@@ -1,0 +1,58 @@
+
+Step1: Optimize direct calls:
+
+Suppose we have a case-lambda as follows
+
+(case-lambda
+  [<formals_0> <code_0>]
+  [<formals_1> <code_1>]
+  ...
+  [<formals_n> <code_n>])
+
+First, generate labels for every clause as well as a label for top
+
+(case-lambda <label>
+  [<formals_0> <label_0> <code0_>]
+  [<formals_1> <label_1> <code1_>]
+  ...
+  [<formals_n> <label_n> <coden_>])
+
+Now everywhere there is a call to a closure bound variable:
+  (funcall x args ...)
+We match on the labels of x:
+  * If a matching label is found, we transform the call to
+    (dircall <label_i> x args ...)
+  * If no matching label is found, we transform the call to
+    (dircall <label> x args ...)
+If we match on a case with ". rest" formals, we emit a call
+to "list" on the rest arguments because the label will be
+inside the code (after the rest-args are constructed).
+
+
+Step2: Eliminate passing arg-counts:
+
+All direct calls to inner labels do not require passing an argument
+count since it will not be used by the procedure.
+
+
+
+Step3:  Eliminate useless case-lambda cases. (not important)
+
+For every label generated, determine whether it is actually used or
+not.  
+
+We assume the main label unused until we find:
+  * A reference to it in a closure that's not a dircall operator.
+  * A reference to it as the target label to a dircall.
+
+We assume an inner label unused until we find:
+  * A direct call to it.
+  * The main label used.
+
+If a case-lambda has unused clauses, they can be eliminated.
+
+If a case-lambda has an unused main label, the dispatch can be
+eliminated.
+
+
+

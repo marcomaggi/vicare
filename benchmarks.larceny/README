@@ -1,0 +1,34 @@
+This directory contains the Gambit benchmarks and benchmarking
+infrastructure, written by Marc Feeley.  Will Clinger has
+hacked it up to run benchmarks on the machines used by the
+Larceny project, and has added several benchmarks beyond
+those distributed with Gambit.
+
+Additional files and directories:
+
+    summarize.sch   ; Scheme code for summarizing results
+    summarize2.sch  ; Scheme code for generating HTML of results
+    results.*       ; outputs of the bench script
+    Results         ; a place to move results.* files
+
+To summarize results:
+
+    % larceny
+    > (load "summarize.sch")
+    > ((summarize larceny-results) "results.Larceny")
+    > ((summarize mzscheme-results) "results.MzScheme")
+
+An output file can be specified as an optional argument.
+
+To generate HTML bar graphs of summarized results:
+
+    % larceny
+    > (load "summarize.sch")
+    > (load "summarize2.sch")
+    > (define summaries (decode-usual-suspects))
+    > (graph-benchmarks summaries "temp1")
+
+See the definition of decode-usual-suspects in summarize.sch.
+There is also a decode-usual-suspects-linux.
+
+Will Clinger

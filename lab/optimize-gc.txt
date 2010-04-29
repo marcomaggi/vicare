@@ -1,0 +1,26 @@
+Originally: revno 104
+
+echo '(length (s-head 10000000 s))' | time ikarus streams.ss 
+Ikarus Scheme (Build 2006-12-06)
+Copyright (c) 2006 Abdulaziz Ghuloum
+
+> 10000000
+> 
+        4.97 real         3.46 user         1.50 sys
+
+After optimization: revno 105
+echo '(length (s-head 10000000 s))' | time ikarus streams.ss 
+Ikarus Scheme (Build 2006-12-06)
+Copyright (c) 2006 Abdulaziz Ghuloum
+
+> 10000000
+> 
+        4.23 real         3.23 user         1.00 sys
+
+As of r127:
+        3.79 real         3.15 user         0.63 sys
+
+With engines (r139):     
+        3.94 real         3.23 user         0.69 sys
+  Note: this is about 2% overhead.
+

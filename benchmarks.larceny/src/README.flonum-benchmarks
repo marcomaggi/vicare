@@ -1,0 +1,13 @@
+fft.scm
+gcbench.scm
+gcold.scm
+mbrot.scm
+nbody.scm
+nucleic.scm
+perm9.scm
+pnpoly.scm
+ray.scm
+simplex.scm
+slatex.scm
+sum1.scm
+test.scm

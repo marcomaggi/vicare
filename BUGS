@@ -1,0 +1,88 @@
+Performance Bugs:
+
+Tail call optimization does not seem to always kick.  In this
+example, x which comes in (disp -4 %esp) is copied into 
+(disp -4 %esp) even though it was there to begin with.
+
+> (lambda (x) (quotient x x))
+   
+    ---
+    (cmpl -4 %eax)
+    (jne (label L16))
+    (label L17)
+    (movl (disp -4 %esp) %edi)
+    (movl (disp -4 %esp) %eax)
+    (movl %edi %ebx)
+    (movl (disp (obj quotient) 7) %edi)
+    (movl %ebx (disp -4 %esp))
+    (movl %eax (disp -8 %esp))
+    (movl -8 %eax)
+    (jmp (disp -3 %edi))
+    (label L16)
+    (jmp (label SL_invalid_args))
+    (nop)
+
+Other Bugs:
+
+* fxsra does not work for large numbers
+
+* Ensure immutable exports
+
+
+Email Will Clinger regarding:
+
+Larceny v0.93 "Deviated Prevert" (Nov 10 2006 04:27:45, precise:BSD
+Unix:unified)
+
+
+> (exact->inexact #xFFFFFFFFFFFFFFFF)
+9.223372036854776e18
+
+> #xFFFFFFFFFFFFFFFF
+18446744073709551615
+
+======================================================================
+FIXED: 
+
+* pretty-print goes into infinite loop on cyclic data
+
+* set! on global names is not working.
+
+* (exact->inexact (/ (expt 2 3000) (- (expt 2 3000) 1)))
+  should return 1.0, not +nan.0.
+
+* FIXED symbol calls are not checking for non-procedure.
+
+
+* FIX: Error in generate-code: BUG: unhandles single rv.
+
+
+
+
+
+Not applicable anymore:
+
+* In libcompile.ss:
+  If you move the (initialize-system) call to the very bottom of the
+  library, the system crashes on startup.  
+
+
+
+
+
+Fixed:
+
+* Investigate what happens when an interrupt occurs during a write.
+
+   > (define (f) (write (gensym)) (newline) (f))
+   > (f)
+   ...
+   #{g17660 |adxhQB29QdSYPKBS|}
+   #{g17661 |ZaFfTMGRz!c17&zm|}
+   #{g17662 |>yF!AMbaIL$dTG>B|}#{g17662 |>yF!AMbaIL$dTG>B|}Error:
+   interrupted.
+   >
+
+  Two displays occurred at the end.
+
+

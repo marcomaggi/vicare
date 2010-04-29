@@ -1,0 +1,11 @@
+
+****************************
+Benchmarking Petite-Chez-Scheme-r5rs on Fri Jan 19 21:34:57 EST 2007 under Darwin iub-vpn-75-198.noc.indiana.edu 8.8.3 Darwin Kernel Version 8.8.3: Wed Oct 18 21:57:10 PDT 2006; root:xnu-792.15.4.obj~4/RELEASE_I386 i386 i386
+
+Testing tak under Petite-Chez-Scheme-r5rs
+Compiling...
+Running...
+Petite Chez Scheme Version 6.9c
+Copyright (c) 1985-2003 Cadence Research Systems
+
+> 

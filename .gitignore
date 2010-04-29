@@ -1,0 +1,17 @@
+*~
+=*
+,,*
+*.o
+*.a
+*.so.*
+*.so
+.arch
+{arch}
+autom4te*
+.emacs.*
+*.gz
+*.bz2
+*.info
+*.html
+configure
+

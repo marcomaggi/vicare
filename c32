@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+
+./configure \
+  --prefix=$HOME/.opt32 \
+  CFLAGS="-m32 -I$HOME/.opt32/include -I$HOME/.opt32/lib/libffi-3.0.8/include" \
+  LDFLAGS="-m32 -L$HOME/.opt32/lib" \
+&& make clean \
+&& make
+

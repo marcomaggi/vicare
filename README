@@ -1,0 +1,21 @@
+Ikarus Scheme is an implementation of the Scheme programming
+language.  The preliminary release of Ikarus implements the majority
+of the features found in the current standard, the Revised 6 report
+on the algorithmic language Scheme including full R6RS library and
+script syntax, syntax-case, unicode strings, bytevectors,
+user-defined record types, exception handling, conditions, and
+enumerations.  Over 80% of the R6RS procedures and keywords are
+currently implemented and subsequent releases will proceed towards
+brining Ikarus to full R6RS conformance.
+
+The main purpose behind releasing Ikarus early is to give Scheme
+programmers the opportunity to experiment with the various new
+features that were newly introduced in R6RS.  The most important of
+such features is the ability to structure large programs into
+libraries; where each library extends the language through
+procedural and syntactic abstractions.  Many useful libraries can be
+written using the currently supported set of R6RS features including
+text processing tools, symbolic logic systems, interpreters and
+compilers, and many mathematical and scientific packages.  It is my
+hope that this release will encourage the Scheme community to write
+and to share their most useful R6RS libraries.

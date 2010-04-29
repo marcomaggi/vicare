@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+
+./configure --prefix=$HOME/.opt64 \
+  CFLAGS="-m64 -I $HOME/.opt64/include -I $HOME/.opt64/lib/libffi-3.0.8/include" \
+  LDFLAGS="-m64 -L$HOME/.opt64/lib" \
+&& make clean \
+&& make
+
+# LIBFFI configuration (on darwin):
+#   ./configure 
+#       --target=x86_64-darwin
+#       --build=x86_64-darwin
+#       --prefix=/Users/ikarus/.opt64
+#       CFLAGS=-m64 
+#       LDFLAGS=-m64
