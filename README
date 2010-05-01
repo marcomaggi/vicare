@@ -46,6 +46,9 @@ While the long term aim  of the project is still not clearly
 established,  Vicare  has the  following  short and  midterm
 goals:
 
+* Drop  documentation in  TeX  format, replacing  it with  a
+  Texinfo file.
+
 
 
 2. License
