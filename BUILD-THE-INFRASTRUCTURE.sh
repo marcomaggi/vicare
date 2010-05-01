@@ -6,7 +6,7 @@ set -xe
 
 aclocal
 autoheader
-automake --foreign
+automake --foreign --add-missing
 autoconf
 
 ### end of file

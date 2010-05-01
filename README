@@ -1,6 +1,6 @@
 
-			   Vicare
-			   ======
+			     Vicare Scheme
+			     =============
 
 
 Topics
@@ -18,37 +18,41 @@ Topics
 1. Introduction
 ---------------
 
-Scheme is  a statically scoped  and properly tail--recursive
-dialect  of the  Lisp programming  language invented  by Guy
-Lewis Steele Jr. and Gerald Jay Sussman.  It was designed to
-have  an exceptionally  clear and  simple semantics  and few
-different ways to form expressions.
+Scheme is  a statically scoped  and properly tail--recursive  dialect of
+the  Lisp programming  language invented  by  Guy Lewis  Steele Jr.  and
+Gerald Jay Sussman.  It was  designed to have an exceptionally clear and
+simple semantics and few different ways to form expressions.
 
-  The "Revised^6 Report  on the Algorithmic Language Scheme"
-gives  a defining  description of  the  programming language
-Scheme.  The report is the work of many people in the course
-of  many years; revision  6 was  edited by  Michael Sperber,
-R. Kent Dybvig, Matthew Flatt and Anton Van Straaten.
+  The  "Revised^6 Report  on the  Algorithmic Language  Scheme"  gives a
+defining description of the  programming language Scheme.  The report is
+the work  of many  people in the  course of  many years; revision  6 was
+edited by Michael  Sperber, R. Kent Dybvig, Matthew  Flatt and Anton Van
+Straaten.
 
-  Ikarus is  an almost R6RS compliant  implementation of the
-Scheme programming language; it is the creation of Abdulaziz
-Ghuloum.
-
-  Vicare  (pronounced the etruscan  way) is  an experimental
-fork of Ikarus Scheme which  aims at fixing bugs and enhance
-some features like the POSIX interface.
+  Ikarus  is  an almost  R6RS  compliant  implementation  of the  Scheme
+programming language;  it is the creation of  Abdulaziz Ghuloum.  Vicare
+(pronounced the etruscan  way) is an experimental fork  of Ikarus Scheme
+which  aims at  fixing bugs  and enhance  some features  like  the POSIX
+interface.
 
 
 1.1 Policy
 ----------
 
-While the long term aim  of the project is still not clearly
-established,  Vicare  has the  following  short and  midterm
-goals:
+While the long term aim of the project is still not clearly established,
+Vicare has the following short and midterm goals:
 
-* Drop  documentation in  TeX  format, replacing  it with  a
-  Texinfo file.
+* Drop documentation in TeX format, replacing it with a Texinfo file.
 
+* Document the  internals of the source distribution,  both the building
+  infrastructure and the source code.
+
+* Fix bugs.
+
+* Accept patches which improve compliance  with the R6RS report, with an
+  eye to pragmatism and "programs that work".
+
+* Accept patches to expose the POSIX interface at the Scheme level.
 
 
 2. License
@@ -57,29 +61,25 @@ goals:
 Copyright (c) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
 Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 
-This  program  is free  software:  you  can redistribute  it
-and/or modify it  under the terms of the  GNU General Public
-License as published by the Free Software Foundation, either
-version  3 of  the License,  or (at  your option)  any later
-version.
+This program is free software:  you can redistribute it and/or modify it
+under the  terms of the GNU  General Public License as  published by the
+Free Software Foundation,  either version 3 of the  License, or (at your
+option) any later version.
 
-This  program is  distributed in  the hope  that it  will be
-useful, but  WITHOUT ANY WARRANTY; without  even the implied
-warranty  of  MERCHANTABILITY or  FITNESS  FOR A  PARTICULAR
-PURPOSE.   See  the  GNU  General Public  License  for  more
-details.
+This program  is distributed  in the  hope that it  will be  useful, but
+WITHOUT   ANY   WARRANTY;  without   even   the   implied  warranty   of
+MERCHANTABILITY  or  FITNESS FOR  A  PARTICULAR  PURPOSE.   See the  GNU
+General Public License for more details.
 
-You should  have received a  copy of the GNU  General Public
-License   along   with    this   program.    If   not,   see
-<http://www.gnu.org/licenses/>.
+You should have received a copy  of the GNU General Public License along
+with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 4. Install
 ----------
 
-If you have checked out  a revision from the repository, you
-will have to build  the infrastructure running a script from
-the top source directory:
+If you have checked out a revision from the repository, you will have to
+build the infrastructure running a script from the top source directory:
 
    $ cd /path/to/vicare
    $ sh BUILD-THE-INFRASTRUCTURE.sh
@@ -96,8 +96,8 @@ after that, basically we should do:
 
     $ make install -n
 
-  The "Makefile" supports the "DESTDIR" environment variable
-to install the files under a temporary location; example:
+  The "Makefile" supports the  "DESTDIR" environment variable to install
+the files under a temporary location; example:
 
     $ make install DESTDIR=/tmp/marco/vicare
 
@@ -115,15 +115,15 @@ will run the test suite.
 A. Credits
 ----------
 
-The  origina Ikarus  Scheme code  is the  work  of Abdulaziz
-Ghuloum.  Vicare is a fork driven by Marco Maggi.
+The origina Ikarus Scheme code is the work of Abdulaziz Ghuloum.  Vicare
+Scheme is a fork driven by Marco Maggi.
 
 
 B. Bug reports
 --------------
 
-Bug reports  are appreciated, register them  using the issue
-tracker at Vicare GitHub site.
+Bug reports  are appreciated, register  them using the issue  tracker at
+Vicare GitHub site.
 
 
 C. Resources
@@ -131,29 +131,20 @@ C. Resources
 
 The latest version of this package can be downloaded from:
 
-      <http://github.com/marcomaggi/vicare/downloads>
+	    <http://github.com/marcomaggi/vicare/downloads>
 
 the home page of the Vicare project is at:
 
-	 <http://marcomaggi.github.com/vicare.html>
+	       <http://marcomaggi.github.com/vicare.html>
 
 development takes place at:
 
-	   <http://github.com/marcomaggi/vicare/>
+		 <http://github.com/marcomaggi/vicare/>
 
 
 ### end of file
 # Local Variables:
 # mode: text
-# fill-column: 60
-# paragraph-start: "*"
-# End:
-
-
-
-### end of file
-# Local Variables:
-# mode: text
-# fill-column: 60
+# fill-column: 72
 # paragraph-start: "*"
 # End:
