@@ -27,7 +27,7 @@ case "$target_os" in
     LDFLAGS="-Wl,-E -Wl,--export-all-symbols $LDFLAGS"
     ;;
   *darwin*)
-    AC_DEFINE(HACK_FFI, 1, 
+    AC_DEFINE(HACK_FFI, 1,
               [Mark code returned by libffi executable because
                libffi does not do that yet.  This so far is only
                important on Snow Leopard in 64-bit mode but we
@@ -37,7 +37,7 @@ case "$target_os" in
 
 AC_CHECK_SIZEOF(void *)
 if test "$ac_cv_sizeof_void_p" = 4; then
-   AC_DEFINE(FLAT_TABLES, 1, 
+   AC_DEFINE(FLAT_TABLES, 1,
      [use flat segment and dirty vectors (not used yet)])
 fi
 
@@ -64,7 +64,7 @@ AC_CHECK_HEADERS([assert.h dlfcn.h errno.h fcntl.h signal.h \
 AC_CHECK_LIB(pthread, main)
 
 AC_CHECK_HEADERS([gmp.h],,[AC_MSG_ERROR([
-ERROR: Cannot find libgmp. 
+ERROR: Cannot find libgmp.
 ERROR: You might want to supply CFLAGS=-I</path/to/include> (containing
 ERROR: the gmp.h header file), and LDFLAGS=-L</path/to/lib> (containing
 ERROR: libgmp.so) if libgmp is installed in a non-standard location.
@@ -72,7 +72,7 @@ ERROR: libgmp can be obtained from <http://gmplib.org>. ])])
 
 # check that gmp is present
 AC_HAVE_LIBRARY([gmp],,[AC_MSG_ERROR([
-ERROR: Cannot find libgmp. 
+ERROR: Cannot find libgmp.
 ERROR: You might want to supply CFLAGS=-I</path/to/include> (containing
 ERROR: the gmp.h header file), and LDFLAGS=-L</path/to/lib> (containing
 ERROR: libgmp.so) if libgmp is installed in a non-standard location.
@@ -95,7 +95,7 @@ if test "$enable_libffi" != no; then
     if test "$have_ffi_h" = no; then
       AC_MSG_ERROR([ffi.h cannot be found.
 Please specify the location of the header file using
-  ./configure CFLAGS=-I<path/to/ffi.h>   <other-options ...>
+  ./configure CPPFLAGS=-I<path/to/ffi.h>   <other-options ...>
 ])
     fi
     if test "$have_libffi" = no; then
@@ -112,27 +112,27 @@ fi # "$enable_ffi" != no
 AC_DEFINE_UNQUOTED(ENABLE_LIBFFI, [$libffi_val], [adds support for libffi])
 
 AC_CHECK_MEMBER([struct stat.st_mtimespec],
-   AC_DEFINE(HAVE_STAT_ST_MTIMESPEC, 1, 
+   AC_DEFINE(HAVE_STAT_ST_MTIMESPEC, 1,
              [stat struct has st_mtimespec field]),
-   [], 
+   [],
    [[#include <sys/stat.h>]])
 
 AC_CHECK_MEMBER([struct stat.st_mtim],
-   AC_DEFINE(HAVE_STAT_ST_MTIM, 1, 
+   AC_DEFINE(HAVE_STAT_ST_MTIM, 1,
              [stat struct has st_mtim field]),
-   [], 
+   [],
    [[#include <sys/stat.h>]])
 
 AC_CHECK_MEMBER([struct stat.st_ctimespec],
-   AC_DEFINE(HAVE_STAT_ST_CTIMESPEC, 1, 
+   AC_DEFINE(HAVE_STAT_ST_CTIMESPEC, 1,
              [stat struct has st_ctimespec field]),
-   [], 
+   [],
    [[#include <sys/stat.h>]])
 
 AC_CHECK_MEMBER([struct stat.st_ctim],
-   AC_DEFINE(HAVE_STAT_ST_CTIM, 1, 
+   AC_DEFINE(HAVE_STAT_ST_CTIM, 1,
              [stat struct has st_ctim field]),
-   [], 
+   [],
    [[#include <sys/stat.h>]])
 
 

@@ -102,8 +102,8 @@ EXTRA_DIST=ikarus.boot.4.prebuilt ikarus.boot.8.prebuilt last-revision \
 
 all: $(nodist_pkglib_DATA)
 
-revno = "$(shell sed 's/ .*//' ../.bzr/branch/last-revision 2>/dev/null)"
-$(srcdir)/last-revision: $(shell ls ../.bzr/branch/last-revision 2>/dev/null) 
+revno = "$(git show | head -1 | cut -d ' ' -f2)"
+$(srcdir)/last-revision:
 	echo $(revno) >$@
 
 sizeofvoidp = $(shell grep SIZEOF_VOID_P ../config.h | sed "s/.*\(.\)/\1/g")
@@ -119,7 +119,7 @@ ikarus.config.ss: Makefile last-revision ../config.h
 CLEANFILES=$(nodist_pkglib_DATA) ikarus.config.ss
 MAINTAINERCLEANFILES=last-revision
 
-ikarus.boot: $(EXTRA_DIST) ikarus.config.ss 
+ikarus.boot: $(EXTRA_DIST) ikarus.config.ss
 	IKARUS_SRC_DIR=$(srcdir) \
   IKARUS_BUILD_DIR=$(builddir) \
   IKARUS_FASL_DIRECTORY='' \
