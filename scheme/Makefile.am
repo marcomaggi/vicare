@@ -102,9 +102,8 @@ EXTRA_DIST=ikarus.boot.4.prebuilt ikarus.boot.8.prebuilt last-revision \
 
 all: $(nodist_pkglib_DATA)
 
-revno = "$(git show | head -1 | cut -d ' ' -f2)"
 $(srcdir)/last-revision:
-	echo $(revno) >$@
+	git show | head -1 | cut -d ' ' -f2 >$@
 
 sizeofvoidp = $(shell grep SIZEOF_VOID_P ../config.h | sed "s/.*\(.\)/\1/g")
 

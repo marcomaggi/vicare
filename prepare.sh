@@ -7,7 +7,7 @@ set -xe
 (set -xe ;  cd .. && sh BUILD-THE-INFRASTRUCTURE.sh)
 
 prefix=/usr/local
-LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.6/include
+LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.8/include
 
 ../configure \
     --prefix="${prefix}"                        \

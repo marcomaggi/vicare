@@ -1,15 +1,16 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
+;;; Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -24,7 +25,7 @@
   (include "ikarus.config.ss")
 
   (define (host-info) target)
-  
+
   (define (split-path s)
     (define (nodata i s ls)
       (cond
@@ -33,9 +34,9 @@
         [else (data (+ i 1) s ls (list (string-ref s i)))]))
     (define (data i s ls ac)
       (cond
-        [(= i (string-length s)) 
+        [(= i (string-length s))
          (cons (list->string (reverse ac)) ls)]
-        [(char=? (string-ref s i) #\:) 
+        [(char=? (string-ref s i) #\:)
          (nodata (+ i 1) s
            (cons (list->string (reverse ac)) ls))]
         [else (data (+ i 1) s ls (cons (string-ref s i) ac))]))
@@ -43,21 +44,22 @@
 
 
   (define (print-greeting)
-    (printf "Ikarus Scheme version ~a~a~a~a\n" 
+    (printf "Ikarus Scheme version ~a~a~a~a\n"
       ikarus-version
       (if (zero? (string-length ikarus-revision)) "" "+")
       (if (= (fixnum-width) 30)
           ""
           ", 64-bit")
-      (if (zero? (string-length ikarus-revision)) 
+      (if (zero? (string-length ikarus-revision))
           ""
           (format " (revision ~a, build ~a)"
-            (+ 1 (string->number ikarus-revision))
+	    ikarus-revision
+;;;            (+ 1 (string->number ikarus-revision))
             (let-syntax ([ds (lambda (x) (date-string))])
               ds))))
-    (display "Copyright (c) 2006-2009 Abdulaziz Ghuloum\n\n"))
+    (display "Copyright (c) 2006-2010 Abdulaziz Ghuloum\n\n"))
 
-  (define (init-library-path) 
+  (define (init-library-path)
     (library-path
       (append
         (cond
@@ -67,8 +69,8 @@
     (let ([prefix
            (lambda (ext ls)
              (append (map (lambda (x) (string-append ext x)) ls) ls))])
-      (library-extensions 
-        (prefix "/main" 
+      (library-extensions
+        (prefix "/main"
           (prefix ".ikarus"
             (library-extensions)))))))
 
@@ -101,7 +103,7 @@
         [(string=? (car args) "-O2")
          (f (cdr args) (lambda () (k) (optimize-level 2)))]
         [(string=? (car args) "-O1")
-         (f (cdr args) (lambda () (k) (optimize-level 1)))] 
+         (f (cdr args) (lambda () (k) (optimize-level 1)))]
         [(string=? (car args) "-O0")
          (f (cdr args) (lambda () (k) (optimize-level 0)))]
         [(string=? (car args) "--no-rcfile")
@@ -111,8 +113,8 @@
         [(string=? (car args) "--rcfile")
          (let ([d (cdr args)])
            (when (null? d) (die 'ikarus "--rcfile requires a script name"))
-           (set! rcfiles 
-             (cons (car d) 
+           (set! rcfiles
+             (cons (car d)
                (case rcfiles
                  [(#t) '()]
                  [(#f) (invalid-rc-error)]
@@ -173,7 +175,7 @@
         [(getenv "HOME") =>
          (lambda (home)
            (let ([f (string-append home "/.ikarusrc")])
-             (if (file-exists? f) 
+             (if (file-exists? f)
                  (list f)
                  '())))]
         [else '()]))
@@ -182,10 +184,10 @@
       (lambda (filename)
         (with-exception-handler
           (lambda (con)
-            (raise-continuable 
-              (condition 
+            (raise-continuable
+              (condition
                 (make-who-condition 'ikarus)
-                (make-message-condition 
+                (make-message-condition
                   (format "loading rc file ~a failed" filename))
                 con)))
           (lambda ()

@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(ikarus, 0.0.4-rc1, aghuloum@cs.indiana.edu)
+AC_INIT(vicare, 0.1d0, marco.maggi-ipsu@poste.it)
 AC_CANONICAL_SYSTEM
-AM_INIT_AUTOMAKE(ikarus, 0.0.4-rc1, gnu)
+AM_INIT_AUTOMAKE(vicare, 0.1d0, gnu)
 AC_CONFIG_SRCDIR([src/])
 
 
