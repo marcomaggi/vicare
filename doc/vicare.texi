@@ -478,6 +478,7 @@ Revised^6 Report on the algorithmic language Scheme
 
 @set TARBALLURL                 @url{http://github.com/marcomaggi/vicare/downloads}
 @set REPOSITORYURL              @url{http://github.com/marcomaggi/vicare/}
+@set EXECUTABLE                 @command{vicare}
 
 @c page
 @c ------------------------------------------------------------
@@ -583,6 +584,7 @@ people.
 Appendices
 
 * missing::                     Missing Features.
+* building::                    Building infrastructure.
 * credits::                     Credits for this document.
 * package license::             @gnu{} General Public License.
 * references::                  Bibliography and references.
@@ -5077,6 +5079,33 @@ make-custom-textual-input/output-port
 open-file-input/output-port
 @end example
 @end itemize
+
+@c page
+@node building
+@appendix Building infrastructure
+
+
+This appendix contains instructions on how to use and modify the
+building infrastructure of @value{PACKAGE}.
+
+@menu
+* building revision::           Package revision in the banner.
+@end menu
+
+@c page
+@node building revision
+@appendixsec Package revision in the banner
+
+
+When running @value{EXECUTABLE} in a terminal, it prints a banner
+showing the revision number:
+
+@example
+$ vicare
+
+@end example
+
+The revision specification shows the commit in the
 
 @c page
 @node credits
