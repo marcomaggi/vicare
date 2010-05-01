@@ -42,6 +42,9 @@ pronounced the etruscan way.
 While the long term aim of the project is still not clearly established,
 Vicare has the following short and midterm goals:
 
+* Allow the installation  of both Ikarus and Vicare  without conflict in
+  installed files and directories.
+
 * Drop documentation in TeX format, replacing it with a Texinfo file.
 
 * Document the  internals of the source distribution,  both the building
@@ -55,6 +58,29 @@ Vicare has the following short and midterm goals:
 * Accept patches to expose the POSIX interface at the Scheme level.
 
 * Reject big and revolutionary patches.
+
+
+1.2 Contributing
+----------------
+
+If you  feel the need to  contribute bug reports, bug  fixes, patches or
+documentation to  Vicare Scheme, you  are welcome.  For bug  reports and
+patches, you should adhere to the following rules:
+
+* Vicare  is hosted  at  GitHub, so  first  of all  an  issue should  be
+  registered at the development site:
+
+		 <http://github.com/marcomaggi/vicare/>
+
+  so  that a  new branch  can be  created in  the repository,  with name
+  referring to the issue.
+
+* The branch which aims at enhancing the original Ikarus distribution is
+  named "ikarus", so a patch should be built by deriving the code from a
+  checkout of such branch.
+
+  For  documentation contributions,  you can  contact  directly Vicare's
+maintainer at <marco.maggi-ipsu@poste.it>;
 
 
 2. License

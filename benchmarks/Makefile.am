@@ -69,7 +69,10 @@ EXTRA_DIST=README bench.ss benchall.ss rn100 parsing-data.ss \
 
 benchall:
 	date +"NOW: %Y-%m-%d %H:%M:%S" >>timelog
-	../src/vicare -b ../scheme/vicare.boot --r6rs-script benchall.ss 2>>timelog
+	VICARE_SRC_DIR=$(srcdir) \
+	VICARE_LIBRARY_PATH=$(srcdir) \
+		../src/vicare -b ../scheme/vicare.boot --r6rs-script $(srcdir)/benchall.ss
+#2>>timelog
 	rm -f z*.scm z*.tex
 
 clean:
