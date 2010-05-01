@@ -1,29 +1,30 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
+;;; Modified by Marco Maggi.
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 (library (ikarus.compiler)
-  (export compile-core-expr-to-port 
+  (export compile-core-expr-to-port
           assembler-output optimize-cp
           current-primitive-locations eval-core
-          current-core-eval compile-core-expr 
+          current-core-eval compile-core-expr
           expand expand/optimize expand/scc-letrec optimizer-output
-          cp0-effort-limit cp0-size-limit optimize-level 
+          cp0-effort-limit cp0-size-limit optimize-level
           perform-tag-analysis tag-analysis-output
           strip-source-info generate-debug-calls current-letrec-pass)
-  (import 
+  (import
     (rnrs hashtables)
     (ikarus system $fx)
     (ikarus system $pairs)
@@ -34,11 +35,11 @@
         fasl-write optimize-cp
         compile-core-expr-to-port assembler-output
         current-primitive-locations eval-core
-        cp0-size-limit cp0-effort-limit 
+        cp0-size-limit cp0-effort-limit
         expand/optimize expand/scc-letrec expand optimizer-output
         tag-analysis-output perform-tag-analysis
         current-core-eval current-letrec-pass)
-    (ikarus include)
+    (vicare include)
     (ikarus.fasl.write)
     (ikarus.intel-assembler))
 
@@ -51,7 +52,7 @@
     (define (enumerate fld* i)
       (syntax-case fld* ()
         [() #'()]
-        [(x . x*) 
+        [(x . x*)
          (with-syntax ([i i] [i* (enumerate #'x* (fx+ i 1))])
            #'(i . i*))]))
     (define (generate-body ctxt cls*)
@@ -111,11 +112,11 @@
    [else (rem* s2 s1)]))
 
 
-  
+
 (define-struct constant (value))
 (define-struct code-loc (label))
 (define-struct foreign-label (label))
-(define-struct var 
+(define-struct var
    (name reg-conf frm-conf var-conf reg-move frm-move var-move
          loc index referenced global-loc))
 (define-struct cp-var (idx))
@@ -164,14 +165,14 @@
 ;;; this define-structure definition for compatibility with the
 ;;; notation used in Oscar's thesis.
 (define-syntax define-structure
-  (lambda (stx) 
+  (lambda (stx)
     (define (fmt ctxt)
-      (lambda (str . args) 
-        (datum->syntax ctxt 
-          (string->symbol 
+      (lambda (str . args)
+        (datum->syntax ctxt
+          (string->symbol
             (apply format str (map syntax->datum args))))))
     (syntax-case stx ()
-      [(_ (name fields ...)) 
+      [(_ (name fields ...))
        #'(define-struct name (fields ...))]
       [(_ (name fields ...) ([others defaults] ...))
        (with-syntax ([(pred maker (getters ...) (setters ...))
@@ -255,9 +256,9 @@
              (string? (cadr x)))
         (cadr x)
         (error 'quoted-string "not a quoted string" x)))
-  (define (lexical x) 
+  (define (lexical x)
     (getprop x *cookie*))
-  (define (get-fmls x args) 
+  (define (get-fmls x args)
     (define (matching? fmls args)
       (cond
         [(null? fmls) (null? args)]
@@ -282,11 +283,11 @@
   (define-syntax equal-case
     (lambda (x)
       (syntax-case x ()
-         [(_ val clause* ...) 
-          (with-syntax ([body 
+         [(_ val clause* ...)
+          (with-syntax ([body
                          (let f ([clause* #'(clause* ...)])
                            (syntax-case clause* (else)
-                             [([else e e* ...]) 
+                             [([else e e* ...])
                               #'(begin e e* ...)]
                              [([(datum* ...) e e* ...] . rest)
                               (with-syntax ([rest (f #'rest)])
@@ -303,11 +304,11 @@
             (let ([nfml* (gen-fml* fml*)])
               (let ([body (E body ctxt)])
                 (ungen-fml* fml*)
-                (make-clambda-case 
+                (make-clambda-case
                   (make-case-info
                     (gensym)
-                    (properize nfml*) 
-                    (list? fml*)) 
+                    (properize nfml*)
+                    (list? fml*))
                   body))))))
            cls*))
   (define (E-make-parameter mk-call args ctxt)
@@ -316,7 +317,7 @@
        (let ([val-expr (car args)]
              [t (gensym 't)]
              [x (gensym 'x)])
-         (E `((lambda (,t) 
+         (E `((lambda (,t)
                 (case-lambda
                   [() ,t]
                   [(,x) (set! ,t ,x)]))
@@ -329,7 +330,7 @@
              [t (gensym 't)]
              [t0 (gensym 't)]
              [x (gensym 'x)])
-         (E `((case-lambda 
+         (E `((case-lambda
                 [(,t ,f)
                  (if ((primitive procedure?) ,f)
                      ((case-lambda
@@ -339,14 +340,14 @@
                            [(,x) (set! ,t0 (,f ,x))])])
                       (,f ,t))
                      ((primitive die)
-                        'make-parameter 
+                        'make-parameter
                         '"not a procedure"
                         ,f))])
               ,val-expr
               ,guard-expr)
             ctxt))]
-      [else 
-       (mk-call 
+      [else
+       (mk-call
          (make-primref 'make-parameter)
          (map (lambda (x) (E x #f)) args))]))
   (define (E-app mk-call rator args ctxt)
@@ -354,12 +355,12 @@
       [((primitive make-parameter)) (E-make-parameter mk-call args ctxt)]
       [else
        (let ([names (get-fmls rator args)])
-         (mk-call 
+         (mk-call
            (E rator (list ctxt))
            (let f ([args args] [names names])
              (cond
                [(pair? names)
-                (cons 
+                (cons
                   (E (car args) (car names))
                   (f (cdr args) (cdr names)))]
                [else
@@ -369,19 +370,19 @@
       [(pair? x)
        (equal-case (car x)
          [(quote) (make-constant (cadr x))]
-         [(if) 
-          (make-conditional 
+         [(if)
+          (make-conditional
             (E (cadr x) #f)
             (E (caddr x) ctxt)
             (E (cadddr x) ctxt))]
          [(set!)
           (let ([lhs (cadr x)] [rhs (caddr x)])
             (cond
-              [(lexical lhs) => 
-               (lambda (var) 
+              [(lexical lhs) =>
+               (lambda (var)
                  (set-prelex-source-assigned?! var #t)
                  (make-assign var (E rhs lhs)))]
-              [else (make-global-set! lhs (E rhs lhs))]))] 
+              [else (make-global-set! lhs (E rhs lhs))]))]
          [(begin)
           (let f ([a (cadr x)] [d (cddr x)])
             (cond
@@ -410,8 +411,8 @@
                   [loc* (map cadr bind*)]
                   [rhs* (map caddr bind*)])
               (let ([nlhs* (gen-fml* lhs*)])
-                (for-each 
-                  (lambda (lhs loc) 
+                (for-each
+                  (lambda (lhs loc)
                     (set-prelex-global-location! lhs loc))
                   nlhs* loc*)
                 (let ([expr (make-rec*bind nlhs* (map E rhs* lhs*)
@@ -430,12 +431,12 @@
           (let ([ae (cadr x)])
             (let ([cls* (E-clambda-clause* (cddr x) ctxt)])
               (make-clambda (gensym) cls* #f #f
-                (cons 
+                (cons
                   (and (symbol? ctxt) ctxt)
                   (and (not (strip-source-info))
                        (annotation? ae)
                        (annotation-source ae))))))]
-         [(lambda) 
+         [(lambda)
           (E `(case-lambda ,(cdr x)) ctxt)]
          [(foreign-call)
           (let ([name (quoted-string (cadr x))] [arg* (cddr x)])
@@ -443,13 +444,13 @@
          [(primitive)
           (let ([var (cadr x)])
             (make-primref var))]
-         [(annotated-call) 
+         [(annotated-call)
           (E-app
             (if (generate-debug-calls)
                 (lambda (op rands)
                   (define (operator? x)
                     (struct-case x
-                      [(primref x) 
+                      [(primref x)
                        (guard (con [(assertion-violation? con) #t])
                          (system-value x)
                          #f)]
@@ -458,7 +459,7 @@
                     (if (annotation? ae)
                         (cons (annotation-source ae) (annotation-stripped ae))
                         (cons #f (syntax->datum ae))))
-                  (define src/expr 
+                  (define src/expr
                     (make-constant (get-src/expr (cadr x))))
                   (if (operator? op)
                       (make-funcall op rands)
@@ -474,15 +475,15 @@
             (set-prelex-source-referenced?! var #t)
             var)]
          [else
-          (make-funcall 
-            (make-primref 'top-level-value) 
+          (make-funcall
+            (make-primref 'top-level-value)
             (list (make-constant x)))])]
       [else (error 'recordize "invalid expression" x)]))
   (E x #f))
 
 (define (unparse x)
   (define (E-args proper x)
-    (if proper 
+    (if proper
         (map E x)
         (let f ([a (car x)] [d (cdr x)])
           (cond
@@ -496,28 +497,28 @@
       [(var x) (string->symbol (format ":~a" x))]
       [(prelex name) (string->symbol (format ":~a" name))]
       [(primref x) x]
-      [(conditional test conseq altern) 
+      [(conditional test conseq altern)
        `(if ,(E test) ,(E conseq) ,(E altern))]
       [(interrupt-call e0 e1)
        `(interrupt-call ,(E e0) ,(E e1))]
       [(primcall op arg*) `(,op . ,(map E arg*))]
-      [(bind lhs* rhs* body) 
+      [(bind lhs* rhs* body)
        `(let ,(map (lambda (lhs rhs) (list (E lhs) (E rhs))) lhs* rhs*)
           ,(E body))]
-      [(recbind lhs* rhs* body) 
+      [(recbind lhs* rhs* body)
        `(letrec ,(map (lambda (lhs rhs) (list (E lhs) (E rhs))) lhs* rhs*)
           ,(E body))]
-      [(rec*bind lhs* rhs* body) 
+      [(rec*bind lhs* rhs* body)
        `(letrec* ,(map (lambda (lhs rhs) (list (E lhs) (E rhs))) lhs* rhs*)
           ,(E body))]
-      ;[(library-recbind lhs* loc* rhs* body) 
-      ; `(letrec ,(map (lambda (lhs loc rhs) (list (E lhs) loc (E rhs))) 
+      ;[(library-recbind lhs* loc* rhs* body)
+      ; `(letrec ,(map (lambda (lhs loc rhs) (list (E lhs) loc (E rhs)))
       ;                lhs* loc* rhs*)
       ;    ,(E body))]
-      [(fix lhs* rhs* body) 
+      [(fix lhs* rhs* body)
        `(fix ,(map (lambda (lhs rhs) (list (E lhs) (E rhs))) lhs* rhs*)
           ,(E body))]
-      [(seq e0 e1) 
+      [(seq e0 e1)
        (let ()
          (define (f x ac)
            (struct-case x
@@ -548,9 +549,9 @@
        `(new-frame [base: ,base-idx]
                    [size: ,size]
           ,(E body))]
-      [(frame-var idx) 
+      [(frame-var idx)
        (string->symbol (format "fv.~a" idx))]
-      [(cp-var idx) 
+      [(cp-var idx)
        (string->symbol (format "cp.~a" idx))]
       [(save-cp expr)
        `(save-cp ,(E expr))]
@@ -584,7 +585,7 @@
       [(ntcall target valuw args mask size)
        `(ntcall ,target ,size)]
       [else
-       (if (symbol? x) 
+       (if (symbol? x)
            x
            "#<unknown>")]))
   (E x))
@@ -606,12 +607,12 @@
        (let ([a (f (car ls))])
          (cons a (map f (cdr ls))))]))
   (define (E-args proper x)
-    (if proper 
+    (if proper
         (map Var x)
         (let f ([a (car x)] [d (cdr x)])
           (cond
             [(null? d) (Var a)]
-            [else 
+            [else
              (let ([a (Var a)])
                (cons a (f (car d) (cdr d))))]))))
   (define (clambda-clause x)
@@ -627,7 +628,7 @@
                 (and (eq? (car body) 'let)
                      (= (length (cadr body)) 1))))
        (list 'let* (append b* (cadr body)) (caddr body))]
-      [else 
+      [else
        (list 'let b* body)]))
   (define (E x)
     (struct-case x
@@ -635,10 +636,10 @@
       [(prelex) (Var x)]
       [(primref x) x]
       [(known x t) `(known ,(E x) ,(T:description t))]
-      [(conditional test conseq altern) 
+      [(conditional test conseq altern)
        (cons 'if (map E (list test conseq altern)))]
       [(primcall op arg*) (cons op (map E arg*))]
-      [(bind lhs* rhs* body) 
+      [(bind lhs* rhs* body)
        (let* ([lhs* (map Var lhs*)]
               [rhs* (map E rhs*)]
               [body (E body)])
@@ -655,14 +656,14 @@
               [rhs* (map E rhs*)]
               [body (E body)])
          (import (only (ikarus) map))
-         (list 'letrec (map list lhs* rhs*) body))] 
+         (list 'letrec (map list lhs* rhs*) body))]
       [(rec*bind lhs* rhs* body)
        (let* ([lhs* (map Var lhs*)]
               [rhs* (map E rhs*)]
               [body (E body)])
          (import (only (ikarus) map))
-         (list 'letrec* (map list lhs* rhs*) body))] 
-      [(seq e0 e1) 
+         (list 'letrec* (map list lhs* rhs*) body))]
+      [(seq e0 e1)
        (cons 'begin
           (let f ([e0 e0] [e* (list e1)])
             (struct-case e0
@@ -678,7 +679,7 @@
          (cond
            [(= (length cls*) 1) (cons 'lambda (car cls*))]
            [else (cons 'case-lambda cls*)]))]
-      [(funcall rator rand*) 
+      [(funcall rator rand*)
        (let ([rator (E rator)])
          (cons rator (map E rand*)))]
       [(forcall rator rand*) `(foreign-call ,rator . ,(map E rand*))]
@@ -694,13 +695,13 @@
   (define (make-conses ls)
     (cond
       [(null? ls) (make-constant '())]
-      [else 
-       (make-funcall (make-primref 'cons) 
-         (list (car ls) (make-conses (cdr ls))))]))      
+      [else
+       (make-funcall (make-primref 'cons)
+         (list (car ls) (make-conses (cdr ls))))]))
   (define (properize lhs* rhs*)
     (cond
       [(null? lhs*) (error who "improper improper")]
-      [(null? (cdr lhs*)) 
+      [(null? (cdr lhs*))
        (list (make-conses rhs*))]
       [else (cons (car rhs*) (properize (cdr lhs*) (cdr rhs*)))]))
   (define (inline-case cls rand*)
@@ -737,7 +738,7 @@
                  (struct-case info
                    [(case-info L args proper)
                     (and proper (fx= (length args) 1))])]))]
-        [else #f])) 
+        [else #f]))
     (define (valid-mv-producer? x)
       (struct-case x
         [(funcall) #t]
@@ -755,7 +756,7 @@
          [(call-with-values)
           (cond
             [(and (open-mvcalls) (fx= (length rand*) 2))
-             (let ([producer (inline (car rand*) '())] 
+             (let ([producer (inline (car rand*) '())]
                    [consumer (cadr rand*)])
                (cond
                  [(single-value-consumer? consumer)
@@ -763,13 +764,13 @@
                  [(and (valid-mv-consumer? consumer)
                        (valid-mv-producer? producer))
                   (make-mvcall producer consumer)]
-                 [else 
+                 [else
                   (make-funcall rator rand*)]))]
             [else
              (mk rator rand*)])]
          [(debug-call)
-          (inline 
-            (lambda (op^ rand*^) 
+          (inline
+            (lambda (op^ rand*^)
               (mk rator (cons* (car rand*) op^ rand*^)))
             (cadr rand*)
             (cddr rand*))]
@@ -778,23 +779,23 @@
       [(bind lhs* rhs* body)
        (if (null? lhs*)
            (inline mk body rand*)
-           (make-bind lhs* rhs* 
+           (make-bind lhs* rhs*
              (call-expr mk body rand*)))]
       [(recbind lhs* rhs* body)
        (if (null? lhs*)
            (inline mk body rand*)
-           (make-recbind lhs* rhs* 
+           (make-recbind lhs* rhs*
              (call-expr mk body rand*)))]
       [(rec*bind lhs* rhs* body)
        (if (null? lhs*)
            (inline mk body rand*)
-           (make-rec*bind lhs* rhs* 
-             (call-expr mk body rand*)))] 
+           (make-rec*bind lhs* rhs*
+             (call-expr mk body rand*)))]
       [else (mk rator rand*)]))
   (define (call-expr mk x rand*)
     (cond
       [(clambda? x) (inline mk x rand*)]
-      [(and (prelex? x) (not (prelex-source-assigned? x))) 
+      [(and (prelex? x) (not (prelex-source-assigned? x)))
        ;;; FIXME: did we do the analysis yet?
        (mk x rand*)]
       [else
@@ -814,11 +815,11 @@
       [(rec*bind lhs* rhs* body)
        (make-rec*bind lhs* (map Expr rhs*) (Expr body))]
       [(conditional test conseq altern)
-       (make-conditional 
+       (make-conditional
          (Expr test)
          (Expr conseq)
          (Expr altern))]
-      [(seq e0 e1) 
+      [(seq e0 e1)
        (make-seq (Expr e0) (Expr e1))]
       [(clambda g cls* cp free name)
        (make-clambda g
@@ -830,7 +831,7 @@
          cp free name)]
       [(funcall rator rand*)
        (inline make-funcall (Expr rator) (map Expr rand*))]
-      [(forcall rator rand*) 
+      [(forcall rator rand*)
        (make-forcall rator (map Expr rand*))]
       [(assign lhs rhs)
        (assert (prelex-source-assigned? lhs))
@@ -842,7 +843,7 @@
 #|
 (letrec* (bi ...
           [x (let ([lhs* rhs*] ...) body)]
-          bj ...) 
+          bj ...)
   body)
 ===?
 (letrec* (bi ...
@@ -882,13 +883,13 @@
   (define (Expr x)
     (struct-case x
       [(constant) x]
-      [(prelex) 
+      [(prelex)
        (cond
          [(prelex-source-assigned? x)
           (cond
             [(prelex-global-location x) =>
              (lambda (loc)
-               (make-funcall 
+               (make-funcall
                  (make-primref '$symbol-value)
                  (list (make-constant loc))))]
             [else
@@ -897,15 +898,15 @@
          [else x])]
       [(primref) x]
       [(bind lhs* rhs* body)
-       (let-values ([(lhs* a-lhs* a-rhs*) (fix-lhs* lhs*)]) 
-         (make-bind lhs* (map Expr rhs*) 
+       (let-values ([(lhs* a-lhs* a-rhs*) (fix-lhs* lhs*)])
+         (make-bind lhs* (map Expr rhs*)
            (bind-assigned a-lhs* a-rhs* (Expr body))))]
       [(fix lhs* rhs* body)
        (make-fix lhs* (map Expr rhs*) (Expr body))]
       [(conditional test conseq altern)
        (make-conditional (Expr test) (Expr conseq) (Expr altern))]
       [(seq e0 e1) (make-seq (Expr e0) (Expr e1))]
-      [(clambda g cls* cp free name) 
+      [(clambda g cls* cp free name)
        (make-clambda g
          (map (lambda (cls)
                 (struct-case cls
@@ -913,7 +914,7 @@
                    (struct-case info
                      [(case-info label fml* proper)
                       (let-values ([(fml* a-lhs* a-rhs*) (fix-lhs* fml*)])
-                        (make-clambda-case 
+                        (make-clambda-case
                           (make-case-info label fml* proper)
                           (bind-assigned a-lhs* a-rhs* (Expr body))))])]))
               cls*)
@@ -931,7 +932,7 @@
                (make-funcall (make-primref '$init-symbol-value!)
                  (list (make-constant where) (Expr rhs)))]
               [(prelex-global-location lhs) =>
-               (lambda (loc) 
+               (lambda (loc)
                  (make-funcall (make-primref '$set-symbol-value!)
                    (list (make-constant loc) (Expr rhs))))]
               [else
@@ -1004,20 +1005,20 @@
   (define who 'sanitize-bindings)
   (define (CLambda x)
     (struct-case x
-      [(clambda g cls* cp free name) 
+      [(clambda g cls* cp free name)
        (make-clambda g
          (map (lambda (cls)
                 (struct-case cls
                   [(clambda-case info body)
                    (struct-case info
                      [(case-info label fml* proper)
-                      (make-clambda-case 
+                      (make-clambda-case
                         (make-case-info label fml* proper)
                         (Expr body))])]))
               cls*)
          cp free name)]))
-  (define (do-fix lhs* rhs* body) 
-    (if (null? lhs*) 
+  (define (do-fix lhs* rhs* body)
+    (if (null? lhs*)
         (Expr body)
         (make-fix lhs* (map CLambda rhs*) (Expr body))))
   (define (A x)
@@ -1030,11 +1031,11 @@
       [(var)      x]
       [(primref) x]
       [(bind lhs* rhs* body)
-       (let-values ([(lambda* other*) 
+       (let-values ([(lambda* other*)
                      (partition
                        (lambda (x) (clambda? (cdr x)))
                        (map cons lhs* rhs*))])
-         (make-bind (map car other*) 
+         (make-bind (map car other*)
                     (map Expr (map cdr other*))
            (do-fix (map car lambda*) (map cdr lambda*)
              body)))]
@@ -1043,7 +1044,7 @@
       [(conditional test conseq altern)
        (make-conditional (Expr test) (Expr conseq) (Expr altern))]
       [(seq e0 e1) (make-seq (Expr e0) (Expr e1))]
-      [(clambda g cls* cp free name) 
+      [(clambda g cls* cp free name)
        (let ([t (unique-var 'anon)])
          (make-fix (list t) (list (CLambda x)) t))]
       [(forcall op rand*)
@@ -1056,7 +1057,7 @@
 
 
 (define (untag x)
-  (struct-case x 
+  (struct-case x
     [(known x t) (values x t)]
     [else        (values x #f)]))
 
@@ -1072,7 +1073,7 @@
   (define (set-var x v)
     (struct-case v
       [(clambda) (set-var-referenced! x v)]
-      [(var) 
+      [(var)
        (cond
          [(bound-var v) => (lambda (v) (set-var-referenced! x v))]
          [else (void)])]
@@ -1085,7 +1086,7 @@
         [(clambda main-label cls*)
          (let f ([cls* cls*])
            (cond
-             [(null? cls*) 
+             [(null? cls*)
               ;;; none matching?
               (make-funcall rator rand*)]
              [else
@@ -1101,7 +1102,7 @@
                         (make-jmpcall label (strip rator)
                            (let f ([fml* (cdr fml*)] [rand* rand*])
                              (cond
-                               [(null? fml*) 
+                               [(null? fml*)
                                 ;;; FIXME: construct list afterwards
                                 (list (make-funcall (make-primref 'list) rand*))]
                                [else
@@ -1114,7 +1115,7 @@
       [else x]))
   (define (CLambda x)
     (struct-case x
-      [(clambda g cls* cp free name) 
+      [(clambda g cls* cp free name)
        (make-clambda g
          (map (lambda (cls)
                 (struct-case cls
@@ -1130,7 +1131,7 @@
   (define (A- x)
     (struct-case x
       [(known x t) (Expr x)]
-      [else (Expr x)])) 
+      [else (Expr x)]))
   (define (Expr x)
     (struct-case x
       [(constant) x]
@@ -1174,7 +1175,7 @@
       [(var-global-loc (car lhs*)) =>
        (lambda (loc)
          (make-seq
-           (make-funcall (make-primref '$init-symbol-value!) 
+           (make-funcall (make-primref '$init-symbol-value!)
              (list (make-constant loc) (car lhs*)))
            (global-assign (cdr lhs*) body)))]
       [else (global-assign (cdr lhs*) body)]))
@@ -1195,12 +1196,12 @@
   (define (Expr x)
     (struct-case x
       [(constant) x]
-      [(var) 
+      [(var)
        (cond
          [(var-global-loc x) =>
-          (lambda (loc) 
-            (make-funcall 
-              (make-primref '$symbol-value) 
+          (lambda (loc)
+            (make-funcall
+              (make-primref '$symbol-value)
               (list (make-constant loc))))]
          [else x])]
       [(primref)  x]
@@ -1208,12 +1209,12 @@
        (make-bind lhs* (map Expr rhs*)
          (global-assign lhs* (Expr body)))]
       [(fix lhs* rhs* body)
-       (make-fix lhs* (map Expr rhs*) 
+       (make-fix lhs* (map Expr rhs*)
          (global-fix lhs* (Expr body)))]
       [(conditional test conseq altern)
        (make-conditional (Expr test) (Expr conseq) (Expr altern))]
       [(seq e0 e1) (make-seq (Expr e0) (Expr e1))]
-      [(clambda g cls* cp free name) 
+      [(clambda g cls* cp free name)
        (make-clambda g
          (map (lambda (cls)
                 (struct-case cls
@@ -1238,15 +1239,15 @@
       [(var)      x]
       [(primref)  x]
       [(bind lhs* rhs* body)
-       (make-bind lhs* (map Main rhs*) 
+       (make-bind lhs* (map Main rhs*)
          (global-assign lhs* (Main body)))]
       [(fix lhs* rhs* body)
-       (make-fix lhs* (map Main rhs*) 
+       (make-fix lhs* (map Main rhs*)
          (global-fix lhs* (Main body)))]
       [(conditional test conseq altern)
        (make-conditional (Main test) (Main conseq) (Main altern))]
       [(seq e0 e1) (make-seq (Main e0) (Main e1))]
-      [(clambda g cls* cp free name) 
+      [(clambda g cls* cp free name)
        (make-clambda g
          (map (lambda (cls)
                 (struct-case cls
@@ -1286,9 +1287,9 @@
                    [(d d-free) (do-clambda* (cdr lhs*) (cdr x*))])
         (values (cons a d) (union a-free d-free)))]))
   (define (do-clambda lhs x)
-    (struct-case x 
+    (struct-case x
       [(clambda g cls* _cp _free name)
-       (let-values ([(cls* free) 
+       (let-values ([(cls* free)
                      (let f ([cls* cls*])
                        (cond
                          [(null? cls*) (values '() '())]
@@ -1301,15 +1302,15 @@
                                  (cons (make-clambda-case info body) cls*)
                                  (union (difference body-free (case-info-args info))
                                         cls*-free)))])]))])
-          (values 
-            (make-closure 
+          (values
+            (make-closure
               (make-clambda g cls* lhs free name)
               free
               #f)
             free))]))
   (define (A x)
     (struct-case x
-      [(known x t) 
+      [(known x t)
        (let-values ([(x free) (Expr x)])
          (values (make-known x t) free))]
       [else (Expr x)]))
@@ -1323,12 +1324,12 @@
   (define (Expr ex)
     (struct-case ex
       [(constant) (values ex '())]
-      [(var) 
+      [(var)
        (set-var-index! ex #f)
        (values ex (singleton ex))]
       [(primref) (values ex '())]
       [(bind lhs* rhs* body)
-       (let-values ([(rhs* rhs-free) (Expr* rhs*)] 
+       (let-values ([(rhs* rhs-free) (Expr* rhs*)]
                     [(body body-free) (Expr body)])
           (values (make-bind lhs* rhs* body)
                   (union rhs-free (difference body-free lhs*))))]
@@ -1336,8 +1337,8 @@
        (for-each (lambda (x) (set-var-index! x #t)) lhs*)
        (let-values ([(rhs* rfree) (do-clambda* lhs* rhs*)]
                     [(body bfree) (Expr body)])
-          (for-each 
-            (lambda (lhs rhs) 
+          (for-each
+            (lambda (lhs rhs)
               (when (var-index lhs)
                 (set-closure-well-known?! rhs #t)
                 (set-var-index! lhs #f)))
@@ -1350,7 +1351,7 @@
                     [(altern altern-free) (Expr altern)])
          (values (make-conditional test conseq altern)
                  (union test-free (union conseq-free altern-free))))]
-      [(seq e0 e1) 
+      [(seq e0 e1)
        (let-values ([(e0 e0-free) (Expr e0)]
                     [(e1 e1-free) (Expr e1)])
          (values (make-seq e0 e1) (union e0-free e1-free)))]
@@ -1367,7 +1368,7 @@
                      (if (optimize-cp) (Rator rator) (Expr rator))]
                     [(rand* rand*-free)
                      (A* rand*)])
-         (values (make-jmpcall label rator rand*) 
+         (values (make-jmpcall label rator rand*)
                  (union rat-free rand*-free)))]
       [else (error who "invalid expression" ex)]))
   (define (Rator x)
@@ -1378,7 +1379,7 @@
       ;   (values (make-known x t) free))]
       [else (Expr x)]))
   (let-values ([(prog free) (Expr prog)])
-    (unless (null? free) 
+    (unless (null? free)
       (error 'convert-closures "free vars encountered in program"
           (map unparse free)))
    prog))
@@ -1396,7 +1397,7 @@
     (define (set-subst! x v)
       (unless (var? x) (error 'set-subst! "not a var" x))
       (set-var-index! x (make-prop v)))
-    (define (copy-subst! lhs rhs) 
+    (define (copy-subst! lhs rhs)
       (unless (var? lhs) (error 'copy-subst! "not a var" lhs))
       (cond
         [(and (var? rhs) (var-index rhs)) =>
@@ -1405,7 +1406,7 @@
              [(prop? v) (set-var-index! lhs v)]
              [else (set-var-index! lhs #f)]))]
         [else (set-var-index! lhs #f)]))
-    (define (get-subst x) 
+    (define (get-subst x)
       (unless (var? x) (error 'get-subst "not a var" x))
       (struct-case (var-index x)
         [(prop v) v]
@@ -1420,7 +1421,7 @@
       [(clambda label cls* cp/dropped free*/dropped name)
        (let ([cls* (map
                      (lambda (x)
-                       (struct-case x 
+                       (struct-case x
                          [(clambda-case info body)
                           (for-each unset! (case-info-args info))
                           (make-clambda-case info (E body))]))
@@ -1443,11 +1444,11 @@
       (let ([body (E body)])
         (for-each unset! lhs*)
         (make-bind lhs* rhs* body))))
-  (define (trim-free ls) 
+  (define (trim-free ls)
     (cond
       [(null? ls) '()]
       [(get-forward! (car ls)) =>
-       (lambda (what) 
+       (lambda (what)
          (let ([rest (trim-free (cdr ls))])
            (struct-case what
              [(closure) rest]
@@ -1457,14 +1458,14 @@
   (define (do-fix lhs* rhs* body)
     (for-each unset! lhs*)
     (let ([free** ;;; trim the free lists first; after init.
-           (map (lambda (lhs rhs) 
+           (map (lambda (lhs rhs)
                   ;;; remove self also
                   (remq lhs (trim-free (closure-free* rhs))))
                 lhs* rhs*)])
       (define-struct node (name code deps whacked free wk?))
-      (let ([node* 
-             (map (lambda (lhs rhs) 
-                    (let ([n (make-node lhs (closure-code rhs) '() #f '() 
+      (let ([node*
+             (map (lambda (lhs rhs)
+                    (let ([n (make-node lhs (closure-code rhs) '() #f '()
                                (closure-well-known? rhs))])
                       (set-subst! lhs n)
                       n))
@@ -1472,13 +1473,13 @@
         ;;; if x is free in y, then whenever x becomes a non-combinator,
         ;;; y also becomes a non-combinator.  Here, we mark these
         ;;; dependencies.
-        (for-each 
+        (for-each
           (lambda (my-node free*)
             (for-each (lambda (fvar)
                         (cond
                           [(get-subst fvar) => ;;; one of ours
                            (lambda (her-node)
-                             (set-node-deps! her-node 
+                             (set-node-deps! her-node
                                (cons my-node (node-deps her-node))))]
                           [else ;;; not one of ours
                            (set-node-free! my-node
@@ -1496,9 +1497,9 @@
                     [else #t])
               (unless (node-whacked x)
                 (set-node-whacked! x #t)
-                (for-each 
+                (for-each
                   (lambda (y)
-                    (set-node-free! y 
+                    (set-node-free! y
                       (cons (node-name x) (node-free y)))
                     (process-node y))
                   (node-deps x)))))
@@ -1511,26 +1512,26 @@
                    (let ([wk? (node-wk? node)]
                          [name (node-name node)]
                          [free (node-free node)])
-                     (let ([closure 
+                     (let ([closure
                             (make-closure (node-code node) free wk?)])
                        (cond
                          [(null? free)
-                          (set-subst! name closure)] 
+                          (set-subst! name closure)]
                          [(and (null? (cdr free)) wk?)
-                          (set-subst! name closure)] 
+                          (set-subst! name closure)]
                          [else
                           (unset! name)])
                        closure)))
                  node*)])
-          (for-each 
+          (for-each
             (lambda (lhs^ closure)
-              (let* ([lhs (get-forward! lhs^)] 
-                     [free 
-                      (filter var? 
+              (let* ([lhs (get-forward! lhs^)]
+                     [free
+                      (filter var?
                         (remq lhs (trim-free (closure-free* closure))))])
                 (set-closure-free*! closure free)
                 (set-closure-code! closure
-                  (lift-code 
+                  (lift-code
                     lhs
                     (closure-code closure)
                     (closure-free* closure)))))
@@ -1539,8 +1540,8 @@
           (let ([body (E body)])
             (let f ([lhs* lhs*] [rhs* rhs*] [l* '()] [r* '()])
               (cond
-                [(null? lhs*) 
-                 (if (null? l*) 
+                [(null? lhs*)
+                 (if (null? l*)
                      body
                      (make-fix l* r* body))]
                 [else
@@ -1549,7 +1550,7 @@
                      [(get-subst lhs)
                       (unset! lhs)
                       (f (cdr lhs*) (cdr rhs*) l* r*)]
-                     [else 
+                     [else
                       (f (cdr lhs*) (cdr rhs*)
                          (cons lhs l*) (cons rhs r*))]))])))))))
   (define (get-forward! x)
@@ -1609,13 +1610,13 @@
 
 (begin ;;; DEFINITIONS
   (module (wordsize)
-    (import (ikarus include))
+    (import (vicare include))
     (include "ikarus.config.ss"))
   (define wordshift
     (case wordsize
       [(4) 2]
       [(8) 3]
-      [else 
+      [else
        (error 'ikarus "wordsize is neither 4 nor 8" wordsize)]))
   (define fx-scale wordsize)
   (define object-alignment (* 2 wordsize))
@@ -1666,12 +1667,12 @@
   (define bignum-tag         #b011)
   (define bignum-sign-mask   #b1000)
   (define bignum-sign-shift   3)
-  (define bignum-length-shift 4) 
+  (define bignum-length-shift 4)
   (define disp-bignum-data    wordsize)
 
   (define pagesize 4096)
   (define pageshift 12)
-  
+
   (define bytevector-mask 7)
   (define bytevector-tag 2)
   (define disp-bytevector-length 0)
@@ -1686,7 +1687,7 @@
   (define disp-symbol-record-proc    (* 4 wordsize))
   (define disp-symbol-record-plist   (* 5 wordsize))
   (define symbol-record-size         (* 6 wordsize))
-  
+
   (define record-tag  5)
   (define record-mask 7)
 
@@ -1714,22 +1715,22 @@
   (define disp-code-annotation        (* 4 wordsize))
   (define disp-code-unused            (* 5 wordsize))
   (define disp-code-data              (* 6 wordsize))
-  
+
   (define transcoder-mask                  #xFF) ;;; 0011
   (define transcoder-tag                   #x7F) ;;; 0011
   (define transcoder-payload-shift           10)
 
-  (define transcoder-write-utf8-mask     #x1000) 
-  (define transcoder-write-byte-mask     #x2000) 
-  (define transcoder-read-utf8-mask      #x4000) 
-  (define transcoder-read-byte-mask      #x8000) 
+  (define transcoder-write-utf8-mask     #x1000)
+  (define transcoder-write-byte-mask     #x2000)
+  (define transcoder-read-utf8-mask      #x4000)
+  (define transcoder-read-byte-mask      #x8000)
   (define transcoder-handling-mode-shift     16)
   (define transcoder-handling-mode-bits       2)
   (define transcoder-eol-style-shift         18)
   (define transcoder-eol-style-bits           3)
   (define transcoder-codec-shift             21)
   (define transcoder-codec-bits               3)
-  
+
   (define transcoder-handling-mode:none    #b00)
   (define transcoder-handling-mode:ignore  #b01)
   (define transcoder-handling-mode:raise   #b10)
@@ -1742,7 +1743,7 @@
   (define transcoder-eol-style:nel        #b100)
   (define transcoder-eol-style:crnel      #b101)
   (define transcoder-eol-style:ls         #b110)
-  
+
   (define transcoder-codec:none           #b000)
   (define transcoder-codec:latin-1        #b001)
   (define transcoder-codec:utf-8          #b010)
@@ -1778,7 +1779,7 @@
 
   ;;; refer to the picture in src/ikarus-collect.c for details
   ;;; on how call-frames are laid out.  (search for livemask)
-  (define call-instruction-size 
+  (define call-instruction-size
     (case wordsize
       [(4) 5]
       [(8) 10]
@@ -1872,7 +1873,7 @@
   (define (ja label) (list 'ja label))
   (define (jo label) (list 'jo label))
   (define (jmp label) (list 'jmp label))
-  (define esp '%esp) ; stack base pointer 
+  (define esp '%esp) ; stack base pointer
   (define al '%al)
   (define ah '%ah)
   (define bh '%bh)
@@ -1895,8 +1896,8 @@
   (cond
     [((current-primitive-locations) op) =>
      (lambda (x)
-       (unless (symbol? x) 
-         (error 'primitive-location 
+       (unless (symbol? x)
+         (error 'primitive-location
             "not a valid location for ~s" x op))
        x)]
     [else
@@ -1905,19 +1906,19 @@
          make-url-condition
          url-condition?
         (url condition-url))
-       (raise 
-         (condition 
+       (raise
+         (condition
            (make-error)
            (make-who-condition 'ikarus)
            (make-message-condition "primitive not supported yet")
            (make-message-condition
              "please file a bug report to help us prioritize our goals")
-           (make-url-condition 
+           (make-url-condition
              "https://bugs.launchpad.net/ikarus/+filebug")
            (make-irritants-condition (list op)))))]))
 
 ;(define (primref-loc op)
-;  (mem (fx- disp-symbol-record-proc record-tag) 
+;  (mem (fx- disp-symbol-record-proc record-tag)
 ;       (obj (primref->symbol op))))
 
 
@@ -1925,12 +1926,12 @@
 (module ;assembly-labels
   (refresh-cached-labels!
    sl-annotated-procedure-label
-   sl-apply-label 
-   sl-continuation-code-label 
+   sl-apply-label
+   sl-continuation-code-label
    sl-invalid-args-label
-   sl-mv-ignore-rp-label 
+   sl-mv-ignore-rp-label
    sl-mv-error-rp-label
-   sl-values-label 
+   sl-values-label
    sl-cwv-label)
   (define-syntax define-cached
     (lambda (x)
@@ -1942,9 +1943,9 @@
                (define (name*)
                  (or v* (error 'name* "uninitialized label"))) ...
                (define (refresh)
-                 (define-syntax name* 
+                 (define-syntax name*
                    (lambda (stx)
-                     (syntax-error stx 
+                     (syntax-error stx
                         "cannot use label before it is defined")))
                  ...
                  (let* ([name* (let ([label (let () b* b** ...)])
@@ -1957,7 +1958,7 @@
     (define SL_annotated (gensym "SL_annotated"))
     (assemble-sources (lambda (x) #f)
       (list
-        (list 2 
+        (list 2
           `(name ,(make-annotation-indirect))
           (label SL_annotated)
           (movl (mem (fx- (fx+ disp-closure-data wordsize) closure-tag) cpr) cpr)
@@ -1969,7 +1970,7 @@
           [L_apply_loop (gensym)])
       (assemble-sources (lambda (x) #f)
         (list
-          (list 0 
+          (list 0
               (label SL_apply)
               (movl (mem fpr eax) ebx)
               (cmpl (int nil) ebx)
@@ -1989,7 +1990,7 @@
     (define SL_continuation_code (gensym "SL_continuation_code"))
     (assemble-sources (lambda (x) #f)
       (list
-        (let ([L_cont_zero_args      (gensym)] 
+        (let ([L_cont_zero_args      (gensym)]
               [L_cont_mult_args      (gensym)]
               [L_cont_one_arg        (gensym)]
               [L_cont_mult_move_args (gensym)]
@@ -2094,7 +2095,7 @@
               [L_cwv_call (gensym)]
               [SL_nonprocedure (gensym "SL_nonprocedure")]
               [SL_invalid_args (gensym "SL_invalid_args")])
-          (list 
+          (list
               0 ; no free vars
               '(name call-with-values)
               (label SL_call_with_values)
@@ -2124,7 +2125,7 @@
               (label L_cwv_multi_rp)
               ; because values does not pop the return point
               ; we have to adjust fp one more word here
-              (addl (int (fx* wordsize 3)) fpr) 
+              (addl (int (fx* wordsize 3)) fpr)
               (movl (mem (fx* -2 wordsize) fpr) cpr) ; consumer
               (cmpl (int (argc-convention 0)) eax)
               (je (label L_cwv_done))
@@ -2170,7 +2171,7 @@
   (cond
     [(and (pair? x) (eq? (car x) 'seq))
      (for-each print-instr (cdr x))]
-    [else 
+    [else
      (printf "    ~s\n" x)]))
 
 (define optimizer-output (make-parameter #f))
@@ -2182,7 +2183,7 @@
               (optimize-direct-calls p))]
          [p (optimize-letrec p)]
          [p (source-optimize p)]
-         [dummy 
+         [dummy
           (begin
             (when (optimizer-output)
                (pretty-print (unparse-pretty p)))
@@ -2201,13 +2202,13 @@
       (when (assembler-output)
         (parameterize ([gensym-prefix "L"]
                        [print-gensym #f])
-          (for-each 
+          (for-each
             (lambda (ls)
               (newline)
               (for-each print-instr ls))
             ls*)))
-      (let ([code* 
-             (assemble-sources 
+      (let ([code*
+             (assemble-sources
                (lambda (x)
                  (if (closure? x)
                      (if (null? (closure-free* x))
@@ -2237,7 +2238,7 @@
           (die 'current-core-eval "not a procedure" x)))))
 
 (define eval-core
-  (lambda (x) 
+  (lambda (x)
     ((current-core-eval) x)))
 
 (include "ikarus.compiler.altcogen.ss")
@@ -2248,8 +2249,8 @@
       [() plocs]
       [(p)
        (if (procedure? p)
-           (begin 
-             (set! plocs p) 
+           (begin
+             (set! plocs p)
              (refresh-cached-labels!))
            (error 'current-primitive-locations "not a procedure" p))])))
 
@@ -2268,7 +2269,7 @@
     [(x) (expand/scc-letrec x (interaction-environment))]
     [(x env)
      (expand/pretty x env 'expand/scc-letrec
-       (lambda (x) 
+       (lambda (x)
          (parameterize ([open-mvcalls #f])
             (optimize-direct-calls x)))
        (lambda (x)
@@ -2280,7 +2281,7 @@
     [(x) (expand/optimize x (interaction-environment))]
     [(x env)
      (expand/pretty x env 'expand/optimize
-       (lambda (x) 
+       (lambda (x)
          (parameterize ([open-mvcalls #f])
             (optimize-direct-calls x)))
        optimize-letrec

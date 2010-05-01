@@ -1,22 +1,23 @@
-#!../src/ikarus -b ikarus.boot --r6rs-script
+#!../src/vicare -b vicare.boot --r6rs-script
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
+;;; Modified by Marco Maggi
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; vim:syntax=scheme
 (import (only (ikarus) import))
-(import (except (ikarus) 
+(import (except (ikarus)
           current-letrec-pass
           current-core-eval
           assembler-output optimize-cp optimize-level
@@ -25,7 +26,7 @@
           optimizer-output tag-analysis-output perform-tag-analysis))
 (import (ikarus.compiler))
 (import (except (psyntax system $bootstrap)
-                eval-core 
+                eval-core
                 current-primitive-locations
                 compile-core-expr-to-port))
 (import (ikarus.compiler)) ; just for fun
@@ -50,11 +51,11 @@
   ;;;  an error (e.g. "not an output port"), while the error
   ;;;  procedure may call the printer to display the message.
   ;;;  This works fine as long as error does not itself cause
-  ;;;  an error (which may lead to the infamous Error: Error: 
+  ;;;  an error (which may lead to the infamous Error: Error:
   ;;;  Error: Error: Error: Error: Error: Error: Error: ...).
   ;;;
   '(
-    
+
     "ikarus.singular-objects.ss"
     "ikarus.handlers.ss"
     "ikarus.multiple-values.ss"
@@ -154,7 +155,7 @@
     [with-syntax         (macro . with-syntax)]
     [identifier-syntax   (macro . identifier-syntax)]
     [parameterize        (macro . parameterize)]
-    [when                (macro . when)]         
+    [when                (macro . when)]
     [unless              (macro . unless)]
     [let                 (macro . let)]
     [let*                (macro . let*)]
@@ -185,9 +186,9 @@
     [buffer-mode         (macro . buffer-mode)]
     [file-options        (macro . file-options)]
     [error-handling-mode (macro . error-handling-mode)]
-    [fields              (macro . fields)] 
+    [fields              (macro . fields)]
     [mutable             (macro . mutable)]
-    [immutable           (macro . immutable)] 
+    [immutable           (macro . immutable)]
     [parent              (macro . parent)]
     [protocol            (macro . protocol)]
     [sealed              (macro . sealed)]
@@ -1553,32 +1554,32 @@
 
   ))
 
-(define (macro-identifier? x) 
+(define (macro-identifier? x)
   (and (assq x ikarus-system-macros) #t))
 
 (define (procedure-identifier? x)
   (not (macro-identifier? x)))
 
 (define bootstrap-collection
-  (let ([ls 
+  (let ([ls
          (let f ([ls library-legend])
            (define required? cadddr)
            (define library-name cadr)
            (cond
              [(null? ls) '()]
-             [(required? (car ls)) 
+             [(required? (car ls))
               (cons (find-library-by-name (library-name (car ls)))
                     (f (cdr ls)))]
              [else (f (cdr ls))]))])
     (case-lambda
       [() ls]
-      [(x) (unless (memq x ls) 
+      [(x) (unless (memq x ls)
              (set! ls (cons x ls)))])))
 
 (define (verify-map)
   (define (f x)
-    (for-each 
-      (lambda (x) 
+    (for-each
+      (lambda (x)
         (unless (assq x library-legend)
           (error 'verify "not in the libraries list" x)))
       (cdr x)))
@@ -1608,19 +1609,19 @@
   (let f ([x x] [ls ls] [p #f])
     (cond
       [(null? ls) p]
-      [(eq? x (caar ls)) 
+      [(eq? x (caar ls))
        (if p
-           (if (pair? p) 
+           (if (pair? p)
                (if (eq? (cdr p) (cdar ls))
                    (f x (cdr ls) p)
                    (f x (cdr ls) 2))
                (f x (cdr ls) (+ p 1)))
            (f x (cdr ls) (car ls)))]
       [else (f x (cdr ls) p)])))
-      
+
 (define (make-system-data subst env)
   (define who 'make-system-data)
-  (let ([export-subst    (make-collection)] 
+  (let ([export-subst    (make-collection)]
         [export-env      (make-collection)]
         [export-primlocs (make-collection)])
     (for-each
@@ -1639,7 +1640,7 @@
             [(assq1 x subst) =>
              ;;; primitive defined (exported) within the compiled libraries
              (lambda (p)
-               (unless (pair? p) 
+               (unless (pair? p)
                  (error who "invalid exports" p x))
                (let ([label (cdr p)])
                  (cond
@@ -1647,14 +1648,14 @@
                     (lambda (p)
                       (let ([binding (cdr p)])
                         (case (car binding)
-                          [(global) 
+                          [(global)
                            (export-subst (cons x label))
                            (export-env   (cons label (cons 'core-prim x)))
                            (export-primlocs (cons x (cdr binding)))]
-                          [else 
+                          [else
                            (error #f "invalid binding for identifier" p x)])))]
                    [else (error #f "cannot find binding" x label)])))]
-            [else 
+            [else
              ;;; core primitive with no backing definition, assumed to
              ;;; be defined in other strata of the system
              ;(printf "undefined primitive ~s\n" x)
@@ -1676,10 +1677,10 @@
               =>
               (lambda (q)
                 (cond
-                  [(memq key (cdr q)) 
+                  [(memq key (cdr q))
                    (cons x (f (cdr ls)))]
                   [else (f (cdr ls))]))]
-             [else 
+             [else
               ;;; not going to any library?
               (f (cdr ls))])))])))
 
@@ -1687,7 +1688,7 @@
   (define (build-library legend-entry)
     (let ([key (car legend-entry)]
           [name (cadr legend-entry)]
-          [visible? (caddr legend-entry)]) 
+          [visible? (caddr legend-entry)])
       (let ([id     (gensym)]
             [name       name]
             [version    (if (eq? (car name) 'rnrs) '(6) '())]
@@ -1695,17 +1696,17 @@
             [visit-libs  '()]
             [invoke-libs '()])
         (let-values ([(subst env)
-                      (if (equal? name '(psyntax system $all)) 
+                      (if (equal? name '(psyntax system $all))
                           (values export-subst export-env)
                           (values
                             (get-export-subset key export-subst)
                             '()))])
-          `(install-library 
+          `(install-library
              ',id ',name ',version ',import-libs ',visit-libs ',invoke-libs
              ',subst ',env void void '#f '#f '#f '() ',visible? '#f)))))
   (let ([code `(library (ikarus primlocs)
                   (export) ;;; must be empty
-                  (import 
+                  (import
                     (only (ikarus.symbols) system-value-gensym)
                     (only (psyntax library-manager)
                           install-library)
@@ -1716,7 +1717,7 @@
                     (for-each
                       (lambda (x) (putprop (car x) g (cdr x)))
                       ',primlocs)
-                    (let ([proc 
+                    (let ([proc
                            (lambda (x) (getprop x g))])
                       (current-primitive-locations proc)))
                   ,@(map build-library library-legend))])
@@ -1727,7 +1728,7 @@
 ;;; the first code to run on the system is one that initializes
 ;;; the value and proc fields of the location of $init-symbol-value!
 ;;; Otherwise, all subsequent inits to any global variable will
-;;; segfault.  
+;;; segfault.
 
 (define (make-init-code)
   (define proc (gensym))
@@ -1736,22 +1737,22 @@
   (define sym (gensym))
   (define val (gensym))
   (define args (gensym))
-  (values 
+  (values
     (list '(ikarus.init))
     (list
-      `((case-lambda 
+      `((case-lambda
           [(,proc) (,proc ',loc ,proc)])
         (case-lambda
           [(,sym ,val)
            (begin
              ((primitive $set-symbol-value!) ,sym ,val)
-             (if ((primitive procedure?) ,val) 
+             (if ((primitive procedure?) ,val)
                  ((primitive $set-symbol-proc!) ,sym ,val)
                  ((primitive $set-symbol-proc!) ,sym
-                    (case-lambda 
+                    (case-lambda
                       [,args
                        ((primitive error)
-                         'apply 
+                         'apply
                          '"not a procedure"
                          ((primitive $symbol-value) ,sym))]))))])))
     `([$init-symbol-value! . ,label])
@@ -1763,9 +1764,9 @@
   ;;; remove all re-exported identifiers (those with labels in
   ;;; subst but not binding in env).
   (define (prune-subst subst env)
-    (cond 
-      ((null? subst) '()) 
-      ((not (assq (cdar subst) env)) (prune-subst (cdr subst) env)) 
+    (cond
+      ((null? subst) '())
+      ((not (assq (cdar subst) env)) (prune-subst (cdr subst) env))
       (else (cons (car subst) (prune-subst (cdr subst) env)))))
   (let-values (((name* code* subst env) (make-init-code)))
     (debugf "Expanding ")
@@ -1773,7 +1774,7 @@
       (lambda (file)
         (debugf " ~s" file)
         (load (string-append src-dir "/" file)
-          (lambda (x) 
+          (lambda (x)
             (let-values ([(name code export-subst export-env)
                           (boot-library-expand x)])
                (set! name* (cons name name*))
@@ -1786,7 +1787,7 @@
                   (make-system-data (prune-subst subst env) env)])
       (let-values ([(name code)
                     (build-system-library export-subst export-env export-locs)])
-        (values 
+        (values
           (reverse (cons* (car name*) name (cdr name*)))
           (reverse (cons* (car code*) code (cdr code*)))
           export-locs)))))
@@ -1797,7 +1798,7 @@
   (lambda ()
     (let-values ([(name* core* locs)
                   (time-it "macro expansion"
-                    (lambda () 
+                    (lambda ()
                       (parameterize ([current-library-collection
                                        bootstrap-collection])
                         (expand-all scheme-library-files))))])
@@ -1805,19 +1806,19 @@
           (lambda (x)
             (cond
               [(assq x locs) => cdr]
-              [else 
+              [else
                (error 'bootstrap "no location for primitive" x)])))
-        (let ([p (open-file-output-port "ikarus.boot" 
+        (let ([p (open-file-output-port "vicare.boot"
                     (file-options no-fail))])
           (time-it "code generation and serialization"
             (lambda ()
               (debugf "Compiling ")
-              (for-each 
-                (lambda (name core) 
+              (for-each
+                (lambda (name core)
                   (debugf " ~s" name)
                   (compile-core-expr-to-port core p))
                 name*
-                core*) 
+                core*)
               (debugf "\n")))
           (close-output-port p)))))
 

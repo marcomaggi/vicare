@@ -1,5 +1,6 @@
+## Process this file with automake to produce Makefile.in
 
-nodist_pkglib_DATA=ikarus.boot
+nodist_pkglib_DATA=vicare.boot
 
 EXTRA_DIST=ikarus.boot.4.prebuilt ikarus.boot.8.prebuilt last-revision \
   ikarus.enumerations.ss run-tests.ss \
@@ -100,6 +101,9 @@ EXTRA_DIST=ikarus.boot.4.prebuilt ikarus.boot.8.prebuilt last-revision \
   tests/tests-5.6-req.scm \
   tests/unicode.ss
 
+NEW_BOOT_FILE	= vicare.boot
+NEW_EXECUTABLE	= ../src/vicare
+
 all: $(nodist_pkglib_DATA)
 
 $(srcdir)/last-revision:
@@ -118,15 +122,20 @@ ikarus.config.ss: Makefile last-revision ../config.h
 CLEANFILES=$(nodist_pkglib_DATA) ikarus.config.ss
 MAINTAINERCLEANFILES=last-revision
 
-ikarus.boot: $(EXTRA_DIST) ikarus.config.ss
+# To  create the  new  boot image  we  use a  prebuilt  boot image;  the
+# environment variable  names are hardcoded  in the prebuilt  boot image
+# and are the Ikarus' ones.
+$(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
 	IKARUS_SRC_DIR=$(srcdir) \
   IKARUS_BUILD_DIR=$(builddir) \
   IKARUS_FASL_DIRECTORY='' \
   IKARUS_LIBRARY_PATH=.:$(srcdir):$(srcdir)/../lib \
-  ../src/ikarus -b $(srcdir)/ikarus.boot.$(sizeofvoidp).prebuilt \
+  $(NEW_EXECUTABLE) -b $(srcdir)/ikarus.boot.$(sizeofvoidp).prebuilt \
   --r6rs-script $(srcdir)/makefile.ss
 
-check: ikarus.boot
+check: $(NEW_BOOT_FILE)
 	IKARUS_SRC_DIR=$(srcdir) \
-  IKARUS_LIBRARY_PATH=$(srcdir) \
-  ../src/ikarus -b ikarus.boot --r6rs-script $(srcdir)/run-tests.ss
+  VICARE_LIBRARY_PATH=$(srcdir) \
+  $(NEW_EXECUTABLE) -b $(NEW_BOOT_FILE) --r6rs-script $(srcdir)/run-tests.ss
+
+### end of file

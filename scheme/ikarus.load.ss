@@ -1,22 +1,23 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
+;;; Modified by Marco Maggi
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 (library (ikarus load)
   (export load load-r6rs-script fasl-directory)
-  (import 
+  (import
     (except (ikarus) fasl-directory load load-r6rs-script)
     (only (ikarus.compiler) compile-core-expr)
     (only (psyntax library-manager)
@@ -26,24 +27,24 @@
 
   (define-struct serialized-library (contents))
 
-  (define fasl-extension 
+  (define fasl-extension
     (cond
-      [(<= (fixnum-width) 32) ".ikarus-32bit-fasl"]
-      [else                   ".ikarus-64bit-fasl"]))
+      [(<= (fixnum-width) 32) ".vicare-32bit-fasl"]
+      [else                   ".vicare-64bit-fasl"]))
 
-  (define fasl-directory 
-    (make-parameter 
+  (define fasl-directory
+    (make-parameter
       (cond
-        [(getenv "IKARUS_FASL_DIRECTORY")]
+        [(getenv "VICARE_FASL_DIRECTORY")]
         [(getenv "HOME") =>
          (lambda (s)
-           (string-append s "/.ikarus/precompiled"))]
+           (string-append s "/.vicare/precompiled"))]
         [else ""])
       (lambda (s)
         (if (string? s)
             s
             (die 'fasl-directory "not a string" s)))))
-      
+
   (define (fasl-path filename)
     (let ([d (fasl-directory)])
       (and (not (string=? d ""))
@@ -56,12 +57,12 @@
         [(< (file-mtime ikfasl) (file-mtime filename))
          (fprintf (current-error-port)
             "WARNING: not using fasl file ~s because it is older \
-             than the source file ~s\n" 
+             than the source file ~s\n"
            ikfasl
            filename)
          #f]
         [else
-         (let ([x 
+         (let ([x
                 (let ([p (open-file-input-port ikfasl)])
                   (let ([x (fasl-read p)])
                     (close-input-port p)
@@ -71,7 +72,7 @@
                (begin
                  (fprintf (current-error-port)
                     "WARNING: not using fasl file ~s because it was \
-                     compiled with a different instance of ikarus.\n" 
+                     compiled with a different instance of ikarus.\n"
                     ikfasl)
                  #f)))])))
 
@@ -115,7 +116,7 @@
 
   (define load-r6rs-script
     (lambda (filename serialize? run?)
-      (unless (string? filename) 
+      (unless (string? filename)
         (die 'load-r6rs-script "file name is not a string" filename))
       (let ([prog (read-script-source-file filename)])
         (let([thunk (compile-r6rs-top-level prog)])
@@ -123,10 +124,10 @@
             (serialize-all
               (lambda (file-name contents)
                 (do-serialize-library file-name contents))
-              (lambda (core-expr) 
+              (lambda (core-expr)
                 (compile-core-expr core-expr))))
           (when run? (thunk))))))
 
   (current-precompiled-library-loader load-serialized-library)
-  
+
   )

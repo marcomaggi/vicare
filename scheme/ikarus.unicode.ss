@@ -1,26 +1,27 @@
 ;;; Copyright (C) 2008  Abdulaziz Ghuloum, R. Kent Dybvig
 ;;; Copyright (C) 2006,2007  Abdulaziz Ghuloum
-;;; 
+;;; Modified by Marco Maggi.
+;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining a
 ;;; copy of this software and associated documentation files (the "Software"),
 ;;; to deal in the Software without restriction, including without limitation
 ;;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
 ;;; and/or sell copies of the Software, and to permit persons to whom the
 ;;; Software is furnished to do so, subject to the following conditions:
-;;; 
+;;;
 ;;; The above copyright notice and this permission notice shall be included in
 ;;; all copies or substantial portions of the Software.
-;;; 
+;;;
 ;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 ;;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 ;;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
 ;;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 ;;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 ;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-;;; DEALINGS IN THE SOFTWARE. 
+;;; DEALINGS IN THE SOFTWARE.
 
 (library (ikarus.unicode)
-  (export 
+  (export
     unicode-printable-char?
     char-upcase char-downcase char-titlecase char-foldcase
     char-whitespace? char-lower-case? char-upper-case?
@@ -30,29 +31,29 @@
     string-foldcase string-titlecase  string-ci<? string-ci<=?
     string-ci=? string-ci>? string-ci>=? string-normalize-nfd
     string-normalize-nfkd string-normalize-nfc string-normalize-nfkc )
-  (import 
-    (ikarus include)
-    (except (ikarus) 
-      unicode-printable-char?
-      char-upcase char-downcase char-titlecase char-foldcase
-      char-whitespace? char-lower-case? char-upper-case?
-      char-title-case?  char-numeric?
-      char-alphabetic? char-general-category char-ci<? char-ci<=?
-      char-ci=? char-ci>? char-ci>=? string-upcase string-downcase
-      string-foldcase string-titlecase  string-ci<? string-ci<=?
-      string-ci=? string-ci>? string-ci>=? string-normalize-nfd
-      string-normalize-nfkd string-normalize-nfc string-normalize-nfkc ))
+  (import
+      (vicare include)
+    (except (ikarus)
+	    unicode-printable-char?
+	    char-upcase char-downcase char-titlecase char-foldcase
+	    char-whitespace? char-lower-case? char-upper-case?
+	    char-title-case?  char-numeric?
+	    char-alphabetic? char-general-category char-ci<? char-ci<=?
+	    char-ci=? char-ci>? char-ci>=? string-upcase string-downcase
+	    string-foldcase string-titlecase  string-ci<? string-ci<=?
+	    string-ci=? string-ci>? string-ci>=? string-normalize-nfd
+	    string-normalize-nfkd string-normalize-nfc string-normalize-nfkc ))
 
 
 
-(module UNSAFE 
+(module UNSAFE
   (fx< fx<= fx> fx>= fx= fx+ fx-
    fxior fxand fxsra fxsll fxzero?
    integer->char char->integer
    char<? char<=? char=? char>? char>=?
    string-ref string-set! string-length
    vector-ref vector-set! vector-length)
-  (import 
+  (import
     (rename (ikarus system $strings)
       ($string-length string-length)
       ($string-ref    string-ref)
@@ -60,7 +61,7 @@
     (rename (ikarus system $vectors)
       ($vector-length vector-length)
       ($vector-ref    vector-ref)
-      ($vector-set!   vector-set!)) 
+      ($vector-set!   vector-set!))
     (rename (ikarus system $chars)
       ($char->fixnum char->integer)
       ($fixnum->char integer->char)
@@ -108,7 +109,7 @@
     [(_ name unsafe-op)
      (define name
        (lambda (c)
-         (if (char? c) 
+         (if (char? c)
              (unsafe-op c)
              (assertion-violation 'name "not a char" c))))]))
 
@@ -126,7 +127,7 @@
 (define-char-op char-general-category $char-category)
 
 (define (do-char-cmp a ls cmp who)
-  (if (char? a) 
+  (if (char? a)
       (let f ([a ($char-foldcase a)] [ls ls])
         (cond
           [(null? ls) #t]
@@ -166,11 +167,11 @@
 (define-char-cmp char-ci>? char>?)
 (define-char-cmp char-ci>=? char>=?)
 
-(define (handle-special str ac) 
+(define (handle-special str ac)
   (define (chars ac n)
     (cond
       [(null? ac) n]
-      [else 
+      [else
        (chars (cdr ac)
          (let f ([p (cdar ac)] [n n])
            (cond
@@ -179,18 +180,18 @@
   (define (extend src ac src-len dst-len)
     (let f ([str str] [dst (make-string dst-len)] [i 0] [j 0] [ac (reverse ac)] [sigma* '()])
       (cond
-        [(null? ac) 
+        [(null? ac)
          (string-copy! str i dst j (fx- src-len i))
          (do-sigmas dst sigma*)]
         [else
          (let ([idx (caar ac)] [c* (cdar ac)] [ac (cdr ac)])
            (let ([cnt (fx- idx i)])
              (string-copy! str i dst j cnt)
-             (let g ([str str]       [dst dst] 
-                     [i (fx+ i cnt)] [j (fx+ j cnt)] 
-                     [ac ac]         [c* c*]) 
+             (let g ([str str]       [dst dst]
+                     [i (fx+ i cnt)] [j (fx+ j cnt)]
+                     [ac ac]         [c* c*])
                (cond
-                 [(pair? c*) 
+                 [(pair? c*)
                   (string-set! dst j (car c*))
                   (g str dst i (fx+ j 1) ac (cdr c*))]
                  [(char? c*)
@@ -222,8 +223,8 @@
   (let ([n (string-length str)])
     (let f ([str str] [dst (make-string n)] [i 0] [n n] [ac '()])
       (cond
-        [(fx= i n) 
-         (if (null? ac) 
+        [(fx= i n)
+         (if (null? ac)
              dst
              (handle-special dst ac))]
         [else
@@ -233,7 +234,7 @@
               (string-set! dst i c/ls)
               (f str dst (fx+ i 1) n ac)]
              [else
-              (f str dst (fx+ i 1) n 
+              (f str dst (fx+ i 1) n
                  (cons (cons i c/ls) ac))]))]))))
 
 
@@ -243,7 +244,7 @@
     [(_ name unsafe-op)
      (define name
        (lambda (s)
-         (if (string? s) 
+         (if (string? s)
              (unsafe-op s)
              (assertion-violation 'name "not a string" s))))]))
 
@@ -410,7 +411,7 @@
 
 
 (define (do-string-cmp a ls cmp who)
-  (if (string? a) 
+  (if (string? a)
       (let f ([a a] [ls ls])
         (cond
           [(null? ls) #t]
@@ -444,9 +445,9 @@
           (do-string-cmp s1 rest cmp 'name)]))]))
 
 (define-string-cmp string-ci=? $string-ci=?)
-(define-string-cmp string-ci<? 
+(define-string-cmp string-ci<?
   (lambda (s1 s2) ($string-ci<? s1 s2)))
-(define-string-cmp string-ci<=? 
+(define-string-cmp string-ci<=?
   (lambda (s1 s2) (not ($string-ci<? s2 s1))))
 (define-string-cmp string-ci>=?
   (lambda (s1 s2) (not ($string-ci<? s1 s2))))
@@ -560,7 +561,7 @@
               (set! ac (cons c ac))
               (let ([c1 (string-ref s i)])
                 (cond
-                  [(and (and (char<=? hangul-lbase c) 
+                  [(and (and (char<=? hangul-lbase c)
                              (char<=? c hangul-llimit))
                         (and (char<=? hangul-vbase c1)
                              (char<=? c1 hangul-vlimit)))

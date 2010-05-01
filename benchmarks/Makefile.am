@@ -1,3 +1,4 @@
+## Process this file with automake to produce Makefile.in
 
 EXTRA_DIST=README bench.ss benchall.ss rn100 parsing-data.ss \
   summarize.pl rnrs-benchmarks.ss bib \
@@ -64,12 +65,14 @@ EXTRA_DIST=README bench.ss benchall.ss rn100 parsing-data.ss \
   rnrs-benchmarks/trav1.ss \
   rnrs-benchmarks/trav2.ss \
   rnrs-benchmarks/triangl.ss \
-  rnrs-benchmarks/wc.ss 
+  rnrs-benchmarks/wc.ss
 
-benchall: 
+benchall:
 	date +"NOW: %Y-%m-%d %H:%M:%S" >>timelog
-	../src/ikarus -b ../scheme/ikarus.boot --r6rs-script benchall.ss 2>>timelog
+	../src/vicare -b ../scheme/vicare.boot --r6rs-script benchall.ss 2>>timelog
 	rm -f z*.scm z*.tex
 
 clean:
 	rm -f z*.scm z*.tex
+
+### end of file

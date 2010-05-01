@@ -29,11 +29,11 @@ the work  of many  people in the  course of  many years; revision  6 was
 edited by Michael  Sperber, R. Kent Dybvig, Matthew  Flatt and Anton Van
 Straaten.
 
-  Ikarus  is  an almost  R6RS  compliant  implementation  of the  Scheme
+  Ikarus Scheme is an almost R6RS compliant implementation of the Scheme
 programming language;  it is the creation of  Abdulaziz Ghuloum.  Vicare
-(pronounced the etruscan  way) is an experimental fork  of Ikarus Scheme
-which  aims at  fixing bugs  and enhance  some features  like  the POSIX
-interface.
+Scheme is  an experimental  fork of Ikarus  Scheme which aims  at fixing
+bugs and  enhance some  features like the  POSIX interface;  "Vicare" is
+pronounced the etruscan way.
 
 
 1.1 Policy
@@ -54,12 +54,14 @@ Vicare has the following short and midterm goals:
 
 * Accept patches to expose the POSIX interface at the Scheme level.
 
+* Reject big and revolutionary patches.
+
 
 2. License
 ----------
 
 Copyright (c) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
-Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+Modified by the Vicare contributors.
 
 This program is free software:  you can redistribute it and/or modify it
 under the  terms of the GNU  General Public License as  published by the

@@ -5,30 +5,31 @@
 ;;; The copyright below is for the R6RS implementation not part
 ;;; of the original work.
 
-;;; Copyright (c) 2009 Abdulaziz Ghuloum 
-;;; 
+;;; Copyright (c) 2009 Abdulaziz Ghuloum
+;;; Modified by Marco Maggi
+;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining a
 ;;; copy of this software and associated documentation files (the "Software"),
 ;;; to deal in the Software without restriction, including without limitation
 ;;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
 ;;; and/or sell copies of the Software, and to permit persons to whom the
 ;;; Software is furnished to do so, subject to the following conditions:
-;;; 
+;;;
 ;;; The above copyright notice and this permission notice shall be included in
 ;;; all copies or substantial portions of the Software.
-;;; 
+;;;
 ;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 ;;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 ;;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
 ;;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 ;;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 ;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-;;; DEALINGS IN THE SOFTWARE. 
+;;; DEALINGS IN THE SOFTWARE.
 
 
 
 
-;;;  (parse-flonum <fl> 
+;;;  (parse-flonum <fl>
 ;;;    (lambda (positive? digits:list-of-chars exponent:int)
 ;;;      ---)
 ;;;    (lambda (inf/nan:string)
@@ -36,11 +37,11 @@
 ;;;  calls one of the two procedures depending on whether the
 ;;;  number has a real value or not.
 
-(library (ikarus flonum-parser)
+(library (vicare flonum-parser)
   (export parse-flonum)
 
   (import (rnrs))
-  
+
   (define fxsll fxarithmetic-shift-left)
   (define fxsra fxarithmetic-shift-right)
 
@@ -59,8 +60,8 @@
   (define (flonum-parts x)
     (flonum-bytes x
       (lambda (b0 b1 b2 b3 b4 b5 b6 b7)
-        (values 
-          (zero? (fxand b0 128)) 
+        (values
+          (zero? (fxand b0 128))
           (+ (fxsll (fxand b0 127) 4)
              (fxsra b1 4))
           (+ (+ b7 (fxsll b6 8) (fxsll b5 16))
@@ -85,7 +86,7 @@
                 (scale (* f 2) (* (expt b (- e)) 2) 1 1 0 B round? f e)
                 (scale (* f b 2) (* (expt b (- 1 e)) 2) b 1 0 B round? f e))))))
 
-  (define (len n) 
+  (define (len n)
     (let f ([n n] [i 0])
       (cond
         [(zero? n) i]
@@ -94,8 +95,8 @@
   (define scale
     (lambda (r s m+ m- k B round? f e)
       (let ([est (exact
-                   (ceiling 
-                     (- (* (+ e (len f) -1) (invlog2of B)) 
+                   (ceiling
+                     (- (* (+ e (len f) -1) (invlog2of B))
                         1e-10)))])
         (if (>= est 0)
             (fixup r (* s (exptt B est)) m+ m- est B round?)
@@ -103,7 +104,7 @@
               (fixup (* r scale) s (* m+ scale) (* m- scale) est B round?))))))
 
   (define fixup
-    (lambda (r s m+ m- k B round?) 
+    (lambda (r s m+ m- k B round?)
       (if ((if round? >= >) (+ r m+) s) ; too low?
           (values (+ k 1) (generate r s m+ m- B round?))
           (values k (generate (* r B) s (* m+ B) (* m- B) B round?)))))
@@ -112,12 +113,12 @@
     (vector-ref '#(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9) x))
 
   (define generate
-    (lambda (r s m+ m- B round?) 
+    (lambda (r s m+ m- B round?)
       (let-values ([(q r) (div-and-mod r s)])
         (let ([tc1 ((if round? <= <) r m-)]
               [tc2 ((if round? >= >) (+ r m+) s)])
           (if (not tc1)
-              (if (not tc2) 
+              (if (not tc2)
                   (cons (chr q) (generate (* r B) s (* m+ B) (* m- B) B round?))
                   (list (chr (+ q 1))))
               (if (not tc2)

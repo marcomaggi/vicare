@@ -21,7 +21,7 @@
 
 (library (ikarus startup)
   (export print-greeting init-library-path host-info split-path)
-  (import (except (ikarus) host-info) (ikarus include))
+  (import (except (ikarus) host-info) (vicare include))
   (include "ikarus.config.ss")
 
   (define (host-info) target)
@@ -44,7 +44,7 @@
 
 
   (define (print-greeting)
-    (printf "Ikarus Scheme version ~a~a~a~a\n"
+    (printf "Vicare Scheme version ~a~a~a~a\n"
       ikarus-version
       (if (zero? (string-length ikarus-revision)) "" "+")
       (if (= (fixnum-width) 30)
@@ -53,17 +53,16 @@
       (if (zero? (string-length ikarus-revision))
           ""
           (format " (revision ~a, build ~a)"
-	    ikarus-revision
-;;;            (+ 1 (string->number ikarus-revision))
+	    ikarus-revision #;(+ 1 (string->number ikarus-revision))
             (let-syntax ([ds (lambda (x) (date-string))])
               ds))))
-    (display "Copyright (c) 2006-2010 Abdulaziz Ghuloum\n\n"))
+    (display "Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors\n\n"))
 
   (define (init-library-path)
     (library-path
       (append
         (cond
-          [(getenv "IKARUS_LIBRARY_PATH") => split-path]
+          [(getenv "VICARE_LIBRARY_PATH") => split-path]
           [else '(".")])
         (list ikarus-lib-dir)))
     (let ([prefix
@@ -71,7 +70,7 @@
              (append (map (lambda (x) (string-append ext x)) ls) ls))])
       (library-extensions
         (prefix "/main"
-          (prefix ".ikarus"
+          (prefix ".vicare"
             (library-extensions)))))))
 
 
@@ -93,7 +92,7 @@
   (define (parse-command-line-arguments)
     (let f ([args (command-line-arguments)] [k void])
       (define (invalid-rc-error)
-        (die 'ikarus "--no-rcfile is invalid with --rcfile"))
+        (die 'vicare "--no-rcfile is invalid with --rcfile"))
       (cond
         [(null? args) (values '() #f #f '() k)]
         [(member (car args) '("-d" "--debug"))
@@ -112,7 +111,7 @@
          (f (cdr args) k)]
         [(string=? (car args) "--rcfile")
          (let ([d (cdr args)])
-           (when (null? d) (die 'ikarus "--rcfile requires a script name"))
+           (when (null? d) (die 'vicare "--rcfile requires a script name"))
            (set! rcfiles
              (cons (car d)
                (case rcfiles
@@ -125,23 +124,23 @@
         [(string=? (car args) "--script")
          (let ([d (cdr args)])
            (cond
-             [(null? d) (die 'ikarus "--script requires a script name")]
+             [(null? d) (die 'vicare "--script requires a script name")]
              [else (values '() (car d) 'script (cdr d) k)]))]
         [(string=? (car args) "--r6rs-script")
          (let ([d (cdr args)])
            (cond
-             [(null? d) (die 'ikarus "--r6rs-script requires a script name")]
+             [(null? d) (die 'vicare "--r6rs-script requires a script name")]
              [else (values '() (car d) 'r6rs-script (cdr d) k)]))]
         [(string=? (car args) "--r6rs-repl")
          (let ([d (cdr args)])
            (cond
-             [(null? d) (die 'ikarus "--r6rs-repl requires a script name")]
+             [(null? d) (die 'vicare "--r6rs-repl requires a script name")]
              [else (values '() (car d) 'r6rs-repl (cdr d) k)]))]
         [(string=? (car args) "--compile-dependencies")
          (let ([d (cdr args)])
            (cond
              [(null? d)
-              (die 'ikarus "--compile-dependencies requires a script name")]
+              (die 'vicare "--compile-dependencies requires a script name")]
              [else
               (values '() (car d) 'compile (cdr d) k)]))]
         [else
@@ -155,7 +154,7 @@
 
     (define (assert-null files who)
       (unless (null? files)
-        (apply die 'ikarus
+        (apply die 'vicare
           (format "load files not allowed for ~a" who)
           files)))
 
@@ -171,10 +170,10 @@
 
     (define (default-rc-files)
       (cond
-        [(getenv "IKARUS_RC_FILES") => split-path]
+       [(getenv "VICARE_RC_FILES") => split-path]
         [(getenv "HOME") =>
          (lambda (home)
-           (let ([f (string-append home "/.ikarusrc")])
+           (let ([f (string-append home "/.vicarerc")])
              (if (file-exists? f)
                  (list f)
                  '())))]
@@ -186,7 +185,7 @@
           (lambda (con)
             (raise-continuable
               (condition
-                (make-who-condition 'ikarus)
+                (make-who-condition 'vicare)
                 (make-message-condition
                   (format "loading rc file ~a failed" filename))
                 con)))
