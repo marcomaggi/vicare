@@ -12,7 +12,7 @@
 @c ------------------------------------------------------------
 
 @macro version{}
-@VERSION{}
+@value{VERSION}
 @end macro
 
 @macro gnu{}
@@ -26,6 +26,7 @@
 @macro fdl{}
 @acronym{FDL}
 @end macro
+
 
 @c ------------------------------------------------------------
 @c Special notes.
@@ -455,7 +456,7 @@ Revised^6 Report on the algorithmic language Scheme
 
 @c To be used as @value{PACKAGE} whenever we need to include the full
 @c name of this package.
-@set PACKAGE                    Vicare
+@set PACKAGE                    Vicare Scheme
 
 @c To be used as @value{PACKAGE_NICKNAME} whenever we need to include
 @c the nickname of the project: the name that is used to compose the
@@ -475,6 +476,9 @@ Revised^6 Report on the algorithmic language Scheme
 @set COPYRIGHT_YEARS            2006-2010
 
 
+@set TARBALLURL                 @url{http://github.com/marcomaggi/vicare/downloads}
+@set REPOSITORYURL              @url{http://github.com/marcomaggi/vicare/}
+
 @c page
 @c ------------------------------------------------------------
 @c Copyright notice.
@@ -482,11 +486,11 @@ Revised^6 Report on the algorithmic language Scheme
 
 @copying
 @noindent
-This document describes version @version{} of @value{PACKAGE}, an
+This document describes version @version{} of @value{PACKAGE}, an almost
 @rnrs{6} compliant implementation of the Scheme programming language.
 Vicare (pronounced the etruscan way) is an experimental fork of Ikarus
-Scheme which aims at fixing bugs and enhance some features like the
-@posix{} interface.
+Scheme which aims at fixing bugs, full @rnrs{6} compliance, enhancing
+some features like the @posix{} interface.
 
 The Vicarus Scheme package is distributed under the terms of the @gnu{}
 General Public License (@gpl{}) and can be downloaded from:
@@ -503,18 +507,9 @@ development takes place at:
 
 @center @url{http://github.com/marcomaggi/vicare/}
 
-The original Ikarus Scheme package is distributed under the terms of the
-@gnu{} General Public License (@gpl{}) and can be downloaded from:
-
-@center @url{http://www.ikarus-scheme.org/}
-
 @noindent
-or:
-
-@center @url{https://launchpad.net/ikarus}
-
-@noindent
-Copyright @copyright{} @value{COPYRIGHT_YEARS} by Abdulaziz Ghuloum.
+Copyright @copyright{} @value{COPYRIGHT_YEARS} by Abdulaziz Ghuloum.@*
+This document was modified by the @value{PACKAGE} contributors.
 
 @quotation
 This program is free software: you can redistribute it and/or modify it
@@ -535,7 +530,7 @@ Trademarks used herein are the property of their respective owners.
 
 This document is derived from the original Ikarus documentation,
 reformatted in Texinfo; the reformatting author and maintainer is Marco
-Maggi @email{marco.maggi-ipsu@@post.iet} with contributions by other
+Maggi @email{marco.maggi-ipsu@@poste.it} with contributions by other
 people.
 @end copying
 
@@ -582,13 +577,11 @@ people.
 
 @menu
 * overview::                    Overview of Vicare Scheme.
-* using::                       Using Ikarus.
-* ikaruslib::                   Ikarus libraries.
+* using::                       Using the program.
+* library::                     Installed libraries.
 
 Appendices
 
-@c * contrib libraries::           Contributed libraries.
-* devel::                       Accessing development revisions.
 * missing::                     Missing Features.
 * credits::                     Credits for this document.
 * package license::             @gnu{} General Public License.
@@ -610,6 +603,7 @@ External documents
 
 Overview of Ikarus Scheme
 
+* overview original::           Original Ikarus Scheme.
 * overview tech::               Technology overview.
 * overview resources::          Resources.
 * overview system::             System requirements.
@@ -625,102 +619,103 @@ Installation and uninstallation
 * overview install quick::              Quick installation guide.
 * overview install prerequisites::      Installing the prerequisites.
 * overview install details::            Installation details.
-* overview install uninstall::          Uninstalling Ikarus.
+* overview install uninstall::          Uninstalling @value{PRJNAME}.
 
-Using Ikarus
+Using @value{PRJNAME}
 
 * using interactive::           Interactive sessions.
 * using invoking::              Command line arguments.
 * using script::                Using @command{scheme-script}.
-* using libraries::             Ikarus and @rnrs{6} libraries.
+* using libraries::             @value{PRJNAME} and @rnrs{6} libraries.
 
-Ikarus and @rnrs{6} libraries
+@value{PRJNAME} and @rnrs{6} libraries
 
-* using libraries intro::       Introduction to Ikarus libraries.
-* using libraries searching::   How Ikarus finds libraries.
+* using libraries intro::       Introduction to @value{PRJNAME} libraries.
+* using libraries searching::   How @value{PRJNAME} finds libraries.
 * using libraries summary::     Library search summary.
 * using libraries examples::    Examples of libraries usage.
 
-The Ikarus library
+The @value{PRJNAME} library
 
-* ikaruslib cross::             Writing cross--implementation libraries.
-* ikaruslib reader::            Reader.
-* ikaruslib cafe::              Cafe.
-* ikaruslib environment::       Environments.
-* ikaruslib load::              Loading source files.
-* ikaruslib import::            Local library imports.
-* ikaruslib modules::           Local modules.
-* ikaruslib parameters::        Parameters.
-* ikaruslib gensym::            Gensyms.
-* ikaruslib printing::          Printing.
-* ikaruslib tracing::           Tracing.
-* ikaruslib timing::            Timing.
-* ikaruslib guardians::         Guardians.
-* ikaruslib io::                Input/output library.
-* ikaruslib posix::             @posix{} functions.
-* ikaruslib foreign::           Foreign interface library.
-* ikaruslib misc::              Miscellaneous functions.
+* library cross::             Writing cross--implementation
+                                libraries.
+* library reader::            Reader.
+* library cafe::              Cafe.
+* library environment::       Environments.
+* library load::              Loading source files.
+* library import::            Local library imports.
+* library modules::           Local modules.
+* library parameters::        Parameters.
+* library gensym::            Gensyms.
+* library printing::          Printing.
+* library tracing::           Tracing.
+* library timing::            Timing.
+* library guardians::         Guardians and garbage collection.
+* library io::                Input/output library.
+* library posix::             @posix{} functions.
+* library foreign::           Foreign interface library.
+* library misc::              Miscellaneous functions.
 
 Local modules
 
-* ikaruslib modules examples::  Usage example for modules.
-* ikaruslib modules api::       Modules programming interface.
+* library modules examples::  Usage example for modules.
+* library modules api::       Modules programming interface.
 
 Usage example for modules
 
-* ikaruslib modules examples anonymous::        Anonymous modules.
-* ikaruslib modules examples named::            Named modules.
-* ikaruslib modules examples utils::            Utilities examples.
+* library modules examples anonymous::        Anonymous modules.
+* library modules examples named::            Named modules.
+* library modules examples utils::            Utilities examples.
 
-Guardians
+Guardians and garbage collection
 
-* ikaruslib guardians examples::        Usage examples for guardians.
-* ikaruslib guardians api::             Guardians programming interface.
+* library guardians examples::        Usage examples for guardians.
+* library guardians api::             Guardians programming interface.
 
 Input/output library
 
-* ikaruslib io process::        Spawning processes.
-* ikaruslib io socket::         Using network sockets.
-* ikaruslib io non-block::      Non--blocking mode for ports.
+* library io process::        Spawning processes.
+* library io socket::         Using network sockets.
+* library io non-block::      Non--blocking mode for ports.
 
 Using network sockets
 
-* ikaruslib io socket client::  Establishing client network
+* library io socket client::  Establishing client network
                                 connections.
-* ikaruslib io socket server::  Opening server network services.
+* library io socket server::  Opening server network services.
 
 @posix{} functions
 
-* ikaruslib posix process::     Spawning processes and the like.
-* ikaruslib posix waitpid::     Waiting for terminated children.
-* ikaruslib posix signal::      Delivering signals to processes.
-* ikaruslib posix file::        Interfacing with the file system.
-* ikaruslib posix env::         Interfacing with the execution
+* library posix process::     Spawning processes and the like.
+* library posix waitpid::     Waiting for terminated children.
+* library posix signal::      Delivering signals to processes.
+* library posix file::        Interfacing with the file system.
+* library posix env::         Interfacing with the execution
                                 environment.
-* ikaruslib posix misc::        Miscellaneous functions.
+* library posix misc::        Miscellaneous functions.
 
 The @library{ikarus foreign} library
 
-* ikaruslib foreign overview::  Overview of the foreign functions
+* library foreign overview::  Overview of the foreign functions
                                 interface.
-* ikaruslib foreign memory::    Memory management.
-* ikaruslib foreign memops::    Memory operations.
-* ikaruslib foreign dl::        Accessing foreign objects from Scheme.
-* ikaruslib foreign call out::  Calling out to foreign procedures.
-* ikaruslib foreign call back:: Calling back to Scheme.
+* library foreign memory::    Memory management.
+* library foreign memops::    Memory operations.
+* library foreign dl::        Accessing foreign objects from Scheme.
+* library foreign call out::  Calling out to foreign procedures.
+* library foreign call back:: Calling back to Scheme.
 
 Memory operations
 
-* ikaruslib foreign memops alloc::      Allocating and freeing memory.
-* ikaruslib foreign memops pointer::    Handling pointer values.
-* ikaruslib foreign memops poke::       Poking values.
-* ikaruslib foreign memops peek::       Peeking values.
+* library foreign memops alloc::      Allocating and freeing memory.
+* library foreign memops pointer::    Handling pointer values.
+* library foreign memops poke::       Poking values.
+* library foreign memops peek::       Peeking values.
 
 Calling out to foreign procedures
 
-* ikaruslib foreign call out api::      Interface to foreign functions.
-* ikaruslib foreign call out types::    Type specifiers.
-* ikaruslib foreign call out example::  C language call out example.
+* library foreign call out api::      Interface to foreign functions.
+* library foreign call out types::    Type specifiers.
+* library foreign call out example::  C language call out example.
 
 @end detailmenu
 @end menu
@@ -752,11 +747,27 @@ fixing bugs, pushing compliance with @rnrs{6}, enhance some features
 like the @posix{} interface.  Vicare is pronounced the etruscan way.
 
 @menu
+* overview original::           Original Ikarus Scheme.
 * overview tech::               Technology overview.
 * overview resources::          Resources.
 * overview system::             System requirements.
 * overview install::            Installation and uninstallation.
 @end menu
+
+@c page
+@node overview original
+@section Original Ikarus Scheme
+
+
+The original Ikarus Scheme package is distributed under the terms of the
+@gnu{} General Public License (@gpl{}) and can be downloaded from:
+
+@center @url{http://www.ikarus-scheme.org/}
+
+@noindent
+or:
+
+@center @url{https://launchpad.net/ikarus}
 
 @c page
 @node overview tech
@@ -1111,10 +1122,9 @@ for details.
 @subsection Installation details
 
 
-You have two choices for downloading the @value{PRJNAME} source: you can
-either download a distribution from @url{http://@/ikarus-scheme.org}, or
-you can refer to @ref{devel} for information on downloading a
-development (``bleeding edge'') version.
+We have two choices for downloading the @value{PRJNAME} source: we can
+either download a distribution from @value{TARBALLURL}, or we can
+checkout a revision from the GitHub repository @value{REPOSITORYURL}.
 
 @itemize
 @item
@@ -1738,42 +1748,43 @@ implementations.
 @end example
 
 @c page
-@node ikaruslib
-@chapter The @value{PRJNAME} library
+@node library
+@chapter Installed libraries
 
 
 In addition to the libraries listed in the @rnrs{6} standard,
-@value{PRJNAME} contains the @library{ikarus} library which provides
-additional useful features.  The @library{ikarus} library is a composite
+@value{PRJNAME} contains the @library{vicare} library which provides
+additional useful features.  The @library{vicare} library is a composite
 library---it exports a superset of all the supported bindings of
-@rnrs{6}.  While not all of the exports of @code{(ikarus)} are
-documented at this time, this chapter attempts to describe a few of
-these useful extensions.  Extensions to Scheme's lexical syntax are also
-documented.
+@rnrs{6}.
+
+While not all of the exports of @library{vicare} are documented at this
+time, this chapter attempts to describe a few of these useful
+extensions.  Extensions to Scheme's lexical syntax are also documented.
 
 @menu
-* ikaruslib cross::             Writing cross--implementation
+* library cross::             Writing cross--implementation
                                 libraries.
-* ikaruslib reader::            Reader.
-* ikaruslib cafe::              Cafe.
-* ikaruslib environment::       Environments.
-* ikaruslib load::              Loading source files.
-* ikaruslib import::            Local library imports.
-* ikaruslib modules::           Local modules.
-* ikaruslib parameters::        Parameters.
-* ikaruslib gensym::            Gensyms.
-* ikaruslib printing::          Printing.
-* ikaruslib tracing::           Tracing.
-* ikaruslib timing::            Timing.
-* ikaruslib guardians::         Guardians and garbage collection.
-* ikaruslib io::                Input/output library.
-* ikaruslib posix::             @posix{} functions.
-* ikaruslib foreign::           Foreign interface library.
-* ikaruslib misc::              Miscellaneous functions.
+* library reader::            Reader.
+* library cafe::              Cafe.
+* library environment::       Environments.
+* library load::              Loading source files.
+* library import::            Local library imports.
+* library modules::           Local modules.
+* library parameters::        Parameters.
+* library gensym::            Gensyms.
+* library printing::          Printing.
+* library tracing::           Tracing.
+* library timing::            Timing.
+* library guardians::         Guardians and garbage collection.
+* library io::                Input/output library.
+* library posix::             @posix{} functions.
+* library foreign::           Foreign interface library.
+* library misc::              Miscellaneous functions.
 @end menu
 
 @c page
-@node ikaruslib cross
+@node library cross
 @section Writing cross--implementation libraries
 
 
@@ -1868,7 +1879,7 @@ foo/compat.mzscheme.ss  :              specific for MzScheme
 @end example
 
 @c page
-@node ikaruslib reader
+@node library reader
 @section Reader
 
 
@@ -1976,7 +1987,7 @@ $
 @end deffn
 
 @c page
-@node ikaruslib cafe
+@node library cafe
 @section Cafe
 
 
@@ -2003,7 +2014,7 @@ To exit from a cafe we can write the @code{#!eof} object.
 @end defun
 
 @c page
-@node ikaruslib environment
+@node library environment
 @section Environments
 
 
@@ -2013,12 +2024,10 @@ To exit from a cafe we can write the @code{#!eof} object.
 @defun interaction-environment
 Return an environment object representing the environment active at the
 @repl{}.  To be used as argument for @func{eval}.
-
-@unstable{1661}
 @end defun
 
 @c page
-@node ikaruslib load
+@node library load
 @section Loading source files
 
 
@@ -2044,7 +2053,7 @@ The format of the annotated source is the one which is comprehensible by
 @end defun
 
 @c page
-@node ikaruslib import
+@node library import
 @section Local library imports
 
 
@@ -2076,11 +2085,8 @@ that was using it is deleted.
 @end deffn
 
 @c page
-@node ikaruslib modules
+@node library modules
 @section Local modules
-
-
-@unstable{1661}
 
 
 Modules are somewhat like libraries in that they define a set of
@@ -2100,27 +2106,24 @@ similar in spirit to that of Chez Scheme.
 @end quotation
 
 @menu
-* ikaruslib modules examples::  Usage example for modules.
-* ikaruslib modules api::       Modules programming interface.
+* library modules examples::  Usage example for modules.
+* library modules api::       Modules programming interface.
 @end menu
 
 @c page
-@node ikaruslib modules examples
+@node library modules examples
 @subsection Usage example for modules
 
 
 @menu
-* ikaruslib modules examples anonymous::        Anonymous modules.
-* ikaruslib modules examples named::            Named modules.
-* ikaruslib modules examples utils::            Utilities examples.
+* library modules examples anonymous::        Anonymous modules.
+* library modules examples named::            Named modules.
+* library modules examples utils::            Utilities examples.
 @end menu
 
 @c page
-@node ikaruslib modules examples anonymous
+@node library modules examples anonymous
 @subsubsection Anonymous modules
-
-
-@unstable{1661}
 
 
 The following example defines an anonymous module, without expressions,
@@ -2247,7 +2250,7 @@ when the enclosing environment is not the top level.  The same behaviour
 is shown by named modules.
 
 @c page
-@node ikaruslib modules examples named
+@node library modules examples named
 @subsubsection Named modules
 
 
@@ -2389,7 +2392,7 @@ from a @strong{named} module before its definition:
 @end example
 
 @c page
-@node ikaruslib modules examples utils
+@node library modules examples utils
 @subsubsection Utilities examples
 
 
@@ -2420,7 +2423,7 @@ access definitions in a module without using the @func{import} form:
 @end example
 
 @c page
-@node ikaruslib modules api
+@node library modules api
 @subsection Modules programming interface
 
 
@@ -2457,7 +2460,7 @@ from the module.
 @end deffn
 
 @c page
-@node ikaruslib parameters
+@node library parameters
 @section Parameters
 
 
@@ -2570,7 +2573,7 @@ normal when the body returns.
 @end deffn
 
 @c page
-@node ikaruslib gensym
+@node library gensym
 @section Gensyms
 
 
@@ -2744,7 +2747,7 @@ counterpart:
 @end example
 
 @c page
-@node ikaruslib printing
+@node library printing
 @section Printing
 
 
@@ -3044,7 +3047,7 @@ the order at which the gensyms are printed, not in the order in which
 gensyms were created.
 
 @c page
-@node ikaruslib tracing
+@node library tracing
 @section Tracing
 
 
@@ -3152,7 +3155,7 @@ except that it traces its arguments and values.
 @end deffn
 
 @c page
-@node ikaruslib timing
+@node library timing
 @section Timing
 
 
@@ -3223,7 +3226,7 @@ running stats:
 @end deffn
 
 @c page
-@node ikaruslib guardians
+@node library guardians
 @section Guardians and garbage collection
 
 
@@ -3247,17 +3250,17 @@ registered, they are run.  This binding is exported by the
 
 
 @menu
-* ikaruslib guardians examples::        Usage examples for guardians.
-* ikaruslib guardians api::             Guardians programming interface.
+* library guardians examples::        Usage examples for guardians.
+* library guardians api::             Guardians programming interface.
 @end menu
 
 @c page
-@node ikaruslib guardians examples
+@node library guardians examples
 @subsection Usage examples for guardians
 
 
 Let's say that we use the @value{PRJNAME} @ffi{} to handle some memory block
-(@ref{ikaruslib foreign} for details on the @ffi{}); memory blocks
+(@ref{library foreign} for details on the @ffi{}); memory blocks
 allocated with @func{malloc} are not released by the @value{PRJNAME} garbage
 collector: we have to explicitly apply @func{free} to the pointer value
 referencing them.
@@ -3450,7 +3453,7 @@ guardian:
 @end example
 
 @c page
-@node ikaruslib guardians api
+@node library guardians api
 @subsection Guardians programming interface
 
 
@@ -3517,25 +3520,19 @@ example in the previous section):
 @end deffn
 
 @c page
-@node ikaruslib io
+@node library io
 @section Input/output library
 
 
-@unstable{1661}
-
-
 @menu
-* ikaruslib io process::        Spawning processes.
-* ikaruslib io socket::         Using network sockets.
-* ikaruslib io non-block::      Non--blocking mode for ports.
+* library io process::        Spawning processes.
+* library io socket::         Using network sockets.
+* library io non-block::      Non--blocking mode for ports.
 @end menu
 
 @c page
-@node ikaruslib io process
+@node library io process
 @subsection Spawning processes
-
-
-@unstable{1661}
 
 
 @defun process @var{command} . @var{options}
@@ -3603,30 +3600,24 @@ Environment Variables}
 
 @defun process-nonblocking @var{command} . @var{options}
 Like @func{process} but the returned ports have their underlying file
-descriptors configured to non--blocking mode (@ref{ikaruslib io
+descriptors configured to non--blocking mode (@ref{library io
 non-block}).
 @end defun
 
 @c page
-@node ikaruslib io socket
+@node library io socket
 @subsection Using network sockets
 
 
-@unstable{1661}
-
-
 @menu
-* ikaruslib io socket client::  Establishing client network
+* library io socket client::  Establishing client network
                                 connections.
-* ikaruslib io socket server::  Opening server network services.
+* library io socket server::  Opening server network services.
 @end menu
 
 @c page
-@node ikaruslib io socket client
+@node library io socket client
 @subsubsection Establishing client network connections
-
-
-@unstable{1661}
 
 
 @defun tcp-connect @var{hostname} @var{service}
@@ -3636,7 +3627,7 @@ non-block}).
 Establish a network connection using the @tcp{} or @udp{} protocol, to
 the host selected by the string @var{hostname}, port/service selected by
 the string @var{service}.  The @code{-nonblocking} version sets the
-underlying socket descriptor to non--blocking mode (@ref{ikaruslib io
+underlying socket descriptor to non--blocking mode (@ref{library io
 non-block}).  Upon success, return a port; if an error occurs an
 exception is raised.
 
@@ -3658,18 +3649,15 @@ See the @file{/etc/services} configuration file.
 @end defun
 
 @c page
-@node ikaruslib io socket server
+@node library io socket server
 @subsubsection Opening server network services
-
-
-@unstable{1661}
 
 
 @defun tcp-server-socket @var{server-port-number}
 @defunx tcp-server-socket-nonblocking @var{server-port-number}
 Build a new @tcp{} server object for the selected port number (which
 must be an exact integer).  The @code{-nonblocking} versions set the
-underlying socket descriptor to non--blocking mode (@ref{ikaruslib io
+underlying socket descriptor to non--blocking mode (@ref{library io
 non-block}).  Upon success, return a server--object; if an error occurs
 an exception is raised.
 
@@ -3704,7 +3692,7 @@ an input port to be used to receive data;
 @noindent
 if an error occurs: an exception is raised.  The @code{-nonblocking}
 versions set the underlying socket descriptor to non--blocking mode
-(@ref{ikaruslib io non-block}).
+(@ref{library io non-block}).
 
 If the server socket was configured as blocking: this function suspends
 the process waiting for an incoming connection.
@@ -3759,7 +3747,7 @@ value must be a fixnum greater than zero.
 @end deffn
 
 @c page
-@node ikaruslib io non-block
+@node library io non-block
 @subsection Non--blocking mode for ports
 
 
@@ -3774,29 +3762,23 @@ fcntl(fd, F_SETFL, O_NONBLOCK);
 @glibcref{Open-time Flags, Open-time Flags}
 
 @c page
-@node ikaruslib posix
+@node library posix
 @section @posix{} functions
 
 
-@unstable{1661}
-
-
 @menu
-* ikaruslib posix process::     Spawning processes and the like.
-* ikaruslib posix waitpid::     Waiting for terminated children.
-* ikaruslib posix signal::      Delivering signals to processes.
-* ikaruslib posix file::        Interfacing with the file system.
-* ikaruslib posix env::         Interfacing with the execution
+* library posix process::     Spawning processes and the like.
+* library posix waitpid::     Waiting for terminated children.
+* library posix signal::      Delivering signals to processes.
+* library posix file::        Interfacing with the file system.
+* library posix env::         Interfacing with the execution
                                 environment.
-* ikaruslib posix misc::        Miscellaneous functions.
+* library posix misc::        Miscellaneous functions.
 @end menu
 
 @c page
-@node ikaruslib posix process
+@node library posix process
 @subsection Spawning processes and the like
-
-
-@unstable{1661}
 
 
 @defun fork @var{parent-proc} @var{child-thunk}
@@ -3840,11 +3822,8 @@ Example:
 @end defun
 
 @c page
-@node ikaruslib posix waitpid
+@node library posix waitpid
 @subsection Waiting for terminated children
-
-
-@unstable{1661}
 
 
 @defun waitpid [@var{pid} [@var{block?} [@var{want-error?}]]]
@@ -3946,7 +3925,7 @@ the child process.  If no signal was received: return @false{}.
 
 
 @c page
-@node ikaruslib posix signal
+@node library posix signal
 @subsection Delivering signals to processes
 
 
@@ -3978,9 +3957,6 @@ the child process.  If no signal was received: return @false{}.
 @cindex @code{SIGVTALRM}
 @cindex @code{SIGXCPU}
 @cindex @code{SIGXFSZ}
-
-
-@unstable{1661}
 
 
 @defun kill @var{pid} @var{signame}
@@ -4028,11 +4004,8 @@ SIGXFSZ
 @end defun
 
 @c page
-@node ikaruslib posix file
+@node library posix file
 @subsection Interfacing with the file system
-
-
-@unstable{1661}
 
 
 @subsubheading Current working directory
@@ -4188,11 +4161,8 @@ If an error occurs, an exception is raised.
 @end defun
 
 @c page
-@node ikaruslib posix env
+@node library posix env
 @subsection Interfacing with the execution environment
-
-
-@unstable{1661}
 
 
 @defun getenv @var{varname}
@@ -4209,11 +4179,8 @@ Example:
 @end defun
 
 @c page
-@node ikaruslib posix misc
+@node library posix misc
 @subsection Miscellaneous functions
-
-
-@unstable{1661}
 
 
 @defun strerror @var{error-code}
@@ -4234,7 +4201,7 @@ positive exact integers.  If an error occurs an exception is raised.
 @end defun
 
 @c page
-@node ikaruslib foreign
+@node library foreign
 @section The @library{ikarus foreign} library
 
 
@@ -4265,17 +4232,17 @@ indefinitely).  Use judiciously.
 @end quotation
 
 @menu
-* ikaruslib foreign overview::  Overview of the foreign functions
+* library foreign overview::  Overview of the foreign functions
                                 interface.
-* ikaruslib foreign memory::    Memory management.
-* ikaruslib foreign memops::    Memory operations.
-* ikaruslib foreign dl::        Accessing foreign objects from Scheme.
-* ikaruslib foreign call out::  Calling out to foreign procedures.
-* ikaruslib foreign call back:: Calling back to Scheme.
+* library foreign memory::    Memory management.
+* library foreign memops::    Memory operations.
+* library foreign dl::        Accessing foreign objects from Scheme.
+* library foreign call out::  Calling out to foreign procedures.
+* library foreign call back:: Calling back to Scheme.
 @end menu
 
 @c page
-@node ikaruslib foreign overview
+@node library foreign overview
 @subsection Overview of the foreign functions interface
 
 
@@ -4338,7 +4305,7 @@ the Libffi headers are to be found; @ref{overview install} for details.
 @end quotation
 
 @c page
-@node ikaruslib foreign memory
+@node library foreign memory
 @subsection Memory management
 
 
@@ -4386,19 +4353,19 @@ and more easily maintainable libraries.  To put it more boldly:
 @strong{Do not sprinkle your code with low--level memory operations}.
 
 @c page
-@node ikaruslib foreign memops
+@node library foreign memops
 @subsection Memory operations
 
 
 @menu
-* ikaruslib foreign memops alloc::      Allocating and freeing memory.
-* ikaruslib foreign memops pointer::    Handling pointer values.
-* ikaruslib foreign memops poke::       Poking values.
-* ikaruslib foreign memops peek::       Peeking values.
+* library foreign memops alloc::      Allocating and freeing memory.
+* library foreign memops pointer::    Handling pointer values.
+* library foreign memops poke::       Poking values.
+* library foreign memops peek::       Peeking values.
 @end menu
 
 @c page
-@node ikaruslib foreign memops alloc
+@node library foreign memops alloc
 @subsubsection Allocating and freeing memory
 
 
@@ -4429,7 +4396,7 @@ procedures that are external to @value{PRJNAME}.
 @end deffn
 
 @c page
-@node ikaruslib foreign memops pointer
+@node library foreign memops pointer
 @subsubsection Handling pointer values
 
 
@@ -4463,7 +4430,7 @@ platform.
 @end deffn
 
 @c page
-@node ikaruslib foreign memops poke
+@node library foreign memops poke
 @subsubsection Poking values
 
 
@@ -4548,7 +4515,7 @@ to the 32-bit pointer @var{value}.
 @end deffn
 
 @c page
-@node ikaruslib foreign memops peek
+@node library foreign memops peek
 @subsubsection Peeking values
 
 
@@ -4687,7 +4654,7 @@ systems.
 @end deffn
 
 @c page
-@node ikaruslib foreign dl
+@node library foreign dl
 @subsection Accessing foreign objects from Scheme
 
 
@@ -4778,7 +4745,7 @@ details.
 @end deffn
 
 @c page
-@node ikaruslib foreign call out
+@node library foreign call out
 @subsection Calling out to foreign procedures
 
 
@@ -4788,13 +4755,13 @@ access system--specific facilities that are available on the host
 machine.
 
 @menu
-* ikaruslib foreign call out api::      Interface to foreign functions.
-* ikaruslib foreign call out types::    Type specifiers.
-* ikaruslib foreign call out example::  C language call out example.
+* library foreign call out api::      Interface to foreign functions.
+* library foreign call out types::    Type specifiers.
+* library foreign call out example::  C language call out example.
 @end menu
 
 @c page
-@node ikaruslib foreign call out api
+@node library foreign call out api
 @subsubsection Interface to foreign functions
 
 
@@ -4821,7 +4788,7 @@ the parameter types:
 @itemize
 @item
 the return type is a symbol that can be any one of the type specifiers
-listed in @ref{ikaruslib foreign call out types};
+listed in @ref{library foreign call out types};
 
 @item
 the parameter types is a list of type specifier symbols; if the foreign
@@ -4854,7 +4821,7 @@ the final procedure @func{p2} can be called with as many arguments as
 the ones specified in the @var{parameter-types}; the parameters supplied
 to @func{p2} must match the types supplied as the @var{parameter-types}
 according to the ``Valid Scheme types'' column in the table in
-@ref{ikaruslib foreign call out types};
+@ref{library foreign call out types};
 
 @item
 the procedure @func{p2} converts the parameters from Scheme types to
@@ -4871,7 +4838,7 @@ signature can be used multiple times.  Similarly, separating the foreign
 procedure preparation from parameter passing allows for preparing the
 foreign procedure once and calling it many times.
 
-The list of types in the table in @ref{ikaruslib foreign call out types}
+The list of types in the table in @ref{library foreign call out types}
 is restricted to basics and provides no automatic conversion from
 composite Scheme data structures (such as strings, symbols, vectors, and
 lists) to native types.  The restriction is intentional in order for
@@ -4899,7 +4866,7 @@ between exact and inexact numbers is performed.
 @end deffn
 
 @c page
-@node ikaruslib foreign call out types
+@node library foreign call out types
 @subsubsection Type specifiers
 
 
@@ -4941,7 +4908,7 @@ a return value specifier to mean ``no useful value is returned''.
 
 
 @c page
-@node ikaruslib foreign call out example
+@node library foreign call out example
 @subsubsection C language call out example
 
 
@@ -4992,7 +4959,7 @@ Unhandled exception
 
 
 @c page
-@node ikaruslib foreign call back
+@node library foreign call back
 @subsection Calling back to Scheme
 
 
@@ -5009,7 +4976,7 @@ type.  Therefore, a Scheme procedure used for a call back must be
 wrapped with a proper adapter that converts the incoming parameters from
 native format to Scheme values as well as convert the value that the
 Scheme procedure returns back to native format.  The signature format is
-similar to the one used for call outs (@ref{ikaruslib foreign call out
+similar to the one used for call outs (@ref{library foreign call out
 types} for details).
 
 
@@ -5048,7 +5015,7 @@ integer.
 
 
 @c page
-@node ikaruslib misc
+@node library misc
 @section Miscellaneous functions
 
 
