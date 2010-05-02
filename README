@@ -1,6 +1,6 @@
 
-			     Vicare Scheme
-			     =============
+                             Vicare Scheme
+                             =============
 
 
 Topics
@@ -70,7 +70,7 @@ patches, you should adhere to the following rules:
 * Vicare  is hosted  at  GitHub, so  first  of all  an  issue should  be
   registered at the development site:
 
-		 <http://github.com/marcomaggi/vicare/>
+                 <http://github.com/marcomaggi/vicare/>
 
   so  that a  new branch  can be  created in  the repository,  with name
   referring to the issue.
@@ -160,15 +160,15 @@ C. Resources
 
 The latest version of this package can be downloaded from:
 
-	    <http://github.com/marcomaggi/vicare/downloads>
+            <http://github.com/marcomaggi/vicare/downloads>
 
 the home page of the Vicare project is at:
 
-	       <http://marcomaggi.github.com/vicare.html>
+               <http://marcomaggi.github.com/vicare.html>
 
 development takes place at:
 
-		 <http://github.com/marcomaggi/vicare/>
+                 <http://github.com/marcomaggi/vicare/>
 
 
 ### end of file
