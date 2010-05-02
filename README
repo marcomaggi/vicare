@@ -31,9 +31,8 @@ Straaten.
 
   Ikarus Scheme is an almost R6RS compliant implementation of the Scheme
 programming language;  it is the creation of  Abdulaziz Ghuloum.  Vicare
-Scheme is  an experimental  fork of Ikarus  Scheme which aims  at fixing
-bugs and  enhance some  features like the  POSIX interface;  "Vicare" is
-pronounced the etruscan way.
+Scheme is an experimental fork  of Ikarus Scheme; "Vicare" is pronounced
+the etruscan way.
 
 
 1.1 Policy
@@ -47,17 +46,19 @@ Vicare has the following short and midterm goals:
 
 * Drop documentation in TeX format, replacing it with a Texinfo file.
 
-* Document the  internals of the source distribution,  both the building
+* Document  the  internals  of   the  distribution,  both  the  building
   infrastructure and the source code.
 
 * Fix bugs.
 
-* Accept patches which improve compliance  with the R6RS report, with an
-  eye to pragmatism and "programs that work".
+* Push compliance with R6RS, keeping a pragmatic eye at issues.
 
-* Accept patches to expose the POSIX interface at the Scheme level.
+* Enhance the POSIX interface.
 
-* Reject big and revolutionary patches.
+* Avoid the distribution of companion libraries: only code directly used
+  in Vicare's internals is distribted.   It is always possible to fork a
+  branch  and build a  "batteries included"  distribution as  a separate
+  project.
 
 
 1.2 Contributing
@@ -79,9 +80,21 @@ patches, you should adhere to the following rules:
   named "ikarus", so a patch should be built by deriving the code from a
   checkout of such branch.
 
-  For  documentation contributions,  you can  contact  directly Vicare's
+* Patches are accepted  only if they come with  documentation and tests;
+  for  patches  enhancing compliance  with  R6RS,  documentation is  not
+  needed.
+
+* Patches  exposing the  POSIX interface  at  the Scheme  level will  be
+  accepted, but, at some point in  the future, that code will be subject
+  to modifications to enforce a policy of internal coherence.
+
+* Big and revolutionary patches will be rejected.  It is always possible
+  to  fork a  branch and  develop whatever  experimental reorganisation,
+  rewriting or enhancement (for example support for other CPUs).
+
+  For  documentation  contributions,  you  can email  directly  Vicare's
 maintainer  at <marco.maggi-ipsu@poste.it>  with or  without  opening an
-issue abount undocumented features.
+issue about undocumented features.
 
 
 2. License
@@ -144,8 +157,8 @@ will run the test suite.
 A. Credits
 ----------
 
-The origina Ikarus Scheme code is the work of Abdulaziz Ghuloum.  Vicare
-Scheme is a fork driven by Marco Maggi.
+The  original Ikarus  Scheme  code  is the  work  of Abdulaziz  Ghuloum.
+Vicare Scheme is a fork driven by Marco Maggi.
 
 
 B. Bug reports
