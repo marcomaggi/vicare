@@ -490,8 +490,8 @@ Revised^6 Report on the algorithmic language Scheme
 This document describes version @version{} of @value{PACKAGE}, an almost
 @rnrs{6} compliant implementation of the Scheme programming language.
 Vicare (pronounced the etruscan way) is an experimental fork of Ikarus
-Scheme which aims at fixing bugs, full @rnrs{6} compliance, enhancing
-some features like the @posix{} interface.
+Scheme which aims at fixing bugs, full @rnrs{6} compliance with a
+pragmatic eye, enhancing some features like the @posix{} interface.
 
 The Vicarus Scheme package is distributed under the terms of the @gnu{}
 General Public License (@gpl{}) and can be downloaded from:

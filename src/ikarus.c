@@ -1,16 +1,16 @@
 /*
  *  Ikarus Scheme -- A compiler for R6RS Scheme.
  *  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
- *  
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 3 as
  *  published by the Free Software Foundation.
- *  
+ *
  *  This program is distributed in the hope that it will be useful, but
  *  WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -25,21 +25,21 @@
 #include <stdlib.h>
 
 void ikarus_usage_short(){
-  fprintf(stderr, "ikarus -h for more help\n");
+  fprintf(stderr, "vicare -h for more help\n");
 }
 
 void ikarus_usage(){
-  static char* helpstring = 
+  static char* helpstring =
 "\n\
-Options for running ikarus scheme:\n\
-\n  ikarus -h\n\
+Options for running Vicare Scheme:\n\
+\n  vicare -h\n\
     Prints this help message then exits.\n\
-\n  ikarus [-b <bootfile>] --r6rs-script <scriptfile> opts ...\n\
-    Starts ikarus in r6rs-script mode.  The script file is treated\n\
+\n  vicare [-b <bootfile>] --r6rs-script <scriptfile> opts ...\n\
+    Starts Vicare in r6rs-script mode.  The script file is treated\n\
     as an R6RS-script.  The options opts ... can be obtained using\n\
     the \"command-line\" procedure in the (rnrs programs) library.\n\
-\n  ikarus [-b <bootfile>] <file> ... [-- opts ...]\n\
-    Starts ikarus in interactive mode.  Each of the files is first\n\
+\n  vicare [-b <bootfile>] <file> ... [-- opts ...]\n\
+    Starts Vicare in interactive mode.  Each of the files is first\n\
     loaded into the interaction environment before the interactive\n\
     repl is started.  The options opts can be obtained using the\n\
     \"command-line\" procedure.\n\
@@ -49,7 +49,7 @@ Options for running ikarus scheme:\n\
   initialized.  If the -b option is not supplied, the default boot\n\
   file is used.  The current default boot file location is\n\
   \"%s\".\n\
-  Consult the Ikarus Scheme User's Guide for more details.\n\n";
+  Consult the Vicare Scheme User's Guide for more details.\n\n";
   fprintf(stderr, helpstring, BOOTFILE);
 }
 
