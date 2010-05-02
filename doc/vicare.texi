@@ -1,7 +1,7 @@
 \input texinfo.tex
 @c %**start of header
 @setfilename vicare.info
-@settitle Vicare Scheme
+@settitle Vicare Scheme User's and Contributor's Guide
 @c %**end of header
 
 @include version.texi
@@ -452,7 +452,7 @@ Revised^6 Report on the algorithmic language Scheme
 
 @set PRJNAME                    Vicare
 
-@set TITLE                      Vicare Scheme
+@set TITLE                      Vicare Scheme User's and Contributor's Guide
 
 @c To be used as @value{PACKAGE} whenever we need to include the full
 @c name of this package.
@@ -479,6 +479,7 @@ Revised^6 Report on the algorithmic language Scheme
 @set TARBALLURL                 @url{http://github.com/marcomaggi/vicare/downloads}
 @set REPOSITORYURL              @url{http://github.com/marcomaggi/vicare/}
 @set EXECUTABLE                 @command{vicare}
+@set RAWEXECUTABLE              vicare
 
 @c page
 @c ------------------------------------------------------------
@@ -727,7 +728,7 @@ Calling out to foreign procedures
 
 @c page
 @node overview
-@chapter Overview of Ikarus Scheme
+@chapter Overview of Vicare Scheme
 
 
 Scheme is a statically scoped and properly tail--recursive dialect of
@@ -745,7 +746,7 @@ Ikarus Scheme is an almost @rnrs{6} compliant implementation of the
 Scheme programming language; it is the creation of Abdulaziz Ghuloum.
 
 Vicare Scheme is an experimental fork of Ikarus Scheme which aims at
-fixing bugs, pushing compliance with @rnrs{6}, enhance some features
+fixing bugs, pushing compliance with @rnrs{6}, enhancing some features
 like the @posix{} interface.  Vicare is pronounced the etruscan way.
 
 @menu
@@ -770,6 +771,9 @@ The original Ikarus Scheme package is distributed under the terms of the
 or:
 
 @center @url{https://launchpad.net/ikarus}
+
+It was developed by Abdulaziz Ghuloum until the beginning of year 2010;
+at that time the Vicare fork was started.
 
 @c page
 @node overview tech
@@ -812,10 +816,20 @@ servers and personal computers.  The supported systems include Mac OS X,
 @section Resources
 
 
-The @value{PRJNAME} website is found at
-@url{http://@/ikarus-scheme.org}; a project page on Launchpad
-(@url{https://@/launchpad.net/@/ikarus}) provides access to the bug
-tracker.
+The @value{PACKAGE} package is distributed under the terms of the @gnu{}
+General Public License (@gpl{}) and can be downloaded from:
+
+@center @value{TARBALLURL}
+
+@noindent
+the home page of the project is at:
+
+@center @url{http://marcomaggi.github.com/vicare.html}
+
+@noindent
+development takes place at:
+
+@center @value{REPOSITORYURL}
 
 Newcomers to Scheme should refer to @url{http://@/www.schemers.org},
 which contains listings of tutorials and books that are helpful in
@@ -829,72 +843,12 @@ features of @value{PRJNAME} have been inspired by similar features in
 @emph{Chez Scheme}; the @emph{Chez Scheme User's Guide} can be found at
 the same site.
 
-Many common extensions to Scheme have been documented as @srfi{}s
-(``Scheme Requests for Implementation''); all of these documents can be
-found at @url{http://@/srfi.schemers.org}.
-
-@value{PRJNAME} provides a core set of features, but a number of
-third--party libraries that work with @value{PRJNAME} have been
-developed.  Some of these libraries include:
-
-@itemize
-@item SRFI libraries
-A port of the @srfi{} libraries to @rnrs{6} implementations.
-@url{https://@/code.launchpad.net/@/~scheme-libraries-team/@/scheme-libraries/@/srfi}.
-
-@item Agave
-A collection of libraries for @rnrs{6} implementations.
-@url{http://@/github.com/@/dharmatech/@/agave}.
-
-@item Box2D-Lite
-A graphical widget showing bidimensional physics.
-@url{http://@/github.com/@/dharmatech/@/box2d-lite}.
-
-@item Industria
-A collection of libraries for @rnrs{6} implementations.
-@url{https://@/code.launchpad.net/@/~weinholt/@/scheme-libraries/@/industria}.
-
-@item MPL
-A collection of libraries for @rnrs{6} implementations.
-@url{http://@/github.com/@/dharmatech/@/mpl}.
-
-@item Nausicaa
-A collection of Scheme libraries and bindings to C language libraries
-with support for @value{PRJNAME}, Mosh, Ypsilon Schemes and partial support for
-Larceny Scheme.  @url{http://@/marcomaggi.github.com/@/nausicaa.html}.
-
-@item Numero
-A collection of libraries for @rnrs{6} implementations.
-@url{http://@/github.com/@/dharmatech/@/numero}.
-
-@item @rnrs{6}--@acronym{CLOS}
-A port of @acronym{CLOS} to @rnrs{6} implementations.
-@url{https://@/code.launchpad.net/@/~c-sloma/@/r6rs-clos/@/r6rs-clos-dev}.
-
-@item Sbank
-A binding to @code{gobject-introspection} making accessible the Gtk
-programming interface at the Scheme level.
-@url{http://@/rotty.yi.org/@/software/@/sbank/}.
-
-@item Spells
-A collection of libraries for @rnrs{6} implementations.
-@url{http://@/rotty.yi.org/@/software/@/spells/}.
-
-@item Xitomatl
-A collection of Scheme libraries with support for @value{PRJNAME}, Larceny,
-@acronym{PLT} and Ypsilon Schemes.
-@url{https://@/code.launchpad.net/@/~derick-eddington/@/scheme-libraries/@/xitomatl}.
-@end itemize
-
-Developers of other extension libraries are encouraged to contact us to
-have their libraries listed here.
-
 @c page
 @node overview system
 @section System requirements
 
 
-To run @value{PRJNAME}, you will need a system with a relatively recent
+To run @value{PACKAGE}, we will need a system with a relatively recent
 Intel @emph{x86} processor; @value{PRJNAME} requires a Unix/Linux
 operating system (or emulation), and some prerequisite libraries.
 
@@ -908,11 +862,11 @@ operating system (or emulation), and some prerequisite libraries.
 @subsection Hardware requirements
 
 
-@value{PRJNAME} Scheme runs on the IA-32 (@emph{x86}) architecture
-supporting @acronym{SSE2} extensions.  This includes the Athlon 64,
-Sempron 64, and Turion 64 processors from @acronym{AMD} and the Pentium
-4, Xeon, Celeron, Pentium M, Core, and Core2 processors from Intel.  The
-system does not run on Intel Pentium III or earlier processors.
+@value{PACKAGE} runs on the IA-32 (@emph{x86}) architecture supporting
+@acronym{SSE2} extensions.  This includes the Athlon 64, Sempron 64, and
+Turion 64 processors from @acronym{AMD} and the Pentium 4, Xeon,
+Celeron, Pentium M, Core, and Core2 processors from Intel.  The system
+does not run on Intel Pentium III or earlier processors.
 
 The @value{PRJNAME} compiler generates @acronym{SSE2} instructions to
 handle Scheme's @acronym{IEEE} floating point representation
@@ -946,8 +900,8 @@ Microsoft Windows XP, using Cygwin 1.5.24 (@url{http://@/cygwin.org}).
 @subsection Software requirements
 
 
-You will need some additional libraries and tools to build
-@value{PRJNAME}.
+We will need some additional libraries and tools to build
+@value{PACKAGE}.
 
 @table @strong
 @item GMP
@@ -960,19 +914,19 @@ packages are available for most operating systems.  Alternatively,
 
 The @gmp{} web page points out that @gmp{} has revealed subtle bugs in
 many C compilers.  Although the @gmp{} build process includes a
-comprehensive self--test (which you absolutely must run if building it
-yourself), you may still prefer to obtain a prebuilt binary version for
-your system, if one is available.
+comprehensive self--test (which we absolutely must run if building it
+ourselves), we may still prefer to obtain a prebuilt binary version for
+our system, if one is available.
 
 @quotation
 @strong{NOTE} @value{PRJNAME} runs in 32-bit mode only.  To run it in
-64-bit environments, you will have to obtain the 32-bit version of
-@gmp{}, or compile it yourself after adding @code{ABI=32} to its
+64-bit environments, we will have to obtain the 32-bit version of
+@gmp{}, or compile it ourselves after adding @code{ABI=32} to its
 configuration options.
 @end quotation
 
 @item libffi
-You will probably need @code{libffi}, a C library that simplifies
+We will probably need @code{libffi}, a C library that simplifies
 run--time calls to arbitrary C functions.  @value{PRJNAME} will operate
 without @code{libffi}, but will not be able to call foreign procedures
 (those written in C).  @code{libffi} can be downloaded from
@@ -983,7 +937,7 @@ The @gnu{} C Compiler is required to build the @value{PRJNAME}
 executable (e.g. the garbage collector, loader, and OS--related
 runtime).  @gcc{} versions 4.1 and 4.2 were successfully used to build
 @value{PRJNAME}.  It may be possible to build @value{PRJNAME} using
-other C compilers
+other C compilers.
 
 @item Autoconf and Automake
 The @gnu{} Autoconf (version 2.61) and @gnu{} Automake (version 1.10)
@@ -992,34 +946,16 @@ base.  They are not required to build the official release of
 @value{PRJNAME}.
 
 Prebuilt packages for these tools have been created for most Unix/Linux
-systems; if you prefer, you can download the source code from
+systems; if we prefer, we can download the source code from
 @url{http://@/www.gnu.org/@/software/@/autoconf} and
 @url{http://@/www.gnu.org/@/software/@/automake} respectively, and build
-them yourself.
+them ourselves.
 
-@item XeLaTeX
-The XeLaTeX typesetting system is required for building the
-documentation.  XeLaTeX (and XeTeX) is an implementation of the LaTeX
-(and TeX) typesetting system.  XeLaTeX can be obtained from
-@url{http://@/scripts.sil.org/@/xetex} and is included with TeX--Live
-(@url{http://@/tug.org/@/texlive/}) and and Mac--TeX
-(@url{http://@/tug.org/@/mactex/}) distributions.
-
-@item @TeX{} and Texinfo
-(Not needed for a routine install.)  This document is provided in PDF,
-Info, and HTML formats.  If you wish to rebuild the document from its
-Texinfo source, you will need @TeX{} (for creating the PDF version) and
-Texinfo (for creating the other versions).
-
-Many Unix and Linux systems have installable @TeX{} packages; if you
-cannot find one for your system, you can install TeX@tie{}Live
-(@url{http://@/tug.org/@/texlive/}), for Unix/Linux and Windows; MacTeX
-(@url{http://@/tug.org/@/mactex/}) is a comparable system for Macintosh
-OS@tie{}X.
-
-Texinfo is also available as an installable package for most Unix/Linux
-systems.  Alternatively, you can download it from
-@url{http://@/www.gnu.org/@/software/@/texinfo} and build it yourself.
+@item Texinfo
+This document is provided in Texinfo format.  Texinfo is available as an
+installable package for most Unix/Linux systems.  Alternatively, we can
+download the source package
+@url{http://@/www.gnu.org/@/software/@/texinfo}.
 @end table
 
 @c page
@@ -1035,19 +971,18 @@ systems.  Alternatively, you can download it from
 @cindex @value{PRJNAME}, disinstalling
 
 
-There are two ways to install @value{PRJNAME} on your system: you can
-either install a prebuilt package, if one is available for your
-operating system, or you can build from source.  There are two reasons
-for preferring the ``build from source'' approach.  First, not all
-Unix/Linux package repositories have an @value{PRJNAME} package at all.
-Second, prebuilt packages often lag current revisions to the system by a
-considerable amount.  Therefore, the version you install from a package
-repository might not even have some of the features documented in this
-manual.
+There are two ways to install @value{PACKAGE} on our system: we can
+either install a prebuilt package, if one is available for our operating
+system, or we can build it from source.  There are two reasons to prefer
+the ``build from source'' approach: first, not all Unix/Linux package
+repositories have an @value{PACKAGE} package at all; second, prebuilt
+packages often lag current revisions to the system by a considerable
+amount.  Therefore, the version we install from a package repository
+might not even have some of the features documented in this manual.
 
-We will assume in this section that you are building @value{PRJNAME}
-yourself.  @value{PRJNAME} uses the standard installation method found
-in most other Unix software.  Thus you will follow the usual steps.
+We will assume in this section that we are building @value{package}
+ourselves.  @value{PRJNAME} uses the standard installation method found
+in most other Unix software.  Thus we will follow the usual steps.
 
 @enumerate
 @item
@@ -1078,8 +1013,8 @@ method found in most other Unix software.  Simply run the following
 commands from the shell:
 
 @example
-$ tar -zxf ikarus-n.n.n.tar.gz
-$ cd ikarus-n.n.n
+$ tar -xvzf vicare-n.n.n.tar.gz
+$ cd vicare-n.n.n
 $ ./configure [--prefix=path] [CFLAGS=-I/dir] [LDFLAGS=-L/dir]
 $ make
 $ make install
@@ -1089,70 +1024,74 @@ $ make install
 @ref{overview install details} for how to enable the foreign functions
 interface.
 
-The rest of this section gives more detail on building, installing, and
-uninstalling @value{PRJNAME}.
-
-To uninstall @value{PRJNAME}, use the following steps:
+To uninstall @value{PACKAGE}, use the following steps:
 
 @example
-$ cd path/to/ikarus-n.n.n
+$ cd path/to/vicare-n.n.n
 $ make uninstall
 @end example
+
+The rest of this section gives more detail on building, installing, and
+uninstalling @value{PACKAGE}.
 
 @c page
 @node overview install prerequisites
 @subsection Installing the prerequisites
 
 
-The first step is to ensure that you have @gmp{} and @code{libffi}
-installed.  As mentioned earlier, you should generally use your system's
-package manager for these.  Note where the include (@code{.h}) and
-library (@code{.a}) files for each of these packages are installed.
-(Typically this will be in either @file{/usr/@/include} and
-@file{/usr/@/lib}, or @file{/usr/@/local/@/include} and
-@file{/usr/@/local/@/lib}.)
+The first step is to ensure that we have @gmp{} and Libffi installed; we
+should generally use our system's package manager for these.  Note where
+the include (@code{.h}) and library (@code{.a}) files for each of these
+packages are installed.  (Typically this will be in either
+@file{/usr/@/include} and @file{/usr/@/lib}, or
+@file{/usr/@/local/@/include} and @file{/usr/@/local/@/lib}.)
 
-If you choose to download these as source and build them yourselves,
-refer to the installation instructions found in each package.  If you
-are installing @gmp{} from source, it is @emph{essential} that you run
-the self--tests after building, and verify that no errors were detected.
-You do this by the command @command{make check}; see the documentation
-for details.
+If we choose to download these as source and build them ourselves, refer
+to the installation instructions found in each package.  If we are
+installing @gmp{} from source, it is @emph{essential} that we run the
+self--tests after building, and verify that no errors were detected.  We
+do this by issuing the command @command{make check}; see the
+documentation for details.
 
 @c page
 @node overview install details
 @subsection Installation details
 
 
-We have two choices for downloading the @value{PRJNAME} source: we can
-either download a distribution from @value{TARBALLURL}, or we can
-checkout a revision from the GitHub repository @value{REPOSITORYURL}.
+We have two choices for downloading the @value{PACKAGE} source: we can
+either download a distribution from:
+
+@center @value{TARBALLURL}
+
+@noindent
+or we can checkout a revision from the GitHub repository:
+
+@center @value{REPOSITORYURL}
 
 @itemize
 @item
-@value{PRJNAME} source distributions are tarballs named
-@file{ikarus-@-@var{@var{n.n.n}}.tar.gz}, where @file{@var{n.n.n}} is a
+@value{PACKAGE} source distributions are tarballs named
+@file{vicare-@-@var{@var{n.n.n}}.tar.gz}, where @file{@var{n.n.n}} is a
 3--component ID indicating the current revision.
 
-If you downloaded a distribution, unpack it.  From the shell prompt:
+If we downloaded a distribution, unpack it.  From the shell prompt:
 
 @example
-$ tar -zxf ikarus-@var{n.n.n}.tar.gz
+$ tar -xvzf vicare-@var{n.n.n}.tar.gz
 @end example
 
 @noindent
-this creates the base directory @file{ikarus-@var{n.n.n}}.
+this creates the base directory @file{vicare-@var{n.n.n}}.
 
 @item
-If you downloaded a bleeding--edge snapshot, you will have a directory
-called @code{ikarus.dev}.  No unpacking is needed.
+If we downloaded a bleeding--edge snapshot, no unpacking is needed.
 @end itemize
 
-Configure the build system by running the @command{configure} script
+We configure the build system by running the @command{configure} script
 located in the base directory.  To do this, type the following commands:
 
 @example
-$ cd ikarus-@var{n.n.n}
+$ cd vicare-@var{n.n.n}
 $ ./configure
 checking build system type... i386-apple-darwin8.10.1
 checking host system type... i386-apple-darwin8.10.1
@@ -1169,22 +1108,22 @@ This configures the system to be built then installed in the
 system--wide location (binaries are normally installed in
 @file{/usr/@/local/@/bin}).  To install it in another location (e.g. in
 your home directory), provide a @option{--prefix} location to
-@command{configure} as follows.
+@command{configure} as follows:
 
 @example
 $ ./configure --prefix=/opt/sw
 @end example
 
 @noindent
-This will install the executable in @file{/opt/@/sw/@/bin}, libraries in
+this will install the executable in @file{/opt/@/sw/@/bin}, libraries in
 @file{/opt/@/sw/@/lib/@/ikarus}, and documentation in
 @file{/opt/@/sw/@/share/@/doc/@/ikarus}.
 
-To install @value{PRJNAME} for your own use (thus not requiring root permissions
-to install), specify @code{--prefix=$HOME/local}, which installs
-everything in a @file{local} directory of your home directory.
+To install @value{PACKAGE} for personal use (thus not requiring root
+permissions to install), specify @code{--prefix=$HOME/local}, which
+installs everything in a @file{local} directory of our home directory.
 
-@command{configure} allows you to fine--tune where things are installed,
+@command{configure} allows us to fine--tune where things are installed,
 though this is rarely necessary or useful.  Do
 @code{./configure@tie{}--help} for a full list of options.
 
@@ -1192,81 +1131,86 @@ The most common @command{configure} options are as follows.
 
 @table @asis
 @item @option{--prefix}
-Specify the location in the file system where @value{PRJNAME} will be installed.
+Specify the location in the file system where @value{PACKAGE} will be
+installed.
 
 @item @option{--enable-ffi}
-Include @value{PRJNAME}'s Foreign Function Interface, so that @value{PRJNAME} code can
-invoke C code, and vice versa.  Requires @code{libffi}.
+Include @value{PACKAGE}'s Foreign Function Interface, so that
+@value{PRJNAME} code can invoke C code, and vice versa; requires Libffi.
 
 @item @env{CFLAGS}
 Specify options to be used while compiling @value{PRJNAME}'s C code.
+
+@item @env{CPPFLAGS}
+Specify options to be used while preprocessing @value{PRJNAME}'s C code.
 
 @item @env{LDFLAGS}
 Specify options to be used while linking @value{PRJNAME}.
 @end table
 
 @command{configure} will fail if it cannot find the location where
-@gmp{} is installed.  The script will also fail if you have specified
-@option{--enable-ffi} and it can't find @code{libffi}.  If running
-@command{configure} fails to locate either of these libraries, you will
-need to provide their locations.  Refer back to your notes on location
-of the @gmp{} and @code{libffi} files, and use the @env{CFLAGS} and
+@gmp{} is installed.  The script will also fail if we have specified
+@option{--enable-ffi} and it can't find Libffi.  If running
+@command{configure} fails to locate either of these libraries, we will
+need to provide their locations.  Use the @env{CPPFLAGS} and
 @env{LDFLAGS} options to specify the locations of the header and library
-files accordingly.
+files.
 
-For example, assume that you have installed @gmp{} and @code{libffi} in
-subdirectories of @file{/opt/sw}, and you wish to support foreign
+For example, assume that we have installed @gmp{} and Libffi in
+subdirectories of @file{/opt/sw}, and we wish to support foreign
 functions.@footnote{The @command{configure} command shown here is very
 imposing, and anyone can easily make mistakes.  In general, it's a good
 idea to create a shell script that has the sequence of
 @command{configure} and @command{make} commands needed to configure,
-build, and install a package; this not only allows you to re--install
-easily, but also gives you a concrete indication of what options you
-used to build the software the last time.  Of course, you should put
-this script somewhere other than in the actual @value{PRJNAME} software
+build, and install a package; this not only allows us to re--install
+easily, but also gives us a concrete indication of what options we used
+to build the software the last time.  Of course, we should put this
+script somewhere other than in the actual @value{PRJNAME} software
 directory!}
 
 @example
-./configure                                                \
-  --prefix=$HOME/local                                     \
-  --enable-ffi                                             \
-  CFLAGS="-I/opt/sw/gmp/include -I/opt/sw/libffi/include"  \
+./configure                                                  \
+  --prefix=$HOME/local                                       \
+  --enable-ffi                                               \
+  CPPFLAGS="-I/opt/sw/gmp/include -I/opt/sw/libffi/include"  \
   LDFLAGS="-L/opt/sw/gmp/lib -L/opt/sw/libffi/lib"
 @end example
 
-You can use the @env{CFLAGS} and @env{LDFLAGS} variables to select more
-specialized compilation and linking options; refer to your compiler
+We can use the @env{CFLAGS} and @env{LDFLAGS} variables to select more
+specialized compilation and linking options; refer to the compiler
 documentation for more details.
 
-You can now build the system by running the command @command{make}, with
-no arguments.  This performs two tasks:
+We can now build the system by running the command @command{make}, with
+no arguments; this performs two tasks:
 
 @enumerate
 @item
-It builds the @command{ikarus} executable from the C files located in
+It builds the @command{vicare} executable from the C files located in
 the @file{src} directory.
 
 @item
-It uses the @command{ikarus} executable and the pre--built
+It uses the @command{vicare} executable and the pre--built
 @file{ikarus.boot.orig} boot file to rebuild the Scheme boot image file
-@file{ikarus.boot} from the Scheme sources located in the @file{scheme}
+@file{vicare.boot} from the Scheme sources located in the @file{scheme}
 directory.
 @end enumerate
 
-The final stage is to install @value{PRJNAME} via the command @command{make
-install}.  If you're installing @value{PRJNAME} in a system--wide location,
-you'll probably need to have administrator privileges (use the
-@command{sudo} or @command{su} commands).  If that's not feasible, then
-reconfigure to install within a directory tree under your home
-directory.
+The final stage is to install @value{PRJNAME} via the command
+@command{make install}.  If we're installing @value{PRJNAME} in a
+system--wide location, we probably need to have administrator privileges
+(use the @command{sudo} or @command{su} commands); if that's not
+feasible, then we need to reconfigure to install within a directory tree
+under our home directory.
 
 Finally, try a small session, to verify that everything installed
 properly.
 
 @example
-$ ikarus
-@value{PRJNAME} Scheme version 0.0.4-rc1+ (revision 1865, build 2009-11-17)
-Copyright (c) 2006-2009 Abdulaziz Ghuloum
+$ vicare
+Vicare Scheme version 0.1d0+ \
+  (revision master/d844c006eb9ada1a047be3893d0dd40f8ae6204a, \
+  build 2010-05-02)
+Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors
 
 > (display "hello, world!\n")
 hello, world!
@@ -1275,14 +1219,14 @@ hello, world!
 5
 @end example
 
-If you get the first @code{>} prompt, then @value{PRJNAME} was successfully
-installed on the system.  You may need to update the @env{PATH} variable
-in environment to contain the directory in which the @command{ikarus}
-executable was installed.
+If we get the first @code{>} prompt, then @value{PRJNAME} was
+successfully installed on the system.  We may need to update the
+@env{PATH} variable in environment to contain the directory in which the
+@command{vicare} executable was installed.
 
 Finally, do @command{make clean} to get rid of executables, object
-files, and other build products in your @file{ikarus-@var{n.n.n}}
-directory.  Do not delete the directory itself: it will be needed if you
+files, and other build products in the @file{vicare-@var{n.n.n}}
+directory.  Do not delete the directory itself: it will be needed if we
 ever want to uninstall @value{PRJNAME}.
 
 @c page
@@ -1296,9 +1240,9 @@ ever want to uninstall @value{PRJNAME}.
 @cindex Uninstalling @value{PRJNAME}
 
 
-To uninstall @value{PRJNAME}, go to the directory you built
+To uninstall @value{PACKAGE}, go to the directory we built
 @value{PRJNAME} in (not the directory where you installed it), and do
-@code{make uninstall}.
+@command{make uninstall}.
 
 @example
 $ cd path/to/vicare-@var{n.n.n}
@@ -1310,7 +1254,7 @@ $ make uninstall
 @chapter Using @value{PRJNAME}
 
 
-Once @value{PRJNAME} is properly installed, you can invoke it either in
+Once @value{PACKAGE} is properly installed, we can invoke it either in
 an interactive terminal session or as the interpreter for invoking a
 script.
 
@@ -1329,13 +1273,15 @@ script.
 @section Interactive sessions
 
 
-If you want an interactive session, use a bare @command{ikarus} command,
-with no options.
+If we want an interactive session, use a bare @value{EXECUTABLE}
+command, with no options.
 
 @example
-$ ikarus
-@value{PRJNAME} Scheme version 0.0.4-rc1+ (revision 1865, build 2009-11-17)
-Copyright (c) 2006-2009 Abdulaziz Ghuloum
+$ @value{RAWEXECUTABLE}
+Vicare Scheme version 0.1d0+ \
+  (revision master/d844c006eb9ada1a047be3893d0dd40f8ae6204a, \
+   build 2010-05-02)
+Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors
 
 > (+ 2 2)
 4
@@ -1350,46 +1296,56 @@ the session.
 @section Command line arguments
 
 
-The @command{ikarus} executable recognizes a few command line switches
-that influence how @value{PRJNAME} starts.
+The @value{EXECUTABLE} executable recognizes a few command line switches
+that influence how @value{PACKAGE} starts.  The following are the main
+options, driving the execution mode.
 
 @table @code
-@item ikarus -h
-The presence of the @option{-h} flag causes @command{ikarus} to display
-a help message then to exit.  The help message summarizes the command
-line switches.  No further action is performed.
+@item @value{RAWEXECUTABLE} -h
+The presence of the @option{-h} flag causes @value{EXECUTABLE} to
+display a help message then to exit; the help message summarizes the
+command line switches.  No further action is performed.
 
-@item ikarus -b path/to/boot/file.boot
+@item @value{RAWEXECUTABLE} -b path/to/boot/file.boot
 The @option{-b} flag (which requires an extra argument) directs
-@command{ikarus} to use the specified boot file as the initial system
+@value{EXECUTABLE} to use the specified boot file as the initial system
 boot file.  The boot file is a binary file that contains all the code
-and data of the Scheme system.  In the absence of @option{-b} flag, the
-executable will use the default boot file.  Running @command{ikarus -h}
-shows the location where the default boot file was installed.
+and data of the Scheme system.  In the absence of the @option{-b} flag,
+the executable will use the default boot file.  Running
+@command{@value{RAWEXECUTABLE} -h} shows the location where the default
+boot file was installed.
 
 The rest of the command line arguments are recognized by the standard
 Scheme run time system.  They are processed after the boot file is
 loaded.
 
-@item ikarus --r6rs-script script-file-name [arguments ...]
-The @option{--r6rs-script} argument instructs @value{PRJNAME} that the supplied
-file is an @rnrs{6} script.  The script file name and any additional
-optional @code{arguments} can be obtained by calling the
-@func{command-line} procedure.
+@item @value{RAWEXECUTABLE} --script script-file-name [arguments ...]
+@itemx @value{RAWEXECUTABLE} --r6rs-script script-file-name [arguments ...]
+The @option{--script} or @option{--r6rs-script} option instructs
+@value{PRJNAME} that the supplied file is an @rnrs{6} script.  The
+script file name and any additional optional @code{arguments} can be
+obtained by calling the @func{command-line} procedure.
 
 @example
-$ cat test.ss
+$ cat test.sps
 (import (rnrs))
 (write (command-line))
 (newline)
 
-$ ikarus --r6rs-script test.ss hi there
-("test.ss" "hi" "there")
+$ @value{RAWEXECUTABLE} --r6rs-script test.sps hi there
+("test.sps" "hi" "there")
 @end example
 
-@item ikarus files ... [-- arguments ...]
-The lack of an @option{--r6rs-script} argument causes @value{PRJNAME} to start in
-interactive mode.  Each of the @code{files} is first loaded, in the
+@item @value{RAWEXECUTABLE} --r6rs-repl <FILE> ... [-- arguments ...]
+Start interactive mode, but load and evaluate @file{FILE} first.
+
+@item @value{RAWEXECUTABLE} --compile-dependencies <FILE> ... [-- arguments ...]
+Load the program or library @file{FILE} and compile all the libraries on
+which it depends.
+
+@item @value{RAWEXECUTABLE} <file> ... [-- arguments ...]
+The lack of an @option{--r6rs-script} argument causes @value{PRJNAME} to
+start in interactive mode.  Each @code{file} is first loaded in the
 interaction environment.  The interaction environment initially contains
 all the bindings exported from the @library{ikarus} library.
 
@@ -1401,10 +1357,10 @@ mode, the first element of the returned list will be the string
 
 @quotation
 @strong{NOTE} @rnrs{6} lives in a somewhat uneasy tension with a
-standard Scheme @acronym{REPL} (read-eval-print loop), which the Report
-effectively does not define.  In particular, the effect of re--importing
-a module, as you might do when reloading and rerunning a program, isn't
-well--defined by @rnrs{6}.
+standard Scheme @acronym{REPL} (read--eval--print loop), which the
+Report effectively does not define.  In particular, the effect of
+reimporting a module, as you might do when reloading and rerunning a
+program, isn't well--defined by @rnrs{6}.
 
 This is a limitation caused by the particular design choices made in
 @rnrs{6}; it's hoped that a future revision to the language will repair
@@ -1417,6 +1373,33 @@ applications nor for writing any substantial piece of code.
 @end quotation
 @end table
 
+The following are additional options turning on/off auxiliary behaviour.
+
+@table @code
+@item -d
+@itemx --debug
+Turn on debugging mode.  With this unhandled exceptions in the program
+will result in starting the debugger, which allows stack trace
+inspection.
+
+@item -nd
+@itemx --no-debug
+Turn off debugging mode.
+
+@item -O0
+@itemx -O1
+@itemx -O2
+Turn on various levels of compile optimisations.
+
+@item --no-rcfile
+Disable loading of run--command files.
+
+@item --rcfile <FILE>
+Load and evaluate @file{file} at startup, before running the script.
+The file must hold a proper @rnrs{6} program, beginning with the
+@func{import} clause.
+@end table
+
 @c page
 @node using script
 @section Using @command{scheme-script}
@@ -1425,13 +1408,13 @@ applications nor for writing any substantial piece of code.
 Scheme scripts can be executed using the following command:
 
 @example
-ikarus --r6rs-script @var{script-name}
+@value{RAWEXECUTABLE} --r6rs-script @var{script-name}
 @end example
 
 @noindent
-as described in the previous section.  For convenience, @value{PRJNAME}
-follows the @rnrs{6} recommendations and installs a wrapper program
-called @command{scheme-script}.
+@value{PACKAGE} does @strong{not} follow the @rnrs{6} recommendations
+and does not install a wrapper program called @command{scheme-script} to
+avoid conflicts with other Scheme implementations.
 
 Here is a sample script (Pig Latin---``Igpay Atinlay''---is a code that
 was at one time popular among very young North American children).
@@ -1463,11 +1446,11 @@ was at one time popular among very young North American children).
 (newline)
 @end example
 
-Assuming we have stored the script in the file @file{demo}, we can
-invoke this script via @command{scheme-script}.
+Assuming we have stored the script in the file @file{demo.sps}, we can
+invoke this script via @value{EXECUTABLE}:
 
 @example
-$ scheme-script demo ice cream after dinner
+$ @value{RAWEXECUTABLE} --r6rs-script demo.sps ice cream after dinner
 (iceyay reamcay afteryay innerday)
 @end example
 
@@ -1477,7 +1460,7 @@ script.  All modern systems have the @command{env} command which
 searches for a command in the user's path.
 
 @example
-#!/usr/bin/env scheme-script
+#!/usr/bin/env @value{RAWEXECUTABLE} --r6rs-script
 (import (rnrs))
 
 ...
@@ -1486,21 +1469,14 @@ searches for a command in the user's path.
 Now we can make the file executable, and use it directly.
 
 @example
-$ chmod +x demo
-$ ./demo ice cream after dinner
+$ chmod +x demo.sps
+$ ./demo.sps ice cream after dinner
 (iceyay reamcay afteryay innerday)
 @end example
 
 There are a few fine points.
 
 @itemize
-@item
-@command{scheme-script} is recommended by @rnrs{6}, and therefore most
-@rnrs{6}--compliant implementations will provide such a command that
-invokes that particular system.  If you have several of these systems
-installed, you will need to make sure that the right system is invoked.
-Manipulating the @env{PATH} is a reasonable solution.
-
 @item
 Under Mac OS X, if a script name ends with the @code{.command}
 extension, then it can be executed from the Finder by double--clicking
@@ -1516,9 +1492,9 @@ executed.  The @code{.command} extension can be hidden from the
 
 One of the major features added in @rnrs{6} was a standardized concept
 of libraries: modules that export features that can be imported into
-programs.  A library is named by a list, e.g., @code{(yoyodyne
-block-transfer-computations)}; the core library of the language is
-provided in the library @code{(rnrs)}.
+programs.  A library is named by a list, e.g., @library{yoyodyne
+block-transfer-computations}; the core library of the language is
+provided in the library @library{rnrs}.
 
 Unfortunately, libraries have many quirks.  Partially, this comes from
 the way libraries are defined in @rnrs{6}; some fine--tuning in the

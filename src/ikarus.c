@@ -1,6 +1,7 @@
 /*
  *  Ikarus Scheme -- A compiler for R6RS Scheme.
  *  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+ *  Modified by Marco Maggi
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 3 as
@@ -35,7 +36,7 @@ Options for running Vicare Scheme:\n\
 \n  vicare -h\n\
     Prints this help message then exits.\n\
 \n  vicare [-b <bootfile>] --r6rs-script <scriptfile> opts ...\n\
-    Starts Vicare in r6rs-script mode.  The script file is treated\n\
+    Starts Vicare in R6RS-script mode.  The script file is treated\n\
     as an R6RS-script.  The options opts ... can be obtained using\n\
     the \"command-line\" procedure in the (rnrs programs) library.\n\
 \n  vicare [-b <bootfile>] <file> ... [-- opts ...]\n\
