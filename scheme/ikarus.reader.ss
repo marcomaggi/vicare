@@ -1,15 +1,16 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
+;;; Modified by Marco Maggi
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -33,17 +34,17 @@
       input-port-column-number))
 
   (define (die/lex id pos who msg arg*)
-    (raise 
+    (raise
       (condition
-        (make-lexical-violation) 
+        (make-lexical-violation)
         (make-message-condition msg)
-        (if (null? arg*) 
+        (if (null? arg*)
             (condition)
             (make-irritants-condition arg*))
-        (make-source-position-condition 
+        (make-source-position-condition
           id pos))))
-  (define (die/pos p off who msg arg*) 
-    (die/lex (port-id p) 
+  (define (die/pos p off who msg arg*)
+    (die/lex (port-id p)
        (let ([pos (input-port-byte-position p)])
          (and pos (+ pos off)))
        who msg arg*))
@@ -56,20 +57,20 @@
       (die/lex (car src) (cdr src) who msg arg*)))
 
 
-  (define (checked-integer->char n ac p) 
+  (define (checked-integer->char n ac p)
     (define (valid-integer-char? n)
       (cond
         [(<= n #xD7FF)   #t]
         [(< n #xE000)    #f]
         [(<= n #x10FFFF) #t]
         [else            #f]))
-    (if (valid-integer-char? n) 
+    (if (valid-integer-char? n)
         ($fixnum->char n)
-        (die/p p 'tokenize 
+        (die/p p 'tokenize
           "invalid numeric value for character"
           (list->string (reverse ac)))))
 
-  (define-syntax read-char 
+  (define-syntax read-char
     (syntax-rules ()
       [(_ p) (get-char p)]))
 
@@ -89,7 +90,7 @@
         [($char<= c ($fixnum->char 127))
          (or (letter? c) (special-initial? c))]
         [else (unicode-printable-char? c)])))
-  (define letter? 
+  (define letter?
     (lambda (c)
       (or (and ($char<= #\a c) ($char<= c #\z))
           (and ($char<= #\A c) ($char<= c #\Z)))))
@@ -105,9 +106,9 @@
         [($char<= c ($fixnum->char 127))
          (or (letter? c)
              (digit? c)
-             (special-initial? c) 
+             (special-initial? c)
              (special-subsequent? c))]
-        [else 
+        [else
           (or (unicode-printable-char? c)
               (memq (char-general-category c) '(Nd Mc Me)))])))
   (define tokenize-identifier
@@ -124,16 +125,16 @@
           (read-char p)
           (tokenize-backslash ls p)]
          [(eq? (port-mode p) 'r6rs-mode)
-          (die/p p 'tokenize "invalid identifier syntax" 
+          (die/p p 'tokenize "invalid identifier syntax"
             (list->string (reverse (cons c ls))))]
          [else ls]))))
   (define (tokenize-string ls p)
     (let ([c (read-char p)])
       (cond
-        [(eof-object? c) 
+        [(eof-object? c)
          (die/p p 'tokenize "invalid eof inside string")]
         [else (tokenize-string-char ls p c)])))
-  (define LF1 '(#\xA #\x85 #\x2028)) ;;; these are considered newlines 
+  (define LF1 '(#\xA #\x85 #\x2028)) ;;; these are considered newlines
   (define LF2 '(#\xA #\x85))         ;;; these are not newlines if they
                                      ;;; appear after CR
   (define (tokenize-string-char ls p c)
@@ -142,13 +143,13 @@
           (eq? (char-general-category c) 'Zs)))
     (define (tokenize-string-continue ls p c)
       (cond
-        [(eof-object? c) 
+        [(eof-object? c)
          (die/p p 'tokenize "invalid eof inside string")]
         [(intraline-whitespace? c)
          (let f ()
            (let ([c (read-char p)])
              (cond
-               [(eof-object? c) 
+               [(eof-object? c)
                 (die/p p 'tokenize "invalid eof inside string")]
                [(intraline-whitespace? c) (f)]
                [else (tokenize-string-char ls p c)])))]
@@ -158,7 +159,7 @@
      [($char= #\\ c)
       (let ([c (read-char p)])
         (cond
-          [(eof-object? c) 
+          [(eof-object? c)
            (die/p p 'tokenize "invalid eof after string escape")]
           [($char= #\a c) (tokenize-string (cons #\x7 ls) p)]
           [($char= #\b c) (tokenize-string (cons #\x8 ls) p)]
@@ -172,32 +173,32 @@
           [($char= #\x c) ;;; unicode escape \xXXX;
            (let ([c (read-char p)])
              (cond
-               [(eof-object? c) 
+               [(eof-object? c)
                 (die/p p 'tokenize "invalid eof inside string")]
                [(hex c) =>
                 (lambda (n)
                   (let f ([n n] [ac (cons c '(#\x))])
                     (let ([c (read-char p)])
                       (cond
-                        [(eof-object? n) 
+                        [(eof-object? n)
                          (die/p p 'tokenize "invalid eof inside string")]
                         [(hex c) =>
                          (lambda (v) (f (+ (* n 16) v) (cons c ac)))]
-                        [($char= c #\;) 
+                        [($char= c #\;)
                          (tokenize-string
                            (cons (checked-integer->char n ac p) ls) p)]
                         [else
                          (die/p-1 p 'tokenize
                            "invalid char in escape sequence"
                            (list->string (reverse (cons c ac))))]))))]
-               [else 
+               [else
                 (die/p-1 p 'tokenize
                   "invalid char in escape sequence" c)]))]
           [(intraline-whitespace? c)
            (let f ()
              (let ([c (read-char p)])
                (cond
-                 [(eof-object? c) 
+                 [(eof-object? c)
                   (die/p p 'tokenize "invalid eof inside string")]
                  [(intraline-whitespace? c) (f)]
                  [(memv c LF1)
@@ -207,10 +208,10 @@
                     (cond
                       [(memv c LF2)
                        (tokenize-string-continue ls p (read-char p))]
-                      [else 
+                      [else
                        (tokenize-string-continue ls p c)]))]
                  [else
-                  (die/p-1 p 'tokenize 
+                  (die/p-1 p 'tokenize
                     "non-whitespace character after escape")])))]
           [(memv c LF1)
            (tokenize-string-continue ls p (read-char p))]
@@ -245,7 +246,7 @@
            (read-char p)
            (let ([c (peek-char p)])
              (cond
-               [(eof-object? c) 
+               [(eof-object? c)
                 (die/p p 'tokenize "invalid syntax .. near end of file")]
                [($char= c #\.) ; this is the third
                 (read-char p)
@@ -253,16 +254,16 @@
                   (cond
                     [(eof-object? c) '(datum . ...)]
                     [(delimiter? c)  '(datum . ...)]
-                    [else 
+                    [else
                      (die/p p 'tokenize "invalid syntax"
                        (string-append "..." (string c)))]))]
                [else
                 (die/p p 'tokenize "invalid syntax"
                   (string-append ".." (string c)))]))]
-          [else 
+          [else
            (cons 'datum
              (u:dot p '(#\.) 10 #f #f +1))]))))
-  (define tokenize-char* 
+  (define tokenize-char*
     (lambda (i str p d)
       (cond
        [(fx= i (string-length str))
@@ -270,18 +271,18 @@
           (cond
            [(eof-object? c) d]
            [(delimiter? c)  d]
-           [else 
+           [else
             (die/p p 'tokenize "invalid character after sequence"
               (string-append str (string c)))]))]
        [else
         (let ([c (read-char p)])
           (cond
-            [(eof-object? c) 
+            [(eof-object? c)
              (die/p p 'tokenize
                "invalid eof in the middle of expected sequence" str)]
             [($char= c (string-ref str i))
              (tokenize-char* (fxadd1 i) str p d)]
-            [else 
+            [else
              (die/p-1 p 'tokenize
                 "invalid char while scanning string"
                  c str)]))])))
@@ -291,11 +292,11 @@
         (cond
           [(eof-object? c) (cons 'datum (string-ref str 0))]
           [(delimiter? c)  (cons 'datum (string-ref str 0))]
-          [($char= (string-ref str 1) c) 
+          [($char= (string-ref str 1) c)
            (read-char p)
            (tokenize-char*  2 str p d)]
-          [else 
-           (die/p p 'tokenize "invalid syntax" 
+          [else
+           (die/p p 'tokenize "invalid syntax"
              (string-ref str 0) c)]))))
   (define tokenize-char
     (lambda (p)
@@ -309,38 +310,38 @@
                [(eof-object? c)
                 (read-char p)
                 '(datum . #\n)]
-               [(eqv? #\u c) 
+               [(eqv? #\u c)
                 (read-char p)
                 (tokenize-char-seq p "ul" '(datum . #\x0))]
-               [(eqv? #\e c) 
+               [(eqv? #\e c)
                 (read-char p)
                 (tokenize-char-seq p "ewline" '(datum . #\xA))]
                [(delimiter? c)
                 '(datum . #\n)]
-               [else 
+               [else
                 (die/p p 'tokenize "invalid syntax"
                   (string #\# #\\ #\n c))]))]
-          [(eqv? #\a c) 
+          [(eqv? #\a c)
            (tokenize-char-seq p "alarm" '(datum . #\x7))]
-          [(eqv? #\b c) 
+          [(eqv? #\b c)
            (tokenize-char-seq p "backspace" '(datum . #\x8))]
           [(eqv? #\t c)
            (tokenize-char-seq p "tab" '(datum . #\x9))]
-          [(eqv? #\l c) 
+          [(eqv? #\l c)
            (tokenize-char-seq p "linefeed" '(datum . #\xA))]
-          [(eqv? #\v c) 
+          [(eqv? #\v c)
            (tokenize-char-seq p "vtab" '(datum . #\xB))]
-          [(eqv? #\p c) 
+          [(eqv? #\p c)
            (tokenize-char-seq p "page" '(datum . #\xC))]
-          [(eqv? #\r c) 
+          [(eqv? #\r c)
            (tokenize-char-seq p "return" '(datum . #\xD))]
-          [(eqv? #\e c) 
+          [(eqv? #\e c)
            (tokenize-char-seq p "esc" '(datum . #\x1B))]
-          [(eqv? #\s c) 
+          [(eqv? #\s c)
            (tokenize-char-seq p "space" '(datum . #\x20))]
           [(eqv? #\d c)
            (tokenize-char-seq p "delete" '(datum . #\x7F))]
-          [(eqv? #\x c) 
+          [(eqv? #\x c)
            (let ([n (peek-char p)])
              (cond
                [(or (eof-object? n) (delimiter? n))
@@ -360,7 +361,7 @@
                            (read-char p)
                            (f (+ (* v 16) v0) (cons c ac)))]
                         [else
-                         (die/p p 'tokenize 
+                         (die/p p 'tokenize
                            "invalid character sequence"
                            (list->string (reverse (cons c ac))))]))))]
                [else
@@ -371,7 +372,7 @@
              (cond
                [(eof-object? n) (cons 'datum c)]
                [(delimiter? n)  (cons 'datum c)]
-               [else 
+               [else
                 (die/p p 'tokenize "invalid syntax"
                   (string-append "#\\" (string c n)))]))]))))
   (define (hex x)
@@ -379,7 +380,7 @@
       [(and ($char<= #\0 x) ($char<= x #\9))
        ($fx- ($char->fixnum x) ($char->fixnum #\0))]
       [(and ($char<= #\a x) ($char<= x #\f))
-       ($fx- ($char->fixnum x) 
+       ($fx- ($char->fixnum x)
              ($fx- ($char->fixnum #\a) 10))]
       [(and ($char<= #\A x) ($char<= x #\F))
        ($fx- ($char->fixnum x)
@@ -397,12 +398,12 @@
          (apprev str (fx+ i 1) (cons (string-ref str i) ac))])))
   (define multiline-comment
     (lambda (p)
-      (define f 
+      (define f
         (lambda (p ac)
           (let ([c (read-char p)])
             (cond
               [(eof-object? c) (multiline-error p)]
-              [($char= #\| c) 
+              [($char= #\| c)
                (let g ([c (read-char p)] [ac ac])
                  (cond
                    [(eof-object? c) (multiline-error p)]
@@ -419,7 +420,7 @@
                       (if (string? v)
                           (f p (apprev v 0 ac))
                           (f p ac)))]
-                   [else 
+                   [else
                     (f p (cons c (cons #\# ac)))]))]
               [else (f p (cons c ac))]))))
       (let ([ac (f p '())])
@@ -440,19 +441,19 @@
     (lambda (c p)
       (cond
         [(eof-object? c) (die/p p 'tokenize "invalid # near end of file")]
-        [(memq c '(#\t #\T)) 
+        [(memq c '(#\t #\T))
          (let ([c1 (peek-char p)])
            (cond
              [(eof-object? c1) '(datum . #t)]
              [(delimiter? c1)  '(datum . #t)]
-             [else (die/p p 'tokenize 
+             [else (die/p p 'tokenize
                      (format "invalid syntax near #~a~a" c c1))]))]
-        [(memq c '(#\f #\F)) 
+        [(memq c '(#\f #\F))
          (let ([c1 (peek-char p)])
            (cond
              [(eof-object? c1) '(datum . #f)]
              [(delimiter? c1)  '(datum . #f)]
-             [else (die/p p 'tokenize 
+             [else (die/p p 'tokenize
                      (format "invalid syntax near #~a~a" c c1))]))]
         [($char= #\\ c) (tokenize-char p)]
         [($char= #\( c) 'vparen]
@@ -464,28 +465,28 @@
              [(eqv? c #\@) (read-char p)
               '(macro . unsyntax-splicing)]
              [else '(macro . unsyntax)]))]
-        [($char= #\! c) 
+        [($char= #\! c)
          (let ([e (read-char p)])
            (when (eof-object? e)
              (die/p p 'tokenize "invalid eof near #!"))
            (case e
-             [(#\e) 
+             [(#\e)
               (when (eq? (port-mode p) 'r6rs-mode)
                 (die/p-1 p 'tokenize "invalid syntax: #!e"))
               (read-char* p '(#\e) "of" "eof sequence" #f #f)
               (cons 'datum (eof-object))]
-             [(#\r) 
+             [(#\r)
               (read-char* p '(#\r) "6rs" "#!r6rs comment" #f #f)
               (set-port-mode! p 'r6rs-mode)
               (tokenize/1 p)]
-             [(#\i) 
-              (read-char* p '(#\i) "karus" "#!ikarus comment" #f #f)
-              (set-port-mode! p 'ikarus-mode)
+             [(#\i)
+              (read-char* p '(#\v) "icare" "#!vicare comment" #f #f)
+              (set-port-mode! p 'vicare-mode)
               (tokenize/1 p)]
              [else
               (die/p-1 p 'tokenize
                 (format "invalid syntax near #!~a" e))]))]
-        [(digit? c) 
+        [(digit? c)
          (when (eq? (port-mode p) 'r6rs-mode)
            (die/p-1 p 'tokenize "graph syntax is invalid in #!r6rs mode"
               (format "#~a" c)))
@@ -495,15 +496,15 @@
            (die/p-1 p 'tokenize "gensym syntax is invalid in #!r6rs mode"
               (format "#~a" c)))
          (let* ([c (skip-whitespace p "gensym")]
-                [id0 
+                [id0
                  (cond
                    [(initial? c)
                     (list->string
                       (reverse (tokenize-identifier (cons c '()) p)))]
                    [($char= #\| c)
-                    (list->string 
+                    (list->string
                       (reverse (tokenize-bar p '())))]
-                   [else 
+                   [else
                     (die/p-1 p 'tokenize
                       "invalid char inside gensym" c)])])
               (cons 'datum (gensym id0)))]
@@ -512,21 +513,21 @@
            (die/p-1 p 'tokenize "gensym syntax is invalid in #!r6rs mode"
               (format "#~a" c)))
          (let* ([c (skip-whitespace p "gensym")]
-                [id0 
+                [id0
                  (cond
                    [(initial? c)
                     (list->string
                       (reverse (tokenize-identifier (cons c '()) p)))]
                    [($char= #\| c)
-                    (list->string 
+                    (list->string
                       (reverse (tokenize-bar p '())))]
-                   [else 
+                   [else
                     (die/p-1 p 'tokenize
                       "invalid char inside gensym" c)])]
                 [c (skip-whitespace p "gensym")])
            (cond
              [($char= #\} c)
-              (cons 'datum 
+              (cons 'datum
                 (foreign-call "ikrt_strings_to_gensym" #f id0))]
              [else
               (let ([id1
@@ -534,19 +535,19 @@
                        [(initial? c)
                         (list->string
                          (reverse
-                           (tokenize-identifier 
+                           (tokenize-identifier
                              (cons c '()) p)))]
                        [($char= #\| c)
-                        (list->string 
+                        (list->string
                           (reverse (tokenize-bar p '())))]
-                       [else 
+                       [else
                         (die/p-1 p 'tokenize
                           "invalid char inside gensym" c)])])
                 (let ([c (skip-whitespace p "gensym")])
                   (cond
                     [($char= #\} c)
                      (cons 'datum
-                      (foreign-call "ikrt_strings_to_gensym" 
+                      (foreign-call "ikrt_strings_to_gensym"
                         id0 id1))]
                     [else
                      (die/p-1 p 'tokenize
@@ -561,29 +562,29 @@
                    (let ([c (read-char p)])
                      (cond
                        [($char= c #\() 'vu8]
-                       [(eof-object? c) 
+                       [(eof-object? c)
                         (die/p p 'tokenize "invalid eof object after #vu8")]
-                       [else (die/p-1 p 'tokenize 
+                       [else (die/p-1 p 'tokenize
                                (format "invalid sequence #vu8~a" c))]))]
-                  [(eof-object? c) 
+                  [(eof-object? c)
                    (die/p p 'tokenize "invalid eof object after #vu")]
-                  [else (die/p-1 p 'tokenize 
+                  [else (die/p-1 p 'tokenize
                            (format "invalid sequence #vu~a" c))]))]
-             [(eof-object? c) 
+             [(eof-object? c)
               (die/p p 'tokenize "invalid eof object after #v")]
              [else (die/p p 'tokenize
                      (format "invalid sequence #v~a" c))]))]
-        [(memq c '(#\e #\E)) 
+        [(memq c '(#\e #\E))
          (cons 'datum (parse-string p (list c #\#) 10 #f 'e))]
-        [(memq c '(#\i #\I)) 
+        [(memq c '(#\i #\I))
          (cons 'datum (parse-string p (list c #\#) 10 #f 'i))]
-        [(memq c '(#\b #\B)) 
+        [(memq c '(#\b #\B))
          (cons 'datum (parse-string p (list c #\#) 2 2 #f))]
-        [(memq c '(#\x #\X)) 
+        [(memq c '(#\x #\X))
          (cons 'datum (parse-string p (list c #\#) 16 16 #f))]
-        [(memq c '(#\o #\O)) 
+        [(memq c '(#\o #\O))
          (cons 'datum (parse-string p (list c #\#) 8 8 #f))]
-        [(memq c '(#\d #\D)) 
+        [(memq c '(#\d #\D))
          (cons 'datum (parse-string p (list c #\#) 10 10 #f))]
         ;[($char= #\@ c) DEAD: Unfixable due to port encoding
         ;                 that does not allow mixing binary and
@@ -594,8 +595,8 @@
         ;      (format "#~a" c)))
         ; (die/p-1 p 'read "FIXME: fasl read disabled")
         ; '(cons 'datum ($fasl-read p))]
-        [else 
-         (die/p-1 p 'tokenize 
+        [else
+         (die/p-1 p 'tokenize
             (format "invalid syntax #~a" c))])))
 
   (define (num-error p str ls)
@@ -624,8 +625,8 @@
              (let ([var c])
                (define-syntax fail
                  (syntax-rules ()
-                    [(_) 
-                     (num-error p "invalid numeric sequence" 
+                    [(_)
+                     (num-error p "invalid numeric sequence"
                         (cons var ac))]))
                (define-syntax next
                  (syntax-rules ()
@@ -639,30 +640,30 @@
   (define (read-char* p ls str who ci? delimited?)
     (let f ([i 0] [ls ls])
       (cond
-        [(fx= i (string-length str)) 
+        [(fx= i (string-length str))
          (when delimited?
            (let ([c (peek-char p)])
              (when (and (not (eof-object? c)) (not (delimiter? c)))
-               (die/p p 'tokenize 
-                 (format "invalid ~a: ~s" who 
+               (die/p p 'tokenize
+                 (format "invalid ~a: ~s" who
                    (list->string (reverse (cons c ls))))))))]
         [else
          (let ([c (read-char p)])
            (cond
-             [(eof-object? c) 
+             [(eof-object? c)
               (die/p p 'tokenize
                 (format "invalid eof inside ~a" who))]
              [(or (and (not ci?) (char=? c (string-ref str i)))
                   (and ci? (char=? (char-downcase c) (string-ref str i))))
               (f (add1 i) (cons c ls))]
-             [else 
-              (die/p-1 p 'tokenize 
+             [else
+              (die/p-1 p 'tokenize
                 (format "invalid ~a: ~s" who
                   (list->string (reverse (cons c ls)))))]))])))
   (define (tokenize-hashnum p n)
     (let ([c (read-char p)])
       (cond
-        [(eof-object? c) 
+        [(eof-object? c)
          (die/p p 'tokenize "invalid eof inside #n mark/ref")]
         [($char= #\= c) (cons 'mark n)]
         [($char= #\# c) (cons 'ref n)]
@@ -674,12 +675,12 @@
     (lambda (p ac)
       (let ([c (read-char p)])
         (cond
-          [(eof-object? c) 
+          [(eof-object? c)
            (die/p p 'tokenize "unexpected eof while reading symbol")]
           [($char= #\\ c)
            (let ([c (read-char p)])
              (cond
-               [(eof-object? c) 
+               [(eof-object? c)
                 (die/p p 'tokenize "unexpected eof while reading symbol")]
                [else (tokenize-bar p (cons c ac))]))]
           [($char= #\| c) ac]
@@ -687,36 +688,36 @@
   (define (tokenize-backslash main-ac p)
     (let ([c (read-char p)])
       (cond
-        [(eof-object? c) 
+        [(eof-object? c)
          (die/p p 'tokenize "invalid eof after symbol escape")]
-        [($char= #\x c) 
+        [($char= #\x c)
          (let ([c (read-char p)])
            (cond
-             [(eof-object? c) 
+             [(eof-object? c)
               (die/p p 'tokenize "invalid eof after \\x")]
-             [(hex c) => 
+             [(hex c) =>
               (lambda (v)
                 (let f ([v v] [ac `(,c #\x #\\)])
                   (let ([c (read-char p)])
                     (cond
-                      [(eof-object? c) 
-                       (die/p p 'tokenize 
+                      [(eof-object? c)
+                       (die/p p 'tokenize
                          (format "invalid eof after ~a"
                            (list->string (reverse ac))))]
                       [($char= #\; c)
-                       (tokenize-identifier 
+                       (tokenize-identifier
                          (cons (checked-integer->char v ac p) main-ac)
                          p)]
                       [(hex c) =>
                        (lambda (v0)
                          (f (+ (* v 16) v0) (cons c ac)))]
-                      [else 
+                      [else
                        (die/p-1 p 'tokenize "invalid sequence"
                          (list->string (cons c (reverse ac))))]))))]
              [else
-              (die/p-1 p 'tokenize 
+              (die/p-1 p 'tokenize
                  (format "invalid sequence \\x~a" c))]))]
-        [else 
+        [else
          (die/p-1 p 'tokenize
            (format "invalid sequence \\~a" c))])))
   (define tokenize/c
@@ -731,7 +732,7 @@
         [($char= #\] c)   'rbrack]
         [($char= #\' c)   '(macro . quote)]
         [($char= #\` c)   '(macro . quasiquote)]
-        [($char= #\, c) 
+        [($char= #\, c)
          (let ([c (peek-char p)])
            (cond
             [(eof-object? c) '(macro . unquote)]
@@ -740,7 +741,7 @@
              '(macro . unquote-splicing)]
             [else '(macro . unquote)]))]
         [($char= #\# c) (tokenize-hash p)]
-        [(char<=? #\0 c #\9) 
+        [(char<=? #\0 c #\9)
          (let ([d (fx- (char->integer c) (char->integer #\0))])
            (cons 'datum
              (u:digit+ p (list c) 10 #f #f +1 d)))]
@@ -779,12 +780,12 @@
          (let ([ls (reverse (tokenize-bar p '()))])
            (cons 'datum (string->symbol (list->string ls))))]
         [($char= #\\ c)
-         (cons 'datum 
+         (cons 'datum
             (string->symbol
               (list->string
                 (reverse (tokenize-backslash '() p)))))]
         ;[($char= #\{ c) 'lbrace]
-        [($char= #\@ c) 
+        [($char= #\@ c)
          (when (eq? (port-mode p) 'r6rs-mode)
            (die/p p 'tokenize "@-expr syntax is invalid in #!r6rs mode"))
          'at-expr]
@@ -802,12 +803,12 @@
           [(eqv? c #\#)
            (let ([c (read-char p)])
              (cond
-               [(eof-object? c) 
+               [(eof-object? c)
                 (die/p p 'tokenize "invalid eof after #")]
                [(eqv? c #\;)
-                (read-as-comment p) 
+                (read-as-comment p)
                 (tokenize/1 p)]
-               [(eqv? c #\|) 
+               [(eqv? c #\|)
                 (multiline-comment p)
                 (tokenize/1 p)]
                [else
@@ -828,18 +829,18 @@
              (let ([pos (input-port-byte-position p)])
                (let ([c (read-char p)])
                  (cond
-                   [(eof-object? c) 
+                   [(eof-object? c)
                     (die/p p 'tokenize "invalid eof after #")]
                    [(eqv? c #\;)
                     (read-as-comment p)
                     (tokenize/1+pos p)]
-                   [(eqv? c #\|) 
+                   [(eqv? c #\|)
                     (multiline-comment p)
                     (tokenize/1+pos p)]
                    [else
                     (values (tokenize-hash/c c p) pos)])))]
             [(char-whitespace? c) (tokenize/1+pos p)]
-            [else 
+            [else
              (values (tokenize/c c p) pos)])))))
 
   (define tokenize-script-initial
@@ -850,7 +851,7 @@
           [(eqv? c #\;)
            (skip-comment p)
            (tokenize/1 p)]
-          [(eqv? c #\#) 
+          [(eqv? c #\#)
            (let ([c (read-char p)])
              (cond
                [(eof-object? c)
@@ -861,7 +862,7 @@
                [(eqv? c #\;)
                 (read-as-comment p)
                 (tokenize/1 p)]
-               [(eqv? c #\|) 
+               [(eqv? c #\|)
                 (multiline-comment p)
                 (tokenize/1 p)]
                [else
@@ -878,7 +879,7 @@
             [(eqv? c #\;)
              (skip-comment p)
              (tokenize/1+pos p)]
-            [(eqv? c #\#) 
+            [(eqv? c #\#)
              (let ([pos (input-port-byte-position p)])
                (let ([c (read-char p)])
                  (cond
@@ -890,7 +891,7 @@
                    [(eqv? c #\;)
                     (read-as-comment p)
                     (tokenize/1+pos p)]
-                   [(eqv? c #\|) 
+                   [(eqv? c #\|)
                     (multiline-comment p)
                     (tokenize/1+pos p)]
                    [else
@@ -904,7 +905,7 @@
   (define-struct annotation (expression source stripped))
   ;;; - source is a pair of file-name x char-position
   ;;; - stripped is an s-expression with no annotations
-  ;;; - expression is a list/vector/id/whathaveyou that 
+  ;;; - expression is a list/vector/id/whathaveyou that
   ;;;   may contain further annotations.
 
 
@@ -912,7 +913,7 @@
     (define-syntax tokenize/1 syntax-error)
     (define (annotate-simple datum pos p)
       (make-annotation datum (cons (port-id p) pos) datum))
-    (define (annotate stripped expression pos p) 
+    (define (annotate stripped expression pos p)
       (make-annotation expression (cons (port-id p) pos) stripped))
     (define read-list
       (lambda (p locs k end mis init?)
@@ -935,7 +936,7 @@
                   [(eq? t 'dot)
                    (die/p-1 p 'read "cannot have two dots in a list")]
                   [else
-                   (die/p-1 p 'read 
+                   (die/p-1 p 'read
                      (format "expecting ~a, got ~a" end t))])))]
             [else
              (let-values ([(a a^ locs k) (parse-token p locs k t pos)])
@@ -943,8 +944,8 @@
                  (let ([x (cons a d)] [x^ (cons a^ d^)])
                    (values x x^ locs (extend-k-pair x x^ a d k)))))]))))
     (define extend-k-pair
-      (lambda (x x^ a d k) 
-        (cond 
+      (lambda (x x^ a d k)
+        (cond
           [(or (loc? a) (loc? d))
            (lambda ()
              (let ([a (car x)])
@@ -953,7 +954,7 @@
                  (set-car! x^ (loc-value^ a))))
              (let ([d (cdr x)])
                (when (loc? d)
-                 (set-cdr! x (loc-value d)) 
+                 (set-cdr! x (loc-value d))
                  (set-cdr! x^ (loc-value^ d))))
              (k))]
           [else k])))
@@ -965,23 +966,23 @@
            (let ([a (car ls)])
              (vector-set! v i a)
              (vector-set! v^ i (car ls^))
-             (vector-put v v^ 
+             (vector-put v v^
                 (if (loc? a)
                     (lambda ()
                       (vector-set! v i (loc-value a))
                       (vector-set! v^ i (loc-value^ a))
                       (k))
                     k)
-                (fxsub1 i) 
+                (fxsub1 i)
                 (cdr ls)
                 (cdr ls^)))])))
     (define read-vector
       (lambda (p locs k count ls ls^)
         (let-values ([(t pos) (tokenize/1+pos p)])
           (cond
-            [(eof-object? t) 
+            [(eof-object? t)
              (die/p p 'read "end of file encountered while reading a vector")]
-            [(eq? t 'rparen) 
+            [(eq? t 'rparen)
              (let ([v (make-vector count)] [v^ (make-vector count)])
                (let ([k (vector-put v v^ k (fxsub1 count) ls ls^)])
                  (values v v^ locs k)))]
@@ -991,15 +992,15 @@
              (die/p-1 p 'read "unexpected . while reading a vector")]
             [else
              (let-values ([(a a^ locs k) (parse-token p locs k t pos)])
-                (read-vector p locs k (fxadd1 count) 
+                (read-vector p locs k (fxadd1 count)
                   (cons a ls) (cons a^ ls^)))]))))
     (define read-bytevector
       (lambda (p locs k count ls)
         (let-values ([(t pos) (tokenize/1+pos p)])
           (cond
-            [(eof-object? t) 
+            [(eof-object? t)
              (die/p p 'read "end of file encountered while reading a bytevector")]
-            [(eq? t 'rparen) 
+            [(eq? t 'rparen)
              (let ([v (u8-list->bytevector (reverse ls))])
                (values v v locs k))]
             [(eq? t 'rbrack)
@@ -1009,9 +1010,9 @@
             [else
              (let-values ([(a a^ locs k) (parse-token p locs k t pos)])
                 (unless (and (fixnum? a) (fx<= 0 a) (fx<= a 255))
-                  (die/ann a^ 'read 
+                  (die/ann a^ 'read
                     "invalid value in a bytevector" a))
-                (read-bytevector p locs k (fxadd1 count) 
+                (read-bytevector p locs k (fxadd1 count)
                   (cons a ls)))]))))
     (define read-at-expr
       (lambda (p locs k at-pos)
@@ -1024,7 +1025,7 @@
                 (let ([str^ (annotate-simple str pos p)])
                   (values (cons str a*) (cons str^ a*^))))))
         (define (return start-pos start-col c*** p)
-          (let ([indent 
+          (let ([indent
                  (apply min start-col
                    (map
                      (lambda (c**)
@@ -1062,7 +1063,7 @@
                           (s1 c* pos (cdr c**) n)))
                     (if (char=? (car c*) #\space)
                         (s1 (cdr c*) pos c** (+ n 1))
-                        (cons* 
+                        (cons*
                           (mk n pos)
                           (map convert (cons (cons c* pos) c**))))))
               (define (s00 c* pos c** n)
@@ -1083,10 +1084,10 @@
               (s0 c** 0))
             (define (cons-initial c** c***)
               (define (all-white? c**)
-                (andmap (lambda (c*) 
+                (andmap (lambda (c*)
                           (and (not (nested? c*))
                                (not (nested*? c*))
-                               (andmap 
+                               (andmap
                                  (lambda (c) (char=? c #\space))
                                  (car c*))))
                         c**))
@@ -1140,7 +1141,7 @@
               (define (match-prefix c* pref*)
                 (cond
                   [(and (pair? c*) (pair? pref*))
-                   (and (char=? (car c*) (car pref*)) 
+                   (and (char=? (car c*) (car pref*))
                         (match-prefix (cdr c*) (cdr pref*)))]
                   [else (and (null? pref*) c*)]))
               (let ([c (read-char p)])
@@ -1151,7 +1152,7 @@
                    (let g ([x* (cons #\} c*)] [p* pref*])
                      (if (null? p*)
                          (if (= depth 0)
-                             (let ([c** 
+                             (let ([c**
                                     (reverse
                                       (if (null? c*)
                                           c**
@@ -1161,7 +1162,7 @@
                              (f x* pos c** c*** (- depth 1) locs k))
                          (let ([c (peek-char p)])
                            (cond
-                             [(eof-object? c) 
+                             [(eof-object? c)
                               (die/p p 'read "invalid eof inside @-expression")]
                              [(char=? c (rev-punc (car p*)))
                               (read-char p)
@@ -1169,14 +1170,14 @@
                              [else
                               (f x* pos c** c*** depth locs k)]))))]
                   [(char=? c #\{)
-                   (f (cons c c*) pos c** c*** 
+                   (f (cons c c*) pos c** c***
                       (if (match-prefix c* pref*) (+ depth 1) depth)
                       locs k)]
                   [(char=? c #\newline)
                    (f '()
                       (port-position p)
                       '()
-                      (cons (reverse 
+                      (cons (reverse
                               (if (null? c*)
                                   c**
                                   (cons (cons (reverse c*) pos) c**)))
@@ -1186,9 +1187,9 @@
                    (lambda (c*)
                      (let ([c (peek-char p)])
                        (cond
-                         [(eof-object? c) 
+                         [(eof-object? c)
                           (die/p p 'read "invalid eof inside nested @-expr")]
-                         [(char=? c #\") 
+                         [(char=? c #\")
                           (read-char p)
                           (let ([c* (tokenize-string c* p)])
                             (f c* pos c** c*** depth locs k))]
@@ -1207,7 +1208,7 @@
         (define (read-brackets p locs k)
           (let-values ([(a* a*^ locs k)
                         (read-list p locs k 'rbrack 'rparen #t)])
-            (unless (list? a*) 
+            (unless (list? a*)
               (die/ann a*^ 'read "not a proper list"))
             (let ([c (peek-char p)])
               (cond
@@ -1220,11 +1221,11 @@
                    (values (append a* b*)
                            (append a*^ b*^)
                            locs k))]
-                [(char=? c #\|) 
+                [(char=? c #\|)
                  (read-char p)
                  (let-values ([(b* b*^ locs k)
                                (read-at-bar p locs k #t)])
-                   (values (append a* b*) 
+                   (values (append a* b*)
                            (append a*^ b*^)
                            locs k))]
                 [else (values a* a*^ locs k)]))))
@@ -1235,7 +1236,7 @@
               [(= i (string-length chars)) #f]
               [(char=? c (string-ref chars i)) #t]
               [else (f (+ i 1))])))
-        (define (rev-punc c) 
+        (define (rev-punc c)
           (cond
             [(char=? c #\() #\)]
             [(char=? c #\[) #\]]
@@ -1258,7 +1259,7 @@
                  (let f ([ls (list c)])
                    (let ([c (peek-char p)])
                      (cond
-                       [(eof-object? c) 
+                       [(eof-object? c)
                         (die/p p 'read "eof inside @|< mode")]
                        [(left-punc? c)
                         (read-char p)
@@ -1266,20 +1267,20 @@
                        [(char=? c #\{)
                         (read-char p)
                         (read-text p locs k (append ls '(#\|)))]
-                       [else 
+                       [else
                         (read-at-bar-others ls p locs k)]))))]
               [text-mode? ;;; @|5 6 7|
                (read-at-bar-datum p locs k)]
-              [else 
+              [else
                (die/p p 'read "invalid char in @| mode" c)])))
         (define (read-at-bar-others ls p locs k)
           (define (split ls)
             (cond
               [(null? ls) (values '() '())]
-              [(initial? (car ls)) 
+              [(initial? (car ls))
                (let-values ([(a d) (split (cdr ls))])
                  (values (cons (car ls) a) d))]
-              [else 
+              [else
                (values '() ls)]))
           (define (mksymbol ls)
             (let ([s (string->symbol
@@ -1310,7 +1311,7 @@
                           [(#\[) #\] ;;;  vim paren-matching sucks
                            (let-values ([(b* b*^ locs k)
                                          (read-list p locs k 'rbrack 'rparen #t)])
-                             (g (cdr rest) 
+                             (g (cdr rest)
                                 (list (append a* b*))
                                 (list (append a*^ b*^))
                                 locs k))]
@@ -1331,16 +1332,16 @@
               [(char=? c #\|)
                (read-char p)
                (values '() '() locs k)]
-              [else 
+              [else
                (let-values ([(a a^ locs k) (read-expr p locs k)])
                  (let-values ([(a* a*^ locs k) (read-at-bar-datum p locs k)])
-                   (values (cons a a*) (cons a^ a*^) locs k)))])))  
+                   (values (cons a a*) (cons a^ a*^) locs k)))])))
         (define (read-at-text-mode p locs k)
           (let ([c (peek-char p)])
             (cond
-              [(eof-object? c) 
+              [(eof-object? c)
                (die/p p 'read "eof encountered inside @-expression")]
-              [(char=? c #\|) 
+              [(char=? c #\|)
                (read-char p)
                (read-at-bar p locs k #t)]
               [else
@@ -1385,57 +1386,57 @@
                                     (read-at-bar p locs k #f)])
                         (let ([v (cons a a*)] [v^ (cons a^ a*^)])
                           (values v (annotate v v^ at-pos p) locs k)))]
-                     [else 
+                     [else
                       (values a a^ locs k)])))])))
         (read-at-sexpr-mode p locs k)))
     (define parse-token
       (lambda (p locs k t pos)
         (cond
           [(eof-object? t)
-           (values (eof-object) 
+           (values (eof-object)
              (annotate-simple (eof-object) pos p) locs k)]
           [(eq? t 'lparen)
-           (let-values ([(ls ls^ locs k) 
+           (let-values ([(ls ls^ locs k)
                          (read-list p locs k 'rparen 'rbrack #t)])
              (values ls (annotate ls ls^ pos p) locs k))]
-          [(eq? t 'lbrack) 
-           (let-values ([(ls ls^ locs k) 
+          [(eq? t 'lbrack)
+           (let-values ([(ls ls^ locs k)
                          (read-list p locs k 'rbrack 'rparen #t)])
              (values ls (annotate ls ls^ pos p) locs k))]
-          [(eq? t 'vparen) 
-           (let-values ([(v v^ locs k) 
+          [(eq? t 'vparen)
+           (let-values ([(v v^ locs k)
                          (read-vector p locs k 0 '() '())])
              (values v (annotate v v^ pos p) locs k))]
           [(eq? t 'vu8)
-           (let-values ([(v v^ locs k) 
+           (let-values ([(v v^ locs k)
                          (read-bytevector p locs k 0 '())])
              (values v (annotate v v^ pos p) locs k))]
-          [(eq? t 'at-expr) 
+          [(eq? t 'at-expr)
            (read-at-expr p locs k pos)]
           [(pair? t)
            (cond
-             [(eq? (car t) 'datum) 
-              (values (cdr t) 
+             [(eq? (car t) 'datum)
+              (values (cdr t)
                 (annotate-simple (cdr t) pos p) locs k)]
              [(eq? (car t) 'macro)
               (let ([macro (cdr t)])
                 (define (read-macro)
                   (let-values ([(t pos) (tokenize/1+pos p)])
                     (cond
-                      [(eof-object? t) 
-                       (die/p p 'read 
+                      [(eof-object? t)
+                       (die/p p 'read
                          (format "invalid eof after ~a read macro"
                          macro))]
                       [else (parse-token p locs k t pos)])))
                 (let-values ([(expr expr^ locs k) (read-macro)])
                   (let ([d (list expr)] [d^ (list expr^)])
-                    (let ([x (cons macro d)] 
+                    (let ([x (cons macro d)]
                           [x^ (cons (annotate-simple macro pos p) d^)])
                       (values x (annotate x x^ pos p) locs
                         (extend-k-pair d d^ expr '() k))))))]
-             [(eq? (car t) 'mark) 
+             [(eq? (car t) 'mark)
               (let ([n (cdr t)])
-                (let-values ([(expr expr^ locs k) 
+                (let-values ([(expr expr^ locs k)
                               (read-expr p locs k)])
                   (cond
                     [(assq n locs) =>
@@ -1463,7 +1464,7 @@
                        (values loc 'unused locs k)))]))]
              [else (die/p p 'read "invalid token" t)])]
           [else
-           (die/p-1 p 'read 
+           (die/p-1 p 'read
              (format "unexpected ~s found" t))])))
     (define read-expr
       (lambda (p locs k)
@@ -1496,7 +1497,7 @@
                          (set-loc-value! h h1)
                          h1)))
                  h))))))
-  
+
   (define (read-as-comment p)
     (begin (read-expr p '() void) (void)))
 
@@ -1533,7 +1534,7 @@
   (define read-annotated
     (case-lambda
       [(p)
-       (unless (input-port? p) 
+       (unless (input-port? p)
          (error 'read-annotated "not an input port" p))
        (let-values ([(expr expr^ locs k) (read-expr p '() void)])
          (cond
@@ -1575,7 +1576,7 @@
            (die 'read "not an input port" p))]))
 
   (define (get-datum p)
-    (unless (input-port? p) 
+    (unless (input-port? p)
       (die 'get-datum "not an input port"))
     (my-read p))
 
@@ -1590,5 +1591,5 @@
 
 )
 
-          
+
 

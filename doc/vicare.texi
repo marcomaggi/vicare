@@ -604,7 +604,7 @@ External documents
 @detailmenu
  --- The Detailed Node Listing ---
 
-Overview of Ikarus Scheme
+Overview of Vicare Scheme
 
 * overview original::           Original Ikarus Scheme.
 * overview tech::               Technology overview.
@@ -638,26 +638,24 @@ Using @value{PRJNAME}
 * using libraries summary::     Library search summary.
 * using libraries examples::    Examples of libraries usage.
 
-The @value{PRJNAME} library
+Installed libraries
 
-* library cross::             Writing cross--implementation
-                                libraries.
-* library reader::            Reader.
-* library cafe::              Cafe.
-* library environment::       Environments.
-* library load::              Loading source files.
-* library import::            Local library imports.
-* library modules::           Local modules.
-* library parameters::        Parameters.
-* library gensym::            Gensyms.
-* library printing::          Printing.
-* library tracing::           Tracing.
-* library timing::            Timing.
-* library guardians::         Guardians and garbage collection.
-* library io::                Input/output library.
-* library posix::             @posix{} functions.
-* library foreign::           Foreign interface library.
-* library misc::              Miscellaneous functions.
+* library reader::              Reader.
+* library cafe::                Cafe.
+* library environment::         Environments.
+* library load::                Loading source files.
+* library import::              Local library imports.
+* library modules::             Local modules.
+* library parameters::          Parameters.
+* library gensym::              Gensyms.
+* library printing::            Printing.
+* library tracing::             Tracing.
+* library timing::              Timing.
+* library guardians::           Guardians and garbage collection.
+* library io::                  Input/output library.
+* library posix::               @posix{} functions.
+* library foreign::             Foreign interface library.
+* library misc::                Miscellaneous functions.
 
 Local modules
 
@@ -697,7 +695,7 @@ Using network sockets
                                 environment.
 * library posix misc::        Miscellaneous functions.
 
-The @library{ikarus foreign} library
+The @library{vicare foreign} library
 
 * library foreign overview::  Overview of the foreign functions
                                 interface.
@@ -719,6 +717,10 @@ Calling out to foreign procedures
 * library foreign call out api::      Interface to foreign functions.
 * library foreign call out types::    Type specifiers.
 * library foreign call out example::  C language call out example.
+
+Building infrastructure
+
+* building revision::           Package revision in the banner.
 
 @end detailmenu
 @end menu
@@ -1347,7 +1349,7 @@ which it depends.
 The lack of an @option{--r6rs-script} argument causes @value{PRJNAME} to
 start in interactive mode.  Each @code{file} is first loaded in the
 interaction environment.  The interaction environment initially contains
-all the bindings exported from the @library{ikarus} library.
+all the bindings exported from the @library{vicare} library.
 
 The optional @code{arguments} following the @code{--} marker can be
 obtained by calling the @func{command-line} procedure.  In interactive
@@ -1490,22 +1492,10 @@ executed.  The @code{.command} extension can be hidden from the
 @section @value{PRJNAME} and @rnrs{6} libraries
 
 
-One of the major features added in @rnrs{6} was a standardized concept
-of libraries: modules that export features that can be imported into
-programs.  A library is named by a list, e.g., @library{yoyodyne
-block-transfer-computations}; the core library of the language is
+A library exports features that can be imported into programs; a library
+is named by a list, e.g., @library{yoyodyne
+block-transfer-computations}.  The core features of the language is
 provided in the library @library{rnrs}.
-
-Unfortunately, libraries have many quirks.  Partially, this comes from
-the way libraries are defined in @rnrs{6}; some fine--tuning in the
-future will probably tighten up the semantics.  Partially, this comes
-from the fact that no language standard can or should define how
-external code modules are stored and retrieved; there are many decisions
-that an implementer must be free to make (a hypothetical Scheme
-implementation might want to retrieve libraries from a database system,
-for example).
-
-This section discusses the @value{PRJNAME} implementation of libraries.
 
 @menu
 * using libraries intro::       Introduction to @value{PRJNAME} libraries.
@@ -1532,10 +1522,10 @@ a library form, which might look like this:
 @end example
 
 @noindent
-notice the @command{import} clause; libraries have no predefined
-namespace, and therefore at least @code{(rnrs)} must be imported.
+notice the @func{import} clause; libraries have no predefined namespace,
+and therefore at least @library{rnrs} must be imported.
 
-We can import @code{(sample)} into another library, a script, or an
+We can import @library{sample} into another library, a script, or a
 @value{PRJNAME} top--level session:
 
 @example
@@ -1546,9 +1536,9 @@ We can import @code{(sample)} into another library, a script, or an
 
 Library names are lists, thus allowing the writer of one or more
 libraries to group related libraries together.  For example, as well as
-@code{(yoyodyne block-transfer-computations)}, we might also have
-@code{(yoyodyne tardis navigation)} and @code{(yoyodyne tardis
-diagnostics)}.  Leaving the parentheses off a single--component library
+@library{yoyodyne block-transfer-computations}, we might also have
+@library{yoyodyne tardis navigation} and @library{yoyodyne tardis
+diagnostics}.  Leaving the parentheses off a single--component library
 name is a common error.
 
 @c page
@@ -1557,16 +1547,16 @@ name is a common error.
 
 
 In @value{PRJNAME}, a library is a file with the same name as the last
-component of the library name.  For example, the library @code{(sample)}
-will correspond to a file named @file{sample.sls} somewhere in the file
-system.  The file extension @code{sls} stands for ``Scheme library
-source''; although @value{PRJNAME} will also accept the extensions
-@code{ss} and @code{scm}, these really indicate scripts, rather than
-libraries.
+component of the library name.  For example, the library
+@library{sample} will correspond to a file named @file{sample.sls}
+somewhere in the file system.  The file extension @code{sls} stands for
+``Scheme library source''; although @value{PRJNAME} will also accept the
+extensions @code{ss} and @code{scm}, these really indicate scripts,
+rather than libraries.
 
 @value{PRJNAME} has a search algorithm for libraries that is similar to
 those used in other languages.  Its search path comprises a series of
-directories.  When you try to import a library whose name contains just
+directories.  When we try to import a library whose name contains just
 one component, @value{PRJNAME} will examine each directory in the search
 path for a file with a matching name.  Importing a library whose name is
 a list of components causes @value{PRJNAME} to match to a series of
@@ -1576,45 +1566,44 @@ Here is an example of each case:
 
 @itemize
 @item
-Importing @code{(sample)} causes @value{PRJNAME} to look in each
+Importing @library{sample} causes @value{PRJNAME} to look in each
 directory on the path for a file named @file{sample.sls}.
 
 @item
-Importing @code{(yoyodyne sample)} causes @value{PRJNAME} to look in
-each directory on the path for a directory named @code{yoyodyne}, and
+Importing @library{yoyodyne sample} causes @value{PRJNAME} to look in
+each directory on the path for a directory named @file{yoyodyne}, and
 within that a file named @file{sample.sls}.  (The @func{library} form
-for this library must still specify the library name as @code{(yoyodyne
-sample)}, not @code{(sample)}.)
+for this library must still specify the library name as
+@library{yoyodyne sample}, not @library{sample}.)
 @end itemize
 
-@value{PRJNAME} always places its own libraries at the end of the search path.
-Other library directories can be added to the search path in two ways:
-by modifying an environment variable, or by setting @value{PRJNAME}'s
-@func{library-path} parameter.  @value{PRJNAME} consults the environment variable
-@env{IKARUS_LIBRARY_PATH} at the beginning of execution, and places each
-of the directories there into its search path.  The search path is then
-set to the value of the parameter @func{library-path}, which can be
-updated as necessary.
+@value{PRJNAME} always places its own libraries at the end of the search
+path.  Other library directories can be added to the search path in two
+ways: by modifying an environment variable, or by setting
+@value{PRJNAME}'s @func{library-path} parameter.  @value{PRJNAME}
+consults the environment variable @env{VICARE_LIBRARY_PATH} at the
+beginning of execution, and places each of the directories there into
+its search path.  The search path is then set to the value of the
+parameter @func{library-path}, which can be updated as necessary.
 
 @example
-$ export IKARUS_LIBRARY_PATH=$HOME/scheme:/tmp/library
-$ echo $IKARUS_LIBRARY_PATH
+$ export VICARE_LIBRARY_PATH=$HOME/scheme:/tmp/library
+$ echo $VICARE_LIBRARY_PATH
 /home/someuser/scheme:/tmp/library
-$ ikarus
-@value{PRJNAME} Scheme version 0.0.4-rc1+ (revision 1865, build 2009-11-17)
-Copyright (c) 2006-2009 Abdulaziz Ghuloum
+$ @value{RAWEXECUTABLE}
+...
 
 > (library-path)
 ("/home/someuser/scheme" "/tmp/library"
-  "/home/someuser/local/lib/ikarus")
+  "/home/someuser/local/lib/vicare")
 > (library-path (cons "/opt/sw/extra-libraries" (library-path)))
 > (library-path)
 ("/opt/sw/extra-libraries" "/home/someuser/scheme"
-  "/tmp/library" "/home/someuser/local/lib/ikarus")
+  "/tmp/library" "/home/someuser/local/lib/vicare")
 @end example
 
 @noindent
-In this example, the user sets @env{IKARUS_LIBRARY_PATH} before the
+In this example, the user sets @env{VICARE_LIBRARY_PATH} before the
 session; the settings are reflected in the value of
 @code{(library-path)}.  A further directory is then set during the
 session.
@@ -1629,15 +1618,15 @@ There are two refinements of the library search algorithm.
 @itemize
 @item
 A common pattern is to distribute a main library along with a number of
-additional extensions: we might have a main library named @code{(lib)},
-and additional optional extensions named @code{(lib extras)} and
-@code{(lib frills)}.  Although the previous packaging method can be
-used, @value{PRJNAME} allows you to use a simpler technique where the main
-library is stored in @file{lib/main.sls}, and the extensions are stored
-in @file{lib/extras.sls} and @file{lib/frills.sls}, respectively.
+additional extensions: we might have a main library named @library{lib},
+and additional optional extensions named @library{lib extras} and
+@library{lib frills}.  Although the previous packaging method can be
+used, @value{PRJNAME} allows you to use a simpler technique where the
+main library is stored in @file{lib/main.sls}, and the extensions are
+stored in @file{lib/extras.sls} and @file{lib/frills.sls}, respectively.
 
 @item
-@value{PRJNAME} will also look in @file{lib/main.ikarus.sls} before
+@value{PRJNAME} will also look in @file{lib/main.vicare.sls} before
 trying @file{lib/main.sls}.  This allows you to provide an
 @value{PRJNAME}--specific implementation as well as a generic
 implementation.
@@ -1648,7 +1637,7 @@ implementation.
 @subsection Library search algorithm summary
 
 
-@value{PRJNAME} attempts to import the library @code{(a b c)} as
+@value{PRJNAME} attempts to import the library @library{a b c} as
 follows, for each directory in the search path:
 
 @enumerate
@@ -1666,9 +1655,9 @@ matching file is found:
 /main.sls
 /main.ss
 /main.scm
-.ikarus.sls
-.ikarus.ss
-.ikarus.scm
+.vicare.sls
+.vicare.ss
+.vicare.scm
 .sls
 .ss
 .scm
@@ -1688,17 +1677,17 @@ code, and suppose further that pretty printing is just a nice add--on
 prettier}).
 
 @value{PRJNAME} exports a good pretty--printing facility in its
-@library{ikarus} library.  However, since @func{pretty-print} is not a
+@library{vicare} library.  However, since @func{pretty-print} is not a
 standard procedure, a program that uses it would be rendered unportable
 to other @rnrs{6} Scheme implementations.
 
-The programmer can put the @code{.ikarus.*} extensions to use in this
+The programmer can put the @code{.vicare.*} extensions to use in this
 situation, by writing two versions of a @library{pretty-printing}
 library: one for use by @value{PRJNAME}, and one portable for other
 implementations.
 
 @example
-;; pretty-printing.ikarus.ss --
+;; pretty-printing.vicare.ss --
 ;;
 ;; Can be used only by @value{PRJNAME} Scheme.
 
@@ -1741,170 +1730,73 @@ time, this chapter attempts to describe a few of these useful
 extensions.  Extensions to Scheme's lexical syntax are also documented.
 
 @menu
-* library cross::             Writing cross--implementation
-                                libraries.
-* library reader::            Reader.
-* library cafe::              Cafe.
-* library environment::       Environments.
-* library load::              Loading source files.
-* library import::            Local library imports.
-* library modules::           Local modules.
-* library parameters::        Parameters.
-* library gensym::            Gensyms.
-* library printing::          Printing.
-* library tracing::           Tracing.
-* library timing::            Timing.
-* library guardians::         Guardians and garbage collection.
-* library io::                Input/output library.
-* library posix::             @posix{} functions.
-* library foreign::           Foreign interface library.
-* library misc::              Miscellaneous functions.
+* library reader::              Reader.
+* library cafe::                Cafe.
+* library environment::         Environments.
+* library load::                Loading source files.
+* library import::              Local library imports.
+* library modules::             Local modules.
+* library parameters::          Parameters.
+* library gensym::              Gensyms.
+* library printing::            Printing.
+* library tracing::             Tracing.
+* library timing::              Timing.
+* library guardians::           Guardians and garbage collection.
+* library io::                  Input/output library.
+* library posix::               @posix{} functions.
+* library foreign::             Foreign interface library.
+* library misc::                Miscellaneous functions.
 @end menu
-
-@c page
-@node library cross
-@section Writing cross--implementation libraries
-
-
-When searching for a library, @value{PRJNAME} appends a suffix to the
-appropriate file pathname; the initial set of suffixes is:
-
-@ignore
-Wed Oct 22, 2008: notice that these extensions are in the files
-"scheme/ikarus.main.ss" and "psyntax.library-manager.ss".
-@end ignore
-@example
-/main.ikarus.sls
-/main.ikarus.ss
-/main.ikarus.scm
-/main.sls
-/main.ss
-/main.scm
-.ikarus.sls
-.ikarus.ss
-.ikarus.scm
-.sls
-.ss
-.scm
-@end example
-
-This list of file suffixes is iterated sequentially.  As a consequence,
-files ending with the @code{.ikarus.*} suffixes are given precedence
-over files that have generic Scheme extensions.  The rationale for this
-behaviour is to facilitate writing cross--implementation libraries: ones
-that take advantage of implementation--specific features, while at the
-same time to provide a fail--safe alternative for other @rnrs{6}
-implementations.
-
-Consider for example a program which would like to use the
-@func{pretty-print} procedure to format some code, and suppose further
-that pretty printing is just a nice add--on (e.g. using @file{write}
-suffices, but pretty--printing is @emph{just prettier}) @value{PRJNAME} exports a
-good pretty--printing facility in its @library{ikarus} library.
-However, since @func{pretty-print} is not a standard procedure, a
-program that uses it would be rendered unportable to other @rnrs{6}
-Scheme implementations.
-
-The programmer can put the @code{.ikarus.*} extensions to use in this
-situation, by writing two versions of a @library{pretty-printing}
-library: one for use by @value{PRJNAME}, and one portable for other
-implementations.
-
-@example
-;; pretty-printing.ikarus.ss --
-;;
-;; Can be used only by @value{PRJNAME} Scheme.
-
-(library (pretty-printing)
-  (export pretty-print)
-  (import (only (ikarus) pretty-print)))
-
-;;; end of file
-@end example
-
-@example
-;; pretty-printing.sls --
-;;
-;; For any other Scheme implementation, portable though
-;; not very pretty.
-
-(library (pretty-printing)
-  (export pretty-print)
-  (import (rnrs))
-  (define (pretty-print x port)
-    (write x port)
-    (newline port)))
-
-;;; end of file
-@end example
-
-The @code{/main.*} suffixes serve a different purpose.  Often, a set of
-libraries is distributed in a single package and it is convenient for
-the programmer to group related files in directories.  If a package
-contains the libraries @library{foo}, @library{foo core}, and
-@library{foo compat}, then putting all such library files together in
-one directory makes it easier to package, install, and remove these
-libraries en masse.  The layout of the package would look like:
-
-@example
-foo/README              :              ignored by @value{PRJNAME}
-foo/COPYING             :
-foo/main.ss             : (foo)        implementation independent
-foo/core.ss             : (foo core)
-foo/compat.ss           : (foo compat) default @rnrs{6} library
-foo/compat.ikarus.ss    :              specific for @value{PRJNAME}
-foo/compat.mzscheme.ss  :              specific for MzScheme
-@end example
 
 @c page
 @node library reader
 @section Reader
 
 
-@deffn {Reader Syntax} {#!ikarus}
-@value{PRJNAME} extends Scheme's lexical syntax (@rnrs{6} Chapter 4) in a variety
-of ways including:
+@deffn {Reader Syntax} {#!vicare}
+@value{PRJNAME} extends Scheme's lexical syntax (@rnrs{6} Chapter 4) in
+a variety of ways including:
 
 @itemize
 @item
-end--of--file marker, @code{#!eof};
+End--of--file marker, @code{#!eof}.
 
 @item
-gensym syntax, @code{#@{gensym@}};
+Gensym syntax, @code{#@{gensym@}}.
 
 @item
-graph syntax, @code{#nn= #nn#}.
+Graph syntax, @code{#nn= #nn#}.
 @end itemize
 
 The syntax extensions are made available by default on all input ports,
 until the @code{#!r6rs} token is read.  Thus, reading the @code{#!r6rs}
 token disables all extensions to the lexical syntax on the specific
-port, and the @code{#!ikarus} enables them again.
+port, and the @code{#!vicare} enables them again.
 
 When writing code that is intended to be portable across different
 Scheme implementations, we should add the @code{#!r6rs} token to the top
-of every script and library that you write; this allows @value{PRJNAME} to alert
-us when using non--portable features.  When writing code that's intended
-to be @value{PRJNAME}--specific, we should add the @code{#!ikarus} token in order
-to get an immediate error when the code is run under other
-implementations.
+of every script and library that we write; this allows @value{PRJNAME}
+to alert us when using non--portable features.  When writing code that's
+intended to be @value{PRJNAME}--specific, we should add the
+@code{#!vicare} token in order to get an immediate error when the code
+is run under other implementations.
 @end deffn
 
 
 @deffn Procedure port-mode @var{input-port}
 Accept an input port as argument and return a symbol among
-@code{r6rs-mode} and @code{ikarus-mode} as result.  All input ports
-start under @code{ikarus-mode} and thus accept @value{PRJNAME}--specific reader
+@code{r6rs-mode} and @code{vicare-mode} as result.  All input ports
+start under @code{vicare-mode} and thus accept @value{PRJNAME}--specific reader
 extensions.  When the @code{#!r6rs} token is read from a port, its mode
-changes to @code{ikarus-mode}.
+changes to @code{vicare-mode}.
 
 @example
 > (port-mode (current-input-port))
-ikarus-mode
+vicare-mode
 > #!r6rs (port-mode (current-input-port))
 r6rs-mode
 > #!ikarus (port-mode (current-input-port))
-ikarus-mode
+vicare-mode
 @end example
 @end deffn
 
@@ -1912,8 +1804,9 @@ ikarus-mode
 @deffn Procedure set-port-mode! @var{input-port} @var{mode}
 Modifiy the lexical syntax accepted by subsequent calls to @func{read}
 on the input port.  The mode is a symbol among @code{r6rs-mode} and
-@code{ikarus-mode}.  The effect of setting the port mode is similar to
-that of reading the @code{#!r6rs} or @code{#ikarus} from that port.
+@code{vicare-mode}.  The effect of setting the port mode is similar to
+that of reading the @code{#!r6rs} or @code{#!vicare} token from that
+port.
 
 @example
 > (set-port-mode! (current-input-port) 'r6rs-mode)
@@ -1930,8 +1823,7 @@ reader (e.g. @func{read} and @func{get-datum}) from reading the rest of
 the file.
 
 @example
-#!/usr/bin/env scheme-script
-(import (ikarus))
+(import (vicare))
 <some code>
 (display "goodbye\n")
 
@@ -1939,8 +1831,8 @@ the file.
 <some junk>
 @end example
 
-The @code{#!eof} marker also serves as a datum in @value{PRJNAME}, much like
-@true{} and @false{}, when it is found inside other expressions.
+The @code{#!eof} marker also serves as a datum in @value{PRJNAME}, much
+like @true{} and @false{}, when it is found inside other expressions.
 
 @example
 > (eof-object)
@@ -1975,7 +1867,7 @@ the current cafe (if one exists).  It prompts the user for an
 expression, evaluates it, prints the result back, and repeats the
 process.  If @func{new-cafe} is called with an argument, @var{eval},
 then that argument must be a procedure that takes a single argument.
-The eval procedure will be used to evaluate the expressions.
+The @var{eval} procedure will be used to evaluate the expressions.
 
 Every time a new cafe is started, the prompt is changed to reflect the
 depth of the current cafe (i.e. how many eof objects is takes to exit
@@ -2014,7 +1906,8 @@ library with the @func{import} form.  Here we see how to load files by
 specifying their pathname on the file system.
 
 
-@defun load @var{pathname} [@var{eval-proc}]
+@defun load @var{pathname}
+@defunx load @var{pathname} @var{eval-proc}
 Read and evaluate the file selected by the string @var{pathname}.
 
 If @var{eval-proc} is given: it must be a procedure that takes a single
@@ -2036,7 +1929,7 @@ The format of the annotated source is the one which is comprehensible by
 
 
 @deffn Syntax import import-spec* ...
-The @func{import} keyword which is exported from the @code{(ikarus)}
+  The @func{import} keyword which is exported from the @library{vicare}
 library can be used anywhere definitions can occur: at a script body,
 library's top--level, or in internal definitions context.  The syntax of
 the local @func{import} form is similar to the @func{import} that
@@ -2084,14 +1977,15 @@ similar in spirit to that of Chez Scheme.
 @end quotation
 
 @menu
-* library modules examples::  Usage example for modules.
-* library modules api::       Modules programming interface.
+* library modules examples::    Usage example for modules.
+* library modules api::         Modules programming interface.
 @end menu
 
 @c page
 @node library modules examples
 @subsection Usage example for modules
 
+@c SONO ARRIVATO QUI
 
 @menu
 * library modules examples anonymous::        Anonymous modules.
@@ -3208,7 +3102,7 @@ running stats:
 @section Guardians and garbage collection
 
 
-Guardians are available in the @library{ikarus} library; quoting
+Guardians are available in the @library{vicare} library; quoting
 @bibref{DYBGUA}:
 
 @quotation
@@ -3223,7 +3117,7 @@ program.
 @defun collect
 Run the garbage collector.  If post--garbage collection hooks are
 registered, they are run.  This binding is exported by the
-@library{ikarus} library.
+@library{vicare} library.
 @end defun
 
 
@@ -4180,12 +4074,12 @@ positive exact integers.  If an error occurs an exception is raised.
 
 @c page
 @node library foreign
-@section The @library{ikarus foreign} library
+@section The @library{vicare foreign} library
 
 
 This chapter describes the facilities through which @value{PRJNAME}
 interfaces with the host operating system and other external libraries.
-The facilities of the @library{ikarus foreign} library give the Scheme
+The facilities of the @library{vicare foreign} library give the Scheme
 program unrestricted access to the computer memory, allowing one to
 allocate, access, modify, and free memory as needed.  The facilities
 also allow the Scheme program to @emph{call out} to system procedures as
@@ -4319,7 +4213,7 @@ on.  Objects, as found in object--oriented programming languages, are at
 an even higher level of abstraction since they are treated as opaque
 references that retain state and know how to respond to messages.
 
-The procedures in the @library{ikarus foreign} library are meant to
+The procedures in the @library{vicare foreign} library are meant to
 provide a way to interface with the low level memory operations such as
 setting and getting bytes from specific locations in memory.  Although
 they do not provide high--level operations, the basic procedures make
