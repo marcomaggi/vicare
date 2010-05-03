@@ -2003,13 +2003,13 @@ and invokes its functions from the enclosing environment (which is the
 top level):
 
 @example
-(import (ikarus))
+(import (vicare))
 
-[module (one two three)
+(module (one two three)
     (define (one)       'one)
     (define (two)       'two)
     (define (three)     (cons 'three (hidden)))
-    (define (hidden)    'hidden)]
+    (define (hidden)    'hidden))
 
 (printf "calling anonymous: ~s ~s ~s~%" (one) (two) (three))
 @end example
@@ -2022,15 +2022,15 @@ The following example defines a module, with expressions, and invokes
 its functions from the enclosing environment (which is the top level):
 
 @example
-(import (ikarus))
+(import (vicare))
 
-[module (one two three)
+(module (one two three)
     (define (one)       'one)
     (define (two)       'two)
     (define (three)     (cons 'three (hidden)))
     (define (hidden)    'hidden)
 
-    (printf "defining an anonymous module~%")]
+    (printf "defining an anonymous module~%"))
 
 (printf "calling anonymous: ~s ~s ~s~%" (one) (two) (three))
 @end example
@@ -2059,16 +2059,16 @@ its functions from the enclosing environment (which is a @func{let}
 form):
 
 @example
-(import (ikarus))
+(import (vicare))
 
 (let ()
-  [module (one two three)
+  (module (one two three)
       (define (one)       'one)
       (define (two)       'two)
       (define (three)     (cons 'three (hidden)))
       (define (hidden)    'hidden)
 
-      (printf "defining an anonymous module~%")]
+      (printf "defining an anonymous module~%"))
 
   (printf "calling anonymous: ~s ~s ~s~%" (one) (two) (three)))
 @end example
@@ -2092,7 +2092,7 @@ The following example shows that bindings from the enclosing environment
 and the top level environment are accessible from the modules:
 
 @example
-(import (ikarus))
+(import (vicare))
 
 (define (top-level-before) 'top-level-before)
 
@@ -2100,14 +2100,14 @@ and the top level environment are accessible from the modules:
 
   (define (outer-before) 'outer-before)
 
-  [module (one two three)
+  (module (one two three)
     (define (one)       'one)
     (define (two)       'two)
     (define (three)     (list 'three
                               (outer-before)
                               (outer-after)
                               (top-level-before)
-                              (top-level-after)))]
+                              (top-level-after))))
 
   (define (outer-after) 'outer-after)
 
