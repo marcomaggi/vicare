@@ -1349,7 +1349,7 @@ which it depends.
 The lack of an @option{--r6rs-script} argument causes @value{PRJNAME} to
 start in interactive mode.  Each @code{file} is first loaded in the
 interaction environment.  The interaction environment initially contains
-all the bindings exported from the @library{vicare} library.
+all the bindings exported from the @library{ikarus} library.
 
 The optional @code{arguments} following the @code{--} marker can be
 obtained by calling the @func{command-line} procedure.  In interactive
@@ -1677,7 +1677,7 @@ code, and suppose further that pretty printing is just a nice add--on
 prettier}).
 
 @value{PRJNAME} exports a good pretty--printing facility in its
-@library{vicare} library.  However, since @func{pretty-print} is not a
+@library{ikarus} library.  However, since @func{pretty-print} is not a
 standard procedure, a program that uses it would be rendered unportable
 to other @rnrs{6} Scheme implementations.
 
@@ -1720,12 +1720,12 @@ implementations.
 
 
 In addition to the libraries listed in the @rnrs{6} standard,
-@value{PRJNAME} contains the @library{vicare} library which provides
-additional useful features.  The @library{vicare} library is a composite
+@value{PRJNAME} contains the @library{ikarus} library which provides
+additional useful features.  The @library{ikarus} library is a composite
 library---it exports a superset of all the supported bindings of
 @rnrs{6}.
 
-While not all of the exports of @library{vicare} are documented at this
+While not all of the exports of @library{ikarus} are documented at this
 time, this chapter attempts to describe a few of these useful
 extensions.  Extensions to Scheme's lexical syntax are also documented.
 
@@ -1823,7 +1823,7 @@ reader (e.g. @func{read} and @func{get-datum}) from reading the rest of
 the file.
 
 @example
-(import (vicare))
+(import (ikarus))
 <some code>
 (display "goodbye\n")
 
@@ -1929,7 +1929,7 @@ The format of the annotated source is the one which is comprehensible by
 
 
 @deffn Syntax import import-spec* ...
-  The @func{import} keyword which is exported from the @library{vicare}
+  The @func{import} keyword which is exported from the @library{ikarus}
 library can be used anywhere definitions can occur: at a script body,
 library's top--level, or in internal definitions context.  The syntax of
 the local @func{import} form is similar to the @func{import} that
@@ -2003,7 +2003,7 @@ and invokes its functions from the enclosing environment (which is the
 top level):
 
 @example
-(import (vicare))
+(import (ikarus))
 
 (module (one two three)
     (define (one)       'one)
@@ -2022,7 +2022,7 @@ The following example defines a module, with expressions, and invokes
 its functions from the enclosing environment (which is the top level):
 
 @example
-(import (vicare))
+(import (ikarus))
 
 (module (one two three)
     (define (one)       'one)
@@ -2059,7 +2059,7 @@ its functions from the enclosing environment (which is a @func{let}
 form):
 
 @example
-(import (vicare))
+(import (ikarus))
 
 (let ()
   (module (one two three)
@@ -2092,7 +2092,7 @@ The following example shows that bindings from the enclosing environment
 and the top level environment are accessible from the modules:
 
 @example
-(import (vicare))
+(import (ikarus))
 
 (define (top-level-before) 'top-level-before)
 
@@ -3102,7 +3102,7 @@ running stats:
 @section Guardians and garbage collection
 
 
-Guardians are available in the @library{vicare} library; quoting
+Guardians are available in the @library{ikarus} library; quoting
 @bibref{DYBGUA}:
 
 @quotation
@@ -3117,7 +3117,7 @@ program.
 @defun collect
 Run the garbage collector.  If post--garbage collection hooks are
 registered, they are run.  This binding is exported by the
-@library{vicare} library.
+@library{ikarus} library.
 @end defun
 
 
