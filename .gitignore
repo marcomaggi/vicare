@@ -22,6 +22,7 @@ Makefile.in
 .vimview
 .DS_Store
 autom4te.cache
+scheme/last-revision
 benchmarks/sys/*
 benchmarks/results.AWK-r6rs
 benchmarks/results.Chicken-r6rs
