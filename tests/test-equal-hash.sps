@@ -35,7 +35,7 @@
 ;;;; code
 
 (check
-    (let ((table (make-hashtable symbol-hash equal?)))
+    (let ((table (make-hashtable equal-hash equal?)))
       (hashtable-set! table 'ciao 1)
       (hashtable-ref  table 'ciao #f))
   => 1)

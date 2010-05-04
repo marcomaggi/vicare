@@ -1,15 +1,16 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
+;;; Mofified by Marco Maggi
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -21,8 +22,8 @@
           hashtable-update! hashtable-keys hashtable-mutable?
           hashtable-clear! hashtable-entries hashtable-copy
           hashtable-equivalence-function hashtable-hash-function
-          string-hash string-ci-hash symbol-hash)
-  (import 
+          string-hash string-ci-hash symbol-hash equal-hash)
+  (import
     (ikarus system $pairs)
     (ikarus system $vectors)
     (ikarus system $tcbuckets)
@@ -34,7 +35,7 @@
             hashtable-update! hashtable-keys hashtable-mutable?
             hashtable-clear! hashtable-entries hashtable-copy
             hashtable-equivalence-function hashtable-hash-function
-            string-hash string-ci-hash symbol-hash))
+            string-hash string-ci-hash symbol-hash equal-hash))
 
   (define-struct hasht (vec count tc mutable? hashf equivf hashf0))
 
@@ -51,7 +52,7 @@
               v)))))
 
   ;;; assq-like lookup
-  (define direct-lookup 
+  (define direct-lookup
     (lambda (x b)
       (if (fixnum? b)
           #f
@@ -84,26 +85,26 @@
     (lambda (lb x y)
       (let ([n ($tcbucket-next lb)])
         (cond
-          [(eq? n x) 
+          [(eq? n x)
            ($set-tcbucket-next! lb y)
            (void)]
           [else
            (replace! n x y)]))))
 
-  (define re-add! 
+  (define re-add!
     (lambda (h b)
       (let ([vec (hasht-vec h)]
             [next ($tcbucket-next b)])
         ;;; first remove it from its old place
-        (let ([idx 
+        (let ([idx
                (if (fixnum? next)
                    next
                    (get-bucket-index next))])
           (let ([fst ($vector-ref vec idx)])
             (cond
-              [(eq? fst b) 
+              [(eq? fst b)
                ($vector-set! vec idx next)]
-              [else 
+              [else
                (replace! fst b next)])))
         ;;; reset the tcbucket-tconc FIRST
         ($set-tcbucket-tconc! b (hasht-tc h))
@@ -151,25 +152,25 @@
     (and (get-bucket h x) #t))
 
   (define (del-hash h x)
-    (define unlink! 
+    (define unlink!
       (lambda (h b)
         (let ([vec (hasht-vec h)]
               [next ($tcbucket-next b)])
           ;;; first remove it from its old place
-          (let ([idx 
+          (let ([idx
                  (if (fixnum? next)
                      next
                      (get-bucket-index next))])
             (let ([fst ($vector-ref vec idx)])
               (cond
-                [(eq? fst b) 
+                [(eq? fst b)
                  ($vector-set! vec idx next)]
-                [else 
+                [else
                  (replace! fst b next)])))
           ;;; set next to be #f, denoting, not in table
           ($set-tcbucket-next! b #f))))
     (cond
-      [(get-bucket h x) => 
+      [(get-bucket h x) =>
        (lambda (b)
          (unlink! h b)
          ;;; don't forget the count.
@@ -184,7 +185,7 @@
             (let f ([b ($vector-ref vec idx)])
               (cond
                 [(fixnum? b)
-                 ($vector-set! vec idx 
+                 ($vector-set! vec idx
                    (vector x v ($vector-ref vec idx)))
                  (let ([ct (hasht-count h)])
                    (set-hasht-count! h ($fxadd1 ct))
@@ -208,17 +209,17 @@
                  (cond
                    [(or (direct-lookup x b) (rehash-lookup h (hasht-tc h) x))
                     =>
-                    (lambda (b) 
+                    (lambda (b)
                       ($set-tcbucket-val! b v)
                       (void))]
-                   [else 
+                   [else
                     (let ([bucket
-                           ($make-tcbucket (hasht-tc h) x v 
+                           ($make-tcbucket (hasht-tc h) x v
                              ($vector-ref vec idx))])
                       (if ($fx= (pointer-value x) pv)
                           ($vector-set! vec idx bucket)
                           (let* ([ih (pointer-value x)]
-                                 [idx 
+                                 [idx
                                   ($fxlogand ih ($fx- ($vector-length vec) 1))])
                             ($set-tcbucket-next! bucket ($vector-ref vec idx))
                             ($vector-set! vec idx bucket))))
@@ -226,7 +227,7 @@
                       (set-hasht-count! h ($fxadd1 ct))
                       (when ($fx> ct ($vector-length vec))
                         (enlarge-table h)))])))))])))
-          
+
   (define (update-hash! h x proc default)
     (cond
       [(get-bucket h x) =>
@@ -264,11 +265,11 @@
          (lambda (hashf)
            (enlarge-hashtable h hashf))]
         [(eq? eq? (hasht-equivf h))
-         (enlarge-hashtable h 
+         (enlarge-hashtable h
            (lambda (x) (pointer-value x)))]
         [else
-         (enlarge-hashtable h 
-           (lambda (x) 
+         (enlarge-hashtable h
+           (lambda (x)
              (if (number? x)
                  (number-hash x)
                  (pointer-value x))))])))
@@ -285,11 +286,11 @@
     (lambda (n)
       (init-vec (make-vector n) 0 n)))
 
-  (define (clear-hash! h) 
+  (define (clear-hash! h)
     (let ([v (hasht-vec h)])
       (init-vec v 0 (vector-length v)))
     (unless (hasht-hashf h)
-      (set-hasht-tc! h 
+      (set-hasht-tc! h
         (let ([x (cons #f #f)])
           (cons x x))))
     (set-hasht-count! h 0))
@@ -300,9 +301,9 @@
         (let f ([i ($fxsub1 n)] [j ($fxsub1 (vector-length v))] [kv kv] [v v])
           (cond
             [($fx= i -1) kv]
-            [else 
+            [else
              (let ([b ($vector-ref v j)])
-               (if (fixnum? b) 
+               (if (fixnum? b)
                    (f i ($fxsub1 j) kv v)
                    (f (let f ([i i] [b b] [kv kv])
                         ($vector-set! kv i ($tcbucket-key b))
@@ -319,9 +320,9 @@
         (let f ([i ($fxsub1 n)] [j ($fxsub1 (vector-length v))] [kv kv] [vv vv] [v v])
           (cond
             [($fx= i -1) (values kv vv)]
-            [else 
+            [else
              (let ([b ($vector-ref v j)])
-               (if (fixnum? b) 
+               (if (fixnum? b)
                    (f i ($fxsub1 j) kv vv v)
                    (f (let f ([i i] [b b] [kv kv] [vv vv])
                         ($vector-set! kv i ($tcbucket-key b))
@@ -337,16 +338,16 @@
     (define (dup-hasht h mutable? n)
       (let* ([hashf (hasht-hashf h)]
              [tc (and (not hashf) (let ([x (cons #f #f)]) (cons x x)))])
-        (make-hasht (make-base-vec n) 0 tc mutable? 
+        (make-hasht (make-base-vec n) 0 tc mutable?
                     hashf (hasht-equivf h) (hasht-hashf0 h))))
     (let ([v (hasht-vec h)] [n (hasht-count h)])
       (let ([r (dup-hasht h mutable? (vector-length v))])
         (let f ([i ($fxsub1 n)] [j ($fxsub1 (vector-length v))] [r r] [v v])
           (cond
             [($fx= i -1) r]
-            [else 
+            [else
              (let ([b ($vector-ref v j)])
-               (if (fixnum? b) 
+               (if (fixnum? b)
                    (f i ($fxsub1 j) r v)
                    (f (let f ([i i] [b b] [r r])
                         (put-hash! r ($tcbucket-key b) ($tcbucket-val b))
@@ -390,9 +391,10 @@
          (cond
            [(or (eq? f symbol-hash)
                 (eq? f string-hash)
-                (eq? f string-ci-hash))
+                (eq? f string-ci-hash)
+		(eq? f equal-hash))
             f]
-           [else 
+           [else
             (lambda (k)
               (let ([i (f k)])
                 (if (or (fixnum? i) (bignum? i))
@@ -421,7 +423,7 @@
   (define hashtable-set!
     (lambda (h x v)
       (if (hasht? h)
-          (if (hasht-mutable? h) 
+          (if (hasht-mutable? h)
               (put-hash! h x v)
               (die 'hashtable-set! "hashtable is immutable" h))
           (die 'hashtable-set! "not a hash table" h))))
@@ -438,12 +440,12 @@
 
   (define hashtable-size
     (lambda (h)
-      (if (hasht? h) 
+      (if (hasht? h)
           (hasht-count h)
           (die 'hashtable-size "not a hash table" h))))
 
   (define hashtable-delete!
-    (lambda (h x) 
+    (lambda (h x)
       ;;; FIXME: should shrink table if number of keys drops below
       ;;; (sqrt (vector-length (hasht-vec h)))
       (if (hasht? h)
@@ -458,25 +460,25 @@
         (die 'hashtable-entries "not a hash table" h)))
 
   (define (hashtable-keys h)
-    (if (hasht? h) 
+    (if (hasht? h)
         (get-keys h)
         (die 'hashtable-keys "not a hash table" h)))
 
   (define (hashtable-mutable? h)
-    (if (hasht? h) 
+    (if (hasht? h)
         (hasht-mutable? h)
         (die 'hashtable-mutable? "not a hash table" h)))
 
   (define (hashtable-clear! h)
-    (if (hasht? h) 
+    (if (hasht? h)
         (if (hasht-mutable? h)
             (clear-hash! h)
             (die 'hashtable-clear! "hash table is immutable" h))
         (die 'hashtable-clear! "not a hash table" h)))
 
-  (define hashtable-copy 
+  (define hashtable-copy
     (case-lambda
-      [(h) 
+      [(h)
        (if (hasht? h)
            (if (hasht-mutable? h)
                (hasht-copy h #f)
@@ -505,15 +507,20 @@
         (die 'string-hash "not a string" s)))
 
   (define (string-ci-hash s)
-    (if (string? s) 
-        (foreign-call "ikrt_string_hash" 
+    (if (string? s)
+        (foreign-call "ikrt_string_hash"
           (string-foldcase s))
         (die 'string-ci-hash "not a string" s)))
 
   (define (symbol-hash s)
-    (if (symbol? s) 
+    (if (symbol? s)
         (foreign-call "ikrt_string_hash" (symbol->string s))
         (die 'symbol-hash "not a symbol" s)))
+
+  (define (equal-hash s)
+    (string-hash
+     (call-with-string-output-port
+	 (lambda (port) (write s port)))))
 
   (define (number-hash x)
     (cond
@@ -522,14 +529,14 @@
       [(bignum? x) (foreign-call "ikrt_bignum_hash" x)]
       [(ratnum? x)
        (fxxor
-         (number-hash (numerator x)) 
+         (number-hash (numerator x))
          (number-hash (denominator x)))]
-      [else 
-       (fxxor 
+      [else
+       (fxxor
          (number-hash (real-part x))
          (number-hash (imag-part x)))]))
 
   (set-rtd-printer! (type-descriptor hasht)
-    (lambda (x p wr) 
+    (lambda (x p wr)
       (display "#<hashtable>" p)))
 )
