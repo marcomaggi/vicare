@@ -631,7 +631,7 @@ Using @value{PRJNAME}
 * using script::                Using @command{scheme-script}.
 * using libraries::             @value{PRJNAME} and @rnrs{6} libraries.
 
-@value{PRJNAME} and @rnrs{6} libraries
+Vicare and @rnrs{6} libraries
 
 * using libraries intro::       Introduction to @value{PRJNAME} libraries.
 * using libraries searching::   How @value{PRJNAME} finds libraries.
@@ -1267,7 +1267,7 @@ script.
 * using interactive::           Interactive sessions.
 * using invoking::              Command line arguments.
 * using script::                Using @command{scheme-script}.
-* using libraries::             @value{PRJNAME} and @rnrs{6} libraries.
+* using libraries::             @rnrs{6} libraries.
 @end menu
 
 @c page
@@ -1489,7 +1489,7 @@ executed.  The @code{.command} extension can be hidden from the
 
 @c page
 @node using libraries
-@section @value{PRJNAME} and @rnrs{6} libraries
+@section @rnrs{6} libraries
 
 
 A library exports features that can be imported into programs; a library
