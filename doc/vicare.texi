@@ -982,7 +982,7 @@ packages often lag current revisions to the system by a considerable
 amount.  Therefore, the version we install from a package repository
 might not even have some of the features documented in this manual.
 
-We will assume in this section that we are building @value{package}
+We will assume in this section that we are building @value{PACKAGE}
 ourselves.  @value{PRJNAME} uses the standard installation method found
 in most other Unix software.  Thus we will follow the usual steps.
 
