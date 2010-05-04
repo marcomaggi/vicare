@@ -1,8 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 
-AUTOMAKE_OPTIONS	=foreign
+AUTOMAKE_OPTIONS	= foreign
 SUBDIRS			= src scheme doc lib benchmarks tests
-EXTRA_DIST		= README COPYING GPL-3
+EXTRA_DIST		= README COPYING GPL-3 configure.sh
 dist_doc_DATA		= README COPYING GPL-3
 
 .PHONY: test tests
