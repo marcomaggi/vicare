@@ -10,6 +10,8 @@ Topics
   2. License
   4. Install
   5. Testing
+  6. Policy
+  7. Contributing
   A. Credits
   B. Bug reports
   C. Resources
@@ -35,8 +37,77 @@ Scheme is an experimental fork  of Ikarus Scheme; "Vicare" is pronounced
 the etruscan way.
 
 
-1.1 Policy
+2. License
 ----------
+
+Copyright (c) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
+Modified by the Vicare contributors.
+
+This program is free software:  you can redistribute it and/or modify it
+under the  terms of the GNU  General Public License as  published by the
+Free Software Foundation,  either version 3 of the  License, or (at your
+option) any later version.
+
+This program  is distributed  in the  hope that it  will be  useful, but
+WITHOUT   ANY   WARRANTY;  without   even   the   implied  warranty   of
+MERCHANTABILITY  or  FITNESS FOR  A  PARTICULAR  PURPOSE.   See the  GNU
+General Public License for more details.
+
+You should have received a copy  of the GNU General Public License along
+with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+4. Install
+----------
+
+If we have checked out a  revision from the repository, you will have to
+build the infrastructure running a script from the top source directory:
+
+   $ cd /path/to/vicare
+   $ sh BUILD-THE-INFRASTRUCTURE.sh
+
+after that, basically we should do:
+
+   $ mkdir "=build"
+   $ cd "=build"
+   $ ../configure
+   $ make
+   $ make install
+
+  To test what a rule will do use the "-n" option; example:
+
+    $ make install -n
+
+  The "Makefile" supports the  "DESTDIR" environment variable to install
+the files under a temporary location; example:
+
+    $ make install DESTDIR=/tmp/marco/vicare
+
+
+5. Testing
+----------
+
+The original tests (from the Ikarus distribution) are executed running:
+
+   $ make check
+
+the new tests added in Vicare are executed running:
+
+   $ make tests
+
+  All the test files under "tests"  are programs whose file name has the
+format  "test-<name>.sps"  where  <name>  is  indicates  of  the  tested
+feature; it is possible to select a single test file by using the "name"
+variable on the command line of "make"; for example:
+
+   $ make tests name=equal-hash
+
+will run the "test-equal-hash.sps" file.  The "name" variable is used to
+expand a file name with wildcards as in "test-*$(name)*.sps".
+
+
+6. Policy
+---------
 
 While the long term aim of the project is still not clearly established,
 Vicare has the following short and midterm goals:
@@ -61,8 +132,8 @@ Vicare has the following short and midterm goals:
   project.
 
 
-1.2 Contributing
-----------------
+7. Contributing
+---------------
 
 If you  feel the need to  contribute bug reports, bug  fixes, patches or
 documentation to  Vicare Scheme, you  are welcome.  For bug  reports and
@@ -90,75 +161,26 @@ patches, you should adhere to the following rules:
 
 * Big and revolutionary patches will be rejected.  It is always possible
   to  fork a  branch and  develop whatever  experimental reorganisation,
-  rewriting or enhancement (for example support for other CPUs).
+  rewriting or  enhancement (for example  support for other  CPUs).  Big
+  changes can be merged later if they are successful.
 
   For  documentation  contributions,  you  can email  directly  Vicare's
 maintainer  at <marco.maggi-ipsu@poste.it>  with or  without  opening an
-issue about undocumented features.
+issue about  undocumented features.  Documentation in  patches should be
+added   to  the   Texinfo   file  "doc/vicare.texi",   but  pure   ASCII
+documentation may be accepted (and formatted by the maintainer) if it is
+not too long.
 
-
-2. License
-----------
-
-Copyright (c) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
-Modified by the Vicare contributors.
-
-This program is free software:  you can redistribute it and/or modify it
-under the  terms of the GNU  General Public License as  published by the
-Free Software Foundation,  either version 3 of the  License, or (at your
-option) any later version.
-
-This program  is distributed  in the  hope that it  will be  useful, but
-WITHOUT   ANY   WARRANTY;  without   even   the   implied  warranty   of
-MERCHANTABILITY  or  FITNESS FOR  A  PARTICULAR  PURPOSE.   See the  GNU
-General Public License for more details.
-
-You should have received a copy  of the GNU General Public License along
-with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
-4. Install
-----------
-
-If you have checked out a revision from the repository, you will have to
-build the infrastructure running a script from the top source directory:
-
-   $ cd /path/to/vicare
-   $ sh BUILD-THE-INFRASTRUCTURE.sh
-
-after that, basically we should do:
-
-   $ mkdir "=build"
-   $ cd "=build"
-   $ ../configure
-   $ make
-   $ make install
-
-  To test what a rule will do use the "-n" option; example:
-
-    $ make install -n
-
-  The "Makefile" supports the  "DESTDIR" environment variable to install
-the files under a temporary location; example:
-
-    $ make install DESTDIR=/tmp/marco/vicare
-
-
-5. Testing
-----------
-
-Running:
-
-   $ make check
-
-will run the test suite.
+  Tests  for  patches must  be  added  under  the "tests"  subdirectory,
+ideally by creating a new test file.
 
 
 A. Credits
 ----------
 
 The  original Ikarus  Scheme  code  is the  work  of Abdulaziz  Ghuloum.
-Vicare Scheme is a fork driven by Marco Maggi.
+Vicare Scheme  is a  fork driven by  Marco Maggi.  See  the CONTRIBUTORS
+file for the list of contributors to Vicare Scheme.
 
 
 B. Bug reports

@@ -1,0 +1,5853 @@
+\input texinfo.tex
+@c %**start of header
+@setfilename vicare.info
+@settitle Vicare Scheme User's and Contributor's Guide
+@c %**end of header
+
+@include version.texi
+
+@c page
+@c ------------------------------------------------------------
+@c Macros.
+@c ------------------------------------------------------------
+
+@macro version{}
+@value{VERSION}
+@end macro
+
+@macro gnu{}
+@acronym{GNU}
+@end macro
+
+@macro gpl{}
+@acronym{GPL}
+@end macro
+
+@macro fdl{}
+@acronym{FDL}
+@end macro
+
+
+@c ------------------------------------------------------------
+@c Special notes.
+@c ------------------------------------------------------------
+
+@macro forunix{}
+@strong{Unix:}
+@end macro
+
+@macro fixme{TEXT}
+@strong{FIXME: \TEXT\}
+@end macro
+
+@c ------------------------------------------------------------
+@c Scheme related macros.
+@c ------------------------------------------------------------
+
+@macro rnrs{VERSION}
+@acronym{R\VERSION\RS}
+@end macro
+
+@macro rsix{}
+Revised^6 Report on the algorithmic language Scheme
+@end macro
+
+@macro repl{}
+@acronym{REPL}
+@end macro
+
+@macro srfi{}
+@acronym{SRFI}
+@end macro
+
+@c Separating the @srfi{} macro from the number with a '--' rather than
+@c a '-'  makes the expansion look  ugly in menu entries  under the Info
+@c reader.  IMHO  this should not happen,  but it does; so  we live with
+@c this, because the main purpose of this document is to provide an Info
+@c version.
+@macro ansrfi{NUM}
+@srfi{}-\NUM\
+@end macro
+
+@macro clos{}
+@acronym{CLOS}
+@end macro
+
+@macro library{SPEC}
+@code{(\SPEC\)}
+@end macro
+
+@macro ffi{}
+@acronym{FFI}
+@end macro
+
+@macro class{NAME}
+@code{<\NAME\>}
+@end macro
+
+@macro aclass{NAME}
+<\NAME\>
+@end macro
+
+@macro cclass{NAME}
+<\NAME\>
+@end macro
+
+@macro objtype{NAME}
+@code{\NAME\}
+@end macro
+
+@macro condition{NAME}
+@code{&\NAME\}
+@end macro
+
+@macro rtd{}
+@acronym{RTD}
+@end macro
+
+@c ------------------------------------------------------------
+@c Miscellaneous acronyms.
+@c ------------------------------------------------------------
+
+@macro ansi{}
+@acronym{ANSI}
+@end macro
+
+@macro api{}
+@acronym{API}
+@end macro
+
+@c Remember that @url is already used by Texinfo.
+@macro aurl{}
+@acronym{URL}
+@end macro
+
+@macro ascii{}
+@acronym{ASCII}
+@end macro
+
+@macro cpu{}
+@acronym{CPU}
+@end macro
+
+@macro csv{}
+@acronym{CSV}
+@end macro
+
+@macro ieee{}
+@acronym{IEEE}
+@end macro
+
+@macro iso{}
+@acronym{ISO}
+@end macro
+
+@macro posix{}
+@acronym{POSIX}
+@end macro
+
+@macro rfc{}
+@acronym{RFC}
+@end macro
+
+@macro utf{}
+@acronym{UTF}
+@end macro
+
+@macro utc{}
+@acronym{UTC}
+@end macro
+
+@macro tai{}
+@acronym{TAI}
+@end macro
+
+@c ------------------------------------------------------------
+@c Software acronyms.
+@c ------------------------------------------------------------
+
+@macro gmp{}
+@acronym{GMP}
+@end macro
+
+@macro gcc{}
+@acronym{GCC}
+@end macro
+
+@c ------------------------------------------------------------
+@c Network related acronyms.
+@c ------------------------------------------------------------
+
+@macro http{}
+@acronym{HTTP}
+@end macro
+
+@macro ftp{}
+@acronym{FTP}
+@end macro
+
+@macro ip{}
+@acronym{IP}
+@end macro
+
+@macro tcp{}
+@acronym{TCP}
+@end macro
+
+@macro udp{}
+@acronym{UDP}
+@end macro
+
+@macro smtp{}
+@acronym{SMTP}
+@end macro
+
+@c ------------------------------------------------------------
+@c Scheme language macros.
+@c ------------------------------------------------------------
+
+@macro func{NAME}
+@code{\NAME\}
+@end macro
+
+@macro snull{}
+@code{()}
+@end macro
+
+@macro true{}
+@code{#t}
+@end macro
+
+@macro false{}
+@code{#f}
+@end macro
+
+@macro keyword{NAME}
+@code{#:\NAME\}
+@end macro
+
+@c ------------------------------------------------------------
+@c C language macros.
+@c ------------------------------------------------------------
+
+@macro cfunc{NAME}
+@code{\NAME\()}
+@end macro
+
+@macro cnull{}
+@code{NULL}
+@end macro
+
+@c ------------------------------------------------------------
+@c Macros for references to external documents.
+@c ------------------------------------------------------------
+
+@macro glibcref{NODE, TITLE}
+@ref{\NODE\,\TITLE\,\TITLE\,libc}
+@end macro
+
+@c @macro rsixref{NODE, TITLE}
+@c @ref{\NODE\,\TITLE\,\TITLE\,r6rs}
+@c @end macro
+
+@macro bibref{TAG}
+@code{[\TAG\]}
+@end macro
+
+@macro autoconfref{NODE, TITLE}
+@ref{\NODE\,\TITLE\,\TITLE\,autoconf}
+@end macro
+
+@macro vicareref{NODE, TITLE}
+@ref{\NODE\,\TITLE\,\TITLE\,vicare}
+@end macro
+
+@macro nauref{NODE, TITLE}
+@ref{\NODE\,\TITLE\,\TITLE\,nausicaa}
+@end macro
+
+@macro naumoreref{NODE, TITLE}
+@ref{\NODE\,\TITLE\,\TITLE\,nausicaa-more}
+@end macro
+
+@c ------------------------------------------------------------
+@c RNRS document macros.
+@c ------------------------------------------------------------
+
+@macro rsixlibrary{THING}
+@code{(rnrs \THING\ (6))}
+@end macro
+
+@c The following macro does not work.  It appears that it is not
+@c possible to use "@cindex" in the expansion of a macro because the DVI
+@c output will not work.  Texinfo output would work, though.  Tested
+@c with "texi2dvi" version 1.135 (GNU Texinfo 4.13).
+@c
+@c @macro cindexRsixlibrary{THING}
+@c @cindex @rsixlibrary{\THING\}, library
+@c @cindex Library, @rsixlibrary{\THING\}
+@c @end macro
+
+@macro arbno{THING}
+\THING\*
+@end macro
+
+@macro atleastone{THING}
+\THING\+
+@end macro
+
+@c ------------------------------------------------------------
+@c To be used in normal text.
+
+@macro meta{THING}
+<\THING\>
+@end macro
+
+@macro metao{THING}
+<\THING\0>
+@end macro
+
+@macro metai{THING}
+<\THING\1>
+@end macro
+
+@macro metaii{THING}
+<\THING\2>
+@end macro
+
+@macro metaiii{THING}
+<\THING\3>
+@end macro
+
+@macro metan{THING}
+<\THING\N>
+@end macro
+
+@macro metani{THING}
+<\THING\N+1>
+@end macro
+
+@c ------------------------------------------------------------
+@c To be used inside @example environment and @samp directives.
+
+@macro cmeta{THING}
+<\THING\>
+@end macro
+
+@macro cmetao{THING}
+<\THING\0>
+@end macro
+
+@macro cmetai{THING}
+<\THING\1>
+@end macro
+
+@macro cmetaii{THING}
+<\THING\2>
+@end macro
+
+@macro cmetaiii{THING}
+<\THING\3>
+@end macro
+
+@macro cmetan{THING}
+<\THING\N>
+@end macro
+
+@macro cmetani{THING}
+<\THING\N+1>
+@end macro
+
+@c ------------------------------------------------------------
+@c To be used inside argument lists.
+
+@macro ameta{THING}
+<\THING\>
+@end macro
+
+@macro ametao{THING}
+<\THING\0>
+@end macro
+
+@macro ametai{THING}
+<\THING\1>
+@end macro
+
+@macro ametaii{THING}
+<\THING\2>
+@end macro
+
+@macro ametaiii{THING}
+<\THING\3>
+@end macro
+
+@macro ametan{THING}
+<\THING\N>
+@end macro
+
+@macro ametani{THING}
+<\THING\N+1>
+@end macro
+
+@c ------------------------------------------------------------
+
+@macro hyper{THING}
+<\THING\>
+@end macro
+
+@macro hyperi{THING}
+<\THING\1>
+@end macro
+
+@macro hyperii{THING}
+<\THING\2>
+@end macro
+
+@macro hyperiii{THING}
+<\THING\3>
+@end macro
+
+@macro hypern{THING}
+<\THING\n>
+@end macro
+
+@c ------------------------------------------------------------
+
+@macro varo{THING}
+@var{\THING\0}
+@end macro
+
+@macro vari{THING}
+@var{\THING\1}
+@end macro
+
+@macro varii{THING}
+@var{\THING\2}
+@end macro
+
+@macro variii{THING}
+@var{\THING\3}
+@end macro
+
+@macro variv{THING}
+@var{\THING\4}
+@end macro
+
+@macro varn{THING}
+@var{\THING\n}
+@end macro
+
+@macro vark{THING}
+@var{\THING\k}
+@end macro
+
+@macro varj{THING}
+@var{\THING\j}
+@end macro
+
+@c page
+@c ------------------------------------------------------------
+@c Values.
+@c ------------------------------------------------------------
+
+@set PRJNAME                    Vicare
+
+@set TITLE                      Vicare Scheme User's and Contributor's Guide
+
+@c To be used as @value{PACKAGE} whenever we need to include the full
+@c name of this package.
+@set PACKAGE                    Vicare Scheme
+
+@c To be used as @value{PACKAGE_NICKNAME} whenever we need to include
+@c the nickname of the project: the name that is used to compose the
+@c distribution tarball or the web address.
+@set PACKAGE_NICKNAME           vicare
+
+@c To be used as @value{AUTHOR} whenever we need to include the list of
+@c authors of this document.
+@set AUTHOR                     Abdulaziz Ghuloum
+
+@c To be used as @value{AUTHOR_EMAIL} whenever we need to include the
+@c email of the *single* author of this document.
+@set AUTHOR_EMAIL               @email{aghuloum@@cs.indiana.edu}
+
+@c To be used as @value{COPYRIGHT_YEARS} whenever we need to include the
+@c list of copyright years.
+@set COPYRIGHT_YEARS            2006-2010
+
+
+@set TARBALLURL                 @url{http://github.com/marcomaggi/vicare/downloads}
+@set REPOSITORYURL              @url{http://github.com/marcomaggi/vicare/}
+@set EXECUTABLE                 @command{vicare}
+@set RAWEXECUTABLE              vicare
+
+@c page
+@c ------------------------------------------------------------
+@c Copyright notice.
+@c ------------------------------------------------------------
+
+@copying
+@noindent
+This document describes version @version{} of @value{PACKAGE}, an almost
+@rnrs{6} compliant implementation of the Scheme programming language.
+Vicare (pronounced the etruscan way) is an experimental fork of Ikarus
+Scheme which aims at fixing bugs, full @rnrs{6} compliance with a
+pragmatic eye, enhancing some features like the @posix{} interface.
+
+The Vicarus Scheme package is distributed under the terms of the @gnu{}
+General Public License (@gpl{}) and can be downloaded from:
+
+@center @url{http://github.com/marcomaggi/vicare/downloads}
+
+@noindent
+the home page of the project is at:
+
+@center @url{http://marcomaggi.github.com/vicare.html}
+
+@noindent
+development takes place at:
+
+@center @url{http://github.com/marcomaggi/vicare/}
+
+@noindent
+Copyright @copyright{} @value{COPYRIGHT_YEARS} by Abdulaziz Ghuloum.@*
+This document was modified by the @value{PACKAGE} contributors.
+
+@quotation
+This program is free software: you can redistribute it and/or modify it
+under the terms of the @gnu{} General Public License version 3 as
+published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+You should have received a copy of the @gnu{} General Public License
+along with this program.  If not, see
+@url{http://www.gnu.org/licenses/}.
+@end quotation
+
+Trademarks used herein are the property of their respective owners.
+
+This document is derived from the original Ikarus documentation,
+reformatted in Texinfo; the reformatting author and maintainer is Marco
+Maggi @email{marco.maggi-ipsu@@poste.it} with contributions by other
+people.
+@end copying
+
+@c page
+@c ------------------------------------------------------------
+@c Headers.
+@c ------------------------------------------------------------
+
+@titlepage
+@title @value{TITLE}
+@subtitle Revision @version{}
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@shortcontents
+@contents
+
+@c ------------------------------------------------------------
+
+@ifinfo
+@dircategory Development
+@direntry
+* vicare: (vicare).             @value{TITLE}.
+@end direntry
+@end ifinfo
+
+@c ------------------------------------------------------------
+
+@ignore
+@syncodeindex tp cp
+@syncodeindex vr cp
+@syncodeindex fn cp
+@end ignore
+
+
+@c page
+@ifnottex
+@node Top
+@top @value{TITLE}
+
+@insertcopying
+
+@menu
+* overview::                    Overview of Vicare Scheme.
+* using::                       Using the program.
+* library::                     Installed libraries.
+
+Appendices
+
+* missing::                     Missing Features.
+* building::                    Building infrastructure.
+* credits::                     Credits for this document.
+* package license::             @gnu{} General Public License.
+* references::                  Bibliography and references.
+
+Indexes
+
+* concept index::               An entry for each concept.
+* function index::              An entry for each function.
+* variable index::              An entry for each variable.
+* type index::                  An entry for each type.
+
+External documents
+
+* libffi: (libffi).             Libffi documentation.
+
+@detailmenu
+ --- The Detailed Node Listing ---
+
+Overview of Vicare Scheme
+
+* overview original::           Original Ikarus Scheme.
+* overview tech::               Technology overview.
+* overview resources::          Resources.
+* overview system::             System requirements.
+* overview install::            Installation and uninstallation.
+
+System requirements
+
+* overview system hardware::    Hardware requirements.
+* overview system software::    Software requirements.
+
+Installation and uninstallation
+
+* overview install quick::              Quick installation guide.
+* overview install prerequisites::      Installing the prerequisites.
+* overview install details::            Installation details.
+* overview install uninstall::          Uninstalling @value{PRJNAME}.
+
+Using @value{PRJNAME}
+
+* using interactive::           Interactive sessions.
+* using invoking::              Command line arguments.
+* using script::                Using @command{scheme-script}.
+* using libraries::             @value{PRJNAME} and @rnrs{6} libraries.
+
+@value{PRJNAME} and @rnrs{6} libraries
+
+* using libraries intro::       Introduction to @value{PRJNAME} libraries.
+* using libraries searching::   How @value{PRJNAME} finds libraries.
+* using libraries summary::     Library search summary.
+* using libraries examples::    Examples of libraries usage.
+
+Installed libraries
+
+* library reader::              Reader.
+* library cafe::                Cafe.
+* library environment::         Environments.
+* library load::                Loading source files.
+* library import::              Local library imports.
+* library modules::             Local modules.
+* library parameters::          Parameters.
+* library gensym::              Gensyms.
+* library printing::            Printing.
+* library tracing::             Tracing.
+* library timing::              Timing.
+* library guardians::           Guardians and garbage collection.
+* library io::                  Input/output library.
+* library posix::               @posix{} functions.
+* library foreign::             Foreign interface library.
+* library misc::                Miscellaneous functions.
+
+Local modules
+
+* library modules examples::  Usage example for modules.
+* library modules api::       Modules programming interface.
+
+Usage example for modules
+
+* library modules examples anonymous::        Anonymous modules.
+* library modules examples named::            Named modules.
+* library modules examples utils::            Utilities examples.
+
+Guardians and garbage collection
+
+* library guardians examples::        Usage examples for guardians.
+* library guardians api::             Guardians programming interface.
+
+Input/output library
+
+* library io process::        Spawning processes.
+* library io socket::         Using network sockets.
+* library io non-block::      Non--blocking mode for ports.
+
+Using network sockets
+
+* library io socket client::  Establishing client network
+                                connections.
+* library io socket server::  Opening server network services.
+
+@posix{} functions
+
+* library posix process::     Spawning processes and the like.
+* library posix waitpid::     Waiting for terminated children.
+* library posix signal::      Delivering signals to processes.
+* library posix file::        Interfacing with the file system.
+* library posix env::         Interfacing with the execution
+                                environment.
+* library posix misc::        Miscellaneous functions.
+
+The @library{vicare foreign} library
+
+* library foreign overview::  Overview of the foreign functions
+                                interface.
+* library foreign memory::    Memory management.
+* library foreign memops::    Memory operations.
+* library foreign dl::        Accessing foreign objects from Scheme.
+* library foreign call out::  Calling out to foreign procedures.
+* library foreign call back:: Calling back to Scheme.
+
+Memory operations
+
+* library foreign memops alloc::      Allocating and freeing memory.
+* library foreign memops pointer::    Handling pointer values.
+* library foreign memops poke::       Poking values.
+* library foreign memops peek::       Peeking values.
+
+Calling out to foreign procedures
+
+* library foreign call out api::      Interface to foreign functions.
+* library foreign call out types::    Type specifiers.
+* library foreign call out example::  C language call out example.
+
+Building infrastructure
+
+* building revision::           Package revision in the banner.
+
+@end detailmenu
+@end menu
+
+@end ifnottex
+
+
+@c page
+@node overview
+@chapter Overview of Vicare Scheme
+
+
+Scheme is a statically scoped and properly tail--recursive dialect of
+the Lisp programming language invented by Guy Lewis Steele Jr.  and
+Gerald Jay Sussman.  It was designed to have an exceptionally clear and
+simple semantics and few different ways to form expressions.
+
+The ``Revised^6 Report on the Algorithmic Language Scheme'' (@rnrs{6})
+gives a defining description of the programming language Scheme.  The
+report is the work of many people in the course of many years; revision
+6 was edited by Michael Sperber, R. Kent Dybvig, Matthew Flatt and Anton
+Van Straaten.
+
+Ikarus Scheme is an almost @rnrs{6} compliant implementation of the
+Scheme programming language; it is the creation of Abdulaziz Ghuloum.
+
+Vicare Scheme is an experimental fork of Ikarus Scheme which aims at
+fixing bugs, pushing compliance with @rnrs{6}, enhancing some features
+like the @posix{} interface.  Vicare is pronounced the etruscan way.
+
+@menu
+* overview original::           Original Ikarus Scheme.
+* overview tech::               Technology overview.
+* overview resources::          Resources.
+* overview system::             System requirements.
+* overview install::            Installation and uninstallation.
+@end menu
+
+@c page
+@node overview original
+@section Original Ikarus Scheme
+
+
+The original Ikarus Scheme package is distributed under the terms of the
+@gnu{} General Public License (@gpl{}) and can be downloaded from:
+
+@center @url{http://www.ikarus-scheme.org/}
+
+@noindent
+or:
+
+@center @url{https://launchpad.net/ikarus}
+
+It was developed by Abdulaziz Ghuloum until the beginning of year 2010;
+at that time the Vicare fork was started.
+
+@c page
+@node overview tech
+@section Technology overview
+
+
+@value{PRJNAME} Scheme provides the programmer with many advantages:
+
+@table @strong
+
+@item Optimizing code generator
+The compiler's backend employs state of the art technologies in code
+generation that produce fast, efficient, machine code.  When developing
+computationally intensive programs, one is not constrained by using a
+slow interpreter.
+
+@item Fast incremental compilation
+Every library and script is quickly compiled to native machine code.
+When developing large software, one is not constrained by how slow the
+batch compiler runs.
+
+@item Robust and fine--tuned standard libraries
+The standard libraries are written such that they perform as much error
+checking as required to provide a safe and fast runtime environment.
+
+@item Multi--generational garbage collector
+The BiBOP based garbage collector used in @value{PRJNAME} allows the runtime
+system to expand its memory footprint as needed.  The entire 32-bit
+virtual address space could be used and unneeded memory is released back
+to the operating system.
+
+@item Supports many operating systems
+@value{PRJNAME} runs on the most popular and widely used operating systems for
+servers and personal computers.  The supported systems include Mac OS X,
+@gnu{}+Linux, FreeBSD, NetBSD, and Microsoft Windows (under Cygwin).
+@end table
+
+@c page
+@node overview resources
+@section Resources
+
+
+The @value{PACKAGE} package is distributed under the terms of the @gnu{}
+General Public License (@gpl{}) and can be downloaded from:
+
+@center @value{TARBALLURL}
+
+@noindent
+the home page of the project is at:
+
+@center @url{http://marcomaggi.github.com/vicare.html}
+
+@noindent
+development takes place at:
+
+@center @value{REPOSITORYURL}
+
+Newcomers to Scheme should refer to @url{http://@/www.schemers.org},
+which contains listings of tutorials and books that are helpful in
+learning the language.
+
+This document is a supplement to the @emph{Revised^6 Report on the
+Algorithmic Language Scheme}, found at @url{http://@/www.r6rs.org}.
+Kent Dybvig's @emph{The Scheme Programming Language}, Fourth Edition, is
+an excellent tutorial and reference for @rnrs{6}.  Some extended
+features of @value{PRJNAME} have been inspired by similar features in
+@emph{Chez Scheme}; the @emph{Chez Scheme User's Guide} can be found at
+the same site.
+
+@c page
+@node overview system
+@section System requirements
+
+
+To run @value{PACKAGE}, we will need a system with a relatively recent
+Intel @emph{x86} processor; @value{PRJNAME} requires a Unix/Linux
+operating system (or emulation), and some prerequisite libraries.
+
+@menu
+* overview system hardware::    Hardware requirements.
+* overview system software::    Software requirements.
+@end menu
+
+@c page
+@node overview system hardware
+@subsection Hardware requirements
+
+
+@value{PACKAGE} runs on the IA-32 (@emph{x86}) architecture supporting
+@acronym{SSE2} extensions.  This includes the Athlon 64, Sempron 64, and
+Turion 64 processors from @acronym{AMD} and the Pentium 4, Xeon,
+Celeron, Pentium M, Core, and Core2 processors from Intel.  The system
+does not run on Intel Pentium III or earlier processors.
+
+The @value{PRJNAME} compiler generates @acronym{SSE2} instructions to
+handle Scheme's @acronym{IEEE} floating point representation
+(@emph{flonums}) for inexact numbers.
+
+
+@subsubheading Operating systems
+
+@value{PRJNAME} is tested under the following operating systems; in
+general, any later version of one of these systems should be usable:
+
+@itemize
+@item
+Mac OS X version 10.4 and 10.5.
+
+@item
+Linux 2.6.18 (Debian, Fedora, Gentoo, and Ubuntu).
+
+@item
+FreeBSD version 6.2.
+
+@item
+NetBSD version 3.1.
+
+@item
+Microsoft Windows XP, using Cygwin 1.5.24 (@url{http://@/cygwin.org}).
+@end itemize
+
+@c page
+@node overview system software
+@subsection Software requirements
+
+
+We will need some additional libraries and tools to build
+@value{PACKAGE}.
+
+@table @strong
+@item GMP
+@value{PRJNAME} uses the @gnu{} Multiple Precision Arithmetic Library
+(@gmp{}) for some bignum arithmetic operations.  To build
+@value{PRJNAME} from scratch, @gmp{} version 4.2 or better must be
+installed along with the required header files.  Pre--built @gmp{}
+packages are available for most operating systems.  Alternatively,
+@gmp{} can be downloaded from @url{http://@/gmplib.org/}.
+
+The @gmp{} web page points out that @gmp{} has revealed subtle bugs in
+many C compilers.  Although the @gmp{} build process includes a
+comprehensive self--test (which we absolutely must run if building it
+ourselves), we may still prefer to obtain a prebuilt binary version for
+our system, if one is available.
+
+@quotation
+@strong{NOTE} @value{PRJNAME} runs in 32-bit mode only.  To run it in
+64-bit environments, we will have to obtain the 32-bit version of
+@gmp{}, or compile it ourselves after adding @code{ABI=32} to its
+configuration options.
+@end quotation
+
+@item libffi
+We will probably need @code{libffi}, a C library that simplifies
+run--time calls to arbitrary C functions.  @value{PRJNAME} will operate
+without @code{libffi}, but will not be able to call foreign procedures
+(those written in C).  @code{libffi} can be downloaded from
+@url{http://@/sourceware.org/@/libffi}.
+
+@item GCC
+The @gnu{} C Compiler is required to build the @value{PRJNAME}
+executable (e.g. the garbage collector, loader, and OS--related
+runtime).  @gcc{} versions 4.1 and 4.2 were successfully used to build
+@value{PRJNAME}.  It may be possible to build @value{PRJNAME} using
+other C compilers.
+
+@item Autoconf and Automake
+The @gnu{} Autoconf (version 2.61) and @gnu{} Automake (version 1.10)
+tools are required if one wishes to modify the @value{PRJNAME} source
+base.  They are not required to build the official release of
+@value{PRJNAME}.
+
+Prebuilt packages for these tools have been created for most Unix/Linux
+systems; if we prefer, we can download the source code from
+@url{http://@/www.gnu.org/@/software/@/autoconf} and
+@url{http://@/www.gnu.org/@/software/@/automake} respectively, and build
+them ourselves.
+
+@item Texinfo
+This document is provided in Texinfo format.  Texinfo is available as an
+installable package for most Unix/Linux systems.  Alternatively, we can
+download the source package
+@url{http://@/www.gnu.org/@/software/@/texinfo}.
+@end table
+
+@c page
+@node overview install
+@section Installation and uninstallation
+
+
+@cindex Installing @value{PRJNAME}
+@cindex Uninstalling @value{PRJNAME}
+@cindex Disinstalling @value{PRJNAME}
+@cindex @value{PRJNAME}, installing
+@cindex @value{PRJNAME}, uninstalling
+@cindex @value{PRJNAME}, disinstalling
+
+
+There are two ways to install @value{PACKAGE} on our system: we can
+either install a prebuilt package, if one is available for our operating
+system, or we can build it from source.  There are two reasons to prefer
+the ``build from source'' approach: first, not all Unix/Linux package
+repositories have an @value{PACKAGE} package at all; second, prebuilt
+packages often lag current revisions to the system by a considerable
+amount.  Therefore, the version we install from a package repository
+might not even have some of the features documented in this manual.
+
+We will assume in this section that we are building @value{package}
+ourselves.  @value{PRJNAME} uses the standard installation method found
+in most other Unix software.  Thus we will follow the usual steps.
+
+@enumerate
+@item
+Download the software.
+
+@item
+Set configuration options.
+
+@item
+Build and install
+@end enumerate
+
+@menu
+* overview install quick::              Quick installation guide.
+* overview install prerequisites::      Installing the prerequisites.
+* overview install details::            Installation details.
+* overview install uninstall::          Uninstalling @value{PRJNAME}.
+@end menu
+
+@c page
+@node overview install quick
+@subsection Quick installation guide
+
+
+If familiar with installing Unix software on our system, then all we
+need to know is that @value{PRJNAME} uses the standard installation
+method found in most other Unix software.  Simply run the following
+commands from the shell:
+
+@example
+$ tar -xvzf vicare-n.n.n.tar.gz
+$ cd vicare-n.n.n
+$ ./configure [--prefix=path] [CFLAGS=-I/dir] [LDFLAGS=-L/dir]
+$ make
+$ make install
+@end example
+
+@noindent
+@ref{overview install details} for how to enable the foreign functions
+interface.
+
+To uninstall @value{PACKAGE}, use the following steps:
+
+@example
+$ cd path/to/vicare-n.n.n
+$ make uninstall
+@end example
+
+The rest of this section gives more detail on building, installing, and
+uninstalling @value{PACKAGE}.
+
+@c page
+@node overview install prerequisites
+@subsection Installing the prerequisites
+
+
+The first step is to ensure that we have @gmp{} and Libffi installed; we
+should generally use our system's package manager for these.  Note where
+the include (@code{.h}) and library (@code{.a}) files for each of these
+packages are installed.  (Typically this will be in either
+@file{/usr/@/include} and @file{/usr/@/lib}, or
+@file{/usr/@/local/@/include} and @file{/usr/@/local/@/lib}.)
+
+If we choose to download these as source and build them ourselves, refer
+to the installation instructions found in each package.  If we are
+installing @gmp{} from source, it is @emph{essential} that we run the
+self--tests after building, and verify that no errors were detected.  We
+do this by issuing the command @command{make check}; see the
+documentation for details.
+
+@c page
+@node overview install details
+@subsection Installation details
+
+
+We have two choices for downloading the @value{PACKAGE} source: we can
+either download a distribution from:
+
+@center @value{TARBALLURL}
+
+@noindent
+or we can checkout a revision from the GitHub repository:
+
+@center @value{REPOSITORYURL}
+
+@itemize
+@item
+@value{PACKAGE} source distributions are tarballs named
+@file{vicare-@-@var{@var{n.n.n}}.tar.gz}, where @file{@var{n.n.n}} is a
+3--component ID indicating the current revision.
+
+If we downloaded a distribution, unpack it.  From the shell prompt:
+
+@example
+$ tar -xvzf vicare-@var{n.n.n}.tar.gz
+@end example
+
+@noindent
+this creates the base directory @file{vicare-@var{n.n.n}}.
+
+@item
+If we downloaded a bleeding--edge snapshot, no unpacking is needed.
+@end itemize
+
+We configure the build system by running the @command{configure} script
+located in the base directory.  To do this, type the following commands:
+
+@example
+$ cd vicare-@var{n.n.n}
+$ ./configure
+checking build system type... i386-apple-darwin8.10.1
+checking host system type... i386-apple-darwin8.10.1
+...
+configure: creating ./config.status
+config.status: creating Makefile
+config.status: creating src/Makefile
+config.status: creating scheme/Makefile
+config.status: creating doc/Makefile
+config.status: executing depfiles commands
+@end example
+
+This configures the system to be built then installed in the
+system--wide location (binaries are normally installed in
+@file{/usr/@/local/@/bin}).  To install it in another location (e.g. in
+your home directory), provide a @option{--prefix} location to
+@command{configure} as follows:
+
+@example
+$ ./configure --prefix=/opt/sw
+@end example
+
+@noindent
+this will install the executable in @file{/opt/@/sw/@/bin}, libraries in
+@file{/opt/@/sw/@/lib/@/ikarus}, and documentation in
+@file{/opt/@/sw/@/share/@/doc/@/ikarus}.
+
+To install @value{PACKAGE} for personal use (thus not requiring root
+permissions to install), specify @code{--prefix=$HOME/local}, which
+installs everything in a @file{local} directory of our home directory.
+
+@command{configure} allows us to fine--tune where things are installed,
+though this is rarely necessary or useful.  Do
+@code{./configure@tie{}--help} for a full list of options.
+
+The most common @command{configure} options are as follows.
+
+@table @asis
+@item @option{--prefix}
+Specify the location in the file system where @value{PACKAGE} will be
+installed.
+
+@item @option{--enable-ffi}
+Include @value{PACKAGE}'s Foreign Function Interface, so that
+@value{PRJNAME} code can invoke C code, and vice versa; requires Libffi.
+
+@item @env{CFLAGS}
+Specify options to be used while compiling @value{PRJNAME}'s C code.
+
+@item @env{CPPFLAGS}
+Specify options to be used while preprocessing @value{PRJNAME}'s C code.
+
+@item @env{LDFLAGS}
+Specify options to be used while linking @value{PRJNAME}.
+@end table
+
+@command{configure} will fail if it cannot find the location where
+@gmp{} is installed.  The script will also fail if we have specified
+@option{--enable-ffi} and it can't find Libffi.  If running
+@command{configure} fails to locate either of these libraries, we will
+need to provide their locations.  Use the @env{CPPFLAGS} and
+@env{LDFLAGS} options to specify the locations of the header and library
+files.
+
+For example, assume that we have installed @gmp{} and Libffi in
+subdirectories of @file{/opt/sw}, and we wish to support foreign
+functions.@footnote{The @command{configure} command shown here is very
+imposing, and anyone can easily make mistakes.  In general, it's a good
+idea to create a shell script that has the sequence of
+@command{configure} and @command{make} commands needed to configure,
+build, and install a package; this not only allows us to re--install
+easily, but also gives us a concrete indication of what options we used
+to build the software the last time.  Of course, we should put this
+script somewhere other than in the actual @value{PRJNAME} software
+directory!}
+
+@example
+./configure                                                  \
+  --prefix=$HOME/local                                       \
+  --enable-ffi                                               \
+  CPPFLAGS="-I/opt/sw/gmp/include -I/opt/sw/libffi/include"  \
+  LDFLAGS="-L/opt/sw/gmp/lib -L/opt/sw/libffi/lib"
+@end example
+
+We can use the @env{CFLAGS} and @env{LDFLAGS} variables to select more
+specialized compilation and linking options; refer to the compiler
+documentation for more details.
+
+We can now build the system by running the command @command{make}, with
+no arguments; this performs two tasks:
+
+@enumerate
+@item
+It builds the @command{vicare} executable from the C files located in
+the @file{src} directory.
+
+@item
+It uses the @command{vicare} executable and the pre--built
+@file{ikarus.boot.orig} boot file to rebuild the Scheme boot image file
+@file{vicare.boot} from the Scheme sources located in the @file{scheme}
+directory.
+@end enumerate
+
+The final stage is to install @value{PRJNAME} via the command
+@command{make install}.  If we're installing @value{PRJNAME} in a
+system--wide location, we probably need to have administrator privileges
+(use the @command{sudo} or @command{su} commands); if that's not
+feasible, then we need to reconfigure to install within a directory tree
+under our home directory.
+
+Finally, try a small session, to verify that everything installed
+properly.
+
+@example
+$ vicare
+Vicare Scheme version 0.1d0+ \
+  (revision master/d844c006eb9ada1a047be3893d0dd40f8ae6204a, \
+  build 2010-05-02)
+Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors
+
+> (display "hello, world!\n")
+hello, world!
+> (define twice (lambda (f) (lambda (x) (f (f x)))))
+> ((twice add1) 3)
+5
+@end example
+
+If we get the first @code{>} prompt, then @value{PRJNAME} was
+successfully installed on the system.  We may need to update the
+@env{PATH} variable in environment to contain the directory in which the
+@command{vicare} executable was installed.
+
+Finally, do @command{make clean} to get rid of executables, object
+files, and other build products in the @file{vicare-@var{n.n.n}}
+directory.  Do not delete the directory itself: it will be needed if we
+ever want to uninstall @value{PRJNAME}.
+
+@c page
+@node overview install uninstall
+@subsection Uninstalling @value{PRJNAME}
+
+
+@cindex @value{PRJNAME}, uninstalling
+@cindex @value{PRJNAME}, disinstalling
+@cindex Disinstalling @value{PRJNAME}
+@cindex Uninstalling @value{PRJNAME}
+
+
+To uninstall @value{PACKAGE}, go to the directory we built
+@value{PRJNAME} in (not the directory where you installed it), and do
+@command{make uninstall}.
+
+@example
+$ cd path/to/vicare-@var{n.n.n}
+$ make uninstall
+@end example
+
+@c page
+@node using
+@chapter Using @value{PRJNAME}
+
+
+Once @value{PACKAGE} is properly installed, we can invoke it either in
+an interactive terminal session or as the interpreter for invoking a
+script.
+
+@cindex Command line
+@cindex Invoking @value{PRJNAME}
+
+@menu
+* using interactive::           Interactive sessions.
+* using invoking::              Command line arguments.
+* using script::                Using @command{scheme-script}.
+* using libraries::             @value{PRJNAME} and @rnrs{6} libraries.
+@end menu
+
+@c page
+@node using interactive
+@section Interactive sessions
+
+
+If we want an interactive session, use a bare @value{EXECUTABLE}
+command, with no options.
+
+@example
+$ @value{RAWEXECUTABLE}
+Vicare Scheme version 0.1d0+ \
+  (revision master/d844c006eb9ada1a047be3893d0dd40f8ae6204a, \
+   build 2010-05-02)
+Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors
+
+> (+ 2 2)
+4
+@end example
+
+@noindent
+end--of--file (@key{Ctrl-D} in a typical terminal window) will terminate
+the session.
+
+@c page
+@node using invoking
+@section Command line arguments
+
+
+The @value{EXECUTABLE} executable recognizes a few command line switches
+that influence how @value{PACKAGE} starts.  The following are the main
+options, driving the execution mode.
+
+@table @code
+@item @value{RAWEXECUTABLE} -h
+The presence of the @option{-h} flag causes @value{EXECUTABLE} to
+display a help message then to exit; the help message summarizes the
+command line switches.  No further action is performed.
+
+@item @value{RAWEXECUTABLE} -b path/to/boot/file.boot
+The @option{-b} flag (which requires an extra argument) directs
+@value{EXECUTABLE} to use the specified boot file as the initial system
+boot file.  The boot file is a binary file that contains all the code
+and data of the Scheme system.  In the absence of the @option{-b} flag,
+the executable will use the default boot file.  Running
+@command{@value{RAWEXECUTABLE} -h} shows the location where the default
+boot file was installed.
+
+The rest of the command line arguments are recognized by the standard
+Scheme run time system.  They are processed after the boot file is
+loaded.
+
+@item @value{RAWEXECUTABLE} --script script-file-name [arguments ...]
+@itemx @value{RAWEXECUTABLE} --r6rs-script script-file-name [arguments ...]
+The @option{--script} or @option{--r6rs-script} option instructs
+@value{PRJNAME} that the supplied file is an @rnrs{6} script.  The
+script file name and any additional optional @code{arguments} can be
+obtained by calling the @func{command-line} procedure.
+
+@example
+$ cat test.sps
+(import (rnrs))
+(write (command-line))
+(newline)
+
+$ @value{RAWEXECUTABLE} --r6rs-script test.sps hi there
+("test.sps" "hi" "there")
+@end example
+
+@item @value{RAWEXECUTABLE} --r6rs-repl <FILE> ... [-- arguments ...]
+Start interactive mode, but load and evaluate @file{FILE} first.
+
+@item @value{RAWEXECUTABLE} --compile-dependencies <FILE> ... [-- arguments ...]
+Load the program or library @file{FILE} and compile all the libraries on
+which it depends.
+
+@item @value{RAWEXECUTABLE} <file> ... [-- arguments ...]
+The lack of an @option{--r6rs-script} argument causes @value{PRJNAME} to
+start in interactive mode.  Each @code{file} is first loaded in the
+interaction environment.  The interaction environment initially contains
+all the bindings exported from the @library{ikarus} library.
+
+The optional @code{arguments} following the @code{--} marker can be
+obtained by calling the @func{command-line} procedure.  In interactive
+mode, the first element of the returned list will be the string
+@code{*interactive*}, corresponding to the script name in
+@rnrs{6}--script mode.
+
+@quotation
+@strong{NOTE} @rnrs{6} lives in a somewhat uneasy tension with a
+standard Scheme @acronym{REPL} (read--eval--print loop), which the
+Report effectively does not define.  In particular, the effect of
+reimporting a module, as you might do when reloading and rerunning a
+program, isn't well--defined by @rnrs{6}.
+
+This is a limitation caused by the particular design choices made in
+@rnrs{6}; it's hoped that a future revision to the language will repair
+this particular problem.  Even so, we hope to achieve better interaction
+between loading and libraries in the future.
+
+Accordingly, the interactive mode is intended for quick experimenting
+with the built--in features.  It is intended neither for developing
+applications nor for writing any substantial piece of code.
+@end quotation
+@end table
+
+The following are additional options turning on/off auxiliary behaviour.
+
+@table @code
+@item -d
+@itemx --debug
+Turn on debugging mode.  With this unhandled exceptions in the program
+will result in starting the debugger, which allows stack trace
+inspection.
+
+@item -nd
+@itemx --no-debug
+Turn off debugging mode.
+
+@item -O0
+@itemx -O1
+@itemx -O2
+Turn on various levels of compile optimisations.
+
+@item --no-rcfile
+Disable loading of run--command files.
+
+@item --rcfile <FILE>
+Load and evaluate @file{file} at startup, before running the script.
+The file must hold a proper @rnrs{6} program, beginning with the
+@func{import} clause.
+@end table
+
+@c page
+@node using script
+@section Using @command{scheme-script}
+
+
+Scheme scripts can be executed using the following command:
+
+@example
+@value{RAWEXECUTABLE} --r6rs-script @var{script-name}
+@end example
+
+@noindent
+@value{PACKAGE} does @strong{not} follow the @rnrs{6} recommendations
+and does not install a wrapper program called @command{scheme-script} to
+avoid conflicts with other Scheme implementations.
+
+Here is a sample script (Pig Latin---``Igpay Atinlay''---is a code that
+was at one time popular among very young North American children).
+
+@example
+(import (rnrs))
+
+;;; Convert a string to its Pig Latin equivalent.
+;;;
+;;; If the first character is a vowel, append "yay".
+;;; "egg" -> "eggyay"
+;;;
+;;; If the first character is a consonant, remove it,
+;;; and append it plus "ay" to the string.
+;;; "foo" -> "oofay"
+
+(define pig-latin
+  (lambda (str)
+    (let ((first (string-ref str 0)))
+      (if (memv first '(#\a #\e #\i #\o #\u))
+	  (string-append str "yay")
+	  (string-append
+ 	    (substring str 1 (string-length str))
+	    (string first) "ay")))))
+
+(display
+ (map pig-latin
+     (cdr (command-line))))
+(newline)
+@end example
+
+Assuming we have stored the script in the file @file{demo.sps}, we can
+invoke this script via @value{EXECUTABLE}:
+
+@example
+$ @value{RAWEXECUTABLE} --r6rs-script demo.sps ice cream after dinner
+(iceyay reamcay afteryay innerday)
+@end example
+
+On Unix/Linux systems, scripts generally start with a ``shebang'' line
+(@emph{sh}arp plus @emph{bang}) which names an interpreter for the
+script.  All modern systems have the @command{env} command which
+searches for a command in the user's path.
+
+@example
+#!/usr/bin/env @value{RAWEXECUTABLE} --r6rs-script
+(import (rnrs))
+
+...
+@end example
+
+Now we can make the file executable, and use it directly.
+
+@example
+$ chmod +x demo.sps
+$ ./demo.sps ice cream after dinner
+(iceyay reamcay afteryay innerday)
+@end example
+
+There are a few fine points.
+
+@itemize
+@item
+Under Mac OS X, if a script name ends with the @code{.command}
+extension, then it can be executed from the Finder by double--clicking
+on it.  This brings up a terminal window in which the script is
+executed.  The @code{.command} extension can be hidden from the
+@emph{Get Info} item from the Finder's File menu.
+@end itemize
+
+@c page
+@node using libraries
+@section @value{PRJNAME} and @rnrs{6} libraries
+
+
+A library exports features that can be imported into programs; a library
+is named by a list, e.g., @library{yoyodyne
+block-transfer-computations}.  The core features of the language is
+provided in the library @library{rnrs}.
+
+@menu
+* using libraries intro::       Introduction to @value{PRJNAME} libraries.
+* using libraries searching::   How @value{PRJNAME} finds libraries.
+* using libraries summary::     Library search summary.
+* using libraries examples::    Examples of libraries usage.
+@end menu
+
+@c page
+@node using libraries intro
+@subsection Introduction to libraries
+
+
+A library consists of a ``file'' (some assemblage of text) that contains
+a library form, which might look like this:
+
+@example
+(library (sample)
+  (export cube)
+  (import (rnrs))
+  (define cube
+    (lambda (x)
+      (* x x x))))
+@end example
+
+@noindent
+notice the @func{import} clause; libraries have no predefined namespace,
+and therefore at least @library{rnrs} must be imported.
+
+We can import @library{sample} into another library, a script, or a
+@value{PRJNAME} top--level session:
+
+@example
+> (import (sample))
+> (cube 3)
+27
+@end example
+
+Library names are lists, thus allowing the writer of one or more
+libraries to group related libraries together.  For example, as well as
+@library{yoyodyne block-transfer-computations}, we might also have
+@library{yoyodyne tardis navigation} and @library{yoyodyne tardis
+diagnostics}.  Leaving the parentheses off a single--component library
+name is a common error.
+
+@c page
+@node using libraries searching
+@subsection How @value{PRJNAME} finds libraries
+
+
+In @value{PRJNAME}, a library is a file with the same name as the last
+component of the library name.  For example, the library
+@library{sample} will correspond to a file named @file{sample.sls}
+somewhere in the file system.  The file extension @code{sls} stands for
+``Scheme library source''; although @value{PRJNAME} will also accept the
+extensions @code{ss} and @code{scm}, these really indicate scripts,
+rather than libraries.
+
+@value{PRJNAME} has a search algorithm for libraries that is similar to
+those used in other languages.  Its search path comprises a series of
+directories.  When we try to import a library whose name contains just
+one component, @value{PRJNAME} will examine each directory in the search
+path for a file with a matching name.  Importing a library whose name is
+a list of components causes @value{PRJNAME} to match to a series of
+subdirectories with matching names.
+
+Here is an example of each case:
+
+@itemize
+@item
+Importing @library{sample} causes @value{PRJNAME} to look in each
+directory on the path for a file named @file{sample.sls}.
+
+@item
+Importing @library{yoyodyne sample} causes @value{PRJNAME} to look in
+each directory on the path for a directory named @file{yoyodyne}, and
+within that a file named @file{sample.sls}.  (The @func{library} form
+for this library must still specify the library name as
+@library{yoyodyne sample}, not @library{sample}.)
+@end itemize
+
+@value{PRJNAME} always places its own libraries at the end of the search
+path.  Other library directories can be added to the search path in two
+ways: by modifying an environment variable, or by setting
+@value{PRJNAME}'s @func{library-path} parameter.  @value{PRJNAME}
+consults the environment variable @env{VICARE_LIBRARY_PATH} at the
+beginning of execution, and places each of the directories there into
+its search path.  The search path is then set to the value of the
+parameter @func{library-path}, which can be updated as necessary.
+
+@example
+$ export VICARE_LIBRARY_PATH=$HOME/scheme:/tmp/library
+$ echo $VICARE_LIBRARY_PATH
+/home/someuser/scheme:/tmp/library
+$ @value{RAWEXECUTABLE}
+...
+
+> (library-path)
+("/home/someuser/scheme" "/tmp/library"
+  "/home/someuser/local/lib/vicare")
+> (library-path (cons "/opt/sw/extra-libraries" (library-path)))
+> (library-path)
+("/opt/sw/extra-libraries" "/home/someuser/scheme"
+  "/tmp/library" "/home/someuser/local/lib/vicare")
+@end example
+
+@noindent
+In this example, the user sets @env{VICARE_LIBRARY_PATH} before the
+session; the settings are reflected in the value of
+@code{(library-path)}.  A further directory is then set during the
+session.
+
+In programs intended to be distributed, you should resist the urge to
+set @code{(library-path)}, as the user's file hierarchies might not
+match yours.  For most libraries, simply telling the user to install the
+library in one of the libraries on the search path is good enough.
+
+There are two refinements of the library search algorithm.
+
+@itemize
+@item
+A common pattern is to distribute a main library along with a number of
+additional extensions: we might have a main library named @library{lib},
+and additional optional extensions named @library{lib extras} and
+@library{lib frills}.  Although the previous packaging method can be
+used, @value{PRJNAME} allows you to use a simpler technique where the
+main library is stored in @file{lib/main.sls}, and the extensions are
+stored in @file{lib/extras.sls} and @file{lib/frills.sls}, respectively.
+
+@item
+@value{PRJNAME} will also look in @file{lib/main.vicare.sls} before
+trying @file{lib/main.sls}.  This allows you to provide an
+@value{PRJNAME}--specific implementation as well as a generic
+implementation.
+@end itemize
+
+@c page
+@node using libraries summary
+@subsection Library search algorithm summary
+
+
+@value{PRJNAME} attempts to import the library @library{a b c} as
+follows, for each directory in the search path:
+
+@enumerate
+@item
+Build the rootname @file{a/b/c}.
+
+@item
+Append each of the following strings to the rootname, in order, until a
+matching file is found:
+
+@example
+/main.ikarus.sls
+/main.ikarus.ss
+/main.ikarus.scm
+/main.sls
+/main.ss
+/main.scm
+.vicare.sls
+.vicare.ss
+.vicare.scm
+.sls
+.ss
+.scm
+@end example
+@end enumerate
+
+If there is no match, then the import is in error.
+
+@c page
+@node using libraries examples
+@subsection Examples of library usage
+
+
+Consider a program using @func{pretty-print} procedure to format some
+code, and suppose further that pretty printing is just a nice add--on
+(e.g. using @file{write} suffices, but pretty--printing is @emph{just
+prettier}).
+
+@value{PRJNAME} exports a good pretty--printing facility in its
+@library{ikarus} library.  However, since @func{pretty-print} is not a
+standard procedure, a program that uses it would be rendered unportable
+to other @rnrs{6} Scheme implementations.
+
+The programmer can put the @code{.vicare.*} extensions to use in this
+situation, by writing two versions of a @library{pretty-printing}
+library: one for use by @value{PRJNAME}, and one portable for other
+implementations.
+
+@example
+;; pretty-printing.vicare.ss --
+;;
+;; Can be used only by @value{PRJNAME} Scheme.
+
+(library (pretty-printing)
+  (export pretty-print)
+  (import (only (ikarus) pretty-print)))
+
+;;; end of file
+@end example
+
+@example
+;; pretty-printing.sls --
+;;
+;; For any other Scheme implementation, portable though
+;; not very pretty.
+
+(library (pretty-printing)
+  (export pretty-print)
+  (import (rnrs))
+  (define (pretty-print x port)
+    (write x port)
+    (newline port)))
+
+;;; end of file
+@end example
+
+@c page
+@node library
+@chapter Installed libraries
+
+
+In addition to the libraries listed in the @rnrs{6} standard,
+@value{PRJNAME} contains the @library{ikarus} library which provides
+additional useful features.  The @library{ikarus} library is a composite
+library---it exports a superset of all the supported bindings of
+@rnrs{6}.
+
+While not all of the exports of @library{ikarus} are documented at this
+time, this chapter attempts to describe a few of these useful
+extensions.  Extensions to Scheme's lexical syntax are also documented.
+
+@menu
+* library reader::              Reader.
+* library cafe::                Cafe.
+* library environment::         Environments.
+* library load::                Loading source files.
+* library import::              Local library imports.
+* library modules::             Local modules.
+* library parameters::          Parameters.
+* library gensym::              Gensyms.
+* library printing::            Printing.
+* library tracing::             Tracing.
+* library timing::              Timing.
+* library guardians::           Guardians and garbage collection.
+* library io::                  Input/output library.
+* library posix::               @posix{} functions.
+* library foreign::             Foreign interface library.
+* library misc::                Miscellaneous functions.
+@end menu
+
+@c page
+@node library reader
+@section Reader
+
+
+@deffn {Reader Syntax} {#!vicare}
+@value{PRJNAME} extends Scheme's lexical syntax (@rnrs{6} Chapter 4) in
+a variety of ways including:
+
+@itemize
+@item
+End--of--file marker, @code{#!eof}.
+
+@item
+Gensym syntax, @code{#@{gensym@}}.
+
+@item
+Graph syntax, @code{#nn= #nn#}.
+@end itemize
+
+The syntax extensions are made available by default on all input ports,
+until the @code{#!r6rs} token is read.  Thus, reading the @code{#!r6rs}
+token disables all extensions to the lexical syntax on the specific
+port, and the @code{#!vicare} enables them again.
+
+When writing code that is intended to be portable across different
+Scheme implementations, we should add the @code{#!r6rs} token to the top
+of every script and library that we write; this allows @value{PRJNAME}
+to alert us when using non--portable features.  When writing code that's
+intended to be @value{PRJNAME}--specific, we should add the
+@code{#!vicare} token in order to get an immediate error when the code
+is run under other implementations.
+@end deffn
+
+
+@deffn Procedure port-mode @var{input-port}
+Accept an input port as argument and return a symbol among
+@code{r6rs-mode} and @code{vicare-mode} as result.  All input ports
+start under @code{vicare-mode} and thus accept @value{PRJNAME}--specific reader
+extensions.  When the @code{#!r6rs} token is read from a port, its mode
+changes to @code{vicare-mode}.
+
+@example
+> (port-mode (current-input-port))
+vicare-mode
+> #!r6rs (port-mode (current-input-port))
+r6rs-mode
+> #!ikarus (port-mode (current-input-port))
+vicare-mode
+@end example
+@end deffn
+
+
+@deffn Procedure set-port-mode! @var{input-port} @var{mode}
+Modifiy the lexical syntax accepted by subsequent calls to @func{read}
+on the input port.  The mode is a symbol among @code{r6rs-mode} and
+@code{vicare-mode}.  The effect of setting the port mode is similar to
+that of reading the @code{#!r6rs} or @code{#!vicare} token from that
+port.
+
+@example
+> (set-port-mode! (current-input-port) 'r6rs-mode)
+> (port-mode (current-input-port))
+r6rs-mode
+@end example
+@end deffn
+
+
+@deffn {Reader Syntax} {#!eof}
+The end--of--file marker, @code{#!eof}, is an extension to the @rnrs{6}
+syntax.  The primary utility of the @code{#!eof} marker is to stop the
+reader (e.g. @func{read} and @func{get-datum}) from reading the rest of
+the file.
+
+@example
+(import (ikarus))
+<some code>
+(display "goodbye\n")
+
+#!eof
+<some junk>
+@end example
+
+The @code{#!eof} marker also serves as a datum in @value{PRJNAME}, much
+like @true{} and @false{}, when it is found inside other expressions.
+
+@example
+> (eof-object)
+#!eof
+> (read (open-input-string ""))
+#!eof
+> (read (open-input-string "#!eof"))
+#!eof
+> (quote #!eof)
+#!eof
+> (eof-object? '#!eof)
+#t
+> #!r6rs #!eof
+Unhandled exception
+Condition components:
+  1. &error
+  2. &who: tokenize
+  3. &message: "invalid syntax: #!e"
+> #!ikarus #!eof
+$
+@end example
+@end deffn
+
+@c page
+@node library cafe
+@section Cafe
+
+
+@defun new-cafe @var{eval}
+The procedure @func{new-cafe} starts a new read--eval--print loop inside
+the current cafe (if one exists).  It prompts the user for an
+expression, evaluates it, prints the result back, and repeats the
+process.  If @func{new-cafe} is called with an argument, @var{eval},
+then that argument must be a procedure that takes a single argument.
+The @var{eval} procedure will be used to evaluate the expressions.
+
+Every time a new cafe is started, the prompt is changed to reflect the
+depth of the current cafe (i.e. how many eof objects is takes to exit
+the outermost cafe).
+
+Input and output performed by the cafe can be changed by the
+@func{console-input-port} and @func{console-output-port} parameters.
+
+If a @func{die} occurs during reading, evaluating, or printing an
+expression, then the die is printed to the error--port and the
+operations of the cafe resume as normal.
+
+To exit from a cafe we can write the @code{#!eof} object.
+@end defun
+
+@c page
+@node library environment
+@section Environments
+
+
+@cindex Environment, interaction
+
+
+@defun interaction-environment
+Return an environment object representing the environment active at the
+@repl{}.  To be used as argument for @func{eval}.
+@end defun
+
+@c page
+@node library load
+@section Loading source files
+
+
+Loading of source files can be done explicitly or by requesting a
+library with the @func{import} form.  Here we see how to load files by
+specifying their pathname on the file system.
+
+
+@defun load @var{pathname}
+@defunx load @var{pathname} @var{eval-proc}
+Read and evaluate the file selected by the string @var{pathname}.
+
+If @var{eval-proc} is given: it must be a procedure that takes a single
+argument, an annotated form, and evaluates it.  The default
+@var{eval-proc} looks like this:
+
+@example
+(define (load-handler x)
+  (eval x (interaction-environment)))
+@end example
+
+The format of the annotated source is the one which is comprehensible by
+@func{eval}.
+@end defun
+
+@c page
+@node library import
+@section Local library imports
+
+
+@deffn Syntax import import-spec* ...
+  The @func{import} keyword which is exported from the @library{ikarus}
+library can be used anywhere definitions can occur: at a script body,
+library's top--level, or in internal definitions context.  The syntax of
+the local @func{import} form is similar to the @func{import} that
+appears at the top of a library or a script form, and carries with it
+the same restrictions: no identifier name may be imported twice unless
+it denotes the same identifier; no identifier may be both imported and
+defined; and imported identifiers are immutable.
+
+Local @func{import} forms are useful for two reasons: (1) they minimize
+the namespace clutter that usually occurs when many libraries are
+imported at the top level, and (2) they limit the scope of the import
+and thus help modularize a library's dependencies.
+
+Suppose you are constructing a large library and at some point you
+realize that one of your procedures needs to make use of some other
+library for performing a specific task.  Importing that library at top
+level makes it available for the entire library.  Consequently, even if
+that library is no longer used anywhere in the code (say when the code
+that uses it is deleted), it becomes very hard to delete the import
+without first examiniming the entire library body for potential usage
+leaks.  By locally importing a library into the appropriate scope, we
+gain the ability to delete the @func{import} form when the procedure
+that was using it is deleted.
+@end deffn
+
+@c page
+@node library modules
+@section Local modules
+
+
+Modules are somewhat like libraries in that they define a set of
+bindings in a ``private namespace''; bindings can be exported from a
+module and imported into other modules and libraries.  The main
+difference between modules and @rnrs{6} libraries is that modules are
+defined in a single form nested into a library; so, in a way, they are
+sub--libraries.
+
+@quotation
+@emph{Note:} In the official documentation of @value{PRJNAME} 0.0.3+
+(revision 1648) modules are yet not documented.  Please refer to Section
+10.5 of Chez Scheme User's Guide, Chapter 3 of Oscar Waddel's Ph.D
+Thesis, and its POPL99 paper for details on using the @func{module} and
+@func{import} keywords.  @value{PRJNAME}'s internal module system is
+similar in spirit to that of Chez Scheme.
+@end quotation
+
+@menu
+* library modules examples::    Usage example for modules.
+* library modules api::         Modules programming interface.
+@end menu
+
+@c page
+@node library modules examples
+@subsection Usage example for modules
+
+@c SONO ARRIVATO QUI
+
+@menu
+* library modules examples anonymous::        Anonymous modules.
+* library modules examples named::            Named modules.
+* library modules examples utils::            Utilities examples.
+@end menu
+
+@c page
+sr @node library modules examples anonymous
+@subsubsection Anonymous modules
+
+
+The following example defines an anonymous module, without expressions,
+and invokes its functions from the enclosing environment (which is the
+top level):
+
+@example
+(import (ikarus))
+
+(module (one two three)
+    (define (one)       'one)
+    (define (two)       'two)
+    (define (three)     (cons 'three (hidden)))
+    (define (hidden)    'hidden))
+
+(printf "calling anonymous: ~s ~s ~s~%" (one) (two) (three))
+@end example
+
+@noindent
+notice that the @func{hidden} function is visible inside the module but
+not in the enclosing environment.
+
+The following example defines a module, with expressions, and invokes
+its functions from the enclosing environment (which is the top level):
+
+@example
+(import (ikarus))
+
+(module (one two three)
+    (define (one)       'one)
+    (define (two)       'two)
+    (define (three)     (cons 'three (hidden)))
+    (define (hidden)    'hidden)
+
+    (printf "defining an anonymous module~%"))
+
+(printf "calling anonymous: ~s ~s ~s~%" (one) (two) (three))
+@end example
+
+@noindent
+notice that when the enclosing environment is the top level: the
+expressions at the end of a module are evaluated @strong{after} the
+expressions at the top level; so the output from the example is:
+
+@example
+calling anonymous: one two (three . hidden)
+defining an anonymous module
+@end example
+
+@noindent
+this can lead to undesired results if the module's expressions are meant
+to initialise the state of the module, and the expressions at the top
+level invoke the module's functions (before initialisation).  On the
+other hand: this behaviour allows the module to access definitions from
+the enclosing environment and the top level environment despite their
+placement in the file; see below for an example.  The same behaviour is
+shown by named modules.
+
+The following example defines a module, with expressions, and invokes
+its functions from the enclosing environment (which is a @func{let}
+form):
+
+@example
+(import (ikarus))
+
+(let ()
+  (module (one two three)
+      (define (one)       'one)
+      (define (two)       'two)
+      (define (three)     (cons 'three (hidden)))
+      (define (hidden)    'hidden)
+
+      (printf "defining an anonymous module~%"))
+
+  (printf "calling anonymous: ~s ~s ~s~%" (one) (two) (three)))
+@end example
+
+@noindent
+notice that when the enclosing environment is @strong{not} the top
+level: the expressions at the end of a module are evaluated
+@strong{before} the expressions in the body of the enclosing
+environment; so the output from the example is:
+
+@example
+defining an anonymous module
+calling anonymous: one two (three . hidden)
+@end example
+
+@noindent
+so the state of the module can be correctly initialised before its
+functions are invoked.  The same behaviour is shown by named modules.
+
+The following example shows that bindings from the enclosing environment
+and the top level environment are accessible from the modules:
+
+@example
+(import (ikarus))
+
+(define (top-level-before) 'top-level-before)
+
+(let ()
+
+  (define (outer-before) 'outer-before)
+
+  (module (one two three)
+    (define (one)       'one)
+    (define (two)       'two)
+    (define (three)     (list 'three
+                              (outer-before)
+                              (outer-after)
+                              (top-level-before)
+                              (top-level-after))))
+
+  (define (outer-after) 'outer-after)
+
+  (printf "calling anonymous: ~s ~s ~s~%" (one) (two) (three)))
+
+(define (top-level-after) 'top-level-after)
+@end example
+
+@noindent
+this happens both when the enclosing environment is the top level and
+when the enclosing environment is not the top level.  The same behaviour
+is shown by named modules.
+
+@c page
+@node library modules examples named
+@subsubsection Named modules
+
+
+The following example defines a module named @code{blue} and invokes
+functions from it in the top level environment:
+
+@example
+(import (ikarus))
+
+[module blue (blue-one blue-two blue-three)
+    (define (blue-one)          'blue-one)
+    (define (blue-two)          'blue-two)
+    (define (blue-three)        (cons 'blue-three (hidden)))
+    (define (hidden)            'blue-hidden)]
+
+(import blue)
+(printf "calling blue: ~s ~s ~s~%"
+        (blue-one) (blue-two) (blue-three))
+@end example
+
+@noindent
+notice that bindings from a named module are accessible only if imported
+in the enclosing environment.
+
+The following example defines two modules named @code{green} and
+@code{red}, then it imports their bindings in different environments:
+
+@example
+(import (ikarus))
+
+(let ()
+
+  [module green (one two three)
+    (define (one)       'green-one)
+    (define (two)       'green-two)
+    (define (three)     (cons 'green-three (hidden)))
+    (define (hidden)    'green-hidden)]
+
+  [module red (one two three)
+    (define (one)       'red-one)
+    (define (two)       'red-two)
+    (define (three)     (cons 'red-three (hidden)))
+    (define (hidden)    'red-hidden)]
+
+  (import green)
+
+  [let ()
+    (import red)
+    (printf "calling red: ~s ~s ~s~%" (one) (two) (three))]
+
+  (printf "calling green: ~s ~s ~s~%" (one) (two) (three)))
+@end example
+
+The following example shows that modules in the same enclosing
+environment can import their bindings:
+
+@example
+(import (ikarus))
+
+(let ()
+
+  [module green (one two)
+    (define (one)       'one)
+    (define (two)       'two)]
+
+  [module red (f g)
+    (import green)
+    (define (f)         (cons 'f (one)))
+    (define (g)         (cons 'g (two)))]
+
+  (import red)
+  (printf "calling red: ~s ~s~%" (f) (g)))
+@end example
+
+@noindent
+while the following example shows that bindings from an anonymous module
+are automatically available in modules defined in the same enclosing
+environment:
+
+@example
+(import (ikarus))
+
+(let ()
+
+  [module (one two)
+    (define (one)       'one)
+    (define (two)       'two)]
+
+  [module red (f g)
+    (define (f)         (cons 'f (one)))
+    (define (g)         (cons 'g (two)))]
+
+  (import red)
+  (printf "calling red: ~s ~s~%" (f) (g)))
+@end example
+
+@noindent
+and the following example shows that the order of module definitions
+does not matter in determining visibility of bindings from
+@strong{anonymous} modules:
+
+@example
+(import (ikarus))
+
+(let ()
+
+  [module red (f g)
+    (define (f)         (cons 'f (one)))
+    (define (g)         (cons 'g (two)))]
+
+  [module (one two)
+    (define (one)       'one)
+    (define (two)       'two)]
+
+  (import red)
+  (printf "calling red: ~s ~s~%" (f) (g)))
+@end example
+
+@noindent
+the following is an @strong{error} because it tries to import bindings
+from a @strong{named} module before its definition:
+
+@example
+(import (ikarus))
+
+(let ()
+
+  [module red (f g)
+    (import green)
+    (define (f)         (cons 'f (one)))
+    (define (g)         (cons 'g (two)))]
+
+  [module green (one two)
+    (define (one)       'one)
+    (define (two)       'two)]
+
+  (import red)
+  (printf "calling red: ~s ~s~%" (f) (g)))
+@end example
+
+@c page
+@node library modules examples utils
+@subsubsection Utilities examples
+
+
+The following example shows how syntactic abstractions can be used to
+access definitions in a module without using the @func{import} form:
+
+@example
+(import (ikarus))
+
+(let ()
+
+  (define-syntax in-module
+    (syntax-rules ()
+      [(_ ?module ?expr ...)
+       (let () (import ?module) ?expr ...)]))
+
+  [module red (one two)
+    (define (one arg)   (cons 'red-one arg))
+    (define (two arg)   (cons 'red-two arg))]
+
+  [module green (one two)
+    (define (one arg)   (cons 'green-one arg))
+    (define (two arg)   (cons 'green-two arg))]
+
+  (printf "calling ones: ~s ~s~%"
+          [(in-module red one)   123]
+          [(in-module green one) 456]))
+@end example
+
+@c page
+@node library modules api
+@subsection Modules programming interface
+
+
+@deffn Syntax module @var{interface} @var{definitions} ... @var{expressions} ...
+@deffnx Syntax module @var{name} @var{interface} @var{definitions} ... @var{expressions} ...
+Define a new local module.  The first form defines an @emph{anonymous}
+module, while the second form defines a @emph{named} module called
+@var{name}, which must be a symbol.
+
+@var{interface} is a list of symbols that select bindings from this
+module to be exported.  Every listed symbol must be bound in this
+module's @var{definitions}, otherwise an error is raised.
+
+@var{definitions} is a set of bindings like the one that may appear at
+the beginning of a @func{let} body, with the addition of @func{import}
+forms that may import bindings from libraries and other modules.
+
+@var{expressions} is a set of expressions that is evaluated at module's
+definition time.
+
+Modules ``exist'' only in the enclosing region, bindings exported from a
+module are not accessible outside of the enclosing region.  Modules can
+be nested and import/export relations are possible according to the
+regions nesting hierarchy.
+
+Bindings in the @var{interface} declared by anonymous modules are
+imported by default in the enclosing region: there is no need to use
+@func{import}.  Bindings in the @var{interface} declared by named
+modules are visible only in regions that @func{import} the module.
+
+@var{definitions} and @var{expressions} have no default access to the
+bindings in the enclosing region; only imported bindings are visible
+from the module.
+@end deffn
+
+@c page
+@node library parameters
+@section Parameters
+
+
+Parameters in @value{PRJNAME}@footnote{Parameters are found in many Scheme
+implementations such as Chez Scheme and MzScheme.} are intended for
+customizing the behavior of a procedure during the dynamic execution of
+some piece of code.  Parameters are first class entities (represented as
+procedures) that hold the parameter value.  A parameter procedure
+accepts either zero or one argument.  If given no arguments, it returns
+the current value of the parameter.  If given a single argument, it must
+set the state to the value of the argument.
+
+Parameters replace the older concept of using starred @code{*global*}
+customization variables.  For example, instead of writing:
+
+@example
+(define *screen-width* 72)
+@end example
+
+@noindent
+and then mutating the variable @code{*screen-width*} with @code{set!},
+we could wrap the variable @code{*screen-width*} with a
+@code{screen-width} parameter as follows:
+
+@example
+(define *screen-width* 72)
+(define screen-width
+   (case-lambda
+     [()  *screen-width*]
+     [(x) (set! *screen-width* x)]))
+@end example
+
+The value of @code{screen-width} can now be passed as argument, returned
+as a value, and exported from libraries.
+
+
+@deffn Procedure make-parameter @var{x}
+@deffnx Procedure make-parameter @var{x} @var{f}
+As parameters are common in @value{PRJNAME}, the procedure @func{make-parameter}
+is defined to model the common usage pattern of parameter construction.
+
+@code{(make-parameter x)} constructs a parameter with @var{x} as the
+initial value.  For example, the code above could be written succinctly
+as:
+
+@example
+(define screen-width (make-parameter 72))
+@end example
+
+@code{(make-parameter x f)} constructs a parameter which filters the
+assigned values through the procedure @var{f}.  The initial value of the
+parameter is the result of calling @code{(f x)}.  Typical uses of the
+filter procedure include checking some constraints on the passed
+argument or converting it to a different data type.  The
+@code{screen-width} parameter may be constructed more robustly as:
+
+@example
+(define screen-width
+  (make-parameter 72
+    (lambda (w)
+      (assert (and (integer? w) (exact? w)))
+      (max w 1))))
+@end example
+
+This definition ensures, through @func{assert}, that the argument passed
+is an exact integer.  It also ensures, through @func{max} that the
+assigned value is always positive.
+@end deffn
+
+
+@deffn Syntax parameterize ([lhs* rhs*] ...) body body* ...
+Parameters can be assigned to by simply calling the parameter procedure
+with a single argument.  The @func{parameterize} syntax is used to set
+the value of a parameter within the dynamic extent of the @code{body
+body* ...} expressions.
+
+The @code{lhs* ...} are expressions, each of which must evaluate to a
+parameter.  Such parameters are not necessarily constructed by
+@func{make-parameter}---any procedure that follows the parameters
+protocol works.
+
+The advantage of using @func{parameterize} over explicitly assigning to
+parameters (same argument applies to global variables) is that you're
+guaranteed that whenever control exits the body of a @func{parameterize}
+expression, the value of the parameter is reset back to what it was
+before the body expressions were entered.  This is true even in the
+presence of @func{call/cc}, errors, and exceptions.
+
+The following example shows how to set the text property of a terminal
+window.  The parameter @code{terminal-property} sends an @ansi{} escape
+sequence to the terminal whenever the parameter value is changed.  The
+use of @code{terminal-property} within @func{parameterize} changes the
+property before @code{(display "RED!")} is called and resets it back to
+normal when the body returns.
+
+@example
+(define terminal-property
+  (make-parameter "0"
+    (lambda (x)
+      (display "\x1b;[")
+      (display x)
+      (display "m")
+      x)))
+
+(display "Normal and ")
+(parameterize ([terminal-property "41;37"])
+  (display "RED!"))
+(newline)
+@end example
+@end deffn
+
+@c page
+@node library gensym
+@section Gensyms
+
+
+Gensym stands for @emph{generated symbol}---a fresh symbol that is
+generated at run time and is guaranteed to be @emph{not} @func{eq?} to
+any other symbol present in the system.  Gensyms are useful in many
+applications including expanders, compilers, and interpreters when
+generating an arbitrary number of unique names is needed.
+
+@value{PRJNAME} is similar to Chez Scheme in that the readers (including the
+@func{read} procedure) and writers (including @func{write} and
+@func{pretty-print}) maintain the read/write invariance on gensyms.
+When a gensym is written to an output port, the system automatically
+generates a random unique identifier for the gensym.  When the gensym is
+read back though the @code{#@{gensym@}} read syntax, a new gensym is
+@emph{not} regenerated, but instead, it is looked up in the global
+symbol table.
+
+A gensym's name is composed of two parts: a @emph{pretty} string and a
+@emph{unique} string.  The Scheme procedure @func{symbol->string}
+returns the pretty string of the gensym and not its unique string.
+Gensyms are printed by default as @code{#@{pretty-string unique-string@}}.
+
+
+@deffn Procedure gensym
+@deffnx Procedure gensym @var{string}
+@deffnx Procedure gensym @var{symbol}
+Construct a new gensym.  If passed no arguments, construct a gensym with
+no pretty name.  The pretty name is constructed when and if the pretty
+name of the resulting gensym is needed.  If @func{gensym} is passed a
+string, that string is used as the pretty name.  If @func{gensym} is
+passed a symbol, the pretty name of the symbol is used as the pretty
+name of the returned gensym.  See @func{gensym-prefix} and
+@func{gensym-count} for details.
+
+@example
+> (gensym)
+#@{g0 |y0zf>GlFvcTJE0xw|@}
+> (gensym)
+#@{g1 |U%X&sF6kX!YC8LW=|@}
+> (eq? (gensym) (gensym))
+#f
+@end example
+
+@code{(gensym string)} constructs a new gensym with @var{string} as its
+pretty name.  Similarly, @code{(gensym symbol)} constructs a new gensym
+with the pretty name of @var{symbol}, if it has one, as its pretty name.
+
+@example
+> (gensym "foo")
+#@{foo |>VgOllCM&$dSvRN=|@}
+> (gensym 'foo)
+#@{foo |!TqQLmtw2hoEYfU>|@}
+> (gensym (gensym 'foo))
+#@{foo |N2C>5O0>C?OROUBU|@}
+@end example
+@end deffn
+
+
+@deffn Procedure gensym? @var{x}
+Return @true{} if its argument is a gensym, return @false{} otherwise.
+
+@example
+> (gensym? (gensym))
+#t
+> (gensym? 'foo)
+#f
+> (gensym? 12)
+#f
+@end example
+@end deffn
+
+
+@deffn Procedure gensym->unique-string @var{gensym}
+Return the unique name associated with the gensym argument.
+
+@example
+> (gensym->unique-string (gensym))
+"YukrolLMgP?%ElcR"
+@end example
+@end deffn
+
+
+@deffn {Reader Syntax} {#@{gensym@}}
+@deffnx {Reader Syntax} {#@{unique-name@}}
+@deffnx {Reader Syntax} {#@{pretty-name unique-name@}}
+@deffnx {Reader Syntax} {#:pretty-name}
+@value{PRJNAME}'s @func{read} and @func{write} procedures extend the lexical
+syntax of Scheme by the ability to read and write gensyms using one of
+these three forms.
+
+@code{#@{unique-name@}} constructs, at read time, a gensym whose unique
+name is the one specified.  If a gensym with the same unique name
+already exists in the system's symbol table, that gensym is returned.
+
+@example
+> '#@{some-long-name@}
+#@{g0 |some-long-name|@}
+> (gensym? '#@{some-long-unique-name@})
+#t
+> (eq? '#@{another-unique-name@} '#@{another-unique-name@})
+#t
+@end example
+
+The two--part @code{#@{pretty-name unique-name@}} gensym syntax is
+similar to the syntax shown above with the exception that if a new
+gensym is constructed (that is, if the gensym did not already exist in
+the symbol table), the pretty name of the constructed gensym is set to
+@code{pretty-name}.
+
+@example
+> '#@{foo unique-identifier@}
+#@{foo |unique-identifier|@}
+> '#@{unique-identifier@}
+#@{foo |unique-identifier|@}
+> '#@{bar unique-identifier@}
+#@{foo |unique-identifier|@}
+@end example
+
+The @code{#:pretty-name} form constructs, at read time, a gensym whose
+pretty name is @code{pretty-name} and whose unique name is fresh.  This
+form guarantees that the resulting gensym is not @func{eq?} to any other
+symbol in the system.
+
+@example
+> '#:foo
+#@{foo |j=qTGlEwS/Zlp2Dj|@}
+> (eq? '#:foo '#:foo)
+#f
+@end example
+@end deffn
+
+
+@c ------------------------------------------------------------
+
+@subsection An example
+
+
+@noindent
+The @library{rnrs syntax-case} library provides a
+@func{generate-temporaries} procedure, which takes a syntax object
+(representing a list of things) and returns a list of fresh identifiers.
+Using @func{gensym}, that procedure can be defined as follows:
+
+@example
+(define (generate-temporaries* stx)
+  (syntax-case stx ()
+    [(x* ...)
+     (map (lambda (x)
+            (datum->syntax #'unimportant
+              (gensym
+                (if (identifier? x)
+                    (syntax->datum x)
+                    't))))
+          #'(x* ...))]))
+@end example
+
+The above definition works by taking the input @var{stx} and
+destructuring it into the list of syntax objects @code{x* ...}.  The
+inner procedure maps each @var{x} into a new syntax object (constructed
+with @func{datum->syntax}).  The datum is a gensym, whose name is the
+same name as @var{x} if @var{x} is an identifier, or the symbol @code{t}
+if @var{x} is not an identifier.  The output of
+@func{generate-temporaries*} generates names similar to their input
+counterpart:
+
+@example
+> (print-gensym #f)
+> (generate-temporaries* #'(x y z 1 2))
+(#<syntax x> #<syntax y> #<syntax z> #<syntax t> #<syntax t>)
+@end example
+
+@c page
+@node library printing
+@section Printing
+
+
+@deffn Procedure pretty-print @var{datum}
+@deffnx Procedure pretty-print @var{datum} @var{output-port}
+The procedure @func{pretty-print} is intended for printing Scheme data,
+typically Scheme programs, in a format close to how a Scheme programmer
+would write it.  Unlike @func{write}, which writes its input all in one
+line, @func{pretty-print} inserts spaces and new lines in order to
+produce more pleasant output.
+
+@example
+(define fact-code
+  '(letrec ([fact (lambda (n)
+                    (if (zero? n)
+                        1
+                      (* n (fact (- n 1)))))])
+     (fact 5)))
+
+> (pretty-print fact-code)
+(letrec ((fact
+          (lambda (n) (if (zero? n) 1 (* n (fact (- n 1)))))))
+  (fact 5))
+@end example
+
+The second argument to @func{pretty-print}, if supplied, must be an
+output port.  If not supplied, the @func{current-output-port} is used.
+
+@quotation
+@emph{Limitations:} As shown in the output above, the current
+implementation of @func{pretty-print} does not handle printing of square
+brackets properly.
+@end quotation
+@end deffn
+
+
+@deffn Parameter pretty-width
+@deffnx Parameter pretty-width @var{n}
+The parameter @func{pretty-width} controls the number of characters
+after which the @func{pretty-print} starts breaking long lines into
+multiple lines.  The initial value of @func{pretty-width} is set to 60
+characters, which is suitable for most terminals and printed material.
+
+@example
+> (parameterize ([pretty-width 40])
+     (pretty-print fact-code))
+(letrec ((fact
+          (lambda (n)
+            (if (zero? n)
+                1
+                (* n (fact (- n 1)))))))
+  (fact 5))
+@end example
+
+Note that @func{pretty-width} does not guarantee that the output will
+not extend beyond the specified number.  Very long symbols, for
+examples, cannot be split into multiple lines and may force the printer
+to go beyond the value of @func{pretty-width}.
+@end deffn
+
+
+@deffn Procedure format @var{fmt-string} @var{args} ...
+The procedure @func{format} produces a string formatted according to
+@func{fmt-string} and the supplied arguments.  The format string
+contains markers in which the string representation of each argument is
+placed.  The markers include:
+
+@table @code
+@item ~s
+instructs the formatter to place the next argument as if the procedure
+@func{write} has printed it; if the argument contains a string, the
+string will be quoted and all quotes and backslashes in the string will
+be escaped; similarly, characters will be printed using the @code{#\x}
+notation;
+
+@item ~a
+instructs the formatter to place the next argument as if the procedure
+@func{display} has printed it; strings and characters are placed as they
+are in the output;
+
+@item ~b
+instructs the formatter to convert the next argument to its binary (base
+2) representation; the argument must be an exact number;
+
+@item ~o
+is similar to @code{~b} except that the number is printed in octal (base
+8);
+
+@item ~x
+is similar to @code{~b} except that the number is printed in hexadecimal
+(base 16);
+
+@item ~d
+outputs the next argument, which can be an exact or inexact number, in
+its decimal (base 10) representation;
+
+@item ~~
+instructs the formatter to place a tilde character, @code{~}, in the
+output without consuming an argument;
+
+@item ~%
+instructs the formatter to place a newline character in the output
+without consuming an argument.
+@end table
+
+Note that the @code{#b}, @code{#o}, and @code{#x} numeric prefixes are
+not added to the output when @code{~b}, @code{~o}, and @code{~x} are
+used.
+
+@example
+> (format "message: ~s, ~s, and ~s" 'symbol "string" #\c)
+"message: symbol, \"string\", and #\\c"
+
+> (format "message: ~a, ~a, and ~a" 'symbol "string" #\c)
+"message: symbol, string, and c"
+@end example
+@end deffn
+
+
+@deffn Procedure printf @var{fmt-string} @var{args} ...
+The procedure @func{printf} is similar to @func{format} except that the
+output is sent to the @code{current-output-port} instead of being
+collected in a string.
+
+@example
+> (let ([n (+ (expt 2 32) #b11001)])
+    (printf "~d = #b~b = #x~x\n" n n n))
+4294967321 = #b100000000000000000000000000011001 = #x100000019
+@end example
+@end deffn
+
+
+@deffn Procedure fprintf @var{output-port} @var{fmt-string} @var{args} ...
+The procedure @func{fprintf} is similar to @func{printf} except that the
+output port to which the output is sent is specified as the first
+argument.
+@end deffn
+
+
+@deffn Parameter print-graph
+@deffnx Parameter print-graph #t
+@deffnx Parameter print-graph #f
+The graph notation is a way of marking and referencing parts of a data
+structure and, consequently, creating shared and cyclic data structures
+at read time instead of resorting to explicit mutation at run time.  The
+@code{#n=} marks the following data structure with mark @var{n}, where
+@var{n} is a nonnegative integer.  The @code{#n#} references the data
+structure marked @var{n}.  Marks can be assigned and referenced in any
+order but each mark must be assigned to exactly once in an expression.
+
+@example
+> (let ([x '#0=(1 2 3)])
+    (eq? x '#0#))
+#t
+> (let ([x '#0#] [y '#0=(1 2 3)])
+    (eq? x y))
+#t
+> (eq? (cdr '(12 . #1#)) '#1=(1 2 3))
+#t
+> (let ([x '#1=(#1# . #1#)])
+    (and (eq? x (car x))
+         (eq? x (cdr x))))
+#t
+@end example
+
+The @func{print-graph} parameter controls how the writers (e.g.
+@func{pretty-print} and @func{write}) handle shared and cyclic data
+structures.  In @value{PRJNAME}, all writers detect cyclic data structures and
+they all terminate on all input, cyclic or otherwise.
+
+If the value of @func{print-graph} is set to @false{} (the default),
+then the writers do not attempt to detect shared data structures.  Any
+part of the input that is shared is printed as if no sharing is present.
+If the value of @func{print-graph} is set to @true{}, all sharing of
+data structures is marked using the @code{#n=} and @code{#n#} notation.
+
+@example
+> (parameterize ([print-graph #f])
+    (let ([x (list 1 2 3 4)])
+      (pretty-print (list x x x))))
+((1 2 3 4) (1 2 3 4) (1 2 3 4))
+
+> (parameterize ([print-graph #t])
+    (let ([x (list 1 2 3 4)])
+      (pretty-print (list x x x))))
+(#0=(1 2 3 4) #0# #0#)
+
+> (parameterize ([print-graph #f])
+    (let ([x (list 1 2)])
+      (let ([y (list x x x x)])
+        (set-car! (last-pair y) y)
+        (pretty-print (list y y)))))
+(#0=((1 2) (1 2) (1 2) #0#) #0#)
+
+> (parameterize ([print-graph #t])
+    (let ([x (list 1 2)])
+      (let ([y (list x x x x)])
+        (set-car! (last-pair y) y)
+        (pretty-print (list y y)))))
+(#0=(#1=(1 2) #1# #1# #0#) #0#)
+@end example
+@end deffn
+
+
+@deffn Parameter print-unicode
+@deffnx Parameter print-unicode #t
+@deffnx Parameter print-unicode #f
+Unstable.
+@end deffn
+
+
+@deffn Parameter print-gensym
+@deffnx Parameter print-gensym #t
+@deffnx Parameter print-gensym #f
+@deffnx Parameter print-gensym 'pretty
+The parameter @code{print-gensym} controls how gensyms are printed by
+the various writers.
+
+If the value of @code{print-gensym} is @false{}, then gensym syntax is
+suppressed by the writers and only the gensyms' pretty names are
+printed.  If the value of @code{print-gensym} is @true{}, then the full
+@code{#@{pretty unique@}} syntax is printed.  Finally, if the value of
+@code{print-gensym} is the symbol @code{pretty}, then gensyms are
+printed using the @code{#:pretty} notation.
+
+@example
+> (parameterize ([print-gensym #f])
+    (pretty-print (list (gensym) (gensym))))
+(g0 g1)
+
+> (parameterize ([print-gensym #t])
+    (pretty-print (list (gensym) (gensym))))
+(#@{g2 |KR1M2&CTt1<B0n/m|@} #@{g3 |FBAb&7NC6&=c82!O|@})
+
+> (parameterize ([print-gensym 'pretty])
+    (pretty-print (list (gensym) (gensym))))
+(#:g4 #:g5)
+@end example
+
+The initial value of @code{print-gensym} is @true{}.
+
+@end deffn
+
+
+@deffn Parameter gensym-prefix
+@deffnx Parameter gensym-prefix @var{string}
+The parameter @code{gensym-prefix} specifies the string to be used as
+the prefix to generated pretty names.  The default value of
+@code{gensym-prefix} is the string @code{g}, which causes generated
+strings to have pretty names in the sequence @code{g0}, @code{g1},
+@code{g2}, etc.
+
+@example
+> (parameterize ([gensym-prefix "var"]
+                 [print-gensym #f])
+     (pretty-print (list (gensym) (gensym) (gensym))))
+(var0 var1 var2)
+@end example
+
+Beware that the @code{gensym-prefix} controls how pretty names are
+generated, and has nothing to do with how @func{gensym} constructs a new
+gensym.  In particular, notice the difference between the output in the
+first example with the output of the examples below:
+
+@example
+> (pretty-print
+    (parameterize ([gensym-prefix "var"] [print-gensym #f])
+      (list (gensym) (gensym) (gensym))))
+(g3 g4 g5)
+
+> (let ([ls (list (gensym) (gensym) (gensym))])
+    (parameterize ([gensym-prefix "var"] [print-gensym #f])
+      (pretty-print ls)))
+(var5 var6 var7)
+@end example
+@end deffn
+
+
+@deffn Parameter gensym-count
+@deffnx Parameter gensym-count @var{n}
+The parameter @code{gensym-count} determines the number which is
+attached to the @code{gensym-prefix} when gensyms' pretty names are
+generated.  The initial value of @code{gensym-count} is 0 and is
+incremented every time a pretty name is generated.  It might be set to
+any non-negative integer value.
+
+@example
+> (let ([x (gensym)])
+    (parameterize ([gensym-count 100] [print-gensym #f])
+      (pretty-print (list (gensym) x (gensym)))))
+(g100 g101 g102)
+@end example
+@end deffn
+
+Notice from all the examples so far that pretty names are generated in
+the order at which the gensyms are printed, not in the order in which
+gensyms were created.
+
+@c page
+@node library tracing
+@section Tracing
+
+
+@deffn Syntax trace-define (name . args) body body* ...
+@deffnx Syntax trace-define name expression
+The @func{trace-define} syntax is similar to @func{define} except that
+the bound value, which must be a procedure, becomes a traced procedure.
+A traced procedure prints its arguments when it is called and prints its
+values when it returns.
+
+@example
+> (trace-define (fact n)
+    (if (zero? n) 1 (* n (fact (- n 1)))))
+> (fact 5)
+|(fact 5)
+| (fact 4)
+| |(fact 3)
+| | (fact 2)
+| | |(fact 1)
+| | | (fact 0)
+| | | 1
+| | |1
+| | 2
+| |6
+| 24
+|120
+120
+@end example
+
+The tracing facility in @value{PRJNAME} preserves and shows tail recursion and
+distinguishes it from non--tail recursion by showing tail calls starting
+at the same line in which their parent was called.
+
+@example
+> (trace-define (fact n)
+    (trace-define (fact-aux n m)
+      (if (zero? n) m (fact-aux (- n 1) (* n m))))
+    (fact-aux n 1))
+> (fact 5)
+|(fact 5)
+|(fact-aux 5 1)
+|(fact-aux 4 5)
+|(fact-aux 3 20)
+|(fact-aux 2 60)
+|(fact-aux 1 120)
+|(fact-aux 0 120)
+|120
+120
+@end example
+
+Moreover, the tracing facility interacts well with continuations and
+exceptions.
+
+@example
+> (call/cc
+    (lambda (k)
+      (trace-define (loop n)
+        (if (zero? n)
+            (k 'done)
+            (+ (loop (- n 1)) 1)))
+      (loop 5)))
+|(loop 5)
+| (loop 4)
+| |(loop 3)
+| | (loop 2)
+| | |(loop 1)
+| | | (loop 0)
+done
+@end example
+@end deffn
+
+
+@deffn Syntax trace-lambda name args body body* ...
+The @func{trace-lambda} macro is similar to @func{lambda} except that
+the resulting procedure is traced: it prints the arguments it receives
+and the results it returns.
+@end deffn
+
+
+@deffn Procedure make-traced-procedure @var{name} @var{proc}
+The procedure @func{make-traced-procedure} takes a name (typically a
+symbol) and a procedure.  It returns a procedure similar to @var{proc}
+except that it traces its arguments and values.
+
+@example
+> (define (fact n)
+    (if (zero? n)
+        (lambda (k) (k 1))
+        (lambda (k)
+          ((fact (- n 1))
+           (make-traced-procedure `(k ,n)
+             (lambda (v)
+               (k (* v n))))))))
+> (call/cc
+    (lambda (k)
+      ((fact 5) (make-traced-procedure 'K k))))
+|((k 1) 1)
+|((k 2) 1)
+|((k 3) 2)
+|((k 4) 6)
+|((k 5) 24)
+|(K 120)
+120
+@end example
+@end deffn
+
+@c page
+@node library timing
+@section Timing
+
+
+This section describes some of @value{PRJNAME}'s timing facilities which may be
+useful for benchmarking and performance tuning.
+
+
+@deffn Syntax time @var{expression}
+The @func{time} macro performs the following: it evaluates
+@var{expression}, then prints a summary of the run time statistics, then
+returns the values returned by @var{expression}.  The run--time summary
+includes the number of bytes allocated, the number of garbage collection
+runs, and the time spent in both the mutator and the collector.
+
+@example
+> (let ()                                   ;;; 10 million
+    (define ls (time (vector->list (make-vector 10000000))))
+    (time (append ls ls))
+    (values))
+running stats for (vector->list (make-vector 10000000)):
+    3 collections
+    672 ms elapsed cpu time, including 547 ms collecting
+    674 ms elapsed real time, including 549 ms collecting
+    120012328 bytes allocated
+running stats for (append ls ls):
+    4 collections
+    1536 ms elapsed cpu time, including 1336 ms collecting
+    1538 ms elapsed real time, including 1337 ms collecting
+    160000040 bytes allocated
+@end example
+
+@quotation
+@emph{Note:} The output listed above is @emph{just a sample} that was
+taken at some point on some machine.  The output on your machine at the
+time you read this may vary.
+@end quotation
+@end deffn
+
+
+@deffn Procedure time-it @var{who} @var{thunk}
+The procedure @func{time-it} takes a datum denoting the name of the
+computation and a thunk (i.e. a procedure with no arguments), invokes
+the thunk, prints the stats, and returns the values obtained from
+invoking the thunk.  If the value of @var{who} is non--false, @var{who}
+is used when displaying the run--time statistics.  If the value of
+@var{who} is @false{}, then no name for the computation is displayed.
+
+@example
+> (time-it "a very fast computation"
+    (lambda () (values 1 2 3)))
+running stats for a very fast computation:
+    no collections
+    0 ms elapsed cpu time, including 0 ms collecting
+    0 ms elapsed real time, including 0 ms collecting
+    24 bytes allocated
+1
+2
+3
+
+> (time-it #f (lambda () 12))
+running stats:
+    no collections
+    0 ms elapsed cpu time, including 0 ms collecting
+    0 ms elapsed real time, including 0 ms collecting
+    0 bytes allocated
+12
+@end example
+@end deffn
+
+@c page
+@node library guardians
+@section Guardians and garbage collection
+
+
+Guardians are available in the @library{ikarus} library; quoting
+@bibref{DYBGUA}:
+
+@quotation
+Guardians provide a means to protect objects from destruction by the
+garbage collector.  A guardian is an object with which objects can be
+registered for preservation and from which objects actually saved from
+destruction can be retrieved, one at a time, at the convenience of the
+program.
+@end quotation
+
+
+@defun collect
+Run the garbage collector.  If post--garbage collection hooks are
+registered, they are run.  This binding is exported by the
+@library{ikarus} library.
+@end defun
+
+
+@menu
+* library guardians examples::        Usage examples for guardians.
+* library guardians api::             Guardians programming interface.
+@end menu
+
+@c page
+@node library guardians examples
+@subsection Usage examples for guardians
+
+
+Let's say that we use the @value{PRJNAME} @ffi{} to handle some memory block
+(@ref{library foreign} for details on the @ffi{}); memory blocks
+allocated with @func{malloc} are not released by the @value{PRJNAME} garbage
+collector: we have to explicitly apply @func{free} to the pointer value
+referencing them.
+
+If we use the blocks synchronously with the evaluation of forms, we do
+(assuming we do not use continuations, so this use of
+@func{dynamic-wind} is fine):
+
+@example
+(import (ikarus)
+  (ikarus foreign))
+
+(define (do-something-with . args)
+  (display args)
+  (newline))
+
+(let ((p        #f)
+      (size     4096))
+  (dynamic-wind
+      (lambda ()
+        (set! p (malloc size))
+        (unless p (error #f "memory allocation")))
+      (lambda ()
+        (do-something-with p))
+      (lambda ()
+        (free p))))
+@end example
+
+@noindent
+and we can define a syntax for it:
+
+@example
+(import (ikarus)
+  (ikarus foreign))
+
+(define (do-something-with . args)
+  (display args)
+  (newline))
+
+(define-syntax with-block
+  (syntax-rules ()
+    ((_ ?pointer ?size ?body ...)
+     (let ((?pointer    #f))
+       (dynamic-wind
+           (lambda ()
+             (set! ?pointer (malloc ?size))
+             (unless ?pointer (error #f "memory allocation")))
+           (lambda ()
+             ?body ...)
+           (lambda ()
+             (free ?pointer)))))))
+
+(with-block p 2048
+  (do-something-with p))
+
+(with-block p 4096
+  (do-something-with p))
+
+(with-block p 8192
+  (do-something-with p))
+@end example
+
+If we need the block in an event driven program: we will probably need
+to use it asynchronously with the evaluation of forms.  For example, we
+store the pointer value that references a block in a thunk (a closure
+that takes no arguments):
+
+@example
+(import (ikarus)
+  (ikarus foreign))
+
+(define *event-source* '())
+
+(define (enqueue-event event)
+  (set! *event-source*
+        (reverse (cons event (reverse *event-source*)))))
+
+(define (pop-event)
+  (if (null? *event-source*)
+      #f
+    (let ((event (car *event-source*)))
+      (set! *event-source* (cdr *event-source*))
+      event)))
+
+;; Usage:
+
+(define (do-something-with . args)
+  (display args)
+  (newline))
+
+(let ((p (malloc 4096)))
+  (unless p (error #f "memory allocation"))
+  (enqueue-event (lambda ()
+                   (do-something-with p)))
+  (enqueue-event (lambda ()
+                   (do-something-with 123)))
+  (enqueue-event (lambda ()
+                   (do-something-with p))))
+
+(do ((event (pop-event) (pop-event)))
+    ((not event))
+  (event))
+@end example
+
+@noindent
+once the thunks have been evaluated, the pointer value is garbage
+collected, but the allocated memory block becomes leaked memory.  We
+need a way to be notified of the pointer value garbage collection, so
+that we can apply @func{free} to it; this is the job for guardians.
+
+The following script shows the usage of a guardian to free a memory
+block:
+
+@example
+(import (ikarus)
+  (ikarus foreign))
+
+(define g (make-guardian))
+
+(let ((a (malloc (expt 2 20))))
+  (unless p (error #f "memory allocation"))
+  (g a)
+  (printf "value ~s~%" a))
+
+(printf "value from guardian ~s~%" (g))
+
+;; This triggers a garbage collection.
+(collect)
+
+(let ((p (g)))
+  (printf "value from guardian ~s~%" p)
+  (free p))
+@end example
+
+In an event driven program what we have to do is to register the pointer
+into the guardian, and then periodically enqueue as event a call to the
+guardian:
+
+@example
+(import (ikarus)
+  (ikarus foreign))
+
+;; Event source handling.
+
+(define *event-source* '())
+
+(define (enqueue-event event)
+  (set! *event-source*
+        (reverse (cons event (reverse *event-source*)))))
+
+(define (pop-event)
+  (if (null? *event-source*)
+      #f
+    (let ((event (car *event-source*)))
+      (set! *event-source* (cdr *event-source*))
+      event)))
+
+;; Block guardian.
+
+(define block-guardian (make-guardian))
+
+(define (run-block-guardian)
+  (do ((p (block-guardian) (block-guardian)))
+      ((not p))
+    (printf "collecting ~s~%" p)
+    (free p)))
+
+;; Application follows.
+
+(define (do-something-with . args)
+  (display args)
+  (newline))
+
+(let ((p (malloc (expt 2 20))))
+  (unless p (error #f "memory allocation"))
+  (block-guardian p)
+  (enqueue-event (lambda () (do-something-with p)))
+  (enqueue-event (lambda () (do-something-with 123)))
+  (enqueue-event (lambda () (do-something-with p)))
+  (enqueue-event (lambda () (do-something-with 456))))
+
+(do ((event (pop-event) (pop-event))
+     (i 1 (+ i 1)))
+    ((= i 20))
+  (when event
+    (event))
+  (when (= 0 (modulo i 10))
+    (collect)
+    (enqueue-event run-block-guardian)))
+@end example
+
+@c page
+@node library guardians api
+@subsection Guardians programming interface
+
+
+@defun make-guardian
+Build and return a new guardian object: a closure that can be called
+with one or zero arguments, and that is interfaced with the garbage
+collector of the Scheme implementation (in a non--portable way).
+
+The guardian works like this:
+
+@itemize
+@item
+when the closure is called with one argument: it adds the argument to an
+internal set of ``guarded values'', accessible to the garbage collector;
+
+@item
+when the garbage collector detects no other references to a value in the
+set of guarded values: the guardian removes it from the set and appends
+it to an internal queue (@acronym{FIFO});
+
+@item
+when the closure is called with zero arguments: it removes the first
+value from the internal queue and returns it; if no values are in the
+queue it returns @false{}.
+@end itemize
+
+After an object has been returned by the guardian, it is no more
+``guarded'' so it will be garbage collected when it will become
+inaccessible (unsless it is registered in a guardian).
+
+@quotation
+@emph{Note:} it is possible to register an object in more than one
+guardian, when the object is found inaccessible all the guardian
+closures that have it will return it to the caller.  This may lead to
+invalid finalisation operations, it is the responsibility of the
+programmer to avoid this.
+@end quotation
+
+@quotation
+@emph{Note:} it is possible to register an object multiple times in the
+same guardian, when the object is found inaccessible the guardian
+closure that has it will return it to the caller multiple times.  This
+may lead to invalid finalisation operations, it is the responsibility of
+the programmer to avoid this.
+@end quotation
+@end defun
+
+
+@deffn Parameter post-gc-hooks
+Hold a list of thunks evaluated after each garbage collection run.  It
+can be used to run a guardian cleanup function like this (using the
+example in the previous section):
+
+@example
+(define (run-block-guardian)
+  (do ((p (block-guardian) (block-guardian)))
+      ((not p))
+    (free p)))
+
+(post-gc-hooks
+ (cons run-block-guardian
+  (post-gc-hooks)))
+@end example
+@end deffn
+
+@c page
+@node library io
+@section Input/output library
+
+
+@menu
+* library io process::        Spawning processes.
+* library io socket::         Using network sockets.
+* library io non-block::      Non--blocking mode for ports.
+@end menu
+
+@c page
+@node library io process
+@subsection Spawning processes
+
+
+@defun process @var{command} . @var{options}
+Run a subprocess with a set of command line options.  @var{command} is a
+string selecting the executable pathname.  @var{options} is a list of
+strings interpreted as command line options.
+
+If @var{command} does not not contain a @code{/} character, the command
+is searched in the directories listed in the @env{PATH} environment
+variable.
+
+Return multiple values:
+
+@enumerate
+@item
+the subprocess pid;
+@item
+an output port that writes to the subprocess' standard input channel;
+@item
+an input port that reads from the subprocess' standard output channel;
+@item
+an input port that reads from the subprocess' standard error channel.
+@end enumerate
+
+If an error occurs: an exception is raised.
+
+Example:
+
+@example
+(call-with-values
+    (lambda ()
+      (process "ls" "-l"))
+  (lambda (pid stdin-out stdout-in stderr-in)
+    (do-something)))
+@end example
+
+@noindent
+with @func{receive}:
+
+@example
+(receive (pid stdin-out stdout-in stderr-in)
+    (process "ls" "-l")
+  (do-something))
+@end example
+
+@noindent
+with @func{let-values}:
+
+@example
+(let-values ([(pid stdin-out stdout-in stderr-in)
+              (process "ls" "-l")])
+  (do-something))
+@end example
+
+@quotation
+@forunix{} @func{process} makes use of the @cfunc{fork} and
+@cfunc{execvp} system functions.@*
+
+@glibcref{Creating a Process, Creating a Process}@* @glibcref{Executing
+a File, Executing a File}@* @glibcref{Standard Environment, Standard
+Environment Variables}
+@end quotation
+@end defun
+
+
+@defun process-nonblocking @var{command} . @var{options}
+Like @func{process} but the returned ports have their underlying file
+descriptors configured to non--blocking mode (@ref{library io
+non-block}).
+@end defun
+
+@c page
+@node library io socket
+@subsection Using network sockets
+
+
+@menu
+* library io socket client::  Establishing client network
+                                connections.
+* library io socket server::  Opening server network services.
+@end menu
+
+@c page
+@node library io socket client
+@subsubsection Establishing client network connections
+
+
+@defun tcp-connect @var{hostname} @var{service}
+@defunx udp-connect @var{hostname} @var{service}
+@defunx tcp-connect-nonblocking @var{hostname} @var{service}
+@defunx udp-connect-nonblocking @var{hostname} @var{service}
+Establish a network connection using the @tcp{} or @udp{} protocol, to
+the host selected by the string @var{hostname}, port/service selected by
+the string @var{service}.  The @code{-nonblocking} version sets the
+underlying socket descriptor to non--blocking mode (@ref{library io
+non-block}).  Upon success, return a port; if an error occurs an
+exception is raised.
+
+@var{hostname} can be a dotted decimal address for IPv4, or a
+hexadecimal string for IPv6, or a network address.
+
+@var{service} can be a numerical string representing the port, or the
+``official'' name of a service, like @code{smtp} or @code{pop3}.
+
+@quotation
+@forunix{} These functions use of the @cfunc{socket}, @cfunc{connect}
+and @cfunc{get@-addr@-info} system functions.
+
+@glibcref{Creating a Socket, Creating a Socket}@*
+@glibcref{Connecting, Making a Connection}@*
+See the @cfunc{getaddrinfo} manual page.@*
+See the @file{/etc/services} configuration file.
+@end quotation
+@end defun
+
+@c page
+@node library io socket server
+@subsubsection Opening server network services
+
+
+@defun tcp-server-socket @var{server-port-number}
+@defunx tcp-server-socket-nonblocking @var{server-port-number}
+Build a new @tcp{} server object for the selected port number (which
+must be an exact integer).  The @code{-nonblocking} versions set the
+underlying socket descriptor to non--blocking mode (@ref{library io
+non-block}).  Upon success, return a server--object; if an error occurs
+an exception is raised.
+
+@quotation
+@forunix{} These functions make use of the @cfunc{socket},
+@cfunc{setsockopt}, @cfunc{bind} and @cfunc{listen} system functions.
+The socket is configured with the @code{AF_INET}, @code{INADDR_ANY},
+@code{SO_REUSEADDR} values and options (@value{PRJNAME} version 0.0.3+, checkout
+1468).
+
+@glibcref{Creating a Socket, Creating a Socket}@*
+@glibcref{Socket Option Functions, Socket Option Functions}@*
+@glibcref{Setting Address, Setting the Address of a Socket}@*
+@glibcref{Listening, Listening for Connections}
+@end quotation
+@end defun
+
+
+@defun accept-connection @var{server-object}
+@defunx accept-connection-nonblocking @var{server-object}
+Accept the next incoming connection to the selected server.  If success
+return two values:
+
+@enumerate
+@item
+an output port to be used to send data;
+
+@item
+an input port to be used to receive data;
+@end enumerate
+
+@noindent
+if an error occurs: an exception is raised.  The @code{-nonblocking}
+versions set the underlying socket descriptor to non--blocking mode
+(@ref{library io non-block}).
+
+If the server socket was configured as blocking: this function suspends
+the process waiting for an incoming connection.
+
+@quotation
+@fixme{What happens when the server socket is configured as
+non--blocking?}
+@end quotation
+
+@quotation
+@forunix{} These functions make use of the @cfunc{accept} system call.
+
+@glibcref{Accepting Connections, Accepting Connections}
+@end quotation
+@end defun
+
+
+@defun close-tcp-server-socket @var{server-object}
+Close a server socket causing it to stop listening.
+
+@quotation
+@forunix{} this function makes use of the @cfunc{shutdown} system
+function.
+
+@glibcref{Closing a Socket, Closing a Socket}
+See also the @cfunc{shutdown} manual page.
+@end quotation
+@end defun
+
+
+@defun register-callback @var{server-object} @var{proc}
+Register a callback function to be invoked whenever a new incoming
+connection request happens on @var{server-object}.  The callback will be
+invoked by the @value{PRJNAME} event loop.
+
+@quotation
+@fixme{What are the parameters that get passed to @var{proc}?  Look for
+@func{make-t} and @func{t-proc} in @file{ikarus.io.ss}.}
+@end quotation
+@end defun
+
+
+@deffn Parameter input-socket-buffer-size
+Select the size in bytes of the input buffer for server sockets.  The
+value must be a fixnum greater or equal to 128.
+@end deffn
+
+
+@deffn Parameter output-socket-buffer-size
+Select the size in bytes of the output buffer for server sockets.  The
+value must be a fixnum greater than zero.
+@end deffn
+
+@c page
+@node library io non-block
+@subsection Non--blocking mode for ports
+
+
+@forunix{} Non--blocking mode is setup with a call like:
+
+@example
+fcntl(fd, F_SETFL, O_NONBLOCK);
+@end example
+
+@noindent
+@glibcref{Control Operations, Control Operations}@*
+@glibcref{Open-time Flags, Open-time Flags}
+
+@c page
+@node library posix
+@section @posix{} functions
+
+
+@menu
+* library posix process::     Spawning processes and the like.
+* library posix waitpid::     Waiting for terminated children.
+* library posix signal::      Delivering signals to processes.
+* library posix file::        Interfacing with the file system.
+* library posix env::         Interfacing with the execution
+                                environment.
+* library posix misc::        Miscellaneous functions.
+@end menu
+
+@c page
+@node library posix process
+@subsection Spawning processes and the like
+
+
+@defun fork @var{parent-proc} @var{child-thunk}
+Fork a new process using the system @cfunc{fork} function.
+
+If the operation is successful: in the parent process @var{parent-proc}
+is evaluated by applying it to an exact integer representing the child
+pid; in the child process @var{child-thunk} is evaluated.
+
+If an error occurs: an exception is raised.
+
+Example:
+
+@example
+(fork
+  (lambda (child-pid)
+    (printf "in parent, child pid = ~s\n" child-pid))
+  (lambda ()
+    (printf "in child\n")
+    (exit)))
+
+(printf "here we are in the parent\n")
+@end example
+
+@glibcref{Creating a Process, Creating a Process}
+@end defun
+
+
+@defun system @var{command-string}
+Executes a command using the @cfunc{system} function, which uses the
+system shell.  If success: return the exit code of the process.  If
+error: raise an exception.
+
+Example:
+
+@example
+(system "ls -l")
+@end example
+
+@glibcref{Running a Command, Running a Command}
+@end defun
+
+@c page
+@node library posix waitpid
+@subsection Waiting for terminated children
+
+
+@defun waitpid [@var{pid} [@var{block?} [@var{want-error?}]]]
+Wait for another process termination using the system @cfunc{waitpid}
+function and return informations about its status.
+
+If successful and there is a child waiting to be noticed: the returned
+value is a record of type @code{wstatus}, whose interface is described
+below.  If successful but no child is waiting to be noticed: the
+returned value is @false{}.
+
+If an error occurs and @var{want-error?} is @true{}, an exception is
+raised.  If an error occurs and @var{want-error?} is @false{}: the
+return value is @false{}.  @var{want-error?} defaults to @true{}.
+
+@var{pid} is the id of the process to wait for; it defaults to
+@code{-1}.  If it is:
+
+@table @asis
+@item @emph{a positive integer}
+return informations about the process having that pid;
+
+@item @code{0}
+return informations about a process in the set of terminated children in
+the same group of the calling process; if more eligible children exists,
+one is selected at random;
+
+@item @code{-1}
+return informations about a process in the set of terminated children;
+if more eligible children exists, one is selected at random;
+
+@item @emph{a negative integer other than @code{-1}}
+wait for a process in the set of terminated children whose process group
+id is equal to the absolute value of @var{pid}.
+@end table
+
+If @var{block?} is @true{} (the default), then the process is suspended
+waiting for an eligible child; if @var{block?} is @false{} the process
+is not suspended and the return value is @false{}.
+
+@glibcref{Process Completion, Process Completion}
+@end defun
+
+
+The following example tests @func{waitpid}:
+
+@example
+(fork
+   (lambda (child-pid)
+     (printf "in parent, child pid = ~s\n" child-pid)
+     (let ([status (waitpid child-pid)])
+       (printf "in parent, child status: ~s\n" status)))
+   (lambda ()
+     (printf "in child\n")
+     (exit 1)))
+@end example
+
+@noindent
+the following example test killing with a signal:
+
+@example
+(fork
+   (lambda (child-pid)
+     (printf "in parent, child pid = ~s\n" child-pid)
+     (kill child-pid 'SIGKILL)
+     (let ([status (waitpid child-pid)])
+       (printf "in parent, child status: ~s\n" status)))
+   (lambda ()
+     (printf "in child\n")
+     (nanosleep 5 0)))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Status record interface
+
+@ignore
+Notice that in @value{PRJNAME} 1648 the predicate WSTATUS? is not exported from
+the library.  Dunny why.
+@end ignore
+
+
+@defun wstatus-pid @var{status}
+Return the pid of the process extracting it from @var{status}.
+@end defun
+
+
+@defun wstatus-exit-status @var{status}
+Return the exit code of the process extracting it from @var{status}.  If
+the process was stopped by a signal: the return value is @false{}.
+@end defun
+
+
+@defun wstatus-received-signal @var{status}
+Return a symbol representing the signal that caused the termination of
+the child process.  If no signal was received: return @false{}.
+@end defun
+
+
+
+@c page
+@node library posix signal
+@subsection Delivering signals to processes
+
+
+@cindex @code{SIGABRT}
+@cindex @code{SIGALRM}
+@cindex @code{SIGBUS}
+@cindex @code{SIGCHLD}
+@cindex @code{SIGCONT}
+@cindex @code{SIGFPE}
+@cindex @code{SIGHUP}
+@cindex @code{SIGILL}
+@cindex @code{SIGINT}
+@cindex @code{SIGKILL}
+@cindex @code{SIGPIPE}
+@cindex @code{SIGQUIT}
+@cindex @code{SIGSEGV}
+@cindex @code{SIGSTOP}
+@cindex @code{SIGTERM}
+@cindex @code{SIGTSTP}
+@cindex @code{SIGTTIN}
+@cindex @code{SIGTTOU}
+@cindex @code{SIGUSR1}
+@cindex @code{SIGUSR2}
+@cindex @code{SIGPOLL}
+@cindex @code{SIGPROF}
+@cindex @code{SIGSYS}
+@cindex @code{SIGTRAP}
+@cindex @code{SIGURG}
+@cindex @code{SIGVTALRM}
+@cindex @code{SIGXCPU}
+@cindex @code{SIGXFSZ}
+
+
+@defun kill @var{pid} @var{signame}
+Send the signal selected by @var{signame} to the process or group of
+processes selected by @var{pid}.  Make use of the system @cfunc{kill}
+function.  If an error occurs: an exception is raised.
+
+Following is the meaning of @var{pid}:
+
+@table @code
+@item @var{pid} > 0
+deliver the signal to the process having @var{pid} as identifier;
+
+@item @var{pid} == 0
+deliver the signal to all the process in the group of the sender;
+
+@item @var{pid} == -1
+deliver the signal to all the process having the same effective user
+identifier of the sender; see the whole documentation in the system
+library;
+
+@item @var{pid} < -1
+deliver the signal to all the process in the group having identifier
+equal to the absolute value of @var{pid}.
+@end table
+
+@var{signame} must be a symbol specifying a signal.  Supported signal
+names follow:
+
+@example
+SIGABRT         SIGALRM         SIGBUS
+SIGCHLD         SIGCONT         SIGFPE
+SIGHUP          SIGILL          SIGINT
+SIGKILL         SIGPIPE         SIGQUIT
+SIGSEGV         SIGSTOP         SIGTERM
+SIGTSTP         SIGTTIN         SIGTTOU
+SIGUSR1         SIGUSR2         SIGPOLL
+SIGPROF         SIGSYS          SIGTRAP
+SIGURG          SIGVTALRM       SIGXCPU
+SIGXFSZ
+@end example
+
+@glibcref{Signaling Another Process, Signaling Another Process}@*
+@glibcref{Standard Signals, Standard Signals}
+@end defun
+
+@c page
+@node library posix file
+@subsection Interfacing with the file system
+
+
+@subsubheading Current working directory
+
+
+@defun current-directory [@var{pathname}]
+When invoked with an argument, change the current working directory to
+the one selected by the string @var{pathname}.  Make use of the system
+@cfunc{chdir} function.
+
+When invoked without argument, return a string representing the current
+working directory pathname.  Make use of the system @cfunc{getcwd}
+function.
+
+If an error occurs, an exception is raised.
+
+@glibcref{Working Directory, Working Directory}
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Inspecting the file system
+
+
+@defun directory-list @var{pathname}
+Build and return the list of strings representing the entries in the
+directory selected by the string @var{pathname}.  Make use of the
+@cfunc{opendir}, @cfunc{readdir}, @cfunc{closedir} system functions.
+
+If an error occurs, an exception is raised.
+
+@glibcref{Opening a Directory, Opening a Directory}@*
+@glibcref{Reading/Closing Directory, Reading/Closing Directory}
+@end defun
+
+
+@defun file-ctime @var{pathname}
+Return the time of the last modification to the attributes of the file;
+makes use of the @cfunc{stat} system function, and return the
+@code{st_ctime} field of the @code{stat} data structure.
+
+The returned value is an exact integer, representing the number of
+seconds elapsed since the Epoch (00:00:00 on January 1, 1970,
+Coordinated Universal Time).
+
+If an error occurs, an exception is raised.
+
+@glibcref{Reading Attributes, Reading Attributes}
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Inspecting file types
+
+For the following functions: if @var{follow} is @true{}, the default,
+make use of the @cfunc{stat} system function; if @var{follow} is
+@false{}, make use of the @cfunc{lstat} system function.
+
+@glibcref{Reading Attributes, Reading Attributes}
+
+
+@defun file-exists? @var{pathname} [@var{follow}]
+Return @true{} if @var{pathname} exists on the file system; otherwise
+return @false{}.  If an error occurs, an exception is raised.
+@end defun
+
+
+@defun file-regular? @var{pathname} [@var{follow}]
+Return @true{} if @var{pathname} exists on the file system and it is a
+regular file; otherwise return @false{}.  If an error occurs, an
+exception is raised.
+@end defun
+
+
+@defun file-directory? @var{pathname} [@var{follow}]
+Return @true{} if @var{pathname} exists on the file system and it is a
+directory; otherwise return @false{}.  If an error occurs, an exception
+is raised.
+@end defun
+
+
+@defun file-symbolic-link? @var{pathname} [@var{follow}]
+Return @true{} if @var{pathname} exists on the file system and it is a
+symbolic link; otherwise return @false{}.  If an error occurs, an
+exception is raised.
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Creation
+
+
+@defun make-symbolic-link @var{to} @var{pathname}
+Create a symbolic link whose pathname is the string @var{pathname}
+referencing the @var{to} string pathname.  Make use of the
+@cfunc{symlink} system function.  If an error occurs, an exception is
+raised.
+
+@glibcref{Symbolic Links, Symbolic Links}
+@end defun
+
+
+@defun make-directory @var{pathname} [@var{mode}]
+Create a directory with name selected by the string @var{pathname}.
+Make use of the @cfunc{mkdir} system function.  If an error occurs, an
+exception is raised.
+
+@var{mode} must be an exact integere selecting the access permissions
+for the directory; it defaults to @samp{#o755}.
+
+@glibcref{Creating Directories, Creating Directories}
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Deletion
+
+
+@defun delete-file @var{pathname}
+Remove from the system the file selected by the @var{pathname} string.
+Make use of the @cfunc{unlink} system function.  If an error occurs, an
+exception is raised.
+
+@glibcref{Deleting Files, Deleting Files}
+@end defun
+
+
+@defun delete-directory @var{pathname}
+Remove from the system the directory selected by the @var{pathname}
+string.  Make use of the @cfunc{rmdir} system function.  If an error
+occurs, an exception is raised.
+
+@glibcref{Deleting Files, Deleting Files}
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Permissions
+
+
+@defun change-mode @var{pathname} @var{mode}
+Change the access permissions of the file or directory selected by the
+@var{pathname} string.  Make use of the @cfunc{chmod} system function.
+If an error occurs, an exception is raised.
+
+@var{mode} must be an exact integer selecting the permissions.
+
+@glibcref{Setting Permissions, Setting Permissions}
+@end defun
+
+@c page
+@node library posix env
+@subsection Interfacing with the execution environment
+
+
+@defun getenv @var{varname}
+Return the current value, as a string, of the system environment
+variable selected by the string @var{varname}.  If the variable is not
+set: @false{} is returned.
+
+Example:
+
+@example
+(getenv "PATH")
+@result{} "/usr/local/bin:/usr/bin:/bin"
+@end example
+@end defun
+
+@c page
+@node library posix misc
+@subsection Miscellaneous functions
+
+
+@defun strerror @var{error-code}
+Return a string describing the @code{errno} code @var{error-code}.
+Makes use of the system function @cfunc{strerror}.  If @var{error-code}
+is not a valid @code{errno} value: return a string telling it.
+
+@glibcref{Error Messages, Error Messages}
+@end defun
+
+
+@defun nanosleep @var{seconds} @var{nanoseconds}
+Suspend the process for the selected time; it makes use of the system
+@cfunc{nanosleep} function.  @var{seconds} and @var{nanoseconds} must be
+positive exact integers.  If an error occurs an exception is raised.
+
+@glibcref{Sleeping, Sleeping}
+@end defun
+
+@c page
+@node library foreign
+@section The @library{vicare foreign} library
+
+
+This chapter describes the facilities through which @value{PRJNAME}
+interfaces with the host operating system and other external libraries.
+The facilities of the @library{vicare foreign} library give the Scheme
+program unrestricted access to the computer memory, allowing one to
+allocate, access, modify, and free memory as needed.  The facilities
+also allow the Scheme program to @emph{call out} to system procedures as
+well as allow the native procedures to @emph{call back} into Scheme.
+
+@ignore
+An original paragraph giving an overview of this chapter contents was
+omitted because with the menu above it is useless, and because it looked
+outdated.
+@end ignore
+
+@quotation
+@emph{Note:} @value{PRJNAME} version @code{0.0.4} is the first version
+of @value{PRJNAME} to support the described foreign interfaces.
+@end quotation
+
+@quotation
+@emph{Caveat emptor:} Preparing each call out and call back procedure
+leaks a small amount of memory.  This is because the system cannot track
+such pointers that go into native code (which may retain such pointers
+indefinitely).  Use judiciously.
+@end quotation
+
+@menu
+* library foreign overview::  Overview of the foreign functions
+                                interface.
+* library foreign memory::    Memory management.
+* library foreign memops::    Memory operations.
+* library foreign dl::        Accessing foreign objects from Scheme.
+* library foreign call out::  Calling out to foreign procedures.
+* library foreign call back:: Calling back to Scheme.
+@end menu
+
+@c page
+@node library foreign overview
+@subsection Overview of the foreign functions interface
+
+
+In order to make full use of the computer, it is important for a
+programming environment (e.g., @value{PRJNAME} Scheme) to facilitate
+access to the underlying architecture on which it runs.  The underlying
+architecture includes the @api{} provided by the host operating system
+kernel (e.g., Linux), the system libraries (e.g., @code{libc}), and
+other site--installed libraries (e.g., @code{sqlite3}).
+
+Providing direct access to such @api{} from within Scheme allows the
+programmer to write Scheme libraries that have few or no dependencies on
+external programs (such as @code{C} development toolchain).  When
+dealing with system libraries, the programmer must have a thorough
+understanding of many aspects of the targeted system.  This section
+attempts to provide answers to many questions that are frequently
+encountered when interfacing to external libraries.
+
+@c ------------------------------------------------------------
+
+@subsubheading Libffi
+
+
+Currently (Sat May 1, 2010) @value{PRJNAME} implements the foreign
+functions interface (@ffi{}) using an extenal library: Libffi,
+originally by Anthony Green.  Libffi can be found at:
+
+@center @url{http://sourceware.org/libffi/}
+
+@noindent
+and it is distributed under a liberal license (look for it at the site,
+basically we can do everything but remove the original copyright
+notice).
+
+On Unix--like systems, we can install Libffi with the traditional
+sequence:
+
+@example
+$ ./configure [options]
+$ make
+$ make install
+@end example
+
+@noindent
+and the makefile supports the @env{DESTDIR} environment variable for
+installation under a different directory prefix.
+
+@quotation
+@emph{Note:} Libffi version 3.0.6 installs its header files under:
+
+@example
+$@{prefix@}/lib/libffi-3.0.6/include
+@end example
+
+@noindent
+and trying to use the @option{--includedir} option to
+@command{configure} will @strong{not} work in changing this.  It means
+that when configuring @value{PRJNAME} for installation we have to specify where
+the Libffi headers are to be found; @ref{overview install} for details.
+@end quotation
+
+@c page
+@node library foreign memory
+@subsection Memory management
+
+
+@value{PRJNAME} Scheme is a managed environment.  Like in many
+programming environments, @value{PRJNAME} manages its own memory.
+Scheme objects are allocated in a special memory region (the Scheme
+heap) and have type--specific object layouts; this allows the run time
+system to distinguish object types and the garbage collector to locate
+all potentially live objects, and reclaim the memory of dead objects.
+Scheme objects are also @emph{opaque} in the sense that the data
+structures used to represent Scheme objects (e.g., pairs) are not
+exposed to the programmer, who can only interact with objects through an
+interface (e.g., @code{car}, @code{cdr}).
+
+Unmanaged environments, such as the operating system on which
+@value{PRJNAME} runs, require that the programmer manages the allocation
+and deallocation of system resources herself.  Memory regions, file
+handles, external devices, the screen, etc., are all examples of
+resources whose management must be coordinated among the different parts
+of the system, and this becomes the responsibility of the programmer who
+is wiring the different subsystems together.
+
+Memory, from a system's point of view, is @emph{transparent}.  A pointer
+is an integer denoting an address of memory.  This memory address may
+contain a value that requires interpretation.  At the lowest--level,
+each byte of memory contains eight bits, each of which may be toggled on
+or off.  A level higher, contiguous sequences of bytes are grouped
+together and are interpreted as integers, floating point numbers, or
+pointers to other memory addresses.  These are the basic data types that
+are often interpreted atomically.  Yet a level higher, groups of basic
+types form data structures such as arrays, linked lists, trees, and so
+on.  Objects, as found in object--oriented programming languages, are at
+an even higher level of abstraction since they are treated as opaque
+references that retain state and know how to respond to messages.
+
+The procedures in the @library{vicare foreign} library are meant to
+provide a way to interface with the low level memory operations such as
+setting and getting bytes from specific locations in memory.  Although
+they do not provide high--level operations, the basic procedures make
+implementing high--level operations (such as the Objective--C system)
+possible.  Programmers are encouraged to define their own abstractions
+that are most suitable for the specific target library rather than using
+the low--level operations directly.  This results in writing more robust
+and more easily maintainable libraries.  To put it more boldly:
+@strong{Do not sprinkle your code with low--level memory operations}.
+
+@c page
+@node library foreign memops
+@subsection Memory operations
+
+
+@menu
+* library foreign memops alloc::      Allocating and freeing memory.
+* library foreign memops pointer::    Handling pointer values.
+* library foreign memops poke::       Poking values.
+* library foreign memops peek::       Peeking values.
+@end menu
+
+@c page
+@node library foreign memops alloc
+@subsubsection Allocating and freeing memory
+
+
+@deffn Procedure malloc @var{number-of-bytes}
+Allocate a block of memory and return a pointer to it.  The
+@func{malloc} Scheme procedure is implemented using the host--provided
+@cfunc{malloc} system procedure (often found in @code{libc}).  The
+number of bytes must be a positive exact integer.
+
+@example
+> (malloc 10)
+#<pointer #x00300320>
+> (malloc 10000)
+#<pointer #x01800400>
+@end example
+
+In case of failure allocating memory: the return value is @false{}.
+@end deffn
+
+
+@deffn Procedure free @var{pointer-to-memory-block}
+Release the memory region at the given address.  The memory region must
+have been allocated with @cfunc{malloc}, @cfunc{calloc}, or a similar
+system procedure.  Once freed, memory operations on the given address
+are invalid and may cause the system to crash at unpredictable times.
+@value{PRJNAME} cannot check for such errors since the memory may be freed by
+procedures that are external to @value{PRJNAME}.
+@end deffn
+
+@c page
+@node library foreign memops pointer
+@subsubsection Handling pointer values
+
+
+The result of calling the procedures @func{eq?}, @func{eqv?} and
+@func{equal?} on pointer values is unspecified.
+
+
+@deffn Procedure pointer->integer @var{pointer}
+Convert the value of @var{pointer} to an exact integer value.  The
+result may be a fixnum or a bignum depending on the pointer.
+@end deffn
+
+
+@deffn Procedure integer->pointer @var{exact-integer}
+Convert @var{exact-integer} to a pointer value.  The lower 32 bits (or
+64 bits on 64-bit systems) of the argument are significant in computing
+the pointer value.  It is guaranteed that @code{(integer->pointer
+(pointer->integer p))} points to the same address as @var{p}.
+@end deffn
+
+
+@deffn Procedure pointer? @var{x}
+Return @true{} if the value of @var{x} is a pointer, return @false{}
+otherwise.
+@end deffn
+
+
+@deffn Procedure pointer-size
+Return the number of bytes required to hold a pointer on the underlying
+platform.
+@end deffn
+
+@c page
+@node library foreign memops poke
+@subsubsection Poking values
+
+
+With all the following functions: the @var{pointer} argument must be a
+valid pointer; the @var{offset} and @var{value} arguments must be exact
+integers.  When adding an offset to a pointer: all the following
+functions @strong{do not} scale the offset to the size of the poked
+value.  Pointer arithmetics is performed with byte offsets.
+
+
+@macro poker{BYTENUM,BITNUM}
+Set to @var{value} the \BYTENUM\ of memory located at @var{offset} from
+@var{pointer}.  Only the \BITNUM\ lowermost bits of @var{value} are used
+in the operation and the remaining bits are ignored.
+@end macro
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Poking exact integers
+
+
+@deffn Procedure pointer-set-c-char! @var{pointer} @var{offset} @var{value}
+@poker{single byte,8}
+@end deffn
+
+
+@deffn Procedure pointer-set-c-short! @var{pointer} @var{offset} @var{value}
+@poker{two bytes,16}
+@end deffn
+
+
+@deffn Procedure pointer-set-c-int! @var{pointer} @var{offset} @var{value}
+@poker{four bytes,32}
+@end deffn
+
+
+@deffn Procedure pointer-set-c-long! @var{pointer} @var{offset} @var{value}
+On 64-bit systems: @poker{eight bytes,64}
+
+On 32-bit systems: perform the same task as @func{pointer-set-c-int!}.
+@end deffn
+
+
+@deffn Procedure pointer-set-c-long-long! @var{pointer} @var{offset} @var{value}
+Set to @var{value} a number of bytes corresponding to the @code{long
+long} type located at @var{offset} from @var{pointer}.
+@end deffn
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Poking floating point numbers
+
+
+@deffn Procedure pointer-set-c-float! @var{pointer} @var{offset} @var{flonum}
+Convert the Scheme floating point number @var{flonum} (represented in
+@value{PRJNAME} as an @ieee{} 754 double precision floating point number) to a
+float (an @ieee{} 754 single precision floating point number) and store
+the result in the four bytes at @var{offset} from @var{pointer}.
+@end deffn
+
+
+@deffn Procedure pointer-set-c-double! @var{pointer} @var{offset} @var{flonum}
+Store the double precision @ieee{} 754 floating point value of the
+Scheme @var{flonum} in the eight bytes at @var{offset} from
+@var{pointer}.
+@end deffn
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Poking pointers
+
+
+@deffn Procedure pointer-set-c-pointer! @var{pointer} @var{offset} @var{value}
+On 64-bit systems: set the eight bytes at @var{offset} from
+@var{pointer} to the 64-bit pointer @var{value}.
+
+On 32-bit systems: set the four bytes at @var{offset} from @var{pointer}
+to the 32-bit pointer @var{value}.
+@end deffn
+
+@c page
+@node library foreign memops peek
+@subsubsection Peeking values
+
+
+With all the following functions: the @var{pointer} argument must be a
+valid pointer; the @var{offset} argument must be an exact integer.  When
+adding an offset to a pointer: all the following functions @strong{do
+not} scale the offset to the size of the poked value.  Pointer
+arithmetics is performed with byte offsets.
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Peeking exact integers
+
+
+@deffn Procedure pointer-ref-c-signed-char @var{pointer} @var{offset}
+Peek the single byte located at @var{offset} from @var{pointer} and
+return an exact integer representing the sign--extended integer value of
+that byte. The resulting value is in the inclusive range @code{[-128,
+127]}.
+@end deffn
+
+
+@deffn Procedure pointer-ref-c-unsigned-char @var{pointer} @var{offset}
+Peek the single byte located at @var{offset} from @var{pointer} and
+return an exact integer representing the unsigned integer value of that
+byte.  The resulting value is in the inclusive range @code{[0, 255]}.
+@end deffn
+
+
+The following example shows the difference between the two functions
+above:
+
+@example
+> (let ([p (malloc 3)])
+    (pointer-set-c-char! p 0 #b01111111)
+    (pointer-set-c-char! p 1 #b10000000)
+    (pointer-set-c-char! p 2 #b11111111)
+    (let ([result
+           (list (pointer-ref-c-signed-char p 0)
+                 (pointer-ref-c-signed-char p 1)
+                 (pointer-ref-c-signed-char p 2)
+                 (pointer-ref-c-unsigned-char p 0)
+                 (pointer-ref-c-unsigned-char p 1)
+                 (pointer-ref-c-unsigned-char p 2))])
+      (free p)
+      result))
+(127 -128 -1 127 128 255)
+@end example
+
+
+@deffn Procedure pointer-ref-c-signed-short @var{pointer} @var{offset}
+Peek two bytes at @var{offset} from @var{pointer} and return an exact
+integer representing the sign--extended integer value of the sequence.
+The resulting value is in the inclusive range @code{[-32768, 32767]}.
+@end deffn
+
+
+@deffn Procedure pointer-ref-c-unsigned-short @var{pointer} @var{offset}
+Peek two bytes at @var{offset} from @var{pointer} and return an exact
+integer representing the unsigned integer value of the sequence.  The
+resulting value is in the inclusive range @code{[0, 65535]}.
+@end deffn
+
+
+@deffn Procedure pointer-ref-c-signed-int @var{pointer} @var{offset}
+Peek four bytes at @var{offset} from @var{pointer} and return an exact
+integer in the inclusive range @code{[-2^31, 2^31-1]}.
+@end deffn
+
+
+@deffn Procedure pointer-ref-c-unsigned-int @var{pointer} @var{offset}
+Peek four bytes at @var{offset} from @var{pointer} and return an exact
+integer in the inclusive range @code{[0, 2^32-1]}.
+@end deffn
+
+
+@deffn Procedure pointer-ref-c-signed-long @var{pointer} @var{offset}
+On 64-bit systems: peek eight bytes at @var{offset} from @var{pointer}
+and return an integer in the inclusive range @code{[-2^63, 2^63-1]}.
+
+On 32-bit systems, perform the same task as
+@func{pointer-ref-c-signed-int}.
+@end deffn
+
+
+@deffn Procedure pointer-ref-c-unsigned-long @var{pointer} @var{offset}
+On 64-bit systems: peek eight bytes at @var{offset} from @var{pointer}
+and return an integer in the inclusive range @code{[0, 2^64-1]}.
+
+On 32-bit systems: perform the same task as
+@func{pointer-ref-c-unsigned-int}.
+@end deffn
+
+
+@deffn Procedure pointer-ref-c-signed-long-long @var{pointer} @var{offset}
+Peek a number of bytes corresponding to the native @code{long long} type
+at @var{offset} from @var{pointer} and return an integer.
+@end deffn
+
+
+@deffn Procedure pointer-ref-c-unsigned-long-long @var{pointer} @var{offset}
+Peek a number of bytes corresponding to the native @code{unsigned long
+long} type at @var{offset} from @var{pointer} and return an integer.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Peeking floating point numbers
+
+
+@deffn Procedure pointer-ref-c-float @var{pointer} @var{offset}
+Return the four--byte float (represented as @ieee{} 754 single precision
+floating point number) stored at @var{offset} from @var{pointer}.  The
+value is extended to an @ieee{} 754 double precision floating point
+number that @value{PRJNAME} uses to represent inexact numbers.
+@end deffn
+
+
+@deffn Procedure pointer-ref-c-double @var{pointer} @var{offset}
+Return the eight--byte float (represented as @ieee{} 754 double
+precision floating point number) stored at @var{offset} from
+@var{pointer}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Peeking pointers
+
+
+@deffn Procedure pointer-ref-c-pointer @var{pointer} @var{offset}
+Return the pointer stored at @var{offset} from @var{pointer}.  The size
+of the pointer (also the number of bytes loaded) depends on the
+architecture: it is 4 bytes on 32-bit systems and 8 bytes on 64-bit
+systems.
+@end deffn
+
+@c page
+@node library foreign dl
+@subsection Accessing foreign objects from Scheme
+
+
+@deffn Procedure dlopen
+@deffnx Procedure dlopen @var{library-name}
+@deffnx Procedure dlopen @var{library-name} @var{lazy?} @var{global?}
+Take the string @var{library-name} representing a system library and
+call the system procedure @cfunc{dlopen} which dynamically loads the
+given library into the running process.
+
+The name of the library is system--dependent and must include the
+appropriate suffix (e.g. @code{*.so} on Linux, @code{*.dylib} on Darwin
+and @code{*.dll} on Cygwin).  @var{library-name} may include a full path
+which identifies the location of the library, or it may just be the name
+of the library in which case the system will lookup the library name
+using the @env{LD_LIBRARY_PATH} environment variable.
+
+The argument @var{lazy?} specifies how library dependencies are loaded.
+If true, @func{dlopen} delays the resolution and loading of dependent
+libraries until they are actually used.  If false, all library
+dependencies are loaded before the call to @func{dlopen} returns.
+
+The argument @func{global?} specifies the scope of the symbols exported
+from the loaded library.  If true, all exported symbols become part of
+the running image, and subsequent @func{dlsym} calls may not need to
+specify the library from which the symbol is loaded.  If false, the
+exported symbols are not global and the library pointer needs to be
+specified for @func{dlsym}.
+
+Calling @code{(dlopen library-name)} is equivalent to @code{(dlopen
+library-name #f #f)}.  Calling @code{(dlopen)} without arguments returns
+a pointer to the current process.
+
+If succesful, @func{dlopen} returns a pointer to the external library
+which can be used subsequently by @func{dlsym} and @func{dlclose}.  If
+the library cannot be loaded, @func{dlopen} returns @false{} and the
+procedure @func{dlerror} can be used to obtain the cause of the failure.
+
+Consult the @code{dlopen(3)} page in your system manual for further
+details.
+@end deffn
+
+
+@deffn Procedure dlclose @var{library-pointer}
+A wrapper for the system procedure of the same name.  It receives a
+library pointer (e.g. one obtained from @func{dlopen}) and releases the
+resources loaded from that library.  Closing a library renders all
+symbols and static data structures that the library exports invalid and
+the program may crash or corrupt its memory if such symbols are used
+after a library is closed.
+
+Most system implementations of dynamic loading employ reference counting
+for @func{dlopen} and @func{dlclose} in that library resources are not
+freed until the number of calls to @func{dlclose} matches the number of
+calls to @func{dlopen}.
+
+The procedure @func{dlclose} returns a boolean value indicating whether
+the success status of the operation.  If @func{dlclose} returns
+@false{}, the procedure @func{dlerror} can be used to obtain the cause
+of the error.
+
+Consult the @code{dlclose(3)} page in your system manual for further
+details.
+@end deffn
+
+
+@deffn Procedure dlsym @var{library-pointer} @var{string}
+Take a library pointer (e.g. one obtained by a call to @func{dlopen})
+and a string representing the name of a symbol that the library exports
+and return a pointer to the location of that symbol in memory.  If
+@func{dlsym} fails, it returns @false{} and the cause of the error can
+be obtained using the procedure @code{dlerror}.
+
+Consult the @code{dlsym(3)} page in your system manual for further
+details.
+@end deffn
+
+
+@deffn Procedure dlerror
+If any of the dynamic loading operations (i.e., @func{dlopen},
+@func{dlclose}, @func{dlsym}) fails, the cause of the error can be
+obtained by calling @func{dlerror} which returns a string describing the
+error.  The procedure @func{dlerror} returns @false{} if there was no
+dynamic loading error.
+
+Consult the @code{dlerror(3)} page in your system manual for further
+details.
+@end deffn
+
+@c page
+@node library foreign call out
+@subsection Calling out to foreign procedures
+
+
+@value{PRJNAME} provides the means to call out from Scheme to foreign
+procedures.  This allows the programmers to extend @value{PRJNAME} to
+access system--specific facilities that are available on the host
+machine.
+
+@menu
+* library foreign call out api::      Interface to foreign functions.
+* library foreign call out types::    Type specifiers.
+* library foreign call out example::  C language call out example.
+@end menu
+
+@c page
+@node library foreign call out api
+@subsubsection Interface to foreign functions
+
+
+In order to call out to a foreign procedure, one must provide two pieces
+of information: the signature of the foreign procedure (e.g. its type
+declaration if it is a C language procedure) and the address of the
+procedure in memory.  The address of the procedure can be easily
+obtained using @func{dlsym} if the name of the procedure and its
+exporting library are known.  The signature of the procedure cannot, in
+general, be obtained dynamically, and therefore must be hard coded into
+the program.
+
+The signature of the foreign procedure is required for proper linkage
+between the Scheme system and the foreign system.  Using the signature,
+@value{PRJNAME} determines how Scheme values are converted into native values,
+and where (e.g. in which registers and stack slots) to put these
+arguments.  The signature also determines where the returned values are
+placed and how they are converted from the system data types to the
+corresponding Scheme data types.
+
+A procedure's signature is composed of two parts: the return type and
+the parameter types:
+
+@itemize
+@item
+the return type is a symbol that can be any one of the type specifiers
+listed in @ref{library foreign call out types};
+
+@item
+the parameter types is a list of type specifier symbols; if the foreign
+function takes no arguments: the parameter types must be the empty list;
+@end itemize
+
+@noindent
+the symbol @code{void} can appear as a return type but cannot appear as
+a parameter type.
+
+
+@deffn Procedure make-c-callout @var{return-type} @var{parameter-types}
+The procedure @func{make-c-callout} is the primary facility for making
+foreign procedures callable from Scheme.  It works as follows:
+
+@enumerate
+@item
+@func{make-c-callout} receives two arguments denoting the signature of
+the procedure to be called; it prepares a bridge that converts from
+Scheme's calling conventions and data structures to their foreign
+counterparts; it returns a procedure @func{p1};
+
+@item
+the procedure @func{p1} accepts a pointer to a foreign procedure
+(e.g. one obtained from @func{dlsym}) and returns a Scheme procedure
+@func{p2} that encapsulates the foreign procedure;
+
+@item
+the final procedure @func{p2} can be called with as many arguments as
+the ones specified in the @var{parameter-types}; the parameters supplied
+to @func{p2} must match the types supplied as the @var{parameter-types}
+according to the ``Valid Scheme types'' column in the table in
+@ref{library foreign call out types};
+
+@item
+the procedure @func{p2} converts the parameters from Scheme types to
+native types, calls the foreign procedure, obtains the result, and
+converts it to the appropriate Scheme value (depending on the
+@var{return-type}).
+@end enumerate
+
+The interface of @func{make-c-callout} is broken down into three stages
+in order to accomodate common usage patterns.  Often a function
+signature can be used by many foreign procedures and therefore,
+@func{make-c-callout} can be called once per signature and each
+signature can be used multiple times.  Similarly, separating the foreign
+procedure preparation from parameter passing allows for preparing the
+foreign procedure once and calling it many times.
+
+The list of types in the table in @ref{library foreign call out types}
+is restricted to basics and provides no automatic conversion from
+composite Scheme data structures (such as strings, symbols, vectors, and
+lists) to native types.  The restriction is intentional in order for
+@value{PRJNAME} to avoid making invalid assumptions about the memory management
+of the target library.
+
+@quotation
+For example, while @value{PRJNAME} @emph{can} convert a Scheme string to a native
+byte array (e.g. use @func{string->bytevector} to decode the string,
+then use @func{malloc} to allocate a temporary buffer, then copy the
+bytes from the bytevector to the allocated memory), it cannot decide
+when this allocated byte array is no longer needed and should be freed.
+This knowledge is library--dependent and is often procedure--dependent.
+Therefore, @value{PRJNAME} leaves it to the programmer to manage all memory
+related issues.
+@end quotation
+
+Outgoing parameters to foreign procedures are checked against the
+declared types.  For example, if a callback is prepared to expect a
+parameter of type @code{signed-int}, only exact integers are allowed to
+be passed out.  For integer types, only a fixed number of bits is used
+and the remaining bits are ignored.  For floating point types, the
+argument is checked to be a Scheme flonum.  No implicit conversion
+between exact and inexact numbers is performed.
+@end deffn
+
+@c page
+@node library foreign call out types
+@subsubsection Type specifiers
+
+
+The following table lists valid type specifiers that can be used in
+callout and callback signatures.  Specifiers with ``4/8 bytes'' have
+size that depends on the system: it is 4 bytes on 32-bit systems and 8
+bytes on 64-bit systems.  The @code{void} specifier can only be used as
+a return value specifier to mean ``no useful value is returned''.
+
+
+@multitable {@code{unsigned-short}} {4/8 bytes} {Valid Scheme types} {Corresponding C types}
+@headitem Type specifier @tab Size @tab Valid Scheme types @tab Corresponding C types
+@item
+@code{signed-char} @tab 1 byte @tab exact integer @tab @code{char}
+@item
+@code{unsigned-char} @tab 1 byte @tab exact integer @tab @code{unsigned char}
+@item
+@code{signed-short} @tab 2 bytes @tab exact integer @tab @code{short}
+@item
+@code{unsigned-short} @tab 2 bytes @tab exact integer @tab @code{unsigned short}
+@item
+@code{signed-int} @tab 4 bytes @tab exact integer @tab @code{int}
+@item
+@code{unsigned-int} @tab 4 bytes @tab exact integer @tab @code{unsigned int}
+@item
+@code{signed-long} @tab 4/8 bytes @tab exact integer @tab @code{long}
+@item
+@code{unsigned-long} @tab 4/8 bytes @tab exact integer @tab @code{unsigned long}
+@item
+@code{float} @tab 4 bytes @tab flonum @tab @code{float}
+@item
+@code{double} @tab 8 bytes @tab flonum @tab @code{double}
+@item
+@code{pointer} @tab 4/8 bytes @tab pointer @tab @code{void*}, @code{char*}, @code{int*}, @code{int**}, etc
+@item
+@code{void} @tab --- @tab --- @tab @code{void}
+@end multitable
+
+
+
+@c page
+@node library foreign call out example
+@subsubsection C language call out example
+
+
+The following example illustrates the use of the @func{make-c-callout}
+procedure in combination with @func{dlopen} and @func{dlsym}; the
+session was run on a 32-bit @value{PRJNAME} running under Mac OS X 10.4:
+
+@enumerate
+@item
+the @file{libc.dylib} foreign library is loaded and is bound to the
+variable @code{libc};
+
+@item
+we obtain a pointer to the @cfunc{atan} foreign procedure that is
+defined in @code{libc}; the native procedure @cfunc{atan} takes a
+@code{double} as an argument and returns a @code{double} and that's the
+signature that we use for @func{make-c-callout};
+
+@item
+we call the foreign procedure interface with one argument, @code{1.0},
+which is a flonum and thus matches the required parameter type; the
+native procedure returns a @code{double} value which is converted to the
+Scheme flonum with value @code{0.7853981633974483}.
+@end enumerate
+
+@example
+> (import (ikarus foreign))
+> (define libc (dlopen "libc.dylib"))
+> libc
+#<pointer #x00100770>
+> (define libc-atan-ptr (dlsym libc "atan"))
+> libc-atan-ptr
+#<pointer #x9006CB1F>
+> (define libc-atan
+    ((make-c-callout 'double '(double)) libc-atan-ptr))
+> libc-atan
+#<procedure>
+> (libc-atan 1.0)
+0.7853981633974483
+> (libc-atan 1)
+Unhandled exception
+ Condition components:
+    1. &assertion
+    2. &who: callout-procedure
+    3. &message: "argument does not match type double"
+    4. &irritants: (1)
+@end example
+
+
+@c page
+@node library foreign call back
+@subsection Calling back to Scheme
+
+
+In order to provide full interoperability with native procedures,
+@value{PRJNAME} allows native procedures to call back into Scheme just
+as it allows Scheme to call out to native procedures.  This is important
+for many system libraries that provide graphical user interfaces with
+event handling (e.g. Cocoa, GTK+, GLUT, etc.), database engines
+(e.g. libsqlite, libmysql, etc.), among others.
+
+The native calling site for the call back is compiled with a specific
+callback signature encoding the expected parameter types and return
+type.  Therefore, a Scheme procedure used for a call back must be
+wrapped with a proper adapter that converts the incoming parameters from
+native format to Scheme values as well as convert the value that the
+Scheme procedure returns back to native format.  The signature format is
+similar to the one used for call outs (@ref{library foreign call out
+types} for details).
+
+
+@deffn Procedure make-c-callback @var{return-type} @var{parameter-types}
+The procedure @func{make-c-callback} is similar to the procedure
+@func{make-c-callout} except that it provides a bridge from native
+procedures back into Scheme.  While the procedure @func{make-c-callout}
+takes a native pointer and returns a Scheme procedure,
+@func{make-c-callback} takes a Scheme procedure and returns a native
+pointer.  The native pointer can be called by foreign procedures.  The
+native parameters are converted to Scheme data (according to
+@var{parameter-types}), the Scheme procedure is called with these
+parameters, and the returned value is converted back into native format
+(according to @var{return-type}) before control returns to the native
+call site.
+
+Note that the native procedure pointer obtained from
+@func{make-c-callback} is indistinguishable from other native procedures
+that are obtained using @func{dlsym} or similar means.  In particular,
+such native pointers can be passed to @func{make-c-callout} resulting in
+a Scheme procedure that calls out to the native procedure that in turn
+calls back into Scheme.  The following segment illustrates a very
+inefficient way of extracting the lowermost 32 bits from an exact
+integer.
+
+@example
+> (format "~x"
+    (((make-c-callout 'unsigned-int '(unsigned-int))
+      ((make-c-callback 'unsigned-int '(unsigned-int))
+       values))
+     #xfedcba09876543210fedcba09876543210))
+"76543210"
+@end example
+@end deffn
+
+
+
+@c page
+@node library misc
+@section Miscellaneous functions
+
+
+@defun void
+Return the void value.  It is the value returned by forms that do not
+return a meaningful value.
+@end defun
+
+@c page
+@node missing
+@appendix Missing Features
+
+
+@value{PRJNAME} does not fully conform to @rnrs{6} yet.  Although it implements
+most of @rnrs{6}'s macros and procedures, some are still missing.  This
+appendix summarizes the set of missing features and procedures.
+
+@itemize
+@item
+The procedure @func{equal?} may not terminate on infinite (circular)
+input, when the input is @func{equal?}.
+
+@item
+@func{number->string} does not accept the third argument (precision).
+Similarly, @func{string->number} and the reader do not recognize the
+@code{|p} notation.
+
+@item
+The following procedures are missing from @code{(rnrs arithmetic
+bitwise)}:
+
+@example
+bitwise-reverse-bit-field               bitwise-rotate-bit-field
+@end example
+
+@item
+The following procedures are missing from @code{(rnrs arithmetic
+fixnum)}:
+
+@example
+fxreverse-bit-field                     fxrotate-bit-field
+@end example
+
+@item
+The following procedures are missing from @code{(rnrs hashtables)}:
+
+@example
+make-eqv-hashtable                      equal-hash
+@end example
+
+@item
+The following procedures are missing from @code{(rnrs io ports)}:
+
+@example
+port-has-port-position?                 port-position
+port-has-set-port-position!?            set-port-position!
+make-custom-binary-input/output-port
+make-custom-textual-input/output-port
+open-file-input/output-port
+@end example
+@end itemize
+
+@c page
+@node building
+@appendix Building infrastructure
+
+
+This appendix contains instructions on how to use and modify the
+building infrastructure of @value{PACKAGE}.  The source of the package
+is manage by a Git repository, so some bits of the infrastructure depend
+on Git.
+
+@menu
+* building revision::           Package revision in the banner.
+@end menu
+
+@c page
+@node building revision
+@appendixsec Package revision in the banner
+
+
+When running @value{EXECUTABLE} in a terminal, it prints a banner
+showing the revision number:
+
+@smallexample
+$ vicare
+Vicare Scheme version 0.1d0+ \
+  (revision master/21da24720f161708372756e1324c230bd5ff6ac9, \
+   build 2010-05-01)
+Copyright (c) 2006-2010 Abdulaziz Ghuloum
+@end smallexample
+
+The revision specification shows the branch name and the commit hash;
+they are read from the file @file{./scheme/last-revision}, which is
+generated by the following chunk of code in the
+@file{.git/hooks/post-commit} script:
+
+@smallexample
+LAST_REVISION_FILE=./scheme/last-revision
+BRANCH_NAME=$(git branch 2>/dev/null | \
+                sed -e '/^[^*]/d' -e 's/^* //')
+COMMIT_HASH=$(git show | head -1 | cut -d' ' -f2)
+echo "$BRANCH_NAME/$COMMIT_HASH" >$LAST_REVISION_FILE
+@end smallexample
+
+@c page
+@node credits
+@appendix Credits for this document
+
+
+The skeleton of this document is the original ``Ikarus User's Guide'' in
+XeLaTeX format, by Abdulaziz Ghulom.  That document is available in the
+Ikarus distribution and is covered by the @gnu{} General Public License
+version 3 as published by the Free Software Foundation.  It is available
+at the following @aurl{}s:
+
+@center @url{http://www.cs.indiana.edu/~aghuloum/ikarus/}
+@center @url{https://launchpad.net/ikarus}
+
+@c page
+@node package license
+@appendix @gnu{} General Public License
+
+@c The GNU General Public License.
+@center Version 3, 29 June 2007
+
+@display
+Copyright @copyright{} 2007 Free Software Foundation, Inc. @url{http://fsf.org/}
+
+Everyone is permitted to copy and distribute verbatim copies of this
+license document, but changing it is not allowed.
+@end display
+
+@heading Preamble
+
+The GNU General Public License is a free, copyleft license for
+software and other kinds of works.
+
+The licenses for most software and other practical works are designed
+to take away your freedom to share and change the works.  By contrast,
+the GNU General Public License is intended to guarantee your freedom
+to share and change all versions of a program---to make sure it remains
+free software for all its users.  We, the Free Software Foundation,
+use the GNU General Public License for most of our software; it
+applies also to any other work released this way by its authors.  You
+can apply it to your programs, too.
+
+When we speak of free software, we are referring to freedom, not
+price.  Our General Public Licenses are designed to make sure that you
+have the freedom to distribute copies of free software (and charge for
+them if you wish), that you receive source code or can get it if you
+want it, that you can change the software or use pieces of it in new
+free programs, and that you know you can do these things.
+
+To protect your rights, we need to prevent others from denying you
+these rights or asking you to surrender the rights.  Therefore, you
+have certain responsibilities if you distribute copies of the
+software, or if you modify it: responsibilities to respect the freedom
+of others.
+
+For example, if you distribute copies of such a program, whether
+gratis or for a fee, you must pass on to the recipients the same
+freedoms that you received.  You must make sure that they, too,
+receive or can get the source code.  And you must show them these
+terms so they know their rights.
+
+Developers that use the GNU GPL protect your rights with two steps:
+(1) assert copyright on the software, and (2) offer you this License
+giving you legal permission to copy, distribute and/or modify it.
+
+For the developers' and authors' protection, the GPL clearly explains
+that there is no warranty for this free software.  For both users' and
+authors' sake, the GPL requires that modified versions be marked as
+changed, so that their problems will not be attributed erroneously to
+authors of previous versions.
+
+Some devices are designed to deny users access to install or run
+modified versions of the software inside them, although the
+manufacturer can do so.  This is fundamentally incompatible with the
+aim of protecting users' freedom to change the software.  The
+systematic pattern of such abuse occurs in the area of products for
+individuals to use, which is precisely where it is most unacceptable.
+Therefore, we have designed this version of the GPL to prohibit the
+practice for those products.  If such problems arise substantially in
+other domains, we stand ready to extend this provision to those
+domains in future versions of the GPL, as needed to protect the
+freedom of users.
+
+Finally, every program is threatened constantly by software patents.
+States should not allow patents to restrict development and use of
+software on general-purpose computers, but in those that do, we wish
+to avoid the special danger that patents applied to a free program
+could make it effectively proprietary.  To prevent this, the GPL
+assures that patents cannot be used to render the program non-free.
+
+The precise terms and conditions for copying, distribution and
+modification follow.
+
+@heading TERMS AND CONDITIONS
+
+@enumerate 0
+@item
+Definitions.
+
+``This License'' refers to version 3 of the GNU General Public License.
+
+``Copyright'' also means copyright-like laws that apply to other kinds
+of works, such as semiconductor masks.
+
+``The Program'' refers to any copyrightable work licensed under this
+License.  Each licensee is addressed as ``you''.  ``Licensees'' and
+``recipients'' may be individuals or organizations.
+
+To ``modify'' a work means to copy from or adapt all or part of the work
+in a fashion requiring copyright permission, other than the making of
+an exact copy.  The resulting work is called a ``modified version'' of
+the earlier work or a work ``based on'' the earlier work.
+
+A ``covered work'' means either the unmodified Program or a work based
+on the Program.
+
+To ``propagate'' a work means to do anything with it that, without
+permission, would make you directly or secondarily liable for
+infringement under applicable copyright law, except executing it on a
+computer or modifying a private copy.  Propagation includes copying,
+distribution (with or without modification), making available to the
+public, and in some countries other activities as well.
+
+To ``convey'' a work means any kind of propagation that enables other
+parties to make or receive copies.  Mere interaction with a user
+through a computer network, with no transfer of a copy, is not
+conveying.
+
+An interactive user interface displays ``Appropriate Legal Notices'' to
+the extent that it includes a convenient and prominently visible
+feature that (1) displays an appropriate copyright notice, and (2)
+tells the user that there is no warranty for the work (except to the
+extent that warranties are provided), that licensees may convey the
+work under this License, and how to view a copy of this License.  If
+the interface presents a list of user commands or options, such as a
+menu, a prominent @item
+in the list meets this criterion.
+
+@item
+Source Code.
+
+The ``source code'' for a work means the preferred form of the work for
+making modifications to it.  ``Object code'' means any non-source form
+of a work.
+
+A ``Standard Interface'' means an interface that either is an official
+standard defined by a recognized standards body, or, in the case of
+interfaces specified for a particular programming language, one that
+is widely used among developers working in that language.
+
+The ``System Libraries'' of an executable work include anything, other
+than the work as a whole, that (a) is included in the normal form of
+packaging a Major Component, but which is not part of that Major
+Component, and (b) serves only to enable use of the work with that
+Major Component, or to implement a Standard Interface for which an
+implementation is available to the public in source code form.  A
+``Major Component'', in this context, means a major essential component
+(kernel, window system, and so on) of the specific operating system
+(if any) on which the executable work runs, or a compiler used to
+produce the work, or an object code interpreter used to run it.
+
+The ``Corresponding Source'' for a work in object code form means all
+the source code needed to generate, install, and (for an executable
+work) run the object code and to modify the work, including scripts to
+control those activities.  However, it does not include the work's
+System Libraries, or general-purpose tools or generally available free
+programs which are used unmodified in performing those activities but
+which are not part of the work.  For example, Corresponding Source
+includes interface definition files associated with source files for
+the work, and the source code for shared libraries and dynamically
+linked subprograms that the work is specifically designed to require,
+such as by intimate data communication or control flow between those
+subprograms and other parts of the work.
+
+The Corresponding Source need not include anything that users can
+regenerate automatically from other parts of the Corresponding Source.
+
+The Corresponding Source for a work in source code form is that same
+work.
+
+@item
+Basic Permissions.
+
+All rights granted under this License are granted for the term of
+copyright on the Program, and are irrevocable provided the stated
+conditions are met.  This License explicitly affirms your unlimited
+permission to run the unmodified Program.  The output from running a
+covered work is covered by this License only if the output, given its
+content, constitutes a covered work.  This License acknowledges your
+rights of fair use or other equivalent, as provided by copyright law.
+
+You may make, run and propagate covered works that you do not convey,
+without conditions so long as your license otherwise remains in force.
+You may convey covered works to others for the sole purpose of having
+them make modifications exclusively for you, or provide you with
+facilities for running those works, provided that you comply with the
+terms of this License in conveying all material for which you do not
+control copyright.  Those thus making or running the covered works for
+you must do so exclusively on your behalf, under your direction and
+control, on terms that prohibit them from making any copies of your
+copyrighted material outside their relationship with you.
+
+Conveying under any other circumstances is permitted solely under the
+conditions stated below.  Sublicensing is not allowed; section 10
+makes it unnecessary.
+
+@item
+Protecting Users' Legal Rights From Anti-Circumvention Law.
+
+No covered work shall be deemed part of an effective technological
+measure under any applicable law fulfilling obligations under article
+11 of the WIPO copyright treaty adopted on 20 December 1996, or
+similar laws prohibiting or restricting circumvention of such
+measures.
+
+When you convey a covered work, you waive any legal power to forbid
+circumvention of technological measures to the extent such
+circumvention is effected by exercising rights under this License with
+respect to the covered work, and you disclaim any intention to limit
+operation or modification of the work as a means of enforcing, against
+the work's users, your or third parties' legal rights to forbid
+circumvention of technological measures.
+
+@item
+Conveying Verbatim Copies.
+
+You may convey verbatim copies of the Program's source code as you
+receive it, in any medium, provided that you conspicuously and
+appropriately publish on each copy an appropriate copyright notice;
+keep intact all notices stating that this License and any
+non-permissive terms added in accord with section 7 apply to the code;
+keep intact all notices of the absence of any warranty; and give all
+recipients a copy of this License along with the Program.
+
+You may charge any price or no price for each copy that you convey,
+and you may offer support or warranty protection for a fee.
+
+@item
+Conveying Modified Source Versions.
+
+You may convey a work based on the Program, or the modifications to
+produce it from the Program, in the form of source code under the
+terms of section 4, provided that you also meet all of these
+conditions:
+
+@enumerate a
+@item
+
+The work must carry prominent notices stating that you modified it,
+and giving a relevant date.
+
+@item
+
+The work must carry prominent notices stating that it is released
+under this License and any conditions added under section 7.  This
+requirement modifies the requirement in section 4 to ``keep intact all
+notices''.
+
+@item
+
+You must license the entire work, as a whole, under this License to
+anyone who comes into possession of a copy.  This License will
+therefore apply, along with any applicable section 7 additional terms,
+to the whole of the work, and all its parts, regardless of how they
+are packaged.  This License gives no permission to license the work in
+any other way, but it does not invalidate such permission if you have
+separately received it.
+
+@item
+
+If the work has interactive user interfaces, each must display
+Appropriate Legal Notices; however, if the Program has interactive
+interfaces that do not display Appropriate Legal Notices, your work
+need not make them do so.
+@end enumerate
+
+A compilation of a covered work with other separate and independent
+works, which are not by their nature extensions of the covered work,
+and which are not combined with it such as to form a larger program,
+in or on a volume of a storage or distribution medium, is called an
+``aggregate'' if the compilation and its resulting copyright are not
+used to limit the access or legal rights of the compilation's users
+beyond what the individual works permit.  Inclusion of a covered work
+in an aggregate does not cause this License to apply to the other
+parts of the aggregate.
+
+@item
+ Conveying Non-Source Forms.
+
+You may convey a covered work in object code form under the terms of
+sections 4 and 5, provided that you also convey the machine-readable
+Corresponding Source under the terms of this License, in one of these
+ways:
+
+@enumerate a
+@item
+
+Convey the object code in, or embodied in, a physical product
+(including a physical distribution medium), accompanied by the
+Corresponding Source fixed on a durable physical medium customarily
+used for software interchange.
+
+@item
+
+Convey the object code in, or embodied in, a physical product
+(including a physical distribution medium), accompanied by a written
+offer, valid for at least three years and valid for as long as you
+offer spare parts or customer support for that product model, to give
+anyone who possesses the object code either (1) a copy of the
+Corresponding Source for all the software in the product that is
+covered by this License, on a durable physical medium customarily used
+for software interchange, for a price no more than your reasonable
+cost of physically performing this conveying of source, or (2) access
+to copy the Corresponding Source from a network server at no charge.
+
+@item
+
+Convey individual copies of the object code with a copy of the written
+offer to provide the Corresponding Source.  This alternative is
+allowed only occasionally and noncommercially, and only if you
+received the object code with such an offer, in accord with subsection
+6b.
+
+@item
+
+Convey the object code by offering access from a designated place
+(gratis or for a charge), and offer equivalent access to the
+Corresponding Source in the same way through the same place at no
+further charge.  You need not require recipients to copy the
+Corresponding Source along with the object code.  If the place to copy
+the object code is a network server, the Corresponding Source may be
+on a different server (operated by you or a third party) that supports
+equivalent copying facilities, provided you maintain clear directions
+next to the object code saying where to find the Corresponding Source.
+Regardless of what server hosts the Corresponding Source, you remain
+obligated to ensure that it is available for as long as needed to
+satisfy these requirements.
+
+@item
+
+Convey the object code using peer-to-peer transmission, provided you
+inform other peers where the object code and Corresponding Source of
+the work are being offered to the general public at no charge under
+subsection 6d.
+
+@end enumerate
+
+A separable portion of the object code, whose source code is excluded
+from the Corresponding Source as a System Library, need not be
+included in conveying the object code work.
+
+A ``User Product'' is either (1) a ``consumer product'', which means any
+tangible personal property which is normally used for personal,
+family, or household purposes, or (2) anything designed or sold for
+incorporation into a dwelling.  In determining whether a product is a
+consumer product, doubtful cases shall be resolved in favor of
+coverage.  For a particular product received by a particular user,
+``normally used'' refers to a typical or common use of that class of
+product, regardless of the status of the particular user or of the way
+in which the particular user actually uses, or expects or is expected
+to use, the product.  A product is a consumer product regardless of
+whether the product has substantial commercial, industrial or
+non-consumer uses, unless such uses represent the only significant
+mode of use of the product.
+
+``Installation Information'' for a User Product means any methods,
+procedures, authorization keys, or other information required to
+install and execute modified versions of a covered work in that User
+Product from a modified version of its Corresponding Source.  The
+information must suffice to ensure that the continued functioning of
+the modified object code is in no case prevented or interfered with
+solely because modification has been made.
+
+If you convey an object code work under this section in, or with, or
+specifically for use in, a User Product, and the conveying occurs as
+part of a transaction in which the right of possession and use of the
+User Product is transferred to the recipient in perpetuity or for a
+fixed term (regardless of how the transaction is characterized), the
+Corresponding Source conveyed under this section must be accompanied
+by the Installation Information.  But this requirement does not apply
+if neither you nor any third party retains the ability to install
+modified object code on the User Product (for example, the work has
+been installed in ROM).
+
+The requirement to provide Installation Information does not include a
+requirement to continue to provide support service, warranty, or
+updates for a work that has been modified or installed by the
+recipient, or for the User Product in which it has been modified or
+installed.  Access to a network may be denied when the modification
+itself materially and adversely affects the operation of the network
+or violates the rules and protocols for communication across the
+network.
+
+Corresponding Source conveyed, and Installation Information provided,
+in accord with this section must be in a format that is publicly
+documented (and with an implementation available to the public in
+source code form), and must require no special password or key for
+unpacking, reading or copying.
+
+@item
+Additional Terms.
+
+``Additional permissions'' are terms that supplement the terms of this
+License by making exceptions from one or more of its conditions.
+Additional permissions that are applicable to the entire Program shall
+be treated as though they were included in this License, to the extent
+that they are valid under applicable law.  If additional permissions
+apply only to part of the Program, that part may be used separately
+under those permissions, but the entire Program remains governed by
+this License without regard to the additional permissions.
+
+When you convey a copy of a covered work, you may at your option
+remove any additional permissions from that copy, or from any part of
+it.  (Additional permissions may be written to require their own
+removal in certain cases when you modify the work.)  You may place
+additional permissions on material, added by you to a covered work,
+for which you have or can give appropriate copyright permission.
+
+Notwithstanding any other provision of this License, for material you
+add to a covered work, you may (if authorized by the copyright holders
+of that material) supplement the terms of this License with terms:
+
+@enumerate a
+@item
+
+Disclaiming warranty or limiting liability differently from the terms
+of sections 15 and 16 of this License; or
+
+@item
+
+Requiring preservation of specified reasonable legal notices or author
+attributions in that material or in the Appropriate Legal Notices
+displayed by works containing it; or
+
+@item
+
+Prohibiting misrepresentation of the origin of that material, or
+requiring that modified versions of such material be marked in
+reasonable ways as different from the original version; or
+
+@item
+
+Limiting the use for publicity purposes of names of licensors or
+authors of the material; or
+
+@item
+
+Declining to grant rights under trademark law for use of some trade
+names, trademarks, or service marks; or
+
+@item
+
+Requiring indemnification of licensors and authors of that material by
+anyone who conveys the material (or modified versions of it) with
+contractual assumptions of liability to the recipient, for any
+liability that these contractual assumptions directly impose on those
+licensors and authors.
+@end enumerate
+
+All other non-permissive additional terms are considered ``further
+restrictions'' within the meaning of section 10.  If the Program as you
+received it, or any part of it, contains a notice stating that it is
+governed by this License along with a term that is a further
+restriction, you may remove that term.  If a license document contains
+a further restriction but permits relicensing or conveying under this
+License, you may add to a covered work material governed by the terms
+of that license document, provided that the further restriction does
+not survive such relicensing or conveying.
+
+If you add terms to a covered work in accord with this section, you
+must place, in the relevant source files, a statement of the
+additional terms that apply to those files, or a notice indicating
+where to find the applicable terms.
+
+Additional terms, permissive or non-permissive, may be stated in the
+form of a separately written license, or stated as exceptions; the
+above requirements apply either way.
+
+@item
+Termination.
+
+You may not propagate or modify a covered work except as expressly
+provided under this License.  Any attempt otherwise to propagate or
+modify it is void, and will automatically terminate your rights under
+this License (including any patent licenses granted under the third
+paragraph of section 11).
+
+However, if you cease all violation of this License, then your license
+from a particular copyright holder is reinstated (a) provisionally,
+unless and until the copyright holder explicitly and finally
+terminates your license, and (b) permanently, if the copyright holder
+fails to notify you of the violation by some reasonable means prior to
+60 days after the cessation.
+
+Moreover, your license from a particular copyright holder is
+reinstated permanently if the copyright holder notifies you of the
+violation by some reasonable means, this is the first time you have
+received notice of violation of this License (for any work) from that
+copyright holder, and you cure the violation prior to 30 days after
+your receipt of the notice.
+
+Termination of your rights under this section does not terminate the
+licenses of parties who have received copies or rights from you under
+this License.  If your rights have been terminated and not permanently
+reinstated, you do not qualify to receive new licenses for the same
+material under section 10.
+
+@item
+Acceptance Not Required for Having Copies.
+
+You are not required to accept this License in order to receive or run
+a copy of the Program.  Ancillary propagation of a covered work
+occurring solely as a consequence of using peer-to-peer transmission
+to receive a copy likewise does not require acceptance.  However,
+nothing other than this License grants you permission to propagate or
+modify any covered work.  These actions infringe copyright if you do
+not accept this License.  Therefore, by modifying or propagating a
+covered work, you indicate your acceptance of this License to do so.
+
+@item
+Automatic Licensing of Downstream Recipients.
+
+Each time you convey a covered work, the recipient automatically
+receives a license from the original licensors, to run, modify and
+propagate that work, subject to this License.  You are not responsible
+for enforcing compliance by third parties with this License.
+
+An ``entity transaction'' is a transaction transferring control of an
+organization, or substantially all assets of one, or subdividing an
+organization, or merging organizations.  If propagation of a covered
+work results from an entity transaction, each party to that
+transaction who receives a copy of the work also receives whatever
+licenses to the work the party's predecessor in interest had or could
+give under the previous paragraph, plus a right to possession of the
+Corresponding Source of the work from the predecessor in interest, if
+the predecessor has it or can get it with reasonable efforts.
+
+You may not impose any further restrictions on the exercise of the
+rights granted or affirmed under this License.  For example, you may
+not impose a license fee, royalty, or other charge for exercise of
+rights granted under this License, and you may not initiate litigation
+(including a cross-claim or counterclaim in a lawsuit) alleging that
+any patent claim is infringed by making, using, selling, offering for
+sale, or importing the Program or any portion of it.
+
+@item
+Patents.
+
+A ``contributor'' is a copyright holder who authorizes use under this
+License of the Program or a work on which the Program is based.  The
+work thus licensed is called the contributor's ``contributor version''.
+
+A contributor's ``essential patent claims'' are all patent claims owned
+or controlled by the contributor, whether already acquired or
+hereafter acquired, that would be infringed by some manner, permitted
+by this License, of making, using, or selling its contributor version,
+but do not include claims that would be infringed only as a
+consequence of further modification of the contributor version.  For
+purposes of this definition, ``control'' includes the right to grant
+patent sublicenses in a manner consistent with the requirements of
+this License.
+
+Each contributor grants you a non-exclusive, worldwide, royalty-free
+patent license under the contributor's essential patent claims, to
+make, use, sell, offer for sale, import and otherwise run, modify and
+propagate the contents of its contributor version.
+
+In the following three paragraphs, a ``patent license'' is any express
+agreement or commitment, however denominated, not to enforce a patent
+(such as an express permission to practice a patent or covenant not to
+sue for patent infringement).  To ``grant'' such a patent license to a
+party means to make such an agreement or commitment not to enforce a
+patent against the party.
+
+If you convey a covered work, knowingly relying on a patent license,
+and the Corresponding Source of the work is not available for anyone
+to copy, free of charge and under the terms of this License, through a
+publicly available network server or other readily accessible means,
+then you must either (1) cause the Corresponding Source to be so
+available, or (2) arrange to deprive yourself of the benefit of the
+patent license for this particular work, or (3) arrange, in a manner
+consistent with the requirements of this License, to extend the patent
+license to downstream recipients.  ``Knowingly relying'' means you have
+actual knowledge that, but for the patent license, your conveying the
+covered work in a country, or your recipient's use of the covered work
+in a country, would infringe one or more identifiable patents in that
+country that you have reason to believe are valid.
+
+If, pursuant to or in connection with a single transaction or
+arrangement, you convey, or propagate by procuring conveyance of, a
+covered work, and grant a patent license to some of the parties
+receiving the covered work authorizing them to use, propagate, modify
+or convey a specific copy of the covered work, then the patent license
+you grant is automatically extended to all recipients of the covered
+work and works based on it.
+
+A patent license is ``discriminatory'' if it does not include within the
+scope of its coverage, prohibits the exercise of, or is conditioned on
+the non-exercise of one or more of the rights that are specifically
+granted under this License.  You may not convey a covered work if you
+are a party to an arrangement with a third party that is in the
+business of distributing software, under which you make payment to the
+third party based on the extent of your activity of conveying the
+work, and under which the third party grants, to any of the parties
+who would receive the covered work from you, a discriminatory patent
+license (a) in connection with copies of the covered work conveyed by
+you (or copies made from those copies), or (b) primarily for and in
+connection with specific products or compilations that contain the
+covered work, unless you entered into that arrangement, or that patent
+license was granted, prior to 28 March 2007.
+
+Nothing in this License shall be construed as excluding or limiting
+any implied license or other defenses to infringement that may
+otherwise be available to you under applicable patent law.
+
+@item
+No Surrender of Others' Freedom.
+
+If conditions are imposed on you (whether by court order, agreement or
+otherwise) that contradict the conditions of this License, they do not
+excuse you from the conditions of this License.  If you cannot convey
+a covered work so as to satisfy simultaneously your obligations under
+this License and any other pertinent obligations, then as a
+consequence you may not convey it at all.  For example, if you agree
+to terms that obligate you to collect a royalty for further conveying
+from those to whom you convey the Program, the only way you could
+satisfy both those terms and this License would be to refrain entirely
+from conveying the Program.
+
+@item
+Use with the GNU Affero General Public License.
+
+Notwithstanding any other provision of this License, you have
+permission to link or combine any covered work with a work licensed
+under version 3 of the GNU Affero General Public License into a single
+combined work, and to convey the resulting work.  The terms of this
+License will continue to apply to the part which is the covered work,
+but the special requirements of the GNU Affero General Public License,
+section 13, concerning interaction through a network will apply to the
+combination as such.
+
+@item
+Revised Versions of this License.
+
+The Free Software Foundation may publish revised and/or new versions
+of the GNU General Public License from time to time.  Such new
+versions will be similar in spirit to the present version, but may
+differ in detail to address new problems or concerns.
+
+Each version is given a distinguishing version number.  If the Program
+specifies that a certain numbered version of the GNU General Public
+License ``or any later version'' applies to it, you have the option of
+following the terms and conditions either of that numbered version or
+of any later version published by the Free Software Foundation.  If
+the Program does not specify a version number of the GNU General
+Public License, you may choose any version ever published by the Free
+Software Foundation.
+
+If the Program specifies that a proxy can decide which future versions
+of the GNU General Public License can be used, that proxy's public
+statement of acceptance of a version permanently authorizes you to
+choose that version for the Program.
+
+Later license versions may give you additional or different
+permissions.  However, no additional obligations are imposed on any
+author or copyright holder as a result of your choosing to follow a
+later version.
+
+@item
+Disclaimer of Warranty.
+
+THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
+APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
+HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM ``AS IS'' WITHOUT
+WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE.  THE ENTIRE RISK AS TO THE QUALITY AND
+PERFORMANCE OF THE PROGRAM IS WITH YOU.  SHOULD THE PROGRAM PROVE
+DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
+CORRECTION.
+
+@item
+Limitation of Liability.
+
+IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
+WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MODIFIES AND/OR
+CONVEYS THE PROGRAM AS PERMITTED ABOVE, BE LIABLE TO YOU FOR DAMAGES,
+INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES
+ARISING OUT OF THE USE OR INABILITY TO USE THE PROGRAM (INCLUDING BUT
+NOT LIMITED TO LOSS OF DATA OR DATA BEING RENDERED INACCURATE OR
+LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM
+TO OPERATE WITH ANY OTHER PROGRAMS), EVEN IF SUCH HOLDER OR OTHER
+PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+@item
+Interpretation of Sections 15 and 16.
+
+If the disclaimer of warranty and limitation of liability provided
+above cannot be given local legal effect according to their terms,
+reviewing courts shall apply local law that most closely approximates
+an absolute waiver of all civil liability in connection with the
+Program, unless a warranty or assumption of liability accompanies a
+copy of the Program in return for a fee.
+
+@end enumerate
+
+@heading END OF TERMS AND CONDITIONS
+
+@heading How to Apply These Terms to Your New Programs
+
+If you develop a new program, and you want it to be of the greatest
+possible use to the public, the best way to achieve this is to make it
+free software which everyone can redistribute and change under these
+terms.
+
+To do so, attach the following notices to the program.  It is safest
+to attach them to the start of each source file to most effectively
+state the exclusion of warranty; and each file should have at least
+the ``copyright'' line and a pointer to where the full notice is found.
+
+@smallexample
+@var{one line to give the program's name and a brief idea of what it does.}
+Copyright (C) @var{year} @var{name of author}
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at
+your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see @url{http://www.gnu.org/licenses/}.
+@end smallexample
+
+Also add information on how to contact you by electronic and paper mail.
+
+If the program does terminal interaction, make it output a short
+notice like this when it starts in an interactive mode:
+
+@smallexample
+@var{program} Copyright (C) @var{year} @var{name of author}
+This program comes with ABSOLUTELY NO WARRANTY; for details type @samp{show w}.
+This is free software, and you are welcome to redistribute it
+under certain conditions; type @samp{show c} for details.
+@end smallexample
+
+The hypothetical commands @samp{show w} and @samp{show c} should show
+the appropriate parts of the General Public License.  Of course, your
+program's commands might be different; for a GUI interface, you would
+use an ``about box''.
+
+You should also get your employer (if you work as a programmer) or school,
+if any, to sign a ``copyright disclaimer'' for the program, if necessary.
+For more information on this, and how to apply and follow the GNU GPL, see
+@url{http://www.gnu.org/licenses/}.
+
+The GNU General Public License does not permit incorporating your
+program into proprietary programs.  If your program is a subroutine
+library, you may consider it more useful to permit linking proprietary
+applications with the library.  If this is what you want to do, use
+the GNU Lesser General Public License instead of this License.  But
+first, please read @url{http://www.gnu.org/philosophy/why-not-lgpl.html}.
+
+
+@c page
+@node references
+@appendix Bibliography and references
+
+
+@noindent
+@emph{Revised^6 Report on the Algorithmic Language Scheme.}  Michael
+Sperber and R. Kent Dybvig and Matthew Flatt and Anton Van Straaten
+(Editors).  2007.
+
+@noindent
+@emph{Revised^6 Report on the Algorithmic Language Scheme---Standard
+Libraries.}  Michael Sperber and R. Kent Dybvig and Matthew Flatt and
+Anton Van Straaten (Editors). 2007.
+
+@noindent
+@emph{Scheme Request for Implementation 41: Streams.}  Philip L. Bewig.
+2007.  @url{http://@/srfi.schemers.org/@/srfi-41/@/srfi-41.html}
+
+@noindent
+@bibref{DYBGUA} @emph{Guardians in a generation--based garbage
+collector}.  R. Kent Dybvig and Carl Bruggeman and David Eby.  PLDI '93,
+pages 207--216, June 1993.  Introduces guardians and describes the
+implementation of guardians and weak pairs in Chez Scheme.
+
+@noindent
+@emph{Don't stop the BiBOP: Flexible and efficient storage management
+for dynamically--typed languages.}  R. Kent Dybvig and David Eby and
+Carl Bruggeman.  Technical Report 400, Indiana University, March 1994.
+Describes Chez Scheme's storage management system.
+
+@noindent
+@emph{Generation Friendly Eq Hash Tables.}  Abdulaziz Ghuloum and
+R. Kent Dybvig. In @emph{Proceedings of the 2007 Workshop on Scheme and
+Functional Programming}, pages 207--216.  Universite Laval Technical
+Report DIUL-RT-0701, 2007.
+
+@noindent
+@emph{Extending the Scope of Syntactic Abstraction.}  Oscar Waddell.
+PhD thesis, Indiana University Computer Science Department, August 1999.
+@url{http://www.cs.indiana.edu/@/~owaddell/@/papers/@/thesis.ps.gz}
+
+@noindent
+@emph{Extending the Scope of Syntactic Abstraction.}  Oscar Waddell and
+R. Kent Dybvig.  In @emph{Conference Record of POPL'99: The 26th ACM
+SIGPLAN-SIGACT Symposium on Principles of Programming Languages}, pages
+203--213, January 1999.
+@url{http://www.cs.indiana.edu/@/~dyb/@/papers/@/popl99.ps.gz}
+
+@noindent
+@emph{Chez Scheme Version 7 User's Guide.}  R. Kent Dybvig.  Cadence
+Research Systems, 2005.  User's guide and reference manual for Chez
+Scheme Version 7.  @url{http://@/www.scheme.com/@/csug7/}
+
+@noindent
+@emph{Implicit phasing for R6RS libraries.}  Abdulaziz Ghuloum and
+R. Kent Dybvig.  In @emph{ICFP '07: Proceedings of the 2007 ACM SIGPLAN
+international conference on Functional programming}, pages 303--314.
+New York, NY, USA, 2007.  ACM.
+
+
+
+@c page
+@node concept index
+@appendix An entry for each concept
+
+@printindex cp
+
+@node function index
+@appendix An entry for each function.
+
+@printindex fn
+
+@node variable index
+@appendix An entry for each variable.
+
+@printindex vr
+
+@node type index
+@appendix An entry for each type.
+
+@printindex tp
+
+@bye
+
+@c end of file
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: t
+@c End:
