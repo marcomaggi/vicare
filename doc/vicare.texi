@@ -1,7 +1,7 @@
 \input texinfo.tex
 @c %**start of header
 @setfilename vicare.info
-@settitle Vicare Scheme User's and Contributor's Guide
+@settitle Vicare Scheme User's Guide
 @c %**end of header
 
 @include version.texi
@@ -452,7 +452,7 @@ Revised^6 Report on the algorithmic language Scheme
 
 @set PRJNAME                    Vicare
 
-@set TITLE                      Vicare Scheme User's and Contributor's Guide
+@set TITLE                      Vicare Scheme User's Guide
 
 @c To be used as @value{PACKAGE} whenever we need to include the full
 @c name of this package.
@@ -581,6 +581,7 @@ people.
 * overview::                    Overview of Vicare Scheme.
 * using::                       Using the program.
 * library::                     Installed libraries.
+* posix::                       The @posix{} interface.
 
 Appendices
 
@@ -629,9 +630,9 @@ Using @value{PRJNAME}
 * using interactive::           Interactive sessions.
 * using invoking::              Command line arguments.
 * using script::                Using @command{scheme-script}.
-* using libraries::             @value{PRJNAME} and @rnrs{6} libraries.
+* using libraries::             @rnrs{6} libraries.
 
-Vicare and @rnrs{6} libraries
+@rnrs{6} libraries
 
 * using libraries intro::       Introduction to @value{PRJNAME} libraries.
 * using libraries searching::   How @value{PRJNAME} finds libraries.
@@ -653,14 +654,13 @@ Installed libraries
 * library timing::              Timing.
 * library guardians::           Guardians and garbage collection.
 * library io::                  Input/output library.
-* library posix::               @posix{} functions.
 * library foreign::             Foreign interface library.
 * library misc::                Miscellaneous functions.
 
 Local modules
 
-* library modules examples::  Usage example for modules.
-* library modules api::       Modules programming interface.
+* library modules examples::    Usage example for modules.
+* library modules api::         Modules programming interface.
 
 Usage example for modules
 
@@ -685,16 +685,6 @@ Using network sockets
                                 connections.
 * library io socket server::  Opening server network services.
 
-@posix{} functions
-
-* library posix process::     Spawning processes and the like.
-* library posix waitpid::     Waiting for terminated children.
-* library posix signal::      Delivering signals to processes.
-* library posix file::        Interfacing with the file system.
-* library posix env::         Interfacing with the execution
-                                environment.
-* library posix misc::        Miscellaneous functions.
-
 The @library{vicare foreign} library
 
 * library foreign overview::  Overview of the foreign functions
@@ -717,6 +707,29 @@ Calling out to foreign procedures
 * library foreign call out api::      Interface to foreign functions.
 * library foreign call out types::    Type specifiers.
 * library foreign call out example::  C language call out example.
+
+The @posix{} interface
+
+* posix process::               Spawning processes and the like.
+* posix waitpid::               Waiting for terminated children.
+* posix signal::                Delivering signals to processes.
+* posix file::                  Interfacing with the file system.
+* posix env::                   Interfacing with the execution
+                                environment.
+* posix misc::                  Miscellaneous functions.
+
+Internals
+
+* posix int intro::             Introduction to the @posix{} @api{} internals.
+* posix int files::             File system interface.
+* posix int exec::              Executing processes.
+* posix int time::              Time and date.
+
+File system interface
+
+* posix int files stat::        Status and access permissions.
+* posix int files dir::         Handling directories.
+* posix int files link::        Handling links and symbolic links.
 
 Building infrastructure
 
@@ -1743,7 +1756,6 @@ extensions.  Extensions to Scheme's lexical syntax are also documented.
 * library timing::              Timing.
 * library guardians::           Guardians and garbage collection.
 * library io::                  Input/output library.
-* library posix::               @posix{} functions.
 * library foreign::             Foreign interface library.
 * library misc::                Miscellaneous functions.
 @end menu
@@ -3634,445 +3646,6 @@ fcntl(fd, F_SETFL, O_NONBLOCK);
 @glibcref{Open-time Flags, Open-time Flags}
 
 @c page
-@node library posix
-@section @posix{} functions
-
-
-@menu
-* library posix process::     Spawning processes and the like.
-* library posix waitpid::     Waiting for terminated children.
-* library posix signal::      Delivering signals to processes.
-* library posix file::        Interfacing with the file system.
-* library posix env::         Interfacing with the execution
-                                environment.
-* library posix misc::        Miscellaneous functions.
-@end menu
-
-@c page
-@node library posix process
-@subsection Spawning processes and the like
-
-
-@defun fork @var{parent-proc} @var{child-thunk}
-Fork a new process using the system @cfunc{fork} function.
-
-If the operation is successful: in the parent process @var{parent-proc}
-is evaluated by applying it to an exact integer representing the child
-pid; in the child process @var{child-thunk} is evaluated.
-
-If an error occurs: an exception is raised.
-
-Example:
-
-@example
-(fork
-  (lambda (child-pid)
-    (printf "in parent, child pid = ~s\n" child-pid))
-  (lambda ()
-    (printf "in child\n")
-    (exit)))
-
-(printf "here we are in the parent\n")
-@end example
-
-@glibcref{Creating a Process, Creating a Process}
-@end defun
-
-
-@defun system @var{command-string}
-Executes a command using the @cfunc{system} function, which uses the
-system shell.  If success: return the exit code of the process.  If
-error: raise an exception.
-
-Example:
-
-@example
-(system "ls -l")
-@end example
-
-@glibcref{Running a Command, Running a Command}
-@end defun
-
-@c page
-@node library posix waitpid
-@subsection Waiting for terminated children
-
-
-@defun waitpid [@var{pid} [@var{block?} [@var{want-error?}]]]
-Wait for another process termination using the system @cfunc{waitpid}
-function and return informations about its status.
-
-If successful and there is a child waiting to be noticed: the returned
-value is a record of type @code{wstatus}, whose interface is described
-below.  If successful but no child is waiting to be noticed: the
-returned value is @false{}.
-
-If an error occurs and @var{want-error?} is @true{}, an exception is
-raised.  If an error occurs and @var{want-error?} is @false{}: the
-return value is @false{}.  @var{want-error?} defaults to @true{}.
-
-@var{pid} is the id of the process to wait for; it defaults to
-@code{-1}.  If it is:
-
-@table @asis
-@item @emph{a positive integer}
-return informations about the process having that pid;
-
-@item @code{0}
-return informations about a process in the set of terminated children in
-the same group of the calling process; if more eligible children exists,
-one is selected at random;
-
-@item @code{-1}
-return informations about a process in the set of terminated children;
-if more eligible children exists, one is selected at random;
-
-@item @emph{a negative integer other than @code{-1}}
-wait for a process in the set of terminated children whose process group
-id is equal to the absolute value of @var{pid}.
-@end table
-
-If @var{block?} is @true{} (the default), then the process is suspended
-waiting for an eligible child; if @var{block?} is @false{} the process
-is not suspended and the return value is @false{}.
-
-@glibcref{Process Completion, Process Completion}
-@end defun
-
-
-The following example tests @func{waitpid}:
-
-@example
-(fork
-   (lambda (child-pid)
-     (printf "in parent, child pid = ~s\n" child-pid)
-     (let ([status (waitpid child-pid)])
-       (printf "in parent, child status: ~s\n" status)))
-   (lambda ()
-     (printf "in child\n")
-     (exit 1)))
-@end example
-
-@noindent
-the following example test killing with a signal:
-
-@example
-(fork
-   (lambda (child-pid)
-     (printf "in parent, child pid = ~s\n" child-pid)
-     (kill child-pid 'SIGKILL)
-     (let ([status (waitpid child-pid)])
-       (printf "in parent, child status: ~s\n" status)))
-   (lambda ()
-     (printf "in child\n")
-     (nanosleep 5 0)))
-@end example
-
-@c ------------------------------------------------------------
-
-@subsubheading Status record interface
-
-@ignore
-Notice that in @value{PRJNAME} 1648 the predicate WSTATUS? is not exported from
-the library.  Dunny why.
-@end ignore
-
-
-@defun wstatus-pid @var{status}
-Return the pid of the process extracting it from @var{status}.
-@end defun
-
-
-@defun wstatus-exit-status @var{status}
-Return the exit code of the process extracting it from @var{status}.  If
-the process was stopped by a signal: the return value is @false{}.
-@end defun
-
-
-@defun wstatus-received-signal @var{status}
-Return a symbol representing the signal that caused the termination of
-the child process.  If no signal was received: return @false{}.
-@end defun
-
-
-
-@c page
-@node library posix signal
-@subsection Delivering signals to processes
-
-
-@cindex @code{SIGABRT}
-@cindex @code{SIGALRM}
-@cindex @code{SIGBUS}
-@cindex @code{SIGCHLD}
-@cindex @code{SIGCONT}
-@cindex @code{SIGFPE}
-@cindex @code{SIGHUP}
-@cindex @code{SIGILL}
-@cindex @code{SIGINT}
-@cindex @code{SIGKILL}
-@cindex @code{SIGPIPE}
-@cindex @code{SIGQUIT}
-@cindex @code{SIGSEGV}
-@cindex @code{SIGSTOP}
-@cindex @code{SIGTERM}
-@cindex @code{SIGTSTP}
-@cindex @code{SIGTTIN}
-@cindex @code{SIGTTOU}
-@cindex @code{SIGUSR1}
-@cindex @code{SIGUSR2}
-@cindex @code{SIGPOLL}
-@cindex @code{SIGPROF}
-@cindex @code{SIGSYS}
-@cindex @code{SIGTRAP}
-@cindex @code{SIGURG}
-@cindex @code{SIGVTALRM}
-@cindex @code{SIGXCPU}
-@cindex @code{SIGXFSZ}
-
-
-@defun kill @var{pid} @var{signame}
-Send the signal selected by @var{signame} to the process or group of
-processes selected by @var{pid}.  Make use of the system @cfunc{kill}
-function.  If an error occurs: an exception is raised.
-
-Following is the meaning of @var{pid}:
-
-@table @code
-@item @var{pid} > 0
-deliver the signal to the process having @var{pid} as identifier;
-
-@item @var{pid} == 0
-deliver the signal to all the process in the group of the sender;
-
-@item @var{pid} == -1
-deliver the signal to all the process having the same effective user
-identifier of the sender; see the whole documentation in the system
-library;
-
-@item @var{pid} < -1
-deliver the signal to all the process in the group having identifier
-equal to the absolute value of @var{pid}.
-@end table
-
-@var{signame} must be a symbol specifying a signal.  Supported signal
-names follow:
-
-@example
-SIGABRT         SIGALRM         SIGBUS
-SIGCHLD         SIGCONT         SIGFPE
-SIGHUP          SIGILL          SIGINT
-SIGKILL         SIGPIPE         SIGQUIT
-SIGSEGV         SIGSTOP         SIGTERM
-SIGTSTP         SIGTTIN         SIGTTOU
-SIGUSR1         SIGUSR2         SIGPOLL
-SIGPROF         SIGSYS          SIGTRAP
-SIGURG          SIGVTALRM       SIGXCPU
-SIGXFSZ
-@end example
-
-@glibcref{Signaling Another Process, Signaling Another Process}@*
-@glibcref{Standard Signals, Standard Signals}
-@end defun
-
-@c page
-@node library posix file
-@subsection Interfacing with the file system
-
-
-@subsubheading Current working directory
-
-
-@defun current-directory [@var{pathname}]
-When invoked with an argument, change the current working directory to
-the one selected by the string @var{pathname}.  Make use of the system
-@cfunc{chdir} function.
-
-When invoked without argument, return a string representing the current
-working directory pathname.  Make use of the system @cfunc{getcwd}
-function.
-
-If an error occurs, an exception is raised.
-
-@glibcref{Working Directory, Working Directory}
-@end defun
-
-
-@c ------------------------------------------------------------
-
-@subsubheading Inspecting the file system
-
-
-@defun directory-list @var{pathname}
-Build and return the list of strings representing the entries in the
-directory selected by the string @var{pathname}.  Make use of the
-@cfunc{opendir}, @cfunc{readdir}, @cfunc{closedir} system functions.
-
-If an error occurs, an exception is raised.
-
-@glibcref{Opening a Directory, Opening a Directory}@*
-@glibcref{Reading/Closing Directory, Reading/Closing Directory}
-@end defun
-
-
-@defun file-ctime @var{pathname}
-Return the time of the last modification to the attributes of the file;
-makes use of the @cfunc{stat} system function, and return the
-@code{st_ctime} field of the @code{stat} data structure.
-
-The returned value is an exact integer, representing the number of
-seconds elapsed since the Epoch (00:00:00 on January 1, 1970,
-Coordinated Universal Time).
-
-If an error occurs, an exception is raised.
-
-@glibcref{Reading Attributes, Reading Attributes}
-@end defun
-
-
-@c ------------------------------------------------------------
-
-@subsubheading Inspecting file types
-
-For the following functions: if @var{follow} is @true{}, the default,
-make use of the @cfunc{stat} system function; if @var{follow} is
-@false{}, make use of the @cfunc{lstat} system function.
-
-@glibcref{Reading Attributes, Reading Attributes}
-
-
-@defun file-exists? @var{pathname} [@var{follow}]
-Return @true{} if @var{pathname} exists on the file system; otherwise
-return @false{}.  If an error occurs, an exception is raised.
-@end defun
-
-
-@defun file-regular? @var{pathname} [@var{follow}]
-Return @true{} if @var{pathname} exists on the file system and it is a
-regular file; otherwise return @false{}.  If an error occurs, an
-exception is raised.
-@end defun
-
-
-@defun file-directory? @var{pathname} [@var{follow}]
-Return @true{} if @var{pathname} exists on the file system and it is a
-directory; otherwise return @false{}.  If an error occurs, an exception
-is raised.
-@end defun
-
-
-@defun file-symbolic-link? @var{pathname} [@var{follow}]
-Return @true{} if @var{pathname} exists on the file system and it is a
-symbolic link; otherwise return @false{}.  If an error occurs, an
-exception is raised.
-@end defun
-
-
-@c ------------------------------------------------------------
-
-@subsubheading Creation
-
-
-@defun make-symbolic-link @var{to} @var{pathname}
-Create a symbolic link whose pathname is the string @var{pathname}
-referencing the @var{to} string pathname.  Make use of the
-@cfunc{symlink} system function.  If an error occurs, an exception is
-raised.
-
-@glibcref{Symbolic Links, Symbolic Links}
-@end defun
-
-
-@defun make-directory @var{pathname} [@var{mode}]
-Create a directory with name selected by the string @var{pathname}.
-Make use of the @cfunc{mkdir} system function.  If an error occurs, an
-exception is raised.
-
-@var{mode} must be an exact integere selecting the access permissions
-for the directory; it defaults to @samp{#o755}.
-
-@glibcref{Creating Directories, Creating Directories}
-@end defun
-
-@c ------------------------------------------------------------
-
-@subsubheading Deletion
-
-
-@defun delete-file @var{pathname}
-Remove from the system the file selected by the @var{pathname} string.
-Make use of the @cfunc{unlink} system function.  If an error occurs, an
-exception is raised.
-
-@glibcref{Deleting Files, Deleting Files}
-@end defun
-
-
-@defun delete-directory @var{pathname}
-Remove from the system the directory selected by the @var{pathname}
-string.  Make use of the @cfunc{rmdir} system function.  If an error
-occurs, an exception is raised.
-
-@glibcref{Deleting Files, Deleting Files}
-@end defun
-
-
-@c ------------------------------------------------------------
-
-@subsubheading Permissions
-
-
-@defun change-mode @var{pathname} @var{mode}
-Change the access permissions of the file or directory selected by the
-@var{pathname} string.  Make use of the @cfunc{chmod} system function.
-If an error occurs, an exception is raised.
-
-@var{mode} must be an exact integer selecting the permissions.
-
-@glibcref{Setting Permissions, Setting Permissions}
-@end defun
-
-@c page
-@node library posix env
-@subsection Interfacing with the execution environment
-
-
-@defun getenv @var{varname}
-Return the current value, as a string, of the system environment
-variable selected by the string @var{varname}.  If the variable is not
-set: @false{} is returned.
-
-Example:
-
-@example
-(getenv "PATH")
-@result{} "/usr/local/bin:/usr/bin:/bin"
-@end example
-@end defun
-
-@c page
-@node library posix misc
-@subsection Miscellaneous functions
-
-
-@defun strerror @var{error-code}
-Return a string describing the @code{errno} code @var{error-code}.
-Makes use of the system function @cfunc{strerror}.  If @var{error-code}
-is not a valid @code{errno} value: return a string telling it.
-
-@glibcref{Error Messages, Error Messages}
-@end defun
-
-
-@defun nanosleep @var{seconds} @var{nanoseconds}
-Suspend the process for the selected time; it makes use of the system
-@cfunc{nanosleep} function.  @var{seconds} and @var{nanoseconds} must be
-positive exact integers.  If an error occurs an exception is raised.
-
-@glibcref{Sleeping, Sleeping}
-@end defun
-
-@c page
 @node library foreign
 @section The @library{vicare foreign} library
 
@@ -4895,6 +4468,851 @@ integer.
 Return the void value.  It is the value returned by forms that do not
 return a meaningful value.
 @end defun
+
+@c page
+@node posix
+@chapter The @posix{} interface
+
+
+The @posix{} functions are exported by the @library{ikarus} library.
+
+@menu
+* posix process::               Spawning processes and the like.
+* posix waitpid::               Waiting for terminated children.
+* posix signal::                Delivering signals to processes.
+* posix file::                  Interfacing with the file system.
+* posix env::                   Interfacing with the execution
+                                environment.
+* posix misc::                  Miscellaneous functions.
+
+Internals
+
+* posix int intro::             Internals: introduction to the @posix{}
+                                @api{}.
+* posix int errno::             Internals: handling @code{errno} codes.
+* posix int files::             Internals: file system interface.
+* posix int exec::              Internals: executing processes.
+* posix int time::              Internals: time and date.
+* posix int env::               Internals: environment variables.
+@end menu
+
+@c page
+@node posix process
+@section Spawning processes and the like
+
+
+@defun fork @var{parent-proc} @var{child-thunk}
+Fork a new process using the system @cfunc{fork} function.
+
+If the operation is successful: in the parent process @var{parent-proc}
+is evaluated by applying it to an exact integer representing the child
+pid; in the child process @var{child-thunk} is evaluated.
+
+If an error occurs: an exception is raised.
+
+Example:
+
+@example
+(fork
+  (lambda (child-pid)
+    (printf "in parent, child pid = ~s\n" child-pid))
+  (lambda ()
+    (printf "in child\n")
+    (exit)))
+
+(printf "here we are in the parent\n")
+@end example
+
+@glibcref{Creating a Process, Creating a Process}
+@end defun
+
+
+@defun system @var{command-string}
+Executes a command using the @cfunc{system} function, which uses the
+system shell.  If success: return the exit code of the process.  If
+error: raise an exception.
+
+Example:
+
+@example
+(system "ls -l")
+@end example
+
+@glibcref{Running a Command, Running a Command}
+@end defun
+
+@c page
+@node posix waitpid
+@section Waiting for terminated children
+
+
+@defun waitpid [@var{pid} [@var{block?} [@var{want-error?}]]]
+Wait for another process termination using the system @cfunc{waitpid}
+function and return informations about its status.
+
+If successful and there is a child waiting to be noticed: the returned
+value is a record of type @code{wstatus}, whose interface is described
+below.  If successful but no child is waiting to be noticed: the
+returned value is @false{}.
+
+If an error occurs and @var{want-error?} is @true{}, an exception is
+raised.  If an error occurs and @var{want-error?} is @false{}: the
+return value is @false{}.  @var{want-error?} defaults to @true{}.
+
+@var{pid} is the id of the process to wait for; it defaults to
+@code{-1}.  If it is:
+
+@table @asis
+@item @emph{a positive integer}
+return informations about the process having that pid;
+
+@item @code{0}
+return informations about a process in the set of terminated children in
+the same group of the calling process; if more eligible children exists,
+one is selected at random;
+
+@item @code{-1}
+return informations about a process in the set of terminated children;
+if more eligible children exists, one is selected at random;
+
+@item @emph{a negative integer other than @code{-1}}
+wait for a process in the set of terminated children whose process group
+id is equal to the absolute value of @var{pid}.
+@end table
+
+If @var{block?} is @true{} (the default), then the process is suspended
+waiting for an eligible child; if @var{block?} is @false{} the process
+is not suspended and the return value is @false{}.
+
+@glibcref{Process Completion, Process Completion}
+@end defun
+
+
+The following example tests @func{waitpid}:
+
+@example
+(fork
+   (lambda (child-pid)
+     (printf "in parent, child pid = ~s\n" child-pid)
+     (let ([status (waitpid child-pid)])
+       (printf "in parent, child status: ~s\n" status)))
+   (lambda ()
+     (printf "in child\n")
+     (exit 1)))
+@end example
+
+@noindent
+the following example test killing with a signal:
+
+@example
+(fork
+   (lambda (child-pid)
+     (printf "in parent, child pid = ~s\n" child-pid)
+     (kill child-pid 'SIGKILL)
+     (let ([status (waitpid child-pid)])
+       (printf "in parent, child status: ~s\n" status)))
+   (lambda ()
+     (printf "in child\n")
+     (nanosleep 5 0)))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Status record interface
+
+@ignore
+Notice that in @value{PRJNAME} 1648 the predicate WSTATUS? is not exported from
+the library.  Dunny why.
+@end ignore
+
+
+@defun wstatus-pid @var{status}
+Return the pid of the process extracting it from @var{status}.
+@end defun
+
+
+@defun wstatus-exit-status @var{status}
+Return the exit code of the process extracting it from @var{status}.  If
+the process was stopped by a signal: the return value is @false{}.
+@end defun
+
+
+@defun wstatus-received-signal @var{status}
+Return a symbol representing the signal that caused the termination of
+the child process.  If no signal was received: return @false{}.
+@end defun
+
+
+
+@c page
+@node posix signal
+@section Delivering signals to processes
+
+
+@cindex @code{SIGABRT}
+@cindex @code{SIGALRM}
+@cindex @code{SIGBUS}
+@cindex @code{SIGCHLD}
+@cindex @code{SIGCONT}
+@cindex @code{SIGFPE}
+@cindex @code{SIGHUP}
+@cindex @code{SIGILL}
+@cindex @code{SIGINT}
+@cindex @code{SIGKILL}
+@cindex @code{SIGPIPE}
+@cindex @code{SIGQUIT}
+@cindex @code{SIGSEGV}
+@cindex @code{SIGSTOP}
+@cindex @code{SIGTERM}
+@cindex @code{SIGTSTP}
+@cindex @code{SIGTTIN}
+@cindex @code{SIGTTOU}
+@cindex @code{SIGUSR1}
+@cindex @code{SIGUSR2}
+@cindex @code{SIGPOLL}
+@cindex @code{SIGPROF}
+@cindex @code{SIGSYS}
+@cindex @code{SIGTRAP}
+@cindex @code{SIGURG}
+@cindex @code{SIGVTALRM}
+@cindex @code{SIGXCPU}
+@cindex @code{SIGXFSZ}
+
+
+@defun kill @var{pid} @var{signame}
+Send the signal selected by @var{signame} to the process or group of
+processes selected by @var{pid}.  Make use of the system @cfunc{kill}
+function.  If an error occurs: an exception is raised.
+
+Following is the meaning of @var{pid}:
+
+@table @code
+@item @var{pid} > 0
+deliver the signal to the process having @var{pid} as identifier;
+
+@item @var{pid} == 0
+deliver the signal to all the process in the group of the sender;
+
+@item @var{pid} == -1
+deliver the signal to all the process having the same effective user
+identifier of the sender; see the whole documentation in the system
+library;
+
+@item @var{pid} < -1
+deliver the signal to all the process in the group having identifier
+equal to the absolute value of @var{pid}.
+@end table
+
+@var{signame} must be a symbol specifying a signal.  Supported signal
+names follow:
+
+@example
+SIGABRT         SIGALRM         SIGBUS
+SIGCHLD         SIGCONT         SIGFPE
+SIGHUP          SIGILL          SIGINT
+SIGKILL         SIGPIPE         SIGQUIT
+SIGSEGV         SIGSTOP         SIGTERM
+SIGTSTP         SIGTTIN         SIGTTOU
+SIGUSR1         SIGUSR2         SIGPOLL
+SIGPROF         SIGSYS          SIGTRAP
+SIGURG          SIGVTALRM       SIGXCPU
+SIGXFSZ
+@end example
+
+@glibcref{Signaling Another Process, Signaling Another Process}@*
+@glibcref{Standard Signals, Standard Signals}
+@end defun
+
+@c page
+@node posix file
+@section Interfacing with the file system
+
+
+@subsubheading Current working directory
+
+
+@defun current-directory [@var{pathname}]
+When invoked with an argument, change the current working directory to
+the one selected by the string @var{pathname}.  Make use of the system
+@cfunc{chdir} function.
+
+When invoked without argument, return a string representing the current
+working directory pathname.  Make use of the system @cfunc{getcwd}
+function.
+
+If an error occurs, an exception is raised.
+
+@glibcref{Working Directory, Working Directory}
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Inspecting the file system
+
+
+@defun directory-list @var{pathname}
+Build and return the list of strings representing the entries in the
+directory selected by the string @var{pathname}.  Make use of the
+@cfunc{opendir}, @cfunc{readdir}, @cfunc{closedir} system functions.
+
+If an error occurs, an exception is raised.
+
+@glibcref{Opening a Directory, Opening a Directory}@*
+@glibcref{Reading/Closing Directory, Reading/Closing Directory}
+@end defun
+
+
+@defun file-ctime @var{pathname}
+Return the time of the last modification to the attributes of the file;
+makes use of the @cfunc{stat} system function, and return the
+@code{st_ctime} field of the @code{stat} data structure.
+
+The returned value is an exact integer, representing the number of
+seconds elapsed since the Epoch (00:00:00 on January 1, 1970,
+Coordinated Universal Time).
+
+If an error occurs, an exception is raised.
+
+@glibcref{Reading Attributes, Reading Attributes}
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Inspecting file types
+
+For the following functions: if @var{follow} is @true{}, the default,
+make use of the @cfunc{stat} system function; if @var{follow} is
+@false{}, make use of the @cfunc{lstat} system function.
+
+@glibcref{Reading Attributes, Reading Attributes}
+
+
+@defun file-exists? @var{pathname} [@var{follow}]
+Return @true{} if @var{pathname} exists on the file system; otherwise
+return @false{}.  If an error occurs, an exception is raised.
+@end defun
+
+
+@defun file-regular? @var{pathname} [@var{follow}]
+Return @true{} if @var{pathname} exists on the file system and it is a
+regular file; otherwise return @false{}.  If an error occurs, an
+exception is raised.
+@end defun
+
+
+@defun file-directory? @var{pathname} [@var{follow}]
+Return @true{} if @var{pathname} exists on the file system and it is a
+directory; otherwise return @false{}.  If an error occurs, an exception
+is raised.
+@end defun
+
+
+@defun file-symbolic-link? @var{pathname} [@var{follow}]
+Return @true{} if @var{pathname} exists on the file system and it is a
+symbolic link; otherwise return @false{}.  If an error occurs, an
+exception is raised.
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Creation
+
+
+@defun make-symbolic-link @var{to} @var{pathname}
+Create a symbolic link whose pathname is the string @var{pathname}
+referencing the @var{to} string pathname.  Make use of the
+@cfunc{symlink} system function.  If an error occurs, an exception is
+raised.
+
+@glibcref{Symbolic Links, Symbolic Links}
+@end defun
+
+
+@defun make-directory @var{pathname} [@var{mode}]
+Create a directory with name selected by the string @var{pathname}.
+Make use of the @cfunc{mkdir} system function.  If an error occurs, an
+exception is raised.
+
+@var{mode} must be an exact integere selecting the access permissions
+for the directory; it defaults to @samp{#o755}.
+
+@glibcref{Creating Directories, Creating Directories}
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Deletion
+
+
+@defun delete-file @var{pathname}
+Remove from the system the file selected by the @var{pathname} string.
+Make use of the @cfunc{unlink} system function.  If an error occurs, an
+exception is raised.
+
+@glibcref{Deleting Files, Deleting Files}
+@end defun
+
+
+@defun delete-directory @var{pathname}
+Remove from the system the directory selected by the @var{pathname}
+string.  Make use of the @cfunc{rmdir} system function.  If an error
+occurs, an exception is raised.
+
+@glibcref{Deleting Files, Deleting Files}
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Permissions
+
+
+@defun change-mode @var{pathname} @var{mode}
+Change the access permissions of the file or directory selected by the
+@var{pathname} string.  Make use of the @cfunc{chmod} system function.
+If an error occurs, an exception is raised.
+
+@var{mode} must be an exact integer selecting the permissions.
+
+@glibcref{Setting Permissions, Setting Permissions}
+@end defun
+
+@c page
+@node posix env
+@section Interfacing with the execution environment
+
+
+@defun getenv @var{varname}
+Return the current value, as a string, of the system environment
+variable selected by the string @var{varname}.  If the variable is not
+set: @false{} is returned.
+
+Example:
+
+@example
+(getenv "PATH")
+@result{} "/usr/local/bin:/usr/bin:/bin"
+@end example
+@end defun
+
+@c page
+@node posix misc
+@section Miscellaneous functions
+
+
+@defun strerror @var{error-code}
+Return a string describing the @code{errno} code @var{error-code}.
+Makes use of the system function @cfunc{strerror}.  If @var{error-code}
+is not a valid @code{errno} value: return a string telling it.
+
+@glibcref{Error Messages, Error Messages}
+@end defun
+
+
+@defun nanosleep @var{seconds} @var{nanoseconds}
+Suspend the process for the selected time; it makes use of the system
+@cfunc{nanosleep} function.  @var{seconds} and @var{nanoseconds} must be
+positive exact integers.  If an error occurs an exception is raised.
+
+@glibcref{Sleeping, Sleeping}
+@end defun
+
+@c page
+@node posix int intro
+@section Internals: introduction to the @posix{} @api{}
+
+
+The C language--level implementation is in the file
+@file{src/ikarus-runtime.c}; the Scheme--level implementation is in the
+library @library{ikarus.posix}, file @file{scheme/ikarus.posix.ss}.
+
+@c page
+@node posix int errno
+@section Internals: handling @code{errno} codes
+
+
+@deftypefun ikptr ik_errno_to_code (void)
+Apply @cfunc{ik_errno_num_to_code} to the current @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ik_errno_num_to_code (int @var{en})
+Convert the @code{errno} value @var{en} into an internal representation
+as fixnum, then return the fixnum.  If @var{en} is an unknown
+@code{errno} value, return a fixnum representing @math{-99999}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_errno_code_to_name (ikptr @var{ec}, ikpcb * @var{pcb})
+Convert a fixnum, internal, representation of an @code{errno} code into
+a bytevector holding the string representation of that code; return a
+reference to the bytevector.  If @var{ec} is invalid: return
+@code{false_object}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_strerror (ikptr @var{ec}, ikpcb * @var{pcb})
+Interface to the @cfunc{strerror} C function.  @glibcref{Error Messages,
+strerror}.
+
+Convert a fixnum, internal, representation of an @code{errno} code into
+a bytevector holding the string message which describes it; return a
+reference to the bytevector.  If @var{ec} is invalid: return
+@code{false_object}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_last_errno (ikpcb * pcb)
+Return an exact integer representing the value of @code{errno} right
+after the last call to a foreign function through the @ffi{}.
+@end deftypefun
+
+@c page
+@node posix int files
+@section Internals: file system interface
+
+
+The functions documented in this section are defined in
+@file{src/ikarus-runtime.c}.
+
+@menu
+* posix int files stat::        Status and access permissions.
+* posix int files dir::         Handling directories.
+* posix int files link::        Handling links and symbolic links.
+@end menu
+
+@c page
+@node posix int files stat
+@subsection Status and access permissions
+
+
+@deftypefun ikptr ikrt_stat (ikptr @var{pathname}, ikptr @var{follow})
+Interface to the @cfunc{stat} and @cfunc{lstat} C functions.
+@glibcref{Reading Attributes, stat}.
+
+@var{pathname} must reference a bytevector object holding a file
+pathname; when @var{follow} is @code{false_object} @cfunc{lstat} is
+used, else @cfunc{stat} is used.
+
+If successful return a fixnum object: @samp{1} if @var{pathname} is a
+regular file, @samp{2} if it is a directory, @samp{3} if it is a
+symbolic link, @samp{0} otherwise.  If an error occurs in @cfunc{stat}
+or @cfunc{lstat}: return the result of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_chmod (ikptr @var{pathname}, ikptr @var{mode})
+Interface to the @cfunc{chmod} C function.  @glibcref{Setting
+Permissions, chmod}.  Change the access permissions of a file.
+
+@var{pathname} must reference a bytevector object holding the file
+pathname; @var{mode} must be a fixnum representing the file permissions.
+
+If successful, return @code{true_object}; if an error occurs in
+@cfunc{chmod}, return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_access (ikptr @var{pathname}, ikptr @var{how})
+Interface to the @cfunc{access} C function.  @glibcref{Testing File
+Access, access}.  Test access permissions for a file.
+
+@var{pathname} must reference a bytevector object holding a file
+pathname; @var{how} must be a fixnum: if zero the mode is @code{F_OK},
+else it is an OR combination built as follows:
+
+@itemize
+@item
+If the first bit of @var{how} is set: @code{R_OK} is added.
+
+@item
+If the second bit of @var{how} is set: @code{W_OK} is added.
+
+@item
+If the third bit of @var{how} is set: @code{X_OK} is added.
+@end itemize
+
+If successful return @code{true_object}; if an error occurs in
+@cfunc{access} with @code{errno} set to @code{EACCES}, @code{EROFS} or
+@code{ETXTBSY} return @code{false_object}; if an error occurs in
+@cfunc{access} under any other condition, return the return value of
+@cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_file_size (ikptr @var{pathname}, ikpcb * @var{pcb})
+Interface to the @cfunc{stat} C function.  @glibcref{Reading Attributes,
+stat}.  Retrieve the size of a file.
+
+@var{pathname} must reference a bytevector object holding a file
+pathname.
+
+If successful return an exact integer representing the file size
+(according to the @code{st_size} field of @code{struct stat}); if an
+error occurs in @cfunc{stat}, return the return value of
+@cfunc{ik_errno_to_code}.
+@end deftypefun
+
+@c page
+@node posix int files dir
+@subsection Handling directories
+
+
+@deftypefun ikptr ikrt_directory_list (ikptr @var{pathname}, ikpcb * @var{pcb})
+Interface to the @cfunc{opendir}, @cfunc{readdir} and @cfunc{closedir} C
+functions.  @glibcref{Accessing Directories, Accessing Directories}.
+Inspect the contents of the selected directory.
+
+@var{pathname} must reference a bytevector object holding a file
+pathname.
+
+If successful, return a list of bytevectors representing the names of
+the entries in the directory.  If an error occurs in the C functions,
+return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_mkdir (ikptr @var{pathname}, ikptr @var{mode})
+Interface to the @cfunc{mkdir} C function.  @glibcref{Creating
+Directories, mkdir}.
+
+@var{pathname} must reference a bytevector object holding the new
+directory pathname; @var{mode} must be a fixnum representing the file
+permissions for the new directory.
+
+If successful, return @code{true_object}; if an error occurs in
+@cfunc{mkdir}, return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_rmdir (ikptr @var{pathname})
+Interface to the @cfunc{rmdir} C function.  @glibcref{Deleting Files,
+rmdir}.  Remove a directory.
+
+@var{pathname} must reference a bytevector object holding the directory
+pathname.
+
+If successful, return @code{true_object}; if an error occurs in
+@cfunc{rmdir}, return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_chdir (ikptr @var{pathname})
+Interface to the @cfunc{chdir} C function.  @glibcref{Working Directory,
+chdir}.  Change the current working directory.
+
+@var{pathname} must reference a bytevector object holding the directory
+pathname.
+
+If successful, return @code{true_object}; if an error occurs in
+@cfunc{chdir}, return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_getcwd (ikpcb * @var{pcb})
+Interface to the @cfunc{getcwd} C function.  @glibcref{Working
+Directory, getcwd}.  Retrieve the current working directory.
+
+If successful, return a reference to a bytevector object holding the
+current working directory pathname; if an error occurs in
+@cfunc{getcwd}, return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+@c page
+@node posix int files link
+@subsection Handling links and symbolic links
+
+
+@deftypefun ikptr ikrt_link (ikptr @var{old_pathname}, ikptr @var{pathname})
+Interface to the @cfunc{link} C function.  @glibcref{Hard Links, link}.
+Create a hard link.
+
+@var{old_pathname} must reference a bytevector object holding the old
+file pathname; @var{pathname} must reference a bytevector object holding
+the new hard link pathname.
+
+If successful, return @code{true_object}; if an error occurs in
+@cfunc{link}, return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_delete_file (ikptr @var{pathname})
+Interface to the @cfunc{unlink} C function.  @glibcref{Deleting Files,
+unlink}.  Remove a file selected by pathname.
+
+@var{pathname} must reference a bytevector object holding a file
+pathname.  If an error occurs in @cfunc{unlink}: return the result of
+@cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_symlink (ikptr @var{old_pathname}, ikptr @var{pathname})
+Interface to the @cfunc{symlink} C function.  @glibcref{Symbolic Links,
+symlink}.  Create a symbolic link.
+
+@var{old_pathname} must reference a bytevector object holding the old
+file pathname; @var{pathname} must reference a bytevector object holding
+the new symbolic link pathname.
+
+If successful, return @code{true_object}; if an error occurs in
+@cfunc{symlink}, return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_realpath (ikptr @var{pathname}, ikpcb * @var{pcb})
+Interface to the @cfunc{realpath} C function.  @glibcref{Symbolic Links,
+realpath}.  Acquire the absolute name of the selected file, removing
+dot, double--dot components and repeated separators, and following
+symbolic links.
+
+@var{pathname} must reference a bytevector object holding the file
+pathname.
+
+If successful, return a bytevector holding the canonicalised pathname;
+if an error occurs in @cfunc{realpath}, return the return value of
+@cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_rename_file (ikptr @var{src}, ikptr @var{dst})
+Interface to the @cfunc{rename} C function.  @glibcref{Renaming Files,
+rename}.
+
+@var{src} and @var{dst} must reference bytevector objects holding the
+old and new pathnames.
+
+If successful return @code{true_object}; if an error occurs in
+@cfunc{rename}, return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+@c page
+@node posix int exec
+@section Internals: executing processes
+
+
+@deftypefun ikptr ikrt_exit (ikptr @var{status}, ikpcb * @var{pcb})
+Interface to the @cfunc{exit} C function.  @glibcref{Normal Termination,
+exit}.  Exit the current process.
+
+If @var{status} is a fixnum, it is used as exit status; else the exit
+status is @code{EXIT_FAILURE}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_fork (void)
+Interface to the @cfunc{fork} C function.  @glibcref{Creating a Process,
+fork}.  Create a new process.
+
+If successful return a fixnum representing the the return value of
+@cfunc{fork}; if an error occurs in @cfunc{fork}, return the return
+value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ik_system (ikptr @var{command})
+Interface to the @cfunc{system} C function.  @glibcref{Running a
+Command, system}.  Execute a command through the system shell.
+
+@var{command} must reference a bytevector object holding the command to
+execute.
+
+If successful return the exit status of the executed process; if an
+error occurs in @cfunc{system}, return the return value of
+@cfunc{ik_errno_to_code}.
+@end deftypefun
+
+@c page
+@node posix int time
+@section Internals: time and date
+
+
+@deftypefun ikptr ikrt_current_time (ikptr @var{time})
+Interface to the @cfunc{gettimeofday} C function.
+@glibcref{High-Resolution Calendar, gettimeofday}.  Retrieve the current
+time.
+
+@var{time} must reference a @code{time} internal structure, which is
+filled with three values: megaseconds, seconds and microseconds.
+
+Always return @var{time} itself.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_gmt_offset (ikptr @var{time})
+Compute the offset in seconds between the local time and the
+@acronym{UTC} time.
+
+@var{time} must reference a @code{time} internal structure, already
+filled with megaseconds, seconds and microseconds.
+
+Return a fixnum representing the offset.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_nanosleep (ikptr @var{secs}, ikptr @var{nsecs})
+Interface to the @cfunc{nanosleep} C function.  @glibcref{Sleeping,
+nanosleep}.  Halt the current process.
+
+@var{secs} and @var{nsecs} must be fixnums or exact integers whose value
+is stored in a single limb (see the @code{mpn_} @api{} in @gmp{}).
+@end deftypefun
+
+@c page
+@node posix int env
+@section Internals: environment variables
+
+
+@deftypefun ikptr ikrt_getenv (ikptr @var{variable}, ikpcb * @var{pcb})
+Interface to the @cfunc{getenv} C function.  @glibcref{Environment
+Access, getenv}.  Retrieve the value of environment variables.
+
+@var{variable} must reference a bytevector object representing the name
+of the environment variable.
+
+If the environment variable is set: return a bytevector representing its
+value; else return @code{false_object}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_setenv (ikptr @var{variable}, ikptr @var{value}, ikptr @var{overwrite})
+Interface to the @cfunc{setenv} C function.  @glibcref{Environment
+Access, setenv}.  Set a new value for an environment variable.
+
+@var{variable} must reference a bytevector object representing the name
+of the environment variable; @var{value} must reference a bytevector
+object representing the new value.  If @var{overwrite} is
+@code{false_object} and the environment variable already exists: the
+environment variable is left untouched; else the new value is set,
+either creating a new environment variable or replacing the old value.
+
+If successful return @code{true_object}; if an error occurs in
+@cfunc{setenv} return @code{false_object}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_unsetenv (ikptr @var{variable})
+Interface to the @cfunc{unsetenv} C function.  @glibcref{Environment
+Access, unsetenv}.  Unset an environment variable.
+
+@var{variable} must reference a bytevector object representing the name
+of the environment variable.
+
+Return void.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_environ (ikpcb * @var{pcb})
+Interface to the @code{environ} global C variable.
+@glibcref{Environment Access, unsetenv}.  Retrieve the full environment.
+
+Return a list of bytevectors representing the contents of the
+@code{environ} array; if the environment is empty (no environment
+variables set) return @code{null_object}.
+@end deftypefun
+
 
 @c page
 @node missing
