@@ -10,4 +10,7 @@ dist_doc_DATA		= README COPYING GPL-3
 test tests:
 	cd tests ; $(MAKE) $(@)
 
+test-r6rs:
+	cd tests ; $(MAKE) $(@)
+
 ### end of file

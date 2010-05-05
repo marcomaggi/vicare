@@ -1,0 +1,142 @@
+/* This stylesheet is used for browsing the subversion repository */
+
+html {
+  overflow-y: scroll;
+}
+
+body {
+  color: black;
+  background-color: white;
+  font-family: Optima, Arial, Verdana, Helvetica, sans-serif;
+  margin: 0px;
+  padding: 0px;
+}
+
+.content {
+  margin-left: auto;
+  margin-right: auto;
+  width: 45em;
+}
+
+.navbar {
+  background-color: #080;
+  color: #ffefd5;
+  margin-bottom: 1em;
+  padding: 0.5em 0em;
+  white-space: nowrap;
+}
+.navbar a {
+  color: #ffefd5;
+  text-decoration: none;
+}
+
+.navtitle {
+  font-size: xx-large;
+  font-weight: bold;
+}
+
+.navitem {
+  text-decoration: none;
+  border-left: 3px solid #ffefd5;
+}
+.navlink a    { padding: 0em 1em; }
+.navcurlink a { padding: 0em 1em; background-color: #060; }
+.navlink    a:hover, .navlink    a:active, .navlink    a:focus,
+.navcurlink a:hover, .navcurlink a:active, .navcurlink a:focus {
+  background-color: #040;
+}
+
+.parlisttitle { margin-bottom: 0.5em; }
+.parlistitem  { margin-bottom: 0.5em; margin-left: 2em; }
+
+.nolinkunderlines a { text-decoration: none; }
+
+.footer {
+  text-align: right;
+  margin-top: 8em;
+  padding: 0.5em 1em 0.5em;
+  border: 1px solid;
+  border-width: 1px 0;
+  clear: both;
+  border-color: rgb(30%,30%,50%) navy rgb(75%,80%,85%) navy;
+  background: rgb(88%,90%,92%);
+  font-size: 80%;
+}
+
+.svn {
+  margin: 3em;
+}
+
+.path, .updir, .dir, .file {
+  font-family: Courier New, Courier, monospace;
+}
+
+.rev {
+  margin-right: 3px;
+  padding-left: 3px;
+  text-align: left;
+  font-size: 120%;
+  font-weight: bold;
+}
+
+.path {
+  margin: 3px;
+  padding: 3px;
+  background: #FFCC66;
+  font-size: 120%;
+  font-weight: bold;
+}
+
+.updir {
+  margin: 3px;
+  padding: 3px;
+  margin-left: 3em;
+  background: #FFEEAA;
+}
+
+.updir a {
+  text-decoration: none;
+  color: black;
+  font-weight: bold;
+}
+
+.dir {
+  margin: 3px;
+  padding: 3px;
+  margin-left: 3em;
+  background: rgb(90%,90%,90%);
+}
+
+.dir a {
+  text-decoration: none;
+  color: black;
+  font-weight: bold;
+}
+
+.dir:hover {
+  margin: 3px;
+  padding: 3px;
+  margin-left: 3em;
+  background: rgb(100%,100%,80%);
+/*  border: 1px black solid; */
+}
+
+.file {
+  margin: 3px;
+  padding: 3px;
+  margin-left: 3em;
+  background: rgb(95%,95%,95%);
+}
+
+.file a {
+  text-decoration: none;
+  color: black;
+}
+
+.file:hover {
+  margin: 3px;
+  padding: 3px;
+  margin-left: 3em;
+  background: rgb(100%,100%,90%);
+/*  border: 1px black solid; */
+}

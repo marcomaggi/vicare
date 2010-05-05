@@ -95,6 +95,11 @@ the new tests added in Vicare are executed running:
 
    $ make tests
 
+the  following command  will run  the R6RS  compliance tests  by Matthew
+Flatt.
+
+   $ make test-r6rs
+
   All the test files under "tests"  are programs whose file name has the
 format  "test-<name>.sps"  where  <name>  is  indicates  of  the  tested
 feature; it is possible to select a single test file by using the "name"
@@ -181,6 +186,9 @@ A. Credits
 The  original Ikarus  Scheme  code  is the  work  of Abdulaziz  Ghuloum.
 Vicare Scheme  is a  fork driven by  Marco Maggi.  See  the CONTRIBUTORS
 file for the list of contributors to Vicare Scheme.
+
+  The R6RS  compatibility tests in  "./tests/r6rs" are by  Matthew Flatt
+and are distributed under the GNU GPL version 2, or any later version.
 
 
 B. Bug reports
