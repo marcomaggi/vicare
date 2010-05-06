@@ -445,6 +445,12 @@ Revised^6 Report on the algorithmic language Scheme
 @var{\THING\j}
 @end macro
 
+@c ------------------------------------------------------------
+
+@macro void{}
+@code{#<void>}
+@end macro
+
 @c page
 @c ------------------------------------------------------------
 @c Values.
@@ -582,6 +588,7 @@ people.
 * using::                       Using the program.
 * library::                     Installed libraries.
 * posix::                       The @posix{} interface.
+* objects int::                 Internals: builtin objects.
 
 Appendices
 
@@ -720,16 +727,39 @@ The @posix{} interface
 
 Internals
 
-* posix int intro::             Introduction to the @posix{} @api{} internals.
-* posix int files::             File system interface.
-* posix int exec::              Executing processes.
-* posix int time::              Time and date.
+* posix int intro::             Internals: introduction to the @posix{}
+                                @api{}.
+* posix int errno::             Internals: handling @code{errno} codes.
+* posix int fd::                Internals: file descriptors.
+* posix int files::             Internals: file system interface.
+* posix int exec::              Internals: executing processes.
+* posix int time::              Internals: time and date.
+* posix int env::               Internals: environment variables.
 
-File system interface
+Internals: file descriptors
+
+* posix int fd open::           Opening and closing file
+                                descriptors.
+* posix int fd seek::           Handling file descriptor cursor.
+* posix int fd rw::             Reading and writing.
+* posix int fd event::          Handling file descriptor events.
+* posix int fd net::            Handling sockets.
+
+Internals: file system interface
 
 * posix int files stat::        Status and access permissions.
 * posix int files dir::         Handling directories.
 * posix int files link::        Handling links and symbolic links.
+
+Internals: builtin objects
+
+* objects int intro::           Introduction to buitin objects.
+* objects int refs::            Builtin object references.
+* objects int const::           Constant values.
+* objects int alloc::           Allocating memory for builtin
+                                objects.
+* objects int fixnum::          Fixnum objects.
+* objects int bytevector::      Bytevector objects.
 
 Building infrastructure
 
@@ -5649,6 +5679,396 @@ Return a list of bytevectors representing the contents of the
 variables set) return @code{null_object}.
 @end deftypefun
 
+@c page
+@node objects int
+@chapter Internals: builtin objects
+
+
+@menu
+* objects int intro::           Introduction to buitin objects.
+* objects int refs::            Builtin object references.
+* objects int const::           Constant values.
+* objects int alloc::           Allocating memory for builtin
+                                objects.
+* objects int fixnum::          Fixnum objects.
+* objects int bytevector::      Bytevector objects.
+@end menu
+
+@c page
+@node objects int intro
+@section Introduction to buitin objects
+
+
+Builtin objects are implemented in the C language portion of the source
+code; the overall definitions are in @file{src/ikarus-data.h}.
+
+@c page
+@node objects int refs
+@section Builtin object references
+
+
+@deftp {Object Reference} ikptr
+In general, it is a reference to a builtin object, implemented as an
+@code{unsigned long int}; it can be:
+
+@itemize
+@item
+A tagged pointer referencing a memory block holding a builtin object;
+the pointer is aligned in such a way that the @math{3} least significant
+bits are set to zero, the tag is stored in those @math{3} bits.
+
+@item
+An embedded fixnum, in which case the @math{2} least significant bits
+are set to zero; the fixnum can be extracted with the @func{fix} macro.
+
+@item
+An embedded constant value, in which case all the @math{3} least
+significant bits are set to one.
+@end itemize
+
+The definition assumes that:
+
+@itemize
+@item
+On 32 bits platforms, @code{unsigned long int} is a 32 bits value.
+
+@item
+On 64 bits platforms, @code{unsigned long int} is a 64 bits value.
+
+@item
+The type @code{unsigned long int} is big enough to hold a pointer for
+the underlying platform.
+@end itemize
+
+If an @code{ikptr} value is neither a fixnum nor a constant value, the
+@math{3} least significant bits of an @code{ikptr} represent the ``tag''
+of the referenced object's type.
+
+Notice that the type definition of @code{ikptr} is @strong{not} a
+pointer; this means that when storing a pointer into an @code{ikptr} and
+then adding offsets to it, the offset is in bytes:
+
+@example
+uint8_t *p = ...;
+ikptr    q = (ikptr)p;
+
+void *   r = (void *)(p + 3);  /* pointer to the 4th byte */
+@end example
+@end deftp
+
+
+@defmac tagof (@var{ref})
+Extract the @math{3} least significant bits of an @code{ikptr} value.
+@end defmac
+
+
+@defmac ref (@var{ptr}, @var{offset})
+Expand to the word at @var{offset} past @var{ptr}; it can be used either
+as operand or as left--side of an assignment.  The ``word'' is the
+unsigned integer type used in the type definition of @code{ikptr};
+@var{ptr} can be a pointer of any type: it is cast to a ``pointer to
+words''.  Example:
+
+@example
+char *   p = ...;
+ikptr    q;
+
+ref(p, 1) = 123L;       /* store the value in the first
+                           word of the array */
+
+q = ref(p, 3);          /* retrieve the third word in
+                           the array */
+@end example
+@end defmac
+
+@c page
+@node objects int const
+@section Constant values
+
+
+@defmac false_object
+An @code{ikptr} value representing @false{}.
+@end defmac
+
+
+@defmac true_object
+An @code{ikptr} value representing @true{}.
+@end defmac
+
+
+@defmac null_object
+An @code{ikptr} value representing null (the empty list).
+@end defmac
+
+
+@defmac void_object
+An @code{ikptr} value representing @void{}, the return value of
+functions returning no value.
+@end defmac
+
+
+@ignore
+This is some sort of reset value related to the garbace collection.
+
+@defmac bwp_object
+An @code{ikptr} value representing @false{}.
+@end defmac
+
+@end ignore
+
+@c page
+@node objects int alloc
+@section Allocating memory for builtin objects
+
+
+In short, memory allocation is performed as follows:
+
+@example
+ikpcb     pcb = ...;
+long int  number_of_bytes = ...;
+ikptr     p = ik_safe_alloc(pcb, align(number_of_bytes));
+@end example
+
+@noindent
+where @code{pcb} is the pointer to a data structure describing the
+memory heap.  Memory blocks, subject to garbage collection, are
+allocated on the heap, a contiguous region of memory:
+
+@example
+    allocated  allocated      allocated
+    block      block          block
+...|----------|--------------|--------|------...
+    ^          ^              ^        ^
+    |          |              |        |
+  pointer    pointer        pointer   pointer to
+                                      next block
+@end example
+
+@noindent
+every pointer must satisfy alignment constraints with the following
+purposes:
+
+@enumerate
+@item
+To make pointer indirection efficient on the underlying platform.
+
+@item
+To have pointer values with the @math{3} least significant bits set to
+zero.
+@end enumerate
+
+@noindent
+for this reason we must always filter the requested size (in bytes)
+through the @func{align} macro.  The @code{pcb} always references a
+``pointer to the next free block'' with alignment constraints satisfied;
+if we filter the requested number of bytes through @func{align}, we
+obtain a number of bytes which, added to the pointer, gives a correctly
+aligned pointer:
+
+@example
+uint8_t * allocated_block = (uint8_t *)pcb->allocation_pointer;
+long int  requested_size  = ...;
+long int  aligned_size    = align(requested_size);
+uint8_t * next_free_block = allocated_block + aligned_size;
+pcb->allocation_pointer   = (ikptr)next_free_block;
+
+/* use "allocated_block" */
+
+
+            requested size
+       |.......................|
+            aligned size
+       |..........................|
+...----|--------------------------|-----------....
+        ^                          ^
+        |                          |
+      pointer to an              pointer to the
+      allocated block            next block
+@end example
+
+
+@defmac align (@var{number_of_bytes})
+Convert @var{number_of_bytes}, which must be an integer of type
+@code{long int}, to the number of bytes requested to satisfy pointer
+alignment constraints.  We can simulate the computation with:
+
+@example
+(import (ikarus))
+
+(define sizeof-ikptr
+  (make-parameter #f))
+
+(define (align n)
+  (let* ((wordsize      (sizeof-ikptr))
+         (wordshift     (if (= wordsize 4) 2 3))
+         (align_shift   (+ 1 wordshift))
+         (align_size    (* 2 wordsize))
+         (<<            bitwise-arithmetic-shift-left)
+         (>>            bitwise-arithmetic-shift-right))
+    (<< (>> (- (+ n align_size) 1)
+            align_shift)
+        align_shift)))
+
+(define (print-align n)
+  (let ((m (align n))
+        (base-pointer (expt 2 (- (* 8 (sizeof-ikptr)) 1))))
+    (display n)
+    (display " -> ")
+    (display m)
+    (display "\t")
+    (display (number->string base-pointer 2))
+    (display " -> ")
+    (display (number->string (+ base-pointer m) 2))
+    (newline)))
+
+(parameterize ((sizeof-ikptr 4)) ; 32 bits platform
+  (print-align 12)
+  (print-align 17)
+  (print-align 1234))
+@end example
+@end defmac
+
+
+@deftypefun ikptr ik_safe_alloc (ikpcb * @var{pcb}, int @var{aligned_size})
+Allocate a memory block on the heap and return a reference to it as an
+untagged pointer.  @var{pcb} must reference the heap, @var{aligned_size}
+must be the requested number of bytes filtered through @func{align}.
+
+If not enough memory is available on the heap, a garbage collection is
+triggered; then allocation is tried again: if it still fails the process
+is terminated with exit status @code{-1}.
+@end deftypefun
+
+
+@c page
+@node objects int fixnum
+@section Fixnum objects
+
+
+Fixnums are ``small'' exact integers.  In Vicare's jargon, ``word size''
+is the number of bytes in an @code{ikptr}; if the word size is @math{4},
+@math{30} bits are used for fixnum representation, else the number of
+bits used is the number of bits in a word minus @math{3}:
+
+@example
+#define wordsize ((int)(sizeof(ikptr)))
+#define wordshift ((wordsize == 4)?2:3)
+@end example
+
+Let's say @code{ikptr} is a @math{32} bits value, which means the word
+size is @math{4} bytes; then the representation of a fixnum is:
+
+@example
+   30 bits fixnum representation
+|.................................|00
+
+|--------|--------|--------|------+--|
+  byte3    byte2    byte1    byte0
+@end example
+
+@noindent
+the two least significant bits are set to zero: this ``tags'' the
+@code{ikptr} which embed fixnums.
+
+
+@defmac fix (@var{num})
+Convert a small exact integer in the correct range for a fixnum, into a
+@code{ikptr} value.
+@end defmac
+
+
+@defmac unfix (@var{ref})
+Convert an @code{ikptr} value holding a fixnum into a fixnum of type
+@code{long int}.
+@end defmac
+
+
+@defmac is_fixnum (@var{ref})
+Expand to true if @var{ref} is an @code{ikptr} embedding a fixnum.  It
+just tests if the least significant bits in the tag are set to zero.
+@end defmac
+
+
+Examples:
+
+@example
+long int  n = 123L;
+ikptr     p = fix(n);
+long int  m = unfix(p);
+@end example
+
+@c page
+@node objects int bytevector
+@section Bytevector objects
+
+
+Bytevector objects are allocated on the heap; there is no function to
+allocate a bytevector, we have to call @cfunc{ik_safe_alloc} explicitly;
+to perform the allocation we compute the whole size of the bytevector
+data area, add to it room for meta data and finally compute the aligned
+block size:
+
+@example
+ikpcb     pcb = ...;
+long int  requested_size  = ...;
+long int  bytevector_size = disp_bytevector_data + requested_size;
+lont int  aligned_size    = align(bytevector_size);
+ikptr     bv = ik_safe_alloc(pcb, aligned_size) + bytevector_tag;
+@end example
+
+@noindent
+@cfunc{ik_safe_alloc} returns an @code{ikptr} value representing the
+aligned pointer, having the @math{3} least significant bits set to zero;
+we add to it the bytevector tag (an integer value fitting in @math{3}
+bits) which allows to recognise bytevectors among all the other builtin
+objects.
+
+We have to explicitly store the bytevector length in the memory block as
+a fixnum, so usually a full allocation looks like this:
+
+@example
+ikpcb     pcb;
+long int  size;
+ikptr     bv;
+uint8_t * data_area;
+
+pcb  = ...;
+size = ...;
+bv   = ik_safe_alloc(pcb, align(disp_bytevector_data+size))
+       + bytevector_tag;
+
+ref(bv, off_bytevector_length) = fix(size);
+data_area = bv + off_bytevector_data;
+@end example
+
+
+@defmac bytevector_tag
+An integer used to tag pointers to bytevector memory blocks.
+@end defmac
+
+
+@defmac disp_bytevector_data
+The number of bytes to allocate as metadata area in a bytevector memory
+block.
+@end defmac
+
+
+@defmac off_bytevector_length
+An integer to add to a tagged bytevector reference (@code{ikptr}) to
+retrieve the pointer to the first byte of the bytevector length.  The
+bytevector length is a fixnum.
+@end defmac
+
+
+@defmac off_bytevector_data
+An integer to add to a tagged bytevector reference (@code{ikptr}) to
+retrieve the pointer to the first byte of the bytevector length.  The
+bytevector length is a fixnum.
+
+Notice that on both @math{32} bits and @math{64} bits platforms: the
+first byte of the data area is at the same offset from the first byte of
+the bytevector memory block.
+@end defmac
 
 @c page
 @node missing
