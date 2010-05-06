@@ -5692,6 +5692,7 @@ variables set) return @code{null_object}.
                                 objects.
 * objects int fixnum::          Fixnum objects.
 * objects int bytevector::      Bytevector objects.
+* objects int vector::          Vector objects.
 @end menu
 
 @c page
@@ -6010,9 +6011,9 @@ block size:
 
 @example
 ikpcb     pcb = ...;
-long int  requested_size  = ...;
-long int  bytevector_size = disp_bytevector_data + requested_size;
-lont int  aligned_size    = align(bytevector_size);
+long int  requested_size = ...;
+long int  block_size     = disp_bytevector_data + requested_size;
+lont int  aligned_size   = align(block_size);
 ikptr     bv = ik_safe_alloc(pcb, aligned_size) + bytevector_tag;
 @end example
 
@@ -6047,9 +6048,17 @@ An integer used to tag pointers to bytevector memory blocks.
 @end defmac
 
 
+@defmac disp_bytevector_length
+Displacement of length.  The number of bytes to add to an untagged
+pointer to bytevector to get the pointer to the first byte in the word
+holding the bytevector length as fixnum.
+@end defmac
+
+
 @defmac disp_bytevector_data
-The number of bytes to allocate as metadata area in a bytevector memory
-block.
+Displacement of data area.  The number of bytes to add to an untagged
+pointer to bytevector to get the pointer to the first byte in the data
+area.
 @end defmac
 
 
@@ -6068,6 +6077,86 @@ bytevector length is a fixnum.
 Notice that on both @math{32} bits and @math{64} bits platforms: the
 first byte of the data area is at the same offset from the first byte of
 the bytevector memory block.
+@end defmac
+
+@c page
+@node objects int vector
+@section Vector objects
+
+
+Vector objects are allocated on the heap; the function
+@cfunc{ikrt_make_vector1} can allocate a vector, but we can also call
+@cfunc{ik_safe_alloc} explicitly; to perform the allocation we compute
+the whole size of the vector data area, add to it room for meta data and
+finally compute the aligned block size:
+
+@example
+ikpcb     pcb = ...;
+long int  number_of_elements = ...;
+long int  requested_size = sizeof(ikptr) * number_of_elements;
+long int  block_size     = disp_vector_data + requested_size;
+lont int  aligned_size   = align(block_size);
+ikptr     vec = ik_safe_alloc(pcb, aligned_size) + vector_tag;
+@end example
+
+@noindent
+@cfunc{ik_safe_alloc} returns an @code{ikptr} value representing the
+aligned pointer, having the @math{3} least significant bits set to zero;
+we add to it the vector tag (an integer value fitting in @math{3} bits)
+which allows to recognise vectors among all the other builtin objects.
+
+We have to explicitly store the vector length in the memory block as a
+fixnum, so usually a full allocation looks like this:
+
+@example
+ikpcb     pcb;
+long int  size;
+ikptr     bv;
+uint8_t * data_area;
+
+pcb  = ...;
+size = ...;
+bv   = ik_safe_alloc(pcb, align(disp_vector_data+size))
+       + vector_tag;
+
+ref(bv, off_vector_length) = fix(size);
+data_area = bv + off_vector_data;
+@end example
+
+
+@defmac vector_tag
+An integer used to tag pointers to vector memory blocks.
+@end defmac
+
+
+@defmac disp_vector_length
+Displacement of length.  The number of bytes to add to an untagged
+pointer to vector to get the pointer to the first byte in the word
+holding the vector length as fixnum.
+@end defmac
+
+
+@defmac disp_vector_data
+Displacement of data area.  The number of bytes to add to an untagged
+pointer to vector to get the pointer to the first byte in the data area.
+@end defmac
+
+
+@defmac off_vector_length
+An integer to add to a tagged vector reference (@code{ikptr}) to
+retrieve the pointer to the first byte of the vector length.  The
+vector length is a fixnum.
+@end defmac
+
+
+@defmac off_vector_data
+An integer to add to a tagged vector reference (@code{ikptr}) to
+retrieve the pointer to the first byte of the vector length.  The
+vector length is a fixnum.
+
+Notice that on both @math{32} bits and @math{64} bits platforms: the
+first byte of the data area is at the same offset from the first byte of
+the vector memory block.
 @end defmac
 
 @c page
