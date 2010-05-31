@@ -230,14 +230,6 @@
 (check (log (R #x-42 -0.))		(=> quasi=?) (inexact (R (B #x8611A6D2511D3 -49)
 								 (B #x-3243F6A8885A3 -48))))
 
-;;(log (+ (* xr xr) (* xi xi)))
-(write (log (+ (* (B #x1 1024) (B #x1 1024))
-	       0.0)))(newline)
-(write (log    (* (B #x1 1024) (B #x1 1024))
-	       ))(newline)
-(write (* (B #x1 1024) (B #x1 1024)))(newline)
-(write (+ 0.0 (* (B #x1 1024) (B #x1 1024))))(newline)
-
 ;;These fail because:
 ;;
 ;;  (inexact (B #x1 1024)) => +inf.0
