@@ -2919,12 +2919,10 @@
           ;;; FIXME: incorrect as per bug 180170
           (- (log (numerator x)) (log (denominator x)))]
          [(or (compnum? x) (cflonum? x))
-          (let ([e 2.718281828459045])
-            (define (ln x) (/ (log x) (log e)))
-            (let ([xr (real-part x)] [xi (imag-part x)])
-              (make-rectangular
-                (/ (ln (+ (* xr xr) (* xi xi))) 2)
-                (atan xi xr))))]
+	  (let ([xr (real-part x)] [xi (imag-part x)])
+	    (make-rectangular
+	     (/ (log (+ (* xr xr) (* xi xi))) 2)
+	     (atan xi xr)))]
          [else (die 'log "not a number" x)])]
       [(x y)
        (let ([ly (log y)])
