@@ -1,7 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 
-EXTRA_DIST=checks.sls			\
-		test-equal-hash.sps
+EXTRA_DIST=	checks.sls		\
+		test-equal-hash.sps	\
+		test-log.sps
 
 testdir			= $(srcdir)
 VICARE_SELECTED_TESTS	= $(wildcard $(testdir)/test-*$(name)*.sps)
@@ -18,7 +19,7 @@ VICARE_R6RS_RUN	= $(VICARE_R6RS_ENV) $(VICARE) $(VICARE_FLAGS)
 
 test tests:
 	@echo
-	@$(foreach f,$(VICARE_SELECTED_TESTS),$(VICARE_RUN) $(f))
+	@$(foreach f,$(VICARE_SELECTED_TESTS),$(VICARE_RUN) $(f);)
 	@echo
 
 test-r6rs:

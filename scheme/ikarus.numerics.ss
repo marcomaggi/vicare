@@ -1,15 +1,15 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -21,9 +21,9 @@
           flfloor flceiling flnumerator fldenominator flexp fllog
           flinteger? flonum-bytes flnan? flfinite? flinfinite?
           flexpt $flround flround)
-  (import 
+  (import
     (ikarus system $bytevectors)
-    (ikarus system $fx) 
+    (ikarus system $fx)
     (only (ikarus system $flonums) $fl>= $flonum-sbe)
     (ikarus system $bignums)
     (except (ikarus system $flonums) $flonum-rational?
@@ -33,11 +33,11 @@
             flfloor flceiling flnumerator fldenominator flexp fllog
             flexpt flinteger? flonum-parts flonum-bytes flnan? flfinite?
             flinfinite? flround))
-  
+
   (define (flonum-bytes f)
-    (unless (flonum? f) 
+    (unless (flonum? f)
       (die 'flonum-bytes "not a flonum" f))
-    (values 
+    (values
       ($flonum-u8-ref f 0)
       ($flonum-u8-ref f 1)
       ($flonum-u8-ref f 2)
@@ -47,11 +47,11 @@
       ($flonum-u8-ref f 6)
       ($flonum-u8-ref f 7)))
   (define (flonum-parts x)
-    (unless (flonum? x) 
+    (unless (flonum? x)
       (die 'flonum-parts "not a flonum" x))
     (let-values ([(b0 b1 b2 b3 b4 b5 b6 b7) (flonum-bytes x)])
-      (values 
-        (zero? (fxlogand b0 128)) 
+      (values
+        (zero? (fxlogand b0 128))
         (+ (fxsll (fxlogand b0 127) 4)
            (fxsra b1 4))
         (+ (+ b7 (fxsll b6 8) (fxsll b5 16))
@@ -60,7 +60,7 @@
                  (fxsll b2 16)
                  (fxsll (fxlogand b1 #b1111) 24))
               (expt 2 24))))))
-  (define ($zero-m? f) 
+  (define ($zero-m? f)
     (and ($fxzero? ($flonum-u8-ref f 7))
          ($fxzero? ($flonum-u8-ref f 6))
          ($fxzero? ($flonum-u8-ref f 5))
@@ -70,12 +70,12 @@
          ($fxzero? ($fxlogand ($flonum-u8-ref f 1) #b1111))))
 
   (define ($flonum-rational? x)
-    (let ([be ($fxlogand ($flonum-sbe x) 
+    (let ([be ($fxlogand ($flonum-sbe x)
                 ($fxsub1 ($fxsll 1 11)))])
       ($fx< be 2047)))
 
   (define ($flonum-integer? x)
-    (let ([be ($fxlogand ($flonum-sbe x) 
+    (let ([be ($fxlogand ($flonum-sbe x)
                 ($fxsub1 ($fxsll 1 11)))])
       (cond
         [($fx= be 2047)  ;;; nans and infs
@@ -84,11 +84,11 @@
          #t]
         [($fx= be 0) ;;; denormalized double, only +/-0.0 is integer
          (and ($fx= ($flonum-u8-ref x 7) 0)
-              ($fx= ($flonum-u8-ref x 6) 0) 
-              ($fx= ($flonum-u8-ref x 5) 0) 
-              ($fx= ($flonum-u8-ref x 4) 0) 
-              ($fx= ($flonum-u8-ref x 3) 0) 
-              ($fx= ($flonum-u8-ref x 2) 0) 
+              ($fx= ($flonum-u8-ref x 6) 0)
+              ($fx= ($flonum-u8-ref x 5) 0)
+              ($fx= ($flonum-u8-ref x 4) 0)
+              ($fx= ($flonum-u8-ref x 3) 0)
+              ($fx= ($flonum-u8-ref x 2) 0)
               ($fx= ($flonum-u8-ref x 1) 0))]
         [($fx< be ($fx+ 1075 -52)) ;;; too small to be an integer
          #f]
@@ -98,7 +98,7 @@
   (define ($$flround x)
     (foreign-call "ikrt_fl_round" x ($make-flonum)))
 
-  (define ($flround x) 
+  (define ($flround x)
     ;;; optimize for integer flonums case
     (define (ratnum-round n nbe)
       (let ([d (sll 1 nbe)])
@@ -121,8 +121,8 @@
                [(= be 0) ;;; denormalized
                 (if pos? +0.0 -0.0)]
                [else ; normalized flonum
-                (let ([r 
-                       (inexact 
+                (let ([r
+                       (inexact
                          (ratnum-round (+ m (expt 2 52)) (- 1075 be)))])
                   (if pos? r ($fl* r -1.0)))]))]))))
 
@@ -134,7 +134,7 @@
   (module ($flonum->exact)
     (define ($flonum-signed-mantissa x)
       (let ([b0 ($flonum-u8-ref x 0)])
-        (let ([m0 ($fx+ ($flonum-u8-ref x 7) 
+        (let ([m0 ($fx+ ($flonum-u8-ref x 7)
                         ($fx+ ($fxsll ($flonum-u8-ref x 6) 8)
                               ($fxsll ($flonum-u8-ref x 5) 16)))]
               [m1 ($fx+ ($flonum-u8-ref x 4)
@@ -147,7 +147,7 @@
                         ($fxlogor ($fxlogand b1 #xF) #x10)))])
           (if ($fx= 0 ($fxlogand #x80 b0))
               (+ (bitwise-arithmetic-shift-left ($fxlogor m1 ($fxsll m2 24)) 24) m0)
-              (+ (bitwise-arithmetic-shift-left 
+              (+ (bitwise-arithmetic-shift-left
                    ($fx- 0 ($fxlogor m1 ($fxsll m2 24))) 24)
                  ($fx- 0 m0))))))
     (define ($flonum->exact x)
@@ -157,7 +157,7 @@
           (cond
             [($fx= be 2047) #f] ;;; nans/infs
             [($fx>= be 1075)    ;;; magnitude large enough to be an integer
-             (bitwise-arithmetic-shift-left 
+             (bitwise-arithmetic-shift-left
                ($flonum-signed-mantissa x)
                (- be 1075))]
             [else
@@ -165,54 +165,54 @@
              (let-values ([(pos? be m) (flonum-parts x)])
                (cond
                  [(= be 0) ;;; denormalized
-                  (if (= m 0) 
+                  (if (= m 0)
                       0
-                      (* (if pos? 1 -1) 
+                      (* (if pos? 1 -1)
                          (/ m (expt 2 1074))))]
                  [else ; normalized flonum
                   (/ (+ m (expt 2 52))
-                     (bitwise-arithmetic-shift-left 
-                       (if pos? 1 -1) 
+                     (bitwise-arithmetic-shift-left
+                       (if pos? 1 -1)
                        (- 1075 be)))]))])))))
 
-  (define (flnumerator x) 
-    (unless (flonum? x) 
+  (define (flnumerator x)
+    (unless (flonum? x)
       (die 'flnumerator "not a flonum" x))
     (cond
       [($flonum-integer? x) x]
-      [($flonum-rational? x) 
+      [($flonum-rational? x)
        (exact->inexact (numerator ($flonum->exact x)))]
       [else x]))
 
-  (define (fldenominator x) 
-    (unless (flonum? x) 
+  (define (fldenominator x)
+    (unless (flonum? x)
       (die 'fldenominator "not a flonum" x))
     (cond
       [($flonum-integer? x) 1.0]
-      [($flonum-rational? x) 
+      [($flonum-rational? x)
        (exact->inexact (denominator ($flonum->exact x)))]
       [(flnan? x) x]
       [else 1.0]))
 
   (define (fleven? x)
     ;;; FIXME: optimize
-    (unless (flonum? x) 
+    (unless (flonum? x)
       (die 'fleven? "not a flonum" x))
     (let ([v ($flonum->exact x)])
       (cond
         [(fixnum? v) ($fx= ($fxlogand v 1) 0)]
-        [(bignum? v) 
+        [(bignum? v)
          (foreign-call "ikrt_even_bn" v)]
         [else (die 'fleven? "not an integer flonum" x)])))
 
   (define (flodd? x)
-    (unless (flonum? x) 
+    (unless (flonum? x)
       (die 'flodd? "not a flonum" x))
     ;;; FIXME: optimize
     (let ([v ($flonum->exact x)])
       (cond
         [(fixnum? v) ($fx= ($fxlogand v 1) 1)]
-        [(bignum? v) 
+        [(bignum? v)
          (not (foreign-call "ikrt_even_bn" v))]
         [else (die 'flodd? "not an integer flonum" x)])))
 
@@ -221,36 +221,36 @@
         ($flonum-integer? x)
         (die 'flinteger? "not a flonum" x)))
 
-  (define (flinfinite? x) 
-    (if (flonum? x) 
+  (define (flinfinite? x)
+    (if (flonum? x)
         (let ([be (fxlogand ($flonum-sbe x) (sub1 (fxsll 1 11)))])
           (and (fx= be 2047)  ;;; nans and infs
                ($zero-m? x)))
         (die 'flinfinite? "not a flonum" x)))
 
-  (define (flnan? x) 
-    (if (flonum? x) 
+  (define (flnan? x)
+    (if (flonum? x)
         (let ([be (fxlogand ($flonum-sbe x) (sub1 (fxsll 1 11)))])
           (and (fx= be 2047)  ;;; nans and infs
                (not ($zero-m? x))))
         (die 'flnan? "not a flonum" x)))
 
-  (define (flfinite? x) 
-    (if (flonum? x) 
+  (define (flfinite? x)
+    (if (flonum? x)
         (let ([be (fxlogand ($flonum-sbe x) (sub1 (fxsll 1 11)))])
           (not (fx= be 2047)))
         (die 'flfinite? "not a flonum" x)))
-  
+
   (define ($flzero? x)
     (let ([be (fxlogand ($flonum-sbe x) (sub1 (fxsll 1 11)))])
-       (and 
+       (and
          (fx= be 0) ;;; denormalized double, only +/-0.0 is integer
          (and (fx= ($flonum-u8-ref x 7) 0)
-              (fx= ($flonum-u8-ref x 6) 0) 
-              (fx= ($flonum-u8-ref x 5) 0) 
-              (fx= ($flonum-u8-ref x 4) 0) 
-              (fx= ($flonum-u8-ref x 3) 0) 
-              (fx= ($flonum-u8-ref x 2) 0) 
+              (fx= ($flonum-u8-ref x 6) 0)
+              (fx= ($flonum-u8-ref x 5) 0)
+              (fx= ($flonum-u8-ref x 4) 0)
+              (fx= ($flonum-u8-ref x 3) 0)
+              (fx= ($flonum-u8-ref x 2) 0)
               (fx= ($flonum-u8-ref x 1) 0)))))
 
   (define ($flnegative? x)
@@ -264,7 +264,7 @@
        (or ($flonum->exact x)
            (die who "number has no real value" x))]
       [(cflonum? x)
-       (make-rectangular 
+       (make-rectangular
          (or ($flonum->exact ($cflonum-real x))
              (die who "number has no real value" x))
          (or ($flonum->exact ($cflonum-imag x))
@@ -277,51 +277,51 @@
 
 
   (define (flpositive? x)
-    (if (flonum? x) 
+    (if (flonum? x)
         ($fl> x 0.0)
         (die 'flpositive? "not a flonum" x)))
-  
+
   (define (flabs x)
-    (if (flonum? x) 
+    (if (flonum? x)
         (if ($fx> ($flonum-u8-ref x 0) 127)
             ($fl* x -1.0)
             x)
         (die 'flabs "not a flonum" x)))
 
   (define (fixnum->flonum x)
-    (if (fixnum? x) 
+    (if (fixnum? x)
         ($fixnum->flonum x)
         (die 'fixnum->flonum "not a fixnum")))
 
   (define (flsin x)
-    (if (flonum? x) 
+    (if (flonum? x)
         (foreign-call "ikrt_fl_sin" x)
         (die 'flsin "not a flonum" x)))
 
   (define (flcos x)
-    (if (flonum? x) 
+    (if (flonum? x)
         (foreign-call "ikrt_fl_cos" x)
         (die 'flcos "not a flonum" x)))
 
   (define (fltan x)
-    (if (flonum? x) 
+    (if (flonum? x)
         (foreign-call "ikrt_fl_tan" x)
         (die 'fltan "not a flonum" x)))
 
   (define (flasin x)
-    (if (flonum? x) 
+    (if (flonum? x)
         (foreign-call "ikrt_fl_asin" x)
         (die 'flasin "not a flonum" x)))
 
   (define (flacos x)
-    (if (flonum? x) 
+    (if (flonum? x)
         (foreign-call "ikrt_fl_acos" x)
         (die 'flacos "not a flonum" x)))
 
-  (define flatan 
+  (define flatan
     (case-lambda
       [(x)
-       (if (flonum? x) 
+       (if (flonum? x)
            (foreign-call "ikrt_fl_atan" x)
            (die 'flatan "not a flonum" x))]
       [(x y)
@@ -337,28 +337,28 @@
         (let ([q (quotient n d)])
           (if (>= n 0) q (- q 1)))))
     (cond
-      [(flonum? x) 
+      [(flonum? x)
        ;;; optimize for integer flonums case
        (let ([e ($flonum->exact x)])
          (cond
            [(ratnum? e)
-            (exact->inexact (ratnum-floor e))] 
+            (exact->inexact (ratnum-floor e))]
            [else x]))]
       [else (die 'flfloor "not a flonum" x)]))
 
   (define (flceiling x)
     (cond
-      [(flonum? x) 
+      [(flonum? x)
        ;;; optimize for integer flonums case
        (let ([e ($flonum->exact x)])
          (cond
            [(ratnum? e)
-            (exact->inexact (ceiling e))] 
+            (exact->inexact (ceiling e))]
            [else x]))]
       [else (die 'flceiling "not a flonum" x)]))
 
   (define (flexp x)
-    (if (flonum? x) 
+    (if (flonum? x)
         (foreign-call "ikrt_fl_exp" x ($make-flonum))
         (die 'flexp "not a flonum" x)))
 
@@ -379,7 +379,7 @@
   (define (flexpt x y)
     (if (flonum? x)
         (if (flonum? y)
-            (let ([y^ ($flonum->exact y)]) 
+            (let ([y^ ($flonum->exact y)])
               ;;; FIXME: performance bottleneck?
               (cond
                 [(fixnum? y^) (inexact (expt x y^))]
@@ -395,9 +395,9 @@
   (export + - * / zero? = < <= > >= add1 sub1 quotient remainder
           modulo even? odd? bitwise-and bitwise-not bitwise-ior
           bitwise-xor bitwise-if
-          bitwise-arithmetic-shift-right bitwise-arithmetic-shift-left 
-          bitwise-arithmetic-shift 
-          bitwise-length bitwise-copy-bit-field 
+          bitwise-arithmetic-shift-right bitwise-arithmetic-shift-left
+          bitwise-arithmetic-shift
+          bitwise-length bitwise-copy-bit-field
           bitwise-copy-bit bitwise-bit-field
           positive? negative? expt gcd lcm numerator denominator
           exact-integer-sqrt
@@ -409,7 +409,7 @@
           sinh cosh tanh asinh acosh atanh
           flmax random
           error@add1 error@sub1)
-  (import 
+  (import
     (ikarus system $fx)
     (ikarus system $flonums)
     (ikarus system $ratnums)
@@ -420,10 +420,10 @@
     (only (ikarus flonums) $flonum->exact $flzero? $flnegative?
           $flround)
     (except (ikarus) + - * / zero? = < <= > >= add1 sub1 quotient
-            remainder modulo even? odd? quotient+remainder number->string 
+            remainder modulo even? odd? quotient+remainder number->string
             bitwise-arithmetic-shift-right bitwise-arithmetic-shift-left
-            bitwise-arithmetic-shift 
-            bitwise-length bitwise-copy-bit-field 
+            bitwise-arithmetic-shift
+            bitwise-length bitwise-copy-bit-field
             bitwise-copy-bit bitwise-bit-field
             positive? negative? bitwise-and bitwise-not bitwise-ior
             bitwise-xor bitwise-if
@@ -443,9 +443,9 @@
   ;;; (define (ratnum->flonum x)
   ;;;   (define (->flonum n d)
   ;;;     (let-values ([(q r) (quotient+remainder n d)])
-  ;;;       (if (= r 0) 
+  ;;;       (if (= r 0)
   ;;;           (inexact q)
-  ;;;           (if (= q 0) 
+  ;;;           (if (= q 0)
   ;;;               (/ (->flonum d n))
   ;;;               (+ q (->flonum r d))))))
   ;;;   (let ([n (numerator x)] [d (denominator x)])
@@ -458,11 +458,11 @@
   ;;;                    (expt 2.0 b))))
   ;;;           (* (->flonum (bitwise-arithmetic-shift-right n b) d)
   ;;;              (expt 2.0 b))))))
-  
-  ;;; (define (ratnum->flonum x) 
+
+  ;;; (define (ratnum->flonum x)
   ;;;   (let f ([n ($ratnum-n x)] [d ($ratnum-d x)])
   ;;;     (let-values ([(q r) (quotient+remainder n d)])
-  ;;;       (if (= q 0) 
+  ;;;       (if (= q 0)
   ;;;           (/ 1.0 (f d n))
   ;;;           (if (= r 0)
   ;;;               (inexact q)
@@ -471,20 +471,20 @@
   ;;; (define (ratnum->flonum num)
   ;;;   (define (rat n m)
   ;;;     (let-values ([(q r) (quotient+remainder n m)])
-  ;;;        (if (= r 0) 
+  ;;;        (if (= r 0)
   ;;;            (inexact q)
   ;;;            (fl+ (inexact q) (fl/ 1.0 (rat  m r))))))
   ;;;   (define (pos n d)
   ;;;     (cond
   ;;;       [(even? n)
   ;;;        (* (pos (sra n 1) d) 2.0)]
-  ;;;       [(even? d) 
+  ;;;       [(even? d)
   ;;;        (/ (pos n (sra d 1)) 2.0)]
   ;;;       [(> n d) (rat n d)]
-  ;;;       [else 
+  ;;;       [else
   ;;;        (/ (rat d n))]))
   ;;;   (let ([n ($ratnum-n num)] [d ($ratnum-d num)])
-  ;;;     (if (> n 0) 
+  ;;;     (if (> n 0)
   ;;;         (pos n d)
   ;;;         (- (pos (- n) d)))))
 
@@ -534,9 +534,9 @@
             ($make-ratnum
               (+ (* x ($ratnum-d y)) ($ratnum-n y))
               ($ratnum-d y))]
-           [(compnum? y) 
-            ($make-compnum 
-              (binary+ x ($compnum-real y)) 
+           [(compnum? y)
+            ($make-compnum
+              (binary+ x ($compnum-real y))
               ($compnum-imag y))]
            [(cflonum? y)
             ($make-cflonum
@@ -554,11 +554,11 @@
            [(ratnum? y)
             ($make-ratnum
               (+ (* x ($ratnum-d y)) ($ratnum-n y))
-              ($ratnum-d y))] 
-           [(compnum? y) 
-            ($make-compnum 
-              (binary+ x ($compnum-real y)) 
-              ($compnum-imag y))] 
+              ($ratnum-d y))]
+           [(compnum? y)
+            ($make-compnum
+              (binary+ x ($compnum-real y))
+              ($compnum-imag y))]
            [(cflonum? y)
             ($make-cflonum
               (binary+ x ($cflonum-real y))
@@ -596,51 +596,51 @@
                   [d0 ($ratnum-d x)] [d1 ($ratnum-d y)])
               ;;; FIXME: inefficient
               (/ (+ (* n0 d1) (* n1 d0)) (* d0 d1)))]
-           [(compnum? y) 
-            ($make-compnum 
-              (binary+ x ($compnum-real y)) 
-              ($compnum-imag y))] 
+           [(compnum? y)
+            ($make-compnum
+              (binary+ x ($compnum-real y))
+              ($compnum-imag y))]
            [(cflonum? y)
             ($make-cflonum
               (binary+ x ($cflonum-real y))
-              ($cflonum-imag y))] 
+              ($cflonum-imag y))]
            [else (err '+ y)])]
-        [(compnum? x) 
+        [(compnum? x)
          (cond
            [(or (fixnum? y) (bignum? y) (ratnum? y))
-            ($make-compnum 
+            ($make-compnum
               (binary+ ($compnum-real x) y)
               ($compnum-imag x))]
-           [(compnum? y) 
-            ($make-rectangular 
-              (binary+ ($compnum-real x) ($compnum-real y)) 
+           [(compnum? y)
+            ($make-rectangular
+              (binary+ ($compnum-real x) ($compnum-real y))
               (binary+ ($compnum-imag x) ($compnum-imag y)))]
            [(flonum? y)
             ($make-cflonum
               (binary+ y ($compnum-real x))
               (inexact ($compnum-imag x)))]
            [(cflonum? y)
-            ($make-cflonum 
+            ($make-cflonum
               (binary+ ($compnum-real x) ($cflonum-real y))
               (binary+ ($compnum-imag x) ($cflonum-imag y)))]
            [else (err '+ y)])]
         [(cflonum? x)
          (cond
            [(cflonum? y)
-            ($make-cflonum 
+            ($make-cflonum
               (binary+ ($cflonum-real x) ($cflonum-real y))
               (binary+ ($cflonum-imag x) ($cflonum-imag y)))]
-           [(flonum? y) 
+           [(flonum? y)
             ($make-cflonum
-              ($fl+ ($cflonum-real x) y) 
+              ($fl+ ($cflonum-real x) y)
               ($cflonum-imag x))]
            [(or (fixnum? y) (bignum? y) (ratnum? y))
-            ($make-compnum 
+            ($make-compnum
               (binary+ ($compnum-real x) y)
               ($compnum-imag x))]
-           [(compnum? y) 
-            ($make-cflonum 
-              (binary+ ($cflonum-real x) ($compnum-real y)) 
+           [(compnum? y)
+            ($make-cflonum
+              (binary+ ($cflonum-real x) ($compnum-real y))
               (binary+ ($cflonum-imag x) ($compnum-imag y)))]
            [else (err '+ y)])]
         [else (err '+ x)])))
@@ -653,13 +653,13 @@
            [(fixnum? y) ($fxlogand x y)]
            [(bignum? y)
             (foreign-call "ikrt_fxbnlogand" x y)]
-           [else 
+           [else
             (die 'bitwise-and "not an exact integer" y)])]
         [(bignum? x)
          (cond
            [(fixnum? y)
             (foreign-call "ikrt_fxbnlogand" y x)]
-           [(bignum? y) 
+           [(bignum? y)
             (foreign-call "ikrt_bnbnlogand" x y)]
            [else
             (die 'bitwise-and "not an exact integer" y)])]
@@ -673,13 +673,13 @@
            [(fixnum? y) ($fxlogor x y)]
            [(bignum? y)
             (foreign-call "ikrt_fxbnlogor" x y)]
-           [else 
+           [else
             (die 'bitwise-ior "not an exact integer" y)])]
         [(bignum? x)
          (cond
            [(fixnum? y)
             (foreign-call "ikrt_fxbnlogor" y x)]
-           [(bignum? y) 
+           [(bignum? y)
             (foreign-call "ikrt_bnbnlogor" x y)]
            [else
             (die 'bitwise-ior "not an exact integer" y)])]
@@ -713,7 +713,7 @@
          (cond
            [(fixnum? y) ($fxlogxor x y)]
            [(bignum? y) (fxbn x y)]
-           [else 
+           [else
             (die 'bitwise-xor "not an exact integer" y)])]
         [(bignum? x)
          (cond
@@ -727,7 +727,7 @@
   (define binary-
     (lambda (x y)
       (cond
-        [(fixnum? x) 
+        [(fixnum? x)
          (cond
            [(fixnum? y)
             (foreign-call "ikrt_fxfxminus" x y)]
@@ -737,15 +737,15 @@
             (if ($fx= x 0)
                 ($fl* y -1.0)
                 ($fl- ($fixnum->flonum x) y))]
-           [(ratnum? y) 
+           [(ratnum? y)
             (let ([n ($ratnum-n y)] [d ($ratnum-d y)])
               (binary/ (binary- (binary* d x) n) d))]
            [(compnum? y)
-            ($make-compnum 
+            ($make-compnum
               (binary- x ($compnum-real y))
               (binary- 0 ($compnum-imag y)))]
-           [(cflonum? y) 
-            ($make-cflonum 
+           [(cflonum? y)
+            ($make-cflonum
               (binary- x ($cflonum-real y))
               ($fl- 0.0 ($cflonum-imag y)))]
            [else (err '- y)])]
@@ -757,24 +757,24 @@
             (foreign-call "ikrt_bnbnminus" x y)]
            [(flonum? y)
             ($fl- (bignum->flonum x) y)]
-           [(ratnum? y) 
+           [(ratnum? y)
             (let ([n ($ratnum-n y)] [d ($ratnum-d y)])
               (binary/ (binary- (binary* d x) n) d))]
            [(compnum? y)
-            ($make-compnum 
+            ($make-compnum
               (binary- x ($compnum-real y))
-              (binary- 0 ($compnum-imag y)))] 
-           [(cflonum? y) 
-            ($make-cflonum 
+              (binary- 0 ($compnum-imag y)))]
+           [(cflonum? y)
+            ($make-cflonum
               (binary- x ($cflonum-real y))
-              ($fl- 0.0 ($cflonum-imag y)))] 
+              ($fl- 0.0 ($cflonum-imag y)))]
            [else (err '- y)])]
         [(flonum? x)
          (cond
            [(flonum? y)
             ($fl- x y)]
            [(cflonum? y)
-            ($make-cflonum 
+            ($make-cflonum
               ($fl- x ($cflonum-real y))
               ($fl- 0.0 ($cflonum-imag y)))]
            [(fixnum? y)
@@ -785,7 +785,7 @@
             (let ([n ($ratnum-n y)] [d ($ratnum-d y)])
               (binary/ (binary- (binary* d x) n) d))]
            [(compnum? y)
-            ($make-cflonum 
+            ($make-cflonum
               (binary- x ($compnum-real y))
               (binary- 0.0 ($compnum-imag y)))]
            [else (err '- y)])]
@@ -799,22 +799,22 @@
                 (binary/ (binary- (binary* nx dy) (binary* ny dx))
                          (binary* dx dy)))]
              [(compnum? y)
-              ($make-compnum 
+              ($make-compnum
                 (binary- x ($compnum-real y))
-                (binary- 0 ($compnum-imag y)))] 
-             [(cflonum? y) 
-              ($make-cflonum 
+                (binary- 0 ($compnum-imag y)))]
+             [(cflonum? y)
+              ($make-cflonum
                 (binary- x ($cflonum-real y))
                 ($fl- 0.0 ($cflonum-imag y)))]
              [else (err '- y)]))]
         [(compnum? x)
          (cond
            [(or (fixnum? y) (bignum? y) (ratnum? y))
-            ($make-compnum 
+            ($make-compnum
                (binary- ($compnum-real x) y)
                ($compnum-imag x))]
            [(compnum? y)
-            ($make-rectangular 
+            ($make-rectangular
               (binary- ($compnum-real x) ($compnum-real y))
               (binary- ($compnum-imag x) ($compnum-imag y)))]
            [(flonum? y)
@@ -822,7 +822,7 @@
               (binary- ($compnum-real x) y)
               (binary- ($compnum-imag x) 0.0))]
            [(cflonum? y)
-            ($make-cflonum 
+            ($make-cflonum
               (binary- ($compnum-real x) ($cflonum-real y))
               (binary- ($compnum-imag x) ($cflonum-imag y)))]
            [else
@@ -830,29 +830,29 @@
         [(cflonum? x)
          (cond
            [(flonum? y)
-            ($make-cflonum 
+            ($make-cflonum
                ($fl- ($cflonum-real x) y)
                ($cflonum-imag x))]
            [(cflonum? y)
-            ($make-cflonum 
+            ($make-cflonum
               (binary- ($cflonum-real x) ($cflonum-real y))
               (binary- ($cflonum-imag x) ($cflonum-imag y)))]
            [(or (fixnum? y) (bignum? y) (ratnum? y))
-            ($make-cflonum 
+            ($make-cflonum
                (binary- ($cflonum-real x) y)
                ($cflonum-imag x))]
            [(compnum? y)
-            ($make-cflonum 
+            ($make-cflonum
               (binary- ($cflonum-real x) ($compnum-real y))
               (binary- ($cflonum-imag x) ($compnum-imag y)))]
            [else
-            (err '- y)])] 
+            (err '- y)])]
         [else (err '- x)])))
 
   (define binary*
     (lambda (x y)
       (cond
-        [(fixnum? x) 
+        [(fixnum? x)
          (cond
            [(fixnum? y)
             (foreign-call "ikrt_fxfxmult" x y)]
@@ -860,13 +860,13 @@
             (foreign-call "ikrt_fxbnmult" x y)]
            [(flonum? y)
             ($fl* ($fixnum->flonum x) y)]
-           [(ratnum? y) 
+           [(ratnum? y)
             (binary/ (binary* x ($ratnum-n y)) ($ratnum-d y))]
-           [(compnum? y) 
+           [(compnum? y)
             ($make-rectangular
               (binary* x ($compnum-real y))
               (binary* x ($compnum-imag y)))]
-           [(cflonum? y) 
+           [(cflonum? y)
             ($make-cflonum
               (binary* x ($cflonum-real y))
               (binary* x ($cflonum-imag y)))]
@@ -879,22 +879,22 @@
             (foreign-call "ikrt_bnbnmult" x y)]
            [(flonum? y)
             ($fl* (bignum->flonum x) y)]
-           [(ratnum? y) 
+           [(ratnum? y)
             (binary/ (binary* x ($ratnum-n y)) ($ratnum-d y))]
-           [(compnum? y) 
+           [(compnum? y)
             ($make-rectangular
               (binary* x ($compnum-real y))
-              (binary* x ($compnum-imag y)))] 
-           [(cflonum? y) 
+              (binary* x ($compnum-imag y)))]
+           [(cflonum? y)
             ($make-cflonum
               (binary* x ($cflonum-real y))
-              (binary* x ($cflonum-imag y)))] 
+              (binary* x ($cflonum-imag y)))]
            [else (err '* y)])]
         [(flonum? x)
          (cond
            [(flonum? y)
             ($fl* x y)]
-           [(cflonum? y) 
+           [(cflonum? y)
             ($make-cflonum
               ($fl* x ($cflonum-real y))
               ($fl* x ($cflonum-imag y)))]
@@ -902,16 +902,16 @@
             ($fl* x ($fixnum->flonum y))]
            [(bignum? y)
             ($fl* x (bignum->flonum y))]
-           [(ratnum? y) 
+           [(ratnum? y)
             (binary/ (binary* x ($ratnum-n y)) ($ratnum-d y))]
-           [(compnum? y) 
+           [(compnum? y)
             ($make-cflonum
               (binary* x ($compnum-real y))
               (binary* x ($compnum-imag y)))]
            [else (err '* y)])]
-        [(ratnum? x) 
+        [(ratnum? x)
          (cond
-           [(ratnum? y) 
+           [(ratnum? y)
             (binary/ (binary* ($ratnum-n x) ($ratnum-n y))
                      (binary* ($ratnum-d x) ($ratnum-d y)))]
            [(compnum? y)
@@ -923,9 +923,9 @@
               (binary* x ($cflonum-real y))
               (binary* x ($cflonum-imag y)))]
            [else (binary* y x)])]
-        [(compnum? x) 
+        [(compnum? x)
          (cond
-           [(or (fixnum? y) (bignum? y) (ratnum? y)) 
+           [(or (fixnum? y) (bignum? y) (ratnum? y))
             ($make-rectangular
               (binary* ($compnum-real x) y)
               (binary* ($compnum-imag x) y))]
@@ -950,7 +950,7 @@
                 (- (* r0 r1) (* i0 i1))
                 (+ (* r0 i1) (* i0 r1))))]
            [else (err '* y)])]
-        [(cflonum? x) 
+        [(cflonum? x)
          (cond
            [(flonum? y)
             ($make-cflonum
@@ -964,7 +964,7 @@
               ($make-cflonum
                 ($fl- ($fl* r0 r1) ($fl* i0 i1))
                 ($fl+ ($fl* r0 i1) ($fl* i0 r1))))]
-           [(or (fixnum? y) (bignum? y) (ratnum? y)) 
+           [(or (fixnum? y) (bignum? y) (ratnum? y))
             ($make-cflonum
               (binary* ($compnum-real x) y)
               (binary* ($compnum-imag x) y))]
@@ -978,7 +978,7 @@
                 (+ (* r0 i1) (* i0 r1))))]
            [else (err '* y)])]
         [else (err '* x)])))
-   
+
   (define +
     (case-lambda
       [(x y) (binary+ x y)]
@@ -1008,7 +1008,7 @@
       [() -1]
       [(a b c d . e*)
        (let f ([ac (binary-bitwise-and a
-                     (binary-bitwise-and b 
+                     (binary-bitwise-and b
                        (binary-bitwise-and c d)))]
                [e* e*])
          (cond
@@ -1027,7 +1027,7 @@
       [() 0]
       [(a b c d . e*)
        (let f ([ac (binary-bitwise-ior a
-                     (binary-bitwise-ior b 
+                     (binary-bitwise-ior b
                        (binary-bitwise-ior c d)))]
                [e* e*])
          (cond
@@ -1046,7 +1046,7 @@
       [() 0]
       [(a b c d . e*)
        (let f ([ac (binary-bitwise-xor a
-                     (binary-bitwise-xor b 
+                     (binary-bitwise-xor b
                        (binary-bitwise-xor c d)))]
                [e* e*])
          (cond
@@ -1065,7 +1065,7 @@
     (unless (or (fixnum? x) (bignum? x)) (err x))
     (unless (or (fixnum? y) (bignum? y)) (err y))
     (unless (or (fixnum? z) (bignum? z)) (err z))
-    (bitwise-ior 
+    (bitwise-ior
       (bitwise-and x y)
       (bitwise-and (bitwise-not x) z)))
 
@@ -1111,7 +1111,7 @@
            [(null? e*) ac]
            [else (f (binary* ac (car e*)) (cdr e*))]))]))
 
-  (define (binary-gcd x y) 
+  (define (binary-gcd x y)
     (define (gcd x y)
       (cond
         [($fx= y 0) x]
@@ -1125,29 +1125,29 @@
 
   (define gcd
     (case-lambda
-      [(x y) 
+      [(x y)
        (cond
          [(or (fixnum? x) (bignum? x))
           (cond
-            [(or (fixnum? y) (bignum? y)) 
+            [(or (fixnum? y) (bignum? y))
              (binary-gcd x y)]
             [(number? y)
              (die 'gcd "not an exact integer" y)]
-            [else 
+            [else
              (die 'gcd "not a number" y)])]
          [(number? x)
           (die 'gcd "not an exact integer" x)]
-         [else 
+         [else
           (die 'gcd "not a number" x)])]
       [(x)
        (cond
          [(or (fixnum? x) (bignum? x)) x]
          [(number? x)
           (die 'gcd "not an exact integer" x)]
-         [else 
+         [else
           (die 'gcd "not a number" x)])]
       [() 0]
-      [(x y z . ls) 
+      [(x y z . ls)
        (let f ([g (gcd (gcd x y) z)] [ls ls])
          (cond
            [(null? ls) g]
@@ -1156,11 +1156,11 @@
 
   (define lcm
     (case-lambda
-      [(x y) 
+      [(x y)
        (cond
          [(or (fixnum? x) (bignum? x))
           (cond
-            [(or (fixnum? y) (bignum? y)) 
+            [(or (fixnum? y) (bignum? y))
              (let ([x (if (< x 0) (- x) x)]
                    [y (if (< y 0) (- y) y)])
                (let ([g (binary-gcd x y)])
@@ -1171,7 +1171,7 @@
                  [(or (fixnum? v) (bignum? v))
                   (inexact (lcm x v))]
                  [else (die 'lcm "not an integer" y)]))]
-            [else 
+            [else
              (die 'lcm "not an integer" y)])]
          [(flonum? x)
           (let ([v ($flonum->exact x)])
@@ -1179,7 +1179,7 @@
               [(or (fixnum? v) (bignum? v))
                (inexact (lcm v y))]
               [else (die 'lcm "not an integer" x)]))]
-         [else 
+         [else
           (die 'lcm "not an integer" x)])]
       [(x)
        (cond
@@ -1189,10 +1189,10 @@
             (cond
               [(or (fixnum? v) (bignum? v)) x]
               [else (die 'lcm "not an integer" x)]))]
-         [else 
+         [else
           (die 'lcm "not an integer" x)])]
       [() 1]
-      [(x y z . ls) 
+      [(x y z . ls)
        ;;; FIXME: incorrect for multiple roundings
        (let f ([g (lcm (lcm x y) z)] [ls ls])
          (cond
@@ -1202,26 +1202,26 @@
 
   (define binary/
     (lambda (x y)
-      (define (x/compy x y) 
+      (define (x/compy x y)
         (let ([yr (real-part y)]
               [yi (imag-part y)])
           (let ([denom (+ (* yr yr) (* yi yi))])
-            (make-rectangular 
+            (make-rectangular
               (binary/ (* x yr) denom)
               (binary/ (* (- x) yi) denom)))))
-      (define (compx/y x y) 
+      (define (compx/y x y)
         (let ([xr (real-part x)]
               [xi (imag-part x)])
-          (make-rectangular 
+          (make-rectangular
             (binary/ xr y)
             (binary/ xi y))))
-      (define (compx/compy x y) 
+      (define (compx/compy x y)
         (let ([xr (real-part x)]
               [xi (imag-part x)]
               [yr (real-part y)]
               [yi (imag-part y)])
           (let ([denom (+ (* yr yr) (* yi yi))])
-            (make-rectangular 
+            (make-rectangular
               (binary/ (+ (* xr yr) (* xi yi)) denom)
               (binary/ (- (* xi yr) (* xr yi)) denom)))))
       (cond
@@ -1246,7 +1246,7 @@
                      (cond
                        [($fx= g y) (fxquotient x g)]
                        [($fx= g 1) ($make-ratnum x y)]
-                       [else 
+                       [else
                         ($make-ratnum (fxquotient x g) (fxquotient y g))])))]
               [else
                (if ($fx= y -1)
@@ -1256,7 +1256,7 @@
                        [($fx= ($fx- 0 g) y) (binary- 0 (fxquotient x g))]
                        [($fx= g 1) ($make-ratnum (binary- 0 x) (binary- 0 y))]
                        [else
-                        ($make-ratnum 
+                        ($make-ratnum
                           (binary- 0 (fxquotient x g))
                           (binary- 0 (fxquotient y g)))])))])]
            [(bignum? y)
@@ -1266,22 +1266,22 @@
                   (cond
                     [(= g y) (quotient x g)]
                     [($bignum-positive? y)
-                     (if ($fx= g 1) 
+                     (if ($fx= g 1)
                          ($make-ratnum x y)
                          ($make-ratnum (fxquotient x g) (quotient y g)))]
                     [else
                      (if ($fx= g 1)
                          ($make-ratnum (binary- 0 x) (binary- 0 y))
-                         ($make-ratnum 
+                         ($make-ratnum
                             (binary- 0 (fxquotient x g))
                             (binary- 0 (quotient y g))))])))]
            [(ratnum? y)
             (/ (* x ($ratnum-d y)) ($ratnum-n y))]
            [(or (compnum? y) (cflonum? y)) (x/compy x y)]
            [else (err '/ y)])]
-        [(bignum? x) 
+        [(bignum? x)
          (cond
-           [(fixnum? y) 
+           [(fixnum? y)
             (cond
               [($fx= y 0) (die '/ "division by 0")]
               [($fx> y 0)
@@ -1300,16 +1300,16 @@
                      (cond
                        [(= (- g) y) (- (quotient x g))]
                        [else
-                        ($make-ratnum 
+                        ($make-ratnum
                           (- (quotient x g))
                           (- (quotient y g)))])))])]
-           [(bignum? y) 
+           [(bignum? y)
             (let ([g (binary-gcd x y)])
               (cond
                 [($fx= g 1)
                  (if ($bignum-positive? y)
                      ($make-ratnum x y)
-                     ($make-ratnum 
+                     ($make-ratnum
                        (binary- 0 x)
                        (binary- 0 y)))]
                 [($bignum-positive? y)
@@ -1324,13 +1324,13 @@
                          (binary- 0 (quotient x g))
                          (quotient y g))))]))]
            [(flonum? y) ($fl/ (bignum->flonum x) y)]
-           [(ratnum? y) 
+           [(ratnum? y)
             (binary/ (binary* x ($ratnum-d y)) ($ratnum-n y))]
            [(or (compnum? y) (cflonum? y)) (x/compy x y)]
            [else (err '/ y)])]
         [(ratnum? x)
          (cond
-           [(ratnum? y) 
+           [(ratnum? y)
             (binary/
               (binary* ($ratnum-n x) ($ratnum-d y))
               (binary* ($ratnum-n y) ($ratnum-d x)))]
@@ -1347,7 +1347,7 @@
   (define /
     (case-lambda
       [(x y) (binary/ x y)]
-      [(x) 
+      [(x)
        (cond
          [(fixnum? x)
           (cond
@@ -1383,9 +1383,9 @@
   (define flmax
     (case-lambda
       [(x y)
-       (if (flonum? x) 
-           (if (flonum? y) 
-               (if ($fl< x y) 
+       (if (flonum? x)
+           (if (flonum? y)
+               (if ($fl< x y)
                    y
                    x)
                (die 'flmax "not a flonum" y))
@@ -1396,23 +1396,23 @@
            [(null? ls) (flmax a b)]
            [else
             (f (flmax a b) (car ls) (cdr ls))]))]
-      [(x) 
-       (if (flonum? x) 
-           x 
+      [(x)
+       (if (flonum? x)
+           x
            (die 'flmax "not a number" x))]))
 
   (define max
     (case-lambda
       [(x y)
        (cond
-         [(fixnum? x) 
+         [(fixnum? x)
           (cond
-            [(fixnum? y) 
+            [(fixnum? y)
              (if ($fx> x y) x y)]
             [(bignum? y)
              (if (positive-bignum? y) y x)]
-            [(flonum? y) 
-             (let ([x ($fixnum->flonum x)]) 
+            [(flonum? y)
+             (let ([x ($fixnum->flonum x)])
                (if ($fl>= y x) y x))]
             [(ratnum? y) ;;; FIXME: optimize
              (if (>= x y) x y)]
@@ -1423,32 +1423,32 @@
              (if (positive-bignum? x) x y)]
             [(bignum? y)
              (if (bnbn> x y) x y)]
-            [(flonum? y) 
-             (let ([x (bignum->flonum x)]) 
+            [(flonum? y)
+             (let ([x (bignum->flonum x)])
                (if ($fl>= y x) y x))]
             [(ratnum? y) ;;; FIXME: optimize
              (if (>= x y) x y)]
             [else (die 'max "not a number" y)])]
-         [(flonum? x) 
+         [(flonum? x)
           (cond
-            [(flonum? y) 
+            [(flonum? y)
              (if ($fl>= x y) x y)]
-            [(fixnum? y) 
-             (let ([y ($fixnum->flonum y)]) 
+            [(fixnum? y)
+             (let ([y ($fixnum->flonum y)])
                (if ($fl>= y x) y x))]
             [(bignum? y)
-             (let ([y (bignum->flonum y)]) 
+             (let ([y (bignum->flonum y)])
                (if ($fl>= y x) y x))]
             [(ratnum? y)
              ;;; FIXME: may be incorrect
              (let ([y (ratnum->flonum y)])
                (if ($fl>= y x) y x))]
             [else (die 'max "not a number" y)])]
-         [(ratnum? x) 
+         [(ratnum? x)
           (cond
             [(or (fixnum? y) (bignum? y) (ratnum? y))
              (if (>= x y) x y)]
-            [(flonum? y) 
+            [(flonum? y)
              (let ([x (ratnum->flonum x)])
                (if ($fl>= x y) x y))]
             [else (die 'max "not a number" y)])]
@@ -1459,7 +1459,7 @@
            [(null? ls) (max a b)]
            [else
             (f (max a b) (car ls) (cdr ls))]))]
-      [(x) 
+      [(x)
        (cond
          [(or (fixnum? x) (bignum? x) (ratnum? x) (flonum? x)) x]
          [else (die 'max "not a number" x)])]))
@@ -1468,14 +1468,14 @@
     (case-lambda
       [(x y)
        (cond
-         [(fixnum? x) 
+         [(fixnum? x)
           (cond
-            [(fixnum? y) 
+            [(fixnum? y)
              (if ($fx> x y) y x)]
             [(bignum? y)
              (if (positive-bignum? y) x y)]
-            [(flonum? y) 
-             (let ([x ($fixnum->flonum x)]) 
+            [(flonum? y)
+             (let ([x ($fixnum->flonum x)])
                (if ($fl>= y x) x y))]
             [(ratnum? y) ;;; FIXME: optimize
              (if (>= x y) y x)]
@@ -1486,32 +1486,32 @@
              (if (positive-bignum? x) y x)]
             [(bignum? y)
              (if (bnbn> x y) y x)]
-            [(flonum? y) 
-             (let ([x (bignum->flonum x)]) 
+            [(flonum? y)
+             (let ([x (bignum->flonum x)])
                (if ($fl>= y x) x y))]
             [(ratnum? y) ;;; FIXME: optimize
              (if (>= x y) y x)]
             [else (die 'min "not a number" y)])]
-         [(flonum? x) 
+         [(flonum? x)
           (cond
-            [(flonum? y) 
+            [(flonum? y)
              (if ($fl>= x y) y x)]
-            [(fixnum? y) 
-             (let ([y ($fixnum->flonum y)]) 
+            [(fixnum? y)
+             (let ([y ($fixnum->flonum y)])
                (if ($fl>= y x) x y))]
             [(bignum? y)
-             (let ([y (bignum->flonum y)]) 
+             (let ([y (bignum->flonum y)])
                (if ($fl>= y x) x y))]
             [(ratnum? y)
              ;;; FIXME: may be incorrect
              (let ([y (ratnum->flonum y)])
                (if ($fl>= y x) x y))]
             [else (die 'min "not a number" y)])]
-         [(ratnum? x) 
+         [(ratnum? x)
           (cond
             [(or (fixnum? y) (bignum? y) (ratnum? y))
              (if (>= x y) y x)]
-            [(flonum? y) 
+            [(flonum? y)
              (let ([x (ratnum->flonum x)])
                (if ($fl>= x y) y x))]
             [else (die 'min "not a number" y)])]
@@ -1522,14 +1522,14 @@
            [(null? ls) (min a b)]
            [else
             (f (min a b) (car ls) (cdr ls))]))]
-      [(x) 
+      [(x)
        (cond
          [(or (fixnum? x) (bignum? x) (ratnum? x) (flonum? x)) x]
          [else (die 'min "not a number" x)])]))
 
   (define (abs x)
     (cond
-      [(fixnum? x) 
+      [(fixnum? x)
        (if ($fx< x 0) (- x) x)]
       [(bignum? x)
        (if ($bignum-positive? x) x (- x))]
@@ -1537,9 +1537,9 @@
        (if ($fx> ($flonum-u8-ref x 0) 127)
            ($fl* x -1.0)
            x)]
-      [(ratnum? x) 
+      [(ratnum? x)
        (let ([n ($ratnum-n x)])
-         (if (< n 0) 
+         (if (< n 0)
              ($make-ratnum (- n) ($ratnum-d x))
              x))]
       [else (die 'abs "not a real number" x)]))
@@ -1548,7 +1548,7 @@
     (case-lambda
       [(x y)
        (if (flonum? x)
-           (if (flonum? y) 
+           (if (flonum? y)
                (if ($fl< x y) x y)
                (die 'flmin "not a flonum" y))
            (die 'flmin "not a flonum" x))]
@@ -1558,9 +1558,9 @@
            [(null? ls) (flmin a b)]
            [else
             (f (flmin a b) (car ls) (cdr ls))]))]
-      [(x) 
-       (if (flonum? x) 
-           x 
+      [(x)
+       (if (flonum? x)
+           x
            (die 'flmin "not a flonum" x))]))
 
   (define (->inexact x who)
@@ -1569,8 +1569,8 @@
       [(bignum? x) (bignum->flonum x)]
       [(ratnum? x) (ratnum->flonum x)]
       [(flonum? x) x]
-      [(compnum? x) 
-       (make-rectangular 
+      [(compnum? x)
+       (make-rectangular
          (->inexact (real-part x) who)
          (->inexact (imag-part x) who))]
       [(cflonum? x) x]
@@ -1594,11 +1594,11 @@
          (die 'real->flonum "not a real number" x)])))
 
   (define positive-bignum?
-    (lambda (x) 
+    (lambda (x)
       (foreign-call "ikrt_positive_bn" x)))
 
   (define even-bignum?
-    (lambda (x) 
+    (lambda (x)
       (foreign-call "ikrt_even_bn" x)))
 
   (define ($fxeven? x)
@@ -1634,8 +1634,8 @@
         (utf8->string (foreign-call "ikrt_bignum_to_bytevector" x)))
       (module (bignum->power-string)
         (define string-map "0123456789ABCDEF")
-        (define (init-string x chars) 
-          (if ($bignum-positive? x) 
+        (define (init-string x chars)
+          (if ($bignum-positive? x)
               (make-string chars)
               (let ([s (make-string ($fxadd1 chars))])
                 (string-set! s 0 #\-)
@@ -1663,8 +1663,8 @@
                         ($fxlogor b
                           ($fxsll ($bignum-byte-ref x j) k)))]
                     [else
-                     (string-set! s ($fx- n i) 
-                       (string-ref string-map 
+                     (string-set! s ($fx- n i)
+                       (string-ref string-map
                          ($fxlogand mask b)))
                      (f ($fxadd1 i) j ($fx- k shift) ($fxsra b shift))])))))))
       (define (bignum->string x r)
@@ -1675,8 +1675,8 @@
           [(16) (bignum->power-string x 15 4)]
           [else (die 'number->string "BUG")])))
     (define ratnum->string
-      (lambda (x r) 
-        (string-append 
+      (lambda (x r)
+        (string-append
           ($number->string ($ratnum-n x) r)
           "/"
           ($number->string ($ratnum-d x) r))))
@@ -1693,9 +1693,9 @@
         (cond
           [(fixnum? x) (fixnum->string x r)]
           [(bignum? x) (bignum->string x r)]
-          [(flonum? x) 
-           (unless (eqv? r 10) 
-             (die 'number->string 
+          [(flonum? x)
+           (unless (eqv? r 10)
+             (die 'number->string
                 "invalid radix for inexact number"
                 r x))
            (flonum->string x)]
@@ -1705,7 +1705,7 @@
                  [xi ($compnum-imag x)])
              (if (eqv? xr 0)
                  (string-append (imag xi r) "i")
-                 (string-append 
+                 (string-append
                    ($number->string xr r)
                    (imag xi r)
                    "i")))]
@@ -1719,7 +1719,7 @@
                 (string-append ($number->string xr r)
                   (if ($fl> xi 0.0) "+inf.0i" "-inf.0i"))]
                [else
-                (string-append 
+                (string-append
                   ($number->string xr r) (imag xi r) "i")]))]
           [else (die 'number->string "not a number" x)])))
     (define do-warn
@@ -1729,13 +1729,13 @@
           (condition
             (make-warning)
             (make-who-condition 'number->string)
-            (make-message-condition 
+            (make-message-condition
               "precision argument is not supported")))))
     (define number->string
       (case-lambda
         [(x) ($number->string x 10)]
-        [(x r) 
-         (unless (memv r '(2 8 10 16)) 
+        [(x r)
+         (unless (memv r '(2 8 10 16))
            (die 'number->string "invalid radix" r))
          ($number->string x r)]
         [(x r precision)
@@ -1751,15 +1751,15 @@
             (if (eqv? m 0)
                 (die 'modulo "division by zero" n m)
                 ($fxmodulo n m))]
-           [(bignum? m) 
+           [(bignum? m)
             (if ($fx< n 0)
-                (if ($bignum-positive? m) 
+                (if ($bignum-positive? m)
                     (foreign-call "ikrt_fxbnplus" n m)
                     n)
-                (if ($bignum-positive? m) 
+                (if ($bignum-positive? m)
                     n
                     (foreign-call "ikrt_fxbnplus" n m)))]
-           [(flonum? m) 
+           [(flonum? m)
             (let ([v ($flonum->exact m)])
               (cond
                 [(or (fixnum? v) (bignum? v))
@@ -1770,28 +1770,28 @@
            [else (die 'modulo "not a number" m)])]
         [(bignum? n)
          (cond
-           [(fixnum? m) 
+           [(fixnum? m)
             (if (eqv? m 0)
                 (die 'modulo "division by zero" n m)
                 (foreign-call "ikrt_bnfx_modulo" n m))]
-           [(bignum? m) 
-            (if ($bignum-positive? n) 
-                (if ($bignum-positive? m) 
+           [(bignum? m)
+            (if ($bignum-positive? n)
+                (if ($bignum-positive? m)
                     (remainder n m)
                     (+ m (remainder n m)))
                 (if ($bignum-positive? m)
                     (+ m (remainder n m))
                     (remainder n m)))]
-           [(flonum? m) 
+           [(flonum? m)
             (let ([v ($flonum->exact m)])
               (cond
                 [(or (fixnum? v) (bignum? v))
                  (inexact (modulo n v))]
                 [else
-                 (die 'modulo "not an integer" m)]))] 
+                 (die 'modulo "not an integer" m)]))]
            [(ratnum? m) (die 'modulo "not an integer" m)]
            [else (die 'modulo "not a number" m)])]
-        [(flonum? n) 
+        [(flonum? n)
          (let ([v ($flonum->exact n)])
            (cond
              [(or (fixnum? v) (bignum? v))
@@ -1830,8 +1830,8 @@
                     (if (fxfl< x y)
                         (flloopt y (car ls) (cdr ls))
                         (loopf (car ls) (cdr ls))))]
-               [(ratnum? y) 
-                (if (null? ls) 
+               [(ratnum? y)
+                (if (null? ls)
                     (fxrt< x y)
                     (if (fxrt< x y)
                         (rtloopt y (car ls) (cdr ls))
@@ -1920,12 +1920,12 @@
                     (if (rtrt< x y)
                         (rtloopt y (car ls) (cdr ls))
                         (loopf (car ls) (cdr ls))))]
-               [else (err y)]))) 
+               [else (err y)])))
          (define loopf
            (lambda (x ls)
              (cond
-               [(number? x) 
-                (if (null? ls) 
+               [(number? x)
+                (if (null? ls)
                     #f
                     (loopf (car ls) (cdr ls)))]
                [else (err x)])))
@@ -1964,7 +1964,7 @@
                 [else (err x)])]
              [(x y z) (and (name x y) (name y z))]
              [(x) (if (number? x) #t (err x))]
-             [(x y . ls) 
+             [(x y . ls)
               (cond
                 [(fixnum? x) (fxloopt x y ls)]
                 [(bignum? x) (bnloopt x y ls)]
@@ -1993,15 +1993,15 @@
     (syntax-rules ()
       [(_ flfl? flfx? fxfl? flbn? bnfl? fl?)
        (begin
-         (define-syntax flfl? 
+         (define-syntax flfl?
            (syntax-rules () [(_ x y) (fl? x y)]))
-         (define-syntax flfx? 
+         (define-syntax flfx?
            (syntax-rules () [(_ x y) (fl? x ($fixnum->flonum y))]))
-         (define-syntax flbn? 
+         (define-syntax flbn?
            (syntax-rules () [(_ x y) (fl? x (bignum->flonum y))]))
-         (define-syntax fxfl? 
+         (define-syntax fxfl?
            (syntax-rules () [(_ x y) (fl? ($fixnum->flonum x) y)]))
-         (define-syntax bnfl? 
+         (define-syntax bnfl?
            (syntax-rules () [(_ x y) (fl? (bignum->flonum x) y)])))]))
 
  ;;;  #;
@@ -2022,39 +2022,39 @@
       [(_ fl<? $fl<)
        (define fl<?
          (case-lambda
-           [(x y) 
+           [(x y)
             (if (flonum? x)
-                (if (flonum? y) 
+                (if (flonum? y)
                     ($fl< x y)
                     (die 'fl<? "not a flonum" y))
                 (die 'fl<? "not a flonum" x))]
-           [(x y z) 
+           [(x y z)
             (if (flonum? x)
-                (if (flonum? y) 
-                    (if (flonum? z) 
+                (if (flonum? y)
+                    (if (flonum? z)
                         (and ($fl< x y) ($fl< y z))
                         (die 'fl<? "not a flonum" z))
                     (die 'fl<? "not a flonum" y))
                 (die 'fl<? "not a flonum" x))]
-           [(x) 
+           [(x)
             (or (flonum? x)
                 (die 'fl<? "not a flonum" x))]
-           [(x y . rest) 
+           [(x y . rest)
             (let ()
               (define (loopf a ls)
-                (unless (flonum? a) 
+                (unless (flonum? a)
                   (die 'fl<? "not a flonum" a))
-                (if (null? ls) 
+                (if (null? ls)
                     #f
                     (loopf (car ls) (cdr ls))))
-              (if (flonum? x) 
-                  (if (flonum? y) 
-                      (if ($fl< x y) 
+              (if (flonum? x)
+                  (if (flonum? y)
+                      (if ($fl< x y)
                           (let f ([x y] [y (car rest)] [ls (cdr rest)])
-                            (if (flonum? y) 
+                            (if (flonum? y)
                                 (if (null? ls)
                                     ($fl< x y)
-                                    (if ($fl< x y) 
+                                    (if ($fl< x y)
                                         (f y (car ls) (cdr ls))
                                         (loopf (car ls) (cdr ls))))
                                 (die 'fl<? "not a flonum" y)))
@@ -2067,23 +2067,23 @@
   (define-flcmp fl>? $fl>)
   (define-flcmp fl>=? $fl>=)
 
-  (define fl+ 
+  (define fl+
     (case-lambda
-      [(x y) 
+      [(x y)
        (if (flonum? x)
-           (if (flonum? y) 
+           (if (flonum? y)
                ($fl+ x y)
                (die 'fl+ "not a flonum" y))
            (die 'fl+ "not a flonum" x))]
-      [(x y z) 
+      [(x y z)
        (fl+ (fl+ x y) z)]
       [(x y z q . rest)
        (let f ([ac (fl+ (fl+ (fl+ x y) z) q)] [rest rest])
-         (if (null? rest) 
+         (if (null? rest)
              ac
              (f (fl+ ac (car rest)) (cdr rest))))]
-      [(x) 
-       (if (flonum? x) 
+      [(x)
+       (if (flonum? x)
            x
            (die 'fl+ "not a flonum" x))]
       [() (exact->inexact 0)]))
@@ -2091,64 +2091,64 @@
 
   (define fl-
     (case-lambda
-      [(x y) 
+      [(x y)
        (if (flonum? x)
-           (if (flonum? y) 
+           (if (flonum? y)
                ($fl- x y)
                (die 'fl- "not a flonum" y))
            (die 'fl- "not a flonum" x))]
-      [(x y z) 
+      [(x y z)
        (fl- (fl- x y) z)]
       [(x y z q . rest)
        (let f ([ac (fl- (fl- (fl- x y) z) q)] [rest rest])
-         (if (null? rest) 
+         (if (null? rest)
              ac
              (f (fl- ac (car rest)) (cdr rest))))]
-      [(x) 
-       (if (flonum? x) 
+      [(x)
+       (if (flonum? x)
            ($fl* -1.0 x)
            (die 'fl+ "not a flonum" x))]))
 
   (define fl*
     (case-lambda
-      [(x y) 
+      [(x y)
        (if (flonum? x)
-           (if (flonum? y) 
+           (if (flonum? y)
                ($fl* x y)
                (die 'fl* "not a flonum" y))
            (die 'fl* "not a flonum" x))]
-      [(x y z) 
+      [(x y z)
        (fl* (fl* x y) z)]
       [(x y z q . rest)
        (let f ([ac (fl* (fl* (fl* x y) z) q)] [rest rest])
-         (if (null? rest) 
+         (if (null? rest)
              ac
              (f (fl* ac (car rest)) (cdr rest))))]
-      [(x) 
-       (if (flonum? x) 
+      [(x)
+       (if (flonum? x)
            x
            (die 'fl* "not a flonum" x))]
       [() 1.0]))
 
   (define fl/
     (case-lambda
-      [(x y) 
+      [(x y)
        (if (flonum? x)
-           (if (flonum? y) 
+           (if (flonum? y)
                ($fl/ x y)
                (die 'fl/ "not a flonum" y))
            (die 'fl/ "not a flonum" x))]
-      [(x y z) 
+      [(x y z)
        (fl/ (fl/ x y) z)]
       [(x y z q . rest)
        (let f ([ac (fl/ (fl/ (fl/ x y) z) q)] [rest rest])
-         (if (null? rest) 
+         (if (null? rest)
              ac
              (f (fl/ ac (car rest)) (cdr rest))))]
-      [(x) 
-       (if (flonum? x) 
+      [(x)
+       (if (flonum? x)
            ($fl/ 1.0 x)
-           (die 'fl/ "not a flonum" x))])) 
+           (die 'fl/ "not a flonum" x))]))
 
   (flcmp flfl= flfx= fxfl= flbn= bnfl= $fl=)
   (flcmp flfl< flfx< fxfl< flbn< bnfl< $fl<)
@@ -2160,7 +2160,7 @@
     (syntax-rules ()
       [(_ pred)
        (syntax-rules ()
-         [(_ ex in) 
+         [(_ ex in)
           (let ([x ex] [y in])
             (if ($flonum-rational? y)
                 (pred x (exact y))
@@ -2169,7 +2169,7 @@
     (syntax-rules ()
       [(_ pred)
        (syntax-rules ()
-         [(_ in ex) 
+         [(_ in ex)
           (let ([x in] [y ex])
             (if ($flonum-rational? x)
                 (pred (exact x) y)
@@ -2208,7 +2208,7 @@
           [(fixnum? y) ($fx= x y)]
           [(flonum? y) (fxfl= x y)]
           [(or (bignum? y) (ratnum? y) (compnum? y)) #f]
-          [(cflonum? y) 
+          [(cflonum? y)
            (and (flfl= 0.0 ($cflonum-imag y)) (fxfl= x ($cflonum-real y)))]
           [else (err y)]))
       (define (bn? x y)
@@ -2216,7 +2216,7 @@
           [(bignum? y) (bnbn= x y)]
           [(flonum? y) (bnfl= x y)]
           [(or (fixnum? y) (ratnum? y) (compnum? y)) #f]
-          [(cflonum? y) 
+          [(cflonum? y)
            (and (flfl= 0.0 ($cflonum-imag y)) (bnfl= x ($cflonum-real y)))]
           [else (err y)]))
       (define (fl? x y)
@@ -2226,7 +2226,7 @@
           [(bignum? y) (flbn= x y)]
           [(ratnum? y) (flrt= x y)]
           [(compnum? y) #f]
-          [(cflonum? y) 
+          [(cflonum? y)
            (and (flfl= 0.0 ($cflonum-imag y)) (flfl= x ($cflonum-real y)))]
           [else (err y)]))
       (define (rn? x y)
@@ -2259,21 +2259,21 @@
                  (if (null? ls) #f (loopf (car ls) (cdr ls)))))]))
       (define loopf
         (lambda (x ls)
-          (if (number? x) 
-              (if (null? ls) 
+          (if (number? x)
+              (if (null? ls)
                   #f
                  (loopf (car ls) (cdr ls)))
               (err x))))
       (define (cncn= x y)
-        (and 
+        (and
           (= ($compnum-real x) ($compnum-real y))
           (= ($compnum-imag x) ($compnum-imag y))))
       (define (cncf= x y)
-        (and 
+        (and
           (= ($compnum-real x) ($cflonum-real y))
           (= ($compnum-imag x) ($cflonum-imag y))))
       (define (cfcf= x y)
-        (and 
+        (and
           (= ($cflonum-real x) ($cflonum-real y))
           (= ($cflonum-imag x) ($cflonum-imag y))))
       (define =
@@ -2300,20 +2300,20 @@
              [else (err x)])]))
       =))
 
-  ;(define = 
+  ;(define =
   ;  (mk< = $fx= false false bnbn= fxfl= flfx= bnfl= flbn= flfl=
   ;             false false false false flrt= rtfl= rtrt=))
 
-  (define < 
+  (define <
     (mk< < $fx< fxbn< bnfx< bnbn< fxfl< flfx< bnfl< flbn< flfl<
                exrt< rtex< exrt< rtex< flrt< rtfl< rtrt<))
   (define >
     (mk< > $fx> fxbn> bnfx> bnbn> fxfl> flfx> bnfl> flbn> flfl>
                exrt> rtex> exrt> rtex> flrt> rtfl> rtrt>))
-  (define <= 
+  (define <=
     (mk< <= $fx<= fxbn< bnfx< bnbn<= fxfl<= flfx<= bnfl<= flbn<= flfl<=
                exrt< rtex< exrt< rtex< flrt<= rtfl<= rtrt<=))
-  (define >= 
+  (define >=
     (mk< >= $fx>= fxbn> bnfx> bnbn>= fxfl>= flfx>= bnfl>= flbn>= flfl>=
                exrt> rtex> exrt> rtex> flrt>= rtfl>= rtrt>=))
 
@@ -2324,7 +2324,7 @@
         [(fixnum? x) (+ (greatest-fixnum) 1)]
         [(number? x) (+ x 1)]
         [else (die 'add1 "not a number" x)])))
-  
+
   (define add1
     (lambda (x)
       (import (ikarus))
@@ -2351,10 +2351,10 @@
         [(ratnum? x) #f]
         [(flonum? x)
          (or ($fl= x 0.0) ($fl= x -0.0))]
-        [(cflonum? x) 
+        [(cflonum? x)
          (and ($fl= ($cflonum-real x) 0.0) ($fl= ($cflonum-imag x) 0.0))]
         [(compnum? x) #f]
-        [else 
+        [else
          (die 'zero? "not a number" x)])))
 
   (define expt
@@ -2373,14 +2373,14 @@
         [(fixnum? m)
          (if ($fx>= m 0)
              (cond
-               [(ratnum? n) 
+               [(ratnum? n)
                 ($make-ratnum (expt ($ratnum-n n) m) (expt ($ratnum-d n) m))]
                [else (fxexpt n m)])
              (let ([v (expt n (- m))])
                (if (eq? v 0)
                    0
                    (/ 1 v))))]
-        [(bignum? m) 
+        [(bignum? m)
          (cond
            [(eq? n 0) 0]
            [(eq? n 1) 1]
@@ -2390,7 +2390,7 @@
                     1
                     -1)
                 (/ 1 (expt n (- m))))]
-           [else 
+           [else
             (die 'expt "result is too big to compute" n m)])]
         [(flonum? m) (flexpt (inexact n) m)]
         [(ratnum? m) (flexpt (inexact n) (inexact m))]
@@ -2415,17 +2415,17 @@
   (define quotient+remainder
     (lambda (x y)
       (cond
-        [(eq? y 0) 
+        [(eq? y 0)
          (die 'quotient+remainder
                 "second argument must be non-zero")]
-        [(fixnum? x) 
+        [(fixnum? x)
          (cond
            [(fixnum? y)
             (if (eq? y -1)
                 (values (- x) 0)
                 (values (fxquotient x y) (fxremainder x y)))]
            [(bignum? y) (values 0 x)]
-           [(flonum? y) 
+           [(flonum? y)
             (let ([v ($flonum->exact y)])
               (cond
                 [(or (fixnum? v) (bignum? v))
@@ -2442,16 +2442,16 @@
            [(bignum? y)
             (let ([p (foreign-call "ikrt_bnbndivrem" x y)])
               (values (car p) (cdr p)))]
-           [(flonum? y) 
+           [(flonum? y)
             (let ([v ($flonum->exact y)])
               (cond
                 [(or (fixnum? v) (bignum? v))
                  (let-values ([(q r) (quotient+remainder x v)])
                    (values (inexact q) (inexact r)))]
                 [else
-                 (die 'quotient+remainder "not an integer" y)]))] 
+                 (die 'quotient+remainder "not an integer" y)]))]
            [else (die 'quotient+remainder "not an integer" y)])]
-        [(flonum? x) 
+        [(flonum? x)
          (let ([v ($flonum->exact x)])
            (cond
              [(or (fixnum? v) (bignum? v))
@@ -2529,10 +2529,10 @@
         [(flonum? x) (foreign-call "ikrt_fl_asinh" x)]
         [(or (fixnum? x) (bignum? x) (ratnum? x))
          (asinh (inexact x))]
-        [(or (cflonum? x) (compnum? x)) 
+        [(or (cflonum? x) (compnum? x))
          (let ([x (real-part x)] [y (imag-part x)])
            (cond
-             [(= x 0) 
+             [(= x 0)
               (let ([v (asin y)])
                 (make-rectangular (imag-part v) (real-part v)))]
              [else
@@ -2551,7 +2551,7 @@
     (lambda (x)
       (define who 'acosh)
       (cond
-        [(flonum? x) 
+        [(flonum? x)
          (cond
            [($fl>= x 1.0) (foreign-call "ikrt_fl_acosh" x)]
            [($fl>= x -1.0)
@@ -2561,7 +2561,7 @@
            [else +nan.0])]
         [(or (fixnum? x) (bignum? x) (ratnum? x))
          (acosh (inexact x))]
-        [(or (cflonum? x) (compnum? x)) 
+        [(or (cflonum? x) (compnum? x))
          (let ([x (real-part x)] [y (imag-part x)])
            (cond
              [(= x 0) (+ (asinh y) (make-rectangular 0 PI/2))]
@@ -2581,7 +2581,7 @@
     (lambda (x)
       (define who 'atanh)
       (cond
-        [(flonum? x) 
+        [(flonum? x)
          (cond
            [(and (fl<=? x 1.0) (fl>=? x -1.0))
             (foreign-call "ikrt_fl_atanh" x)]
@@ -2597,13 +2597,13 @@
     (lambda (x)
       (cond
         [(flonum? x) (foreign-call "ikrt_fl_sin" x)]
-        [(fixnum? x) 
+        [(fixnum? x)
          (if (fx=? x 0)
              0
              (foreign-call "ikrt_fx_sin" x))]
         [(or (cflonum? x) (compnum? x))
          (let ([r (real-part x)] [i (imag-part x)])
-           (make-rectangular 
+           (make-rectangular
              (* (sin r) (cosh i))
              (* (cos r) (sinh i))))]
         [(number? x) (sin (inexact x))]
@@ -2613,13 +2613,13 @@
     (lambda (x)
       (cond
         [(flonum? x) (foreign-call "ikrt_fl_cos" x)]
-        [(fixnum? x) 
+        [(fixnum? x)
          (if (fx=? x 0)
              1
              (foreign-call "ikrt_fx_cos" x))]
         [(or (cflonum? x) (compnum? x))
          (let ([r (real-part x)] [i (imag-part x)])
-           (make-rectangular 
+           (make-rectangular
              (* (cos r) (cosh i))
              (* (sin r) (sinh i))))]
         [(number? x) (cos (inexact x))]
@@ -2629,14 +2629,14 @@
     (lambda (x)
       (cond
         [(flonum? x) (foreign-call "ikrt_fl_tan" x)]
-        [(fixnum? x) 
+        [(fixnum? x)
          (if (fx=? x 0)
              0
              (foreign-call "ikrt_fx_tan" x))]
         [(or (cflonum? x) (compnum? x))
          (let ([r (real-part x)] [i (imag-part x)])
            (make-rectangular
-             (/ (sin (* 2 r)) 
+             (/ (sin (* 2 r))
                 (+ (cos (* 2 r)) (cosh (* 2 i))))
              (/ (tanh (* 2 i))
                 (+ 1 (/ (cos (* 2 r)) (cosh (* 2 i)))))))]
@@ -2651,7 +2651,7 @@
   (define asin
     (lambda (x)
       (cond
-        [(flonum? x) 
+        [(flonum? x)
          (cond
            [($fl> x 1.0)
             (make-rectangular PI/2 (acosh x))]
@@ -2659,7 +2659,7 @@
             (make-rectangular (- PI/2) (- (acosh (- x))))]
            [else
             (foreign-call "ikrt_fl_asin" x)])]
-        [(or (cflonum? x) (compnum? x)) 
+        [(or (cflonum? x) (compnum? x))
          (let ([x (real-part x)] [y (imag-part x)])
            (cond
              [(= x 0) (make-rectangular 0 (asinh y))]
@@ -2686,8 +2686,8 @@
            [($fl< x -1.0)
             (make-rectangular PI (- (acosh (- x))))]
            [else
-            (foreign-call "ikrt_fl_acos" x)])] 
-        [(or (cflonum? x) (compnum? x)) 
+            (foreign-call "ikrt_fl_acos" x)])]
+        [(or (cflonum? x) (compnum? x))
          (- PI/2 (asin x))]
         [(number? x) (acos (inexact x))]
         [else (die 'acos "not a number" x)])))
@@ -2708,7 +2708,7 @@
   (define sqrt
     (lambda (x)
       (cond
-        [(flonum? x) 
+        [(flonum? x)
          (if ($fl< x 0.0)
              (make-rectangular 0.0
                (foreign-call "ikrt_fl_sqrt" ($fl- 0.0 x)))
@@ -2728,13 +2728,13 @@
             (let-values ([(s r) (exact-integer-sqrt x)])
               (cond
                 [(eq? r 0) s]
-                [else 
+                [else
                  (let ([v (sqrt (inexact x))])
                    ;;; could the [dropped] residual ever affect the answer?
                    (cond
                      [(infinite? v)
-                      (if (bignum? s) 
-                          (foreign-call "ikrt_bignum_to_flonum" 
+                      (if (bignum? s)
+                          (foreign-call "ikrt_bignum_to_flonum"
                              s
                              1 ;;; round up in case of a tie
                              ($make-flonum))
@@ -2749,26 +2749,26 @@
          (let ([xr (real-part x)] [xi (imag-part x)])
            (let ([m (sqrt (+ (* xr xr) (* xi xi)))]
                  [s (if (> xi 0) 1 -1)])
-             (make-rectangular 
+             (make-rectangular
                (sqrt (/ (+ m xr) 2))
                (* s (sqrt (/ (- m xr) 2))))))]
         [else (die 'sqrt "not a number" x)])))
 
   (define flsqrt
     (lambda (x)
-      (if (flonum? x) 
+      (if (flonum? x)
           (foreign-call "ikrt_fl_sqrt" x)
           (die 'flsqrt "not a flonum" x))))
 
   (define flzero?
     (lambda (x)
-      (if (flonum? x) 
+      (if (flonum? x)
           ($flzero? x)
           (die 'flzero? "not a flonum" x))))
 
   (define flnegative?
     (lambda (x)
-      (if (flonum? x) 
+      (if (flonum? x)
           ($fl< x 0.0)
           (die 'flnegative? "not a flonum" x))))
 
@@ -2776,16 +2776,16 @@
     (lambda (x)
       (define who 'exact-integer-sqrt)
       (cond
-        [(fixnum? x) 
+        [(fixnum? x)
          (cond
            [($fx= x 0) (values 0 0)]
            [($fx< x 0) (die who "invalid argument" x)]
            [else
             (let ([s (foreign-call "ikrt_exact_fixnum_sqrt" x)])
               (values s ($fx- x ($fx* s s))))])]
-        [(bignum? x) 
+        [(bignum? x)
          (cond
-           [($bignum-positive? x) 
+           [($bignum-positive? x)
             (let ([r (foreign-call "ikrt_exact_bignum_sqrt" x)])
               (values (car r) (cdr r)))]
            [else (die who "invalid argument" x)])]
@@ -2815,28 +2815,28 @@
         (let ([q (quotient n d)])
           (if (>= n 0) q (- q 1)))))
     (cond
-      [(flonum? x) 
+      [(flonum? x)
        ;;; optimize for integer flonums
        (let ([e ($flonum->exact x)])
          (cond
-           [(ratnum? e) 
-            (exact->inexact (ratnum-floor e))] 
+           [(ratnum? e)
+            (exact->inexact (ratnum-floor e))]
            [else x]))]
       [(ratnum? x) (ratnum-floor x)]
       [(or (fixnum? x) (bignum? x)) x]
       [else (die 'floor "not a number" x)]))
-  
+
   (define (ceiling x)
     (define (ratnum-ceiling x)
       (let ([n (numerator x)] [d (denominator x)])
         (let ([q (quotient n d)])
           (if (< n 0) q (+ q 1)))))
     (cond
-      [(flonum? x) 
+      [(flonum? x)
        ;;; optimize for integer flonums
        (let ([e ($flonum->exact x)])
          (cond
-           [(ratnum? e) (exact->inexact (ratnum-ceiling e))] 
+           [(ratnum? e) (exact->inexact (ratnum-ceiling e))]
            [else x]))]
       [(ratnum? x) (ratnum-ceiling x)]
       [(or (fixnum? x) (bignum? x)) x]
@@ -2866,17 +2866,17 @@
 
   (define (truncate x)
     ;;; FIXME: fltruncate should preserve the sign of -0.0.
-    ;;; 
+    ;;;
     (cond
-      [(flonum? x) 
-       (let ([e ($flonum->exact x)]) 
+      [(flonum? x)
+       (let ([e ($flonum->exact x)])
          (cond
            [(ratnum? e) (exact->inexact ($ratnum-truncate e))]
            [else x]))]
       [(ratnum? x) ($ratnum-truncate x)]
       [(or (fixnum? x) (bignum? x)) x]
       [else (die 'truncate "not a number" x)]))
-  
+
 
   (define (fltruncate x)
     ;;; FIXME: fltruncate should preserve the sign of -0.0.
@@ -2888,10 +2888,10 @@
         [else x])))
 
   (define log
-    (case-lambda 
+    (case-lambda
       [(x)
        (cond
-         [(fixnum? x) 
+         [(fixnum? x)
           (cond
             [($fx= x 1) 0]
             [($fx= x 0) (die 'log "undefined around 0")]
@@ -2899,12 +2899,13 @@
             [else (make-rectangular (log (- x)) (acos -1))])]
          [(flonum? x)
           (cond
-            [(fl>=? x 0.0) (foreign-call "ikrt_fl_log" x)]
-            [else 
-             (make-rectangular 
-               (log (fl- 0.0 x))
-               (acos -1))])]
-         [(bignum? x) 
+	   ((nan? x)	  +nan.0)
+	   [(fl>=? x 0.0) (foreign-call "ikrt_fl_log" x)]
+	   [else
+	    (make-rectangular
+	     (log (fl- 0.0 x))
+	     (acos -1))])]
+         [(bignum? x)
           (if ($bignum-positive? x)
               (let ([v (log (inexact x))])
                 (cond
@@ -2914,49 +2915,49 @@
                      (fl* 2.0 (log s)))]
                   [else v]))
               (make-rectangular (log (- x)) (acos -1)))]
-         [(ratnum? x) 
+         [(ratnum? x)
           ;;; FIXME: incorrect as per bug 180170
           (- (log (numerator x)) (log (denominator x)))]
          [(or (compnum? x) (cflonum? x))
           (let ([e 2.718281828459045])
             (define (ln x) (/ (log x) (log e)))
             (let ([xr (real-part x)] [xi (imag-part x)])
-              (make-rectangular 
+              (make-rectangular
                 (/ (ln (+ (* xr xr) (* xi xi))) 2)
                 (atan xi xr))))]
          [else (die 'log "not a number" x)])]
       [(x y)
        (let ([ly (log y)])
-         (if (eqv? ly 0) 
+         (if (eqv? ly 0)
              (die 'log "invalid arguments" x y)
              (/ (log x) ly)))]))
 
-  (define (random n) 
-    (if (fixnum? n) 
-        (if (fx> n 1) 
-            (foreign-call "ikrt_fxrandom" n) 
-            (if (fx= n 1) 
+  (define (random n)
+    (if (fixnum? n)
+        (if (fx> n 1)
+            (foreign-call "ikrt_fxrandom" n)
+            (if (fx= n 1)
                 0
                 (die 'random "incorrect argument" n)))
         (die 'random "not a fixnum" n)))
 
 
-  (define (shift-right-arithmetic n m who) 
+  (define (shift-right-arithmetic n m who)
     (cond
-      [(fixnum? m) 
+      [(fixnum? m)
        (cond
-         [(fixnum? n) 
+         [(fixnum? n)
           (cond
             [($fx>= m 0) ($fxsra n m)]
             [else (die who "offset must be non-negative" m)])]
-         [(bignum? n) 
+         [(bignum? n)
           (cond
-            [($fx> m 0)  
+            [($fx> m 0)
              (foreign-call "ikrt_bignum_shift_right" n m)]
             [($fx= m 0) n]
             [else (die who "offset must be non-negative" m)])]
          [else (die who "not an exact integer" n)])]
-      [(bignum? m) 
+      [(bignum? m)
        (cond
          [(fixnum? n) (if ($fx>= n 0) 0 -1)]
          [(bignum? n) (if ($bignum-positive? n) 0 -1)]
@@ -2966,19 +2967,19 @@
   (define (sra n m)
     (shift-right-arithmetic n m 'sra))
 
-  (define (shift-left-logical n m who) 
+  (define (shift-left-logical n m who)
     (unless (fixnum? m)
       (die who "shift amount is not a fixnum"))
     (cond
       [(fixnum? n)
        (cond
-         [($fx> m 0) 
+         [($fx> m 0)
           (foreign-call "ikrt_fixnum_shift_left" n m)]
          [($fx= m 0) n]
          [else (die who "offset must be non-negative" m)])]
-      [(bignum? n) 
+      [(bignum? n)
        (cond
-         [($fx> m 0) 
+         [($fx> m 0)
           (foreign-call "ikrt_bignum_shift_left" n m)]
          [($fx= m 0) n]
          [else (die who "offset must be non-negative" m)])]
@@ -2987,9 +2988,9 @@
   (define (sll n m)
     (shift-left-logical n m 'sll))
 
-  (define (bitwise-arithmetic-shift-right n m) 
+  (define (bitwise-arithmetic-shift-right n m)
     (shift-right-arithmetic n m 'bitwise-arithmetic-shift-right))
-  (define (bitwise-arithmetic-shift-left n m) 
+  (define (bitwise-arithmetic-shift-left n m)
     (shift-left-logical n m 'bitwise-arithmetic-shift-left))
   (define (bitwise-arithmetic-shift n m)
     (define who 'bitwise-arithmetic-shift)
@@ -2998,30 +2999,30 @@
     (cond
       [(fixnum? n)
        (cond
-         [($fx> m 0) 
+         [($fx> m 0)
           (foreign-call "ikrt_fixnum_shift_left" n m)]
          [($fx= m 0) n]
          [else
           (let ([m^ (- m)])
-            (unless (fixnum? m^) 
+            (unless (fixnum? m^)
               (die who "shift amount is too big" m))
             ($fxsra n m^))])]
       [(bignum? n)
        (cond
-         [($fx> m 0) 
+         [($fx> m 0)
           (foreign-call "ikrt_bignum_shift_left" n m)]
          [($fx= m 0) n]
          [else
           (let ([m^ (- m)])
-            (unless (fixnum? m^) 
+            (unless (fixnum? m^)
               (die who "shift amount is too big" m))
             (foreign-call "ikrt_bignum_shift_right" n m^))])]
       [else (die who "not an exact integer" n)]))
 
-  (define (exp x) 
+  (define (exp x)
     (cond
       [(flonum? x) (flexp x)]
-      [(fixnum? x) 
+      [(fixnum? x)
        (if ($fx= x 0) 1 (flexp (fixnum->flonum x)))]
       [(bignum? x) (flexp (bignum->flonum x))]
       [(ratnum? x) (flexp (ratnum->flonum x))]
@@ -3030,7 +3031,7 @@
        ;;     = e^xr cos(xi) + e^xr sin(xi) i
        (let ([xr (real-part x)] [xi (imag-part x)])
          (let ([e^xr (exp xr)])
-           (make-rectangular 
+           (make-rectangular
              (* e^xr (cos xi))
              (* e^xr (sin xi)))))]
       [else (die 'exp "not a number" x)]))
@@ -3047,7 +3048,7 @@
       (case bit
         [(0)
          (cond
-           [(bitwise-bit-set? n idx) 
+           [(bitwise-bit-set? n idx)
             (bitwise-and n (bitwise-not (sll 1 idx)))]
            [else n])]
         [(1)
@@ -3056,56 +3057,56 @@
            [(>= n 0) (+ n (sll 1 idx))]
            [else
             (bitwise-not
-              (bitwise-and 
-                (bitwise-not n) 
+              (bitwise-and
+                (bitwise-not n)
                 (bitwise-not (sll 1 idx))))])]
         [else (die who "bit must be either 0 or 1" bit)]))
     (cond
       [(fixnum? idx)
        (cond
-         [(fx< idx 0) 
+         [(fx< idx 0)
           (die who "negative bit index" idx)]
          [(or (fixnum? n) (bignum? n))
           (do-copy-bit n idx bit)]
          [else (die who "not an exact integer" n)])]
       [(bignum? idx)
-       (unless (or (fixnum? n) (bignum? n)) 
+       (unless (or (fixnum? n) (bignum? n))
          (die who "not an exact integer" n))
        (if ($bignum-positive? idx)
            (case bit
              [(0)
-              (if (>= n 0) 
+              (if (>= n 0)
                   n
                   (die who "unrepresentable result"))]
-             [(1) 
-              (if (< n 0) 
+             [(1)
+              (if (< n 0)
                   n
                   (die who "unrepresentable result"))]
              [else (die who "bit must be either 0 or 1" bit)])
            (die who "negative bit index" idx))]
       [else (die who "index is not an exact integer" idx)]))
 
-  (define (bitwise-bit-field n idx1 idx2) 
+  (define (bitwise-bit-field n idx1 idx2)
     (define who 'bitwise-bit-field)
     (cond
       [(and (fixnum? idx1) (fx>= idx1 0))
        (cond
          [(and (fixnum? idx2) (fx>= idx2 0))
           (cond
-            [(fx<= idx1 idx2) 
+            [(fx<= idx1 idx2)
              (cond
-               [(or (fixnum? n) (bignum? n)) 
-                (bitwise-and 
+               [(or (fixnum? n) (bignum? n))
+                (bitwise-and
                    (sra n idx1)
                    (- (sll 1 (- idx2 idx1)) 1))]
                [else (die who "not an exact integer" n)])]
             [else (die who "invalid order for indices" idx1 idx2)])]
-         [else 
-          (if (not (fixnum? idx2)) 
+         [else
+          (if (not (fixnum? idx2))
               (die who "invalid index" idx2)
               (die who "negative index" idx2))])]
-      [else 
-       (if (not (fixnum? idx1)) 
+      [else
+       (if (not (fixnum? idx1))
            (die who "invalid index" idx1)
            (die who "negative index" idx1))]))
 
@@ -3116,12 +3117,12 @@
 
 (library (ikarus flonum-conversion)
   (export string->flonum flonum->string)
-  (import 
+  (import
     (rnrs bytevectors)
     (ikarus system $bytevectors)
     (ikarus system $flonums)
     (except (ikarus) flonum->string string->flonum ))
-  
+
   (module (flonum->string)
     (module (flonum->digits)
       (define flonum->digits
@@ -3138,7 +3139,7 @@
                 (if (or (= e min-e) (not (= f (expt b (- p 1)))))
                     (scale (* f 2) (* (expt b (- e)) 2) 1 1 0 B round? f e)
                     (scale (* f b 2) (* (expt b (- 1 e)) 2) b 1 0 B round? f e))))))
-      (define (len n) 
+      (define (len n)
         (let f ([n n] [i 0])
           (cond
             [(zero? n) i]
@@ -3146,27 +3147,27 @@
       (define scale
         (lambda (r s m+ m- k B round? f e)
           (let ([est (inexact->exact
-                       (ceiling 
-                         (- (* (+ e (len f) -1) (invlog2of B)) 
+                       (ceiling
+                         (- (* (+ e (len f) -1) (invlog2of B))
                             1e-10)))])
             (if (>= est 0)
                 (fixup r (* s (exptt B est)) m+ m- est B round?)
                 (let ([scale (exptt B (- est))])
                   (fixup (* r scale) s (* m+ scale) (* m- scale) est B round?))))))
       (define fixup
-        (lambda (r s m+ m- k B round?) 
+        (lambda (r s m+ m- k B round?)
           (if ((if round? >= >) (+ r m+) s) ; too low?
               (values (+ k 1) (generate r s m+ m- B round?))
               (values k (generate (* r B) s (* m+ B) (* m- B) B round?)))))
       (define (chr x)
         (vector-ref '#(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9) x))
       (define generate
-        (lambda (r s m+ m- B round?) 
+        (lambda (r s m+ m- B round?)
           (let-values ([(q r) (quotient+remainder r s)])
             (let ([tc1 ((if round? <= <) r m-)]
                   [tc2 ((if round? >= >) (+ r m+) s)])
               (if (not tc1)
-                  (if (not tc2) 
+                  (if (not tc2)
                       (cons (chr q) (generate (* r B) s (* m+ B) (* m- B) B round?))
                       (list (chr (+ q 1))))
                   (if (not tc2)
@@ -3195,12 +3196,12 @@
                 (expt B k))))))
     (define (format-flonum pos? expt digits)
       (define (next x)
-        (if (null? x) 
+        (if (null? x)
             (values #\0 '())
             (values (car x) (cdr x))))
       (define (format-flonum-no-expt expt d0 d*)
         (cond
-          [(= expt 1) 
+          [(= expt 1)
            (cons d0 (if (null? d*) '(#\. #\0) (cons #\. d*)))]
           [else
            (cons d0
@@ -3216,10 +3217,10 @@
            (list->string (cons #\- ls))))
       (let ([d0 (car digits)] [d* (cdr digits)])
         (cond
-          [(null? d*) 
-           (if (char=? d0 #\0) 
+          [(null? d*)
+           (if (char=? d0 #\0)
                (if pos? "0.0" "-0.0")
-               (if (= expt 1) 
+               (if (= expt 1)
                    (if pos?
                        (string d0 #\. #\0)
                        (string #\- d0 #\. #\0))
@@ -3235,10 +3236,10 @@
            (sign pos? (format-flonum-no-expt expt d0 d*))]
           [(<= -3 expt 0)
            (sign pos? (cons* #\0 #\. (format-flonum-no-expt/neg expt digits)))]
-          [else 
+          [else
            (string-append
              (if pos? "" "-")
-             (string d0) "." (list->string d*) 
+             (string d0) "." (list->string d*)
              "e" (fixnum->string (- expt 1)))])))
     (define (flo->string pos? m e p)
       (let-values ([(expt digits) (flonum->digits m e 10 p 2 10)])
@@ -3248,11 +3249,11 @@
         (cond
           [(<= 1 be 2046) ; normalized flonum
            (flo->string pos? (+ m (expt 2 52)) (- be 1075) 53)]
-          [(= be 0) 
+          [(= be 0)
            (flo->string pos? m -1074 52)]
           [(= be 2047)
-           (if (= m 0) 
-               (if pos? "+inf.0" "-inf.0") 
+           (if (= m 0)
+               (if pos? "+inf.0" "-inf.0")
                ;;; Gee!  nans have no sign!
                "+nan.0")]
           [else (die 'flonum->string "cannot happen")]))))
@@ -3260,19 +3261,19 @@
   (define (string->flonum x)
     (cond
       [(string? x)
-       (foreign-call "ikrt_bytevector_to_flonum" 
+       (foreign-call "ikrt_bytevector_to_flonum"
          (string->utf8 x))]
-      [else 
+      [else
        (die 'string->flonum "not a string" x)])) )
 
 (library (ikarus rationalize)
   (export rationalize)
-  (import 
+  (import
     (except (ikarus) rationalize))
- 
-  (define (rationalize x eps) 
+
+  (define (rationalize x eps)
     (define who 'rationalize)
-    (define (simplest x y) 
+    (define (simplest x y)
       (cond
         [(< y x) (simplest y x)]
         [(= x y) x]
@@ -3280,14 +3281,14 @@
          (let ([n (numerator x)] [d (denominator x)]
                [n^ (numerator y)] [d^ (denominator y)])
            (simplest^ n d n^ d^))]
-        [(< y 0) 
+        [(< y 0)
          (let ([n (numerator x)] [d (denominator x)]
                [n^ (numerator y)] [d^ (denominator y)])
            (- (simplest^ (- n^) d^ (- n) d)))]
         [else 0]))
     (define (simplest^ n d n^ d^)
       (let-values ([(q r) (div-and-mod n d)])
-        (if (= r 0) 
+        (if (= r 0)
             q
             (let-values ([(q^ r^) (div-and-mod n^ d^)])
               (if (= q q^)
@@ -3298,23 +3299,23 @@
     (define (go x eps)
       (simplest (- x eps) (+ x eps)))
     (cond
-      [(flonum? x) 
+      [(flonum? x)
        (if (flfinite? x)
            (cond
-             [(flonum? eps) 
+             [(flonum? eps)
               (if (flfinite? eps) (go x eps) +0.0)]
              [(or (fixnum? eps) (bignum? eps) (ratnum? eps))
               (go x eps)]
              [else (die who "not a number" eps)])
            (cond
-             [(flonum? eps) 
+             [(flonum? eps)
               (if (flfinite? eps) x +nan.0)]
              [(or (fixnum? eps) (bignum? eps) (ratnum? eps))
               x]
              [else (die who "not a number" eps)]))]
       [(or (fixnum? x) (bignum? x) (ratnum? x))
        (cond
-         [(flonum? eps) 
+         [(flonum? eps)
           (if (flfinite? eps) (go x eps) +0.0)]
          [(or (fixnum? eps) (bignum? eps) (ratnum? eps))
           (go x eps)]
@@ -3324,8 +3325,8 @@
 
 (library (ikarus r6rs-fu div/mod)
   (export div mod div-and-mod div0 mod0 div0-and-mod0)
-  (import 
-    (except (ikarus) 
+  (import
+    (except (ikarus)
       div mod div-and-mod div0 mod0 div0-and-mod0))
 
   (define (div-and-mod* n m who)
@@ -3340,14 +3341,14 @@
               (if (>= m 0)
                   (values (- d0 1) (+ m0 m))
                   (values (+ d0 1) (- m0 m)))))))
-    (define (rat-div-and-mod n m) 
+    (define (rat-div-and-mod n m)
       (let ([x (/ n m)])
         (cond
-          [(or (fixnum? x) (bignum? x)) 
+          [(or (fixnum? x) (bignum? x))
            (values x 0)]
           [else
            (let ([n0 (numerator x)] [d0 (denominator x)])
-             (let ([q (quotient n0 d0)]) 
+             (let ([q (quotient n0 d0)])
                (let ([r (- n (* q m))])
                  (if (>= r 0)
                      (values q r)
@@ -3355,51 +3356,51 @@
                          (values (- q 1) (+ r m))
                          (values (+ q 1) (- r m)))))))])))
     (cond
-      [(fixnum? m) 
+      [(fixnum? m)
        (cond
-         [($fx= m 0) 
+         [($fx= m 0)
           (die who "division by 0")]
          [(or (fixnum? n) (bignum? n))
           (int-div-and-mod n m)]
-         [(flonum? n) 
+         [(flonum? n)
           (fldiv-and-mod n (fixnum->flonum m))]
-         [(ratnum? n) 
+         [(ratnum? n)
           (rat-div-and-mod n m)]
          [else (die who "not a number" n)])]
-      [(bignum? m) 
+      [(bignum? m)
        (cond
          [(or (fixnum? n) (bignum? n))
           (int-div-and-mod n m)]
-         [(flonum? n) 
+         [(flonum? n)
           (let ([v ($flonum->exact n)])
-            (unless v 
+            (unless v
               (die who "invalid argument" n))
             (let-values ([(a b) (div-and-mod* v m who)])
               (values (inexact a) (inexact b))))]
-         [(ratnum? n) 
+         [(ratnum? n)
           (rat-div-and-mod n m)]
          [else (die who "not a number" n)])]
-      [(ratnum? m) 
+      [(ratnum? m)
        (cond
          [(or (fixnum? n) (bignum? n) (ratnum? n))
           (rat-div-and-mod n m)]
-         [(flonum? n) 
+         [(flonum? n)
           (let ([v ($flonum->exact n)])
-            (unless v 
+            (unless v
               (die who "invalid argument" n))
             (let-values ([(a b) (div-and-mod* v m who)])
               (values (inexact a) (inexact b))))]
          [else (die who "not a number" n)])]
-      [(flonum? m) 
+      [(flonum? m)
        (cond
-         [($fl= m 0.0) 
+         [($fl= m 0.0)
           (die who "division by 0.0")]
          [(flonum? n) (fldiv-and-mod n m)]
-         [(fixnum? n) 
+         [(fixnum? n)
           (fldiv-and-mod (fixnum->flonum n) m)]
          [(or (bignum? n) (ratnum? n))
           (let ([v ($flonum->exact m)])
-            (unless v 
+            (unless v
               (die who "invalid argument" m))
             (let-values ([(a b) (div-and-mod* n v who)])
               (values (inexact a) (inexact b))))]
@@ -3409,14 +3410,14 @@
   (define (div-and-mod n m)
     (div-and-mod* n m 'div-and-mod))
 
-  (define (div n m) 
+  (define (div n m)
     (import (ikarus system $fx))
     (cond
-      [(and (fixnum? n) (fixnum? m)) 
+      [(and (fixnum? n) (fixnum? m))
        (cond
          [(eq? m 0) (die 'div "division by 0")]
          [(eq? m -1) (- n)]
-         [else 
+         [else
           (let ([d0 ($fxquotient n m)])
             (if ($fx>= n ($fx* d0 m))
                 d0
@@ -3427,10 +3428,10 @@
        (let-values ([(a b) (div-and-mod* n m 'div)])
          a)]))
 
-  (define (mod n m) 
+  (define (mod n m)
     (import (ikarus system $fx))
     (cond
-      [(and (fixnum? n) (fixnum? m)) 
+      [(and (fixnum? n) (fixnum? m))
        (cond
          [(eq? m 0) (die 'mod "division by 0")]
          [else
@@ -3444,46 +3445,46 @@
       [else
        (let-values ([(a b) (div-and-mod* n m 'mod)])
          b)]))
-  
-  (define (div0-and-mod0 x y) 
+
+  (define (div0-and-mod0 x y)
     (let-values ([(d m) (div-and-mod* x y 'div0-and-mod0)])
-      (if (> y 0) 
+      (if (> y 0)
           (if (< m (/ y 2))
               (values d m)
               (values (+ d 1) (- m y)))
           (if (>= m (/ y -2))
               (values (- d 1) (+ m y))
               (values d m)))))
-  
-  (define (div0 x y) 
+
+  (define (div0 x y)
     (let-values ([(d m) (div-and-mod* x y 'div0)])
-      (if (> y 0) 
+      (if (> y 0)
           (if (< m (/ y 2))
               d
               (+ d 1))
           (if (>= m (/ y -2))
               (- d 1)
               d))))
-   
-  (define (mod0 x y) 
+
+  (define (mod0 x y)
     (let-values ([(d m) (div-and-mod* x y 'mod0)])
-      (if (> y 0) 
+      (if (> y 0)
           (if (< m (/ y 2))
               m
               (- m y))
           (if (>= m (/ y -2))
               (+ m y)
               m))))
-  ) 
+  )
 
 (library (ikarus flonums div-and-mod)
   (export fldiv flmod fldiv-and-mod fldiv0 flmod0 fldiv0-and-mod0)
-  (import 
+  (import
     (ikarus system $flonums)
     (ikarus system $fx)
-    (except (ikarus) 
+    (except (ikarus)
       fldiv flmod fldiv-and-mod fldiv0 flmod0 fldiv0-and-mod0))
-  
+
   (define ($flmod n m)
     (let ([d0 (fltruncate ($fl/ n m))])
       (let ([m0 ($fl- n ($fl* d0 m))])
@@ -3492,7 +3493,7 @@
             (if ($fl>= m 0.0)
                 ($fl+ m0 m)
                 ($fl- m0 m))))))
-  
+
   (define ($fldiv n m)
     (let ([d0 (fltruncate ($fl/ n m))])
       (if ($fl>= n ($fl* d0 m))
@@ -3500,7 +3501,7 @@
           (if ($fl>= m 0.0)
               ($fl- d0 1.0)
               ($fl+ d0 1.0)))))
-  
+
   (define ($fldiv-and-mod n m)
     (let ([d0 (fltruncate ($fl/ n m))])
       (let ([m0 ($fl- n ($fl* d0 m))])
@@ -3509,24 +3510,24 @@
             (if ($fl>= m 0.0)
                 (values ($fl- d0 1.0) ($fl+ m0 m))
                 (values ($fl+ d0 1.0) ($fl- m0 m)))))))
-  
+
   (define (fldiv n m)
     (if (flonum? n)
-        (if (flonum? m) 
-            ($fldiv n m) 
+        (if (flonum? m)
+            ($fldiv n m)
             (die 'fldiv "not a flonum" m))
         (die 'fldiv "not a flonum" n)))
-  
+
   (define (flmod n m)
     (if (flonum? n)
         (if (flonum? m)
             ($flmod n m)
             (die 'flmod "not a flonum" m))
         (die 'flmod "not a flonum" n)))
-  
+
   (define (fldiv-and-mod n m)
     (if (flonum? n)
-        (if (flonum? m) 
+        (if (flonum? m)
             ($fldiv-and-mod n m)
             (die 'fldiv-and-mod "not a flonum" m))
         (die 'fldiv-and-mod "not a flonum" n)))
@@ -3578,21 +3579,21 @@
 
   (define (fldiv0 n m)
     (if (flonum? n)
-        (if (flonum? m) 
+        (if (flonum? m)
             ($fldiv0 n m)
             (die 'fldiv0 "not a flonum" m))
         (die 'fldiv0 "not a flonum" n)))
 
   (define (flmod0 n m)
     (if (flonum? n)
-        (if (flonum? m) 
+        (if (flonum? m)
             ($flmod0 n m)
             (die 'flmod0 "not a flonum" m))
         (die 'flmod0 "not a flonum" n)))
 
   (define (fldiv0-and-mod0 n m)
     (if (flonum? n)
-        (if (flonum? m) 
+        (if (flonum? m)
             ($fldiv0-and-mod0 n m)
             (die 'fldiv0-and-mod0 "not a flonum" m))
         (die 'fldiv0-and-mod0 "not a flonum" n))))
@@ -3605,11 +3606,11 @@
           fxcopy-bit
           fxcopy-bit-field fxrotate-bit-field
           fxbit-field)
-  (import 
+  (import
     (ikarus system $fx)
     (ikarus system $bignums)
     (ikarus system $flonums)
-    (except (ikarus) 
+    (except (ikarus)
       fxfirst-bit-set bitwise-bit-set? bitwise-first-bit-set
       fxbit-count bitwise-bit-count
       fxlength
@@ -3619,7 +3620,7 @@
       fxbit-field))
 
   (module (bitwise-first-bit-set fxfirst-bit-set)
-    (define (byte-first-bit-set x i) 
+    (define (byte-first-bit-set x i)
       (import (ikarus system $bytevectors))
       (define-syntax make-first-bit-set-bytevector
         (lambda (x)
@@ -3642,25 +3643,25 @@
             (byte-first-bit-set y i))))
     (define ($bnloop x i idx)
       (let ([b ($bignum-byte-ref x idx)])
-        (if ($fxzero? b) 
+        (if ($fxzero? b)
             ($bnloop x ($fx+ i 8) ($fx+ idx 1))
             (byte-first-bit-set b i))))
     (define ($fxfirst-bit-set x)
-      (if ($fx> x 0) 
+      (if ($fx> x 0)
           ($fxloop x 0)
-          (if ($fx= x 0) 
-              -1 
-              (if ($fx> x (least-fixnum)) 
+          (if ($fx= x 0)
+              -1
+              (if ($fx> x (least-fixnum))
                   ($fxloop ($fx- 0 x) 0)
                   ($bnloop (- x) 0 0)))))
     (define (fxfirst-bit-set x)
       (cond
-        [(fixnum? x) 
+        [(fixnum? x)
          ($fxfirst-bit-set x)]
         [else (die 'fxfirst-bit-set "not a fixnum" x)]))
     (define (bitwise-first-bit-set x)
       (cond
-        [(fixnum? x) 
+        [(fixnum? x)
          ($fxfirst-bit-set x)]
         [(bignum? x) ($bnloop x 0 0)]
         [else (die 'bitwise-first-bit-set "not an exact integer" x)])))
@@ -3694,17 +3695,17 @@
           (pos-fxbitcount n)))
     (define (bnbitcount n)
       (define (poscount x idx c)
-        (let ([c (+ c 
-                    ($fx+ (pos-fxbitcount 
-                            ($fxlogor 
+        (let ([c (+ c
+                    ($fx+ (pos-fxbitcount
+                            ($fxlogor
                               ($fxsll ($bignum-byte-ref x ($fx+ idx 3)) 8)
                               ($bignum-byte-ref x ($fx+ idx 2))))
-                          (pos-fxbitcount 
-                            ($fxlogor 
+                          (pos-fxbitcount
+                            ($fxlogor
                               ($fxsll ($bignum-byte-ref x ($fxadd1 idx)) 8)
                               ($bignum-byte-ref x idx)))))])
-          (if ($fx= idx 0) 
-              c 
+          (if ($fx= idx 0)
+              c
               (poscount x ($fx- idx 4) c))))
       (if ($bignum-positive? n)
           (poscount n ($fx- ($bignum-size n) 4) 0)
@@ -3719,11 +3720,11 @@
         [(fixnum? n) ($fxbitcount n)]
         [(bignum? n) (bnbitcount n)]
         [else (die 'bitwise-bit-count "not an exact integer" n)])))
-  
-  (define (fxlength x) 
+
+  (define (fxlength x)
     (define (fxlength32 x)
       (let ([fl ($fixnum->flonum x)])
-         (let ([sbe ($fxlogor 
+         (let ([sbe ($fxlogor
                       ($fxsll ($flonum-u8-ref fl 0) 4)
                       ($fxsra ($flonum-u8-ref fl 1) 4))])
            (cond
@@ -3733,7 +3734,7 @@
       (if ($fx> x #x7FFFFFFF)
           ($fx+ 31 (fxlength32 ($fxsra x 31)))
           (fxlength32 x)))
-    (if (fixnum? x) 
+    (if (fixnum? x)
         (case (fixnum-width)
           [(30)
            (fxlength32 (if ($fx< x 0) ($fxlognot x) x))]
@@ -3743,8 +3744,8 @@
 
   (define (fxbit-set? x i)
     (define who 'fxbit-set?)
-    (if (fixnum? x) 
-        (if (fixnum? i) 
+    (if (fixnum? x)
+        (if (fixnum? i)
             (if (and ($fx<= 0 i) ($fx< i (fixnum-width)))
                 (not ($fxzero? ($fxlogand ($fxsra x i) 1)))
                 (die who "index out of range" i))
@@ -3754,42 +3755,42 @@
   (define (bitwise-bit-set? x i)
     (define who 'bitwise-bit-set?)
     (cond
-      [(fixnum? i) 
-       (when ($fx< i 0) 
+      [(fixnum? i)
+       (when ($fx< i 0)
          (die who "index must be non-negative" i))
        (cond
-         [(fixnum? x) 
+         [(fixnum? x)
           (if ($fx< i (fixnum-width))
               ($fx= ($fxlogand ($fxsra x i) 1) 1)
               ($fx< x 0))]
-         [(bignum? x) 
+         [(bignum? x)
           (let ([n ($bignum-size x)])
             (let ([m ($fx* n 8)])
-              (if ($fx< m i) 
-                  (not ($bignum-positive? x)) 
-                  (if ($bignum-positive? x) 
+              (if ($fx< m i)
+                  (not ($bignum-positive? x))
+                  (if ($bignum-positive? x)
                       (let ([b ($bignum-byte-ref x ($fxsra i 3))])
                         ($fx= ($fxlogand ($fxsra b ($fxlogand i 7)) 1) 1))
                       (= 1 (bitwise-and
                              (bitwise-arithmetic-shift-right x i)
                              1))))))]
          [else (die who "not an exact integer" x)])]
-      [(bignum? i) 
-       (unless ($bignum-positive? i) 
+      [(bignum? i)
+       (unless ($bignum-positive? i)
          (die who "index must be non-negative"))
        (cond
          [(fixnum? x) ($fx< x 0)]
-         [(bignum? x) 
+         [(bignum? x)
           (= 1 (bitwise-and (bitwise-arithmetic-shift-right x i) 1))]
          [else (die who "not an exact integer" x)])]
-      [else 
+      [else
        (die who "index is not an exact integer" i)]))
 
 
   (define (fxcopy-bit x i b)
     (define who 'fxcopy-bit)
-    (if (fixnum? x) 
-        (if (fixnum? i) 
+    (if (fixnum? x)
+        (if (fixnum? i)
             (if (and ($fx<= 0 i) ($fx< i (fixnum-width)))
                 (case b
                   [(0) ($fxlogand x ($fxlognot ($fxsll 1 i)))]
@@ -3801,14 +3802,14 @@
 
   (define (fxcopy-bit-field x i j b)
     (define who 'fxcopy-bit-field)
-    (if (fixnum? x) 
+    (if (fixnum? x)
         (if (fixnum? i)
             (if ($fx<= 0 i)
-                (if (fixnum? j) 
+                (if (fixnum? j)
                     (if ($fx< j (fixnum-width))
                         (if ($fx<= i j)
-                            (if (fixnum? b) 
-                                (let ([m 
+                            (if (fixnum? b)
+                                (let ([m
                                        ($fxlogxor
                                          ($fxsub1 ($fxsll 1 i))
                                          ($fxsub1 ($fxsll 1 j)))])
@@ -3837,7 +3838,7 @@
     (if (fixnum? x)
         (if (fixnum? i)
             (if ($fx>= i 0)
-                (if (fixnum? j) 
+                (if (fixnum? j)
                     (if ($fx< j (fixnum-width))
                         (let ([w ($fx- j i)])
                           (if ($fx>= w 0)
@@ -3853,17 +3854,17 @@
             (die who "start index is not a fixnum" i))
         (die who "not a fixnum" x)))
 
-                    
+
 
   (define (fxbit-field x i j)
     (define who 'fxbit-field)
-    (if (fixnum? x) 
+    (if (fixnum? x)
         (if (fixnum? i)
             (if ($fx<= 0 i)
-                (if (fixnum? j) 
+                (if (fixnum? j)
                     (if ($fx< j (fixnum-width))
                         (if ($fx<= i j)
-                            ($fxsra 
+                            ($fxsra
                               ($fxlogand x ($fxsub1 ($fxsll 1 j)))
                               i)
                             (if ($fx<= 0 j)
@@ -3881,13 +3882,13 @@
 (library (ikarus complex-numbers)
   (export make-rectangular $make-rectangular make-polar
           real-part imag-part angle magnitude)
-  (import 
+  (import
     (except (ikarus) make-rectangular make-polar
           real-part imag-part angle magnitude)
     (except (ikarus system $compnums) $make-rectangular))
 
   (define ($make-rectangular r i)
-    ;;; should be called with 2 exacts 
+    ;;; should be called with 2 exacts
     (if (eqv? i 0)
         r
         ($make-compnum r i)))
@@ -3897,7 +3898,7 @@
     (define (err x)
       (die who "invalid argument" x))
     (cond
-      [(flonum? i) 
+      [(flonum? i)
        (cond
          [(flonum? r) ($make-cflonum r i)]
          [(or (fixnum? r) (bignum? r) (ratnum? r))
@@ -3919,7 +3920,7 @@
       (die who "not a real number" mag))
     (unless (real? angle)
       (die who "not a real number" angle))
-    (make-rectangular 
+    (make-rectangular
       (* mag (cos angle))
       (* mag (sin angle))))
 
@@ -3936,7 +3937,7 @@
          (let ([r ($cflonum-real x)]
                [i ($cflonum-imag x)])
            (sqrt (+ (* r r) (* i i))))]
-        [else 
+        [else
          (die 'magnitude "not a number" x)])))
 
   (define angle
@@ -3965,7 +3966,7 @@
          (let ([r ($cflonum-real x)]
                [i ($cflonum-imag x)])
            (atan i r))]
-        [else 
+        [else
          (die 'angle "not a number" x)])))
 
   (define real-part
@@ -3977,7 +3978,7 @@
         [(flonum? x) x]
         [(compnum? x) ($compnum-real x)]
         [(cflonum? x) ($cflonum-real x)]
-        [else 
+        [else
          (die 'real-part "not a number" x)])))
 
   (define imag-part
@@ -3989,7 +3990,7 @@
         [(flonum? x) 0]
         [(compnum? x) ($compnum-imag x)]
         [(cflonum? x) ($cflonum-imag x)]
-        [else 
+        [else
          (die 'imag-part "not a number" x)])))
 )
 
