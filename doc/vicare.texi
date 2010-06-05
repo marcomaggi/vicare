@@ -588,7 +588,11 @@ people.
 * using::                       Using the program.
 * library::                     Installed libraries.
 * posix::                       The @posix{} interface.
-* objects int::                 Internals: builtin objects.
+
+Internals
+
+* objects int::                 Builtin objects.
+* debug int::                   Debug mode.
 
 Appendices
 
@@ -6158,6 +6162,40 @@ Notice that on both @math{32} bits and @math{64} bits platforms: the
 first byte of the data area is at the same offset from the first byte of
 the vector memory block.
 @end defmac
+
+@c page
+@node debug int
+@chapter Internals: debug mode
+
+
+@menu
+* debug int intro::             Introduction to debug mode.
+@end menu
+
+@c page
+@node debug int intro
+@section Introduction to debug mode
+
+
+Debug mode is driven with the following options:
+
+@table @option
+@item -d
+@itemx --debug
+Turn on debugging mode.  The parameter @func{generate-debug-calls} is
+set to true.
+
+@item -nd
+@itemx --no-debug
+Turn off debugging mode.  The parameter @func{generate-debug-calls} is
+set to false.
+@end table
+
+
+@deffn Parameter generate-debug-calls
+Set to true when debug mode is turned on.  Defined in
+@file{ikarus.compiler.ss}, configured in @file{ikarus.main.ss}.
+@end deffn
 
 @c page
 @node missing
