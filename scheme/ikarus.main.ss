@@ -79,13 +79,13 @@
 (library (ikarus main)
   (export)
   (import (except (ikarus) load-r6rs-script)
-          (except (ikarus startup) host-info)
-          (only (ikarus.compiler) generate-debug-calls)
-          (only (ikarus.debugger) guarded-start)
-          (only (psyntax library-manager) current-library-expander)
-          (only (ikarus.reader.annotated) read-source-file)
-          (only (ikarus.symbol-table) initialize-symbol-table!)
-          (only (ikarus load) load-r6rs-script))
+    (except (ikarus startup) host-info)
+    (only (ikarus.compiler) generate-debug-calls)
+    (only (ikarus.debugger) guarded-start)
+    (only (psyntax library-manager) current-library-expander)
+    (only (ikarus.reader.annotated) read-source-file)
+    (only (ikarus.symbol-table) initialize-symbol-table!)
+    (only (ikarus load) load-r6rs-script))
 
   (define rcfiles #t) ;; #f for no rcfile, list for specific list
 
@@ -94,58 +94,58 @@
       (define (invalid-rc-error)
         (die 'vicare "--no-rcfile is invalid with --rcfile"))
       (cond
-        [(null? args) (values '() #f #f '() k)]
-        [(member (car args) '("-d" "--debug"))
-         (f (cdr args) (lambda () (k) (generate-debug-calls #t)))]
-        [(member (car args) '("-nd" "--no-debug"))
-         (f (cdr args) (lambda () (k) (generate-debug-calls #f)))]
-        [(string=? (car args) "-O2")
-         (f (cdr args) (lambda () (k) (optimize-level 2)))]
-        [(string=? (car args) "-O1")
-         (f (cdr args) (lambda () (k) (optimize-level 1)))]
-        [(string=? (car args) "-O0")
-         (f (cdr args) (lambda () (k) (optimize-level 0)))]
-        [(string=? (car args) "--no-rcfile")
-         (unless (boolean? rcfiles) (invalid-rc-error))
-         (set! rcfiles #f)
-         (f (cdr args) k)]
-        [(string=? (car args) "--rcfile")
-         (let ([d (cdr args)])
-           (when (null? d) (die 'vicare "--rcfile requires a script name"))
-           (set! rcfiles
-             (cons (car d)
-               (case rcfiles
-                 [(#t) '()]
-                 [(#f) (invalid-rc-error)]
-                 [else rcfiles])))
-           (f (cdr d) k))]
-        [(string=? (car args) "--")
-         (values '() #f #f (cdr args) k)]
-        [(string=? (car args) "--script")
-         (let ([d (cdr args)])
-           (cond
-             [(null? d) (die 'vicare "--script requires a script name")]
-             [else (values '() (car d) 'script (cdr d) k)]))]
-        [(string=? (car args) "--r6rs-script")
-         (let ([d (cdr args)])
-           (cond
-             [(null? d) (die 'vicare "--r6rs-script requires a script name")]
-             [else (values '() (car d) 'r6rs-script (cdr d) k)]))]
-        [(string=? (car args) "--r6rs-repl")
-         (let ([d (cdr args)])
-           (cond
-             [(null? d) (die 'vicare "--r6rs-repl requires a script name")]
-             [else (values '() (car d) 'r6rs-repl (cdr d) k)]))]
-        [(string=? (car args) "--compile-dependencies")
-         (let ([d (cdr args)])
-           (cond
-             [(null? d)
-              (die 'vicare "--compile-dependencies requires a script name")]
-             [else
-              (values '() (car d) 'compile (cdr d) k)]))]
-        [else
-         (let-values ([(f* script script-type a* k) (f (cdr args) k)])
-           (values (cons (car args) f*) script script-type a* k))])))
+       [(null? args) (values '() #f #f '() k)]
+       [(member (car args) '("-d" "--debug"))
+	(f (cdr args) (lambda () (k) (generate-debug-calls #t)))]
+       [(member (car args) '("-nd" "--no-debug"))
+	(f (cdr args) (lambda () (k) (generate-debug-calls #f)))]
+       [(string=? (car args) "-O2")
+	(f (cdr args) (lambda () (k) (optimize-level 2)))]
+       [(string=? (car args) "-O1")
+	(f (cdr args) (lambda () (k) (optimize-level 1)))]
+       [(string=? (car args) "-O0")
+	(f (cdr args) (lambda () (k) (optimize-level 0)))]
+       [(string=? (car args) "--no-rcfile")
+	(unless (boolean? rcfiles) (invalid-rc-error))
+	(set! rcfiles #f)
+	(f (cdr args) k)]
+       [(string=? (car args) "--rcfile")
+	(let ([d (cdr args)])
+	  (when (null? d) (die 'vicare "--rcfile requires a script name"))
+	  (set! rcfiles
+		(cons (car d)
+		      (case rcfiles
+			[(#t) '()]
+			[(#f) (invalid-rc-error)]
+			[else rcfiles])))
+	  (f (cdr d) k))]
+       [(string=? (car args) "--")
+	(values '() #f #f (cdr args) k)]
+       [(string=? (car args) "--script")
+	(let ([d (cdr args)])
+	  (cond
+	   [(null? d) (die 'vicare "--script requires a script name")]
+	   [else (values '() (car d) 'script (cdr d) k)]))]
+       [(string=? (car args) "--r6rs-script")
+	(let ([d (cdr args)])
+	  (cond
+	   [(null? d) (die 'vicare "--r6rs-script requires a script name")]
+	   [else (values '() (car d) 'r6rs-script (cdr d) k)]))]
+       [(string=? (car args) "--r6rs-repl")
+	(let ([d (cdr args)])
+	  (cond
+	   [(null? d) (die 'vicare "--r6rs-repl requires a script name")]
+	   [else (values '() (car d) 'r6rs-repl (cdr d) k)]))]
+       [(string=? (car args) "--compile-dependencies")
+	(let ([d (cdr args)])
+	  (cond
+	   [(null? d)
+	    (die 'vicare "--compile-dependencies requires a script name")]
+	   [else
+	    (values '() (car d) 'compile (cdr d) k)]))]
+       [else
+	(let-values ([(f* script script-type a* k) (f (cdr args) k)])
+	  (values (cons (car args) f*) script script-type a* k))])))
 
   (initialize-symbol-table!)
   (init-library-path)
@@ -155,13 +155,13 @@
     (define (assert-null files who)
       (unless (null? files)
         (apply die 'vicare
-          (format "load files not allowed for ~a" who)
-          files)))
+	       (format "load files not allowed for ~a" who)
+	       files)))
 
     (define (start proc)
       (if (generate-debug-calls)
           (guarded-start proc)
-          (proc)))
+	(proc)))
 
     (define-syntax doit
       (syntax-rules ()
@@ -171,26 +171,26 @@
     (define (default-rc-files)
       (cond
        [(getenv "VICARE_RC_FILES") => split-path]
-        [(getenv "HOME") =>
-         (lambda (home)
-           (let ([f (string-append home "/.vicarerc")])
-             (if (file-exists? f)
-                 (list f)
-                 '())))]
-        [else '()]))
+       [(getenv "HOME") =>
+	(lambda (home)
+	  (let ([f (string-append home "/.vicarerc")])
+	    (if (file-exists? f)
+		(list f)
+	      '())))]
+       [else '()]))
 
     (for-each
-      (lambda (filename)
-        (with-exception-handler
-          (lambda (con)
-            (raise-continuable
-              (condition
-                (make-who-condition 'vicare)
-                (make-message-condition
-                  (format "loading rc file ~a failed" filename))
-                con)))
-          (lambda ()
-            (load-r6rs-script filename #f #t))))
+	(lambda (filename)
+	  (with-exception-handler
+	      (lambda (con)
+		(raise-continuable
+		 (condition
+		  (make-who-condition 'vicare)
+		  (make-message-condition
+		   (format "loading rc file ~a failed" filename))
+		  con)))
+	    (lambda ()
+	      (load-r6rs-script filename #f #t))))
       (case rcfiles
         [(#t) (default-rc-files)]
         [(#f) '()]
@@ -199,43 +199,43 @@
     (init-command-line-args)
 
     (cond
-      [(memq script-type '(r6rs-script r6rs-repl))
-       (let ([f (lambda ()
-                  (doit
-                    (command-line-arguments (cons script args))
-                    (for-each
+     ((memq script-type '(r6rs-script r6rs-repl))
+      (let ([f (lambda ()
+		 (doit
+		  (command-line-arguments (cons script args))
+		  (for-each
                       (lambda (filename)
                         (for-each
-                          (lambda (src)
-                            ((current-library-expander) src))
+			    (lambda (src)
+			      ((current-library-expander) src))
                           (read-source-file filename)))
-                      files)
-                    (load-r6rs-script script #f #t)))])
-         (cond
-           [(eq? script-type 'r6rs-script) (f)]
-           [else
-            (print-greeting)
-            (let ([env (f)])
-              (interaction-environment env)
-              (new-cafe
-                (lambda (x)
-                  (doit (eval x env)))))]))]
-      [(eq? script-type 'compile)
-       (assert-null files "--compile-dependencies")
-       (doit
-         (command-line-arguments (cons script args))
-         (load-r6rs-script script #t #f))]
-      [(eq? script-type 'script) ; no greeting, no cafe
+		    files)
+		  (load-r6rs-script script #f #t)))])
+	(cond
+	 ((eq? script-type 'r6rs-script) (f))
+	 (else
+	  (print-greeting)
+	  (let ([env (f)])
+	    (interaction-environment env)
+	    (new-cafe
+	     (lambda (x)
+	       (doit (eval x env)))))))))
+     [(eq? script-type 'compile)
+      (assert-null files "--compile-dependencies")
+      (doit
        (command-line-arguments (cons script args))
-       (doit
-         (for-each load files)
-         (load script))]
-      [else
-       (print-greeting)
-       (command-line-arguments (cons "*interactive*" args))
-       (doit (for-each load files))
-       (new-cafe
-         (lambda (x)
-           (doit (eval x (interaction-environment)))))])
+       (load-r6rs-script script #t #f))]
+     [(eq? script-type 'script) ; no greeting, no cafe
+      (command-line-arguments (cons script args))
+      (doit
+       (for-each load files)
+       (load script))]
+     [else
+      (print-greeting)
+      (command-line-arguments (cons "*interactive*" args))
+      (doit (for-each load files))
+      (new-cafe
+       (lambda (x)
+	 (doit (eval x (interaction-environment)))))])
 
     (exit 0)))

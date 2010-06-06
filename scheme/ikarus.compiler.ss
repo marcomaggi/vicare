@@ -446,27 +446,27 @@
             (make-primref var))]
          [(annotated-call)
           (E-app
-            (if (generate-debug-calls)
-                (lambda (op rands)
-                  (define (operator? x)
-                    (struct-case x
-                      [(primref x)
-                       (guard (con [(assertion-violation? con) #t])
-                         (system-value x)
-                         #f)]
-                      [else #f]))
-                  (define (get-src/expr ae)
-                    (if (annotation? ae)
-                        (cons (annotation-source ae) (annotation-stripped ae))
-                        (cons #f (syntax->datum ae))))
-                  (define src/expr
-                    (make-constant (get-src/expr (cadr x))))
-                  (if (operator? op)
-                      (make-funcall op rands)
-                      (make-funcall (make-primref 'debug-call)
-                        (cons* src/expr op rands))))
-                make-funcall)
-            (caddr x) (cdddr x) ctxt)]
+	   (if (generate-debug-calls)
+	       (lambda (op rands)
+		 (define (operator? x)
+		   (struct-case x
+				[(primref x)
+				 (guard (con [(assertion-violation? con) #t])
+				   (system-value x)
+				   #f)]
+				[else #f]))
+		 (define (get-src/expr ae)
+		   (if (annotation? ae)
+		       (cons (annotation-source ae) (annotation-stripped ae))
+		     (cons #f (syntax->datum ae))))
+		 (define src/expr
+		   (make-constant (get-src/expr (cadr x))))
+		 (if (operator? op)
+		     (make-funcall op rands)
+		   (make-funcall (make-primref 'debug-call)
+				 (cons* src/expr op rands))))
+	     make-funcall)
+	   (caddr x) (cdddr x) ctxt)]
          [else (E-app make-funcall (car x) (cdr x) ctxt)])]
       [(symbol? x)
        (cond

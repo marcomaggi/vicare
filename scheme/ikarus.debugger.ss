@@ -1,7 +1,7 @@
 
 (library (ikarus.debugger)
   (export debug-call guarded-start
-          make-traced-procedure make-traced-macro) 
+          make-traced-procedure make-traced-macro)
   (import (except (ikarus) make-traced-procedure make-traced-macro))
 
 
@@ -44,7 +44,7 @@
             (thunk)
             (dynamic-wind
               (let ([scell (mkcell *scell*)])
-                (lambda () 
+                (lambda ()
                   (set! *scell* scell)
                   (pre)))
               (lambda ()
@@ -71,19 +71,19 @@
 
   (module (display-return-trace make-traced-procedure make-traced-macro)
     (define *trace-depth* 0)
-    
+
     (define display-prefix
       (lambda (n)
         (let f ([i 0])
           (unless (= i n)
             (display (if (even? i) "|" " "))
             (f (+ i 1))))))
-  
+
     (define (display-call-trace n ls)
       (display-prefix n)
       (write ls)
       (newline))
- 
+
     (define (display-return-trace n ls)
       (display-prefix n)
       (unless (null? ls)
@@ -100,7 +100,7 @@
         [(name proc) (make-traced-procedure name proc (lambda (x) x))]
         [(name proc filter)
          (lambda args
-           (stacked-call 
+           (stacked-call
              (lambda ()
                (set! *trace-depth* (add1 *trace-depth*)))
              (lambda ()
@@ -110,25 +110,25 @@
                (apply proc args))
              (lambda ()
                (set! *trace-depth* (sub1 *trace-depth*)))))]))
-  
+
     (define make-traced-macro
       (lambda (name x)
         (cond
-          [(procedure? x) 
+          [(procedure? x)
            (make-traced-procedure name x syntax->datum)]
           [(variable-transformer? x)
            (make-variable-transformer
-             (make-traced-procedure name 
+             (make-traced-procedure name
                (variable-transformer-procedure x)
                syntax->datum))]
           [else x]))))
 
   (define-struct trace (src/expr rator rands))
 
-  (define (trace-src x) 
+  (define (trace-src x)
     (let ([x (trace-src/expr x)])
       (if (pair? x) (car x) #f)))
-  (define (trace-expr x) 
+  (define (trace-expr x)
     (let ([x (trace-src/expr x)])
       (if (pair? x) (cdr x) #f)))
 

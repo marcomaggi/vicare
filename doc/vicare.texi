@@ -1368,12 +1368,11 @@ The rest of the command line arguments are recognized by the standard
 Scheme run time system.  They are processed after the boot file is
 loaded.
 
-@item @value{RAWEXECUTABLE} --script script-file-name [arguments ...]
-@itemx @value{RAWEXECUTABLE} --r6rs-script script-file-name [arguments ...]
-The @option{--script} or @option{--r6rs-script} option instructs
-@value{PRJNAME} that the supplied file is an @rnrs{6} script.  The
-script file name and any additional optional @code{arguments} can be
-obtained by calling the @func{command-line} procedure.
+@item @value{RAWEXECUTABLE} --r6rs-script script-file-name [arguments ...]
+The @option{--r6rs-script} option instructs @value{PRJNAME} that the
+supplied file is an @rnrs{6} script.  The script file name and any
+additional optional @code{arguments} can be obtained by calling the
+@func{command-line} procedure.
 
 @example
 $ cat test.sps
@@ -1384,6 +1383,24 @@ $ cat test.sps
 $ @value{RAWEXECUTABLE} --r6rs-script test.sps hi there
 ("test.sps" "hi" "there")
 @end example
+
+@item @value{RAWEXECUTABLE} --script script-file-name [arguments ...]
+The @option{--script} option instructs @value{PRJNAME} that the supplied
+file is a Scheme script.  The script file name and any additional
+optional @code{arguments} can be obtained by calling the
+@func{command-line} procedure.
+
+@example
+$ cat test.sps
+(write (command-line))
+(newline)
+
+$ @value{RAWEXECUTABLE} --script test.sps hi there
+("test.sps" "hi" "there")
+@end example
+
+When @option{--script} is used: all the scripts loaded are accepted as
+Scheme scripts without the @func{import} or @func{library} forms.
 
 @item @value{RAWEXECUTABLE} --r6rs-repl <FILE> ... [-- arguments ...]
 Start interactive mode, but load and evaluate @file{FILE} first.
@@ -6191,11 +6208,24 @@ Turn off debugging mode.  The parameter @func{generate-debug-calls} is
 set to false.
 @end table
 
+The implementation is mostly in @file{ikarus.debugger.ss} and
+@file{ikarus.compiler.ss}.
+
 
 @deffn Parameter generate-debug-calls
 Set to true when debug mode is turned on.  Defined in
 @file{ikarus.compiler.ss}, configured in @file{ikarus.main.ss}.
 @end deffn
+
+
+@defun guarded-start @var{proc}
+Evaluate the procedure @var{proc} under the debugging infrastructure.
+It is used in the @library{ikarus main} library (@file{ikarus.main.ss})
+to start the execution of a program and all the other execution modes.
+
+@var{proc} is evaluated under the installation of an exception handler
+displaying the stack trace and offering the continuation alternatives.
+@end defun
 
 @c page
 @node missing

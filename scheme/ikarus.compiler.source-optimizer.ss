@@ -1,15 +1,15 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -18,7 +18,7 @@
 
 ;;; Oscar Waddell. "Extending the Scope of Syntactic Abstraction". PhD.
 ;;; Thesis. Indiana University Computer Science Department. August 1999.
-;;; Available online: 
+;;; Available online:
 ;;;   http://www.cs.indiana.edu/~owaddell/papers/thesis.ps.gz
 
 (module (source-optimize optimize-level cp0-effort-limit cp0-size-limit)
@@ -38,7 +38,7 @@
   ;;;
   (define (passive-counter)
     (make-counter (greatest-fixnum) #f
-      (lambda args 
+      (lambda args
         (error 'passive-counter "invalid abort"))))
   ;;;
   (define (passive-counter-value x)
@@ -78,22 +78,22 @@
             (set-prelex-source-referenced?! y #t)
             (set-prelex-residual-referenced?! y #t)))
         y))
-    (define (extend env lhs* rands) 
+    (define (extend env lhs* rands)
       (if (null? lhs*)
           (values env '())
           (let ([nlhs* (map copy-var lhs*)])
-            (when rands 
-              (for-each 
-                (lambda (lhs rhs) 
+            (when rands
+              (for-each
+                (lambda (lhs rhs)
                   (set-prelex-operand! lhs rhs))
                 nlhs* rands))
             (values (vector lhs* nlhs* env) nlhs*))))
     (define (copy-back ls)
-      (for-each 
+      (for-each
         (lambda (x)
-          (set-prelex-source-assigned?! x 
+          (set-prelex-source-assigned?! x
              (prelex-residual-assigned? x))
-          (set-prelex-source-referenced?! x 
+          (set-prelex-source-referenced?! x
              (prelex-residual-referenced? x)))
         ls))
     (define-syntax with-extended-env
@@ -200,15 +200,15 @@
       [(fxadd1 _)                  foldable             result-true]
       [(fxsub1 _)                  foldable             result-true]
       [(fxzero? _)                 foldable                        ]
-      [(fx=? _ . _)                foldable                        ] 
-      [(fx<? _ . _)                foldable                        ] 
-      [(fx<=? _ . _)               foldable                        ] 
-      [(fx>? _ . _)                foldable                        ] 
+      [(fx=? _ . _)                foldable                        ]
+      [(fx<? _ . _)                foldable                        ]
+      [(fx<=? _ . _)               foldable                        ]
+      [(fx>? _ . _)                foldable                        ]
       [(fx>=? _ . _)               foldable                        ]
-      [(fx= _ . _)                 foldable                        ] 
-      [(fx< _ . _)                 foldable                        ] 
-      [(fx<= _ . _)                foldable                        ] 
-      [(fx> _ . _)                 foldable                        ] 
+      [(fx= _ . _)                 foldable                        ]
+      [(fx< _ . _)                 foldable                        ]
+      [(fx<= _ . _)                foldable                        ]
+      [(fx> _ . _)                 foldable                        ]
       [(fx>= _ . _)                foldable                        ]
       [(real-part _)               foldable             result-true]
       [(imag-part _)               foldable             result-true]
@@ -223,10 +223,10 @@
       [(integer->char _)           foldable             result-true]
       [(eof-object)                foldable effect-free result-true]
       [(zero? _)                   foldable                        ]
-      [(= _ . _)                   foldable                        ] 
-      [(< _ . _)                   foldable                        ] 
-      [(<= _ . _)                  foldable                        ] 
-      [(> _ . _)                   foldable                        ] 
+      [(= _ . _)                   foldable                        ]
+      [(< _ . _)                   foldable                        ]
+      [(<= _ . _)                  foldable                        ]
+      [(> _ . _)                   foldable                        ]
       [(>= _ . _)                  foldable                        ]
       [(expt _ _)                  foldable             result-true]
       [(log _)                     foldable             result-true]
@@ -352,7 +352,7 @@
       [($data->transcoder . _)]
       [(current-time . _)]
     ))
- 
+
   (module (primprop)
     (define-syntax ct-gensym
       (lambda (x)
@@ -378,7 +378,7 @@
           (let ([cc (car a)] [cv (cdr a)])
             (let ([prim (car cc)] [args (cdr cc)])
               (let-values ([(p* ls) (get prim (cdr ls))])
-                (putprop prim g 
+                (putprop prim g
                   (cons (cons args cv) p*))
                 (f ls))))))))
   (define (primitive-info op args)
@@ -389,7 +389,7 @@
            (and (pair? args)
                 (case (car params)
                   [(_) (f (cdr args) (cdr params))]
-                  [(#f 0 ()) 
+                  [(#f 0 ())
                    (let ([v (value-visit-operand! (car args))])
                      (and (constant? v)
                           (equal? (constant-value v) (car params))
@@ -421,10 +421,10 @@
         (syntax-case cls* (else)
           [() #'(error 'extract "unmatched ctxt" t)]
           [([else e e* ...]) #'(begin e e* ...)]
-          [([(t* ...) e e* ...] rest ...) 
+          [([(t* ...) e e* ...] rest ...)
            (with-syntax ([(t* ...) (map test #'(t* ...))]
                          [body (extract #'(rest ...))])
-             #'(if (or t* ...) 
+             #'(if (or t* ...)
                    (begin e e* ...)
                    body))]))
       (syntax-case stx ()
@@ -433,7 +433,7 @@
            #'(let ([t expr])
                body))])))
   (define (mkseq e0 e1)
-    ;;; returns a (seq e0 e1) with a seq-less e1 if both 
+    ;;; returns a (seq e0 e1) with a seq-less e1 if both
     ;;; e0 and e1 are constructed properly.
     (if (simple? e0)
         e1
@@ -444,7 +444,7 @@
             [(seq e1a e1b) (make-seq (make-seq e0 e1a) e1b)]
             [else (make-seq e0 e1)]))))
   ;;; simple?: check quickly whether something is effect-free
-  (define (simple? x) 
+  (define (simple? x)
     (struct-case x
       [(constant) #t]
       [(prelex)   #t]
@@ -489,7 +489,7 @@
     (or (operand-value rand)
         (let ([sc (passive-counter)])
           (let ([e (struct-case rand
-                     [(operand expr env ec) 
+                     [(operand expr env ec)
                       (E expr 'v env sc ec)])])
             (set-operand-value! rand e)
             (set-operand-size! rand (passive-counter-value sc))
@@ -521,10 +521,10 @@
                [rator (cadr rand*)]
                [rands (cddr rand*)])
            (let ([ctxt2 (make-app rands (app-ctxt ctxt))])
-             (let ([rator (E (operand-expr rator) 
-                             ctxt2 
+             (let ([rator (E (operand-expr rator)
+                             ctxt2
                              (operand-env rator)
-                             (operand-ec rator) 
+                             (operand-ec rator)
                              sc)])
                (if (app-inlined ctxt2)
                    (begin
@@ -537,7 +537,7 @@
   (define (E-var x ctxt env ec sc)
     (ctxt-case ctxt
       [(e) (make-constant (void))]
-      [else 
+      [else
        (let ([x (lookup x env)])
          (let ([opnd (prelex-operand x)])
            (if (and opnd (not (operand-inner-pending opnd)))
@@ -567,25 +567,25 @@
   (define (copy2 x opnd ctxt ec sc)
     (let ([rhs (result-expr (operand-value opnd))])
       (struct-case rhs
-        [(clambda) 
+        [(clambda)
          (ctxt-case ctxt
            [(v) (residualize-ref x sc)]
            [(p) (make-constant #t)]
            [(e) (make-constant (void))]
-           [(app) 
+           [(app)
             (or (and (not (operand-outer-pending opnd))
                      (dynamic-wind
                        (lambda () (set-operand-outer-pending! opnd #t))
                        (lambda ()
                          (call/cc
                            (lambda (abort)
-                             (inline rhs ctxt empty-env 
+                             (inline rhs ctxt empty-env
                                (if (active-counter? ec)
                                    ec
                                    (make-counter
                                      (cp0-effort-limit)
                                      ctxt abort))
-                               (make-counter 
+                               (make-counter
                                  (if (active-counter? sc)
                                      (counter-value sc)
                                      (cp0-size-limit))
@@ -602,7 +602,7 @@
   (define (inline proc ctxt env ec sc)
     (define (get-case cases rand*)
       (define (compatible? x)
-        (struct-case (clambda-case-info x) 
+        (struct-case (clambda-case-info x)
           [(case-info label args proper)
            (cond
              [proper (= (length rand*) (length args))]
@@ -626,7 +626,7 @@
          (struct-case (get-case cases rand*)
            [(clambda-case info body)
             (struct-case info
-              [(case-info label args proper) 
+              [(case-info label args proper)
                (cond
                  [proper
                   (with-extended-env ((env args) (env args rand*))
@@ -634,11 +634,11 @@
                       (let ([result (make-let-binding args rand* body sc)])
                         (set-app-inlined! ctxt #t)
                         result)))]
-                 [else 
+                 [else
                   (let-values ([(x* t* r) (partition args rand*)])
                     (with-extended-env ((env a*)
                                         (env (append x* t*) rand*))
-                      (let ([rarg (make-operand 
+                      (let ([rarg (make-operand
                                     (make-funcall (make-primref 'list) t*)
                                     env ec)])
                         (with-extended-env ((env b*)
@@ -672,7 +672,7 @@
             (cons (score-value-visit-operand! rand sc) rhs*))]
         [(prelex-residual-assigned? var)
          (set-operand-residualize-for-effect! rand #t)
-         (values 
+         (values
             (cons var lhs*)
             (cons (make-constant (void)) rhs*))]
         [else
@@ -692,11 +692,11 @@
     (define (get-value p ls)
       (call/cc
         (lambda (k)
-          (with-exception-handler 
-            (lambda (con) 
+          (with-exception-handler
+            (lambda (con)
               (decrement ec 10)
               (k #f))
-            (lambda () 
+            (lambda ()
               (make-constant (apply (system-value p) ls)))))))
     (let ([rand* (app-rand* ctxt)])
       (let ([info (primitive-info p rand*)])
@@ -704,7 +704,7 @@
                (or (and (info-effect-free? info)
                         (ctxt-case (app-ctxt ctxt)
                           [(e) (make-constant (void))]
-                          [(p) 
+                          [(p)
                            (cond
                              [(info-result-true? info)
                               (make-constant #t)]
@@ -739,16 +739,16 @@
   ;;;
   (define (build-conditional e0 e1 e2)
     (or (struct-case e0
-          [(funcall rator rand*) 
-           (struct-case rator 
-             [(primref op) 
+          [(funcall rator rand*)
+           (struct-case rator
+             [(primref op)
               (and (eq? op 'not)
                    (= (length rand*) 1)
                    (build-conditional (car rand*) e2 e1))]
              [else #f])]
           [else #f])
         (make-conditional e0 e1 e2)))
-         
+
   (define (E x ctxt env ec sc)
     (decrement ec 1)
     (struct-case x
@@ -759,15 +759,15 @@
       [(conditional e0 e1 e2)
        (let ([e0 (E e0 'p env ec sc)])
          (struct-case (result-expr e0)
-           [(constant k) 
+           [(constant k)
             (mkseq e0 (E (if k e1 e2) ctxt env ec sc))]
-           [else 
+           [else
             (let ([ctxt (ctxt-case ctxt [(app) 'v] [else ctxt])])
               (let ([e1 (E e1 ctxt env ec sc)]
                     [e2 (E e2 ctxt env ec sc)])
                 (if (records-equal? e1 e2 ctxt)
                     (mkseq e0 e1)
-                    (begin 
+                    (begin
                       (decrement sc 1)
                       (build-conditional e0 e1 e2)))))]))]
       [(assign x v)
@@ -784,7 +784,7 @@
               (make-assign x (E v 'v env ec sc))]))
          (make-constant (void)))]
       [(funcall rator rand*)
-       (E-call rator 
+       (E-call rator
          (map (lambda (x) (make-operand x env ec)) rand*)
          env ctxt ec sc)]
       [(forcall name rand*)
@@ -792,32 +792,32 @@
        (make-forcall name (map (lambda (x) (E x 'v env ec sc)) rand*))]
       [(primref name)
        (ctxt-case ctxt
-         [(app) 
+         [(app)
           (case name
             [(debug-call) (E-debug-call ctxt ec sc)]
             [else (fold-prim name ctxt ec sc)])]
          [(v) (decrement sc 1) x]
          [else (make-constant #t)])]
-      [(clambda g cases cp free name) 
+      [(clambda g cases cp free name)
        (ctxt-case ctxt
          [(app) (inline x ctxt env ec sc)]
          [(p e) (make-constant #t)]
          [else
           (decrement sc 2)
           (make-clambda (gensym)
-            (map 
+            (map
               (lambda (x)
                 (struct-case x
                   [(clambda-case info body)
                    (struct-case info
-                     [(case-info label args proper) 
+                     [(case-info label args proper)
                       (with-extended-env ((env args) (env args #f))
-                        (make-clambda-case 
+                        (make-clambda-case
                           (make-case-info (gensym) args proper)
                           (E body 'v env ec sc)))])]))
               cases)
             cp free name)])]
-      [(bind lhs* rhs* body) 
+      [(bind lhs* rhs* body)
        (do-bind lhs* rhs* body ctxt env ec sc)]
       [(fix lhs* rhs* body)
        (with-extended-env ((env lhs*) (env lhs* #f))
@@ -826,7 +826,7 @@
              (set-prelex-operand! lhs (make-operand rhs env ec)))
             lhs* rhs*)
          (let ([body (E body ctxt env ec sc)])
-           (let ([lhs* (remp 
+           (let ([lhs* (remp
                          (lambda (x)
                            (not (prelex-residual-referenced? x)))
                          lhs*)])
@@ -834,7 +834,7 @@
                [(null? lhs*) body]
                [else
                 (decrement sc 1)
-                (make-fix lhs* 
+                (make-fix lhs*
                   (map (lambda (x)
                          (let ([opnd (prelex-operand x)])
                            (decrement sc (+ (operand-size opnd) 1))
@@ -853,7 +853,7 @@
            [(eq? x (car lhs*)) (car rhs*)]
            [else (f (cdr lhs*) (cdr rhs*))]))]
       [else x]))
-  (define optimize-level 
+  (define optimize-level
     (make-parameter 1
       (lambda (x)
         (if (memv x '(0 1 2))
@@ -863,8 +863,9 @@
     (define (source-optimize expr)
       (E expr 'v empty-env (passive-counter) (passive-counter)))
     (case (optimize-level)
-      [(2) (source-optimize expr)]
-      [(1) 
+      [(2)
+       (source-optimize expr)]
+      [(1)
        (parameterize ([cp0-size-limit 0])
          (source-optimize expr))]
       [else expr]))
