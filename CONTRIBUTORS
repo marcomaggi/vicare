@@ -1,6 +1,11 @@
 Marco  Maggi   <marco.maggi-ipsu@poste.it>  is  the  initial
 maintainer of Vicare Scheme fork.
 
+Andreas Rottmann: provided patch to implement getpid.
+
+Göran     Weinholt:    provided    patch     to    implement
+FXREVERSE-BIT-FIELD.
+
 ### end of file
 # Local Variables:
 # mode: text

@@ -1,6 +1,6 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2008,2009  Abdulaziz Ghuloum
-;;; Modified by Marco Maggi
+;;; Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
@@ -19,14 +19,14 @@
 (library (ikarus not-yet-implemented)
   (export
     bitwise-reverse-bit-field
-    bitwise-rotate-bit-field fxreverse-bit-field
+    bitwise-rotate-bit-field
     make-custom-binary-input/output-port
     make-custom-textual-input/output-port
     open-file-input/output-port )
 
   (import (except (ikarus)
     bitwise-reverse-bit-field
-    bitwise-rotate-bit-field fxreverse-bit-field
+    bitwise-rotate-bit-field
     make-custom-binary-input/output-port
     make-custom-textual-input/output-port
     open-file-input/output-port))
@@ -56,7 +56,6 @@
   (not-yet
     ;;; should be implemented
     bitwise-rotate-bit-field bitwise-reverse-bit-field
-    fxreverse-bit-field
     ;;; won't be implemented
     make-custom-binary-input/output-port
     make-custom-textual-input/output-port
