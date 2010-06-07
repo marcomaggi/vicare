@@ -6358,7 +6358,7 @@ The following procedures are missing from @code{(rnrs arithmetic
 fixnum)}:
 
 @example
-fxreverse-bit-field                     fxrotate-bit-field
+fxrotate-bit-field
 @end example
 
 @item
