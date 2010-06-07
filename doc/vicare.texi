@@ -3161,6 +3161,97 @@ running stats:
 @end example
 @end deffn
 
+
+@defun time-and-gather @var{gather} @var{thunk}
+Like @func{time-it} evaluate the procedure @var{thunk} timing its
+execution; return the return values of @var{thunk}.  Build two objects
+of type @code{stats} and apply the procedure @var{gather} to them: the
+first represents the statistics before @var{thunk} evaluation, the
+second represents the statistics after @var{thunk} evaluation.
+@end defun
+
+
+@defun stats? @var{obj}
+Return true if @var{obj} is an object of type @code{stats}.
+@end defun
+
+
+All the fields of a @code{stats} object hold fixnums.
+
+
+@defun stats-user-secs @var{stats}
+Return the user seconds field of @var{stats}.
+@end defun
+
+
+@defun stats-user-usecs @var{stats}
+Return the user microseconds field of @var{stats}.
+@end defun
+
+
+@defun stats-sys-secs @var{stats}
+Return the system seconds field of @var{stats}.
+@end defun
+
+
+@defun stats-sys-usecs @var{stats}
+Return the system microseconds field of @var{stats}.
+@end defun
+
+
+@defun stats-real-secs @var{stats}
+Return the real seconds field of @var{stats}.
+@end defun
+
+
+@defun stats-real-usecs @var{stats}
+Return the real microseconds field of @var{stats}.
+@end defun
+
+
+@defun stats-collection-id @var{stats}
+Return the collection identifier field of @var{stats}.
+@end defun
+
+@defun stats-gc-user-secs @var{stats}
+Return the garbage collection user seconds field of @var{stats}.
+@end defun
+
+
+@defun stats-gc-user-usecs @var{stats}
+Return the garbage collection user microseconds field of @var{stats}.
+@end defun
+
+
+@defun stats-gc-sys-secs @var{stats}
+Return the garbage collection system seconds field of @var{stats}.
+@end defun
+
+
+@defun stats-gc-sys-usecs @var{stats}
+Return the garbage collection system microseconds field of @var{stats}.
+@end defun
+
+
+@defun stats-gc-real-secs @var{stats}
+Return the garbage collection real seconds field of @var{stats}.
+@end defun
+
+
+@defun stats-gc-real-usecs @var{stats}
+Return the garbage collection real microseconds field of @var{stats}.
+@end defun
+
+
+@defun stats-bytes-minor @var{stats}
+Return the garbage collection bytes minor field of @var{stats}.
+@end defun
+
+
+@defun stats-bytes-major @var{stats}
+Return the garbage collection bytes major field of @var{stats}.
+@end defun
+
 @c page
 @node library guardians
 @section Guardians and garbage collection

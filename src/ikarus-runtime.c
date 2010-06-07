@@ -1,16 +1,16 @@
 /*
  *  Ikarus Scheme -- A compiler for R6RS Scheme.
  *  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
- *  
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 3 as
  *  published by the Free Software Foundation.
- *  
+ *
  *  This program is distributed in the hope that it will be useful, but
  *  WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -43,7 +43,7 @@
 extern ikptr ik_errno_to_code();
 
 int total_allocated_pages = 0;
-         
+
 extern char **environ;
 
 
@@ -67,7 +67,7 @@ extend_table_maybe(ikptr p, unsigned long int size, ikpcb* pcb){
     ikptr v = ik_mmap(new_vec_size);
     bzero((char*)(long)v, new_vec_size - old_vec_size);
     memcpy((char*)(long)(v+new_vec_size-old_vec_size),
-           (char*)(long)pcb->dirty_vector_base, 
+           (char*)(long)pcb->dirty_vector_base,
            old_vec_size);
     ik_munmap((ikptr)(long)pcb->dirty_vector_base, old_vec_size);
     pcb->dirty_vector_base = (unsigned int*)(long)v;
@@ -75,13 +75,13 @@ extend_table_maybe(ikptr p, unsigned long int size, ikpcb* pcb){
     ikptr s = ik_mmap(new_vec_size);
     bzero((char*)(long)s, new_vec_size - old_vec_size);
     memcpy((char*)(long)(s+new_vec_size-old_vec_size),
-           (char*)(long)(pcb->segment_vector_base), 
+           (char*)(long)(pcb->segment_vector_base),
            old_vec_size);
     ik_munmap((ikptr)(long)pcb->segment_vector_base, old_vec_size);
     pcb->segment_vector_base = (unsigned int*)(long)s;
     pcb->segment_vector = (unsigned int*)(long)(s - new_lo * pagesize);
     pcb->memory_base = (new_lo * segment_size);
-  } 
+  }
   else if (q >= pcb->memory_end){
     unsigned long int lo = segment_index(pcb->memory_base);
     unsigned long int old_hi = segment_index(pcb->memory_end);
@@ -89,7 +89,7 @@ extend_table_maybe(ikptr p, unsigned long int size, ikpcb* pcb){
     unsigned long int new_vec_size = (new_hi - lo) * pagesize;
     unsigned long int old_vec_size = (old_hi - lo) * pagesize;
     ikptr v = ik_mmap(new_vec_size);
-    memcpy((char*)(long)v, 
+    memcpy((char*)(long)v,
            (char*)(long)pcb->dirty_vector_base,
            old_vec_size);
     bzero((char*)(long)(v+old_vec_size), new_vec_size - old_vec_size);
@@ -125,15 +125,15 @@ ik_munmap_from_segment(ikptr base, unsigned long int size, ikpcb* pcb){
   assert(base >= pcb->memory_base);
   assert((base+size) <= pcb->memory_end);
   assert(size == align_to_next_page(size));
-  unsigned int* p = 
+  unsigned int* p =
     ((unsigned int*)(long)(pcb->segment_vector)) + page_index(base);
-  unsigned int* s = 
+  unsigned int* s =
     ((unsigned int*)(long)(pcb->dirty_vector)) + page_index(base);
   unsigned int* q = p + page_index(size);
   while(p < q){
     assert(*p != hole_mt);
     *p = hole_mt; /* holes */
-    *s = 0;  
+    *s = 0;
     p++; s++;
   }
   ikpage* r = pcb->uncached_pages;
@@ -167,12 +167,12 @@ ik_mmap_typed(unsigned long int size, unsigned int type, ikpcb* pcb){
       p = s->base;
       pcb->cached_pages = s->next;
       s->next = pcb->uncached_pages;
-      pcb->uncached_pages = s; 
-    } 
+      pcb->uncached_pages = s;
+    }
     else {
       p = ik_mmap(size);
     }
-  } 
+  }
   else {
     p = ik_mmap(size);
   }
@@ -252,7 +252,7 @@ ik_munmap(ikptr mem, unsigned long int size){
     fprintf(stderr, "ik_munmap failed: %s\n", strerror(errno));
     exit(-1);
   }
-#else 
+#else
   win_munmap((char*)mem, mapsize);
 #endif
 #ifndef NDEBUG
@@ -263,7 +263,7 @@ ik_munmap(ikptr mem, unsigned long int size){
 
 int total_malloced = 0;
 
-void* 
+void*
 ik_malloc(int size){
   void* x = malloc(size);
   if(x == NULL){
@@ -339,12 +339,12 @@ ikpcb* ik_make_pcb(){
     pcb->segment_vector = (unsigned int*)(long)(svec - lo_seg * pagesize);
     pcb->memory_base = (ikptr)(lo_seg * segment_size);
     pcb->memory_end = (ikptr)(hi_seg * segment_size);
-    set_segment_type(pcb->heap_base, 
+    set_segment_type(pcb->heap_base,
         pcb->heap_size,
         mainheap_mt,
         pcb);
-    set_segment_type(pcb->stack_base, 
-        pcb->stack_size, 
+    set_segment_type(pcb->stack_base,
+        pcb->stack_size,
         mainstack_mt,
         pcb);
   }
@@ -409,7 +409,7 @@ ik_safe_alloc(ikpcb* pcb, int size){
   if(nap < ep){
     pcb->allocation_pointer = nap;
     return ap;
-  } 
+  }
   else {
     ik_collect(size, pcb);
     ikptr ap = pcb->allocation_pointer;
@@ -439,7 +439,7 @@ ik_unsafe_alloc(ikpcb* pcb, int size){
   if(nap < ep){
     pcb->allocation_pointer = nap;
     return ap;
-  } 
+  }
   else {
     if(ap){
       ikpages* p = ik_malloc(sizeof(ikpages));
@@ -489,7 +489,7 @@ void ik_stack_overflow(ikpcb* pcb){
   fprintf(stderr, "entered ik_stack_overflow pcb=0x%016lx\n", (long int)pcb);
 #endif
   set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
-  
+
   ikptr frame_base = pcb->frame_base;
   ikptr underflow_handler = ref(frame_base, -wordsize);
 #ifndef NDEBUG
@@ -499,7 +499,7 @@ void ik_stack_overflow(ikpcb* pcb){
   ikptr k = ik_unsafe_alloc(pcb, align(continuation_size)) + vector_tag;
   ref(k, -vector_tag) = continuation_tag;
   ref(k, off_continuation_top) = pcb->frame_pointer;
-  ref(k, off_continuation_size) = 
+  ref(k, off_continuation_size) =
     pcb->frame_base - pcb->frame_pointer - wordsize;
   ref(k, off_continuation_next) = pcb->next_k;
   pcb->next_k = k;
@@ -517,7 +517,7 @@ void ik_stack_overflow(ikpcb* pcb){
 char* ik_uuid(char* str){
   assert((36 << fx_shift) == (int) ref(str, disp_string_length - string_tag));
   uuid_t u;
-  uuid_clear(u); 
+  uuid_clear(u);
   uuid_generate(u);
   uuid_unparse_upper(u, str + disp_string_data - string_tag);
   return str;
@@ -525,7 +525,7 @@ char* ik_uuid(char* str){
 */
 
 
-static const char* uuid_chars = 
+static const char* uuid_chars =
 "!$%&/0123456789<=>?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 static int uuid_strlen = 1;
 ikptr ik_uuid(ikptr bv){
@@ -566,7 +566,7 @@ ikrt_stat(ikptr filename, ikptr follow /*, ikpcb* pcb */){
   if(r == 0){
     if(S_ISREG(s.st_mode)){
       return fix(1);
-    } 
+    }
     else if(S_ISDIR(s.st_mode)){
       return fix(2);
     }
@@ -576,7 +576,7 @@ ikrt_stat(ikptr filename, ikptr follow /*, ikpcb* pcb */){
     else {
       return fix(0);
     }
-  }  
+  }
   return ik_errno_to_code();
 }
 
@@ -608,7 +608,7 @@ ikrt_delete_file(ikptr filename){
   int err = unlink(str);
   if(err == 0){
     return true_object;
-  } 
+  }
   return ik_errno_to_code();
 }
 
@@ -703,11 +703,11 @@ ikrt_realpath(ikptr bv, ikpcb* pcb){
   return r+bytevector_tag;
 }
 
-ikptr 
+ikptr
 ik_system(ikptr str){
   if(tagof(str) == bytevector_tag){
     int r = system((char*)(long)(str+off_bytevector_data));
-    if(r >= 0) {  
+    if(r >= 0) {
       return fix(r);
     } else {
       return ik_errno_to_code();
@@ -743,7 +743,7 @@ ik_dump_metatable(ikpcb* pcb){
       p += pagesize;
       s++;
     }
-    fprintf(stderr, "0x%016lx + %5ld pages = %s\n", 
+    fprintf(stderr, "0x%016lx + %5ld pages = %s\n",
         (long int) start,
         ((long int)p-(long int)start)/pagesize,
         mtname(t));
@@ -765,7 +765,7 @@ ik_dump_dirty_vector(ikpcb* pcb){
       p += pagesize;
       s++;
     }
-    fprintf(stderr, "0x%016lx + %5ld pages = 0x%08x\n", 
+    fprintf(stderr, "0x%016lx + %5ld pages = 0x%08x\n",
         (long int) start,
         ((long int)p-(long int)start)/pagesize,
         t);
@@ -773,7 +773,7 @@ ik_dump_dirty_vector(ikpcb* pcb){
   return void_object;
 }
 
-ikptr 
+ikptr
 ikrt_make_code(ikptr codesizeptr, ikptr freevars, ikptr rvec, ikpcb* pcb){
   assert((fx_mask & (int)codesizeptr) == 0);
   long int code_size = unfix(codesizeptr);
@@ -815,7 +815,7 @@ ikrt_bvftime(ikptr outbv, ikptr fmtbv){
   if(tmp == NULL){
     fprintf(stderr, "Error in time: %s\n", strerror(errno));
   }
-  int rv = 
+  int rv =
     strftime((char*)(long)(outbv+off_bytevector_data),
              unfix(ref(outbv, off_bytevector_length)) + 1,
              (char*)(long)(fmtbv+off_bytevector_data),
@@ -841,7 +841,7 @@ ikrt_register_guardian_pair(ikptr p0, ikpcb* pcb){
   return void_object;
 }
 
-ikptr 
+ikptr
 ikrt_register_guardian(ikptr tc, ikptr obj, ikpcb* pcb){
   ikptr p0 = ik_unsafe_alloc(pcb, pair_size) + pair_tag;
   ref(p0, off_car) = tc;
@@ -849,13 +849,16 @@ ikrt_register_guardian(ikptr tc, ikptr obj, ikpcb* pcb){
   return ikrt_register_guardian_pair(p0, pcb);
 }
 
-ikptr 
+ikptr
 ikrt_stats_now(ikptr t, ikpcb* pcb){
   struct rusage r;
   struct timeval s;
 
   gettimeofday(&s, 0);
   getrusage(RUSAGE_SELF, &r);
+  /* Do  not  change the  order  of the  fields!!!   It  must match  the
+     implementation     of     the     record    type     "stats"     in
+     "scheme/ikarus.timer.ss". */
   ref(t, off_record_data)                = fix(r.ru_utime.tv_sec);
   ref(t, off_record_data + wordsize)     = fix(r.ru_utime.tv_usec);
   ref(t, off_record_data + 2 * wordsize) = fix(r.ru_stime.tv_sec);
@@ -881,7 +884,7 @@ ikrt_stats_now(ikptr t, ikpcb* pcb){
   return void_object;
 }
 
-ikptr 
+ikptr
 ikrt_current_time(ikptr t){
   struct timeval s;
   gettimeofday(&s, 0);
@@ -895,7 +898,7 @@ ikrt_current_time(ikptr t){
 ikptr
 ikrt_gmt_offset(ikptr t){
   time_t clock =
-    unfix(ref(t, off_record_data + 0*wordsize)) * 1000000 
+    unfix(ref(t, off_record_data + 0*wordsize)) * 1000000
     + unfix(ref(t, off_record_data + 1*wordsize));
   struct tm* m = gmtime(&clock);
   time_t gmtclock = mktime(m);
@@ -907,7 +910,7 @@ ikrt_gmt_offset(ikptr t){
   */
 }
 
-ikptr 
+ikptr
 ikrt_fork(){
   int pid = fork();
   if(pid >= 0){
@@ -919,7 +922,7 @@ ikrt_fork(){
 
 
 
-ikptr 
+ikptr
 ikrt_getenv(ikptr bv, ikpcb* pcb){
   char* v = getenv((char*)(long)(bv + off_bytevector_data));
   if(v){
@@ -929,13 +932,13 @@ ikrt_getenv(ikptr bv, ikpcb* pcb){
     ref(s, -bytevector_tag) = fix(n);
     memcpy((char*)(long)(s+off_bytevector_data), v, n+1);
     return s;
-  } 
+  }
   else {
     return false_object;
   }
 }
 
-ikptr 
+ikptr
 ikrt_make_vector1(ikptr len, ikpcb* pcb){
   int intlen = (int)len;
   if(is_fixnum(len) && (intlen >= 0)){
@@ -949,7 +952,7 @@ ikrt_make_vector1(ikptr len, ikpcb* pcb){
 }
 
 #if 0
-ikptr 
+ikptr
 ikrt_make_vector2(ikptr len, ikptr obj, ikpcb* pcb){
   if(is_fixnum(len) && ((len >> 31)!=0)){
     pcb->root0 = &obj;
@@ -965,9 +968,9 @@ ikrt_make_vector2(ikptr len, ikptr obj, ikpcb* pcb){
 #endif
 
 
-ikptr 
+ikptr
 ikrt_setenv(ikptr key, ikptr val, ikptr overwrite){
-  int err = setenv((char*)(key+off_bytevector_data), 
+  int err = setenv((char*)(key+off_bytevector_data),
                    (char*)(val+off_bytevector_data),
                    overwrite!=false_object);
   if(err){
@@ -977,7 +980,7 @@ ikrt_setenv(ikptr key, ikptr val, ikptr overwrite){
   }
 }
 
-ikptr 
+ikptr
 ikrt_unsetenv(ikptr key){
   unsetenv((char*)(key+off_bytevector_data));
   return void_object;
@@ -985,7 +988,7 @@ ikrt_unsetenv(ikptr key){
 
 
 
-ikptr 
+ikptr
 ikrt_environ(ikpcb* pcb){
   char** es = environ;
   int i; char* e;
@@ -1022,12 +1025,12 @@ ikrt_exit(ikptr status, ikpcb* pcb){
 ikptr
 ikrt_nanosleep(ikptr secs, ikptr nsecs /*, ikpcb* pcb */){
   struct timespec t;
-  t.tv_sec = 
-    is_fixnum(secs) 
-      ? (unsigned long) unfix(secs) 
+  t.tv_sec =
+    is_fixnum(secs)
+      ? (unsigned long) unfix(secs)
       : ref(secs, off_bignum_data);
-  t.tv_nsec = 
-    is_fixnum(nsecs) 
+  t.tv_nsec =
+    is_fixnum(nsecs)
       ? (unsigned long) unfix(nsecs)
       : ref(nsecs, off_bignum_data);
   return fix(nanosleep(&t, NULL));
@@ -1080,7 +1083,7 @@ ikrt_access(ikptr filename, ikptr how /*, ikpcb* pcb */){
     if (ik_how & 2) c_how |= W_OK;
     if (ik_how & 4) c_how |= X_OK;
   }
-  
+
   r = access(fn, c_how);
   if (r == 0) {
     return true_object;
@@ -1123,7 +1126,7 @@ ikrt_rename_file(ikptr src, ikptr dst /* ikpcb* pcb */){
   }
 }
 
-ikptr 
+ikptr
 ikrt_last_errno(ikpcb* pcb){
   return s_to_number(pcb->last_errno, pcb);
 }
