@@ -1,23 +1,24 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
+;;; Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 (library (ikarus.posix)
 
-  (export 
-    posix-fork fork waitpid system file-exists? delete-file
+  (export
+    posix-fork fork waitpid getpid getppid system file-exists? delete-file
     nanosleep getenv setenv unsetenv env environ split-file-name
     file-ctime file-mtime file-real-path current-directory
     file-regular? file-directory? file-readable? file-writable?
@@ -26,10 +27,10 @@
     make-directory* delete-directory change-mode kill strerror
     wstatus-pid wstatus-exit-status wstatus-received-signal)
 
-  (import 
+  (import
     (rnrs bytevectors)
     (except (ikarus)
-      nanosleep posix-fork fork waitpid system file-exists?
+      nanosleep posix-fork fork waitpid getpid getppid system file-exists?
       delete-file getenv setenv unsetenv env environ split-file-name
       file-ctime file-mtime file-real-path current-directory
       file-regular? file-directory? file-readable? file-writable?
@@ -50,16 +51,16 @@
           [(fx= pid 0) (child-proc)]
           [(fx< pid 0) (raise/strerror 'fork pid)]
           [else (parent-proc pid)]))))
-  
+
   (module (signal-code->signal-name signal-name->signal-code)
-    
+
     (define signal-names-al
       ;; From ikarus-process.c
-      '((1 . SIGABRT) 
+      '((1 . SIGABRT)
         (2 . SIGALRM)
         (3 . SIGBUS)
-        (4 . SIGCHLD)                   
-        (5 . SIGCONT) 
+        (4 . SIGCHLD)
+        (5 . SIGCONT)
         (6 . SIGFPE)
         (7 . SIGHUP)
         (8 . SIGILL)
@@ -83,20 +84,20 @@
         (26 . SIGVTALRM)
         (27 . SIGXCPU)
         (28 . SIGXFSZ)))
-    
+
     (define signal-code->signal-name
-      (lambda (sigcode)        
+      (lambda (sigcode)
         (cond
           [(assv sigcode signal-names-al) => cdr]
           [else sigcode])))
-    
+
     (define signal-name->signal-code
-      (lambda (signame)        
+      (lambda (signame)
         (cond
           [(find (lambda (p) (eqv? (cdr p) signame)) signal-names-al) => car]
           [else #f])))
   )
-  
+
   (define kill
     (lambda (pid signame)
       (define who 'kill)
@@ -123,15 +124,23 @@
        (unless (fixnum? pid) (die who "not a fixnum" pid))
        (unless (boolean? block?) (die who "not a boolean" block?))
        (let ([r (foreign-call "ikrt_waitpid" (make-wstatus #f #f #f) pid block?)])
-         (cond 
+         (cond
            [(wstatus? r)
             (set-wstatus-received-signal! r
-              (signal-code->signal-name 
+              (signal-code->signal-name
                 (wstatus-received-signal r)))
             r]
            [(and want-error? (not (eqv? r 0)))
             (error who (strerror r) pid)]
            [else #f]))]))
+
+  (define getpid
+    (lambda ()
+      (foreign-call "ikrt_getpid")))
+
+  (define getppid
+    (lambda ()
+      (foreign-call "ikrt_getppid")))
 
   (define system
     (lambda (x)
@@ -142,7 +151,7 @@
         (if (fx< rv 0)
             (raise/strerror 'system rv)
             rv))))
-  
+
   (define stat
     (lambda (path follow who)
       (unless (string? path)
@@ -171,7 +180,7 @@
     (unless (string? str) (die who "not a string" str))
     (cond
       [(find-last path-sep str) =>
-       (lambda (i) 
+       (lambda (i)
          (values
            (substring str 0 i)
            (let ([i (fx+ i 1)])
@@ -187,23 +196,23 @@
         r)))
 
   (define file-exists?
-    (case-lambda 
+    (case-lambda
       [(path) (file-exists? path #t)]
       [(path follow)
        (and (stat path follow 'file-exists?) #t)]))
-  
+
   (define file-regular?
     (case-lambda
       [(path) (file-regular? path #t)]
       [(path follow)
        (eq? 'regular (stat path follow 'file-regular?))]))
-  
+
   (define file-directory?
     (case-lambda
       [(path) (file-directory? path #t)]
       [(path follow)
        (eq? 'directory (stat path follow 'file-directory?))]))
-  
+
   (define file-symbolic-link?
     (lambda (path)
       (eq? 'symlink (stat path #f 'file-symbolic-link?))))
@@ -211,7 +220,7 @@
   (define file-readable?
     (lambda (path)
       (access path 1 'file-readable?)))
-  
+
   (define file-writable?
     (lambda (path)
       (access path 2 'file-writable?)))
@@ -239,7 +248,7 @@
                  (string->utf8 x))])
         (unless (eq? v #t)
           (raise/strerror who v x)))))
-  
+
   (define rename-file
     (lambda (src dst)
       (define who 'rename-file)
@@ -262,7 +271,7 @@
         (if (fixnum? r)
             (raise/strerror who r path)
             (map utf8->string (reverse r))))))
-  
+
   (define ($make-directory path mode who)
     (unless (string? path)
       (die who "not a string" path))
@@ -272,10 +281,10 @@
       (unless (eq? r #t)
         (raise/strerror who r path))))
 
-  (define default-dir-mode #o755) 
+  (define default-dir-mode #o755)
 
   (define make-directory
-    (case-lambda 
+    (case-lambda
       [(path) (make-directory path default-dir-mode)]
       [(path mode) ($make-directory path mode 'make-directory)]))
 
@@ -288,13 +297,13 @@
         (cond
           [(file-exists? dirname)
            (unless (file-directory? dirname)
-             (die who 
+             (die who
                (format "path component ~a is not a directory" dirname)
                dirname0))]
           [else
            (let-values ([(base suffix) (split-file-name dirname)])
              (unless (string=? base "") (f base))
-             (unless (string=? suffix "") 
+             (unless (string=? suffix "")
                ($make-directory dirname mode who)))])))
     (define make-directory*
       (case-lambda
@@ -312,7 +321,7 @@
          (if want-error?
              (unless (eq? r #t) (raise/strerror who r path))
              (eq? r #t)))]))
-  
+
   (define change-mode
     (lambda (path mode)
       (define who 'change-mode)
@@ -323,30 +332,30 @@
       (let ([r (foreign-call "ikrt_chmod" (string->utf8 path) mode)])
         (unless (eq? r #t)
           (raise/strerror who r path)))))
-  
+
   (define ($make-link to path who proc)
     (unless (and (string? to) (string? path))
       (die who "not a string" (if (string? to) path to)))
     (let ([r (proc (string->utf8 to) (string->utf8 path))])
       (unless (eq? r #t)
         (raise/strerror who r path))))
-  
+
   (define (make-symbolic-link to path)
     ($make-link to path 'make-symbolic-link
                 (lambda (u-to u-path)
                   (foreign-call "ikrt_symlink" u-to u-path))))
-  
+
   (define (make-hard-link to path)
     ($make-link to path 'make-hard-link
                 (lambda (u-to u-path)
                   (foreign-call "ikrt_link" u-to u-path))))
-  
+
   (define ($file-time x who proc)
-    (unless (string? x) 
+    (unless (string? x)
       (die who "not a string" x))
     (let ([v (proc (string->utf8 x))])
       (cond
-        [(bytevector? v) 
+        [(bytevector? v)
          (let ([n0 (bytevector-u8-ref v 0)]
                [n1 (bytevector-u8-ref v 1)])
            (+ (* (bytevector-uint-ref v 2 (native-endianness) n0)
@@ -355,20 +364,20 @@
         [else (raise/strerror who v x)])))
 
   (define (file-ctime x)
-    ($file-time x 'file-ctime 
+    ($file-time x 'file-ctime
       (lambda (u) (foreign-call "ikrt_file_ctime2" u))))
 
   (define (file-mtime x)
-    ($file-time x 'file-mtime 
+    ($file-time x 'file-mtime
       (lambda (u) (foreign-call "ikrt_file_mtime2" u))))
 
   (define (file-real-path x)
     (define who 'file-real-path)
-    (unless (string? x) 
+    (unless (string? x)
       (die who "not a string" x))
     (let ([v (foreign-call "ikrt_realpath" (string->utf8 x))])
       (cond
-        [(bytevector? v) 
+        [(bytevector? v)
          (let ([s (utf8->string v)])
            (when (or (string=? s "")
                      (not (char=? (string-ref s 0) #\/)))
@@ -378,7 +387,7 @@
 
   (define (getenv key)
     (define who 'getenv)
-    (define ($getenv-str key) 
+    (define ($getenv-str key)
       (define ($getenv-bv key)
         (foreign-call "ikrt_getenv" key))
       (let ([rv ($getenv-bv (string->utf8 key))])
@@ -388,7 +397,7 @@
         (die who "key is not a string" key)))
 
   (define ($setenv key val overwrite)
-    (foreign-call "ikrt_setenv" 
+    (foreign-call "ikrt_setenv"
        (string->utf8 key) (string->utf8 val) overwrite))
 
   (define setenv
@@ -397,7 +406,7 @@
        (define who 'setenv)
        (if (string? key)
            (if (string? val)
-               (unless ($setenv key val overwrite) 
+               (unless ($setenv key val overwrite)
                  (error who "cannot setenv"))
                (die who "invalid value" val))
            (die who "invalid key" key))]
@@ -405,7 +414,7 @@
 
   (define (unsetenv key)
     (define who 'unsetenv)
-    (if (string? key) 
+    (if (string? key)
         (foreign-call "ikrt_unsetenv" (string->utf8 key))
         (die who "invalid key" key)))
 
@@ -413,7 +422,7 @@
     (let ()
       (define env
         (case-lambda
-          [(key) 
+          [(key)
            (if (string? key)
                (foreign-call "ikrt_getenv" key)
                (die 'env "the key is not a string" key))]
@@ -431,7 +440,7 @@
 
   (define environ
     (lambda ()
-      (map 
+      (map
         (lambda (bv)
           (let ([s (utf8->string bv)])
             (define (loc= s i n)
@@ -467,21 +476,21 @@
 
   (define current-directory
     (case-lambda
-      [() 
+      [()
        (let ([v (foreign-call "ikrt_getcwd")])
          (if (bytevector? v)
              (utf8->string v)
              (raise/strerror 'current-directory v)))]
-      [(x) 
-       (if (string? x) 
+      [(x)
+       (if (string? x)
            (let ([rv (foreign-call "ikrt_chdir" (string->utf8 x))])
              (unless (eq? rv #t)
                (raise/strerror 'current-directory rv x)))
            (die 'current-directory "not a string" x))]))
-  
-  (define raise/strerror 
+
+  (define raise/strerror
     (case-lambda
-      [(who errno-code) 
+      [(who errno-code)
        (raise/strerror who errno-code #f)]
       [(who errno-code filename)
        (raise
@@ -489,10 +498,10 @@
            (make-error)
            (make-who-condition who)
            (make-message-condition (strerror errno-code))
-           (if filename 
+           (if filename
                (make-i/o-filename-error filename)
                (condition))))]))
-  
+
   (define strerror
     (lambda (errno-code)
       (define who 'strerror)
@@ -500,13 +509,13 @@
         (die who "not a fixnum" errno-code))
       (let ([emsg (foreign-call "ikrt_strerror" errno-code)])
         (if emsg
-            (let ([errno-name 
+            (let ([errno-name
                    (foreign-call "ikrt_errno_code_to_name" errno-code)])
               (assert errno-name)
-              (format "~a: ~a" 
+              (format "~a: ~a"
                 (utf8->string errno-name)
                 (utf8->string emsg)))
-            (format "Ikarus's ~a: don't know Ikarus errno code ~s" 
+            (format "Ikarus's ~a: don't know Ikarus errno code ~s"
               who errno-code)))))
 
   )

@@ -1,16 +1,17 @@
 /*
  *  Ikarus Scheme -- A compiler for R6RS Scheme.
  *  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
- *  
+ *  Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 3 as
  *  published by the Free Software Foundation.
- *  
+ *
  *  This program is distributed in the hope that it will be useful, but
  *  WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -28,7 +29,7 @@
 
 extern ikptr ik_errno_to_code();
 
-static int 
+static int
 list_length(ikptr x){
   int n = 0;
   while(tagof(x) == pair_tag){
@@ -58,25 +59,25 @@ execvpe_(const char *cmd, char *const *argv, char *const *envp){
   const char *searchpath;
   const char *sep;
   size_t cmd_len;
-  
+
   if (cmd[0] == '/')
     execve(cmd, argv, envp);
-  
+
   searchpath = getenv("PATH");
   if (searchpath == NULL)
     searchpath = "/bin:/usr/bin";
 
   cmd_len = strlen(cmd);
-  
+
   sep = NULL;
   do {
     size_t prefix_len, path_len;
-    
+
     sep = strchr(searchpath, ':');
     if (sep == NULL) {
       sep = searchpath + strlen(searchpath);
     }
-    
+
     prefix_len = (sep - searchpath);
     path_len = prefix_len + cmd_len + 2;
     path = realloc(path, path_len);
@@ -91,7 +92,7 @@ execvpe_(const char *cmd, char *const *argv, char *const *envp){
       path[prefix_len] = '/';
       memcpy(path + prefix_len + 1, cmd, cmd_len + 1);
     }
-    
+
     execve(path, argv, envp);
     switch (errno) {
     case E2BIG:
@@ -100,16 +101,16 @@ execvpe_(const char *cmd, char *const *argv, char *const *envp){
     case ETXTBSY:
       break; /* these are treated as error, abort search */
     }
-    
+
     searchpath = sep + 1;
   } while (sep[0] != '\0');
 
   if (path) free(path);
-  
+
   return -1;
 }
 
-ikptr 
+ikptr
 ikrt_process(ikptr rvec, ikptr env, ikptr cmd, ikptr argv /*, ikpcb* pcb */){
   int infds[2];
   int outfds[2];
@@ -160,7 +161,7 @@ ikrt_process(ikptr rvec, ikptr env, ikptr cmd, ikptr argv /*, ikpcb* pcb */){
       execvp(cmd_str, argv_strs);
     else
       execv(cmd_str, argv_strs);
-    fprintf(stderr, "failed to exec %s: %s\n", 
+    fprintf(stderr, "failed to exec %s: %s\n",
         (char*)(long)(cmd+off_bytevector_data),
         strerror(errno));
     exit(-1);
@@ -240,7 +241,7 @@ ik_signal_num_to_code(int signum){
       return si->c;
     }
   }
-  fprintf(stderr, "\n*** ik_signal_num_to_code: Don't know signal %d ***\n\n", 
+  fprintf(stderr, "\n*** ik_signal_num_to_code: Don't know signal %d ***\n\n",
           signum);
   return fix(99999);
 }
@@ -270,7 +271,7 @@ ikrt_kill(ikptr pid, ikptr sigcode /*, ikpcb* pcb */){
   return ik_errno_to_code();
 }
 
-ikptr 
+ikptr
 ikrt_waitpid(ikptr rvec, ikptr pid, ikptr block /*, ikpcb* pcb */){
   /* rvec is assumed to come in as #(#f #f #f) */
   int status, options = 0;
@@ -284,7 +285,7 @@ ikrt_waitpid(ikptr rvec, ikptr pid, ikptr block /*, ikpcb* pcb */){
       ref(rvec, off_record_data+1*wordsize) = fix(WEXITSTATUS(status));
     }
     if(WIFSIGNALED(status)) {
-      ref(rvec, off_record_data+2*wordsize) = 
+      ref(rvec, off_record_data+2*wordsize) =
         ik_signal_num_to_code(WTERMSIG(status));
     }
     return rvec;
@@ -293,5 +294,17 @@ ikrt_waitpid(ikptr rvec, ikptr pid, ikptr block /*, ikpcb* pcb */){
   } else {
     return ik_errno_to_code();
   }
+}
+
+ikptr
+ikrt_getpid(void)
+{
+  return fix(getpid());
+}
+
+ikptr
+ikrt_getppid(void)
+{
+  return fix(getppid());
 }
 

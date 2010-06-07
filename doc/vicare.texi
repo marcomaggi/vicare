@@ -4528,6 +4528,7 @@ return a meaningful value.
 The @posix{} functions are exported by the @library{ikarus} library.
 
 @menu
+* posix pid::                   Process identifier functions.
 * posix process::               Spawning processes and the like.
 * posix waitpid::               Waiting for terminated children.
 * posix signal::                Delivering signals to processes.
@@ -4547,6 +4548,20 @@ Internals
 * posix int time::              Internals: time and date.
 * posix int env::               Internals: environment variables.
 @end menu
+
+@c page
+@node posix pid
+@section Process identifier functions
+
+
+@defun getpid
+Return the process identifier as a fixnum.
+@end defun
+
+
+@defun getppid
+Return the process identifier of the parent as a fixnum.
+@end defun
 
 @c page
 @node posix process
