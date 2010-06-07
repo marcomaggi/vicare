@@ -1356,6 +1356,7 @@ display a help message then to exit; the help message summarizes the
 command line switches.  No further action is performed.
 
 @item @value{RAWEXECUTABLE} -b path/to/boot/file.boot
+@itemx @value{RAWEXECUTABLE} --boot path/to/boot/file.boot
 The @option{-b} flag (which requires an extra argument) directs
 @value{EXECUTABLE} to use the specified boot file as the initial system
 boot file.  The boot file is a binary file that contains all the code

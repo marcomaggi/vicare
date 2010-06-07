@@ -36,10 +36,12 @@ Options for running Vicare Scheme:\n\
 \n  vicare -h\n\
     Prints this help message then exits.\n\
 \n  vicare [-b <bootfile>] --r6rs-script <scriptfile> opts ...\n\
+  vicare [--boot <bootfile>] --r6rs-script <scriptfile> opts ...\n\
     Starts Vicare in R6RS-script mode.  The script file is treated\n\
     as an R6RS-script.  The options opts ... can be obtained using\n\
     the \"command-line\" procedure in the (rnrs programs) library.\n\
 \n  vicare [-b <bootfile>] <file> ... [-- opts ...]\n\
+  vicare [--boot <bootfile>] <file> ... [-- opts ...]\n\
     Starts Vicare in interactive mode.  Each of the files is first\n\
     loaded into the interaction environment before the interactive\n\
     repl is started.  The options opts can be obtained using the\n\
@@ -62,7 +64,9 @@ int main(int argc, char** argv){
     exit(0);
   }
 
-  if ((argc >= 3) && (strcmp(argv[1], "-b") == 0)){
+  if ((argc >= 3) &&
+      ((strcmp(argv[1], "-b") == 0) ||
+       (strcmp(argv[1], "--boot") == 0))){
     boot_file = argv[2];
     int i;
     for(i=3; i<=argc; i++){
