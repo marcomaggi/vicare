@@ -4543,6 +4543,7 @@ Internals
                                 @api{}.
 * posix int errno::             Internals: handling @code{errno} codes.
 * posix int fd::                Internals: file descriptors.
+* posix int pid::               Internals: process identifier functions.
 * posix int files::             Internals: file system interface.
 * posix int exec::              Internals: executing processes.
 * posix int time::              Internals: time and date.
@@ -5001,6 +5002,73 @@ File pathnames are always bytevector objects and the C language level,
 while they are strings at the Scheme language level; the conversion is
 performed with @func{string->utf8}.
 
+@c ------------------------------------------------------------
+
+@subsubheading How to add a @posix{} primitive
+
+
+Remember that the @posix{} primitives end up exported by the
+@library{ikarus} library.  Follow these steps:
+
+@enumerate
+@item
+In the file @file{scheme/makefile.ss}: add an entry for the function to
+the list bound to @code{identifier->library-map}, respect alphabetic
+order.  For example, for @func{getpid} add:
+
+@example
+[getpid         i]
+@end example
+
+@item
+In the file @file{scheme/ikarus.posix.ss}: add the binding to both the
+export list of @library{ikarus.posix} and to the @code{except} import
+list from @library{ikarus}; add the function implementation calling the
+foreign function.  For example, for @func{getpid} add:
+
+@example
+(define getppid
+  (lambda ()
+    (foreign-call "ikrt_getppid")))
+@end example
+
+@item
+Select an appropriate C language file in the @file{src} subdirectory and
+add the primitive function.  For example, for @func{getpid} in the file
+@file{ikarus-process.c} add:
+
+@example
+ikptr
+ikrt_getpid(void)
+@{
+  return fix(getpid());
+@}
+@end example
+
+@item
+Add a file to the @file{tests} subdirectory with tests for the new
+primitive.  For example, for @func{getpid} add:
+
+@example
+(import (rnrs)
+  (ikarus)
+  (checks))
+
+(check-set-mode! 'report-failed)
+(display "*** testing getpid\n")
+
+(display "result of getpid() is " )
+(display (getpid))
+(newline)
+
+(check
+    (fixnum? (getpid))
+  => #t)
+
+(check-report)
+@end example
+@end enumerate
+
 @c page
 @node posix int errno
 @section Internals: handling @code{errno} codes
@@ -5273,6 +5341,22 @@ Socket, shutdown}.  Close a socket for both reading and writing.
 If successful return the raw C language @cnull{} pointer; if an error
 occurs in @cfunc{shutdown}, return the return value of
 @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+@c page
+@node posix int pid
+@section Internals: process identifier functions
+
+
+@deftypefun ikptr ikrt_getpid (void)
+Return the process identifier as fixnum.  @glibcref{Process
+Identification, getpid}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_getppid (void)
+Return the parent process identifier as fixnum.  @glibcref{Process
+Identification, getpid}.
 @end deftypefun
 
 @c page
