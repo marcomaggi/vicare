@@ -1,5 +1,6 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;; Modified by Marco Maggi.
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
@@ -863,6 +864,10 @@
     (define (source-optimize expr)
       (E expr 'v empty-env (passive-counter) (passive-counter)))
     (case (optimize-level)
+      ;;It is determined that trying to comment out the clause for level
+      ;;2  makes the  process crash!!!   Commenting out  the  clause for
+      ;;level 1 does not crash.  (Marco Maggi, Mon Jun 7, 2010)
+      ;;
       [(2)
        (source-optimize expr)]
       [(1)
