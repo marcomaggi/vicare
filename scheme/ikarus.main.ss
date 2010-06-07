@@ -198,6 +198,14 @@
 
     (init-command-line-args)
 
+    ;;Added to fix Vicare issue #3.  The optimisation code is unfinished
+    ;;anyway according to comments in the relevant files.  (Marco Maggi,
+    ;;Mon Jun 7, 2010)
+    (when (< 0 (optimize-level))
+      (display "*** vicare warning: optimization level artificially set to 0.\n"
+	       (current-error-port)))
+    (optimize-level 0)
+
     (cond
      ((memq script-type '(r6rs-script r6rs-repl))
       (let ([f (lambda ()
