@@ -6,6 +6,10 @@ Andreas Rottmann: provided patch to implement getpid.
 Göran     Weinholt:    provided    patch     to    implement
 FXREVERSE-BIT-FIELD.
 
+Matthew Flatt  distributed the  R6RS test suite  embedded in
+the Vicare distribution.
+
+
 ### end of file
 # Local Variables:
 # mode: text
