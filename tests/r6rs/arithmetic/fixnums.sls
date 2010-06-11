@@ -17,10 +17,10 @@
 
 #!r6rs
 
-(library (tests r6rs arithmetic fixnums)
+(library (r6rs arithmetic fixnums)
   (export run-arithmetic-fixnums-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
   ;; Originally from Ikarus test suite:
   (define (fx*/carry-reference fx1 fx2 fx3)

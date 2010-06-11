@@ -16,8 +16,8 @@
 ;;;02110-1301 USA.
 
 #!r6rs
-(import (tests r6rs control)
-        (tests r6rs test)
+(import (r6rs control)
+        (r6rs test)
         (rnrs io simple))
 (display "Running tests for (rnrs control)\n")
 (run-control-tests)

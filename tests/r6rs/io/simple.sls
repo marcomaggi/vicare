@@ -17,10 +17,10 @@
 
 #!r6rs
 
-(library (tests r6rs io simple)
+(library (r6rs io simple)
   (export run-io-simple-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
   (define (run-io-simple-tests)
 

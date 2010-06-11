@@ -17,10 +17,10 @@
 
 #!r6rs
 
-(library (tests r6rs records syntactic)
+(library (r6rs records syntactic)
   (export run-records-syntactic-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
   ;; ----------------------------------------
 

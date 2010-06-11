@@ -17,10 +17,10 @@
 
 #!r6rs
 
-(library (tests r6rs arithmetic flonums)
+(library (r6rs arithmetic flonums)
   (export run-arithmetic-flonums-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
   (define (try-flonums proc)
     (proc 0.0)

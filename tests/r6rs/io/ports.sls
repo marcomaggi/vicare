@@ -17,11 +17,11 @@
 
 #!r6rs
 
-(library (tests r6rs io ports)
+(library (r6rs io ports)
   (export run-io-ports-tests)
   (import (rnrs)
           (rnrs mutable-strings (6))
-          (tests r6rs test))
+          (r6rs test))
 
   (define-syntax test-transcoders
     (syntax-rules ()

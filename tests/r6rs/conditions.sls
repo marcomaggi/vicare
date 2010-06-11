@@ -16,10 +16,10 @@
 ;;;02110-1301 USA.
 #!r6rs
 
-(library (tests r6rs conditions)
+(library (r6rs conditions)
   (export run-conditions-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
 
   (define-syntax test-cond

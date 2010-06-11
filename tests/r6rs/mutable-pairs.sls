@@ -17,11 +17,11 @@
 
 #!r6rs
 
-(library (tests r6rs mutable-pairs)
+(library (r6rs mutable-pairs)
   (export run-mutable-pairs-tests)
   (import (rnrs)
           (rnrs mutable-pairs)
-          (tests r6rs test))
+          (r6rs test))
 
   (define (f) (list 'not-a-constant-list))
   (define (g) '(constant-list))

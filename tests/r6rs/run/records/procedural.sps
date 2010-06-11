@@ -16,8 +16,8 @@
 ;;;02110-1301 USA.
 
 #!r6rs
-(import (tests r6rs records procedural)
-        (tests r6rs test)
+(import (r6rs records procedural)
+        (r6rs test)
         (rnrs io simple))
 (display "Running tests for (rnrs records procedural)\n")
 (run-records-procedural-tests)

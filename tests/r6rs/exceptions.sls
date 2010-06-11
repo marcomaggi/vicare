@@ -16,10 +16,10 @@
 ;;;02110-1301 USA.
 #!r6rs
 
-(library (tests r6rs exceptions)
+(library (r6rs exceptions)
   (export run-exceptions-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
   (define (run-exceptions-tests)
 

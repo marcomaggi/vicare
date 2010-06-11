@@ -1,9 +1,5 @@
 ## Process this file with automake to produce Makefile.in
 
-EXTRA_DIST=	checks.sls		\
-		test-equal-hash.sps	\
-		test-log.sps
-
 testdir			= $(srcdir)
 VICARE_SELECTED_TESTS	= $(wildcard $(testdir)/test-*$(name)*.sps)
 
@@ -12,8 +8,6 @@ VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
 VICARE_FLAGS	= -b $(VICARE_BOOT) --debug --r6rs-script
 VICARE_ENV	= VICARE_LIBRARY_PATH=$(srcdir):$(srcdir)/../lib
 VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
-VICARE_R6RS_ENV	= VICARE_LIBRARY_PATH=$(srcdir)/../tests:$(srcdir)/..:$(srcdir)/../lib
-VICARE_R6RS_RUN	= $(VICARE_R6RS_ENV) $(VICARE) $(VICARE_FLAGS)
 
 .PHONY: test tests test-r6rs
 
@@ -23,6 +17,7 @@ test tests:
 	@echo
 
 ## --------------------------------------------------------------------
+## Raw interface for Flatt's R6RS test suite.
 
 vicare_r6rs_subtest_RULES	=	\
 	test-r6rs-control		\
@@ -58,78 +53,198 @@ vicare_r6rs_subtest_RULES	=	\
 test-r6rs: $(vicare_r6rs_subtest_RULES)
 
 test-r6rs-control:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/control.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/control.sps
 
 test-r6rs-base:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/base.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/base.sps
 
 test-r6rs-io-ports:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/io/ports.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/io/ports.sps
 
 test-r6rs-io-simple:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/io/simple.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/io/simple.sps
 
 test-r6rs-eval:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/eval.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/eval.sps
 
 test-r6rs-syntax-case:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/syntax-case.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/syntax-case.sps
 
 test-r6rs-mutable-strings:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/mutable-strings.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/mutable-strings.sps
 
 test-r6rs-records-procedural:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/records/procedural.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/records/procedural.sps
 
 test-r6rs-records-syntactic:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/records/syntactic.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/records/syntactic.sps
 
 test-r6rs-conditions:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/conditions.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/conditions.sps
 
 test-r6rs-hashtables:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/hashtables.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/hashtables.sps
 
 test-r6rs-programs:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/programs.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/programs.sps
 
 test-r6rs-contrib:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/contrib.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/contrib.sps
 
 test-r6rs-unicode:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/unicode.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/unicode.sps
 
 test-r6rs-r5rs:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/r5rs.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/r5rs.sps
 
 test-r6rs-reader:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/reader.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/reader.sps
 
 test-r6rs-mutable-pairs:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/mutable-pairs.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/mutable-pairs.sps
 
 test-r6rs-lists:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/lists.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/lists.sps
 
 test-r6rs-arithmetic-fixnums:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/arithmetic/fixnums.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/arithmetic/fixnums.sps
 
 test-r6rs-arithmetic-bitwise:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/arithmetic/bitwise.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/arithmetic/bitwise.sps
 
 test-r6rs-arithmetic-flonums:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/arithmetic/flonums.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/arithmetic/flonums.sps
 
 test-r6rs-bytevectors:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/bytevectors.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/bytevectors.sps
 
 test-r6rs-exceptions:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/exceptions.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/exceptions.sps
 
 test-r6rs-enums:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/enums.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/enums.sps
 
 test-r6rs-sorting:
-	@$(VICARE_R6RS_RUN) $(srcdir)/r6rs/run/sorting.sps
+	@$(VICARE_RUN) $(srcdir)/r6rs/run/sorting.sps
+
+## --------------------------------------------------------------------
+## Interface to "make check".
+
+TESTS_ENVIRONMENT	= $(VICARE_RUN)
+TESTS			=	\
+	test-equal-hash.sps				\
+	test-fxreverse-bit-field.sps			\
+	test-getpid.sps					\
+	test-log.sps					\
+	\
+	test-issue-10.sps				\
+	test-issue-12.sps				\
+	test-issue-7.sps				\
+	test-issue-8.sps				\
+	test-issue-9.sps				\
+	\
+	$(srcdir)/r6rs/run/control.sps			\
+	$(srcdir)/r6rs/run/base.sps			\
+	$(srcdir)/r6rs/run/io/ports.sps			\
+	$(srcdir)/r6rs/run/io/simple.sps		\
+	$(srcdir)/r6rs/run/eval.sps			\
+	$(srcdir)/r6rs/run/syntax-case.sps		\
+	$(srcdir)/r6rs/run/mutable-strings.sps		\
+	$(srcdir)/r6rs/run/records/procedural.sps	\
+	$(srcdir)/r6rs/run/records/syntactic.sps	\
+	$(srcdir)/r6rs/run/conditions.sps		\
+	$(srcdir)/r6rs/run/hashtables.sps		\
+	$(srcdir)/r6rs/run/programs.sps			\
+	$(srcdir)/r6rs/run/contrib.sps			\
+	$(srcdir)/r6rs/run/unicode.sps			\
+	$(srcdir)/r6rs/run/r5rs.sps			\
+	$(srcdir)/r6rs/run/reader.sps			\
+	$(srcdir)/r6rs/run/mutable-pairs.sps		\
+	$(srcdir)/r6rs/run/lists.sps			\
+	$(srcdir)/r6rs/run/arithmetic/fixnums.sps	\
+	$(srcdir)/r6rs/run/arithmetic/bitwise.sps	\
+	$(srcdir)/r6rs/run/arithmetic/flonums.sps	\
+	$(srcdir)/r6rs/run/bytevectors.sps		\
+	$(srcdir)/r6rs/run/exceptions.sps		\
+	$(srcdir)/r6rs/run/enums.sps			\
+	$(srcdir)/r6rs/run/sorting.sps
+
+## --------------------------------------------------------------------
+
+EXTRA_DIST =	\
+	checks.sls					\
+	r6rs						\
+	r6rs/README.txt					\
+	r6rs/arithmetic					\
+	r6rs/arithmetic/bitwise.sls			\
+	r6rs/arithmetic/fixnums.sls			\
+	r6rs/arithmetic/flonums.sls			\
+	r6rs/base.sls					\
+	r6rs/bytevectors.sls				\
+	r6rs/conditions.sls				\
+	r6rs/contrib					\
+	r6rs/contrib.sls				\
+	r6rs/contrib/helper1.sls			\
+	r6rs/control.sls				\
+	r6rs/enums.sls					\
+	r6rs/eval.sls					\
+	r6rs/exceptions.sls				\
+	r6rs/hashtables.sls				\
+	r6rs/io						\
+	r6rs/io/ports.sls				\
+	r6rs/io/simple.sls				\
+	r6rs/lists.sls					\
+	r6rs/mutable-pairs.sls				\
+	r6rs/mutable-strings.sls			\
+	r6rs/programs.sls				\
+	r6rs/r5rs.sls					\
+	r6rs/reader.sls					\
+	r6rs/records					\
+	r6rs/records/procedural.sls			\
+	r6rs/records/syntactic.sls			\
+	r6rs/run					\
+	r6rs/run-via-eval.sps				\
+	r6rs/run.sps					\
+	r6rs/run/arithmetic				\
+	r6rs/run/arithmetic/bitwise.sps			\
+	r6rs/run/arithmetic/fixnums.sps			\
+	r6rs/run/arithmetic/flonums.sps			\
+	r6rs/run/base.sps				\
+	r6rs/run/bytevectors.sps			\
+	r6rs/run/conditions.sps				\
+	r6rs/run/contrib.sps				\
+	r6rs/run/control.sps				\
+	r6rs/run/enums.sps				\
+	r6rs/run/eval.sps				\
+	r6rs/run/exceptions.sps				\
+	r6rs/run/hashtables.sps				\
+	r6rs/run/io					\
+	r6rs/run/io/ports.sps				\
+	r6rs/run/io/simple.sps				\
+	r6rs/run/lists.sps				\
+	r6rs/run/mutable-pairs.sps			\
+	r6rs/run/mutable-strings.sps			\
+	r6rs/run/programs.sps				\
+	r6rs/run/r5rs.sps				\
+	r6rs/run/reader.sps				\
+	r6rs/run/records				\
+	r6rs/run/records/procedural.sps			\
+	r6rs/run/records/syntactic.sps			\
+	r6rs/run/sorting.sps				\
+	r6rs/run/syntax-case.sps			\
+	r6rs/run/unicode.sps				\
+	r6rs/sorting.sls				\
+	r6rs/syntax-case.sls				\
+	r6rs/test.sls					\
+	r6rs/unicode.sls				\
+	test-equal-hash.sps				\
+	test-fxreverse-bit-field.sps			\
+	test-getpid.sps					\
+	test-issue-10.sps				\
+	test-issue-12.sps				\
+	test-issue-7.sps				\
+	test-issue-8.sps				\
+	test-issue-9.sps				\
+	test-log.sps
 
 ### end of file

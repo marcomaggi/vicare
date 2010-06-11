@@ -16,8 +16,8 @@
 ;;;02110-1301 USA.
 
 #!r6rs
-(import (tests r6rs contrib)
-        (tests r6rs test)
+(import (r6rs contrib)
+        (r6rs test)
         (rnrs io simple))
 (display "Running contibuted tests\n")
 (run-contrib-tests)

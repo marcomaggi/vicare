@@ -16,8 +16,8 @@
 ;;;02110-1301 USA.
 
 #!r6rs
-(import (tests r6rs arithmetic flonums)
-        (tests r6rs test)
+(import (r6rs arithmetic flonums)
+        (r6rs test)
         (rnrs io simple))
 (display "Running tests for (rnrs arithmetic flonums)\n")
 (run-arithmetic-flonums-tests)

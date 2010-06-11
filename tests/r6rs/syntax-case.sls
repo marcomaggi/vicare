@@ -17,11 +17,11 @@
 
 #!r6rs
 
-(library (tests r6rs syntax-case)
+(library (r6rs syntax-case)
   (export run-syntax-case-tests)
   (import (for (rnrs) run expand)
           (rename (only (rnrs base) cons) (cons kons)) ; for free-identifier=?
-          (tests r6rs test))
+          (r6rs test))
 
   (define (unwrap s)
     (cond
