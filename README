@@ -95,10 +95,27 @@ the new tests added in Vicare are executed running:
 
    $ make tests
 
-the  following command  will run  the R6RS  compliance tests  by Matthew
-Flatt.
+the following command will run  all the R6RS compliance tests by Matthew
+Flatt:
 
    $ make test-r6rs
+
+in detail:  each of the  following rules will  run a single set  of R6RS
+compliance tests:
+
+    test-r6rs-arithmetic-bitwise        test-r6rs-arithmetic-fixnums
+    test-r6rs-arithmetic-flonums        test-r6rs-base
+    test-r6rs-bytevectors               test-r6rs-conditions
+    test-r6rs-contrib                   test-r6rs-control
+    test-r6rs-enums                     test-r6rs-eval
+    test-r6rs-exceptions                test-r6rs-hashtables
+    test-r6rs-io-ports                  test-r6rs-io-simple
+    test-r6rs-lists                     test-r6rs-mutable-pairs
+    test-r6rs-mutable-strings           test-r6rs-programs
+    test-r6rs-r5rs                      test-r6rs-reader
+    test-r6rs-records-procedural        test-r6rs-records-syntactic
+    test-r6rs-sorting                   test-r6rs-syntax-case
+    test-r6rs-unicode
 
   All the test files under "tests"  are programs whose file name has the
 format  "test-<name>.sps"  where  <name>  is  indicates  of  the  tested
