@@ -37,4 +37,7 @@ vicare_test_RULES	= test tests test-r6rs \
 $(vicare_test_RULES):
 	cd tests ; $(MAKE) $(@)
 
+ikarus-tests:
+	cd scheme; $(MAKE) $(@)
+
 ### end of file

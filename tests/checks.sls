@@ -169,7 +169,10 @@
 	(display (length check:failed))
 	(display " failed.")
 	(if (or (null? check:failed) (<= (check:mode) 1))
-	    (newline)
+	    (begin
+	      (newline)
+	      (newline)
+	      (newline))
 	  (let* ((w (car (reverse check:failed)))
 		 (expression (car w))
 		 (actual-result (cadr w))
@@ -178,7 +181,9 @@
 	    (newline)
 	    (check:report-expression expression)
 	    (check:report-actual-result actual-result)
-	    (check:report-failed expected-result))))))
+	    (check:report-failed expected-result)
+	    (newline)
+	    (newline))))))
 
 (define (check-passed? expected-total-count)
   (and (= (length check:failed) 0)
