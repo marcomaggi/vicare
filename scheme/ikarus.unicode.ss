@@ -259,86 +259,87 @@
 
 (define-string-op string-titlecase
   (lambda (str)
-    (let* ([n (string-length str)] [dst (make-string n)])
-      (define (trans2 s i seen-cased? ac)
-        (if (fx= i n)
-            (handle-special dst ac)
-            (s i seen-cased? ac)))
-      (define (trans1 s i c/ls seen-cased? ac)
-        (cond
-          [(char? c/ls)
-           (string-set! dst i c/ls)
-           (trans2 s (fx+ i 1) seen-cased? ac)]
-          [else
-           (trans2 s (fx+ i 1) seen-cased? (cons (cons i c/ls) ac))]))
+    (let* ((n (string-length str)) (dst (make-string n)))
       (define (trans s i c seen-cased? ac)
+	(define (trans1 s i c/ls seen-cased? ac)
+	  (define (trans2 s i seen-cased? ac)
+	    (if (fx= i n)
+		(handle-special dst ac)
+	      (s i seen-cased? ac)))
+	  (cond ((char? c/ls)
+		 (string-set! dst i c/ls)
+		 (trans2 s (fx+ i 1) seen-cased? ac))
+		(else
+		 (trans2 s (fx+ i 1) seen-cased? (cons (cons i c/ls) ac)))))
         (if seen-cased?
             (trans1 s i ($str-downcase c) #t ac)
-            (if ($char-cased? c)
-                (trans1 s i ($str-titlecase c) #t ac)
-                (trans1 s i c #f ac))))
+	  (if ($char-cased? c)
+	      (trans1 s i ($str-titlecase c) #t ac)
+	    (trans1 s i c #f ac))))
       (define (s0 i ac)
-        (let ([c (string-ref str i)])
+        (let ((c (string-ref str i)))
           (cond
-            [($wb-aletter? c) (trans sAletter i c #f ac)]
-            [($wb-numeric? c) (trans sNumeric i c #f ac)]
-            [($wb-katakana? c) (trans sKatakana i c #f ac)]
-            [($wb-extendnumlet? c) (trans sExtendnumlet i c #f ac)]
-            [else (string-set! dst i c)
-                  (let ([i (fx+ i 1)])
-                    (if (fx= i n)
-                        (handle-special dst ac)
-                        (s0 i ac)))])))
+	   (($wb-aletter? c) (trans sAletter i c #f ac))
+	   (($wb-numeric? c) (trans sNumeric i c #f ac))
+	   (($wb-katakana? c) (trans sKatakana i c #f ac))
+	   (($wb-extendnumlet? c) (trans sExtendnumlet i c #f ac))
+	   (else (string-set! dst i c)
+		 (let ((i (fx+ i 1)))
+		   (if (fx= i n)
+		       (handle-special dst ac)
+		     (s0 i ac)))))))
       (define (sAletter i seen-cased? ac)
-        (let ([c (string-ref str i)])
+        (let ((c (string-ref str i)))
           (cond
-            [(or ($wb-aletter? c) ($wb-extend? c) ($wb-format? c))
-             (trans sAletter i c seen-cased? ac)]
-            [(or ($wb-midletter? c) ($wb-midnumlet? c))
-             (trans sAletterMid i c seen-cased? ac)]
-            [($wb-numeric? c) (trans sNumeric i c seen-cased? ac)]
-            [($wb-extendnumlet? c) (trans sExtendnumlet i c seen-cased? ac)]
-            [else (s0 i ac)])))
+	   ((or ($wb-aletter? c) ($wb-extend? c) ($wb-format? c))
+	    (trans sAletter i c seen-cased? ac))
+	   ((or ($wb-midletter? c) ($wb-midnumlet? c))
+	    (trans sAletterMid i c seen-cased? ac))
+	   (($wb-numeric? c) (trans sNumeric i c seen-cased? ac))
+	   (($wb-extendnumlet? c) (trans sExtendnumlet i c seen-cased? ac))
+	   (else (s0 i ac)))))
       (define (sAletterMid i seen-cased? ac)
-        (let ([c (string-ref str i)])
+        (let ((c (string-ref str i)))
           (cond
-            [(or ($wb-extend? c) ($wb-format? c))
-             (trans sAletterMid i c seen-cased? ac)]
-            [($wb-aletter? c) (trans sAletter i c seen-cased? ac)]
-            [else (s0 i ac)])))
+	   ((or ($wb-extend? c) ($wb-format? c))
+	    (trans sAletterMid i c seen-cased? ac))
+	   (($wb-aletter? c) (trans sAletter i c seen-cased? ac))
+	   (else (s0 i ac)))))
       (define (sNumeric i seen-cased? ac)
-        (let ([c (string-ref str i)])
+        (let ((c (string-ref str i)))
           (cond
-            [(or ($wb-numeric? c) ($wb-extend? c) ($wb-format? c))
-             (trans sNumeric c i seen-cased? ac)]
-            [(or ($wb-midnum? c) ($wb-midnumlet? c))
-             (trans sNumericMid i c seen-cased? ac)]
-            [($wb-aletter? c) (trans sAletter i c seen-cased? ac)]
-            [($wb-extendnumlet? c) (trans sExtendnumlet i c seen-cased? ac)]
-            [else (s0 i ac)])))
+	   ((or ($wb-numeric? c) ($wb-extend? c) ($wb-format? c))
+	    (trans sNumeric      i c seen-cased? ac))
+	   ((or ($wb-midnum? c) ($wb-midnumlet? c))
+	    (trans sNumericMid   i c seen-cased? ac))
+	   (($wb-aletter? c)
+	    (trans sAletter      i c seen-cased? ac))
+	   (($wb-extendnumlet? c)
+	    (trans sExtendnumlet i c seen-cased? ac))
+	   (else (s0 i ac)))))
       (define (sNumericMid i seen-cased? ac)
-        (let ([c (string-ref str i)])
+        (let ((c (string-ref str i)))
           (cond
-            [(or ($wb-extend? c) ($wb-format? c))
-             (trans sNumericMid i c seen-cased? ac)]
-            [($wb-numeric? c) (trans sNumeric i c seen-cased? ac)]
-            [else (s0 i ac)])))
+	   ((or ($wb-extend? c) ($wb-format? c))
+	    (trans sNumericMid i c seen-cased? ac))
+	   (($wb-numeric? c) (trans sNumeric i c seen-cased? ac))
+	   (else (s0 i ac)))))
       (define (sKatakana i seen-cased? ac)
-        (let ([c (string-ref str i)])
+        (let ((c (string-ref str i)))
           (cond
-            [(or ($wb-katakana? c) ($wb-extend? c) ($wb-format? c))
-             (trans sKatakana i c seen-cased? ac)]
-            [($wb-extendnumlet? c) (trans sExtendnumlet i c seen-cased? ac)]
-            [else (s0 i ac)])))
+	   ((or ($wb-katakana? c) ($wb-extend? c) ($wb-format? c))
+	    (trans sKatakana i c seen-cased? ac))
+	   (($wb-extendnumlet? c) (trans sExtendnumlet i c seen-cased? ac))
+	   (else (s0 i ac)))))
       (define (sExtendnumlet i seen-cased? ac)
-        (let ([c (string-ref str i)])
+        (let ((c (string-ref str i)))
           (cond
-            [(or ($wb-extendnumlet? c) ($wb-extend? c) ($wb-format? c))
-             (trans sExtendnumlet i c seen-cased? ac)]
-            [($wb-aletter? c) (trans sAletter i c seen-cased? ac)]
-            [($wb-numeric? c) (trans sNumeric i c seen-cased? ac)]
-            [($wb-katakana? c) (trans sKatakana i c seen-cased? ac)]
-            [else (s0 i ac)])))
+	   ((or ($wb-extendnumlet? c) ($wb-extend? c) ($wb-format? c))
+	    (trans sExtendnumlet i c seen-cased? ac))
+	   (($wb-aletter? c) (trans sAletter i c seen-cased? ac))
+	   (($wb-numeric? c) (trans sNumeric i c seen-cased? ac))
+	   (($wb-katakana? c) (trans sKatakana i c seen-cased? ac))
+	   (else (s0 i ac)))))
       (if (fx= n 0) dst (s0 0 '())))))
 
 
