@@ -17,11 +17,11 @@
 
 #!r6rs
 
-(library (tests r6rs mutable-strings)
+(library (r6rs mutable-strings)
   (export run-mutable-strings-tests)
   (import (rnrs)
           (rnrs mutable-strings)
-          (tests r6rs test))
+          (r6rs test))
 
   (define (f) (make-string 3 #\*))
   (define (g) "***")

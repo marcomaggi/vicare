@@ -16,8 +16,8 @@
 ;;;02110-1301 USA.
 
 #!r6rs
-(import (tests r6rs unicode)
-        (tests r6rs test)
+(import (r6rs unicode)
+        (r6rs test)
         (rnrs io simple))
 (display "Running tests for (rnrs unicode)\n")
 (run-unicode-tests)

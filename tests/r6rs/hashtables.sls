@@ -16,10 +16,10 @@
 ;;;02110-1301 USA.
 #!r6rs
 
-(library (tests r6rs hashtables)
+(library (r6rs hashtables)
   (export run-hashtables-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
   (define-syntax test-ht
     (syntax-rules ()

@@ -16,11 +16,11 @@
 ;;;02110-1301 USA.
 #!r6rs
 
-(library (tests r6rs contrib)
+(library (r6rs contrib)
   (export run-contrib-tests)
   (import (rnrs)
-          (tests r6rs test)
-          (prefix (tests r6rs contrib helper1) L:))
+          (r6rs test)
+          (prefix (r6rs contrib helper1) L:))
 
   ;; Definitions ----------------------------------------
 

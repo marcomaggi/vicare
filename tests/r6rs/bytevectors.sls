@@ -17,10 +17,10 @@
 
 #!r6rs
 
-(library (tests r6rs bytevectors)
+(library (r6rs bytevectors)
   (export run-bytevectors-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
   (define (run-bytevectors-tests)
 

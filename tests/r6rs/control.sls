@@ -16,10 +16,10 @@
 ;;;02110-1301 USA.
 #!r6rs
 
-(library (tests r6rs control)
+(library (r6rs control)
   (export run-control-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
   (define (run-control-tests)
 

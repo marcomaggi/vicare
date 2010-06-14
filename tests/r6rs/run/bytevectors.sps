@@ -16,8 +16,8 @@
 ;;;02110-1301 USA.
 
 #!r6rs
-(import (tests r6rs bytevectors)
-        (tests r6rs test)
+(import (r6rs bytevectors)
+        (r6rs test)
         (rnrs io simple))
 (display "Running tests for (rnrs bytevectors)\n")
 (run-bytevectors-tests)

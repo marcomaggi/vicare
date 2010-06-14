@@ -19,7 +19,7 @@
 
 ;; from Derick Eddington
 
-(library (tests r6rs contrib helper1)
+(library (r6rs contrib helper1)
   (export x s)
   (import (rnrs))
 

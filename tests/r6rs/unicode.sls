@@ -17,10 +17,10 @@
 
 #!r6rs
 
-(library (tests r6rs unicode)
+(library (r6rs unicode)
   (export run-unicode-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
   (define (run-unicode-tests)
 

@@ -17,10 +17,10 @@
 
 #!r6rs
 
-(library (tests r6rs lists)
+(library (r6rs lists)
   (export run-lists-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
   (define (run-lists-tests)
 

@@ -17,10 +17,10 @@
 
 #!r6rs
 
-(library (tests r6rs arithmetic bitwise)
+(library (r6rs arithmetic bitwise)
   (export run-arithmetic-bitwise-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
   ;; Helpers originally from Ikarus test suite:
   (define (ref ei)

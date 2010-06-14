@@ -16,10 +16,10 @@
 ;;;02110-1301 USA.
 #!r6rs
 
-(library (tests r6rs enums)
+(library (r6rs enums)
   (export run-enums-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
   ;; ----------------------------------------
 

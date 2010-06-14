@@ -17,10 +17,10 @@
 
 #!r6rs
 
-(library (tests r6rs reader)
+(library (r6rs reader)
   (export run-reader-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
   (define-syntax number-test
     (syntax-rules ()

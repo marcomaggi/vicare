@@ -17,10 +17,10 @@
 
 #!r6rs
 
-(library (tests r6rs records procedural)
+(library (r6rs records procedural)
   (export run-records-procedural-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
   ;; ----------------------------------------
 

@@ -17,7 +17,7 @@
 
 #!r6rs
 
-(library (tests r6rs test)
+(library (r6rs test)
   (export test
           test/approx
           test/alts

@@ -87,20 +87,17 @@ the files under a temporary location; example:
 5. Testing
 ----------
 
-The original tests (from the Ikarus distribution) are executed running:
+The  original  tests  (from  the  Ikarus  distribution)  are  under  the
+"scheme/tests" subdirectory and they are executed running:
 
-   $ make check
+   $ make ikarus-tests
 
-the new tests added in Vicare are executed running:
+  The new tests added in Vicare are in the "tests" subdirectory and they
+are executed running:
 
    $ make tests
 
-the  following command  will run  the R6RS  compliance tests  by Matthew
-Flatt.
-
-   $ make test-r6rs
-
-  All the test files under "tests"  are programs whose file name has the
+all the  test files under "tests"  are programs whose file  name has the
 format  "test-<name>.sps"  where  <name>  is  indicates  of  the  tested
 feature; it is possible to select a single test file by using the "name"
 variable on the command line of "make"; for example:
@@ -109,6 +106,35 @@ variable on the command line of "make"; for example:
 
 will run the "test-equal-hash.sps" file.  The "name" variable is used to
 expand a file name with wildcards as in "test-*$(name)*.sps".
+
+  The  following command  will  run  all the  R6RS  compliance tests  by
+Matthew Flatt:
+
+   $ make test-r6rs
+
+whose files are in the "tests/r6rs" subdirectory; in detail: each of the
+following makefile rules will run a single set of R6RS compliance tests:
+
+    test-r6rs-arithmetic-bitwise        test-r6rs-arithmetic-fixnums
+    test-r6rs-arithmetic-flonums        test-r6rs-base
+    test-r6rs-bytevectors               test-r6rs-conditions
+    test-r6rs-contrib                   test-r6rs-control
+    test-r6rs-enums                     test-r6rs-eval
+    test-r6rs-exceptions                test-r6rs-hashtables
+    test-r6rs-io-ports                  test-r6rs-io-simple
+    test-r6rs-lists                     test-r6rs-mutable-pairs
+    test-r6rs-mutable-strings           test-r6rs-programs
+    test-r6rs-r5rs                      test-r6rs-reader
+    test-r6rs-records-procedural        test-r6rs-records-syntactic
+    test-r6rs-sorting                   test-r6rs-syntax-case
+    test-r6rs-unicode
+
+  The command:
+
+   $ make check
+
+will  run both  the R6RS  compliance tests  and the  Vicare  tests under
+"tests".
 
 
 6. Policy

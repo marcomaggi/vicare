@@ -16,8 +16,8 @@
 ;;;02110-1301 USA.
 
 #!r6rs
-(import (tests r6rs mutable-pairs)
-        (tests r6rs test)
+(import (r6rs mutable-pairs)
+        (r6rs test)
         (rnrs io simple))
 (display "Running tests for (rnrs mutable-pairs)\n")
 (run-mutable-pairs-tests)

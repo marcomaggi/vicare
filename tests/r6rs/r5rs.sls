@@ -17,12 +17,12 @@
 
 #!r6rs
 
-(library (tests r6rs r5rs)
+(library (r6rs r5rs)
   (export run-r5rs-tests)
   (import (rnrs)
           (rnrs r5rs)
           (rnrs eval)
-          (tests r6rs test))
+          (r6rs test))
 
   ;; ----------------------------------------
 

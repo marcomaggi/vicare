@@ -133,9 +133,9 @@ $(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
   $(NEW_EXECUTABLE) -b $(srcdir)/ikarus.boot.$(sizeofvoidp).prebuilt \
   --r6rs-script $(srcdir)/makefile.ss
 
-check: $(NEW_BOOT_FILE)
+ikarus-tests: $(NEW_BOOT_FILE)
 	IKARUS_SRC_DIR=$(srcdir) \
-  VICARE_LIBRARY_PATH=$(srcdir) \
-  $(NEW_EXECUTABLE) -b $(NEW_BOOT_FILE) --r6rs-script $(srcdir)/run-tests.ss
+		VICARE_LIBRARY_PATH=$(srcdir) \
+		$(NEW_EXECUTABLE) -b $(NEW_BOOT_FILE) --r6rs-script $(srcdir)/run-tests.ss
 
 ### end of file

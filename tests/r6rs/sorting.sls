@@ -17,10 +17,10 @@
 
 #!r6rs
 
-(library (tests r6rs sorting)
+(library (r6rs sorting)
   (export run-sorting-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
   (define (run-sorting-tests)
 

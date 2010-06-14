@@ -17,10 +17,10 @@
 
 #!r6rs
 
-(library (tests r6rs base)
+(library (r6rs base)
   (export run-base-tests)
   (import (rnrs)
-          (tests r6rs test))
+          (r6rs test))
 
   (define (try-reals f but-not)
     (if (not (member 0 but-not))

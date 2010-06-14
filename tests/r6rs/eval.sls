@@ -16,11 +16,11 @@
 ;;;02110-1301 USA.
 #!r6rs
 
-(library (tests r6rs eval)
+(library (r6rs eval)
   (export run-eval-tests)
   (import (rnrs)
           (rnrs eval)
-          (tests r6rs test))
+          (r6rs test))
 
   (define (run-eval-tests)
 

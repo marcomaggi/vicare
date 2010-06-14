@@ -16,8 +16,8 @@
 ;;;02110-1301 USA.
 
 #!r6rs
-(import (tests r6rs conditions)
-        (tests r6rs test)
+(import (r6rs conditions)
+        (r6rs test)
         (rnrs io simple))
 (display "Running tests for (rnrs conditions)\n")
 (run-conditions-tests)
