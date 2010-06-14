@@ -137,11 +137,12 @@ TESTS			=	\
 	test-getpid.sps					\
 	test-log.sps					\
 	\
-	test-issue-10.sps				\
-	test-issue-12.sps				\
 	test-issue-7.sps				\
 	test-issue-8.sps				\
 	test-issue-9.sps				\
+	test-issue-10.sps				\
+	test-issue-12.sps				\
+	test-issue-13.sps				\
 	\
 	$(srcdir)/r6rs/run/control.sps			\
 	$(srcdir)/r6rs/run/base.sps			\
@@ -240,11 +241,13 @@ EXTRA_DIST =	\
 	test-equal-hash.sps				\
 	test-fxreverse-bit-field.sps			\
 	test-getpid.sps					\
-	test-issue-10.sps				\
-	test-issue-12.sps				\
+	test-log.sps					\
 	test-issue-7.sps				\
 	test-issue-8.sps				\
 	test-issue-9.sps				\
-	test-log.sps
+	test-issue-10.sps				\
+	test-issue-12.sps				\
+	test-issue-13.sps
+
 
 ### end of file
