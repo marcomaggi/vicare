@@ -1388,7 +1388,7 @@
 
   (define guard-macro
     (lambda (x)
-      (define (gen-clauses con outerk clause*)
+      (define (gen-clauses raised-obj con outerk clause*)
         (define (f x k)
           (syntax-match x (=>)
             ((e => p)
@@ -1406,7 +1406,7 @@
           (syntax-match x* (else)
             (()
              (let ((g (gensym)))
-               (values `(,g (lambda () (raise-continuable ,con))) g)))
+               (values `(,g (lambda () (raise-continuable ,raised-obj))) g)))
             (((else e e* ...))
              (values `(begin ,e ,@e*) #f))
             ((cls . cls*)
@@ -1423,14 +1423,16 @@
       (syntax-match x ()
         ((_ (con clause* ...) b b* ...)
          (id? con)
-         (let ((outerk (gensym)))
+         (let ((outerk     (gensym))
+	       (raised-obj (gensym)))
            (bless
              `((call/cc
                  (lambda (,outerk)
                    (lambda ()
                      (with-exception-handler
-                       (lambda (,con)
-                         ,(gen-clauses con outerk clause*))
+                       (lambda (,raised-obj)
+			 (let ((,con ,raised-obj))
+                           ,(gen-clauses raised-obj con outerk clause*)))
                        (lambda () ,b ,@b*))))))))))))
 
   (define define-enumeration-macro
