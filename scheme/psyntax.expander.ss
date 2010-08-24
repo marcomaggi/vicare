@@ -1388,11 +1388,7 @@
 
   (define guard-macro
     (lambda (x)
-<<<<<<< HEAD
-      (define (gen-clauses con outerk clause*)
-=======
       (define (gen-clauses raised-obj con outerk clause*)
->>>>>>> issue-15-guard-reraising-wrong-object
         (define (f x k)
           (syntax-match x (=>)
             ((e => p)
