@@ -2357,53 +2357,68 @@
         [else
          (die 'zero? "not a number" x)])))
 
-  (define expt
-    (lambda (n m)
-      (define fxexpt
-        (lambda (n m)
-          (cond (($fxzero? m)
-		 1)
-		(($fxzero? ($fxlogand m 1))
-		 (fxexpt (binary* n n) ($fxsra m 1)))
-		(else
-		 (binary* n (fxexpt (binary* n n) ($fxsra m 1)))))))
-      (define ln
-	(let ((log_e (log 2.718281828459045)))
-	  (lambda (x)
-	    (/ (log x) log_e))))
-      (unless (number? n)
-        (die 'expt "not a numebr" n))
-      (cond ((fixnum? m)
-	     (if ($fx>= m 0)
-		 (cond ((ratnum? n)
-			($make-ratnum (expt ($ratnum-n n) m) (expt ($ratnum-d n) m)))
-		       (else (fxexpt n m)))
-	       (let ((v (expt n (- m))))
-		 (if (eq? v 0)
-		     0
-		   (/ 1 v)))))
-	    ((bignum? m)
-	     (cond ((eq? n 0) 0)
-		   ((eq? n 1) 1)
-		   ((eq? n -1)
-		    (if (even-bignum? m)
-			1
-		      -1))
-		   ((nan? n)
-		    +nan.0)
-		   (else
-		    (die 'expt "result is too big to compute" n m))))
-	    ((flonum? m)
-	     (if (or (compnum? n) (cflonum? n))
-		 (exp (* m (ln n)))
-	       (flexpt (inexact n) m)))
-	    ((ratnum? m)
-	     (flexpt (inexact n) (inexact m)))
-	    ((or (compnum? m) (cflonum? m))
-	     (if (eq? n 0)
-		 0
-	       (exp (* m (ln n)))))
-	    (else (die 'expt "not a number" m)))))
+  (define (expt n m)
+    (define (fxexpt n m)
+      ;;Compute n^m  when m  is a  fixnum.  It may  recurse a  number of
+      ;;times equal to the bits in the representation of M.
+      ;;
+      ;;Notes:
+      ;;
+      ;;* ($fxlogand m 1)  is 1 for even m and 0 for  odd m, or in other
+      ;;words: the return value is the rightmost bit of M.
+      ;;
+      ;;* $fxsra means "fixnum shift right arithmetic".
+      ;;
+      (cond (($fxzero? m)
+	     (cond ((nan? n)	+nan.0)
+		   ((exact? n)	1)
+		   (else	1.)))
+	    ((infinite? n)
+	     (if (real? n)
+		 +inf.0
+	       +inf.0+inf.0i))
+	    (($fxzero? ($fxlogand m 1)) ;the rightmost bit in M is zero
+	     (fxexpt (binary* n n) ($fxsra m 1)))
+	    (else ;the rightmost bit in M is one
+	     (binary* n (fxexpt (binary* n n) ($fxsra m 1))))))
+    (define log_e (log 2.718281828459045))
+    (define (ln x)
+      (/ (log x) log_e))
+    (unless (number? n)
+      (die 'expt "not a numebr" n))
+    (cond ((fixnum? m)
+	   (if ($fx>= m 0)
+	       (if (ratnum? n)
+		   (if ($fxzero? m)
+		       1
+		     ($make-ratnum (expt ($ratnum-n n) m) (expt ($ratnum-d n) m)))
+		 (fxexpt n m))
+	     (let ((v (expt n (- m))))
+	       (if (eq? v 0)
+		   0
+		 (/ 1 v)))))
+	  ((bignum? m)
+	   (cond ((eq? n 0) 0)
+		 ((eq? n 1) 1)
+		 ((eq? n -1)
+		  (if (even-bignum? m)
+		      1
+		    -1))
+		 ((nan? n)
+		  +nan.0)
+		 (else
+		  (die 'expt "result is too big to compute" n m))))
+	  ((flonum? m)
+	   (if (or (compnum? n) (cflonum? n))
+	       (exp (* m (ln n)))
+	     (flexpt (inexact n) m)))
+	  ((ratnum? m)
+	   (flexpt (inexact n) (inexact m)))
+	  ((or (compnum? m) (cflonum? m))
+	   (if (eq? n 0)
+	       0
+	     (exp (* m (ln n)))))
+	  (else (die 'expt "not a number" m))))
 
   (define quotient
     (lambda (x y)

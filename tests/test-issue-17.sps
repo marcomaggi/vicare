@@ -47,9 +47,9 @@
 (define bignum0 (expt 2 32))
 
 
-;;;; exponentiation with fixnum base
+;;;; fixnum exponent
 
-;;; fixnum exponent
+;;; fixnum base
 
 (check (expt 2 3)		=> 8)
 (check (expt 2 -3)		=> 1/8)
@@ -64,7 +64,202 @@
 (check (expt -3 0)		=> 1)
 
 ;;; --------------------------------------------------------------------
-;;; bignum exponent
+;;; rational base
+
+(check (expt 2/3 3)		=> 8/27)
+(check (expt 2/3 -3)		=> 27/8)
+
+(check (expt -2/3 3)		=> -8/27)
+(check (expt -2/3 -3)		=> -27/8)
+
+(check (expt 3/4 0)		=> 1)
+(check (expt -3/4 0)		=> 1)
+
+;;; --------------------------------------------------------------------
+;;; bignum base
+
+(check (expt bignum0 3)		=> 79228162514264337593543950336)
+(check (expt bignum0 -3)	=> 1/79228162514264337593543950336)
+
+(check (expt (- bignum0) 3)	=> -79228162514264337593543950336)
+(check (expt (- bignum0) -3)	=> -1/79228162514264337593543950336)
+
+(check (expt bignum0 0)		=> 1)
+(check (expt (- bignum0) 0)	=> 1)
+
+;;; --------------------------------------------------------------------
+;;; flonum base
+
+(check (expt 2. 3)		=> 8.)
+(check (expt 2. -3)		=> 0.125)
+
+(check (expt -2. 3)		=> -8.0)
+(check (expt -2. -3)		=> -0.125)
+
+(check (expt 0. 3)		=> 0.)
+(check (expt 0. -3)		=> +inf.0)
+
+(check (expt 3. 0)		=> 1.)
+(check (expt -3. 0)		=> 1.)
+
+(check (expt 2.3 3)		(=> eq=?) 12.166999999999998)
+(check (expt 2.3 -3)		(=> eq=?) 0.08218952905399854)
+
+(check (expt -2.3 3)		(=> eq=?) -12.166999999999998)
+(check (expt -2.3 -3)		(=> eq=?) -0.08218952905399854)
+
+(check (expt 3.4 0)		=> 1.)
+(check (expt -3.4 0)		=> 1.)
+
+(check (expt +inf.0 2)		=> +inf.0)
+(check (expt +inf.0 -2)		=> 0.0)
+(check (expt +inf.0 0)		=> +nan.0)
+
+(check (expt -inf.0 2)		=> +inf.0)
+(check (expt -inf.0 -2)		=> 0.0)
+(check (expt -inf.0 0)		=> +nan.0)
+
+(check (nan? (expt +nan.0 2))	=> #t)
+(check (nan? (expt +nan.0 -2))	=> #t)
+(check (nan? (expt +nan.0 0))	=> #t)
+
+;;; --------------------------------------------------------------------
+;;; complex fixnum base
+
+(check (expt 1+2i 2)		=> -3+4i)
+(check (expt 3+4i 5)		=> -237-3116i)
+
+(check (expt +2i 2)		=> -4)
+(check (expt +4i 5)		=> +1024i)
+(check (expt -2i 2)		=> -4)
+(check (expt -4i 5)		=> -1024i)
+
+(check (expt +2i -2)		=> -1/4)
+(check (expt +4i -5)		=> -1/1024i)
+(check (expt -2i -2)		=> -1/4)
+(check (expt -4i -5)		=> +1/1024i)
+
+;;; --------------------------------------------------------------------
+;;; complex rational base
+
+
+;;; --------------------------------------------------------------------
+;;; complex bignum base
+
+(check
+    (expt (make-rectangular bignum0 bignum0) 3)
+  => -158456325028528675187087900672+158456325028528675187087900672i)
+
+(check
+    (expt (make-rectangular (- bignum0) bignum0) 3)
+  => 158456325028528675187087900672+158456325028528675187087900672i)
+
+(check
+    (expt (make-rectangular bignum0 (- bignum0)) 3)
+  => -158456325028528675187087900672-158456325028528675187087900672i)
+
+(check
+    (expt (make-rectangular (- bignum0) (- bignum0)) 3)
+  => 158456325028528675187087900672-158456325028528675187087900672i)
+
+;;
+
+(check
+    (expt (make-rectangular bignum0 bignum0) -3)
+  => -1/316912650057057350374175801344-1/316912650057057350374175801344i)
+
+(check
+    (expt (make-rectangular (- bignum0) bignum0) -3)
+  => 1/316912650057057350374175801344-1/316912650057057350374175801344i)
+
+(check
+    (expt (make-rectangular bignum0 (- bignum0)) -3)
+  => -1/316912650057057350374175801344+1/316912650057057350374175801344i)
+
+(check
+    (expt (make-rectangular (- bignum0) (- bignum0)) -3)
+  => 1/316912650057057350374175801344+1/316912650057057350374175801344i)
+
+;;
+
+(check
+    (expt (make-rectangular 0 bignum0) 3)
+  => -79228162514264337593543950336i)
+
+(check
+    (expt (make-rectangular 0 bignum0) -3)
+  => +1/79228162514264337593543950336i)
+
+(check
+    (expt (make-rectangular 0 (- bignum0)) 3)
+  => +79228162514264337593543950336i)
+
+(check
+    (expt (make-rectangular 0 (- bignum0)) -3)
+  => -1/79228162514264337593543950336i)
+
+;;; --------------------------------------------------------------------
+;;; complex flonum base
+
+(check (expt 1.+2.i 2)		=> -3.+4.i)
+(check (expt 3.+4.i 5)		=> -237.-3116.i)
+
+(check (expt +2.i 2)		=> -4.+0.i)
+(check (expt +4.i 5)		=> +1024.i)
+(check (expt -2.i 2)		=> -4.+0.i)
+(check (expt -4.i 5)		=> -1024.i)
+
+(check (expt +2.i -2)		(=> eq=?) (inexact -1/4))
+(check (expt +4.i -5)		(=> eq=?) (inexact -1/1024i))
+(check (expt -2.i -2)		(=> eq=?) (inexact -1/4))
+(check (expt -4.i -5)		(=> eq=?) (inexact +1/1024i))
+
+(check (expt +inf.0+2.i 2)	=> +inf.0+inf.0i)
+(check (expt +2.+inf.0i 2)	=> +inf.0+inf.0i)
+(check (expt +inf.0+2.i 0)	=> +inf.0+inf.0i)
+(check (expt +2.+inf.0i 0)	=> +inf.0+inf.0i)
+
+(check (expt -inf.0+2.i 2)	=> -inf.0-inf.0i)
+(check (expt +2.-inf.0i 2)	=> -inf.0-inf.0i)
+(check (expt -inf.0+2.i 0)	=> -inf.0-inf.0i)
+(check (expt +2.-inf.0i 0)	=> -inf.0-inf.0i)
+
+(check (nan? (expt +nan.0+2.i 2))	=> #t)
+(check (nan? (expt +2.+nan.0i 2))	=> #t)
+(check (nan? (expt +nan.0+2.i 0))	=> #t)
+(check (nan? (expt +2.+nan.0i 0))	=> #t)
+
+
+;;;; rational exponent
+
+;;; --------------------------------------------------------------------
+;;; fixnum base
+
+;;; --------------------------------------------------------------------
+;;; rational base
+
+;;; --------------------------------------------------------------------
+;;; bignum base
+
+;;; --------------------------------------------------------------------
+;;; flonum base
+
+;;; --------------------------------------------------------------------
+;;; complex fixnum base
+
+;;; --------------------------------------------------------------------
+;;; complex rational base
+
+;;; --------------------------------------------------------------------
+;;; complex bignum base
+
+;;; --------------------------------------------------------------------
+;;; complex flonum base
+
+
+;;;; bignum exponent
+
+;;; fixnum base
 
 (check (expt  0 (+ 3 bignum0))	=> 0)
 (check (expt  1 (+ 3 bignum0))	=> 1)
@@ -91,8 +286,46 @@
 ;; (check (expt 0 (+  3 bignum0))	=> 0)
 ;; (check (expt 0 (- -3 bignum0))	=> 0)
 
+(check
+    (guard (E ((assertion-violation? E)
+	       #t)
+	      (else #f))
+      ;;result is too big to compute
+      (expt 2 (make-rectangular bignum0 bignum0)))
+  => #t)
+
 ;;; --------------------------------------------------------------------
-;;; flonum exponent
+;;; rational base
+
+;;; --------------------------------------------------------------------
+;;; bignum base
+
+;;; --------------------------------------------------------------------
+;;; flonum base
+
+;;When the  exponent is a bignum:  EXPT computes the result  only if the
+;;base is 0, +1, -1 or NaN.
+;;
+;; (check
+;;     (expt +nan.0 (expt 2 32))
+;;   => +nan.0)
+
+;;; --------------------------------------------------------------------
+;;; complex fixnum base
+
+;;; --------------------------------------------------------------------
+;;; complex rational base
+
+;;; --------------------------------------------------------------------
+;;; complex bignum base
+
+;;; --------------------------------------------------------------------
+;;; complex flonum base
+
+
+;;;; flonum exponent
+
+;;; fixnum base
 
 (check (expt 2 +nan.0)		=> +nan.0)
 (check (expt 2 +inf.0)		=> +inf.0)
@@ -111,7 +344,44 @@
 (check (expt -3 0.)		=> 1.)
 
 ;;; --------------------------------------------------------------------
-;;; complex fixnum exponent
+;;; rational base
+
+
+;;; --------------------------------------------------------------------
+;;; bignum base
+
+
+;;; --------------------------------------------------------------------
+;;; flonum base
+
+;; (check (expt 1.+2.i 2.)		(=> eq=?) -3.+4.i)
+;; (check (expt 3.+4.i 5.)		(=> eq=?) -237.-3116.i)
+
+;; (check
+;;     (let ((r (expt +i +inf.0)))
+;;       (list (nan? (real-part r))
+;; 	    (nan? (imag-part r))))
+;;   => '(#t #t))
+
+(check (expt 0.0 0.0)		=> 1.0)
+(check (expt 0.0 1.0)		=> 0.0)
+
+;;; --------------------------------------------------------------------
+;;; complex fixnum base
+
+;;; --------------------------------------------------------------------
+;;; complex rational base
+
+;;; --------------------------------------------------------------------
+;;; complex bignum base
+
+;;; --------------------------------------------------------------------
+;;; complex flonum base
+
+
+;;;; complex exponent
+
+;;; fixnum base
 
 (check (expt 2 +3+4i)		(=> eq=?) -7.461496614688567+2.8854927255134477i)
 (check (expt 2 +3-4i)		(=> eq=?) -7.461496614688567-2.8854927255134477i)
@@ -129,41 +399,25 @@
 (check (expt 0 -3-4i)		=> 0)
 
 ;;; --------------------------------------------------------------------
-;;; complex bignum exponent
+;;; rational base
 
-(check
-    (guard (E ((assertion-violation? E)
-	       #t)
-	      (else #f))
-      ;;result is too big to compute
-      (expt 2 (make-rectangular bignum0 bignum0)))
-  => #t)
+;;; --------------------------------------------------------------------
+;;; bignum base
 
+;;; --------------------------------------------------------------------
+;;; flonum base
 
-
-;;;; exponentiation with complex base
+;;; --------------------------------------------------------------------
+;;; complex fixnum base
 
-;; (check (expt 1+2i 2)		=> -3+4i)
-;; (check (expt 3+4i 5)		=> -237-3116i)
+;;; --------------------------------------------------------------------
+;;; complex rational base
 
-;; (check (expt 1.+2.i 2.)		(=> eq=?) -3.+4.i)
-;; (check (expt 3.+4.i 5.)		(=> eq=?) -237.-3116.i)
+;;; --------------------------------------------------------------------
+;;; complex bignum base
 
-;; (check
-;;     (let ((r (expt +i +inf.0)))
-;;       (list (nan? (real-part r))
-;; 	    (nan? (imag-part r))))
-;;   => '(#t #t))
-
-
-;;;; exponentiation with bignum exponent
-
-;;When the  exponent is a bignum:  EXPT computes the result  only if the
-;;base is 0, +1, -1 or NaN.
-;;
-;; (check
-;;     (expt +nan.0 (expt 2 32))
-;;   => +nan.0)
+;;; --------------------------------------------------------------------
+;;; complex flonum base
 
 
 ;;;; done
