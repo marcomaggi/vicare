@@ -2457,7 +2457,6 @@
   (cond ((fixnum? m)
 	 (cond (($fxzero? m)
 		(cond ((nan? n)		+nan.0)
-;;;		      ((infinite? n)	1)
 		      ((exact? n)	1)
 		      (else		1.)))
 	       (($fx> m 0)
@@ -2492,16 +2491,25 @@
 		(die 'expt "result is too big to compute" n m))))
 	((flonum? m)
 	 (cond ((real? n)
-		(if (nan? n)
-		    +nan.0
-		  (flexpt (inexact n) m)))
+		(cond ((nan? n)
+		       +nan.0)
+		      ((integer? m)
+		       ;;N^M  when M  is an  integer always  has  a real
+		       ;;number as result.
+		       (flexpt (inexact n) m))
+		      ((negative? n)
+		       (exp (* m (log n))))
+		      (else
+		       (flexpt (inexact n) m))))
 	       ((or (nan? (real-part n))
 		    (nan? (imag-part n)))
 		+nan.0+nan.0i)
 	       (else
 		(exp (* m (log n))))))
 	((ratnum? m)
-	 (flexpt (inexact n) (inexact m)))
+;;; (expt (expt n ($ratnum-n m))
+;;;       (inexact ($make-ratnum 1 ($ratnum-d m))))
+	 (expt n (inexact m)))
 	((or (compnum? m) (cflonum? m))
 	 (cond ((eq? n 0)
 		0)
