@@ -2361,50 +2361,171 @@
         [else
          (die 'zero? "not a number" x)])))
 
-  (define expt
-    (lambda (n m)
-      (define fxexpt
-        (lambda (n m)
-          (cond
-            [($fxzero? m) 1]
-            [($fxzero? ($fxlogand m 1))
-             (fxexpt (binary* n n) ($fxsra m 1))]
-            [else
-             (binary* n (fxexpt (binary* n n) ($fxsra m 1)))])))
-      (unless (number? n)
-        (die 'expt "not a numebr" n))
-      (cond
-        [(fixnum? m)
-         (if ($fx>= m 0)
-             (cond
-               [(ratnum? n)
-                ($make-ratnum (expt ($ratnum-n n) m) (expt ($ratnum-d n) m))]
-               [else (fxexpt n m)])
-             (let ([v (expt n (- m))])
-               (if (eq? v 0)
-                   0
-                   (/ 1 v))))]
-        [(bignum? m)
-         (cond
-           [(eq? n 0) 0]
-           [(eq? n 1) 1]
-           [(eq? n -1)
-            (if (positive-bignum? m)
-                (if (even-bignum? m)
-                    1
-                    -1)
-                (/ 1 (expt n (- m))))]
-           [else
-            (die 'expt "result is too big to compute" n m)])]
-        [(flonum? m) (flexpt (inexact n) m)]
-        [(ratnum? m) (flexpt (inexact n) (inexact m))]
-        [(or (compnum? m) (cflonum? m))
-         (if (eq? n 0)
-             0
-             (let ([e 2.718281828459045])
-               (define (ln x) (/ (log x) (log e)))
-               (exp (* m (ln n)))))]
-        [else (die 'expt "not a number" m)])))
+(define (expt n m)
+  ;;Return N raised to the power  M.  For non--zero N, this is:
+  ;;
+  ;;    (expt N M) === (exp (log (expt N M)))
+  ;;               === (exp (* M (log N)))
+  ;;
+  ;;for N equal to zero:
+  ;;
+  ;;    (expt 0.0 Z) = 1.0 if Z = 0.0
+  ;;                 = 0.0 if (real-part Z) is positive
+  ;;
+  ;;for  other cases  in which  the first  argument is  zero,  either an
+  ;;exception       is       raised       with      condition       type
+  ;;"&implementation-restriction",  or an  unspecified number  object is
+  ;;returned.
+  ;;
+  ;;For an  exact real number  object N and  an exact integer  object M,
+  ;;(expt N M)  must return an exact result.  For all  other values of N
+  ;;and M, (expt N M) may return an inexact result, even when both N and
+  ;;M are exact.
+  ;;
+  ;;Notice that this definition can  lead to unintuitive results; from a
+  ;;discussion with Kent Dybvig: It does seem like:
+  ;;
+  ;;   (expt +inf.0+2.i 2)
+  ;;
+  ;;would be equivalent to:
+  ;;
+  ;;   (* +inf.0+2.i +inf.0+2.i)
+  ;;
+  ;;which evaluates  to +inf.0+inf.0i.   Nevertheless, I'm not  sure the
+  ;;R6RS supports this interpretation.   According to the description of
+  ;;expt, when z1 is not zero,
+  ;;
+  ;;   (expt z1 z2) => e^{z2 log z1}
+  ;;
+  ;;so,
+  ;;
+  ;;   (expt +inf.0+2.i 2) => (exp (* 2 (log +inf.0+2.i)))
+  ;;
+  ;;Meanwhile, the Section 11.7.3 subsection on transcendental functions
+  ;;defines log as follows:
+  ;;
+  ;;   (log z) => log |z| + (angle z)i
+  ;;
+  ;;so,
+  ;;
+  ;;   (log +inf.0+2.i) =>
+  ;;     (make-rectangular
+  ;;       (log (magnitude +inf.0+2.0i))
+  ;;       (angle +inf.0+2.0i))
+  ;;
+  ;;Since:
+  ;;
+  ;;   (magnitude +inf.0+2.i) => +inf.0,
+  ;;   (log +inf.0) => +inf.0, and
+  ;;   (angle +inf.0+2.i) => 0.0,
+  ;;
+  ;;we have:
+  ;;
+  ;;   (log +inf.0+2.i) => +inf.0+0.0i
+  ;;
+  ;;and finally:
+  ;;
+  ;;   (expt +inf.0+2.i 2) => (exp (* 2 +inf.0+0.0i))
+  ;;                       => (exp +inf.0+0.0i)
+  ;;                       => +inf.0+0.0i
+  ;;
+
+  (define (%expt-fx n m)
+    ;;Recursive function computing N^M when M is a fixnum and N is:
+    ;;
+    ;;* A real number, infinite included, NaN excluded.
+    ;;
+    ;;* A finite complex number.
+    ;;
+    ;;This function recurses a number of  times equal to the bits in the
+    ;;representation of M.
+    ;;
+    ;;Notes about used procedures:
+    ;;
+    ;;* ($fxlogand  m 1) is 1  for even m and  0 for odd m,  or in other
+    ;;words: the return value is the rightmost bit of M.
+    ;;
+    ;;* $fxsra means "fixnum shift right arithmetic".
+    ;;
+    ;;* binary* is the multiplication with two arguments.
+    ;;
+    (cond (($fxzero? m)
+	   1)
+	  (($fxzero? ($fxlogand m 1)) ;the rightmost bit in M is zero
+	   (%expt-fx (binary* n n) ($fxsra m 1)))
+	  (else ;the rightmost bit in M is one
+	   (binary* n (%expt-fx (binary* n n) ($fxsra m 1))))))
+
+  (unless (number? n)
+    (die 'expt "not a numebr" n))
+  (cond ((fixnum? m)
+	 (cond (($fxzero? m)
+		(cond ((nan? n)		+nan.0)
+		      ((exact? n)	1)
+		      (else		1.)))
+	       (($fx> m 0)
+		(cond ((integer? n)
+		       (%expt-fx n m))
+		      ((ratnum? n)
+		       ($make-ratnum (%expt-fx ($ratnum-n n) m)
+				     (%expt-fx ($ratnum-d n) m)))
+		      ((real? n) ;this includes the real infinite +inf.0
+		       (if (nan? n)
+			   +nan.0
+			 (%expt-fx n m)))
+		      ;;In the following clauses N is a non-real.
+		      ((or (nan? (real-part n))
+			   (nan? (imag-part n)))
+		       +nan.0+nan.0i)
+		      ((infinite? n) ;this handles correctly some special cases
+		       (exp (* m (log n))))
+		      (else
+		       (%expt-fx n m))))
+	       (else ;M is negative
+		(let ((v (expt n (- m))))
+		  (if (eq? v 0)
+		      0
+		    (/ 1 v))))))
+	((bignum? m)
+	 (cond ((eq? n 0)	0)
+	       ((eq? n 1)	1)
+	       ((eq? n -1)	(if (even-bignum? m) 1 -1))
+	       ((nan? n)	+nan.0)
+	       (else
+		(die 'expt "result is too big to compute" n m))))
+	((flonum? m)
+	 (cond ((real? n)
+		(cond ((nan? n)
+		       +nan.0)
+		      ((integer? m)
+		       ;;N^M  when M  is an  integer always  has  a real
+		       ;;number as result.
+		       (flexpt (inexact n) m))
+		      ((negative? n)
+		       (exp (* m (log n))))
+		      (else
+		       (flexpt (inexact n) m))))
+	       ((or (nan? (real-part n))
+		    (nan? (imag-part n)))
+		+nan.0+nan.0i)
+	       (else
+		(exp (* m (log n))))))
+	((ratnum? m)
+;;; (expt (expt n ($ratnum-n m))
+;;;       (inexact ($make-ratnum 1 ($ratnum-d m))))
+	 (expt n (inexact m)))
+	((or (compnum? m) (cflonum? m))
+	 (cond ((eq? n 0)
+		0)
+	       ((or (nan? (real-part n))
+		    (nan? (imag-part n)))
+		+nan.0+nan.0i)
+	       ((zero? n)
+		(if (flonum? n) 0.0 0.0+0.0i))
+	       (else
+		(exp (* m (log n))))))
+	(else
+	 (die 'expt "not a number" m))))
 
   (define quotient
     (lambda (x y)
@@ -3029,13 +3150,27 @@
       [(bignum? x) (flexp (bignum->flonum x))]
       [(ratnum? x) (flexp (ratnum->flonum x))]
       [(or (compnum? x) (cflonum? x))
-       ;; e^x = e^(xr + xi i)
-       ;;     = e^xr cos(xi) + e^xr sin(xi) i
+       ;;In general:
+       ;;
+       ;;   e^x = e^(xr + xi i)
+       ;;       = e^xr cos(xi) + e^xr sin(xi) i
+       ;;
+       ;;but the special case xi=0.0 is handled as:
+       ;;
+       ;;   e^(xr+0.0i) = e^xr * e^(0.0 i) = e^xr * 1.0+0.0i
+       ;;
+       ;;else,  in  the  special  case  xr=+inf.0,  the  imaginary  part
+       ;;becomes:
+       ;;
+       ;;   e^xr * sin(xi) * i = +inf.0 * 0.0 * i = +nan.0 * i
+       ;;
        (let ([xr (real-part x)] [xi (imag-part x)])
-         (let ([e^xr (exp xr)])
-           (make-rectangular
-             (* e^xr (cos xi))
-             (* e^xr (sin xi)))))]
+	 (if (zero? xi)
+	     (make-rectangular (inexact (exp xr)) 0.0) ;equivalent to: (* (exp xr) 1.0+0.0i)
+	   (let ([e^xr (exp xr)])
+	     (make-rectangular
+	      (* e^xr (cos xi))
+	      (* e^xr (sin xi))))))]
       [else (die 'exp "not a number" x)]))
 
   (define (bitwise-length n)
