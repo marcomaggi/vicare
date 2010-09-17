@@ -2427,7 +2427,13 @@
   ;;
   ;;   (expt +inf.0+2.i 2) => (exp (* 2 +inf.0+0.0i))
   ;;                       => (exp +inf.0+0.0i)
-  ;;                       => +inf.0+0.0i
+  ;;                       => (* (exp +inf.0) (exp 0.0i))
+  ;;                       => (* +inf.0 1.0+0.0i)
+  ;;                       => +inf.0+nan.0i
+  ;;
+  ;;because:
+  ;;
+  ;;   (* +inf.0 0.0i) => +nan.0
   ;;
 
   (define (%expt-fx n m)
@@ -3155,22 +3161,19 @@
        ;;   e^x = e^(xr + xi i)
        ;;       = e^xr cos(xi) + e^xr sin(xi) i
        ;;
-       ;;but the special case xi=0.0 is handled as:
+       ;;and:
        ;;
        ;;   e^(xr+0.0i) = e^xr * e^(0.0 i) = e^xr * 1.0+0.0i
        ;;
-       ;;else,  in  the  special  case  xr=+inf.0,  the  imaginary  part
-       ;;becomes:
+       ;;so, in the special case xr=+inf.0, the imaginary part becomes:
        ;;
        ;;   e^xr * sin(xi) * i = +inf.0 * 0.0 * i = +nan.0 * i
        ;;
        (let ([xr (real-part x)] [xi (imag-part x)])
-	 (if (zero? xi)
-	     (make-rectangular (inexact (exp xr)) 0.0) ;equivalent to: (* (exp xr) 1.0+0.0i)
-	   (let ([e^xr (exp xr)])
-	     (make-rectangular
-	      (* e^xr (cos xi))
-	      (* e^xr (sin xi))))))]
+	 (let ([e^xr (exp xr)])
+	   (make-rectangular
+	    (* e^xr (cos xi))
+	    (* e^xr (sin xi)))))]
       [else (die 'exp "not a number" x)]))
 
   (define (bitwise-length n)
