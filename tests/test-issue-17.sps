@@ -41,11 +41,13 @@
 	(rb (real-part b))
 	(ia (imag-part a))
 	(ib (imag-part b)))
-    (and (or (and (nan? ra) (nan? rb))
+    (and (or (= ra rb)
+	     (and (nan? ra) (nan? rb))
 	     (and (zero? ra) (zero? rb))
 	     (< (abs (- ra rb)) epsilon)
 	     (< (abs (/ (- ra rb) ra)) epsilon))
-	 (or (and (nan? ia) (nan? ib))
+	 (or (= ia ib)
+	     (and (nan? ia) (nan? ib))
 	     (and (zero? ia) (zero? ib))
 	     (< (abs (- ia ib)) epsilon)
 	     (< (abs (/ (- ia ib) ia)) epsilon)))))
@@ -242,8 +244,8 @@
 (check (expt -2.i -2)		(=> eq=?) (inexact -1/4))
 (check (expt -4.i -5)		(=> eq=?) (inexact +1/1024i))
 
-(check (expt +inf.0+2.i 2)	=> +inf.0+0.0i)
-(check (expt +inf.0-2.i 2)	=> +inf.0+0.0i)
+(check (expt +inf.0+2.i 2)	(=> eq=?) +inf.0+nan.0i)
+(check (expt +inf.0-2.i 2)	(=> eq=?) +inf.0+nan.0i)
 
 (check (expt +inf.0+2.i 0)	=> 1.)
 (check (expt +2.+inf.0i 0)	=> 1.)
@@ -433,8 +435,8 @@
 (check (expt -2.i -2/3)		(=> eq=?) 0.31498026247371835+0.5455618179858607i)
 (check (expt -4.i -5/3)		(=> eq=?) -0.08592060231241268+0.04960628287400623i)
 
-(check (expt +inf.0+2.i 2/3)	=> +inf.0+0.0i)
-(check (expt +inf.0-2.i 2/3)	=> +inf.0+0.0i)
+(check (expt +inf.0+2.i 2/3)	(=> eq=?) +inf.0+nan.0i)
+(check (expt +inf.0-2.i 2/3)	(=> eq=?) +inf.0+nan.0i)
 
 (check (expt +nan.0+2.i 2/3)	(=> eq=?) +nan.0+nan.0i)
 (check (expt +2.+nan.0i 2/3)	(=> eq=?) +nan.0+nan.0i)
@@ -690,11 +692,11 @@
 (check (expt -2.i -2.)		(=> eq=?) (inexact -1/4))
 (check (expt -4.i -5.)		(=> eq=?) (inexact +1/1024i))
 
-(check (expt +inf.0+2.i 2.)	=> +inf.0+0.0i)
-(check (expt +inf.0-2.i 2.)	=> +inf.0+0.0i)
+(check (expt +inf.0+2.i 2.)	(=> eq=?) +inf.0+nan.0i)
+(check (expt +inf.0-2.i 2.)	(=> eq=?) +inf.0+nan.0i)
 
-(check (expt +inf.0+2.i 0.)	(=> eq=?) +nan.0+0.0i)
-(check (expt +2.+inf.0i 0.)	(=> eq=?) +nan.0+0.0i)
+(check (expt +inf.0+2.i 0.)	(=> eq=?) +nan.0+nan.0i)
+(check (expt +2.+inf.0i 0.)	(=> eq=?) +nan.0+nan.0i)
 
 (check (expt +nan.0+2.i 2.)	(=> eq=?) +nan.0+nan.0i)
 (check (expt +nan.0+2.i 2.)	(=> eq=?) +nan.0+nan.0i)
@@ -805,8 +807,8 @@
 
 (check (expt 1. +nan.0+nan.0i)	(=> eq=?) +nan.0+nan.0i)
 
-(check (expt 1. +inf.0+2.0i)	(=> eq=?) +nan.0+0.0i)
-(check (expt 1. -inf.0+2.0i)	(=> eq=?) +nan.0+0.0i)
+(check (expt 1. +inf.0+2.0i)	(=> eq=?) +nan.0+nan.0i)
+(check (expt 1. -inf.0+2.0i)	(=> eq=?) +nan.0+nan.0i)
 (check (expt 1. +2.0+inf.0i)	(=> eq=?) +nan.0+nan.0i)
 (check (expt 1. -2.0+inf.0i)	(=> eq=?) +nan.0+nan.0i)
 
