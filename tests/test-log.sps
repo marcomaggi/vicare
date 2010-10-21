@@ -66,7 +66,7 @@
 
 (check (log 1)		=> 0)
 (check (log 10)		(=> quasi=?) 2.30258509299)
-(check (log -10)	(=> quasi=?) 2.30258509299+3.14159265358793)
+(check (log -10)	(=> quasi=?) 2.30258509299+3.14159265358793i)
 
 (check
     (guard (E (else #t))

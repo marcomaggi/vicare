@@ -1,15 +1,16 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2008,2009  Abdulaziz Ghuloum
-;;; 
+;;; Modified by Marco Maggi
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -52,11 +53,11 @@
         [(_ C Ca other . rest) (gen-empty C Ca . rest)]))
     (define-syntax gen-delimiter
       (syntax-rules (eof)
-        [(_ C Ca c) 
+        [(_ C Ca c)
          (C GEN-DELIM-TEST c
             (C FAIL Ca)
             (C FAIL Ca c))]
-        [(_ C Ca c [(eof) then] . rest) 
+        [(_ C Ca c [(eof) then] . rest)
          (C GEN-DELIM-TEST c
              then
              (C FAIL Ca c))]
@@ -68,7 +69,7 @@
          (gen-char C Ca c dc . rest)]
         [(_ C Ca c dc [(test . args) => result then] . rest)
          (cond
-           [(test c . args) => 
+           [(test c . args) =>
             (lambda (result) then)]
            [else (gen-char C Ca c dc . rest)])]
         [(_ C Ca c dc [ls then] . rest)
@@ -81,7 +82,7 @@
          (define (name Ca ... arg* ...)
            (C GEN-TEST c next fail (Ca ...)
               (gen-empty C (Ca ...) clause* ...)
-              (gen-char C (Ca ...) c 
+              (gen-char C (Ca ...) c
                   (gen-delimiter C (Ca ...) c clause* ...)
                   clause* ...)))]))
     (define-syntax define-parser^
@@ -90,7 +91,7 @@
           (lambda (var)
             (let f ([ls1 ls1] [ls2 ls2])
               (cond
-                [(null? ls1) 
+                [(null? ls1)
                  (error 'define-parser "cannot find" var)]
                 [(bound-identifier=? var (car ls1))
                  (car ls2)]
@@ -100,14 +101,14 @@
              orig*
              [name* (arg** ...) clause** ...] ...)
            (with-syntax ([(mapped-entries ...)
-                          (map 
+                          (map
                             (lookup
                               (syntax->datum #'orig*)
                               #'(name* ...))
                             #'(entries ...))])
              #'(begin
-                 (config GEN-ARGS 
-                    gen-clause config next fail name* 
+                 (config GEN-ARGS
+                    gen-clause config next fail name*
                     (arg** ...)
                     (clause** ...))
                  ...
@@ -158,7 +159,7 @@
            (fail)
            (let ([mag (do-sn/ex sn ex (/ num ac))])
              (next u:polar r mag ex)))]
-      [(#\i) 
+      [(#\i)
        (if (= ac 0)
            (fail)
            (next u:done (mkrec0 n0 (do-sn/ex sn ex (/ num ac)))))])
@@ -171,9 +172,9 @@
       [(eof) n])
 
     (u:polar (r mag ex)
-      [(digit r) => d 
+      [(digit r) => d
        (next u:digit+ r (cons 'polar mag) ex +1 d)]
-      [(#\.) 
+      [(#\.)
        (if (= r 10)
            (next u:dot r (cons 'polar mag) ex +1)
            (fail))]
@@ -184,26 +185,26 @@
       [(eof)
        (if (number? n0)
            (fail)
-           (mkrec1 n0 (do-dec-sn/ex sn ex 
+           (mkrec1 n0 (do-dec-sn/ex sn ex
                         (* ac (expt 10 (+ exp1 (* exp2 exp-sign)))))))]
       [(digit r) => d
        (next u:exponent+digit r n0 ex sn ac exp1 (+ (* exp2 r) d) exp-sign)]
-      [(sign) => sn2 
+      [(sign) => sn2
        (if n0
            (fail)
            (let ([real (do-dec-sn/ex sn ex (* ac (expt 10 (+ exp1 (* exp2 exp-sign)))))])
              (next u:sign r real ex sn2)))]
-      [(#\@) 
+      [(#\@)
        (if n0
            (fail)
            (let ([mag (do-dec-sn/ex sn ex (* ac (expt 10 (+ exp1 (* exp2 exp-sign)))))])
              (next u:polar r mag ex)))]
       [(#\i)
-       (let ([n1 (do-dec-sn/ex sn ex 
+       (let ([n1 (do-dec-sn/ex sn ex
                    (* ac (expt 10 (+ exp1 (* exp2 exp-sign)))))])
          (next u:done (mkrec0 n0 n1)))]
       [(#\|)
-       (let ([n1 (do-dec-sn/ex sn ex 
+       (let ([n1 (do-dec-sn/ex sn ex
                    (* ac (expt 10 (+ exp1 (* exp2 exp-sign)))))])
          (next u:mant r n0 n1 ex))])
 
@@ -218,7 +219,11 @@
 
     (u:digit+dot (r n0 ex sn ac exp)
       [(eof)
-       (mkrec1 n0 (do-dec-sn/ex sn ex (* ac (expt 10 exp))))]
+       (if (and n0 (not (pair? n0)))
+       	   (fail)
+	 (mkrec1 n0 (do-dec-sn/ex sn ex (* ac (expt 10 exp)))))
+;;;       (mkrec1 n0 (do-dec-sn/ex sn ex (* ac (expt 10 exp))))
+       ]
       [(digit r) => d
        (next u:digit+dot r n0 ex sn (+ (* ac r) d) (- exp 1))]
       [(#\i)
@@ -230,7 +235,7 @@
            (let ([real (do-dec-sn/ex sn ex (* ac (expt 10 exp)))])
              (next u:sign r real ex sn2)))]
       [(#\@)
-       (if n0 
+       (if n0
            (fail)
            (let ([mag (do-dec-sn/ex sn ex (* ac (expt 10 exp)))])
              (next u:polar r mag ex)))]
@@ -245,8 +250,12 @@
 
 
     (u:digit+ (r n0 ex sn ac)
-      [(eof) 
-       (mkrec1 n0 (do-sn/ex sn ex ac))]
+      [(eof)
+       (if (and n0 (not (pair? n0)))
+       	   (fail)
+       	 (mkrec1 n0 (do-sn/ex sn ex ac)))
+;;;       (mkrec1 n0 (do-sn/ex sn ex ac))
+       ]
       [(digit r) => d
        (next u:digit+ r n0 ex sn (+ (* ac r) d))]
       [(#\.)
@@ -255,7 +264,7 @@
            (fail))]
       [(#\/) (next u:ratio r n0 ex sn ac)]
       [(sign) => sn2
-       (if n0 
+       (if n0
            (fail)
            (let ([real (do-sn/ex sn ex ac)])
              (next u:sign r real ex sn2)))]
@@ -311,7 +320,7 @@
        (next u:digit+ r n0 ex sn d)]
       [(#\i) (next u:sign-i r n0 ex sn)]
       [(#\n) (next u:sign-n r n0 ex)]
-      [(#\.) 
+      [(#\.)
        (if (= r 10)
            (next u:dot r n0 ex sn)
            (fail))])
@@ -383,14 +392,14 @@
        (unless (string? s) (die who "not a string" s))
        (unless (memv r '(10 16 2 8)) (die who "invalid radix" r))
        (parse-string s (string-length s) 0 r #f #f)]))
-  
+
 )
 
 
 
 ;;; <number>          ::= <num 2>
 ;;;                     | <num 8>
-;;;                     | <num 10> 
+;;;                     | <num 10>
 ;;;                     | <num 16>
 ;;; <num R>           ::= <prefix R> <complex R>
 ;;; <complex R>       ::= <real R>
@@ -410,7 +419,7 @@
 ;;; <real R>          ::= <sign> <ureal R>
 ;;;                     | "+" <naninf>
 ;;;                     | "-" <naninf>
-;;; <naninf>          ::= "nan.0" 
+;;; <naninf>          ::= "nan.0"
 ;;;                     | "inf.0"
 ;;; <ureal R>           | <uinteger R>
 ;;;                     | <uinteger R> "/" <uinteger R>
