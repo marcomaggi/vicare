@@ -145,6 +145,7 @@ TESTS			=	\
 	test-issue-13.sps				\
 	test-issue-15.sps				\
 	test-issue-17.sps				\
+	test-issue-18.sps				\
 	\
 	$(srcdir)/r6rs/run/control.sps			\
 	$(srcdir)/r6rs/run/base.sps			\
@@ -251,6 +252,7 @@ EXTRA_DIST =	\
 	test-issue-12.sps				\
 	test-issue-13.sps				\
 	test-issue-15.sps				\
-	test-issue-17.sps
+	test-issue-17.sps				\
+	test-issue-18.sps
 
 ### end of file
