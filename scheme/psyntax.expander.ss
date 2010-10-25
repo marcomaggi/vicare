@@ -1,4 +1,5 @@
 ;;; Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
+;;; Modified by Marco Maggi
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining a
 ;;; copy of this software and associated documentation files (the "Software"),
@@ -1518,7 +1519,7 @@
          (let ((pos (or (expression-position stx)
                         (expression-position expr))))
            (bless
-             `(unless ,expr (assertion-error ',expr ',pos))))))))
+             `(or ,expr (assertion-error ',expr ',pos))))))))
 
   (define endianness-macro
     (lambda (stx)
