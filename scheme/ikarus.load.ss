@@ -72,7 +72,7 @@
                (begin
                  (fprintf (current-error-port)
                     "WARNING: not using fasl file ~s because it was \
-                     compiled with a different instance of ikarus.\n"
+                     compiled with a different instance of vicare.\n"
                     ikfasl)
                  #f)))])))
 
