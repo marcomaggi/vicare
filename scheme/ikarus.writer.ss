@@ -1,5 +1,6 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;; Modified by Marco Maggi
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
@@ -198,10 +199,16 @@
     (define (f d i)
       (cond
         [(null? d) i]
-        [(or (not (pair? d)) (shared? d h))
+        [(not (pair? d))
          (write-char #\space p)
          (write-char #\. p)
          (write-char #\space p)
+         (wr d p m h i)]
+        [(shared? d h)
+         (write-char #\space p)
+	 (when (print-graph)
+	   (write-char #\. p)
+	   (write-char #\space p))
          (wr d p m h i)]
         [else
          (write-char #\space p)
