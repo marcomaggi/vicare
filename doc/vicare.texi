@@ -479,7 +479,7 @@ Revised^6 Report on the algorithmic language Scheme
 
 @c To be used as @value{COPYRIGHT_YEARS} whenever we need to include the
 @c list of copyright years.
-@set COPYRIGHT_YEARS            2006-2010
+@set COPYRIGHT_YEARS            2006-2011
 
 
 @set TARBALLURL                 @url{http://github.com/marcomaggi/vicare/downloads}
@@ -593,6 +593,8 @@ Internals
 
 * objects int::                 Builtin objects.
 * debug int::                   Debug mode.
+* compiler::                    Wild notes on the compiler
+                                internals.
 
 Appendices
 
@@ -6417,6 +6419,89 @@ to start the execution of a program and all the other execution modes.
 @var{proc} is evaluated under the installation of an exception handler
 displaying the stack trace and offering the continuation alternatives.
 @end defun
+
+@c page
+@node compiler
+@chapter Wild notes on the compiler internals
+
+
+@quotation
+This chapter is a collection of notes on the internals of the compiler;
+there is guarantee of neither their correctness nor their completeness,
+because the original compiler code is fully undocumented.
+@end quotation
+
+@menu
+* compiler intro::              Introduction to the compiler.
+* compiler conventions::        Coding conventions in the compiler
+                                code.
+* compiler cogen::              Stuff in @file{ikarus.compiler.altcogen.ss}.
+@end menu
+
+@c page
+@node compiler intro
+@section Introduction to the compiler
+
+
+@value{PACKAGE}'s compiler supports only the Intel architecture.  The
+compiler is coded in the following files
+
+@table @file
+@item ikarus.compiler.altcogen.ss
+Generate assembly code in S--expression format.
+@end table
+
+
+How do we generate assembly code?  First we need to generate a single
+line of assembly code; this is done by @func{make-asm-instr} which
+accepts as first argument a Scheme symbol representing the instruction,
+for example: @samp{move}, @samp{idiv}, @samp{int+}.
+
+Then we need to generate blocks of assembly instructions: sequences of
+instructions which must be executed in order.  There are two types of
+blocks: the ones which at the end generate a value to be stored in a
+location (register or memory), the ones which perform some operation but
+do not generate a value.  The first kind are blocks which ``impose a
+value'', the second kind are the ``side effects''.
+
+@c page
+@node compiler conventions
+@section Coding conventions in the compiler code
+
+
+Throughout the compiler code variables with the following names appear:
+
+@table @var
+@item op
+Scheme symbol representing an @strong{operation} to be directly
+translated into assembly.  Examples: @samp{alloc}, @samp{mref},
+@samp{mref32}, @samp{bref}, @samp{logand}, @samp{logxor}, @samp{logor},
+@samp{int+}, @samp{int-}, @samp{int*}, @samp{int-quotient},
+@samp{int-remainder}, @samp{sll}, @samp{sra}.
+
+@item rator
+Represents a reference to an @strong{operator}: a function coded in
+assembly or C language.
+
+@item rands
+Scheme list holding the @strong{operands} to which an operation must be
+applied.  These operands are in such a format that can be directly used
+in the assembly S--expression like:
+
+@example
+(make-set eax (car rands))
+@end example
+
+@noindent
+which generate an assignment operation to store the first element of
+@var{rands} into the @code{eax} processor register.
+@end table
+
+@c page
+@node compiler cogen
+@section Stuff in @file{ikarus.compiler.altcogen.ss}
+
+
 
 @c page
 @node missing
