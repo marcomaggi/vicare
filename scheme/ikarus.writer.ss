@@ -1,15 +1,15 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -20,7 +20,7 @@
           print-unicode print-graph put-datum traverse
           traversal-helpers)
 
-  (import 
+  (import
     (rnrs hashtables)
     (ikarus system $chars)
     (ikarus system $strings)
@@ -32,7 +32,7 @@
     (ikarus system $transcoders)
     (only (ikarus system $foreign) pointer? pointer->integer)
     (only (ikarus.pretty-formats) get-fmt)
-    (except (ikarus) 
+    (except (ikarus)
       write display format printf fprintf print-error print-unicode print-graph
       put-datum))
 
@@ -46,7 +46,7 @@
                make-cache cache-string cache-object cache-next)
   ;;; association list in hash table is one of the following forms:
   ;;;
-  ;;; a fixnum: 
+  ;;; a fixnum:
   (define cyclic-bit         #b001)
   (define shared-bit         #b010)
   (define marked-bit         #b100)
@@ -54,36 +54,36 @@
   ;;;
   ;;; or a pair of a fixnum (above) and a cache:
   (define-struct cache (string object next))
-  (define (cyclic-set? b) 
+  (define (cyclic-set? b)
     (fx= (fxand b cyclic-bit) cyclic-bit))
   (define (shared-set? b)
     (fx= (fxand b shared-bit) shared-bit))
   (define (mark-set? b)
     (fx= (fxand b marked-bit) marked-bit))
-               
+
   (define (set-mark! x h n)
     (let ([b (hashtable-ref h x #f)])
       (cond
-        [(fixnum? b) 
-         (hashtable-set! h x 
+        [(fixnum? b)
+         (hashtable-set! h x
            (fxior (fxsll n mark-shift) marked-bit b))]
         [else
-         (set-car! b 
+         (set-car! b
            (fxior (fxsll n mark-shift) marked-bit (car b)))])))
 
   (define (set-shared! x h)
     (let ([b (hashtable-ref h x #f)])
       (cond
-        [(fixnum? b) 
+        [(fixnum? b)
          (hashtable-set! h x (fxior shared-bit b))]
         [else
          (set-car! b (fxior shared-bit (car b)))])))
-  
+
   (define (shared? x h)
     (cond
       [(hashtable-ref h x #f) =>
-       (lambda (b) 
-         (if (fixnum? b) 
+       (lambda (b)
+         (if (fixnum? b)
              (shared-set? b)
              (let ([b (car b)])
                (shared-set? b))))]
@@ -107,7 +107,7 @@
   (define (traverse-struct x h)
     (define (traverse-vanilla-struct x h)
       (let ([rtd (struct-type-descriptor x)])
-        (unless 
+        (unless
           (and (record-type-descriptor? rtd)
                (record-type-opaque? rtd))
           (traverse (struct-name x) h)
@@ -119,8 +119,8 @@
     (define (traverse-custom-struct x h printer)
       (let-values ([(p e) (open-string-output-port)])
         (let ([cache #f])
-          (printer x p 
-            (lambda (v) 
+          (printer x p
+            (lambda (v)
               (let ([str (e)])
                 (set! cache (make-cache str v cache))
                 (traverse v h))))
@@ -170,7 +170,7 @@
       (lambda (x p)
         (unless (fxzero? x)
           (loop (fxquotient x 10) p)
-          (write-char 
+          (write-char
              (integer->char
                 (fx+ (fxremainder x 10)
                      (char->integer #\0)))
@@ -182,7 +182,7 @@
       [else (loop x p)]))
   (define (write-pair x p m h i)
     (define (macro x h)
-      (and 
+      (and
         (pair? x)
         (let ([a (car x)])
           (and (symbol? a)
@@ -209,7 +209,7 @@
            (f (cdr d) i))]))
     (cond
       [(macro x h) =>
-       (lambda (a) 
+       (lambda (a)
          (write-string a p #f)
          (wr (cadr x) p m h i))]
       [else
@@ -221,14 +221,14 @@
     (define (f x p m h i idx n)
       (cond
         [(fx= idx n) i]
-        [else 
+        [else
          (write-char #\space p)
          (let ([i (wr (vector-ref x idx) p m h i)])
            (f x p m h i (fx+ idx 1) n))]))
     (write-char #\# p)
     (let ([n (vector-length x)])
       (cond
-        [(fx=? n 0) 
+        [(fx=? n 0)
          (write-char #\( p)
          (write-char #\) p)
          i]
@@ -260,7 +260,7 @@
       (let ([n (fxand n #xF)])
         (cond
           [(fx<= n 9)
-           (write-char (integer->char 
+           (write-char (integer->char
                          (fx+ (char->integer #\0) n))
                        p)]
           [else
@@ -277,11 +277,11 @@
   (define (write-character x p m)
     (define char-table ; first nonprintable chars
       '#("nul" "x1" "x2" "x3" "x4" "x5" "x6" "alarm"
-         "backspace" "tab" "linefeed" "vtab" "page" "return" "xE" "xF" 
-         "x10" "x11" "x12" "x13" "x14" "x15" "x16" "x17" 
-         "x18" "x19" "x1A" "esc" "x1C" "x1D" "x1E" "x1F" 
+         "backspace" "tab" "linefeed" "vtab" "page" "return" "xE" "xF"
+         "x10" "x11" "x12" "x13" "x14" "x15" "x16" "x17"
+         "x18" "x19" "x1A" "esc" "x1C" "x1D" "x1E" "x1F"
          "space"))
-    (if m 
+    (if m
         (let ([i (char->integer x)])
           (write-char #\# p)
           (cond
@@ -291,7 +291,7 @@
            [(fx< i 127)
             (write-char #\\ p)
             (write-char x p)]
-           [(fx= i 127) 
+           [(fx= i 127)
             (write-char #\\ p)
             (write-char* "delete" p)]
            [(and (print-unicode) (unicode-printable-char? x))
@@ -307,35 +307,39 @@
       ;;; commonize with write-symbol-bar-escape
       (define (loop x i n p)
         (unless (fx= i n)
-          (let* ([c (string-ref x i)]
-                 [b (char->integer c)])
+          (let* ([ch   (string-ref x i)]
+                 [byte (char->integer ch)])
             (cond
-              [(fx< b 32) 
+              [(fx< byte 32)
                (cond
-                 [(fx< b 7) 
-                  (write-inline-hex b p)]
-                 [(fx< b 14)
+                 [(fx< byte 7)
+                  (write-inline-hex byte p)]
+                 [(fx< byte 14)
                   (write-char #\\ p)
-                  (write-char (string-ref "abtnvfr" (fx- b 7)) p)]
-                 [else 
-                  (write-inline-hex b p)])]
-              [(or (char=? #\" c) (char=? #\\ c))
+                  (write-char (string-ref "abtnvfr" (fx- byte 7)) p)]
+                 [else
+                  (write-inline-hex byte p)])]
+              [(or (char=? #\" ch) (char=? #\\ ch))
                (write-char #\\ p)
-               (write-char c p)]
-              [(fx< b 127)
-               (write-char c p)]
-              [(or (fx= b #x85) (fx= b #x2028))
-               (write-inline-hex b p)]
+               (write-char ch p)]
+              [(fx< byte 127)
+               (write-char ch p)]
+              [(or (fx= byte 127)	;this is the #\delete char
+		   (fx= byte #x85)
+		   (fx= byte #x2028))
+               (write-inline-hex byte p)]
               [(print-unicode)
-               (write-char c p)]
+		;PRINT-UNICODE  is  a parameter,  #t  if  we must  write
+		;unicode chars
+               (write-char ch p)]
               [else
-               (write-inline-hex b p)]))
+               (write-inline-hex byte p)]))
           (loop x (fxadd1 i) n p)))
       (write-char #\" p)
       (loop x 0 (string-length x) p)
       (write-char #\" p))
-    (if m 
-        (write-string-escape x p) 
+    (if m
+        (write-string-escape x p)
         (write-char* x p)))
   (module (write-gensym write-symbol)
     (define (write-gensym x p m h i)
@@ -358,7 +362,7 @@
                 (write-symbol-bar-esc ustr p)
                 (write-char #\} p))])
            i)]
-        [else 
+        [else
          (write-symbol x p m)
          i]))
     (define write-symbol-bar-esc
@@ -371,19 +375,19 @@
                 (cond
                   [(fx< b 32)
                    (cond
-                     [(fx< b 7) 
+                     [(fx< b 7)
                       (write-inline-hex b p)]
                      [(fx< b 14)
                       (write-char #\\ p)
                       (write-char (string-ref "abtnvfr" (fx- b 7)) p)]
-                     [else 
+                     [else
                       (write-inline-hex b p)])]
                   [(memq c '(#\\ #\|))
                    (write-char #\\ p)
                    (write-char c p)]
-                  [(fx< b 127) 
+                  [(fx< b 127)
                    (write-char c p)]
-                  [else 
+                  [else
                    (write-inline-hex b p)]))
               (write-symbol-bar-esc-loop x (fxadd1 i) n p))))
         (write-char #\| p)
@@ -407,23 +411,23 @@
                  (string->list s))
                (with-syntax ([bv (datum->syntax #'stx bv)])
                  #'(quote bv)))])))
-      (define subsequents-map 
+      (define subsequents-map
         (ascii-map
           "!$%&*/:<=>?^_~+-.@abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"))
       (define initials-map
         (ascii-map
           "!$%&*/:<=>?^_~abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"))
-      (define initial-categories 
+      (define initial-categories
         '(Lu Ll Lt Lm Lo Mn Nl No Pd Pc Po Sc Sm Sk So Co))
       (define subsequent-categories
         '(Nd Mc Me))
       (define (in-map? byte map)
         (let ([i (fxand byte 7)]
               [j (fxsra byte 3)])
-          (and 
+          (and
             (fx< j (bytevector-length map))
             (let ([mask (fxsll 1 i)])
-               (not (fxzero? 
+               (not (fxzero?
                       (fxlogand mask
                         (bytevector-u8-ref map j))))))))
       (define (subsequent*? str i n)
@@ -448,7 +452,7 @@
       (define (peculiar-symbol-string? str)
         (let ([n (string-length str)])
           (cond
-            [(fx= n 1) 
+            [(fx= n 1)
              (memq (string-ref str 0) '(#\+ #\-))]
             [(fx>= n 2)
              (or (and (char=? (string-ref str 0) #\-)
@@ -459,14 +463,14 @@
       (define (write-symbol-hex-esc str p)
         (let ([n (string-length str)])
           (cond
-            [(fx= n 0) 
-             (write-char #\| p) 
+            [(fx= n 0)
+             (write-char #\| p)
              (write-char #\| p)]
             [else
              (let* ([c0 (string-ref str 0)]
                     [b0 (char->integer c0)])
                (cond
-                 [(in-map? b0 initials-map) 
+                 [(in-map? b0 initials-map)
                   (write-char c0 p)]
                  [(fx< b0 128) (write-inline-hex b0 p)]
                  [(and (print-unicode)
@@ -479,24 +483,24 @@
           (let* ([c (string-ref str i)]
                  [b (char->integer c)])
             (cond
-              [(in-map? b subsequents-map) 
+              [(in-map? b subsequents-map)
                (write-char c p)]
-              [(fx< b 128) 
+              [(fx< b 128)
                (write-inline-hex b p)]
-              [(and (print-unicode) 
+              [(and (print-unicode)
                  (let ([cat (char-general-category c)])
                    (or (memq cat initial-categories)
                        (memq cat subsequent-categories))))
                (write-char c p)]
-              [else 
+              [else
                (write-inline-hex b p)]))
           (write-subsequent* str (fxadd1 i) j p)))
       (define (write-peculiar str p)
         (let ([n (string-length str)])
           (cond
-            [(fx= n 1) 
+            [(fx= n 1)
              (write-char (string-ref str 0) p)]
-            [(and (fx>= n 2) 
+            [(and (fx>= n 2)
                   (char=? (string-ref str 0) #\-)
                   (char=? (string-ref str 1) #\>))
              (write-char #\- p)
@@ -518,7 +522,7 @@
     (define (write-vanilla-struct x p m h i)
       (cond
         [(let ([rtd (struct-type-descriptor x)])
-           (and (record-type-descriptor? rtd) 
+           (and (record-type-descriptor? rtd)
                 (record-type-opaque? rtd)))
          (write-char* "#<unknown>" p)
          i]
@@ -532,12 +536,12 @@
                  [(fx= idx n)
                   (write-char #\] p)
                   i]
-                 [else 
+                 [else
                   (write-char #\space p)
-                  (f (fxadd1 idx) 
+                  (f (fxadd1 idx)
                      (wr (struct-ref x idx) p m h i))]))))]))
     (define (write-custom-struct out p m h i)
-      (let ([i 
+      (let ([i
              (let f ([cache (cdr out)])
                (cond
                  [(not cache) i]
@@ -554,12 +558,12 @@
         [else (write-vanilla-struct x p m h i)])))
   (define (write-char* x p)
     (let f ([x x] [p p] [i 0] [n (string-length x)])
-      (unless (fx=? i n) 
+      (unless (fx=? i n)
         (write-char (string-ref x i) p)
         (f x p (fx+ i 1) n))))
   (define (write-procedure x p)
     (write-char* "#<procedure" p)
-    (let-values ([(name src) 
+    (let-values ([(name src)
                   (let ([ae (procedure-annotation x)])
                     (if (pair? ae)
                         (values (car ae) (cdr ae))
@@ -633,7 +637,7 @@
       [(transcoder? x) (write-char* "#<transcoder>" p) i]
       [(struct? x) (write-shared x p m h i write-struct)]
       [(code? x) (write-char* "#<code>" p) i]
-      [(pointer? x) 
+      [(pointer? x)
        (write-char* "#<pointer #x" p)
        (write-hex
          (pointer->integer x)
@@ -651,28 +655,28 @@
 
 
   (define print-graph (make-parameter #f))
-  
+
   (define (write-to-port x p)
     (let ([h (make-eq-hashtable)])
       (traverse x h)
       (wr x p #t h 0))
     (flush-output-port p))
-  
+
   (define (display-to-port x p)
     (let ([h (make-eq-hashtable)])
       (traverse x h)
       (wr x p #f h 0))
     (flush-output-port p))
-  
+
   (define formatter
     (lambda (who p fmt args)
       ;;; first check
       (let f ([i 0] [args args])
         (cond
           [(fx= i (string-length fmt))
-           (unless (null? args) 
-             (die who 
-               (format 
+           (unless (null? args)
+             (die who
+               (format
                  "extra arguments given for format string \x2036;~a\x2033;"
                  fmt)))]
           [else
@@ -695,7 +699,7 @@
                       (let ([a (car args)])
                         (unless (number? a) (die who "not a number" a))
                         (unless (or (eqv? c #\d) (exact? a))
-                          (die who 
+                          (die who
                             (format "inexact numbers cannot be \
                                      printed with ~~~a" c)
                             a)))
@@ -712,12 +716,12 @@
                (let ([i (fxadd1 i)])
                  (let ([c (string-ref fmt i)])
                   (cond
-                    [(eqv? c #\~) 
+                    [(eqv? c #\~)
                      (write-char #\~ p)
                      (f (fxadd1 i) args)]
-                    [(eqv? c #\%) 
+                    [(eqv? c #\%)
                      (write-char #\newline p)
-                     (f (fxadd1 i) args)] 
+                     (f (fxadd1 i) args)]
                     [(eqv? c #\a)
                      (display-to-port (car args) p)
                      (f (fxadd1 i) (cdr args))]
@@ -731,12 +735,12 @@
                          (display-to-port (number->string a (cdr x)) p))
                        (f (fxadd1 i) (cdr args)))]
                     [else (die who "BUG" c)])))]
-              [else 
+              [else
                (write-char c p)
                (f (fxadd1 i) args)]))))
       ;;; then flush
       (flush-output-port p)))
-  
+
   (define fprintf
     (lambda (p fmt . args)
       (assert-open-textual-output-port p 'fprintf)
@@ -755,7 +759,7 @@
         (formatter 'print-error p fmt args)
         (write-char #\. p)
         (newline p))))
-  
+
   (define format
     (lambda (fmt . args)
       (unless (string? fmt)
@@ -763,14 +767,14 @@
       (let-values ([(p e) (open-string-output-port)])
         (formatter 'format p fmt args)
         (e))))
-   
-  (define printf 
+
+  (define printf
     (lambda (fmt . args)
       (unless (string? fmt)
         (die 'printf "not a string" fmt))
       (formatter 'printf (current-output-port) fmt args)))
-  
-  (define write 
+
+  (define write
     (case-lambda
       [(x) (write-to-port x (current-output-port))]
       [(x p)
@@ -781,23 +785,23 @@
     (assert-open-textual-output-port p 'put-datum)
     (write-to-port x p))
 
-  (define display 
+  (define display
     (case-lambda
       [(x) (display-to-port x (current-output-port))]
       [(x p)
        (assert-open-textual-output-port p 'display)
        (display-to-port x p)]))
 
-  (define print-error 
+  (define print-error
     (lambda (who fmt . args)
       (display-error "Error" who fmt args)))
 
   (define (assert-open-textual-output-port p who)
-    (unless (output-port? p) 
+    (unless (output-port? p)
       (die who "not an output port" p))
-    (unless (textual-port? p) 
+    (unless (textual-port? p)
       (die who "not a textual port" p))
-    (when (port-closed? p) 
+    (when (port-closed? p)
       (die who "port is closed" p)))
 
   )
