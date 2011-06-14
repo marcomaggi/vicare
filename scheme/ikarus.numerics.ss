@@ -1376,6 +1376,7 @@
               [($fx= n -1) (- d)]
               [else ($make-ratnum d n)]))]
          [(compnum? x) (binary/ 1 x)]
+         [(cflonum? x) (binary/ 1 x)]
          [else (die '/ "not a number" x)])]
       [(x y z . ls)
        (let f ([a (binary/ x y)] [b z] [ls ls])
