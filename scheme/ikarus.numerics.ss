@@ -2830,7 +2830,19 @@
        (cond
          [(flonum? x) (foreign-call "ikrt_fl_atan" x)]
          [(fixnum? x) (foreign-call "ikrt_fx_atan" x)]
-         [(or (ratnum? x) (bignum? x)) (atan (inexact x))]
+         [(or (ratnum? x) (bignum? x) (compnum? x))
+	  (atan (inexact x))]
+	 ((cflonum? x)
+	  ;;Formula from Wikipedia section "Logarithmic forms":
+	  ;;
+	  ;;	<http://en.wikipedia.org/wiki/Arc_tangent>
+	  ;;
+	  ;;
+	  (if (zero? (imag-part x))
+	      (flatan (real-part x))
+	    (* +0.5i
+	       (- (log (- 1 (* +1i x)))
+		  (log (+ 1 (* +1i x)))))))
          [else (die 'atan "not a number" x)])]
       [(y x)
        (unless (real? x) (die 'atan "not a real number" x))
