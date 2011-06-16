@@ -545,7 +545,7 @@
            [(cflonum? y)
             ($make-cflonum
               (binary+ x ($cflonum-real y))
-              ($cflonum-imag y))]
+              ($fl+ 0.0 ($cflonum-imag y)))]
            [else (err '+ y)])]
         [(bignum? x)
          (cond
@@ -2837,8 +2837,8 @@
 	  ;;
 	  ;;	<http://en.wikipedia.org/wiki/Arc_tangent>
 	  ;;
-	  ;;
-	  (if (zero? (imag-part x))
+	  (if (let ((I (imag-part x)))
+		(and (exact? I) (zero? I)))
 	      (flatan (real-part x))
 	    (* +0.5i
 	       (- (log (- 1 (* +1i x)))
@@ -3060,7 +3060,6 @@
                   [else v]))
               (make-rectangular (log (- x)) (acos -1)))]
          [(ratnum? x)
-          ;;; FIXME: incorrect as per bug 180170
           (- (log (numerator x)) (log (denominator x)))]
          [(or (compnum? x) (cflonum? x))
 	  (let ([xr (real-part x)] [xi (imag-part x)])
