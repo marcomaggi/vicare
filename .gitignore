@@ -11,6 +11,7 @@ autom4te*
 .emacs.*
 *.gz
 *.bz2
+*.tgz
 *.info
 *.html
 configure
