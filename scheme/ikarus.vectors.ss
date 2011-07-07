@@ -1,15 +1,15 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -18,8 +18,8 @@
   (export make-vector vector vector-length vector-ref vector-set!
           vector->list list->vector vector-map vector-for-each
           vector-fill!)
-  (import 
-    (except (ikarus) make-vector vector 
+  (import
+    (except (ikarus) make-vector vector
             vector-length vector-ref vector-set!
             vector->list list->vector vector-map vector-for-each
             vector-fill!)
@@ -30,7 +30,7 @@
 
   (define vector-length
     (lambda (x)
-      (unless (vector? x) 
+      (unless (vector? x)
         (die 'vector-length "not a vector" x))
       ($vector-length x)))
 
@@ -58,11 +58,11 @@
                 (cond
                  [(null? ls) n]
                  [else (length ($cdr ls) ($fx+ n 1))]))]
-             [loop 
+             [loop
               (lambda (v ls i n)
                 (cond
                  [($fx= i n) v]
-                 [else 
+                 [else
                   ($vector-set! v i ($car ls))
                   (loop v ($cdr ls) ($fx+ i 1) n)]))])
        (lambda ls
@@ -71,7 +71,7 @@
              (loop v ls 0 n))))))
 
 
-  (define vector-ref 
+  (define vector-ref
     (lambda (v i)
       (unless (vector? v)
         (die 'vector-ref "not a vector" v))
@@ -81,10 +81,10 @@
                    ($fx<= 0 i))
         (die 'vector-ref "index is out of range" i v))
       ($vector-ref v i)))
-  
-  (define vector-set! 
-    (lambda (v i c) 
-      (unless (vector? v) 
+
+  (define vector-set!
+    (lambda (v i c)
+      (unless (vector? v)
         (die 'vector-set! "not a vector" v))
       (unless (fixnum? i)
         (die 'vector-set! "not a valid index" i))
@@ -138,7 +138,7 @@
 
   (module (vector-map)
     (define who 'vector-map)
-    (define (ls->vec ls n) 
+    (define (ls->vec ls n)
       (let f ([v (make-vector n)]
               [n n]
               [ls ls])
@@ -149,23 +149,65 @@
              ($vector-set! v n ($car ls))
              (f v n ($cdr ls)))])))
     (define vector-map
+      ;;Notice that R6RS states:
+      ;;
+      ;;"If multiple  returns occur  from VECTOR-MAP, the  return values
+      ;;returned by earlier returns are not mutated."
+      ;;
+      ;;so  if  we  jump  back   into  the  mapping  procedure  using  a
+      ;;continuation,  VECTOR-MAP  must   return  a  new  vector.   This
+      ;;behaviour can be demonstrated with the following program:
+      ;;
+      ;;#!r6rs
+      ;;(import (rnrs))
+      ;;(let ((only-once #t)
+      ;;      (v0 (vector 1 2 3 4 5 6))
+      ;;      (cl '())
+      ;;      (old-v1 #f))
+      ;;  (let ((v1 (vector-map (lambda (elt)
+      ;;                          (call/cc
+      ;;                              (lambda (c)
+      ;;                                (set! cl (cons c cl))
+      ;;                                (* elt elt))))
+      ;;                        v0)))
+      ;;    (when only-once
+      ;;      (set! only-once #f)
+      ;;      (set! old-v1 v1)
+      ;;      ((car (reverse cl)) 'x))
+      ;;
+      ;;    (write v0)(newline)
+      ;;    (write old-v1)(newline)
+      ;;    (write v1)(newline)))
+      ;;
+      ;;which must print:
+      ;;
+      ;;#(1 2 3 4 5 6)
+      ;;#(1 4 9 16 25 36)
+      ;;#(x 4 9 16 25 36)
+      ;;
+      ;;rather than:
+      ;;
+      ;;#(1 2 3 4 5 6)
+      ;;#(x 4 9 16 25 36)  ;; wrong!!!
+      ;;#(x 4 9 16 25 36)
+      ;;
       (case-lambda
-        [(p v) 
-         (unless (procedure? p) 
+        [(p v)
+         (unless (procedure? p)
            (die who "not a procedure" p))
-         (unless (vector? v) 
+         (unless (vector? v)
            (die who "not a vector" v))
          (let f ([p p] [v v] [i 0] [n (vector-length v)] [ac '()])
            (cond
              [($fx= i n) (ls->vec ac n)]
-             [else 
+             [else
               (f p v ($fxadd1 i) n (cons (p (vector-ref v i)) ac))]))]
-        [(p v0 v1) 
-         (unless (procedure? p) 
+        [(p v0 v1)
+         (unless (procedure? p)
            (die who "not a procedure" p))
-         (unless (vector? v0) 
+         (unless (vector? v0)
            (die who "not a vector" v0))
-         (unless (vector? v1) 
+         (unless (vector? v1)
            (die who "not a vector" v1))
          (let ([n (vector-length v0)])
            (unless ($fx= n ($vector-length v1))
@@ -173,38 +215,38 @@
            (let f ([p p] [v0 v0] [v1 v1] [i 0] [n n] [ac '()])
              (cond
                [($fx= i n) (ls->vec ac n)]
-               [else 
-                (f p v0 v1 ($fxadd1 i) n 
+               [else
+                (f p v0 v1 ($fxadd1 i) n
                    (cons (p ($vector-ref v0 i) ($vector-ref v1 i)) ac))])))]
-        [(p v0 v1 . v*) 
-         (unless (procedure? p) 
+        [(p v0 v1 . v*)
+         (unless (procedure? p)
            (die who "not a procedure" p))
-         (unless (vector? v0) 
+         (unless (vector? v0)
            (die who "not a vector" v0))
-         (unless (vector? v1) 
+         (unless (vector? v1)
            (die who "not a vector" v1))
          (let ([n (vector-length v0)])
            (unless ($fx= n ($vector-length v1))
              (die who "length mismatch" v0 v1))
            (let f ([v* v*] [n n])
-             (unless (null? v*) 
+             (unless (null? v*)
                (let ([a ($car v*)])
-                 (unless (vector? a) 
+                 (unless (vector? a)
                    (die who "not a vector" a))
-                 (unless ($fx= ($vector-length a) n) 
+                 (unless ($fx= ($vector-length a) n)
                    (die who "length mismatch")))
                (f ($cdr v*) n)))
            (let f ([p p] [v0 v0] [v1 v1] [v* v*] [i 0] [n n] [ac '()])
              (cond
-               [($fx= i n) (ls->vec ac n)] 
-               [else 
-                (f p v0 v1 v* ($fxadd1 i) n 
-                   (cons 
+               [($fx= i n) (ls->vec ac n)]
+               [else
+                (f p v0 v1 v* ($fxadd1 i) n
+                   (cons
                      (apply p ($vector-ref v0 i) ($vector-ref v1 i)
-                       (let f ([i i] [v* v*]) 
-                         (if (null? v*) 
+                       (let f ([i i] [v* v*])
+                         (if (null? v*)
                              '()
-                             (cons ($vector-ref ($car v*) i) 
+                             (cons ($vector-ref ($car v*) i)
                                    (f i ($cdr v*))))))
                      ac))])))])))
 
@@ -213,23 +255,23 @@
     (define who 'vector-for-each)
     (define vector-for-each
       (case-lambda
-        [(p v) 
-         (unless (procedure? p) 
+        [(p v)
+         (unless (procedure? p)
            (die who "not a procedure" p))
-         (unless (vector? v) 
+         (unless (vector? v)
            (die who "not a vector" v))
          (let f ([p p] [v v] [i 0] [n (vector-length v)])
            (cond
              [($fx= i n) (void)]
-             [else 
+             [else
               (p (vector-ref v i))
               (f p v ($fxadd1 i) n)]))]
-        [(p v0 v1) 
-         (unless (procedure? p) 
+        [(p v0 v1)
+         (unless (procedure? p)
            (die who "not a procedure" p))
-         (unless (vector? v0) 
+         (unless (vector? v0)
            (die who "not a vector" v0))
-         (unless (vector? v1) 
+         (unless (vector? v1)
            (die who "not a vector" v1))
          (let ([n (vector-length v0)])
            (unless ($fx= n ($vector-length v1))
@@ -237,44 +279,44 @@
            (let f ([p p] [v0 v0] [v1 v1] [i 0] [n n])
              (cond
                [($fx= i n) (void)]
-               [else 
+               [else
                 (p ($vector-ref v0 i) ($vector-ref v1 i))
                 (f p v0 v1 ($fxadd1 i) n)])))]
-        [(p v0 v1 . v*) 
-         (unless (procedure? p) 
+        [(p v0 v1 . v*)
+         (unless (procedure? p)
            (die who "not a procedure" p))
-         (unless (vector? v0) 
+         (unless (vector? v0)
            (die who "not a vector" v0))
-         (unless (vector? v1) 
+         (unless (vector? v1)
            (die who "not a vector" v1))
          (let ([n (vector-length v0)])
            (unless ($fx= n ($vector-length v1))
              (die who "length mismatch" v0 v1))
            (let f ([v* v*] [n n])
-             (unless (null? v*) 
+             (unless (null? v*)
                (let ([a ($car v*)])
-                 (unless (vector? a) 
+                 (unless (vector? a)
                    (die who "not a vector" a))
-                 (unless ($fx= ($vector-length a) n) 
+                 (unless ($fx= ($vector-length a) n)
                    (die who "length mismatch")))
                (f ($cdr v*) n)))
            (let f ([p p] [v0 v0] [v1 v1] [v* v*] [i 0] [n n])
              (cond
-               [($fx= i n) (void)] 
-               [else 
+               [($fx= i n) (void)]
+               [else
                 (apply p ($vector-ref v0 i) ($vector-ref v1 i)
-                  (let f ([i i] [v* v*]) 
-                    (if (null? v*) 
+                  (let f ([i i] [v* v*])
+                    (if (null? v*)
                         '()
-                        (cons ($vector-ref ($car v*) i) 
+                        (cons ($vector-ref ($car v*) i)
                               (f i ($cdr v*))))))
                 (f p v0 v1 v* ($fxadd1 i) n)])))])))
 
   (define (vector-fill! v fill)
-    (unless (vector? v) 
+    (unless (vector? v)
       (die 'vector-fill! "not a vector" v))
     (let f ([v v] [i 0] [n ($vector-length v)] [fill fill])
-      (unless ($fx= i n) 
+      (unless ($fx= i n)
         ($vector-set! v i fill)
         (f v ($fxadd1 i) n fill))))
 
