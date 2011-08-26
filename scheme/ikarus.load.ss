@@ -98,7 +98,13 @@
         (unless (eof-object? x)
           (eval-proc x)
           (read-and-eval p eval-proc)))))
+
   (define load
+    ;;Load  the  source  code  from  file  X, which  must  be  a  string
+    ;;representing a  file pathname, and  transform the contents  of the
+    ;;file in a  list of symbolic expressions.  For  each library in the
+    ;;source apply EVAL-PROC to the corresponding symbolic expression.
+    ;;
     (case-lambda
       [(x) (load x load-handler)]
       [(x eval-proc)

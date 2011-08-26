@@ -5,9 +5,14 @@
 ;;;
 ;;;Abstract
 ;;;
-;;;	This file is an R6RS-compliant Scheme program which, when run in
-;;;	the appropriate system  environment, rebuilds Vicare's boot file
+;;;	This  file  is  an  R6RS-compliant Scheme  program,  using  some
+;;;	Vicare's  extension.   When  run  in the  appropriate  operative
+;;;	system   environment:    it   rebuilds   Vicare's    boot   file
 ;;;	"vicare.boot".
+;;;
+;;;	  This program works  hand-in-hand with the expander, especially
+;;;	  the   library   (psyntax    library-manager)   in   the   file
+;;;	  "psyntax.library-manager.ss".
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under  the terms of  the GNU General  Public License version  3 as
@@ -25,12 +30,12 @@
 
 (import (only (ikarus) import))
 (import (except (ikarus)
-          current-letrec-pass
-          current-core-eval
-          assembler-output optimize-cp optimize-level
-          cp0-size-limit cp0-effort-limit expand/optimize
-          expand/scc-letrec expand
-          optimizer-output tag-analysis-output perform-tag-analysis))
+		current-letrec-pass
+		current-core-eval
+		assembler-output optimize-cp optimize-level
+		cp0-size-limit cp0-effort-limit expand/optimize
+		expand/scc-letrec expand
+		optimizer-output tag-analysis-output perform-tag-analysis))
 (import (ikarus.compiler))
 (import (except (psyntax system $bootstrap)
                 eval-core
@@ -56,6 +61,11 @@
   (or (getenv "IKARUS_SRC_DIR") "."))
 
 (define verbose-output? #f)
+
+(define-syntax each-for
+  (syntax-rules ()
+    ((_ ?list ?lambda)
+     (for-each ?lambda ?list))))
 
 (define (make-collection)
   ;;Return a  closure to handle lists of  elements called "collections".
@@ -1692,6 +1702,10 @@
 
 
 (define (make-system-data subst env)
+  ;;SUBST  is  an  alist  representing  the  substitutions  of  all  the
+  ;;libraries  in the  boot  image,  ENV is  an  alist representing  the
+  ;;environment of all the libraries in the boot image.
+  ;;
   (define who 'make-system-data)
   (define (macro-identifier? x)
     (and (assq x ikarus-system-macros) #t))
@@ -1715,45 +1729,47 @@
   (let ((export-subst    (make-collection))
         (export-env      (make-collection))
         (export-primlocs (make-collection)))
-    (for-each (lambda (x)
-		(let ((name	(car x))
-		      (binding	(cadr x))
-		      (label	(gensym)))
-		  (export-subst (cons name label))
-		  (export-env   (cons label binding))))
-      ikarus-system-macros)
-    (for-each (lambda (x)
-		(when (procedure-identifier? x)
-		  (cond
-		   ((assq x (export-subst))
-		    (error who "ambiguous export" x))
-		   ((assq1 x subst) =>
-		    ;;Primitive  defined (exported) within  the compiled
-		    ;;libraries.
-		    (lambda (p)
-		      (unless (pair? p)
-			(error who "invalid exports" p x))
-		      (let ((label (cdr p)))
-			(cond ((assq label env) =>
-			       (lambda (p)
-				 (let ((binding (cdr p)))
-				   (case (car binding)
-				     ((global)
-				      (export-subst (cons x label))
-				      (export-env   (cons label (cons 'core-prim x)))
-				      (export-primlocs (cons x (cdr binding))))
-				     (else
-				      (error #f "invalid binding for identifier" p x))))))
-			      (else
-			       (error #f "cannot find binding" x label))))))
-		   (else
-		    ;;Core primitive with no backing definition, assumed
-		    ;;to be defined in other strata of the system
-		;(printf "undefined primitive ~s\n" x)
-		    (let ((label (gensym)))
-		      (export-subst (cons x label))
-		      (export-env (cons label (cons 'core-prim x))))))))
-      (map car identifier->library-map))
+
+    (each-for ikarus-system-macros
+      (lambda (x)
+	(let ((name	(car  x))
+	      (binding	(cadr x))
+	      (label	(gensym)))
+	  (export-subst (cons name label))
+	  (export-env   (cons label binding)))))
+
+    (each-for (map car identifier->library-map)
+      (lambda (x)
+	(when (procedure-identifier? x)
+	  (cond ((assq x (export-subst))
+		 (error who "ambiguous export" x))
+		((assq1 x subst) =>
+		 ;;Primitive  defined  (exported)  within  the  compiled
+		 ;;libraries.
+		 (lambda (p)
+		   (unless (pair? p)
+		     (error who "invalid exports" p x))
+		   (let ((label (cdr p)))
+		     (cond ((assq label env) =>
+			    (lambda (p)
+			      (let ((binding (cdr p)))
+				(case (car binding)
+				  ((global)
+				   (export-subst (cons x label))
+				   (export-env   (cons label (cons 'core-prim x)))
+				   (export-primlocs (cons x (cdr binding))))
+				  (else
+				   (error #f "invalid binding for identifier" p x))))))
+			   (else
+			    (error #f "cannot find binding" x label))))))
+		(else
+		 ;;Core primitive with no backing definition, assumed to
+		 ;;be defined in other strata of the system
+		 ;; (printf "undefined primitive ~s\n" x)
+		 (let ((label (gensym)))
+		   (export-subst (cons x label))
+		   (export-env (cons label (cons 'core-prim x)))))))))
+
     (values (export-subst) (export-env) (export-primlocs))))
 
 
@@ -1790,20 +1806,20 @@
 	   (name	(cadr	legend-entry))
 	   (visible?	(caddr	legend-entry))
 	   (id		(gensym))
-	   (version	(if (eq? 'rnrs (car name))
-			    '(6)
-			  '())))
-      (let-values (((subst env) (if (equal? name '(psyntax system $all))
-				    (values export-subst export-env)
-				  (values (get-export-subset nickname export-subst) '()))))
-	;;Datums  embedded in  this  symbolic expression  are quoted  to
-	;;allow the sexp to be handed to EVAL (I guess; Marco Maggi, Aug
-	;;26, 2011).
-	`(install-library ',id ',name ',version
-			  '() ;; import-libs
-			  '() ;; visit-libs
-			  '() ;; invoke-libs
-			  ',subst ',env void void '#f '#f '#f '() ',visible? '#f))))
+	   (version	(if (eq? 'rnrs (car name)) '(6) '()))
+	   (system-all?	(equal? name '(psyntax system $all)))
+	   (env		(if system-all? export-env '()))
+	   (subst	(if system-all?
+			    export-subst
+			  (get-export-subset nickname export-subst))))
+      ;;Datums  embedded in  this  symbolic expression  are quoted  to
+      ;;allow the sexp to be handed to EVAL (I guess; Marco Maggi, Aug
+      ;;26, 2011).
+      `(install-library ',id ',name ',version
+			'() ;; import-libs
+			'() ;; visit-libs
+			'() ;; invoke-libs
+			',subst ',env void void '#f '#f '#f '() ',visible? '#f)))
 
   (define (get-export-subset nickname subst)
     ;;Given the list of substitutions SUBST, build and return the subset
@@ -1857,37 +1873,52 @@
 
 
 (define (expand-all files)
-;;; remove all re-exported identifiers (those with labels in
-;;; subst but not binding in env).
+  ;;Expand all the  libraries in FILES, which must be  a list of strings
+  ;;representing  file  pathnames  under  SRC-DIR.
+  ;;
+  ;;Return  3  values:  the  list  of  library  specifications,  a  list
+  ;;representing  all  the  code  forms  from  all  the  libraries,  the
+  ;;EXPORT-LOCS.
+  ;;
+  ;;Notice that the  last code to be executed is the  one of the (ikarus
+  ;;main)  library,  and  the one  before  it  is  the one  returned  by
+  ;;BUILD-SYSTEM-LIBRARY.
+  ;;
   (define (prune-subst subst env)
+    ;;Remove all re-exported identifiers (those with labels in SUBST but
+    ;;no binding in ENV).
+    ;;
     (cond ((null? subst)
 	   '())
 	  ((not (assq (cdar subst) env))
 	   (prune-subst (cdr subst) env))
 	  (else
 	   (cons (car subst) (prune-subst (cdr subst) env)))))
+
+  ;;For each library: accumulate all the code in the CODE* variable, all
+  ;;the substitutions in SUBST, the whole environment in ENV.
   (let-values (((name* code* subst env) (make-init-code)))
     (debug-printf "Expanding ")
-    (for-each
-	(lambda (file)
-	  (debug-printf " ~s" file)
-	  (load (string-append src-dir "/" file)
-		(lambda (x)
-		  (let-values (((name code export-subst export-env)
-				(boot-library-expand x)))
-		    (set! name* (cons name name*))
-		    (set! code* (cons code code*))
-		    (set! subst (append export-subst subst))
-		    (set! env (append export-env env))))))
+    (for-each (lambda (file)
+		(debug-printf " ~s" file)
+		;;For each  library in the  file apply the  function for
+		;;its side effects.
+		(load (string-append src-dir "/" file)
+		      (lambda (x)
+			(let-values (((name code export-subst export-env)
+				      (boot-library-expand x)))
+			  (set! name* (cons name name*))
+			  (set! code* (cons code code*))
+			  (set! subst (append export-subst subst))
+			  (set! env   (append export-env   env))))))
       files)
     (debug-printf "\n")
     (let-values (((export-subst export-env export-locs)
                   (make-system-data (prune-subst subst env) env)))
       (let-values (((name code) (build-system-library export-subst export-env export-locs)))
-        (values
-	 (reverse (cons* (car name*) name (cdr name*)))
-	 (reverse (cons* (car code*) code (cdr code*)))
-	 export-locs)))))
+        (values (reverse (cons* (car name*) name (cdr name*)))
+		(reverse (cons* (car code*) code (cdr code*)))
+		export-locs)))))
 
 
 ;;;; Go!
@@ -1935,4 +1966,5 @@
 ;;; end of file
 ;;; Local Variables:
 ;;; eval: (put 'time-it 'scheme-indent-function 1)
+;;; eval: (put 'each-for 'scheme-indent-function 1)
 ;;; End:
