@@ -1372,13 +1372,12 @@
          ((ratnum? x)
           (let ((n ($ratnum-n x))
 		(d ($ratnum-d x)))
-            (cond
-              (($fx= n 1) d)
-              (($fx= n -1) (- d))
-              (else
-	       (if (> 0 n)
-		   ($make-ratnum (- d) (- n))
-		 ($make-ratnum d n))))))
+	    (cond (($fx= n 1) d)
+		  (($fx= n -1) (- d))
+		  (else
+		   (if (> 0 n)
+		       ($make-ratnum (- d) (- n))
+		     ($make-ratnum d n))))))
          ((compnum? x) (binary/ 1 x))
          ((cflonum? x) (binary/ 1 x))
          (else (die '/ "not a number" x))))
@@ -3268,9 +3267,7 @@
 
   )
 
-
-
-
+
 (library (ikarus flonum-conversion)
   (export string->flonum flonum->string)
   (import
@@ -3422,6 +3419,7 @@
       (else
        (die 'string->flonum "not a string" x)))) )
 
+
 (library (ikarus rationalize)
   (export rationalize)
   (import
@@ -3478,7 +3476,7 @@
          (else (die who "not a number" eps))))
       (else (die who "not a number" x)))))
 
-
+
 (library (ikarus r6rs-fu div/mod)
   (export div mod div-and-mod div0 mod0 div0-and-mod0)
   (import
@@ -3633,6 +3631,7 @@
               m))))
   )
 
+
 (library (ikarus flonums div-and-mod)
   (export fldiv flmod fldiv-and-mod fldiv0 flmod0 fldiv0-and-mod0)
   (import
@@ -3754,6 +3753,7 @@
             (die 'fldiv0-and-mod0 "not a flonum" m))
         (die 'fldiv0-and-mod0 "not a flonum" n))))
 
+
 (library (ikarus bitwise misc)
   (export fxfirst-bit-set bitwise-bit-set? bitwise-first-bit-set
           fxbit-count bitwise-bit-count
@@ -4147,7 +4147,7 @@
 
   )
 
-
+
 (library (ikarus complex-numbers)
   (export make-rectangular $make-rectangular make-polar
           real-part imag-part angle magnitude)

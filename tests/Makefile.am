@@ -13,7 +13,7 @@ VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
 
 test tests:
 	@echo
-	$(foreach f,$(VICARE_SELECTED_TESTS),$(VICARE_RUN) $(f);)
+	@$(foreach f,$(VICARE_SELECTED_TESTS),$(VICARE_RUN) $(f);)
 	@echo
 
 #page
