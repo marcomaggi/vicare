@@ -5106,7 +5106,7 @@ Remember that the @posix{} primitives end up exported by the
 
 @enumerate
 @item
-In the file @file{scheme/makefile.ss}: add an entry for the function to
+In the file @file{scheme/makefile.sps}: add an entry for the function to
 the list bound to @code{identifier->library-map}, respect alphabetic
 order.  For example, for @func{getpid} add:
 

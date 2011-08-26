@@ -3,6 +3,12 @@
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
+;;;Abstract
+;;;
+;;;	This file is an R6RS-compliant Scheme program which, when run in
+;;;	the appropriate system  environment, rebuilds Vicare's boot file
+;;;	"vicare.boot".
+;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under  the terms of  the GNU General  Public License version  3 as
 ;;;published by the Free Software Foundation.
@@ -14,8 +20,9 @@
 ;;;
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;
 
-;;; vim:syntax=scheme
+
 (import (only (ikarus) import))
 (import (except (ikarus)
           current-letrec-pass
@@ -41,6 +48,9 @@
 
 
 ;;;; helpers
+
+(define boot-file-name
+  "vicare.boot")
 
 (define src-dir
   (or (getenv "IKARUS_SRC_DIR") "."))
@@ -1906,7 +1916,7 @@
 					   (else
 					    (error 'bootstrap
 					      "no location for primitive" x)))))
-      (let ((port (open-file-output-port "vicare.boot" (file-options no-fail))))
+      (let ((port (open-file-output-port boot-file-name (file-options no-fail))))
 	(time-it "code generation and serialization"
 	  (lambda ()
 	    (debug-printf "Compiling ")
@@ -1922,8 +1932,6 @@
 
 (printf "Happy Happy Joy Joy\n")
 
-;;; vim:syntax=scheme
-#!eof
 ;;; end of file
 ;;; Local Variables:
 ;;; eval: (put 'time-it 'scheme-indent-function 1)

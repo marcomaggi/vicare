@@ -23,7 +23,7 @@ EXTRA_DIST=ikarus.boot.4.prebuilt ikarus.boot.8.prebuilt last-revision \
   ikarus.singular-objects.ss ikarus.sort.ss ikarus.strings.ss \
   ikarus.structs.ss ikarus.symbols.ss ikarus.timer.ss \
   ikarus.unicode-conversion.ss ikarus.unicode.ss \
-  ikarus.vectors.ss ikarus.writer.ss makefile.ss \
+  ikarus.vectors.ss ikarus.writer.ss makefile.sps \
   pass-specify-rep-primops.ss pass-specify-rep.ss psyntax.builders.ss \
   psyntax.compat.ss psyntax.config.ss psyntax.expander.ss \
   psyntax.internal.ss psyntax.library-manager.ss \
@@ -131,7 +131,7 @@ $(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
   IKARUS_FASL_DIRECTORY='' \
   IKARUS_LIBRARY_PATH=.:$(srcdir):$(srcdir)/../lib \
   $(NEW_EXECUTABLE) -b $(srcdir)/ikarus.boot.$(sizeofvoidp).prebuilt \
-  --r6rs-script $(srcdir)/makefile.ss
+  --r6rs-script $(srcdir)/makefile.sps
 
 ikarus-tests: $(NEW_BOOT_FILE)
 	IKARUS_SRC_DIR=$(srcdir) \
