@@ -1,7 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 
 testdir			= $(srcdir)
-VICARE_SELECTED_TESTS	= $(wildcard $(testdir)/test-*$(name)*.sps)
+VICARE_SELECTED_TESTS	= $(wildcard $(testdir)/test-*$(name)*.sps) \
+			  $(wildcard $(testdir)/test-*$(file)*.sps)
 
 VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot

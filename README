@@ -98,14 +98,16 @@ are executed running:
    $ make tests
 
 all the  test files under "tests"  are programs whose file  name has the
-format  "test-<name>.sps"  where  <name>  is  indicates  of  the  tested
-feature; it is possible to select a single test file by using the "name"
+format "test-<name>.sps"  where <name> indicates the  tested feature; it
+is possible to  select a single test file by using  the "name" or "file"
 variable on the command line of "make"; for example:
 
    $ make tests name=equal-hash
+   $ make tests file=equal-hash
 
-will run the "test-equal-hash.sps" file.  The "name" variable is used to
-expand a file name with wildcards as in "test-*$(name)*.sps".
+will  run  the  "test-equal-hash.sps"   file.   The  "name"  and  "file"
+variables  are  used  to  expand  a  file  name  with  wildcards  as  in
+"test-*$(name)*.sps" and "test-*$(file)*.sps".
 
   The  following command  will  run  all the  R6RS  compliance tests  by
 Matthew Flatt:
