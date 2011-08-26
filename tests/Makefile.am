@@ -1,24 +1,25 @@
 ## Process this file with automake to produce Makefile.in
 
 testdir			= $(srcdir)
-VICARE_SELECTED_TESTS	= $(wildcard $(testdir)/test-*$(name)*.sps) \
-			  $(wildcard $(testdir)/test-*$(file)*.sps)
+VICARE_SELECTED_TESTS	= $(wildcard $(testdir)/test-*$(file)*.sps)
 
 VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
 VICARE_FLAGS	= -b $(VICARE_BOOT) --debug --r6rs-script
-VICARE_ENV	= VICARE_LIBRARY_PATH=$(srcdir):$(srcdir)/../lib
+VICARE_ENV	= VICARE_LIBRARY_PATH=$(srcdir):$(srcdir)/../lib CHECK_TEST_NAME=$(name)
 VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
 
 .PHONY: test tests test-r6rs
 
 test tests:
 	@echo
-	@$(foreach f,$(VICARE_SELECTED_TESTS),$(VICARE_RUN) $(f);)
+	$(foreach f,$(VICARE_SELECTED_TESTS),$(VICARE_RUN) $(f);)
 	@echo
 
+#page
 ## --------------------------------------------------------------------
 ## Raw interface for Flatt's R6RS test suite.
+## --------------------------------------------------------------------
 
 vicare_r6rs_subtest_RULES	=	\
 	test-r6rs-control		\
@@ -128,30 +129,13 @@ test-r6rs-enums:
 test-r6rs-sorting:
 	@$(VICARE_RUN) $(srcdir)/r6rs/run/sorting.sps
 
+#page
 ## --------------------------------------------------------------------
 ## Interface to "make check".
+## --------------------------------------------------------------------
 
 TESTS_ENVIRONMENT	= $(VICARE_RUN)
 TESTS			=	\
-	test-equal-hash.sps				\
-	test-fxreverse-bit-field.sps			\
-	test-getpid.sps					\
-	test-log.sps					\
-	\
-	test-issue-7.sps				\
-	test-issue-8.sps				\
-	test-issue-9.sps				\
-	test-issue-10.sps				\
-	test-issue-12.sps				\
-	test-issue-13.sps				\
-	test-issue-15.sps				\
-	test-issue-17.sps				\
-	test-issue-18.sps				\
-	test-issue-20.sps				\
-	test-issue-21.sps				\
-	test-issue-22.sps				\
-	test-issue-23.sps				\
-	\
 	$(srcdir)/r6rs/run/control.sps			\
 	$(srcdir)/r6rs/run/base.sps			\
 	$(srcdir)/r6rs/run/io/ports.sps			\
@@ -177,7 +161,31 @@ TESTS			=	\
 	$(srcdir)/r6rs/run/exceptions.sps		\
 	$(srcdir)/r6rs/run/enums.sps			\
 	$(srcdir)/r6rs/run/sorting.sps
+	\
+	test-getpid.sps					\
+	test-log.sps					\
+	\
+	test-issue-001-equal-hash.sps			\
+	test-issue-006-fxreverse-bit-field.sps		\
+	test-issue-007.sps				\
+	test-issue-008.sps				\
+	test-issue-009.sps				\
+	test-issue-010.sps				\
+	test-issue-012.sps				\
+	test-issue-013.sps				\
+	test-issue-015.sps				\
+	test-issue-017.sps				\
+	test-issue-018.sps				\
+	test-issue-020.sps				\
+	test-issue-021.sps				\
+	test-issue-022.sps				\
+	test-issue-023.sps				\
+	test-issue-024.sps				\
+	test-issue-025.sps
 
+#page
+## --------------------------------------------------------------------
+## Extra files to be distributed.
 ## --------------------------------------------------------------------
 
 EXTRA_DIST =	\
@@ -246,22 +254,29 @@ EXTRA_DIST =	\
 	r6rs/syntax-case.sls				\
 	r6rs/test.sls					\
 	r6rs/unicode.sls				\
-	test-equal-hash.sps				\
-	test-fxreverse-bit-field.sps			\
+	\
 	test-getpid.sps					\
 	test-log.sps					\
-	test-issue-7.sps				\
-	test-issue-8.sps				\
-	test-issue-9.sps				\
-	test-issue-10.sps				\
-	test-issue-12.sps				\
-	test-issue-13.sps				\
-	test-issue-15.sps				\
-	test-issue-17.sps				\
-	test-issue-18.sps				\
-	test-issue-20.sps				\
-	test-issue-21.sps				\
-	test-issue-22.sps				\
-	test-issue-23.sps
+	\
+	test-issue-001-equal-hash.sps			\
+	test-issue-006-fxreverse-bit-field.sps		\
+	test-issue-007.sps				\
+	test-issue-008.sps				\
+	test-issue-009.sps				\
+	test-issue-010.sps				\
+	test-issue-012.sps				\
+	test-issue-013.sps				\
+	test-issue-015.sps				\
+	test-issue-017.sps				\
+	test-issue-018.sps				\
+	test-issue-020.sps				\
+	test-issue-021.sps				\
+	test-issue-022.sps				\
+	test-issue-023.sps				\
+	test-issue-024.sps				\
+	test-issue-025.sps
 
 ### end of file
+# Local Variables:
+# mode: makefile-gmake
+# End:
