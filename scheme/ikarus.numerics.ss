@@ -2099,23 +2099,23 @@
 
   (define fl-
     (case-lambda
-      ((x y)
-       (if (flonum? x)
-           (if (flonum? y)
-               ($fl- x y)
-               (die 'fl- "not a flonum" y))
-           (die 'fl- "not a flonum" x)))
-      ((x y z)
-       (fl- (fl- x y) z))
-      ((x y z q . rest)
-       (let f ((ac (fl- (fl- (fl- x y) z) q)) (rest rest))
-         (if (null? rest)
-             ac
-             (f (fl- ac (car rest)) (cdr rest)))))
-      ((x)
-       (if (flonum? x)
-           ($fl* -1.0 x)
-           (die 'fl+ "not a flonum" x)))))
+     ((x y)
+      (if (flonum? x)
+	  (if (flonum? y)
+	      ($fl- x y)
+	    (die 'fl- "not a flonum" y))
+	(die 'fl- "not a flonum" x)))
+     ((x y z)
+      (fl- (fl- x y) z))
+     ((x y z q . rest)
+      (let f ((ac (fl- (fl- (fl- x y) z) q)) (rest rest))
+	(if (null? rest)
+	    ac
+	  (f (fl- ac (car rest)) (cdr rest)))))
+     ((x)
+      (if (flonum? x)
+	  ($fl* -1.0 x)
+	(die 'fl- "not a flonum" x)))))
 
   (define fl*
     (case-lambda

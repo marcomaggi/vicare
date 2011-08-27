@@ -1189,11 +1189,25 @@
   [(V x . x*) (check-flonums (cons x x*) ($flop-aux* 'fl:mul! x x*))]
   [(P . x*) (check-flonums x* (K #t))]
   [(E . x*) (check-flonums x* (nop))])
-(define-primop fl- safe
-  [(V x) (check-flonums (list x) ($flop-aux 'fl:sub! (K 0.0) x))]
-  [(V x . x*) (check-flonums (cons x x*) ($flop-aux* 'fl:sub! x x*))]
-  [(P x . x*) (check-flonums (cons x x*) (K #t))]
-  [(E x . x*) (check-flonums (cons x x*) (nop))])
+;;The  following implementation  of  FL-  was used  by  the compiler  to
+;;override   the  implemtation   in   "ikarus.numerics.ss"  for   speed.
+;;Unfortunately it does not handle correctly the case:
+;;
+;;  (FL- 0.0) => -0.0
+;;
+;;returning "+0.0" because:
+;;
+;;  (FL- 0.0 0.0) => 0.0
+;;
+;;for this reason I commented it out.  It is my understanding that there
+;;is no way  to include conditionals in the  DEFINE-PRIMOP syntax (Marco
+;;Maggi; Aug 27, 2011).
+;;
+;; (define-primop fl- safe
+;;   [(V x) (check-flonums (list x) ($flop-aux 'fl:sub! (K 0.0) x))]
+;;   [(V x . x*) (check-flonums (cons x x*) ($flop-aux* 'fl:sub! x x*))]
+;;   [(P x . x*) (check-flonums (cons x x*) (K #t))]
+;;   [(E x . x*) (check-flonums (cons x x*) (nop))])
 (define-primop fl/ safe
   [(V x) (check-flonums (list x) ($flop-aux 'fl:div! (K 1.0) x))]
   [(V x . x*) (check-flonums (cons x x*) ($flop-aux* 'fl:div! x x*))]
