@@ -134,7 +134,7 @@ test-r6rs-sorting:
 ## Interface to "make check".
 ## --------------------------------------------------------------------
 
-TESTS_ENVIRONMENT	= $(VICARE_RUN)
+TESTS_ENVIRONMENT	= $(VICARE_ENV)
 TESTS			=	\
 	$(srcdir)/r6rs/run/control.sps			\
 	$(srcdir)/r6rs/run/base.sps			\
@@ -160,7 +160,7 @@ TESTS			=	\
 	$(srcdir)/r6rs/run/bytevectors.sps		\
 	$(srcdir)/r6rs/run/exceptions.sps		\
 	$(srcdir)/r6rs/run/enums.sps			\
-	$(srcdir)/r6rs/run/sorting.sps
+	$(srcdir)/r6rs/run/sorting.sps			\
 	\
 	test-getpid.sps					\
 	test-log.sps					\
