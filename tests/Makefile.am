@@ -134,7 +134,8 @@ test-r6rs-sorting:
 ## Interface to "make check".
 ## --------------------------------------------------------------------
 
-TESTS_ENVIRONMENT	= $(VICARE_ENV)
+# TESTS and TESTS_ENVIRONMENT are Automake variables.
+TESTS_ENVIRONMENT	= $(VICARE_RUN)
 TESTS			=	\
 	$(srcdir)/r6rs/run/control.sps			\
 	$(srcdir)/r6rs/run/base.sps			\
@@ -181,7 +182,7 @@ TESTS			=	\
 	test-issue-022.sps				\
 	test-issue-023.sps				\
 	test-issue-024.sps				\
-	test-issue-025.sps
+	test-issue-025-sign-in-exact-rationals.sps
 
 #page
 ## --------------------------------------------------------------------
@@ -274,7 +275,7 @@ EXTRA_DIST =	\
 	test-issue-022.sps				\
 	test-issue-023.sps				\
 	test-issue-024.sps				\
-	test-issue-025.sps
+	test-issue-025-sign-in-exact-rationals.sps
 
 ### end of file
 # Local Variables:
