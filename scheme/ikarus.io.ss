@@ -166,7 +166,8 @@
 
 ;;;; list of things to do
 ;;
-;;* Implement SET-PORT-POSITION! for OPEN-BYTEVECTOR-OUTPUT-PORT.
+;;*   Test  the  transcoders   with  OPEN-BYTEVECTOR-OUTPUT-PORT,
+;;especially the SET-PORT-POSITION! function.
 ;;
 
 
@@ -1087,7 +1088,6 @@
 	      (identifier	"*bytevector-output-port*")
 	      (read!		#f)
 	      (get-position	#t)
-;;;	      (set-position!	#f)
 	      (close		#f)
 	      (cookie		(default-cookie #f)))
 	  (define (write! src.bv src.start count)
@@ -1168,17 +1168,61 @@
    ((proc)
     (call-with-bytevector-output-port proc #f))
    ((proc transcoder)
+    ;;Defined   by  R6RS.    PROC  must   accept   one  argument.
+    ;;MAYBE-TRANSCODER must be either a transcoder or false.
+    ;;
+    ;;The  CALL-WITH-BYTEVECTOR-OUTPUT-PORT procedure  creates an
+    ;;output port  that accumulates the  bytes written to  it and
+    ;;calls PROC with that output port as an argument.
+    ;;
+    ;;Whenever PROC  returns, a  bytevector consisting of  all of
+    ;;the  port's  accumulated bytes  (regardless  of the  port's
+    ;;current position) is returned and the port is closed.
+    ;;
+    ;;The   transcoder  associated  with   the  output   port  is
+    ;;determined as for a call to OPEN-BYTEVECTOR-OUTPUT-PORT.
+    ;;
     (define who 'call-with-bytevector-output-port)
     (unless (procedure? proc)
       (die who "not a procedure" proc))
     (unless (or (not transcoder) (transcoder? transcoder))
       (die who "invalid transcoder argument" transcoder))
-    (let-values (((p extract) (open-bytevector-output-port transcoder)))
-      (proc p)
-      (extract)))))
+    (let-values (((port getter) (open-bytevector-output-port transcoder)))
+      (proc port)
+      (getter)))))
 
 
-;;;; string ports
+;;;; string output ports
+
+(define (open-output-string)
+  ;;Defined by Ikarus.
+  ;;
+  (define who 'open-output-string)
+  (let ((cookie		(default-cookie '()))
+	(buffer-size	256))
+    ($make-port (fxior textual-output-port-bits fast-char-text-tag)
+		0 buffer-size (make-string buffer-size)
+		#t ;;; transcoder
+		"*string-output-port*"
+		#f
+		(lambda (str i c)
+		  (unless (= c 0)
+		    (let ((x (make-string c)))
+		      (string-copy! str i x 0 c)
+		      (set-cookie-dest! cookie (cons x (cookie-dest cookie)))))
+		  c)
+		#t ;;; get-position
+		#f ;;; set-position!
+		#f ;;; close!
+		cookie)))
+
+(define (open-string-output-port)
+  (let ((p (open-output-string)))
+    (values p (lambda ()
+		(let ((str (get-output-string p)))
+		  (set-cookie-dest! ($port-cookie p) '())
+		  str)))))
+
 
 (define (call-with-string-output-port proc)
   (define who 'call-with-string-output-port)
@@ -1208,33 +1252,6 @@
   (parameterize ((current-output-port p))
     (proc)))
 
-(define (open-output-string)
-  (define who 'open-output-string)
-  (let ((cookie		(default-cookie '()))
-	(buffer-size	256))
-    ($make-port (fxior textual-output-port-bits fast-char-text-tag)
-		0 buffer-size (make-string buffer-size)
-		#t ;;; transcoder
-		"*string-output-port*"
-		#f
-		(lambda (str i c)
-		  (unless (= c 0)
-		    (let ((x (make-string c)))
-		      (string-copy! str i x 0 c)
-		      (set-cookie-dest! cookie (cons x (cookie-dest cookie)))))
-		  c)
-		#t ;;; get-position
-		#f ;;; set-position!
-		#f ;;; close!
-		cookie)))
-
-(define (open-string-output-port)
-  (let ((p (open-output-string)))
-    (values p (lambda ()
-		(let ((str (get-output-string p)))
-		  (set-cookie-dest! ($port-cookie p) '())
-		  str)))))
-
 (define (get-output-string-cookie-data cookie)
   (define (append-str-buf* ls)
     (let f ((ls ls) (i 0))
@@ -1263,6 +1280,9 @@
 	       (die 'get-output-string "not an output-string port" p))))
     (die 'get-output-string "not a port" p)))
 
+
+;;;; string input ports
+
 (define (open-string-input-port/id str id)
   (unless (string? str)
     (die 'open-string-input-port "not a string" str))
@@ -1272,10 +1292,10 @@
    #t ;;; transcoder
    id
    all-data-in-buffer ;;; read!
-   #f ;;; write!
-   #t ;;; get-position
-   #t ;;; set-position!
-   #f ;;; close
+   #f		      ;;; write!
+   #t		      ;;; get-position
+   #t		      ;;; set-position!
+   #f		      ;;; close
    (default-cookie #f)))
 
 (define (open-string-input-port str)
