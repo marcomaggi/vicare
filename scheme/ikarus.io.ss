@@ -164,6 +164,12 @@
 ;;
 ;;
 
+;;;; list of things to do
+;;
+;;* Implement SET-PORT-POSITION! for OPEN-BYTEVECTOR-OUTPUT-PORT.
+;;
+
+
 (library (ikarus.io)
   (export
     port? input-port? output-port? textual-port? binary-port?
@@ -342,6 +348,8 @@
 (define input-file-buffer-size		(+ input-block-size 128))
 (define output-file-buffer-size		output-block-size)
 
+(define bytevector-binary-buffer-size	256)
+
 (define custom-binary-buffer-size	256)
 (define custom-textual-buffer-size	256)
 
@@ -362,6 +370,19 @@
     (syntax-rules ()
       ((_ x)
        ($fxzero? ($fxlogand x -256))))))
+
+(define-syntax %the-true-value?
+  ;;Evaluate to  true if the object  is the actual  #t value, not
+  ;;just true according to Scheme semantics.
+  ;;
+  (syntax-rules ()
+    ((_ ?obj)
+     (eqv? #t ?obj))))
+
+(define (port-id p)
+  (if (port? p)
+      ($port-id p)
+    (die 'port-id "not a port" p)))
 
 
 ;;;; predicates
@@ -449,7 +470,16 @@
 		       ($fxlogand ($port-tag x) fast-attrs-mask))))
 
 
-;;;; tracking number of rows and columns
+;;;; tracking underlying device position, number of rows and columns
+;;
+;;NOTE:  It is  impossible  to  track the  row  number for  ports
+;;supporting the SET-PORT-POSITION! operation.  The ROW-NUM field
+;;of  the cookie  is  meaningful only  for  ports whose  position
+;;increases monotonically because of read or write operations, it
+;;should be invalidated whenever  the port position is moved with
+;;SET-PORT-POSITION!.  Notice  that the  input port used  to read
+;;Scheme source code satisfies this requirement.
+;;
 
 (define-struct cookie
   (dest mode pos row-num newline-pos))
@@ -457,24 +487,30 @@
 (define (default-cookie fd)
   (make-cookie fd 'vicare-mode 0 0 0))
 
-(define (port-id p)
-  (if (port? p)
-      ($port-id p)
-    (die 'port-id "not a port" p)))
-
 (define (input-port-byte-position p)
+  ;;Defined  by Ikarus.  Return  the port  position for  an input
+  ;;port in bytes.
+  ;;
   (if (input-port? p)
       (let ((cookie ($port-cookie p)))
-	(+ (cookie-pos cookie) (fx+ ($port-index p) 1)))
+	(+ (cookie-pos cookie) (fx+ 1 ($port-index p))))
     (error 'input-port-byte-position "not an input port" p)))
 
-(define (mark/return-newline p)
+(define (%mark/return-newline p)
+  ;;Register the presence of a #\newline character at the current
+  ;;position  in  the  port.   Return  a  newline  character  for
+  ;;convenience at the call site.
+  ;;
   (let ((cookie ($port-cookie p)))
-    (set-cookie-row-num!     cookie (+ (cookie-row-num cookie) 1))
-    (set-cookie-newline-pos! cookie (+ (cookie-pos cookie) ($port-index p))))
+    (set-cookie-row-num!     cookie (+ 1               (cookie-row-num cookie)))
+    (set-cookie-newline-pos! cookie (+ ($port-index p) (cookie-pos cookie))))
   #\newline)
 
 (define (input-port-column-number p)
+  ;;Defined by  Ikarus.  Return the current column  number for an
+  ;;input port.
+  ;;
+;;;FIXME It computes the count assuming 1 byte = 1 character.
   (if (input-port? p)
       (let ((cookie ($port-cookie p)))
 	(- (+ (cookie-pos cookie) ($port-index p))
@@ -482,6 +518,10 @@
     (die 'input-port-column-number "not an input port" p)))
 
 (define (input-port-row-number p)
+  ;;Defined  by Ikarus.   Return the  current row  number  for an
+  ;;input port.
+  ;;
+;;;FIXME It computes the count assuming 1 byte = 1 character.
   (if (input-port? p)
       (cookie-row-num ($port-cookie p))
     (die 'input-port-row-number "not an input port" p)))
@@ -489,60 +529,112 @@
 
 ;;;; port position
 
+(define (port-has-port-position? p)
+  ;;Defined  by  R6RS.   Return  #t  if  the  port  supports  the
+  ;;PORT-POSITION operation, and #f otherwise.
+  ;;
+  (define who 'port-has-port-position?)
+  (if (port? p)
+      (and ($port-get-position p) #t)
+    (die who "not a port" p)))
+
 (define (port-position p)
+  ;;Defined  by  R6RS.   For  a binary  port,  the  PORT-POSITION
+  ;;procedure returns the index of the position at which the next
+  ;;byte would  be read from or  written to the port  as an exact
+  ;;non--negative   integer   object.    For  a   textual   port,
+  ;;PORT-POSITION      returns      a      value     of      some
+  ;;implementation-dependent   type   representing   the   port's
+  ;;position; this value  may be useful only as  the POS argument
+  ;;to SET-PORT-POSITION!, if the latter is supported on the port
+  ;;(see below).
+  ;
+  ;;If  the port  does not  support the  operation, PORT-POSITION
+  ;;raises an exception with condition type "&assertion".
+  ;;
+  ;;*NOTE* For a  textual port, the port position  may or may not
+  ;;be  an integer  object.   If  it is  an  integer object,  the
+  ;;integer object  does not necessarily correspond to  a byte or
+  ;;character position.
+  ;;
   (define who 'port-position)
   (unless (port? p)
     (die who "not a port" p))
   (let ((index		($port-index p))
 	(get-position	($port-get-position p)))
     (cond ((procedure? get-position)
-	   (let ((pos (get-position)))
-	     (if (or (fixnum? pos) (bignum? pos))
+	   (let ((device-position (get-position)))
+	     ;;DEVICE-POSITION is the  position in the underlying
+	     ;;device, but  we have  to return the  full position
+	     ;;taking into account the offset in the input/output
+	     ;;buffer.
+	     (if (or (fixnum? device-position) (bignum? device-position))
 		 (if (input-port? p)
-		     (- pos (- ($port-size p) index))
-		   (+ pos index))
+		     (- device-position (- ($port-size p) index))
+		   (+ device-position index))
 	       (die who "invalid value returned by get-position" p))))
-	  ((eqv? get-position #t)
+	  ((%the-true-value? get-position)
 	   (+ index (cookie-pos ($port-cookie p))))
 	  (else
 	   (die who "port does not support port-position operation" p)))))
 
-(define (set-port-position! p pos)
+(define (set-port-position! port pos)
+  ;;Defined by R6RS.   If PORT is a binary port,  POS should be a
+  ;;non-negative  exact integer  object.   If PORT  is a  textual
+  ;;port,  POS  should   be  the  return  value  of   a  call  to
+  ;;PORT-POSITION on PORT.
+  ;;
+  ;;The  SET-PORT-POSITION! procedure  raises  an exception  with
+  ;;condition type  &assertion if the  port does not  support the
+  ;;operation,   and    an   exception   with    condition   type
+  ;;&i/o-invalid-position  if POS is  not in  the range  of valid
+  ;;positions of  PORT.  Otherwise, it sets  the current position
+  ;;of  the   port  to   POS.   If  PORT   is  an   output  port,
+  ;;SET-PORT-POSITION!  first flushes PORT.
+  ;;
+  ;;If PORT is  a binary output port and  the current position is
+  ;;set beyond the current end of the data in the underlying data
+  ;;sink, the object is not extended until new data is written at
+  ;;that position.  The contents of any intervening positions are
+  ;;unspecified.   Binary ports created  by OPEN-FILE-OUTPUT-PORT
+  ;;and  OPEN-FILE-INPUT/OUTPUT-PORT can  always  be extended  in
+  ;;this  manner within  the limits  of the  underlying operating
+  ;;system.  In other cases, attempts  to set the port beyond the
+  ;;current end of data in the underlying object may result in an
+  ;;exception with condition type &i/o-invalid-position.
+  ;;
   (define who 'set-port-position!)
-  (define (set-position! p pos flush?)
-    (let ((setpos! ($port-set-position! p)))
-      (cond ((procedure? setpos!)
-	     (when flush? (flush-output-port p))
-	     (setpos! pos)
-	     ($set-port-index! p 0)
-	     ($set-port-size!  p 0)
-	     (set-cookie-pos! ($port-cookie p) pos))
-	    ((eqv? setpos! #t)
-	     (if (<= pos ($port-size p))
-		 ($set-port-index! p pos)
-	       (die who "position out of range" pos)))
-	    (else
-	     (die who "port does not support port position" p)))))
   (unless (and (or (fixnum? pos) (bignum? pos)) (>= pos 0))
     (die who "position must be a nonnegative exact integer" pos))
-  (cond ((output-port? p)
-	 (set-position! p pos #t))
-	((input-port? p)
-	 (set-position! p pos #f))
-	(else
-	 (die who "not a port" p))))
+  (let ((flush?  (cond ((output-port? port)
+			#t)
+		       ((input-port? port)
+			#f)
+		       (else
+			(die who "not a port" port))))
+	(setpos! ($port-set-position! port)))
+    (cond ((procedure? setpos!)
+	   (when flush? (flush-output-port port))
+	   (setpos! pos)
+	   ($set-port-index! port 0)
+	   ($set-port-size!  port 0)
+	   (set-cookie-pos! ($port-cookie port) pos))
+	  ((eqv? setpos! #t)
+	   (if (<= pos ($port-size port))
+	       ($set-port-index! port pos)
+	     (die who "position out of range" pos)))
+	  (else
+	   (die who "port does not support port position" port)))))
 
-(define (port-has-port-position? p)
-  (define who 'port-has-port-position?)
-  (if (port? p)
-      (and ($port-get-position p) #t)
-    (die who "not a port" p)))
-
-(define (port-has-set-port-position!? p)
+(define (port-has-set-port-position!? port)
+  ;;Defined by R6RS.  The PORT-HAS-SET-PORT-POSITION!?  procedure
+  ;;returns  #t  if  the  port  supports  the  SET-PORT-POSITION!
+  ;;operation, and #f otherwise.
+  ;;
   (define who 'port-has-set-port-position!?)
-  (if (port? p)
-      (and ($port-set-position! p) #t)
-    (die who "not a port" p)))
+  (if (port? port)
+      (and ($port-set-position! port) #t)
+    (die who "not a port" port)))
 
 
 ;;;; custom ports
@@ -550,14 +642,15 @@
 (define guarded-port
   (let ((G (make-guardian)))
     (define (clean-up)
-      (cond ((G) => (lambda (p)
-		      (close-port p)
-		      (clean-up)))))
-    (lambda (p)
+      (let ((port (G)))
+	(when port
+	  (close-port port)
+	  (clean-up))))
+    (lambda (port)
       (clean-up)
-      (when (fixnum? (cookie-dest ($port-cookie p)))
-	(G p))
-      p)))
+      (when (fixnum? (cookie-dest ($port-cookie port)))
+	(G port))
+      port)))
 
 (define ($make-custom-binary-port attributes used-buffer-size identifier
 				  read! write! get-position set-position! close buffer-size)
@@ -847,16 +940,17 @@
 
 
 (define (input-transcoder-attrs x who)
-  (cond ((not x) ;;; binary input port
+  (cond ((not x) ;binary input port
 	 binary-input-port-bits)
 	((not (eq? 'none (transcoder-eol-style x)))
 	 (die who "unsupported transcoder eol-style"
 	      (transcoder-eol-style x)))
 	((eq? 'latin-1-codec (transcoder-codec x))
 	 (fxior textual-input-port-bits fast-u8-text-tag))
-;;; attrs for utf-8-codec are set  as part of the bom-reading dance when
-;;; the first char is read.
-	(else textual-input-port-bits)))
+	;;attrs  for   utf-8-codec  are   set  as  part   of  the
+	;;bom-reading dance when the first char is read.
+	(else
+	 textual-input-port-bits)))
 
 (define (output-transcoder-attrs x who)
   (cond ((not x) ;;; binary input port
@@ -870,7 +964,8 @@
 	 (fxior textual-output-port-bits fast-u7-text-tag))
 	((eq? 'utf-16-codec (transcoder-codec x))
 	 (fxior textual-output-port-bits fast-u16be-text-tag))
-	(else (die who "unsupported codec" (transcoder-codec x)))))
+	(else
+	 (die who "unsupported codec" (transcoder-codec x)))))
 
 
 ;;;; bytevector ports
@@ -880,67 +975,193 @@
    ((bv)
     (open-bytevector-input-port bv #f))
    ((bv maybe-transcoder)
+    ;;MAYBE-TRANSCODER must be either a transcoder or false.
+    ;;
+    ;;The  OPEN-BYTEVECTOR-INPUT-PORT procedure returns  an input
+    ;;port whose bytes are  drawn from BYTEVECTOR.  If TRANSCODER
+    ;;is specified, it becomes the transcoder associated with the
+    ;;returned port.
+    ;;
+    ;;If MAYBE-TRANSCODER is false or  absent, the port will be a
+    ;;binary  port   and  will  support   the  PORT-POSITION  and
+    ;;SET-PORT-POSITION!  operations.  Otherwise the port will be
+    ;;a textual  port, and whether it  supports the PORT-POSITION
+    ;;and  SET-PORT-POSITION!  operations will  be implementation
+    ;;dependent (and possibly transcoder-dependent).
+    ;;
+    ;;If BYTEVECTOR  is modified after OPEN-BYTEVECTOR-INPUT-PORT
+    ;;has  been  called,  the  effect  on the  returned  port  is
+    ;;unspecified.
+    ;;
+    (define who 'open-bytevector-input-port)
     (unless (bytevector? bv)
-      (die 'open-bytevector-input-port
-	   "not a bytevector" bv))
-    (when (and maybe-transcoder
-	       (not (transcoder? maybe-transcoder)))
-      (die 'open-bytevector-input-port
-	   "not a transcoder" maybe-transcoder))
-    ($make-port (input-transcoder-attrs maybe-transcoder
-					'open-bytevector-output-port)
-		0 (bytevector-length bv) bv
-		maybe-transcoder
-		"*bytevector-input-port*"
-		all-data-in-buffer ;;; read!
-		#f		   ;;; write!
-		#t		   ;;; get-position
-		#t		   ;;; set-position!
-		#f		   ;;; close
-		(default-cookie #f)))))
+      (die who "not a bytevector" bv))
+    (when (and maybe-transcoder (not (transcoder? maybe-transcoder)))
+      (die who "not a transcoder" maybe-transcoder))
+    (let ((attributes		(input-transcoder-attrs maybe-transcoder who))
+	  (buffer-index		0)
+	  (used-buffer-size	(bytevector-length bv))
+	  (buffer		bv)
+	  (transcoder		maybe-transcoder)
+	  (identifier		"*bytevector-input-port*")
+	  (read!		all-data-in-buffer)
+	  (write!		#f)
+	  (get-position		#t)
+	  (set-position!	#t)
+	  (close		#f)
+	  (cookie		(default-cookie #f)))
+      ($make-port attributes
+		  buffer-index used-buffer-size buffer
+		  transcoder identifier
+		  read! write! get-position set-position! close
+		  cookie)))))
 
 (define open-bytevector-output-port
   (case-lambda
    (()
     (open-bytevector-output-port #f))
-   ((transcoder)
+   ((maybe-transcoder)
+    ;;MAYBE-TRANSCODER must be either a transcoder or false.
+    ;;
+    ;;The   OPEN-BYTEVECTOR-OUTPUT-PORT  procedure   returns  two
+    ;;values: an  output port  and an extraction  procedure.  The
+    ;;output port  accumulates the bytes written to  it for later
+    ;;extraction by the procedure.
+    ;;
+    ;;If  MAYBE-TRANSCODER  is   a  transcoder,  it  becomes  the
+    ;;transcoder associated  with the port.   If MAYBE-TRANSCODER
+    ;;is false or absent, the port will be a binary port and will
+    ;;support    the    PORT-POSITION   and    SET-PORT-POSITION!
+    ;;operations.  Otherwise the port will be a textual port, and
+    ;;whether     it    supports     the     PORT-POSITION    and
+    ;;SET-PORT-POSITION!  operations  is implementation dependent
+    ;;(and possibly transcoder-dependent).
+    ;;
+    ;;The extraction procedure  takes no arguments.  When called,
+    ;;it  returns  a  bytevector  consisting of  all  the  port's
+    ;;accumulated  bytes   (regardless  of  the   port's  current
+    ;;position), removes the accumulated bytes from the port, and
+    ;;resets the port's position.
+    ;;
     (define who 'open-bytevector-output-port)
-    (unless (or (not transcoder) (transcoder? transcoder))
-      (die who "invalid transcoder value" transcoder))
-    (let ((buf* '()) (buffer-size 256))
-      (let ((p ($make-port (output-transcoder-attrs transcoder 'open-bytevector-output-port)
-			   0 buffer-size (make-bytevector buffer-size)
-			   transcoder
-			   "*bytevector-output-port*"
-			   #f
-			   (lambda (bv i c)
-			     (unless (= c 0)
-			       (let ((x (make-bytevector c)))
-				 (bytevector-copy! bv i x 0 c)
-				 (set! buf* (cons x buf*))))
-			     c)
-			   #t ;;; get-position
-			   #f ;;; set-position!
-			   #f ;;; close
-			   (default-cookie #f))))
-	(values p
-		(lambda ()
-		  (define (append-bv-buf* ls)
-		    (let f ((ls ls) (i 0))
-		      (cond
-		       ((null? ls)
-			(values (make-bytevector i) 0))
-		       (else
-			(let* ((a (car ls))
-			       (n (bytevector-length a)))
-			  (let-values (((bv i) (f (cdr ls) (fx+ i n))))
-			    (bytevector-copy! a 0 bv i n)
-			    (values bv (fx+ i n))))))))
-		  (unless ($port-closed? p)
-		    (flush-output-port p))
-		  (let-values (((bv len) (append-bv-buf* buf*)))
-		    (set! buf* '())
-		    bv))))))))
+    (unless (or (not maybe-transcoder) (transcoder? maybe-transcoder))
+      (die who "invalid transcoder value" maybe-transcoder))
+    (let ((output-bvs		'())
+	  (position-in-buffer	#f))
+      ;;The most common use of  this port type is to append bytes
+      ;;and finally extract the whole output bytevector:
+      ;;
+      ;;  (let-values (((port getter) (open-bytevector-output-port)))
+      ;;    (put-bytevector port '#vu8(1 2 3)) ...
+      ;;    (getter))
+      ;;
+      ;;for this reason we implement  the state of the port to be
+      ;;somewhat  efficient  for  such  use.   Whenever  data  is
+      ;;written  to the port:  a new  bytevector is  prepended to
+      ;;OUTPUT-BVS.   When the  getter  is invoked:  the list  is
+      ;;converted to the actual bytevector.
+      ;;
+      ;;This  situation  is  violated if  SET-PORT-POSITION!   is
+      ;;applied to  the port; in this case  we convert OUTPUT-BVS
+      ;;to  a  list holding  a  single  bytevector  and save  the
+      ;;position in  POSITION-IN-BUFFER.  When POSITION-IN-BUFFER
+      ;;is   non-false:   OUTPUT-BVS   always  holds   a   single
+      ;;bytevector.   Now the  WRITE! procedure  must distinguish
+      ;;the  two cases:  data fitting  in the  single bytevector,
+      ;;data extending out of the single bytevector.
+      ;;
+      ;;*NOTE*  The  POS field  of  the  cookie  is always  set  by
+      ;;SET-PORT-POSITION!  and the  various functions invoking the
+      ;;WRITE! operation,  we do not need  to set it  here with the
+      ;;single  exception of  the  getter function  which needs  to
+      ;;reset it to zero.
+      ;;
+      (define port
+	(let ((attributes	(output-transcoder-attrs maybe-transcoder who))
+	      ;;For a bytevector  port the buffer index
+	      ;;is always zero.
+	      (buffer-index	0)
+	      (used-buffer-size	bytevector-binary-buffer-size)
+	      (buffer		(make-bytevector bytevector-binary-buffer-size))
+	      (transcoder	maybe-transcoder)
+	      (identifier	"*bytevector-output-port*")
+	      (read!		#f)
+	      (get-position	#t)
+;;;	      (set-position!	#f)
+	      (close		#f)
+	      (cookie		(default-cookie #f)))
+	  (define (write! src.bv src.start count)
+	    (cond ((zero? count)
+		   (values))
+		  (position-in-buffer
+		   (let* ((dst.bv	(car output-bvs))
+			  (total-size	(bytevector-length dst.bv))
+			  (old-position	(cookie-pos cookie))
+			  (delta	(- total-size old-position)))
+		     (if (<= count delta)
+			 ;;The  new  data   fits  in  the  single
+			 ;;bytevector.
+			 (bytevector-copy! src.bv src.start dst.bv old-position count)
+		       (begin
+			 ;;The new  data goes part  in the single
+			 ;;bytevector   and   part   in   a   new
+			 ;;bytevector.
+			 (bytevector-copy! src.bv src.start dst.bv old-position delta)
+			 (let* ((src.start	(+ delta src.start))
+				(delta		(- count delta))
+				(dst.bv		(make-bytevector delta)))
+			   (bytevector-copy! src.bv src.start dst.bv 0 delta)
+			   (set! output-bvs (cons dst.bv output-bvs))
+			   (set! position-in-buffer #f))))))
+		  (else
+		   ;;Prepend a new bytevector to OUTPUT-BVS.
+		   (let ((dst.bv (make-bytevector count)))
+		     (bytevector-copy! src.bv src.start dst.bv 0 count)
+		     (set! output-bvs (cons dst.bv output-bvs)))))
+	    count)
+	  (define (set-position! new-position)
+	    ;;NEW-POSITION  has  already  been validated  by  the
+	    ;;procedure SET-PORT-POSITION!.
+	    ;;
+	    (let ((old-position (cookie-pos cookie)))
+	      (cond ((< old-position new-position)
+		     (raise (condition
+			     (make-who-condition who)
+			     (make-message-condition "attempt to set port position beyond limit")
+			     (make-i/o-invalid-position-error new-position))))
+		    ((> old-position new-position)
+		     (flush-output-port port)
+		     (let-values (((bv bv.len.unused) (append-bytevectors output-bvs)))
+		       (set! output-bvs (list bv)))
+		     (set! position-in-buffer new-position))
+		    (else ;(= old-position new-position)
+		     (values)))))
+	  ($make-port attributes
+		      buffer-index used-buffer-size buffer
+		      transcoder identifier
+		      read! write! get-position set-position! close
+		      cookie)))
+      (define (getter)
+	(unless ($port-closed? port)
+	  (flush-output-port port))
+	(let-values (((bv bv.len.unused) (append-bytevectors output-bvs)))
+	  (set! output-bvs '())
+	  (set-cookie-pos! ($port-cookie port) 0)
+	  bv))
+      (define (append-bytevectors bvs)
+	(let recur ((bvs bvs)
+		    (accumulated-total-length 0))
+	  (cond ((null? bvs)
+		 (values (make-bytevector accumulated-total-length) 0))
+		(else
+		 (let* ((src.bv  (car bvs))
+			(src.len (bytevector-length src.bv)))
+		   (let-values
+		       (((dst.bv next-byte-index)
+			 (recur (cdr bvs) (fx+ src.len accumulated-total-length))))
+		     (bytevector-copy! src.bv 0 dst.bv next-byte-index src.len)
+		     (values dst.bv (fx+ src.len next-byte-index))))))))
+      (values port getter)))))
 
 (define call-with-bytevector-output-port
   (case-lambda
@@ -1719,7 +1940,7 @@
 	       ((fx< b 128)
 		($set-port-index! p (fx+ i 1))
 		(if (eqv? b (char->integer #\newline))
-		    (mark/return-newline p)
+		    (%mark/return-newline p)
 		  (integer->char b)))
 	       (else (get-char-utf8-mode p who)))))
 	   (else
@@ -1731,7 +1952,7 @@
 	    ($set-port-index! p (fx+ i 1))
 	    (let ((c (string-ref ($port-buffer p) i)))
 	      (if (eqv? c #\newline)
-		  (mark/return-newline p)
+		  (%mark/return-newline p)
 		c)))
 	   (else (get-char-char-mode p who)))))
        ((eq? m fast-get-latin-tag)
@@ -1741,7 +1962,7 @@
 	    ($set-port-index! p (fx+ i 1))
 	    (let ((b (bytevector-u8-ref ($port-buffer p) i)))
 	      (if (eqv? b (char->integer #\newline))
-		  (mark/return-newline p)
+		  (%mark/return-newline p)
 		(integer->char b))))
 	   (else
 	    (get-char-latin-mode p who 1)))))
