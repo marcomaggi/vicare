@@ -55,8 +55,8 @@
 ;;Field name: index
 ;;Field accessor: $port-index PORT
 ;;Field Mutator: $set-port-index! PORT IDX
-;;  Zero-based offset of the  current position in the buffer; see
-;;  the description of the BUFFER field below.
+;;  Zero-based  fixnum  offset of  the  current  position in  the
+;;  buffer; see the description of the BUFFER field below.
 ;;
 ;;  For an output port: it is  the offset in the output buffer of
 ;;  the next location to be written to.
@@ -67,8 +67,9 @@
 ;;Field name: size
 ;;Field accessor: $port-size PORT
 ;;Field mutator: $set-port-size! PORT SIZE
-;;  The  number  of  bytes  currently used  in  the  input/output
-;;  buffer; see the description of the BUFFER field below.
+;;  Fixnum representing the number of bytes currently used in the
+;;  input/output buffer; see the  description of the BUFFER field
+;;  below.
 ;;
 ;;  When the device is a  Scheme string or bytevector: this field
 ;;  is  set to  the number  of characters  in the  string  or the
@@ -386,6 +387,118 @@
     (die 'port-id "not a port" p)))
 
 
+(define-syntax with-port
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ (?port) . ?body)
+       (let* ((port-id	#'?port)
+	      (port-str	(symbol->string (syntax->datum port-id))))
+	 (define (%dot-id field-str)
+	   (datum->syntax port-id (string->symbol (string-append port-str field-str))))
+	 (with-syntax
+	     ((PORT.TAG				(%dot-id ".tag"))
+		;fixnum, bits representing the port tag
+	      (PORT.ATTRIBUTES			(%dot-id ".attributes"))
+		;fixnum, bits representing the port attributes
+	      (PORT.BUFFER.INDEX		(%dot-id ".buffer.index"))
+		;fixnum, the offset from the buffer beginning
+	      (PORT.BUFFER.USED-SIZE		(%dot-id ".buffer.used-size"))
+		;fixnum, number of bytes used in the buffer
+	      (PORT.BUFFER			(%dot-id ".buffer"))
+		;bytevector, the buffer
+	      (PORT.TRANSCODER			(%dot-id ".transcoder"))
+		;the transcoder or false
+	      (PORT.ID				(%dot-id ".id"))
+		;string, describes the port
+	      (PORT.READ!			(%dot-id ".read!"))
+		;function or false, the read function
+	      (PORT.WRITE!			(%dot-id ".write!"))
+		;function or false, the write function
+	      (PORT.SET-POSITION!		(%dot-id ".set-position!"))
+		;function or false, the function to set the position
+	      (PORT.GET-POSITION		(%dot-id ".get-position"))
+		;function or false, the function to get the position
+	      (PORT.CLOSE			(%dot-id ".close"))
+		;function or false, the function to close the port
+	      (PORT.COOKIE			(%dot-id ".cookie"))
+		;cookie record
+	      (PORT.HAS-BUFFER?			(%dot-id ".has-buffer?"))
+		;true if the port has a buffer
+	      (PORT.HAS-NO-BUFFER?		(%dot-id ".has-no-buffer?"))
+		;true if the port has no buffer
+	      (PORT.BUFFER.FULL?		(%dot-id ".buffer.full?"))
+		;true if the buffer is full
+	      (PORT.CLOSED?			(%dot-id ".closed?"))
+		;true if the port is closed
+	      (PORT.FAST-ATTRS			(%dot-id ".fast-attrs"))
+		;fixnum, the type attributes bits
+	      (PORT.BUFFER.SIZE			(%dot-id ".buffer.size"))
+		;fixnum, the buffer size
+	      (PORT.BUFFER.ROOM			(%dot-id ".buffer.room"))
+		;fixnum, the number of bytes available in the buffer
+	      (PORT.BUFFER.INDEX.INCR!		(%dot-id ".buffer.index.incr!"))
+		;method, increment the buffer index
+	      (PORT.BUFFER.USED-SIZE.INCR!	(%dot-id ".buffer.used-size.incr!")))
+		;method, increment
+	   #'(let-syntax
+		 ((PORT.TAG		(identifier-syntax ($port-tag		?port)))
+		  (PORT.BUFFER		(identifier-syntax ($port-buffer	?port)))
+		  (PORT.TRANSCODER	(identifier-syntax ($port-transcoder	?port)))
+		  (PORT.ID		(identifier-syntax ($port-id		?port)))
+		  (PORT.READ!		(identifier-syntax ($port-read!		?port)))
+		  (PORT.WRITE!		(identifier-syntax ($port-write!	?port)))
+		  (PORT.SET-POSITION!	(identifier-syntax ($port-set-position!	?port)))
+		  (PORT.GET-POSITION	(identifier-syntax ($port-get-position	?port)))
+		  (PORT.CLOSE		(identifier-syntax ($port-close		?port)))
+		  (PORT.COOKIE		(identifier-syntax ($port-cookie	?port)))
+		  (PORT.CLOSED?		(identifier-syntax ($port-closed?	?port)))
+		  (PORT.FAST-ATTRS	(identifier-syntax ($port-fast-attrs	?port)))
+		  (PORT.HAS-BUFFER?
+		   (identifier-syntax ($port-buffer ?port)))
+		  (PORT.HAS-NO-BUFFER?
+		   (identifier-syntax (not ($port-buffer ?port))))
+		  (PORT.BUFFER.SIZE
+		   (identifier-syntax (bytevector-length ($port-buffer ?port))))
+		  (PORT.ATTRIBUTES
+		   (identifier-syntax
+		    (_
+		     ($port-attrs  ?port))
+		    ((set! id ?value)
+		     ($set-port-attrs! ?port ?value))))
+		  (PORT.BUFFER.INDEX
+		   (identifier-syntax
+		    (_
+		     ($port-index  ?port))
+		    ((set! id ?value)
+		     ($set-port-index! ?port ?value))))
+		  (PORT.BUFFER.USED-SIZE
+		   (identifier-syntax
+		    (_
+		     ($port-size  ?port))
+		    ((set! id ?value)
+		     ($set-port-size! ?port ?value)))))
+	       (let ()
+		 (import UNSAFE) ;for FX+ and FX=
+		 (let-syntax
+		     ((PORT.BUFFER.FULL?
+		       (identifier-syntax (fx= PORT.BUFFER.USED-SIZE PORT.BUFFER.SIZE)))
+		      (PORT.BUFFER.ROOM
+		       (identifier-syntax (fx- PORT.BUFFER.SIZE PORT.BUFFER.INDEX)))
+		      (PORT.BUFFER.INDEX.INCR!
+		       (syntax-rules ()
+			 ((_)
+			  (set! PORT.BUFFER.INDEX (fx+ 1     PORT.BUFFER.INDEX)))
+			 ((_ ?step)
+			  (set! PORT.BUFFER.INDEX (fx+ ?step PORT.BUFFER.INDEX)))))
+		      (PORT.BUFFER.USED-SIZE.INCR!
+		       (syntax-rules ()
+			 ((_)
+			  (set! PORT.BUFFER.USED-SIZE (fx+ 1     PORT.BUFFER.USED-SIZE)))
+			 ((_ ?step)
+			  (set! PORT.BUFFER.USED-SIZE (fx+ ?step PORT.BUFFER.USED-SIZE))))))
+		   . ?body)))))))))
+
+
 ;;;; predicates
 
 (define (port? x)
@@ -653,7 +766,7 @@
 	(G port))
       port)))
 
-(define ($make-custom-binary-port attributes used-buffer-size identifier
+(define ($make-custom-binary-port attributes buffer.used-size identifier
 				  read! write! get-position set-position! close buffer-size)
   ;;Build and  return a new  custom binary port, either  input or
   ;;output.  It is used by the following functions:
@@ -661,17 +774,17 @@
   ;;	make-custom-binary-input-port
   ;;	make-custom-binary-output-port
   ;;
-  (let ((buffer-index	0)
+  (let ((buffer.index	0)
 	(buffer		(make-bytevector buffer-size))
 	(transcoder	#f)
 	(cookie		(default-cookie #f)))
     ($make-port attributes
-		buffer-index used-buffer-size buffer
+		buffer.index buffer.used-size buffer
 		transcoder identifier
 		read! write! get-position set-position! close
 		cookie)))
 
-(define ($make-custom-textual-port attributes used-buffer-size identifier
+(define ($make-custom-textual-port attributes buffer.used-size identifier
 				   read! write! get-position set-position! close buffer-size)
   ;;Build and return  a new custom textual port,  either input or
   ;;output.  It is used by the following functions:
@@ -679,12 +792,12 @@
   ;;	make-custom-textual-input-port
   ;;	make-custom-textual-output-port
   ;;
-  (let ((buffer-index	0)
+  (let ((buffer.index	0)
 	(buffer		(make-string buffer-size))
 	(transcoder	#t)
 	(cookie		(default-cookie #f)))
     ($make-port attributes
-		buffer-index used-buffer-size buffer
+		buffer.index buffer.used-size buffer
 		transcoder identifier
 		read! write! get-position set-position! close
 		cookie)))
@@ -755,10 +868,10 @@
     (die who "get-position is not a procedure or #f"
 	 get-position))
   (let ((attributes		binary-input-port-bits)
-	(used-buffer-size	0)
+	(buffer.used-size	0)
 	(write!			#f)
 	(buffer-size		custom-binary-buffer-size))
-    ($make-custom-binary-port attributes used-buffer-size identifier
+    ($make-custom-binary-port attributes buffer.used-size identifier
 			      read! write! get-position set-position! close buffer-size)))
 
 (define (make-custom-binary-output-port identifier write! get-position set-position! close)
@@ -804,10 +917,10 @@
     (die who "get-position is not a procedure or #f"
 	 get-position))
   (let ((attributes		binary-output-port-bits)
-	(used-buffer-size	custom-binary-buffer-size)
+	(buffer.used-size	custom-binary-buffer-size)
 	(read!			#f)
 	(buffer-size		custom-binary-buffer-size))
-    ($make-custom-binary-port attributes used-buffer-size identifier
+    ($make-custom-binary-port attributes buffer.used-size identifier
 			      read! write! get-position set-position! close buffer-size)))
 
 ;;; --------------------------------------------------------------------
@@ -879,10 +992,10 @@
     (die who "get-position is not a procedure or #f"
 	 get-position))
   (let ((attributes		(fxior textual-input-port-bits fast-char-text-tag))
-	(used-buffer-size	0)
+	(buffer.used-size	0)
 	(write!			#f)
 	(buffer-size		custom-textual-buffer-size))
-    ($make-custom-textual-port attributes used-buffer-size identifier
+    ($make-custom-textual-port attributes buffer.used-size identifier
 			       read! write! get-position set-position! close buffer-size)))
 
 (define (make-custom-textual-output-port identifier write! get-position set-position! close)
@@ -933,10 +1046,10 @@
     (die who "get-position is not a procedure or #f"
 	 get-position))
   (let ((attributes		(fxior textual-output-port-bits fast-char-text-tag))
-	(used-buffer-size	custom-textual-buffer-size)
+	(buffer.used-size	custom-textual-buffer-size)
 	(read!			#f)
 	(buffer-size		custom-textual-buffer-size))
-    ($make-custom-textual-port attributes used-buffer-size identifier
+    ($make-custom-textual-port attributes buffer.used-size identifier
 			       read! write! get-position set-position! close buffer-size)))
 
 
@@ -969,7 +1082,7 @@
 	 (die who "unsupported codec" (transcoder-codec x)))))
 
 
-;;;; bytevector ports
+;;;; bytevector input ports
 
 (define open-bytevector-input-port
   (case-lambda
@@ -1000,8 +1113,8 @@
     (when (and maybe-transcoder (not (transcoder? maybe-transcoder)))
       (die who "not a transcoder" maybe-transcoder))
     (let ((attributes		(input-transcoder-attrs maybe-transcoder who))
-	  (buffer-index		0)
-	  (used-buffer-size	(bytevector-length bv))
+	  (buffer.index		0)
+	  (buffer.used-size	(bytevector-length bv))
 	  (buffer		bv)
 	  (transcoder		maybe-transcoder)
 	  (identifier		"*bytevector-input-port*")
@@ -1012,10 +1125,13 @@
 	  (close		#f)
 	  (cookie		(default-cookie #f)))
       ($make-port attributes
-		  buffer-index used-buffer-size buffer
+		  buffer.index buffer.used-size buffer
 		  transcoder identifier
 		  read! write! get-position set-position! close
 		  cookie)))))
+
+
+;;;; bytevector output ports
 
 (define open-bytevector-output-port
   (case-lambda
@@ -1081,8 +1197,8 @@
 	(let ((attributes	(output-transcoder-attrs maybe-transcoder who))
 	      ;;For a bytevector  port the buffer index
 	      ;;is always zero.
-	      (buffer-index	0)
-	      (used-buffer-size	bytevector-binary-buffer-size)
+	      (buffer.index	0)
+	      (buffer.used-size	bytevector-binary-buffer-size)
 	      (buffer		(make-bytevector bytevector-binary-buffer-size))
 	      (transcoder	maybe-transcoder)
 	      (identifier	"*bytevector-output-port*")
@@ -1137,7 +1253,7 @@
 		    (else ;(= old-position new-position)
 		     (values)))))
 	  ($make-port attributes
-		      buffer-index used-buffer-size buffer
+		      buffer.index buffer.used-size buffer
 		      transcoder identifier
 		      read! write! get-position set-position! close
 		      cookie)))
@@ -1192,37 +1308,187 @@
       (getter)))))
 
 
+;;;; binary ports, output to
+
+(module (put-u8 put-bytevector)
+  (import UNSAFE)
+
+  (define (put-u8 port byte)
+    ;;Defined by R6RS.  Write BYTE  to the output port and return
+    ;;unspecified values.
+    ;;
+    (define who 'put-u8)
+    (unless (u8? byte)
+      (die who "not a u8" byte))
+    (with-port (port)
+      (cond ((fx= fast-put-byte-tag port.fast-attrs)
+	     (if port.has-no-buffer?
+		 (put-byte/unbuffered! port byte who)
+	       (let try-again-after-flushing-buffer ()
+		 (if (fx< port.buffer.index port.buffer.size)
+		     ;;The buffer exists and  it has room for one
+		     ;;byte.
+		     (begin
+		       (assert (fx<= port.buffer.index port.buffer.used-size))
+		       (bytevector-u8-set! port.buffer port.buffer.index byte)
+		       (when (fx= port.buffer.index port.buffer.used-size)
+			 (port.buffer.used-size.incr!))
+		       (port.buffer.index.incr!))
+		   ;;The buffer exists but  it has no room: flush
+		   ;;the buffer and try again.
+		   (begin
+		     (assert (= port.buffer.used-size port.buffer.index))
+		     (assert (= port.buffer.used-size port.buffer.size))
+		     (flush-output-port port)
+		     (try-again-after-flushing-buffer))))))
+	    ((output-port? port)
+	     (die who "not a binary port" port))
+	    (else
+	     (die who "not an output port" port)))))
+
+  (define put-bytevector
+    ;;(put-bytevector port bv)
+    ;;(put-bytevector port bv start)
+    ;;(put-bytevector port bv start count)
+    ;;
+    ;;START and COUNT must  be non-negative exact integer objects
+    ;;that default to 0 and:
+    ;;
+    ;; (- (bytevector-length BV) START)
+    ;;
+    ;;respectively.   BV   must  have   a  length  of   at  least
+    ;;START+COUNT.  The PUT-BYTEVECTOR procedure writes the COUNT
+    ;;bytes of the  bytevector BV starting at index  START to the
+    ;;output   port.    The   PUT-BYTEVECTOR  procedure   returns
+    ;;unspecified values.
+    ;;
+    (put-string/bv 'put-bytevector "not a bytevector"
+		   bytevector? bytevector-length $put-bytevector))
+
+  (define ($put-bytevector port src.bv src.start count)
+    ;;Write COUNT bytes from  the bytevector SRC.BV to the binary
+    ;;output   PORT  starting   at   offset  SRC.START.    Return
+    ;;unspecified values.
+    ;;
+    (define who 'put-bytevector)
+    (with-port (port)
+      (cond ((fx= fast-put-byte-tag port.fast-attrs)
+	     (if port.has-no-buffer?
+		 ;;Write  bytes  one  by  one to  the  underlying
+		 ;;device.
+		 (let next-byte ((index src.start)
+				 (last  (fx+ src.start count)))
+		   (unless (fx= index last)
+		     (put-byte/unbuffered! port (bytevector-u8-ref src.bv index) who)
+		     (next-byte (fx+ 1 index) last)))
+	       ;;Write  bytes to  the buffer  and, if  the buffer
+	       ;;fills up, to the underlying device.
+	       (let try-again-after-flushing-buffer ((room port.buffer.room))
+		 (define (copy! src.bv src.start dst.bv dst.start count)
+;;;FIXME We are not using  BYTEVECTOR-COPY! here in an attempt to
+;;;have  more  efficiency  because  we  know  the  arguments  are
+;;;correct.   It would  be  better  to replace  COPY!   with a  C
+;;;implemented  function not  validating  its arguments.   (Marco
+;;;Maggi; Aug 31, 2011)
+		   (when (fx> count 0)
+		     (bytevector-u8-set! dst.bv dst.start (bytevector-u8-ref src.bv src.start))
+		     (copy! src.bv (fx+ src.start 1) dst.bv (fx+ dst.start 1) (fx- count 1))))
+		 (cond ((fx= 0 room)
+			;;The buffer exists and it is full.
+			(flush-output-port port)
+			(try-again-after-flushing-buffer port.buffer.room))
+		       ((fx<= count room)
+			;;The buffer  exists and there  is enough
+			;;room for all of SRC.BV.
+			(copy! src.bv src.start port.buffer port.buffer.index count)
+			(port.buffer.index.incr! count)
+			(when (fx< port.buffer.used-size port.buffer.index)
+			  (set! port.buffer.used-size port.buffer.index)))
+		       (else
+			;;The buffer exists  and it can hold some
+			;;but not all of SRC.BV.
+			(assert (fx> count room))
+			(copy! src.bv src.start port.buffer port.buffer.index room)
+			(set! port.buffer.index     port.buffer.size)
+			(set! port.buffer.used-size port.buffer.index)
+			(flush-output-port port)
+			(try-again-after-flushing-buffer port.buffer.room))))))
+	    ((output-port? port)
+	     (die who "not a binary port" port))
+	    (else
+	     (die who "not an output port" port))))))
+
+
 ;;;; string output ports
 
 (define (open-output-string)
-  ;;Defined by Ikarus.
+  ;;Defined  by Ikarus.  Build  and return  a new  textual output
+  ;;port serving as sink to a Scheme string.
   ;;
-  (define who 'open-output-string)
-  (let ((cookie		(default-cookie '()))
-	(buffer-size	256))
-    ($make-port (fxior textual-output-port-bits fast-char-text-tag)
-		0 buffer-size (make-string buffer-size)
-		#t ;;; transcoder
-		"*string-output-port*"
-		#f
-		(lambda (str i c)
-		  (unless (= c 0)
-		    (let ((x (make-string c)))
-		      (string-copy! str i x 0 c)
-		      (set-cookie-dest! cookie (cons x (cookie-dest cookie)))))
-		  c)
-		#t ;;; get-position
-		#f ;;; set-position!
-		#f ;;; close!
+  (let* ((attributes		(fxior textual-output-port-bits fast-char-text-tag))
+	 (buffer.index		0)
+	 (buffer.used-size	256)
+	 (buffer		(make-string buffer.used-size))
+	 (transcoder		#t)
+	 (identifier		"*string-output-port*")
+	 (read!			#f)
+	 (get-position		#t)
+	 (set-position!		#f)
+	 (close			#f)
+	 (cookie		(default-cookie '())))
+    (define (write! src.str src.start count)
+      (unless (zero? count)
+	(let ((dst.str (make-string count)))
+	  (string-copy! src.str src.start dst.str 0 count)
+	  (set-cookie-dest! cookie (cons dst.str (cookie-dest cookie)))))
+      count)
+    ($make-port attributes
+		buffer.index buffer.used-size buffer
+		transcoder identifier
+		read! write! get-position set-position! close
 		cookie)))
 
-(define (open-string-output-port)
-  (let ((p (open-output-string)))
-    (values p (lambda ()
-		(let ((str (get-output-string p)))
-		  (set-cookie-dest! ($port-cookie p) '())
-		  str)))))
+(define (get-output-string port)
+  (define who 'get-output-string)
+  (define (main port)
+    (if (port? port)
+	(let ((cookie ($port-cookie port)))
+	  (cond ((and (cookie? cookie)
+		      (let ((x (cookie-dest cookie)))
+			(or (null? x) (pair? x))))
+		 (unless ($port-closed? port)
+		   (flush-output-port port))
+		 (get-output-string-cookie-data cookie))
+		(else
+		 (die who "not an output-string port" port))))
+      (die who "not a port" port)))
 
+  (define (get-output-string-cookie-data cookie)
+    (define (append-str-buf* ls)
+      (let f ((ls ls) (i 0))
+	(cond ((null? ls)
+	       (values (make-string i) 0))
+	      (else
+	       (let* ((a (car ls))
+		      (n (string-length a)))
+		 (let-values (((bv i) (f (cdr ls) (fx+ i n))))
+		   (string-copy! a 0 bv i n)
+		   (values bv (fx+ i n))))))))
+    (let ((buf* (cookie-dest cookie)))
+      (let-values (((bv len) (append-str-buf* buf*)))
+	bv)))
+
+  (main port))
+
+;;; --------------------------------------------------------------------
+
+(define (open-string-output-port)
+  (let* ((port   (open-output-string))
+	 (getter (lambda ()
+		   (let ((str (get-output-string port)))
+		     (set-cookie-dest! ($port-cookie port) '())
+		     str))))
+    (values port getter)))
 
 (define (call-with-string-output-port proc)
   (define who 'call-with-string-output-port)
@@ -1251,34 +1517,6 @@
     (die who "not a textual port" p))
   (parameterize ((current-output-port p))
     (proc)))
-
-(define (get-output-string-cookie-data cookie)
-  (define (append-str-buf* ls)
-    (let f ((ls ls) (i 0))
-      (cond ((null? ls)
-	     (values (make-string i) 0))
-	    (else
-	     (let* ((a (car ls))
-		    (n (string-length a)))
-	       (let-values (((bv i) (f (cdr ls) (fx+ i n))))
-		 (string-copy! a 0 bv i n)
-		 (values bv (fx+ i n))))))))
-  (let ((buf* (cookie-dest cookie)))
-    (let-values (((bv len) (append-str-buf* buf*)))
-      bv)))
-
-(define (get-output-string p)
-  (if (port? p)
-      (let ((cookie ($port-cookie p)))
-	(cond ((and (cookie? cookie)
-		    (let ((x (cookie-dest cookie)))
-		      (or (null? x) (pair? x))))
-	       (unless ($port-closed? p)
-		 (flush-output-port p))
-	       (get-output-string-cookie-data cookie))
-	      (else
-	       (die 'get-output-string "not an output-string port" p))))
-    (die 'get-output-string "not a port" p)))
 
 
 ;;;; string input ports
@@ -1356,14 +1594,14 @@
     (die 'port-transcoder "not a port" p)))
 
 
-(define ($port-closed? p)
-  (import UNSAFE)
-  (not (fx= (fxand ($port-attrs p) closed-port-tag) 0)))
-
 (define (port-closed? p)
   (if (port? p)
       ($port-closed? p)
     (error 'port-closed? "not a port" p)))
+
+(define ($port-closed? p)
+  (import UNSAFE)
+  (not (fx= (fxand ($port-attrs p) closed-port-tag) 0)))
 
 (define ($mark-port-closed! p)
   ($set-port-attrs! p
@@ -1384,33 +1622,38 @@
     (die 'set-port-mode! "not a port" p)))
 
 (define (put-byte/unbuffered! p b who)
-  (when ($port-closed? p) (die who "port is closed" p))
+  (when ($port-closed? p)
+    (die who "port is closed" p))
   (let ((bv (make-bytevector 1)))
     (bytevector-u8-set! bv 0 b)
     (let ((bytes (($port-write! p) bv 0 1)))
-      (cond
-       ((eq? bytes 1)
-	(let ((cookie ($port-cookie p)))
-	  (set-cookie-pos! cookie (+ (cookie-pos cookie) 1))))
-       ((eq? bytes 0)
-	($mark-port-closed! p)
-	(die who "could not write bytes to sink"))
-       (else
-	(die who "invalid return value from write! proc" bytes p))))))
+      ;;We  need to  account for  the case  the  WRITE!  function
+      ;;returns  an  incorrect value,  for  example a  non-fixnum
+      ;;value.
+      (cond ((eq? bytes 1)
+	     (let ((cookie ($port-cookie p)))
+	       (set-cookie-pos! cookie (+ (cookie-pos cookie) 1))))
+	    ((eq? bytes 0)
+	     ($mark-port-closed! p)
+	     (die who "could not write bytes to sink"))
+	    (else
+	     (die who "invalid return value from write! proc" bytes p))))))
 
 (define (put-char/unbuffered! p c who)
   (when ($port-closed? p) (die who "port is closed" p))
   (let ((str (string c)))
     (let ((bytes (($port-write! p) str 0 1)))
-      (cond
-       ((eq? bytes 1)
-	(let ((cookie ($port-cookie p)))
-	  (set-cookie-pos! cookie (+ (cookie-pos cookie) 1))))
-       ((eq? bytes 0)
-	($mark-port-closed! p)
-	(die who "could not write char to sink"))
-       (else
-	(die who "invalid return value from write! proc" bytes p))))))
+      ;;We  need to  account for  the case  the  WRITE!  function
+      ;;returns  an  incorrect value,  for  example a  non-fixnum
+      ;;value.
+      (cond ((eq? bytes 1)
+	     (let ((cookie ($port-cookie p)))
+	       (set-cookie-pos! cookie (+ (cookie-pos cookie) 1))))
+	    ((eq? bytes 0)
+	     ($mark-port-closed! p)
+	     (die who "could not write char to sink"))
+	    (else
+	     (die who "invalid return value from write! proc" bytes p))))))
 
 
 (define flush-output-port
@@ -2875,71 +3118,6 @@
     (put-char p #\newline)
     (flush-output-port p))))
 
-(module (put-u8 put-bytevector)
-  (import UNSAFE)
-    ;;;
-  (define (put-u8 p b)
-    (define who 'put-u8)
-    (unless (u8? b) (die who "not a u8" b))
-    (let ((m ($port-fast-attrs p)))
-      (cond
-       ((eq? m fast-put-byte-tag)
-	(let ((i ($port-index p)) (j ($port-size p)))
-	  (if (fx< i j)
-	      (begin
-		(bytevector-u8-set! ($port-buffer p) i b)
-		($set-port-index! p (fx+ i 1)))
-	    (if (fx= j 0)
-		(put-byte/unbuffered! p b who)
-	      (begin
-		(flush-output-port p)
-		(put-u8 p b))))))
-       (else
-	(if (output-port? p)
-	    (die who "not a binary port" p)
-	  (die who "not an output port" p))))))
-    ;;;
-  (define ($put-bytevector p bv i c)
-    (define who 'put-bytevector)
-    (define (copy! src dst si di c)
-      (when (fx> c 0)
-	(bytevector-u8-set! dst di (bytevector-u8-ref src si))
-	(copy! src dst (fx+ si 1) (fx+ di 1) (fx- c 1))))
-    (let ((m ($port-fast-attrs p)))
-      (cond
-       ((eq? m fast-put-byte-tag)
-	(let ((idx ($port-index p)) (j ($port-size p)))
-	  (let ((room (fx- j idx)))
-	    (cond
-	     ((fx>= room c)
-	      ;; hurray
-	      (copy! bv ($port-buffer p) i idx c)
-	      ($set-port-index! p (fx+ idx c)))
-	     ((fx> room 0)
-	      ($set-port-index! p (fx+ idx room))
-	      (copy! bv ($port-buffer p) i idx room)
-	      (flush-output-port p)
-	      ($put-bytevector p bv (fx+ i room) (fx- c room)))
-	     ((fx> j 0)
-	      (flush-output-port p)
-	      ($put-bytevector p bv i c))
-	     (else
-	      (let f ((i i) (j (fx+ i c)))
-		(unless (fx= i j)
-		  (put-byte/unbuffered! p (bytevector-u8-ref bv i) who)
-		  (f (fx+ i 1) j))))))))
-       (else
-	(if (output-port? p)
-	    (die who "not a binary port" p)
-	  (die who "not an output port" p))))))
-
-  (define put-bytevector
-    (put-string/bv 'put-bytevector "not a bytevector"
-		   bytevector? bytevector-length $put-bytevector))
-
-    ;;; module
-  )
-
 
 (define (pair->env-utf8 pair)
   (let* ((key-utf8 (string->utf8 (car pair)))
@@ -3313,4 +3491,5 @@
 ;;; end of file
 ;;; Local Variables:
 ;;; fill-column: 65
+;;; eval: (put 'with-port 'scheme-indent-function 1)
 ;;; End:
