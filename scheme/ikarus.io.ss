@@ -2134,8 +2134,10 @@
 
 
 (define (%refill-bytevector-buffer port who)
-  ;;Defined by Ikarus.  Assume PORT  is an input port object with
-  ;;input buffer.
+  ;;Defined  by Ikarus.   Assume  PORT is  an  input binary  port
+  ;;object with  input buffer.  Fill the input  buffer keeping in
+  ;;it the bytes already there  but not yet consumed.  Return the
+  ;;number of new bytes loaded.
   ;;
   (with-binary-port (port)
     (when port.closed?
@@ -2165,7 +2167,19 @@
 	    (bytevector-copy! buffer port.buffer.index buffer 0 delta))
 	  (set! port.buffer.index     0)
 	  (set! port.buffer.used-size delta))
-	;;Fill the buffer with data from the device.
+	;;Fill the buffer with data from the device.  Before:
+	;;
+	;;                                buffer
+	;;  |+***********+-------------------|
+	;;   ^           ^
+	;; index     used size
+	;;
+	;;after:
+	;;
+	;;                                buffer
+	;;  |+*******************************|
+	;;   ^                               ^
+	;; index                         used size
 	;;
 	(let* ((max   (fx- port.buffer.size port.buffer.used-size))
 	       (count (port.read! buffer port.buffer.used-size max)))
@@ -2180,22 +2194,82 @@
 
 (module (read-char get-char lookahead-char)
   (import UNSAFE)
-  (define (get-char-latin-mode p who inc)
-    (let ((n (%refill-bytevector-buffer p who)))
+
+  (define (get-char p)
+    (do-get-char p 'get-char))
+
+  (define read-char
+    (case-lambda
+     ((p)
+      (do-get-char p 'read-char))
+     (()
+      (do-get-char (current-input-port) 'read-char))))
+
+  (define (do-get-char p who)
+    (let ((m ($port-fast-attrs p)))
       (cond
-       ((fx= n 0) (eof-object))
+       ((eq? m fast-get-utf8-tag)
+	(let ((i ($port-index p)))
+	  (cond
+	   ((fx< i ($port-size p))
+	    (let ((b (bytevector-u8-ref ($port-buffer p) i)))
+	      (cond
+	       ((fx< b 128)
+		($set-port-index! p (fx+ i 1))
+		(if (eqv? b (char->integer #\newline))
+		    (%mark/return-newline p)
+		  (integer->char b)))
+	       (else (get-char-utf8-mode p who)))))
+	   (else
+	    (get-char-utf8-mode p who)))))
+       ((eq? m fast-get-char-tag)
+	(let ((i ($port-index p)))
+	  (cond
+	   ((fx< i ($port-size p))
+	    ($set-port-index! p (fx+ i 1))
+	    (let ((c (string-ref ($port-buffer p) i)))
+	      (if (eqv? c #\newline)
+		  (%mark/return-newline p)
+		c)))
+	   (else (get-char-char-mode p who)))))
+       ((eq? m fast-get-latin-tag)
+	(let ((i ($port-index p)))
+	  (cond
+	   ((fx< i ($port-size p))
+	    ($set-port-index! p (fx+ i 1))
+	    (let ((b (bytevector-u8-ref ($port-buffer p) i)))
+	      (if (eqv? b (char->integer #\newline))
+		  (%mark/return-newline p)
+		(integer->char b))))
+	   (else
+	    (get-char-latin-mode p who 1)))))
+       ((eq? m fast-get-utf16le-tag) (get-utf16 p who 'little))
+       ((eq? m fast-get-utf16be-tag) (get-utf16 p who 'big))
        (else
-	(let ((idx ($port-index p)))
-	  ($set-port-index! p (fx+ idx inc))
-	  (integer->char (bytevector-u8-ref ($port-buffer p) idx)))))))
+	(if (speedup-input-port p who)
+	    (eof-object)
+	  (do-get-char p who))))))
+
+  (define (get-char-latin-mode port who inc)
+    (with-textual-port (port)
+      (let ((count (%refill-bytevector-buffer port who)))
+	(if (fx= count 0)
+	    (eof-object)
+	  (let ((old-buffer.index port.buffer.index))
+	    (port.buffer.index.incr! inc)
+	    (integer->char (bytevector-u8-ref port.buffer old-buffer.index)))))))
+
   (define (get-char-utf8-mode p who)
     (define (do-error p who)
       (case (transcoder-error-handling-mode ($port-transcoder p))
-	((ignore)  (get-char p))
-	((replace) #\xFFFD)
+	((ignore)
+	 (get-char p))
+	((replace)
+	 #\xFFFD)
 	((raise)
 	 (raise (make-i/o-decoding-error p)))
-	(else (die who "cannot happen"))))
+	(else
+	 (die who "cannot happen"))))
     (let ((i ($port-index p))
 	  (j ($port-size p))
 	  (buf ($port-buffer p)))
@@ -2376,12 +2450,12 @@
 		  (do-error p who))
 		 (else (lookahead-char-utf8-mode p who)))))))
 	   (else (do-error p who))))))))
-    ;;;
+;;;
   (define (advance-bom p who bom-seq)
-      ;;; return eof if port is eof,
-      ;;; #t if a bom is present, updating the port index to
-      ;;;    point just past the bom.
-      ;;; #f otherwise.
+;;; return eof if port is eof,
+;;; #t if a bom is present, updating the port index to
+;;;    point just past the bom.
+;;; #f otherwise.
     (cond
      ((fx< ($port-index p) ($port-size p))
       (let f ((i 0) (ls bom-seq))
@@ -2407,9 +2481,9 @@
 	(if (fx= bytes 0)
 	    (eof-object)
 	  (advance-bom p who bom-seq))))))
-    ;;;
+;;;
   (define (speedup-input-port p who)
-      ;;; returns #t if port is eof, #f otherwise
+;;; returns #t if port is eof, #f otherwise
     (unless (input-port? p)
       (die who "not an input port" p))
     (when ($port-closed? p)
@@ -2440,7 +2514,7 @@
 	     (else #t))))
 	(else
 	 (die who "BUG: codec not handled" (transcoder-codec tr))))))
-    ;;;
+;;;
   (define (lookahead-char-char-mode p who)
     (let ((str ($port-buffer p))
 	  (read! ($port-read! p)))
@@ -2460,7 +2534,7 @@
 	    (eof-object))
 	   (else
 	    (string-ref str 0)))))))
-    ;;;
+;;;
   (define (lookahead-char p)
     (define who 'lookahead-char)
     (let ((m ($port-fast-attrs p)))
@@ -2496,7 +2570,7 @@
 	(if (speedup-input-port p who)
 	    (eof-object)
 	  (lookahead-char p))))))
-    ;;;
+;;;
   (define (get-char-char-mode p who)
     (let ((str ($port-buffer p))
 	  (read! ($port-read! p)))
@@ -2624,56 +2698,7 @@
 	  (if (fx= bytes 0)
 	      (eof-object)
 	    (get-utf16 p who endianness)))))))
-  (define (get-char p)
-    (do-get-char p 'get-char))
-  (define read-char
-    (case-lambda
-     ((p) (do-get-char p 'read-char))
-     (() (do-get-char (current-input-port) 'read-char))))
-  (define (do-get-char p who)
-    (let ((m ($port-fast-attrs p)))
-      (cond
-       ((eq? m fast-get-utf8-tag)
-	(let ((i ($port-index p)))
-	  (cond
-	   ((fx< i ($port-size p))
-	    (let ((b (bytevector-u8-ref ($port-buffer p) i)))
-	      (cond
-	       ((fx< b 128)
-		($set-port-index! p (fx+ i 1))
-		(if (eqv? b (char->integer #\newline))
-		    (%mark/return-newline p)
-		  (integer->char b)))
-	       (else (get-char-utf8-mode p who)))))
-	   (else
-	    (get-char-utf8-mode p who)))))
-       ((eq? m fast-get-char-tag)
-	(let ((i ($port-index p)))
-	  (cond
-	   ((fx< i ($port-size p))
-	    ($set-port-index! p (fx+ i 1))
-	    (let ((c (string-ref ($port-buffer p) i)))
-	      (if (eqv? c #\newline)
-		  (%mark/return-newline p)
-		c)))
-	   (else (get-char-char-mode p who)))))
-       ((eq? m fast-get-latin-tag)
-	(let ((i ($port-index p)))
-	  (cond
-	   ((fx< i ($port-size p))
-	    ($set-port-index! p (fx+ i 1))
-	    (let ((b (bytevector-u8-ref ($port-buffer p) i)))
-	      (if (eqv? b (char->integer #\newline))
-		  (%mark/return-newline p)
-		(integer->char b))))
-	   (else
-	    (get-char-latin-mode p who 1)))))
-       ((eq? m fast-get-utf16le-tag) (get-utf16 p who 'little))
-       ((eq? m fast-get-utf16be-tag) (get-utf16 p who 'big))
-       (else
-	(if (speedup-input-port p who)
-	    (eof-object)
-	  (do-get-char p who)))))))
+  )
 
 
 (module (get-u8 lookahead-u8)
@@ -3955,4 +3980,6 @@
 ;;; Local Variables:
 ;;; fill-column: 65
 ;;; eval: (put 'with-port 'scheme-indent-function 1)
+;;; eval: (put 'with-binary-port 'scheme-indent-function 1)
+;;; eval: (put 'with-textual-port 'scheme-indent-function 1)
 ;;; End:
