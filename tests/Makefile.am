@@ -6,7 +6,8 @@ VICARE_SELECTED_TESTS	= $(wildcard $(testdir)/test-*$(file)*.sps)
 VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
 VICARE_FLAGS	= -b $(VICARE_BOOT) --debug --r6rs-script
-VICARE_ENV	= VICARE_LIBRARY_PATH=$(srcdir):$(srcdir)/../lib CHECK_TEST_NAME=$(name)
+VICARE_ENV	= VICARE_LIBRARY_PATH=$(srcdir):$(srcdir)/../lib CHECK_TEST_NAME=$(name) \
+		  VICARE_SRC_DIR=$(srcdir)
 VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
 
 .PHONY: test tests test-r6rs

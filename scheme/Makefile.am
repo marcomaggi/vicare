@@ -56,7 +56,6 @@ EXTRA_DIST=ikarus.boot.4.prebuilt ikarus.boot.8.prebuilt last-revision \
   tests/framework.ss \
   tests/guardians.ss \
   tests/hashtables.ss \
-  tests/io.ss \
   tests/lists.ss \
   tests/normalization.ss \
   tests/numerics.ss \
