@@ -2256,40 +2256,9 @@
        (import UNSAFE)
        (if (fx< ?buffer.offset ($port-size ?port))
 	   (begin . ?available-data-body)
-	 (let ((count (%refill-bytevector-buffer ?port ?who)))
-	   (if (fx= 0 count)
-	       (begin . ?end-of-file-body)
-	     (begin . ?after-refill-body))))))))
-
-(define-syntax maybe-refill-buffer-return-eof-or-retry-or
-  ;;?PORT  must be  an input  port with  a bytevector  as buffer;
-  ;;there is  no constraint on  the state of the  buffer.  Refill
-  ;;the buffer if needed and evaluate a sequence of forms.
-  ;;
-  ;;The  code in  this  macro  mutates the  fields  of the  ?PORT
-  ;;structure representing the buffer  state, so the client forms
-  ;;must reload the fields they use.
-  ;;
-  ;;If there  are bytes  to be consumed  in the  buffer: evaluate
-  ;;?AVAILABLE-DATA-BODY and return its result.
-  ;;
-  ;;If  the buffer  is fully  consumed and  refilling  the buffer
-  ;;succeeds:   evaluate  ?AVAILABLE-DATA-BODY  and   return  its
-  ;;result.
-  ;;
-  ;;If  the buffer  is fully  consumed and  refilling  the buffer
-  ;;finds the  EOF with  no new bytes  available: return  the EOF
-  ;;object.
-  ;;
-  (syntax-rules (if-available-data:)
-    ((maybe-refill-buffer-return-eof-or-retry-or (?port ?who)
-       (if-available-data: . ?available-data-body))
-     (let retry-after-filling-buffer ()
-       (maybe-refill-buffer-and-evaluate (?port ?who)
-	 (data-is-needed-at:	($port-index ?port))
-	 (if-end-of-file:	(eof-object))
-	 (if-successful-refill:	(retry-after-filling-buffer))
-	 (if-available-data:	. ?available-data-body))))))
+	 (refill-buffer-and-evaluate (?port ?who)
+	   (if-end-of-file:		. ?end-of-file-body)
+	   (if-successful-refill:	. ?after-refill-body)))))))
 
 (define (%refill-bytevector-buffer port who)
   ;;Defined by Ikarus.  Assume PORT  is an input port object with
@@ -2403,16 +2372,21 @@
 	 ;;case of single-byte character available in the buffer,
 	 ;;else  we  call the  specialised  function for  reading
 	 ;;UTF-8 chars.
-	 (maybe-refill-buffer-return-eof-or-retry-or (port who)
-	   (if-available-data:
-	    (let ((byte0 (bytevector-u8-ref port.buffer port.buffer.index)))
-	      (if (utf-8-single-byte? byte0)
-		  (begin
-		    (port.buffer.index.incr! 1)
-		    (if (fx= byte0 newline-integer)
-			(%mark/return-newline port)
-		      (integer->char byte0)))
-		(get-char-utf8-mode port who))))))
+	 (let retry-after-filling-buffer ()
+	   (let ((buffer.offset-byte0 port.buffer.index))
+	     (maybe-refill-buffer-and-evaluate (port who)
+	       (data-is-needed-at: buffer.offset-byte0)
+	       (if-end-of-file: (eof-object))
+	       (if-successful-refill: (retry-after-filling-buffer))
+	       (if-available-data:
+		(let ((byte0 (bytevector-u8-ref port.buffer buffer.offset-byte0)))
+		  (if (utf-8-single-byte? byte0)
+		      (begin
+			(set! port.buffer.index (fx+ 1 buffer.offset-byte0))
+			(if (fx= byte0 newline-integer)
+			    (%mark/return-newline port)
+			  (integer->char byte0)))
+		    (get-char-utf8-mode port who byte0))))))))
 
 	((fast-get-char-tag)
 	 ;;The PORT is a textual  input port with a Scheme string
@@ -2420,14 +2394,18 @@
 	 ;;char  available  in  the  buffer,  else  we  call  the
 	 ;;specialised function for reading characters.
 	 (let ((buffer.offset port.buffer.index))
-	   (if (fx< buffer.offset port.buffer.used-size)
-	       (begin
-		 (set! port.buffer.index (fx+ 1 buffer.offset))
-		 (let ((ch (string-ref port.buffer buffer.offset)))
-		   (if (eqv? ch #\newline)
-		       (%mark/return-newline port)
-		     ch)))
-	     (get-char-char-mode port who))))
+	   (cond ((fx< buffer.offset port.buffer.used-size)
+		  (set! port.buffer.index (fx+ 1 buffer.offset))
+		  (let ((ch (string-ref port.buffer buffer.offset)))
+		    (if (eqv? ch #\newline)
+			(%mark/return-newline port)
+		      ch)))
+		 ((eq? port.read! all-data-in-buffer)
+		  ;;The  buffer itself  is the  device and  it is
+		  ;;fully consumed.
+		  (eof-object))
+		 (else
+		  (get/lookahead-char-char-mode port who 1)))))
 
 	((fast-get-latin-tag)
 	 ;;The  PORT  is  a  binary  input port  with  a  Latin-1
@@ -2440,10 +2418,10 @@
 	   (if (fx< buffer.offset port.buffer.used-size)
 	       (begin
 		 (set! port.buffer.index (fx+ 1 buffer.offset))
-		 (let ((b (bytevector-u8-ref port.buffer buffer.offset)))
-		   (if (eqv? b newline-integer)
+		 (let ((byte (bytevector-u8-ref port.buffer buffer.offset)))
+		   (if (eqv? byte newline-integer)
 		       (%mark/return-newline port)
-		     (integer->char b))))
+		     (integer->char byte))))
 	     (get/lookahead-char-latin-mode port who 1))))
 
 	((fast-get-utf16le-tag)
@@ -2495,13 +2473,17 @@
 	 ;;case of one single  byte char available in the buffer,
 	 ;;else we call the specialised function for reading UTF8
 	 ;;characters.
-	 (let ((i port.buffer.index))
-	   (if (fx< i port.buffer.used-size)
-	       (let ((b (bytevector-u8-ref port.buffer i)))
-		 (if (fx< b 128)
-		     (integer->char b)
-		   (lookahead-char-utf8-mode port who)))
-	     (lookahead-char-utf8-mode port who))))
+	 (let retry-after-filling-buffer ()
+	   (let ((buffer.offset-byte0 port.buffer.index))
+	     (maybe-refill-buffer-and-evaluate (port who)
+	       (data-is-needed-at: buffer.offset-byte0)
+	       (if-end-of-file: (eof-object))
+	       (if-successful-refill: (retry-after-filling-buffer))
+	       (if-available-data:
+		(let ((byte0 (bytevector-u8-ref port.buffer buffer.offset-byte0)))
+		  (if (utf-8-single-byte? byte0)
+		      (integer->char byte0)
+		    (lookahead-char-utf8-mode port who byte0))))))))
 
 	((fast-get-char-tag)
 	 ;;The PORT is a textual  input port with a Scheme string
@@ -2509,9 +2491,14 @@
 	 ;;char  available  in  the  buffer,  else  we  call  the
 	 ;;specialised function for reading characters.
 	 (let ((i port.buffer.index))
-	   (if (fx< i port.buffer.used-size)
-	       (string-ref port.buffer i)
-	     (lookahead-char-char-mode port who))))
+	   (cond ((fx< i port.buffer.used-size)
+		  (string-ref port.buffer i))
+		 ((eq? port.read! all-data-in-buffer)
+		  ;;The  buffer itself  is the  device and  it is
+		  ;;fully consumed.
+		  (eof-object))
+		 (else
+		  (get/lookahead-char-char-mode port who 0)))))
 
 	((fast-get-latin-tag)
 	 ;;The  PORT  is  a  binary  input port  with  a  Latin-1
@@ -2547,34 +2534,28 @@
 ;;; --------------------------------------------------------------------
 ;;; GET-CHAR and LOOKAHEAD-CHAR for ports with UTF-8 transcoder
 
-  (define (get-char-utf8-mode port who)
+  (define (get-char-utf8-mode port who byte0)
     ;;Subroutine of DO-GET-CHAR.  Read  from a textual input PORT
     ;;a UTF-8 encoded character for the cases of 2, 3 and 4 bytes
     ;;encoding;  the  case  of  1-byte  encoding  is  handled  by
     ;;DO-GET-CHAR.
+    ;;
+    ;;BYTE0  is the  first byte  of the  UTF-8  sequence, already
+    ;;extracted by the calling function.
     ;;
     ;;Return a  Scheme character or  the EOF object.  In  case of
     ;;error: honor the error mode in the port's transcoder.
     ;;
     (with-textual-port (port)
       (define-inline (main)
-	(let retry-after-filling-buffer-for-1-byte ()
-	  (define-alias buffer.offset-byte0 port.buffer.index)
-	  (maybe-refill-buffer-and-evaluate (port who)
-	    (data-is-needed-at: buffer.offset-byte0)
-	    (if-end-of-file: (eof-object))
-	    (if-successful-refill: (retry-after-filling-buffer-for-1-byte))
-	    (if-available-data:
-	     (let ((byte0 (bytevector-u8-ref port.buffer buffer.offset-byte0)))
-	       (cond ((utf-8-first-of-two-bytes? byte0)
-		      (get-2-bytes-character byte0))
-		     ((utf-8-first-of-three-bytes? byte0)
-		      (get-3-bytes-character byte0))
-		     ((utf-8-first-of-four-bytes? byte0)
-		      (get-4-bytes-character byte0))
-		     (else
-		      (error-handler "invalid byte while expecting first byte of UTF-8 character"
-				     byte0))))))))
+	(cond ((utf-8-first-of-two-bytes? byte0)
+	       (get-2-bytes-character byte0))
+	      ((utf-8-first-of-three-bytes? byte0)
+	       (get-3-bytes-character byte0))
+	      ((utf-8-first-of-four-bytes? byte0)
+	       (get-4-bytes-character byte0))
+	      (else
+	       (error-handler "invalid byte while expecting first byte of UTF-8 character" byte0))))
 
       (define-inline (get-2-bytes-character byte0)
 	(let retry-after-filling-buffer-for-1-more-byte ()
@@ -2667,34 +2648,28 @@
 
       (main)))
 
-  (define (lookahead-char-utf8-mode port who)
+  (define (lookahead-char-utf8-mode port who byte0)
     ;;Subroutine of DO-PEEK-CHAR.  Peek from a textual input PORT
     ;;a UTF-8 encoded character for the cases of 2, 3 and 4 bytes
     ;;encoding;  the  case  of  1-byte  encoding  is  handled  by
     ;;DO-PEEK-CHAR.
+    ;;
+    ;;BYTE0  is the  first byte  in the  UTF-8  sequence, already
+    ;;extracted by the calling function.
     ;;
     ;;Return a  Scheme character or  the EOF object.  In  case of
     ;;error: honor the error mode in the port's transcoder.
     ;;
     (with-textual-port (port)
       (define-inline (main)
-	(let retry-after-filling-buffer-for-1-byte ()
-	  (define-alias buffer.offset-byte0 port.buffer.index)
-	  (maybe-refill-buffer-and-evaluate (port who)
-	    (data-is-needed-at: buffer.offset-byte0)
-	    (if-end-of-file: (eof-object))
-	    (if-successful-refill: (retry-after-filling-buffer-for-1-byte))
-	    (if-available-data:
-	     (let ((byte0 (bytevector-u8-ref port.buffer buffer.offset-byte0)))
-	       (cond ((utf-8-first-of-two-bytes? byte0)
-		      (peek-2-bytes-character byte0))
-		     ((utf-8-first-of-three-bytes? byte0)
-		      (peek-3-bytes-character byte0))
-		     ((utf-8-first-of-four-bytes? byte0)
-		      (peek-4-bytes-character byte0))
-		     (else
-		      (error-handler "invalid byte while expecting first byte of UTF-8 character"
-				     byte0))))))))
+	(cond ((utf-8-first-of-two-bytes? byte0)
+	       (peek-2-bytes-character byte0))
+	      ((utf-8-first-of-three-bytes? byte0)
+	       (peek-3-bytes-character byte0))
+	      ((utf-8-first-of-four-bytes? byte0)
+	       (peek-4-bytes-character byte0))
+	      (else
+	       (error-handler "invalid byte while expecting first byte of UTF-8 character" byte0))))
 
       (define-inline (peek-2-bytes-character byte0)
 	(let retry-after-filling-buffer-for-1-more-byte ()
@@ -2795,10 +2770,10 @@
     ;;offending sequence.
     ;;
     (with-textual-port (port)
-      (define-inline (recurse)
+     (define-inline (recurse)
 	(get-utf16 port who endianness))
 
-      (define (error-handler offending-fixnum)
+      (define (error-handler . irritants)
 	;;Handle the  error honoring  the error handling  mode in
 	;;port's transcoder.
 	;;
@@ -2814,7 +2789,7 @@
 			 (make-who-condition who)
 			 (make-message-condition
 			  "invalid value from textual input port while decoding UTF-16 character")
-			 (make-irritants-condition (list offending-fixnum)))))
+			 (make-irritants-condition irritants))))
 	    (else
 	     (die who "internal error: invalid error handling mode" port mode)))))
 
@@ -3031,69 +3006,62 @@
       (refill-buffer-and-evaluate (port who)
 	(if-end-of-file: (eof-object))
 	(if-successful-refill:
-	 (let ((old-buffer.index port.buffer.index))
+	 (let ((buffer.offset port.buffer.index))
 	   (port.buffer.index.incr! buffer-index-increment)
-	   (integer->char (bytevector-u8-ref port.buffer old-buffer.index)))))))
+	   (integer->char (bytevector-u8-ref port.buffer buffer.offset)))))))
 
 ;;; --------------------------------------------------------------------
 ;;; GET-CHAR and LOOKAHEAD-CHAR for ports with string input buffer
 
-  (define (get-char-char-mode port who)
-    ;;PORT must be  a textual input port with  a Scheme string as
-    ;;buffer; such buffer must  have been already fully consumed.
-    ;;Refill the input buffer  reading from the underlying device
-    ;;and  return  the  next  Scheme character  from  the  buffer
-    ;;consuming it.
+  (define (get/lookahead-char-char-mode port who buffer-index-increment)
+    ;;Subroutine of DO-GET-CHAR or  DO-PEEK-CHAR.  PORT must be a
+    ;;textual  input port with  a Scheme  string as  buffer; such
+    ;;buffer must  have been already fully  consumed.  Refill the
+    ;;input buffer reading from  the underlying device and return
+    ;;the next Scheme character from the buffer consuming it.
+    ;;
+    ;;When  BUFFER-INDEX-INCREMENT  is 1  this  function acts  as
+    ;;GET-CHAR,   when  it   is   0  this   function  acts   like
+    ;;LOOKAHEAD-CHAR.
     ;;
     ;;If EOF  is found while reading from  the underlying device:
     ;;return the EOF object.
     ;;
     (with-textual-port (port)
       (assert (fx=? port.buffer.index port.buffer.used-size))
-      (if (eq? port.read! all-data-in-buffer)
-	  (eof-object)
-	(let* ((buffer.length	port.buffer.size)
-	       (count		(port.read! port.buffer 0 buffer.length)))
-	  (unless (fixnum? count)
-	    (die who "invalid return value from read!" count))
-	  (unless (<= 0 count buffer.length)
-	    (die who "return value from read! is out of range" count))
-	  (port.cookie.pos.incr! count)
-	  (set! port.buffer.used-size count)
-	  (if (fx= count 0)
-	      (begin
-		(set! port.buffer.index 0)
-		(eof-object))
-	    (begin
-	      (set! port.buffer.index 1)
-	      (string-ref port.buffer 0)))))))
-
-  (define (lookahead-char-char-mode port who)
-    ;;PORT must be  a textual input port with  a Scheme string as
-    ;;buffer; such buffer must  have been already fully consumed.
-    ;;Refill the input buffer  reading from the underlying device
-    ;;and  return  the  next  Scheme character  from  the  buffer
-    ;;without consuming it.
-    ;;
-    ;;If EOF  is found while reading from  the underlying device:
-    ;;return the EOF object.
-    ;;
-    (with-textual-port (port)
-      (assert (fx=? port.buffer.index port.buffer.used-size))
-      (if (eq? port.read! all-data-in-buffer)
-	  (eof-object)
-	(let* ((buffer.length	port.buffer.size)
-	       (count		(port.read! port.buffer 0 buffer.length)))
-	  (unless (fixnum? count)
-	    (die who "invalid return value from read!" count))
-	  (unless (<= 0 count buffer.length)
-	    (die who "return value from read! is out of range" count))
-	  (port.cookie.pos.incr! count)
-	  (set! port.buffer.index     0)
-	  (set! port.buffer.used-size count)
-	  (if (fx= count 0)
-	      (eof-object)
-	    (string-ref port.buffer 0))))))
+      (let* ((buffer.length	port.buffer.size)
+	     (count		(port.read! port.buffer 0 buffer.length)))
+	;;We enter this function with this scenario:
+	;;
+	;;            old cookie.pos
+	;;                v
+	;;  |-------------+-----------------------| device
+	;;        |*******+---------| buffer
+	;;                ^
+	;;          index = used-size
+	;;
+	;;and  right  after  calling  READ!  we  want  the  following
+	;;scenario:
+	;;
+	;;       old cookie.pos     new cookie.pos
+	;;                v            v
+	;;  |-------------+------------+----------| device
+	;;               |*************+---| buffer
+	;;                ^            ^
+	;;              index       used-size
+	;;
+	;; count = new cookie.pos - old cookie.pos
+	;;
+	(unless (fixnum? count)
+	  (die who "invalid return value from read!" count))
+	(unless (<= 0 count buffer.length)
+	  (die who "return value from read! is out of range" count))
+	(port.cookie.pos.incr! count)
+	(set! port.buffer.used-size count)
+	(set! port.buffer.index buffer-index-increment)
+	(if (fx= count 0)
+	    (eof-object)
+	  (string-ref port.buffer 0)))))
 
 ;;; --------------------------------------------------------------------
 ;;; Byte Order Mark (BOM) processing
@@ -4534,5 +4502,4 @@
 ;;; eval: (put 'case-textual-input-port-fast-tag	'scheme-indent-function 1)
 ;;; eval: (put 'refill-buffer-and-evaluate		'scheme-indent-function 1)
 ;;; eval: (put 'maybe-refill-buffer-and-evaluate	'scheme-indent-function 1)
-;;; eval: (put 'maybe-refill-buffer-return-eof-or-retry-or 'scheme-indent-function 1)
 ;;; End:
