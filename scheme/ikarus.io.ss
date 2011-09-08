@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Copyright (C) 2006,2007,2008,2011  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Abstract
@@ -79,7 +79,13 @@
 ;;Field name: buffer
 ;;Field accessor: $port-buffer PORT
 ;;  The  input/output  buffer  for   the  port.   The  buffer  is
-;;  allocated at port construction time and never reallocated.
+;;  allocated  at port construction  time and  never reallocated.
+;;
+;;  For the  logic of the functions  to work: it  is mandatory to
+;;  have a buffer at least  wide enough to hold the largest UTF-8
+;;  character.   This  is  because   it  is  possible  to  put  a
+;;  transcoder on top  of every binary port, and  we need a place
+;;  to store partially read or written characters.
 ;;
 ;;  When the  port has a Scheme bytevector  as underlying device:
 ;;  the bytevector itself is the buffer.
@@ -175,6 +181,9 @@
 ;;field POS of the cookie to become invalid.  This situation must
 ;;be detected by all the functions, currently it is not.
 ;;
+;;* Write documentation for the Ikarus-specific functions.
+;;
+
 
 (library (ikarus.io)
   (export
@@ -424,6 +433,8 @@
 
 ;;;; constants
 
+(define newline-integer			(char->integer #\newline))
+
 (define input-block-size		(* 4 4096))
 (define output-block-size		(* 4 4096))
 (define input-file-buffer-size		(+ input-block-size 128))
@@ -452,7 +463,7 @@
 
 
 ;;;; tags
-
+;;
 ;;All the tags have 13 bits.
 ;;
 ;;The  12th and  13th  bits are  used  only by  CLOSED-PORT-TAG and  the
@@ -480,14 +491,22 @@
 (define textual-input-port-bits  #b00000000000101)
 (define textual-output-port-bits #b00000000000110)
 
+;;This one  is used for binary  input ports from  which raw bytes
+;;must be read.
 (define fast-get-byte-tag        #b00000000001001)
+;;The  following are  used  for textual  input  ports from  which
+;;characters in some encodeing must be read.
 (define fast-get-char-tag        #b00000000010101)
 (define fast-get-utf8-tag        #b00000000100101)
 (define fast-get-latin-tag       #b00000001100101)
 (define fast-get-utf16be-tag     #b00000010000101)
 (define fast-get-utf16le-tag     #b00000100000101)
 
+;;This one  is used  for binary output  ports to which  raw bytes
+;;must be written.
 (define fast-put-byte-tag        #b00000000001010)
+;;The  following  are used  for  textual  output  ports to  which
+;;characters in some encodeing must be written.
 (define fast-put-char-tag        #b00000000010110)
 (define fast-put-utf8-tag        #b00000000100110)
 (define fast-put-latin-tag       #b00000001100110)
@@ -504,6 +523,25 @@
   (identifier-syntax (lambda (x)
 		       (import (ikarus system $fx))
 		       ($fxlogand ($port-tag x) fast-attrs-mask))))
+
+(define-syntax case-textual-input-port-fast-tag
+  (syntax-rules ( ;;
+		 fast-get-utf8-tag fast-get-char-tag fast-get-latin-tag
+		 fast-get-utf16le-tag fast-get-utf16be-tag else)
+    ((case-textual-input-port-fast-tag ?port
+       ((fast-get-utf8-tag)		. ?utf8-tag-body)
+       ((fast-get-char-tag)		. ?char-tag-body)
+       ((fast-get-latin-tag)		. ?latin-tag-body)
+       ((fast-get-utf16le-tag)		. ?utf16le-tag-body)
+       ((fast-get-utf16be-tag)		. ?utf16be-tag-body)
+       (else				. ?else-body))
+     (let ((m ($port-fast-attrs ?port)))
+       (cond ((eq? m fast-get-utf8-tag)		. ?utf8-tag-body)
+	     ((eq? m fast-get-char-tag)		. ?char-tag-body)
+	     ((eq? m fast-get-latin-tag)	. ?latin-tag-body)
+	     ((eq? m fast-get-utf16le-tag)	. ?utf16le-tag-body)
+	     ((eq? m fast-get-utf16be-tag)	. ?utf16be-tag-body)
+	     (else				. ?else-body))))))
 
 
 ;;;; helpers
@@ -530,6 +568,20 @@
   (syntax-rules ()
     ((_ ?obj)
      (eqv? #t ?obj))))
+
+(define-syntax define-inline
+  (syntax-rules ()
+    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
+     (define-syntax ?name
+       (syntax-rules ()
+	 ((_ ?arg ... . ?rest)
+	  (begin ?form0 ?form ...)))))))
+
+(define-syntax define-alias
+  (syntax-rules ()
+    ((_ ?alias ?subst)
+     (define-syntax ?alias
+       (identifier-syntax ?subst)))))
 
 (define (port-id p)
   (if (port? p)
@@ -1646,14 +1698,10 @@
       ;;   (unless (fx= 0 count)
       ;;     (string-set! dst.str dst.start (string-ref srx.str src.start))
       ;;     (string-copy! src.str (fx+ 1 str.start) dst.str (fx+ 1 dst.start) (fx- count 1))))
-      (define-syntax get-device
-	(syntax-rules ()
-	  ((_)
-	   (cookie-dest cookie))))
-      (define-syntax set-device!
-	(syntax-rules ()
-	  ((_ ?new-device)
-	   (set-cookie-dest! cookie ?new-device))))
+      (define-inline (get-device)
+	(cookie-dest cookie))
+      (define-inline (set-device! ?new-device)
+	(set-cookie-dest! cookie ?new-device))
       (define (write! src.str src.start count)
 	(if (zero? count)
 	    count
@@ -2133,11 +2181,125 @@
 		     (try-again-after-partial-write)))))))))))
 
 
+;;;; bytevector buffer handling for input ports
+;;
+;;Input functions  always read bytes from the  input buffer; when
+;;the  input buffer is  completely consumed:  new bytes  are read
+;;from  the  underlying device  refilling  the buffer.   Whenever
+;;refilling  reads no  characters (that  is: the  READ!  function
+;;returns 0) the port is in EOF state.
+;;
+;;The following macros make it easier to handle this mechanism by
+;;wrapping the %REFILL-BYTEVECTOR-BUFFER function.
+;;
+
+(define-syntax data-is-needed-at:	(syntax-rules ()))
+(define-syntax if-available-data:	(syntax-rules ()))
+(define-syntax if-successful-refill:	(syntax-rules ()))
+(define-syntax if-end-of-file:		(syntax-rules ()))
+
+(define-syntax refill-buffer-and-evaluate
+  ;;?PORT must be an input  port with a bytevector as buffer; the
+  ;;buffer  must  be  fully  consumed.   Refill  the  buffer  and
+  ;;evaluate a sequence of forms.
+  ;;
+  ;;The  code in  this  macro  mutates the  fields  of the  ?PORT
+  ;;structure representing the buffer  state, so the client forms
+  ;;must reload the fields they use.
+  ;;
+  ;;If refilling the buffer succeeds: evaluate ?AFTER-REFILL-BODY
+  ;;and return its result.
+  ;;
+  ;;If  refilling the  buffer finds  the  EOF with  no new  bytes
+  ;;available: evaluate ?END-OF-FILE-BODY and return its result.
+  ;;
+  (syntax-rules (if-end-of-file: if-successful-refill:)
+    ((refill-buffer-and-evaluate (?port ?who)
+       (if-end-of-file:		. ?end-of-file-body)
+       (if-successful-refill:	. ?after-refill-body))
+     (let ()
+       (import UNSAFE)
+       (let ((count (%refill-bytevector-buffer ?port ?who)))
+	 (if (fx= 0 count)
+	     (begin . ?end-of-file-body)
+	   (begin . ?after-refill-body)))))))
+
+(define-syntax maybe-refill-buffer-and-evaluate
+  ;;?PORT  must be  an input  port with  a bytevector  as buffer;
+  ;;there is  no constraint on  the state of the  buffer.  Refill
+  ;;the buffer if needed and evaluate a sequence of forms.
+  ;;
+  ;;The  code in  this  macro  mutates the  fields  of the  ?PORT
+  ;;structure representing the buffer  state, so the client forms
+  ;;must reload the fields they use.
+  ;;
+  ;;If there are  bytes to be consumed in  the buffer between the
+  ;;offset ?BUFFER.OFFSET and the  end of the used area: evaluate
+  ;;?AVAILABLE-DATA-BODY and return its result.
+  ;;
+  ;;If ?BUFFER.OFFSET  references the  end of buffer's  used area
+  ;;(there are  no more bytes  to be consumed) and  refilling the
+  ;;buffer succeeds:  evaluate ?AFTER-REFILL-BODY and  return its
+  ;;result.
+  ;;
+  ;;If there are no more bytes and refilling the buffer finds the
+  ;;EOF with  no new bytes  available: evaluate ?END-OF-FILE-BODY
+  ;;and return its result.
+  ;;
+  (syntax-rules (if-end-of-file: if-successful-refill: if-available-data:)
+    ((maybe-refill-buffer-and-evaluate (?port ?who)
+       (data-is-needed-at:	?buffer.offset)
+       (if-end-of-file:		. ?end-of-file-body)
+       (if-successful-refill:	. ?after-refill-body)
+       (if-available-data:	. ?available-data-body))
+     (let ()
+       (import UNSAFE)
+       (if (fx< ?buffer.offset ($port-size ?port))
+	   (begin . ?available-data-body)
+	 (let ((count (%refill-bytevector-buffer ?port ?who)))
+	   (if (fx= 0 count)
+	       (begin . ?end-of-file-body)
+	     (begin . ?after-refill-body))))))))
+
+(define-syntax maybe-refill-buffer-return-eof-or-retry-or
+  ;;?PORT  must be  an input  port with  a bytevector  as buffer;
+  ;;there is  no constraint on  the state of the  buffer.  Refill
+  ;;the buffer if needed and evaluate a sequence of forms.
+  ;;
+  ;;The  code in  this  macro  mutates the  fields  of the  ?PORT
+  ;;structure representing the buffer  state, so the client forms
+  ;;must reload the fields they use.
+  ;;
+  ;;If there  are bytes  to be consumed  in the  buffer: evaluate
+  ;;?AVAILABLE-DATA-BODY and return its result.
+  ;;
+  ;;If  the buffer  is fully  consumed and  refilling  the buffer
+  ;;succeeds:   evaluate  ?AVAILABLE-DATA-BODY  and   return  its
+  ;;result.
+  ;;
+  ;;If  the buffer  is fully  consumed and  refilling  the buffer
+  ;;finds the  EOF with  no new bytes  available: return  the EOF
+  ;;object.
+  ;;
+  (syntax-rules (if-available-data:)
+    ((maybe-refill-buffer-return-eof-or-retry-or (?port ?who)
+       (if-available-data: . ?available-data-body))
+     (let retry-after-filling-buffer ()
+       (maybe-refill-buffer-and-evaluate (?port ?who)
+	 (data-is-needed-at:	($port-index ?port))
+	 (if-end-of-file:	(eof-object))
+	 (if-successful-refill:	(retry-after-filling-buffer))
+	 (if-available-data:	. ?available-data-body))))))
+
 (define (%refill-bytevector-buffer port who)
-  ;;Defined  by Ikarus.   Assume  PORT is  an  input binary  port
-  ;;object with  input buffer.  Fill the input  buffer keeping in
-  ;;it the bytes already there  but not yet consumed.  Return the
-  ;;number of new bytes loaded.
+  ;;Defined by Ikarus.  Assume PORT  is an input port object with
+  ;;a bytevector as buffer.  Fill  the input buffer keeping in it
+  ;;the bytes already there but not yet consumed; mutate the PORT
+  ;;structure fields representing the buffer state.
+  ;;
+  ;;Return the number  of new bytes loaded.  If  the return value
+  ;;is zero:  the underlying device has  no more bytes,  it is at
+  ;;its EOF.
   ;;
   (with-binary-port (port)
     (when port.closed?
@@ -2192,513 +2354,911 @@
 	  count)))))
 
 
-(module (read-char get-char lookahead-char)
+(module (read-char get-char lookahead-char peek-char)
   (import UNSAFE)
 
   (define (get-char p)
+    ;;Defined  by  R6RS.   Read  from  the  textual  input  PORT,
+    ;;blocking  as  necessary,  until  a  complete  character  is
+    ;;available, or until an end of file is reached.
+    ;;
+    ;;If a complete character is available before the next end of
+    ;;file, GET-CHAR returns that character and updates the input
+    ;;port to  point past  the character.  If  an end of  file is
+    ;;reached before any character  is read, GET-CHAR returns the
+    ;;end--of--file object.
+    ;;
     (do-get-char p 'get-char))
 
   (define read-char
+    ;;Defined by  R6RS.  Reads from textual  input PORT, blocking
+    ;;as necessary  until a character  is available, or  the data
+    ;;that  is  available  cannot  be  the prefix  of  any  valid
+    ;;encoding, or an end of file is reached.
+    ;;
+    ;;If a complete character is available before the next end of
+    ;;file:  READ-CHAR  returns that  character  and updates  the
+    ;;input port to point past that character.
+    ;;
+    ;;If  an end of  file is  reached before  any data  are read:
+    ;;READ-CHAR returns the end--of--file object.
+    ;;
+    ;;If PORT  is omitted, it  defaults to the value  returned by
+    ;;CURRENT-INPUT-PORT.
+    ;;
     (case-lambda
-     ((p)
-      (do-get-char p 'read-char))
+     ((port)
+      (do-get-char port 'read-char))
      (()
       (do-get-char (current-input-port) 'read-char))))
 
-  (define (do-get-char p who)
-    (let ((m ($port-fast-attrs p)))
-      (cond
-       ((eq? m fast-get-utf8-tag)
-	(let ((i ($port-index p)))
-	  (cond
-	   ((fx< i ($port-size p))
-	    (let ((b (bytevector-u8-ref ($port-buffer p) i)))
-	      (cond
-	       ((fx< b 128)
-		($set-port-index! p (fx+ i 1))
-		(if (eqv? b (char->integer #\newline))
-		    (%mark/return-newline p)
-		  (integer->char b)))
-	       (else (get-char-utf8-mode p who)))))
-	   (else
-	    (get-char-utf8-mode p who)))))
-       ((eq? m fast-get-char-tag)
-	(let ((i ($port-index p)))
-	  (cond
-	   ((fx< i ($port-size p))
-	    ($set-port-index! p (fx+ i 1))
-	    (let ((c (string-ref ($port-buffer p) i)))
-	      (if (eqv? c #\newline)
-		  (%mark/return-newline p)
-		c)))
-	   (else (get-char-char-mode p who)))))
-       ((eq? m fast-get-latin-tag)
-	(let ((i ($port-index p)))
-	  (cond
-	   ((fx< i ($port-size p))
-	    ($set-port-index! p (fx+ i 1))
-	    (let ((b (bytevector-u8-ref ($port-buffer p) i)))
-	      (if (eqv? b (char->integer #\newline))
-		  (%mark/return-newline p)
-		(integer->char b))))
-	   (else
-	    (get-char-latin-mode p who 1)))))
-       ((eq? m fast-get-utf16le-tag) (get-utf16 p who 'little))
-       ((eq? m fast-get-utf16be-tag) (get-utf16 p who 'big))
-       (else
-	(if (speedup-input-port p who)
-	    (eof-object)
-	  (do-get-char p who))))))
-
-  (define (get-char-latin-mode port who inc)
+  (define (do-get-char port who)
+    (define-inline (recurse)
+      (do-get-char port who))
     (with-textual-port (port)
-      (let ((count (%refill-bytevector-buffer port who)))
-	(if (fx= count 0)
-	    (eof-object)
-	  (let ((old-buffer.index port.buffer.index))
-	    (port.buffer.index.incr! inc)
-	    (integer->char (bytevector-u8-ref port.buffer old-buffer.index)))))))
+      (case-textual-input-port-fast-tag port
+	((fast-get-utf8-tag)
+	 ;;The  PORT  is  a   binary  input  port  with  a  UTF-8
+	 ;;transcoder on  top of it.  We process  here the simple
+	 ;;case of single-byte character available in the buffer,
+	 ;;else  we  call the  specialised  function for  reading
+	 ;;UTF-8 chars.
+	 (maybe-refill-buffer-return-eof-or-retry-or (port who)
+	   (if-available-data:
+	    (let ((byte0 (bytevector-u8-ref port.buffer port.buffer.index)))
+	      (if (utf-8-single-byte? byte0)
+		  (begin
+		    (port.buffer.index.incr! 1)
+		    (if (fx= byte0 newline-integer)
+			(%mark/return-newline port)
+		      (integer->char byte0)))
+		(get-char-utf8-mode port who))))))
 
-  (define (get-char-utf8-mode p who)
-    (define (do-error p who)
-      (case (transcoder-error-handling-mode ($port-transcoder p))
-	((ignore)
-	 (get-char p))
-	((replace)
-	 #\xFFFD)
-	((raise)
-	 (raise (make-i/o-decoding-error p)))
+	((fast-get-char-tag)
+	 ;;The PORT is a textual  input port with a Scheme string
+	 ;;as  buffer.  We process  here the  simple case  of one
+	 ;;char  available  in  the  buffer,  else  we  call  the
+	 ;;specialised function for reading characters.
+	 (let ((buffer.offset port.buffer.index))
+	   (if (fx< buffer.offset port.buffer.used-size)
+	       (begin
+		 (set! port.buffer.index (fx+ 1 buffer.offset))
+		 (let ((ch (string-ref port.buffer buffer.offset)))
+		   (if (eqv? ch #\newline)
+		       (%mark/return-newline port)
+		     ch)))
+	     (get-char-char-mode port who))))
+
+	((fast-get-latin-tag)
+	 ;;The  PORT  is  a  binary  input port  with  a  Latin-1
+	 ;;transcoder  on  top   of  it.   Knowing  that  Latin-1
+	 ;;characters are 1 byte wide: we process here the simple
+	 ;;case of one char available in the buffer, else we call
+	 ;;the   specialised   function   for   reading   Latin-1
+	 ;;characters.
+	 (let ((buffer.offset port.buffer.index))
+	   (if (fx< buffer.offset port.buffer.used-size)
+	       (begin
+		 (set! port.buffer.index (fx+ 1 buffer.offset))
+		 (let ((b (bytevector-u8-ref port.buffer buffer.offset)))
+		   (if (eqv? b newline-integer)
+		       (%mark/return-newline port)
+		     (integer->char b))))
+	     (get/lookahead-char-latin-mode port who 1))))
+
+	((fast-get-utf16le-tag)
+	 ;;The  PORT  is  a  binary  input  port  with  a  UTF-16
+	 ;;transcoder on top of it  and it has been recognised as
+	 ;;holding characters in little endian order.
+	 (get-utf16 port who 'little))
+
+	((fast-get-utf16be-tag)
+	 ;;The  PORT  is  a  binary  input  port  with  a  UTF-16
+	 ;;transcoder on top of it  and it has been recognised as
+	 ;;holding characters in big endian order.
+	 (get-utf16 port who 'big))
+
 	(else
-	 (die who "cannot happen"))))
-    (let ((i ($port-index p))
-	  (j ($port-size p))
-	  (buf ($port-buffer p)))
-      (cond
-       ((fx= i j) ;;; exhausted
-	(let ((bytes (%refill-bytevector-buffer p who)))
-	  (cond
-	   ((fx= bytes 0) (eof-object))
-	   (else (get-char p)))))
-       (else
-	(let ((b0 (bytevector-u8-ref buf i)))
-	  (cond
-	   ((fx= (fxsra b0 5) #b110) ;;; two-byte-encoding
-	    (let ((i (fx+ i 1)))
-	      (cond
-	       ((fx< i j)
-		(let ((b1 (bytevector-u8-ref buf i)))
-		  (cond
-		   ((fx= (fxsra b1 6) #b10)
-		    ($set-port-index! p (fx+ i 1))
-		    (integer->char
-		     (fxior (fxand b1 #b111111)
-			    (fxsll (fxand b0 #b11111) 6))))
-		   (else
-		    ($set-port-index! p i)
-		    (do-error p who)))))
-	       (else
-		(let ((bytes (%refill-bytevector-buffer p who)))
-		  (cond
-		   ((fx= bytes 0)
-		    ($set-port-index! p (fx+ ($port-index p) 1))
-		    (do-error p who))
-		   (else (get-char-utf8-mode p who))))))))
-	   ((fx= (fxsra b0 4) #b1110) ;;; three-byte-encoding
-	    (cond
-	     ((fx< (fx+ i 2) j)
-	      (let ((b1 (bytevector-u8-ref buf (fx+ i 1)))
-		    (b2 (bytevector-u8-ref buf (fx+ i 2))))
-		(cond
-		 ((fx= (fxsra (fxlogor b1 b2) 6) #b10)
-		  (let ((n (fxlogor
-			    (fxsll (fxand b0 #b1111) 12)
-			    (fxsll (fxand b1 #b111111) 6)
-			    (fxand b2 #b111111))))
-		    (cond
-		     ((and (fx<= #xD800 n) (fx<= n #xDFFF))
-		      ($set-port-index! p (fx+ i 1))
-		      (do-error p who))
-		     (else
-		      ($set-port-index! p (fx+ i 3))
-		      (integer->char n)))))
-		 (else
-		  ($set-port-index! p (fx+ i 1))
-		  (do-error p who)))))
-	     (else
-	      (let ((bytes (%refill-bytevector-buffer p who)))
-		(cond
-		 ((fx= bytes 0)
-		  ($set-port-index! p (fx+ ($port-index p) 1))
-		  (do-error p who))
-		 (else (get-char-utf8-mode p who)))))))
-	   ((fx= (fxsra b0 3) #b11110) ;;; four-byte-encoding
-	    (cond
-	     ((fx< (fx+ i 3) j)
-	      (let ((b1 (bytevector-u8-ref buf (fx+ i 1)))
-		    (b2 (bytevector-u8-ref buf (fx+ i 2)))
-		    (b3 (bytevector-u8-ref buf (fx+ i 3))))
-		(cond
-		 ((fx= (fxsra (fxlogor b1 b2 b3) 6) #b10)
-		  (let ((n (fxlogor
-			    (fxsll (fxand b0 #b111) 18)
-			    (fxsll (fxand b1 #b111111) 12)
-			    (fxsll (fxand b2 #b111111) 6)
-			    (fxand b3 #b111111))))
-		    (cond
-		     ((and (fx<= #x10000 n) (fx<= n #x10FFFF))
-		      ($set-port-index! p (fx+ i 4))
-		      (integer->char n))
-		     (else
-		      ($set-port-index! p (fx+ i 1))
-		      (do-error p who)))))
-		 (else
-		  ($set-port-index! p (fx+ i 1))
-		  (do-error p who)))))
-	     (else
-	      (let ((bytes (%refill-bytevector-buffer p who)))
-		(cond
-		 ((fx= bytes 0)
-		  ($set-port-index! p (fx+ ($port-index p) 1))
-		  (do-error p who))
-		 (else (get-char-utf8-mode p who)))))))
-	   (else
-	    ($set-port-index! p (fx+ i 1))
-	    (do-error p who))))))))
+	 ;;If PORT  references a port  structure it has  not been
+	 ;;tagged yet.
+	 (if (validate-port-then-parse-bom-and-add-fast-tag-to-untagged-port port who)
+	     (eof-object)
+	   (recurse))))))
 
-  (define (lookahead-char-utf8-mode p who)
-    (define (do-error p who)
-      (case (transcoder-error-handling-mode ($port-transcoder p))
-	((ignore) (lookahead-char p))
-	((replace) #\xFFFD)
-	((raise)
-	 (raise (make-i/o-decoding-error p)))
-	(else (die who "cannot happen"))))
-    (let ((i ($port-index p))
-	  (j ($port-size p))
-	  (buf ($port-buffer p)))
-      (cond
-       ((fx= i j) ;;; exhausted
-	(let ((bytes (%refill-bytevector-buffer p who)))
-	  (cond
-	   ((fx= bytes 0) (eof-object))
-	   (else (lookahead-char p)))))
-       (else
-	(let ((b0 (bytevector-u8-ref buf i)))
-	  (cond
-	   ((fx= (fxsra b0 5) #b110) ;;; two-byte-encoding
-	    (let ((i (fx+ i 1)))
-	      (cond
-	       ((fx< i j)
-		(let ((b1 (bytevector-u8-ref buf i)))
-		  (cond
-		   ((fx= (fxsra b1 6) #b10)
-		    (integer->char
-		     (fxior (fxand b1 #b111111)
-			    (fxsll (fxand b0 #b11111) 6))))
-		   (else
-		    (do-error p who)))))
-	       (else
-		(let ((bytes (%refill-bytevector-buffer p who)))
-		  (cond
-		   ((fx= bytes 0) (do-error p who))
-		   (else (lookahead-char-utf8-mode p who))))))))
-	   ((fx= (fxsra b0 4) #b1110) ;;; three-byte-encoding
-	    (cond
-	     ((fx< (fx+ i 2) j)
-	      (let ((b1 (bytevector-u8-ref buf (fx+ i 1)))
-		    (b2 (bytevector-u8-ref buf (fx+ i 2))))
-		(cond
-		 ((fx= (fxsra (fxlogor b1 b2) 6) #b10)
-		  (let ((n (fxlogor
-			    (fxsll (fxand b0 #b1111) 12)
-			    (fxsll (fxand b1 #b111111) 6)
-			    (fxand b2 #b111111))))
-		    (cond
-		     ((and (fx<= #xD800 n) (fx<= n #xDFFF))
-		      (do-error p who))
-		     (else (integer->char n)))))
-		 (else (do-error p who)))))
-	     (else
-	      (let ((bytes (%refill-bytevector-buffer p who)))
-		(cond
-		 ((fx= bytes 0) (do-error p who))
-		 (else (lookahead-char-utf8-mode p who)))))))
-	   ((fx= (fxsra b0 3) #b11110) ;;; four-byte-encoding
-	    (cond
-	     ((fx< (fx+ i 3) j)
-	      (let ((b1 (bytevector-u8-ref buf (fx+ i 1)))
-		    (b2 (bytevector-u8-ref buf (fx+ i 2)))
-		    (b3 (bytevector-u8-ref buf (fx+ i 3))))
-		(cond
-		 ((fx= (fxsra (fxlogor b1 b2 b3) 6) #b10)
-		  (let ((n (fxlogor
-			    (fxsll (fxand b0 #b111) 18)
-			    (fxsll (fxand b1 #b111111) 12)
-			    (fxsll (fxand b2 #b111111) 6)
-			    (fxand b3 #b111111))))
-		    (cond
-		     ((and (fx<= #x10000 n) (fx<= n #x10FFFF))
-		      (integer->char n))
+;;; --------------------------------------------------------------------
+
+  (define (lookahead-char port)
+    ;;Defined  by  R6RS.  The  LOOKAHEAD-CHAR  procedure is  like
+    ;;GET-CHAR, but  it does  not update PORT  to point  past the
+    ;;character.  PORT must be a textual input port.
+    ;;
+    (do-peek-char port 'lookahead-char))
+
+  (define peek-char
+    ;;Define by  R6RS.  This is  the same as READ-CHAR,  but does
+    ;;not consume any data from the port.
+    ;;
+    (case-lambda
+     (()
+      (do-peek-char (current-input-port) 'peek-char))
+     ((port)
+      (do-peek-char port 'peek-char))))
+
+  (define (do-peek-char port who)
+    (define-inline (recurse)
+      (do-peek-char port who))
+    (with-textual-port (port)
+      (case-textual-input-port-fast-tag port
+	((fast-get-utf8-tag)
+	 ;;The  PORT  is  a   binary  input  port  with  a  UTF-8
+	 ;;transcoder on  top of it.  We process  here the simple
+	 ;;case of one single  byte char available in the buffer,
+	 ;;else we call the specialised function for reading UTF8
+	 ;;characters.
+	 (let ((i port.buffer.index))
+	   (if (fx< i port.buffer.used-size)
+	       (let ((b (bytevector-u8-ref port.buffer i)))
+		 (if (fx< b 128)
+		     (integer->char b)
+		   (lookahead-char-utf8-mode port who)))
+	     (lookahead-char-utf8-mode port who))))
+
+	((fast-get-char-tag)
+	 ;;The PORT is a textual  input port with a Scheme string
+	 ;;as  buffer.  We process  here the  simple case  of one
+	 ;;char  available  in  the  buffer,  else  we  call  the
+	 ;;specialised function for reading characters.
+	 (let ((i port.buffer.index))
+	   (if (fx< i port.buffer.used-size)
+	       (string-ref port.buffer i)
+	     (lookahead-char-char-mode port who))))
+
+	((fast-get-latin-tag)
+	 ;;The  PORT  is  a  binary  input port  with  a  Latin-1
+	 ;;transcoder  on  top   of  it.   Knowing  that  Latin-1
+	 ;;characters are 1 byte wide: we process here the simple
+	 ;;case of one char available in the buffer, else we call
+	 ;;the   specialised   function   for   reading   Latin-1
+	 ;;characters.
+	 (let ((i port.buffer.index))
+	   (if (fx< i port.buffer.used-size)
+	       (integer->char (bytevector-u8-ref port.buffer i))
+	     (get/lookahead-char-latin-mode port who 0))))
+
+	((fast-get-utf16le-tag)
+	 ;;The  PORT  is  a  binary  input  port  with  a  UTF-16
+	 ;;transcoder on top of it  and it has been recognised as
+	 ;;holding characters in little endian order.
+	 (peek-utf16 port who 'little))
+
+	((fast-get-utf16be-tag)
+	 ;;The  PORT  is  a  binary  input  port  with  a  UTF-16
+	 ;;transcoder on top of it  and it has been recognised as
+	 ;;holding characters in big endian order.
+	 (peek-utf16 port who 'big))
+
+	(else
+	 ;;If PORT  references a port  structure it has  not been
+	 ;;tagged yet.
+	 (if (validate-port-then-parse-bom-and-add-fast-tag-to-untagged-port port who)
+	     (eof-object)
+	   (recurse))))))
+
+;;; --------------------------------------------------------------------
+;;; GET-CHAR and LOOKAHEAD-CHAR for ports with UTF-8 transcoder
+
+  (define (get-char-utf8-mode port who)
+    ;;Subroutine of DO-GET-CHAR.  Read  from a textual input PORT
+    ;;a UTF-8 encoded character for the cases of 2, 3 and 4 bytes
+    ;;encoding;  the  case  of  1-byte  encoding  is  handled  by
+    ;;DO-GET-CHAR.
+    ;;
+    ;;Return a  Scheme character or  the EOF object.  In  case of
+    ;;error: honor the error mode in the port's transcoder.
+    ;;
+    (with-textual-port (port)
+      (define-inline (main)
+	(let retry-after-filling-buffer-for-1-byte ()
+	  (define-alias buffer.offset-byte0 port.buffer.index)
+	  (maybe-refill-buffer-and-evaluate (port who)
+	    (data-is-needed-at: buffer.offset-byte0)
+	    (if-end-of-file: (eof-object))
+	    (if-successful-refill: (retry-after-filling-buffer-for-1-byte))
+	    (if-available-data:
+	     (let ((byte0 (bytevector-u8-ref port.buffer buffer.offset-byte0)))
+	       (cond ((utf-8-first-of-two-bytes? byte0)
+		      (get-2-bytes-character byte0))
+		     ((utf-8-first-of-three-bytes? byte0)
+		      (get-3-bytes-character byte0))
+		     ((utf-8-first-of-four-bytes? byte0)
+		      (get-4-bytes-character byte0))
 		     (else
-		      (do-error p who)))))
-		 (else
-		  (do-error p who)))))
-	     (else
-	      (let ((bytes (%refill-bytevector-buffer p who)))
-		(cond
-		 ((fx= bytes 0)
-		  (do-error p who))
-		 (else (lookahead-char-utf8-mode p who)))))))
-	   (else (do-error p who))))))))
-;;;
-  (define (advance-bom p who bom-seq)
-;;; return eof if port is eof,
-;;; #t if a bom is present, updating the port index to
-;;;    point just past the bom.
-;;; #f otherwise.
-    (cond
-     ((fx< ($port-index p) ($port-size p))
-      (let f ((i 0) (ls bom-seq))
-	(cond
-	 ((null? ls)
-	  ($set-port-index! p (fx+ ($port-index p) i))
-	  #t)
-	 (else
-	  (let ((idx (fx+ i ($port-index p))))
-	    (cond
-	     ((fx< idx ($port-size p))
-	      (if (fx=? (car ls)
-			(bytevector-u8-ref ($port-buffer p) idx))
-		  (f (fx+ i 1) (cdr ls))
-		#f))
-	     (else
-	      (let ((bytes (%refill-bytevector-buffer p who)))
-		(if (fx= bytes 0)
-		    #f
-		  (f i ls))))))))))
-     (else
-      (let ((bytes (%refill-bytevector-buffer p who)))
-	(if (fx= bytes 0)
-	    (eof-object)
-	  (advance-bom p who bom-seq))))))
-;;;
-  (define (speedup-input-port p who)
-;;; returns #t if port is eof, #f otherwise
-    (unless (input-port? p)
-      (die who "not an input port" p))
-    (when ($port-closed? p)
-      (die who "port is closed" p))
-    (let ((tr ($port-transcoder p)))
-      (unless tr
-	(die who "not a textual port" p))
-      (case (transcoder-codec tr)
+		      (error-handler "invalid byte while expecting first byte of UTF-8 character"
+				     byte0))))))))
+
+      (define-inline (get-2-bytes-character byte0)
+	(let retry-after-filling-buffer-for-1-more-byte ()
+	  (define-alias buffer.offset-byte0 port.buffer.index)
+	  (let* ((buffer.offset-byte1 (fx+ 1 buffer.offset-byte0))
+		 (buffer.offset-past  (fx+ 1 buffer.offset-byte1)))
+	    (maybe-refill-buffer-and-evaluate (port who)
+	      (data-is-needed-at: buffer.offset-byte1)
+	      (if-end-of-file:
+	       (set! port.buffer.index port.buffer.used-size)
+	       (eof-object))
+	      (if-successful-refill:
+	       (retry-after-filling-buffer-for-1-more-byte))
+	      (if-available-data:
+	       (let ((byte1 (bytevector-u8-ref port.buffer buffer.offset-byte1)))
+		 (set! port.buffer.index buffer.offset-past)
+		 (if (utf-8-second-of-two-bytes? byte1)
+		     (integer->char (utf-8-two-bytes-compose byte0 byte1))
+		   (error-handler "invalid second byte in 2-bytes UTF-8 character" byte1))))))))
+
+      (define-inline (get-3-bytes-character byte0)
+	(let retry-after-filling-buffer-for-2-more-bytes ()
+	  (define-alias buffer.offset-byte0 port.buffer.index)
+	  (let* ((buffer.offset-byte1 (fx+ 1 buffer.offset-byte0))
+		 (buffer.offset-byte2 (fx+ 1 buffer.offset-byte1))
+		 (buffer.offset-past  (fx+ 1 buffer.offset-byte2)))
+	    (maybe-refill-buffer-and-evaluate (port who)
+	      (data-is-needed-at: buffer.offset-byte2)
+	      (if-end-of-file:
+	       (set! port.buffer.index port.buffer.used-size)
+	       (error-handler "unexpected end of file while decoding 3-bytes UTF-8 character"))
+	      (if-successful-refill:
+	       (retry-after-filling-buffer-for-2-more-bytes))
+	      (if-available-data:
+	       (let ((byte1 (bytevector-u8-ref port.buffer buffer.offset-byte1))
+		     (byte2 (bytevector-u8-ref port.buffer buffer.offset-byte2)))
+		 (set! port.buffer.index buffer.offset-past)
+		 (if (utf-8-second-and-third-of-three-bytes? byte1 byte2)
+		     (let ((n (utf-8-three-bytes-compose byte0 byte1 byte2)))
+		       (if (and (fx<= #xD800 n) (fx<= n #xDFFF))
+			   (error-handler "invalid integer representation \
+                                           as result of decoding 3-bytes UTF-8 character"
+					  n)
+			 (integer->char n)))
+		   (error-handler "invalid second or third byte in 3-bytes UTF-8 character"
+				  byte1 byte2))))))))
+
+      (define-inline (get-4-bytes-character byte0)
+	(let retry-after-filling-buffer-for-3-more-bytes ()
+	  (define-alias buffer.offset-byte0 port.buffer.index)
+	  (let* ((buffer.offset-byte1 (fx+ 1 buffer.offset-byte0))
+		 (buffer.offset-byte2 (fx+ 1 buffer.offset-byte1))
+		 (buffer.offset-byte3 (fx+ 1 buffer.offset-byte2))
+		 (buffer.offset-past  (fx+ 1 buffer.offset-byte3)))
+	    (maybe-refill-buffer-and-evaluate (port who)
+	      (data-is-needed-at: buffer.offset-byte3)
+	      (if-end-of-file:
+	       (set! port.buffer.index port.buffer.used-size)
+	       (error-handler "unexpected end of file while decoding 4-bytes UTF-8 character"))
+	      (if-successful-refill:
+	       (retry-after-filling-buffer-for-3-more-bytes))
+	      (if-available-data:
+	       (let ((byte1 (bytevector-u8-ref port.buffer buffer.offset-byte1))
+		     (byte2 (bytevector-u8-ref port.buffer buffer.offset-byte2))
+		     (byte3 (bytevector-u8-ref port.buffer buffer.offset-byte3)))
+		 (set! port.buffer.index buffer.offset-past)
+		 (if (utf-8-second-third-and-fourth-of-three-bytes? byte1 byte2 byte3)
+		     (let ((n (utf-8-four-bytes-compose byte0 byte1 byte2 byte3)))
+		       (if (and (fx<= #x10000 n) (fx<= n #x10FFFF))
+			   (integer->char n)
+			 (error-handler "invalid integer representation as result \
+                                         of decoding 4-bytes UTF-8 character" n)))
+		   (error-handler "invalid second, third or fourth byte in 4-bytes UTF-8 character"
+				  byte1 byte2 byte3))))))))
+
+      (define (error-handler message . irritants)
+	(let ((mode (transcoder-error-handling-mode port.transcoder)))
+	  (case mode
+	    ((ignore)
+	     (do-get-char port who))
+	    ((replace)
+	     #\xFFFD)
+	    ((raise)
+	     (raise (condition (make-i/o-decoding-error port)
+			       (make-who-condition who)
+			       (make-message-condition message)
+			       (make-irritants-condition irritants))))
+	    (else
+	     (die who "internal error, wrong transcoder error handling mode" mode)))))
+
+      (main)))
+
+  (define (lookahead-char-utf8-mode port who)
+    ;;Subroutine of DO-PEEK-CHAR.  Peek from a textual input PORT
+    ;;a UTF-8 encoded character for the cases of 2, 3 and 4 bytes
+    ;;encoding;  the  case  of  1-byte  encoding  is  handled  by
+    ;;DO-PEEK-CHAR.
+    ;;
+    ;;Return a  Scheme character or  the EOF object.  In  case of
+    ;;error: honor the error mode in the port's transcoder.
+    ;;
+    (with-textual-port (port)
+      (define-inline (main)
+	(let retry-after-filling-buffer-for-1-byte ()
+	  (define-alias buffer.offset-byte0 port.buffer.index)
+	  (maybe-refill-buffer-and-evaluate (port who)
+	    (data-is-needed-at: buffer.offset-byte0)
+	    (if-end-of-file: (eof-object))
+	    (if-successful-refill: (retry-after-filling-buffer-for-1-byte))
+	    (if-available-data:
+	     (let ((byte0 (bytevector-u8-ref port.buffer buffer.offset-byte0)))
+	       (cond ((utf-8-first-of-two-bytes? byte0)
+		      (peek-2-bytes-character byte0))
+		     ((utf-8-first-of-three-bytes? byte0)
+		      (peek-3-bytes-character byte0))
+		     ((utf-8-first-of-four-bytes? byte0)
+		      (peek-4-bytes-character byte0))
+		     (else
+		      (error-handler "invalid byte while expecting first byte of UTF-8 character"
+				     byte0))))))))
+
+      (define-inline (peek-2-bytes-character byte0)
+	(let retry-after-filling-buffer-for-1-more-byte ()
+	  (define-alias buffer.offset-byte0 port.buffer.index)
+	  (let ((buffer.offset-byte1 (fx+ 1 buffer.offset-byte0)))
+	    (maybe-refill-buffer-and-evaluate (port who)
+	      (data-is-needed-at: buffer.offset-byte1)
+	      (if-end-of-file:
+	       (error-handler "unexpected end of file while decoding 2-bytes UTF-8 character"))
+	      (if-successful-refill: (retry-after-filling-buffer-for-1-more-byte))
+	      (if-available-data:
+	       (let ((byte1 (bytevector-u8-ref port.buffer buffer.offset-byte1)))
+		 (if (utf-8-second-of-two-bytes? byte1)
+		     (integer->char (utf-8-two-bytes-compose byte0 byte1))
+		   (error-handler "invalid second byte in 2-bytes UTF-8 character"
+				  byte1))))))))
+
+      (define-inline (peek-3-bytes-character byte0)
+	(let retry-after-filling-buffer-for-2-more-bytes ()
+	  (define-alias buffer.offset-byte0 port.buffer.index)
+	  (let* ((buffer.offset-byte1 (fx+ 1 buffer.offset-byte0))
+		 (buffer.offset-byte2 (fx+ 1 buffer.offset-byte1)))
+	    (maybe-refill-buffer-and-evaluate (port who)
+	      (data-is-needed-at: buffer.offset-byte2)
+	      (if-end-of-file:
+	       (error-handler "unexpected end of file while decoding 3-bytes UTF-8 character"))
+	      (if-successful-refill: (retry-after-filling-buffer-for-2-more-bytes))
+	      (if-available-data:
+	       (let ((byte1 (bytevector-u8-ref port.buffer buffer.offset-byte1))
+		     (byte2 (bytevector-u8-ref port.buffer buffer.offset-byte2)))
+		 (if (utf-8-second-and-third-of-three-bytes? byte1 byte2)
+		     (let ((n (utf-8-three-bytes-compose byte0 byte1 byte2)))
+		       (if (and (fx<= #xD800 n) (fx<= n #xDFFF)) ;forbidden range
+			   (error-handler "invalid integer representation as result \
+                                           of decoding 3-bytes UTF-8 character"
+					  n)
+			 (integer->char n)))
+		   (error-handler "invalid second or third byte in 3-bytes UTF-8 character"
+				  byte1 byte2))))))))
+
+      (define-inline (peek-4-bytes-character byte0)
+	(let retry-after-filling-buffer-for-3-more-bytes ()
+	  (define-alias buffer.offset-byte0 port.buffer.index)
+	  (let* ((buffer.offset-byte1 (fx+ 1 buffer.offset-byte0))
+		 (buffer.offset-byte2 (fx+ 1 buffer.offset-byte1))
+		 (buffer.offset-byte3 (fx+ 1 buffer.offset-byte2)))
+	    (maybe-refill-buffer-and-evaluate (port who)
+	      (data-is-needed-at: buffer.offset-byte3)
+	      (if-end-of-file:
+	       (error-handler "unexpected end of file while decoding 4-bytes UTF-8 character"))
+	      (if-successful-refill: (retry-after-filling-buffer-for-3-more-bytes))
+	      (if-available-data:
+	       (let ((byte1 (bytevector-u8-ref port.buffer buffer.offset-byte1))
+		     (byte2 (bytevector-u8-ref port.buffer buffer.offset-byte2))
+		     (byte3 (bytevector-u8-ref port.buffer buffer.offset-byte3)))
+		 (if (utf-8-second-third-and-fourth-of-three-bytes? byte1 byte2 byte3)
+		     (let ((n (utf-8-four-bytes-compose byte0 byte1 byte2 byte3)))
+		       (if (and (fx<= #x10000 n) (fx<= n #x10FFFF))
+			   (integer->char n)
+			 (error-handler "invalid integer representation as result \
+                                         of decoding 4-bytes UTF-8 character" n)))
+		   (error-handler "invalid second, third or fourth byte \
+                                   in 4-bytes UTF-8 character"))))))))
+
+      (define (error-handler message . irritants)
+	(case (transcoder-error-handling-mode port.transcoder)
+	  ((ignore)
+	   (do-peek-char port who))
+	  ((replace)
+	   #\xFFFD)
+	  ((raise)
+	   (raise (condition (make-i/o-decoding-error port)
+			     (make-who-condition who)
+			     (make-message-condition message)
+			     (make-irritants-condition irritants))))
+	  (else
+	   (die who "cannot happen"))))
+
+      (main)))
+
+;;; --------------------------------------------------------------------
+;;; GET-CHAR and LOOKAHEAD-CHAR for ports with UTF-16 transcoder
+
+  (define (get-utf16 port who endianness)
+    ;;Read and return from PORT a UTF-16 encoded character; leave
+    ;;the input buffer pointing to  the first byte after the read
+    ;;character.
+    ;;
+    ;;PORT must be an already validated textual input port with a
+    ;;bytevector as buffer.
+    ;;
+    ;;ENDIANNESS  must  be  one  among the  symbols  accepted  by
+    ;;BYTEVECTOR-U16-REF.
+    ;;
+    ;;In  case  of error  decoding  the  input:  honor the  error
+    ;;handling mode  selected in the PORT's  transcoder and leave
+    ;;the  input buffer  pointing  to the  first  byte after  the
+    ;;offending sequence.
+    ;;
+    (with-textual-port (port)
+      (define-inline (recurse)
+	(get-utf16 port who endianness))
+
+      (define (error-handler offending-fixnum)
+	;;Handle the  error honoring  the error handling  mode in
+	;;port's transcoder.
+	;;
+	(let ((mode (transcoder-error-handling-mode port.transcoder)))
+	  (case mode
+	    ((ignore)
+	     (do-get-char port who endianness))
+	    ((replace)
+	     #\xFFFD)
+	    ((raise)
+	     (raise
+	      (condition (make-i/o-decoding-error port)
+			 (make-who-condition who)
+			 (make-message-condition
+			  "invalid value from textual input port while decoding UTF-16 character")
+			 (make-irritants-condition (list offending-fixnum)))))
+	    (else
+	     (die who "internal error: invalid error handling mode" port mode)))))
+
+      (define (integer->char/invalid integer-representation-of-char)
+	;;If the argument is a valid integer representation for a
+	;;Unicode  character   according  to  R6RS:   return  the
+	;;corresponding character value, else handle the error.
+	;;
+	(cond ((fx<= integer-representation-of-char #xD7FF)
+	       (integer->char integer-representation-of-char))
+	      ((fx<  integer-representation-of-char #xE000)
+	       (error-handler integer-representation-of-char))
+	      ((fx<= integer-representation-of-char #x10FFFF)
+	       (integer->char integer-representation-of-char))
+	      (else
+	       (error-handler integer-representation-of-char))))
+
+      (let ((buffer.offset port.buffer.index))
+	(cond ((fx<= (fx+ buffer.offset 2) port.buffer.used-size)
+	       ;;There are two bytes  in the input buffer, enough
+	       ;;for a full UTF-16 character encoded as single 16
+	       ;;bits word.
+	       (let ((word1 (bytevector-u16-ref port.buffer buffer.offset endianness)))
+		 (cond ((or (fx< word1 #xD800) (fx< #xDFFF word1))
+			;;The word is in  the allowed range for a
+			;;UTF-16 encoded character of 16 bits.
+			(set! port.buffer.index (fx+ buffer.offset 2))
+			(integer->char/invalid word1))
+		       ((not (and (fx<= #xD800 word1) (fx<= word1 #xDBFF)))
+			;;The word is  in the forbidden range for
+			;;UTF-16:  it is  neither  a single  word
+			;;character nor the  first in a surrogate
+			;;pair.
+			(set! port.buffer.index (fx+ buffer.offset 2))
+			(error-handler word1))
+		       ((fx<= (fx+ buffer.offset 4) port.buffer.used-size)
+			;;The  word  is  the  first of  a  UTF-16
+			;;surrogate  pair  and  the input  buffer
+			;;already holds the second word.
+			(let ((word2 (bytevector-u16-ref port.buffer (fx+ buffer.offset 2) endianness)))
+			  (if (not (and (fx<= #xDC00 word2) (fx<= word2 #xDFFF)))
+			      ;;The  second  word  is invalid  as
+			      ;;second   in  a   surrogate  pair:
+			      ;;handle the error.
+			      (begin
+				(set! port.buffer.index (fx+ buffer.offset 2))
+				(error-handler word1))
+			    ;;The second word  is valid as second
+			    ;;in  a  surrogate  pair: compose  it
+			    ;;with the first.
+			    (begin
+			      (set! port.buffer.index (fx+ buffer.offset 4))
+			      (integer->char/invalid (fx+ #x10000
+							  (fxlogor (fxsll (fxand word1 #x3FF) 10)
+								   (fxand word2 #x3FF))))))))
+		       (else
+			;;The  word  is  the  first of  a  UTF-16
+			;;surrogate  pair, but input  buffer does
+			;;not hold the full second word.
+			(refill-buffer-and-evaluate (port who)
+			  (if-end-of-file:
+			   ;;The input  data is corrupted because
+			   ;;we  expected the  second word  to be
+			   ;;there before EOF.
+			   (set! port.buffer.index port.buffer.used-size)
+			   (error-handler word1))
+			  (if-successful-refill:
+			   (recurse)))))))
+
+	      ((fx< buffer.offset port.buffer.used-size)
+	       ;;There is only 1 byte in the input buffer.
+	       (refill-buffer-and-evaluate (port who)
+		 (if-end-of-file:
+		  ;;The  input  data   is  corrupted  because  we
+		  ;;expected at least a  16 bits word to be there
+		  ;;before EOF.
+		  (set! port.buffer.index port.buffer.used-size)
+		  (error-handler (bytevector-u8-ref port.buffer buffer.offset)))
+		 (if-successful-refill:
+		  (recurse))))
+
+	      (else
+	       ;;The input buffer is empty.
+	       (refill-buffer-and-evaluate (port who)
+		 (if-end-of-file:	(eof-object))
+		 (if-successful-refill:	(recurse))))))))
+
+  (define (peek-utf16 port who endianness)
+    ;;peek and return from PORT a UTF-16 encoded character; leave
+    ;;the input buffer pointing to  the same byte it was pointing
+    ;;before the call to this function.
+    ;;
+    ;;PORT must be an already validated textual input port with a
+    ;;bytevector as buffer.
+    ;;
+    ;;ENDIANNESS  must  be  one  among the  symbols  accepted  by
+    ;;BYTEVECTOR-U16-REF.
+    ;;
+    ;;In  case  of error  decoding  the  input:  honor the  error
+    ;;handling mode selected in the PORT's transcoder.
+    ;;
+    (with-textual-port (port)
+      (define-inline (recurse)
+	(peek-utf16 port who endianness))
+
+      (define (error-handler offending-fixnum)
+	;;Handle the  error honoring  the error handling  mode in
+	;;port's transcoder.
+	;;
+	(let ((mode (transcoder-error-handling-mode port.transcoder)))
+	  (case mode
+	    ((ignore)
+	     (recurse))
+	    ((replace)
+	     #\xFFFD)
+	    ((raise)
+	     (raise
+	      (condition (make-i/o-decoding-error port)
+			 (make-who-condition who)
+			 (make-message-condition
+			  "invalid value from textual input port while decoding UTF-16 character")
+			 (make-irritants-condition (list offending-fixnum)))))
+	    (else
+	     (die who "internal error: invalid error handling mode" port mode)))))
+
+      (define (integer->char/invalid integer-representation-of-char)
+	;;If the argument is a valid integer representation for a
+	;;Unicode  character   according  to  R6RS:   return  the
+	;;corresponding character value, else handle the error.
+	;;
+	(cond ((fx<= integer-representation-of-char #xD7FF)
+	       (integer->char integer-representation-of-char))
+	      ((fx<  integer-representation-of-char #xE000)
+	       #\xFFFD)
+	      ((fx<= integer-representation-of-char #x10FFFF)
+	       (integer->char integer-representation-of-char))
+	      (else
+	       (error-handler integer-representation-of-char))))
+
+      (let ((buffer.offset port.buffer.index))
+	(cond ((fx<= (fx+ buffer.offset 2) port.buffer.used-size)
+	       ;;There are two bytes  in the input buffer, enough
+	       ;;for a full UTF-16 character encoded as single 16
+	       ;;bits word.
+	       (let ((word1 (bytevector-u16-ref port.buffer buffer.offset endianness)))
+		 (cond ((or (fx< word1 #xD800) (fx< #xDFFF word1))
+			;;The word is in  the allowed range for a
+			;;UTF-16 encoded character of 16 bits.
+			(integer->char/invalid word1))
+		       ((not (and (fx<= #xD800 word1) (fx<= word1 #xDBFF)))
+			;;The word is  in the forbidden range for
+			;;UTF-16:  it is  neither  a single  word
+			;;character nor the  first in a surrogate
+			;;pair.
+			(error-handler word1))
+		       ((fx<= (fx+ buffer.offset 4) port.buffer.used-size)
+			;;The  word  is  the  first of  a  UTF-16
+			;;surrogate  pair  and  the input  buffer
+			;;already holds the second word.
+			(let ((word2 (bytevector-u16-ref port.buffer (fx+ buffer.offset 2) endianness)))
+			  (if (not (and (fx<= #xDC00 word2) (fx<= word2 #xDFFF)))
+			      ;;The  second  word  is invalid  as
+			      ;;second   in  a   surrogate  pair:
+			      ;;handle the error.
+			      (error-handler word2)
+			    ;;The second word  is valid as second
+			    ;;in  a  surrogate  pair: compose  it
+			    ;;with the first.
+			    (integer->char/invalid (fx+ #x10000
+							(fxlogor (fxsll (fxand word1 #x3FF) 10)
+								 (fxand word2 #x3FF)))))))
+		       (else
+			;;The  word  is  the  first of  a  UTF-16
+			;;surrogate  pair, but input  buffer does
+			;;not hold the full second word.
+			(refill-buffer-and-evaluate (port who)
+			  (if-end-of-file:
+			   ;;The input  data is corrupted because
+			   ;;we  expected the  second word  to be
+			   ;;there before EOF.
+			   (error-handler word1))
+			  (if-successful-refill:
+			   (recurse)))))))
+
+	      ((fx< buffer.offset port.buffer.used-size)
+	       ;;There is only 1 byte in the input buffer.
+	       (refill-buffer-and-evaluate (port who)
+		 (if-end-of-file:
+		  ;;The  input  data   is  corrupted  because  we
+		  ;;expected at least a  16 bits word to be there
+		  ;;before EOF.
+		  (error-handler (bytevector-u8-ref port.buffer buffer.offset)))
+		 (if-successful-refill: (recurse))))
+
+	      (else
+	       ;;The input buffer is empty.
+	       (refill-buffer-and-evaluate (port who)
+		 (if-end-of-file:	(eof-object))
+		 (if-successful-refill:	(recurse))))))))
+
+;;; --------------------------------------------------------------------
+;;; GET-CHAR and LOOKAHEAD-CHAR for ports with Latin-1 transcoder
+
+  (define (get/lookahead-char-latin-mode port who buffer-index-increment)
+    ;;PORT  must be  a textual  input port  with a  bytevector as
+    ;;buffer; such buffer must be already fully consumed.
+    ;;
+    ;;When  BUFFER-INDEX-INCREMENT  is 1  this  function acts  as
+    ;;GET-CHAR,   when  it   is   0  this   function  acts   like
+    ;;LOOKAHEAD-CHAR.
+    ;;
+    (with-textual-port (port)
+      (assert (fx=? port.buffer.index port.buffer.used-size))
+      (refill-buffer-and-evaluate (port who)
+	(if-end-of-file: (eof-object))
+	(if-successful-refill:
+	 (let ((old-buffer.index port.buffer.index))
+	   (port.buffer.index.incr! buffer-index-increment)
+	   (integer->char (bytevector-u8-ref port.buffer old-buffer.index)))))))
+
+;;; --------------------------------------------------------------------
+;;; GET-CHAR and LOOKAHEAD-CHAR for ports with string input buffer
+
+  (define (get-char-char-mode port who)
+    ;;PORT must be  a textual input port with  a Scheme string as
+    ;;buffer; such buffer must  have been already fully consumed.
+    ;;Refill the input buffer  reading from the underlying device
+    ;;and  return  the  next  Scheme character  from  the  buffer
+    ;;consuming it.
+    ;;
+    ;;If EOF  is found while reading from  the underlying device:
+    ;;return the EOF object.
+    ;;
+    (with-textual-port (port)
+      (assert (fx=? port.buffer.index port.buffer.used-size))
+      (if (eq? port.read! all-data-in-buffer)
+	  (eof-object)
+	(let* ((buffer.length	port.buffer.size)
+	       (count		(port.read! port.buffer 0 buffer.length)))
+	  (unless (fixnum? count)
+	    (die who "invalid return value from read!" count))
+	  (unless (<= 0 count buffer.length)
+	    (die who "return value from read! is out of range" count))
+	  (port.cookie.pos.incr! count)
+	  (set! port.buffer.used-size count)
+	  (if (fx= count 0)
+	      (begin
+		(set! port.buffer.index 0)
+		(eof-object))
+	    (begin
+	      (set! port.buffer.index 1)
+	      (string-ref port.buffer 0)))))))
+
+  (define (lookahead-char-char-mode port who)
+    ;;PORT must be  a textual input port with  a Scheme string as
+    ;;buffer; such buffer must  have been already fully consumed.
+    ;;Refill the input buffer  reading from the underlying device
+    ;;and  return  the  next  Scheme character  from  the  buffer
+    ;;without consuming it.
+    ;;
+    ;;If EOF  is found while reading from  the underlying device:
+    ;;return the EOF object.
+    ;;
+    (with-textual-port (port)
+      (assert (fx=? port.buffer.index port.buffer.used-size))
+      (if (eq? port.read! all-data-in-buffer)
+	  (eof-object)
+	(let* ((buffer.length	port.buffer.size)
+	       (count		(port.read! port.buffer 0 buffer.length)))
+	  (unless (fixnum? count)
+	    (die who "invalid return value from read!" count))
+	  (unless (<= 0 count buffer.length)
+	    (die who "return value from read! is out of range" count))
+	  (port.cookie.pos.incr! count)
+	  (set! port.buffer.index     0)
+	  (set! port.buffer.used-size count)
+	  (if (fx= count 0)
+	      (eof-object)
+	    (string-ref port.buffer 0))))))
+
+;;; --------------------------------------------------------------------
+;;; Byte Order Mark (BOM) processing
+
+  (define (advance-bom port who bom)
+    ;;Read and  consume bytes from  PORT verifying if  they match
+    ;;the given sequence of  bytes representing a Byte Order Mark
+    ;;(BOM).
+    ;;
+    ;;PORT must  be an  input port with  a bytevector  as buffer.
+    ;;BOM  must be a  list of  fixnums representing  the expected
+    ;;Byte Order Mark sequence.
+    ;;
+    ;;Return #t if the whole BOM sequence is read and matched; in
+    ;;this case  the port  position is left  right after  the BOM
+    ;;sequence.
+    ;;
+    ;;Return #f if  the bytes from the port do  not match the BOM
+    ;;sequence; in  this case  the port position  is left  at the
+    ;;same point it was before this function call.
+    ;;
+    ;;Return the  EOF object if  the port reaches EOF  before the
+    ;;whole BOM  is matched;  in this case  the port  position is
+    ;;left at the same point it was before this function call.
+    ;;
+    (with-port (port)
+      (let next-byte-in-bom ((number-of-consumed-bytes 0)
+			     (bom bom))
+	(if (null? bom)
+	    ;;Full  success:  all  the  bytes in  the  given  BOM
+	    ;;sequence where matched.
+	    (begin
+	      (port.buffer.index.incr! number-of-consumed-bytes)
+	      #t)
+	  (let retry-after-filling-buffer ()
+	    (let ((buffer.offset (fx+ number-of-consumed-bytes port.buffer.index)))
+	      (maybe-refill-buffer-and-evaluate (port who)
+		(data-is-needed-at: buffer.offset)
+		(if-end-of-file: (eof-object))
+		(if-successful-refill: (retry-after-filling-buffer))
+		(if-available-data:
+		 (and (fx=? (car bom) (bytevector-u8-ref port.buffer buffer.offset))
+		      (next-byte-in-bom (fx+ 1 number-of-consumed-bytes) (cdr bom)))))))))))
+
+  (define (validate-port-then-parse-bom-and-add-fast-tag-to-untagged-port port who)
+    ;;Validate PORT  as a still  open, textual, input  port; read
+    ;;the Byte Order Mark  expected for the port's transcoder and
+    ;;mutate the port's  attributes tagging the port accordingly.
+    ;;Return #t if port is at EOF, #f otherwise.
+    ;;
+    (unless (input-port? port)
+      (die who "not an input port" port))
+    (unless (textual-port? port)
+      (die who "not a textual port" port))
+    (when ($port-closed? port)
+      (die who "port is closed" port))
+    (with-textual-port (port)
+      (unless port.transcoder
+	(die who "expected port with transcoder" port))
+      (case (transcoder-codec port.transcoder)
 	((utf-8-codec)
-	 ($set-port-attrs! p
-			   (fxior textual-input-port-bits fast-u7-text-tag))
-	 (eof-object? (advance-bom p who '(#xEF #xBB #xBF))))
+	 (set! port.attributes (fxior textual-input-port-bits fast-u7-text-tag))
+	 (eof-object? (advance-bom port who '(#xEF #xBB #xBF))))
 	((utf-16-codec)
-	 (let ((be? (advance-bom p who '(#xFE #xFF))))
-	   (case be?
+	 (let ((big-endian? (advance-bom port who '(#xFE #xFF))))
+	   (case big-endian?
 	     ((#t)
-	      ($set-port-attrs! p
-				(fxior textual-input-port-bits fast-u16be-text-tag))
+	      (set! port.attributes (fxior textual-input-port-bits fast-u16be-text-tag))
 	      #f)
 	     ((#f)
-	      (let ((le? (advance-bom p who '(#xFF #xFE))))
-		(case le?
-		  ((#t #f) ;;; little by default
-		   ($set-port-attrs! p
-				     (fxior textual-input-port-bits fast-u16le-text-tag))
+	      (let ((little-endian? (advance-bom port who '(#xFF #xFE))))
+		(case little-endian?
+		  ((#t #f)
+		   ;;If  no  BOM  is  present, we  select  little
+		   ;;endian by default.
+		   (set! port.attributes (fxior textual-input-port-bits fast-u16le-text-tag))
 		   #f)
-		  (else #t))))
-	     (else #t))))
+		  (else
+		   (assert (eof-object? little-endian?))
+		   #t))))
+	     (else
+	      (assert (eof-object? big-endian?))
+	      #t))))
 	(else
-	 (die who "BUG: codec not handled" (transcoder-codec tr))))))
-;;;
-  (define (lookahead-char-char-mode p who)
-    (let ((str ($port-buffer p))
-	  (read! ($port-read! p)))
-      (if (eq? read! all-data-in-buffer)
-	  (eof-object)
-	(let ((n (read! str 0 (string-length str))))
-	  (unless (fixnum? n)
-	    (die who "invalid return value from read!" n))
-	  (unless (<= 0 n (string-length str))
-	    (die who "return value from read! is out of range" n))
-	  (let ((idx ($port-index p)) (cookie ($port-cookie p)))
-	    (set-cookie-pos! cookie (+ idx (cookie-pos cookie))))
-	  ($set-port-index! p 0)
-	  ($set-port-size! p n)
-	  (cond
-	   ((fx= n 0)
-	    (eof-object))
-	   (else
-	    (string-ref str 0)))))))
-;;;
-  (define (lookahead-char p)
-    (define who 'lookahead-char)
-    (let ((m ($port-fast-attrs p)))
-      (cond
-       ((eq? m fast-get-utf8-tag)
-	(let ((i ($port-index p)))
-	  (cond
-	   ((fx< i ($port-size p))
-	    (let ((b (bytevector-u8-ref ($port-buffer p) i)))
-	      (cond
-	       ((fx< b 128) (integer->char b))
-	       (else (lookahead-char-utf8-mode p who)))))
-	   (else
-	    (lookahead-char-utf8-mode p who)))))
-       ((eq? m fast-get-char-tag)
-	(let ((i ($port-index p)))
-	  (cond
-	   ((fx< i ($port-size p))
-	    (string-ref ($port-buffer p) i))
-	   (else
-	    (lookahead-char-char-mode p who)))))
-       ((eq? m fast-get-latin-tag)
-	(let ((i ($port-index p)))
-	  (cond
-	   ((fx< i ($port-size p))
-	    (integer->char
-	     (bytevector-u8-ref ($port-buffer p) i)))
-	   (else
-	    (get-char-latin-mode p who 0)))))
-       ((eq? m fast-get-utf16le-tag) (peek-utf16 p who 'little))
-       ((eq? m fast-get-utf16be-tag) (peek-utf16 p who 'big))
-       (else
-	(if (speedup-input-port p who)
-	    (eof-object)
-	  (lookahead-char p))))))
-;;;
-  (define (get-char-char-mode p who)
-    (let ((str ($port-buffer p))
-	  (read! ($port-read! p)))
-      (if (eq? read! all-data-in-buffer)
-	  (eof-object)
-	(let ((n (read! str 0 (string-length str))))
-	  (unless (fixnum? n)
-	    (die who "invalid return value from read!" n))
-	  (unless (<= 0 n (string-length str))
-	    (die who "return value from read! is out of range" n))
-	  (let ((idx ($port-index p)) (cookie ($port-cookie p)))
-	    (set-cookie-pos! cookie (+ idx (cookie-pos cookie))))
-	  ($set-port-size! p n)
-	  (cond
-	   ((fx= n 0)
-	    ($set-port-index! p 0)
-	    (eof-object))
-	   (else
-	    ($set-port-index! p 1)
-	    (string-ref str 0)))))))
-  (define (peek-utf16 p who endianness)
-    (define integer->char/invalid
-      (lambda (n)
-	(cond
-	 ((fx<= n #xD7FF)   (integer->char n))
-	 ((fx< n  #xE000)   #\xFFFD)
-	 ((fx<= n #x10FFFF) (integer->char n))
-	 (else               #\xFFFD))))
-    (let ((i ($port-index p)))
-      (cond
-       ((fx<= (fx+ i 2) ($port-size p))
-	(let ((w1 (bytevector-u16-ref ($port-buffer p) i endianness)))
-	  (cond
-	   ((or (fx< w1 #xD800) (fx> w1 #xDFFF))
-	    (integer->char/invalid w1))
-	   ((not (and (fx<= #xD800 w1) (fx<= w1 #xDBFF)))
-	    #\xFFFD)
-	   ((fx<= (+ i 4) ($port-size p))
-	    (let ((w2 (bytevector-u16-ref
-		       ($port-buffer p) (+ i 2) endianness)))
-	      (cond
-	       ((not (and (fx<= #xDC00 w2) (fx<= w2 #xDFFF)))
-		#\xFFFD)
-	       (else
-		(integer->char/invalid
-		 (fx+ #x10000
-		      (fxlogor
-		       (fxsll (fxand w1 #x3FF) 10)
-		       (fxand w2 #x3FF))))))))
-	   (else
-	    (let ((bytes (%refill-bytevector-buffer p who)))
-	      (cond
-	       ((fx= bytes 0)
-		#\xFFFD)
-	       (else
-		(peek-utf16 p who endianness))))))))
-       ((fx< i ($port-size p))
-	(let ((bytes (%refill-bytevector-buffer p who)))
-	  (cond
-	   ((fx= bytes 0)
-	    #\xFFFD)
-	   (else (peek-utf16 p who endianness)))))
-       (else
-	(let ((bytes (%refill-bytevector-buffer p who)))
-	  (if (fx= bytes 0)
-	      (eof-object)
-	    (peek-utf16 p who endianness)))))))
-  (define (get-utf16 p who endianness)
-    (define (invalid p who endianness n)
-      (case (transcoder-error-handling-mode (port-transcoder p))
-	((ignore) (do-get-char p who endianness))
-	((replace) #\xFFFD)
-	((raise)
-	 (raise (make-i/o-decoding-error p n)))
-	(else (die who "BUG: invalid error handling mode" p))))
-    (define (integer->char/invalid p who endianness n)
-      (cond
-       ((fx<= n #xD7FF)   (integer->char n))
-       ((fx< n  #xE000)   (invalid p who endianness n))
-       ((fx<= n #x10FFFF) (integer->char n))
-       (else              (invalid p who endianness n))))
-    (let ((i ($port-index p)))
-      (cond
-       ((fx<= (fx+ i 2) ($port-size p))
-	(let ((w1 (bytevector-u16-ref ($port-buffer p) i endianness)))
-	  (cond
-	   ((or (fx< w1 #xD800) (fx> w1 #xDFFF))
-	    ($set-port-index! p (fx+ i 2))
-	    (integer->char/invalid p who endianness w1))
-	   ((not (and (fx<= #xD800 w1) (fx<= w1 #xDBFF)))
-	    ($set-port-index! p (fx+ i 2))
-	    (invalid p who endianness w1))
-	   ((fx<= (+ i 4) ($port-size p))
-	    (let ((w2 (bytevector-u16-ref
-		       ($port-buffer p) (+ i 2) endianness)))
-	      (cond
-	       ((not (and (fx<= #xDC00 w2) (fx<= w2 #xDFFF)))
-		($set-port-index! p (fx+ i 2))
-		(invalid p who endianness w1))
-	       (else
-		($set-port-index! p (fx+ i 4))
-		(integer->char/invalid p who endianness
-				       (fx+ #x10000
-					    (fxlogor
-					     (fxsll (fxand w1 #x3FF) 10)
-					     (fxand w2 #x3FF))))))))
-	   (else
-	    (let ((bytes (%refill-bytevector-buffer p who)))
-	      (cond
-	       ((fx= bytes 0)
-		($set-port-index! p ($port-size p))
-		(invalid p who endianness w1))
-	       (else
-		(get-utf16 p who endianness))))))))
-       ((fx< i ($port-size p))
-	(let ((bytes (%refill-bytevector-buffer p who)))
-	  (cond
-	   ((fx= bytes 0)
-	    ($set-port-index! p ($port-size p))
-	    (invalid p who endianness
-		     (bytevector-u8-ref ($port-buffer p) ($port-index p))))
-	   (else (get-utf16 p who endianness)))))
-       (else
-	(let ((bytes (%refill-bytevector-buffer p who)))
-	  (if (fx= bytes 0)
-	      (eof-object)
-	    (get-utf16 p who endianness)))))))
-  )
+	 (die who "BUG: codec not handled" (transcoder-codec port.transcoder))))))
+
+;;; --------------------------------------------------------------------
+
+;;; 1-byte UTF-8 encoding
+
+  (define-inline (utf-8-single-byte? byte)
+    ;;Evaluate to true if BYTE  is valid as 1-byte UTF-8 encoding
+    ;;of a Unicode character.
+    ;;
+    (fx< byte 128))
+
+;;; 2-bytes UTF-8 encoding
+
+  (define-inline (utf-8-first-of-two-bytes? byte0)
+    ;;Evaluate to true if BYTE0  is valid as first of 2-bytes
+    ;;UTF-8 encoding of a Unicode character.
+    ;;
+    (fx= (fxsra byte0 5) #b110))
+
+  (define-inline (utf-8-second-of-two-bytes? byte1)
+    ;;Evaluate to true if BYTE1 is valid as second of 2-bytes
+    ;;UTF-8 encoding of a Unicode character.
+    ;;
+    (fx= (fxsra byte1 6) #b10))
+
+  (define-inline (utf-8-two-bytes-compose byte0 byte1)
+    ;;Compose  the   integer  representation  of   a  Unicode
+    ;;character from a 2-bytes UTF-8 encoding.
+    ;;
+    (fxior (fxsll (fxand byte0 #b11111) 6)
+	   (fxand byte1 #b111111)))
+
+;;; 3-bytes UTF-8 encoding
+
+  (define-inline (utf-8-first-of-three-bytes? byte0)
+    ;;Evaluate to true if BYTE0  is valid as first of 3-bytes
+    ;;UTF-8 encoding of a Unicode character.
+    ;;
+    (fx= (fxsra byte0 4) #b1110))
+
+  (define-inline (utf-8-second-and-third-of-three-bytes? byte1 byte2)
+    ;;Evaluate to true if BYTE1 and BYTE2 are valid as second
+    ;;and  third  of  3-bytes  UTF-8 encoding  of  a  Unicode
+    ;;character.
+    ;;
+    (fx= (fxsra (fxlogor byte1 byte2) 6) #b10))
+
+  (define-inline (utf-8-three-bytes-compose byte0 byte1 byte2)
+    ;;Compose  the   integer  representation  of   a  Unicode
+    ;;character from a 3-bytes UTF-8 encoding.
+    ;;
+    (fxlogor (fxsll (fxand byte0   #b1111) 12)
+	     (fxsll (fxand byte1 #b111111)  6)
+	     (fxand byte2 #b111111)))
+
+;;; 4-bytes UTF-8 encoding
+
+  (define-inline (utf-8-first-of-four-bytes? byte0)
+    ;;Evaluate to true if BYTE0  is valid as first of 4-bytes
+    ;;UTF-8 encoding of a Unicode character.
+    ;;
+    (fx= (fxsra byte0 3) #b11110))
+
+  (define-inline (utf-8-second-third-and-fourth-of-three-bytes? byte1 byte2 byte3)
+    ;;Evaluate to true if BYTE1, BYTE2 and BYTE3 are valid as
+    ;;second, third and fourth of 4-bytes UTF-8 encoding of a
+    ;;Unicode character.
+    ;;
+    (fx= (fxsra (fxlogor byte1 byte2 byte3) 6) #b10))
+
+  (define-inline (utf-8-four-bytes-compose byte0 byte1 byte2 byte3)
+    ;;Compose  the   integer  representation  of   a  Unicode
+    ;;character from a 4-bytes UTF-8 encoding.
+    ;;
+    (fxlogor (fxsll (fxand byte0    #b111) 18)
+	     (fxsll (fxand byte1 #b111111) 12)
+	     (fxsll (fxand byte2 #b111111)  6)
+	     (fxand byte3 #b111111)))
+
+  #| end of module |# )
 
 
 (module (get-u8 lookahead-u8)
@@ -3157,17 +3717,6 @@
       (apply values vals))))
 
 
-(define peek-char
-  (case-lambda
-   (() (lookahead-char (current-input-port)))
-   ((p)
-    (define who 'peek-char)
-    (unless (input-port? p)
-      (die "not an input-port" p))
-    (unless (textual-port? p)
-      (die who "not a textual port" p))
-    (lookahead-char p))))
-
 (define (get-bytevector-n p n)
   (import (ikarus system $fx)
     (ikarus system $bytevectors))
@@ -3979,7 +4528,11 @@
 ;;; end of file
 ;;; Local Variables:
 ;;; fill-column: 65
-;;; eval: (put 'with-port 'scheme-indent-function 1)
-;;; eval: (put 'with-binary-port 'scheme-indent-function 1)
-;;; eval: (put 'with-textual-port 'scheme-indent-function 1)
+;;; eval: (put 'with-port				'scheme-indent-function 1)
+;;; eval: (put 'with-binary-port			'scheme-indent-function 1)
+;;; eval: (put 'with-textual-port			'scheme-indent-function 1)
+;;; eval: (put 'case-textual-input-port-fast-tag	'scheme-indent-function 1)
+;;; eval: (put 'refill-buffer-and-evaluate		'scheme-indent-function 1)
+;;; eval: (put 'maybe-refill-buffer-and-evaluate	'scheme-indent-function 1)
+;;; eval: (put 'maybe-refill-buffer-return-eof-or-retry-or 'scheme-indent-function 1)
 ;;; End:
