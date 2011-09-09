@@ -2898,94 +2898,95 @@
       (define-inline (recurse)
 	(peek-utf16 port who endianness))
 
-      (define (error-handler offending-fixnum)
+      (define (error-handler message . irritants)
 	;;Handle the  error honoring  the error handling  mode in
 	;;port's transcoder.
 	;;
 	(let ((mode (transcoder-error-handling-mode port.transcoder)))
 	  (case mode
 	    ((ignore)
-	     (recurse))
+	     (do-get-char port who endianness))
 	    ((replace)
 	     #\xFFFD)
 	    ((raise)
-	     (raise
-	      (condition (make-i/o-decoding-error port)
-			 (make-who-condition who)
-			 (make-message-condition
-			  "invalid value from textual input port while decoding UTF-16 character")
-			 (make-irritants-condition (list offending-fixnum)))))
+	     (raise (condition (make-i/o-decoding-error port)
+			       (make-who-condition who)
+			       (make-message-condition message)
+			       (make-irritants-condition irritants))))
 	    (else
 	     (die who "internal error: invalid error handling mode" port mode)))))
 
       (define (integer->char/invalid integer-representation-of-char)
-	;;If the argument is a valid integer representation for a
-	;;Unicode  character   according  to  R6RS:   return  the
-	;;corresponding character value, else handle the error.
+      	;;If the argument is a valid integer representation for a
+      	;;Unicode  character   according  to  R6RS:   return  the
+      	;;corresponding character value, else handle the error.
+      	;;
+	;;The  fact that  we  validate the  16-bit  words in  the
+	;;UTF-16  stream does  *not* guarantee  that  a surrogate
+	;;pair, once decoded  into the integer representation, is
+	;;a  valid Unicode representation.   The integers  in the
+	;;invalid range [#xD800, #xDFFF]  can still be encoded as
+	;;surrogate pairs.
 	;;
-	(cond ((fx<= integer-representation-of-char #xD7FF)
-	       (integer->char integer-representation-of-char))
-	      ((fx<  integer-representation-of-char #xE000)
-	       #\xFFFD)
-	      ((fx<= integer-representation-of-char #x10FFFF)
-	       (integer->char integer-representation-of-char))
-	      (else
-	       (error-handler integer-representation-of-char))))
+	;;This  is  why we  check  the  representation with  this
+	;;function: this check is *not* a repetition of the check
+	;;on the 16-bit words.
+	;;
+	(define errmsg
+	  "invalid integer representation decoded from UTF-16 surrogate pair")
+      	(cond ((fx<= integer-representation-of-char #xD7FF)
+      	       (integer->char integer-representation-of-char))
+      	      ((fx<  integer-representation-of-char #xE000)
+      	       (error-handler errmsg integer-representation-of-char))
+      	      ((fx<= integer-representation-of-char #x10FFFF)
+      	       (integer->char integer-representation-of-char))
+      	      (else
+      	       (error-handler errmsg integer-representation-of-char))))
 
-      (let ((buffer.offset port.buffer.index))
-	(cond ((fx<= (fx+ buffer.offset 2) port.buffer.used-size)
-	       ;;There are two bytes  in the input buffer, enough
-	       ;;for a full UTF-16 character encoded as single 16
-	       ;;bits word.
-	       (let ((word0 (bytevector-u16-ref port.buffer buffer.offset endianness)))
-		 (cond ((or (fx< word0 #xD800) (fx< #xDFFF word0))
-			;;The word is in  the allowed range for a
-			;;UTF-16 encoded character of 16 bits.
+      (let* ((buffer.offset-word0 port.buffer.index)
+	     (buffer.offset-word1 (fx+ 2 buffer.offset-word0))
+	     (buffer.offset-past  (fx+ 2 buffer.offset-word1)))
+	(cond ((fx<= buffer.offset-word1 port.buffer.used-size)
+	       ;;There  are  at  least  two bytes  in  the  input
+	       ;;buffer,  enough  for  a  full  UTF-16  character
+	       ;;encoded as single 16 bits word.
+	       (let ((word0 (bytevector-u16-ref port.buffer buffer.offset-word0 endianness)))
+		 (cond ((utf-16-single-word? word0)
 			(integer->char/invalid word0))
-		       ((not (and (fx<= #xD800 word0) (fx<= word0 #xDBFF)))
-			;;The word is  in the forbidden range for
-			;;UTF-16:  it is  neither  a single  word
-			;;character nor the  first in a surrogate
-			;;pair.
-			(error-handler word0))
-		       ((fx<= (fx+ buffer.offset 4) port.buffer.used-size)
+		       ((not (utf-16-first-of-two-words? word0))
+			(error-handler "invalid 16-bit word while decoding UTF-16 characters" word0))
+		       ((fx<= buffer.offset-past port.buffer.used-size)
 			;;The  word  is  the  first of  a  UTF-16
 			;;surrogate  pair  and  the input  buffer
 			;;already holds the second word.
-			(let ((word1 (bytevector-u16-ref port.buffer (fx+ buffer.offset 2) endianness)))
-			  (if (not (and (fx<= #xDC00 word1) (fx<= word1 #xDFFF)))
-			      ;;The  second  word  is invalid  as
-			      ;;second   in  a   surrogate  pair:
-			      ;;handle the error.
-			      (error-handler word1)
-			    ;;The second word  is valid as second
-			    ;;in  a  surrogate  pair: compose  it
-			    ;;with the first.
-			    (integer->char/invalid (fx+ #x10000
-							(fxlogor (fxsll (fxand word0 #x3FF) 10)
-								 (fxand word1 #x3FF)))))))
+			(let ((word1 (bytevector-u16-ref port.buffer buffer.offset-word1 endianness)))
+			  (if (utf-16-second-of-two-words? word1)
+			      (integer->char/invalid (utf-16-compose-from-surrogate-pair word0 word1))
+			    (error-handler "invalid value as second 16-bit word of \
+                                            UTF-16 character" word0))))
 		       (else
 			;;The  word  is  the  first of  a  UTF-16
 			;;surrogate  pair, but input  buffer does
 			;;not hold the full second word.
 			(refill-buffer-and-evaluate (port who)
 			  (if-end-of-file:
-			   ;;The input  data is corrupted because
-			   ;;we  expected the  second word  to be
-			   ;;there before EOF.
-			   (error-handler word0))
+			   (error-handler "unexpected end of file while reading second \
+                                           16-bit word in UTF-16 surrogate pair character" word0))
 			  (if-successful-refill:
 			   (recurse)))))))
 
-	      ((fx< buffer.offset port.buffer.used-size)
+	      ((fx< buffer.offset-word0 port.buffer.used-size)
 	       ;;There is only 1 byte in the input buffer.
 	       (refill-buffer-and-evaluate (port who)
 		 (if-end-of-file:
 		  ;;The  input  data   is  corrupted  because  we
 		  ;;expected at least a  16 bits word to be there
 		  ;;before EOF.
-		  (error-handler (bytevector-u8-ref port.buffer buffer.offset)))
-		 (if-successful-refill: (recurse))))
+		  (error-handler "unexpected end of file after byte while reading \
+                                  16-bit word of UTF-16 character"
+				 (bytevector-u8-ref port.buffer buffer.offset-word0)))
+		 (if-successful-refill:
+		  (recurse))))
 
 	      (else
 	       ;;The input buffer is empty.
