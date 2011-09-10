@@ -872,7 +872,7 @@
 
 ;;The following macro definitions  assume that the BYTE arguments
 ;;are  fixnums representing  1 byte  (they are  in the  range [0,
-;;255]),  while  the  IREP  arguments  are  fixnums  representing
+;;255]), while the  CODE-POINT arguments are fixnums representing
 ;;Unicode code points  (they are in the range  [0, #x10FFFF], but
 ;;outside the range [#xD800, #xDFFF]).
 ;;
@@ -886,7 +886,7 @@
       (and (unsafe.fx<= #xF5 byte) (unsafe.fx<= byte #xFF))))
 
 ;;; -------------------------------------------------------------
-;;; decoding 1-byte UTF-8 to integer representations
+;;; decoding 1-byte UTF-8 to code points
 
 (define-inline (utf-8-single-byte? byte)
   ;;Evaluate to true if BYTE is valid as 1-byte UTF-8 encoding of
@@ -895,16 +895,20 @@
   (unsafe.fx< byte 128))
 
 (define-inline (utf-8-decode-single-byte byte)
-  ;;Decode the integer representation of a Unicode character from
-  ;;a 1-byte UTF-8 encoding.
+  ;;Decode the  code point of  a Unicode character from  a 1-byte
+  ;;UTF-8 encoding.
   ;;
   byte)
 
-(define-inline (utf-8-valid-integer-representation-from-1-byte? irep)
-  (and (unsafe.fx<= 0 irep) (unsafe.fx<= irep #x007F)))
+(define-inline (utf-8-valid-code-point-from-1-byte? code-point)
+  ;;Evaluate   to  true   if  CODE-POINT   is  a   valid  integer
+  ;;representation for a code  point decoded from a 2-bytes UTF-8
+  ;;sequence.
+  ;;
+  (and (unsafe.fx<= 0 code-point) (unsafe.fx<= code-point #x007F)))
 
 ;;; -------------------------------------------------------------
-;;; decoding 2-bytes UTF-8 to integer representations
+;;; decoding 2-bytes UTF-8 to code points
 
 (define-inline (utf-8-first-of-two-bytes? byte0)
   ;;Evaluate to true if BYTE0  is valid as first of 2-bytes UTF-8
@@ -919,20 +923,21 @@
   (unsafe.fx= (unsafe.fxsra byte1 6) #b10))
 
 (define-inline (utf-8-decode-two-bytes byte0 byte1)
-  ;;Decode the integer representation of a Unicode character from
-  ;;a 2-bytes UTF-8 encoding.
+  ;;Decode the code  point of a Unicode character  from a 2-bytes
+  ;;UTF-8 encoding.
   ;;
   (unsafe.fxior (unsafe.fxsll (unsafe.fxand byte0 #b11111) 6)
 		(unsafe.fxand byte1 #b111111)))
 
-(define-inline (utf-8-valid-integer-representation-from-2-bytes? irep)
-  ;;Evaluate to true if IREP is a valid integer representation of
-  ;;a code point decoded from a 2-bytes UTF-8 sequence.
+(define-inline (utf-8-valid-code-point-from-2-bytes? code-point)
+  ;;Evaluate   to  true   if  CODE-POINT   is  a   valid  integer
+  ;;representation for a code  point decoded from a 2-bytes UTF-8
+  ;;sequence.
   ;;
-  (and (unsafe.fx<= #x0080 irep) (unsafe.fx<= irep #x07FF)))
+  (and (unsafe.fx<= #x0080 code-point) (unsafe.fx<= code-point #x07FF)))
 
 ;;; -------------------------------------------------------------
-;;; decoding 3-bytes UTF-8 to integer representations
+;;; decoding 3-bytes UTF-8 to code points
 
 (define-inline (utf-8-first-of-three-bytes? byte0)
   ;;Evaluate to true if BYTE0  is valid as first of 3-bytes UTF-8
@@ -947,23 +952,23 @@
   (unsafe.fx= (unsafe.fxsra (unsafe.fxior byte1 byte2) 6) #b10))
 
 (define-inline (utf-8-decode-three-bytes byte0 byte1 byte2)
-  ;;Decode the integer representation of a Unicode character from
-  ;;a 3-bytes UTF-8 encoding.
+  ;;Decode the code  point of a Unicode character  from a 3-bytes
+  ;;UTF-8 encoding.
   ;;
   (unsafe.fxior (unsafe.fxior (unsafe.fxsll (unsafe.fxand byte0   #b1111) 12)
 			      (unsafe.fxsll (unsafe.fxand byte1 #b111111)  6))
 		(unsafe.fxand byte2 #b111111)))
 
-(define-inline (utf-8-valid-integer-representation-from-3-bytes? irep)
-  ;;Evaluate to true if IREP is a valid integer representation of
-  ;;a code point decoded from a 3-bytes UTF-8 sequence.
+(define-inline (utf-8-valid-code-point-from-3-bytes? code-point)
+  ;;Evaluate   to  true   if  CODE-POINT   is  a   valid  integer
+  ;;representation for a code  point decoded from a 3-bytes UTF-8
+  ;;sequence.
   ;;
-  ;;FIXME what's wrong here???
-  (and (unsafe.fx<= #x0800 irep) (unsafe.fx<= irep #xFFFF)
-       (unsafe.fx< irep #xD800)  (unsafe.fx<  #xDFFF irep)))
+  (and (unsafe.fx<= #x0800 code-point) (unsafe.fx<= code-point #xFFFF)
+       (or (unsafe.fx< code-point #xD800) (unsafe.fx<  #xDFFF code-point))))
 
 ;;; -------------------------------------------------------------
-;;; decoding 4-bytes UTF-8 to integer representations
+;;; decoding 4-bytes UTF-8 to code points
 
 (define-inline (utf-8-first-of-four-bytes? byte0)
   ;;Evaluate to true if BYTE0  is valid as first of 4-bytes UTF-8
@@ -979,31 +984,32 @@
   (unsafe.fx= (unsafe.fxsra (unsafe.fxior (unsafe.fxior byte1 byte2) byte3) 6) #b10))
 
 (define-inline (utf-8-decode-four-bytes byte0 byte1 byte2 byte3)
-  ;;Decode the integer representation of a Unicode character from
-  ;;a 4-bytes UTF-8 encoding.
+  ;;Decode the code  point of a Unicode character  from a 4-bytes
+  ;;UTF-8 encoding.
   ;;
   (unsafe.fxior (unsafe.fxior (unsafe.fxior (unsafe.fxsll (unsafe.fxand byte0    #b111) 18)
 					    (unsafe.fxsll (unsafe.fxand byte1 #b111111) 12))
 			      (unsafe.fxsll (unsafe.fxand byte2 #b111111)  6))
 		(unsafe.fxand byte3 #b111111)))
 
-(define-inline (utf-8-valid-integer-representation-from-4-bytes? irep)
-  ;;Evaluate to true if IREP is a valid integer representation of
-  ;;a code point decoded from a 3-bytes UTF-8 sequence.
+(define-inline (utf-8-valid-code-point-from-4-bytes? code-point)
+  ;;Evaluate   to  true   if  CODE-POINT   is  a   valid  integer
+  ;;representation for a code  point decoded from a 3-bytes UTF-8
+  ;;sequence.
   ;;
-  (and (unsafe.fx<= #x010000 irep) (unsafe.fx<= irep #x10FFFF)))
+  (and (unsafe.fx<= #x010000 code-point) (unsafe.fx<= code-point #x10FFFF)))
 
 ;;; -------------------------------------------------------------
-;;; encoding integer representations to 1-byte UTF-8
+;;; encoding code points to 1-byte UTF-8
 
-(define-inline (utf-8-irep-single-byte? irep)
-  (and (unsafe.fx<= 0 irep) (unsafe.fx<= 255)))
+(define-inline (utf-8-code-point-single-byte? code-point)
+  (and (unsafe.fx<= 0 code-point) (unsafe.fx<= 255)))
 
-(define-inline (utf-8-encode-single-byte irep)
-  ;;Encode the integer representation of a Unicode character to a
-  ;;1-byte UTF-8 encoding.
+(define-inline (utf-8-encode-single-byte code-point)
+  ;;Encode  the code  point of  a Unicode  character to  a 1-byte
+  ;;UTF-8 encoding.
   ;;
-  irep)
+  code-point)
 
 
 ;;;; UTF-16 decoding
@@ -2926,10 +2932,11 @@
 			(error-handler errmsg byte1))
 		       ((utf-8-second-of-two-bytes? byte1)
 			(let ((N (utf-8-decode-two-bytes byte0 byte1)))
-			  (if (utf-8-valid-integer-representation-from-2-bytes? N)
+			  (if (utf-8-valid-code-point-from-2-bytes? N)
 			      (integer->char N)
-			    (error-handler "invalid integer representation as result \
-                                            of decoding 2-bytes UTF-8 character" N))))
+			    (error-handler "invalid code point as result \
+                                            of decoding 2-bytes UTF-8 character"
+					   byte0 byte1 N))))
 		       (else
 			(error-handler errmsg byte1)))))))))
 
@@ -2956,10 +2963,11 @@
 			(error-handler errmsg byte1 byte2))
 		       ((utf-8-second-and-third-of-three-bytes? byte1 byte2)
 			(let ((N (utf-8-decode-three-bytes byte0 byte1 byte2)))
-			  (if (utf-8-valid-integer-representation-from-3-bytes? N)
+			  (if (utf-8-valid-code-point-from-3-bytes? N)
 			      (integer->char N)
-			    (error-handler "invalid integer representation as result \
-                                            of decoding 3-bytes UTF-8 character" N))))
+			    (error-handler "invalid code point as result \
+                                            of decoding 3-bytes UTF-8 character"
+					   byte0 byte1 byte2 N))))
 		       (else
 			(error-handler errmsg byte1 byte2)))))))))
 
@@ -2989,10 +2997,11 @@
 			(error-handler errmsg byte1 byte2 byte3))
 		       ((utf-8-second-third-and-fourth-of-three-bytes? byte1 byte2 byte3)
 			(let ((N (utf-8-decode-four-bytes byte0 byte1 byte2 byte3)))
-			  (if (utf-8-valid-integer-representation-from-3-bytes? N)
+			  (if (utf-8-valid-code-point-from-4-bytes? N)
 			      (integer->char N)
-			    (error-handler "invalid integer representation as result \
-                                            of decoding 4-bytes UTF-8 character" N))))
+			    (error-handler "invalid code point as result \
+                                            of decoding 4-bytes UTF-8 character"
+					   byte0 byte1 byte2 byte3 N))))
 		       (else
 			(error-handler errmsg byte1 byte2 byte3)))))))))
 
@@ -3056,10 +3065,11 @@
 			(error-handler errmsg byte1))
 		       ((utf-8-second-of-two-bytes? byte1)
 			(let ((N (utf-8-decode-two-bytes byte0 byte1)))
-			  (if (utf-8-valid-integer-representation-from-2-bytes? N)
+			  (if (utf-8-valid-code-point-from-2-bytes? N)
 			      (integer->char N)
-			    (error-handler "invalid integer representation as result \
-                                            of decoding 2-bytes UTF-8 character" N))))
+			    (error-handler "invalid code point as result \
+                                            of decoding 2-bytes UTF-8 character"
+					   byte0 byte1 N))))
 		       (else
 			(error-handler errmsg byte1)))))))))
 
@@ -3082,10 +3092,11 @@
 			(error-handler errmsg byte1 byte2))
 		       ((utf-8-second-and-third-of-three-bytes? byte1 byte2)
 			(let ((N (utf-8-decode-three-bytes byte0 byte1 byte2)))
-			  (if (utf-8-valid-integer-representation-from-3-bytes? N)
+			  (if (utf-8-valid-code-point-from-3-bytes? N)
 			      (integer->char N)
-			    (error-handler "invalid integer representation as result \
-                                            of decoding 3-bytes UTF-8 character" N))))
+			    (error-handler "invalid code point as result \
+                                            of decoding 3-bytes UTF-8 character"
+					   byte0 byte1 byte2 N))))
 		       (else
 			(error-handler errmsg byte1 byte2)))))))))
 
@@ -3111,10 +3122,11 @@
 			(error-handler errmsg byte1 byte2 byte3))
 		       ((utf-8-second-third-and-fourth-of-three-bytes? byte1 byte2 byte3)
 			(let ((N (utf-8-decode-four-bytes byte0 byte1 byte2 byte3)))
-			  (if (utf-8-valid-integer-representation-from-3-bytes? N)
+			  (if (utf-8-valid-code-point-from-4-bytes? N)
 			      (integer->char N)
-			    (error-handler "invalid integer representation as result \
-                                            of decoding 4-bytes UTF-8 character" N))))
+			    (error-handler "invalid code point as result \
+                                            of decoding 4-bytes UTF-8 character"
+					   byte0 byte1 byte2 N))))
 		       (else
 			(error-handler errmsg byte1 byte2 byte3)))))))))
 
@@ -3176,7 +3188,7 @@
 	     (die who "internal error: invalid error handling mode" port mode)))))
 
 
-      (define (integer->char/invalid integer-representation-of-char)
+      (define (integer->char/invalid char-code-point)
       	;;If the argument is a valid integer representation for a
       	;;Unicode  character   according  to  R6RS:   return  the
       	;;corresponding character value, else handle the error.
@@ -3193,15 +3205,15 @@
 	;;on the 16-bit words.
 	;;
 	(define errmsg
-	  "invalid integer representation decoded from UTF-16 surrogate pair")
-      	(cond ((unsafe.fx<= integer-representation-of-char #xD7FF)
-      	       (integer->char integer-representation-of-char))
-      	      ((unsafe.fx<  integer-representation-of-char #xE000)
-      	       (error-handler errmsg integer-representation-of-char))
-      	      ((unsafe.fx<= integer-representation-of-char #x10FFFF)
-      	       (integer->char integer-representation-of-char))
+	  "invalid code point decoded from UTF-16 surrogate pair")
+      	(cond ((unsafe.fx<= char-code-point #xD7FF)
+      	       (integer->char char-code-point))
+      	      ((unsafe.fx<  char-code-point #xE000)
+      	       (error-handler errmsg char-code-point))
+      	      ((unsafe.fx<= char-code-point #x10FFFF)
+      	       (integer->char char-code-point))
       	      (else
-      	       (error-handler errmsg integer-representation-of-char))))
+      	       (error-handler errmsg char-code-point))))
 
       (let* ((buffer.offset-word0 port.buffer.index)
 	     (buffer.offset-word1 (unsafe.fx+ 2 buffer.offset-word0))
@@ -3300,7 +3312,7 @@
 	    (else
 	     (die who "internal error: invalid error handling mode" port mode)))))
 
-      (define (integer->char/invalid integer-representation-of-char)
+      (define (integer->char/invalid char-code-point)
       	;;If the argument is a valid integer representation for a
       	;;Unicode  character   according  to  R6RS:   return  the
       	;;corresponding character value, else handle the error.
@@ -3317,15 +3329,15 @@
 	;;on the 16-bit words.
 	;;
 	(define errmsg
-	  "invalid integer representation decoded from UTF-16 surrogate pair")
-      	(cond ((unsafe.fx<= integer-representation-of-char #xD7FF)
-      	       (integer->char integer-representation-of-char))
-      	      ((unsafe.fx<  integer-representation-of-char #xE000)
-      	       (error-handler errmsg integer-representation-of-char))
-      	      ((unsafe.fx<= integer-representation-of-char #x10FFFF)
-      	       (integer->char integer-representation-of-char))
+	  "invalid code point decoded from UTF-16 surrogate pair")
+      	(cond ((unsafe.fx<= char-code-point #xD7FF)
+      	       (integer->char char-code-point))
+      	      ((unsafe.fx<  char-code-point #xE000)
+      	       (error-handler errmsg char-code-point))
+      	      ((unsafe.fx<= char-code-point #x10FFFF)
+      	       (integer->char char-code-point))
       	      (else
-      	       (error-handler errmsg integer-representation-of-char))))
+      	       (error-handler errmsg char-code-point))))
 
       (let* ((buffer.offset-word0 port.buffer.index)
 	     (buffer.offset-word1 (unsafe.fx+ 2 buffer.offset-word0))
@@ -3540,103 +3552,150 @@
 
 
 (module (get-u8 lookahead-u8)
-  (define (get-u8 p)
+
+  (define (get-u8 port)
+    ;;Defined  by R6RS.  Read  from the  binary input  port PORT,
+    ;;blocking as necessary, until  a byte is available from PORT
+    ;;or  until an end  of file  is reached.   If a  byte becomes
+    ;;available, GET-U8 returns the  byte as an octet and updates
+    ;;PORT to  point just  past that byte.   If no input  byte is
+    ;;seen before  an end of file  is reached, the  EOF object is
+    ;;returned.
+    ;;
+    ;;Here we  handle the case  of byte already available  in the
+    ;;buffer.      If    the     buffer     is    empty:     call
+    ;;GET/PEEK-U8-BYTE-MODE.   If  the  PORT  has  not  yet  been
+    ;;tagged: call SLOW-GET/PEEK-U8.
+    ;;
     (define who 'get-u8)
-    (let ((m ($port-fast-attrs p)))
-      (cond
-       ((eq? m fast-get-byte-tag)
-	(let ((i ($port-index p)))
-	  (cond
-	   ((unsafe.fx< i ($port-size p))
-	    ($set-port-index! p (unsafe.fx+ i 1))
-	    (bytevector-u8-ref ($port-buffer p) i))
-	   (else (get-u8-byte-mode p who 1)))))
-       (else (slow-get-u8 p who 1)))))
+    (with-binary-port (port)
+      (if (eq? port.attributes fast-get-byte-tag)
+	  (let ((buffer.offset port.buffer.index))
+	    (if (unsafe.fx< buffer.offset port.buffer.used-size)
+		(begin
+		  (set! port.buffer.index (unsafe.fx+ 1 buffer.offset))
+		  (bytevector-u8-ref port.buffer buffer.offset))
+	      (get/peek-u8-byte-mode port who 1)))
+	(slow-get/peek-u8 port who 1))))
 
-  (define (lookahead-u8 p)
+  (define (lookahead-u8 port)
+    ;;Defined  by  R6RS.   The  LOOKAHEAD-U8  procedure  is  like
+    ;;GET-U8, but it does not update PORT to point past the byte.
+    ;;
+    ;;Here we  handle the case  of byte already available  in the
+    ;;buffer.      If    the     buffer     is    empty:     call
+    ;;GET/PEEK-U8-BYTE-MODE.   If  the  PORT  has  not  yet  been
+    ;;tagged: call SLOW-GET/PEEK-U8.
+    ;;
     (define who 'lookahead-u8)
-    (let ((m ($port-fast-attrs p)))
-      (cond
-       ((eq? m fast-get-byte-tag)
-	(let ((i ($port-index p)))
-	  (cond
-	   ((unsafe.fx< i ($port-size p))
-	    (bytevector-u8-ref ($port-buffer p) i))
-	   (else (get-u8-byte-mode p who 0)))))
-       (else (slow-get-u8 p who 0)))))
+    (with-binary-port (port)
+      (if (eq? port.attributes fast-get-byte-tag)
+	  (let ((buffer.offset port.buffer.index))
+	    (if (unsafe.fx< buffer.offset port.buffer.used-size)
+		(bytevector-u8-ref port.buffer buffer.offset)
+	      (get/peek-u8-byte-mode port who 0)))
+	(slow-get/peek-u8 port who 0))))
 
-  (define (get-u8-byte-mode p who start)
-    (when ($port-closed? p) (die who "port is closed" p))
-    (let ((cnt (%refill-bytevector-buffer p who)))
-      (cond
-       ((eqv? cnt 0) (eof-object))
-       (else
-	($set-port-index! p start)
-	(bytevector-u8-ref ($port-buffer p) 0)))))
+  (define (get/peek-u8-byte-mode port who start)
+    ;;Subroutine of  GET-u8 and LOOKAHEAD-u8.  To  be called when
+    ;;the port  buffer is fully  consumed.  Get or peek  the next
+    ;;byte from PORT, set the buffer index to START.
+    ;;
+    (with-binary-port (port)
+      (when port.closed?
+	(die who "port is closed" port))
+      (let ((count (%refill-bytevector-buffer port who)))
+	(if (unsafe.fx= 0 count)
+	    (eof-object)
+	 (begin
+	   (set! port.buffer.index start)
+	   (bytevector-u8-ref port.buffer 0))))))
 
-  (define (slow-get-u8 p who start)
-    (%assert-binary-input-port p who)
-    ($set-port-attrs! p fast-get-byte-tag)
-    (get-u8-byte-mode p who start))
+  (define (slow-get/peek-u8 port who start)
+    ;;Subroutine of GET-u8 and  LOOKAHEAD-u8.  Validate PORT as a
+    ;;binary  input port,  mark the  port  with FAST-GET-BYTE-TAG
+    ;;then call GET/PEEK-U8-BYTE-MODE.
+    ;;
+    (unless (port? port)
+      (die who "not a port" port))
+    (with-binary-port (port)
+      (when port.closed?
+	(die who "port is closed" port))
+      (when port.transcoder
+	(die who "port is not binary" port))
+      (unless port.read!
+	(die who "port is not an input port" port))
+      (set! port.attributes fast-get-byte-tag)
+      (get/peek-u8-byte-mode port who start)))
 
-  (define (%assert-binary-input-port p who)
-    (unless (port? p) (die who "not a port" p))
-    (when ($port-closed? p) (die who "port is closed" p))
-    (when ($port-transcoder p) (die who "port is not binary" p))
-    (unless ($port-read! p)
-      (die who "port is not an input port" p)))
-  )
+  #| end of module |# )
 
 
-(define (port-eof? p)
+(define (port-eof? port)
+  ;;Defined by R6RS.   PORT must be an input  port.  Return #t if
+  ;;the LOOKAHEAD-U8 procedure (if PORT  is a binary port) or the
+  ;;LOOKAHEAD-CHAR procedure  (if PORT  is a textual  port) would
+  ;;return the  EOF object, and #f otherwise.   The operation may
+  ;;block  indefinitely if  no  data is  available  but the  port
+  ;;cannot be determined to be at end of file.
+  ;;
   (define who 'port-eof?)
-  (let ((m ($port-fast-attrs p)))
-    (cond ((not (eq? m 0))
-	   (if (unsafe.fx< ($port-index p) ($port-size p))
-	       #f
-	     (if ($port-transcoder p)
-		 (eof-object? (lookahead-char p))
-	       (eof-object? (lookahead-u8 p)))))
-	  ((input-port? p)
-	   (when ($port-closed? p)
-	     (die who "port is closed" p))
-	   (if (textual-port? p)
-	       (eof-object? (lookahead-char p))
-	     (eof-object? (lookahead-u8 p))))
-	  (else
-	   (die who "not an input port" p)))))
+  (with-port (port)
+    (let ((m port.attributes))
+      (cond ((not (eq? m 0))
+	     (cond ((unsafe.fx< port.buffer.index port.buffer.used-size)
+		    #f)
+		   (port.transcoder
+		    (eof-object? (lookahead-char port)))
+		   (else
+		    (eof-object? (lookahead-u8 port)))))
+	    ((input-port? port)
+	     (when port.closed?
+	       (die who "port is closed" port))
+	     (eof-object? (if (textual-port? port)
+			      (lookahead-char port)
+			    (lookahead-u8 port))))
+	    (else
+	     (die who "not an input port" port))))))
 
 
 ;;; FIXME: these hard coded constants should go away
 (define EAGAIN-error-code -6) ;;; from ikarus-errno.c
 
 (define io-error
+  ;;Raise a non-continuable  exception describing an input/output
+  ;;system error from the value of ERRNO.
+  ;;
   (case-lambda
-   ((who id err base-condition)
-    (raise
-     (condition
-      base-condition
-      (make-who-condition who)
-      (make-message-condition (strerror err))
-      (case err
-	;; from ikarus-errno.c: EACCES=-2, EFAULT=-21, EROFS=-71, EEXIST=-20,
-	;;                      EIO=-29, ENOENT=-45
-	;; Why is EFAULT included here?
-	((-2 -21) (make-i/o-file-protection-error id))
-	((-71)    (make-i/o-file-is-read-only-error id))
-	((-20)    (make-i/o-file-already-exists-error id))
-	((-29)    (make-i/o-error))
-	((-45)    (make-i/o-file-does-not-exist-error id))
-	(else (if id
-		  (make-irritants-condition (list id))
-		(condition)))))))
-   ((who id err) (io-error who id err (make-error)))))
+   ((who id errno base-condition)
+    (raise (condition base-condition
+		      (make-who-condition who)
+		      (make-message-condition (strerror errno))
+		      (case errno
+			;; from ikarus-errno.c: EACCES=-2, EFAULT=-21, EROFS=-71, EEXIST=-20,
+			;;                      EIO=-29, ENOENT=-45
+			;; Why is EFAULT included here?
+			((-2 -21)
+			 (make-i/o-file-protection-error id))
+			((-71)
+			 (make-i/o-file-is-read-only-error id))
+			((-20)
+			 (make-i/o-file-already-exists-error id))
+			((-29)
+			 (make-i/o-error))
+			((-45)
+			 (make-i/o-file-does-not-exist-error id))
+			(else
+			 (if id
+			     (make-irritants-condition (list id))
+			   (condition)))))))
+   ((who id errno)
+    (io-error who id errno (make-error)))))
 
 (define input-socket-buffer-size
   (make-parameter (+ input-block-size 128)
     (lambda (x)
-      (import (ikarus system $fx))
-      (if (and (fixnum? x) ($fx>= x 128))
+      (if (and (fixnum? x) (unsafe.fx>= x 128))
 	  x
 	(error 'input-socket-buffer-size
 	  "buffer size should be a fixnum >= 128"
@@ -3645,8 +3704,7 @@
 (define output-socket-buffer-size
   (make-parameter output-block-size
     (lambda (x)
-      (import (ikarus system $fx))
-      (if (and (fixnum? x) ($fx> x 0))
+      (if (and (fixnum? x) (unsafe.fx> x 0))
 	  x
 	(error 'output-socket-buffer-size
 	  "buffer size should be a positive fixnum"
@@ -3654,9 +3712,9 @@
 
 (define (make-file-set-position-handler fd id)
   (lambda (pos) ;;; set-position!
-    (let ((err (foreign-call "ikrt_set_position" fd pos)))
-      (when err
-	(io-error 'set-position! id err
+    (let ((errno (foreign-call "ikrt_set_position" fd pos)))
+      (when errno
+	(io-error 'set-position! id errno
 		  (make-i/o-invalid-position-error pos))))))
 
 (define (fh->input-port fd id size transcoder close who)

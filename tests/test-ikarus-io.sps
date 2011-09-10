@@ -801,9 +801,9 @@
 	      R)))))
 
   (define make-utf8-bytevector-range3
-    ;;Build and  return a  bytevector holding 24  bits words  from #x800
-    ;;(2048) included to #xFFFF (65535) included, skipping the forbidden
-    ;;range  for  the  integer  representation  of  characters  [#xD800,
+    ;;Build  and  return  a  bytevector holding  characters  encoded  as
+    ;;3-bytes UTF-8  sequences; the characters  have code points  in the
+    ;;range  [#x0800,  #xFFFF], skipping  the  forbidden range  [#xD800,
     ;;#xDFFF]  ==  [#xD800,  #xE000).   This  is  the  bytevector  UTF-8
     ;;representation of the string returned by MAKE-UTF8-STRING-RANGE3.
     ;;
@@ -1074,7 +1074,7 @@
 			  (make-transcoder (utf-8-codec)))
     => (make-utf8-string-range2))
 
-  (check
+  #;(check
       (bytevector->string (make-utf8-bytevector-range3)
 			  (make-transcoder (utf-8-codec)))
     => (make-utf8-string-range3))
