@@ -3662,12 +3662,12 @@
 ;;; FIXME: these hard coded constants should go away
 (define EAGAIN-error-code -6) ;;; from ikarus-errno.c
 
-(define io-error
+(define raise-io-error
   ;;Raise a non-continuable  exception describing an input/output
   ;;system error from the value of ERRNO.
   ;;
   (case-lambda
-   ((who id errno base-condition)
+   ((who port-identifier errno base-condition)
     (raise (condition base-condition
 		      (make-who-condition who)
 		      (make-message-condition (strerror errno))
@@ -3676,21 +3676,21 @@
 			;;                      EIO=-29, ENOENT=-45
 			;; Why is EFAULT included here?
 			((-2 -21)
-			 (make-i/o-file-protection-error id))
+			 (make-i/o-file-protection-error port-identifier))
 			((-71)
-			 (make-i/o-file-is-read-only-error id))
+			 (make-i/o-file-is-read-only-error port-identifier))
 			((-20)
-			 (make-i/o-file-already-exists-error id))
+			 (make-i/o-file-already-exists-error port-identifier))
 			((-29)
 			 (make-i/o-error))
 			((-45)
-			 (make-i/o-file-does-not-exist-error id))
+			 (make-i/o-file-does-not-exist-error port-identifier))
 			(else
-			 (if id
-			     (make-irritants-condition (list id))
+			 (if port-identifier
+			     (make-irritants-condition (list port-identifier))
 			   (condition)))))))
-   ((who id errno)
-    (io-error who id errno (make-error)))))
+   ((who port-identifier errno)
+    (raise-io-error who port-identifier errno (make-error)))))
 
 (define input-socket-buffer-size
   (make-parameter (+ input-block-size 128)
@@ -3710,54 +3710,63 @@
 	  "buffer size should be a positive fixnum"
 	  x)))))
 
-(define (make-file-set-position-handler fd id)
-  (lambda (pos) ;;; set-position!
-    (let ((errno (foreign-call "ikrt_set_position" fd pos)))
-      (when errno
-	(io-error 'set-position! id errno
-		  (make-i/o-invalid-position-error pos))))))
-
-(define (fh->input-port fd id size transcoder close who)
-  ;;Given the file handle FD, as a fixnum, representing an opened
-  ;;file for  the underlying platform: build and  return a Scheme
-  ;;input port to be used to access the data.
+(define (make-file-set-position-handler fd port-identifier)
+  ;;Build  and  return a  closure  to  be  used as  SET-POSITION!
+  ;;function for a port wrapping the file handler FD.
   ;;
-  (letrec
-      ((port ($make-port (input-transcoder-attrs transcoder who) ;attrs
-			 0			;index
-			 0			;initial size
-			 (make-bytevector size) ;buffer
-			 transcoder		;transcoder
-			 id			;port identifier
-			 (letrec ((refill	;read! function
-				   (lambda (bv idx cnt)
-				     (let ((bytes
-					    (foreign-call "ikrt_read_fd" fd bv idx
-							  (if (unsafe.fx< input-block-size cnt)
-							      input-block-size
-							    cnt))))
-				       (cond ((unsafe.fx>= bytes 0) bytes)
-					     ((unsafe.fx= bytes EAGAIN-error-code)
-					      (call/cc
-						  (lambda (k)
-						    (add-io-event fd k 'r)
-						    (process-events)))
-					      (refill bv idx cnt))
-					     (else
-					      (io-error 'read id bytes
-							(make-i/o-read-error))))))))
-			   refill)
-			 #f ;write!
-			 #t ;get-position
-			 (make-file-set-position-handler fd id) ;set-position
-			 (cond ((procedure? close) close) ;close
-			       ((eqv? close #t) (file-close-proc id fd))
-			       (else #f))
-			 (default-cookie fd))))
-    (guarded-port port)))
+  (lambda (position)
+    (let ((errno (foreign-call "ikrt_set_position" port-identifier position)))
+      (when errno
+	(raise-io-error 'set-position! port-identifier errno
+			(make-i/o-invalid-position-error position))))))
 
+(define (file-handler->input-port fd port-identifier buffer-size transcoder close-function who)
+  ;;Given the fixnum file descriptor FD representing an open file
+  ;;for the underlying platform:  build and return a Scheme input
+  ;;port to be used to access the data.
+  ;;
+  ;;The  returned   port  supports  both   the  GET-POSITION  and
+  ;;SET-POSITION! operations.
+  ;;
+  ;;If  CLOSE-FUNCTION  is  a  function:  it  is  used  as  close
+  ;;function; if it  is true: a standard close  function for file
+  ;;descriptors is  used; if else  the port does not  support the
+  ;;close function.
+  ;;
+  (let ((attributes		(input-transcoder-attrs transcoder who))
+	(buffer-index		0)
+	(buffer-used-size	0)
+	(buffer			(make-bytevector buffer-size))
+	(write!			#f)
+	(get-position		#t)
+	(set-position!		(make-file-set-position-handler fd port-identifier))
+	(close			(cond ((procedure? close-function)
+				       close-function)
+				      ((eqv? close-function #t)
+				       (file-close-proc port-identifier fd))
+				      (else #f))))
+    (define-inline (ikrt-read-fd fd dst.bv dst.start requested-count)
+      (foreign-call "ikrt_read_fd" fd dst.bv dst.start requested-count))
+    (define (read! dst.bv dst.start requested-count)
+      (let ((count (ikrt-read-fd fd dst.bv dst.start (if (unsafe.fx< input-block-size requested-count)
+							 input-block-size
+						       requested-count))))
+	(cond ((unsafe.fx>= count 0)
+	       count)
+	      ((unsafe.fx= count EAGAIN-error-code)
+	       (call/cc
+		   (lambda (k)
+		     (add-io-event fd k 'r)
+		     (process-events)))
+	       (read! dst.bv dst.start requested-count))
+	      (else
+	       (raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
+    (guarded-port ($make-port attributes buffer-index buffer-used-size buffer
+			      transcoder port-identifier
+			      read! write! get-position set-position! close
+			      (default-cookie fd)))))
 
-(define (fh->output-port fd id size transcoder close who)
+(define (file-handler->output-port fd id size transcoder close who)
   (letrec ((port
 	    ($make-port
 	     (output-transcoder-attrs transcoder who)
@@ -3782,7 +3791,7 @@
 				   (process-events)))
 			     (refill bv idx cnt))
 			    (else
-			     (io-error 'write id bytes
+			     (raise-io-error 'write id bytes
 				       (make-i/o-write-error))))))))
 	       refill)
 	     #t ;;; get-position
@@ -3799,14 +3808,14 @@
     (cond
      ((foreign-call "ikrt_close_fd" fd) =>
       (lambda (err)
-	(io-error 'close id err))))))
+	(raise-io-error 'close id err))))))
 
 
 (define (open-input-file-handle filename who)
   (let ((fh (foreign-call "ikrt_open_input_fd"
 			  (string->utf8 filename))))
     (cond
-     ((fx< fh 0) (io-error who filename fh))
+     ((fx< fh 0) (raise-io-error who filename fh))
      (else fh))))
 
 (define (open-output-file-handle filename file-options who)
@@ -3823,7 +3832,7 @@
 			    (string->utf8 filename)
 			    opt)))
       (cond
-       ((fx< fh 0) (io-error who filename fh))
+       ((fx< fh 0) (raise-io-error who filename fh))
        (else fh)))))
 
 (define open-file-input-port
@@ -3844,7 +3853,7 @@
       (die who "invalid transcoder" transcoder))
 		; FIXME: file-options ignored
 		; FIXME: buffer-mode ignored
-    (fh->input-port
+    (file-handler->input-port
      (open-input-file-handle filename who)
      filename
      input-file-buffer-size
@@ -3873,7 +3882,7 @@
 	     ((none) 0)
 	     ((block line) output-file-buffer-size)
 	     (else (die who "invalid buffer mode" buffer-mode)))))
-      (fh->output-port
+      (file-handler->output-port
        (open-output-file-handle filename file-options who)
        filename buffer-size transcoder #t who)))))
 
@@ -3885,7 +3894,7 @@
 (define (open-output-file filename)
   (unless (string? filename)
     (die 'open-output-file "invalid filename" filename))
-  (fh->output-port
+  (file-handler->output-port
    (open-output-file-handle filename (file-options)
 			    'open-output-file)
    filename
@@ -3897,7 +3906,7 @@
 (define (open-input-file filename)
   (unless (string? filename)
     (die 'open-input-file "invalid filename" filename))
-  (fh->input-port
+  (file-handler->input-port
    (open-input-file-handle filename 'open-input-file)
    filename
    input-file-buffer-size
@@ -3912,7 +3921,7 @@
   (unless (procedure? proc)
     (die 'with-output-to-file "not a procedure" proc))
   (call-with-port
-      (fh->output-port
+      (file-handler->output-port
        (open-output-file-handle filename (file-options)
 				'with-output-to-file)
        filename
@@ -3930,7 +3939,7 @@
   (unless (procedure? proc)
     (die 'call-with-output-file "not a procedure" proc))
   (call-with-port
-      (fh->output-port
+      (file-handler->output-port
        (open-output-file-handle filename (file-options)
 				'call-with-output-file)
        filename
@@ -3946,7 +3955,7 @@
   (unless (procedure? proc)
     (die 'call-with-input-file "not a procedure" proc))
   (call-with-port
-      (fh->input-port
+      (file-handler->input-port
        (open-input-file-handle filename 'call-with-input-file)
        filename
        input-file-buffer-size
@@ -3961,7 +3970,7 @@
   (unless (procedure? proc)
     (die 'with-input-from-file "not a procedure" proc))
   (call-with-port
-      (fh->input-port
+      (file-handler->input-port
        (open-input-file-handle filename 'with-input-from-file)
        filename
        input-file-buffer-size
@@ -3983,18 +3992,18 @@
 
 
 (define (standard-input-port)
-  (fh->input-port 0 '*stdin* 256 #f #f 'standard-input-port))
+  (file-handler->input-port 0 '*stdin* 256 #f #f 'standard-input-port))
 
 (define (standard-output-port)
-  (fh->output-port 1 '*stdout* 256 #f #f 'standard-output-port))
+  (file-handler->output-port 1 '*stdout* 256 #f #f 'standard-output-port))
 
 (define (standard-error-port)
-  (fh->output-port 2 '*stderr* 256 #f #f 'standard-error-port))
+  (file-handler->output-port 2 '*stderr* 256 #f #f 'standard-error-port))
 
 (define current-input-port
   (make-parameter
       (transcoded-port
-       (fh->input-port 0 '*stdin* input-file-buffer-size #f #f #f)
+       (file-handler->input-port 0 '*stdin* input-file-buffer-size #f #f #f)
        (native-transcoder))
     (lambda (x)
       (if (and (input-port? x) (textual-port? x))
@@ -4004,7 +4013,7 @@
 (define current-output-port
   (make-parameter
       (transcoded-port
-       (fh->output-port 1 '*stdout* output-file-buffer-size #f #f #f)
+       (file-handler->output-port 1 '*stdout* output-file-buffer-size #f #f #f)
        (native-transcoder))
     (lambda (x)
       (if (and (output-port? x) (textual-port? x))
@@ -4014,7 +4023,7 @@
 (define current-error-port
   (make-parameter
       (transcoded-port
-       (fh->output-port 2 '*stderr* 0 #f #f #f)
+       (file-handler->output-port 2 '*stderr* 0 #f #f #f)
        (native-transcoder))
     (lambda (x)
       (if (and (output-port? x) (textual-port? x))
@@ -4508,7 +4517,7 @@
 			   (string->utf8 cmd)
 			   (map string->utf8 (cons cmd args)))))
       (cond ((fixnum? r)
-	     (io-error who cmd r))
+	     (raise-io-error who cmd r))
 	    (else
 	     (unless blocking?
 	       (or stdin (set-fd-nonblocking (vector-ref r 1) who cmd))
@@ -4517,15 +4526,15 @@
 	     (values
 	      (vector-ref r 0)        ; pid
 	      (and (not stdin)
-		   (fh->output-port (vector-ref r 1)
+		   (file-handler->output-port (vector-ref r 1)
 				    cmd output-file-buffer-size #f #t
 				    'process))
 	      (and (not stdout)
-		   (fh->input-port (vector-ref r 2)
+		   (file-handler->input-port (vector-ref r 2)
 				   cmd input-file-buffer-size #f #t
 				   'process))
 	      (and (not stderr)
-		   (fh->input-port (vector-ref r 3)
+		   (file-handler->input-port (vector-ref r 3)
 				   cmd input-file-buffer-size #f #t
 				   'process))))))))
 
@@ -4542,11 +4551,11 @@
 (define (set-fd-nonblocking fd who id)
   (let ((rv (foreign-call "ikrt_make_fd_nonblocking" fd)))
     (unless (eq? rv 0)
-      (io-error who id rv))))
+      (raise-io-error who id rv))))
 
 (define (socket->ports socket who id block?)
   (if (< socket 0)
-      (io-error who id socket)
+      (raise-io-error who id socket)
     (let ((close
 	   (let ((closed-once? #f))
 	     (lambda ()
@@ -4556,9 +4565,9 @@
       (unless block?
 	(set-fd-nonblocking socket who id))
       (values
-       (fh->input-port socket
+       (file-handler->input-port socket
 		       id (input-socket-buffer-size) #f close who)
-       (fh->output-port socket
+       (file-handler->output-port socket
 			id (output-socket-buffer-size) #f close who)))))
 
 (define-syntax define-connector
@@ -4646,7 +4655,7 @@
             ;;; do select
 	  (let ((rv (foreign-call "ikrt_select" n rbv wbv xbv)))
 	    (when (< rv 0)
-	      (io-error 'select #f rv)))
+	      (raise-io-error 'select #f rv)))
             ;;; go through fds again and see if they're selected
 	  (for-each
               (lambda (t)
@@ -4716,7 +4725,7 @@
 	      (process-events)))
 	(do-accept-connection s who blocking?))
        ((< sock 0)
-	(io-error who s sock))
+	(raise-io-error who s sock))
        (else
 	(socket->ports sock who (make-socket-info bv) blocking?))))))
 
@@ -4805,7 +4814,7 @@
     (clean-up)
     (let ((rv (foreign-call "ikrt_opendir" (string->utf8 filename))))
       (if (fixnum? rv)
-	  (io-error who filename rv)
+	  (raise-io-error who filename rv)
 	(let ((stream (make-directory-stream filename rv #f)))
 	  (G stream)
 	  stream))))
@@ -4821,7 +4830,7 @@
       (cond
        ((fixnum? rv)
 	(close-directory-stream x #f)
-	(io-error who (directory-stream-filename x) rv))
+	(raise-io-error who (directory-stream-filename x) rv))
        ((not rv) #f)
        (else (utf8->string rv)))))
 
@@ -4837,7 +4846,7 @@
 	(let ((rv (foreign-call "ikrt_closedir"
 				(directory-stream-pointer x))))
 	  (when (and wanterror? (not (eqv? rv 0)))
-	    (io-error who (directory-stream-filename x) rv)))))
+	    (raise-io-error who (directory-stream-filename x) rv)))))
      ((x) (close-directory-stream x #t))))
 
   (set-rtd-printer! (type-descriptor directory-stream)
