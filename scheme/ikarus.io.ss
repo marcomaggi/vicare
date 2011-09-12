@@ -174,6 +174,8 @@
 
 ;;;; list of things to do
 ;;
+;;* Write tests for all the untested functions.
+;;
 ;;*   Test  the  transcoders   with  OPEN-BYTEVECTOR-OUTPUT-PORT,
 ;;especially the SET-PORT-POSITION! function.
 ;;
@@ -188,6 +190,10 @@
 ;;search for the next character.  Implement this by searching for
 ;;the  next character beginning  discarding the  minimum possible
 ;;number of bytes, for example in UTF-8 discard at most 3 bytes.
+;;
+;;* Implement missing functions
+;;
+;;* Solve all the FIXME issues.
 ;;
 
 
@@ -391,17 +397,26 @@
     (ikarus system $io)
     (prefix (only (ikarus) port?) primop.)
     (prefix (rename (ikarus system $fx)
-		    ($fxsra    fxsra)	;shift right
-		    ($fxsll    fxsll)	;shift left
-		    ($fxlogor  fxior)	;inclusive logic OR
-		    ($fxlogand fxand)	;logic AND
-		    ($fx+      fx+)
-		    ($fx-      fx-)
-		    ($fx<      fx<)
-		    ($fx>      fx>)
-		    ($fx>=     fx>=)
-		    ($fx<=     fx<=)
-		    ($fx=      fx=))
+		    ($fxzero?	fxzero?)
+		    ($fxadd1	fxadd1)	 ;increment
+		    ($fxsub1	fxsub1)	 ;decrement
+		    ($fxsra	fxsra)	 ;shift right
+		    ($fxsll	fxsll)	 ;shift left
+		    ($fxlogor	fxlogor) ;inclusive logic OR
+		    ($fxlogand	fxand)	 ;logic AND
+		    ($fx+	fx+)
+		    ($fx-	fx-)
+		    ($fx<	fx<)
+		    ($fx>	fx>)
+		    ($fx>=	fx>=)
+		    ($fx<=	fx<=)
+		    ($fx=	fx=))
+	    unsafe.)
+    (prefix (rename (ikarus system $bytevectors)
+		    ($make-bytevector	make-bytevector)
+		    ($bytevector-length	bytevector-length)
+		    ($bytevector-set!	bytevector-set!)
+		    ($bytevector-u8-ref	bytevector-u8-ref))
 	    unsafe.))
 
 
@@ -571,6 +586,15 @@
 ;;
 (define all-data-in-buffer 'all-data-in-buffer)
 
+(define-syntax unsafe.fxior
+  (syntax-rules ()
+    ((_ ?op1)
+     ?op1)
+    ((_ ?op1 ?op2)
+     (unsafe.fxlogor ?op1 ?op2))
+    ((_ ?op1 ?op2 . ?ops)
+     (unsafe.fxlogor ?op1 (unsafe.fxior ?op2 . ?ops)))))
+
 (define-syntax u8?
   ;;Evaluate to true if the argument is an unsigned byte.
   ;;
@@ -606,6 +630,26 @@
   (if (port? p)
       ($port-id p)
     (die 'port-id "not a port" p)))
+
+(define (%validate-and-tag-binary-input-port port who)
+  ;;Assuming  that PORT  is a  port  object: validate  PORT as  a
+  ;;binary input port.  This function is to be called if the port
+  ;;attributes are not equal to FAST-GET-BYTE-TAG.  If successful
+  ;;mark  the port  with the  FAST-GET-BYTE-TAG and  return, else
+  ;;raise an exception.
+  ;;
+  ;;This function  is meant to  be used by  GET-U8, LOOKAHEAD-U8,
+  ;;GET-BYTEVECTOR-N,   GET-BYTEVECTOR-N!,   GET-BYTEVECTOR-SOME,
+  ;;GET-BYTEVECTOR-ALL.
+  ;;
+  (with-binary-port (port)
+    (when port.closed?
+      (die who "port is closed" port))
+    (when port.transcoder
+      (die who "port is not binary" port))
+    (unless port.read!
+      (die who "port is not an input port" port))
+    (set! port.attributes fast-get-byte-tag)))
 
 
 ;;;; dot notation macros for port structures
@@ -695,7 +739,7 @@
 		  (PORT.GET-POSITION	(identifier-syntax ($port-get-position	?port)))
 		  (PORT.CLOSE		(identifier-syntax ($port-close		?port)))
 		  (PORT.COOKIE		(identifier-syntax ($port-cookie	?port)))
-		  (PORT.CLOSED?		(identifier-syntax ($port-closed?	?port)))
+		  (PORT.CLOSED?		(identifier-syntax (%port-closed?	?port)))
 		  (PORT.FAST-ATTRS	(identifier-syntax ($port-fast-attrs	?port)))
 		  (PORT.HAS-BUFFER?
 		   (identifier-syntax ($port-buffer ?port)))
@@ -955,8 +999,8 @@
   ;;Decode the code  point of a Unicode character  from a 3-bytes
   ;;UTF-8 encoding.
   ;;
-  (unsafe.fxior (unsafe.fxior (unsafe.fxsll (unsafe.fxand byte0   #b1111) 12)
-			      (unsafe.fxsll (unsafe.fxand byte1 #b111111)  6))
+  (unsafe.fxior (unsafe.fxsll (unsafe.fxand byte0   #b1111) 12)
+		(unsafe.fxsll (unsafe.fxand byte1 #b111111)  6)
 		(unsafe.fxand byte2 #b111111)))
 
 (define-inline (utf-8-valid-code-point-from-3-bytes? code-point)
@@ -981,15 +1025,15 @@
   ;;second,  third and  fourth  of 4-bytes  UTF-8  encoding of  a
   ;;Unicode character.
   ;;
-  (unsafe.fx= (unsafe.fxsra (unsafe.fxior (unsafe.fxior byte1 byte2) byte3) 6) #b10))
+  (unsafe.fx= (unsafe.fxsra (unsafe.fxior byte1 byte2 byte3) 6) #b10))
 
 (define-inline (utf-8-decode-four-bytes byte0 byte1 byte2 byte3)
   ;;Decode the code  point of a Unicode character  from a 4-bytes
   ;;UTF-8 encoding.
   ;;
-  (unsafe.fxior (unsafe.fxior (unsafe.fxior (unsafe.fxsll (unsafe.fxand byte0    #b111) 18)
-					    (unsafe.fxsll (unsafe.fxand byte1 #b111111) 12))
-			      (unsafe.fxsll (unsafe.fxand byte2 #b111111)  6))
+  (unsafe.fxior (unsafe.fxsll (unsafe.fxand byte0    #b111) 18)
+		(unsafe.fxsll (unsafe.fxand byte1 #b111111) 12)
+		(unsafe.fxsll (unsafe.fxand byte2 #b111111)  6)
 		(unsafe.fxand byte3 #b111111)))
 
 (define-inline (utf-8-valid-code-point-from-4-bytes? code-point)
@@ -1825,7 +1869,7 @@
 		      read! write! get-position set-position! close
 		      cookie)))
       (define (getter)
-	(unless ($port-closed? port)
+	(unless (%port-closed? port)
 	  (flush-output-port port))
 	(let-values (((bv bv.len.unused) (append-bytevectors output-bvs)))
 	  (set! output-bvs '())
@@ -1951,7 +1995,7 @@
 	       ;;Write  bytes to  the buffer  and, if  the buffer
 	       ;;fills up, to the underlying device.
 	       (let try-again-after-flushing-buffer ((room port.buffer.room))
-		 (cond ((unsafe.fx= 0 room)
+		 (cond ((unsafe.fxzero? room)
 			;;The buffer exists and it is full.
 			(flush-output-port port)
 			(try-again-after-flushing-buffer port.buffer.room))
@@ -2353,19 +2397,19 @@
   ;;closed.
   ;;
   (if (port? port)
-      ($port-closed? port)
+      (%port-closed? port)
     (error 'port-closed? "not a port" port)))
 
-(define ($port-closed? p)
-  (not (unsafe.fx= (unsafe.fxand ($port-attrs p) closed-port-tag) 0)))
+(define (%port-closed? port)
+  (not (unsafe.fx= (unsafe.fxand ($port-attrs port) closed-port-tag) 0)))
 
 (define ($mark-port-closed! port)
   ($set-port-attrs! port (unsafe.fxior closed-port-tag
-					 (unsafe.fxand ($port-attrs port)
-						       port-type-mask))))
+				       (unsafe.fxand ($port-attrs port) port-type-mask))))
 
-(define ($close-port port)
-  ;;Assume that PORT is a port object.
+(define (%close-port port)
+  ;;Subroutine     for    CLOSE-PORT,     CLOSE-INPUT-PORT    and
+  ;;CLOSE-OUTPUT-PORT.  Assume that PORT is a port object.
   ;;
   (with-port (port)
     (unless port.closed?
@@ -2386,21 +2430,21 @@
   ;;
   (unless (port? port)
     (die 'close-port "not a port" port))
-  ($close-port port))
+  (%close-port port))
 
 (define (close-input-port port)
   ;;Define by R6RS.  Close an input port.
   ;;
   (unless (input-port? port)
     (die 'close-input-port "not an input port" port))
-  ($close-port port))
+  (%close-port port))
 
 (define (close-output-port port)
   ;;Define by R6RS.  Close an output port.
   ;;
   (unless (output-port? port)
     (die 'close-output-port "not an output port" port))
-  ($close-port port))
+  (%close-port port))
 
 
 ;;;; port mode
@@ -2485,6 +2529,46 @@
 	       (die who "invalid return value from write! proc" count port)))))))
 
 
+;;;; auxiliary port functions
+
+(define (port-eof? port)
+  ;;Defined by R6RS.   PORT must be an input  port.  Return #t if
+  ;;the LOOKAHEAD-U8 procedure (if PORT  is a binary port) or the
+  ;;LOOKAHEAD-CHAR procedure  (if PORT  is a textual  port) would
+  ;;return the  EOF object, and #f otherwise.   The operation may
+  ;;block  indefinitely if  no  data is  available  but the  port
+  ;;cannot be determined to be at end of file.
+  ;;
+  (define who 'port-eof?)
+  (with-port (port)
+    (let ((m port.attributes))
+      (cond ((not (eq? m 0))
+	     (cond ((unsafe.fx< port.buffer.index port.buffer.used-size)
+		    #f)
+		   (port.transcoder
+		    (eof-object? (lookahead-char port)))
+		   (else
+		    (eof-object? (lookahead-u8 port)))))
+	    ((input-port? port)
+	     (when port.closed?
+	       (die who "port is closed" port))
+	     (eof-object? (if (textual-port? port)
+			      (lookahead-char port)
+			    (lookahead-u8 port))))
+	    (else
+	     (die who "not an input port" port))))))
+
+(define (output-port-buffer-mode port)
+  ;;Defined  by  R6RS.  Return  the  symbol  that represents  the
+  ;;buffer mode of PORT.
+  ;;
+  (unless (output-port? port)
+    (die 'output-port-buffer-mode "not an output port" port))
+  (with-port (port)
+    (if port.has-buffer?
+	'none
+      'block)))
+
 (define flush-output-port
   (case-lambda
    (()
@@ -2575,7 +2659,7 @@
        (if-end-of-file:		. ?end-of-file-body)
        (if-successful-refill:	. ?after-refill-body))
      (let ((count (%refill-bytevector-buffer ?port ?who)))
-       (if (unsafe.fx= 0 count)
+       (if (unsafe.fxzero? count)
 	   (begin . ?end-of-file-body)
 	 (begin . ?after-refill-body))))))
 
@@ -2676,6 +2760,8 @@
 	  count)))))
 
 
+;;;; character input functions
+
 (module (read-char get-char lookahead-char peek-char)
 
   (define (get-char p)
@@ -3516,7 +3602,7 @@
       (die who "not an input port" port))
     (unless (textual-port? port)
       (die who "not a textual port" port))
-    (when ($port-closed? port)
+    (when (%port-closed? port)
       (die who "port is closed" port))
     (with-textual-port (port)
       (unless port.transcoder
@@ -3551,639 +3637,8 @@
   #| end of module |# )
 
 
-(module (get-u8 lookahead-u8)
+;;;; string input functions
 
-  (define (get-u8 port)
-    ;;Defined  by R6RS.  Read  from the  binary input  port PORT,
-    ;;blocking as necessary, until  a byte is available from PORT
-    ;;or  until an end  of file  is reached.   If a  byte becomes
-    ;;available, GET-U8 returns the  byte as an octet and updates
-    ;;PORT to  point just  past that byte.   If no input  byte is
-    ;;seen before  an end of file  is reached, the  EOF object is
-    ;;returned.
-    ;;
-    ;;Here we  handle the case  of byte already available  in the
-    ;;buffer.      If    the     buffer     is    empty:     call
-    ;;GET/PEEK-U8-BYTE-MODE.   If  the  PORT  has  not  yet  been
-    ;;tagged: call SLOW-GET/PEEK-U8.
-    ;;
-    (define who 'get-u8)
-    (with-binary-port (port)
-      (if (eq? port.attributes fast-get-byte-tag)
-	  (let ((buffer.offset port.buffer.index))
-	    (if (unsafe.fx< buffer.offset port.buffer.used-size)
-		(begin
-		  (set! port.buffer.index (unsafe.fx+ 1 buffer.offset))
-		  (bytevector-u8-ref port.buffer buffer.offset))
-	      (get/peek-u8-byte-mode port who 1)))
-	(slow-get/peek-u8 port who 1))))
-
-  (define (lookahead-u8 port)
-    ;;Defined  by  R6RS.   The  LOOKAHEAD-U8  procedure  is  like
-    ;;GET-U8, but it does not update PORT to point past the byte.
-    ;;
-    ;;Here we  handle the case  of byte already available  in the
-    ;;buffer.      If    the     buffer     is    empty:     call
-    ;;GET/PEEK-U8-BYTE-MODE.   If  the  PORT  has  not  yet  been
-    ;;tagged: call SLOW-GET/PEEK-U8.
-    ;;
-    (define who 'lookahead-u8)
-    (with-binary-port (port)
-      (if (eq? port.attributes fast-get-byte-tag)
-	  (let ((buffer.offset port.buffer.index))
-	    (if (unsafe.fx< buffer.offset port.buffer.used-size)
-		(bytevector-u8-ref port.buffer buffer.offset)
-	      (get/peek-u8-byte-mode port who 0)))
-	(slow-get/peek-u8 port who 0))))
-
-  (define (get/peek-u8-byte-mode port who start)
-    ;;Subroutine of  GET-u8 and LOOKAHEAD-u8.  To  be called when
-    ;;the port  buffer is fully  consumed.  Get or peek  the next
-    ;;byte from PORT, set the buffer index to START.
-    ;;
-    (with-binary-port (port)
-      (when port.closed?
-	(die who "port is closed" port))
-      (let ((count (%refill-bytevector-buffer port who)))
-	(if (unsafe.fx= 0 count)
-	    (eof-object)
-	 (begin
-	   (set! port.buffer.index start)
-	   (bytevector-u8-ref port.buffer 0))))))
-
-  (define (slow-get/peek-u8 port who start)
-    ;;Subroutine of GET-u8 and  LOOKAHEAD-u8.  Validate PORT as a
-    ;;binary  input port,  mark the  port  with FAST-GET-BYTE-TAG
-    ;;then call GET/PEEK-U8-BYTE-MODE.
-    ;;
-    (unless (port? port)
-      (die who "not a port" port))
-    (with-binary-port (port)
-      (when port.closed?
-	(die who "port is closed" port))
-      (when port.transcoder
-	(die who "port is not binary" port))
-      (unless port.read!
-	(die who "port is not an input port" port))
-      (set! port.attributes fast-get-byte-tag)
-      (get/peek-u8-byte-mode port who start)))
-
-  #| end of module |# )
-
-
-(define (port-eof? port)
-  ;;Defined by R6RS.   PORT must be an input  port.  Return #t if
-  ;;the LOOKAHEAD-U8 procedure (if PORT  is a binary port) or the
-  ;;LOOKAHEAD-CHAR procedure  (if PORT  is a textual  port) would
-  ;;return the  EOF object, and #f otherwise.   The operation may
-  ;;block  indefinitely if  no  data is  available  but the  port
-  ;;cannot be determined to be at end of file.
-  ;;
-  (define who 'port-eof?)
-  (with-port (port)
-    (let ((m port.attributes))
-      (cond ((not (eq? m 0))
-	     (cond ((unsafe.fx< port.buffer.index port.buffer.used-size)
-		    #f)
-		   (port.transcoder
-		    (eof-object? (lookahead-char port)))
-		   (else
-		    (eof-object? (lookahead-u8 port)))))
-	    ((input-port? port)
-	     (when port.closed?
-	       (die who "port is closed" port))
-	     (eof-object? (if (textual-port? port)
-			      (lookahead-char port)
-			    (lookahead-u8 port))))
-	    (else
-	     (die who "not an input port" port))))))
-
-
-;;; FIXME: these hard coded constants should go away
-(define EAGAIN-error-code -6) ;;; from ikarus-errno.c
-
-(define raise-io-error
-  ;;Raise a non-continuable  exception describing an input/output
-  ;;system error from the value of ERRNO.
-  ;;
-  (case-lambda
-   ((who port-identifier errno base-condition)
-    (raise (condition base-condition
-		      (make-who-condition who)
-		      (make-message-condition (strerror errno))
-		      (case errno
-			;; from ikarus-errno.c: EACCES=-2, EFAULT=-21, EROFS=-71, EEXIST=-20,
-			;;                      EIO=-29, ENOENT=-45
-			;; Why is EFAULT included here?
-			((-2 -21)
-			 (make-i/o-file-protection-error port-identifier))
-			((-71)
-			 (make-i/o-file-is-read-only-error port-identifier))
-			((-20)
-			 (make-i/o-file-already-exists-error port-identifier))
-			((-29)
-			 (make-i/o-error))
-			((-45)
-			 (make-i/o-file-does-not-exist-error port-identifier))
-			(else
-			 (if port-identifier
-			     (make-irritants-condition (list port-identifier))
-			   (condition)))))))
-   ((who port-identifier errno)
-    (raise-io-error who port-identifier errno (make-error)))))
-
-(define input-socket-buffer-size
-  (make-parameter (+ input-block-size 128)
-    (lambda (x)
-      (if (and (fixnum? x) (unsafe.fx>= x 128))
-	  x
-	(error 'input-socket-buffer-size
-	  "buffer size should be a fixnum >= 128"
-	  x)))))
-
-(define output-socket-buffer-size
-  (make-parameter output-block-size
-    (lambda (x)
-      (if (and (fixnum? x) (unsafe.fx> x 0))
-	  x
-	(error 'output-socket-buffer-size
-	  "buffer size should be a positive fixnum"
-	  x)))))
-
-(define (make-file-set-position-handler fd port-identifier)
-  ;;Build  and  return a  closure  to  be  used as  SET-POSITION!
-  ;;function for a port wrapping the file handler FD.
-  ;;
-  (lambda (position)
-    (let ((errno (foreign-call "ikrt_set_position" port-identifier position)))
-      (when errno
-	(raise-io-error 'set-position! port-identifier errno
-			(make-i/o-invalid-position-error position))))))
-
-(define (file-handler->input-port fd port-identifier buffer-size transcoder close-function who)
-  ;;Given the fixnum file descriptor FD representing an open file
-  ;;for the underlying platform:  build and return a Scheme input
-  ;;port to be used to access the data.
-  ;;
-  ;;The  returned   port  supports  both   the  GET-POSITION  and
-  ;;SET-POSITION! operations.
-  ;;
-  ;;If  CLOSE-FUNCTION  is  a  function:  it  is  used  as  close
-  ;;function; if it  is true: a standard close  function for file
-  ;;descriptors is  used; if else  the port does not  support the
-  ;;close function.
-  ;;
-  (let ((attributes		(input-transcoder-attrs transcoder who))
-	(buffer-index		0)
-	(buffer-used-size	0)
-	(buffer			(make-bytevector buffer-size))
-	(write!			#f)
-	(get-position		#t)
-	(set-position!		(make-file-set-position-handler fd port-identifier))
-	(close			(cond ((procedure? close-function)
-				       close-function)
-				      ((eqv? close-function #t)
-				       (file-close-proc port-identifier fd))
-				      (else #f))))
-    (define-inline (ikrt-read-fd fd dst.bv dst.start requested-count)
-      (foreign-call "ikrt_read_fd" fd dst.bv dst.start requested-count))
-    (define (read! dst.bv dst.start requested-count)
-      (let ((count (ikrt-read-fd fd dst.bv dst.start (if (unsafe.fx< input-block-size requested-count)
-							 input-block-size
-						       requested-count))))
-	(cond ((unsafe.fx>= count 0)
-	       count)
-	      ((unsafe.fx= count EAGAIN-error-code)
-	       (call/cc
-		   (lambda (k)
-		     (add-io-event fd k 'r)
-		     (process-events)))
-	       (read! dst.bv dst.start requested-count))
-	      (else
-	       (raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
-    (guarded-port ($make-port attributes buffer-index buffer-used-size buffer
-			      transcoder port-identifier
-			      read! write! get-position set-position! close
-			      (default-cookie fd)))))
-
-(define (file-handler->output-port fd id size transcoder close who)
-  (letrec ((port
-	    ($make-port
-	     (output-transcoder-attrs transcoder who)
-	     0 size (make-bytevector size)
-	     transcoder
-	     id
-	     #f
-	     (letrec ((refill
-		       (lambda (bv idx cnt)
-			 (let ((bytes
-				(foreign-call "ikrt_write_fd" fd bv idx
-					      (if (unsafe.fx< output-block-size cnt)
-						  output-block-size
-						cnt))))
-
-			   (cond
-			    ((unsafe.fx>= bytes 0) bytes)
-			    ((unsafe.fx= bytes EAGAIN-error-code)
-			     (call/cc
-				 (lambda (k)
-				   (add-io-event fd k 'w)
-				   (process-events)))
-			     (refill bv idx cnt))
-			    (else
-			     (raise-io-error 'write id bytes
-				       (make-i/o-write-error))))))))
-	       refill)
-	     #t ;;; get-position
-	     (make-file-set-position-handler fd id)
-	     (cond
-	      ((procedure? close) close)
-	      ((eqv? close #t) (file-close-proc id fd))
-	      (else #f))
-	     (default-cookie fd))))
-    (guarded-port port)))
-
-(define (file-close-proc id fd)
-  (lambda ()
-    (cond
-     ((foreign-call "ikrt_close_fd" fd) =>
-      (lambda (err)
-	(raise-io-error 'close id err))))))
-
-
-(define (open-input-file-handle filename who)
-  (let ((fh (foreign-call "ikrt_open_input_fd"
-			  (string->utf8 filename))))
-    (cond
-     ((fx< fh 0) (raise-io-error who filename fh))
-     (else fh))))
-
-(define (open-output-file-handle filename file-options who)
-  (define (opt->num x)
-    (bitwise-ior
-     (if (enum-set-member? 'no-create x)   1 0)
-     (if (enum-set-member? 'no-fail x)     2 0)
-     (if (enum-set-member? 'no-truncate x) 4 0)))
-  (let ((opt (if (enum-set? file-options)
-		 (opt->num file-options)
-	       (die who "file-options is not an enum set"
-		    file-options))))
-    (let ((fh (foreign-call "ikrt_open_output_fd"
-			    (string->utf8 filename)
-			    opt)))
-      (cond
-       ((fx< fh 0) (raise-io-error who filename fh))
-       (else fh)))))
-
-(define open-file-input-port
-  (case-lambda
-   ((filename)
-    (open-file-input-port filename (file-options) 'block #f))
-   ((filename file-options)
-    (open-file-input-port filename file-options 'block #f))
-   ((filename file-options buffer-mode)
-    (open-file-input-port filename file-options buffer-mode #f))
-   ((filename file-options buffer-mode transcoder)
-    (define who 'open-file-input-port)
-    (unless (string? filename)
-      (die who "invalid filename" filename))
-    (unless (enum-set? file-options)
-      (die who "file-options is not an enum set" file-options))
-    (unless (or (not transcoder) (transcoder? transcoder))
-      (die who "invalid transcoder" transcoder))
-		; FIXME: file-options ignored
-		; FIXME: buffer-mode ignored
-    (file-handler->input-port
-     (open-input-file-handle filename who)
-     filename
-     input-file-buffer-size
-     transcoder
-     #t
-     who))))
-
-(define open-file-output-port
-  (case-lambda
-   ((filename)
-    (open-file-output-port filename (file-options) 'block #f))
-   ((filename file-options)
-    (open-file-output-port filename file-options 'block #f))
-   ((filename file-options buffer-mode)
-    (open-file-output-port filename file-options buffer-mode #f))
-   ((filename file-options buffer-mode transcoder)
-    (define who 'open-file-output-port)
-    (unless (string? filename)
-      (die who "invalid filename" filename))
-		; FIXME: file-options ignored
-		; FIXME: line-buffered output ports are not handled
-    (unless (or (not transcoder) (transcoder? transcoder))
-      (die who "invalid transcoder" transcoder))
-    (let ((buffer-size
-	   (case buffer-mode
-	     ((none) 0)
-	     ((block line) output-file-buffer-size)
-	     (else (die who "invalid buffer mode" buffer-mode)))))
-      (file-handler->output-port
-       (open-output-file-handle filename file-options who)
-       filename buffer-size transcoder #t who)))))
-
-(define (output-port-buffer-mode p)
-  (unless (output-port? p)
-    (die 'output-port-buffer-mode "not an output port" p))
-  (if (fx= 0 ($port-size p)) 'none 'block))
-
-(define (open-output-file filename)
-  (unless (string? filename)
-    (die 'open-output-file "invalid filename" filename))
-  (file-handler->output-port
-   (open-output-file-handle filename (file-options)
-			    'open-output-file)
-   filename
-   output-file-buffer-size
-   (native-transcoder)
-   #t
-   'open-output-file))
-
-(define (open-input-file filename)
-  (unless (string? filename)
-    (die 'open-input-file "invalid filename" filename))
-  (file-handler->input-port
-   (open-input-file-handle filename 'open-input-file)
-   filename
-   input-file-buffer-size
-   (native-transcoder)
-   #t
-   'open-input-file))
-
-
-(define (with-output-to-file filename proc)
-  (unless (string? filename)
-    (die 'with-output-to-file "invalid filename" filename))
-  (unless (procedure? proc)
-    (die 'with-output-to-file "not a procedure" proc))
-  (call-with-port
-      (file-handler->output-port
-       (open-output-file-handle filename (file-options)
-				'with-output-to-file)
-       filename
-       output-file-buffer-size
-       (native-transcoder)
-       #t
-       'with-output-to-file)
-    (lambda (p)
-      (parameterize ((current-output-port p))
-	(proc)))))
-
-(define (call-with-output-file filename proc)
-  (unless (string? filename)
-    (die 'call-with-output-file "invalid filename" filename))
-  (unless (procedure? proc)
-    (die 'call-with-output-file "not a procedure" proc))
-  (call-with-port
-      (file-handler->output-port
-       (open-output-file-handle filename (file-options)
-				'call-with-output-file)
-       filename
-       output-file-buffer-size
-       (native-transcoder)
-       #t
-       'call-with-output-file)
-    proc))
-
-(define (call-with-input-file filename proc)
-  (unless (string? filename)
-    (die 'call-with-input-file "invalid filename" filename))
-  (unless (procedure? proc)
-    (die 'call-with-input-file "not a procedure" proc))
-  (call-with-port
-      (file-handler->input-port
-       (open-input-file-handle filename 'call-with-input-file)
-       filename
-       input-file-buffer-size
-       (native-transcoder)
-       #t
-       'call-with-input-file)
-    proc))
-
-(define (with-input-from-file filename proc)
-  (unless (string? filename)
-    (die 'with-input-from-file "invalid filename" filename))
-  (unless (procedure? proc)
-    (die 'with-input-from-file "not a procedure" proc))
-  (call-with-port
-      (file-handler->input-port
-       (open-input-file-handle filename 'with-input-from-file)
-       filename
-       input-file-buffer-size
-       (native-transcoder)
-       #t
-       'with-input-from-file)
-    (lambda (p)
-      (parameterize ((current-input-port p))
-	(proc)))))
-
-(define (with-input-from-string string proc)
-  (unless (string? string)
-    (die 'with-input-from-string "not a string" string))
-  (unless (procedure? proc)
-    (die 'with-input-from-string "not a procedure" proc))
-  (parameterize ((current-input-port
-		  (open-string-input-port string)))
-    (proc)))
-
-
-(define (standard-input-port)
-  (file-handler->input-port 0 '*stdin* 256 #f #f 'standard-input-port))
-
-(define (standard-output-port)
-  (file-handler->output-port 1 '*stdout* 256 #f #f 'standard-output-port))
-
-(define (standard-error-port)
-  (file-handler->output-port 2 '*stderr* 256 #f #f 'standard-error-port))
-
-(define current-input-port
-  (make-parameter
-      (transcoded-port
-       (file-handler->input-port 0 '*stdin* input-file-buffer-size #f #f #f)
-       (native-transcoder))
-    (lambda (x)
-      (if (and (input-port? x) (textual-port? x))
-	  x
-	(die 'current-input-port "not a textual input port" x)))))
-
-(define current-output-port
-  (make-parameter
-      (transcoded-port
-       (file-handler->output-port 1 '*stdout* output-file-buffer-size #f #f #f)
-       (native-transcoder))
-    (lambda (x)
-      (if (and (output-port? x) (textual-port? x))
-	  x
-	(die 'current-output-port "not a textual output port" x)))))
-
-(define current-error-port
-  (make-parameter
-      (transcoded-port
-       (file-handler->output-port 2 '*stderr* 0 #f #f #f)
-       (native-transcoder))
-    (lambda (x)
-      (if (and (output-port? x) (textual-port? x))
-	  x
-	(die 'current-errorput-port "not a textual output port" x)))))
-
-(define console-output-port
-  (let ((p (current-output-port)))
-    (lambda () p)))
-
-(define console-error-port
-  (let ((p (current-error-port)))
-    (lambda () p)))
-
-(define console-input-port
-  (let ((p (current-input-port)))
-    (lambda () p)))
-
-(define (call-with-port p proc)
-  (define who 'call-with-port)
-  (unless (port? p)
-    (die who "not a port" p))
-  (unless (procedure? proc)
-    (die who "not a procedure" proc))
-  (call-with-values
-      (lambda ()
-	(proc p))
-    (lambda vals
-      (close-port p)
-      (apply values vals))))
-
-
-(define (get-bytevector-n p n)
-  (import (ikarus system $fx)
-    (ikarus system $bytevectors))
-  (define (subbytevector s n)
-    (let ((p ($make-bytevector n)))
-      (let f ((s s) (n n) (p p))
-	(let ((n ($fx- n 1)))
-	  ($bytevector-set! p n ($bytevector-u8-ref s n))
-	  (if ($fx= n 0)
-	      p
-	    (f s n p))))))
-  (unless (input-port? p)
-    (die 'get-bytevector-n "not an input port" p))
-  (unless (binary-port? p)
-    (die 'get-bytevector-n "not a binary port" p))
-  (unless (fixnum? n)
-    (die 'get-bytevector-n "count is not a fixnum" n))
-  (cond
-   (($fx> n 0)
-    (let ((s ($make-bytevector n)))
-      (let f ((p p) (n n) (s s) (i 0))
-	(let ((x (get-u8 p)))
-	  (cond
-	   ((eof-object? x)
-	    (if ($fx= i 0)
-		(eof-object)
-	      (subbytevector s i)))
-	   (else
-	    ($bytevector-set! s i x)
-	    (let ((i ($fxadd1 i)))
-	      (if ($fx= i n)
-		  s
-		(f p n s i)))))))))
-   (($fx= n 0) '#vu8())
-   (else (die 'get-bytevector-n "count is negative" n))))
-
-(define (get-bytevector-n! p s i c)
-  (import (ikarus system $fx) (ikarus system $bytevectors))
-  (unless (input-port? p)
-    (die 'get-bytevector-n! "not an input port" p))
-  (unless (binary-port? p)
-    (die 'get-bytevector-n! "not a binary port" p))
-  (unless (bytevector? s)
-    (die 'get-bytevector-n! "not a bytevector" s))
-  (let ((len ($bytevector-length s)))
-    (unless (fixnum? i)
-      (die 'get-bytevector-n! "starting index is not a fixnum" i))
-    (when (or ($fx< i 0) ($fx> i len))
-      (die 'get-bytevector-n!
-	   (format "starting index is out of range 0..~a" len)
-	   i))
-    (unless (fixnum? c)
-      (die 'get-bytevector-n! "count is not a fixnum" c))
-    (cond
-     (($fx> c 0)
-      (let ((j (+ i c)))
-	(when (> j len)
-	  (die 'get-bytevector-n!
-               (format "count is out of range 0..~a" (- len i))
-               c))
-	(let ((x (get-u8 p)))
-	  (cond
-	   ((eof-object? x) x)
-	   (else
-	    ($bytevector-set! s i x)
-	    (let f ((p p) (s s) (start i) (i 1) (c c))
-	      (cond
-	       (($fx= i c) i)
-	       (else
-		(let ((x (get-u8 p)))
-		  (cond
-		   ((eof-object? x) i)
-		   (else
-		    ($bytevector-set! s ($fx+ start i) x)
-		    (f p s start ($fx+ i 1) c))))))))))))
-     (($fx= c 0) 0)
-     (else (die 'get-bytevector-n! "count is negative" c)))))
-
-(define (get-bytevector-some p)
-  (define who 'get-bytevector-some)
-  (let ((m ($port-fast-attrs p)))
-    (cond
-     ((eq? m fast-get-byte-tag)
-      (let ((i ($port-index p)) (j ($port-size p)))
-	(let ((cnt (unsafe.fx- j i)))
-	  (cond
-	   ((unsafe.fx> cnt 0)
-	    (let f ((bv (make-bytevector cnt))
-		    (buf ($port-buffer p))
-		    (i i) (j j) (idx 0))
-	      (cond
-	       ((unsafe.fx= i j)
-		($set-port-index! p j)
-		bv)
-	       (else
-		(bytevector-u8-set! bv idx (bytevector-u8-ref buf i))
-		(f bv buf (unsafe.fx+ i 1) j (unsafe.fx+ idx 1))))))
-	   (else
-	    (%refill-bytevector-buffer p who)
-	    (if (unsafe.fx= ($port-index p) ($port-size p))
-		(eof-object)
-	      (get-bytevector-some p)))))))
-     (else (die who "invalid port argument" p)))))
-
-(define (get-bytevector-all p)
-  (define (get-it p)
-    (let f ((p p) (n 0) (ac '()))
-      (let ((x (get-u8 p)))
-	(cond
-	 ((eof-object? x)
-	  (if (null? ac)
-	      (eof-object)
-	    (make-it n ac)))
-	 (else (f p (+ n 1) (cons x ac)))))))
-  (define (make-it n revls)
-    (let f ((s (make-bytevector n)) (i (- n 1)) (ls revls))
-      (cond
-       ((pair? ls)
-	(bytevector-u8-set! s i (car ls))
-	(f s (- i 1) (cdr ls)))
-       (else s))))
-  (if (input-port? p)
-      (if (binary-port? p)
-	  (get-it p)
-	(die 'get-bytevector-all "not a binary port" p))
-    (die 'get-bytevector-all "not an input port" p)))
-
-
 (define (get-string-n p n)
   (import (ikarus system $fx) (ikarus system $strings))
   (unless (input-port? p)
@@ -4305,6 +3760,787 @@
 	  (get-it p)
 	(die 'get-string-all "not a textual port" p))
     (die 'get-string-all "not an input port" p)))
+
+
+;;;; byte input functions
+
+(define (get-u8 port)
+  ;;Defined  by R6RS.   Read  from the  binary  input port  PORT,
+  ;;blocking as necessary, until a byte is available from PORT or
+  ;;until  an  end  of  file  is  reached.   If  a  byte  becomes
+  ;;available, GET-U8  returns the byte  as an octet  and updates
+  ;;PORT to point just past that  byte.  If no input byte is seen
+  ;;before an end of file is reached, the EOF object is returned.
+  ;;
+  ;;Here  we handle  the case  of byte  already available  in the
+  ;;buffer, if the buffer is empty: we call a subroutine.
+  ;;
+  (define who 'get-u8)
+  (unless (port? port)
+    (die who "not a port" port))
+  (with-binary-port (port)
+    (if (eq? port.attributes fast-get-byte-tag)
+	(let ((buffer.offset port.buffer.index))
+	  (if (unsafe.fx< buffer.offset port.buffer.used-size)
+	      (begin
+		(set! port.buffer.index (unsafe.fxadd1 buffer.offset))
+		(unsafe.bytevector-u8-ref port.buffer buffer.offset))
+	    (%get/peek-u8-byte-mode port who 1)))
+      (begin
+	(%validate-and-tag-binary-input-port port who)
+	(%get/peek-u8-byte-mode port who 1)))))
+
+(define (lookahead-u8 port)
+  ;;Defined by R6RS.  The  LOOKAHEAD-U8 procedure is like GET-U8,
+  ;;but it does not update PORT to point past the byte.
+  ;;
+  ;;Here  we handle  the case  of byte  already available  in the
+  ;;buffer, if the buffer is empty: we call a subroutine.
+  ;;
+  (define who 'lookahead-u8)
+  (unless (port? port)
+    (die who "not a port" port))
+  (with-binary-port (port)
+    (if (eq? port.attributes fast-get-byte-tag)
+	(let ((buffer.offset port.buffer.index))
+	  (if (unsafe.fx< buffer.offset port.buffer.used-size)
+	      (unsafe.bytevector-u8-ref port.buffer buffer.offset)
+	    (%get/peek-u8-byte-mode port who 0)))
+      (begin
+	(%validate-and-tag-binary-input-port port who)
+	(%get/peek-u8-byte-mode port who 0)))))
+
+(define (%get/peek-u8-byte-mode port who start)
+  ;;Subroutine of GET-u8 and LOOKAHEAD-u8.  To be called when the
+  ;;port buffer  is fully  consumed.  Get or  peek the  next byte
+  ;;from PORT, set the buffer index to START.
+  ;;
+  (with-binary-port (port)
+    (when port.closed?
+      (die who "port is closed" port))
+    (refill-buffer-and-evaluate (port who)
+      (if-end-of-file: (eof-object))
+      (if-successful-refill:
+       (set! port.buffer.index start)
+       (unsafe.bytevector-u8-ref port.buffer 0)))))
+
+
+;;;; bytevector input functions
+
+(define (get-bytevector-n port count)
+  ;;Defined  by  R6RS.   COUNT  must be  an  exact,  non-negative
+  ;;integer object representing the number of bytes to be read.
+  ;;
+  ;;The  GET-BYTEVECTOR-N procedure reads  from the  binary input
+  ;;PORT, blocking as necessary,  until COUNT bytes are available
+  ;;from PORT or until an end of file is reached.
+  ;;
+  ;;If  COUNT  bytes  are   available  before  an  end  of  file,
+  ;;GET-BYTEVECTOR-N returns a bytevector of size COUNT.
+  ;;
+  ;;If  fewer  bytes  are   available  before  an  end  of  file,
+  ;;GET-BYTEVECTOR-N   returns  a  bytevector   containing  those
+  ;;bytes. In  either case,  the input port  is updated  to point
+  ;;just past the bytes read.
+  ;;
+  ;;If an end of file  is reached before any bytes are available,
+  ;;GET-BYTEVECTOR-N returns the EOF object.
+  ;;
+  (define who 'get-bytevector-n)
+  (define (%subbytevector src.bv src.len)
+    (let ((dst.bv (unsafe.make-bytevector src.len)))
+      (let loop ((count src.len))
+	(let ((count (unsafe.fxsub1 count)))
+	  (unsafe.bytevector-set! dst.bv count (unsafe.bytevector-u8-ref src.bv count))
+	  (if (unsafe.fxzero? count)
+	      dst.bv
+	    (loop count))))))
+  (unless (port? port)
+    (die who "not a port" port))
+  (with-binary-port (port)
+    (unless (eq? port.attributes fast-get-byte-tag)
+      (%validate-and-tag-binary-input-port port who))
+    (unless (fixnum? count)
+      (die who "count is not a fixnum" count))
+    (cond ((unsafe.fx> count 0)
+	   (let ((dst.bv (unsafe.make-bytevector count)))
+	     (let loop ((i 0))
+	       (let ((x (get-u8 port)))
+		 (if (eof-object? x)
+		     (if (unsafe.fxzero? i)
+			 (eof-object)
+		       (%subbytevector dst.bv i))
+		   (begin
+		     (unsafe.bytevector-set! dst.bv i x)
+		     (let ((i (unsafe.fxadd1 i)))
+		       (if (unsafe.fx= i count)
+			   dst.bv
+			 (loop i)))))))))
+	  ((unsafe.fxzero? count)
+	   '#vu8())
+	  (else
+	   (die who "count is negative" count)))))
+
+(define (get-bytevector-n! port dst.bv start count)
+  ;;Defined  by  R6RS.   COUNT  must be  an  exact,  non-negative
+  ;;integer object, representing the  number of bytes to be read.
+  ;;DST.BV  must  be  a  bytevector  with  at  least  START+COUNT
+  ;;elements.
+  ;;
+  ;;The GET-BYTEVECTOR-N!  procedure  reads from the binary input
+  ;;PORT, blocking as necessary,  until COUNT bytes are available
+  ;;or until an end of file is reached.
+  ;;
+  ;;If COUNT bytes are available  before an end of file, they are
+  ;;written into  DST.BV starting at index START,  and the result
+  ;;is COUNT.
+  ;;
+  ;;If fewer bytes are available before the next end of file, the
+  ;;available  bytes are  written into  DST.BV starting  at index
+  ;;START,  and the result  is a  number object  representing the
+  ;;number of bytes actually read.
+  ;;
+  ;;In either case, the input  port is updated to point just past
+  ;;the bytes read. If an end of file is reached before any bytes
+  ;;are available, GET-BYTEVECTOR-N!  returns the EOF object.
+  ;;
+  (define who 'get-bytevector-n!)
+  (unless (port? port)
+    (die who "not a port" port))
+  (with-binary-port (port)
+    (unless (eq? port.attributes fast-get-byte-tag)
+      (%validate-and-tag-binary-input-port port who))
+    (unless (bytevector? dst.bv)
+      (die who "not a bytevector" dst.bv))
+    (unless (fixnum? start)
+      (die who "starting index is not a fixnum" start))
+    (unless (fixnum? count)
+      (die who "count is not a fixnum" count))
+    (let ((len (unsafe.bytevector-length dst.bv)))
+      (when (or (unsafe.fx< start 0) (unsafe.fx<= len start))
+	(die who "starting index is out of range" start))
+      (cond ((unsafe.fx> count 0)
+	     (let ((imax (+ start count)))
+	       (when (> imax len)
+		 (die who "count is out of range" count (- len start)))
+	       ;;We must return EOF if the first read returns EOF.
+	       (let ((x (get-u8 port)))
+		 (if (eof-object? x)
+		     x
+		   (begin
+		     (unsafe.bytevector-set! dst.bv start x)
+		     ;;From  now on  we must  return the  number of
+		     ;;read bytes.
+		     (let loop ((i (unsafe.fxadd1 start)))
+		       (if (unsafe.fx= i imax)
+			   i
+			 (let ((x (get-u8 port)))
+			   (if (eof-object? x)
+			       i
+			     (begin
+			       (unsafe.bytevector-set! dst.bv i x)
+			       (loop (unsafe.fxadd1 i))))))))))))
+	    ((unsafe.fxzero? count)
+	     0)
+	    (else
+	     (die who "count is negative" count))))))
+
+(define (get-bytevector-some port)
+  ;;Defined by  R6RS.  Read from the binary  input PORT, blocking
+  ;;as necessary,  until bytes are  available or until an  end of
+  ;;file is reached.
+  ;;
+  ;;If  bytes  become  available, GET-BYTEVECTOR-SOME  returns  a
+  ;;freshly allocated bytevector containing the initial available
+  ;;bytes (at least one), and  it updates PORT to point just past
+  ;;these bytes.
+  ;;
+  ;;If no input bytes are seen  before an end of file is reached,
+  ;;the EOF object is returned.
+  ;;
+  (define who 'get-bytevector-some)
+  (unless (port? port)
+    (die who "not a port" port))
+  (with-binary-port (port)
+    (unless (eq? port.attributes fast-get-byte-tag)
+      (%validate-and-tag-binary-input-port port who))
+    (let ()
+      (define (data-available-in-buffer)
+	(let* ((buffer		port.buffer)
+	       (buffer.used-size port.buffer.used-size)
+	       (buffer.offset	port.buffer.index)
+	       (dst.bv		(make-bytevector (unsafe.fx- buffer.used-size buffer.offset))))
+	  (set! port.buffer.index buffer.used-size)
+	  (let loop ((buffer.offset	buffer.offset)
+		     (dst.index	0))
+	    (if (unsafe.fx= buffer.offset buffer.used-size)
+		dst.bv
+	      (begin
+		(unsafe.bytevector-set! dst.bv dst.index (unsafe.bytevector-u8-ref buffer buffer.offset))
+		(loop (unsafe.fxadd1 buffer.offset) (unsafe.fxadd1 dst.index)))))))
+      (unless (eq? port.attributes fast-get-byte-tag)
+	(die who "invalid port argument" port))
+      (maybe-refill-buffer-and-evaluate (port who)
+	(data-is-needed-at: port.buffer.index)
+	(if-end-of-file: (eof-object))
+	(if-successful-refill: (data-available-in-buffer))
+	(if-available-data: (data-available-in-buffer))))))
+
+(define (get-bytevector-all port)
+  ;;Defined by R6RS.   Attempts to read all bytes  until the next
+  ;;end of file, blocking as necessary.
+  ;;
+  ;;If one  or more bytes are read,  GET-BYTEVECTOR-ALL returns a
+  ;;bytevector containing all  bytes up to the next  end of file.
+  ;;Otherwise, get-bytevector-all returns the EOF object.
+  ;;
+  ;;The operation  may block indefinitely waiting to  see if more
+  ;;bytes will  become available, even if some  bytes are already
+  ;;available.
+  ;;
+  (define who 'get-bytevector-all)
+  (unless (port? port)
+    (die who "not a port" port))
+  (with-binary-port (port)
+    (unless (eq? port.attributes fast-get-byte-tag)
+      (%validate-and-tag-binary-input-port port who))
+    (let-values (((out-port getter) (open-bytevector-output-port #f)))
+      (let retry-after-filling-buffer ()
+	(define (data-available-in-buffer)
+	  (put-bytevector out-port port.buffer port.buffer.index port.buffer.used-size)
+	  (retry-after-filling-buffer))
+	(maybe-refill-buffer-and-evaluate (port who)
+	  (data-is-needed-at: port.buffer.index)
+	  (if-end-of-file:
+	   (let ((result (getter)))
+	     (if (zero? (unsafe.bytevector-length result))
+		 (eof-object)
+	       result)))
+	  (if-successful-refill: (data-available-in-buffer))
+	  (if-available-data: (data-available-in-buffer)))))))
+
+
+;;;; platform API for file descriptors
+;;
+;;See detailed documentation in the Texinfo file.
+;;
+
+(define-inline (platform-open-input-fd pathname-bv)
+  ;;Interface to  "open()".  Open a file  descriptor for reading;
+  ;;if successful  return a non-negative  fixnum representing the
+  ;;file descriptor;  else return a  negative fixnum representing
+  ;;an ERRNO code.
+  ;;
+  (foreign-call "ikrt_open_input_fd" pathname-bv))
+
+(define-inline (platform-open-output-fd pathname-bv open-options)
+  ;;Interface to  "open()".  Open a file  descriptor for writing;
+  ;;if successful  return a non-negative  fixnum representing the
+  ;;file descriptor;  else return a  negative fixnum representing
+  ;;an ERRNO code.
+  ;;
+  (foreign-call "ikrt_open_output_fd" pathname-bv open-options))
+
+(define-inline (platform-read-fd fd dst.bv dst.start requested-count)
+  ;;Interface to  "read()".  Read data from  the file descriptor;
+  ;;if successful  return a non-negative  fixnum representind the
+  ;;number of bytes actually  read; else return a negative fixnum
+  ;;representing an ERRNO code.
+  ;;
+  (foreign-call "ikrt_read_fd" fd dst.bv dst.start requested-count))
+
+(define-inline (platform-write-fd fd src.bv src.start requested-count)
+  ;;Interface to  "write()".  Write data to  the file descriptor;
+  ;;if successful  return a non-negative  fixnum representind the
+  ;;number  of bytes  actually  written; else  return a  negative
+  ;;fixnum representing an ERRNO code.
+  ;;
+  (foreign-call "ikrt_write_fd" fd src.bv src.start requested-count))
+
+(define-inline (platform-set-position fd position)
+  (foreign-call "ikrt_set_position" fd position))
+
+(define-inline (platform-close-fd fd)
+  ;;Interface to "close()".  Close the file descriptor and return
+  ;;false or a fixnum representing an ERRNO code.
+  ;;
+  (foreign-call "ikrt_close_fd" fd))
+
+
+;;;; platform I/O error handling
+
+;;; FIXME: these hard coded constants should go away
+(define EAGAIN-error-code -6) ;;; from ikarus-errno.c
+
+(define raise-io-error
+  ;;Raise a non-continuable  exception describing an input/output
+  ;;system error from the value of ERRNO.
+  ;;
+  (case-lambda
+   ((who port-identifier errno base-condition)
+    (raise (condition base-condition
+		      (make-who-condition who)
+		      (make-message-condition (strerror errno))
+		      (case errno
+			;; from ikarus-errno.c: EACCES=-2, EFAULT=-21, EROFS=-71, EEXIST=-20,
+			;;                      EIO=-29, ENOENT=-45
+			;; Why is EFAULT included here?
+			((-2 -21)
+			 (make-i/o-file-protection-error port-identifier))
+			((-71)
+			 (make-i/o-file-is-read-only-error port-identifier))
+			((-20)
+			 (make-i/o-file-already-exists-error port-identifier))
+			((-29)
+			 (make-i/o-error))
+			((-45)
+			 (make-i/o-file-does-not-exist-error port-identifier))
+			(else
+			 (if port-identifier
+			     (make-irritants-condition (list port-identifier))
+			   (condition)))))))
+   ((who port-identifier errno)
+    (raise-io-error who port-identifier errno (make-error)))))
+
+
+;;;; helper functions for platform's descriptors
+
+(define (%open-input-file-descriptor filename who)
+  ;;Subroutine for the functions  below opening a file for input.
+  ;;Open  and  return  a  file descriptor  referencing  the  file
+  ;;selected by  the string FILENAME.  If an  error occurs: raise
+  ;;an exception.
+  ;;
+  (let ((fd (platform-open-input-fd (string->utf8 filename))))
+    (if (fx< fd 0)
+	(raise-io-error who filename fd)
+      fd)))
+
+(define (%open-output-file-descriptor filename file-options who)
+  ;;Subroutine for the functions below opening a file for output.
+  ;;Open  and  return  a  file descriptor  referencing  the  file
+  ;;selected by  the string FILENAME.  If an  error occurs: raise
+  ;;an exception.
+  ;;
+  (let ((opts (if (enum-set? file-options)
+		  (unsafe.fxior (if (enum-set-member? 'no-create   file-options) 1 0)
+				(if (enum-set-member? 'no-fail     file-options) 2 0)
+				(if (enum-set-member? 'no-truncate file-options) 4 0))
+		(die who "file-options is not an enum set" file-options))))
+    (let ((fd (platform-open-output-fd (string->utf8 filename) opts)))
+      (if (fx< fd 0)
+	  (raise-io-error who filename fd)
+	fd))))
+
+(define (%file-descriptor->input-port fd port-identifier buffer-size transcoder close-function who)
+  ;;Given the fixnum file descriptor FD representing an open file
+  ;;for the underlying platform:  build and return a Scheme input
+  ;;port to be used to read the data.
+  ;;
+  ;;The  returned   port  supports  both   the  GET-POSITION  and
+  ;;SET-POSITION! operations.
+  ;;
+  ;;If  CLOSE-FUNCTION  is  a  function:  it  is  used  as  close
+  ;;function; if it  is true: a standard close  function for file
+  ;;descriptors is used; else the port does not support the close
+  ;;function.
+  ;;
+  (let ((attributes		(input-transcoder-attrs transcoder who))
+	(buffer-index		0)
+	(buffer-used-size	0)
+	(buffer			(make-bytevector buffer-size))
+	(write!			#f)
+	(get-position		#t))
+
+    (define set-position!
+      (%make-set-position!-function-for-file-descriptor-port fd port-identifier))
+
+    (define close
+      (cond ((procedure? close-function)
+	     close-function)
+	    ((eqv? close-function #t)
+	     (%make-close-function-for-platform-descriptor-port port-identifier fd))
+	    (else #f)))
+
+    (define (read! dst.bv dst.start requested-count)
+      (let ((count (platform-read-fd fd dst.bv dst.start (if (unsafe.fx< input-block-size requested-count)
+							     input-block-size
+							   requested-count))))
+	(cond ((unsafe.fx>= count 0)
+	       count)
+	      ((unsafe.fx= count EAGAIN-error-code)
+	       (call/cc
+		   (lambda (k)
+		     (add-io-event fd k 'r)
+		     (process-events)))
+	       (read! dst.bv dst.start requested-count))
+	      (else
+	       (raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
+    (guarded-port ($make-port attributes buffer-index buffer-used-size buffer
+			      transcoder port-identifier
+			      read! write! get-position set-position! close
+			      (default-cookie fd)))))
+
+(define (%file-descriptor->output-port fd port-identifier buffer-size transcoder close-function who)
+  ;;Given the fixnum file descriptor FD representing an open file
+  ;;for the underlying platform: build and return a Scheme output
+  ;;port to be used to write the data.
+  ;;
+  ;;The  returned   port  supports  both   the  GET-POSITION  and
+  ;;SET-POSITION! operations.
+  ;;
+  ;;If  CLOSE-FUNCTION  is  a  function:  it  is  used  as  close
+  ;;function; if it  is true: a standard close  function for file
+  ;;descriptors is used; else the port does not support the close
+  ;;operation.
+  ;;
+  (let ((attributes		(output-transcoder-attrs transcoder who))
+	(buffer-index		0)
+	(buffer-used-size	buffer-size)
+	(buffer			(make-bytevector buffer-size))
+	(read!			#f)
+	(get-position		#t))
+
+    (define set-position!
+      (%make-set-position!-function-for-file-descriptor-port fd port-identifier))
+
+    (define close
+      (cond ((procedure? close-function)
+	     close-function)
+	    ((eqv? close-function #t)
+	     (%make-close-function-for-platform-descriptor-port port-identifier fd))
+	    (else #f)))
+
+    (define (write! src.bv src.start requested-count)
+      (let ((count (platform-write-fd fd src.bv src.start
+				      (if (unsafe.fx< output-block-size requested-count)
+					  output-block-size
+					requested-count))))
+	(cond ((unsafe.fx>= count 0)
+	       count)
+	      ((unsafe.fx= count EAGAIN-error-code)
+	       (call/cc
+		   (lambda (k)
+		     (add-io-event fd k 'w)
+		     (process-events)))
+	       (write! src.bv src.start requested-count))
+	      (else
+	       (raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
+
+    (guarded-port ($make-port attributes buffer-index buffer-used-size buffer
+			      transcoder port-identifier
+			      read! write! get-position set-position! close
+			      (default-cookie fd)))))
+
+(define (%make-set-position!-function-for-file-descriptor-port fd port-identifier)
+  ;;Build  and  return a  closure  to  be  used as  SET-POSITION!
+  ;;function for  a port wrapping the  platform's file descriptor
+  ;;FD.
+  ;;
+  (lambda (position)
+    (let ((errno (platform-set-position fd position)))
+      (when errno
+	(raise-io-error 'set-position! port-identifier errno
+			(make-i/o-invalid-position-error position))))))
+
+(define (%make-close-function-for-platform-descriptor-port port-identifier fd)
+  ;;Return  a standard  CLOSE function  for a  port  wrapping the
+  ;;platform's  descriptor   FD.   It  is  used   for  both  file
+  ;;descriptors  and socket  descriptors, and  in general  can be
+  ;;used for any platform descriptor.
+  ;;
+  (lambda ()
+    (let ((errno (platform-close-fd fd)))
+      (when errno
+	(raise-io-error 'close port-identifier errno)))))
+
+
+;;;; opening ports wrapping platform file descriptors
+
+(define open-file-input-port
+  ;;Defined by R6RS.   The OPEN-FILE-INPUT-PORT procedure returns
+  ;;an  input port  for  the named  file.   The FILE-OPTIONS  and
+  ;;MAYBE-TRANSCODER arguments are optional.
+  ;;
+  ;;The  FILE-OPTIONS  argument,   which  may  determine  various
+  ;;aspects  of the  returned  port, defaults  to  the value  of:
+  ;;
+  ;;   (file-options)
+  ;;
+  ;;MAYBE-TRANSCODER must be either a transcoder or false.
+  ;;
+  ;;The  BUFFER-MODE argument, if  supplied, must  be one  of the
+  ;;symbols that  name a  buffer mode.  The  BUFFER-MODE argument
+  ;;defaults to BLOCK.
+  ;;
+  ;;If   MAYBE-TRANSCODER  is  a   transcoder,  it   becomes  the
+  ;;transcoder associated with the returned port.
+  ;;
+  ;;If MAYBE-TRANSCODER  is false or  absent, the port will  be a
+  ;;binary   port  and   will  support   the   PORT-POSITION  and
+  ;;SET-PORT-POSITION!  operations.  Otherwise the port will be a
+  ;;textual port,  and whether it supports  the PORT-POSITION and
+  ;;SET-PORT-POSITION!   operations  is  implementation-dependent
+  ;;(and possibly transcoder-dependent).
+  ;;
+  (case-lambda
+   ((filename)
+    (open-file-input-port filename (file-options) 'block #f))
+
+   ((filename file-options)
+    (open-file-input-port filename file-options   'block #f))
+
+   ((filename file-options buffer-mode)
+    (open-file-input-port filename file-options buffer-mode #f))
+
+   ((filename file-options buffer-mode maybe-transcoder)
+    (define who 'open-file-input-port)
+    (unless (string? filename)
+      (die who "invalid filename" filename))
+    (unless (enum-set? file-options)
+      (die who "file-options is not an enum set" file-options))
+    (unless (or (not maybe-transcoder) (transcoder? maybe-transcoder))
+      (die who "invalid maybe-transcoder" maybe-transcoder))
+;;;FIXME: file-options ignored
+;;;FIXME: buffer-mode ignored
+    (%file-descriptor->input-port (%open-input-file-descriptor filename who)
+				  filename input-file-buffer-size maybe-transcoder #t who))))
+
+(define open-file-output-port
+  ;;Defined by R6RS.  The OPEN-FILE-OUTPUT-PORT procedure returns
+  ;;an output port for the named file.
+  ;;
+  ;;The  FILE-OPTIONS  argument,   which  may  determine  various
+  ;;aspects of the returned port, defaults to the value of:
+  ;;
+  ;;   (file-options)
+  ;;
+  ;;MAYBE-TRANSCODER must be either a transcoder or false.
+  ;;
+  ;;The  BUFFER-MODE argument, if  supplied, must  be one  of the
+  ;;symbols that  name a  buffer mode.  The  BUFFER-MODE argument
+  ;;defaults to BLOCK.
+  ;;
+  ;;If   MAYBE-TRANSCODER  is  a   transcoder,  it   becomes  the
+  ;;transcoder associated with the port.
+  ;;
+  ;;If MAYBE-TRANSCODER  is false or  absent, the port will  be a
+  ;;binary   port  and   will  support   the   PORT-POSITION  and
+  ;;SET-PORT-POSITION!  operations.  Otherwise the port will be a
+  ;;textual port,  and whether it supports  the PORT-POSITION and
+  ;;SET-PORT-POSITION!   operations  is implementation-dependent
+  ;;(and possibly transcoder-dependent).
+  ;;
+  (case-lambda
+   ((filename)
+    (open-file-output-port filename (file-options) 'block #f))
+
+   ((filename file-options)
+    (open-file-output-port filename file-options 'block #f))
+
+   ((filename file-options buffer-mode)
+    (open-file-output-port filename file-options buffer-mode #f))
+
+   ((filename file-options buffer-mode maybe-transcoder)
+    (define who 'open-file-output-port)
+    (unless (string? filename)
+      (die who "invalid filename" filename))
+;;;FIXME: file-options ignored
+;;;FIXME: line-buffered output ports are not handled
+    (unless (or (not maybe-transcoder) (transcoder? maybe-transcoder))
+      (die who "invalid transcoder" maybe-transcoder))
+    (let ((buffer-size (case buffer-mode
+			 ((none)
+			  0)
+			 ((block line)
+			  output-file-buffer-size)
+			 (else
+			  (die who "invalid buffer mode" buffer-mode)))))
+      (%file-descriptor->output-port (%open-output-file-descriptor filename file-options who)
+				     filename buffer-size maybe-transcoder #t who)))))
+
+(define (open-output-file filename)
+  ;;Defined by  R6RS.  Open FILENAME for output,  with empty file
+  ;;options, and returns the obtained port.
+  ;;
+  (define who 'open-output-file)
+  (unless (string? filename)
+    (die who "invalid filename" filename))
+  (%file-descriptor->output-port (%open-output-file-descriptor filename (file-options) who)
+				 filename output-file-buffer-size (native-transcoder) #t who))
+
+(define (open-input-file filename)
+  ;;Defined by  R6RS.  Open FILENAME  for input, with  empty file
+  ;;options, and returns the obtained port.
+  ;;
+  (define who 'open-input-file)
+  (unless (string? filename)
+    (die who "invalid filename" filename))
+  (%file-descriptor->input-port (%open-input-file-descriptor filename who)
+				filename input-file-buffer-size (native-transcoder) #t who))
+
+
+(define (with-output-to-file filename thunk)
+  ;;Defined by R6RS.   THUNK must be a procedure  and must accept
+  ;;zero arguments.
+  ;;
+  ;;The  file is  opened for  input  or output  using empty  file
+  ;;options, and THUNK is called with no arguments.
+  ;;
+  ;;During the dynamic extent of  the call to THUNK, the obtained
+  ;;port   is  made   the   value  returned   by  the   procedure
+  ;;CURRENT-OUTPUT-PORT; the previous default value is reinstated
+  ;;when the dynamic extent is exited.
+  ;;
+  ;;When THUNK  returns, the  port is closed  automatically.  The
+  ;;values returned by THUNK are returned.
+  ;;
+  ;;If an escape  procedure is used to escape  back into the call
+  ;;to   THUNK  after   THUNK  is   returned,  the   behavior  is
+  ;;unspecified.
+  ;;
+  (define who 'with-output-to-file)
+  (unless (string? filename)
+    (die who "invalid filename" filename))
+  (unless (procedure? thunk)
+    (die who "not a procedure" thunk))
+  (call-with-port
+      (%file-descriptor->output-port (%open-output-file-descriptor filename (file-options) who)
+				     filename output-file-buffer-size (native-transcoder)
+				     #t who)
+    (lambda (port)
+      (parameterize ((current-output-port port))
+	(thunk)))))
+
+(define (with-input-from-file filename thunk)
+  ;;Defined by R6RS.   THUNK must be a procedure  and must accept
+  ;;zero arguments.
+  ;;
+  ;;The  file is  opened for  input  or output  using empty  file
+  ;;options, and THUNK is called with no arguments.
+  ;;
+  ;;During the dynamic extent of  the call to THUNK, the obtained
+  ;;port   is  made   the   value  returned   by  the   procedure
+  ;;CURRENT-INPUT-PORT; the previous  default value is reinstated
+  ;;when the dynamic extent is exited.
+  ;;
+  ;;When THUNK  returns, the  port is closed  automatically.  The
+  ;;values returned by THUNK are returned.
+  ;;
+  ;;If an escape  procedure is used to escape  back into the call
+  ;;to   THUNK  after   THUNK  is   returned,  the   behavior  is
+  ;;unspecified.
+  ;;
+  (define who 'with-input-from-file)
+  (unless (string? filename)
+    (die who "invalid filename" filename))
+  (unless (procedure? thunk)
+    (die who "not a procedure" thunk))
+  (call-with-port
+      (%file-descriptor->input-port (%open-input-file-descriptor filename who)
+				    filename input-file-buffer-size (native-transcoder) #t who)
+    (lambda (port)
+      (parameterize ((current-input-port port))
+	(thunk)))))
+
+(define (call-with-output-file filename proc)
+  ;;Defined by R6RS.  PROC should accept one argument.
+  ;;
+  ;;This procedure  opens the file named by  FILENAME for output,
+  ;;with  no specified  file  options, and  calls  PROC with  the
+  ;;obtained port as an argument.
+  ;;
+  ;;If  PROC returns, the  port is  closed automatically  and the
+  ;;values returned by PROC are returned.
+  ;;
+  ;;If   PROC  does   not  return,   the  port   is   not  closed
+  ;;automatically, unless  it is possible to prove  that the port
+  ;;will never again be used for an I/O operation.
+  ;;
+  (define who 'call-with-output-file)
+  (unless (string? filename)
+    (die who "invalid filename" filename))
+  (unless (procedure? proc)
+    (die who "not a procedure" proc))
+  (call-with-port
+      (%file-descriptor->output-port (%open-output-file-descriptor filename (file-options) who)
+				     filename output-file-buffer-size (native-transcoder) #t who)
+    proc))
+
+(define (call-with-input-file filename proc)
+  ;;Defined by R6RS.  PROC should accept one argument.
+  ;;
+  ;;This procedure  opens the file  named by FILENAME  for input,
+  ;;with  no specified  file  options, and  calls  PROC with  the
+  ;;obtained port as an argument.
+  ;;
+  ;;If  PROC returns, the  port is  closed automatically  and the
+  ;;values returned by PROC are returned.
+  ;;
+  ;;If   PROC  does   not  return,   the  port   is   not  closed
+  ;;automatically, unless  it is possible to prove  that the port
+  ;;will never again be used for an I/O operation.
+  ;;
+  (define who 'call-with-input-file)
+  (unless (string? filename)
+    (die who "invalid filename" filename))
+  (unless (procedure? proc)
+    (die who "not a procedure" proc))
+  (call-with-port
+      (%file-descriptor->input-port (%open-input-file-descriptor filename who)
+				    filename input-file-buffer-size (native-transcoder) #t who)
+    proc))
+
+(define (with-input-from-string string thunk)
+  ;;Defined by Ikarus.  THUNK must be a procedure and must accept
+  ;;zero arguments.
+  ;;
+  ;;STRING must be  a Scheme string, and THUNK  is called with no
+  ;;arguments.
+  ;;
+  ;;The  STRING is used  as argument  for OPEN-STRING-INPUT-PORT;
+  ;;during the dynamic extent of  the call to THUNK, the obtained
+  ;;port    is   made   the    value   returned    by   procedure
+  ;;CURRENT-INPUT-PORT; the previous  default value is reinstated
+  ;;when the dynamic extent is exited.
+  ;;
+  ;;When THUNK  returns, the  port is closed  automatically.  The
+  ;;values returned by THUNK are returned.
+  ;;
+  ;;If an escape  procedure is used to escape  back into the call
+  ;;to   THUNK  after   THUNK  is   returned,  the   behavior  is
+  ;;unspecified.
+  ;;
+  (define who 'with-input-from-string)
+  (unless (string? string)
+    (die who "not a string" string))
+  (unless (procedure? thunk)
+    (die who "not a procedure" thunk))
+  (parameterize ((current-input-port (open-string-input-port string)))
+    (thunk)))
+
+(define (call-with-port port proc)
+  ;;Defined  by  R6RS.   PROC  must  accept  one  argument.   The
+  ;;CALL-WITH-PORT procedure calls PROC with PORT as an argument.
+  ;;
+  ;;If PROC returns, PORT  is closed automatically and the values
+  ;;returned by PROC are returned.
+  ;;
+  ;;If PROC  does not return,  PORT is not  closed automatically,
+  ;;except perhaps  when it is  possible to prove that  PORT will
+  ;;never again be used for an input or output operation.
+  ;;
+  (define who 'call-with-port)
+  (unless (port? port)
+    (die who "not a port" port))
+  (unless (procedure? proc)
+    (die who "not a procedure" proc))
+  (call-with-values
+      (lambda ()
+	(proc port))
+    (lambda vals
+      (%close-port port)
+      (apply values vals))))
 
 
 (define-syntax put-string/bv
@@ -4471,7 +4707,7 @@
       (die 'newline "not an output port" p))
     (unless (textual-port? p)
       (die 'newline "not a textual port" p))
-    (when ($port-closed? p)
+    (when (%port-closed? p)
       (die 'newline "port is closed" p))
     (put-char p #\newline)
     (flush-output-port p))))
@@ -4526,15 +4762,15 @@
 	     (values
 	      (vector-ref r 0)        ; pid
 	      (and (not stdin)
-		   (file-handler->output-port (vector-ref r 1)
+		   (%file-descriptor->output-port (vector-ref r 1)
 				    cmd output-file-buffer-size #f #t
 				    'process))
 	      (and (not stdout)
-		   (file-handler->input-port (vector-ref r 2)
+		   (%file-descriptor->input-port (vector-ref r 2)
 				   cmd input-file-buffer-size #f #t
 				   'process))
 	      (and (not stderr)
-		   (file-handler->input-port (vector-ref r 3)
+		   (%file-descriptor->input-port (vector-ref r 3)
 				   cmd input-file-buffer-size #f #t
 				   'process))))))))
 
@@ -4548,6 +4784,26 @@
   (%spawn-process 'process-nonblocking #t #f #f #f #f cmd args))
 
 
+;;;; platform socket functions
+
+(define input-socket-buffer-size
+  (make-parameter (+ input-block-size 128)
+    (lambda (x)
+      (if (and (fixnum? x) (unsafe.fx>= x 128))
+	  x
+	(error 'input-socket-buffer-size
+	  "buffer size should be a fixnum >= 128"
+	  x)))))
+
+(define output-socket-buffer-size
+  (make-parameter output-block-size
+    (lambda (x)
+      (if (and (fixnum? x) (unsafe.fx> x 0))
+	  x
+	(error 'output-socket-buffer-size
+	  "buffer size should be a positive fixnum"
+	  x)))))
+
 (define (set-fd-nonblocking fd who id)
   (let ((rv (foreign-call "ikrt_make_fd_nonblocking" fd)))
     (unless (eq? rv 0)
@@ -4560,15 +4816,13 @@
 	   (let ((closed-once? #f))
 	     (lambda ()
 	       (if closed-once?
-		   ((file-close-proc id socket))
+		   ((%make-close-function-for-platform-descriptor-port id socket))
 		 (set! closed-once? #t))))))
       (unless block?
 	(set-fd-nonblocking socket who id))
       (values
-       (file-handler->input-port socket
-		       id (input-socket-buffer-size) #f close who)
-       (file-handler->output-port socket
-			id (output-socket-buffer-size) #f close who)))))
+       (%file-descriptor->input-port  socket id (input-socket-buffer-size)  #f close who)
+       (%file-descriptor->output-port socket id (output-socket-buffer-size) #f close who)))))
 
 (define-syntax define-connector
   (syntax-rules ()
@@ -4856,6 +5110,109 @@
 
 
 		;(set-fd-nonblocking 0 'init '*stdin*)
+
+
+;;;; standard, console and current ports
+
+(define (standard-input-port)
+  ;;Defined by R6RS.  Return a new binary input port connected to
+  ;;standard input.  Whether  the port supports the PORT-POSITION
+  ;;and   SET-PORT-POSITION!     operations   is   implementation
+  ;;dependent.
+  ;;
+  (%file-descriptor->input-port  0 '*stdin* 256 #f #f 'standard-input-port))
+
+(define (standard-output-port)
+  ;;Defined by  R6RS.  Return a new binary  output port connected
+  ;;to  the  standard  output.   Whether the  port  supports  the
+  ;;PORT-POSITION    and   SET-PORT-POSITION!     operations   is
+  ;;implementation dependent.
+  ;;
+  (%file-descriptor->output-port 1 '*stdout* 256 #f #f 'standard-output-port))
+
+(define (standard-error-port)
+  ;;Defined by  R6RS.  Return a new binary  output port connected
+  ;;to  the  standard  error.   Whether  the  port  supports  the
+  ;;PORT-POSITION    and   SET-PORT-POSITION!     operations   is
+  ;;implementation dependent.
+  ;;
+  (%file-descriptor->output-port 2 '*stderr* 256 #f #f 'standard-error-port))
+
+(define current-input-port
+  ;;Defined by  R6RS.  Return a  default textual port  for input.
+  ;;Normally,  this  default  port  is associated  with  standard
+  ;;input,   but  can   be  dynamically   reassigned   using  the
+  ;;WITH-INPUT-FROM-FILE procedure from  the (rnrs io simple (6))
+  ;;library.   The  port  may  or  may  not  have  an  associated
+  ;;transcoder;  if  it does,  the  transcoder is  implementation
+  ;;dependent.
+  (make-parameter
+      (transcoded-port (%file-descriptor->input-port 0 '*stdin* input-file-buffer-size #f #f #f)
+		       (native-transcoder))
+    (lambda (x)
+      (if (and (input-port? x) (textual-port? x))
+	  x
+	(die 'current-input-port "not a textual input port" x)))))
+
+(define current-output-port
+  ;;Defined by  R6RS.  Hold the default textual  port for regular
+  ;;output.   Normally,  this  default  port is  associated  with
+  ;;standard output.
+  ;;
+  ;;The  return value of  CURRENT-OUTPUT-PORT can  be dynamically
+  ;;reassigned using  the WITH-OUTPUT-TO-FILE procedure  from the
+  ;;(rnrs  io  simple (6))  library.   A  port  returned by  this
+  ;;procedure may or may not have an associated transcoder; if it
+  ;;does, the transcoder is implementation dependent.
+  ;;
+  (make-parameter
+      (transcoded-port (%file-descriptor->output-port 1 '*stdout* output-file-buffer-size #f #f #f)
+		       (native-transcoder))
+    (lambda (x)
+      (if (and (output-port? x) (textual-port? x))
+	  x
+	(die 'current-output-port "not a textual output port" x)))))
+
+(define current-error-port
+  ;;Defined  by R6RS.  Hold  the default  textual port  for error
+  ;;output.   Normally,  this  default  port is  associated  with
+  ;;standard error.
+  ;;
+  ;;The  return value  of CURRENT-ERROR-PORT  can  be dynamically
+  ;;reassigned using  the WITH-OUTPUT-TO-FILE procedure  from the
+  ;;(rnrs  io  simple (6))  library.   A  port  returned by  this
+  ;;procedure may or may not have an associated transcoder; if it
+  ;;does, the transcoder is implementation dependent.
+  ;;
+  (make-parameter
+      (transcoded-port (%file-descriptor->output-port 2 '*stderr* 0 #f #f #f)
+		       (native-transcoder))
+    (lambda (x)
+      (if (and (output-port? x) (textual-port? x))
+	  x
+	(die 'current-errorput-port "not a textual output port" x)))))
+
+(define console-output-port
+  ;;Defined by Ikarus.  Return a default textual port for output;
+  ;;each call returns the same port.
+  ;;
+  (let ((port (current-output-port)))
+    (lambda () port)))
+
+(define console-error-port
+  ;;Defined by Ikarus.  Return  a default textual port for error;
+  ;;each call returns the same port.
+  ;;
+  (let ((port (current-error-port)))
+    (lambda () port)))
+
+(define console-input-port
+  ;;Defined by Ikarus.  Return  a default textual port for input;
+  ;;each call returns the same port.
+  ;;
+  (let ((port (current-input-port)))
+    (lambda () port)))
+
 
 ;;;; done
 

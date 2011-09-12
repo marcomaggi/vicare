@@ -1054,13 +1054,18 @@
   	    (if (= (string-length r) (string-length s))
   		(error #f "test failed")
               (error #f "length mismatch" (string-length s) (string-length r))))))
-      (printf "ok\n"))
-    (test 'utf8 (utf-8-codec)
-  	  string->utf8
-  	  utf8->string)
-    (test 'utf16 (utf-16-codec)
-  	  (lambda (x) (string->utf16 x 'little))
-  	  (lambda (x) (utf16->string x 'little))))
+      (printf "ok\n")
+      #t)
+    (check
+	(test 'utf8 (utf-8-codec)
+	      string->utf8
+	      utf8->string)
+      => #t)
+    (check
+	(test 'utf16 (utf-16-codec)
+	      (lambda (x) (string->utf16 x 'little))
+	      (lambda (x) (utf16->string x 'little)))
+      => #t))
 
 ;;; --------------------------------------------------------------------
 
@@ -1074,7 +1079,7 @@
 			  (make-transcoder (utf-8-codec)))
     => (make-utf8-string-range2))
 
-  #;(check
+  (check
       (bytevector->string (make-utf8-bytevector-range3)
 			  (make-transcoder (utf-8-codec)))
     => (make-utf8-string-range3))

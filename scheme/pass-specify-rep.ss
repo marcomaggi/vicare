@@ -1,15 +1,15 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -49,22 +49,22 @@
     (interruptable? p-handler p-handled? v-handler v-handled? e-handler e-handled?))
   (define interrupt-handler
     (make-parameter (lambda () (error 'interrupt-handler "uninitialized"))))
-  (define (interrupt) 
+  (define (interrupt)
     ((interrupt-handler))
     (prm 'interrupt))
   (define (with-interrupt-handler p x ctxt args
-             make-interrupt-call make-no-interrupt-call 
+             make-interrupt-call make-no-interrupt-call
              k)
     (cond
       [(not (PH-interruptable? p))
-       (parameterize ([interrupt-handler 
+       (parameterize ([interrupt-handler
                        (lambda ()
-                         (error 'cogen "uninterruptable" 
+                         (error 'cogen "uninterruptable"
                                 x args ctxt))])
           (k))]
       [else
        (let ([interrupted? #f])
-         (let ([body 
+         (let ([body
                 (parameterize ([interrupt-handler
                                 (lambda () (set! interrupted? #t))])
                    (k))])
@@ -117,7 +117,7 @@
   ;;;
   ;;; if ctxt is P:
   ;;;   if cogen-pred, then P
-  ;;;   if cogen-value, then (!= V #f) 
+  ;;;   if cogen-value, then (!= V #f)
   ;;;   if cogen-effect, then (seq E #t)
   ;;;
   ;;; if ctxt is E:
@@ -167,9 +167,9 @@
                make-interrupt-call make-no-interrupt-call
                (lambda ()
                  (case ctxt
-                   [(P) 
+                   [(P)
                     (cond
-                      [(PH-p-handled? p) 
+                      [(PH-p-handled? p)
                        (apply (PH-p-handler p) args)]
                       [(PH-v-handled? p)
                        (let ([e (apply (PH-v-handler p) args)])
@@ -178,27 +178,27 @@
                        (let ([e (apply (PH-e-handler p) args)])
                          (if (interrupt? e) e (make-seq e (K #t))))]
                       [else (error 'cogen-primop "not handled" x)])]
-                   [(V) 
+                   [(V)
                     (cond
-                      [(PH-v-handled? p) 
+                      [(PH-v-handled? p)
                        (apply (PH-v-handler p) args)]
-                      [(PH-p-handled? p) 
+                      [(PH-p-handled? p)
                        (let ([e (apply (PH-p-handler p) args)])
                          (if (interrupt? e)
-                             e 
+                             e
                              (make-conditional e (K bool-t) (K bool-f))))]
                       [(PH-e-handled? p)
                        (let ([e (apply (PH-e-handler p) args)])
                          (if (interrupt? e) e (make-seq e (K void-object))))]
                       [else (error 'cogen-primop "not handled" x)])]
-                   [(E) 
+                   [(E)
                     (cond
-                      [(PH-e-handled? p) 
+                      [(PH-e-handled? p)
                        (apply (PH-e-handler p) args)]
-                      [(PH-p-handled? p) 
+                      [(PH-p-handled? p)
                        (let ([e (apply (PH-p-handler p) args)])
                          (if (interrupt? e)
-                             e 
+                             e
                              (make-conditional e (prm 'nop) (prm 'nop))))]
                       [(PH-v-handled? p)
                        (let ([e (apply (PH-v-handler p) args)])
@@ -206,7 +206,7 @@
                              e
                              (with-tmp ([t e]) (prm 'nop))))]
                       [else (error 'cogen-primop "not handled" x)])]
-                   [else 
+                   [else
                     (error 'cogen-primop "invalid context" ctxt)])))))))
     cogen-primop)
   (module (cogen-primop cogen-debug-primop)
@@ -223,29 +223,29 @@
         [(fxarithmetic-shift-right) 'error@fxarithmetic-shift-right]
         [else                      x]))
     (define (make-interrupt-call op args)
-      (make-funcall 
+      (make-funcall
         (V (make-primref (primop-interrupt-handler op)))
         args))
     (define (make-no-interrupt-call op args)
       (make-funcall (V (make-primref op)) args))
-    (define cogen-primop 
+    (define cogen-primop
       (make-cogen-handler make-interrupt-call make-no-interrupt-call))
     (define (cogen-debug-primop op src/loc ctxt args)
       (define (make-call op args)
-        (make-funcall 
+        (make-funcall
           (V (make-primref 'debug-call))
           (cons* (V src/loc) (V (make-primref op)) args)))
       ((make-cogen-handler make-call make-call)
        op ctxt args)))
 
-  
+
   (define-syntax define-primop
     (lambda (x)
       (define (cogen-name stx name suffix)
         (datum->syntax stx
           (string->symbol
-            (format "cogen-~a-~a" 
-              suffix 
+            (format "cogen-~a-~a"
+              suffix
               (syntax->datum name)))))
       (define (generate-handler name ctxt case*)
         (define (filter-cases case*)
@@ -259,23 +259,23 @@
           (with-syntax ([ctxt ctxt] [name name]
                         [(case* ...) case*]
                         [handled? (not (null? case*))])
-            #'[(case-lambda 
+            #'[(case-lambda
                  case* ...
                  [args (interrupt)])
                handled?])))
       (syntax-case x ()
-        [(stx name int? case* ...) 
+        [(stx name int? case* ...)
          (with-syntax ([cogen-p (cogen-name #'stx #'name "pred")]
                        [cogen-e (cogen-name #'stx #'name "effect")]
                        [cogen-v (cogen-name #'stx #'name "value")]
                        [interruptable?
                         (syntax-case #'int? (safe unsafe)
                           [safe   #t] [unsafe #f])]
-                       [(p-handler phandled?) 
+                       [(p-handler phandled?)
                         (generate-handler #'name #'P #'(case* ...))]
                        [(v-handler vhandled?)
                         (generate-handler #'name #'V #'(case* ...))]
-                       [(e-handler ehandled?) 
+                       [(e-handler ehandled?)
                         (generate-handler #'name #'E #'(case* ...))])
            #'(begin
                (define cogen-p p-handler)
@@ -283,8 +283,8 @@
                (define cogen-e e-handler)
                (module ()
                  (set-primop! 'name
-                    (make-PH interruptable? 
-                       cogen-p phandled? 
+                    (make-PH interruptable?
+                       cogen-p phandled?
                        cogen-v vhandled?
                        cogen-e ehandled?)))))])))
 
@@ -292,8 +292,8 @@
   (define (handle-fix lhs* rhs* body)
     (define (closure-size x)
       (struct-case x
-        [(closure code free*) 
-         (if (null? free*) 
+        [(closure code free*)
+         (if (null? free*)
              0
              (align (+ disp-closure-data
                        (* (length free*) wordsize))))]))
@@ -307,7 +307,7 @@
            (cond
              [(p? x y)
               (values (cons x a*) (cons y b*) c* d*)]
-             [else 
+             [else
               (values a* b* (cons x c*) (cons y d*))]))]))
     (define (combinator? lhs rhs)
       (struct-case rhs
@@ -325,10 +325,10 @@
     (define (build-closures lhs* rhs* body)
       (let ([lhs (car lhs*)] [rhs (car rhs*)]
             [lhs* (cdr lhs*)] [rhs* (cdr rhs*)])
-        (let ([n (closure-size rhs)] 
+        (let ([n (closure-size rhs)]
               [n* (map closure-size rhs*)])
-          (make-bind (list lhs) 
-                     (list (prm 'alloc 
+          (make-bind (list lhs)
+                     (list (prm 'alloc
                                 (K (sum n* n))
                                 (K closure-tag)))
             (make-bind lhs* (adders lhs n n*)
@@ -336,12 +336,12 @@
     (define (build-setters lhs* rhs* body)
       (define (build-setter lhs rhs body)
         (struct-case rhs
-          [(closure code free*) 
+          [(closure code free*)
            (make-seq
-             (prm 'mset lhs 
+             (prm 'mset lhs
                   (K (- disp-closure-code closure-tag))
                   (V code))
-             (let f ([ls free*] 
+             (let f ([ls free*]
                      [i (- disp-closure-data closure-tag)])
                (cond
                  [(null? ls) body]
@@ -374,7 +374,7 @@
         [(boolean? c) (make-constant (if c bool-t bool-f))]
         [(eq? c (void)) (make-constant void-object)]
         [(bwp-object? c) (make-constant bwp-object)]
-        [(char? c) (make-constant 
+        [(char? c) (make-constant
                      (fxlogor char-tag
                        (fxsll (char->integer c) char-shift)))]
         [(null? c) (make-constant nil)]
@@ -383,7 +383,7 @@
         [else (make-constant (make-object c))])))
 
   (define (V x) ;;; erase known values
-    (struct-case x 
+    (struct-case x
       [(known x t)
        (unknown-V x)]
       [else (unknown-V x)]))
@@ -392,7 +392,7 @@
     (struct-case x
       [(constant) (constant-rep x)]
       [(var)      x]
-      [(primref name)  
+      [(primref name)
        (prm 'mref
              (K (make-object (primref->symbol name)))
              (K (- disp-symbol-record-value symbol-ptag)))]
@@ -400,15 +400,15 @@
       [(closure)  (make-constant x)]
       [(bind lhs* rhs* body)
        (make-bind lhs* (map V rhs*) (V body))]
-      [(fix lhs* rhs* body) 
+      [(fix lhs* rhs* body)
        (handle-fix lhs* rhs* (V body))]
-      [(conditional e0 e1 e2) 
+      [(conditional e0 e1 e2)
        (make-conditional (P e0) (V e1) (V e2))]
       [(seq e0 e1)
        (make-seq (E e0) (V e1))]
       [(primcall op arg*)
        (case op
-         [(debug-call) 
+         [(debug-call)
           (cogen-debug-call op 'V arg* V)]
          [else (cogen-primop op 'V arg*)])]
       [(forcall op arg*)
@@ -417,20 +417,20 @@
        (make-funcall (Function rator) (map V arg*))]
       [(jmpcall label rator arg*)
        (make-jmpcall label (V rator) (map V arg*))]
-      [else (error 'cogen-V "invalid value expr" x)])) 
+      [else (error 'cogen-V "invalid value expr" x)]))
 
   (define (cogen-debug-call op ctxt arg* k)
     (define (fail)
       (k (make-funcall (make-primref 'debug-call) arg*)))
     (assert (>= (length arg*) 2))
-    (let ([src/expr (car arg*)] 
+    (let ([src/expr (car arg*)]
           [op (cadr arg*)]
           [args (cddr arg*)])
       (struct-case (remove-tag op)
-        [(primref name) 
+        [(primref name)
          (if (primop? name)
              (cogen-debug-primop name src/expr ctxt args)
-             (fail))] 
+             (fail))]
         [else (fail)])))
 
   (define (P x)
@@ -441,15 +441,15 @@
       [(closure)  (K #t)]
       [(bind lhs* rhs* body)
        (make-bind lhs* (map V rhs*) (P body))]
-      [(conditional e0 e1 e2) 
+      [(conditional e0 e1 e2)
        (make-conditional (P e0) (P e1) (P e2))]
       [(seq e0 e1)
        (make-seq (E e0) (P e1))]
-      [(fix lhs* rhs* body) 
+      [(fix lhs* rhs* body)
        (handle-fix lhs* rhs* (P body))]
       [(primcall op arg*)
        (case op
-         [(debug-call) 
+         [(debug-call)
           (cogen-debug-call op 'P arg* P)]
          [else (cogen-primop op 'P arg*)])]
       [(var)     (prm '!= (V x) (V (K #f)))]
@@ -459,8 +459,8 @@
       [(known expr type)
        ;;; FIXME: suboptimal
        (P expr)]
-      [else (error 'cogen-P "invalid pred expr" x)])) 
-  
+      [else (error 'cogen-P "invalid pred expr" x)]))
+
   (define (E x)
     (struct-case x
       [(constant) (nop)]
@@ -470,15 +470,15 @@
       [(closure)  (nop)]
       [(bind lhs* rhs* body)
        (make-bind lhs* (map V rhs*) (E body))]
-      [(conditional e0 e1 e2) 
+      [(conditional e0 e1 e2)
        (make-conditional (P e0) (E e1) (E e2))]
       [(seq e0 e1)
        (make-seq (E e0) (E e1))]
-      [(fix lhs* rhs* body) 
+      [(fix lhs* rhs* body)
        (handle-fix lhs* rhs* (E body))]
       [(primcall op arg*)
        (case op
-         [(debug-call) 
+         [(debug-call)
           (cogen-debug-call op 'E arg* E)]
          [else (cogen-primop op 'E arg*)])]
       [(forcall op arg*)
@@ -516,7 +516,7 @@
                   (= (length args) 1)
                   (let f ([x (car args)])
                     (struct-case x
-                      [(constant x) 
+                      [(constant x)
                        (and (symbol? x) x)]
                       [(known x t) (f x)]
                       [else #f]))) =>
@@ -550,9 +550,9 @@
   ;;;========================================================================
   ;;;
   (define (interrupt-unless x)
-    (make-conditional x (prm 'nop) (interrupt))) 
+    (make-conditional x (prm 'nop) (interrupt)))
   (define (interrupt-when x)
-    (make-conditional x (interrupt) (prm 'nop))) 
+    (make-conditional x (interrupt) (prm 'nop)))
   (define (interrupt-unless-fixnum x)
     (interrupt-unless (tag-test x fx-mask fx-tag)))
 
@@ -574,13 +574,13 @@
   (define (Clambda x)
     (struct-case x
       [(clambda label case* cp free* name)
-       (make-clambda label 
+       (make-clambda label
           (map ClambdaCase case*)
           cp free* name)]
       [else (error 'specify-rep "invalid clambda" x)]))
   ;;;
   (define (Program x)
-    (struct-case x 
+    (struct-case x
       [(codes code* body)
        (let ([code* (map Clambda code*)]
              [body (V body)])

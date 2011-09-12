@@ -1,15 +1,15 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -50,7 +50,7 @@
           i/o-encoding-error? i/o-encoding-error-char
           no-infinities-violation? make-no-infinities-violation
           no-nans-violation? make-no-nans-violation
-          interrupted-condition? make-interrupted-condition 
+          interrupted-condition? make-interrupted-condition
           make-source-position-condition source-position-condition?
           source-position-file-name source-position-character
 
@@ -73,7 +73,7 @@
           &i/o-decoding-rtd &i/o-decoding-rcd &i/o-encoding-rtd
           &i/o-encoding-rcd &no-infinities-rtd &no-infinities-rcd
           &no-nans-rtd &no-nans-rcd
-          &interrupted-rtd &interrupted-rcd 
+          &interrupted-rtd &interrupted-rcd
           &source-position-rtd &source-position-rcd
           )
   (import
@@ -84,7 +84,7 @@
     (except (ikarus) define-condition-type condition? simple-conditions
           condition condition-predicate condition-accessor
           print-condition
-          
+
           ;;; more junk
 
           &condition &message &warning &serious &error &violation
@@ -127,18 +127,18 @@
           i/o-encoding-error? i/o-encoding-error-char
           no-infinities-violation? make-no-infinities-violation
           no-nans-violation? make-no-nans-violation
-          
-          interrupted-condition? make-interrupted-condition 
+
+          interrupted-condition? make-interrupted-condition
           make-source-position-condition source-position-condition?
           source-position-file-name source-position-character
           ))
-  
-  (define-record-type &condition 
+
+  (define-record-type &condition
     (nongenerative))
 
   (define &condition-rtd (record-type-descriptor &condition))
   (define &condition-rcd (record-constructor-descriptor &condition))
-  
+
   (define-record-type compound-condition
     (nongenerative)
     (fields (immutable components))
@@ -152,18 +152,18 @@
   (define condition
     (case-lambda
       [() (make-compound-condition '())]
-      [(x) 
+      [(x)
        (if (condition? x)
-           x 
+           x
            (die 'condition "not a condition type" x))]
       [x*
        (let ([ls
               (let f ([x* x*])
                 (cond
                   [(null? x*) '()]
-                  [(&condition? (car x*)) 
+                  [(&condition? (car x*))
                    (cons (car x*) (f (cdr x*)))]
-                  [(compound-condition? (car x*)) 
+                  [(compound-condition? (car x*))
                    (append (simple-conditions (car x*)) (f (cdr x*)))]
                   [else (die 'condition "not a condition" (car x*))]))])
          (cond
@@ -177,54 +177,54 @@
       [(&condition? x) (list x)]
       [else (die 'simple-conditions "not a condition" x)]))
 
-  (define (condition-predicate rtd) 
-    (unless (rtd? rtd) 
+  (define (condition-predicate rtd)
+    (unless (rtd? rtd)
       (die 'condition-predicate "not a record type descriptor" rtd))
     (unless (rtd-subtype? rtd (record-type-descriptor &condition))
       (die 'condition-predicate "not a descendant of &condition" rtd))
     (let ([p? (record-predicate rtd)])
-      (lambda (x) 
-        (or (p? x) 
-            (and (compound-condition? x) 
+      (lambda (x)
+        (or (p? x)
+            (and (compound-condition? x)
                  (let f ([ls (compound-condition-components x)])
-                   (and (pair? ls) 
-                        (or (p? (car ls)) 
+                   (and (pair? ls)
+                        (or (p? (car ls))
                             (f (cdr ls))))))))))
-  
-  (define (condition-accessor rtd proc) 
-    (unless (rtd? rtd) 
+
+  (define (condition-accessor rtd proc)
+    (unless (rtd? rtd)
       (die 'condition-accessor "not a record type descriptor" rtd))
-    (unless (procedure? proc) 
+    (unless (procedure? proc)
       (die 'condition-accessor "not a procedure" proc))
     (unless (rtd-subtype? rtd (record-type-descriptor &condition))
       (die 'condition-accessor "not a descendant of &condition" rtd))
     (let ([p? (record-predicate rtd)])
-      (lambda (x) 
+      (lambda (x)
         (cond
           [(p? x) (proc x)]
-          [(compound-condition? x) 
+          [(compound-condition? x)
            (let f ([ls (compound-condition-components x)])
              (cond
-               [(pair? ls) 
-                (if (p? (car ls)) 
+               [(pair? ls)
+                (if (p? (car ls))
                     (proc (car ls))
                     (f (cdr ls)))]
                [else
                 (die 'condition-accessor "not a condition of correct type" x rtd)]))]
-          [else 
+          [else
            (die 'condition-accessor "not a condition of correct type" x rtd)]))))
 
   (define-syntax define-condition-type
     (lambda (x)
       (define (mkname name suffix)
-        (datum->syntax name 
-           (string->symbol 
-             (string-append 
+        (datum->syntax name
+           (string->symbol
+             (string-append
                (symbol->string (syntax->datum name))
                suffix))))
       (syntax-case x ()
         [(ctxt name super constructor predicate (field* accessor*) ...)
-         (and (identifier? #'name) 
+         (and (identifier? #'name)
               (identifier? #'super)
               (identifier? #'constructor)
               (identifier? #'predicate)
@@ -240,22 +240,22 @@
                   (nongenerative)
                   (sealed #f) (opaque #f))
                (define predicate (condition-predicate (record-type-descriptor name)))
-               (define accessor* (condition-accessor (record-type-descriptor name) aux-accessor*)) 
+               (define accessor* (condition-accessor (record-type-descriptor name) aux-accessor*))
                ...
                (define rtd (record-type-descriptor name))
                (define rcd (record-constructor-descriptor name))))])))
 
   (define-condition-type &message &condition
-    make-message-condition message-condition? 
+    make-message-condition message-condition?
     (message condition-message))
 
   (define-condition-type &warning &condition
     make-warning warning?)
 
-  (define-condition-type &serious &condition 
+  (define-condition-type &serious &condition
     make-serious-condition serious-condition?)
 
-  (define-condition-type &error &serious 
+  (define-condition-type &error &serious
     make-error error?)
 
   (define-condition-type &violation &serious
@@ -265,10 +265,10 @@
     make-assertion-violation assertion-violation?)
 
   (define-condition-type &irritants &condition
-    make-irritants-condition irritants-condition? 
+    make-irritants-condition irritants-condition?
     (irritants condition-irritants))
 
-  (define-condition-type &who &condition 
+  (define-condition-type &who &condition
     make-who-condition who-condition?
     (who condition-who))
 
@@ -290,7 +290,7 @@
   (define-condition-type &undefined &violation
     make-undefined-violation undefined-violation?)
 
-  (define-condition-type &i/o &error 
+  (define-condition-type &i/o &error
     make-i/o-error i/o-error?)
 
   (define-condition-type &i/o-read &i/o
@@ -332,7 +332,7 @@
 
   (define-condition-type &no-infinities &implementation-restriction
     make-no-infinities-violation no-infinities-violation?)
-  
+
   (define-condition-type &no-nans &implementation-restriction
     make-no-nans-violation no-nans-violation?)
 
@@ -345,25 +345,25 @@
     (file-name source-position-file-name)
     (character source-position-character))
 
-  (define print-condition 
+  (define print-condition
     (let ()
       (define (print-simple-condition x p)
         (let* ([rtd (record-rtd x)]
                [rf (let l ([rtd rtd] [accum '()])
                      (if rtd
-                       (l (record-type-parent rtd) 
-                          (cons 
+                       (l (record-type-parent rtd)
+                          (cons
                             (cons rtd (record-type-field-names rtd))
                             accum))
                        (remp (lambda (a) (zero? (vector-length (cdr a))))
                              accum)))]
-               [rf-len (apply + (map vector-length 
+               [rf-len (apply + (map vector-length
                                      (map cdr rf)))])
           (let ([name (record-type-name rtd)])
-            (display name p))          
+            (display name p))
           (case rf-len
             [(0) (newline p)]
-            [(1) 
+            [(1)
              (display ": " p)
              (write ((record-accessor (caar rf) 0) x) p)
              (newline p)]
@@ -382,9 +382,9 @@
                rf)])))
       (define (print-condition x p)
         (cond
-          [(condition? x) 
+          [(condition? x)
            (let ([ls (simple-conditions x)])
-             (if (null? ls) 
+             (if (null? ls)
                  (display "Condition object with no further information\n" p)
                  (begin
                    (display " Condition components:\n" p)
@@ -395,15 +395,15 @@
                        (display ". " p)
                        (print-simple-condition (car ls) p)
                        (f (cdr ls) (+ i 1)))))))]
-          [else 
+          [else
            (display " Non-condition object: " p)
            (write x p)
            (newline p)]))
       (case-lambda
-        [(x) 
+        [(x)
          (print-condition x (console-output-port))]
         [(x port)
-         (if (output-port? port) 
+         (if (output-port? port)
              (print-condition x port)
              (die 'print-condition "not an output port" port))])))
 
