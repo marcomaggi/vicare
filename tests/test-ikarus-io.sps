@@ -1419,6 +1419,93 @@
   #t)
 
 
+(parametrise ((check-test-name	'get-bytevector-n))
+
+  (define test-bv-u8.len
+    (expt 2 16))
+
+  (define test-bv-u8
+    (let ((result #f))
+      (define (%bytevector-u8-fill! bv)
+	(do ((i 0 (+ 1 i)))
+	    ((= i 100)
+	     bv)
+	  (do ((j 0 (+ 1 j)))
+	      ((= j 256))
+	    (bytevector-u8-set! bv j j))))
+      (lambda ()
+	(or result
+	    (begin
+	      (set! result (%bytevector-u8-fill! (make-bytevector test-bv-u8.len)))
+	      result)))))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(get-bytevector-n 123 1))
+    => '(123))
+
+  (check	;argument is not an input port
+      (let-values (((port getter) (open-bytevector-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (get-bytevector-n port 1)))
+    => #t)
+
+  (check	;argument is not a binary port
+      (let-values (((port getter) (open-string-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (get-bytevector-n port 1)))
+    => #t)
+
+  (check	;count is not a fixnum
+      (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eqv? #\a (car (condition-irritants E))))
+		  (else E))
+	  (get-bytevector-n port #\a)))
+    => #t)
+
+  (check	;count is negative
+      (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (car (condition-irritants E)))
+		  (else E))
+	  (get-bytevector-n port -3)))
+    => -3)
+
+;;; --------------------------------------------------------------------
+
+  (check	;count is zero
+      (let ((port (open-bytevector-input-port (test-bv-u8))))
+	(get-bytevector-n port 0))
+    => '#vu8())
+
+  (check
+      (let ((port (open-bytevector-input-port (test-bv-u8))))
+	(get-bytevector-n port 1))
+    => '#vu8(0))
+
+  #;(check
+      (let ((port (open-bytevector-input-port (test-bv-u8))))
+	(get-bytevector-n port test-bv-u8.len))
+    => (test-bv-u8))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

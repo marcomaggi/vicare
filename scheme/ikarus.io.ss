@@ -716,10 +716,10 @@
 		;fixnum, the type attributes bits
 	      (PORT.BUFFER.SIZE			(%dot-id ".buffer.size"))
 		;fixnum, the buffer size
-	      (PORT.BUFFER.ROOM			(%dot-id ".buffer.room"))
-		;fixnum, the number of bytes available in the buffer
 	      (PORT.BUFFER.RESET!		(%dot-id ".buffer.reset!"))
 		;method, set the buffer index and used size to zero
+	      (PORT.BUFFER.ROOM			(%dot-id ".buffer.room"))
+		;method, the number of bytes available in the buffer
 	      (PORT.BUFFER.INDEX.INCR!		(%dot-id ".buffer.index.incr!"))
 		;method, increment the buffer index
 	      (PORT.BUFFER.USED-SIZE.INCR!	(%dot-id ".buffer.used-size.incr!"))
@@ -769,7 +769,9 @@
 		   ((PORT.BUFFER.FULL?
 		     (identifier-syntax (unsafe.fx= PORT.BUFFER.USED-SIZE PORT.BUFFER.SIZE)))
 		    (PORT.BUFFER.ROOM
-		     (identifier-syntax (unsafe.fx- PORT.BUFFER.SIZE PORT.BUFFER.INDEX)))
+		     (syntax-rules ()
+		       ((_)
+			(unsafe.fx- PORT.BUFFER.SIZE PORT.BUFFER.INDEX))))
 		    (PORT.BUFFER.RESET!
 		     (syntax-rules ()
 		       ((_)
@@ -779,13 +781,13 @@
 		    (PORT.BUFFER.INDEX.INCR!
 		     (syntax-rules ()
 		       ((_)
-			(set! PORT.BUFFER.INDEX (unsafe.fx+ 1     PORT.BUFFER.INDEX)))
+			(set! PORT.BUFFER.INDEX (unsafe.fxadd1 PORT.BUFFER.INDEX)))
 		       ((_ ?step)
 			(set! PORT.BUFFER.INDEX (unsafe.fx+ ?step PORT.BUFFER.INDEX)))))
 		    (PORT.BUFFER.USED-SIZE.INCR!
 		     (syntax-rules ()
 		       ((_)
-			(set! PORT.BUFFER.USED-SIZE (unsafe.fx+ 1     PORT.BUFFER.USED-SIZE)))
+			(set! PORT.BUFFER.USED-SIZE (unsafe.fxadd1 PORT.BUFFER.USED-SIZE)))
 		       ((_ ?step)
 			(set! PORT.BUFFER.USED-SIZE (unsafe.fx+ ?step PORT.BUFFER.USED-SIZE)))))
 		    (PORT.MARK-AS-CLOSED
@@ -1919,118 +1921,6 @@
       (getter)))))
 
 
-;;;; binary ports, output to
-
-(module (put-u8 put-bytevector)
-  (import UNSAFE)
-
-  (define (put-u8 port byte)
-    ;;Defined by R6RS.  Write BYTE  to the output port and return
-    ;;unspecified values.
-    ;;
-    (define who 'put-u8)
-    (unless (u8? byte)
-      (die who "not a u8" byte))
-    (with-binary-port (port)
-      (cond ((unsafe.fx= fast-put-byte-tag port.fast-attrs)
-	     (if port.has-no-buffer?
-		 (put-byte/unbuffered! port byte who)
-	       (let try-again-after-flushing-buffer ()
-		 (if (unsafe.fx< port.buffer.index port.buffer.size)
-		     ;;The buffer exists and  it has room for one
-		     ;;byte.
-		     (begin
-		       (assert (unsafe.fx<= port.buffer.index port.buffer.used-size))
-		       (bytevector-u8-set! port.buffer port.buffer.index byte)
-		       (when (unsafe.fx= port.buffer.index port.buffer.used-size)
-			 (port.buffer.used-size.incr!))
-		       (port.buffer.index.incr!))
-		   ;;The buffer exists but  it has no room: flush
-		   ;;the buffer and try again.
-		   (begin
-		     (assert (= port.buffer.used-size port.buffer.index))
-		     (assert (= port.buffer.used-size port.buffer.size))
-		     (flush-output-port port)
-		     (try-again-after-flushing-buffer))))))
-	    ((output-port? port)
-	     (die who "not a binary port" port))
-	    (else
-	     (die who "not an output port" port)))))
-
-  (define put-bytevector
-    ;;(put-bytevector port bv)
-    ;;(put-bytevector port bv start)
-    ;;(put-bytevector port bv start count)
-    ;;
-    ;;START and COUNT must  be non-negative exact integer objects
-    ;;that default to 0 and:
-    ;;
-    ;; (- (bytevector-length BV) START)
-    ;;
-    ;;respectively.   BV   must  have   a  length  of   at  least
-    ;;START+COUNT.  The PUT-BYTEVECTOR procedure writes the COUNT
-    ;;bytes of the  bytevector BV starting at index  START to the
-    ;;output   port.    The   PUT-BYTEVECTOR  procedure   returns
-    ;;unspecified values.
-    ;;
-    (put-string/bv 'put-bytevector "not a bytevector"
-		   bytevector? bytevector-length $put-bytevector))
-
-  (define ($put-bytevector port src.bv src.start count)
-    ;;Write COUNT bytes from  the bytevector SRC.BV to the binary
-    ;;output   PORT  starting   at   offset  SRC.START.    Return
-    ;;unspecified values.
-    ;;
-    (define who 'put-bytevector)
-    (with-binary-port (port)
-      (cond ((unsafe.fx= fast-put-byte-tag port.fast-attrs)
-	     (if port.has-no-buffer?
-		 ;;Write  bytes  one  by  one to  the  underlying
-		 ;;device.
-		 (let next-byte ((index src.start)
-				 (last  (unsafe.fx+ src.start count)))
-		   (unless (unsafe.fx= index last)
-		     (put-byte/unbuffered! port (bytevector-u8-ref src.bv index) who)
-		     (next-byte (unsafe.fx+ 1 index) last)))
-	       ;;Write  bytes to  the buffer  and, if  the buffer
-	       ;;fills up, to the underlying device.
-	       (let try-again-after-flushing-buffer ((room port.buffer.room))
-		 (cond ((unsafe.fxzero? room)
-			;;The buffer exists and it is full.
-			(flush-output-port port)
-			(try-again-after-flushing-buffer port.buffer.room))
-		       ((unsafe.fx<= count room)
-			;;The buffer  exists and there  is enough
-			;;room for all of the COUNT bytes.
-			(copy! src.bv src.start port.buffer port.buffer.index count)
-			(port.buffer.index.incr! count)
-			(when (unsafe.fx< port.buffer.used-size port.buffer.index)
-			  (set! port.buffer.used-size port.buffer.index)))
-		       (else
-			;;The buffer exists  and it can hold some
-			;;but not all of the COUNT bytes.
-			(assert (unsafe.fx> count room))
-			(copy! src.bv src.start port.buffer port.buffer.index room)
-			(set! port.buffer.index     port.buffer.size)
-			(set! port.buffer.used-size port.buffer.index)
-			(flush-output-port port)
-			(try-again-after-flushing-buffer port.buffer.room))))))
-	    ((output-port? port)
-	     (die who "not a binary port" port))
-	    (else
-	     (die who "not an output port" port)))))
-
-  (define (copy! src.bv src.start dst.bv dst.start count)
-;;;FIXME We are not using  BYTEVECTOR-COPY! here in an attempt to
-;;;have  more  efficiency  because  we  know  the  arguments  are
-;;;correct.   It would  be  better  to replace  COPY!   with a  C
-;;;implemented  function not  validating  its arguments.   (Marco
-;;;Maggi; Aug 31, 2011)
-    (when (unsafe.fx> count 0)
-      (bytevector-u8-set! dst.bv dst.start (bytevector-u8-ref src.bv src.start))
-      (copy! src.bv (unsafe.fx+ src.start 1) dst.bv (unsafe.fx+ dst.start 1) (unsafe.fx- count 1)))))
-
-
 ;;;; string output ports
 
 (define (open-output-string)
@@ -2401,7 +2291,7 @@
     (error 'port-closed? "not a port" port)))
 
 (define (%port-closed? port)
-  (not (unsafe.fx= (unsafe.fxand ($port-attrs port) closed-port-tag) 0)))
+  (not (unsafe.fxzero? (unsafe.fxand ($port-attrs port) closed-port-tag))))
 
 (define ($mark-port-closed! port)
   ($set-port-attrs! port (unsafe.fxior closed-port-tag
@@ -2447,7 +2337,7 @@
   (%close-port port))
 
 
-;;;; port mode
+;;;; auxiliary port functions
 
 (define (port-mode port)
   ;;Defined by Ikarus.
@@ -2467,69 +2357,6 @@
      (set-cookie-mode! ($port-cookie port) mode))
     (else
      (die who "invalid mode" mode))))
-
-
-(define (put-byte/unbuffered! port byte who)
-  ;;Defined by  Ikarus.  Write directly  the single BYTE  to PORT
-  ;;without  using  the  output  buffer.   The  return  value  is
-  ;;unspecified.
-  ;;
-  ;;PORT must be a binary  output port.  BYTE must be an unsigned
-  ;;fixnum in the range [0, 255].
-  ;;
-  ;;This function calls the  port's WRITE! function to output the
-  ;;byte; if  it writes  no byte: the  port is marked  as closed.
-  ;;FIXME Is this correct?
-  ;;
-  (with-binary-port (port)
-    (when port.closed?
-      (die who "port is closed" port))
-    (let ((bv (make-bytevector 1)))
-      (bytevector-u8-set! bv 0 byte)
-      (let ((count (port.write! bv 0 1)))
-	;;We  need to  account for  the case  the  WRITE!  function
-	;;returns  an  incorrect value,  for  example a  non-fixnum
-	;;value.
-	(cond ((eq? count 1)
-	       (let ((cookie port.cookie))
-		 (set-cookie-pos! cookie (fx+ 1 (cookie-pos cookie)))))
-	      ((eq? count 0)
-	       (port.mark-as-closed)
-	       (die who "could not write bytes to output port" port))
-	      (else
-	       (die who "invalid return value from write! proc" count port)))))))
-
-(define (put-char/unbuffered! port char who)
-  ;;Defined by  Ikarus.  Write directly  the single CHAR  to PORT
-  ;;without  using  the  output  buffer.   The  return  value  is
-  ;;unspecified.
-  ;;
-  ;;PORT must  be a textual output  port.  CHAR must  be a Scheme
-  ;;character.
-  ;;
-  ;;This function calls the  port's WRITE! function to output the
-  ;;char; if  it writes  no char: the  port is marked  as closed.
-  ;;FIXME Is this correct?
-  ;;
-  (with-textual-port (port)
-    (when port.closed?
-      (die who "port is closed" port))
-    (let ((str (string char)))
-      (let ((count (port.write! str 0 1)))
-	;;We need  to account for  the case the  WRITE!  function
-	;;returns  an incorrect value,  for example  a non-fixnum
-	;;value.
-	(cond ((eq? count 1)
-	       (let ((cookie port.cookie))
-		 (set-cookie-pos! cookie (fx+ 1 (cookie-pos cookie)))))
-	      ((eq? count 0)
-	       (port.mark-as-closed)
-	       (die who "could not write char to output port" port))
-	      (else
-	       (die who "invalid return value from write! proc" count port)))))))
-
-
-;;;; auxiliary port functions
 
 (define (port-eof? port)
   ;;Defined by R6RS.   PORT must be an input  port.  Return #t if
@@ -2587,7 +2414,7 @@
     (with-port (port)
       (when port.closed?
 	(die who "port is closed" port))
-      (unless (unsafe.fx= port.buffer.index 0)
+      (unless (unsafe.fxzero? port.buffer.index)
 	;;The buffer is not empty.   We can safely write only the
 	;;portion  of  the  buffer  between zero  and  the  index
 	;;(rather than  between zero and the  used size), because
@@ -2606,7 +2433,7 @@
 		   ;;Full success, all bytes absorbed.
 		   (set! port.buffer.index     0)
 		   (set! port.buffer.used-size 0))
-		  ((unsafe.fx= count 0)
+		  ((unsafe.fxzero? count)
 		   ;;Failure, no  bytes absorbed.  Interpreted as
 		   ;;unrecoverable failure.
 		   (port.mark-as-closed)
@@ -2731,7 +2558,7 @@
 	;;
 	(let ((delta (unsafe.fx- port.buffer.used-size port.buffer.index)))
 	  (port.cookie.pos.incr! port.buffer.index)
-	  (unless (unsafe.fx= delta 0)
+	  (unless (unsafe.fxzero? delta)
 	    (bytevector-copy! buffer port.buffer.index buffer 0 delta))
 	  (set! port.buffer.index     0)
 	  (set! port.buffer.used-size delta))
@@ -2758,6 +2585,273 @@
 	    (die who "read! returned a value out of range" count))
 	  (port.buffer.used-size.incr! count)
 	  count)))))
+
+
+;;;; byte input functions
+
+(define (get-u8 port)
+  ;;Defined  by R6RS.   Read  from the  binary  input port  PORT,
+  ;;blocking as necessary, until a byte is available from PORT or
+  ;;until  an  end  of  file  is  reached.   If  a  byte  becomes
+  ;;available, GET-U8  returns the byte  as an octet  and updates
+  ;;PORT to point just past that  byte.  If no input byte is seen
+  ;;before an end of file is reached, the EOF object is returned.
+  ;;
+  ;;Here  we handle  the case  of byte  already available  in the
+  ;;buffer, if the buffer is empty: we call a subroutine.
+  ;;
+  (define who 'get-u8)
+  (unless (port? port)
+    (die who "not a port" port))
+  (with-binary-port (port)
+    (if (eq? port.attributes fast-get-byte-tag)
+	(let ((buffer.offset port.buffer.index))
+	  (if (unsafe.fx< buffer.offset port.buffer.used-size)
+	      (begin
+		(set! port.buffer.index (unsafe.fxadd1 buffer.offset))
+		(unsafe.bytevector-u8-ref port.buffer buffer.offset))
+	    (%get/peek-u8-byte-mode port who 1)))
+      (begin
+	(%validate-and-tag-binary-input-port port who)
+	(%get/peek-u8-byte-mode port who 1)))))
+
+(define (lookahead-u8 port)
+  ;;Defined by R6RS.  The  LOOKAHEAD-U8 procedure is like GET-U8,
+  ;;but it does not update PORT to point past the byte.
+  ;;
+  ;;Here  we handle  the case  of byte  already available  in the
+  ;;buffer, if the buffer is empty: we call a subroutine.
+  ;;
+  (define who 'lookahead-u8)
+  (unless (port? port)
+    (die who "not a port" port))
+  (with-binary-port (port)
+    (if (eq? port.attributes fast-get-byte-tag)
+	(let ((buffer.offset port.buffer.index))
+	  (if (unsafe.fx< buffer.offset port.buffer.used-size)
+	      (unsafe.bytevector-u8-ref port.buffer buffer.offset)
+	    (%get/peek-u8-byte-mode port who 0)))
+      (begin
+	(%validate-and-tag-binary-input-port port who)
+	(%get/peek-u8-byte-mode port who 0)))))
+
+(define (%get/peek-u8-byte-mode port who start)
+  ;;Subroutine of GET-u8 and LOOKAHEAD-u8.  To be called when the
+  ;;port buffer  is fully  consumed.  Get or  peek the  next byte
+  ;;from PORT, set the buffer index to START.
+  ;;
+  (with-binary-port (port)
+    (when port.closed?
+      (die who "port is closed" port))
+    (refill-buffer-and-evaluate (port who)
+      (if-end-of-file: (eof-object))
+      (if-successful-refill:
+       (set! port.buffer.index start)
+       (unsafe.bytevector-u8-ref port.buffer 0)))))
+
+
+;;;; bytevector input functions
+
+(define (get-bytevector-n port count)
+  ;;Defined  by  R6RS.   COUNT  must be  an  exact,  non-negative
+  ;;integer object representing the number of bytes to be read.
+  ;;
+  ;;The  GET-BYTEVECTOR-N procedure reads  from the  binary input
+  ;;PORT, blocking as necessary,  until COUNT bytes are available
+  ;;from PORT or until an end of file is reached.
+  ;;
+  ;;If  COUNT  bytes  are   available  before  an  end  of  file,
+  ;;GET-BYTEVECTOR-N returns a bytevector of size COUNT.
+  ;;
+  ;;If  fewer  bytes  are   available  before  an  end  of  file,
+  ;;GET-BYTEVECTOR-N   returns  a  bytevector   containing  those
+  ;;bytes. In  either case,  the input port  is updated  to point
+  ;;just past the bytes read.
+  ;;
+  ;;If an end of file  is reached before any bytes are available,
+  ;;GET-BYTEVECTOR-N returns the EOF object.
+  ;;
+  (define who 'get-bytevector-n)
+  (define (%subbytevector src.bv src.len)
+    (let ((dst.bv (unsafe.make-bytevector src.len)))
+      (let loop ((count src.len))
+	(let ((count (unsafe.fxsub1 count)))
+	  (unsafe.bytevector-set! dst.bv count (unsafe.bytevector-u8-ref src.bv count))
+	  (if (unsafe.fxzero? count)
+	      dst.bv
+	    (loop count))))))
+  (unless (port? port)
+    (die who "not a port" port))
+  (with-binary-port (port)
+    (unless (eq? port.attributes fast-get-byte-tag)
+      (%validate-and-tag-binary-input-port port who))
+    (unless (fixnum? count)
+      (die who "count is not a fixnum" count))
+    (cond ((unsafe.fx> count 0)
+	   (let-values (((out-port getter) (open-bytevector-output-port #f)))
+	     (let retry-after-filling-buffer ((count count))
+	       (define (data-available-in-buffer)
+		 (let* ((buffer.used-size	port.buffer.used-size)
+			(buffer.offset		port.buffer.index)
+			(amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
+			(all-count?		(unsafe.fx<= count amount-of-available))
+			(amount-to-write	(if all-count? count amount-of-available)))
+		   (put-bytevector out-port port.buffer port.buffer.index amount-to-write)
+                   (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-write))
+                   (if all-count?
+		       (getter)
+		     (retry-after-filling-buffer (unsafe.fx- count amount-of-available)))))
+	       (maybe-refill-buffer-and-evaluate (port who)
+		 (data-is-needed-at: port.buffer.index)
+		 (if-end-of-file:
+		  (let ((result (getter)))
+		    (if (zero? (unsafe.bytevector-length result))
+			(eof-object)
+		      result)))
+		 (if-successful-refill: (data-available-in-buffer))
+		 (if-available-data: (data-available-in-buffer))))))
+	  ((unsafe.fxzero? count)
+	   '#vu8())
+	  (else
+	   (die who "count is negative" count)))))
+
+(define (get-bytevector-n! port dst.bv start count)
+  ;;Defined  by  R6RS.   COUNT  must be  an  exact,  non-negative
+  ;;integer object, representing the  number of bytes to be read.
+  ;;DST.BV  must  be  a  bytevector  with  at  least  START+COUNT
+  ;;elements.
+  ;;
+  ;;The GET-BYTEVECTOR-N!  procedure  reads from the binary input
+  ;;PORT, blocking as necessary,  until COUNT bytes are available
+  ;;or until an end of file is reached.
+  ;;
+  ;;If COUNT bytes are available  before an end of file, they are
+  ;;written into  DST.BV starting at index START,  and the result
+  ;;is COUNT.
+  ;;
+  ;;If fewer bytes are available before the next end of file, the
+  ;;available  bytes are  written into  DST.BV starting  at index
+  ;;START,  and the result  is a  number object  representing the
+  ;;number of bytes actually read.
+  ;;
+  ;;In either case, the input  port is updated to point just past
+  ;;the bytes read. If an end of file is reached before any bytes
+  ;;are available, GET-BYTEVECTOR-N!  returns the EOF object.
+  ;;
+  (define who 'get-bytevector-n!)
+  (unless (port? port)
+    (die who "not a port" port))
+  (with-binary-port (port)
+    (unless (eq? port.attributes fast-get-byte-tag)
+      (%validate-and-tag-binary-input-port port who))
+    (unless (bytevector? dst.bv)
+      (die who "not a bytevector" dst.bv))
+    (unless (fixnum? start)
+      (die who "starting index is not a fixnum" start))
+    (unless (fixnum? count)
+      (die who "count is not a fixnum" count))
+    (let ((len (unsafe.bytevector-length dst.bv)))
+      (when (or (unsafe.fx< start 0) (unsafe.fx<= len start))
+	(die who "starting index is out of range" start))
+      (cond ((unsafe.fx> count 0)
+	     (let ((imax (+ start count)))
+	       (when (> imax len)
+		 (die who "count is out of range" count (- len start)))
+	       ;;We must return EOF if the first read returns EOF.
+	       (let ((x (get-u8 port)))
+		 (if (eof-object? x)
+		     x
+		   (begin
+		     (unsafe.bytevector-set! dst.bv start x)
+		     ;;From  now on  we must  return the  number of
+		     ;;read bytes.
+		     (let loop ((i (unsafe.fxadd1 start)))
+		       (if (unsafe.fx= i imax)
+			   i
+			 (let ((x (get-u8 port)))
+			   (if (eof-object? x)
+			       i
+			     (begin
+			       (unsafe.bytevector-set! dst.bv i x)
+			       (loop (unsafe.fxadd1 i))))))))))))
+	    ((unsafe.fxzero? count)
+	     0)
+	    (else
+	     (die who "count is negative" count))))))
+
+(define (get-bytevector-some port)
+  ;;Defined by  R6RS.  Read from the binary  input PORT, blocking
+  ;;as necessary,  until bytes are  available or until an  end of
+  ;;file is reached.
+  ;;
+  ;;If  bytes  become  available, GET-BYTEVECTOR-SOME  returns  a
+  ;;freshly allocated bytevector containing the initial available
+  ;;bytes (at least one), and  it updates PORT to point just past
+  ;;these bytes.
+  ;;
+  ;;If no input bytes are seen  before an end of file is reached,
+  ;;the EOF object is returned.
+  ;;
+  (define who 'get-bytevector-some)
+  (unless (port? port)
+    (die who "not a port" port))
+  (with-binary-port (port)
+    (unless (eq? port.attributes fast-get-byte-tag)
+      (%validate-and-tag-binary-input-port port who))
+    (let ()
+      (define (data-available-in-buffer)
+	(let* ((buffer		port.buffer)
+	       (buffer.used-size port.buffer.used-size)
+	       (buffer.offset	port.buffer.index)
+	       (dst.bv		(make-bytevector (unsafe.fx- buffer.used-size buffer.offset))))
+	  (set! port.buffer.index buffer.used-size)
+	  (let loop ((buffer.offset	buffer.offset)
+		     (dst.index	0))
+	    (if (unsafe.fx= buffer.offset buffer.used-size)
+		dst.bv
+	      (begin
+		(unsafe.bytevector-set! dst.bv dst.index (unsafe.bytevector-u8-ref buffer buffer.offset))
+		(loop (unsafe.fxadd1 buffer.offset) (unsafe.fxadd1 dst.index)))))))
+      (unless (eq? port.attributes fast-get-byte-tag)
+	(die who "invalid port argument" port))
+      (maybe-refill-buffer-and-evaluate (port who)
+	(data-is-needed-at: port.buffer.index)
+	(if-end-of-file: (eof-object))
+	(if-successful-refill: (data-available-in-buffer))
+	(if-available-data: (data-available-in-buffer))))))
+
+(define (get-bytevector-all port)
+  ;;Defined by R6RS.   Attempts to read all bytes  until the next
+  ;;end of file, blocking as necessary.
+  ;;
+  ;;If one  or more bytes are read,  GET-BYTEVECTOR-ALL returns a
+  ;;bytevector containing all  bytes up to the next  end of file.
+  ;;Otherwise, get-bytevector-all returns the EOF object.
+  ;;
+  ;;The operation  may block indefinitely waiting to  see if more
+  ;;bytes will  become available, even if some  bytes are already
+  ;;available.
+  ;;
+  (define who 'get-bytevector-all)
+  (unless (port? port)
+    (die who "not a port" port))
+  (with-binary-port (port)
+    (unless (eq? port.attributes fast-get-byte-tag)
+      (%validate-and-tag-binary-input-port port who))
+    (let-values (((out-port getter) (open-bytevector-output-port #f)))
+      (let retry-after-filling-buffer ()
+	(define (data-available-in-buffer)
+	  (put-bytevector out-port port.buffer port.buffer.index port.buffer.used-size)
+	  (retry-after-filling-buffer))
+	(maybe-refill-buffer-and-evaluate (port who)
+	  (data-is-needed-at: port.buffer.index)
+	  (if-end-of-file:
+	   (let ((result (getter)))
+	     (if (zero? (unsafe.bytevector-length result))
+		 (eof-object)
+	       result)))
+	  (if-successful-refill: (data-available-in-buffer))
+	  (if-available-data: (data-available-in-buffer)))))))
 
 
 ;;;; character input functions
@@ -2820,7 +2914,7 @@
 		(let ((byte0 (bytevector-u8-ref port.buffer buffer.offset-byte0)))
 		  (if (utf-8-single-byte? byte0)
 		      (let ((N (utf-8-decode-single-byte byte0)))
-			(set! port.buffer.index (unsafe.fx+ 1 buffer.offset-byte0))
+			(set! port.buffer.index (unsafe.fxadd1 buffer.offset-byte0))
 			(if (unsafe.fx= N newline-integer)
 			    (%mark/return-newline port)
 			  (integer->char N)))
@@ -2833,7 +2927,7 @@
 	 ;;specialised function for reading characters.
 	 (let ((buffer.offset port.buffer.index))
 	   (cond ((unsafe.fx< buffer.offset port.buffer.used-size)
-		  (set! port.buffer.index (unsafe.fx+ 1 buffer.offset))
+		  (set! port.buffer.index (unsafe.fxadd1 buffer.offset))
 		  (let ((ch (string-ref port.buffer buffer.offset)))
 		    (if (eqv? ch #\newline)
 			(%mark/return-newline port)
@@ -2855,7 +2949,7 @@
 	 (let ((buffer.offset port.buffer.index))
 	   (if (unsafe.fx< buffer.offset port.buffer.used-size)
 	       (begin
-		 (set! port.buffer.index (unsafe.fx+ 1 buffer.offset))
+		 (set! port.buffer.index (unsafe.fxadd1 buffer.offset))
 		 (let ((byte (bytevector-u8-ref port.buffer buffer.offset)))
 		   (if (eqv? byte newline-integer)
 		       (%mark/return-newline port)
@@ -3001,8 +3095,8 @@
       (define-inline (get-2-bytes-character byte0)
 	(let retry-after-filling-buffer-for-1-more-byte ()
 	  (define-alias buffer.offset-byte0 port.buffer.index)
-	  (let* ((buffer.offset-byte1 (unsafe.fx+ 1 buffer.offset-byte0))
-		 (buffer.offset-past  (unsafe.fx+ 1 buffer.offset-byte1)))
+	  (let* ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
+		 (buffer.offset-past  (unsafe.fxadd1 buffer.offset-byte1)))
 	    (maybe-refill-buffer-and-evaluate (port who)
 	      (data-is-needed-at: buffer.offset-byte1)
 	      (if-end-of-file:
@@ -3029,9 +3123,9 @@
       (define-inline (get-3-bytes-character byte0)
 	(let retry-after-filling-buffer-for-2-more-bytes ()
 	  (define-alias buffer.offset-byte0 port.buffer.index)
-	  (let* ((buffer.offset-byte1 (unsafe.fx+ 1 buffer.offset-byte0))
-		 (buffer.offset-byte2 (unsafe.fx+ 1 buffer.offset-byte1))
-		 (buffer.offset-past  (unsafe.fx+ 1 buffer.offset-byte2)))
+	  (let* ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
+		 (buffer.offset-byte2 (unsafe.fxadd1 buffer.offset-byte1))
+		 (buffer.offset-past  (unsafe.fxadd1 buffer.offset-byte2)))
 	    (maybe-refill-buffer-and-evaluate (port who)
 	      (data-is-needed-at: buffer.offset-byte2)
 	      (if-end-of-file:
@@ -3060,10 +3154,10 @@
       (define-inline (get-4-bytes-character byte0)
 	(let retry-after-filling-buffer-for-3-more-bytes ()
 	  (define-alias buffer.offset-byte0 port.buffer.index)
-	  (let* ((buffer.offset-byte1 (unsafe.fx+ 1 buffer.offset-byte0))
-		 (buffer.offset-byte2 (unsafe.fx+ 1 buffer.offset-byte1))
-		 (buffer.offset-byte3 (unsafe.fx+ 1 buffer.offset-byte2))
-		 (buffer.offset-past  (unsafe.fx+ 1 buffer.offset-byte3)))
+	  (let* ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
+		 (buffer.offset-byte2 (unsafe.fxadd1 buffer.offset-byte1))
+		 (buffer.offset-byte3 (unsafe.fxadd1 buffer.offset-byte2))
+		 (buffer.offset-past  (unsafe.fxadd1 buffer.offset-byte3)))
 	    (maybe-refill-buffer-and-evaluate (port who)
 	      (data-is-needed-at: buffer.offset-byte3)
 	      (if-end-of-file:
@@ -3138,7 +3232,7 @@
       (define-inline (peek-2-bytes-character byte0)
 	(let retry-after-filling-buffer-for-1-more-byte ()
 	  (define-alias buffer.offset-byte0 port.buffer.index)
-	  (let ((buffer.offset-byte1 (unsafe.fx+ 1 buffer.offset-byte0)))
+	  (let ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0)))
 	    (maybe-refill-buffer-and-evaluate (port who)
 	      (data-is-needed-at: buffer.offset-byte1)
 	      (if-end-of-file:
@@ -3162,8 +3256,8 @@
       (define-inline (peek-3-bytes-character byte0)
 	(let retry-after-filling-buffer-for-2-more-bytes ()
 	  (define-alias buffer.offset-byte0 port.buffer.index)
-	  (let* ((buffer.offset-byte1 (unsafe.fx+ 1 buffer.offset-byte0))
-		 (buffer.offset-byte2 (unsafe.fx+ 1 buffer.offset-byte1)))
+	  (let* ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
+		 (buffer.offset-byte2 (unsafe.fxadd1 buffer.offset-byte1)))
 	    (maybe-refill-buffer-and-evaluate (port who)
 	      (data-is-needed-at: buffer.offset-byte2)
 	      (if-end-of-file:
@@ -3189,9 +3283,9 @@
       (define-inline (peek-4-bytes-character byte0)
 	(let retry-after-filling-buffer-for-3-more-bytes ()
 	  (define-alias buffer.offset-byte0 port.buffer.index)
-	  (let* ((buffer.offset-byte1 (unsafe.fx+ 1 buffer.offset-byte0))
-		 (buffer.offset-byte2 (unsafe.fx+ 1 buffer.offset-byte1))
-		 (buffer.offset-byte3 (unsafe.fx+ 1 buffer.offset-byte2)))
+	  (let* ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
+		 (buffer.offset-byte2 (unsafe.fxadd1 buffer.offset-byte1))
+		 (buffer.offset-byte3 (unsafe.fxadd1 buffer.offset-byte2)))
 	    (maybe-refill-buffer-and-evaluate (port who)
 	      (data-is-needed-at: buffer.offset-byte3)
 	      (if-end-of-file:
@@ -3545,7 +3639,7 @@
 	(port.cookie.pos.incr! count)
 	(set! port.buffer.used-size count)
 	(set! port.buffer.index buffer-index-increment)
-	(if (unsafe.fx= count 0)
+	(if (unsafe.fxzero? count)
 	    (eof-object)
 	  (string-ref port.buffer 0)))))
 
@@ -3590,7 +3684,7 @@
 		(if-successful-refill: (retry-after-filling-buffer))
 		(if-available-data:
 		 (and (unsafe.fx= (car bom) (bytevector-u8-ref port.buffer buffer.offset))
-		      (next-byte-in-bom (unsafe.fx+ 1 number-of-consumed-bytes) (cdr bom)))))))))))
+		      (next-byte-in-bom (unsafe.fxadd1 number-of-consumed-bytes) (cdr bom)))))))))))
 
   (define (validate-port-then-parse-bom-and-add-fast-tag-to-untagged-port port who)
     ;;Validate PORT  as a still  open, textual, input  port; read
@@ -3717,13 +3811,13 @@
 	  (make-it n ac))
 	 ((eof-object? x)
 	  (if (null? ac) x (make-it n ac)))
-	 (else (f p (unsafe.fx+ n 1) (cons x ac)))))))
+	 (else (f p (unsafe.fxadd1 n) (cons x ac)))))))
   (define (make-it n revls)
-    (let f ((s (make-string n)) (i (unsafe.fx- n 1)) (ls revls))
+    (let f ((s (make-string n)) (i (unsafe.fxsub1 n)) (ls revls))
       (cond
        ((pair? ls)
 	(string-set! s i (car ls))
-	(f s (unsafe.fx- i 1) (cdr ls)))
+	(f s (unsafe.fxsub1 i) (cdr ls)))
        (else s))))
   (if (input-port? p)
       (if (textual-port? p)
@@ -3762,262 +3856,351 @@
     (die 'get-string-all "not an input port" p)))
 
 
-;;;; byte input functions
+;;;; unbuffered byte and char output
 
-(define (get-u8 port)
-  ;;Defined  by R6RS.   Read  from the  binary  input port  PORT,
-  ;;blocking as necessary, until a byte is available from PORT or
-  ;;until  an  end  of  file  is  reached.   If  a  byte  becomes
-  ;;available, GET-U8  returns the byte  as an octet  and updates
-  ;;PORT to point just past that  byte.  If no input byte is seen
-  ;;before an end of file is reached, the EOF object is returned.
+(define (put-byte/unbuffered! port byte who)
+  ;;Defined by  Ikarus.  Write directly  the single BYTE  to PORT
+  ;;without  using  the  output  buffer.   The  return  value  is
+  ;;unspecified.
   ;;
-  ;;Here  we handle  the case  of byte  already available  in the
-  ;;buffer, if the buffer is empty: we call a subroutine.
+  ;;PORT must be a binary  output port.  BYTE must be an unsigned
+  ;;fixnum in the range [0, 255].
   ;;
-  (define who 'get-u8)
-  (unless (port? port)
-    (die who "not a port" port))
-  (with-binary-port (port)
-    (if (eq? port.attributes fast-get-byte-tag)
-	(let ((buffer.offset port.buffer.index))
-	  (if (unsafe.fx< buffer.offset port.buffer.used-size)
-	      (begin
-		(set! port.buffer.index (unsafe.fxadd1 buffer.offset))
-		(unsafe.bytevector-u8-ref port.buffer buffer.offset))
-	    (%get/peek-u8-byte-mode port who 1)))
-      (begin
-	(%validate-and-tag-binary-input-port port who)
-	(%get/peek-u8-byte-mode port who 1)))))
-
-(define (lookahead-u8 port)
-  ;;Defined by R6RS.  The  LOOKAHEAD-U8 procedure is like GET-U8,
-  ;;but it does not update PORT to point past the byte.
-  ;;
-  ;;Here  we handle  the case  of byte  already available  in the
-  ;;buffer, if the buffer is empty: we call a subroutine.
-  ;;
-  (define who 'lookahead-u8)
-  (unless (port? port)
-    (die who "not a port" port))
-  (with-binary-port (port)
-    (if (eq? port.attributes fast-get-byte-tag)
-	(let ((buffer.offset port.buffer.index))
-	  (if (unsafe.fx< buffer.offset port.buffer.used-size)
-	      (unsafe.bytevector-u8-ref port.buffer buffer.offset)
-	    (%get/peek-u8-byte-mode port who 0)))
-      (begin
-	(%validate-and-tag-binary-input-port port who)
-	(%get/peek-u8-byte-mode port who 0)))))
-
-(define (%get/peek-u8-byte-mode port who start)
-  ;;Subroutine of GET-u8 and LOOKAHEAD-u8.  To be called when the
-  ;;port buffer  is fully  consumed.  Get or  peek the  next byte
-  ;;from PORT, set the buffer index to START.
+  ;;This function calls the  port's WRITE! function to output the
+  ;;byte; if  it writes  no byte: the  port is marked  as closed.
+  ;;FIXME Is this correct?
   ;;
   (with-binary-port (port)
     (when port.closed?
       (die who "port is closed" port))
-    (refill-buffer-and-evaluate (port who)
-      (if-end-of-file: (eof-object))
-      (if-successful-refill:
-       (set! port.buffer.index start)
-       (unsafe.bytevector-u8-ref port.buffer 0)))))
+    (let ((bv (make-bytevector 1)))
+      (bytevector-u8-set! bv 0 byte)
+      (let ((count (port.write! bv 0 1)))
+	;;We  need to  account for  the case  the  WRITE!  function
+	;;returns  an  incorrect value,  for  example a  non-fixnum
+	;;value.
+	(cond ((eq? count 1)
+	       (let ((cookie port.cookie))
+		 (set-cookie-pos! cookie (fx+ 1 (cookie-pos cookie)))))
+	      ((eq? count 0)
+	       (port.mark-as-closed)
+	       (die who "could not write bytes to output port" port))
+	      (else
+	       (die who "invalid return value from write! proc" count port)))))))
+
+(define (put-char/unbuffered! port char who)
+  ;;Defined by  Ikarus.  Write directly  the single CHAR  to PORT
+  ;;without  using  the  output  buffer.   The  return  value  is
+  ;;unspecified.
+  ;;
+  ;;PORT must  be a textual output  port.  CHAR must  be a Scheme
+  ;;character.
+  ;;
+  ;;This function calls the  port's WRITE! function to output the
+  ;;char; if  it writes  no char: the  port is marked  as closed.
+  ;;FIXME Is this correct?
+  ;;
+  (with-textual-port (port)
+    (when port.closed?
+      (die who "port is closed" port))
+    (let ((str (string char)))
+      (let ((count (port.write! str 0 1)))
+	;;We need  to account for  the case the  WRITE!  function
+	;;returns  an incorrect value,  for example  a non-fixnum
+	;;value.
+	(cond ((eq? count 1)
+	       (let ((cookie port.cookie))
+		 (set-cookie-pos! cookie (fx+ 1 (cookie-pos cookie)))))
+	      ((eq? count 0)
+	       (port.mark-as-closed)
+	       (die who "could not write char to output port" port))
+	      (else
+	       (die who "invalid return value from write! proc" count port)))))))
 
 
-;;;; bytevector input functions
+;;;; byte and bytevector output
 
-(define (get-bytevector-n port count)
-  ;;Defined  by  R6RS.   COUNT  must be  an  exact,  non-negative
-  ;;integer object representing the number of bytes to be read.
-  ;;
-  ;;The  GET-BYTEVECTOR-N procedure reads  from the  binary input
-  ;;PORT, blocking as necessary,  until COUNT bytes are available
-  ;;from PORT or until an end of file is reached.
-  ;;
-  ;;If  COUNT  bytes  are   available  before  an  end  of  file,
-  ;;GET-BYTEVECTOR-N returns a bytevector of size COUNT.
-  ;;
-  ;;If  fewer  bytes  are   available  before  an  end  of  file,
-  ;;GET-BYTEVECTOR-N   returns  a  bytevector   containing  those
-  ;;bytes. In  either case,  the input port  is updated  to point
-  ;;just past the bytes read.
-  ;;
-  ;;If an end of file  is reached before any bytes are available,
-  ;;GET-BYTEVECTOR-N returns the EOF object.
-  ;;
-  (define who 'get-bytevector-n)
-  (define (%subbytevector src.bv src.len)
-    (let ((dst.bv (unsafe.make-bytevector src.len)))
-      (let loop ((count src.len))
-	(let ((count (unsafe.fxsub1 count)))
-	  (unsafe.bytevector-set! dst.bv count (unsafe.bytevector-u8-ref src.bv count))
-	  (if (unsafe.fxzero? count)
-	      dst.bv
-	    (loop count))))))
-  (unless (port? port)
-    (die who "not a port" port))
-  (with-binary-port (port)
-    (unless (eq? port.attributes fast-get-byte-tag)
-      (%validate-and-tag-binary-input-port port who))
-    (unless (fixnum? count)
-      (die who "count is not a fixnum" count))
-    (cond ((unsafe.fx> count 0)
-	   (let ((dst.bv (unsafe.make-bytevector count)))
-	     (let loop ((i 0))
-	       (let ((x (get-u8 port)))
-		 (if (eof-object? x)
-		     (if (unsafe.fxzero? i)
-			 (eof-object)
-		       (%subbytevector dst.bv i))
-		   (begin
-		     (unsafe.bytevector-set! dst.bv i x)
-		     (let ((i (unsafe.fxadd1 i)))
-		       (if (unsafe.fx= i count)
-			   dst.bv
-			 (loop i)))))))))
-	  ((unsafe.fxzero? count)
-	   '#vu8())
-	  (else
-	   (die who "count is negative" count)))))
+(module (put-u8 put-bytevector)
+  (import UNSAFE)
 
-(define (get-bytevector-n! port dst.bv start count)
-  ;;Defined  by  R6RS.   COUNT  must be  an  exact,  non-negative
-  ;;integer object, representing the  number of bytes to be read.
-  ;;DST.BV  must  be  a  bytevector  with  at  least  START+COUNT
-  ;;elements.
-  ;;
-  ;;The GET-BYTEVECTOR-N!  procedure  reads from the binary input
-  ;;PORT, blocking as necessary,  until COUNT bytes are available
-  ;;or until an end of file is reached.
-  ;;
-  ;;If COUNT bytes are available  before an end of file, they are
-  ;;written into  DST.BV starting at index START,  and the result
-  ;;is COUNT.
-  ;;
-  ;;If fewer bytes are available before the next end of file, the
-  ;;available  bytes are  written into  DST.BV starting  at index
-  ;;START,  and the result  is a  number object  representing the
-  ;;number of bytes actually read.
-  ;;
-  ;;In either case, the input  port is updated to point just past
-  ;;the bytes read. If an end of file is reached before any bytes
-  ;;are available, GET-BYTEVECTOR-N!  returns the EOF object.
-  ;;
-  (define who 'get-bytevector-n!)
-  (unless (port? port)
-    (die who "not a port" port))
-  (with-binary-port (port)
-    (unless (eq? port.attributes fast-get-byte-tag)
-      (%validate-and-tag-binary-input-port port who))
-    (unless (bytevector? dst.bv)
-      (die who "not a bytevector" dst.bv))
-    (unless (fixnum? start)
-      (die who "starting index is not a fixnum" start))
-    (unless (fixnum? count)
-      (die who "count is not a fixnum" count))
-    (let ((len (unsafe.bytevector-length dst.bv)))
-      (when (or (unsafe.fx< start 0) (unsafe.fx<= len start))
-	(die who "starting index is out of range" start))
-      (cond ((unsafe.fx> count 0)
-	     (let ((imax (+ start count)))
-	       (when (> imax len)
-		 (die who "count is out of range" count (- len start)))
-	       ;;We must return EOF if the first read returns EOF.
-	       (let ((x (get-u8 port)))
-		 (if (eof-object? x)
-		     x
+  (define (put-u8 port byte)
+    ;;Defined by R6RS.  Write BYTE  to the output port and return
+    ;;unspecified values.
+    ;;
+    (define who 'put-u8)
+    (unless (u8? byte)
+      (die who "not a u8" byte))
+    (with-binary-port (port)
+      (cond ((unsafe.fx= fast-put-byte-tag port.fast-attrs)
+	     (if port.has-no-buffer?
+		 (put-byte/unbuffered! port byte who)
+	       (let try-again-after-flushing-buffer ()
+		 (if (unsafe.fx< port.buffer.index port.buffer.size)
+		     ;;The buffer exists and  it has room for one
+		     ;;byte.
+		     (begin
+		       (assert (unsafe.fx<= port.buffer.index port.buffer.used-size))
+		       (bytevector-u8-set! port.buffer port.buffer.index byte)
+		       (when (unsafe.fx= port.buffer.index port.buffer.used-size)
+			 (port.buffer.used-size.incr!))
+		       (port.buffer.index.incr!))
+		   ;;The buffer exists but  it has no room: flush
+		   ;;the buffer and try again.
 		   (begin
-		     (unsafe.bytevector-set! dst.bv start x)
-		     ;;From  now on  we must  return the  number of
-		     ;;read bytes.
-		     (let loop ((i (unsafe.fxadd1 start)))
-		       (if (unsafe.fx= i imax)
-			   i
-			 (let ((x (get-u8 port)))
-			   (if (eof-object? x)
-			       i
-			     (begin
-			       (unsafe.bytevector-set! dst.bv i x)
-			       (loop (unsafe.fxadd1 i))))))))))))
-	    ((unsafe.fxzero? count)
-	     0)
+		     (assert (= port.buffer.used-size port.buffer.index))
+		     (assert (= port.buffer.used-size port.buffer.size))
+		     (flush-output-port port)
+		     (try-again-after-flushing-buffer))))))
+	    ((output-port? port)
+	     (die who "not a binary port" port))
 	    (else
-	     (die who "count is negative" count))))))
+	     (die who "not an output port" port)))))
 
-(define (get-bytevector-some port)
-  ;;Defined by  R6RS.  Read from the binary  input PORT, blocking
-  ;;as necessary,  until bytes are  available or until an  end of
-  ;;file is reached.
-  ;;
-  ;;If  bytes  become  available, GET-BYTEVECTOR-SOME  returns  a
-  ;;freshly allocated bytevector containing the initial available
-  ;;bytes (at least one), and  it updates PORT to point just past
-  ;;these bytes.
-  ;;
-  ;;If no input bytes are seen  before an end of file is reached,
-  ;;the EOF object is returned.
-  ;;
-  (define who 'get-bytevector-some)
-  (unless (port? port)
-    (die who "not a port" port))
-  (with-binary-port (port)
-    (unless (eq? port.attributes fast-get-byte-tag)
-      (%validate-and-tag-binary-input-port port who))
-    (let ()
-      (define (data-available-in-buffer)
-	(let* ((buffer		port.buffer)
-	       (buffer.used-size port.buffer.used-size)
-	       (buffer.offset	port.buffer.index)
-	       (dst.bv		(make-bytevector (unsafe.fx- buffer.used-size buffer.offset))))
-	  (set! port.buffer.index buffer.used-size)
-	  (let loop ((buffer.offset	buffer.offset)
-		     (dst.index	0))
-	    (if (unsafe.fx= buffer.offset buffer.used-size)
-		dst.bv
+  (define put-bytevector
+    ;;(put-bytevector port bv)
+    ;;(put-bytevector port bv start)
+    ;;(put-bytevector port bv start count)
+    ;;
+    ;;START and COUNT must  be non-negative exact integer objects
+    ;;that default to 0 and:
+    ;;
+    ;; (- (bytevector-length BV) START)
+    ;;
+    ;;respectively.   BV   must  have   a  length  of   at  least
+    ;;START+COUNT.  The PUT-BYTEVECTOR procedure writes the COUNT
+    ;;bytes of the  bytevector BV starting at index  START to the
+    ;;output   port.    The   PUT-BYTEVECTOR  procedure   returns
+    ;;unspecified values.
+    ;;
+    (put-string/bv 'put-bytevector "not a bytevector"
+		   bytevector? bytevector-length $put-bytevector))
+
+  (define ($put-bytevector port src.bv src.start count)
+    ;;Write COUNT bytes from  the bytevector SRC.BV to the binary
+    ;;output   PORT  starting   at   offset  SRC.START.    Return
+    ;;unspecified values.
+    ;;
+    (define who 'put-bytevector)
+    (with-binary-port (port)
+      (cond ((unsafe.fx= fast-put-byte-tag port.fast-attrs)
+	     (if port.has-no-buffer?
+		 ;;Write  bytes  one  by  one to  the  underlying
+		 ;;device.
+		 (let next-byte ((index src.start)
+				 (last  (unsafe.fx+ src.start count)))
+		   (unless (unsafe.fx= index last)
+		     (put-byte/unbuffered! port (bytevector-u8-ref src.bv index) who)
+		     (next-byte (unsafe.fxadd1 index) last)))
+	       ;;Write  bytes to  the buffer  and, if  the buffer
+	       ;;fills up, to the underlying device.
+	       (let try-again-after-flushing-buffer ((count count)
+						     (room  (port.buffer.room)))
+		 (cond ((unsafe.fxzero? room)
+			;;The buffer exists and it is full.
+			(flush-output-port port)
+			(try-again-after-flushing-buffer count (port.buffer.room)))
+		       ((unsafe.fx<= count room)
+			;;The buffer  exists and there  is enough
+			;;room for all of the COUNT bytes.
+			(copy! src.bv src.start port.buffer port.buffer.index count)
+			(port.buffer.index.incr! count)
+			(when (unsafe.fx< port.buffer.used-size port.buffer.index)
+			  (set! port.buffer.used-size port.buffer.index)))
+		       (else
+			;;The buffer exists  and it can hold some
+			;;but not all of the COUNT bytes.
+			(assert (unsafe.fx> count room))
+			(copy! src.bv src.start port.buffer port.buffer.index room)
+			(set! port.buffer.index     port.buffer.size)
+			(set! port.buffer.used-size port.buffer.index)
+			(flush-output-port port)
+			(try-again-after-flushing-buffer (unsafe.fx- count room) (port.buffer.room)))))))
+	    ((output-port? port)
+	     (die who "not a binary port" port))
+	    (else
+	     (die who "not an output port" port)))))
+
+  (define (copy! src.bv src.start dst.bv dst.start count)
+;;;FIXME We are not using  BYTEVECTOR-COPY! here in an attempt to
+;;;have  more  efficiency  because  we  know  the  arguments  are
+;;;correct.   It would  be  better  to replace  COPY!   with a  C
+;;;implemented  function not  validating  its arguments.   (Marco
+;;;Maggi; Aug 31, 2011)
+    (when (unsafe.fx> count 0)
+      (bytevector-u8-set! dst.bv dst.start (bytevector-u8-ref src.bv src.start))
+      (copy! src.bv (unsafe.fxadd1 src.start) dst.bv (unsafe.fxadd1 dst.start) (unsafe.fxsub1 count)))))
+
+
+;;;; string output
+
+(define-syntax put-string/bv
+  (syntax-rules ()
+    ((_ who not-a-what pred? len $put)
+     (case-lambda
+      ((p bv)
+       (if (pred? bv)
+	   ($put p bv 0 (len bv))
+	 (die who not-a-what bv)))
+      ((p bv i)
+       (if (pred? bv)
+	   (if (fixnum? i)
+	       (let ((n (len bv)))
+		 (if (and (fx<= i n) (fx>= i 0))
+		     ($put p bv i (fx- n i))
+		   (die who "index out of range" i)))
+	     (die who "invalid index" i))
+	 (die who not-a-what bv)))
+      ((p bv i c)
+       (if (pred? bv)
+	   (if (fixnum? i)
+	       (let ((n (len bv)))
+		 (if (and (fx<= i n) (fx>= i 0))
+		     (if (fixnum? c)
+			 (if (and (fx>= c 0) (fx>= (fx- n c) i))
+			     ($put p bv i c)
+			   (die who "count out of range" c))
+		       (die who "invalid count" c))
+		   (die who "index out of range" i)))
+	     (die who "invalid index" i))
+	 (die who not-a-what bv)))))))
+
+(module (put-char write-char put-string)
+  (define (put-byte! p b who)
+    (let ((i ($port-index p)) (j ($port-size p)))
+      (if (unsafe.fx< i j)
+	  (begin
+	    (bytevector-u8-set! ($port-buffer p) i b)
+	    ($set-port-index! p (unsafe.fxadd1 i)))
+	(if (unsafe.fxzero? j)
+	    (put-byte/unbuffered! p b who)
+	  (begin
+	    (flush-output-port p)
+	    (put-byte! p b who))))))
+  (define (put-char-utf8-mode p b who)
+    (cond
+     ((unsafe.fx< b 128)
+      (put-byte! p b who))
+     ((unsafe.fx<= b #x7FF)
+      (put-byte! p (unsafe.fxior #b11000000 (unsafe.fxsra b 6)) who)
+      (put-byte! p (unsafe.fxior #b10000000 (unsafe.fxand b #b111111)) who))
+     ((unsafe.fx<= b #xFFFF)
+      (put-byte! p (unsafe.fxior #b11100000 (unsafe.fxsra b 12)) who)
+      (put-byte! p (unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 6) #b111111)) who)
+      (put-byte! p (unsafe.fxior #b10000000 (unsafe.fxand b #b111111)) who))
+     (else
+      (put-byte! p (unsafe.fxior #b11110000 (unsafe.fxsra b 18)) who)
+      (put-byte! p (unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 12) #b111111)) who)
+      (put-byte! p (unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 6) #b111111)) who)
+      (put-byte! p (unsafe.fxior #b10000000 (unsafe.fxand b #b111111)) who))))
+    ;;;
+  (define write-char
+    (case-lambda
+     ((c p) (do-put-char p c 'write-char))
+     ((c) (do-put-char (current-output-port) c 'write-char))))
+  (define (put-char p c)
+    (do-put-char p c 'put-char))
+  (define ($put-string p str start count)
+    (unless (output-port? p)
+      (die 'put-string "not an output port" p))
+    (unless (textual-port? p)
+      (die 'put-string "not a textual port" p))
+    (let f ((i start) (j (unsafe.fx+ start count)))
+      (unless (unsafe.fx= i j)
+	(do-put-char p (string-ref str i) 'put-string)
+	(f (unsafe.fxadd1 i) j))))
+  (define put-string
+    (put-string/bv 'put-string "not a string"
+		   string? string-length $put-string))
+  (define (do-put-char p c who)
+    (unless (char? c) (die who "not a char" c))
+    (let ((m ($port-fast-attrs p)))
+      (cond
+       ((eq? m fast-put-utf8-tag)
+	(let ((i ($port-index p)) (j ($port-size p)))
+	  (let ((b (char->integer c)))
+	    (cond
+	     ((unsafe.fx< b 128)
+	      (if (unsafe.fx< i j)
+		  (begin
+		    (bytevector-u8-set! ($port-buffer p) i b)
+		    ($set-port-index! p (unsafe.fxadd1 i)))
+		(if (unsafe.fxzero? j)
+		    (put-byte/unbuffered! p b who)
+		  (begin
+		    (flush-output-port p)
+		    (put-byte! p b who)))))
+	     (else
+	      (put-char-utf8-mode p b who))))))
+       ((eq? m fast-put-char-tag)
+	(let ((i ($port-index p)) (j ($port-size p)))
+	  (if (unsafe.fx< i j)
 	      (begin
-		(unsafe.bytevector-set! dst.bv dst.index (unsafe.bytevector-u8-ref buffer buffer.offset))
-		(loop (unsafe.fxadd1 buffer.offset) (unsafe.fxadd1 dst.index)))))))
-      (unless (eq? port.attributes fast-get-byte-tag)
-	(die who "invalid port argument" port))
-      (maybe-refill-buffer-and-evaluate (port who)
-	(data-is-needed-at: port.buffer.index)
-	(if-end-of-file: (eof-object))
-	(if-successful-refill: (data-available-in-buffer))
-	(if-available-data: (data-available-in-buffer))))))
+		(string-set! ($port-buffer p) i c)
+		($set-port-index! p (unsafe.fxadd1 i)))
+	    (if (unsafe.fxzero? j)
+		(put-char/unbuffered! p c who)
+	      (begin
+		(flush-output-port p)
+		(do-put-char p c who))))))
+       ((eq? m fast-put-latin-tag)
+	(let ((i ($port-index p)) (j ($port-size p)))
+	  (let ((b (char->integer c)))
+	    (cond
+	     ((unsafe.fx< b 256)
+	      (if (unsafe.fx< i j)
+		  (begin
+		    (bytevector-u8-set! ($port-buffer p) i b)
+		    ($set-port-index! p (unsafe.fxadd1 i)))
+		(if (unsafe.fxzero? j)
+		    (put-byte/unbuffered! p b who)
+		  (begin
+		    (flush-output-port p)
+		    (put-byte! p b who)))))
+	     (else
+	      (case (transcoder-error-handling-mode (port-transcoder p))
+		((ignore) (void))
+		((replace) (do-put-char p #\? who))
+		((raise)
+		 (raise (make-i/o-encoding-error p c)))
+		(else (die who "BUG: invalid error handling mode" p))))))))
+       ((eq? m fast-put-utf16be-tag)
+	(let ((n (char->integer c)))
+	  (cond
+	   ((unsafe.fx< n #x10000)
+	    (put-byte! p (unsafe.fxsra n 8) who)
+	    (put-byte! p (unsafe.fxand n #xFF) who))
+	   (else
+	    (let ((u^ (unsafe.fx- n #x10000)))
+	      (let ((w1 (unsafe.fxior #xD800 (unsafe.fxsra u^ 10))))
+		(put-byte! p (unsafe.fxsra w1 8) who)
+		(put-byte! p (unsafe.fxand w1 #xFF) who))
+	      (let ((w2 (unsafe.fxior #xDC00 (unsafe.fxand u^ (- (unsafe.fxsll 1 10) 1)))))
+		(put-byte! p (unsafe.fxsra w2 8) who)
+		(put-byte! p (unsafe.fxand w2 #xFF) who)))))))
+       (else
+	(if (output-port? p)
+	    (if (textual-port? p)
+		(if (port-closed? p)
+		    (die who "port is closed" p)
+		  (die who "unsupported port" p))
+	      (die who "not a textual port" p))
+	  (die who "not an output port" p)))))))
 
-(define (get-bytevector-all port)
-  ;;Defined by R6RS.   Attempts to read all bytes  until the next
-  ;;end of file, blocking as necessary.
-  ;;
-  ;;If one  or more bytes are read,  GET-BYTEVECTOR-ALL returns a
-  ;;bytevector containing all  bytes up to the next  end of file.
-  ;;Otherwise, get-bytevector-all returns the EOF object.
-  ;;
-  ;;The operation  may block indefinitely waiting to  see if more
-  ;;bytes will  become available, even if some  bytes are already
-  ;;available.
-  ;;
-  (define who 'get-bytevector-all)
-  (unless (port? port)
-    (die who "not a port" port))
-  (with-binary-port (port)
-    (unless (eq? port.attributes fast-get-byte-tag)
-      (%validate-and-tag-binary-input-port port who))
-    (let-values (((out-port getter) (open-bytevector-output-port #f)))
-      (let retry-after-filling-buffer ()
-	(define (data-available-in-buffer)
-	  (put-bytevector out-port port.buffer port.buffer.index port.buffer.used-size)
-	  (retry-after-filling-buffer))
-	(maybe-refill-buffer-and-evaluate (port who)
-	  (data-is-needed-at: port.buffer.index)
-	  (if-end-of-file:
-	   (let ((result (getter)))
-	     (if (zero? (unsafe.bytevector-length result))
-		 (eof-object)
-	       result)))
-	  (if-successful-refill: (data-available-in-buffer))
-	  (if-available-data: (data-available-in-buffer)))))))
+
+(define newline
+  (case-lambda
+   (()
+    (put-char (current-output-port) #\newline)
+    (flush-output-port (current-output-port)))
+   ((p)
+    (unless (output-port? p)
+      (die 'newline "not an output port" p))
+    (unless (textual-port? p)
+      (die 'newline "not a textual port" p))
+    (when (%port-closed? p)
+      (die 'newline "port is closed" p))
+    (put-char p #\newline)
+    (flush-output-port p))))
 
 
 ;;;; platform API for file descriptors
@@ -4543,176 +4726,15 @@
       (apply values vals))))
 
 
-(define-syntax put-string/bv
-  (syntax-rules ()
-    ((_ who not-a-what pred? len $put)
-     (case-lambda
-      ((p bv)
-       (if (pred? bv)
-	   ($put p bv 0 (len bv))
-	 (die who not-a-what bv)))
-      ((p bv i)
-       (if (pred? bv)
-	   (if (fixnum? i)
-	       (let ((n (len bv)))
-		 (if (and (fx<= i n) (fx>= i 0))
-		     ($put p bv i (fx- n i))
-		   (die who "index out of range" i)))
-	     (die who "invalid index" i))
-	 (die who not-a-what bv)))
-      ((p bv i c)
-       (if (pred? bv)
-	   (if (fixnum? i)
-	       (let ((n (len bv)))
-		 (if (and (fx<= i n) (fx>= i 0))
-		     (if (fixnum? c)
-			 (if (and (fx>= c 0) (fx>= (fx- n c) i))
-			     ($put p bv i c)
-			   (die who "count out of range" c))
-		       (die who "invalid count" c))
-		   (die who "index out of range" i)))
-	     (die who "invalid index" i))
-	 (die who not-a-what bv)))))))
+(define (process cmd . args)
+  (%spawn-process 'process #t #t #f #f #f #f cmd args))
 
-(module (put-char write-char put-string)
-  (define (put-byte! p b who)
-    (let ((i ($port-index p)) (j ($port-size p)))
-      (if (unsafe.fx< i j)
-	  (begin
-	    (bytevector-u8-set! ($port-buffer p) i b)
-	    ($set-port-index! p (unsafe.fx+ i 1)))
-	(if (unsafe.fx= j 0)
-	    (put-byte/unbuffered! p b who)
-	  (begin
-	    (flush-output-port p)
-	    (put-byte! p b who))))))
-  (define (put-char-utf8-mode p b who)
-    (cond
-     ((unsafe.fx< b 128)
-      (put-byte! p b who))
-     ((unsafe.fx<= b #x7FF)
-      (put-byte! p (unsafe.fxior #b11000000 (unsafe.fxsra b 6)) who)
-      (put-byte! p (unsafe.fxior #b10000000 (unsafe.fxand b #b111111)) who))
-     ((unsafe.fx<= b #xFFFF)
-      (put-byte! p (unsafe.fxior #b11100000 (unsafe.fxsra b 12)) who)
-      (put-byte! p (unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 6) #b111111)) who)
-      (put-byte! p (unsafe.fxior #b10000000 (unsafe.fxand b #b111111)) who))
-     (else
-      (put-byte! p (unsafe.fxior #b11110000 (unsafe.fxsra b 18)) who)
-      (put-byte! p (unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 12) #b111111)) who)
-      (put-byte! p (unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 6) #b111111)) who)
-      (put-byte! p (unsafe.fxior #b10000000 (unsafe.fxand b #b111111)) who))))
-    ;;;
-  (define write-char
-    (case-lambda
-     ((c p) (do-put-char p c 'write-char))
-     ((c) (do-put-char (current-output-port) c 'write-char))))
-  (define (put-char p c)
-    (do-put-char p c 'put-char))
-  (define ($put-string p str start count)
-    (unless (output-port? p)
-      (die 'put-string "not an output port" p))
-    (unless (textual-port? p)
-      (die 'put-string "not a textual port" p))
-    (let f ((i start) (j (unsafe.fx+ start count)))
-      (unless (unsafe.fx= i j)
-	(do-put-char p (string-ref str i) 'put-string)
-	(f (unsafe.fx+ i 1) j))))
-  (define put-string
-    (put-string/bv 'put-string "not a string"
-		   string? string-length $put-string))
-  (define (do-put-char p c who)
-    (unless (char? c) (die who "not a char" c))
-    (let ((m ($port-fast-attrs p)))
-      (cond
-       ((eq? m fast-put-utf8-tag)
-	(let ((i ($port-index p)) (j ($port-size p)))
-	  (let ((b (char->integer c)))
-	    (cond
-	     ((unsafe.fx< b 128)
-	      (if (unsafe.fx< i j)
-		  (begin
-		    (bytevector-u8-set! ($port-buffer p) i b)
-		    ($set-port-index! p (unsafe.fx+ i 1)))
-		(if (unsafe.fx= j 0)
-		    (put-byte/unbuffered! p b who)
-		  (begin
-		    (flush-output-port p)
-		    (put-byte! p b who)))))
-	     (else
-	      (put-char-utf8-mode p b who))))))
-       ((eq? m fast-put-char-tag)
-	(let ((i ($port-index p)) (j ($port-size p)))
-	  (if (unsafe.fx< i j)
-	      (begin
-		(string-set! ($port-buffer p) i c)
-		($set-port-index! p (unsafe.fx+ i 1)))
-	    (if (unsafe.fx= j 0)
-		(put-char/unbuffered! p c who)
-	      (begin
-		(flush-output-port p)
-		(do-put-char p c who))))))
-       ((eq? m fast-put-latin-tag)
-	(let ((i ($port-index p)) (j ($port-size p)))
-	  (let ((b (char->integer c)))
-	    (cond
-	     ((unsafe.fx< b 256)
-	      (if (unsafe.fx< i j)
-		  (begin
-		    (bytevector-u8-set! ($port-buffer p) i b)
-		    ($set-port-index! p (unsafe.fx+ i 1)))
-		(if (unsafe.fx= j 0)
-		    (put-byte/unbuffered! p b who)
-		  (begin
-		    (flush-output-port p)
-		    (put-byte! p b who)))))
-	     (else
-	      (case (transcoder-error-handling-mode (port-transcoder p))
-		((ignore) (void))
-		((replace) (do-put-char p #\? who))
-		((raise)
-		 (raise (make-i/o-encoding-error p c)))
-		(else (die who "BUG: invalid error handling mode" p))))))))
-       ((eq? m fast-put-utf16be-tag)
-	(let ((n (char->integer c)))
-	  (cond
-	   ((unsafe.fx< n #x10000)
-	    (put-byte! p (unsafe.fxsra n 8) who)
-	    (put-byte! p (unsafe.fxand n #xFF) who))
-	   (else
-	    (let ((u^ (unsafe.fx- n #x10000)))
-	      (let ((w1 (unsafe.fxior #xD800 (unsafe.fxsra u^ 10))))
-		(put-byte! p (unsafe.fxsra w1 8) who)
-		(put-byte! p (unsafe.fxand w1 #xFF) who))
-	      (let ((w2 (unsafe.fxior #xDC00 (unsafe.fxand u^ (- (unsafe.fxsll 1 10) 1)))))
-		(put-byte! p (unsafe.fxsra w2 8) who)
-		(put-byte! p (unsafe.fxand w2 #xFF) who)))))))
-       (else
-	(if (output-port? p)
-	    (if (textual-port? p)
-		(if (port-closed? p)
-		    (die who "port is closed" p)
-		  (die who "unsupported port" p))
-	      (die who "not a textual port" p))
-	  (die who "not an output port" p)))))))
+(define (process* search? env stdin stdout stderr cmd . args)
+  (%spawn-process 'process* search? #t env stdin stdout stderr cmd args))
 
-
-(define newline
-  (case-lambda
-   (()
-    (put-char (current-output-port) #\newline)
-    (flush-output-port (current-output-port)))
-   ((p)
-    (unless (output-port? p)
-      (die 'newline "not an output port" p))
-    (unless (textual-port? p)
-      (die 'newline "not a textual port" p))
-    (when (%port-closed? p)
-      (die 'newline "port is closed" p))
-    (put-char p #\newline)
-    (flush-output-port p))))
+(define (process-nonblocking cmd . args)
+  (%spawn-process 'process-nonblocking #t #f #f #f #f cmd args))
 
-
 (define (%spawn-process who search? blocking? env stdin stdout stderr cmd args)
   (define (port->fd port port-pred arg-name port-type)
     (cond ((eqv? port #f) -1)
@@ -4773,15 +4795,6 @@
 		   (%file-descriptor->input-port (vector-ref r 3)
 				   cmd input-file-buffer-size #f #t
 				   'process))))))))
-
-(define (process cmd . args)
-  (%spawn-process 'process #t #t #f #f #f #f cmd args))
-
-(define (process* search? env stdin stdout stderr cmd . args)
-  (%spawn-process 'process* search? #t env stdin stdout stderr cmd args))
-
-(define (process-nonblocking cmd . args)
-  (%spawn-process 'process-nonblocking #t #f #f #f #f cmd args))
 
 
 ;;;; platform socket functions
@@ -4933,7 +4946,7 @@
 	    (let ((ls pending))
 	      (set! pending '())
 	      ls))))))
-  )
+  #| end of module |# )
 
 
 (define-struct tcp-server (portnum fd))
