@@ -35,6 +35,7 @@
 (check-set-mode! 'report-failed)
 (display "*** testing Ikarus input/output functions\n")
 
+
 (define-syntax test
   ;;Derived from "scheme/tests/io.ss"
   (syntax-rules ()
@@ -58,8 +59,232 @@
 	 (begin (printf "failure\n") #f))
        => #t))))
 
+
+;;;; generic helpers
+
+(define %subbytevector
+  (case-lambda
+   ((src.bv src.start)
+    (%subbytevector src.bv src.start (bytevector-length src.bv)))
+   ((src.bv src.start src.len)
+    (let ((dst.bv (make-bytevector (fx- src.len src.start))))
+      (do ((i 0         (+ 1 i))
+	   (j src.start (+ 1 j)))
+	  ((= j src.len)
+	   dst.bv)
+	(bytevector-u8-set! dst.bv i (bytevector-u8-ref src.bv j)))))))
+
+(define (%bytevector-u8-compare A.bv B.bv)
+  (let ((A.len (bytevector-length A.bv))
+	(B.len (bytevector-length B.bv)))
+    (if (not (= A.len B.len))
+	(begin
+	  (printf "different lengths: ~a, ~a\n" A.len B.len)
+	  #f)
+      (let loop ((i 0))
+	(if (= i A.len)
+	    #t
+	  (let ((A.byte (bytevector-u8-ref A.bv i))
+		(B.byte (bytevector-u8-ref B.bv i)))
+	    (if (not (= A.byte B.byte))
+		(begin
+		  (printf "different byte at index ~a: ~a, ~a\n" i A.byte B.byte)
+		  #f)
+	      (loop (+ 1 i)))))))))
+
+
+;;;; syntax helpers
+
+(define-syntax unwind-protect
+  (syntax-rules ()
+    ((_ ?body ?cleanup0 ?cleanup ...)
+     (let ((cleanup (lambda () ?cleanup0 ?cleanup ...)))
+       (with-exception-handler
+	   (lambda (E)
+	     (cleanup)
+	     (raise E))
+	 (lambda ()
+	   (call-with-values
+	       (lambda () ?body)
+	     (lambda return-values
+	       (cleanup)
+	       (apply values return-values)))))))))
+
+
+;;;; file helpers
+
 (define (src-file x)
+  ;;Build   and  return   a   test  file   string   pathname  from   the
+  ;;"$(srcdir)/tests" directory of the distribution.
+  ;;
   (string-append (or (getenv "VICARE_SRC_DIR") ".") "/" x))
+
+;;; --------------------------------------------------------------------
+
+(define (make-test-pathname filename)
+  ;;Build and  return a test file  string pathname to be  used to create
+  ;;new test files.
+  ;;
+  (string-append (or (getenv "VICARE_BUILDDIR") ".") "/" filename))
+
+;;The current test file string pathname.
+;;
+(define test-pathname
+  (make-parameter "test-pathname.bin"
+    (lambda (obj)
+      (assert (string? obj))
+      obj)))
+
+;;Function used to fill the file referenced by (TEST-PATHNAME).
+;;
+(define test-pathname-data-func
+  (make-parameter bindata-hundreds.bv
+    (lambda (obj)
+      (assert (procedure? obj))
+      obj)))
+
+(define (cleanup-test-pathname)
+  ;;If the current test file exists: remove it.
+  ;;
+  (when (file-exists? (test-pathname))
+    (delete-file (test-pathname))))
+
+(define (create-test-pathname)
+  ;;Create a  new test  file using the  current (TEST-PATHNAME)  and the
+  ;;current (TEST-PATHNAME-DATA-FUNC).
+  ;;
+  (cleanup-test-pathname)
+  (let ((port (open-file-output-port (test-pathname) (file-options) (buffer-mode block) #f)))
+    (put-bytevector port ((test-pathname-data-func)))
+    (close-output-port port)))
+
+(define (open-test-pathname)
+  ;;Open the current test  file referenced by (TEST-PATHNAME) and return
+  ;;a binary input port for it.
+  ;;
+  (open-file-input-port (test-pathname) (file-options) (buffer-mode block) #f))
+
+(define-syntax with-input-test-pathname
+  (syntax-rules ()
+    ((_ (?port) . ?body)
+     (begin
+       (create-test-pathname)
+       (let ((?port (open-test-pathname)))
+	 (unwind-protect
+	     (begin  . ?body)
+	   (close-input-port ?port)
+	   (cleanup-test-pathname)))))))
+
+;;; --------------------------------------------------------------------
+
+(define (file-size-char-by-char filename)
+  ;;Open textual file FILENAME and  compute its size in character units,
+  ;;reading characters one by one.
+  ;;
+  (with-input-from-file filename
+    (lambda ()
+      (let loop ((i 0))
+	(let ((x (get-char (current-input-port))))
+	  (if (eof-object? x)
+	      i
+	    (loop (+ i 1))))))))
+
+
+(define (file->bytevector filename)
+  ;;Open the  binary file  FILENAME read  all the bytes  one by  one and
+  ;;return a bytevector holding them.
+  ;;
+  (let ((port (open-file-input-port filename (file-options) 'block #f)))
+    (u8-list->bytevector
+     (let loop ()
+       (let ((x (get-u8 port)))
+	 (if (eof-object? x)
+	     (begin
+	       (close-input-port port)
+	       '())
+	   (cons x (loop))))))))
+
+(define (bytevector->binary-port bv port)
+  ;;Write to the binary PORT the bytes from the bytevector BV.
+  ;;
+  (let loop ((i 0))
+    (unless (fx= i (bytevector-length bv))
+      (put-u8 port (bytevector-u8-ref bv i))
+      (loop (fx+ i 1)))))
+
+(define (bytevector->textual-port bv port)
+  ;;Write  to  the  textual  PORT  the  bytes  from  the  bytevector  BV
+  ;;converting them to characters.
+  ;;
+  (let loop ((i 0))
+    (unless (fx= i (bytevector-length bv))
+      (put-char port (integer->char (bytevector-u8-ref bv i)))
+      (loop (fx+ i 1)))))
+
+
+;;;; binary data
+
+(define (bindata-empty.len)
+  0)
+
+(define (bindata-empty.bv)
+  '#vu8())
+
+(define (bindata-zero.bv)
+  '#vu8(0))
+
+(define (bindata-zero.len)
+  1)
+
+(define (bindata-ten.len)
+  10)
+
+(define (bindata-ten.bv)
+  ;;Holds  the same  bytes  of the  first  subvector of  length 10  of
+  ;;BINDATA-HUNDREDS.
+  ;;
+  '#vu8(0 1 2 3 4 5 6 7 8 9))
+
+(define (bindata-bytes.len)
+  256)
+
+(define bindata-bytes.bv
+  ;;Holds  the  same bytes  of  the first  subvector  of  length 256  of
+  ;;BINDATA-HUNDREDS.
+  ;;
+  (let ((result #f))
+    (define (%bytevector-u8-fill! bv)
+      (do ((i 0 (+ 1 i)))
+	  ((= i 256)
+	   bv)
+	(bytevector-u8-set! bv i i)))
+    (lambda ()
+      (or result
+	  (begin
+	    (set! result (%bytevector-u8-fill! (make-bytevector (bindata-bytes.len) 0)))
+	    result)))))
+
+(define (bindata-hundreds.len)
+  (* 100 256))
+
+(define bindata-hundreds.bv
+  ;;A bytevector holding 100 sequences of bytes from 0 included to 255
+  ;;included.
+  ;;
+  (let ((result #f))
+    (define (%bytevector-u8-fill! bv)
+      (do ((i 0 (+ 1 i)))
+	  ((= i 100)
+	   bv)
+	(let ((base (* 256 i)))
+	  (do ((j 0 (+ 1 j)))
+	      ((= j 256))
+	    (bytevector-u8-set! bv (+ base j) j)))))
+    (lambda ()
+      (or result
+	  (begin
+	    (set! result (%bytevector-u8-fill! (make-bytevector (bindata-hundreds.len) 0)))
+	    result)))))
 
 
 (parametrise ((check-test-name	'output-bytevector))
@@ -1305,141 +1530,72 @@
 
 (parametrise ((check-test-name	'ikarus/file))
 
-  (define (file-size-char-by-char filename)
-    ;;Open  textual file  FILENAME  and compute  its  size in  character
-    ;;units, reading characters one by one.
-    ;;
-    (with-input-from-file filename
-      (lambda ()
-	(let loop ((i 0))
-	  (let ((x (get-char (current-input-port))))
-	    (if (eof-object? x)
-		i
-	      (loop (+ i 1))))))))
+  ;;Preliminary assertions on input data.
+  (assert (= (file-size-char-by-char (src-file "TEST-SOURCE-FILE.txt")) 56573))
+  (assert (= (file-size (src-file "TEST-SOURCE-FILE.txt")) 56573))
+  (let ((bv (file->bytevector (src-file "TEST-SOURCE-FILE.txt"))))
+    (let-values (((port extract) (open-bytevector-output-port #f)))
+      (bytevector->binary-port bv port)
+      (let ((bv2 (extract)))
+	(assert (bytevector=? bv bv2))
+	(assert (bytevector=? #vu8() (extract))))))
 
+  (check	;bytevector output port, native transcoder
+      (let ((bv (file->bytevector (src-file "TEST-SOURCE-FILE.txt"))))
+	(let-values (((p extract) (open-bytevector-output-port (native-transcoder))))
+	  (bytevector->textual-port bv p)
+	  (let ((bv2 (extract)))
+	    (list (bytevector=? bv bv2)
+		  (bytevector=? #vu8() (extract))))))
+    => '(#t #t))
 
-  (define (file->bytevector filename)
-    ;;Open the  binary file FILENAME read  all the bytes one  by one and
-    ;;return a bytevector holding them.
-    ;;
-    (let ((port (open-file-input-port filename (file-options) 'block #f)))
-      (u8-list->bytevector
-       (let loop ()
-	 (let ((x (get-u8 port)))
-	   (if (eof-object? x)
-	       (begin
-		 (close-input-port port)
-		 '())
-	     (cons x (loop))))))))
+  (check	;bytevector output port, latin-1 codec
+      (let ((bv (file->bytevector (src-file "TEST-SOURCE-FILE.txt"))))
+	(let-values (((p extract) (open-bytevector-output-port
+				   (make-transcoder (latin-1-codec)))))
+	  (bytevector->textual-port bv p)
+	  (let ((bv2 (extract)))
+	    (list (bytevector=? bv bv2)
+		  (bytevector=? #vu8() (extract))))))
+    => '(#t #t))
 
-  (define (bytevector->binary-port bv port)
-    ;;Write to the binary PORT the bytes from the bytevector BV.
-    ;;
-    (let loop ((i 0))
-      (unless (fx= i (bytevector-length bv))
-	(put-u8 port (bytevector-u8-ref bv i))
-	(loop (fx+ i 1)))))
+  (check	;string output port
+      (let ((bv (file->bytevector (src-file "TEST-SOURCE-FILE.txt"))))
+	(let-values (((p extract) (open-string-output-port)))
+	  (bytevector->textual-port bv p)
+	  (let ((str (extract)))
+	    (list (bytevector=? bv (string->utf8 str))
+		  (string=? "" (extract))))))
+    => '(#t #t))
 
-  (define (bytevector->textual-port bv port)
-    ;;Write  to  the textual  PORT  the  bytes  from the  bytevector  BV
-    ;;converting them to characters.
-    ;;
-    (let loop ((i 0))
-      (unless (fx= i (bytevector-length bv))
-	(put-char port (integer->char (bytevector-u8-ref bv i)))
-	(loop (fx+ i 1)))))
+  (check	;standard output port as binary port
+      (let ((p (standard-output-port)))
+	(bytevector->binary-port (string->utf8 "HELLO THERE\n") p)
+	(flush-output-port p)
+	#t)
+    => #t)
 
-;;; --------------------------------------------------------------------
+  (check	;current output port as textual
+      (let ((p (current-output-port)))
+	(bytevector->textual-port (string->utf8 "HELLO THERE\n") p)
+	(flush-output-port p)
+	#t)
+    => #t)
 
-  (define (test-input-files)
-    ;;Preliminary assertions on input data.
-    (assert (= (file-size-char-by-char (src-file "TEST-SOURCE-FILE.txt")) 56573))
-    (assert (= (file-size (src-file "TEST-SOURCE-FILE.txt")) 56573))
-    (let ((bv (file->bytevector (src-file "TEST-SOURCE-FILE.txt"))))
-      (let-values (((p extract) (open-bytevector-output-port #f)))
-	(bytevector->binary-port bv p)
-	(let ((bv2 (extract)))
-	  (assert (bytevector=? bv bv2))
-	  (assert (bytevector=? #vu8() (extract))))))
+  (check	;current output port as textual
+      (let ((p (current-output-port)))
+	(put-string p "HELLO THERE\n")
+	(flush-output-port p)
+	#t)
+    => #t)
 
-    (check	;bytevector output port, native transcoder
-	(let ((bv (file->bytevector (src-file "TEST-SOURCE-FILE.txt"))))
-	  (let-values (((p extract) (open-bytevector-output-port (native-transcoder))))
-	    (bytevector->textual-port bv p)
-	    (let ((bv2 (extract)))
-	      (list (bytevector=? bv bv2)
-		    (bytevector=? #vu8() (extract))))))
-      => '(#t #t))
-
-    (check	;bytevector output port, latin-1 codec
-	(let ((bv (file->bytevector (src-file "TEST-SOURCE-FILE.txt"))))
-	  (let-values (((p extract) (open-bytevector-output-port
-				     (make-transcoder (latin-1-codec)))))
-	    (bytevector->textual-port bv p)
-	    (let ((bv2 (extract)))
-	      (list (bytevector=? bv bv2)
-		    (bytevector=? #vu8() (extract))))))
-      => '(#t #t))
-
-    (check	;string output port
-	(let ((bv (file->bytevector (src-file "TEST-SOURCE-FILE.txt"))))
-	  (let-values (((p extract) (open-string-output-port)))
-	    (bytevector->textual-port bv p)
-	    (let ((str (extract)))
-	      (list (bytevector=? bv (string->utf8 str))
-		    (string=? "" (extract))))))
-      => '(#t #t))
-
-    (check	;standard output port as binary port
-	(let ((p (standard-output-port)))
-	  (bytevector->binary-port (string->utf8 "HELLO THERE\n") p)
-	  (flush-output-port p)
-	  #t)
-      => #t)
-
-    (check	;current output port as textual
-	(let ((p (current-output-port)))
-	  (bytevector->textual-port (string->utf8 "HELLO THERE\n") p)
-	  (flush-output-port p)
-	  #t)
-      => #t)
-
-    (check	;current output port as textual
-	(let ((p (current-output-port)))
-	  (put-string p "HELLO THERE\n")
-	  (flush-output-port p)
-	  #t)
-      => #t)
-    #f)
-
-;;; --------------------------------------------------------------------
-
-  (test-input-files)
-
-  #t)
+  #f)
 
 
-(parametrise ((check-test-name	'get-bytevector-n))
+(parametrise ((check-test-name		'get-bytevector-n)
+	      (test-pathname		(make-test-pathname "get-bytevector-n.bin"))
+	      (input-file-buffer-size	100))
 
-  (define test-bv-u8.len
-    (expt 2 16))
-
-  (define test-bv-u8
-    (let ((result #f))
-      (define (%bytevector-u8-fill! bv)
-	(do ((i 0 (+ 1 i)))
-	    ((= i 100)
-	     bv)
-	  (do ((j 0 (+ 1 j)))
-	      ((= j 256))
-	    (bytevector-u8-set! bv j j))))
-      (lambda ()
-	(or result
-	    (begin
-	      (set! result (%bytevector-u8-fill! (make-bytevector test-bv-u8.len)))
-	      result)))))
-
-;;; --------------------------------------------------------------------
 ;;; arguments validation
 
   (check	;argument is not a port
@@ -1487,21 +1643,79 @@
     => -3)
 
 ;;; --------------------------------------------------------------------
+;;; input from a bytevector port
 
   (check	;count is zero
-      (let ((port (open-bytevector-input-port (test-bv-u8))))
+      (let ((port (open-bytevector-input-port (bindata-hundreds.bv))))
 	(get-bytevector-n port 0))
-    => '#vu8())
+    => (bindata-empty.bv))
 
-  (check
-      (let ((port (open-bytevector-input-port (test-bv-u8))))
+  (check	;count is 1
+      (let ((port (open-bytevector-input-port (bindata-hundreds.bv))))
 	(get-bytevector-n port 1))
-    => '#vu8(0))
+    => (bindata-zero.bv))
 
-  #;(check
-      (let ((port (open-bytevector-input-port (test-bv-u8))))
-	(get-bytevector-n port test-bv-u8.len))
-    => (test-bv-u8))
+  (check	;count is 10
+      (let ((port (open-bytevector-input-port (bindata-hundreds.bv))))
+	(get-bytevector-n port 10))
+    => (bindata-ten.bv))
+
+  (check	;count is big
+      (let ((port (open-bytevector-input-port (bindata-hundreds.bv))))
+	(get-bytevector-n port (bindata-hundreds.len)))
+    => (bindata-hundreds.bv))
+
+;;; --------------------------------------------------------------------
+;;; input from a file
+
+  (check	;count is 1, much smaller than buffer size
+      (with-input-test-pathname (port)
+	(get-bytevector-n port 1))
+    => (bindata-zero.bv))
+
+  (check	;count is 10, much smaller than buffer size
+      (with-input-test-pathname (port)
+	(get-bytevector-n port 10))
+    => (bindata-ten.bv))
+
+  (check	;count equals buffer size
+      (parametrise ((input-file-buffer-size (bindata-bytes.len)))
+	(with-input-test-pathname (port)
+	  (get-bytevector-n port (input-file-buffer-size))))
+    => (bindata-bytes.bv))
+
+  (check	;count is  equal to buffer  size and equal to  the whole
+		;available data size
+      (parametrise ((input-file-buffer-size	(bindata-bytes.len))
+		    (test-pathname-data-func	bindata-bytes.bv))
+	(with-input-test-pathname (port)
+	  (get-bytevector-n port (bindata-bytes.len))))
+    => (bindata-bytes.bv))
+
+  (check	;count is bigger than buffer size
+      (with-input-test-pathname (port)
+	(get-bytevector-n port (bindata-bytes.len)))
+    => (bindata-bytes.bv))
+
+  (check	;count is much bigger than  buffer size and equal to the
+		;whole available data size
+      (with-input-test-pathname (port)
+	(bytevector-length (get-bytevector-n port (bindata-hundreds.len))))
+    => (bindata-hundreds.len))
+
+  (check	;count is much bigger than  buffer size and equal to the
+  		;whole available data size
+      (with-input-test-pathname (port)
+  	(let ((bv (get-bytevector-n port (bindata-hundreds.len)))
+	      (lim 4500))
+	  (%bytevector-u8-compare bv (bindata-hundreds.bv))))
+    => #t)
+
+  ;; (check	;count is much bigger than  buffer size and equal to the
+  ;; 		;whole available data size
+  ;;     (with-input-test-pathname (port)
+  ;; 	(get-bytevector-n port (bindata-hundreds.len)))
+  ;;   => (bindata-hundreds.bv))
 
   #t)
 
@@ -1511,3 +1725,6 @@
 (check-report)
 
 ;;; end of file
+;;; Local Variables:
+;;; eval: (put 'with-input-test-pathname 'scheme-indent-function 1)
+;;; End:

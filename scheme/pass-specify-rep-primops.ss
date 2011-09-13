@@ -2338,11 +2338,17 @@
 (define-primop $port-cookie unsafe
   [(V x) (prm 'mref (T x) (K (- disp-port-cookie vector-tag)))])
 (define-primop $port-attrs unsafe
+  ;;To  be used when  the argument  has already  been validated  as port
+  ;;value.
   [(V x)
    (prm 'sra
      (prm 'mref (T x) (K (- disp-port-attrs vector-tag)))
      (K port-attrs-shift))])
+;;
 (define-primop $port-tag unsafe
+  ;;To be used  when the argument has not yet  already been validated as
+  ;;port  value.  Return zero  if the  argument is  not tagged  as port.
+  ;;(NOTE: not sure about this.  Marco Maggi; Sep 13, 2011.)
   [(V x)
    (make-conditional
      (tag-test (T x) vector-mask vector-tag)

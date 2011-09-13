@@ -1322,6 +1322,8 @@
     (open-string-output-port                     i r ip)
     (bytevector-port-buffer-size		 i)
     (string-port-buffer-size			 i)
+    (input-file-buffer-size			 i)
+    (output-file-buffer-size			 i)
     (output-port-buffer-mode                     i r ip)
     (port-eof?                                   i r ip)
     (port-has-port-position?                     i r ip)
