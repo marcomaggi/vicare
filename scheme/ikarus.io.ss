@@ -469,6 +469,21 @@
 	    unsafe.))
 
 
+;;;; emergency debugging
+
+(define (emergency-platform-write-fd str)
+  ;;Interface to  "write()".  In case something  goes wrong while
+  ;;modifying  the code  in  this  library, it  may  be that  the
+  ;;compiled image fails to  write understandable messages to the
+  ;;standard ports  using the R6RS functions.   This macro allows
+  ;;direct interface to the platform's stderr.
+  ;;
+  (let ((bv (string->utf8 str)))
+    (foreign-call "ikrt_write_fd" 2 bv 0 (unsafe.bytevector-length bv))
+    ;;and a newline
+    (foreign-call "ikrt_write_fd" 2 '#vu8(10) 0 1)))
+
+
 ;;;; port tags
 ;;
 ;;All the tags have 13 bits.
@@ -1241,7 +1256,7 @@
 (define output-block-size		(* 4 4096))
 (define custom-binary-buffer-size	256)
 (define custom-textual-buffer-size	256)
-(define buffer-size-lower-limit		128)
+(define buffer-size-lower-limit		16)
 (define buffer-size-upper-limit		(expt 2 16))
 
 (define-inline (%valid-buffer-size? obj)
@@ -1538,7 +1553,7 @@
       (cond ((procedure? setpos!)
 	     ;;An underlying device exists.
 	     (if (output-port? port)
-		 (%unsafe.flush-output-port port)
+		 (%unsafe.flush-output-port port who)
 	       (port.buffer.reset!))
 	     ;;If SETPOS!  fails we can assume  nothing about the
 	     ;;position in the device.
@@ -2032,7 +2047,7 @@
 			     (make-message-condition "attempt to set port position beyond limit")
 			     (make-i/o-invalid-position-error new-position))))
 		    ((> old-position new-position)
-		     (%unsafe.flush-output-port port)
+		     (%unsafe.flush-output-port port 'open-bytevector-output-port/set-position!)
 		     (let-values (((bv bv.len.unused) (%unsafe.bytevector-concatenate output-bvs)))
 		       (set! output-bvs (list bv)))
 		     (set! position-in-single-bytevector new-position))
@@ -2050,7 +2065,7 @@
 	;;
 	(with-binary-port (port)
 	  (unless port.closed?
-	    (%unsafe.flush-output-port port who))
+	    (%unsafe.flush-output-port port 'open-bytevector-output-port/getter))
 	  (let-values (((bv bv.len.unused) (%unsafe.bytevector-concatenate output-bvs)))
 	    (set! output-bvs '())
 	    (set! port.buffer.index 0)
@@ -2224,7 +2239,7 @@
     (unless (%unsafe.textual-output-port? port)
       (wrong-port-error))
     (unless port.closed?
-      (%unsafe.flush-output-port port))
+      (%unsafe.flush-output-port port who))
     (let ((cookie port.cookie))
       (unless (cookie? cookie)
 	(wrong-port-error))
@@ -2484,7 +2499,7 @@
   (with-port (port)
     (unless port.closed?
       (when port.write!
-	(%unsafe.flush-output-port port))
+	(%unsafe.flush-output-port port '%unsafe.close-port))
       (port.mark-as-closed)
       (when (procedure? port.close)
 	(port.close)))))
@@ -4213,7 +4228,7 @@
 		   (begin
 		     (%debug-assert (= port.buffer.used-size port.buffer.index))
 		     (%debug-assert (= port.buffer.used-size port.buffer.size))
-		     (%unsafe.flush-output-port port)
+		     (%unsafe.flush-output-port port who)
 		     (try-again-after-flushing-buffer))))))
 	    ((output-port? port)
 	     (die who "not a binary port" port))
@@ -4261,7 +4276,7 @@
 						     (room  (port.buffer.room)))
 		 (cond ((unsafe.fxzero? room)
 			;;The buffer exists and it is full.
-			(%unsafe.flush-output-port port)
+			(%unsafe.flush-output-port port who)
 			(try-again-after-flushing-buffer count (port.buffer.room)))
 		       ((unsafe.fx<= count room)
 			;;The buffer  exists and there  is enough
@@ -4277,7 +4292,7 @@
 			(%unsafe.bytevector-copy! src.bv src.start port.buffer port.buffer.index room)
 			(set! port.buffer.index     port.buffer.size)
 			(set! port.buffer.used-size port.buffer.index)
-			(%unsafe.flush-output-port port)
+			(%unsafe.flush-output-port port who)
 			(try-again-after-flushing-buffer (unsafe.fx- count room) (port.buffer.room)))))))
 	    ((output-port? port)
 	     (die who "not a binary port" port))
@@ -4330,7 +4345,7 @@
 	(if (unsafe.fxzero? j)
 	    (put-byte/unbuffered! p b who)
 	  (begin
-	    (%unsafe.flush-output-port p)
+	    (%unsafe.flush-output-port p who)
 	    (put-byte! p b who))))))
   (define (put-char-utf8-mode p b who)
     (cond
@@ -4383,7 +4398,7 @@
 		(if (unsafe.fxzero? j)
 		    (put-byte/unbuffered! p b who)
 		  (begin
-		    (%unsafe.flush-output-port p)
+		    (%unsafe.flush-output-port p who)
 		    (put-byte! p b who)))))
 	     (else
 	      (put-char-utf8-mode p b who))))))
@@ -4396,7 +4411,7 @@
 	    (if (unsafe.fxzero? j)
 		(put-char/unbuffered! p c who)
 	      (begin
-		(%unsafe.flush-output-port p)
+		(%unsafe.flush-output-port p who)
 		(do-put-char p c who))))))
        ((eq? m fast-put-latin-tag)
 	(let ((i ($port-index p)) (j ($port-size p)))
@@ -4410,7 +4425,7 @@
 		(if (unsafe.fxzero? j)
 		    (put-byte/unbuffered! p b who)
 		  (begin
-		    (%unsafe.flush-output-port p)
+		    (%unsafe.flush-output-port p who)
 		    (put-byte! p b who)))))
 	     (else
 	      (case (transcoder-error-handling-mode (port-transcoder p))
@@ -4448,7 +4463,7 @@
    (()
     (let ((port (current-output-port)))
       (put-char port #\newline)
-      (%unsafe.flush-output-port port)))
+      (%unsafe.flush-output-port port 'newline)))
    ((port)
     (define who 'newline)
     (unless (output-port? port)
@@ -4458,7 +4473,7 @@
     (when (%unsafe.port-closed? port)
       (die who "port is closed" port))
     (put-char port #\newline)
-    (%unsafe.flush-output-port port))))
+    (%unsafe.flush-output-port port who))))
 
 
 ;;;; platform API for file descriptors
@@ -5464,7 +5479,8 @@
 		       (native-transcoder))
     (lambda (x)
       (if (and (output-port? x) (%unsafe.textual-port? x))
-	  x
+	  (begin
+	    x)
 	(die 'current-error-port "not a textual output port" x)))))
 
 (define console-output-port

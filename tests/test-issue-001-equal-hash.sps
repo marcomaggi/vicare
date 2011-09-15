@@ -25,7 +25,7 @@
 ;;;
 
 
-(import (rnrs)
+(import (ikarus)
   (checks))
 
 (check-set-mode! 'report-failed)
