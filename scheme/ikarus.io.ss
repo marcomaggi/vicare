@@ -710,6 +710,28 @@
   (when (%unsafe.port-closed? ?port)
     (assertion-violation ?who "port is closed" ?port)))
 
+;;; --------------------------------------------------------------------
+
+(define-inline (%assert-value-is-port-position position who)
+  (unless (and (or (fixnum? position)
+		   (bignum? position))
+	       (>= position 0))
+    (assertion-violation who "position must be a nonnegative exact integer" position)))
+
+(define-inline (%assert-value-is-transcoder ?transcoder ?who)
+  (unless (transcoder? ?transcoder)
+    (assertion-violation ?who "not a transcoder" ?transcoder)))
+
+(define-inline (%assert-value-is-maybe-transcoder ?maybe-transcoder ?who)
+  (when (and ?maybe-transcoder (not (transcoder? ?maybe-transcoder)))
+    (assertion-violation ?who "neither false nor a transcoder" ?maybe-transcoder)))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%assert-value-is-bytevector ?obj ?who)
+  (unless (bytevector? ?obj)
+    (assertion-violation ?who "not a bytevector" ?obj)))
+
 
 ;;;; generic helpers
 
@@ -1498,8 +1520,7 @@
   ;;Defined  by  R6RS.   Return  #t  if  the  port  supports  the
   ;;PORT-POSITION operation, and #f otherwise.
   ;;
-  (define who 'port-has-port-position?)
-  (%assert-value-is-port port who)
+  (%assert-value-is-port port 'port-has-port-position?)
   (with-port (port)
     (and port.get-position #t)))
 
@@ -1508,8 +1529,7 @@
   ;;returns  #t  if  the  port  supports  the  SET-PORT-POSITION!
   ;;operation, and #f otherwise.
   ;;
-  (define who 'port-has-set-port-position!?)
-  (%assert-value-is-port port who)
+  (%assert-value-is-port port 'port-has-set-port-position!?)
   (with-port (port)
     (and port.set-position! #t)))
 
@@ -1584,8 +1604,7 @@
   ;;
   (define who 'set-port-position!)
   (%assert-value-is-port port who)
-  (unless (and (or (fixnum? pos) (bignum? pos)) (>= pos 0))
-    (die who "position must be a nonnegative exact integer" pos))
+  (%assert-value-is-port-position pos who)
   (with-port (port)
     (let ((setpos! port.set-position!))
       (cond ((procedure? setpos!)
@@ -1623,9 +1642,11 @@
 	  (close-port port)
 	  (clean-up))))
     (lambda (port)
+      (%assert-value-is-port port 'guarded-port)
       (clean-up)
-      (when (fixnum? (cookie-dest ($port-cookie port)))
-	(G port))
+      (with-port (port)
+	(when (fixnum? (cookie-dest port.cookie))
+	  (G port)))
       port)))
 
 (define (%make-custom-binary-port attributes identifier
@@ -1723,8 +1744,7 @@
     (die who "close should be either a procedure or #f" close))
   (unless (or (procedure? get-position)
 	      (not get-position))
-    (die who "get-position is not a procedure or #f"
-	 get-position))
+    (die who "get-position is not a procedure or #f" get-position))
   (let ((attributes		binary-input-port-bits)
 	(write!			#f)
 	(buffer.size		custom-binary-buffer-size))
@@ -1772,8 +1792,7 @@
     (die who "close should be either a procedure or #f" close))
   (unless (or (procedure? get-position)
 	      (not get-position))
-    (die who "get-position is not a procedure or #f"
-	 get-position))
+    (die who "get-position is not a procedure or #f" get-position))
   (let ((attributes		binary-output-port-bits)
 	(read!			#f)
 	(buffer.size		custom-binary-buffer-size))
@@ -1847,8 +1866,7 @@
     (die who "close should be either a procedure or #f" close))
   (unless (or (procedure? get-position)
 	      (not get-position))
-    (die who "get-position is not a procedure or #f"
-	 get-position))
+    (die who "get-position is not a procedure or #f" get-position))
   (let ((attributes		fast-get-char-tag)
 	(write!			#f)
 	(buffer.size		custom-textual-buffer-size))
@@ -1901,11 +1919,10 @@
     (die who "close should be either a procedure or #f" close))
   (unless (or (procedure? get-position)
 	      (not get-position))
-    (die who "get-position is not a procedure or #f"
-	 get-position))
-  (let ((attributes		fast-put-char-tag)
-	(read!			#f)
-	(buffer.size		custom-textual-buffer-size))
+    (die who "get-position is not a procedure or #f" get-position))
+  (let ((attributes	fast-put-char-tag)
+	(read!		#f)
+	(buffer.size	custom-textual-buffer-size))
     (%make-custom-textual-port attributes identifier
 			       read! write! get-position set-position! close
 			       buffer.size)))
@@ -1938,10 +1955,8 @@
     ;;unspecified.
     ;;
     (define who 'open-bytevector-input-port)
-    (unless (bytevector? bv)
-      (die who "not a bytevector" bv))
-    (when (and maybe-transcoder (not (transcoder? maybe-transcoder)))
-      (die who "not a transcoder" maybe-transcoder))
+    (%assert-value-is-bytevector bv who)
+    (%assert-value-is-maybe-transcoder maybe-transcoder who)
     ;;The input bytevector is itself the buffer!!!
     (let ((attributes		(%input-transcoder-attrs maybe-transcoder who))
 	  (buffer.index		0)
@@ -1990,8 +2005,7 @@
     ;;resets the port's position.
     ;;
     (define who 'open-bytevector-output-port)
-    (unless (or (not maybe-transcoder) (transcoder? maybe-transcoder))
-      (die who "invalid transcoder value" maybe-transcoder))
+    (%assert-value-is-maybe-transcoder maybe-transcoder who)
     (let ((output-bvs '())
 	  (position-in-single-bytevector #f))
       ;;The most common use of  this port type is to append bytes
@@ -2432,13 +2446,11 @@
   ;;
   (define who 'transcoded-port)
   (%assert-value-is-port port who)
-  (unless (transcoder? transcoder)
-    (die who "not a transcoder" transcoder))
+  (%assert-value-is-transcoder transcoder who)
   (with-binary-port (port)
     (when port.transcoder
       (die who "not a binary port" port))
-    (when port.closed?
-      (die who "cannot transcode closed port" port))
+    (%unsafe-assert-value-is-open-port port who)
     (let ((read! ($port-read! port))
 	  (write! ($port-write! port)))
       (port.mark-as-closed)
@@ -3037,8 +3049,7 @@
   (with-binary-port (port)
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
       (%validate-and-tag-open-binary-input-port port who))
-    (unless (bytevector? dst.bv)
-      (die who "not a bytevector" dst.bv))
+    (%assert-value-is-bytevector dst.bv who)
     (unless (fixnum? start)
       (die who "starting index is not a fixnum" start))
     (unless (fixnum? count)
@@ -4144,7 +4155,7 @@
 
 ;;;; unbuffered byte and char output
 
-(define (put-byte/unbuffered! port byte who)
+(define (%put-byte/unbuffered! port byte who)
   ;;Defined by  Ikarus.  Write directly  the single BYTE  to PORT
   ;;without  using  the  output  buffer.   The  return  value  is
   ;;unspecified.
@@ -4173,7 +4184,7 @@
 	      (else
 	       (die who "invalid return value from write! proc" count port)))))))
 
-(define (put-char/unbuffered! port char who)
+(define (%put-char/unbuffered! port char who)
   ;;Defined by  Ikarus.  Write directly  the single CHAR  to PORT
   ;;without  using  the  output  buffer.   The  return  value  is
   ;;unspecified.
@@ -4215,7 +4226,7 @@
     (with-binary-port (port)
       (cond ((unsafe.fx= fast-put-byte-tag port.fast-attributes)
 	     (if port.has-no-buffer?
-		 (put-byte/unbuffered! port byte who)
+		 (%put-byte/unbuffered! port byte who)
 	       (let try-again-after-flushing-buffer ()
 		 (if (unsafe.fx< port.buffer.index port.buffer.size)
 		     ;;The buffer exists and  it has room for one
@@ -4271,7 +4282,7 @@
 		 (let next-byte ((index src.start)
 				 (last  (unsafe.fx+ src.start count)))
 		   (unless (unsafe.fx= index last)
-		     (put-byte/unbuffered! port (unsafe.bytevector-u8-ref src.bv index) who)
+		     (%put-byte/unbuffered! port (unsafe.bytevector-u8-ref src.bv index) who)
 		     (next-byte (unsafe.fxadd1 index) last)))
 	       ;;Write  bytes to  the buffer  and, if  the buffer
 	       ;;fills up, to the underlying device.
@@ -4346,7 +4357,7 @@
 	    (bytevector-u8-set! ($port-buffer p) i b)
 	    ($set-port-index! p (unsafe.fxadd1 i)))
 	(if (unsafe.fxzero? j)
-	    (put-byte/unbuffered! p b who)
+	    (%put-byte/unbuffered! p b who)
 	  (begin
 	    (%unsafe.flush-output-port p who)
 	    (put-byte! p b who))))))
@@ -4402,7 +4413,7 @@
 		    (bytevector-u8-set! ($port-buffer p) i b)
 		    ($set-port-index! p (unsafe.fxadd1 i)))
 		(if (unsafe.fxzero? j)
-		    (put-byte/unbuffered! p b who)
+		    (%put-byte/unbuffered! p b who)
 		  (begin
 		    (%unsafe.flush-output-port p who)
 		    (put-byte! p b who)))))
@@ -4415,7 +4426,7 @@
 		(string-set! ($port-buffer p) i c)
 		($set-port-index! p (unsafe.fxadd1 i)))
 	    (if (unsafe.fxzero? j)
-		(put-char/unbuffered! p c who)
+		(%put-char/unbuffered! p c who)
 	      (begin
 		(%unsafe.flush-output-port p who)
 		(do-put-char p c who))))))
@@ -4429,7 +4440,7 @@
 		    (bytevector-u8-set! ($port-buffer p) i b)
 		    ($set-port-index! p (unsafe.fxadd1 i)))
 		(if (unsafe.fxzero? j)
-		    (put-byte/unbuffered! p b who)
+		    (%put-byte/unbuffered! p b who)
 		  (begin
 		    (%unsafe.flush-output-port p who)
 		    (put-byte! p b who)))))
@@ -4757,8 +4768,7 @@
       (die who "invalid filename" filename))
     (unless (enum-set? file-options)
       (die who "file-options is not an enum set" file-options))
-    (unless (or (not maybe-transcoder) (transcoder? maybe-transcoder))
-      (die who "invalid maybe-transcoder" maybe-transcoder))
+    (%assert-value-is-maybe-transcoder maybe-transcoder who)
 ;;;FIXME: file-options ignored
 ;;;FIXME: buffer-mode ignored
     (let ((fd			(%open-input-file-descriptor filename who))
@@ -4809,8 +4819,7 @@
       (die who "invalid filename" filename))
 ;;;FIXME: file-options ignored
 ;;;FIXME: line-buffered output ports are not handled
-    (unless (or (not maybe-transcoder) (transcoder? maybe-transcoder))
-      (die who "invalid transcoder" maybe-transcoder))
+    (%assert-value-is-maybe-transcoder maybe-transcoder who)
     (let ((buffer-size (case buffer-mode
 			 ((none)
 			  0)
