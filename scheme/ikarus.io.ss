@@ -732,6 +732,22 @@
   (unless (bytevector? ?obj)
     (assertion-violation ?who "not a bytevector" ?obj)))
 
+(define-inline (%assert-value-is-procedure ?proc ?who)
+  (unless (procedure? ?proc)
+    (assertion-violation ?who "not a procedure" ?proc)))
+
+(define-inline (%assert-value-is-read!-procedure ?proc ?who)
+  (unless (procedure? ?proc)
+    (assertion-violation ?who "read! is not a procedure" ?proc)))
+
+(define-inline (%assert-value-is-write!-procedure ?proc ?who)
+  (unless (procedure? ?proc)
+    (assertion-violation ?who "write! is not a procedure" ?proc)))
+
+(define-inline (%assert-value-is-maybe-close-procedure ?proc ?who)
+  (unless (or (procedure? ?proc) (not ?proc))
+    (assertion-violation ?who "close should be either a procedure or false" ?proc)))
+
 
 ;;;; generic helpers
 
@@ -1738,8 +1754,7 @@
   (define who 'make-custom-binary-input-port)
   (unless (string? identifier)
     (die who "id is not a string" identifier))
-  (unless (procedure? read!)
-    (die who "read! is not a procedure" read!))
+  (%assert-value-is-read!-procedure read! who)
   (unless (or (procedure? close) (not close))
     (die who "close should be either a procedure or #f" close))
   (unless (or (procedure? get-position)
@@ -1786,8 +1801,7 @@
   (define who 'make-custom-binary-output-port)
   (unless (string? identifier)
     (die who "id is not a string" identifier))
-  (unless (procedure? write!)
-    (die who "write! is not a procedure" write!))
+  (%assert-value-is-write!-procedure write! who)
   (unless (or (procedure? close) (not close))
     (die who "close should be either a procedure or #f" close))
   (unless (or (procedure? get-position)
@@ -1860,8 +1874,7 @@
   (define who 'make-custom-textual-input-port)
   (unless (string? identifier)
     (die who "id is not a string" identifier))
-  (unless (procedure? read!)
-    (die who "read! is not a procedure" read!))
+  (%assert-value-is-read!-procedure read! who)
   (unless (or (procedure? close) (not close))
     (die who "close should be either a procedure or #f" close))
   (unless (or (procedure? get-position)
@@ -1913,8 +1926,7 @@
   (define who 'make-custom-textual-output-port)
   (unless (string? identifier)
     (die who "id is not a string" identifier))
-  (unless (procedure? write!)
-    (die who "write! is not a procedure" write!))
+  (%assert-value-is-write!-procedure write! who)
   (unless (or (procedure? close) (not close))
     (die who "close should be either a procedure or #f" close))
   (unless (or (procedure? get-position)
@@ -2148,10 +2160,8 @@
     ;;determined as for a call to OPEN-BYTEVECTOR-OUTPUT-PORT.
     ;;
     (define who 'call-with-bytevector-output-port)
-    (unless (procedure? proc)
-      (die who "not a procedure" proc))
-    (unless (or (not transcoder) (transcoder? transcoder))
-      (die who "invalid transcoder argument" transcoder))
+    (%assert-value-is-procedure proc who)
+    (%assert-value-is-maybe-transcoder transcoder who)
     (let-values (((port getter) (open-bytevector-output-port transcoder)))
       (proc port)
       (getter)))))
@@ -2341,8 +2351,7 @@
   ;;operations.
   ;;
   (define who 'call-with-string-output-port)
-  (unless (procedure? proc)
-    (die who "not a procedure" proc))
+  (%assert-value-is-procedure proc who)
   (let-values (((port getter) (open-string-output-port)))
     (proc port)
     (getter)))
@@ -2359,8 +2368,7 @@
   ;;current position) is returned and the port is closed.
   ;;
   (define who 'with-output-to-string)
-  (unless (procedure? proc)
-    (die who "not a procedure" proc))
+  (%assert-value-is-procedure proc who)
   (let-values (((port extract) (open-string-output-port)))
     (parameterize ((current-output-port port))
       (proc))
@@ -2375,8 +2383,7 @@
   ;;port only for the extent of the call to PROC.
   ;;
   (define who 'with-output-to-port)
-  (unless (procedure? proc)
-    (die who "not a procedure" proc))
+  (%assert-value-is-procedure proc who)
   (%assert-value-is-output-port port who)
   (%unsafe-assert-value-is-textual-port port who)
   (parameterize ((current-output-port port))
@@ -4873,8 +4880,7 @@
   (define who 'with-output-to-file)
   (unless (string? filename)
     (die who "invalid filename" filename))
-  (unless (procedure? thunk)
-    (die who "not a procedure" thunk))
+  (%assert-value-is-procedure thunk who)
   (call-with-port
       (%file-descriptor->output-port (%open-output-file-descriptor filename (file-options) who)
 				     filename (output-file-buffer-size) (native-transcoder)
@@ -4905,8 +4911,7 @@
   (define who 'with-input-from-file)
   (unless (string? filename)
     (die who "invalid filename" filename))
-  (unless (procedure? thunk)
-    (die who "not a procedure" thunk))
+  (%assert-value-is-procedure thunk who)
   (call-with-port
       (%file-descriptor->input-port (%open-input-file-descriptor filename who)
 				    filename (input-file-buffer-size) (native-transcoder) #t who)
@@ -4931,8 +4936,7 @@
   (define who 'call-with-output-file)
   (unless (string? filename)
     (die who "invalid filename" filename))
-  (unless (procedure? proc)
-    (die who "not a procedure" proc))
+  (%assert-value-is-procedure proc who)
   (call-with-port
       (%file-descriptor->output-port (%open-output-file-descriptor filename (file-options) who)
 				     filename (output-file-buffer-size) (native-transcoder) #t who)
@@ -4955,8 +4959,7 @@
   (define who 'call-with-input-file)
   (unless (string? filename)
     (die who "invalid filename" filename))
-  (unless (procedure? proc)
-    (die who "not a procedure" proc))
+  (%assert-value-is-procedure proc who)
   (call-with-port
       (%file-descriptor->input-port (%open-input-file-descriptor filename who)
 				    filename (input-file-buffer-size) (native-transcoder) #t who)
@@ -4985,8 +4988,7 @@
   (define who 'with-input-from-string)
   (unless (string? string)
     (die who "not a string" string))
-  (unless (procedure? thunk)
-    (die who "not a procedure" thunk))
+  (%assert-value-is-procedure thunk who)
   (parameterize ((current-input-port (open-string-input-port string)))
     (thunk)))
 
@@ -5003,8 +5005,7 @@
   ;;
   (define who 'call-with-port)
   (%assert-value-is-port port who)
-  (unless (procedure? proc)
-    (die who "not a procedure" proc))
+  (%assert-value-is-procedure proc who)
   (call-with-values
       (lambda ()
 	(proc port))
@@ -5329,8 +5330,7 @@
 
 (define (register-callback what proc)
   (define who 'register-callback)
-  (unless (procedure? proc)
-    (die who "not a procedure" proc))
+  (%assert-value-is-procedure proc who)
   (cond
    ((output-port? what)
     (let ((c (cookie-dest ($port-cookie what))))
