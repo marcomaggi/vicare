@@ -627,17 +627,24 @@
 ;;(define init-put-utf16-tag		#b00000110000110)
 
 
-;;;; helpers
+;;;; syntax helpers
 
-;;ALL-DATA-IN-BUFFER is  used in place  of the READ!  procedure  to mark
-;;ports whose  buffer is  all the data  there is,  that is: there  is no
-;;underlying device.
-;;
-(define all-data-in-buffer
-  'all-data-in-buffer)
+(define-syntax define-inline
+  (syntax-rules ()
+    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
+     (define-syntax ?name
+       (syntax-rules ()
+	 ((_ ?arg ... . ?rest)
+	  (begin ?form0 ?form ...)))))))
 
-(define newline-integer
-  (unsafe.char->integer #\newline))
+(define-syntax define-alias
+  (syntax-rules ()
+    ((_ ?alias ?subst)
+     (define-syntax ?alias
+       (identifier-syntax ?subst)))))
+
+
+;;;; assertion helpers
 
 (define-syntax %debug-assert
   ;;This is meant  to expand to nothing when  debugging is turned
@@ -662,6 +669,59 @@
     (syntax-rules ()
       ((_ ?pred)
        (values)))))
+
+(define-inline (%assert-value-is-port ?port ?who)
+  (unless (port? ?port)
+    (assertion-violation ?who "not a port" ?port)))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%assert-value-is-input-port ?port ?who)
+  (unless (input-port? ?port)
+    (assertion-violation ?who "not an input port" ?port)))
+
+(define-inline (%unsafe-assert-value-is-input-port ?port ?who)
+  (unless (%unsafe.input-port? ?port)
+    (assertion-violation ?who "not an input port" ?port)))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%assert-value-is-output-port ?port ?who)
+  (unless (output-port? ?port)
+    (assertion-violation ?who "not an output port" ?port)))
+
+(define-inline (%unsafe-assert-value-is-output-port ?port ?who)
+  (unless ($unsafe.output-port? ?port)
+    (assertion-violation ?who "not an output port" ?port)))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%unsafe-assert-value-is-textual-port ?port ?who)
+  (unless (%unsafe.textual-port? ?port)
+    (assertion-violation ?who "not a textual port" ?port)))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%assert-value-is-open-port ?port ?who)
+  (when (port-closed? ?port)
+    (assertion-violation ?who "port is closed" ?port)))
+
+(define-inline (%unsafe-assert-value-is-open-port ?port ?who)
+  (when (%unsafe.port-closed? ?port)
+    (assertion-violation ?who "port is closed" ?port)))
+
+
+;;;; generic helpers
+
+;;ALL-DATA-IN-BUFFER is  used in place  of the READ!  procedure  to mark
+;;ports whose  buffer is  all the data  there is,  that is: there  is no
+;;underlying device.
+;;
+(define all-data-in-buffer
+  'all-data-in-buffer)
+
+(define newline-integer
+  (unsafe.char->integer #\newline))
 
 (define-syntax %unsafe.fxior
   (syntax-rules ()
@@ -690,20 +750,6 @@
     ((_ ?obj)
      (eqv? #t ?obj))))
 
-(define-syntax define-inline
-  (syntax-rules ()
-    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-     (define-syntax ?name
-       (syntax-rules ()
-	 ((_ ?arg ... . ?rest)
-	  (begin ?form0 ?form ...)))))))
-
-(define-syntax define-alias
-  (syntax-rules ()
-    ((_ ?alias ?subst)
-     (define-syntax ?alias
-       (identifier-syntax ?subst)))))
-
 (define (%validate-and-tag-open-binary-input-port port who)
   ;;Assuming that PORT is a port object: validate PORT as an open
   ;;binary input port.  This function is to be called if the port
@@ -716,8 +762,7 @@
   ;;GET-BYTEVECTOR-ALL.
   ;;
   (with-binary-port (port)
-    (when port.closed?
-      (die who "port is closed" port))
+    (%unsafe-assert-value-is-open-port port who)
     (when port.transcoder
       (die who "port is not binary" port))
     (unless port.read!
@@ -847,7 +892,7 @@
 		  (PORT.GET-POSITION	(identifier-syntax ($port-get-position	?port)))
 		  (PORT.CLOSE		(identifier-syntax ($port-close		?port)))
 		  (PORT.COOKIE		(identifier-syntax ($port-cookie	?port)))
-		  (PORT.CLOSED?		(identifier-syntax (%unsafe.port-closed?	?port)))
+		  (PORT.CLOSED?		(identifier-syntax (%unsafe.port-closed? ?port)))
 		  (PORT.FAST-ATTRIBUTES	(identifier-syntax ($port-fast-attrs	?port)))
 		  (PORT.HAS-BUFFER?
 		   (identifier-syntax ($port-buffer ?port)))
@@ -1411,10 +1456,9 @@
   ;;Defined  by Ikarus.  Return  the port  position for  an input
   ;;port in bytes.
   ;;
-  (if (input-port? port)
-      (with-port (port)
-	(+ (cookie-pos port.cookie) (fx+ 1 port.buffer.index)))
-    (error 'input-port-byte-position "not an input port" port)))
+  (%assert-value-is-input-port port 'input-port-byte-position)
+  (with-port (port)
+    (+ (cookie-pos port.cookie) (fx+ 1 port.buffer.index))))
 
 (define (%mark/return-newline port)
   ;;Register the presence of a #\newline character at the current
@@ -1432,22 +1476,20 @@
   ;;input port.
   ;;
 ;;;FIXME It computes the count assuming 1 byte = 1 character.
-  (if (input-port? port)
-      (with-textual-port (port)
-	(let ((cookie port.cookie))
-	  (- (+ (cookie-pos cookie) port.buffer.index)
-	     (cookie-newline-pos cookie))))
-    (die 'input-port-column-number "not an input port" port)))
+  (%assert-value-is-input-port port 'input-port-column-number)
+  (with-textual-port (port)
+    (let ((cookie port.cookie))
+      (- (+ (cookie-pos cookie) port.buffer.index)
+	 (cookie-newline-pos cookie)))))
 
 (define (input-port-row-number port)
   ;;Defined  by Ikarus.   Return the  current row  number  for an
   ;;input port.
   ;;
 ;;;FIXME It computes the count assuming 1 byte = 1 character.
-  (if (input-port? port)
-      (with-textual-port (port)
-	(cookie-row-num port.cookie))
-    (die 'input-port-row-number "not an input port" port)))
+  (%assert-value-is-input-port port 'input-port-row-number)
+  (with-textual-port (port)
+    (cookie-row-num port.cookie)))
 
 
 ;;;; port position
@@ -1457,10 +1499,9 @@
   ;;PORT-POSITION operation, and #f otherwise.
   ;;
   (define who 'port-has-port-position?)
-  (if (port? port)
-      (with-port (port)
-	(and port.get-position #t))
-    (die who "not a port" port)))
+  (%assert-value-is-port port who)
+  (with-port (port)
+    (and port.get-position #t)))
 
 (define (port-has-set-port-position!? port)
   ;;Defined by R6RS.  The PORT-HAS-SET-PORT-POSITION!?  procedure
@@ -1468,10 +1509,9 @@
   ;;operation, and #f otherwise.
   ;;
   (define who 'port-has-set-port-position!?)
-  (if (port? port)
-      (with-port (port)
-	(and port.set-position! #t))
-    (die who "not a port" port)))
+  (%assert-value-is-port port who)
+  (with-port (port)
+    (and port.set-position! #t)))
 
 (define (port-position port)
   ;;Defined by  R6RS.  For  a binary port,  PORT-POSITION returns
@@ -1494,8 +1534,7 @@
   ;;character position.
   ;;
   (define who 'port-position)
-  (unless (port? port)
-    (die who "not a port" port))
+  (%assert-value-is-port port who)
   (with-port (port)
     (cond ((procedure? port.get-position)
 	   (let ((device-position (port.get-position)))
@@ -1544,8 +1583,7 @@
   ;;exception with condition type &i/o-invalid-position.
   ;;
   (define who 'set-port-position!)
-  (unless (port? port)
-    (die who "not a port" port))
+  (%assert-value-is-port port who)
   (unless (and (or (fixnum? pos) (bignum? pos)) (>= pos 0))
     (die who "position must be a nonnegative exact integer" pos))
   (with-port (port)
@@ -2233,8 +2271,7 @@
   (define who 'get-output-string)
   (define (wrong-port-error)
     (die who "not an output-string port" port))
-  (unless (port? port)
-    (die who "not a port" port))
+  (%assert-value-is-port port who)
   (with-textual-port (port)
     (unless (%unsafe.textual-output-port? port)
       (wrong-port-error))
@@ -2326,10 +2363,8 @@
   (define who 'with-output-to-port)
   (unless (procedure? proc)
     (die who "not a procedure" proc))
-  (unless (output-port? port)
-    (die who "not an output port" port))
-  (unless (%unsafe.textual-port? port)
-    (die who "not a textual port" port))
+  (%assert-value-is-output-port port who)
+  (%unsafe-assert-value-is-textual-port port who)
   (parameterize ((current-output-port port))
     (proc)))
 
@@ -2396,10 +2431,9 @@
   ;;output operations.
   ;;
   (define who 'transcoded-port)
+  (%assert-value-is-port port who)
   (unless (transcoder? transcoder)
     (die who "not a transcoder" transcoder))
-  (unless (port? port)
-    (die who "not a port" port))
   (with-binary-port (port)
     (when port.transcoder
       (die who "not a binary port" port))
@@ -2426,10 +2460,10 @@
   ;;returns  false  if  PORT  is  binary  or  does  not  have  an
   ;;associated transcoder.
   ;;
-  (if (port? port)
-      (let ((tr ($port-transcoder port)))
-	(and (transcoder? tr) tr))
-    (die 'port-transcoder "not a port" port)))
+  (%assert-value-is-port port 'port-transcoder)
+  (with-port (port)
+    (let ((tr port.transcoder))
+      (and (transcoder? tr) tr))))
 
 (define (%input-transcoder-attrs maybe-transcoder who)
   ;;Return a  fixnum representing the fast tag  attributes for an
@@ -2472,9 +2506,8 @@
   ;;Defined  by Ikarus.   Return true  if PORT  has  already been
   ;;closed.
   ;;
-  (if (port? port)
-      (%unsafe.port-closed? port)
-    (error 'port-closed? "not a port" port)))
+  (%assert-value-is-port port 'port-closed?)
+  (%unsafe.port-closed? port))
 
 (define (%unsafe.port-closed? port)
   (with-port (port)
@@ -2512,47 +2545,41 @@
   ;;still a  port.  The CLOSE-PORT  procedure returns unspecified
   ;;values.
   ;;
-  (unless (port? port)
-    (die 'close-port "not a port" port))
+  (%assert-value-is-port port 'close-port)
   (%unsafe.close-port port))
 
 (define (close-input-port port)
   ;;Define by R6RS.  Close an input port.
   ;;
-  (unless (input-port? port)
-    (die 'close-input-port "not an input port" port))
+  (%assert-value-is-input-port port 'close-input-port)
   (%unsafe.close-port port))
 
 (define (close-output-port port)
   ;;Define by R6RS.  Close an output port.
   ;;
-  (unless (output-port? port)
-    (die 'close-output-port "not an output port" port))
+  (%assert-value-is-output-port port 'close-output-port)
   (%unsafe.close-port port))
 
 
 ;;;; auxiliary port functions
 
 (define (port-id port)
-  (if (port? port)
-      (with-port (port)
-	port.id)
-    (die 'port-id "not a port" port)))
+  (%assert-value-is-port port 'port-id)
+  (with-port (port)
+    port.id))
 
 (define (port-mode port)
   ;;Defined by Ikarus.
   ;;
-  (if (port? port)
-      (with-port (port)
-	(cookie-mode port.cookie))
-    (die 'port-mode "not a port" port)))
+  (%assert-value-is-port port 'port-mode)
+  (with-port (port)
+    (cookie-mode port.cookie)))
 
 (define (set-port-mode! port mode)
   ;;Defined by Ikarus.
   ;;
   (define who 'set-port-mode!)
-  (unless (port? port)
-    (die who "not a port" port))
+  (%assert-value-is-port port who)
   (case mode
     ((r6rs-mode vicare-mode)
      (with-port (port)
@@ -2569,31 +2596,26 @@
   ;;cannot be determined to be at end of file.
   ;;
   (define who 'port-eof?)
-  (unless (port? port)
-    (die who "not a port" port))
-  (cond ((%unsafe.input-port? port)
-	 (with-port (port)
-	   (when port.closed?
-	     (die who "port is closed" port))
-	   ;;Checking the  buffer status  is the fastest  path to
-	   ;;the result.
-	   (cond ((and port.has-buffer? (unsafe.fx< port.buffer.index port.buffer.used-size))
-		  #f)
-		 (port.transcoder
-		  (eof-object? (lookahead-char port)))
-		 (else
-		  (eof-object? (lookahead-u8 port))))))
-	(else
-	 (die who "not an input port" port))))
+  (%assert-value-is-port port who)
+  (%unsafe-assert-value-is-input-port port who)
+  (with-port (port)
+    (%unsafe-assert-value-is-open-port port who)
+    ;;Checking the  buffer status  is the fastest  path to
+    ;;the result.
+    (cond ((and port.has-buffer? (unsafe.fx< port.buffer.index port.buffer.used-size))
+	   #f)
+	  (port.transcoder
+	   (eof-object? (lookahead-char port)))
+	  (else
+	   (eof-object? (lookahead-u8 port))))))
 
 (define (output-port-buffer-mode port)
   ;;Defined  by  R6RS.  Return  the  symbol  that represents  the
   ;;buffer mode of PORT.
   ;;
-  (if (output-port? port)
-      (with-port (port)
-	(if port.has-buffer? 'none 'block))
-    (die 'output-port-buffer-mode "not an output port" port)))
+  (%assert-value-is-output-port port 'output-port-buffer-mode)
+  (with-port (port)
+    (if port.has-buffer? 'none 'block)))
 
 
 ;;;; buffer handling for output ports
@@ -2616,11 +2638,9 @@
     ;;See %UNSAFE.FLUSH-OUTPUT-PORT for further details.
     ;;
     (define who who)
-    (unless (output-port? port)
-      (die who "not an output port" port))
+    (%assert-value-is-output-port port who)
     (with-port (port)
-      (when port.closed?
-	(die who "port is closed" port))
+      (%unsafe-assert-value-is-open-port port who)
       (%unsafe.flush-output-port port who)))))
 
 (define (%unsafe.flush-output-port port who)
@@ -2807,8 +2827,7 @@
     ;;to it.  The  following check is to avoid  such a mistake by
     ;;internal functions;  this mistake should not  happen if the
     ;;functions have not bugs.
-    (when port.closed?
-      (die who "port is closed" port))
+    (%unsafe-assert-value-is-open-port port who)
     (if (eq? port.read! all-data-in-buffer)
 	0
       (let ((buffer port.buffer))
@@ -2881,8 +2900,7 @@
   ;;buffer, if the buffer is empty: we call a subroutine.
   ;;
   (define who 'get-u8)
-  (unless (port? port)
-    (die who "not a port" port))
+  (%assert-value-is-port port who)
   (with-binary-port (port)
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
       (%validate-and-tag-open-binary-input-port port who))
@@ -2901,8 +2919,7 @@
   ;;buffer, if the buffer is empty: we call a subroutine.
   ;;
   (define who 'lookahead-u8)
-  (unless (port? port)
-    (die who "not a port" port))
+  (%assert-value-is-port port who)
   (with-binary-port (port)
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
       (%validate-and-tag-open-binary-input-port port who))
@@ -2958,8 +2975,7 @@
 	  (if (unsafe.fxzero? count)
 	      dst.bv
 	    (loop count))))))
-  (unless (port? port)
-    (die who "not a port" port))
+  (%assert-value-is-port port who)
   (with-binary-port (port)
     (unless (unsafe.fx= port.fast-attributes fast-get-byte-tag)
       (%validate-and-tag-open-binary-input-port port who))
@@ -3017,8 +3033,7 @@
   ;;are available, GET-BYTEVECTOR-N!  returns the EOF object.
   ;;
   (define who 'get-bytevector-n!)
-  (unless (port? port)
-    (die who "not a port" port))
+  (%assert-value-is-port port who)
   (with-binary-port (port)
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
       (%validate-and-tag-open-binary-input-port port who))
@@ -3071,8 +3086,7 @@
   ;;the EOF object is returned.
   ;;
   (define who 'get-bytevector-some)
-  (unless (port? port)
-    (die who "not a port" port))
+  (%assert-value-is-port port who)
   (with-binary-port (port)
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
       (%validate-and-tag-open-binary-input-port port who))
@@ -3111,8 +3125,7 @@
   ;;available.
   ;;
   (define who 'get-bytevector-all)
-  (unless (port? port)
-    (die who "not a port" port))
+  (%assert-value-is-port port who)
   (with-binary-port (port)
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
       (%validate-and-tag-open-binary-input-port port who))
@@ -3972,13 +3985,10 @@
     ;;mutate the port's  attributes tagging the port accordingly.
     ;;Return #t if port is at EOF, #f otherwise.
     ;;
-    (unless (input-port? port)
-      (die who "not an input port" port))
-    (unless (%unsafe.textual-port? port)
-      (die who "not a textual port" port))
+    (%assert-value-is-input-port port who)
+    (%unsafe-assert-value-is-textual-port port who)
     (with-textual-port (port)
-      (when port.closed?
-	(die who "port is closed" port))
+      (%unsafe-assert-value-is-open-port port who)
       (unless port.transcoder
 	(die who "expected port with transcoder" port))
       (case (transcoder-codec port.transcoder)
@@ -4016,12 +4026,11 @@
 (define (get-string-n p n)
   (import (ikarus system $fx)
     (ikarus system $strings))
-  (unless (input-port? p)
-    (die 'get-string-n "not an input port" p))
-  (unless (%unsafe.textual-port? p)
-    (die 'get-string-n "not a textual port" p))
+  (define who 'get-string-n)
+  (%assert-value-is-input-port p who)
+  (%unsafe-assert-value-is-textual-port p who)
   (unless (fixnum? n)
-    (die 'get-string-n "count is not a fixnum" n))
+    (die who "count is not a fixnum" n))
   (cond
    (($fx> n 0)
     (let ((s ($make-string n)))
@@ -4043,12 +4052,11 @@
 
 (define (get-string-n! p s i c)
   (import (ikarus system $fx) (ikarus system $strings))
-  (unless (input-port? p)
-    (die 'get-string-n! "not an input port" p))
-  (unless (%unsafe.textual-port? p)
-    (die 'get-string-n! "not a textual port" p))
+  (define who 'get-string-n!)
+  (%assert-value-is-input-port p who)
+  (%unsafe-assert-value-is-textual-port p who)
   (unless (string? s)
-    (die 'get-string-n! "not a string" s))
+    (die who "not a string" s))
   (let ((len ($string-length s)))
     (unless (fixnum? i)
       (die 'get-string-n! "starting index is not a fixnum" i))
@@ -4100,11 +4108,9 @@
 	(string-set! s i (car ls))
 	(f s (unsafe.fxsub1 i) (cdr ls)))
        (else s))))
-  (if (input-port? p)
-      (if (%unsafe.textual-port? p)
-	  (get-it p)
-	(die who "not a textual port" p))
-    (die who "not an input port" p)))
+  (%assert-value-is-input-port p who)
+  (%unsafe-assert-value-is-textual-port p who)
+  (get-it p))
 (define (get-line p)
   ($get-line p 'get-line))
 (define read-line
@@ -4114,6 +4120,7 @@
 
 
 (define (get-string-all p)
+  (define who 'get-string-all)
   (define (get-it p)
     (let f ((p p) (n 0) (ac '()))
       (let ((x (get-char p)))
@@ -4130,11 +4137,9 @@
 	(string-set! s i (car ls))
 	(f s (- i 1) (cdr ls)))
        (else s))))
-  (if (input-port? p)
-      (if (%unsafe.textual-port? p)
-	  (get-it p)
-	(die 'get-string-all "not a textual port" p))
-    (die 'get-string-all "not an input port" p)))
+  (%assert-value-is-input-port p who)
+  (%unsafe-assert-value-is-textual-port p who)
+  (get-it p))
 
 
 ;;;; unbuffered byte and char output
@@ -4152,8 +4157,7 @@
   ;;FIXME Is this correct?
   ;;
   (with-binary-port (port)
-    (when port.closed?
-      (die who "port is closed" port))
+    (%unsafe-assert-value-is-open-port port who)
     (let ((bv (make-bytevector 1)))
       (unsafe.bytevector-u8-set! bv 0 byte)
       (let ((count (port.write! bv 0 1)))
@@ -4182,8 +4186,7 @@
   ;;FIXME Is this correct?
   ;;
   (with-textual-port (port)
-    (when port.closed?
-      (die who "port is closed" port))
+    (%unsafe-assert-value-is-open-port port who)
     (let ((str (string char)))
       (let ((count (port.write! str 0 1)))
 	;;We need  to account for  the case the  WRITE!  function
@@ -4363,25 +4366,28 @@
       (put-byte! p (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 12) #b111111)) who)
       (put-byte! p (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 6) #b111111)) who)
       (put-byte! p (%unsafe.fxior #b10000000 (unsafe.fxand b #b111111)) who))))
-    ;;;
+
   (define write-char
     (case-lambda
      ((c p) (do-put-char p c 'write-char))
      ((c) (do-put-char (current-output-port) c 'write-char))))
+
   (define (put-char p c)
     (do-put-char p c 'put-char))
+
   (define ($put-string p str start count)
-    (unless (output-port? p)
-      (die 'put-string "not an output port" p))
-    (unless (%unsafe.textual-port? p)
-      (die 'put-string "not a textual port" p))
+    (define who 'put-string)
+    (%assert-value-is-output-port p who)
+    (%unsafe-assert-value-is-textual-port p who)
     (let f ((i start) (j (unsafe.fx+ start count)))
       (unless (unsafe.fx= i j)
 	(do-put-char p (string-ref str i) 'put-string)
 	(f (unsafe.fxadd1 i) j))))
+
   (define put-string
     (put-string/bv 'put-string "not a string"
 		   string? string-length $put-string))
+
   (define (do-put-char p c who)
     (unless (char? c) (die who "not a char" c))
     (let ((m ($port-fast-attrs p)))
@@ -4449,13 +4455,12 @@
 		(put-byte! p (unsafe.fxsra w2 8) who)
 		(put-byte! p (unsafe.fxand w2 #xFF) who)))))))
        (else
-	(if (output-port? p)
-	    (if (%unsafe.textual-port? p)
-		(if (port-closed? p)
-		    (die who "port is closed" p)
-		  (die who "unsupported port" p))
-	      (die who "not a textual port" p))
-	  (die who "not an output port" p)))))))
+	(%assert-value-is-output-port         p who)
+	(%unsafe-assert-value-is-textual-port p who)
+	(%unsafe-assert-value-is-open-port    p who)
+	(die who "unsupported port" p)))))
+
+  #| end of module |# )
 
 
 (define newline
@@ -4466,12 +4471,9 @@
       (%unsafe.flush-output-port port 'newline)))
    ((port)
     (define who 'newline)
-    (unless (output-port? port)
-      (die who "not an output port" port))
-    (unless (%unsafe.textual-port? port)
-      (die who "not a textual port" port))
-    (when (%unsafe.port-closed? port)
-      (die who "port is closed" port))
+    (%assert-value-is-output-port port who)
+    (%unsafe-assert-value-is-textual-port port who)
+    (%unsafe-assert-value-is-open-port port who)
     (put-char port #\newline)
     (%unsafe.flush-output-port port who))))
 
@@ -4991,8 +4993,7 @@
   ;;never again be used for an input or output operation.
   ;;
   (define who 'call-with-port)
-  (unless (port? port)
-    (die who "not a port" port))
+  (%assert-value-is-port port who)
   (unless (procedure? proc)
     (die who "not a procedure" proc))
   (call-with-values
@@ -5291,29 +5292,27 @@
 	(die who "failed to shutdown")))))
 
 (define (reset-input-port! p)
-  (if (input-port? p)
-      (begin
-	($set-port-index! p ($port-size p))
-	(unregister-callback p))
-    (die 'reset-input-port! "not an input port" p)))
+  (%assert-value-is-input-port p 'reset-input-port!)
+  ($set-port-index! p ($port-size p))
+  (unregister-callback p))
 
 (define (reset-output-port! p)
-  (if (output-port? p)
-      (begin
-	($set-port-index! p 0)
-	(unregister-callback p))
-    (die 'reset-output-port! "not an output port" p)))
+  (%assert-value-is-output-port p 'reset-output-port!)
+  ($set-port-index! p 0)
+  (unregister-callback p))
 
 (define (unregister-callback what)
   (define who 'unregister-callback)
   (cond
    ((output-port? what)
     (let ((c (cookie-dest ($port-cookie what))))
-      (unless (fixnum? c) (die who "not a file-based port" what))
+      (unless (fixnum? c)
+	(die who "not a file-based port" what))
       (rem-io-event c)))
    ((input-port? what)
     (let ((c (cookie-dest ($port-cookie what))))
-      (unless (fixnum? c) (die who "not a file-based port" what))
+      (unless (fixnum? c)
+	(die who "not a file-based port" what))
       (rem-io-event c)))
    ((tcp-server? what)
     (rem-io-event (tcp-server-fd what)))
@@ -5440,9 +5439,10 @@
       (transcoded-port (%file-descriptor->input-port 0 "*stdin*" (input-file-buffer-size) #f #f #f)
 		       (native-transcoder))
     (lambda (x)
-      (if (and (input-port? x) (%unsafe.textual-port? x))
-	  x
-	(die 'current-input-port "not a textual input port" x)))))
+      (define who 'current-input-port)
+      (%assert-value-is-input-port x who)
+      (%unsafe-assert-value-is-textual-port x who)
+      x)))
 
 (define current-output-port
   ;;Defined by  R6RS.  Hold the default textual  port for regular
@@ -5459,9 +5459,10 @@
       (transcoded-port (%file-descriptor->output-port 1 "*stdout*" (output-file-buffer-size) #f #f #f)
 		       (native-transcoder))
     (lambda (x)
-      (if (and (output-port? x) (%unsafe.textual-port? x))
-	  x
-	(die 'current-output-port "not a textual output port" x)))))
+      (define who 'current-output-port)
+      (%assert-value-is-output-port x who)
+      (%unsafe-assert-value-is-textual-port x who)
+      x)))
 
 (define current-error-port
   ;;Defined  by R6RS.  Hold  the default  textual port  for error
@@ -5478,10 +5479,10 @@
       (transcoded-port (%file-descriptor->output-port 2 "*stderr*" 0 #f #f #f)
 		       (native-transcoder))
     (lambda (x)
-      (if (and (output-port? x) (%unsafe.textual-port? x))
-	  (begin
-	    x)
-	(die 'current-error-port "not a textual output port" x)))))
+      (define who 'current-error-port)
+      (%assert-value-is-output-port x who)
+      (%unsafe-assert-value-is-textual-port x who)
+      x)))
 
 (define console-output-port
   ;;Defined by Ikarus.  Return a default textual port for output;
