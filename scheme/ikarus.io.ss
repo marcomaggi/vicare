@@ -1598,10 +1598,9 @@
 	   ;;is  no underlying  device  (that is:  the buffer  is
 	   ;;itself the  device) the POS  field of the  cookie is
 	   ;;perpetually set to zero.
-	   (%debug-assert (zero? (cookie-pos port.cookie)))
 	   (+ port.buffer.index (cookie-pos port.cookie)))
 	  (else
-	   (die who "port does not support port-position operation" port)))))
+	   (assertion-violation who "port does not support port-position operation" port)))))
 
 (define (set-port-position! port pos)
   ;;Defined by R6RS.   If PORT is a binary port,  POS should be a
@@ -1610,9 +1609,9 @@
   ;;PORT-POSITION on PORT.
   ;;
   ;;The  SET-PORT-POSITION! procedure  raises  an exception  with
-  ;;condition type  &assertion if the  port does not  support the
+  ;;condition type "&assertion" if  the port does not support the
   ;;operation,   and    an   exception   with    condition   type
-  ;;&i/o-invalid-position  if POS is  not in  the range  of valid
+  ;;"&i/o-invalid-position" if  POS is not in the  range of valid
   ;;positions of  PORT.  Otherwise, it sets  the current position
   ;;of  the   port  to   POS.   If  PORT   is  an   output  port,
   ;;SET-PORT-POSITION!  first flushes PORT.
@@ -1645,7 +1644,7 @@
 	     ;;set  by this  function  AFTER having  successfully
 	     ;;called the port's own SET-POSITION! function.
 	     (set-cookie-pos! port.cookie pos))
-	    ((eqv? setpos! #t)
+	    ((and (boolean? setpos!) setpos!)
 	     ;;In this case the  underlying device (if any) still
 	     ;;may  have a  position  stored in  the cookie.   If
 	     ;;there is no underlying device (that is: the buffer
@@ -1655,7 +1654,7 @@
 		 (set! port.buffer.index pos)
 	       (die who "position out of range" pos)))
 	    (else
-	     (die who "port does not support port position" port))))))
+	     (assertion-violation who "port does not support port position" port))))))
 
 
 ;;;; custom ports
