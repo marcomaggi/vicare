@@ -718,6 +718,12 @@
 	       (>= position 0))
     (assertion-violation who "position must be a nonnegative exact integer" position)))
 
+(define-inline (%assert-value-is-get-position-result ?position ?port ?who)
+  (unless (and (or (fixnum? ?position)
+		   (bignum? ?position))
+	       (>= ?position 0))
+    (die ?who "invalid value returned by get-position" ?port ?position)))
+
 (define-inline (%assert-value-is-transcoder ?transcoder ?who)
   (unless (transcoder? ?transcoder)
     (assertion-violation ?who "not a transcoder" ?transcoder)))
@@ -1578,21 +1584,21 @@
   (with-port (port)
     (cond ((procedure? port.get-position)
 	   (let ((device-position (port.get-position)))
+	     (%assert-value-is-get-position-result device-position port who)
 	     ;;DEVICE-POSITION is the  position in the underlying
 	     ;;device, but  we have  to return the  full position
 	     ;;taking into account the offset in the input/output
 	     ;;buffer.
-	     (if (or (fixnum? device-position) (bignum? device-position))
-		 (if (input-port? port)
-		     (- device-position (- port.buffer.used-size port.buffer.index))
-		   (+ device-position port.buffer.index))
-	       (die who "invalid value returned by get-position" port))))
+	     (if (%unsafe.input-port? port)
+		 (- device-position (- port.buffer.used-size port.buffer.index))
+	       (+ device-position port.buffer.index))))
 	  ((%the-true-value? port.get-position)
 	   ;;In this  case the  underlying device (if  any) still
 	   ;;may have a position  stored in the cookie.  If there
 	   ;;is  no underlying  device  (that is:  the buffer  is
 	   ;;itself the  device) the POS  field of the  cookie is
 	   ;;perpetually set to zero.
+	   (%debug-assert (zero? (cookie-pos port.cookie)))
 	   (+ port.buffer.index (cookie-pos port.cookie)))
 	  (else
 	   (die who "port does not support port-position operation" port)))))
@@ -1629,7 +1635,7 @@
     (let ((setpos! port.set-position!))
       (cond ((procedure? setpos!)
 	     ;;An underlying device exists.
-	     (if (output-port? port)
+	     (if (%unsafe.output-port? port)
 		 (%unsafe.flush-output-port port who)
 	       (port.buffer.reset!))
 	     ;;If SETPOS!  fails we can assume  nothing about the
