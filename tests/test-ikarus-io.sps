@@ -1592,6 +1592,73 @@
   #f)
 
 
+(parametrise ((check-test-name			'open-bytevector-output-port)
+	      (bytevector-port-buffer-size	8))
+
+;;; arguments validation
+
+  (check	;argument is not a transcoder
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(let-values (((port getter) (open-bytevector-output-port 123)))
+	  #f))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; no transcoder
+
+  (check	;single byte
+      (let-values (((port getter) (open-bytevector-output-port)))
+	(put-u8 port 65)
+	(getter))
+    => '#vu8(65))
+
+  (check	;byte by byte until the buffer is full
+      (let-values (((port getter) (open-bytevector-output-port)))
+	(do ((i 0 (+ 1 i)))
+	    ((= 9 i))
+	  (put-u8 port 65))
+	(getter))
+    => '#vu8(65 65 65  65 65 65  65 65 65))
+
+  (check	;single bytevecor not filling the buffer
+      (let-values (((port getter) (open-bytevector-output-port)))
+	(put-bytevector port '#vu8(1 2 3 4 5))
+	(getter))
+    => '#vu8(1 2 3 4 5))
+
+  (check	;single bytevecor filling the buffer
+      (let-values (((port getter) (open-bytevector-output-port)))
+	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9))
+	(getter))
+    => '#vu8(0 1 2 3 4 5 6 7 8 9))
+
+  (check	;bytevector by bytevector until the buffer is full
+      (let-values (((port getter) (open-bytevector-output-port)))
+	(do ((i 0 (+ 1 i)))
+	    ((= 3 i))
+	  (put-bytevector port '#vu8(1 2 3)))
+	(getter))
+    => '#vu8(1 2 3  1 2 3  1 2 3))
+
+  (check	;fill the buffer multiple times
+      (let-values (((port getter) (open-bytevector-output-port)))
+	(do ((i 0 (+ 1 i)))
+	    ((= 5 i))
+	  (put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9)))
+	(getter))
+    => '#vu8( ;;
+	     0 1 2 3 4 5 6 7 8 9
+	     0 1 2 3 4 5 6 7 8 9
+	     0 1 2 3 4 5 6 7 8 9
+	     0 1 2 3 4 5 6 7 8 9
+	     0 1 2 3 4 5 6 7 8 9))
+
+  #t)
+
+
 (parametrise ((check-test-name		'get-bytevector-n)
 	      (test-pathname		(make-test-pathname "get-bytevector-n.bin"))
 	      (input-file-buffer-size	100))

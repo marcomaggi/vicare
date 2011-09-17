@@ -82,6 +82,22 @@
 ;;  the output buffer; when the  buffer is full: data is sent the
 ;;  underlying device.
 ;;
+;;*  Exceptions  raised by  SET-PORT-POSITION!  must be  reviewed
+;;because they do not comply with R6RS.
+;;
+;;* R6RS states the following about SET-PORT-POSITION!:
+;;
+;;  If PORT is  a binary output port and  the current position is
+;;  set beyond the current end of the data in the underlying data
+;;  sink, the object is not extended until new data is written at
+;;  that position.  The contents of any intervening positions are
+;;  unspecified.   Binary ports created  by OPEN-FILE-OUTPUT-PORT
+;;  and  OPEN-FILE-INPUT/OUTPUT-PORT can  always  be extended  in
+;;  this  manner within  the limits  of the  underlying operating
+;;  system.  In other cases, attempts  to set the port beyond the
+;;  current end of data in the underlying object may result in an
+;;  exception with condition type &i/o-invalid-position.
+;;
 
 
 ;;;; The port data structure
@@ -730,7 +746,9 @@
 
 (define-inline (%assert-value-is-maybe-transcoder ?maybe-transcoder ?who)
   (when (and ?maybe-transcoder (not (transcoder? ?maybe-transcoder)))
-    (assertion-violation ?who "neither false nor a transcoder" ?maybe-transcoder)))
+    (assertion-violation ?who
+      "expected false or a transcoder object as optional transcoder argument"
+      ?maybe-transcoder)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1345,49 +1363,38 @@
 
 ;;;; port's buffer size customisation
 
-(define input-block-size		(* 4 4096))
-(define output-block-size		(* 4 4096))
-(define custom-binary-buffer-size	256)
-(define custom-textual-buffer-size	256)
-(define buffer-size-lower-limit		16)
+(define default-binary-block-size	(* 4 4096))
+(define default-string-block-size	256)
+(define buffer-size-lower-limit		8)
 (define buffer-size-upper-limit		(expt 2 16))
+
+(define error-message/invalid-buffer-size
+  (string-append "expected fixnum in range "
+		 (number->string buffer-size-lower-limit)
+		 " <= x < "
+		 (number->string buffer-size-upper-limit)
+		 " as buffer size"))
 
 (define-inline (%valid-buffer-size? obj)
   (and (fixnum? obj)
        (unsafe.fx>= obj buffer-size-lower-limit)
-       (unsafe.fx<= obj buffer-size-upper-limit)))
+       (unsafe.fx<  obj buffer-size-upper-limit)))
 
-(define input-file-buffer-size
-  (make-parameter (+ input-block-size 128)
-    (lambda (obj)
-      (if (%valid-buffer-size? obj)
-	  obj
-	(error 'input-file-buffer-size
-	  "expected fixnum in range 0 <= x < 2^16 as input file buffer size" obj)))))
+(define-syntax define-buffer-size-parameter
+  (syntax-rules ()
+    ((_ ?who ?init)
+     (define ?who
+       (make-parameter ?init
+	 (lambda (obj)
+	   (if (%valid-buffer-size? obj)
+	       obj
+	     (error '?who error-message/invalid-buffer-size obj)))))
+     )))
 
-(define output-file-buffer-size
-  (make-parameter output-block-size
-    (lambda (obj)
-      (if (%valid-buffer-size? obj)
-	  obj
-	(error 'output-file-buffer-size
-	  "expected fixnum in range 0 <= x < 2^16 as output file buffer size" obj)))))
-
-(define bytevector-port-buffer-size
-  (make-parameter input-block-size
-    (lambda (obj)
-      (if (%valid-buffer-size? obj)
-	  obj
-	(error 'bytevector-port-buffer-size
-	  "bytevector port buffer size should be a fixnum >= 128" obj)))))
-
-(define string-port-buffer-size
-  (make-parameter 256
-    (lambda (obj)
-      (if (%valid-buffer-size? obj)
-	  obj
-	(error 'string-port-buffer-size
-	  "string port buffer size should be a fixnum >= 128" obj)))))
+(define-buffer-size-parameter input-file-buffer-size		(+ default-binary-block-size 128))
+(define-buffer-size-parameter output-file-buffer-size		default-binary-block-size)
+(define-buffer-size-parameter bytevector-port-buffer-size	default-binary-block-size)
+(define-buffer-size-parameter string-port-buffer-size		default-string-block-size)
 
 
 ;;;; predicates
@@ -1768,7 +1775,7 @@
   (%assert-value-is-maybe-get-position-procedure get-position who)
   (let ((attributes		binary-input-port-bits)
 	(write!			#f)
-	(buffer.size		custom-binary-buffer-size))
+	(buffer.size		(bytevector-port-buffer-size)))
     (%make-custom-binary-port attributes identifier
 			      read! write! get-position set-position! close
 			      buffer.size)))
@@ -1812,7 +1819,7 @@
   (%assert-value-is-maybe-get-position-procedure get-position who)
   (let ((attributes		binary-output-port-bits)
 	(read!			#f)
-	(buffer.size		custom-binary-buffer-size))
+	(buffer.size		(bytevector-port-buffer-size)))
     (%make-custom-binary-port attributes identifier
 			      read! write! get-position set-position! close
 			      buffer.size)))
@@ -1882,7 +1889,7 @@
   (%assert-value-is-maybe-get-position-procedure get-position who)
   (let ((attributes		fast-get-char-tag)
 	(write!			#f)
-	(buffer.size		custom-textual-buffer-size))
+	(buffer.size		(string-port-buffer-size)))
     (%make-custom-textual-port attributes identifier
 			       read! write! get-position set-position! close
 			       buffer.size)))
@@ -1931,7 +1938,7 @@
   (%assert-value-is-maybe-get-position-procedure get-position who)
   (let ((attributes	fast-put-char-tag)
 	(read!		#f)
-	(buffer.size	custom-textual-buffer-size))
+	(buffer.size	(string-port-buffer-size)))
     (%make-custom-textual-port attributes identifier
 			       read! write! get-position set-position! close
 			       buffer.size)))
@@ -2015,8 +2022,7 @@
     ;;
     (define who 'open-bytevector-output-port)
     (%assert-value-is-maybe-transcoder maybe-transcoder who)
-    (let ((output-bvs '())
-	  (position-in-single-bytevector #f))
+    (let ()
       ;;The most common use of  this port type is to append bytes
       ;;and finally extract the whole output bytevector:
       ;;
@@ -2049,59 +2055,65 @@
       ;;function which needs to reset it to zero.
       ;;
       (define port
-	(let ((attributes	(%output-transcoder-attrs maybe-transcoder who))
-	      (buffer.index	0)
-	      (buffer.used-size	0)
-	      (buffer		(unsafe.make-bytevector (bytevector-port-buffer-size)))
-	      (transcoder	maybe-transcoder)
-	      (identifier	"*bytevector-output-port*")
-	      (read!		#f)
-	      (get-position	#t)
-	      (close		#f)
-	      (cookie		(default-cookie #f)))
+	(let ((attributes		(%output-transcoder-attrs maybe-transcoder who))
+	      (buffer.index		0)
+	      (buffer.used-size		0)
+	      (buffer			(unsafe.make-bytevector (bytevector-port-buffer-size)))
+	      (transcoder		maybe-transcoder)
+	      (identifier		"*bytevector-output-port*")
+	      (read!			#f)
+	      (get-position		#t)
+	      (close			#f)
+	      (cookie			(default-cookie '())))
+	  (define-inline (get-device)
+	    (cookie-dest cookie))
+	  (define-inline (set-device! ?new-device)
+	    (set-cookie-dest! cookie ?new-device))
+	  (define-inline (device-position)
+	    (cookie-pos cookie))
+	  (define-inline (set-device-position! ?new-position)
+	    (set-cookie-pos! cookie ?new-position))
 
 	  (define (write! src.bv src.start count)
-	    ;;Always return COUNT.
-	    (cond ((zero? count)
-		   (values))
-		  ((null? output-bvs)
-		   (%debug-assert (not position-in-single-bytevector))
-		   (let ((dst.bv (unsafe.make-bytevector count)))
-		     (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
-		     (set! output-bvs (list dst.bv))))
-		  (position-in-single-bytevector
-		   (%debug-assert (not (null? output-bvs)))
-		   (let* ((dst.bv	(car output-bvs))
-			  (total-size	(bytevector-length dst.bv))
-			  (old-position	(cookie-pos cookie))
-			  (delta	(- total-size old-position)))
-		     (if (<= count delta)
-			 ;;The  new  data   fits  in  the  single
-			 ;;bytevector.
-			 (%unsafe.bytevector-copy! src.bv src.start dst.bv old-position count)
-		       (begin
-			 ;;The new  data goes part  in the single
-			 ;;bytevector   and   part   in   a   new
-			 ;;bytevector.
-			 (%unsafe.bytevector-copy! src.bv src.start dst.bv old-position delta)
-			 (let* ((src.start	(+ delta src.start))
-				(delta		(- count delta))
-				(dst.bv		(unsafe.make-bytevector delta)))
-			   (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 delta)
-			   (set! output-bvs (cons dst.bv output-bvs))
-			   (set! position-in-single-bytevector #f))))))
-		  (else
-		   ;;Prepend a new bytevector to OUTPUT-BVS.
-		   (let ((dst.bv (unsafe.make-bytevector count)))
-		     (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
-		     (set! output-bvs (cons dst.bv output-bvs)))))
-	    count)
+	    (if (zero? count) ;should never happen, but who knows?!?
+		count
+	      (let ((output-bvs   (get-device))
+		    (old-position (device-position)))
+		(if (and (not (null? output-bvs))
+			 (null? (cdr output-bvs))
+			 (< old-position (unsafe.bytevector-length (car output-bvs))))
+		    ;;The  current position  was  set inside  the
+		    ;;already accumulated data.
+		    (let* ((dst.bv	(car output-bvs))
+			   (total-size	(unsafe.bytevector-length dst.bv))
+			   (delta	(- total-size old-position)))
+		      (if (<= count delta)
+			  ;;The  new  data  fits  in  the  single
+			  ;;bytevector.
+			  (%unsafe.bytevector-copy! src.bv src.start dst.bv old-position count)
+			(begin
+			  ;;The new data  goes part in the single
+			  ;;bytevector   and   part   in  a   new
+			  ;;bytevector.
+			  (%unsafe.bytevector-copy! src.bv src.start dst.bv old-position delta)
+			  (let* ((src.start	(+ delta src.start))
+				 (delta		(- count delta))
+				 (dst.bv	(make-bytevector delta)))
+			    (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 delta)
+			    (set-device! (cons dst.bv output-bvs))))))
+		  ;;The  current position  is at  the end  of the
+		  ;;already  accumulated  data.   Prepend  a  new
+		  ;;bytevector to OUTPUT-BVS.
+		  (let ((dst.bv (make-bytevector count)))
+		    (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
+		    (set-device! (cons dst.bv output-bvs))))
+		count)))
 
 	  (define (set-position! new-position)
-	    ;;NEW-POSITION  has  already  been validated  by  the
+	    ;;NEW-POSITION  has  already   been  validated  by  the
 	    ;;procedure SET-PORT-POSITION!.
 	    ;;
-	    (let ((old-position (cookie-pos cookie)))
+	    (let ((old-position (device-position)))
 	      (cond ((< old-position new-position)
 		     (raise (condition
 			     (make-who-condition who)
@@ -2109,9 +2121,9 @@
 			     (make-i/o-invalid-position-error new-position))))
 		    ((> old-position new-position)
 		     (%unsafe.flush-output-port port 'open-bytevector-output-port/set-position!)
-		     (let-values (((bv bv.len.unused) (%unsafe.bytevector-concatenate output-bvs)))
-		       (set! output-bvs (list bv)))
-		     (set! position-in-single-bytevector new-position))
+		     (let-values (((bv bv.len.unused) (%unsafe.bytevector-concatenate (get-device))))
+		       (set-device! (list bv)))
+		     (set-device-position! new-position))
 		    (else ;(= old-position new-position)
 		     (values)))))
 
@@ -2120,19 +2132,24 @@
 
       (define (getter)
 	;;The  extraction  function.   Flush  the buffer  to  the
-	;;OUTPUT-BVS  list,   convert  OUTPUT-BVS  to   a  single
+	;;device  list,  convert  the  device list  to  a  single
 	;;bytevector.  Return the single bytevector and reset the
 	;;port to its empty state.
 	;;
 	(with-binary-port (port)
+	  (define-inline (set-device! ?new-device)
+	    (set-cookie-dest! port.cookie ?new-device))
+	  (define-inline (get-device)
+	    (cookie-dest port.cookie))
+	  (define-inline (set-position! ?new-value)
+	    (set-cookie-pos! port.cookie ?new-value))
 	  (unless port.closed?
 	    (%unsafe.flush-output-port port 'open-bytevector-output-port/getter))
-	  (let-values (((bv bv.len.unused) (%unsafe.bytevector-concatenate output-bvs)))
-	    (set! output-bvs '())
+	  (let-values (((bv bv.len.unused) (%unsafe.bytevector-concatenate (get-device))))
+	    (set-device! '())
 	    (set! port.buffer.index 0)
 	    (set! port.buffer.used-size 0)
-	    (set! position-in-single-bytevector #f)
-	    (set-cookie-pos! port.cookie 0)
+	    (set-position! 0)
 	    bv)))
 
       (values port getter)))))
@@ -4219,105 +4236,103 @@
 
 ;;;; byte and bytevector output
 
-(module (put-u8 put-bytevector)
-  (define (put-u8 port byte)
-    ;;Defined by R6RS.  Write BYTE  to the output port and return
-    ;;unspecified values.
-    ;;
-    (define who 'put-u8)
-    (unless (%u8? byte)
-      (die who "not a u8" byte))
-    (with-binary-port (port)
-      (cond ((unsafe.fx= fast-put-byte-tag port.fast-attributes)
-	     (if port.has-no-buffer?
-		 (%put-byte/unbuffered! port byte who)
-	       (let try-again-after-flushing-buffer ()
-		 (if (unsafe.fx< port.buffer.index port.buffer.size)
-		     ;;The buffer exists and  it has room for one
-		     ;;byte.
-		     (begin
-		       (%debug-assert (<= port.buffer.index port.buffer.used-size))
-		       (unsafe.bytevector-u8-set! port.buffer port.buffer.index byte)
-		       (when (unsafe.fx= port.buffer.index port.buffer.used-size)
-			 (port.buffer.used-size.incr!))
-		       (port.buffer.index.incr!))
-		   ;;The buffer exists but  it has no room: flush
-		   ;;the buffer and try again.
+(define (put-u8 port byte)
+  ;;Defined by  R6RS.  Write BYTE  to the output port  and return
+  ;;unspecified values.
+  ;;
+  (define who 'put-u8)
+  (unless (%u8? byte)
+    (die who "not a u8" byte))
+  (with-binary-port (port)
+    (cond ((unsafe.fx= fast-put-byte-tag port.fast-attributes)
+	   (if port.has-no-buffer?
+	       (%put-byte/unbuffered! port byte who)
+	     (let try-again-after-flushing-buffer ()
+	       (if (unsafe.fx< port.buffer.index port.buffer.size)
+		   ;;The buffer  exists and  it has room  for one
+		   ;;byte.
 		   (begin
-		     (%debug-assert (= port.buffer.used-size port.buffer.index))
-		     (%debug-assert (= port.buffer.used-size port.buffer.size))
-		     (%unsafe.flush-output-port port who)
-		     (try-again-after-flushing-buffer))))))
-	    ((output-port? port)
-	     (die who "not a binary port" port))
-	    (else
-	     (die who "not an output port" port)))))
+		     (%debug-assert (<= port.buffer.index port.buffer.used-size))
+		     (unsafe.bytevector-u8-set! port.buffer port.buffer.index byte)
+		     (when (unsafe.fx= port.buffer.index port.buffer.used-size)
+		       (port.buffer.used-size.incr!))
+		     (port.buffer.index.incr!))
+		 ;;The buffer  exists but  it has no  room: flush
+		 ;;the buffer and try again.
+		 (begin
+		   (%debug-assert (= port.buffer.used-size port.buffer.index))
+		   (%debug-assert (= port.buffer.used-size port.buffer.size))
+		   (%unsafe.flush-output-port port who)
+		   (try-again-after-flushing-buffer))))))
+	  ((output-port? port)
+	   (die who "not a binary port" port))
+	  (else
+	   (die who "not an output port" port)))))
 
-  (define put-bytevector
-    ;;(put-bytevector port bv)
-    ;;(put-bytevector port bv start)
-    ;;(put-bytevector port bv start count)
-    ;;
-    ;;START and COUNT must  be non-negative exact integer objects
-    ;;that default to 0 and:
-    ;;
-    ;; (- (bytevector-length BV) START)
-    ;;
-    ;;respectively.   BV   must  have   a  length  of   at  least
-    ;;START+COUNT.  The PUT-BYTEVECTOR procedure writes the COUNT
-    ;;bytes of the  bytevector BV starting at index  START to the
-    ;;output   port.    The   PUT-BYTEVECTOR  procedure   returns
-    ;;unspecified values.
-    ;;
-    (put-string/bv 'put-bytevector "not a bytevector"
-		   bytevector? bytevector-length $put-bytevector))
+(define put-bytevector
+  ;;(put-bytevector port bv)
+  ;;(put-bytevector port bv start)
+  ;;(put-bytevector port bv start count)
+  ;;
+  ;;START and  COUNT must  be non-negative exact  integer objects
+  ;;that default to 0 and:
+  ;;
+  ;; (- (bytevector-length BV) START)
+  ;;
+  ;;respectively.  BV must have a length of at least START+COUNT.
+  ;;The PUT-BYTEVECTOR  procedure writes  the COUNT bytes  of the
+  ;;bytevector  BV starting at  index START  to the  output port.
+  ;;The PUT-BYTEVECTOR procedure returns unspecified values.
+  ;;
+  (put-string/bv 'put-bytevector "not a bytevector"
+		 bytevector? bytevector-length %unsafe.put-bytevector))
 
-  (define ($put-bytevector port src.bv src.start count)
-    ;;Write COUNT bytes from  the bytevector SRC.BV to the binary
-    ;;output   PORT  starting   at   offset  SRC.START.    Return
-    ;;unspecified values.
-    ;;
-    (define who 'put-bytevector)
-    (with-binary-port (port)
-      (cond ((unsafe.fx= fast-put-byte-tag port.fast-attributes)
-	     (if port.has-no-buffer?
-		 ;;Write  bytes  one  by  one to  the  underlying
-		 ;;device.
-		 (let next-byte ((index src.start)
-				 (last  (unsafe.fx+ src.start count)))
-		   (unless (unsafe.fx= index last)
-		     (%put-byte/unbuffered! port (unsafe.bytevector-u8-ref src.bv index) who)
-		     (next-byte (unsafe.fxadd1 index) last)))
-	       ;;Write  bytes to  the buffer  and, if  the buffer
-	       ;;fills up, to the underlying device.
-	       (let try-again-after-flushing-buffer ((count count)
-						     (room  (port.buffer.room)))
-		 (cond ((unsafe.fxzero? room)
-			;;The buffer exists and it is full.
-			(%unsafe.flush-output-port port who)
-			(try-again-after-flushing-buffer count (port.buffer.room)))
-		       ((unsafe.fx<= count room)
-			;;The buffer  exists and there  is enough
-			;;room for all of the COUNT bytes.
-			(%unsafe.bytevector-copy! src.bv src.start port.buffer port.buffer.index count)
-			(port.buffer.index.incr! count)
-			(when (unsafe.fx< port.buffer.used-size port.buffer.index)
-			  (set! port.buffer.used-size port.buffer.index)))
-		       (else
-			;;The buffer exists  and it can hold some
-			;;but not all of the COUNT bytes.
-			(%debug-assert (> count room))
-			(%unsafe.bytevector-copy! src.bv src.start port.buffer port.buffer.index room)
-			(set! port.buffer.index     port.buffer.size)
-			(set! port.buffer.used-size port.buffer.index)
-			(%unsafe.flush-output-port port who)
-			(try-again-after-flushing-buffer (unsafe.fx- count room) (port.buffer.room)))))))
-	    ((output-port? port)
-	     (die who "not a binary port" port))
-	    (else
-	     (die who "not an output port" port)))))
-
-  #| end of module |# )
+(define (%unsafe.put-bytevector port src.bv src.start count)
+  ;;Write COUNT  bytes from the  bytevector SRC.BV to  the binary
+  ;;output PORT starting at offset SRC.START.  Return unspecified
+  ;;values.
+  ;;
+  (define who 'put-bytevector)
+  (with-binary-port (port)
+    (cond ((unsafe.fx= fast-put-byte-tag port.fast-attributes)
+	   (if port.has-no-buffer?
+	       ;;Write bytes one by one to the underlying device.
+	       (let next-byte ((index src.start)
+			       (last  (unsafe.fx+ src.start count)))
+		 (unless (unsafe.fx= index last)
+		   (%put-byte/unbuffered! port (unsafe.bytevector-u8-ref src.bv index) who)
+		   (next-byte (unsafe.fxadd1 index) last)))
+	     ;;Write  bytes to  the buffer  and, when  the buffer
+	     ;;fills up, to the underlying device.
+	     (let try-again-after-flushing-buffer ((src.start	src.start)
+						   (count	count)
+						   (room	(port.buffer.room)))
+	       (cond ((unsafe.fxzero? room)
+		      ;;The buffer exists and it is full.
+		      (%unsafe.flush-output-port port who)
+		      (try-again-after-flushing-buffer src.start count (port.buffer.room)))
+		     ((unsafe.fx<= count room)
+		      ;;The  buffer exists  and  there is  enough
+		      ;;room for all of the COUNT bytes.
+		      (%unsafe.bytevector-copy! src.bv src.start port.buffer port.buffer.index count)
+		      (port.buffer.index.incr! count)
+		      (when (unsafe.fx< port.buffer.used-size port.buffer.index)
+			(set! port.buffer.used-size port.buffer.index)))
+		     (else
+		      ;;The  buffer exists and  it can  hold some
+		      ;;but not all of the COUNT bytes.
+		      (%debug-assert (> count room))
+		      (%unsafe.bytevector-copy! src.bv src.start port.buffer port.buffer.index room)
+		      (set! port.buffer.index     port.buffer.size)
+		      (set! port.buffer.used-size port.buffer.index)
+		      (%unsafe.flush-output-port port who)
+		      (try-again-after-flushing-buffer (unsafe.fx+ src.start room)
+						       (unsafe.fx- count room)
+						       (port.buffer.room)))))))
+	  ((output-port? port)
+	   (die who "not a binary port" port))
+	  (else
+	   (die who "not an output port" port)))))
 
 
 ;;;; string output
@@ -4605,7 +4620,7 @@
 	  (raise-io-error who filename fd)
 	fd))))
 
-(define (%file-descriptor->input-port fd port-identifier buffer-size transcoder close-function who)
+(define (%file-descriptor->input-port fd port-identifier buffer.size transcoder close-function who)
   ;;Given the fixnum file descriptor FD representing an open file
   ;;for the underlying platform:  build and return a Scheme input
   ;;port to be used to read the data.
@@ -4621,7 +4636,7 @@
   (let ((attributes		(%input-transcoder-attrs transcoder who))
 	(buffer.index		0)
 	(buffer.used-size	0)
-	(buffer			(make-bytevector buffer-size))
+	(buffer			(make-bytevector buffer.size))
 	(write!			#f)
 	(get-position		#t))
 
@@ -4636,9 +4651,7 @@
 	    (else #f)))
 
     (define (read! dst.bv dst.start requested-count)
-      (let ((count (platform-read-fd fd dst.bv dst.start (if (unsafe.fx< input-block-size requested-count)
-							     input-block-size
-							   requested-count))))
+      (let ((count (platform-read-fd fd dst.bv dst.start buffer.size)))
 	(cond ((unsafe.fx>= count 0)
 	       count)
 	      ((unsafe.fx= count EAGAIN-error-code)
@@ -4649,12 +4662,13 @@
 	       (read! dst.bv dst.start requested-count))
 	      (else
 	       (raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
+
     (guarded-port ($make-port attributes buffer.index buffer.used-size buffer
 			      transcoder port-identifier
 			      read! write! get-position set-position! close
 			      (default-cookie fd)))))
 
-(define (%file-descriptor->output-port fd port-identifier buffer-size transcoder close-function who)
+(define (%file-descriptor->output-port fd port-identifier buffer.size transcoder close-function who)
   ;;Given the fixnum file descriptor FD representing an open file
   ;;for the underlying platform: build and return a Scheme output
   ;;port to be used to write the data.
@@ -4670,7 +4684,7 @@
   (let ((attributes		(%output-transcoder-attrs transcoder who))
 	(buffer.index		0)
 	(buffer.used-size	0)
-	(buffer			(make-bytevector buffer-size))
+	(buffer			(make-bytevector buffer.size))
 	(read!			#f)
 	(get-position		#t))
 
@@ -4685,10 +4699,7 @@
 	    (else #f)))
 
     (define (write! src.bv src.start requested-count)
-      (let ((count (platform-write-fd fd src.bv src.start
-				      (if (unsafe.fx< output-block-size requested-count)
-					  output-block-size
-					requested-count))))
+      (let ((count (platform-write-fd fd src.bv src.start requested-count)))
 	(cond ((unsafe.fx>= count 0)
 	       count)
 	      ((unsafe.fx= count EAGAIN-error-code)
@@ -5084,23 +5095,8 @@
 
 ;;;; platform socket functions
 
-(define input-socket-buffer-size
-  (make-parameter (+ input-block-size 128)
-    (lambda (x)
-      (if (and (fixnum? x) (unsafe.fx>= x 128))
-	  x
-	(error 'input-socket-buffer-size
-	  "buffer size should be a fixnum >= 128"
-	  x)))))
-
-(define output-socket-buffer-size
-  (make-parameter output-block-size
-    (lambda (x)
-      (if (and (fixnum? x) (unsafe.fx> x 0))
-	  x
-	(error 'output-socket-buffer-size
-	  "buffer size should be a positive fixnum"
-	  x)))))
+(define-buffer-size-parameter input-socket-buffer-size	(+ 128 default-binary-block-size))
+(define-buffer-size-parameter output-socket-buffer-size	default-binary-block-size)
 
 (define (set-fd-nonblocking fd who id)
   (let ((rv (foreign-call "ikrt_make_fd_nonblocking" fd)))
