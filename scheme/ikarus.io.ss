@@ -1363,38 +1363,82 @@
 
 ;;;; port's buffer size customisation
 
-(define default-binary-block-size	(* 4 4096))
-(define default-string-block-size	256)
+;;For  ports having a  Scheme bytevector  as buffer:  the minimum
+;;buffer size must be big enough  to allow the buffer to hold the
+;;full byte-encoding of a Unicode character for all the supported
+;;transcoders.  For ports having a Scheme string as buffer: there
+;;is no rational constraint on the buffer size.
+;;
+;;It makes  sense to have  "as small as possible"  minimum buffer
+;;size to allow easy writing  of test suites exercising the logic
+;;of buffer flushing and filling.
+;;
 (define buffer-size-lower-limit		8)
-(define buffer-size-upper-limit		(expt 2 16))
 
-(define error-message/invalid-buffer-size
-  (string-append "expected fixnum in range "
-		 (number->string buffer-size-lower-limit)
-		 " <= x < "
-		 (number->string buffer-size-upper-limit)
-		 " as buffer size"))
+;;The  maximum buffer size  must be  small enough  to fit  into a
+;;fixnum, which  is defined by R6RS  to be capable  of holding at
+;;least 24 bits.
+(define buffer-size-upper-limit		(expt 2 24))
+
+;;For binary ports: the default buffer size should be selected to
+;;allow efficient caching of portions of binary data blobs, which
+;;may be megabytes wide.
+;;
+(define default-binary-block-size	(* 4 4096))
+
+;;For textual  ports: the default buffer size  should be selected
+;;to allow  efficient caching  of portions of  text for  the most
+;;recurring use, which  includes accumulation of "small" strings,
+;;like in the use of printf-like functions.
+;;
+(define default-string-block-size	256)
 
 (define-inline (%valid-buffer-size? obj)
   (and (fixnum? obj)
        (unsafe.fx>= obj buffer-size-lower-limit)
        (unsafe.fx<  obj buffer-size-upper-limit)))
 
-(define-syntax define-buffer-size-parameter
-  (syntax-rules ()
-    ((_ ?who ?init)
-     (define ?who
-       (make-parameter ?init
-	 (lambda (obj)
-	   (if (%valid-buffer-size? obj)
-	       obj
-	     (error '?who error-message/invalid-buffer-size obj)))))
-     )))
+(define %make-buffer-size-parameter
+  (let ((error-message/invalid-buffer-size (string-append "expected fixnum in range "
+							  (number->string buffer-size-lower-limit)
+							  " <= x < "
+							  (number->string buffer-size-upper-limit)
+							  " as buffer size")))
+    (lambda (init who)
+      (make-parameter init
+	(lambda (obj)
+	  (if (%valid-buffer-size? obj)
+	      obj
+	    (error who error-message/invalid-buffer-size obj)))))))
 
-(define-buffer-size-parameter input-file-buffer-size		(+ default-binary-block-size 128))
-(define-buffer-size-parameter output-file-buffer-size		default-binary-block-size)
-(define-buffer-size-parameter bytevector-port-buffer-size	default-binary-block-size)
-(define-buffer-size-parameter string-port-buffer-size		default-string-block-size)
+(let-syntax ((define-buffer-size-parameter (syntax-rules ()
+					     ((_ ?who ?init)
+					      (define ?who
+						(%make-buffer-size-parameter ?init ?who))))))
+
+  ;;Customisable buffer  size for bytevector ports.  To  be used by
+  ;;OPEN-BYTEVECTOR-OUTPUT-PORT and similar.
+  ;;
+  (define-buffer-size-parameter bytevector-port-buffer-size	default-binary-block-size)
+
+  ;;Customisable  buffer size  for  string ports.   To  be used  by
+  ;;OPEN-STRING-OUTPUT-PORT and similar.
+  ;;
+  (define-buffer-size-parameter string-port-buffer-size		default-string-block-size)
+
+  ;;Customisable  buffer  size  for  file  ports.  To  be  used  by
+  ;;OPEN-FILE-INPUT-PORT, OPEN-FILE-OUTPUT-PORT and similar.
+  ;;
+  (define-buffer-size-parameter input-file-buffer-size		(+ default-binary-block-size 128))
+  (define-buffer-size-parameter output-file-buffer-size		default-binary-block-size)
+
+  ;;Customisable  buffer size  for  socket ports.   To  be used  by
+  ;;TCP-CONNECT and similar.
+  ;;
+  (define-buffer-size-parameter input-socket-buffer-size	(+ 128 default-binary-block-size))
+  (define-buffer-size-parameter output-socket-buffer-size	default-binary-block-size)
+
+  #| end of LET-SYNTAX |# )
 
 
 ;;;; predicates
@@ -5094,9 +5138,6 @@
 
 
 ;;;; platform socket functions
-
-(define-buffer-size-parameter input-socket-buffer-size	(+ 128 default-binary-block-size))
-(define-buffer-size-parameter output-socket-buffer-size	default-binary-block-size)
 
 (define (set-fd-nonblocking fd who id)
   (let ((rv (foreign-call "ikrt_make_fd_nonblocking" fd)))
