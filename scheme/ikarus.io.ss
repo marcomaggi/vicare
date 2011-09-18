@@ -57,31 +57,6 @@
 ;;
 ;;* Implement missing R6RS functions.
 ;;
-;;* Write a documentation section on buffering stating that:
-;;
-;;  - %UNSAFE.FLUSH-OUTPUT-PORT is  the only function calling the
-;;  port's WRITE! function.
-;;
-;;  -  %REFILL-INPUT-PORT-BYTEVECTOR-BUFFER is the  only function
-;;  calling the port's READ! function.
-;;
-;;  - All the ports have  a buffer despite the selected buffering
-;;  mode.
-;;
-;;  - All the output ports write data to the buffer.
-;;
-;;  - When the  buffering mode is NONE: data  is first written to
-;;  the output  buffer, then  immediately sent to  the underlying
-;;  device.
-;;
-;;  - When the  buffering mode is LINE: data  is first written to
-;;  the output  buffer up to the first  newline, then immediately
-;;  sent to the underlying device.
-;;
-;;  - When the buffering mode  is BLOCK: data is first written to
-;;  the output buffer; when the  buffer is full: data is sent the
-;;  underlying device.
-;;
 ;;*  Exceptions  raised by  SET-PORT-POSITION!  must be  reviewed
 ;;because they do not comply with R6RS.
 ;;
@@ -97,6 +72,10 @@
 ;;  system.  In other cases, attempts  to set the port beyond the
 ;;  current end of data in the underlying object may result in an
 ;;  exception with condition type &i/o-invalid-position.
+;;
+;;* Change  OPEN-STRING-INPUT-PORT and OPEN-BYTEVECTOR-INPUT-PORT
+;;to use the  string or buffer itself as buffer  when it is short
+;;enough, and to use a separate buffer otherwise.
 ;;
 
 
@@ -246,6 +225,67 @@
 ;;Field mutator: $set-port-cookie PORT COOKIE
 ;;  A "cookie"  record used  to track line  and column  number in
 ;;  textual ports.
+;;
+
+
+;;;; On buffering
+;;
+;;We establish the following constraints:
+;;
+;;*  If an  exact  integer is  in  the range  representable by  a
+;;fixnum, Vicare will represent it as a fixnum.
+;;
+;;* No  matter which BUFFER-MODE  was selected, every port  has a
+;;buffer.
+;;
+;;* The  buffer is a Scheme  bytevector or a  Scheme string whose
+;;length is representable by a fixnum.
+;;
+;;* The input functions always read data from the buffer first.
+;;
+;;* The output functions always write data to the buffer first.
+;;
+;;*   %UNSAFE.REFILL-INPUT-PORT-BYTEVECTOR-BUFFER  is   the  only
+;;function calling the port's  READ!  function, copying data from
+;;the underlying device to the input buffer.
+;;
+;;*  %UNSAFE.FLUSH-OUTPUT-PORT is the  only function  calling the
+;;port's WRITE! function, copying  data from the output buffer to
+;;the underlying device.
+;;
+;; --------------------------------------------------------------
+;;
+;;From the constraints it follows that:
+;;
+;;*  OPEN-STRING-INPUT-PORT  and OPEN-BYTEVECTOR-INPUT-PORT  will
+;;refuse  to create a  port to  read characters  or bytes  from a
+;;string or  bytevector whose length exceeds the  return value of
+;;GREATEST-FIXNUM.
+;;
+;;*  All the arithmetics  involving the  buffer can  be performed
+;;using unsafe fixnum functions.
+;;
+;; --------------------------------------------------------------
+;;
+;;Buffer mode handling is as follows:
+;;
+;;* When the buffering mode is NONE: data is first written to the
+;;output buffer, then immediately sent to the underlying device.
+;;
+;;* When the buffering mode is LINE: data is first written to the
+;;output buffer up to the first newline, then immediately sent to
+;;the underlying device.
+;;
+;;* When  the buffering mode is  BLOCK: data is  first written to
+;;the output buffer.  Only when  the buffer is full: data is sent
+;;to the underlying device.
+;;
+;; --------------------------------------------------------------
+;;
+;;Things to notice:
+;;
+;;* The exact integer representing the current position of a port
+;;in the underlying device can be either a fixnum or a bignum.
 ;;
 
 
@@ -1378,7 +1418,7 @@
 ;;The  maximum buffer size  must be  small enough  to fit  into a
 ;;fixnum, which  is defined by R6RS  to be capable  of holding at
 ;;least 24 bits.
-(define buffer-size-upper-limit		(expt 2 24))
+(define buffer-size-upper-limit		(greatest-fixnum))
 
 ;;For binary ports: the default buffer size should be selected to
 ;;allow efficient caching of portions of binary data blobs, which
@@ -2018,20 +2058,23 @@
     (%assert-value-is-bytevector bv who)
     (%assert-value-is-maybe-transcoder maybe-transcoder who)
     ;;The input bytevector is itself the buffer!!!
-    (let ((attributes		(%input-transcoder-attrs maybe-transcoder who))
-	  (buffer.index		0)
-	  (buffer.used-size	(bytevector-length bv))
-	  (buffer		bv)
-	  (transcoder		maybe-transcoder)
-	  (identifier		"*bytevector-input-port*")
-	  (read!		all-data-in-buffer)
-	  (write!		#f)
-	  (get-position		#t)
-	  (set-position!	#t)
-	  (close		#f)
-	  (cookie		(default-cookie #f)))
-      ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
-		  read! write! get-position set-position! close cookie)))))
+    (let ((bv.len (bytevector-length bv)))
+      (unless (< bv.len buffer-size-upper-limit)
+	(error who "input bytevector length exceeds maximum supported size" bv.len))
+      (let ((attributes		(%input-transcoder-attrs maybe-transcoder who))
+	    (buffer.index	0)
+	    (buffer.used-size	bv.len)
+	    (buffer		bv)
+	    (transcoder		maybe-transcoder)
+	    (identifier		"*bytevector-input-port*")
+	    (read!		all-data-in-buffer)
+	    (write!		#f)
+	    (get-position	#t)
+	    (set-position!	#t)
+	    (close		#f)
+	    (cookie		(default-cookie #f)))
+	($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
+		    read! write! get-position set-position! close cookie))))))
 
 
 ;;;; bytevector output ports
@@ -2076,27 +2119,32 @@
       ;;    (getter))
       ;;
       ;;for this reason we implement  the state of the port to be
-      ;;somewhat  efficient  for  such  use.   Whenever  data  is
-      ;;written  to the port:  a new  bytevector is  prepended to
-      ;;OUTPUT-BVS.   When the  getter  is invoked:  the list  is
-      ;;converted to the actual bytevector.
+      ;;somewhat efficient  for such use.   The device is  a list
+      ;;stored  in the  cookie,  called OUTPUT-BVS  in the  code;
+      ;;whenever data is written to the port: a new bytevector is
+      ;;prepended  to OUTPUT-BVS.   When the  getter  is invoked:
+      ;;OUTPUT-BVS is converted to the actual full bytevector.
       ;;
       ;;This  situation  is  violated if  SET-PORT-POSITION!   is
-      ;;applied to  the port; in this case  we convert OUTPUT-BVS
-      ;;to  a  list holding  a  single  bytevector  and save  the
-      ;;position    in    POSITION-IN-SINGLE-BYTEVECTOR.     When
-      ;;POSITION-IN-SINGLE-BYTEVECTOR  is  non-false:  OUTPUT-BVS
-      ;;always  holds  a   single  bytevector.   Now  the  WRITE!
-      ;;procedure must distinguish the two cases: data fitting in
-      ;;the single  bytevector, data extending out  of the single
-      ;;bytevector.
+      ;;applied to the  port to move the position  before the end
+      ;;of  the data.   If this  happens:  SET-POSITION! converts
+      ;;OUTPUT-BVS to a list holding a single full bytevector.
+      ;;
+      ;;Whenever  OUTPUT-BVS holds  a single  bytevector  and the
+      ;;position is  less than  such bytevector length:  it means
+      ;;that SET-PORT-POSITION! was used.
+      ;;
+      ;;The  WRITE!  procedure  must distinguish  the  two cases:
+      ;;data fitting  in the single bytevector,  data spread into
+      ;;multiple bytevectors.
       ;;
       ;;*NOTE*  The POS  field of  the  cookie is  always set  by
       ;;SET-PORT-POSITION!   and the  various  functions invoking
-      ;;the WRITE!   operation, after having  successfully called
-      ;;the port's own SET-POSITION!  function; we do not need to
-      ;;set  it here  with  the single  exception  of the  getter
-      ;;function which needs to reset it to zero.
+      ;;the WRITE!  operation;  this happens after such functions
+      ;;have called  WRITE! or SET-POSITION!.  We do  not need to
+      ;;set  the POS  field of  the cookie  here with  the single
+      ;;exception of the extraction function which needs to reset
+      ;;it to zero.
       ;;
       (define port
 	(let ((attributes		(%output-transcoder-attrs maybe-transcoder who))
@@ -2119,6 +2167,7 @@
 	    (set-cookie-pos! cookie ?new-position))
 
 	  (define (write! src.bv src.start count)
+	    (%debug-assert (fixnum? count))
 	    (if (zero? count) ;should never happen, but who knows?!?
 		count
 	      (let ((output-bvs   (get-device))
@@ -2128,27 +2177,28 @@
 			 (< old-position (unsafe.bytevector-length (car output-bvs))))
 		    ;;The  current position  was  set inside  the
 		    ;;already accumulated data.
-		    (let* ((dst.bv	(car output-bvs))
-			   (total-size	(unsafe.bytevector-length dst.bv))
-			   (delta	(- total-size old-position)))
-		      (if (<= count delta)
-			  ;;The  new  data  fits  in  the  single
-			  ;;bytevector.
-			  (%unsafe.bytevector-copy! src.bv src.start dst.bv old-position count)
-			(begin
-			  ;;The new data  goes part in the single
-			  ;;bytevector   and   part   in  a   new
-			  ;;bytevector.
-			  (%unsafe.bytevector-copy! src.bv src.start dst.bv old-position delta)
-			  (let* ((src.start	(+ delta src.start))
-				 (delta		(- count delta))
-				 (dst.bv	(make-bytevector delta)))
-			    (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 delta)
-			    (set-device! (cons dst.bv output-bvs))))))
+		    (begin
+		      (%debug-assert (fixnum? old-position))
+		      (let* ((dst.bv	(car output-bvs))
+			     (room	(unsafe.fx- (unsafe.bytevector-length dst.bv) old-position)))
+			(if (unsafe.fx<= count room)
+			    ;;The  new data  fits  in the  single
+			    ;;bytevector.
+			    (%unsafe.bytevector-copy! src.bv src.start dst.bv old-position count)
+			  (begin
+			    ;;The  new  data  goes  part  in  the
+			    ;;single bytevector and part in a new
+			    ;;bytevector.
+			    (%unsafe.bytevector-copy! src.bv src.start dst.bv old-position room)
+			    (let* ((src.start	(unsafe.fx+ room src.start))
+				   (count	(unsafe.fx- count room))
+				   (dst.bv	(unsafe.make-bytevector count)))
+			      (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
+			      (set-device! (cons dst.bv output-bvs)))))))
 		  ;;The  current position  is at  the end  of the
 		  ;;already  accumulated  data.   Prepend  a  new
 		  ;;bytevector to OUTPUT-BVS.
-		  (let ((dst.bv (make-bytevector count)))
+		  (let ((dst.bv (unsafe.make-bytevector count)))
 		    (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
 		    (set-device! (cons dst.bv output-bvs))))
 		count)))
@@ -2157,14 +2207,16 @@
 	    ;;NEW-POSITION  has  already   been  validated  by  the
 	    ;;procedure SET-PORT-POSITION!.
 	    ;;
+	    (define who 'open-bytevector-output-port/set-position!)
 	    (let ((old-position (device-position)))
 	      (cond ((< old-position new-position)
+;;;;FIXME not always error
 		     (raise (condition
 			     (make-who-condition who)
 			     (make-message-condition "attempt to set port position beyond limit")
 			     (make-i/o-invalid-position-error new-position))))
 		    ((> old-position new-position)
-		     (%unsafe.flush-output-port port 'open-bytevector-output-port/set-position!)
+		     (%unsafe.flush-output-port port who)
 		     (let-values (((bv bv.len.unused) (%unsafe.bytevector-concatenate (get-device))))
 		       (set-device! (list bv)))
 		     (set-device-position! new-position))
@@ -2473,19 +2525,22 @@
   (unless (string? str)
     (die who "not a string" str))
   ;;The input string is itself the buffer!!!
-  (let ((attributes		fast-get-char-tag)
-	(buffer.index		0)
-	(buffer.used-size	(string-length str))
-	(buffer			str)
-	(transcoder		#t)
-	(read!			all-data-in-buffer)
-	(write!			#f)
-	(get-position		#t)
-	(set-position!		#t)
-	(close			#f)
-	(cookie			(default-cookie #f)))
-    ($make-port attributes buffer.index buffer.used-size buffer transcoder id
-		read! write! get-position set-position! close cookie)))
+  (let ((str.len (string-length str)))
+    (unless (< bv.len buffer-size-upper-limit)
+      (error who "input bytevector length exceeds maximum supported size" bv.len))
+    (let ((attributes		fast-get-char-tag)
+	  (buffer.index		0)
+	  (buffer.used-size	str.len)
+	  (buffer		str)
+	  (transcoder		#t)
+	  (read!		all-data-in-buffer)
+	  (write!		#f)
+	  (get-position		#t)
+	  (set-position!	#t)
+	  (close		#f)
+	  (cookie		(default-cookie #f)))
+      ($make-port attributes buffer.index buffer.used-size buffer transcoder id
+		  read! write! get-position set-position! close cookie))))
 
 
 ;;;; transcoded ports
@@ -2813,7 +2868,7 @@
 ;;returns 0) the port is in EOF state.
 ;;
 ;;The following macros make it easier to handle this mechanism by
-;;wrapping the %REFILL-INPUT-PORT-BYTEVECTOR-BUFFER function.
+;;wrapping the %UNSAFE.REFILL-INPUT-PORT-BYTEVECTOR-BUFFER function.
 ;;
 
 (define-syntax data-is-needed-at:	(syntax-rules ()))
@@ -2840,7 +2895,7 @@
     ((%refill-bytevector-buffer-and-evaluate (?port ?who)
        (if-end-of-file:		. ?end-of-file-body)
        (if-successful-refill:	. ?after-refill-body))
-     (let ((count (%refill-input-port-bytevector-buffer ?port ?who)))
+     (let ((count (%unsafe.refill-input-port-bytevector-buffer ?port ?who)))
        (if (unsafe.fxzero? count)
 	   (begin . ?end-of-file-body)
 	 (begin . ?after-refill-body))))))
@@ -2879,7 +2934,7 @@
 	 (if-end-of-file:	. ?end-of-file-body)
 	 (if-successful-refill:	. ?after-refill-body))))))
 
-(define (%refill-input-port-bytevector-buffer port who)
+(define (%unsafe.refill-input-port-bytevector-buffer port who)
   ;;Assume  PORT is  an input  port object  with a  bytevector as
   ;;buffer.   Fill  the input  buffer  keeping  in  it the  bytes
   ;;already there but not  yet consumed (see the pictures below);

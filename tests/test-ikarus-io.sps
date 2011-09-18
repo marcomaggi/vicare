@@ -35,6 +35,13 @@
 (check-set-mode! 'report-failed)
 (display "*** testing Ikarus input/output functions\n")
 
+;; (bytevector-port-buffer-size	256)
+;; (string-port-buffer-size	256)
+;; (input-file-buffer-size		256)
+;; (output-file-buffer-size	256)
+;; (input-socket-buffer-size	256)
+;; (output-socket-buffer-size	256)
+
 
 (define-syntax test
   ;;Derived from "scheme/tests/io.ss"
@@ -414,7 +421,7 @@
 			 (i/o-error-position E)))
 		  (else E))
 	  (set-port-position! port 3)))
-    => '(open-bytevector-output-port 3))
+    => '(open-bytevector-output-port/set-position! 3))
 
   (check	;invalid position, beyond limit
       (let-values (((port getter) (open-bytevector-output-port)))
@@ -424,7 +431,7 @@
 			 (i/o-error-position E)))
 		  (else E))
 	  (set-port-position! port 20)))
-    => '(open-bytevector-output-port 20))
+    => '(open-bytevector-output-port/set-position! 20))
 
   (check	;set and get position, no write
       (let-values (((port getter) (open-bytevector-output-port)))
