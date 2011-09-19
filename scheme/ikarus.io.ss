@@ -866,6 +866,9 @@
     ((_ ?obj)
      (eqv? #t ?obj))))
 
+(define-inline (%list-holding-single-value? ell)
+  (and (not (null? ell)) (null? (cdr ell))))
+
 (define (%validate-and-tag-open-binary-input-port port who)
   ;;Assuming that PORT is a port object: validate PORT as an open
   ;;binary input port.  This function is to be called if the port
@@ -2193,13 +2196,17 @@
 	(set-cookie-dest! cookie ?new-device))
       (define-inline (%device-position)
 	(cookie-pos cookie))
-      (define (%serialise-device who reset?)
+      (define (%%serialise-device who reset?)
 	(with-port (port)
 	  (unless port.closed?
 	    (%unsafe.flush-output-port port who))
 	  (let ((bv (%unsafe.bytevector-reverse-and-concatenate (%get-device))))
 	    (%set-device! (if reset? '() (list bv)))
 	    bv)))
+      (define-inline (%serialise-device who)
+	(%%serialise-device who #f))
+      (define-inline (%serialise-device-and-reset who)
+	(%%serialise-device who #t))
 
       (define (write! src.bv src.start count)
 	(%debug-assert (fixnum? count))
@@ -2207,15 +2214,15 @@
 	    count
 	  (let ((output-bvs   (%get-device))
 		(old-position (%device-position)))
-	    (if (and (not (null? output-bvs))
-		     (null? (cdr output-bvs))
+	    (if (and (%list-holding-single-value? output-bvs)
 		     (< old-position (unsafe.bytevector-length (car output-bvs))))
 		;;The current position was set inside the already
 		;;accumulated data.
 		(begin
+;;;FIXME This is wrong!!
 		  (%debug-assert (fixnum? old-position))
-		  (let* ((dst.bv	(car output-bvs))
-			 (room	(unsafe.fx- (unsafe.bytevector-length dst.bv) old-position)))
+		  (let* ((dst.bv  (car output-bvs))
+			 (room    (unsafe.fx- (unsafe.bytevector-length dst.bv) old-position)))
 		    (if (unsafe.fx<= count room)
 			;;The  new   data  fits  in   the  single
 			;;bytevector.
@@ -2248,7 +2255,7 @@
 	;;
 	(define who 'open-bytevector-output-port/set-position!)
 	(unless (or (=  new-position (%device-position))
-		    (<= new-position (unsafe.bytevector-length (%serialise-device who #f))))
+		    (<= new-position (unsafe.bytevector-length (%serialise-device who))))
 	  (%raise-port-position-out-of-range who port new-position)))
 
       (define (extract)
@@ -2260,7 +2267,7 @@
 	(with-port (port)
 	  (define-inline (set-device-position! ?new-value)
 	    (set-cookie-pos! port.cookie ?new-value))
-	  (let ((bv (%serialise-device who #t)))
+	  (let ((bv (%serialise-device-and-reset who)))
 	    (set! port.buffer.index 0)
 	    (set! port.buffer.used-size 0)
 	    (set-device-position! 0)
