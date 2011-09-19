@@ -1686,26 +1686,30 @@
   ;;
   (define who 'port-position)
   (%assert-value-is-port port who)
+  (%unsafe.port-get-position who port))
+
+(define (%unsafe.port-get-position who port)
   (with-port (port)
-    (cond ((procedure? port.get-position)
-	   (let ((device-position (port.get-position)))
-	     (%assert-value-is-get-position-result device-position port who)
-	     ;;DEVICE-POSITION is the  position in the underlying
-	     ;;device, but  we have  to return the  full position
-	     ;;taking into account the offset in the input/output
-	     ;;buffer.
-	     (if (%unsafe.input-port? port)
-		 (- device-position (- port.buffer.used-size port.buffer.index))
-	       (+ device-position port.buffer.index))))
-	  ((%the-true-value? port.get-position)
-	   ;;In this  case the  underlying device (if  any) still
-	   ;;may have a position  stored in the cookie.  If there
-	   ;;is  no underlying  device  (that is:  the buffer  is
-	   ;;itself the  device) the POS  field of the  cookie is
-	   ;;perpetually set to zero.
-	   (+ port.buffer.index (cookie-pos port.cookie)))
-	  (else
-	   (assertion-violation who "port does not support port-position operation" port)))))
+    (let ((getpos port.get-position))
+      (cond ((procedure? getpos)
+	     ;;The port has a device.
+	     (let ((device-position (getpos)))
+	       (%assert-value-is-get-position-result device-position port who)
+	       ;;DEVICE-POSITION   is   the   position   in   the
+	       ;;underlying  device, but  we have  to  return the
+	       ;;full position taking  into account the offset in
+	       ;;the input/output buffer.
+	       (if (%unsafe.input-port? port)
+		   (- device-position (- port.buffer.used-size port.buffer.index))
+		 (+ device-position port.buffer.index))))
+	    ((and (boolean? getpos) getpos)
+	     ;;The port may or may not have an underlying device.
+	     ;;If there  is no  underlying device: the  buffer is
+	     ;;itself the device and  the POS field of the cookie
+	     ;;is perpetually set to zero.
+	     (+ port.buffer.index (cookie-pos port.cookie)))
+	    (else
+	     (assertion-violation who "port does not support port-position operation" port))))))
 
 (define (set-port-position! port new-position)
   ;;Defined  by R6RS.   If PORT  is a  binary  port, NEW-POSITION
@@ -1738,22 +1742,34 @@
   (with-port (port)
     (let ((setpos! port.set-position!))
       (cond ((procedure? setpos!)
-	     ;;An underlying device exists.
-	     (if (%unsafe.output-port? port)
-		 (%unsafe.flush-output-port port who)
-	       (port.buffer.reset!))
-	     ;;If SETPOS!  fails we can assume  nothing about the
-	     ;;position in the device.
-	     (setpos! new-position)
-	     ;;Notice that  the NEW-POSITION field  of the port's
-	     ;;cookie  is  set  by  this  function  AFTER  having
-	     ;;successfully  called the port's  own SET-POSITION!
-	     ;;function.
-	     (set-cookie-pos! port.cookie new-position))
+	     ;;An  underlying  device  exists.  Call  the  port's
+	     ;;SET-POSITION! function  only if we  cannot satisfy
+	     ;;this request by moving the index in the buffer.
+	     (let ((old-position (%unsafe.port-get-position who port)))
+	       (unless (= old-position new-position)
+		 (let ((new-buffer.index (+ port.buffer.index (- new-position old-position))))
+		   (define-inline (device-set-position!)
+		     (set-cookie-pos! port.cookie new-position))
+		   (if (and (>= new-buffer.index 0)
+			    (<= new-buffer.index port.buffer.used-size))
+		       (set! port.buffer.index new-buffer.index)
+		     (begin
+		       (if (%unsafe.output-port? port)
+			   (%unsafe.flush-output-port port who)
+			 (port.buffer.reset!))
+		       ;;If SETPOS!  fails  we can assume nothing
+		       ;;about the position in the device.
+		       (setpos! new-position)
+		       ;;Notice  that the  NEW-POSITION  field of
+		       ;;the  port's   cookie  is  set   by  this
+		       ;;function   AFTER   having   successfully
+		       ;;called  the   port's  own  SET-POSITION!
+		       ;;function.
+		       (device-set-position!)))))))
 	    ((and (boolean? setpos!) setpos!)
-	     ;;There  is  no  underlying  device: the  buffer  is
-	     ;;itself the device.  The POS field of the cookie is
-	     ;;perpetually set to zero.
+             ;;There may or may  not be an underlying device.  In
+             ;;case  there is  no device:  the POS  field  of the
+             ;;cookie is perpetually set to zero.
 	     (if (< new-position port.buffer.used-size)
 		 (set! port.buffer.index new-position)
 	       (%raise-port-position-out-of-range who port new-position)))
@@ -2231,8 +2247,8 @@
 	;;position in the POS field of the cookie.
 	;;
 	(define who 'open-bytevector-output-port/set-position!)
-	(unless (or (= new-position (%device-position))
-		    (< new-position (unsafe.bytevector-length (%serialise-device who #f))))
+	(unless (or (=  new-position (%device-position))
+		    (<= new-position (unsafe.bytevector-length (%serialise-device who #f))))
 	  (%raise-port-position-out-of-range who port new-position)))
 
       (define (extract)
