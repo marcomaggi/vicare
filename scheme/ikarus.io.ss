@@ -817,6 +817,16 @@
     (assertion-violation ?who "get-position should be either a procedure or false" ?proc)))
 
 
+;;;; error helpers
+
+(define (%raise-port-position-out-of-range who port new-position)
+  (raise (condition
+	  (make-who-condition who)
+	  (make-message-condition "attempt to set port position beyond limit")
+	  (make-i/o-invalid-position-error new-position)
+	  (make-irritants-condition (list port)))))
+
+
 ;;;; generic helpers
 
 ;;ALL-DATA-IN-BUFFER is  used in place  of the READ!  procedure  to mark
@@ -898,17 +908,21 @@
 			  dst.str (unsafe.fxadd1 dst.start)
 			  (unsafe.fxsub1 count))))
 
-(define (%unsafe.bytevector-concatenate list-of-bytevectors)
-  (let recur ((bvs list-of-bytevectors)
-	      (accumulated-total-length 0))
-    (if (null? bvs)
-	(values (unsafe.make-bytevector accumulated-total-length) 0)
-      (let* ((src.bv  (car bvs))
-	     (src.len (unsafe.bytevector-length src.bv)))
-	(let-values (((dst.bv next-byte-index)
-		      (recur (cdr bvs) (unsafe.fx+ src.len accumulated-total-length))))
-	  (%unsafe.bytevector-copy! src.bv 0 dst.bv next-byte-index src.len)
-	  (values dst.bv (unsafe.fx+ src.len next-byte-index)))))))
+(define (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors)
+  (call-with-values
+      (lambda ()
+	(let recur ((bvs list-of-bytevectors)
+		    (accumulated-total-length 0))
+	  (if (null? bvs)
+	      (values (unsafe.make-bytevector accumulated-total-length) 0)
+	    (let* ((src.bv  (car bvs))
+		   (src.len (unsafe.bytevector-length src.bv)))
+	      (let-values (((dst.bv next-byte-index)
+			    (recur (cdr bvs) (unsafe.fx+ src.len accumulated-total-length))))
+		(%unsafe.bytevector-copy! src.bv 0 dst.bv next-byte-index src.len)
+		(values dst.bv (unsafe.fx+ src.len next-byte-index)))))))
+    (lambda (full-bytevector dummy)
+      full-bytevector)))
 
 
 ;;;; dot notation macros for port structures
@@ -1693,18 +1707,18 @@
 	  (else
 	   (assertion-violation who "port does not support port-position operation" port)))))
 
-(define (set-port-position! port pos)
-  ;;Defined by R6RS.   If PORT is a binary port,  POS should be a
-  ;;non-negative  exact integer  object.   If PORT  is a  textual
-  ;;port,  POS  should   be  the  return  value  of   a  call  to
-  ;;PORT-POSITION on PORT.
+(define (set-port-position! port new-position)
+  ;;Defined  by R6RS.   If PORT  is a  binary  port, NEW-POSITION
+  ;;should be a non-negative exact  integer object.  If PORT is a
+  ;;textual port,  NEW-POSITION should be  the return value  of a
+  ;;call to PORT-POSITION on PORT.
   ;;
   ;;The  SET-PORT-POSITION! procedure  raises  an exception  with
-  ;;condition type "&assertion" if  the port does not support the
+  ;;condition type  &ASSERTION if the  port does not  support the
   ;;operation,   and    an   exception   with    condition   type
-  ;;"&i/o-invalid-position" if  POS is not in the  range of valid
-  ;;positions of  PORT.  Otherwise, it sets  the current position
-  ;;of  the   port  to   POS.   If  PORT   is  an   output  port,
+  ;;&I/O-INVALID-POSITION if NEW-POSITION is  not in the range of
+  ;;valid  positions of  PORT.   Otherwise, it  sets the  current
+  ;;position  of the port  to POS.   If PORT  is an  output port,
   ;;SET-PORT-POSITION!  first flushes PORT.
   ;;
   ;;If PORT is  a binary output port and  the current position is
@@ -1716,11 +1730,11 @@
   ;;this  manner within  the limits  of the  underlying operating
   ;;system.  In other cases, attempts  to set the port beyond the
   ;;current end of data in the underlying object may result in an
-  ;;exception with condition type &i/o-invalid-position.
+  ;;exception with condition type &I/O-INVALID-POSITION.
   ;;
   (define who 'set-port-position!)
   (%assert-value-is-port port who)
-  (%assert-value-is-port-position pos who)
+  (%assert-value-is-port-position new-position who)
   (with-port (port)
     (let ((setpos! port.set-position!))
       (cond ((procedure? setpos!)
@@ -1730,20 +1744,19 @@
 	       (port.buffer.reset!))
 	     ;;If SETPOS!  fails we can assume  nothing about the
 	     ;;position in the device.
-	     (setpos! pos)
-	     ;;Notice that the POS  field of the port's cookie is
-	     ;;set  by this  function  AFTER having  successfully
-	     ;;called the port's own SET-POSITION! function.
-	     (set-cookie-pos! port.cookie pos))
+	     (setpos! new-position)
+	     ;;Notice that  the NEW-POSITION field  of the port's
+	     ;;cookie  is  set  by  this  function  AFTER  having
+	     ;;successfully  called the port's  own SET-POSITION!
+	     ;;function.
+	     (set-cookie-pos! port.cookie new-position))
 	    ((and (boolean? setpos!) setpos!)
-	     ;;In this case the  underlying device (if any) still
-	     ;;may  have a  position  stored in  the cookie.   If
-	     ;;there is no underlying device (that is: the buffer
-	     ;;is itself the device)  the POS field of the cookie
-	     ;;is perpetually set to zero.
-	     (if (<= pos port.buffer.used-size)
-		 (set! port.buffer.index pos)
-	       (die who "position out of range" pos)))
+	     ;;There  is  no  underlying  device: the  buffer  is
+	     ;;itself the device.  The POS field of the cookie is
+	     ;;perpetually set to zero.
+	     (if (< new-position port.buffer.used-size)
+		 (set! port.buffer.index new-position)
+	       (%raise-port-position-out-of-range who port new-position)))
 	    (else
 	     (assertion-violation who "port does not support port position" port))))))
 
@@ -2109,21 +2122,32 @@
     ;;
     (define who 'open-bytevector-output-port)
     (%assert-value-is-maybe-transcoder maybe-transcoder who)
-    (let ()
+    (let ((port			#f)
+	  (attributes		(%output-transcoder-attrs maybe-transcoder who))
+	  (buffer.index		0)
+	  (buffer.used-size	0)
+	  (buffer		(unsafe.make-bytevector (bytevector-port-buffer-size)))
+	  (transcoder		maybe-transcoder)
+	  (identifier		"*bytevector-output-port*")
+	  (read!		#f)
+	  (get-position		#t)
+	  (close		#f)
+	  (cookie		(default-cookie '())))
       ;;The most common use of  this port type is to append bytes
       ;;and finally extract the whole output bytevector:
       ;;
-      ;;  (let-values (((port getter) (open-bytevector-output-port)))
+      ;;  (let-values (((port extract) (open-bytevector-output-port)))
       ;;    (put-bytevector port '#vu8(1 2 3))
       ;;    ...
-      ;;    (getter))
+      ;;    (extract))
       ;;
       ;;for this reason we implement  the state of the port to be
       ;;somewhat efficient  for such use.   The device is  a list
       ;;stored  in the  cookie,  called OUTPUT-BVS  in the  code;
       ;;whenever data is written to the port: a new bytevector is
-      ;;prepended  to OUTPUT-BVS.   When the  getter  is invoked:
-      ;;OUTPUT-BVS is converted to the actual full bytevector.
+      ;;prepended  to OUTPUT-BVS.  When  the extract  function is
+      ;;invoked:  OUTPUT-BVS  is  converted  to the  actual  full
+      ;;bytevector.
       ;;
       ;;This  situation  is  violated if  SET-PORT-POSITION!   is
       ;;applied to the  port to move the position  before the end
@@ -2146,109 +2170,89 @@
       ;;exception of the extraction function which needs to reset
       ;;it to zero.
       ;;
-      (define port
-	(let ((attributes		(%output-transcoder-attrs maybe-transcoder who))
-	      (buffer.index		0)
-	      (buffer.used-size		0)
-	      (buffer			(unsafe.make-bytevector (bytevector-port-buffer-size)))
-	      (transcoder		maybe-transcoder)
-	      (identifier		"*bytevector-output-port*")
-	      (read!			#f)
-	      (get-position		#t)
-	      (close			#f)
-	      (cookie			(default-cookie '())))
-	  (define-inline (get-device)
-	    (cookie-dest cookie))
-	  (define-inline (set-device! ?new-device)
-	    (set-cookie-dest! cookie ?new-device))
-	  (define-inline (device-position)
-	    (cookie-pos cookie))
-	  (define-inline (set-device-position! ?new-position)
-	    (set-cookie-pos! cookie ?new-position))
 
-	  (define (write! src.bv src.start count)
-	    (%debug-assert (fixnum? count))
-	    (if (zero? count) ;should never happen, but who knows?!?
-		count
-	      (let ((output-bvs   (get-device))
-		    (old-position (device-position)))
-		(if (and (not (null? output-bvs))
-			 (null? (cdr output-bvs))
-			 (< old-position (unsafe.bytevector-length (car output-bvs))))
-		    ;;The  current position  was  set inside  the
-		    ;;already accumulated data.
-		    (begin
-		      (%debug-assert (fixnum? old-position))
-		      (let* ((dst.bv	(car output-bvs))
-			     (room	(unsafe.fx- (unsafe.bytevector-length dst.bv) old-position)))
-			(if (unsafe.fx<= count room)
-			    ;;The  new data  fits  in the  single
-			    ;;bytevector.
-			    (%unsafe.bytevector-copy! src.bv src.start dst.bv old-position count)
-			  (begin
-			    ;;The  new  data  goes  part  in  the
-			    ;;single bytevector and part in a new
-			    ;;bytevector.
-			    (%unsafe.bytevector-copy! src.bv src.start dst.bv old-position room)
-			    (let* ((src.start	(unsafe.fx+ room src.start))
-				   (count	(unsafe.fx- count room))
-				   (dst.bv	(unsafe.make-bytevector count)))
-			      (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
-			      (set-device! (cons dst.bv output-bvs)))))))
-		  ;;The  current position  is at  the end  of the
-		  ;;already  accumulated  data.   Prepend  a  new
-		  ;;bytevector to OUTPUT-BVS.
-		  (let ((dst.bv (unsafe.make-bytevector count)))
-		    (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
-		    (set-device! (cons dst.bv output-bvs))))
-		count)))
+      (define-inline (%get-device)
+	(cookie-dest cookie))
+      (define-inline (%set-device! ?new-device)
+	(set-cookie-dest! cookie ?new-device))
+      (define-inline (%device-position)
+	(cookie-pos cookie))
+      (define (%serialise-device who reset?)
+	(with-port (port)
+	  (unless port.closed?
+	    (%unsafe.flush-output-port port who))
+	  (let ((bv (%unsafe.bytevector-reverse-and-concatenate (%get-device))))
+	    (%set-device! (if reset? '() (list bv)))
+	    bv)))
 
-	  (define (set-position! new-position)
-	    ;;NEW-POSITION  has  already   been  validated  by  the
-	    ;;procedure SET-PORT-POSITION!.
-	    ;;
-	    (define who 'open-bytevector-output-port/set-position!)
-	    (let ((old-position (device-position)))
-	      (cond ((< old-position new-position)
-;;;;FIXME not always error
-		     (raise (condition
-			     (make-who-condition who)
-			     (make-message-condition "attempt to set port position beyond limit")
-			     (make-i/o-invalid-position-error new-position))))
-		    ((> old-position new-position)
-		     (%unsafe.flush-output-port port who)
-		     (let-values (((bv bv.len.unused) (%unsafe.bytevector-concatenate (get-device))))
-		       (set-device! (list bv)))
-		     (set-device-position! new-position))
-		    (else ;(= old-position new-position)
-		     (values)))))
+      (define (write! src.bv src.start count)
+	(%debug-assert (fixnum? count))
+	(if (zero? count) ;should never happen, but who knows?!?
+	    count
+	  (let ((output-bvs   (%get-device))
+		(old-position (%device-position)))
+	    (if (and (not (null? output-bvs))
+		     (null? (cdr output-bvs))
+		     (< old-position (unsafe.bytevector-length (car output-bvs))))
+		;;The current position was set inside the already
+		;;accumulated data.
+		(begin
+		  (%debug-assert (fixnum? old-position))
+		  (let* ((dst.bv	(car output-bvs))
+			 (room	(unsafe.fx- (unsafe.bytevector-length dst.bv) old-position)))
+		    (if (unsafe.fx<= count room)
+			;;The  new   data  fits  in   the  single
+			;;bytevector.
+			(%unsafe.bytevector-copy! src.bv src.start dst.bv old-position count)
+		      (begin
+			;;The  new data goes  part in  the single
+			;;bytevector   and    part   in   a   new
+			;;bytevector.
+			(%unsafe.bytevector-copy! src.bv src.start dst.bv old-position room)
+			(let* ((src.start	(unsafe.fx+ room src.start))
+			       (count	(unsafe.fx- count room))
+			       (dst.bv	(unsafe.make-bytevector count)))
+			  (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
+			  (%set-device! (cons dst.bv output-bvs)))))))
+	      ;;The current position is at the end of the already
+	      ;;accumulated  data.  Prepend  a new  bytevector to
+	      ;;OUTPUT-BVS.
+	      (let ((dst.bv (unsafe.make-bytevector count)))
+		(%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
+		(%set-device! (cons dst.bv output-bvs))))
+	    count)))
 
-	  ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
-		      read! write! get-position set-position! close cookie)))
+      (define (set-position! new-position)
+	;;NEW-POSITION  has  already   been  validated  as  exact
+	;;integer by  the procedure SET-PORT-POSITION!.   Here we
+	;;only have to  verify that the value is  valid as offset
+	;;inside  the   underlying  full  bytevector.    If  this
+	;;validation succeeds:  SET-PORT-POSITION! will store the
+	;;position in the POS field of the cookie.
+	;;
+	(define who 'open-bytevector-output-port/set-position!)
+	(unless (or (= new-position (%device-position))
+		    (< new-position (unsafe.bytevector-length (%serialise-device who #f))))
+	  (%raise-port-position-out-of-range who port new-position)))
 
-      (define (getter)
+      (define (extract)
 	;;The  extraction  function.   Flush  the buffer  to  the
 	;;device  list,  convert  the  device list  to  a  single
 	;;bytevector.  Return the single bytevector and reset the
 	;;port to its empty state.
 	;;
-	(with-binary-port (port)
-	  (define-inline (set-device! ?new-device)
-	    (set-cookie-dest! port.cookie ?new-device))
-	  (define-inline (get-device)
-	    (cookie-dest port.cookie))
-	  (define-inline (set-position! ?new-value)
+	(with-port (port)
+	  (define-inline (set-device-position! ?new-value)
 	    (set-cookie-pos! port.cookie ?new-value))
-	  (unless port.closed?
-	    (%unsafe.flush-output-port port 'open-bytevector-output-port/getter))
-	  (let-values (((bv bv.len.unused) (%unsafe.bytevector-concatenate (get-device))))
-	    (set-device! '())
+	  (let ((bv (%serialise-device who #t)))
 	    (set! port.buffer.index 0)
 	    (set! port.buffer.used-size 0)
-	    (set-position! 0)
+	    (set-device-position! 0)
 	    bv)))
 
-      (values port getter)))))
+      (set! port ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
+			     read! write! get-position set-position! close cookie))
+      (values port extract)))))
 
 (define call-with-bytevector-output-port
   (case-lambda
@@ -2272,9 +2276,9 @@
     (define who 'call-with-bytevector-output-port)
     (%assert-value-is-procedure proc who)
     (%assert-value-is-maybe-transcoder transcoder who)
-    (let-values (((port getter) (open-bytevector-output-port transcoder)))
+    (let-values (((port extract) (open-bytevector-output-port transcoder)))
       (proc port)
-      (getter)))))
+      (extract)))))
 
 
 ;;;; string output ports
@@ -2526,8 +2530,8 @@
     (die who "not a string" str))
   ;;The input string is itself the buffer!!!
   (let ((str.len (string-length str)))
-    (unless (< bv.len buffer-size-upper-limit)
-      (error who "input bytevector length exceeds maximum supported size" bv.len))
+    (unless (< str.len buffer-size-upper-limit)
+      (error who "input string length exceeds maximum supported size" str.len))
     (let ((attributes		fast-get-char-tag)
 	  (buffer.index		0)
 	  (buffer.used-size	str.len)
