@@ -1602,6 +1602,22 @@
   #f)
 
 
+(parametrise ((check-test-name	'open-bytevector-input-port))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check	;argument is not a bytevector
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(open-bytevector-input-port 123))
+    => '(123))
+
+  #t)
+
+
 (parametrise ((check-test-name			'open-bytevector-output-port)
 	      (bytevector-port-buffer-size	8))
 

@@ -2175,7 +2175,10 @@
     (%assert-value-is-bytevector bv who)
     (%assert-value-is-maybe-transcoder maybe-transcoder who)
     ;;The input bytevector is itself the buffer!!!
-    (let ((bv.len (bytevector-length bv)))
+    (let ((bv.len (unsafe.bytevector-length bv)))
+      ;;FIXME  The following is  an artificial  limitation to  allow the
+      ;;buffer to  be handled using  unsafe fixnum functions; it  can be
+      ;;removed using a custom port for big bytevectors.
       (unless (< bv.len buffer-size-upper-limit)
 	(error who "input bytevector length exceeds maximum supported size" bv.len))
       (let ((attributes		(%input-transcoder-attrs maybe-transcoder who))
@@ -2648,7 +2651,7 @@
     (extract)))
 
 
-;;;; generic port output
+;;;; output to current output port
 
 (define (with-output-to-port port proc)
   ;;Defined by  Ikarus.  Set PORT as  the current output  port and calls
