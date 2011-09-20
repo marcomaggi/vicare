@@ -898,13 +898,29 @@
 		    (unsafe.fxsll (unsafe.bytevector-u8-ref x i) 8)))))
 
 (define (%unsafe.bytevector-copy! src.bv src.start dst.bv dst.start count)
+  ;;Like BYTEVECTOR-COPY!  defined by R6RS; expect  all the exact
+  ;;integers to be fixnums.
+  ;;
   (when (unsafe.fx> count 0)
     (unsafe.bytevector-u8-set! dst.bv dst.start (unsafe.bytevector-u8-ref src.bv src.start))
     (%unsafe.bytevector-copy! src.bv (unsafe.fxadd1 src.start)
 			      dst.bv (unsafe.fxadd1 dst.start)
 			      (unsafe.fxsub1 count))))
 
+(define (%unsafe.bigdst-bytevector-copy! src.bv src.start dst.bv dst.start count)
+  ;;Like BYTEVECTOR-COPY!  defined by  R6RS; expect all the exact
+  ;;integers to be fixnums with the exception of DST.START.
+  ;;
+  (when (unsafe.fx> count 0)
+    (unsafe.bytevector-u8-set! dst.bv dst.start (unsafe.bytevector-u8-ref src.bv src.start))
+    (%unsafe.bytevector-copy! src.bv (unsafe.fxadd1 src.start)
+			      dst.bv (+ 1 dst.start)
+			      (unsafe.fxsub1 count))))
+
 (define (%unsafe.string-copy! src.str src.start dst.str dst.start count)
+  ;;Like  BYTEVECTOR-COPY!   defined by  R6RS,  but for  strings;
+  ;;expect all the exact integers to be fixnums.
+  ;;
   (when (unsafe.fx> count 0)
     (unsafe.string-set! dst.str dst.start (unsafe.string-ref src.str src.start))
     (%unsafe.string-copy! src.str (unsafe.fxadd1 src.start)
@@ -2219,22 +2235,24 @@
 		;;The current position was set inside the already
 		;;accumulated data.
 		(begin
-;;;FIXME This is wrong!!
-		  (%debug-assert (fixnum? old-position))
+		  ;;Remember  that OLD-POSITION  can be  either a
+		  ;;fixnum  or a  bignum; the  same goes  for the
+		  ;;length of DST.BV and ROOM.
 		  (let* ((dst.bv  (car output-bvs))
-			 (room    (unsafe.fx- (unsafe.bytevector-length dst.bv) old-position)))
-		    (if (unsafe.fx<= count room)
+			 (room    (- (unsafe.bytevector-length dst.bv) old-position)))
+		    (if (<= count room)
 			;;The  new   data  fits  in   the  single
 			;;bytevector.
-			(%unsafe.bytevector-copy! src.bv src.start dst.bv old-position count)
+			(%unsafe.bigdst-bytevector-copy! src.bv src.start dst.bv old-position count)
 		      (begin
+			(%debug-assert (fixnum? room))
 			;;The  new data goes  part in  the single
 			;;bytevector   and    part   in   a   new
 			;;bytevector.
-			(%unsafe.bytevector-copy! src.bv src.start dst.bv old-position room)
-			(let* ((src.start	(unsafe.fx+ room src.start))
-			       (count	(unsafe.fx- count room))
-			       (dst.bv	(unsafe.make-bytevector count)))
+			(%unsafe.bigdst-bytevector-copy! src.bv src.start dst.bv old-position room)
+			(let* ((src.start (unsafe.fx+ room src.start))
+			       (count     (unsafe.fx- count room))
+			       (dst.bv    (unsafe.make-bytevector count)))
 			  (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
 			  (%set-device! (cons dst.bv output-bvs)))))))
 	      ;;The current position is at the end of the already
