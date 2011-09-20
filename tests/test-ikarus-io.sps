@@ -622,7 +622,7 @@
 			 (i/o-error-position E)))
 		  (else E))
 	  (set-port-position! port 3)))
-    => '(open-string-output-port 3))
+    => '(open-string-output-port/set-position! 3))
 
   (check	;invalid position, beyond limit
       (let-values (((port getter) (open-string-output-port)))
@@ -632,7 +632,7 @@
 			 (i/o-error-position E)))
 		  (else E))
 	  (set-port-position! port 20)))
-    => '(open-string-output-port 20))
+    => '(open-string-output-port/set-position! 20))
 
   (check	;set and get position, no write
       (let-values (((port getter) (open-string-output-port)))
@@ -3138,6 +3138,57 @@
 	(display "abcdefghil"))
 ;;;               0123456789
     => '(10 "abcdefghil"))
+
+  #t)
+
+
+(parametrise ((check-test-name	'with-output-to-port))
+
+;;; arguments validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(with-output-to-port 123 (lambda () #f)))
+    => '(123))
+
+  (check	;argument is not an output port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (car (condition-irritants E)))
+		(else E))
+	(with-output-to-port (current-input-port) (lambda () #f)))
+    (=> eq?) (current-input-port))
+
+  (check	;argument is not a textual port
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (with-output-to-port port (lambda () #f))))
+    => #t)
+
+  (check	;argument is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(with-output-to-port (current-output-port) 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; textual port
+
+  (check
+      (let-values (((port extract) (open-string-output-port)))
+	(with-output-to-port port
+	  (lambda ()
+	    (put-string (current-output-port) "123")))
+	(extract))
+    => "123")
 
   #t)
 

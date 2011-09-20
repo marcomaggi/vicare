@@ -736,7 +736,7 @@
   (unless (input-port? ?port)
     (assertion-violation ?who "not an input port" ?port)))
 
-(define-inline (%unsafe-assert-value-is-input-port ?port ?who)
+(define-inline (%unsafe.assert-value-is-input-port ?port ?who)
   (unless (%unsafe.input-port? ?port)
     (assertion-violation ?who "not an input port" ?port)))
 
@@ -746,13 +746,13 @@
   (unless (output-port? ?port)
     (assertion-violation ?who "not an output port" ?port)))
 
-(define-inline (%unsafe-assert-value-is-output-port ?port ?who)
+(define-inline (%unsafe.assert-value-is-output-port ?port ?who)
   (unless ($unsafe.output-port? ?port)
     (assertion-violation ?who "not an output port" ?port)))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (%unsafe-assert-value-is-textual-port ?port ?who)
+(define-inline (%unsafe.assert-value-is-textual-port ?port ?who)
   (unless (%unsafe.textual-port? ?port)
     (assertion-violation ?who "not a textual port" ?port)))
 
@@ -762,7 +762,7 @@
   (when (port-closed? ?port)
     (assertion-violation ?who "port is closed" ?port)))
 
-(define-inline (%unsafe-assert-value-is-open-port ?port ?who)
+(define-inline (%unsafe.assert-value-is-open-port ?port ?who)
   (when (%unsafe.port-closed? ?port)
     (assertion-violation ?who "port is closed" ?port)))
 
@@ -881,7 +881,7 @@
   ;;GET-BYTEVECTOR-ALL.
   ;;
   (with-binary-port (port)
-    (%unsafe-assert-value-is-open-port port who)
+    (%unsafe.assert-value-is-open-port port who)
     (when port.transcoder
       (die who "port is not binary" port))
     (unless port.read!
@@ -2651,14 +2651,17 @@
 ;;;; generic port output
 
 (define (with-output-to-port port proc)
-  ;;Defined by Ikarus.   Set port as the current  output port and
-  ;;calls PROC with no arguments.  The port is the current output
-  ;;port only for the extent of the call to PROC.
+  ;;Defined by  Ikarus.  Set PORT as  the current output  port and calls
+  ;;PROC with  no arguments.  The port  is the current  output port only
+  ;;for the extent of the call to PROC.
+  ;;
+  ;;PORT must  be a textual output port,  because CURRENT-OUTPUT-PORT is
+  ;;supposed to return a textual output port.
   ;;
   (define who 'with-output-to-port)
   (%assert-value-is-procedure proc who)
   (%assert-value-is-output-port port who)
-  (%unsafe-assert-value-is-textual-port port who)
+  (%unsafe.assert-value-is-textual-port port who)
   (parameterize ((current-output-port port))
     (proc)))
 
@@ -2690,7 +2693,7 @@
   (with-binary-port (port)
     (when port.transcoder
       (die who "not a binary port" port))
-    (%unsafe-assert-value-is-open-port port who)
+    (%unsafe.assert-value-is-open-port port who)
     (let ((read! ($port-read! port))
 	  (write! ($port-write! port)))
       (port.mark-as-closed)
@@ -2849,9 +2852,9 @@
   ;;
   (define who 'port-eof?)
   (%assert-value-is-port port who)
-  (%unsafe-assert-value-is-input-port port who)
+  (%unsafe.assert-value-is-input-port port who)
   (with-port (port)
-    (%unsafe-assert-value-is-open-port port who)
+    (%unsafe.assert-value-is-open-port port who)
     ;;Checking the  buffer status  is the fastest  path to
     ;;the result.
     (cond ((and port.has-buffer? (unsafe.fx< port.buffer.index port.buffer.used-size))
@@ -2892,7 +2895,7 @@
     (define who who)
     (%assert-value-is-output-port port who)
     (with-port (port)
-      (%unsafe-assert-value-is-open-port port who)
+      (%unsafe.assert-value-is-open-port port who)
       (%unsafe.flush-output-port port who)))))
 
 (define (%unsafe.flush-output-port port who)
@@ -3079,7 +3082,7 @@
     ;;to it.  The  following check is to avoid  such a mistake by
     ;;internal functions;  this mistake should not  happen if the
     ;;functions have not bugs.
-    (%unsafe-assert-value-is-open-port port who)
+    (%unsafe.assert-value-is-open-port port who)
     (if (eq? port.read! all-data-in-buffer)
 	0
       (let ((buffer port.buffer))
@@ -4237,9 +4240,9 @@
     ;;Return #t if port is at EOF, #f otherwise.
     ;;
     (%assert-value-is-input-port port who)
-    (%unsafe-assert-value-is-textual-port port who)
+    (%unsafe.assert-value-is-textual-port port who)
     (with-textual-port (port)
-      (%unsafe-assert-value-is-open-port port who)
+      (%unsafe.assert-value-is-open-port port who)
       (unless port.transcoder
 	(die who "expected port with transcoder" port))
       (case (transcoder-codec port.transcoder)
@@ -4279,7 +4282,7 @@
     (ikarus system $strings))
   (define who 'get-string-n)
   (%assert-value-is-input-port p who)
-  (%unsafe-assert-value-is-textual-port p who)
+  (%unsafe.assert-value-is-textual-port p who)
   (unless (fixnum? n)
     (die who "count is not a fixnum" n))
   (cond
@@ -4305,7 +4308,7 @@
   (import (ikarus system $fx) (ikarus system $strings))
   (define who 'get-string-n!)
   (%assert-value-is-input-port p who)
-  (%unsafe-assert-value-is-textual-port p who)
+  (%unsafe.assert-value-is-textual-port p who)
   (unless (string? s)
     (die who "not a string" s))
   (let ((len ($string-length s)))
@@ -4360,7 +4363,7 @@
 	(f s (unsafe.fxsub1 i) (cdr ls)))
        (else s))))
   (%assert-value-is-input-port p who)
-  (%unsafe-assert-value-is-textual-port p who)
+  (%unsafe.assert-value-is-textual-port p who)
   (get-it p))
 (define (get-line p)
   ($get-line p 'get-line))
@@ -4389,7 +4392,7 @@
 	(f s (- i 1) (cdr ls)))
        (else s))))
   (%assert-value-is-input-port p who)
-  (%unsafe-assert-value-is-textual-port p who)
+  (%unsafe.assert-value-is-textual-port p who)
   (get-it p))
 
 
@@ -4408,7 +4411,7 @@
   ;;FIXME Is this correct?
   ;;
   (with-binary-port (port)
-    (%unsafe-assert-value-is-open-port port who)
+    (%unsafe.assert-value-is-open-port port who)
     (let ((bv (make-bytevector 1)))
       (unsafe.bytevector-u8-set! bv 0 byte)
       (let ((count (port.write! bv 0 1)))
@@ -4437,7 +4440,7 @@
   ;;FIXME Is this correct?
   ;;
   (with-textual-port (port)
-    (%unsafe-assert-value-is-open-port port who)
+    (%unsafe.assert-value-is-open-port port who)
     (let ((str (string char)))
       (let ((count (port.write! str 0 1)))
 	;;We need  to account for  the case the  WRITE!  function
@@ -4627,7 +4630,7 @@
   (define ($put-string p str start count)
     (define who 'put-string)
     (%assert-value-is-output-port p who)
-    (%unsafe-assert-value-is-textual-port p who)
+    (%unsafe.assert-value-is-textual-port p who)
     (let f ((i start) (j (unsafe.fx+ start count)))
       (unless (unsafe.fx= i j)
 	(do-put-char p (string-ref str i) 'put-string)
@@ -4705,8 +4708,8 @@
 		(put-byte! p (unsafe.fxand w2 #xFF) who)))))))
        (else
 	(%assert-value-is-output-port         p who)
-	(%unsafe-assert-value-is-textual-port p who)
-	(%unsafe-assert-value-is-open-port    p who)
+	(%unsafe.assert-value-is-textual-port p who)
+	(%unsafe.assert-value-is-open-port    p who)
 	(die who "unsupported port" p)))))
 
   #| end of module |# )
@@ -4721,8 +4724,8 @@
    ((port)
     (define who 'newline)
     (%assert-value-is-output-port port who)
-    (%unsafe-assert-value-is-textual-port port who)
-    (%unsafe-assert-value-is-open-port port who)
+    (%unsafe.assert-value-is-textual-port port who)
+    (%unsafe.assert-value-is-open-port port who)
     (put-char port #\newline)
     (%unsafe.flush-output-port port who))))
 
@@ -5659,7 +5662,7 @@
     (lambda (x)
       (define who 'current-input-port)
       (%assert-value-is-input-port x who)
-      (%unsafe-assert-value-is-textual-port x who)
+      (%unsafe.assert-value-is-textual-port x who)
       x)))
 
 (define current-output-port
@@ -5679,7 +5682,7 @@
     (lambda (x)
       (define who 'current-output-port)
       (%assert-value-is-output-port x who)
-      (%unsafe-assert-value-is-textual-port x who)
+      (%unsafe.assert-value-is-textual-port x who)
       x)))
 
 (define current-error-port
@@ -5699,7 +5702,7 @@
     (lambda (x)
       (define who 'current-error-port)
       (%assert-value-is-output-port x who)
-      (%unsafe-assert-value-is-textual-port x who)
+      (%unsafe.assert-value-is-textual-port x who)
       x)))
 
 (define console-output-port
