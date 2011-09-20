@@ -2646,6 +2646,502 @@
   #t)
 
 
+(parametrise ((check-test-name		'call-with-string-output-port)
+	      (string-port-buffer-size	8))
+
+  (define-syntax position-and-contents
+    (lambda (stx)
+      (syntax-case stx ()
+	((?ctx ?port . ?body)
+	 #'(let ((result (check.with-result
+			     (call-with-string-output-port
+				 (lambda (?port)
+				   (begin . ?body)
+				   (check.add-result (port-position ?port)))))))
+	     (list (caadr result) (car result)))))))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check	;argument is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(call-with-string-output-port 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; port operations support
+
+  (check
+      (check.with-result
+	  (call-with-string-output-port
+	      (lambda (port)
+		(check.add-result (port-has-port-position? port)))))
+    => '("" (#t)))
+
+  (check
+      (check.with-result
+	  (call-with-string-output-port
+	      (lambda (port)
+		(check.add-result (port-has-set-port-position!? port)))))
+    => '("" (#t)))
+
+;;; --------------------------------------------------------------------
+;;; writing data, single extraction
+
+  (check	;single char
+      (call-with-string-output-port
+	  (lambda (port)
+	    (put-char port #\A)))
+    => "A")
+
+  (check	;char by char until the buffer is full
+      (call-with-string-output-port
+	  (lambda (port)
+	    (do ((i 0 (+ 1 i)))
+		((= 9 i))
+	      (put-char port #\A))))
+    => "AAAAAAAAA")
+
+  (check	;single string not filling the buffer
+      (call-with-string-output-port
+	  (lambda (port)
+	    (put-string port "12345")))
+    => "12345")
+
+  (check	;single string filling the buffer
+      (call-with-string-output-port
+	  (lambda (port)
+	    (put-string port "0123456789")))
+    => "0123456789")
+
+  (check	;string by string until the buffer is full
+      (call-with-string-output-port
+	  (lambda (port)
+	    (do ((i 0 (+ 1 i)))
+		((= 3 i))
+	      (put-string port "123"))))
+    => "123123123")
+
+  (check	;fill the buffer multiple times
+      (call-with-string-output-port
+	  (lambda (port)
+	    (do ((i 0 (+ 1 i)))
+		((= 5 i))
+	      (put-string port "0123456789"))))
+    => "0123456789\
+        0123456789\
+        0123456789\
+        0123456789\
+        0123456789")
+
+;;; --------------------------------------------------------------------
+;;; getting port position
+
+  (check	;empty device
+      (position-and-contents port
+	(values))
+    => '(0 ""))
+
+  (check	;some data in buffer, none in device
+      (position-and-contents port
+	(put-string port "012"))
+    => '(3 "012"))
+
+  (check	;buffer full, no data in device
+      (position-and-contents port
+	(put-string port "01234567"))
+    => '(8 "01234567"))
+
+  (check	;some data in buffer, some data in device
+      (position-and-contents port
+	(put-string port "01234567")
+	(put-string port "89ab"))
+    => '(12 "0123456789ab"))
+
+  (check	;buffer empty, data in device
+      (position-and-contents port
+	(put-string port "01234567")
+	(flush-output-port port))
+    => '(8 "01234567"))
+
+;;; --------------------------------------------------------------------
+;;; setting port position, no overwriting
+
+  (check	;empty device
+      (position-and-contents port
+	(set-port-position! port 0))
+    => '(0 ""))
+
+  (check	;some data in buffer, none in device
+      (position-and-contents port
+	(put-string port "012")
+	(set-port-position! port 1))
+    => '(1 "012"))
+
+  (check   ;Some data  in buffer, none in device.   Move position in the
+	   ;middle, then again at the end.
+      (position-and-contents port
+	(put-string port "012")
+	(set-port-position! port 1)
+	(set-port-position! port 3))
+    => '(3 "012"))
+
+  (check ;Buffer full, no data  in device.  Move position in the middle,
+	 ;then again at the end.
+      (position-and-contents port
+  	(put-string port "01234567")
+	(set-port-position! port 1)
+	(set-port-position! port 8))
+    => '(8 "01234567"))
+
+  (check	;Some  data  in  buffer,  some  data  in  device.   Move
+		;position in the middle.
+      (position-and-contents port
+  	(put-string port "01234567")
+  	(put-string port "89ab")
+	(set-port-position! port 6))
+    => '(6 "0123456789ab"))
+
+  (check	;Buffer  empty, data  in device.   Move position  in the
+		;middle.
+      (position-and-contents port
+  	(put-string port "01234567")
+  	(flush-output-port port)
+	(set-port-position! port 6))
+    => '(6 "01234567"))
+
+;;; --------------------------------------------------------------------
+;;; setting port position, overwriting
+
+  (check	;empty buffer, empty device
+      (position-and-contents port
+	(set-port-position! port 0)
+	(put-string port ""))
+    => '(0 ""))
+
+  (check	;partial internal overwrite, data in buffer, empty device
+      (position-and-contents port
+	(put-string port "01234567")
+	(set-port-position! port 2)
+	(put-string port "abc"))
+    => '(5 "01abc567"))
+
+  (check	;partial internal overwrite, empty buffer, data in device
+      (position-and-contents port
+	(put-string port "01234567")
+	(flush-output-port port)
+	(set-port-position! port 2)
+	(put-string port "abc"))
+    => '(5 "01abc567"))
+
+  (check	;partial internal overwrite, some data in buffer, some data in device
+      (position-and-contents port
+	(put-string port "0123456789")
+	(set-port-position! port 2)
+	(put-string port "abc"))
+    => '(5 "01abc56789"))
+
+  (check	;overflow overwrite, data in buffer, empty device
+      (position-and-contents port
+	(put-string port "01234567")
+	(set-port-position! port 6)
+	(put-string port "abcd"))
+    => '(10 "012345abcd"))
+
+  (check	;overflow overwrite, empty buffer, empty device
+      (position-and-contents port
+	(put-string port "01234567")
+	(flush-output-port port)
+	(set-port-position! port 6)
+	(put-string port "abcd"))
+    => '(10 "012345abcd"))
+
+  (check	;overflow overwrite, some data in buffer, some data in device
+      (position-and-contents port
+	(put-string port "0123456789")
+	(set-port-position! port 6)
+	(put-string port "abcdef"))
+    => '(12 "012345abcdef"))
+
+  (check	;full overwrite, data in buffer, empty device
+      (position-and-contents port
+	(put-string port "01234567")
+	(set-port-position! port 0)
+	(put-string port "abcdefgh"))
+;;;                       01234567
+    => '(8 "abcdefgh"))
+
+  (check	;full overwrite, empty buffer, data in device
+      (position-and-contents port
+	(put-string port "01234567")
+	(flush-output-port port)
+	(set-port-position! port 0)
+	(put-string port "abcdefgh"))
+;;;                       01234567
+    => '(8 "abcdefgh"))
+
+  (check	;full overwrite, some data in buffer, some data in device
+      (position-and-contents port
+	(put-string port "0123456789")
+	(set-port-position! port 0)
+	(put-string port "abcdefghil"))
+;;;                       0123456789
+    => '(10 "abcdefghil"))
+
+  #t)
+
+
+(parametrise ((check-test-name		'with-output-to-string)
+	      (string-port-buffer-size	8))
+
+  (define-syntax position-and-contents
+    (lambda (stx)
+      (syntax-case stx ()
+	((?ctx . ?body)
+	 #'(let ((result (check.with-result
+			     (with-output-to-string
+			       (lambda ()
+				 (begin . ?body)
+				 (check.add-result (port-position (current-output-port))))))))
+	     (list (caadr result) (car result)))))))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check	;argument is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(with-output-to-string 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; port operations support
+
+  (check
+      (check.with-result
+	  (with-output-to-string
+	    (lambda ()
+	      (check.add-result (port-has-port-position? (current-output-port))))))
+    => '("" (#t)))
+
+  (check
+      (check.with-result
+	  (with-output-to-string
+	    (lambda ()
+	      (check.add-result (port-has-set-port-position!? (current-output-port))))))
+    => '("" (#t)))
+
+;;; --------------------------------------------------------------------
+;;; writing data, single extraction
+
+  (check	;single char
+      (with-output-to-string
+	(lambda ()
+	  (display #\A)))
+    => "A")
+
+  (check	;char by char until the buffer is full
+      (with-output-to-string
+	(lambda ()
+	  (do ((i 0 (+ 1 i)))
+	      ((= 9 i))
+	    (display #\A))))
+    => "AAAAAAAAA")
+
+  (check	;single string not filling the buffer
+      (with-output-to-string
+	(lambda ()
+	  (display "12345")))
+    => "12345")
+
+  (check	;single string filling the buffer
+      (with-output-to-string
+	(lambda ()
+	  (display "0123456789")))
+    => "0123456789")
+
+  (check	;string by string until the buffer is full
+      (with-output-to-string
+	(lambda ()
+	  (do ((i 0 (+ 1 i)))
+	      ((= 3 i))
+	    (display "123"))))
+    => "123123123")
+
+  (check	;fill the buffer multiple times
+      (with-output-to-string
+	(lambda ()
+	  (do ((i 0 (+ 1 i)))
+	      ((= 5 i))
+	    (display "0123456789"))))
+    => "0123456789\
+        0123456789\
+        0123456789\
+        0123456789\
+        0123456789")
+
+;;; --------------------------------------------------------------------
+;;; getting port position
+
+  (check	;empty device
+      (position-and-contents
+	  (values))
+    => '(0 ""))
+
+  (check	;some data in buffer, none in device
+      (position-and-contents
+	  (display "012"))
+    => '(3 "012"))
+
+  (check	;buffer full, no data in device
+      (position-and-contents
+	  (display "01234567"))
+    => '(8 "01234567"))
+
+  (check	;some data in buffer, some data in device
+      (position-and-contents
+	  (display "01234567")
+	(display "89ab"))
+    => '(12 "0123456789ab"))
+
+  (check	;buffer empty, data in device
+      (position-and-contents
+	  (display "01234567")
+	(flush-output-port (current-output-port)))
+    => '(8 "01234567"))
+
+;;; --------------------------------------------------------------------
+;;; setting port position, no overwriting
+
+  (check	;empty device
+      (position-and-contents
+	  (set-port-position! (current-output-port) 0))
+    => '(0 ""))
+
+  (check	;some data in buffer, none in device
+      (position-and-contents
+	  (display "012")
+	(set-port-position! (current-output-port) 1))
+    => '(1 "012"))
+
+  (check   ;Some data  in buffer, none in device.   Move position in the
+		;middle, then again at the end.
+      (position-and-contents
+	  (display "012")
+	(set-port-position! (current-output-port) 1)
+	(set-port-position! (current-output-port) 3))
+    => '(3 "012"))
+
+  (check ;Buffer full, no data  in device.  Move position in the middle,
+		;then again at the end.
+      (position-and-contents
+	  (display "01234567")
+	(set-port-position! (current-output-port) 1)
+	(set-port-position! (current-output-port) 8))
+    => '(8 "01234567"))
+
+  (check	;Some  data  in  buffer,  some  data  in  device.   Move
+		;position in the middle.
+      (position-and-contents
+	  (display "01234567")
+  	(display "89ab")
+	(set-port-position! (current-output-port) 6))
+    => '(6 "0123456789ab"))
+
+  (check	;Buffer  empty, data  in device.   Move position  in the
+		;middle.
+      (position-and-contents
+	  (display "01234567")
+  	(flush-output-port (current-output-port))
+	(set-port-position! (current-output-port) 6))
+    => '(6 "01234567"))
+
+;;; --------------------------------------------------------------------
+;;; setting port position, overwriting
+
+  (check	;empty buffer, empty device
+      (position-and-contents
+	  (set-port-position! (current-output-port) 0)
+	(display ""))
+    => '(0 ""))
+
+  (check       ;partial internal overwrite, data in buffer, empty device
+      (position-and-contents
+	  (display "01234567")
+	(set-port-position! (current-output-port) 2)
+	(display "abc"))
+    => '(5 "01abc567"))
+
+  (check       ;partial internal overwrite, empty buffer, data in device
+      (position-and-contents
+	  (display "01234567")
+	(flush-output-port (current-output-port))
+	(set-port-position! (current-output-port) 2)
+	(display "abc"))
+    => '(5 "01abc567"))
+
+  (check ;partial internal overwrite, some data in buffer, some data in device
+      (position-and-contents
+	  (display "0123456789")
+	(set-port-position! (current-output-port) 2)
+	(display "abc"))
+    => '(5 "01abc56789"))
+
+  (check	;overflow overwrite, data in buffer, empty device
+      (position-and-contents
+	  (display "01234567")
+	(set-port-position! (current-output-port) 6)
+	(display "abcd"))
+    => '(10 "012345abcd"))
+
+  (check	;overflow overwrite, empty buffer, empty device
+      (position-and-contents
+	  (display "01234567")
+	(flush-output-port (current-output-port))
+	(set-port-position! (current-output-port) 6)
+	(display "abcd"))
+    => '(10 "012345abcd"))
+
+  (check   ;overflow overwrite, some data in buffer, some data in device
+      (position-and-contents
+	  (display "0123456789")
+	(set-port-position! (current-output-port) 6)
+	(display "abcdef"))
+    => '(12 "012345abcdef"))
+
+  (check	;full overwrite, data in buffer, empty device
+      (position-and-contents
+	  (display "01234567")
+	(set-port-position! (current-output-port) 0)
+	(display "abcdefgh"))
+;;;               01234567
+    => '(8 "abcdefgh"))
+
+  (check	;full overwrite, empty buffer, data in device
+      (position-and-contents
+	  (display "01234567")
+	(flush-output-port (current-output-port))
+	(set-port-position! (current-output-port) 0)
+	(display "abcdefgh"))
+;;;               01234567
+    => '(8 "abcdefgh"))
+
+  (check       ;full overwrite, some data in buffer, some data in device
+      (position-and-contents
+	  (display "0123456789")
+	(set-port-position! (current-output-port) 0)
+	(display "abcdefghil"))
+;;;               0123456789
+    => '(10 "abcdefghil"))
+
+  #t)
+
+
 (parametrise ((check-test-name		'get-bytevector-n)
 	      (test-pathname		(make-test-pathname "get-bytevector-n.bin"))
 	      (input-file-buffer-size	100))
