@@ -2142,6 +2142,510 @@
   #t)
 
 
+(parametrise ((check-test-name		'open-string-output-port)
+	      (string-port-buffer-size	8))
+
+  (define-syntax snapshot-position-and-contents
+    (lambda (stx)
+      (syntax-case stx ()
+	((?ctx)
+	 (with-syntax ((PORT	(datum->syntax #'?ctx 'port))
+		       (EXTRACT (datum->syntax #'?ctx 'extract)))
+	   #'(let ((pos (port-position PORT)))
+	       (list pos (EXTRACT))))))))
+
+  (define-syntax position-and-contents
+    (lambda (stx)
+      (syntax-case stx ()
+	((?ctx ?port . ?body)
+	 #'(let-values (((?port extract) (open-string-output-port)))
+	     (begin . ?body)
+	     (let ((pos (port-position ?port)))
+	       (list pos (extract))))))))
+
+;;; --------------------------------------------------------------------
+;;; port operations support
+
+  (check
+      (let-values (((port extract) (open-string-output-port)))
+	(port-has-port-position? port))
+    => #t)
+
+  (check
+      (let-values (((port extract) (open-string-output-port)))
+	(port-has-set-port-position!? port))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; writing data, single extraction
+
+  (check	;single char
+      (let-values (((port extract) (open-string-output-port)))
+	(put-char port #\A)
+	(extract))
+    => "A")
+
+  (check	;char by char until the buffer is full
+      (let-values (((port extract) (open-string-output-port)))
+	(do ((i 0 (+ 1 i)))
+	    ((= 9 i)
+	     (extract))
+	  (put-char port #\A)))
+    => "AAAAAAAAA")
+
+  (check	;single string not filling the buffer
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port "12345")
+	(extract))
+    => "12345")
+
+  (check	;single string filling the buffer
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port "0123456789")
+	(extract))
+    => "0123456789")
+
+  (check	;string by string until the buffer is full
+      (let-values (((port extract) (open-string-output-port)))
+	(do ((i 0 (+ 1 i)))
+	    ((= 3 i)
+	     (extract))
+	  (put-string port "123")))
+    => "123123123")
+
+  (check	;fill the buffer multiple times
+      (let-values (((port extract) (open-string-output-port)))
+	(do ((i 0 (+ 1 i)))
+	    ((= 5 i)
+	     (extract))
+	  (put-string port "0123456789")))
+    => "0123456789\
+        0123456789\
+        0123456789\
+        0123456789\
+        0123456789")
+
+;;; --------------------------------------------------------------------
+;;; writing data, multiple extraction
+
+  (check	;empty device, data in buffer
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port "012")
+	(let ((result (snapshot-position-and-contents)))
+	  (put-string port "3456")
+	  (list result (snapshot-position-and-contents))))
+    => '((3 "012")
+	 (4 "3456")))
+
+  (check	;empty buffer, data in device
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port "0123456789")
+	(flush-output-port port)
+	(let ((result (snapshot-position-and-contents)))
+	  (put-string port "abcdefghil")
+	  (flush-output-port port)
+	  (list result (snapshot-position-and-contents))))
+    => '((10 "0123456789")
+	 (10 "abcdefghil")))
+
+  (check	;some data in device, some data in buffer
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port "0123456789")
+	(let ((result (snapshot-position-and-contents)))
+	  (put-string port "abcdefghil")
+	  (list result (snapshot-position-and-contents))))
+    => '((10 "0123456789")
+	 (10 "abcdefghil")))
+
+;;; --------------------------------------------------------------------
+;;; getting port position
+
+  (check	;empty device
+      (let-values (((port extract) (open-string-output-port)))
+	(port-position port))
+    => 0)
+
+  (check	;some data in buffer, none in device
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port "012")
+	(port-position port))
+    => 3)
+
+  (check	;buffer full, no data in device
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port "01234567")
+	(port-position port))
+    => 8)
+
+  (check	;some data in buffer, some data in device
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port "01234567")
+	(put-string port "89ab")
+	(port-position port))
+    => 12)
+
+  (check	;buffer empty, data in device
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port "01234567")
+	(flush-output-port port)
+	(port-position port))
+    => 8)
+
+;;; --------------------------------------------------------------------
+;;; setting port position, no overwriting
+
+  (check	;empty device
+      (position-and-contents port
+	(set-port-position! port 0))
+    => '(0 ""))
+
+  (check	;some data in buffer, none in device
+      (position-and-contents port
+	(put-string port "012")
+	(set-port-position! port 1))
+    => '(1 "012"))
+
+  (check   ;Some data  in buffer, none in device.   Move position in the
+	   ;middle, then again at the end.
+      (position-and-contents port
+	(put-string port "012")
+	(set-port-position! port 1)
+	(set-port-position! port 3))
+    => '(3 "012"))
+
+  (check ;Buffer full, no data  in device.  Move position in the middle,
+	 ;then again at the end.
+      (position-and-contents port
+  	(put-string port "01234567")
+	(set-port-position! port 1)
+	(set-port-position! port 8))
+    => '(8 "01234567"))
+
+  (check	;Some  data  in  buffer,  some  data  in  device.   Move
+		;position in the middle.
+      (position-and-contents port
+  	(put-string port "01234567")
+  	(put-string port "89ab")
+	(set-port-position! port 6))
+    => '(6 "0123456789ab"))
+
+  (check	;Buffer  empty, data  in device.   Move position  in the
+		;middle.
+      (position-and-contents port
+  	(put-string port "01234567")
+  	(flush-output-port port)
+	(set-port-position! port 6))
+    => '(6 "01234567"))
+
+;;; --------------------------------------------------------------------
+;;; setting port position, overwriting
+
+  (check	;empty buffer, empty device
+      (position-and-contents port
+	(set-port-position! port 0)
+	(put-string port ""))
+    => '(0 ""))
+
+  (check	;partial internal overwrite, data in buffer, empty device
+      (position-and-contents port
+	(put-string port "01234567")
+	(set-port-position! port 2)
+	(put-string port "abc"))
+    => '(5 "01abc567"))
+
+  (check	;partial internal overwrite, empty buffer, data in device
+      (position-and-contents port
+	(put-string port "01234567")
+	(flush-output-port port)
+	(set-port-position! port 2)
+	(put-string port "abc"))
+    => '(5 "01abc567"))
+
+  (check	;partial internal overwrite, some data in buffer, some data in device
+      (position-and-contents port
+	(put-string port "0123456789")
+	(set-port-position! port 2)
+	(put-string port "abc"))
+    => '(5 "01abc56789"))
+
+  (check	;overflow overwrite, data in buffer, empty device
+      (position-and-contents port
+	(put-string port "01234567")
+	(set-port-position! port 6)
+	(put-string port "abcd"))
+    => '(10 "012345abcd"))
+
+  (check	;overflow overwrite, empty buffer, empty device
+      (position-and-contents port
+	(put-string port "01234567")
+	(flush-output-port port)
+	(set-port-position! port 6)
+	(put-string port "abcd"))
+    => '(10 "012345abcd"))
+
+  (check	;overflow overwrite, some data in buffer, some data in device
+      (position-and-contents port
+	(put-string port "0123456789")
+	(set-port-position! port 6)
+	(put-string port "abcdef"))
+    => '(12 "012345abcdef"))
+
+  (check	;full overwrite, data in buffer, empty device
+      (position-and-contents port
+	(put-string port "01234567")
+	(set-port-position! port 0)
+	(put-string port "abcdefgh"))
+;;;                       01234567
+    => '(8 "abcdefgh"))
+
+  (check	;full overwrite, empty buffer, data in device
+      (position-and-contents port
+	(put-string port "01234567")
+	(flush-output-port port)
+	(set-port-position! port 0)
+	(put-string port "abcdefgh"))
+;;;                       01234567
+    => '(8 "abcdefgh"))
+
+  (check	;full overwrite, some data in buffer, some data in device
+      (position-and-contents port
+	(put-string port "0123456789")
+	(set-port-position! port 0)
+	(put-string port "abcdefghil"))
+;;;                       0123456789
+    => '(10 "abcdefghil"))
+
+  #t)
+
+
+(parametrise ((check-test-name		'get-output-string)
+	      (string-port-buffer-size	8))
+
+  (define-syntax snapshot-position-and-contents
+    (lambda (stx)
+      (syntax-case stx ()
+	((?ctx)
+	 (with-syntax ((PORT	(datum->syntax #'?ctx 'port)))
+	   #'(let ((pos (port-position PORT)))
+	       (list pos (get-output-string PORT))))))))
+
+  (define-syntax position-and-contents
+    (lambda (stx)
+      (syntax-case stx ()
+	((?ctx ?port . ?body)
+	 #'(let-values (((?port extract) (open-string-output-port)))
+	     (begin . ?body)
+	     (let ((pos (port-position ?port)))
+	       (list pos (get-output-string ?port))))))))
+
+;;; --------------------------------------------------------------------
+;;; writing data, single extraction
+
+  (check	;single char
+      (let-values (((port extract) (open-string-output-port)))
+	(put-char port #\A)
+	(get-output-string port))
+    => "A")
+
+  (check	;char by char until the buffer is full
+      (let-values (((port extract) (open-string-output-port)))
+	(do ((i 0 (+ 1 i)))
+	    ((= 9 i)
+	     (get-output-string port))
+	  (put-char port #\A)))
+    => "AAAAAAAAA")
+
+  (check	;single string not filling the buffer
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port "12345")
+	(get-output-string port))
+    => "12345")
+
+  (check	;single string filling the buffer
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port "0123456789")
+	(get-output-string port))
+    => "0123456789")
+
+  (check	;string by string until the buffer is full
+      (let-values (((port extract) (open-string-output-port)))
+	(do ((i 0 (+ 1 i)))
+	    ((= 3 i)
+	     (get-output-string port))
+	  (put-string port "123")))
+    => "123123123")
+
+  (check	;fill the buffer multiple times
+      (let-values (((port extract) (open-string-output-port)))
+	(do ((i 0 (+ 1 i)))
+	    ((= 5 i)
+	     (get-output-string port))
+	  (put-string port "0123456789")))
+    => "0123456789\
+        0123456789\
+        0123456789\
+        0123456789\
+        0123456789")
+
+;;; --------------------------------------------------------------------
+;;; writing data, multiple extraction
+
+  (check	;empty device, data in buffer
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port "012")
+	(let ((result (snapshot-position-and-contents)))
+	  (put-string port "3456")
+	  (list result (snapshot-position-and-contents))))
+    => '((3 "012")
+	 (4 "3456")))
+
+  (check	;empty buffer, data in device
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port "0123456789")
+	(flush-output-port port)
+	(let ((result (snapshot-position-and-contents)))
+	  (put-string port "abcdefghil")
+	  (flush-output-port port)
+	  (list result (snapshot-position-and-contents))))
+    => '((10 "0123456789")
+	 (10 "abcdefghil")))
+
+  (check	;some data in device, some data in buffer
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port "0123456789")
+	(let ((result (snapshot-position-and-contents)))
+	  (put-string port "abcdefghil")
+	  (list result (snapshot-position-and-contents))))
+    => '((10 "0123456789")
+	 (10 "abcdefghil")))
+
+;;; --------------------------------------------------------------------
+;;; setting port position, no overwriting
+
+  (check	;empty device
+      (position-and-contents port
+	(set-port-position! port 0))
+    => '(0 ""))
+
+  (check	;some data in buffer, none in device
+      (position-and-contents port
+	(put-string port "012")
+	(set-port-position! port 1))
+    => '(1 "012"))
+
+  (check   ;Some data  in buffer, none in device.   Move position in the
+	   ;middle, then again at the end.
+      (position-and-contents port
+	(put-string port "012")
+	(set-port-position! port 1)
+	(set-port-position! port 3))
+    => '(3 "012"))
+
+  (check ;Buffer full, no data  in device.  Move position in the middle,
+	 ;then again at the end.
+      (position-and-contents port
+  	(put-string port "01234567")
+	(set-port-position! port 1)
+	(set-port-position! port 8))
+    => '(8 "01234567"))
+
+  (check	;Some  data  in  buffer,  some  data  in  device.   Move
+		;position in the middle.
+      (position-and-contents port
+  	(put-string port "01234567")
+  	(put-string port "89ab")
+	(set-port-position! port 6))
+    => '(6 "0123456789ab"))
+
+  (check	;Buffer  empty, data  in device.   Move position  in the
+		;middle.
+      (position-and-contents port
+  	(put-string port "01234567")
+  	(flush-output-port port)
+	(set-port-position! port 6))
+    => '(6 "01234567"))
+
+;;; --------------------------------------------------------------------
+;;; setting port position, overwriting
+
+  (check	;empty buffer, empty device
+      (position-and-contents port
+	(set-port-position! port 0)
+	(put-string port ""))
+    => '(0 ""))
+
+  (check	;partial internal overwrite, data in buffer, empty device
+      (position-and-contents port
+	(put-string port "01234567")
+	(set-port-position! port 2)
+	(put-string port "abc"))
+    => '(5 "01abc567"))
+
+  (check	;partial internal overwrite, empty buffer, data in device
+      (position-and-contents port
+	(put-string port "01234567")
+	(flush-output-port port)
+	(set-port-position! port 2)
+	(put-string port "abc"))
+    => '(5 "01abc567"))
+
+  (check	;partial internal overwrite, some data in buffer, some data in device
+      (position-and-contents port
+	(put-string port "0123456789")
+	(set-port-position! port 2)
+	(put-string port "abc"))
+    => '(5 "01abc56789"))
+
+  (check	;overflow overwrite, data in buffer, empty device
+      (position-and-contents port
+	(put-string port "01234567")
+	(set-port-position! port 6)
+	(put-string port "abcd"))
+    => '(10 "012345abcd"))
+
+  (check	;overflow overwrite, empty buffer, empty device
+      (position-and-contents port
+	(put-string port "01234567")
+	(flush-output-port port)
+	(set-port-position! port 6)
+	(put-string port "abcd"))
+    => '(10 "012345abcd"))
+
+  (check	;overflow overwrite, some data in buffer, some data in device
+      (position-and-contents port
+	(put-string port "0123456789")
+	(set-port-position! port 6)
+	(put-string port "abcdef"))
+    => '(12 "012345abcdef"))
+
+  (check	;full overwrite, data in buffer, empty device
+      (position-and-contents port
+	(put-string port "01234567")
+	(set-port-position! port 0)
+	(put-string port "abcdefgh"))
+;;;                       01234567
+    => '(8 "abcdefgh"))
+
+  (check	;full overwrite, empty buffer, data in device
+      (position-and-contents port
+	(put-string port "01234567")
+	(flush-output-port port)
+	(set-port-position! port 0)
+	(put-string port "abcdefgh"))
+;;;                       01234567
+    => '(8 "abcdefgh"))
+
+  (check	;full overwrite, some data in buffer, some data in device
+      (position-and-contents port
+	(put-string port "0123456789")
+	(set-port-position! port 0)
+	(put-string port "abcdefghil"))
+;;;                       0123456789
+    => '(10 "abcdefghil"))
+
+  #t)
+
+
 (parametrise ((check-test-name		'get-bytevector-n)
 	      (test-pathname		(make-test-pathname "get-bytevector-n.bin"))
 	      (input-file-buffer-size	100))

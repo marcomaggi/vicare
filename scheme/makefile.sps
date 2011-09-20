@@ -452,7 +452,6 @@
     (port-mode                                   i)
     (set-port-mode!                              i)
     (with-input-from-string                      i)
-    (open-output-string                          i)
     (open-output-bytevector                      i)
     (get-output-string                           i)
     (get-output-bytevector                       i)

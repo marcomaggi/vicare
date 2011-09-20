@@ -325,10 +325,9 @@
     open-bytevector-output-port call-with-bytevector-output-port
 
     ;; output to strings
-    open-string-output-port with-output-to-string
+    open-string-output-port with-output-to-string get-output-string
     with-output-to-port
     call-with-string-output-port
-    open-output-string get-output-string
 
     ;; custom ports
     make-custom-binary-input-port
@@ -427,7 +426,7 @@
 		  open-string-output-port with-output-to-string
 		  with-output-to-port
 		  call-with-string-output-port
-		  open-output-string get-output-string
+		  get-output-string
 
 		  ;; custom ports
 		  make-custom-binary-input-port
@@ -519,6 +518,7 @@
 		    ($bytevector-u8-ref	bytevector-u8-ref))
 	    unsafe.)
     (prefix (rename (ikarus system $strings)
+		    ($make-string	make-string)
 		    ($string-length	string-length)
 		    ($string-ref	string-ref)
 		    ($string-set!	string-set!))
@@ -892,9 +892,9 @@
 ;;;; bytevector helpers
 
 (define (%unsafe.bytevector-u16-ref bv index endianness)
-  ;;Like  BYTEVECTOR-U16-REF  defined by  R6RS.   Assume all  the
-  ;;arguments to  have been  already validated; expect  the index
-  ;;integers to be fixnums.
+  ;;Like BYTEVECTOR-U16-REF  defined by R6RS.  Assume  all the arguments
+  ;;to  have been  already validated;  expect the  index integers  to be
+  ;;fixnums.
   ;;
   (if (eq? endianness 'little)
       (%unsafe.fxior (unsafe.bytevector-u8-ref bv index)
@@ -903,9 +903,9 @@
 		   (unsafe.fxsll (unsafe.bytevector-u8-ref bv index) 8))))
 
 (define (%unsafe.bytevector-copy! src.bv src.start dst.bv dst.start count)
-  ;;Like  BYTEVECTOR-COPY!   defined  by  R6RS.  Assume  all  the
-  ;;arguments have  been already validated; expect  all the exact
-  ;;integers to be fixnums.
+  ;;Like BYTEVECTOR-COPY!   defined by  R6RS.  Assume all  the arguments
+  ;;have been  already validated;  expect all the  exact integers  to be
+  ;;fixnums.
   ;;
   (when (unsafe.fx> count 0)
     (unsafe.bytevector-u8-set! dst.bv dst.start (unsafe.bytevector-u8-ref src.bv src.start))
@@ -914,9 +914,9 @@
 			      (unsafe.fxsub1 count))))
 
 (define (%unsafe.bigdst-bytevector-copy! src.bv src.start dst.bv dst.start count)
-  ;;Like  BYTEVECTOR-COPY!   defined  by  R6RS.  Assume  all  the
-  ;;arguments have  been already validated; expect  all the exact
-  ;;integers to be fixnums with the exception of DST.START.
+  ;;Like BYTEVECTOR-COPY!   defined by  R6RS.  Assume all  the arguments
+  ;;have been  already validated;  expect all the  exact integers  to be
+  ;;fixnums with the exception of DST.START.
   ;;
   (when (unsafe.fx> count 0)
     (unsafe.bytevector-u8-set! dst.bv dst.start (unsafe.bytevector-u8-ref src.bv src.start))
@@ -925,9 +925,9 @@
 				     (unsafe.fxsub1 count))))
 
 (define (%unsafe.big-bytevector-copy! src.bv src.start dst.bv dst.start count)
-  ;;Like  BYTEVECTOR-COPY!   defined  by  R6RS.  Assume  all  the
-  ;;arguments have  been already validated; expect  all the exact
-  ;;integers to be either fixnums or bignums.
+  ;;Like BYTEVECTOR-COPY!   defined by  R6RS.  Assume all  the arguments
+  ;;have been  already validated;  expect all the  exact integers  to be
+  ;;either fixnums or bignums.
   ;;
   (when (> count 0)
     (unsafe.bytevector-u8-set! dst.bv dst.start (unsafe.bytevector-u8-ref src.bv src.start))
@@ -936,12 +936,10 @@
 				  (- count 1))))
 
 (define (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors)
-  ;;Reverse the arrugments  and concatenate its bytevector items;
-  ;;return  the result.   Assume  the argument  has been  already
-  ;;validated.
+  ;;Reverse the  argument and  concatenate its bytevector  items; return
+  ;;the result.  Assume the argument has been already validated.
   ;;
-  ;;The  bytevectors may  have either  a  fixnum or  a bignum  as
-  ;;length.
+  ;;The bytevectors may have either a fixnum or a bignum as length.
   ;;
   (call-with-values
       (lambda ()
@@ -970,6 +968,49 @@
     (%unsafe.string-copy! src.str (unsafe.fxadd1 src.start)
 			  dst.str (unsafe.fxadd1 dst.start)
 			  (unsafe.fxsub1 count))))
+
+(define (%unsafe.bigdst-string-copy! src.str src.start dst.str dst.start count)
+  ;;Like BYTEVECTOR-COPY!  defined by R6RS, but for strings.  Assume all
+  ;;the  arguments have  been already  validated; expect  all  the exact
+  ;;integers to be fixnums with the exception of DST.START.
+  ;;
+  (when (unsafe.fx> count 0)
+    (unsafe.string-set! dst.str dst.start (unsafe.string-ref src.str src.start))
+    (%unsafe.bigdst-string-copy! src.str (unsafe.fxadd1 src.start)
+				 dst.str (+ 1           dst.start)
+				 (unsafe.fxsub1 count))))
+
+(define (%unsafe.big-string-copy! src.str src.start dst.str dst.start count)
+  ;;Like BYTEVECTOR-COPY!  defined by R6RS, but for strings.  Assume all
+  ;;the  arguments have  been already  validated; expect  all  the exact
+  ;;integers to be either fixnums or bignums.
+  ;;
+  (when (> count 0)
+    (unsafe.string-set! dst.str dst.start (unsafe.string-ref src.str src.start))
+    (%unsafe.big-string-copy! src.str (+ 1 src.start)
+			      dst.str (+ 1 dst.start)
+			      (- count 1))))
+
+(define (%unsafe.string-reverse-and-concatenate list-of-strings)
+  ;;Reverse the  argument and concatenate  its string items;  return the
+  ;;result.  Assume the argument has been already validated.
+  ;;
+  ;;The strings may have either a fixnum or a bignum as length.
+  ;;
+  (call-with-values
+      (lambda ()
+	(let recur ((strs list-of-strings)
+		    (accumulated-total-length 0))
+	  (if (null? strs)
+	      (values (unsafe.make-string accumulated-total-length) 0)
+	    (let* ((src.str  (car strs))
+		   (src.len (unsafe.string-length src.str)))
+	      (let-values (((dst.str next-byte-index)
+			    (recur (cdr strs) (+ src.len accumulated-total-length))))
+		(%unsafe.big-string-copy! src.str 0 dst.str next-byte-index src.len)
+		(values dst.str (+ src.len next-byte-index)))))))
+    (lambda (full-string dummy)
+      full-string)))
 
 
 ;;;; dot notation macros for port structures
@@ -2153,6 +2194,49 @@
 		    read! write! get-position set-position! close cookie))))))
 
 
+;;;; string input ports
+
+(define (open-string-input-port str)
+  ;;Defined  by   R6RS.   Return  a  textual   input  port  whose
+  ;;characters are drawn from STR.   The port may or may not have
+  ;;an  associated  transcoder; if  it  does,  the transcoder  is
+  ;;implementation--dependent.   The   port  should  support  the
+  ;;PORT-POSITION and SET-PORT-POSITION!  operations.
+  ;;
+  ;;If  STR  is modified  after  OPEN-STRING-INPUT-PORT has  been
+  ;;called, the effect on the returned port is unspecified.
+  ;;
+  (open-string-input-port/id str "*string-input-port*"))
+
+(define (open-string-input-port/id str id)
+  ;;Defined  by Ikarus.   For  details see  the documentation  of
+  ;;OPEN-STRING-INPUT-PORT.
+  ;;
+  ;;In this port there is  no underlying device: the input string
+  ;;is set as the buffer.
+  ;;
+  (define who 'open-string-input-port)
+  (unless (string? str)
+    (die who "not a string" str))
+  ;;The input string is itself the buffer!!!
+  (let ((str.len (string-length str)))
+    (unless (< str.len buffer-size-upper-limit)
+      (error who "input string length exceeds maximum supported size" str.len))
+    (let ((attributes		fast-get-char-tag)
+	  (buffer.index		0)
+	  (buffer.used-size	str.len)
+	  (buffer		str)
+	  (transcoder		#t)
+	  (read!		all-data-in-buffer)
+	  (write!		#f)
+	  (get-position		#t)
+	  (set-position!	#t)
+	  (close		#f)
+	  (cookie		(default-cookie #f)))
+      ($make-port attributes buffer.index buffer.used-size buffer transcoder id
+		  read! write! get-position set-position! close cookie))))
+
+
 ;;;; bytevector output ports
 
 (define open-bytevector-output-port
@@ -2345,150 +2429,6 @@
 
 ;;;; string output ports
 
-(define (open-output-string)
-  (%open-output-string 'open-output-string))
-
-(define (%open-output-string who)
-  ;;Defined   by   Ikarus.   Return   an   output  textual   port
-  ;;accumulating   the  characters  written   to  it   for  later
-  ;;extraction by GET-OUTPUT-STRING.
-  ;;
-  ;;GET-OUTPUT-STRING, when  called, returns a  string consisting
-  ;;of all  the port's accumulated characters  (regardless of the
-  ;;port's current position),  removes the accumulated characters
-  ;;from the port, and resets the port's position.
-  ;;
-  ;;The most common use of this  port type is to append chars and
-  ;;finally extract the whole output string:
-  ;;
-  ;;  (let ((port (open-output-string)))
-  ;;    (display "ciao" port) ...
-  ;;    (get-output-string))
-  ;;
-  ;;for  this reason we  implement the  state of  the port  to be
-  ;;somewhat efficient for such use.
-  ;;
-  ;;This port has  no buffer and its underlying  device is a list
-  ;;of strings stored in the DEST field of the port's cookie:
-  ;;
-  ;;*  When the  WRITE!  function  is invoked:  a  new string  is
-  ;;prepended to the device.
-  ;;
-  ;;* When  the getter is invoked:  the list is  converted to the
-  ;;actual  full string  and returned  and the  device is  set to
-  ;;null.
-  ;;
-  ;;This most common  situation is violated if SET-PORT-POSITION!
-  ;;is applied  to the port; the  SET-POSITION! function converts
-  ;;the device to a list  holding a single string holding all the
-  ;;accumulated  characters.  In  this  situation it  is easy  to
-  ;;detect  if the  position  is inside  the already  accumulated
-  ;;characters by  comparing the position index to  the length of
-  ;;the   single  string.    Now  the   WRITE!    procedure  must
-  ;;distinguish the two cases: data fitting in the single string,
-  ;;data extending out of the single string.
-  ;;
-  ;;*NOTE*  The  POS  field  of  the  cookie  is  always  set  by
-  ;;SET-PORT-POSITION!   and the  various functions  invoking the
-  ;;WRITE!   operation,  after  having  successfully  called  the
-  ;;port's own WRITE! or SET-POSITION! functions.  We do not need
-  ;;to  set it  here  with  the single  exception  of the  getter
-  ;;function which needs to reset it to zero.
-  ;;
-  (define port
-    (let ((attributes		fast-put-char-tag)
-	  ;;For a string port there is no buffer.
-	  (buffer.index		0)
-	  (buffer.used-size	0)
-	  (buffer		(make-string (string-port-buffer-size)))
-	  (transcoder		#t)
-	  (identifier		"*string-output-port*")
-	  (read!		#f)
-	  (get-position		#t)
-	  (close		#f)
-	  (cookie		(default-cookie '())))
-      (define-inline (get-device)
-	(cookie-dest cookie))
-      (define-inline (set-device! ?new-device)
-	(set-cookie-dest! cookie ?new-device))
-
-      (define (write! src.str src.start count)
-	(if (zero? count)
-	    count
-	  (let ((output-strs  (get-device))
-		(old-position (cookie-pos  cookie)))
-	    (if (and (not (null? output-strs))
-		     (null? (cdr output-strs))
-		     (< old-position (unsafe.string-length (car output-strs))))
-		;;The  current  position  was  set  inside  the
-		;;already accumulated data.
-		(let* ((dst.str		(car output-strs))
-		       (total-size	(unsafe.string-length dst.str))
-		       (delta		(- total-size old-position)))
-		  (if (<= count delta)
-		      ;;The new data fits in the single string.
-		      (%unsafe.string-copy! src.str src.start dst.str old-position count)
-		    (begin
-		      ;;The  new data  goes part  in  the single
-		      ;;string and part in a new string.
-		      (%unsafe.string-copy! src.str src.start dst.str old-position delta)
-		      (let* ((src.start	(+ delta src.start))
-			     (delta		(- count delta))
-			     (dst.str		(make-string delta)))
-			(%unsafe.string-copy! src.str src.start dst.str 0 delta)
-			(set-device! (cons dst.str output-strs))))))
-	      ;;The  current  position is  at  the  end of  the
-	      ;;already accumulated data.  Prepend a new string
-	      ;;to OUTPUT-STRS.
-	      (let ((dst.str (make-string count)))
-		(%unsafe.string-copy! src.str src.start dst.str 0 count)
-		(set-device! (cons dst.str output-strs))))
-	    count)))
-
-      (define (set-position! new-position)
-	;;NEW-POSITION   has  already   been  validated   by  the
-	;;procedure SET-PORT-POSITION!.
-	;;
-	(let ((old-position (cookie-pos cookie)))
-	  (cond ((< old-position new-position)
-		 (raise (condition
-			 (make-who-condition who)
-			 (make-message-condition "attempt to set port position beyond limit")
-			 (make-i/o-invalid-position-error new-position))))
-		((> old-position new-position)
-		 (set-device! (list (apply string-append (reverse (get-device))))))
-		(else ;(= old-position new-position)
-		 (values)))))
-
-      ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
-		  read! write! get-position set-position! close cookie)))
-  port)
-
-(define (get-output-string port)
-  ;;Defined by Ikarus.  Return the string accumulated in the PORT
-  ;;opened by OPEN-OUTPUT-STRING.
-  ;;
-  (define who 'get-output-string)
-  (define (wrong-port-error)
-    (die who "not an output-string port" port))
-  (%assert-value-is-port port who)
-  (with-textual-port (port)
-    (unless (%unsafe.textual-output-port? port)
-      (wrong-port-error))
-    (unless port.closed?
-      (%unsafe.flush-output-port port who))
-    (let ((cookie port.cookie))
-      (unless (cookie? cookie)
-	(wrong-port-error))
-      (let ((device (cookie-dest cookie)))
-	(unless (or (null? device) (pair? device))
-	  (wrong-port-error))
-	(set-cookie-dest! cookie '())
-	(set-cookie-pos!  cookie 0)
-	(apply string-append (reverse device))))))
-
-;;; --------------------------------------------------------------------
-
 (define (open-string-output-port)
   ;;Defined by  R6RS.  Return two  values: a textual  output port
   ;;and an extraction procedure.  The output port accumulates the
@@ -2506,9 +2446,166 @@
   ;;accumulated characters  from the port, and  resets the port's
   ;;position.
   ;;
-  (let ((port (%open-output-string 'open-string-output-port)))
-    (values port (lambda ()
-		   (get-output-string port)))))
+  (define who 'open-string-output-port)
+  (let ((port			#f)
+	(attributes		fast-put-char-tag)
+	(buffer.index		0)
+	(buffer.used-size	0)
+	(buffer			(unsafe.make-string (string-port-buffer-size)))
+	(identifier		"*string-output-port*")
+	(transcoder		#f)
+	(read!			#f)
+	(get-position		#t)
+	(close			#f)
+	(cookie			(default-cookie '())))
+    ;;The most common use of this  port type is to append characters and
+    ;;finally extract the whole output bytevector:
+    ;;
+    ;;  (call-with-values
+    ;;      open-string-output-port
+    ;;    (lambda (port extract)
+    ;;      (put-string port "123")
+    ;;      ...
+    ;;      (extract)))
+    ;;
+    ;;for this reason we implement the device of the port to be somewhat
+    ;;efficient  for such  use.   The device  is  a list  stored in  the
+    ;;cookie, called  OUTPUT-STRS in the code; whenever  data is flushed
+    ;;from  the buffer  to  the device:  a  new string  is prepended  to
+    ;;OUTPUT-strs.  When the extract function is invoked: OUTPUT-STRS is
+    ;;reversed and concatenated obtaining a bytevector.
+    ;;
+    ;;This situation  is violated  if SET-PORT-POSITION!  is  applied to
+    ;;the port to move the position before the end of the data.  If this
+    ;;happens: SET-POSITION!   converts OUTPUT-STRS to a  list holding a
+    ;;single full string.
+    ;;
+    ;;Whenever  OUTPUT-STRS holds a  single string  and the  position is
+    ;;less  than such  string length:  it means  that SET-PORT-POSITION!
+    ;;was used.
+    ;;
+
+    (define-inline (%get-device)
+      (cookie-dest cookie))
+    (define-inline (%set-device! ?new-device)
+      (set-cookie-dest! cookie ?new-device))
+    (define-inline (%device-position)
+      (cookie-pos cookie))
+    (define (%%serialise-device! who reset?)
+      (with-port (port)
+	(unless port.closed?
+	  (%unsafe.flush-output-port port who))
+	(let ((bv (%unsafe.string-reverse-and-concatenate (%get-device))))
+	  (%set-device! (if reset? '() (list bv)))
+	  bv)))
+    (define-inline (%serialise-device! who)
+      (%%serialise-device! who #f))
+    (define-inline (%serialise-device-and-reset! who)
+      (%%serialise-device! who #t))
+
+    (define (write! src.str src.start count)
+      (%debug-assert (and (fixnum? count) (<= 0 count)))
+      (let ((output-strs  (%get-device))
+	    (dev-position (%device-position)))
+	(if (and (%list-holding-single-value? output-strs)
+		 (< dev-position (unsafe.string-length (car output-strs))))
+	    ;;The   current  position   was  set   inside   the  already
+	    ;;accumulated data.
+	    (write!/overwrite src.str src.start count output-strs dev-position)
+	  ;;The  current   position  is  at  the  end   of  the  already
+	  ;;accumulated data.
+	  (write!/append src.str src.start count output-strs))
+	count))
+
+    (define-inline (write!/overwrite src.str src.start count output-strs dev-position)
+      ;;Write  data  to the  device,  overwriting  some  of the  already
+      ;;existing  data.  The  device  is already  composed  of a  single
+      ;;string.  Remember that DEV-POSITION can  be either a fixnum or a
+      ;;bignum; the same goes for DST.LEN and DST.ROOM.
+      ;;
+      (let* ((dst.str  (car output-strs))
+	     (dst.len  (unsafe.string-length dst.str))
+	     (dst.room (- dst.len dev-position)))
+	(if (<= count dst.room)
+	    ;;The new data fits in the single string.
+	    (%unsafe.bigdst-string-copy! src.str src.start dst.str dev-position count)
+	  (begin
+	    (%debug-assert (fixnum? dst.room))
+	    ;;The new data goes part in  the single string and part in a
+	    ;;new string.
+	    (%unsafe.bigdst-string-copy! src.str src.start dst.str dev-position dst.room)
+	    (let* ((src.start (unsafe.fx+ src.start dst.room))
+		   (count     (unsafe.fx- count     dst.room))
+		   (dst.str   (unsafe.make-string count)))
+	      (%unsafe.string-copy! src.str src.start dst.str 0 count)
+	      (%set-device! (cons dst.str output-strs)))))))
+
+    (define-inline (write!/append src.str src.start count output-strs)
+      ;;Append  new  data  to  the  device.  Prepend  a  new  string  to
+      ;;OUTPUT-STRS.
+      ;;
+      (let ((dst.str (unsafe.make-string count)))
+	(%unsafe.string-copy! src.str src.start dst.str 0 count)
+	(%set-device! (cons dst.str output-strs))))
+
+    (define (set-position! new-position)
+      ;;NEW-POSITION has already been  validated as exact integer by the
+      ;;procedure SET-PORT-POSITION!.  Here we  only have to verify that
+      ;;the value is valid as  offset inside the underlying full string.
+      ;;If this validation  succeeds: SET-PORT-POSITION!  will store the
+      ;;position in the POS field of the cookie.
+      ;;
+      (define who 'open-string-output-port/set-position!)
+      (unless (or (=  new-position (%device-position))
+		  (<= new-position (unsafe.string-length (%serialise-device! who))))
+	(%raise-port-position-out-of-range who port new-position)))
+
+    (define (extract)
+      ;;The  extraction  function.   Flush  the buffer  to  the
+      ;;device  list,  convert  the  device list  to  a  single
+      ;;string.  Return the single string and reset the
+      ;;port to its empty state.
+      ;;
+      (with-port (port)
+	(define-inline (set-device-position! ?new-value)
+	  (set-cookie-pos! port.cookie ?new-value))
+	(let ((bv (%serialise-device-and-reset! who)))
+	  (set! port.buffer.index     0)
+	  (set! port.buffer.used-size 0)
+	  (set-device-position! 0)
+	  bv)))
+
+    (set! port ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
+			   read! write! get-position set-position! close cookie))
+    (values port extract)))
+
+(define (get-output-string port)
+  ;;Defined by Ikarus.  Return the string accumulated in the PORT opened
+  ;;by OPEN-STRING-OUTPUT-PORT.
+  ;;
+  (define who 'get-output-string)
+  (define (wrong-port-error)
+    (die who "not an output-string port" port))
+  (%assert-value-is-port port who)
+  (with-textual-port (port)
+    (unless (%unsafe.textual-output-port? port)
+      (wrong-port-error))
+    (unless port.closed?
+      (%unsafe.flush-output-port port who))
+    (let ((cookie port.cookie))
+      (unless (cookie? cookie)
+	(wrong-port-error))
+      (let ((output-strs (cookie-dest cookie)))
+	(unless (or (null? output-strs) (pair? output-strs))
+	  (wrong-port-error))
+	(let ((str (%unsafe.string-reverse-and-concatenate output-strs)))
+	  (set! port.buffer.index     0)
+	  (set! port.buffer.used-size 0)
+	  (set-cookie-dest! cookie '())
+	  (set-cookie-pos!  cookie 0)
+	  str)))))
+
+;;; --------------------------------------------------------------------
 
 (define (call-with-string-output-port proc)
   ;;Defined by R6RS.  PROC must accept one argument.
@@ -2564,49 +2661,6 @@
   (%unsafe-assert-value-is-textual-port port who)
   (parameterize ((current-output-port port))
     (proc)))
-
-
-;;;; string input ports
-
-(define (open-string-input-port str)
-  ;;Defined  by   R6RS.   Return  a  textual   input  port  whose
-  ;;characters are drawn from STR.   The port may or may not have
-  ;;an  associated  transcoder; if  it  does,  the transcoder  is
-  ;;implementation--dependent.   The   port  should  support  the
-  ;;PORT-POSITION and SET-PORT-POSITION!  operations.
-  ;;
-  ;;If  STR  is modified  after  OPEN-STRING-INPUT-PORT has  been
-  ;;called, the effect on the returned port is unspecified.
-  ;;
-  (open-string-input-port/id str "*string-input-port*"))
-
-(define (open-string-input-port/id str id)
-  ;;Defined  by Ikarus.   For  details see  the documentation  of
-  ;;OPEN-STRING-INPUT-PORT.
-  ;;
-  ;;In this port there is  no underlying device: the input string
-  ;;is set as the buffer.
-  ;;
-  (define who 'open-string-input-port)
-  (unless (string? str)
-    (die who "not a string" str))
-  ;;The input string is itself the buffer!!!
-  (let ((str.len (string-length str)))
-    (unless (< str.len buffer-size-upper-limit)
-      (error who "input string length exceeds maximum supported size" str.len))
-    (let ((attributes		fast-get-char-tag)
-	  (buffer.index		0)
-	  (buffer.used-size	str.len)
-	  (buffer		str)
-	  (transcoder		#t)
-	  (read!		all-data-in-buffer)
-	  (write!		#f)
-	  (get-position		#t)
-	  (set-position!	#t)
-	  (close		#f)
-	  (cookie		(default-cookie #f)))
-      ($make-port attributes buffer.index buffer.used-size buffer transcoder id
-		  read! write! get-position set-position! close cookie))))
 
 
 ;;;; transcoded ports
