@@ -888,17 +888,23 @@
       (die who "port is not an input port" port))
     (set! port.attributes (%unsafe.fxior port.attributes fast-get-byte-tag))))
 
-(define (%unsafe.bytevector-u16-ref x i endianness)
-  (case endianness
-    ((little)
-     (%unsafe.fxior (unsafe.bytevector-u8-ref x i)
-		    (unsafe.fxsll (unsafe.bytevector-u8-ref x (unsafe.fxadd1 i)) 8)))
-    (else
-     (%unsafe.fxior (unsafe.bytevector-u8-ref x (unsafe.fxadd1 i))
-		    (unsafe.fxsll (unsafe.bytevector-u8-ref x i) 8)))))
+
+;;;; bytevector helpers
+
+(define (%unsafe.bytevector-u16-ref bv index endianness)
+  ;;Like  BYTEVECTOR-U16-REF  defined by  R6RS.   Assume all  the
+  ;;arguments to  have been  already validated; expect  the index
+  ;;integers to be fixnums.
+  ;;
+  (if (eq? endianness 'little)
+      (%unsafe.fxior (unsafe.bytevector-u8-ref bv index)
+		     (unsafe.fxsll (unsafe.bytevector-u8-ref bv (unsafe.fxadd1 index)) 8))
+    (%unsafe.fxior (unsafe.bytevector-u8-ref bv (unsafe.fxadd1 index))
+		   (unsafe.fxsll (unsafe.bytevector-u8-ref bv index) 8))))
 
 (define (%unsafe.bytevector-copy! src.bv src.start dst.bv dst.start count)
-  ;;Like BYTEVECTOR-COPY!  defined by R6RS; expect  all the exact
+  ;;Like  BYTEVECTOR-COPY!   defined  by  R6RS.  Assume  all  the
+  ;;arguments have  been already validated; expect  all the exact
   ;;integers to be fixnums.
   ;;
   (when (unsafe.fx> count 0)
@@ -908,14 +914,52 @@
 			      (unsafe.fxsub1 count))))
 
 (define (%unsafe.bigdst-bytevector-copy! src.bv src.start dst.bv dst.start count)
-  ;;Like BYTEVECTOR-COPY!  defined by  R6RS; expect all the exact
+  ;;Like  BYTEVECTOR-COPY!   defined  by  R6RS.  Assume  all  the
+  ;;arguments have  been already validated; expect  all the exact
   ;;integers to be fixnums with the exception of DST.START.
   ;;
   (when (unsafe.fx> count 0)
     (unsafe.bytevector-u8-set! dst.bv dst.start (unsafe.bytevector-u8-ref src.bv src.start))
-    (%unsafe.bytevector-copy! src.bv (unsafe.fxadd1 src.start)
-			      dst.bv (+ 1 dst.start)
-			      (unsafe.fxsub1 count))))
+    (%unsafe.bigdst-bytevector-copy! src.bv (unsafe.fxadd1 src.start)
+				     dst.bv (+ 1           dst.start)
+				     (unsafe.fxsub1 count))))
+
+(define (%unsafe.big-bytevector-copy! src.bv src.start dst.bv dst.start count)
+  ;;Like  BYTEVECTOR-COPY!   defined  by  R6RS.  Assume  all  the
+  ;;arguments have  been already validated; expect  all the exact
+  ;;integers to be either fixnums or bignums.
+  ;;
+  (when (> count 0)
+    (unsafe.bytevector-u8-set! dst.bv dst.start (unsafe.bytevector-u8-ref src.bv src.start))
+    (%unsafe.big-bytevector-copy! src.bv (+ 1 src.start)
+				  dst.bv (+ 1 dst.start)
+				  (- count 1))))
+
+(define (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors)
+  ;;Reverse the arrugments  and concatenate its bytevector items;
+  ;;return  the result.   Assume  the argument  has been  already
+  ;;validated.
+  ;;
+  ;;The  bytevectors may  have either  a  fixnum or  a bignum  as
+  ;;length.
+  ;;
+  (call-with-values
+      (lambda ()
+	(let recur ((bvs list-of-bytevectors)
+		    (accumulated-total-length 0))
+	  (if (null? bvs)
+	      (values (unsafe.make-bytevector accumulated-total-length) 0)
+	    (let* ((src.bv  (car bvs))
+		   (src.len (unsafe.bytevector-length src.bv)))
+	      (let-values (((dst.bv next-byte-index)
+			    (recur (cdr bvs) (+ src.len accumulated-total-length))))
+		(%unsafe.big-bytevector-copy! src.bv 0 dst.bv next-byte-index src.len)
+		(values dst.bv (+ src.len next-byte-index)))))))
+    (lambda (full-bytevector dummy)
+      full-bytevector)))
+
+
+;;;; string helpers
 
 (define (%unsafe.string-copy! src.str src.start dst.str dst.start count)
   ;;Like  BYTEVECTOR-COPY!   defined by  R6RS,  but for  strings;
@@ -926,22 +970,6 @@
     (%unsafe.string-copy! src.str (unsafe.fxadd1 src.start)
 			  dst.str (unsafe.fxadd1 dst.start)
 			  (unsafe.fxsub1 count))))
-
-(define (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors)
-  (call-with-values
-      (lambda ()
-	(let recur ((bvs list-of-bytevectors)
-		    (accumulated-total-length 0))
-	  (if (null? bvs)
-	      (values (unsafe.make-bytevector accumulated-total-length) 0)
-	    (let* ((src.bv  (car bvs))
-		   (src.len (unsafe.bytevector-length src.bv)))
-	      (let-values (((dst.bv next-byte-index)
-			    (recur (cdr bvs) (unsafe.fx+ src.len accumulated-total-length))))
-		(%unsafe.bytevector-copy! src.bv 0 dst.bv next-byte-index src.len)
-		(values dst.bv (unsafe.fx+ src.len next-byte-index)))))))
-    (lambda (full-bytevector dummy)
-      full-bytevector)))
 
 
 ;;;; dot notation macros for port structures
@@ -2162,48 +2190,36 @@
 	  (buffer.index		0)
 	  (buffer.used-size	0)
 	  (buffer		(unsafe.make-bytevector (bytevector-port-buffer-size)))
-	  (transcoder		maybe-transcoder)
 	  (identifier		"*bytevector-output-port*")
 	  (read!		#f)
 	  (get-position		#t)
 	  (close		#f)
 	  (cookie		(default-cookie '())))
-      ;;The most common use of  this port type is to append bytes
-      ;;and finally extract the whole output bytevector:
+      ;;The most  common use of  this port type  is to append  bytes and
+      ;;finally extract the whole output bytevector:
       ;;
-      ;;  (let-values (((port extract) (open-bytevector-output-port)))
-      ;;    (put-bytevector port '#vu8(1 2 3))
-      ;;    ...
-      ;;    (extract))
+      ;;  (call-with-values
+      ;;      open-bytevector-output-port
+      ;;    (lambda (port extract)
+      ;;      (put-bytevector port '#vu8(1 2 3))
+      ;;      ...
+      ;;      (extract)))
       ;;
-      ;;for this reason we implement  the state of the port to be
-      ;;somewhat efficient  for such use.   The device is  a list
-      ;;stored  in the  cookie,  called OUTPUT-BVS  in the  code;
-      ;;whenever data is written to the port: a new bytevector is
-      ;;prepended  to OUTPUT-BVS.  When  the extract  function is
-      ;;invoked:  OUTPUT-BVS  is  converted  to the  actual  full
-      ;;bytevector.
+      ;;for  this reason  we  implement the  device  of the  port to  be
+      ;;somewhat efficient for such use.  The device is a list stored in
+      ;;the  cookie, called  OUTPUT-BVS in  the code;  whenever  data is
+      ;;flushed  from the  buffer to  the  device: a  new bytevector  is
+      ;;prepended to OUTPUT-BVS.  When  the extract function is invoked:
+      ;;OUTPUT-BVS is reversed and concatenated obtaining a bytevector.
       ;;
-      ;;This  situation  is  violated if  SET-PORT-POSITION!   is
-      ;;applied to the  port to move the position  before the end
-      ;;of  the data.   If this  happens:  SET-POSITION! converts
-      ;;OUTPUT-BVS to a list holding a single full bytevector.
+      ;;This situation is violated  if SET-PORT-POSITION!  is applied to
+      ;;the port  to move the position  before the end of  the data.  If
+      ;;this  happens:  SET-POSITION!  converts  OUTPUT-BVS  to  a  list
+      ;;holding a single full bytevector.
       ;;
-      ;;Whenever  OUTPUT-BVS holds  a single  bytevector  and the
-      ;;position is  less than  such bytevector length:  it means
-      ;;that SET-PORT-POSITION! was used.
-      ;;
-      ;;The  WRITE!  procedure  must distinguish  the  two cases:
-      ;;data fitting  in the single bytevector,  data spread into
-      ;;multiple bytevectors.
-      ;;
-      ;;*NOTE*  The POS  field of  the  cookie is  always set  by
-      ;;SET-PORT-POSITION!   and the  various  functions invoking
-      ;;the WRITE!  operation;  this happens after such functions
-      ;;have called  WRITE! or SET-POSITION!.  We do  not need to
-      ;;set  the POS  field of  the cookie  here with  the single
-      ;;exception of the extraction function which needs to reset
-      ;;it to zero.
+      ;;Whenever OUTPUT-BVS  holds a single bytevector  and the position
+      ;;is   less   than  such   bytevector   length:   it  means   that
+      ;;SET-PORT-POSITION! was used.
       ;;
 
       (define-inline (%get-device)
@@ -2212,68 +2228,73 @@
 	(set-cookie-dest! cookie ?new-device))
       (define-inline (%device-position)
 	(cookie-pos cookie))
-      (define (%%serialise-device who reset?)
+      (define (%%serialise-device! who reset?)
 	(with-port (port)
 	  (unless port.closed?
 	    (%unsafe.flush-output-port port who))
 	  (let ((bv (%unsafe.bytevector-reverse-and-concatenate (%get-device))))
 	    (%set-device! (if reset? '() (list bv)))
 	    bv)))
-      (define-inline (%serialise-device who)
-	(%%serialise-device who #f))
-      (define-inline (%serialise-device-and-reset who)
-	(%%serialise-device who #t))
+      (define-inline (%serialise-device! who)
+	(%%serialise-device! who #f))
+      (define-inline (%serialise-device-and-reset! who)
+	(%%serialise-device! who #t))
 
       (define (write! src.bv src.start count)
-	(%debug-assert (fixnum? count))
-	(if (zero? count) ;should never happen, but who knows?!?
-	    count
-	  (let ((output-bvs   (%get-device))
-		(old-position (%device-position)))
-	    (if (and (%list-holding-single-value? output-bvs)
-		     (< old-position (unsafe.bytevector-length (car output-bvs))))
-		;;The current position was set inside the already
-		;;accumulated data.
-		(begin
-		  ;;Remember  that OLD-POSITION  can be  either a
-		  ;;fixnum  or a  bignum; the  same goes  for the
-		  ;;length of DST.BV and ROOM.
-		  (let* ((dst.bv  (car output-bvs))
-			 (room    (- (unsafe.bytevector-length dst.bv) old-position)))
-		    (if (<= count room)
-			;;The  new   data  fits  in   the  single
-			;;bytevector.
-			(%unsafe.bigdst-bytevector-copy! src.bv src.start dst.bv old-position count)
-		      (begin
-			(%debug-assert (fixnum? room))
-			;;The  new data goes  part in  the single
-			;;bytevector   and    part   in   a   new
-			;;bytevector.
-			(%unsafe.bigdst-bytevector-copy! src.bv src.start dst.bv old-position room)
-			(let* ((src.start (unsafe.fx+ room src.start))
-			       (count     (unsafe.fx- count room))
-			       (dst.bv    (unsafe.make-bytevector count)))
-			  (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
-			  (%set-device! (cons dst.bv output-bvs)))))))
-	      ;;The current position is at the end of the already
-	      ;;accumulated  data.  Prepend  a new  bytevector to
-	      ;;OUTPUT-BVS.
-	      (let ((dst.bv (unsafe.make-bytevector count)))
+	(%debug-assert (and (fixnum? count) (<= 0 count)))
+	(let ((output-bvs   (%get-device))
+	      (dev-position (%device-position)))
+	  (if (and (%list-holding-single-value? output-bvs)
+		   (< dev-position (unsafe.bytevector-length (car output-bvs))))
+	      ;;The  current   position  was  set   inside  the  already
+	      ;;accumulated data.
+	      (write!/overwrite src.bv src.start count output-bvs dev-position)
+	    ;;The  current  position  is  at  the  end  of  the  already
+	    ;;accumulated data.
+	    (write!/append src.bv src.start count output-bvs))
+	  count))
+
+      (define-inline (write!/overwrite src.bv src.start count output-bvs dev-position)
+	;;Write  data to  the device,  overwriting some  of  the already
+	;;existing  data.  The device  is already  composed of  a single
+	;;bytevector.  Remember that DEV-POSITION can be either a fixnum
+	;;or a bignum; the same goes for DST.LEN and DST.ROOM.
+	;;
+	(let* ((dst.bv   (car output-bvs))
+	       (dst.len  (unsafe.bytevector-length dst.bv))
+	       (dst.room (- dst.len dev-position)))
+	  (if (<= count dst.room)
+	      ;;The new data fits in the single bytevector.
+	      (%unsafe.bigdst-bytevector-copy! src.bv src.start dst.bv dev-position count)
+	    (begin
+	      (%debug-assert (fixnum? dst.room))
+	      ;;The new data goes part in the single bytevector and part
+	      ;;in a new bytevector.
+	      (%unsafe.bigdst-bytevector-copy! src.bv src.start dst.bv dev-position dst.room)
+	      (let* ((src.start (unsafe.fx+ src.start dst.room))
+		     (count     (unsafe.fx- count     dst.room))
+		     (dst.bv    (unsafe.make-bytevector count)))
 		(%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
-		(%set-device! (cons dst.bv output-bvs))))
-	    count)))
+		(%set-device! (cons dst.bv output-bvs)))))))
+
+      (define-inline (write!/append src.bv src.start count output-bvs)
+	;;Append new  data to the  device.  Prepend a new  bytevector to
+	;;OUTPUT-BVS.
+	;;
+	(let ((dst.bv (unsafe.make-bytevector count)))
+	  (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
+	  (%set-device! (cons dst.bv output-bvs))))
 
       (define (set-position! new-position)
-	;;NEW-POSITION  has  already   been  validated  as  exact
-	;;integer by  the procedure SET-PORT-POSITION!.   Here we
-	;;only have to  verify that the value is  valid as offset
-	;;inside  the   underlying  full  bytevector.    If  this
-	;;validation succeeds:  SET-PORT-POSITION! will store the
-	;;position in the POS field of the cookie.
+	;;NEW-POSITION has  already been  validated as exact  integer by
+	;;the procedure SET-PORT-POSITION!.  Here we only have to verify
+	;;that the value  is valid as offset inside  the underlying full
+	;;bytevector.   If this validation  succeeds: SET-PORT-POSITION!
+	;;will store the position in the POS field of the cookie.
 	;;
 	(define who 'open-bytevector-output-port/set-position!)
 	(unless (or (=  new-position (%device-position))
-		    (<= new-position (unsafe.bytevector-length (%serialise-device who))))
+		    (<= new-position (unsafe.bytevector-length (%serialise-device! who))))
 	  (%raise-port-position-out-of-range who port new-position)))
 
       (define (extract)
@@ -2285,13 +2306,13 @@
 	(with-port (port)
 	  (define-inline (set-device-position! ?new-value)
 	    (set-cookie-pos! port.cookie ?new-value))
-	  (let ((bv (%serialise-device-and-reset who)))
-	    (set! port.buffer.index 0)
+	  (let ((bv (%serialise-device-and-reset! who)))
+	    (set! port.buffer.index     0)
 	    (set! port.buffer.used-size 0)
 	    (set-device-position! 0)
 	    bv)))
 
-      (set! port ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
+      (set! port ($make-port attributes buffer.index buffer.used-size buffer maybe-transcoder identifier
 			     read! write! get-position set-position! close cookie))
       (values port extract)))))
 
@@ -5655,7 +5676,7 @@
 
 ;;; end of file
 ;;; Local Variables:
-;;; fill-column: 65
+;;; fill-column: 72
 ;;; eval: (put 'with-port				'scheme-indent-function 1)
 ;;; eval: (put 'with-binary-port			'scheme-indent-function 1)
 ;;; eval: (put 'with-textual-port			'scheme-indent-function 1)
