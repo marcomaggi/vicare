@@ -30,7 +30,10 @@
 #!r6rs
 (import (rename (ikarus)
 		(parameterize	parametrise))
-  (checks))
+  (except (checks) with-result add-result)
+  (prefix (only (checks)
+		with-result add-result)
+	  check.))
 
 (check-set-mode! 'report-failed)
 (display "*** testing Ikarus input/output functions\n")
@@ -1602,7 +1605,7 @@
 (parametrise ((check-test-name			'open-bytevector-output-port)
 	      (bytevector-port-buffer-size	8))
 
-  (define-syntax position-and-contents
+  (define-syntax snapshot-position-and-contents
     (lambda (stx)
       (syntax-case stx ()
 	((?ctx)
@@ -1610,6 +1613,15 @@
 		       (EXTRACT (datum->syntax #'?ctx 'extract)))
 	   #'(let ((pos (port-position PORT)))
 	       (list pos (EXTRACT))))))))
+
+  (define-syntax position-and-contents
+    (lambda (stx)
+      (syntax-case stx ()
+	((?ctx ?port . ?body)
+	 #'(let-values (((?port extract) (open-bytevector-output-port)))
+	     (begin . ?body)
+	     (let ((pos (port-position ?port)))
+	       (list pos (extract))))))))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
@@ -1692,9 +1704,9 @@
   (check	;empty device, data in buffer
       (let-values (((port extract) (open-bytevector-output-port)))
 	(put-bytevector port '#vu8(0 1 2))
-	(let ((result (position-and-contents)))
+	(let ((result (snapshot-position-and-contents)))
 	  (put-bytevector port '#vu8(3 4 5 6))
-	  (list result (position-and-contents))))
+	  (list result (snapshot-position-and-contents))))
     => '((3 #vu8(0 1 2))
 	 (4 #vu8(3 4 5 6))))
 
@@ -1702,19 +1714,19 @@
       (let-values (((port extract) (open-bytevector-output-port)))
 	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9))
 	(flush-output-port port)
-	(let ((result (position-and-contents)))
+	(let ((result (snapshot-position-and-contents)))
 	  (put-bytevector port '#vu8(10 11 12 13 14 15 16 17 18 19))
 	  (flush-output-port port)
-	  (list result (position-and-contents))))
+	  (list result (snapshot-position-and-contents))))
     => '((10 #vu8(0 1 2 3 4 5 6 7 8 9))
 	 (10 #vu8(10 11 12 13 14 15 16 17 18 19))))
 
   (check	;some data in device, some data in buffer
       (let-values (((port extract) (open-bytevector-output-port)))
 	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9))
-	(let ((result (position-and-contents)))
+	(let ((result (snapshot-position-and-contents)))
 	  (put-bytevector port '#vu8(10 11 12 13 14 15 16 17 18 19))
-	  (list result (position-and-contents))))
+	  (list result (snapshot-position-and-contents))))
     => '((10 #vu8(0 1 2 3 4 5 6 7 8 9))
 	 (10 #vu8(10 11 12 13 14 15 16 17 18 19))))
 
@@ -1756,137 +1768,375 @@
 ;;; setting port position, no overwriting, no transcoder
 
   (check	;empty device
-      (let-values (((port extract) (open-bytevector-output-port)))
-	(set-port-position! port 0)
-	(position-and-contents))
+      (position-and-contents port
+	(set-port-position! port 0))
     => '(0 #vu8()))
 
   (check	;some data in buffer, none in device
-      (let-values (((port extract) (open-bytevector-output-port)))
+      (position-and-contents port
 	(put-bytevector port '#vu8(0 1 2))
-	(set-port-position! port 1)
-	(position-and-contents))
+	(set-port-position! port 1))
     => '(1 #vu8(0 1 2)))
 
   (check   ;Some data  in buffer, none in device.   Move position in the
 	   ;middle, then again at the end.
-      (let-values (((port extract) (open-bytevector-output-port)))
+      (position-and-contents port
 	(put-bytevector port '#vu8(0 1 2))
 	(set-port-position! port 1)
-	(set-port-position! port 3)
-	(position-and-contents))
+	(set-port-position! port 3))
     => '(3 #vu8(0 1 2)))
 
   (check ;Buffer full, no data  in device.  Move position in the middle,
 	 ;then again at the end.
-      (let-values (((port extract) (open-bytevector-output-port)))
+      (position-and-contents port
   	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
 	(set-port-position! port 1)
-	(set-port-position! port 8)
-	(position-and-contents))
+	(set-port-position! port 8))
     => '(8 #vu8(0 1 2 3 4 5 6 7)))
 
   (check	;Some  data  in  buffer,  some  data  in  device.   Move
 		;position in the middle.
-      (let-values (((port extract) (open-bytevector-output-port)))
+      (position-and-contents port
   	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
   	(put-bytevector port '#vu8(8 9 10 11))
-	(set-port-position! port 6)
-	(position-and-contents))
+	(set-port-position! port 6))
     => '(6 #vu8(0 1 2 3 4 5 6 7 8 9 10 11)))
 
   (check	;Buffer  empty, data  in device.   Move position  in the
 		;middle.
-      (let-values (((port extract) (open-bytevector-output-port)))
+      (position-and-contents port
   	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
   	(flush-output-port port)
-	(set-port-position! port 6)
-	(position-and-contents))
+	(set-port-position! port 6))
     => '(6 #vu8(0 1 2 3 4 5 6 7)))
 
 ;;; --------------------------------------------------------------------
 ;;; setting port position, overwriting, no transcoder
 
   (check	;empty buffer, empty device
-      (let-values (((port extract) (open-bytevector-output-port)))
+      (position-and-contents port
 	(set-port-position! port 0)
-	(put-bytevector port '#vu8())
-	(position-and-contents))
+	(put-bytevector port '#vu8()))
     => '(0 #vu8()))
 
   (check	;partial internal overwrite, data in buffer, empty device
-      (let-values (((port extract) (open-bytevector-output-port)))
+      (position-and-contents port
 	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
 	(set-port-position! port 2)
-	(put-bytevector port '#vu8(20 30 40))
-	(position-and-contents))
+	(put-bytevector port '#vu8(20 30 40)))
     => '(5 #vu8(0 1 20 30 40 5 6 7)))
 
   (check	;partial internal overwrite, empty buffer, data in device
-      (let-values (((port extract) (open-bytevector-output-port)))
+      (position-and-contents port
 	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
 	(flush-output-port port)
 	(set-port-position! port 2)
-	(put-bytevector port '#vu8(20 30 40))
-	(position-and-contents))
+	(put-bytevector port '#vu8(20 30 40)))
     => '(5 #vu8(0 1 20 30 40 5 6 7)))
 
   (check	;partial internal overwrite, some data in buffer, some data in device
-      (let-values (((port extract) (open-bytevector-output-port)))
+      (position-and-contents port
 	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9))
 	(set-port-position! port 2)
-	(put-bytevector port '#vu8(20 30 40))
-	(position-and-contents))
+	(put-bytevector port '#vu8(20 30 40)))
     => '(5 #vu8(0 1 20 30 40 5 6 7 8 9)))
 
   (check	;overflow overwrite, data in buffer, empty device
-      (let-values (((port extract) (open-bytevector-output-port)))
+      (position-and-contents port
 	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
 	(set-port-position! port 6)
-	(put-bytevector port '#vu8(60 70 80 90))
-	(position-and-contents))
+	(put-bytevector port '#vu8(60 70 80 90)))
     => '(10 #vu8(0 1 2 3 4 5 60 70 80 90)))
 
   (check	;overflow overwrite, empty buffer, empty device
-      (let-values (((port extract) (open-bytevector-output-port)))
+      (position-and-contents port
 	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
 	(flush-output-port port)
 	(set-port-position! port 6)
-	(put-bytevector port '#vu8(60 70 80 90))
-	(position-and-contents))
+	(put-bytevector port '#vu8(60 70 80 90)))
     => '(10 #vu8(0 1 2 3 4 5 60 70 80 90)))
 
   (check	;overflow overwrite, some data in buffer, some data in device
-      (let-values (((port extract) (open-bytevector-output-port)))
+      (position-and-contents port
 	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9))
 	(set-port-position! port 6)
-	(put-bytevector port '#vu8(60 70 80 90 100 110))
-	(position-and-contents))
+	(put-bytevector port '#vu8(60 70 80 90 100 110)))
     => '(12 #vu8(0 1 2 3 4 5 60 70 80 90 100 110)))
 
   (check	;full overwrite, data in buffer, empty device
-      (let-values (((port extract) (open-bytevector-output-port)))
+      (position-and-contents port
 	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
 	(set-port-position! port 0)
-	(put-bytevector port '#vu8(10 11 12 13 14 15 16 17))
-	(position-and-contents))
+	(put-bytevector port '#vu8(10 11 12 13 14 15 16 17)))
     => '(8 #vu8(10 11 12 13 14 15 16 17)))
 
   (check	;full overwrite, empty buffer, data in device
-      (let-values (((port extract) (open-bytevector-output-port)))
+      (position-and-contents port
 	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
 	(flush-output-port port)
 	(set-port-position! port 0)
-	(put-bytevector port '#vu8(10 11 12 13 14 15 16 17))
-	(position-and-contents))
+	(put-bytevector port '#vu8(10 11 12 13 14 15 16 17)))
     => '(8 #vu8(10 11 12 13 14 15 16 17)))
 
   (check	;full overwrite, some data in buffer, some data in device
-      (let-values (((port extract) (open-bytevector-output-port)))
+      (position-and-contents port
 	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9))
 	(set-port-position! port 0)
-	(put-bytevector port '#vu8(10 11 12 13 14 15 16 17 18 19))
-	(position-and-contents))
+	(put-bytevector port '#vu8(10 11 12 13 14 15 16 17 18 19)))
+    => '(10 #vu8(10 11 12 13 14 15 16 17 18 19)))
+
+  #t)
+
+
+(parametrise ((check-test-name			'call-with-bytevector-output-port)
+	      (bytevector-port-buffer-size	8))
+
+  (define-syntax position-and-contents
+    (lambda (stx)
+      (syntax-case stx ()
+	((?ctx ?port . ?body)
+	 #'(let ((result (check.with-result
+			     (call-with-bytevector-output-port
+				 (lambda (?port)
+				   (begin . ?body)
+				   (check.add-result (port-position ?port)))))))
+	     (list (caadr result) (car result)))))))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check	;argument is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(call-with-bytevector-output-port 123 #f))
+    => '(123))
+
+  (check	;argument is not a transcoder
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(call-with-bytevector-output-port (lambda (port) #f) 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; port operations support
+
+  (check
+      (check.with-result
+	  (call-with-bytevector-output-port
+	      (lambda (port)
+		(check.add-result (port-has-port-position? port)))))
+    => '(#vu8() (#t)))
+
+  (check
+      (check.with-result
+	  (call-with-bytevector-output-port
+	      (lambda (port)
+		(check.add-result (port-has-set-port-position!? port)))))
+    => '(#vu8() (#t)))
+
+;;; --------------------------------------------------------------------
+;;; writing data, no transcoder
+
+  (check	;single byte
+      (call-with-bytevector-output-port
+	  (lambda (port)
+	    (put-u8 port 65)))
+    => '#vu8(65))
+
+  (check	;byte by byte until the buffer is full
+      (call-with-bytevector-output-port
+	  (lambda (port)
+	    (do ((i 0 (+ 1 i)))
+		((= 9 i))
+	      (put-u8 port 65))))
+    => '#vu8(65 65 65  65 65 65  65 65 65))
+
+  (check	;single bytevecor not filling the buffer
+      (call-with-bytevector-output-port
+	  (lambda (port)
+	    (put-bytevector port '#vu8(1 2 3 4 5))))
+    => '#vu8(1 2 3 4 5))
+
+  (check	;single bytevecor filling the buffer
+      (call-with-bytevector-output-port
+	  (lambda (port)
+	    (put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+    => '#vu8(0 1 2 3 4 5 6 7 8 9))
+
+  (check	;bytevector by bytevector until the buffer is full
+      (call-with-bytevector-output-port
+	  (lambda (port)
+	    (do ((i 0 (+ 1 i)))
+		((= 3 i))
+	      (put-bytevector port '#vu8(1 2 3)))))
+    => '#vu8(1 2 3  1 2 3  1 2 3))
+
+  (check	;fill the buffer multiple times
+      (call-with-bytevector-output-port
+	  (lambda (port)
+	    (do ((i 0 (+ 1 i)))
+		((= 5 i))
+	      (put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9)))))
+    => '#vu8( ;;
+	     0 1 2 3 4 5 6 7 8 9
+	     0 1 2 3 4 5 6 7 8 9
+	     0 1 2 3 4 5 6 7 8 9
+	     0 1 2 3 4 5 6 7 8 9
+	     0 1 2 3 4 5 6 7 8 9))
+
+;;; --------------------------------------------------------------------
+;;; getting port position, no transcoder
+
+  (check	;empty device
+      (position-and-contents port
+	(values))
+    => '(0 #vu8()))
+
+  (check	;some data in buffer, none in device
+      (position-and-contents port
+	(put-bytevector port '#vu8(0 1 2)))
+    => '(3 #vu8(0 1 2)))
+
+  (check	;buffer full, no data in device
+      (position-and-contents port
+	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7)))
+    => '(8 #vu8(0 1 2 3 4 5 6 7)))
+
+  (check	;some data in buffer, some data in device
+      (position-and-contents port
+	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
+	(put-bytevector port '#vu8(8 9 10 11)))
+    => '(12 #vu8(0 1 2 3 4 5 6 7 8 9 10 11)))
+
+  (check	;buffer empty, data in device
+      (position-and-contents port
+	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
+	(flush-output-port port))
+    => '(8 #vu8(0 1 2 3 4 5 6 7)))
+
+;;; --------------------------------------------------------------------
+;;; setting port position, no overwriting, no transcoder
+
+  (check	;empty device
+      (position-and-contents port
+	(set-port-position! port 0))
+    => '(0 #vu8()))
+
+  (check	;some data in buffer, none in device
+      (position-and-contents port
+	(put-bytevector port '#vu8(0 1 2))
+	(set-port-position! port 1))
+    => '(1 #vu8(0 1 2)))
+
+  (check   ;Some data  in buffer, none in device.   Move position in the
+	   ;middle, then again at the end.
+      (position-and-contents port
+	(put-bytevector port '#vu8(0 1 2))
+	(set-port-position! port 1)
+	(set-port-position! port 3))
+    => '(3 #vu8(0 1 2)))
+
+  (check ;Bufffer full, no data in device.  Move position in the middle,
+	 ;then again at the end.
+      (position-and-contents port
+	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
+	(set-port-position! port 1)
+	(set-port-position! port 8))
+    => '(8 #vu8(0 1 2 3 4 5 6 7)))
+
+  (check	;Some  data  in  buffer,  some  data  in  device.   Move
+		;position in the middle.
+      (position-and-contents port
+	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
+	(put-bytevector port '#vu8(8 9 10 11))
+	(set-port-position! port 6))
+    => '(6 #vu8(0 1 2 3 4 5 6 7 8 9 10 11)))
+
+  (check	;Buffer  empty, data  in device.   Move position  in the
+  		;middle.
+      (position-and-contents port
+	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
+	(flush-output-port port)
+	(set-port-position! port 6))
+    => '(6 #vu8(0 1 2 3 4 5 6 7)))
+
+;;; --------------------------------------------------------------------
+;;; setting port position, overwriting, no transcoder
+
+  (check	;empty buffer, empty device
+      (position-and-contents port
+	(set-port-position! port 0)
+  	(put-bytevector port '#vu8()))
+    => '(0 #vu8()))
+
+  (check       ;partial internal overwrite, data in buffer, empty device
+      (position-and-contents port
+  	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
+  	(set-port-position! port 2)
+  	(put-bytevector port '#vu8(20 30 40)))
+    => '(5 #vu8(0 1 20 30 40 5 6 7)))
+
+  (check       ;partial internal overwrite, empty buffer, data in device
+      (position-and-contents port
+  	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
+  	(flush-output-port port)
+  	(set-port-position! port 2)
+  	(put-bytevector port '#vu8(20 30 40)))
+    => '(5 #vu8(0 1 20 30 40 5 6 7)))
+
+  (check ;partial internal overwrite, some data in buffer, some data in device
+      (position-and-contents port
+  	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9))
+  	(set-port-position! port 2)
+  	(put-bytevector port '#vu8(20 30 40)))
+    => '(5 #vu8(0 1 20 30 40 5 6 7 8 9)))
+
+  (check	;overflow overwrite, data in buffer, empty device
+      (position-and-contents port
+  	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
+  	(set-port-position! port 6)
+  	(put-bytevector port '#vu8(60 70 80 90)))
+    => '(10 #vu8(0 1 2 3 4 5 60 70 80 90)))
+
+  (check	;overflow overwrite, empty buffer, empty device
+      (position-and-contents port
+  	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
+  	(flush-output-port port)
+  	(set-port-position! port 6)
+  	(put-bytevector port '#vu8(60 70 80 90)))
+    => '(10 #vu8(0 1 2 3 4 5 60 70 80 90)))
+
+  (check   ;overflow overwrite, some data in buffer, some data in device
+      (position-and-contents port
+  	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9))
+  	(set-port-position! port 6)
+  	(put-bytevector port '#vu8(60 70 80 90 100 110)))
+    => '(12 #vu8(0 1 2 3 4 5 60 70 80 90 100 110)))
+
+  (check	;full overwrite, data in buffer, empty device
+      (position-and-contents port
+  	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
+  	(set-port-position! port 0)
+  	(put-bytevector port '#vu8(10 11 12 13 14 15 16 17)))
+    => '(8 #vu8(10 11 12 13 14 15 16 17)))
+
+  (check	;full overwrite, empty buffer, data in device
+      (position-and-contents port
+  	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
+  	(flush-output-port port)
+  	(set-port-position! port 0)
+  	(put-bytevector port '#vu8(10 11 12 13 14 15 16 17)))
+    => '(8 #vu8(10 11 12 13 14 15 16 17)))
+
+  (check       ;full overwrite, some data in buffer, some data in device
+      (position-and-contents port
+  	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9))
+  	(set-port-position! port 0)
+  	(put-bytevector port '#vu8(10 11 12 13 14 15 16 17 18 19)))
     => '(10 #vu8(10 11 12 13 14 15 16 17 18 19)))
 
   #t)
@@ -2037,5 +2287,7 @@
 
 ;;; end of file
 ;;; Local Variables:
-;;; eval: (put 'with-input-test-pathname 'scheme-indent-function 1)
+;;; eval: (put 'with-input-test-pathname	'scheme-indent-function 1)
+;;; eval: (put 'check.with-result		'scheme-indent-function 1)
+;;; eval: (put 'position-and-contents		'scheme-indent-function 1)
 ;;; End:
