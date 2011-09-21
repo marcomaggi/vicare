@@ -1117,10 +1117,6 @@
 		;function or false, the function to close the port
 	      (PORT.COOKIE			(%dot-id ".cookie"))
 		;cookie record
-	      (PORT.HAS-BUFFER?			(%dot-id ".has-buffer?"))
-		;true if the port has a buffer
-	      (PORT.HAS-NO-BUFFER?		(%dot-id ".has-no-buffer?"))
-		;true if the port has no buffer
 	      (PORT.BUFFER.FULL?		(%dot-id ".buffer.full?"))
 		;true if the buffer is full
 	      (PORT.CLOSED?			(%dot-id ".closed?"))
@@ -1129,7 +1125,7 @@
 		;fixnum, the type attributes bits
 	      (PORT.BUFFER.SIZE			(%dot-id ".buffer.size"))
 		;fixnum, the buffer size
-	      (PORT.BUFFER.RESET!		(%dot-id ".buffer.reset!"))
+	      (PORT.BUFFER.RESET-TO-EMPTY!	(%dot-id ".buffer.reset-to-empty!"))
 		;method, set the buffer index and used size to zero
 	      (PORT.BUFFER.ROOM			(%dot-id ".buffer.room"))
 		;method, the number of bytes available in the buffer
@@ -1139,12 +1135,11 @@
 		;method, increment
 	      (PORT.MARK-AS-CLOSED		(%dot-id ".mark-as-closed"))
 		;method, mark the port as closed
-	      (PORT.COOKIE.POS			(%dot-id ".cookie.pos"))
-		;exact integer, the current device position
-	      (PORT.COOKIE.POS.SET!		(%dot-id ".cookie.pos.set!"))
-		;method, store a value in the POS field of the cookie
-	      (PORT.COOKIE.POS.INCR!		(%dot-id ".cookie.pos.incr!")))
+	      (PORT.DEVICE.POSITION		(%dot-id ".device.position"))
+		;exact integer, track the current device position
+	      (PORT.DEVICE.POSITION.INCR!	(%dot-id ".device.position.incr!"))
 		;method, increment the POS field of the cookie
+	      )
 	   #'(let-syntax
 		 ((PORT.TAG		(identifier-syntax ($port-tag		?port)))
 		  (PORT.BUFFER		(identifier-syntax ($port-buffer	?port)))
@@ -1158,30 +1153,20 @@
 		  (PORT.COOKIE		(identifier-syntax ($port-cookie	?port)))
 		  (PORT.CLOSED?		(identifier-syntax (%unsafe.port-closed? ?port)))
 		  (PORT.FAST-ATTRIBUTES	(identifier-syntax ($port-fast-attrs	?port)))
-		  (PORT.HAS-BUFFER?
-		   (identifier-syntax ($port-buffer ?port)))
-		  (PORT.HAS-NO-BUFFER?
-		   (identifier-syntax (not ($port-buffer ?port))))
 		  (PORT.BUFFER.SIZE
 		   (identifier-syntax (?buffer-length ($port-buffer ?port))))
 		  (PORT.ATTRIBUTES
 		   (identifier-syntax
-		    (_
-		     ($port-attrs  ?port))
-		    ((set! id ?value)
-		     ($set-port-attrs! ?port ?value))))
+		    (_			($port-attrs ?port))
+		    ((set! id ?value)	($set-port-attrs! ?port ?value))))
 		  (PORT.BUFFER.INDEX
 		   (identifier-syntax
-		    (_
-		     ($port-index  ?port))
-		    ((set! id ?value)
-		     ($set-port-index! ?port ?value))))
+		    (_			($port-index ?port))
+		    ((set! _ ?value)	($set-port-index! ?port ?value))))
 		  (PORT.BUFFER.USED-SIZE
 		   (identifier-syntax
-		    (_
-		     ($port-size  ?port))
-		    ((set! id ?value)
-		     ($set-port-size! ?port ?value)))))
+		    (_			($port-size ?port))
+		    ((set! _ ?value)	($set-port-size! ?port ?value)))))
 	       (let-syntax
 		   ((PORT.BUFFER.FULL?
 		     (identifier-syntax (unsafe.fx= PORT.BUFFER.USED-SIZE PORT.BUFFER.SIZE)))
@@ -1189,7 +1174,7 @@
 		     (syntax-rules ()
 		       ((_)
 			(unsafe.fx- PORT.BUFFER.SIZE PORT.BUFFER.INDEX))))
-		    (PORT.BUFFER.RESET!
+		    (PORT.BUFFER.RESET-TO-EMPTY!
 		     (syntax-rules ()
 		       ((_)
 			(begin
@@ -1211,17 +1196,16 @@
 		     (syntax-rules ()
 		       ((_)
 			($mark-port-closed! ?port))))
-		    (PORT.COOKIE.POS
-		     (identifier-syntax (cookie-pos PORT.COOKIE)))
-		    (PORT.COOKIE.POS.SET!
-		     (syntax-rules ()
-		       ((_ ?new-device-position)
-			(set-cookie-pos! PORT.COOKIE ?new-device-position))))
-		    (PORT.COOKIE.POS.INCR!
+		    (PORT.DEVICE.POSITION
+		     (identifier-syntax
+		      (_			(cookie-pos PORT.COOKIE))
+		      ((set! _ ?new-value)	(set-cookie-pos! PORT.COOKIE ?new-value))))
+		    (PORT.DEVICE.POSITION.INCR!
 		     (syntax-rules ()
 		       ((_ ?step)
 			(let ((cookie PORT.COOKIE))
-			  (set-cookie-pos! cookie (+ (cookie-pos cookie) ?step)))))))
+			  (set-cookie-pos! cookie (+ ?step (cookie-pos cookie)))))))
+		    )
 		 . ?body))))))))
 
 
@@ -1761,7 +1745,7 @@
   ;;
   (%assert-value-is-input-port port 'input-port-byte-position)
   (with-port (port)
-    (+ (cookie-pos port.cookie) (fx+ 1 port.buffer.index))))
+    (+ port.device.position (unsafe.fxadd1 port.buffer.index))))
 
 (define (%mark/return-newline port)
   ;;Register the presence of a #\newline character at the current
@@ -1770,8 +1754,8 @@
   ;;
   (with-textual-port (port)
     (let ((cookie port.cookie))
-      (set-cookie-row-num!     cookie (+ 1                 (cookie-row-num cookie)))
-      (set-cookie-newline-pos! cookie (+ port.buffer.index (cookie-pos cookie)))))
+      (set-cookie-row-num!     cookie (+ 1 (cookie-row-num cookie)))
+      (set-cookie-newline-pos! cookie (+ port.device.position port.buffer.index))))
   #\newline)
 
 (define (input-port-column-number port)
@@ -1782,7 +1766,7 @@
   (%assert-value-is-input-port port 'input-port-column-number)
   (with-textual-port (port)
     (let ((cookie port.cookie))
-      (- (+ (cookie-pos cookie) port.buffer.index)
+      (- (+ port.device.position port.buffer.index)
 	 (cookie-newline-pos cookie)))))
 
 (define (input-port-row-number port)
@@ -1861,7 +1845,7 @@
 	    ((and (boolean? getpos) getpos)
 	     ;;The  cookie's  POS  field  correctly tracks  the  current
 	     ;;device position.
-	     port.cookie.pos)
+	     port.device.position)
 	    (else
 	     (assertion-violation who
 	       "port does not support port-position operation" port))))))
@@ -1909,7 +1893,7 @@
 		     (begin
 		       (if (%unsafe.output-port? port)
 			   (%unsafe.flush-output-port port who)
-			 (port.buffer.reset!))
+			 (port.buffer.reset-to-empty!))
 		       (let-syntax ((new-device-position (identifier-syntax new-port-position)))
 			 ;;If SET-POSITION!  fails we can assume nothing
 			 ;;about the position in the device.
@@ -1917,7 +1901,7 @@
 			 ;;Notice that the cookie's  POS field is set by
 			 ;;this   function  AFTER   having  successfully
 			 ;;called SET-POSITION!.
-			 (port.cookie.pos.set! new-device-position))))))))
+			 (set! port.device.position new-device-position))))))))
 	    ((and (boolean? set-position!) set-position!)
 	     ;;The  cookie's  POS field  holds  a  value representing  a
 	     ;;correct  and  immutable  device  position.  We  move  the
@@ -2418,8 +2402,6 @@
 	(cookie-dest cookie))
       (define-inline (%set-device! ?new-device)
 	(set-cookie-dest! cookie ?new-device))
-      (define-inline (%device-position)
-	(cookie-pos cookie))
       (define (%%serialise-device! who reset?)
 	(with-port (port)
 	  (unless port.closed?
@@ -2434,17 +2416,18 @@
 
       (define (write! src.bv src.start count)
 	(%debug-assert (and (fixnum? count) (<= 0 count)))
-	(let ((output-bvs   (%get-device))
-	      (dev-position (%device-position)))
-	  (if (and (%list-holding-single-value? output-bvs)
-		   (< dev-position (unsafe.bytevector-length (car output-bvs))))
-	      ;;The  current   position  was  set   inside  the  already
+	(with-port (port)
+	  (let ((output-bvs   (%get-device))
+		(dev-position port.device.position))
+	    (if (and (%list-holding-single-value? output-bvs)
+		     (< dev-position (unsafe.bytevector-length (car output-bvs))))
+		;;The  current   position  was  set   inside  the  already
+		;;accumulated data.
+		(write!/overwrite src.bv src.start count output-bvs dev-position)
+	      ;;The  current  position  is  at  the  end  of  the  already
 	      ;;accumulated data.
-	      (write!/overwrite src.bv src.start count output-bvs dev-position)
-	    ;;The  current  position  is  at  the  end  of  the  already
-	    ;;accumulated data.
-	    (write!/append src.bv src.start count output-bvs))
-	  count))
+	      (write!/append src.bv src.start count output-bvs))
+	    count)))
 
       (define-inline (write!/overwrite src.bv src.start count output-bvs dev-position)
 	;;Write  data to  the device,  overwriting some  of  the already
@@ -2485,9 +2468,10 @@
 	;;will store the position in the POS field of the cookie.
 	;;
 	(define who 'open-bytevector-output-port/set-position!)
-	(unless (or (=  new-position (%device-position))
-		    (<= new-position (unsafe.bytevector-length (%serialise-device! who))))
-	  (%raise-port-position-out-of-range who port new-position)))
+	(with-port (port)
+	  (unless (or (=  new-position port.device.position)
+		      (<= new-position (unsafe.bytevector-length (%serialise-device! who))))
+	    (%raise-port-position-out-of-range who port new-position))))
 
       (define (extract)
 	;;The  extraction  function.   Flush  the buffer  to  the
@@ -2496,12 +2480,9 @@
 	;;port to its empty state.
 	;;
 	(with-port (port)
-	  (define-inline (set-device-position! ?new-value)
-	    (set-cookie-pos! port.cookie ?new-value))
 	  (let ((bv (%serialise-device-and-reset! who)))
-	    (set! port.buffer.index     0)
-	    (set! port.buffer.used-size 0)
-	    (set-device-position! 0)
+	    (port.buffer.reset-to-empty!)
+	    (set! port.device.position 0)
 	    bv)))
 
       (set! port ($make-port attributes buffer.index buffer.used-size buffer maybe-transcoder identifier
@@ -2597,8 +2578,6 @@
       (cookie-dest cookie))
     (define-inline (%set-device! ?new-device)
       (set-cookie-dest! cookie ?new-device))
-    (define-inline (%device-position)
-      (cookie-pos cookie))
     (define (%%serialise-device! who reset?)
       (with-port (port)
 	(unless port.closed?
@@ -2613,17 +2592,18 @@
 
     (define (write! src.str src.start count)
       (%debug-assert (and (fixnum? count) (<= 0 count)))
-      (let ((output-strs  (%get-device))
-	    (dev-position (%device-position)))
-	(if (and (%list-holding-single-value? output-strs)
-		 (< dev-position (unsafe.string-length (car output-strs))))
-	    ;;The   current  position   was  set   inside   the  already
+      (with-port (port)
+	(let ((output-strs  (%get-device))
+	      (dev-position port.device.position))
+	  (if (and (%list-holding-single-value? output-strs)
+		   (< dev-position (unsafe.string-length (car output-strs))))
+	      ;;The   current  position   was  set   inside   the  already
+	      ;;accumulated data.
+	      (write!/overwrite src.str src.start count output-strs dev-position)
+	    ;;The  current   position  is  at  the  end   of  the  already
 	    ;;accumulated data.
-	    (write!/overwrite src.str src.start count output-strs dev-position)
-	  ;;The  current   position  is  at  the  end   of  the  already
-	  ;;accumulated data.
-	  (write!/append src.str src.start count output-strs))
-	count))
+	    (write!/append src.str src.start count output-strs))
+	  count)))
 
     (define-inline (write!/overwrite src.str src.start count output-strs dev-position)
       ;;Write  data  to the  device,  overwriting  some  of the  already
@@ -2664,9 +2644,10 @@
       ;;position in the POS field of the cookie.
       ;;
       (define who 'open-string-output-port/set-position!)
-      (unless (or (=  new-position (%device-position))
-		  (<= new-position (unsafe.string-length (%serialise-device! who))))
-	(%raise-port-position-out-of-range who port new-position)))
+      (with-port (port)
+	(unless (or (=  new-position port.device.position)
+		    (<= new-position (unsafe.string-length (%serialise-device! who))))
+	  (%raise-port-position-out-of-range who port new-position))))
 
     (define (extract)
       ;;The  extraction  function.   Flush  the buffer  to  the
@@ -2675,12 +2656,9 @@
       ;;port to its empty state.
       ;;
       (with-port (port)
-	(define-inline (set-device-position! ?new-value)
-	  (set-cookie-pos! port.cookie ?new-value))
 	(let ((bv (%serialise-device-and-reset! who)))
-	  (set! port.buffer.index     0)
-	  (set! port.buffer.used-size 0)
-	  (set-device-position! 0)
+	  (port.buffer.reset-to-empty!)
+	  (set! port.device.position 0)
 	  bv)))
 
     (set! port ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
@@ -2707,10 +2685,9 @@
 	(unless (or (null? output-strs) (pair? output-strs))
 	  (wrong-port-error))
 	(let ((str (%unsafe.string-reverse-and-concatenate output-strs)))
-	  (set! port.buffer.index     0)
-	  (set! port.buffer.used-size 0)
+	  (port.buffer.reset-to-empty!)
 	  (set-cookie-dest! cookie '())
-	  (set-cookie-pos!  cookie 0)
+	  (set! port.device.position  0)
 	  str)))))
 
 ;;; --------------------------------------------------------------------
@@ -2963,7 +2940,7 @@
     (%unsafe.assert-value-is-open-port port who)
     ;;Checking the  buffer status  is the fastest  path to
     ;;the result.
-    (cond ((and port.has-buffer? (unsafe.fx< port.buffer.index port.buffer.used-size))
+    (cond ((unsafe.fx< port.buffer.index port.buffer.used-size)
 	   #f)
 	  (port.transcoder
 	   (eof-object? (lookahead-char port)))
@@ -2975,8 +2952,7 @@
   ;;buffer mode of PORT.
   ;;
   (%assert-value-is-output-port port 'output-port-buffer-mode)
-  (with-port (port)
-    (if port.has-buffer? 'none 'block)))
+  'block)
 
 
 ;;;; buffer handling for output ports
@@ -3076,9 +3052,8 @@
 		(die who "write! returned an invalid value" count))
 	    (cond ((unsafe.fx= count port.buffer.used-size)
 		   ;;Full success, all data absorbed.
-		   (port.cookie.pos.incr! port.buffer.used-size)
-		   (set! port.buffer.index     0)
-		   (set! port.buffer.used-size 0))
+		   (port.device.position.incr! port.buffer.used-size)
+		   (port.buffer.reset-to-empty!))
 		  ((unsafe.fxzero? count)
 		   ;;Failure, no data absorbed.  Try again.
 		   (try-again-after-partial-write buffer.offset))
@@ -3242,7 +3217,7 @@
 	  (unless (and (unsafe.fx>= count 0)
 		       (unsafe.fx<= count max))
 	    (die who "read! returned a value out of range" count))
-	  (port.cookie.pos.incr!       count)
+	  (port.device.position.incr!  count)
 	  (port.buffer.used-size.incr! count)
 	  count)))))
 
@@ -3458,7 +3433,7 @@
 	       (dst.bv		(make-bytevector (unsafe.fx- buffer.used-size buffer.offset))))
 	  (set! port.buffer.index buffer.used-size)
 	  (let loop ((buffer.offset	buffer.offset)
-		     (dst.index	0))
+		     (dst.index		0))
 	    (if (unsafe.fx= buffer.offset buffer.used-size)
 		dst.bv
 	      (begin
@@ -4289,7 +4264,7 @@
 	  (die who "invalid return value from read!" count))
 	(unless (<= 0 count buffer.length)
 	  (die who "return value from read! is out of range" count))
-	(port.cookie.pos.incr! count)
+	(port.device.position.incr! count)
 	(set! port.buffer.used-size count)
 	(set! port.buffer.index buffer-index-increment)
 	(if (unsafe.fxzero? count)
@@ -4525,8 +4500,7 @@
 	;;returns  an  incorrect value,  for  example a  non-fixnum
 	;;value.
 	(cond ((eq? count 1)
-	       (let ((cookie port.cookie))
-		 (set-cookie-pos! cookie (fx+ 1 (cookie-pos cookie)))))
+	       (port.device.position.incr! 1))
 	      ((eq? count 0)
 	       (port.mark-as-closed)
 	       (die who "could not write bytes to output port" port))
@@ -4553,8 +4527,7 @@
 	;;returns  an incorrect value,  for example  a non-fixnum
 	;;value.
 	(cond ((eq? count 1)
-	       (let ((cookie port.cookie))
-		 (set-cookie-pos! cookie (fx+ 1 (cookie-pos cookie)))))
+	       (port.device.position.incr! 1))
 	      ((eq? count 0)
 	       (port.mark-as-closed)
 	       (die who "could not write char to output port" port))
@@ -4573,25 +4546,23 @@
     (die who "not a u8" byte))
   (with-binary-port (port)
     (cond ((unsafe.fx= fast-put-byte-tag port.fast-attributes)
-	   (if port.has-no-buffer?
-	       (%put-byte/unbuffered! port byte who)
-	     (let try-again-after-flushing-buffer ()
-	       (if (unsafe.fx< port.buffer.index port.buffer.size)
-		   ;;The buffer  exists and  it has room  for one
-		   ;;byte.
-		   (begin
-		     (%debug-assert (<= port.buffer.index port.buffer.used-size))
-		     (unsafe.bytevector-u8-set! port.buffer port.buffer.index byte)
-		     (when (unsafe.fx= port.buffer.index port.buffer.used-size)
-		       (port.buffer.used-size.incr!))
-		     (port.buffer.index.incr!))
-		 ;;The buffer  exists but  it has no  room: flush
-		 ;;the buffer and try again.
+	   (let try-again-after-flushing-buffer ()
+	     (if (unsafe.fx< port.buffer.index port.buffer.size)
+		 ;;The buffer  exists and  it has room  for one
+		 ;;byte.
 		 (begin
-		   (%debug-assert (= port.buffer.used-size port.buffer.index))
-		   (%debug-assert (= port.buffer.used-size port.buffer.size))
-		   (%unsafe.flush-output-port port who)
-		   (try-again-after-flushing-buffer))))))
+		   (%debug-assert (<= port.buffer.index port.buffer.used-size))
+		   (unsafe.bytevector-u8-set! port.buffer port.buffer.index byte)
+		   (when (unsafe.fx= port.buffer.index port.buffer.used-size)
+		     (port.buffer.used-size.incr!))
+		   (port.buffer.index.incr!))
+	       ;;The buffer  exists but  it has no  room: flush
+	       ;;the buffer and try again.
+	       (begin
+		 (%debug-assert (= port.buffer.used-size port.buffer.index))
+		 (%debug-assert (= port.buffer.used-size port.buffer.size))
+		 (%unsafe.flush-output-port port who)
+		 (try-again-after-flushing-buffer)))))
 	  ((output-port? port)
 	   (die who "not a binary port" port))
 	  (else
@@ -4623,40 +4594,33 @@
   (define who 'put-bytevector)
   (with-binary-port (port)
     (cond ((unsafe.fx= fast-put-byte-tag port.fast-attributes)
-	   (if port.has-no-buffer?
-	       ;;Write bytes one by one to the underlying device.
-	       (let next-byte ((index src.start)
-			       (last  (unsafe.fx+ src.start count)))
-		 (unless (unsafe.fx= index last)
-		   (%put-byte/unbuffered! port (unsafe.bytevector-u8-ref src.bv index) who)
-		   (next-byte (unsafe.fxadd1 index) last)))
-	     ;;Write  bytes to  the buffer  and, when  the buffer
-	     ;;fills up, to the underlying device.
-	     (let try-again-after-flushing-buffer ((src.start	src.start)
-						   (count	count)
-						   (room	(port.buffer.room)))
-	       (cond ((unsafe.fxzero? room)
-		      ;;The buffer exists and it is full.
-		      (%unsafe.flush-output-port port who)
-		      (try-again-after-flushing-buffer src.start count (port.buffer.room)))
-		     ((unsafe.fx<= count room)
-		      ;;The  buffer exists  and  there is  enough
-		      ;;room for all of the COUNT bytes.
-		      (%unsafe.bytevector-copy! src.bv src.start port.buffer port.buffer.index count)
-		      (port.buffer.index.incr! count)
-		      (when (unsafe.fx< port.buffer.used-size port.buffer.index)
-			(set! port.buffer.used-size port.buffer.index)))
-		     (else
-		      ;;The  buffer exists and  it can  hold some
-		      ;;but not all of the COUNT bytes.
-		      (%debug-assert (> count room))
-		      (%unsafe.bytevector-copy! src.bv src.start port.buffer port.buffer.index room)
-		      (set! port.buffer.index     port.buffer.size)
-		      (set! port.buffer.used-size port.buffer.index)
-		      (%unsafe.flush-output-port port who)
-		      (try-again-after-flushing-buffer (unsafe.fx+ src.start room)
-						       (unsafe.fx- count room)
-						       (port.buffer.room)))))))
+	   ;;Write bytes to the buffer and, when the buffer fills up, to
+	   ;;the underlying device.
+	   (let try-again-after-flushing-buffer ((src.start	src.start)
+						 (count		count)
+						 (room		(port.buffer.room)))
+	     (cond ((unsafe.fxzero? room)
+		    ;;The buffer exists and it is full.
+		    (%unsafe.flush-output-port port who)
+		    (try-again-after-flushing-buffer src.start count (port.buffer.room)))
+		   ((unsafe.fx<= count room)
+		    ;;The  buffer exists  and  there is  enough
+		    ;;room for all of the COUNT bytes.
+		    (%unsafe.bytevector-copy! src.bv src.start port.buffer port.buffer.index count)
+		    (port.buffer.index.incr! count)
+		    (when (unsafe.fx< port.buffer.used-size port.buffer.index)
+		      (set! port.buffer.used-size port.buffer.index)))
+		   (else
+		    ;;The  buffer exists and  it can  hold some
+		    ;;but not all of the COUNT bytes.
+		    (%debug-assert (> count room))
+		    (%unsafe.bytevector-copy! src.bv src.start port.buffer port.buffer.index room)
+		    (set! port.buffer.index     port.buffer.size)
+		    (set! port.buffer.used-size port.buffer.index)
+		    (%unsafe.flush-output-port port who)
+		    (try-again-after-flushing-buffer (unsafe.fx+ src.start room)
+						     (unsafe.fx- count room)
+						     (port.buffer.room))))))
 	  ((output-port? port)
 	   (die who "not a binary port" port))
 	  (else
