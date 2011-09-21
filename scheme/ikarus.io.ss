@@ -249,16 +249,23 @@
 ;;  - The  value is #f when  the underlying device has  no position.  In
 ;;  this case the port does not support the SET-POSITION! operation.
 ;;
-;;  - The value  is #t only for input ports having  the buffer itself as
-;;  underlying device: those  returned by OPEN-BYTEVECTOR-INPUT-PORT and
-;;  OPEN-STRING-INPUT-PORT.  In such cases:  the POS field of the cookie
-;;  is perpetually set to the buffer=device size.
+;;  -  The  value is  #t  when  the cookie's  POS  field  holds a  value
+;;  representing a correct and  immutable device position.  In this case
+;;  the current  port position can be  moved only by  moving the current
+;;  buffer index.
+;;
+;;  For  example the  ports returned  by  OPEN-BYTEVECTOR-INPUT-PORT and
+;;  OPEN-STRING-INPUT-PORT have the  buffer itself as underlying device;
+;;  for these ports:  the POS field of the cookie  is perpetually set to
+;;  the buffer=device size.
+;;
+;;  NOTE     At     present    only     the     ports    returned     by
+;;  OPEN-BYTEVECTOR-INPUT-PORT  and   OPEN-STRING-INPUT-PORT  have  this
+;;  policy,  so SET-PORT-POSITION!  is  optimised for  this case  (Marco
+;;  Maggi; Sep 21, 2011).
 ;;
 ;;  -  The  value  is a  procedure  when  the  underlying device  has  a
-;;  position.    With   the  exception   of   the   ports  returned   by
-;;  OPEN-BYTEVECTOR-INPUT-PORT and OPEN-STRING-INPUT-PORT: all the ports
-;;  supporting the SET-POSITION! operation must have a procedure in this
-;;  field.
+;;  position.
 ;;
 ;;Field name: close
 ;;Field accessor: $port-close PORT
@@ -1132,6 +1139,10 @@
 		;method, increment
 	      (PORT.MARK-AS-CLOSED		(%dot-id ".mark-as-closed"))
 		;method, mark the port as closed
+	      (PORT.COOKIE.POS			(%dot-id ".cookie.pos"))
+		;exact integer, the current device position
+	      (PORT.COOKIE.POS.SET!		(%dot-id ".cookie.pos.set!"))
+		;method, store a value in the POS field of the cookie
 	      (PORT.COOKIE.POS.INCR!		(%dot-id ".cookie.pos.incr!")))
 		;method, increment the POS field of the cookie
 	   #'(let-syntax
@@ -1200,6 +1211,12 @@
 		     (syntax-rules ()
 		       ((_)
 			($mark-port-closed! ?port))))
+		    (PORT.COOKIE.POS
+		     (identifier-syntax (cookie-pos PORT.COOKIE)))
+		    (PORT.COOKIE.POS.SET!
+		     (syntax-rules ()
+		       ((_ ?new-device-position)
+			(set-cookie-pos! PORT.COOKIE ?new-device-position))))
 		    (PORT.COOKIE.POS.INCR!
 		     (syntax-rules ()
 		       ((_ ?step)
@@ -1781,67 +1798,48 @@
 ;;;; port position
 
 (define (port-has-port-position? port)
-  ;;Defined  by  R6RS.   Return  #t  if  the  port  supports  the
-  ;;PORT-POSITION operation, and #f otherwise.
+  ;;Defined by R6RS.   Return #t if the port  supports the PORT-POSITION
+  ;;operation, and #f otherwise.
   ;;
   (%assert-value-is-port port 'port-has-port-position?)
   (with-port (port)
     (and port.get-position #t)))
 
 (define (port-has-set-port-position!? port)
-  ;;Defined by R6RS.  The PORT-HAS-SET-PORT-POSITION!?  procedure
-  ;;returns  #t  if  the  port  supports  the  SET-PORT-POSITION!
-  ;;operation, and #f otherwise.
+  ;;Defined   by  R6RS.   The   PORT-HAS-SET-PORT-POSITION!?   procedure
+  ;;returns #t  if the port supports  the SET-PORT-POSITION!  operation,
+  ;;and #f otherwise.
   ;;
   (%assert-value-is-port port 'port-has-set-port-position!?)
   (with-port (port)
     (and port.set-position! #t)))
 
 (define (port-position port)
-  ;;Defined by  R6RS.  For  a binary port,  PORT-POSITION returns
-  ;;the index  of the  position at which  the next byte  would be
-  ;;read from  or written  to the port  as an  exact non-negative
-  ;;integer object.
+  ;;Defined by R6RS.  For a binary port, PORT-POSITION returns the index
+  ;;of the position at which the next byte would be read from or written
+  ;;to the port as an exact non-negative integer object.
   ;;
-  ;;For  a textual port,  PORT-POSITION returns  a value  of some
-  ;;implementation-dependent   type   representing   the   port's
-  ;;position; this value  may be useful only as  the POS argument
-  ;;to SET-PORT-POSITION!, if the latter is supported on the port
-  ;;(see below).
+  ;;For  a   textual  port,  PORT-POSITION  returns  a   value  of  some
+  ;;implementation-dependent type representing the port's position; this
+  ;;value may be useful only  as the POS argument to SET-PORT-POSITION!,
+  ;;if the latter is supported on the port (see below).
   ;;
-  ;;If  the port  does not  support the  operation, PORT-POSITION
-  ;;raises an exception with condition type "&assertion".
+  ;;If the port does not  support the operation, PORT-POSITION raises an
+  ;;exception with condition type "&assertion".
   ;;
-  ;;*NOTE* For a  textual port, the port position  may or may not
-  ;;be  an integer  object.   If  it is  an  integer object,  the
-  ;;integer object  does not necessarily correspond to  a byte or
-  ;;character position.
+  ;;*NOTE* For  a textual port, the port  position may or may  not be an
+  ;;integer object.  If it is an integer object, the integer object does
+  ;;not necessarily correspond to a byte or character position.
   ;;
   (define who 'port-position)
   (%assert-value-is-port port who)
   (%unsafe.port-get-position who port))
 
 (define (%unsafe.port-get-position who port)
+  ;;Return the current port position for PORT.
+  ;;
   (with-port (port)
-    (let ((device-position
-	   (let ((getpos port.get-position))
-	     (cond ((procedure? getpos)
-		    ;;The  port has  a device  whose position  cannot be
-		    ;;tracked by the cookie's POS field.
-		    (let ((device-position (getpos)))
-		      (%assert-value-is-get-position-result device-position port who)
-		      device-position))
-		   ((and (boolean? getpos) getpos)
-		    ;;The port may or may not have an underlying device;
-		    ;;in any  case: the cookie's POS field  is enough to
-		    ;;track the current device position.
-		    ;;
-		    ;;If there  is no  underlying device: the  buffer is
-		    ;;itself the device and  the POS field of the cookie
-		    ;;is perpetually set to the buffer size.
-		    (cookie-pos port.cookie))
-		   (else
-		    (assertion-violation who "port does not support port-position operation" port))))))
+    (let ((device-position (%unsafe.device-get-position who port)))
       ;;DEVICE-POSITION is the position in the underlying device, but we
       ;;have to return the port  position taking into account the offset
       ;;in the input/output buffer.
@@ -1849,45 +1847,62 @@
 	  (+ device-position port.buffer.index)
 	(- device-position (- port.buffer.used-size port.buffer.index))))))
 
-(define (set-port-position! port new-position)
-  ;;Defined  by R6RS.   If PORT  is a  binary  port, NEW-POSITION
-  ;;should be a non-negative exact  integer object.  If PORT is a
-  ;;textual port,  NEW-POSITION should be  the return value  of a
-  ;;call to PORT-POSITION on PORT.
+(define (%unsafe.device-get-position who port)
+  ;;Return the current device position for PORT.
   ;;
-  ;;The  SET-PORT-POSITION! procedure  raises  an exception  with
-  ;;condition type  &ASSERTION if the  port does not  support the
-  ;;operation,   and    an   exception   with    condition   type
-  ;;&I/O-INVALID-POSITION if NEW-POSITION is  not in the range of
-  ;;valid  positions of  PORT.   Otherwise, it  sets the  current
-  ;;position  of the port  to POS.   If PORT  is an  output port,
-  ;;SET-PORT-POSITION!  first flushes PORT.
+  (with-port (port)
+    (let ((getpos port.get-position))
+      (cond ((procedure? getpos)
+	     ;;The port has a device whose position cannot be tracked by
+	     ;;the cookie's POS field.
+	     (let ((device-position (getpos)))
+	       (%assert-value-is-get-position-result device-position port who)
+	       device-position))
+	    ((and (boolean? getpos) getpos)
+	     ;;The  cookie's  POS  field  correctly tracks  the  current
+	     ;;device position.
+	     port.cookie.pos)
+	    (else
+	     (assertion-violation who
+	       "port does not support port-position operation" port))))))
+
+(define (set-port-position! port new-port-position)
+  ;;Defined by R6RS.  If PORT is a binary port, NEW-PORT-POSITION should
+  ;;be a non-negative exact integer  object.  If PORT is a textual port,
+  ;;NEW-PORT-POSITION  should   be  the  return  value  of   a  call  to
+  ;;PORT-POSITION on PORT.
   ;;
-  ;;If PORT is  a binary output port and  the current position is
-  ;;set beyond the current end of the data in the underlying data
-  ;;sink, the object is not extended until new data is written at
-  ;;that position.  The contents of any intervening positions are
-  ;;unspecified.   Binary ports created  by OPEN-FILE-OUTPUT-PORT
-  ;;and  OPEN-FILE-INPUT/OUTPUT-PORT can  always  be extended  in
-  ;;this  manner within  the limits  of the  underlying operating
-  ;;system.  In other cases, attempts  to set the port beyond the
-  ;;current end of data in the underlying object may result in an
-  ;;exception with condition type &I/O-INVALID-POSITION.
+  ;;The SET-PORT-POSITION! procedure  raises an exception with condition
+  ;;type &ASSERTION if  the port does not support  the operation, and an
+  ;;exception    with    condition    type   &I/O-INVALID-POSITION    if
+  ;;NEW-PORT-POSITION is  not in the  range of valid positions  of PORT.
+  ;;Otherwise, it sets the current position of the port to POS.  If PORT
+  ;;is an output port, SET-PORT-POSITION!  first flushes PORT.
+  ;;
+  ;;If PORT  is a  binary output  port and the  current position  is set
+  ;;beyond the current end of the  data in the underlying data sink, the
+  ;;object is not  extended until new data is  written at that position.
+  ;;The contents  of any intervening positions  are unspecified.  Binary
+  ;;ports        created       by        OPEN-FILE-OUTPUT-PORT       and
+  ;;OPEN-FILE-INPUT/OUTPUT-PORT  can always be  extended in  this manner
+  ;;within  the limits  of the  underlying operating  system.   In other
+  ;;cases, attempts  to set the port  beyond the current end  of data in
+  ;;the underlying object may result in an exception with condition type
+  ;;&I/O-INVALID-POSITION.
   ;;
   (define who 'set-port-position!)
   (%assert-value-is-port port who)
-  (%assert-value-is-port-position new-position who)
+  (%assert-value-is-port-position new-port-position who)
   (with-port (port)
-    (let ((setpos! port.set-position!))
-      (cond ((procedure? setpos!)
-	     ;;An  underlying  device  exists.  Call  the  port's
-	     ;;SET-POSITION! function  only if we  cannot satisfy
-	     ;;this request by moving the index in the buffer.
-	     (let ((old-position (%unsafe.port-get-position who port)))
-	       (unless (= old-position new-position)
-		 (let ((new-buffer.index (+ port.buffer.index (- new-position old-position))))
-		   (define-inline (device-set-position!)
-		     (set-cookie-pos! port.cookie new-position))
+    (let ((set-position! port.set-position!))
+      (cond ((procedure? set-position!)
+	     ;;An   underlying   device   exists.    Call   the   port's
+	     ;;SET-POSITION!   function only if  we cannot  satisfy this
+	     ;;request by moving the index in the buffer.
+	     (let ((old-port-position (%unsafe.port-get-position who port)))
+	       (unless (= old-port-position new-port-position)
+		 (let ((new-buffer.index (+ port.buffer.index
+					    (- new-port-position old-port-position))))
 		   (if (and (>= new-buffer.index 0)
 			    (<= new-buffer.index port.buffer.used-size))
 		       (set! port.buffer.index new-buffer.index)
@@ -1895,24 +1910,40 @@
 		       (if (%unsafe.output-port? port)
 			   (%unsafe.flush-output-port port who)
 			 (port.buffer.reset!))
-		       ;;If SETPOS!  fails  we can assume nothing
-		       ;;about the position in the device.
-		       (setpos! new-position)
-		       ;;Notice  that the  NEW-POSITION  field of
-		       ;;the  port's   cookie  is  set   by  this
-		       ;;function   AFTER   having   successfully
-		       ;;called  the   port's  own  SET-POSITION!
-		       ;;function.
-		       (device-set-position!)))))))
-	    ((and (boolean? setpos!) setpos!)
-             ;;This case happens only  for input ports having the buffer
-             ;;itself  as underlying  device.   For such  case: the  POS
-             ;;field of the cookie is perpetually set to zero.
-	     (if (<= new-position port.buffer.used-size)
-		 (set! port.buffer.index new-position)
-	       (%raise-port-position-out-of-range who port new-position)))
+		       (let-syntax ((new-device-position (identifier-syntax new-port-position)))
+			 ;;If SET-POSITION!  fails we can assume nothing
+			 ;;about the position in the device.
+			 (set-position! new-device-position)
+			 ;;Notice that the cookie's  POS field is set by
+			 ;;this   function  AFTER   having  successfully
+			 ;;called SET-POSITION!.
+			 (port.cookie.pos.set! new-device-position))))))))
+	    ((and (boolean? set-position!) set-position!)
+	     ;;The  cookie's  POS field  holds  a  value representing  a
+	     ;;correct  and  immutable  device  position.  We  move  the
+	     ;;current port position by moving the current buffer index.
+	     ;;
+	     ;;Note that the correct  implementation of this case is the
+	     ;;following:
+	     #|
+	     (let ((old-port-position (%unsafe.port-get-position who port)))
+	       (unless (= old-port-position new-port-position)
+		 (let ((delta (- new-port-position old-port-position)))
+		   (if (<= 0 delta port.buffer.used-size)
+		       (set! port.buffer.index delta)
+		     (%raise-port-position-out-of-range who port new-port-position)))))
+	     |#
+	     ;;but we know that, at present, the only ports implementing
+	     ;;this     policy    are     the    ones     returned    by
+	     ;;OPEN-BYTEVECTOR-INPUT-PORT and OPEN-STRING-INPUT-PORT, so
+	     ;;we can optimise with the following:
+	     (unless (= new-port-position port.buffer.index)
+	       (if (<= 0 new-port-position port.buffer.used-size)
+		   (set! port.buffer.index new-port-position)
+		 (%raise-port-position-out-of-range who port new-port-position))))
 	    (else
-	     (assertion-violation who "port does not support port position" port))))))
+	     (assertion-violation who
+	       "port does not support set-port-position operation" port))))))
 
 
 ;;;; custom ports
