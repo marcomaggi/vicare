@@ -1668,7 +1668,7 @@
 
   (check
       (let ((port (open-bytevector-input-port '#vu8())))
-	(lookahead-u8 port))
+	(get-bytevector-n port 3))
     => (eof-object))
 
   (check
@@ -1733,11 +1733,175 @@
 	(port-position port))
     => 10)
 
-  (check 'this
+  (check
       (let ((port (open-bytevector-input-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
 	(set-port-position! port 5)
 	(port-position port))
     => 5)
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(set-port-position! port 5)
+	(set-port-position! port 1)
+	(set-port-position! port 9)
+	(port-position port))
+    => 9)
+
+  (check
+      (check.with-result
+	  (let ((port (open-bytevector-input-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	    (set-port-position! port 5)
+	    (check.add-result (get-bytevector-n port 5))
+	    (port-position port)))
+    => '(10 (#vu8(5 6 7 8 9))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'open-string-input-port))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check	;argument is not a string
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(open-string-input-port 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; port operations support
+
+  (check
+      (port-has-port-position? (open-string-input-port ""))
+    => #t)
+
+  (check
+      (port-has-set-port-position!? (open-string-input-port ""))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; reading bytes
+
+  (check
+      (let ((port (open-string-input-port "")))
+	(lookahead-char port))
+    => (eof-object))
+
+  (check
+      (let ((port (open-string-input-port "12")))
+	(lookahead-char port))
+    => #\1)
+
+  (check
+      (let ((port (open-string-input-port "")))
+	(get-char port))
+    => (eof-object))
+
+  (check
+      (let ((port (open-string-input-port "12")))
+	(get-char port))
+    => #\1)
+
+  (check
+      (let ((port (open-string-input-port "1")))
+	(get-char port)
+	(get-char port))
+    => (eof-object))
+
+;;; --------------------------------------------------------------------
+;;; reading strings
+
+  (check
+      (let ((port (open-string-input-port "")))
+	(get-string-n port 3))
+    => (eof-object))
+
+  (check
+      (check.with-result
+	  (let ((port (open-string-input-port "")))
+	    (check.add-result (get-string-n port 0))
+	    (eof-object? (get-char port))))
+    => '(#t ("")))
+
+  (check
+      (check.with-result
+	  (let ((port (open-string-input-port "012")))
+	    (check.add-result (get-string-n port 3))
+	    (eof-object? (get-char port))))
+    => '(#t ("012")))
+
+  (check
+      (check.with-result
+	  (let ((port (open-string-input-port "012345")))
+	    (check.add-result (get-string-n port 3))
+	    (check.add-result (get-string-n port 3))
+	    (eof-object? (get-char port))))
+    => '(#t ("012" "345")))
+
+;;; --------------------------------------------------------------------
+;;; getting position
+
+  (check
+      (let ((port (open-string-input-port "")))
+	(port-position port))
+    => 0)
+
+  (check
+      (let ((port (open-string-input-port "0123456789")))
+	(port-position port))
+    => 0)
+
+  (check
+      (let ((port (open-string-input-port "0123456789")))
+	(get-string-n port 5)
+	(port-position port))
+    => 5)
+
+  (check
+      (let ((port (open-string-input-port "0123456789")))
+	(get-string-n port 10)
+	(port-position port))
+    => 10)
+
+;;; --------------------------------------------------------------------
+;;; setting position
+
+  (check
+      (let ((port (open-string-input-port "")))
+	(set-port-position! port 0)
+	(port-position port))
+    => 0)
+
+  (check
+      (let ((port (open-string-input-port "0123456789")))
+	(set-port-position! port 10)
+	(port-position port))
+    => 10)
+
+  (check
+      (let ((port (open-string-input-port "0123456789")))
+	(set-port-position! port 5)
+	(port-position port))
+    => 5)
+
+  (check
+      (let ((port (open-string-input-port "0123456789")))
+	(set-port-position! port 5)
+	(set-port-position! port 1)
+	(set-port-position! port 9)
+	(port-position port))
+    => 9)
+
+  (check
+      (check.with-result
+	  (let ((port (open-string-input-port "0123456789")))
+	    (set-port-position! port 5)
+	    (check.add-result (get-string-n port 5))
+	    (port-position port)))
+    => '(10 ("56789")))
 
   #t)
 
