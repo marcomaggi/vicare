@@ -2802,20 +2802,18 @@
     (when port.transcoder
       (die who "not a binary port" port))
     (%unsafe.assert-value-is-open-port port who)
-    (let ((read! ($port-read! port))
-	  (write! ($port-write! port)))
-      (port.mark-as-closed)
-      (guarded-port
-       ($make-port (cond (port.read!
-			  (%input-transcoder-attrs  transcoder who))
-			 (port.write!
-			  (%output-transcoder-attrs transcoder who))
-			 (else
-			  (die who "port is neither input nor output!" port)))
-		   port.buffer.index port.buffer.used-size port.buffer
-		   transcoder port.id
-		   port.read! port.write! port.get-position port.set-position! port.close
-		   port.cookie)))))
+    (port.mark-as-closed)
+    (guarded-port
+     ($make-port (cond (port.read!
+			(%input-transcoder-attrs  transcoder who))
+		       (port.write!
+			(%output-transcoder-attrs transcoder who))
+		       (else
+			(die who "port is neither input nor output!" port)))
+		 port.buffer.index port.buffer.used-size port.buffer
+		 transcoder port.id
+		 port.read! port.write! port.get-position port.set-position! port.close
+		 port.cookie))))
 
 (define (port-transcoder port)
   ;;Defined by R6RS.  Return  the transcoder associated with PORT
