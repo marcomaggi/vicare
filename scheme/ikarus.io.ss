@@ -81,9 +81,9 @@
 
 ;;;; The port data structure
 ;;
-;;It is defined in "pass-specify-rep-primops.ss"; its allocation,
-;;accessors and mutators are  all defined as primitive operations
-;;inlined by the compiler.
+;;It  is  defined   in  "pass-specify-rep-primops.ss";  its  allocation,
+;;accessors and mutators are all defined as primitive operations inlined
+;;by the compiler.
 ;;
 ;;Constructor: $make-port ATTRS IDX SZ BUF TR ID READ WRITE GETP SETP CL COOKIE
 ;;Aguments: IDX		- index in input/output buffer,
@@ -97,10 +97,10 @@
 ;;          SETP	- set-position procedure
 ;;          CL		- close procedure
 ;;          COOKIE	- line and column tracker
-;;  Build  a  new  port  structure  and  return  a  Scheme  value
-;;  referencing  it.  Notice  that the  underlying device  is not
-;;  among the constructor  arguments: it is implicitly referenced
-;;  by the functions READ, WRITE, GETP, SETP, CL.
+;;  Build a new port structure and return a Scheme value referencing it.
+;;  Notice  that the  underlying  device is  not  among the  constructor
+;;  arguments: it is implicitly referenced by the functions READ, WRITE,
+;;  GETP, SETP, CL.
 ;;
 ;;
 ;;Fields of a port block
@@ -112,97 +112,96 @@
 ;;Field name: index
 ;;Field accessor: $port-index PORT
 ;;Field Mutator: $set-port-index! PORT IDX
-;;  Zero-based  fixnum  offset of  the  current  position in  the
-;;  buffer; see the description of the BUFFER field below.
+;;  Zero-based fixnum offset of the  current position in the buffer; see
+;;  the description of the BUFFER field below.
 ;;
-;;  For an output port: it is  the offset in the output buffer of
-;;  the next location to be written to.
+;;  For an  output port: it  is the offset  in the output buffer  of the
+;;  next location to be written to.
 ;;
-;;  For an  input port: it is  the offset of the  input buffer of
-;;  the next location to be read from.
+;;  For an input port: it is the  offset of the input buffer of the next
+;;  location to be read from.
 ;;
 ;;Field name: size
 ;;Field accessor: $port-size PORT
 ;;Field mutator: $set-port-size! PORT SIZE
-;;  Fixnum representing the  number of bytes/chars currently used
-;;  in the input/output buffer; see the description of the BUFFER
-;;  field below.
+;;  Fixnum representing the number  of bytes/chars currently used in the
+;;  input/output buffer; see the description of the BUFFER field below.
 ;;
-;;  When the device is a  Scheme string or bytevector: this field
-;;  is  set to  the number  of characters  in the  string  or the
-;;  number of bytes in the bytevector.
+;;  When the device is a Scheme  string or bytevector: this field is set
+;;  to the number of characters in  the string or the number of bytes in
+;;  the bytevector.
 ;;
 ;;Field name: buffer
 ;;Field accessor: $port-buffer PORT
-;;  The  input/output  buffer  for   the  port.   The  buffer  is
-;;  allocated  at port construction  time and  never reallocated.
+;;  The input/output  buffer for the  port.  The buffer is  allocated at
+;;  port  construction time  and  never reallocated.   The  size of  the
+;;  buffers is customisable through a set of parameters.
 ;;
-;;  For the  logic of the functions  to work: it  is mandatory to
-;;  have a buffer at least  wide enough to hold the largest UTF-8
-;;  character.   This  is  because   it  is  possible  to  put  a
-;;  transcoder on top  of every binary port, and  we need a place
-;;  to store partially read or written characters.
+;;  For the  logic of the functions to  work: it is mandatory  to have a
+;;  buffer at  least wide  enough to hold  the largest  UTF-8 character.
+;;  This is because  it is possible to put a transcoder  on top of every
+;;  binary port, and we need a  place to store partially read or written
+;;  characters.
 ;;
-;;  When the  port has a Scheme bytevector  as underlying device:
-;;  the bytevector itself is the buffer.
+;;  Custom  binary ports  have a  bytevector as  buffer;  custom textual
+;;  ports have a string as buffer.
 ;;
-;;  When the port  has a Scheme string as  underlying device: the
-;;  string itself is the buffer.
+;;  As  special cases: the  port returned  by OPEN-BYTEVECTOR-INPUT-PORT
+;;  has  the   bytevector  itself  as  buffer,  the   port  returned  by
+;;  OPEN-STRING-INPUT-PORT has the string itself as buffer.
 ;;
-;;  When the port  has a platform file as  underlying device: the
-;;  buffer is a Scheme bytevector.   For input files: the size of
-;;  the  input buffer  is  the parameter  INPUT-FILE-BUFFER-SIZE.
-;;  For  output files:  the  size  of the  output  buffer is  the
-;;  constant OUTPUT-FILE-BUFFER-SIZE.
+;;  The port returned by OPEN-BYTEVECTOR-OUTPUT-PORT has a bytevector as
+;;  buffer; the port returned by OPEN-STRING-OUTPUT-PORT has a string as
+;;  buffer.
 ;;
-;;  When doing  output on an underlying device  with buffer: data
-;;  is first written in the buffer and once in a while flushed to
-;;  the  device.   The  actual  offset  into an  output  port  is
-;;  computed with:
+;;  When the port  has a platform file as  underlying device: the buffer
+;;  is a Scheme bytevector.
 ;;
-;;	   offset = pos + index
+;;  When doing output on an  underlying device: data is first written in
+;;  the buffer and  once in a while flushed to  the device.  The current
+;;  output port position is computed with:
 ;;
-;;                        pos
+;;	   port position = device position + index
+;;
+;;                 device position
 ;;                        v                        device
 ;;	   |--------------+---------------------------|
 ;;                        |*****+*******+--------| buffer
 ;;                        ^     ^       ^        ^
 ;;                        0   index  used-size  size
 ;;
-;;  When doing input on an underlying device with buffer: a block
-;;  of data is  first copied from the device  into the buffer and
-;;  then read  to produce Scheme values.  The  actual offset into
-;;  an input port is computed with:
+;;  When doing input  on an underlying device: a block  of data is first
+;;  copied  from the device  into the  buffer and  then read  to produce
+;;  Scheme values.  The current input port position is computed with:
 ;;
-;;	   offset = pos - size + index
-;;	          = pos - (size - index)
+;;	   port position = device position - used-size + index
+;;	                 = device position - (used-size - index)
 ;;
-;;                                      pos
+;;                               device position
 ;;                                      v           device
 ;;	   |----------------------------+-------------|
-;;                      |*******+*******+--------|
+;;                      |*******+*******+--------| buffer
 ;;                      ^       ^       ^        ^
-;;                      0     index  used size  size
+;;                      0     index  used-size  size
 ;;
 ;;Field name: transcoder
 ;;
 ;;Field name: id
 ;;Field accessor: $port-id
-;;  An  object  describing the  underlying  device.   For a  port
-;;  associated to a file: it  is a Scheme string representing the
-;;  file name given to functions like OPEN-OUTPUT-FILE.
+;;  An object  describing the underlying device.  For  a port associated
+;;  to a file: it is a Scheme string representing the file name given to
+;;  functions like OPEN-OUTPUT-FILE.
 ;;
 ;;Field name: read!
 ;;Field accessor: $port-read! PORT
 ;;  Fill buffer procedure.
 ;;
-;;  When the value  is a procedure: it must  be a function which,
-;;  applied to the port itself,  fills the input buffer with data
-;;  from the underlying device.
+;;  When the value is a procedure:  it must be a function which, applied
+;;  to  the port  itself,  fills the  input  buffer with  data from  the
+;;  underlying device.
 ;;
-;;  When the  value is the Scheme  symbol ALL-DATA-IN-BUFFER: the
-;;  port  has no  underlying  device, the  buffer  itself is  the
-;;  device.
+;;  When the value is the Scheme symbol ALL-DATA-IN-BUFFER: the port has
+;;  no underlying device, the buffer itself is the device.
 ;;
 ;;Field name: write!
 ;;Field accessor: $port-write! PORT
@@ -210,11 +209,56 @@
 ;;
 ;;Field name: get-position
 ;;Field accessor: $port-get-position PORT
-;;  Get position procedure.
+;;  Get position policy: it is  used to retrieve the current position in
+;;  the underlying  device.  The device  position is tracked by  the POS
+;;  field  of  the  port's  cookie.   The  current  device  position  is
+;;  different from the  current port position: see the  BUFFER field for
+;;  details.
+;;
+;;  This field can  be set to #f, #t or a  procedure taking no arguments
+;;  and returning the current device position.
+;;
+;;  - The  value is #f when  the underlying device has  no position.  In
+;;  this case the port does not support the GET-POSITION operation.
+;;
+;;  -  The value is  #t for  ports in  which the  cookie's POS  field is
+;;  successfully used to track the device position; this is the case for
+;;  all the non-custom ports instantiated by this library.  Custom ports
+;;  cannot have this field set to #t.
+;;
+;;  As a  special case the ports  returned by OPEN-BYTEVECTOR-INPUT-PORT
+;;  and OPEN-STRING-INPUT-PORT  use the  bytevector or string  itself as
+;;  buffer; in  such cases: the POS  field of the  cookie is perpetually
+;;  set  to the  buffer=device size,  so  the port  position equals  the
+;;  device position which equals the current buffer index.
+;;
+;;  - The value is a procedure when the underlying device has a position
+;;  which cannot be tracked by the cookie's POS field.  This is the case
+;;  for all the custom ports having a device.
 ;;
 ;;Field name: set-position!
 ;;Field accessor: $port-set-position! PORT
-;;  Set position procedure.
+;;  Set position policy:  it is used to set the  current position in the
+;;  underlying device.  The device position  is tracked by the POS field
+;;  of the port's cookie.  The current device position is different from
+;;  the current port position: see the BUFFER field for details.
+;;
+;;  This field can be set to #f, #t or a procedure taking the new device
+;;  position as argument and returning unspecified values.
+;;
+;;  - The  value is #f when  the underlying device has  no position.  In
+;;  this case the port does not support the SET-POSITION! operation.
+;;
+;;  - The value  is #t only for input ports having  the buffer itself as
+;;  underlying device: those  returned by OPEN-BYTEVECTOR-INPUT-PORT and
+;;  OPEN-STRING-INPUT-PORT.  In such cases:  the POS field of the cookie
+;;  is perpetually set to the buffer=device size.
+;;
+;;  -  The  value  is a  procedure  when  the  underlying device  has  a
+;;  position.    With   the  exception   of   the   ports  returned   by
+;;  OPEN-BYTEVECTOR-INPUT-PORT and OPEN-STRING-INPUT-PORT: all the ports
+;;  supporting the SET-POSITION! operation must have a procedure in this
+;;  field.
 ;;
 ;;Field name: close
 ;;Field accessor: $port-close PORT
@@ -223,8 +267,9 @@
 ;;Field name: cookie
 ;;Field accessor: $port-cookie PORT
 ;;Field mutator: $set-port-cookie PORT COOKIE
-;;  A "cookie"  record used  to track line  and column  number in
-;;  textual ports.
+;;  A COOKIE  record used to keep  a reference to  the underlying device
+;;  and track its current position.   Additionally it can track line and
+;;  column numbers in textual ports.
 ;;
 
 
@@ -1778,26 +1823,31 @@
 
 (define (%unsafe.port-get-position who port)
   (with-port (port)
-    (let ((getpos port.get-position))
-      (cond ((procedure? getpos)
-	     ;;The port has a device.
-	     (let ((device-position (getpos)))
-	       (%assert-value-is-get-position-result device-position port who)
-	       ;;DEVICE-POSITION   is   the   position   in   the
-	       ;;underlying  device, but  we have  to  return the
-	       ;;full position taking  into account the offset in
-	       ;;the input/output buffer.
-	       (if (%unsafe.input-port? port)
-		   (- device-position (- port.buffer.used-size port.buffer.index))
-		 (+ device-position port.buffer.index))))
-	    ((and (boolean? getpos) getpos)
-	     ;;The port may or may not have an underlying device.
-	     ;;If there  is no  underlying device: the  buffer is
-	     ;;itself the device and  the POS field of the cookie
-	     ;;is perpetually set to zero.
-	     (+ port.buffer.index (cookie-pos port.cookie)))
-	    (else
-	     (assertion-violation who "port does not support port-position operation" port))))))
+    (let ((device-position
+	   (let ((getpos port.get-position))
+	     (cond ((procedure? getpos)
+		    ;;The  port has  a device  whose position  cannot be
+		    ;;tracked by the cookie's POS field.
+		    (let ((device-position (getpos)))
+		      (%assert-value-is-get-position-result device-position port who)
+		      device-position))
+		   ((and (boolean? getpos) getpos)
+		    ;;The port may or may not have an underlying device;
+		    ;;in any  case: the cookie's POS field  is enough to
+		    ;;track the current device position.
+		    ;;
+		    ;;If there  is no  underlying device: the  buffer is
+		    ;;itself the device and  the POS field of the cookie
+		    ;;is perpetually set to the buffer size.
+		    (cookie-pos port.cookie))
+		   (else
+		    (assertion-violation who "port does not support port-position operation" port))))))
+      ;;DEVICE-POSITION is the position in the underlying device, but we
+      ;;have to return the port  position taking into account the offset
+      ;;in the input/output buffer.
+      (if (%unsafe.output-port? port)
+	  (+ device-position port.buffer.index)
+	(- device-position (- port.buffer.used-size port.buffer.index))))))
 
 (define (set-port-position! port new-position)
   ;;Defined  by R6RS.   If PORT  is a  binary  port, NEW-POSITION
@@ -1855,10 +1905,10 @@
 		       ;;function.
 		       (device-set-position!)))))))
 	    ((and (boolean? setpos!) setpos!)
-             ;;There may or may  not be an underlying device.  In
-             ;;case  there is  no device:  the POS  field  of the
-             ;;cookie is perpetually set to zero.
-	     (if (< new-position port.buffer.used-size)
+             ;;This case happens only  for input ports having the buffer
+             ;;itself  as underlying  device.   For such  case: the  POS
+             ;;field of the cookie is perpetually set to zero.
+	     (if (<= new-position port.buffer.used-size)
 		 (set! port.buffer.index new-position)
 	       (%raise-port-position-out-of-range who port new-position)))
 	    (else
@@ -2174,7 +2224,18 @@
     (define who 'open-bytevector-input-port)
     (%assert-value-is-bytevector bv who)
     (%assert-value-is-maybe-transcoder maybe-transcoder who)
-    ;;The input bytevector is itself the buffer!!!
+    ;;The input  bytevector is  itself the buffer!!!   The port is  in a
+    ;;state equivalent to the following:
+    ;;
+    ;;                                           device position
+    ;;                                                  v
+    ;;   |----------------------------------------------| device
+    ;;   |*******************+**************************| buffer
+    ;;   ^                   ^                          ^
+    ;;   0            index = port position       used-size = size
+    ;;
+    ;;the device position equals the  bytevector length and its value in
+    ;;the cookie's POS field is never mutated.
     (let ((bv.len (unsafe.bytevector-length bv)))
       ;;FIXME  The following is  an artificial  limitation to  allow the
       ;;buffer to  be handled using  unsafe fixnum functions; it  can be
@@ -2193,6 +2254,7 @@
 	    (set-position!	#t)
 	    (close		#f)
 	    (cookie		(default-cookie #f)))
+	(set-cookie-pos! cookie bv.len)
 	($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
 		    read! write! get-position set-position! close cookie))))))
 
@@ -2221,7 +2283,18 @@
   (define who 'open-string-input-port)
   (unless (string? str)
     (die who "not a string" str))
-  ;;The input string is itself the buffer!!!
+  ;;The input  string is itself  the buffer!!!  The  port is in  a state
+  ;;equivalent to the following:
+  ;;
+  ;;                                           device position
+  ;;                                                  v
+  ;;   |----------------------------------------------| device
+  ;;   |*******************+**************************| buffer
+  ;;   ^                   ^                          ^
+  ;;   0            index = port position       used-size = size
+  ;;
+  ;;the device  position equals the string  length and its  value in the
+  ;;cookie's POS field is never mutated.
   (let ((str.len (string-length str)))
     (unless (< str.len buffer-size-upper-limit)
       (error who "input string length exceeds maximum supported size" str.len))
@@ -2236,6 +2309,7 @@
 	  (set-position!	#t)
 	  (close		#f)
 	  (cookie		(default-cookie #f)))
+      (set-cookie-pos! cookie str.len)
       ($make-port attributes buffer.index buffer.used-size buffer transcoder id
 		  read! write! get-position set-position! close cookie))))
 
@@ -3240,7 +3314,7 @@
     (unless (fixnum? count)
       (die who "count is not a fixnum" count))
     (cond ((unsafe.fx> count 0)
-	   (let-values (((out-port getter) (open-bytevector-output-port #f)))
+	   (let-values (((out-port extract) (open-bytevector-output-port #f)))
 	     (let retry-after-filling-buffer ((count count))
 	       (define (data-available-in-buffer)
 		 (let* ((buffer.used-size	port.buffer.used-size)
@@ -3248,15 +3322,15 @@
 			(amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
 			(all-count?		(unsafe.fx<= count amount-of-available))
 			(amount-to-write	(if all-count? count amount-of-available)))
-		   (put-bytevector out-port port.buffer port.buffer.index amount-to-write)
+		   (put-bytevector out-port port.buffer buffer.offset amount-to-write)
                    (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-write))
                    (if all-count?
-		       (getter)
+		       (extract)
 		     (retry-after-filling-buffer (unsafe.fx- count amount-of-available)))))
 	       (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 		 (data-is-needed-at: port.buffer.index)
 		 (if-end-of-file:
-		  (let ((result (getter)))
+		  (let ((result (extract)))
 		    (if (zero? (unsafe.bytevector-length result))
 			(eof-object)
 		      result)))

@@ -1615,6 +1615,130 @@
 	(open-bytevector-input-port 123))
     => '(123))
 
+  (check	;argument is not a transcoder
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(open-bytevector-input-port '#vu8(1) 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; port operations support
+
+  (check
+      (port-has-port-position? (open-bytevector-input-port '#vu8()))
+    => #t)
+
+  (check
+      (port-has-set-port-position!? (open-bytevector-input-port '#vu8()))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; reading bytes
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(lookahead-u8 port))
+    => (eof-object))
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(12))))
+	(lookahead-u8 port))
+    => 12)
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(get-u8 port))
+    => (eof-object))
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(12))))
+	(get-u8 port))
+    => 12)
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(12))))
+	(get-u8 port)
+	(get-u8 port))
+    => (eof-object))
+
+;;; --------------------------------------------------------------------
+;;; reading bytevectors
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(lookahead-u8 port))
+    => (eof-object))
+
+  (check
+      (check.with-result
+	  (let ((port (open-bytevector-input-port '#vu8())))
+	    (check.add-result (get-bytevector-n port 0))
+	    (eof-object? (get-u8 port))))
+    => '(#t (#vu8())))
+
+  (check
+      (check.with-result
+	  (let ((port (open-bytevector-input-port '#vu8(0 1 2))))
+	    (check.add-result (get-bytevector-n port 3))
+	    (eof-object? (get-u8 port))))
+    => '(#t (#vu8(0 1 2))))
+
+  (check
+      (check.with-result
+	  (let ((port (open-bytevector-input-port '#vu8(0 1 2 3 4 5))))
+	    (check.add-result (get-bytevector-n port 3))
+	    (check.add-result (get-bytevector-n port 3))
+	    (eof-object? (get-u8 port))))
+    => '(#t (#vu8(0 1 2) #vu8(3 4 5))))
+
+;;; --------------------------------------------------------------------
+;;; getting position
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(port-position port))
+    => 0)
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(port-position port))
+    => 0)
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(get-bytevector-n port 5)
+	(port-position port))
+    => 5)
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(get-bytevector-n port 10)
+	(port-position port))
+    => 10)
+
+;;; --------------------------------------------------------------------
+;;; setting position
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(set-port-position! port 0)
+	(port-position port))
+    => 0)
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(set-port-position! port 10)
+	(port-position port))
+    => 10)
+
+  (check 'this
+      (let ((port (open-bytevector-input-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(set-port-position! port 5)
+	(port-position port))
+    => 5)
+
   #t)
 
 
