@@ -1135,10 +1135,14 @@
 		;method, increment
 	      (PORT.MARK-AS-CLOSED		(%dot-id ".mark-as-closed"))
 		;method, mark the port as closed
+	      (PORT.DEVICE			(%dot-id ".device"))
+		;false or Scheme value, references the underlying device
 	      (PORT.DEVICE.POSITION		(%dot-id ".device.position"))
 		;exact integer, track the current device position
 	      (PORT.DEVICE.POSITION.INCR!	(%dot-id ".device.position.incr!"))
 		;method, increment the POS field of the cookie
+	      (PORT.MODE			(%dot-id ".mode"))
+		;Scheme symbol, select the port mode
 	      )
 	   #'(let-syntax
 		 ((PORT.TAG		(identifier-syntax ($port-tag		?port)))
@@ -1196,15 +1200,23 @@
 		     (syntax-rules ()
 		       ((_)
 			($mark-port-closed! ?port))))
+		    (PORT.DEVICE
+		     (identifier-syntax
+		      (_			(cookie-dest PORT.COOKIE))
+		      ((set! _ ?new-device)	(set-cookie-dest! PORT.COOKIE ?new-device))))
 		    (PORT.DEVICE.POSITION
 		     (identifier-syntax
 		      (_			(cookie-pos PORT.COOKIE))
-		      ((set! _ ?new-value)	(set-cookie-pos! PORT.COOKIE ?new-value))))
+		      ((set! _ ?new-position)	(set-cookie-pos! PORT.COOKIE ?new-position))))
 		    (PORT.DEVICE.POSITION.INCR!
 		     (syntax-rules ()
 		       ((_ ?step)
 			(let ((cookie PORT.COOKIE))
 			  (set-cookie-pos! cookie (+ ?step (cookie-pos cookie)))))))
+		    (PORT.MODE
+		     (identifier-syntax
+		      (_			(cookie-mode PORT.COOKIE))
+		      ((set! _ ?new-mode)	(set-cookie-mode! PORT.COOKIE ?new-mode))))
 		    )
 		 . ?body))))))))
 
@@ -1943,7 +1955,9 @@
       (%assert-value-is-port port 'guarded-port)
       (clean-up)
       (with-port (port)
-	(when (fixnum? (cookie-dest port.cookie))
+	;;If the  port wraps a  platform descriptor: register it  in the
+	;;guardian.
+	(when (fixnum? port.device)
 	  (G port)))
       port)))
 
@@ -2397,97 +2411,90 @@
       ;;is   less   than  such   bytevector   length:   it  means   that
       ;;SET-PORT-POSITION! was used.
       ;;
-
-      (define-inline (%get-device)
-	(cookie-dest cookie))
-      (define-inline (%set-device! ?new-device)
-	(set-cookie-dest! cookie ?new-device))
-      (define (%%serialise-device! who reset?)
-	(with-port (port)
+      (with-port (port)
+	(define (%%serialise-device! who reset?)
 	  (unless port.closed?
 	    (%unsafe.flush-output-port port who))
-	  (let ((bv (%unsafe.bytevector-reverse-and-concatenate (%get-device))))
-	    (%set-device! (if reset? '() (list bv)))
-	    bv)))
-      (define-inline (%serialise-device! who)
-	(%%serialise-device! who #f))
-      (define-inline (%serialise-device-and-reset! who)
-	(%%serialise-device! who #t))
+	  (let ((bv (%unsafe.bytevector-reverse-and-concatenate port.device)))
+	    (set! port.device (if reset? '() (list bv)))
+	    bv))
+	(define-inline (%serialise-device! who)
+	  (%%serialise-device! who #f))
+	(define-inline (%serialise-device-and-reset! who)
+	  (%%serialise-device! who #t))
 
-      (define (write! src.bv src.start count)
-	(%debug-assert (and (fixnum? count) (<= 0 count)))
-	(with-port (port)
-	  (let ((output-bvs   (%get-device))
+	(define (write! src.bv src.start count)
+	  (%debug-assert (and (fixnum? count) (<= 0 count)))
+	  (let ((output-bvs   port.device)
 		(dev-position port.device.position))
 	    (if (and (%list-holding-single-value? output-bvs)
 		     (< dev-position (unsafe.bytevector-length (car output-bvs))))
-		;;The  current   position  was  set   inside  the  already
+		;;The  current  position  was  set  inside  the  already
 		;;accumulated data.
 		(write!/overwrite src.bv src.start count output-bvs dev-position)
-	      ;;The  current  position  is  at  the  end  of  the  already
+	      ;;The  current  position is  at  the  end  of the  already
 	      ;;accumulated data.
 	      (write!/append src.bv src.start count output-bvs))
-	    count)))
+	    count))
 
-      (define-inline (write!/overwrite src.bv src.start count output-bvs dev-position)
-	;;Write  data to  the device,  overwriting some  of  the already
-	;;existing  data.  The device  is already  composed of  a single
-	;;bytevector.  Remember that DEV-POSITION can be either a fixnum
-	;;or a bignum; the same goes for DST.LEN and DST.ROOM.
-	;;
-	(let* ((dst.bv   (car output-bvs))
-	       (dst.len  (unsafe.bytevector-length dst.bv))
-	       (dst.room (- dst.len dev-position)))
-	  (if (<= count dst.room)
-	      ;;The new data fits in the single bytevector.
-	      (%unsafe.bigdst-bytevector-copy! src.bv src.start dst.bv dev-position count)
-	    (begin
-	      (%debug-assert (fixnum? dst.room))
-	      ;;The new data goes part in the single bytevector and part
-	      ;;in a new bytevector.
-	      (%unsafe.bigdst-bytevector-copy! src.bv src.start dst.bv dev-position dst.room)
-	      (let* ((src.start (unsafe.fx+ src.start dst.room))
-		     (count     (unsafe.fx- count     dst.room))
-		     (dst.bv    (unsafe.make-bytevector count)))
-		(%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
-		(%set-device! (cons dst.bv output-bvs)))))))
+	(define-inline (write!/overwrite src.bv src.start count output-bvs dev-position)
+	  ;;Write data  to the device,  overwriting some of  the already
+	  ;;existing data.   The device is already composed  of a single
+	  ;;bytevector.   Remember  that DEV-POSITION  can  be either  a
+	  ;;fixnum or a bignum; the same goes for DST.LEN and DST.ROOM.
+	  ;;
+	  (let* ((dst.bv   (car output-bvs))
+		 (dst.len  (unsafe.bytevector-length dst.bv))
+		 (dst.room (- dst.len dev-position)))
+	    (if (<= count dst.room)
+		;;The new data fits in the single bytevector.
+		(%unsafe.bigdst-bytevector-copy! src.bv src.start dst.bv dev-position count)
+	      (begin
+		(%debug-assert (fixnum? dst.room))
+		;;The new  data goes part  in the single  bytevector and
+		;;part in a new bytevector.
+		(%unsafe.bigdst-bytevector-copy! src.bv src.start dst.bv dev-position dst.room)
+		(let* ((src.start (unsafe.fx+ src.start dst.room))
+		       (count     (unsafe.fx- count     dst.room))
+		       (dst.bv    (unsafe.make-bytevector count)))
+		  (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
+		  (set! port.device (cons dst.bv output-bvs)))))))
 
-      (define-inline (write!/append src.bv src.start count output-bvs)
-	;;Append new  data to the  device.  Prepend a new  bytevector to
-	;;OUTPUT-BVS.
-	;;
-	(let ((dst.bv (unsafe.make-bytevector count)))
-	  (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
-	  (%set-device! (cons dst.bv output-bvs))))
+	(define-inline (write!/append src.bv src.start count output-bvs)
+	  ;;Append new data to the  device.  Prepend a new bytevector to
+	  ;;OUTPUT-BVS.
+	  ;;
+	  (let ((dst.bv (unsafe.make-bytevector count)))
+	    (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
+	    (set! port.device (cons dst.bv output-bvs))))
 
-      (define (set-position! new-position)
-	;;NEW-POSITION has  already been  validated as exact  integer by
-	;;the procedure SET-PORT-POSITION!.  Here we only have to verify
-	;;that the value  is valid as offset inside  the underlying full
-	;;bytevector.   If this validation  succeeds: SET-PORT-POSITION!
-	;;will store the position in the POS field of the cookie.
-	;;
-	(define who 'open-bytevector-output-port/set-position!)
-	(with-port (port)
+	(define (set-position! new-position)
+	  ;;NEW-POSITION has already been  validated as exact integer by
+	  ;;the  procedure  SET-PORT-POSITION!.  Here  we  only have  to
+	  ;;verify  that  the  value  is  valid  as  offset  inside  the
+	  ;;underlying  full bytevector.   If this  validation succeeds:
+	  ;;SET-PORT-POSITION!  will store the position in the POS field
+	  ;;of the cookie.
+	  ;;
+	  (define who 'open-bytevector-output-port/set-position!)
 	  (unless (or (=  new-position port.device.position)
 		      (<= new-position (unsafe.bytevector-length (%serialise-device! who))))
-	    (%raise-port-position-out-of-range who port new-position))))
+	    (%raise-port-position-out-of-range who port new-position)))
 
-      (define (extract)
-	;;The  extraction  function.   Flush  the buffer  to  the
-	;;device  list,  convert  the  device list  to  a  single
-	;;bytevector.  Return the single bytevector and reset the
-	;;port to its empty state.
-	;;
-	(with-port (port)
+	(define (extract)
+	  ;;The  extraction function.   Flush the  buffer to  the device
+	  ;;list,  convert  the  device  list to  a  single  bytevector.
+	  ;;Return the single bytevector and reset the port to its empty
+	  ;;state.
+	  ;;
 	  (let ((bv (%serialise-device-and-reset! who)))
 	    (port.buffer.reset-to-empty!)
 	    (set! port.device.position 0)
-	    bv)))
+	    bv))
 
-      (set! port ($make-port attributes buffer.index buffer.used-size buffer maybe-transcoder identifier
-			     read! write! get-position set-position! close cookie))
-      (values port extract)))))
+	(set! port ($make-port attributes buffer.index buffer.used-size buffer maybe-transcoder identifier
+			       read! write! get-position set-position! close cookie))
+	(values port extract))))))
 
 (define call-with-bytevector-output-port
   (case-lambda
@@ -2573,97 +2580,88 @@
     ;;less  than such  string length:  it means  that SET-PORT-POSITION!
     ;;was used.
     ;;
-
-    (define-inline (%get-device)
-      (cookie-dest cookie))
-    (define-inline (%set-device! ?new-device)
-      (set-cookie-dest! cookie ?new-device))
-    (define (%%serialise-device! who reset?)
-      (with-port (port)
+    (with-port (port)
+      (define (%%serialise-device! who reset?)
 	(unless port.closed?
 	  (%unsafe.flush-output-port port who))
-	(let ((bv (%unsafe.string-reverse-and-concatenate (%get-device))))
-	  (%set-device! (if reset? '() (list bv)))
-	  bv)))
-    (define-inline (%serialise-device! who)
-      (%%serialise-device! who #f))
-    (define-inline (%serialise-device-and-reset! who)
-      (%%serialise-device! who #t))
+	(let ((bv (%unsafe.string-reverse-and-concatenate port.device)))
+	  (set! port.device (if reset? '() (list bv)))
+	  bv))
+      (define-inline (%serialise-device! who)
+	(%%serialise-device! who #f))
+      (define-inline (%serialise-device-and-reset! who)
+	(%%serialise-device! who #t))
 
-    (define (write! src.str src.start count)
-      (%debug-assert (and (fixnum? count) (<= 0 count)))
-      (with-port (port)
-	(let ((output-strs  (%get-device))
+      (define (write! src.str src.start count)
+	(%debug-assert (and (fixnum? count) (<= 0 count)))
+	(let ((output-strs  port.device)
 	      (dev-position port.device.position))
 	  (if (and (%list-holding-single-value? output-strs)
 		   (< dev-position (unsafe.string-length (car output-strs))))
-	      ;;The   current  position   was  set   inside   the  already
+	      ;;The  current   position  was  set   inside  the  already
 	      ;;accumulated data.
 	      (write!/overwrite src.str src.start count output-strs dev-position)
-	    ;;The  current   position  is  at  the  end   of  the  already
+	    ;;The  current  position  is  at  the  end  of  the  already
 	    ;;accumulated data.
 	    (write!/append src.str src.start count output-strs))
-	  count)))
+	  count))
 
-    (define-inline (write!/overwrite src.str src.start count output-strs dev-position)
-      ;;Write  data  to the  device,  overwriting  some  of the  already
-      ;;existing  data.  The  device  is already  composed  of a  single
-      ;;string.  Remember that DEV-POSITION can  be either a fixnum or a
-      ;;bignum; the same goes for DST.LEN and DST.ROOM.
-      ;;
-      (let* ((dst.str  (car output-strs))
-	     (dst.len  (unsafe.string-length dst.str))
-	     (dst.room (- dst.len dev-position)))
-	(if (<= count dst.room)
-	    ;;The new data fits in the single string.
-	    (%unsafe.bigdst-string-copy! src.str src.start dst.str dev-position count)
-	  (begin
-	    (%debug-assert (fixnum? dst.room))
-	    ;;The new data goes part in  the single string and part in a
-	    ;;new string.
-	    (%unsafe.bigdst-string-copy! src.str src.start dst.str dev-position dst.room)
-	    (let* ((src.start (unsafe.fx+ src.start dst.room))
-		   (count     (unsafe.fx- count     dst.room))
-		   (dst.str   (unsafe.make-string count)))
-	      (%unsafe.string-copy! src.str src.start dst.str 0 count)
-	      (%set-device! (cons dst.str output-strs)))))))
+      (define-inline (write!/overwrite src.str src.start count output-strs dev-position)
+	;;Write  data to  the device,  overwriting some  of  the already
+	;;existing  data.  The device  is already  composed of  a single
+	;;string.  Remember that DEV-POSITION  can be either a fixnum or
+	;;a bignum; the same goes for DST.LEN and DST.ROOM.
+	;;
+	(let* ((dst.str  (car output-strs))
+	       (dst.len  (unsafe.string-length dst.str))
+	       (dst.room (- dst.len dev-position)))
+	  (if (<= count dst.room)
+	      ;;The new data fits in the single string.
+	      (%unsafe.bigdst-string-copy! src.str src.start dst.str dev-position count)
+	    (begin
+	      (%debug-assert (fixnum? dst.room))
+	      ;;The new data goes part  in the single string and part in
+	      ;;a new string.
+	      (%unsafe.bigdst-string-copy! src.str src.start dst.str dev-position dst.room)
+	      (let* ((src.start (unsafe.fx+ src.start dst.room))
+		     (count     (unsafe.fx- count     dst.room))
+		     (dst.str   (unsafe.make-string count)))
+		(%unsafe.string-copy! src.str src.start dst.str 0 count)
+		(set! port.device (cons dst.str output-strs)))))))
 
-    (define-inline (write!/append src.str src.start count output-strs)
-      ;;Append  new  data  to  the  device.  Prepend  a  new  string  to
-      ;;OUTPUT-STRS.
-      ;;
-      (let ((dst.str (unsafe.make-string count)))
-	(%unsafe.string-copy! src.str src.start dst.str 0 count)
-	(%set-device! (cons dst.str output-strs))))
+      (define-inline (write!/append src.str src.start count output-strs)
+	;;Append  new data  to  the  device.  Prepend  a  new string  to
+	;;OUTPUT-STRS.
+	;;
+	(let ((dst.str (unsafe.make-string count)))
+	  (%unsafe.string-copy! src.str src.start dst.str 0 count)
+	  (set! port.device (cons dst.str output-strs))))
 
-    (define (set-position! new-position)
-      ;;NEW-POSITION has already been  validated as exact integer by the
-      ;;procedure SET-PORT-POSITION!.  Here we  only have to verify that
-      ;;the value is valid as  offset inside the underlying full string.
-      ;;If this validation  succeeds: SET-PORT-POSITION!  will store the
-      ;;position in the POS field of the cookie.
-      ;;
-      (define who 'open-string-output-port/set-position!)
-      (with-port (port)
+      (define (set-position! new-position)
+	;;NEW-POSITION has  already been  validated as exact  integer by
+	;;the procedure SET-PORT-POSITION!.  Here we only have to verify
+	;;that the value  is valid as offset inside  the underlying full
+	;;string.  If this validation succeeds: SET-PORT-POSITION!  will
+	;;store the position in the POS field of the cookie.
+	;;
+	(define who 'open-string-output-port/set-position!)
 	(unless (or (=  new-position port.device.position)
 		    (<= new-position (unsafe.string-length (%serialise-device! who))))
-	  (%raise-port-position-out-of-range who port new-position))))
+	  (%raise-port-position-out-of-range who port new-position)))
 
-    (define (extract)
-      ;;The  extraction  function.   Flush  the buffer  to  the
-      ;;device  list,  convert  the  device list  to  a  single
-      ;;string.  Return the single string and reset the
-      ;;port to its empty state.
-      ;;
-      (with-port (port)
+      (define (extract)
+	;;The extraction function.  Flush the buffer to the device list,
+	;;convert the device list to a single string.  Return the single
+	;;string and reset the port to its empty state.
+	;;
 	(let ((bv (%serialise-device-and-reset! who)))
 	  (port.buffer.reset-to-empty!)
 	  (set! port.device.position 0)
-	  bv)))
+	  bv))
 
-    (set! port ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
-			   read! write! get-position set-position! close cookie))
-    (values port extract)))
+      (set! port ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
+			     read! write! get-position set-position! close cookie))
+      (values port extract))))
 
 (define (get-output-string port)
   ;;Defined by Ikarus.  Return the string accumulated in the PORT opened
@@ -2681,12 +2679,12 @@
     (let ((cookie port.cookie))
       (unless (cookie? cookie)
 	(wrong-port-error))
-      (let ((output-strs (cookie-dest cookie)))
+      (let ((output-strs port.device))
 	(unless (or (null? output-strs) (pair? output-strs))
 	  (wrong-port-error))
 	(let ((str (%unsafe.string-reverse-and-concatenate output-strs)))
 	  (port.buffer.reset-to-empty!)
-	  (set-cookie-dest! cookie '())
+	  (set! port.device '())
 	  (set! port.device.position  0)
 	  str)))))
 
@@ -2911,7 +2909,7 @@
   ;;
   (%assert-value-is-port port 'port-mode)
   (with-port (port)
-    (cookie-mode port.cookie)))
+    port.mode))
 
 (define (set-port-mode! port mode)
   ;;Defined by Ikarus.
@@ -2921,7 +2919,7 @@
   (case mode
     ((r6rs-mode vicare-mode)
      (with-port (port)
-       (set-cookie-mode! port.cookie mode)))
+       (set! port.mode mode)))
     (else
      (die who "invalid mode" mode))))
 
@@ -5325,18 +5323,19 @@
 
 (define (%spawn-process who search? blocking? env stdin stdout stderr cmd args)
   (define (port->fd port port-pred arg-name port-type)
-    (cond ((eqv? port #f) -1)
-	  ((port-pred port)
-	   (let ((fd (cookie-dest ($port-cookie port))))
-	     (unless (fixnum? fd)
-	       (die who
-		    (string-append arg-name " is not a file-based port")
-		    stdin))
-	     fd))
-	  (else
-	   (die who
-		(string-append arg-name " is neither false nor an " port-type)
-		stdin))))
+    (with-port (port)
+      (cond ((eqv? port #f) -1)
+	    ((port-pred port)
+	     (let ((fd port.device))
+	       (unless (fixnum? fd)
+		 (die who
+		      (string-append arg-name " is not a file-based port")
+		      stdin))
+	       fd))
+	    (else
+	     (die who
+		  (string-append arg-name " is neither false nor an " port-type)
+		  stdin)))))
 
   (define (pair->env-utf8 pair)
     (let* ((key-utf8 (string->utf8 (car pair)))
@@ -5595,36 +5594,35 @@
 
 (define (unregister-callback what)
   (define who 'unregister-callback)
-  (cond
-   ((output-port? what)
-    (let ((c (cookie-dest ($port-cookie what))))
-      (unless (fixnum? c)
-	(die who "not a file-based port" what))
-      (rem-io-event c)))
-   ((input-port? what)
-    (let ((c (cookie-dest ($port-cookie what))))
-      (unless (fixnum? c)
-	(die who "not a file-based port" what))
-      (rem-io-event c)))
-   ((tcp-server? what)
-    (rem-io-event (tcp-server-fd what)))
-   (else (die who "invalid argument" what))))
+  (cond ((or (output-port? what)
+	     (input-port?  what))
+	 (with-port (what)
+	   (let ((c what.device))
+	     (unless (fixnum? c)
+	       (die who "not a file-based port" what))
+	     (rem-io-event c))))
+	((tcp-server? what)
+	 (rem-io-event (tcp-server-fd what)))
+	(else (die who "invalid argument" what))))
 
 (define (register-callback what proc)
   (define who 'register-callback)
   (%assert-value-is-procedure proc who)
-  (cond
-   ((output-port? what)
-    (let ((c (cookie-dest ($port-cookie what))))
-      (unless (fixnum? c) (die who "not a file-based port" what))
-      (add-io-event c proc 'w)))
-   ((input-port? what)
-    (let ((c (cookie-dest ($port-cookie what))))
-      (unless (fixnum? c) (die who "not a file-based port" what))
-      (add-io-event c proc 'r)))
-   ((tcp-server? what)
-    (add-io-event (tcp-server-fd what) proc 'r))
-   (else (die who "invalid argument" what))))
+  (cond ((output-port? what)
+	 (with-port (what)
+	   (let ((c what.device))
+	     (unless (fixnum? c)
+	       (die who "not a file-based port" what))
+	     (add-io-event c proc 'w))))
+	((input-port? what)
+	 (with-port (what)
+	 (let ((c what.device))
+	   (unless (fixnum? c)
+	     (die who "not a file-based port" what))
+	   (add-io-event c proc 'r))))
+	((tcp-server? what)
+	 (add-io-event (tcp-server-fd what) proc 'r))
+	(else (die who "invalid argument" what))))
 
 
 (module (directory-stream? open-directory-stream
