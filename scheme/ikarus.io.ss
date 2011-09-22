@@ -1807,6 +1807,9 @@
 ;;been  closed  already) to  free  its descriptor.   We  do  it using  a
 ;;guardian and the POST-GC-HOOK.
 ;;
+;;It is also a good idea to close custom ports.  We do it using the same
+;;technique.
+;;
 
 (define port-guardian
   (let ((G (make-guardian)))
@@ -1815,6 +1818,8 @@
 	(when port
 	  ;;Notice that, as defined  by R6RS, CLOSE-PORT does nothing if
 	  ;;PORT has already been closed.
+;;; (with-port (port)
+;;;   (emergency-platform-write-fd (string-append "closing guarded port " port.id)))
 	  (close-port port)
 	  (close-garbage-collected-ports))))
     (post-gc-hooks (cons close-garbage-collected-ports (post-gc-hooks)))
@@ -1827,7 +1832,9 @@
   (lambda (port)
     (%assert-value-is-port port '%port->guarded-port)
     (with-port (port)
-      (when port.device.is-descriptor?
+      (when (or port.device.is-descriptor?
+		(eq? port.device 'close-after-gc))
+;;;(emergency-platform-write-fd (string-append "registering port " port.id))
 	(port-guardian port)))
     port))
 
@@ -1996,9 +2003,10 @@
 	(buffer.used-size	0)
 	(buffer			(make-bytevector (bytevector-port-buffer-size)))
 	(transcoder		#f)
-	(cookie			(default-cookie #f)))
-    ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
-		read! write! get-position set-position! close cookie)))
+	(cookie			(default-cookie 'close-after-gc)))
+    (%port->guarded-port
+     ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
+		 read! write! get-position set-position! close cookie))))
 
 (define (%make-custom-textual-port attributes identifier read! write! get-position set-position! close)
   ;;Build and return  a new custom textual port,  either input or
@@ -2011,9 +2019,10 @@
 	(buffer.used-size	0)
 	(buffer			(make-string (string-port-buffer-size)))
 	(transcoder		#t)
-	(cookie			(default-cookie #f)))
-    ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
-		read! write! get-position set-position! close cookie)))
+	(cookie			(default-cookie 'close-after-gc)))
+    (%port->guarded-port
+     ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
+		 read! write! get-position set-position! close cookie))))
 
 ;;; --------------------------------------------------------------------
 
