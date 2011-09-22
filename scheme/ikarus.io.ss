@@ -854,19 +854,23 @@
 
 (define-inline (%assert-value-is-read!-procedure ?proc ?who)
   (unless (procedure? ?proc)
-    (assertion-violation ?who "read! is not a procedure" ?proc)))
+    (assertion-violation ?who "READ! is not a procedure" ?proc)))
 
 (define-inline (%assert-value-is-write!-procedure ?proc ?who)
   (unless (procedure? ?proc)
-    (assertion-violation ?who "write! is not a procedure" ?proc)))
+    (assertion-violation ?who "WRITE! is not a procedure" ?proc)))
 
 (define-inline (%assert-value-is-maybe-close-procedure ?proc ?who)
   (unless (or (procedure? ?proc) (not ?proc))
-    (assertion-violation ?who "close should be either a procedure or false" ?proc)))
+    (assertion-violation ?who "CLOSE should be either a procedure or false" ?proc)))
 
 (define-inline (%assert-value-is-maybe-get-position-procedure ?proc ?who)
   (unless (or (procedure? ?proc) (not ?proc))
-    (assertion-violation ?who "get-position should be either a procedure or false" ?proc)))
+    (assertion-violation ?who "GET-POSITION should be either a procedure or false" ?proc)))
+
+(define-inline (%assert-value-is-maybe-set-position!-procedure ?proc ?who)
+  (unless (or (procedure? ?proc) (not ?proc))
+    (assertion-violation ?who "SET-POSITION! should be either a procedure or false" ?proc)))
 
 
 ;;;; error helpers
@@ -1143,6 +1147,8 @@
 		;method, increment the POS field of the cookie
 	      (PORT.MODE			(%dot-id ".mode"))
 		;Scheme symbol, select the port mode
+	      (PORT.DEVICE.IS-DESCRIPTOR?	(%dot-id ".device.is-descriptor?"))
+		;true if the device is a fixnum (it is interpreted as platform descriptor)
 	      )
 	   #'(let-syntax
 		 ((PORT.TAG		(identifier-syntax ($port-tag		?port)))
@@ -1217,6 +1223,8 @@
 		     (identifier-syntax
 		      (_			(cookie-mode PORT.COOKIE))
 		      ((set! _ ?new-mode)	(set-cookie-mode! PORT.COOKIE ?new-mode))))
+		    (PORT.DEVICE.IS-DESCRIPTOR?
+		     (identifier-syntax (fixnum? (cookie-dest PORT.COOKIE))))
 		    )
 		 . ?body))))))))
 
@@ -1944,7 +1952,10 @@
 
 ;;;; custom ports
 
-(define guarded-port
+(define %guarded-port
+  ;;Accept a port  as argument and return the port; if  the port wraps a
+  ;;platform descriptor: register it in the guardian.
+  ;;
   (let ((G (make-guardian)))
     (define (clean-up)
       (let ((port (G)))
@@ -1952,17 +1963,14 @@
 	  (close-port port)
 	  (clean-up))))
     (lambda (port)
-      (%assert-value-is-port port 'guarded-port)
+      (%assert-value-is-port port '%guarded-port)
       (clean-up)
       (with-port (port)
-	;;If the  port wraps a  platform descriptor: register it  in the
-	;;guardian.
-	(when (fixnum? port.device)
+	(when port.device.is-descriptor?
 	  (G port)))
       port)))
 
-(define (%make-custom-binary-port attributes identifier
-				  read! write! get-position set-position! close buffer.size)
+(define (%make-custom-binary-port attributes identifier read! write! get-position set-position! close)
   ;;Build and  return a new  custom binary port, either  input or
   ;;output.  It is used by the following functions:
   ;;
@@ -1971,14 +1979,13 @@
   ;;
   (let ((buffer.index		0)
 	(buffer.used-size	0)
-	(buffer			(make-bytevector buffer.size))
+	(buffer			(make-bytevector (bytevector-port-buffer-size)))
 	(transcoder		#f)
 	(cookie			(default-cookie #f)))
     ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
 		read! write! get-position set-position! close cookie)))
 
-(define (%make-custom-textual-port attributes identifier
-				   read! write! get-position set-position! close buffer.size)
+(define (%make-custom-textual-port attributes identifier read! write! get-position set-position! close)
   ;;Build and return  a new custom textual port,  either input or
   ;;output.  It is used by the following functions:
   ;;
@@ -1987,7 +1994,7 @@
   ;;
   (let ((buffer.index		0)
 	(buffer.used-size	0)
-	(buffer			(make-string buffer.size))
+	(buffer			(make-string (string-port-buffer-size)))
 	(transcoder		#t)
 	(cookie			(default-cookie #f)))
     ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
@@ -2046,19 +2053,16 @@
   ;;do  not,  however, the  behavior  of  the  resulting port  is
   ;;unspecified.
   ;;
-;;; FIXME: get-position and set-position! are ignored for now
   (define who 'make-custom-binary-input-port)
   (unless (string? identifier)
     (die who "id is not a string" identifier))
   (%assert-value-is-read!-procedure read! who)
   (%assert-value-is-maybe-close-procedure close who)
-  (%assert-value-is-maybe-get-position-procedure get-position who)
+  (%assert-value-is-maybe-get-position-procedure  get-position  who)
+  (%assert-value-is-maybe-set-position!-procedure set-position! who)
   (let ((attributes		binary-input-port-bits)
-	(write!			#f)
-	(buffer.size		(bytevector-port-buffer-size)))
-    (%make-custom-binary-port attributes identifier
-			      read! write! get-position set-position! close
-			      buffer.size)))
+	(write!			#f))
+    (%make-custom-binary-port attributes identifier read! write! get-position set-position! close)))
 
 (define (make-custom-binary-output-port identifier write! get-position set-position! close)
   ;;Defined by  R6RS.  Return a newly created  binary output port
@@ -2090,19 +2094,16 @@
   ;;otherwise behaves as described.  If it does not, however, the
   ;;behavior of the resulting port is unspecified.
   ;;
-;;; FIXME: get-position and set-position! are ignored for now
   (define who 'make-custom-binary-output-port)
   (unless (string? identifier)
     (die who "id is not a string" identifier))
   (%assert-value-is-write!-procedure write! who)
   (%assert-value-is-maybe-close-procedure close who)
-  (%assert-value-is-maybe-get-position-procedure get-position who)
+  (%assert-value-is-maybe-get-position-procedure  get-position  who)
+  (%assert-value-is-maybe-set-position!-procedure set-position! who)
   (let ((attributes		binary-output-port-bits)
-	(read!			#f)
-	(buffer.size		(bytevector-port-buffer-size)))
-    (%make-custom-binary-port attributes identifier
-			      read! write! get-position set-position! close
-			      buffer.size)))
+	(read!			#f))
+    (%make-custom-binary-port attributes identifier read! write! get-position set-position! close)))
 
 ;;; --------------------------------------------------------------------
 
@@ -2160,19 +2161,16 @@
   ;;do  not,  however, the  behavior  of  the  resulting port  is
   ;;unspecified.
   ;;
-;;;FIXME: get-position and set-position! are ignored for now
   (define who 'make-custom-textual-input-port)
   (unless (string? identifier)
     (die who "id is not a string" identifier))
   (%assert-value-is-read!-procedure read! who)
   (%assert-value-is-maybe-close-procedure close who)
-  (%assert-value-is-maybe-get-position-procedure get-position who)
+  (%assert-value-is-maybe-get-position-procedure  get-position  who)
+  (%assert-value-is-maybe-set-position!-procedure set-position! who)
   (let ((attributes		fast-get-char-tag)
-	(write!			#f)
-	(buffer.size		(string-port-buffer-size)))
-    (%make-custom-textual-port attributes identifier
-			       read! write! get-position set-position! close
-			       buffer.size)))
+	(write!			#f))
+    (%make-custom-textual-port attributes identifier read! write! get-position set-position! close)))
 
 (define (make-custom-textual-output-port identifier write! get-position set-position! close)
   ;;Defined by R6RS.  Return  a newly created textual output port
@@ -2209,19 +2207,16 @@
   ;;otherwise behaves as described.  If it does not, however, the
   ;;behavior of the resulting port is unspecified.
   ;;
-;;;FIXME: get-position and set-position! are ignored for now
   (define who 'make-custom-textual-output-port)
   (unless (string? identifier)
     (die who "id is not a string" identifier))
   (%assert-value-is-write!-procedure write! who)
   (%assert-value-is-maybe-close-procedure close who)
-  (%assert-value-is-maybe-get-position-procedure get-position who)
+  (%assert-value-is-maybe-get-position-procedure  get-position  who)
+  (%assert-value-is-maybe-set-position!-procedure set-position! who)
   (let ((attributes	fast-put-char-tag)
-	(read!		#f)
-	(buffer.size	(string-port-buffer-size)))
-    (%make-custom-textual-port attributes identifier
-			       read! write! get-position set-position! close
-			       buffer.size)))
+	(read!		#f))
+    (%make-custom-textual-port attributes identifier read! write! get-position set-position! close)))
 
 
 ;;;; bytevector input ports
@@ -2778,7 +2773,7 @@
       (die who "not a binary port" port))
     (%unsafe.assert-value-is-open-port port who)
     (port.mark-as-closed)
-    (guarded-port
+    (%guarded-port
      ($make-port (cond (port.read!
 			(%input-transcoder-attrs  transcoder who))
 		       (port.write!
@@ -4953,10 +4948,10 @@
 	      (else
 	       (raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
-    (guarded-port ($make-port attributes buffer.index buffer.used-size buffer
-			      transcoder port-identifier
-			      read! write! get-position set-position! close
-			      (default-cookie fd)))))
+    (%guarded-port ($make-port attributes buffer.index buffer.used-size buffer
+			       transcoder port-identifier
+			       read! write! get-position set-position! close
+			       (default-cookie fd)))))
 
 (define (%file-descriptor->output-port fd port-identifier buffer.size transcoder close-function who)
   ;;Given the fixnum file descriptor FD representing an open file
@@ -5001,10 +4996,10 @@
 	      (else
 	       (raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
 
-    (guarded-port ($make-port attributes buffer.index buffer.used-size buffer
-			      transcoder port-identifier
-			      read! write! get-position set-position! close
-			      (default-cookie fd)))))
+    (%guarded-port ($make-port attributes buffer.index buffer.used-size buffer
+			       transcoder port-identifier
+			       read! write! get-position set-position! close
+			       (default-cookie fd)))))
 
 (define (%make-set-position!-function-for-file-descriptor-port fd port-identifier)
   ;;Build  and  return a  closure  to  be  used as  SET-POSITION!
@@ -5324,18 +5319,14 @@
 (define (%spawn-process who search? blocking? env stdin stdout stderr cmd args)
   (define (port->fd port port-pred arg-name port-type)
     (with-port (port)
-      (cond ((eqv? port #f) -1)
+      (cond ((and (boolean? port) (not port))
+	     -1)
 	    ((port-pred port)
-	     (let ((fd port.device))
-	       (unless (fixnum? fd)
-		 (die who
-		      (string-append arg-name " is not a file-based port")
-		      stdin))
-	       fd))
+	     (if port.device.is-descriptor?
+		 port.device
+	       (die who (string-append arg-name " is not a file-based port") stdin)))
 	    (else
-	     (die who
-		  (string-append arg-name " is neither false nor an " port-type)
-		  stdin)))))
+	     (die who (string-append arg-name " is neither false nor an " port-type) stdin)))))
 
   (define (pair->env-utf8 pair)
     (let* ((key-utf8 (string->utf8 (car pair)))
