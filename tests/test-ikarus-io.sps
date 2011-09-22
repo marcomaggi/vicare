@@ -2225,6 +2225,603 @@
   #t)
 
 
+(parametrise ((check-test-name		'make-custom-textual-input-port)
+	      (string-port-buffer-size	8))
+
+  (define (make-test-port str)
+    (let ((position	0)
+	  (str.len	(string-length str))
+	  (port		#f))
+
+      (define (read! dst.str dst.start count)
+	(let* ((available	(- str.len position))
+	       (to-read		(min available count)))
+	  (unless (zero? to-read)
+	    (string-copy! str position dst.str dst.start to-read)
+	    (set! position (+ to-read position)))
+	  to-read))
+
+      (define (get-position)
+	position)
+
+      (define (set-position! new-position)
+	(if (<= 0 new-position str.len)
+	    (set! position new-position)
+	  (raise
+	   (condition (make-i/o-invalid-position-error new-position)
+		      (make-who-condition 'make-test-port/set-position!)
+		      (make-message-condition "invalid port position")
+		      (make-irritants-condition (list port))))))
+
+      (define (close)
+	(set! str #f))
+
+      (set! port (make-custom-textual-input-port "*test-custom-input-port*"
+						 read! get-position set-position! close))
+      port))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check	;ID is not a string
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-custom-textual-input-port 123	     ;id
+					(lambda args #f)  ;read!
+					(lambda args #f)  ;get-position
+					(lambda args #f)  ;set-position!
+					(lambda args #f))) ;close
+    => '(123))
+
+  (check	;READ! is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-custom-textual-input-port "test"	     ;id
+					123	     ;read!
+					(lambda args #f)  ;get-position
+					(lambda args #f)  ;set-position!
+					(lambda args #f))) ;close
+    => '(123))
+
+  (check	;GET-POSITION is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-custom-textual-input-port "test"	     ;id
+					(lambda args #f)  ;read!
+					123	     ;get-position
+					(lambda args #f)  ;set-position!
+					(lambda args #f))) ;close
+    => '(123))
+
+  (check	;SET-POSITION! is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-custom-textual-input-port "test"	     ;id
+					(lambda args #f)  ;read!
+					(lambda args #f)  ;get-position
+					123	     ;set-position!
+					(lambda args #f))) ;close
+    => '(123))
+
+  (check	;CLOSE is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-custom-textual-input-port "test"	   ;id
+					(lambda args #f) ;read!
+					(lambda args #f) ;get-position
+					(lambda args #f) ;set-position!
+					123))	    ;close
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; port operations support
+
+  (check
+      (port-has-port-position? (make-test-port ""))
+    => #t)
+
+  (check
+      (port-has-set-port-position!? (make-test-port ""))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; reading bytes
+
+  (check
+      (let ((port (make-test-port "")))
+	(lookahead-char port))
+    => (eof-object))
+
+  (check
+      (let ((port (make-test-port "12")))
+	(lookahead-char port))
+    => #\1)
+
+  (check
+      (let ((port (make-test-port "")))
+	(get-char port))
+    => (eof-object))
+
+  (check
+      (let ((port (make-test-port "12")))
+	(get-char port))
+    => #\1)
+
+  (check
+      (let ((port (make-test-port "1")))
+	(get-char port)
+	(get-char port))
+    => (eof-object))
+
+;;; --------------------------------------------------------------------
+;;; reading strings
+
+  (check
+      (let ((port (make-test-port "")))
+	(get-string-n port 3))
+    => (eof-object))
+
+  (check
+      (check.with-result
+	  (let ((port (make-test-port "")))
+	    (check.add-result (get-string-n port 0))
+	    (eof-object? (get-char port))))
+    => '(#t ("")))
+
+  (check
+      (check.with-result
+	  (let ((port (make-test-port "012")))
+	    (check.add-result (get-string-n port 3))
+	    (eof-object? (get-char port))))
+    => '(#t ("012")))
+
+  (check
+      (check.with-result
+	  (let ((port (make-test-port "012345")))
+	    (check.add-result (get-string-n port 3))
+	    (check.add-result (get-string-n port 3))
+	    (eof-object? (get-char port))))
+    => '(#t ("012" "345")))
+
+;;; --------------------------------------------------------------------
+;;; getting position
+
+  (check
+      (let ((port (make-test-port "")))
+	(port-position port))
+    => 0)
+
+  (check
+      (let ((port (make-test-port "0123456789")))
+	(port-position port))
+    => 0)
+
+  (check
+      (let ((port (make-test-port "0123456789")))
+	(get-string-n port 5)
+	(port-position port))
+    => 5)
+
+  (check
+      (let ((port (make-test-port "0123456789")))
+	(get-string-n port 10)
+	(port-position port))
+    => 10)
+
+;;; --------------------------------------------------------------------
+;;; setting position
+
+  (check
+      (let ((port (make-test-port "")))
+	(set-port-position! port 0)
+	(port-position port))
+    => 0)
+
+  (check
+      (let ((port (make-test-port "0123456789")))
+	(set-port-position! port 10)
+	(port-position port))
+    => 10)
+
+  (check
+      (let ((port (make-test-port "0123456789")))
+	(set-port-position! port 5)
+	(port-position port))
+    => 5)
+
+  (check
+      (let ((port (make-test-port "0123456789")))
+	(set-port-position! port 5)
+	(set-port-position! port 1)
+	(set-port-position! port 9)
+	(port-position port))
+    => 9)
+
+  (check
+      (check.with-result
+	  (let ((port (make-test-port "0123456789")))
+	    (set-port-position! port 5)
+	    (check.add-result (get-string-n port 5))
+	    (port-position port)))
+    => '(10 ("56789")))
+
+  #t)
+
+
+(parametrise ((check-test-name		'make-custom-textual-output-port)
+	      (string-port-buffer-size	8))
+
+  (define (make-test-port)
+    (let ((port #f))
+      (let-values (((subport extract) (open-string-output-port)))
+
+	(define (write! src.str src.start count)
+	  (do ((i 0 (+ 1 i)))
+	      ((= i count)
+	       count)
+	    (put-char subport (string-ref src.str (+ i src.start)))))
+
+	(define (get-position)
+	  (port-position subport))
+
+	(define (set-position! new-position)
+	  (set-port-position! subport new-position))
+
+	(define (close)
+	  #f)
+
+	(set! port (make-custom-textual-output-port "*test-textual-output-port*"
+						    write! get-position set-position! close))
+	(values port (lambda ()
+		       (flush-output-port port)
+		       (extract))))))
+
+  (define-syntax snapshot-position-and-contents
+    (lambda (stx)
+      (syntax-case stx ()
+	((?ctx)
+	 (with-syntax ((PORT	(datum->syntax #'?ctx 'port))
+		       (EXTRACT (datum->syntax #'?ctx 'extract)))
+	   #'(let ((pos (port-position PORT)))
+	       (list pos (EXTRACT))))))))
+
+  (define-syntax position-and-contents
+    (lambda (stx)
+      (syntax-case stx ()
+	((?ctx ?port . ?body)
+	 #'(let-values (((?port extract) (make-test-port)))
+	     (begin . ?body)
+	     (let ((pos (port-position ?port)))
+	       (list pos (extract))))))))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check	;ID is not a string
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-custom-textual-output-port 123	       ;id
+					 (lambda args #f)   ;write!
+					 (lambda args #f)   ;get-position
+					 (lambda args #f)   ;set-position!
+					 (lambda args #f))) ;close
+    => '(123))
+
+  (check	;WRITE! is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-custom-textual-output-port "test"	       ;id
+					 123	       ;write!
+					 (lambda args #f)   ;get-position
+					 (lambda args #f)   ;set-position!
+					 (lambda args #f))) ;close
+    => '(123))
+
+  (check	;GET-POSITION is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-custom-textual-output-port "test"	       ;id
+					 (lambda args #f)   ;write!
+					 123	       ;get-position
+					 (lambda args #f)   ;set-position!
+					 (lambda args #f))) ;close
+    => '(123))
+
+  (check	;SET-POSITION! is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-custom-textual-output-port "test"	       ;id
+					 (lambda args #f)   ;write!
+					 (lambda args #f)   ;get-position
+					 123	       ;set-position!
+					 (lambda args #f))) ;close
+    => '(123))
+
+  (check	;CLOSE is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-custom-textual-output-port "test"	     ;id
+					 (lambda args #f) ;write!
+					 (lambda args #f) ;get-position
+					 (lambda args #f) ;set-position!
+					 123))	     ;close
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; port operations support
+
+  (check
+      (let-values (((port extract) (make-test-port)))
+	(port-has-port-position? port))
+    => #t)
+
+  (check
+      (let-values (((port extract) (make-test-port)))
+	(port-has-set-port-position!? port))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; writing data, single extraction
+
+  (check	;single char
+      (let-values (((port extract) (make-test-port)))
+	(put-char port #\A)
+	(extract))
+    => "A")
+
+  (check	;char by char until the buffer is full
+      (let-values (((port extract) (make-test-port)))
+	(do ((i 0 (+ 1 i)))
+	    ((= 9 i)
+	     (extract))
+	  (put-char port #\A)))
+    => "AAAAAAAAA")
+
+  (check	;single string not filling the buffer
+      (let-values (((port extract) (make-test-port)))
+	(put-string port "12345")
+	(extract))
+    => "12345")
+
+  (check	;single string filling the buffer
+      (let-values (((port extract) (make-test-port)))
+	(put-string port "0123456789")
+	(extract))
+    => "0123456789")
+
+  (check	;string by string until the buffer is full
+      (let-values (((port extract) (make-test-port)))
+	(do ((i 0 (+ 1 i)))
+	    ((= 3 i)
+	     (extract))
+	  (put-string port "123")))
+    => "123123123")
+
+  (check	;fill the buffer multiple times
+      (let-values (((port extract) (make-test-port)))
+	(do ((i 0 (+ 1 i)))
+	    ((= 5 i)
+	     (extract))
+	  (put-string port "0123456789")))
+    => "0123456789\
+        0123456789\
+        0123456789\
+        0123456789\
+        0123456789")
+
+;;; --------------------------------------------------------------------
+;;; writing data, multiple extraction
+
+  (check	;empty device, data in buffer
+      (let-values (((port extract) (make-test-port)))
+	(put-string port "012")
+	(let ((result (snapshot-position-and-contents)))
+	  (put-string port "3456")
+	  (list result (snapshot-position-and-contents))))
+    => '((3 "012")
+	 (4 "3456")))
+
+  (check	;empty buffer, data in device
+      (let-values (((port extract) (make-test-port)))
+	(put-string port "0123456789")
+	(flush-output-port port)
+	(let ((result (snapshot-position-and-contents)))
+	  (put-string port "abcdefghil")
+	  (flush-output-port port)
+	  (list result (snapshot-position-and-contents))))
+    => '((10 "0123456789")
+	 (10 "abcdefghil")))
+
+  (check	;some data in device, some data in buffer
+      (let-values (((port extract) (make-test-port)))
+	(put-string port "0123456789")
+	(let ((result (snapshot-position-and-contents)))
+	  (put-string port "abcdefghil")
+	  (list result (snapshot-position-and-contents))))
+    => '((10 "0123456789")
+	 (10 "abcdefghil")))
+
+;;; --------------------------------------------------------------------
+;;; getting port position
+
+  (check	;empty device
+      (let-values (((port extract) (make-test-port)))
+	(port-position port))
+    => 0)
+
+  (check	;some data in buffer, none in device
+      (let-values (((port extract) (make-test-port)))
+	(put-string port "012")
+	(port-position port))
+    => 3)
+
+  (check	;buffer full, no data in device
+      (let-values (((port extract) (make-test-port)))
+	(put-string port "01234567")
+	(port-position port))
+    => 8)
+
+  (check	;some data in buffer, some data in device
+      (let-values (((port extract) (make-test-port)))
+	(put-string port "01234567")
+	(put-string port "89ab")
+	(port-position port))
+    => 12)
+
+  (check	;buffer empty, data in device
+      (let-values (((port extract) (make-test-port)))
+	(put-string port "01234567")
+	(flush-output-port port)
+	(port-position port))
+    => 8)
+
+;;; --------------------------------------------------------------------
+;;; setting port position, no overwriting
+
+  (check	;empty device
+      (position-and-contents port
+	(set-port-position! port 0))
+    => '(0 ""))
+
+  (check	;some data in buffer, none in device
+      (position-and-contents port
+	(put-string port "012")
+	(set-port-position! port 1))
+    => '(1 "012"))
+
+  (check   ;Some data  in buffer, none in device.   Move position in the
+		;middle, then again at the end.
+      (position-and-contents port
+	(put-string port "012")
+	(set-port-position! port 1)
+	(set-port-position! port 3))
+    => '(3 "012"))
+
+  (check ;Buffer full, no data  in device.  Move position in the middle,
+		;then again at the end.
+      (position-and-contents port
+  	(put-string port "01234567")
+	(set-port-position! port 1)
+	(set-port-position! port 8))
+    => '(8 "01234567"))
+
+  (check	;Some  data  in  buffer,  some  data  in  device.   Move
+		;position in the middle.
+      (position-and-contents port
+  	(put-string port "01234567")
+  	(put-string port "89ab")
+	(set-port-position! port 6))
+    => '(6 "0123456789ab"))
+
+  (check	;Buffer  empty, data  in device.   Move position  in the
+		;middle.
+      (position-and-contents port
+  	(put-string port "01234567")
+  	(flush-output-port port)
+	(set-port-position! port 6))
+    => '(6 "01234567"))
+
+;;; --------------------------------------------------------------------
+;;; setting port position, overwriting
+
+  (check	;empty buffer, empty device
+      (position-and-contents port
+	(set-port-position! port 0)
+	(put-string port ""))
+    => '(0 ""))
+
+  (check       ;partial internal overwrite, data in buffer, empty device
+      (position-and-contents port
+	(put-string port "01234567")
+	(set-port-position! port 2)
+	(put-string port "abc"))
+    => '(5 "01abc567"))
+
+  (check       ;partial internal overwrite, empty buffer, data in device
+      (position-and-contents port
+	(put-string port "01234567")
+	(flush-output-port port)
+	(set-port-position! port 2)
+	(put-string port "abc"))
+    => '(5 "01abc567"))
+
+  (check ;partial internal overwrite, some data in buffer, some data in device
+      (position-and-contents port
+	(put-string port "0123456789")
+	(set-port-position! port 2)
+	(put-string port "abc"))
+    => '(5 "01abc56789"))
+
+  (check	;overflow overwrite, data in buffer, empty device
+      (position-and-contents port
+	(put-string port "01234567")
+	(set-port-position! port 6)
+	(put-string port "abcd"))
+    => '(10 "012345abcd"))
+
+  (check	;overflow overwrite, empty buffer, empty device
+      (position-and-contents port
+	(put-string port "01234567")
+	(flush-output-port port)
+	(set-port-position! port 6)
+	(put-string port "abcd"))
+    => '(10 "012345abcd"))
+
+  (check   ;overflow overwrite, some data in buffer, some data in device
+      (position-and-contents port
+	(put-string port "0123456789")
+	(set-port-position! port 6)
+	(put-string port "abcdef"))
+    => '(12 "012345abcdef"))
+
+  (check	;full overwrite, data in buffer, empty device
+      (position-and-contents port
+	(put-string port "01234567")
+	(set-port-position! port 0)
+	(put-string port "abcdefgh"))
+;;;                       01234567
+    => '(8 "abcdefgh"))
+
+  (check	;full overwrite, empty buffer, data in device
+      (position-and-contents port
+	(put-string port "01234567")
+	(flush-output-port port)
+	(set-port-position! port 0)
+	(put-string port "abcdefgh"))
+;;;                       01234567
+    => '(8 "abcdefgh"))
+
+  (check       ;full overwrite, some data in buffer, some data in device
+      (position-and-contents port
+	(put-string port "0123456789")
+	(set-port-position! port 0)
+	(put-string port "abcdefghil"))
+;;;                       0123456789
+    => '(10 "abcdefghil"))
+
+  #t)
+
+
 (parametrise ((check-test-name	'open-bytevector-input-port))
 
 ;;; --------------------------------------------------------------------
