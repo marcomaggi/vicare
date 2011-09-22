@@ -852,6 +852,10 @@
   (unless (procedure? ?proc)
     (assertion-violation ?who "not a procedure" ?proc)))
 
+(define-inline (%assert-value-is-port-identifier ?identifier ?who)
+  (unless (string? ?identifier)
+    (assertion-violation ?who "ID is not a string" ?identifier)))
+
 (define-inline (%assert-value-is-read!-procedure ?proc ?who)
   (unless (procedure? ?proc)
     (assertion-violation ?who "READ! is not a procedure" ?proc)))
@@ -2078,8 +2082,7 @@
   ;;unspecified.
   ;;
   (define who 'make-custom-binary-input-port)
-  (unless (string? identifier)
-    (die who "ID is not a string" identifier))
+  (%assert-value-is-port-identifier identifier who)
   (%assert-value-is-read!-procedure read! who)
   (%assert-value-is-maybe-close-procedure close who)
   (%assert-value-is-maybe-get-position-procedure  get-position  who)
@@ -2119,8 +2122,7 @@
   ;;behavior of the resulting port is unspecified.
   ;;
   (define who 'make-custom-binary-output-port)
-  (unless (string? identifier)
-    (die who "id is not a string" identifier))
+  (%assert-value-is-port-identifier identifier who)
   (%assert-value-is-write!-procedure write! who)
   (%assert-value-is-maybe-close-procedure close who)
   (%assert-value-is-maybe-get-position-procedure  get-position  who)
@@ -2186,8 +2188,7 @@
   ;;unspecified.
   ;;
   (define who 'make-custom-textual-input-port)
-  (unless (string? identifier)
-    (die who "id is not a string" identifier))
+  (%assert-value-is-port-identifier identifier who)
   (%assert-value-is-read!-procedure read! who)
   (%assert-value-is-maybe-close-procedure close who)
   (%assert-value-is-maybe-get-position-procedure  get-position  who)
@@ -2232,8 +2233,7 @@
   ;;behavior of the resulting port is unspecified.
   ;;
   (define who 'make-custom-textual-output-port)
-  (unless (string? identifier)
-    (die who "id is not a string" identifier))
+  (%assert-value-is-port-identifier identifier who)
   (%assert-value-is-write!-procedure write! who)
   (%assert-value-is-maybe-close-procedure close who)
   (%assert-value-is-maybe-get-position-procedure  get-position  who)
@@ -2331,6 +2331,7 @@
   (define who 'open-string-input-port)
   (unless (string? str)
     (die who "not a string" str))
+  (%assert-value-is-port-identifier id who)
   ;;The input  string is itself  the buffer!!!  The  port is in  a state
   ;;equivalent to the following:
   ;;
