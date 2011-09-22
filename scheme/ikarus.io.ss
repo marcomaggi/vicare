@@ -1233,6 +1233,107 @@
 		 . ?body))))))))
 
 
+;;;; cookie data structure
+;;
+;;An  instance of  this  structure is  associated  to every  port
+;;position data  structure.  It registers  the underlying device,
+;;if any, and it  tracks the underlying device's position, number
+;;of rows and columns (when possible).
+;;
+;;NOTE:  It is  impossible  to  track the  row  number for  ports
+;;supporting the SET-PORT-POSITION! operation.  The ROW-NUM field
+;;of  the cookie  is  meaningful only  for  ports whose  position
+;;increases monotonically because of read or write operations, it
+;;should be invalidated whenever  the port position is moved with
+;;SET-PORT-POSITION!.  Notice  that the  input port used  to read
+;;Scheme source code satisfies this requirement.
+;;
+
+;;Constructor: (make-cookie DEST MODE POS ROW-NUM NEWLINE-POS)
+;;
+;;Field name: dest
+;;Accessor name: (cookie-dest COOKIE)
+;;  If an underlying device  exists: this field holds a reference
+;;  to it, for example  a fixnum representing an operative system
+;;  file descriptor.
+;;
+;;  If no device exists: this field is set to false.
+;;
+;;  As a special case: this  field can hold a Scheme list managed
+;;  as a stack in which data is temporarily stored.  For example:
+;;  this is the case of output bytevector ports.
+;;
+;;Field name: mode
+;;Accessor name: (cookie-mode COOKIE)
+;;Mutator name: (set-cookie-mode! COOKIE MODE-SYMBOL)
+;;  Hold the symbol "vicare-mode" or "r6rs-mode".
+;;
+;;Field name: pos
+;;Accessor name: (cookie-pos COOKIE)
+;;Mutator name: (set-cookie-pos! COOKIE NEW-POS)
+;;  If an underlying device  exists: this field holds the current
+;;  position in  the underlying device.  If  no underlying device
+;;  exists: this field is set to zero.
+;;
+;;  It  is  the  responsibility  of  the *callers*  of  the  port
+;;  functions  READ!, WRITE!  and  SET-POSITION!  to  update this
+;;  field.  The  port functions READ!,  WRITE!  and SET-POSITION!
+;;  must not touch the cookie.
+;;
+;;Field name: row-num
+;;Accessor name: (cookie-row-num COOKIE)
+;;Mutator name: (set-cookie-row-num! COOKIE NEW-POS)
+;;
+;;Field name: newline-pos
+;;Accessor name: (cookie-newline-pos COOKIE)
+;;Mutator name: (set-cookie-newline-pos! COOKIE NEW-POS)
+;;
+(define-struct cookie
+  (dest mode pos row-num newline-pos))
+
+(define (default-cookie fd)
+  (make-cookie fd 'vicare-mode 0 0 0))
+
+(define (input-port-byte-position port)
+  ;;Defined  by Ikarus.  Return  the port  position for  an input
+  ;;port in bytes.
+  ;;
+  (%assert-value-is-input-port port 'input-port-byte-position)
+  (with-port (port)
+    (+ port.device.position (unsafe.fxadd1 port.buffer.index))))
+
+(define (%mark/return-newline port)
+  ;;Register the presence of a #\newline character at the current
+  ;;position  in  the  port.   Return  a  newline  character  for
+  ;;convenience at the call site.
+  ;;
+  (with-textual-port (port)
+    (let ((cookie port.cookie))
+      (set-cookie-row-num!     cookie (+ 1 (cookie-row-num cookie)))
+      (set-cookie-newline-pos! cookie (+ port.device.position port.buffer.index))))
+  #\newline)
+
+(define (input-port-column-number port)
+  ;;Defined by  Ikarus.  Return the current column  number for an
+  ;;input port.
+  ;;
+;;;FIXME It computes the count assuming 1 byte = 1 character.
+  (%assert-value-is-input-port port 'input-port-column-number)
+  (with-textual-port (port)
+    (let ((cookie port.cookie))
+      (- (+ port.device.position port.buffer.index)
+	 (cookie-newline-pos cookie)))))
+
+(define (input-port-row-number port)
+  ;;Defined  by Ikarus.   Return the  current row  number  for an
+  ;;input port.
+  ;;
+;;;FIXME It computes the count assuming 1 byte = 1 character.
+  (%assert-value-is-input-port port 'input-port-row-number)
+  (with-textual-port (port)
+    (cookie-row-num port.cookie)))
+
+
 ;;;; Introduction to Unicode and UCS
 ;;
 ;;As required by R6RS,  the input/output libraries must implement
@@ -1702,105 +1803,41 @@
   (define-unsafe-predicate %unsafe.textual-output-port?	textual-output-port-bits))
 
 
-;;;; cookie data structure
-;;
-;;An  instance of  this  structure is  associated  to every  port
-;;position data  structure.  It registers  the underlying device,
-;;if any, and it  tracks the underlying device's position, number
-;;of rows and columns (when possible).
-;;
-;;NOTE:  It is  impossible  to  track the  row  number for  ports
-;;supporting the SET-PORT-POSITION! operation.  The ROW-NUM field
-;;of  the cookie  is  meaningful only  for  ports whose  position
-;;increases monotonically because of read or write operations, it
-;;should be invalidated whenever  the port position is moved with
-;;SET-PORT-POSITION!.  Notice  that the  input port used  to read
-;;Scheme source code satisfies this requirement.
-;;
+;;;; port attributes
 
-;;Constructor: (make-cookie DEST MODE POS ROW-NUM NEWLINE-POS)
-;;
-;;Field name: dest
-;;Accessor name: (cookie-dest COOKIE)
-;;  If an underlying device  exists: this field holds a reference
-;;  to it, for example  a fixnum representing an operative system
-;;  file descriptor.
-;;
-;;  If no device exists: this field is set to false.
-;;
-;;  As a special case: this  field can hold a Scheme list managed
-;;  as a stack in which data is temporarily stored.  For example:
-;;  this is the case of output bytevector ports.
-;;
-;;Field name: mode
-;;Accessor name: (cookie-mode COOKIE)
-;;Mutator name: (set-cookie-mode! COOKIE MODE-SYMBOL)
-;;  Hold the symbol "vicare-mode" or "r6rs-mode".
-;;
-;;Field name: pos
-;;Accessor name: (cookie-pos COOKIE)
-;;Mutator name: (set-cookie-pos! COOKIE NEW-POS)
-;;  If an underlying device  exists: this field holds the current
-;;  position in  the underlying device.  If  no underlying device
-;;  exists: this field is set to zero.
-;;
-;;  It  is  the  responsibility  of  the *callers*  of  the  port
-;;  functions  READ!, WRITE!  and  SET-POSITION!  to  update this
-;;  field.  The  port functions READ!,  WRITE!  and SET-POSITION!
-;;  must not touch the cookie.
-;;
-;;Field name: row-num
-;;Accessor name: (cookie-row-num COOKIE)
-;;Mutator name: (set-cookie-row-num! COOKIE NEW-POS)
-;;
-;;Field name: newline-pos
-;;Accessor name: (cookie-newline-pos COOKIE)
-;;Mutator name: (set-cookie-newline-pos! COOKIE NEW-POS)
-;;
-(define-struct cookie
-  (dest mode pos row-num newline-pos))
-
-(define (default-cookie fd)
-  (make-cookie fd 'vicare-mode 0 0 0))
-
-(define (input-port-byte-position port)
-  ;;Defined  by Ikarus.  Return  the port  position for  an input
-  ;;port in bytes.
+(define (%input-transcoder-attrs maybe-transcoder who)
+  ;;Return a  fixnum representing the fast tag  attributes for an
+  ;;input port using MAYBE-TRANSCODER.
   ;;
-  (%assert-value-is-input-port port 'input-port-byte-position)
-  (with-port (port)
-    (+ port.device.position (unsafe.fxadd1 port.buffer.index))))
+  (cond ((not maybe-transcoder)
+	 binary-input-port-bits)
+	((not (eq? 'none (transcoder-eol-style maybe-transcoder)))
+	 (die who "unsupported transcoder eol-style" (transcoder-eol-style maybe-transcoder)))
+	((eq? 'latin-1-codec (transcoder-codec maybe-transcoder))
+	 fast-get-latin-tag)
+	(else
+	 ;;Attributes for UTF-8-CODEC and UTF-16-CODEC are set as
+	 ;;part of the Byte Order Mark reading operation when the
+	 ;;first char is read.
+	 textual-input-port-bits)))
 
-(define (%mark/return-newline port)
-  ;;Register the presence of a #\newline character at the current
-  ;;position  in  the  port.   Return  a  newline  character  for
-  ;;convenience at the call site.
+(define (%output-transcoder-attrs maybe-transcoder who)
+  ;;Return a  fixnum representing the fast tag  attributes for an
+  ;;output port using MAYBE-TRANSCODER.
   ;;
-  (with-textual-port (port)
-    (let ((cookie port.cookie))
-      (set-cookie-row-num!     cookie (+ 1 (cookie-row-num cookie)))
-      (set-cookie-newline-pos! cookie (+ port.device.position port.buffer.index))))
-  #\newline)
-
-(define (input-port-column-number port)
-  ;;Defined by  Ikarus.  Return the current column  number for an
-  ;;input port.
-  ;;
-;;;FIXME It computes the count assuming 1 byte = 1 character.
-  (%assert-value-is-input-port port 'input-port-column-number)
-  (with-textual-port (port)
-    (let ((cookie port.cookie))
-      (- (+ port.device.position port.buffer.index)
-	 (cookie-newline-pos cookie)))))
-
-(define (input-port-row-number port)
-  ;;Defined  by Ikarus.   Return the  current row  number  for an
-  ;;input port.
-  ;;
-;;;FIXME It computes the count assuming 1 byte = 1 character.
-  (%assert-value-is-input-port port 'input-port-row-number)
-  (with-textual-port (port)
-    (cookie-row-num port.cookie)))
+  (cond ((not maybe-transcoder)
+	 binary-output-port-bits)
+	((not (eq? 'none (transcoder-eol-style maybe-transcoder)))
+	 (die who "unsupported transcoder eol-style" (transcoder-eol-style maybe-transcoder)))
+	((eq? 'latin-1-codec (transcoder-codec maybe-transcoder))
+	 fast-put-latin-tag)
+	((eq? 'utf-8-codec   (transcoder-codec maybe-transcoder))
+	 fast-put-utf8-tag)
+	((eq? 'utf-16-codec  (transcoder-codec maybe-transcoder))
+	 ;;By default we select little endian UTF-16.
+	 fast-put-utf16le-tag)
+	(else
+	 (die who "unsupported codec" (transcoder-codec maybe-transcoder)))))
 
 
 ;;;; guarded ports
@@ -2821,40 +2858,6 @@
     (let ((tr port.transcoder))
       (and (transcoder? tr) tr))))
 
-(define (%input-transcoder-attrs maybe-transcoder who)
-  ;;Return a  fixnum representing the fast tag  attributes for an
-  ;;input port using MAYBE-TRANSCODER.
-  ;;
-  (cond ((not maybe-transcoder)
-	 binary-input-port-bits)
-	((not (eq? 'none (transcoder-eol-style maybe-transcoder)))
-	 (die who "unsupported transcoder eol-style" (transcoder-eol-style maybe-transcoder)))
-	((eq? 'latin-1-codec (transcoder-codec maybe-transcoder))
-	 fast-get-latin-tag)
-	(else
-	 ;;Attributes for UTF-8-CODEC and UTF-16-CODEC are set as
-	 ;;part of the Byte Order Mark reading operation when the
-	 ;;first char is read.
-	 textual-input-port-bits)))
-
-(define (%output-transcoder-attrs maybe-transcoder who)
-  ;;Return a  fixnum representing the fast tag  attributes for an
-  ;;output port using MAYBE-TRANSCODER.
-  ;;
-  (cond ((not maybe-transcoder)
-	 binary-output-port-bits)
-	((not (eq? 'none (transcoder-eol-style maybe-transcoder)))
-	 (die who "unsupported transcoder eol-style" (transcoder-eol-style maybe-transcoder)))
-	((eq? 'latin-1-codec (transcoder-codec maybe-transcoder))
-	 fast-put-latin-tag)
-	((eq? 'utf-8-codec   (transcoder-codec maybe-transcoder))
-	 fast-put-utf8-tag)
-	((eq? 'utf-16-codec  (transcoder-codec maybe-transcoder))
-	 ;;By default we select little endian UTF-16.
-	 fast-put-utf16le-tag)
-	(else
-	 (die who "unsupported codec" (transcoder-codec maybe-transcoder)))))
-
 
 ;;;; closing ports
 
@@ -2876,22 +2879,6 @@
   (with-port (port)
     (set! port.attributes (%unsafe.fxior closed-port-tag
 					 (unsafe.fxand port.attributes port-type-mask)))))
-
-(define (%unsafe.close-port port)
-  ;;Subroutine     for    CLOSE-PORT,     CLOSE-INPUT-PORT    and
-  ;;CLOSE-OUTPUT-PORT.  Assume that PORT is a port object.
-  ;;
-  ;;Flush data in  the buffer to the underlying  device, mark the
-  ;;port as closed and finally call the port's CLOSE function, if
-  ;;any.
-  ;;
-  (with-port (port)
-    (unless port.closed?
-      (when port.write!
-	(%unsafe.flush-output-port port '%unsafe.close-port))
-      (port.mark-as-closed)
-      (when (procedure? port.close)
-	(port.close)))))
 
 (define (close-port port)
   ;;Defined  by  R6RS.   Closes  the  port,  rendering  the  port
@@ -2915,6 +2902,22 @@
   ;;
   (%assert-value-is-output-port port 'close-output-port)
   (%unsafe.close-port port))
+
+(define (%unsafe.close-port port)
+  ;;Subroutine     for    CLOSE-PORT,     CLOSE-INPUT-PORT    and
+  ;;CLOSE-OUTPUT-PORT.  Assume that PORT is a port object.
+  ;;
+  ;;Flush data in  the buffer to the underlying  device, mark the
+  ;;port as closed and finally call the port's CLOSE function, if
+  ;;any.
+  ;;
+  (with-port (port)
+    (unless port.closed?
+      (when port.write!
+	(%unsafe.flush-output-port port '%unsafe.close-port))
+      (port.mark-as-closed)
+      (when (procedure? port.close)
+	(port.close)))))
 
 
 ;;;; auxiliary port functions

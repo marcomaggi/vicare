@@ -4717,6 +4717,18 @@
   #t)
 
 
+(parametrise ((check-test-name			'transcoded-port)
+	      (bytevector-port-buffer-size	8))
+
+  (check
+      (let* ((bin-port	(open-bytevector-input-port '#vu8()))
+	     (tran-port	(transcoded-port bin-port (native-transcoder))))
+	(port-closed? bin-port))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name		'get-bytevector-n)
 	      (test-pathname		(make-test-pathname "get-bytevector-n.bin"))
 	      (input-file-buffer-size	100))
