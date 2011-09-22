@@ -2070,7 +2070,7 @@
   ;;
   (define who 'make-custom-binary-input-port)
   (unless (string? identifier)
-    (die who "id is not a string" identifier))
+    (die who "ID is not a string" identifier))
   (%assert-value-is-read!-procedure read! who)
   (%assert-value-is-maybe-close-procedure close who)
   (%assert-value-is-maybe-get-position-procedure  get-position  who)

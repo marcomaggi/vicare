@@ -1602,6 +1602,267 @@
   #f)
 
 
+(parametrise ((check-test-name			'make-custom-binary-input-port)
+	      (bytevector-port-buffer-size	8))
+
+  (define (make-test-port bv)
+    (let ((position	0)
+	  (bv.len	(bytevector-length bv))
+	  (port		#f))
+
+      (define (read! dst.bv dst.start count)
+	(let* ((available	(- bv.len position))
+	       (to-read		(min available count)))
+	  (unless (zero? to-read)
+	    (bytevector-copy! bv position dst.bv dst.start to-read)
+	    (set! position (+ to-read position)))
+	  to-read))
+
+      (define (get-position)
+	position)
+
+      (define (set-position! new-position)
+	(if (<= 0 new-position bv.len)
+	    (set! position new-position)
+	  (raise
+	   (condition (make-i/o-invalid-position-error new-position)
+		      (make-who-condition 'make-test-port/set-position!)
+		      (make-message-condition "invalid port position")
+		      (make-irritants-condition (list port))))))
+
+      (define (close)
+	(set! bv #f))
+
+      (set! port (make-custom-binary-input-port "*test-binary-input-port*"
+						read! get-position set-position! close))
+      port))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check	;ID is not a string
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-custom-binary-input-port 123	     ;id
+				       (lambda args #f)   ;read!
+				       (lambda args #f)   ;get-position
+				       (lambda args #f)   ;set-position!
+				       (lambda args #f))) ;close
+    => '(123))
+
+  (check	;READ! is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-custom-binary-input-port "test"	     ;id
+				       123	     ;read!
+				       (lambda args #f)   ;get-position
+				       (lambda args #f)   ;set-position!
+				       (lambda args #f))) ;close
+    => '(123))
+
+  (check	;GET-POSITION is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-custom-binary-input-port "test"	     ;id
+				       (lambda args #f)   ;read!
+				       123	     ;get-position
+				       (lambda args #f)   ;set-position!
+				       (lambda args #f))) ;close
+    => '(123))
+
+  (check	;SET-POSITION! is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-custom-binary-input-port "test"	     ;id
+				       (lambda args #f)   ;read!
+				       (lambda args #f)   ;get-position
+				       123	     ;set-position!
+				       (lambda args #f))) ;close
+    => '(123))
+
+  (check	;CLOSE is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-custom-binary-input-port "test"	   ;id
+				       (lambda args #f) ;read!
+				       (lambda args #f) ;get-position
+				       (lambda args #f) ;set-position!
+				       123))	   ;close
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; port operations support
+
+  (check
+      (port-has-port-position? (make-test-port '#vu8()))
+    => #t)
+
+  (check
+      (port-has-set-port-position!? (make-test-port '#vu8()))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; reading bytes
+
+  (check
+      (let ((port (make-test-port '#vu8())))
+	(lookahead-u8 port))
+    => (eof-object))
+
+  (check
+      (let ((port (make-test-port '#vu8(12))))
+	(lookahead-u8 port))
+    => 12)
+
+  (check
+      (let ((port (make-test-port '#vu8())))
+	(get-u8 port))
+    => (eof-object))
+
+  (check
+      (let ((port (make-test-port '#vu8(12))))
+	(get-u8 port))
+    => 12)
+
+  (check
+      (let ((port (make-test-port '#vu8(12))))
+	(get-u8 port)
+	(get-u8 port))
+    => (eof-object))
+
+;;; --------------------------------------------------------------------
+;;; reading bytevectors
+
+  (check
+      (let ((port (make-test-port '#vu8())))
+	(get-bytevector-n port 3))
+    => (eof-object))
+
+  (check
+      (check.with-result
+	  (let ((port (make-test-port '#vu8())))
+	    (check.add-result (get-bytevector-n port 0))
+	    (eof-object? (get-u8 port))))
+    => '(#t (#vu8())))
+
+  (check
+      (check.with-result
+	  (let ((port (make-test-port '#vu8(0 1 2))))
+	    (check.add-result (get-bytevector-n port 3))
+	    (eof-object? (get-u8 port))))
+    => '(#t (#vu8(0 1 2))))
+
+  (check
+      (check.with-result
+	  (let ((port (make-test-port '#vu8(0 1 2 3 4 5))))
+	    (check.add-result (get-bytevector-n port 3))
+	    (check.add-result (get-bytevector-n port 3))
+	    (eof-object? (get-u8 port))))
+    => '(#t (#vu8(0 1 2) #vu8(3 4 5))))
+
+;;; --------------------------------------------------------------------
+;;; getting position
+
+  (check
+      (let ((port (make-test-port '#vu8())))
+	(port-position port))
+    => 0)
+
+  (check
+      (let ((port (make-test-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(port-position port))
+    => 0)
+
+  (check
+      (let ((port (make-test-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(get-bytevector-n port 5)
+	(port-position port))
+    => 5)
+
+  (check
+      (let ((port (make-test-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(get-bytevector-n port 10)
+	(port-position port))
+    => 10)
+
+;;; --------------------------------------------------------------------
+;;; setting position
+
+  (check
+      (let ((port (make-test-port '#vu8())))
+	(set-port-position! port 0)
+	(port-position port))
+    => 0)
+
+  (check
+      (let ((port (make-test-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(set-port-position! port 10)
+	(port-position port))
+    => 10)
+
+  (check
+      (let ((port (make-test-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(set-port-position! port 5)
+	(port-position port))
+    => 5)
+
+  (check
+      (let ((port (make-test-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(set-port-position! port 5)
+	(set-port-position! port 1)
+	(set-port-position! port 9)
+	(port-position port))
+    => 9)
+
+  (check
+      (check.with-result
+	  (let ((port (make-test-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	    (set-port-position! port 5)
+	    (check.add-result (get-bytevector-n port 5))
+	    (port-position port)))
+    => '(10 (#vu8(5 6 7 8 9))))
+
+;;; --------------------------------------------------------------------
+;;; closing the port
+
+  (check
+      (let ((port (make-test-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(port-closed? port))
+    => #f)
+
+  (check
+      (let ((port (make-test-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(close-port port)
+	#t)
+    => #t)
+
+  (check
+      (let ((port (make-test-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(close-port port)
+	(close-port port)
+	(close-port port)
+	#t)
+    => #t)
+
+  (check
+      (let ((port (make-test-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(close-port port)
+	(port-closed? port))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'open-bytevector-input-port))
 
 ;;; --------------------------------------------------------------------
