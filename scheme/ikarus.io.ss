@@ -1799,6 +1799,39 @@
     (cookie-row-num port.cookie)))
 
 
+;;;; guarded ports
+;;
+;;It  happens that  platforms  have a  maximum  limit on  the number  of
+;;descriptors allocated to  a process.  When a port  wrapping a platform
+;;descriptor is  garbage collected: we want  to close it (if  it has not
+;;been  closed  already) to  free  its descriptor.   We  do  it using  a
+;;guardian and the POST-GC-HOOK.
+;;
+
+(define port-guardian
+  (let ((G (make-guardian)))
+    (define (close-garbage-collected-ports)
+      (let ((port (G)))
+	(when port
+	  ;;Notice that, as defined  by R6RS, CLOSE-PORT does nothing if
+	  ;;PORT has already been closed.
+	  (close-port port)
+	  (close-garbage-collected-ports))))
+    (post-gc-hooks (cons close-garbage-collected-ports (post-gc-hooks)))
+    G))
+
+(define %port->guarded-port
+  ;;Accept a port  as argument and return the port  itself.  If the port
+  ;;wraps a platform descriptor: register it in the guardian.
+  ;;
+  (lambda (port)
+    (%assert-value-is-port port '%port->guarded-port)
+    (with-port (port)
+      (when port.device.is-descriptor?
+	(port-guardian port)))
+    port))
+
+
 ;;;; port position
 
 (define (port-has-port-position? port)
@@ -1951,24 +1984,6 @@
 
 
 ;;;; custom ports
-
-(define %guarded-port
-  ;;Accept a port  as argument and return the port; if  the port wraps a
-  ;;platform descriptor: register it in the guardian.
-  ;;
-  (let ((G (make-guardian)))
-    (define (clean-up)
-      (let ((port (G)))
-	(when port
-	  (close-port port)
-	  (clean-up))))
-    (lambda (port)
-      (%assert-value-is-port port '%guarded-port)
-      (clean-up)
-      (with-port (port)
-	(when port.device.is-descriptor?
-	  (G port)))
-      port)))
 
 (define (%make-custom-binary-port attributes identifier read! write! get-position set-position! close)
   ;;Build and  return a new  custom binary port, either  input or
@@ -2773,7 +2788,7 @@
       (die who "not a binary port" port))
     (%unsafe.assert-value-is-open-port port who)
     (port.mark-as-closed)
-    (%guarded-port
+    (%port->guarded-port
      ($make-port (cond (port.read!
 			(%input-transcoder-attrs  transcoder who))
 		       (port.write!
@@ -4923,7 +4938,8 @@
 	(buffer.used-size	0)
 	(buffer			(make-bytevector buffer.size))
 	(write!			#f)
-	(get-position		#t))
+	(get-position		#t)
+	(cookie			(default-cookie fd)))
 
     (define set-position!
       (%make-set-position!-function-for-file-descriptor-port fd port-identifier))
@@ -4948,10 +4964,9 @@
 	      (else
 	       (raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
-    (%guarded-port ($make-port attributes buffer.index buffer.used-size buffer
-			       transcoder port-identifier
-			       read! write! get-position set-position! close
-			       (default-cookie fd)))))
+    (%port->guarded-port
+     ($make-port attributes buffer.index buffer.used-size buffer transcoder port-identifier
+		 read! write! get-position set-position! close cookie))))
 
 (define (%file-descriptor->output-port fd port-identifier buffer.size transcoder close-function who)
   ;;Given the fixnum file descriptor FD representing an open file
@@ -4971,7 +4986,8 @@
 	(buffer.used-size	0)
 	(buffer			(make-bytevector buffer.size))
 	(read!			#f)
-	(get-position		#t))
+	(get-position		#t)
+	(cookie			(default-cookie fd)))
 
     (define set-position!
       (%make-set-position!-function-for-file-descriptor-port fd port-identifier))
@@ -4996,10 +5012,9 @@
 	      (else
 	       (raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
 
-    (%guarded-port ($make-port attributes buffer.index buffer.used-size buffer
-			       transcoder port-identifier
-			       read! write! get-position set-position! close
-			       (default-cookie fd)))))
+    (%port->guarded-port
+     ($make-port attributes buffer.index buffer.used-size buffer transcoder port-identifier
+		 read! write! get-position set-position! close cookie))))
 
 (define (%make-set-position!-function-for-file-descriptor-port fd port-identifier)
   ;;Build  and  return a  closure  to  be  used as  SET-POSITION!
