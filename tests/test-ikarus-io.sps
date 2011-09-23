@@ -4986,6 +4986,101 @@
   #t)
 
 
+(parametrise ((check-test-name	'port-eof?))
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(port-eof? 123))
+    => '(123))
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (port-eof? port)))
+    => #t)
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-input-port port)
+	  (port-eof? port)))
+    => #t)
+
+  (check
+      (port-eof? (open-bytevector-input-port '#vu8()))
+    => #t)
+
+  (check
+      (port-eof? (open-bytevector-input-port '#vu8(1 2 3)))
+    => #f)
+
+  (check
+      (port-eof? (open-string-input-port ""))
+    => #t)
+
+  (check
+      (port-eof? (open-string-input-port "123"))
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'flush-output-port))
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(flush-output-port 123))
+    => '(123))
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (flush-output-port port)))
+    => #t)
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-output-port port)
+	  (flush-output-port port)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(put-bytevector port '#vu8(1 2 3))
+	(flush-output-port port)
+	(extract))
+    => '#vu8(1 2 3))
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(flush-output-port port)
+	(extract))
+    => '#vu8())
+
+  #t)
+
+
 (parametrise ((check-test-name		'get-bytevector-n)
 	      (test-pathname		(make-test-pathname "get-bytevector-n.bin"))
 	      (input-file-buffer-size	100))

@@ -799,7 +799,7 @@
     (assertion-violation ?who "not an output port" ?port)))
 
 (define-inline (%unsafe.assert-value-is-output-port ?port ?who)
-  (unless ($unsafe.output-port? ?port)
+  (unless (%unsafe.output-port? ?port)
     (assertion-violation ?who "not an output port" ?port)))
 
 ;;; --------------------------------------------------------------------
@@ -2993,7 +2993,8 @@
     ;;See %UNSAFE.FLUSH-OUTPUT-PORT for further details.
     ;;
     (define who who)
-    (%assert-value-is-output-port port who)
+    (%assert-value-is-port port who)
+    (%unsafe.assert-value-is-output-port port who)
     (with-port (port)
       (%unsafe.assert-value-is-open-port port who)
       (%unsafe.flush-output-port port who)))))
