@@ -4720,11 +4720,94 @@
 (parametrise ((check-test-name			'transcoded-port)
 	      (bytevector-port-buffer-size	8))
 
+  (define (%string->latin-1 str)
+    (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+      (put-string port str)
+      (extract)))
+
+  (define (%latin-1->string bv)
+    (let ((port (open-bytevector-input-port bv (make-transcoder (latin-1-codec)))))
+      (get-string-all port)))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(transcoded-port 123 (native-transcoder)))
+    => '(123))
+
+  (check	;argument is not a transcoder
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(let ((bin-port (open-bytevector-input-port '#vu8())))
+	  (transcoded-port bin-port 123)))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; operation behaviour
+
   (check
       (let* ((bin-port	(open-bytevector-input-port '#vu8()))
 	     (tran-port	(transcoded-port bin-port (native-transcoder))))
 	(port-closed? bin-port))
     => #t)
+
+;;; --------------------------------------------------------------------
+;;; transcoding input ports
+
+  (check
+      (let* ((bin-port	(open-bytevector-input-port (%string->latin-1 "ciao mamma àáèéìíòóùú")))
+	     (tran-port	(transcoded-port bin-port (make-transcoder (latin-1-codec)))))
+	(get-string-all tran-port))
+    => "ciao mamma àáèéìíòóùú")
+
+  (check
+      (let* ((bin-port	(open-bytevector-input-port (string->utf8 "ciao mamma àáèéìíòóùú λΓσΩ")))
+	     (tran-port	(transcoded-port bin-port (make-transcoder (utf-8-codec)))))
+	(get-string-all tran-port))
+    => "ciao mamma àáèéìíòóùú λΓσΩ")
+
+  (check
+      (let* ((bin-port	(open-bytevector-input-port (string->utf16 "ciao mamma àáèéìíòóùú λΓσΩ")))
+	     (tran-port	(transcoded-port bin-port (make-transcoder (utf-16-codec)))))
+	(get-string-all tran-port))
+    => "ciao mamma àáèéìíòóùú λΓσΩ")
+
+  #;(check
+      (let* ((bin-port	(open-bytevector-input-port (string->utf32 "ciao mamma λΓσΩ")))
+	     (tran-port	(transcoded-port bin-port (make-transcoder (utf-32-codec)))))
+	(get-string-all tran-port))
+    => "ciao mamma λΓσΩ")
+
+;;; --------------------------------------------------------------------
+;;; transcoding output ports
+
+  (check
+      (let-values (((bin-port extract) (open-bytevector-output-port)))
+	(let ((tran-port (transcoded-port bin-port (make-transcoder (latin-1-codec)))))
+	  (put-string tran-port "ciao mamma àáèéìíòóùú")
+	  (%latin-1->string (extract))))
+    => "ciao mamma àáèéìíòóùú")
+
+  (check
+      (let-values (((bin-port extract) (open-bytevector-output-port)))
+	(let ((tran-port (transcoded-port bin-port (make-transcoder (utf-8-codec)))))
+	  (put-string tran-port "ciao mamma àáèéìíòóùú λΓσΩ")
+	  (utf8->string (extract))))
+    => "ciao mamma àáèéìíòóùú λΓσΩ")
+
+  (check
+      (let-values (((bin-port extract) (open-bytevector-output-port)))
+	(let ((tran-port (transcoded-port bin-port (make-transcoder (utf-16-codec)))))
+	  (put-string tran-port "ciao mamma àáèéìíòóùú λΓσΩ")
+	  (utf16->string (extract))))
+    => "ciao mamma àáèéìíòóùú λΓσΩ")
 
   #t)
 
