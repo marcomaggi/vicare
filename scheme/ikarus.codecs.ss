@@ -1,120 +1,189 @@
-;;; Ikarus Scheme -- A compiler for R6RS Scheme.
-;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
-;;; This program is free software: you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License version 3 as
-;;; published by the Free Software Foundation.
-;;; 
-;;; This program is distributed in the hope that it will be useful, but
-;;; WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; General Public License for more details.
-;;; 
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;
+;;;Abstract
+;;;
+;;; 	NOTE The primitive operations  on a transcoder value are defined
+;;; 	in "pass-specify-rep-primops.ss".  A  transcoder value is just a
+;;; 	word tagged  to make  it of disjoint  type; the payload  of this
+;;; 	word is an 8-bit vector whose format is as follows:
+;;;
+;;;	   765 432 10
+;;;         |   |   |
+;;;         |   |   -- error handling mode
+;;;         |   ------ end of line style
+;;;         ---------- codec
+;;;
+;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under  the terms of  the GNU General  Public License version  3 as
+;;;published by the Free Software Foundation.
+;;;
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
+;;;
+;;;You should  have received  a copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;
 
-
+
 (library (ikarus codecs)
   (export latin-1-codec utf-8-codec utf-16-codec native-eol-style
           make-transcoder native-transcoder buffer-mode?
           transcoder-codec transcoder-eol-style
           transcoder-error-handling-mode)
-  (import 
-    (except (ikarus) latin-1-codec utf-8-codec utf-16-codec 
+  (import
+    (except (ikarus) latin-1-codec utf-8-codec utf-16-codec
       native-eol-style make-transcoder native-transcoder
       buffer-mode? transcoder-codec
       transcoder-eol-style transcoder-error-handling-mode)
-    (ikarus system $transcoders))
-  (define (latin-1-codec) 'latin-1-codec)
-  (define (utf-8-codec)   'utf-8-codec)
-  (define (utf-16-codec)  'utf-16-codec)
-  (define (native-eol-style) 'none)
-  
-  (define error-handling-mode-alist
-    '([ignore .  #b01]
-      [raise .   #b10]
-      [replace . #b11]))
-  (define error-handling-mode-mask #b11)
+    (ikarus system $transcoders)
+    (prefix (rename (ikarus system $fx)
+		    ($fx=	fx=)	;inclusive logic OR
+		    ($fxlogor	fxior)	;inclusive logic OR
+		    ($fxlogand	fxand))	;logic AND
+	    unsafe.))
 
-  (define eol-style-alist
-    '([none .   #b00000]
-      [lf .     #b00100]
-      [cr .     #b01000]
-      [crlf .   #b01100]
-      [nel .    #b10000]
-      [crnel .  #b10100]
-      [ls .     #b11000]))
-  (define eol-style-mask #b11100)
+
+;;;; helpers
 
-  (define codec-alist
-    '([latin-1-codec . #b0100000]
-      [utf-8-codec .   #b1000000]
-      [utf-16-codec .  #b1100000]))
-  (define codec-mask #b11100000)
+(define-syntax define-inline
+  (syntax-rules ()
+    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
+     (define-syntax ?name
+       (syntax-rules ()
+	 ((_ ?arg ... . ?rest)
+	  (begin ?form0 ?form ...)))))))
 
-  (define (rev-lookup n ls)
-    (cond
-      [(null? ls) #f]
-      [(= (cdar ls) n) (caar ls)]
-      [else (rev-lookup n (cdr ls))]))
+(define-syntax %unsafe.fxior
+  (syntax-rules ()
+    ((_ ?op1)
+     ?op1)
+    ((_ ?op1 ?op2)
+     (unsafe.fxior ?op1 ?op2))
+    ((_ ?op1 ?op2 . ?ops)
+     (unsafe.fxior ?op1 (%unsafe.fxior ?op2 . ?ops)))))
 
-  (define (codec->fixnum x who)
-    (cond
-      [(assq x codec-alist) => cdr]
-      [else (die who "not a valid coded" x)]))
+(define-inline (%assert-value-is-transcoder ?obj ?who)
+  (unless (transcoder? ?obj)
+    (assertion-violation ?who "not a transcoder" ?obj)))
 
-  (define (eol-style->fixnum x who)
-    (cond
-      [(assq x eol-style-alist) => cdr]
-      [else (die who "not a valid eol-style" x)]))
+
+(define (latin-1-codec)
+  'latin-1-codec)
 
-  (define (error-handling-mode->fixnum x who)
-    (cond
-      [(assq x error-handling-mode-alist) => cdr]
-      [else (die who "not a valid error-handling mode" x)]))
+(define (utf-8-codec)
+  'utf-8-codec)
 
-  (define make-transcoder
-    (case-lambda
-      [(codec eol-style handling-mode) 
-       ($data->transcoder 
-         (fxior 
-           (error-handling-mode->fixnum handling-mode 'make-transcoder)
-           (eol-style->fixnum eol-style 'make-transcoder)
-           (codec->fixnum codec 'make-transcoder)))]
-      [(codec eol-style) 
-       (make-transcoder codec eol-style 'replace)]
-      [(codec) 
-       (make-transcoder codec 'none 'replace)]))
+(define (utf-16-codec)
+  'utf-16-codec)
 
-  (define (native-transcoder) 
-    (make-transcoder 'utf-8-codec 'none 'replace))
+(define (native-eol-style)
+  'none)
 
-  (define (transcoder-codec x) 
-    (define who 'transcoder-codec)
-    (if (transcoder? x) 
-        (let ([tag (fxlogand ($transcoder->data x) codec-mask)])
-          (or (rev-lookup tag codec-alist)
-              (die who "transcoder has no codec" x)))
-        (die who "not a transcoder" x)))
+
+(define error-handling-mode-alist
+  ;;2 bits are reserved for the error handling mode.
+  ;;
+  '((ignore	. #b01)
+    (raise	. #b10)
+    (replace	. #b11)))
+(define error-handling-mode-mask #b11)
 
-  (define (transcoder-eol-style x) 
-    (define who 'transcoder-eol-style)
-    (if (transcoder? x) 
-        (let ([tag (fxlogand ($transcoder->data x) eol-style-mask)])
-          (or (rev-lookup tag eol-style-alist)
-              (die who "transcoder has no eol-style" x)))
-        (die who "not a transcoder" x)))
+(define eol-style-alist
+  ;;3 bits are reserved for the error handling mode.
+  ;;
+;;;                 43210
+  '((none	. #b00000)
+    (lf		. #b00100)
+    (cr		. #b01000)
+    (crlf	. #b01100)
+    (nel	. #b10000)
+    (crnel	. #b10100)
+    (ls		. #b11000)))
+(define eol-style-mask #b11100)
 
-  (define (transcoder-error-handling-mode x) 
-    (define who 'transcoder-error-handling-mode)
-    (if (transcoder? x) 
-        (let ([tag (fxlogand ($transcoder->data x) error-handling-mode-mask)])
-          (or (rev-lookup tag error-handling-mode-alist)
-              (die who "transcoder has no error-handling mode" x)))
-        (die who "not a transcoder" x)))
+(define codec-alist
+  ;;3 bits are reserved for the coded.
+  ;;
+;;;                         76543210
+  '((latin-1-codec	. #b00100000)
+    (utf-8-codec	. #b01000000)
+    (utf-16-codec	. #b01100000)))
+(define codec-mask	  #b11100000)
 
-  (define (buffer-mode? x)
-    (and (memq x '(none line block)) #t))
+(define (reverse-lookup bits alist)
+  (cond ((null? alist)
+	 #f)
+	((unsafe.fx= (cdar alist) bits)
+	 (caar alist))
+	(else
+	 (reverse-lookup bits (cdr alist)))))
 
-  )
+(define (codec->fixnum x who)
+  (cond ((assq x codec-alist)
+	 => cdr)
+	(else
+	 (assertion-violation who "not a valid coded" x))))
 
+(define (eol-style->fixnum x who)
+  (cond ((assq x eol-style-alist)
+	 => cdr)
+	(else
+	 (assertion-violation who "not a valid eol-style" x))))
+
+(define (error-handling-mode->fixnum x who)
+  (cond ((assq x error-handling-mode-alist)
+	 => cdr)
+	(else
+	 (assertion-violation who "not a valid error-handling mode" x))))
+
+
+(define make-transcoder
+  (case-lambda
+   ((codec eol-style handling-mode)
+    (define who 'make-transcoder)
+    ($data->transcoder (%unsafe.fxior (error-handling-mode->fixnum handling-mode who)
+				      (eol-style->fixnum	   eol-style     who)
+				      (codec->fixnum		   codec         who))))
+   ((codec eol-style)
+    (make-transcoder codec eol-style 'replace))
+   ((codec)
+    (make-transcoder codec 'none 'replace))))
+
+(define (native-transcoder)
+  (make-transcoder 'utf-8-codec 'none 'replace))
+
+(define (transcoder-codec x)
+  (define who 'transcoder-codec)
+  (%assert-value-is-transcoder x who)
+  (let ((tag (unsafe.fxand ($transcoder->data x) codec-mask)))
+    (or (reverse-lookup tag codec-alist)
+	(assertion-violation who "transcoder has no codec" x))))
+
+(define (transcoder-eol-style x)
+  (define who 'transcoder-eol-style)
+  (%assert-value-is-transcoder x who)
+  (let ((tag (unsafe.fxand ($transcoder->data x) eol-style-mask)))
+    (or (reverse-lookup tag eol-style-alist)
+	(assertion-violation who "transcoder has no eol-style" x))))
+
+(define (transcoder-error-handling-mode x)
+  (define who 'transcoder-error-handling-mode)
+  (%assert-value-is-transcoder x who)
+  (let ((tag (unsafe.fxand ($transcoder->data x) error-handling-mode-mask)))
+    (or (reverse-lookup tag error-handling-mode-alist)
+	(assertion-violation who "transcoder has no error-handling mode" x))))
+
+(define (buffer-mode? x)
+  (and (memq x '(none line block)) #t))
+
+
+;;;; done
+
+)
+
+;;; end of file

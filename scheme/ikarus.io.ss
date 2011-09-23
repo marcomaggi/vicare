@@ -4797,6 +4797,20 @@
 	      (let ((w2 (%unsafe.fxior #xDC00 (unsafe.fxand u^ (- (unsafe.fxsll 1 10) 1)))))
 		(put-byte! p (unsafe.fxsra w2 8) who)
 		(put-byte! p (unsafe.fxand w2 #xFF) who)))))))
+       ((eq? m fast-put-utf16le-tag)
+	(let ((n (char->integer c)))
+	  (cond
+	   ((unsafe.fx< n #x10000)
+	    (put-byte! p (unsafe.fxand n #xFF) who)
+	    (put-byte! p (unsafe.fxsra n 8) who))
+	   (else
+	    (let ((u^ (unsafe.fx- n #x10000)))
+	      (let ((w1 (%unsafe.fxior #xD800 (unsafe.fxsra u^ 10))))
+		(put-byte! p (unsafe.fxand w1 #xFF) who)
+		(put-byte! p (unsafe.fxsra w1 8) who))
+	      (let ((w2 (%unsafe.fxior #xDC00 (unsafe.fxand u^ (- (unsafe.fxsll 1 10) 1)))))
+		(put-byte! p (unsafe.fxand w2 #xFF) who)
+		(put-byte! p (unsafe.fxsra w2 8) who)))))))
        (else
 	(%assert-value-is-output-port         p who)
 	(%unsafe.assert-value-is-textual-port p who)

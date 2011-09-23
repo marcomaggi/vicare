@@ -4758,6 +4758,12 @@
 	(port-closed? bin-port))
     => #t)
 
+  (check
+      (let* ((bin-port	(open-bytevector-input-port '#vu8()))
+	     (tran-port	(transcoded-port bin-port (native-transcoder))))
+	(port-transcoder tran-port))
+    (=> eq?) (native-transcoder))
+
 ;;; --------------------------------------------------------------------
 ;;; transcoding input ports
 
@@ -4774,7 +4780,8 @@
     => "ciao mamma àáèéìíòóùú λΓσΩ")
 
   (check
-      (let* ((bin-port	(open-bytevector-input-port (string->utf16 "ciao mamma àáèéìíòóùú λΓσΩ")))
+      (let* ((bin-port	(open-bytevector-input-port (string->utf16 "ciao mamma àáèéìíòóùú λΓσΩ"
+								   (endianness little))))
 	     (tran-port	(transcoded-port bin-port (make-transcoder (utf-16-codec)))))
 	(get-string-all tran-port))
     => "ciao mamma àáèéìíòóùú λΓσΩ")
@@ -4806,7 +4813,7 @@
       (let-values (((bin-port extract) (open-bytevector-output-port)))
 	(let ((tran-port (transcoded-port bin-port (make-transcoder (utf-16-codec)))))
 	  (put-string tran-port "ciao mamma àáèéìíòóùú λΓσΩ")
-	  (utf16->string (extract))))
+	  (utf16->string (extract) (endianness little))))
     => "ciao mamma àáèéìíòóùú λΓσΩ")
 
   #t)
