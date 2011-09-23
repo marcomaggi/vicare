@@ -4881,6 +4881,7 @@
 	(get-string-all tran-port))
     => "ciao mamma àáèéìíòóùú λΓσΩ")
 
+  ;;There is no UTF-32 codec.
   #;(check
       (let* ((bin-port	(open-bytevector-input-port (string->utf32 "ciao mamma λΓσΩ")))
 	     (tran-port	(transcoded-port bin-port (make-transcoder (utf-32-codec)))))

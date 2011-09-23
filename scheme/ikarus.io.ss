@@ -2,35 +2,35 @@
 ;;;
 ;;;Abstract
 ;;;
-;;;	Define and  export almost all the  I/O functions mandated
-;;;	by R6RS plus some implementation-specific functions.
+;;;	Define and export almost all  the I/O functions mandated by R6RS
+;;;	plus some implementation-specific  functions.  See also the file
+;;;	"ikarus.codecs.ss".
 ;;;
-;;;	The functions and macros  prefixed with "%" and "unsafe."
-;;;	are  not  exported.  The  functions  and macros  prefixed
-;;;	"unsafe." or  "%unsafe."  assume that  the arguments have
-;;;	already been validated.  The functions prefixed "unsafe."
-;;;	are imported from another library.
+;;;	The functions  and macros prefixed  with "%" and  "unsafe."  are
+;;;	not exported.   The functions  and macros prefixed  "unsafe." or
+;;;	"%unsafe."   assume   that  the  arguments   have  already  been
+;;;	validated.  The functions  prefixed "unsafe."  are imported from
+;;;	another library.
 ;;;
-;;;	NOTE The primitive operations on a port value are defined
-;;;	in "pass-specify-rep-primops.ss"; a  port value is just a
-;;;	block of memory whose first  word is tagged with the port
+;;;	NOTE The  primitive operations  on a port  value are  defined in
+;;;	"pass-specify-rep-primops.ss"; a port value is a block of memory
+;;;	allocated as a  vector whose first word is  tagged with the port
 ;;;	tag.
 ;;;
 ;;;Copyright (c) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
-;;;This program is free  software: you can redistribute it and/or
-;;;modify it  under the terms  of the GNU General  Public License
-;;;version 3 as published by the Free Software Foundation.
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under  the terms of  the GNU General  Public License version  3 as
+;;;published by the Free Software Foundation.
 ;;;
-;;;This  program is  distributed  in  the hope  that  it will  be
-;;;useful,  but WITHOUT  ANY WARRANTY;  without even  the implied
-;;;warranty  of  MERCHANTABILITY  or  FITNESS  FOR  A  PARTICULAR
-;;;PURPOSE.  See the GNU General Public License for more details.
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
 ;;;
-;;;You  should have  received a  copy of  the GNU  General Public
-;;;License    along   with   this    program.    If    not,   see
-;;;<http://www.gnu.org/licenses/>.
+;;;You should  have received  a copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
