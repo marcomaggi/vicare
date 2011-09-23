@@ -297,6 +297,101 @@
 	    result)))))
 
 
+(parametrise ((check-test-name	'transcoders))
+
+;;; native transcoder
+
+  (check
+      (transcoder-codec (native-transcoder))
+    => (utf-8-codec))
+
+  (check
+      (transcoder-eol-style (native-transcoder))
+    => (eol-style none))
+
+  (check
+      (transcoder-error-handling-mode (native-transcoder))
+    => (error-handling-mode replace))
+
+;;; --------------------------------------------------------------------
+;;; making transcoders
+
+  (check
+      (let ((T (make-transcoder (utf-8-codec)
+				(eol-style lf)
+				(error-handling-mode raise))))
+	(list (transcoder-codec T)
+	      (transcoder-eol-style T)
+	      (transcoder-error-handling-mode T)))
+    => (list (utf-8-codec)
+	     (eol-style lf)
+	     (error-handling-mode raise)))
+
+  (check
+      (let ((T (make-transcoder (utf-8-codec)
+				(eol-style lf))))
+	(list (transcoder-codec T)
+	      (transcoder-eol-style T)
+	      (transcoder-error-handling-mode T)))
+    => (list (utf-8-codec)
+	     (eol-style lf)
+	     (error-handling-mode replace)))
+
+  (check
+      (let ((T (make-transcoder (utf-8-codec))))
+	(list (transcoder-codec T)
+	      (transcoder-eol-style T)
+	      (transcoder-error-handling-mode T)))
+    => (list (utf-8-codec)
+	     (eol-style none)
+	     (error-handling-mode replace)))
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-transcoder 123))
+    => '(123))
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-transcoder (utf-8-codec) 'ciao))
+    => '(ciao))
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(make-transcoder (utf-8-codec) (eol-style lf) 'ciao))
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; buffer mode
+
+  (check
+      (buffer-mode? (buffer-mode none))
+    => #t)
+
+  (check
+      (buffer-mode? (buffer-mode line))
+    => #t)
+
+  (check
+      (buffer-mode? (buffer-mode block))
+    => #t)
+
+  (check
+      (buffer-mode? 'ciao)
+    => #f)
+
+  #t)
+
+
 (parametrise ((check-test-name	'output-bytevector))
 
   (check

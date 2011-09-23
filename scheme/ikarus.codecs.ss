@@ -127,7 +127,7 @@
   (cond ((assq x codec-alist)
 	 => cdr)
 	(else
-	 (assertion-violation who "not a valid coded" x))))
+	 (assertion-violation who "not a valid codec" x))))
 
 (define (%eol-style->fixnum x who)
   (cond ((assq x eol-style-alist)
