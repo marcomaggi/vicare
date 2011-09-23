@@ -804,6 +804,10 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-inline (%unsafe.assert-value-is-binary-port ?port ?who)
+  (unless (%unsafe.binary-port? ?port)
+    (assertion-violation ?who "not a binary port" ?port)))
+
 (define-inline (%unsafe.assert-value-is-textual-port ?port ?who)
   (unless (%unsafe.textual-port? ?port)
     (assertion-violation ?who "not a textual port" ?port)))
@@ -941,11 +945,13 @@
   ;;GET-BYTEVECTOR-ALL.
   ;;
   (with-binary-port (port)
-    (%unsafe.assert-value-is-open-port port who)
-    (when port.transcoder
-      (assertion-violation who "port is not binary" port))
-    (unless port.read!
-      (assertion-violation who "port is not an input port" port))
+    (%unsafe.assert-value-is-binary-port port who)
+    (%unsafe.assert-value-is-input-port  port who)
+    (%unsafe.assert-value-is-open-port   port who)
+    ;; (when port.transcoder
+    ;;   (assertion-violation who "port is not binary" port))
+    ;; (unless port.read!
+    ;;   (assertion-violation who "port is not an input port" port))
     (set! port.attributes (%unsafe.fxior port.attributes fast-get-byte-tag))))
 
 
@@ -3260,6 +3266,8 @@
   (define who 'get-u8)
   (%assert-value-is-port port who)
   (with-binary-port (port)
+    ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
+    ;;PORT.FAST-ATTRIBUTES which does not include it).
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
       (%validate-and-tag-open-binary-input-port port who))
     (let ((buffer.offset port.buffer.index))
@@ -3279,6 +3287,8 @@
   (define who 'lookahead-u8)
   (%assert-value-is-port port who)
   (with-binary-port (port)
+    ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
+    ;;PORT.FAST-ATTRIBUTES which does not include it).
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
       (%validate-and-tag-open-binary-input-port port who))
     (let ((buffer.offset port.buffer.index))

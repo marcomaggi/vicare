@@ -5081,6 +5081,234 @@
   #t)
 
 
+(parametrise ((check-test-name	'get-u8))
+
+  (define (make-test-bytevector-input-port bv)
+    (let ((position	0)
+	  (bv.len	(bytevector-length bv))
+	  (port		#f))
+
+      (define (read! dst.bv dst.start count)
+	(let* ((available	(- bv.len position))
+	       (to-read		(min available count)))
+	  (unless (zero? to-read)
+	    (bytevector-copy! bv position dst.bv dst.start to-read)
+	    (set! position (+ to-read position)))
+	  to-read))
+
+      (define (get-position)
+	position)
+
+      (define (set-position! new-position)
+	(if (<= 0 new-position bv.len)
+	    (set! position new-position)
+	  (raise
+	   (condition (make-i/o-invalid-position-error new-position)
+		      (make-who-condition 'make-test-port/set-position!)
+		      (make-message-condition "invalid port position")
+		      (make-irritants-condition (list port))))))
+
+      (define (close)
+	(set! bv #f))
+
+      (set! port (make-custom-binary-input-port "*test-binary-input-port*"
+						read! get-position set-position! close))
+      port))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check	;not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(get-u8 123))
+    => '(123))
+
+  (check	;not an input port
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (get-u8 port)))
+    => #t)
+
+  (check	;not a binary port
+      (let ((port (open-string-input-port "")))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (get-u8 port)))
+    => #t)
+
+  (check	;not a binary port (with transcoded port)
+      (let* ((bin-port  (open-bytevector-input-port '#vu8()))
+	     (tran-port (transcoded-port bin-port (native-transcoder))))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? tran-port (car (condition-irritants E))))
+		  (else E))
+	  (get-u8 tran-port)))
+    => #t)
+
+  (check	;not an open port (with port fast tagged at creation)
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-input-port port)
+	  (get-u8 port)))
+    => #t)
+
+  (check	;not an open port (with port not fast tagged at creation)
+      (let ((port (make-test-bytevector-input-port '#vu8())))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-input-port port)
+	  (get-u8 port)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(get-u8 port))
+    => (eof-object))
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(123))))
+	(get-u8 port))
+    => 123)
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(123))))
+	(get-u8 port)
+	(get-u8 port))
+    => (eof-object))
+
+  #t)
+
+
+(parametrise ((check-test-name	'lookahead-u8))
+
+  (define (make-test-bytevector-input-port bv)
+    (let ((position	0)
+	  (bv.len	(bytevector-length bv))
+	  (port		#f))
+
+      (define (read! dst.bv dst.start count)
+	(let* ((available	(- bv.len position))
+	       (to-read		(min available count)))
+	  (unless (zero? to-read)
+	    (bytevector-copy! bv position dst.bv dst.start to-read)
+	    (set! position (+ to-read position)))
+	  to-read))
+
+      (define (get-position)
+	position)
+
+      (define (set-position! new-position)
+	(if (<= 0 new-position bv.len)
+	    (set! position new-position)
+	  (raise
+	   (condition (make-i/o-invalid-position-error new-position)
+		      (make-who-condition 'make-test-port/set-position!)
+		      (make-message-condition "invalid port position")
+		      (make-irritants-condition (list port))))))
+
+      (define (close)
+	(set! bv #f))
+
+      (set! port (make-custom-binary-input-port "*test-binary-input-port*"
+						read! get-position set-position! close))
+      port))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check	;not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(lookahead-u8 123))
+    => '(123))
+
+  (check	;not an input port
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (lookahead-u8 port)))
+    => #t)
+
+  (check	;not a binary port
+      (let ((port (open-string-input-port "")))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (lookahead-u8 port)))
+    => #t)
+
+  (check	;not a binary port (with transcoded port)
+      (let* ((bin-port  (open-bytevector-input-port '#vu8()))
+	     (tran-port (transcoded-port bin-port (native-transcoder))))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? tran-port (car (condition-irritants E))))
+		  (else E))
+	  (lookahead-u8 tran-port)))
+    => #t)
+
+  (check	;not an open port (with port fast tagged at creation)
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-input-port port)
+	  (lookahead-u8 port)))
+    => #t)
+
+  (check	;not an open port (with port not fast tagged at creation)
+      (let ((port (make-test-bytevector-input-port '#vu8())))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-input-port port)
+	  (lookahead-u8 port)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(lookahead-u8 port))
+    => (eof-object))
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(123))))
+	(lookahead-u8 port))
+    => 123)
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(1 2))))
+	(lookahead-u8 port)
+	(lookahead-u8 port))
+    => 1)
+
+  #t)
+
+
 (parametrise ((check-test-name		'get-bytevector-n)
 	      (test-pathname		(make-test-pathname "get-bytevector-n.bin"))
 	      (input-file-buffer-size	100))
