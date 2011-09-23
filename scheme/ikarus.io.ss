@@ -830,7 +830,7 @@
   (unless (and (or (fixnum? ?position)
 		   (bignum? ?position))
 	       (>= ?position 0))
-    (die ?who "invalid value returned by get-position" ?port ?position)))
+    (assertion-violation ?who "invalid value returned by get-position" ?port ?position)))
 
 (define-inline (%assert-value-is-transcoder ?transcoder ?who)
   (unless (transcoder? ?transcoder)
@@ -943,9 +943,9 @@
   (with-binary-port (port)
     (%unsafe.assert-value-is-open-port port who)
     (when port.transcoder
-      (die who "port is not binary" port))
+      (assertion-violation who "port is not binary" port))
     (unless port.read!
-      (die who "port is not an input port" port))
+      (assertion-violation who "port is not an input port" port))
     (set! port.attributes (%unsafe.fxior port.attributes fast-get-byte-tag))))
 
 
@@ -1812,7 +1812,8 @@
   (cond ((not maybe-transcoder)
 	 binary-input-port-bits)
 	((not (eq? 'none (transcoder-eol-style maybe-transcoder)))
-	 (die who "unsupported transcoder eol-style" (transcoder-eol-style maybe-transcoder)))
+	 (assertion-violation who
+	   "unsupported transcoder eol-style" (transcoder-eol-style maybe-transcoder)))
 	((eq? 'latin-1-codec (transcoder-codec maybe-transcoder))
 	 fast-get-latin-tag)
 	(else
@@ -1828,7 +1829,8 @@
   (cond ((not maybe-transcoder)
 	 binary-output-port-bits)
 	((not (eq? 'none (transcoder-eol-style maybe-transcoder)))
-	 (die who "unsupported transcoder eol-style" (transcoder-eol-style maybe-transcoder)))
+	 (assertion-violation who
+	   "unsupported transcoder eol-style" (transcoder-eol-style maybe-transcoder)))
 	((eq? 'latin-1-codec (transcoder-codec maybe-transcoder))
 	 fast-put-latin-tag)
 	((eq? 'utf-8-codec   (transcoder-codec maybe-transcoder))
@@ -1837,7 +1839,8 @@
 	 ;;By default we select little endian UTF-16.
 	 fast-put-utf16le-tag)
 	(else
-	 (die who "unsupported codec" (transcoder-codec maybe-transcoder)))))
+	 (assertion-violation who
+	   "unsupported codec" (transcoder-codec maybe-transcoder)))))
 
 
 ;;;; guarded ports
@@ -2367,7 +2370,7 @@
   ;;
   (define who 'open-string-input-port)
   (unless (string? str)
-    (die who "not a string" str))
+    (assertion-violation who "not a string" str))
   (%assert-value-is-port-identifier id who)
   ;;The input  string is itself  the buffer!!!  The  port is in  a state
   ;;equivalent to the following:
@@ -2726,7 +2729,7 @@
   ;;
   (define who 'get-output-string)
   (define (wrong-port-error)
-    (die who "not an output-string port" port))
+    (assertion-violation who "not an output-string port" port))
   (%assert-value-is-port port who)
   (with-textual-port (port)
     (unless (%unsafe.textual-output-port? port)
@@ -2832,7 +2835,7 @@
   (%assert-value-is-transcoder transcoder who)
   (with-binary-port (port)
     (when port.transcoder
-      (die who "not a binary port" port))
+      (assertion-violation who "not a binary port" port))
     (%unsafe.assert-value-is-open-port port who)
     (port.mark-as-closed)
     (%port->guarded-port
@@ -2841,7 +2844,7 @@
 		       (port.write!
 			(%output-transcoder-attrs transcoder who))
 		       (else
-			(die who "port is neither input nor output!" port)))
+			(assertion-violation who "port is neither input nor output!" port)))
 		 port.buffer.index port.buffer.used-size port.buffer
 		 transcoder port.id
 		 port.read! port.write! port.get-position port.set-position! port.close
@@ -2946,7 +2949,7 @@
      (with-port (port)
        (set! port.mode mode)))
     (else
-     (die who "invalid mode" mode))))
+     (assertion-violation who "invalid mode" mode))))
 
 (define (port-eof? port)
   ;;Defined by R6RS.   PORT must be an input  port.  Return #t if
@@ -3068,7 +3071,7 @@
 	      (begin
 		;;Avoid further operations and raise an error.
 		(port.mark-as-closed)
-		(die who "write! returned an invalid value" count))
+		(assertion-violation who "write! returned an invalid value" count))
 	    (cond ((unsafe.fx= count port.buffer.used-size)
 		   ;;Full success, all data absorbed.
 		   (port.device.position.incr! port.buffer.used-size)
@@ -3232,10 +3235,10 @@
 	(let* ((max   (unsafe.fx- port.buffer.size port.buffer.used-size))
 	       (count (port.read! buffer port.buffer.used-size max)))
 	  (unless (fixnum? count)
-	    (die who "invalid return value from read! procedure" count))
+	    (assertion-violation who "invalid return value from read! procedure" count))
 	  (unless (and (unsafe.fx>= count 0)
 		       (unsafe.fx<= count max))
-	    (die who "read! returned a value out of range" count))
+	    (assertion-violation who "read! returned a value out of range" count))
 	  (port.device.position.incr!  count)
 	  (port.buffer.used-size.incr! count)
 	  count)))))
@@ -3264,7 +3267,7 @@
 	  (begin
 	    (set! port.buffer.index (unsafe.fxadd1 buffer.offset))
 	    (unsafe.bytevector-u8-ref port.buffer buffer.offset))
-	(%get/peek-u8-byte-mode port who 1)))))
+	(%get/peek-u8 port who 1)))))
 
 (define (lookahead-u8 port)
   ;;Defined by R6RS.  The  LOOKAHEAD-U8 procedure is like GET-U8,
@@ -3281,9 +3284,9 @@
     (let ((buffer.offset port.buffer.index))
       (if (unsafe.fx< buffer.offset port.buffer.used-size)
 	  (unsafe.bytevector-u8-ref port.buffer buffer.offset)
-	(%get/peek-u8-byte-mode port who 0)))))
+	(%get/peek-u8 port who 0)))))
 
-(define (%get/peek-u8-byte-mode port who buffer.offset-after)
+(define (%get/peek-u8 port who buffer.offset-after)
   ;;Subroutine of GET-U8 and LOOKAHEAD-U8.  To be called when the
   ;;port buffer  is fully  consumed.  Get or  peek the  next byte
   ;;from PORT, set the buffer index to BUFFER.OFFSET-AFTER.
@@ -3335,7 +3338,7 @@
     (unless (unsafe.fx= port.fast-attributes fast-get-byte-tag)
       (%validate-and-tag-open-binary-input-port port who))
     (unless (fixnum? count)
-      (die who "count is not a fixnum" count))
+      (assertion-violation who "count is not a fixnum" count))
     (cond ((unsafe.fx> count 0)
 	   (let-values (((out-port extract) (open-bytevector-output-port #f)))
 	     (let retry-after-filling-buffer ((count count))
@@ -3362,7 +3365,7 @@
 	  ((unsafe.fxzero? count)
 	   '#vu8())
 	  (else
-	   (die who "count is negative" count)))))
+	   (assertion-violation who "count is negative" count)))))
 
 (define (get-bytevector-n! port dst.bv start count)
   ;;Defined  by  R6RS.   COUNT  must be  an  exact,  non-negative
@@ -3394,16 +3397,16 @@
       (%validate-and-tag-open-binary-input-port port who))
     (%assert-value-is-bytevector dst.bv who)
     (unless (fixnum? start)
-      (die who "starting index is not a fixnum" start))
+      (assertion-violation who "starting index is not a fixnum" start))
     (unless (fixnum? count)
-      (die who "count is not a fixnum" count))
+      (assertion-violation who "count is not a fixnum" count))
     (let ((len (unsafe.bytevector-length dst.bv)))
       (when (or (unsafe.fx< start 0) (unsafe.fx<= len start))
-	(die who "starting index is out of range" start))
+	(assertion-violation who "starting index is out of range" start))
       (cond ((unsafe.fx> count 0)
 	     (let ((imax (+ start count)))
 	       (when (> imax len)
-		 (die who "count is out of range" count (- len start)))
+		 (assertion-violation who "count is out of range" count (- len start)))
 	       ;;We must return EOF if the first read returns EOF.
 	       (let ((x (get-u8 port)))
 		 (if (eof-object? x)
@@ -3424,7 +3427,7 @@
 	    ((unsafe.fxzero? count)
 	     0)
 	    (else
-	     (die who "count is negative" count))))))
+	     (assertion-violation who "count is negative" count))))))
 
 (define (get-bytevector-some port)
   ;;Defined by  R6RS.  Read from the binary  input PORT, blocking
@@ -3459,7 +3462,7 @@
 		(unsafe.bytevector-u8-set! dst.bv dst.index (unsafe.bytevector-u8-ref buffer buffer.offset))
 		(loop (unsafe.fxadd1 buffer.offset) (unsafe.fxadd1 dst.index)))))))
       (unless (unsafe.fx= port.attributes fast-get-byte-tag)
-	(die who "invalid port argument" port))
+	(assertion-violation who "invalid port argument" port))
       (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	(data-is-needed-at: port.buffer.index)
 	(if-end-of-file: (eof-object))
@@ -3843,7 +3846,8 @@
 			       (make-message-condition message)
 			       (make-irritants-condition irritants))))
 	    (else
-	     (die who "internal error, wrong transcoder error handling mode" mode)))))
+	     (assertion-violation who
+	       "internal error, wrong transcoder error handling mode" mode)))))
 
       (main)))
 
@@ -3967,7 +3971,7 @@
 			     (make-message-condition message)
 			     (make-irritants-condition irritants))))
 	  (else
-	   (die who "cannot happen"))))
+	   (assertion-violation who "cannot happen"))))
 
       (main)))
 
@@ -4010,7 +4014,7 @@
 			       (make-message-condition message)
 			       (make-irritants-condition irritants))))
 	    (else
-	     (die who "internal error: invalid error handling mode" port mode)))))
+	     (assertion-violation who "internal error: invalid error handling mode" port mode)))))
 
 
       (define (integer->char/invalid char-code-point)
@@ -4136,7 +4140,7 @@
 			       (make-message-condition message)
 			       (make-irritants-condition irritants))))
 	    (else
-	     (die who "internal error: invalid error handling mode" port mode)))))
+	     (assertion-violation who "internal error: invalid error handling mode" port mode)))))
 
       (define (integer->char/invalid char-code-point)
       	;;If the argument is a valid integer representation for a
@@ -4280,9 +4284,9 @@
 	;; count = new cookie.pos - old cookie.pos
 	;;
 	(unless (fixnum? count)
-	  (die who "invalid return value from read!" count))
+	  (assertion-violation who "invalid return value from read!" count))
 	(unless (<= 0 count buffer.length)
-	  (die who "return value from read! is out of range" count))
+	  (assertion-violation who "return value from read! is out of range" count))
 	(port.device.position.incr! count)
 	(set! port.buffer.used-size count)
 	(set! port.buffer.index buffer-index-increment)
@@ -4344,7 +4348,7 @@
     (with-textual-port (port)
       (%unsafe.assert-value-is-open-port port who)
       (unless port.transcoder
-	(die who "expected port with transcoder" port))
+	(assertion-violation who "expected port with transcoder" port))
       (case (transcoder-codec port.transcoder)
 	((utf-8-codec)
 	 (set! port.attributes fast-get-utf8-tag)
@@ -4370,7 +4374,7 @@
 	      (%debug-assert (eof-object? big-endian?))
 	      #t))))
 	(else
-	 (die who "BUG: codec not handled" (transcoder-codec port.transcoder))))))
+	 (assertion-violation who "BUG: codec not handled" (transcoder-codec port.transcoder))))))
 
   #| end of module |# )
 
@@ -4384,7 +4388,7 @@
   (%assert-value-is-input-port p who)
   (%unsafe.assert-value-is-textual-port p who)
   (unless (fixnum? n)
-    (die who "count is not a fixnum" n))
+    (assertion-violation who "count is not a fixnum" n))
   (cond
    (($fx> n 0)
     (let ((s ($make-string n)))
@@ -4402,7 +4406,7 @@
 		  s
 		(f p n s i)))))))))
    (($fx= n 0) "")
-   (else (die 'get-string-n "count is negative" n))))
+   (else (assertion-violation 'get-string-n "count is negative" n))))
 
 (define (get-string-n! p s i c)
   (import (ikarus system $fx) (ikarus system $strings))
@@ -4410,21 +4414,21 @@
   (%assert-value-is-input-port p who)
   (%unsafe.assert-value-is-textual-port p who)
   (unless (string? s)
-    (die who "not a string" s))
+    (assertion-violation who "not a string" s))
   (let ((len ($string-length s)))
     (unless (fixnum? i)
-      (die 'get-string-n! "starting index is not a fixnum" i))
+      (assertion-violation 'get-string-n! "starting index is not a fixnum" i))
     (when (or ($fx< i 0) ($fx> i len))
-      (die 'get-string-n!
+      (assertion-violation 'get-string-n!
 	   (format "starting index is out of range 0..~a" len)
 	   i))
     (unless (fixnum? c)
-      (die 'get-string-n! "count is not a fixnum" c))
+      (assertion-violation 'get-string-n! "count is not a fixnum" c))
     (cond
      (($fx> c 0)
       (let ((j (+ i c)))
 	(when (> j len)
-	  (die 'get-string-n!
+	  (assertion-violation 'get-string-n!
                (format "count is out of range 0..~a" (- len i))
                c))
 	(let ((x (get-char p)))
@@ -4443,7 +4447,7 @@
 			i
 		      (f p s start i c))))))))))))
      (($fx= c 0) 0)
-     (else (die 'get-string-n! "count is negative" c)))))
+     (else (assertion-violation 'get-string-n! "count is negative" c)))))
 
 (define ($get-line p who)
   (define (get-it p)
@@ -4522,9 +4526,9 @@
 	       (port.device.position.incr! 1))
 	      ((eq? count 0)
 	       (port.mark-as-closed)
-	       (die who "could not write bytes to output port" port))
+	       (assertion-violation who "could not write bytes to output port" port))
 	      (else
-	       (die who "invalid return value from write! proc" count port)))))))
+	       (assertion-violation who "invalid return value from write! proc" count port)))))))
 
 (define (%put-char/unbuffered! port char who)
   ;;Defined by  Ikarus.  Write directly  the single CHAR  to PORT
@@ -4549,9 +4553,9 @@
 	       (port.device.position.incr! 1))
 	      ((eq? count 0)
 	       (port.mark-as-closed)
-	       (die who "could not write char to output port" port))
+	       (assertion-violation who "could not write char to output port" port))
 	      (else
-	       (die who "invalid return value from write! proc" count port)))))))
+	       (assertion-violation who "invalid return value from write! proc" count port)))))))
 
 
 ;;;; byte and bytevector output
@@ -4562,7 +4566,7 @@
   ;;
   (define who 'put-u8)
   (unless (%u8? byte)
-    (die who "not a u8" byte))
+    (assertion-violation who "not a u8" byte))
   (with-binary-port (port)
     (cond ((unsafe.fx= fast-put-byte-tag port.fast-attributes)
 	   (let try-again-after-flushing-buffer ()
@@ -4583,9 +4587,9 @@
 		 (%unsafe.flush-output-port port who)
 		 (try-again-after-flushing-buffer)))))
 	  ((output-port? port)
-	   (die who "not a binary port" port))
+	   (assertion-violation who "not a binary port" port))
 	  (else
-	   (die who "not an output port" port)))))
+	   (assertion-violation who "not an output port" port)))))
 
 (define put-bytevector
   ;;(put-bytevector port bv)
@@ -4641,9 +4645,9 @@
 						     (unsafe.fx- count room)
 						     (port.buffer.room))))))
 	  ((output-port? port)
-	   (die who "not a binary port" port))
+	   (assertion-violation who "not a binary port" port))
 	  (else
-	   (die who "not an output port" port)))))
+	   (assertion-violation who "not an output port" port)))))
 
 
 ;;;; string output
@@ -4655,16 +4659,16 @@
       ((p bv)
        (if (pred? bv)
 	   ($put p bv 0 (len bv))
-	 (die who not-a-what bv)))
+	 (assertion-violation who not-a-what bv)))
       ((p bv i)
        (if (pred? bv)
 	   (if (fixnum? i)
 	       (let ((n (len bv)))
 		 (if (and (fx<= i n) (fx>= i 0))
 		     ($put p bv i (fx- n i))
-		   (die who "index out of range" i)))
-	     (die who "invalid index" i))
-	 (die who not-a-what bv)))
+		   (assertion-violation who "index out of range" i)))
+	     (assertion-violation who "invalid index" i))
+	 (assertion-violation who not-a-what bv)))
       ((p bv i c)
        (if (pred? bv)
 	   (if (fixnum? i)
@@ -4673,11 +4677,11 @@
 		     (if (fixnum? c)
 			 (if (and (fx>= c 0) (fx>= (fx- n c) i))
 			     ($put p bv i c)
-			   (die who "count out of range" c))
-		       (die who "invalid count" c))
-		   (die who "index out of range" i)))
-	     (die who "invalid index" i))
-	 (die who not-a-what bv)))))))
+			   (assertion-violation who "count out of range" c))
+		       (assertion-violation who "invalid count" c))
+		   (assertion-violation who "index out of range" i)))
+	     (assertion-violation who "invalid index" i))
+	 (assertion-violation who not-a-what bv)))))))
 
 (module (put-char write-char put-string)
   (define (put-byte! p b who)
@@ -4730,7 +4734,7 @@
 		   string? string-length $put-string))
 
   (define (do-put-char p c who)
-    (unless (char? c) (die who "not a char" c))
+    (unless (char? c) (assertion-violation who "not a char" c))
     (let ((m ($port-fast-attrs p)))
       (cond
        ((eq? m fast-put-utf8-tag)
@@ -4780,7 +4784,7 @@
 		((replace) (do-put-char p #\? who))
 		((raise)
 		 (raise (make-i/o-encoding-error p c)))
-		(else (die who "BUG: invalid error handling mode" p))))))))
+		(else (assertion-violation who "BUG: invalid error handling mode" p))))))))
        ((eq? m fast-put-utf16be-tag)
 	(let ((n (char->integer c)))
 	  (cond
@@ -4813,7 +4817,7 @@
 	(%assert-value-is-output-port         p who)
 	(%unsafe.assert-value-is-textual-port p who)
 	(%unsafe.assert-value-is-open-port    p who)
-	(die who "unsupported port" p)))))
+	(assertion-violation who "unsupported port" p)))))
 
   #| end of module |# )
 
@@ -4939,7 +4943,7 @@
 		  (%unsafe.fxior (if (enum-set-member? 'no-create   file-options) 1 0)
 				 (if (enum-set-member? 'no-fail     file-options) 2 0)
 				 (if (enum-set-member? 'no-truncate file-options) 4 0))
-		(die who "file-options is not an enum set" file-options))))
+		(assertion-violation who "file-options is not an enum set" file-options))))
     (let ((fd (platform-open-output-fd (string->utf8 filename) opts)))
       (if (fx< fd 0)
 	  (raise-io-error who filename fd)
@@ -5105,9 +5109,9 @@
    ((filename file-options buffer-mode maybe-transcoder)
     (define who 'open-file-input-port)
     (unless (string? filename)
-      (die who "invalid filename" filename))
+      (assertion-violation who "invalid filename" filename))
     (unless (enum-set? file-options)
-      (die who "file-options is not an enum set" file-options))
+      (assertion-violation who "file-options is not an enum set" file-options))
     (%assert-value-is-maybe-transcoder maybe-transcoder who)
 ;;;FIXME: file-options ignored
 ;;;FIXME: buffer-mode ignored
@@ -5156,7 +5160,7 @@
    ((filename file-options buffer-mode maybe-transcoder)
     (define who 'open-file-output-port)
     (unless (string? filename)
-      (die who "invalid filename" filename))
+      (assertion-violation who "invalid filename" filename))
 ;;;FIXME: file-options ignored
 ;;;FIXME: line-buffered output ports are not handled
     (%assert-value-is-maybe-transcoder maybe-transcoder who)
@@ -5166,7 +5170,7 @@
 			 ((block line)
 			  (output-file-buffer-size))
 			 (else
-			  (die who "invalid buffer mode" buffer-mode)))))
+			  (assertion-violation who "invalid buffer mode" buffer-mode)))))
       (%file-descriptor->output-port (%open-output-file-descriptor filename file-options who)
 				     filename buffer-size maybe-transcoder #t who)))))
 
@@ -5176,7 +5180,7 @@
   ;;
   (define who 'open-output-file)
   (unless (string? filename)
-    (die who "invalid filename" filename))
+    (assertion-violation who "invalid filename" filename))
   (%file-descriptor->output-port (%open-output-file-descriptor filename (file-options) who)
 				 filename (output-file-buffer-size) (native-transcoder) #t who))
 
@@ -5186,7 +5190,7 @@
   ;;
   (define who 'open-input-file)
   (unless (string? filename)
-    (die who "invalid filename" filename))
+    (assertion-violation who "invalid filename" filename))
   (%file-descriptor->input-port (%open-input-file-descriptor filename who)
 				filename (input-file-buffer-size) (native-transcoder) #t who))
 
@@ -5212,7 +5216,7 @@
   ;;
   (define who 'with-output-to-file)
   (unless (string? filename)
-    (die who "invalid filename" filename))
+    (assertion-violation who "invalid filename" filename))
   (%assert-value-is-procedure thunk who)
   (call-with-port
       (%file-descriptor->output-port (%open-output-file-descriptor filename (file-options) who)
@@ -5243,7 +5247,7 @@
   ;;
   (define who 'with-input-from-file)
   (unless (string? filename)
-    (die who "invalid filename" filename))
+    (assertion-violation who "invalid filename" filename))
   (%assert-value-is-procedure thunk who)
   (call-with-port
       (%file-descriptor->input-port (%open-input-file-descriptor filename who)
@@ -5268,7 +5272,7 @@
   ;;
   (define who 'call-with-output-file)
   (unless (string? filename)
-    (die who "invalid filename" filename))
+    (assertion-violation who "invalid filename" filename))
   (%assert-value-is-procedure proc who)
   (call-with-port
       (%file-descriptor->output-port (%open-output-file-descriptor filename (file-options) who)
@@ -5291,7 +5295,7 @@
   ;;
   (define who 'call-with-input-file)
   (unless (string? filename)
-    (die who "invalid filename" filename))
+    (assertion-violation who "invalid filename" filename))
   (%assert-value-is-procedure proc who)
   (call-with-port
       (%file-descriptor->input-port (%open-input-file-descriptor filename who)
@@ -5320,7 +5324,7 @@
   ;;
   (define who 'with-input-from-string)
   (unless (string? string)
-    (die who "not a string" string))
+    (assertion-violation who "not a string" string))
   (%assert-value-is-procedure thunk who)
   (parameterize ((current-input-port (open-string-input-port string)))
     (thunk)))
@@ -5364,9 +5368,11 @@
 	    ((port-pred port)
 	     (if port.device.is-descriptor?
 		 port.device
-	       (die who (string-append arg-name " is not a file-based port") stdin)))
+	       (assertion-violation who
+		 (string-append arg-name " is not a file-based port") stdin)))
 	    (else
-	     (die who (string-append arg-name " is neither false nor an " port-type) stdin)))))
+	     (assertion-violation who
+	       (string-append arg-name " is neither false nor an " port-type) stdin)))))
 
   (define (pair->env-utf8 pair)
     (let* ((key-utf8 (string->utf8 (car pair)))
@@ -5384,9 +5390,9 @@
 	(stdout-fd (port->fd stdout output-port? "stdout" "output port"))
 	(stderr-fd (port->fd stderr output-port? "stderr" "output port")))
     (unless (string? cmd)
-      (die who "command is not a string" cmd))
+      (assertion-violation who "command is not a string" cmd))
     (unless (andmap string? args)
-      (die who "all command arguments must be strings"))
+      (assertion-violation who "all command arguments must be strings"))
     (let ((r (foreign-call "ikrt_process"
 			   (vector search? stdin-fd stdout-fd stderr-fd)
 			   (and env (map pair->env-utf8 env))
@@ -5442,11 +5448,11 @@
     ((_ who foreign-name block?)
      (define (who host srvc)
        (unless (and (string? host) (string? srvc))
-	 (die 'who "host and service must both be strings" host srvc))
+	 (assertion-violation 'who "host and service must both be strings" host srvc))
        (socket->ports
 	(or (foreign-call foreign-name
 			  (string->utf8 host) (string->utf8 srvc))
-	    (die 'who "failed to resolve host name or connect" host srvc))
+	    (assertion-violation 'who "failed to resolve host name or connect" host srvc))
 	'who
 	(string-append host ":" srvc)
 	block?)))))
@@ -5557,7 +5563,7 @@
   (let ((sock (foreign-call "ikrt_listen" portnum)))
     (cond
      ((fx>= sock 0) (make-tcp-server portnum sock))
-     (else (die 'tcp-server-socket "failed to start server")))))
+     (else (assertion-violation 'tcp-server-socket "failed to start server")))))
 
 (define (tcp-server-socket-nonblocking portnum)
   (let ((s (tcp-server-socket portnum)))
@@ -5579,10 +5585,10 @@
       (+ (* 256 (bytevector-u8-ref x 2))
 	 (bytevector-u8-ref x 3))))
   (unless (tcp-server? s)
-    (die who "not a tcp server" s))
+    (assertion-violation who "not a tcp server" s))
   (let ((fd (tcp-server-fd s)) (bv (make-bytevector 16)))
     (unless fd
-      (die who "server is closed" s))
+      (assertion-violation who "server is closed" s))
     (let ((sock (foreign-call "ikrt_accept" fd bv)))
       (cond
        ((eq? sock EAGAIN-error-code)
@@ -5605,13 +5611,13 @@
 (define (close-tcp-server-socket s)
   (define who 'close-tcp-server-socket)
   (unless (tcp-server? s)
-    (die who "not a tcp server" s))
+    (assertion-violation who "not a tcp server" s))
   (let ((fd (tcp-server-fd s)))
     (unless fd
-      (die who "server is closed" s))
+      (assertion-violation who "server is closed" s))
     (let ((rv (foreign-call "ikrt_shutdown" fd)))
       (when (fx< rv 0)
-	(die who "failed to shutdown")))))
+	(assertion-violation who "failed to shutdown")))))
 
 (define (reset-input-port! p)
   (%assert-value-is-input-port p 'reset-input-port!)
@@ -5630,11 +5636,11 @@
 	 (with-port (what)
 	   (let ((c what.device))
 	     (unless (fixnum? c)
-	       (die who "not a file-based port" what))
+	       (assertion-violation who "not a file-based port" what))
 	     (rem-io-event c))))
 	((tcp-server? what)
 	 (rem-io-event (tcp-server-fd what)))
-	(else (die who "invalid argument" what))))
+	(else (assertion-violation who "invalid argument" what))))
 
 (define (register-callback what proc)
   (define who 'register-callback)
@@ -5643,17 +5649,17 @@
 	 (with-port (what)
 	   (let ((c what.device))
 	     (unless (fixnum? c)
-	       (die who "not a file-based port" what))
+	       (assertion-violation who "not a file-based port" what))
 	     (add-io-event c proc 'w))))
 	((input-port? what)
 	 (with-port (what)
 	 (let ((c what.device))
 	   (unless (fixnum? c)
-	     (die who "not a file-based port" what))
+	     (assertion-violation who "not a file-based port" what))
 	   (add-io-event c proc 'r))))
 	((tcp-server? what)
 	 (add-io-event (tcp-server-fd what) proc 'r))
-	(else (die who "invalid argument" what))))
+	(else (assertion-violation who "invalid argument" what))))
 
 
 (module (directory-stream? open-directory-stream
@@ -5673,7 +5679,7 @@
   (define (open-directory-stream filename)
     (define who 'open-directory-stream)
     (unless (string? filename)
-      (die who "not a string" filename))
+      (assertion-violation who "not a string" filename))
     (clean-up)
     (let ((rv (foreign-call "ikrt_opendir" (string->utf8 filename))))
       (if (fixnum? rv)
@@ -5685,9 +5691,9 @@
   (define (read-directory-stream x)
     (define who 'read-directory-stream)
     (unless (directory-stream? x)
-      (die who "not a directory stream" x))
+      (assertion-violation who "not a directory stream" x))
     (when (directory-stream-closed? x)
-      (die who "directory stream is closed" x))
+      (assertion-violation who "directory stream is closed" x))
     (let ((rv (foreign-call "ikrt_readdir"
 			    (directory-stream-pointer x))))
       (cond
@@ -5703,7 +5709,7 @@
       (define who 'close-directory-stream)
       (clean-up)
       (unless (directory-stream? x)
-	(die who "not a directory stream" x))
+	(assertion-violation who "not a directory stream" x))
       (unless (directory-stream-closed? x)
 	(set-directory-stream-closed?! x #t)
 	(let ((rv (foreign-call "ikrt_closedir"
