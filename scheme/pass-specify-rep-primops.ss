@@ -2426,7 +2426,6 @@
 	 (K (- disp-port-attrs vector-tag))
 	 (prm 'logor (prm 'sll (T i) (K port-attrs-shift)) (K port-tag)))))
 
-
  /section)
 
 
@@ -2636,13 +2635,16 @@
 
  /section)
 
-(section ; transcoders
+
+;;;; port transcoders
+
+(section
  ;;A transcoder  is a word  tagged to make  it of a disjoint  type.  The
  ;;transcoder data (codec, EOL style,  error handling) is encoded in the
  ;;most significant bits of this word.
  ;;
  ;;  |---------------------------|------------| transcoder
- ;;         payload bits              tag
+ ;;         payload bits          transcoder-tag
  ;;
 
  (define-primop transcoder? unsafe

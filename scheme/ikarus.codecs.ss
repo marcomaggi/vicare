@@ -2,8 +2,8 @@
 ;;;
 ;;;Abstract
 ;;;
-;;; 	NOTE The primitive operations  on a transcoder value are defined
-;;; 	in "pass-specify-rep-primops.ss".  A  transcoder value is just a
+;;; 	The primitive  operations on a  transcoder value are  defined in
+;;; 	"pass-specify-rep-primops.ss".   A transcoder  value  is just  a
 ;;; 	word tagged  to make  it of disjoint  type; the payload  of this
 ;;; 	word is an 8-bit vector whose format is as follows:
 ;;;
@@ -35,11 +35,10 @@
           make-transcoder native-transcoder buffer-mode?
           transcoder-codec transcoder-eol-style
           transcoder-error-handling-mode)
-  (import
-    (except (ikarus) latin-1-codec utf-8-codec utf-16-codec
-      native-eol-style make-transcoder native-transcoder
-      buffer-mode? transcoder-codec
-      transcoder-eol-style transcoder-error-handling-mode)
+  (import (except (ikarus) latin-1-codec utf-8-codec utf-16-codec
+		  native-eol-style make-transcoder native-transcoder
+		  buffer-mode? transcoder-codec
+		  transcoder-eol-style transcoder-error-handling-mode)
     (ikarus system $transcoders)
     (prefix (rename (ikarus system $fx)
 		    ($fx=	fx=)	;inclusive logic OR
@@ -115,27 +114,28 @@
     (utf-16-codec	. #b01100000)))
 (define codec-mask	  #b11100000)
 
-(define (reverse-lookup bits alist)
+
+(define (%reverse-alist-lookup bits alist)
   (cond ((null? alist)
 	 #f)
 	((unsafe.fx= (cdar alist) bits)
 	 (caar alist))
 	(else
-	 (reverse-lookup bits (cdr alist)))))
+	 (%reverse-alist-lookup bits (cdr alist)))))
 
-(define (codec->fixnum x who)
+(define (%codec->fixnum x who)
   (cond ((assq x codec-alist)
 	 => cdr)
 	(else
 	 (assertion-violation who "not a valid coded" x))))
 
-(define (eol-style->fixnum x who)
+(define (%eol-style->fixnum x who)
   (cond ((assq x eol-style-alist)
 	 => cdr)
 	(else
 	 (assertion-violation who "not a valid eol-style" x))))
 
-(define (error-handling-mode->fixnum x who)
+(define (%error-handling-mode->fixnum x who)
   (cond ((assq x error-handling-mode-alist)
 	 => cdr)
 	(else
@@ -146,9 +146,9 @@
   (case-lambda
    ((codec eol-style handling-mode)
     (define who 'make-transcoder)
-    ($data->transcoder (%unsafe.fxior (error-handling-mode->fixnum handling-mode who)
-				      (eol-style->fixnum	   eol-style     who)
-				      (codec->fixnum		   codec         who))))
+    ($data->transcoder (%unsafe.fxior (%error-handling-mode->fixnum handling-mode who)
+				      (%eol-style->fixnum	    eol-style     who)
+				      (%codec->fixnum		    codec         who))))
    ((codec eol-style)
     (make-transcoder codec eol-style 'replace))
    ((codec)
@@ -161,21 +161,21 @@
   (define who 'transcoder-codec)
   (%assert-value-is-transcoder x who)
   (let ((tag (unsafe.fxand ($transcoder->data x) codec-mask)))
-    (or (reverse-lookup tag codec-alist)
+    (or (%reverse-alist-lookup tag codec-alist)
 	(assertion-violation who "transcoder has no codec" x))))
 
 (define (transcoder-eol-style x)
   (define who 'transcoder-eol-style)
   (%assert-value-is-transcoder x who)
   (let ((tag (unsafe.fxand ($transcoder->data x) eol-style-mask)))
-    (or (reverse-lookup tag eol-style-alist)
+    (or (%reverse-alist-lookup tag eol-style-alist)
 	(assertion-violation who "transcoder has no eol-style" x))))
 
 (define (transcoder-error-handling-mode x)
   (define who 'transcoder-error-handling-mode)
   (%assert-value-is-transcoder x who)
   (let ((tag (unsafe.fxand ($transcoder->data x) error-handling-mode-mask)))
-    (or (reverse-lookup tag error-handling-mode-alist)
+    (or (%reverse-alist-lookup tag error-handling-mode-alist)
 	(assertion-violation who "transcoder has no error-handling mode" x))))
 
 (define (buffer-mode? x)
