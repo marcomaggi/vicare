@@ -4915,6 +4915,25 @@
   #t)
 
 
+(parametrise ((check-test-name	'misc))
+
+  (check
+      (port-id (open-string-input-port ""))
+    => "*string-input-port*")
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(port-id 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+
+  #t)
+
+
 (parametrise ((check-test-name		'get-bytevector-n)
 	      (test-pathname		(make-test-pathname "get-bytevector-n.bin"))
 	      (input-file-buffer-size	100))

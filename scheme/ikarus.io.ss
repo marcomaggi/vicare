@@ -2872,14 +2872,6 @@
   (with-port (port)
     (unsafe.fx= (unsafe.fxand port.attributes closed-port-tag) closed-port-tag)))
 
-(define ($mark-port-closed! port)
-  ;;Set the CLOSED?   bit to 1 in the  attributes or PORT; resets
-  ;;to 0 all the fast tag bits in PORT.
-  ;;
-  (with-port (port)
-    (set! port.attributes (%unsafe.fxior closed-port-tag
-					 (unsafe.fxand port.attributes port-type-mask)))))
-
 (define (close-port port)
   ;;Defined  by  R6RS.   Closes  the  port,  rendering  the  port
   ;;incapable  of delivering or  accepting data.   If PORT  is an
@@ -2919,23 +2911,33 @@
       (when (procedure? port.close)
 	(port.close)))))
 
+(define ($mark-port-closed! port)
+  ;;Set the CLOSED?   bit to 1 in the  attributes or PORT; resets
+  ;;to 0 all the fast tag bits in PORT.
+  ;;
+  (with-port (port)
+    (set! port.attributes (%unsafe.fxior closed-port-tag
+					 (unsafe.fxand port.attributes port-type-mask)))))
+
 
 ;;;; auxiliary port functions
 
 (define (port-id port)
+  ;;Defined by Ikarus.  Return the string identifier of a port.
+  ;;
   (%assert-value-is-port port 'port-id)
   (with-port (port)
     port.id))
 
 (define (port-mode port)
-  ;;Defined by Ikarus.
+  ;;Defined by Ikarus.  The port mode is used only by the reader.
   ;;
   (%assert-value-is-port port 'port-mode)
   (with-port (port)
     port.mode))
 
 (define (set-port-mode! port mode)
-  ;;Defined by Ikarus.
+  ;;Defined by Ikarus.  The port mode is used only by the reader.
   ;;
   (define who 'set-port-mode!)
   (%assert-value-is-port port who)
@@ -2977,11 +2979,6 @@
 
 
 ;;;; buffer handling for output ports
-;;
-;;Output functions always append  data to the output buffer; when
-;;the output  buffer is full:  data is flushed to  the underlying
-;;device by calling the port's WRITE! function.
-;;
 
 (define flush-output-port
   (case-lambda
