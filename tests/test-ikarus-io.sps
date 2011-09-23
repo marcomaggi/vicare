@@ -4931,6 +4931,58 @@
 
 ;;; --------------------------------------------------------------------
 
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(port-mode 123))
+    => '(123))
+
+  (check
+      (port-mode (open-bytevector-input-port '#vu8()))
+    => 'vicare-mode)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(set-port-mode! 123 'vicare-mode))
+    => '(123))
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(set-port-mode! (open-bytevector-input-port '#vu8())
+			123))
+    => '(123))
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(set-port-mode! port 'r6rs-mode)
+	(port-mode port))
+    => 'r6rs-mode)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(output-port-buffer-mode 123))
+    => '(123))
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(output-port-buffer-mode port))
+    => 'block)
+
   #t)
 
 
