@@ -40,42 +40,45 @@
 ;;
 ;;* Write tests for all the untested functions.
 ;;
-;;*   Test  the  transcoders   with  OPEN-BYTEVECTOR-OUTPUT-PORT,
-;;especially the SET-PORT-POSITION! function.
+;;* Move  the CLOSED?   bit in the  attributes into the  fast attributes
+;;bitvector?  It would make it easier to test for valid fast tagging.
 ;;
-;;*  FIXME If SET-PORT-POSITION!   fails it  is possible  for the
-;;field POS of the cookie to become invalid.  This situation must
-;;be detected by all the functions, currently it is not.
+;;*  Test the  transcoders with  OPEN-BYTEVECTOR-OUTPUT-PORT, especially
+;;the SET-PORT-POSITION! function.
+;;
+;;* FIXME If SET-PORT-POSITION!  fails  it is possible for the field POS
+;;of the cookie  to become invalid.  This situation  must be detected by
+;;all the functions, currently it is not.
 ;;
 ;;* Write documentation for the Ikarus-specific functions.
 ;;
-;;* When a decoding error  occurs from an input port: R6RS states
-;;that an "appropriate" number of  input bytes must be skipped in
-;;search for the next character.  Implement this by searching for
-;;the  next character beginning  discarding the  minimum possible
-;;number of bytes, for example in UTF-8 discard at most 3 bytes.
+;;* When a decoding error occurs from an input port: R6RS states that an
+;;"appropriate" number of input bytes  must be skipped in search for the
+;;next character.   Implement this by  searching for the  next character
+;;beginning discarding the minimum possible number of bytes, for example
+;;in UTF-8 discard at most 3 bytes.
 ;;
 ;;* Implement missing R6RS functions.
 ;;
-;;*  Exceptions  raised by  SET-PORT-POSITION!  must be  reviewed
-;;because they do not comply with R6RS.
+;;* Exceptions  raised by  SET-PORT-POSITION!  must be  reviewed because
+;;they do not comply with R6RS.
 ;;
 ;;* R6RS states the following about SET-PORT-POSITION!:
 ;;
-;;  If PORT is  a binary output port and  the current position is
-;;  set beyond the current end of the data in the underlying data
-;;  sink, the object is not extended until new data is written at
-;;  that position.  The contents of any intervening positions are
-;;  unspecified.   Binary ports created  by OPEN-FILE-OUTPUT-PORT
-;;  and  OPEN-FILE-INPUT/OUTPUT-PORT can  always  be extended  in
-;;  this  manner within  the limits  of the  underlying operating
-;;  system.  In other cases, attempts  to set the port beyond the
-;;  current end of data in the underlying object may result in an
-;;  exception with condition type &i/o-invalid-position.
+;;  If PORT  is a  binary output  port and the  current position  is set
+;;  beyond the current end of the  data in the underlying data sink, the
+;;  object is not  extended until new data is  written at that position.
+;;  The contents  of any intervening positions  are unspecified.  Binary
+;;  ports        created       by        OPEN-FILE-OUTPUT-PORT       and
+;;  OPEN-FILE-INPUT/OUTPUT-PORT  can always be  extended in  this manner
+;;  within  the limits  of the  underlying operating  system.   In other
+;;  cases, attempts  to set the port  beyond the current end  of data in
+;;  the underlying object may result in an exception with condition type
+;;  &i/o-invalid-position.
 ;;
-;;* Change  OPEN-STRING-INPUT-PORT and OPEN-BYTEVECTOR-INPUT-PORT
-;;to use the  string or buffer itself as buffer  when it is short
-;;enough, and to use a separate buffer otherwise.
+;;* Change OPEN-STRING-INPUT-PORT  and OPEN-BYTEVECTOR-INPUT-PORT to use
+;;the string or buffer itself as  buffer when it is short enough, and to
+;;use a separate buffer otherwise.
 ;;
 
 
