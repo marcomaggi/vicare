@@ -3278,7 +3278,7 @@
 	  (begin
 	    (set! port.buffer.index (unsafe.fxadd1 buffer.offset))
 	    (unsafe.bytevector-u8-ref port.buffer buffer.offset))
-	(%get/peek-u8 port who 1)))))
+	(%get/peek-u8-from-device port who 1)))))
 
 (define (lookahead-u8 port)
   ;;Defined by R6RS.  The  LOOKAHEAD-U8 procedure is like GET-U8,
@@ -3297,9 +3297,9 @@
     (let ((buffer.offset port.buffer.index))
       (if (unsafe.fx< buffer.offset port.buffer.used-size)
 	  (unsafe.bytevector-u8-ref port.buffer buffer.offset)
-	(%get/peek-u8 port who 0)))))
+	(%get/peek-u8-from-device port who 0)))))
 
-(define (%get/peek-u8 port who buffer.offset-after)
+(define (%get/peek-u8-from-device port who buffer.offset-after)
   ;;Subroutine of GET-U8 and LOOKAHEAD-U8.  To be called when the
   ;;port buffer  is fully  consumed.  Get or  peek the  next byte
   ;;from PORT, set the buffer index to BUFFER.OFFSET-AFTER.
