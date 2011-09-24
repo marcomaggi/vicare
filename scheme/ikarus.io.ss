@@ -883,6 +883,15 @@
   (unless (or (procedure? ?proc) (not ?proc))
     (assertion-violation ?who "SET-POSITION! should be either a procedure or false" ?proc)))
 
+;;; --------------------------------------------------------------------
+
+(define-inline (%assert-value-is-count-argument ?count ?who)
+  (let ((count ?count))
+    (unless (and (integer? count) (exact? count))
+      (assertion-violation ?who "expected exact integer as count argument" count))
+    (unless (<= 0 count)
+      (assertion-violation ?who "expected non-negative exact integer as count argument" count))))
+
 
 ;;;; error helpers
 
@@ -936,7 +945,7 @@
 (define-inline (%list-holding-single-value? ell)
   (and (not (null? ell)) (null? (cdr ell))))
 
-(define (%validate-and-tag-open-binary-input-port port who)
+(define (%validate-untagged-port-as-open-binary-input-then-tag-it port who)
   ;;Assuming that PORT is a port object: validate PORT as an open
   ;;binary input port.  This function is to be called if the port
   ;;fast  attributes  are  not  equal to  FAST-GET-BYTE-TAG.   If
@@ -3272,7 +3281,7 @@
     ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
     ;;PORT.FAST-ATTRIBUTES which does not include it).
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
-      (%validate-and-tag-open-binary-input-port port who))
+      (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
     (let ((buffer.offset port.buffer.index))
       (if (unsafe.fx< buffer.offset port.buffer.used-size)
 	  (begin
@@ -3293,7 +3302,7 @@
     ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
     ;;PORT.FAST-ATTRIBUTES which does not include it).
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
-      (%validate-and-tag-open-binary-input-port port who))
+      (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
     (let ((buffer.offset port.buffer.index))
       (if (unsafe.fx< buffer.offset port.buffer.used-size)
 	  (unsafe.bytevector-u8-ref port.buffer buffer.offset)
@@ -3316,69 +3325,57 @@
 ;;;; bytevector input functions
 
 (define (get-bytevector-n port count)
-  ;;Defined  by  R6RS.   COUNT  must be  an  exact,  non-negative
-  ;;integer object representing the number of bytes to be read.
+  ;;Defined  by R6RS.   COUNT  must be  an  exact, non-negative  integer
+  ;;object representing the number of bytes to be read.
   ;;
-  ;;The  GET-BYTEVECTOR-N procedure reads  from the  binary input
-  ;;PORT, blocking as necessary,  until COUNT bytes are available
-  ;;from PORT or until an end of file is reached.
+  ;;The  GET-BYTEVECTOR-N procedure  reads from  the binary  input PORT,
+  ;;blocking as necessary, until COUNT  bytes are available from PORT or
+  ;;until an end of file is reached.
   ;;
-  ;;If  COUNT  bytes  are   available  before  an  end  of  file,
-  ;;GET-BYTEVECTOR-N returns a bytevector of size COUNT.
+  ;;If COUNT bytes are available before an end of file, GET-BYTEVECTOR-N
+  ;;returns a bytevector of size COUNT.
   ;;
-  ;;If  fewer  bytes  are   available  before  an  end  of  file,
-  ;;GET-BYTEVECTOR-N   returns  a  bytevector   containing  those
-  ;;bytes. In  either case,  the input port  is updated  to point
-  ;;just past the bytes read.
+  ;;If fewer bytes are available before an end of file, GET-BYTEVECTOR-N
+  ;;returns  a bytevector containing  those bytes.  In either  case, the
+  ;;input port is updated to point just past the bytes read.
   ;;
-  ;;If an end of file  is reached before any bytes are available,
+  ;;If  an  end of  file  is reached  before  any  bytes are  available,
   ;;GET-BYTEVECTOR-N returns the EOF object.
   ;;
   (define who 'get-bytevector-n)
-  (define (%subbytevector src.bv src.len)
-    ;;Build  and return  a new  bytevector holding  the  bytes in
-    ;;SRC.BV from 0 to SRC.LEN.
-    ;;
-    (let ((dst.bv (unsafe.make-bytevector src.len)))
-      (let loop ((count src.len))
-	(let ((count (unsafe.fxsub1 count)))
-	  (unsafe.bytevector-u8-set! dst.bv count (unsafe.bytevector-u8-ref src.bv count))
-	  (if (unsafe.fxzero? count)
-	      dst.bv
-	    (loop count))))))
   (%assert-value-is-port port who)
   (with-binary-port (port)
+    ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
+    ;;PORT.FAST-ATTRIBUTES which does not include it).
     (unless (unsafe.fx= port.fast-attributes fast-get-byte-tag)
-      (%validate-and-tag-open-binary-input-port port who))
-    (unless (fixnum? count)
-      (assertion-violation who "count is not a fixnum" count))
-    (cond ((unsafe.fx> count 0)
-	   (let-values (((out-port extract) (open-bytevector-output-port #f)))
-	     (let retry-after-filling-buffer ((count count))
-	       (define (data-available-in-buffer)
-		 (let* ((buffer.used-size	port.buffer.used-size)
-			(buffer.offset		port.buffer.index)
-			(amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
-			(all-count?		(unsafe.fx<= count amount-of-available))
-			(amount-to-write	(if all-count? count amount-of-available)))
-		   (put-bytevector out-port port.buffer buffer.offset amount-to-write)
-                   (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-write))
-                   (if all-count?
-		       (extract)
-		     (retry-after-filling-buffer (unsafe.fx- count amount-of-available)))))
-	       (%maybe-refill-bytevector-buffer-and-evaluate (port who)
-		 (data-is-needed-at: port.buffer.index)
-		 (if-end-of-file:
-		  (let ((result (extract)))
-		    (if (zero? (unsafe.bytevector-length result))
-			(eof-object)
-		      result)))
-		 (if-successful-refill: (data-available-in-buffer))
-		 (if-available-data: (data-available-in-buffer))))))
-	  ((unsafe.fxzero? count)
-	   '#vu8())
-	  (else
-	   (assertion-violation who "count is negative" count)))))
+      (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
+    (%assert-value-is-count-argument count who)
+    (if (zero? count)
+	(quote #vu8())
+      (let retry-after-filling-buffer ((list-of-bytevectors	'())
+				       (count			count))
+	(define (data-available-in-buffer)
+	  (let* ((buffer.used-size	port.buffer.used-size)
+		 (buffer.offset	port.buffer.index)
+		 (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
+		 (all-count?		(<= count amount-of-available))
+		 (amount-to-read	(if all-count? count amount-of-available)))
+	    (let ((bv (unsafe.make-bytevector amount-to-read)))
+	      (%unsafe.bytevector-copy! port.buffer buffer.offset bv 0 amount-to-read)
+	      (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-read))
+	      (let ((list-of-bytevectors (cons bv list-of-bytevectors)))
+		(if all-count?
+		    (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors)
+		  (retry-after-filling-buffer list-of-bytevectors (- count amount-of-available)))))))
+	(%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	  (data-is-needed-at: port.buffer.index)
+	  (if-end-of-file:
+	   (let ((result (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors)))
+	     (if (zero? (unsafe.bytevector-length result))
+		 (eof-object)
+	       result)))
+	  (if-successful-refill: (data-available-in-buffer))
+	  (if-available-data: (data-available-in-buffer)))))))
 
 (define (get-bytevector-n! port dst.bv start count)
   ;;Defined  by  R6RS.   COUNT  must be  an  exact,  non-negative
@@ -3406,8 +3403,10 @@
   (define who 'get-bytevector-n!)
   (%assert-value-is-port port who)
   (with-binary-port (port)
+    ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
+    ;;PORT.FAST-ATTRIBUTES which does not include it).
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
-      (%validate-and-tag-open-binary-input-port port who))
+      (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
     (%assert-value-is-bytevector dst.bv who)
     (unless (fixnum? start)
       (assertion-violation who "starting index is not a fixnum" start))
@@ -3459,7 +3458,7 @@
   (%assert-value-is-port port who)
   (with-binary-port (port)
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
-      (%validate-and-tag-open-binary-input-port port who))
+      (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
     (let ()
       (define (data-available-in-buffer)
 	(let* ((buffer		port.buffer)
@@ -3498,7 +3497,7 @@
   (%assert-value-is-port port who)
   (with-binary-port (port)
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
-      (%validate-and-tag-open-binary-input-port port who))
+      (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
     (let-values (((out-port getter) (open-bytevector-output-port #f)))
       (let retry-after-filling-buffer ()
 	(define (data-available-in-buffer)

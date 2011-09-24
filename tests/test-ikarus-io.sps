@@ -5341,6 +5341,16 @@
 	  (get-bytevector-n port 1)))
     => #t)
 
+  (check	;argument is not an open port
+      (let-values (((port getter) (open-string-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-output-port port)
+	  (get-bytevector-n port 1)))
+    => #t)
+
   (check	;count is not a fixnum
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
 	(guard (E ((assertion-violation? E)
@@ -5439,11 +5449,10 @@
 	  (%bytevector-u8-compare bv (bindata-hundreds.bv))))
     => #t)
 
-  ;; (check	;count is much bigger than  buffer size and equal to the
-  ;; 		;whole available data size
-  ;;     (with-input-test-pathname (port)
-  ;; 	(get-bytevector-n port (bindata-hundreds.len)))
-  ;;   => (bindata-hundreds.bv))
+  (check	;count is bigger than available data
+      (let ((port (open-bytevector-input-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+	(get-bytevector-n port 20))
+    => '#vu8(0 1 2 3 4 5 6 7 8 9))
 
   #t)
 
