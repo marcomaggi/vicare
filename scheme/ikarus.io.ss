@@ -885,12 +885,36 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (%assert-value-is-count-argument ?count ?who)
+(define (%assert-value-is-count-argument ?count ?who)
   (let ((count ?count))
     (unless (and (integer? count) (exact? count))
       (assertion-violation ?who "expected exact integer as count argument" count))
     (unless (<= 0 count)
       (assertion-violation ?who "expected non-negative exact integer as count argument" count))))
+
+(define (%assert-value-is-start-index-for-bytevector-argument dst.start dst.bv who)
+  (unless (and (integer? dst.start) (exact? dst.start))
+    (assertion-violation who "expected exact integer as bytevector start index argument" dst.start))
+  (unless (>= dst.start 0)
+    (assertion-violation who "expected non-negative exact integer as start index argument" dst.start))
+  (unless (<  dst.start (unsafe.bytevector-length dst.bv))
+    (assertion-violation who
+      (string-append "start index argument "
+		     (number->string dst.start)
+		     " too big for bytevector of length "
+		     (number->string (unsafe.bytevector-length dst.bv)))
+      dst.start)))
+
+(define (%assert-value-is-count-from-start-in-bytevector-argument count start dst.bv who)
+  (unless (<= (+ start count) (unsafe.bytevector-length dst.bv))
+    (assertion-violation who
+      (string-append "count argument "
+		     (number->string count)
+		     " from start index "
+		     (number->string start)
+		     " too big for bytevector of length "
+		     (number->string (unsafe.bytevector-length dst.bv)))
+      count)))
 
 
 ;;;; error helpers
@@ -3347,7 +3371,7 @@
   (with-binary-port (port)
     ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
     ;;PORT.FAST-ATTRIBUTES which does not include it).
-    (unless (unsafe.fx= port.fast-attributes fast-get-byte-tag)
+    (unless (unsafe.fx= port.attributes fast-get-byte-tag)
       (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
     (%assert-value-is-count-argument count who)
     (if (zero? count)
@@ -3356,7 +3380,7 @@
 				       (count			count))
 	(define (data-available-in-buffer)
 	  (let* ((buffer.used-size	port.buffer.used-size)
-		 (buffer.offset	port.buffer.index)
+		 (buffer.offset		port.buffer.index)
 		 (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
 		 (all-count?		(<= count amount-of-available))
 		 (amount-to-read	(if all-count? count amount-of-available)))
@@ -3378,27 +3402,25 @@
 	  (if-available-data: (data-available-in-buffer)))))))
 
 (define (get-bytevector-n! port dst.bv start count)
-  ;;Defined  by  R6RS.   COUNT  must be  an  exact,  non-negative
-  ;;integer object, representing the  number of bytes to be read.
-  ;;DST.BV  must  be  a  bytevector  with  at  least  START+COUNT
-  ;;elements.
+  ;;Defined  by R6RS.   COUNT  must be  an  exact, non-negative  integer
+  ;;object, representing the number of bytes to be read.  DST.BV must be
+  ;;a bytevector with at least START+COUNT elements.
   ;;
-  ;;The GET-BYTEVECTOR-N!  procedure  reads from the binary input
-  ;;PORT, blocking as necessary,  until COUNT bytes are available
-  ;;or until an end of file is reached.
+  ;;The GET-BYTEVECTOR-N!   procedure reads from the  binary input PORT,
+  ;;blocking as necessary,  until COUNT bytes are available  or until an
+  ;;end of file is reached.
   ;;
-  ;;If COUNT bytes are available  before an end of file, they are
-  ;;written into  DST.BV starting at index START,  and the result
-  ;;is COUNT.
+  ;;If COUNT bytes are available before an end of file, they are written
+  ;;into DST.BV starting at index START, and the result is COUNT.
   ;;
-  ;;If fewer bytes are available before the next end of file, the
-  ;;available  bytes are  written into  DST.BV starting  at index
-  ;;START,  and the result  is a  number object  representing the
-  ;;number of bytes actually read.
+  ;;If  fewer bytes  are  available before  the  next end  of file,  the
+  ;;available bytes are written into DST.BV starting at index START, and
+  ;;the  result is  a number  object  representing the  number of  bytes
+  ;;actually read.
   ;;
-  ;;In either case, the input  port is updated to point just past
-  ;;the bytes read. If an end of file is reached before any bytes
-  ;;are available, GET-BYTEVECTOR-N!  returns the EOF object.
+  ;;In either  case, the input  port is updated  to point just  past the
+  ;;bytes  read.  If  an end  of file  is reached  before any  bytes are
+  ;;available, GET-BYTEVECTOR-N!  returns the EOF object.
   ;;
   (define who 'get-bytevector-n!)
   (%assert-value-is-port port who)
@@ -3408,38 +3430,32 @@
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
       (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
     (%assert-value-is-bytevector dst.bv who)
-    (unless (fixnum? start)
-      (assertion-violation who "starting index is not a fixnum" start))
-    (unless (fixnum? count)
-      (assertion-violation who "count is not a fixnum" count))
-    (let ((len (unsafe.bytevector-length dst.bv)))
-      (when (or (unsafe.fx< start 0) (unsafe.fx<= len start))
-	(assertion-violation who "starting index is out of range" start))
-      (cond ((unsafe.fx> count 0)
-	     (let ((imax (+ start count)))
-	       (when (> imax len)
-		 (assertion-violation who "count is out of range" count (- len start)))
-	       ;;We must return EOF if the first read returns EOF.
-	       (let ((x (get-u8 port)))
-		 (if (eof-object? x)
-		     x
-		   (begin
-		     (unsafe.bytevector-u8-set! dst.bv start x)
-		     ;;From  now on  we must  return the  number of
-		     ;;read bytes.
-		     (let loop ((i (unsafe.fxadd1 start)))
-		       (if (unsafe.fx= i imax)
-			   i
-			 (let ((x (get-u8 port)))
-			   (if (eof-object? x)
-			       i
-			     (begin
-			       (unsafe.bytevector-u8-set! dst.bv i x)
-			       (loop (unsafe.fxadd1 i))))))))))))
-	    ((unsafe.fxzero? count)
-	     0)
-	    (else
-	     (assertion-violation who "count is negative" count))))))
+    (%assert-value-is-start-index-for-bytevector-argument start dst.bv who)
+    (%assert-value-is-count-argument count who)
+    (%assert-value-is-count-from-start-in-bytevector-argument count start dst.bv who)
+    (if (zero? count)
+	count
+      (let retry-after-filling-buffer ((dst.start start)
+				       (count     count))
+	(define (data-available-in-buffer)
+	  (let* ((buffer.used-size	port.buffer.used-size)
+		 (buffer.offset		port.buffer.index)
+		 (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
+		 (all-count?		(<= count amount-of-available))
+		 (amount-to-read	(if all-count? count amount-of-available)))
+	    (%unsafe.bigdst-bytevector-copy! port.buffer buffer.offset dst.bv dst.start amount-to-read)
+	    (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-read))
+	    (let ((dst.start (+ dst.start amount-to-read)))
+	      (if all-count?
+		  dst.start
+		(retry-after-filling-buffer dst.start (- count amount-to-read))))))
+	(%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	  (data-is-needed-at: port.buffer.index)
+	  (if-end-of-file: (if (= dst.start start)
+			       (eof-object)
+			     (- dst.start start)))
+	  (if-successful-refill: (data-available-in-buffer))
+	  (if-available-data: (data-available-in-buffer)))))))
 
 (define (get-bytevector-some port)
   ;;Defined by  R6RS.  Read from the binary  input PORT, blocking

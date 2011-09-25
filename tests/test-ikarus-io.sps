@@ -46,6 +46,23 @@
 ;; (output-socket-buffer-size	256)
 
 
+;;;; syntax helpers
+
+(define-syntax unwind-protect
+  (syntax-rules ()
+    ((_ ?body ?cleanup0 ?cleanup ...)
+     (let ((cleanup (lambda () ?cleanup0 ?cleanup ...)))
+       (with-exception-handler
+	   (lambda (E)
+	     (cleanup)
+	     (raise E))
+	 (lambda ()
+	   (call-with-values
+	       (lambda () ?body)
+	     (lambda return-values
+	       (cleanup)
+	       (apply values return-values)))))))))
+
 (define-syntax test
   ;;Derived from "scheme/tests/io.ss"
   (syntax-rules ()
@@ -102,23 +119,19 @@
 		  #f)
 	      (loop (+ 1 i)))))))))
 
-
-;;;; syntax helpers
+(define (%open-disposable-binary-output-port)
+  (let-values (((port getter) (open-bytevector-output-port)))
+    port))
 
-(define-syntax unwind-protect
-  (syntax-rules ()
-    ((_ ?body ?cleanup0 ?cleanup ...)
-     (let ((cleanup (lambda () ?cleanup0 ?cleanup ...)))
-       (with-exception-handler
-	   (lambda (E)
-	     (cleanup)
-	     (raise E))
-	 (lambda ()
-	   (call-with-values
-	       (lambda () ?body)
-	     (lambda return-values
-	       (cleanup)
-	       (apply values return-values)))))))))
+(define (%open-disposable-textual-output-port)
+  (let-values (((port getter) (open-string-output-port)))
+    port))
+
+(define (%open-disposable-binary-input-port)
+  (open-bytevector-input-port '#vu8(1)))
+
+(define (%open-disposable-textual-input-port)
+  (open-string-input-port "1"))
 
 
 ;;;; file helpers
@@ -5309,11 +5322,11 @@
   #t)
 
 
-(parametrise ((check-test-name		'get-bytevector-n)
+(parametrise ((check-test-name		'get-bytevector-n-plain)
 	      (test-pathname		(make-test-pathname "get-bytevector-n.bin"))
 	      (input-file-buffer-size	100))
 
-;;; arguments validation
+;;; port argument validation
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
@@ -5324,7 +5337,7 @@
     => '(123))
 
   (check	;argument is not an input port
-      (let-values (((port getter) (open-bytevector-output-port)))
+      (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
 ;;;		   (pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
@@ -5333,7 +5346,7 @@
     => #t)
 
   (check	;argument is not a binary port
-      (let-values (((port getter) (open-string-output-port)))
+      (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
 ;;;		   (pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
@@ -5342,32 +5355,44 @@
     => #t)
 
   (check	;argument is not an open port
-      (let-values (((port getter) (open-string-output-port)))
+      (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
 ;;;		   (pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
-	  (close-output-port port)
+	  (close-input-port port)
 	  (get-bytevector-n port 1)))
     => #t)
 
-  (check	;count is not a fixnum
-      (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
+;;; --------------------------------------------------------------------
+;;; count argument validation
+
+  (check	;count is not an integer
+      (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
 ;;;		   (pretty-print (condition-message E))
-		   (eqv? #\a (car (condition-irritants E))))
+		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n port #\a)))
-    => #t)
+    => '(#\a))
 
-  (check	;count is negative
-      (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
+  (check 	;count is not an exact integer
+      (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
 ;;;		   (pretty-print (condition-message E))
-		   (car (condition-irritants E)))
+		   (condition-irritants E))
+		  (else E))
+	  (get-bytevector-n port 1.0)))
+    => '(1.0))
+
+  (check 	;count is negative
+      (let ((port (%open-disposable-binary-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n port -3)))
-    => -3)
+    => '(-3))
 
 ;;; --------------------------------------------------------------------
 ;;; input from a bytevector port
@@ -5453,6 +5478,237 @@
       (let ((port (open-bytevector-input-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
 	(get-bytevector-n port 20))
     => '#vu8(0 1 2 3 4 5 6 7 8 9))
+
+  #t)
+
+
+(parametrise ((check-test-name		'get-bytevector-n-bang)
+	      (test-pathname		(make-test-pathname "get-bytevector-n-bang.bin"))
+	      (input-file-buffer-size	100))
+
+;;; port argument validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(get-bytevector-n! 123 (make-bytevector 1) 0 1))
+    => '(123))
+
+  (check	;argument is not an input port
+      (let ((port (%open-disposable-binary-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (get-bytevector-n! port (make-bytevector 1) 0 1)))
+    => #t)
+
+  (check	;argument is not a binary port
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (get-bytevector-n! port  (make-bytevector 1) 0 1)))
+    => #t)
+
+  (check	;argument is not an open port
+      (let ((port (%open-disposable-binary-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-input-port port)
+	  (get-bytevector-n! port  (make-bytevector 1) 0 1)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; bytevector argument validation
+
+  (check	;argument is not a bytevector
+      (let ((port (%open-disposable-binary-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (get-bytevector-n! port  123 0 1)))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; start index argument validation
+
+  (check	;argument start index is not an integer
+      (let ((port (%open-disposable-binary-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (get-bytevector-n! port  (make-bytevector 1) #\a 1)))
+    => '(#\a))
+
+  (check	;argument start index is not an exact integer
+      (let ((port (%open-disposable-binary-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (get-bytevector-n! port  (make-bytevector 1) 1.0 1)))
+    => '(1.0))
+
+  (check	;argument start index is negative
+      (let ((port (%open-disposable-binary-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (get-bytevector-n! port  (make-bytevector 1) -1 1)))
+    => '(-1))
+
+  (check	;argument start index is too big
+      (let ((port (%open-disposable-binary-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (get-bytevector-n! port  (make-bytevector 1) 2 1)))
+    => '(2))
+
+;;; --------------------------------------------------------------------
+;;; count argument validation
+
+  (check	;count is not an integer
+      (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
+	(guard (E ((assertion-violation? E)
+		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (get-bytevector-n! port (make-bytevector 1) 0 #\a)))
+    => '(#\a))
+
+  (check	;count is not an exact integer
+      (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (get-bytevector-n! port (make-bytevector 1) 0 1.0)))
+    => '(1.0))
+
+  (check	;count is negative
+      (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (get-bytevector-n! port (make-bytevector 1) 0 -1)))
+    => '(-1))
+
+  (check	;count is too big
+      (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (get-bytevector-n! port (make-bytevector 1) 0 123)))
+    => '(123))
+
+  (check	;count is too big
+      (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (get-bytevector-n! port (make-bytevector 1) 0 2)))
+    => '(2))
+
+;;; --------------------------------------------------------------------
+;;; input from a bytevector port
+
+;;; ADATTARE QUESTI TEST
+
+  (check	;no data available
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(get-bytevector-n! port 10))
+    => (eof-object))
+
+  (check	;count is zero
+      (let ((port (open-bytevector-input-port (bindata-hundreds.bv))))
+	(get-bytevector-n! port 0))
+    => (bindata-empty.bv))
+
+  (check	;count is 1
+      (let ((port (open-bytevector-input-port (bindata-hundreds.bv))))
+	(get-bytevector-n! port 1))
+    => (bindata-zero.bv))
+
+  (check	;count is 10
+      (let ((port (open-bytevector-input-port (bindata-hundreds.bv))))
+	(get-bytevector-n! port 10))
+    => (bindata-ten.bv))
+
+  (check	;count is big
+      (let ((port (open-bytevector-input-port (bindata-hundreds.bv))))
+	(get-bytevector-n! port (bindata-hundreds.len)))
+    => (bindata-hundreds.bv))
+
+;; ;;; --------------------------------------------------------------------
+;; ;;; input from a file
+
+;;   (check	;no data available
+;;       (parametrise ((test-pathname-data-func bindata-empty.bv))
+;; 	(with-input-test-pathname (port)
+;; 	  (get-bytevector-n! port 10)))
+;;     => (eof-object))
+
+;;   (check	;count is 1, much smaller than buffer size
+;;       (with-input-test-pathname (port)
+;; 	(get-bytevector-n! port 1))
+;;     => (bindata-zero.bv))
+
+;;   (check	;count is 10, much smaller than buffer size
+;;       (with-input-test-pathname (port)
+;; 	(get-bytevector-n! port 10))
+;;     => (bindata-ten.bv))
+
+;;   (check	;count equals buffer size
+;;       (parametrise ((input-file-buffer-size (bindata-bytes.len)))
+;; 	(with-input-test-pathname (port)
+;; 	  (get-bytevector-n! port (input-file-buffer-size))))
+;;     => (bindata-bytes.bv))
+
+;;   (check	;count is  equal to buffer  size and equal to  the whole
+;; 		;available data size
+;;       (parametrise ((input-file-buffer-size	(bindata-bytes.len))
+;; 		    (test-pathname-data-func	bindata-bytes.bv))
+;; 	(with-input-test-pathname (port)
+;; 	  (get-bytevector-n! port (bindata-bytes.len))))
+;;     => (bindata-bytes.bv))
+
+;;   (check	;count is bigger than buffer size
+;;       (with-input-test-pathname (port)
+;; 	(get-bytevector-n! port (bindata-bytes.len)))
+;;     => (bindata-bytes.bv))
+
+;;   (check	;count is much bigger than  buffer size and equal to the
+;; 		;whole available data size
+;;       (with-input-test-pathname (port)
+;; 	(bytevector-length (get-bytevector-n! port (bindata-hundreds.len))))
+;;     => (bindata-hundreds.len))
+
+;;   (check	;count is much bigger than  buffer size and equal to the
+;;   		;whole available data size
+;;       (with-input-test-pathname (port)
+;;   	(let ((bv (get-bytevector-n! port (bindata-hundreds.len)))
+;; 	      (lim 4500))
+;; 	  (%bytevector-u8-compare bv (bindata-hundreds.bv))))
+;;     => #t)
+
+;;   (check	;count is bigger than available data
+;;       (let ((port (open-bytevector-input-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
+;; 	(get-bytevector-n! port 20))
+;;     => '#vu8(0 1 2 3 4 5 6 7 8 9))
 
   #t)
 
