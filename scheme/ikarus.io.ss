@@ -692,7 +692,12 @@
   ;;Extract the type bits from the tag of a port X.
   ;;
   (identifier-syntax (lambda (x)
-		       (unsafe.fxand ($port-tag x) fast-attrs-mask))))
+		       (unsafe.fxand ($port-attrs x) fast-attrs-mask))))
+
+(define-syntax $set-port-fast-attrs!
+  (syntax-rules ()
+    ((_ ?port ?tag)
+     ($set-port-attrs! ?port (%unsafe.fxior ($port-attrs ?port) ?tag)))))
 
 (define-syntax case-textual-input-port-fast-tag
   (syntax-rules ( ;;
@@ -969,26 +974,109 @@
 (define-inline (%list-holding-single-value? ell)
   (and (not (null? ell)) (null? (cdr ell))))
 
+
+;;;; port tagging helpers
+
 (define (%validate-untagged-port-as-open-binary-input-then-tag-it port who)
-  ;;Assuming that PORT is a port object: validate PORT as an open
-  ;;binary input port.  This function is to be called if the port
-  ;;fast  attributes  are  not  equal to  FAST-GET-BYTE-TAG.   If
-  ;;successful  mark  the  port  with the  FAST-GET-BYTE-TAG  and
-  ;;return, else raise an exception.
+  ;;Assuming  that PORT  is a  port object:  validate PORT  as  an open,
+  ;;binary, input port.  This function is  to be called if the port fast
+  ;;attributes are  not equal to FAST-GET-BYTE-TAG.   If successful mark
+  ;;the  port  with the  FAST-GET-BYTE-TAG  and  return,  else raise  an
+  ;;exception.
   ;;
-  ;;This function  is meant to  be used by  GET-U8, LOOKAHEAD-U8,
-  ;;GET-BYTEVECTOR-N,   GET-BYTEVECTOR-N!,   GET-BYTEVECTOR-SOME,
+  ;;This  function  is  meant   to  be  used  by  GET-U8,  LOOKAHEAD-U8,
+  ;;GET-BYTEVECTOR-N,       GET-BYTEVECTOR-N!,      GET-BYTEVECTOR-SOME,
   ;;GET-BYTEVECTOR-ALL.
   ;;
+  (%unsafe.assert-value-is-binary-port port who)
+  (%unsafe.assert-value-is-input-port  port who)
+  (%unsafe.assert-value-is-open-port   port who)
   (with-binary-port (port)
-    (%unsafe.assert-value-is-binary-port port who)
-    (%unsafe.assert-value-is-input-port  port who)
-    (%unsafe.assert-value-is-open-port   port who)
     ;; (when port.transcoder
     ;;   (assertion-violation who "port is not binary" port))
     ;; (unless port.read!
     ;;   (assertion-violation who "port is not an input port" port))
-    (set! port.attributes (%unsafe.fxior port.attributes fast-get-byte-tag))))
+    (set! port.fast-attributes fast-get-byte-tag)))
+
+(define (%validate-untagged-port-as-open-textual-input-then-parse-bom-and-add-fast-tag port who)
+  ;;Assuming PORT  is a  port object: validate  it as an  open, textual,
+  ;;input  port;  read the  Byte  Order  Mark  expected for  the  port's
+  ;;transcoder  and  mutate  the  port's  attributes  tagging  the  port
+  ;;accordingly.  Return #t if port is at EOF, #f otherwise.
+  ;;
+  (define utf-8-byte-order-mark			'(#xEF #xBB #xBF))
+  (define utf-16-big-endian-byte-order-mark	'(#xFE #xFF))
+  (define utf-16-little-endian-byte-order-mark	'(#xFF #xFE))
+  (%unsafe.assert-value-is-textual-port port who)
+  (%unsafe.assert-value-is-input-port port who)
+  (%unsafe.assert-value-is-open-port port who)
+  (with-textual-port (port)
+    (unless port.transcoder
+      (assertion-violation who "textual port is expected to have a transcoder" port))
+    (case (transcoder-codec port.transcoder)
+      ((utf-8-codec)
+       (set! port.fast-attributes fast-get-utf8-tag)
+       (eof-object? (%parse-byte-order-mark port who utf-8-byte-order-mark)))
+      ((utf-16-codec)
+       (let ((big-endian? (%parse-byte-order-mark port who utf-16-big-endian-byte-order-mark)))
+	 (case big-endian?
+	   ((#t)
+	    (set! port.fast-attributes fast-get-utf16be-tag)
+	    #f)
+	   ((#f)
+	    (let ((little-endian? (%parse-byte-order-mark port who utf-16-little-endian-byte-order-mark)))
+	      (case little-endian?
+		((#t #f)
+		 ;;If  no BOM  is present,  we select  little  endian by
+		 ;;default.
+		 (set! port.fast-attributes fast-get-utf16le-tag)
+		 #f)
+		(else
+		 (%debug-assert (eof-object? little-endian?))
+		 #t))))
+	   (else
+	    (%debug-assert (eof-object? big-endian?))
+	    #t))))
+      (else
+       (assertion-violation who "BUG: codec not handled" (transcoder-codec port.transcoder))))))
+
+(define (%parse-byte-order-mark port who bom)
+  ;;Read and consume  bytes from PORT verifying if  they match the given
+  ;;sequence of bytes representing a Byte Order Mark (BOM).
+  ;;
+  ;;PORT must  be a textual  or binary input  port with a  bytevector as
+  ;;buffer.  BOM  must be  a list of  fixnums representing  the expected
+  ;;Byte Order Mark sequence.
+  ;;
+  ;;Return #t  if the whole  BOM sequence is  read and matched;  in this
+  ;;case the port position is left right after the BOM sequence.
+  ;;
+  ;;Return #f if the bytes from  the port do not match the BOM sequence;
+  ;;in this  case the  port position is  left at  the same point  it was
+  ;;before this function call.
+  ;;
+  ;;Return the EOF  object if the port reaches EOF  before the whole BOM
+  ;;is matched; in this case the port position is left at the same point
+  ;;it was before this function call.
+  ;;
+  (with-port (port)
+    (let next-byte-in-bom ((number-of-consumed-bytes 0)
+			   (bom bom))
+      (if (null? bom)
+	  ;;Full  success:  all  the  bytes in  the  given  BOM
+	  ;;sequence where matched.
+	  (begin
+	    (port.buffer.index.incr! number-of-consumed-bytes)
+	    #t)
+	(let retry-after-filling-buffer ()
+	  (let ((buffer.offset (unsafe.fx+ number-of-consumed-bytes port.buffer.index)))
+	    (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	      (data-is-needed-at: buffer.offset)
+	      (if-end-of-file: (eof-object))
+	      (if-successful-refill: (retry-after-filling-buffer))
+	      (if-available-data:
+	       (and (unsafe.fx= (car bom) (unsafe.bytevector-u8-ref port.buffer buffer.offset))
+		    (next-byte-in-bom (unsafe.fxadd1 number-of-consumed-bytes) (cdr bom)))))))))))
 
 
 ;;;; bytevector helpers
@@ -1208,13 +1296,16 @@
 		  (PORT.CLOSE		(identifier-syntax ($port-close		?port)))
 		  (PORT.COOKIE		(identifier-syntax ($port-cookie	?port)))
 		  (PORT.CLOSED?		(identifier-syntax (%unsafe.port-closed? ?port)))
-		  (PORT.FAST-ATTRIBUTES	(identifier-syntax ($port-fast-attrs	?port)))
-		  (PORT.BUFFER.SIZE
-		   (identifier-syntax (?buffer-length ($port-buffer ?port))))
 		  (PORT.ATTRIBUTES
 		   (identifier-syntax
 		    (_			($port-attrs ?port))
 		    ((set! id ?value)	($set-port-attrs! ?port ?value))))
+		  (PORT.FAST-ATTRIBUTES
+		   (identifier-syntax
+		    (_			($port-fast-attrs ?port))
+		    ((set! _ ?tag)	($set-port-fast-attrs! ?port ?tag))))
+		  (PORT.BUFFER.SIZE
+		   (identifier-syntax (?buffer-length ($port-buffer ?port))))
 		  (PORT.BUFFER.INDEX
 		   (identifier-syntax
 		    (_			($port-index ?port))
@@ -3203,20 +3294,17 @@
 	 (if-successful-refill:	. ?after-refill-body))))))
 
 (define (%unsafe.refill-input-port-bytevector-buffer port who)
-  ;;Assume  PORT is  an input  port object  with a  bytevector as
-  ;;buffer.   Fill  the input  buffer  keeping  in  it the  bytes
-  ;;already there but not  yet consumed (see the pictures below);
-  ;;mutate  the  PORT structure  fields  representing the  buffer
-  ;;state and the port position.
+  ;;Assume PORT  is an  input port object  with a bytevector  as buffer.
+  ;;Fill the input buffer keeping in  it the bytes already there but not
+  ;;yet  consumed (see the  pictures below);  mutate the  PORT structure
+  ;;fields representing the buffer state and the port position.
   ;;
-  ;;Return the number  of new bytes loaded.  If  the return value
-  ;;is zero:  the underlying device has  no more bytes,  it is at
-  ;;its EOF, but  there may still be bytes to  be consumed in the
-  ;;buffer unless  the buffer  was already fully  consumed before
-  ;;this function call.
+  ;;Return the number of new bytes loaded.  If the return value is zero:
+  ;;the underlying device has no more bytes, it is at its EOF, but there
+  ;;may still  be bytes to be  consumed in the buffer  unless the buffer
+  ;;was already fully consumed before this function call.
   ;;
-  ;;This  shold be  the only  function calling  the  port's READ!
-  ;;function.
+  ;;This should be the only function calling the port's READ!  function.
   ;;
   (with-binary-port (port)
     ;;Textual  ports (with  transcoder) can  be built  on  top of
@@ -3533,44 +3621,44 @@
 
 (module (read-char get-char lookahead-char peek-char)
 
-  (define (get-char p)
-    ;;Defined  by  R6RS.   Read  from  the  textual  input  PORT,
-    ;;blocking  as  necessary,  until  a  complete  character  is
-    ;;available, or until an end of file is reached.
+  (define (get-char port)
+    ;;Defined by  R6RS.  Read from  the textual input PORT,  blocking as
+    ;;necessary, until  a complete character  is available, or  until an
+    ;;end of file is reached.
     ;;
-    ;;If a complete character is available before the next end of
-    ;;file, GET-CHAR returns that character and updates the input
-    ;;port to  point past  the character.  If  an end of  file is
-    ;;reached before any character  is read, GET-CHAR returns the
-    ;;end--of--file object.
+    ;;If a complete character is  available before the next end of file,
+    ;;GET-CHAR  returns that  character and  updates the  input  port to
+    ;;point past the character.  If an end of file is reached before any
+    ;;character is read, GET-CHAR returns the EOF object.
     ;;
-    (do-get-char p 'get-char))
+    (%do-get-char port 'get-char))
 
   (define read-char
-    ;;Defined by  R6RS.  Reads from textual  input PORT, blocking
-    ;;as necessary  until a character  is available, or  the data
-    ;;that  is  available  cannot  be  the prefix  of  any  valid
-    ;;encoding, or an end of file is reached.
+    ;;Defined  by R6RS.   Reads  from textual  input  PORT, blocking  as
+    ;;necessary  until a  character is  available, or  the data  that is
+    ;;available cannot be the prefix of any valid encoding, or an end of
+    ;;file is reached.
     ;;
-    ;;If a complete character is available before the next end of
-    ;;file:  READ-CHAR  returns that  character  and updates  the
-    ;;input port to point past that character.
+    ;;If a complete character is  available before the next end of file:
+    ;;READ-CHAR  returns that character  and updates  the input  port to
+    ;;point past that character.
     ;;
-    ;;If  an end of  file is  reached before  any data  are read:
-    ;;READ-CHAR returns the end--of--file object.
+    ;;If an end  of file is reached before any  data are read: READ-CHAR
+    ;;returns the EOF object.
     ;;
-    ;;If PORT  is omitted, it  defaults to the value  returned by
+    ;;If  PORT  is  omitted,  it  defaults  to  the  value  returned  by
     ;;CURRENT-INPUT-PORT.
     ;;
     (case-lambda
      ((port)
-      (do-get-char port 'read-char))
+      (%do-get-char port 'read-char))
      (()
-      (do-get-char (current-input-port) 'read-char))))
+      (%do-get-char (current-input-port) 'read-char))))
 
-  (define (do-get-char port who)
+  (define (%do-get-char port who)
     (define-inline (recurse)
-      (do-get-char port who))
+      (%do-get-char port who))
+    (%assert-value-is-port port who)
     (with-textual-port (port)
       (case-textual-input-port-fast-tag port
 	((fast-get-utf8-tag)
@@ -3646,7 +3734,7 @@
 	(else
 	 ;;If PORT  references a port  structure it has  not been
 	 ;;tagged yet.
-	 (if (validate-port-then-parse-bom-and-add-fast-tag-to-untagged-port port who)
+	 (if (%validate-untagged-port-as-open-textual-input-then-parse-bom-and-add-fast-tag port who)
 	     (eof-object)
 	   (recurse))))))
 
@@ -3734,7 +3822,7 @@
 	(else
 	 ;;If PORT  references a port  structure it has  not been
 	 ;;tagged yet.
-	 (if (validate-port-then-parse-bom-and-add-fast-tag-to-untagged-port port who)
+	 (if (%validate-untagged-port-as-open-textual-input-then-parse-bom-and-add-fast-tag port who)
 	     (eof-object)
 	   (recurse))))))
 
@@ -3742,10 +3830,10 @@
 ;;; GET-CHAR and LOOKAHEAD-CHAR for ports with UTF-8 transcoder
 
   (define (get-char-utf8-mode port who byte0)
-    ;;Subroutine of DO-GET-CHAR.  Read  from a textual input PORT
+    ;;Subroutine of %DO-GET-CHAR.  Read  from a textual input PORT
     ;;a UTF-8 encoded character for the cases of 2, 3 and 4 bytes
     ;;encoding;  the  case  of  1-byte  encoding  is  handled  by
-    ;;DO-GET-CHAR.
+    ;;%DO-GET-CHAR.
     ;;
     ;;BYTE0  is the  first byte  of the  UTF-8  sequence, already
     ;;extracted by the calling function.
@@ -3864,7 +3952,7 @@
 	(let ((mode (transcoder-error-handling-mode port.transcoder)))
 	  (case mode
 	    ((ignore)
-	     (do-get-char port who))
+	     (%do-get-char port who))
 	    ((replace)
 	     #\xFFFD)
 	    ((raise)
@@ -4032,7 +4120,7 @@
 	(let ((mode (transcoder-error-handling-mode port.transcoder)))
 	  (case mode
 	    ((ignore)
-	     (do-get-char port who endianness))
+	     (%do-get-char port who endianness))
 	    ((replace)
 	     #\xFFFD)
 	    ((raise)
@@ -4158,7 +4246,7 @@
 	(let ((mode (transcoder-error-handling-mode port.transcoder)))
 	  (case mode
 	    ((ignore)
-	     (do-get-char port who endianness))
+	     (%do-get-char port who endianness))
 	    ((replace)
 	     #\xFFFD)
 	    ((raise)
@@ -4272,11 +4360,11 @@
 ;;; GET-CHAR and LOOKAHEAD-CHAR for ports with string input buffer
 
   (define (get/lookahead-char-char-mode port who buffer-index-increment)
-    ;;Subroutine of DO-GET-CHAR or  DO-PEEK-CHAR.  PORT must be a
-    ;;textual  input port with  a Scheme  string as  buffer; such
-    ;;buffer must  have been already fully  consumed.  Refill the
-    ;;input buffer reading from  the underlying device and return
-    ;;the next Scheme character from the buffer consuming it.
+    ;;Subroutine  of  %DO-GET-CHAR  or  DO-PEEK-CHAR.  PORT  must  be  a
+    ;;textual input  port with  a Scheme string  as buffer;  such buffer
+    ;;must have  been already fully  consumed.  Refill the  input buffer
+    ;;reading  from the  underlying device  and return  the  next Scheme
+    ;;character from the buffer consuming it.
     ;;
     ;;When  BUFFER-INDEX-INCREMENT  is 1  this  function acts  as
     ;;GET-CHAR,   when  it   is   0  this   function  acts   like
@@ -4320,88 +4408,6 @@
 	(if (unsafe.fxzero? count)
 	    (eof-object)
 	  (string-ref port.buffer 0)))))
-
-;;; --------------------------------------------------------------------
-;;; Byte Order Mark (BOM) processing
-
-  (define (advance-bom port who bom)
-    ;;Read and  consume bytes from  PORT verifying if  they match
-    ;;the given sequence of  bytes representing a Byte Order Mark
-    ;;(BOM).
-    ;;
-    ;;PORT must  be an  input port with  a bytevector  as buffer.
-    ;;BOM  must be a  list of  fixnums representing  the expected
-    ;;Byte Order Mark sequence.
-    ;;
-    ;;Return #t if the whole BOM sequence is read and matched; in
-    ;;this case  the port  position is left  right after  the BOM
-    ;;sequence.
-    ;;
-    ;;Return #f if  the bytes from the port do  not match the BOM
-    ;;sequence; in  this case  the port position  is left  at the
-    ;;same point it was before this function call.
-    ;;
-    ;;Return the  EOF object if  the port reaches EOF  before the
-    ;;whole BOM  is matched;  in this case  the port  position is
-    ;;left at the same point it was before this function call.
-    ;;
-    (with-port (port)
-      (let next-byte-in-bom ((number-of-consumed-bytes 0)
-			     (bom bom))
-	(if (null? bom)
-	    ;;Full  success:  all  the  bytes in  the  given  BOM
-	    ;;sequence where matched.
-	    (begin
-	      (port.buffer.index.incr! number-of-consumed-bytes)
-	      #t)
-	  (let retry-after-filling-buffer ()
-	    (let ((buffer.offset (unsafe.fx+ number-of-consumed-bytes port.buffer.index)))
-	      (%maybe-refill-bytevector-buffer-and-evaluate (port who)
-		(data-is-needed-at: buffer.offset)
-		(if-end-of-file: (eof-object))
-		(if-successful-refill: (retry-after-filling-buffer))
-		(if-available-data:
-		 (and (unsafe.fx= (car bom) (unsafe.bytevector-u8-ref port.buffer buffer.offset))
-		      (next-byte-in-bom (unsafe.fxadd1 number-of-consumed-bytes) (cdr bom)))))))))))
-
-  (define (validate-port-then-parse-bom-and-add-fast-tag-to-untagged-port port who)
-    ;;Validate PORT  as a still  open, textual, input  port; read
-    ;;the Byte Order Mark  expected for the port's transcoder and
-    ;;mutate the port's  attributes tagging the port accordingly.
-    ;;Return #t if port is at EOF, #f otherwise.
-    ;;
-    (%assert-value-is-input-port port who)
-    (%unsafe.assert-value-is-textual-port port who)
-    (with-textual-port (port)
-      (%unsafe.assert-value-is-open-port port who)
-      (unless port.transcoder
-	(assertion-violation who "expected port with transcoder" port))
-      (case (transcoder-codec port.transcoder)
-	((utf-8-codec)
-	 (set! port.attributes fast-get-utf8-tag)
-	 (eof-object? (advance-bom port who '(#xEF #xBB #xBF))))
-	((utf-16-codec)
-	 (let ((big-endian? (advance-bom port who '(#xFE #xFF))))
-	   (case big-endian?
-	     ((#t)
-	      (set! port.attributes fast-get-utf16be-tag)
-	      #f)
-	     ((#f)
-	      (let ((little-endian? (advance-bom port who '(#xFF #xFE))))
-		(case little-endian?
-		  ((#t #f)
-		   ;;If  no  BOM  is  present, we  select  little
-		   ;;endian by default.
-		   (set! port.attributes fast-get-utf16le-tag)
-		   #f)
-		  (else
-		   (%debug-assert (eof-object? little-endian?))
-		   #t))))
-	     (else
-	      (%debug-assert (eof-object? big-endian?))
-	      #t))))
-	(else
-	 (assertion-violation who "BUG: codec not handled" (transcoder-codec port.transcoder))))))
 
   #| end of module |# )
 

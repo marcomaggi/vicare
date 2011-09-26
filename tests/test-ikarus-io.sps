@@ -133,6 +133,15 @@
 (define (%open-disposable-textual-input-port)
   (open-string-input-port "1"))
 
+(define (%string->latin-1 str)
+  (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+    (put-string port str)
+    (extract)))
+
+(define (%latin-1->string bv)
+  (let ((port (open-bytevector-input-port bv (make-transcoder (latin-1-codec)))))
+    (get-string-all port)))
+
 
 ;;;; file helpers
 
@@ -4828,16 +4837,6 @@
 (parametrise ((check-test-name			'transcoded-port)
 	      (bytevector-port-buffer-size	8))
 
-  (define (%string->latin-1 str)
-    (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
-      (put-string port str)
-      (extract)))
-
-  (define (%latin-1->string bv)
-    (let ((port (open-bytevector-input-port bv (make-transcoder (latin-1-codec)))))
-      (get-string-all port)))
-
-;;; --------------------------------------------------------------------
 ;;; arguments validation
 
   (check	;argument is not a port
@@ -5942,6 +5941,112 @@
 	(let ((bv (get-bytevector-all port)))
 	  (list bv (port-eof? port))))
     => (list (bindata-hundreds.bv) #t))
+
+  #t)
+
+
+(parametrise ((check-test-name	'read-char))
+
+;;; port argument validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(read-char 123))
+    => '(123))
+
+  (check	;argument is not an input port
+      (let ((port (%open-disposable-textual-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (read-char port)))
+    => #t)
+
+  (check	;argument is not a textual port
+      (let ((port (%open-disposable-binary-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (read-char port)))
+    => #t)
+
+  (check	;argument is not an open port
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-input-port port)
+	  (read-char port)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; reading from string input port
+
+;;Remember that a string input port has the string itself as buffer.
+
+  (check	;no input available
+      (let ((port (open-string-input-port "")))
+	(get-char port))
+    => (eof-object))
+
+  (check	;read single char
+      (let ((port (open-string-input-port "ciao")))
+	(get-char port))
+    => #\c)
+
+  (check	;read multiple chars
+      (let ((port (open-string-input-port "ciao")))
+	(let ((c1 (get-char port))
+	      (c2 (get-char port))
+	      (c3 (get-char port))
+	      (c4 (get-char port)))
+	  (list c1 c2 c3 c4 (get-char port))))
+    => (list #\c #\i #\a #\o (eof-object)))
+
+;;; --------------------------------------------------------------------
+;;; reading from bytevector input port, transcoded UTF-8
+
+  (let ((str "ciao àáèéìíòóùú λΓσΩ"))
+    (check
+	(let* ((bin-port	(open-bytevector-input-port (string->utf8 str)))
+	       (port		(transcoded-port bin-port (make-transcoder (utf-8-codec)))))
+	  (do ((i 0 (+ 1 i))
+	       (L '() (cons (read-char port) L)))
+	      ((= i (string-length str))
+	       (apply string (reverse L)))))
+      => str))
+
+;;; --------------------------------------------------------------------
+;;; reading from bytevector input port, transcoded UTF-16
+
+  (let ((str "ciao àáèéìíòóùú λΓσΩ"))
+    (check
+	(let* ((bin-port	(open-bytevector-input-port (string->utf16 str (endianness little))))
+	       (port		(transcoded-port bin-port (make-transcoder (utf-16-codec)))))
+	  (do ((i 0 (+ 1 i))
+	       (L '() (cons (read-char port) L)))
+	      ((= i (string-length str))
+	       (apply string (reverse L)))))
+      => str))
+
+;;; --------------------------------------------------------------------
+;;; reading from bytevector input port, transcoded Latin-1
+
+  (let ((str "ciao àáèéìíòóùú"))
+    (check
+	(let* ((bin-port	(open-bytevector-input-port (%string->latin-1 str)))
+	       (port		(transcoded-port bin-port (make-transcoder (latin-1-codec)))))
+	  (do ((i 0 (+ 1 i))
+	       (L '() (cons (read-char port) L)))
+	      ((= i (string-length str))
+	       (apply string (reverse L)))))
+      => str))
 
   #t)
 
