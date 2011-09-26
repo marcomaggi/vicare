@@ -3401,21 +3401,21 @@
 	  (if-successful-refill: (data-available-in-buffer))
 	  (if-available-data: (data-available-in-buffer)))))))
 
-(define (get-bytevector-n! port dst.bv start count)
+(define (get-bytevector-n! port dst.bv dst.start count)
   ;;Defined  by R6RS.   COUNT  must be  an  exact, non-negative  integer
   ;;object, representing the number of bytes to be read.  DST.BV must be
-  ;;a bytevector with at least START+COUNT elements.
+  ;;a bytevector with at least DST.START+COUNT elements.
   ;;
   ;;The GET-BYTEVECTOR-N!   procedure reads from the  binary input PORT,
   ;;blocking as necessary,  until COUNT bytes are available  or until an
   ;;end of file is reached.
   ;;
   ;;If COUNT bytes are available before an end of file, they are written
-  ;;into DST.BV starting at index START, and the result is COUNT.
+  ;;into DST.BV starting at index DST.START, and the result is COUNT.
   ;;
   ;;If  fewer bytes  are  available before  the  next end  of file,  the
-  ;;available bytes are written into DST.BV starting at index START, and
-  ;;the  result is  a number  object  representing the  number of  bytes
+  ;;available bytes are written into DST.BV starting at index DST.START,
+  ;;and the result  is a number object representing  the number of bytes
   ;;actually read.
   ;;
   ;;In either  case, the input  port is updated  to point just  past the
@@ -3430,12 +3430,12 @@
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
       (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
     (%assert-value-is-bytevector dst.bv who)
-    (%assert-value-is-start-index-for-bytevector-argument start dst.bv who)
+    (%assert-value-is-start-index-for-bytevector-argument dst.start dst.bv who)
     (%assert-value-is-count-argument count who)
-    (%assert-value-is-count-from-start-in-bytevector-argument count start dst.bv who)
+    (%assert-value-is-count-from-start-in-bytevector-argument count dst.start dst.bv who)
     (if (zero? count)
 	count
-      (let retry-after-filling-buffer ((dst.start start)
+      (let retry-after-filling-buffer ((tmp.start dst.start)
 				       (count     count))
 	(define (data-available-in-buffer)
 	  (let* ((buffer.used-size	port.buffer.used-size)
@@ -3443,17 +3443,17 @@
 		 (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
 		 (all-count?		(<= count amount-of-available))
 		 (amount-to-read	(if all-count? count amount-of-available)))
-	    (%unsafe.bigdst-bytevector-copy! port.buffer buffer.offset dst.bv dst.start amount-to-read)
+	    (%unsafe.bigdst-bytevector-copy! port.buffer buffer.offset dst.bv tmp.start amount-to-read)
 	    (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-read))
-	    (let ((dst.start (+ dst.start amount-to-read)))
+	    (let ((tmp.start (+ tmp.start amount-to-read)))
 	      (if all-count?
-		  dst.start
-		(retry-after-filling-buffer dst.start (- count amount-to-read))))))
+		  (- tmp.start dst.start)
+		(retry-after-filling-buffer tmp.start (- count amount-to-read))))))
 	(%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	  (data-is-needed-at: port.buffer.index)
-	  (if-end-of-file: (if (= dst.start start)
+	  (if-end-of-file: (if (= tmp.start dst.start)
 			       (eof-object)
-			     (- dst.start start)))
+			     (- tmp.start dst.start)))
 	  (if-successful-refill: (data-available-in-buffer))
 	  (if-available-data: (data-available-in-buffer)))))))
 

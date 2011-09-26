@@ -5581,7 +5581,7 @@
   (check	;count is not an integer
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
 	(guard (E ((assertion-violation? E)
-		   (pretty-print (condition-message E))
+;;;		   (pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n! port (make-bytevector 1) 0 #\a)))
@@ -5626,89 +5626,136 @@
 ;;; --------------------------------------------------------------------
 ;;; input from a bytevector port
 
-;;; ADATTARE QUESTI TEST
-
   (check	;no data available
       (let ((port (open-bytevector-input-port '#vu8())))
-	(get-bytevector-n! port 10))
+	(get-bytevector-n! port (make-bytevector 10) 0 10))
     => (eof-object))
 
   (check	;count is zero
-      (let ((port (open-bytevector-input-port (bindata-hundreds.bv))))
-	(get-bytevector-n! port 0))
-    => (bindata-empty.bv))
+      (let ((port	(open-bytevector-input-port '#vu8(123 2 3)))
+	    (bv		(make-bytevector 1 0))
+	    (start	0)
+	    (count	0))
+	(list (get-bytevector-n! port bv start count) bv))
+    => '(0 #vu8(0)))
 
   (check	;count is 1
-      (let ((port (open-bytevector-input-port (bindata-hundreds.bv))))
-	(get-bytevector-n! port 1))
-    => (bindata-zero.bv))
+      (let ((port	(open-bytevector-input-port (bindata-hundreds.bv)))
+	    (bv		(make-bytevector 1))
+	    (start	0)
+	    (count	1))
+	(list (get-bytevector-n! port bv start count) bv))
+    => (list 1 (bindata-zero.bv)))
 
   (check	;count is 10
-      (let ((port (open-bytevector-input-port (bindata-hundreds.bv))))
-	(get-bytevector-n! port 10))
-    => (bindata-ten.bv))
+      (let ((port (open-bytevector-input-port (bindata-hundreds.bv)))
+	    (bv		(make-bytevector 10))
+	    (start	0)
+	    (count	10))
+	(list (get-bytevector-n! port bv start count) bv))
+    => (list 10 (bindata-ten.bv)))
 
   (check	;count is big
-      (let ((port (open-bytevector-input-port (bindata-hundreds.bv))))
-	(get-bytevector-n! port (bindata-hundreds.len)))
-    => (bindata-hundreds.bv))
+      (let ((port	(open-bytevector-input-port (bindata-hundreds.bv)))
+	    (bv		(make-bytevector (bindata-hundreds.len)))
+	    (start	0)
+	    (count	(bindata-hundreds.len)))
+	(list (get-bytevector-n! port bv start count) bv))
+    => (list (bindata-hundreds.len) (bindata-hundreds.bv)))
 
-;; ;;; --------------------------------------------------------------------
-;; ;;; input from a file
+  (check	;exercise start
+      (let ((port	(open-bytevector-input-port '#vu8(1 2 3 4 5 6 7 8 9)))
+	    (bv		(make-bytevector 10 0))
+	    (start	3)
+	    (count	6))
+	(list (get-bytevector-n! port bv start count) bv))
+    => '(6 #vu8(0 0 0 1 2 3 4 5 6 0)))
 
-;;   (check	;no data available
-;;       (parametrise ((test-pathname-data-func bindata-empty.bv))
-;; 	(with-input-test-pathname (port)
-;; 	  (get-bytevector-n! port 10)))
-;;     => (eof-object))
+  (check	;exercise start
+      (let ((port	(open-bytevector-input-port '#vu8(1 2 3 4 5 6 7 8 9)))
+	    (bv		(make-bytevector 10 0))
+	    (start	8)
+	    (count	1))
+	(list (get-bytevector-n! port bv start count) bv))
+    => '(1 #vu8(0 0 0 0 0 0 0 0 1 0)))
 
-;;   (check	;count is 1, much smaller than buffer size
-;;       (with-input-test-pathname (port)
-;; 	(get-bytevector-n! port 1))
-;;     => (bindata-zero.bv))
+  (check	;count is bigger than available data
+      (let ((port	(open-bytevector-input-port '#vu8(0 1 2 3 4 5 6 7 8 9)))
+	    (bv		(make-bytevector 20 123))
+	    (start	0)
+	    (count	20))
+	(list (get-bytevector-n! port bv start count) bv))
+    => '(10 #vu8(0 1 2 3 4 5 6 7 8 9
+		   123 123 123
+		   123 123 123
+		   123 123 123
+		   123)))
 
-;;   (check	;count is 10, much smaller than buffer size
-;;       (with-input-test-pathname (port)
-;; 	(get-bytevector-n! port 10))
-;;     => (bindata-ten.bv))
+;;; --------------------------------------------------------------------
+;;; input from a file
 
-;;   (check	;count equals buffer size
-;;       (parametrise ((input-file-buffer-size (bindata-bytes.len)))
-;; 	(with-input-test-pathname (port)
-;; 	  (get-bytevector-n! port (input-file-buffer-size))))
-;;     => (bindata-bytes.bv))
+  (check	;no data available
+      (parametrise ((test-pathname-data-func bindata-empty.bv))
+	(with-input-test-pathname (port)
+	  (let ((bv	(make-bytevector 2 123))
+		(start	0)
+		(count	2))
+	    (list (get-bytevector-n! port bv start count) bv))))
+    => (list (eof-object) '#vu8(123 123)))
 
-;;   (check	;count is  equal to buffer  size and equal to  the whole
-;; 		;available data size
-;;       (parametrise ((input-file-buffer-size	(bindata-bytes.len))
-;; 		    (test-pathname-data-func	bindata-bytes.bv))
-;; 	(with-input-test-pathname (port)
-;; 	  (get-bytevector-n! port (bindata-bytes.len))))
-;;     => (bindata-bytes.bv))
+  (check	;count is 1, much smaller than buffer size
+      (with-input-test-pathname (port)
+	(let ((bv	(make-bytevector 1 123))
+	      (start	0)
+	      (count	1))
+	  (list (get-bytevector-n! port bv start count) bv)))
+    => (list 1 (bindata-zero.bv)))
 
-;;   (check	;count is bigger than buffer size
-;;       (with-input-test-pathname (port)
-;; 	(get-bytevector-n! port (bindata-bytes.len)))
-;;     => (bindata-bytes.bv))
+  (check	;count is 10, much smaller than buffer size
+      (with-input-test-pathname (port)
+	(let ((bv	(make-bytevector 10))
+	      (start	0)
+	      (count	10))
+	  (list (get-bytevector-n! port bv start count) bv)))
+    => (list 10 (bindata-ten.bv)))
 
-;;   (check	;count is much bigger than  buffer size and equal to the
-;; 		;whole available data size
-;;       (with-input-test-pathname (port)
-;; 	(bytevector-length (get-bytevector-n! port (bindata-hundreds.len))))
-;;     => (bindata-hundreds.len))
+  (parametrise ((input-file-buffer-size (bindata-bytes.len)))
+    (check	;count equals buffer size
+	(with-input-test-pathname (port)
 
-;;   (check	;count is much bigger than  buffer size and equal to the
-;;   		;whole available data size
-;;       (with-input-test-pathname (port)
-;;   	(let ((bv (get-bytevector-n! port (bindata-hundreds.len)))
-;; 	      (lim 4500))
-;; 	  (%bytevector-u8-compare bv (bindata-hundreds.bv))))
-;;     => #t)
+	  (let ((bv	(make-bytevector (input-file-buffer-size)))
+		(start	0)
+		(count	(input-file-buffer-size)))
+	    (list (get-bytevector-n! port bv start count) bv)))
+      => (list (input-file-buffer-size) (bindata-bytes.bv))))
 
-;;   (check	;count is bigger than available data
-;;       (let ((port (open-bytevector-input-port '#vu8(0 1 2 3 4 5 6 7 8 9))))
-;; 	(get-bytevector-n! port 20))
-;;     => '#vu8(0 1 2 3 4 5 6 7 8 9))
+  (parametrise ((input-file-buffer-size		(bindata-bytes.len))
+		(test-pathname-data-func	bindata-bytes.bv))
+    (check	;count is  equal to buffer  size and equal to  the whole
+		;available data size
+	(with-input-test-pathname (port)
+	  (let ((bv	(make-bytevector (bindata-bytes.len)))
+		(start	0)
+		(count	(bindata-bytes.len)))
+	    (list (get-bytevector-n! port bv start count) bv)))
+      => (list (bindata-bytes.len) (bindata-bytes.bv))))
+
+  (check	;count is bigger than buffer size
+      (with-input-test-pathname (port)
+	(let ((bv	(make-bytevector (bindata-bytes.len)))
+	      (start	0)
+	      (count	(bindata-bytes.len)))
+	  (list (get-bytevector-n! port bv start count) bv)))
+    => (list (bindata-bytes.len) (bindata-bytes.bv)))
+
+  (check	;count is much bigger than  buffer size and equal to the
+		;whole available data size
+      (with-input-test-pathname (port)
+	(let ((bv	(make-bytevector (bindata-hundreds.len)))
+	      (start	0)
+	      (count	(bindata-hundreds.len)))
+	  (list (get-bytevector-n! port bv start count) bv)))
+    => (list (bindata-hundreds.len) (bindata-hundreds.bv)))
 
   #t)
 
