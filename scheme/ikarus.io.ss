@@ -3458,39 +3458,31 @@
 	  (if-available-data: (data-available-in-buffer)))))))
 
 (define (get-bytevector-some port)
-  ;;Defined by  R6RS.  Read from the binary  input PORT, blocking
-  ;;as necessary,  until bytes are  available or until an  end of
-  ;;file is reached.
+  ;;Defined  by R6RS.   Read from  the  binary input  PORT, blocking  as
+  ;;necessary,  until bytes are  available or  until an  end of  file is
+  ;;reached.
   ;;
-  ;;If  bytes  become  available, GET-BYTEVECTOR-SOME  returns  a
-  ;;freshly allocated bytevector containing the initial available
-  ;;bytes (at least one), and  it updates PORT to point just past
-  ;;these bytes.
+  ;;If  bytes become  available, GET-BYTEVECTOR-SOME  returns  a freshly
+  ;;allocated  bytevector  containing the  initial  available bytes  (at
+  ;;least one), and it updates PORT to point just past these bytes.
   ;;
-  ;;If no input bytes are seen  before an end of file is reached,
-  ;;the EOF object is returned.
+  ;;If no input bytes are seen before an end of file is reached, the EOF
+  ;;object is returned.
   ;;
   (define who 'get-bytevector-some)
   (%assert-value-is-port port who)
   (with-binary-port (port)
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
       (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
-    (let ()
+    (let retry-after-filling-buffer ()
       (define (data-available-in-buffer)
-	(let* ((buffer		port.buffer)
-	       (buffer.used-size port.buffer.used-size)
-	       (buffer.offset	port.buffer.index)
-	       (dst.bv		(make-bytevector (unsafe.fx- buffer.used-size buffer.offset))))
-	  (set! port.buffer.index buffer.used-size)
-	  (let loop ((buffer.offset	buffer.offset)
-		     (dst.index		0))
-	    (if (unsafe.fx= buffer.offset buffer.used-size)
-		dst.bv
-	      (begin
-		(unsafe.bytevector-u8-set! dst.bv dst.index (unsafe.bytevector-u8-ref buffer buffer.offset))
-		(loop (unsafe.fxadd1 buffer.offset) (unsafe.fxadd1 dst.index)))))))
-      (unless (unsafe.fx= port.attributes fast-get-byte-tag)
-	(assertion-violation who "invalid port argument" port))
+	(let* ((buffer.used-size	port.buffer.used-size)
+	       (buffer.offset		port.buffer.index)
+	       (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
+	       (dst.bv			(unsafe.make-bytevector amount-of-available)))
+	  (%unsafe.bytevector-copy! port.buffer buffer.offset dst.bv 0 amount-of-available)
+	  (set! port.buffer.index (unsafe.fx+ buffer.offset amount-of-available))
+	  dst.bv))
       (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	(data-is-needed-at: port.buffer.index)
 	(if-end-of-file: (eof-object))

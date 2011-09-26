@@ -5760,6 +5760,105 @@
   #t)
 
 
+(parametrise ((check-test-name		'get-bytevector-some)
+	      (test-pathname		(make-test-pathname "get-bytevector-some.bin"))
+	      (input-file-buffer-size	100))
+
+;;; port argument validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(get-bytevector-some 123))
+    => '(123))
+
+  (check	;argument is not an input port
+      (let ((port (%open-disposable-binary-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (get-bytevector-some port)))
+    => #t)
+
+  (check	;argument is not a binary port
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (get-bytevector-some port)))
+    => #t)
+
+  (check	;argument is not an open port
+      (let ((port (%open-disposable-binary-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-input-port port)
+	  (get-bytevector-some port)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; input from a bytevector port
+
+;;Remember  that bytevector  input ports  have the  buffer equal  to the
+;;input bytevector.
+
+  (check	;no data available
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(get-bytevector-some port))
+    => (eof-object))
+
+  (check	;data size equal to buffer size
+      (let* ((port	(open-bytevector-input-port '#vu8(0 1 2 3 4 5 6 7)))
+	     (bv	(get-bytevector-some port)))
+	(list bv (port-eof? port)))
+    => '(#vu8(0 1 2 3 4 5 6 7) #t))
+
+;;; --------------------------------------------------------------------
+;;; input from a file
+
+  (check	;no data available
+      (parametrise ((test-pathname-data-func bindata-empty.bv))
+	(with-input-test-pathname (port)
+	  (get-bytevector-some port)))
+    => (eof-object))
+
+  (check	;return buffer contents
+      (parametrise ((input-file-buffer-size 8))
+	(with-input-test-pathname (port)
+	  (get-bytevector-some port)))
+    => '#vu8(0 1 2 3 4 5 6 7))
+
+  (check	;return buffer contents twice
+      (parametrise ((input-file-buffer-size 8))
+	(with-input-test-pathname (port)
+	  (let ((bv (get-bytevector-some port)))
+	    (list bv (get-bytevector-some port)))))
+    => '(#vu8(0 1 2 3 4 5 6 7) #vu8(8 9 10 11 12 13 14 15)))
+
+  (check	;return the whole data smaller than buffer
+      (parametrise ((input-file-buffer-size	8)
+		    (test-pathname-data-func	(lambda ()
+						  '#vu8(0 1 2 3))))
+	(with-input-test-pathname (port)
+	  (get-bytevector-some port)))
+    => '#vu8(0 1 2 3))
+
+  (check	;return tail of buffer contents
+      (parametrise ((input-file-buffer-size 8))
+	(with-input-test-pathname (port)
+	  (let ((bv (get-bytevector-n port 4)))
+	    (list bv (get-bytevector-some port)))))
+    => '(#vu8(0 1 2 3) #vu8(4 5 6 7)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
