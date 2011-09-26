@@ -3472,6 +3472,8 @@
   (define who 'get-bytevector-some)
   (%assert-value-is-port port who)
   (with-binary-port (port)
+    ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
+    ;;PORT.FAST-ATTRIBUTES which does not include it).
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
       (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
     (let retry-after-filling-buffer ()
@@ -3481,7 +3483,7 @@
 	       (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
 	       (dst.bv			(unsafe.make-bytevector amount-of-available)))
 	  (%unsafe.bytevector-copy! port.buffer buffer.offset dst.bv 0 amount-of-available)
-	  (set! port.buffer.index (unsafe.fx+ buffer.offset amount-of-available))
+	  (set! port.buffer.index buffer.used-size)
 	  dst.bv))
       (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	(data-is-needed-at: port.buffer.index)
@@ -3490,36 +3492,41 @@
 	(if-available-data: (data-available-in-buffer))))))
 
 (define (get-bytevector-all port)
-  ;;Defined by R6RS.   Attempts to read all bytes  until the next
-  ;;end of file, blocking as necessary.
+  ;;Defined by R6RS.   Attempts to read all bytes until  the next end of
+  ;;file, blocking as necessary.
   ;;
-  ;;If one  or more bytes are read,  GET-BYTEVECTOR-ALL returns a
-  ;;bytevector containing all  bytes up to the next  end of file.
-  ;;Otherwise, get-bytevector-all returns the EOF object.
+  ;;If  one  or  more  bytes  are  read,  GET-BYTEVECTOR-ALL  returns  a
+  ;;bytevector  containing  all  bytes  up  to the  next  end  of  file.
+  ;;Otherwise, GET-BYTEVECTOR-ALL returns the EOF object.
   ;;
-  ;;The operation  may block indefinitely waiting to  see if more
-  ;;bytes will  become available, even if some  bytes are already
-  ;;available.
+  ;;The operation  may block indefinitely  waiting to see if  more bytes
+  ;;will become available, even if some bytes are already available.
   ;;
   (define who 'get-bytevector-all)
   (%assert-value-is-port port who)
   (with-binary-port (port)
+    ;;Remember  that PORT.ATTRIBUTES  includes the  CLOSED?  bit  (it is
+    ;;PORT.FAST-ATTRIBUTES which does not include it).
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
       (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
-    (let-values (((out-port getter) (open-bytevector-output-port #f)))
-      (let retry-after-filling-buffer ()
-	(define (data-available-in-buffer)
-	  (put-bytevector out-port port.buffer port.buffer.index port.buffer.used-size)
-	  (retry-after-filling-buffer))
-	(%maybe-refill-bytevector-buffer-and-evaluate (port who)
-	  (data-is-needed-at: port.buffer.index)
-	  (if-end-of-file:
-	   (let ((result (getter)))
-	     (if (zero? (unsafe.bytevector-length result))
-		 (eof-object)
-	       result)))
-	  (if-successful-refill: (data-available-in-buffer))
-	  (if-available-data: (data-available-in-buffer)))))))
+    (let retry-after-filling-buffer ((list-of-bytevectors '()))
+      (define (data-available-in-buffer)
+	(let* ((buffer.used-size	port.buffer.used-size)
+	       (buffer.offset		port.buffer.index)
+	       (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
+	       (dst.bv			(unsafe.make-bytevector amount-of-available)))
+	  (%unsafe.bytevector-copy! port.buffer buffer.offset dst.bv 0 amount-of-available)
+	  (set! port.buffer.index buffer.used-size)
+	  (retry-after-filling-buffer (cons dst.bv list-of-bytevectors))))
+      (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	(data-is-needed-at: port.buffer.index)
+	(if-end-of-file:
+	 (let ((result (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors)))
+	   (if (zero? (unsafe.bytevector-length result))
+	       (eof-object)
+	     result)))
+	(if-successful-refill: (data-available-in-buffer))
+	(if-available-data: (data-available-in-buffer))))))
 
 
 ;;;; character input functions
