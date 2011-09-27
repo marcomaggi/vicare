@@ -4112,7 +4112,8 @@
   ;;input buffer pointing to the first byte after the read character.
   ;;
   ;;PORT  must  be  an  already  validated textual  input  port  with  a
-  ;;bytevector as buffer.
+  ;;bytevector  as  buffer  and  a  UTF-16  transcoder  with  endianness
+  ;;matching ENDIANNESS.
   ;;
   ;;ENDIANNESS   must   be   one   among   the   symbols   accepted   by
   ;;BYTEVECTOR-U16-REF.
@@ -4132,7 +4133,8 @@
       (let ((mode (transcoder-error-handling-mode port.transcoder)))
 	(case mode
 	  ((ignore)
-	   (%do-read-char port who endianness))
+	   ;;To ignore means jump to the next.
+	   (recurse))
 	  ((replace)
 	   #\xFFFD)
 	  ((raise)
@@ -4168,6 +4170,9 @@
 	    (else
 	     (error-handler errmsg char-code-point))))
 
+    (define-inline (%word-ref buffer.offset)
+      (%unsafe.bytevector-u16-ref port.buffer buffer.offset endianness))
+
     (let* ((buffer.offset-word0 port.buffer.index)
 	   (buffer.offset-word1 (unsafe.fx+ 2 buffer.offset-word0))
 	   (buffer.offset-past  (unsafe.fx+ 2 buffer.offset-word1)))
@@ -4175,9 +4180,9 @@
 	     ;;There are at least two  bytes in the input buffer, enough
 	     ;;for  a full UTF-16  character encoded  as single  16 bits
 	     ;;word.
-	     (let ((word0 (%unsafe.bytevector-u16-ref port.buffer buffer.offset-word0 endianness)))
+	     (let ((word0 (%word-ref buffer.offset-word0)))
 	       (cond ((utf-16-single-word? word0)
-		      ;;The word  is in the  allowed range for  a UTF-16
+		      ;;WORD0  is  in the  allowed  range  for a  UTF-16
 		      ;;encoded character of 16 bits.
 		      (set! port.buffer.index buffer.offset-word1)
 		      (integer->char/invalid (utf-16-decode-single-word word0)))
@@ -4185,11 +4190,10 @@
 		      (set! port.buffer.index buffer.offset-word1)
 		      (error-handler "invalid 16-bit word while decoding UTF-16 characters" word0))
 		     ((unsafe.fx<= buffer.offset-past port.buffer.used-size)
-		      ;;The word is the first of a UTF-16 surrogate pair
+		      ;;WORD0 is  the first  of a UTF-16  surrogate pair
 		      ;;and  the input buffer  already holds  the second
 		      ;;word.
-		      (let ((word1 (%unsafe.bytevector-u16-ref port.buffer buffer.offset-word1
-							       endianness)))
+		      (let ((word1 (%word-ref buffer.offset-word1)))
 			(if (utf-16-second-of-two-words? word1)
 			    (begin
 			      (set! port.buffer.index buffer.offset-past)
@@ -4197,16 +4201,16 @@
 			  (begin
 			    (set! port.buffer.index buffer.offset-word1)
 			    (error-handler "invalid value as second 16-bit word of \
-                                              UTF-16 character" word0)))))
+                                            UTF-16 character" word0 word1)))))
 		     (else
-		      ;;The  word is  the  first of  a UTF-16  surrogate
-		      ;;pair, but  input buffer  does not hold  the full
-		      ;;second word.
+		      ;;WORD0 is  the first of a  UTF-16 surrogate pair,
+		      ;;but input  buffer does not hold  the full second
+		      ;;word.
 		      (%refill-bytevector-buffer-and-evaluate (port who)
 			(if-end-of-file:
 			 (set! port.buffer.index port.buffer.used-size)
 			 (error-handler "unexpected end of file while reading second \
-                                           16-bit word in UTF-16 surrogate pair character" word0))
+                                         16-bit word in UTF-16 surrogate pair character" word0))
 			(if-successful-refill:
 			 (recurse)))))))
 
@@ -4215,10 +4219,13 @@
 	     (%refill-bytevector-buffer-and-evaluate (port who)
 	       (if-end-of-file:
 		;;The  input data  is corrupted  because we  expected at
-		;;least a 16 bits word to be there before EOF.
+		;;least a  16 bits word  to be there before  EOF.  Being
+		;;the data  corrupted we discard the single  byte in the
+		;;buffer.  (FIXME Is this  good whatever it is the error
+		;;handling mode?)
 		(set! port.buffer.index port.buffer.used-size)
 		(error-handler "unexpected end of file after byte while reading \
-                                  16-bit word of UTF-16 character"
+                                16-bit word of UTF-16 character"
 			       (unsafe.bytevector-u8-ref port.buffer buffer.offset-word0)))
 	       (if-successful-refill:
 		(recurse))))
@@ -4227,7 +4234,7 @@
 	     ;;The input buffer is empty.
 	     (%refill-bytevector-buffer-and-evaluate (port who)
 	       (if-end-of-file:	(eof-object))
-	       (if-successful-refill:	(recurse))))))))
+	       (if-successful-refill: (recurse))))))))
 
 (define (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who endianness)
   ;;Peek  and return  from PORT  a UTF-16  encoded character;  leave the
@@ -4235,7 +4242,8 @@
   ;;call to this function.
   ;;
   ;;PORT  must  be  an  already  validated textual  input  port  with  a
-  ;;bytevector as buffer.
+  ;;bytevector  as  buffer  and  a UTF-16  transcoder  whose  endianness
+  ;;matches ENDIANNESS.
   ;;
   ;;ENDIANNESS   must   be   one   among   the   symbols   accepted   by
   ;;BYTEVECTOR-U16-REF.
@@ -4254,7 +4262,8 @@
       (let ((mode (transcoder-error-handling-mode port.transcoder)))
 	(case mode
 	  ((ignore)
-	   (%do-read-char port who endianness))
+	   ;;To ignore means jump to the next.
+	   (recurse))
 	  ((replace)
 	   #\xFFFD)
 	  ((raise)
@@ -4290,6 +4299,9 @@
 	    (else
 	     (error-handler errmsg char-code-point))))
 
+    (define-inline (%word-ref buffer.offset)
+      (%unsafe.bytevector-u16-ref port.buffer buffer.offset endianness))
+
     (let* ((buffer.offset-word0 port.buffer.index)
 	   (buffer.offset-word1 (unsafe.fx+ 2 buffer.offset-word0))
 	   (buffer.offset-past  (unsafe.fx+ 2 buffer.offset-word1)))
@@ -4297,29 +4309,28 @@
 	     ;;There are at least two  bytes in the input buffer, enough
 	     ;;for  a full UTF-16  character encoded  as single  16 bits
 	     ;;word.
-	     (let ((word0 (%unsafe.bytevector-u16-ref port.buffer buffer.offset-word0 endianness)))
+	     (let ((word0 (%word-ref buffer.offset-word0)))
 	       (cond ((utf-16-single-word? word0)
 		      (integer->char/invalid (utf-16-decode-single-word word0)))
 		     ((not (utf-16-first-of-two-words? word0))
 		      (error-handler "invalid 16-bit word while decoding UTF-16 characters" word0))
 		     ((unsafe.fx<= buffer.offset-past port.buffer.used-size)
-		      ;;The word is the first of a UTF-16 surrogate pair
+		      ;;WORD0 is  the first  of a UTF-16  surrogate pair
 		      ;;and  the input buffer  already holds  the second
 		      ;;word.
-		      (let ((word1 (%unsafe.bytevector-u16-ref port.buffer buffer.offset-word1
-							       endianness)))
+		      (let ((word1 (%word-ref buffer.offset-word1)))
 			(if (utf-16-second-of-two-words? word1)
 			    (integer->char/invalid (utf-16-decode-surrogate-pair word0 word1))
 			  (error-handler "invalid value as second 16-bit word of \
-                                            UTF-16 character" word0))))
+                                          UTF-16 character" word0 word1))))
 		     (else
-		      ;;The  word is  the  first of  a UTF-16  surrogate
-		      ;;pair, but  input buffer  does not hold  the full
+		      ;;WORD0 is  the first of a  UTF-16 surrogate pair,
+		      ;;but  the input  buffer  does not  hold the  full
 		      ;;second word.
 		      (%refill-bytevector-buffer-and-evaluate (port who)
 			(if-end-of-file:
 			 (error-handler "unexpected end of file while reading second \
-                                           16-bit word in UTF-16 surrogate pair character" word0))
+                                         16-bit word in UTF-16 surrogate pair character" word0))
 			(if-successful-refill:
 			 (recurse)))))))
 
@@ -4330,7 +4341,7 @@
 		;;The  input data  is corrupted  because we  expected at
 		;;least a 16 bits word to be there before EOF.
 		(error-handler "unexpected end of file after byte while reading \
-                                  16-bit word of UTF-16 character"
+                                16-bit word of UTF-16 character"
 			       (unsafe.bytevector-u8-ref port.buffer buffer.offset-word0)))
 	       (if-successful-refill:
 		(recurse))))
@@ -4339,7 +4350,7 @@
 	     ;;The input buffer is empty.
 	     (%refill-bytevector-buffer-and-evaluate (port who)
 	       (if-end-of-file:	(eof-object))
-	       (if-successful-refill:	(recurse))))))))
+	       (if-successful-refill: (recurse))))))))
 
 
 ;;;; GET-CHAR and LOOKAHEAD-CHAR for ports with Latin-1 transcoder
