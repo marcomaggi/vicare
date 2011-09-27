@@ -563,6 +563,7 @@
 		    ($fx=	fx=))
 	    unsafe.)
     (prefix (rename (ikarus system $chars)
+		    ($char=		char=)
 		    ($char->fixnum	char->integer)
 		    ($fixnum->char	integer->char))
 	    unsafe.)
@@ -4069,7 +4070,6 @@
 		     (else
 		      (%error-handler errmsg byte1 byte2 byte3)))))))))
 
-;;;usare qui in peek
     (define (%unexpected-eof-error message . irritants)
       (let ((mode (transcoder-error-handling-mode port.transcoder)))
 	(case mode
@@ -4358,7 +4358,7 @@
 	    (begin
 	      (set! port.buffer.index (unsafe.fxadd1 buffer.offset))
 	      (let ((byte (unsafe.bytevector-u8-ref port.buffer buffer.offset)))
-		(if (eqv? byte newline-integer)
+		(if (unsafe.fx= byte newline-integer)
 		    (%mark/return-newline port)
 		  (unsafe.integer->char byte))))
 	  (%unsafe.read/peek-char-from-port-with-latin-codec port ?who 1))))))
@@ -4411,8 +4411,8 @@
 	(if (unsafe.fx< buffer.offset port.buffer.used-size)
 	    (begin
 	      (set! port.buffer.index (unsafe.fxadd1 buffer.offset))
-	      (let ((ch (string-ref port.buffer buffer.offset)))
-		(if (eqv? ch #\newline)
+	      (let ((ch (unsafe.string-ref port.buffer buffer.offset)))
+		(if (unsafe.char= ch #\newline)
 		    (%mark/return-newline port)
 		  ch)))
 	  (%unsafe.read/peek-char-from-port-with-string-buffer port ?who 1))))))
@@ -4426,7 +4426,7 @@
     (with-port-having-string-buffer (port)
       (let ((buffer.offset-char port.buffer.index))
 	(if (unsafe.fx< buffer.offset-char port.buffer.used-size)
-	    (string-ref port.buffer buffer.offset-char)
+	    (unsafe.string-ref port.buffer buffer.offset-char)
 	  (%unsafe.read/peek-char-from-port-with-string-buffer port ?who 0))))))
 
 (define (%unsafe.read/peek-char-from-port-with-string-buffer port who buffer-index-increment)
@@ -4477,7 +4477,7 @@
 	(set! port.buffer.index buffer-index-increment)
 	(if (unsafe.fxzero? count)
 	    (eof-object)
-	  (string-ref port.buffer 0))))))
+	  (unsafe.string-ref port.buffer 0))))))
 
 
 ;;;; string input functions
