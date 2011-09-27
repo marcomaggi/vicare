@@ -3908,24 +3908,28 @@
 		      (%error-handler errmsg byte1 byte2 byte3)))))))))
 
     (define (%unexpected-eof-error message . irritants)
-      (case (transcoder-error-handling-mode port.transcoder)
-	((ignore)
-	 (eof-object))
-	((replace)
-	 (set! port.buffer.index port.buffer.used-size)
-	 #\xFFFD)
-	((raise)
-	 (raise (condition (make-i/o-decoding-error port)
-			   (make-who-condition who)
-			   (make-message-condition message)
-			   (make-irritants-condition irritants))))
-	(else
-	 (assertion-violation who "cannot happen"))))
+      (let ((mode (transcoder-error-handling-mode port.transcoder)))
+	(case mode
+	  ((ignore)
+	   ;;To ignore means to jump to the next.
+	   (set! port.buffer.index port.buffer.used-size)
+	   (eof-object))
+	  ((replace)
+	   (set! port.buffer.index port.buffer.used-size)
+	   #\xFFFD)
+	  ((raise)
+	   (raise (condition (make-i/o-decoding-error port)
+			     (make-who-condition who)
+			     (make-message-condition message)
+			     (make-irritants-condition irritants))))
+	  (else
+	   (assertion-violation who "internal error, wrong transcoder error handling mode" mode)))))
 
     (define (%error-handler message . irritants)
       (let ((mode (transcoder-error-handling-mode port.transcoder)))
 	(case mode
 	  ((ignore)
+	   ;;To ignore means to jump to the next.
 	   (%unsafe.read-char-from-port-with-utf8-codec port who))
 	  ((replace)
 	   #\xFFFD)
@@ -3984,7 +3988,7 @@
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte1)
 	    (if-end-of-file:
-	     (%error-handler "unexpected end of file while decoding 2-bytes UTF-8 character"))
+	     (%unexpected-eof-error "unexpected EOF while decoding 2-bytes UTF-8 character" byte0))
 	    (if-successful-refill: (retry-after-filling-buffer-for-1-more-byte))
 	    (if-available-data:
 	     (let ((byte1  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
@@ -4008,7 +4012,10 @@
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte2)
 	    (if-end-of-file:
-	     (%error-handler "unexpected end of file while decoding 3-bytes UTF-8 character"))
+	     (apply %unexpected-eof-error "unexpected EOF while decoding 3-bytes UTF-8 character"
+		    byte0 (if (unsafe.fx< buffer.offset-byte1 port.buffer.used-size)
+			      (list (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
+			    '())))
 	    (if-successful-refill: (retry-after-filling-buffer-for-2-more-bytes))
 	    (if-available-data:
 	     (let ((byte1  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
@@ -4035,7 +4042,13 @@
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte3)
 	    (if-end-of-file:
-	     (%error-handler "unexpected end of file while decoding 4-bytes UTF-8 character"))
+	     (apply %unexpected-eof-error "unexpected EOF while decoding 4-bytes UTF-8 character"
+		    byte0 (if (unsafe.fx< buffer.offset-byte1 port.buffer.used-size)
+			      (cons (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1)
+				    (if (unsafe.fx< buffer.offset-byte2 port.buffer.used-size)
+					(list (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte2))
+				      '()))
+			    '())))
 	    (if-successful-refill: (retry-after-filling-buffer-for-3-more-bytes))
 	    (if-available-data:
 	     (let ((byte1  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
@@ -4056,19 +4069,38 @@
 		     (else
 		      (%error-handler errmsg byte1 byte2 byte3)))))))))
 
+;;;usare qui in peek
+    (define (%unexpected-eof-error message . irritants)
+      (let ((mode (transcoder-error-handling-mode port.transcoder)))
+	(case mode
+	  ((ignore)
+	   ;;To ignore means jump to the next.
+	   (eof-object))
+	  ((replace)
+	   #\xFFFD)
+	  ((raise)
+	   (raise (condition (make-i/o-decoding-error port)
+			     (make-who-condition who)
+			     (make-message-condition message)
+			     (make-irritants-condition irritants))))
+	  (else
+	   (assertion-violation who "internal error, wrong transcoder error handling mode" mode)))))
+
     (define (%error-handler message . irritants)
-      (case (transcoder-error-handling-mode port.transcoder)
-	((ignore)
-	 (%unsafe.peek-char-from-port-with-utf8-codec port who))
-	((replace)
-	 #\xFFFD)
-	((raise)
-	 (raise (condition (make-i/o-decoding-error port)
-			   (make-who-condition who)
-			   (make-message-condition message)
-			   (make-irritants-condition irritants))))
-	(else
-	 (assertion-violation who "cannot happen"))))
+      (let ((mode (transcoder-error-handling-mode port.transcoder)))
+	(case mode
+	  ((ignore)
+	   ;;To ignore means jump to the next.
+	   (%unsafe.peek-char-from-port-with-utf8-codec port who))
+	  ((replace)
+	   #\xFFFD)
+	  ((raise)
+	   (raise (condition (make-i/o-decoding-error port)
+			     (make-who-condition who)
+			     (make-message-condition message)
+			     (make-irritants-condition irritants))))
+	  (else
+	   (assertion-violation who "internal error, wrong transcoder error handling mode" mode)))))
 
     (main)))
 

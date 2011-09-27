@@ -6250,7 +6250,7 @@
     => #t)
 
 ;;; --------------------------------------------------------------------
-;;; reading from string input port
+;;; peeking from string input port
 
 ;;Remember that a string input port has the string itself as buffer.
 
@@ -6274,7 +6274,7 @@
     => (list #\c #\i #\a #\o (eof-object)))
 
 ;;; --------------------------------------------------------------------
-;;; reading from bytevector input port, transcoded UTF-8
+;;; peeking from bytevector input port, transcoded UTF-8
 
   (let ((str "ciao àáèéìíòóùú λΓσΩ"))
     (check
@@ -6290,7 +6290,166 @@
       => str))
 
 ;;; --------------------------------------------------------------------
-;;; reading from bytevector input port, transcoded UTF-16
+;;; peeking from bytevector input port, transcoded UTF-8, 2-bytes chars
+
+  (check	;read 2-bytes UTF-8 char
+      (let* ((bin-port	(open-bytevector-input-port '#vu8(#xCE #XBB)))
+	     (port	(transcoded-port bin-port (make-transcoder (utf-8-codec)
+								   (eol-style none)
+								   (error-handling-mode ignore)))))
+	(string (peek-char port)))
+    => "λ")
+
+  (check	;attempt   to  peek   incomplete  2-bytes   UTF-8  char,
+		;unexpected EOF, ignore
+      (let* ((bin-port	(open-bytevector-input-port '#vu8(#xCE)))
+  	     (port	(transcoded-port bin-port (make-transcoder (utf-8-codec)
+  								   (eol-style none)
+  								   (error-handling-mode ignore)))))
+  	(let ((ch (peek-char port)))
+	  (list ch (port-eof? port))))
+    => (list (eof-object) #f))
+
+  (check	;attempt   to  peek   incomplete  2-bytes   UTF-8  char,
+		;unexpected EOF, replace
+      (let* ((bin-port	(open-bytevector-input-port '#vu8(#xCE)))
+  	     (port	(transcoded-port bin-port
+  					 (make-transcoder (utf-8-codec)
+  							  (eol-style none)
+  							  (error-handling-mode replace)))))
+  	(let ((ch (peek-char port)))
+  	  (list ch (port-eof? port))))
+    => '(#\xFFFD #f))
+
+  (check	;attempt   to  read   incomplete  2-bytes   UTF-8  char,
+		;unexpected EOF, raise
+      (guard (E ((i/o-decoding-error? E)
+;;;  		 (pretty-print (condition-message E))
+  		 (condition-irritants E))
+  		(else E))
+  	(let* ((bin-port	(open-bytevector-input-port '#vu8(#xCE)))
+  	       (port		(transcoded-port bin-port
+  						 (make-transcoder (utf-8-codec)
+  								  (eol-style none)
+  								  (error-handling-mode raise)))))
+  	  (peek-char port)))
+    => '(#xCE))
+
+;;; --------------------------------------------------------------------
+;;; peeking from bytevector input port, transcoded UTF-8, 3-bytes chars
+
+  (check	;read 3-bytes UTF-8 char
+      (let* ((bin-port	(open-bytevector-input-port '#vu8(#xE0 #xA6 #xBC)))
+	     (port	(transcoded-port bin-port (make-transcoder (utf-8-codec)
+								   (eol-style none)
+								   (error-handling-mode ignore)))))
+	(peek-char port))
+    => #\x09BC)
+
+  (check	;attempt   to  read   incomplete  3-bytes   UTF-8  char,
+    		;unexpected EOF, ignore
+      (let* ((doit (lambda (bv)
+		     (let ((port (open-bytevector-input-port
+				  bv (make-transcoder (utf-8-codec)
+						      (eol-style none)
+						      (error-handling-mode ignore)))))
+		       (let ((ch (peek-char port)))
+			 (list ch (port-eof? port))))))
+	     (a	(doit '#vu8(#xE0 #xA6)))
+	     (b (doit '#vu8(#xE0))))
+	(list a b))
+    => `((,(eof-object) #f) (,(eof-object) #f)))
+
+  (check	;attempt   to  read   incomplete  3-bytes   UTF-8  char,
+		;unexpected EOF, replace
+      (let* ((doit (lambda (bv)
+		     (let* ((port (open-bytevector-input-port
+				   bv (make-transcoder (utf-8-codec)
+						       (eol-style none)
+						       (error-handling-mode replace))))
+			    (ch (peek-char port)))
+		       (list ch (port-eof? port)))))
+	     (a	(doit '#vu8(#xE0 #xA6)))
+	     (b (doit '#vu8(#xE0))))
+	(list a b))
+    => '((#\xFFFD #f) (#\xFFFD #f)))
+
+  (check	;attempt   to  read   incomplete  3-bytes   UTF-8  char,
+    		;unexpected EOF, raise
+      (let* ((doit (lambda (bv)
+		     (guard (E ((i/o-decoding-error? E)
+;;;				(pretty-print (condition-message E))
+				(condition-irritants E))
+			       (else E))
+		       (let ((port (open-bytevector-input-port
+				    bv (make-transcoder (utf-8-codec)
+							(eol-style none)
+							(error-handling-mode raise)))))
+			 (peek-char port)))))
+	     (a	(doit '#vu8(#xE0 #xA6)))
+	     (b (doit '#vu8(#xE0))))
+	(list a b))
+    => '((#xE0 #xA6) (#xE0)))
+
+;;; --------------------------------------------------------------------
+;;; peeking from bytevector input port, transcoded UTF-8, 4-bytes chars
+
+  (check	;read 4-bytes UTF-8 char
+      (let ((port (open-bytevector-input-port '#vu8(#xF0 #xAF #xA7 #x91)
+					      (make-transcoder (utf-8-codec)))))
+  	(peek-char port))
+    => #\x2F9D1)
+
+  (check	;attempt   to  read   incomplete  4-bytes   UTF-8  char,
+    		;unexpected EOF, ignore
+      (let* ((doit (lambda (bv)
+		     (let* ((port (open-bytevector-input-port
+				   bv (make-transcoder (utf-8-codec)
+						       (eol-style none)
+						       (error-handling-mode ignore))))
+			    (ch (peek-char port)))
+		       (list ch (port-eof? port)))))
+	     (a	(doit '#vu8(#xF0 #xAF #xA7)))
+	     (b (doit '#vu8(#xF0 #xAF)))
+	     (c (doit '#vu8(#xF0))))
+	(list a b c))
+    => `((,(eof-object) #f) (,(eof-object) #f) (,(eof-object) #f)))
+
+  (check	;attempt   to  read   incomplete  4-bytes   UTF-8  char,
+    		;unexpected EOF, replace
+      (let* ((doit (lambda (bv)
+		     (let* ((port (open-bytevector-input-port
+				   bv (make-transcoder (utf-8-codec)
+						       (eol-style none)
+						       (error-handling-mode replace))))
+			    (ch (peek-char port)))
+		       (list ch (port-eof? port)))))
+	     (a	(doit '#vu8(#xF0 #xAF #xA7)))
+	     (b (doit '#vu8(#xF0 #xAF)))
+	     (c (doit '#vu8(#xF0))))
+	(list a b c))
+    => '((#\xFFFD #f) (#\xFFFD #f) (#\xFFFD #f)))
+
+  (check	;attempt   to  read   incomplete  4-bytes   UTF-8  char,
+    		;unexpected EOF, raise
+      (let* ((doit (lambda (bv)
+		     (guard (E ((i/o-decoding-error? E)
+;;;				(pretty-print (condition-message E))
+				(condition-irritants E))
+			       (else E))
+		       (let ((port (open-bytevector-input-port
+				    bv (make-transcoder (utf-8-codec)
+							(eol-style none)
+							(error-handling-mode raise)))))
+			 (peek-char port)))))
+	     (a	(doit '#vu8(#xF0 #xAF #xA7)))
+	     (b (doit '#vu8(#xF0 #xAF)))
+	     (c (doit '#vu8(#xF0))))
+	(list a b c))
+    => '((#xF0 #xAF #xA7) (#xF0 #xAF) (#xF0)))
+
+;;; --------------------------------------------------------------------
+;;; peeking from bytevector input port, transcoded UTF-16
 
   (let ((str "ciao àáèéìíòóùú λΓσΩ"))
     (check
@@ -6306,7 +6465,7 @@
       => str))
 
 ;;; --------------------------------------------------------------------
-;;; reading from bytevector input port, transcoded Latin-1
+;;; peeking from bytevector input port, transcoded Latin-1
 
   (let ((str "ciao àáèéìíòóùú"))
     (check
