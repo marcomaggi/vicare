@@ -4274,7 +4274,7 @@
 	  (else
 	   (assertion-violation who "internal error: invalid error handling mode" port mode)))))
 
-    (define (%unexpected-eof-error message . irritants)
+    (define (%unexpected-eof-error message irritants)
       ;;Handle the unexpected EOF error honoring the error handling mode
       ;;in port's  transcoder.
       ;;
@@ -4349,9 +4349,15 @@
 		      ;;second word.
 		      (%refill-bytevector-buffer-and-evaluate (port who)
 			(if-end-of-file:
-			 (%unexpected-eof-error "unexpected end of file while reading second \
-                                                 16-bit word in UTF-16 surrogate pair character"
-						word0))
+			 (%unexpected-eof-error
+			  "unexpected end of file while reading second \
+                           16-bit word in UTF-16 surrogate pair character"
+			  `(,(unsafe.bytevector-u8-ref port.buffer buffer.offset-word0)
+			    ,(unsafe.bytevector-u8-ref port.buffer (unsafe.fxadd1 buffer.offset-word0))
+			    . ,(if (unsafe.fx< buffer.offset-word1
+					       port.buffer.used-size)
+				   (list (unsafe.bytevector-u8-ref port.buffer buffer.offset-word1))
+				 '()))))
 			(if-successful-refill:
 			 (recurse)))))))
 
@@ -4361,9 +4367,10 @@
 	       (if-end-of-file:
 		;;The  input data  is corrupted  because we  expected at
 		;;least a 16 bits word to be there before EOF.
-		(%unexpected-eof-error "unexpected end of file after byte while reading \
-                                        16-bit word of UTF-16 character"
-				       (unsafe.bytevector-u8-ref port.buffer buffer.offset-word0)))
+		(%unexpected-eof-error
+		 "unexpected end of file after byte while reading \
+                  16-bit word of UTF-16 character"
+		 `(,(unsafe.bytevector-u8-ref port.buffer buffer.offset-word0))))
 	       (if-successful-refill:
 		(recurse))))
 
