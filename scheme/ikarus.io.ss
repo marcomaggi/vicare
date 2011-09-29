@@ -3793,6 +3793,7 @@
 	       (define (%error)
 		 (%error-handler "invalid byte while expecting first byte of UTF-8 character" byte0))
 	       (cond ((utf-8-invalid-byte? byte0)
+		      (set! port.buffer.index (unsafe.fxadd1 buffer.offset-byte0))
 		      (%error))
 		     ((utf-8-single-byte? byte0)
 		      (get-single-byte-character byte0 buffer.offset-byte0))
@@ -3827,7 +3828,7 @@
 		   (errmsg "invalid second byte in 2-bytes UTF-8 character"))
 	       (set! port.buffer.index buffer.offset-past)
 	       (cond ((utf-8-invalid-byte? byte1)
-		      (%error-handler errmsg byte1))
+		      (%error-handler errmsg byte0 byte1))
 		     ((utf-8-second-of-two-bytes? byte1)
 		      (let ((N (utf-8-decode-two-bytes byte0 byte1)))
 			(if (utf-8-valid-code-point-from-2-bytes? N)
@@ -3859,16 +3860,16 @@
 	       (set! port.buffer.index buffer.offset-past)
 	       (cond ((or (utf-8-invalid-byte? byte1)
 			  (utf-8-invalid-byte? byte2))
-		      (%error-handler errmsg byte1 byte2))
+		      (%error-handler errmsg byte0 byte1 byte2))
 		     ((utf-8-second-and-third-of-three-bytes? byte1 byte2)
 		      (let ((N (utf-8-decode-three-bytes byte0 byte1 byte2)))
 			(if (utf-8-valid-code-point-from-3-bytes? N)
 			    (unsafe.integer->char N)
 			  (%error-handler "invalid code point as result \
                                            of decoding 3-bytes UTF-8 character"
-					 byte0 byte1 byte2 N))))
+					  byte0 byte1 byte2 N))))
 		     (else
-		      (%error-handler errmsg byte1 byte2)))))))))
+		      (%error-handler errmsg byte0 byte1 byte2)))))))))
 
     (define-inline (get-4-bytes-character byte0 buffer.offset-byte0)
       (let retry-after-filling-buffer-for-3-more-bytes ()
@@ -3897,16 +3898,16 @@
 	       (cond ((or (utf-8-invalid-byte? byte1)
 			  (utf-8-invalid-byte? byte2)
 			  (utf-8-invalid-byte? byte3))
-		      (%error-handler errmsg byte1 byte2 byte3))
+		      (%error-handler errmsg byte0 byte1 byte2 byte3))
 		     ((utf-8-second-third-and-fourth-of-three-bytes? byte1 byte2 byte3)
 		      (let ((N (utf-8-decode-four-bytes byte0 byte1 byte2 byte3)))
 			(if (utf-8-valid-code-point-from-4-bytes? N)
 			    (unsafe.integer->char N)
 			  (%error-handler "invalid code point as result \
                                            of decoding 4-bytes UTF-8 character"
-					 byte0 byte1 byte2 byte3 N))))
+					  byte0 byte1 byte2 byte3 N))))
 		     (else
-		      (%error-handler errmsg byte1 byte2 byte3)))))))))
+		      (%error-handler errmsg byte0 byte1 byte2 byte3)))))))))
 
     (define (%unexpected-eof-error message . irritants)
       (let ((mode (transcoder-error-handling-mode port.transcoder)))

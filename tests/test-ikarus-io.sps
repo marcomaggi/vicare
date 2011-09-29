@@ -455,12 +455,36 @@
 
 (define TWO-BYTES-UTF-8-CHAR				GREEK-SMALL-LETTER-LAMBDA)
 (define TWO-BYTES-UTF-8-CHAR-UTF-8			GREEK-SMALL-LETTER-LAMBDA-UTF-8)
+(define CORRUPTED-TWO-BYTES-UTF-8-CHAR-UTF-8
+  (let ((bv (bytevector-copy TWO-BYTES-UTF-8-CHAR-UTF-8)))
+    (bytevector-u8-set! bv 1 #xFF)
+    bv))
 
 (define THREE-BYTES-UTF-8-CHAR				BENGALI-SIGN-NUKTA)
 (define THREE-BYTES-UTF-8-CHAR-UTF-8			BENGALI-SIGN-NUKTA-UTF-8)
+(define CORRUPTED1-THREE-BYTES-UTF-8-CHAR-UTF-8
+  (let ((bv (bytevector-copy THREE-BYTES-UTF-8-CHAR-UTF-8)))
+    (bytevector-u8-set! bv 1 #xFF)
+    bv))
+(define CORRUPTED2-THREE-BYTES-UTF-8-CHAR-UTF-8
+  (let ((bv (bytevector-copy THREE-BYTES-UTF-8-CHAR-UTF-8)))
+    (bytevector-u8-set! bv 2 #xFF)
+    bv))
 
 (define FOUR-BYTES-UTF-8-CHAR				CJK-COMPATIBILITY-IDEOGRAPH-2F9D1)
 (define FOUR-BYTES-UTF-8-CHAR-UTF-8			CJK-COMPATIBILITY-IDEOGRAPH-2F9D1-UTF-8)
+(define CORRUPTED1-FOUR-BYTES-UTF-8-CHAR-UTF-8
+  (let ((bv (bytevector-copy FOUR-BYTES-UTF-8-CHAR-UTF-8)))
+    (bytevector-u8-set! bv 1 #xFF)
+    bv))
+(define CORRUPTED2-FOUR-BYTES-UTF-8-CHAR-UTF-8
+  (let ((bv (bytevector-copy FOUR-BYTES-UTF-8-CHAR-UTF-8)))
+    (bytevector-u8-set! bv 2 #xFF)
+    bv))
+(define CORRUPTED3-FOUR-BYTES-UTF-8-CHAR-UTF-8
+  (let ((bv (bytevector-copy FOUR-BYTES-UTF-8-CHAR-UTF-8)))
+    (bytevector-u8-set! bv 3 #xFF)
+    bv))
 
 ;;; --------------------------------------------------------------------
 
@@ -6277,7 +6301,7 @@
     => (list #\c #\i #\a #\o (eof-object)))
 
 ;;; --------------------------------------------------------------------
-;;; peeking from bytevector input port, transcoded UTF-8
+;;; reading from bytevector input port, transcoded UTF-8
 
   (check
       (let ((port (open-bytevector-input-port test-bytevector-for-utf-8
@@ -6289,7 +6313,7 @@
     => test-string-for-utf-8)
 
 ;;; --------------------------------------------------------------------
-;;; peeking from bytevector input port, transcoded UTF-8, 2-bytes chars
+;;; reading from bytevector input port, transcoded UTF-8, 2-bytes chars
 
   (check	;read 2-bytes UTF-8 char, lambda character
       (let ((port (open-bytevector-input-port TWO-BYTES-UTF-8-CHAR-UTF-8
@@ -6299,7 +6323,7 @@
 	(read-char port))
     => TWO-BYTES-UTF-8-CHAR)
 
-  (check	;attempt   to  peek   incomplete  2-bytes   UTF-8  char,
+  (check	;attempt   to  read   incomplete  2-bytes   UTF-8  char,
 		;unexpected EOF, ignore
       (let* ((port (open-bytevector-input-port (subbytevector-u8 TWO-BYTES-UTF-8-CHAR-UTF-8 0 1)
 					       (make-transcoder (utf-8-codec)
@@ -6309,7 +6333,7 @@
 	(list ch (port-eof? port)))
     => (list (eof-object) #t))
 
-  (check	;attempt   to  peek   incomplete  2-bytes   UTF-8  char,
+  (check	;attempt   to  read   incomplete  2-bytes   UTF-8  char,
 		;unexpected EOF, replace
       (let* ((port (open-bytevector-input-port (subbytevector-u8 TWO-BYTES-UTF-8-CHAR-UTF-8 0 1)
 					       (make-transcoder (utf-8-codec)
@@ -6333,7 +6357,7 @@
     => (list (bytevector-u8-ref TWO-BYTES-UTF-8-CHAR-UTF-8 0)))
 
 ;;; --------------------------------------------------------------------
-;;; peeking from bytevector input port, transcoded UTF-8, 3-bytes chars
+;;; reading from bytevector input port, transcoded UTF-8, 3-bytes chars
 
   (check	;read 3-bytes UTF-8 char
       (let ((port (open-bytevector-input-port THREE-BYTES-UTF-8-CHAR-UTF-8
@@ -6390,7 +6414,7 @@
 	     (bytevector->u8-list (subbytevector-u8 THREE-BYTES-UTF-8-CHAR-UTF-8 0 1))))
 
 ;;; --------------------------------------------------------------------
-;;; peeking from bytevector input port, transcoded UTF-8, 4-bytes chars
+;;; reading from bytevector input port, transcoded UTF-8, 4-bytes chars
 
   (check	;read 4-bytes UTF-8 char
       (let ((port (open-bytevector-input-port FOUR-BYTES-UTF-8-CHAR-UTF-8
@@ -6450,7 +6474,171 @@
 	(bytevector->u8-list (subbytevector-u8 FOUR-BYTES-UTF-8-CHAR-UTF-8 0 1))))
 
 ;;; --------------------------------------------------------------------
-;;; peeking from bytevector input port, transcoded UTF-16
+;;; reading from bytevector input port, transcoded UTF-8, invalid byte
+
+  (check	;attempt to read invalid byte, ignore
+      (let* ((port (open-bytevector-input-port '#vu8(#xFF)
+					       (make-transcoder (utf-8-codec)
+								(eol-style none)
+								(error-handling-mode ignore))))
+	     (ch (read-char port)))
+	(list ch (port-eof? port)))
+    => (list (eof-object) #t))
+
+  (check	;attempt to read invalid byte, replace
+      (let* ((port (open-bytevector-input-port '#vu8(#xFF)
+					       (make-transcoder (utf-8-codec)
+								(eol-style none)
+								(error-handling-mode replace))))
+	     (ch (read-char port)))
+	(list ch (port-eof? port)))
+    => '(#\xFFFD #t))
+
+  (check	;attempt to read invalid byte, raise
+      (guard (E ((i/o-decoding-error? E)
+;;;  		 (pretty-print (condition-message E))
+  		 (condition-irritants E))
+  		(else E))
+  	(let ((port (open-bytevector-input-port '#vu8(#xFF)
+						(make-transcoder (utf-8-codec)
+								 (eol-style none)
+								 (error-handling-mode raise)))))
+  	  (read-char port)))
+    => '(#xFF))
+
+;;; --------------------------------------------------------------------
+;;; reading from bytevector input port, transcoded UTF-8, corrupted 2-bytes chars
+
+  (check	;attempt to read corrupted 2-bytes UTF-8 char, ignore
+      (let* ((port (open-bytevector-input-port CORRUPTED-TWO-BYTES-UTF-8-CHAR-UTF-8
+					       (make-transcoder (utf-8-codec)
+								(eol-style none)
+								(error-handling-mode ignore))))
+	     (ch (read-char port)))
+	(list ch (port-eof? port)))
+    => (list (eof-object) #t))
+
+  (check	;attempt to read corrupted 2-bytes UTF-8 char, replace
+      (let* ((port (open-bytevector-input-port CORRUPTED-TWO-BYTES-UTF-8-CHAR-UTF-8
+					       (make-transcoder (utf-8-codec)
+								(eol-style none)
+								(error-handling-mode replace))))
+	     (ch (read-char port)))
+	(list ch (port-eof? port)))
+    => '(#\xFFFD #t))
+
+  (check	;attempt to read corrupted 2-bytes UTF-8 char, raise
+      (guard (E ((i/o-decoding-error? E)
+;;;  		 (pretty-print (condition-message E))
+  		 (condition-irritants E))
+  		(else E))
+  	(let ((port (open-bytevector-input-port CORRUPTED-TWO-BYTES-UTF-8-CHAR-UTF-8
+						(make-transcoder (utf-8-codec)
+								 (eol-style none)
+								 (error-handling-mode raise)))))
+  	  (read-char port)))
+    => (bytevector->u8-list CORRUPTED-TWO-BYTES-UTF-8-CHAR-UTF-8))
+
+;;; --------------------------------------------------------------------
+;;; reading from bytevector input port, transcoded UTF-8, corrupted 3-bytes chars
+
+  (check	;attempt to read corrupted 3-bytes UTF-8 char, ignore
+      (let* ((doit (lambda (bv)
+		     (let ((port (open-bytevector-input-port
+				  bv (make-transcoder (utf-8-codec)
+						      (eol-style none)
+						      (error-handling-mode ignore)))))
+		       (let ((ch (read-char port)))
+			 (list ch (port-eof? port))))))
+	     (a	(doit CORRUPTED1-THREE-BYTES-UTF-8-CHAR-UTF-8))
+	     (b (doit CORRUPTED2-THREE-BYTES-UTF-8-CHAR-UTF-8)))
+	(list a b))
+    => `((,(eof-object) #t) (,(eof-object) #t)))
+
+  (check	;attempt   to  read   incomplete  3-bytes   UTF-8  char,
+		;unexpected EOF, replace
+      (let* ((doit (lambda (bv)
+		     (let* ((port (open-bytevector-input-port
+				   bv (make-transcoder (utf-8-codec)
+						       (eol-style none)
+						       (error-handling-mode replace))))
+			    (ch (read-char port)))
+		       (list ch (port-eof? port)))))
+	     (a	(doit CORRUPTED1-THREE-BYTES-UTF-8-CHAR-UTF-8))
+	     (b (doit CORRUPTED2-THREE-BYTES-UTF-8-CHAR-UTF-8)))
+	(list a b))
+    => '((#\xFFFD #t) (#\xFFFD #t)))
+
+  (check	;attempt   to  read   incomplete  3-bytes   UTF-8  char,
+    		;unexpected EOF, raise
+      (let* ((doit (lambda (bv)
+		     (guard (E ((i/o-decoding-error? E)
+;;;				(pretty-print (condition-message E))
+				(condition-irritants E))
+			       (else E))
+		       (let ((port (open-bytevector-input-port
+				    bv (make-transcoder (utf-8-codec)
+							(eol-style none)
+							(error-handling-mode raise)))))
+			 (read-char port)))))
+	     (a	(doit CORRUPTED1-THREE-BYTES-UTF-8-CHAR-UTF-8))
+	     (b (doit CORRUPTED2-THREE-BYTES-UTF-8-CHAR-UTF-8)))
+	(list a b))
+    => (list (bytevector->u8-list CORRUPTED1-THREE-BYTES-UTF-8-CHAR-UTF-8)
+	     (bytevector->u8-list CORRUPTED2-THREE-BYTES-UTF-8-CHAR-UTF-8)))
+
+;;; --------------------------------------------------------------------
+;;; reading from bytevector input port, transcoded UTF-8, corrupted 4-bytes chars
+
+  (check	;attempt to read corrupted 4-bytes UTF-8 char, ignore
+      (let* ((doit (lambda (bv)
+		     (let ((port (open-bytevector-input-port
+				  bv (make-transcoder (utf-8-codec)
+						      (eol-style none)
+						      (error-handling-mode ignore)))))
+		       (let ((ch (read-char port)))
+			 (list ch (port-eof? port))))))
+	     (a	(doit CORRUPTED1-FOUR-BYTES-UTF-8-CHAR-UTF-8))
+	     (b (doit CORRUPTED2-FOUR-BYTES-UTF-8-CHAR-UTF-8))
+	     (c (doit CORRUPTED3-FOUR-BYTES-UTF-8-CHAR-UTF-8)))
+	(list a b c))
+    => `((,(eof-object) #t) (,(eof-object) #t) (,(eof-object) #t)))
+
+  (check	;attempt to read corrupted 4-bytes UTF-8 char, replace
+      (let* ((doit (lambda (bv)
+		     (let* ((port (open-bytevector-input-port
+				   bv (make-transcoder (utf-8-codec)
+						       (eol-style none)
+						       (error-handling-mode replace))))
+			    (ch (read-char port)))
+		       (list ch (port-eof? port)))))
+	     (a	(doit CORRUPTED1-FOUR-BYTES-UTF-8-CHAR-UTF-8))
+	     (b (doit CORRUPTED2-FOUR-BYTES-UTF-8-CHAR-UTF-8))
+	     (c (doit CORRUPTED3-FOUR-BYTES-UTF-8-CHAR-UTF-8)))
+	(list a b c))
+    => '((#\xFFFD #t) (#\xFFFD #t) (#\xFFFD #t)))
+
+  (check	;attempt to read corrupted 4-bytes UTF-8 char, raise
+      (let* ((doit (lambda (bv)
+		     (guard (E ((i/o-decoding-error? E)
+;;;				(pretty-print (condition-message E))
+				(condition-irritants E))
+			       (else E))
+		       (let ((port (open-bytevector-input-port
+				    bv (make-transcoder (utf-8-codec)
+							(eol-style none)
+							(error-handling-mode raise)))))
+			 (read-char port)))))
+	     (a	(doit CORRUPTED1-FOUR-BYTES-UTF-8-CHAR-UTF-8))
+	     (b (doit CORRUPTED2-FOUR-BYTES-UTF-8-CHAR-UTF-8))
+	     (c (doit CORRUPTED3-FOUR-BYTES-UTF-8-CHAR-UTF-8)))
+	(list a b c))
+    => (list (bytevector->u8-list CORRUPTED1-FOUR-BYTES-UTF-8-CHAR-UTF-8)
+	     (bytevector->u8-list CORRUPTED2-FOUR-BYTES-UTF-8-CHAR-UTF-8)
+	     (bytevector->u8-list CORRUPTED3-FOUR-BYTES-UTF-8-CHAR-UTF-8)))
+
+;;; --------------------------------------------------------------------
+;;; reading from bytevector input port, transcoded UTF-16
 
   (check
       (let ((port (open-bytevector-input-port test-bytevector-for-utf-16-le
@@ -6480,7 +6668,7 @@
     => test-string-for-utf-16-be)
 
 ;;; --------------------------------------------------------------------
-;;; peeking from bytevector input port, transcoded UTF-16, 1-word chars
+;;; reading from bytevector input port, transcoded UTF-16, 1-word chars
 
   (check	;little endian char, default
       (let ((port (open-bytevector-input-port ONE-WORD-UTF-16-CHAR-UTF-16-LE
@@ -6543,7 +6731,7 @@
     => (bytevector->u8-list (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-LE 0 1)))
 
 ;;; --------------------------------------------------------------------
-;;; peeking from bytevector input port, transcoded UTF-16, 2-words chars
+;;; reading from bytevector input port, transcoded UTF-16, 2-words chars
 
   (check	;little endian char, default
       (let ((port (open-bytevector-input-port TWO-WORDS-UTF-16-CHAR-UTF-16-LE
@@ -6614,7 +6802,7 @@
 	     (bytevector->u8-list (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 3))))
 
 ;;; --------------------------------------------------------------------
-;;; peeking from bytevector input port, transcoded Latin-1
+;;; reading from bytevector input port, transcoded Latin-1
 
   (check
       (let ((port (open-bytevector-input-port test-bytevector-for-latin-1
