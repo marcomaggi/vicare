@@ -35,6 +35,7 @@
 		with-result add-result)
 	  check.))
 
+(print-unicode #f)
 (check-set-mode! 'report-failed)
 (display "*** testing Ikarus input/output functions\n")
 
@@ -89,18 +90,6 @@
 
 ;;;; generic helpers
 
-(define %subbytevector
-  (case-lambda
-   ((src.bv src.start)
-    (%subbytevector src.bv src.start (bytevector-length src.bv)))
-   ((src.bv src.start src.len)
-    (let ((dst.bv (make-bytevector (fx- src.len src.start))))
-      (do ((i 0         (+ 1 i))
-	   (j src.start (+ 1 j)))
-	  ((= j src.len)
-	   dst.bv)
-	(bytevector-u8-set! dst.bv i (bytevector-u8-ref src.bv j)))))))
-
 (define (%bytevector-u8-compare A.bv B.bv)
   (let ((A.len (bytevector-length A.bv))
 	(B.len (bytevector-length B.bv)))
@@ -118,6 +107,20 @@
 		  (printf "different byte at index ~a: ~a, ~a\n" i A.byte B.byte)
 		  #f)
 	      (loop (+ 1 i)))))))))
+
+(define (%bytevector-append . bvs)
+  (let* ((dst.len (fold-left (lambda (len bv)
+			       (+ len (bytevector-length bv)))
+		    0 bvs))
+	 (dst.bv  (make-bytevector dst.len)))
+    (let loop ((bvs bvs)
+	       (i   0))
+      (if (null? bvs)
+	  dst.bv
+	(let* ((src.bv  (car bvs))
+	       (src.len (bytevector-length src.bv)))
+	  (bytevector-copy! src.bv 0 dst.bv i src.len)
+	  (loop (cdr bvs) (+ i src.len)))))))
 
 (define (%open-disposable-binary-output-port)
   (let-values (((port getter) (open-bytevector-output-port)))
@@ -317,6 +320,252 @@
 	  (begin
 	    (set! result (%bytevector-u8-fill! (make-bytevector (bindata-hundreds.len) 0)))
 	    result)))))
+
+
+;;;; Unicode chars, test bytevectors, test strings
+;;
+;;UTF-8 encodings available from:
+;;
+;;   <http://www.utf8-chartable.de/>
+;;
+
+(define (utf8->utf16le bv)
+  (string->utf16 (utf8->string bv) (endianness little)))
+
+(define (utf8->utf16be bv)
+  (string->utf16 (utf8->string bv) (endianness big)))
+
+(define (utf8->latin1 bv)
+  (%string->latin-1 (utf8->string bv)))
+
+;;; --------------------------------------------------------------------
+
+(define LATIN-SMALL-LETTER-A-WITH-GRAVE			#\x00E0)
+(define LATIN-SMALL-LETTER-A-WITH-GRAVE-UTF-8		'#vu8(#xC3 #xA0))
+(define LATIN-SMALL-LETTER-A-WITH-GRAVE-UTF-16-LE	'#vu8(224 0))
+(define LATIN-SMALL-LETTER-A-WITH-GRAVE-UTF-16-BE	'#vu8(0 224))
+(define LATIN-SMALL-LETTER-A-WITH-GRAVE-LATIN-1		'#vu8(224))
+
+(define LATIN-SMALL-LETTER-A-WITH-ACUTE			#\x00E1)
+(define LATIN-SMALL-LETTER-A-WITH-ACUTE-UTF-8		'#vu8(#xC3 #xA1))
+(define LATIN-SMALL-LETTER-A-WITH-ACUTE-UTF-16-LE	'#vu8(225 0))
+(define LATIN-SMALL-LETTER-A-WITH-ACUTE-UTF-16-BE	'#vu8(0 225))
+(define LATIN-SMALL-LETTER-A-WITH-ACUTE-LATIN-1		'#vu8(225))
+
+;;; --------------------------------------------------------------------
+
+(define LATIN-SMALL-LETTER-E-WITH-GRAVE			#\x00E8)
+(define LATIN-SMALL-LETTER-E-WITH-GRAVE-UTF-8		'#vu8(#xC3 #xA8))
+(define LATIN-SMALL-LETTER-E-WITH-GRAVE-UTF-16-LE	'#vu8(232 0))
+(define LATIN-SMALL-LETTER-E-WITH-GRAVE-UTF-16-BE	'#vu8(0 232))
+(define LATIN-SMALL-LETTER-E-WITH-GRAVE-LATIN-1		'#vu8(232))
+
+(define LATIN-SMALL-LETTER-E-WITH-ACUTE			#\x00E9)
+(define LATIN-SMALL-LETTER-E-WITH-ACUTE-UTF-8		'#vu8(#xC3 #xA9))
+(define LATIN-SMALL-LETTER-E-WITH-ACUTE-UTF-16-LE	'#vu8(233 0))
+(define LATIN-SMALL-LETTER-E-WITH-ACUTE-UTF-16-BE	'#vu8(0 233))
+(define LATIN-SMALL-LETTER-E-WITH-ACUTE-LATIN-1		'#vu8(233))
+
+;;; --------------------------------------------------------------------
+
+(define LATIN-SMALL-LETTER-I-WITH-GRAVE			#\x00EC)
+(define LATIN-SMALL-LETTER-I-WITH-GRAVE-UTF-8		'#vu8(#xC3 #xAC))
+(define LATIN-SMALL-LETTER-I-WITH-GRAVE-UTF-16-LE	'#vu8(236 0))
+(define LATIN-SMALL-LETTER-I-WITH-GRAVE-UTF-16-BE	'#vu8(0 236))
+(define LATIN-SMALL-LETTER-I-WITH-GRAVE-LATIN-1		'#vu8(236))
+
+(define LATIN-SMALL-LETTER-I-WITH-ACUTE			#\x00ED)
+(define LATIN-SMALL-LETTER-I-WITH-ACUTE-UTF-8		'#vu8(#xC3 #xAD))
+(define LATIN-SMALL-LETTER-I-WITH-ACUTE-UTF-16-LE	'#vu8(237 0))
+(define LATIN-SMALL-LETTER-I-WITH-ACUTE-UTF-16-BE	'#vu8(0 237))
+(define LATIN-SMALL-LETTER-I-WITH-ACUTE-LATIN-1		'#vu8(237))
+
+;;; --------------------------------------------------------------------
+
+(define LATIN-SMALL-LETTER-O-WITH-GRAVE			#\x00F2)
+(define LATIN-SMALL-LETTER-O-WITH-GRAVE-UTF-8		'#vu8(#xC3 #xB2))
+(define LATIN-SMALL-LETTER-O-WITH-GRAVE-UTF-16-LE	'#vu8(242 0))
+(define LATIN-SMALL-LETTER-O-WITH-GRAVE-UTF-16-BE	'#vu8(0 242))
+(define LATIN-SMALL-LETTER-O-WITH-GRAVE-LATIN-1		'#vu8(242))
+
+(define LATIN-SMALL-LETTER-O-WITH-ACUTE			#\x00F3)
+(define LATIN-SMALL-LETTER-O-WITH-ACUTE-UTF-8		'#vu8(#xC3 #xB3))
+(define LATIN-SMALL-LETTER-O-WITH-ACUTE-UTF-16-LE	'#vu8(243 0))
+(define LATIN-SMALL-LETTER-O-WITH-ACUTE-UTF-16-BE	'#vu8(0 243))
+(define LATIN-SMALL-LETTER-O-WITH-ACUTE-LATIN-1		'#vu8(243))
+
+;;; --------------------------------------------------------------------
+
+(define LATIN-SMALL-LETTER-U-WITH-GRAVE			#\x00F9)
+(define LATIN-SMALL-LETTER-U-WITH-GRAVE-UTF-8		'#vu8(#xC3 #xB9))
+(define LATIN-SMALL-LETTER-U-WITH-GRAVE-UTF-16-LE	'#vu8(249 0))
+(define LATIN-SMALL-LETTER-U-WITH-GRAVE-UTF-16-BE	'#vu8(0 249))
+(define LATIN-SMALL-LETTER-U-WITH-GRAVE-LATIN-1		'#vu8(249))
+
+(define LATIN-SMALL-LETTER-U-WITH-ACUTE			#\x00FA)
+(define LATIN-SMALL-LETTER-U-WITH-ACUTE-UTF-8		'#vu8(#xC3 #xBA))
+(define LATIN-SMALL-LETTER-U-WITH-ACUTE-UTF-16-LE	'#vu8(250 0))
+(define LATIN-SMALL-LETTER-U-WITH-ACUTE-UTF-16-BE	'#vu8(0 250))
+(define LATIN-SMALL-LETTER-U-WITH-ACUTE-LATIN-1		'#vu8(250))
+
+;;; --------------------------------------------------------------------
+
+(define GREEK-SMALL-LETTER-ALPHA			#\x03B1)
+(define GREEK-SMALL-LETTER-ALPHA-UTF-8			'#vu8(#xCE #xB1))
+(define GREEK-SMALL-LETTER-ALPHA-UTF-16-LE		'#vu8(177 3))
+(define GREEK-SMALL-LETTER-ALPHA-UTF-16-BE		'#vu8(3 177))
+
+(define GREEK-SMALL-LETTER-BETA				#\x03B2)
+(define GREEK-SMALL-LETTER-BETA-UTF-8			'#vu8(#xCE #xB2))
+(define GREEK-SMALL-LETTER-BETA-UTF-16-LE		'#vu8(178 3))
+(define GREEK-SMALL-LETTER-BETA-UTF-16-BE		'#vu8(3 178))
+
+(define GREEK-SMALL-LETTER-GAMMA			#\x03B3)
+(define GREEK-SMALL-LETTER-GAMMA-UTF-8			'#vu8(#xCE #xB3))
+(define GREEK-SMALL-LETTER-GAMMA-UTF-16-LE		'#vu8(179 3))
+(define GREEK-SMALL-LETTER-GAMMA-UTF-16-BE		'#vu8(3 179))
+
+(define GREEK-SMALL-LETTER-DELTA			#\x03B4)
+(define GREEK-SMALL-LETTER-DELTA-UTF-8			'#vu8(#xCE #xB4))
+(define GREEK-SMALL-LETTER-DELTA-UTF-16-LE		'#vu8(180 3))
+(define GREEK-SMALL-LETTER-DELTA-UTF-16-BE		'#vu8(180 3))
+
+(define GREEK-SMALL-LETTER-LAMBDA			#\x03BB)
+(define GREEK-SMALL-LETTER-LAMBDA-UTF-8			'#vu8(#xCE #xBB))
+(define GREEK-SMALL-LETTER-LAMBDA-UTF-16-LE		'#vu8(187 3))
+(define GREEK-SMALL-LETTER-LAMBDA-UTF-16-BE		'#vu8(3 187))
+
+;;; --------------------------------------------------------------------
+
+(define BENGALI-SIGN-NUKTA				#\x09BC)
+(define BENGALI-SIGN-NUKTA-UTF-8			'#vu8(#xE0 #xA6 #xBC))
+(define BENGALI-SIGN-NUKTA-UTF-16-LE			'#vu8(188 9))
+(define BENGALI-SIGN-NUKTA-UTF-16-BE			'#vu8(9 188))
+
+(define CJK-COMPATIBILITY-IDEOGRAPH-2F9D1		#\x2F9D1)
+(define CJK-COMPATIBILITY-IDEOGRAPH-2F9D1-UTF-8		'#vu8(#xF0 #xAF #xA7 #x91))
+(define CJK-COMPATIBILITY-IDEOGRAPH-2F9D1-UTF-16-LE	'#vu8(126 216 209 221))
+(define CJK-COMPATIBILITY-IDEOGRAPH-2F9D1-UTF-16-BE	'#vu8(216 126 221 209))
+
+;;; --------------------------------------------------------------------
+
+(define TWO-BYTES-UTF-8-CHAR				GREEK-SMALL-LETTER-LAMBDA)
+(define TWO-BYTES-UTF-8-CHAR-UTF-8			GREEK-SMALL-LETTER-LAMBDA-UTF-8)
+
+(define THREE-BYTES-UTF-8-CHAR				BENGALI-SIGN-NUKTA)
+(define THREE-BYTES-UTF-8-CHAR-UTF-8			BENGALI-SIGN-NUKTA-UTF-8)
+
+(define FOUR-BYTES-UTF-8-CHAR				CJK-COMPATIBILITY-IDEOGRAPH-2F9D1)
+(define FOUR-BYTES-UTF-8-CHAR-UTF-8			CJK-COMPATIBILITY-IDEOGRAPH-2F9D1-UTF-8)
+
+;;; --------------------------------------------------------------------
+
+(define ONE-WORD-UTF-16-CHAR				GREEK-SMALL-LETTER-LAMBDA)
+(define ONE-WORD-UTF-16-CHAR-UTF-16-LE			GREEK-SMALL-LETTER-LAMBDA-UTF-16-LE)
+(define ONE-WORD-UTF-16-CHAR-UTF-16-BE			GREEK-SMALL-LETTER-LAMBDA-UTF-16-BE)
+
+(define TWO-WORDS-UTF-16-CHAR				CJK-COMPATIBILITY-IDEOGRAPH-2F9D1)
+(define TWO-WORDS-UTF-16-CHAR-UTF-16-LE			CJK-COMPATIBILITY-IDEOGRAPH-2F9D1-UTF-16-LE)
+(define TWO-WORDS-UTF-16-CHAR-UTF-16-BE			CJK-COMPATIBILITY-IDEOGRAPH-2F9D1-UTF-16-BE)
+
+;;; --------------------------------------------------------------------
+
+(define test-string-for-latin-1
+  (string
+   LATIN-SMALL-LETTER-A-WITH-GRAVE LATIN-SMALL-LETTER-A-WITH-ACUTE
+   LATIN-SMALL-LETTER-E-WITH-GRAVE LATIN-SMALL-LETTER-E-WITH-ACUTE
+   LATIN-SMALL-LETTER-I-WITH-GRAVE LATIN-SMALL-LETTER-I-WITH-ACUTE
+   LATIN-SMALL-LETTER-O-WITH-GRAVE LATIN-SMALL-LETTER-O-WITH-ACUTE
+   LATIN-SMALL-LETTER-U-WITH-GRAVE LATIN-SMALL-LETTER-U-WITH-ACUTE))
+
+(define test-bytevector-for-latin-1
+  (%bytevector-append
+   LATIN-SMALL-LETTER-A-WITH-GRAVE-LATIN-1 LATIN-SMALL-LETTER-A-WITH-ACUTE-LATIN-1
+   LATIN-SMALL-LETTER-E-WITH-GRAVE-LATIN-1 LATIN-SMALL-LETTER-E-WITH-ACUTE-LATIN-1
+   LATIN-SMALL-LETTER-I-WITH-GRAVE-LATIN-1 LATIN-SMALL-LETTER-I-WITH-ACUTE-LATIN-1
+   LATIN-SMALL-LETTER-O-WITH-GRAVE-LATIN-1 LATIN-SMALL-LETTER-O-WITH-ACUTE-LATIN-1
+   LATIN-SMALL-LETTER-U-WITH-GRAVE-LATIN-1 LATIN-SMALL-LETTER-U-WITH-ACUTE-LATIN-1))
+
+;;; --------------------------------------------------------------------
+
+(define test-string-for-utf-8
+  (string
+   LATIN-SMALL-LETTER-A-WITH-GRAVE LATIN-SMALL-LETTER-A-WITH-ACUTE
+   LATIN-SMALL-LETTER-E-WITH-GRAVE LATIN-SMALL-LETTER-E-WITH-ACUTE
+   LATIN-SMALL-LETTER-I-WITH-GRAVE LATIN-SMALL-LETTER-I-WITH-ACUTE
+   LATIN-SMALL-LETTER-O-WITH-GRAVE LATIN-SMALL-LETTER-O-WITH-ACUTE
+   LATIN-SMALL-LETTER-U-WITH-GRAVE LATIN-SMALL-LETTER-U-WITH-ACUTE
+   GREEK-SMALL-LETTER-ALPHA GREEK-SMALL-LETTER-BETA
+   GREEK-SMALL-LETTER-GAMMA GREEK-SMALL-LETTER-DELTA
+   GREEK-SMALL-LETTER-LAMBDA
+   TWO-BYTES-UTF-8-CHAR THREE-BYTES-UTF-8-CHAR FOUR-BYTES-UTF-8-CHAR))
+
+(define test-bytevector-for-utf-8
+  (%bytevector-append
+   LATIN-SMALL-LETTER-A-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-A-WITH-ACUTE-UTF-8
+   LATIN-SMALL-LETTER-E-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-E-WITH-ACUTE-UTF-8
+   LATIN-SMALL-LETTER-I-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-I-WITH-ACUTE-UTF-8
+   LATIN-SMALL-LETTER-O-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-O-WITH-ACUTE-UTF-8
+   LATIN-SMALL-LETTER-U-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-U-WITH-ACUTE-UTF-8
+   GREEK-SMALL-LETTER-ALPHA-UTF-8 GREEK-SMALL-LETTER-BETA-UTF-8
+   GREEK-SMALL-LETTER-GAMMA-UTF-8 GREEK-SMALL-LETTER-DELTA-UTF-8
+   GREEK-SMALL-LETTER-LAMBDA-UTF-8
+   TWO-BYTES-UTF-8-CHAR-UTF-8
+   THREE-BYTES-UTF-8-CHAR-UTF-8
+   FOUR-BYTES-UTF-8-CHAR-UTF-8))
+
+;;; --------------------------------------------------------------------
+
+(define test-string-for-utf-16-le
+  (string
+   LATIN-SMALL-LETTER-A-WITH-GRAVE LATIN-SMALL-LETTER-A-WITH-ACUTE
+   LATIN-SMALL-LETTER-E-WITH-GRAVE LATIN-SMALL-LETTER-E-WITH-ACUTE
+   LATIN-SMALL-LETTER-I-WITH-GRAVE LATIN-SMALL-LETTER-I-WITH-ACUTE
+   LATIN-SMALL-LETTER-O-WITH-GRAVE LATIN-SMALL-LETTER-O-WITH-ACUTE
+   LATIN-SMALL-LETTER-U-WITH-GRAVE LATIN-SMALL-LETTER-U-WITH-ACUTE
+   GREEK-SMALL-LETTER-ALPHA GREEK-SMALL-LETTER-BETA
+   GREEK-SMALL-LETTER-GAMMA GREEK-SMALL-LETTER-DELTA
+   GREEK-SMALL-LETTER-LAMBDA
+   ONE-WORD-UTF-16-CHAR
+   TWO-WORDS-UTF-16-CHAR))
+
+(define test-bytevector-for-utf-16-le
+  (%bytevector-append
+   LATIN-SMALL-LETTER-A-WITH-GRAVE-UTF-16-LE LATIN-SMALL-LETTER-A-WITH-ACUTE-UTF-16-LE
+   LATIN-SMALL-LETTER-E-WITH-GRAVE-UTF-16-LE LATIN-SMALL-LETTER-E-WITH-ACUTE-UTF-16-LE
+   LATIN-SMALL-LETTER-I-WITH-GRAVE-UTF-16-LE LATIN-SMALL-LETTER-I-WITH-ACUTE-UTF-16-LE
+   LATIN-SMALL-LETTER-O-WITH-GRAVE-UTF-16-LE LATIN-SMALL-LETTER-O-WITH-ACUTE-UTF-16-LE
+   LATIN-SMALL-LETTER-U-WITH-GRAVE-UTF-16-LE LATIN-SMALL-LETTER-U-WITH-ACUTE-UTF-16-LE
+   GREEK-SMALL-LETTER-ALPHA-UTF-16-LE GREEK-SMALL-LETTER-BETA-UTF-16-LE
+   GREEK-SMALL-LETTER-GAMMA-UTF-16-LE GREEK-SMALL-LETTER-DELTA-UTF-16-LE
+   GREEK-SMALL-LETTER-LAMBDA-UTF-16-LE
+   ONE-WORD-UTF-16-CHAR-UTF-16-LE TWO-WORDS-UTF-16-CHAR-UTF-16-LE))
+
+;;; --------------------------------------------------------------------
+
+(define test-string-for-utf-16-be
+  (string
+   LATIN-SMALL-LETTER-A-WITH-GRAVE LATIN-SMALL-LETTER-A-WITH-ACUTE
+   LATIN-SMALL-LETTER-E-WITH-GRAVE LATIN-SMALL-LETTER-E-WITH-ACUTE
+   LATIN-SMALL-LETTER-I-WITH-GRAVE LATIN-SMALL-LETTER-I-WITH-ACUTE
+   LATIN-SMALL-LETTER-O-WITH-GRAVE LATIN-SMALL-LETTER-O-WITH-ACUTE
+   LATIN-SMALL-LETTER-U-WITH-GRAVE LATIN-SMALL-LETTER-U-WITH-ACUTE
+   GREEK-SMALL-LETTER-ALPHA GREEK-SMALL-LETTER-BETA
+   GREEK-SMALL-LETTER-GAMMA GREEK-SMALL-LETTER-DELTA
+   GREEK-SMALL-LETTER-LAMBDA
+   ONE-WORD-UTF-16-CHAR TWO-WORDS-UTF-16-CHAR))
+
+(define test-bytevector-for-utf-16-be
+  (%bytevector-append
+   LATIN-SMALL-LETTER-A-WITH-GRAVE-UTF-16-BE LATIN-SMALL-LETTER-A-WITH-ACUTE-UTF-16-BE
+   LATIN-SMALL-LETTER-E-WITH-GRAVE-UTF-16-BE LATIN-SMALL-LETTER-E-WITH-ACUTE-UTF-16-BE
+   LATIN-SMALL-LETTER-I-WITH-GRAVE-UTF-16-BE LATIN-SMALL-LETTER-I-WITH-ACUTE-UTF-16-BE
+   LATIN-SMALL-LETTER-O-WITH-GRAVE-UTF-16-BE LATIN-SMALL-LETTER-O-WITH-ACUTE-UTF-16-BE
+   LATIN-SMALL-LETTER-U-WITH-GRAVE-UTF-16-BE LATIN-SMALL-LETTER-U-WITH-ACUTE-UTF-16-BE
+   GREEK-SMALL-LETTER-ALPHA-UTF-16-BE GREEK-SMALL-LETTER-BETA-UTF-16-BE
+   GREEK-SMALL-LETTER-GAMMA-UTF-16-BE GREEK-SMALL-LETTER-DELTA-UTF-16-BE
+   GREEK-SMALL-LETTER-LAMBDA-UTF-16-BE
+   ONE-WORD-UTF-16-CHAR-UTF-16-BE TWO-WORDS-UTF-16-CHAR-UTF-16-BE))
 
 
 (parametrise ((check-test-name	'transcoders))
@@ -4881,24 +5130,24 @@
     => "ciao mamma àáèéìíòóùú")
 
   (check
-      (let* ((bin-port	(open-bytevector-input-port (string->utf8 "ciao mamma àáèéìíòóùú λΓσΩ")))
+      (let* ((bin-port	(open-bytevector-input-port (string->utf8 "ciao mamma àáèéìíòóùú     ")))
 	     (tran-port	(transcoded-port bin-port (make-transcoder (utf-8-codec)))))
 	(get-string-all tran-port))
-    => "ciao mamma àáèéìíòóùú λΓσΩ")
+    => "ciao mamma àáèéìíòóùú     ")
 
   (check
-      (let* ((bin-port	(open-bytevector-input-port (string->utf16 "ciao mamma àáèéìíòóùú λΓσΩ"
+      (let* ((bin-port	(open-bytevector-input-port (string->utf16 "ciao mamma àáèéìíòóùú     "
 								   (endianness little))))
 	     (tran-port	(transcoded-port bin-port (make-transcoder (utf-16-codec)))))
 	(get-string-all tran-port))
-    => "ciao mamma àáèéìíòóùú λΓσΩ")
+    => "ciao mamma àáèéìíòóùú     ")
 
   ;;There is no UTF-32 codec.
   #;(check
-      (let* ((bin-port	(open-bytevector-input-port (string->utf32 "ciao mamma λΓσΩ")))
+      (let* ((bin-port	(open-bytevector-input-port (string->utf32 "ciao mamma     ")))
 	     (tran-port	(transcoded-port bin-port (make-transcoder (utf-32-codec)))))
 	(get-string-all tran-port))
-    => "ciao mamma λΓσΩ")
+    => "ciao mamma     ")
 
 ;;; --------------------------------------------------------------------
 ;;; transcoding output ports
@@ -4913,16 +5162,16 @@
   (check
       (let-values (((bin-port extract) (open-bytevector-output-port)))
 	(let ((tran-port (transcoded-port bin-port (make-transcoder (utf-8-codec)))))
-	  (put-string tran-port "ciao mamma àáèéìíòóùú λΓσΩ")
+	  (put-string tran-port "ciao mamma àáèéìíòóùú     ")
 	  (utf8->string (extract))))
-    => "ciao mamma àáèéìíòóùú λΓσΩ")
+    => "ciao mamma àáèéìíòóùú     ")
 
   (check
       (let-values (((bin-port extract) (open-bytevector-output-port)))
 	(let ((tran-port (transcoded-port bin-port (make-transcoder (utf-16-codec)))))
-	  (put-string tran-port "ciao mamma àáèéìíòóùú λΓσΩ")
+	  (put-string tran-port "ciao mamma àáèéìíòóùú     ")
 	  (utf16->string (extract) (endianness little))))
-    => "ciao mamma àáèéìíòóùú λΓσΩ")
+    => "ciao mamma àáèéìíòóùú     ")
 
   #t)
 
@@ -6012,7 +6261,7 @@
 ;;; --------------------------------------------------------------------
 ;;; reading from bytevector input port, transcoded UTF-8
 
-  (let ((str "ciao àáèéìíòóùú λΓσΩ"))
+  (let ((str "ciao àáèéìíòóùú     "))
     (check
 	(let* ((bin-port	(open-bytevector-input-port (string->utf8 str)))
 	       (port		(transcoded-port bin-port (make-transcoder (utf-8-codec)))))
@@ -6031,7 +6280,7 @@
 								   (eol-style none)
 								   (error-handling-mode ignore)))))
 	(string (read-char port)))
-    => "λ")
+    => " ")
 
   (check	;attempt   to  read   incomplete  2-bytes   UTF-8  char,
 		;unexpected EOF, ignore
@@ -6183,7 +6432,7 @@
 ;;; --------------------------------------------------------------------
 ;;; reading from bytevector input port, transcoded UTF-16
 
-    (let ((str "ciao àáèéìíòóùú λΓσΩ"))
+    (let ((str "ciao àáèéìíòóùú     "))
       (check
 	  (let* ((bin-port	(open-bytevector-input-port (string->utf16 str (endianness little))))
 		 (port		(transcoded-port bin-port (make-transcoder (utf-16-codec)))))
@@ -6276,49 +6525,47 @@
 ;;; --------------------------------------------------------------------
 ;;; peeking from bytevector input port, transcoded UTF-8
 
-  (let ((str "ciao àáèéìíòóùú λΓσΩ"))
-    (check
-	(let* ((bin-port	(open-bytevector-input-port (string->utf8 str)))
-	       (port		(transcoded-port bin-port (make-transcoder (utf-8-codec)))))
-	  (let loop ((i 0) (L '()))
-	    (if (= i (string-length str))
-		(apply string (reverse L))
-	      (loop (+ 1 i) (cons (begin
-				    (peek-char port)
-				    (get-char  port))
-				  L)))))
-      => str))
+  (check
+      (let ((port (open-bytevector-input-port test-bytevector-for-utf-8
+					      (make-transcoder (utf-8-codec)))))
+	(let loop ((i 0) (L '()))
+	  (if (= i (string-length test-string-for-utf-8))
+	      (apply string (reverse L))
+	    (loop (+ 1 i) (cons (begin
+				  (peek-char port)
+				  (get-char  port))
+				L)))))
+    => test-string-for-utf-8)
 
 ;;; --------------------------------------------------------------------
 ;;; peeking from bytevector input port, transcoded UTF-8, 2-bytes chars
 
-  (check	;read 2-bytes UTF-8 char
-      (let* ((bin-port	(open-bytevector-input-port '#vu8(#xCE #XBB)))
-	     (port	(transcoded-port bin-port (make-transcoder (utf-8-codec)
-								   (eol-style none)
-								   (error-handling-mode ignore)))))
-	(string (peek-char port)))
-    => "λ")
+  (check	;read 2-bytes UTF-8 char, lambda character
+      (let ((port (open-bytevector-input-port TWO-BYTES-UTF-8-CHAR-UTF-8
+					      (make-transcoder (utf-8-codec)
+							       (eol-style none)
+							       (error-handling-mode ignore)))))
+	(peek-char port))
+    => TWO-BYTES-UTF-8-CHAR)
 
   (check	;attempt   to  peek   incomplete  2-bytes   UTF-8  char,
 		;unexpected EOF, ignore
-      (let* ((bin-port	(open-bytevector-input-port '#vu8(#xCE)))
-  	     (port	(transcoded-port bin-port (make-transcoder (utf-8-codec)
-  								   (eol-style none)
-  								   (error-handling-mode ignore)))))
-  	(let ((ch (peek-char port)))
-	  (list ch (port-eof? port))))
+      (let* ((port (open-bytevector-input-port (subbytevector-u8 TWO-BYTES-UTF-8-CHAR-UTF-8 0 1)
+					       (make-transcoder (utf-8-codec)
+								(eol-style none)
+								(error-handling-mode ignore))))
+	     (ch (peek-char port)))
+	(list ch (port-eof? port)))
     => (list (eof-object) #f))
 
   (check	;attempt   to  peek   incomplete  2-bytes   UTF-8  char,
 		;unexpected EOF, replace
-      (let* ((bin-port	(open-bytevector-input-port '#vu8(#xCE)))
-  	     (port	(transcoded-port bin-port
-  					 (make-transcoder (utf-8-codec)
-  							  (eol-style none)
-  							  (error-handling-mode replace)))))
-  	(let ((ch (peek-char port)))
-  	  (list ch (port-eof? port))))
+      (let* ((port (open-bytevector-input-port (subbytevector-u8 TWO-BYTES-UTF-8-CHAR-UTF-8 0 1)
+					       (make-transcoder (utf-8-codec)
+								(eol-style none)
+								(error-handling-mode replace))))
+	     (ch (peek-char port)))
+	(list ch (port-eof? port)))
     => '(#\xFFFD #f))
 
   (check	;attempt   to  read   incomplete  2-bytes   UTF-8  char,
@@ -6327,11 +6574,10 @@
 ;;;  		 (pretty-print (condition-message E))
   		 (condition-irritants E))
   		(else E))
-  	(let* ((bin-port	(open-bytevector-input-port '#vu8(#xCE)))
-  	       (port		(transcoded-port bin-port
-  						 (make-transcoder (utf-8-codec)
-  								  (eol-style none)
-  								  (error-handling-mode raise)))))
+  	(let ((port (open-bytevector-input-port '#vu8(#xCE)
+						(make-transcoder (utf-8-codec)
+								 (eol-style none)
+								 (error-handling-mode raise)))))
   	  (peek-char port)))
     => '(#xCE))
 
@@ -6339,10 +6585,10 @@
 ;;; peeking from bytevector input port, transcoded UTF-8, 3-bytes chars
 
   (check	;read 3-bytes UTF-8 char
-      (let* ((bin-port	(open-bytevector-input-port '#vu8(#xE0 #xA6 #xBC)))
-	     (port	(transcoded-port bin-port (make-transcoder (utf-8-codec)
-								   (eol-style none)
-								   (error-handling-mode ignore)))))
+      (let ((port (open-bytevector-input-port '#vu8(#xE0 #xA6 #xBC)
+					      (make-transcoder (utf-8-codec)
+							       (eol-style none)
+							       (error-handling-mode ignore)))))
 	(peek-char port))
     => #\x09BC)
 
@@ -6451,7 +6697,7 @@
 ;;; --------------------------------------------------------------------
 ;;; peeking from bytevector input port, transcoded UTF-16
 
-  (let ((str "ciao àáèéìíòóùú λΓσΩ"))
+  (let ((str "ciao àáèéìíòóùú     "))
     (check
 	(let* ((bin-port	(open-bytevector-input-port (string->utf16 str (endianness little))))
 	       (port		(transcoded-port bin-port (make-transcoder (utf-16-codec)))))
@@ -6463,6 +6709,34 @@
 				    (get-char  port))
 				  L)))))
       => str))
+
+;;; --------------------------------------------------------------------
+;;; peeking from bytevector input port, transcoded UTF-16, 1-word chars
+
+  (check	;little endian char
+      (let ((port (open-bytevector-input-port '#vu8(#xFF #xFE #xAB #xCD)
+					      (make-transcoder (utf-16-codec)))))
+	(peek-char port))
+    => #\xCDAB)
+
+  (check	;big endian char
+      (let ((port (open-bytevector-input-port '#vu8(#xFE #xFF #xAB #xCD)
+					      (make-transcoder (utf-16-codec)))))
+	(peek-char port))
+    => #\xABCD)
+
+  (check	;attempt  to read  incomplete single  byte  UTF-16 char,
+		;unexpected EOF, ignore
+      (let* ((doit (lambda (bv)
+		     (let* ((port (open-bytevector-input-port
+				   bv (make-transcoder (utf-16-codec)
+						       (eol-style none)
+						       (error-handling-mode ignore))))
+			    (ch (peek-char port)))
+		       (list ch (port-eof? port)))))
+	     (a	(doit '#vu8(#xFF #xFE #xAB))))
+	a)
+    => `(,(eof-object) #f))
 
 ;;; --------------------------------------------------------------------
 ;;; peeking from bytevector input port, transcoded Latin-1

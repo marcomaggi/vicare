@@ -1898,7 +1898,8 @@
 
  /section)
 
-(section ;;; bytevectors
+
+(section	;;; bytevectors
 
  (define-primop bytevector? safe
    ((P x) (tag-test (T x) bytevector-mask bytevector-tag))
@@ -2184,9 +2185,11 @@
 	    (with-tmp ((x0 (prm 'mref32 t (K bvoff))))
 	      (prm 'bswap! x0 x0)
 	      (prm 'mset32 t (K bvoff) (prm 'sra x0 (K 32)))))))))))
+
  /section)
 
-(section ;;; strings
+
+(section	;;; strings
 
  (define-primop string? safe
    ((P x) (tag-test (T x) string-mask string-tag))

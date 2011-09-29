@@ -1,19 +1,19 @@
-;;; Ikarus Scheme -- A compiler for R6RS Scheme.
-;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; Modified by Marco Maggi
+;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;; This program is free software: you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License version 3 as
-;;; published by the Free Software Foundation.
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under  the terms of  the GNU General  Public License version  3 as
+;;;published by the Free Software Foundation.
 ;;;
-;;; This program is distributed in the hope that it will be useful, but
-;;; WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; General Public License for more details.
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
 ;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+;;;You should  have received  a copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;
 
 (library (ikarus.reader)
   (export read read-initial read-token comment-handler get-datum
@@ -479,7 +479,7 @@
               (read-char* p '(#\r) "6rs" "#!r6rs comment" #f #f)
               (set-port-mode! p 'r6rs-mode)
               (tokenize/1 p)]
-             [(#\i)
+             [(#\v)
               (read-char* p '(#\v) "icare" "#!vicare comment" #f #f)
               (set-port-mode! p 'vicare-mode)
               (tokenize/1 p)]
@@ -554,26 +554,42 @@
                         "invalid char inside gensym" c)])))]))]
         [($char= #\v c)
          (let ([c (read-char p)])
-           (cond
-             [($char= #\u c)
-              (let ([c (read-char p)])
-                (cond
-                  [($char= c #\8)
-                   (let ([c (read-char p)])
-                     (cond
-                       [($char= c #\() 'vu8]
-                       [(eof-object? c)
-                        (die/p p 'tokenize "invalid eof object after #vu8")]
-                       [else (die/p-1 p 'tokenize
-                               (format "invalid sequence #vu8~a" c))]))]
-                  [(eof-object? c)
-                   (die/p p 'tokenize "invalid eof object after #vu")]
-                  [else (die/p-1 p 'tokenize
-                           (format "invalid sequence #vu~a" c))]))]
-             [(eof-object? c)
-              (die/p p 'tokenize "invalid eof object after #v")]
-             [else (die/p p 'tokenize
-                     (format "invalid sequence #v~a" c))]))]
+           (cond [($char= #\u c)
+		  (let ([c (read-char p)])
+		    (cond
+		     [($char= c #\8)
+		      (let ([c (read-char p)])
+			(cond
+			 [($char= c #\() 'vu8]
+			 [(eof-object? c)
+			  (die/p p 'tokenize "invalid eof object after #vu8")]
+			 [else (die/p-1 p 'tokenize
+					(format "invalid sequence #vu8~a" c))]))]
+		     [(eof-object? c)
+		      (die/p p 'tokenize "invalid eof object after #vu")]
+		     [else (die/p-1 p 'tokenize
+				    (format "invalid sequence #vu~a" c))]))]
+		 [($char= #\s c)
+		  [when (eq? (port-mode p) 'r6rs-mode)
+		    (die/p p 'tokenize "invalid #vs8 syntax in #!r6rs mode" "#vs8")]
+		  (let ([c (read-char p)])
+		    (cond
+		     [($char= c #\8)
+		      (let ([c (read-char p)])
+			(cond
+			 [($char= c #\() 'vs8]
+			 [(eof-object? c)
+			  (die/p p 'tokenize "invalid eof object after #vs8")]
+			 [else (die/p-1 p 'tokenize
+					(format "invalid sequence #vs8~a" c))]))]
+		     [(eof-object? c)
+		      (die/p p 'tokenize "invalid eof object after #vs")]
+		     [else (die/p-1 p 'tokenize
+				    (format "invalid sequence #vs~a" c))]))]
+		 [(eof-object? c)
+		  (die/p p 'tokenize "invalid eof object after #v")]
+		 [else (die/p p 'tokenize
+			      (format "invalid sequence #v~a" c))]))]
         [(memq c '(#\e #\E))
          (cons 'datum (parse-string p (list c #\#) 10 #f 'e))]
         [(memq c '(#\i #\I))
@@ -994,7 +1010,7 @@
              (let-values ([(a a^ locs k) (parse-token p locs k t pos)])
                 (read-vector p locs k (fxadd1 count)
                   (cons a ls) (cons a^ ls^)))]))))
-    (define read-bytevector
+    (define read-u8-bytevector
       (lambda (p locs k count ls)
         (let-values ([(t pos) (tokenize/1+pos p)])
           (cond
@@ -1011,8 +1027,35 @@
              (let-values ([(a a^ locs k) (parse-token p locs k t pos)])
                 (unless (and (fixnum? a) (fx<= 0 a) (fx<= a 255))
                   (die/ann a^ 'read
-                    "invalid value in a bytevector" a))
-                (read-bytevector p locs k (fxadd1 count)
+                    "invalid value in a u8 bytevector" a))
+                (read-u8-bytevector p locs k (fxadd1 count)
+                  (cons a ls)))]))))
+    (define read-s8-bytevector
+      (lambda (p locs k count ls)
+        (let-values ([(t pos) (tokenize/1+pos p)])
+          (cond
+            [(eof-object? t)
+             (die/p p 'read "end of file encountered while reading a bytevector")]
+            [(eq? t 'rparen)
+             (let ((v (let ((bv ($make-bytevector count)))
+			(let loop ((i  (- count 1))
+				   (ls ls))
+			  (if (null? ls)
+			      bv
+			    (begin
+			      ($bytevector-set! bv i (car ls))
+			      (loop (- i 1) (cdr ls))))))))
+               (values v v locs k))]
+            [(eq? t 'rbrack)
+             (die/p-1 p 'read "unexpected ] while reading a bytevector")]
+            [(eq? t 'dot)
+             (die/p-1 p 'read "unexpected . while reading a bytevector")]
+            [else
+             (let-values ([(a a^ locs k) (parse-token p locs k t pos)])
+                (unless (and (fixnum? a) (fx<= -128 a) (fx<= a 127))
+                  (die/ann a^ 'read
+                    "invalid value in a s8 bytevector" a))
+                (read-s8-bytevector p locs k (fxadd1 count)
                   (cons a ls)))]))))
     (define read-at-expr
       (lambda (p locs k at-pos)
@@ -1409,7 +1452,11 @@
              (values v (annotate v v^ pos p) locs k))]
           [(eq? t 'vu8)
            (let-values ([(v v^ locs k)
-                         (read-bytevector p locs k 0 '())])
+                         (read-u8-bytevector p locs k 0 '())])
+             (values v (annotate v v^ pos p) locs k))]
+          [(eq? t 'vs8)
+           (let-values ([(v v^ locs k)
+                         (read-s8-bytevector p locs k 0 '())])
              (values v (annotate v v^ pos p) locs k))]
           [(eq? t 'at-expr)
            (read-at-expr p locs k pos)]

@@ -4126,7 +4126,7 @@
     (define-inline (recurse)
       (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who endianness))
 
-    (define (error-handler message . irritants)
+    (define (%error-handler message . irritants)
       ;;Handle  the error  honoring the  error handling  mode  in port's
       ;;transcoder.
       ;;
@@ -4164,11 +4164,11 @@
       (cond ((unsafe.fx<= char-code-point #xD7FF)
 	     (unsafe.integer->char char-code-point))
 	    ((unsafe.fx<  char-code-point #xE000)
-	     (error-handler errmsg char-code-point))
+	     (%error-handler errmsg char-code-point))
 	    ((unsafe.fx<= char-code-point #x10FFFF)
 	     (unsafe.integer->char char-code-point))
 	    (else
-	     (error-handler errmsg char-code-point))))
+	     (%error-handler errmsg char-code-point))))
 
     (define-inline (%word-ref buffer.offset)
       (%unsafe.bytevector-u16-ref port.buffer buffer.offset endianness))
@@ -4188,7 +4188,7 @@
 		      (integer->char/invalid (utf-16-decode-single-word word0)))
 		     ((not (utf-16-first-of-two-words? word0))
 		      (set! port.buffer.index buffer.offset-word1)
-		      (error-handler "invalid 16-bit word while decoding UTF-16 characters" word0))
+		      (%error-handler "invalid 16-bit word while decoding UTF-16 characters" word0))
 		     ((unsafe.fx<= buffer.offset-past port.buffer.used-size)
 		      ;;WORD0 is  the first  of a UTF-16  surrogate pair
 		      ;;and  the input buffer  already holds  the second
@@ -4200,7 +4200,7 @@
 			      (integer->char/invalid (utf-16-decode-surrogate-pair word0 word1)))
 			  (begin
 			    (set! port.buffer.index buffer.offset-word1)
-			    (error-handler "invalid value as second 16-bit word of \
+			    (%error-handler "invalid value as second 16-bit word of \
                                             UTF-16 character" word0 word1)))))
 		     (else
 		      ;;WORD0 is  the first of a  UTF-16 surrogate pair,
@@ -4209,7 +4209,7 @@
 		      (%refill-bytevector-buffer-and-evaluate (port who)
 			(if-end-of-file:
 			 (set! port.buffer.index port.buffer.used-size)
-			 (error-handler "unexpected end of file while reading second \
+			 (%error-handler "unexpected end of file while reading second \
                                          16-bit word in UTF-16 surrogate pair character" word0))
 			(if-successful-refill:
 			 (recurse)))))))
@@ -4224,7 +4224,7 @@
 		;;buffer.  (FIXME Is this  good whatever it is the error
 		;;handling mode?)
 		(set! port.buffer.index port.buffer.used-size)
-		(error-handler "unexpected end of file after byte while reading \
+		(%error-handler "unexpected end of file after byte while reading \
                                 16-bit word of UTF-16 character"
 			       (unsafe.bytevector-u8-ref port.buffer buffer.offset-word0)))
 	       (if-successful-refill:
@@ -4255,7 +4255,7 @@
     (define-inline (recurse)
       (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who endianness))
 
-    (define (error-handler message . irritants)
+    (define (%error-handler message . irritants)
       ;;Handle  the error  honoring the  error handling  mode  in port's
       ;;transcoder.
       ;;
@@ -4264,6 +4264,25 @@
 	  ((ignore)
 	   ;;To ignore means jump to the next.
 	   (recurse))
+	  ((replace)
+	   #\xFFFD)
+	  ((raise)
+	   (raise (condition (make-i/o-decoding-error port)
+			     (make-who-condition who)
+			     (make-message-condition message)
+			     (make-irritants-condition irritants))))
+	  (else
+	   (assertion-violation who "internal error: invalid error handling mode" port mode)))))
+
+    (define (%unexpected-eof-error message . irritants)
+      ;;Handle the unexpected EOF error honoring the error handling mode
+      ;;in port's  transcoder.
+      ;;
+      (let ((mode (transcoder-error-handling-mode port.transcoder)))
+	(case mode
+	  ((ignore)
+	   ;;To ignore means jump to the next.
+	   (eof-object))
 	  ((replace)
 	   #\xFFFD)
 	  ((raise)
@@ -4288,16 +4307,15 @@
       ;;This is why we check the representation with this function: this
       ;;check is *not* a repetition of the check on the 16-bit words.
       ;;
-      (define errmsg
-	"invalid code point decoded from UTF-16 surrogate pair")
-      (cond ((unsafe.fx<= char-code-point #xD7FF)
-	     (unsafe.integer->char char-code-point))
-	    ((unsafe.fx<  char-code-point #xE000)
-	     (error-handler errmsg char-code-point))
-	    ((unsafe.fx<= char-code-point #x10FFFF)
-	     (unsafe.integer->char char-code-point))
-	    (else
-	     (error-handler errmsg char-code-point))))
+      (let ((errmsg "invalid code point decoded from UTF-16 surrogate pair"))
+	(cond ((unsafe.fx<= char-code-point #xD7FF)
+	       (unsafe.integer->char char-code-point))
+	      ((unsafe.fx<  char-code-point #xE000)
+	       (%error-handler errmsg char-code-point))
+	      ((unsafe.fx<= char-code-point #x10FFFF)
+	       (unsafe.integer->char char-code-point))
+	      (else
+	       (%error-handler errmsg char-code-point)))))
 
     (define-inline (%word-ref buffer.offset)
       (%unsafe.bytevector-u16-ref port.buffer buffer.offset endianness))
@@ -4313,7 +4331,8 @@
 	       (cond ((utf-16-single-word? word0)
 		      (integer->char/invalid (utf-16-decode-single-word word0)))
 		     ((not (utf-16-first-of-two-words? word0))
-		      (error-handler "invalid 16-bit word while decoding UTF-16 characters" word0))
+		      (%error-handler "invalid 16-bit word while decoding UTF-16 characters"
+				      word0))
 		     ((unsafe.fx<= buffer.offset-past port.buffer.used-size)
 		      ;;WORD0 is  the first  of a UTF-16  surrogate pair
 		      ;;and  the input buffer  already holds  the second
@@ -4321,16 +4340,18 @@
 		      (let ((word1 (%word-ref buffer.offset-word1)))
 			(if (utf-16-second-of-two-words? word1)
 			    (integer->char/invalid (utf-16-decode-surrogate-pair word0 word1))
-			  (error-handler "invalid value as second 16-bit word of \
-                                          UTF-16 character" word0 word1))))
+			  (%error-handler "invalid value as second 16-bit word of \
+                                           UTF-16 character"
+					  word0 word1))))
 		     (else
 		      ;;WORD0 is  the first of a  UTF-16 surrogate pair,
 		      ;;but  the input  buffer  does not  hold the  full
 		      ;;second word.
 		      (%refill-bytevector-buffer-and-evaluate (port who)
 			(if-end-of-file:
-			 (error-handler "unexpected end of file while reading second \
-                                         16-bit word in UTF-16 surrogate pair character" word0))
+			 (%unexpected-eof-error "unexpected end of file while reading second \
+                                                 16-bit word in UTF-16 surrogate pair character"
+						word0))
 			(if-successful-refill:
 			 (recurse)))))))
 
@@ -4340,9 +4361,9 @@
 	       (if-end-of-file:
 		;;The  input data  is corrupted  because we  expected at
 		;;least a 16 bits word to be there before EOF.
-		(error-handler "unexpected end of file after byte while reading \
-                                16-bit word of UTF-16 character"
-			       (unsafe.bytevector-u8-ref port.buffer buffer.offset-word0)))
+		(%unexpected-eof-error "unexpected end of file after byte while reading \
+                                        16-bit word of UTF-16 character"
+				       (unsafe.bytevector-u8-ref port.buffer buffer.offset-word0)))
 	       (if-successful-refill:
 		(recurse))))
 

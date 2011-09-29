@@ -586,7 +586,7 @@ people.
 @menu
 * overview::                    Overview of Vicare Scheme.
 * using::                       Using the program.
-* library::                     Installed libraries.
+* iklib::                       @value{PRJNAME} specific libraries.
 * posix::                       The @posix{} interface.
 
 Internals
@@ -615,167 +615,8 @@ External documents
 
 * libffi: (libffi).             Libffi documentation.
 
-@detailmenu
- --- The Detailed Node Listing ---
-
-Overview of Vicare Scheme
-
-* overview original::           Original Ikarus Scheme.
-* overview tech::               Technology overview.
-* overview resources::          Resources.
-* overview system::             System requirements.
-* overview install::            Installation and uninstallation.
-
-System requirements
-
-* overview system hardware::    Hardware requirements.
-* overview system software::    Software requirements.
-
-Installation and uninstallation
-
-* overview install quick::              Quick installation guide.
-* overview install prerequisites::      Installing the prerequisites.
-* overview install details::            Installation details.
-* overview install uninstall::          Uninstalling @value{PRJNAME}.
-
-Using @value{PRJNAME}
-
-* using interactive::           Interactive sessions.
-* using invoking::              Command line arguments.
-* using script::                Using @command{scheme-script}.
-* using libraries::             @rnrs{6} libraries.
-
-@rnrs{6} libraries
-
-* using libraries intro::       Introduction to @value{PRJNAME} libraries.
-* using libraries searching::   How @value{PRJNAME} finds libraries.
-* using libraries summary::     Library search summary.
-* using libraries examples::    Examples of libraries usage.
-
-Installed libraries
-
-* library reader::              Reader.
-* library cafe::                Cafe.
-* library environment::         Environments.
-* library load::                Loading source files.
-* library import::              Local library imports.
-* library modules::             Local modules.
-* library parameters::          Parameters.
-* library gensym::              Gensyms.
-* library printing::            Printing.
-* library tracing::             Tracing.
-* library timing::              Timing.
-* library guardians::           Guardians and garbage collection.
-* library io::                  Input/output library.
-* library foreign::             Foreign interface library.
-* library misc::                Miscellaneous functions.
-
-Local modules
-
-* library modules examples::    Usage example for modules.
-* library modules api::         Modules programming interface.
-
-Usage example for modules
-
-* library modules examples anonymous::        Anonymous modules.
-* library modules examples named::            Named modules.
-* library modules examples utils::            Utilities examples.
-
-Guardians and garbage collection
-
-* library guardians examples::        Usage examples for guardians.
-* library guardians api::             Guardians programming interface.
-
-Input/output library
-
-* library io process::        Spawning processes.
-* library io socket::         Using network sockets.
-* library io non-block::      Non--blocking mode for ports.
-
-Using network sockets
-
-* library io socket client::  Establishing client network
-                                connections.
-* library io socket server::  Opening server network services.
-
-The @library{vicare foreign} library
-
-* library foreign overview::  Overview of the foreign functions
-                                interface.
-* library foreign memory::    Memory management.
-* library foreign memops::    Memory operations.
-* library foreign dl::        Accessing foreign objects from Scheme.
-* library foreign call out::  Calling out to foreign procedures.
-* library foreign call back:: Calling back to Scheme.
-
-Memory operations
-
-* library foreign memops alloc::      Allocating and freeing memory.
-* library foreign memops pointer::    Handling pointer values.
-* library foreign memops poke::       Poking values.
-* library foreign memops peek::       Peeking values.
-
-Calling out to foreign procedures
-
-* library foreign call out api::      Interface to foreign functions.
-* library foreign call out types::    Type specifiers.
-* library foreign call out example::  C language call out example.
-
-The @posix{} interface
-
-* posix process::               Spawning processes and the like.
-* posix waitpid::               Waiting for terminated children.
-* posix signal::                Delivering signals to processes.
-* posix file::                  Interfacing with the file system.
-* posix env::                   Interfacing with the execution
-                                environment.
-* posix misc::                  Miscellaneous functions.
-
-Internals
-
-* posix int intro::             Internals: introduction to the @posix{}
-                                @api{}.
-* posix int errno::             Internals: handling @code{errno} codes.
-* posix int fd::                Internals: file descriptors.
-* posix int files::             Internals: file system interface.
-* posix int exec::              Internals: executing processes.
-* posix int time::              Internals: time and date.
-* posix int env::               Internals: environment variables.
-
-Internals: file descriptors
-
-* posix int fd open::           Opening and closing file
-                                descriptors.
-* posix int fd seek::           Handling file descriptor cursor.
-* posix int fd rw::             Reading and writing.
-* posix int fd event::          Handling file descriptor events.
-* posix int fd net::            Handling sockets.
-
-Internals: file system interface
-
-* posix int files stat::        Status and access permissions.
-* posix int files dir::         Handling directories.
-* posix int files link::        Handling links and symbolic links.
-
-Internals: builtin objects
-
-* objects int intro::           Introduction to buitin objects.
-* objects int refs::            Builtin object references.
-* objects int const::           Constant values.
-* objects int alloc::           Allocating memory for builtin
-                                objects.
-* objects int fixnum::          Fixnum objects.
-* objects int bytevector::      Bytevector objects.
-
-Building infrastructure
-
-* building revision::           Package revision in the banner.
-
-@end detailmenu
 @end menu
-
 @end ifnottex
-
 
 @c page
 @node overview
@@ -1782,7 +1623,7 @@ implementations.
 @end example
 
 @c page
-@node library
+@node iklib
 @chapter Installed libraries
 
 
@@ -1797,25 +1638,26 @@ time, this chapter attempts to describe a few of these useful
 extensions.  Extensions to Scheme's lexical syntax are also documented.
 
 @menu
-* library reader::              Reader.
-* library cafe::                Cafe.
-* library environment::         Environments.
-* library load::                Loading source files.
-* library import::              Local library imports.
-* library modules::             Local modules.
-* library parameters::          Parameters.
-* library gensym::              Gensyms.
-* library printing::            Printing.
-* library tracing::             Tracing.
-* library timing::              Timing.
-* library guardians::           Guardians and garbage collection.
-* library io::                  Input/output library.
-* library foreign::             Foreign interface library.
-* library misc::                Miscellaneous functions.
+* iklib reader::               Reader.
+* iklib cafe::                 Cafe.
+* iklib bytevectors::          Additional bytevector functions.
+* iklib environment::          Environments.
+* iklib load::                 Loading source files.
+* iklib import::               Local library imports.
+* iklib modules::              Local modules.
+* iklib parameters::           Parameters.
+* iklib gensym::               Gensyms.
+* iklib printing::             Printing.
+* iklib tracing::              Tracing.
+* iklib timing::               Timing.
+* iklib guardians::            Guardians and garbage collection.
+* iklib io::                   Input/output library.
+* iklib foreign::              Foreign interface library.
+* iklib misc::                 Miscellaneous functions.
 @end menu
 
 @c page
-@node library reader
+@node iklib reader
 @section Reader
 
 
@@ -1861,7 +1703,7 @@ changes to @code{vicare-mode}.
 vicare-mode
 > #!r6rs (port-mode (current-input-port))
 r6rs-mode
-> #!ikarus (port-mode (current-input-port))
+> #!vicare (port-mode (current-input-port))
 vicare-mode
 @end example
 @end deffn
@@ -1917,13 +1759,19 @@ Condition components:
   1. &error
   2. &who: tokenize
   3. &message: "invalid syntax: #!e"
-> #!ikarus #!eof
+> #!vicare #!eof
 $
 @end example
 @end deffn
 
+
+@deffn {Reader Syntax} {#vs8(@var{byte} ...)}
+Read a bytevector as @code{#vu8(@var{octect} ...)} would do, but allow
+@var{byte} to be in the range @math{[-128, 127]}.
+@end deffn
+
 @c page
-@node library cafe
+@node iklib cafe
 @section Cafe
 
 
@@ -1950,7 +1798,93 @@ To exit from a cafe we can write the @code{#!eof} object.
 @end defun
 
 @c page
-@node library environment
+@node iklib bytevectors
+@section Additional bytevector functions
+
+
+The description of bytevectors uses the term @emph{byte} for an exact
+integer object in the interval @math{(-128, @dots{}, 127)} and the term
+@emph{octet} for an exact integer object in the interval @math{(0,
+@dots{}, 255)}.  A byte corresponds to its two's complement
+representation as an octet.
+
+@menu
+* iklib bytevectors sub::       Building subbytevectors.
+* iklib bytevectors conv::      Converting bytevectors.
+@end menu
+
+@c page
+@node iklib bytevectors sub
+@subsection Building subbytevectors
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun subbytevector-u8 @var{bv} @var{start}
+@defunx subbytevector-u8 @var{bv} @var{start} @var{end}
+Build and return a new bytevector holding the bytes in @var{bv} from
+index @var{start} (inclusive) to index @var{end} (exclusive).  The start
+and end indexes must be such that:
+
+@example
+0 <= @var{start} <= @var{end} <= (bytevector-length @var{bv})
+@end example
+@end defun
+
+
+@defun subbytevector-u8/count @var{bv} @var{start} @var{count}
+Build and return a new bytevector holding @var{count} bytes in @var{bv}
+from index @var{start} (inclusive).  The start index and the byte count
+must be such that:
+
+@example
+0 <= @var{start} <= @var{start} + @var{count} <= (bytevector-length @var{bv})
+@end example
+@end defun
+
+
+@defun subbytevector-s8 @var{bv} @var{start}
+@defunx subbytevector-s8 @var{bv} @var{start} @var{end}
+Build and return a new bytevector holding the bytes in @var{bv} from
+index @var{start} (inclusive) to index @var{end} (exclusive).  The start
+and end indexes must be such that:
+
+@example
+0 <= @var{start} <= @var{end} <= (bytevector-length @var{bv})
+@end example
+@end defun
+
+
+@defun subbytevector-s8/count @var{bv} @var{start} @var{count}
+Build and return a new bytevector holding @var{count} bytes in @var{bv}
+from index @var{start} (inclusive).  The start index and the byte count
+must be such that:
+
+@example
+0 <= @var{start} <= @var{start} + @var{count} <= (bytevector-length @var{bv})
+@end example
+@end defun
+
+@c page
+@node iklib bytevectors conv
+@subsection Converting bytevectors
+
+
+@deffn Procedure {bytevector->s8-list} @var{bytevector}
+@deffnx Procedure {s8-list->bytevector} @var{list}
+@var{list} must be a list of bytes.
+
+The @func{bytevector->s8-list} procedure returns a newly allocated list
+of the bytes of @var{bytevector} in the same order.
+
+The @func{s8-list->bytevector} procedure returns a newly allocated
+bytevector whose elements are the elements of list @var{list}, in the
+same order.  It is analogous to @func{list->vector}.
+@end deffn
+
+@c page
+@node iklib environment
 @section Environments
 
 
@@ -1963,7 +1897,7 @@ Return an environment object representing the environment active at the
 @end defun
 
 @c page
-@node library load
+@node iklib load
 @section Loading source files
 
 
@@ -1990,12 +1924,12 @@ The format of the annotated source is the one which is comprehensible by
 @end defun
 
 @c page
-@node library import
+@node iklib import
 @section Local library imports
 
 
 @deffn Syntax import import-spec* ...
-  The @func{import} keyword which is exported from the @library{ikarus}
+The @func{import} keyword which is exported from the @library{ikarus}
 library can be used anywhere definitions can occur: at a script body,
 library's top--level, or in internal definitions context.  The syntax of
 the local @func{import} form is similar to the @func{import} that
@@ -2022,7 +1956,7 @@ that was using it is deleted.
 @end deffn
 
 @c page
-@node library modules
+@node iklib modules
 @section Local modules
 
 
@@ -2034,7 +1968,7 @@ defined in a single form nested into a library; so, in a way, they are
 sub--libraries.
 
 @quotation
-@emph{Note:} In the official documentation of @value{PRJNAME} 0.0.3+
+@strong{NOTE} In the official documentation of @value{PRJNAME} 0.0.3+
 (revision 1648) modules are yet not documented.  Please refer to Section
 10.5 of Chez Scheme User's Guide, Chapter 3 of Oscar Waddel's Ph.D
 Thesis, and its POPL99 paper for details on using the @func{module} and
@@ -2043,24 +1977,23 @@ similar in spirit to that of Chez Scheme.
 @end quotation
 
 @menu
-* library modules examples::    Usage example for modules.
-* library modules api::         Modules programming interface.
+* iklib modules examples::      Usage example for modules.
+* iklib modules api::           Modules programming interface.
 @end menu
 
 @c page
-@node library modules examples
+@node iklib modules examples
 @subsection Usage example for modules
 
-@c SONO ARRIVATO QUI
 
 @menu
-* library modules examples anonymous::        Anonymous modules.
-* library modules examples named::            Named modules.
-* library modules examples utils::            Utilities examples.
+* iklib modules examples anonymous:: Anonymous modules.
+* iklib modules examples named::     Named modules.
+* iklib modules examples utils::     Utilities examples.
 @end menu
 
 @c page
-@node library modules examples anonymous
+@node iklib modules examples anonymous
 @subsubsection Anonymous modules
 
 
@@ -2188,7 +2121,7 @@ when the enclosing environment is not the top level.  The same behaviour
 is shown by named modules.
 
 @c page
-@node library modules examples named
+@node iklib modules examples named
 @subsubsection Named modules
 
 
@@ -2330,7 +2263,7 @@ from a @strong{named} module before its definition:
 @end example
 
 @c page
-@node library modules examples utils
+@node iklib modules examples utils
 @subsubsection Utilities examples
 
 
@@ -2361,7 +2294,7 @@ access definitions in a module without using the @func{import} form:
 @end example
 
 @c page
-@node library modules api
+@node iklib modules api
 @subsection Modules programming interface
 
 
@@ -2398,7 +2331,7 @@ from the module.
 @end deffn
 
 @c page
-@node library parameters
+@node iklib parameters
 @section Parameters
 
 
@@ -2511,7 +2444,7 @@ normal when the body returns.
 @end deffn
 
 @c page
-@node library gensym
+@node iklib gensym
 @section Gensyms
 
 
@@ -2685,7 +2618,7 @@ counterpart:
 @end example
 
 @c page
-@node library printing
+@node iklib printing
 @section Printing
 
 
@@ -2985,7 +2918,7 @@ the order at which the gensyms are printed, not in the order in which
 gensyms were created.
 
 @c page
-@node library tracing
+@node iklib tracing
 @section Tracing
 
 
@@ -3093,7 +3026,7 @@ except that it traces its arguments and values.
 @end deffn
 
 @c page
-@node library timing
+@node iklib timing
 @section Timing
 
 
@@ -3255,7 +3188,7 @@ Return the garbage collection bytes major field of @var{stats}.
 @end defun
 
 @c page
-@node library guardians
+@node iklib guardians
 @section Guardians and garbage collection
 
 
@@ -3279,20 +3212,20 @@ registered, they are run.  This binding is exported by the
 
 
 @menu
-* library guardians examples::        Usage examples for guardians.
-* library guardians api::             Guardians programming interface.
+* iklib guardians examples::    Usage examples for guardians.
+* iklib guardians api::         Guardians programming interface.
 @end menu
 
 @c page
-@node library guardians examples
+@node iklib guardians examples
 @subsection Usage examples for guardians
 
 
-Let's say that we use the @value{PRJNAME} @ffi{} to handle some memory block
-(@ref{library foreign} for details on the @ffi{}); memory blocks
-allocated with @func{malloc} are not released by the @value{PRJNAME} garbage
-collector: we have to explicitly apply @func{free} to the pointer value
-referencing them.
+Let's say that we use the @value{PRJNAME} @ffi{} to handle some memory
+block (@ref{iklib foreign} for details on the @ffi{}); memory blocks
+allocated with @func{malloc} are not released by the @value{PRJNAME}
+garbage collector: we have to explicitly apply @func{free} to the
+pointer value referencing them.
 
 If we use the blocks synchronously with the evaluation of forms, we do
 (assuming we do not use continuations, so this use of
@@ -3482,7 +3415,7 @@ guardian:
 @end example
 
 @c page
-@node library guardians api
+@node iklib guardians api
 @subsection Guardians programming interface
 
 
@@ -3549,18 +3482,18 @@ example in the previous section):
 @end deffn
 
 @c page
-@node library io
+@node iklib io
 @section Input/output library
 
 
 @menu
-* library io process::        Spawning processes.
-* library io socket::         Using network sockets.
-* library io non-block::      Non--blocking mode for ports.
+* iklib io process::            Spawning processes.
+* iklib io socket::             Using network sockets.
+* iklib io non-block::          Non--blocking mode for ports.
 @end menu
 
 @c page
-@node library io process
+@node iklib io process
 @subsection Spawning processes
 
 
@@ -3629,23 +3562,22 @@ Environment Variables}
 
 @defun process-nonblocking @var{command} . @var{options}
 Like @func{process} but the returned ports have their underlying file
-descriptors configured to non--blocking mode (@ref{library io
-non-block}).
+descriptors configured to non--blocking mode (@ref{iklib io non-block}).
 @end defun
 
 @c page
-@node library io socket
+@node iklib io socket
 @subsection Using network sockets
 
 
 @menu
-* library io socket client::  Establishing client network
+* iklib io socket client::      Establishing client network
                                 connections.
-* library io socket server::  Opening server network services.
+* iklib io socket server::      Opening server network services.
 @end menu
 
 @c page
-@node library io socket client
+@node iklib io socket client
 @subsubsection Establishing client network connections
 
 
@@ -3656,7 +3588,7 @@ non-block}).
 Establish a network connection using the @tcp{} or @udp{} protocol, to
 the host selected by the string @var{hostname}, port/service selected by
 the string @var{service}.  The @code{-nonblocking} version sets the
-underlying socket descriptor to non--blocking mode (@ref{library io
+underlying socket descriptor to non--blocking mode (@ref{iklib io
 non-block}).  Upon success, return a port; if an error occurs an
 exception is raised.
 
@@ -3678,7 +3610,7 @@ See the @file{/etc/services} configuration file.
 @end defun
 
 @c page
-@node library io socket server
+@node iklib io socket server
 @subsubsection Opening server network services
 
 
@@ -3686,7 +3618,7 @@ See the @file{/etc/services} configuration file.
 @defunx tcp-server-socket-nonblocking @var{server-port-number}
 Build a new @tcp{} server object for the selected port number (which
 must be an exact integer).  The @code{-nonblocking} versions set the
-underlying socket descriptor to non--blocking mode (@ref{library io
+underlying socket descriptor to non--blocking mode (@ref{iklib io
 non-block}).  Upon success, return a server--object; if an error occurs
 an exception is raised.
 
@@ -3721,7 +3653,7 @@ an input port to be used to receive data;
 @noindent
 if an error occurs: an exception is raised.  The @code{-nonblocking}
 versions set the underlying socket descriptor to non--blocking mode
-(@ref{library io non-block}).
+(@ref{iklib io non-block}).
 
 If the server socket was configured as blocking: this function suspends
 the process waiting for an incoming connection.
@@ -3776,7 +3708,7 @@ value must be a fixnum greater than zero.
 @end deffn
 
 @c page
-@node library io non-block
+@node iklib io non-block
 @subsection Non--blocking mode for ports
 
 
@@ -3791,7 +3723,7 @@ fcntl(fd, F_SETFL, O_NONBLOCK);
 @glibcref{Open-time Flags, Open-time Flags}
 
 @c page
-@node library foreign
+@node iklib foreign
 @section The @library{vicare foreign} library
 
 
@@ -3822,17 +3754,17 @@ indefinitely).  Use judiciously.
 @end quotation
 
 @menu
-* library foreign overview::  Overview of the foreign functions
+* iklib foreign overview::  Overview of the foreign functions
                                 interface.
-* library foreign memory::    Memory management.
-* library foreign memops::    Memory operations.
-* library foreign dl::        Accessing foreign objects from Scheme.
-* library foreign call out::  Calling out to foreign procedures.
-* library foreign call back:: Calling back to Scheme.
+* iklib foreign memory::    Memory management.
+* iklib foreign memops::    Memory operations.
+* iklib foreign dl::        Accessing foreign objects from Scheme.
+* iklib foreign call out::  Calling out to foreign procedures.
+* iklib foreign call back:: Calling back to Scheme.
 @end menu
 
 @c page
-@node library foreign overview
+@node iklib foreign overview
 @subsection Overview of the foreign functions interface
 
 
@@ -3895,7 +3827,7 @@ the Libffi headers are to be found; @ref{overview install} for details.
 @end quotation
 
 @c page
-@node library foreign memory
+@node iklib foreign memory
 @subsection Memory management
 
 
@@ -3943,19 +3875,19 @@ and more easily maintainable libraries.  To put it more boldly:
 @strong{Do not sprinkle your code with low--level memory operations}.
 
 @c page
-@node library foreign memops
+@node iklib foreign memops
 @subsection Memory operations
 
 
 @menu
-* library foreign memops alloc::      Allocating and freeing memory.
-* library foreign memops pointer::    Handling pointer values.
-* library foreign memops poke::       Poking values.
-* library foreign memops peek::       Peeking values.
+* iklib foreign memops alloc::    Allocating and freeing memory.
+* iklib foreign memops pointer::  Handling pointer values.
+* iklib foreign memops poke::     Poking values.
+* iklib foreign memops peek::     Peeking values.
 @end menu
 
 @c page
-@node library foreign memops alloc
+@node iklib foreign memops alloc
 @subsubsection Allocating and freeing memory
 
 
@@ -3986,7 +3918,7 @@ procedures that are external to @value{PRJNAME}.
 @end deffn
 
 @c page
-@node library foreign memops pointer
+@node iklib foreign memops pointer
 @subsubsection Handling pointer values
 
 
@@ -4020,7 +3952,7 @@ platform.
 @end deffn
 
 @c page
-@node library foreign memops poke
+@node iklib foreign memops poke
 @subsubsection Poking values
 
 
@@ -4105,7 +4037,7 @@ to the 32-bit pointer @var{value}.
 @end deffn
 
 @c page
-@node library foreign memops peek
+@node iklib foreign memops peek
 @subsubsection Peeking values
 
 
@@ -4244,7 +4176,7 @@ systems.
 @end deffn
 
 @c page
-@node library foreign dl
+@node iklib foreign dl
 @subsection Accessing foreign objects from Scheme
 
 
@@ -4335,7 +4267,7 @@ details.
 @end deffn
 
 @c page
-@node library foreign call out
+@node iklib foreign call out
 @subsection Calling out to foreign procedures
 
 
@@ -4345,13 +4277,13 @@ access system--specific facilities that are available on the host
 machine.
 
 @menu
-* library foreign call out api::      Interface to foreign functions.
-* library foreign call out types::    Type specifiers.
-* library foreign call out example::  C language call out example.
+* iklib foreign call out api::      Interface to foreign functions.
+* iklib foreign call out types::    Type specifiers.
+* iklib foreign call out example::  C language call out example.
 @end menu
 
 @c page
-@node library foreign call out api
+@node iklib foreign call out api
 @subsubsection Interface to foreign functions
 
 
@@ -4378,7 +4310,7 @@ the parameter types:
 @itemize
 @item
 the return type is a symbol that can be any one of the type specifiers
-listed in @ref{library foreign call out types};
+listed in @ref{iklib foreign call out types};
 
 @item
 the parameter types is a list of type specifier symbols; if the foreign
@@ -4411,7 +4343,7 @@ the final procedure @func{p2} can be called with as many arguments as
 the ones specified in the @var{parameter-types}; the parameters supplied
 to @func{p2} must match the types supplied as the @var{parameter-types}
 according to the ``Valid Scheme types'' column in the table in
-@ref{library foreign call out types};
+@ref{iklib foreign call out types};
 
 @item
 the procedure @func{p2} converts the parameters from Scheme types to
@@ -4428,12 +4360,12 @@ signature can be used multiple times.  Similarly, separating the foreign
 procedure preparation from parameter passing allows for preparing the
 foreign procedure once and calling it many times.
 
-The list of types in the table in @ref{library foreign call out types}
-is restricted to basics and provides no automatic conversion from
-composite Scheme data structures (such as strings, symbols, vectors, and
-lists) to native types.  The restriction is intentional in order for
-@value{PRJNAME} to avoid making invalid assumptions about the memory management
-of the target library.
+The list of types in the table in @ref{iklib foreign call out types} is
+restricted to basics and provides no automatic conversion from composite
+Scheme data structures (such as strings, symbols, vectors, and lists) to
+native types.  The restriction is intentional in order for
+@value{PRJNAME} to avoid making invalid assumptions about the memory
+management of the target library.
 
 @quotation
 For example, while @value{PRJNAME} @emph{can} convert a Scheme string to a native
@@ -4456,7 +4388,7 @@ between exact and inexact numbers is performed.
 @end deffn
 
 @c page
-@node library foreign call out types
+@node iklib foreign call out types
 @subsubsection Type specifiers
 
 
@@ -4498,7 +4430,7 @@ a return value specifier to mean ``no useful value is returned''.
 
 
 @c page
-@node library foreign call out example
+@node iklib foreign call out example
 @subsubsection C language call out example
 
 
@@ -4549,7 +4481,7 @@ Unhandled exception
 
 
 @c page
-@node library foreign call back
+@node iklib foreign call back
 @subsection Calling back to Scheme
 
 
@@ -4566,7 +4498,7 @@ type.  Therefore, a Scheme procedure used for a call back must be
 wrapped with a proper adapter that converts the incoming parameters from
 native format to Scheme values as well as convert the value that the
 Scheme procedure returns back to native format.  The signature format is
-similar to the one used for call outs (@ref{library foreign call out
+similar to the one used for call outs (@ref{iklib foreign call out
 types} for details).
 
 
@@ -4605,7 +4537,7 @@ integer.
 
 
 @c page
-@node library misc
+@node iklib misc
 @section Miscellaneous functions
 
 
