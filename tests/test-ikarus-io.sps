@@ -6574,23 +6574,23 @@
 ;;;  		 (pretty-print (condition-message E))
   		 (condition-irritants E))
   		(else E))
-  	(let ((port (open-bytevector-input-port '#vu8(#xCE)
+  	(let ((port (open-bytevector-input-port (subbytevector-u8 TWO-BYTES-UTF-8-CHAR-UTF-8 0 1)
 						(make-transcoder (utf-8-codec)
 								 (eol-style none)
 								 (error-handling-mode raise)))))
   	  (peek-char port)))
-    => '(#xCE))
+    => (list (bytevector-u8-ref TWO-BYTES-UTF-8-CHAR-UTF-8 0)))
 
 ;;; --------------------------------------------------------------------
 ;;; peeking from bytevector input port, transcoded UTF-8, 3-bytes chars
 
   (check	;read 3-bytes UTF-8 char
-      (let ((port (open-bytevector-input-port '#vu8(#xE0 #xA6 #xBC)
+      (let ((port (open-bytevector-input-port THREE-BYTES-UTF-8-CHAR-UTF-8
 					      (make-transcoder (utf-8-codec)
 							       (eol-style none)
 							       (error-handling-mode ignore)))))
 	(peek-char port))
-    => #\x09BC)
+    => THREE-BYTES-UTF-8-CHAR)
 
   (check	;attempt   to  read   incomplete  3-bytes   UTF-8  char,
     		;unexpected EOF, ignore
@@ -6601,8 +6601,8 @@
 						      (error-handling-mode ignore)))))
 		       (let ((ch (peek-char port)))
 			 (list ch (port-eof? port))))))
-	     (a	(doit '#vu8(#xE0 #xA6)))
-	     (b (doit '#vu8(#xE0))))
+	     (a	(doit (subbytevector-u8 THREE-BYTES-UTF-8-CHAR-UTF-8 0 2)))
+	     (b (doit (subbytevector-u8 THREE-BYTES-UTF-8-CHAR-UTF-8 0 1))))
 	(list a b))
     => `((,(eof-object) #f) (,(eof-object) #f)))
 
@@ -6615,8 +6615,8 @@
 						       (error-handling-mode replace))))
 			    (ch (peek-char port)))
 		       (list ch (port-eof? port)))))
-	     (a	(doit '#vu8(#xE0 #xA6)))
-	     (b (doit '#vu8(#xE0))))
+	     (a	(doit (subbytevector-u8 THREE-BYTES-UTF-8-CHAR-UTF-8 0 2)))
+	     (b (doit (subbytevector-u8 THREE-BYTES-UTF-8-CHAR-UTF-8 0 1))))
 	(list a b))
     => '((#\xFFFD #f) (#\xFFFD #f)))
 
@@ -6632,19 +6632,20 @@
 							(eol-style none)
 							(error-handling-mode raise)))))
 			 (peek-char port)))))
-	     (a	(doit '#vu8(#xE0 #xA6)))
-	     (b (doit '#vu8(#xE0))))
+	     (a	(doit (subbytevector-u8 THREE-BYTES-UTF-8-CHAR-UTF-8 0 2)))
+	     (b (doit (subbytevector-u8 THREE-BYTES-UTF-8-CHAR-UTF-8 0 1))))
 	(list a b))
-    => '((#xE0 #xA6) (#xE0)))
+    => (list (bytevector->u8-list (subbytevector-u8 THREE-BYTES-UTF-8-CHAR-UTF-8 0 2))
+	     (bytevector->u8-list (subbytevector-u8 THREE-BYTES-UTF-8-CHAR-UTF-8 0 1))))
 
 ;;; --------------------------------------------------------------------
 ;;; peeking from bytevector input port, transcoded UTF-8, 4-bytes chars
 
   (check	;read 4-bytes UTF-8 char
-      (let ((port (open-bytevector-input-port '#vu8(#xF0 #xAF #xA7 #x91)
+      (let ((port (open-bytevector-input-port THREE-BYTES-UTF-8-CHAR-UTF-8
 					      (make-transcoder (utf-8-codec)))))
   	(peek-char port))
-    => #\x2F9D1)
+    => THREE-BYTES-UTF-8-CHAR)
 
   (check	;attempt   to  read   incomplete  4-bytes   UTF-8  char,
     		;unexpected EOF, ignore
