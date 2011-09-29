@@ -46,7 +46,6 @@ EXTRA_DIST=ikarus.boot.4.prebuilt ikarus.boot.8.prebuilt last-revision \
   tests/bignum-to-flonum.ss \
   tests/bignums.ss \
   tests/bitwise.ss \
-  tests/bytevectors.ss \
   tests/case-folding.ss \
   tests/div-and-mod.ss \
   tests/enums.ss \
