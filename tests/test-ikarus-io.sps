@@ -6285,10 +6285,7 @@
 	(let loop ((i 0) (L '()))
 	  (if (= i (string-length test-string-for-utf-8))
 	      (apply string (reverse L))
-	    (loop (+ 1 i) (cons (begin
-				  (read-char port)
-				  (get-char  port))
-				L)))))
+	    (loop (+ 1 i) (cons (read-char port) L)))))
     => test-string-for-utf-8)
 
 ;;; --------------------------------------------------------------------
@@ -6310,7 +6307,7 @@
 								(error-handling-mode ignore))))
 	     (ch (read-char port)))
 	(list ch (port-eof? port)))
-    => (list (eof-object) #f))
+    => (list (eof-object) #t))
 
   (check	;attempt   to  peek   incomplete  2-bytes   UTF-8  char,
 		;unexpected EOF, replace
@@ -6320,7 +6317,7 @@
 								(error-handling-mode replace))))
 	     (ch (read-char port)))
 	(list ch (port-eof? port)))
-    => '(#\xFFFD #f))
+    => '(#\xFFFD #t))
 
   (check	;attempt   to  read   incomplete  2-bytes   UTF-8  char,
 		;unexpected EOF, raise
@@ -6358,7 +6355,7 @@
 	     (a	(doit (subbytevector-u8 THREE-BYTES-UTF-8-CHAR-UTF-8 0 2)))
 	     (b (doit (subbytevector-u8 THREE-BYTES-UTF-8-CHAR-UTF-8 0 1))))
 	(list a b))
-    => `((,(eof-object) #f) (,(eof-object) #f)))
+    => `((,(eof-object) #t) (,(eof-object) #t)))
 
   (check	;attempt   to  read   incomplete  3-bytes   UTF-8  char,
 		;unexpected EOF, replace
@@ -6372,7 +6369,7 @@
 	     (a	(doit (subbytevector-u8 THREE-BYTES-UTF-8-CHAR-UTF-8 0 2)))
 	     (b (doit (subbytevector-u8 THREE-BYTES-UTF-8-CHAR-UTF-8 0 1))))
 	(list a b))
-    => '((#\xFFFD #f) (#\xFFFD #f)))
+    => '((#\xFFFD #t) (#\xFFFD #t)))
 
   (check	;attempt   to  read   incomplete  3-bytes   UTF-8  char,
     		;unexpected EOF, raise
@@ -6414,7 +6411,7 @@
 	     (b (doit (subbytevector-u8 FOUR-BYTES-UTF-8-CHAR-UTF-8 0 2)))
 	     (c (doit (subbytevector-u8 FOUR-BYTES-UTF-8-CHAR-UTF-8 0 1))))
 	(list a b c))
-    => `((,(eof-object) #f) (,(eof-object) #f) (,(eof-object) #f)))
+    => `((,(eof-object) #t) (,(eof-object) #t) (,(eof-object) #t)))
 
   (check	;attempt   to  read   incomplete  4-bytes   UTF-8  char,
     		;unexpected EOF, replace
@@ -6429,7 +6426,7 @@
 	     (b (doit (subbytevector-u8 FOUR-BYTES-UTF-8-CHAR-UTF-8 0 2)))
 	     (c (doit (subbytevector-u8 FOUR-BYTES-UTF-8-CHAR-UTF-8 0 1))))
 	(list a b c))
-    => '((#\xFFFD #f) (#\xFFFD #f) (#\xFFFD #f)))
+    => '((#\xFFFD #t) (#\xFFFD #t) (#\xFFFD #t)))
 
   (check	;attempt   to  read   incomplete  4-bytes   UTF-8  char,
     		;unexpected EOF, raise
@@ -6461,10 +6458,7 @@
 	(let loop ((i 0) (L '()))
 	  (if (= i (string-length test-string-for-utf-16-le))
 	      (apply string (reverse L))
-	    (loop (+ 1 i) (cons (begin
-				  (read-char port)
-				  (get-char  port))
-				L)))))
+	    (loop (+ 1 i) (cons (read-char port) L)))))
     => test-string-for-utf-16-le)
 
   (check
@@ -6473,10 +6467,7 @@
 	(let loop ((i 0) (L '()))
 	  (if (= i (string-length test-string-for-utf-16-le))
 	      (apply string (reverse L))
-	    (loop (+ 1 i) (cons (begin
-				  (read-char port)
-				  (get-char  port))
-				L)))))
+	    (loop (+ 1 i) (cons (read-char port) L)))))
     => test-string-for-utf-16-le)
 
   (check
@@ -6485,10 +6476,7 @@
 	(let loop ((i 0) (L '()))
 	  (if (= i (string-length test-string-for-utf-16-be))
 	      (apply string (reverse L))
-	    (loop (+ 1 i) (cons (begin
-				  (read-char port)
-				  (get-char  port))
-				L)))))
+	    (loop (+ 1 i) (cons (read-char port) L)))))
     => test-string-for-utf-16-be)
 
 ;;; --------------------------------------------------------------------
@@ -6523,7 +6511,7 @@
 		       (list ch (port-eof? port)))))
 	     (a	(doit (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-LE 0 1))))
 	a)
-    => `(,(eof-object) #f))
+    => `(,(eof-object) #t))
 
   (check	;attempt  to read  incomplete single  word  UTF-16 char,
 		;unexpected EOF, replace
@@ -6536,7 +6524,7 @@
 		       (list ch (port-eof? port)))))
 	     (a	(doit (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-LE 0 1))))
 	a)
-    => '(#\xFFFD #f))
+    => '(#\xFFFD #t))
 
   (check	;attempt  to read  incomplete single  word  UTF-16 char,
 		;unexpected EOF, raise
@@ -6588,7 +6576,7 @@
 	     (b	(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 2)))
 	     (c	(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 3))))
 	(list a b c))
-    => `((,(eof-object) #f) (,(eof-object) #f) (,(eof-object) #f)))
+    => `((,(eof-object) #t) (,(eof-object) #t) (,(eof-object) #t)))
 
   (check	;attempt   to  read   incomplete  2-word   UTF-16  char,
 		;unexpected EOF, replace
@@ -6603,7 +6591,7 @@
 	     (b	(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 2)))
 	     (c	(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 3))))
 	(list a b c))
-    => '((#\xFFFD #f) (#\xFFFD #f) (#\xFFFD #f)))
+    => '((#\xFFFD #t) (#\xFFFD #t) (#\xFFFD #t)))
 
   (check	;attempt  to read  incomplete single  word  UTF-16 char,
 		;unexpected EOF, raise
@@ -6634,13 +6622,10 @@
 	(let loop ((i 0) (L '()))
 	  (if (= i (string-length test-string-for-latin-1))
 	      (apply string (reverse L))
-	    (loop (+ 1 i) (cons (begin
-				  (read-char port)
-				  (get-char  port))
-				L)))))
+	    (loop (+ 1 i) (cons (read-char port) L)))))
     => test-string-for-latin-1)
 
-    #t)
+  #t)
 
 
 (parametrise ((check-test-name	'peek-char))

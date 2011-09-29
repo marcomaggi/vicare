@@ -4145,6 +4145,25 @@
 	  (else
 	   (assertion-violation who "internal error: invalid error handling mode" port mode)))))
 
+    (define (%unexpected-eof-error message irritants)
+      ;;Handle the unexpected EOF error honoring the error handling mode
+      ;;in port's  transcoder.
+      ;;
+      (let ((mode (transcoder-error-handling-mode port.transcoder)))
+	(case mode
+	  ((ignore)
+	   ;;To ignore means jump to the next.
+	   (eof-object))
+	  ((replace)
+	   #\xFFFD)
+	  ((raise)
+	   (raise (condition (make-i/o-decoding-error port)
+			     (make-who-condition who)
+			     (make-message-condition message)
+			     (make-irritants-condition irritants))))
+	  (else
+	   (assertion-violation who "internal error: invalid error handling mode" port mode)))))
+
     (define (integer->char/invalid char-code-point)
       ;;If the argument is a  valid integer representation for a Unicode
       ;;character according to  R6RS: return the corresponding character
@@ -4209,8 +4228,15 @@
 		      (%refill-bytevector-buffer-and-evaluate (port who)
 			(if-end-of-file:
 			 (set! port.buffer.index port.buffer.used-size)
-			 (%error-handler "unexpected end of file while reading second \
-                                         16-bit word in UTF-16 surrogate pair character" word0))
+			 (%unexpected-eof-error
+			  "unexpected end of file while reading second \
+                           16-bit word in UTF-16 surrogate pair character"
+			  `(,(unsafe.bytevector-u8-ref port.buffer buffer.offset-word0)
+			    ,(unsafe.bytevector-u8-ref port.buffer (unsafe.fxadd1 buffer.offset-word0))
+			    . ,(if (unsafe.fx< buffer.offset-word1
+					       port.buffer.used-size)
+				   (list (unsafe.bytevector-u8-ref port.buffer buffer.offset-word1))
+				 '()))))
 			(if-successful-refill:
 			 (recurse)))))))
 
@@ -4224,9 +4250,10 @@
 		;;buffer.  (FIXME Is this  good whatever it is the error
 		;;handling mode?)
 		(set! port.buffer.index port.buffer.used-size)
-		(%error-handler "unexpected end of file after byte while reading \
-                                16-bit word of UTF-16 character"
-			       (unsafe.bytevector-u8-ref port.buffer buffer.offset-word0)))
+		(%unexpected-eof-error
+		 "unexpected end of file after byte while reading \
+                  16-bit word of UTF-16 character"
+		 `(,(unsafe.bytevector-u8-ref port.buffer buffer.offset-word0))))
 	       (if-successful-refill:
 		(recurse))))
 
