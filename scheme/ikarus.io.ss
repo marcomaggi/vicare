@@ -12,6 +12,10 @@
 ;;;	validated.  The functions  prefixed "unsafe."  are imported from
 ;;;	another library.
 ;;;
+;;;	This file tries to stick  to this convention: "byte" is a fixnum
+;;;	in the range  [-128, 127], "octet" is a fixnum  in the range [0,
+;;;	255].
+;;;
 ;;;	NOTE The  primitive operations  on a port  value are  defined in
 ;;;	"pass-specify-rep-primops.ss"; a port value is a block of memory
 ;;;	allocated as a  vector whose first word is  tagged with the port
@@ -53,10 +57,10 @@
 ;;* Write documentation for the Ikarus-specific functions.
 ;;
 ;;* When a decoding error occurs from an input port: R6RS states that an
-;;"appropriate" number of input bytes  must be skipped in search for the
+;;"appropriate" number of input octets must be skipped in search for the
 ;;next character.   Implement this by  searching for the  next character
-;;beginning discarding the minimum possible number of bytes, for example
-;;in UTF-8 discard at most 3 bytes.
+;;beginning  discarding  the  minimum  possible number  of  octets,  for
+;;example in UTF-8 discard at most 3 octets.
 ;;
 ;;* Implement missing R6RS functions.
 ;;
@@ -90,7 +94,7 @@
 ;;
 ;;Constructor: $make-port ATTRS IDX SZ BUF TR ID READ WRITE GETP SETP CL COOKIE
 ;;Aguments: IDX		- index in input/output buffer,
-;;	    SZ		- number of bytes/chars used in the input/output buffer,
+;;	    SZ		- number of octets/chars used in the input/output buffer,
 ;;          BUF		- input/output buffer,
 ;;          TR		- transcoder
 ;;          ID		- an object describing the underlying device
@@ -127,11 +131,11 @@
 ;;Field name: size
 ;;Field accessor: $port-size PORT
 ;;Field mutator: $set-port-size! PORT SIZE
-;;  Fixnum representing the number  of bytes/chars currently used in the
+;;  Fixnum representing the number of octets/chars currently used in the
 ;;  input/output buffer; see the description of the BUFFER field below.
 ;;
 ;;  When the device is a Scheme  string or bytevector: this field is set
-;;  to the number of characters in  the string or the number of bytes in
+;;  to the number of characters in the string or the number of octets in
 ;;  the bytevector.
 ;;
 ;;Field name: buffer
@@ -287,60 +291,58 @@
 ;;
 ;;We establish the following constraints:
 ;;
-;;*  If an  exact  integer is  in  the range  representable by  a
-;;fixnum, Vicare will represent it as a fixnum.
+;;*  If an  exact integer  is in  the range  representable by  a fixnum,
+;;Vicare will represent it as a fixnum.
 ;;
-;;* No  matter which BUFFER-MODE  was selected, every port  has a
-;;buffer.
+;;* No matter which BUFFER-MODE was selected, every port has a buffer.
 ;;
-;;* The  buffer is a Scheme  bytevector or a  Scheme string whose
-;;length is representable by a fixnum.
+;;* The buffer is a Scheme bytevector or a Scheme string whose length is
+;;representable by a fixnum.
 ;;
 ;;* The input functions always read data from the buffer first.
 ;;
 ;;* The output functions always write data to the buffer first.
 ;;
-;;*   %UNSAFE.REFILL-INPUT-PORT-BYTEVECTOR-BUFFER  is   the  only
-;;function calling the port's  READ!  function, copying data from
-;;the underlying device to the input buffer.
+;;*  %UNSAFE.REFILL-INPUT-PORT-BYTEVECTOR-BUFFER  is  the only  function
+;;calling the  port's READ!  function, copying data  from the underlying
+;;device to the input buffer.
 ;;
-;;*  %UNSAFE.FLUSH-OUTPUT-PORT is the  only function  calling the
-;;port's WRITE! function, copying  data from the output buffer to
-;;the underlying device.
+;;* %UNSAFE.FLUSH-OUTPUT-PORT  is the  only function calling  the port's
+;;WRITE! function, copying data from the output buffer to the underlying
+;;device.
 ;;
 ;; --------------------------------------------------------------
 ;;
 ;;From the constraints it follows that:
 ;;
-;;*  OPEN-STRING-INPUT-PORT  and OPEN-BYTEVECTOR-INPUT-PORT  will
-;;refuse  to create a  port to  read characters  or bytes  from a
-;;string or  bytevector whose length exceeds the  return value of
-;;GREATEST-FIXNUM.
+;;* OPEN-STRING-INPUT-PORT and OPEN-BYTEVECTOR-INPUT-PORT will refuse to
+;;create a port to read characters or octets from a string or bytevector
+;;whose length exceeds the return value of GREATEST-FIXNUM.
 ;;
-;;*  All the arithmetics  involving the  buffer can  be performed
-;;using unsafe fixnum functions.
+;;*  All the  arithmetics involving  the buffer  can be  performed using
+;;unsafe fixnum functions.
 ;;
 ;; --------------------------------------------------------------
 ;;
 ;;Buffer mode handling is as follows:
 ;;
-;;* When the buffering mode is NONE: data is first written to the
-;;output buffer, then immediately sent to the underlying device.
+;;* When the buffering mode is NONE: data is first written to the output
+;;buffer, then immediately sent to the underlying device.
 ;;
-;;* When the buffering mode is LINE: data is first written to the
-;;output buffer up to the first newline, then immediately sent to
-;;the underlying device.
+;;* When the buffering mode is LINE: data is first written to the output
+;;buffer  up  to  the  first  newline,  then  immediately  sent  to  the
+;;underlying device.
 ;;
-;;* When  the buffering mode is  BLOCK: data is  first written to
-;;the output buffer.  Only when  the buffer is full: data is sent
-;;to the underlying device.
+;;*  When the  buffering mode  is BLOCK:  data is  first written  to the
+;;output buffer.   Only when  the buffer  is full: data  is sent  to the
+;;underlying device.
 ;;
 ;; --------------------------------------------------------------
 ;;
 ;;Things to notice:
 ;;
-;;* The exact integer representing the current position of a port
-;;in the underlying device can be either a fixnum or a bignum.
+;;* The exact integer representing the current position of a port in the
+;;underlying device can be either a fixnum or a bignum.
 ;;
 
 
@@ -408,14 +410,14 @@
     ;; reading strings
     get-string-n get-string-n! get-string-all get-line read-line
 
-    ;; reading bytes
+    ;; reading octets
     get-u8 lookahead-u8
 
     ;; reading bytevectors
     get-bytevector-n get-bytevector-n!
     get-bytevector-some get-bytevector-all
 
-    ;; writing bytes and bytevectors
+    ;; writing octets and bytevectors
     put-u8 put-bytevector
 
     ;; writing chars and strings
@@ -507,14 +509,14 @@
 		  ;; reading strings
 		  get-string-n get-string-n! get-string-all get-line read-line
 
-		  ;; reading bytes
+		  ;; reading octets
 		  get-u8 lookahead-u8
 
 		  ;; reading bytevectors
 		  get-bytevector-n get-bytevector-n!
 		  get-bytevector-some get-bytevector-all
 
-		  ;; writing bytes and bytevectors
+		  ;; writing octets and bytevectors
 		  put-u8 put-bytevector
 
 		  ;; writing chars and strings
@@ -645,7 +647,7 @@
 ;;excludes the closed? flag.
 ;;
 ;;This one is  used for binary input ports  (having a bytevector buffer)
-;;from which raw bytes must be read.
+;;from which raw octets must be read.
 (define fast-get-byte-tag        binary-input-port-bits)
 ;;
 ;;The following are  used for textual input ports  from which characters
@@ -975,8 +977,7 @@
      (unsafe.fxlogor ?op1 (%unsafe.fxior ?op2 . ?ops)))))
 
 (define-syntax %u8?
-  ;;Evaluate to true if the  argument is a fixnum representing an
-  ;;unsigned byte.
+  ;;Evaluate to true if the argument is a fixnum representing an octet.
   ;;
   (syntax-rules ()
     ((_ x)
@@ -1062,8 +1063,8 @@
        (assertion-violation who "BUG: codec not handled" (transcoder-codec port.transcoder))))))
 
 (define (%parse-byte-order-mark port who bom)
-  ;;Read and consume  bytes from PORT verifying if  they match the given
-  ;;sequence of bytes representing a Byte Order Mark (BOM).
+  ;;Read and consume octets from  PORT verifying if they match the given
+  ;;sequence of octets representing a Byte Order Mark (BOM).
   ;;
   ;;PORT must  be a textual  or binary input  port with a  bytevector as
   ;;buffer.  BOM  must be  a list of  fixnums representing  the expected
@@ -1072,7 +1073,7 @@
   ;;Return #t  if the whole  BOM sequence is  read and matched;  in this
   ;;case the port position is left right after the BOM sequence.
   ;;
-  ;;Return #f if the bytes from  the port do not match the BOM sequence;
+  ;;Return #f if the octets from the port do not match the BOM sequence;
   ;;in this  case the  port position is  left at  the same point  it was
   ;;before this function call.
   ;;
@@ -1081,23 +1082,23 @@
   ;;it was before this function call.
   ;;
   (with-port (port)
-    (let next-byte-in-bom ((number-of-consumed-bytes 0)
-			   (bom bom))
+    (let next-octet-in-bom ((number-of-consumed-octets 0)
+			    (bom bom))
       (if (null? bom)
-	  ;;Full  success:  all  the  bytes in  the  given  BOM
-	  ;;sequence where matched.
+	  ;;Full success: all the octets in the given BOM sequence where
+	  ;;matched.
 	  (begin
-	    (port.buffer.index.incr! number-of-consumed-bytes)
+	    (port.buffer.index.incr! number-of-consumed-octets)
 	    #t)
 	(let retry-after-filling-buffer ()
-	  (let ((buffer.offset (unsafe.fx+ number-of-consumed-bytes port.buffer.index)))
+	  (let ((buffer.offset (unsafe.fx+ number-of-consumed-octets port.buffer.index)))
 	    (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	      (data-is-needed-at: buffer.offset)
 	      (if-end-of-file: (eof-object))
 	      (if-successful-refill: (retry-after-filling-buffer))
 	      (if-available-data:
 	       (and (unsafe.fx= (car bom) (unsafe.bytevector-u8-ref port.buffer buffer.offset))
-		    (next-byte-in-bom (unsafe.fxadd1 number-of-consumed-bytes) (cdr bom)))))))))))
+		    (next-octet-in-bom (unsafe.fxadd1 number-of-consumed-octets) (cdr bom)))))))))))
 
 
 ;;;; bytevector helpers
@@ -1160,10 +1161,10 @@
 	      (values (unsafe.make-bytevector accumulated-total-length) 0)
 	    (let* ((src.bv  (car bvs))
 		   (src.len (unsafe.bytevector-length src.bv)))
-	      (let-values (((dst.bv next-byte-index)
+	      (let-values (((dst.bv next-octet-index)
 			    (recur (cdr bvs) (+ src.len accumulated-total-length))))
-		(%unsafe.big-bytevector-copy! src.bv 0 dst.bv next-byte-index src.len)
-		(values dst.bv (+ src.len next-byte-index)))))))
+		(%unsafe.big-bytevector-copy! src.bv 0 dst.bv next-octet-index src.len)
+		(values dst.bv (+ src.len next-octet-index)))))))
     (lambda (full-bytevector dummy)
       full-bytevector)))
 
@@ -1216,10 +1217,10 @@
 	      (values (unsafe.make-string accumulated-total-length) 0)
 	    (let* ((src.str  (car strs))
 		   (src.len (unsafe.string-length src.str)))
-	      (let-values (((dst.str next-byte-index)
+	      (let-values (((dst.str next-octet-index)
 			    (recur (cdr strs) (+ src.len accumulated-total-length))))
-		(%unsafe.big-string-copy! src.str 0 dst.str next-byte-index src.len)
-		(values dst.str (+ src.len next-byte-index)))))))
+		(%unsafe.big-string-copy! src.str 0 dst.str next-octet-index src.len)
+		(values dst.str (+ src.len next-octet-index)))))))
     (lambda (full-string dummy)
       full-string)))
 
@@ -1257,7 +1258,7 @@
 	      (PORT.BUFFER.INDEX		(%dot-id ".buffer.index"))
 		;fixnum, the offset from the buffer beginning
 	      (PORT.BUFFER.USED-SIZE		(%dot-id ".buffer.used-size"))
-		;fixnum, number of bytes used in the buffer
+		;fixnum, number of octets used in the buffer
 	      (PORT.BUFFER			(%dot-id ".buffer"))
 		;bytevector, the buffer
 	      (PORT.TRANSCODER			(%dot-id ".transcoder"))
@@ -1287,7 +1288,7 @@
 	      (PORT.BUFFER.RESET-TO-EMPTY!	(%dot-id ".buffer.reset-to-empty!"))
 		;method, set the buffer index and used size to zero
 	      (PORT.BUFFER.ROOM			(%dot-id ".buffer.room"))
-		;method, the number of bytes available in the buffer
+		;method, the number of octets available in the buffer
 	      (PORT.BUFFER.INDEX.INCR!		(%dot-id ".buffer.index.incr!"))
 		;method, increment the buffer index
 	      (PORT.BUFFER.USED-SIZE.INCR!	(%dot-id ".buffer.used-size.incr!"))
@@ -1449,8 +1450,8 @@
   (make-cookie fd 'vicare-mode 0 0 0))
 
 (define (input-port-byte-position port)
-  ;;Defined  by Ikarus.  Return  the port  position for  an input
-  ;;port in bytes.
+  ;;Defined by  Ikarus.  Return the port  position for an  input port in
+  ;;octets.
   ;;
   (%assert-value-is-input-port port 'input-port-byte-position)
   (with-port (port)
@@ -1471,7 +1472,7 @@
   ;;Defined by  Ikarus.  Return the current column  number for an
   ;;input port.
   ;;
-;;;FIXME It computes the count assuming 1 byte = 1 character.
+;;;FIXME It computes the count assuming 1 octet = 1 character.
   (%assert-value-is-input-port port 'input-port-column-number)
   (with-port (port)
     (let ((cookie port.cookie))
@@ -1482,7 +1483,7 @@
   ;;Defined  by Ikarus.   Return the  current row  number  for an
   ;;input port.
   ;;
-;;;FIXME It computes the count assuming 1 byte = 1 character.
+;;;FIXME It computes the count assuming 1 octet = 1 character.
   (%assert-value-is-input-port port 'input-port-row-number)
   (with-port (port)
     (cookie-row-num port.cookie)))
@@ -1490,258 +1491,289 @@
 
 ;;;; Introduction to Unicode and UCS
 ;;
-;;As required by R6RS,  the input/output libraries must implement
-;;transcoders for textual  ports supporting encoding and decoding
-;;between  Scheme characters  and UTF-8,  UTF-16,  ISO/IEC 8859-1
-;;(also known as Latin-1).
+;;As  required  by  R6RS,  the  input/output  libraries  must  implement
+;;transcoders for textual ports supporting encoding and decoding between
+;;Scheme characters and UTF-8 and UTF-16.
 ;;
-;;The mandatory starting points to learn about this stuff are the
+;;The  mandatory starting  points  to  learn about  this  stuff are  the
 ;;following (URLs last verified on Sep 9, 2011):
 ;;
+;;  <http://www.unicode.org/faq/utf_bom.html>
 ;;  <http://en.wikipedia.org/wiki/Universal_Character_Set>
 ;;  <http://en.wikipedia.org/wiki/Unicode>
 ;;  <http://en.wikipedia.org/wiki/Byte_order_mark>
 ;;  <http://en.wikipedia.org/wiki/UTF-8>
 ;;  <http://en.wikipedia.org/wiki/UTF-16>
 ;;  <http://en.wikipedia.org/wiki/UTF-32>
-;;  <http://en.wikipedia.org/wiki/ISO/IEC_8859-1>
 ;;
-;;here we  give only  a brief overview  of the  main definitions,
-;;drawing text from those pages.
+;;here we  give only a brief  overview of the  main definitions, drawing
+;;text from those pages.
 ;;
-;;The  "Universal  Character Set"  (UCS)  is  a  standard set  of
-;;characters upon  which many  character encodings are  based; it
-;;contains abstract characters, each identified by an unambiguous
-;;name and an integer number called its "code point".
+;;The "Universal  Character Set" (UCS)  is a standard set  of characters
+;;upon which  many character encodings  are based; it  contains abstract
+;;characters,  each identified  by an  unambiguous name  and  an integer
+;;number called its "code point".
 ;;
-;;"Unicode" is  a computing industry standard  for the consistent
-;;encoding, representation and handling of text expressed in most
-;;of the world's writing systems.
+;;"Unicode"  is  a  computing   industry  standard  for  the  consistent
+;;encoding, representation and handling of text expressed in most of the
+;;world's writing systems.
 ;;
-;;UCS and  Unicode have an identical repertoire  and numbers: the
-;;same characters with the  same numbers exist on both standards.
-;;UCS  is  a  simple   character  map,  Unicode  adds  rules  for
-;;collation,  normalization  of   forms,  and  the  bidirectional
-;;algorithm for scripts.
+;;UCS and  Unicode have  an identical repertoire  and numbers:  the same
+;;characters with  the same numbers exist  in both standards.   UCS is a
+;;simple character map, Unicode  adds rules for collation, normalization
+;;of forms, and the bidirectional algorithm for scripts.
 ;;
-;;The  Unicode   Consortium,  the  nonprofit   organization  that
-;;coordinates Unicode's  development, has the  goal of eventually
-;;replacing existing character  encoding schemes with Unicode and
-;;its standard "Unicode Transformation Format" (UTF) schemes.
+;;The  Unicode Consortium, the  nonprofit organization  that coordinates
+;;Unicode's development,  has the goal of  eventually replacing existing
+;;character  encoding schemes  with  Unicode and  its standard  "Unicode
+;;Transformation  Format"   alias  "UCS  Transformation   Format"  (UTF)
+;;schemes.
 
-;;By convention  a Unicode code  point is referred to  by writing
-;;"U+" followed by its hexadecimal  number with at least 4 digits
-;;(U+0044 is fine, U+12 is not).
+;;By  convention a Unicode  code point  is referred  to by  writing "U+"
+;;followed by its  hexadecimal number with at least  4 digits (U+0044 is
+;;fine, U+12 is not).
 ;;
-;;In  practice, Unicode  code points  are exact  integers  in the
-;;range  [0, #x10FFFF],  but outside  the range  [#xD800, #xDFFF]
-;;which has special meaning in  UTF schemes.  A code point can be
-;;stored in  21 bits:
+;;In practice, Unicode  code points are exact integers  in the range [0,
+;;#x10FFFF], but  outside the range  [#xD800, #xDFFF] which  has special
+;;meaning in UTF schemes.  A code point can be stored in 21 bits:
 ;;
 ;;  (string-length (number->string #x10FFFF 2)) => 21
 ;;
-;;R6RS defines fixnums  to have at least 24 bits,  so a fixnum is
-;;wide enough to hold a code point:
+;;R6RS defines  fixnums to have  at least 24  bits, so a fixnum  is wide
+;;enough to hold a code point:
 ;;
 ;;  (fixnum? #x10FFFF) => #t
 ;;
-;;and  indeed Scheme  characters  are a  disjoint  type of  value
-;;holding such fixnums:
+;;and indeed Scheme characters are a disjoint type of value holding such
+;;fixnums:
 ;;
 ;;  (integer->char #x10FFFF) => #\x10FFFF
 ;;
 
 
-;;;; UTF-8 scheme and Latin-1
+;;;; UTF-8 scheme
 ;;
-;;UTF-8 is  a multibyte character encoding for  Unicode which can
-;;represent every  character in the  Unicode set, that is  it can
-;;represent  every  code point  in  the  ranges  [0, #xD800)  and
-;;(#xDFFF, #x10FFFF].
+;;UTF-8  is  a  multioctet  character  encoding for  Unicode  which  can
+;;represent every character in the Unicode set, that is it can represent
+;;every code point in the ranges [0, #xD800) and (#xDFFF, #x10FFFF].
 ;;
-;;A stream of UTF-8 encoded characters is meant to be stored byte
-;;by byte in fixed order (and  so without the need to specify the
+;;A stream  of UTF-8 encoded characters  is meant to be  stored octet by
+;;octet  in  fixed  order  (and  so  without the  need  to  specify  the
 ;;endianness of words).
 ;;
-;;The encoding  scheme uses sequences  of 1, 2,  3 or 4  bytes to
-;;encode a each  code point as shown in  the following table; the
-;;byte opening  a sequence has a  unique bit pattern  in the most
-;;significant  bits and  so it  allows the  determination  of the
-;;sequence length;  every byte contains a number  of payload bits
-;;which   must  be   concatenated  (bitwise   inclusive   OR)  to
-;;reconstruct the integer representation of a code point:
+;;The encoding scheme uses sequences of 1,  2, 3 or 4 octets to encode a
+;;each code point as shown in  the following table; the first octet in a
+;;sequence has a unique bit pattern  in the most significant bits and so
+;;it  allows  the determination  of  the  sequence  length; every  octet
+;;contains a number of payload  bits which must be concatenated (bitwise
+;;inclusive  OR) to  reconstruct the  integer representation  of  a code
+;;point:
 ;;
-;; | # of bytes | 1st byte | 2nd byte | 3rd byte | 4th byte |
-;; |------------+----------+----------+----------+----------|
-;; |     1       #b0xxxxxxx
-;; |     2       #b110xxxxx #b10xxxxxx
-;; |     3       #b1110xxxx #b10xxxxxx #b10xxxxxx
-;; |     4       #b11110xxx #b10xxxxxx #b10xxxxxx #b10xxxxxx
+;; | # of octets | 1st octet | 2nd octet | 3rd octet | 4th octet |
+;; |-------------+-----------+-----------+-----------+-----------|
+;; |     1        #b0xxxxxxx
+;; |     2        #b110xxxxx  #b10xxxxxx
+;; |     3        #b1110xxxx  #b10xxxxxx  #b10xxxxxx
+;; |     4        #b11110xxx  #b10xxxxxx  #b10xxxxxx  #b10xxxxxx
 ;;
-;; | # of bytes | # of payload bits |       hex range     |
-;; |------------+-------------------+---------------------|
-;; |     1                        7    [#x0000,   #x007F]
-;; |     2               5 + 6 = 11    [#x0080,   #x07FF]
-;; |     3           4 + 6 + 6 = 16    [#x0800,   #xFFFF]
-;; |     4       3 + 6 + 6 + 6 = 21  [#x010000, #x10FFFF]
+;; | # of octets | # of payload bits |       hex range     |
+;; |-------------+-------------------+---------------------|
+;; |     1                         7    [#x0000,   #x007F]
+;; |     2                5 + 6 = 11    [#x0080,   #x07FF]
+;; |     3            4 + 6 + 6 = 16    [#x0800,   #xFFFF]
+;; |     4        3 + 6 + 6 + 6 = 21  [#x010000, #x10FFFF]
 ;;
-;;Note that bytes  #xFE and #xFF cannot appear  in a valid stream
-;;of UTF-8  encoded characters.  The  sequence of 3 bytes  is the
-;;one  that  could encode  (but  must  not)  the forbidden  range
-;;[#xD800, #xDFFF].
+;;Note that  octets #xFE  and #xFF  cannot appear in  a valid  stream of
+;;UTF-8 encoded  characters.  The sequence of  3 octets is  the one that
+;;could encode (but must not) the forbidden range [#xD800, #xDFFF].
 ;;
-;;The  first   128  characters  of  the   Unicode  character  set
-;;correspond one-to-one with ASCII and are encoded using a single
-;;octet  with the same  binary value  as the  corresponding ASCII
-;;character, making valid ASCII  text valid UTF-8 encoded Unicode
-;;text as well.  Such encoded bytes have the Most Significant Bit
-;;(MSB) set to zero.
+;;The  first 128  characters  of the  Unicode  character set  correspond
+;;one-to-one with  ASCII and are encoded  using a single  octet with the
+;;same binary  value as the corresponding ASCII  character, making valid
+;;ASCII text  valid UTF-8  encoded Unicode text  as well.   Such encoded
+;;octets have the Most Significant Bit (MSB) set to zero.
 ;;
-;;Although the standard does not define it, many programs start a
-;;UTF-8 stream  with a  Byte Order Mark  (BOM) composed of  the 3
-;;bytes: #xEF, #xBB, #xBF.
+;;Although the standard does not  define it, many programs start a UTF-8
+;;stream with  a Byte Order Mark  (BOM) composed of the  3 octets: #xEF,
+;;#xBB, #xBF.
 ;;
 
-;;The following macro definitions  assume that the BYTE arguments
-;;are  fixnums representing  1 byte  (they are  in the  range [0,
-;;255]), while the  CODE-POINT arguments are fixnums representing
-;;Unicode code points  (they are in the range  [0, #x10FFFF], but
-;;outside the range [#xD800, #xDFFF]).
+;;The following  macro definitions assume  that the OCTET  arguments are
+;;fixnums representing 1  octet (they are in the  range [0, 255]), while
+;;the CODE-POINT arguments are  fixnums representing Unicode code points
+;;(they are in  the range [0, #x10FFFF], but  outside the range [#xD800,
+;;#xDFFF]).
 ;;
 
-(define-inline (utf-8-invalid-byte? byte)
-  ;;Evaluate to true  if BYTE has a value  that must never appear
-  ;;in a valid UTF-8 stream.
+(define-inline (utf-8-invalid-octet? octet)
+  ;;Evaluate to  true if OCTET has a  value that must never  appear in a
+  ;;valid UTF-8 stream.
   ;;
-  (or (unsafe.fx= byte #xC0)
-      (unsafe.fx= byte #xC1)
-      (and (unsafe.fx<= #xF5 byte) (unsafe.fx<= byte #xFF))))
+  (or (unsafe.fx= octet #xC0)
+      (unsafe.fx= octet #xC1)
+      (and (unsafe.fx<= #xF5 octet) (unsafe.fx<= octet #xFF))))
 
 ;;; -------------------------------------------------------------
-;;; decoding 1-byte UTF-8 to code points
+;;; decoding 1-octet UTF-8 to code points
 
-(define-inline (utf-8-single-byte? byte)
-  ;;Evaluate to true if BYTE is valid as 1-byte UTF-8 encoding of
-  ;;a Unicode character.
+(define-inline (utf-8-single-octet? octet)
+  ;;Evaluate to  true if OCTET is  valid as 1-octet UTF-8  encoding of a
+  ;;Unicode character.
   ;;
-  (unsafe.fx< byte 128))
+  (unsafe.fx< octet 128))
 
-(define-inline (utf-8-decode-single-byte byte)
-  ;;Decode the  code point of  a Unicode character from  a 1-byte
-  ;;UTF-8 encoding.
+(define-inline (utf-8-decode-single-octet octet)
+  ;;Decode the  code point  of a Unicode  character from a  1-octet UTF-8
+  ;;encoding.
   ;;
-  byte)
+  octet)
 
-(define-inline (utf-8-valid-code-point-from-1-byte? code-point)
-  ;;Evaluate   to  true   if  CODE-POINT   is  a   valid  integer
-  ;;representation for a code  point decoded from a 2-bytes UTF-8
-  ;;sequence.
+(define-inline (utf-8-valid-code-point-from-1-octet? code-point)
+  ;;Evaluate to true if CODE-POINT is a valid integer representation for
+  ;;a code point decoded from a 2-octets UTF-8 sequence.
   ;;
   (and (unsafe.fx<= 0 code-point) (unsafe.fx<= code-point #x007F)))
 
 ;;; -------------------------------------------------------------
-;;; decoding 2-bytes UTF-8 to code points
+;;; decoding 2-octets UTF-8 to code points
 
-(define-inline (utf-8-first-of-two-bytes? byte0)
-  ;;Evaluate to true if BYTE0  is valid as first of 2-bytes UTF-8
+(define-inline (utf-8-first-of-two-octets? octet0)
+  ;;Evaluate  to  true if  OCTET0  is valid  as  first  of 2-octets  UTF-8
   ;;encoding of a Unicode character.
   ;;
-  (unsafe.fx= (unsafe.fxsra byte0 5) #b110))
+  (unsafe.fx= (unsafe.fxsra octet0 5) #b110))
 
-(define-inline (utf-8-second-of-two-bytes? byte1)
-  ;;Evaluate to true if BYTE1 is valid as second of 2-bytes UTF-8
+(define-inline (utf-8-second-of-two-octets? octet1)
+  ;;Evaluate  to true  if  OCTET1 is  valid  as second  of 2-octets  UTF-8
   ;;encoding of a Unicode character.
   ;;
-  (unsafe.fx= (unsafe.fxsra byte1 6) #b10))
+  (unsafe.fx= (unsafe.fxsra octet1 6) #b10))
 
-(define-inline (utf-8-decode-two-bytes byte0 byte1)
-  ;;Decode the code  point of a Unicode character  from a 2-bytes
-  ;;UTF-8 encoding.
+(define-inline (utf-8-decode-two-octets octet0 octet1)
+  ;;Decode the  code point of a  Unicode character from  a 2-octets UTF-8
+  ;;encoding.
   ;;
-  (%unsafe.fxior (unsafe.fxsll (unsafe.fxand byte0 #b11111) 6)
-		 (unsafe.fxand byte1 #b111111)))
+  (%unsafe.fxior (unsafe.fxsll (unsafe.fxand octet0 #b11111) 6)
+		 (unsafe.fxand octet1 #b111111)))
 
-(define-inline (utf-8-valid-code-point-from-2-bytes? code-point)
-  ;;Evaluate   to  true   if  CODE-POINT   is  a   valid  integer
-  ;;representation for a code  point decoded from a 2-bytes UTF-8
-  ;;sequence.
+(define-inline (utf-8-valid-code-point-from-2-octets? code-point)
+  ;;Evaluate to true if CODE-POINT is a valid integer representation for
+  ;;a code point decoded from a 2-octets UTF-8 sequence.
   ;;
   (and (unsafe.fx<= #x0080 code-point) (unsafe.fx<= code-point #x07FF)))
 
 ;;; -------------------------------------------------------------
-;;; decoding 3-bytes UTF-8 to code points
+;;; decoding 3-octets UTF-8 to code points
 
-(define-inline (utf-8-first-of-three-bytes? byte0)
-  ;;Evaluate to true if BYTE0  is valid as first of 3-bytes UTF-8
+(define-inline (utf-8-first-of-three-octets? octet0)
+  ;;Evaluate  to  true if  OCTET0  is valid  as  first  of 3-octets  UTF-8
   ;;encoding of a Unicode character.
   ;;
-  (unsafe.fx= (unsafe.fxsra byte0 4) #b1110))
+  (unsafe.fx= (unsafe.fxsra octet0 4) #b1110))
 
-(define-inline (utf-8-second-and-third-of-three-bytes? byte1 byte2)
-  ;;Evaluate to true  if BYTE1 and BYTE2 are  valid as second and
-  ;;third of 3-bytes UTF-8 encoding of a Unicode character.
+(define-inline (utf-8-second-and-third-of-three-octets? octet1 octet2)
+  ;;Evaluate to true if OCTET1 and OCTET2 are valid as second and third of
+  ;;3-octets UTF-8 encoding of a Unicode character.
   ;;
-  (unsafe.fx= (unsafe.fxsra (%unsafe.fxior byte1 byte2) 6) #b10))
+  (unsafe.fx= (unsafe.fxsra (%unsafe.fxior octet1 octet2) 6) #b10))
 
-(define-inline (utf-8-decode-three-bytes byte0 byte1 byte2)
-  ;;Decode the code  point of a Unicode character  from a 3-bytes
-  ;;UTF-8 encoding.
+(define-inline (utf-8-decode-three-octets octet0 octet1 octet2)
+  ;;Decode the  code point of a  Unicode character from  a 3-octets UTF-8
+  ;;encoding.
   ;;
-  (%unsafe.fxior (unsafe.fxsll (unsafe.fxand byte0   #b1111) 12)
-		 (unsafe.fxsll (unsafe.fxand byte1 #b111111)  6)
-		 (unsafe.fxand byte2 #b111111)))
+  (%unsafe.fxior (unsafe.fxsll (unsafe.fxand octet0   #b1111) 12)
+		 (unsafe.fxsll (unsafe.fxand octet1 #b111111)  6)
+		 (unsafe.fxand octet2 #b111111)))
 
-(define-inline (utf-8-valid-code-point-from-3-bytes? code-point)
-  ;;Evaluate   to  true   if  CODE-POINT   is  a   valid  integer
-  ;;representation for a code  point decoded from a 3-bytes UTF-8
-  ;;sequence.
+(define-inline (utf-8-valid-code-point-from-3-octets? code-point)
+  ;;Evaluate to true if CODE-POINT is a valid integer representation for
+  ;;a code point decoded from a 3-octets UTF-8 sequence.
   ;;
   (and (unsafe.fx<= #x0800 code-point) (unsafe.fx<= code-point #xFFFF)
        (or (unsafe.fx< code-point #xD800) (unsafe.fx<  #xDFFF code-point))))
 
 ;;; -------------------------------------------------------------
-;;; decoding 4-bytes UTF-8 to code points
+;;; decoding 4-octets UTF-8 to code points
 
-(define-inline (utf-8-first-of-four-bytes? byte0)
-  ;;Evaluate to true if BYTE0  is valid as first of 4-bytes UTF-8
+(define-inline (utf-8-first-of-four-octets? octet0)
+  ;;Evaluate  to  true if  OCTET0  is valid  as  first  of 4-octets  UTF-8
   ;;encoding of a Unicode character.
   ;;
-  (unsafe.fx= (unsafe.fxsra byte0 3) #b11110))
+  (unsafe.fx= (unsafe.fxsra octet0 3) #b11110))
 
-(define-inline (utf-8-second-third-and-fourth-of-three-bytes? byte1 byte2 byte3)
-  ;;Evaluate  to true  if BYTE1,  BYTE2  and BYTE3  are valid  as
-  ;;second,  third and  fourth  of 4-bytes  UTF-8  encoding of  a
-  ;;Unicode character.
+(define-inline (utf-8-second-third-and-fourth-of-four-octets? octet1 octet2 octet3)
+  ;;Evaluate  to true if  OCTET1, OCTET2  and OCTET3  are valid  as second,
+  ;;third and fourth of 4-octets UTF-8 encoding of a Unicode character.
   ;;
-  (unsafe.fx= (unsafe.fxsra (%unsafe.fxior byte1 byte2 byte3) 6) #b10))
+  (unsafe.fx= (unsafe.fxsra (%unsafe.fxior octet1 octet2 octet3) 6) #b10))
 
-(define-inline (utf-8-decode-four-bytes byte0 byte1 byte2 byte3)
-  ;;Decode the code  point of a Unicode character  from a 4-bytes
-  ;;UTF-8 encoding.
+(define-inline (utf-8-decode-four-octets octet0 octet1 octet2 octet3)
+  ;;Decode the  code point of a  Unicode character from  a 4-octets UTF-8
+  ;;encoding.
   ;;
-  (%unsafe.fxior (unsafe.fxsll (unsafe.fxand byte0    #b111) 18)
-		 (unsafe.fxsll (unsafe.fxand byte1 #b111111) 12)
-		 (unsafe.fxsll (unsafe.fxand byte2 #b111111)  6)
-		 (unsafe.fxand byte3 #b111111)))
+  (%unsafe.fxior (unsafe.fxsll (unsafe.fxand octet0    #b111) 18)
+		 (unsafe.fxsll (unsafe.fxand octet1 #b111111) 12)
+		 (unsafe.fxsll (unsafe.fxand octet2 #b111111)  6)
+		 (unsafe.fxand octet3 #b111111)))
 
-(define-inline (utf-8-valid-code-point-from-4-bytes? code-point)
-  ;;Evaluate   to  true   if  CODE-POINT   is  a   valid  integer
-  ;;representation for a code  point decoded from a 3-bytes UTF-8
-  ;;sequence.
+(define-inline (utf-8-valid-code-point-from-4-octets? code-point)
+  ;;Evaluate to true if CODE-POINT is a valid integer representation for
+  ;;a code point decoded from a 3-octets UTF-8 sequence.
   ;;
   (and (unsafe.fx<= #x010000 code-point) (unsafe.fx<= code-point #x10FFFF)))
 
 ;;; -------------------------------------------------------------
-;;; encoding code points to 1-byte UTF-8
+;;; encoding code points to 1-octet UTF-8
 
-(define-inline (utf-8-code-point-single-byte? code-point)
+(define-inline (utf-8-code-point-single-octet? code-point)
   (and (unsafe.fx<= 0 code-point) (unsafe.fx<= 255)))
 
-(define-inline (utf-8-encode-single-byte code-point)
-  ;;Encode  the code  point of  a Unicode  character to  a 1-byte
-  ;;UTF-8 encoding.
+(define-inline (utf-8-encode-single-octet code-point)
+  ;;Encode  the code point  of a  Unicode character  to a  1-octet UTF-8
+  ;;encoding.
   ;;
   code-point)
+
+;;; --------------------------------------------------------------------
+
+(define-inline (utf-8-classify-byte octet)
+  (cond ((not (fixnum? octet))
+	 (list 'invalid-value/not-a-fixnum octet))
+	((< octet 0)
+	 (list 'invalid-value/negative-fixnum octet))
+	(else
+	 (let ((str (number->string octet 16)))
+	   (cond ((< #xFF octet)
+		  (list 'invalid-value/fixnum-too-big str))
+		 ((utf-8-invalid-octet? octet)
+		  (list 'invalid-byte str))
+
+		 ((utf-8-single-octet? octet)
+		  (list 'one-byte-character str))
+
+		 ((utf-8-first-of-two-octets? octet)
+		  (list 'first-in-2-byte-char str))
+		 ((utf-8-second-of-two-octets? octet)
+		  (list 'second-in-2-byte-char str))
+
+		 ((utf-8-first-of-three-octets? octet)
+		  (list 'first-in-3-byte-char str))
+		 ((utf-8-second-of-three-octets? octet)
+		  (list 'second-in-3-byte-char str))
+		 ((utf-8-third-of-three-octets? octet)
+		  (list 'third-in-3-byte-char str))
+
+		 ((utf-8-first-of-four-octets? octet)
+		  (list 'first-in-4-byte-char str))
+		 ((utf-8-second-of-four-octets? octet)
+		  (list 'second-in-4-byte-char str))
+		 ((utf-8-third-of-four-octets? octet)
+		  (list 'third-in-4-byte-char str))
+		 ((utf-8-fouth-of-four-octets? octet)
+		  (list 'third-in-4-byte-char str))
+
+		 (else
+		  (list 'internal-error str)))))))
 
 
 ;;;; UTF-16 decoding
@@ -1761,7 +1793,7 @@
 ;;   word in [#xD800, #xDBFF] => first in surrogate pair
 ;;   word in [#xDC00, #xDFFF] => second in surrogate pair
 ;;   word in [#xE000, #xFFFF] => single word character
-;;
+
 ;;The   following  macros   assume  the   WORD  arguments   are  fixnums
 ;;representing  16-bit words,  that is  they must  be in  the  range [0,
 ;;#xFFFF].
@@ -1770,34 +1802,34 @@
 ;;; 1-word encoding
 
 (define-inline (utf-16-single-word? word0)
-  ;;Evaluate  to true  if WORD0  is valid  as single  16-bit word
-  ;;UTF-16 encoding of a Unicode character.
+  ;;Evaluate  to true if  WORD0 is  valid as  single 16-bit  word UTF-16
+  ;;encoding of a Unicode character.
   ;;
   (or (unsafe.fx< word0 #xD800) (unsafe.fx< #xDFFF word0)))
 
 (define-inline (utf-16-decode-single-word word0)
-  ;;Decode the integer representation of a Unicode character from
-  ;;a 16-bit single word UTF-16 encoding.
+  ;;Decode  the integer  representation of  a Unicode  character  from a
+  ;;16-bit single word UTF-16 encoding.
   ;;
   word0)
 
 ;;; 2-words encoding
 
 (define-inline (utf-16-first-of-two-words? word0)
-  ;;Evaluate to true if WORD0 is  valid as first 16-bit word in a
+  ;;Evaluate  to true  if  WORD0 is  valid  as first  16-bit  word in  a
   ;;surrogate pair UTF-16 encoding of a Unicode character.
   ;;
   (and (unsafe.fx<= #xD800 word0) (unsafe.fx<= word0 #xDBFF)))
 
 (define-inline (utf-16-second-of-two-words? word1)
-  ;;Evaluate to true if WORD1 is valid as second 16-bit word in a
+  ;;Evaluate  to true  if WORD1  is  valid as  second 16-bit  word in  a
   ;;surrogate pair UTF-16 encoding of a Unicode character.
   ;;
   (and (unsafe.fx<= #xDC00 word1) (unsafe.fx<= word1 #xDFFF)))
 
 (define-inline (utf-16-decode-surrogate-pair word0 word1)
-  ;;Decode the integer representation of a Unicode character from
-  ;;a surrogate pair UTF-16 encoding.
+  ;;Decode  the integer  representation of  a Unicode  character  from a
+  ;;surrogate pair UTF-16 encoding.
   ;;
   (unsafe.fx+ #x10000
 	      (%unsafe.fxior (unsafe.fxsll (unsafe.fxand word0 #x3FF) 10)
@@ -1824,23 +1856,35 @@
 		  (list 'internal-error str)))))))
 
 
-;;;; ISO/IEC 8859-1, Latin-1
+;;;; ISO/IEC 8859-1 also known as Latin-1
 ;;
-;;Latin-1 uses 1  byte per character; the first  256 Unicode code
-;;points are  identical to the  content of Latin-1.   Every byte,
-;;that is: every fixnum in the range [0, 255], can be interpreted
-;;as a character in Latin-1 encoding.
+;;Latin-1 uses 1 octet per character.  The first 256 Unicode code points
+;;are identical  to the content of  Latin-1, the first  127 Latin-1 code
+;;points are identical to ASCII.  For an itroduction see:
+;;
+;;  <http://en.wikipedia.org/wiki/ISO/IEC_8859-1>
+;;
+;;Latin-1 code points are identical to their octet encoding.
+;;
+;;Latin-1 code  points in the range  [0, 127] are identical  to the same
+;;code points encoded in both ASCII and in UTF-8.
+;;
+;;Latin-1 code points  in the range [128, 255]  are *different* from the
+;;same code points encoded in UTF-8.
+;;
+;;Every  octet (that  is: every  fixnum in  the range  [0, 255])  can be
+;;interpreted as a character in Latin-1 encoding.
 ;;
 
-;;In  the following macros  the argument  BYTE is  meant to  be a
-;;fixnum representing a byte, while the argument IREP is meant to
-;;be the integer representation of a character.
+;;In the  following macros the  argument OCTET is  meant to be  a fixnum
+;;representing  a octet,  while the  argument IREP  is meant  to  be the
+;;integer representation of a character.
 
-(define-inline (latin-1-byte? byte)
+(define-inline (latin-1-octet? octet)
   #t)
 
-(define-inline (latin-1-decode byte)
-  byte)
+(define-inline (latin-1-decode octet)
+  octet)
 
 (define-inline (latin-1-irep? irep)
   #t)
@@ -1851,11 +1895,11 @@
 
 ;;;; port's buffer size customisation
 
-;;For  ports having a  Scheme bytevector  as buffer:  the minimum
-;;buffer size must be big enough  to allow the buffer to hold the
-;;full byte-encoding of a Unicode character for all the supported
-;;transcoders.  For ports having a Scheme string as buffer: there
-;;is no rational constraint on the buffer size.
+;;For ports  having a  Scheme bytevector as  buffer: the  minimum buffer
+;;size  must be big  enough to  allow the  buffer to  hold the  full UTF
+;;encoding  of a Unicode  character for  all the  supported transcoders.
+;;For  ports having  a Scheme  string as  buffer: there  is  no rational
+;;constraint on the buffer size.
 ;;
 ;;It makes  sense to have  "as small as possible"  minimum buffer
 ;;size to allow easy writing  of test suites exercising the logic
@@ -2079,8 +2123,8 @@
 
 (define (port-position port)
   ;;Defined by R6RS.  For a binary port, PORT-POSITION returns the index
-  ;;of the position at which the next byte would be read from or written
-  ;;to the port as an exact non-negative integer object.
+  ;;of  the position  at which  the  next octet  would be  read from  or
+  ;;written to the port as an exact non-negative integer object.
   ;;
   ;;For  a   textual  port,  PORT-POSITION  returns  a   value  of  some
   ;;implementation-dependent type representing the port's position; this
@@ -2092,7 +2136,7 @@
   ;;
   ;;*NOTE* For  a textual port, the port  position may or may  not be an
   ;;integer object.  If it is an integer object, the integer object does
-  ;;not necessarily correspond to a byte or character position.
+  ;;not necessarily correspond to a octet or character position.
   ;;
   (define who 'port-position)
   (%assert-value-is-port port who)
@@ -2246,12 +2290,12 @@
 ;;; --------------------------------------------------------------------
 
 (define (make-custom-binary-input-port identifier read! get-position set-position! close)
-  ;;Defined by  R6RS.  Return a  newly created binary  input port
-  ;;whose byte  source is  an arbitrary algorithm  represented by
-  ;;the READ!   procedure.  ID  must be a  string naming  the new
-  ;;port, provided  for informational purposes  only.  READ! must
-  ;;be a procedure and should  behave as specified below; it will
-  ;;be called by operations that perform binary input.
+  ;;Defined by  R6RS.  Return  a newly created  binary input  port whose
+  ;;octet  source is  an arbitrary  algorithm represented  by  the READ!
+  ;;procedure.  ID  must be a string  naming the new  port, provided for
+  ;;informational purposes  only.  READ! must be a  procedure and should
+  ;;behave  as specified  below; it  will be  called by  operations that
+  ;;perform binary input.
   ;;
   ;;Each of the remaining arguments may be false; if any of those
   ;;arguments is  not false,  it must be  a procedure  and should
@@ -3764,8 +3808,8 @@
       (let ((buffer.offset-byte0 port.buffer.index))
 	(if (unsafe.fx< buffer.offset-byte0 port.buffer.used-size)
 	    (let ((byte0 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte0)))
-	      (if (utf-8-single-byte? byte0)
-		  (let ((N (utf-8-decode-single-byte byte0)))
+	      (if (utf-8-single-octet? byte0)
+		  (let ((N (utf-8-decode-single-octet byte0)))
 		    (set! port.buffer.index (unsafe.fxadd1 buffer.offset-byte0))
 		    (if (unsafe.fx= N newline-integer)
 			(%mark/return-newline port)
@@ -3784,8 +3828,8 @@
       (let ((buffer.offset-byte0 port.buffer.index))
 	(if (unsafe.fx< buffer.offset-byte0 port.buffer.used-size)
 	    (let ((byte0 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte0)))
-	      (if (utf-8-single-byte? byte0)
-		  (unsafe.integer->char (utf-8-decode-single-byte byte0))
+	      (if (utf-8-single-octet? byte0)
+		  (unsafe.integer->char (utf-8-decode-single-octet byte0))
 		(%unsafe.peek-char-from-port-with-utf8-codec port ?who 0)))
 	  (%unsafe.peek-char-from-port-with-utf8-codec port ?who 0))))))
 
@@ -3813,22 +3857,22 @@
 	     (let ((byte0 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte0)))
 	       (define (%error-invalid-byte)
 		 (%error-handler "invalid byte while expecting first byte of UTF-8 character" byte0))
-	       (cond ((utf-8-invalid-byte? byte0)
+	       (cond ((utf-8-invalid-octet? byte0)
 		      (set! port.buffer.index (unsafe.fxadd1 buffer.offset-byte0))
 		      (%error-invalid-byte))
-		     ((utf-8-single-byte? byte0)
+		     ((utf-8-single-octet? byte0)
 		      (get-single-byte-character byte0 buffer.offset-byte0))
-		     ((utf-8-first-of-two-bytes? byte0)
+		     ((utf-8-first-of-two-octets? byte0)
 		      (get-2-bytes-character byte0 buffer.offset-byte0))
-		     ((utf-8-first-of-three-bytes? byte0)
+		     ((utf-8-first-of-three-octets? byte0)
 		      (get-3-bytes-character byte0 buffer.offset-byte0))
-		     ((utf-8-first-of-four-bytes? byte0)
+		     ((utf-8-first-of-four-octets? byte0)
 		      (get-4-bytes-character byte0 buffer.offset-byte0))
 		     (else
 		      (%error-invalid-byte)))))))))
 
     (define-inline (get-single-byte-character byte0 buffer.offset-byte0)
-      (let ((N (utf-8-decode-single-byte byte0)))
+      (let ((N (utf-8-decode-single-octet byte0)))
 	(set! port.buffer.index (unsafe.fxadd1 buffer.offset-byte0))
 	(if (unsafe.fx= N newline-integer)
 	    (%mark/return-newline port)
@@ -3850,11 +3894,11 @@
 		 (%error-handler "invalid second byte in 2-byte UTF-8 character"
 				 byte0 byte1))
 	       (set! port.buffer.index buffer.offset-past)
-	       (cond ((utf-8-invalid-byte? byte1)
+	       (cond ((utf-8-invalid-octet? byte1)
 		      (%error-invalid-second))
-		     ((utf-8-second-of-two-bytes? byte1)
-		      (let ((N (utf-8-decode-two-bytes byte0 byte1)))
-			(if (utf-8-valid-code-point-from-2-bytes? N)
+		     ((utf-8-second-of-two-octets? byte1)
+		      (let ((N (utf-8-decode-two-octets byte0 byte1)))
+			(if (utf-8-valid-code-point-from-2-octets? N)
 			    (unsafe.integer->char N)
 			  (%error-handler "invalid code point as result \
                                            of decoding 2-byte UTF-8 character"
@@ -3884,12 +3928,12 @@
                                   and expecting 3-byte character"
 				 byte0 byte1 byte2))
 	       (set! port.buffer.index buffer.offset-past)
-	       (cond ((or (utf-8-invalid-byte? byte1)
-			  (utf-8-invalid-byte? byte2))
+	       (cond ((or (utf-8-invalid-octet? byte1)
+			  (utf-8-invalid-octet? byte2))
 		      (%error-invalid-second-or-third))
-		     ((utf-8-second-and-third-of-three-bytes? byte1 byte2)
-		      (let ((N (utf-8-decode-three-bytes byte0 byte1 byte2)))
-			(if (utf-8-valid-code-point-from-3-bytes? N)
+		     ((utf-8-second-and-third-of-three-octets? byte1 byte2)
+		      (let ((N (utf-8-decode-three-octets byte0 byte1 byte2)))
+			(if (utf-8-valid-code-point-from-3-octets? N)
 			    (unsafe.integer->char N)
 			  (%error-handler "invalid code point as result \
                                            of decoding 3-byte UTF-8 character"
@@ -3924,13 +3968,13 @@
                                   and expecting 4-byte character"
 				 byte0 byte1 byte2 byte3))
 	       (set! port.buffer.index buffer.offset-past)
-	       (cond ((or (utf-8-invalid-byte? byte1)
-			  (utf-8-invalid-byte? byte2)
-			  (utf-8-invalid-byte? byte3))
+	       (cond ((or (utf-8-invalid-octet? byte1)
+			  (utf-8-invalid-octet? byte2)
+			  (utf-8-invalid-octet? byte3))
 		      (%error-invalid-second-third-or-fourth))
-		     ((utf-8-second-third-and-fourth-of-three-bytes? byte1 byte2 byte3)
-		      (let ((N (utf-8-decode-four-bytes byte0 byte1 byte2 byte3)))
-			(if (utf-8-valid-code-point-from-4-bytes? N)
+		     ((utf-8-second-third-and-fourth-of-four-octets? byte1 byte2 byte3)
+		      (let ((N (utf-8-decode-four-octets byte0 byte1 byte2 byte3)))
+			(if (utf-8-valid-code-point-from-4-octets? N)
 			    (unsafe.integer->char N)
 			  (%error-handler "invalid code point as result \
                                            of decoding 4-byte UTF-8 character"
@@ -4009,15 +4053,15 @@
 	       (define (%error-invalid-byte)
 		 (%error-handler buffer-offset
 				 "invalid byte while expecting first byte of UTF-8 character" byte0))
-	       (cond ((utf-8-invalid-byte? byte0)
+	       (cond ((utf-8-invalid-octet? byte0)
 		      (%error-invalid-byte))
-		     ((utf-8-single-byte? byte0)
-		      (unsafe.integer->char (utf-8-decode-single-byte byte0)))
-		     ((utf-8-first-of-two-bytes? byte0)
+		     ((utf-8-single-octet? byte0)
+		      (unsafe.integer->char (utf-8-decode-single-octet byte0)))
+		     ((utf-8-first-of-two-octets? byte0)
 		      (peek-2-bytes-character byte0 buffer.offset-byte0))
-		     ((utf-8-first-of-three-bytes? byte0)
+		     ((utf-8-first-of-three-octets? byte0)
 		      (peek-3-bytes-character byte0 buffer.offset-byte0))
-		     ((utf-8-first-of-four-bytes? byte0)
+		     ((utf-8-first-of-four-octets? byte0)
 		      (peek-4-bytes-character byte0 buffer.offset-byte0))
 		     (else
 		      (%error-invalid-byte)))))))))
@@ -4036,11 +4080,11 @@
 	       (define (%error-invalid-second)
 		 (%error-handler buffer-offset "invalid second byte in 2-byte UTF-8 character"
 				 byte0 byte1))
-	       (cond ((utf-8-invalid-byte? byte1)
+	       (cond ((utf-8-invalid-octet? byte1)
 		      (%error-invalid-second))
-		     ((utf-8-second-of-two-bytes? byte1)
-		      (let ((N (utf-8-decode-two-bytes byte0 byte1)))
-			(if (utf-8-valid-code-point-from-2-bytes? N)
+		     ((utf-8-second-of-two-octets? byte1)
+		      (let ((N (utf-8-decode-two-octets byte0 byte1)))
+			(if (utf-8-valid-code-point-from-2-octets? N)
 			    (unsafe.integer->char N)
 			  (%error-handler buffer-offset
 					  "invalid code point as result \
@@ -4069,12 +4113,12 @@
 		 (%error-handler buffer-offset
 				 "invalid second or third byte in 3-byte UTF-8 character"
 				 byte0 byte1 byte2))
-	       (cond ((or (utf-8-invalid-byte? byte1)
-			  (utf-8-invalid-byte? byte2))
+	       (cond ((or (utf-8-invalid-octet? byte1)
+			  (utf-8-invalid-octet? byte2))
 		      (%error-invalid-second-or-third))
-		     ((utf-8-second-and-third-of-three-bytes? byte1 byte2)
-		      (let ((N (utf-8-decode-three-bytes byte0 byte1 byte2)))
-			(if (utf-8-valid-code-point-from-3-bytes? N)
+		     ((utf-8-second-and-third-of-three-octets? byte1 byte2)
+		      (let ((N (utf-8-decode-three-octets byte0 byte1 byte2)))
+			(if (utf-8-valid-code-point-from-3-octets? N)
 			    (unsafe.integer->char N)
 			  (%error-handler buffer-offset
 					  "invalid code point as result of \
@@ -4108,13 +4152,13 @@
 		 (%error-handler buffer-offset
 				 "invalid second, third or fourth byte in 4-bytes UTF-8 character"
 				 byte0 byte1 byte2 byte3))
-	       (cond ((or (utf-8-invalid-byte? byte1)
-			  (utf-8-invalid-byte? byte2)
-			  (utf-8-invalid-byte? byte3))
+	       (cond ((or (utf-8-invalid-octet? byte1)
+			  (utf-8-invalid-octet? byte2)
+			  (utf-8-invalid-octet? byte3))
 		      (%error-invalid-second-third-or-fourth))
-		     ((utf-8-second-third-and-fourth-of-three-bytes? byte1 byte2 byte3)
-		      (let ((N (utf-8-decode-four-bytes byte0 byte1 byte2 byte3)))
-			(if (utf-8-valid-code-point-from-4-bytes? N)
+		     ((utf-8-second-third-and-fourth-of-four-octets? byte1 byte2 byte3)
+		      (let ((N (utf-8-decode-four-octets byte0 byte1 byte2 byte3)))
+			(if (utf-8-valid-code-point-from-4-octets? N)
 			    (unsafe.integer->char N)
 			  (%error-handler buffer-offset
 					  "invalid code point as result \
