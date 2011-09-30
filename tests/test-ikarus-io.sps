@@ -7630,6 +7630,11 @@
 	(get-string-n port 10))
     => (eof-object))
 
+  (check	;count is bigger than available data
+      (let ((port (open-string-input-port "01234")))
+	(get-string-n port 10))
+    => "01234")
+
   (let* ((src.len 100)
 	 (src.str (let ((str (make-string src.len)))
 		    (do ((i 0 (+ 1 i)))
@@ -7667,6 +7672,12 @@
 	(get-string-n port 10))
     => (eof-object))
 
+  (check	;count is bigger than available data
+      (let ((port (open-bytevector-input-port '#vu8(65 66 67 68)
+					      (make-transcoder (latin-1-codec)))))
+	(get-string-n port 10))
+    => "ABCD")
+
   (let* ((src.len 100)
   	 (src.str (let ((str (make-string src.len)))
   		    (do ((i 0 (+ 1 i)))
@@ -7693,6 +7704,12 @@
 	(get-string-n port 10))
     => (eof-object))
 
+  (check	;count is bigger than available data
+      (let ((port (open-bytevector-input-port '#vu8(65 66 67 68)
+					      (make-transcoder (utf-8-codec)))))
+	(get-string-n port 10))
+    => "ABCD")
+
   (let* ((src.len 1024)
   	 (src.str (let ((str (make-string src.len)))
   		    (do ((i 0 (+ 1 i)))
@@ -7718,6 +7735,12 @@
       (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-16-codec)))))
 	(get-string-n port 10))
     => (eof-object))
+
+  (check	;count is bigger than available data
+      (let ((port (open-bytevector-input-port (string->utf16 "ABCD" (endianness little))
+					      (make-transcoder (utf-16-codec)))))
+	(get-string-n port 10))
+    => "ABCD")
 
   ;; little endian, default
   (let* ((src.len 1024)
