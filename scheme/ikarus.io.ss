@@ -879,6 +879,10 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-inline (%assert-value-is-fixnum ?obj ?who)
+  (unless (fixnum? ?obj)
+    (assertion-violation ?who "not a fixnum" ?obj)))
+
 (define-inline (%assert-value-is-bytevector ?obj ?who)
   (unless (bytevector? ?obj)
     (assertion-violation ?who "not a bytevector" ?obj)))
@@ -913,7 +917,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (%assert-value-is-count-argument ?count ?who)
+(define (%assert-argument-is-count ?count ?who)
   (let ((count ?count))
     (unless (and (integer? count) (exact? count))
       (assertion-violation ?who "expected exact integer as count argument" count))
@@ -3547,7 +3551,7 @@
     ;;PORT.FAST-ATTRIBUTES which does not include it).
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
       (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
-    (%assert-value-is-count-argument count who)
+    (%assert-argument-is-count count who)
     (if (zero? count)
 	(quote #vu8())
       (let retry-after-filling-buffer ((list-of-bytevectors	'())
@@ -3605,7 +3609,7 @@
       (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
     (%assert-value-is-bytevector dst.bv who)
     (%assert-value-is-start-index-for-bytevector-argument dst.start dst.bv who)
-    (%assert-value-is-count-argument count who)
+    (%assert-argument-is-count count who)
     (%assert-value-is-count-from-start-in-bytevector-argument count dst.start dst.bv who)
     (if (zero? count)
 	count
@@ -4657,32 +4661,67 @@
 
 ;;;; string input functions
 
-(define (get-string-n p n)
-  (import (ikarus system $fx)
-    (ikarus system $strings))
+(define (get-string-n port count)
+  ;;Defined  by R6RS.   COUNT must  be an  exact,  non--negative integer
+  ;;object, representing the number of characters to be read.
+  ;;
+  ;;The  GET-STRING-N  procedure  reads  from the  textual  input  PORT,
+  ;;blocking  as necessary,  until  COUNT characters  are available,  or
+  ;;until an end of file is reached.
+  ;;
+  ;;If COUNT  characters are available before end  of file, GET-STRING-N
+  ;;returns a string consisting of those COUNT characters.
+  ;;
+  ;;If fewer characters are available before  an end of file, but one or
+  ;;more  characters   can  be  read,  GET-STRING-N   returns  a  string
+  ;;containing those characters.
+  ;;
+  ;;In either  case, the input  port is updated  to point just  past the
+  ;;characters  read.  If no  characters can  be read  before an  end of
+  ;;file, the end-of-file object is returned.
+  ;;
+  ;;IMPLEMENTATION RESTRICTION The COUNT argument must be a fixnum.
+  ;;
   (define who 'get-string-n)
-  (%assert-value-is-input-port p who)
-  (%unsafe.assert-value-is-textual-port p who)
-  (unless (fixnum? n)
-    (assertion-violation who "count is not a fixnum" n))
-  (cond
-   (($fx> n 0)
-    (let ((s ($make-string n)))
-      (let f ((p p) (n n) (s s) (i 0))
-	(let ((x (get-char p)))
-	  (cond
-	   ((eof-object? x)
-	    (if ($fx= i 0)
-		(eof-object)
-	      (substring s 0 i)))
-	   (else
-	    ($string-set! s i x)
-	    (let ((i ($fxadd1 i)))
-	      (if ($fx= i n)
-		  s
-		(f p n s i)))))))))
-   (($fx= n 0) "")
-   (else (assertion-violation 'get-string-n "count is negative" n))))
+  (define-inline (%get-it ?read-char)
+    (if (unsafe.fxzero? count)
+	""
+      (let ((dst.str (unsafe.make-string count)))
+	(let loop ((dst.index 0))
+	  (let ((ch (?read-char port who)))
+	    (if (eof-object? ch)
+		(if (unsafe.fxzero? dst.index)
+		    ch
+		  (substring dst.str 0 dst.index))
+	      (begin
+		(unsafe.string-set! dst.str dst.index ch)
+		(let ((dst.index (unsafe.fxadd1 dst.index)))
+		  (if (unsafe.fx= dst.index count)
+		      dst.str
+		    (loop dst.index))))))))))
+  (define-inline (%read-utf16le ?port ?who)
+    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
+  (define-inline (%read-utf16be ?port ?who)
+    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
+  (%assert-value-is-port port who)
+  (%assert-argument-is-count count who)
+  (unless (fixnum? count)
+    (assertion-violation who "count argument must be a fixnum" count))
+  (case-textual-input-port-fast-tag port
+    ((fast-get-utf8-tag)
+     (%get-it %unsafe.read-char-from-port-with-fast-get-utf8-tag))
+    ((fast-get-char-tag)
+     (%get-it %unsafe.read-char-from-port-with-fast-get-char-tag))
+    ((fast-get-latin-tag)
+     (%get-it %unsafe.read-char-from-port-with-fast-get-latin-tag))
+    ((fast-get-utf16le-tag)
+     (%get-it %read-utf16le))
+    ((fast-get-utf16be-tag)
+     (%get-it %read-utf16be))
+    (else
+     (if (%validate-untagged-port-as-open-textual-input-then-parse-bom-and-add-fast-tag port who)
+	 (eof-object)
+       (get-string-n port count)))))
 
 (define (get-string-n! p s i c)
   (import (ikarus system $fx) (ikarus system $strings))

@@ -7542,6 +7542,245 @@
   #t)
 
 
+(parametrise ((check-test-name		'get-string-n-plain)
+	      (test-pathname		(make-test-pathname "get-string-n.bin"))
+	      (input-file-buffer-size	100))
+
+;;; --------------------------------------------------------------------
+;;; port argument validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(get-string-n 123 1))
+    => '(123))
+
+  (check	;argument is not an input port
+      (let ((port (%open-disposable-textual-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (get-string-n port 1)))
+    => #t)
+
+  (check	;argument is not a textual port
+      (let ((port (%open-disposable-binary-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (get-string-n port 1)))
+    => #t)
+
+  (check	;argument is not an open port
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-input-port port)
+	  (get-string-n port 1)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; count argument validation
+
+  (check	;count is not an integer
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (get-string-n port #\a)))
+    => '(#\a))
+
+  (check 	;count is not an exact integer
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (get-string-n port 1.0)))
+    => '(1.0))
+
+  (check 	;count is negative
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (get-string-n port -3)))
+    => '(-3))
+
+  (check 	;count is not a fixnum
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (get-string-n port (+ 1 (greatest-fixnum)))))
+    => (list (+ 1 (greatest-fixnum))))
+
+;;; --------------------------------------------------------------------
+;;; input from a string port
+
+  (check	;no data available
+      (let ((port (open-string-input-port "")))
+	(get-string-n port 10))
+    => (eof-object))
+
+  (let* ((src.len 100)
+	 (src.str (let ((str (make-string src.len)))
+		    (do ((i 0 (+ 1 i)))
+			((= i src.len)
+			 str)
+		      (string-set! str i (integer->char i))))))
+
+    (check	;count is zero
+	(let ((port (open-string-input-port src.str)))
+	  (get-string-n port 0))
+      => "")
+
+    (check	;count is 1
+	(let ((port (open-string-input-port src.str)))
+	  (get-string-n port 1))
+      => "\x0;")
+
+    (check	;count is 10
+	(let ((port (open-string-input-port src.str)))
+	  (get-string-n port 10))
+      => (substring src.str 0 10))
+
+    (check	;count is big
+	(let ((port (open-string-input-port src.str)))
+	  (get-string-n port src.len))
+      => src.str)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; input from a bytevector with Latin-1 encoding
+
+  (check	;no data available
+      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (latin-1-codec)))))
+	(get-string-n port 10))
+    => (eof-object))
+
+  (let* ((src.len 100)
+  	 (src.str (let ((str (make-string src.len)))
+  		    (do ((i 0 (+ 1 i)))
+  			((= i src.len)
+  			 str)
+  		      (string-set! str i (integer->char i)))))
+	 (src.bv  (%string->latin-1 src.str))
+	 (doit	(lambda (count)
+		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (latin-1-codec)))))
+		    (get-string-n port count)))))
+
+    (check (doit 0)		=> "")
+    (check (doit 1)		=> "\x0;")
+    (check (doit 10)		=> (substring src.str 0 10))
+    (check (doit src.len)	=> src.str)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; input from a bytevector with UTF-8 encoding
+
+  (check	;no data available
+      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-8-codec)))))
+	(get-string-n port 10))
+    => (eof-object))
+
+  (let* ((src.len 1024)
+  	 (src.str (let ((str (make-string src.len)))
+  		    (do ((i 0 (+ 1 i)))
+  			((= i src.len)
+  			 str)
+  		      (string-set! str i (integer->char i)))))
+	 (src.bv  (string->utf8 src.str))
+	 (doit	(lambda (count)
+		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-8-codec)))))
+		    (get-string-n port count)))))
+
+    (check (doit 0)		=> "")
+    (check (doit 1)		=> "\x0;")
+    (check (doit 10)		=> (substring src.str 0 10))
+    (check (doit src.len)	=> src.str)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; input from a bytevector with UTF-16 encoding
+
+  (check	;no data available
+      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-16-codec)))))
+	(get-string-n port 10))
+    => (eof-object))
+
+  ;; little endian, default
+  (let* ((src.len 1024)
+  	 (src.str (let ((str (make-string src.len)))
+  		    (do ((i 0 (+ 1 i)))
+  			((= i src.len)
+  			 str)
+  		      (string-set! str i (integer->char i)))))
+	 (src.bv  (string->utf16 src.str (endianness little)))
+	 (doit	(lambda (count)
+		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		    (get-string-n port count)))))
+
+    (check (doit 0)		=> "")
+    (check (doit 1)		=> "\x0;")
+    (check (doit 10)		=> (substring src.str 0 10))
+    (check (doit src.len)	=> src.str)
+
+    #f)
+
+  ;; little endian, with bom
+  (let* ((src.len 1024)
+  	 (src.str (let ((str (make-string src.len)))
+  		    (do ((i 0 (+ 1 i)))
+  			((= i src.len)
+  			 str)
+  		      (string-set! str i (integer->char i)))))
+	 (src.bv  (%bytevector-append BYTE-ORDER-MARK-UTF-16-LE
+				      (string->utf16 src.str (endianness little))))
+	 (doit	(lambda (count)
+		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		    (get-string-n port count)))))
+
+    (check (doit 0)		=> "")
+    (check (doit 1)		=> "\x0;")
+    (check (doit 10)		=> (substring src.str 0 10))
+    (check (doit src.len)	=> src.str)
+    #f)
+
+  ;; big endian, with bom
+  (let* ((src.len 1024)
+  	 (src.str (let ((str (make-string src.len)))
+  		    (do ((i 0 (+ 1 i)))
+  			((= i src.len)
+  			 str)
+  		      (string-set! str i (integer->char i)))))
+	 (src.bv  (%bytevector-append BYTE-ORDER-MARK-UTF-16-BE
+				      (string->utf16 src.str (endianness big))))
+	 (doit	(lambda (count)
+		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		    (get-string-n port count)))))
+
+    (check (doit 0)		=> "")
+    (check (doit 1)		=> "\x0;")
+    (check (doit 10)		=> (substring src.str 0 10))
+    (check (doit src.len)	=> src.str)
+    #f)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
