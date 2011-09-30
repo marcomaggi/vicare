@@ -1746,9 +1746,9 @@
 
 ;;;; UTF-16 decoding
 ;;
-;;Given a 16 bits word  in a UTF-16 stream, represented in Scheme
-;;as a fixnum  in the range [#x0000, #xFFFF],  we can classify it
-;;on the following axis:
+;;Given a  16-bit word in  a UTF-16 stream,  represented in Scheme  as a
+;;fixnum  in the  range  [#x0000, #xFFFF],  we  can classify  it on  the
+;;following axis:
 ;;
 ;; 0000        D7FF D800    DBFF DC00      DFFF E000       FFFF
 ;;  |-------------||-----------||-------------||------------|
@@ -1762,9 +1762,10 @@
 ;;   word in [#xDC00, #xDFFF] => second in surrogate pair
 ;;   word in [#xE000, #xFFFF] => single word character
 ;;
-;;The  following macros  assume  the WORD  arguments are  fixnums
-;;representing 16-bit  words, that is  they must be in  the range
-;;[0, #xFFFF].
+;;The   following  macros   assume  the   WORD  arguments   are  fixnums
+;;representing  16-bit words,  that is  they must  be in  the  range [0,
+;;#xFFFF].
+;;
 
 ;;; 1-word encoding
 
@@ -1801,6 +1802,26 @@
   (unsafe.fx+ #x10000
 	      (%unsafe.fxior (unsafe.fxsll (unsafe.fxand word0 #x3FF) 10)
 			     (unsafe.fxand word1 #x3FF))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (utf-16-classify-word word)
+  (cond ((not (fixnum? word))
+	 (list 'invalid-value/not-a-fixnum word))
+	((< word 0)
+	 (list 'invalid-value/negative-fixnum word))
+	(else
+	 (let ((str (number->string word 16)))
+	   (cond ((< #xFFFF word)
+		  (list 'invalid-value/fixnum-too-big str))
+		 ((utf-16-single-word? word)
+		  (list 'one-word-character str))
+		 ((utf-16-first-of-two-words? word)
+		  (list 'first-word-in-surrogate-pair str))
+		 ((utf-16-second-of-two-words? word)
+		  (list 'second-word-in-surrogate-pair str))
+		 (else
+		  (list 'internal-error str)))))))
 
 
 ;;;; ISO/IEC 8859-1, Latin-1
@@ -3721,9 +3742,9 @@
     ((fast-get-latin-tag)
      (%unsafe.peek-char-from-port-with-fast-get-latin-tag port who))
     ((fast-get-utf16le-tag)
-     (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little))
+     (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little 0))
     ((fast-get-utf16be-tag)
-     (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big))
+     (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big    0))
     (else
      (if (%validate-untagged-port-as-open-textual-input-then-parse-bom-and-add-fast-tag port who)
 	 (eof-object)
@@ -3765,8 +3786,8 @@
 	    (let ((byte0 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte0)))
 	      (if (utf-8-single-byte? byte0)
 		  (unsafe.integer->char (utf-8-decode-single-byte byte0))
-		(%unsafe.peek-char-from-port-with-utf8-codec port ?who)))
-	  (%unsafe.peek-char-from-port-with-utf8-codec port ?who))))))
+		(%unsafe.peek-char-from-port-with-utf8-codec port ?who 0)))
+	  (%unsafe.peek-char-from-port-with-utf8-codec port ?who 0))))))
 
 (define (%unsafe.read-char-from-port-with-utf8-codec port who)
   ;;PORT must be  a textual input port with  bytevector buffer and UTF-8
@@ -3790,11 +3811,11 @@
 	    (if-successful-refill: (retry-after-filling-buffer))
 	    (if-available-data:
 	     (let ((byte0 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte0)))
-	       (define (%error)
+	       (define (%error-invalid-byte)
 		 (%error-handler "invalid byte while expecting first byte of UTF-8 character" byte0))
 	       (cond ((utf-8-invalid-byte? byte0)
 		      (set! port.buffer.index (unsafe.fxadd1 buffer.offset-byte0))
-		      (%error))
+		      (%error-invalid-byte))
 		     ((utf-8-single-byte? byte0)
 		      (get-single-byte-character byte0 buffer.offset-byte0))
 		     ((utf-8-first-of-two-bytes? byte0)
@@ -3804,7 +3825,7 @@
 		     ((utf-8-first-of-four-bytes? byte0)
 		      (get-4-bytes-character byte0 buffer.offset-byte0))
 		     (else
-		      (%error)))))))))
+		      (%error-invalid-byte)))))))))
 
     (define-inline (get-single-byte-character byte0 buffer.offset-byte0)
       (let ((N (utf-8-decode-single-byte byte0)))
@@ -3820,24 +3841,26 @@
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte1)
 	    (if-end-of-file:
-	     (%unexpected-eof-error "unexpected EOF while decoding 2-bytes UTF-8 character" byte0))
+	     (%unexpected-eof-error "unexpected EOF while decoding 2-byte UTF-8 character" byte0))
 	    (if-successful-refill:
 	     (retry-after-filling-buffer-for-1-more-byte))
 	    (if-available-data:
-	     (let ((byte1  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
-		   (errmsg "invalid second byte in 2-bytes UTF-8 character"))
+	     (let ((byte1 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1)))
+	       (define (%error-invalid-second)
+		 (%error-handler "invalid second byte in 2-byte UTF-8 character"
+				 byte0 byte1))
 	       (set! port.buffer.index buffer.offset-past)
 	       (cond ((utf-8-invalid-byte? byte1)
-		      (%error-handler errmsg byte0 byte1))
+		      (%error-invalid-second))
 		     ((utf-8-second-of-two-bytes? byte1)
 		      (let ((N (utf-8-decode-two-bytes byte0 byte1)))
 			(if (utf-8-valid-code-point-from-2-bytes? N)
 			    (unsafe.integer->char N)
 			  (%error-handler "invalid code point as result \
-                                           of decoding 2-bytes UTF-8 character"
+                                           of decoding 2-byte UTF-8 character"
 					  byte0 byte1 N))))
 		     (else
-		      (%error-handler errmsg byte1)))))))))
+		      (%error-invalid-second)))))))))
 
     (define-inline (get-3-bytes-character byte0 buffer.offset-byte0)
       (let retry-after-filling-buffer-for-2-more-bytes ()
@@ -3847,29 +3870,32 @@
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte2)
 	    (if-end-of-file:
-	     (apply %unexpected-eof-error "unexpected EOF while decoding 3-bytes UTF-8 character"
+	     (apply %unexpected-eof-error "unexpected EOF while decoding 3-byte UTF-8 character"
 		    byte0 (if (unsafe.fx< buffer.offset-byte1 port.buffer.used-size)
 			      (list (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
 			    '())))
 	    (if-successful-refill:
 	     (retry-after-filling-buffer-for-2-more-bytes))
 	    (if-available-data:
-	     (let ((byte1  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
-		   (byte2  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte2))
-		   (errmsg "invalid second or third byte in 3-bytes UTF-8 character"))
+	     (let ((byte1 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
+		   (byte2 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte2)))
+	       (define (%error-invalid-second-or-third)
+		 (%error-handler "invalid second or third byte while decoding UTF-8 character \
+                                  and expecting 3-byte character"
+				 byte0 byte1 byte2))
 	       (set! port.buffer.index buffer.offset-past)
 	       (cond ((or (utf-8-invalid-byte? byte1)
 			  (utf-8-invalid-byte? byte2))
-		      (%error-handler errmsg byte0 byte1 byte2))
+		      (%error-invalid-second-or-third))
 		     ((utf-8-second-and-third-of-three-bytes? byte1 byte2)
 		      (let ((N (utf-8-decode-three-bytes byte0 byte1 byte2)))
 			(if (utf-8-valid-code-point-from-3-bytes? N)
 			    (unsafe.integer->char N)
 			  (%error-handler "invalid code point as result \
-                                           of decoding 3-bytes UTF-8 character"
+                                           of decoding 3-byte UTF-8 character"
 					  byte0 byte1 byte2 N))))
 		     (else
-		      (%error-handler errmsg byte0 byte1 byte2)))))))))
+		      (%error-invalid-second-or-third)))))))))
 
     (define-inline (get-4-bytes-character byte0 buffer.offset-byte0)
       (let retry-after-filling-buffer-for-3-more-bytes ()
@@ -3880,7 +3906,7 @@
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte3)
 	    (if-end-of-file:
-	     (apply %unexpected-eof-error "unexpected EOF while decoding 4-bytes UTF-8 character"
+	     (apply %unexpected-eof-error "unexpected EOF while decoding 4-byte UTF-8 character"
 		    byte0 (if (unsafe.fx< buffer.offset-byte1 port.buffer.used-size)
 			      (cons (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1)
 				    (if (unsafe.fx< buffer.offset-byte2 port.buffer.used-size)
@@ -3890,24 +3916,27 @@
 	    (if-successful-refill:
 	     (retry-after-filling-buffer-for-3-more-bytes))
 	    (if-available-data:
-	     (let ((byte1  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
-		   (byte2  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte2))
-		   (byte3  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte3))
-		   (errmsg "invalid second, third or fourth byte in 4-bytes UTF-8 character"))
+	     (let ((byte1 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
+		   (byte2 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte2))
+		   (byte3 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte3)))
+	       (define (%error-invalid-second-third-or-fourth)
+		 (%error-handler "invalid second, third or fourth byte while decoding UTF-8 character \
+                                  and expecting 4-byte character"
+				 byte0 byte1 byte2 byte3))
 	       (set! port.buffer.index buffer.offset-past)
 	       (cond ((or (utf-8-invalid-byte? byte1)
 			  (utf-8-invalid-byte? byte2)
 			  (utf-8-invalid-byte? byte3))
-		      (%error-handler errmsg byte0 byte1 byte2 byte3))
+		      (%error-invalid-second-third-or-fourth))
 		     ((utf-8-second-third-and-fourth-of-three-bytes? byte1 byte2 byte3)
 		      (let ((N (utf-8-decode-four-bytes byte0 byte1 byte2 byte3)))
 			(if (utf-8-valid-code-point-from-4-bytes? N)
 			    (unsafe.integer->char N)
 			  (%error-handler "invalid code point as result \
-                                           of decoding 4-bytes UTF-8 character"
+                                           of decoding 4-byte UTF-8 character"
 					  byte0 byte1 byte2 byte3 N))))
 		     (else
-		      (%error-handler errmsg byte0 byte1 byte2 byte3)))))))))
+		      (%error-invalid-second-third-or-fourth)))))))))
 
     (define (%unexpected-eof-error message . irritants)
       (let ((mode (transcoder-error-handling-mode port.transcoder)))
@@ -3946,33 +3975,42 @@
 
     (main)))
 
-(define (%unsafe.peek-char-from-port-with-utf8-codec port who)
-  ;;Subroutine of %DO-PEEK-CHAR.  Peek from a textual input PORT
-  ;;a UTF-8 encoded character for the cases of 2, 3 and 4 bytes
-  ;;encoding;  the  case  of  1-byte  encoding  is  handled  by
-  ;;%DO-PEEK-CHAR.
+(define (%unsafe.peek-char-from-port-with-utf8-codec port who buffer-offset)
+  ;;Subroutine of %DO-PEEK-CHAR.  Peek from a textual input PORT a UTF-8
+  ;;encoded character  for the cases of  2, 3 and 4  bytes encoding; the
+  ;;case of 1-byte encoding is handled by %DO-PEEK-CHAR.
   ;;
-  ;;BYTE0  is the  first byte  in the  UTF-8  sequence, already
-  ;;extracted by the calling function.
+  ;;BYTE0 is the first byte  in the UTF-8 sequence, already extracted by
+  ;;the calling function.
   ;;
-  ;;Return a  Scheme character or  the EOF object.  In  case of
-  ;;error: honor the error mode in the port's transcoder.
+  ;;Return  a Scheme character  or the  EOF object.   In case  of error:
+  ;;honor the error mode in the port's transcoder.
+  ;;
+  ;;BUFFER-OFFSET  must be  the offset  to add  to  PORT.BUFFER.INDEX to
+  ;;obtain the index of the next byte  in the buffer to read; it must be
+  ;;zero upon entering  this function; it is used  in recursive calls to
+  ;;this function to implement the IGNORE error handling method.
   ;;
   (with-port-having-bytevector-buffer (port)
 
+    (define-inline (recurse buffer-offset)
+      (%unsafe.peek-char-from-port-with-utf8-codec port who buffer-offset))
+
     (define-inline (main)
       (let retry-after-filling-buffer ()
-	(let ((buffer.offset-byte0 port.buffer.index))
+	(let ((buffer.offset-byte0 (unsafe.fx+ port.buffer.index buffer-offset)))
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte0)
 	    (if-end-of-file: (eof-object))
 	    (if-successful-refill: (retry-after-filling-buffer))
 	    (if-available-data:
-	     (let ((byte0 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte0)))
-	       (define (%error)
-		 (%error-handler "invalid byte while expecting first byte of UTF-8 character" byte0))
+	     (let ((byte0		(unsafe.bytevector-u8-ref port.buffer buffer.offset-byte0))
+		   (buffer-offset	(unsafe.fx+ 1 buffer-offset)))
+	       (define (%error-invalid-byte)
+		 (%error-handler buffer-offset
+				 "invalid byte while expecting first byte of UTF-8 character" byte0))
 	       (cond ((utf-8-invalid-byte? byte0)
-		      (%error))
+		      (%error-invalid-byte))
 		     ((utf-8-single-byte? byte0)
 		      (unsafe.integer->char (utf-8-decode-single-byte byte0)))
 		     ((utf-8-first-of-two-bytes? byte0)
@@ -3982,7 +4020,7 @@
 		     ((utf-8-first-of-four-bytes? byte0)
 		      (peek-4-bytes-character byte0 buffer.offset-byte0))
 		     (else
-		      (%error)))))))))
+		      (%error-invalid-byte)))))))))
 
     (define-inline (peek-2-bytes-character byte0 buffer.offset-byte0)
       (let retry-after-filling-buffer-for-1-more-byte ()
@@ -3990,22 +4028,26 @@
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte1)
 	    (if-end-of-file:
-	     (%unexpected-eof-error "unexpected EOF while decoding 2-bytes UTF-8 character" byte0))
+	     (%unexpected-eof-error "unexpected EOF while decoding 2-byte UTF-8 character" byte0))
 	    (if-successful-refill: (retry-after-filling-buffer-for-1-more-byte))
 	    (if-available-data:
-	     (let ((byte1  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
-		   (errmsg "invalid second byte in 2-bytes UTF-8 character"))
+	     (let ((byte1		(unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
+		   (buffer-offset	(unsafe.fx+ 2 buffer-offset)))
+	       (define (%error-invalid-second)
+		 (%error-handler buffer-offset "invalid second byte in 2-byte UTF-8 character"
+				 byte0 byte1))
 	       (cond ((utf-8-invalid-byte? byte1)
-		      (%error-handler errmsg byte1))
+		      (%error-invalid-second))
 		     ((utf-8-second-of-two-bytes? byte1)
 		      (let ((N (utf-8-decode-two-bytes byte0 byte1)))
 			(if (utf-8-valid-code-point-from-2-bytes? N)
 			    (unsafe.integer->char N)
-			  (%error-handler "invalid code point as result \
-                                          of decoding 2-bytes UTF-8 character"
-					 byte0 byte1 N))))
+			  (%error-handler buffer-offset
+					  "invalid code point as result \
+                                           of decoding 2-byte UTF-8 character"
+					  byte0 byte1 N))))
 		     (else
-		      (%error-handler errmsg byte1)))))))))
+		      (%error-invalid-second)))))))))
 
     (define-inline (peek-3-bytes-character byte0 buffer.offset-byte0)
       (let retry-after-filling-buffer-for-2-more-bytes ()
@@ -4014,27 +4056,32 @@
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte2)
 	    (if-end-of-file:
-	     (apply %unexpected-eof-error "unexpected EOF while decoding 3-bytes UTF-8 character"
+	     (apply %unexpected-eof-error "unexpected EOF while decoding 3-byte UTF-8 character"
 		    byte0 (if (unsafe.fx< buffer.offset-byte1 port.buffer.used-size)
 			      (list (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
 			    '())))
 	    (if-successful-refill: (retry-after-filling-buffer-for-2-more-bytes))
 	    (if-available-data:
-	     (let ((byte1  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
-		   (byte2  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte2))
-		   (errmsg "invalid second or third byte in 3-bytes UTF-8 character"))
+	     (let ((byte1		(unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
+		   (byte2		(unsafe.bytevector-u8-ref port.buffer buffer.offset-byte2))
+		   (buffer-offset	(unsafe.fx+ 3 buffer-offset)))
+	       (define (%error-invalid-second-or-third)
+		 (%error-handler buffer-offset
+				 "invalid second or third byte in 3-byte UTF-8 character"
+				 byte0 byte1 byte2))
 	       (cond ((or (utf-8-invalid-byte? byte1)
 			  (utf-8-invalid-byte? byte2))
-		      (%error-handler errmsg byte1 byte2))
+		      (%error-invalid-second-or-third))
 		     ((utf-8-second-and-third-of-three-bytes? byte1 byte2)
 		      (let ((N (utf-8-decode-three-bytes byte0 byte1 byte2)))
 			(if (utf-8-valid-code-point-from-3-bytes? N)
 			    (unsafe.integer->char N)
-			  (%error-handler "invalid code point as result \
-                                          of decoding 3-bytes UTF-8 character"
-					 byte0 byte1 byte2 N))))
+			  (%error-handler buffer-offset
+					  "invalid code point as result of \
+                                           decoding 3-byte UTF-8 character"
+					  byte0 byte1 byte2 N))))
 		     (else
-		      (%error-handler errmsg byte1 byte2)))))))))
+		      (%error-invalid-second-or-third)))))))))
 
     (define-inline (peek-4-bytes-character byte0 buffer.offset-byte0)
       (let retry-after-filling-buffer-for-3-more-bytes ()
@@ -4056,20 +4103,25 @@
 	     (let ((byte1  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
 		   (byte2  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte2))
 		   (byte3  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte3))
-		   (errmsg "invalid second, third or fourth byte in 4-bytes UTF-8 character"))
+		   (buffer-offset (unsafe.fx+ 4 buffer-offset)))
+	       (define (%error-invalid-second-third-or-fourth)
+		 (%error-handler buffer-offset
+				 "invalid second, third or fourth byte in 4-bytes UTF-8 character"
+				 byte0 byte1 byte2 byte3))
 	       (cond ((or (utf-8-invalid-byte? byte1)
 			  (utf-8-invalid-byte? byte2)
 			  (utf-8-invalid-byte? byte3))
-		      (%error-handler errmsg byte1 byte2 byte3))
+		      (%error-invalid-second-third-or-fourth))
 		     ((utf-8-second-third-and-fourth-of-three-bytes? byte1 byte2 byte3)
 		      (let ((N (utf-8-decode-four-bytes byte0 byte1 byte2 byte3)))
 			(if (utf-8-valid-code-point-from-4-bytes? N)
 			    (unsafe.integer->char N)
-			  (%error-handler "invalid code point as result \
-                                          of decoding 4-bytes UTF-8 character"
-					 byte0 byte1 byte2 N))))
+			  (%error-handler buffer-offset
+					  "invalid code point as result \
+                                           of decoding 4-bytes UTF-8 character"
+					  byte0 byte1 byte2 N))))
 		     (else
-		      (%error-handler errmsg byte1 byte2 byte3)))))))))
+		      (%error-invalid-second-third-or-fourth)))))))))
 
     (define (%unexpected-eof-error message . irritants)
       (let ((mode (transcoder-error-handling-mode port.transcoder)))
@@ -4087,12 +4139,12 @@
 	  (else
 	   (assertion-violation who "internal error, wrong transcoder error handling mode" mode)))))
 
-    (define (%error-handler message . irritants)
+    (define (%error-handler buffer-offset message . irritants)
       (let ((mode (transcoder-error-handling-mode port.transcoder)))
 	(case mode
 	  ((ignore)
 	   ;;To ignore means jump to the next.
-	   (%unsafe.peek-char-from-port-with-utf8-codec port who))
+	   (recurse buffer-offset))
 	  ((replace)
 	   #\xFFFD)
 	  ((raise)
@@ -4201,6 +4253,7 @@
 	     ;;for  a full UTF-16  character encoded  as single  16 bits
 	     ;;word.
 	     (let ((word0 (%word-ref buffer.offset-word0)))
+;;;(pretty-print (list who 'word0 (utf-16-classify-word word0)))
 	       (cond ((utf-16-single-word? word0)
 		      ;;WORD0  is  in the  allowed  range  for a  UTF-16
 		      ;;encoded character of 16 bits.
@@ -4208,20 +4261,20 @@
 		      (integer->char/invalid (utf-16-decode-single-word word0)))
 		     ((not (utf-16-first-of-two-words? word0))
 		      (set! port.buffer.index buffer.offset-word1)
-		      (%error-handler "invalid 16-bit word while decoding UTF-16 characters" word0))
+		      (%error-handler "invalid 16-bit word while decoding UTF-16 characters \
+                                       and expecting single word character or first word of \
+                                       surrogate pair" word0))
 		     ((unsafe.fx<= buffer.offset-past port.buffer.used-size)
 		      ;;WORD0 is  the first  of a UTF-16  surrogate pair
 		      ;;and  the input buffer  already holds  the second
 		      ;;word.
 		      (let ((word1 (%word-ref buffer.offset-word1)))
+			(set! port.buffer.index buffer.offset-past)
 			(if (utf-16-second-of-two-words? word1)
-			    (begin
-			      (set! port.buffer.index buffer.offset-past)
-			      (integer->char/invalid (utf-16-decode-surrogate-pair word0 word1)))
-			  (begin
-			    (set! port.buffer.index buffer.offset-word1)
-			    (%error-handler "invalid value as second 16-bit word of \
-                                            UTF-16 character" word0 word1)))))
+			    (integer->char/invalid (utf-16-decode-surrogate-pair word0 word1))
+			  (%error-handler "invalid 16-bit word while decoding UTF-16 characters \
+                                           and expecting second word in surrogate pair"
+					  word0 word1))))
 		     (else
 		      ;;WORD0 is  the first of a  UTF-16 surrogate pair,
 		      ;;but input  buffer does not hold  the full second
@@ -4230,8 +4283,8 @@
 			(if-end-of-file:
 			 (set! port.buffer.index port.buffer.used-size)
 			 (%unexpected-eof-error
-			  "unexpected end of file while reading second \
-                           16-bit word in UTF-16 surrogate pair character"
+			  "unexpected end of file while decoding UTF-16 characters \
+                           and expecting second word in surrogate pair"
 			  `(,(unsafe.bytevector-u8-ref port.buffer buffer.offset-word0)
 			    ,(unsafe.bytevector-u8-ref port.buffer (unsafe.fxadd1 buffer.offset-word0))
 			    . ,(if (unsafe.fx< buffer.offset-word1
@@ -4252,8 +4305,8 @@
 		;;handling mode?)
 		(set! port.buffer.index port.buffer.used-size)
 		(%unexpected-eof-error
-		 "unexpected end of file after byte while reading \
-                  16-bit word of UTF-16 character"
+		 "unexpected end of file while decoding UTF-16 characters \
+                  and expecting a whole 1-word or 2-word character"
 		 `(,(unsafe.bytevector-u8-ref port.buffer buffer.offset-word0))))
 	       (if-successful-refill:
 		(recurse))))
@@ -4264,7 +4317,7 @@
 	       (if-end-of-file:	(eof-object))
 	       (if-successful-refill: (recurse))))))))
 
-(define (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who endianness)
+(define (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who endianness buffer-offset)
   ;;Peek  and return  from PORT  a UTF-16  encoded character;  leave the
   ;;input buffer  pointing to the same  byte it was  pointing before the
   ;;call to this function.
@@ -4279,11 +4332,16 @@
   ;;In case of  error decoding the input: honor  the error handling mode
   ;;selected in the PORT's transcoder.
   ;;
+  ;;BUFFER-OFFSET  must be  the offset  to add  to  PORT.BUFFER.INDEX to
+  ;;obtain the index of the next byte  in the buffer to read; it must be
+  ;;zero upon entering  this function; it is used  in recursive calls to
+  ;;this function to implement the IGNORE error handling method.
+  ;;
   (with-port-having-bytevector-buffer (port)
-    (define-inline (recurse)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who endianness))
+    (define-inline (recurse buffer-offset)
+      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who endianness buffer-offset))
 
-    (define (%error-handler message . irritants)
+    (define (%error-handler buffer-offset message . irritants)
       ;;Handle  the error  honoring the  error handling  mode  in port's
       ;;transcoder.
       ;;
@@ -4291,7 +4349,7 @@
 	(case mode
 	  ((ignore)
 	   ;;To ignore means jump to the next.
-	   (recurse))
+	   (recurse buffer-offset))
 	  ((replace)
 	   #\xFFFD)
 	  ((raise)
@@ -4321,7 +4379,7 @@
 	  (else
 	   (assertion-violation who "internal error: invalid error handling mode" port mode)))))
 
-    (define (integer->char/invalid char-code-point)
+    (define (integer->char/invalid char-code-point buffer-offset)
       ;;If the argument is a  valid integer representation for a Unicode
       ;;character according to  R6RS: return the corresponding character
       ;;value, else handle the error.
@@ -4339,16 +4397,16 @@
 	(cond ((unsafe.fx<= char-code-point #xD7FF)
 	       (unsafe.integer->char char-code-point))
 	      ((unsafe.fx<  char-code-point #xE000)
-	       (%error-handler errmsg char-code-point))
+	       (%error-handler buffer-offset errmsg (list char-code-point)))
 	      ((unsafe.fx<= char-code-point #x10FFFF)
 	       (unsafe.integer->char char-code-point))
 	      (else
-	       (%error-handler errmsg char-code-point)))))
+	       (%error-handler buffer-offset errmsg (list char-code-point))))))
 
     (define-inline (%word-ref buffer.offset)
       (%unsafe.bytevector-u16-ref port.buffer buffer.offset endianness))
 
-    (let* ((buffer.offset-word0 port.buffer.index)
+    (let* ((buffer.offset-word0 (unsafe.fx+ port.buffer.index buffer-offset))
 	   (buffer.offset-word1 (unsafe.fx+ 2 buffer.offset-word0))
 	   (buffer.offset-past  (unsafe.fx+ 2 buffer.offset-word1)))
       (cond ((unsafe.fx<= buffer.offset-word1 port.buffer.used-size)
@@ -4357,19 +4415,25 @@
 	     ;;word.
 	     (let ((word0 (%word-ref buffer.offset-word0)))
 	       (cond ((utf-16-single-word? word0)
-		      (integer->char/invalid (utf-16-decode-single-word word0)))
+		      (integer->char/invalid (utf-16-decode-single-word word0) buffer.offset-word1))
 		     ((not (utf-16-first-of-two-words? word0))
-		      (%error-handler "invalid 16-bit word while decoding UTF-16 characters"
+		      (%error-handler (unsafe.fx+ 2 buffer-offset)
+				      "invalid 16-bit word while decoding UTF-16 characters \
+                                       and expecting single word character or first word in \
+                                       surrogate pair"
 				      word0))
 		     ((unsafe.fx<= buffer.offset-past port.buffer.used-size)
 		      ;;WORD0 is  the first  of a UTF-16  surrogate pair
 		      ;;and  the input buffer  already holds  the second
 		      ;;word.
-		      (let ((word1 (%word-ref buffer.offset-word1)))
+		      (let ((word1		(%word-ref buffer.offset-word1))
+			    (buffer-offset	(unsafe.fx+ 4 buffer-offset)))
 			(if (utf-16-second-of-two-words? word1)
-			    (integer->char/invalid (utf-16-decode-surrogate-pair word0 word1))
-			  (%error-handler "invalid value as second 16-bit word of \
-                                           UTF-16 character"
+			    (integer->char/invalid (utf-16-decode-surrogate-pair word0 word1)
+						   buffer-offset)
+			  (%error-handler buffer-offset
+					  "invalid 16-bit word while decoding UTF-16 characters \
+                                           and expecting second word in surrogate pair"
 					  word0 word1))))
 		     (else
 		      ;;WORD0 is  the first of a  UTF-16 surrogate pair,
@@ -4378,8 +4442,8 @@
 		      (%refill-bytevector-buffer-and-evaluate (port who)
 			(if-end-of-file:
 			 (%unexpected-eof-error
-			  "unexpected end of file while reading second \
-                           16-bit word in UTF-16 surrogate pair character"
+			  "unexpected end of file while decoding UTF-16 characters \
+                           and expecting second 16-bit word in surrogate pair"
 			  `(,(unsafe.bytevector-u8-ref port.buffer buffer.offset-word0)
 			    ,(unsafe.bytevector-u8-ref port.buffer (unsafe.fxadd1 buffer.offset-word0))
 			    . ,(if (unsafe.fx< buffer.offset-word1
@@ -4387,7 +4451,7 @@
 				   (list (unsafe.bytevector-u8-ref port.buffer buffer.offset-word1))
 				 '()))))
 			(if-successful-refill:
-			 (recurse)))))))
+			 (recurse buffer-offset)))))))
 
 	    ((unsafe.fx< buffer.offset-word0 port.buffer.used-size)
 	     ;;There is only 1 byte in the input buffer.
@@ -4396,17 +4460,17 @@
 		;;The  input data  is corrupted  because we  expected at
 		;;least a 16 bits word to be there before EOF.
 		(%unexpected-eof-error
-		 "unexpected end of file after byte while reading \
-                  16-bit word of UTF-16 character"
+		 "unexpected end of file after byte while decoding UTF-16 characters \
+                  and expecting single word character or first word in surrogate pair"
 		 `(,(unsafe.bytevector-u8-ref port.buffer buffer.offset-word0))))
 	       (if-successful-refill:
-		(recurse))))
+		(recurse buffer-offset))))
 
 	    (else
 	     ;;The input buffer is empty.
 	     (%refill-bytevector-buffer-and-evaluate (port who)
 	       (if-end-of-file:	(eof-object))
-	       (if-successful-refill: (recurse))))))))
+	       (if-successful-refill: (recurse buffer-offset))))))))
 
 
 ;;;; GET-CHAR and LOOKAHEAD-CHAR for ports with Latin-1 transcoder
@@ -6006,6 +6070,7 @@
 
 ;;; end of file
 ;;; Local Variables:
+;;; coding: utf-8-unix
 ;;; fill-column: 72
 ;;; eval: (put 'with-port				'scheme-indent-function 1)
 ;;; eval: (put 'with-port-having-bytevector-buffer	'scheme-indent-function 1)
