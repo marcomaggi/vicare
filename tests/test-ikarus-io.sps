@@ -7542,9 +7542,7 @@
   #t)
 
 
-(parametrise ((check-test-name		'get-string-n-plain)
-	      (test-pathname		(make-test-pathname "get-string-n.bin"))
-	      (input-file-buffer-size	100))
+(parametrise ((check-test-name		'get-string-n-plain))
 
 ;;; --------------------------------------------------------------------
 ;;; port argument validation
