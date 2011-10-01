@@ -647,6 +647,7 @@ like the @posix{} interface.  Vicare is pronounced the etruscan way.
 * overview resources::          Resources.
 * overview system::             System requirements.
 * overview install::            Installation and uninstallation.
+* overview restrictions::       Implementation restrictions.
 @end menu
 
 @c page
@@ -1140,6 +1141,27 @@ To uninstall @value{PACKAGE}, go to the directory we built
 $ cd path/to/vicare-@var{n.n.n}
 $ make uninstall
 @end example
+
+@c page
+@node overview restrictions
+@section Implementation restrictions
+
+
+Here is a list of implementations constraints which may be
+non--compliant with @rnrs{6}.
+
+@enumerate
+@item
+Scheme strings can hold at most @code{(greatest-fixnum)} characters; the
+length of a string and all the valid indexes into strings are
+representable as fixnums.
+
+@item
+Scheme bytevectors can hold at most @code{(greatest-fixnum)} bytes; the
+length of a bytevector and all the valid indexes into bytevectors are
+representable as fixnums.
+@end enumerate
+
 
 @c page
 @node using
@@ -1641,6 +1663,7 @@ extensions.  Extensions to Scheme's lexical syntax are also documented.
 * iklib reader::               Reader.
 * iklib cafe::                 Cafe.
 * iklib bytevectors::          Additional bytevector functions.
+* iklib strings::              Additional string functions.
 * iklib environment::          Environments.
 * iklib load::                 Loading source files.
 * iklib import::               Local library imports.
@@ -1882,6 +1905,20 @@ The @func{s8-list->bytevector} procedure returns a newly allocated
 bytevector whose elements are the elements of list @var{list}, in the
 same order.  It is analogous to @func{list->vector}.
 @end deffn
+
+@c page
+@node iklib strings
+@section Additional string functions
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun string->latin1 @var{string}
+@defunx latin1->string @var{bytevevctor}
+Converto to and from a Scheme string and a Scheme bytevector holding the
+Latin-1 encoding of the characters.
+@end defun
 
 @c page
 @node iklib environment

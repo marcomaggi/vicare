@@ -925,6 +925,8 @@
     (string>?                                    i r ba se)
     (string?                                     i r ba se)
     (substring                                   i r ba se)
+    (string->latin1				 i)
+    (latin1->string				 i)
     (symbol->string                              i symbols r ba se)
     (symbol=?                                    i symbols r ba)
     (symbol?                                     i symbols r ba se)
