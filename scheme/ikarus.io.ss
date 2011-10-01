@@ -887,6 +887,10 @@
   (unless (bytevector? ?obj)
     (assertion-violation ?who "not a bytevector" ?obj)))
 
+(define-inline (%assert-value-is-string ?obj ?who)
+  (unless (string? ?obj)
+    (assertion-violation ?who "not a string" ?obj)))
+
 (define-inline (%assert-value-is-procedure ?proc ?who)
   (unless (procedure? ?proc)
     (assertion-violation ?who "not a procedure" ?proc)))
@@ -917,19 +921,24 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (%assert-argument-is-count ?count ?who)
-  (let ((count ?count))
-    (unless (and (integer? count) (exact? count))
-      (assertion-violation ?who "expected exact integer as count argument" count))
-    (unless (<= 0 count)
-      (assertion-violation ?who "expected non-negative exact integer as count argument" count))))
+(define (%assert-argument-is-start-index start who)
+  (unless (and (integer? start) (exact? start))
+    (assertion-violation who "expected exact integer as start index argument" start))
+  (unless (>= start 0)
+    (assertion-violation who "expected non-negative exact integer as start index argument" start)))
 
-(define (%assert-value-is-start-index-for-bytevector-argument dst.start dst.bv who)
-  (unless (and (integer? dst.start) (exact? dst.start))
-    (assertion-violation who "expected exact integer as bytevector start index argument" dst.start))
-  (unless (>= dst.start 0)
-    (assertion-violation who "expected non-negative exact integer as start index argument" dst.start))
-  (unless (<  dst.start (unsafe.bytevector-length dst.bv))
+(define (%assert-argument-is-fixnum-start-index start who)
+  ;;A fixnum  is an exact  integer, but I  do the check twice  because I
+  ;;like descriptive error messages (Marco Maggi; Oct 1, 2011).
+  (unless (and (integer? start) (exact? start))
+    (assertion-violation who "expected exact integer as start index argument" start))
+  (unless (fixnum? start)
+    (assertion-violation who "expected fixnum as start index argument" start))
+  (unless (unsafe.fx>= start 0)
+    (assertion-violation who "expected non-negative fixnum as start index argument" start)))
+
+(define (%assert-argument-is-start-index-for-bytevector dst.start dst.bv who)
+  (unless (< dst.start (unsafe.bytevector-length dst.bv))
     (assertion-violation who
       (string-append "start index argument "
 		     (number->string dst.start)
@@ -937,7 +946,34 @@
 		     (number->string (unsafe.bytevector-length dst.bv)))
       dst.start)))
 
-(define (%assert-value-is-count-from-start-in-bytevector-argument count start dst.bv who)
+(define (%assert-argument-is-start-index-for-string dst.start dst.str who)
+  (unless (< dst.start (unsafe.string-length dst.str))
+    (assertion-violation who
+      (string-append "start index argument "
+		     (number->string dst.start)
+		     " too big for string of length "
+		     (number->string (unsafe.string-length dst.str)))
+      dst.start)))
+
+;;; --------------------------------------------------------------------
+
+(define (%assert-argument-is-count ?count ?who)
+  (let ((count ?count))
+    (unless (and (integer? count) (exact? count))
+      (assertion-violation ?who "expected exact integer as count argument" count))
+    (unless (<= 0 count)
+      (assertion-violation ?who "expected non-negative exact integer as count argument" count))))
+
+(define (%assert-argument-is-fixnum-count count who)
+  (let ((count count))
+    (unless (and (integer? count) (exact? count))
+      (assertion-violation who "expected exact integer as count argument" count))
+    (unless (<= 0 count)
+      (assertion-violation who "expected non-negative exact integer as count argument" count))
+    (unless (fixnum? count)
+      (assertion-violation who "count argument must be a fixnum" count))))
+
+(define (%assert-argument-is-count-from-start-in-bytevector count start dst.bv who)
   (unless (<= (+ start count) (unsafe.bytevector-length dst.bv))
     (assertion-violation who
       (string-append "count argument "
@@ -946,6 +982,17 @@
 		     (number->string start)
 		     " too big for bytevector of length "
 		     (number->string (unsafe.bytevector-length dst.bv)))
+      count)))
+
+(define (%assert-argument-is-count-from-start-in-string count start dst.str who)
+  (unless (<= (+ start count) (unsafe.string-length dst.str))
+    (assertion-violation who
+      (string-append "count argument "
+		     (number->string count)
+		     " from start index "
+		     (number->string start)
+		     " too big for string of length "
+		     (number->string (unsafe.string-length dst.str)))
       count)))
 
 
@@ -3607,10 +3654,11 @@
     ;;PORT.FAST-ATTRIBUTES which does not include it).
     (unless (unsafe.fx= port.attributes fast-get-byte-tag)
       (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
-    (%assert-value-is-bytevector dst.bv who)
-    (%assert-value-is-start-index-for-bytevector-argument dst.start dst.bv who)
-    (%assert-argument-is-count count who)
-    (%assert-value-is-count-from-start-in-bytevector-argument count dst.start dst.bv who)
+    (%assert-value-is-bytevector     dst.bv    who)
+    (%assert-argument-is-start-index dst.start who)
+    (%assert-argument-is-count       count     who)
+    (%assert-argument-is-start-index-for-bytevector dst.start dst.bv who)
+    (%assert-argument-is-count-from-start-in-bytevector count dst.start dst.bv who)
     (if (zero? count)
 	count
       (let retry-after-filling-buffer ((tmp.start dst.start)
@@ -4704,9 +4752,7 @@
   (define-inline (%read-utf16be ?port ?who)
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
   (%assert-value-is-port port who)
-  (%assert-argument-is-count count who)
-  (unless (fixnum? count)
-    (assertion-violation who "count argument must be a fixnum" count))
+  (%assert-argument-is-fixnum-count count who)
   (case-textual-input-port-fast-tag port
     ((fast-get-utf8-tag)
      (%get-it %unsafe.read-char-from-port-with-fast-get-utf8-tag))
@@ -4723,46 +4769,74 @@
 	 (eof-object)
        (get-string-n port count)))))
 
-(define (get-string-n! p s i c)
-  (import (ikarus system $fx) (ikarus system $strings))
+(define (get-string-n! port dst.str dst.start count)
+  ;;Defined by  R6RS.  DST.START and COUNT must  be exact, non--negative
+  ;;integer objects, with COUNT representing the number of characters to
+  ;;be read.   DST.STR must  be a string  with at  least DST.START+COUNT
+  ;;characters.
+  ;;
+  ;;The GET-STRING-N!   procedure reads from  the textual input  PORT in
+  ;;the same manner as GET-STRING-N.
+  ;;
+  ;;If COUNT  characters are available before  an end of  file, they are
+  ;;written  into DST.STR  starting  at index  DST.START,  and COUNT  is
+  ;;returned.
+  ;;
+  ;;If fewer characters are available before  an end of file, but one or
+  ;;more can be read, those characters are written into DST.STR starting
+  ;;at index  DST.START and  the number of  characters actually  read is
+  ;;returned as an exact integer object.
+  ;;
+  ;;If no characters  can be read before an end of  file, the EOF object
+  ;;is returned.
+  ;;
+  ;;IMPLEMENTATION RESTRICTION The DST.START and COUNT arguments must be
+  ;;fixnums.
+  ;;
   (define who 'get-string-n!)
-  (%assert-value-is-input-port p who)
-  (%unsafe.assert-value-is-textual-port p who)
-  (unless (string? s)
-    (assertion-violation who "not a string" s))
-  (let ((len ($string-length s)))
-    (unless (fixnum? i)
-      (assertion-violation 'get-string-n! "starting index is not a fixnum" i))
-    (when (or ($fx< i 0) ($fx> i len))
-      (assertion-violation 'get-string-n!
-	   (format "starting index is out of range 0..~a" len)
-	   i))
-    (unless (fixnum? c)
-      (assertion-violation 'get-string-n! "count is not a fixnum" c))
-    (cond
-     (($fx> c 0)
-      (let ((j (+ i c)))
-	(when (> j len)
-	  (assertion-violation 'get-string-n!
-               (format "count is out of range 0..~a" (- len i))
-               c))
-	(let ((x (get-char p)))
-	  (cond
-	   ((eof-object? x) x)
-	   (else
-	    ($string-set! s i x)
-	    (let f ((p p) (s s) (start i) (i 1) (c c))
-	      (let ((x (get-char p)))
-		(cond
-		 ((eof-object? x) i)
-		 (else
-		  ($string-set! s ($fx+ start i) x)
-		  (let ((i ($fxadd1 i)))
-		    (if ($fx= i c)
-			i
-		      (f p s start i c))))))))))))
-     (($fx= c 0) 0)
-     (else (assertion-violation 'get-string-n! "count is negative" c)))))
+  (define-inline (%get-it dst.past ?read-char)
+    (if (unsafe.fxzero? count)
+	count
+      (let loop ((dst.index dst.start))
+	(let ((ch (?read-char port who)))
+	  (if (eof-object? ch)
+	      (if (unsafe.fx= dst.index dst.start)
+		  ch
+		(unsafe.fx- dst.index dst.start))
+	    (begin
+	      (unsafe.string-set! dst.str dst.index ch)
+	      (let ((dst.index (unsafe.fxadd1 dst.index)))
+		(if (unsafe.fx= dst.index dst.past)
+		    (unsafe.fx- dst.index dst.start)
+		  (loop dst.index)))))))))
+  (define-inline (%read-utf16le ?port ?who)
+    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
+  (define-inline (%read-utf16be ?port ?who)
+    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
+  (%assert-value-is-port port who)
+  (%assert-value-is-string dst.str who)
+  (%assert-argument-is-fixnum-start-index dst.start who)
+  (%assert-argument-is-fixnum-count count who)
+  (%assert-argument-is-start-index-for-string dst.start dst.str who)
+  (let ((dst.past (+ dst.start count)))
+    (unless (fixnum? dst.past)
+      (assertion-violation who "start+count result is not a fixnum" dst.start count))
+    (%assert-argument-is-count-from-start-in-string count dst.start dst.str who)
+    (case-textual-input-port-fast-tag port
+      ((fast-get-utf8-tag)
+       (%get-it dst.past %unsafe.read-char-from-port-with-fast-get-utf8-tag))
+      ((fast-get-char-tag)
+       (%get-it dst.past %unsafe.read-char-from-port-with-fast-get-char-tag))
+      ((fast-get-latin-tag)
+       (%get-it dst.past %unsafe.read-char-from-port-with-fast-get-latin-tag))
+      ((fast-get-utf16le-tag)
+       (%get-it dst.past %read-utf16le))
+      ((fast-get-utf16be-tag)
+       (%get-it dst.past %read-utf16be))
+      (else
+       (if (%validate-untagged-port-as-open-textual-input-then-parse-bom-and-add-fast-tag port who)
+	   (eof-object)
+	 (get-string-n! port dst.str dst.start count))))))
 
 (define ($get-line p who)
   (define (get-it p)

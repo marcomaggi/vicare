@@ -7802,6 +7802,444 @@
   #t)
 
 
+(parametrise ((check-test-name		'get-string-n-bang))
+
+;;; --------------------------------------------------------------------
+;;; port argument validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(let ((port		123)
+	      (dst.str		(make-string 1))
+	      (dst.start	0)
+	      (count		1))
+	  (get-string-n! port dst.str dst.start count)))
+    => '(123))
+
+  (check	;argument is not an input port
+      (let ((port (%open-disposable-textual-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (let ((port		port)
+		(dst.str	(make-string 1))
+		(dst.start	0)
+		(count		1))
+	    (get-string-n! port dst.str dst.start count))))
+    => #t)
+
+  (check	;argument is not a textual port
+      (let ((port (%open-disposable-binary-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (let ((port		port)
+		(dst.str	(make-string 1))
+		(dst.start	0)
+		(count		1))
+	    (get-string-n! port dst.str dst.start count))))
+    => #t)
+
+  (check	;argument is not an open port
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-input-port port)
+	  (let ((port		port)
+		(dst.str	(make-string 1))
+		(dst.start	0)
+		(count		1))
+	    (get-string-n! port dst.str dst.start count))))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; start argument validation
+
+  (check	;start is not an integer
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (let ((port		port)
+		(dst.str	(make-string 1))
+		(dst.start	#\a)
+		(count		1))
+	    (get-string-n! port dst.str dst.start count))))
+    => '(#\a))
+
+  (check 	;start is not an exact integer
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (let ((port		port)
+		(dst.str	(make-string 1))
+		(dst.start	1.0)
+		(count		1))
+	    (get-string-n! port dst.str dst.start count))))
+    => '(1.0))
+
+  (check 	;start is not a fixnum
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (let ((port		port)
+		(dst.str	(make-string 1))
+		(dst.start	(+ 1 (greatest-fixnum)))
+		(count		1))
+	    (get-string-n! port dst.str dst.start count))))
+    => (list (+ 1 (greatest-fixnum))))
+
+  (check 	;start is negative
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (let ((port		port)
+		(dst.str	(make-string 1))
+		(dst.start	-3)
+		(count		1))
+	    (get-string-n! port dst.str dst.start count))))
+    => '(-3))
+
+  (check 	;start is too big for string
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (let ((port		port)
+		(dst.str	(make-string 10))
+		(dst.start	12)
+		(count		1))
+	    (get-string-n! port dst.str dst.start count))))
+    => '(12))
+
+;;; --------------------------------------------------------------------
+;;; count argument validation
+
+  (check	;count is not an integer
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (let ((port		port)
+		(dst.str	(make-string 1))
+		(dst.start	0)
+		(count		#\a))
+	    (get-string-n! port dst.str dst.start count))))
+    => '(#\a))
+
+  (check 	;count is not an exact integer
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (let ((port		port)
+		(dst.str	(make-string 1))
+		(dst.start	0)
+		(count		1.0))
+	    (get-string-n! port dst.str dst.start count))))
+    => '(1.0))
+
+  (check 	;count is not a fixnum
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (let ((port		port)
+		(dst.str	(make-string 1))
+		(dst.start	0)
+		(count		(+ 1 (greatest-fixnum))))
+	    (get-string-n! port dst.str dst.start count))))
+    => (list (+ 1 (greatest-fixnum))))
+
+  (check 	;count is negative
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (let ((port		port)
+		(dst.str	(make-string 1))
+		(dst.start	0)
+		(count		-3))
+	    (get-string-n! port dst.str dst.start count))))
+    => '(-3))
+
+;;; --------------------------------------------------------------------
+;;; start+count arguments validation
+
+  (check 	;start+count is not a fixnum
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (let ((port		port)
+		(dst.str	(make-string 10))
+		(dst.start	1)
+		(count		(greatest-fixnum)))
+	    (get-string-n! port dst.str dst.start count))))
+    => (list 1 (greatest-fixnum)))
+
+  (check 	;start+count is too big for string
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (let ((port		port)
+		(dst.str	(make-string 10))
+		(dst.start	8)
+		(count		9))
+	    (get-string-n! port dst.str dst.start count))))
+    => '(9))
+
+;;; --------------------------------------------------------------------
+;;; input from a string port
+
+  (check	;no data available
+      (let ((port (open-string-input-port "")))
+	(let ((dst.str		(make-string 10))
+	      (dst.start	0)
+	      (count		10))
+	  (get-string-n! port dst.str dst.start count)))
+    => (eof-object))
+
+  (check	;count is bigger than available data
+      (let ((port (open-string-input-port "01234")))
+	(let ((dst.str		(make-string 10 #\Z))
+	      (dst.start	0)
+	      (count		10))
+	  (list (get-string-n! port dst.str dst.start count) dst.str)))
+    => '(5 "01234ZZZZZ"))
+
+  (let* ((src.len 100)
+  	 (src.str (let ((str (make-string src.len)))
+  		    (do ((i 0 (+ 1 i)))
+  			((= i src.len)
+  			 str)
+  		      (string-set! str i (integer->char i))))))
+
+    (check	;count is zero
+  	(let ((port (open-string-input-port src.str)))
+	  (let ((dst.str	(make-string 10 #\Z))
+		(dst.start	0)
+		(count		0))
+	    (list (get-string-n! port dst.str dst.start count) dst.str)))
+      => '(0 "ZZZZZZZZZZ"))
+
+    (check	;count is 1
+  	(let ((port (open-string-input-port src.str)))
+	  (let ((dst.str	(make-string 10 #\Z))
+		(dst.start	0)
+		(count		1))
+	    (list (get-string-n! port dst.str dst.start count) dst.str)))
+      => '(1 "\x0;ZZZZZZZZZ"))
+
+    (check	;count is 10
+  	(let ((port (open-string-input-port src.str)))
+	  (let ((dst.str	(make-string 10 #\Z))
+		(dst.start	0)
+		(count		10))
+	    (list (get-string-n! port dst.str dst.start count) dst.str)))
+      => (list 10 (substring src.str 0 10)))
+
+    (check	;count is big
+
+  	(let ((port (open-string-input-port src.str)))
+	  (let ((dst.str	(make-string src.len #\Z))
+		(dst.start	0)
+		(count		src.len))
+	    (list (get-string-n! port dst.str dst.start count) dst.str)))
+      => (list src.len src.str))
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; input from a bytevector with Latin-1 encoding
+
+  (check	;no data available
+      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (latin-1-codec)))))
+	(let ((dst.str		(make-string 10 #\Z))
+	      (dst.start	0)
+	      (count		10))
+	  (list (get-string-n! port dst.str dst.start count) dst.str)))
+    => (list (eof-object) "ZZZZZZZZZZ"))
+
+  (check	;count is bigger than available data
+      (let ((port (open-bytevector-input-port '#vu8(65 66 67 68)
+					      (make-transcoder (latin-1-codec)))))
+	(let ((dst.str		(make-string 10 #\Z))
+	      (dst.start	0)
+	      (count		10))
+	  (list (get-string-n! port dst.str dst.start count) dst.str)))
+    => '(4 "ABCDZZZZZZ"))
+
+  (let* ((src.len 100)
+  	 (src.str (let ((str (make-string src.len)))
+  		    (do ((i 0 (+ 1 i)))
+  			((= i src.len)
+  			 str)
+  		      (string-set! str i (integer->char i)))))
+	 (src.bv  (%string->latin-1 src.str))
+	 (doit	(lambda (count len)
+		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (latin-1-codec)))))
+		    (let ((dst.str	(make-string len #\Z))
+			  (dst.start	0))
+		      (list (get-string-n! port dst.str dst.start count) dst.str))))))
+
+    (check (doit 0 10)			=> '(0 "ZZZZZZZZZZ"))
+    (check (doit 1 10)			=> '(1 "\x0;ZZZZZZZZZ"))
+    (check (doit 10 10)			=> (list 10 (substring src.str 0 10)))
+    (check (doit src.len src.len)	=> (list src.len src.str))
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; input from a bytevector with UTF-8 encoding
+
+  (check	;no data available
+      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-8-codec)))))
+	(let ((dst.str		(make-string 10 #\Z))
+	      (dst.start	0)
+	      (count		10))
+	  (list (get-string-n! port dst.str dst.start count) dst.str)))
+    => (list (eof-object) "ZZZZZZZZZZ"))
+
+  (check	;count is bigger than available data
+      (let ((port (open-bytevector-input-port '#vu8(65 66 67 68)
+					      (make-transcoder (utf-8-codec)))))
+	(let ((dst.str		(make-string 10 #\Z))
+	      (dst.start	0)
+	      (count		10))
+	  (list (get-string-n! port dst.str dst.start count) dst.str)))
+    => '(4 "ABCDZZZZZZ"))
+
+  (let* ((src.len 1024)
+  	 (src.str (let ((str (make-string src.len)))
+  		    (do ((i 0 (+ 1 i)))
+  			((= i src.len)
+  			 str)
+  		      (string-set! str i (integer->char i)))))
+	 (src.bv  (string->utf8 src.str))
+	 (doit	(lambda (count len)
+		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-8-codec)))))
+		    (let ((dst.str	(make-string len #\Z))
+			  (dst.start	0))
+		      (list (get-string-n! port dst.str dst.start count) dst.str))))))
+
+    (check (doit 0 10)			=> '(0 "ZZZZZZZZZZ"))
+    (check (doit 1 10)			=> '(1 "\x0;ZZZZZZZZZ"))
+    (check (doit 10 10)			=> (list 10 (substring src.str 0 10)))
+    (check (doit src.len src.len)	=> (list src.len src.str))
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; input from a bytevector with UTF-16 encoding
+
+  (check	;no data available
+      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-16-codec)))))
+	(let ((dst.str		(make-string 10 #\Z))
+	      (dst.start	0)
+	      (count		10))
+	  (list (get-string-n! port dst.str dst.start count) dst.str)))
+    => (list (eof-object) "ZZZZZZZZZZ"))
+
+  (check	;count is bigger than available data
+      (let ((port (open-bytevector-input-port (string->utf16 "ABCD" (endianness little))
+					      (make-transcoder (utf-16-codec)))))
+	(let ((dst.str		(make-string 10 #\Z))
+	      (dst.start	0)
+	      (count		10))
+	  (list (get-string-n! port dst.str dst.start count) dst.str)))
+    => '(4 "ABCDZZZZZZ"))
+
+  ;; little endian, default
+  (let* ((src.len 1024)
+  	 (src.str (let ((str (make-string src.len)))
+  		    (do ((i 0 (+ 1 i)))
+  			((= i src.len)
+  			 str)
+  		      (string-set! str i (integer->char i)))))
+	 (src.bv  (string->utf16 src.str (endianness little)))
+	 (doit	(lambda (count len)
+		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		    (let ((dst.str	(make-string len #\Z))
+			  (dst.start	0))
+		      (list (get-string-n! port dst.str dst.start count) dst.str))))))
+
+    (check (doit 0 10)			=> '(0 "ZZZZZZZZZZ"))
+    (check (doit 1 10)			=> '(1 "\x0;ZZZZZZZZZ"))
+    (check (doit 10 10)			=> (list 10 (substring src.str 0 10)))
+    (check (doit src.len src.len)	=> (list src.len src.str))
+
+    #f)
+
+  ;; little endian, with bom
+  (let* ((src.len 1024)
+  	 (src.str (let ((str (make-string src.len)))
+  		    (do ((i 0 (+ 1 i)))
+  			((= i src.len)
+  			 str)
+  		      (string-set! str i (integer->char i)))))
+ 	 (src.bv  (%bytevector-append BYTE-ORDER-MARK-UTF-16-LE
+ 				      (string->utf16 src.str (endianness little))))
+	 (doit	(lambda (count len)
+		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		    (let ((dst.str	(make-string len #\Z))
+			  (dst.start	0))
+		      (list (get-string-n! port dst.str dst.start count) dst.str))))))
+
+    (check (doit 0 10)			=> '(0 "ZZZZZZZZZZ"))
+    (check (doit 1 10)			=> '(1 "\x0;ZZZZZZZZZ"))
+    (check (doit 10 10)			=> (list 10 (substring src.str 0 10)))
+    (check (doit src.len src.len)	=> (list src.len src.str))
+
+    #f)
+
+  ;; big endian, with bom
+  (let* ((src.len 1024)
+  	 (src.str (let ((str (make-string src.len)))
+  		    (do ((i 0 (+ 1 i)))
+  			((= i src.len)
+  			 str)
+  		      (string-set! str i (integer->char i)))))
+ 	 (src.bv  (%bytevector-append BYTE-ORDER-MARK-UTF-16-BE
+ 				      (string->utf16 src.str (endianness big))))
+	 (doit	(lambda (count len)
+		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		    (let ((dst.str	(make-string len #\Z))
+			  (dst.start	0))
+		      (list (get-string-n! port dst.str dst.start count) dst.str))))))
+
+    (check (doit 0 10)			=> '(0 "ZZZZZZZZZZ"))
+    (check (doit 1 10)			=> '(1 "\x0;ZZZZZZZZZ"))
+    (check (doit 10 10)			=> (list 10 (substring src.str 0 10)))
+    (check (doit src.len src.len)	=> (list src.len src.str))
+
+    #f)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
