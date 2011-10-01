@@ -1242,17 +1242,6 @@
 				 dst.str (+ 1           dst.start)
 				 (unsafe.fxsub1 count))))
 
-(define (%unsafe.big-string-copy! src.str src.start dst.str dst.start count)
-  ;;Like BYTEVECTOR-COPY!  defined by R6RS, but for strings.  Assume all
-  ;;the  arguments have  been already  validated; expect  all  the exact
-  ;;integers to be either fixnums or bignums.
-  ;;
-  (when (> count 0)
-    (unsafe.string-set! dst.str dst.start (unsafe.string-ref src.str src.start))
-    (%unsafe.big-string-copy! src.str (+ 1 src.start)
-			      dst.str (+ 1 dst.start)
-			      (- count 1))))
-
 (define (%unsafe.string-reverse-and-concatenate list-of-strings who)
   ;;Reverse the  argument and concatenate  its string items;  return the
   ;;result.  Assume the argument has been already validated.
@@ -2861,21 +2850,22 @@
 ;;;; string output ports
 
 (define (open-string-output-port)
-  ;;Defined by  R6RS.  Return two  values: a textual  output port
-  ;;and an extraction procedure.  The output port accumulates the
-  ;;characters  written  to  it   for  later  extraction  by  the
-  ;;procedure.
+  ;;Defined by  R6RS.  Return two values:  a textual output  port and an
+  ;;extraction  procedure.  The output  port accumulates  the characters
+  ;;written to it for later extraction by the procedure.
   ;;
-  ;;The port may or may  not have an associated transcoder; if it
-  ;;does, the  transcoder is implementation-dependent.   The port
-  ;;should  support   the  PORT-POSITION  and  SET-PORT-POSITION!
-  ;;operations.
+  ;;The port may  or may not have an associated  transcoder; if it does,
+  ;;the transcoder is implementation-dependent.  The port should support
+  ;;the PORT-POSITION and SET-PORT-POSITION!  operations.
   ;;
-  ;;The extraction procedure takes no arguments.  When called, it
-  ;;returns a string consisting  of all of the port's accumulated
-  ;;characters (regardless of  the current position), removes the
-  ;;accumulated characters  from the port, and  resets the port's
+  ;;The  extraction  procedure  takes  no arguments.   When  called,  it
+  ;;returns  a  string  consisting  of  all of  the  port's  accumulated
+  ;;characters  (regardless  of   the  current  position),  removes  the
+  ;;accumulated  characters  from  the   port,  and  resets  the  port's
   ;;position.
+  ;;
+  ;;IMPLEMENTATION  RESTRICTION  The  accumulated  string  can  have  as
+  ;;maximum lenght the greatest fixnum.
   ;;
   (define who 'open-string-output-port)
   (let ((port			#f)
@@ -2952,12 +2942,12 @@
 	       (dst.room (- dst.len dev-position)))
 	  (if (<= count dst.room)
 	      ;;The new data fits in the single string.
-	      (%unsafe.bigdst-string-copy! src.str src.start dst.str dev-position count)
+	      (%unsafe.string-copy! src.str src.start dst.str dev-position count)
 	    (begin
 	      (%debug-assert (fixnum? dst.room))
 	      ;;The new data goes part  in the single string and part in
 	      ;;a new string.
-	      (%unsafe.bigdst-string-copy! src.str src.start dst.str dev-position dst.room)
+	      (%unsafe.string-copy! src.str src.start dst.str dev-position dst.room)
 	      (let* ((src.start (unsafe.fx+ src.start dst.room))
 		     (count     (unsafe.fx- count     dst.room))
 		     (dst.str   (unsafe.make-string count)))
