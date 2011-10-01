@@ -8240,6 +8240,197 @@
   #t)
 
 
+(parametrise ((check-test-name		'get-string-all))
+
+;;; --------------------------------------------------------------------
+;;; port argument validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(get-string-all 123))
+    => '(123))
+
+  (check	;argument is not an input port
+      (let ((port (%open-disposable-textual-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (get-string-all port)))
+    => #t)
+
+  (check	;argument is not a textual port
+      (let ((port (%open-disposable-binary-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (get-string-all port)))
+    => #t)
+
+  (check	;argument is not an open port
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-input-port port)
+	  (get-string-all port)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; input from a string port
+
+  (check	;no data available
+      (let ((port (open-string-input-port "")))
+	(get-string-all port))
+    => (eof-object))
+
+  (check	;one char available
+      (let ((port (open-string-input-port "A")))
+	(get-string-all port))
+    => "A")
+
+  (let* ((src.len 100)
+	 (src.str (let ((str (make-string src.len)))
+		    (do ((i 0 (+ 1 i)))
+			((= i src.len)
+			 str)
+		      (string-set! str i (integer->char i))))))
+
+    (check
+	(let ((port (open-string-input-port src.str)))
+	  (get-string-all port))
+      => src.str)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; input from a bytevector with Latin-1 encoding
+
+  (check	;no data available
+      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (latin-1-codec)))))
+	(get-string-all port))
+    => (eof-object))
+
+  (check	;some data available
+      (let ((port (open-bytevector-input-port '#vu8(65 66 67 68)
+					      (make-transcoder (latin-1-codec)))))
+	(get-string-all port))
+    => "ABCD")
+
+  (let* ((src.len 100)
+  	 (src.str (let ((str (make-string src.len)))
+  		    (do ((i 0 (+ 1 i)))
+  			((= i src.len)
+  			 str)
+  		      (string-set! str i (integer->char i)))))
+	 (src.bv  (%string->latin-1 src.str))
+	 (doit	(lambda (count)
+		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (latin-1-codec)))))
+		    (get-string-all port)))))
+
+    (check (doit src.len)	=> src.str)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; input from a bytevector with UTF-8 encoding
+
+  (check	;no data available
+      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-8-codec)))))
+	(get-string-all port))
+    => (eof-object))
+
+  (check	;some data available
+      (let ((port (open-bytevector-input-port '#vu8(65 66 67 68)
+					      (make-transcoder (utf-8-codec)))))
+	(get-string-all port))
+    => "ABCD")
+
+  (let* ((src.len 1024)
+  	 (src.str (let ((str (make-string src.len)))
+  		    (do ((i 0 (+ 1 i)))
+  			((= i src.len)
+  			 str)
+  		      (string-set! str i (integer->char i)))))
+	 (src.bv  (string->utf8 src.str))
+	 (doit	(lambda (count)
+		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-8-codec)))))
+		    (get-string-all port)))))
+
+    (check (doit src.len)	=> src.str)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; input from a bytevector with UTF-16 encoding
+
+  (check	;no data available
+      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-16-codec)))))
+	(get-string-all port))
+    => (eof-object))
+
+  (check	;some data available
+      (let ((port (open-bytevector-input-port (string->utf16 "ABCD" (endianness little))
+					      (make-transcoder (utf-16-codec)))))
+	(get-string-all port))
+    => "ABCD")
+
+  ;; little endian, default
+  (let* ((src.len 1024)
+  	 (src.str (let ((str (make-string src.len)))
+  		    (do ((i 0 (+ 1 i)))
+  			((= i src.len)
+  			 str)
+  		      (string-set! str i (integer->char i)))))
+	 (src.bv  (string->utf16 src.str (endianness little)))
+	 (doit	(lambda (count)
+		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		    (get-string-all port)))))
+
+    (check (doit src.len)	=> src.str)
+
+    #f)
+
+  ;; little endian, with bom
+  (let* ((src.len 1024)
+  	 (src.str (let ((str (make-string src.len)))
+  		    (do ((i 0 (+ 1 i)))
+  			((= i src.len)
+  			 str)
+  		      (string-set! str i (integer->char i)))))
+	 (src.bv  (%bytevector-append BYTE-ORDER-MARK-UTF-16-LE
+				      (string->utf16 src.str (endianness little))))
+	 (doit	(lambda (count)
+		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		    (get-string-all port)))))
+
+    (check (doit src.len)	=> src.str)
+    #f)
+
+  ;; big endian, with bom
+  (let* ((src.len 1024)
+  	 (src.str (let ((str (make-string src.len)))
+  		    (do ((i 0 (+ 1 i)))
+  			((= i src.len)
+  			 str)
+  		      (string-set! str i (integer->char i)))))
+	 (src.bv  (%bytevector-append BYTE-ORDER-MARK-UTF-16-BE
+				      (string->utf16 src.str (endianness big))))
+	 (doit	(lambda (count)
+		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		    (get-string-all port)))))
+
+    (check (doit src.len)	=> src.str)
+    #f)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

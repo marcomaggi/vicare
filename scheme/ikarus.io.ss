@@ -1253,24 +1253,30 @@
 			      dst.str (+ 1 dst.start)
 			      (- count 1))))
 
-(define (%unsafe.string-reverse-and-concatenate list-of-strings)
+(define (%unsafe.string-reverse-and-concatenate list-of-strings who)
   ;;Reverse the  argument and concatenate  its string items;  return the
   ;;result.  Assume the argument has been already validated.
   ;;
-  ;;The strings may have either a fixnum or a bignum as length.
+  ;;IMPLEMENTATION RESTRICTION The strings must have a fixnum length and
+  ;;the whole string must at maximum have a fixnum length.
   ;;
   (call-with-values
       (lambda ()
 	(let recur ((strs list-of-strings)
 		    (accumulated-total-length 0))
 	  (if (null? strs)
-	      (values (unsafe.make-string accumulated-total-length) 0)
+	      (begin
+		(unless (fixnum? accumulated-total-length)
+		  (assertion-violation who
+		    "request to generate string with length too big, it must be a fixnum"
+		    accumulated-total-length))
+		(values (unsafe.make-string accumulated-total-length) 0))
 	    (let* ((src.str  (car strs))
 		   (src.len (unsafe.string-length src.str)))
 	      (let-values (((dst.str next-octet-index)
 			    (recur (cdr strs) (+ src.len accumulated-total-length))))
-		(%unsafe.big-string-copy! src.str 0 dst.str next-octet-index src.len)
-		(values dst.str (+ src.len next-octet-index)))))))
+		(%unsafe.string-copy! src.str 0 dst.str next-octet-index src.len)
+		(values dst.str (unsafe.fx+ src.len next-octet-index)))))))
     (lambda (full-string dummy)
       full-string)))
 
@@ -2913,9 +2919,9 @@
       (define (%%serialise-device! who reset?)
 	(unless port.closed?
 	  (%unsafe.flush-output-port port who))
-	(let ((bv (%unsafe.string-reverse-and-concatenate port.device)))
-	  (set! port.device (if reset? '() (list bv)))
-	  bv))
+	(let ((str (%unsafe.string-reverse-and-concatenate port.device who)))
+	  (set! port.device (if reset? '() (list str)))
+	  str))
       (define-inline (%serialise-device! who)
 	(%%serialise-device! who #f))
       (define-inline (%serialise-device-and-reset! who)
@@ -2983,10 +2989,10 @@
 	;;convert the device list to a single string.  Return the single
 	;;string and reset the port to its empty state.
 	;;
-	(let ((bv (%serialise-device-and-reset! who)))
+	(let ((str (%serialise-device-and-reset! who)))
 	  (port.buffer.reset-to-empty!)
 	  (set! port.device.position 0)
-	  bv))
+	  str))
 
       (set! port ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
 			     read! write! get-position set-position! close cookie))
@@ -3011,7 +3017,7 @@
       (let ((output-strs port.device))
 	(unless (or (null? output-strs) (pair? output-strs))
 	  (wrong-port-error))
-	(let ((str (%unsafe.string-reverse-and-concatenate output-strs)))
+	(let ((str (%unsafe.string-reverse-and-concatenate output-strs who)))
 	  (port.buffer.reset-to-empty!)
 	  (set! port.device '())
 	  (set! port.device.position  0)
@@ -4837,27 +4843,58 @@
 	   (eof-object)
 	 (get-string-n! port dst.str dst.start count))))))
 
-(define (get-string-all p)
+(define (get-string-all port)
+  ;;Defined by R6RS.   Read from the textual input PORT  until an end of
+  ;;file,  decoding characters in  the same  manner as  GET-STRING-N and
+  ;;GET-STRING-N!.
+  ;;
+  ;;If  characters  are available  before  the  end  of file,  a  string
+  ;;containing all  the characters decoded  from that data  is returned.
+  ;;If  no  character  precedes the  end  of  file,  the EOF  object  is
+  ;;returned.
+  ;;
+  ;;IMPLEMENTATION RESTRICTION The maximum  length of the retuned string
+  ;;is the greatest fixnum.
+  ;;
   (define who 'get-string-all)
-  (define (get-it p)
-    (let f ((p p) (n 0) (ac '()))
-      (let ((x (get-char p)))
-	(cond
-	 ((eof-object? x)
-	  (if (null? ac)
-	      (eof-object)
-	    (make-it n ac)))
-	 (else (f p (+ n 1) (cons x ac)))))))
-  (define (make-it n revls)
-    (let f ((s (make-string n)) (i (- n 1)) (ls revls))
-      (cond
-       ((pair? ls)
-	(string-set! s i (car ls))
-	(f s (- i 1) (cdr ls)))
-       (else s))))
-  (%assert-value-is-input-port p who)
-  (%unsafe.assert-value-is-textual-port p who)
-  (get-it p))
+  (define-inline (%get-it ?read-char)
+    (let ((dst.len (string-port-buffer-size)))
+      (let next-buffer-string ((output-strs '()))
+	(let next-char ((dst.str   (unsafe.make-string dst.len))
+			(dst.index 0))
+	  (let ((ch (?read-char port who)))
+	    (if (eof-object? ch)
+		(if (and (null? output-strs) (unsafe.fxzero? dst.index))
+		    ch
+		  (%unsafe.string-reverse-and-concatenate (cons (substring dst.str 0 dst.index)
+								output-strs)
+							  who))
+	      (begin
+		(unsafe.string-set! dst.str dst.index ch)
+		(let ((dst.index (unsafe.fxadd1 dst.index)))
+		  (if (unsafe.fx= dst.index dst.len)
+		      (next-buffer-string (cons dst.str output-strs))
+		    (next-char dst.str dst.index))))))))))
+  (define-inline (%read-utf16le ?port ?who)
+    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
+  (define-inline (%read-utf16be ?port ?who)
+    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
+  (%assert-value-is-port port who)
+  (case-textual-input-port-fast-tag port
+    ((FAST-GET-UTF8-TAG)
+     (%get-it %unsafe.read-char-from-port-with-fast-get-utf8-tag))
+    ((FAST-GET-CHAR-TAG)
+     (%get-it %unsafe.read-char-from-port-with-fast-get-char-tag))
+    ((FAST-GET-LATIN-TAG)
+     (%get-it %unsafe.read-char-from-port-with-fast-get-latin-tag))
+    ((FAST-GET-UTF16LE-TAG)
+     (%get-it %read-utf16le))
+    ((FAST-GET-UTF16BE-TAG)
+     (%get-it %read-utf16be))
+    (else
+     (if (%validate-untagged-port-as-open-textual-input-then-parse-bom-and-add-fast-tag port who)
+	 (eof-object)
+       (get-string-all port)))))
 
 
 ;;;; string line input functions
