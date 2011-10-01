@@ -2865,7 +2865,7 @@
   ;;position.
   ;;
   ;;IMPLEMENTATION  RESTRICTION  The  accumulated  string  can  have  as
-  ;;maximum lenght the greatest fixnum.
+  ;;maximum length the greatest fixnum.
   ;;
   (define who 'open-string-output-port)
   (let ((port			#f)

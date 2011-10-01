@@ -136,14 +136,14 @@
 (define (%open-disposable-textual-input-port)
   (open-string-input-port "1"))
 
-(define (%string->latin-1 str)
-  (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
-    (put-string port str)
-    (extract)))
+;; (define (%string->latin-1 str)
+;;   (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+;;     (put-string port str)
+;;     (extract)))
 
-(define (%latin-1->string bv)
-  (let ((port (open-bytevector-input-port bv (make-transcoder (latin-1-codec)))))
-    (get-string-all port)))
+;; (define (%latin-1->string bv)
+;;   (let ((port (open-bytevector-input-port bv (make-transcoder (latin-1-codec)))))
+;;     (get-string-all port)))
 
 
 ;;;; file helpers
@@ -336,7 +336,7 @@
   (string->utf16 (utf8->string bv) (endianness big)))
 
 (define (utf8->latin1 bv)
-  (%string->latin-1 (utf8->string bv)))
+  (string->latin1 (utf8->string bv)))
 
 (define BYTE-ORDER-MARK-UTF-8		'#vu8(#xEF #xBB #xBF))
 (define BYTE-ORDER-MARK-UTF-16-LE	'#vu8(#xFF #xFE))
@@ -5240,7 +5240,7 @@
 ;;; transcoding input ports
 
   (check
-      (let* ((bin-port	(open-bytevector-input-port (%string->latin-1 "ciao mamma àáèéìíòóùú")))
+      (let* ((bin-port	(open-bytevector-input-port (string->latin1 "ciao mamma àáèéìíòóùú")))
 	     (tran-port	(transcoded-port bin-port (make-transcoder (latin-1-codec)))))
 	(get-string-all tran-port))
     => "ciao mamma àáèéìíòóùú")
@@ -5272,7 +5272,7 @@
       (let-values (((bin-port extract) (open-bytevector-output-port)))
 	(let ((tran-port (transcoded-port bin-port (make-transcoder (latin-1-codec)))))
 	  (put-string tran-port "ciao mamma àáèéìíòóùú")
-	  (%latin-1->string (extract))))
+	  (latin1->string (extract))))
     => "ciao mamma àáèéìíòóùú")
 
   (check
@@ -7684,7 +7684,7 @@
   			((= i src.len)
   			 str)
   		      (string-set! str i (integer->char i)))))
-	 (src.bv  (%string->latin-1 src.str))
+	 (src.bv  (string->latin1 src.str))
 	 (doit	(lambda (count)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (latin-1-codec)))))
 		    (get-string-n port count)))))
@@ -8098,7 +8098,7 @@
   			((= i src.len)
   			 str)
   		      (string-set! str i (integer->char i)))))
-	 (src.bv  (%string->latin-1 src.str))
+	 (src.bv  (string->latin1 src.str))
 	 (doit	(lambda (count len)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (latin-1-codec)))))
 		    (let ((dst.str	(make-string len #\Z))
@@ -8328,7 +8328,7 @@
   			((= i src.len)
   			 str)
   		      (string-set! str i (integer->char i)))))
-	 (src.bv  (%string->latin-1 src.str))
+	 (src.bv  (string->latin1 src.str))
 	 (doit	(lambda (count)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (latin-1-codec)))))
 		    (get-string-all port)))))
