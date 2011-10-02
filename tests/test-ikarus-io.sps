@@ -4421,6 +4421,21 @@
 ;;;                       0123456789
     => '(10 "abcdefghil"))
 
+;;; --------------------------------------------------------------------
+
+  ;;Commented out because it takes to much memory.
+  ;;
+  ;; (check
+  ;;     (guard (E ((assertion-violation? E)
+  ;; 		 (pretty-print (condition-message E))
+  ;; 		 (condition-irritants E))
+  ;; 		(else E))
+  ;; 	(let-values (((port extract) (open-string-output-port)))
+  ;; 	  (let ((half (div (greatest-fixnum) 2)))
+  ;; 	    (put-string port (make-string half))
+  ;; 	    (put-string port (make-string (+ 1 half))))))
+  ;;   => (list (+ 1 (greatest-fixnum))))
+
   #t)
 
 

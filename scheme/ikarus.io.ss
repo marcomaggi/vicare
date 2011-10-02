@@ -812,6 +812,9 @@
   (unless (port? ?port)
     (assertion-violation ?who "not a port" ?port)))
 
+(define-inline (%implementation-violation ?who ?message . ?irritants)
+  (assertion-violation ?who ?message . ?irritants))
+
 ;;; --------------------------------------------------------------------
 
 (define-inline (%assert-value-is-input-port ?port ?who)
@@ -2865,7 +2868,8 @@
   ;;position.
   ;;
   ;;IMPLEMENTATION  RESTRICTION  The  accumulated  string  can  have  as
-  ;;maximum length the greatest fixnum.
+  ;;maximum  length the  greatest fixnum,  which means  that  the device
+  ;;position also can be at most the greatest fixnum.
   ;;
   (define who 'open-string-output-port)
   (let ((port			#f)
@@ -2878,7 +2882,7 @@
 	(read!			#f)
 	(get-position		#t)
 	(close			#f)
-	(cookie			(default-cookie '())))
+	(cookie			(default-cookie '(0 . ()))))
     ;;The most common use of this  port type is to append characters and
     ;;finally extract the whole output bytevector:
     ;;
@@ -2890,27 +2894,39 @@
     ;;      (extract)))
     ;;
     ;;for this reason we implement the device of the port to be somewhat
-    ;;efficient  for such  use.   The device  is  a list  stored in  the
-    ;;cookie, called  OUTPUT-STRS in the code; whenever  data is flushed
-    ;;from  the buffer  to  the device:  a  new string  is prepended  to
-    ;;OUTPUT-strs.  When the extract function is invoked: OUTPUT-STRS is
-    ;;reversed and concatenated obtaining a bytevector.
+    ;;efficient  for such  use.
+    ;;
+    ;;The  device  is a  pair  stored in  the  cookie;  the cdr,  called
+    ;;OUTPUT.STRS  in the  code  holds  null or  a  list of  accumulated
+    ;;strings; the car,  called OUTPUT.LEN in the code,  holds the total
+    ;;number of characters accumulated so far.
+    ;;
+    ;;Whenever  data is flushed  from the  buffer to  the device:  a new
+    ;;string is  prepended to OUTPUT.STRS and  OUTPUT.LEN is incremented
+    ;;accordingly.  When the extract function is invoked: OUTPUT.STRS is
+    ;;reversed  and concatenated  obtaining  a single  string of  length
+    ;;OUTPUT.LEN.
     ;;
     ;;This situation  is violated  if SET-PORT-POSITION!  is  applied to
     ;;the port to move the position before the end of the data.  If this
-    ;;happens: SET-POSITION!   converts OUTPUT-STRS to a  list holding a
-    ;;single full string.
+    ;;happens: SET-POSITION!   converts OUTPUT.STRS to a  list holding a
+    ;;single full string (OUTPUT.LEN is left unchanged).
     ;;
-    ;;Whenever  OUTPUT-STRS holds a  single string  and the  position is
+    ;;Whenever  OUTPUT.STRS holds a  single string  and the  position is
     ;;less  than such  string length:  it means  that SET-PORT-POSITION!
     ;;was used.
+    ;;
+    ;;Remember that strings hold at most (GREATEST-FIXNUM) characters.
     ;;
     (with-port (port)
       (define (%%serialise-device! who reset?)
 	(unless port.closed?
 	  (%unsafe.flush-output-port port who))
-	(let ((str (%unsafe.string-reverse-and-concatenate port.device who)))
-	  (set! port.device (if reset? '() (list str)))
+	(let* ((dev		port.device)
+	       (output.len	(car dev))
+	       (output.strs	(cdr dev))
+	       (str		(%unsafe.string-reverse-and-concatenate output.strs who)))
+	  (set! port.device (if reset? '(0 . ()) `(,output.len . (,str))))
 	  str))
       (define-inline (%serialise-device! who)
 	(%%serialise-device! who #f))
@@ -2918,49 +2934,58 @@
 	(%%serialise-device! who #t))
 
       (define (write! src.str src.start count)
+	;;Write data to the device.
+	;;
 	(%debug-assert (and (fixnum? count) (<= 0 count)))
-	(let ((output-strs  port.device)
-	      (dev-position port.device.position))
-	  (if (and (%list-holding-single-value? output-strs)
-		   (< dev-position (unsafe.string-length (car output-strs))))
+	(let* ((dev			port.device)
+	       (output.len		(car dev))
+	       (output.strs		(cdr dev))
+	       (dev-position		port.device.position)
+	       (new-dev-position	(+ count dev-position)))
+	  (unless (fixnum? new-dev-position)
+	    (%implementation-violation who
+	      "request to write data to port would exceed maximum size of strings" new-dev-position))
+	  (if (unsafe.fx< dev-position output.len)
 	      ;;The  current   position  was  set   inside  the  already
 	      ;;accumulated data.
-	      (write!/overwrite src.str src.start count output-strs dev-position)
+	      (write!/overwrite src.str src.start count output.len output.strs dev-position
+				new-dev-position)
 	    ;;The  current  position  is  at  the  end  of  the  already
 	    ;;accumulated data.
-	    (write!/append src.str src.start count output-strs))
+	    (write!/append src.str src.start count output.strs new-dev-position))
 	  count))
 
-      (define-inline (write!/overwrite src.str src.start count output-strs dev-position)
+      (define-inline (write!/overwrite src.str src.start count output.len output.strs dev-position
+				       new-dev-position)
 	;;Write  data to  the device,  overwriting some  of  the already
 	;;existing  data.  The device  is already  composed of  a single
-	;;string.  Remember that DEV-POSITION  can be either a fixnum or
-	;;a bignum; the same goes for DST.LEN and DST.ROOM.
+	;;string of length OUTPUT.LEN in the car of OUTPUT.STRS.
 	;;
-	(let* ((dst.str  (car output-strs))
-	       (dst.len  (unsafe.string-length dst.str))
-	       (dst.room (- dst.len dev-position)))
+	(let* ((dst.str  (car output.strs))
+	       (dst.len  output.len)
+	       (dst.room (unsafe.fx- dst.len dev-position)))
 	  (if (<= count dst.room)
-	      ;;The new data fits in the single string.
+	      ;;The new  data fits  in the single  string.  There  is no
+	      ;;need to update the device.
 	      (%unsafe.string-copy! src.str src.start dst.str dev-position count)
 	    (begin
 	      (%debug-assert (fixnum? dst.room))
 	      ;;The new data goes part  in the single string and part in
-	      ;;a new string.
+	      ;;a new string.  We need to update the device.
 	      (%unsafe.string-copy! src.str src.start dst.str dev-position dst.room)
 	      (let* ((src.start (unsafe.fx+ src.start dst.room))
 		     (count     (unsafe.fx- count     dst.room))
 		     (dst.str   (unsafe.make-string count)))
 		(%unsafe.string-copy! src.str src.start dst.str 0 count)
-		(set! port.device (cons dst.str output-strs)))))))
+		(set! port.device `(,new-dev-position . (,dst.str . ,output.strs))))))))
 
-      (define-inline (write!/append src.str src.start count output-strs)
-	;;Append  new data  to  the  device.  Prepend  a  new string  to
-	;;OUTPUT-STRS.
+      (define-inline (write!/append src.str src.start count output.strs new-dev-position)
+	;;Append new data to the accumulated strings.  We need to update
+	;;the device.
 	;;
 	(let ((dst.str (unsafe.make-string count)))
 	  (%unsafe.string-copy! src.str src.start dst.str 0 count)
-	  (set! port.device (cons dst.str output-strs))))
+	  (set! port.device `(,new-dev-position . (,dst.str . ,output.strs)))))
 
       (define (set-position! new-position)
 	;;NEW-POSITION has  already been  validated as exact  integer by
@@ -2970,8 +2995,9 @@
 	;;store the position in the POS field of the cookie.
 	;;
 	(define who 'open-string-output-port/set-position!)
-	(unless (or (=  new-position port.device.position)
-		    (<= new-position (unsafe.string-length (%serialise-device! who))))
+	(unless (and (fixnum? new-position)
+		     (or (unsafe.fx=  new-position port.device.position)
+			 (unsafe.fx<= new-position (unsafe.string-length (%serialise-device! who)))))
 	  (%raise-port-position-out-of-range who port new-position)))
 
       (define (extract)
@@ -3004,10 +3030,10 @@
     (let ((cookie port.cookie))
       (unless (cookie? cookie)
 	(wrong-port-error))
-      (let ((output-strs port.device))
-	(unless (or (null? output-strs) (pair? output-strs))
+      (let ((dev port.device))
+	(unless (pair? dev)
 	  (wrong-port-error))
-	(let ((str (%unsafe.string-reverse-and-concatenate output-strs who)))
+	(let ((str (%unsafe.string-reverse-and-concatenate (cdr dev) who)))
 	  (port.buffer.reset-to-empty!)
 	  (set! port.device '())
 	  (set! port.device.position  0)
@@ -6263,4 +6289,5 @@
 ;;; eval: (put 'case-textual-input-port-fast-tag	'scheme-indent-function 1)
 ;;; eval: (put '%refill-bytevector-buffer-and-evaluate		'scheme-indent-function 1)
 ;;; eval: (put '%maybe-refill-bytevector-buffer-and-evaluate	'scheme-indent-function 1)
+;;; eval: (put '%implementation-violation		'scheme-indent-function 1)
 ;;; End:
