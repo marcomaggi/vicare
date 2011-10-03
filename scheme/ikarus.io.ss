@@ -5328,18 +5328,21 @@
 
 
 (define newline
+  ;;Defined by  R6RS.  This is  equivalent to using WRITE-CHAR  to write
+  ;;#\linefeed to the textual output PORT.
+  ;;
+  ;;If  PORT  is   omitted,  it  defaults  to  the   value  returned  by
+  ;;CURRENT-OUTPUT-PORT.
+  ;;
+  ;;NOTE The original  Ikarus code flushed the buffer  after writing the
+  ;;newline, I have removed this  because flushing must be controlled by
+  ;;the buffering mode (Marco Maggi; Oct 3, 2011).
+  ;;
   (case-lambda
    (()
-    (let ((port (current-output-port)))
-      (put-char port #\newline)
-      (%unsafe.flush-output-port port 'newline)))
+    (write-char (current-output-port) #\newline))
    ((port)
-    (define who 'newline)
-    (%assert-value-is-output-port port who)
-    (%unsafe.assert-value-is-textual-port port who)
-    (%unsafe.assert-value-is-open-port port who)
-    (put-char port #\newline)
-    (%unsafe.flush-output-port port who))))
+    (write-char port #\newline))))
 
 
 ;;;; platform API for file descriptors
