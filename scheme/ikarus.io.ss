@@ -4927,32 +4927,39 @@
 
 ;;;; string line input functions
 
-(define ($get-line p who)
-  (define (get-it p)
-    (let f ((p p) (n 0) (ac '()))
-      (let ((x (get-char p)))
-	(cond
-	 ((eqv? x #\newline)
-	  (make-it n ac))
-	 ((eof-object? x)
-	  (if (null? ac) x (make-it n ac)))
-	 (else (f p (unsafe.fxadd1 n) (cons x ac)))))))
-  (define (make-it n revls)
-    (let f ((s (make-string n)) (i (unsafe.fxsub1 n)) (ls revls))
-      (cond
-       ((pair? ls)
-	(string-set! s i (car ls))
-	(f s (unsafe.fxsub1 i) (cdr ls)))
-       (else s))))
-  (%assert-value-is-input-port p who)
-  (%unsafe.assert-value-is-textual-port p who)
-  (get-it p))
-(define (get-line p)
-  ($get-line p 'get-line))
+(define (get-line port)
+  (%do-get-line p 'get-line))
+
 (define read-line
   (case-lambda
-   (() ($get-line (current-input-port) 'read-line))
-   ((p) ($get-line p 'read-line))))
+   (()
+    (%do-get-line (current-input-port) 'read-line))
+   ((port)
+    (%do-get-line port 'read-line))))
+
+(define (%do-get-line port who)
+  (define (get-it port)
+    (let f ((port port) (n 0) (ac '()))
+      (let ((x (get-char port)))
+	(cond ((eqv? x #\newline)
+	       (make-it n ac))
+	      ((eof-object? x)
+	       (if (null? ac)
+		   x
+		 (make-it n ac)))
+	      (else
+	       (f port (unsafe.fxadd1 n) (cons x ac)))))))
+  (define (make-it n revls)
+    (let f ((s  (make-string n))
+	    (i  (unsafe.fxsub1 n))
+	    (ls revls))
+      (cond ((pair? ls)
+	     (string-set! s i (car ls))
+	     (f s (unsafe.fxsub1 i) (cdr ls)))
+	    (else s))))
+  (%assert-value-is-input-port port who)
+  (%unsafe.assert-value-is-textual-port port who)
+  (get-it port))
 
 
 ;;;; unbuffered byte and char output

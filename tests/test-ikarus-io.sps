@@ -108,20 +108,6 @@
 		  #f)
 	      (loop (+ 1 i)))))))))
 
-(define (%bytevector-append . bvs)
-  (let* ((dst.len (fold-left (lambda (len bv)
-			       (+ len (bytevector-length bv)))
-		    0 bvs))
-	 (dst.bv  (make-bytevector dst.len)))
-    (let loop ((bvs bvs)
-	       (i   0))
-      (if (null? bvs)
-	  dst.bv
-	(let* ((src.bv  (car bvs))
-	       (src.len (bytevector-length src.bv)))
-	  (bytevector-copy! src.bv 0 dst.bv i src.len)
-	  (loop (cdr bvs) (+ i src.len)))))))
-
 (define (%open-disposable-binary-output-port)
   (let-values (((port getter) (open-bytevector-output-port)))
     port))
@@ -492,9 +478,9 @@
 (define ONE-WORD-UTF-16-CHAR-UTF-16-LE			GREEK-SMALL-LETTER-LAMBDA-UTF-16-LE)
 (define ONE-WORD-UTF-16-CHAR-UTF-16-BE			GREEK-SMALL-LETTER-LAMBDA-UTF-16-BE)
 (define ONE-WORD-UTF-16-CHAR-UTF-16-LE/BOM
-  (%bytevector-append BYTE-ORDER-MARK-UTF-16-LE ONE-WORD-UTF-16-CHAR-UTF-16-LE))
+  (bytevector-append BYTE-ORDER-MARK-UTF-16-LE ONE-WORD-UTF-16-CHAR-UTF-16-LE))
 (define ONE-WORD-UTF-16-CHAR-UTF-16-BE/BOM
-  (%bytevector-append BYTE-ORDER-MARK-UTF-16-BE ONE-WORD-UTF-16-CHAR-UTF-16-BE))
+  (bytevector-append BYTE-ORDER-MARK-UTF-16-BE ONE-WORD-UTF-16-CHAR-UTF-16-BE))
 
 ;;The only way  to make a 1-word UTF-16  character appear "corrupted" is
 ;;to  select it  in the  range allocated  by UTF-16  to second  words in
@@ -512,19 +498,19 @@
 (define CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-LE/BOM
   (let ((bv (make-bytevector 2)))
     (bytevector-u16-set! bv 0 CORRUPTED-ONE-WORD-UTF-16-CHAR-WORD (endianness little))
-    (%bytevector-append BYTE-ORDER-MARK-UTF-16-LE bv)))
+    (bytevector-append BYTE-ORDER-MARK-UTF-16-LE bv)))
 (define CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-BE/BOM
   (let ((bv (make-bytevector 2)))
     (bytevector-u16-set! bv 0 CORRUPTED-ONE-WORD-UTF-16-CHAR-WORD (endianness big))
-    (%bytevector-append BYTE-ORDER-MARK-UTF-16-BE bv)))
+    (bytevector-append BYTE-ORDER-MARK-UTF-16-BE bv)))
 
 (define TWO-WORDS-UTF-16-CHAR				CJK-COMPATIBILITY-IDEOGRAPH-2F9D1)
 (define TWO-WORDS-UTF-16-CHAR-UTF-16-LE			CJK-COMPATIBILITY-IDEOGRAPH-2F9D1-UTF-16-LE)
 (define TWO-WORDS-UTF-16-CHAR-UTF-16-BE			CJK-COMPATIBILITY-IDEOGRAPH-2F9D1-UTF-16-BE)
 (define TWO-WORDS-UTF-16-CHAR-UTF-16-LE/BOM
-  (%bytevector-append BYTE-ORDER-MARK-UTF-16-LE TWO-WORDS-UTF-16-CHAR-UTF-16-LE))
+  (bytevector-append BYTE-ORDER-MARK-UTF-16-LE TWO-WORDS-UTF-16-CHAR-UTF-16-LE))
 (define TWO-WORDS-UTF-16-CHAR-UTF-16-BE/BOM
-  (%bytevector-append BYTE-ORDER-MARK-UTF-16-BE TWO-WORDS-UTF-16-CHAR-UTF-16-BE))
+  (bytevector-append BYTE-ORDER-MARK-UTF-16-BE TWO-WORDS-UTF-16-CHAR-UTF-16-BE))
 
 ;;To make  a 2-word UTF-16  character appear "corrupted" we  select: the
 ;;first word in the correct range  allocated by UTF-16 to first words in
@@ -548,12 +534,12 @@
   (let ((bv (make-bytevector 4)))
     (bytevector-u16-set! bv 0 CORRUPTED1-TWO-WORDS-UTF-16-CHAR-1ST-WORD (endianness little))
     (bytevector-u16-set! bv 2 CORRUPTED1-TWO-WORDS-UTF-16-CHAR-2ND-WORD (endianness little))
-    (%bytevector-append BYTE-ORDER-MARK-UTF-16-LE bv)))
+    (bytevector-append BYTE-ORDER-MARK-UTF-16-LE bv)))
 (define CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-BE/BOM
   (let ((bv (make-bytevector 4)))
     (bytevector-u16-set! bv 0 CORRUPTED1-TWO-WORDS-UTF-16-CHAR-1ST-WORD (endianness big))
     (bytevector-u16-set! bv 2 CORRUPTED1-TWO-WORDS-UTF-16-CHAR-2ND-WORD (endianness big))
-    (%bytevector-append BYTE-ORDER-MARK-UTF-16-BE bv)))
+    (bytevector-append BYTE-ORDER-MARK-UTF-16-BE bv)))
 
 (define CORRUPTED2-TWO-WORDS-UTF-16-CHAR-1ST-WORD	#xDAFF)
 (define CORRUPTED2-TWO-WORDS-UTF-16-CHAR-2ND-WORD	#xDBFF)
@@ -571,12 +557,12 @@
   (let ((bv (make-bytevector 4)))
     (bytevector-u16-set! bv 0 CORRUPTED2-TWO-WORDS-UTF-16-CHAR-1ST-WORD (endianness little))
     (bytevector-u16-set! bv 2 CORRUPTED2-TWO-WORDS-UTF-16-CHAR-2ND-WORD (endianness little))
-    (%bytevector-append BYTE-ORDER-MARK-UTF-16-LE bv)))
+    (bytevector-append BYTE-ORDER-MARK-UTF-16-LE bv)))
 (define CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-BE/BOM
   (let ((bv (make-bytevector 4)))
     (bytevector-u16-set! bv 0 CORRUPTED2-TWO-WORDS-UTF-16-CHAR-1ST-WORD (endianness big))
     (bytevector-u16-set! bv 2 CORRUPTED2-TWO-WORDS-UTF-16-CHAR-2ND-WORD (endianness big))
-    (%bytevector-append BYTE-ORDER-MARK-UTF-16-BE bv)))
+    (bytevector-append BYTE-ORDER-MARK-UTF-16-BE bv)))
 
 ;;; --------------------------------------------------------------------
 
@@ -589,7 +575,7 @@
    LATIN-SMALL-LETTER-U-WITH-GRAVE LATIN-SMALL-LETTER-U-WITH-ACUTE))
 
 (define TEST-BYTEVECTOR-FOR-LATIN-1
-  (%bytevector-append
+  (bytevector-append
    LATIN-SMALL-LETTER-A-WITH-GRAVE-LATIN-1 LATIN-SMALL-LETTER-A-WITH-ACUTE-LATIN-1
    LATIN-SMALL-LETTER-E-WITH-GRAVE-LATIN-1 LATIN-SMALL-LETTER-E-WITH-ACUTE-LATIN-1
    LATIN-SMALL-LETTER-I-WITH-GRAVE-LATIN-1 LATIN-SMALL-LETTER-I-WITH-ACUTE-LATIN-1
@@ -611,7 +597,7 @@
    TWO-BYTES-UTF-8-CHAR THREE-BYTES-UTF-8-CHAR FOUR-BYTES-UTF-8-CHAR))
 
 (define TEST-BYTEVECTOR-FOR-UTF-8
-  (%bytevector-append
+  (bytevector-append
    LATIN-SMALL-LETTER-A-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-A-WITH-ACUTE-UTF-8
    LATIN-SMALL-LETTER-E-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-E-WITH-ACUTE-UTF-8
    LATIN-SMALL-LETTER-I-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-I-WITH-ACUTE-UTF-8
@@ -640,7 +626,7 @@
    TWO-WORDS-UTF-16-CHAR))
 
 (define TEST-BYTEVECTOR-FOR-UTF-16-LE
-  (%bytevector-append
+  (bytevector-append
    LATIN-SMALL-LETTER-A-WITH-GRAVE-UTF-16-LE LATIN-SMALL-LETTER-A-WITH-ACUTE-UTF-16-LE
    LATIN-SMALL-LETTER-E-WITH-GRAVE-UTF-16-LE LATIN-SMALL-LETTER-E-WITH-ACUTE-UTF-16-LE
    LATIN-SMALL-LETTER-I-WITH-GRAVE-UTF-16-LE LATIN-SMALL-LETTER-I-WITH-ACUTE-UTF-16-LE
@@ -652,7 +638,7 @@
    ONE-WORD-UTF-16-CHAR-UTF-16-LE TWO-WORDS-UTF-16-CHAR-UTF-16-LE))
 
 (define TEST-BYTEVECTOR-FOR-UTF-16-LE/BOM
-  (%bytevector-append BYTE-ORDER-MARK-UTF-16-LE TEST-BYTEVECTOR-FOR-UTF-16-LE))
+  (bytevector-append BYTE-ORDER-MARK-UTF-16-LE TEST-BYTEVECTOR-FOR-UTF-16-LE))
 
 ;;; --------------------------------------------------------------------
 
@@ -669,7 +655,7 @@
    ONE-WORD-UTF-16-CHAR TWO-WORDS-UTF-16-CHAR))
 
 (define TEST-BYTEVECTOR-FOR-UTF-16-BE
-  (%bytevector-append
+  (bytevector-append
    LATIN-SMALL-LETTER-A-WITH-GRAVE-UTF-16-BE LATIN-SMALL-LETTER-A-WITH-ACUTE-UTF-16-BE
    LATIN-SMALL-LETTER-E-WITH-GRAVE-UTF-16-BE LATIN-SMALL-LETTER-E-WITH-ACUTE-UTF-16-BE
    LATIN-SMALL-LETTER-I-WITH-GRAVE-UTF-16-BE LATIN-SMALL-LETTER-I-WITH-ACUTE-UTF-16-BE
@@ -681,7 +667,7 @@
    ONE-WORD-UTF-16-CHAR-UTF-16-BE TWO-WORDS-UTF-16-CHAR-UTF-16-BE))
 
 (define TEST-BYTEVECTOR-FOR-UTF-16-BE/BOM
-  (%bytevector-append BYTE-ORDER-MARK-UTF-16-BE TEST-BYTEVECTOR-FOR-UTF-16-BE))
+  (bytevector-append BYTE-ORDER-MARK-UTF-16-BE TEST-BYTEVECTOR-FOR-UTF-16-BE))
 
 
 (parametrise ((check-test-name	'transcoders))
@@ -7783,7 +7769,7 @@
   			((= i src.len)
   			 str)
   		      (string-set! str i (integer->char i)))))
-	 (src.bv  (%bytevector-append BYTE-ORDER-MARK-UTF-16-LE
+	 (src.bv  (bytevector-append BYTE-ORDER-MARK-UTF-16-LE
 				      (string->utf16 src.str (endianness little))))
 	 (doit	(lambda (count)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
@@ -7802,7 +7788,7 @@
   			((= i src.len)
   			 str)
   		      (string-set! str i (integer->char i)))))
-	 (src.bv  (%bytevector-append BYTE-ORDER-MARK-UTF-16-BE
+	 (src.bv  (bytevector-append BYTE-ORDER-MARK-UTF-16-BE
 				      (string->utf16 src.str (endianness big))))
 	 (doit	(lambda (count)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
@@ -8215,7 +8201,7 @@
   			((= i src.len)
   			 str)
   		      (string-set! str i (integer->char i)))))
- 	 (src.bv  (%bytevector-append BYTE-ORDER-MARK-UTF-16-LE
+ 	 (src.bv  (bytevector-append BYTE-ORDER-MARK-UTF-16-LE
  				      (string->utf16 src.str (endianness little))))
 	 (doit	(lambda (count len)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
@@ -8237,7 +8223,7 @@
   			((= i src.len)
   			 str)
   		      (string-set! str i (integer->char i)))))
- 	 (src.bv  (%bytevector-append BYTE-ORDER-MARK-UTF-16-BE
+ 	 (src.bv  (bytevector-append BYTE-ORDER-MARK-UTF-16-BE
  				      (string->utf16 src.str (endianness big))))
 	 (doit	(lambda (count len)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
@@ -8418,8 +8404,8 @@
   			((= i src.len)
   			 str)
   		      (string-set! str i (integer->char i)))))
-	 (src.bv  (%bytevector-append BYTE-ORDER-MARK-UTF-16-LE
-				      (string->utf16 src.str (endianness little))))
+	 (src.bv  (bytevector-append BYTE-ORDER-MARK-UTF-16-LE
+				     (string->utf16 src.str (endianness little))))
 	 (doit	(lambda (count)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
 		    (get-string-all port)))))
@@ -8434,8 +8420,8 @@
   			((= i src.len)
   			 str)
   		      (string-set! str i (integer->char i)))))
-	 (src.bv  (%bytevector-append BYTE-ORDER-MARK-UTF-16-BE
-				      (string->utf16 src.str (endianness big))))
+	 (src.bv  (bytevector-append BYTE-ORDER-MARK-UTF-16-BE
+				     (string->utf16 src.str (endianness big))))
 	 (doit	(lambda (count)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
 		    (get-string-all port)))))
