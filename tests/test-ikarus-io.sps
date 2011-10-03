@@ -8606,6 +8606,51 @@
   #t)
 
 
+#;(parametrise ((check-test-name	'put-u8))
+
+;;; --------------------------------------------------------------------
+;;; port argument validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(put-u8 123))
+    => '(123))
+
+  (check	;argument is not an output port
+      (let ((port (%open-disposable-binary-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (put-u8 port)))
+    => #t)
+
+  (check	;argument is not a binary port
+      (let ((port (%open-disposable-textual-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (put-u8 port)))
+    => #t)
+
+  (check	;argument is not an open port
+      (let ((port (%open-disposable-binary-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-output-port port)
+	  (put-u8 port)))
+    => #t)
+
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

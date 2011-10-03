@@ -289,15 +289,22 @@
 
 ;;;; On buffering
 ;;
-;;We establish the following constraints:
+;;Given the implementation restrictions:
+;;
+;;*  Strings  have  length  at   most  equal  to  the  return  value  of
+;;GREATEST-FIXNUM.
+;;
+;;*  Bytevectors  have length  at  most equal  to  the  return value  of
+;;GREATEST-FIXNUM.
+;;
+;;we establish the following constraints:
 ;;
 ;;*  If an  exact integer  is in  the range  representable by  a fixnum,
 ;;Vicare will represent it as a fixnum.
 ;;
 ;;* No matter which BUFFER-MODE was selected, every port has a buffer.
 ;;
-;;* The buffer is a Scheme bytevector or a Scheme string whose length is
-;;representable by a fixnum.
+;;* The buffer is a Scheme bytevector or a Scheme string.
 ;;
 ;;* The input functions always read data from the buffer first.
 ;;
@@ -324,18 +331,20 @@
 ;;
 ;; --------------------------------------------------------------
 ;;
+;;The buffer mode is customisable only for output operations; the buffer
+;;mode  LINE is  ignored by  binary output  ports, resulting  in  a mode
+;;equivalent to BLOCK; the buffer mode is ignored by input ports.
+;;
 ;;Buffer mode handling is as follows:
 ;;
-;;* When the buffering mode is NONE: data is first written to the output
-;;buffer, then immediately sent to the underlying device.
+;;* When the  mode is NONE: data is first written  to the output buffer,
+;;then immediately sent to the underlying device.
 ;;
-;;* When the buffering mode is LINE: data is first written to the output
-;;buffer  up  to  the  first  newline,  then  immediately  sent  to  the
-;;underlying device.
+;;* When the mode is LINE: data is first written to the output buffer up
+;;to the first newline, then immediately sent to the underlying device.
 ;;
-;;*  When the  buffering mode  is BLOCK:  data is  first written  to the
-;;output buffer.   Only when  the buffer  is full: data  is sent  to the
-;;underlying device.
+;;* When the mode is BLOCK:  data is first written to the output buffer;
+;;only when the buffer is full data is sent to the underlying device.
 ;;
 ;; --------------------------------------------------------------
 ;;
@@ -5005,96 +5014,36 @@
        (%do-get-line port who)))))
 
 
-;;;; unbuffered byte and char output
-
-(define (%put-byte/unbuffered! port byte who)
-  ;;Defined by  Ikarus.  Write directly  the single BYTE  to PORT
-  ;;without  using  the  output  buffer.   The  return  value  is
-  ;;unspecified.
-  ;;
-  ;;PORT must be a binary  output port.  BYTE must be an unsigned
-  ;;fixnum in the range [0, 255].
-  ;;
-  ;;This function calls the  port's WRITE! function to output the
-  ;;byte; if  it writes  no byte: the  port is marked  as closed.
-  ;;FIXME Is this correct?
-  ;;
-  (with-port-having-bytevector-buffer (port)
-    (%unsafe.assert-value-is-open-port port who)
-    (let ((bv (make-bytevector 1)))
-      (unsafe.bytevector-u8-set! bv 0 byte)
-      (let ((count (port.write! bv 0 1)))
-	;;We  need to  account for  the case  the  WRITE!  function
-	;;returns  an  incorrect value,  for  example a  non-fixnum
-	;;value.
-	(cond ((eq? count 1)
-	       (port.device.position.incr! 1))
-	      ((eq? count 0)
-	       (port.mark-as-closed)
-	       (assertion-violation who "could not write bytes to output port" port))
-	      (else
-	       (assertion-violation who "invalid return value from write! proc" count port)))))))
-
-(define (%put-char/unbuffered! port char who)
-  ;;Defined by  Ikarus.  Write directly  the single CHAR  to PORT
-  ;;without  using  the  output  buffer.   The  return  value  is
-  ;;unspecified.
-  ;;
-  ;;PORT must  be a textual output  port.  CHAR must  be a Scheme
-  ;;character.
-  ;;
-  ;;This function calls the  port's WRITE! function to output the
-  ;;char; if  it writes  no char: the  port is marked  as closed.
-  ;;FIXME Is this correct?
-  ;;
-  (with-port (port)
-    (%unsafe.assert-value-is-open-port port who)
-    (let ((str (string char)))
-      (let ((count (port.write! str 0 1)))
-	;;We need  to account for  the case the  WRITE!  function
-	;;returns  an incorrect value,  for example  a non-fixnum
-	;;value.
-	(cond ((eq? count 1)
-	       (port.device.position.incr! 1))
-	      ((eq? count 0)
-	       (port.mark-as-closed)
-	       (assertion-violation who "could not write char to output port" port))
-	      (else
-	       (assertion-violation who "invalid return value from write! proc" count port)))))))
-
-
 ;;;; byte and bytevector output
 
-(define (put-u8 port byte)
-  ;;Defined by  R6RS.  Write BYTE  to the output port  and return
+(define (put-u8 port octet)
+  ;;Defined  by  R6RS.   Write  OCTET  to the  output  port  and  return
   ;;unspecified values.
   ;;
   (define who 'put-u8)
-  (unless (%u8? byte)
-    (assertion-violation who "not a u8" byte))
+  (%assert-value-is-output-port port who)
+  (%unsafe.assert-value-is-binary-port port who)
+  (unless (%u8? octet)
+    (assertion-violation who "expected octet as argument" octet))
   (with-port-having-bytevector-buffer (port)
-    (cond ((unsafe.fx= FAST-PUT-BYTE-TAG port.fast-attributes)
-	   (let try-again-after-flushing-buffer ()
-	     (if (unsafe.fx< port.buffer.index port.buffer.size)
-		 ;;The buffer  exists and  it has room  for one
-		 ;;byte.
-		 (begin
-		   (%debug-assert (<= port.buffer.index port.buffer.used-size))
-		   (unsafe.bytevector-u8-set! port.buffer port.buffer.index byte)
-		   (when (unsafe.fx= port.buffer.index port.buffer.used-size)
-		     (port.buffer.used-size.incr!))
-		   (port.buffer.index.incr!))
-	       ;;The buffer  exists but  it has no  room: flush
-	       ;;the buffer and try again.
-	       (begin
-		 (%debug-assert (= port.buffer.used-size port.buffer.index))
-		 (%debug-assert (= port.buffer.used-size port.buffer.size))
-		 (%unsafe.flush-output-port port who)
-		 (try-again-after-flushing-buffer)))))
-	  ((output-port? port)
-	   (assertion-violation who "not a binary port" port))
-	  (else
-	   (assertion-violation who "not an output port" port)))))
+    (%debug-assert (unsafe.fx= FAST-PUT-BYTE-TAG port.fast-attributes))
+    (let try-again-after-flushing-buffer ()
+      (if (unsafe.fx< port.buffer.index port.buffer.size)
+	  ;;The buffer exists and it has room for one byte.
+	  (let ((buffer.index	  port.buffer.index)
+		(buffer.used-size port.buffer.used-size))
+	    (%debug-assert (<= buffer.index buffer.used-size))
+	    (unsafe.bytevector-u8-set! port.buffer buffer.index octet)
+	    (when (unsafe.fx= buffer.index buffer.used-size)
+	      (set! port.buffer.used-size (unsafe.fxadd1 buffer.used-size)))
+	    (set! port.buffer.index (unsafe.fxadd1 buffer.index)))
+	;;The buffer exists but it has no room: flush the buffer and try
+	;;again.
+	(begin
+	  (%debug-assert (= port.buffer.used-size port.buffer.index))
+	  (%debug-assert (= port.buffer.used-size port.buffer.size))
+	  (%unsafe.flush-output-port port who)
+	  (try-again-after-flushing-buffer))))))
 
 (define put-bytevector
   ;;(put-bytevector port bv)
@@ -5188,6 +5137,66 @@
 	     (assertion-violation who "invalid index" i))
 	 (assertion-violation who not-a-what bv)))))))
 
+
+;;;; unbuffered byte and char output
+
+(define (%put-byte/unbuffered! port byte who)
+  ;;Defined by  Ikarus.  Write directly  the single BYTE  to PORT
+  ;;without  using  the  output  buffer.   The  return  value  is
+  ;;unspecified.
+  ;;
+  ;;PORT must be a binary  output port.  BYTE must be an unsigned
+  ;;fixnum in the range [0, 255].
+  ;;
+  ;;This function calls the  port's WRITE! function to output the
+  ;;byte; if  it writes  no byte: the  port is marked  as closed.
+  ;;FIXME Is this correct?
+  ;;
+  (with-port-having-bytevector-buffer (port)
+    (%unsafe.assert-value-is-open-port port who)
+    (let ((bv (make-bytevector 1)))
+      (unsafe.bytevector-u8-set! bv 0 byte)
+      (let ((count (port.write! bv 0 1)))
+	;;We  need to  account for  the case  the  WRITE!  function
+	;;returns  an  incorrect value,  for  example a  non-fixnum
+	;;value.
+	(cond ((eq? count 1)
+	       (port.device.position.incr! 1))
+	      ((eq? count 0)
+	       (port.mark-as-closed)
+	       (assertion-violation who "could not write bytes to output port" port))
+	      (else
+	       (assertion-violation who "invalid return value from write! proc" count port)))))))
+
+(define (%put-char/unbuffered! port char who)
+  ;;Defined by  Ikarus.  Write directly  the single CHAR  to PORT
+  ;;without  using  the  output  buffer.   The  return  value  is
+  ;;unspecified.
+  ;;
+  ;;PORT must  be a textual output  port.  CHAR must  be a Scheme
+  ;;character.
+  ;;
+  ;;This function calls the  port's WRITE! function to output the
+  ;;char; if  it writes  no char: the  port is marked  as closed.
+  ;;FIXME Is this correct?
+  ;;
+  (with-port (port)
+    (%unsafe.assert-value-is-open-port port who)
+    (let ((str (string char)))
+      (let ((count (port.write! str 0 1)))
+	;;We need  to account for  the case the  WRITE!  function
+	;;returns  an incorrect value,  for example  a non-fixnum
+	;;value.
+	(cond ((eq? count 1)
+	       (port.device.position.incr! 1))
+	      ((eq? count 0)
+	       (port.mark-as-closed)
+	       (assertion-violation who "could not write char to output port" port))
+	      (else
+	       (assertion-violation who "invalid return value from write! proc" count port)))))))
+
+
+
 (module (put-char write-char put-string)
   (define (put-byte! p b who)
     (let ((i ($port-index p)) (j ($port-size p)))
@@ -5239,6 +5248,7 @@
 		   string? string-length $put-string))
 
   (define (do-put-char p c who)
+    (%assert-value-is-port p who)
     (unless (char? c) (assertion-violation who "not a char" c))
     (let ((m ($port-fast-attrs p)))
       (cond
@@ -5339,10 +5349,12 @@
   ;;the buffering mode (Marco Maggi; Oct 3, 2011).
   ;;
   (case-lambda
+   ;;Better  use  PUT-CHAR  rather  than  WRITE-CHAR:  PUT-CHAR  has  no
+   ;;optional arguments, WRITE-CHAR is a CASE-LAMBDA.
    (()
-    (write-char (current-output-port) #\newline))
+    (put-char (current-output-port) #\newline))
    ((port)
-    (write-char port #\newline))))
+    (put-char port #\newline))))
 
 
 ;;;; platform API for file descriptors
