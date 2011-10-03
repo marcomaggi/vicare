@@ -1834,6 +1834,7 @@ representation as an octet.
 @menu
 * iklib bytevectors sub::       Building subbytevectors.
 * iklib bytevectors conv::      Converting bytevectors.
+* iklib bytevectors generic::   Generic bytevectors operations.
 @end menu
 
 @c page
@@ -1894,6 +1895,9 @@ must be such that:
 @subsection Converting bytevectors
 
 
+The following bindings are exported by the @library{ikarus} library.
+
+
 @deffn Procedure {bytevector->s8-list} @var{bytevector}
 @deffnx Procedure {s8-list->bytevector} @var{list}
 @var{list} must be a list of bytes.
@@ -1905,6 +1909,19 @@ The @func{s8-list->bytevector} procedure returns a newly allocated
 bytevector whose elements are the elements of list @var{list}, in the
 same order.  It is analogous to @func{list->vector}.
 @end deffn
+
+@c page
+@node iklib bytevectors generic
+@subsection Generic bytevectors operations
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun bytevector-append @var{bytevector} ...
+Concatenate the bytevector arguments and return the result.  If no
+arguments are given: return the empty bytevector.
+@end defun
 
 @c page
 @node iklib strings

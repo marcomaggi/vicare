@@ -1027,6 +1027,71 @@
   #t)
 
 
+(parametrise ((check-test-name	'append))
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(bytevector-append 123))
+    => '(123))
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(bytevector-append '#vu8() 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector-append)
+    => '#vu8())
+
+  (check
+      (bytevector-append '#vu8())
+    => '#vu8())
+
+  (check
+      (bytevector-append '#vu8() '#vu8())
+    => '#vu8())
+
+  (check
+      (bytevector-append '#vu8() '#vu8() '#vu8())
+    => '#vu8())
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector-append '#vu8(1 2 3))
+    => '#vu8(1 2 3))
+
+  (check
+      (bytevector-append '#vu8(1 2 3) '#vu8(4 5 6))
+    => '#vu8(1 2 3 4 5 6))
+
+  (check
+      (bytevector-append '#vu8(1 2 3) '#vu8(4 5 6) '#vu8(7 8 9))
+    => '#vu8(1 2 3 4 5 6 7 8 9))
+
+  (check
+      (bytevector-append '#vu8() '#vu8(4 5 6) '#vu8(7 8 9))
+    => '#vu8(4 5 6 7 8 9))
+
+  (check
+      (bytevector-append '#vu8(1 2 3) '#vu8() '#vu8(7 8 9))
+    => '#vu8(1 2 3 7 8 9))
+
+  (check
+      (bytevector-append '#vu8(1 2 3) '#vu8(4 5 6) '#vu8())
+    => '#vu8(1 2 3 4 5 6))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

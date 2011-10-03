@@ -1116,6 +1116,7 @@
     (subbytevector-u8/count			 i)
     (subbytevector-s8				 i)
     (subbytevector-s8/count			 i)
+    (bytevector-append				 i)
     (endianness                                  i r bv)
     (native-endianness                           i r bv)
     (sint-list->bytevector                       i r bv)

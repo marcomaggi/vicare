@@ -49,7 +49,8 @@
     subbytevector-s8		subbytevector-s8/count
 
     s8-list->bytevector		bytevector->s8-list
-    )
+
+    bytevector-append)
   (import (except (ikarus)
 		  make-bytevector bytevector-length bytevector-s8-ref
 		  bytevector-u8-ref bytevector-u8-set! bytevector-s8-set!
@@ -82,7 +83,8 @@
 		  subbytevector-s8		subbytevector-s8/count
 
 		  s8-list->bytevector		bytevector->s8-list
-		  )
+
+		  bytevector-append)
     (ikarus system $fx)
     (ikarus system $bignums)
     (ikarus system $pairs)
@@ -115,6 +117,9 @@
        (syntax-rules ()
 	 ((_ ?arg ... . ?rest)
 	  (begin ?form0 ?form ...)))))))
+
+(define-inline (%implementation-violation ?who ?message . ?irritants)
+  (assertion-violation ?who ?message . ?irritants))
 
 
 ;;;; helpers
@@ -1384,6 +1389,45 @@
 (define (bytevector-s64-set! bv i n endianness)
   ($bytevector-set/64 bv i n (- (expt 2 63)) (expt 2 63)
 		      'bytevector-s64-set! bytevector-sint-set! endianness))
+
+
+(define (bytevector-append . list-of-bytevectors)
+  (define who 'bytevector-append)
+
+  (define-inline (%length list-of-bytevectors)
+    (%%length list-of-bytevectors 0))
+  (define (%%length list-of-bytevectors accumulated-length)
+    ;;Validate LIST-OF-BYTEVECTORS  as a list of  bytevectors and return
+    ;;the  total length  of the  bytevectors; if  LIST-OF-BYTEVECTORS is
+    ;;null return N.
+    ;;
+    (if (null? list-of-bytevectors)
+	accumulated-length
+      (let ((bv ($car list-of-bytevectors)))
+	(unless (bytevector? bv)
+	  (assertion-violation who "expected list of bytevectors as argument" bv))
+	(%%length ($cdr list-of-bytevectors) (+ accumulated-length ($bytevector-length bv))))))
+
+  (define (fill-bytevector dst.bv src.bv dst.index dst.past src.index)
+    (unless ($fx= dst.index dst.past)
+      ($bytevector-set! dst.bv dst.index ($bytevector-u8-ref src.bv src.index))
+      (fill-bytevector dst.bv src.bv ($fxadd1 dst.index) dst.past ($fxadd1 src.index))))
+
+  (define (fill-bytevectors dst.bv list-of-bytevectors dst.start)
+    (if (null? list-of-bytevectors)
+	dst.bv
+      (let ((src.bv ($car list-of-bytevectors)))
+	(let ((src.len ($bytevector-length src.bv)))
+	  (let ((dst.past ($fx+ dst.start src.len)))
+	    (fill-bytevector dst.bv src.bv dst.start dst.past 0)
+	    (fill-bytevectors dst.bv ($cdr list-of-bytevectors) dst.past))))))
+
+  (let ((accumulated-length (%length list-of-bytevectors)))
+    (unless (fixnum? accumulated-length)
+      (%implementation-violation who
+	"appending bytevectors would produce a bytevector who length exceeds the supported maximum"
+	accumulated-length))
+    (fill-bytevectors ($make-bytevector accumulated-length) list-of-bytevectors 0)))
 
 
 
