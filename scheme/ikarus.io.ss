@@ -1234,43 +1234,24 @@
 			  dst.str (unsafe.fxadd1 dst.start)
 			  (unsafe.fxsub1 count))))
 
-(define (%unsafe.bigdst-string-copy! src.str src.start dst.str dst.start count)
-  ;;Like BYTEVECTOR-COPY!  defined by R6RS, but for strings.  Assume all
-  ;;the  arguments have  been already  validated; expect  all  the exact
-  ;;integers to be fixnums with the exception of DST.START.
-  ;;
-  (when (unsafe.fx> count 0)
-    (unsafe.string-set! dst.str dst.start (unsafe.string-ref src.str src.start))
-    (%unsafe.bigdst-string-copy! src.str (unsafe.fxadd1 src.start)
-				 dst.str (+ 1           dst.start)
-				 (unsafe.fxsub1 count))))
-
-(define (%unsafe.string-reverse-and-concatenate list-of-strings who)
-  ;;Reverse the  argument and concatenate  its string items;  return the
-  ;;result.  Assume the argument has been already validated.
+(define (%unsafe.string-reverse-and-concatenate list-of-strings dst.len who)
+  ;;Reverse LIST-OF-STRINGS and concatenate its string items; return the
+  ;;result.  The  resulting list must  have length DST.LEN.   Assume the
+  ;;arguments have been already validated.
   ;;
   ;;IMPLEMENTATION RESTRICTION The strings must have a fixnum length and
   ;;the whole string must at maximum have a fixnum length.
   ;;
-  (call-with-values
-      (lambda ()
-	(let recur ((strs list-of-strings)
-		    (accumulated-total-length 0))
-	  (if (null? strs)
-	      (begin
-		(unless (fixnum? accumulated-total-length)
-		  (assertion-violation who
-		    "request to generate string with length too big, it must be a fixnum"
-		    accumulated-total-length))
-		(values (unsafe.make-string accumulated-total-length) 0))
-	    (let* ((src.str  (car strs))
-		   (src.len (unsafe.string-length src.str)))
-	      (let-values (((dst.str next-octet-index)
-			    (recur (cdr strs) (+ src.len accumulated-total-length))))
-		(%unsafe.string-copy! src.str 0 dst.str next-octet-index src.len)
-		(values dst.str (unsafe.fx+ src.len next-octet-index)))))))
-    (lambda (full-string dummy)
-      full-string)))
+  (let ((dst.str (unsafe.make-string dst.len)))
+    (let next-string ((list-of-strings list-of-strings)
+		      (dst.start       dst.len))
+      (if (null? list-of-strings)
+	  dst.str
+	(let* ((src.str   (car list-of-strings))
+	       (src.len   (unsafe.string-length src.str))
+	       (dst.start (unsafe.fx- dst.start src.len)))
+	  (%unsafe.string-copy! src.str 0 dst.str dst.start src.len)
+	  (next-string (cdr list-of-strings) dst.start))))))
 
 
 ;;;; dot notation macros for port structures
@@ -2920,12 +2901,10 @@
     ;;
     (with-port (port)
       (define (%%serialise-device! who reset?)
-	(unless port.closed?
-	  (%unsafe.flush-output-port port who))
 	(let* ((dev		port.device)
 	       (output.len	(car dev))
 	       (output.strs	(cdr dev))
-	       (str		(%unsafe.string-reverse-and-concatenate output.strs who)))
+	       (str		(%unsafe.string-reverse-and-concatenate output.strs output.len who)))
 	  (set! port.device (if reset? '(0 . ()) `(,output.len . (,str))))
 	  str))
       (define-inline (%serialise-device! who)
@@ -2964,20 +2943,18 @@
 	(let* ((dst.str  (car output.strs))
 	       (dst.len  output.len)
 	       (dst.room (unsafe.fx- dst.len dev-position)))
-	  (if (<= count dst.room)
+	  (%debug-assert (fixnum? dst.room))
+	  (if (unsafe.fx<= count dst.room)
 	      ;;The new  data fits  in the single  string.  There  is no
 	      ;;need to update the device.
 	      (%unsafe.string-copy! src.str src.start dst.str dev-position count)
 	    (begin
-	      (%debug-assert (fixnum? dst.room))
 	      ;;The new data goes part  in the single string and part in
 	      ;;a new string.  We need to update the device.
 	      (%unsafe.string-copy! src.str src.start dst.str dev-position dst.room)
 	      (let* ((src.start (unsafe.fx+ src.start dst.room))
-		     (count     (unsafe.fx- count     dst.room))
-		     (dst.str   (unsafe.make-string count)))
-		(%unsafe.string-copy! src.str src.start dst.str 0 count)
-		(set! port.device `(,new-dev-position . (,dst.str . ,output.strs))))))))
+		     (count     (unsafe.fx- count     dst.room)))
+		(write!/append src.str src.start count output.strs new-dev-position))))))
 
       (define-inline (write!/append src.str src.start count output.strs new-dev-position)
 	;;Append new data to the accumulated strings.  We need to update
@@ -2989,10 +2966,11 @@
 
       (define (set-position! new-position)
 	;;NEW-POSITION has  already been  validated as exact  integer by
-	;;the procedure SET-PORT-POSITION!.  Here we only have to verify
+	;;the procedure SET-PORT-POSITION!.  The buffer has already been
+	;;flushed by  SET-PORT-POSITION!.  Here  we only have  to verify
 	;;that the value  is valid as offset inside  the underlying full
 	;;string.  If this validation succeeds: SET-PORT-POSITION!  will
-	;;store the position in the POS field of the cookie.
+	;;store the position in the cookie.
 	;;
 	(define who 'open-string-output-port/set-position!)
 	(unless (and (fixnum? new-position)
@@ -3005,6 +2983,9 @@
 	;;convert the device list to a single string.  Return the single
 	;;string and reset the port to its empty state.
 	;;
+	(define who 'open-string-output-port/extract)
+        (unless port.closed?
+	  (%unsafe.flush-output-port port who))
 	(let ((str (%serialise-device-and-reset! who)))
 	  (port.buffer.reset-to-empty!)
 	  (set! port.device.position 0)
@@ -3031,11 +3012,14 @@
       (unless (cookie? cookie)
 	(wrong-port-error))
       (let ((dev port.device))
-	(unless (pair? dev)
+	(unless (and (pair?   dev)
+		     (fixnum? (car dev))
+		     (or (null? (cdr dev))
+			 (pair? (cdr dev))))
 	  (wrong-port-error))
-	(let ((str (%unsafe.string-reverse-and-concatenate (cdr dev) who)))
+	(let ((str (%unsafe.string-reverse-and-concatenate (cdr dev) (car dev) who)))
 	  (port.buffer.reset-to-empty!)
-	  (set! port.device '())
+	  (set! port.device '(0 . ()))
 	  (set! port.device.position  0)
 	  str)))))
 
@@ -4875,21 +4859,24 @@
   (define who 'get-string-all)
   (define-inline (%get-it ?read-char)
     (let ((dst.len (string-port-buffer-size)))
-      (let next-buffer-string ((output-strs '()))
+      (let next-buffer-string ((output.len  0)
+			       (output.strs '()))
 	(let next-char ((dst.str   (unsafe.make-string dst.len))
 			(dst.index 0))
 	  (let ((ch (?read-char port who)))
 	    (if (eof-object? ch)
-		(if (and (null? output-strs) (unsafe.fxzero? dst.index))
+		(if (and (null? output.strs) (unsafe.fxzero? dst.index))
 		    ch
 		  (%unsafe.string-reverse-and-concatenate (cons (substring dst.str 0 dst.index)
-								output-strs)
+								output.strs)
+							  (unsafe.fx+ dst.index output.len)
 							  who))
 	      (begin
 		(unsafe.string-set! dst.str dst.index ch)
 		(let ((dst.index (unsafe.fxadd1 dst.index)))
 		  (if (unsafe.fx= dst.index dst.len)
-		      (next-buffer-string (cons dst.str output-strs))
+		      (next-buffer-string (unsafe.fx+ output.len dst.len)
+					  (cons dst.str output.strs))
 		    (next-char dst.str dst.index))))))))))
   (define-inline (%read-utf16le ?port ?who)
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
