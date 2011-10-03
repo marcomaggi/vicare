@@ -923,12 +923,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (%assert-argument-is-start-index start who)
-  (unless (and (integer? start) (exact? start))
-    (assertion-violation who "expected exact integer as start index argument" start))
-  (unless (>= start 0)
-    (assertion-violation who "expected non-negative exact integer as start index argument" start)))
-
 (define (%assert-argument-is-fixnum-start-index start who)
   ;;A fixnum  is an exact  integer, but I  do the check twice  because I
   ;;like descriptive error messages (Marco Maggi; Oct 1, 2011).
@@ -1037,17 +1031,6 @@
      (and (fixnum? x)
 	  (unsafe.fx>= x 0)
 	  (unsafe.fx<= x 255)))))
-
-(define-syntax %the-true-value?
-  ;;Evaluate to  true if the object  is the actual  #t value, not
-  ;;just true according to Scheme semantics.
-  ;;
-  (syntax-rules ()
-    ((_ ?obj)
-     (eqv? #t ?obj))))
-
-(define-inline (%list-holding-single-value? ell)
-  (and (not (null? ell)) (null? (cdr ell))))
 
 
 ;;;; port tagging helpers
@@ -1172,33 +1155,13 @@
   ;;have been  already validated;  expect all the  exact integers  to be
   ;;fixnums.
   ;;
+  ;;FIXME This should be implemented in C.
+  ;;
   (when (unsafe.fx> count 0)
     (unsafe.bytevector-u8-set! dst.bv dst.start (unsafe.bytevector-u8-ref src.bv src.start))
     (%unsafe.bytevector-copy! src.bv (unsafe.fxadd1 src.start)
 			      dst.bv (unsafe.fxadd1 dst.start)
 			      (unsafe.fxsub1 count))))
-
-(define (%unsafe.bigdst-bytevector-copy! src.bv src.start dst.bv dst.start count)
-  ;;Like BYTEVECTOR-COPY!   defined by  R6RS.  Assume all  the arguments
-  ;;have been  already validated;  expect all the  exact integers  to be
-  ;;fixnums with the exception of DST.START.
-  ;;
-  (when (unsafe.fx> count 0)
-    (unsafe.bytevector-u8-set! dst.bv dst.start (unsafe.bytevector-u8-ref src.bv src.start))
-    (%unsafe.bigdst-bytevector-copy! src.bv (unsafe.fxadd1 src.start)
-				     dst.bv (+ 1           dst.start)
-				     (unsafe.fxsub1 count))))
-
-(define (%unsafe.big-bytevector-copy! src.bv src.start dst.bv dst.start count)
-  ;;Like BYTEVECTOR-COPY!   defined by  R6RS.  Assume all  the arguments
-  ;;have been  already validated;  expect all the  exact integers  to be
-  ;;either fixnums or bignums.
-  ;;
-  (when (> count 0)
-    (unsafe.bytevector-u8-set! dst.bv dst.start (unsafe.bytevector-u8-ref src.bv src.start))
-    (%unsafe.big-bytevector-copy! src.bv (+ 1 src.start)
-				  dst.bv (+ 1 dst.start)
-				  (- count 1))))
 
 (define (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors dst.len who)
   ;;Reverse  LIST-OF-BYTEVECTORS and  concatenate its  bytevector items;
@@ -1226,6 +1189,8 @@
 (define (%unsafe.string-copy! src.str src.start dst.str dst.start count)
   ;;Like  BYTEVECTOR-COPY!   defined by  R6RS,  but for  strings;
   ;;expect all the exact integers to be fixnums.
+  ;;
+  ;;FIXME This should be implemented in C.
   ;;
   (when (unsafe.fx> count 0)
     (unsafe.string-set! dst.str dst.start (unsafe.string-ref src.str src.start))
@@ -2731,10 +2696,22 @@
 	(define (%%serialise-device! who reset?)
 	  (let* ((dev		port.device)
 		 (output.len	(car dev))
-		 (output.bvs	(cdr dev))
-		 (bv		(%unsafe.bytevector-reverse-and-concatenate output.bvs output.len who)))
-	    (set! port.device (if reset? '(0 . ()) `(,output.len . (,bv))))
-	    bv))
+		 (output.bvs	(cdr dev)))
+	    (cond ((unsafe.fxzero? output.len)
+		   ;;No bytes accumulated, the device is empty.
+		   '#vu8())
+		  ((null? (cdr output.bvs))
+		   ;;The device has already been serialised.
+		   (when reset?
+		     (set! port.device '(0 . ())))
+		   (car output.bvs))
+		  (else
+		   ;;The device needs to be serialised.
+		   (let ((bv (%unsafe.bytevector-reverse-and-concatenate output.bvs output.len who)))
+		     (set! port.device (if reset?
+					   '(0 . ())
+					 `(,output.len . (,bv))))
+		     bv)))))
 	(define-inline (%serialise-device! who)
 	  (%%serialise-device! who #f))
 	(define-inline (%serialise-device-and-reset! who)
@@ -2925,10 +2902,19 @@
       (define (%%serialise-device! who reset?)
 	(let* ((dev		port.device)
 	       (output.len	(car dev))
-	       (output.strs	(cdr dev))
-	       (str		(%unsafe.string-reverse-and-concatenate output.strs output.len who)))
-	  (set! port.device (if reset? '(0 . ()) `(,output.len . (,str))))
-	  str))
+	       (output.strs	(cdr dev)))
+	  (cond ((unsafe.fxzero? output.len)
+		 ;;No bytes accumulated, the device is empty.
+		 "")
+		((null? (cdr output.strs))
+		 ;;The device has already been serialised.
+		 (when reset?
+		   (set! port.device '(0 . ())))
+		 (car output.strs))
+		(else
+		 (let ((str (%unsafe.string-reverse-and-concatenate output.strs output.len who)))
+		   (set! port.device (if reset? '(0 . ()) `(,output.len . (,str))))
+		   str)))))
       (define-inline (%serialise-device! who)
 	(%%serialise-device! who #f))
       (define-inline (%serialise-device-and-reset! who)
@@ -3619,6 +3605,8 @@
   ;;If  an  end of  file  is reached  before  any  bytes are  available,
   ;;GET-BYTEVECTOR-N returns the EOF object.
   ;;
+  ;;IMPLEMENTATION RESTRICTION The COUNT argument must be a fixnum.
+  ;;
   (define who 'get-bytevector-n)
   (%assert-value-is-port port who)
   (with-port-having-bytevector-buffer (port)
@@ -3626,7 +3614,7 @@
     ;;PORT.FAST-ATTRIBUTES which does not include it).
     (unless (unsafe.fx= port.attributes FAST-GET-BYTE-TAG)
       (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
-    (%assert-argument-is-count count who)
+    (%assert-argument-is-fixnum-count count who)
     (if (zero? count)
 	(quote #vu8())
       (let retry-after-filling-buffer ((output.len		0)
@@ -3638,7 +3626,7 @@
 		 (amount-of-available		(unsafe.fx- buffer.used-size buffer.offset))
 		 (all-count-is-available?	(<= count amount-of-available))
 		 (amount-to-read		(if all-count-is-available? count amount-of-available))
-		 (output.len1			(+ output.len amount-to-read)))
+		 (output.len1			(unsafe.fx+ output.len amount-to-read)))
 	    (unless (fixnum? output.len1)
 	      (%implementation-violation who
 		"request to write data to port would exceed maximum size of bytevectors"
@@ -3681,6 +3669,8 @@
   ;;bytes  read.  If  an end  of file  is reached  before any  bytes are
   ;;available, GET-BYTEVECTOR-N!  returns the EOF object.
   ;;
+  ;;IMPLEMENTATION RESTRICTION The COUNT argument must be a fixnum.
+  ;;
   (define who 'get-bytevector-n!)
   (%assert-value-is-port port who)
   (with-port-having-bytevector-buffer (port)
@@ -3688,9 +3678,9 @@
     ;;PORT.FAST-ATTRIBUTES which does not include it).
     (unless (unsafe.fx= port.attributes FAST-GET-BYTE-TAG)
       (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
-    (%assert-value-is-bytevector     dst.bv    who)
-    (%assert-argument-is-start-index dst.start who)
-    (%assert-argument-is-count       count     who)
+    (%assert-value-is-bytevector dst.bv    who)
+    (%assert-argument-is-fixnum-start-index dst.start who)
+    (%assert-argument-is-fixnum-count count who)
     (%assert-argument-is-start-index-for-bytevector dst.start dst.bv who)
     (%assert-argument-is-count-from-start-in-bytevector count dst.start dst.bv who)
     (if (zero? count)
@@ -3703,7 +3693,7 @@
 		 (amount-of-available		(unsafe.fx- buffer.used-size buffer.offset))
 		 (all-count-is-available?	(<= count amount-of-available))
 		 (amount-to-read		(if all-count-is-available? count amount-of-available)))
-	    (%unsafe.bigdst-bytevector-copy! port.buffer buffer.offset dst.bv tmp.start amount-to-read)
+	    (%unsafe.bytevector-copy! port.buffer buffer.offset dst.bv tmp.start amount-to-read)
 	    (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-read))
 	    (let ((tmp.start (+ tmp.start amount-to-read)))
 	      (if all-count-is-available?
