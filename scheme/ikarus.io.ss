@@ -1200,26 +1200,25 @@
 				  dst.bv (+ 1 dst.start)
 				  (- count 1))))
 
-(define (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors)
-  ;;Reverse the  argument and  concatenate its bytevector  items; return
-  ;;the result.  Assume the argument has been already validated.
+(define (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors dst.len who)
+  ;;Reverse  LIST-OF-BYTEVECTORS and  concatenate its  bytevector items;
+  ;;return  the result.  The  resulting list  must have  length DST.LEN.
+  ;;Assume the arguments have been already validated.
   ;;
-  ;;The bytevectors may have either a fixnum or a bignum as length.
+  ;;IMPLEMENTATION RESTRICTION The bytevectors must have a fixnum length
+  ;;and the whole bytevector must at maximum have a fixnum length.
   ;;
-  (call-with-values
-      (lambda ()
-	(let recur ((bvs list-of-bytevectors)
-		    (accumulated-total-length 0))
-	  (if (null? bvs)
-	      (values (unsafe.make-bytevector accumulated-total-length) 0)
-	    (let* ((src.bv  (car bvs))
-		   (src.len (unsafe.bytevector-length src.bv)))
-	      (let-values (((dst.bv next-octet-index)
-			    (recur (cdr bvs) (+ src.len accumulated-total-length))))
-		(%unsafe.big-bytevector-copy! src.bv 0 dst.bv next-octet-index src.len)
-		(values dst.bv (+ src.len next-octet-index)))))))
-    (lambda (full-bytevector dummy)
-      full-bytevector)))
+  (let next-bytevector ((dst.bv              (unsafe.make-bytevector dst.len))
+			(list-of-bytevectors list-of-bytevectors)
+			(dst.start           dst.len))
+    (if (null? list-of-bytevectors)
+	(begin
+	  dst.bv)
+      (let* ((src.bv    (car list-of-bytevectors))
+	     (src.len   (unsafe.bytevector-length src.bv))
+	     (dst.start (unsafe.fx- dst.start src.len)))
+	(%unsafe.bytevector-copy! src.bv 0 dst.bv dst.start src.len)
+	(next-bytevector dst.bv (cdr list-of-bytevectors) dst.start)))))
 
 
 ;;;; string helpers
@@ -1242,16 +1241,16 @@
   ;;IMPLEMENTATION RESTRICTION The strings must have a fixnum length and
   ;;the whole string must at maximum have a fixnum length.
   ;;
-  (let ((dst.str (unsafe.make-string dst.len)))
-    (let next-string ((list-of-strings list-of-strings)
-		      (dst.start       dst.len))
-      (if (null? list-of-strings)
-	  dst.str
-	(let* ((src.str   (car list-of-strings))
-	       (src.len   (unsafe.string-length src.str))
-	       (dst.start (unsafe.fx- dst.start src.len)))
-	  (%unsafe.string-copy! src.str 0 dst.str dst.start src.len)
-	  (next-string (cdr list-of-strings) dst.start))))))
+  (let next-string ((dst.str (unsafe.make-string dst.len))
+		    (list-of-strings list-of-strings)
+		    (dst.start       dst.len))
+    (if (null? list-of-strings)
+	dst.str
+      (let* ((src.str   (car list-of-strings))
+	     (src.len   (unsafe.string-length src.str))
+	     (dst.start (unsafe.fx- dst.start src.len)))
+	(%unsafe.string-copy! src.str 0 dst.str dst.start src.len)
+	(next-string dst.str (cdr list-of-strings) dst.start)))))
 
 
 ;;;; dot notation macros for port structures
@@ -2692,7 +2691,7 @@
 	  (read!		#f)
 	  (get-position		#t)
 	  (close		#f)
-	  (cookie		(default-cookie '())))
+	  (cookie		(default-cookie '(0 . ()))))
       ;;The most  common use of  this port type  is to append  bytes and
       ;;finally extract the whole output bytevector:
       ;;
@@ -2704,27 +2703,37 @@
       ;;      (extract)))
       ;;
       ;;for  this reason  we  implement the  device  of the  port to  be
-      ;;somewhat efficient for such use.  The device is a list stored in
-      ;;the  cookie, called  OUTPUT-BVS in  the code;  whenever  data is
-      ;;flushed  from the  buffer to  the  device: a  new bytevector  is
-      ;;prepended to OUTPUT-BVS.  When  the extract function is invoked:
-      ;;OUTPUT-BVS is reversed and concatenated obtaining a bytevector.
+      ;;somewhat efficient for such use.
+      ;;
+      ;;The  device is  a pair  stored in  the cookie;  the  cdr, called
+      ;;OUTPUT.BVS  in the  code, holds  null or  a list  of accumulated
+      ;;bytevectors; the  car, called OUTPUT.LEN in the  code, holds the
+      ;;total number of bytes accumulated so far.
+      ;;
+      ;;Whenever data  is flushed from the  buffer to the  device: a new
+      ;;bytevector  is   prepended  to  OUTPUT.BVS   and  OUTPUT.LEN  is
+      ;;incremented accordingly.  When  the extract function is invoked:
+      ;;OUTPUT.BVS  is  reversed  and  concatenated obtaining  a  single
+      ;;bytevector of length OUTPUT.LEN.
       ;;
       ;;This situation is violated  if SET-PORT-POSITION!  is applied to
       ;;the port  to move the position  before the end of  the data.  If
-      ;;this  happens:  SET-POSITION!  converts  OUTPUT-BVS  to  a  list
-      ;;holding a single full bytevector.
+      ;;this  happens:  SET-POSITION!   converts  OUTPUT.BVS to  a  list
+      ;;holding a single full bytevector (OUTPUT.LEN is left unchanged).
       ;;
-      ;;Whenever OUTPUT-BVS  holds a single bytevector  and the position
+      ;;Whenever OUTPUT.BVS  holds a single bytevector  and the position
       ;;is   less   than  such   bytevector   length:   it  means   that
-      ;;SET-PORT-POSITION! was used.
+      ;;SET-PORT-POSITION!  was used.
+      ;;
+      ;;Remember that bytevectors hold at most (GREATEST-FIXNUM) bytes.
       ;;
       (with-port (port)
 	(define (%%serialise-device! who reset?)
-	  (unless port.closed?
-	    (%unsafe.flush-output-port port who))
-	  (let ((bv (%unsafe.bytevector-reverse-and-concatenate port.device)))
-	    (set! port.device (if reset? '() (list bv)))
+	  (let* ((dev		port.device)
+		 (output.len	(car dev))
+		 (output.bvs	(cdr dev))
+		 (bv		(%unsafe.bytevector-reverse-and-concatenate output.bvs output.len who)))
+	    (set! port.device (if reset? '(0 . ()) `(,output.len . (,bv))))
 	    bv))
 	(define-inline (%serialise-device! who)
 	  (%%serialise-device! who #f))
@@ -2732,61 +2741,72 @@
 	  (%%serialise-device! who #t))
 
 	(define (write! src.bv src.start count)
+	  ;;Write data to the device.
+	  ;;
+	  (define who 'open-bytevector-output-port/write!)
 	  (%debug-assert (and (fixnum? count) (<= 0 count)))
-	  (let ((output-bvs   port.device)
-		(dev-position port.device.position))
-	    (if (and (%list-holding-single-value? output-bvs)
-		     (< dev-position (unsafe.bytevector-length (car output-bvs))))
+	  (let* ((dev			port.device)
+		 (output.len		(car dev))
+		 (output.bvs		(cdr dev))
+		 (dev-position		port.device.position)
+		 (new-dev-position	(+ count dev-position)))
+	    (unless (fixnum? new-dev-position)
+	      (%implementation-violation who
+		"request to write data to port would exceed maximum size of bytevectors"
+		new-dev-position))
+	    (if (unsafe.fx< dev-position output.len)
 		;;The  current  position  was  set  inside  the  already
 		;;accumulated data.
-		(write!/overwrite src.bv src.start count output-bvs dev-position)
+		(write!/overwrite src.bv src.start count output.len output.bvs dev-position
+				  new-dev-position)
 	      ;;The  current  position is  at  the  end  of the  already
 	      ;;accumulated data.
-	      (write!/append src.bv src.start count output-bvs))
+	      (write!/append src.bv src.start count output.bvs new-dev-position))
 	    count))
 
-	(define-inline (write!/overwrite src.bv src.start count output-bvs dev-position)
+	(define-inline (write!/overwrite src.bv src.start count output.len output.bvs dev-position
+					 new-dev-position)
 	  ;;Write data  to the device,  overwriting some of  the already
 	  ;;existing data.   The device is already composed  of a single
-	  ;;bytevector.   Remember  that DEV-POSITION  can  be either  a
-	  ;;fixnum or a bignum; the same goes for DST.LEN and DST.ROOM.
+	  ;;bytevector of length OUTPUT.LEN in the car of OUTPUT.BVS.
 	  ;;
-	  (let* ((dst.bv   (car output-bvs))
-		 (dst.len  (unsafe.bytevector-length dst.bv))
-		 (dst.room (- dst.len dev-position)))
-	    (if (<= count dst.room)
-		;;The new data fits in the single bytevector.
-		(%unsafe.bigdst-bytevector-copy! src.bv src.start dst.bv dev-position count)
+	  (let* ((dst.bv   (car output.bvs))
+		 (dst.len  output.len)
+		 (dst.room (unsafe.fx- dst.len dev-position)))
+	    (%debug-assert (fixnum? dst.room))
+	    (if (unsafe.fx<= count dst.room)
+		;;The new data fits  in the single bytevector.  There is
+		;;no need to update the device.
+		(%unsafe.bytevector-copy! src.bv src.start dst.bv dev-position count)
 	      (begin
-		(%debug-assert (fixnum? dst.room))
 		;;The new  data goes part  in the single  bytevector and
-		;;part in a new bytevector.
-		(%unsafe.bigdst-bytevector-copy! src.bv src.start dst.bv dev-position dst.room)
+		;;part  in a  new  bytevector.  We  need  to update  the
+		;;device.
+		(%unsafe.bytevector-copy! src.bv src.start dst.bv dev-position dst.room)
 		(let* ((src.start (unsafe.fx+ src.start dst.room))
-		       (count     (unsafe.fx- count     dst.room))
-		       (dst.bv    (unsafe.make-bytevector count)))
-		  (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
-		  (set! port.device (cons dst.bv output-bvs)))))))
+		       (count     (unsafe.fx- count     dst.room)))
+		  (write!/append src.bv src.start count output.bvs new-dev-position))))))
 
-	(define-inline (write!/append src.bv src.start count output-bvs)
-	  ;;Append new data to the  device.  Prepend a new bytevector to
-	  ;;OUTPUT-BVS.
+	(define-inline (write!/append src.bv src.start count output.bvs new-dev-position)
+	  ;;Append new data to  the accumulated bytevectors.  We need to
+	  ;;update the device.
 	  ;;
 	  (let ((dst.bv (unsafe.make-bytevector count)))
 	    (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
-	    (set! port.device (cons dst.bv output-bvs))))
+	    (set! port.device `(,new-dev-position . (,dst.bv . ,output.bvs)))))
 
 	(define (set-position! new-position)
 	  ;;NEW-POSITION has already been  validated as exact integer by
-	  ;;the  procedure  SET-PORT-POSITION!.  Here  we  only have  to
+	  ;;the  procedure SET-PORT-POSITION!.   The buffer  has already
+	  ;;been flushed  by SET-PORT-POSITION!.   Here we only  have to
 	  ;;verify  that  the  value  is  valid  as  offset  inside  the
 	  ;;underlying  full bytevector.   If this  validation succeeds:
-	  ;;SET-PORT-POSITION!  will store the position in the POS field
-	  ;;of the cookie.
+	  ;;SET-PORT-POSITION!  will store the position in the cookie.
 	  ;;
 	  (define who 'open-bytevector-output-port/set-position!)
-	  (unless (or (=  new-position port.device.position)
-		      (<= new-position (unsafe.bytevector-length (%serialise-device! who))))
+	  (unless (and (fixnum? new-position)
+		       (or (unsafe.fx=  new-position port.device.position)
+			   (unsafe.fx<= new-position (unsafe.bytevector-length (%serialise-device! who)))))
 	    (%raise-port-position-out-of-range who port new-position)))
 
 	(define (extract)
@@ -2795,6 +2815,8 @@
 	  ;;Return the single bytevector and reset the port to its empty
 	  ;;state.
 	  ;;
+	  (unless port.closed?
+	    (%unsafe.flush-output-port port who))
 	  (let ((bv (%serialise-device-and-reset! who)))
 	    (port.buffer.reset-to-empty!)
 	    (set! port.device.position 0)
@@ -2915,6 +2937,7 @@
       (define (write! src.str src.start count)
 	;;Write data to the device.
 	;;
+	(define who 'open-string-output-port/write!)
 	(%debug-assert (and (fixnum? count) (<= 0 count)))
 	(let* ((dev			port.device)
 	       (output.len		(car dev))
@@ -3606,30 +3629,36 @@
     (%assert-argument-is-count count who)
     (if (zero? count)
 	(quote #vu8())
-      (let retry-after-filling-buffer ((list-of-bytevectors	'())
+      (let retry-after-filling-buffer ((output.len		0)
+				       (list-of-bytevectors	'())
 				       (count			count))
-	(define (data-available-in-buffer)
+	(define (%data-available-in-buffer)
 	  (let* ((buffer.used-size		port.buffer.used-size)
 		 (buffer.offset			port.buffer.index)
 		 (amount-of-available		(unsafe.fx- buffer.used-size buffer.offset))
 		 (all-count-is-available?	(<= count amount-of-available))
-		 (amount-to-read		(if all-count-is-available? count amount-of-available)))
+		 (amount-to-read		(if all-count-is-available? count amount-of-available))
+		 (output.len1			(+ output.len amount-to-read)))
+	    (unless (fixnum? output.len1)
+	      (%implementation-violation who
+		"request to write data to port would exceed maximum size of bytevectors"
+		output.len1))
 	    (let ((bv (unsafe.make-bytevector amount-to-read)))
 	      (%unsafe.bytevector-copy! port.buffer buffer.offset bv 0 amount-to-read)
 	      (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-read))
-	      (let ((list-of-bytevectors (cons bv list-of-bytevectors)))
+	      (let ((list-of-bytevectors1 (cons bv list-of-bytevectors)))
 		(if all-count-is-available?
-		    (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors)
-		  (retry-after-filling-buffer list-of-bytevectors (- count amount-of-available)))))))
+		    (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors1 output.len1 who)
+		  (retry-after-filling-buffer output.len1 list-of-bytevectors1
+					      (- count amount-of-available)))))))
 	(%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	  (data-is-needed-at: port.buffer.index)
 	  (if-end-of-file:
-	   (let ((result (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors)))
-	     (if (zero? (unsafe.bytevector-length result))
-		 (eof-object)
-	       result)))
-	  (if-successful-refill: (data-available-in-buffer))
-	  (if-available-data: (data-available-in-buffer)))))))
+	   (if (zero? output.len)
+	       (eof-object)
+	     (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors output.len who)))
+	  (if-successful-refill: (%data-available-in-buffer))
+	  (if-available-data: (%data-available-in-buffer)))))))
 
 (define (get-bytevector-n! port dst.bv dst.start count)
   ;;Defined  by R6RS.   COUNT  must be  an  exact, non-negative  integer
@@ -3668,7 +3697,7 @@
 	count
       (let retry-after-filling-buffer ((tmp.start dst.start)
 				       (count     count))
-	(define (data-available-in-buffer)
+	(define (%data-available-in-buffer)
 	  (let* ((buffer.used-size		port.buffer.used-size)
 		 (buffer.offset			port.buffer.index)
 		 (amount-of-available		(unsafe.fx- buffer.used-size buffer.offset))
@@ -3685,8 +3714,8 @@
 	  (if-end-of-file: (if (= tmp.start dst.start)
 			       (eof-object)
 			     (- tmp.start dst.start)))
-	  (if-successful-refill: (data-available-in-buffer))
-	  (if-available-data: (data-available-in-buffer)))))))
+	  (if-successful-refill: (%data-available-in-buffer))
+	  (if-available-data: (%data-available-in-buffer)))))))
 
 (define (get-bytevector-some port)
   ;;Defined  by R6RS.   Read from  the  binary input  PORT, blocking  as
@@ -3708,7 +3737,7 @@
     (unless (unsafe.fx= port.attributes FAST-GET-BYTE-TAG)
       (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
     (let retry-after-filling-buffer ()
-      (define (data-available-in-buffer)
+      (define (%data-available-in-buffer)
 	(let* ((buffer.used-size	port.buffer.used-size)
 	       (buffer.offset		port.buffer.index)
 	       (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
@@ -3719,8 +3748,8 @@
       (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	(data-is-needed-at: port.buffer.index)
 	(if-end-of-file: (eof-object))
-	(if-successful-refill: (data-available-in-buffer))
-	(if-available-data: (data-available-in-buffer))))))
+	(if-successful-refill: (%data-available-in-buffer))
+	(if-available-data: (%data-available-in-buffer))))))
 
 (define (get-bytevector-all port)
   ;;Defined by R6RS.   Attempts to read all bytes until  the next end of
@@ -3740,24 +3769,30 @@
     ;;PORT.FAST-ATTRIBUTES which does not include it).
     (unless (unsafe.fx= port.attributes FAST-GET-BYTE-TAG)
       (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
-    (let retry-after-filling-buffer ((list-of-bytevectors '()))
-      (define (data-available-in-buffer)
+    (let retry-after-filling-buffer ((output.len          0)
+				     (list-of-bytevectors '()))
+      (define (%data-available-in-buffer)
 	(let* ((buffer.used-size	port.buffer.used-size)
 	       (buffer.offset		port.buffer.index)
 	       (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
-	       (dst.bv			(unsafe.make-bytevector amount-of-available)))
-	  (%unsafe.bytevector-copy! port.buffer buffer.offset dst.bv 0 amount-of-available)
-	  (set! port.buffer.index buffer.used-size)
-	  (retry-after-filling-buffer (cons dst.bv list-of-bytevectors))))
+	       (output.len		(+ output.len amount-of-available)))
+	  (unless (fixnum? output.len)
+	    (%implementation-violation who
+	      "request to write data to port would exceed maximum size of bytevectors"
+	      output.len))
+	  (let ((dst.bv (unsafe.make-bytevector amount-of-available)))
+	    (%unsafe.bytevector-copy! port.buffer buffer.offset dst.bv 0 amount-of-available)
+	    (set! port.buffer.index buffer.used-size)
+	    (retry-after-filling-buffer output.len
+					(cons dst.bv list-of-bytevectors)))))
       (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	(data-is-needed-at: port.buffer.index)
-	(if-end-of-file:
-	 (let ((result (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors)))
-	   (if (zero? (unsafe.bytevector-length result))
-	       (eof-object)
-	     result)))
-	(if-successful-refill: (data-available-in-buffer))
-	(if-available-data: (data-available-in-buffer))))))
+	(if-end-of-file: (if (zero? output.len)
+			     (eof-object)
+			   (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors
+								       output.len who)))
+	(if-successful-refill: (%data-available-in-buffer))
+	(if-available-data:    (%data-available-in-buffer))))))
 
 
 ;;;; character input functions
