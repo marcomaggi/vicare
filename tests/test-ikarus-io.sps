@@ -8432,6 +8432,180 @@
   #t)
 
 
+(parametrise ((check-test-name	'read-line))
+
+;;; --------------------------------------------------------------------
+;;; port argument validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(read-line 123))
+    => '(123))
+
+  (check	;argument is not an input port
+      (let ((port (%open-disposable-textual-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (read-line port)))
+    => #t)
+
+  (check	;argument is not a textual port
+      (let ((port (%open-disposable-binary-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (read-line port)))
+    => #t)
+
+  (check	;argument is not an open port
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-input-port port)
+	  (read-line port)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; input from a string port
+
+  (check	;no data available
+      (let ((port (open-string-input-port "")))
+	(read-line port))
+    => (eof-object))
+
+  (check	;one char available
+      (let ((port (open-string-input-port "A")))
+	(read-line port))
+    => "A")
+
+  (check	;newline
+      (let ((port (open-string-input-port "\n")))
+	(read-line port))
+    => "")
+
+  (check	;one char and newline
+      (let ((port (open-string-input-port "A\n")))
+	(read-line port))
+    => "A")
+
+  (check	;string and newline
+      (let ((port (open-string-input-port "ciao\n")))
+	(read-line port))
+    => "ciao")
+
+  ;; long string, no newline
+  (let* ((src.len 100)
+	 (src.str (let ((str (make-string src.len)))
+		    (do ((i 0 (+ 1 i)))
+			((= i src.len)
+			 str)
+		      (string-set! str i (let ((ch (integer->char i)))
+					   (if (char=? ch #\newline)
+					       #\A
+					     ch)))))))
+
+    (check
+	(let ((port (open-string-input-port src.str)))
+	  (read-line port))
+      => src.str)
+
+    #f)
+
+  (check	;multiple lines
+      (let ((port (open-string-input-port "ciao\nhello\nsalut\n")))
+	(let ((L1 (read-line port))
+	      (L2 (read-line port))
+	      (L3 (read-line port)))
+	  (list L1 L2 L3 (port-eof? port))))
+    => '("ciao" "hello" "salut" #t))
+
+;;; --------------------------------------------------------------------
+;;; input from a bytevector with Latin-1 encoding
+
+  (check	;no data available
+      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (latin-1-codec)))))
+	(read-line port))
+    => (eof-object))
+
+  (check	;some data available, no newline
+      (let ((port (open-bytevector-input-port '#vu8(65 66 67 68)
+					      (make-transcoder (latin-1-codec)))))
+	(read-line port))
+    => "ABCD")
+
+  (check	;some data available, newline
+      (let ((port (open-bytevector-input-port '#vu8(65 66 67 10 68)
+					      (make-transcoder (latin-1-codec)))))
+	(read-line port))
+    => "ABC")
+
+;;; --------------------------------------------------------------------
+;;; input from a bytevector with UTF-8 encoding
+
+  (check	;no data available
+      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-8-codec)))))
+	(read-line port))
+    => (eof-object))
+
+  (check	;some data available, no newline
+      (let ((port (open-bytevector-input-port (string->utf8 "ABCD")
+					      (make-transcoder (utf-8-codec)))))
+	(read-line port))
+    => "ABCD")
+
+  (check	;some data available, newline
+      (let ((port (open-bytevector-input-port (string->utf8 "ABC\nD")
+					      (make-transcoder (utf-8-codec)))))
+	(read-line port))
+    => "ABC")
+
+;;; --------------------------------------------------------------------
+;;; input from a bytevector with UTF-16 encoding
+
+  (check	;no data available
+      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-16-codec)))))
+	(read-line port))
+    => (eof-object))
+
+  (check	;some data available, no newline
+      (let ((port (open-bytevector-input-port (string->utf16 "ABCD" (endianness little))
+					      (make-transcoder (utf-16-codec)))))
+	(read-line port))
+    => "ABCD")
+
+  (check	;some data available, newline
+      (let ((port (open-bytevector-input-port (string->utf16 "ABC\nD" (endianness little))
+					      (make-transcoder (utf-16-codec)))))
+	(read-line port))
+    => "ABC")
+
+  (check	;some data available, no newline
+      (let ((port (open-bytevector-input-port (bytevector-append
+					       BYTE-ORDER-MARK-UTF-16-BE
+					       (string->utf16 "ABCD" (endianness big)))
+					      (make-transcoder (utf-16-codec)))))
+	(read-line port))
+    => "ABCD")
+
+  (check	;some data available, newline
+      (let ((port (open-bytevector-input-port (bytevector-append
+					       BYTE-ORDER-MARK-UTF-16-BE
+					       (string->utf16 "ABC\nD" (endianness big)))
+					      (make-transcoder (utf-16-codec)))))
+	(read-line port))
+    => "ABC")
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

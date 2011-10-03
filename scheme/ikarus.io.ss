@@ -4928,9 +4928,29 @@
 ;;;; string line input functions
 
 (define (get-line port)
-  (%do-get-line p 'get-line))
+  ;;Defined  by  R6RS.  Read  from  the textual  input  PORT  up to  and
+  ;;including the linefeed character or end of file, decoding characters
+  ;;in the same manner as GET-STRING-N and GET-STRING-N!.
+  ;;
+  ;;If a linefeed character is read, a string containing all of the text
+  ;;up to  (but not including)  the linefeed character is  returned, and
+  ;;the port is updated to point just past the linefeed character.
+  ;;
+  ;;If an  end of file is  encountered before any  linefeed character is
+  ;;read, but some characters have  been read and decoded as characters,
+  ;;a string containing those characters is returned.
+  ;;
+  ;;If an end of file is encountered before any characters are read, the
+  ;;EOF object is returned.
+  ;;
+  ;;NOTE The end-of-line style, if not NONE, will cause all line endings
+  ;;to be read as linefeed characters.
+  ;;
+  (%do-get-line port 'get-line))
 
 (define read-line
+  ;;Defined by Ikarus.  Like GET-LINE.
+  ;;
   (case-lambda
    (()
     (%do-get-line (current-input-port) 'read-line))
@@ -4938,28 +4958,51 @@
     (%do-get-line port 'read-line))))
 
 (define (%do-get-line port who)
-  (define (get-it port)
-    (let f ((port port) (n 0) (ac '()))
-      (let ((x (get-char port)))
-	(cond ((eqv? x #\newline)
-	       (make-it n ac))
+  (define-inline (%get-it ?read-char)
+    (let loop ((port		port)
+	       (number-of-chars	0)
+	       (reverse-chars	'()))
+      (let ((x (?read-char port who)))
+	(cond ((and (char? x) (unsafe.char= x #\newline))
+	       (reversed-chars->string number-of-chars reverse-chars))
 	      ((eof-object? x)
-	       (if (null? ac)
+	       (if (null? reverse-chars)
 		   x
-		 (make-it n ac)))
+		 (reversed-chars->string number-of-chars reverse-chars)))
 	      (else
-	       (f port (unsafe.fxadd1 n) (cons x ac)))))))
-  (define (make-it n revls)
-    (let f ((s  (make-string n))
-	    (i  (unsafe.fxsub1 n))
-	    (ls revls))
-      (cond ((pair? ls)
-	     (string-set! s i (car ls))
-	     (f s (unsafe.fxsub1 i) (cdr ls)))
-	    (else s))))
-  (%assert-value-is-input-port port who)
-  (%unsafe.assert-value-is-textual-port port who)
-  (get-it port))
+	       (loop port (unsafe.fxadd1 number-of-chars) (cons x reverse-chars)))))))
+
+  (define (reversed-chars->string dst.len reverse-chars)
+    (let next-char ((dst.str       (unsafe.make-string dst.len))
+		    (dst.index     (unsafe.fxsub1 dst.len))
+		    (reverse-chars reverse-chars))
+      (if (null? reverse-chars)
+	  dst.str
+	(begin
+	  (string-set! dst.str dst.index (car reverse-chars))
+	  (next-char dst.str (unsafe.fxsub1 dst.index) (cdr reverse-chars))))))
+
+  (define-inline (%read-utf16le ?port ?who)
+    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
+  (define-inline (%read-utf16be ?port ?who)
+    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
+
+  (%assert-value-is-port port who)
+  (case-textual-input-port-fast-tag port
+    ((FAST-GET-UTF8-TAG)
+     (%get-it %unsafe.read-char-from-port-with-fast-get-utf8-tag))
+    ((FAST-GET-CHAR-TAG)
+     (%get-it %unsafe.read-char-from-port-with-fast-get-char-tag))
+    ((FAST-GET-LATIN-TAG)
+     (%get-it %unsafe.read-char-from-port-with-fast-get-latin-tag))
+    ((FAST-GET-UTF16LE-TAG)
+     (%get-it %read-utf16le))
+    ((FAST-GET-UTF16BE-TAG)
+     (%get-it %read-utf16be))
+    (else
+     (if (%validate-untagged-port-as-open-textual-input-then-parse-bom-and-add-fast-tag port who)
+	 (eof-object)
+       (%do-get-line port who)))))
 
 
 ;;;; unbuffered byte and char output
