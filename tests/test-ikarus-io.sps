@@ -8606,7 +8606,8 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'put-u8))
+(parametrise ((check-test-name			'put-u8)
+	      (bytevector-port-buffer-size	8))
 
 ;;; --------------------------------------------------------------------
 ;;; port argument validation
@@ -8616,7 +8617,7 @@
 ;;;		 (pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
-	(put-u8 123))
+	(put-u8 123 1))
     => '(123))
 
   (check	;argument is not an output port
@@ -8625,7 +8626,7 @@
 ;;;		   (pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
-	  (put-u8 port)))
+	  (put-u8 port 1)))
     => #t)
 
   (check	;argument is not a binary port
@@ -8634,7 +8635,7 @@
 ;;;		   (pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
-	  (put-u8 port)))
+	  (put-u8 port 1)))
     => #t)
 
   (check	;argument is not an open port
@@ -8644,9 +8645,79 @@
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-output-port port)
-	  (put-u8 port)))
+	  (put-u8 port 1)))
     => #t)
 
+;;; --------------------------------------------------------------------
+;;; octet argument validation
+
+  (check	;octet is not an integer
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(let ((port (%open-disposable-binary-output-port)))
+	  (put-u8 port #\a)))
+    => '(#\a))
+
+  (check	;octet is not an exact integer
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(let ((port (%open-disposable-binary-output-port)))
+	  (put-u8 port 1.0)))
+    => '(1.0))
+
+  (check	;octet is negative
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(let ((port (%open-disposable-binary-output-port)))
+	  (put-u8 port -1)))
+    => '(-1))
+
+  (check	;octet is too big
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(let ((port (%open-disposable-binary-output-port)))
+	  (put-u8 port 256)))
+    => '(256))
+
+  (check	;octet is not a fixnum
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(let ((port (%open-disposable-binary-output-port)))
+	  (put-u8 port (+ 1 (greatest-fixnum)))))
+    => (list (+ 1 (greatest-fixnum))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(put-u8 port 100)
+	(extract))
+    => '#vu8(100))
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(put-u8 port 0)
+	(put-u8 port 255)
+	(extract))
+    => '#vu8(0 255))
+
+  (check	;fill the buffer
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(do ((i 0 (+ 1 i)))
+	    ((= i 10)
+	     (extract))
+	  (put-u8 port i)))
+    => '#vu8(0 1 2 3 4 5 6 7 8 9))
 
   #t)
 

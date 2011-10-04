@@ -890,6 +890,13 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-inline (%assert-argument-is-an-octet ?value ?who)
+  (let ((x ?value))
+    (unless (and (fixnum? x)
+		 (unsafe.fx>= x 0)
+		 (unsafe.fx<= x 255))
+      (assertion-violation ?who "expected octet as argument" ?value))))
+
 (define-inline (%assert-value-is-fixnum ?obj ?who)
   (unless (fixnum? ?obj)
     (assertion-violation ?who "not a fixnum" ?obj)))
@@ -1032,15 +1039,6 @@
     ((_ ?op1 ?op2 . ?ops)
      (unsafe.fxlogor ?op1 (%unsafe.fxior ?op2 . ?ops)))))
 
-(define-syntax %u8?
-  ;;Evaluate to true if the argument is a fixnum representing an octet.
-  ;;
-  (syntax-rules ()
-    ((_ x)
-     (and (fixnum? x)
-	  (unsafe.fx>= x 0)
-	  (unsafe.fx<= x 255)))))
-
 
 ;;;; port tagging helpers
 
@@ -1064,6 +1062,25 @@
     ;; (unless port.read!
     ;;   (assertion-violation who "port is not an input port" port))
     (set! port.fast-attributes FAST-GET-BYTE-TAG)))
+
+(define (%validate-untagged-port-as-open-binary-output-then-tag-it port who)
+  ;;Assuming  that PORT  is a  port object:  validate PORT  as  an open,
+  ;;binary, output port.  This function is to be called if the port fast
+  ;;attributes are  not equal to FAST-PUT-BYTE-TAG.   If successful mark
+  ;;the  port  with the  FAST-PUT-BYTE-TAG  and  return,  else raise  an
+  ;;exception.
+  ;;
+  ;;This function is meant to be used by PUT-U8 and PUT-BYTEVECTOR.
+  ;;
+  (%unsafe.assert-value-is-binary-port port who)
+  (%unsafe.assert-value-is-output-port port who)
+  (%unsafe.assert-value-is-open-port   port who)
+  (with-port (port)
+    ;; (when port.transcoder
+    ;;   (assertion-violation who "port is not binary" port))
+    ;; (unless port.write!
+    ;;   (assertion-violation who "port is not an input port" port))
+    (set! port.fast-attributes FAST-PUT-BYTE-TAG)))
 
 (define (%validate-untagged-port-as-open-textual-input-then-parse-bom-and-add-fast-tag port who)
   ;;Assuming PORT  is a  port object: validate  it as an  open, textual,
@@ -3295,30 +3312,52 @@
       (%unsafe.assert-value-is-open-port port who)
       (%unsafe.flush-output-port port who)))))
 
+(define-syntax room-is-needed-at:	(syntax-rules ()))
+(define-syntax if-successful-flush:	(syntax-rules ()))
+(define-syntax if-device-cannot-absorb:	(syntax-rules ()))
+
+(define-syntax %flush-bytevector-buffer-and-evaluate
+  (syntax-rules ()
+    ((%flush-bytevector-buffer-and-evaluate (?port ?who)
+       (room-is-needed-at: ?buffer.index)
+       (if-successful-flush: . ?available-body)
+       (if-device-cannot-absorb: . ?failure-body))
+     (let ((port ?port))
+       (with-port-having-bytevector-buffer (port)
+	 (let try-again-after-flushing-buffer ()
+	   (if (unsafe.fx< ?buffer.index port.buffer.size)
+	       (begin . ?available-body)
+	     (begin
+	       (%debug-assert (= port.buffer.used-size port.buffer.index))
+	       (%debug-assert (= port.buffer.used-size port.buffer.size))
+	       (guard (E ((i/o-write-error? E)
+			  (begin . ?failure-body))
+			 (else (raise E)))
+		 (%unsafe.flush-output-port port ?who))
+	       (try-again-after-flushing-buffer)))))))))
+
 (define (%unsafe.flush-output-port port who)
-  ;;PORT must be  an open output port, either  binary or textual.
-  ;;Flush  any buffered  output from  the buffer  of PORT  to the
-  ;;underlying  file,  device,  or  object.   Return  unspecified
-  ;;values.
+  ;;PORT must be  an open output port, either  binary or textual.  Flush
+  ;;any buffered output from the  buffer of PORT to the underlying file,
+  ;;device, or object.  Return unspecified values.
   ;;
-  ;;This should  be the only  function to call the  port's WRITE!
+  ;;This  should  be  the  only  function  to  call  the  port's  WRITE!
   ;;function.
   ;;
-  ;;If PORT.WRITE!   returns an invalid  value: the state  of the
-  ;;port is considered undefined  and the port unusable; the port
-  ;;is marked closed to avoid further operations and an assertion
-  ;;violation is raised.
+  ;;If PORT.WRITE!  returns  an invalid value: the state  of the port is
+  ;;considered  undefined and  the  port unusable;  the  port is  marked
+  ;;closed to avoid further operations  and a condition object is raised
+  ;;with components: &i/o-port, &i/o-write, &who, &message, &irritants.
   ;;
-  ;;If PORT.WRITE!   returns zero written bytes  or cannot absorb
-  ;;all  the bytes in  the buffer:  this function  loops retrying
-  ;;until PORT.WRITE!  accepts the data, which may be forever but
-  ;;it is  compliant to  R6RS requirement to  block as  needed to
-  ;;output data.
+  ;;If PORT.WRITE!  returns zero written  bytes or cannot absorb all the
+  ;;bytes in the buffer:  this function loops retrying until PORT.WRITE!
+  ;;accepts the data,  which may be forever but it  is compliant to R6RS
+  ;;requirement to block as needed to output data.
   ;;
-  ;;FIXME  As  a  Vicare-specific  customisation: we  may  add  a
-  ;;parameter to optionally  request raising a special exception,
-  ;;like "port  would block",  when the underlying  device cannot
-  ;;absorb all the data in the buffer.
+  ;;FIXME As a Vicare-specific customisation:  we may add a parameter to
+  ;;optionally  request raising  a special  exception, like  "port would
+  ;;block", when the underlying device cannot absorb all the data in the
+  ;;buffer.
   ;;
   (with-port (port)
     (unless (unsafe.fxzero? port.buffer.used-size)
@@ -3364,7 +3403,11 @@
 	      (begin
 		;;Avoid further operations and raise an error.
 		(port.mark-as-closed)
-		(assertion-violation who "write! returned an invalid value" count))
+		(raise (condition (make-i/o-write-error)
+				  (make-i/o-port-error port)
+				  (make-who-condition who)
+				  (make-message-condition "write! returned an invalid value")
+				  (make-irritants-condition count))))
 	    (cond ((unsafe.fx= count port.buffer.used-size)
 		   ;;Full success, all data absorbed.
 		   (port.device.position.incr! port.buffer.used-size)
@@ -5022,28 +5065,30 @@
   ;;
   (define who 'put-u8)
   (%assert-value-is-output-port port who)
-  (%unsafe.assert-value-is-binary-port port who)
-  (unless (%u8? octet)
-    (assertion-violation who "expected octet as argument" octet))
   (with-port-having-bytevector-buffer (port)
-    (%debug-assert (unsafe.fx= FAST-PUT-BYTE-TAG port.fast-attributes))
-    (let try-again-after-flushing-buffer ()
-      (if (unsafe.fx< port.buffer.index port.buffer.size)
-	  ;;The buffer exists and it has room for one byte.
-	  (let ((buffer.index	  port.buffer.index)
-		(buffer.used-size port.buffer.used-size))
-	    (%debug-assert (<= buffer.index buffer.used-size))
-	    (unsafe.bytevector-u8-set! port.buffer buffer.index octet)
-	    (when (unsafe.fx= buffer.index buffer.used-size)
-	      (set! port.buffer.used-size (unsafe.fxadd1 buffer.used-size)))
-	    (set! port.buffer.index (unsafe.fxadd1 buffer.index)))
-	;;The buffer exists but it has no room: flush the buffer and try
-	;;again.
-	(begin
-	  (%debug-assert (= port.buffer.used-size port.buffer.index))
-	  (%debug-assert (= port.buffer.used-size port.buffer.size))
-	  (%unsafe.flush-output-port port who)
-	  (try-again-after-flushing-buffer))))))
+    ;;Remember  that PORT.ATTRIBUTES  includes the  CLOSED?  bit  (it is
+    ;;PORT.FAST-ATTRIBUTES which does not include it).
+    (unless (unsafe.fx= port.attributes FAST-GET-BYTE-TAG)
+      (%validate-untagged-port-as-open-binary-output-then-tag-it port who))
+    (%assert-argument-is-an-octet octet who)
+    (%flush-bytevector-buffer-and-evaluate (port who)
+      (room-is-needed-at: port.buffer.index)
+      (if-successful-flush:
+       (let ((buffer.index	  port.buffer.index)
+	     (buffer.used-size port.buffer.used-size))
+	 (%debug-assert (<= buffer.index buffer.used-size))
+	 (unsafe.bytevector-u8-set! port.buffer buffer.index octet)
+	 (when (unsafe.fx= buffer.index buffer.used-size)
+	   (set! port.buffer.used-size (unsafe.fxadd1 buffer.used-size)))
+	 (set! port.buffer.index (unsafe.fxadd1 buffer.index))))
+      (if-device-cannot-absorb:
+       (raise
+	(condition
+	 (make-i/o-write-error)
+	 (make-i/o-port-error port)
+	 (make-who-condition who)
+	 (make-message-condition "device underlying binary output port cannot absorb octect")
+	 (make-irritants-condition octet)))))))
 
 (define put-bytevector
   ;;(put-bytevector port bv)
@@ -6364,6 +6409,7 @@
 ;;; eval: (put 'with-port-having-bytevector-buffer	'scheme-indent-function 1)
 ;;; eval: (put 'with-port-having-string-buffer		'scheme-indent-function 1)
 ;;; eval: (put 'case-textual-input-port-fast-tag	'scheme-indent-function 1)
+;;; eval: (put '%flush-bytevector-buffer-and-evaluate	'scheme-indent-function 1)
 ;;; eval: (put '%refill-bytevector-buffer-and-evaluate		'scheme-indent-function 1)
 ;;; eval: (put '%maybe-refill-bytevector-buffer-and-evaluate	'scheme-indent-function 1)
 ;;; eval: (put '%implementation-violation		'scheme-indent-function 1)
