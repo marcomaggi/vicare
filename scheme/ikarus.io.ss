@@ -620,7 +620,7 @@
 
 ;;;; port tags
 ;;
-;;All the tags have 15 bits.  The least significant 13 bits are reserved
+;;All the tags have 16 bits.  The least significant 13 bits are reserved
 ;;as the "fast attributes", which is be used by the macros:
 ;;
 ;;   %CASE-TEXTUAL-INPUT-PORT-FAST-TAG
@@ -651,10 +651,20 @@
 
 ;;The following bitpatterns are used for additional attributes.
 ;;
-;;                              5432109876543210
-(define I/O-PORT-TAG          #b0100000000000000)
+;;                              65432109876543210
+;;                              |||                non-fast-tag bits
+;;                                |                true if I/O port
+;;                              ||                 buffer mode bits
+;;                              65432109876543210
+(define I/O-PORT-TAG          #b00100000000000000)
 		;Used to tag ports that are both input and output.
-
+(define BUFFER-MODE-NONE-TAG  #b01000000000000000)
+		;Used to tag ports having NONE as buffer mode.
+(define BUFFER-MODE-LINE-TAG  #b10000000000000000)
+		;Used to tag ports having LINE as buffer mode.
+;;
+;;Notice that there  is no BUFFER-MODE-BLOCK-TAG bit: only  for LINE and
+;;NONE buffering something must be done.
 
 ;;If we are just interested in the port type: input or output, binary or
 ;;textual, we can do:
@@ -803,22 +813,22 @@
 
 ;;; --------------------------------------------------------------------
 
-;;                                 5432109876543210
-(define FAST-ATTRS-MASK          #b0011111111111111)
-(define OTHER-ATTRS-MASK         #b1100000000000000)
+;;                                 65432109876543210
+(define FAST-ATTRS-MASK          #b00011111111111111)
+(define OTHER-ATTRS-MASK         #b11100000000000000)
 
 (define-inline ($port-fast-attrs port)
   ;;Extract the fast-tag bits from the tag of PORT.
   ;;
   (unsafe.fxand ($port-attrs port) FAST-ATTRS-MASK))
 
+(define-inline ($set-port-fast-attrs! ?port ?fast-tag)
+  ($set-port-attrs! ?port (%unsafe.fxior ($port-other-attrs ?port) ?fast-tag)))
+
 (define-inline ($port-other-attrs port)
   ;;Extract the non-fast-tag bits from the tag of PORT.
   ;;
   (unsafe.fxand ($port-attrs port) OTHER-ATTRS-MASK))
-
-(define-inline ($set-port-fast-attrs! ?port ?fast-tag)
-  ($set-port-attrs! ?port (%unsafe.fxior ($port-other-attrs ?port) ?fast-tag)))
 
 (define-syntax %case-binary-input-port-fast-tag
   (lambda (stx)
@@ -1273,24 +1283,25 @@
   ;;
   (with-port-having-bytevector-buffer (port)
     (let ((big-endian? (%parse-byte-order-mark port who UTF-16-BIG-ENDIAN-BYTE-ORDER-MARK-LIST)))
-      (case big-endian?
-	((#t)
-	 (set! port.fast-attributes FAST-GET-UTF16BE-TAG)
-	 #f)
-	((#f)
-	 (let ((little-endian? (%parse-byte-order-mark port who UTF-16-LITTLE-ENDIAN-BYTE-ORDER-MARK-LIST)))
-	   (case little-endian?
-	     ((#t #f)
-	      ;;If  no BOM  is present,  we select  little  endian by
-	      ;;default.
-	      (set! port.fast-attributes FAST-GET-UTF16LE-TAG)
-	      #f)
-	     (else
-	      (%debug-assert (eof-object? little-endian?))
-	      #t))))
-	(else
-	 (%debug-assert (eof-object? big-endian?))
-	 #t)))))
+      (if (boolean? big-endian?)
+	  (if big-endian?
+	      (begin
+		(set! port.fast-attributes FAST-GET-UTF16BE-TAG)
+		#f)
+	    (let ((little-endian? (%parse-byte-order-mark port who
+							  UTF-16-LITTLE-ENDIAN-BYTE-ORDER-MARK-LIST)))
+	      (if (boolean? little-endian?)
+		  ;;If  no BOM is  present, we  select little  endian by
+		  ;;default.
+		  (begin
+		    (set! port.fast-attributes FAST-GET-UTF16LE-TAG)
+		    #f)
+		(begin
+		  (%debug-assert (eof-object? little-endian?))
+		  #t))))
+	(begin
+	  (%debug-assert (eof-object? big-endian?))
+	  #t)))))
 
 (define (%parse-bom-and-add-fast-tag port who)
   ;;Assuming PORT  is a  port object: validate  it as an  open, textual,
@@ -1311,7 +1322,8 @@
 	    (set! port.fast-attributes FAST-GET-UTF16BE-TAG)
 	    #f)
 	   ((#f)
-	    (let ((little-endian? (%parse-byte-order-mark port who UTF-16-LITTLE-ENDIAN-BYTE-ORDER-MARK-LIST)))
+	    (let ((little-endian? (%parse-byte-order-mark port who
+							  UTF-16-LITTLE-ENDIAN-BYTE-ORDER-MARK-LIST)))
 	      (case little-endian?
 		((#t #f)
 		 ;;If  no BOM  is present,  we select  little  endian by
@@ -1457,12 +1469,12 @@
 (define-syntax with-port-having-bytevector-buffer
   (syntax-rules ()
     ((_ (?port) . ?body)
-     (%with-port (?port bytevector-length) . ?body))))
+     (%with-port (?port unsafe.bytevector-length) . ?body))))
 
 (define-syntax with-port-having-string-buffer
   (syntax-rules ()
     ((_ (?port) . ?body)
-     (%with-port (?port string-length) . ?body))))
+     (%with-port (?port unsafe.string-length) . ?body))))
 
 (define-syntax %with-port
   (lambda (stx)
@@ -1505,6 +1517,10 @@
 		;true if the port is closed
 	      (PORT.INPUT-AND-OUTPUT?		(%dot-id ".input-and-output?"))
 		;true if the port is both input and output
+	      (PORT.BUFFER-MODE-LINE?		(%dot-id ".buffer-mode-line?"))
+		;true if the port has LINE as buffer mode
+	      (PORT.BUFFER-MODE-NONE?		(%dot-id ".buffer-mode-none?"))
+		;true if the port has NONE as buffer mode
 	      (PORT.FAST-ATTRIBUTES		(%dot-id ".fast-attributes"))
 		;fixnum, the type attributes bits
 	      (PORT.BUFFER.SIZE			(%dot-id ".buffer.size"))
@@ -1544,6 +1560,10 @@
 		  (PORT.CLOSED?		(identifier-syntax (%unsafe.port-closed? ?port)))
 		  (PORT.INPUT-AND-OUTPUT?
 		   (identifier-syntax (%unsafe.port-input-and-output? ?port)))
+		  (PORT.BUFFER-MODE-LINE?
+		   (identifier-syntax (%unsafe.port-buffer-mode-line? ?port)))
+		  (PORT.BUFFER-MODE-NONE?
+		   (identifier-syntax (%unsafe.port-buffer-mode-none? ?port)))
 		  (PORT.ATTRIBUTES
 		   (identifier-syntax
 		    (_			($port-attrs ?port))
@@ -2246,7 +2266,10 @@
   (define-unsafe-predicate %unsafe.binary-input-port?	BINARY-INPUT-PORT-BITS)
   (define-unsafe-predicate %unsafe.binary-output-port?	BINARY-OUTPUT-PORT-BITS)
   (define-unsafe-predicate %unsafe.textual-input-port?	TEXTUAL-INPUT-PORT-BITS)
-  (define-unsafe-predicate %unsafe.textual-output-port?	TEXTUAL-OUTPUT-PORT-BITS))
+  (define-unsafe-predicate %unsafe.textual-output-port?	TEXTUAL-OUTPUT-PORT-BITS)
+
+  (define-unsafe-predicate %unsafe.port-buffer-mode-none?	BUFFER-MODE-NONE-TAG)
+  (define-unsafe-predicate %unsafe.port-buffer-mode-line?	BUFFER-MODE-LINE-TAG))
 
 
 ;;;; guarded ports
@@ -5334,17 +5357,18 @@
 (define (%do-put-char port ch who)
   (%assert-argument-is-port port who)
   (%assert-argument-is-char ch   who)
-  (%case-textual-output-port-fast-tag (port who)
-    ((FAST-PUT-UTF8-TAG)
-     (%put-char-to-port-with-fast-utf8-tag port ch who))
-    ((FAST-PUT-CHAR-TAG)
-     (%put-char-to-port-with-fast-char-tag port ch who))
-    ((FAST-PUT-LATIN-TAG)
-     (%put-char-to-port-with-fast-latin1-tag port ch who))
-    ((FAST-PUT-UTF16LE-TAG)
-     (%put-char-to-port-with-fast-utf16le-tag port ch who))
-    ((FAST-PUT-UTF16BE-TAG)
-     (%put-char-to-port-with-fast-utf16be-tag port ch who))))
+  (let ((code-point (unsafe.char->integer ch)))
+    (%case-textual-output-port-fast-tag (port who)
+      ((FAST-PUT-UTF8-TAG)
+       (%put-char-to-port-with-fast-utf8-tag port ch code-point who))
+      ((FAST-PUT-CHAR-TAG)
+       (%put-char-to-port-with-fast-char-tag port ch who))
+      ((FAST-PUT-LATIN-TAG)
+       (%put-char-to-port-with-fast-latin1-tag port ch code-point who))
+      ((FAST-PUT-UTF16LE-TAG)
+       (%put-char-to-port-with-fast-utf16le-tag port ch code-point who))
+      ((FAST-PUT-UTF16BE-TAG)
+       (%put-char-to-port-with-fast-utf16be-tag port ch code-point who)))))
 
 (define (%unsafe.put-byte! port b who)
   (let ((i ($port-index port)) (j ($port-size port)))
@@ -5361,111 +5385,110 @@
 ;;; --------------------------------------------------------------------
 ;;; PUT-CHAR for port with string buffer
 
-(define-inline (%put-char-to-port-with-fast-char-tag port ch who)
-  (let ((i ($port-index port))
-	(j ($port-size port)))
-    (if (unsafe.fx< i j)
-	(begin
-	  (string-set! ($port-buffer port) i ch)
-	  ($set-port-index! port (unsafe.fxadd1 i)))
-      (if (unsafe.fxzero? j)
-	  (%put-char/unbuffered! port ch who)
-	(begin
-	  (%unsafe.flush-output-port port who)
-	  (%do-put-char port ch who))))))
+(define (%put-char-to-port-with-fast-char-tag port ch who)
+  (with-port-having-string-buffer (port)
+    (let retry-after-flushing-buffer ()
+      (let ((buffer.offset	port.buffer.index)
+	    (buffer.used-size	port.buffer.used-size))
+	(if (unsafe.fx< buffer.offset port.buffer.size)
+	    (begin
+	      (string-set! port.buffer buffer.offset ch)
+	      (set! port.buffer.index (unsafe.fxadd1 buffer.offset))
+	      (when (unsafe.fx= buffer.offset buffer.used-size)
+		(set! port.buffer.used-size port.buffer.index)))
+	  (begin
+	    (%unsafe.flush-output-port port who)
+	    (retry-after-flushing-buffer)))))))
 
 ;;; --------------------------------------------------------------------
 ;;; PUT-CHAR for port with bytevector buffer and UTF-8 transcoder
 
-(define-inline (%put-char-to-port-with-fast-utf8-tag port ch who)
+(define (%put-char-to-port-with-fast-utf8-tag port ch code-point who)
   (let ((i ($port-index port))
 	(j ($port-size port)))
-    (let ((b (char->integer ch)))
-      (cond ((unsafe.fx< b 128)
-	     (if (unsafe.fx< i j)
-		 (begin
-		   (bytevector-u8-set! ($port-buffer port) i b)
-		   ($set-port-index! port (unsafe.fxadd1 i)))
-	       (if (unsafe.fxzero? j)
-		   (%put-byte/unbuffered! port b who)
-		 (begin
-		   (%unsafe.flush-output-port port who)
-		   (%unsafe.put-byte! port b who)))))
-	    (else
-	     (%unsafe.put-char-utf8-mode port b who))))))
+    (cond ((unsafe.fx< code-point 128)
+	   (if (unsafe.fx< i j)
+	       (begin
+		 (bytevector-u8-set! ($port-buffer port) i code-point)
+		 ($set-port-index! port (unsafe.fxadd1 i)))
+	     (if (unsafe.fxzero? j)
+		 (%put-byte/unbuffered! port ch code-point who)
+	       (begin
+		 (%unsafe.flush-output-port port who)
+		 (%unsafe.put-byte! port ch code-point who)))))
+	  (else
+	   (%unsafe.put-char-utf8-mode port ch code-point who)))))
 
-(define (%unsafe.put-char-utf8-mode port b who)
+(define (%unsafe.put-char-utf8-mode port ch code-point who)
   (cond
-   ((unsafe.fx< b 128)
-    (%unsafe.put-byte! port b who))
-   ((unsafe.fx<= b #x7FF)
-    (%unsafe.put-byte! port (%unsafe.fxior #b11000000 (unsafe.fxsra b 6)) who)
-    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand b #b111111)) who))
-   ((unsafe.fx<= b #xFFFF)
-    (%unsafe.put-byte! port (%unsafe.fxior #b11100000 (unsafe.fxsra b 12)) who)
-    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 6) #b111111)) who)
-    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand b #b111111)) who))
+   ((unsafe.fx< code-point 128)
+    (%unsafe.put-byte! port ch code-point who))
+   ((unsafe.fx<= code-point #x7FF)
+    (%unsafe.put-byte! port (%unsafe.fxior #b11000000 (unsafe.fxsra code-point 6)) who)
+    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand code-point #b111111)) who))
+   ((unsafe.fx<= code-point #xFFFF)
+    (%unsafe.put-byte! port (%unsafe.fxior #b11100000 (unsafe.fxsra code-point 12)) who)
+    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra code-point 6) #b111111)) who)
+    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand code-point #b111111)) who))
    (else
-    (%unsafe.put-byte! port (%unsafe.fxior #b11110000 (unsafe.fxsra b 18)) who)
-    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 12) #b111111)) who)
-    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 6) #b111111)) who)
-    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand b #b111111)) who))))
+    (%unsafe.put-byte! port (%unsafe.fxior #b11110000 (unsafe.fxsra code-point 18)) who)
+    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra code-point 12) #b111111)) who)
+    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra code-point 6) #b111111)) who)
+    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand code-point #b111111)) who))))
 
 ;;; --------------------------------------------------------------------
 ;;; PUT-CHAR for port with bytevector buffer and Latin-1 transcoder
 
-(define-inline (%put-char-to-port-with-fast-latin1-tag port ch who)
-  (let ((i ($port-index port)) (j ($port-size port)))
-    (let ((b (char->integer ch)))
-      (cond ((unsafe.fx< b 256)
-	     (if (unsafe.fx< i j)
-		 (begin
-		   (bytevector-u8-set! ($port-buffer port) i b)
-		   ($set-port-index! port (unsafe.fxadd1 i)))
-	       (if (unsafe.fxzero? j)
-		   (%put-byte/unbuffered! port b who)
-		 (begin
-		   (%unsafe.flush-output-port port who)
-		   (%unsafe.put-byte! port b who)))))
-	    (else
-	     (case (transcoder-error-handling-mode (port-transcoder port))
-	       ((ignore) (void))
-	       ((replace) (%do-put-char port #\? who))
-	       ((raise)
-		(raise (make-i/o-encoding-error port ch)))
-	       (else (assertion-violation who "BUG: invalid error handling mode" port))))))))
+(define (%put-char-to-port-with-fast-latin1-tag port ch code-point who)
+  (let ((i ($port-index port))
+	(j ($port-size port)))
+    (cond ((unsafe.fx< code-point 256)
+	   (if (unsafe.fx< i j)
+	       (begin
+		 (bytevector-u8-set! ($port-buffer port) i code-point)
+		 ($set-port-index! port (unsafe.fxadd1 i)))
+	     (if (unsafe.fxzero? j)
+		 (%put-byte/unbuffered! port ch code-point who)
+	       (begin
+		 (%unsafe.flush-output-port port who)
+		 (%unsafe.put-byte! port ch code-point who)))))
+	  (else
+	   (case (transcoder-error-handling-mode (port-transcoder port))
+	     ((ignore) (void))
+	     ((replace) (%do-put-char port #\? who))
+	     ((raise)
+	      (raise (make-i/o-encoding-error port ch)))
+	     (else
+	      (assertion-violation who "BUG: invalid error handling mode" port)))))))
 
 ;;; --------------------------------------------------------------------
 ;;; PUT-CHAR for port with bytevector buffer and UTF-16 transcoder
 
-(define-inline (%put-char-to-port-with-fast-utf16be-tag port ch who)
-  (let ((n (char->integer ch)))
-    (cond ((unsafe.fx< n #x10000)
-	   (%unsafe.put-byte! port (unsafe.fxsra n 8) who)
-	   (%unsafe.put-byte! port (unsafe.fxand n #xFF) who))
-	  (else
-	   (let ((u^ (unsafe.fx- n #x10000)))
-	     (let ((w1 (%unsafe.fxior #xD800 (unsafe.fxsra u^ 10))))
-	       (%unsafe.put-byte! port (unsafe.fxsra w1 8) who)
-	       (%unsafe.put-byte! port (unsafe.fxand w1 #xFF) who))
-	     (let ((w2 (%unsafe.fxior #xDC00 (unsafe.fxand u^ (- (unsafe.fxsll 1 10) 1)))))
-	       (%unsafe.put-byte! port (unsafe.fxsra w2 8) who)
-	       (%unsafe.put-byte! port (unsafe.fxand w2 #xFF) who)))))))
+(define (%put-char-to-port-with-fast-utf16be-tag port ch code-point who)
+  (cond ((unsafe.fx< code-point #x10000)
+	 (%unsafe.put-byte! port (unsafe.fxsra code-point 8) who)
+	 (%unsafe.put-byte! port (unsafe.fxand code-point #xFF) who))
+	(else
+	 (let ((u^ (unsafe.fx- code-point #x10000)))
+	   (let ((w1 (%unsafe.fxior #xD800 (unsafe.fxsra u^ 10))))
+	     (%unsafe.put-byte! port (unsafe.fxsra w1 8) who)
+	     (%unsafe.put-byte! port (unsafe.fxand w1 #xFF) who))
+	   (let ((w2 (%unsafe.fxior #xDC00 (unsafe.fxand u^ (- (unsafe.fxsll 1 10) 1)))))
+	     (%unsafe.put-byte! port (unsafe.fxsra w2 8) who)
+	     (%unsafe.put-byte! port (unsafe.fxand w2 #xFF) who))))))
 
-(define-inline (%put-char-to-port-with-fast-utf16le-tag port ch who)
-  (let ((n (char->integer ch)))
-    (cond
-     ((unsafe.fx< n #x10000)
-      (%unsafe.put-byte! port (unsafe.fxand n #xFF) who)
-      (%unsafe.put-byte! port (unsafe.fxsra n 8) who))
-     (else
-      (let ((u^ (unsafe.fx- n #x10000)))
-	(let ((w1 (%unsafe.fxior #xD800 (unsafe.fxsra u^ 10))))
-	  (%unsafe.put-byte! port (unsafe.fxand w1 #xFF) who)
-	  (%unsafe.put-byte! port (unsafe.fxsra w1 8) who))
-	(let ((w2 (%unsafe.fxior #xDC00 (unsafe.fxand u^ (- (unsafe.fxsll 1 10) 1)))))
-	  (%unsafe.put-byte! port (unsafe.fxand w2 #xFF) who)
-	  (%unsafe.put-byte! port (unsafe.fxsra w2 8) who)))))))
+(define (%put-char-to-port-with-fast-utf16le-tag port ch code-point who)
+  (cond ((unsafe.fx< code-point #x10000)
+	 (%unsafe.put-byte! port (unsafe.fxand code-point #xFF) who)
+	 (%unsafe.put-byte! port (unsafe.fxsra code-point 8) who))
+	(else
+	 (let ((u^ (unsafe.fx- code-point #x10000)))
+	   (let ((w1 (%unsafe.fxior #xD800 (unsafe.fxsra u^ 10))))
+	     (%unsafe.put-byte! port (unsafe.fxand w1 #xFF) who)
+	     (%unsafe.put-byte! port (unsafe.fxsra w1 8) who))
+	   (let ((w2 (%unsafe.fxior #xDC00 (unsafe.fxand u^ (- (unsafe.fxsll 1 10) 1)))))
+	     (%unsafe.put-byte! port (unsafe.fxand w2 #xFF) who)
+	     (%unsafe.put-byte! port (unsafe.fxsra w2 8) who))))))
 
 
 ;;;; string output
