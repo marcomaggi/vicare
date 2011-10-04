@@ -817,9 +817,9 @@
       ((_ ?pred)
        (values)))))
 
-(define-inline (%assert-value-is-port ?port ?who)
+(define-inline (%assert-argument-is-port ?port ?who)
   (unless (port? ?port)
-    (assertion-violation ?who "not a port" ?port)))
+    (assertion-violation ?who "expected port as argument" ?port)))
 
 (define-inline (%implementation-violation ?who ?message . ?irritants)
   (assertion-violation ?who ?message . ?irritants))
@@ -866,7 +866,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (%assert-value-is-port-position position who)
+(define-inline (%assert-argument-is-port-position position who)
   (unless (and (or (fixnum? position)
 		   (bignum? position))
 	       (>= position 0))
@@ -878,11 +878,11 @@
 	       (>= ?position 0))
     (assertion-violation ?who "invalid value returned by get-position" ?port ?position)))
 
-(define-inline (%assert-value-is-transcoder ?transcoder ?who)
+(define-inline (%assert-argument-is-transcoder ?transcoder ?who)
   (unless (transcoder? ?transcoder)
     (assertion-violation ?who "not a transcoder" ?transcoder)))
 
-(define-inline (%assert-value-is-maybe-transcoder ?maybe-transcoder ?who)
+(define-inline (%assert-argument-is-maybe-transcoder ?maybe-transcoder ?who)
   (when (and ?maybe-transcoder (not (transcoder? ?maybe-transcoder)))
     (assertion-violation ?who
       "expected false or a transcoder object as optional transcoder argument"
@@ -913,7 +913,7 @@
   (unless (procedure? ?proc)
     (assertion-violation ?who "not a procedure" ?proc)))
 
-(define-inline (%assert-value-is-port-identifier ?identifier ?who)
+(define-inline (%assert-argument-is-port-identifier ?identifier ?who)
   (unless (string? ?identifier)
     (assertion-violation ?who "ID is not a string" ?identifier)))
 
@@ -949,8 +949,9 @@
   (unless (unsafe.fx>= start 0)
     (assertion-violation who "expected non-negative fixnum as start index argument" start)))
 
-(define (%assert-argument-is-start-index-for-bytevector dst.start dst.bv who)
-  (unless (< dst.start (unsafe.bytevector-length dst.bv))
+(define (%unsafe.assert-argument-is-start-index-for-bytevector dst.start dst.bv who)
+  ;;Notice that start=length is valid is the count argument is zero
+  (unless (unsafe.fx<= dst.start (unsafe.bytevector-length dst.bv))
     (assertion-violation who
       (string-append "start index argument "
 		     (number->string dst.start)
@@ -958,8 +959,9 @@
 		     (number->string (unsafe.bytevector-length dst.bv)))
       dst.start)))
 
-(define (%assert-argument-is-start-index-for-string dst.start dst.str who)
-  (unless (< dst.start (unsafe.string-length dst.str))
+(define (%unsafe.assert-argument-is-start-index-for-string dst.start dst.str who)
+  ;;Notice that start=length is valid is the count argument is zero
+  (unless (unsafe.fx< dst.start (unsafe.string-length dst.str))
     (assertion-violation who
       (string-append "start index argument "
 		     (number->string dst.start)
@@ -973,20 +975,20 @@
   (let ((count ?count))
     (unless (and (integer? count) (exact? count))
       (assertion-violation ?who "expected exact integer as count argument" count))
-    (unless (<= 0 count)
+    (unless (>= count 0)
       (assertion-violation ?who "expected non-negative exact integer as count argument" count))))
 
 (define (%assert-argument-is-fixnum-count count who)
   (let ((count count))
     (unless (and (integer? count) (exact? count))
       (assertion-violation who "expected exact integer as count argument" count))
-    (unless (<= 0 count)
-      (assertion-violation who "expected non-negative exact integer as count argument" count))
     (unless (fixnum? count)
-      (assertion-violation who "count argument must be a fixnum" count))))
+      (assertion-violation who "count argument must be a fixnum" count))
+    (unless (unsafe.fx>= count 0)
+      (assertion-violation who "expected non-negative exact integer as count argument" count))))
 
-(define (%assert-argument-is-count-from-start-in-bytevector count start dst.bv who)
-  (unless (<= (+ start count) (unsafe.bytevector-length dst.bv))
+(define (%unsafe.assert-argument-is-count-from-start-in-bytevector count start dst.bv who)
+  (unless (unsafe.fx<= (unsafe.fx+ start count) (unsafe.bytevector-length dst.bv))
     (assertion-violation who
       (string-append "count argument "
 		     (number->string count)
@@ -996,8 +998,8 @@
 		     (number->string (unsafe.bytevector-length dst.bv)))
       count)))
 
-(define (%assert-argument-is-count-from-start-in-string count start dst.str who)
-  (unless (<= (+ start count) (unsafe.string-length dst.str))
+(define (%unsafe.assert-argument-is-count-from-start-in-string count start dst.str who)
+  (unless (unsafe.fx<= (unsafe.fx+ start count) (unsafe.string-length dst.str))
     (assertion-violation who
       (string-append "count argument "
 		     (number->string count)
@@ -2112,7 +2114,7 @@
   ;;wraps a platform descriptor: register it in the guardian.
   ;;
   (lambda (port)
-    (%assert-value-is-port port '%port->guarded-port)
+    (%assert-argument-is-port port '%port->guarded-port)
     (with-port (port)
       (when (or port.device.is-descriptor?
 		(eq? port.device 'close-after-gc))
@@ -2127,7 +2129,7 @@
   ;;Defined by R6RS.   Return #t if the port  supports the PORT-POSITION
   ;;operation, and #f otherwise.
   ;;
-  (%assert-value-is-port port 'port-has-port-position?)
+  (%assert-argument-is-port port 'port-has-port-position?)
   (with-port (port)
     (and port.get-position #t)))
 
@@ -2136,7 +2138,7 @@
   ;;returns #t  if the port supports  the SET-PORT-POSITION!  operation,
   ;;and #f otherwise.
   ;;
-  (%assert-value-is-port port 'port-has-set-port-position!?)
+  (%assert-argument-is-port port 'port-has-set-port-position!?)
   (with-port (port)
     (and port.set-position! #t)))
 
@@ -2158,7 +2160,7 @@
   ;;not necessarily correspond to a octet or character position.
   ;;
   (define who 'port-position)
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (%unsafe.port-get-position who port))
 
 (define (%unsafe.port-get-position who port)
@@ -2217,8 +2219,8 @@
   ;;&I/O-INVALID-POSITION.
   ;;
   (define who 'set-port-position!)
-  (%assert-value-is-port port who)
-  (%assert-value-is-port-position new-port-position who)
+  (%assert-argument-is-port port who)
+  (%assert-argument-is-port-position new-port-position who)
   (with-port (port)
     (let ((set-position! port.set-position!))
       (cond ((procedure? set-position!)
@@ -2360,7 +2362,7 @@
   ;;unspecified.
   ;;
   (define who 'make-custom-binary-input-port)
-  (%assert-value-is-port-identifier identifier who)
+  (%assert-argument-is-port-identifier identifier who)
   (%assert-value-is-read!-procedure read! who)
   (%assert-value-is-maybe-close-procedure close who)
   (%assert-value-is-maybe-get-position-procedure  get-position  who)
@@ -2400,7 +2402,7 @@
   ;;behavior of the resulting port is unspecified.
   ;;
   (define who 'make-custom-binary-output-port)
-  (%assert-value-is-port-identifier identifier who)
+  (%assert-argument-is-port-identifier identifier who)
   (%assert-value-is-write!-procedure write! who)
   (%assert-value-is-maybe-close-procedure close who)
   (%assert-value-is-maybe-get-position-procedure  get-position  who)
@@ -2466,7 +2468,7 @@
   ;;unspecified.
   ;;
   (define who 'make-custom-textual-input-port)
-  (%assert-value-is-port-identifier identifier who)
+  (%assert-argument-is-port-identifier identifier who)
   (%assert-value-is-read!-procedure read! who)
   (%assert-value-is-maybe-close-procedure close who)
   (%assert-value-is-maybe-get-position-procedure  get-position  who)
@@ -2511,7 +2513,7 @@
   ;;behavior of the resulting port is unspecified.
   ;;
   (define who 'make-custom-textual-output-port)
-  (%assert-value-is-port-identifier identifier who)
+  (%assert-argument-is-port-identifier identifier who)
   (%assert-value-is-write!-procedure write! who)
   (%assert-value-is-maybe-close-procedure close who)
   (%assert-value-is-maybe-get-position-procedure  get-position  who)
@@ -2549,7 +2551,7 @@
     ;;
     (define who 'open-bytevector-input-port)
     (%assert-value-is-bytevector bv who)
-    (%assert-value-is-maybe-transcoder maybe-transcoder who)
+    (%assert-argument-is-maybe-transcoder maybe-transcoder who)
     ;;The input  bytevector is  itself the buffer!!!   The port is  in a
     ;;state equivalent to the following:
     ;;
@@ -2609,7 +2611,7 @@
   (define who 'open-string-input-port)
   (unless (string? str)
     (assertion-violation who "not a string" str))
-  (%assert-value-is-port-identifier id who)
+  (%assert-argument-is-port-identifier id who)
   ;;The input  string is itself  the buffer!!!  The  port is in  a state
   ;;equivalent to the following:
   ;;
@@ -2672,7 +2674,7 @@
     ;;resets the port's position.
     ;;
     (define who 'open-bytevector-output-port)
-    (%assert-value-is-maybe-transcoder maybe-transcoder who)
+    (%assert-argument-is-maybe-transcoder maybe-transcoder who)
     (let ((port			#f)
 	  (attributes		(%output-transcoder-attrs maybe-transcoder who))
 	  (buffer.index		0)
@@ -2850,7 +2852,7 @@
     ;;
     (define who 'call-with-bytevector-output-port)
     (%assert-value-is-procedure proc who)
-    (%assert-value-is-maybe-transcoder transcoder who)
+    (%assert-argument-is-maybe-transcoder transcoder who)
     (let-values (((port extract) (open-bytevector-output-port transcoder)))
       (proc port)
       (extract)))))
@@ -3037,7 +3039,7 @@
   (define who 'get-output-string)
   (define (wrong-port-error)
     (assertion-violation who "not an output-string port" port))
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (with-port-having-string-buffer (port)
     (unless (%unsafe.textual-output-port? port)
       (wrong-port-error))
@@ -3141,8 +3143,8 @@
   ;;output operations.
   ;;
   (define who 'transcoded-port)
-  (%assert-value-is-port port who)
-  (%assert-value-is-transcoder transcoder who)
+  (%assert-argument-is-port port who)
+  (%assert-argument-is-transcoder transcoder who)
   (with-port-having-bytevector-buffer (port)
     (when port.transcoder
       (assertion-violation who "not a binary port" port))
@@ -3166,7 +3168,7 @@
   ;;returns  false  if  PORT  is  binary  or  does  not  have  an
   ;;associated transcoder.
   ;;
-  (%assert-value-is-port port 'port-transcoder)
+  (%assert-argument-is-port port 'port-transcoder)
   (with-port (port)
     (let ((tr port.transcoder))
       (and (transcoder? tr) tr))))
@@ -3178,7 +3180,7 @@
   ;;Defined  by Ikarus.   Return true  if PORT  has  already been
   ;;closed.
   ;;
-  (%assert-value-is-port port 'port-closed?)
+  (%assert-argument-is-port port 'port-closed?)
   (%unsafe.port-closed? port))
 
 (define (%unsafe.port-closed? port)
@@ -3193,7 +3195,7 @@
   ;;still a  port.  The CLOSE-PORT  procedure returns unspecified
   ;;values.
   ;;
-  (%assert-value-is-port port 'close-port)
+  (%assert-argument-is-port port 'close-port)
   (%unsafe.close-port port))
 
 (define (close-input-port port)
@@ -3238,14 +3240,14 @@
 (define (port-id port)
   ;;Defined by Ikarus.  Return the string identifier of a port.
   ;;
-  (%assert-value-is-port port 'port-id)
+  (%assert-argument-is-port port 'port-id)
   (with-port (port)
     port.id))
 
 (define (port-mode port)
   ;;Defined by Ikarus.  The port mode is used only by the reader.
   ;;
-  (%assert-value-is-port port 'port-mode)
+  (%assert-argument-is-port port 'port-mode)
   (with-port (port)
     port.mode))
 
@@ -3253,7 +3255,7 @@
   ;;Defined by Ikarus.  The port mode is used only by the reader.
   ;;
   (define who 'set-port-mode!)
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (case mode
     ((r6rs-mode vicare-mode)
      (with-port (port)
@@ -3270,7 +3272,7 @@
   ;;cannot be determined to be at end of file.
   ;;
   (define who 'port-eof?)
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (%unsafe.assert-value-is-input-port port who)
   (with-port (port)
     (%unsafe.assert-value-is-open-port port who)
@@ -3306,7 +3308,7 @@
     ;;See %UNSAFE.FLUSH-OUTPUT-PORT for further details.
     ;;
     (define who who)
-    (%assert-value-is-port port who)
+    (%assert-argument-is-port port who)
     (%unsafe.assert-value-is-output-port port who)
     (with-port (port)
       (%unsafe.assert-value-is-open-port port who)
@@ -3591,7 +3593,7 @@
   ;;buffer, if the buffer is empty: we call a subroutine.
   ;;
   (define who 'get-u8)
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (with-port-having-bytevector-buffer (port)
     ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
     ;;PORT.FAST-ATTRIBUTES which does not include it).
@@ -3612,7 +3614,7 @@
   ;;buffer, if the buffer is empty: we call a subroutine.
   ;;
   (define who 'lookahead-u8)
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (with-port-having-bytevector-buffer (port)
     ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
     ;;PORT.FAST-ATTRIBUTES which does not include it).
@@ -3660,7 +3662,7 @@
   ;;IMPLEMENTATION RESTRICTION The COUNT argument must be a fixnum.
   ;;
   (define who 'get-bytevector-n)
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (with-port-having-bytevector-buffer (port)
     ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
     ;;PORT.FAST-ATTRIBUTES which does not include it).
@@ -3724,7 +3726,7 @@
   ;;IMPLEMENTATION RESTRICTION The COUNT argument must be a fixnum.
   ;;
   (define who 'get-bytevector-n!)
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (with-port-having-bytevector-buffer (port)
     ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
     ;;PORT.FAST-ATTRIBUTES which does not include it).
@@ -3733,8 +3735,8 @@
     (%assert-value-is-bytevector dst.bv    who)
     (%assert-argument-is-fixnum-start-index dst.start who)
     (%assert-argument-is-fixnum-count count who)
-    (%assert-argument-is-start-index-for-bytevector dst.start dst.bv who)
-    (%assert-argument-is-count-from-start-in-bytevector count dst.start dst.bv who)
+    (%unsafe.assert-argument-is-start-index-for-bytevector dst.start dst.bv who)
+    (%unsafe.assert-argument-is-count-from-start-in-bytevector count dst.start dst.bv who)
     (if (zero? count)
 	count
       (let retry-after-filling-buffer ((tmp.start dst.start)
@@ -3772,7 +3774,7 @@
   ;;object is returned.
   ;;
   (define who 'get-bytevector-some)
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (with-port-having-bytevector-buffer (port)
     ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
     ;;PORT.FAST-ATTRIBUTES which does not include it).
@@ -3805,7 +3807,7 @@
   ;;will become available, even if some bytes are already available.
   ;;
   (define who 'get-bytevector-all)
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (with-port-having-bytevector-buffer (port)
     ;;Remember  that PORT.ATTRIBUTES  includes the  CLOSED?  bit  (it is
     ;;PORT.FAST-ATTRIBUTES which does not include it).
@@ -3874,7 +3876,7 @@
     (%do-read-char (current-input-port) 'read-char))))
 
 (define (%do-read-char port who)
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (case-textual-input-port-fast-tag port
     ((FAST-GET-UTF8-TAG)
      (%unsafe.read-char-from-port-with-fast-get-utf8-tag port who))
@@ -3911,7 +3913,7 @@
     (%do-peek-char port 'peek-char))))
 
 (define (%do-peek-char port who)
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (case-textual-input-port-fast-tag port
     ((FAST-GET-UTF8-TAG)
      (%unsafe.peek-char-from-port-with-fast-get-utf8-tag port who))
@@ -4833,7 +4835,7 @@
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
   (define-inline (%read-utf16be ?port ?who)
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (%assert-argument-is-fixnum-count count who)
   (case-textual-input-port-fast-tag port
     ((FAST-GET-UTF8-TAG)
@@ -4895,15 +4897,15 @@
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
   (define-inline (%read-utf16be ?port ?who)
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (%assert-value-is-string dst.str who)
   (%assert-argument-is-fixnum-start-index dst.start who)
   (%assert-argument-is-fixnum-count count who)
-  (%assert-argument-is-start-index-for-string dst.start dst.str who)
+  (%unsafe.assert-argument-is-start-index-for-string dst.start dst.str who)
   (let ((dst.past (+ dst.start count)))
     (unless (fixnum? dst.past)
       (assertion-violation who "start+count result is not a fixnum" dst.start count))
-    (%assert-argument-is-count-from-start-in-string count dst.start dst.str who)
+    (%unsafe.assert-argument-is-count-from-start-in-string count dst.start dst.str who)
     (case-textual-input-port-fast-tag port
       ((FAST-GET-UTF8-TAG)
        (%get-it dst.past %unsafe.read-char-from-port-with-fast-get-utf8-tag))
@@ -4959,7 +4961,7 @@
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
   (define-inline (%read-utf16be ?port ?who)
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (case-textual-input-port-fast-tag port
     ((FAST-GET-UTF8-TAG)
      (%get-it %unsafe.read-char-from-port-with-fast-get-utf8-tag))
@@ -5039,7 +5041,7 @@
   (define-inline (%read-utf16be ?port ?who)
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
 
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (case-textual-input-port-fast-tag port
     ((FAST-GET-UTF8-TAG)
      (%get-it %unsafe.read-char-from-port-with-fast-get-utf8-tag))
@@ -5064,7 +5066,7 @@
   ;;unspecified values.
   ;;
   (define who 'put-u8)
-  (%assert-value-is-output-port port who)
+  (%assert-argument-is-port port who)
   (with-port-having-bytevector-buffer (port)
     ;;Remember  that PORT.ATTRIBUTES  includes the  CLOSED?  bit  (it is
     ;;PORT.FAST-ATTRIBUTES which does not include it).
@@ -5091,62 +5093,85 @@
 	 (make-irritants-condition octet)))))))
 
 (define put-bytevector
-  ;;(put-bytevector port bv)
-  ;;(put-bytevector port bv start)
-  ;;(put-bytevector port bv start count)
+  ;;Defined by R6RS.  START and COUNT must be non-negative exact integer
+  ;;objects that default to 0 and:
   ;;
-  ;;START and  COUNT must  be non-negative exact  integer objects
-  ;;that default to 0 and:
+  ;;   (- (bytevector-length BV) START)
   ;;
-  ;; (- (bytevector-length BV) START)
+  ;;respectively.  BV must  have a length of at  least START+COUNT.  The
+  ;;PUT-BYTEVECTOR procedure writes the COUNT bytes of the bytevector BV
+  ;;starting  at index  START to  the output  port.   The PUT-BYTEVECTOR
+  ;;procedure returns unspecified values.
   ;;
-  ;;respectively.  BV must have a length of at least START+COUNT.
-  ;;The PUT-BYTEVECTOR  procedure writes  the COUNT bytes  of the
-  ;;bytevector  BV starting at  index START  to the  output port.
-  ;;The PUT-BYTEVECTOR procedure returns unspecified values.
-  ;;
-  (put-string/bv 'put-bytevector "not a bytevector"
-		 bytevector? bytevector-length %unsafe.put-bytevector))
+  (case-lambda
+   ((port bv)
+    (define who 'put-bytevector)
+    (%assert-argument-is-port port who)
+    (with-port-having-bytevector-buffer (port)
+      ;;Remember that  PORT.ATTRIBUTES includes the CLOSED?   bit (it is
+      ;;PORT.FAST-ATTRIBUTES which does not include it).
+      (unless (unsafe.fx= port.attributes FAST-PUT-BYTE-TAG)
+	(%validate-untagged-port-as-open-binary-output-then-tag-it port who))
+      (%assert-value-is-bytevector bv who)
+      (%unsafe.put-bytevector port bv 0 (unsafe.bytevector-length bv) who)))
+   ((port bv start)
+    (define who 'put-bytevector)
+    (%assert-argument-is-port port who)
+    (with-port-having-bytevector-buffer (port)
+      ;;Remember that  PORT.ATTRIBUTES includes the CLOSED?   bit (it is
+      ;;PORT.FAST-ATTRIBUTES which does not include it).
+      (unless (unsafe.fx= port.attributes FAST-PUT-BYTE-TAG)
+	(%validate-untagged-port-as-open-binary-output-then-tag-it port who))
+      (%assert-value-is-bytevector bv who)
+      (%assert-argument-is-fixnum-start-index start who)
+      (%unsafe.assert-argument-is-start-index-for-bytevector start bv who)
+      (%unsafe.put-bytevector port bv start (unsafe.fx- (unsafe.bytevector-length bv) start) who)))
+   ((port bv start count)
+    (define who 'put-bytevector)
+    (%assert-argument-is-port port who)
+    (with-port-having-bytevector-buffer (port)
+      ;;Remember that  PORT.ATTRIBUTES includes the CLOSED?   bit (it is
+      ;;PORT.FAST-ATTRIBUTES which does not include it).
+      (unless (unsafe.fx= port.attributes FAST-PUT-BYTE-TAG)
+	(%validate-untagged-port-as-open-binary-output-then-tag-it port who))
+      (%assert-value-is-bytevector bv who)
+      (%assert-argument-is-fixnum-start-index start who)
+      (%unsafe.assert-argument-is-start-index-for-bytevector start bv who)
+      (%assert-argument-is-fixnum-count count who)
+      (%unsafe.assert-argument-is-count-from-start-in-bytevector count start bv who)
+      (%unsafe.put-bytevector port bv start count who)))))
 
-(define (%unsafe.put-bytevector port src.bv src.start count)
-  ;;Write COUNT  bytes from the  bytevector SRC.BV to  the binary
-  ;;output PORT starting at offset SRC.START.  Return unspecified
-  ;;values.
+(define (%unsafe.put-bytevector port src.bv src.start count who)
+  ;;Write COUNT  bytes from the  bytevector SRC.BV to the  binary output
+  ;;PORT starting at offset SRC.START.  Return unspecified values.
   ;;
-  (define who 'put-bytevector)
   (with-port-having-bytevector-buffer (port)
-    (cond ((unsafe.fx= FAST-PUT-BYTE-TAG port.fast-attributes)
-	   ;;Write bytes to the buffer and, when the buffer fills up, to
-	   ;;the underlying device.
-	   (let try-again-after-flushing-buffer ((src.start	src.start)
-						 (count		count)
-						 (room		(port.buffer.room)))
-	     (cond ((unsafe.fxzero? room)
-		    ;;The buffer exists and it is full.
-		    (%unsafe.flush-output-port port who)
-		    (try-again-after-flushing-buffer src.start count (port.buffer.room)))
-		   ((unsafe.fx<= count room)
-		    ;;The  buffer exists  and  there is  enough
-		    ;;room for all of the COUNT bytes.
-		    (%unsafe.bytevector-copy! src.bv src.start port.buffer port.buffer.index count)
-		    (port.buffer.index.incr! count)
-		    (when (unsafe.fx< port.buffer.used-size port.buffer.index)
-		      (set! port.buffer.used-size port.buffer.index)))
-		   (else
-		    ;;The  buffer exists and  it can  hold some
-		    ;;but not all of the COUNT bytes.
-		    (%debug-assert (> count room))
-		    (%unsafe.bytevector-copy! src.bv src.start port.buffer port.buffer.index room)
-		    (set! port.buffer.index     port.buffer.size)
-		    (set! port.buffer.used-size port.buffer.index)
-		    (%unsafe.flush-output-port port who)
-		    (try-again-after-flushing-buffer (unsafe.fx+ src.start room)
-						     (unsafe.fx- count room)
-						     (port.buffer.room))))))
-	  ((output-port? port)
-	   (assertion-violation who "not a binary port" port))
-	  (else
-	   (assertion-violation who "not an output port" port)))))
+    ;;Write octets to  the buffer and, when the buffer  fills up, to the
+    ;;underlying device.
+    (let try-again-after-flushing-buffer ((src.start	src.start)
+					  (count	count)
+					  (room		(port.buffer.room)))
+      (cond ((unsafe.fxzero? room)
+	     ;;The buffer is full.
+	     (%unsafe.flush-output-port port who)
+	     (try-again-after-flushing-buffer src.start count (port.buffer.room)))
+	    ((unsafe.fx<= count room)
+	     ;;There is enough  room in the buffer for  all of the COUNT
+	     ;;octets.
+	     (%unsafe.bytevector-copy! src.bv src.start port.buffer port.buffer.index count)
+	     (port.buffer.index.incr! count)
+	     (when (unsafe.fx< port.buffer.used-size port.buffer.index)
+	       (set! port.buffer.used-size port.buffer.index)))
+	    (else
+	     ;;The buffer can hold some but not all of the COUNT bytes.
+	     (%debug-assert (unsafe.fx> count room))
+	     (%unsafe.bytevector-copy! src.bv src.start port.buffer port.buffer.index room)
+	     (set! port.buffer.index     port.buffer.size)
+	     (set! port.buffer.used-size port.buffer.size)
+	     (%unsafe.flush-output-port port who)
+	     (try-again-after-flushing-buffer (unsafe.fx+ src.start room)
+					      (unsafe.fx- count room)
+					      (port.buffer.room)))))))
 
 
 ;;;; string output
@@ -5293,7 +5318,7 @@
 		   string? string-length $put-string))
 
   (define (do-put-char p c who)
-    (%assert-value-is-port p who)
+    (%assert-argument-is-port p who)
     (unless (char? c) (assertion-violation who "not a char" c))
     (let ((m ($port-fast-attrs p)))
       (cond
@@ -5677,7 +5702,7 @@
       (assertion-violation who "invalid filename" filename))
     (unless (enum-set? file-options)
       (assertion-violation who "file-options is not an enum set" file-options))
-    (%assert-value-is-maybe-transcoder maybe-transcoder who)
+    (%assert-argument-is-maybe-transcoder maybe-transcoder who)
 ;;;FIXME: file-options ignored
 ;;;FIXME: buffer-mode ignored
     (let ((fd			(%open-input-file-descriptor filename who))
@@ -5728,7 +5753,7 @@
       (assertion-violation who "invalid filename" filename))
 ;;;FIXME: file-options ignored
 ;;;FIXME: line-buffered output ports are not handled
-    (%assert-value-is-maybe-transcoder maybe-transcoder who)
+    (%assert-argument-is-maybe-transcoder maybe-transcoder who)
     (let ((buffer-size (case buffer-mode
 			 ((none)
 			  0)
@@ -5906,7 +5931,7 @@
   ;;never again be used for an input or output operation.
   ;;
   (define who 'call-with-port)
-  (%assert-value-is-port port who)
+  (%assert-argument-is-port port who)
   (%assert-value-is-procedure proc who)
   (call-with-values
       (lambda ()

@@ -8722,6 +8722,279 @@
   #t)
 
 
+(parametrise ((check-test-name			'put-bytevector)
+	      (bytevector-port-buffer-size	8))
+
+;;; --------------------------------------------------------------------
+;;; port argument validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(put-bytevector 123 '#vu8()))
+    => '(123))
+
+  (check	;argument is not an output port
+      (let ((port (%open-disposable-binary-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (put-bytevector port '#vu8())))
+    => #t)
+
+  (check	;argument is not a binary port
+      (let ((port (%open-disposable-textual-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (put-bytevector port '#vu8())))
+    => #t)
+
+  (check	;argument is not an open port
+      (let ((port (%open-disposable-binary-output-port)))
+	(guard (E ((assertion-violation? E)
+;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-output-port port)
+	  (put-bytevector port '#vu8())))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; bytevector argument validation
+
+  (check	;argument is not a bytevector
+      (let ((port (%open-disposable-binary-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (put-bytevector port #\a)))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; start argument validation
+
+  (check	;argument is not an integer
+      (let ((port (%open-disposable-binary-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (put-bytevector port '#vu8() #\a)))
+    => '(#\a))
+
+  (check	;argument is not an exact integer
+      (let ((port (%open-disposable-binary-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (put-bytevector port '#vu8() 1.0)))
+    => '(1.0))
+
+  (check	;argument is not a fixnum
+      (let ((port (%open-disposable-binary-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (put-bytevector port '#vu8() (+ 1 (greatest-fixnum)))))
+    => (list (+ 1 (greatest-fixnum))))
+
+  (check	;argument is negative
+      (let ((port (%open-disposable-binary-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (put-bytevector port '#vu8() -1)))
+    => '(-1))
+
+  (check	;argument is out of range for bytevector
+      (let ((port (%open-disposable-binary-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (put-bytevector port '#vu8() 1)))
+    => '(1))
+
+;;; --------------------------------------------------------------------
+;;; count argument validation
+
+  (check	;argument is not an integer
+      (let ((port (%open-disposable-binary-output-port)))
+  	(guard (E ((assertion-violation? E)
+;;;  		   (pretty-print (condition-message E))
+  		   (condition-irritants E))
+  		  (else E))
+  	  (put-bytevector port '#vu8() 0 #\a)))
+    => '(#\a))
+
+  (check	;argument is not an exact integer
+      (let ((port (%open-disposable-binary-output-port)))
+  	(guard (E ((assertion-violation? E)
+;;;  		   (pretty-print (condition-message E))
+  		   (condition-irritants E))
+  		  (else E))
+  	  (put-bytevector port '#vu8() 0 1.0)))
+    => '(1.0))
+
+  (check	;argument is not a fixnum
+      (let ((port (%open-disposable-binary-output-port)))
+  	(guard (E ((assertion-violation? E)
+;;;  		   (pretty-print (condition-message E))
+  		   (condition-irritants E))
+  		  (else E))
+  	  (put-bytevector port '#vu8() 0 (+ 1 (greatest-fixnum)))))
+    => (list (+ 1 (greatest-fixnum))))
+
+  (check	;argument is negative
+      (let ((port (%open-disposable-binary-output-port)))
+  	(guard (E ((assertion-violation? E)
+;;;  		   (pretty-print (condition-message E))
+  		   (condition-irritants E))
+  		  (else E))
+  	  (put-bytevector port '#vu8() 0 -1)))
+    => '(-1))
+
+  (check	;argument is out of range for bytevector
+      (let ((port (%open-disposable-binary-output-port)))
+  	(guard (E ((assertion-violation? E)
+;;;  		   (pretty-print (condition-message E))
+  		   (condition-irritants E))
+  		  (else E))
+  	  (put-bytevector port '#vu8() 0 1)))
+    => '(1))
+
+  (check	;argument is out of range for bytevector
+      (let ((port (%open-disposable-binary-output-port)))
+  	(guard (E ((assertion-violation? E)
+;;;  		   (pretty-print (condition-message E))
+  		   (condition-irritants E))
+  		  (else E))
+  	  (put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9) 0 11)))
+    => '(11))
+
+  (check	;argument is out of range for bytevector
+      (let ((port (%open-disposable-binary-output-port)))
+  	(guard (E ((assertion-violation? E)
+;;;  		   (pretty-print (condition-message E))
+  		   (condition-irritants E))
+  		  (else E))
+  	  (put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9) 5 6)))
+    => '(6))
+
+;;; --------------------------------------------------------------------
+;;; no start, no count
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(put-bytevector port '#vu8())
+	(extract))
+    => '#vu8())
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(put-bytevector port '#vu8(0))
+	(extract))
+    => '#vu8(0))
+
+  (check	;bytevector length equals buffer size
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7))
+	(extract))
+    => '#vu8(0 1 2 3 4 5 6 7))
+
+  (check	;bytevector length greater than buffer size
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9))
+	(extract))
+    => '#vu8(0 1 2 3 4 5 6 7 8 9))
+
+  (check	;total length greater than buffer size
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(put-bytevector port '#vu8(0 1 2 3 4 5))
+	(put-bytevector port '#vu8(6 7 8 9))
+	(extract))
+    => '#vu8(0 1 2 3 4 5 6 7 8 9))
+
+;;; --------------------------------------------------------------------
+;;; no count
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(put-bytevector port '#vu8() 0)
+	(extract))
+    => '#vu8())
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(put-bytevector port '#vu8(0) 0)
+	(extract))
+    => '#vu8(0))
+
+  (check	;bytevector length equals buffer size
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(put-bytevector port '#vu8(99 99 0 1 2 3 4 5 6 7) 2)
+	(extract))
+    => '#vu8(0 1 2 3 4 5 6 7))
+
+  (check	;bytevector length greater than buffer size
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(put-bytevector port '#vu8(99 99 0 1 2 3 4 5 6 7 8 9) 2)
+	(extract))
+    => '#vu8(0 1 2 3 4 5 6 7 8 9))
+
+  (check	;total length greater than buffer size
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(put-bytevector port '#vu8(99 99 0 1 2 3 4 5) 2)
+	(put-bytevector port '#vu8(99 99 99 6 7 8 9) 3)
+	(extract))
+    => '#vu8(0 1 2 3 4 5 6 7 8 9))
+
+;;; --------------------------------------------------------------------
+;;; start and count
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port)))
+  	(put-bytevector port '#vu8() 0 0)
+  	(extract))
+    => '#vu8())
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port)))
+  	(put-bytevector port '#vu8(0) 0 1)
+  	(extract))
+    => '#vu8(0))
+
+  (check	;bytevector length equals buffer size
+      (let-values (((port extract) (open-bytevector-output-port)))
+  	(put-bytevector port '#vu8(99 99 0 1 2 3 4 5 6 7 98 98) 2 8)
+  	(extract))
+    => '#vu8(0 1 2 3 4 5 6 7))
+
+  (check	;bytevector length greater than buffer size
+      (let-values (((port extract) (open-bytevector-output-port)))
+  	(put-bytevector port '#vu8(99 99 0 1 2 3 4 5 6 7 8 9 98 98) 2 10)
+  	(extract))
+    => '#vu8(0 1 2 3 4 5 6 7 8 9))
+
+  (check	;total length greater than buffer size
+      (let-values (((port extract) (open-bytevector-output-port)))
+  	(put-bytevector port '#vu8(99 99 0 1 2 3 4 5 98 98) 2 6)
+  	(put-bytevector port '#vu8(99 99 99 6 7 8 9 98 98) 3 4)
+  	(extract))
+    => '#vu8(0 1 2 3 4 5 6 7 8 9))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
