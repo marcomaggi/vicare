@@ -31,12 +31,15 @@
 
 
 (library (ikarus codecs)
-  (export latin-1-codec utf-8-codec utf-16-codec native-eol-style
+  (export native-eol-style latin-1-codec utf-8-codec
+	  utf-16-codec utf-16le-codec utf-16be-codec
           make-transcoder native-transcoder buffer-mode?
           transcoder-codec transcoder-eol-style
           transcoder-error-handling-mode)
-  (import (except (ikarus) latin-1-codec utf-8-codec utf-16-codec
-		  native-eol-style make-transcoder native-transcoder
+  (import (except (ikarus)
+		  native-eol-style latin-1-codec utf-8-codec
+		  utf-16-codec utf-16le-codec utf-16be-codec
+		  make-transcoder native-transcoder
 		  buffer-mode? transcoder-codec
 		  transcoder-eol-style transcoder-error-handling-mode)
     (ikarus system $transcoders)
@@ -80,6 +83,12 @@
 (define (utf-16-codec)
   'utf-16-codec)
 
+(define (utf-16le-codec)
+  'utf-16le-codec)
+
+(define (utf-16be-codec)
+  'utf-16be-codec)
+
 (define (native-eol-style)
   'none)
 
@@ -111,7 +120,9 @@
 ;;;                         76543210
   '((latin-1-codec	. #b00100000)
     (utf-8-codec	. #b01000000)
-    (utf-16-codec	. #b01100000)))
+    (utf-16-codec	. #b01100000)
+    (utf-16le-codec	. #b10000000)
+    (utf-16be-codec	. #b10100000)))
 (define codec-mask	  #b11100000)
 
 

@@ -1357,6 +1357,8 @@
     (transcoder-eol-style                        i r ip)
     (transcoder-error-handling-mode              i r ip)
     (utf-16-codec                                i r ip)
+    (utf-16le-codec                              i)
+    (utf-16be-codec                              i)
     (utf-8-codec                                 i r ip)
     (input-port?                                 i r is ip se)
     (output-port?                                i r is ip se)

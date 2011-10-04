@@ -607,15 +607,32 @@
     (foreign-call "ikrt_write_fd" 2 '#vu8(10) 0 1)))
 
 
+;;;; syntax helpers
+
+(define-syntax define-inline
+  (syntax-rules ()
+    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
+     (define-syntax ?name
+       (syntax-rules ()
+	 ((_ ?arg ... . ?rest)
+	  (begin ?form0 ?form ...)))))))
+
+
 ;;;; port tags
 ;;
-;;All the tags have 13 bits.
+;;All the tags have 15 bits.  The least significant 13 bits are reserved
+;;as the "fast attributes", which is be used by the macros:
 ;;
-;;The 13th bit  is used only by CLOSED-PORT-TAG  which is not associated
-;;to the type of a port; for  this reason if we want to extract only the
-;;type  bits  we have  to  use a  mask  with  11 bits  set  to  1 as  in
-;;FAST-ATTRS-MASK.
+;;   %CASE-TEXTUAL-INPUT-PORT-FAST-TAG
+;;   %CASE-TEXTUAL-OUTPUT-PORT-FAST-TAG
 ;;
+;;to  quickly select  code to  run for  I/O operations  on a  port.  The
+;;following bitpatterns are used to compose the "fast attributes":
+;;
+;;                                32109876543210
+;;                                          |||| type bits
+;;                                 |||||||||     codec bits
+;;                                |              true-if-closed bit
 ;;                                32109876543210
 (define INPUT-PORT-TAG		#b00000000000001)
 (define OUTPUT-PORT-TAG		#b00000000000010)
@@ -628,6 +645,16 @@
 (define FAST-U16LE-TEXT-TAG	#b00000100000000)
 (define INIT-U16-TEXT-TAG	#b00000110000000)
 (define CLOSED-PORT-TAG		#b10000000000000)
+;;
+;;NOTE Bits  9, 10,  11 and  12 are currently  unused and  available for
+;;additional codecs.
+
+;;The following bitpatterns are used for additional attributes.
+;;
+;;                              5432109876543210
+(define I/O-PORT-TAG          #b0100000000000000)
+		;Used to tag ports that are both input and output.
+
 
 ;;If we are just interested in the port type: input or output, binary or
 ;;textual, we can do:
@@ -675,6 +702,10 @@
 (define FAST-GET-UTF16LE-TAG	(%unsafe.fxior FAST-U16LE-TEXT-TAG TEXTUAL-INPUT-PORT-BITS))
 		;Tag for textual input  ports with bytevector buffer and
 		;UTF-16 little endian transcoder.
+(define INIT-GET-UTF16-TAG	(%unsafe.fxior INIT-U16-TEXT-TAG TEXTUAL-INPUT-PORT-BITS))
+		;Tag for textual input  ports with bytevector buffer and
+		;UTF-16 transcoder  not yet recognised as  little or big
+		;endian.
 
 ;;The following tag constants  allow fast classification of output ports
 ;;by doing:
@@ -716,38 +747,237 @@
 
 ;;; --------------------------------------------------------------------
 
-;;                                 32109876543210
-(define FAST-ATTRS-MASK          #b00111111111111)
-
-(define-syntax $port-fast-attrs
-  ;;Extract the type bits from the tag of a port X.
+(define (%input-transcoder-attrs maybe-transcoder who)
+  ;;Return a  fixnum representing the fast tag  attributes for an
+  ;;input port using MAYBE-TRANSCODER.
   ;;
-  (identifier-syntax (lambda (x)
-		       (unsafe.fxand ($port-attrs x) FAST-ATTRS-MASK))))
+  (cond ((not maybe-transcoder)
+	 FAST-GET-BYTE-TAG)
+	((not (eq? 'none (transcoder-eol-style maybe-transcoder)))
+	 (assertion-violation who
+	   "unsupported transcoder eol-style" (transcoder-eol-style maybe-transcoder)))
+	(else
+	 (let ((codec (transcoder-codec maybe-transcoder)))
+	   (cond ((eq? codec 'utf-8-codec)	FAST-GET-UTF8-TAG)
+		 ((eq? codec 'latin-1-codec)	FAST-GET-LATIN-TAG)
+		 ((eq? codec 'utf-16le-codec)	FAST-GET-UTF16LE-TAG)
+		 ((eq? codec 'utf-16be-codec)	FAST-GET-UTF16BE-TAG)
+		 ;;The   selection   between  FAST-GET-UTF16LE-TAG   and
+		 ;;FAST-GET-UTF16BE-TAG is performed as part of the Byte
+		 ;;Order Mark  reading operation when the  first char is
+		 ;;read.
+		 ((eq? codec 'utf-16-codec)	INIT-GET-UTF16-TAG)
+		 (else
+		  ;;If no  codec is recognised,  wait to read  the first
+		  ;;character  to tag  the  port according  to the  Byte
+		  ;;Order Mark.
+		  TEXTUAL-INPUT-PORT-BITS))))))
 
-(define-syntax $set-port-fast-attrs!
-  (syntax-rules ()
-    ((_ ?port ?tag)
-     ($set-port-attrs! ?port (%unsafe.fxior ($port-attrs ?port) ?tag)))))
+(define (%output-transcoder-attrs maybe-transcoder who)
+  ;;Return a fixnum  representing the fast tag attributes  for an output
+  ;;port using MAYBE-TRANSCODER.
+  ;;
+  ;;Notice  that  an output  port  is  never  tagged as  UTF-16  without
+  ;;selection of endianness; by default little endianness is selected.
+  ;;
+  (cond ((not maybe-transcoder)
+	 FAST-PUT-BYTE-TAG)
+	((not (eq? 'none (transcoder-eol-style maybe-transcoder)))
+	 (assertion-violation who
+	   "unsupported transcoder eol-style" (transcoder-eol-style maybe-transcoder)))
+	(else
+	 (let ((codec (transcoder-codec maybe-transcoder)))
+	   (cond ((eq? codec 'utf-8-codec)	FAST-PUT-UTF8-TAG)
+		 ((eq? codec 'latin-1-codec)	FAST-PUT-LATIN-TAG)
+		 ((eq? codec 'utf-16le-codec)	FAST-PUT-UTF16LE-TAG)
+		 ((eq? codec 'utf-16be-codec)	FAST-PUT-UTF16BE-TAG)
+		 ;;By default we select little endian UTF-16.
+		 ((eq? codec 'utf-16-codec)	FAST-PUT-UTF16LE-TAG)
+		 (else
+		  (assertion-violation who "unsupported codec" codec)))))))
 
-(define-syntax case-textual-input-port-fast-tag
-  (syntax-rules ( ;;
-		 FAST-GET-UTF8-TAG FAST-GET-CHAR-TAG FAST-GET-LATIN-TAG
-		 FAST-GET-UTF16LE-TAG FAST-GET-UTF16BE-TAG else)
-    ((case-textual-input-port-fast-tag ?port
-       ((FAST-GET-UTF8-TAG)		. ?utf8-tag-body)
-       ((FAST-GET-CHAR-TAG)		. ?char-tag-body)
-       ((FAST-GET-LATIN-TAG)		. ?latin-tag-body)
-       ((FAST-GET-UTF16LE-TAG)		. ?utf16le-tag-body)
-       ((FAST-GET-UTF16BE-TAG)		. ?utf16be-tag-body)
-       (else				. ?else-body))
-     (let ((m ($port-fast-attrs ?port)))
-       (cond ((unsafe.fx= m FAST-GET-UTF8-TAG)		. ?utf8-tag-body)
-	     ((unsafe.fx= m FAST-GET-CHAR-TAG)		. ?char-tag-body)
-	     ((unsafe.fx= m FAST-GET-LATIN-TAG)		. ?latin-tag-body)
-	     ((unsafe.fx= m FAST-GET-UTF16LE-TAG)	. ?utf16le-tag-body)
-	     ((unsafe.fx= m FAST-GET-UTF16BE-TAG)	. ?utf16be-tag-body)
-	     (else					. ?else-body))))))
+(define-inline ($mark-port-closed! ?port)
+  ;;Set the CLOSED?  bit to 1 in the attributes or PORT.
+  ;;
+  ($set-port-attrs! ?port (%unsafe.fxior CLOSED-PORT-TAG ($port-attrs ?port))))
+
+;;; --------------------------------------------------------------------
+
+;;                                 5432109876543210
+(define FAST-ATTRS-MASK          #b0011111111111111)
+(define OTHER-ATTRS-MASK         #b1100000000000000)
+
+(define-inline ($port-fast-attrs port)
+  ;;Extract the fast-tag bits from the tag of PORT.
+  ;;
+  (unsafe.fxand ($port-attrs port) FAST-ATTRS-MASK))
+
+(define-inline ($port-other-attrs port)
+  ;;Extract the non-fast-tag bits from the tag of PORT.
+  ;;
+  (unsafe.fxand ($port-attrs port) OTHER-ATTRS-MASK))
+
+(define-inline ($set-port-fast-attrs! ?port ?fast-tag)
+  ($set-port-attrs! ?port (%unsafe.fxior ($port-other-attrs ?port) ?fast-tag)))
+
+(define-syntax %case-binary-input-port-fast-tag
+  (lambda (stx)
+    (syntax-case stx (FAST-GET-BYTE-TAG else)
+      ((%case-textual-input-port-fast-tag (?port ?who)
+	 ((FAST-GET-BYTE-TAG) . ?byte-tag-body))
+       (and (identifier? #'?port)
+	    (identifier? #'?who))
+       #'(let ((m ($port-fast-attrs ?port)))
+	   (if (unsafe.fx= m FAST-GET-BYTE-TAG)
+	       (begin . ?byte-tag-body)
+	     (begin
+	       (%unsafe.assert-value-is-input-port  ?port ?who)
+	       (%unsafe.assert-value-is-binary-port ?port ?who)
+	       (%unsafe.assert-value-is-open-port   ?port ?who)
+	       (assertion-violation ?who "internal error: corrupted port" ?port))))))))
+
+(define-syntax %case-binary-output-port-fast-tag
+  (lambda (stx)
+    (syntax-case stx (FAST-PUT-BYTE-TAG else)
+      ((%case-textual-input-port-fast-tag (?port ?who)
+	 ((FAST-PUT-BYTE-TAG) . ?byte-tag-body))
+       (and (identifier? #'?port)
+	    (identifier? #'?who))
+       #'(let ((m ($port-fast-attrs ?port)))
+	   (if (unsafe.fx= m FAST-PUT-BYTE-TAG)
+	       (begin . ?byte-tag-body)
+	     (begin
+	       (%unsafe.assert-value-is-output-port ?port ?who)
+	       (%unsafe.assert-value-is-binary-port ?port ?who)
+	       (%unsafe.assert-value-is-open-port   ?port ?who)
+	       (assertion-violation ?who "internal error: corrupted port" ?port))))))))
+
+(define-syntax %case-textual-input-port-fast-tag
+  ;;For  a port  fast tagged  for input:  select a  body of  code  to be
+  ;;evaluated.
+  ;;
+  ;;If the port is tagged for output and it is an I/O port: retag it for
+  ;;input and select a body of code to be evaluated.
+  ;;
+  ;;If the  port is  untagged: validate it  as open textual  input port,
+  ;;then try to  tag it reading the Byte Order  Mark.  If the validation
+  ;;fails:  raise an  assertion violation.   If reading  the  BOM fails:
+  ;;raise an exception of type &i/o-read.  If the port is at EOF: return
+  ;;the EOF object.
+  ;;
+  (lambda (stx)
+    (syntax-case stx ( ;;
+		      FAST-GET-UTF8-TAG FAST-GET-CHAR-TAG FAST-GET-LATIN-TAG
+		      FAST-GET-UTF16LE-TAG FAST-GET-UTF16BE-TAG)
+      ((%case-textual-input-port-fast-tag (?port ?who)
+	 ((FAST-GET-UTF8-TAG)		. ?utf8-tag-body)
+	 ((FAST-GET-CHAR-TAG)		. ?char-tag-body)
+	 ((FAST-GET-LATIN-TAG)		. ?latin-tag-body)
+	 ((FAST-GET-UTF16LE-TAG)	. ?utf16le-tag-body)
+	 ((FAST-GET-UTF16BE-TAG)	. ?utf16be-tag-body))
+       (and (identifier? #'?port)
+	    (identifier? #'?who))
+       #'(let retry-after-tagging-port ()
+	   (define (%validate-and-tag)
+	     (%unsafe.assert-value-is-input-port   ?port ?who)
+	     (%unsafe.assert-value-is-textual-port ?port ?who)
+	     (%unsafe.assert-value-is-open-port    ?port ?who)
+	     (if (%parse-bom-and-add-fast-tag ?port ?who)
+		 (eof-object)
+	       (retry-after-tagging-port)))
+	   (let ((m ($port-fast-attrs ?port)))
+	     (cond ((unsafe.fx= m FAST-GET-UTF8-TAG)	. ?utf8-tag-body)
+		   ((unsafe.fx= m FAST-GET-CHAR-TAG)	. ?char-tag-body)
+		   ((unsafe.fx= m FAST-GET-LATIN-TAG)	. ?latin-tag-body)
+		   ((unsafe.fx= m FAST-GET-UTF16LE-TAG)	. ?utf16le-tag-body)
+		   ((unsafe.fx= m FAST-GET-UTF16BE-TAG)	. ?utf16be-tag-body)
+		   ((unsafe.fx= m INIT-GET-UTF16-TAG)
+		    (if (%parse-utf16-bom-and-add-fast-tag ?port ?who)
+			(eof-object)
+		      (retry-after-tagging-port)))
+		   ((unsafe.fx= m FAST-GET-BYTE-TAG)
+		    (assertion-violation ?who "expected textual port" ?port))
+		   (else
+		    (if (%unsafe.port-input-and-output? ?port)
+			(cond ((unsafe.fx= m FAST-PUT-UTF8-TAG)
+			       ($set-port-fast-attrs! ?port FAST-GET-UTF8-TAG)
+			       (retry-after-tagging-port))
+			      ((unsafe.fx= m FAST-PUT-CHAR-TAG)
+			       ($set-port-fast-attrs! ?port FAST-GET-CHAR-TAG)
+			       (retry-after-tagging-port))
+			      ((unsafe.fx= m FAST-PUT-LATIN-TAG)
+			       ($set-port-fast-attrs! ?port FAST-GET-LATIN-TAG)
+			       (retry-after-tagging-port))
+			      ((unsafe.fx= m FAST-PUT-UTF16LE-TAG)
+			       ($set-port-fast-attrs! ?port FAST-GET-UTF16LE-TAG)
+			       (retry-after-tagging-port))
+			      ((unsafe.fx= m FAST-PUT-UTF16BE-TAG)
+			       ($set-port-fast-attrs! ?port FAST-GET-UTF16BE-TAG)
+			       (retry-after-tagging-port))
+			      ((unsafe.fx= m FAST-PUT-BYTE-TAG)
+			       (assertion-violation ?who "expected textual port" ?port))
+			      (else
+			       (%validate-and-tag)))
+		      (%validate-and-tag))))))))))
+
+(define-syntax %case-textual-output-port-fast-tag
+  ;;For  a port fast  tagged for  output: select  a body  of code  to be
+  ;;evaluated.
+  ;;
+  ;;If the port is tagged for input  and it is an I/O port: retag it for
+  ;;output and select a body of code to be evaluated.
+  ;;
+  ;;If the  port is untagged: validate  it as open  textual output port.
+  ;;If the validation fails: raise an assertion violation.
+  ;;
+  (lambda (stx)
+    (syntax-case stx ( ;;
+		      FAST-PUT-UTF8-TAG FAST-PUT-CHAR-TAG FAST-PUT-LATIN-TAG
+		      FAST-PUT-UTF16LE-TAG FAST-PUT-UTF16BE-TAG)
+      ((%case-textual-output-port-fast-tag (?port ?who)
+	 ((FAST-PUT-UTF8-TAG)		. ?utf8-tag-body)
+	 ((FAST-PUT-CHAR-TAG)		. ?char-tag-body)
+	 ((FAST-PUT-LATIN-TAG)		. ?latin-tag-body)
+	 ((FAST-PUT-UTF16LE-TAG)	. ?utf16le-tag-body)
+	 ((FAST-PUT-UTF16BE-TAG)	. ?utf16be-tag-body))
+       (and (identifier? #'?port)
+	    (identifier? #'?who))
+       #'(let retry-after-tagging-port ()
+	   (define (%validate-and-tag)
+	     (%unsafe.assert-value-is-textual-port ?port ?who)
+	     (%unsafe.assert-value-is-output-port  ?port ?who)
+	     (%unsafe.assert-value-is-open-port    ?port ?who)
+	     (assertion-violation ?who "unsupported port transcoder" ?port))
+	   (let ((m ($port-fast-attrs ?port)))
+	     (cond ((unsafe.fx= m FAST-PUT-UTF8-TAG)	. ?utf8-tag-body)
+		   ((unsafe.fx= m FAST-PUT-CHAR-TAG)	. ?char-tag-body)
+		   ((unsafe.fx= m FAST-PUT-LATIN-TAG)	. ?latin-tag-body)
+		   ((unsafe.fx= m FAST-PUT-UTF16LE-TAG)	. ?utf16le-tag-body)
+		   ((unsafe.fx= m FAST-PUT-UTF16BE-TAG)	. ?utf16be-tag-body)
+		   ((unsafe.fx= m FAST-PUT-BYTE-TAG)
+		    (assertion-violation ?who "expected textual port" ?port))
+		   (else
+		    (if (%unsafe.port-input-and-output? ?port)
+			(cond ((unsafe.fx= m FAST-GET-UTF8-TAG)
+			       ($set-port-fast-attrs! ?port FAST-PUT-UTF8-TAG)
+			       (retry-after-tagging-port))
+			      ((unsafe.fx= m FAST-GET-CHAR-TAG)
+			       ($set-port-fast-attrs! ?port FAST-PUT-CHAR-TAG)
+			       (retry-after-tagging-port))
+			      ((unsafe.fx= m FAST-GET-LATIN-TAG)
+			       ($set-port-fast-attrs! ?port FAST-PUT-LATIN-TAG)
+			       (retry-after-tagging-port))
+			      ((unsafe.fx= m FAST-GET-UTF16LE-TAG)
+			       ($set-port-fast-attrs! ?port FAST-PUT-UTF16LE-TAG)
+			       (retry-after-tagging-port))
+			      ((unsafe.fx= m FAST-GET-UTF16BE-TAG)
+			       ($set-port-fast-attrs! ?port FAST-PUT-UTF16BE-TAG)
+			       (retry-after-tagging-port))
+			      ((unsafe.fx= m FAST-GET-BYTE-TAG)
+			       (assertion-violation ?who "expected textual port" ?port))
+			      (else
+			       (%validate-and-tag)))
+		      (%validate-and-tag))))))))))
 
 ;;; --------------------------------------------------------------------
 ;;; Backup of original Ikarus values
@@ -772,23 +1002,6 @@
 ;;(define FAST-PUT-UTF16BE-TAG		#b00000010000110)
 ;;(define FAST-PUT-UTF16LE-TAG		#b00000100000110)
 ;;(define INIT-PUT-UTF16-TAG		#b00000110000110)
-
-
-;;;; syntax helpers
-
-(define-syntax define-inline
-  (syntax-rules ()
-    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-     (define-syntax ?name
-       (syntax-rules ()
-	 ((_ ?arg ... . ?rest)
-	  (begin ?form0 ?form ...)))))))
-
-(define-syntax define-alias
-  (syntax-rules ()
-    ((_ ?alias ?subst)
-     (define-syntax ?alias
-       (identifier-syntax ?subst)))))
 
 
 ;;;; assertion helpers
@@ -895,7 +1108,11 @@
     (unless (and (fixnum? x)
 		 (unsafe.fx>= x 0)
 		 (unsafe.fx<= x 255))
-      (assertion-violation ?who "expected octet as argument" ?value))))
+      (assertion-violation ?who "expected octet Scheme fixnum as argument" ?value))))
+
+(define-inline (%assert-argument-is-char ?obj ?who)
+  (unless (char? ?obj)
+    (assertion-violation ?who "expected Scheme character as argument" ?obj)))
 
 (define-inline (%assert-value-is-fixnum ?obj ?who)
   (unless (fixnum? ?obj)
@@ -1029,6 +1246,10 @@
 (define all-data-in-buffer
   'all-data-in-buffer)
 
+(define UTF-8-BYTE-ORDER-MARK-LIST			'(#xEF #xBB #xBF))
+(define UTF-16-BIG-ENDIAN-BYTE-ORDER-MARK-LIST		'(#xFE #xFF))
+(define UTF-16-LITTLE-ENDIAN-BYTE-ORDER-MARK-LIST	'(#xFF #xFE))
+
 (define newline-integer
   (unsafe.char->integer #\newline))
 
@@ -1042,75 +1263,55 @@
      (unsafe.fxlogor ?op1 (%unsafe.fxior ?op2 . ?ops)))))
 
 
-;;;; port tagging helpers
+;;;; Byte Order Mark (BOM) parsing
 
-(define (%validate-untagged-port-as-open-binary-input-then-tag-it port who)
-  ;;Assuming  that PORT  is a  port object:  validate PORT  as  an open,
-  ;;binary, input port.  This function is  to be called if the port fast
-  ;;attributes are  not equal to FAST-GET-BYTE-TAG.   If successful mark
-  ;;the  port  with the  FAST-GET-BYTE-TAG  and  return,  else raise  an
-  ;;exception.
+(define (%parse-utf16-bom-and-add-fast-tag port who)
+  ;;Assuming PORT  is an  open input textual  port object with  a UTF-16
+  ;;transcoder:  read  the  Byte   Order  Mark  and  mutate  the  port's
+  ;;attributes   tagging    the   port   as    FAST-GET-UTF16BE-TAG   or
+  ;;FAST-GET-UTF16LE-TAG.  Return #t if port is at EOF, #f otherwise.
   ;;
-  ;;This  function  is  meant   to  be  used  by  GET-U8,  LOOKAHEAD-U8,
-  ;;GET-BYTEVECTOR-N,       GET-BYTEVECTOR-N!,      GET-BYTEVECTOR-SOME,
-  ;;GET-BYTEVECTOR-ALL.
-  ;;
-  (%unsafe.assert-value-is-binary-port port who)
-  (%unsafe.assert-value-is-input-port  port who)
-  (%unsafe.assert-value-is-open-port   port who)
-  (with-port (port)
-    ;; (when port.transcoder
-    ;;   (assertion-violation who "port is not binary" port))
-    ;; (unless port.read!
-    ;;   (assertion-violation who "port is not an input port" port))
-    (set! port.fast-attributes FAST-GET-BYTE-TAG)))
+  (with-port-having-bytevector-buffer (port)
+    (let ((big-endian? (%parse-byte-order-mark port who UTF-16-BIG-ENDIAN-BYTE-ORDER-MARK-LIST)))
+      (case big-endian?
+	((#t)
+	 (set! port.fast-attributes FAST-GET-UTF16BE-TAG)
+	 #f)
+	((#f)
+	 (let ((little-endian? (%parse-byte-order-mark port who UTF-16-LITTLE-ENDIAN-BYTE-ORDER-MARK-LIST)))
+	   (case little-endian?
+	     ((#t #f)
+	      ;;If  no BOM  is present,  we select  little  endian by
+	      ;;default.
+	      (set! port.fast-attributes FAST-GET-UTF16LE-TAG)
+	      #f)
+	     (else
+	      (%debug-assert (eof-object? little-endian?))
+	      #t))))
+	(else
+	 (%debug-assert (eof-object? big-endian?))
+	 #t)))))
 
-(define (%validate-untagged-port-as-open-binary-output-then-tag-it port who)
-  ;;Assuming  that PORT  is a  port object:  validate PORT  as  an open,
-  ;;binary, output port.  This function is to be called if the port fast
-  ;;attributes are  not equal to FAST-PUT-BYTE-TAG.   If successful mark
-  ;;the  port  with the  FAST-PUT-BYTE-TAG  and  return,  else raise  an
-  ;;exception.
-  ;;
-  ;;This function is meant to be used by PUT-U8 and PUT-BYTEVECTOR.
-  ;;
-  (%unsafe.assert-value-is-binary-port port who)
-  (%unsafe.assert-value-is-output-port port who)
-  (%unsafe.assert-value-is-open-port   port who)
-  (with-port (port)
-    ;; (when port.transcoder
-    ;;   (assertion-violation who "port is not binary" port))
-    ;; (unless port.write!
-    ;;   (assertion-violation who "port is not an input port" port))
-    (set! port.fast-attributes FAST-PUT-BYTE-TAG)))
-
-(define (%validate-untagged-port-as-open-textual-input-then-parse-bom-and-add-fast-tag port who)
+(define (%parse-bom-and-add-fast-tag port who)
   ;;Assuming PORT  is a  port object: validate  it as an  open, textual,
   ;;input  port;  read the  Byte  Order  Mark  expected for  the  port's
   ;;transcoder  and  mutate  the  port's  attributes  tagging  the  port
   ;;accordingly.  Return #t if port is at EOF, #f otherwise.
   ;;
-  (define utf-8-byte-order-mark			'(#xEF #xBB #xBF))
-  (define utf-16-big-endian-byte-order-mark	'(#xFE #xFF))
-  (define utf-16-little-endian-byte-order-mark	'(#xFF #xFE))
-  (%unsafe.assert-value-is-textual-port port who)
-  (%unsafe.assert-value-is-input-port port who)
-  (%unsafe.assert-value-is-open-port port who)
-  (with-port-having-string-buffer (port)
-    (unless port.transcoder
-      (assertion-violation who "textual port is expected to have a transcoder" port))
+  (with-port-having-bytevector-buffer (port)
+    (%debug-assert port.transcoder)
     (case (transcoder-codec port.transcoder)
       ((utf-8-codec)
        (set! port.fast-attributes FAST-GET-UTF8-TAG)
-       (eof-object? (%parse-byte-order-mark port who utf-8-byte-order-mark)))
+       (eof-object? (%parse-byte-order-mark port who UTF-8-BYTE-ORDER-MARK-LIST)))
       ((utf-16-codec)
-       (let ((big-endian? (%parse-byte-order-mark port who utf-16-big-endian-byte-order-mark)))
+       (let ((big-endian? (%parse-byte-order-mark port who UTF-16-BIG-ENDIAN-BYTE-ORDER-MARK-LIST)))
 	 (case big-endian?
 	   ((#t)
 	    (set! port.fast-attributes FAST-GET-UTF16BE-TAG)
 	    #f)
 	   ((#f)
-	    (let ((little-endian? (%parse-byte-order-mark port who utf-16-little-endian-byte-order-mark)))
+	    (let ((little-endian? (%parse-byte-order-mark port who UTF-16-LITTLE-ENDIAN-BYTE-ORDER-MARK-LIST)))
 	      (case little-endian?
 		((#t #f)
 		 ;;If  no BOM  is present,  we select  little  endian by
@@ -1302,6 +1503,8 @@
 		;true if the buffer is full
 	      (PORT.CLOSED?			(%dot-id ".closed?"))
 		;true if the port is closed
+	      (PORT.INPUT-AND-OUTPUT?		(%dot-id ".input-and-output?"))
+		;true if the port is both input and output
 	      (PORT.FAST-ATTRIBUTES		(%dot-id ".fast-attributes"))
 		;fixnum, the type attributes bits
 	      (PORT.BUFFER.SIZE			(%dot-id ".buffer.size"))
@@ -1339,6 +1542,8 @@
 		  (PORT.CLOSE		(identifier-syntax ($port-close		?port)))
 		  (PORT.COOKIE		(identifier-syntax ($port-cookie	?port)))
 		  (PORT.CLOSED?		(identifier-syntax (%unsafe.port-closed? ?port)))
+		  (PORT.INPUT-AND-OUTPUT?
+		   (identifier-syntax (%unsafe.port-input-and-output? ?port)))
 		  (PORT.ATTRIBUTES
 		   (identifier-syntax
 		    (_			($port-attrs ?port))
@@ -2036,51 +2241,12 @@
   (define-unsafe-predicate %unsafe.textual-port?	TEXTUAL-PORT-TAG)
   (define-unsafe-predicate %unsafe.input-port?		INPUT-PORT-TAG)
   (define-unsafe-predicate %unsafe.output-port?		OUTPUT-PORT-TAG)
+  (define-unsafe-predicate %unsafe.port-input-and-output? I/O-PORT-TAG)
 
   (define-unsafe-predicate %unsafe.binary-input-port?	BINARY-INPUT-PORT-BITS)
   (define-unsafe-predicate %unsafe.binary-output-port?	BINARY-OUTPUT-PORT-BITS)
   (define-unsafe-predicate %unsafe.textual-input-port?	TEXTUAL-INPUT-PORT-BITS)
   (define-unsafe-predicate %unsafe.textual-output-port?	TEXTUAL-OUTPUT-PORT-BITS))
-
-
-;;;; port attributes
-
-(define (%input-transcoder-attrs maybe-transcoder who)
-  ;;Return a  fixnum representing the fast tag  attributes for an
-  ;;input port using MAYBE-TRANSCODER.
-  ;;
-  (cond ((not maybe-transcoder)
-	 BINARY-INPUT-PORT-BITS)
-	((not (eq? 'none (transcoder-eol-style maybe-transcoder)))
-	 (assertion-violation who
-	   "unsupported transcoder eol-style" (transcoder-eol-style maybe-transcoder)))
-	((eq? 'latin-1-codec (transcoder-codec maybe-transcoder))
-	 FAST-GET-LATIN-TAG)
-	(else
-	 ;;Attributes for UTF-8-CODEC and UTF-16-CODEC are set as
-	 ;;part of the Byte Order Mark reading operation when the
-	 ;;first char is read.
-	 TEXTUAL-INPUT-PORT-BITS)))
-
-(define (%output-transcoder-attrs maybe-transcoder who)
-  ;;Return a  fixnum representing the fast tag  attributes for an
-  ;;output port using MAYBE-TRANSCODER.
-  ;;
-  (cond ((not maybe-transcoder)
-	 BINARY-OUTPUT-PORT-BITS)
-	((not (eq? 'none (transcoder-eol-style maybe-transcoder)))
-	 (assertion-violation who
-	   "unsupported transcoder eol-style" (transcoder-eol-style maybe-transcoder)))
-	((eq? 'latin-1-codec (transcoder-codec maybe-transcoder))
-	 FAST-PUT-LATIN-TAG)
-	((eq? 'utf-8-codec   (transcoder-codec maybe-transcoder))
-	 FAST-PUT-UTF8-TAG)
-	((eq? 'utf-16-codec  (transcoder-codec maybe-transcoder))
-	 ;;By default we select little endian UTF-16.
-	 FAST-PUT-UTF16LE-TAG)
-	(else
-	 (assertion-violation who
-	   "unsupported codec" (transcoder-codec maybe-transcoder)))))
 
 
 ;;;; guarded ports
@@ -3226,14 +3392,6 @@
       (when (procedure? port.close)
 	(port.close)))))
 
-(define ($mark-port-closed! port)
-  ;;Set the CLOSED?   bit to 1 in the  attributes or PORT; resets
-  ;;to 0 all the fast tag bits in PORT.
-  ;;
-  (with-port (port)
-    (set! port.attributes (%unsafe.fxior CLOSED-PORT-TAG
-					 (unsafe.fxand port.attributes PORT-TYPE-MASK)))))
-
 
 ;;;; auxiliary port functions
 
@@ -3594,17 +3752,15 @@
   ;;
   (define who 'get-u8)
   (%assert-argument-is-port port who)
-  (with-port-having-bytevector-buffer (port)
-    ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
-    ;;PORT.FAST-ATTRIBUTES which does not include it).
-    (unless (unsafe.fx= port.attributes FAST-GET-BYTE-TAG)
-      (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
-    (let ((buffer.offset port.buffer.index))
-      (if (unsafe.fx< buffer.offset port.buffer.used-size)
-	  (begin
-	    (set! port.buffer.index (unsafe.fxadd1 buffer.offset))
-	    (unsafe.bytevector-u8-ref port.buffer buffer.offset))
-	(%get/peek-u8-from-device port who 1)))))
+  (%case-binary-input-port-fast-tag (port who)
+    ((FAST-GET-BYTE-TAG)
+     (with-port-having-bytevector-buffer (port)
+       (let ((buffer.offset port.buffer.index))
+	 (if (unsafe.fx< buffer.offset port.buffer.used-size)
+	     (begin
+	       (set! port.buffer.index (unsafe.fxadd1 buffer.offset))
+	       (unsafe.bytevector-u8-ref port.buffer buffer.offset))
+	   (%get/peek-u8-from-device port who 1)))))))
 
 (define (lookahead-u8 port)
   ;;Defined by R6RS.  The  LOOKAHEAD-U8 procedure is like GET-U8,
@@ -3615,15 +3771,13 @@
   ;;
   (define who 'lookahead-u8)
   (%assert-argument-is-port port who)
-  (with-port-having-bytevector-buffer (port)
-    ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
-    ;;PORT.FAST-ATTRIBUTES which does not include it).
-    (unless (unsafe.fx= port.attributes FAST-GET-BYTE-TAG)
-      (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
-    (let ((buffer.offset port.buffer.index))
-      (if (unsafe.fx< buffer.offset port.buffer.used-size)
-	  (unsafe.bytevector-u8-ref port.buffer buffer.offset)
-	(%get/peek-u8-from-device port who 0)))))
+  (%case-binary-input-port-fast-tag (port who)
+    ((FAST-GET-BYTE-TAG)
+     (with-port-having-bytevector-buffer (port)
+       (let ((buffer.offset port.buffer.index))
+	 (if (unsafe.fx< buffer.offset port.buffer.used-size)
+	     (unsafe.bytevector-u8-ref port.buffer buffer.offset)
+	   (%get/peek-u8-from-device port who 0)))))))
 
 (define (%get/peek-u8-from-device port who buffer.offset-after)
   ;;Subroutine of GET-U8 and LOOKAHEAD-U8.  To be called when the
@@ -3663,44 +3817,42 @@
   ;;
   (define who 'get-bytevector-n)
   (%assert-argument-is-port port who)
-  (with-port-having-bytevector-buffer (port)
-    ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
-    ;;PORT.FAST-ATTRIBUTES which does not include it).
-    (unless (unsafe.fx= port.attributes FAST-GET-BYTE-TAG)
-      (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
-    (%assert-argument-is-fixnum-count count who)
-    (if (zero? count)
-	(quote #vu8())
-      (let retry-after-filling-buffer ((output.len		0)
-				       (list-of-bytevectors	'())
-				       (count			count))
-	(define (%data-available-in-buffer)
-	  (let* ((buffer.used-size		port.buffer.used-size)
-		 (buffer.offset			port.buffer.index)
-		 (amount-of-available		(unsafe.fx- buffer.used-size buffer.offset))
-		 (all-count-is-available?	(<= count amount-of-available))
-		 (amount-to-read		(if all-count-is-available? count amount-of-available))
-		 (output.len1			(unsafe.fx+ output.len amount-to-read)))
-	    (unless (fixnum? output.len1)
-	      (%implementation-violation who
-		"request to write data to port would exceed maximum size of bytevectors"
-		output.len1))
-	    (let ((bv (unsafe.make-bytevector amount-to-read)))
-	      (%unsafe.bytevector-copy! port.buffer buffer.offset bv 0 amount-to-read)
-	      (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-read))
-	      (let ((list-of-bytevectors1 (cons bv list-of-bytevectors)))
-		(if all-count-is-available?
-		    (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors1 output.len1 who)
-		  (retry-after-filling-buffer output.len1 list-of-bytevectors1
-					      (- count amount-of-available)))))))
-	(%maybe-refill-bytevector-buffer-and-evaluate (port who)
-	  (data-is-needed-at: port.buffer.index)
-	  (if-end-of-file:
-	   (if (zero? output.len)
-	       (eof-object)
-	     (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors output.len who)))
-	  (if-successful-refill: (%data-available-in-buffer))
-	  (if-available-data: (%data-available-in-buffer)))))))
+  (%case-binary-input-port-fast-tag (port who)
+    ((FAST-GET-BYTE-TAG)
+     (with-port-having-bytevector-buffer (port)
+       (%assert-argument-is-fixnum-count count who)
+       (if (zero? count)
+	   (quote #vu8())
+	 (let retry-after-filling-buffer ((output.len		0)
+					  (list-of-bytevectors	'())
+					  (count		count))
+	   (define (%data-available-in-buffer)
+	     (let* ((buffer.used-size		port.buffer.used-size)
+		    (buffer.offset		port.buffer.index)
+		    (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
+		    (all-count-is-available?	(<= count amount-of-available))
+		    (amount-to-read		(if all-count-is-available? count amount-of-available))
+		    (output.len1		(unsafe.fx+ output.len amount-to-read)))
+	       (unless (fixnum? output.len1)
+		 (%implementation-violation who
+		   "request to write data to port would exceed maximum size of bytevectors"
+		   output.len1))
+	       (let ((bv (unsafe.make-bytevector amount-to-read)))
+		 (%unsafe.bytevector-copy! port.buffer buffer.offset bv 0 amount-to-read)
+		 (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-read))
+		 (let ((list-of-bytevectors1 (cons bv list-of-bytevectors)))
+		   (if all-count-is-available?
+		       (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors1 output.len1 who)
+		     (retry-after-filling-buffer output.len1 list-of-bytevectors1
+						 (- count amount-of-available)))))))
+	   (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	     (data-is-needed-at: port.buffer.index)
+	     (if-end-of-file:
+	      (if (zero? output.len)
+		  (eof-object)
+		(%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors output.len who)))
+	     (if-successful-refill: (%data-available-in-buffer))
+	     (if-available-data: (%data-available-in-buffer)))))))))
 
 (define (get-bytevector-n! port dst.bv dst.start count)
   ;;Defined  by R6RS.   COUNT  must be  an  exact, non-negative  integer
@@ -3727,39 +3879,37 @@
   ;;
   (define who 'get-bytevector-n!)
   (%assert-argument-is-port port who)
-  (with-port-having-bytevector-buffer (port)
-    ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
-    ;;PORT.FAST-ATTRIBUTES which does not include it).
-    (unless (unsafe.fx= port.attributes FAST-GET-BYTE-TAG)
-      (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
-    (%assert-value-is-bytevector dst.bv    who)
-    (%assert-argument-is-fixnum-start-index dst.start who)
-    (%assert-argument-is-fixnum-count count who)
-    (%unsafe.assert-argument-is-start-index-for-bytevector dst.start dst.bv who)
-    (%unsafe.assert-argument-is-count-from-start-in-bytevector count dst.start dst.bv who)
-    (if (zero? count)
-	count
-      (let retry-after-filling-buffer ((tmp.start dst.start)
-				       (count     count))
-	(define (%data-available-in-buffer)
-	  (let* ((buffer.used-size		port.buffer.used-size)
-		 (buffer.offset			port.buffer.index)
-		 (amount-of-available		(unsafe.fx- buffer.used-size buffer.offset))
-		 (all-count-is-available?	(<= count amount-of-available))
-		 (amount-to-read		(if all-count-is-available? count amount-of-available)))
-	    (%unsafe.bytevector-copy! port.buffer buffer.offset dst.bv tmp.start amount-to-read)
-	    (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-read))
-	    (let ((tmp.start (+ tmp.start amount-to-read)))
-	      (if all-count-is-available?
-		  (- tmp.start dst.start)
-		(retry-after-filling-buffer tmp.start (- count amount-to-read))))))
-	(%maybe-refill-bytevector-buffer-and-evaluate (port who)
-	  (data-is-needed-at: port.buffer.index)
-	  (if-end-of-file: (if (= tmp.start dst.start)
-			       (eof-object)
-			     (- tmp.start dst.start)))
-	  (if-successful-refill: (%data-available-in-buffer))
-	  (if-available-data: (%data-available-in-buffer)))))))
+  (%case-binary-input-port-fast-tag (port who)
+    ((FAST-GET-BYTE-TAG)
+     (with-port-having-bytevector-buffer (port)
+       (%assert-value-is-bytevector dst.bv    who)
+       (%assert-argument-is-fixnum-start-index dst.start who)
+       (%assert-argument-is-fixnum-count count who)
+       (%unsafe.assert-argument-is-start-index-for-bytevector dst.start dst.bv who)
+       (%unsafe.assert-argument-is-count-from-start-in-bytevector count dst.start dst.bv who)
+       (if (zero? count)
+	   count
+	 (let retry-after-filling-buffer ((tmp.start dst.start)
+					  (count     count))
+	   (define (%data-available-in-buffer)
+	     (let* ((buffer.used-size		port.buffer.used-size)
+		    (buffer.offset		port.buffer.index)
+		    (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
+		    (all-count-is-available?	(<= count amount-of-available))
+		    (amount-to-read		(if all-count-is-available? count amount-of-available)))
+	       (%unsafe.bytevector-copy! port.buffer buffer.offset dst.bv tmp.start amount-to-read)
+	       (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-read))
+	       (let ((tmp.start (+ tmp.start amount-to-read)))
+		 (if all-count-is-available?
+		     (- tmp.start dst.start)
+		   (retry-after-filling-buffer tmp.start (- count amount-to-read))))))
+	   (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	     (data-is-needed-at: port.buffer.index)
+	     (if-end-of-file: (if (= tmp.start dst.start)
+				  (eof-object)
+				(- tmp.start dst.start)))
+	     (if-successful-refill: (%data-available-in-buffer))
+	     (if-available-data: (%data-available-in-buffer)))))))))
 
 (define (get-bytevector-some port)
   ;;Defined  by R6RS.   Read from  the  binary input  PORT, blocking  as
@@ -3775,25 +3925,23 @@
   ;;
   (define who 'get-bytevector-some)
   (%assert-argument-is-port port who)
-  (with-port-having-bytevector-buffer (port)
-    ;;Remember  that PORT.ATTRIBUTES  includes  the CLOSED?  bit (it  is
-    ;;PORT.FAST-ATTRIBUTES which does not include it).
-    (unless (unsafe.fx= port.attributes FAST-GET-BYTE-TAG)
-      (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
-    (let retry-after-filling-buffer ()
-      (define (%data-available-in-buffer)
-	(let* ((buffer.used-size	port.buffer.used-size)
-	       (buffer.offset		port.buffer.index)
-	       (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
-	       (dst.bv			(unsafe.make-bytevector amount-of-available)))
-	  (%unsafe.bytevector-copy! port.buffer buffer.offset dst.bv 0 amount-of-available)
-	  (set! port.buffer.index buffer.used-size)
-	  dst.bv))
-      (%maybe-refill-bytevector-buffer-and-evaluate (port who)
-	(data-is-needed-at: port.buffer.index)
-	(if-end-of-file: (eof-object))
-	(if-successful-refill: (%data-available-in-buffer))
-	(if-available-data: (%data-available-in-buffer))))))
+  (%case-binary-input-port-fast-tag (port who)
+    ((FAST-GET-BYTE-TAG)
+     (with-port-having-bytevector-buffer (port)
+       (let retry-after-filling-buffer ()
+	 (define (%data-available-in-buffer)
+	   (let* ((buffer.used-size	port.buffer.used-size)
+		  (buffer.offset	port.buffer.index)
+		  (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
+		  (dst.bv		(unsafe.make-bytevector amount-of-available)))
+	     (%unsafe.bytevector-copy! port.buffer buffer.offset dst.bv 0 amount-of-available)
+	     (set! port.buffer.index buffer.used-size)
+	     dst.bv))
+	 (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	   (data-is-needed-at: port.buffer.index)
+	   (if-end-of-file: (eof-object))
+	   (if-successful-refill: (%data-available-in-buffer))
+	   (if-available-data: (%data-available-in-buffer))))))))
 
 (define (get-bytevector-all port)
   ;;Defined by R6RS.   Attempts to read all bytes until  the next end of
@@ -3808,35 +3956,33 @@
   ;;
   (define who 'get-bytevector-all)
   (%assert-argument-is-port port who)
-  (with-port-having-bytevector-buffer (port)
-    ;;Remember  that PORT.ATTRIBUTES  includes the  CLOSED?  bit  (it is
-    ;;PORT.FAST-ATTRIBUTES which does not include it).
-    (unless (unsafe.fx= port.attributes FAST-GET-BYTE-TAG)
-      (%validate-untagged-port-as-open-binary-input-then-tag-it port who))
-    (let retry-after-filling-buffer ((output.len          0)
-				     (list-of-bytevectors '()))
-      (define (%data-available-in-buffer)
-	(let* ((buffer.used-size	port.buffer.used-size)
-	       (buffer.offset		port.buffer.index)
-	       (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
-	       (output.len		(+ output.len amount-of-available)))
-	  (unless (fixnum? output.len)
-	    (%implementation-violation who
-	      "request to write data to port would exceed maximum size of bytevectors"
-	      output.len))
-	  (let ((dst.bv (unsafe.make-bytevector amount-of-available)))
-	    (%unsafe.bytevector-copy! port.buffer buffer.offset dst.bv 0 amount-of-available)
-	    (set! port.buffer.index buffer.used-size)
-	    (retry-after-filling-buffer output.len
-					(cons dst.bv list-of-bytevectors)))))
-      (%maybe-refill-bytevector-buffer-and-evaluate (port who)
-	(data-is-needed-at: port.buffer.index)
-	(if-end-of-file: (if (zero? output.len)
-			     (eof-object)
-			   (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors
-								       output.len who)))
-	(if-successful-refill: (%data-available-in-buffer))
-	(if-available-data:    (%data-available-in-buffer))))))
+  (%case-binary-input-port-fast-tag (port who)
+    ((FAST-GET-BYTE-TAG)
+     (with-port-having-bytevector-buffer (port)
+       (let retry-after-filling-buffer ((output.len          0)
+					(list-of-bytevectors '()))
+	 (define (%data-available-in-buffer)
+	   (let* ((buffer.used-size	port.buffer.used-size)
+		  (buffer.offset		port.buffer.index)
+		  (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
+		  (output.len		(+ output.len amount-of-available)))
+	     (unless (fixnum? output.len)
+	       (%implementation-violation who
+		 "request to write data to port would exceed maximum size of bytevectors"
+		 output.len))
+	     (let ((dst.bv (unsafe.make-bytevector amount-of-available)))
+	       (%unsafe.bytevector-copy! port.buffer buffer.offset dst.bv 0 amount-of-available)
+	       (set! port.buffer.index buffer.used-size)
+	       (retry-after-filling-buffer output.len
+					   (cons dst.bv list-of-bytevectors)))))
+	 (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	   (data-is-needed-at: port.buffer.index)
+	   (if-end-of-file: (if (zero? output.len)
+				(eof-object)
+			      (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors
+									  output.len who)))
+	   (if-successful-refill: (%data-available-in-buffer))
+	   (if-available-data:    (%data-available-in-buffer))))))))
 
 
 ;;;; character input functions
@@ -3877,7 +4023,7 @@
 
 (define (%do-read-char port who)
   (%assert-argument-is-port port who)
-  (case-textual-input-port-fast-tag port
+  (%case-textual-input-port-fast-tag (port who)
     ((FAST-GET-UTF8-TAG)
      (%unsafe.read-char-from-port-with-fast-get-utf8-tag port who))
     ((FAST-GET-CHAR-TAG)
@@ -3887,11 +4033,7 @@
     ((FAST-GET-UTF16LE-TAG)
      (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'little))
     ((FAST-GET-UTF16BE-TAG)
-     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'big))
-    (else
-     (if (%validate-untagged-port-as-open-textual-input-then-parse-bom-and-add-fast-tag port who)
-	 (eof-object)
-       (%do-read-char port who)))))
+     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'big))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3914,7 +4056,7 @@
 
 (define (%do-peek-char port who)
   (%assert-argument-is-port port who)
-  (case-textual-input-port-fast-tag port
+  (%case-textual-input-port-fast-tag (port who)
     ((FAST-GET-UTF8-TAG)
      (%unsafe.peek-char-from-port-with-fast-get-utf8-tag port who))
     ((FAST-GET-CHAR-TAG)
@@ -3924,11 +4066,7 @@
     ((FAST-GET-UTF16LE-TAG)
      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little 0))
     ((FAST-GET-UTF16BE-TAG)
-     (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big    0))
-    (else
-     (if (%validate-untagged-port-as-open-textual-input-then-parse-bom-and-add-fast-tag port who)
-	 (eof-object)
-       (%do-peek-char port who)))))
+     (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big    0))))
 
 
 ;;;; GET-CHAR and LOOKAHEAD-CHAR for ports with UTF-8 transcoder
@@ -4837,7 +4975,7 @@
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
   (%assert-argument-is-port port who)
   (%assert-argument-is-fixnum-count count who)
-  (case-textual-input-port-fast-tag port
+  (%case-textual-input-port-fast-tag (port who)
     ((FAST-GET-UTF8-TAG)
      (%get-it %unsafe.read-char-from-port-with-fast-get-utf8-tag))
     ((FAST-GET-CHAR-TAG)
@@ -4847,11 +4985,7 @@
     ((FAST-GET-UTF16LE-TAG)
      (%get-it %read-utf16le))
     ((FAST-GET-UTF16BE-TAG)
-     (%get-it %read-utf16be))
-    (else
-     (if (%validate-untagged-port-as-open-textual-input-then-parse-bom-and-add-fast-tag port who)
-	 (eof-object)
-       (get-string-n port count)))))
+     (%get-it %read-utf16be))))
 
 (define (get-string-n! port dst.str dst.start count)
   ;;Defined by  R6RS.  DST.START and COUNT must  be exact, non--negative
@@ -4906,7 +5040,7 @@
     (unless (fixnum? dst.past)
       (assertion-violation who "start+count result is not a fixnum" dst.start count))
     (%unsafe.assert-argument-is-count-from-start-in-string count dst.start dst.str who)
-    (case-textual-input-port-fast-tag port
+    (%case-textual-input-port-fast-tag (port who)
       ((FAST-GET-UTF8-TAG)
        (%get-it dst.past %unsafe.read-char-from-port-with-fast-get-utf8-tag))
       ((FAST-GET-CHAR-TAG)
@@ -4916,11 +5050,7 @@
       ((FAST-GET-UTF16LE-TAG)
        (%get-it dst.past %read-utf16le))
       ((FAST-GET-UTF16BE-TAG)
-       (%get-it dst.past %read-utf16be))
-      (else
-       (if (%validate-untagged-port-as-open-textual-input-then-parse-bom-and-add-fast-tag port who)
-	   (eof-object)
-	 (get-string-n! port dst.str dst.start count))))))
+       (%get-it dst.past %read-utf16be)))))
 
 (define (get-string-all port)
   ;;Defined by R6RS.   Read from the textual input PORT  until an end of
@@ -4962,7 +5092,7 @@
   (define-inline (%read-utf16be ?port ?who)
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
   (%assert-argument-is-port port who)
-  (case-textual-input-port-fast-tag port
+  (%case-textual-input-port-fast-tag (port who)
     ((FAST-GET-UTF8-TAG)
      (%get-it %unsafe.read-char-from-port-with-fast-get-utf8-tag))
     ((FAST-GET-CHAR-TAG)
@@ -4972,11 +5102,7 @@
     ((FAST-GET-UTF16LE-TAG)
      (%get-it %read-utf16le))
     ((FAST-GET-UTF16BE-TAG)
-     (%get-it %read-utf16be))
-    (else
-     (if (%validate-untagged-port-as-open-textual-input-then-parse-bom-and-add-fast-tag port who)
-	 (eof-object)
-       (get-string-all port)))))
+     (%get-it %read-utf16be))))
 
 
 ;;;; string line input functions
@@ -5042,7 +5168,7 @@
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
 
   (%assert-argument-is-port port who)
-  (case-textual-input-port-fast-tag port
+  (%case-textual-input-port-fast-tag (port who)
     ((FAST-GET-UTF8-TAG)
      (%get-it %unsafe.read-char-from-port-with-fast-get-utf8-tag))
     ((FAST-GET-CHAR-TAG)
@@ -5052,11 +5178,7 @@
     ((FAST-GET-UTF16LE-TAG)
      (%get-it %read-utf16le))
     ((FAST-GET-UTF16BE-TAG)
-     (%get-it %read-utf16be))
-    (else
-     (if (%validate-untagged-port-as-open-textual-input-then-parse-bom-and-add-fast-tag port who)
-	 (eof-object)
-       (%do-get-line port who)))))
+     (%get-it %read-utf16be))))
 
 
 ;;;; byte and bytevector output
@@ -5067,30 +5189,28 @@
   ;;
   (define who 'put-u8)
   (%assert-argument-is-port port who)
-  (with-port-having-bytevector-buffer (port)
-    ;;Remember  that PORT.ATTRIBUTES  includes the  CLOSED?  bit  (it is
-    ;;PORT.FAST-ATTRIBUTES which does not include it).
-    (unless (unsafe.fx= port.attributes FAST-GET-BYTE-TAG)
-      (%validate-untagged-port-as-open-binary-output-then-tag-it port who))
-    (%assert-argument-is-an-octet octet who)
-    (%flush-bytevector-buffer-and-evaluate (port who)
-      (room-is-needed-at: port.buffer.index)
-      (if-successful-flush:
-       (let ((buffer.index	  port.buffer.index)
-	     (buffer.used-size port.buffer.used-size))
-	 (%debug-assert (<= buffer.index buffer.used-size))
-	 (unsafe.bytevector-u8-set! port.buffer buffer.index octet)
-	 (when (unsafe.fx= buffer.index buffer.used-size)
-	   (set! port.buffer.used-size (unsafe.fxadd1 buffer.used-size)))
-	 (set! port.buffer.index (unsafe.fxadd1 buffer.index))))
-      (if-device-cannot-absorb:
-       (raise
-	(condition
-	 (make-i/o-write-error)
-	 (make-i/o-port-error port)
-	 (make-who-condition who)
-	 (make-message-condition "device underlying binary output port cannot absorb octect")
-	 (make-irritants-condition octet)))))))
+  (%case-binary-input-port-fast-tag (port who)
+    ((FAST-GET-BYTE-TAG)
+     (with-port-having-bytevector-buffer (port)
+       (%assert-argument-is-an-octet octet who)
+       (%flush-bytevector-buffer-and-evaluate (port who)
+	 (room-is-needed-at: port.buffer.index)
+	 (if-successful-flush:
+	  (let ((buffer.index	  port.buffer.index)
+		(buffer.used-size port.buffer.used-size))
+	    (%debug-assert (<= buffer.index buffer.used-size))
+	    (unsafe.bytevector-u8-set! port.buffer buffer.index octet)
+	    (when (unsafe.fx= buffer.index buffer.used-size)
+	      (set! port.buffer.used-size (unsafe.fxadd1 buffer.used-size)))
+	    (set! port.buffer.index (unsafe.fxadd1 buffer.index))))
+	 (if-device-cannot-absorb:
+	  (raise
+	   (condition
+	    (make-i/o-write-error)
+	    (make-i/o-port-error port)
+	    (make-who-condition who)
+	    (make-message-condition "device underlying binary output port cannot absorb octect")
+	    (make-irritants-condition octet)))))))))
 
 (define put-bytevector
   ;;Defined by R6RS.  START and COUNT must be non-negative exact integer
@@ -5107,39 +5227,30 @@
    ((port bv)
     (define who 'put-bytevector)
     (%assert-argument-is-port port who)
-    (with-port-having-bytevector-buffer (port)
-      ;;Remember that  PORT.ATTRIBUTES includes the CLOSED?   bit (it is
-      ;;PORT.FAST-ATTRIBUTES which does not include it).
-      (unless (unsafe.fx= port.attributes FAST-PUT-BYTE-TAG)
-	(%validate-untagged-port-as-open-binary-output-then-tag-it port who))
-      (%assert-value-is-bytevector bv who)
-      (%unsafe.put-bytevector port bv 0 (unsafe.bytevector-length bv) who)))
+    (%case-binary-input-port-fast-tag (port who)
+      ((FAST-GET-BYTE-TAG)
+       (%assert-value-is-bytevector bv who)
+       (%unsafe.put-bytevector port bv 0 (unsafe.bytevector-length bv) who))))
    ((port bv start)
     (define who 'put-bytevector)
     (%assert-argument-is-port port who)
-    (with-port-having-bytevector-buffer (port)
-      ;;Remember that  PORT.ATTRIBUTES includes the CLOSED?   bit (it is
-      ;;PORT.FAST-ATTRIBUTES which does not include it).
-      (unless (unsafe.fx= port.attributes FAST-PUT-BYTE-TAG)
-	(%validate-untagged-port-as-open-binary-output-then-tag-it port who))
-      (%assert-value-is-bytevector bv who)
-      (%assert-argument-is-fixnum-start-index start who)
-      (%unsafe.assert-argument-is-start-index-for-bytevector start bv who)
-      (%unsafe.put-bytevector port bv start (unsafe.fx- (unsafe.bytevector-length bv) start) who)))
+    (%case-binary-input-port-fast-tag (port who)
+      ((FAST-GET-BYTE-TAG)
+       (%assert-value-is-bytevector bv who)
+       (%assert-argument-is-fixnum-start-index start who)
+       (%unsafe.assert-argument-is-start-index-for-bytevector start bv who)
+       (%unsafe.put-bytevector port bv start (unsafe.fx- (unsafe.bytevector-length bv) start) who))))
    ((port bv start count)
     (define who 'put-bytevector)
     (%assert-argument-is-port port who)
-    (with-port-having-bytevector-buffer (port)
-      ;;Remember that  PORT.ATTRIBUTES includes the CLOSED?   bit (it is
-      ;;PORT.FAST-ATTRIBUTES which does not include it).
-      (unless (unsafe.fx= port.attributes FAST-PUT-BYTE-TAG)
-	(%validate-untagged-port-as-open-binary-output-then-tag-it port who))
-      (%assert-value-is-bytevector bv who)
-      (%assert-argument-is-fixnum-start-index start who)
-      (%unsafe.assert-argument-is-start-index-for-bytevector start bv who)
-      (%assert-argument-is-fixnum-count count who)
-      (%unsafe.assert-argument-is-count-from-start-in-bytevector count start bv who)
-      (%unsafe.put-bytevector port bv start count who)))))
+    (%case-binary-input-port-fast-tag (port who)
+      ((FAST-GET-BYTE-TAG)
+       (%assert-value-is-bytevector bv who)
+       (%assert-argument-is-fixnum-start-index start who)
+       (%unsafe.assert-argument-is-start-index-for-bytevector start bv who)
+       (%assert-argument-is-fixnum-count count who)
+       (%unsafe.assert-argument-is-count-from-start-in-bytevector count start bv who)
+       (%unsafe.put-bytevector port bv start count who))))))
 
 (define (%unsafe.put-bytevector port src.bv src.start count who)
   ;;Write COUNT  bytes from the  bytevector SRC.BV to the  binary output
@@ -5208,7 +5319,171 @@
 	 (assertion-violation who not-a-what bv)))))))
 
 
-;;;; unbuffered byte and char output
+;;;; character output
+
+(define write-char
+  (case-lambda
+   ((ch port)
+    (%do-put-char port ch 'write-char))
+   ((ch)
+    (%do-put-char (current-output-port) ch 'write-char))))
+
+(define (put-char port ch)
+  (%do-put-char port ch 'put-char))
+
+(define (%do-put-char port ch who)
+  (%assert-argument-is-port port who)
+  (%assert-argument-is-char ch   who)
+  (%case-textual-output-port-fast-tag (port who)
+    ((FAST-PUT-UTF8-TAG)
+     (%put-char-to-port-with-fast-utf8-tag port ch who))
+    ((FAST-PUT-CHAR-TAG)
+     (%put-char-to-port-with-fast-char-tag port ch who))
+    ((FAST-PUT-LATIN-TAG)
+     (%put-char-to-port-with-fast-latin1-tag port ch who))
+    ((FAST-PUT-UTF16LE-TAG)
+     (%put-char-to-port-with-fast-utf16le-tag port ch who))
+    ((FAST-PUT-UTF16BE-TAG)
+     (%put-char-to-port-with-fast-utf16be-tag port ch who))))
+
+(define (%unsafe.put-byte! port b who)
+  (let ((i ($port-index port)) (j ($port-size port)))
+    (if (unsafe.fx< i j)
+	(begin
+	  (bytevector-u8-set! ($port-buffer port) i b)
+	  ($set-port-index! port (unsafe.fxadd1 i)))
+      (if (unsafe.fxzero? j)
+	  (%put-byte/unbuffered! port b who)
+	(begin
+	  (%unsafe.flush-output-port port who)
+	  (%unsafe.put-byte! port b who))))))
+
+;;; --------------------------------------------------------------------
+;;; PUT-CHAR for port with string buffer
+
+(define-inline (%put-char-to-port-with-fast-char-tag port ch who)
+  (let ((i ($port-index port))
+	(j ($port-size port)))
+    (if (unsafe.fx< i j)
+	(begin
+	  (string-set! ($port-buffer port) i ch)
+	  ($set-port-index! port (unsafe.fxadd1 i)))
+      (if (unsafe.fxzero? j)
+	  (%put-char/unbuffered! port ch who)
+	(begin
+	  (%unsafe.flush-output-port port who)
+	  (%do-put-char port ch who))))))
+
+;;; --------------------------------------------------------------------
+;;; PUT-CHAR for port with bytevector buffer and UTF-8 transcoder
+
+(define-inline (%put-char-to-port-with-fast-utf8-tag port ch who)
+  (let ((i ($port-index port))
+	(j ($port-size port)))
+    (let ((b (char->integer ch)))
+      (cond ((unsafe.fx< b 128)
+	     (if (unsafe.fx< i j)
+		 (begin
+		   (bytevector-u8-set! ($port-buffer port) i b)
+		   ($set-port-index! port (unsafe.fxadd1 i)))
+	       (if (unsafe.fxzero? j)
+		   (%put-byte/unbuffered! port b who)
+		 (begin
+		   (%unsafe.flush-output-port port who)
+		   (%unsafe.put-byte! port b who)))))
+	    (else
+	     (%unsafe.put-char-utf8-mode port b who))))))
+
+(define (%unsafe.put-char-utf8-mode port b who)
+  (cond
+   ((unsafe.fx< b 128)
+    (%unsafe.put-byte! port b who))
+   ((unsafe.fx<= b #x7FF)
+    (%unsafe.put-byte! port (%unsafe.fxior #b11000000 (unsafe.fxsra b 6)) who)
+    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand b #b111111)) who))
+   ((unsafe.fx<= b #xFFFF)
+    (%unsafe.put-byte! port (%unsafe.fxior #b11100000 (unsafe.fxsra b 12)) who)
+    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 6) #b111111)) who)
+    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand b #b111111)) who))
+   (else
+    (%unsafe.put-byte! port (%unsafe.fxior #b11110000 (unsafe.fxsra b 18)) who)
+    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 12) #b111111)) who)
+    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 6) #b111111)) who)
+    (%unsafe.put-byte! port (%unsafe.fxior #b10000000 (unsafe.fxand b #b111111)) who))))
+
+;;; --------------------------------------------------------------------
+;;; PUT-CHAR for port with bytevector buffer and Latin-1 transcoder
+
+(define-inline (%put-char-to-port-with-fast-latin1-tag port ch who)
+  (let ((i ($port-index port)) (j ($port-size port)))
+    (let ((b (char->integer ch)))
+      (cond ((unsafe.fx< b 256)
+	     (if (unsafe.fx< i j)
+		 (begin
+		   (bytevector-u8-set! ($port-buffer port) i b)
+		   ($set-port-index! port (unsafe.fxadd1 i)))
+	       (if (unsafe.fxzero? j)
+		   (%put-byte/unbuffered! port b who)
+		 (begin
+		   (%unsafe.flush-output-port port who)
+		   (%unsafe.put-byte! port b who)))))
+	    (else
+	     (case (transcoder-error-handling-mode (port-transcoder port))
+	       ((ignore) (void))
+	       ((replace) (%do-put-char port #\? who))
+	       ((raise)
+		(raise (make-i/o-encoding-error port ch)))
+	       (else (assertion-violation who "BUG: invalid error handling mode" port))))))))
+
+;;; --------------------------------------------------------------------
+;;; PUT-CHAR for port with bytevector buffer and UTF-16 transcoder
+
+(define-inline (%put-char-to-port-with-fast-utf16be-tag port ch who)
+  (let ((n (char->integer ch)))
+    (cond ((unsafe.fx< n #x10000)
+	   (%unsafe.put-byte! port (unsafe.fxsra n 8) who)
+	   (%unsafe.put-byte! port (unsafe.fxand n #xFF) who))
+	  (else
+	   (let ((u^ (unsafe.fx- n #x10000)))
+	     (let ((w1 (%unsafe.fxior #xD800 (unsafe.fxsra u^ 10))))
+	       (%unsafe.put-byte! port (unsafe.fxsra w1 8) who)
+	       (%unsafe.put-byte! port (unsafe.fxand w1 #xFF) who))
+	     (let ((w2 (%unsafe.fxior #xDC00 (unsafe.fxand u^ (- (unsafe.fxsll 1 10) 1)))))
+	       (%unsafe.put-byte! port (unsafe.fxsra w2 8) who)
+	       (%unsafe.put-byte! port (unsafe.fxand w2 #xFF) who)))))))
+
+(define-inline (%put-char-to-port-with-fast-utf16le-tag port ch who)
+  (let ((n (char->integer ch)))
+    (cond
+     ((unsafe.fx< n #x10000)
+      (%unsafe.put-byte! port (unsafe.fxand n #xFF) who)
+      (%unsafe.put-byte! port (unsafe.fxsra n 8) who))
+     (else
+      (let ((u^ (unsafe.fx- n #x10000)))
+	(let ((w1 (%unsafe.fxior #xD800 (unsafe.fxsra u^ 10))))
+	  (%unsafe.put-byte! port (unsafe.fxand w1 #xFF) who)
+	  (%unsafe.put-byte! port (unsafe.fxsra w1 8) who))
+	(let ((w2 (%unsafe.fxior #xDC00 (unsafe.fxand u^ (- (unsafe.fxsll 1 10) 1)))))
+	  (%unsafe.put-byte! port (unsafe.fxand w2 #xFF) who)
+	  (%unsafe.put-byte! port (unsafe.fxsra w2 8) who)))))))
+
+
+;;;; string output
+
+(define put-string
+  (put-string/bv 'put-string "not a string"
+		 string? string-length %unsafe.put-string))
+
+(define (%unsafe.put-string p str start count)
+  (define who 'put-string)
+  (%assert-value-is-output-port p who)
+  (%unsafe.assert-value-is-textual-port p who)
+  (let f ((i start) (j (unsafe.fx+ start count)))
+    (unless (unsafe.fx= i j)
+      (%do-put-char p (string-ref str i) 'put-string)
+      (f (unsafe.fxadd1 i) j))))
+
+
 
 (define (%put-byte/unbuffered! port byte who)
   ;;Defined by  Ikarus.  Write directly  the single BYTE  to PORT
@@ -5264,147 +5539,6 @@
 	       (assertion-violation who "could not write char to output port" port))
 	      (else
 	       (assertion-violation who "invalid return value from write! proc" count port)))))))
-
-
-
-(module (put-char write-char put-string)
-  (define (put-byte! p b who)
-    (let ((i ($port-index p)) (j ($port-size p)))
-      (if (unsafe.fx< i j)
-	  (begin
-	    (bytevector-u8-set! ($port-buffer p) i b)
-	    ($set-port-index! p (unsafe.fxadd1 i)))
-	(if (unsafe.fxzero? j)
-	    (%put-byte/unbuffered! p b who)
-	  (begin
-	    (%unsafe.flush-output-port p who)
-	    (put-byte! p b who))))))
-  (define (put-char-utf8-mode p b who)
-    (cond
-     ((unsafe.fx< b 128)
-      (put-byte! p b who))
-     ((unsafe.fx<= b #x7FF)
-      (put-byte! p (%unsafe.fxior #b11000000 (unsafe.fxsra b 6)) who)
-      (put-byte! p (%unsafe.fxior #b10000000 (unsafe.fxand b #b111111)) who))
-     ((unsafe.fx<= b #xFFFF)
-      (put-byte! p (%unsafe.fxior #b11100000 (unsafe.fxsra b 12)) who)
-      (put-byte! p (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 6) #b111111)) who)
-      (put-byte! p (%unsafe.fxior #b10000000 (unsafe.fxand b #b111111)) who))
-     (else
-      (put-byte! p (%unsafe.fxior #b11110000 (unsafe.fxsra b 18)) who)
-      (put-byte! p (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 12) #b111111)) who)
-      (put-byte! p (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra b 6) #b111111)) who)
-      (put-byte! p (%unsafe.fxior #b10000000 (unsafe.fxand b #b111111)) who))))
-
-  (define write-char
-    (case-lambda
-     ((c p) (do-put-char p c 'write-char))
-     ((c) (do-put-char (current-output-port) c 'write-char))))
-
-  (define (put-char p c)
-    (do-put-char p c 'put-char))
-
-  (define ($put-string p str start count)
-    (define who 'put-string)
-    (%assert-value-is-output-port p who)
-    (%unsafe.assert-value-is-textual-port p who)
-    (let f ((i start) (j (unsafe.fx+ start count)))
-      (unless (unsafe.fx= i j)
-	(do-put-char p (string-ref str i) 'put-string)
-	(f (unsafe.fxadd1 i) j))))
-
-  (define put-string
-    (put-string/bv 'put-string "not a string"
-		   string? string-length $put-string))
-
-  (define (do-put-char p c who)
-    (%assert-argument-is-port p who)
-    (unless (char? c) (assertion-violation who "not a char" c))
-    (let ((m ($port-fast-attrs p)))
-      (cond
-       ((eq? m FAST-PUT-UTF8-TAG)
-	(let ((i ($port-index p)) (j ($port-size p)))
-	  (let ((b (char->integer c)))
-	    (cond
-	     ((unsafe.fx< b 128)
-	      (if (unsafe.fx< i j)
-		  (begin
-		    (bytevector-u8-set! ($port-buffer p) i b)
-		    ($set-port-index! p (unsafe.fxadd1 i)))
-		(if (unsafe.fxzero? j)
-		    (%put-byte/unbuffered! p b who)
-		  (begin
-		    (%unsafe.flush-output-port p who)
-		    (put-byte! p b who)))))
-	     (else
-	      (put-char-utf8-mode p b who))))))
-       ((eq? m FAST-PUT-CHAR-TAG)
-	(let ((i ($port-index p)) (j ($port-size p)))
-	  (if (unsafe.fx< i j)
-	      (begin
-		(string-set! ($port-buffer p) i c)
-		($set-port-index! p (unsafe.fxadd1 i)))
-	    (if (unsafe.fxzero? j)
-		(%put-char/unbuffered! p c who)
-	      (begin
-		(%unsafe.flush-output-port p who)
-		(do-put-char p c who))))))
-       ((eq? m FAST-PUT-LATIN-TAG)
-	(let ((i ($port-index p)) (j ($port-size p)))
-	  (let ((b (char->integer c)))
-	    (cond
-	     ((unsafe.fx< b 256)
-	      (if (unsafe.fx< i j)
-		  (begin
-		    (bytevector-u8-set! ($port-buffer p) i b)
-		    ($set-port-index! p (unsafe.fxadd1 i)))
-		(if (unsafe.fxzero? j)
-		    (%put-byte/unbuffered! p b who)
-		  (begin
-		    (%unsafe.flush-output-port p who)
-		    (put-byte! p b who)))))
-	     (else
-	      (case (transcoder-error-handling-mode (port-transcoder p))
-		((ignore) (void))
-		((replace) (do-put-char p #\? who))
-		((raise)
-		 (raise (make-i/o-encoding-error p c)))
-		(else (assertion-violation who "BUG: invalid error handling mode" p))))))))
-       ((eq? m FAST-PUT-UTF16BE-TAG)
-	(let ((n (char->integer c)))
-	  (cond
-	   ((unsafe.fx< n #x10000)
-	    (put-byte! p (unsafe.fxsra n 8) who)
-	    (put-byte! p (unsafe.fxand n #xFF) who))
-	   (else
-	    (let ((u^ (unsafe.fx- n #x10000)))
-	      (let ((w1 (%unsafe.fxior #xD800 (unsafe.fxsra u^ 10))))
-		(put-byte! p (unsafe.fxsra w1 8) who)
-		(put-byte! p (unsafe.fxand w1 #xFF) who))
-	      (let ((w2 (%unsafe.fxior #xDC00 (unsafe.fxand u^ (- (unsafe.fxsll 1 10) 1)))))
-		(put-byte! p (unsafe.fxsra w2 8) who)
-		(put-byte! p (unsafe.fxand w2 #xFF) who)))))))
-       ((eq? m FAST-PUT-UTF16LE-TAG)
-	(let ((n (char->integer c)))
-	  (cond
-	   ((unsafe.fx< n #x10000)
-	    (put-byte! p (unsafe.fxand n #xFF) who)
-	    (put-byte! p (unsafe.fxsra n 8) who))
-	   (else
-	    (let ((u^ (unsafe.fx- n #x10000)))
-	      (let ((w1 (%unsafe.fxior #xD800 (unsafe.fxsra u^ 10))))
-		(put-byte! p (unsafe.fxand w1 #xFF) who)
-		(put-byte! p (unsafe.fxsra w1 8) who))
-	      (let ((w2 (%unsafe.fxior #xDC00 (unsafe.fxand u^ (- (unsafe.fxsll 1 10) 1)))))
-		(put-byte! p (unsafe.fxand w2 #xFF) who)
-		(put-byte! p (unsafe.fxsra w2 8) who)))))))
-       (else
-	(%assert-value-is-output-port         p who)
-	(%unsafe.assert-value-is-textual-port p who)
-	(%unsafe.assert-value-is-open-port    p who)
-	(assertion-violation who "unsupported port" p)))))
-
-  #| end of module |# )
 
 
 (define newline
@@ -6433,9 +6567,12 @@
 ;;; eval: (put 'with-port				'scheme-indent-function 1)
 ;;; eval: (put 'with-port-having-bytevector-buffer	'scheme-indent-function 1)
 ;;; eval: (put 'with-port-having-string-buffer		'scheme-indent-function 1)
-;;; eval: (put 'case-textual-input-port-fast-tag	'scheme-indent-function 1)
+;;; eval: (put '%implementation-violation		'scheme-indent-function 1)
+;;; eval: (put '%case-binary-input-port-fast-tag	'scheme-indent-function 1)
+;;; eval: (put '%case-binary-output-port-fast-tag	'scheme-indent-function 1)
+;;; eval: (put '%case-textual-input-port-fast-tag	'scheme-indent-function 1)
+;;; eval: (put '%case-textual-output-port-fast-tag	'scheme-indent-function 1)
 ;;; eval: (put '%flush-bytevector-buffer-and-evaluate	'scheme-indent-function 1)
 ;;; eval: (put '%refill-bytevector-buffer-and-evaluate		'scheme-indent-function 1)
 ;;; eval: (put '%maybe-refill-bytevector-buffer-and-evaluate	'scheme-indent-function 1)
-;;; eval: (put '%implementation-violation		'scheme-indent-function 1)
 ;;; End:

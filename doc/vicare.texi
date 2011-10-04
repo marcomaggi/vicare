@@ -3541,10 +3541,29 @@ example in the previous section):
 
 
 @menu
+* iklib io codecs::             Additional transcoder codecs.
 * iklib io process::            Spawning processes.
 * iklib io socket::             Using network sockets.
 * iklib io non-block::          Non--blocking mode for ports.
 @end menu
+
+@c page
+@node iklib io codecs
+@subsection Additional transcoder codecs
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@deffn Procedure utf-16le-codec
+@deffnx Procedure utf-16be-codec
+Codecs for the @utf{}-16 encoding schemes, little endian and big
+endian..
+
+A call to any of these procedures returns a value that is equal in the
+sense of @func{eqv?} to the result of any other call to the same
+procedure.
+@end deffn
 
 @c page
 @node iklib io process
