@@ -5275,7 +5275,7 @@
 ;;; --------------------------------------------------------------------
 ;;; transcoding output ports
 
-  (check 'this
+  (check
       (let-values (((bin-port extract) (open-bytevector-output-port)))
 	(let ((tran-port (transcoded-port bin-port (make-transcoder (latin-1-codec)
 								    (eol-style none)
