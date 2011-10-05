@@ -5284,13 +5284,16 @@
 	  (latin1->string (extract))))
     => TEST-STRING-FOR-LATIN-1)
 
-  (check
+  (check 'this
       (let-values (((bin-port extract) (open-bytevector-output-port)))
 	(let ((tran-port (transcoded-port bin-port (make-transcoder (utf-8-codec)
 								    (eol-style none)
 								    (error-handling-mode raise)))))
 	  (put-string tran-port TEST-STRING-FOR-UTF-8)
-	  (utf8->string (extract))))
+	  (let ((bv (extract)))
+(pretty-print bv)
+(pretty-print (string->utf8 TEST-STRING-FOR-UTF-8))
+	    (utf8->string bv))))
     => TEST-STRING-FOR-UTF-8)
 
   (check
@@ -5317,7 +5320,7 @@
 								    (eol-style none)
 								    (error-handling-mode replace)))))
 	  (put-string tran-port TEST-STRING-FOR-UTF-16-BE)
-	  (utf16->string (extract) (endianness little))))
+	  (utf16->string (extract) (endianness big))))
     => TEST-STRING-FOR-UTF-16-BE)
 
   #t)

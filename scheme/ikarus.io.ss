@@ -2417,6 +2417,7 @@
 ;;; (with-port (port)
 ;;;   (emergency-platform-write-fd (string-append "closing guarded port " port.id)))
 	  (close-port port)
+	  (set-cookie-port! ($port-cookie port) #f)
 	  (close-garbage-collected-ports))))
     (post-gc-hooks (cons close-garbage-collected-ports (post-gc-hooks)))
     G))
@@ -3028,6 +3029,13 @@
       ;;SET-PORT-POSITION!  was used.
       ;;
       ;;Remember that bytevectors hold at most (GREATEST-FIXNUM) bytes.
+      ;;
+      ;;Notice how the internal  functions are closures upon the cookie,
+      ;;not the port;  this port type stores a reference  to the port in
+      ;;the cookie.  If a transcoder is put on top of this port, the new
+      ;;transcoded port  is stored in the cookie,  allowing the internal
+      ;;functions  to correctly  reference the  buffer and  its indexes.
+      ;;See also TRANSCODED-PORT.
       ;;
       (define (%%serialise-device! who reset?)
 	(let ((port (cookie-port cookie)))
@@ -5490,15 +5498,7 @@
       ((FAST-PUT-UTF8-TAG)
        (%unsafe.put-char-to-port-with-fast-utf8-tag    port ch code-point who))
       ((FAST-PUT-CHAR-TAG)
-;; (emergency-platform-write-fd (string-append (symbol->string who) " do-put-char char="
-;; 					    (string ch)))
-       (%unsafe.put-char-to-port-with-fast-char-tag    port ch code-point who)
-;; (emergency-platform-write-fd (string-append (symbol->string who) " do-put-char output.len="
-;; 					    (number->string (car (cookie-dest ($port-cookie port))))
-;; 					    " buffer " ($port-buffer port)
-;; 					    " index " (number->string ($port-index port))
-;; 					    " used-size " (number->string ($port-size port))))
-)
+       (%unsafe.put-char-to-port-with-fast-char-tag    port ch code-point who))
       ((FAST-PUT-LATIN-TAG)
        (%unsafe.put-char-to-port-with-fast-latin1-tag  port ch code-point who))
       ((FAST-PUT-UTF16LE-TAG)
@@ -5519,10 +5519,7 @@
 	      (unsafe.string-set! port.buffer buffer.offset ch)
 	      (set! port.buffer.index buffer.past)
 	      (when (unsafe.fx> buffer.past port.buffer.used-size)
-		(set! port.buffer.used-size buffer.past))
-;;emergency
-;(emergency-platform-write-fd port.buffer)
-	      )
+		(set! port.buffer.used-size buffer.past)))
 	  (begin
 	    (%unsafe.flush-output-port port who)
 	    (retry-after-flushing-buffer)))))))
