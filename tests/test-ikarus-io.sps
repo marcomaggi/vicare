@@ -568,6 +568,7 @@
 
 (define TEST-STRING-FOR-LATIN-1
   (string
+   #\c #\i #\a #\o #\space
    LATIN-SMALL-LETTER-A-WITH-GRAVE LATIN-SMALL-LETTER-A-WITH-ACUTE
    LATIN-SMALL-LETTER-E-WITH-GRAVE LATIN-SMALL-LETTER-E-WITH-ACUTE
    LATIN-SMALL-LETTER-I-WITH-GRAVE LATIN-SMALL-LETTER-I-WITH-ACUTE
@@ -576,6 +577,7 @@
 
 (define TEST-BYTEVECTOR-FOR-LATIN-1
   (bytevector-append
+   (string->latin1 "ciao ")
    LATIN-SMALL-LETTER-A-WITH-GRAVE-LATIN-1 LATIN-SMALL-LETTER-A-WITH-ACUTE-LATIN-1
    LATIN-SMALL-LETTER-E-WITH-GRAVE-LATIN-1 LATIN-SMALL-LETTER-E-WITH-ACUTE-LATIN-1
    LATIN-SMALL-LETTER-I-WITH-GRAVE-LATIN-1 LATIN-SMALL-LETTER-I-WITH-ACUTE-LATIN-1
@@ -586,6 +588,7 @@
 
 (define TEST-STRING-FOR-UTF-8
   (string
+   #\c #\i #\a #\o #\space
    LATIN-SMALL-LETTER-A-WITH-GRAVE LATIN-SMALL-LETTER-A-WITH-ACUTE
    LATIN-SMALL-LETTER-E-WITH-GRAVE LATIN-SMALL-LETTER-E-WITH-ACUTE
    LATIN-SMALL-LETTER-I-WITH-GRAVE LATIN-SMALL-LETTER-I-WITH-ACUTE
@@ -598,6 +601,7 @@
 
 (define TEST-BYTEVECTOR-FOR-UTF-8
   (bytevector-append
+   (string->utf8 "ciao ")
    LATIN-SMALL-LETTER-A-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-A-WITH-ACUTE-UTF-8
    LATIN-SMALL-LETTER-E-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-E-WITH-ACUTE-UTF-8
    LATIN-SMALL-LETTER-I-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-I-WITH-ACUTE-UTF-8
@@ -5201,7 +5205,7 @@
 
 
 (parametrise ((check-test-name			'transcoded-port)
-	      (bytevector-port-buffer-size	8))
+	      (bytevector-port-buffer-size	10))
 
 ;;; arguments validation
 
@@ -5241,23 +5245,25 @@
 ;;; transcoding input ports
 
   (check
-      (let* ((bin-port	(open-bytevector-input-port (string->latin1 "ciao mamma àáèéìíòóùú")))
-	     (tran-port	(transcoded-port bin-port (make-transcoder (latin-1-codec)))))
+      (let* ((bin-port	(open-bytevector-input-port (string->latin1 TEST-STRING-FOR-LATIN-1)))
+	     (tran-port	(transcoded-port bin-port (make-transcoder (latin-1-codec)
+								   (eol-style none)
+								   (error-handling-mode replace)))))
 	(get-string-all tran-port))
-    => "ciao mamma àáèéìíòóùú")
+    => TEST-STRING-FOR-LATIN-1)
 
   (check
-      (let* ((bin-port	(open-bytevector-input-port (string->utf8 "ciao mamma àáèéìíòóùú     ")))
+      (let* ((bin-port	(open-bytevector-input-port (string->utf8 TEST-STRING-FOR-UTF-8)))
 	     (tran-port	(transcoded-port bin-port (make-transcoder (utf-8-codec)))))
 	(get-string-all tran-port))
-    => "ciao mamma àáèéìíòóùú     ")
+    => TEST-STRING-FOR-UTF-8)
 
   (check
-      (let* ((bin-port	(open-bytevector-input-port (string->utf16 "ciao mamma àáèéìíòóùú     "
+      (let* ((bin-port	(open-bytevector-input-port (string->utf16 TEST-STRING-FOR-UTF-16-LE
 								   (endianness little))))
 	     (tran-port	(transcoded-port bin-port (make-transcoder (utf-16-codec)))))
 	(get-string-all tran-port))
-    => "ciao mamma àáèéìíòóùú     ")
+    => TEST-STRING-FOR-UTF-16-LE)
 
   ;;There is no UTF-32 codec.
   #;(check
@@ -5269,26 +5275,50 @@
 ;;; --------------------------------------------------------------------
 ;;; transcoding output ports
 
-  (check
+  (check 'this
       (let-values (((bin-port extract) (open-bytevector-output-port)))
-	(let ((tran-port (transcoded-port bin-port (make-transcoder (latin-1-codec)))))
-	  (put-string tran-port "ciao mamma àáèéìíòóùú")
+	(let ((tran-port (transcoded-port bin-port (make-transcoder (latin-1-codec)
+								    (eol-style none)
+								    (error-handling-mode raise)))))
+	  (put-string tran-port TEST-STRING-FOR-LATIN-1)
 	  (latin1->string (extract))))
-    => "ciao mamma àáèéìíòóùú")
+    => TEST-STRING-FOR-LATIN-1)
 
   (check
       (let-values (((bin-port extract) (open-bytevector-output-port)))
-	(let ((tran-port (transcoded-port bin-port (make-transcoder (utf-8-codec)))))
-	  (put-string tran-port "ciao mamma àáèéìíòóùú     ")
+	(let ((tran-port (transcoded-port bin-port (make-transcoder (utf-8-codec)
+								    (eol-style none)
+								    (error-handling-mode raise)))))
+	  (put-string tran-port TEST-STRING-FOR-UTF-8)
 	  (utf8->string (extract))))
-    => "ciao mamma àáèéìíòóùú     ")
+    => TEST-STRING-FOR-UTF-8)
 
   (check
       (let-values (((bin-port extract) (open-bytevector-output-port)))
-	(let ((tran-port (transcoded-port bin-port (make-transcoder (utf-16-codec)))))
-	  (put-string tran-port "ciao mamma àáèéìíòóùú     ")
+	(let ((tran-port (transcoded-port bin-port (make-transcoder (utf-16-codec)
+								    (eol-style none)
+								    (error-handling-mode replace)))))
+	  (put-string tran-port TEST-STRING-FOR-UTF-16-LE)
 	  (utf16->string (extract) (endianness little))))
-    => "ciao mamma àáèéìíòóùú     ")
+    => TEST-STRING-FOR-UTF-16-LE)
+
+  (check
+      (let-values (((bin-port extract) (open-bytevector-output-port)))
+	(let ((tran-port (transcoded-port bin-port (make-transcoder (utf-16le-codec)
+								    (eol-style none)
+								    (error-handling-mode replace)))))
+	  (put-string tran-port TEST-STRING-FOR-UTF-16-LE)
+	  (utf16->string (extract) (endianness little))))
+    => TEST-STRING-FOR-UTF-16-LE)
+
+  (check
+      (let-values (((bin-port extract) (open-bytevector-output-port)))
+	(let ((tran-port (transcoded-port bin-port (make-transcoder (utf-16be-codec)
+								    (eol-style none)
+								    (error-handling-mode replace)))))
+	  (put-string tran-port TEST-STRING-FOR-UTF-16-BE)
+	  (utf16->string (extract) (endianness little))))
+    => TEST-STRING-FOR-UTF-16-BE)
 
   #t)
 

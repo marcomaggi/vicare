@@ -386,19 +386,21 @@
            (let ([ls (simple-conditions x)])
              (if (null? ls)
                  (display "Condition object with no further information\n" p)
-                 (begin
-                   (display " Condition components:\n" p)
-                   (let f ([ls ls] [i 1])
-                     (unless (null? ls)
-                       (display "   " p)
-                       (display i p)
-                       (display ". " p)
-                       (print-simple-condition (car ls) p)
-                       (f (cdr ls) (+ i 1)))))))]
+	       (begin
+		 (display " Condition components:\n" p)
+		 (let f ([ls ls] [i 1])
+		   (unless (null? ls)
+		     (display "   " p)
+		     (display i p)
+		     (display ". " p)
+		     (print-simple-condition (car ls) p)
+		     (f (cdr ls) (+ i 1)))))))
+	   (flush-output-port p)]
           [else
            (display " Non-condition object: " p)
            (write x p)
-           (newline p)]))
+           (newline p)
+	   (flush-output-port p)]))
       (case-lambda
         [(x)
          (print-condition x (console-output-port))]

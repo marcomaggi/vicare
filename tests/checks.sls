@@ -1,6 +1,6 @@
 ;;;Lightweight testing (reference implementation)
 ;;;
-;;;Copyright (c) 2009, 2010 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2010, 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2005-2006 Sebastian Egner <Sebastian.Egner@philips.com>
 ;;;Modified by Derick Eddington for R6RS Scheme.
 ;;;
@@ -160,30 +160,30 @@
   (newline))
 
 (define (check-report)
-  (if (>= (check:mode) 1)
-      (begin
+  (when (>= (check:mode) 1)
+    (newline)
+    (display "; *** checks *** : ")
+    (display check:correct)
+    (display " correct, ")
+    (display (length check:failed))
+    (display " failed.")
+    (if (or (null? check:failed) (<= (check:mode) 1))
+	(begin
+	  (newline)
+	  (newline)
+	  (newline))
+      (let* ((w (car (reverse check:failed)))
+	     (expression (car w))
+	     (actual-result (cadr w))
+	     (expected-result (caddr w)))
+	(display " First failed example:")
 	(newline)
-	(display "; *** checks *** : ")
-	(display check:correct)
-	(display " correct, ")
-	(display (length check:failed))
-	(display " failed.")
-	(if (or (null? check:failed) (<= (check:mode) 1))
-	    (begin
-	      (newline)
-	      (newline)
-	      (newline))
-	  (let* ((w (car (reverse check:failed)))
-		 (expression (car w))
-		 (actual-result (cadr w))
-		 (expected-result (caddr w)))
-	    (display " First failed example:")
-	    (newline)
-	    (check:report-expression expression)
-	    (check:report-actual-result actual-result)
-	    (check:report-failed expected-result)
-	    (newline)
-	    (newline))))))
+	(check:report-expression expression)
+	(check:report-actual-result actual-result)
+	(check:report-failed expected-result)
+	(newline)
+	(newline)))
+    (flush-output-port (current-error-port))))
 
 (define (check-passed? expected-total-count)
   (and (= (length check:failed) 0)
