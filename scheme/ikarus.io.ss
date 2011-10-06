@@ -5741,7 +5741,6 @@
 (define (%do-put-char port ch who)
   (%assert-argument-is-port port who)
   (%assert-argument-is-char ch   who)
-;(emergency-platform-write-fd "here")
   (let ((code-point (unsafe.char->integer ch)))
     (%case-textual-output-port-fast-tag (port who)
       ((FAST-PUT-UTF8-TAG)
@@ -6056,14 +6055,14 @@
 
 ;;;; platform API for file descriptors
 ;;
-;;See detailed documentation in the Texinfo file.
+;;See detailed documentation of the C functions in the Texinfo file.
 ;;
 
 (define-inline (platform-open-input-fd pathname-bv)
-  ;;Interface to  "open()".  Open a file  descriptor for reading;
-  ;;if successful  return a non-negative  fixnum representing the
-  ;;file descriptor;  else return a  negative fixnum representing
-  ;;an ERRNO code.
+  ;;Interface  to "open()".   Open  a file  descriptor  for reading;  if
+  ;;successful  return  a  non-negative  fixnum  representing  the  file
+  ;;descriptor;  else return  a  negative fixnum  representing an  ERRNO
+  ;;code.
   ;;
   (foreign-call "ikrt_open_input_fd" pathname-bv))
 
@@ -6076,85 +6075,98 @@
   (foreign-call "ikrt_open_output_fd" pathname-bv open-options))
 
 (define-inline (platform-read-fd fd dst.bv dst.start requested-count)
-  ;;Interface to  "read()".  Read data from  the file descriptor;
-  ;;if successful  return a non-negative  fixnum representind the
-  ;;number of bytes actually  read; else return a negative fixnum
-  ;;representing an ERRNO code.
+  ;;Interface to "read()".  Read data  from the file descriptor into the
+  ;;supplied  bytevector;  if successful  return  a non-negative  fixnum
+  ;;representind  the  number of  bytes  actually  read;  else return  a
+  ;;negative fixnum representing an ERRNO code.
   ;;
   (foreign-call "ikrt_read_fd" fd dst.bv dst.start requested-count))
 
 (define-inline (platform-write-fd fd src.bv src.start requested-count)
-  ;;Interface to  "write()".  Write data to  the file descriptor;
-  ;;if successful  return a non-negative  fixnum representind the
-  ;;number  of bytes  actually  written; else  return a  negative
-  ;;fixnum representing an ERRNO code.
+  ;;Interface to "write()".  Write  data from the supplied bytevector to
+  ;;the  file descriptor;  if  successful return  a non-negative  fixnum
+  ;;representind  the number of  bytes actually  written; else  return a
+  ;;negative fixnum representing an ERRNO code.
   ;;
   (foreign-call "ikrt_write_fd" fd src.bv src.start requested-count))
 
 (define-inline (platform-set-position fd position)
+  ;;Interface to "lseek()".  Set  the cursor position.  POSITION must be
+  ;;an  exact integer in  the range  of the  "off_t" platform  type.  If
+  ;;successful return false; if an error occurs return a negative fixnum
+  ;;representing an  ERRNO code.
+  ;;
   (foreign-call "ikrt_set_position" fd position))
 
 (define-inline (platform-close-fd fd)
-  ;;Interface to "close()".  Close the file descriptor and return
-  ;;false or a fixnum representing an ERRNO code.
+  ;;Interface to "close()".  Close  the file descriptor and return false
+  ;;or a fixnum representing an ERRNO code.
   ;;
   (foreign-call "ikrt_close_fd" fd))
 
 
 ;;;; platform I/O error handling
 
-;;; FIXME: these hard coded constants should go away
-(define EAGAIN-error-code -6) ;;; from ikarus-errno.c
+(define errno-code-EAGAIN
+  (foreign-call "ik_errno_EAGAIN"))
+(define errno-code-EACCES
+  (foreign-call "ik_errno_EACCES"))
+(define errno-code-EFAULT
+  (foreign-call "ik_errno_EFAULT"))
+(define errno-code-EROFS
+  (foreign-call "ik_errno_EROFS"))
+(define errno-code-EEXIST
+  (foreign-call "ik_errno_EEXIST"))
+(define errno-code-EIO
+  (foreign-call "ik_errno_EIO"))
+(define errno-code-ENOENT
+  (foreign-call "ik_errno_ENOENT"))
 
-(define raise-io-error
+(define %raise-io-error
   ;;Raise a non-continuable  exception describing an input/output
   ;;system error from the value of ERRNO.
   ;;
   (case-lambda
    ((who port-identifier errno base-condition)
-    (raise (condition base-condition
-		      (make-who-condition who)
-		      (make-message-condition (strerror errno))
-		      (case errno
-			;; from ikarus-errno.c: EACCES=-2, EFAULT=-21, EROFS=-71, EEXIST=-20,
-			;;                      EIO=-29, ENOENT=-45
-			;; Why is EFAULT included here?
-			((-2 -21)
-			 (make-i/o-file-protection-error port-identifier))
-			((-71)
-			 (make-i/o-file-is-read-only-error port-identifier))
-			((-20)
-			 (make-i/o-file-already-exists-error port-identifier))
-			((-29)
-			 (make-i/o-error))
-			((-45)
-			 (make-i/o-file-does-not-exist-error port-identifier))
-			(else
-			 (if port-identifier
-			     (make-irritants-condition (list port-identifier))
-			   (condition)))))))
+    (raise
+     (condition base-condition
+		(make-who-condition who)
+		(make-message-condition (strerror errno))
+		(cond ((or (unsafe.fx= errno errno-code-EACCES)
+			   (unsafe.fx= errno errno-code-EFAULT)) ;why is EFAULT included here?
+		       (make-i/o-file-protection-error port-identifier))
+		      ((unsafe.fx= errno errno-code-EROFS)
+		       (make-i/o-file-is-read-only-error port-identifier))
+		      ((unsafe.fx= errno errno-code-EEXIST)
+		       (make-i/o-file-already-exists-error port-identifier))
+		      ((unsafe.fx= errno errno-code-EIO)
+		       (make-i/o-error))
+		      ((unsafe.fx= errno errno-code-ENOENT)
+		       (make-i/o-file-does-not-exist-error port-identifier))
+		      (else
+		       (if port-identifier
+			   (make-irritants-condition (list port-identifier))
+			 (condition)))))))
    ((who port-identifier errno)
-    (raise-io-error who port-identifier errno (make-error)))))
+    (%raise-io-error who port-identifier errno (make-error)))))
 
 
 ;;;; helper functions for platform's descriptors
 
 (define (%open-input-file-descriptor filename who)
-  ;;Subroutine for the functions  below opening a file for input.
-  ;;Open  and  return  a  file descriptor  referencing  the  file
-  ;;selected by  the string FILENAME.  If an  error occurs: raise
-  ;;an exception.
+  ;;Subroutine for the  functions below opening a file  for input.  Open
+  ;;and return  a file descriptor  referencing the file selected  by the
+  ;;string FILENAME.  If an error occurs: raise an exception.
   ;;
   (let ((fd (platform-open-input-fd (string->utf8 filename))))
-    (if (fx< fd 0)
-	(raise-io-error who filename fd)
+    (if (unsafe.fx< fd 0)
+	(%raise-io-error who filename fd)
       fd)))
 
 (define (%open-output-file-descriptor filename file-options who)
-  ;;Subroutine for the functions below opening a file for output.
-  ;;Open  and  return  a  file descriptor  referencing  the  file
-  ;;selected by  the string FILENAME.  If an  error occurs: raise
-  ;;an exception.
+  ;;Subroutine for the functions below  opening a file for output.  Open
+  ;;and return  a file descriptor  referencing the file selected  by the
+  ;;string FILENAME.  If an error occurs: raise an exception.
   ;;
   (let ((opts (if (enum-set? file-options)
 		  (%unsafe.fxior (if (enum-set-member? 'no-create   file-options) 1 0)
@@ -6162,8 +6174,8 @@
 				 (if (enum-set-member? 'no-truncate file-options) 4 0))
 		(assertion-violation who "file-options is not an enum set" file-options))))
     (let ((fd (platform-open-output-fd (string->utf8 filename) opts)))
-      (if (fx< fd 0)
-	  (raise-io-error who filename fd)
+      (if (unsafe.fx< fd 0)
+	  (%raise-io-error who filename fd)
 	fd))))
 
 (define (%file-descriptor->input-port fd port-identifier buffer.size transcoder close-function who)
@@ -6202,14 +6214,14 @@
       (let ((count (platform-read-fd fd dst.bv dst.start buffer.size)))
 	(cond ((unsafe.fx>= count 0)
 	       count)
-	      ((unsafe.fx= count EAGAIN-error-code)
+	      ((unsafe.fx= count errno-code-EAGAIN)
 	       (call/cc
 		   (lambda (k)
 		     (add-io-event fd k 'r)
 		     (process-events)))
 	       (read! dst.bv dst.start requested-count))
 	      (else
-	       (raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
+	       (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
     (%port->maybe-guarded-port
      ($make-port attributes buffer.index buffer.used-size buffer transcoder port-identifier
@@ -6251,14 +6263,14 @@
       (let ((count (platform-write-fd fd src.bv src.start requested-count)))
 	(cond ((unsafe.fx>= count 0)
 	       count)
-	      ((unsafe.fx= count EAGAIN-error-code)
+	      ((unsafe.fx= count errno-code-EAGAIN)
 	       (call/cc
 		   (lambda (k)
 		     (add-io-event fd k 'w)
 		     (process-events)))
 	       (write! src.bv src.start requested-count))
 	      (else
-	       (raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
+	       (%raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
 
     (%port->maybe-guarded-port
      ($make-port attributes buffer.index buffer.used-size buffer transcoder port-identifier
@@ -6272,7 +6284,7 @@
   (lambda (position)
     (let ((errno (platform-set-position fd position)))
       (when errno
-	(raise-io-error 'set-position! port-identifier errno
+	(%raise-io-error 'set-position! port-identifier errno
 			(make-i/o-invalid-position-error position))))))
 
 (define (%make-close-function-for-platform-descriptor-port port-identifier fd)
@@ -6284,7 +6296,7 @@
   (lambda ()
     (let ((errno (platform-close-fd fd)))
       (when errno
-	(raise-io-error 'close port-identifier errno)))))
+	(%raise-io-error 'close port-identifier errno)))))
 
 
 ;;;; opening ports wrapping platform file descriptors
@@ -6618,7 +6630,7 @@
 			   (string->utf8 cmd)
 			   (map string->utf8 (cons cmd args)))))
       (cond ((fixnum? r)
-	     (raise-io-error who cmd r))
+	     (%raise-io-error who cmd r))
 	    (else
 	     (unless blocking?
 	       (or stdin (set-fd-nonblocking (vector-ref r 1) who cmd))
@@ -6645,11 +6657,11 @@
 (define (set-fd-nonblocking fd who id)
   (let ((rv (foreign-call "ikrt_make_fd_nonblocking" fd)))
     (unless (eq? rv 0)
-      (raise-io-error who id rv))))
+      (%raise-io-error who id rv))))
 
 (define (socket->ports socket who id block?)
   (if (< socket 0)
-      (raise-io-error who id socket)
+      (%raise-io-error who id socket)
     (let ((close
 	   (let ((closed-once? #f))
 	     (lambda ()
@@ -6747,7 +6759,7 @@
             ;;; do select
 	  (let ((rv (foreign-call "ikrt_select" n rbv wbv xbv)))
 	    (when (< rv 0)
-	      (raise-io-error 'select #f rv)))
+	      (%raise-io-error 'select #f rv)))
             ;;; go through fds again and see if they're selected
 	  (for-each
               (lambda (t)
@@ -6810,14 +6822,14 @@
       (assertion-violation who "server is closed" s))
     (let ((sock (foreign-call "ikrt_accept" fd bv)))
       (cond
-       ((eq? sock EAGAIN-error-code)
+       ((eq? sock errno-code-EAGAIN)
 	(call/cc
 	    (lambda (k)
 	      (add-io-event fd k 'r)
 	      (process-events)))
 	(do-accept-connection s who blocking?))
        ((< sock 0)
-	(raise-io-error who s sock))
+	(%raise-io-error who s sock))
        (else
 	(socket->ports sock who (make-socket-info bv) blocking?))))))
 
@@ -6902,7 +6914,7 @@
     (clean-up)
     (let ((rv (foreign-call "ikrt_opendir" (string->utf8 filename))))
       (if (fixnum? rv)
-	  (raise-io-error who filename rv)
+	  (%raise-io-error who filename rv)
 	(let ((stream (make-directory-stream filename rv #f)))
 	  (G stream)
 	  stream))))
@@ -6918,7 +6930,7 @@
       (cond
        ((fixnum? rv)
 	(close-directory-stream x #f)
-	(raise-io-error who (directory-stream-filename x) rv))
+	(%raise-io-error who (directory-stream-filename x) rv))
        ((not rv) #f)
        (else (utf8->string rv)))))
 
@@ -6934,7 +6946,7 @@
 	(let ((rv (foreign-call "ikrt_closedir"
 				(directory-stream-pointer x))))
 	  (when (and wanterror? (not (eqv? rv 0)))
-	    (raise-io-error who (directory-stream-filename x) rv)))))
+	    (%raise-io-error who (directory-stream-filename x) rv)))))
      ((x) (close-directory-stream x #t))))
 
   (set-rtd-printer! (type-descriptor directory-stream)

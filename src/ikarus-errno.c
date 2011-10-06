@@ -1,16 +1,17 @@
 /*
  *  Ikarus Scheme -- A compiler for R6RS Scheme.
  *  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
- *  
+ *  Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 3 as
  *  published by the Free Software Foundation.
- *  
+ *
  *  This program is distributed in the hope that it will be useful, but
  *  WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -152,10 +153,46 @@ ik_errno_to_code(){
   int en = errno;
   return ik_errno_num_to_code(en);
 }
+ikptr
+ik_errno_EAGAIN (void)
+{
+  return ik_errno_num_to_code(EAGAIN);
+}
+ikptr
+ik_errno_EACCES (void)
+{
+  return ik_errno_num_to_code(EACCES);
+}
+ikptr
+ik_errno_EFAULT (void)
+{
+  return ik_errno_num_to_code(EFAULT);
+}
+ikptr
+ik_errno_EROFS (void)
+{
+  return ik_errno_num_to_code(EROFS);
+}
+ikptr
+ik_errno_EEXIST (void)
+{
+  return ik_errno_num_to_code(EEXIST);
+}
+ikptr
+ik_errno_EIO (void)
+{
+  return ik_errno_num_to_code(EIO);
+}
+ikptr
+ik_errno_ENOENT (void)
+{
+  return ik_errno_num_to_code(ENOENT);
+}
+
 
 ikptr
 ikrt_errno_code_to_name(ikptr ec, ikpcb* pcb){
-  /* Used by Scheme to get the name of the errno corresponding 
+  /* Used by Scheme to get the name of the errno corresponding
      to the Ikarus errno code. */
   errno_info* ei;
   int i;
@@ -163,7 +200,7 @@ ikrt_errno_code_to_name(ikptr ec, ikpcb* pcb){
     ei = &errno_table[i];
     if(ei->c == ec){
       int len = strlen(ei->s);
-      ikptr bv = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1)) 
+      ikptr bv = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1))
                  + bytevector_tag;
       ref(bv, off_bytevector_length) = fix(len);
       memcpy((char*)(bv+off_bytevector_data), ei->s, len+1);
@@ -175,7 +212,7 @@ ikrt_errno_code_to_name(ikptr ec, ikpcb* pcb){
 
 ikptr
 ikrt_strerror(ikptr ec, ikpcb* pcb){
-  /* Used by Scheme to get the error message of the errno corresponding 
+  /* Used by Scheme to get the error message of the errno corresponding
      to the Ikarus errno code. */
   errno_info* ei;
   int i;
@@ -189,7 +226,7 @@ ikrt_strerror(ikptr ec, ikpcb* pcb){
         exit(EXIT_FAILURE);
       }
       int len = strlen(es);
-      ikptr bv = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1)) 
+      ikptr bv = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1))
                  + bytevector_tag;
       ref(bv, off_bytevector_length) = fix(len);
       memcpy((char*)(bv+off_bytevector_data), es, len+1);
