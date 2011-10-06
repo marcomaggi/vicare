@@ -3791,50 +3791,39 @@
     (%unsafe.assert-value-is-open-port   port who)
     (%unsafe.flush-output-port port who))))
 
-(define-syntax room-is-needed-at:	(syntax-rules ()))
-(define-syntax if-successful-flush:	(syntax-rules ()))
-(define-syntax if-device-cannot-absorb:	(syntax-rules ()))
+(define-syntax room-is-needed-for:	(syntax-rules ()))
+(define-syntax if-available-room:	(syntax-rules ()))
 
 ;;; --------------------------------------------------------------------
 
 (define-syntax %flush-bytevector-buffer-and-evaluate
   (syntax-rules ()
     ((%flush-bytevector-buffer-and-evaluate (?port ?who)
-       (room-is-needed-at: ?buffer.index)
-       (if-successful-flush: . ?available-body)
-       (if-device-cannot-absorb: . ?failure-body))
+       (room-is-needed-for: ?number-of-bytes)
+       (if-available-room: . ?available-body))
      (let ((port ?port))
        (with-port-having-bytevector-buffer (port)
 	 (let try-again-after-flushing-buffer ()
-	   (if (unsafe.fx< ?buffer.index port.buffer.size)
+	   (if (unsafe.fx<= ?number-of-bytes (unsafe.fx- port.buffer.size port.buffer.index))
 	       (begin . ?available-body)
 	     (begin
 	       (%debug-assert (= port.buffer.used-size port.buffer.index))
-	       (%debug-assert (= port.buffer.used-size port.buffer.size))
-	       (guard (E ((i/o-write-error? E)
-			  (begin . ?failure-body))
-			 (else (raise E)))
-		 (%unsafe.flush-output-port port ?who))
+	       (%unsafe.flush-output-port port ?who)
 	       (try-again-after-flushing-buffer)))))))))
 
 (define-syntax %flush-string-buffer-and-evaluate
   (syntax-rules ()
     ((%flush-string-buffer-and-evaluate (?port ?who)
-       (room-is-needed-at: ?buffer.index)
-       (if-successful-flush: . ?available-body)
-       (if-device-cannot-absorb: . ?failure-body))
+       (room-is-needed-for: ?number-of-chars)
+       (if-available-room: . ?available-body))
      (let ((port ?port))
        (with-port-having-string-buffer (port)
 	 (let try-again-after-flushing-buffer ()
-	   (if (unsafe.fx< ?buffer.index port.buffer.size)
+	   (if (unsafe.fx<= ?number-of-bytes (unsafe.fx- port.buffer.size port.buffer.index))
 	       (begin . ?available-body)
 	     (begin
 	       (%debug-assert (= port.buffer.used-size port.buffer.index))
-	       (%debug-assert (= port.buffer.used-size port.buffer.size))
-	       (guard (E ((i/o-write-error? E)
-			  (begin . ?failure-body))
-			 (else (raise E)))
-		 (%unsafe.flush-output-port port ?who))
+	       (%unsafe.flush-output-port port ?who)
 	       (try-again-after-flushing-buffer)))))))))
 
 (define (%unsafe.flush-output-port port who)
@@ -5646,23 +5635,16 @@
      (with-port-having-bytevector-buffer (port)
        (%assert-argument-is-an-octet octet who)
        (%flush-bytevector-buffer-and-evaluate (port who)
-	 (room-is-needed-at: port.buffer.index)
-	 (if-successful-flush:
-	  (let ((buffer.index	  port.buffer.index)
-		(buffer.used-size port.buffer.used-size))
+	 (room-is-needed-for: 1)
+	 (if-available-room:
+	  (let* ((buffer.index		port.buffer.index)
+		 (buffer.past		(unsafe.fxadd1 buffer.index))
+		 (buffer.used-size	port.buffer.used-size))
 	    (%debug-assert (<= buffer.index buffer.used-size))
 	    (unsafe.bytevector-u8-set! port.buffer buffer.index octet)
 	    (when (unsafe.fx= buffer.index buffer.used-size)
-	      (set! port.buffer.used-size (unsafe.fxadd1 buffer.used-size)))
-	    (set! port.buffer.index (unsafe.fxadd1 buffer.index))))
-	 (if-device-cannot-absorb:
-	  (raise
-	   (condition
-	    (make-i/o-write-error)
-	    (make-i/o-port-error port)
-	    (make-who-condition who)
-	    (make-message-condition "device underlying binary output port cannot absorb octect")
-	    (make-irritants-condition octet)))))))))
+	      (set! port.buffer.used-size buffer.past))
+	    (set! port.buffer.index buffer.past))))))))
 
 (define put-bytevector
   ;;Defined by R6RS.  START and COUNT must be non-negative exact integer
