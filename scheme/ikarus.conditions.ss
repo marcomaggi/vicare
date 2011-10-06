@@ -75,7 +75,9 @@
           &no-nans-rtd &no-nans-rcd
           &interrupted-rtd &interrupted-rcd
           &source-position-rtd &source-position-rcd
-          )
+
+	  &i/o-eagain make-i/o-eagain i/o-eagain-error?
+	  &i/o-eagain-rtd &i/o-eagain-rcd)
   (import
     (rnrs records inspection)
     (rnrs records procedural)
@@ -127,6 +129,9 @@
           i/o-encoding-error? i/o-encoding-error-char
           no-infinities-violation? make-no-infinities-violation
           no-nans-violation? make-no-nans-violation
+
+	  &i/o-eagain make-i/o-eagain i/o-eagain-error?
+	  &i/o-eagain-rtd &i/o-eagain-rcd
 
           interrupted-condition? make-interrupted-condition
           make-source-position-condition source-position-condition?
@@ -344,6 +349,10 @@
     make-source-position-condition source-position-condition?
     (file-name source-position-file-name)
     (character source-position-character))
+
+  ;;; Vicare specific conditions
+  (define-condition-type &i/o-eagain &i/o
+    make-i/o-eagain i/o-eagain-error?)
 
   (define print-condition
     (let ()

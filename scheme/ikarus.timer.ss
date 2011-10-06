@@ -17,8 +17,7 @@
 
 (library (ikarus timers)
   (export
-    time-it verbose-timer
-    time-and-gather
+    time-it verbose-timer	time-and-gather
 
     stats?
     stats-user-secs		stats-user-usecs
@@ -28,25 +27,19 @@
     stats-gc-user-secs		stats-gc-user-usecs
     stats-gc-sys-secs		stats-gc-sys-usecs
     stats-gc-real-secs		stats-gc-real-usecs
-    stats-bytes-minor		stats-bytes-major
-    )
+    stats-bytes-minor		stats-bytes-major)
   (import (except (ikarus)
-		  time-it verbose-timer
+		  time-it verbose-timer		time-and-gather
 
-		  ;;To  be uncommented  when the  boot image  is rebuilt
-		  ;;including these bindings, too.
-		  ;;
-		  ;; time-and-gather
-		  ;; stats?
-		  ;; stats-user-secs		stats-user-usecs
-		  ;; stats-sys-secs		stats-sys-usecs
-		  ;; stats-real-secs		stats-real-usecs
-		  ;; stats-collection-id
-		  ;; stats-gc-user-secs		stats-gc-user-usecs
-		  ;; stats-gc-sys-secs		stats-gc-sys-usecs
-		  ;; stats-gc-real-secs		stats-gc-real-usecs
-		  ;; stats-bytes-minor		stats-bytes-major
-		  ))
+		  stats?
+		  stats-user-secs		stats-user-usecs
+		  stats-sys-secs		stats-sys-usecs
+		  stats-real-secs		stats-real-usecs
+		  stats-collection-id
+		  stats-gc-user-secs		stats-gc-user-usecs
+		  stats-gc-sys-secs		stats-gc-sys-usecs
+		  stats-gc-real-secs		stats-gc-real-usecs
+		  stats-bytes-minor		stats-bytes-major))
 
   (define-record-type stats
     ;;Do  not change  the  order of  the  fields!!!  It  must match  the

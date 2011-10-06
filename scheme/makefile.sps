@@ -299,6 +299,8 @@
 						      &i/o-decoding-rcd)))
     (&i/o-encoding			($core-rtd . (&i/o-encoding-rtd
 						      &i/o-encoding-rcd)))
+    (&i/o-eagain			($core-rtd . (&i/o-eagain-rtd
+    						      &i/o-eagain-rcd)))
     (&no-infinities			($core-rtd . (&no-infinities-rtd
 						      &no-infinities-rcd)))
     (&no-nans				($core-rtd . (&no-nans-rtd
@@ -1295,6 +1297,8 @@
     (i/o-read-error?                             i r ip is fi)
     (&i/o-write                                  i r ip is fi)
     (i/o-write-error?                            i r ip is fi)
+    (&i/o-eagain                                 i)
+    (i/o-eagain-error?                           i)
     (lookahead-char                              i r ip)
     (lookahead-u8                                i r ip)
     (make-bytevector                             i r bv)
@@ -1316,6 +1320,7 @@
     (make-i/o-port-error                         i r ip is fi)
     (make-i/o-read-error                         i r ip is fi)
     (make-i/o-write-error                        i r ip is fi)
+    (make-i/o-eagain	                         i)
     (latin-1-codec                               i r ip)
     (make-transcoder                             i r ip)
     (native-eol-style                            i r ip)

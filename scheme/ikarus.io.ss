@@ -557,7 +557,7 @@
     ;;$PORT-* and $SET-PORT-* bindings.
     (ikarus system $io)
     (prefix (only (ikarus) port?) primop.)
-    (prefix (rename #;(ikarus system $fx) (ikarus fixnums unsafe)
+    (prefix (rename (ikarus system $fx) #;(ikarus fixnums unsafe)
 		    ($fxzero?	fxzero?)
 		    ($fxadd1	fxadd1)	 ;increment
 		    ($fxsub1	fxsub1)	 ;decrement
@@ -6122,6 +6122,15 @@
 (define errno-code-ENOENT
   (foreign-call "ik_errno_ENOENT"))
 
+(define (%raise-eagain-error who port)
+  (raise
+   (condition (make-i/o-eagain)
+	      (make-who-condition who)
+	      (make-message-condition (strerror errno-code-EAGAIN))
+	      (if port
+		  (make-i/o-port-error port)
+		(condition)))))
+
 (define %raise-io-error
   ;;Raise a non-continuable  exception describing an input/output
   ;;system error from the value of ERRNO.
@@ -6153,13 +6162,16 @@
 
 ;;;; helper functions for platform's descriptors
 
+;;FIXME This should be customisable.
+(define string->bytevector/filename-encoding string->utf8)
+
 (define (%open-input-file-descriptor filename who)
   ;;Subroutine for the  functions below opening a file  for input.  Open
   ;;and return  a file descriptor  referencing the file selected  by the
   ;;string FILENAME.  If an error occurs: raise an exception.
   ;;
-  (let ((fd (platform-open-input-fd (string->utf8 filename))))
-    (if (unsafe.fx< fd 0)
+  (let ((fd (platform-open-input-fd (string->bytevector/filename-encoding filename))))
+    (if (fx< fd 0)
 	(%raise-io-error who filename fd)
       fd)))
 
@@ -6173,23 +6185,22 @@
 				 (if (enum-set-member? 'no-fail     file-options) 2 0)
 				 (if (enum-set-member? 'no-truncate file-options) 4 0))
 		(assertion-violation who "file-options is not an enum set" file-options))))
-    (let ((fd (platform-open-output-fd (string->utf8 filename) opts)))
-      (if (unsafe.fx< fd 0)
+    (let ((fd (platform-open-output-fd (string->bytevector/filename-encoding filename) opts)))
+      (if (fx< fd 0)
 	  (%raise-io-error who filename fd)
 	fd))))
 
 (define (%file-descriptor->input-port fd port-identifier buffer.size transcoder close-function who)
-  ;;Given the fixnum file descriptor FD representing an open file
-  ;;for the underlying platform:  build and return a Scheme input
-  ;;port to be used to read the data.
+  ;;Given the  fixnum file descriptor  FD representing an open  file for
+  ;;the underlying platform: build and  return a Scheme input port to be
+  ;;used to read the data.
   ;;
-  ;;The  returned   port  supports  both   the  GET-POSITION  and
-  ;;SET-POSITION! operations.
+  ;;The returned  port supports both the  GET-POSITION and SET-POSITION!
+  ;;operations.
   ;;
-  ;;If  CLOSE-FUNCTION  is  a  function:  it  is  used  as  close
-  ;;function; if it  is true: a standard close  function for file
-  ;;descriptors is used; else the port does not support the close
-  ;;function.
+  ;;If CLOSE-FUNCTION is a function: it is used as close function; if it
+  ;;is true:  a standard  close function for  file descriptors  is used;
+  ;;else the port does not support the close function.
   ;;
   (let ((attributes		(%select-input-fast-tag-from-transcoder transcoder who
 									GUARDED-PORT-TAG))
@@ -6228,17 +6239,16 @@
 		 read! write! get-position set-position! close cookie))))
 
 (define (%file-descriptor->output-port fd port-identifier buffer.size transcoder close-function who)
-  ;;Given the fixnum file descriptor FD representing an open file
-  ;;for the underlying platform: build and return a Scheme output
-  ;;port to be used to write the data.
+  ;;Given the  fixnum file descriptor  FD representing an open  file for
+  ;;the underlying platform: build and return a Scheme output port to be
+  ;;used to write the data.
   ;;
-  ;;The  returned   port  supports  both   the  GET-POSITION  and
-  ;;SET-POSITION! operations.
+  ;;The returned  port supports both the  GET-POSITION and SET-POSITION!
+  ;;operations.
   ;;
-  ;;If  CLOSE-FUNCTION  is  a  function:  it  is  used  as  close
-  ;;function; if it  is true: a standard close  function for file
-  ;;descriptors is used; else the port does not support the close
-  ;;operation.
+  ;;If CLOSE-FUNCTION is a function: it is used as close function; if it
+  ;;is true:  a standard  close function for  file descriptors  is used;
+  ;;else the port does not support the close operation.
   ;;
   (let ((attributes		(%select-output-fast-tag-from-transcoder transcoder who
 									 GUARDED-PORT-TAG))
@@ -6277,21 +6287,19 @@
 		 read! write! get-position set-position! close cookie))))
 
 (define (%make-set-position!-function-for-file-descriptor-port fd port-identifier)
-  ;;Build  and  return a  closure  to  be  used as  SET-POSITION!
-  ;;function for  a port wrapping the  platform's file descriptor
-  ;;FD.
+  ;;Build and return a closure to be used as SET-POSITION!  function for
+  ;;a port wrapping the platform's file descriptor FD.
   ;;
   (lambda (position)
     (let ((errno (platform-set-position fd position)))
       (when errno
 	(%raise-io-error 'set-position! port-identifier errno
-			(make-i/o-invalid-position-error position))))))
+			 (make-i/o-invalid-position-error position))))))
 
 (define (%make-close-function-for-platform-descriptor-port port-identifier fd)
-  ;;Return  a standard  CLOSE function  for a  port  wrapping the
-  ;;platform's  descriptor   FD.   It  is  used   for  both  file
-  ;;descriptors  and socket  descriptors, and  in general  can be
-  ;;used for any platform descriptor.
+  ;;Return a standard CLOSE function  for a port wrapping the platform's
+  ;;descriptor  FD.  It  is used  for both  file descriptors  and socket
+  ;;descriptors, and in general can be used for any platform descriptor.
   ;;
   (lambda ()
     (let ((errno (platform-close-fd fd)))
@@ -6693,6 +6701,7 @@
 (define-connector tcp-connect-nonblocking "ikrt_tcp_connect" #f)
 (define-connector udp-connect-nonblocking "ikrt_udp_connect" #f)
 
+
 (module (add-io-event rem-io-event process-events)
   (define-struct t (fd proc type))
     ;;; callbacks
