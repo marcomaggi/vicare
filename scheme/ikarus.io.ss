@@ -1023,7 +1023,7 @@
 	   (%unsafe.assert-value-is-output-port  ?port ?who)
 	   (%unsafe.assert-value-is-open-port    ?port ?who)
 	   (assertion-violation ?who "unsupported port transcoder" ?port))
-	 (define (%reconfigure-as-output port tag)
+	 (define (%reconfigure-as-output ?port tag)
 	   (%unsafe.reconfigure-input-buffer-to-output-buffer ?port ?who)
 	   ($set-port-fast-attrs! ?port tag)
 	   (retry-after-tagging-port))
@@ -5741,6 +5741,7 @@
 (define (%do-put-char port ch who)
   (%assert-argument-is-port port who)
   (%assert-argument-is-char ch   who)
+;(emergency-platform-write-fd "here")
   (let ((code-point (unsafe.char->integer ch)))
     (%case-textual-output-port-fast-tag (port who)
       ((FAST-PUT-UTF8-TAG)
@@ -6047,12 +6048,10 @@
   ;;the buffering mode (Marco Maggi; Oct 3, 2011).
   ;;
   (case-lambda
-   ;;Better  use  PUT-CHAR  rather  than  WRITE-CHAR:  PUT-CHAR  has  no
-   ;;optional arguments, WRITE-CHAR is a CASE-LAMBDA.
    (()
-    (put-char (current-output-port) #\newline))
+    (%do-put-char (current-output-port) #\newline 'newline))
    ((port)
-    (put-char port #\newline))))
+    (%do-put-char port #\newline 'newline))))
 
 
 ;;;; platform API for file descriptors

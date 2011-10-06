@@ -7558,51 +7558,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'newline))
-
-;;; --------------------------------------------------------------------
-;;; port argument validation
-
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-		 (pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(newline 123))
-    => '(123))
-
-  (check	;argument is not an output port
-      (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-		   (pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (newline port '#vu8())))
-    => #t)
-
-  (check	;argument is not a textual port
-      (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-		   (pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (newline port '#vu8())))
-    => #t)
-
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-textual-output-port)))
-	(guard (E ((assertion-violation? E)
-		   (pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (close-output-port port)
-	  (newline port '#vu8())))
-    => #t)
-
-
-  #t)
-
-
 (parametrise ((check-test-name			'put-char)
 	      (bytevector-port-buffer-size	8))
 
@@ -8083,6 +8038,95 @@
 	(put-string port TEST-STRING-FOR-LATIN-1)
 	(extract))
     => TEST-BYTEVECTOR-FOR-LATIN-1)
+
+  #t)
+
+
+(parametrise ((check-test-name	'newline))
+
+;;; --------------------------------------------------------------------
+;;; port argument validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(newline 123))
+    => '(123))
+
+  (check	;argument is not an output port
+      (let ((port (%open-disposable-textual-input-port)))
+  	(guard (E ((assertion-violation? E)
+;;;  		   (pretty-print (condition-message E))
+  		   (eq? port (car (condition-irritants E))))
+  		  (else E))
+  	  (newline port)))
+    => #t)
+
+  (check	;argument is not a textual port
+      (let ((port (%open-disposable-binary-output-port)))
+  	(guard (E ((assertion-violation? E)
+;;;  		   (pretty-print (condition-message E))
+  		   (eq? port (car (condition-irritants E))))
+  		  (else E))
+  	  (newline port)))
+    => #t)
+
+  (check	;argument is not an open port
+      (let ((port (%open-disposable-textual-output-port)))
+  	(guard (E ((assertion-violation? E)
+;;;  		   (pretty-print (condition-message E))
+  		   (eq? port (car (condition-irritants E))))
+  		  (else E))
+  	  (close-output-port port)
+  	  (newline port)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; string port
+
+  (check
+      (let-values (((port extract) (open-string-output-port)))
+	(newline port)
+	(extract))
+    => "\n")
+
+;;; --------------------------------------------------------------------
+;;; UTF-8 transcoder
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+	(newline port)
+	(utf8->string (extract)))
+    => "\n")
+
+;;; --------------------------------------------------------------------
+;;; UTF-16 LE transcoder
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16le-codec)))))
+	(newline port)
+	(utf16->string (extract) (endianness little)))
+    => "\n")
+
+;;; --------------------------------------------------------------------
+;;; UTF-16 BE transcoder
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16be-codec)))))
+	(newline port)
+	(utf16->string (extract) (endianness big)))
+    => "\n")
+
+;;; --------------------------------------------------------------------
+;;; Latin-1 transcoder
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+	(newline port)
+	(latin1->string (extract)))
+    => "\n")
 
   #t)
 
