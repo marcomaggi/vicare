@@ -2061,7 +2061,7 @@
 ;;; encoding code points to 1-octet UTF-8
 
 (define-inline (utf-8-single-octet-code-point? code-point)
-  (and (unsafe.fx< 0 code-point) (unsafe.fx<= code-point 127)))
+  (and (unsafe.fx<= 0 code-point) (unsafe.fx<= code-point 127)))
 
 (define-inline (utf-8-encode-single-octet code-point)
   ;;Encode  the code point  of a  Unicode character  to a  1-octet UTF-8

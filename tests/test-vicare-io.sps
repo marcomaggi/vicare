@@ -7557,6 +7557,489 @@
 
   #t)
 
+
+(parametrise ((check-test-name			'put-char)
+	      (bytevector-port-buffer-size	8))
+
+;;; --------------------------------------------------------------------
+;;; port argument validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(put-char 123 #\a))
+    => '(123))
+
+  (check	;argument is not an output port
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (put-char port #\a)))
+    => #t)
+
+  (check	;argument is not a textual port
+      (let ((port (%open-disposable-binary-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (put-char port #\a)))
+    => #t)
+
+  (check	;argument is not an open port
+      (let ((port (%open-disposable-textual-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-output-port port)
+	  (put-char port #\a)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; char argument validation
+
+  (check	;argument is not a char
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(let ((port (%open-disposable-textual-output-port)))
+	  (put-char port 123)))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; string port
+
+  (check
+      (let-values (((port extract) (open-string-output-port)))
+	(put-char port #\A)
+	(extract))
+    => "A")
+
+  (check
+      (let-values (((port extract) (open-string-output-port)))
+	(put-char port #\A)
+	(put-char port #\B)
+	(extract))
+    => "AB")
+
+  (check
+      (let-values (((port extract) (open-string-output-port)))
+	(let ((str TEST-STRING-FOR-UTF-8))
+	  (do ((i 0 (+ 1 i)))
+	      ((= i (string-length str))
+	       (extract))
+	    (put-char port (string-ref str i)))))
+    => TEST-STRING-FOR-UTF-8)
+
+;;; --------------------------------------------------------------------
+;;; UTF-8 transcoder
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+	(put-char port #\A)
+	(utf8->string (extract)))
+    => "A")
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+	(put-char port #\A)
+	(put-char port #\B)
+	(utf8->string (extract)))
+    => "AB")
+
+  (check	;fill the buffer
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+	(do ((i 0 (+ 1 i)))
+	    ((= i 10)
+	     (extract))
+	  (put-char port (integer->char i))))
+    => '#vu8(0 1 2 3 4 5 6 7 8 9))
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+	(let ((str TEST-STRING-FOR-UTF-8))
+	  (do ((i 0 (+ 1 i)))
+	      ((= i (string-length str))
+	       (extract))
+	    (put-char port (string-ref str i)))))
+    => TEST-BYTEVECTOR-FOR-UTF-8)
+
+;;; --------------------------------------------------------------------
+;;; UTF-16 LE transcoder
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16le-codec)))))
+	(put-char port #\A)
+	(utf16->string (extract) (endianness little)))
+    => "A")
+
+  (check	;fill the buffer
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16le-codec)))))
+	(let ((str TEST-STRING-FOR-UTF-16-LE))
+	  (do ((i 0 (+ 1 i)))
+	      ((= i (string-length str))
+	       (extract))
+	    (put-char port (string-ref str i)))))
+    => TEST-BYTEVECTOR-FOR-UTF-16-LE)
+
+;;; --------------------------------------------------------------------
+;;; UTF-16 BE transcoder
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16be-codec)))))
+	(put-char port #\A)
+	(utf16->string (extract) (endianness big)))
+    => "A")
+
+  (check	;fill the buffer
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16be-codec)))))
+	(let ((str TEST-STRING-FOR-UTF-16-BE))
+	  (do ((i 0 (+ 1 i)))
+	      ((= i (string-length str))
+	       (extract))
+	    (put-char port (string-ref str i)))))
+    => TEST-BYTEVECTOR-FOR-UTF-16-BE)
+
+;;; --------------------------------------------------------------------
+;;; Latin-1 transcoder
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+	(put-char port #\A)
+	(latin1->string (extract)))
+    => "A")
+
+  (check	;fill the buffer
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+	(let ((str TEST-STRING-FOR-LATIN-1))
+	  (do ((i 0 (+ 1 i)))
+	      ((= i (string-length str))
+	       (extract))
+	    (put-char port (string-ref str i)))))
+    => TEST-BYTEVECTOR-FOR-LATIN-1)
+
+  #t)
+
+
+(parametrise ((check-test-name			'write-char)
+	      (bytevector-port-buffer-size	8))
+
+;;; --------------------------------------------------------------------
+;;; port argument validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(write-char #\a 123))
+    => '(123))
+
+  (check	;argument is not an output port
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (write-char #\a port)))
+    => #t)
+
+  (check	;argument is not a textual port
+      (let ((port (%open-disposable-binary-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (write-char #\a port)))
+    => #t)
+
+  (check	;argument is not an open port
+      (let ((port (%open-disposable-textual-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-output-port port)
+	  (write-char #\a port)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; char argument validation
+
+  (check	;argument is not a char
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(let ((port (%open-disposable-textual-output-port)))
+	  (write-char 123 port)))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; string port
+
+  (check
+      (let-values (((port extract) (open-string-output-port)))
+	(write-char #\A port)
+	(extract))
+    => "A")
+
+  (check
+      (let-values (((port extract) (open-string-output-port)))
+	(write-char #\A port)
+	(write-char #\B port)
+	(extract))
+    => "AB")
+
+  (check
+      (let-values (((port extract) (open-string-output-port)))
+	(let ((str TEST-STRING-FOR-UTF-8))
+	  (do ((i 0 (+ 1 i)))
+	      ((= i (string-length str))
+	       (extract))
+	    (write-char (string-ref str i) port))))
+    => TEST-STRING-FOR-UTF-8)
+
+;;; --------------------------------------------------------------------
+;;; UTF-8 transcoder
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+	(write-char #\A port)
+	(utf8->string (extract)))
+    => "A")
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+	(write-char #\A port)
+	(write-char #\B port)
+	(utf8->string (extract)))
+    => "AB")
+
+  (check	;fill the buffer
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+	(do ((i 0 (+ 1 i)))
+	    ((= i 10)
+	     (extract))
+	  (write-char (integer->char i) port)))
+    => '#vu8(0 1 2 3 4 5 6 7 8 9))
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+	(let ((str TEST-STRING-FOR-UTF-8))
+	  (do ((i 0 (+ 1 i)))
+	      ((= i (string-length str))
+	       (extract))
+	    (write-char (string-ref str i) port))))
+    => TEST-BYTEVECTOR-FOR-UTF-8)
+
+;;; --------------------------------------------------------------------
+;;; UTF-16 LE transcoder
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16le-codec)))))
+	(write-char #\A port)
+	(utf16->string (extract) (endianness little)))
+    => "A")
+
+  (check	;fill the buffer
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16le-codec)))))
+	(let ((str TEST-STRING-FOR-UTF-16-LE))
+	  (do ((i 0 (+ 1 i)))
+	      ((= i (string-length str))
+	       (extract))
+	    (write-char (string-ref str i) port))))
+    => TEST-BYTEVECTOR-FOR-UTF-16-LE)
+
+;;; --------------------------------------------------------------------
+;;; UTF-16 BE transcoder
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16be-codec)))))
+	(write-char #\A port)
+	(utf16->string (extract) (endianness big)))
+    => "A")
+
+  (check	;fill the buffer
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16be-codec)))))
+	(let ((str TEST-STRING-FOR-UTF-16-BE))
+	  (do ((i 0 (+ 1 i)))
+	      ((= i (string-length str))
+	       (extract))
+	    (write-char (string-ref str i) port))))
+    => TEST-BYTEVECTOR-FOR-UTF-16-BE)
+
+;;; --------------------------------------------------------------------
+;;; Latin-1 transcoder
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+	(write-char #\A port)
+	(latin1->string (extract)))
+    => "A")
+
+  (check	;fill the buffer
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+	(let ((str TEST-STRING-FOR-LATIN-1))
+	  (do ((i 0 (+ 1 i)))
+	      ((= i (string-length str))
+	       (extract))
+	    (write-char (string-ref str i) port))))
+    => TEST-BYTEVECTOR-FOR-LATIN-1)
+
+  #t)
+
+
+(parametrise ((check-test-name			'put-string)
+	      (bytevector-port-buffer-size	8))
+
+;;; --------------------------------------------------------------------
+;;; port argument validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(put-string 123 "a"))
+    => '(123))
+
+  (check	;argument is not an output port
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (put-string port "a")))
+    => #t)
+
+  (check	;argument is not a textual port
+      (let ((port (%open-disposable-binary-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (put-string port "a")))
+    => #t)
+
+  (check	;argument is not an open port
+      (let ((port (%open-disposable-textual-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-output-port port)
+	  (put-string port "a")))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; char argument validation
+
+  (check	;argument is not a char
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(let ((port (%open-disposable-textual-output-port)))
+	  (put-string port 123)))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; string port
+
+  (check
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port "A")
+	(extract))
+    => "A")
+
+  (check
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port "A")
+	(put-string port "B")
+	(extract))
+    => "AB")
+
+  (check
+      (let-values (((port extract) (open-string-output-port)))
+	(put-string port TEST-STRING-FOR-UTF-8)
+	(extract))
+    => TEST-STRING-FOR-UTF-8)
+
+;;; --------------------------------------------------------------------
+;;; UTF-8 transcoder
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+	(put-string port "A")
+	(utf8->string (extract)))
+    => "A")
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+	(put-string port "A")
+	(put-string port "B")
+	(utf8->string (extract)))
+    => "AB")
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+	(put-string port TEST-STRING-FOR-UTF-8)
+	(extract))
+    => TEST-BYTEVECTOR-FOR-UTF-8)
+
+;;; --------------------------------------------------------------------
+;;; UTF-16 LE transcoder
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16le-codec)))))
+	(put-string port "A")
+	(utf16->string (extract) (endianness little)))
+    => "A")
+
+  (check	;fill the buffer
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16le-codec)))))
+	(put-string port TEST-STRING-FOR-UTF-16-LE)
+	(extract))
+    => TEST-BYTEVECTOR-FOR-UTF-16-LE)
+
+;;; --------------------------------------------------------------------
+;;; UTF-16 BE transcoder
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16be-codec)))))
+	(put-string port "A")
+	(utf16->string (extract) (endianness big)))
+    => "A")
+
+  (check	;fill the buffer
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16be-codec)))))
+	(put-string port TEST-STRING-FOR-UTF-16-BE)
+	(extract))
+    => TEST-BYTEVECTOR-FOR-UTF-16-BE)
+
+;;; --------------------------------------------------------------------
+;;; Latin-1 transcoder
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+	(put-string port "A")
+	(latin1->string (extract)))
+    => "A")
+
+  (check	;fill the buffer
+      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+	(put-string port TEST-STRING-FOR-LATIN-1)
+	(extract))
+    => TEST-BYTEVECTOR-FOR-LATIN-1)
+
+  #t)
 
 
 ;;;; done
