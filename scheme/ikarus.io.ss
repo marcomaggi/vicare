@@ -4456,7 +4456,7 @@
 	   (if-available-data:    (%data-available-in-buffer))))))))
 
 
-;;;; character input functions
+;;;; character input
 
 (define (get-char port)
   ;;Defined  by R6RS.   Read from  the textual  input PORT,  blocking as
@@ -4539,8 +4539,8 @@
     ((FAST-GET-UTF16BE-TAG)
      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big    0))))
 
-
-;;;; GET-CHAR and LOOKAHEAD-CHAR for ports with UTF-8 transcoder
+;;; --------------------------------------------------------------------
+;;; GET-CHAR and LOOKAHEAD-CHAR for ports with UTF-8 transcoder
 
 (define-inline (%unsafe.read-char-from-port-with-fast-get-utf8-tag ?port ?who)
   ;;PORT  is a  textual  input  port with  bytevector  buffer and  UTF-8
@@ -4946,8 +4946,8 @@
 
     (main)))
 
-
-;;;; GET-CHAR and LOOKAHEAD-CHAR for ports with UTF-16 transcoder
+;;; --------------------------------------------------------------------
+;;; GET-CHAR and LOOKAHEAD-CHAR for ports with UTF-16 transcoder
 
 (define (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who endianness)
   ;;Read  and return  from PORT  a UTF-16  encoded character;  leave the
@@ -5042,7 +5042,6 @@
 	     ;;for  a full UTF-16  character encoded  as single  16 bits
 	     ;;word.
 	     (let ((word0 (%word-ref buffer.offset-word0)))
-;;;(pretty-print (list who 'word0 (utf-16-classify-word word0)))
 	       (cond ((utf-16-single-word? word0)
 		      ;;WORD0  is  in the  allowed  range  for a  UTF-16
 		      ;;encoded character of 16 bits.
@@ -5261,8 +5260,8 @@
 	       (if-end-of-file:	(eof-object))
 	       (if-successful-refill: (recurse buffer-offset))))))))
 
-
-;;;; GET-CHAR and LOOKAHEAD-CHAR for ports with Latin-1 transcoder
+;;; --------------------------------------------------------------------
+;;; GET-CHAR and LOOKAHEAD-CHAR for ports with Latin-1 transcoder
 
 (define-inline (%unsafe.read-char-from-port-with-fast-get-latin-tag ?port ?who)
   ;;PORT must be a textual input port with bytevector buffer and Latin-1
@@ -5317,8 +5316,8 @@
 	 (port.buffer.index.incr! buffer-index-increment)
 	 (unsafe.integer->char (unsafe.bytevector-u8-ref port.buffer buffer.offset)))))))
 
-
-;;;; GET-CHAR and LOOKAHEAD-CHAR for ports with string buffer
+;;; --------------------------------------------------------------------
+;;; GET-CHAR and LOOKAHEAD-CHAR for ports with string buffer
 
 (define-inline (%unsafe.read-char-from-port-with-fast-get-char-tag ?port ?who)
   ;;PORT must  be a textual input  port with a Scheme  string as buffer.
@@ -5370,7 +5369,7 @@
 	 (unsafe.string-ref port.buffer buffer.offset))))))
 
 
-;;;; string input functions
+;;;; string input
 
 (define (get-string-n port count)
   ;;Defined  by R6RS.   COUNT must  be an  exact,  non--negative integer
@@ -5546,7 +5545,7 @@
      (%get-it %read-utf16be))))
 
 
-;;;; string line input functions
+;;;; string line input
 
 (define (get-line port)
   ;;Defined  by  R6RS.  Read  from  the textual  input  PORT  up to  and
@@ -5824,7 +5823,6 @@
 	((utf-8-two-octets-code-point? code-point)
 	 (let ((octet0 (utf-8-encode-first-of-two-octets  code-point))
 	       (octet1 (utf-8-encode-second-of-two-octets code-point)))
-;;(pretty-print (list who ch code-point octet0 octet1))
 	   (with-port-having-bytevector-buffer (port)
 	     (let retry-after-flushing-buffer ()
 	       (let* ((buffer.offset-octet0	port.buffer.index)
@@ -5906,11 +5904,9 @@
 	       (let* ((buffer.offset-word0	port.buffer.index)
 		      (buffer.past		(unsafe.fx+ 2 buffer.offset-word0)))
 		 (define-inline (%buffer-set! offset word)
-		   #;(bytevector-u16-set! port.buffer offset word endianness)
 		   (%unsafe.bytevector-u16-set! port.buffer offset word endianness))
 		 (if (unsafe.fx<= buffer.past port.buffer.size)
 		     (begin
-;;;(pretty-print (list who ch code-point word0))
 		       (%buffer-set! buffer.offset-word0 word0)
 		       (set! port.buffer.index buffer.past)
 		       (when (unsafe.fx> buffer.past port.buffer.used-size)
@@ -5927,27 +5923,14 @@
 		      (buffer.offset-word1	(unsafe.fx+ 2 buffer.offset-word0))
 		      (buffer.past		(unsafe.fx+ 2 buffer.offset-word1)))
 		 (define-inline (%buffer-set! offset word)
-		   #;(bytevector-u16-set! port.buffer offset word endianness)
 		   (%unsafe.bytevector-u16-set! port.buffer offset word endianness))
 		 (if (unsafe.fx<= buffer.past port.buffer.size)
 		     (begin
-#;(pretty-print (list who ch code-point 'words word0 word1
-		    'buffer.offset-word0 buffer.offset-word0
-		    'buffer.offset-word1 buffer.offset-word1
-		    'buffer.past buffer.past
-		    'buffer.used-size buffer.used-size
-		    ))
 		       (%buffer-set! buffer.offset-word0 word0)
 		       (%buffer-set! buffer.offset-word1 word1)
 		       (set! port.buffer.index buffer.past)
 		       (when (unsafe.fx> buffer.past port.buffer.used-size)
-			 (set! port.buffer.used-size buffer.past))
-;; (pretty-print (list who
-;; 		    'buffer.index port.buffer.index
-;; 		    'buffer.used-size port.buffer.used-size))
-;; (flush-output-port (current-output-port))
-;;(%unsafe.flush-output-port port who)
-)
+			 (set! port.buffer.used-size buffer.past)))
 		   (begin
 		     (%unsafe.flush-output-port port who)
 		     (retry-after-flushing-buffer))))))))))

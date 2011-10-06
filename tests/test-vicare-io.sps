@@ -7558,6 +7558,51 @@
   #t)
 
 
+(parametrise ((check-test-name	'newline))
+
+;;; --------------------------------------------------------------------
+;;; port argument validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(newline 123))
+    => '(123))
+
+  (check	;argument is not an output port
+      (let ((port (%open-disposable-textual-input-port)))
+	(guard (E ((assertion-violation? E)
+		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (newline port '#vu8())))
+    => #t)
+
+  (check	;argument is not a textual port
+      (let ((port (%open-disposable-binary-output-port)))
+	(guard (E ((assertion-violation? E)
+		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (newline port '#vu8())))
+    => #t)
+
+  (check	;argument is not an open port
+      (let ((port (%open-disposable-textual-output-port)))
+	(guard (E ((assertion-violation? E)
+		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-output-port port)
+	  (newline port '#vu8())))
+    => #t)
+
+
+  #t)
+
+
 (parametrise ((check-test-name			'put-char)
 	      (bytevector-port-buffer-size	8))
 
