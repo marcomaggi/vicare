@@ -6226,11 +6226,7 @@
 	(cond ((unsafe.fx>= count 0)
 	       count)
 	      ((unsafe.fx= count errno-code-EAGAIN)
-	       (call/cc
-		   (lambda (k)
-		     (add-io-event fd k 'r)
-		     (process-events)))
-	       (read! dst.bv dst.start requested-count))
+	       (%raise-eagain-error who #f))
 	      (else
 	       (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
@@ -6274,11 +6270,7 @@
 	(cond ((unsafe.fx>= count 0)
 	       count)
 	      ((unsafe.fx= count errno-code-EAGAIN)
-	       (call/cc
-		   (lambda (k)
-		     (add-io-event fd k 'w)
-		     (process-events)))
-	       (write! src.bv src.start requested-count))
+	       (%raise-eagain-error who #f))
 	      (else
 	       (%raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
 
