@@ -8131,6 +8131,12 @@
   #t)
 
 
+(parametrise ((check-test-name	'open-file-input-port))
+
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

@@ -1,18 +1,19 @@
 /*
- *  Ikarus Scheme -- A compiler for R6RS Scheme.
- *  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
- *  
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 3 as
- *  published by the Free Software Foundation.
- *  
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
- *  
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Ikarus Scheme -- A compiler for R6RS Scheme.
+ * Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+ * Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+ *
+ * This program is free software:  you can redistribute it and/or modify
+ * it under  the terms of  the GNU General  Public License version  3 as
+ * published by the Free Software Foundation.
+ *
+ * This program is  distributed in the hope that it  will be useful, but
+ * WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+ * MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+ * General Public License for more details.
+ *
+ * You should  have received  a copy of  the GNU General  Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 
@@ -55,9 +56,16 @@ ikrt_set_position(ikptr fd, ikptr pos /*, ikpcb* pcb */){
 
 
 ikptr
-ikrt_open_input_fd(ikptr fn /*, ikpcb* pcb */){
-  int fh = open((char*)(long)(fn+off_bytevector_data), O_RDONLY, 0);
-  if(fh >= 0){
+ikrt_open_input_fd (ikptr fn, ikptr ikopts /*, ikpcb* pcb */)
+{
+  int opts  = unfix(ikopts);
+  /* no special flags supported at present */
+  int flags = O_RDONLY;
+  /* the "mode" value is used  only when creating the file, which should
+     not happen here */
+  int mode  = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+  int fh = open((char*)(long)(fn+off_bytevector_data), flags, mode);
+  if (fh >= 0){
     return fix(fh);
   } else {
     return ik_errno_to_code();
@@ -66,25 +74,24 @@ ikrt_open_input_fd(ikptr fn /*, ikpcb* pcb */){
 
 ikptr
 ikrt_open_output_fd(ikptr fn, ikptr ikopts /*, ikpcb* pcb */){
-  int opts = unfix(ikopts);
-  int mode = 0;
+  int opts  = unfix(ikopts);
+  int mode  = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+  int flags = 0;
   switch (opts){
     /* mode 0: error if exists, create if does not exist */
-    case 0: mode = O_WRONLY | O_CREAT | O_EXCL; break;
+    case 0: flags = O_WRONLY | O_CREAT | O_EXCL; break;
     /* mode 1: truncate if exists, error if not exists */
-    case 1: mode = O_WRONLY | O_TRUNC; break;
+    case 1: flags = O_WRONLY | O_TRUNC; break;
     /* mode 2: truncate if exists, create if not exist */
-    case 2: mode = O_WRONLY | O_TRUNC | O_CREAT ; break;
+    case 2: flags = O_WRONLY | O_TRUNC | O_CREAT ; break;
     /* mode 3: truncate if exists, error if not exists */
-    case 3: mode = O_WRONLY | O_TRUNC ; break;
-    case 4: mode = O_WRONLY | O_CREAT | O_EXCL ; break;
-    case 5: mode = O_WRONLY | O_CREAT ; break;
-    case 6: mode = O_WRONLY | O_CREAT ; break;
-    case 7: mode = O_WRONLY ; break;
+    case 3: flags = O_WRONLY | O_TRUNC ; break;
+    case 4: flags = O_WRONLY | O_CREAT | O_EXCL ; break;
+    case 5: flags = O_WRONLY | O_CREAT ; break;
+    case 6: flags = O_WRONLY | O_CREAT ; break;
+    case 7: flags = O_WRONLY ; break;
   }
-  int fh = open((char*)(long)(fn+off_bytevector_data), 
-                mode,
-                S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+  int fh = open((char*)(long)(fn+off_bytevector_data), flags, mode);
   if(fh >= 0){
     return fix(fh);
   } else {
@@ -98,9 +105,9 @@ ikrt_read_fd(ikptr fd, ikptr bv, ikptr off, ikptr cnt /*, ikpcb* pcb */){
 #if 0
   fprintf(stderr, "READ: %d\n", unfix(fd));
 #endif
-  ssize_t bytes = 
+  ssize_t bytes =
    read(unfix(fd),
-        (char*)(long)(bv+off_bytevector_data+unfix(off)), 
+        (char*)(long)(bv+off_bytevector_data+unfix(off)),
         unfix(cnt));
 #if 0
   fprintf(stderr, "BYTES: %d\n", bytes);
@@ -116,7 +123,7 @@ ikptr
 ikrt_write_fd(ikptr fd, ikptr bv, ikptr off, ikptr cnt /*, ikpcb* pcb */){
 #if 0
   if (0) {
-    fprintf(stderr, "WRITE %d, %p %d %d %d\n", 
+    fprintf(stderr, "WRITE %d, %p %d %d %d\n",
          unfix(fd),
          bv,
          unfix(ref(bv, off_bytevector_length)),
@@ -130,9 +137,9 @@ ikrt_write_fd(ikptr fd, ikptr bv, ikptr off, ikptr cnt /*, ikpcb* pcb */){
     fprintf(stderr, "\n");
   }
 #endif
-  ssize_t bytes = 
+  ssize_t bytes =
    write(unfix(fd),
-         (char*)(long)(bv+off_bytevector_data+unfix(off)), 
+         (char*)(long)(bv+off_bytevector_data+unfix(off)),
          unfix(cnt));
   if(bytes >= 0){
     return fix(bytes);
@@ -192,7 +199,7 @@ ikrt_udp_connect(ikptr host, ikptr srvc /*, ikpcb* pcb */){
   return do_connect(host, srvc, SOCK_DGRAM);
 }
 
-ikptr 
+ikptr
 ikrt_make_fd_nonblocking(ikptr fdptr /*, ikpcb* pcb */){
   int fd = unfix(fdptr);
   int err = fcntl(fd, F_SETFL, O_NONBLOCK);
@@ -202,7 +209,7 @@ ikrt_make_fd_nonblocking(ikptr fdptr /*, ikpcb* pcb */){
   return 0;
 }
 
-ikptr 
+ikptr
 ikrt_select(ikptr fds, ikptr rfds, ikptr wfds, ikptr xfds /*, ikpcb* pcb */){
   int rv = select(unfix(fds),
                   (fd_set*)(rfds + off_bytevector_data),
@@ -211,13 +218,13 @@ ikrt_select(ikptr fds, ikptr rfds, ikptr wfds, ikptr xfds /*, ikpcb* pcb */){
                   NULL);
   if(rv < 0){
     return ik_errno_to_code();
-  } 
+  }
   return fix(rv);
 }
 
 ikptr
 ikrt_listen(ikptr port /*, ikpcb* pcb */){
-  
+
   int sock = socket(AF_INET, SOCK_STREAM, 0);
   if(sock < 0){
     return ik_errno_to_code();
@@ -250,9 +257,9 @@ ikrt_listen(ikptr port /*, ikpcb* pcb */){
   return fix(sock);
 }
 
-#if 0 
+#if 0
 not used
-ikptr 
+ikptr
 ikrt_getsockname(ikptr s, ikpcb* pcb){
   socklen_t size = sizeof(struct sockaddr);
   ikptr bv = ik_safe_alloc(pcb, align(disp_bytevector_data+size))
@@ -279,7 +286,7 @@ ikrt_accept(ikptr s, ikptr bv /*, ikpcb* pcb */){
                     &addrlen);
   if(sock < 0){
     return ik_errno_to_code();
-  } 
+  }
   ref(bv, off_bytevector_length) = fix(addrlen);
   return fix(sock);
 }
@@ -293,12 +300,12 @@ ikrt_shutdown(ikptr s /*, ikpcb* pcb*/){
 #endif
   if(err < 0){
     return ik_errno_to_code();
-  } 
+  }
   return 0;
 }
 
 
-static ikptr 
+static ikptr
 timespec_bytevector(struct timespec* s, ikpcb* pcb) {
   int len = sizeof(struct timespec);
   ikptr r = ik_safe_alloc(pcb, align(disp_bytevector_data+len+3));
@@ -359,7 +366,7 @@ ikrt_file_ctime(ikptr filename, ikptr res){
   if(err) {
     return ik_errno_to_code();
   }
-  
+
   ref(res, off_car) = fix(s.st_ctime);
   ref(res, off_cdr) = 0;
   return fix(0);
@@ -372,7 +379,7 @@ ikrt_file_mtime(ikptr filename, ikptr res){
   if(err) {
     return ik_errno_to_code();
   }
-  
+
   ref(res, off_car) = fix(s.st_mtime);
   ref(res, off_cdr) = 0;
   return fix(0);

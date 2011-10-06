@@ -1228,6 +1228,14 @@
   (unless (or (procedure? ?proc) (not ?proc))
     (assertion-violation ?who "SET-POSITION! should be either a procedure or false" ?proc)))
 
+(define-inline (%assert-argument-is-a-filename filename who)
+  (unless (string? filename)
+    (assertion-violation who "expected Scheme string as filename argument" filename)))
+
+(define-inline (%assert-argument-is-a-file-options obj who)
+  (unless (enum-set? obj)
+    (assertion-violation who "expected enum set as file-options argument" obj)))
+
 ;;; --------------------------------------------------------------------
 
 (define (%assert-argument-is-fixnum-start-index start who)
@@ -6058,13 +6066,13 @@
 ;;See detailed documentation of the C functions in the Texinfo file.
 ;;
 
-(define-inline (platform-open-input-fd pathname-bv)
+(define-inline (platform-open-input-fd pathname-bv open-options)
   ;;Interface  to "open()".   Open  a file  descriptor  for reading;  if
   ;;successful  return  a  non-negative  fixnum  representing  the  file
   ;;descriptor;  else return  a  negative fixnum  representing an  ERRNO
   ;;code.
   ;;
-  (foreign-call "ikrt_open_input_fd" pathname-bv))
+  (foreign-call "ikrt_open_input_fd" pathname-bv open-options))
 
 (define-inline (platform-open-output-fd pathname-bv open-options)
   ;;Interface to  "open()".  Open a file  descriptor for writing;
@@ -6165,12 +6173,17 @@
 ;;FIXME This should be customisable.
 (define string->bytevector/filename-encoding string->utf8)
 
-(define (%open-input-file-descriptor filename who)
+(define (%open-input-file-descriptor filename file-options who)
   ;;Subroutine for the  functions below opening a file  for input.  Open
   ;;and return  a file descriptor  referencing the file selected  by the
   ;;string FILENAME.  If an error occurs: raise an exception.
   ;;
-  (let ((fd (platform-open-input-fd (string->bytevector/filename-encoding filename))))
+  ;;R6RS states that the NO-CREATE, NO-FAIL and NO-TRUNCATE file options
+  ;;have  no effect  when opening  a file  only for  input.   At present
+  ;;FILE-OPTIONS is ignored, no flags are supported.
+  ;;
+  (let* ((opts 0)
+	 (fd   (platform-open-input-fd (string->bytevector/filename-encoding filename) opts)))
     (if (fx< fd 0)
 	(%raise-io-error who filename fd)
       fd)))
@@ -6180,17 +6193,18 @@
   ;;and return  a file descriptor  referencing the file selected  by the
   ;;string FILENAME.  If an error occurs: raise an exception.
   ;;
-  (let ((opts (if (enum-set? file-options)
-		  (%unsafe.fxior (if (enum-set-member? 'no-create   file-options) 1 0)
-				 (if (enum-set-member? 'no-fail     file-options) 2 0)
-				 (if (enum-set-member? 'no-truncate file-options) 4 0))
-		(assertion-violation who "file-options is not an enum set" file-options))))
-    (let ((fd (platform-open-output-fd (string->bytevector/filename-encoding filename) opts)))
-      (if (fx< fd 0)
-	  (%raise-io-error who filename fd)
-	fd))))
+  (let* ((opts (if (enum-set? file-options)
+		   (%unsafe.fxior (if (enum-set-member? 'no-create   file-options) 1 0)
+				  (if (enum-set-member? 'no-fail     file-options) 2 0)
+				  (if (enum-set-member? 'no-truncate file-options) 4 0))
+		 (assertion-violation who "file-options is not an enum set" file-options)))
+	 (fd (platform-open-output-fd (string->bytevector/filename-encoding filename) opts)))
+    (if (fx< fd 0)
+	(%raise-io-error who filename fd)
+      fd)))
 
-(define (%file-descriptor->input-port fd port-identifier buffer.size transcoder close-function who)
+(define (%file-descriptor->input-port fd attributes port-identifier buffer.size
+				      transcoder close-function who)
   ;;Given the  fixnum file descriptor  FD representing an open  file for
   ;;the underlying platform: build and  return a Scheme input port to be
   ;;used to read the data.
@@ -6203,6 +6217,7 @@
   ;;else the port does not support the close function.
   ;;
   (let ((attributes		(%select-input-fast-tag-from-transcoder transcoder who
+									attributes
 									GUARDED-PORT-TAG))
 	(buffer.index		0)
 	(buffer.used-size	0)
@@ -6217,7 +6232,7 @@
     (define close
       (cond ((procedure? close-function)
 	     close-function)
-	    ((eqv? close-function #t)
+	    ((and (boolean? close-function) close-function)
 	     (%make-close-function-for-platform-descriptor-port port-identifier fd))
 	    (else #f)))
 
@@ -6234,7 +6249,8 @@
      ($make-port attributes buffer.index buffer.used-size buffer transcoder port-identifier
 		 read! write! get-position set-position! close cookie))))
 
-(define (%file-descriptor->output-port fd port-identifier buffer.size transcoder close-function who)
+(define (%file-descriptor->output-port fd attributes port-identifier buffer.size
+				       transcoder close-function who)
   ;;Given the  fixnum file descriptor  FD representing an open  file for
   ;;the underlying platform: build and return a Scheme output port to be
   ;;used to write the data.
@@ -6247,6 +6263,7 @@
   ;;else the port does not support the close operation.
   ;;
   (let ((attributes		(%select-output-fast-tag-from-transcoder transcoder who
+									 attributes
 									 GUARDED-PORT-TAG))
 	(buffer.index		0)
 	(buffer.used-size	0)
@@ -6261,7 +6278,7 @@
     (define close
       (cond ((procedure? close-function)
 	     close-function)
-	    ((eqv? close-function #t)
+	    ((and (boolean? close-function) close-function)
 	     (%make-close-function-for-platform-descriptor-port port-identifier fd))
 	    (else #f)))
 
@@ -6298,34 +6315,41 @@
       (when errno
 	(%raise-io-error 'close port-identifier errno)))))
 
+(define (%buffer-mode->attributes buffer-mode who)
+  (case buffer-mode
+    ((block)	0)
+    ((line)	BUFFER-MODE-LINE-TAG)
+    ((none)	BUFFER-MODE-NONE-TAG)
+    (else
+     (assertion-violation who "invalid buffer-mode argument" buffer-mode))))
+
 
 ;;;; opening ports wrapping platform file descriptors
 
 (define open-file-input-port
-  ;;Defined by R6RS.   The OPEN-FILE-INPUT-PORT procedure returns
-  ;;an  input port  for  the named  file.   The FILE-OPTIONS  and
+  ;;Defined  by  R6RS.  The  OPEN-FILE-INPUT-PORT  procedure returns  an
+  ;;input   port   for   the   named   file.    The   FILE-OPTIONS   and
   ;;MAYBE-TRANSCODER arguments are optional.
   ;;
-  ;;The  FILE-OPTIONS  argument,   which  may  determine  various
-  ;;aspects  of the  returned  port, defaults  to  the value  of:
+  ;;The FILE-OPTIONS  argument, which  may determine various  aspects of
+  ;;the returned port, defaults to the value of:
   ;;
   ;;   (file-options)
   ;;
   ;;MAYBE-TRANSCODER must be either a transcoder or false.
   ;;
-  ;;The  BUFFER-MODE argument, if  supplied, must  be one  of the
-  ;;symbols that  name a  buffer mode.  The  BUFFER-MODE argument
-  ;;defaults to BLOCK.
+  ;;The BUFFER-MODE  argument, if supplied,  must be one of  the symbols
+  ;;that  name a  buffer  mode.  The  BUFFER-MODE  argument defaults  to
+  ;;BLOCK.
   ;;
-  ;;If   MAYBE-TRANSCODER  is  a   transcoder,  it   becomes  the
-  ;;transcoder associated with the returned port.
+  ;;If  MAYBE-TRANSCODER  is a  transcoder,  it  becomes the  transcoder
+  ;;associated with the returned port.
   ;;
-  ;;If MAYBE-TRANSCODER  is false or  absent, the port will  be a
-  ;;binary   port  and   will  support   the   PORT-POSITION  and
-  ;;SET-PORT-POSITION!  operations.  Otherwise the port will be a
-  ;;textual port,  and whether it supports  the PORT-POSITION and
-  ;;SET-PORT-POSITION!   operations  is  implementation-dependent
-  ;;(and possibly transcoder-dependent).
+  ;;If MAYBE-TRANSCODER  is false or absent,  the port will  be a binary
+  ;;port  and  will  support  the PORT-POSITION  and  SET-PORT-POSITION!
+  ;;operations.  Otherwise the port will  be a textual port, and whether
+  ;;it supports the  PORT-POSITION and SET-PORT-POSITION!  operations is
+  ;;implementation dependent (and possibly transcoder dependent).
   ;;
   (case-lambda
    ((filename)
@@ -6339,18 +6363,16 @@
 
    ((filename file-options buffer-mode maybe-transcoder)
     (define who 'open-file-input-port)
-    (unless (string? filename)
-      (assertion-violation who "invalid filename" filename))
-    (unless (enum-set? file-options)
-      (assertion-violation who "file-options is not an enum set" file-options))
+    (%assert-argument-is-a-filename filename who)
+    (%assert-argument-is-a-file-options file-options who)
     (%assert-argument-is-maybe-transcoder maybe-transcoder who)
-;;;FIXME: file-options ignored
-;;;FIXME: buffer-mode ignored
-    (let ((fd			(%open-input-file-descriptor filename who))
-	  (port-identifier	filename)
-	  (buffer-size		(input-file-buffer-size))
-	  (close-function	#t))
-      (%file-descriptor->input-port fd port-identifier buffer-size maybe-transcoder
+    (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
+	   (attributes		(%unsafe.fxior DEFAULT-OTHER-ATTRS buffer-mode-attrs))
+	   (fd			(%open-input-file-descriptor filename file-options who))
+	   (port-identifier	filename)
+	   (buffer-size		(input-file-buffer-size))
+	   (close-function	#t))
+      (%file-descriptor->input-port fd attributes port-identifier buffer-size maybe-transcoder
 				    close-function who)))))
 
 (define open-file-output-port
@@ -6390,20 +6412,16 @@
 
    ((filename file-options buffer-mode maybe-transcoder)
     (define who 'open-file-output-port)
-    (unless (string? filename)
-      (assertion-violation who "invalid filename" filename))
-;;;FIXME: file-options ignored
-;;;FIXME: line-buffered output ports are not handled
+    (%assert-argument-is-a-filename filename who)
+    (%assert-argument-is-a-file-options file-options who)
     (%assert-argument-is-maybe-transcoder maybe-transcoder who)
-    (let ((buffer-size (case buffer-mode
-			 ((none)
-			  0)
-			 ((block line)
-			  (output-file-buffer-size))
-			 (else
-			  (assertion-violation who "invalid buffer mode" buffer-mode)))))
-      (%file-descriptor->output-port (%open-output-file-descriptor filename file-options who)
-				     filename buffer-size maybe-transcoder #t who)))))
+    (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
+	   (attributes		(%unsafe.fxior DEFAULT-OTHER-ATTRS buffer-mode-attrs))
+	   (fd			(%open-output-file-descriptor filename file-options who))
+	   (port-identifier	filename)
+	   (buffer-size		(output-file-buffer-size)))
+      (%file-descriptor->output-port fd attributes port-identifier
+				     buffer-size maybe-transcoder #t who)))))
 
 (define (open-output-file filename)
   ;;Defined by  R6RS.  Open FILENAME for output,  with empty file
@@ -6413,6 +6431,7 @@
   (unless (string? filename)
     (assertion-violation who "invalid filename" filename))
   (%file-descriptor->output-port (%open-output-file-descriptor filename (file-options) who)
+				 DEFAULT-OTHER-ATTRS
 				 filename (output-file-buffer-size) (native-transcoder) #t who))
 
 (define (open-input-file filename)
@@ -6422,7 +6441,8 @@
   (define who 'open-input-file)
   (unless (string? filename)
     (assertion-violation who "invalid filename" filename))
-  (%file-descriptor->input-port (%open-input-file-descriptor filename who)
+  (%file-descriptor->input-port (%open-input-file-descriptor filename (file-options) who)
+				DEFAULT-OTHER-ATTRS
 				filename (input-file-buffer-size) (native-transcoder) #t who))
 
 
@@ -6451,6 +6471,7 @@
   (%assert-value-is-procedure thunk who)
   (call-with-port
       (%file-descriptor->output-port (%open-output-file-descriptor filename (file-options) who)
+				     DEFAULT-OTHER-ATTRS
 				     filename (output-file-buffer-size) (native-transcoder)
 				     #t who)
     (lambda (port)
@@ -6481,7 +6502,10 @@
     (assertion-violation who "invalid filename" filename))
   (%assert-value-is-procedure thunk who)
   (call-with-port
-      (%file-descriptor->input-port (%open-input-file-descriptor filename who)
+      (%file-descriptor->input-port (%open-input-file-descriptor filename
+								 (file-options no-create no-truncate)
+								 who)
+				    DEFAULT-OTHER-ATTRS
 				    filename (input-file-buffer-size) (native-transcoder) #t who)
     (lambda (port)
       (parameterize ((current-input-port port))
@@ -6507,6 +6531,7 @@
   (%assert-value-is-procedure proc who)
   (call-with-port
       (%file-descriptor->output-port (%open-output-file-descriptor filename (file-options) who)
+				     DEFAULT-OTHER-ATTRS
 				     filename (output-file-buffer-size) (native-transcoder) #t who)
     proc))
 
@@ -6529,7 +6554,8 @@
     (assertion-violation who "invalid filename" filename))
   (%assert-value-is-procedure proc who)
   (call-with-port
-      (%file-descriptor->input-port (%open-input-file-descriptor filename who)
+      (%file-descriptor->input-port (%open-input-file-descriptor filename (file-options) who)
+				    DEFAULT-OTHER-ATTRS
 				    filename (input-file-buffer-size) (native-transcoder) #t who)
     proc))
 
@@ -6639,17 +6665,17 @@
 	     (values
 	      (vector-ref r 0)        ; pid
 	      (and (not stdin)
-		   (%file-descriptor->output-port (vector-ref r 1)
-				    cmd (output-file-buffer-size) #f #t
-				    'process))
+		   (%file-descriptor->output-port (vector-ref r 1) DEFAULT-OTHER-ATTRS
+						  cmd (output-file-buffer-size) #f #t
+						  'process))
 	      (and (not stdout)
-		   (%file-descriptor->input-port (vector-ref r 2)
-				   cmd (input-file-buffer-size) #f #t
-				   'process))
+		   (%file-descriptor->input-port (vector-ref r 2) DEFAULT-OTHER-ATTRS
+						 cmd (input-file-buffer-size) #f #t
+						 'process))
 	      (and (not stderr)
-		   (%file-descriptor->input-port (vector-ref r 3)
-				   cmd (input-file-buffer-size) #f #t
-				   'process))))))))
+		   (%file-descriptor->input-port (vector-ref r 3) DEFAULT-OTHER-ATTRS
+						 cmd (input-file-buffer-size) #f #t
+						 'process))))))))
 
 
 ;;;; platform socket functions
@@ -6671,8 +6697,10 @@
       (unless block?
 	(set-fd-nonblocking socket who id))
       (values
-       (%file-descriptor->input-port  socket id (input-socket-buffer-size)  #f close who)
-       (%file-descriptor->output-port socket id (output-socket-buffer-size) #f close who)))))
+       (%file-descriptor->input-port  socket DEFAULT-OTHER-ATTRS
+				      id (input-socket-buffer-size)  #f close who)
+       (%file-descriptor->output-port socket DEFAULT-OTHER-ATTRS
+				      id (output-socket-buffer-size) #f close who)))))
 
 (define-syntax define-connector
   (syntax-rules ()
@@ -6967,7 +6995,8 @@
   ;;and   SET-PORT-POSITION!     operations   is   implementation
   ;;dependent.
   ;;
-  (%file-descriptor->input-port  0 "*stdin*" 256 #f #f 'standard-input-port))
+  (%file-descriptor->input-port  0 DEFAULT-OTHER-ATTRS
+				 "*stdin*" (input-file-buffer-size) #f #f 'standard-input-port))
 
 (define (standard-output-port)
   ;;Defined by  R6RS.  Return a new binary  output port connected
@@ -6975,7 +7004,8 @@
   ;;PORT-POSITION    and   SET-PORT-POSITION!     operations   is
   ;;implementation dependent.
   ;;
-  (%file-descriptor->output-port 1 "*stdout*" 256 #f #f 'standard-output-port))
+  (%file-descriptor->output-port 1 DEFAULT-OTHER-ATTRS
+				 "*stdout*" (output-file-buffer-size) #f #f 'standard-output-port))
 
 (define (standard-error-port)
   ;;Defined by  R6RS.  Return a new binary  output port connected
@@ -6983,7 +7013,8 @@
   ;;PORT-POSITION    and   SET-PORT-POSITION!     operations   is
   ;;implementation dependent.
   ;;
-  (%file-descriptor->output-port 2 "*stderr*" 256 #f #f 'standard-error-port))
+  (%file-descriptor->output-port 2 DEFAULT-OTHER-ATTRS
+				 "*stderr*" (output-file-buffer-size) #f #f 'standard-error-port))
 
 (define current-input-port
   ;;Defined by  R6RS.  Return a  default textual port  for input.
@@ -6994,8 +7025,7 @@
   ;;transcoder;  if  it does,  the  transcoder is  implementation
   ;;dependent.
   (make-parameter
-      (transcoded-port (%file-descriptor->input-port 0 "*stdin*" (input-file-buffer-size) #f #f #f)
-		       (native-transcoder))
+      (transcoded-port (standard-input-port) (native-transcoder))
     (lambda (x)
       (define who 'current-input-port)
       (%assert-value-is-input-port x who)
@@ -7014,8 +7044,7 @@
   ;;does, the transcoder is implementation dependent.
   ;;
   (make-parameter
-      (transcoded-port (%file-descriptor->output-port 1 "*stdout*" (output-file-buffer-size) #f #f #f)
-		       (native-transcoder))
+      (transcoded-port (standard-output-port) (native-transcoder))
     (lambda (x)
       (define who 'current-output-port)
       (%assert-value-is-output-port x who)
@@ -7034,8 +7063,7 @@
   ;;does, the transcoder is implementation dependent.
   ;;
   (make-parameter
-      (transcoded-port (%file-descriptor->output-port 2 "*stderr*" (output-file-buffer-size) #f #f #f)
-		       (native-transcoder))
+      (transcoded-port (standard-error-port) (native-transcoder))
     (lambda (x)
       (define who 'current-error-port)
       (%assert-value-is-output-port x who)
