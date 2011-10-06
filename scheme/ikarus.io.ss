@@ -2061,7 +2061,7 @@
 ;;; encoding code points to 1-octet UTF-8
 
 (define-inline (utf-8-single-octet-code-point? code-point)
-  (and (unsafe.fx< 0 code-point) (unsafe.fx<= code-point 255)))
+  (and (unsafe.fx< 0 code-point) (unsafe.fx<= code-point 127)))
 
 (define-inline (utf-8-encode-single-octet code-point)
   ;;Encode  the code point  of a  Unicode character  to a  1-octet UTF-8
@@ -2746,7 +2746,7 @@
 	(buffer.used-size	0)
 	(buffer			(make-string (string-port-buffer-size)))
 	(transcoder		#t)
-	(cookie			(default-cookie )))
+	(cookie			(default-cookie #f)))
     (%port->maybe-guarded-port
      ($make-port (%unsafe.fxior attributes GUARDED-PORT-TAG)
 		 buffer.index buffer.used-size buffer transcoder identifier
@@ -5709,6 +5709,7 @@
 	((utf-8-two-octets-code-point? code-point)
 	 (let ((octet0 (utf-8-encode-first-of-two-octets  code-point))
 	       (octet1 (utf-8-encode-second-of-two-octets code-point)))
+;;(pretty-print (list who ch code-point octet0 octet1))
 	   (with-port-having-bytevector-buffer (port)
 	     (let retry-after-flushing-buffer ()
 	       (let* ((buffer.offset-octet0	port.buffer.index)

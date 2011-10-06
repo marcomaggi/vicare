@@ -614,6 +614,23 @@
    THREE-BYTES-UTF-8-CHAR-UTF-8
    FOUR-BYTES-UTF-8-CHAR-UTF-8))
 
+;;The following "special" test strings are here to hunt a specific bug.
+;;
+(define SPECIAL-TEST-STRING-FOR-UTF-8
+  (string
+   LATIN-SMALL-LETTER-A-WITH-GRAVE LATIN-SMALL-LETTER-A-WITH-ACUTE
+   LATIN-SMALL-LETTER-E-WITH-GRAVE LATIN-SMALL-LETTER-E-WITH-ACUTE
+   LATIN-SMALL-LETTER-I-WITH-GRAVE LATIN-SMALL-LETTER-I-WITH-ACUTE
+   LATIN-SMALL-LETTER-O-WITH-GRAVE LATIN-SMALL-LETTER-O-WITH-ACUTE
+   LATIN-SMALL-LETTER-U-WITH-GRAVE LATIN-SMALL-LETTER-U-WITH-ACUTE))
+(define SPECIAL-TEST-BYTEVECTOR-FOR-UTF-8
+  (bytevector-append
+   LATIN-SMALL-LETTER-A-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-A-WITH-ACUTE-UTF-8
+   LATIN-SMALL-LETTER-E-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-E-WITH-ACUTE-UTF-8
+   LATIN-SMALL-LETTER-I-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-I-WITH-ACUTE-UTF-8
+   LATIN-SMALL-LETTER-O-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-O-WITH-ACUTE-UTF-8
+   LATIN-SMALL-LETTER-U-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-U-WITH-ACUTE-UTF-8))
+
 ;;; --------------------------------------------------------------------
 
 (define TEST-STRING-FOR-UTF-16-LE
@@ -5284,17 +5301,25 @@
 	  (latin1->string (extract))))
     => TEST-STRING-FOR-LATIN-1)
 
-  (check 'this
+  (check
       (let-values (((bin-port extract) (open-bytevector-output-port)))
 	(let ((tran-port (transcoded-port bin-port (make-transcoder (utf-8-codec)
 								    (eol-style none)
 								    (error-handling-mode raise)))))
 	  (put-string tran-port TEST-STRING-FOR-UTF-8)
 	  (let ((bv (extract)))
-(pretty-print bv)
-(pretty-print (string->utf8 TEST-STRING-FOR-UTF-8))
 	    (utf8->string bv))))
     => TEST-STRING-FOR-UTF-8)
+
+  (check
+      (let-values (((bin-port extract) (open-bytevector-output-port)))
+	(let ((tran-port (transcoded-port bin-port (make-transcoder (utf-8-codec)
+								    (eol-style none)
+								    (error-handling-mode raise)))))
+	  (put-string tran-port SPECIAL-TEST-STRING-FOR-UTF-8)
+	  (let ((bv (extract)))
+	    (utf8->string bv))))
+    => SPECIAL-TEST-STRING-FOR-UTF-8)
 
   (check
       (let-values (((bin-port extract) (open-bytevector-output-port)))
