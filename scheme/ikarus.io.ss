@@ -3795,6 +3795,8 @@
 (define-syntax if-successful-flush:	(syntax-rules ()))
 (define-syntax if-device-cannot-absorb:	(syntax-rules ()))
 
+;;; --------------------------------------------------------------------
+
 (define-syntax %flush-bytevector-buffer-and-evaluate
   (syntax-rules ()
     ((%flush-bytevector-buffer-and-evaluate (?port ?who)
@@ -3803,6 +3805,26 @@
        (if-device-cannot-absorb: . ?failure-body))
      (let ((port ?port))
        (with-port-having-bytevector-buffer (port)
+	 (let try-again-after-flushing-buffer ()
+	   (if (unsafe.fx< ?buffer.index port.buffer.size)
+	       (begin . ?available-body)
+	     (begin
+	       (%debug-assert (= port.buffer.used-size port.buffer.index))
+	       (%debug-assert (= port.buffer.used-size port.buffer.size))
+	       (guard (E ((i/o-write-error? E)
+			  (begin . ?failure-body))
+			 (else (raise E)))
+		 (%unsafe.flush-output-port port ?who))
+	       (try-again-after-flushing-buffer)))))))))
+
+(define-syntax %flush-string-buffer-and-evaluate
+  (syntax-rules ()
+    ((%flush-string-buffer-and-evaluate (?port ?who)
+       (room-is-needed-at: ?buffer.index)
+       (if-successful-flush: . ?available-body)
+       (if-device-cannot-absorb: . ?failure-body))
+     (let ((port ?port))
+       (with-port-having-string-buffer (port)
 	 (let try-again-after-flushing-buffer ()
 	   (if (unsafe.fx< ?buffer.index port.buffer.size)
 	       (begin . ?available-body)
@@ -3902,13 +3924,13 @@
 
 ;;;; bytevector buffer handling for input ports
 ;;
-;;Input functions  always read bytes from the  input buffer; when
-;;the  input buffer is  completely consumed:  new bytes  are read
-;;from  the  underlying device  refilling  the buffer.   Whenever
-;;refilling  reads no  characters (that  is: the  READ!  function
-;;returns 0) the port is in EOF state.
+;;Input  functions always  read bytes  from the  input buffer;  when the
+;;input  buffer is  completely consumed:  new  bytes are  read from  the
+;;underlying device  refilling the buffer.  Whenever  refilling reads no
+;;characters (that is: the READ!  function returns 0) the port is in EOF
+;;state.
 ;;
-;;The following macros make it easier to handle this mechanism by
+;;The  following macros  make  it  easier to  handle  this mechanism  by
 ;;wrapping the %UNSAFE.REFILL-INPUT-PORT-BYTEVECTOR-BUFFER function.
 ;;
 
@@ -4023,7 +4045,148 @@
 	;;
 	(let ((delta (unsafe.fx- port.buffer.used-size port.buffer.index)))
 	  (unless (unsafe.fxzero? delta)
-	    (bytevector-copy! buffer port.buffer.index buffer 0 delta))
+	    (%unsafe.bytevector-copy! buffer port.buffer.index buffer 0 delta))
+	  (set! port.buffer.index     0)
+	  (set! port.buffer.used-size delta))
+	;;Fill the buffer with data from the device.  Before:
+	;;
+	;;                          cookie.pos
+	;;                              v           device
+	;; |----------------------------+-------------|
+	;;                 |+***********+-------------------|
+	;;                  ^           ^                 buffer
+	;;                index     used size
+	;;
+	;;after:
+	;;
+	;;                                        cookie.pos
+	;;                                            v
+	;; |------------------------------------------|device
+	;;                 |+*************************+-----|
+	;;                  ^                         ^   buffer
+	;;                index                   used size
+	;;
+	(let* ((max   (unsafe.fx- port.buffer.size port.buffer.used-size))
+	       (count (port.read! buffer port.buffer.used-size max)))
+	  (unless (fixnum? count)
+	    (assertion-violation who "invalid return value from read! procedure" count))
+	  (unless (and (unsafe.fx>= count 0)
+		       (unsafe.fx<= count max))
+	    (assertion-violation who "read! returned a value out of range" count))
+	  (port.device.position.incr!  count)
+	  (port.buffer.used-size.incr! count)
+	  count)))))
+
+
+;;;; string buffer handling for input ports
+;;
+;;Input functions always read characters from the input buffer; when the
+;;input buffer is completely consumed:  new characters are read from the
+;;underlying device  refilling the buffer.  Whenever  refilling reads no
+;;characters (that is: the READ!  function returns 0) the port is in EOF
+;;state.
+;;
+;;The  following macros  make  it  easier to  handle  this mechanism  by
+;;wrapping the %UNSAFE.REFILL-INPUT-PORT-string-BUFFER function.
+;;
+
+(define-syntax %refill-string-buffer-and-evaluate
+  ;;?PORT must be an input port with a string as buffer; the buffer must
+  ;;be fully  consumed.  Refill  the buffer and  evaluate a  sequence of
+  ;;forms.
+  ;;
+  ;;The code  in this  macro mutates the  fields of the  ?PORT structure
+  ;;representing the buffer  state, so the client forms  must reload the
+  ;;fields they use.
+  ;;
+  ;;If  refilling the buffer  succeeds: evaluate  ?AFTER-REFILL-BODY and
+  ;;return its result.
+  ;;
+  ;;If  refilling  the buffer  finds  the  EOF  with no  new  characters
+  ;;available: evaluate ?END-OF-FILE-BODY and return its result.
+  ;;
+  (syntax-rules (if-end-of-file: if-successful-refill:)
+    ((%refill-string-buffer-and-evaluate (?port ?who)
+       (if-end-of-file:		. ?end-of-file-body)
+       (if-successful-refill:	. ?after-refill-body))
+     (let ((count (%unsafe.refill-input-port-string-buffer ?port ?who)))
+       (if (unsafe.fxzero? count)
+	   (begin . ?end-of-file-body)
+	 (begin . ?after-refill-body))))))
+
+(define-syntax %maybe-refill-string-buffer-and-evaluate
+  ;;?PORT must  be an input  port with a  string as buffer; there  is no
+  ;;constraint on the state of  the buffer.  Refill the buffer if needed
+  ;;and evaluate a sequence of forms.
+  ;;
+  ;;The code  in this  macro mutates the  fields of the  ?PORT structure
+  ;;representing the buffer  state, so the client forms  must reload the
+  ;;fields they use.
+  ;;
+  ;;If there  are characters  to be consumed  in the buffer  between the
+  ;;offset  ?BUFFER.OFFSET  and  the  end  of the  used  area:  evaluate
+  ;;?AVAILABLE-DATA-BODY and return its result.
+  ;;
+  ;;If ?BUFFER.OFFSET  references the end  of buffer's used  area (there
+  ;;are  no more  characters to  be consumed)  and refilling  the buffer
+  ;;succeeds: evaluate ?AFTER-REFILL-BODY and return its result.
+  ;;
+  ;;If there are  no more characters and refilling  the buffer finds the
+  ;;EOF  with no  new  bytes available:  evaluate ?END-OF-FILE-BODY  and
+  ;;return its result.
+  ;;
+  (syntax-rules (if-end-of-file: if-successful-refill: if-available-data:)
+    ((%maybe-refill-string-buffer-and-evaluate (?port ?who)
+       (data-is-needed-at:	?buffer.offset)
+       (if-end-of-file:		. ?end-of-file-body)
+       (if-successful-refill:	. ?after-refill-body)
+       (if-available-data:	. ?available-data-body))
+     (if (unsafe.fx< ?buffer.offset ($port-size ?port))
+	 (begin . ?available-data-body)
+       (%refill-string-buffer-and-evaluate (?port ?who)
+	 (if-end-of-file:	. ?end-of-file-body)
+	 (if-successful-refill:	. ?after-refill-body))))))
+
+(define (%unsafe.refill-input-port-string-buffer port who)
+  ;;Assume PORT is  an input port object with a  string as buffer.  Fill
+  ;;the input buffer keeping in  it the characters already there but not
+  ;;yet  consumed (see the  pictures below);  mutate the  PORT structure
+  ;;fields representing the buffer state and the port position.
+  ;;
+  ;;Return the number of new  characters loaded.  If the return value is
+  ;;zero: the underlying device has no more bytes, it is at its EOF, but
+  ;;there may  still be characters to  be consumed in  the buffer unless
+  ;;the buffer was already fully consumed before this function call.
+  ;;
+  ;;This should be the only function calling the port's READ!  function.
+  ;;
+  (with-port-having-string-buffer (port)
+    (%unsafe.assert-value-is-open-port port who)
+    (if (eq? port.read! all-data-in-buffer)
+	0
+      (let ((buffer port.buffer))
+	;;Shift to the beginning data  alraedy in buffer but still to be
+	;;consumed; commit the new position.  Before:
+	;;
+	;;                          cookie.pos
+	;;                              v           device
+	;; |----------------------------+-------------|
+	;;       |**********+###########+---------|
+	;;                  ^           ^       buffer
+	;;                index     used size
+	;;
+	;;after:
+	;;
+	;;                          cookie.pos
+	;;                              v           device
+	;; |----------------------------+-------------|
+	;;                 |+###########+-------------------|
+	;;                  ^           ^                 buffer
+	;;                index     used size
+	;;
+	(let ((delta (unsafe.fx- port.buffer.used-size port.buffer.index)))
+	  (unless (unsafe.fxzero? delta)
+	    (%unsafe.string-copy! buffer port.buffer.index buffer 0 delta))
 	  (set! port.buffer.index     0)
 	  (set! port.buffer.used-size delta))
 	;;Fill the buffer with data from the device.  Before:
@@ -5209,43 +5372,13 @@
   ;;GET-CHAR, when it is 0 this function acts like LOOKAHEAD-CHAR.
   ;;
   (with-port-having-string-buffer (port)
-    (%debug-assert (fx= port.buffer.index port.buffer.used-size))
-    (if (eq? port.read! all-data-in-buffer)
-	;;The buffer itself is the device and it is fully consumed.
-	(eof-object)
-      (let* ((buffer.length	port.buffer.size)
-	     (count		(port.read! port.buffer 0 buffer.length)))
-	;;We enter this function with this scenario:
-	;;
-	;;            old cookie.pos
-	;;                v
-	;;  |-------------+-----------------------| device
-	;;        |*******+---------| buffer
-	;;                ^
-	;;          index = used-size
-	;;
-	;;and  right  after  calling  READ!   we  want  the  following
-	;;scenario:
-	;;
-	;;       old cookie.pos     new cookie.pos
-	;;                v            v
-	;;  |-------------+------------+----------| device
-	;;               |*************+---| buffer
-	;;                ^            ^
-	;;              index       used-size
-	;;
-	;; count = new cookie.pos - old cookie.pos
-	;;
-	(unless (fixnum? count)
-	  (assertion-violation who "invalid return value from read!" count))
-	(unless (<= 0 count buffer.length)
-	  (assertion-violation who "return value from read! is out of range" count))
-	(port.device.position.incr! count)
-	(set! port.buffer.used-size count)
-	(set! port.buffer.index buffer-index-increment)
-	(if (unsafe.fxzero? count)
-	    (eof-object)
-	  (unsafe.string-ref port.buffer 0))))))
+    (%debug-assert (unsafe.fx= port.buffer.index port.buffer.used-size))
+    (%refill-string-buffer-and-evaluate (port who)
+      (if-end-of-file: (eof-object))
+      (if-successful-refill:
+       (let ((buffer.offset port.buffer.index))
+	 (port.buffer.index.incr! buffer-index-increment)
+	 (unsafe.string-ref port.buffer buffer.offset))))))
 
 
 ;;;; string input functions
@@ -6971,6 +7104,9 @@
 ;;; eval: (put '%case-textual-input-port-fast-tag	'scheme-indent-function 1)
 ;;; eval: (put '%case-textual-output-port-fast-tag	'scheme-indent-function 1)
 ;;; eval: (put '%flush-bytevector-buffer-and-evaluate	'scheme-indent-function 1)
+;;; eval: (put '%flush-string-buffer-and-evaluate	'scheme-indent-function 1)
 ;;; eval: (put '%refill-bytevector-buffer-and-evaluate		'scheme-indent-function 1)
 ;;; eval: (put '%maybe-refill-bytevector-buffer-and-evaluate	'scheme-indent-function 1)
+;;; eval: (put '%refill-string-buffer-and-evaluate		'scheme-indent-function 1)
+;;; eval: (put '%maybe-refill-string-buffer-and-evaluate	'scheme-indent-function 1)
 ;;; End:
