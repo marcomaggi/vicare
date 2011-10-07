@@ -1196,13 +1196,13 @@
   (unless (bytevector? ?obj)
     (assertion-violation ?who "not a bytevector" ?obj)))
 
-(define-inline (%assert-value-is-string ?obj ?who)
+(define-inline (%assert-argument-is-string ?obj ?who)
   (unless (string? ?obj)
-    (assertion-violation ?who "not a string" ?obj)))
+    (assertion-violation ?who "expected string as argument" ?obj)))
 
-(define-inline (%assert-value-is-procedure ?proc ?who)
+(define-inline (%assert-argument-is-procedure ?proc ?who)
   (unless (procedure? ?proc)
-    (assertion-violation ?who "not a procedure" ?proc)))
+    (assertion-violation ?who "expected procedure as argument" ?proc)))
 
 (define-inline (%assert-argument-is-port-identifier ?identifier ?who)
   (unless (string? ?identifier)
@@ -3094,6 +3094,53 @@
       ($make-port attributes buffer.index buffer.used-size buffer transcoder id
 		  read! write! get-position set-position! close cookie))))
 
+(define (with-input-from-string string thunk)
+  ;;Defined by Ikarus.   THUNK must be a procedure  and must accept zero
+  ;;arguments.  STRING must be a Scheme string, and THUNK is called with
+  ;;no arguments.
+  ;;
+  ;;The STRING  is used  as argument for  OPEN-STRING-INPUT-PORT; during
+  ;;the dynamic extent  of the call to THUNK, the  obtained port is made
+  ;;the  value returned  by procedure  CURRENT-INPUT-PORT;  the previous
+  ;;default value is reinstated when the dynamic extent is exited.
+  ;;
+  ;;When THUNK  returns, the port  is closed automatically.   The values
+  ;;returned by THUNK are returned.
+  ;;
+  ;;If an escape procedure is used to escape back into the call to THUNK
+  ;;after THUNK is returned, the behavior is unspecified.
+  ;;
+  (define who 'with-input-from-string)
+  (%assert-argument-is-string    string who)
+  (%assert-argument-is-procedure thunk  who)
+  (parameterize ((current-input-port (open-string-input-port string)))
+    (thunk)))
+
+
+;;;; generic port functions
+
+(define (call-with-port port proc)
+  ;;Defined by R6RS.  PROC must accept one argument.  The CALL-WITH-PORT
+  ;;procedure calls PROC with PORT as an argument.
+  ;;
+  ;;If  PROC  returns,  PORT  is  closed automatically  and  the  values
+  ;;returned by PROC are returned.
+  ;;
+  ;;If PROC  does not return,  PORT is not closed  automatically, except
+  ;;perhaps when it  is possible to prove that PORT  will never again be
+  ;;used for an input or output operation.
+  ;;
+  (define who 'call-with-port)
+  (%assert-argument-is-port port who)
+  (%unsafe.assert-value-is-open-port port who)
+  (%assert-argument-is-procedure proc who)
+  (call-with-values
+      (lambda ()
+	(proc port))
+    (lambda vals
+      (%unsafe.close-port port who)
+      (apply values vals))))
+
 
 ;;;; bytevector output ports
 
@@ -3326,7 +3373,7 @@
     ;;for a call to OPEN-BYTEVECTOR-OUTPUT-PORT.
     ;;
     (define who 'call-with-bytevector-output-port)
-    (%assert-value-is-procedure proc who)
+    (%assert-argument-is-procedure proc who)
     (%assert-argument-is-maybe-transcoder transcoder who)
     (let-values (((port extract) (open-bytevector-output-port transcoder)))
       (proc port)
@@ -3566,7 +3613,7 @@
   ;;operations.
   ;;
   (define who 'call-with-string-output-port)
-  (%assert-value-is-procedure proc who)
+  (%assert-argument-is-procedure proc who)
   (let-values (((port getter) (open-string-output-port)))
     (proc port)
     (getter)))
@@ -3583,7 +3630,7 @@
   ;;current position) is returned and the port is closed.
   ;;
   (define who 'with-output-to-string)
-  (%assert-value-is-procedure proc who)
+  (%assert-argument-is-procedure proc who)
   (let-values (((port extract) (open-string-output-port)))
     (parameterize ((current-output-port port))
       (proc))
@@ -3601,7 +3648,7 @@
   ;;supposed to return a textual output port.
   ;;
   (define who 'with-output-to-port)
-  (%assert-value-is-procedure proc who)
+  (%assert-argument-is-procedure proc who)
   (%assert-value-is-output-port port who)
   (%unsafe.assert-value-is-textual-port port who)
   (parameterize ((current-output-port port))
@@ -5480,7 +5527,7 @@
   (define-inline (%read-utf16be ?port ?who)
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
   (%assert-argument-is-port port who)
-  (%assert-value-is-string dst.str who)
+  (%assert-argument-is-string dst.str who)
   (%assert-argument-is-fixnum-start-index dst.start who)
   (%assert-argument-is-fixnum-count count who)
   (%unsafe.assert-argument-is-start-index-for-string dst.start dst.str who)
@@ -5999,19 +6046,19 @@
    ((port str)
     (define who 'put-string)
     (%assert-argument-is-port port who)
-    (%assert-value-is-string str who)
+    (%assert-argument-is-string str who)
     (%unsafe.put-string port str 0 (unsafe.string-length str) who))
    ((port str start)
     (define who 'put-string)
     (%assert-argument-is-port port who)
-    (%assert-value-is-string str who)
+    (%assert-argument-is-string str who)
     (%assert-argument-is-fixnum-start-index start who)
     (%unsafe.assert-argument-is-start-index-for-string start str who)
     (%unsafe.put-string port str start (unsafe.fx- (unsafe.string-length str) start) who))
    ((port str start count)
     (define who 'put-string)
     (%assert-argument-is-port port who)
-    (%assert-value-is-string str who)
+    (%assert-argument-is-string str who)
     (%assert-argument-is-fixnum-start-index start who)
     (%unsafe.assert-argument-is-start-index-for-string start str who)
     (%assert-argument-is-fixnum-count count who)
@@ -6324,7 +6371,7 @@
      (assertion-violation who "invalid buffer-mode argument" buffer-mode))))
 
 
-;;;; opening ports wrapping platform file descriptors
+;;;; input ports wrapping platform file descriptors
 
 (define open-file-input-port
   ;;Defined  by  R6RS.  The  OPEN-FILE-INPUT-PORT  procedure returns  an
@@ -6375,6 +6422,76 @@
       (%file-descriptor->input-port fd attributes port-identifier buffer-size maybe-transcoder
 				    close-function who)))))
 
+(define (%open-input-file-with-defaults filename who)
+  ;;Open FILENAME  for input, with  empty file options, and  returns the
+  ;;obtained port.
+  ;;
+  (%assert-argument-is-a-filename filename who)
+  (let ((fd		(%open-input-file-descriptor filename (file-options) who))
+	(attributes	DEFAULT-OTHER-ATTRS)
+	(port-id	filename)
+	(buffer.size	(input-file-buffer-size))
+	(transcoder	(native-transcoder))
+	(close-function	#t))
+    (%file-descriptor->input-port fd attributes port-id buffer.size transcoder close-function who)))
+
+(define (open-input-file filename)
+  ;;Defined by  R6RS.  Open FILENAME  for input, with  empty file
+  ;;options, and returns the obtained port.
+  ;;
+  (define who 'open-input-file)
+  (%open-input-file-with-defaults filename who))
+
+(define (with-input-from-file filename thunk)
+  ;;Defined by R6RS.   THUNK must be a procedure  and must accept
+  ;;zero arguments.
+  ;;
+  ;;The  file is  opened for  input  or output  using empty  file
+  ;;options, and THUNK is called with no arguments.
+  ;;
+  ;;During the dynamic extent of  the call to THUNK, the obtained
+  ;;port   is  made   the   value  returned   by  the   procedure
+  ;;CURRENT-INPUT-PORT; the previous  default value is reinstated
+  ;;when the dynamic extent is exited.
+  ;;
+  ;;When THUNK  returns, the  port is closed  automatically.  The
+  ;;values returned by THUNK are returned.
+  ;;
+  ;;If an escape  procedure is used to escape  back into the call
+  ;;to   THUNK  after   THUNK  is   returned,  the   behavior  is
+  ;;unspecified.
+  ;;
+  (define who 'with-input-from-file)
+  (%assert-argument-is-a-filename filename who)
+  (%assert-argument-is-procedure  thunk    who)
+  (call-with-port
+      (%open-input-file-with-defaults filename who)
+    (lambda (port)
+      (parameterize ((current-input-port port))
+	(thunk)))))
+
+(define (call-with-input-file filename proc)
+  ;;Defined by R6RS.  PROC should accept one argument.
+  ;;
+  ;;This procedure opens  the file named by FILENAME  for input, with no
+  ;;specified file options, and calls  PROC with the obtained port as an
+  ;;argument.
+  ;;
+  ;;If PROC  returns, the  port is closed  automatically and  the values
+  ;;returned by PROC are returned.
+  ;;
+  ;;If  PROC does  not return,  the  port is  not closed  automatically,
+  ;;unless it  is possible to  prove that the  port will never  again be
+  ;;used for an I/O operation.
+  ;;
+  (define who 'call-with-input-file)
+  (%assert-argument-is-a-filename filename who)
+  (%assert-argument-is-procedure  proc  who)
+  (call-with-port (%open-input-file-with-defaults filename who) proc))
+
+
+;;;; output ports wrapping platform file descriptors
+
 (define open-file-output-port
   ;;Defined by R6RS.  The OPEN-FILE-OUTPUT-PORT procedure returns
   ;;an output port for the named file.
@@ -6423,189 +6540,66 @@
       (%file-descriptor->output-port fd attributes port-identifier
 				     buffer-size maybe-transcoder #t who)))))
 
+(define (%open-output-file-with-defaults filename who)
+  ;;Open FILENAME  for output, with  empty file options, and  return the
+  ;;obtained port.
+  ;;
+  (%assert-argument-is-a-filename filename who)
+  (let ((fd		(%open-output-file-descriptor filename (file-options) who))
+	(attributes	DEFAULT-OTHER-ATTRS)
+	(port-id	filename)
+	(buffer.size	(output-file-buffer-size))
+	(transcoder	(native-transcoder))
+	(close-function	#t))
+    (%file-descriptor->output-port fd attributes port-id buffer.size transcoder close-function who)))
+
 (define (open-output-file filename)
-  ;;Defined by  R6RS.  Open FILENAME for output,  with empty file
-  ;;options, and returns the obtained port.
+  ;;Defined by R6RS.  Open FILENAME for output, with empty file options,
+  ;;and return the obtained port.
   ;;
   (define who 'open-output-file)
-  (unless (string? filename)
-    (assertion-violation who "invalid filename" filename))
-  (%file-descriptor->output-port (%open-output-file-descriptor filename (file-options) who)
-				 DEFAULT-OTHER-ATTRS
-				 filename (output-file-buffer-size) (native-transcoder) #t who))
-
-(define (open-input-file filename)
-  ;;Defined by  R6RS.  Open FILENAME  for input, with  empty file
-  ;;options, and returns the obtained port.
-  ;;
-  (define who 'open-input-file)
-  (unless (string? filename)
-    (assertion-violation who "invalid filename" filename))
-  (%file-descriptor->input-port (%open-input-file-descriptor filename (file-options) who)
-				DEFAULT-OTHER-ATTRS
-				filename (input-file-buffer-size) (native-transcoder) #t who))
-
+  (%open-output-file-with-defaults filename who))
 
 (define (with-output-to-file filename thunk)
-  ;;Defined by R6RS.   THUNK must be a procedure  and must accept
-  ;;zero arguments.
+  ;;Defined by  R6RS.  THUNK  must be a  procedure and must  accept zero
+  ;;arguments.  The file is opened  for output using empty file options,
+  ;;and THUNK is called with no arguments.
   ;;
-  ;;The  file is  opened for  input  or output  using empty  file
-  ;;options, and THUNK is called with no arguments.
+  ;;During the dynamic extent of the call to THUNK, the obtained port is
+  ;;made the  value returned  by the procedure  CURRENT-OUTPUT-PORT; the
+  ;;previous  default value  is reinstated  when the  dynamic  extent is
+  ;;exited.
   ;;
-  ;;During the dynamic extent of  the call to THUNK, the obtained
-  ;;port   is  made   the   value  returned   by  the   procedure
-  ;;CURRENT-OUTPUT-PORT; the previous default value is reinstated
-  ;;when the dynamic extent is exited.
+  ;;When THUNK  returns, the port  is closed automatically.   The values
+  ;;returned by THUNK are returned.
   ;;
-  ;;When THUNK  returns, the  port is closed  automatically.  The
-  ;;values returned by THUNK are returned.
-  ;;
-  ;;If an escape  procedure is used to escape  back into the call
-  ;;to   THUNK  after   THUNK  is   returned,  the   behavior  is
-  ;;unspecified.
+  ;;If an escape procedure is used to escape back into the call to THUNK
+  ;;after THUNK is returned, the behavior is unspecified.
   ;;
   (define who 'with-output-to-file)
-  (unless (string? filename)
-    (assertion-violation who "invalid filename" filename))
-  (%assert-value-is-procedure thunk who)
-  (call-with-port
-      (%file-descriptor->output-port (%open-output-file-descriptor filename (file-options) who)
-				     DEFAULT-OTHER-ATTRS
-				     filename (output-file-buffer-size) (native-transcoder)
-				     #t who)
+  (%assert-argument-is-procedure thunk who)
+  (call-with-port (%open-output-file-with-defaults filename who)
     (lambda (port)
       (parameterize ((current-output-port port))
-	(thunk)))))
-
-(define (with-input-from-file filename thunk)
-  ;;Defined by R6RS.   THUNK must be a procedure  and must accept
-  ;;zero arguments.
-  ;;
-  ;;The  file is  opened for  input  or output  using empty  file
-  ;;options, and THUNK is called with no arguments.
-  ;;
-  ;;During the dynamic extent of  the call to THUNK, the obtained
-  ;;port   is  made   the   value  returned   by  the   procedure
-  ;;CURRENT-INPUT-PORT; the previous  default value is reinstated
-  ;;when the dynamic extent is exited.
-  ;;
-  ;;When THUNK  returns, the  port is closed  automatically.  The
-  ;;values returned by THUNK are returned.
-  ;;
-  ;;If an escape  procedure is used to escape  back into the call
-  ;;to   THUNK  after   THUNK  is   returned,  the   behavior  is
-  ;;unspecified.
-  ;;
-  (define who 'with-input-from-file)
-  (unless (string? filename)
-    (assertion-violation who "invalid filename" filename))
-  (%assert-value-is-procedure thunk who)
-  (call-with-port
-      (%file-descriptor->input-port (%open-input-file-descriptor filename
-								 (file-options no-create no-truncate)
-								 who)
-				    DEFAULT-OTHER-ATTRS
-				    filename (input-file-buffer-size) (native-transcoder) #t who)
-    (lambda (port)
-      (parameterize ((current-input-port port))
 	(thunk)))))
 
 (define (call-with-output-file filename proc)
   ;;Defined by R6RS.  PROC should accept one argument.
   ;;
-  ;;This procedure  opens the file named by  FILENAME for output,
-  ;;with  no specified  file  options, and  calls  PROC with  the
-  ;;obtained port as an argument.
+  ;;This procedure opens the file  named by FILENAME for output, with no
+  ;;specified file options, and calls  PROC with the obtained port as an
+  ;;argument.
   ;;
-  ;;If  PROC returns, the  port is  closed automatically  and the
-  ;;values returned by PROC are returned.
-  ;;
-  ;;If   PROC  does   not  return,   the  port   is   not  closed
-  ;;automatically, unless  it is possible to prove  that the port
-  ;;will never again be used for an I/O operation.
-  ;;
-  (define who 'call-with-output-file)
-  (unless (string? filename)
-    (assertion-violation who "invalid filename" filename))
-  (%assert-value-is-procedure proc who)
-  (call-with-port
-      (%file-descriptor->output-port (%open-output-file-descriptor filename (file-options) who)
-				     DEFAULT-OTHER-ATTRS
-				     filename (output-file-buffer-size) (native-transcoder) #t who)
-    proc))
-
-(define (call-with-input-file filename proc)
-  ;;Defined by R6RS.  PROC should accept one argument.
-  ;;
-  ;;This procedure  opens the file  named by FILENAME  for input,
-  ;;with  no specified  file  options, and  calls  PROC with  the
-  ;;obtained port as an argument.
-  ;;
-  ;;If  PROC returns, the  port is  closed automatically  and the
-  ;;values returned by PROC are returned.
-  ;;
-  ;;If   PROC  does   not  return,   the  port   is   not  closed
-  ;;automatically, unless  it is possible to prove  that the port
-  ;;will never again be used for an I/O operation.
-  ;;
-  (define who 'call-with-input-file)
-  (unless (string? filename)
-    (assertion-violation who "invalid filename" filename))
-  (%assert-value-is-procedure proc who)
-  (call-with-port
-      (%file-descriptor->input-port (%open-input-file-descriptor filename (file-options) who)
-				    DEFAULT-OTHER-ATTRS
-				    filename (input-file-buffer-size) (native-transcoder) #t who)
-    proc))
-
-(define (with-input-from-string string thunk)
-  ;;Defined by Ikarus.  THUNK must be a procedure and must accept
-  ;;zero arguments.
-  ;;
-  ;;STRING must be  a Scheme string, and THUNK  is called with no
-  ;;arguments.
-  ;;
-  ;;The  STRING is used  as argument  for OPEN-STRING-INPUT-PORT;
-  ;;during the dynamic extent of  the call to THUNK, the obtained
-  ;;port    is   made   the    value   returned    by   procedure
-  ;;CURRENT-INPUT-PORT; the previous  default value is reinstated
-  ;;when the dynamic extent is exited.
-  ;;
-  ;;When THUNK  returns, the  port is closed  automatically.  The
-  ;;values returned by THUNK are returned.
-  ;;
-  ;;If an escape  procedure is used to escape  back into the call
-  ;;to   THUNK  after   THUNK  is   returned,  the   behavior  is
-  ;;unspecified.
-  ;;
-  (define who 'with-input-from-string)
-  (unless (string? string)
-    (assertion-violation who "not a string" string))
-  (%assert-value-is-procedure thunk who)
-  (parameterize ((current-input-port (open-string-input-port string)))
-    (thunk)))
-
-(define (call-with-port port proc)
-  ;;Defined  by  R6RS.   PROC  must  accept  one  argument.   The
-  ;;CALL-WITH-PORT procedure calls PROC with PORT as an argument.
-  ;;
-  ;;If PROC returns, PORT  is closed automatically and the values
+  ;;If PROC  returns, the  port is closed  automatically and  the values
   ;;returned by PROC are returned.
   ;;
-  ;;If PROC  does not return,  PORT is not  closed automatically,
-  ;;except perhaps  when it is  possible to prove that  PORT will
-  ;;never again be used for an input or output operation.
+  ;;If  PROC does  not return,  the  port is  not closed  automatically,
+  ;;unless it  is possible to  prove that the  port will never  again be
+  ;;used for an I/O operation.
   ;;
-  (define who 'call-with-port)
-  (%assert-argument-is-port port who)
-  (%assert-value-is-procedure proc who)
-  (call-with-values
-      (lambda ()
-	(proc port))
-    (lambda vals
-      (%unsafe.close-port port who)
-      (apply values vals))))
+  (define who 'call-with-output-file)
+  (%assert-argument-is-procedure proc who)
+  (call-with-port (%open-output-file-with-defaults filename who) proc))
 
 
 (define (process cmd . args)
@@ -6904,7 +6898,7 @@
 
 (define (register-callback what proc)
   (define who 'register-callback)
-  (%assert-value-is-procedure proc who)
+  (%assert-argument-is-procedure proc who)
   (cond ((output-port? what)
 	 (with-port (what)
 	   (let ((c what.device))

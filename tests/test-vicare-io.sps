@@ -2120,6 +2120,184 @@
   #t)
 
 
+(parametrise ((check-test-name	'with-input-from-string))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check	;argument is not a string
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(with-input-from-string 123 values))
+    => '(123))
+
+  (check	;argument is not a thunk
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(with-input-from-string "ciao" 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; port operations support
+
+  (check
+      (with-input-from-string ""
+	(lambda ()
+	  (port-has-port-position? (current-input-port))))
+    => #t)
+
+  (check
+      (with-input-from-string ""
+	(lambda ()
+	  (port-has-set-port-position!? (current-input-port))))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; reading bytes
+
+  (check
+      (with-input-from-string ""
+	(lambda ()
+	  (lookahead-char (current-input-port))))
+    => (eof-object))
+
+  (check
+      (with-input-from-string "12"
+	(lambda ()
+	  (lookahead-char (current-input-port))))
+    => #\1)
+
+  (check
+      (with-input-from-string ""
+	(lambda ()
+	  (get-char (current-input-port))))
+    => (eof-object))
+
+  (check
+      (with-input-from-string "12"
+	(lambda ()
+	  (get-char (current-input-port))))
+    => #\1)
+
+  (check
+      (with-input-from-string "1"
+	(lambda ()
+	  (get-char (current-input-port))
+	  (get-char (current-input-port))))
+    => (eof-object))
+
+;;; --------------------------------------------------------------------
+;;; reading strings
+
+  (check
+      (with-input-from-string ""
+	(lambda ()
+	  (get-string-n (current-input-port) 3)))
+    => (eof-object))
+
+  (check
+      (check.with-result
+	  (with-input-from-string ""
+	    (lambda ()
+	      (check.add-result (get-string-n (current-input-port) 0))
+	      (eof-object? (get-char (current-input-port))))))
+    => '(#t ("")))
+
+  (check
+      (check.with-result
+	  (with-input-from-string "012"
+	    (lambda ()
+	      (check.add-result (get-string-n (current-input-port) 3))
+	      (eof-object? (get-char (current-input-port))))))
+    => '(#t ("012")))
+
+  (check
+      (check.with-result
+	  (with-input-from-string "012345"
+	    (lambda ()
+	      (check.add-result (get-string-n (current-input-port) 3))
+	      (check.add-result (get-string-n (current-input-port) 3))
+	      (eof-object? (get-char (current-input-port))))))
+    => '(#t ("012" "345")))
+
+;;; --------------------------------------------------------------------
+;;; getting position
+
+  (check
+      (with-input-from-string ""
+	(lambda ()
+	  (port-position (current-input-port))))
+    => 0)
+
+  (check
+      (with-input-from-string "0123456789"
+	(lambda ()
+	  (port-position (current-input-port))))
+    => 0)
+
+  (check
+      (with-input-from-string "0123456789"
+	(lambda ()
+	  (get-string-n (current-input-port) 5)
+	  (port-position (current-input-port))))
+    => 5)
+
+  (check
+      (with-input-from-string "0123456789"
+	(lambda ()
+	  (get-string-n (current-input-port) 10)
+	  (port-position (current-input-port))))
+    => 10)
+
+;;; --------------------------------------------------------------------
+;;; setting position
+
+  (check
+      (with-input-from-string ""
+	(lambda ()
+	  (set-port-position! (current-input-port) 0)
+	  (port-position (current-input-port))))
+    => 0)
+
+  (check
+      (with-input-from-string "0123456789"
+	(lambda ()
+	  (set-port-position! (current-input-port) 10)
+	  (port-position (current-input-port))))
+    => 10)
+
+  (check
+      (with-input-from-string "0123456789"
+	(lambda ()
+	  (set-port-position! (current-input-port) 5)
+	  (port-position (current-input-port))))
+    => 5)
+
+  (check
+      (with-input-from-string "0123456789"
+	(lambda ()
+	  (set-port-position! (current-input-port) 5)
+	  (set-port-position! (current-input-port) 1)
+	  (set-port-position! (current-input-port) 9)
+	  (port-position (current-input-port))))
+    => 9)
+
+  (check
+      (check.with-result
+	  (with-input-from-string "0123456789"
+	    (lambda ()
+	      (set-port-position! (current-input-port) 5)
+	      (check.add-result (get-string-n (current-input-port) 5))
+	      (port-position (current-input-port)))))
+    => '(10 ("56789")))
+
+  #t)
+
+
 (parametrise ((check-test-name			'open-bytevector-output-port)
 	      (bytevector-port-buffer-size	8))
 
@@ -3726,6 +3904,50 @@
   #t)
 
 
+(parametrise ((check-test-name	'call-with-port))
+
+;;; arguments validation
+
+  (check	;argument is not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(call-with-port 123 values))
+    => '(123))
+
+  (check	;argument is not an open port
+      (let ((port (%open-disposable-binary-input-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-port port)
+	  (call-with-port port values)))
+    => #t)
+
+  (check	;argument is not a procedure
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(call-with-port (current-output-port) 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; textual port
+
+  (check
+      (let-values (((port extract) (open-string-output-port)))
+	(call-with-port port
+	  (lambda (port)
+	    (put-string port "123")))
+	(extract))
+    => "123")
+
+  #t)
+
+
 (parametrise ((check-test-name			'transcoded-port)
 	      (bytevector-port-buffer-size	10))
 
@@ -3856,7 +4078,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'misc))
+(parametrise ((check-test-name	'port-id))
 
   (check
       (port-id (open-string-input-port ""))
@@ -3870,7 +4092,10 @@
 	(port-id 123))
     => '(123))
 
-;;; --------------------------------------------------------------------
+  #t)
+
+
+(parametrise ((check-test-name	'port-mode))
 
   (check
       (guard (E ((assertion-violation? E)
@@ -3884,7 +4109,11 @@
       (port-mode (open-bytevector-input-port '#vu8()))
     => 'vicare-mode)
 
-;;; --------------------------------------------------------------------
+  #t)
+
+
+(parametrise ((check-test-name	'set-port-mode-bang))
+
 
   (check
       (guard (E ((assertion-violation? E)
@@ -3909,7 +4138,10 @@
 	(port-mode port))
     => 'r6rs-mode)
 
-;;; --------------------------------------------------------------------
+  #t)
+
+
+(parametrise ((check-test-name	'output-port-buffer-mode))
 
   (check
       (guard (E ((assertion-violation? E)
