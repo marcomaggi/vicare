@@ -42,6 +42,9 @@
       bound-identifier=? datum->syntax syntax-error
       syntax-violation syntax->datum make-variable-transformer
       null-environment scheme-report-environment)
+    (only (ikarus)
+	  source-position-port-id
+	  source-position-byte)
     (rnrs base)
     (rnrs lists)
     (rnrs control)
@@ -278,7 +281,11 @@
       (write (stx->datum x) p)
       (let ((expr (stx-expr x)))
         (when (annotation? expr)
-          (let ((src (annotation-source expr)))
+          (let ((src (annotation-source expr)
+		 #;(let ((pos (annotation-source x)))
+		   (cons (source-position-port-id pos)
+			 (source-position-byte    pos)))
+		 ))
             (when (pair? src)
               (display " [char " p)
               (display (cdr src) p)
@@ -4046,8 +4053,8 @@
 
   (define (position->condition x)
     (if (pair? x)
-        (make-source-position-condition (car x) (cdr x))
-        (condition)))
+        (make-source-position-condition (car x) (cdr x) #f)
+      (condition)))
 
   (define (extract-position-condition x)
     (position->condition (expression-position x)))
@@ -4056,7 +4063,11 @@
     (and (stx? x)
          (let ((x (stx-expr x)))
            (and (annotation? x)
-                (annotation-source x)))))
+                (annotation-source x)
+		#;(let ((pos (annotation-source x)))
+		  (cons (source-position-port-id pos)
+			(source-position-byte    pos)))
+		))))
 
   (define (syntax-annotation x)
     (if (stx? x) (stx-expr x) x))

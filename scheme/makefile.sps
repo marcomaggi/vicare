@@ -704,7 +704,8 @@
 
     (source-position-condition?                  i)
     (make-source-position-condition              i)
-    (source-position-file-name                   i)
+    (source-position-port-id                     i)
+    (source-position-byte                        i)
     (source-position-character                   i)
 
     ($apply-nonprocedure-error-handler           )
@@ -1342,6 +1343,8 @@
     (port-has-port-position?                     i r ip)
     (port-has-set-port-position!?                i r ip)
     (port-position                               i r ip)
+    (input-port-byte-position                    i)
+    (input-port-char-position                    i)
     (input-port-column-number                    i)
     (input-port-row-number                       i)
     (port-transcoder                             i r ip)

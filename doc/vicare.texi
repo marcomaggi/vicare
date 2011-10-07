@@ -1660,24 +1660,102 @@ time, this chapter attempts to describe a few of these useful
 extensions.  Extensions to Scheme's lexical syntax are also documented.
 
 @menu
-* iklib reader::               Reader.
-* iklib cafe::                 Cafe.
-* iklib bytevectors::          Additional bytevector functions.
-* iklib strings::              Additional string functions.
-* iklib environment::          Environments.
-* iklib load::                 Loading source files.
-* iklib import::               Local library imports.
-* iklib modules::              Local modules.
-* iklib parameters::           Parameters.
-* iklib gensym::               Gensyms.
-* iklib printing::             Printing.
-* iklib tracing::              Tracing.
-* iklib timing::               Timing.
-* iklib guardians::            Guardians and garbage collection.
-* iklib io::                   Input/output library.
-* iklib foreign::              Foreign interface library.
-* iklib misc::                 Miscellaneous functions.
+* iklib conditions::            Additional condition types.
+* iklib reader::                Reader.
+* iklib cafe::                  Cafe.
+* iklib bytevectors::           Additional bytevector functions.
+* iklib strings::               Additional string functions.
+* iklib environment::           Environments.
+* iklib load::                  Loading source files.
+* iklib import::                Local library imports.
+* iklib modules::               Local modules.
+* iklib parameters::            Parameters.
+* iklib gensym::                Gensyms.
+* iklib printing::              Printing.
+* iklib tracing::               Tracing.
+* iklib timing::                Timing.
+* iklib guardians::             Guardians and garbage collection.
+* iklib io::                    Input/output library.
+* iklib foreign::               Foreign interface library.
+* iklib misc::                  Miscellaneous functions.
 @end menu
+
+@c page
+@node iklib conditions
+@section Additional condition types
+
+
+@menu
+* iklib conditions spos::       Scheme source code position.
+* iklib conditions eagain::     Reporting @code{EAGAIN} exceptions.
+@end menu
+
+@c page
+@node iklib conditions spos
+@subsection Scheme source code position
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@deftp {Condition Type} &source-position
+Condition type used to represent a position in Scheme source code read
+from a textual input port; it is derived from @condition{condition}.  It
+has the following fields:
+
+@table @code
+@item port-id
+A Scheme string representing the port identifier, for example the file
+name.
+
+@item character
+An exact non--negative integer representing the character offset of the
+position in the source.
+@end table
+@end deftp
+
+
+@defun make-source-position-condition @var{port-id} @var{character}
+Build and return a new condition object of type
+@condition{source-position}.
+@end defun
+
+
+@defun source-position-condition? @var{obj}
+Return true if @var{obj} is a condition object with type
+@condition{source-position}.
+@end defun
+
+
+@defun source-position-port-id @var{spos}
+@defunx source-position-character @var{spos}
+Accessors for the fields of condition objects of type
+@condition{source-position}.
+@end defun
+
+@c page
+@node iklib conditions eagain
+@subsection Reporting @code{EAGAIN} exceptions
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@deftp {Condition Type} &i/o-eagain
+Used to signal that a system call returned with @code{errno} set to
+@code{EAGAIN}.  It is derived from @condition{i/o}.
+@end deftp
+
+
+@defun make-i/o-eagain
+Return a new condition object of type @condition{i/o-eagain}.
+@end defun
+
+
+@defun i/o-again-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{i/o-eagain}.
+@end defun
 
 @c page
 @node iklib reader
@@ -3541,36 +3619,11 @@ example in the previous section):
 
 
 @menu
-* iklib io conditions::         Additional condition types.
 * iklib io codecs::             Additional transcoder codecs.
 * iklib io process::            Spawning processes.
 * iklib io socket::             Using network sockets.
 * iklib io non-block::          Non--blocking mode for ports.
 @end menu
-
-@c page
-@node iklib io conditions
-@subsection Additional condition types
-
-
-The following bindings are exported by the @library{ikarus} library.
-
-
-@deftp Condition &i/o-eagain
-Used to signal that a system call returned with @code{errno} set to
-@code{EAGAIN}.  It is derived from @condition{i/o}.
-@end deftp
-
-
-@defun make-i/o-eagain
-Return a new condition object of type @condition{i/o-eagain}.
-@end defun
-
-
-@defun i/o-again-error? @var{obj}
-Return @true{} if @var{obj} is a condition object of type
-@condition{i/o-eagain}.
-@end defun
 
 @c page
 @node iklib io codecs

@@ -142,6 +142,14 @@ $(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
   # $(NEW_EXECUTABLE) -b $(IKARUS_PREBUILT_BOOT_FILE) \
   # --r6rs-script $(srcdir)/makefile.sps
 
+try-vicare-boot: $(EXTRA_DIST) ikarus.config.ss
+	IKARUS_SRC_DIR=$(srcdir) \
+   IKARUS_BUILD_DIR=$(builddir) \
+   VICARE_FASL_DIRECTORY='' \
+   VICARE_LIBRARY_PATH=.:$(srcdir):$(srcdir)/../lib \
+   $(NEW_EXECUTABLE) -b vicare.boot.try \
+   --r6rs-script $(srcdir)/makefile.sps
+
 ikarus-tests: $(NEW_BOOT_FILE)
 	IKARUS_SRC_DIR=$(srcdir) \
 		VICARE_LIBRARY_PATH=$(srcdir) \

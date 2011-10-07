@@ -410,7 +410,7 @@
     ;; port position
     port-position port-has-port-position?
     set-port-position! port-has-set-port-position!?
-    input-port-byte-position
+    input-port-byte-position input-port-char-position
     input-port-column-number input-port-row-number
 
     ;; reading chars
@@ -509,7 +509,7 @@
 		  ;; port position
 		  port-position port-has-port-position?
 		  set-port-position! port-has-set-port-position!?
-		  input-port-byte-position
+		  input-port-byte-position input-port-char-position
 		  input-port-column-number input-port-row-number
 
 		  ;; reading chars
@@ -1798,8 +1798,12 @@
   ;;octets.
   ;;
   (%assert-value-is-input-port port 'input-port-byte-position)
-  (with-port (port)
-    (+ port.device.position (unsafe.fxadd1 port.buffer.index))))
+  (if (port-has-port-position? port)
+      (port-position port)
+    #f))
+
+(define (input-port-char-position port)
+  (input-port-byte-position port))
 
 (define (%mark/return-newline port)
   ;;Register the presence of a #\newline character at the current

@@ -32,12 +32,15 @@ vicare_test_RULES	= test tests test-r6rs \
 	test-r6rs-enums			\
 	test-r6rs-sorting
 
-.PHONY: $(vicare_test_RULES)
+.PHONY: $(vicare_test_RULES) try-vicare-boot
 
 $(vicare_test_RULES):
 	cd tests ; $(MAKE) $(@)
 
 ikarus-tests:
+	cd scheme; $(MAKE) $(@)
+
+try-vicare-boot:
 	cd scheme; $(MAKE) $(@)
 
 ### end of file
