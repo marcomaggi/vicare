@@ -435,11 +435,7 @@
                   (and (symbol? ctxt) ctxt)
                   (and (not (strip-source-info))
                        (annotation? ae)
-                       (annotation-source ae)
-		       #;(let ((pos (annotation-source ae)))
-			 (cons (source-position-port-id pos)
-			       (source-position-byte    pos)))
-		       )))))]
+                       (annotation-source ae))))))]
          [(lambda)
           (E `(case-lambda ,(cdr x)) ctxt)]
          [(foreign-call)
@@ -462,9 +458,6 @@
 		 (define (get-src/expr ae)
 		   (if (annotation? ae)
 		       (cons (annotation-source ae)
-			     #;(let ((pos (annotation-source ae)))
-			       (cons (source-position-port-id pos)
-				     (source-position-byte    pos)))
 			     (annotation-stripped ae))
 		     (cons #f (syntax->datum ae))))
 		 (define src/expr

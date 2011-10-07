@@ -1822,10 +1822,10 @@
   ;;
 ;;;FIXME It computes the count assuming 1 octet = 1 character.
   (%assert-value-is-input-port port 'input-port-column-number)
-  (with-port (port)
-    (let ((cookie port.cookie))
-      (- (+ port.device.position port.buffer.index)
-	 (cookie-newline-pos cookie)))))
+  (if (port-has-port-position? port)
+      (with-port (port)
+	(- (port-position port) (cookie-newline-pos port.cookie)))
+    #f))
 
 (define (input-port-row-number port)
   ;;Defined  by Ikarus.   Return the  current row  number  for an
@@ -3084,7 +3084,7 @@
   (let ((str.len (string-length str)))
     (unless (< str.len BUFFER-SIZE-UPPER-LIMIT)
       (error who "input string length exceeds maximum supported size" str.len))
-    (let ((attributes		FAST-GET-CHAR-TAG)
+    (let ((attributes		(%unsafe.fxior FAST-GET-CHAR-TAG DEFAULT-OTHER-ATTRS))
 	  (buffer.index		0)
 	  (buffer.used-size	str.len)
 	  (buffer		str)
@@ -3408,7 +3408,7 @@
   ;;
   (define who 'open-string-output-port)
   (let ((port			#f)
-	(attributes		FAST-PUT-CHAR-TAG)
+	(attributes		(%unsafe.fxior FAST-PUT-CHAR-TAG DEFAULT-OTHER-ATTRS))
 	(buffer.index		0)
 	(buffer.used-size	0)
 	(buffer			(unsafe.make-string (string-port-buffer-size))

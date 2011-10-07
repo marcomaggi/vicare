@@ -32,31 +32,12 @@
     (ikarus system $bytevectors))
 
 
-;;;; helpers
-
-(define-syntax define-inline
-  (syntax-rules ()
-    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-     (define-syntax ?name
-       (syntax-rules ()
-	 ((_ ?arg ... . ?rest)
-	  (begin ?form0 ?form ...)))))))
-
-
-
 (define (make-compound-position port)
-  (cons (port-id port) (input-port-byte-position port))
-  #;(make-source-position-condition (port-id port)
-				    (input-port-byte-position port)
-				    (input-port-char-position port)))
+  (cons (port-id port) (input-port-byte-position port)))
 
 (define (make-compound-position/with-offset port offset)
-  (let ((byte	(source-position-byte port))
-	(char	(source-position-character port)))
-    (cons (port-id port (and byte (+ byte offset))))
-    #;(make-source-position-condition (port-id port)
-				    (and byte (+ byte offset))
-				    (and char (+ char offset)))))
+  (let ((byte (input-port-byte-position port)))
+    (cons (port-id port) (and byte (+ byte offset)))))
 
 
 (define (die/lex pos who msg arg*)
@@ -66,7 +47,10 @@
 	      (if (null? arg*)
 		  (condition)
 		(make-irritants-condition arg*))
-	      pos)))
+	      (let ((port-id (car pos))
+		    (byte    (cdr pos)))
+		(make-source-position-condition port-id byte #f))
+	      )))
 
 (define (die/pos port offset who msg arg*)
   (die/lex (make-compound-position/with-offset port offset) who msg arg*))
@@ -952,9 +936,9 @@
 (module (read-expr read-expr-script-initial)
   (define-syntax tokenize/1 syntax-error)
   (define (annotate-simple datum pos p)
-    (make-annotation datum #;(make-compound-position p) (cons (port-id p) pos) datum))
+    (make-annotation datum (cons (port-id p) pos) datum))
   (define (annotate stripped expression pos p)
-    (make-annotation expression #;(make-compound-position p) (cons (port-id p) pos) stripped))
+    (make-annotation expression (cons (port-id p) pos) stripped))
   (define read-list
     (lambda (p locs k end mis init?)
       (let-values ([(t pos) (tokenize/1+pos p)])
