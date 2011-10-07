@@ -546,4 +546,13 @@
 
 )
 
+(library (ikarus system strings)
+  (export $make-string $string-length
+	  $string-ref $string-set!)
+  (import (ikarus))
+  (define $make-string		make-string)
+  (define $string-length	string-length)
+  (define $string-ref		string-ref)
+  (define $string-set!		string-set!))
+
 ;;; end of file

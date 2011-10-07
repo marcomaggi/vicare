@@ -557,7 +557,7 @@
     ;;$PORT-* and $SET-PORT-* bindings.
     (ikarus system $io)
     (prefix (only (ikarus) port?) primop.)
-    (prefix (rename (ikarus system $fx) #;(ikarus fixnums unsafe)
+    (prefix (rename #;(ikarus system $fx) (ikarus fixnums unsafe)
 		    ($fxzero?	fxzero?)
 		    ($fxadd1	fxadd1)	 ;increment
 		    ($fxsub1	fxsub1)	 ;decrement
@@ -573,18 +573,18 @@
 		    ($fx<=	fx<=)
 		    ($fx=	fx=))
 	    unsafe.)
-    (prefix (rename (ikarus system $chars)
+    (prefix (rename #;(ikarus system $chars) (ikarus system chars)
 		    ($char=		char=)
 		    ($char->fixnum	char->integer)
 		    ($fixnum->char	integer->char))
 	    unsafe.)
-    (prefix (rename (ikarus system $bytevectors)
+    (prefix (rename #;(ikarus system $bytevectors) (ikarus system bytevectors)
 		    ($make-bytevector	make-bytevector)
 		    ($bytevector-length	bytevector-length)
 		    ($bytevector-set!	bytevector-u8-set!)
 		    ($bytevector-u8-ref	bytevector-u8-ref))
 	    unsafe.)
-    (prefix (rename (ikarus system $strings)
+    (prefix (rename #;(ikarus system $strings) (ikarus system strings)
 		    ($make-string	make-string)
 		    ($string-length	string-length)
 		    ($string-ref	string-ref)
@@ -1479,7 +1479,7 @@
 (define (%unsafe.bytevector-copy! src.bv src.start dst.bv dst.start count)
   ;;Like BYTEVECTOR-COPY!   defined by  R6RS.  Assume all  the arguments
   ;;have been  already validated;  expect all the  exact integers  to be
-  ;;fixnums.
+  ;;fixnums; perform the copy from the START indexes forwards.
   ;;
   ;;FIXME This should be implemented in C.
   ;;
@@ -1513,8 +1513,9 @@
 ;;;; string helpers
 
 (define (%unsafe.string-copy! src.str src.start dst.str dst.start count)
-  ;;Like  BYTEVECTOR-COPY!   defined by  R6RS,  but for  strings;
-  ;;expect all the exact integers to be fixnums.
+  ;;Like BYTEVECTOR-COPY!  defined by  R6RS, but for strings; expect all
+  ;;the exact  integers to be fixnums;  perform the copy  from the start
+  ;;indexes forwards.
   ;;
   ;;FIXME This should be implemented in C.
   ;;
@@ -1625,7 +1626,7 @@
 		;method, increment the buffer index
 	    (PORT.BUFFER.USED-SIZE.INCR!	(%dot-id ".buffer.used-size.incr!"))
 		;method, increment
-	    (PORT.MARK-AS-CLOSED		(%dot-id ".mark-as-closed"))
+	    (PORT.MARK-AS-CLOSED!		(%dot-id ".mark-as-closed!"))
 		;method, mark the port as closed
 	    (PORT.DEVICE			(%dot-id ".device"))
 		;false or Scheme value, references the underlying device
@@ -1695,7 +1696,7 @@
 		      (set! PORT.BUFFER.USED-SIZE (unsafe.fxadd1 PORT.BUFFER.USED-SIZE)))
 		     ((_ ?step)
 		      (set! PORT.BUFFER.USED-SIZE (unsafe.fx+ ?step PORT.BUFFER.USED-SIZE)))))
-		  (PORT.MARK-AS-CLOSED
+		  (PORT.MARK-AS-CLOSED!
 		   (syntax-rules ()
 		     ((_)
 		      ($mark-port-closed! ?port))))
@@ -3682,7 +3683,7 @@
   (with-port-having-bytevector-buffer (port)
     (%unsafe.assert-value-is-binary-port port who)
     (%unsafe.assert-value-is-open-port   port who)
-    (port.mark-as-closed)
+    (port.mark-as-closed!)
     (let ((transcoded-port ($make-port
 			    (cond (port.is-input?
 				   (%select-input-fast-tag-from-transcoder
@@ -3763,7 +3764,7 @@
     (unless port.closed?
       (when port.write! ;works with both output and I/O ports
 	(%unsafe.flush-output-port port who))
-      (port.mark-as-closed)
+      (port.mark-as-closed!)
       (when (procedure? port.close)
 	(port.close)))))
 
@@ -3947,7 +3948,7 @@
 			(unsafe.fx<= count port.buffer.used-size)))
 	      (begin
 		;;Avoid further operations and raise an error.
-		(port.mark-as-closed)
+		(port.mark-as-closed!)
 		(raise (condition (make-i/o-write-error)
 				  (make-i/o-port-error port)
 				  (make-who-condition who)
@@ -4055,21 +4056,19 @@
   ;;This should be the only function calling the port's READ!  function.
   ;;
   (with-port-having-bytevector-buffer (port)
-    ;;Textual  ports (with  transcoder) can  be built  on  top of
-    ;;binary  input  ports;  when  this happens:  the  underlying
-    ;;binary port is closed "in a special way" which still allows
-    ;;the upper  textual port to  access the device.  If  PORT is
-    ;;such an  underlying port this function must  not be applied
-    ;;to it.  The  following check is to avoid  such a mistake by
-    ;;internal functions;  this mistake should not  happen if the
-    ;;functions have not bugs.
+    ;;Textual  ports (with  transcoder) can  be built  on top  of binary
+    ;;input  ports; when  this happens:  the underlying  binary  port is
+    ;;closed "in  a special  way" which still  allows the  upper textual
+    ;;port to  access the  device.  If PORT  is such an  underlying port
+    ;;this function must  not be applied to it.   The following check is
+    ;;to avoid such a mistake by internal functions; this mistake should
+    ;;not happen if the functions have no bugs.
     (%unsafe.assert-value-is-open-port port who)
     (if (eq? port.read! all-data-in-buffer)
 	0
       (let ((buffer port.buffer))
-	;;Shift  to the  beginning data  alraedy in  buffer but
-	;;still  to  be  consumed;  commit  the  new  position.
-	;;Before:
+	;;Shift to the beginning data  alraedy in buffer but still to be
+	;;consumed; commit the new position.  Before:
 	;;
 	;;                          cookie.pos
 	;;                              v           device
@@ -4087,9 +4086,10 @@
 	;;                  ^           ^                 buffer
 	;;                index     used size
 	;;
-	(let ((delta (unsafe.fx- port.buffer.used-size port.buffer.index)))
+	(let* ((buffer.index	port.buffer.index)
+	       (delta		(unsafe.fx- port.buffer.used-size buffer.index)))
 	  (unless (unsafe.fxzero? delta)
-	    (%unsafe.bytevector-copy! buffer port.buffer.index buffer 0 delta))
+	    (%unsafe.bytevector-copy! buffer buffer.index buffer 0 delta))
 	  (set! port.buffer.index     0)
 	  (set! port.buffer.used-size delta))
 	;;Fill the buffer with data from the device.  Before:
@@ -4663,11 +4663,11 @@
 		     ((utf-8-single-octet? byte0)
 		      (get-single-byte-character byte0 buffer.offset-byte0))
 		     ((utf-8-first-of-two-octets? byte0)
-		      (get-2-bytes-character byte0 buffer.offset-byte0))
+		      (get-2-bytes-character byte0))
 		     ((utf-8-first-of-three-octets? byte0)
-		      (get-3-bytes-character byte0 buffer.offset-byte0))
+		      (get-3-bytes-character byte0))
 		     ((utf-8-first-of-four-octets? byte0)
-		      (get-4-bytes-character byte0 buffer.offset-byte0))
+		      (get-4-bytes-character byte0))
 		     (else
 		      (%error-invalid-byte)))))))))
 
@@ -4678,9 +4678,11 @@
 	    (%mark/return-newline port)
 	  (unsafe.integer->char N))))
 
-    (define-inline (get-2-bytes-character byte0 buffer.offset-byte0)
+    (define-inline (get-2-bytes-character byte0)
       (let retry-after-filling-buffer-for-1-more-byte ()
-	(let* ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
+	;;After refilling we have to reload buffer indexes.
+	(let* ((buffer.offset-byte0 port.buffer.index)
+	       (buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
 	       (buffer.offset-past  (unsafe.fxadd1 buffer.offset-byte1)))
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte1)
@@ -4706,9 +4708,11 @@
 		     (else
 		      (%error-invalid-second)))))))))
 
-    (define-inline (get-3-bytes-character byte0 buffer.offset-byte0)
+    (define-inline (get-3-bytes-character byte0)
+      ;;After refilling we have to reload buffer indexes.
       (let retry-after-filling-buffer-for-2-more-bytes ()
-	(let* ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
+	(let* ((buffer.offset-byte0 port.buffer.index)
+	       (buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
 	       (buffer.offset-byte2 (unsafe.fxadd1 buffer.offset-byte1))
 	       (buffer.offset-past  (unsafe.fxadd1 buffer.offset-byte2)))
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
@@ -4741,9 +4745,11 @@
 		     (else
 		      (%error-invalid-second-or-third)))))))))
 
-    (define-inline (get-4-bytes-character byte0 buffer.offset-byte0)
+    (define-inline (get-4-bytes-character byte0)
       (let retry-after-filling-buffer-for-3-more-bytes ()
-	(let* ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
+	;;After refilling we have to reload buffer indexes.
+	(let* ((buffer.offset-byte0 port.buffer.index)
+	       (buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
 	       (buffer.offset-byte2 (unsafe.fxadd1 buffer.offset-byte1))
 	       (buffer.offset-byte3 (unsafe.fxadd1 buffer.offset-byte2))
 	       (buffer.offset-past  (unsafe.fxadd1 buffer.offset-byte3)))
@@ -4858,17 +4864,19 @@
 		     ((utf-8-single-octet? byte0)
 		      (unsafe.integer->char (utf-8-decode-single-octet byte0)))
 		     ((utf-8-first-of-two-octets? byte0)
-		      (peek-2-bytes-character byte0 buffer.offset-byte0))
+		      (peek-2-bytes-character byte0))
 		     ((utf-8-first-of-three-octets? byte0)
-		      (peek-3-bytes-character byte0 buffer.offset-byte0))
+		      (peek-3-bytes-character byte0))
 		     ((utf-8-first-of-four-octets? byte0)
-		      (peek-4-bytes-character byte0 buffer.offset-byte0))
+		      (peek-4-bytes-character byte0))
 		     (else
 		      (%error-invalid-byte)))))))))
 
-    (define-inline (peek-2-bytes-character byte0 buffer.offset-byte0)
+    (define-inline (peek-2-bytes-character byte0)
       (let retry-after-filling-buffer-for-1-more-byte ()
-	(let ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0)))
+	;;After refilling we have to reload buffer indexes.
+	(let* ((buffer.offset-byte0 port.buffer.index)
+	       (buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0)))
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte1)
 	    (if-end-of-file:
@@ -4893,9 +4901,11 @@
 		     (else
 		      (%error-invalid-second)))))))))
 
-    (define-inline (peek-3-bytes-character byte0 buffer.offset-byte0)
+    (define-inline (peek-3-bytes-character byte0)
       (let retry-after-filling-buffer-for-2-more-bytes ()
-	(let* ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
+	;;After refilling we have to reload buffer indexes.
+	(let* ((buffer.offset-byte0 port.buffer.index)
+	       (buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
 	       (buffer.offset-byte2 (unsafe.fxadd1 buffer.offset-byte1)))
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte2)
@@ -4927,9 +4937,11 @@
 		     (else
 		      (%error-invalid-second-or-third)))))))))
 
-    (define-inline (peek-4-bytes-character byte0 buffer.offset-byte0)
+    (define-inline (peek-4-bytes-character byte0)
       (let retry-after-filling-buffer-for-3-more-bytes ()
-	(let* ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
+	;;After refilling we have to reload buffer indexes.
+	(let* ((buffer.offset-byte0 port.buffer.index)
+	       (buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
 	       (buffer.offset-byte2 (unsafe.fxadd1 buffer.offset-byte1))
 	       (buffer.offset-byte3 (unsafe.fxadd1 buffer.offset-byte2)))
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
@@ -6178,6 +6190,9 @@
   (foreign-call "ik_errno_ENOENT"))
 
 (define (%raise-eagain-error who port)
+  ;;Raise an exception to signal  that a system call was interrupted and
+  ;;returned the EAGAIN errno code.
+  ;;
   (raise
    (condition (make-i/o-eagain)
 	      (make-who-condition who)
@@ -6263,6 +6278,27 @@
   ;;is true:  a standard  close function for  file descriptors  is used;
   ;;else the port does not support the close function.
   ;;
+  (define set-position!
+    (%make-set-position!-function-for-file-descriptor-port fd port-identifier))
+
+  (define close
+    (cond ((procedure? close-function)
+	   close-function)
+	  ((and (boolean? close-function) close-function)
+	   (%make-close-function-for-platform-descriptor-port port-identifier fd))
+	  (else #f)))
+
+  (define (read! dst.bv dst.start requested-count)
+;;(emergency-platform-write-fd (string-append "requested " (number->string requested-count)))
+    (let ((count (platform-read-fd fd dst.bv dst.start requested-count)))
+;;(emergency-platform-write-fd (string-append "given " (number->string count)))
+      (cond ((unsafe.fx>= count 0)
+	     count)
+	    ((unsafe.fx= count errno-code-EAGAIN)
+	     (%raise-eagain-error who #f))
+	    (else
+	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
+
   (let ((attributes		(%select-input-fast-tag-from-transcoder transcoder who
 									attributes
 									GUARDED-PORT-TAG))
@@ -6272,25 +6308,6 @@
 	(write!			#f)
 	(get-position		#t)
 	(cookie			(default-cookie fd)))
-
-    (define set-position!
-      (%make-set-position!-function-for-file-descriptor-port fd port-identifier))
-
-    (define close
-      (cond ((procedure? close-function)
-	     close-function)
-	    ((and (boolean? close-function) close-function)
-	     (%make-close-function-for-platform-descriptor-port port-identifier fd))
-	    (else #f)))
-
-    (define (read! dst.bv dst.start requested-count)
-      (let ((count (platform-read-fd fd dst.bv dst.start buffer.size)))
-	(cond ((unsafe.fx>= count 0)
-	       count)
-	      ((unsafe.fx= count errno-code-EAGAIN)
-	       (%raise-eagain-error who #f))
-	      (else
-	       (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
     (%port->maybe-guarded-port
      ($make-port attributes buffer.index buffer.used-size buffer transcoder port-identifier
@@ -6309,6 +6326,25 @@
   ;;is true:  a standard  close function for  file descriptors  is used;
   ;;else the port does not support the close operation.
   ;;
+  (define set-position!
+    (%make-set-position!-function-for-file-descriptor-port fd port-identifier))
+
+  (define close
+    (cond ((procedure? close-function)
+	   close-function)
+	  ((and (boolean? close-function) close-function)
+	   (%make-close-function-for-platform-descriptor-port port-identifier fd))
+	  (else #f)))
+
+  (define (write! src.bv src.start requested-count)
+    (let ((count (platform-write-fd fd src.bv src.start requested-count)))
+      (cond ((unsafe.fx>= count 0)
+	     count)
+	    ((unsafe.fx= count errno-code-EAGAIN)
+	     (%raise-eagain-error who #f))
+	    (else
+	     (%raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
+
   (let ((attributes		(%select-output-fast-tag-from-transcoder transcoder who
 									 attributes
 									 GUARDED-PORT-TAG))
@@ -6318,26 +6354,6 @@
 	(read!			#f)
 	(get-position		#t)
 	(cookie			(default-cookie fd)))
-
-    (define set-position!
-      (%make-set-position!-function-for-file-descriptor-port fd port-identifier))
-
-    (define close
-      (cond ((procedure? close-function)
-	     close-function)
-	    ((and (boolean? close-function) close-function)
-	     (%make-close-function-for-platform-descriptor-port port-identifier fd))
-	    (else #f)))
-
-    (define (write! src.bv src.start requested-count)
-      (let ((count (platform-write-fd fd src.bv src.start requested-count)))
-	(cond ((unsafe.fx>= count 0)
-	       count)
-	      ((unsafe.fx= count errno-code-EAGAIN)
-	       (%raise-eagain-error who #f))
-	      (else
-	       (%raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
-
     (%port->maybe-guarded-port
      ($make-port attributes buffer.index buffer.used-size buffer transcoder port-identifier
 		 read! write! get-position set-position! close cookie))))

@@ -1435,8 +1435,13 @@
 
 
 (library (ikarus system bytevectors)
-  (export $bytevector-u8-ref $bytevector-length $make-bytevector)
+  (export $make-bytevector $bytevector-length
+	  $bytevector-u8-ref $bytevector-set!)
   (import (ikarus))
+  (define ($bytevector-set! dst.bv dst.index N)
+    (if (<= 0 N)
+	(bytevector-u8-set! dst.bv dst.index N)
+      (bytevector-s8-set! dst.bv dst.index N)))
   (define $bytevector-u8-ref bytevector-u8-ref)
   (define $bytevector-length bytevector-length)
   (define $make-bytevector   make-bytevector))

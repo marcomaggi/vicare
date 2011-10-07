@@ -536,6 +536,15 @@
    LATIN-SMALL-LETTER-O-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-O-WITH-ACUTE-UTF-8
    LATIN-SMALL-LETTER-U-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-U-WITH-ACUTE-UTF-8))
 
+(define SPECIAL1-TEST-STRING-FOR-UTF-8
+  (string
+   #\c #\i #\a #\o #\space
+   LATIN-SMALL-LETTER-A-WITH-GRAVE LATIN-SMALL-LETTER-A-WITH-ACUTE))
+(define SPECIAL1-TEST-BYTEVECTOR-FOR-UTF-8
+  (bytevector-append
+   (string->utf8 "ciao ")
+   LATIN-SMALL-LETTER-A-WITH-GRAVE-UTF-8 LATIN-SMALL-LETTER-A-WITH-ACUTE-UTF-8))
+
 ;;; --------------------------------------------------------------------
 
 (define TEST-STRING-FOR-UTF-16-LE
@@ -8363,8 +8372,153 @@
   #t)
 
 
-(parametrise ((check-test-name	'open-file-input-port))
+(parametrise ((check-test-name		'open-file-input-port)
+	      (test-pathname		(make-test-pathname "open-file-input-port.bin"))
+	      (input-file-buffer-size	9))
 
+  (define-syntax with-binary-input-test-pathname
+    (syntax-rules ()
+      ((_ ?open-form)
+       (begin
+	 (create-test-pathname)
+	 (let ((port ?open-form))
+	   (unwind-protect
+	       (get-bytevector-all port)
+	     (close-input-port port)
+	     (cleanup-test-pathname)))))))
+
+  (define-syntax with-textual-input-test-pathname
+    (syntax-rules ()
+      ((_ ?open-form)
+       (begin
+	 (create-test-pathname)
+	 (let ((port ?open-form))
+	   (unwind-protect
+	       (get-string-all port)
+	     (close-input-port port)
+	     (cleanup-test-pathname)))))))
+
+;;; --------------------------------------------------------------------
+;;; filename argument validation
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(open-file-input-port 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; file-options argument validation
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(open-file-input-port "123" 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; buffer-mode argument validation
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(open-file-input-port "123" (file-options) 'ciao))
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; transcoder argument validation
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(open-file-input-port "123" (file-options) (buffer-mode block) 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; reading whole binary data
+
+  (check
+      (with-binary-input-test-pathname
+       (open-file-input-port (test-pathname)))
+    => (bindata-hundreds.bv))
+
+  (check
+      (with-binary-input-test-pathname
+       (open-file-input-port (test-pathname) (file-options)))
+    => (bindata-hundreds.bv))
+
+  (check
+      (with-binary-input-test-pathname
+       (open-file-input-port (test-pathname) (file-options) (buffer-mode none)))
+    => (bindata-hundreds.bv))
+
+;;; --------------------------------------------------------------------
+;;; reading whole textual data
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       TEST-BYTEVECTOR-FOR-LATIN-1)))
+	(with-textual-input-test-pathname
+	 (open-file-input-port (test-pathname) (file-options) (buffer-mode none)
+			       (make-transcoder (latin-1-codec)))))
+    => TEST-STRING-FOR-LATIN-1)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       TEST-BYTEVECTOR-FOR-UTF-8)))
+	(with-textual-input-test-pathname
+	 (open-file-input-port (test-pathname) (file-options) (buffer-mode none)
+			       (make-transcoder (utf-8-codec)))))
+    => TEST-STRING-FOR-UTF-8)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       SPECIAL1-TEST-BYTEVECTOR-FOR-UTF-8)))
+	(with-textual-input-test-pathname
+	 (open-file-input-port (test-pathname) (file-options) (buffer-mode none)
+			       (make-transcoder (utf-8-codec)))))
+    => SPECIAL1-TEST-STRING-FOR-UTF-8)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       TEST-BYTEVECTOR-FOR-UTF-16-LE)))
+	(with-textual-input-test-pathname
+	 (open-file-input-port (test-pathname) (file-options) (buffer-mode none)
+			       (make-transcoder (utf-16le-codec)))))
+    => TEST-STRING-FOR-UTF-16-LE)
+
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       TEST-BYTEVECTOR-FOR-UTF-16-BE)))
+	(with-textual-input-test-pathname
+	 (open-file-input-port (test-pathname) (file-options) (buffer-mode none)
+			       (make-transcoder (utf-16be-codec)))))
+    => TEST-STRING-FOR-UTF-16-BE)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       TEST-BYTEVECTOR-FOR-UTF-16-LE/BOM)))
+	(with-textual-input-test-pathname
+	 (open-file-input-port (test-pathname) (file-options) (buffer-mode none)
+			       (make-transcoder (utf-16-codec)))))
+    => TEST-STRING-FOR-UTF-16-LE)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       TEST-BYTEVECTOR-FOR-UTF-16-BE/BOM)))
+	(with-textual-input-test-pathname
+	 (open-file-input-port (test-pathname) (file-options) (buffer-mode none)
+			       (make-transcoder (utf-16-codec)))))
+    => TEST-STRING-FOR-UTF-16-BE)
 
   #t)
 
