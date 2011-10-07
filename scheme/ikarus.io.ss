@@ -4663,11 +4663,11 @@
 		     ((utf-8-single-octet? byte0)
 		      (get-single-byte-character byte0 buffer.offset-byte0))
 		     ((utf-8-first-of-two-octets? byte0)
-		      (get-2-bytes-character byte0))
+		      (get-2-bytes-character byte0 buffer.offset-byte0))
 		     ((utf-8-first-of-three-octets? byte0)
-		      (get-3-bytes-character byte0))
+		      (get-3-bytes-character byte0 buffer.offset-byte0))
 		     ((utf-8-first-of-four-octets? byte0)
-		      (get-4-bytes-character byte0))
+		      (get-4-bytes-character byte0 buffer.offset-byte0))
 		     (else
 		      (%error-invalid-byte)))))))))
 
@@ -4678,18 +4678,17 @@
 	    (%mark/return-newline port)
 	  (unsafe.integer->char N))))
 
-    (define-inline (get-2-bytes-character byte0)
-      (let retry-after-filling-buffer-for-1-more-byte ()
+    (define-inline (get-2-bytes-character byte0 buffer.offset-byte0)
+      (let retry-after-filling-buffer-for-1-more-byte ((buffer.offset-byte0 buffer.offset-byte0))
 	;;After refilling we have to reload buffer indexes.
-	(let* ((buffer.offset-byte0 port.buffer.index)
-	       (buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
+	(let* ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
 	       (buffer.offset-past  (unsafe.fxadd1 buffer.offset-byte1)))
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte1)
 	    (if-end-of-file:
 	     (%unexpected-eof-error "unexpected EOF while decoding 2-byte UTF-8 character" byte0))
 	    (if-successful-refill:
-	     (retry-after-filling-buffer-for-1-more-byte))
+	     (retry-after-filling-buffer-for-1-more-byte port.buffer.index))
 	    (if-available-data:
 	     (let ((byte1 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1)))
 	       (define (%error-invalid-second)
@@ -4708,11 +4707,10 @@
 		     (else
 		      (%error-invalid-second)))))))))
 
-    (define-inline (get-3-bytes-character byte0)
+    (define-inline (get-3-bytes-character byte0 buffer.offset-byte0)
       ;;After refilling we have to reload buffer indexes.
-      (let retry-after-filling-buffer-for-2-more-bytes ()
-	(let* ((buffer.offset-byte0 port.buffer.index)
-	       (buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
+      (let retry-after-filling-buffer-for-2-more-bytes ((buffer.offset-byte0 buffer.offset-byte0))
+	(let* ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
 	       (buffer.offset-byte2 (unsafe.fxadd1 buffer.offset-byte1))
 	       (buffer.offset-past  (unsafe.fxadd1 buffer.offset-byte2)))
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
@@ -4723,7 +4721,7 @@
 			      (list (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
 			    '())))
 	    (if-successful-refill:
-	     (retry-after-filling-buffer-for-2-more-bytes))
+	     (retry-after-filling-buffer-for-2-more-bytes port.buffer.index))
 	    (if-available-data:
 	     (let ((byte1 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
 		   (byte2 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte2)))
@@ -4745,11 +4743,10 @@
 		     (else
 		      (%error-invalid-second-or-third)))))))))
 
-    (define-inline (get-4-bytes-character byte0)
-      (let retry-after-filling-buffer-for-3-more-bytes ()
+    (define-inline (get-4-bytes-character byte0 buffer.offset-byte0)
+      (let retry-after-filling-buffer-for-3-more-bytes ((buffer.offset-byte0 buffer.offset-byte0))
 	;;After refilling we have to reload buffer indexes.
-	(let* ((buffer.offset-byte0 port.buffer.index)
-	       (buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
+	(let* ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
 	       (buffer.offset-byte2 (unsafe.fxadd1 buffer.offset-byte1))
 	       (buffer.offset-byte3 (unsafe.fxadd1 buffer.offset-byte2))
 	       (buffer.offset-past  (unsafe.fxadd1 buffer.offset-byte3)))
@@ -4764,7 +4761,7 @@
 				      '()))
 			    '())))
 	    (if-successful-refill:
-	     (retry-after-filling-buffer-for-3-more-bytes))
+	     (retry-after-filling-buffer-for-3-more-bytes port.buffer.index))
 	    (if-available-data:
 	     (let ((byte1 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
 		   (byte2 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte2))
@@ -4864,24 +4861,24 @@
 		     ((utf-8-single-octet? byte0)
 		      (unsafe.integer->char (utf-8-decode-single-octet byte0)))
 		     ((utf-8-first-of-two-octets? byte0)
-		      (peek-2-bytes-character byte0))
+		      (peek-2-bytes-character byte0 buffer.offset-byte0))
 		     ((utf-8-first-of-three-octets? byte0)
-		      (peek-3-bytes-character byte0))
+		      (peek-3-bytes-character byte0 buffer.offset-byte0))
 		     ((utf-8-first-of-four-octets? byte0)
-		      (peek-4-bytes-character byte0))
+		      (peek-4-bytes-character byte0 buffer.offset-byte0))
 		     (else
 		      (%error-invalid-byte)))))))))
 
-    (define-inline (peek-2-bytes-character byte0)
-      (let retry-after-filling-buffer-for-1-more-byte ()
+    (define-inline (peek-2-bytes-character byte0 buffer.offset-byte0)
+      (let retry-after-filling-buffer-for-1-more-byte ((buffer.offset-byte0 buffer.offset-byte0))
 	;;After refilling we have to reload buffer indexes.
-	(let* ((buffer.offset-byte0 port.buffer.index)
-	       (buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0)))
+	(let ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0)))
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte1)
 	    (if-end-of-file:
 	     (%unexpected-eof-error "unexpected EOF while decoding 2-byte UTF-8 character" byte0))
-	    (if-successful-refill: (retry-after-filling-buffer-for-1-more-byte))
+	    (if-successful-refill:
+	     (retry-after-filling-buffer-for-1-more-byte port.buffer.index))
 	    (if-available-data:
 	     (let ((byte1		(unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
 		   (buffer-offset	(unsafe.fx+ 2 buffer-offset)))
@@ -4901,11 +4898,10 @@
 		     (else
 		      (%error-invalid-second)))))))))
 
-    (define-inline (peek-3-bytes-character byte0)
-      (let retry-after-filling-buffer-for-2-more-bytes ()
+    (define-inline (peek-3-bytes-character byte0 buffer.offset-byte0)
+      (let retry-after-filling-buffer-for-2-more-bytes ((buffer.offset-byte0 buffer.offset-byte0))
 	;;After refilling we have to reload buffer indexes.
-	(let* ((buffer.offset-byte0 port.buffer.index)
-	       (buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
+	(let* ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
 	       (buffer.offset-byte2 (unsafe.fxadd1 buffer.offset-byte1)))
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte2)
@@ -4914,7 +4910,8 @@
 		    byte0 (if (unsafe.fx< buffer.offset-byte1 port.buffer.used-size)
 			      (list (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
 			    '())))
-	    (if-successful-refill: (retry-after-filling-buffer-for-2-more-bytes))
+	    (if-successful-refill:
+	     (retry-after-filling-buffer-for-2-more-bytes port.buffer.index))
 	    (if-available-data:
 	     (let ((byte1		(unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
 		   (byte2		(unsafe.bytevector-u8-ref port.buffer buffer.offset-byte2))
@@ -4937,11 +4934,10 @@
 		     (else
 		      (%error-invalid-second-or-third)))))))))
 
-    (define-inline (peek-4-bytes-character byte0)
-      (let retry-after-filling-buffer-for-3-more-bytes ()
+    (define-inline (peek-4-bytes-character byte0 buffer.offset-byte0)
+      (let retry-after-filling-buffer-for-3-more-bytes ((buffer.offset-byte0 buffer.offset-byte0))
 	;;After refilling we have to reload buffer indexes.
-	(let* ((buffer.offset-byte0 port.buffer.index)
-	       (buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
+	(let* ((buffer.offset-byte1 (unsafe.fxadd1 buffer.offset-byte0))
 	       (buffer.offset-byte2 (unsafe.fxadd1 buffer.offset-byte1))
 	       (buffer.offset-byte3 (unsafe.fxadd1 buffer.offset-byte2)))
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
@@ -4954,7 +4950,8 @@
 					(list (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte2))
 				      '()))
 			    '())))
-	    (if-successful-refill: (retry-after-filling-buffer-for-3-more-bytes))
+	    (if-successful-refill:
+	     (retry-after-filling-buffer-for-3-more-bytes port.buffer.index))
 	    (if-available-data:
 	     (let ((byte1  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte1))
 		   (byte2  (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte2))
@@ -6289,9 +6286,7 @@
 	  (else #f)))
 
   (define (read! dst.bv dst.start requested-count)
-;;(emergency-platform-write-fd (string-append "requested " (number->string requested-count)))
     (let ((count (platform-read-fd fd dst.bv dst.start requested-count)))
-;;(emergency-platform-write-fd (string-append "given " (number->string count)))
       (cond ((unsafe.fx>= count 0)
 	     count)
 	    ((unsafe.fx= count errno-code-EAGAIN)
