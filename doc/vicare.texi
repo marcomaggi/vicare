@@ -3656,6 +3656,9 @@ The following bindings are exported by the @library{ikarus} library.
 @findex open-input-file
 @findex with-input-from-file
 @findex call-with-input-file
+@findex open-output-file
+@findex with-output-to-file
+@findex call-with-output-file
 The function @func{native-transcoder} defined by @rnrs{6} returns a
 transcoder representing acceptable defaults for the platform on which
 the Scheme implementation is running.  Under @value{PRJNAME} such
@@ -3671,9 +3674,9 @@ configured.  Notice that the following functions create Scheme ports
 using the transcoder returned by @func{native-transcoder}:
 
 @example
-open-input-file
-with-input-from-file
-call-with-input-file
+open-input-file         open-output-file
+with-input-from-file    with-output-to-file
+call-with-input-file    call-with-output-file
 @end example
 @end deffn
 
