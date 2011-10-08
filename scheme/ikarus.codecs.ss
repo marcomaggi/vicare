@@ -165,8 +165,12 @@
    ((codec)
     (make-transcoder codec 'none 'replace))))
 
-(define (native-transcoder)
-  (make-transcoder 'utf-8-codec 'none 'replace))
+(define native-transcoder
+  (make-parameter (make-transcoder 'utf-8-codec 'none 'replace)
+    (lambda (obj)
+      (if (transcoder? obj)
+	  obj
+	(assertion-violation 'native-transcoder "expected transcoder value" obj)))))
 
 (define (transcoder-codec x)
   (define who 'transcoder-codec)

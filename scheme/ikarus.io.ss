@@ -438,6 +438,7 @@
     reset-input-port!
     reset-output-port!
     port-id
+    string->filename-func
 
     ;; spawning operative system processes
     process process-nonblocking process*
@@ -537,6 +538,7 @@
 		  reset-input-port!
 		  reset-output-port!
 		  port-id
+		  string->filename-func
 
 		  ;; spawning operative system processes
 		  process process-nonblocking process*
@@ -6233,8 +6235,12 @@
 
 ;;;; helper functions for platform's descriptors
 
-;;FIXME This should be customisable.
-(define string->bytevector/filename-encoding string->utf8)
+(define string->filename-func
+  (make-parameter string->utf8
+    (lambda (obj)
+      (if (procedure? obj)
+	  obj
+	(assertion-violation 'string->filename-func "expected procedure value" obj)))))
 
 (define (%open-input-file-descriptor filename file-options who)
   ;;Subroutine for the  functions below opening a file  for input.  Open
@@ -6246,7 +6252,7 @@
   ;;FILE-OPTIONS is ignored, no flags are supported.
   ;;
   (let* ((opts 0)
-	 (fd   (platform-open-input-fd (string->bytevector/filename-encoding filename) opts)))
+	 (fd   (platform-open-input-fd ((string->filename-func) filename) opts)))
     (if (fx< fd 0)
 	(%raise-io-error who filename fd)
       fd)))
@@ -6261,7 +6267,7 @@
 				  (if (enum-set-member? 'no-fail     file-options) 2 0)
 				  (if (enum-set-member? 'no-truncate file-options) 4 0))
 		 (assertion-violation who "file-options is not an enum set" file-options)))
-	 (fd (platform-open-output-fd (string->bytevector/filename-encoding filename) opts)))
+	 (fd (platform-open-output-fd ((string->filename-func) filename) opts)))
     (if (fx< fd 0)
 	(%raise-io-error who filename fd)
       fd)))
@@ -6950,7 +6956,7 @@
     (unless (string? filename)
       (assertion-violation who "not a string" filename))
     (clean-up)
-    (let ((rv (foreign-call "ikrt_opendir" (string->utf8 filename))))
+    (let ((rv (foreign-call "ikrt_opendir" ((string->filename-func) filename))))
       (if (fixnum? rv)
 	  (%raise-io-error who filename rv)
 	(let ((stream (make-directory-stream filename rv #f)))
@@ -6963,8 +6969,7 @@
       (assertion-violation who "not a directory stream" x))
     (when (directory-stream-closed? x)
       (assertion-violation who "directory stream is closed" x))
-    (let ((rv (foreign-call "ikrt_readdir"
-			    (directory-stream-pointer x))))
+    (let ((rv (foreign-call "ikrt_readdir" (directory-stream-pointer x))))
       (cond
        ((fixnum? rv)
 	(close-directory-stream x #f)

@@ -146,8 +146,7 @@
     (lambda (x)
       (unless (string? x)
         (die 'system "not a string" x))
-      (let ([rv (foreign-call "ik_system"
-                  (string->utf8 x))])
+      (let ([rv (foreign-call "ik_system" (string->utf8 x))])
         (if (fx< rv 0)
             (raise/strerror 'system rv)
             rv))))
@@ -156,7 +155,7 @@
     (lambda (path follow who)
       (unless (string? path)
         (die who "not a string" path))
-      (let ([r (foreign-call "ikrt_stat" (string->utf8 path) follow)])
+      (let ([r (foreign-call "ikrt_stat" ((string->filename-func) path) follow)])
         (case r
           [(0) 'unknown]
           [(1) 'regular]
@@ -190,14 +189,15 @@
   (define access
     (lambda (path how who)
       (unless (string? path)
-        (die who "not a string" path))
-      (let ([r (foreign-call "ikrt_access" (string->utf8 path) how)])
+        (die who "filename not a string" path))
+      (let ([r (foreign-call "ikrt_access" ((string->filename-func) path) how)])
         (unless (boolean? r) (raise/strerror who r path))
         r)))
 
   (define file-exists?
     (case-lambda
-      [(path) (file-exists? path #t)]
+      [(path)
+       (file-exists? path #t)]
       [(path follow)
        (and (stat path follow 'file-exists?) #t)]))
 
@@ -234,7 +234,7 @@
       (define who 'file-size)
       (unless (string? path)
         (die who "filename is not a string" path))
-      (let* ([v (foreign-call "ikrt_file_size" (string->utf8 path))])
+      (let* ([v (foreign-call "ikrt_file_size" ((string->filename-func) path))])
         (if (>= v 0)
             v
             (raise/strerror who v path)))))
@@ -244,8 +244,7 @@
       (define who 'delete-file)
       (unless (string? x)
         (die who "filename is not a string" x))
-      (let ([v (foreign-call "ikrt_delete_file"
-                 (string->utf8 x))])
+      (let ([v (foreign-call "ikrt_delete_file" ((string->filename-func) x))])
         (unless (eq? v #t)
           (raise/strerror who v x)))))
 
@@ -257,8 +256,8 @@
       (unless (string? dst)
         (die who "destination file name is not a string" dst))
       (let ([v (foreign-call "ikrt_rename_file"
-                             (string->utf8 src)
-                             (string->utf8 dst))])
+                             ((string->filename-func) src)
+                             ((string->filename-func) dst))])
         (unless (eq? v #t)
           (raise/strerror who v src)))))
 
@@ -267,7 +266,7 @@
       (define who 'directory-list)
       (unless (string? path)
         (die who "not a string" path))
-      (let ([r (foreign-call "ikrt_directory_list" (string->utf8 path))])
+      (let ([r (foreign-call "ikrt_directory_list" ((string->filename-func) path))])
         (if (fixnum? r)
             (raise/strerror who r path)
             (map utf8->string (reverse r))))))
@@ -277,7 +276,7 @@
       (die who "not a string" path))
     (unless (fixnum? mode)
       (die who "not a fixnum" mode))
-    (let ([r (foreign-call "ikrt_mkdir" (string->utf8 path) mode)])
+    (let ([r (foreign-call "ikrt_mkdir" ((string->filename-func) path) mode)])
       (unless (eq? r #t)
         (raise/strerror who r path))))
 
@@ -317,7 +316,7 @@
        (define who 'delete-directory)
        (unless (string? path)
          (die who "not a string" path))
-       (let ([r (foreign-call "ikrt_rmdir" (string->utf8 path))])
+       (let ([r (foreign-call "ikrt_rmdir" ((string->filename-func) path))])
          (if want-error?
              (unless (eq? r #t) (raise/strerror who r path))
              (eq? r #t)))]))
@@ -329,14 +328,14 @@
         (die who "not a string" path))
       (unless (fixnum? mode)
         (die who "not a fixnum" mode))
-      (let ([r (foreign-call "ikrt_chmod" (string->utf8 path) mode)])
+      (let ([r (foreign-call "ikrt_chmod" ((string->filename-func) path) mode)])
         (unless (eq? r #t)
           (raise/strerror who r path)))))
 
   (define ($make-link to path who proc)
     (unless (and (string? to) (string? path))
       (die who "not a string" (if (string? to) path to)))
-    (let ([r (proc (string->utf8 to) (string->utf8 path))])
+    (let ([r (proc ((string->filename-func) to) ((string->filename-func) path))])
       (unless (eq? r #t)
         (raise/strerror who r path))))
 
@@ -353,7 +352,7 @@
   (define ($file-time x who proc)
     (unless (string? x)
       (die who "not a string" x))
-    (let ([v (proc (string->utf8 x))])
+    (let ([v (proc ((string->filename-func) x))])
       (cond
         [(bytevector? v)
          (let ([n0 (bytevector-u8-ref v 0)]
@@ -375,7 +374,7 @@
     (define who 'file-real-path)
     (unless (string? x)
       (die who "not a string" x))
-    (let ([v (foreign-call "ikrt_realpath" (string->utf8 x))])
+    (let ([v (foreign-call "ikrt_realpath" ((string->filename-func) x))])
       (cond
         [(bytevector? v)
          (let ([s (utf8->string v)])
@@ -483,7 +482,7 @@
              (raise/strerror 'current-directory v)))]
       [(x)
        (if (string? x)
-           (let ([rv (foreign-call "ikrt_chdir" (string->utf8 x))])
+           (let ([rv (foreign-call "ikrt_chdir" ((string->filename-func) x))])
              (unless (eq? rv #t)
                (raise/strerror 'current-directory rv x)))
            (die 'current-directory "not a string" x))]))

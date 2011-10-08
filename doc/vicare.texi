@@ -3619,18 +3619,63 @@ example in the previous section):
 
 
 @menu
-* iklib io codecs::             Additional transcoder codecs.
+* iklib io filename::           File pathname handling.
+* iklib io codecs::             Transcoders and additional codecs.
 * iklib io process::            Spawning processes.
 * iklib io socket::             Using network sockets.
 * iklib io non-block::          Non--blocking mode for ports.
 @end menu
 
 @c page
-@node iklib io codecs
-@subsection Additional transcoder codecs
+@node iklib io filename
+@subsection File pathname handling
 
 
 The following bindings are exported by the @library{ikarus} library.
+
+
+@deffn Parameter string->filename-func
+All the file--related functions defined by @rnrs{6} accept a Scheme
+string as representing a file pathname; internally such string is
+converted to a bytevector to be handed to the underlying operative
+system.
+
+In @value{PRJNAME} such conversion is performed by the function returned
+by @func{string->filename-func}, which defaults to @func{string->utf8}.
+@end deffn
+
+@c page
+@node iklib io codecs
+@subsection Transcoders and additional codecs
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@deffn Parameter native-transcoder
+@findex open-input-file
+@findex with-input-from-file
+@findex call-with-input-file
+The function @func{native-transcoder} defined by @rnrs{6} returns a
+transcoder representing acceptable defaults for the platform on which
+the Scheme implementation is running.  Under @value{PRJNAME} such
+default is:
+
+@example
+(make-transcoder 'utf-8-codec 'none 'replace)
+@end example
+
+@noindent
+and additionally the function it is a parameter, so the default can be
+configured.  Notice that the following functions create Scheme ports
+using the transcoder returned by @func{native-transcoder}:
+
+@example
+open-input-file
+with-input-from-file
+call-with-input-file
+@end example
+@end deffn
 
 
 @deffn Procedure utf-16le-codec

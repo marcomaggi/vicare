@@ -8523,6 +8523,308 @@
   #t)
 
 
+(parametrise ((check-test-name		'open-input-file)
+	      (test-pathname		(make-test-pathname "open-input-file.bin"))
+	      (input-file-buffer-size	9))
+
+  (define-syntax with-textual-input-test-pathname
+    (syntax-rules ()
+      ((_ ?open-form)
+       (begin
+	 (create-test-pathname)
+	 (let ((port ?open-form))
+	   (unwind-protect
+	       (get-string-all port)
+	     (close-input-port port)
+	     (cleanup-test-pathname)))))))
+
+;;; --------------------------------------------------------------------
+;;; filename argument validation
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(open-input-file 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; reading whole textual data
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-LATIN-1))
+		    (native-transcoder	(make-transcoder (latin-1-codec))))
+  	(with-textual-input-test-pathname
+  	 (open-input-file (test-pathname))))
+    => TEST-STRING-FOR-LATIN-1)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-UTF-8)))
+  	(with-textual-input-test-pathname
+  	 (open-input-file (test-pathname))))
+    => TEST-STRING-FOR-UTF-8)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       SPECIAL1-TEST-BYTEVECTOR-FOR-UTF-8)))
+  	(with-textual-input-test-pathname
+  	 (open-input-file (test-pathname))))
+    => SPECIAL1-TEST-STRING-FOR-UTF-8)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-UTF-16-LE))
+		    (native-transcoder	(make-transcoder (utf-16le-codec))))
+  	(with-textual-input-test-pathname
+  	 (open-input-file (test-pathname))))
+    => TEST-STRING-FOR-UTF-16-LE)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-UTF-16-BE))
+		    (native-transcoder	(make-transcoder (utf-16be-codec))))
+  	(with-textual-input-test-pathname
+  	 (open-input-file (test-pathname))))
+    => TEST-STRING-FOR-UTF-16-BE)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-UTF-16-LE/BOM))
+		    (native-transcoder	(make-transcoder (utf-16-codec))))
+  	(with-textual-input-test-pathname
+  	 (open-input-file (test-pathname))))
+    => TEST-STRING-FOR-UTF-16-LE)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-UTF-16-BE/BOM))
+		    (native-transcoder	(make-transcoder (utf-16-codec))))
+  	(with-textual-input-test-pathname
+  	 (open-input-file (test-pathname))))
+    => TEST-STRING-FOR-UTF-16-BE)
+
+  #t)
+
+
+(parametrise ((check-test-name		'with-input-from-file)
+	      (test-pathname		(make-test-pathname "with-input-from-file.bin"))
+	      (input-file-buffer-size	9))
+
+  (define-syntax with-textual-input-test-pathname
+    (syntax-rules ()
+      ((_)
+       (begin
+	 (create-test-pathname)
+	 (unwind-protect
+	     (with-input-from-file (test-pathname)
+	       (lambda ()
+		 (let ((port (current-input-port)))
+		   (get-string-all port))))
+	   (cleanup-test-pathname))))))
+
+;;; --------------------------------------------------------------------
+;;; filename argument validation
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(with-input-from-file 123 values))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; procedure argument validation
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(with-input-from-file "ciao" 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; reading whole textual data
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-LATIN-1))
+		    (native-transcoder	(make-transcoder (latin-1-codec))))
+  	(with-textual-input-test-pathname))
+    => TEST-STRING-FOR-LATIN-1)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-UTF-8)))
+  	(with-textual-input-test-pathname))
+    => TEST-STRING-FOR-UTF-8)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       SPECIAL1-TEST-BYTEVECTOR-FOR-UTF-8)))
+  	(with-textual-input-test-pathname))
+    => SPECIAL1-TEST-STRING-FOR-UTF-8)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-UTF-16-LE))
+		    (native-transcoder	(make-transcoder (utf-16le-codec))))
+  	(with-textual-input-test-pathname))
+    => TEST-STRING-FOR-UTF-16-LE)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-UTF-16-BE))
+		    (native-transcoder	(make-transcoder (utf-16be-codec))))
+  	(with-textual-input-test-pathname))
+    => TEST-STRING-FOR-UTF-16-BE)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-UTF-16-LE/BOM))
+		    (native-transcoder	(make-transcoder (utf-16-codec))))
+  	(with-textual-input-test-pathname))
+    => TEST-STRING-FOR-UTF-16-LE)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-UTF-16-BE/BOM))
+		    (native-transcoder	(make-transcoder (utf-16-codec))))
+  	(with-textual-input-test-pathname))
+    => TEST-STRING-FOR-UTF-16-BE)
+
+  #t)
+
+
+(parametrise ((check-test-name		'call-with-input-file)
+	      (test-pathname		(make-test-pathname "call-with-input-file.bin"))
+	      (input-file-buffer-size	9))
+
+  (define-syntax with-textual-input-test-pathname
+    (syntax-rules ()
+      ((_)
+       (begin
+	 (create-test-pathname)
+	 (unwind-protect
+	     (call-with-input-file (test-pathname)
+	       (lambda (port)
+		 (get-string-all port)))
+	   (cleanup-test-pathname))))))
+
+;;; --------------------------------------------------------------------
+;;; filename argument validation
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(call-with-input-file 123 values))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; procedure argument validation
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(call-with-input-file "ciao" 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; reading whole textual data
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-LATIN-1))
+		    (native-transcoder	(make-transcoder (latin-1-codec))))
+  	(with-textual-input-test-pathname))
+    => TEST-STRING-FOR-LATIN-1)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-UTF-8)))
+  	(with-textual-input-test-pathname))
+    => TEST-STRING-FOR-UTF-8)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       SPECIAL1-TEST-BYTEVECTOR-FOR-UTF-8)))
+  	(with-textual-input-test-pathname))
+    => SPECIAL1-TEST-STRING-FOR-UTF-8)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-UTF-16-LE))
+		    (native-transcoder	(make-transcoder (utf-16le-codec))))
+  	(with-textual-input-test-pathname))
+    => TEST-STRING-FOR-UTF-16-LE)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-UTF-16-BE))
+		    (native-transcoder	(make-transcoder (utf-16be-codec))))
+  	(with-textual-input-test-pathname))
+    => TEST-STRING-FOR-UTF-16-BE)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-UTF-16-LE/BOM))
+		    (native-transcoder	(make-transcoder (utf-16-codec))))
+  	(with-textual-input-test-pathname))
+    => TEST-STRING-FOR-UTF-16-LE)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-BYTEVECTOR-FOR-UTF-16-BE/BOM))
+		    (native-transcoder	(make-transcoder (utf-16-codec))))
+  	(with-textual-input-test-pathname))
+    => TEST-STRING-FOR-UTF-16-BE)
+
+  #t)
+
+
+#;(parametrise ((check-test-name	'wrong-chars))
+
+  (check
+      (let ((port (open-bytevector-input-port TEST-BYTEVECTOR-FOR-UTF-16-LE
+					      (make-transcoder (utf-8-codec)
+							       (eol-style none)
+							       (error-handling-mode replace)))))
+	(let ((c (read-char port))
+	      (i (read-char port))
+	      (a (read-char port))
+	      (o (read-char port))
+	      (s (read-char port))
+	      (x (read-char port)))
+	  (list c i a o s x)))
+    => #f)
+
+  (check 'this
+      (let ((port (open-bytevector-input-port TEST-BYTEVECTOR-FOR-UTF-16-LE
+					      (make-transcoder (utf-8-codec)
+							       (eol-style none)
+							       (error-handling-mode replace)))))
+	(get-string-n port 20))
+    => #t)
+
+  (check
+      (let ((port (open-bytevector-input-port TEST-BYTEVECTOR-FOR-UTF-16-LE
+					      (make-transcoder (utf-8-codec)
+							       (eol-style none)
+							       (error-handling-mode replace)))))
+	(get-string-all port))
+    => #t)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
