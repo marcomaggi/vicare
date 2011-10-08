@@ -4053,7 +4053,6 @@
       (condition)))
 
   (define (extract-position-condition x)
-(write (expression-position x))(newline)
     (position->condition (expression-position x)))
 
   (define (expression-position x)
