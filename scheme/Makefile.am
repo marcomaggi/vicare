@@ -46,7 +46,6 @@ EXTRA_DIST= last-revision						\
   ikarus.debugger.ss							\
   tests/SRFI-1.ss							\
   tests/bignum-to-flonum.ss						\
-  tests/bignums.ss							\
   tests/bitwise.ss							\
   tests/case-folding.ss							\
   tests/div-and-mod.ss							\

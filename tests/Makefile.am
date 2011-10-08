@@ -167,6 +167,9 @@ TESTS			=	\
 	test-getpid.sps					\
 	test-log.sps					\
 	\
+	test-ikarus-bignums.sps				\
+	test-ikarus-io.sps				\
+	\
 	test-issue-001-equal-hash.sps			\
 	test-issue-006-fxreverse-bit-field.sps		\
 	test-issue-007.sps				\
