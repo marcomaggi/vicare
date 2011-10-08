@@ -6514,29 +6514,28 @@
 ;;;; output ports wrapping platform file descriptors
 
 (define open-file-output-port
-  ;;Defined by R6RS.  The OPEN-FILE-OUTPUT-PORT procedure returns
-  ;;an output port for the named file.
+  ;;Defined  by R6RS.   The OPEN-FILE-OUTPUT-PORT  procedure  returns an
+  ;;output port for the named file.
   ;;
-  ;;The  FILE-OPTIONS  argument,   which  may  determine  various
-  ;;aspects of the returned port, defaults to the value of:
+  ;;The FILE-OPTIONS  argument, which  may determine various  aspects of
+  ;;the returned port, defaults to the value of:
   ;;
   ;;   (file-options)
   ;;
   ;;MAYBE-TRANSCODER must be either a transcoder or false.
   ;;
-  ;;The  BUFFER-MODE argument, if  supplied, must  be one  of the
-  ;;symbols that  name a  buffer mode.  The  BUFFER-MODE argument
-  ;;defaults to BLOCK.
+  ;;The BUFFER-MODE  argument, if supplied,  must be one of  the symbols
+  ;;that  name a  buffer  mode.  The  BUFFER-MODE  argument defaults  to
+  ;;BLOCK.
   ;;
-  ;;If   MAYBE-TRANSCODER  is  a   transcoder,  it   becomes  the
-  ;;transcoder associated with the port.
+  ;;If  MAYBE-TRANSCODER  is a  transcoder,  it  becomes the  transcoder
+  ;;associated with the port.
   ;;
-  ;;If MAYBE-TRANSCODER  is false or  absent, the port will  be a
-  ;;binary   port  and   will  support   the   PORT-POSITION  and
-  ;;SET-PORT-POSITION!  operations.  Otherwise the port will be a
-  ;;textual port,  and whether it supports  the PORT-POSITION and
-  ;;SET-PORT-POSITION!   operations  is implementation-dependent
-  ;;(and possibly transcoder-dependent).
+  ;;If MAYBE-TRANSCODER  is false or absent,  the port will  be a binary
+  ;;port  and  will  support  the PORT-POSITION  and  SET-PORT-POSITION!
+  ;;operations.  Otherwise the port will  be a textual port, and whether
+  ;;it supports the  PORT-POSITION and SET-PORT-POSITION!  operations is
+  ;;implementation-dependent (and possibly transcoder-dependent).
   ;;
   (case-lambda
    ((filename)
