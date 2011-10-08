@@ -936,9 +936,9 @@
 (module (read-expr read-expr-script-initial)
   (define-syntax tokenize/1 syntax-error)
   (define (annotate-simple datum pos p)
-    (make-annotation datum (cons (port-id p) pos) datum))
+    (make-annotation datum pos #;(cons (port-id p) pos) datum))
   (define (annotate stripped expression pos p)
-    (make-annotation expression (cons (port-id p) pos) stripped))
+    (make-annotation expression pos #;(cons (port-id p) pos) stripped))
   (define read-list
     (lambda (p locs k end mis init?)
       (let-values ([(t pos) (tokenize/1+pos p)])
