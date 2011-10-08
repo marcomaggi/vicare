@@ -6669,27 +6669,42 @@
 			   (and env (map pair->env-utf8 env))
 			   (string->utf8 cmd)
 			   (map string->utf8 (cons cmd args)))))
-      (cond ((fixnum? r)
-	     (%raise-io-error who cmd r))
-	    (else
-	     (unless blocking?
-	       (or stdin (set-fd-nonblocking (vector-ref r 1) who cmd))
-	       (or stdout (set-fd-nonblocking (vector-ref r 2) who cmd))
-	       (or stderr (set-fd-nonblocking (vector-ref r 3) who cmd)))
-	     (values
-	      (vector-ref r 0)        ; pid
-	      (and (not stdin)
-		   (%file-descriptor->output-port (vector-ref r 1) DEFAULT-OTHER-ATTRS
-						  cmd (output-file-buffer-size) #f #t
-						  'process))
-	      (and (not stdout)
-		   (%file-descriptor->input-port (vector-ref r 2) DEFAULT-OTHER-ATTRS
-						 cmd (input-file-buffer-size) #f #t
-						 'process))
-	      (and (not stderr)
-		   (%file-descriptor->input-port (vector-ref r 3) DEFAULT-OTHER-ATTRS
-						 cmd (input-file-buffer-size) #f #t
-						 'process))))))))
+      (if (fixnum? r)
+	  (%raise-io-error who cmd r)
+	(begin
+	  (unless blocking?
+	    (or stdin (set-fd-nonblocking (vector-ref r 1) who cmd))
+	    (or stdout (set-fd-nonblocking (vector-ref r 2) who cmd))
+	    (or stderr (set-fd-nonblocking (vector-ref r 3) who cmd)))
+	  (values
+	   (vector-ref r 0) ; pid
+	   (and (not stdin)
+		(let ((fd		(vector-ref r 1))
+		      (other-attributes	DEFAULT-OTHER-ATTRS)
+		      (port-identifier	cmd)
+		      (buffer.size	(output-file-buffer-size))
+		      (transcoder	#f)
+		      (close-function	#t))
+		  (%file-descriptor->output-port fd other-attributes port-identifier buffer.size
+						 transcoder close-function who)))
+	   (and (not stdout)
+		(let ((fd		(vector-ref r 2))
+		      (other-attributes	DEFAULT-OTHER-ATTRS)
+		      (port-identifier	cmd)
+		      (buffer.size	(input-file-buffer-size))
+		      (transcoder	#f)
+		      (close-function	#t))
+		  (%file-descriptor->input-port fd other-attributes port-identifier buffer.size
+						transcoder close-function who)))
+	   (and (not stderr)
+		(let ((fd		(vector-ref r 3))
+		      (other-attributes	DEFAULT-OTHER-ATTRS)
+		      (port-identifier	cmd)
+		      (buffer.size	(input-file-buffer-size))
+		      (transcoder	#f)
+		      (close-function	#t))
+		  (%file-descriptor->input-port fd other-attributes port-identifier buffer.size
+						transcoder close-function who)))))))))
 
 
 ;;;; platform socket functions

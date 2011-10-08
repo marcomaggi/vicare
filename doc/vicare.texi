@@ -3709,13 +3709,16 @@ Return multiple values:
 
 @enumerate
 @item
-the subprocess pid;
+The subprocess pid.
+
 @item
-an output port that writes to the subprocess' standard input channel;
+An output port that writes to the subprocess' standard input channel.
+
 @item
-an input port that reads from the subprocess' standard output channel;
+An input port that reads from the subprocess' standard output channel.
+
 @item
-an input port that reads from the subprocess' standard error channel.
+An input port that reads from the subprocess' standard error channel.
 @end enumerate
 
 If an error occurs: an exception is raised.
@@ -3723,28 +3726,9 @@ If an error occurs: an exception is raised.
 Example:
 
 @example
-(call-with-values
-    (lambda ()
-      (process "ls" "-l"))
-  (lambda (pid stdin-out stdout-in stderr-in)
-    (do-something)))
-@end example
-
-@noindent
-with @func{receive}:
-
-@example
-(receive (pid stdin-out stdout-in stderr-in)
-    (process "ls" "-l")
-  (do-something))
-@end example
-
-@noindent
-with @func{let-values}:
-
-@example
-(let-values ([(pid stdin-out stdout-in stderr-in)
-              (process "ls" "-l")])
+(let-values
+    (((pid stdin-output-port stdout-input-port stderr-input-port)
+      (process "ls" "-l")))
   (do-something))
 @end example
 
@@ -3761,7 +3745,7 @@ Environment Variables}
 
 @defun process-nonblocking @var{command} . @var{options}
 Like @func{process} but the returned ports have their underlying file
-descriptors configured to non--blocking mode (@ref{iklib io non-block}).
+descriptors configured to non--blocking mode; @ref{iklib io non-block}.
 @end defun
 
 @c page
