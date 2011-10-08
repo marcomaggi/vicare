@@ -3968,8 +3968,8 @@
 	(call-with-port port
 	  (lambda (port)
 	    (put-string port "123")))
-	(extract))
-    => "123")
+	(list (port-closed? port) (extract)))
+    => '(#t "123"))
 
   #t)
 
