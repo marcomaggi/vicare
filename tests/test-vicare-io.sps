@@ -9211,6 +9211,8 @@
 	     (close-input-port port)
 	     (cleanup-test-pathname)))))))
 
+;;; --------------------------------------------------------------------
+
   (define-syntax with-binary-output-test-pathname
     (syntax-rules ()
       ((_ ?open-form)
@@ -9236,6 +9238,37 @@
 		 (close-output-port port))
 	       (textual-read-test-pathname (make-transcoder ?codec)))
 	   (cleanup-test-pathname))))))
+
+;;; --------------------------------------------------------------------
+
+  (define-syntax with-binary-input/output-test-pathname
+    (syntax-rules ()
+      ((_ ?open-form ?data)
+       (check.with-result
+	 (create-test-pathname)
+	 (let ((port ?open-form))
+	   (unwind-protect
+	       (begin
+		 (set-port-position! port 0)
+		 (check.add-result (get-bytevector-all port))
+		 (set-port-position! port 0)
+		 (put-bytevector port ?data)
+		 (set-port-position! port 0)
+		 (check.add-result (get-bytevector-all port))
+		 (port-position port))
+	     (close-input-port port)
+	     (cleanup-test-pathname)))))))
+
+  (define-syntax with-textual-input/output-test-pathname
+    (syntax-rules ()
+      ((_ ?open-form)
+       (begin
+	 (create-test-pathname)
+	 (let ((port ?open-form))
+	   (unwind-protect
+	       (get-string-all port)
+	     (close-input-port port)
+	     (cleanup-test-pathname)))))))
 
 ;;; --------------------------------------------------------------------
 ;;; filename argument validation
@@ -9420,6 +9453,25 @@
 	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode none)
 				       (make-transcoder (utf-16be-codec)))))
     => TEST-STRING-FOR-UTF-16-BE)
+
+;;; --------------------------------------------------------------------
+;;; reading and writing whole binary data
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       (bindata-bytes.bv))))
+	(with-binary-input/output-test-pathname
+	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate))
+	 (bindata-bytes.bv)))
+    => `(,(bindata-bytes.len) (,(bindata-bytes.bv) ,(bindata-bytes.bv))))
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       (bindata-hundreds.bv))))
+	(with-binary-input/output-test-pathname
+	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate))
+	 (bindata-hundreds.bv)))
+    => `(,(bindata-hundreds.len) (,(bindata-hundreds.bv) ,(bindata-hundreds.bv))))
 
   #t)
 

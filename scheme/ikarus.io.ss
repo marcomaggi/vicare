@@ -1754,14 +1754,7 @@
 ;;Scheme source code satisfies this requirement.
 ;;
 
-;;Constructor: (make-cookie PORT DEST MODE POS ROW-NUM NEWLINE-POS)
-;;
-;;Field name: dest
-;;Accessor name: (cookie-port COOKIE)
-;;Mutator name: (set-cookie-port! COOKIE PORT)
-;;  This field holds  the port to which the cookie  belongs.  It is used
-;;  by some port type which needs to hand its cookie to other ports.  It
-;;  can be set to #f if the port does not use it.
+;;Constructor: (make-cookie DEST MODE POS ROW-NUM NEWLINE-POS)
 ;;
 ;;Field name: dest
 ;;Accessor name: (cookie-dest COOKIE)
@@ -1801,10 +1794,10 @@
 ;;Mutator name: (set-cookie-newline-pos! COOKIE NEW-POS)
 ;;
 (define-struct cookie
-  (port dest mode pos row-num newline-pos))
+  (dest mode pos row-num newline-pos))
 
 (define (default-cookie fd)
-  (make-cookie #f fd 'vicare-mode 0 0 0))
+  (make-cookie fd 'vicare-mode 0 0 0))
 
 (define (input-port-byte-position port)
   ;;Defined by  Ikarus.  Return the port  position for an  input port in
@@ -2551,7 +2544,6 @@
 ;;; (with-port (port)
 ;;;   (emergency-platform-write-fd (string-append "closing guarded port " port.id)))
 	  (close-port port)
-	  (set-cookie-port! ($port-cookie port) #f)
 	  (close-garbage-collected-ports))))
     (post-gc-hooks (cons close-garbage-collected-ports (post-gc-hooks)))
     G))
@@ -3192,15 +3184,7 @@
     ;;
     (define who 'open-bytevector-output-port)
     (%assert-argument-is-maybe-transcoder maybe-transcoder who)
-    (let ((attributes		(%select-output-fast-tag-from-transcoder maybe-transcoder who))
-	  (buffer.index		0)
-	  (buffer.used-size	0)
-	  (buffer		(unsafe.make-bytevector (bytevector-port-buffer-size)))
-	  (identifier		"*bytevector-output-port*")
-	  (read!		#f)
-	  (get-position		#t)
-	  (close		#f)
-	  (cookie		(make-cookie #f '(0 . ()) 'vicare-mode 0 0 0)))
+    (let ((cookie (default-cookie '(0 . ()))))
       ;;The most  common use of  this port type  is to append  bytes and
       ;;finally extract the whole output bytevector:
       ;;
@@ -3237,33 +3221,27 @@
       ;;Remember that bytevectors hold at most (GREATEST-FIXNUM) bytes.
       ;;
       ;;Notice how the internal  functions are closures upon the cookie,
-      ;;not the port;  this port type stores a reference  to the port in
-      ;;the cookie.  If a transcoder is put on top of this port, the new
-      ;;transcoded port  is stored in the cookie,  allowing the internal
-      ;;functions  to correctly  reference the  buffer and  its indexes.
-      ;;See also TRANSCODED-PORT.
+      ;;not the port.
       ;;
       (define (%%serialise-device! who reset?)
-	(let ((port (cookie-port cookie)))
-	  (with-port (port)
-	    (let* ((dev		port.device)
-		   (output.len	(car dev))
-		   (output.bvs	(cdr dev)))
-	      (cond ((unsafe.fxzero? output.len)
-		     ;;No bytes accumulated, the device is empty.
-		     '#vu8())
-		    ((null? (cdr output.bvs))
-		     ;;The device has already been serialised.
-		     (when reset?
-		       (set! port.device '(0 . ())))
-		     (car output.bvs))
-		    (else
-		     ;;The device needs to be serialised.
-		     (let ((bv (%unsafe.bytevector-reverse-and-concatenate output.bvs output.len who)))
-		       (set! port.device (if reset?
-					     '(0 . ())
-					   `(,output.len . (,bv))))
-		       bv)))))))
+	(let* ((dev		(cookie-dest cookie))
+	       (output.len	(car dev))
+	       (output.bvs	(cdr dev)))
+	  (cond ((unsafe.fxzero? output.len)
+		 ;;No bytes accumulated, the device is empty.
+		 '#vu8())
+		((null? (cdr output.bvs))
+		 ;;The device has already been serialised.
+		 (when reset?
+		   (set-cookie-dest! cookie '(0 . ())))
+		 (car output.bvs))
+		(else
+		 ;;The device needs to be serialised.
+		 (let ((bv (%unsafe.bytevector-reverse-and-concatenate output.bvs output.len who)))
+		   (set-cookie-dest! cookie (if reset?
+						'(0 . ())
+					      `(,output.len . (,bv))))
+		   bv)))))
       (define-inline (%serialise-device! who)
 	(%%serialise-device! who #f))
       (define-inline (%serialise-device-and-reset! who)
@@ -3273,64 +3251,58 @@
 	;;Write data to the device.
 	;;
 	(define who 'open-bytevector-output-port/write!)
-	(define port (cookie-port cookie))
 	(%debug-assert (and (fixnum? count) (<= 0 count)))
-	(with-port (port)
-	  (let* ((dev		port.device)
-		 (output.len	(car dev))
-		 (output.bvs	(cdr dev))
-		 (dev-position	port.device.position)
-		 (new-dev-position (+ count dev-position)))
-	    (unless (fixnum? new-dev-position)
-	      (%implementation-violation who
-		"request to write data to port would exceed maximum size of bytevectors"
-		new-dev-position))
-	    (if (unsafe.fx< dev-position output.len)
-		;;The  current  position  was  set  inside  the  already
-		;;accumulated data.
-		(write!/overwrite port src.bv src.start count
-				  output.len output.bvs
-				  dev-position new-dev-position)
-	      ;;The  current  position is  at  the  end  of the  already
+	(let* ((dev		(cookie-dest cookie))
+	       (output.len	(car dev))
+	       (output.bvs	(cdr dev))
+	       (dev-position	(cookie-pos cookie))
+	       (new-dev-position (+ count dev-position)))
+	  (unless (fixnum? new-dev-position)
+	    (%implementation-violation who
+	      "request to write data to port would exceed maximum size of bytevectors"
+	      new-dev-position))
+	  (if (unsafe.fx< dev-position output.len)
+	      ;;The  current  position  was  set  inside  the  already
 	      ;;accumulated data.
-	      (write!/append port src.bv src.start count output.bvs new-dev-position))
-	    count)))
+	      (write!/overwrite src.bv src.start count
+				output.len output.bvs
+				dev-position new-dev-position)
+	    ;;The  current  position is  at  the  end  of the  already
+	    ;;accumulated data.
+	    (write!/append src.bv src.start count output.bvs new-dev-position))
+	  count))
 
-      (define-inline (write!/overwrite ?port src.bv src.start count
+      (define-inline (write!/overwrite src.bv src.start count
 				       output.len output.bvs
 				       dev-position new-dev-position)
 	;;Write  data to  the device,  overwriting some  of  the already
 	;;existing  data.  The device  is already  composed of  a single
 	;;bytevector of length OUTPUT.LEN in the car of OUTPUT.BVS.
 	;;
-	(let ((port ?port))
-	  (with-port (port)
-	    (let* ((dst.bv   (car output.bvs))
-		   (dst.len  output.len)
-		   (dst.room (unsafe.fx- dst.len dev-position)))
-	      (%debug-assert (fixnum? dst.room))
-	      (if (unsafe.fx<= count dst.room)
-		  ;;The new data fits  in the single bytevector.  There is
-		  ;;no need to update the device.
-		  (%unsafe.bytevector-copy! src.bv src.start dst.bv dev-position count)
-		(begin
-		  ;;The new  data goes part  in the single  bytevector and
-		  ;;part  in a  new  bytevector.  We  need  to update  the
-		  ;;device.
-		  (%unsafe.bytevector-copy! src.bv src.start dst.bv dev-position dst.room)
-		  (let* ((src.start (unsafe.fx+ src.start dst.room))
-			 (count     (unsafe.fx- count     dst.room)))
-		    (write!/append port src.bv src.start count output.bvs new-dev-position))))))))
+	(let* ((dst.bv   (car output.bvs))
+	       (dst.len  output.len)
+	       (dst.room (unsafe.fx- dst.len dev-position)))
+	  (%debug-assert (fixnum? dst.room))
+	  (if (unsafe.fx<= count dst.room)
+	      ;;The new data fits  in the single bytevector.  There is
+	      ;;no need to update the device.
+	      (%unsafe.bytevector-copy! src.bv src.start dst.bv dev-position count)
+	    (begin
+	      ;;The new  data goes part  in the single  bytevector and
+	      ;;part  in a  new  bytevector.  We  need  to update  the
+	      ;;device.
+	      (%unsafe.bytevector-copy! src.bv src.start dst.bv dev-position dst.room)
+	      (let* ((src.start (unsafe.fx+ src.start dst.room))
+		     (count     (unsafe.fx- count     dst.room)))
+		(write!/append src.bv src.start count output.bvs new-dev-position))))))
 
-      (define-inline (write!/append ?port src.bv src.start count output.bvs new-dev-position)
+      (define-inline (write!/append src.bv src.start count output.bvs new-dev-position)
 	;;Append new  data to the  accumulated bytevectors.  We  need to
 	;;update the device.
 	;;
-	(let ((port ?port))
-	  (with-port (port)
-	    (let ((dst.bv (unsafe.make-bytevector count)))
-	      (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
-	      (set! port.device `(,new-dev-position . (,dst.bv . ,output.bvs)))))))
+	(let ((dst.bv (unsafe.make-bytevector count)))
+	  (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
+	  (set-cookie-dest! cookie `(,new-dev-position . (,dst.bv . ,output.bvs)))))
 
       (define (set-position! new-position)
 	;;NEW-POSITION has  already been  validated as exact  integer by
@@ -3341,34 +3313,46 @@
 	;;will store the position in the cookie.
 	;;
 	(define who 'open-bytevector-output-port/set-position!)
-	(define port (cookie-port cookie))
-	(with-port (port)
-	  (unless (and (fixnum? new-position)
-		       (or (unsafe.fx=  new-position port.device.position)
-			   (unsafe.fx<= new-position
-					(unsafe.bytevector-length (%serialise-device! who)))))
-	    (%raise-port-position-out-of-range who port new-position))))
+	(unless (and (fixnum? new-position)
+		     (or (unsafe.fx=  new-position (cookie-pos cookie))
+			 (unsafe.fx<= new-position
+				      (unsafe.bytevector-length (%serialise-device! who)))))
+	  (raise (condition
+		  (make-who-condition who)
+		  (make-message-condition "attempt to set bytevector output port position beyond limit")
+		  (make-i/o-invalid-position-error new-position)))))
 
-      (define (extract)
-	;;The extraction function.  Flush the buffer to the device list,
-	;;convert the  device list to  a single bytevector.   Return the
-	;;single bytevector and reset the port to its empty state.
-	;;
-	;;This  function can  be  called  also when  the  port has  been
-	;;closed.
-	;;
-	(define who 'open-bytevector-output-port/extract)
-	(define port (cookie-port cookie))
-	(with-port (port)
-	  (%unsafe.flush-output-port port who)
-	  (let ((bv (%serialise-device-and-reset! who)))
-	    (port.buffer.reset-to-empty!)
-	    (set! port.device.position 0)
-	    bv)))
+      (let* ((attributes	(%select-output-fast-tag-from-transcoder maybe-transcoder who))
+	     (buffer.index	0)
+	     (buffer.used-size	0)
+	     (buffer		(unsafe.make-bytevector (bytevector-port-buffer-size)))
+	     (identifier	"*bytevector-output-port*")
+	     (read!		#f)
+	     (get-position	#t)
+	     (close		#f))
 
-      (let ((port ($make-port attributes buffer.index buffer.used-size buffer maybe-transcoder identifier
-			      read! write! get-position set-position! close cookie)))
-	(set-cookie-port! cookie port)
+	(define port
+	  ($make-port attributes buffer.index buffer.used-size buffer
+		      maybe-transcoder identifier
+		      read! write! get-position set-position! close cookie))
+
+	(define (extract)
+	  ;;The  extraction function.   Flush the  buffer to  the device
+	  ;;list,  convert  the  device  list to  a  single  bytevector.
+	  ;;Return the single bytevector and reset the port to its empty
+	  ;;state.
+	  ;;
+	  ;;This  function can  be called  also when  the port  has been
+	  ;;closed.
+	  ;;
+	  (define who 'open-bytevector-output-port/extract)
+	  (with-port (port)
+	    (%unsafe.flush-output-port port who)
+	    (let ((bv (%serialise-device-and-reset! who)))
+	      (port.buffer.reset-to-empty!)
+	      (set! port.device.position 0)
+	      bv)))
+
 	(values port extract))))))
 
 (define call-with-bytevector-output-port
@@ -3420,18 +3404,7 @@
   ;;position also can be at most the greatest fixnum.
   ;;
   (define who 'open-string-output-port)
-  (let ((port			#f)
-	(attributes		(%unsafe.fxior FAST-PUT-CHAR-TAG DEFAULT-OTHER-ATTRS))
-	(buffer.index		0)
-	(buffer.used-size	0)
-	(buffer			(unsafe.make-string (string-port-buffer-size))
-				#;(make-string (string-port-buffer-size) #\Z))
-	(identifier		"*string-output-port*")
-	(transcoder		#f)
-	(read!			#f)
-	(get-position		#t)
-	(close			#f)
-	(cookie			(default-cookie '(0 . ()))))
+  (let ((cookie (default-cookie '(0 . ()))))
     ;;The most common use of this  port type is to append characters and
     ;;finally extract the whole output bytevector:
     ;;
@@ -3467,94 +3440,111 @@
     ;;
     ;;Remember that strings hold at most (GREATEST-FIXNUM) characters.
     ;;
-    (with-port (port)
-      (define (%%serialise-device! who reset?)
-	(let* ((dev		port.device)
-	       (output.len	(car dev))
-	       (output.strs	(cdr dev)))
-	  (cond ((unsafe.fxzero? output.len)
-		 ;;No bytes accumulated, the device is empty.
-		 "")
-		((null? (cdr output.strs))
-		 ;;The device has already been serialised.
-		 (when reset?
-		   (set! port.device '(0 . ())))
-		 (car output.strs))
-		(else
-		 (let ((str (%unsafe.string-reverse-and-concatenate output.strs output.len who)))
-		   (set! port.device (if reset? '(0 . ()) `(,output.len . (,str))))
-		   str)))))
-      (define-inline (%serialise-device! who)
-	(%%serialise-device! who #f))
-      (define-inline (%serialise-device-and-reset! who)
-	(%%serialise-device! who #t))
+    (define (%%serialise-device! who reset?)
+      (let* ((dev		(cookie-dest cookie))
+	     (output.len	(car dev))
+	     (output.strs	(cdr dev)))
+	(cond ((unsafe.fxzero? output.len)
+	       ;;No bytes accumulated, the device is empty.
+	       "")
+	      ((null? (cdr output.strs))
+	       ;;The device has already been serialised.
+	       (when reset?
+		 (set-cookie-dest! cookie '(0 . ())))
+	       (car output.strs))
+	      (else
+	       (let ((str (%unsafe.string-reverse-and-concatenate output.strs output.len who)))
+		 (set-cookie-dest! cookie (if reset? '(0 . ()) `(,output.len . (,str))))
+		 str)))))
+    (define-inline (%serialise-device! who)
+      (%%serialise-device! who #f))
+    (define-inline (%serialise-device-and-reset! who)
+      (%%serialise-device! who #t))
 
-      (define (write! src.str src.start count)
-	;;Write data to the device.
-	;;
-	(define who 'open-string-output-port/write!)
-	(%debug-assert (and (fixnum? count) (<= 0 count)))
-	(let* ((dev			port.device)
-	       (output.len		(car dev))
-	       (output.strs		(cdr dev))
-	       (dev-position		port.device.position)
-	       (new-dev-position	(+ count dev-position)))
-	  (unless (fixnum? new-dev-position)
-	    (%implementation-violation who
-	      "request to write data to port would exceed maximum size of strings" new-dev-position))
-	  (if (unsafe.fx< dev-position output.len)
-	      ;;The  current   position  was  set   inside  the  already
-	      ;;accumulated data.
-	      (write!/overwrite src.str src.start count output.len output.strs dev-position
-				new-dev-position)
-	    ;;The  current  position  is  at  the  end  of  the  already
+    (define (write! src.str src.start count)
+      ;;Write data to the device.
+      ;;
+      (define who 'open-string-output-port/write!)
+      (%debug-assert (and (fixnum? count) (<= 0 count)))
+      (let* ((dev		(cookie-dest cookie))
+	     (output.len	(car dev))
+	     (output.strs	(cdr dev))
+	     (dev-position	(cookie-pos cookie))
+	     (new-dev-position	(+ count dev-position)))
+	(unless (fixnum? new-dev-position)
+	  (%implementation-violation who
+	    "request to write data to port would exceed maximum size of strings" new-dev-position))
+	(if (unsafe.fx< dev-position output.len)
+	    ;;The   current  position   was  set   inside   the  already
 	    ;;accumulated data.
-	    (write!/append src.str src.start count output.strs new-dev-position))
-	  count))
+	    (write!/overwrite src.str src.start count output.len output.strs dev-position
+			      new-dev-position)
+	  ;;The  current   position  is  at  the  end   of  the  already
+	  ;;accumulated data.
+	  (write!/append src.str src.start count output.strs new-dev-position))
+	count))
 
-      (define-inline (write!/overwrite src.str src.start count output.len output.strs dev-position
-				       new-dev-position)
-	;;Write  data to  the device,  overwriting some  of  the already
-	;;existing  data.  The device  is already  composed of  a single
-	;;string of length OUTPUT.LEN in the car of OUTPUT.STRS.
-	;;
-	(let* ((dst.str  (car output.strs))
-	       (dst.len  output.len)
-	       (dst.room (unsafe.fx- dst.len dev-position)))
-	  (%debug-assert (fixnum? dst.room))
-	  (if (unsafe.fx<= count dst.room)
-	      ;;The new  data fits  in the single  string.  There  is no
-	      ;;need to update the device.
-	      (%unsafe.string-copy! src.str src.start dst.str dev-position count)
-	    (begin
-	      ;;The new data goes part  in the single string and part in
-	      ;;a new string.  We need to update the device.
-	      (%unsafe.string-copy! src.str src.start dst.str dev-position dst.room)
-	      (let* ((src.start (unsafe.fx+ src.start dst.room))
-		     (count     (unsafe.fx- count     dst.room)))
-		(write!/append src.str src.start count output.strs new-dev-position))))))
+    (define-inline (write!/overwrite src.str src.start count output.len output.strs dev-position
+				     new-dev-position)
+      ;;Write  data  to the  device,  overwriting  some  of the  already
+      ;;existing  data.  The  device  is already  composed  of a  single
+      ;;string of length OUTPUT.LEN in the car of OUTPUT.STRS.
+      ;;
+      (let* ((dst.str  (car output.strs))
+	     (dst.len  output.len)
+	     (dst.room (unsafe.fx- dst.len dev-position)))
+	(%debug-assert (fixnum? dst.room))
+	(if (unsafe.fx<= count dst.room)
+	    ;;The new data fits in  the single string.  There is no need
+	    ;;to update the device.
+	    (%unsafe.string-copy! src.str src.start dst.str dev-position count)
+	  (begin
+	    ;;The new data goes part in  the single string and part in a
+	    ;;new string.  We need to update the device.
+	    (%unsafe.string-copy! src.str src.start dst.str dev-position dst.room)
+	    (let* ((src.start (unsafe.fx+ src.start dst.room))
+		   (count     (unsafe.fx- count     dst.room)))
+	      (write!/append src.str src.start count output.strs new-dev-position))))))
 
-      (define-inline (write!/append src.str src.start count output.strs new-dev-position)
-	;;Append new data to the accumulated strings.  We need to update
-	;;the device.
-	;;
-	(let ((dst.str (unsafe.make-string count)))
-	  (%unsafe.string-copy! src.str src.start dst.str 0 count)
-	  (set! port.device `(,new-dev-position . (,dst.str . ,output.strs)))))
+    (define-inline (write!/append src.str src.start count output.strs new-dev-position)
+      ;;Append new data  to the accumulated strings.  We  need to update
+      ;;the device.
+      ;;
+      (let ((dst.str (unsafe.make-string count)))
+	(%unsafe.string-copy! src.str src.start dst.str 0 count)
+	(set-cookie-dest! cookie `(,new-dev-position . (,dst.str . ,output.strs)))))
 
-      (define (set-position! new-position)
-	;;NEW-POSITION has  already been  validated as exact  integer by
-	;;the procedure SET-PORT-POSITION!.  The buffer has already been
-	;;flushed by  SET-PORT-POSITION!.  Here  we only have  to verify
-	;;that the value  is valid as offset inside  the underlying full
-	;;string.  If this validation succeeds: SET-PORT-POSITION!  will
-	;;store the position in the cookie.
-	;;
-	(define who 'open-string-output-port/set-position!)
-	(unless (and (fixnum? new-position)
-		     (or (unsafe.fx=  new-position port.device.position)
-			 (unsafe.fx<= new-position (unsafe.string-length (%serialise-device! who)))))
-	  (%raise-port-position-out-of-range who port new-position)))
+    (define (set-position! new-position)
+      ;;NEW-POSITION has already been  validated as exact integer by the
+      ;;procedure  SET-PORT-POSITION!.   The  buffer  has  already  been
+      ;;flushed by SET-PORT-POSITION!.  Here we only have to verify that
+      ;;the value is valid as  offset inside the underlying full string.
+      ;;If this validation  succeeds: SET-PORT-POSITION!  will store the
+      ;;position in the cookie.
+      ;;
+      (define who 'open-string-output-port/set-position!)
+      (unless (and (fixnum? new-position)
+		   (or (unsafe.fx=  new-position (cookie-pos cookie))
+		       (unsafe.fx<= new-position (unsafe.string-length (%serialise-device! who)))))
+	(raise (condition
+		(make-who-condition who)
+		(make-message-condition "attempt to set string output port position beyond limit")
+		(make-i/o-invalid-position-error new-position)))))
+
+    (let* ((attributes	(%unsafe.fxior FAST-PUT-CHAR-TAG DEFAULT-OTHER-ATTRS))
+	   (buffer.index	0)
+	   (buffer.used-size	0)
+	   (buffer		(unsafe.make-string (string-port-buffer-size))
+				#;(make-string (string-port-buffer-size) #\Z))
+	   (identifier		"*string-output-port*")
+	   (transcoder		#f)
+	   (read!		#f)
+	   (get-position	#t)
+	   (close		#f))
+
+      (define port
+	($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
+		    read! write! get-position set-position! close cookie))
 
       (define (extract)
 	;;The extraction function.  Flush the buffer to the device list,
@@ -3566,13 +3556,12 @@
 	;;
 	(define who 'open-string-output-port/extract)
 	(%unsafe.flush-output-port port who)
-	(let ((str (%serialise-device-and-reset! who)))
-	  (port.buffer.reset-to-empty!)
-	  (set! port.device.position 0)
-	  str))
+	(with-port (port)
+	  (let ((str (%serialise-device-and-reset! who)))
+	    (port.buffer.reset-to-empty!)
+	    (set! port.device.position 0)
+	    str)))
 
-      (set! port ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
-			     read! write! get-position set-position! close cookie))
       (values port extract))))
 
 (define (get-output-string port)
@@ -3714,8 +3703,6 @@
 			    transcoder port.id
 			    port.read! port.write! port.get-position port.set-position! port.close
 			    port.cookie)))
-      (when (cookie-port port.cookie)
-	(set-cookie-port! port.cookie transcoded-port))
       (%port->maybe-guarded-port transcoded-port))))
 
 (define (port-transcoder port)
