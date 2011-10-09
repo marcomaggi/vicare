@@ -3531,7 +3531,7 @@
 		(make-message-condition "attempt to set string output port position beyond limit")
 		(make-i/o-invalid-position-error new-position)))))
 
-    (let* ((attributes	(%unsafe.fxior FAST-PUT-CHAR-TAG DEFAULT-OTHER-ATTRS))
+    (let* ((attributes		(%unsafe.fxior FAST-PUT-CHAR-TAG DEFAULT-OTHER-ATTRS))
 	   (buffer.index	0)
 	   (buffer.used-size	0)
 	   (buffer		(unsafe.make-string (string-port-buffer-size))
@@ -6329,7 +6329,8 @@
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
   (let ((attributes		(%select-input-fast-tag-from-transcoder
-				 transcoder who other-attributes GUARDED-PORT-TAG))
+				 transcoder who other-attributes GUARDED-PORT-TAG
+				 DEFAULT-OTHER-ATTRS))
 	(buffer.index		0)
 	(buffer.used-size	0)
 	(buffer			(make-bytevector buffer.size))
@@ -6374,7 +6375,8 @@
 	     (%raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
 
   (let ((attributes		(%select-output-fast-tag-from-transcoder
-				 transcoder who other-attributes GUARDED-PORT-TAG))
+				 transcoder who other-attributes GUARDED-PORT-TAG
+				 DEFAULT-OTHER-ATTRS))
 	(buffer.index		0)
 	(buffer.used-size	0)
 	(buffer			(make-bytevector buffer.size))
@@ -6427,7 +6429,8 @@
 	     (%raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
 
   (let ((attributes		(%select-input/output-fast-tag-from-transcoder
-				 transcoder who other-attributes INPUT/OUTPUT-PORT-TAG GUARDED-PORT-TAG))
+				 transcoder who other-attributes INPUT/OUTPUT-PORT-TAG
+				 GUARDED-PORT-TAG DEFAULT-OTHER-ATTRS))
 	(buffer.index		0)
 	(buffer.used-size	0)
 	(buffer			(make-bytevector buffer.size))
@@ -6509,26 +6512,26 @@
     (%assert-argument-is-a-file-options file-options who)
     (%assert-argument-is-maybe-transcoder maybe-transcoder who)
     (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
-	   (attributes		(%unsafe.fxior DEFAULT-OTHER-ATTRS buffer-mode-attrs))
+	   (other-attributes	buffer-mode-attrs)
 	   (fd			(%open-input-file-descriptor filename file-options who))
 	   (port-identifier	filename)
 	   (buffer-size		(input-file-buffer-size))
 	   (close-function	#t))
-      (%file-descriptor->input-port fd attributes port-identifier buffer-size maybe-transcoder
-				    close-function who)))))
+      (%file-descriptor->input-port fd other-attributes port-identifier buffer-size
+				    maybe-transcoder close-function who)))))
 
 (define (%open-input-file-with-defaults filename who)
   ;;Open FILENAME  for input, with  empty file options, and  returns the
   ;;obtained port.
   ;;
   (%assert-argument-is-a-filename filename who)
-  (let ((fd		(%open-input-file-descriptor filename (file-options) who))
-	(attributes	DEFAULT-OTHER-ATTRS)
-	(port-id	filename)
-	(buffer.size	(input-file-buffer-size))
-	(transcoder	(native-transcoder))
-	(close-function	#t))
-    (%file-descriptor->input-port fd attributes port-id buffer.size transcoder close-function who)))
+  (let ((fd			(%open-input-file-descriptor filename (file-options) who))
+	(other-attributes	0)
+	(port-id		filename)
+	(buffer.size		(input-file-buffer-size))
+	(transcoder		(native-transcoder))
+	(close-function		#t))
+    (%file-descriptor->input-port fd other-attributes port-id buffer.size transcoder close-function who)))
 
 (define (open-input-file filename)
   ;;Defined by  R6RS.  Open FILENAME  for input, with  empty file
@@ -6627,11 +6630,11 @@
     (%assert-argument-is-a-file-options file-options who)
     (%assert-argument-is-maybe-transcoder maybe-transcoder who)
     (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
-	   (attributes		(%unsafe.fxior DEFAULT-OTHER-ATTRS buffer-mode-attrs))
+	   (other-attributes	buffer-mode-attrs)
 	   (fd			(%open-output-file-descriptor filename file-options who))
 	   (port-identifier	filename)
 	   (buffer-size		(output-file-buffer-size)))
-      (%file-descriptor->output-port fd attributes port-identifier
+      (%file-descriptor->output-port fd other-attributes port-identifier
 				     buffer-size maybe-transcoder #t who)))))
 
 (define (%open-output-file-with-defaults filename who)
@@ -6639,13 +6642,13 @@
   ;;obtained port.
   ;;
   (%assert-argument-is-a-filename filename who)
-  (let ((fd		(%open-output-file-descriptor filename (file-options) who))
-	(attributes	DEFAULT-OTHER-ATTRS)
-	(port-id	filename)
-	(buffer.size	(output-file-buffer-size))
-	(transcoder	(native-transcoder))
-	(close-function	#t))
-    (%file-descriptor->output-port fd attributes port-id buffer.size transcoder close-function who)))
+  (let ((fd			(%open-output-file-descriptor filename (file-options) who))
+	(other-attributes	0)
+	(port-id		filename)
+	(buffer.size		(output-file-buffer-size))
+	(transcoder		(native-transcoder))
+	(close-function		#t))
+    (%file-descriptor->output-port fd other-attributes port-id buffer.size transcoder close-function who)))
 
 (define (open-output-file filename)
   ;;Defined by R6RS.  Open FILENAME for output, with empty file options,
@@ -6722,12 +6725,11 @@
     (%assert-argument-is-a-file-options file-options who)
     (%assert-argument-is-maybe-transcoder maybe-transcoder who)
     (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
-	   (attributes		(%unsafe.fxior INPUT/OUTPUT-PORT-TAG DEFAULT-OTHER-ATTRS
-					       buffer-mode-attrs))
+	   (other-attributes	(%unsafe.fxior INPUT/OUTPUT-PORT-TAG buffer-mode-attrs))
 	   (fd			(%open-input/output-file-descriptor filename file-options who))
 	   (port-identifier	filename)
 	   (buffer-size		(output-file-buffer-size)))
-      (%file-descriptor->input/output-port fd attributes port-identifier
+      (%file-descriptor->input/output-port fd other-attributes port-identifier
 					   buffer-size maybe-transcoder #t who)))))
 
 
@@ -6789,7 +6791,7 @@
 	   (vector-ref r 0) ; pid
 	   (and (not stdin)
 		(let ((fd		(vector-ref r 1))
-		      (other-attributes	DEFAULT-OTHER-ATTRS)
+		      (other-attributes	0)
 		      (port-identifier	cmd)
 		      (buffer.size	(output-file-buffer-size))
 		      (transcoder	#f)
@@ -6798,7 +6800,7 @@
 						 transcoder close-function who)))
 	   (and (not stdout)
 		(let ((fd		(vector-ref r 2))
-		      (other-attributes	DEFAULT-OTHER-ATTRS)
+		      (other-attributes	0)
 		      (port-identifier	cmd)
 		      (buffer.size	(input-file-buffer-size))
 		      (transcoder	#f)
@@ -6807,7 +6809,7 @@
 						transcoder close-function who)))
 	   (and (not stderr)
 		(let ((fd		(vector-ref r 3))
-		      (other-attributes	DEFAULT-OTHER-ATTRS)
+		      (other-attributes	0)
 		      (port-identifier	cmd)
 		      (buffer.size	(input-file-buffer-size))
 		      (transcoder	#f)
@@ -6835,9 +6837,9 @@
       (unless block?
 	(set-fd-nonblocking socket who id))
       (values
-       (%file-descriptor->input-port  socket DEFAULT-OTHER-ATTRS
+       (%file-descriptor->input-port  socket 0
 				      id (input-socket-buffer-size)  #f close who)
-       (%file-descriptor->output-port socket DEFAULT-OTHER-ATTRS
+       (%file-descriptor->output-port socket 0
 				      id (output-socket-buffer-size) #f close who)))))
 
 (define-syntax define-connector
@@ -7132,7 +7134,7 @@
   ;;and   SET-PORT-POSITION!     operations   is   implementation
   ;;dependent.
   ;;
-  (%file-descriptor->input-port  0 DEFAULT-OTHER-ATTRS
+  (%file-descriptor->input-port  0 0
 				 "*stdin*" (input-file-buffer-size) #f #f 'standard-input-port))
 
 (define (standard-output-port)
@@ -7141,7 +7143,7 @@
   ;;PORT-POSITION    and   SET-PORT-POSITION!     operations   is
   ;;implementation dependent.
   ;;
-  (%file-descriptor->output-port 1 DEFAULT-OTHER-ATTRS
+  (%file-descriptor->output-port 1 0
 				 "*stdout*" (output-file-buffer-size) #f #f 'standard-output-port))
 
 (define (standard-error-port)
@@ -7150,7 +7152,7 @@
   ;;PORT-POSITION    and   SET-PORT-POSITION!     operations   is
   ;;implementation dependent.
   ;;
-  (%file-descriptor->output-port 2 DEFAULT-OTHER-ATTRS
+  (%file-descriptor->output-port 2 0
 				 "*stderr*" (output-file-buffer-size) #f #f 'standard-error-port))
 
 (define current-input-port
