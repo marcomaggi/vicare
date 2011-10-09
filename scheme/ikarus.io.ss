@@ -395,6 +395,9 @@
     with-output-to-port
     call-with-string-output-port
 
+    ;; input/output to files
+    open-file-input/output-port
+
     ;; custom ports
     make-custom-binary-input-port
     make-custom-binary-output-port
@@ -494,6 +497,9 @@
 		  with-output-to-port
 		  call-with-string-output-port
 		  get-output-string
+
+		  ;; input/output to files
+		  open-file-input/output-port
 
 		  ;; custom ports
 		  make-custom-binary-input-port
@@ -675,7 +681,7 @@
 ;;       true if guarded port		    |
 ;;       unused bits                      ||
 ;;					  98765432109876543210
-(define I/O-PORT-TAG			#b00000100000000000000)
+(define INPUT/OUTPUT-PORT-TAG		#b00000100000000000000)
 		;Used to tag ports that are both input and output.
 (define BUFFER-MODE-NONE-TAG		#b00001000000000000000)
 		;Used to tag ports having NONE as buffer mode.
@@ -818,6 +824,11 @@
       ;;If no codec  is recognised, wait to read  the first character to
       ;;tag the port according to the Byte Order Mark.
       (else		(%unsafe.fxior other-attributes TEXTUAL-INPUT-PORT-BITS)))))
+
+(define-syntax %select-input/output-fast-tag-from-transcoder
+  (syntax-rules ()
+    ((_ . ?args)
+     (%select-output-fast-tag-from-transcoder . ?args))))
 
 (define-syntax %select-output-fast-tag-from-transcoder
   (syntax-rules ()
@@ -2450,7 +2461,7 @@
   (define-unsafe-predicate %unsafe.textual-port?	TEXTUAL-PORT-TAG)
   (define-unsafe-predicate %unsafe.input-port?		INPUT-PORT-TAG)
   (define-unsafe-predicate %unsafe.output-port?		OUTPUT-PORT-TAG)
-  (define-unsafe-predicate %unsafe.input-and-output-port? I/O-PORT-TAG)
+  (define-unsafe-predicate %unsafe.input-and-output-port? INPUT/OUTPUT-PORT-TAG)
 
   (define-unsafe-predicate %unsafe.binary-input-port?	BINARY-INPUT-PORT-BITS)
   (define-unsafe-predicate %unsafe.binary-output-port?	BINARY-OUTPUT-PORT-BITS)
@@ -6137,12 +6148,20 @@
   (foreign-call "ikrt_open_input_fd" pathname-bv open-options))
 
 (define-inline (platform-open-output-fd pathname-bv open-options)
-  ;;Interface to  "open()".  Open a file  descriptor for writing;
-  ;;if successful  return a non-negative  fixnum representing the
-  ;;file descriptor;  else return a  negative fixnum representing
-  ;;an ERRNO code.
+  ;;Interface  to "open()".   Open  a file  descriptor  for writing;  if
+  ;;successful  return  a  non-negative  fixnum  representing  the  file
+  ;;descriptor;  else return  a  negative fixnum  representing an  ERRNO
+  ;;code.
   ;;
   (foreign-call "ikrt_open_output_fd" pathname-bv open-options))
+
+(define-inline (platform-open-input/output-fd pathname-bv open-options)
+  ;;Interface to "open()".  Open  a file descriptor for reading writing;
+  ;;if  successful return  a non-negative  fixnum representing  the file
+  ;;descriptor;  else return  a  negative fixnum  representing an  ERRNO
+  ;;code.
+  ;;
+  (foreign-call "ikrt_open_input_output_fd" pathname-bv open-options))
 
 (define-inline (platform-read-fd fd dst.bv dst.start requested-count)
   ;;Interface to "read()".  Read data  from the file descriptor into the
@@ -6272,7 +6291,25 @@
 	(%raise-io-error who filename fd)
       fd)))
 
-(define (%file-descriptor->input-port fd attributes port-identifier buffer.size
+(define (%open-input/output-file-descriptor filename file-options who)
+  ;;Subroutine  for the  functions below  opening a  file for  input and
+  ;;output.   Open and  return a  file descriptor  referencing  the file
+  ;;selected  by the  string FILENAME.   If  an error  occurs: raise  an
+  ;;exception.
+  ;;
+  (let* ((opts (if (enum-set? file-options)
+		   ;;In  future  the  options   for  I/O  ports  may  be
+		   ;;different from the ones of output-only ports.
+		   (%unsafe.fxior (if (enum-set-member? 'no-create   file-options) 1 0)
+				  (if (enum-set-member? 'no-fail     file-options) 2 0)
+				  (if (enum-set-member? 'no-truncate file-options) 4 0))
+		 (assertion-violation who "file-options is not an enum set" file-options)))
+	 (fd (platform-open-input/output-fd ((string->filename-func) filename) opts)))
+    (if (fx< fd 0)
+	(%raise-io-error who filename fd)
+      fd)))
+
+(define (%file-descriptor->input-port fd other-attributes port-identifier buffer.size
 				      transcoder close-function who)
   ;;Given the  fixnum file descriptor  FD representing an open  file for
   ;;the underlying platform: build and  return a Scheme input port to be
@@ -6304,9 +6341,8 @@
 	    (else
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
-  (let ((attributes		(%select-input-fast-tag-from-transcoder transcoder who
-									attributes
-									GUARDED-PORT-TAG))
+  (let ((attributes		(%select-input-fast-tag-from-transcoder
+				 transcoder who other-attributes GUARDED-PORT-TAG))
 	(buffer.index		0)
 	(buffer.used-size	0)
 	(buffer			(make-bytevector buffer.size))
@@ -6318,7 +6354,7 @@
      ($make-port attributes buffer.index buffer.used-size buffer transcoder port-identifier
 		 read! write! get-position set-position! close cookie))))
 
-(define (%file-descriptor->output-port fd attributes port-identifier buffer.size
+(define (%file-descriptor->output-port fd other-attributes port-identifier buffer.size
 				       transcoder close-function who)
   ;;Given the  fixnum file descriptor  FD representing an open  file for
   ;;the underlying platform: build and return a Scheme output port to be
@@ -6350,13 +6386,64 @@
 	    (else
 	     (%raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
 
-  (let ((attributes		(%select-output-fast-tag-from-transcoder transcoder who
-									 attributes
-									 GUARDED-PORT-TAG))
+  (let ((attributes		(%select-output-fast-tag-from-transcoder
+				 transcoder who other-attributes GUARDED-PORT-TAG))
 	(buffer.index		0)
 	(buffer.used-size	0)
 	(buffer			(make-bytevector buffer.size))
 	(read!			#f)
+	(get-position		#t)
+	(cookie			(default-cookie fd)))
+    (%port->maybe-guarded-port
+     ($make-port attributes buffer.index buffer.used-size buffer transcoder port-identifier
+		 read! write! get-position set-position! close cookie))))
+
+(define (%file-descriptor->input/output-port fd other-attributes port-identifier buffer.size
+					     transcoder close-function who)
+  ;;Given the  fixnum file descriptor  FD representing an open  file for
+  ;;the underlying platform: build and return a Scheme input/output port
+  ;;to be used to write the data.
+  ;;
+  ;;The returned  port supports both the  GET-POSITION and SET-POSITION!
+  ;;operations.
+  ;;
+  ;;If CLOSE-FUNCTION is a function: it is used as close function; if it
+  ;;is true:  a standard  close function for  file descriptors  is used;
+  ;;else the port does not support the close operation.
+  ;;
+  (define set-position!
+    (%make-set-position!-function-for-file-descriptor-port fd port-identifier))
+
+  (define close
+    (cond ((procedure? close-function)
+	   close-function)
+	  ((and (boolean? close-function) close-function)
+	   (%make-close-function-for-platform-descriptor-port port-identifier fd))
+	  (else #f)))
+
+  (define (read! dst.bv dst.start requested-count)
+    (let ((count (platform-read-fd fd dst.bv dst.start requested-count)))
+      (cond ((unsafe.fx>= count 0)
+	     count)
+	    ((unsafe.fx= count errno-code-EAGAIN)
+	     (%raise-eagain-error who #f))
+	    (else
+	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
+
+  (define (write! src.bv src.start requested-count)
+    (let ((count (platform-write-fd fd src.bv src.start requested-count)))
+      (cond ((unsafe.fx>= count 0)
+	     count)
+	    ((unsafe.fx= count errno-code-EAGAIN)
+	     (%raise-eagain-error who #f))
+	    (else
+	     (%raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
+
+  (let ((attributes		(%select-input/output-fast-tag-from-transcoder
+				 transcoder who other-attributes INPUT/OUTPUT-PORT-TAG GUARDED-PORT-TAG))
+	(buffer.index		0)
+	(buffer.used-size	0)
+	(buffer			(make-bytevector buffer.size))
 	(get-position		#t)
 	(cookie			(default-cookie fd)))
     (%port->maybe-guarded-port
@@ -6620,6 +6707,41 @@
   (define who 'call-with-output-file)
   (%assert-argument-is-procedure proc who)
   (call-with-port (%open-output-file-with-defaults filename who) proc))
+
+
+;;;; input/output ports wrapping platform file descriptors
+
+(define open-file-input/output-port
+  ;;Defined by  R6RS.  Return a single  port that is both  an input port
+  ;;and  an output  port for  the  named file.   The optional  arguments
+  ;;default as described  in the specification of OPEN-FILE-OUTPUT-PORT.
+  ;;If   the    input/output   port   supports    PORT-POSITION   and/or
+  ;;SET-PORT-POSITION!, the  same port position  is used for  both input
+  ;;and output.
+  ;;
+  (case-lambda
+   ((filename)
+    (open-file-input/output-port filename (file-options) 'block #f))
+
+   ((filename file-options)
+    (open-file-input/output-port filename file-options 'block #f))
+
+   ((filename file-options buffer-mode)
+    (open-file-input/output-port filename file-options buffer-mode #f))
+
+   ((filename file-options buffer-mode maybe-transcoder)
+    (define who 'open-file-input/output-port)
+    (%assert-argument-is-a-filename filename who)
+    (%assert-argument-is-a-file-options file-options who)
+    (%assert-argument-is-maybe-transcoder maybe-transcoder who)
+    (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
+	   (attributes		(%unsafe.fxior INPUT/OUTPUT-PORT-TAG DEFAULT-OTHER-ATTRS
+					       buffer-mode-attrs))
+	   (fd			(%open-input/output-file-descriptor filename file-options who))
+	   (port-identifier	filename)
+	   (buffer-size		(output-file-buffer-size)))
+      (%file-descriptor->input/output-port fd attributes port-identifier
+					   buffer-size maybe-transcoder #t who)))))
 
 
 (define (process cmd . args)

@@ -99,6 +99,32 @@ ikrt_open_output_fd(ikptr fn, ikptr ikopts /*, ikpcb* pcb */){
   }
 }
 
+ikptr
+ikrt_open_input_output_fd(ikptr fn, ikptr ikopts /*, ikpcb* pcb */){
+  int opts  = unfix(ikopts);
+  int mode  = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+  int flags = 0;
+  switch (opts){
+    /* mode 0: error if exists, create if does not exist */
+    case 0: flags = O_RDWR | O_CREAT | O_EXCL; break;
+    /* mode 1: truncate if exists, error if not exists */
+    case 1: flags = O_RDWR | O_TRUNC; break;
+    /* mode 2: truncate if exists, create if not exist */
+    case 2: flags = O_RDWR | O_TRUNC | O_CREAT ; break;
+    /* mode 3: truncate if exists, error if not exists */
+    case 3: flags = O_RDWR | O_TRUNC ; break;
+    case 4: flags = O_RDWR | O_CREAT | O_EXCL ; break;
+    case 5: flags = O_RDWR | O_CREAT ; break;
+    case 6: flags = O_RDWR | O_CREAT ; break;
+    case 7: flags = O_RDWR ; break;
+  }
+  int fh = open((char*)(long)(fn+off_bytevector_data), flags, mode);
+  if(fh >= 0){
+    return fix(fh);
+  } else {
+    return ik_errno_to_code();
+  }
+}
 
 ikptr
 ikrt_read_fd(ikptr fd, ikptr bv, ikptr off, ikptr cnt /*, ikpcb* pcb */){

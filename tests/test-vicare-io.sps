@@ -8926,14 +8926,21 @@
   				(make-transcoder (utf-8-codec)))))
     => SPECIAL1-TEST-STRING-FOR-UTF-8)
 
-  (check
+  (check	;default to little endian
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-STRING-FOR-UTF-16-LE)))
+  	(with-textual-output-test-pathname (utf-16le-codec)
+  	 (open-file-output-port (test-pathname) (file-options) (buffer-mode none)
+  				(make-transcoder (utf-16-codec)))))
+    => TEST-STRING-FOR-UTF-16-LE)
+
+  (check	;explicit little endianness selection
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-16-LE)))
   	(with-textual-output-test-pathname (utf-16le-codec)
   	 (open-file-output-port (test-pathname) (file-options) (buffer-mode none)
   				(make-transcoder (utf-16le-codec)))))
     => TEST-STRING-FOR-UTF-16-LE)
-
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
@@ -9178,6 +9185,245 @@
   #t)
 
 
+(parametrise ((check-test-name		'open-file-input/output-port)
+	      (test-pathname		(make-test-pathname "open-file-input-output-port.bin"))
+	      (input-file-buffer-size	9))
+
+  (define-syntax with-binary-input-test-pathname
+    (syntax-rules ()
+      ((_ ?open-form)
+       (begin
+	 (create-test-pathname)
+	 (let ((port ?open-form))
+	   (unwind-protect
+	       (get-bytevector-all port)
+	     (close-input-port port)
+	     (cleanup-test-pathname)))))))
+
+  (define-syntax with-textual-input-test-pathname
+    (syntax-rules ()
+      ((_ ?open-form)
+       (begin
+	 (create-test-pathname)
+	 (let ((port ?open-form))
+	   (unwind-protect
+	       (get-string-all port)
+	     (close-input-port port)
+	     (cleanup-test-pathname)))))))
+
+  (define-syntax with-binary-output-test-pathname
+    (syntax-rules ()
+      ((_ ?open-form)
+       (begin
+	 (cleanup-test-pathname)
+	 (unwind-protect
+	     (let ((port ?open-form))
+	       (unwind-protect
+		   (put-bytevector port ((test-pathname-data-func)))
+		 (close-output-port port))
+	       (binary-read-test-pathname))
+	   (cleanup-test-pathname))))))
+
+  (define-syntax with-textual-output-test-pathname
+    (syntax-rules ()
+      ((_ ?codec ?open-form)
+       (begin
+	 (cleanup-test-pathname)
+	 (unwind-protect
+	     (let ((port ?open-form))
+	       (unwind-protect
+		   (put-string port ((test-pathname-data-func)))
+		 (close-output-port port))
+	       (textual-read-test-pathname (make-transcoder ?codec)))
+	   (cleanup-test-pathname))))))
+
+;;; --------------------------------------------------------------------
+;;; filename argument validation
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(open-file-input/output-port 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; file-options argument validation
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(open-file-input/output-port "123" 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; buffer-mode argument validation
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(open-file-input/output-port "123" (file-options) 'ciao))
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; transcoder argument validation
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(open-file-input/output-port "123" (file-options) (buffer-mode block) 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; reading whole binary data
+
+  (check
+      (with-binary-input-test-pathname
+       (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)))
+    => (bindata-hundreds.bv))
+
+  (check
+      (with-binary-input-test-pathname
+       (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
+  				    (buffer-mode none)))
+    => (bindata-hundreds.bv))
+
+;;; --------------------------------------------------------------------
+;;; reading whole textual data
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       TEST-BYTEVECTOR-FOR-LATIN-1)))
+	(with-textual-input-test-pathname
+	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
+				      (buffer-mode none)
+				      (make-transcoder (latin-1-codec)))))
+    => TEST-STRING-FOR-LATIN-1)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       TEST-BYTEVECTOR-FOR-UTF-8)))
+	(with-textual-input-test-pathname
+	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
+				      (buffer-mode none)
+				      (make-transcoder (utf-8-codec)))))
+    => TEST-STRING-FOR-UTF-8)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       SPECIAL1-TEST-BYTEVECTOR-FOR-UTF-8)))
+	(with-textual-input-test-pathname
+	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
+				      (buffer-mode none)
+				      (make-transcoder (utf-8-codec)))))
+    => SPECIAL1-TEST-STRING-FOR-UTF-8)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       TEST-BYTEVECTOR-FOR-UTF-16-LE)))
+	(with-textual-input-test-pathname
+	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
+				      (buffer-mode none)
+				      (make-transcoder (utf-16-codec)))))
+    => TEST-STRING-FOR-UTF-16-LE)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       TEST-BYTEVECTOR-FOR-UTF-16-LE)))
+	(with-textual-input-test-pathname
+	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
+				      (buffer-mode none)
+				      (make-transcoder (utf-16le-codec)))))
+    => TEST-STRING-FOR-UTF-16-LE)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       TEST-BYTEVECTOR-FOR-UTF-16-BE)))
+	(with-textual-input-test-pathname
+	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
+				      (buffer-mode none)
+				      (make-transcoder (utf-16be-codec)))))
+    => TEST-STRING-FOR-UTF-16-BE)
+
+;;; --------------------------------------------------------------------
+;;; writing whole binary data
+
+  (check
+      (with-binary-output-test-pathname
+       (open-file-input/output-port (test-pathname)))
+    => (bindata-hundreds.bv))
+
+  (check
+      (with-binary-output-test-pathname
+       (open-file-input/output-port (test-pathname) (file-options)))
+    => (bindata-hundreds.bv))
+
+  (check
+      (with-binary-output-test-pathname
+       (open-file-input/output-port (test-pathname) (file-options) (buffer-mode none)))
+    => (bindata-hundreds.bv))
+
+;;; --------------------------------------------------------------------
+;;; writing whole textual data
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-STRING-FOR-LATIN-1)))
+  	(with-textual-output-test-pathname (latin-1-codec)
+	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode none)
+				       (make-transcoder (latin-1-codec)))))
+    => TEST-STRING-FOR-LATIN-1)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-STRING-FOR-UTF-8)))
+  	(with-textual-output-test-pathname (utf-8-codec)
+	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode none)
+				       (make-transcoder (utf-8-codec)))))
+    => TEST-STRING-FOR-UTF-8)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       SPECIAL1-TEST-STRING-FOR-UTF-8)))
+  	(with-textual-output-test-pathname (utf-8-codec)
+	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode none)
+				       (make-transcoder (utf-8-codec)))))
+    => SPECIAL1-TEST-STRING-FOR-UTF-8)
+
+  (check	;default to little endian
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-STRING-FOR-UTF-16-LE)))
+  	(with-textual-output-test-pathname (utf-16le-codec)
+	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode none)
+				       (make-transcoder (utf-16-codec)))))
+    => TEST-STRING-FOR-UTF-16-LE)
+
+  (check	;explicit little endianness selection
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-STRING-FOR-UTF-16-LE)))
+  	(with-textual-output-test-pathname (utf-16le-codec)
+	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode none)
+				       (make-transcoder (utf-16le-codec)))))
+    => TEST-STRING-FOR-UTF-16-LE)
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+  					       TEST-STRING-FOR-UTF-16-BE)))
+  	(with-textual-output-test-pathname (utf-16be-codec)
+	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode none)
+				       (make-transcoder (utf-16be-codec)))))
+    => TEST-STRING-FOR-UTF-16-BE)
+
+  #t)
+
+
 #;(parametrise ((check-test-name	'wrong-chars))
 
   (check
@@ -9222,4 +9468,5 @@
 ;;; eval: (put 'with-input-test-pathname	'scheme-indent-function 1)
 ;;; eval: (put 'check.with-result		'scheme-indent-function 1)
 ;;; eval: (put 'position-and-contents		'scheme-indent-function 1)
+;;; eval: (put 'with-textual-output-test-pathname	'scheme-indent-function 1)
 ;;; End:

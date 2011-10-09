@@ -3665,11 +3665,11 @@ the Scheme implementation is running.  Under @value{PRJNAME} such
 default is:
 
 @example
-(make-transcoder 'utf-8-codec 'none 'replace)
+(make-transcoder (utf-8-codec) 'none 'replace)
 @end example
 
 @noindent
-and additionally the function it is a parameter, so the default can be
+and additionally the function is a parameter, so the default can be
 configured.  Notice that the following functions create Scheme ports
 using the transcoder returned by @func{native-transcoder}:
 
@@ -3681,11 +3681,27 @@ call-with-input-file    call-with-output-file
 @end deffn
 
 
+The codec returned by @func{utf-16-codec}, defined by @rnrs{6}, has
+different semantics depending upon the type of the port:
+
+@itemize
+@item
+For output and input/output ports it defaults to @utf{}-16 little
+endian.
+
+@item
+For input ports the endianness is left unspecified until the first bytes
+are read: such bytes must be a valid @utf{}-16 Byte Order Mark which
+dynamically configures the port.@footnote{The big endian @acronym{BOM}
+for @utf{}-16 is the sequence of bytes @code{#xFE #xFF}; the little
+endian @acronym{BOM} for @utf{}-16 is the sequence of bytes @code{#xFF
+#xFE}.}
+@end itemize
+
+
 @deffn Procedure utf-16le-codec
 @deffnx Procedure utf-16be-codec
-Codecs for the @utf{}-16 encoding schemes, little endian and big
-endian..
-
+Codecs for the @utf{}-16 encoding schemes, little endian and big endian.
 A call to any of these procedures returns a value that is equal in the
 sense of @func{eqv?} to the result of any other call to the same
 procedure.
@@ -5398,6 +5414,23 @@ The open mode is @code{O_WRONLY | O_CREAT}.
 @item 7
 The open mode is @code{O_WRONLY}.
 @end table
+
+If successful return a fixnum representing the file descriptor; if an
+error occurs in @cfunc{open} return the return value of
+@cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_open_input_output_fd (ikptr @var{pathname}, ikptr @var{opts})
+Interface to the @cfunc{open} C function.  @glibcref{Opening and Closing
+Files, open}.  Open a file for reading and writing with configurable
+mode based on @code{O_RDWR}; the access permissions when a new file is
+created are @code{S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH}.
+
+@var{pathname} must reference a bytevector object holding the file
+pathname; @var{opts} must be a fixnum representing the opening flags, it
+has the same format of the @var{opts} argument to
+@func{ikrt_open_output_fd}.
 
 If successful return a fixnum representing the file descriptor; if an
 error occurs in @cfunc{open} return the return value of

@@ -21,15 +21,13 @@
     bitwise-reverse-bit-field
     bitwise-rotate-bit-field
     make-custom-binary-input/output-port
-    make-custom-textual-input/output-port
-    open-file-input/output-port )
+    make-custom-textual-input/output-port)
 
   (import (except (ikarus)
     bitwise-reverse-bit-field
     bitwise-rotate-bit-field
     make-custom-binary-input/output-port
-    make-custom-textual-input/output-port
-    open-file-input/output-port))
+    make-custom-textual-input/output-port))
 
   (define-syntax not-yet
     (syntax-rules ()
@@ -59,7 +57,6 @@
     ;;; won't be implemented
     make-custom-binary-input/output-port
     make-custom-textual-input/output-port
-    open-file-input/output-port
     ))
 
-
+;;; end of file
