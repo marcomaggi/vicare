@@ -1146,6 +1146,12 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-inline (%unsafe.assert-argument-is-not-input/output-port ?port ?who)
+  (when (%unsafe.input-and-output-port? ?port)
+    (assertion-violation ?who "invalid input/output port as argument" ?port)))
+
+;;; --------------------------------------------------------------------
+
 (define-inline (%unsafe.assert-value-is-binary-port ?port ?who)
   (unless (%unsafe.binary-port? ?port)
     (assertion-violation ?who "not a binary port" ?port)))
@@ -1754,7 +1760,7 @@
 ;;Scheme source code satisfies this requirement.
 ;;
 
-;;Constructor: (make-cookie DEST MODE POS ROW-NUM NEWLINE-POS)
+;;Constructor: (make-cookie DEST SUBPORT MODE POS ROW-NUM NEWLINE-POS)
 ;;
 ;;Field name: dest
 ;;Accessor name: (cookie-dest COOKIE)
@@ -1767,6 +1773,13 @@
 ;;  As a  special case: this field can  hold a Scheme list  managed as a
 ;;  stack in which data is temporarily stored.  For example: this is the
 ;;  case of output bytevector ports.
+;;
+;;Field name: subport
+;;Accessor name: (cookie-subport COOKIE)
+;;Mutator name: (set-cookie-subport! COOKIE SUBPORT)
+;;  This  field is usually  set to  false.  Only  for binary  ports upon
+;;  which a  new transcoded port  is created with  TRANSCODED-PORT, this
+;;  field is set to the transcoded port.
 ;;
 ;;Field name: mode
 ;;Accessor name: (cookie-mode COOKIE)
@@ -1796,8 +1809,8 @@
 (define-struct cookie
   (dest mode pos row-num newline-pos))
 
-(define (default-cookie fd)
-  (make-cookie fd 'vicare-mode 0 0 0))
+(define (default-cookie device)
+  (make-cookie device 'vicare-mode 0 0 0))
 
 (define (input-port-byte-position port)
   ;;Defined by  Ikarus.  Return the port  position for an  input port in
@@ -3346,12 +3359,13 @@
 	  ;;closed.
 	  ;;
 	  (define who 'open-bytevector-output-port/extract)
-	  (with-port (port)
-	    (%unsafe.flush-output-port port who)
-	    (let ((bv (%serialise-device-and-reset! who)))
-	      (port.buffer.reset-to-empty!)
-	      (set! port.device.position 0)
-	      bv)))
+	  (let ((port port #;(or (cookie-subport cookie) port)))
+	    (with-port (port)
+	      (%unsafe.flush-output-port port who)
+	      (let ((bv (%serialise-device-and-reset! who)))
+		(port.buffer.reset-to-empty!)
+		(set! port.device.position 0)
+		bv))))
 
 	(values port extract))))))
 
@@ -3686,9 +3700,10 @@
   (define who 'transcoded-port)
   (%assert-argument-is-port port who)
   (%assert-argument-is-transcoder transcoder who)
+  (%unsafe.assert-value-is-binary-port port who)
+  (%unsafe.assert-value-is-open-port   port who)
+  (%unsafe.assert-argument-is-not-input/output-port port who)
   (with-port-having-bytevector-buffer (port)
-    (%unsafe.assert-value-is-binary-port port who)
-    (%unsafe.assert-value-is-open-port   port who)
     (port.mark-as-closed!)
     (let ((transcoded-port ($make-port
 			    (cond (port.is-input?
@@ -3703,6 +3718,7 @@
 			    transcoder port.id
 			    port.read! port.write! port.get-position port.set-position! port.close
 			    port.cookie)))
+;      (set-cookie-subport! port.cookie transcoded-port)
       (%port->maybe-guarded-port transcoded-port))))
 
 (define (port-transcoder port)
