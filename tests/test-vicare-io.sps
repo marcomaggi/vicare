@@ -8549,7 +8549,7 @@
 
   (check
       (with-binary-input-test-pathname
-       (open-file-input-port (test-pathname) (file-options) (buffer-mode none)))
+       (open-file-input-port (test-pathname) (file-options) (buffer-mode block)))
     => (bindata-hundreds.bv))
 
 ;;; --------------------------------------------------------------------
@@ -8559,7 +8559,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
 					       TEST-BYTEVECTOR-FOR-LATIN-1)))
 	(with-textual-input-test-pathname
-	 (open-file-input-port (test-pathname) (file-options) (buffer-mode none)
+	 (open-file-input-port (test-pathname) (file-options) (buffer-mode block)
 			       (make-transcoder (latin-1-codec)))))
     => TEST-STRING-FOR-LATIN-1)
 
@@ -8567,7 +8567,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
 					       TEST-BYTEVECTOR-FOR-UTF-8)))
 	(with-textual-input-test-pathname
-	 (open-file-input-port (test-pathname) (file-options) (buffer-mode none)
+	 (open-file-input-port (test-pathname) (file-options) (buffer-mode block)
 			       (make-transcoder (utf-8-codec)))))
     => TEST-STRING-FOR-UTF-8)
 
@@ -8575,7 +8575,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
 					       SPECIAL1-TEST-BYTEVECTOR-FOR-UTF-8)))
 	(with-textual-input-test-pathname
-	 (open-file-input-port (test-pathname) (file-options) (buffer-mode none)
+	 (open-file-input-port (test-pathname) (file-options) (buffer-mode block)
 			       (make-transcoder (utf-8-codec)))))
     => SPECIAL1-TEST-STRING-FOR-UTF-8)
 
@@ -8583,7 +8583,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
 					       TEST-BYTEVECTOR-FOR-UTF-16-LE)))
 	(with-textual-input-test-pathname
-	 (open-file-input-port (test-pathname) (file-options) (buffer-mode none)
+	 (open-file-input-port (test-pathname) (file-options) (buffer-mode block)
 			       (make-transcoder (utf-16le-codec)))))
     => TEST-STRING-FOR-UTF-16-LE)
 
@@ -8592,7 +8592,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
 					       TEST-BYTEVECTOR-FOR-UTF-16-BE)))
 	(with-textual-input-test-pathname
-	 (open-file-input-port (test-pathname) (file-options) (buffer-mode none)
+	 (open-file-input-port (test-pathname) (file-options) (buffer-mode block)
 			       (make-transcoder (utf-16be-codec)))))
     => TEST-STRING-FOR-UTF-16-BE)
 
@@ -8600,7 +8600,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
 					       TEST-BYTEVECTOR-FOR-UTF-16-LE/BOM)))
 	(with-textual-input-test-pathname
-	 (open-file-input-port (test-pathname) (file-options) (buffer-mode none)
+	 (open-file-input-port (test-pathname) (file-options) (buffer-mode block)
 			       (make-transcoder (utf-16-codec)))))
     => TEST-STRING-FOR-UTF-16-LE)
 
@@ -8608,7 +8608,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
 					       TEST-BYTEVECTOR-FOR-UTF-16-BE/BOM)))
 	(with-textual-input-test-pathname
-	 (open-file-input-port (test-pathname) (file-options) (buffer-mode none)
+	 (open-file-input-port (test-pathname) (file-options) (buffer-mode block)
 			       (make-transcoder (utf-16-codec)))))
     => TEST-STRING-FOR-UTF-16-BE)
 
@@ -8971,7 +8971,7 @@
 
   (check
       (with-binary-output-test-pathname
-       (open-file-output-port (test-pathname) (file-options) (buffer-mode none)))
+       (open-file-output-port (test-pathname) (file-options) (buffer-mode block)))
     => (bindata-hundreds.bv))
 
 ;;; --------------------------------------------------------------------
@@ -8981,7 +8981,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-LATIN-1)))
   	(with-textual-output-test-pathname (latin-1-codec)
-  	 (open-file-output-port (test-pathname) (file-options) (buffer-mode none)
+  	 (open-file-output-port (test-pathname) (file-options) (buffer-mode block)
   				(make-transcoder (latin-1-codec)))))
     => TEST-STRING-FOR-LATIN-1)
 
@@ -8989,7 +8989,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-8)))
   	(with-textual-output-test-pathname (utf-8-codec)
-  	 (open-file-output-port (test-pathname) (file-options) (buffer-mode none)
+  	 (open-file-output-port (test-pathname) (file-options) (buffer-mode block)
   				(make-transcoder (utf-8-codec)))))
     => TEST-STRING-FOR-UTF-8)
 
@@ -8997,7 +8997,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
   					       SPECIAL1-TEST-STRING-FOR-UTF-8)))
   	(with-textual-output-test-pathname (utf-8-codec)
-  	 (open-file-output-port (test-pathname) (file-options) (buffer-mode none)
+  	 (open-file-output-port (test-pathname) (file-options) (buffer-mode block)
   				(make-transcoder (utf-8-codec)))))
     => SPECIAL1-TEST-STRING-FOR-UTF-8)
 
@@ -9005,7 +9005,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-16-LE)))
   	(with-textual-output-test-pathname (utf-16le-codec)
-  	 (open-file-output-port (test-pathname) (file-options) (buffer-mode none)
+  	 (open-file-output-port (test-pathname) (file-options) (buffer-mode block)
   				(make-transcoder (utf-16-codec)))))
     => TEST-STRING-FOR-UTF-16-LE)
 
@@ -9013,7 +9013,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-16-LE)))
   	(with-textual-output-test-pathname (utf-16le-codec)
-  	 (open-file-output-port (test-pathname) (file-options) (buffer-mode none)
+  	 (open-file-output-port (test-pathname) (file-options) (buffer-mode block)
   				(make-transcoder (utf-16le-codec)))))
     => TEST-STRING-FOR-UTF-16-LE)
 
@@ -9021,7 +9021,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-16-BE)))
   	(with-textual-output-test-pathname (utf-16be-codec)
-  	 (open-file-output-port (test-pathname) (file-options) (buffer-mode none)
+  	 (open-file-output-port (test-pathname) (file-options) (buffer-mode block)
   				(make-transcoder (utf-16be-codec)))))
     => TEST-STRING-FOR-UTF-16-BE)
 
@@ -9412,7 +9412,7 @@
   (check
       (with-binary-input-test-pathname
        (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
-  				    (buffer-mode none)))
+  				    (buffer-mode block)))
     => (bindata-hundreds.bv))
 
 ;;; --------------------------------------------------------------------
@@ -9423,7 +9423,7 @@
 					       TEST-BYTEVECTOR-FOR-LATIN-1)))
 	(with-textual-input-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
-				      (buffer-mode none)
+				      (buffer-mode block)
 				      (make-transcoder (latin-1-codec)))))
     => TEST-STRING-FOR-LATIN-1)
 
@@ -9432,7 +9432,7 @@
 					       TEST-BYTEVECTOR-FOR-UTF-8)))
 	(with-textual-input-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
-				      (buffer-mode none)
+				      (buffer-mode block)
 				      (make-transcoder (utf-8-codec)))))
     => TEST-STRING-FOR-UTF-8)
 
@@ -9441,7 +9441,7 @@
 					       SPECIAL1-TEST-BYTEVECTOR-FOR-UTF-8)))
 	(with-textual-input-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
-				      (buffer-mode none)
+				      (buffer-mode block)
 				      (make-transcoder (utf-8-codec)))))
     => SPECIAL1-TEST-STRING-FOR-UTF-8)
 
@@ -9450,7 +9450,7 @@
 					       TEST-BYTEVECTOR-FOR-UTF-16-LE)))
 	(with-textual-input-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
-				      (buffer-mode none)
+				      (buffer-mode block)
 				      (make-transcoder (utf-16-codec)))))
     => TEST-STRING-FOR-UTF-16-LE)
 
@@ -9459,7 +9459,7 @@
 					       TEST-BYTEVECTOR-FOR-UTF-16-LE)))
 	(with-textual-input-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
-				      (buffer-mode none)
+				      (buffer-mode block)
 				      (make-transcoder (utf-16le-codec)))))
     => TEST-STRING-FOR-UTF-16-LE)
 
@@ -9468,7 +9468,7 @@
 					       TEST-BYTEVECTOR-FOR-UTF-16-BE)))
 	(with-textual-input-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
-				      (buffer-mode none)
+				      (buffer-mode block)
 				      (make-transcoder (utf-16be-codec)))))
     => TEST-STRING-FOR-UTF-16-BE)
 
@@ -9487,7 +9487,7 @@
 
   (check
       (with-binary-output-test-pathname
-       (open-file-input/output-port (test-pathname) (file-options) (buffer-mode none)))
+       (open-file-input/output-port (test-pathname) (file-options) (buffer-mode block)))
     => (bindata-hundreds.bv))
 
 ;;; --------------------------------------------------------------------
@@ -9497,7 +9497,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-LATIN-1)))
   	(with-textual-output-test-pathname (latin-1-codec)
-	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode none)
+	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode block)
 				       (make-transcoder (latin-1-codec)))))
     => TEST-STRING-FOR-LATIN-1)
 
@@ -9505,7 +9505,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-8)))
   	(with-textual-output-test-pathname (utf-8-codec)
-	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode none)
+	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode block)
 				       (make-transcoder (utf-8-codec)))))
     => TEST-STRING-FOR-UTF-8)
 
@@ -9513,7 +9513,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
   					       SPECIAL1-TEST-STRING-FOR-UTF-8)))
   	(with-textual-output-test-pathname (utf-8-codec)
-	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode none)
+	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode block)
 				       (make-transcoder (utf-8-codec)))))
     => SPECIAL1-TEST-STRING-FOR-UTF-8)
 
@@ -9521,7 +9521,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-16-LE)))
   	(with-textual-output-test-pathname (utf-16le-codec)
-	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode none)
+	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode block)
 				       (make-transcoder (utf-16-codec)))))
     => TEST-STRING-FOR-UTF-16-LE)
 
@@ -9529,7 +9529,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-16-LE)))
   	(with-textual-output-test-pathname (utf-16le-codec)
-	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode none)
+	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode block)
 				       (make-transcoder (utf-16le-codec)))))
     => TEST-STRING-FOR-UTF-16-LE)
 
@@ -9537,7 +9537,7 @@
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-16-BE)))
   	(with-textual-output-test-pathname (utf-16be-codec)
-	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode none)
+	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode block)
 				       (make-transcoder (utf-16be-codec)))))
     => TEST-STRING-FOR-UTF-16-BE)
 
