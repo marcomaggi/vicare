@@ -635,7 +635,7 @@
 
 ;;;; port tags
 ;;
-;;All the tags have 20 bits.  The least significant 13 bits are reserved
+;;All the tags have 24 bits.  The least significant 13 bits are reserved
 ;;as the "fast attributes", which is used by the macros:
 ;;
 ;;   %CASE-TEXTUAL-INPUT-PORT-FAST-TAG
@@ -670,32 +670,45 @@
 ;;that there  is no  BUFFER-MODE-BLOCK-TAG bit: only  for LINE  and NONE
 ;;buffering something must be done.
 ;;
-;;					  98765432109876543210
-;;       non-fast-tag bits		  ||||||
-;;       true if I/O port                      |
-;;       buffer mode bits		     ||
-;;       true if guarded port		    |
-;;       true if extract function          |
-;;       unused bits                      |
-;;					  98765432109876543210
-(define INPUT/OUTPUT-PORT-TAG		#b00000100000000000000)
+;;                                        321098765432109876543210
+;;       non-fast-tag bits                ||||||||||
+;;       true if I/O port                          |
+;;       buffer mode bits                        ||
+;;       true if guarded port                   |
+;;       true if extract function              |
+;;       EOL style bits                     |||
+;;       unused bits                      ||
+;;                                        321098765432109876543210
+(define INPUT/OUTPUT-PORT-TAG		#b000000000100000000000000)
 		;Used to tag ports that are both input and output.
-(define BUFFER-MODE-NONE-TAG		#b00001000000000000000)
+(define BUFFER-MODE-NONE-TAG		#b000000001000000000000000)
 		;Used to tag ports having NONE as buffer mode.
-(define BUFFER-MODE-LINE-TAG		#b00010000000000000000)
+(define BUFFER-MODE-LINE-TAG		#b000000010000000000000000)
 		;Used to tag ports having LINE as buffer mode.
-(define GUARDED-PORT-TAG		#b00100000000000000000)
+(define GUARDED-PORT-TAG		#b000000100000000000000000)
 		;Used  to tag  ports which  must be  closed by  the port
 		;guardian   after  being   collected   by  the   garbage
 		;collector.  See the definition of PORT-GUARDIAN.
-(define PORT-WITH-EXTRACTION-TAG	#b01000000000000000000)
+(define PORT-WITH-EXTRACTION-TAG	#b000001000000000000000000)
 		;Used to tag binary  output ports which accumulate bytes
 		;to be later retrieved by an extraction function.  These
 		;ports need special treatement when a transcoded port is
 		;created on top of them.  See TRANSCODED-PORT.
-(define DEFAULT-OTHER-ATTRS		#b00000000000000000000)
+
+;;                                                321098765432109876543210
+(define EOL-STYLE-MASK				#b001110000000000000000000)
+(define EOL-LINEFEED-TAG			#b000010000000000000000000) ;;symbol -> lf
+(define EOL-CARRIAGE-RETURN-TAG			#b000100000000000000000000) ;;symbol -> cr
+(define EOL-CARRIAGE-RETURN-LINEFEED-TAG	#b000110000000000000000000) ;;symbol -> crlf
+(define EOL-NEXT-LINE-TAG			#b001000000000000000000000) ;;symbol -> nel
+(define EOL-CARRIAGE-RETURN-NEXT-LINE-TAG	#b001010000000000000000000) ;;symbol -> crnel
+(define EOL-LINE-SEPARATOR-TAG			#b001100000000000000000000) ;;symbol -> ls
+		;Used to  tag textual ports with end  of line conversion
+		;style.
+
+(define DEFAULT-OTHER-ATTRS		#b000000000000000000000000)
 		;Default  non-fast attributes:  non-guarded  port, block
-		;buffer mode, no extraction function.
+		;buffer mode, no extraction function, EOL style none.
 
 ;;If we are just interested in the port type: input or output, binary or
 ;;textual bits, we can do:
@@ -880,8 +893,8 @@
   ;;
   ($set-port-attrs! ?port (%unsafe.fxior CLOSED-PORT-TAG ($port-attrs ?port))))
 
-;;					  98765432109876543210
-(define BUFFER-MODE-NOT-MASK		#b11100111111111111111)
+;;					  321098765432109876543210
+(define BUFFER-MODE-NOT-MASK		#b000011100111111111111111)
 
 (define-inline ($set-port-buffer-mode-to-block! ?port)
   ($set-port-attrs! ?port (unsafe.fxand BUFFER-MODE-NOT-MASK ($port-attrs ?port))))
@@ -896,9 +909,9 @@
 
 ;;; --------------------------------------------------------------------
 
-;;                                 98765432109876543210
-(define FAST-ATTRS-MASK          #b00000011111111111111)
-(define OTHER-ATTRS-MASK         #b11111100000000000000)
+;;                                 321098765432109876543210
+(define FAST-ATTRS-MASK          #b000000000011111111111111)
+(define OTHER-ATTRS-MASK         #b111111111100000000000000)
 
 (define-inline ($port-fast-attrs port)
   ;;Extract the fast attributes from the tag of PORT.
@@ -914,6 +927,87 @@
   ;;Extract the non-fast attributes from the tag of PORT.
   ;;
   (unsafe.fxand ($port-attrs port) OTHER-ATTRS-MASK))
+
+;;; --------------------------------------------------------------------
+
+(define NEWLINE-CODE-POINT		#x000A) ;; U+000A
+(define LINEFEED-CODE-POINT		#x000A) ;; U+000A
+(define CARRIAGE-RETURN-CODE-POINT	#x000D) ;; U+000D
+(define NEXT-LINE-CODE-POINT		#x0085) ;; U+0085
+(define LINE-SEPARATOR-CODE-POINT	#x2028) ;; U+2028
+
+(define NEWLINE-CHAR			#\x000A) ;; U+000A
+(define LINEFEED-CHAR			#\x000A) ;; U+000A
+(define CARRIAGE-RETURN-CHAR		#\x000D) ;; U+000D
+(define NEXT-LINE-CHAR			#\x0085) ;; U+0085
+(define LINE-SEPARATOR-CHAR		#\x2028) ;; U+2028
+
+#|
+(vector-ref (unsafe.fxsra (unsafe.fxand ($port-attrs port)
+					EOL-STYLE-MASK)
+			  19)
+	    EOL-STYLE-VECTOR)
+
+(define EOL-STYLE-VECTOR
+  '#( ;;
+     <EOL-LINEFEED-TAG>				<EOL-CARRIAGE-RETURN-TAG>
+     <EOL-CARRIAGE-RETURN-LINEFEED-TAG>		<EOL-NEXT-LINE-TAG>
+     <EOL-CARRIAGE-RETURN-NEXT-LINE-TAG>	<EOL-LINE-SEPARATOR-TAG>))
+|#
+
+(define (%select-eol-style-from-transcoder who maybe-transcoder)
+  ;;Given a  transcoder return the non-fast  attributes representing the
+  ;;selected end of line conversion style.
+  ;;
+  (if (not maybe-transcoder)
+      0		;EOL style none
+    (let ((style (transcoder-eol-style maybe-transcoder)))
+      (case style
+	((lf)		EOL-LINEFEED-TAG)
+	((cr)		EOL-CARRIAGE-RETURN-TAG)
+	((crlf)		EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+	((nel)		EOL-NEXT-LINE-TAG)
+	((crnel)	EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+	((ls)		EOL-LINE-SEPARATOR-TAG)
+	(else
+	 (assertion-violation who
+	   "internal error: invalid EOL style extracted from transcoder" style))))))
+
+(define-inline (%unsafe.port-eol-style-bits ?port)
+  (unsafe.fxand EOL-STYLE-MASK ($port-attrs ?port)))
+
+(define-syntax %case-eol-style
+  (lambda (stx)
+    (syntax-case stx ( ;;
+		      EOL-LINEFEED-TAG			EOL-CARRIAGE-RETURN-TAG
+		      EOL-CARRIAGE-RETURN-LINEFEED-TAG	EOL-NEXT-LINE-TAG
+		      EOL-CARRIAGE-RETURN-NEXT-LINE-TAG	EOL-LINE-SEPARATOR-TAG
+		      else)
+      ((%case-eol-style (?eol-bits ?who)
+	 ((EOL-LINEFEED-TAG)			. ?line-feed-body)
+	 ((EOL-CARRIAGE-RETURN-TAG)		. ?carriage-return-body)
+	 ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)	. ?carriage-return-line-feed-body)
+	 ((EOL-NEXT-LINE-TAG)			. ?next-line-body)
+	 ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)	. ?carriage-return-next-line-body)
+	 ((EOL-LINE-SEPARATOR-TAG)		. ?line-separator-body)
+	 (else					. ?else-body))
+       (and (identifier? #'?eol-bits)
+	    (identifier? #'?who))
+       #'(cond ((unsafe.fxzero? ?eol-bits)
+		(begin . ?else-body))
+	       ((unsafe.fx= ?eol-bits EOL-LINEFEED-TAG)
+		(begin . ?line-feed-body))
+	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-TAG)
+		(begin . ?carriage-return-body))
+	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+		(begin . ?carriage-return-line-feed-body))
+	       ((unsafe.fx= ?eol-bits EOL-NEXT-LINE-TAG)
+		(begin . ?next-line-body))
+	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+		(begin . ?carriage-return-next-line-body))
+	       ((unsafe.fx= ?eol-bits EOL-LINE-SEPARATOR-TAG)
+		(begin . ?line-separator-body)))
+       ))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1376,9 +1470,6 @@
 (define UTF-8-BYTE-ORDER-MARK-LIST			'(#xEF #xBB #xBF))
 (define UTF-16-BIG-ENDIAN-BYTE-ORDER-MARK-LIST		'(#xFE #xFF))
 (define UTF-16-LITTLE-ENDIAN-BYTE-ORDER-MARK-LIST	'(#xFF #xFE))
-
-(define newline-code-point
-  (unsafe.char->integer #\newline))
 
 (define-syntax %unsafe.fxior
   (syntax-rules ()
@@ -4826,7 +4917,7 @@
 	      (if (utf-8-single-octet? byte0)
 		  (let ((N (utf-8-decode-single-octet byte0)))
 		    (set! port.buffer.index (unsafe.fxadd1 buffer.offset-byte0))
-		    (if (unsafe.fx= N newline-code-point)
+		    (if (unsafe.fx= N NEWLINE-CODE-POINT)
 			(%mark/return-newline port)
 		      (unsafe.integer->char N)))
 		(%unsafe.read-char-from-port-with-utf8-codec port ?who)))
@@ -4889,7 +4980,7 @@
     (define-inline (get-single-byte-character byte0 buffer.offset-byte0)
       (let ((N (utf-8-decode-single-octet byte0)))
 	(set! port.buffer.index (unsafe.fxadd1 buffer.offset-byte0))
-	(if (unsafe.fx= N newline-code-point)
+	(if (unsafe.fx= N NEWLINE-CODE-POINT)
 	    (%mark/return-newline port)
 	  (unsafe.integer->char N))))
 
@@ -5556,7 +5647,7 @@
 	    (begin
 	      (set! port.buffer.index (unsafe.fxadd1 buffer.offset))
 	      (let ((byte (unsafe.bytevector-u8-ref port.buffer buffer.offset)))
-		(if (unsafe.fx= byte newline-code-point)
+		(if (unsafe.fx= byte NEWLINE-CODE-POINT)
 		    (%mark/return-newline port)
 		  (unsafe.integer->char byte))))
 	  (%unsafe.read/peek-char-from-port-with-latin-codec port ?who 1))))))
@@ -6024,21 +6115,142 @@
 (define (%do-put-char port ch who)
   (%assert-argument-is-port port who)
   (%assert-argument-is-char ch   who)
-  (let ((code-point (unsafe.char->integer ch)))
+  (let* ((code-point	(unsafe.char->integer ch))
+	 (eol-bits	(%unsafe.port-eol-style-bits port)))
     (%case-textual-output-port-fast-tag (port who)
       ((FAST-PUT-UTF8-TAG)
-       (%unsafe.put-char-to-port-with-fast-utf8-tag    port ch code-point who))
+       (%case-eol-style (eol-bits who)
+	 ((EOL-LINEFEED-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf8-tag port ch code-point who))
+	 ((EOL-CARRIAGE-RETURN-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf8-tag
+	   port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who))
+	 ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf8-tag
+	   port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
+	  (%unsafe.put-char-to-port-with-fast-utf8-tag
+	   port LINEFEED-CHAR LINEFEED-CODE-POINT who))
+	 ((EOL-NEXT-LINE-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf8-tag
+	   port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who))
+	 ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf8-tag
+	   port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
+	  (%unsafe.put-char-to-port-with-fast-utf8-tag
+	   port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who))
+	 ((EOL-LINE-SEPARATOR-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf8-tag
+	   port LINE-SEPARATOR-CHAR LINE-SEPARATOR-CODE-POINT who))
+	 (else
+	  (%unsafe.put-char-to-port-with-fast-utf8-tag port ch code-point who))))
+
       ((FAST-PUT-CHAR-TAG)
-       (%unsafe.put-char-to-port-with-fast-char-tag    port ch code-point who))
+       (%case-eol-style (eol-bits who)
+	 ((EOL-LINEFEED-TAG)
+	  (%unsafe.put-char-to-port-with-fast-char-tag port ch code-point who))
+	 ((EOL-CARRIAGE-RETURN-TAG)
+	  (%unsafe.put-char-to-port-with-fast-char-tag
+	   port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who))
+	 ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+	  (%unsafe.put-char-to-port-with-fast-char-tag
+	   port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
+	  (%unsafe.put-char-to-port-with-fast-char-tag
+	   port LINEFEED-CHAR LINEFEED-CODE-POINT who))
+	 ((EOL-NEXT-LINE-TAG)
+	  (%unsafe.put-char-to-port-with-fast-char-tag
+	   port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who))
+	 ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+	  (%unsafe.put-char-to-port-with-fast-char-tag
+	   port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
+	  (%unsafe.put-char-to-port-with-fast-char-tag
+	   port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who))
+	 ((EOL-LINE-SEPARATOR-TAG)
+	  (%unsafe.put-char-to-port-with-fast-char-tag
+	   port LINE-SEPARATOR-CHAR LINE-SEPARATOR-CODE-POINT who))
+	 (else
+	  (%unsafe.put-char-to-port-with-fast-char-tag port ch code-point who))))
+
       ((FAST-PUT-LATIN-TAG)
-       (%unsafe.put-char-to-port-with-fast-latin1-tag  port ch code-point who))
+       (%case-eol-style (eol-bits who)
+	 ((EOL-LINEFEED-TAG)
+	  (%unsafe.put-char-to-port-with-fast-latin1-tag port ch code-point who))
+	 ((EOL-CARRIAGE-RETURN-TAG)
+	  (%unsafe.put-char-to-port-with-fast-latin1-tag
+	   port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who))
+	 ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+	  (%unsafe.put-char-to-port-with-fast-latin1-tag
+	   port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
+	  (%unsafe.put-char-to-port-with-fast-latin1-tag
+	   port LINEFEED-CHAR LINEFEED-CODE-POINT who))
+	 ((EOL-NEXT-LINE-TAG)
+	  (assertion-violation who
+	    "EOL style NEL unsupported by Latin-1 codecs" port))
+	 ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+	  (assertion-violation who
+	    "EOL style CRNEL unsupported by Latin-1 codecs" port))
+	 ((EOL-LINE-SEPARATOR-TAG)
+	  (assertion-violation who
+	    "EOL style LS unsupported by Latin-1 transcoders" port))
+	 (else
+	  (%unsafe.put-char-to-port-with-fast-latin1-tag port ch code-point who))))
+
       ((FAST-PUT-UTF16LE-TAG)
-       (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'little))
+       (%case-eol-style (eol-bits who)
+	 ((EOL-LINEFEED-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'little))
+	 ((EOL-CARRIAGE-RETURN-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag
+	   port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'little))
+	 ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag
+	   port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'little)
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag
+	   port LINEFEED-CHAR LINEFEED-CODE-POINT who 'little))
+	 ((EOL-NEXT-LINE-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag
+	   port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who 'little))
+	 ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag
+	   port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'little)
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag
+	   port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who 'little))
+	 ((EOL-LINE-SEPARATOR-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag
+	   port LINE-SEPARATOR-CHAR LINE-SEPARATOR-CODE-POINT who 'little))
+	 (else
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'little))))
+
       ((FAST-PUT-UTF16BE-TAG)
-       (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'big))))
-  (with-port (port)
-    (when port.buffer-mode-none?
-      (%unsafe.flush-output-port port who))))
+       (%case-eol-style (eol-bits who)
+	 ((EOL-LINEFEED-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'big))
+	 ((EOL-CARRIAGE-RETURN-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag
+	   port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'big))
+	 ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag
+	   port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'big)
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag
+	   port LINEFEED-CHAR LINEFEED-CODE-POINT who 'big))
+	 ((EOL-NEXT-LINE-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag
+	   port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who 'big))
+	 ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag
+	   port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'big)
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag
+	   port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who 'big))
+	 ((EOL-LINE-SEPARATOR-TAG)
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag
+	   port LINE-SEPARATOR-CHAR LINE-SEPARATOR-CODE-POINT who 'big))
+	 (else
+	  (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'big)))))
+
+    (cond ((%unsafe.port-buffer-mode-none? port)
+	   (%unsafe.flush-output-port port who))
+	  ((and (%unsafe.port-buffer-mode-line? port)
+		(unsafe.fx= code-point LINEFEED-CODE-POINT))
+	   (%unsafe.flush-output-port port)))))
 
 ;;; --------------------------------------------------------------------
 ;;; PUT-CHAR for port with string buffer
@@ -6056,9 +6268,7 @@
 		(set! port.buffer.used-size buffer.past)))
 	  (begin
 	    (%unsafe.flush-output-port port who)
-	    (retry-after-flushing-buffer)))))
-    #;(when (and port.buffer-mode-line? (unsafe.fx= code-point newline-code-point))
-      (%unsafe.flush-output-port port who))))
+	    (retry-after-flushing-buffer)))))))
 
 ;;; --------------------------------------------------------------------
 ;;; PUT-CHAR for port with bytevector buffer and UTF-8 transcoder
@@ -6082,9 +6292,7 @@
 		      (set! port.buffer.used-size buffer.past)))
 		(begin
 		  (%unsafe.flush-output-port port who)
-		  (retry-after-flushing-buffer)))))
-	  #;(when (and port.buffer-mode-line? (unsafe.fx= code-point newline-code-point))
-	    (%unsafe.flush-output-port port who)))
+		  (retry-after-flushing-buffer))))))
       (%unsafe.put-char-utf8-multioctet-char port ch code-point who))))
 
 (define (%unsafe.put-char-utf8-multioctet-char port ch code-point who)
@@ -6108,9 +6316,7 @@
 			 (set! port.buffer.used-size buffer.past)))
 		   (begin
 		     (%unsafe.flush-output-port port who)
-		     (retry-after-flushing-buffer)))))
-	     #;(when (and port.buffer-mode-line? (unsafe.fx= code-point newline-code-point))
-	       (%unsafe.flush-output-port port who)))))
+		     (retry-after-flushing-buffer))))))))
 
 	((utf-8-two-octets-code-point? code-point)
 	 (let ((octet0 (utf-8-encode-first-of-two-octets  code-point))
@@ -6131,9 +6337,7 @@
 			 (set! port.buffer.used-size buffer.past)))
 		   (begin
 		     (%unsafe.flush-output-port port who)
-		     (retry-after-flushing-buffer)))))
-	     #;(when (and port.buffer-mode-line? (unsafe.fx= code-point newline-code-point))
-	       (%unsafe.flush-output-port port who)))))
+		     (retry-after-flushing-buffer))))))))
 
 	((utf-8-three-octets-code-point? code-point)
 	 (let ((octet0 (utf-8-encode-first-of-three-octets  code-point))
@@ -6157,9 +6361,7 @@
 			 (set! port.buffer.used-size buffer.past)))
 		   (begin
 		     (%unsafe.flush-output-port port who)
-		     (retry-after-flushing-buffer)))))
-	     #;(when (and port.buffer-mode-line? (unsafe.fx= code-point newline-code-point))
-	       (%unsafe.flush-output-port port who)))))
+		     (retry-after-flushing-buffer))))))))
 
 	(else
 	 (%debug-assert (utf-8-four-octets-code-point? code-point))
@@ -6187,9 +6389,7 @@
 			 (set! port.buffer.used-size buffer.past)))
 		   (begin
 		     (%unsafe.flush-output-port port who)
-		     (retry-after-flushing-buffer)))))
-	     #;(when (and port.buffer-mode-line? (unsafe.fx= code-point newline-code-point))
-	       (%unsafe.flush-output-port port who)))))))
+		     (retry-after-flushing-buffer))))))))))
 
 ;;; --------------------------------------------------------------------
 ;;; PUT-CHAR for port with bytevector buffer and UTF-16 transcoder
@@ -6211,9 +6411,7 @@
 			 (set! port.buffer.used-size buffer.past)))
 		   (begin
 		     (%unsafe.flush-output-port port who)
-		     (retry-after-flushing-buffer)))))
-	     #;(when (and port.buffer-mode-line? (unsafe.fx= code-point newline-code-point))
-	       (%unsafe.flush-output-port port who)))))
+		     (retry-after-flushing-buffer))))))))
 	(else
 	 (let ((word0 (utf-16-encode-first-of-two-words  code-point))
 	       (word1 (utf-16-encode-second-of-two-words code-point)))
@@ -6233,9 +6431,7 @@
 			 (set! port.buffer.used-size buffer.past)))
 		   (begin
 		     (%unsafe.flush-output-port port who)
-		     (retry-after-flushing-buffer)))))
-	     #;(when (and port.buffer-mode-line? (unsafe.fx= code-point newline-code-point))
-	       (%unsafe.flush-output-port port who)))))))
+		     (retry-after-flushing-buffer))))))))))
 
 ;;; --------------------------------------------------------------------
 ;;; PUT-CHAR for port with bytevector buffer and Latin-1 transcoder
@@ -6258,9 +6454,7 @@
 		  (set! port.buffer.used-size buffer.past)))
 	    (begin
               (%unsafe.flush-output-port port who)
-	      (retry-after-flushing-buffer)))))
-      #;(when (and port.buffer-mode-line? (unsafe.fx= code-point newline-code-point))
-	(%unsafe.flush-output-port port who))))
+	      (retry-after-flushing-buffer)))))))
   (if (latin-1-code-point? code-point)
       (%doit port ch code-point who)
     (case (transcoder-error-handling-mode (port-transcoder port))
@@ -6315,31 +6509,52 @@
     (%unsafe.put-string port str start count who))))
 
 (define (%unsafe.put-string port src.str src.start count who)
-  (define-inline (%put-it ?put-char)
+  (define-inline (%put-it ?buffer-mode-line ?eol-bits ?put-char)
     (let next-char ((src.index src.start)
 		    (src.past  (unsafe.fx+ src.start count)))
       (unless (unsafe.fx= src.index src.past)
-	(let ((ch (unsafe.string-ref src.str src.index)))
-	  (?put-char port ch (unsafe.char->integer ch) who))
+	(let* ((ch		(unsafe.string-ref src.str src.index))
+	       (code-point	(unsafe.char->integer ch))
+	       (flush?		(and ?buffer-mode-line (unsafe.fx= code-point LINEFEED-CODE-POINT))))
+	  (%case-eol-style (?eol-bits who)
+	    ((EOL-LINEFEED-TAG)
+	     (?put-char port ch code-point who))
+	    ((EOL-CARRIAGE-RETURN-TAG)
+	     (?put-char port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who))
+	    ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+	     (?put-char port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
+	     (?put-char port LINEFEED-CHAR        LINEFEED-CODE-POINT        who))
+	    ((EOL-NEXT-LINE-TAG)
+	     (?put-char port NEXT-LINE-CHAR       NEXT-LINE-CODE-POINT       who))
+	    ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+	     (?put-char port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
+	     (?put-char port NEXT-LINE-CHAR       NEXT-LINE-CODE-POINT       who))
+	    ((EOL-LINE-SEPARATOR-TAG)
+	     (?put-char port LINE-SEPARATOR-CHAR  LINE-SEPARATOR-CODE-POINT  who))
+	    (else
+	     (?put-char port ch                   code-point                 who)))
+	  (when flush?
+	    (%unsafe.flush-output-port port)))
 	(next-char (unsafe.fxadd1 src.index) src.past))))
   (define-inline (%put-utf16le ?port ?ch ?code-point ?who)
     (%unsafe.put-char-to-port-with-fast-utf16xe-tag ?port ?ch ?code-point ?who 'little))
   (define-inline (%put-utf16be ?port ?ch ?code-point ?who)
     (%unsafe.put-char-to-port-with-fast-utf16xe-tag ?port ?ch ?code-point ?who 'big))
-  (%case-textual-output-port-fast-tag (port who)
-    ((FAST-PUT-UTF8-TAG)
-     (%put-it %unsafe.put-char-to-port-with-fast-utf8-tag))
-    ((FAST-PUT-CHAR-TAG)
-     (%put-it %unsafe.put-char-to-port-with-fast-char-tag))
-    ((FAST-PUT-LATIN-TAG)
-     (%put-it %unsafe.put-char-to-port-with-fast-latin1-tag))
-    ((FAST-PUT-UTF16LE-TAG)
-     (%put-it %put-utf16le))
-    ((FAST-PUT-UTF16BE-TAG)
-     (%put-it %put-utf16be)))
-  (with-port (port)
-    (when port.buffer-mode-none?
-      (%unsafe.flush-output-port port who))))
+  (let ((buffer-mode-line? (%unsafe.port-buffer-mode-line? port))
+	(eol-bits          (%unsafe.port-eol-style-bits port)))
+    (%case-textual-output-port-fast-tag (port who)
+      ((FAST-PUT-UTF8-TAG)
+       (%put-it buffer-mode-line? eol-bits %unsafe.put-char-to-port-with-fast-utf8-tag))
+      ((FAST-PUT-CHAR-TAG)
+       (%put-it buffer-mode-line? eol-bits %unsafe.put-char-to-port-with-fast-char-tag))
+      ((FAST-PUT-LATIN-TAG)
+       (%put-it buffer-mode-line? eol-bits %unsafe.put-char-to-port-with-fast-latin1-tag))
+      ((FAST-PUT-UTF16LE-TAG)
+       (%put-it buffer-mode-line? eol-bits %put-utf16le))
+      ((FAST-PUT-UTF16BE-TAG)
+       (%put-it buffer-mode-line? eol-bits %put-utf16be))))
+  (when (%unsafe.port-buffer-mode-none? port)
+    (%unsafe.flush-output-port port who)))
 
 
 (define newline
@@ -7486,6 +7701,7 @@
 ;;; eval: (put '%case-binary-output-port-fast-tag	'scheme-indent-function 1)
 ;;; eval: (put '%case-textual-input-port-fast-tag	'scheme-indent-function 1)
 ;;; eval: (put '%case-textual-output-port-fast-tag	'scheme-indent-function 1)
+;;; eval: (put '%case-eol-style				'scheme-indent-function 1)
 ;;; eval: (put '%flush-bytevector-buffer-and-evaluate	'scheme-indent-function 1)
 ;;; eval: (put '%flush-string-buffer-and-evaluate	'scheme-indent-function 1)
 ;;; eval: (put '%refill-bytevector-buffer-and-evaluate		'scheme-indent-function 1)
