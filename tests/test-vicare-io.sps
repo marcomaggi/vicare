@@ -9610,7 +9610,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'eol-conversion-output))
+(parametrise ((check-test-name	'eol-conversion-output-string))
 
   (define NEWLINE-CODE-POINT		#x000A) ;; U+000A
   (define LINEFEED-CODE-POINT		#x000A) ;; U+000A
@@ -9931,6 +9931,340 @@
 	(let-values (((port extract) (open-bytevector-output-port
 				      (make-transcoder (utf-16be-codec) (eol-style ls)))))
 	  (put-string port test-string)
+	  (extract))
+      => test-bv-utf-16be)
+
+    #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'eol-conversion-output-char))
+
+  (define NEWLINE-CODE-POINT		#x000A) ;; U+000A
+  (define LINEFEED-CODE-POINT		#x000A) ;; U+000A
+  (define CARRIAGE-RETURN-CODE-POINT	#x000D) ;; U+000D
+  (define NEXT-LINE-CODE-POINT		#x0085) ;; U+0085
+  (define LINE-SEPARATOR-CODE-POINT	#x2028) ;; U+2028
+
+  (define NEWLINE-CHAR			#\x000A) ;; U+000A
+  (define LINEFEED-CHAR			#\x000A) ;; U+000A
+  (define CARRIAGE-RETURN-CHAR		#\x000D) ;; U+000D
+  (define NEXT-LINE-CHAR		#\x0085) ;; U+0085
+  (define LINE-SEPARATOR-CHAR		#\x2028) ;; U+2028
+
+  (define (%put-string port str)
+    (do ((i 0 (+ 1 i)))
+	((= i (string-length str)))
+      (put-char port (string-ref str i))))
+
+;;; --------------------------------------------------------------------
+;;; output ports, EOL none
+
+  (let* ((test-string "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
+	 (test-bv-utf-8		(string->utf8 test-string))
+	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
+	 (test-bv-utf-16be	(string->utf16 test-string (endianness big)))
+
+	 (test-string-latin1	"begin \x000A; \x000D; \x000D;\x000A; end")
+	 (test-bv-latin1	(string->latin1 test-string-latin1)))
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (latin-1-codec) (eol-style none)))))
+	  (%put-string port test-string-latin1)
+	  (extract))
+      => test-bv-latin1)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-8-codec) (eol-style none)))))
+	  (%put-string port test-string)
+	  (extract))
+      => test-bv-utf-8)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-16le-codec) (eol-style none)))))
+	  (%put-string port test-string)
+	  (extract))
+      => test-bv-utf-16le)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-16be-codec) (eol-style none)))))
+	  (%put-string port test-string)
+	  (extract))
+      => test-bv-utf-16be)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; output ports, EOL lf
+
+  (let* ((test-string "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
+	 (test-bv-utf-8		(string->utf8 test-string))
+	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
+	 (test-bv-utf-16be	(string->utf16 test-string (endianness big)))
+
+	 (test-string-latin1	"begin \x000A; \x000D; \x000D;\x000A; end")
+	 (test-bv-latin1	(string->latin1 test-string-latin1)))
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (latin-1-codec) (eol-style lf)))))
+	  (%put-string port test-string-latin1)
+	  (extract))
+      => test-bv-latin1)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-8-codec) (eol-style lf)))))
+	  (%put-string port test-string)
+	  (extract))
+      => test-bv-utf-8)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-16le-codec) (eol-style lf)))))
+	  (%put-string port test-string)
+	  (extract))
+      => test-bv-utf-16le)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-16be-codec) (eol-style lf)))))
+	  (%put-string port test-string)
+	  (extract))
+      => test-bv-utf-16be)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; output ports, EOL cr
+
+  (let* ((test-string
+	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
+	 (test-string-out
+	  "begin \x000D; \x000D; \x0085; \x2028; \x000D;\x000D; \x000D;\x0085; end")
+	 (test-bv-utf-8		(string->utf8 test-string-out))
+	 (test-bv-utf-16le	(string->utf16 test-string-out (endianness little)))
+	 (test-bv-utf-16be	(string->utf16 test-string-out (endianness big)))
+
+	 (test-string-latin1		"begin \x000A; \x000D; \x000D;\x000A; end")
+	 (test-string-latin1-out	"begin \x000D; \x000D; \x000D;\x000D; end")
+	 (test-bv-latin1		(string->latin1 test-string-latin1-out)))
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (latin-1-codec) (eol-style cr)))))
+	  (%put-string port test-string-latin1)
+	  (latin1->string (extract)))
+      => test-string-latin1-out)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (latin-1-codec) (eol-style cr)))))
+	  (%put-string port test-string-latin1)
+	  (extract))
+      => test-bv-latin1)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-8-codec) (eol-style cr)))))
+	  (%put-string port test-string)
+	  (utf8->string (extract)))
+      => test-string-out)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-16le-codec) (eol-style cr)))))
+	  (%put-string port test-string)
+	  (extract))
+      => test-bv-utf-16le)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-16be-codec) (eol-style cr)))))
+	  (%put-string port test-string)
+	  (extract))
+      => test-bv-utf-16be)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; output ports, EOL crlf
+
+  (let* ((test-string
+	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
+	 (test-string-out
+	  "begin \x000D;\x000A; \x000D; \x0085; \x2028; \x000D;\x000D;\x000A; \x000D;\x0085; end")
+	 (test-bv-utf-8		(string->utf8 test-string-out))
+	 (test-bv-utf-16le	(string->utf16 test-string-out (endianness little)))
+	 (test-bv-utf-16be	(string->utf16 test-string-out (endianness big)))
+
+	 (test-string-latin1		"begin \x000A; \x000D; \x000D;\x000A; end")
+	 (test-string-latin1-out	"begin \x000D;\x000A; \x000D; \x000D;\x000D;\x000A; end")
+	 (test-bv-latin1		(string->latin1 test-string-latin1-out)))
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (latin-1-codec) (eol-style crlf)))))
+	  (%put-string port test-string-latin1)
+	  (latin1->string (extract)))
+      => test-string-latin1-out)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (latin-1-codec) (eol-style crlf)))))
+	  (%put-string port test-string-latin1)
+	  (extract))
+      => test-bv-latin1)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-8-codec) (eol-style crlf)))))
+	  (%put-string port test-string)
+	  (utf8->string (extract)))
+      => test-string-out)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-16le-codec) (eol-style crlf)))))
+	  (%put-string port test-string)
+	  (extract))
+      => test-bv-utf-16le)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-16be-codec) (eol-style crlf)))))
+	  (%put-string port test-string)
+	  (extract))
+      => test-bv-utf-16be)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; output ports, EOL nel
+
+  (let* ((test-string
+	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
+	 (test-string-out
+	  "begin \x0085; \x000D; \x0085; \x2028; \x000D;\x0085; \x000D;\x0085; end")
+	 (test-bv-utf-8		(string->utf8 test-string-out))
+	 (test-bv-utf-16le	(string->utf16 test-string-out (endianness little)))
+	 (test-bv-utf-16be	(string->utf16 test-string-out (endianness big))))
+
+    (check
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (open-bytevector-output-port (make-transcoder (latin-1-codec) (eol-style nel))))
+      => '(nel))
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-8-codec) (eol-style nel)))))
+	  (%put-string port test-string)
+	  (utf8->string (extract)))
+      => test-string-out)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-16le-codec) (eol-style nel)))))
+	  (%put-string port test-string)
+	  (extract))
+      => test-bv-utf-16le)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-16be-codec) (eol-style nel)))))
+	  (%put-string port test-string)
+	  (extract))
+      => test-bv-utf-16be)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; output ports, EOL crnel
+
+  (let* ((test-string
+	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
+	 (test-string-out
+	  "begin \x000D;\x0085; \x000D; \x0085; \x2028; \x000D;\x000D;\x0085; \x000D;\x0085; end")
+	 (test-bv-utf-8		(string->utf8 test-string-out))
+	 (test-bv-utf-16le	(string->utf16 test-string-out (endianness little)))
+	 (test-bv-utf-16be	(string->utf16 test-string-out (endianness big))))
+
+    (check
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (open-bytevector-output-port (make-transcoder (latin-1-codec) (eol-style crnel))))
+      => '(crnel))
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-8-codec) (eol-style crnel)))))
+	  (%put-string port test-string)
+	  (utf8->string (extract)))
+      => test-string-out)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-16le-codec) (eol-style crnel)))))
+	  (%put-string port test-string)
+	  (extract))
+      => test-bv-utf-16le)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-16be-codec) (eol-style crnel)))))
+	  (%put-string port test-string)
+	  (extract))
+      => test-bv-utf-16be)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; output ports, EOL ls
+
+  (let* ((test-string
+	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
+	 (test-string-out
+	  "begin \x2028; \x000D; \x0085; \x2028; \x000D;\x2028; \x000D;\x0085; end")
+	 (test-bv-utf-8		(string->utf8 test-string-out))
+	 (test-bv-utf-16le	(string->utf16 test-string-out (endianness little)))
+	 (test-bv-utf-16be	(string->utf16 test-string-out (endianness big))))
+
+    (check
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (condition-irritants E))
+		  (else E))
+	  (open-bytevector-output-port (make-transcoder (latin-1-codec) (eol-style ls))))
+      => '(ls))
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-8-codec) (eol-style ls)))))
+	  (%put-string port test-string)
+	  (utf8->string (extract)))
+      => test-string-out)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-16le-codec) (eol-style ls)))))
+	  (%put-string port test-string)
+	  (extract))
+      => test-bv-utf-16le)
+
+    (check
+	(let-values (((port extract) (open-bytevector-output-port
+				      (make-transcoder (utf-16be-codec) (eol-style ls)))))
+	  (%put-string port test-string)
 	  (extract))
       => test-bv-utf-16be)
 
