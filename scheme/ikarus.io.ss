@@ -4999,7 +4999,7 @@
 	       (%convert-double-sub ch external-ch1 external-ch2)
 	     ch))
 	 (define (%convert-double-sub ch external-ch1 external-ch2)
-	   (let ((ch2 (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little)))
+	   (let ((ch2 (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little 0)))
 	     (cond ((eof-object? ch2)
 		    (assertion-violation who
 		      "unexpected end of input while processing end of line conversion" ch))
@@ -5036,7 +5036,7 @@
 	       (%convert-double-sub ch external-ch1 external-ch2)
 	     ch))
 	 (define (%convert-double-sub ch external-ch1 external-ch2)
-	   (let ((ch2 (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big)))
+	   (let ((ch2 (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big 0)))
 	     (cond ((eof-object? ch2)
 		    (assertion-violation who
 		      "unexpected end of input while processing end of line conversion" ch))
