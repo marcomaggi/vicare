@@ -363,6 +363,7 @@
     console-output-port console-error-port   console-input-port
     bytevector-port-buffer-size string-port-buffer-size
     input-file-buffer-size	output-file-buffer-size
+    input/output-file-buffer-size
 
     ;; predicates
     port? input-port? output-port? textual-port? binary-port?
@@ -465,6 +466,7 @@
 		  console-output-port console-error-port   console-input-port
 		  bytevector-port-buffer-size	string-port-buffer-size
 		  input-file-buffer-size	output-file-buffer-size
+		  input/output-file-buffer-size
 
 		  ;; predicates
 		  port? input-port? output-port? textual-port? binary-port?
@@ -1036,7 +1038,7 @@
 	   (%unsafe.assert-value-is-output-port  ?port ?who)
 	   (%unsafe.assert-value-is-open-port    ?port ?who)
 	   (assertion-violation ?who "unsupported port transcoder" ?port))
-	 (define (%reconfigure-as-output ?port tag)
+	 (define (%reconfigure-as-output tag)
 	   (%unsafe.reconfigure-input-buffer-to-output-buffer ?port ?who)
 	   ($set-port-fast-attrs! ?port tag)
 	   (retry-after-tagging-port))
@@ -2413,8 +2415,9 @@
   ;;Customisable  buffer  size  for  file  ports.  To  be  used  by
   ;;OPEN-FILE-INPUT-PORT, OPEN-FILE-OUTPUT-PORT and similar.
   ;;
-  (define-buffer-size-parameter input-file-buffer-size		(+ DEFAULT-BINARY-BLOCK-SIZE 128))
+  (define-buffer-size-parameter input-file-buffer-size		DEFAULT-BINARY-BLOCK-SIZE)
   (define-buffer-size-parameter output-file-buffer-size		DEFAULT-BINARY-BLOCK-SIZE)
+  (define-buffer-size-parameter input/output-file-buffer-size	DEFAULT-BINARY-BLOCK-SIZE)
 
   ;;Customisable  buffer size  for  socket ports.   To  be used  by
   ;;TCP-CONNECT and similar.
@@ -2479,60 +2482,6 @@
 
   (define-unsafe-predicate %unsafe.guarded-port?	GUARDED-PORT-TAG)
   )
-
-
-;;;; buffer reconfiguration
-
-(define-inline (%unsafe.reconfigure-input-buffer-to-output-buffer port who)
-  ;;To be called when switching an I/O port from input to output.
-  ;;
-  ;;Upon entering this function the scenario is:
-  ;;
-  ;;                        cookie.pos
-  ;;                           v           device
-  ;;   |-----------------------+-------------|
-  ;;           |*******+*******+--------| buffer
-  ;;           ^       ^       ^        ^
-  ;;           0     index  used-size  size
-  ;;
-  ;;After setting the device position  to the current index the scenario
-  ;;is:
-  ;;
-  ;;                cookie.pos
-  ;;                   v                   device
-  ;;   |---------------+---------------------|
-  ;;                   |----------------------| buffer
-  ;;                   ^                      ^
-  ;;           0 = index = used-size         size
-  ;;
-  ;;which is fine for an output port with empty buffer.
-  ;;
-  (%unsafe.set-output-port-device-position-to-current-buffer-index! port who))
-
-(define-inline (%unsafe.reconfigure-output-buffer-to-input-buffer port who)
-  ;;To be called when switching an I/O port from output to input.
-  ;;
-  ;;Upon entering this function the scenario is:
-  ;;
-  ;;          cookie.pos
-  ;;             v                          device
-  ;;   |---------+---------------------------|
-  ;;             |*****+*******+--------| buffer
-  ;;             ^     ^       ^        ^
-  ;;             0   index  used-size  size
-  ;;
-  ;;After flushing the buffer the scenario is:
-  ;;
-  ;;                        cookie.pos
-  ;;                           v            device
-  ;;   |-----------------------+-------------|
-  ;;                           |----------------------| buffer
-  ;;                           ^                      ^
-  ;;                     0 = index = used-size       size
-  ;;
-  ;;which is fine for an input port with empty buffer.
-  ;;
-  (%unsafe.flush-output-port port who))
 
 
 ;;;; guarded ports
@@ -2609,13 +2558,13 @@
   ;;
   (define who 'port-position)
   (%assert-argument-is-port port who)
-  (%unsafe.port-get-position who port))
+  (%unsafe.port-position who port))
 
-(define (%unsafe.port-get-position who port)
+(define (%unsafe.port-position who port)
   ;;Return the current port position for PORT.
   ;;
   (with-port (port)
-    (let ((device-position (%unsafe.device-get-position who port)))
+    (let ((device-position (%unsafe.device-position who port)))
       ;;DEVICE-POSITION is the position in the underlying device, but we
       ;;have to return the port  position taking into account the offset
       ;;in the input/output buffer.
@@ -2623,7 +2572,7 @@
 	  (+ device-position port.buffer.index)
 	(- device-position (- port.buffer.used-size port.buffer.index))))))
 
-(define (%unsafe.device-get-position who port)
+(define (%unsafe.device-position who port)
   ;;Return the current device position for PORT.
   ;;
   (with-port (port)
@@ -2642,18 +2591,18 @@
 	     (assertion-violation who
 	       "port does not support port-position operation" port))))))
 
-(define (set-port-position! port new-port-position)
-  ;;Defined by R6RS.  If PORT is a binary port, NEW-PORT-POSITION should
-  ;;be a non-negative exact integer  object.  If PORT is a textual port,
-  ;;NEW-PORT-POSITION  should   be  the  return  value  of   a  call  to
-  ;;PORT-POSITION on PORT.
+(define (set-port-position! port requested-port-position)
+  ;;Defined by R6RS.  If  PORT is a binary port, REQUESTED-PORT-POSITION
+  ;;should be a non-negative exact integer object.  If PORT is a textual
+  ;;port, REQUESTED-PORT-POSITION  should be the return value  of a call
+  ;;to PORT-POSITION on PORT.
   ;;
   ;;The SET-PORT-POSITION! procedure  raises an exception with condition
   ;;type &ASSERTION if  the port does not support  the operation, and an
   ;;exception    with    condition    type   &I/O-INVALID-POSITION    if
-  ;;NEW-PORT-POSITION is  not in the  range of valid positions  of PORT.
-  ;;Otherwise, it sets the current position of the port to POS.  If PORT
-  ;;is an output port, SET-PORT-POSITION!  first flushes PORT.
+  ;;REQUESTED-PORT-POSITION is  not in the  range of valid  positions of
+  ;;PORT.  Otherwise, it  sets the current position of  the port to POS.
+  ;;If PORT is an output port, SET-PORT-POSITION!  first flushes PORT.
   ;;
   ;;If PORT  is a  binary output  port and the  current position  is set
   ;;beyond the current end of the  data in the underlying data sink, the
@@ -2667,84 +2616,298 @@
   ;;&I/O-INVALID-POSITION.
   ;;
   (define who 'set-port-position!)
-  (%assert-argument-is-port port who)
-  (%assert-argument-is-port-position new-port-position who)
   (with-port (port)
-    (let ((set-position! port.set-position!))
-      (cond ((procedure? set-position!)
-	     ;;An   underlying   device   exists.    Call   the   port's
-	     ;;SET-POSITION!   function only if  we cannot  satisfy this
-	     ;;request by moving the index in the buffer.
-	     (let ((old-port-position (%unsafe.port-get-position who port)))
-	       (unless (= old-port-position new-port-position)
-		 (let ((new-buffer.index (+ port.buffer.index
-					    (- new-port-position old-port-position))))
-		   (if (and (>= new-buffer.index 0)
-			    (<= new-buffer.index port.buffer.used-size))
-		       (set! port.buffer.index new-buffer.index)
-		     (begin
-		       (if (%unsafe.output-port? port)
-			   (%unsafe.flush-output-port port who)
-			 (port.buffer.reset-to-empty!))
-		       (let-syntax ((new-device-position (identifier-syntax new-port-position)))
-			 ;;If SET-POSITION!  fails we can assume nothing
-			 ;;about the position in the device.
-			 (set-position! new-device-position)
-			 ;;Notice that the cookie's  POS field is set by
-			 ;;this   function  AFTER   having  successfully
-			 ;;called SET-POSITION!.
-			 (set! port.device.position new-device-position))))))))
-	    ((and (boolean? set-position!) set-position!)
-	     ;;The  cookie's  POS field  holds  a  value representing  a
-	     ;;correct  and  immutable  device  position.  We  move  the
-	     ;;current port position by moving the current buffer index.
-	     ;;
-	     ;;Note that the correct  implementation of this case is the
-	     ;;following:
-	     #|
-	     (let ((old-port-position (%unsafe.port-get-position who port)))
-	       (unless (= old-port-position new-port-position)
-		 (let ((delta (- new-port-position old-port-position)))
-		   (if (<= 0 delta port.buffer.used-size)
-		       (set! port.buffer.index delta)
-		     (%raise-port-position-out-of-range who port new-port-position)))))
-	     |#
-	     ;;but we know that, at present, the only ports implementing
-	     ;;this     policy    are     the    ones     returned    by
-	     ;;OPEN-BYTEVECTOR-INPUT-PORT and OPEN-STRING-INPUT-PORT, so
-	     ;;we can optimise with the following:
-	     (unless (= new-port-position port.buffer.index)
-	       (if (<= 0 new-port-position port.buffer.used-size)
-		   (set! port.buffer.index new-port-position)
-		 (%raise-port-position-out-of-range who port new-port-position))))
-	    (else
-	     (assertion-violation who
-	       "port does not support set-port-position operation" port))))))
+    (define-inline (main)
+      (%assert-argument-is-port port who)
+      (%assert-argument-is-port-position requested-port-position who)
+      (let ((set-position! port.set-position!))
+	(cond ((procedure? set-position!)
+	       (let ((port.old-position (%unsafe.port-position who port)))
+		 (unless (= port.old-position requested-port-position)
+		   (%set-with-procedure port set-position! port.old-position))))
+	      ((and (boolean? set-position!) set-position!)
+	       (%set-with-boolean port))
+	      (else
+	       (assertion-violation who
+		 "port does not support SET-PORT-POSITION! operation" port)))))
 
-(define (%unsafe.set-output-port-device-position-to-current-buffer-index! port who)
-  ;;Assuming  PORT is  an input  port, set  the device  position  to the
-  ;;current buffer index.
+    (define-inline (%set-with-procedure port set-position! port.old-position)
+      ;;The SET-POSITION!   field is  a procedure: an  underlying device
+      ;;exists.  If we are in the following scenario:
+      ;;
+      ;;                                        dev.old-pos
+      ;;                                           v
+      ;; |-----------------------------------------+---------| device
+      ;;     |***+**************+******************+----|buffer
+      ;;         ^              ^                  ^
+      ;;      old-index     new-index          used-size
+      ;;    port.old-pos   port.new-pos
+      ;;
+      ;;we  can satisfy  the request  just by  moving the  index  in the
+      ;;buffer,  without calling SET-POSITION!  and changing  the device
+      ;;position.
+      ;;
+      ;;Remember that port positions are not fixnums.
+      ;;
+      (let* ((delta-pos        (- requested-port-position port.old-position))
+	     (buffer.new-index (+ port.buffer.index delta-pos)))
+	(if (and (>= buffer.new-index 0)
+		 (<= buffer.new-index port.buffer.used-size))
+	    (set! port.buffer.index buffer.new-index)
+	  ;;We  need to change  the device  position.  We  transform the
+	  ;;requested  port  position  in  a requested  device  position
+	  ;;computed  when the  buffer is  empty; we  need to  take into
+	  ;;account the current buffer index.
+	  (let ((device.new-position
+		 (if (%unsafe.output-port? port)
+		     ;;Output  port: flush  the buffer  and reset  it to
+		     ;;empty.  Before flushing:
+		     ;;
+		     ;;    dev.old-pos
+		     ;;       v
+		     ;; |-----+---------------------------|device
+		     ;;       |*******+*******+----|buffer
+		     ;;               ^       ^
+		     ;;             index  used-size
+		     ;;
+		     ;;after flushing:
+		     ;;
+		     ;;           dev.tmp-pos
+		     ;;               v
+		     ;; |-------------+-------------------|device
+		     ;;               |--------------------|buffer
+		     ;;               ^
+		     ;;       index = used-size
+		     ;;
+		     ;;   dev.tmp-pos = dev.old-pos + index
+		     ;;               = port.old-pos
+		     ;;
+		     ;;taking into account the requested port position:
+		     ;;
+		     ;;         dev.tmp-pos  dev.new-pos
+		     ;;               v         v
+		     ;; |-------------+---------+---------|device
+		     ;;               |.........|delta-pos
+		     ;;                         |--------------------|buffer
+		     ;;                         ^
+		     ;;                 index = used-size
+		     ;;
+		     ;;   dev.new-pos = dev.tmp-pos + delta-pos
+		     ;;               = port.old-pos + delta-pos
+		     ;;               = requested-port-position
+		     ;;
+		     (begin
+		       (%unsafe.flush-output-port port who)
+		       requested-port-position)
+		   ;;Input  port:  compute  the device  position,  delay
+		   ;;resetting the buffer  to after successfully calling
+		   ;;SET-POSITION!.  Before moving the position:
+		   ;;
+		   ;;                           dev.old-pos
+		   ;;                                v
+		   ;; |------------------------------+----|device
+		   ;;                     |..........|delta-idx
+		   ;;               |*****+**********+---|buffer
+		   ;;                     ^          ^
+		   ;;                   index      used-size
+		   ;;
+		   ;;taking into account the index position:
+		   ;;
+		   ;;                dev.tmp-pos
+		   ;;                     v
+		   ;; |-------------------+---------------|device
+		   ;;                     |..........|delta-idx
+		   ;;                     |--------------------|buffer
+		   ;;                     ^
+		   ;;               index = used-size
+		   ;;
+		   ;;   dev.tmp-pos = dev.old-pos - delta-idx
+		   ;;
+		   ;;taking into account the requested port position:
+		   ;;
+		   ;;            dev.tmp-pos   dev.new-pos
+		   ;;                     v        v
+		   ;; |-------------------+--------+------|device
+		   ;;                     |........|delta-pos
+		   ;;                              |--------------------|buffer
+		   ;;                              ^
+		   ;;                      index = used-size
+		   ;;
+		   ;;   dev.new-pos = dev.tmp-pos + delta-pos
+		   ;;               = dev.old-pos - delta-idx + delta-pos
+		   ;;
+		   (let ((delta-idx           (unsafe.fx- port.buffer.used-size port.buffer.index))
+			 (device.old-position (%unsafe.device-position who port)))
+		     (+ (- device.old-position delta-idx) delta-pos)))))
+	    ;;If SET-POSITION!   fails we  can assume nothing  about the
+	    ;;position in the device.
+	    (set-position! device.new-position)
+	    ;;Notice that we clean the port buffer and update the device
+	    ;;position   field    AFTER   having   successfully   called
+	    ;;SET-POSITION!.
+	    (port.buffer.reset-to-empty!)
+	    (set! port.device.position device.new-position)))))
+
+    (define-inline (%set-with-boolean port)
+      ;;The cookie's POS field holds  a value representing a correct and
+      ;;immutable device position.  We move the current port position by
+      ;;moving the current buffer index.
+      ;;
+      ;; dev.pos
+      ;;   v
+      ;;   |-------------------------------------|device
+      ;;   |*******+*****************************|buffer
+      ;;   ^       ^                             ^
+      ;;   0     index                     used-size = size
+      ;;
+      ;;Note that  the generally correct implementation of  this case is
+      ;;the following, which considers the buffer not being equal to the
+      ;;device:
+      #|
+      (let ((port.old-position (%unsafe.port-position who port)))
+	(unless (= port.old-position requested-port-position)
+	  (let ((delta-pos (- requested-port-position port.old-position)))
+	    (if (<= 0 delta port.buffer.used-size)
+		(set! port.buffer.index delta-pos)
+	      (%raise-port-position-out-of-range who port requested-port-position)))))
+      |#
+      ;;but we  know that,  at present, the  only ports  implementing this
+      ;;policy  are the  ones returned  by  OPEN-BYTEVECTOR-INPUT-PORT and
+      ;;OPEN-STRING-INPUT-PORT, so we can optimise with the following:
+      ;;
+      (unless (= requested-port-position port.buffer.index)
+	(if (<= 0 requested-port-position port.buffer.used-size)
+	    (set! port.buffer.index requested-port-position)
+	  (%raise-port-position-out-of-range who port requested-port-position))))
+
+    (main)))
+
+(define (%unsafe.reconfigure-input-buffer-to-output-buffer port who)
+  ;;Assuming  PORT is  an input  port: set  the device  position  to the
+  ;;current port position taking into account the buffer index and reset
+  ;;the buffer to  empty.  The device position may  change, but the port
+  ;;position is unchanged.
+  ;;
+  ;;After this function call: the buffer and the device are in the state
+  ;;needed to switch an input/output port from input to output.
   ;;
   (with-port (port)
     (let ((set-position! port.set-position!))
       (cond ((procedure? set-position!)
-	     ;;An underlying device exists.
-	     (let* ((old-dev-position	(%unsafe.device-get-position who port))
-		    (delta		(unsafe.fx- port.buffer.used-size port.buffer.index))
-		    (new-dev-position	(- old-dev-position delta)))
-	       (set-position! new-dev-position)
-	       (set! port.device.position new-dev-position)))
+	     ;;An underlying device  exists.  Before moving the position
+	     ;;the scenario is:
+	     ;;
+	     ;;                        dev.old-pos
+	     ;;                           v
+	     ;;   |-----------------------+-------------|device
+	     ;;           |*******+*******+--------| buffer
+	     ;;           ^       ^       ^        ^
+	     ;;           0     index  used-size  size
+	     ;;
+	     ;;after setting the device position the scenario is:
+	     ;;
+	     ;;                dev.new-pos
+	     ;;                   v
+	     ;;   |---------------+---------------------|device
+	     ;;                   |----------------------|buffer
+	     ;;                   ^                      ^
+	     ;;           0 = index = used-size         size
+	     ;;
+	     ;;which is fine for an output port with empty buffer.
+	     ;;
+	     (let* ((device.old-position (%unsafe.device-position who port))
+		    (delta-idx           (unsafe.fx- port.buffer.used-size port.buffer.index))
+		    (device.new-position (- device.old-position delta-idx)))
+	       (set-position! device.new-position)
+	       (set! port.device.position device.new-position)
+	       (port.buffer.reset-to-empty!)))
 	    ((and (boolean? set-position!) set-position!)
 	     ;;The  cookie's  POS field  holds  a  value representing  a
-	     ;;correct  and  immutable  device  position.  We  move  the
-	     ;;current port position by moving the current buffer index.
-	     ;;So we do nothing here.
+	     ;;correct and immutable device position.  For this port the
+	     ;;current position is changed  by moving the current buffer
+	     ;;index.  So we do nothing here.
+	     ;;
+	     ;; dev.pos
+	     ;;   v
+	     ;;   |-------------------------------------|device
+	     ;;   |*******+*****************************|buffer
+	     ;;   ^       ^                             ^
+	     ;;   0     index                     used-size = size
+	     ;;
 	     (values))
 	    (else
-	     ;;If PORT does  not support the set port  position, we just
-	     ;;reset the buffer to empty state.
-	     (values))))
-    (port.buffer.reset-to-empty!)))
+	     ;;If  PORT does  not  support the  set  port position  (for
+	     ;;example:  it is  a  network socket),  we  just reset  the
+	     ;;buffer to empty state.
+	     (port.buffer.reset-to-empty!))))))
+
+(define (%unsafe.reconfigure-output-buffer-to-input-buffer port who)
+  ;;Assuming  PORT is an  output port:  set the  device position  to the
+  ;;current port position taking into account the buffer index and reset
+  ;;the buffer to  empty.  The device position may  change, but the port
+  ;;position is left unchanged.
+  ;;
+  ;;After this function call: the buffer and the device are in the state
+  ;;needed to switch an input/output port from input to output.
+  ;;
+  (with-port (port)
+    (let ((set-position! port.set-position!))
+      (cond ((procedure? set-position!)
+	     ;;Upon entering this function the scenario is:
+	     ;;
+	     ;;        dev.old-pos
+	     ;;             v                          device
+	     ;;   |---------+---------------------------|
+	     ;;             |*****+*******+--------| buffer
+	     ;;             ^     ^       ^
+	     ;;             0   index  used-size
+	     ;;
+	     ;;after flushing the buffer the scenario is:
+	     ;;
+	     ;;                        dev.tmp-pos
+	     ;;                           v            device
+	     ;;   |-----------------------+-------------|
+	     ;;                           |----------------------| buffer
+	     ;;                           ^
+	     ;;                     0 = index = used-size
+	     ;;
+	     ;;after adjusting  to keep unchanged the  port position the
+	     ;;scenario is:
+	     ;;
+	     ;;               dev.new-pos
+	     ;;                   v                    device
+	     ;;   |---------------+---------------------|
+	     ;;                   |----------------------| buffer
+	     ;;                   ^
+	     ;;          0 = index = used-size
+	     ;;
+	     ;;which is fine for an input port with empty buffer.
+	     (let* ((port.old-position   (%unsafe.port-position who port))
+		    (device.new-position port.old-position))
+               (%unsafe.flush-output-port port who)
+	       (set-position! device.new-position)
+	       (set! port.device.position device.new-position)
+	       (%debug-assert (zero? port.buffer.index))
+	       (%debug-assert (zero? port.buffer.used-size))))
+	    ((and (boolean? set-position!) set-position!)
+	     ;;The  cookie's  POS field  holds  a  value representing  a
+	     ;;correct and immutable device position.  For this port the
+	     ;;current position is changed  by moving the current buffer
+	     ;;index.  So we do nothing here.
+	     ;;
+	     ;; dev.pos
+	     ;;   v
+	     ;;   |-------------------------------------|device
+	     ;;   |*******+*****************************|buffer
+	     ;;   ^       ^                             ^
+	     ;;   0     index                     used-size = size
+	     ;;
+	     (values))
+	    (else
+	     ;;If  PORT does  not  support the  set  port position  (for
+	     ;;example:  it is  a  netword socket),  we  just reset  the
+	     ;;buffer to empty state.
+	     (port.buffer.reset-to-empty!))))))
 
 
 ;;;; custom ports
@@ -6744,7 +6907,7 @@
 	   (other-attributes	(%unsafe.fxior INPUT/OUTPUT-PORT-TAG buffer-mode-attrs))
 	   (fd			(%open-input/output-file-descriptor filename file-options who))
 	   (port-identifier	filename)
-	   (buffer-size		(output-file-buffer-size)))
+	   (buffer-size		(input/output-file-buffer-size)))
       (%file-descriptor->input/output-port fd other-attributes port-identifier
 					   buffer-size maybe-transcoder #t who)))))
 

@@ -60,7 +60,7 @@
 (define src-dir
   (or (getenv "IKARUS_SRC_DIR") "."))
 
-(define verbose-output? #f)
+(define verbose-output? #t)
 
 (define-syntax each-for
   (syntax-rules ()
@@ -1338,6 +1338,7 @@
     (string-port-buffer-size			 i)
     (input-file-buffer-size			 i)
     (output-file-buffer-size			 i)
+    (input/output-file-buffer-size		 i)
     (output-port-buffer-mode                     i r ip)
     (port-eof?                                   i r ip)
     (port-has-port-position?                     i r ip)

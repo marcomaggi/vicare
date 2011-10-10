@@ -121,13 +121,23 @@
   (when (file-exists? (test-pathname))
     (delete-file (test-pathname))))
 
-(define (create-test-pathname)
+(define (create-binary-test-pathname)
   ;;Create a  new test  file using the  current (TEST-PATHNAME)  and the
   ;;current (TEST-PATHNAME-DATA-FUNC).
   ;;
   (cleanup-test-pathname)
   (let ((port (open-file-output-port (test-pathname) (file-options) (buffer-mode block) #f)))
     (put-bytevector port ((test-pathname-data-func)))
+    (close-output-port port)))
+
+(define (create-textual-test-pathname codec)
+  ;;Create a  new test  file using the  current (TEST-PATHNAME)  and the
+  ;;current (TEST-PATHNAME-DATA-FUNC).
+  ;;
+  (cleanup-test-pathname)
+  (let ((port (open-file-output-port (test-pathname) (file-options) (buffer-mode block)
+				     (make-transcoder codec))))
+    (put-string port ((test-pathname-data-func)))
     (close-output-port port)))
 
 (define open-test-pathname
@@ -157,7 +167,7 @@
   (syntax-rules ()
     ((_ (?port) . ?body)
      (begin
-       (create-test-pathname)
+       (create-binary-test-pathname)
        (let ((?port (open-test-pathname)))
 	 (unwind-protect
 	     (begin  . ?body)
@@ -227,6 +237,71 @@
       (or result
 	  (begin
 	    (set! result (%bytevector-u8-fill! (make-bytevector (bindata-hundreds.len) 0)))
+	    result)))))
+
+
+;;;; textual data
+
+(define (textdata-empty.len)
+  0)
+
+(define (textdata-empty.str)
+  '#vu8())
+
+(define (textdata-zero.str)
+  "0")
+
+(define (textdata-zero.len)
+  1)
+
+(define (textdata-ten.len)
+  10)
+
+(define (textdata-ten.str)
+  ;;Holds  the  same  bytes of  the  first  substring  of length  10  of
+  ;;TEXTDATA-HUNDREDS.
+  ;;
+  "0123456789")
+
+(define (textdata-bytes.len)
+  256)
+
+(define textdata-bytes.str
+  ;;Holds  the  same bytes  of  the first  substring  of  length 256  of
+  ;;TEXTDATA-HUNDREDS.
+  ;;
+  (let ((result #f))
+    (define (%string-fill! str)
+      (do ((i 0 (+ 1 i)))
+	  ((= i 256)
+	   str)
+	(string-set! str i (integer->char i))))
+    (lambda ()
+      (or result
+	  (begin
+	    (set! result (%string-fill! (make-string (textdata-bytes.len) #\Z)))
+	    result)))))
+
+(define (textdata-hundreds.len)
+  (* 100 256))
+
+(define textdata-hundreds.str
+  ;;A  string holding  100 sequences  of bytes  from 0  included  to 255
+  ;;included.
+  ;;
+  (let ((result #f))
+    (define (%string-fill! bv)
+      (do ((i 0 (+ 1 i)))
+	  ((= i 100)
+	   bv)
+	(let ((base (* 256 i)))
+	  (do ((j 0 (+ 1 j)))
+	      ((= j 256))
+	    (string-set! bv (+ base j) (integer->char j))))))
+    (lambda ()
+      (or result
+	  (begin
+	    (set! result (%string-fill! (make-string (textdata-hundreds.len) #\Z)))
 	    result)))))
 
 
@@ -4045,7 +4120,7 @@
 ;;; --------------------------------------------------------------------
 ;;; transcoding output ports
 
-  (check 'this
+  (check
       (let-values (((bin-port extract) (open-bytevector-output-port)))
 	(let ((tran-port (transcoded-port bin-port (make-transcoder (latin-1-codec)
 								    (eol-style none)
@@ -8397,7 +8472,7 @@
     (syntax-rules ()
       ((_ ?open-form)
        (begin
-	 (create-test-pathname)
+	 (create-binary-test-pathname)
 	 (let ((port ?open-form))
 	   (unwind-protect
 	       (get-bytevector-all port)
@@ -8408,7 +8483,7 @@
     (syntax-rules ()
       ((_ ?open-form)
        (begin
-	 (create-test-pathname)
+	 (create-binary-test-pathname)
 	 (let ((port ?open-form))
 	   (unwind-protect
 	       (get-string-all port)
@@ -8548,7 +8623,7 @@
     (syntax-rules ()
       ((_ ?open-form)
        (begin
-	 (create-test-pathname)
+	 (create-binary-test-pathname)
 	 (let ((port ?open-form))
 	   (unwind-protect
 	       (get-string-all port)
@@ -8634,7 +8709,7 @@
     (syntax-rules ()
       ((_)
        (begin
-	 (create-test-pathname)
+	 (create-binary-test-pathname)
 	 (unwind-protect
 	     (with-input-from-file (test-pathname)
 	       (lambda ()
@@ -8725,7 +8800,7 @@
     (syntax-rules ()
       ((_)
        (begin
-	 (create-test-pathname)
+	 (create-binary-test-pathname)
 	 (unwind-protect
 	     (call-with-input-file (test-pathname)
 	       (lambda (port)
@@ -9185,15 +9260,14 @@
   #t)
 
 
-(parametrise ((check-test-name		'open-file-input/output-port)
-	      (test-pathname		(make-test-pathname "open-file-input-output-port.bin"))
-	      (input-file-buffer-size	9))
+(parametrise ((check-test-name		'open-file-input-output-port)
+	      (test-pathname		(make-test-pathname "open-file-input-output-port.bin")))
 
   (define-syntax with-binary-input-test-pathname
     (syntax-rules ()
       ((_ ?open-form)
        (begin
-	 (create-test-pathname)
+	 (create-binary-test-pathname)
 	 (let ((port ?open-form))
 	   (unwind-protect
 	       (get-bytevector-all port)
@@ -9204,7 +9278,7 @@
     (syntax-rules ()
       ((_ ?open-form)
        (begin
-	 (create-test-pathname)
+	 (create-binary-test-pathname)
 	 (let ((port ?open-form))
 	   (unwind-protect
 	       (get-string-all port)
@@ -9245,29 +9319,42 @@
     (syntax-rules ()
       ((_ ?open-form ?data)
        (check.with-result
-	 (create-test-pathname)
+	 (create-binary-test-pathname)
 	 (let ((port ?open-form))
 	   (unwind-protect
 	       (begin
-		 (set-port-position! port 0)
 		 (check.add-result (get-bytevector-all port))
+		 (check.add-result (port-position port))
 		 (set-port-position! port 0)
+		 (check.add-result (port-position port))
 		 (put-bytevector port ?data)
+		 (check.add-result (port-position port))
 		 (set-port-position! port 0)
+		 (check.add-result (port-position port))
 		 (check.add-result (get-bytevector-all port))
 		 (port-position port))
-	     (close-input-port port)
+	     (close-port port)
 	     (cleanup-test-pathname)))))))
 
   (define-syntax with-textual-input/output-test-pathname
     (syntax-rules ()
-      ((_ ?open-form)
-       (begin
-	 (create-test-pathname)
+      ((_ ?open-form ?data)
+       (check.with-result
+	 (create-textual-test-pathname (utf-8-codec))
 	 (let ((port ?open-form))
 	   (unwind-protect
-	       (get-string-all port)
-	     (close-input-port port)
+	       (begin
+		 (check.add-result (get-string-all port))
+		 (check.add-result (port-position port))
+		 (set-port-position! port 0)
+		 (check.add-result (port-position port))
+		 (put-string port ?data)
+		 (check.add-result (port-position port))
+		 (set-port-position! port 0)
+		 (check.add-result (port-position port))
+		 (check.add-result (get-string-all port))
+		 (port-position port))
+	     (close-port port)
 	     (cleanup-test-pathname)))))))
 
 ;;; --------------------------------------------------------------------
@@ -9459,11 +9546,22 @@
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
+					       (bindata-bytes.bv)))
+		    (input/output-file-buffer-size 9))
+	(with-binary-input/output-test-pathname
+	 (open-file-input/output-port (test-pathname) (file-options no-fail no-create no-truncate))
+	 (bindata-bytes.bv)))
+    => `(,(bindata-bytes.len)
+	 (,(bindata-bytes.bv) ,(bindata-bytes.len) 0 ,(bindata-bytes.len) 0 ,(bindata-bytes.bv))))
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
 					       (bindata-bytes.bv))))
 	(with-binary-input/output-test-pathname
-	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate))
+	 (open-file-input/output-port (test-pathname) (file-options no-fail no-create no-truncate))
 	 (bindata-bytes.bv)))
-    => `(,(bindata-bytes.len) (,(bindata-bytes.bv) ,(bindata-bytes.bv))))
+    => `(,(bindata-bytes.len)
+	 (,(bindata-bytes.bv) ,(bindata-bytes.len) 0 ,(bindata-bytes.len) 0 ,(bindata-bytes.bv))))
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
@@ -9471,7 +9569,43 @@
 	(with-binary-input/output-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate))
 	 (bindata-hundreds.bv)))
-    => `(,(bindata-hundreds.len) (,(bindata-hundreds.bv) ,(bindata-hundreds.bv))))
+    => `(,(bindata-hundreds.len)
+	 (,(bindata-hundreds.bv) ,(bindata-hundreds.len) 0
+	  ,(bindata-hundreds.len) 0 ,(bindata-hundreds.bv))))
+
+;;; --------------------------------------------------------------------
+;;; reading and writing whole textual data
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       (textdata-bytes.str)))
+		    (input/output-file-buffer-size 9))
+	(with-textual-input/output-test-pathname
+	 (open-file-input/output-port (test-pathname) (file-options no-fail no-create no-truncate)
+				      (buffer-mode block) (make-transcoder (utf-8-codec)))
+	 (textdata-bytes.str)))
+    => (let ((len (bytevector-length (string->utf8 (textdata-bytes.str)))))
+	 `(,len (,(textdata-bytes.str) ,len 0 ,len 0 ,(textdata-bytes.str)))))
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       (textdata-bytes.str))))
+	(with-textual-input/output-test-pathname
+	 (open-file-input/output-port (test-pathname) (file-options no-fail no-create no-truncate)
+				      (buffer-mode block) (make-transcoder (utf-8-codec)))
+	 (textdata-bytes.str)))
+    => (let ((len (bytevector-length (string->utf8 (textdata-bytes.str)))))
+	 `(,len (,(textdata-bytes.str) ,len 0 ,len 0 ,(textdata-bytes.str)))))
+
+  (check
+      (parametrise ((test-pathname-data-func (lambda ()
+					       (textdata-hundreds.str))))
+	(with-textual-input/output-test-pathname
+	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
+				      (buffer-mode block) (make-transcoder (utf-8-codec)))
+	 (textdata-hundreds.str)))
+    => (let ((len (bytevector-length (string->utf8 (textdata-hundreds.str)))))
+	 `(,len (,(textdata-hundreds.str) ,len 0 ,len 0 ,(textdata-hundreds.str)))))
 
   #t)
 
@@ -9492,7 +9626,7 @@
 	  (list c i a o s x)))
     => #f)
 
-  (check 'this
+  (check
       (let ((port (open-bytevector-input-port TEST-BYTEVECTOR-FOR-UTF-16-LE
 					      (make-transcoder (utf-8-codec)
 							       (eol-style none)
