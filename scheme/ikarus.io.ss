@@ -662,6 +662,17 @@
     ((_ (?who ?stx) . ?body)
      (define-syntax ?who (lambda (?stx) . ?body)))))
 
+(define-syntax %debug-assert
+  ;;This is meant to expand to nothing when debugging is turned off.
+  ;;
+  (if #t
+      (syntax-rules ()
+  	((_ ?pred)
+  	 (assert ?pred)))
+    (syntax-rules ()
+      ((_ ?pred)
+       (values)))))
+
 
 ;;;; port tags
 ;;
@@ -852,11 +863,11 @@
   ;;attributes if we want them included.
   ;;
   (syntax-rules ()
-    ((_ ?transcoder ?who)
+    ((_ ?who ?transcoder)
      (%%select-input-fast-tag-from-transcoder ?who ?transcoder DEFAULT-OTHER-ATTRS))
-    ((_ ?transcoder ?who ?other-attribute)
+    ((_ ?who ?transcoder ?other-attribute)
      (%%select-input-fast-tag-from-transcoder ?who ?transcoder ?other-attribute))
-    ((_ ?transcoder ?who ?other-attribute . ?other-attributes)
+    ((_ ?who ?transcoder ?other-attribute . ?other-attributes)
      (%%select-input-fast-tag-from-transcoder ?who ?transcoder
 					      (%unsafe.fxior ?other-attribute . ?other-attributes)))))
 
@@ -866,6 +877,10 @@
   ;;representing the  non-fast attributes  to compose with  the selected
   ;;fast attributes.
   ;;
+;;;NOTE We  cannot put assertions  here because this function  is called
+;;;upon initialisation  of the library  when the standard port  have not
+;;;yet  been  fully constructed.   A  failing  assertion  would use  the
+;;;standard ports, causing a segfault.
   (if (not maybe-transcoder)
       (%unsafe.fxior other-attributes FAST-GET-BYTE-TAG)
     (case (transcoder-codec maybe-transcoder)
@@ -888,11 +903,11 @@
   ;;attributes if we want them included.
   ;;
   (syntax-rules ()
-    ((_ ?transcoder ?who)
+    ((_ ?who ?transcoder)
      (%%select-output-fast-tag-from-transcoder ?who ?transcoder DEFAULT-OTHER-ATTRS))
-    ((_ ?transcoder ?who ?other-attribute)
+    ((_ ?who ?transcoder ?other-attribute)
      (%%select-output-fast-tag-from-transcoder ?who ?transcoder ?other-attribute))
-    ((_ ?transcoder ?who ?other-attribute . ?other-attributes)
+    ((_ ?who ?transcoder ?other-attribute . ?other-attributes)
      (%%select-output-fast-tag-from-transcoder ?who ?transcoder
 					       (%unsafe.fxior ?other-attribute . ?other-attributes)))))
 
@@ -905,6 +920,10 @@
   ;;Notice  that  an output  port  is  never  tagged as  UTF-16  without
   ;;selection of endianness; by default little endianness is selected.
   ;;
+;;;NOTE We  cannot put assertions  here because this function  is called
+;;;upon initialisation  of the library  when the standard port  have not
+;;;yet  been  fully constructed.   A  failing  assertion  would use  the
+;;;standard ports, causing a segfault.
   (if (not maybe-transcoder)
       (%unsafe.fxior other-attributes FAST-PUT-BYTE-TAG)
     (case (transcoder-codec maybe-transcoder)
@@ -998,6 +1017,10 @@
   ;;Given a  transcoder return the non-fast  attributes representing the
   ;;selected end of line conversion style.
   ;;
+;;;NOTE We  cannot put assertions  here because this function  is called
+;;;upon initialisation  of the library  when the standard port  have not
+;;;yet  been  fully constructed.   A  failing  assertion  would use  the
+;;;standard ports, causing a segfault.
   (if (not maybe-transcoder)
       0		;EOL style none
     (let ((style (transcoder-eol-style maybe-transcoder))
@@ -1033,6 +1056,11 @@
   (unsafe.fxand EOL-STYLE-NOT-MASK attributes))
 
 (define-syntax %case-eol-style
+  ;;Select a body to be evaluated  if a port has the selected EOL style.
+  ;;?EOL-BITS must be an identifier bound to the result of:
+  ;;
+  ;;   (%unsafe.port-eol-style-bits port)
+  ;;
   (lambda (stx)
     (syntax-case stx ( ;;
 		      EOL-LINEFEED-TAG			EOL-CARRIAGE-RETURN-TAG
@@ -1040,23 +1068,25 @@
 		      EOL-CARRIAGE-RETURN-NEXT-LINE-TAG	EOL-LINE-SEPARATOR-TAG
 		      else)
       ((%case-eol-style (?eol-bits ?who)
-	 ((EOL-LINEFEED-TAG)			. ?line-feed-body)
+	 ((EOL-LINEFEED-TAG)			. ?linefeed-body)
 	 ((EOL-CARRIAGE-RETURN-TAG)		. ?carriage-return-body)
-	 ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)	. ?carriage-return-line-feed-body)
+	 ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)	. ?carriage-return-linefeed-body)
 	 ((EOL-NEXT-LINE-TAG)			. ?next-line-body)
 	 ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)	. ?carriage-return-next-line-body)
 	 ((EOL-LINE-SEPARATOR-TAG)		. ?line-separator-body)
-	 (else					. ?else-body))
+	 (else					. ?none-body))
        (and (identifier? #'?eol-bits)
 	    (identifier? #'?who))
+       ;;FIXME It  would be better here  to use a  specialised CASE form
+       ;;capable of efficiently dispatch evaluation based on fixnums.
        #'(cond ((unsafe.fxzero? ?eol-bits)
-		(begin . ?else-body))
+		(begin . ?none-body))
 	       ((unsafe.fx= ?eol-bits EOL-LINEFEED-TAG)
-		(begin . ?line-feed-body))
+		(begin . ?linefeed-body))
 	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-TAG)
 		(begin . ?carriage-return-body))
 	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-		(begin . ?carriage-return-line-feed-body))
+		(begin . ?carriage-return-linefeed-body))
 	       ((unsafe.fx= ?eol-bits EOL-NEXT-LINE-TAG)
 		(begin . ?next-line-body))
 	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
@@ -1078,20 +1108,19 @@
        ((FAST-GET-BYTE-TAG) . ?byte-tag-body))
      (and (identifier? #'?port)
 	  (identifier? #'?who))
-     #'(let retry-after-tagging ()
-	 (let ((m ($port-fast-attrs ?port)))
-	   (cond ((unsafe.fx= m FAST-GET-BYTE-TAG)
-		  (begin . ?byte-tag-body))
-		 ((and (%unsafe.input-and-output-port? ?port)
-		       (unsafe.fx= m FAST-PUT-BYTE-TAG))
-		  (%unsafe.reconfigure-output-buffer-to-input-buffer ?port ?who)
-		  ($set-port-fast-attrs! ?port FAST-GET-BYTE-TAG)
-		  (retry-after-tagging))
-		 (else
-		  (%unsafe.assert-value-is-input-port  ?port ?who)
-		  (%unsafe.assert-value-is-binary-port ?port ?who)
-		  (%unsafe.assert-value-is-open-port   ?port ?who)
-		  (assertion-violation ?who "internal error: corrupted port" ?port))))))))
+     #'(let retry-after-tagging ((m ($port-fast-attrs ?port)))
+	 (cond ((unsafe.fx= m FAST-GET-BYTE-TAG)
+		(begin . ?byte-tag-body))
+	       ((and (%unsafe.input-and-output-port? ?port)
+		     (unsafe.fx= m FAST-PUT-BYTE-TAG))
+		(%unsafe.reconfigure-output-buffer-to-input-buffer ?port ?who)
+		($set-port-fast-attrs! ?port FAST-GET-BYTE-TAG)
+		(retry-after-tagging FAST-GET-BYTE-TAG))
+	       (else
+		(%unsafe.assert-value-is-input-port  ?port ?who)
+		(%unsafe.assert-value-is-binary-port ?port ?who)
+		(%unsafe.assert-value-is-open-port   ?port ?who)
+		(assertion-violation ?who "internal error: corrupted port" ?port)))))))
 
 (define-syntax* (%case-binary-output-port-fast-tag stx)
   ;;Assuming ?PORT  has already been  validated as a port  value, select
@@ -1104,20 +1133,19 @@
        ((FAST-PUT-BYTE-TAG) . ?byte-tag-body))
      (and (identifier? #'?port)
 	  (identifier? #'?who))
-     #'(let retry-after-tagging ()
-	 (let ((m ($port-fast-attrs ?port)))
-	   (cond ((unsafe.fx= m FAST-PUT-BYTE-TAG)
-		  (begin . ?byte-tag-body))
-		 ((and (%unsafe.input-and-output-port? ?port)
-		       (unsafe.fx= m FAST-GET-BYTE-TAG))
-		  (%unsafe.reconfigure-input-buffer-to-output-buffer ?port ?who)
-		  ($set-port-fast-attrs! ?port FAST-PUT-BYTE-TAG)
-		  (retry-after-tagging))
-		 (else
-		  (%unsafe.assert-value-is-output-port ?port ?who)
-		  (%unsafe.assert-value-is-binary-port ?port ?who)
-		  (%unsafe.assert-value-is-open-port   ?port ?who)
-		  (assertion-violation ?who "internal error: corrupted port" ?port))))))))
+     #'(let retry-after-tagging ((m ($port-fast-attrs ?port)))
+	 (cond ((unsafe.fx= m FAST-PUT-BYTE-TAG)
+		(begin . ?byte-tag-body))
+	       ((and (%unsafe.input-and-output-port? ?port)
+		     (unsafe.fx= m FAST-GET-BYTE-TAG))
+		(%unsafe.reconfigure-input-buffer-to-output-buffer ?port ?who)
+		($set-port-fast-attrs! ?port FAST-PUT-BYTE-TAG)
+		(retry-after-tagging FAST-PUT-BYTE-TAG))
+	       (else
+		(%unsafe.assert-value-is-output-port ?port ?who)
+		(%unsafe.assert-value-is-binary-port ?port ?who)
+		(%unsafe.assert-value-is-open-port   ?port ?who)
+		(assertion-violation ?who "internal error: corrupted port" ?port)))))))
 
 (define-syntax* (%case-textual-input-port-fast-tag stx)
   ;;For  a port  fast tagged  for input:  select a  body of  code  to be
@@ -1156,6 +1184,9 @@
 	   ($set-port-fast-attrs! ?port tag)
 	   (retry-after-tagging-port))
 	 (let ((m ($port-fast-attrs ?port)))
+	   ;;FIXME It  would be  better here to  use a  specialised CASE
+	   ;;form  capable of efficiently  dispatch evaluation  based on
+	   ;;fixnums.
 	   (cond ((unsafe.fx= m FAST-GET-UTF8-TAG)	. ?utf8-tag-body)
 		 ((unsafe.fx= m FAST-GET-CHAR-TAG)	. ?char-tag-body)
 		 ((unsafe.fx= m FAST-GET-LATIN-TAG)	. ?latin-tag-body)
@@ -1168,6 +1199,9 @@
 		 ((unsafe.fx= m FAST-GET-BYTE-TAG)
 		  (assertion-violation ?who "expected textual port" ?port))
 		 ((%unsafe.input-and-output-port? ?port)
+		  ;;FIXME It  would be better here to  use a specialised
+		  ;;CASE form capable of efficiently dispatch evaluation
+		  ;;based on fixnums.
 		  (cond ((unsafe.fx= m FAST-PUT-UTF8-TAG)
 			 (%reconfigure-as-input FAST-GET-UTF8-TAG))
 			((unsafe.fx= m FAST-PUT-CHAR-TAG)
@@ -1217,6 +1251,9 @@
 	   ($set-port-fast-attrs! ?port tag)
 	   (retry-after-tagging-port))
 	 (let ((m ($port-fast-attrs ?port)))
+	   ;;FIXME It  would be  better here to  use a  specialised CASE
+	   ;;form  capable of efficiently  dispatch evaluation  based on
+	   ;;fixnums.
 	   (cond ((unsafe.fx= m FAST-PUT-UTF8-TAG)	. ?utf8-tag-body)
 		 ((unsafe.fx= m FAST-PUT-CHAR-TAG)	. ?char-tag-body)
 		 ((unsafe.fx= m FAST-PUT-LATIN-TAG)	. ?latin-tag-body)
@@ -1225,6 +1262,9 @@
 		 ((unsafe.fx= m FAST-PUT-BYTE-TAG)
 		  (assertion-violation ?who "expected textual port" ?port))
 		 ((%unsafe.input-and-output-port? ?port)
+		  ;;FIXME It  would be better here to  use a specialised
+		  ;;CASE form capable of efficiently dispatch evaluation
+		  ;;based on fixnums.
 		  (cond ((unsafe.fx= m FAST-GET-UTF8-TAG)
 			 (%reconfigure-as-output FAST-PUT-UTF8-TAG))
 			((unsafe.fx= m FAST-GET-CHAR-TAG)
@@ -1268,30 +1308,6 @@
 
 
 ;;;; assertion helpers
-
-(define-syntax %debug-assert
-  ;;This is meant  to expand to nothing when  debugging is turned
-  ;;off.
-  ;;
-  ;;NOTE It should be better to define it as:
-  ;;
-  ;; (if #t
-  ;;     (syntax-rules ()
-  ;;       ((_ ?pred . ?continuation)
-  ;;        (begin (assert ?pred) . ?continuation)))
-  ;;   (syntax-rules ()
-  ;;     ((_ ?pred . ?continuation)
-  ;;      (begin . ?continuation))))
-  ;;
-  ;;but it would increase the indentation level.
-  ;;
-  (if #t
-      (syntax-rules ()
-  	((_ ?pred)
-  	 (assert ?pred)))
-    (syntax-rules ()
-      ((_ ?pred)
-       (values)))))
 
 (define-inline (%assert-argument-is-port ?port ?who)
   (unless (port? ?port)
@@ -4055,6 +4071,7 @@
   (%unsafe.assert-value-is-open-port   port who)
   (%unsafe.assert-argument-is-not-input/output-port port who)
   (with-port-having-bytevector-buffer (port)
+
     (let ((transcoded-port ($make-port
 			    (%unsafe.fxior
 			     (cond (port.is-input?
@@ -7248,7 +7265,7 @@
       fd)))
 
 (define (%file-descriptor->input-port fd other-attributes port-identifier buffer.size
-				      transcoder close-function who)
+				      maybe-transcoder close-function who)
   ;;Given the  fixnum file descriptor  FD representing an open  file for
   ;;the underlying platform: build and  return a Scheme input port to be
   ;;used to read the data.
@@ -7280,8 +7297,8 @@
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
   (let ((attributes		(%select-input-fast-tag-from-transcoder
-				 who transcoder other-attributes GUARDED-PORT-TAG
-				 (%select-eol-style-from-transcoder who transcoder)
+				 who maybe-transcoder other-attributes GUARDED-PORT-TAG
+				 (%select-eol-style-from-transcoder who maybe-transcoder)
 				 DEFAULT-OTHER-ATTRS))
 	(buffer.index		0)
 	(buffer.used-size	0)
@@ -7289,9 +7306,9 @@
 	(write!			#f)
 	(get-position		#t)
 	(cookie			(default-cookie fd)))
-
     (%port->maybe-guarded-port
-     ($make-port attributes buffer.index buffer.used-size buffer transcoder port-identifier
+     ($make-port attributes buffer.index buffer.used-size buffer
+		 maybe-transcoder port-identifier
 		 read! write! get-position set-position! close cookie))))
 
 (define (%file-descriptor->output-port fd other-attributes port-identifier buffer.size
@@ -7382,7 +7399,7 @@
 	     (%raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
 
   (let ((attributes		(%select-input/output-fast-tag-from-transcoder
-				 transcoder who other-attributes
+				 who transcoder other-attributes
 				 INPUT/OUTPUT-PORT-TAG GUARDED-PORT-TAG
 				 (%select-eol-style-from-transcoder who transcoder)
 				 DEFAULT-OTHER-ATTRS))
@@ -8089,8 +8106,14 @@
   ;;and   SET-PORT-POSITION!     operations   is   implementation
   ;;dependent.
   ;;
-  (%file-descriptor->input-port  0 0
-				 "*stdin*" (input-file-buffer-size) #f #f 'standard-input-port))
+  (let ((who		'standard-input-port)
+	(fd		0)
+	(attributes	0)
+	(port-id	"*stdin*")
+	(buffer.size	(input-file-buffer-size))
+	(transcoder	#f)
+	(close		#f))
+    (%file-descriptor->input-port fd attributes port-id buffer.size transcoder close who)))
 
 (define (standard-output-port)
   ;;Defined by  R6RS.  Return a new binary  output port connected
