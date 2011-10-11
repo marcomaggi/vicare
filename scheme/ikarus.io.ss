@@ -2,9 +2,9 @@
 ;;;
 ;;;Abstract
 ;;;
-;;;	Define and export almost all  the I/O functions mandated by R6RS
-;;;	plus some implementation-specific  functions.  See also the file
-;;;	"ikarus.codecs.ss".
+;;;	Define and  export all the  I/O functions mandated by  R6RS plus
+;;;	some  implementation-specific  functions.   See  also  the  file
+;;;	"ikarus.codecs.ss" for transcoders and codecs.
 ;;;
 ;;;	The functions  and macros prefixed  with "%" and  "unsafe."  are
 ;;;	not exported.   The functions  and macros prefixed  "unsafe." or
@@ -44,45 +44,11 @@
 ;;
 ;;* Write tests for all the untested functions.
 ;;
-;;* Move  the CLOSED?   bit in the  attributes into the  fast attributes
-;;bitvector?  It would make it easier to test for valid fast tagging.
-;;
-;;*  Test the  transcoders with  OPEN-BYTEVECTOR-OUTPUT-PORT, especially
-;;the SET-PORT-POSITION! function.
-;;
 ;;* FIXME If SET-PORT-POSITION!  fails  it is possible for the field POS
-;;of the cookie  to become invalid.  This situation  must be detected by
-;;all the functions, currently it is not.
+;;of  the  cookie to  become  invalid.  Should  the  port  be marked  as
+;;corrupted?
 ;;
 ;;* Write documentation for the Ikarus-specific functions.
-;;
-;;* When a decoding error occurs from an input port: R6RS states that an
-;;"appropriate" number of input octets must be skipped in search for the
-;;next character.   Implement this by  searching for the  next character
-;;beginning  discarding  the  minimum  possible number  of  octets,  for
-;;example in UTF-8 discard at most 3 octets.
-;;
-;;* Implement missing R6RS functions.
-;;
-;;* Exceptions  raised by  SET-PORT-POSITION!  must be  reviewed because
-;;they do not comply with R6RS.
-;;
-;;* R6RS states the following about SET-PORT-POSITION!:
-;;
-;;  If PORT  is a  binary output  port and the  current position  is set
-;;  beyond the current end of the  data in the underlying data sink, the
-;;  object is not  extended until new data is  written at that position.
-;;  The contents  of any intervening positions  are unspecified.  Binary
-;;  ports        created       by        OPEN-FILE-OUTPUT-PORT       and
-;;  OPEN-FILE-INPUT/OUTPUT-PORT  can always be  extended in  this manner
-;;  within  the limits  of the  underlying operating  system.   In other
-;;  cases, attempts  to set the port  beyond the current end  of data in
-;;  the underlying object may result in an exception with condition type
-;;  &i/o-invalid-position.
-;;
-;;* Change OPEN-STRING-INPUT-PORT  and OPEN-BYTEVECTOR-INPUT-PORT to use
-;;the string or buffer itself as  buffer when it is short enough, and to
-;;use a separate buffer otherwise.
 ;;
 
 
@@ -97,17 +63,17 @@
 ;;	    SZ		- number of octets/chars used in the input/output buffer,
 ;;          BUF		- input/output buffer,
 ;;          TR		- transcoder
-;;          ID		- an object describing the underlying device
+;;          ID		- a Scheme string describing the underlying device
 ;;          READ	- read procedure
 ;;          WRITE	- write procedure
 ;;          GETP	- get-position procedure
 ;;          SETP	- set-position procedure
 ;;          CL		- close procedure
-;;          COOKIE	- line and column tracker
+;;          COOKIE	- device, position, line and column tracking
 ;;  Build a new port structure and return a Scheme value referencing it.
 ;;  Notice  that the  underlying  device is  not  among the  constructor
-;;  arguments: it is implicitly referenced by the functions READ, WRITE,
-;;  GETP, SETP, CL.
+;;  arguments: it is  stored in the cookie and  implicitly referenced by
+;;  the functions READ, WRITE, GETP, SETP, CL.
 ;;
 ;;
 ;;Fields of a port block
@@ -115,6 +81,14 @@
 ;;
 ;;Field name: tag
 ;;Field accessor: $port-tag PORT
+;;  Extract  from  a  port  reference  a fixnum  representing  the  port
+;;  attributes.  If  PORT is  not a port  reference the return  value is
+;;  zero.
+;;
+;;Field accessor: $port-attrs PORT
+;;  Extract  from  a  port  reference  a fixnum  representing  the  port
+;;  attributes.  PORT must be a  port reference, otherwise the result is
+;;  unspecified.
 ;;
 ;;Field name: index
 ;;Field accessor: $port-index PORT
@@ -125,7 +99,7 @@
 ;;  For an  output port: it  is the offset  in the output buffer  of the
 ;;  next location to be written to.
 ;;
-;;  For an input port: it is the  offset of the input buffer of the next
+;;  For an input port: it is the  offset in the input buffer of the next
 ;;  location to be read from.
 ;;
 ;;Field name: size
@@ -134,9 +108,9 @@
 ;;  Fixnum representing the number of octets/chars currently used in the
 ;;  input/output buffer; see the description of the BUFFER field below.
 ;;
-;;  When the device is a Scheme  string or bytevector: this field is set
-;;  to the number of characters in the string or the number of octets in
-;;  the bytevector.
+;;  When the  device is a Scheme  string or bytevector  being itself the
+;;  device: this field is set to  the number of characters in the string
+;;  or the number of octets in the bytevector.
 ;;
 ;;Field name: buffer
 ;;Field accessor: $port-buffer PORT
@@ -145,17 +119,21 @@
 ;;  buffers is customisable through a set of parameters.
 ;;
 ;;  For the  logic of the functions to  work: it is mandatory  to have a
-;;  buffer at  least wide  enough to hold  the largest  UTF-8 character.
-;;  This is because  it is possible to put a transcoder  on top of every
-;;  binary port, and we need a  place to store partially read or written
-;;  characters.
+;;  buffer at  least wide  enough to hold  2 characters with  the widest
+;;  serialisation in  bytes.  This is because:  it is possible  to put a
+;;  transcoder on  top of every  binary port; we  need a place  to store
+;;  partially read  or written characters;  2 characters can be  read at
+;;  once when doing end-of-line (EOL) conversion.
 ;;
-;;  Custom  binary ports  have a  bytevector as  buffer;  custom textual
-;;  ports have a string as buffer.
+;;  Built in  binary port  types have a  bytevector as buffer;  built in
+;;  textual port  types may have  a bytevector as  buffer if they  use a
+;;  transcoder, or a string as  buffer.  Custom binary port types have a
+;;  bytevector as  buffer; custom  textual port types  have a  string as
+;;  buffer.
 ;;
 ;;  As  special cases: the  port returned  by OPEN-BYTEVECTOR-INPUT-PORT
-;;  has  the   bytevector  itself  as  buffer,  the   port  returned  by
-;;  OPEN-STRING-INPUT-PORT has the string itself as buffer.
+;;  has the  source bytevector  itself as buffer,  the port  returned by
+;;  OPEN-STRING-INPUT-PORT has the source string itself as buffer.
 ;;
 ;;  The port returned by OPEN-BYTEVECTOR-OUTPUT-PORT has a bytevector as
 ;;  buffer; the port returned by OPEN-STRING-OUTPUT-PORT has a string as
@@ -171,9 +149,9 @@
 ;;	   port position = device position + index
 ;;
 ;;                 device position
-;;                        v                        device
-;;	   |--------------+---------------------------|
-;;                        |*****+*******+--------| buffer
+;;                        v
+;;	   |--------------+---------------------------|device
+;;                        |*****+*******+--------|buffer
 ;;                        ^     ^       ^        ^
 ;;                        0   index  used-size  size
 ;;
@@ -185,34 +163,90 @@
 ;;	                 = device position - (used-size - index)
 ;;
 ;;                               device position
-;;                                      v           device
-;;	   |----------------------------+-------------|
-;;                      |*******+*******+--------| buffer
+;;                                      v
+;;	   |----------------------------+-------------|device
+;;                      |*******+*******+--------|buffer
 ;;                      ^       ^       ^        ^
 ;;                      0     index  used-size  size
 ;;
+;;  When the  port is  input and  the buffer is  itself the  device: the
+;;  device position is perpetually set  to the buffer size.  The current
+;;  port position is computed with:
+;;
+;;	   port position = device position - used-size + index = index
+;;
+;;                                              device position
+;;                                                    v
+;;	   |------------------------------------------|device
+;;         |*******+**********************************|buffer
+;;         ^               ^                          ^
+;;         0             index                used-size = size
+;;
+;;  When the  port is output  and the buffer  is itself the  device: the
+;;  device  position  is perpetually  set  to  zero.   The current  port
+;;  position is computed with:
+;;
+;;	   port position = device position + index = index
+;;
+;;     device position
+;;         v
+;;	   |------------------------------------------|device
+;;         |*******+**********************************|buffer
+;;         ^               ^                          ^
+;;         0             index                used-size = size
+;;
+;;
 ;;Field name: transcoder
+;;Field accessor: $port-transcoder PORT
+;;  A value  of disjoint type  returned by MAKE-TRANSCODER.   It encodes
+;;  the  Unicode  codec, the  end-of-line  conversion  sytle, the  error
+;;  handling modes for errors in the serialisation of characters.
 ;;
 ;;Field name: id
 ;;Field accessor: $port-id
-;;  An object  describing the underlying device.  For  a port associated
-;;  to a file: it is a Scheme string representing the file name given to
-;;  functions like OPEN-OUTPUT-FILE.
+;;  A  Scheme  string describing  the  underlying  device.   For a  port
+;;  associated to  a file: it is  a Scheme string  representing the file
+;;  name given to functions like OPEN-OUTPUT-FILE.
 ;;
 ;;Field name: read!
 ;;Field accessor: $port-read! PORT
-;;  Fill buffer procedure.
+;;  Fill buffer policy.
 ;;
-;;  When the value is a procedure:  it must be a function which, applied
-;;  to  the port  itself,  fills the  input  buffer with  data from  the
-;;  underlying device.
+;;  When  the value  is a  procedure,  it must  be a  function with  the
+;;  following signature:
+;;
+;;	READ! DST DST.START COUNT
+;;
+;;  DST.START will  be a non-negative  fixnum, COUNT will be  a positive
+;;  fixnum and  DST will be  a bytevector or  string whose length  is at
+;;  least  DST.START+COUNT.  The  procedure  should obtain  up to  COUNT
+;;  bytes  or characters  from the  device,  and should  write them  DST
+;;  starting at index DST.START.   The procedure should return a fixnum.
+;;  representing the number of bytes it  has read; to indicate an end of
+;;  file, the procedure should write no bytes and return 0.
 ;;
 ;;  When the value is the Scheme symbol ALL-DATA-IN-BUFFER: the port has
 ;;  no underlying device, the buffer itself is the device.
 ;;
+;;  When the value is #f: the port is output-only.
+;;
 ;;Field name: write!
 ;;Field accessor: $port-write! PORT
-;;  Write butter procedure.
+;;  Flush buffer policy.
+;;
+;;  When  the value  is a  procedure,  it must  be a  function with  the
+;;  following signature:
+;;
+;;	WRITE! SRC SRC.START COUNT
+;;
+;;  SRC.START and COUNT will be  non-negative fixnums, and SRC will be a
+;;  bytevector or string whose length is at least SRC.START+COUNT.
+;;
+;;  The procedure  should write up to  COUNT bytes from  SRC starting at
+;;  index SRC.START  to the device.   In any case, the  procedure should
+;;  return a fixnum representing the number of bytes it wrote.
+;;
+;;  When the value is #f: the port is input-only.
 ;;
 ;;Field name: get-position
 ;;Field accessor: $port-get-position PORT
@@ -241,7 +275,8 @@
 ;;
 ;;  - The value is a procedure when the underlying device has a position
 ;;  which cannot be tracked by the cookie's POS field.  This is the case
-;;  for all the custom ports having a device.
+;;  for  all the  custom  ports  having a  device.   When acquiring  the
+;;  position fails: the procedure must raise an exception.
 ;;
 ;;Field name: set-position!
 ;;Field accessor: $port-set-position! PORT
@@ -264,26 +299,31 @@
 ;;  For  example the  ports returned  by  OPEN-BYTEVECTOR-INPUT-PORT and
 ;;  OPEN-STRING-INPUT-PORT have the  buffer itself as underlying device;
 ;;  for these ports:  the POS field of the cookie  is perpetually set to
-;;  the buffer=device size.
+;;  zero or the buffer size.
 ;;
-;;  NOTE     At     present    only     the     ports    returned     by
-;;  OPEN-BYTEVECTOR-INPUT-PORT  and   OPEN-STRING-INPUT-PORT  have  this
-;;  policy,  so SET-PORT-POSITION!  is  optimised for  this case  (Marco
-;;  Maggi; Sep 21, 2011).
+;;     NOTE    At     present    only    the     ports    returned    by
+;;     OPEN-BYTEVECTOR-INPUT-PORT  and OPEN-STRING-INPUT-PORT  have this
+;;     policy, so SET-PORT-POSITION!  is  optimised for this case (Marco
+;;     Maggi; Sep 21, 2011).
 ;;
 ;;  -  The  value  is a  procedure  when  the  underlying device  has  a
-;;  position.
+;;  position.   When acquiring  the position  fails: the  procedure must
+;;  raise an exception.
+;;
+;;  While  buffer arithmetics  is  handled exclusively  by fixnums,  the
+;;  device position and the port position is represented by non-negative
+;;  exact integers (fixnums or bignums).
 ;;
 ;;Field name: close
 ;;Field accessor: $port-close PORT
-;;  Close device procedure.
+;;  Close device procedure.  It accepts no arguments.
 ;;
 ;;Field name: cookie
 ;;Field accessor: $port-cookie PORT
 ;;Field mutator: $set-port-cookie PORT COOKIE
-;;  A COOKIE  record used to keep  a reference to  the underlying device
-;;  and track its current position.   Additionally it can track line and
-;;  column numbers in textual ports.
+;;  A record of  type COOKIE used to keep a  reference to the underlying
+;;  device and  track its current  position.  Additionally it  can track
+;;  line and column numbers in textual input ports.
 ;;
 
 
@@ -311,31 +351,28 @@
 ;;* The output functions always write data to the buffer first.
 ;;
 ;;*  %UNSAFE.REFILL-INPUT-PORT-BYTEVECTOR-BUFFER  is  the only  function
-;;calling the  port's READ!  function, copying data  from the underlying
-;;device to the input buffer.
+;;calling the  port's READ!  function  for ports having a  bytevector as
+;;buffer; it copies data from the underlying device to the input buffer.
+;;
+;;* %UNSAFE.REFILL-INPUT-PORT-STRING-BUFFER is the only function calling
+;;the port's  READ!  function  for ports having  a string as  buffer; it
+;;copies data from the underlying device to the input buffer.
 ;;
 ;;* %UNSAFE.FLUSH-OUTPUT-PORT  is the  only function calling  the port's
-;;WRITE! function, copying data from the output buffer to the underlying
-;;device.
+;;WRITE! function for  both ports having a string  or bytevector buffer;
+;;if copies data from the output buffer to the underlying device.
 ;;
-;; --------------------------------------------------------------
+;; ---------------------------------------------------------------------
 ;;
 ;;From the constraints it follows that:
-;;
-;;* OPEN-STRING-INPUT-PORT and OPEN-BYTEVECTOR-INPUT-PORT will refuse to
-;;create a port to read characters or octets from a string or bytevector
-;;whose length exceeds the return value of GREATEST-FIXNUM.
 ;;
 ;;*  All the  arithmetics involving  the buffer  can be  performed using
 ;;unsafe fixnum functions.
 ;;
-;; --------------------------------------------------------------
+;; ---------------------------------------------------------------------
 ;;
 ;;The buffer mode is customisable only for output operations; the buffer
-;;mode  LINE is  ignored by  binary output  ports, resulting  in  a mode
-;;equivalent to BLOCK; the buffer mode is ignored by input ports.
-;;
-;;Buffer mode handling is as follows:
+;;mode is ignored by input ports.  Buffer mode handling is as follows:
 ;;
 ;;* When the  mode is NONE: data is first written  to the output buffer,
 ;;then immediately sent to the underlying device.
@@ -345,13 +382,6 @@
 ;;
 ;;* When the mode is BLOCK:  data is first written to the output buffer;
 ;;only when the buffer is full data is sent to the underlying device.
-;;
-;; --------------------------------------------------------------
-;;
-;;Things to notice:
-;;
-;;* The exact integer representing the current position of a port in the
-;;underlying device can be either a fixnum or a bignum.
 ;;
 
 
@@ -563,11 +593,11 @@
 		  ;; directory inspection
 		  open-directory-stream directory-stream?
 		  read-directory-stream close-directory-stream)
-    ;;This  internal library  is the  one  exporting: $MAKE-PORT,
-    ;;$PORT-* and $SET-PORT-* bindings.
+    ;;This internal  library is  the one exporting:  $MAKE-PORT, $PORT-*
+    ;;and $SET-PORT-* bindings.
     (ikarus system $io)
     (prefix (only (ikarus) port?) primop.)
-    (prefix (rename #;(ikarus system $fx) (ikarus fixnums unsafe)
+    (prefix (rename (ikarus system $fx) #;(ikarus fixnums unsafe)
 		    ($fxzero?	fxzero?)
 		    ($fxadd1	fxadd1)	 ;increment
 		    ($fxsub1	fxsub1)	 ;decrement
@@ -583,18 +613,18 @@
 		    ($fx<=	fx<=)
 		    ($fx=	fx=))
 	    unsafe.)
-    (prefix (rename #;(ikarus system $chars) (ikarus system chars)
+    (prefix (rename (ikarus system $chars) #;(ikarus system chars)
 		    ($char=		char=)
 		    ($char->fixnum	char->integer)
 		    ($fixnum->char	integer->char))
 	    unsafe.)
-    (prefix (rename #;(ikarus system $bytevectors) (ikarus system bytevectors)
+    (prefix (rename (ikarus system $bytevectors) #;(ikarus system bytevectors)
 		    ($make-bytevector	make-bytevector)
 		    ($bytevector-length	bytevector-length)
 		    ($bytevector-set!	bytevector-u8-set!)
 		    ($bytevector-u8-ref	bytevector-u8-ref))
 	    unsafe.)
-    (prefix (rename #;(ikarus system $strings) (ikarus system strings)
+    (prefix (rename (ikarus system $strings) #;(ikarus system strings)
 		    ($make-string	make-string)
 		    ($string-length	string-length)
 		    ($string-ref	string-ref)
@@ -605,11 +635,11 @@
 ;;;; emergency debugging
 
 (define (emergency-platform-write-fd str)
-  ;;Interface to  "write()".  In case something  goes wrong while
-  ;;modifying  the code  in  this  library, it  may  be that  the
-  ;;compiled image fails to  write understandable messages to the
-  ;;standard ports  using the R6RS functions.   This macro allows
-  ;;direct interface to the platform's stderr.
+  ;;Interface to the system  "write()" function.  In case something goes
+  ;;wrong while modifying  the code in this library, it  may be that the
+  ;;compiled  image  fails  to  write  understandable  messages  to  the
+  ;;standard ports  using the R6RS functions.  This  macro allows direct
+  ;;interface to the platform's stderr.
   ;;
   (let ((bv (string->utf8 str)))
     (foreign-call "ikrt_write_fd" 2 bv 0 (unsafe.bytevector-length bv))
@@ -635,8 +665,10 @@
 
 ;;;; port tags
 ;;
-;;All the tags have 24 bits.  The least significant 13 bits are reserved
-;;as the "fast attributes", which is used by the macros:
+;;Each  port has  a tag  retrievable with  the $PORT-TAG  or $PORT-ATTRS
+;;primitive  operations.   All  the   tags  have  24  bits.   The  least
+;;significant  14 bits  are reserved  as  "fast attributes"  and can  be
+;;independently extracted as a fixnum used by the macros:
 ;;
 ;;   %CASE-TEXTUAL-INPUT-PORT-FAST-TAG
 ;;   %CASE-TEXTUAL-OUTPUT-PORT-FAST-TAG
@@ -644,7 +676,7 @@
 ;;   %CASE-BINARY-OUTPUT-PORT-FAST-TAG
 ;;
 ;;to  quickly select  code to  run for  I/O operations  on a  port.  The
-;;following bitpatterns are used  to compose the "fast attributes"; note
+;;following bitpatterns  are used to  compose the fast  attributes; note
 ;;that bits  9, 10,  11 and  12 are currently  unused and  available for
 ;;additional codecs:
 ;;
@@ -666,18 +698,21 @@
 (define INIT-U16-TEXT-TAG		#b00000110000000)
 (define CLOSED-PORT-TAG			#b10000000000000)
 
-;;The following bitpatterns are  used for additional attributes.  Notice
-;;that there  is no  BUFFER-MODE-BLOCK-TAG bit: only  for LINE  and NONE
-;;buffering something must be done.
+;;The following bitpatterns are  used for additional attributes ("other"
+;;attributes in the code).
+;;
+;;Notice that there  is no BUFFER-MODE-BLOCK-TAG bit: only  for LINE and
+;;NONE  buffering  something  must   be  done.   BLOCK  buffer  mode  is
+;;represented by setting to zero the 2 block mode bits.
 ;;
 ;;                                        321098765432109876543210
-;;       non-fast-tag bits                ||||||||||
-;;       true if I/O port                          |
-;;       buffer mode bits                        ||
-;;       true if guarded port                   |
-;;       true if extract function              |
-;;       EOL style bits                     |||
-;;       unused bits                      ||
+;;                      non-fast-tag bits ||||||||||
+;;  true if port is both input and output          |
+;;                       buffer mode bits        ||
+;;        true if port is in the guardian       |
+;;   true if port has an extract function      |
+;;                         EOL style bits   |||
+;;                            unused bits ||
 ;;                                        321098765432109876543210
 (define INPUT/OUTPUT-PORT-TAG		#b000000000100000000000000)
 		;Used to tag ports that are both input and output.
@@ -704,10 +739,10 @@
 (define EOL-NEXT-LINE-TAG			#b001000000000000000000000) ;;symbol -> nel
 (define EOL-CARRIAGE-RETURN-NEXT-LINE-TAG	#b001010000000000000000000) ;;symbol -> crnel
 (define EOL-LINE-SEPARATOR-TAG			#b001100000000000000000000) ;;symbol -> ls
-		;Used to  tag textual ports with end  of line conversion
-		;style.
+		;Used  to  tag  textual  ports  with  end-of-line  (EOL)
+		;conversion style.
 
-(define DEFAULT-OTHER-ATTRS		#b000000000000000000000000)
+(define DEFAULT-OTHER-ATTRS			#b000000000000000000000000)
 		;Default  non-fast attributes:  non-guarded  port, block
 		;buffer mode, no extraction function, EOL style none.
 
@@ -1312,7 +1347,10 @@
   (unless (and (or (fixnum? position)
 		   (bignum? position))
 	       (>= position 0))
-    (assertion-violation who "position must be a nonnegative exact integer" position)))
+    (raise
+     (condition (make-who-condition who)
+		(make-message-condition "position must be a nonnegative exact integer")
+		(make-i/o-invalid-position-error position)))))
 
 (define-inline (%assert-value-is-get-position-result ?position ?port ?who)
   (unless (and (or (fixnum? ?position)
@@ -4472,7 +4510,7 @@
 ;;state.
 ;;
 ;;The  following macros  make  it  easier to  handle  this mechanism  by
-;;wrapping the %UNSAFE.REFILL-INPUT-PORT-string-BUFFER function.
+;;wrapping the %UNSAFE.REFILL-INPUT-PORT-STRING-BUFFER function.
 ;;
 
 (define-syntax %refill-string-buffer-and-evaluate
