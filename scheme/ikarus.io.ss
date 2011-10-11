@@ -697,6 +697,7 @@
 
 ;;                                                321098765432109876543210
 (define EOL-STYLE-MASK				#b001110000000000000000000)
+(define EOL-STYLE-NOT-MASK			#b110001111111111111111111)
 (define EOL-LINEFEED-TAG			#b000010000000000000000000) ;;symbol -> lf
 (define EOL-CARRIAGE-RETURN-TAG			#b000100000000000000000000) ;;symbol -> cr
 (define EOL-CARRIAGE-RETURN-LINEFEED-TAG	#b000110000000000000000000) ;;symbol -> crlf
@@ -942,20 +943,6 @@
 (define NEXT-LINE-CHAR			#\x0085) ;; U+0085
 (define LINE-SEPARATOR-CHAR		#\x2028) ;; U+2028
 
-#|
-(vector-ref (unsafe.fxsra (unsafe.fxand ($port-attrs port)
-					EOL-STYLE-MASK)
-			  19)
-	    EOL-STYLE-VECTOR)
-
-(define EOL-STYLE-VECTOR
-  '#( ;;
-     <NONE>
-     <EOL-LINEFEED-TAG>				<EOL-CARRIAGE-RETURN-TAG>
-     <EOL-CARRIAGE-RETURN-LINEFEED-TAG>		<EOL-NEXT-LINE-TAG>
-     <EOL-CARRIAGE-RETURN-NEXT-LINE-TAG>	<EOL-LINE-SEPARATOR-TAG>))
-|#
-
 (define (%select-eol-style-from-transcoder who maybe-transcoder)
   ;;Given a  transcoder return the non-fast  attributes representing the
   ;;selected end of line conversion style.
@@ -990,6 +977,9 @@
 
 (define-inline (%unsafe.port-eol-style-bits ?port)
   (unsafe.fxand EOL-STYLE-MASK ($port-attrs ?port)))
+
+(define-inline (%unsafe.port-nullify-eol-style-bits attributes)
+  (unsafe.fxand EOL-STYLE-NOT-MASK attributes))
 
 (define-syntax %case-eol-style
   (lambda (stx)
@@ -4006,8 +3996,7 @@
 				    (%select-output-fast-tag-from-transcoder transcoder who))
 				   (else
 				    (assertion-violation who "port is neither input nor output!" port)))
-			     ;;nullify EOL style bits
-			     (unsafe.fxand EOL-STYLE-MASK port.other-attributes)
+			     (%unsafe.port-nullify-eol-style-bits port.other-attributes)
 			     (%select-eol-style-from-transcoder who transcoder))
 			    port.buffer.index port.buffer.used-size port.buffer
 			    transcoder port.id
