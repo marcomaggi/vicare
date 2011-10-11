@@ -4362,11 +4362,13 @@
        (if-end-of-file:		. ?end-of-file-body)
        (if-successful-refill:	. ?after-refill-body)
        (if-available-data:	. ?available-data-body))
-     (if (unsafe.fx< ?buffer.offset ($port-size ?port))
-	 (begin . ?available-data-body)
-       (%refill-bytevector-buffer-and-evaluate (?port ?who)
-	 (if-end-of-file:	. ?end-of-file-body)
-	 (if-successful-refill:	. ?after-refill-body))))))
+     (let ((port ?port))
+       (with-port-having-string-buffer (port)
+	 (if (unsafe.fx< ?buffer.offset port.buffer.used-size)
+	     (begin . ?available-data-body)
+	   (%refill-bytevector-buffer-and-evaluate (?port ?who)
+	     (if-end-of-file:	. ?end-of-file-body)
+	     (if-successful-refill:	. ?after-refill-body))))))))
 
 (define (%unsafe.refill-input-port-bytevector-buffer port who)
   ;;Assume PORT  is an  input port object  with a bytevector  as buffer.
@@ -4511,11 +4513,13 @@
        (if-end-of-file:		. ?end-of-file-body)
        (if-successful-refill:	. ?after-refill-body)
        (if-available-data:	. ?available-data-body))
-     (if (unsafe.fx< ?buffer.offset ($port-size ?port))
-	 (begin . ?available-data-body)
-       (%refill-string-buffer-and-evaluate (?port ?who)
-	 (if-end-of-file:	. ?end-of-file-body)
-	 (if-successful-refill:	. ?after-refill-body))))))
+     (let ((port ?port))
+       (with-port-having-string-buffer (port)
+	 (if (unsafe.fx< ?buffer.offset port.buffer.used-size)
+	     (begin . ?available-data-body)
+	   (%refill-string-buffer-and-evaluate (?port ?who)
+	     (if-end-of-file: . ?end-of-file-body)
+	     (if-successful-refill: . ?after-refill-body))))))))
 
 (define (%unsafe.refill-input-port-string-buffer port who)
   ;;Assume PORT is  an input port object with a  string as buffer.  Fill
@@ -4952,7 +4956,7 @@
 	      ch)))))
 
       ((FAST-GET-LATIN-TAG)
-       (let ((ch (%unsafe.read-char-from-port-with-fast-get-latin-tag port who)))
+       (let ((ch (%unsafe.read-char-from-port-with-fast-get-latin1-tag port who)))
 	 (define-inline (%convert-single external-ch)
 	   (if (unsafe.char= ch external-ch)
 	       LINEFEED-CHAR
@@ -4962,12 +4966,12 @@
 	       (%convert-double-sub ch external-ch1 external-ch2)
 	     ch))
 	 (define (%convert-double-sub ch external-ch1 external-ch2)
-	   (let ((ch2 (%unsafe.peek-char-from-port-with-fast-get-latin-tag port who)))
+	   (let ((ch2 (%unsafe.peek-char-from-port-with-fast-get-latin1-tag port who)))
 	     (cond ((eof-object? ch2)
 		    (assertion-violation who
 		      "unexpected end of input while processing end of line conversion" ch))
 		   ((unsafe.char= ch2 external-ch2)
-		    (%unsafe.read-char-from-port-with-fast-get-latin-tag port who)
+		    (%unsafe.read-char-from-port-with-fast-get-latin1-tag port who)
 		    LINEFEED-CHAR)
 		   (else ch))))
 	 (if (eof-object? ch)
@@ -5083,18 +5087,112 @@
     (%do-peek-char port 'peek-char))))
 
 (define (%do-peek-char port who)
-  (%assert-argument-is-port port who)
-  (%case-textual-input-port-fast-tag (port who)
-    ((FAST-GET-UTF8-TAG)
-     (%unsafe.peek-char-from-port-with-fast-get-utf8-tag port who))
-    ((FAST-GET-CHAR-TAG)
-     (%unsafe.peek-char-from-port-with-fast-get-char-tag port who))
-    ((FAST-GET-LATIN-TAG)
-     (%unsafe.peek-char-from-port-with-fast-get-latin-tag port who))
-    ((FAST-GET-UTF16LE-TAG)
-     (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little 0))
-    ((FAST-GET-UTF16BE-TAG)
-     (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big    0))))
+  (define-inline (main)
+    (%assert-argument-is-port port who)
+    (let ((eol-bits (%unsafe.port-eol-style-bits port)))
+      (%case-textual-input-port-fast-tag (port who)
+	((FAST-GET-UTF8-TAG)
+	 (%do-it eol-bits 1
+		 %unsafe.peek-char-from-port-with-fast-get-utf8-tag
+		 %unsafe.peek-char-from-port-with-utf8-codec))
+	((FAST-GET-CHAR-TAG)
+	 (%do-it eol-bits 1 %peek-char %peek-char/offset))
+	((FAST-GET-LATIN-TAG)
+	 (%do-it eol-bits 1 %peek-latin1 %peek-latin1/offset))
+	((FAST-GET-UTF16LE-TAG)
+	 (%do-it eol-bits 2 %peek-utf16le %peek-utf16le/offset))
+	((FAST-GET-UTF16BE-TAG)
+	 (%do-it eol-bits 2 %peek-utf16be %peek-utf16be/offset)))))
+
+  (define-inline (%do-it eol-bits ?offset-of-ch2 ?peek-char ?peek-char/offset)
+    ;;Actually  perform the  lookahead.   Return the  next char  without
+    ;;modifying  the  port position.   If  no  characters are  available
+    ;;return  the EOF  object.   If  the first  character  of a  2-chars
+    ;;end-of-line (EOL) is found, but an attempt to read the second char
+    ;;returns EOF: raise an assertion violation.
+    ;;
+    ;;EOL-BITS must be the port attribute bits to select the EOL style.
+    ;;
+    ;;?PEEK-CHAR  must  be the  identifier  of  a  macro performing  the
+    ;;lookahead operation  for the next available character;  it is used
+    ;;to peek the  next single char and the first char  in a sequence of
+    ;;2-chars EOL.
+    ;;
+    ;;?PEEK-CHAR/OFFSET must be the identifier of a macro performing the
+    ;;forward lookahead operation for the second character in a sequence
+    ;;of 2-chars EOL.
+    ;;
+    ;;?OFFSET-OF-CH2 is the  offset of the second char  in a sequence of
+    ;;2-chars EOL;  for ports having bytevector buffer:  it is expressed
+    ;;in  bytes; for  ports having  string  buffer: it  is expressed  in
+    ;;characters.   Fortunately:  2-chars EOL  sequences  always have  a
+    ;;carriage return as first char and we know that, once the codec has
+    ;;been selected,  with all the EOL  styles the offset  of the second
+    ;;char after CR is the same.
+    ;;
+    (let ((ch (?peek-char port who)))
+      (define-inline (%convert-single external-ch)
+	(if (unsafe.char= ch external-ch)
+	    LINEFEED-CHAR
+	  ch))
+      (define-inline (%convert-double external-ch1 external-ch2)
+	(if (unsafe.char= ch external-ch1)
+	    (%convert-double-sub ch external-ch1 external-ch2)
+	  ch))
+      (define (%convert-double-sub ch external-ch1 external-ch2)
+	(let ((ch2 (?peek-char/offset port who ?offset-of-ch2)))
+	  (cond ((eof-object? ch2)
+		 (assertion-violation who
+		   "unexpected end of input while processing end of line conversion" ch))
+		((unsafe.char= ch2 external-ch2)
+		 LINEFEED-CHAR)
+		(else ch))))
+      (if (eof-object? ch)
+	  ch
+	;;We do not detect  here invalid association between the Latin-1
+	;;codec and EOL styles NEL, CRNEL  and LS; we trust the state of
+	;;the port to be correct.
+	(%case-eol-style (eol-bits who)
+	  ((EOL-LINEFEED-TAG)
+	   ch)
+	  ((EOL-CARRIAGE-RETURN-TAG)
+	   (%convert-single CARRIAGE-RETURN-CHAR))
+	  ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+	   (%convert-double CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+	  ((EOL-NEXT-LINE-TAG)
+	   (%convert-single NEXT-LINE-CHAR))
+	  ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+	   (%convert-double CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+	  ((EOL-LINE-SEPARATOR-TAG)
+	   (%convert-single LINE-SEPARATOR-CHAR))
+	  (else
+	   ch)))))
+
+  (define-inline (%peek-char ?port ?who)
+    (%unsafe.peek-char-from-port-with-fast-get-char-tag ?port ?who))
+
+  (define-inline (%peek-char/offset ?port ?who ?offset)
+    (%unsafe.read/peek-char-from-port-with-string-buffer ?port ?who 0 ?offset))
+
+  (define-inline (%peek-latin1 ?port ?who)
+    (%unsafe.peek-char-from-port-with-fast-get-latin1-tag ?port ?who))
+
+  (define-inline (%peek-latin1/offset ?port ?who ?offset)
+    (%unsafe.read/peek-char-from-port-with-latin1-codec ?port ?who 0 ?offset))
+
+  (define-inline (%peek-utf16le ?port ?who)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
+
+  (define-inline (%peek-utf16le/offset ?port ?who ?offset)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little ?offset))
+
+  (define-inline (%peek-utf16be ?port ?who)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
+
+  (define-inline (%peek-utf16be/offset ?port ?who ?offset)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big ?offset))
+
+  (main))
 
 ;;; --------------------------------------------------------------------
 ;;; GET-CHAR and LOOKAHEAD-CHAR for ports with UTF-8 transcoder
@@ -5687,9 +5785,12 @@
   ;;selected in the PORT's transcoder.
   ;;
   ;;BUFFER-OFFSET  must be  the offset  to add  to  PORT.BUFFER.INDEX to
-  ;;obtain the index of the next byte  in the buffer to read; it must be
-  ;;zero upon entering  this function; it is used  in recursive calls to
-  ;;this function to implement the IGNORE error handling method.
+  ;;obtain the index of the next byte in the buffer to read.  When doing
+  ;;normal lookahead: it must be zero upon entering this function; it is
+  ;;used in  recursive calls  to this function  to implement  the IGNORE
+  ;;error handling  method.  When doing  double lookahead for  EOL style
+  ;;conversion it  can be the offset  of the expected second  char in an
+  ;;EOL sequence.
   ;;
   (with-port-having-bytevector-buffer (port)
     (define-inline (recurse buffer-offset)
@@ -5829,7 +5930,7 @@
 ;;; --------------------------------------------------------------------
 ;;; GET-CHAR and LOOKAHEAD-CHAR for ports with Latin-1 transcoder
 
-(define-inline (%unsafe.read-char-from-port-with-fast-get-latin-tag ?port ?who)
+(define-inline (%unsafe.read-char-from-port-with-fast-get-latin1-tag ?port ?who)
   ;;PORT must be a textual input port with bytevector buffer and Latin-1
   ;;transcoder.   Knowing that Latin-1  characters are  1 byte  wide: we
   ;;process here  the simple case of  one char available  in the buffer,
@@ -5846,9 +5947,9 @@
 		(if (unsafe.fx= byte NEWLINE-CODE-POINT)
 		    (%mark/return-newline port)
 		  (unsafe.integer->char byte))))
-	  (%unsafe.read/peek-char-from-port-with-latin-codec port ?who 1))))))
+	  (%unsafe.read/peek-char-from-port-with-latin1-codec port ?who 1 0))))))
 
-(define-inline (%unsafe.peek-char-from-port-with-fast-get-latin-tag ?port ?who)
+(define-inline (%unsafe.peek-char-from-port-with-fast-get-latin1-tag ?port ?who)
   ;;PORT must be a textual input port with bytevector buffer and Latin-1
   ;;transcoder.   Knowing that Latin-1  characters are  1 byte  wide: we
   ;;process here  the simple case of  one char available  in the buffer,
@@ -5860,27 +5961,47 @@
       (let ((buffer.offset-byte port.buffer.index))
 	(if (unsafe.fx< buffer.offset-byte port.buffer.used-size)
 	    (unsafe.integer->char (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte))
-	  (%unsafe.read/peek-char-from-port-with-latin-codec port ?who 0))))))
+	  (%unsafe.read/peek-char-from-port-with-latin1-codec port ?who 0 0))))))
 
-(define (%unsafe.read/peek-char-from-port-with-latin-codec port who buffer-index-increment)
+(define (%unsafe.read/peek-char-from-port-with-latin1-codec port who buffer-index-increment offset)
   ;;Subroutine of %DO-READ-CHAR or %DO-PEEK-CHAR.  PORT must be a textual
   ;;input  port  with bytevector  buffer  and  Latin-1 transcoder;  such
   ;;buffer must be already fully consumed.
   ;;
   ;;Refill  the input  buffer  reading from  the  underlying device  and
-  ;;return the next  Scheme character from the buffer,  consuming it; if
-  ;;EOF is  found while reading  from the underlying device:  return the
-  ;;EOF object.  When BUFFER-INDEX-INCREMENT  is 1 this function acts as
-  ;;GET-CHAR, when it is 0 this function acts like LOOKAHEAD-CHAR.
+  ;;return the a Scheme character from the buffer; if EOF is found while
+  ;;reading from the underlying device: return the EOF object.
+  ;;
+  ;;When  BUFFER-INDEX-INCREMENT=1 and  OFFSET=0 this  function  acts as
+  ;;GET-CHAR: it reads the next  character and consumes it advancing the
+  ;;port position.
+  ;;
+  ;;When  BUFFER-INDEX-INCREMENT=0 and  OFFSET=0 this  function  acts as
+  ;;PEEK-CHAR:  it  returns  the  next  character and  leaves  the  port
+  ;;position unchanged.
+  ;;
+  ;;When  BUFFER-INDEX-INCREMENT=0 and  OFFSET>0 this  function  acts as
+  ;;forwards PEEK-CHAR:  it reads the  the character at OFFSET  from the
+  ;;current buffer  index and leaves the port  position unchanged.  This
+  ;;usage is needed when converting EOL styles for PEEK-CHAR.  When this
+  ;;usage is desired: usually it is OFFSET=1.
+  ;;
+  ;;Other  combinations  of  BUFFER-INDEX-INCREMENT  and  OFFSET,  while
+  ;;possible, should not be needed.
   ;;
   (with-port-having-bytevector-buffer (port)
-    (%debug-assert (unsafe.fx= port.buffer.index port.buffer.used-size))
-    (%refill-bytevector-buffer-and-evaluate (port who)
-      (if-end-of-file: (eof-object))
-      (if-successful-refill:
-       (let ((buffer.offset port.buffer.index))
-	 (port.buffer.index.incr! buffer-index-increment)
-	 (unsafe.integer->char (unsafe.bytevector-u8-ref port.buffer buffer.offset)))))))
+    (define (%available-data buffer.offset)
+      (unless (unsafe.fxzero? buffer-index-increment)
+	(port.buffer.index.incr! buffer-index-increment))
+      (unsafe.integer->char (unsafe.bytevector-u8-ref port.buffer buffer.offset)))
+    (let ((buffer.offset (unsafe.fx+ offset port.buffer.index)))
+      (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	(data-is-needed-at: buffer.offset)
+	(if-end-of-file: (eof-object))
+	(if-successful-refill:
+	 ;;After refilling we must reload buffer indexes.
+	 (%available-data (unsafe.fx+ offset port.buffer.index)))
+	(if-available-data: (%available-data buffer.offset))))))
 
 ;;; --------------------------------------------------------------------
 ;;; GET-CHAR and LOOKAHEAD-CHAR for ports with string buffer
@@ -5900,7 +6021,7 @@
 		(if (unsafe.char= ch #\newline)
 		    (%mark/return-newline port)
 		  ch)))
-	  (%unsafe.read/peek-char-from-port-with-string-buffer port ?who 1))))))
+	  (%unsafe.read/peek-char-from-port-with-string-buffer port ?who 1 0))))))
 
 (define-inline (%unsafe.peek-char-from-port-with-fast-get-char-tag ?port ?who)
   ;;PORT must  be a textual input  port with a Scheme  string as buffer.
@@ -5912,27 +6033,47 @@
       (let ((buffer.offset-char port.buffer.index))
 	(if (unsafe.fx< buffer.offset-char port.buffer.used-size)
 	    (unsafe.string-ref port.buffer buffer.offset-char)
-	  (%unsafe.read/peek-char-from-port-with-string-buffer port ?who 0))))))
+	  (%unsafe.read/peek-char-from-port-with-string-buffer port ?who 0 0))))))
 
-(define (%unsafe.read/peek-char-from-port-with-string-buffer port who buffer-index-increment)
+(define (%unsafe.read/peek-char-from-port-with-string-buffer port who buffer-index-increment offset)
   ;;Subroutine  of  %DO-READ-CHAR  or  %DO-PEEK-CHAR.  PORT  must  be  a
   ;;textual input port with a  Scheme string as buffer; such buffer must
   ;;have been already fully consumed.
   ;;
   ;;Refill  the input  buffer  reading from  the  underlying device  and
-  ;;return the next  Scheme character from the buffer,  consuming it; if
-  ;;EOF is  found while reading  from the underlying device:  return the
-  ;;EOF object.  When BUFFER-INDEX-INCREMENT  is 1 this function acts as
-  ;;GET-CHAR, when it is 0 this function acts like LOOKAHEAD-CHAR.
+  ;;return the a Scheme character from the buffer; if EOF is found while
+  ;;reading from the underlying device: return the EOF object.
+  ;;
+  ;;When  BUFFER-INDEX-INCREMENT=1 and  OFFSET=0 this  function  acts as
+  ;;GET-CHAR: it reads the next  character and consumes it advancing the
+  ;;port position.
+  ;;
+  ;;When  BUFFER-INDEX-INCREMENT=0 and  OFFSET=0 this  function  acts as
+  ;;PEEK-CHAR:  it  returns  the  next  character and  leaves  the  port
+  ;;position unchanged.
+  ;;
+  ;;When  BUFFER-INDEX-INCREMENT=0 and  OFFSET>0 this  function  acts as
+  ;;forwards PEEK-CHAR:  it reads the  the character at OFFSET  from the
+  ;;current buffer  index and leaves the port  position unchanged.  This
+  ;;usage is needed when converting EOL styles for PEEK-CHAR.  When this
+  ;;usage is desired: usually it is OFFSET=1.
+  ;;
+  ;;Other  combinations  of  BUFFER-INDEX-INCREMENT  and  OFFSET,  while
+  ;;possible, should not be needed.
   ;;
   (with-port-having-string-buffer (port)
-    (%debug-assert (unsafe.fx= port.buffer.index port.buffer.used-size))
-    (%refill-string-buffer-and-evaluate (port who)
-      (if-end-of-file: (eof-object))
-      (if-successful-refill:
-       (let ((buffer.offset port.buffer.index))
-	 (port.buffer.index.incr! buffer-index-increment)
-	 (unsafe.string-ref port.buffer buffer.offset))))))
+    (define (%available-data buffer.offset)
+      (unless (unsafe.fxzero? buffer-index-increment)
+	(port.buffer.index.incr! buffer-index-increment))
+      (unsafe.string-ref port.buffer buffer.offset))
+    (let ((buffer.offset (unsafe.fx+ offset port.buffer.index)))
+      (%maybe-refill-string-buffer-and-evaluate (port who)
+	(data-is-needed-at: buffer.offset)
+	(if-end-of-file: (eof-object))
+	(if-successful-refill:
+	 ;;After refilling we must reload buffer indexes.
+	 (%available-data (unsafe.fx+ offset port.buffer.index)))
+	(if-available-data: (%available-data buffer.offset))))))
 
 
 ;;;; string input
@@ -5977,8 +6118,8 @@
 		  %unsafe.peek-char-from-port-with-fast-get-char-tag))
 	((FAST-GET-LATIN-TAG)
 	 (%get-it eol-bits dst.past
-		  %unsafe.read-char-from-port-with-fast-get-latin-tag
-		  %unsafe.peek-char-from-port-with-fast-get-latin-tag))
+		  %unsafe.read-char-from-port-with-fast-get-latin1-tag
+		  %unsafe.peek-char-from-port-with-fast-get-latin1-tag))
 	((FAST-GET-UTF16LE-TAG)
 	 (%get-it eol-bits dst.past %read-utf16le %peek-utf16le))
 	((FAST-GET-UTF16BE-TAG)
@@ -6199,8 +6340,8 @@
 		  %unsafe.peek-char-from-port-with-fast-get-char-tag))
 	((FAST-GET-LATIN-TAG)
 	 (%get-it eol-bits
-		  %unsafe.read-char-from-port-with-fast-get-latin-tag
-		  %unsafe.peek-char-from-port-with-fast-get-latin-tag))
+		  %unsafe.read-char-from-port-with-fast-get-latin1-tag
+		  %unsafe.peek-char-from-port-with-fast-get-latin1-tag))
 	((FAST-GET-UTF16LE-TAG)
 	 (%get-it eol-bits %read-utf16le %peek-utf16le))
 	((FAST-GET-UTF16BE-TAG)

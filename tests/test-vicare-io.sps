@@ -11233,6 +11233,235 @@
   #t)
 
 
+(parametrise ((check-test-name	'eol-conversion-input-peek))
+
+  (define NEWLINE-CODE-POINT		#x000A) ;; U+000A
+  (define LINEFEED-CODE-POINT		#x000A) ;; U+000A
+  (define CARRIAGE-RETURN-CODE-POINT	#x000D) ;; U+000D
+  (define NEXT-LINE-CODE-POINT		#x0085) ;; U+0085
+  (define LINE-SEPARATOR-CODE-POINT	#x2028) ;; U+2028
+
+  (define NEWLINE-CHAR			#\x000A) ;; U+000A
+  (define LINEFEED-CHAR			#\x000A) ;; U+000A
+  (define CARRIAGE-RETURN-CHAR		#\x000D) ;; U+000D
+  (define NEXT-LINE-CHAR		#\x0085) ;; U+0085
+  (define LINE-SEPARATOR-CHAR		#\x2028) ;; U+2028
+
+  (define (%bytevector string->bytevector . chars)
+    (string->bytevector (apply string chars)))
+
+  (define-syntax open-port
+    (syntax-rules (=>)
+      ((_ ?style ?codec ?string->bytevector => (?char ...))
+       (open-bytevector-input-port (%bytevector ?string->bytevector ?char ...)
+				   (make-transcoder (?codec) ?style)))))
+
+  (define the-eol		(make-parameter #f))
+  (define the-codec		(make-parameter #f))
+  (define string-to-bytevector	(make-parameter #f))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?result)
+       (check
+	   (peek-char (open-port (the-eol) (the-codec) (string-to-bytevector) => (?result)))
+	 => ?result))
+      ((_ ?result (?char ...))
+       (check
+	   (peek-char (open-port (the-eol) (the-codec) (string-to-bytevector) => (?char ...)))
+	 => ?result))))
+
+  (define-syntax doit-incomplete-eol
+    (syntax-rules ()
+      ((_ ?char)
+       (check
+	   (guard (E ((assertion-violation? E)
+;;;		      (pretty-print (condition-message E))
+		      (condition-irritants E))
+		     (else E))
+	     (peek-char (open-port (the-eol) (the-codec) (string-to-bytevector) => (?char))))
+	 => `(,?char)))))
+
+  (define (string->utf16le str)
+    (string->utf16 str (endianness little)))
+
+  (define (string->utf16be str)
+    (string->utf16 str (endianness big)))
+
+  (define (do-all-no-conversion)
+    (parametrise ((the-codec		latin-1-codec)
+		  (string-to-bytevector	string->latin1))
+      (doit LINEFEED-CHAR)
+      (doit CARRIAGE-RETURN-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR)))
+    (parametrise ((the-codec		utf-8-codec)
+		  (string-to-bytevector	string->utf8))
+      (doit LINEFEED-CHAR)
+      (doit CARRIAGE-RETURN-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+      (doit NEXT-LINE-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+      (doit LINE-SEPARATOR-CHAR))
+    (parametrise ((the-codec		utf-16le-codec)
+		  (string-to-bytevector	string->utf16le))
+      (doit LINEFEED-CHAR)
+      (doit CARRIAGE-RETURN-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+      (doit NEXT-LINE-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+      (doit LINE-SEPARATOR-CHAR))
+    (parametrise ((the-codec		utf-16be-codec)
+		  (string-to-bytevector	string->utf16be))
+      (doit LINEFEED-CHAR)
+      (doit CARRIAGE-RETURN-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+      (doit NEXT-LINE-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+      (doit LINE-SEPARATOR-CHAR)))
+
+;;; --------------------------------------------------------------------
+;;; transcoded ports
+
+  (parametrise ((the-eol (eol-style none)))
+    (do-all-no-conversion))
+
+  (parametrise ((the-eol (eol-style lf)))
+    (do-all-no-conversion))
+
+  (parametrise ((the-eol (eol-style crlf)))
+    (parametrise ((the-codec		latin-1-codec)
+		  (string-to-bytevector	string->latin1))
+      (doit LINEFEED-CHAR)
+      (doit-incomplete-eol CARRIAGE-RETURN-CHAR)
+      (doit LINEFEED-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR)))
+    (parametrise ((the-codec		utf-8-codec)
+		  (string-to-bytevector	string->utf8))
+      (doit LINEFEED-CHAR)
+      (doit-incomplete-eol CARRIAGE-RETURN-CHAR)
+      (doit LINEFEED-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+      (doit NEXT-LINE-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+      (doit LINE-SEPARATOR-CHAR))
+    (parametrise ((the-codec		utf-16le-codec)
+		  (string-to-bytevector	string->utf16le))
+      (doit LINEFEED-CHAR)
+      (doit-incomplete-eol CARRIAGE-RETURN-CHAR)
+      (doit LINEFEED-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+      (doit NEXT-LINE-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+      (doit LINE-SEPARATOR-CHAR))
+    (parametrise ((the-codec		utf-16be-codec)
+		  (string-to-bytevector	string->utf16be))
+      (doit LINEFEED-CHAR)
+      (doit-incomplete-eol CARRIAGE-RETURN-CHAR)
+      (doit LINEFEED-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+      (doit NEXT-LINE-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+      (doit LINE-SEPARATOR-CHAR)))
+
+  (parametrise ((the-eol (eol-style nel)))
+    (parametrise ((the-codec		utf-8-codec)
+		  (string-to-bytevector	string->utf8))
+      (doit LINEFEED-CHAR)
+      (doit CARRIAGE-RETURN-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+      (doit LINEFEED-CHAR (NEXT-LINE-CHAR))
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+      (doit LINE-SEPARATOR-CHAR))
+    (parametrise ((the-codec		utf-16le-codec)
+		  (string-to-bytevector	string->utf16le))
+      (doit LINEFEED-CHAR)
+      (doit CARRIAGE-RETURN-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+      (doit LINEFEED-CHAR (NEXT-LINE-CHAR))
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+      (doit LINE-SEPARATOR-CHAR))
+    (parametrise ((the-codec		utf-16be-codec)
+		  (string-to-bytevector	string->utf16be))
+      (doit LINEFEED-CHAR)
+      (doit CARRIAGE-RETURN-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+      (doit LINEFEED-CHAR (NEXT-LINE-CHAR))
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+      (doit LINE-SEPARATOR-CHAR)))
+
+  (parametrise ((the-eol (eol-style crnel)))
+    (parametrise ((the-codec		utf-8-codec)
+		  (string-to-bytevector	string->utf8))
+      (doit LINEFEED-CHAR)
+      (doit-incomplete-eol CARRIAGE-RETURN-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+      (doit NEXT-LINE-CHAR)
+      (doit LINEFEED-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+      (doit LINE-SEPARATOR-CHAR))
+    (parametrise ((the-codec		utf-16le-codec)
+		  (string-to-bytevector	string->utf16le))
+      (doit LINEFEED-CHAR)
+      (doit-incomplete-eol CARRIAGE-RETURN-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+      (doit NEXT-LINE-CHAR)
+      (doit LINEFEED-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+      (doit LINE-SEPARATOR-CHAR))
+    (parametrise ((the-codec		utf-16be-codec)
+		  (string-to-bytevector	string->utf16be))
+      (doit LINEFEED-CHAR)
+      (doit-incomplete-eol CARRIAGE-RETURN-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+      (doit NEXT-LINE-CHAR)
+      (doit LINEFEED-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+      (doit LINE-SEPARATOR-CHAR)))
+
+  (parametrise ((the-eol (eol-style ls)))
+    (parametrise ((the-codec		utf-8-codec)
+		  (string-to-bytevector	string->utf8))
+      (doit LINEFEED-CHAR)
+      (doit CARRIAGE-RETURN-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+      (doit NEXT-LINE-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+      (doit LINEFEED-CHAR (LINE-SEPARATOR-CHAR)))
+    (parametrise ((the-codec		utf-16le-codec)
+		  (string-to-bytevector	string->utf16le))
+      (doit LINEFEED-CHAR)
+      (doit CARRIAGE-RETURN-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+      (doit NEXT-LINE-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+      (doit LINEFEED-CHAR (LINE-SEPARATOR-CHAR)))
+    (parametrise ((the-codec		utf-16be-codec)
+		  (string-to-bytevector	string->utf16be))
+      (doit LINEFEED-CHAR)
+      (doit CARRIAGE-RETURN-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+      (doit NEXT-LINE-CHAR)
+      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+      (doit LINEFEED-CHAR (LINE-SEPARATOR-CHAR))))
+
+;;; --------------------------------------------------------------------
+;;; string ports
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ ?result)
+			(check
+			    (peek-char (open-string-input-port (string ?result)))
+			  => ?result))
+		       ((_ ?result (?char ...))
+			(check
+			    (peek-char (open-string-input-port (string ?char ...)))
+			  => ?result)))))
+
+    (doit LINEFEED-CHAR)
+    (doit CARRIAGE-RETURN-CHAR)
+    (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+    (doit NEXT-LINE-CHAR)
+    (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+    (doit LINE-SEPARATOR-CHAR)
+
+    #f)
+
+  #t)
+
+
 #;(parametrise ((check-test-name	'wrong-chars))
 
   (check
