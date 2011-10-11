@@ -752,7 +752,7 @@
 ;;  (let ((type-bits (unsafe.fxand ($port-attrs port) PORT-TYPE-MASK)))
 ;;    (unsafe.fx= type-bits *-PORT-BITS))
 ;;
-;;of:
+;;or:
 ;;
 ;;  (let ((type-bits (unsafe.fxand ($port-attrs port) *-PORT-BITS)))
 ;;    (unsafe.fx= type-bits *-PORT-BITS))
@@ -770,18 +770,17 @@
 ;;The following  tag constants allow  fast classification of  open input
 ;;ports by doing:
 ;;
-;;  (let ((tag ($port-fast-attrs port)))
-;;    (unsafe.fx= tag FAST-GET-*-TAG))
+;;   (unsafe.fx= ($port-fast-attrs port) FAST-GET-*-TAG)
 ;;
 ;;where FAST-GET-*-TAG  is one of  the constants below.  Notice  that if
-;;the port  is closed the  predicate will fail  because $PORT-FAST-ATTRS
-;;includes the true-if-closed bit.
-;;
+;;the port is closed the predicate will fail because the return value of
+;;$PORT-FAST-ATTRS includes the true-if-closed bit.
+
 ;;This one is  used for binary input ports,  having a bytevector buffer,
 ;;from which raw octets must be read.
 (define FAST-GET-BYTE-TAG        BINARY-INPUT-PORT-BITS)
 ;;
-;;The following is used for textual input ports, having a string buffer.
+;;This one is used for textual input ports, having a string buffer.
 (define FAST-GET-CHAR-TAG	(%unsafe.fxior FAST-CHAR-TEXT-TAG  TEXTUAL-INPUT-PORT-BITS))
 ;;
 ;;The following  are used for  textual input ports, having  a bytevector
@@ -803,18 +802,18 @@
 		;Tag for textual input  ports with bytevector buffer and
 		;UTF-16 transcoder  not yet recognised as  little or big
 		;endian:  endianness selection  is performed  by reading
-		;the Byte Order Mark (BOM).
+		;the Byte Order Mark (BOM) at the beginning of the input
+		;data.
 
-;;The following tag constants  allow fast classification of output ports
-;;by doing:
+;;The following  tag constants allow fast classification  of open output
+;;ports by doing:
 ;;
-;;  (let ((tag ($port-fast-attrs port)))
-;;    (unsafe.fx= tag FAST-PUT-*-TAG))
+;;   (unsafe.fx= ($port-fast-attrs port) FAST-PUT-*-TAG)
 ;;
 ;;where FAST-PUT-*-TAG  is one of  the constants below.  Notice  that if
-;;the port  is closed the  predicate will fail  because $PORT-FAST-ATTRS
-;;includes the true-if-closed bit.
-;;
+;;the port is closed the predicate will fail because the return value of
+;;$PORT-FAST-ATTRS includes the true-if-closed bit.
+
 ;;This one is used for binary output ports, having bytevector buffer, to
 ;;which raw bytes must be written.
 (define FAST-PUT-BYTE-TAG	BINARY-OUTPUT-PORT-BITS)
@@ -841,26 +840,27 @@
 		;Tag for textual output ports with bytevector buffer and
 		;UTF-16 transcoder  with data  not yet recognised  to be
 		;little  or  big endian:  selection  is performed  after
-		;writing the Byte Order Mark.
+		;writing  the  Byte Order  Mark  (BOM).   FIXME This  is
+		;currently not supported.
 
 ;;; --------------------------------------------------------------------
 
 (define-syntax %select-input-fast-tag-from-transcoder
   ;;When using  this macro without specifying the  other attributes: the
   ;;default attributes are automatically included.  When we specify some
-  ;;attribute,  it   is  our  responsibility  to   include  the  default
+  ;;non-fast attribute, it is  our responsibility to specify the default
   ;;attributes if we want them included.
   ;;
   (syntax-rules ()
     ((_ ?transcoder ?who)
-     (%%select-input-fast-tag-from-transcoder ?transcoder ?who DEFAULT-OTHER-ATTRS))
+     (%%select-input-fast-tag-from-transcoder ?who ?transcoder DEFAULT-OTHER-ATTRS))
     ((_ ?transcoder ?who ?other-attribute)
-     (%%select-input-fast-tag-from-transcoder ?transcoder ?who ?other-attribute))
+     (%%select-input-fast-tag-from-transcoder ?who ?transcoder ?other-attribute))
     ((_ ?transcoder ?who ?other-attribute . ?other-attributes)
-     (%%select-input-fast-tag-from-transcoder ?transcoder ?who
+     (%%select-input-fast-tag-from-transcoder ?who ?transcoder
 					      (%unsafe.fxior ?other-attribute . ?other-attributes)))))
 
-(define (%%select-input-fast-tag-from-transcoder maybe-transcoder who other-attributes)
+(define (%%select-input-fast-tag-from-transcoder who maybe-transcoder other-attributes)
   ;;Return  a fixnum  containing the  tag attributes  for an  input port
   ;;using   MAYBE-TRANSCODER.   OTHER-ATTRIBUTES   must   be  a   fixnum
   ;;representing the  non-fast attributes  to compose with  the selected
@@ -875,33 +875,28 @@
       ((utf-16be-codec)	(%unsafe.fxior other-attributes FAST-GET-UTF16BE-TAG))
       ;;The      selection     between      FAST-GET-UTF16LE-TAG     and
       ;;FAST-GET-UTF16BE-TAG is performed as part of the Byte Order Mark
-      ;;reading operation when the first char is read.
+      ;;(BOM) reading operation when the first char is read.
       ((utf-16-codec)	(%unsafe.fxior other-attributes INIT-GET-UTF16-TAG))
       ;;If no codec  is recognised, wait to read  the first character to
       ;;tag the port according to the Byte Order Mark.
       (else		(%unsafe.fxior other-attributes TEXTUAL-INPUT-PORT-BITS)))))
 
-(define-syntax %select-input/output-fast-tag-from-transcoder
-  (syntax-rules ()
-    ((_ . ?args)
-     (%select-output-fast-tag-from-transcoder . ?args))))
-
 (define-syntax %select-output-fast-tag-from-transcoder
   ;;When using  this macro without specifying the  other attributes: the
   ;;default attributes are automatically included.  When we specify some
-  ;;attribute,  it   is  our  responsibility  to   include  the  default
+  ;;non-fast attribute, it is  our responsibility to specify the default
   ;;attributes if we want them included.
   ;;
   (syntax-rules ()
     ((_ ?transcoder ?who)
-     (%%select-output-fast-tag-from-transcoder ?transcoder ?who DEFAULT-OTHER-ATTRS))
+     (%%select-output-fast-tag-from-transcoder ?who ?transcoder DEFAULT-OTHER-ATTRS))
     ((_ ?transcoder ?who ?other-attribute)
-     (%%select-output-fast-tag-from-transcoder ?transcoder ?who ?other-attribute))
+     (%%select-output-fast-tag-from-transcoder ?who ?transcoder ?other-attribute))
     ((_ ?transcoder ?who ?other-attribute . ?other-attributes)
-     (%%select-output-fast-tag-from-transcoder ?transcoder ?who
+     (%%select-output-fast-tag-from-transcoder ?who ?transcoder
 					       (%unsafe.fxior ?other-attribute . ?other-attributes)))))
 
-(define (%%select-output-fast-tag-from-transcoder maybe-transcoder who other-attributes)
+(define (%%select-output-fast-tag-from-transcoder who maybe-transcoder other-attributes)
   ;;Return a  fixnum containing  the tag attributes  for an  output port
   ;;using   MAYBE-TRANSCODER.   OTHER-ATTRIBUTES   must   be  a   fixnum
   ;;representing the  non-fast attributes  to compose with  the selected
@@ -922,6 +917,13 @@
       (else
        (assertion-violation who "unsupported codec" (transcoder-codec maybe-transcoder))))))
 
+(define-syntax %select-input/output-fast-tag-from-transcoder
+  ;;Return  a fixnum  containing the  tag  attributes for  an input  and
+  ;;output port.
+  (syntax-rules ()
+    ((_ . ?args)
+     (%select-output-fast-tag-from-transcoder . ?args))))
+
 ;;; --------------------------------------------------------------------
 
 (define-inline ($mark-port-closed! ?port)
@@ -929,8 +931,11 @@
   ;;
   ($set-port-attrs! ?port (%unsafe.fxior CLOSED-PORT-TAG ($port-attrs ?port))))
 
+;;This  mask  is used  to  nullify  the buffer  mode  bits  in a  fixnum
+;;representing port attributes.
+;;
 ;;					  321098765432109876543210
-(define BUFFER-MODE-NOT-MASK		#b000011100111111111111111)
+(define BUFFER-MODE-NOT-MASK		#b111111100111111111111111)
 
 (define-inline ($set-port-buffer-mode-to-block! ?port)
   ($set-port-attrs! ?port (unsafe.fxand BUFFER-MODE-NOT-MASK ($port-attrs ?port))))
@@ -954,15 +959,15 @@
   ;;
   (unsafe.fxand ($port-attrs port) FAST-ATTRS-MASK))
 
-(define-inline ($set-port-fast-attrs! port fast-attrs)
-  ;;Store new fast attributes in the tag of PORT.
-  ;;
-  ($set-port-attrs! port (%unsafe.fxior ($port-other-attrs port) fast-attrs)))
-
 (define-inline ($port-other-attrs port)
   ;;Extract the non-fast attributes from the tag of PORT.
   ;;
   (unsafe.fxand ($port-attrs port) OTHER-ATTRS-MASK))
+
+(define-inline ($set-port-fast-attrs! port fast-attrs)
+  ;;Store new fast attributes in the tag of PORT.
+  ;;
+  ($set-port-attrs! port (%unsafe.fxior ($port-other-attrs port) fast-attrs)))
 
 ;;; --------------------------------------------------------------------
 
@@ -3375,7 +3380,7 @@
       (unless (< bv.len BUFFER-SIZE-UPPER-LIMIT)
 	(error who "input bytevector length exceeds maximum supported size" bv.len))
       (let ((attributes		(%unsafe.fxior
-				 (%select-input-fast-tag-from-transcoder maybe-transcoder who)
+				 (%select-input-fast-tag-from-transcoder who maybe-transcoder)
 				 (%select-eol-style-from-transcoder who maybe-transcoder)))
 	    (buffer.index	0)
 	    (buffer.used-size	bv.len)
@@ -3680,7 +3685,7 @@
 		  (make-i/o-invalid-position-error new-position)))))
 
       (let* ((attributes	(%select-output-fast-tag-from-transcoder
-				 maybe-transcoder who PORT-WITH-EXTRACTION-TAG
+				 who maybe-transcoder PORT-WITH-EXTRACTION-TAG
 				 (%select-eol-style-from-transcoder who maybe-transcoder)
 				 DEFAULT-OTHER-ATTRS))
 	     (buffer.index	0)
@@ -4053,9 +4058,9 @@
     (let ((transcoded-port ($make-port
 			    (%unsafe.fxior
 			     (cond (port.is-input?
-				    (%select-input-fast-tag-from-transcoder transcoder who))
+				    (%select-input-fast-tag-from-transcoder who transcoder))
 				   (port.is-output?
-				    (%select-output-fast-tag-from-transcoder transcoder who))
+				    (%select-output-fast-tag-from-transcoder who transcoder))
 				   (else
 				    (assertion-violation who "port is neither input nor output!" port)))
 			     (%unsafe.port-nullify-eol-style-bits port.other-attributes)
@@ -7275,7 +7280,7 @@
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
   (let ((attributes		(%select-input-fast-tag-from-transcoder
-				 transcoder who other-attributes GUARDED-PORT-TAG
+				 who transcoder other-attributes GUARDED-PORT-TAG
 				 (%select-eol-style-from-transcoder who transcoder)
 				 DEFAULT-OTHER-ATTRS))
 	(buffer.index		0)
@@ -7322,7 +7327,7 @@
 	     (%raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
 
   (let ((attributes		(%select-output-fast-tag-from-transcoder
-				 transcoder who other-attributes GUARDED-PORT-TAG
+				 who transcoder other-attributes GUARDED-PORT-TAG
 				 (%select-eol-style-from-transcoder who transcoder)
 				 DEFAULT-OTHER-ATTRS))
 	(buffer.index		0)
