@@ -5961,30 +5961,28 @@
   ;;fixnums.
   ;;
   (define-inline (main)
-    (if (unsafe.fxzero? count)
-	count
-      (let ((dst.past (+ dst.start count))
-	    (eol-bits (%unsafe.port-eol-style-bits port)))
-	(unless (fixnum? dst.past)
-	  (assertion-violation who "start+count result is not a fixnum" dst.start count))
-	(%unsafe.assert-argument-is-count-from-start-in-string count dst.start dst.str who)
-	(%case-textual-input-port-fast-tag (port who)
-	  ((FAST-GET-UTF8-TAG)
-	   (%get-it eol-bits dst.past
-		    %unsafe.read-char-from-port-with-fast-get-utf8-tag
-		    %unsafe.peek-char-from-port-with-fast-get-utf8-tag))
-	  ((FAST-GET-CHAR-TAG)
-	   (%get-it eol-bits dst.past
-		    %unsafe.read-char-from-port-with-fast-get-char-tag
-		    %unsafe.peek-char-from-port-with-fast-get-char-tag))
-	  ((FAST-GET-LATIN-TAG)
-	   (%get-it eol-bits dst.past
-		    %unsafe.read-char-from-port-with-fast-get-latin-tag
-		    %unsafe.peek-char-from-port-with-fast-get-latin-tag))
-	  ((FAST-GET-UTF16LE-TAG)
-	   (%get-it eol-bits dst.past %read-utf16le %peek-utf16le))
-	  ((FAST-GET-UTF16BE-TAG)
-	   (%get-it eol-bits dst.past %read-utf16be %peek-utf16be))))))
+    (let ((dst.past (+ dst.start count))
+	  (eol-bits (%unsafe.port-eol-style-bits port)))
+      (unless (fixnum? dst.past)
+	(assertion-violation who "start+count result is not a fixnum" dst.start count))
+      (%unsafe.assert-argument-is-count-from-start-in-string count dst.start dst.str who)
+      (%case-textual-input-port-fast-tag (port who)
+	((FAST-GET-UTF8-TAG)
+	 (%get-it eol-bits dst.past
+		  %unsafe.read-char-from-port-with-fast-get-utf8-tag
+		  %unsafe.peek-char-from-port-with-fast-get-utf8-tag))
+	((FAST-GET-CHAR-TAG)
+	 (%get-it eol-bits dst.past
+		  %unsafe.read-char-from-port-with-fast-get-char-tag
+		  %unsafe.peek-char-from-port-with-fast-get-char-tag))
+	((FAST-GET-LATIN-TAG)
+	 (%get-it eol-bits dst.past
+		  %unsafe.read-char-from-port-with-fast-get-latin-tag
+		  %unsafe.peek-char-from-port-with-fast-get-latin-tag))
+	((FAST-GET-UTF16LE-TAG)
+	 (%get-it eol-bits dst.past %read-utf16le %peek-utf16le))
+	((FAST-GET-UTF16BE-TAG)
+	 (%get-it eol-bits dst.past %read-utf16be %peek-utf16be)))))
 
   (define-inline (%get-it eol-bits dst.past ?read-char ?peek-char)
     (let loop ((dst.index dst.start))
@@ -6010,6 +6008,9 @@
 	    (if (unsafe.fx= dst.index dst.start)
 		ch
 	      (unsafe.fx- dst.index dst.start))
+	  ;;We  do  not  detect  here invalid  association  between  the
+	  ;;Latin-1 codec and EOL styles NEL, CRNEL and LS; we trust the
+	  ;;state of the port to be correct.
 	  (let ((ch (%case-eol-style (eol-bits who)
 		      ((EOL-LINEFEED-TAG)
 		       ch)
@@ -6184,21 +6185,76 @@
     (%do-get-line port 'read-line))))
 
 (define (%do-get-line port who)
-  (define-inline (%get-it ?read-char)
+  (define-inline (main)
+    (%assert-argument-is-port port who)
+    (let ((eol-bits (%unsafe.port-eol-style-bits port)))
+      (%case-textual-input-port-fast-tag (port who)
+	((FAST-GET-UTF8-TAG)
+	 (%get-it eol-bits
+		  %unsafe.read-char-from-port-with-fast-get-utf8-tag
+		  %unsafe.peek-char-from-port-with-fast-get-utf8-tag))
+	((FAST-GET-CHAR-TAG)
+	 (%get-it eol-bits
+		  %unsafe.read-char-from-port-with-fast-get-char-tag
+		  %unsafe.peek-char-from-port-with-fast-get-char-tag))
+	((FAST-GET-LATIN-TAG)
+	 (%get-it eol-bits
+		  %unsafe.read-char-from-port-with-fast-get-latin-tag
+		  %unsafe.peek-char-from-port-with-fast-get-latin-tag))
+	((FAST-GET-UTF16LE-TAG)
+	 (%get-it eol-bits %read-utf16le %peek-utf16le))
+	((FAST-GET-UTF16BE-TAG)
+	 (%get-it eol-bits %read-utf16be %peek-utf16be)))))
+
+  (define-inline (%get-it eol-bits ?read-char ?peek-char)
     (let loop ((port		port)
 	       (number-of-chars	0)
 	       (reverse-chars	'()))
-      (let ((x (?read-char port who)))
-	(cond ((and (char? x) (unsafe.char= x #\newline))
-	       (reversed-chars->string number-of-chars reverse-chars))
-	      ((eof-object? x)
-	       (if (null? reverse-chars)
-		   x
-		 (reversed-chars->string number-of-chars reverse-chars)))
-	      (else
-	       (loop port (unsafe.fxadd1 number-of-chars) (cons x reverse-chars)))))))
+      (let ((ch (?read-char port who)))
+	(define-inline (%convert-single external-ch)
+	  (if (unsafe.char= ch external-ch)
+	      LINEFEED-CHAR
+	    ch))
+	(define-inline (%convert-double external-ch1 external-ch2)
+	  (if (unsafe.char= ch external-ch1)
+	      (%convert-double-sub ch external-ch1 external-ch2)
+	    ch))
+	(define (%convert-double-sub ch external-ch1 external-ch2)
+	  (let ((ch2 (?peek-char port who)))
+	    (cond ((eof-object? ch2)
+		   (assertion-violation who
+		     "unexpected end of input while processing end of line conversion" ch))
+		  ((unsafe.char= ch2 external-ch2)
+		   (?read-char port who)
+		   LINEFEED-CHAR)
+		  (else ch))))
+	(if (eof-object? ch)
+	    (if (null? reverse-chars)
+		ch
+	      (%unsafe.reversed-chars->string number-of-chars reverse-chars))
+	  ;;We  do  not  detect  here invalid  association  between  the
+	  ;;Latin-1 codec and EOL styles NEL, CRNEL and LS; we trust the
+	  ;;state of the port to be correct.
+	  (let ((ch (%case-eol-style (eol-bits who)
+		      ((EOL-LINEFEED-TAG)
+		       ch)
+		      ((EOL-CARRIAGE-RETURN-TAG)
+		       (%convert-single CARRIAGE-RETURN-CHAR))
+		      ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+		       (%convert-double CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+		      ((EOL-NEXT-LINE-TAG)
+		       (%convert-single NEXT-LINE-CHAR))
+		      ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+		       (%convert-double CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+		      ((EOL-LINE-SEPARATOR-TAG)
+		       (%convert-single LINE-SEPARATOR-CHAR))
+		      (else
+		       ch))))
+	    (if (unsafe.char= ch LINEFEED-CHAR)
+		(%unsafe.reversed-chars->string number-of-chars reverse-chars)
+	      (loop port (unsafe.fxadd1 number-of-chars) (cons ch reverse-chars))))))))
 
-  (define (reversed-chars->string dst.len reverse-chars)
+  (define (%unsafe.reversed-chars->string dst.len reverse-chars)
     (let next-char ((dst.str       (unsafe.make-string dst.len))
 		    (dst.index     (unsafe.fxsub1 dst.len))
 		    (reverse-chars reverse-chars))
@@ -6210,21 +6266,17 @@
 
   (define-inline (%read-utf16le ?port ?who)
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
+
+  (define-inline (%peek-utf16le ?port ?who)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
+
   (define-inline (%read-utf16be ?port ?who)
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
 
-  (%assert-argument-is-port port who)
-  (%case-textual-input-port-fast-tag (port who)
-    ((FAST-GET-UTF8-TAG)
-     (%get-it %unsafe.read-char-from-port-with-fast-get-utf8-tag))
-    ((FAST-GET-CHAR-TAG)
-     (%get-it %unsafe.read-char-from-port-with-fast-get-char-tag))
-    ((FAST-GET-LATIN-TAG)
-     (%get-it %unsafe.read-char-from-port-with-fast-get-latin-tag))
-    ((FAST-GET-UTF16LE-TAG)
-     (%get-it %read-utf16le))
-    ((FAST-GET-UTF16BE-TAG)
-     (%get-it %read-utf16be))))
+  (define-inline (%peek-utf16be ?port ?who)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
+
+  (main))
 
 
 ;;;; byte and bytevector output
