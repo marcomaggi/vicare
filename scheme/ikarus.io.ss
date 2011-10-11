@@ -674,7 +674,7 @@
        (values)))))
 
 
-;;;; port tags
+;;;; port attributes
 ;;
 ;;Each  port has  a tag  retrievable with  the $PORT-TAG  or $PORT-ATTRS
 ;;primitive  operations.   All  the   tags  have  24  bits.   The  least
@@ -1171,53 +1171,51 @@
        ((FAST-GET-UTF16BE-TAG)	. ?utf16be-tag-body))
      (and (identifier? #'?port)
 	  (identifier? #'?who))
-     #'(let retry-after-tagging-port ()
+     #'(let retry-after-tagging-port ((m ($port-fast-attrs ?port)))
 	 (define (%validate-and-tag)
 	   (%unsafe.assert-value-is-input-port   ?port ?who)
 	   (%unsafe.assert-value-is-textual-port ?port ?who)
 	   (%unsafe.assert-value-is-open-port    ?port ?who)
 	   (if (%parse-bom-and-add-fast-tag ?who ?port)
 	       (eof-object)
-	     (retry-after-tagging-port)))
-	 (define (%reconfigure-as-input tag)
+	     (retry-after-tagging-port ($port-fast-attrs ?port))))
+	 (define (%reconfigure-as-input fast-attrs)
 	   (%unsafe.reconfigure-output-buffer-to-input-buffer ?port ?who)
-	   ($set-port-fast-attrs! ?port tag)
-	   (retry-after-tagging-port))
-	 (let ((m ($port-fast-attrs ?port)))
-	   ;;FIXME It  would be  better here to  use a  specialised CASE
-	   ;;form  capable of efficiently  dispatch evaluation  based on
-	   ;;fixnums.
-	   (cond ((unsafe.fx= m FAST-GET-UTF8-TAG)	. ?utf8-tag-body)
-		 ((unsafe.fx= m FAST-GET-CHAR-TAG)	. ?char-tag-body)
-		 ((unsafe.fx= m FAST-GET-LATIN-TAG)	. ?latin-tag-body)
-		 ((unsafe.fx= m FAST-GET-UTF16LE-TAG)	. ?utf16le-tag-body)
-		 ((unsafe.fx= m FAST-GET-UTF16BE-TAG)	. ?utf16be-tag-body)
-		 ((unsafe.fx= m INIT-GET-UTF16-TAG)
-		  (if (%parse-utf16-bom-and-add-fast-tag ?who ?port)
-		      (eof-object)
-		    (retry-after-tagging-port)))
-		 ((unsafe.fx= m FAST-GET-BYTE-TAG)
-		  (assertion-violation ?who "expected textual port" ?port))
-		 ((%unsafe.input-and-output-port? ?port)
-		  ;;FIXME It  would be better here to  use a specialised
-		  ;;CASE form capable of efficiently dispatch evaluation
-		  ;;based on fixnums.
-		  (cond ((unsafe.fx= m FAST-PUT-UTF8-TAG)
-			 (%reconfigure-as-input FAST-GET-UTF8-TAG))
-			((unsafe.fx= m FAST-PUT-CHAR-TAG)
-			 (%reconfigure-as-input FAST-GET-CHAR-TAG))
-			((unsafe.fx= m FAST-PUT-LATIN-TAG)
-			 (%reconfigure-as-input FAST-GET-LATIN-TAG))
-			((unsafe.fx= m FAST-PUT-UTF16LE-TAG)
-			 (%reconfigure-as-input FAST-GET-UTF16LE-TAG))
-			((unsafe.fx= m FAST-PUT-UTF16BE-TAG)
-			 (%reconfigure-as-input FAST-GET-UTF16BE-TAG))
-			((unsafe.fx= m FAST-PUT-BYTE-TAG)
-			 (assertion-violation ?who "expected textual port" ?port))
-			(else
-			 (%validate-and-tag))))
-		 (else
-		  (%validate-and-tag))))))))
+	   ($set-port-fast-attrs! ?port fast-attrs)
+	   (retry-after-tagging-port fast-attrs))
+	 ;;FIXME It would be better  here to use a specialised CASE form
+	 ;;capable of efficiently dispatch evaluation based on fixnums.
+	 (cond ((unsafe.fx= m FAST-GET-UTF8-TAG)	. ?utf8-tag-body)
+	       ((unsafe.fx= m FAST-GET-CHAR-TAG)	. ?char-tag-body)
+	       ((unsafe.fx= m FAST-GET-LATIN-TAG)	. ?latin-tag-body)
+	       ((unsafe.fx= m FAST-GET-UTF16LE-TAG)	. ?utf16le-tag-body)
+	       ((unsafe.fx= m FAST-GET-UTF16BE-TAG)	. ?utf16be-tag-body)
+	       ((unsafe.fx= m INIT-GET-UTF16-TAG)
+		(if (%parse-utf16-bom-and-add-fast-tag ?who ?port)
+		    (eof-object)
+		  (retry-after-tagging-port ($port-fast-attrs ?port))))
+	       ((unsafe.fx= m FAST-GET-BYTE-TAG)
+		(assertion-violation ?who "expected textual port" ?port))
+	       ((%unsafe.input-and-output-port? ?port)
+		;;FIXME It  would be better here to  use a specialised
+		;;CASE form capable of efficiently dispatch evaluation
+		;;based on fixnums.
+		(cond ((unsafe.fx= m FAST-PUT-UTF8-TAG)
+		       (%reconfigure-as-input FAST-GET-UTF8-TAG))
+		      ((unsafe.fx= m FAST-PUT-CHAR-TAG)
+		       (%reconfigure-as-input FAST-GET-CHAR-TAG))
+		      ((unsafe.fx= m FAST-PUT-LATIN-TAG)
+		       (%reconfigure-as-input FAST-GET-LATIN-TAG))
+		      ((unsafe.fx= m FAST-PUT-UTF16LE-TAG)
+		       (%reconfigure-as-input FAST-GET-UTF16LE-TAG))
+		      ((unsafe.fx= m FAST-PUT-UTF16BE-TAG)
+		       (%reconfigure-as-input FAST-GET-UTF16BE-TAG))
+		      ((unsafe.fx= m FAST-PUT-BYTE-TAG)
+		       (assertion-violation ?who "expected textual port" ?port))
+		      (else
+		       (%validate-and-tag))))
+	       (else
+		(%validate-and-tag)))))))
 
 (define-syntax* (%case-textual-output-port-fast-tag stx)
   ;;For  a port fast  tagged for  output: select  a body  of code  to be
@@ -1240,47 +1238,45 @@
        ((FAST-PUT-UTF16BE-TAG)	. ?utf16be-tag-body))
      (and (identifier? #'?port)
 	  (identifier? #'?who))
-     #'(let retry-after-tagging-port ()
+     #'(let retry-after-tagging-port ((m ($port-fast-attrs ?port)))
 	 (define (%validate-and-tag)
 	   (%unsafe.assert-value-is-textual-port ?port ?who)
 	   (%unsafe.assert-value-is-output-port  ?port ?who)
 	   (%unsafe.assert-value-is-open-port    ?port ?who)
 	   (assertion-violation ?who "unsupported port transcoder" ?port))
-	 (define (%reconfigure-as-output tag)
+	 (define (%reconfigure-as-output fast-attrs)
 	   (%unsafe.reconfigure-input-buffer-to-output-buffer ?port ?who)
-	   ($set-port-fast-attrs! ?port tag)
-	   (retry-after-tagging-port))
-	 (let ((m ($port-fast-attrs ?port)))
-	   ;;FIXME It  would be  better here to  use a  specialised CASE
-	   ;;form  capable of efficiently  dispatch evaluation  based on
-	   ;;fixnums.
-	   (cond ((unsafe.fx= m FAST-PUT-UTF8-TAG)	. ?utf8-tag-body)
-		 ((unsafe.fx= m FAST-PUT-CHAR-TAG)	. ?char-tag-body)
-		 ((unsafe.fx= m FAST-PUT-LATIN-TAG)	. ?latin-tag-body)
-		 ((unsafe.fx= m FAST-PUT-UTF16LE-TAG)	. ?utf16le-tag-body)
-		 ((unsafe.fx= m FAST-PUT-UTF16BE-TAG)	. ?utf16be-tag-body)
-		 ((unsafe.fx= m FAST-PUT-BYTE-TAG)
-		  (assertion-violation ?who "expected textual port" ?port))
-		 ((%unsafe.input-and-output-port? ?port)
-		  ;;FIXME It  would be better here to  use a specialised
-		  ;;CASE form capable of efficiently dispatch evaluation
-		  ;;based on fixnums.
-		  (cond ((unsafe.fx= m FAST-GET-UTF8-TAG)
-			 (%reconfigure-as-output FAST-PUT-UTF8-TAG))
-			((unsafe.fx= m FAST-GET-CHAR-TAG)
-			 (%reconfigure-as-output FAST-PUT-CHAR-TAG))
-			((unsafe.fx= m FAST-GET-LATIN-TAG)
-			 (%reconfigure-as-output FAST-PUT-LATIN-TAG))
-			((unsafe.fx= m FAST-GET-UTF16LE-TAG)
-			 (%reconfigure-as-output FAST-PUT-UTF16LE-TAG))
-			((unsafe.fx= m FAST-GET-UTF16BE-TAG)
-			 (%reconfigure-as-output FAST-PUT-UTF16BE-TAG))
-			((unsafe.fx= m FAST-GET-BYTE-TAG)
-			 (assertion-violation ?who "expected textual port" ?port))
-			(else
-			 (%validate-and-tag))))
-		 (else
-		  (%validate-and-tag))))))))
+	   ($set-port-fast-attrs! ?port fast-attrs)
+	   (retry-after-tagging-port fast-attrs))
+	 ;;FIXME It would be better  here to use a specialised CASE form
+	 ;;capable of efficiently dispatch evaluation based on fixnums.
+	 (cond ((unsafe.fx= m FAST-PUT-UTF8-TAG)	. ?utf8-tag-body)
+	       ((unsafe.fx= m FAST-PUT-CHAR-TAG)	. ?char-tag-body)
+	       ((unsafe.fx= m FAST-PUT-LATIN-TAG)	. ?latin-tag-body)
+	       ((unsafe.fx= m FAST-PUT-UTF16LE-TAG)	. ?utf16le-tag-body)
+	       ((unsafe.fx= m FAST-PUT-UTF16BE-TAG)	. ?utf16be-tag-body)
+	       ((unsafe.fx= m FAST-PUT-BYTE-TAG)
+		(assertion-violation ?who "expected textual port" ?port))
+	       ((%unsafe.input-and-output-port? ?port)
+		;;FIXME  It would be  better here  to use  a specialised
+		;;CASE form  capable of efficiently  dispatch evaluation
+		;;based on fixnums.
+		(cond ((unsafe.fx= m FAST-GET-UTF8-TAG)
+		       (%reconfigure-as-output FAST-PUT-UTF8-TAG))
+		      ((unsafe.fx= m FAST-GET-CHAR-TAG)
+		       (%reconfigure-as-output FAST-PUT-CHAR-TAG))
+		      ((unsafe.fx= m FAST-GET-LATIN-TAG)
+		       (%reconfigure-as-output FAST-PUT-LATIN-TAG))
+		      ((unsafe.fx= m FAST-GET-UTF16LE-TAG)
+		       (%reconfigure-as-output FAST-PUT-UTF16LE-TAG))
+		      ((unsafe.fx= m FAST-GET-UTF16BE-TAG)
+		       (%reconfigure-as-output FAST-PUT-UTF16BE-TAG))
+		      ((unsafe.fx= m FAST-GET-BYTE-TAG)
+		       (assertion-violation ?who "expected textual port" ?port))
+		      (else
+		       (%validate-and-tag))))
+	       (else
+		(%validate-and-tag)))))))
 
 ;;; --------------------------------------------------------------------
 ;;; Backup of original Ikarus values
