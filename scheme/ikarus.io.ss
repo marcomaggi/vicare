@@ -943,6 +943,17 @@
 (define NEXT-LINE-CHAR			#\x0085) ;; U+0085
 (define LINE-SEPARATOR-CHAR		#\x2028) ;; U+2028
 
+(define (%symbol->eol-attrs style)
+  (case style
+    ((none)	0)
+    ((lf)	EOL-LINEFEED-TAG)
+    ((cr)	EOL-CARRIAGE-RETURN-TAG)
+    ((crlf)	EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+    ((nel)	EOL-NEXT-LINE-TAG)
+    ((crnel)	EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+    ((ls)	EOL-LINE-SEPARATOR-TAG)
+    (else	#f)))
+
 (define (%select-eol-style-from-transcoder who maybe-transcoder)
   ;;Given a  transcoder return the non-fast  attributes representing the
   ;;selected end of line conversion style.
@@ -3346,58 +3357,71 @@
 
 ;;;; string input ports
 
-(define (open-string-input-port str)
-  ;;Defined  by   R6RS.   Return  a  textual   input  port  whose
-  ;;characters are drawn from STR.   The port may or may not have
-  ;;an  associated  transcoder; if  it  does,  the transcoder  is
-  ;;implementation--dependent.   The   port  should  support  the
+(define open-string-input-port
+  ;;Defined by  R6RS, extended by  Vicare.  Return a textual  input port
+  ;;whose characters are  drawn from STR.  The port may  or may not have
+  ;;an   associated  transcoder;   if   it  does,   the  transcoder   is
+  ;;implementation--dependent.     The   port    should    support   the
   ;;PORT-POSITION and SET-PORT-POSITION!  operations.
   ;;
-  ;;If  STR  is modified  after  OPEN-STRING-INPUT-PORT has  been
-  ;;called, the effect on the returned port is unspecified.
+  ;;If STR is modified after OPEN-STRING-INPUT-PORT has been called, the
+  ;;effect on the returned port is unspecified.
   ;;
-  (open-string-input-port/id str "*string-input-port*"))
+  (case-lambda
+   ((str)
+    (open-string-input-port/id str "*string-input-port*" 'none))
+   ((str eol-style)
+    (open-string-input-port/id str "*string-input-port*" eol-style))))
 
-(define (open-string-input-port/id str id)
-  ;;Defined  by Ikarus.   For  details see  the documentation  of
+(define open-string-input-port/id
+  ;;Defined   by  Ikarus.    For  details   see  the   documentation  of
   ;;OPEN-STRING-INPUT-PORT.
   ;;
-  ;;In this port there is  no underlying device: the input string
-  ;;is set as the buffer.
+  ;;In this port there is no  underlying device: the input string is set
+  ;;as the buffer.
   ;;
-  (define who 'open-string-input-port)
-  (unless (string? str)
-    (assertion-violation who "not a string" str))
-  (%assert-argument-is-port-identifier id who)
-  ;;The input  string is itself  the buffer!!!  The  port is in  a state
-  ;;equivalent to the following:
-  ;;
-  ;;                                           device position
-  ;;                                                  v
-  ;;   |----------------------------------------------| device
-  ;;   |*******************+**************************| buffer
-  ;;   ^                   ^                          ^
-  ;;   0            index = port position       used-size = size
-  ;;
-  ;;the device  position equals the string  length and its  value in the
-  ;;cookie's POS field is never mutated.
-  (let ((str.len (string-length str)))
-    (unless (< str.len BUFFER-SIZE-UPPER-LIMIT)
-      (error who "input string length exceeds maximum supported size" str.len))
-    (let ((attributes		(%unsafe.fxior FAST-GET-CHAR-TAG DEFAULT-OTHER-ATTRS))
-	  (buffer.index		0)
-	  (buffer.used-size	str.len)
-	  (buffer		str)
-	  (transcoder		#t)
-	  (read!		all-data-in-buffer)
-	  (write!		#f)
-	  (get-position		#t)
-	  (set-position!	#t)
-	  (close		#f)
-	  (cookie		(default-cookie #f)))
-      (set-cookie-pos! cookie str.len)
-      ($make-port attributes buffer.index buffer.used-size buffer transcoder id
-		  read! write! get-position set-position! close cookie))))
+  (case-lambda
+   ((str id)
+    (open-string-input-port/id str id 'none))
+   ((str id eol-style)
+    (define who 'open-string-input-port)
+    (unless (string? str)
+      (assertion-violation who "not a string" str))
+    (%assert-argument-is-port-identifier id who)
+    ;;The input string  is itself the buffer!!!  The port  is in a state
+    ;;equivalent to the following:
+    ;;
+    ;;                                           device position
+    ;;                                                  v
+    ;;   |----------------------------------------------| device
+    ;;   |*******************+**************************| buffer
+    ;;   ^                   ^                          ^
+    ;;   0            index = port position       used-size = size
+    ;;
+    ;;the device position equals the  string length and its value in the
+    ;;cookie's POS field is never mutated.
+    (let ((str.len (string-length str)))
+      (unless (< str.len BUFFER-SIZE-UPPER-LIMIT)
+	(error who "input string length exceeds maximum supported size" str.len))
+      (let ((attributes		(%unsafe.fxior
+				 FAST-GET-CHAR-TAG
+				 (or (%symbol->eol-attrs eol-style)
+				     (assertion-violation who
+				       "expected EOL style as argument" eol-style))
+				 DEFAULT-OTHER-ATTRS))
+	    (buffer.index		0)
+	    (buffer.used-size	str.len)
+	    (buffer		str)
+	    (transcoder		#t)
+	    (read!		all-data-in-buffer)
+	    (write!		#f)
+	    (get-position		#t)
+	    (set-position!	#t)
+	    (close		#f)
+	    (cookie		(default-cookie #f)))
+	(set-cookie-pos! cookie str.len)
+	($make-port attributes buffer.index buffer.used-size buffer transcoder id
+		    read! write! get-position set-position! close cookie))))))
 
 (define (with-input-from-string string thunk)
   ;;Defined by Ikarus.   THUNK must be a procedure  and must accept zero

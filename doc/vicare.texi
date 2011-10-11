@@ -3621,6 +3621,7 @@ example in the previous section):
 @menu
 * iklib io filename::           File pathname handling.
 * iklib io codecs::             Transcoders and additional codecs.
+* iklib io textual::            Additional textual port features.
 * iklib io process::            Spawning processes.
 * iklib io socket::             Using network sockets.
 * iklib io non-block::          Non--blocking mode for ports.
@@ -3706,6 +3707,33 @@ A call to any of these procedures returns a value that is equal in the
 sense of @func{eqv?} to the result of any other call to the same
 procedure.
 @end deffn
+
+@c page
+@node iklib io textual
+@subsection Additional textual port features
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun open-string-input-port @var{string}
+@defunx open-string-input-port @var{string} @var{eol-style}
+As defined by @rnrs{6}: return a textual input port whose characters are
+drawn from @var{string}.  When @var{eol-style} is used: it must be a
+symbol selecting an end--of--line style conversion, as accepted by
+@func{eol-style}; such conversion is applied to the characters drawn
+from @var{string}.
+
+If @var{string} is modified after @func{open-string-input-port} has been
+called, the effect on the returned port is unspecified.
+@end defun
+
+
+@defun open-string-input-port/id @var{string} @var{id}
+@defunx open-string-input-port/id @var{string} @var{id} @var{eol-style}
+Like @func{open-string-input-port} but allows the specification of a
+customised port identifier @var{id}, which must be a Scheme string.
+@end defun
 
 @c page
 @node iklib io process
