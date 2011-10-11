@@ -1107,7 +1107,7 @@
 	   (%unsafe.assert-value-is-input-port   ?port ?who)
 	   (%unsafe.assert-value-is-textual-port ?port ?who)
 	   (%unsafe.assert-value-is-open-port    ?port ?who)
-	   (if (%parse-bom-and-add-fast-tag ?port ?who)
+	   (if (%parse-bom-and-add-fast-tag ?who ?port)
 	       (eof-object)
 	     (retry-after-tagging-port)))
 	 (define (%reconfigure-as-input tag)
@@ -1121,7 +1121,7 @@
 		 ((unsafe.fx= m FAST-GET-UTF16LE-TAG)	. ?utf16le-tag-body)
 		 ((unsafe.fx= m FAST-GET-UTF16BE-TAG)	. ?utf16be-tag-body)
 		 ((unsafe.fx= m INIT-GET-UTF16-TAG)
-		  (if (%parse-utf16-bom-and-add-fast-tag ?port ?who)
+		  (if (%parse-utf16-bom-and-add-fast-tag ?who ?port)
 		      (eof-object)
 		    (retry-after-tagging-port)))
 		 ((unsafe.fx= m FAST-GET-BYTE-TAG)
@@ -1498,7 +1498,7 @@
 
 ;;;; Byte Order Mark (BOM) parsing
 
-(define (%parse-utf16-bom-and-add-fast-tag port who)
+(define (%parse-utf16-bom-and-add-fast-tag who port)
   ;;Assuming PORT  is an  open input textual  port object with  a UTF-16
   ;;transcoder:  read  the  Byte   Order  Mark  and  mutate  the  port's
   ;;attributes   tagging    the   port   as    FAST-GET-UTF16BE-TAG   or
@@ -1526,7 +1526,7 @@
 	  (%debug-assert (eof-object? big-endian?))
 	  #t)))))
 
-(define (%parse-bom-and-add-fast-tag port who)
+(define (%parse-bom-and-add-fast-tag who port)
   ;;Assuming PORT  is a  port object: validate  it as an  open, textual,
   ;;input  port;  read the  Byte  Order  Mark  expected for  the  port's
   ;;transcoder  and  mutate  the  port's  attributes  tagging  the  port
@@ -1640,7 +1640,7 @@
 			      dst.bv (unsafe.fxadd1 dst.start)
 			      (unsafe.fxsub1 count))))
 
-(define (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors dst.len who)
+(define (%unsafe.bytevector-reverse-and-concatenate who list-of-bytevectors dst.len)
   ;;Reverse  LIST-OF-BYTEVECTORS and  concatenate its  bytevector items;
   ;;return  the result.  The  resulting list  must have  length DST.LEN.
   ;;Assume the arguments have been already validated.
@@ -1676,7 +1676,7 @@
 			  dst.str (unsafe.fxadd1 dst.start)
 			  (unsafe.fxsub1 count))))
 
-(define (%unsafe.string-reverse-and-concatenate list-of-strings dst.len who)
+(define (%unsafe.string-reverse-and-concatenate who list-of-strings dst.len)
   ;;Reverse LIST-OF-STRINGS and concatenate its string items; return the
   ;;result.  The  resulting list must  have length DST.LEN.   Assume the
   ;;arguments have been already validated.
@@ -3542,7 +3542,7 @@
 		 (car output.bvs))
 		(else
 		 ;;The device needs to be serialised.
-		 (let ((bv (%unsafe.bytevector-reverse-and-concatenate output.bvs output.len who)))
+		 (let ((bv (%unsafe.bytevector-reverse-and-concatenate who output.bvs output.len)))
 		   (set-cookie-dest! cookie (if reset?
 						'(0 . ())
 					      `(,output.len . (,bv))))
@@ -3761,7 +3761,7 @@
 		 (set-cookie-dest! cookie '(0 . ())))
 	       (car output.strs))
 	      (else
-	       (let ((str (%unsafe.string-reverse-and-concatenate output.strs output.len who)))
+	       (let ((str (%unsafe.string-reverse-and-concatenate who output.strs output.len)))
 		 (set-cookie-dest! cookie (if reset? '(0 . ()) `(,output.len . (,str))))
 		 str)))))
     (define-inline (%serialise-device! who)
@@ -3907,7 +3907,7 @@
 	       ;;The device has already been serialised.
 	       (car output.strs))
 	      (else
-	       (%unsafe.string-reverse-and-concatenate output.strs output.len who)))))))
+	       (%unsafe.string-reverse-and-concatenate who output.strs output.len)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -4694,7 +4694,7 @@
 		 (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-read))
 		 (let ((list-of-bytevectors1 (cons bv list-of-bytevectors)))
 		   (if all-count-is-available?
-		       (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors1 output.len1 who)
+		       (%unsafe.bytevector-reverse-and-concatenate who list-of-bytevectors1 output.len1)
 		     (retry-after-filling-buffer output.len1 list-of-bytevectors1
 						 (- count amount-of-available)))))))
 	   (%maybe-refill-bytevector-buffer-and-evaluate (port who)
@@ -4702,7 +4702,7 @@
 	     (if-end-of-file:
 	      (if (zero? output.len)
 		  (eof-object)
-		(%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors output.len who)))
+		(%unsafe.bytevector-reverse-and-concatenate who list-of-bytevectors output.len)))
 	     (if-successful-refill: (%data-available-in-buffer))
 	     (if-available-data: (%data-available-in-buffer)))))))))
 
@@ -4831,8 +4831,8 @@
 	   (data-is-needed-at: port.buffer.index)
 	   (if-end-of-file: (if (zero? output.len)
 				(eof-object)
-			      (%unsafe.bytevector-reverse-and-concatenate list-of-bytevectors
-									  output.len who)))
+			      (%unsafe.bytevector-reverse-and-concatenate who list-of-bytevectors
+									  output.len)))
 	   (if-successful-refill: (%data-available-in-buffer))
 	   (if-available-data:    (%data-available-in-buffer))))))))
 
@@ -5937,16 +5937,125 @@
 
 ;;;; string input
 
-(define (get-string-n port count)
-  ;;Defined  by R6RS.   COUNT must  be an  exact,  non--negative integer
-  ;;object, representing the number of characters to be read.
+(define (%unsafe.get-string-n! who port dst.str dst.start count)
+  ;;Subroutine  of GET-STRING-N!,  GET-STRING-N and  GET-STRING-ALL.  It
+  ;;assumes the arguments have already been validated.
+  ;;
+  ;;DST.START and  COUNT must  be exact, non--negative  integer objects,
+  ;;with  COUNT  representing  the  number  of characters  to  be  read.
+  ;;DST.STR must be a string with at least DST.START+COUNT characters.
+  ;;
+  ;;If COUNT  characters are available before  an end of  file, they are
+  ;;written  into DST.STR  starting  at index  DST.START,  and COUNT  is
+  ;;returned.
+  ;;
+  ;;If fewer characters are available before  an end of file, but one or
+  ;;more can be read, those characters are written into DST.STR starting
+  ;;at index  DST.START and  the number of  characters actually  read is
+  ;;returned as an exact integer object.
+  ;;
+  ;;If no characters  can be read before an end of  file, the EOF object
+  ;;is returned.
+  ;;
+  ;;IMPLEMENTATION RESTRICTION The DST.START and COUNT arguments must be
+  ;;fixnums.
+  ;;
+  (define-inline (main)
+    (if (unsafe.fxzero? count)
+	count
+      (let ((dst.past (+ dst.start count))
+	    (eol-bits (%unsafe.port-eol-style-bits port)))
+	(unless (fixnum? dst.past)
+	  (assertion-violation who "start+count result is not a fixnum" dst.start count))
+	(%unsafe.assert-argument-is-count-from-start-in-string count dst.start dst.str who)
+	(%case-textual-input-port-fast-tag (port who)
+	  ((FAST-GET-UTF8-TAG)
+	   (%get-it eol-bits dst.past
+		    %unsafe.read-char-from-port-with-fast-get-utf8-tag
+		    %unsafe.peek-char-from-port-with-fast-get-utf8-tag))
+	  ((FAST-GET-CHAR-TAG)
+	   (%get-it eol-bits dst.past
+		    %unsafe.read-char-from-port-with-fast-get-char-tag
+		    %unsafe.peek-char-from-port-with-fast-get-char-tag))
+	  ((FAST-GET-LATIN-TAG)
+	   (%get-it eol-bits dst.past
+		    %unsafe.read-char-from-port-with-fast-get-latin-tag
+		    %unsafe.peek-char-from-port-with-fast-get-latin-tag))
+	  ((FAST-GET-UTF16LE-TAG)
+	   (%get-it eol-bits dst.past %read-utf16le %peek-utf16le))
+	  ((FAST-GET-UTF16BE-TAG)
+	   (%get-it eol-bits dst.past %read-utf16be %peek-utf16be))))))
+
+  (define-inline (%get-it eol-bits dst.past ?read-char ?peek-char)
+    (let loop ((dst.index dst.start))
+      (let ((ch (?read-char port who)))
+	(define-inline (%convert-single external-ch)
+	  (if (unsafe.char= ch external-ch)
+	      LINEFEED-CHAR
+	    ch))
+	(define-inline (%convert-double external-ch1 external-ch2)
+	  (if (unsafe.char= ch external-ch1)
+	      (%convert-double-sub ch external-ch1 external-ch2)
+	    ch))
+	(define (%convert-double-sub ch external-ch1 external-ch2)
+	  (let ((ch2 (?peek-char port who)))
+	    (cond ((eof-object? ch2)
+		   (assertion-violation who
+		     "unexpected end of input while processing end of line conversion" ch))
+		  ((unsafe.char= ch2 external-ch2)
+		   (?read-char port who)
+		   LINEFEED-CHAR)
+		  (else ch))))
+	(if (eof-object? ch)
+	    (if (unsafe.fx= dst.index dst.start)
+		ch
+	      (unsafe.fx- dst.index dst.start))
+	  (let ((ch (%case-eol-style (eol-bits who)
+		      ((EOL-LINEFEED-TAG)
+		       ch)
+		      ((EOL-CARRIAGE-RETURN-TAG)
+		       (%convert-single CARRIAGE-RETURN-CHAR))
+		      ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+		       (%convert-double CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+		      ((EOL-NEXT-LINE-TAG)
+		       (%convert-single NEXT-LINE-CHAR))
+		      ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+		       (%convert-double CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+		      ((EOL-LINE-SEPARATOR-TAG)
+		       (%convert-single LINE-SEPARATOR-CHAR))
+		      (else
+		       ch))))
+	    (unsafe.string-set! dst.str dst.index ch)
+	    (let ((dst.index (unsafe.fxadd1 dst.index)))
+	      (if (unsafe.fx= dst.index dst.past)
+		  (unsafe.fx- dst.index dst.start)
+		(loop dst.index))))))))
+
+  (define-inline (%read-utf16le ?port ?who)
+    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
+
+  (define-inline (%peek-utf16le ?port ?who)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
+
+  (define-inline (%read-utf16be ?port ?who)
+    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
+
+  (define-inline (%peek-utf16be ?port ?who)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
+
+  (main))
+
+(define (get-string-n port requested-count)
+  ;;Defined by  R6RS.  REQUESTED-COUNT  must be an  exact, non--negative
+  ;;integer object, representing the number of characters to be read.
   ;;
   ;;The  GET-STRING-N  procedure  reads  from the  textual  input  PORT,
-  ;;blocking  as necessary,  until  COUNT characters  are available,  or
-  ;;until an end of file is reached.
+  ;;blocking   as  necessary,   until  REQUESTED-COUNT   characters  are
+  ;;available, or until an end of file is reached.
   ;;
-  ;;If COUNT  characters are available before end  of file, GET-STRING-N
-  ;;returns a string consisting of those COUNT characters.
+  ;;If  REQUESTED-COUNT characters  are  available before  end of  file,
+  ;;GET-STRING-N  returns a string  consisting of  those REQUESTED-COUNT
+  ;;characters.
   ;;
   ;;If fewer characters are available before  an end of file, but one or
   ;;more  characters   can  be  read,  GET-STRING-N   returns  a  string
@@ -5956,42 +6065,23 @@
   ;;characters  read.  If no  characters can  be read  before an  end of
   ;;file, the end-of-file object is returned.
   ;;
-  ;;IMPLEMENTATION RESTRICTION The COUNT argument must be a fixnum.
+  ;;IMPLEMENTATION  RESTRICTION The REQUESTED-COUNT  argument must  be a
+  ;;fixnum.
   ;;
   (define who 'get-string-n)
-  (define-inline (%get-it ?read-char)
-    (if (unsafe.fxzero? count)
-	""
-      (let ((dst.str (unsafe.make-string count)))
-	(let loop ((dst.index 0))
-	  (let ((ch (?read-char port who)))
-	    (if (eof-object? ch)
-		(if (unsafe.fxzero? dst.index)
-		    ch
-		  (substring dst.str 0 dst.index))
-	      (begin
-		(unsafe.string-set! dst.str dst.index ch)
-		(let ((dst.index (unsafe.fxadd1 dst.index)))
-		  (if (unsafe.fx= dst.index count)
-		      dst.str
-		    (loop dst.index))))))))))
-  (define-inline (%read-utf16le ?port ?who)
-    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
-  (define-inline (%read-utf16be ?port ?who)
-    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
   (%assert-argument-is-port port who)
-  (%assert-argument-is-fixnum-count count who)
-  (%case-textual-input-port-fast-tag (port who)
-    ((FAST-GET-UTF8-TAG)
-     (%get-it %unsafe.read-char-from-port-with-fast-get-utf8-tag))
-    ((FAST-GET-CHAR-TAG)
-     (%get-it %unsafe.read-char-from-port-with-fast-get-char-tag))
-    ((FAST-GET-LATIN-TAG)
-     (%get-it %unsafe.read-char-from-port-with-fast-get-latin-tag))
-    ((FAST-GET-UTF16LE-TAG)
-     (%get-it %read-utf16le))
-    ((FAST-GET-UTF16BE-TAG)
-     (%get-it %read-utf16be))))
+  (%assert-argument-is-fixnum-count requested-count who)
+  (if (unsafe.fxzero? requested-count)
+      ""
+    (let* ((dst.str	(unsafe.make-string requested-count))
+	   (dst.start	0)
+	   (count	(%unsafe.get-string-n! who port dst.str dst.start requested-count)))
+      (cond ((eof-object? count)
+	     count)
+	    ((unsafe.fx= count requested-count)
+	     dst.str)
+	    (else
+	     (substring dst.str dst.start count))))))
 
 (define (get-string-n! port dst.str dst.start count)
   ;;Defined by  R6RS.  DST.START and COUNT must  be exact, non--negative
@@ -6018,45 +6108,14 @@
   ;;fixnums.
   ;;
   (define who 'get-string-n!)
-  (define-inline (%get-it dst.past ?read-char)
-    (if (unsafe.fxzero? count)
-	count
-      (let loop ((dst.index dst.start))
-	(let ((ch (?read-char port who)))
-	  (if (eof-object? ch)
-	      (if (unsafe.fx= dst.index dst.start)
-		  ch
-		(unsafe.fx- dst.index dst.start))
-	    (begin
-	      (unsafe.string-set! dst.str dst.index ch)
-	      (let ((dst.index (unsafe.fxadd1 dst.index)))
-		(if (unsafe.fx= dst.index dst.past)
-		    (unsafe.fx- dst.index dst.start)
-		  (loop dst.index)))))))))
-  (define-inline (%read-utf16le ?port ?who)
-    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
-  (define-inline (%read-utf16be ?port ?who)
-    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
   (%assert-argument-is-port port who)
   (%assert-argument-is-string dst.str who)
   (%assert-argument-is-fixnum-start-index dst.start who)
   (%assert-argument-is-fixnum-count count who)
   (%unsafe.assert-argument-is-start-index-for-string dst.start dst.str who)
-  (let ((dst.past (+ dst.start count)))
-    (unless (fixnum? dst.past)
-      (assertion-violation who "start+count result is not a fixnum" dst.start count))
-    (%unsafe.assert-argument-is-count-from-start-in-string count dst.start dst.str who)
-    (%case-textual-input-port-fast-tag (port who)
-      ((FAST-GET-UTF8-TAG)
-       (%get-it dst.past %unsafe.read-char-from-port-with-fast-get-utf8-tag))
-      ((FAST-GET-CHAR-TAG)
-       (%get-it dst.past %unsafe.read-char-from-port-with-fast-get-char-tag))
-      ((FAST-GET-LATIN-TAG)
-       (%get-it dst.past %unsafe.read-char-from-port-with-fast-get-latin-tag))
-      ((FAST-GET-UTF16LE-TAG)
-       (%get-it dst.past %read-utf16le))
-      ((FAST-GET-UTF16BE-TAG)
-       (%get-it dst.past %read-utf16be)))))
+  (if (unsafe.fxzero? count)
+      count
+    (%unsafe.get-string-n! who port dst.str dst.start count)))
 
 (define (get-string-all port)
   ;;Defined by R6RS.   Read from the textual input PORT  until an end of
@@ -6072,43 +6131,24 @@
   ;;is the greatest fixnum.
   ;;
   (define who 'get-string-all)
-  (define-inline (%get-it ?read-char)
-    (let ((dst.len (string-port-buffer-size)))
-      (let next-buffer-string ((output.len  0)
-			       (output.strs '()))
-	(let next-char ((dst.str   (unsafe.make-string dst.len))
-			(dst.index 0))
-	  (let ((ch (?read-char port who)))
-	    (if (eof-object? ch)
-		(if (and (null? output.strs) (unsafe.fxzero? dst.index))
-		    ch
-		  (%unsafe.string-reverse-and-concatenate (cons (substring dst.str 0 dst.index)
-								output.strs)
-							  (unsafe.fx+ dst.index output.len)
-							  who))
-	      (begin
-		(unsafe.string-set! dst.str dst.index ch)
-		(let ((dst.index (unsafe.fxadd1 dst.index)))
-		  (if (unsafe.fx= dst.index dst.len)
-		      (next-buffer-string (unsafe.fx+ output.len dst.len)
-					  (cons dst.str output.strs))
-		    (next-char dst.str dst.index))))))))))
-  (define-inline (%read-utf16le ?port ?who)
-    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
-  (define-inline (%read-utf16be ?port ?who)
-    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
   (%assert-argument-is-port port who)
-  (%case-textual-input-port-fast-tag (port who)
-    ((FAST-GET-UTF8-TAG)
-     (%get-it %unsafe.read-char-from-port-with-fast-get-utf8-tag))
-    ((FAST-GET-CHAR-TAG)
-     (%get-it %unsafe.read-char-from-port-with-fast-get-char-tag))
-    ((FAST-GET-LATIN-TAG)
-     (%get-it %unsafe.read-char-from-port-with-fast-get-latin-tag))
-    ((FAST-GET-UTF16LE-TAG)
-     (%get-it %read-utf16le))
-    ((FAST-GET-UTF16BE-TAG)
-     (%get-it %read-utf16be))))
+  (let ((dst.len (string-port-buffer-size)))
+    (let next-buffer-string ((output.len	0)
+			     (output.strs	'())
+			     (dst.str		(unsafe.make-string dst.len)))
+      (let ((count (%unsafe.get-string-n! who port dst.str 0 dst.len)))
+	(cond ((eof-object? count)
+	       (if (null? output.strs)
+		   count
+		 (%unsafe.string-reverse-and-concatenate who output.strs output.len)))
+	      ((unsafe.fx= count dst.len)
+	       (next-buffer-string (unsafe.fx+ output.len dst.len)
+				   (cons dst.str output.strs)
+				   (unsafe.make-string dst.len)))
+	      (else
+	       (%unsafe.string-reverse-and-concatenate who
+						       (cons (substring dst.str 0 count) output.strs)
+						       (unsafe.fx+ count output.len))))))))
 
 
 ;;;; string line input

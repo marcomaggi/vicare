@@ -10562,7 +10562,7 @@
 
     (check
 	(guard (E ((assertion-violation? E)
-		   (pretty-print (condition-message E))
+;;;		   (pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (open-bytevector-input-port '#vu8()
@@ -10870,7 +10870,7 @@
 
     (check
 	(guard (E ((assertion-violation? E)
-		   (pretty-print (condition-message E))
+;;;		   (pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (open-bytevector-input-port '#vu8()
