@@ -29,7 +29,29 @@
     (ikarus system $chars)
     (ikarus system $fx)
     (ikarus system $pairs)
-    (ikarus system $bytevectors))
+    (ikarus system $bytevectors)
+    (prefix (rename (ikarus system $fx) #;(ikarus fixnums unsafe)
+		    ($fxzero?	fxzero?)
+		    ($fxadd1	fxadd1)		 ;increment
+		    ($fxsub1	fxsub1)		 ;decrement
+		    ($fxsra	fxsra)		 ;shift right
+		    ($fxsll	fxsll)		 ;shift left
+		    ($fxlogor	fxlogor)	 ;inclusive logic OR
+		    ($fxlogand	fxand)		 ;logic AND
+		    ($fx+	fx+)
+		    ($fx-	fx-)
+		    ($fx<	fx<)
+		    ($fx>	fx>)
+		    ($fx>=	fx>=)
+		    ($fx<=	fx<=)
+		    ($fx=	fx=))
+	    unsafe.)
+    (prefix (rename (ikarus system $strings) #;(ikarus system strings)
+		    ($make-string	make-string)
+		    ($string-length	string-length)
+		    ($string-ref	string-ref)
+		    ($string-set!	string-set!))
+	    unsafe.))
 
 
 ;;;; syntax helpers
@@ -304,121 +326,147 @@
 	   (cons 'datum (u:dot port '(#\.) 10 #f #f +1))))))
 
 
-(define tokenize-char*
-  (lambda (i str p d)
-    (cond
-     ((fx= i (string-length str))
-      (let ((c (peek-char p)))
-	(cond
-	 ((eof-object? c) d)
-	 ((delimiter? c)  d)
-	 (else
-	  (die/p p 'tokenize "invalid character after sequence"
-		 (string-append str (string c)))))))
-     (else
-      (let ((c (read-char p)))
-	(cond
-	 ((eof-object? c)
-	  (die/p p 'tokenize
-		 "invalid eof in the middle of expected sequence" str))
-	 (($char= c (string-ref str i))
-	  (tokenize-char* (fxadd1 i) str p d))
-	 (else
-	  (die/p-1 p 'tokenize
-		   "invalid char while scanning string"
-		   c str))))))))
-(define tokenize-char-seq
-  (lambda (p str d)
-    (let ((c (peek-char p)))
-      (cond
-       ((eof-object? c) (cons 'datum (string-ref str 0)))
-       ((delimiter? c)  (cons 'datum (string-ref str 0)))
-       (($char= (string-ref str 1) c)
-	(read-char p)
-	(tokenize-char*  2 str p d))
-       (else
-	(die/p p 'tokenize "invalid syntax"
-	       (string-ref str 0) c))))))
-(define tokenize-char
-  ;;Called after a hash character followed by a backslash character have
-  ;;been read from P.
+(define (tokenize-char-seq port str datum)
+  ;;Subroutine  of TOKENIZE-CHAR.  Read  characters from  PORT verifying
+  ;;that they are equal to the  characters drawn from the string STR; if
+  ;;reading and  comparing is successful:  peek one more char  from PORT
+  ;;and verify that it is EOF or a delimiter (according to DELIMITER?).
   ;;
-  (lambda (p)
-    (let ((c (read-char p)))
-      (cond
-       ((eof-object? c)
-	(die/p p 'tokenize "invalid #\\ near end of file"))
-       ((eqv? #\n c)
-	(let ((c (peek-char p)))
-	  (cond
-	   ((eof-object? c)
-	    (read-char p)
-	    '(datum . #\n))
-	   ((eqv? #\u c)
-	    (read-char p)
-	    (tokenize-char-seq p "ul" '(datum . #\x0)))
-	   ((eqv? #\e c)
-	    (read-char p)
-	    (tokenize-char-seq p "ewline" '(datum . #\xA)))
-	   ((delimiter? c)
-	    '(datum . #\n))
-	   (else
-	    (die/p p 'tokenize "invalid syntax"
-		   (string #\# #\\ #\n c))))))
-       ((eqv? #\a c)
-	(tokenize-char-seq p "alarm" '(datum . #\x7)))
-       ((eqv? #\b c)
-	(tokenize-char-seq p "backspace" '(datum . #\x8)))
-       ((eqv? #\t c)
-	(tokenize-char-seq p "tab" '(datum . #\x9)))
-       ((eqv? #\l c)
-	(tokenize-char-seq p "linefeed" '(datum . #\xA)))
-       ((eqv? #\v c)
-	(tokenize-char-seq p "vtab" '(datum . #\xB)))
-       ((eqv? #\p c)
-	(tokenize-char-seq p "page" '(datum . #\xC)))
-       ((eqv? #\r c)
-	(tokenize-char-seq p "return" '(datum . #\xD)))
-       ((eqv? #\e c)
-	(tokenize-char-seq p "esc" '(datum . #\x1B)))
-       ((eqv? #\s c)
-	(tokenize-char-seq p "space" '(datum . #\x20)))
-       ((eqv? #\d c)
-	(tokenize-char-seq p "delete" '(datum . #\x7F)))
-       ((eqv? #\x c)
-	(let ((n (peek-char p)))
-	  (cond
-	   ((or (eof-object? n) (delimiter? n))
-	    '(datum . #\x))
-	   ((hex n) =>
-	    (lambda (v)
-	      (read-char p)
-	      (let f ((v v) (ac (cons n '(#\x))))
-		(let ((c (peek-char p)))
-		  (cond
-		   ((eof-object? c)
-		    (cons 'datum (checked-integer->char v ac p)))
-		   ((delimiter? c)
-		    (cons 'datum (checked-integer->char v ac p)))
-		   ((hex c) =>
-		    (lambda (v0)
-		      (read-char p)
-		      (f (+ (* v 16) v0) (cons c ac))))
+  ;;If successful return DATUM, else raise an exception.
+  ;;
+  ;;This function is used to parse characters: in the format "#\newline"
+  ;;when the sequence "#\ne" has already been consumed; in this case the
+  ;;function is called as:
+  ;;
+  ;;   (tokenize-char-seq port "ewline" '(datum . #\xA))
+  ;;
+  ;;As an extension  (currently not used in the  lexer, Marco Maggi; Oct
+  ;;12, 2011), this function supports  also the case of character in the
+  ;;format "#\A" when the sequence  "#\A" has already been consumed, and
+  ;;we only  need to verify  that the  next char from  PORT is EOF  or a
+  ;;delimiter.  In this case DATUM is ignored.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (let ((ch (peek-char port)))
+    (cond ((or (eof-object? ch) (delimiter? ch))
+	   (cons 'datum (unsafe.string-ref str 0)))
+	  (($char= ch (unsafe.string-ref str 1))
+	   (read-char port)
+	   (tokenize-char* 2 str port datum))
+	  (else
+	   (%error "invalid syntax" (unsafe.string-ref str 0) ch)))))
+
+(define (tokenize-char* str.index str port datum)
+  ;;Recusrive subroutine of TOKENIZE-CHAR-SEQ.  Draw characters from the
+  ;;string STR, starting at STR.INDEX, and verify that they are equal to
+  ;;the  characters  read  from   PORT;  if  reading  and  comparing  is
+  ;;successful: peek one  more char from PORT and verify  that it is EOF
+  ;;or a delimiter (according to DELIMITER?).
+  ;;
+  ;;If successful return DATUM, else raise an exception.
+  ;;
+  (define-inline (recurse idx)
+    (tokenize-char* idx str port datum))
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (if (unsafe.fx= str.index (unsafe.string-length str))
+      (let ((ch (peek-char port)))
+	(cond ((eof-object? ch) datum)
+	      ((delimiter?  ch) datum)
+	      (else
+	       (%error "invalid character after sequence" (string-append str (string ch))))))
+    (let ((ch (read-char port)))
+      (cond ((eof-object? ch)
+	     (%error "invalid EOF in the middle of expected sequence" str))
+	    (($char= ch (unsafe.string-ref str str.index))
+	     (recurse (unsafe.fxadd1 str.index)))
+	    (else
+	     (%error "invalid char while scanning string" ch str))))))
+
+
+(define (tokenize-char port)
+  ;;Called after a hash character followed by a backslash character have
+  ;;been read from PORT.  Read  characters from PORT parsing a character
+  ;;datum; return the datum:
+  ;;
+  ;;   (datum . <ch>)
+  ;;
+  ;;where <CH> is the character value.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (let ((ch (read-char port)))
+    (cond ((eof-object? ch)
+	   (%error "invalid #\\ near end of file"))
+
+	  ;;There are multiple character sequences starting with "#\n".
+	  (($char= #\n ch)
+	   (let ((ch1 (peek-char port)))
+	     (cond ((eof-object? ch1)
+		    '(datum . #\n))
+		   (($char= #\u ch1)
+		    (read-char port)
+		    (tokenize-char-seq port "ul"	'(datum . #\x0)))
+		   (($char= #\e ch1)
+		    (read-char port)
+		    (tokenize-char-seq port "ewline"	'(datum . #\xA)))
+		   ((delimiter? ch1)
+		    '(datum . #\n))
 		   (else
-		    (die/p p 'tokenize
-                           "invalid character sequence"
-                           (list->string (reverse (cons c ac))))))))))
-	   (else
-	    (die/p p 'tokenize "invalid character sequence"
-		   (string-append "#\\" (string n)))))))
-       (else
-	(let ((n (peek-char p)))
-	  (cond
-	   ((eof-object? n) (cons 'datum c))
-	   ((delimiter? n)  (cons 'datum c))
-	   (else
-	    (die/p p 'tokenize "invalid syntax"
-		   (string-append "#\\" (string c n)))))))))))
+		    (%error "invalid syntax" (string #\# #\\ #\n ch1))))))
+
+	  (($char= #\a ch)
+	   (tokenize-char-seq port "alarm"	'(datum . #\x7)))
+	  (($char= #\b ch)
+	   (tokenize-char-seq port "backspace"	'(datum . #\x8)))
+	  (($char= #\t ch)
+	   (tokenize-char-seq port "tab"	'(datum . #\x9)))
+	  (($char= #\l ch)
+	   (tokenize-char-seq port "linefeed"	'(datum . #\xA)))
+	  (($char= #\v ch)
+	   (tokenize-char-seq port "vtab"	'(datum . #\xB)))
+	  (($char= #\p ch)
+	   (tokenize-char-seq port "page"	'(datum . #\xC)))
+	  (($char= #\r ch)
+	   (tokenize-char-seq port "return"	'(datum . #\xD)))
+	  (($char= #\e ch)
+	   (tokenize-char-seq port "esc"	'(datum . #\x1B)))
+	  (($char= #\s ch)
+	   (tokenize-char-seq port "space"	'(datum . #\x20)))
+	  (($char= #\d ch)
+	   (tokenize-char-seq port "delete"	'(datum . #\x7F)))
+	  (($char= #\x ch)
+	   (let ((n (peek-char port)))
+	     (cond ((or (eof-object? n) (delimiter? n))
+		    '(datum . #\x))
+		   ((hex n)
+		    => (lambda (v)
+			 (read-char port)
+			 (let f ((v v) (ac (cons n '(#\x))))
+			   (let ((c (peek-char port)))
+			     (cond ((eof-object? c)
+				    (cons 'datum (checked-integer->char v ac port)))
+				   ((delimiter? c)
+				    (cons 'datum (checked-integer->char v ac port)))
+				   ((hex c)
+				    => (lambda (v0)
+					 (read-char port)
+					 (f (+ (* v 16) v0) (cons c ac))))
+				   (else
+				    (%error "invalid character sequence"
+					    (list->string (reverse (cons c ac))))))))))
+		   (else
+		    (%error "invalid character sequence"
+			    (string-append "#\\" (string n)))))))
+	  (else
+	   (let ((ch1 (peek-char port)))
+	     (if (or (eof-object? ch1)
+		     (delimiter?  ch1))
+		 (cons 'datum ch)
+	       (%error "invalid syntax" (string-append "#\\" (string ch ch1)))))))))
+
+
 (define (hex x)
   (cond
    ((and ($char<= #\0 x) ($char<= x #\9))
