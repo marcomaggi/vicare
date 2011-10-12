@@ -92,12 +92,13 @@
 (define char->num
   (lambda (c)
     (fx- ($char->fixnum c) ($char->fixnum #\0))))
-(define initial?
-  (lambda (c)
-    (cond
-     [($char<= c ($fixnum->char 127))
-      (or (letter? c) (special-initial? c))]
-     [else (unicode-printable-char? c)])))
+
+(define (initial? c)
+  (cond [($char<= c ($fixnum->char 127))
+	 (or (letter? c) (special-initial? c))]
+	[else
+	 (unicode-printable-char? c)]))
+
 (define letter?
   (lambda (c)
     (or (and ($char<= #\a c) ($char<= c #\z))
@@ -548,46 +549,29 @@
     (when (eq? (port-mode p) 'r6rs-mode)
       (die/p-1 p 'tokenize "gensym syntax is invalid in #!r6rs mode"
 	       (format "#~a" c)))
-    (let* ([c (skip-whitespace p "gensym")]
-	   [id0
-	    (cond
-	     [(initial? c)
-	      (list->string
-	       (reverse (tokenize-identifier (cons c '()) p)))]
-	     [($char= #\| c)
-	      (list->string
-	       (reverse (tokenize-bar p '())))]
-	     [else
-	      (die/p-1 p 'tokenize
-		       "invalid char inside gensym" c)])]
-	   [c (skip-whitespace p "gensym")])
-      (cond
-       [($char= #\} c)
-	(cons 'datum
-	      (foreign-call "ikrt_strings_to_gensym" #f id0))]
-       [else
-	(let ([id1
-	       (cond
-		[(initial? c)
-		 (list->string
-		  (reverse
-		   (tokenize-identifier
-		    (cons c '()) p)))]
-		[($char= #\| c)
-		 (list->string
-		  (reverse (tokenize-bar p '())))]
-		[else
-		 (die/p-1 p 'tokenize
-			  "invalid char inside gensym" c)])])
-	  (let ([c (skip-whitespace p "gensym")])
-	    (cond
-	     [($char= #\} c)
-	      (cons 'datum
-		    (foreign-call "ikrt_strings_to_gensym"
-				  id0 id1))]
-	     [else
-	      (die/p-1 p 'tokenize
-		       "invalid char inside gensym" c)])))]))]
+    (let* ([c   (skip-whitespace p "gensym")]
+	   [id0 (cond [(initial? c)
+		       (list->string (reverse (tokenize-identifier (cons c '()) p)))]
+		      [($char= #\| c)
+		       (list->string (reverse (tokenize-bar p '())))]
+		      [else
+		       (die/p-1 p 'tokenize "invalid char inside gensym" c)])]
+	   [c   (skip-whitespace p "gensym")])
+      (cond [($char= #\} c)
+	     (cons 'datum (foreign-call "ikrt_strings_to_gensym" #f id0))]
+	    [else
+	     (let ([id1 (cond [(initial? c)
+			       (list->string (reverse (tokenize-identifier (cons c '()) p)))]
+			      [($char= #\| c)
+			       (list->string (reverse (tokenize-bar p '())))]
+			      [else
+			       (die/p-1 p 'tokenize "invalid char inside gensym" c)])])
+	       (let ([c (skip-whitespace p "gensym")])
+		 (cond [($char= #\} c)
+			(cons 'datum (foreign-call "ikrt_strings_to_gensym" id0 id1))]
+		       [else
+			(die/p-1 p 'tokenize "invalid char inside gensym" c)])))]))]
+
    [($char= #\v c)
     (let ([c (read-char p)])
       (cond [($char= #\u c)
