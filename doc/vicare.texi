@@ -3719,7 +3719,7 @@ The following bindings are exported by the @library{ikarus} library.
 @defun open-string-input-port @var{string}
 @defunx open-string-input-port @var{string} @var{eol-style}
 As defined by @rnrs{6}: return a textual input port whose characters are
-drawn from @var{string}.  When @var{eol-style} is used: it must be a
+drawn from @var{string}.  When @var{eol-style} is given: it must be a
 symbol selecting an end--of--line style conversion, as accepted by
 @func{eol-style}; such conversion is applied to the characters drawn
 from @var{string}.
@@ -3733,6 +3733,19 @@ called, the effect on the returned port is unspecified.
 @defunx open-string-input-port/id @var{string} @var{id} @var{eol-style}
 Like @func{open-string-input-port} but allows the specification of a
 customised port identifier @var{id}, which must be a Scheme string.
+@end defun
+
+
+@defun open-string-output-port
+@defunx open-string-output-port @var{eol-style}
+As defined by @rnrs{6}, return two values: a textual output port and an
+extraction procedure; the output port accumulates the characters written
+to it for later extraction by the procedure.
+
+As a @value{PRJNAME} extension, when @var{eol-style} is given: it must
+be a symbol selecting an end--of--line style conversion, as accepted by
+@func{eol-style}; such conversion is applied to the characters written
+to the port.
 @end defun
 
 @c page
