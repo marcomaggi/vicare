@@ -520,7 +520,11 @@
 
 
 (define (multiline-comment port)
-  ;;Parse a multiline comment "#| ... |#", possibly nested.
+  ;;Parse a multiline comment  "#| ... |#", possibly nested.  Accumulate
+  ;;the characters in the comment, excluding the "#|" and "|#", and hand
+  ;;the  resulting string to  the function  referenced by  the parameter
+  ;;COMMENT-HANDLER.    Return  the  return   value  of   such  function
+  ;;application.
   ;;
   (define-inline (%multiline-error)
     (die/p port 'tokenize "end of file encountered while inside a #|-style comment"))
