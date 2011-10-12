@@ -593,8 +593,7 @@ Internals
 
 * objects int::                 Builtin objects.
 * debug int::                   Debug mode.
-* compiler::                    Wild notes on the compiler
-                                internals.
+* compiler::                    Wild notes on the compiler internals.
 
 Appendices
 
