@@ -519,47 +519,59 @@
 	(else #f)))
 
 
-(define (multiline-comment p)
+(define (multiline-comment port)
+  ;;Parse a multiline comment "#| ... |#", possibly nested.
+  ;;
   (define-inline (%multiline-error)
-    (die/p p 'tokenize "end of file encountered while inside a #|-style comment"))
+    (die/p port 'tokenize "end of file encountered while inside a #|-style comment"))
 
-  (define-inline (%apprev str str.start accumulated)
-    (apprev str str.start (unsafe.string-length str) accumulated))
-  (define (apprev str str.index str.len accumulated)
+  (define-inline (string->reverse-list str str.start accumulated)
+    (%string->reverse-list str str.start (unsafe.string-length str) accumulated))
+  (define (%string->reverse-list str str.index str.len accumulated)
     (if (unsafe.fx= str.index str.len)
 	accumulated
-      (apprev str (unsafe.fxadd1 str.index) str.len
-	      (cons (unsafe.string-ref str str.index) accumulated))))
+      (%string->reverse-list str (unsafe.fxadd1 str.index) str.len
+			     (cons (unsafe.string-ref str str.index) accumulated))))
 
-  (define (f p ac)
-    (let ((c (read-char p)))
+  (define (accumulate-comment-chars port ac)
+    (define-inline (recurse ac)
+      (accumulate-comment-chars port ac))
+    (let ((c (read-char port)))
       (cond ((eof-object? c)
 	     (%multiline-error))
-	    (($char= #\| c)
-	     (let g ((c (read-char p)) (ac ac))
-	       (cond ((eof-object? c)
-		      (%multiline-error))
-		     (($char= #\# c)
-		      ac)
-		     (($char= #\| c)
-		      (g (read-char p) (cons c ac)))
-		     (else
-		      (f p (cons c ac))))))
-	    (($char= #\# c)
-	     (let ((c (read-char p)))
-	       (cond ((eof-object? c)
-		      (%multiline-error))
-		     (($char= #\| c)
-		      (let ((v (multiline-comment p)))
-			(if (string? v)
-			    (f p (apprev v 0 ac))
-			  (f p ac))))
-		     (else
-		      (f p (cons c (cons #\# ac)))))))
-	    (else
-	     (f p (cons c ac))))))
 
-  ((comment-handler) (reverse-list->string (f p '()))))
+	    ;;A vertical bar character may or may not end this multiline
+	    ;;comment.
+	    (($char= #\| c)
+	     (let next-vertical-bar ((ch1 (read-char port)) (ac ac))
+	       (cond ((eof-object? ch1)
+		      (%multiline-error))
+		     (($char= #\# ch1) ;end of comment
+		      ac)
+		     (($char= #\| ch1) ;optimisation for sequence of bars?!?
+		      (next-vertical-bar (read-char port) (cons ch1 ac)))
+		     (else
+		      (recurse (cons ch1 ac))))))
+
+	    ;;A hash character  may or may not start  a nested multiline
+	    ;;comment.   Read a  nested multiline  comment, if  there is
+	    ;;one.
+	    (($char= #\# c)
+	     (let ((ch1 (read-char port)))
+	       (cond ((eof-object? ch1)
+		      (%multiline-error))
+		     (($char= #\| ch1) ;it is a nested comment
+		      (let ((v (multiline-comment port)))
+			(if (string? v)
+			    (recurse (string->reverse-list v 0 ac))
+			  (recurse ac))))
+		     (else ;it is a standalone hash char
+		      (recurse (cons ch1 (cons #\# ac)))))))
+
+	    (else
+	     (recurse (cons c ac))))))
+
+  ((comment-handler) (reverse-list->string (accumulate-comment-chars port '()))))
 
 
 (define (skip-whitespace p caller)
@@ -1912,7 +1924,7 @@
       (lambda (x) (void))
     (lambda (x)
       (unless (procedure? x)
-	(die 'comment-handler "not a procedure" x))
+	(assertion-violation 'comment-handler "not a procedure" x))
       x)))
 
 
