@@ -32,6 +32,17 @@
     (ikarus system $bytevectors))
 
 
+;;;; syntax helpers
+
+(define-syntax define-inline
+  (syntax-rules ()
+    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
+     (define-syntax ?name
+       (syntax-rules ()
+	 ((_ ?arg ... . ?rest)
+	  (begin ?form0 ?form ...)))))))
+
+
 (define (make-compound-position port)
   (cons (port-id port) (input-port-byte-position port)))
 
@@ -463,169 +474,186 @@
   ;;(datum . #t)		The token is the value #t.
   ;;(datum . #f)		The token is the value #f.
   ;;(datum . <char>)		The token is the character <char>.
-  ;;vparen			The token is a vector.
+  ;;(datum . <sym>)		The token is the symbol <sym>.
+  ;;(datum . <num>)		The token is the number <num>.
+  ;;(datum . #!eof)		The token is the "#!eof" comment.
   ;;(macro . syntax)		The token is a syntax form: #'---.
   ;;(macro . quasisyntax)	The token is a quasisyntax form: #`---.
   ;;(macro . unsyntax-splicing)	The token is an unsyntax-splicing form: #,@---.
   ;;(macro . unsyntax)		The token is an unsyntax form: #,---.
-  ;;(datum . #!eof)		The token is the "#!eof" comment.
   ;;(mark . <n>)		The token is a graph syntax mark: #<N>=---
   ;;(ref . <n>)			The token is a graph syntax reference: #<N>#
+  ;;vparen			The token is a vector.
+  ;;vu8				The token is a u8 bytevector.
+  ;;vs8				The token is a s8 bytevector.
   ;;
   ;;When the token is the  "#!r6rs" or "#!vicare" comment: the port mode
   ;;is changed  accordingly and TOKENIZE/1  is applied to the  port; the
   ;;return value is the return value of TOKENIZE/1.
   ;;
+  (define-inline (%error msg . args)
+    (die/p p 'tokenize msg . args))
+  (define-inline (%error-1 msg . args)
+    (die/p-1 p 'tokenize msg . args))
+
   (cond
-   [(eof-object? c)
-    (die/p p 'tokenize "invalid # near end of file")]
+   ((eof-object? c)
+    (die/p p 'tokenize "invalid # near end of file"))
 
-   [(or ($char= #\t c) ($char= #\T c)) #;(memq c '(#\t #\T))
-    (let ([c1 (peek-char p)])
-      (cond [(eof-object? c1) '(datum . #t)]
-	    [(delimiter?  c1) '(datum . #t)]
-	    [else
-	     (die/p p 'tokenize (format "invalid syntax near #~a~a" c c1))]))]
+   ((or ($char= #\t c) ($char= #\T c)) #;(memq c '(#\t #\T))
+    (let ((c1 (peek-char p)))
+      (cond ((eof-object? c1) '(datum . #t))
+	    ((delimiter?  c1) '(datum . #t))
+	    (else
+	     (%error (format "invalid syntax near #~a~a" c c1))))))
 
-   [(or ($char= #\f c) ($char= #\F c)) #;(memq c '(#\f #\F))
-    (let ([c1 (peek-char p)])
-      (cond [(eof-object? c1) '(datum . #f)]
-	    [(delimiter? c1)  '(datum . #f)]
-	    [else (die/p p 'tokenize (format "invalid syntax near #~a~a" c c1))]))]
+   ((or ($char= #\f c) ($char= #\F c)) #;(memq c '(#\f #\F))
+    (let ((c1 (peek-char p)))
+      (cond ((eof-object? c1) '(datum . #f))
+	    ((delimiter? c1)  '(datum . #f))
+	    (else
+	     (%error (format "invalid syntax near #~a~a" c c1))))))
 
-   [($char= #\\ c) (tokenize-char p)]
-   [($char= #\( c) 'vparen]
-   [($char= #\' c) '(macro . syntax)]
-   [($char= #\` c) '(macro . quasisyntax)]
+   (($char= #\\ c) (tokenize-char p))
+   (($char= #\( c) 'vparen)
+   (($char= #\' c) '(macro . syntax))
+   (($char= #\` c) '(macro . quasisyntax))
 
-   [($char= #\, c)
-    (let ([c (peek-char p)])
-      (cond [(eqv? c #\@)
+   (($char= #\, c)
+    (let ((c (peek-char p)))
+      (cond ((eqv? c #\@)
 	     (read-char p)
-	     '(macro . unsyntax-splicing)]
-	    [else
-	     '(macro . unsyntax)]))]
+	     '(macro . unsyntax-splicing))
+	    (else
+	     '(macro . unsyntax)))))
 
-   [($char= #\! c)
-    (let ([e (read-char p)])
+   (($char= #\! c)
+    (let ((e (read-char p)))
       (when (eof-object? e)
-	(die/p p 'tokenize "invalid eof near #!"))
+	(%error "invalid eof near #!"))
       (case e
-	[(#\e)
+	((#\e)
 	 (when (eq? (port-mode p) 'r6rs-mode)
-	   (die/p-1 p 'tokenize "invalid syntax: #!e"))
+	   (%error-1 "invalid syntax: #!e"))
 	 (read-char* p '(#\e) "of" "eof sequence" #f #f)
-	 (cons 'datum (eof-object))]
-	[(#\r)
+	 (cons 'datum (eof-object)))
+	((#\r)
 	 (read-char* p '(#\r) "6rs" "#!r6rs comment" #f #f)
 	 (set-port-mode! p 'r6rs-mode)
-	 (tokenize/1 p)]
-	[(#\v)
+	 (tokenize/1 p))
+	((#\v)
 	 (read-char* p '(#\v) "icare" "#!vicare comment" #f #f)
 	 (set-port-mode! p 'vicare-mode)
-	 (tokenize/1 p)]
-	[else
-	 (die/p-1 p 'tokenize (format "invalid syntax near #!~a" e))]))]
+	 (tokenize/1 p))
+	(else
+	 (%error-1 (format "invalid syntax near #!~a" e))))))
 
-   [(digit? c)
+   ((digit? c)
     (when (eq? (port-mode p) 'r6rs-mode)
-      (die/p-1 p 'tokenize "graph syntax is invalid in #!r6rs mode"
-	       (format "#~a" c)))
-    (tokenize-hashnum p (char->num c))]
+      (%error-1 "graph syntax is invalid in #!r6rs mode" (format "#~a" c)))
+    (tokenize-hashnum p (char->num c)))
 
-   [($char= #\: c)
+   (($char= #\: c)
     (when (eq? (port-mode p) 'r6rs-mode)
-      (die/p-1 p 'tokenize "gensym syntax is invalid in #!r6rs mode" (format "#~a" c)))
-    (let* ([c (skip-whitespace p "gensym")]
-	   [id0 (cond [(initial? c)
-		       (list->string (reverse (tokenize-identifier (cons c '()) p)))]
-		      [($char= #\| c)
-		       (list->string (reverse (tokenize-bar p '())))]
-		      [else
-		       (die/p-1 p 'tokenize "invalid char inside gensym" c)])])
-      (cons 'datum (gensym id0)))]
+      (%error-1 "gensym syntax is invalid in #!r6rs mode" (format "#~a" c)))
+    (let* ((c (skip-whitespace p "gensym"))
+	   (id0 (cond ((initial? c)
+		       (list->string (reverse (tokenize-identifier (cons c '()) p))))
+		      (($char= #\| c)
+		       (list->string (reverse (tokenize-bar p '()))))
+		      (else
+		       (%error-1 "invalid char inside gensym" c)))))
+      (cons 'datum (gensym id0))))
 
-   [($char= #\{ c)
+   (($char= #\{ c)
     (when (eq? (port-mode p) 'r6rs-mode)
-      (die/p-1 p 'tokenize "gensym syntax is invalid in #!r6rs mode"
-	       (format "#~a" c)))
-    (let* ([c   (skip-whitespace p "gensym")]
-	   [id0 (cond [(initial? c)
-		       (list->string (reverse (tokenize-identifier (cons c '()) p)))]
-		      [($char= #\| c)
-		       (list->string (reverse (tokenize-bar p '())))]
-		      [else
-		       (die/p-1 p 'tokenize "invalid char inside gensym" c)])]
-	   [c   (skip-whitespace p "gensym")])
-      (cond [($char= #\} c)
-	     (cons 'datum (foreign-call "ikrt_strings_to_gensym" #f id0))]
-	    [else
-	     (let ([id1 (cond [(initial? c)
-			       (list->string (reverse (tokenize-identifier (cons c '()) p)))]
-			      [($char= #\| c)
-			       (list->string (reverse (tokenize-bar p '())))]
-			      [else
-			       (die/p-1 p 'tokenize "invalid char inside gensym" c)])])
-	       (let ([c (skip-whitespace p "gensym")])
-		 (cond [($char= #\} c)
-			(cons 'datum (foreign-call "ikrt_strings_to_gensym" id0 id1))]
-		       [else
-			(die/p-1 p 'tokenize "invalid char inside gensym" c)])))]))]
+      (%error-1 "gensym syntax is invalid in #!r6rs mode" (format "#~a" c)))
+    (let* ((c   (skip-whitespace p "gensym"))
+	   (id0 (cond ((initial? c)
+		       (list->string (reverse (tokenize-identifier (cons c '()) p))))
+		      (($char= #\| c)
+		       (list->string (reverse (tokenize-bar p '()))))
+		      (else
+		       (%error-1 "invalid char inside gensym" c))))
+	   (c   (skip-whitespace p "gensym")))
+      (cond (($char= #\} c)
+	     (cons 'datum (foreign-call "ikrt_strings_to_gensym" #f id0)))
+	    (else
+	     (let ((id1 (cond ((initial? c)
+			       (list->string (reverse (tokenize-identifier (cons c '()) p))))
+			      (($char= #\| c)
+			       (list->string (reverse (tokenize-bar p '()))))
+			      (else
+			       (%error-1 "invalid char inside gensym" c)))))
+	       (let ((c (skip-whitespace p "gensym")))
+		 (cond (($char= #\} c)
+			(cons 'datum (foreign-call "ikrt_strings_to_gensym" id0 id1)))
+		       (else
+			(%error-1 "invalid char inside gensym" c)))))))))
 
-   [($char= #\v c)
-    (let ([c (read-char p)])
-      (cond [($char= #\u c)
-	     (let ([c (read-char p)])
-	       (cond [($char= c #\8)
-		      (let ([c (read-char p)])
-			(cond [($char= c #\() 'vu8]
-			      [(eof-object? c)
-			       (die/p p 'tokenize "invalid eof object after #vu8")]
-			      [else
-			       (die/p-1 p 'tokenize (format "invalid sequence #vu8~a" c))]))]
-		     [(eof-object? c)
-		      (die/p p 'tokenize "invalid eof object after #vu")]
-		     [else (die/p-1 p 'tokenize (format "invalid sequence #vu~a" c))]))]
-	    [($char= #\s c)
-	     [when (eq? (port-mode p) 'r6rs-mode)
-	       (die/p p 'tokenize "invalid #vs8 syntax in #!r6rs mode" "#vs8")]
-	     (let ([c (read-char p)])
-	       (cond [($char= c #\8)
-		      (let ([c (read-char p)])
-			(cond [($char= c #\() 'vs8]
-			      [(eof-object? c)
-			       (die/p p 'tokenize "invalid eof object after #vs8")]
-			      [else
-			       (die/p-1 p 'tokenize (format "invalid sequence #vs8~a" c))]))]
-		     [(eof-object? c)
-		      (die/p p 'tokenize "invalid eof object after #vs")]
-		     [else (die/p-1 p 'tokenize (format "invalid sequence #vs~a" c))]))]
-	    [(eof-object? c)
-	     (die/p p 'tokenize "invalid eof object after #v")]
-	    [else (die/p p 'tokenize (format "invalid sequence #v~a" c))]))]
-   [(memq c '(#\e #\E))
-    (cons 'datum (parse-string p (list c #\#) 10 #f 'e))]
-   [(memq c '(#\i #\I))
-    (cons 'datum (parse-string p (list c #\#) 10 #f 'i))]
-   [(memq c '(#\b #\B))
-    (cons 'datum (parse-string p (list c #\#) 2 2 #f))]
-   [(memq c '(#\x #\X))
-    (cons 'datum (parse-string p (list c #\#) 16 16 #f))]
-   [(memq c '(#\o #\O))
-    (cons 'datum (parse-string p (list c #\#) 8 8 #f))]
-   [(memq c '(#\d #\D))
-    (cons 'datum (parse-string p (list c #\#) 10 10 #f))]
-;;;[($char= #\@ c) DEAD: Unfixable due to port encoding
+   (($char= #\v c)
+    (let ((c (read-char p)))
+      (cond (($char= #\u c)	;unsigned bytevector
+	     (let ((c (read-char p)))
+	       (cond (($char= c #\8)	;unsigned bytes bytevector
+		      (let ((c (read-char p)))
+			(cond (($char= c #\()
+			       'vu8)
+			      ((eof-object? c)
+			       (%error "invalid eof object after #vu8"))
+			      (else
+			       (%error-1 (format "invalid sequence #vu8~a" c))))))
+		     ((eof-object? c)
+		      (%error "invalid eof object after #vu"))
+		     (else
+		      (%error-1 (format "invalid sequence #vu~a" c))))))
+
+	    (($char= #\s c)	;signed bytevector
+	     (when (eq? (port-mode p) 'r6rs-mode)
+	       (%error "invalid #vs8 syntax in #!r6rs mode" "#vs8"))
+	     (let ((c (read-char p)))
+	       (cond (($char= c #\8)	;signed bytes bytevector
+		      (let ((c (read-char p)))
+			(cond (($char= c #\()
+			       'vs8)
+			      ((eof-object? c)
+			       (%error "invalid eof object after #vs8"))
+			      (else
+			       (%error-1 (format "invalid sequence #vs8~a" c))))))
+		     ((eof-object? c)
+		      (%error "invalid eof object after #vs"))
+		     (else
+		      (%error-1 (format "invalid sequence #vs~a" c))))))
+
+	    ((eof-object? c)
+	     (%error "invalid eof object after #v"))
+	    (else
+	     (%error (format "invalid sequence #v~a" c))))))
+
+   ((memq c '(#\e #\E))
+    (cons 'datum (parse-string p (list c #\#) 10 #f 'e)))
+   ((memq c '(#\i #\I))
+    (cons 'datum (parse-string p (list c #\#) 10 #f 'i)))
+   ((memq c '(#\b #\B))
+    (cons 'datum (parse-string p (list c #\#) 2 2 #f)))
+   ((memq c '(#\x #\X))
+    (cons 'datum (parse-string p (list c #\#) 16 16 #f)))
+   ((memq c '(#\o #\O))
+    (cons 'datum (parse-string p (list c #\#) 8 8 #f)))
+   ((memq c '(#\d #\D))
+    (cons 'datum (parse-string p (list c #\#) 10 10 #f)))
+
+;;;(($char= #\@ c) DEAD: Unfixable due to port encoding
 ;;;                 that does not allow mixing binary and
 ;;;                 textual data in the same port.
 ;;;                Left here for historical value
 ;;; (when (eq? (port-mode p) 'r6rs-mode)
-;;;   (die/p-1 p 'tokenize "fasl syntax is invalid in #!r6rs mode"
+;;;   (%error-1 "fasl syntax is invalid in #!r6rs mode"
 ;;;      (format "#~a" c)))
 ;;; (die/p-1 p 'read "FIXME: fasl read disabled")
-;;; '(cons 'datum ($fasl-read p))]
-   [else
-    (die/p-1 p 'tokenize (format "invalid syntax #~a" c))]))
+;;; '(cons 'datum ($fasl-read p)))
+   (else
+    (%error-1 (format "invalid syntax #~a" c)))))
 
 
 (define (num-error p str ls)
