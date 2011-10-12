@@ -3708,6 +3708,14 @@ sense of @func{eqv?} to the result of any other call to the same
 procedure.
 @end deffn
 
+
+@deffn Procedure utf-bom-codec
+Codec for @utf{} encoding schemes whose data open with a Byte Order
+Mark.  A call to this procedure returns a value that is equal in the
+sense of @func{eqv?} to the result of any other call to the same
+procedure.
+@end deffn
+
 @c page
 @node iklib io textual
 @subsection Additional textual port features

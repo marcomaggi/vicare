@@ -13,6 +13,8 @@
 ;;;         |   ------ end of line style
 ;;;         ---------- codec
 ;;;
+;;;	Notice that the payload can be made bigger if need arises.
+;;;
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
@@ -31,20 +33,22 @@
 
 
 (library (ikarus codecs)
-  (export native-eol-style latin-1-codec utf-8-codec
+  (export native-eol-style
+	  latin-1-codec utf-8-codec utf-bom-codec
 	  utf-16-codec utf-16le-codec utf-16be-codec
           make-transcoder native-transcoder buffer-mode?
           transcoder-codec transcoder-eol-style
           transcoder-error-handling-mode)
   (import (except (ikarus)
-		  native-eol-style latin-1-codec utf-8-codec
+		  native-eol-style
+		  latin-1-codec utf-8-codec utf-bom-codec
 		  utf-16-codec utf-16le-codec utf-16be-codec
 		  make-transcoder native-transcoder
 		  buffer-mode? transcoder-codec
 		  transcoder-eol-style transcoder-error-handling-mode)
     (ikarus system $transcoders)
     (prefix (rename (ikarus system $fx)
-		    ($fx=	fx=)	;inclusive logic OR
+		    ($fx=	fx=)	;comparison
 		    ($fxlogor	fxior)	;inclusive logic OR
 		    ($fxlogand	fxand))	;logic AND
 	    unsafe.))
@@ -89,6 +93,9 @@
 (define (utf-16be-codec)
   'utf-16be-codec)
 
+(define (utf-bom-codec)
+  'utf-bom-codec)
+
 (define (native-eol-style)
   'none)
 
@@ -115,14 +122,16 @@
 (define eol-style-mask #b11100)
 
 (define codec-alist
-  ;;3 bits are reserved for the coded.
+  ;;3 bits are reserved for the codec.
   ;;
 ;;;                         76543210
   '((latin-1-codec	. #b00100000)
     (utf-8-codec	. #b01000000)
     (utf-16-codec	. #b01100000)
     (utf-16le-codec	. #b10000000)
-    (utf-16be-codec	. #b10100000)))
+    (utf-16be-codec	. #b10100000)
+    (utf-bom-codec	. #b11000000)
+    ))
 (define codec-mask	  #b11100000)
 
 

@@ -1179,7 +1179,8 @@
 	   (%parse-bom-and-add-fast-tag (?who ?port)
 	     (if-successful-match:
 	      (retry-after-tagging-port ($port-fast-attrs ?port)))
-	     (if-end-of-file: (eof-object))))
+	     (if-end-of-file: (eof-object))
+	     (if-no-match-raise-assertion-violation)))
 	 (define (%reconfigure-as-input fast-attrs)
 	   (%unsafe.reconfigure-output-buffer-to-input-buffer ?port ?who)
 	   ($set-port-fast-attrs! ?port fast-attrs)
@@ -1553,14 +1554,19 @@
      (unsafe.fxlogor ?op1 (%unsafe.fxior ?op2 . ?ops)))))
 
 ;;; auxiliary syntaxes
-(define-syntax data-is-needed-at:	(syntax-rules ()))
-(define-syntax if-available-data:	(syntax-rules ()))
-(define-syntax if-available-room:	(syntax-rules ()))
-(define-syntax if-end-of-file:		(syntax-rules ()))
-(define-syntax if-no-match:		(syntax-rules ()))
-(define-syntax if-successful-match:	(syntax-rules ()))
-(define-syntax if-successful-refill:	(syntax-rules ()))
-(define-syntax room-is-needed-for:	(syntax-rules ()))
+(let-syntax
+    ((define-auxiliary-syntax (syntax-rules ()
+				((_ ?who)
+				 (define-syntax ?who (syntax-rules ()))))))
+  (define-auxiliary-syntax data-is-needed-at:)
+  (define-auxiliary-syntax if-available-data:)
+  (define-auxiliary-syntax if-available-room:)
+  (define-auxiliary-syntax if-end-of-file:)
+  (define-auxiliary-syntax if-no-match-raise-assertion-violation)
+  (define-auxiliary-syntax if-no-match:)
+  (define-auxiliary-syntax if-successful-match:)
+  (define-auxiliary-syntax if-successful-refill:)
+  (define-auxiliary-syntax room-is-needed-for:))
 
 
 ;;;; Byte Order Mark (BOM) parsing
@@ -1648,10 +1654,11 @@
 	(if-end-of-file: result-if-end-of-file)))))
 
 (define-syntax %parse-bom-and-add-fast-tag
-  (syntax-rules (if-successful-match: if-end-of-file:)
+  (syntax-rules (if-successful-match: if-end-of-file: if-no-match-raise-assertio-violation)
     ((%parse-bom-and-add-fast-tag (?who ?port)
        (if-successful-match:	. ?matched-body)
-       (if-end-of-file:		. ?eof-body))
+       (if-end-of-file:		. ?eof-body)
+       (if-no-match-raise-assertion-violation))
      (if (%unsafe.parse-bom-and-add-fast-tag ?who ?port)
 	 (begin . ?eof-body)
        (begin . ?matched-body)))))
@@ -1667,6 +1674,8 @@
   ;;If  the input  octects  do not  match  the requested  BOM: raise  an
   ;;assertion violation.
   ;;
+  ;;Notice that Latin-1 encoding has no BOM.
+  ;;
   (with-port-having-bytevector-buffer (port)
     (%debug-assert port.transcoder)
     (case (transcoder-codec port.transcoder)
@@ -1677,7 +1686,7 @@
 	  #f)
 	 (if-no-match:
 	  (assertion-violation who
-	    "expected UTF-8 big endian Byte Order Mark from port" port))
+	    "expected to read UTF-8 big endian Byte Order Mark from port" port))
 	 (if-end-of-file: #t)))
 
       ((utf-16-codec)
@@ -1690,7 +1699,7 @@
 	  #f)
 	 (if-no-match:
 	  (assertion-violation who
-	    "expected UTF-16 big endian Byte Order Mark from port" port))
+	    "expected to read UTF-16 big endian Byte Order Mark from port" port))
 	 (if-end-of-file: #t)))
 
       ((utf-16le-codec)
@@ -1700,12 +1709,36 @@
 	  #f)
 	 (if-no-match:
 	  (assertion-violation who
-	    "expected UTF-16 little endian Byte Order Mark from port" port))
+	    "expected to read UTF-16 little endian Byte Order Mark from port" port))
+	 (if-end-of-file: #t)))
+
+      ((utf-bom-codec)
+       ;;Try  all the  UTF  encodings in  the  order: UTF-8,  UTF-16-be,
+       ;;UTF-16-le.
+       (%parse-byte-order-mark (who port UTF-8-BYTE-ORDER-MARK-LIST)
+	 (if-successful-match:
+	  (set! port.fast-attributes FAST-GET-UTF8-TAG)
+	  #f)
+	 (if-no-match:
+	  (%parse-byte-order-mark (who port UTF-16-BIG-ENDIAN-BYTE-ORDER-MARK-LIST)
+	    (if-successful-match:
+	     (set! port.fast-attributes FAST-GET-UTF16BE-TAG)
+	     #f)
+	    (if-no-match:
+	     (%parse-byte-order-mark (who port UTF-16-LITTLE-ENDIAN-BYTE-ORDER-MARK-LIST)
+	       (if-successful-match:
+		(set! port.fast-attributes FAST-GET-UTF16LE-TAG)
+		#f)
+	       (if-no-match:
+		(assertion-violation who
+		  "expected to read supported UTF Byte Order Mark from port" port))
+	       (if-end-of-file: #t)))
+	    (if-end-of-file: #t)))
 	 (if-end-of-file: #t)))
 
       (else
        (assertion-violation who
-	 "internal error: codec not handled by BOM parser" (transcoder-codec port.transcoder))))))
+	 "codec not handled by BOM parser" (transcoder-codec port.transcoder))))))
 
 
 ;;;; bytevector helpers

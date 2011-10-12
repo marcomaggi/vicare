@@ -11738,6 +11738,127 @@
   #t)
 
 
+(parametrise ((check-test-name	'utf-bom-codec))
+
+  (define TEST-STRING
+    (let* ((str.len	1024)
+	   (str		(make-string 1024)))
+      (do ((i 0 (+ 1 i)))
+	  ((= i 1024)
+	   str)
+	(string-set! str i (integer->char i)))))
+
+  (define TEST-BV-UTF-8
+    (string->utf8 TEST-STRING))
+  (define TEST-BV-UTF-8/BOM
+    (bytevector-append BYTE-ORDER-MARK-UTF-8 TEST-BV-UTF-8))
+
+  (define TEST-BV-UTF-16-LE
+    (string->utf16 TEST-STRING (endianness little)))
+  (define TEST-BV-UTF-16-LE/BOM
+    (bytevector-append BYTE-ORDER-MARK-UTF-16-LE TEST-BV-UTF-16-LE))
+
+  (define TEST-BV-UTF-16-BE
+    (string->utf16 TEST-STRING (endianness big)))
+  (define TEST-BV-UTF-16-BE/BOM
+    (bytevector-append BYTE-ORDER-MARK-UTF-16-BE TEST-BV-UTF-16-BE))
+
+;;; --------------------------------------------------------------------
+;;; reading strings
+
+  (check
+      (let ((port (open-bytevector-input-port TEST-BV-UTF-8
+					      (make-transcoder (utf-bom-codec)))))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (get-string-all port)))
+    => #t)
+
+  (check
+      (let ((port (open-bytevector-input-port TEST-BV-UTF-8/BOM
+					      (make-transcoder (utf-bom-codec)))))
+	(get-string-all port))
+    => TEST-STRING)
+
+  (check
+      (let ((port (open-bytevector-input-port TEST-BV-UTF-16-LE/BOM
+					      (make-transcoder (utf-bom-codec)))))
+	(get-string-all port))
+    => TEST-STRING)
+
+  (check
+      (let ((port (open-bytevector-input-port TEST-BV-UTF-16-BE/BOM
+					      (make-transcoder (utf-bom-codec)))))
+	(get-string-all port))
+    => TEST-STRING)
+
+;;; --------------------------------------------------------------------
+;;; reading char
+
+  (check
+      (let ((port (open-bytevector-input-port TEST-BV-UTF-8
+					      (make-transcoder (utf-bom-codec)))))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (get-char port)))
+    => #t)
+
+  (check
+      (let ((port (open-bytevector-input-port TEST-BV-UTF-8/BOM
+					      (make-transcoder (utf-bom-codec)))))
+	(get-char port))
+    => #\x0)
+
+  (check
+      (let ((port (open-bytevector-input-port TEST-BV-UTF-16-LE/BOM
+					      (make-transcoder (utf-bom-codec)))))
+	(get-char port))
+    => #\x0)
+
+  (check
+      (let ((port (open-bytevector-input-port TEST-BV-UTF-16-BE/BOM
+					      (make-transcoder (utf-bom-codec)))))
+	(get-char port))
+    => #\x0)
+
+;;; --------------------------------------------------------------------
+;;; peeking char
+
+  (check
+      (let ((port (open-bytevector-input-port TEST-BV-UTF-8
+					      (make-transcoder (utf-bom-codec)))))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (lookahead-char port)))
+    => #t)
+
+  (check
+      (let ((port (open-bytevector-input-port TEST-BV-UTF-8/BOM
+					      (make-transcoder (utf-bom-codec)))))
+	(lookahead-char port))
+    => #\x0)
+
+  (check
+      (let ((port (open-bytevector-input-port TEST-BV-UTF-16-LE/BOM
+					      (make-transcoder (utf-bom-codec)))))
+	(lookahead-char port))
+    => #\x0)
+
+  (check
+      (let ((port (open-bytevector-input-port TEST-BV-UTF-16-BE/BOM
+					      (make-transcoder (utf-bom-codec)))))
+	(lookahead-char port))
+    => #\x0)
+
+  #t)
+
+
 #;(parametrise ((check-test-name	'wrong-chars))
 
   (check
