@@ -87,6 +87,9 @@
 (define (die/ann ann who msg . arg*)
   (die/lex (annotation-source ann) who msg arg*))
 
+(define (num-error p str ls)
+  (die/p-1 p 'read str (list->string (reverse ls))))
+
 
 (define (checked-integer->char n ac p)
   (define (valid-integer-char? n)
@@ -669,10 +672,6 @@
     (%error-1 (format "invalid syntax #~a" c)))))
 
 
-(define (num-error p str ls)
-  (die/p-1 p 'read str
-	   (list->string (reverse ls))))
-
 (define-syntax port-config
   (syntax-rules (GEN-TEST GEN-ARGS FAIL EOF-ERROR GEN-DELIM-TEST)
     ((_ GEN-ARGS k . rest) (k (p ac) . rest))
@@ -696,8 +695,7 @@
 	   (define-syntax fail
 	     (syntax-rules ()
 	       ((_)
-		(num-error p "invalid numeric sequence"
-			   (cons var ac)))))
+		(num-error p "invalid numeric sequence" (cons var ac)))))
 	   (define-syntax next
 	     (syntax-rules ()
 	       ((_ who args (... ...))
@@ -707,29 +705,56 @@
 (define-string->number-parser port-config
   (parse-string u:digit+ u:sign u:dot))
 
-(define (read-char* p ls str who ci? delimited?)
-  (let f ((i 0) (ls ls))
-    (cond
-     ((fx= i (string-length str))
-      (when delimited?
-	(let ((c (peek-char p)))
-	  (when (and (not (eof-object? c)) (not (delimiter? c)))
-	    (die/p p 'tokenize
-		   (format "invalid ~a: ~s" who
-			   (list->string (reverse (cons c ls)))))))))
-     (else
-      (let ((c (read-char p)))
-	(cond
-	 ((eof-object? c)
-	  (die/p p 'tokenize
-		 (format "invalid eof inside ~a" who)))
-	 ((or (and (not ci?) (char=? c (string-ref str i)))
-	      (and ci? (char=? (char-downcase c) (string-ref str i))))
-	  (f (add1 i) (cons c ls)))
-	 (else
-	  (die/p-1 p 'tokenize
-		   (format "invalid ~a: ~s" who
-			   (list->string (reverse (cons c ls))))))))))))
+
+(define (read-char* port ls str who case-insensitive? delimited?)
+  ;;Read multiple characters from PORT expecting them to be the chars in
+  ;;the string STR; this function is  used to read a chunk of token.  If
+  ;;successful return  unspecified values; if  an error occurs  raise an
+  ;;exception.
+  ;;
+  ;;LS  must  be  a  list  of  characters already  read  from  PORT  and
+  ;;recognised to be the opening of  the token: they are used to build a
+  ;;better error message.  WHO must  be a string describing the expected
+  ;;token.
+  ;;
+  ;;If CASE-INSENSITIVE? is true: the comparison between characters read
+  ;;from PORT and characters drawn from STR is case insensitive.
+  ;;
+  ;;If DELIMITED? is true: after the chars in STR have been successfully
+  ;;read from PORT, a lookahead is performed on PORT and the result must
+  ;;be EOF or a delimiter character (according to DELIMITER?).
+  ;;
+  ;;Usage example:  when reading the  comment "#!r6rs" this  function is
+  ;;called as:
+  ;;
+  ;;	(read-char* port '(#\r) "6rs" #f #f)
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (define-inline (%error-1 msg . args)
+    (die/p-1 port 'tokenize msg . args))
+  (define str.len
+    (string-length str))
+  (let loop ((i 0) (ls ls))
+    (if (fx= i str.len)
+	(when delimited?
+	  (let ((ch (peek-char port)))
+	    (when (and (not (eof-object? ch))
+		       (not (delimiter?  ch)))
+	      (%error (format "invalid ~a: ~s" who (list->string (reverse (cons ch ls))))))))
+      (let ((ch (read-char port)))
+	(cond ((eof-object? ch)
+	       (%error (format "invalid eof inside ~a" who)))
+	      ((or (and (not case-insensitive?)
+			($char= ch (string-ref str i)))
+		   (and case-insensitive?
+			($char= (char-downcase ch)
+				(string-ref str i))))
+	       (loop (add1 i) (cons ch ls)))
+	      (else
+	       (%error-1 (format "invalid ~a: ~s" who (list->string (reverse (cons ch ls)))))))))))
+
+
 (define (tokenize-hashnum p n)
   (let ((c (read-char p)))
     (cond
@@ -756,6 +781,7 @@
 	   (else (tokenize-bar p (cons c ac))))))
        (($char= #\| c) ac)
        (else (tokenize-bar p (cons c ac)))))))
+
 (define (tokenize-backslash main-ac p)
   (let ((c (read-char p)))
     (cond
@@ -792,78 +818,92 @@
       (die/p-1 p 'tokenize
 	       (format "invalid sequence \\~a" c))))))
 
-(define tokenize/c
-  (lambda (c p)
-    (cond
-     ((eof-object? c)
-      (error 'tokenize/c "hmmmm eof")
-      (eof-object))
-     (($char= #\( c)   'lparen)
-     (($char= #\) c)   'rparen)
-     (($char= #\[ c)   'lbrack)
-     (($char= #\] c)   'rbrack)
-     (($char= #\' c)   '(macro . quote))
-     (($char= #\` c)   '(macro . quasiquote))
-     (($char= #\, c)
-      (let ((c (peek-char p)))
-	(cond
-	 ((eof-object? c) '(macro . unquote))
-	 (($char= c #\@)
-	  (read-char p)
-	  '(macro . unquote-splicing))
-	 (else '(macro . unquote)))))
-     (($char= #\# c)
-      (tokenize-hash p))
-     ((char<=? #\0 c #\9)
-      (let ((d (fx- (char->integer c) (char->integer #\0))))
-	(cons 'datum
-	      (u:digit+ p (list c) 10 #f #f +1 d))))
-     ((initial? c)
-      (let ((ls (reverse (tokenize-identifier (cons c '()) p))))
-	(cons 'datum (string->symbol (list->string ls)))))
-     (($char= #\" c)
-      (let ((ls (tokenize-string '() p)))
-	(cons 'datum (list->string (reverse ls)))))
-     ((memq c '(#\+))
-      (let ((c (peek-char p)))
-	(cond
-	 ((eof-object? c) '(datum . +))
-	 ((delimiter? c)  '(datum . +))
-	 (else
-	  (cons 'datum
-                (u:sign p '(#\+) 10 #f #f +1))))))
-     ((memq c '(#\-))
-      (let ((c (peek-char p)))
-	(cond
-	 ((eof-object? c) '(datum . -))
-	 ((delimiter? c)  '(datum . -))
-	 (($char= c #\>)
-	  (read-char p)
-	  (let ((ls (tokenize-identifier '() p)))
-	    (let ((str (list->string (cons* #\- #\> (reverse ls)))))
-	      (cons 'datum (string->symbol str)))))
-	 (else
-	  (cons 'datum
-                (u:sign p '(#\-) 10 #f #f -1))))))
-     (($char= #\. c)
-      (tokenize-dot p))
-     (($char= #\| c)
-      (when (eq? (port-mode p) 'r6rs-mode)
-	(die/p p 'tokenize "|symbol| syntax is invalid in #!r6rs mode"))
-      (let ((ls (reverse (tokenize-bar p '()))))
-	(cons 'datum (string->symbol (list->string ls)))))
-     (($char= #\\ c)
-      (cons 'datum
-            (string->symbol
-	     (list->string
-	      (reverse (tokenize-backslash '() p))))))
-		;(($char= #\{ c) 'lbrace)
-     (($char= #\@ c)
-      (when (eq? (port-mode p) 'r6rs-mode)
-	(die/p p 'tokenize "@-expr syntax is invalid in #!r6rs mode"))
-      'at-expr)
-     (else
-      (die/p-1 p 'tokenize "invalid syntax" c)))))
+
+(define (tokenize/c c p)
+  (define-inline (%error msg . args)
+    (die/p p 'tokenize msg . args))
+  (cond ((eof-object? c)
+	 (error 'tokenize/c "hmmmm eof")
+	 (eof-object))
+
+	(($char= #\( c)   'lparen)
+	(($char= #\) c)   'rparen)
+	(($char= #\[ c)   'lbrack)
+	(($char= #\] c)   'rbrack)
+	(($char= #\' c)   '(macro . quote))
+	(($char= #\` c)   '(macro . quasiquote))
+
+	(($char= #\, c)
+	 (let ((c (peek-char p)))
+	   (cond ((eof-object? c)
+		  '(macro . unquote))
+		 (($char= c #\@)
+		  (read-char p)
+		  '(macro . unquote-splicing))
+		 (else
+		  '(macro . unquote)))))
+
+	(($char= #\# c)
+	 (tokenize-hash p))
+
+	((char<=? #\0 c #\9)
+	 (let ((d ($fx- (char->integer c) (char->integer #\0))))
+	   (cons 'datum (u:digit+ p (list c) 10 #f #f +1 d))))
+
+	((initial? c)
+	 (let ((ls (reverse (tokenize-identifier (cons c '()) p))))
+	   (cons 'datum (string->symbol (list->string ls)))))
+
+	(($char= #\" c)
+	 (let ((ls (tokenize-string '() p)))
+	   (cons 'datum (list->string (reverse ls)))))
+
+	((memq c '(#\+))
+	 (let ((c (peek-char p)))
+	   (cond
+	    ((eof-object? c) '(datum . +))
+	    ((delimiter? c)  '(datum . +))
+	    (else
+	     (cons 'datum
+		   (u:sign p '(#\+) 10 #f #f +1))))))
+
+	((memq c '(#\-))
+	 (let ((c (peek-char p)))
+	   (cond
+	    ((eof-object? c) '(datum . -))
+	    ((delimiter? c)  '(datum . -))
+	    (($char= c #\>)
+	     (read-char p)
+	     (let ((ls (tokenize-identifier '() p)))
+	       (let ((str (list->string (cons* #\- #\> (reverse ls)))))
+		 (cons 'datum (string->symbol str)))))
+	    (else
+	     (cons 'datum
+		   (u:sign p '(#\-) 10 #f #f -1))))))
+
+	(($char= #\. c)
+	 (tokenize-dot p))
+
+	(($char= #\| c)
+	 (when (eq? (port-mode p) 'r6rs-mode)
+	   (%error "|symbol| syntax is invalid in #!r6rs mode"))
+	 (let ((ls (reverse (tokenize-bar p '()))))
+	   (cons 'datum (string->symbol (list->string ls)))))
+
+	(($char= #\\ c)
+	 (cons 'datum (string->symbol (list->string (reverse (tokenize-backslash '() p))))))
+
+;;;Unused for now.
+;;;
+;;;     (($char= #\{ c) 'lbrace)
+
+	(($char= #\@ c)
+	 (when (eq? (port-mode p) 'r6rs-mode)
+	   (%error "@-expr syntax is invalid in #!r6rs mode"))
+	 'at-expr)
+
+	(else
+	 (die/p-1 p 'tokenize "invalid syntax" c))))
 
 
 (define (tokenize/1 port)
