@@ -519,45 +519,47 @@
 	(else #f)))
 
 
-(define multiline-comment
-  (lambda (p)
-    (define-inline (%multiline-error)
-      (die/p p 'tokenize "end of file encountered while inside a #|-style comment"))
+(define (multiline-comment p)
+  (define-inline (%multiline-error)
+    (die/p p 'tokenize "end of file encountered while inside a #|-style comment"))
 
-    (define (apprev str i ac)
-      (if (fx= i (string-length str))
-	  ac
-	(apprev str (fx+ i 1) (cons (string-ref str i) ac))))
+  (define-inline (%apprev str str.start accumulated)
+    (apprev str str.start (unsafe.string-length str) accumulated))
+  (define (apprev str str.index str.len accumulated)
+    (if (unsafe.fx= str.index str.len)
+	accumulated
+      (apprev str (unsafe.fxadd1 str.index) str.len
+	      (cons (unsafe.string-ref str str.index) accumulated))))
 
-    (define (f p ac)
-      (let ((c (read-char p)))
-	(cond
-	 ((eof-object? c) (%multiline-error))
-	 (($char= #\| c)
-	  (let g ((c (read-char p)) (ac ac))
-	    (cond
-	     ((eof-object? c) (%multiline-error))
-	     (($char= #\# c) ac)
-	     (($char= #\| c)
-	      (g (read-char p) (cons c ac)))
-	     (else (f p (cons c ac))))))
-	 (($char= #\# c)
-	  (let ((c (read-char p)))
-	    (cond
-	     ((eof-object? c) (%multiline-error))
-	     (($char= #\| c)
-	      (let ((v (multiline-comment p)))
-		(if (string? v)
-		    (f p (apprev v 0 ac))
-		  (f p ac))))
-	     (else
-	      (f p (cons c (cons #\# ac)))))))
-	 (else
-	  (f p (cons c ac))))))
+  (define (f p ac)
+    (let ((c (read-char p)))
+      (cond ((eof-object? c)
+	     (%multiline-error))
+	    (($char= #\| c)
+	     (let g ((c (read-char p)) (ac ac))
+	       (cond ((eof-object? c)
+		      (%multiline-error))
+		     (($char= #\# c)
+		      ac)
+		     (($char= #\| c)
+		      (g (read-char p) (cons c ac)))
+		     (else
+		      (f p (cons c ac))))))
+	    (($char= #\# c)
+	     (let ((c (read-char p)))
+	       (cond ((eof-object? c)
+		      (%multiline-error))
+		     (($char= #\| c)
+		      (let ((v (multiline-comment p)))
+			(if (string? v)
+			    (f p (apprev v 0 ac))
+			  (f p ac))))
+		     (else
+		      (f p (cons c (cons #\# ac)))))))
+	    (else
+	     (f p (cons c ac))))))
 
-    (let ((ac (f p '())))
-      ((comment-handler)
-       (list->string (reverse ac))))))
+  ((comment-handler) (reverse-list->string (f p '()))))
 
 
 (define (skip-whitespace p caller)
