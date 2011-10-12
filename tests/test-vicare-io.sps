@@ -11097,40 +11097,40 @@
 
     (check
 	(let ((port (open-string-input-port test-string (eol-style none))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-latin1
 						(make-transcoder (latin-1-codec) (eol-style none)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-latin1-line test-string-latin1-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-8
 						(make-transcoder (utf-8-codec) (eol-style none)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-16le
 						(make-transcoder (utf-16le-codec) (eol-style none)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-16be
 						(make-transcoder (utf-16be-codec) (eol-style none)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
@@ -11153,40 +11153,40 @@
 
     (check
 	(let ((port (open-string-input-port test-string (eol-style lf))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-latin1
 						(make-transcoder (latin-1-codec) (eol-style lf)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-latin1-line test-string-latin1-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-8
 						(make-transcoder (utf-8-codec) (eol-style lf)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-16le
 						(make-transcoder (utf-16le-codec) (eol-style lf)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-16be
 						(make-transcoder (utf-16be-codec) (eol-style lf)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
@@ -11209,40 +11209,40 @@
 
     (check
 	(let ((port (open-string-input-port test-string (eol-style cr))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-latin1
 						(make-transcoder (latin-1-codec) (eol-style cr)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-latin1-line test-string-latin1-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-8
 						(make-transcoder (utf-8-codec) (eol-style cr)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-16le
 						(make-transcoder (utf-16le-codec) (eol-style cr)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-16be
 						(make-transcoder (utf-16be-codec) (eol-style cr)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
@@ -11265,40 +11265,40 @@
 
     (check
 	(let ((port (open-string-input-port test-string (eol-style crlf))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-latin1
 						(make-transcoder (latin-1-codec) (eol-style crlf)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-latin1-line test-string-latin1-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-8
 						(make-transcoder (utf-8-codec) (eol-style crlf)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-16le
 						(make-transcoder (utf-16le-codec) (eol-style crlf)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-16be
 						(make-transcoder (utf-16be-codec) (eol-style crlf)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
@@ -11316,32 +11316,32 @@
 
     (check
 	(let ((port (open-string-input-port test-string (eol-style nel))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-8
 						(make-transcoder (utf-8-codec) (eol-style nel)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-16le
 						(make-transcoder (utf-16le-codec) (eol-style nel)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-16be
 						(make-transcoder (utf-16be-codec) (eol-style nel)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
@@ -11359,32 +11359,32 @@
 
     (check
 	(let ((port (open-string-input-port test-string (eol-style crnel))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-8
 						(make-transcoder (utf-8-codec) (eol-style crnel)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-16le
 						(make-transcoder (utf-16le-codec) (eol-style crnel)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-16be
 						(make-transcoder (utf-16be-codec) (eol-style crnel)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
@@ -11402,32 +11402,32 @@
 
     (check
 	(let ((port (open-string-input-port test-string (eol-style ls))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-8
 						(make-transcoder (utf-8-codec) (eol-style ls)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-16le
 						(make-transcoder (utf-16le-codec) (eol-style ls)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-16be
 						(make-transcoder (utf-16be-codec) (eol-style ls)))))
-	  (let ((line (get-line port))
-		(rest (get-string-all port)))
+	  (let* ((line (get-line port))
+		 (rest (get-string-all port)))
 	    (list line rest)))
       => (list test-string-line test-string-rest))
 
