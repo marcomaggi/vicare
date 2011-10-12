@@ -2021,10 +2021,24 @@
 
 ;;;; cookie data structure
 ;;
-;;An instance  of this  structure is associated  to every  port position
-;;data structure.   It registers the  underlying device, if any,  and it
-;;tracks the  underlying device's position,  number of rows  and columns
-;;(when possible).
+;;An instance of  this structure is referenced by  every port structure;
+;;it  registers  the  underlying  device,  if any,  and  it  tracks  the
+;;underlying  device's  position,  number  of  rows  and  columns  (when
+;;possible).
+;;
+;;The  reason  the full  port  data structure  is  split  into the  PORT
+;;structure and the COOKIE record type, is that, in some port types, the
+;;port's own internal  functions must reference some of  the guts of the
+;;data  structure but cannot  reference the  port itself.   This problem
+;;shows  its uglyness  when TRANSCODED-PORT  is applied  to a  port: the
+;;original  port is  closed  and its  guts  are transferred  to the  new
+;;transcoded port.   By partitioning the  fields, we allow  the internal
+;;functions to reference only the cookie and be free of the port value.
+;;
+;;Why are the fields not all  in the cookie then?  Because accessing the
+;;port is faster than accessing  the cookie and many operations on ports
+;;only require  access to  the buffer, which  is referenced by  the PORT
+;;structure.
 ;;
 ;;NOTE: It  is impossible to track  the row number  for ports supporting
 ;;the SET-PORT-POSITION! operation.  The  ROW-NUM field of the cookie is
