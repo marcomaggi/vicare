@@ -46,6 +46,11 @@
 		    ($fx<=	fx<=)
 		    ($fx=	fx=))
 	    unsafe.)
+    (prefix (rename (ikarus system $chars) #;(ikarus system chars)
+		    ($char=		char=)
+		    ($char->fixnum	char->integer)
+		    ($fixnum->char	integer->char))
+	    unsafe.)
     (prefix (rename (ikarus system $strings) #;(ikarus system strings)
 		    ($make-string	make-string)
 		    ($string-length	string-length)
@@ -63,6 +68,21 @@
        (syntax-rules ()
 	 ((_ ?arg ... . ?rest)
 	  (begin ?form0 ?form ...)))))))
+
+
+;;;; miscellaneous helpers
+
+(define-inline (read-char port)
+  ;;Attempt to  read a  character from PORT.   If successful  return the
+  ;;character, if  an error occurs raise  an exception, if  EOF is found
+  ;;return the EOF object.
+  ;;
+  (get-char port))
+
+(define-inline (reverse-list->string ell)
+  ;;There are more efficient ways to do this, but ELL is usually short.
+  ;;
+  (list->string (reverse ell)))
 
 
 ;;;; data structures
@@ -113,22 +133,25 @@
   (die/p-1 p 'read str (list->string (reverse ls))))
 
 
-(define (checked-integer->char n ac p)
-  (define (valid-integer-char? n)
-    (cond
-     ((<= n #xD7FF)   #t)
-     ((< n #xE000)    #f)
-     ((<= n #x10FFFF) #t)
-     (else            #f)))
-  (if (valid-integer-char? n)
-      ($fixnum->char n)
-    (die/p p 'tokenize
-	   "invalid numeric value for character"
-	   (list->string (reverse ac)))))
-
-(define-syntax read-char
-  (syntax-rules ()
-    ((_ p) (get-char p))))
+(define (integer->char/checked N accumulated-chars port)
+  ;;Validate the  fixnum N  as valid Unicode  code point and  return the
+  ;;corresponding character.
+  ;;
+  ;;If  N is  invalid: raise  an exception  using  ACCUMULATED-CHARS and
+  ;;PORT.  ACCUMULATED-CHARS must be a reversed list of chars from which
+  ;;N was  parsed.  PORT  must be  the port from  which the  chars where
+  ;;drawn.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (define (valid-integer-char? N)
+    (cond ((<= N #xD7FF)   #t)
+	  ((<  N #xE000)   #f)
+	  ((<= N #x10FFFF) #t)
+	  (else            #f)))
+  (if (valid-integer-char? N)
+      (unsafe.integer->char N)
+    (%error "invalid numeric value for character" (reverse-list->string accumulated-chars))))
 
 (define delimiter?
   (lambda (c)
@@ -243,7 +266,7 @@
 		    (lambda (v) (f (+ (* n 16) v) (cons c ac))))
 		   (($char= c #\;)
 		    (tokenize-string
-		     (cons (checked-integer->char n ac p) ls) p))
+		     (cons (integer->char/checked n ac p) ls) p))
 		   (else
 		    (die/p-1 p 'tokenize
 			     "invalid char in escape sequence"
@@ -436,89 +459,107 @@
 	   (tokenize-char-seq port "space"	'(datum . #\x20)))
 	  (($char= #\d ch)
 	   (tokenize-char-seq port "delete"	'(datum . #\x7F)))
+
+	  ;;Read the char "#\x" or a character in hex format "#\xHHHH".
 	  (($char= #\x ch)
-	   (let ((n (peek-char port)))
-	     (cond ((or (eof-object? n) (delimiter? n))
+	   (let ((ch1 (peek-char port)))
+	     (cond ((or (eof-object? ch1)
+			(delimiter?  ch1))
 		    '(datum . #\x))
-		   ((hex n)
-		    => (lambda (v)
+		   ((hex ch1)
+		    => (lambda (digit)
 			 (read-char port)
-			 (let f ((v v) (ac (cons n '(#\x))))
-			   (let ((c (peek-char port)))
-			     (cond ((eof-object? c)
-				    (cons 'datum (checked-integer->char v ac port)))
-				   ((delimiter? c)
-				    (cons 'datum (checked-integer->char v ac port)))
-				   ((hex c)
-				    => (lambda (v0)
+			 (let next-digit ((digit       digit)
+					  (accumulated (cons ch1 '(#\x))))
+			   (let ((chX (peek-char port)))
+			     (cond ((eof-object? chX)
+				    (cons 'datum (integer->char/checked digit accumulated port)))
+				   ((delimiter? chX)
+				    (cons 'datum (integer->char/checked digit accumulated port)))
+				   ((hex chX)
+				    => (lambda (digit0)
 					 (read-char port)
-					 (f (+ (* v 16) v0) (cons c ac))))
+					 (next-digit (+ (* digit 16) digit0)
+						     (cons chX accumulated))))
 				   (else
 				    (%error "invalid character sequence"
-					    (list->string (reverse (cons c ac))))))))))
+					    (reverse-list->string (cons chX accumulated)))))))))
 		   (else
-		    (%error "invalid character sequence"
-			    (string-append "#\\" (string n)))))))
+		    (%error "invalid character sequence" (string #\# #\\ ch1))))))
+
+	  ;;It is a normal character.
 	  (else
 	   (let ((ch1 (peek-char port)))
 	     (if (or (eof-object? ch1)
 		     (delimiter?  ch1))
 		 (cons 'datum ch)
-	       (%error "invalid syntax" (string-append "#\\" (string ch ch1)))))))))
+	       (%error "invalid syntax" (string #\# #\\ ch ch1))))))))
 
 
+(define CHAR-FIXNUM-0		($char->fixnum #\0))
+(define CHAR-FIXNUM-a		($char->fixnum #\a))
+;;(define CHAR-FIXNUM-f		($char->fixnum #\f))
+(define CHAR-FIXNUM-A		($char->fixnum #\A))
+;;(define CHAR-FIXNUM-F		($char->fixnum #\F))
+(define CHAR-FIXNUM-a-10	(unsafe.fx- CHAR-FIXNUM-a 10))
+(define CHAR-FIXNUM-A-10	(unsafe.fx- CHAR-FIXNUM-A 10))
+
 (define (hex x)
-  (cond
-   ((and ($char<= #\0 x) ($char<= x #\9))
-    ($fx- ($char->fixnum x) ($char->fixnum #\0)))
-   ((and ($char<= #\a x) ($char<= x #\f))
-    ($fx- ($char->fixnum x)
-	  ($fx- ($char->fixnum #\a) 10)))
-   ((and ($char<= #\A x) ($char<= x #\F))
-    ($fx- ($char->fixnum x)
-	  ($fx- ($char->fixnum #\A) 10)))
-   (else #f)))
-(define multiline-error
-  (lambda (p)
-    (die/p p 'tokenize
-	   "end of file encountered while inside a #|-style comment")))
-(define apprev
-  (lambda (str i ac)
-    (cond
-     ((fx= i (string-length str)) ac)
-     (else
-      (apprev str (fx+ i 1) (cons (string-ref str i) ac))))))
+  ;;If X is a character in the range of hex digits [0-9a-fA-F]: return a
+  ;;fixnum representing such digit, else return #f.
+  ;;
+  (define-inline (y)
+    ($char->fixnum x))
+  (cond ((and ($char<= #\0 x) ($char<= x #\9))
+	 (unsafe.fx- (y) CHAR-FIXNUM-0))
+	((and ($char<= #\a x) ($char<= x #\f))
+	 (unsafe.fx- (y) CHAR-FIXNUM-a-10))
+	((and ($char<= #\A x) ($char<= x #\F))
+	 (unsafe.fx- (y) CHAR-FIXNUM-A-10))
+	(else #f)))
+
+
 (define multiline-comment
   (lambda (p)
-    (define f
-      (lambda (p ac)
-	(let ((c (read-char p)))
-	  (cond
-	   ((eof-object? c) (multiline-error p))
-	   (($char= #\| c)
-	    (let g ((c (read-char p)) (ac ac))
-	      (cond
-	       ((eof-object? c) (multiline-error p))
-	       (($char= #\# c) ac)
-	       (($char= #\| c)
-		(g (read-char p) (cons c ac)))
-	       (else (f p (cons c ac))))))
-	   (($char= #\# c)
-	    (let ((c (read-char p)))
-	      (cond
-	       ((eof-object? c) (multiline-error p))
-	       (($char= #\| c)
-		(let ((v (multiline-comment p)))
-		  (if (string? v)
-		      (f p (apprev v 0 ac))
-		    (f p ac))))
-	       (else
-		(f p (cons c (cons #\# ac)))))))
-	   (else (f p (cons c ac)))))))
+    (define-inline (%multiline-error)
+      (die/p p 'tokenize "end of file encountered while inside a #|-style comment"))
+
+    (define (apprev str i ac)
+      (if (fx= i (string-length str))
+	  ac
+	(apprev str (fx+ i 1) (cons (string-ref str i) ac))))
+
+    (define (f p ac)
+      (let ((c (read-char p)))
+	(cond
+	 ((eof-object? c) (%multiline-error))
+	 (($char= #\| c)
+	  (let g ((c (read-char p)) (ac ac))
+	    (cond
+	     ((eof-object? c) (%multiline-error))
+	     (($char= #\# c) ac)
+	     (($char= #\| c)
+	      (g (read-char p) (cons c ac)))
+	     (else (f p (cons c ac))))))
+	 (($char= #\# c)
+	  (let ((c (read-char p)))
+	    (cond
+	     ((eof-object? c) (%multiline-error))
+	     (($char= #\| c)
+	      (let ((v (multiline-comment p)))
+		(if (string? v)
+		    (f p (apprev v 0 ac))
+		  (f p ac))))
+	     (else
+	      (f p (cons c (cons #\# ac)))))))
+	 (else
+	  (f p (cons c ac))))))
+
     (let ((ac (f p '())))
       ((comment-handler)
        (list->string (reverse ac))))))
 
+
 (define (skip-whitespace p caller)
   (let ((c (read-char p)))
     (cond
@@ -897,7 +938,7 @@
                            (list->string (reverse ac)))))
 		 (($char= #\; c)
 		  (tokenize-identifier
-		   (cons (checked-integer->char v ac p) main-ac)
+		   (cons (integer->char/checked v ac p) main-ac)
 		   p))
 		 ((hex c) =>
 		  (lambda (v0)
