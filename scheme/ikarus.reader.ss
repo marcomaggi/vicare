@@ -614,50 +614,75 @@
 			(%error-1 "invalid char inside gensym" ch1)))))))))
 
    (($char= #\v ch)
-    ;;Examples of correct sequences of chars:
+    ;;Correct sequences of chars:
     ;;
-    ;; ch  ch1  ch2  ch3
-    ;; -----------------
-    ;; v   u    8    (
-    ;; v   s    8    (
+    ;; ch  ch1  ch2  ch3  ch4  ch5  datum
+    ;; ----------------------------------
+    ;; v   u    8    (              #vu8
+    ;; v   s    8    (              #vs8
+    ;; v   u    1    6    l    (    #vu16l
+    ;; v   u    1    6    b    (    #vu16b
+    ;; v   s    1    6    l    (    #vs16l
+    ;; v   s    1    6    b    (    #vs16b
+    ;; v   u    3    2    l    (    #vu32l
+    ;; v   u    3    2    b    (    #vu32b
+    ;; v   s    3    2    l    (    #vs32l
+    ;; v   s    3    2    b    (    #vs32b
+    ;; v   u    6    4    l    (    #vu64l
+    ;; v   u    6    4    b    (    #vu64b
+    ;; v   s    6    4    l    (    #vs64l
+    ;; v   s    6    4    b    (    #vs64b
     ;;
-    (let ((ch1 (read-char port)))
-      (cond (($char= #\u ch1)	;unsigned bytevector
-	     (let ((ch2 (read-char port)))
-	       (cond (($char= ch2 #\8)	;unsigned bytes bytevector
-		      (let ((ch3 (read-char port)))
-			(cond (($char= ch3 #\()
-			       'vu8)
-			      ((eof-object? ch3)
-			       (%error "invalid eof object after #vu8"))
-			      (else
-			       (%error-1 (format "invalid sequence #vu8~a" ch3))))))
-		     ((eof-object? ch2)
-		      (%error "invalid eof object after #vu"))
-		     (else
-		      (%error-1 (format "invalid sequence #vu~a" ch2))))))
+    (let ((ch1/eof (read-char port)))
+      (define-inline (%read-bytevector)
+	(cond ((char=? #\u ch1/eof)
+	       (%read-unsigned))
+	      ((char=? #\s ch1/eof)
+	       (when (eq? (port-mode port) 'r6rs-mode)
+		 (%error "invalid #vs8 syntax in #!r6rs mode" "#vs8"))
+	       (%read-signed))
+	      ((eof-object? ch1/eof)
+	       (%error "invalid eof object after #v"))
+	      (else
+	       (%error (format "invalid sequence #v~a" ch1/eof)))))
 
-	    (($char= #\s ch1)	;signed bytevector
-	     (when (eq? (port-mode port) 'r6rs-mode)
-	       (%error "invalid #vs8 syntax in #!r6rs mode" "#vs8"))
-	     (let ((ch2 (read-char port)))
-	       (cond (($char= ch2 #\8)	;signed bytes bytevector
-		      (let ((ch3 (read-char port)))
-			(cond (($char= ch3 #\()
-			       'vs8)
-			      ((eof-object? ch3)
-			       (%error "invalid eof object after #vs8"))
-			      (else
-			       (%error-1 (format "invalid sequence #vs8~a" ch3))))))
-		     ((eof-object? ch2)
-		      (%error "invalid eof object after #vs"))
-		     (else
-		      (%error-1 (format "invalid sequence #vs~a" ch2))))))
+      (define-inline (%read-unsigned)
+	(let ((ch2/eof (read-char port)))
+	  (cond ((char=? ch2/eof #\8) ;unsigned bytes bytevector
+		 (%read-unsigned-8))
+		((eof-object? ch2/eof)
+		 (%error "invalid eof object after #vu"))
+		(else
+		 (%error-1 (format "invalid sequence #vu~a" ch2/eof))))))
 
-	    ((eof-object? ch1)
-	     (%error "invalid eof object after #v"))
-	    (else
-	     (%error (format "invalid sequence #v~a" ch1))))))
+      (define-inline (%read-signed)
+	(let ((ch2/eof (read-char port)))
+	  (cond ((char=? ch2/eof #\8) ;signed bytes bytevector
+		 (%read-signed-8))
+		((eof-object? ch2/eof)
+		 (%error "invalid eof object after #vs"))
+		(else
+		 (%error-1 (format "invalid sequence #vs~a" ch2/eof))))))
+
+      (define-inline (%read-unsigned-8)
+	(let ((ch3/eof (read-char port)))
+	  (cond ((char=? ch3/eof #\()
+		 'vu8)
+		((eof-object? ch3/eof)
+		 (%error "invalid eof object after #vu8"))
+		(else
+		 (%error-1 (format "invalid sequence #vu8~a" ch3/eof))))))
+
+      (define-inline (%read-signed-8)
+	(let ((ch3/eof (read-char port)))
+	  (cond ((char=? ch3/eof #\()
+		 'vs8)
+		((eof-object? ch3/eof)
+		 (%error "invalid eof object after #vs8"))
+		(else
+		 (%error-1 (format "invalid sequence #vs8~a" ch3/eof))))))
+
+      (%read-bytevector)))
 
    ((memq ch '(#\e #\E))
     (cons 'datum (parse-string port (list ch #\#) 10 #f 'e)))
