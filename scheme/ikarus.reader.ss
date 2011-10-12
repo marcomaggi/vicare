@@ -684,17 +684,22 @@
 
       (%read-bytevector)))
 
-   ((memq ch '(#\e #\E))
+   ((or ($char= ch #\e) ($char= ch #\E)) #;(memq ch '(#\e #\E))
     (cons 'datum (parse-string port (list ch #\#) 10 #f 'e)))
-   ((memq ch '(#\i #\I))
+
+   ((or ($char= ch #\i) ($char= ch #\I)) #;(memq ch '(#\i #\I))
     (cons 'datum (parse-string port (list ch #\#) 10 #f 'i)))
-   ((memq ch '(#\b #\B))
+
+   ((or ($char= ch #\b) ($char= ch #\B)) #;(memq ch '(#\b #\B))
     (cons 'datum (parse-string port (list ch #\#) 2 2 #f)))
-   ((memq ch '(#\x #\X))
+
+   ((or ($char= ch #\x) ($char= ch #\X)) #;(memq ch '(#\x #\X))
     (cons 'datum (parse-string port (list ch #\#) 16 16 #f)))
-   ((memq ch '(#\o #\O))
+
+   ((or ($char= ch #\o) ($char= ch #\O)) #;(memq ch '(#\o #\O))
     (cons 'datum (parse-string port (list ch #\#) 8 8 #f)))
-   ((memq ch '(#\d #\D))
+
+   ((or ($char= ch #\d) ($char= ch #\D)) #;(memq ch '(#\d #\D))
     (cons 'datum (parse-string port (list ch #\#) 10 10 #f)))
 
 ;;;(($char= #\@ ch) DEAD: Unfixable due to port encoding
