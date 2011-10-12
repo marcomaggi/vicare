@@ -821,7 +821,10 @@
 	       (format "invalid sequence \\~a" c))))))
 
 
-(define (tokenize/c ch p)
+(define (tokenize/c ch port)
+  ;;Recognise a  token to be read from  PORT after the char  CH has been
+  ;;read.   Return a  datum representing  a full  token already  read or
+  ;;describing a token that must still be read:
   ;;
   ;;lparen			The token is a left paranthesis.
   ;;rparen			The token is a right paranthesis.
@@ -835,12 +838,13 @@
   ;;(macro . quasiquote)	The token is a quasiquoted form.
   ;;(macro . unquote)		The token is an unquoted form.
   ;;(macro . unquote-splicing)	The token is an unquoted splicing form.
+  ;;at-expr			The token is an @-expression.
   ;;
   ;;If CH is the character #\#:  the return value is the return value of
   ;;TOKENIZE-HASH applied to PORT.
   ;;
   (define-inline (%error msg . args)
-    (die/p p 'tokenize msg . args))
+    (die/p port 'tokenize msg . args))
   (cond ((eof-object? ch)
 	 (error 'tokenize/c "hmmmm eof")
 	 (eof-object))
@@ -853,81 +857,81 @@
 	(($char= #\` ch)   '(macro . quasiquote))
 
 	(($char= #\, ch)
-	 (let ((ch1 (peek-char p)))
+	 (let ((ch1 (peek-char port)))
 	   (cond ((eof-object? ch1)
 		  '(macro . unquote))
 		 (($char= ch1 #\@)
-		  (read-char p)
+		  (read-char port)
 		  '(macro . unquote-splicing))
 		 (else
 		  '(macro . unquote)))))
 
 	(($char= #\# ch)
-	 (tokenize-hash p))
+	 (tokenize-hash port))
 
 	;; numbers
 	((char<=? #\0 ch #\9)
 	 (let ((d ($fx- (char->integer ch) (char->integer #\0))))
-	   (cons 'datum (u:digit+ p (list ch) 10 #f #f +1 d))))
+	   (cons 'datum (u:digit+ port (list ch) 10 #f #f +1 d))))
 
 	;; symbol
 	((initial? ch)
-	 (let ((ls (reverse (tokenize-identifier (cons ch '()) p))))
+	 (let ((ls (reverse (tokenize-identifier (cons ch '()) port))))
 	   (cons 'datum (string->symbol (list->string ls)))))
 
 	;; string
 	(($char= #\" ch)
-	 (let ((ls (tokenize-string '() p)))
+	 (let ((ls (tokenize-string '() port)))
 	   (cons 'datum (list->string (reverse ls)))))
 
 	;; symbol "+" or number
 	(($char= #\+ ch)
-	 (let ((ch1 (peek-char p)))
+	 (let ((ch1 (peek-char port)))
 	   (cond ((eof-object? ch1) '(datum . +))
 		 ((delimiter?  ch1)  '(datum . +))
 		 (else
-		  (cons 'datum (u:sign p '(#\+) 10 #f #f +1))))))
+		  (cons 'datum (u:sign port '(#\+) 10 #f #f +1))))))
 
 	;; symbol "-", symbol "->" or number
 	(($char= #\- ch)
-	 (let ((ch1 (peek-char p)))
+	 (let ((ch1 (peek-char port)))
 	   (cond ((eof-object? ch1) '(datum . -))
 		 ((delimiter?  ch1) '(datum . -))
 		 (($char= ch1 #\>)
-		  (read-char p)
-		  (let ((ls (tokenize-identifier '() p)))
+		  (read-char port)
+		  (let ((ls (tokenize-identifier '() port)))
 		    (let ((str (list->string (cons* #\- #\> (reverse ls)))))
 		      (cons 'datum (string->symbol str)))))
 		 (else
-		  (cons 'datum (u:sign p '(#\-) 10 #f #f -1))))))
+		  (cons 'datum (u:sign port '(#\-) 10 #f #f -1))))))
 
 	;;The dot is  special because after it only a  single form and a
 	;;closed parenthesis are allowed.
 	(($char= #\. ch)
-	 (tokenize-dot p))
+	 (tokenize-dot port))
 
 	;; symbol with syntax "|<sym>|"
 	(($char= #\| ch)
-	 (when (eq? (port-mode p) 'r6rs-mode)
+	 (when (eq? (port-mode port) 'r6rs-mode)
 	   (%error "|symbol| syntax is invalid in #!r6rs mode"))
-	 (let ((ls (reverse (tokenize-bar p '()))))
+	 (let ((ls (reverse (tokenize-bar port '()))))
 	   (cons 'datum (string->symbol (list->string ls)))))
 
 	;; everything starting with a backslash, for example characters
 	(($char= #\\ ch)
-	 (cons 'datum (string->symbol (list->string (reverse (tokenize-backslash '() p))))))
+	 (cons 'datum (string->symbol (list->string (reverse (tokenize-backslash '() port))))))
 
 ;;;Unused for now.
 ;;;
 ;;;     (($char= #\{ ch) 'lbrace)
 
 	(($char= #\@ ch)
-	 (when (eq? (port-mode p) 'r6rs-mode)
+	 (when (eq? (port-mode port) 'r6rs-mode)
 	   (%error "@-expr syntax is invalid in #!r6rs mode"))
 	 'at-expr)
 
 	(else
-	 (die/p-1 p 'tokenize "invalid syntax" ch))))
+	 (die/p-1 port 'tokenize "invalid syntax" ch))))
 
 
 (define (tokenize/1 port)
