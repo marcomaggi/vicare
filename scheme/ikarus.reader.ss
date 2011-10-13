@@ -1123,17 +1123,27 @@
     (%error-1 (format "invalid syntax #~a" ch)))))
 
 
-(define (tokenize-hashnum p n)
-  (let ((c (read-char p)))
-    (cond
-     ((eof-object? c)
-      (die/p p 'tokenize "invalid eof inside #n mark/ref"))
-     (($char= #\= c) (cons 'mark n))
-     (($char= #\# c) (cons 'ref n))
-     ((dec-digit? c)
-      (tokenize-hashnum p (unsafe.fx+ (fx* n 10) (char->dec-digit c))))
-     (else
-      (die/p-1 p 'tokenize "invalid char while inside a #n mark/ref" c)))))
+(define (tokenize-hashnum port N)
+  ;;Read characters from PORT parsing  a graph notation hash num mark or
+  ;;reference.  Return a datum describing the token:
+  ;;
+  ;;(mark . <num>)	The token is a new hashnum mark.
+  ;;(ref . <num>)	The token is reference to an existing hashnum.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (define-inline (%unexpected-eof-error)
+    (%error "invalid EOF while reading character"))
+  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
+    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+      . ?cond-clauses))
+  (%read-char-no-eof (port ch)
+    ((unsafe.char= #\= ch) (cons 'mark N))
+    ((unsafe.char= #\# ch) (cons 'ref  N))
+    ((dec-digit? ch)
+     (tokenize-hashnum port (unsafe.fx+ (fx* N 10) (char->dec-digit ch))))
+    (else
+     (%error "invalid char while inside a #n mark/ref" ch))))
 
 
 ;;;; reading characters
@@ -1149,139 +1159,136 @@
   ;;
   (define-inline (%error msg . args)
     (die/p port 'tokenize msg . args))
-  (let ((ch (read-char port)))
-    (cond ((eof-object? ch)
-	   (%error "invalid #\\ near end of file"))
+  (define-inline (%unexpected-eof-error)
+    (%error "invalid EOF while reading character"))
+  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
+    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+      . ?cond-clauses))
 
-	  ;;There are multiple character sequences starting with "#\n".
-	  (($char= #\n ch)
-	   (let ((ch1 (peek-char port)))
-	     (cond ((eof-object? ch1)
-		    '(datum . #\n))
-		   (($char= #\u ch1)
-		    (read-char port)
-		    (char-lexeme-seq port "ul"	'(datum . #\x0)))
-		   (($char= #\e ch1)
-		    (read-char port)
-		    (char-lexeme-seq port "ewline"	'(datum . #\xA)))
-		   ((delimiter? ch1)
-		    '(datum . #\n))
-		   (else
-		    (%error "invalid syntax" (string #\# #\\ #\n ch1))))))
+  (define-inline (main)
+    (%read-char-no-eof (port ch)
+      ;;There are multiple character sequences starting with "#\n".
+      (($char= #\n ch)
+       (let ((ch1 (peek-char port)))
+	 (cond ((eof-object? ch1)
+		'(datum . #\n))
+	       (($char= #\u ch1)
+		(read-char port)
+		(char-lexeme-seq port "ul"	'(datum . #\x0)))
+	       (($char= #\e ch1)
+		(read-char port)
+		(char-lexeme-seq port "ewline"	'(datum . #\xA)))
+	       ((delimiter? ch1)
+		'(datum . #\n))
+	       (else
+		(%error "invalid syntax" (string #\# #\\ #\n ch1))))))
 
-	  (($char= #\a ch)
-	   (char-lexeme-seq port "alarm"	'(datum . #\x7)))
-	  (($char= #\b ch)
-	   (char-lexeme-seq port "backspace"	'(datum . #\x8)))
-	  (($char= #\t ch)
-	   (char-lexeme-seq port "tab"	'(datum . #\x9)))
-	  (($char= #\l ch)
-	   (char-lexeme-seq port "linefeed"	'(datum . #\xA)))
-	  (($char= #\v ch)
-	   (char-lexeme-seq port "vtab"	'(datum . #\xB)))
-	  (($char= #\p ch)
-	   (char-lexeme-seq port "page"	'(datum . #\xC)))
-	  (($char= #\r ch)
-	   (char-lexeme-seq port "return"	'(datum . #\xD)))
-	  (($char= #\e ch)
-	   (char-lexeme-seq port "esc"	'(datum . #\x1B)))
-	  (($char= #\s ch)
-	   (char-lexeme-seq port "space"	'(datum . #\x20)))
-	  (($char= #\d ch)
-	   (char-lexeme-seq port "delete"	'(datum . #\x7F)))
+      (($char= #\a ch)  (char-lexeme-seq port "alarm"	'(datum . #\x7)))
+      (($char= #\b ch)  (char-lexeme-seq port "backspace" '(datum . #\x8)))
+      (($char= #\t ch)  (char-lexeme-seq port "tab"	'(datum . #\x9)))
+      (($char= #\l ch)  (char-lexeme-seq port "linefeed" '(datum . #\xA)))
+      (($char= #\v ch)  (char-lexeme-seq port "vtab"	'(datum . #\xB)))
+      (($char= #\p ch)  (char-lexeme-seq port "page"	'(datum . #\xC)))
+      (($char= #\r ch)  (char-lexeme-seq port "return"	'(datum . #\xD)))
+      (($char= #\e ch)  (char-lexeme-seq port "esc"	'(datum . #\x1B)))
+      (($char= #\s ch)  (char-lexeme-seq port "space"	'(datum . #\x20)))
+      (($char= #\d ch)  (char-lexeme-seq port "delete"	'(datum . #\x7F)))
 
-	  ;;Read the char "#\x" or a character in hex format "#\xHHHH".
-	  (($char= #\x ch)
-	   (let ((ch1 (peek-char port)))
-	     (cond ((or (eof-object? ch1)
-			(delimiter?  ch1))
-		    '(datum . #\x))
-		   ((char->hex-digit/or-false ch1)
-		    => (lambda (digit)
-			 (read-char port)
-			 (let next-digit ((digit       digit)
-					  (accumulated (cons ch1 '(#\x))))
-			   (let ((chX (peek-char port)))
-			     (cond ((eof-object? chX)
-				    (cons 'datum (integer->char/checked digit accumulated port)))
-				   ((delimiter? chX)
-				    (cons 'datum (integer->char/checked digit accumulated port)))
-				   ((char->hex-digit/or-false chX)
-				    => (lambda (digit0)
-					 (read-char port)
-					 (next-digit (+ (* digit 16) digit0)
-						     (cons chX accumulated))))
-				   (else
-				    (%error "invalid character sequence"
-					    (reverse-list->string (cons chX accumulated)))))))))
-		   (else
-		    (%error "invalid character sequence" (string #\# #\\ ch1))))))
+      ;;Read the char "#\x" or a character in hex format "#\xHHHH".
+      (($char= #\x ch)
+       (let ((ch1 (peek-char port)))
+	 (cond ((or (eof-object? ch1)
+		    (delimiter?  ch1))
+		'(datum . #\x))
+	       ((char->hex-digit/or-false ch1)
+		=> (lambda (digit)
+		     (read-char port)
+		     (let next-digit ((digit       digit)
+				      (accumulated (cons ch1 '(#\x))))
+		       (let ((chX (peek-char port)))
+			 (cond ((eof-object? chX)
+				(cons 'datum (integer->char/checked digit accumulated port)))
+			       ((delimiter? chX)
+				(cons 'datum (integer->char/checked digit accumulated port)))
+			       ((char->hex-digit/or-false chX)
+				=> (lambda (digit0)
+				     (read-char port)
+				     (next-digit (+ (* digit 16) digit0)
+						 (cons chX accumulated))))
+			       (else
+				(%error "invalid character sequence"
+					(reverse-list->string (cons chX accumulated)))))))))
+	       (else
+		(%error "invalid character sequence" (string #\# #\\ ch1))))))
 
-	  ;;It is a normal character.
-	  (else
-	   (let ((ch1 (peek-char port)))
-	     (if (or (eof-object? ch1)
-		     (delimiter?  ch1))
-		 (cons 'datum ch)
-	       (%error "invalid syntax" (string #\# #\\ ch ch1))))))))
+      ;;It is a normal character.
+      (else
+       (let ((ch1 (peek-char port)))
+	 (if (or (eof-object? ch1)
+		 (delimiter?  ch1))
+	     (cons 'datum ch)
+	   (%error "invalid syntax" (string #\# #\\ ch ch1)))))))
 
-(define (char-lexeme-seq port str datum)
-  ;;Subroutine  of CHAR-LEXEME.  Read  characters from  PORT verifying
-  ;;that they are equal to the  characters drawn from the string STR; if
-  ;;reading and  comparing is successful:  peek one more char  from PORT
-  ;;and verify that it is EOF or a delimiter (according to DELIMITER?).
-  ;;
-  ;;If successful return DATUM, else raise an exception.
-  ;;
-  ;;This function is used to parse characters: in the format "#\newline"
-  ;;when the sequence "#\ne" has already been consumed; in this case the
-  ;;function is called as:
-  ;;
-  ;;   (char-lexeme-seq port "ewline" '(datum . #\xA))
-  ;;
-  ;;As an extension  (currently not used in the  lexer, Marco Maggi; Oct
-  ;;12, 2011), this function supports  also the case of character in the
-  ;;format "#\A" when the sequence  "#\A" has already been consumed, and
-  ;;we only  need to verify  that the  next char from  PORT is EOF  or a
-  ;;delimiter.  In this case DATUM is ignored.
-  ;;
-  (define-inline (%error msg . args)
-    (die/p port 'tokenize msg . args))
-  (let ((ch (peek-char port)))
-    (cond ((or (eof-object? ch) (delimiter? ch))
-	   (cons 'datum (unsafe.string-ref str 0)))
-	  (($char= ch (unsafe.string-ref str 1))
-	   (read-char port)
-	   (char-lexeme* 2 str port datum))
-	  (else
-	   (%error "invalid syntax" (unsafe.string-ref str 0) ch)))))
-
-(define (char-lexeme* str.index str port datum)
-  ;;Recusrive subroutine of CHAR-LEXEME-SEQ.  Draw characters from the
-  ;;string STR, starting at STR.INDEX, and verify that they are equal to
-  ;;the  characters  read  from   PORT;  if  reading  and  comparing  is
-  ;;successful: peek one  more char from PORT and verify  that it is EOF
-  ;;or a delimiter (according to DELIMITER?).
-  ;;
-  ;;If successful return DATUM, else raise an exception.
-  ;;
-  (define-inline (recurse idx)
-    (char-lexeme* idx str port datum))
-  (define-inline (%error msg . args)
-    (die/p port 'tokenize msg . args))
-  (if (unsafe.fx= str.index (unsafe.string-length str))
-      (let ((ch (peek-char port)))
-	(cond ((eof-object? ch) datum)
-	      ((delimiter?  ch) datum)
-	      (else
-	       (%error "invalid character after sequence" (string-append str (string ch))))))
-    (let ((ch (read-char port)))
-      (cond ((eof-object? ch)
-	     (%error "invalid EOF in the middle of expected sequence" str))
-	    (($char= ch (unsafe.string-ref str str.index))
-	     (recurse (unsafe.fxadd1 str.index)))
+  (define (char-lexeme-seq port str datum)
+    ;;Read characters  from PORT  verifying that they  are equal  to the
+    ;;characters drawn from the string  STR; if reading and comparing is
+    ;;successful: peek one more char from PORT and verify that it is EOF
+    ;;or a delimiter (according to DELIMITER?).
+    ;;
+    ;;If successful return DATUM, else raise an exception.
+    ;;
+    ;;This  function  is  used   to  parse  characters:  in  the  format
+    ;;"#\newline" when the sequence "#\ne" has already been consumed; in
+    ;;this case the function is called as:
+    ;;
+    ;;   (char-lexeme-seq port "ewline" '(datum . #\xA))
+    ;;
+    ;;As an extension (currently not used in the lexer, Marco Maggi; Oct
+    ;;12, 2011),  this function supports  also the case of  character in
+    ;;the  format  "#\A"  when  the  sequence  "#\A"  has  already  been
+    ;;consumed, and we only need to  verify that the next char from PORT
+    ;;is EOF or a delimiter.  In this case DATUM is ignored.
+    ;;
+    (define-inline (%error msg . args)
+      (die/p port 'tokenize msg . args))
+    (let ((ch (peek-char port)))
+      (cond ((or (eof-object? ch) (delimiter? ch))
+	     (cons 'datum (unsafe.string-ref str 0)))
+	    (($char= ch (unsafe.string-ref str 1))
+	     (read-char port)
+	     (char-lexeme* 2 str port datum))
 	    (else
-	     (%error "invalid char while scanning string" ch str))))))
+	     (%error "invalid syntax" (unsafe.string-ref str 0) ch)))))
+
+  (define (char-lexeme* str.index str port datum)
+    ;;Draw characters  from the string  STR, starting at  STR.INDEX, and
+    ;;verify that  they are equal to  the characters read  from PORT; if
+    ;;reading and comparing is successful:  peek one more char from PORT
+    ;;and  verify  that   it  is  EOF  or  a   delimiter  (according  to
+    ;;DELIMITER?).
+    ;;
+    ;;If successful return DATUM, else raise an exception.
+    ;;
+    (define-inline (recurse idx)
+      (char-lexeme* idx str port datum))
+    (define-inline (%error msg . args)
+      (die/p port 'tokenize msg . args))
+    (if (unsafe.fx= str.index (unsafe.string-length str))
+	(let ((ch (peek-char port)))
+	  (cond ((eof-object? ch) datum)
+		((delimiter?  ch) datum)
+		(else
+		 (%error "invalid character after expected sequence"
+			 (string-append str (string ch))))))
+      (let ((ch (read-char port)))
+	(cond ((eof-object? ch)
+	       (%error "invalid EOF in the middle of expected sequence" str))
+	      (($char= ch (unsafe.string-ref str str.index))
+	       (recurse (unsafe.fxadd1 str.index)))
+	      (else
+	       (%error "invalid char while scanning string" ch str))))))
+
+  (main))
 
 
 (define (tokenize-script-initial port)
