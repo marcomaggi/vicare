@@ -139,8 +139,6 @@
 
 (parametrise ((check-test-name	'gensym))
 
-;;; --------------------------------------------------------------------
-
   (check
       (let ((sym (read (open-string-input-port "#{ciao}"))))
 	(list (gensym? sym) (symbol? sym) (gensym->unique-string sym)))
@@ -175,6 +173,93 @@
       (let ((sym (read (open-string-input-port "#{d |95BEx%X86N?8X&yC|}"))))
   	(gensym->unique-string sym))
     => '"95BEx%X86N?8X&yC")
+
+  #t)
+
+
+(parametrise ((check-test-name	'strings))
+
+  (define-syntax read-string
+    (syntax-rules ()
+      ((_ (?chars ...))
+       (read-string (?chars ...) (?chars ...)))
+      ((_ (?input-chars ...) (?result-chars ...))
+       (check
+	   (let* ((str  (string #\" ?input-chars ... #\"))
+		  (port (open-string-input-port str)))
+	     (read port))
+	 => (string ?result-chars ...)))))
+
+  (define lf	#\x000A)
+  (define cr	#\x000D)
+  (define nel	#\x0085)
+  (define ls	#\x2028)
+
+  (define space		#\space)
+  (define backslash	#\\)
+
+;;; --------------------------------------------------------------------
+
+  (read-string (#\c #\i #\a #\o))
+  (read-string (#\A lf #\Z))
+  (read-string (#\A cr #\Z))
+  (read-string (#\A nel #\Z))
+  (read-string (#\A ls #\Z))
+  (read-string (#\A cr lf #\Z))
+  (read-string (#\A cr nel #\Z))
+
+;;; --------------------------------------------------------------------
+;;; \<line ending><intraline whitespace>
+
+  (read-string (#\A       backslash lf     space space #\Z) (#\A #\Z))
+  (read-string (#\A space backslash lf     space space #\Z) (#\A space #\Z))
+
+  (read-string (#\A       backslash nel    space space #\Z) (#\A #\Z))
+  (read-string (#\A space backslash nel    space space #\Z) (#\A space #\Z))
+
+  (read-string (#\A       backslash ls     space space #\Z) (#\A #\Z))
+  (read-string (#\A space backslash ls     space space #\Z) (#\A space #\Z))
+
+  (read-string (#\A       backslash cr lf  space space #\Z) (#\A #\Z))
+  (read-string (#\A space backslash cr lf  space space #\Z) (#\A space #\Z))
+
+  (read-string (#\A       backslash cr nel space space #\Z) (#\A #\Z))
+  (read-string (#\A space backslash cr nel space space #\Z) (#\A space #\Z))
+
+;;; --------------------------------------------------------------------
+;;; \<intraline whitespace><line ending>
+
+  (read-string (#\A       backslash space lf     #\Z) (#\A #\Z))
+  (read-string (#\A space backslash space lf     #\Z) (#\A space #\Z))
+
+  (read-string (#\A       backslash space nel    #\Z) (#\A #\Z))
+  (read-string (#\A space backslash space nel    #\Z) (#\A space #\Z))
+
+  (read-string (#\A       backslash space ls     #\Z) (#\A #\Z))
+  (read-string (#\A space backslash space ls     #\Z) (#\A space #\Z))
+
+  (read-string (#\A       backslash space cr lf  #\Z) (#\A #\Z))
+  (read-string (#\A space backslash space cr lf  #\Z) (#\A space #\Z))
+
+  (read-string (#\A       backslash space cr nel #\Z) (#\A #\Z))
+  (read-string (#\A space backslash space cr nel #\Z) (#\A space #\Z))
+;;; --------------------------------------------------------------------
+;;; \<intraline whitespace><line ending><intraline whitespace>
+
+  (read-string (#\A       backslash space lf     space space #\Z) (#\A #\Z))
+  (read-string (#\A space backslash space lf     space space #\Z) (#\A space #\Z))
+
+  (read-string (#\A       backslash space nel    space space #\Z) (#\A #\Z))
+  (read-string (#\A space backslash space nel    space space #\Z) (#\A space #\Z))
+
+  (read-string (#\A       backslash space ls     space space #\Z) (#\A #\Z))
+  (read-string (#\A space backslash space ls     space space #\Z) (#\A space #\Z))
+
+  (read-string (#\A       backslash space cr lf  space space #\Z) (#\A #\Z))
+  (read-string (#\A space backslash space cr lf  space space #\Z) (#\A space #\Z))
+
+  (read-string (#\A       backslash space cr nel space space #\Z) (#\A #\Z))
+  (read-string (#\A space backslash space cr nel space space #\Z) (#\A space #\Z))
 
   #t)
 
