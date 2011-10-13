@@ -312,6 +312,18 @@
 
 
 (define (tokenize-script-initial+pos port)
+  ;;Read  a token  representing  a full  datum  (boolean, char,  string,
+  ;;symbol) or the opening of a compund datum (list, vector, bytevector)
+  ;;and return a datum describing it.  Discard comments.
+  ;;
+  ;;This function selects which among the functions:
+  ;;
+  ;;   TOKENIZE/1+POS
+  ;;   TOKENIZE/C
+  ;;   TOKENIZE-HASH/C
+  ;;
+  ;;is to be called to parse the next token.
+  ;;
   (define-inline (%error msg . args)
     (die/p port 'tokenize msg . args))
   (let* ((pos (make-compound-position port))
@@ -380,18 +392,18 @@
     (tokenize/1 port))
   (let ((ch (read-char port)))
     (cond ((eof-object? ch)
-	   (eof-object))
-	  (($char= ch #\;)
+	   ch)
+	  ((unsafe.char= ch #\;)
 	   (line-comment-lexeme-skip-including-line-ending port)
 	   (recurse))
-	  (($char= ch #\#)
+	  ((unsafe.char= ch #\#)
 	   (let ((ch1 (read-char port)))
 	     (cond ((eof-object? ch1)
 		    (die/p port 'tokenize "invalid EOF after #"))
-		   (($char= ch1 #\;)
+		   ((unsafe.char= ch1 #\;)
 		    (read-and-discard-sexp port)
 		    (recurse))
-		   (($char= ch1 #\|)
+		   ((unsafe.char= ch1 #\|)
 		    (multiline-comment-lexeme port)
 		    (recurse))
 		   (else
@@ -411,19 +423,19 @@
   (let* ((pos (make-compound-position port))
 	 (ch  (read-char port)))
     (cond ((eof-object? ch)
-	   (values (eof-object) pos))
-	  (($char= ch #\;)
+	   (values ch pos))
+	  ((unsafe.char= ch #\;)
 	   (line-comment-lexeme-skip-including-line-ending port)
 	   (recurse))
-	  (($char= ch #\#)
+	  ((unsafe.char= ch #\#)
 	   (let ((pos (make-compound-position port)))
 	     (let ((ch1 (read-char port)))
 	       (cond ((eof-object? ch1)
 		      (die/p port 'tokenize "invalid eof after #"))
-		     (($char= ch1 #\;)
+		     ((unsafe.char= ch1 #\;)
 		      (read-and-discard-sexp port)
 		      (recurse))
-		     (($char= ch1 #\|)
+		     ((unsafe.char= ch1 #\|)
 		      (multiline-comment-lexeme port)
 		      (recurse))
 		     (else
