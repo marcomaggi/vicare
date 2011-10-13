@@ -584,185 +584,6 @@
   (main))
 
 
-(define (tokenize-dot port)
-  ;;Read from  PORT a token starting  with a dot, the  dot being already
-  ;;read.  There return value is a datum describing the token:
-  ;;
-  ;;dot			The token is a standalone dot.
-  ;;(datum . ...)	The token is the ellipsis symbol.
-  ;;(datum . <num>)	The token is the inexact number <NUM>.
-  ;;
-  (define-inline (%error msg . args)
-    (die/p port 'tokenize msg . args))
-  (let ((ch (peek-char port)))
-    (cond ((eof-object? ch) 'dot)
-	  ((delimiter?  ch) 'dot)
-	  (($char= ch #\.) ;a second dot, maybe a "..." opening
-	   (read-char port)
-	   (let ((ch1 (peek-char port)))
-	     (cond ((eof-object? ch1)
-		    (%error "invalid syntax .. near end of file"))
-		   (($char= ch #\.) ;this is the third
-		    (read-char port)
-		    (let ((ch2 (peek-char port)))
-		      (cond ((eof-object? ch2) '(datum . ...))
-			    ((delimiter?  ch2) '(datum . ...))
-			    (else
-			     (%error "invalid syntax" (string-append "..." (string ch2)))))))
-		   (else
-		    (%error "invalid syntax" (string-append ".." (string ch1)))))))
-	  (else
-	   (cons 'datum (u:dot port '(#\.) 10 #f #f +1))))))
-
-
-(define (tokenize-char-seq port str datum)
-  ;;Subroutine  of TOKENIZE-CHAR.  Read  characters from  PORT verifying
-  ;;that they are equal to the  characters drawn from the string STR; if
-  ;;reading and  comparing is successful:  peek one more char  from PORT
-  ;;and verify that it is EOF or a delimiter (according to DELIMITER?).
-  ;;
-  ;;If successful return DATUM, else raise an exception.
-  ;;
-  ;;This function is used to parse characters: in the format "#\newline"
-  ;;when the sequence "#\ne" has already been consumed; in this case the
-  ;;function is called as:
-  ;;
-  ;;   (tokenize-char-seq port "ewline" '(datum . #\xA))
-  ;;
-  ;;As an extension  (currently not used in the  lexer, Marco Maggi; Oct
-  ;;12, 2011), this function supports  also the case of character in the
-  ;;format "#\A" when the sequence  "#\A" has already been consumed, and
-  ;;we only  need to verify  that the  next char from  PORT is EOF  or a
-  ;;delimiter.  In this case DATUM is ignored.
-  ;;
-  (define-inline (%error msg . args)
-    (die/p port 'tokenize msg . args))
-  (let ((ch (peek-char port)))
-    (cond ((or (eof-object? ch) (delimiter? ch))
-	   (cons 'datum (unsafe.string-ref str 0)))
-	  (($char= ch (unsafe.string-ref str 1))
-	   (read-char port)
-	   (tokenize-char* 2 str port datum))
-	  (else
-	   (%error "invalid syntax" (unsafe.string-ref str 0) ch)))))
-
-
-(define (tokenize-char* str.index str port datum)
-  ;;Recusrive subroutine of TOKENIZE-CHAR-SEQ.  Draw characters from the
-  ;;string STR, starting at STR.INDEX, and verify that they are equal to
-  ;;the  characters  read  from   PORT;  if  reading  and  comparing  is
-  ;;successful: peek one  more char from PORT and verify  that it is EOF
-  ;;or a delimiter (according to DELIMITER?).
-  ;;
-  ;;If successful return DATUM, else raise an exception.
-  ;;
-  (define-inline (recurse idx)
-    (tokenize-char* idx str port datum))
-  (define-inline (%error msg . args)
-    (die/p port 'tokenize msg . args))
-  (if (unsafe.fx= str.index (unsafe.string-length str))
-      (let ((ch (peek-char port)))
-	(cond ((eof-object? ch) datum)
-	      ((delimiter?  ch) datum)
-	      (else
-	       (%error "invalid character after sequence" (string-append str (string ch))))))
-    (let ((ch (read-char port)))
-      (cond ((eof-object? ch)
-	     (%error "invalid EOF in the middle of expected sequence" str))
-	    (($char= ch (unsafe.string-ref str str.index))
-	     (recurse (unsafe.fxadd1 str.index)))
-	    (else
-	     (%error "invalid char while scanning string" ch str))))))
-
-
-(define (tokenize-char port)
-  ;;Called after a hash character followed by a backslash character have
-  ;;been read from PORT.  Read  characters from PORT parsing a character
-  ;;datum; return the datum:
-  ;;
-  ;;   (datum . <ch>)
-  ;;
-  ;;where <CH> is the character value.
-  ;;
-  (define-inline (%error msg . args)
-    (die/p port 'tokenize msg . args))
-  (let ((ch (read-char port)))
-    (cond ((eof-object? ch)
-	   (%error "invalid #\\ near end of file"))
-
-	  ;;There are multiple character sequences starting with "#\n".
-	  (($char= #\n ch)
-	   (let ((ch1 (peek-char port)))
-	     (cond ((eof-object? ch1)
-		    '(datum . #\n))
-		   (($char= #\u ch1)
-		    (read-char port)
-		    (tokenize-char-seq port "ul"	'(datum . #\x0)))
-		   (($char= #\e ch1)
-		    (read-char port)
-		    (tokenize-char-seq port "ewline"	'(datum . #\xA)))
-		   ((delimiter? ch1)
-		    '(datum . #\n))
-		   (else
-		    (%error "invalid syntax" (string #\# #\\ #\n ch1))))))
-
-	  (($char= #\a ch)
-	   (tokenize-char-seq port "alarm"	'(datum . #\x7)))
-	  (($char= #\b ch)
-	   (tokenize-char-seq port "backspace"	'(datum . #\x8)))
-	  (($char= #\t ch)
-	   (tokenize-char-seq port "tab"	'(datum . #\x9)))
-	  (($char= #\l ch)
-	   (tokenize-char-seq port "linefeed"	'(datum . #\xA)))
-	  (($char= #\v ch)
-	   (tokenize-char-seq port "vtab"	'(datum . #\xB)))
-	  (($char= #\p ch)
-	   (tokenize-char-seq port "page"	'(datum . #\xC)))
-	  (($char= #\r ch)
-	   (tokenize-char-seq port "return"	'(datum . #\xD)))
-	  (($char= #\e ch)
-	   (tokenize-char-seq port "esc"	'(datum . #\x1B)))
-	  (($char= #\s ch)
-	   (tokenize-char-seq port "space"	'(datum . #\x20)))
-	  (($char= #\d ch)
-	   (tokenize-char-seq port "delete"	'(datum . #\x7F)))
-
-	  ;;Read the char "#\x" or a character in hex format "#\xHHHH".
-	  (($char= #\x ch)
-	   (let ((ch1 (peek-char port)))
-	     (cond ((or (eof-object? ch1)
-			(delimiter?  ch1))
-		    '(datum . #\x))
-		   ((char->hex-digit/or-false ch1)
-		    => (lambda (digit)
-			 (read-char port)
-			 (let next-digit ((digit       digit)
-					  (accumulated (cons ch1 '(#\x))))
-			   (let ((chX (peek-char port)))
-			     (cond ((eof-object? chX)
-				    (cons 'datum (integer->char/checked digit accumulated port)))
-				   ((delimiter? chX)
-				    (cons 'datum (integer->char/checked digit accumulated port)))
-				   ((char->hex-digit/or-false chX)
-				    => (lambda (digit0)
-					 (read-char port)
-					 (next-digit (+ (* digit 16) digit0)
-						     (cons chX accumulated))))
-				   (else
-				    (%error "invalid character sequence"
-					    (reverse-list->string (cons chX accumulated)))))))))
-		   (else
-		    (%error "invalid character sequence" (string #\# #\\ ch1))))))
-
-	  ;;It is a normal character.
-	  (else
-	   (let ((ch1 (peek-char port)))
-	     (if (or (eof-object? ch1)
-		     (delimiter?  ch1))
-		 (cons 'datum ch)
-	       (%error "invalid syntax" (string #\# #\\ ch ch1))))))))
-
-
 ;;;; reading comments
 
 (define (skip-comment port)
@@ -851,6 +672,210 @@
 	  (else ch))))
 
 
+;;;; number parser
+
+(define-syntax port-config
+  (syntax-rules (GEN-TEST GEN-ARGS FAIL EOF-ERROR GEN-DELIM-TEST)
+    ((_ GEN-ARGS k . rest) (k (p ac) . rest))
+    ((_ FAIL (p ac))
+     (num-error p "invalid numeric sequence" ac))
+    ((_ FAIL (p ac) c)
+     (num-error p "invalid numeric sequence" (cons c ac)))
+    ((_ EOF-ERROR (p ac))
+     (num-error p "invalid eof while reading number" ac))
+    ((_ GEN-DELIM-TEST c sk fk)
+     (if (delimiter? c) sk fk))
+    ((_ GEN-TEST var next fail (p ac) eof-case char-case)
+     (let ((c (peek-char p)))
+       (if (eof-object? c)
+	   (let ()
+	     (define-syntax fail
+	       (syntax-rules ()
+		 ((_) (num-error p "invalid numeric sequence" ac))))
+	     eof-case)
+	 (let ((var c))
+	   (define-syntax fail
+	     (syntax-rules ()
+	       ((_)
+		(num-error p "invalid numeric sequence" (cons var ac)))))
+	   (define-syntax next
+	     (syntax-rules ()
+	       ((_ who args (... ...))
+		(who p (cons (get-char p) ac) args (... ...)))))
+	   char-case))))))
+
+(define-string->number-parser port-config
+  (parse-string u:digit+ u:sign u:dot))
+
+
+(define (read-char* port ls str who case-insensitive? delimited?)
+  ;;Read multiple characters from PORT expecting them to be the chars in
+  ;;the string STR; this function is  used to read a chunk of token.  If
+  ;;successful return  unspecified values; if  an error occurs  raise an
+  ;;exception.
+  ;;
+  ;;LS  must  be  a  list  of  characters already  read  from  PORT  and
+  ;;recognised to be the opening of  the token: they are used to build a
+  ;;better error message.  WHO must  be a string describing the expected
+  ;;token.
+  ;;
+  ;;If CASE-INSENSITIVE? is true: the comparison between characters read
+  ;;from PORT and characters drawn from STR is case insensitive.
+  ;;
+  ;;If DELIMITED? is true: after the chars in STR have been successfully
+  ;;read from PORT, a lookahead is performed on PORT and the result must
+  ;;be EOF or a delimiter character (according to DELIMITER?).
+  ;;
+  ;;Usage example:  when reading the  comment "#!r6rs" this  function is
+  ;;called as:
+  ;;
+  ;;	(read-char* port '(#\r) "6rs" #f #f)
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (define-inline (%error-1 msg . args)
+    (die/p-1 port 'tokenize msg . args))
+  (define str.len
+    (string-length str))
+  (let loop ((i 0) (ls ls))
+    (if (fx= i str.len)
+	(when delimited?
+	  (let ((ch (peek-char port)))
+	    (when (and (not (eof-object? ch))
+		       (not (delimiter?  ch)))
+	      (%error (format "invalid ~a: ~s" who (reverse-list->string (cons ch ls)))))))
+      (let ((ch (read-char port)))
+	(cond ((eof-object? ch)
+	       (%error (format "invalid eof inside ~a" who)))
+	      ((or (and (not case-insensitive?)
+			($char= ch (string-ref str i)))
+		   (and case-insensitive?
+			($char= (char-downcase ch)
+				(string-ref str i))))
+	       (loop (add1 i) (cons ch ls)))
+	      (else
+	       (%error-1 (format "invalid ~a: ~s" who (reverse-list->string (cons ch ls))))))))))
+
+
+(define (tokenize/c ch port)
+  ;;Recognise a  token to be read from  PORT after the char  CH has been
+  ;;read.   Return a  datum representing  a full  token already  read or
+  ;;describing a token that must still be read:
+  ;;
+  ;;lparen			The token is a left paranthesis.
+  ;;rparen			The token is a right paranthesis.
+  ;;lbrack			The token is a left bracket.
+  ;;rbrack			The token is a right bracket.
+  ;;(datum . <num>)		The token is the number <NUM>.
+  ;;(datum . <sym>)		The token is the symbol <SYM>.
+  ;;(datum . <str>)		The token is the string <STR>.
+  ;;(datum . <ch>)		The token is the character <CH>.
+  ;;(macro . quote)		The token is a quoted form.
+  ;;(macro . quasiquote)	The token is a quasiquoted form.
+  ;;(macro . unquote)		The token is an unquoted form.
+  ;;(macro . unquote-splicing)	The token is an unquoted splicing form.
+  ;;at-expr			The token is an @-expression.
+  ;;
+  ;;If CH is the character #\#:  the return value is the return value of
+  ;;TOKENIZE-HASH applied to PORT.
+  ;;
+  ;;If CH is the dot character:  the return value is the return value of
+  ;;TOKENIZE-DOT.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (define-inline (%error-1 msg . args)
+    (die/p-1 port 'tokenize msg . args))
+  (cond ((eof-object? ch)
+	 (error 'tokenize/c "hmmmm eof")
+	 (eof-object))
+
+	(($char= #\( ch)   'lparen)
+	(($char= #\) ch)   'rparen)
+	(($char= #\[ ch)   'lbrack)
+	(($char= #\] ch)   'rbrack)
+	(($char= #\' ch)   '(macro . quote))
+	(($char= #\` ch)   '(macro . quasiquote))
+
+	(($char= #\, ch)
+	 (let ((ch1 (peek-char port)))
+	   (cond ((eof-object? ch1)
+		  '(macro . unquote))
+		 (($char= ch1 #\@)
+		  (read-char port)
+		  '(macro . unquote-splicing))
+		 (else
+		  '(macro . unquote)))))
+
+	;;everything starting with a hash
+	(($char= #\# ch)
+	 (tokenize-hash port))
+
+	;;number
+	((char<=? #\0 ch #\9)
+	 (let ((d ($fx- (char->integer ch) (char->integer #\0))))
+	   (cons 'datum (u:digit+ port (list ch) 10 #f #f +1 d))))
+
+	;;symbol
+	((initial? ch)
+	 (let ((ls (reverse (identifier-lexeme (cons ch '()) port))))
+	   (cons 'datum (string->symbol (list->string ls)))))
+
+	;;string
+	(($char= #\" ch)
+	 (let ((ls (string-lexeme '() port)))
+	   (cons 'datum (reverse-list->string ls))))
+
+	;;symbol "+" or number
+	(($char= #\+ ch)
+	 (let ((ch1 (peek-char port)))
+	   (cond ((eof-object? ch1) '(datum . +))
+		 ((delimiter?  ch1)  '(datum . +))
+		 (else
+		  (cons 'datum (u:sign port '(#\+) 10 #f #f +1))))))
+
+	;;symbol "-", symbol "->" or number
+	(($char= #\- ch)
+	 (let ((ch1 (peek-char port)))
+	   (cond ((eof-object? ch1) '(datum . -))
+		 ((delimiter?  ch1) '(datum . -))
+		 (($char= ch1 #\>)
+		  (read-char port)
+		  (let ((ls (identifier-lexeme '() port)))
+		    (let ((str (list->string (cons* #\- #\> (reverse ls)))))
+		      (cons 'datum (string->symbol str)))))
+		 (else
+		  (cons 'datum (u:sign port '(#\-) 10 #f #f -1))))))
+
+	;;everything  staring  with  a  dot  (standalone  dot,  ellipsis
+	;;symbol, inexact number)
+	(($char= #\. ch)
+	 (tokenize-dot port))
+
+	;;symbol with syntax "|<sym>|"
+	(($char= #\| ch)
+	 (when (port-in-r6rs-mode? port)
+	   (%error "|symbol| syntax is invalid in #!r6rs mode"))
+	 (cons 'datum (string->symbol (reverse-list->string (identifier-lexeme/bar '() port)))))
+
+	;;symbol whose first char is a backslash sequence, "\x41;-ciao"
+	(($char= #\\ ch)
+	 (cons 'datum (string->symbol (reverse-list->string
+				       (identifier-lexeme/backslash '() port #f)))))
+
+;;;Unused for now.
+;;;
+;;;     (($char= #\{ ch) 'lbrace)
+
+	(($char= #\@ ch)
+	 (when (port-in-r6rs-mode? port)
+	   (%error "@-expr syntax is invalid in #!r6rs mode"))
+	 'at-expr)
+
+	(else
+	 (%error-1 "invalid syntax" ch))))
+
+
 (define-inline (tokenize-hash port)
   ;;Read a token from PORT.  Called after a #\# character has been read.
   ;;
@@ -905,7 +930,7 @@
 	    (else
 	     (%error (format "invalid syntax near #~a~a" ch ch1))))))
 
-   ((unsafe.char= #\\ ch) (tokenize-char port))
+   ((unsafe.char= #\\ ch) (char-lexeme port))
    ((unsafe.char= #\( ch) 'vparen)
    ((unsafe.char= #\' ch) '(macro . syntax))
    ((unsafe.char= #\` ch) '(macro . quasisyntax))
@@ -1098,91 +1123,6 @@
     (%error-1 (format "invalid syntax #~a" ch)))))
 
 
-;;;; number parser
-
-(define-syntax port-config
-  (syntax-rules (GEN-TEST GEN-ARGS FAIL EOF-ERROR GEN-DELIM-TEST)
-    ((_ GEN-ARGS k . rest) (k (p ac) . rest))
-    ((_ FAIL (p ac))
-     (num-error p "invalid numeric sequence" ac))
-    ((_ FAIL (p ac) c)
-     (num-error p "invalid numeric sequence" (cons c ac)))
-    ((_ EOF-ERROR (p ac))
-     (num-error p "invalid eof while reading number" ac))
-    ((_ GEN-DELIM-TEST c sk fk)
-     (if (delimiter? c) sk fk))
-    ((_ GEN-TEST var next fail (p ac) eof-case char-case)
-     (let ((c (peek-char p)))
-       (if (eof-object? c)
-	   (let ()
-	     (define-syntax fail
-	       (syntax-rules ()
-		 ((_) (num-error p "invalid numeric sequence" ac))))
-	     eof-case)
-	 (let ((var c))
-	   (define-syntax fail
-	     (syntax-rules ()
-	       ((_)
-		(num-error p "invalid numeric sequence" (cons var ac)))))
-	   (define-syntax next
-	     (syntax-rules ()
-	       ((_ who args (... ...))
-		(who p (cons (get-char p) ac) args (... ...)))))
-	   char-case))))))
-
-(define-string->number-parser port-config
-  (parse-string u:digit+ u:sign u:dot))
-
-
-(define (read-char* port ls str who case-insensitive? delimited?)
-  ;;Read multiple characters from PORT expecting them to be the chars in
-  ;;the string STR; this function is  used to read a chunk of token.  If
-  ;;successful return  unspecified values; if  an error occurs  raise an
-  ;;exception.
-  ;;
-  ;;LS  must  be  a  list  of  characters already  read  from  PORT  and
-  ;;recognised to be the opening of  the token: they are used to build a
-  ;;better error message.  WHO must  be a string describing the expected
-  ;;token.
-  ;;
-  ;;If CASE-INSENSITIVE? is true: the comparison between characters read
-  ;;from PORT and characters drawn from STR is case insensitive.
-  ;;
-  ;;If DELIMITED? is true: after the chars in STR have been successfully
-  ;;read from PORT, a lookahead is performed on PORT and the result must
-  ;;be EOF or a delimiter character (according to DELIMITER?).
-  ;;
-  ;;Usage example:  when reading the  comment "#!r6rs" this  function is
-  ;;called as:
-  ;;
-  ;;	(read-char* port '(#\r) "6rs" #f #f)
-  ;;
-  (define-inline (%error msg . args)
-    (die/p port 'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
-    (die/p-1 port 'tokenize msg . args))
-  (define str.len
-    (string-length str))
-  (let loop ((i 0) (ls ls))
-    (if (fx= i str.len)
-	(when delimited?
-	  (let ((ch (peek-char port)))
-	    (when (and (not (eof-object? ch))
-		       (not (delimiter?  ch)))
-	      (%error (format "invalid ~a: ~s" who (reverse-list->string (cons ch ls)))))))
-      (let ((ch (read-char port)))
-	(cond ((eof-object? ch)
-	       (%error (format "invalid eof inside ~a" who)))
-	      ((or (and (not case-insensitive?)
-			($char= ch (string-ref str i)))
-		   (and case-insensitive?
-			($char= (char-downcase ch)
-				(string-ref str i))))
-	       (loop (add1 i) (cons ch ls)))
-	      (else
-	       (%error-1 (format "invalid ~a: ~s" who (reverse-list->string (cons ch ls))))))))))
-
-
 (define (tokenize-hashnum p n)
   (let ((c (read-char p)))
     (cond
@@ -1196,123 +1136,209 @@
       (die/p-1 p 'tokenize "invalid char while inside a #n mark/ref" c)))))
 
 
-(define (tokenize/c ch port)
-  ;;Recognise a  token to be read from  PORT after the char  CH has been
-  ;;read.   Return a  datum representing  a full  token already  read or
-  ;;describing a token that must still be read:
+;;;; reading characters
+
+(define (char-lexeme port)
+  ;;Called after a hash character followed by a backslash character have
+  ;;been read from PORT.  Read  characters from PORT parsing a character
+  ;;datum; return the datum:
   ;;
-  ;;lparen			The token is a left paranthesis.
-  ;;rparen			The token is a right paranthesis.
-  ;;lbrack			The token is a left bracket.
-  ;;rbrack			The token is a right bracket.
-  ;;(datum . <num>)		The token is the number <NUM>.
-  ;;(datum . <sym>)		The token is the symbol <SYM>.
-  ;;(datum . <str>)		The token is the string <STR>.
-  ;;(datum . <ch>)		The token is the character <CH>.
-  ;;(macro . quote)		The token is a quoted form.
-  ;;(macro . quasiquote)	The token is a quasiquoted form.
-  ;;(macro . unquote)		The token is an unquoted form.
-  ;;(macro . unquote-splicing)	The token is an unquoted splicing form.
-  ;;at-expr			The token is an @-expression.
+  ;;   (datum . <ch>)
   ;;
-  ;;If CH is the character #\#:  the return value is the return value of
-  ;;TOKENIZE-HASH applied to PORT.
-  ;;
-  ;;If CH is the dot character:  the return value is the return value of
-  ;;TOKENIZE-DOT.
+  ;;where <CH> is the character value.
   ;;
   (define-inline (%error msg . args)
     (die/p port 'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
-    (die/p-1 port 'tokenize msg . args))
-  (cond ((eof-object? ch)
-	 (error 'tokenize/c "hmmmm eof")
-	 (eof-object))
+  (let ((ch (read-char port)))
+    (cond ((eof-object? ch)
+	   (%error "invalid #\\ near end of file"))
 
-	(($char= #\( ch)   'lparen)
-	(($char= #\) ch)   'rparen)
-	(($char= #\[ ch)   'lbrack)
-	(($char= #\] ch)   'rbrack)
-	(($char= #\' ch)   '(macro . quote))
-	(($char= #\` ch)   '(macro . quasiquote))
+	  ;;There are multiple character sequences starting with "#\n".
+	  (($char= #\n ch)
+	   (let ((ch1 (peek-char port)))
+	     (cond ((eof-object? ch1)
+		    '(datum . #\n))
+		   (($char= #\u ch1)
+		    (read-char port)
+		    (char-lexeme-seq port "ul"	'(datum . #\x0)))
+		   (($char= #\e ch1)
+		    (read-char port)
+		    (char-lexeme-seq port "ewline"	'(datum . #\xA)))
+		   ((delimiter? ch1)
+		    '(datum . #\n))
+		   (else
+		    (%error "invalid syntax" (string #\# #\\ #\n ch1))))))
 
-	(($char= #\, ch)
-	 (let ((ch1 (peek-char port)))
-	   (cond ((eof-object? ch1)
-		  '(macro . unquote))
-		 (($char= ch1 #\@)
-		  (read-char port)
-		  '(macro . unquote-splicing))
-		 (else
-		  '(macro . unquote)))))
+	  (($char= #\a ch)
+	   (char-lexeme-seq port "alarm"	'(datum . #\x7)))
+	  (($char= #\b ch)
+	   (char-lexeme-seq port "backspace"	'(datum . #\x8)))
+	  (($char= #\t ch)
+	   (char-lexeme-seq port "tab"	'(datum . #\x9)))
+	  (($char= #\l ch)
+	   (char-lexeme-seq port "linefeed"	'(datum . #\xA)))
+	  (($char= #\v ch)
+	   (char-lexeme-seq port "vtab"	'(datum . #\xB)))
+	  (($char= #\p ch)
+	   (char-lexeme-seq port "page"	'(datum . #\xC)))
+	  (($char= #\r ch)
+	   (char-lexeme-seq port "return"	'(datum . #\xD)))
+	  (($char= #\e ch)
+	   (char-lexeme-seq port "esc"	'(datum . #\x1B)))
+	  (($char= #\s ch)
+	   (char-lexeme-seq port "space"	'(datum . #\x20)))
+	  (($char= #\d ch)
+	   (char-lexeme-seq port "delete"	'(datum . #\x7F)))
 
-	;;everything starting with a hash
-	(($char= #\# ch)
-	 (tokenize-hash port))
+	  ;;Read the char "#\x" or a character in hex format "#\xHHHH".
+	  (($char= #\x ch)
+	   (let ((ch1 (peek-char port)))
+	     (cond ((or (eof-object? ch1)
+			(delimiter?  ch1))
+		    '(datum . #\x))
+		   ((char->hex-digit/or-false ch1)
+		    => (lambda (digit)
+			 (read-char port)
+			 (let next-digit ((digit       digit)
+					  (accumulated (cons ch1 '(#\x))))
+			   (let ((chX (peek-char port)))
+			     (cond ((eof-object? chX)
+				    (cons 'datum (integer->char/checked digit accumulated port)))
+				   ((delimiter? chX)
+				    (cons 'datum (integer->char/checked digit accumulated port)))
+				   ((char->hex-digit/or-false chX)
+				    => (lambda (digit0)
+					 (read-char port)
+					 (next-digit (+ (* digit 16) digit0)
+						     (cons chX accumulated))))
+				   (else
+				    (%error "invalid character sequence"
+					    (reverse-list->string (cons chX accumulated)))))))))
+		   (else
+		    (%error "invalid character sequence" (string #\# #\\ ch1))))))
 
-	;;number
-	((char<=? #\0 ch #\9)
-	 (let ((d ($fx- (char->integer ch) (char->integer #\0))))
-	   (cons 'datum (u:digit+ port (list ch) 10 #f #f +1 d))))
+	  ;;It is a normal character.
+	  (else
+	   (let ((ch1 (peek-char port)))
+	     (if (or (eof-object? ch1)
+		     (delimiter?  ch1))
+		 (cons 'datum ch)
+	       (%error "invalid syntax" (string #\# #\\ ch ch1))))))))
 
-	;;symbol
-	((initial? ch)
-	 (let ((ls (reverse (identifier-lexeme (cons ch '()) port))))
-	   (cons 'datum (string->symbol (list->string ls)))))
+(define (char-lexeme-seq port str datum)
+  ;;Subroutine  of CHAR-LEXEME.  Read  characters from  PORT verifying
+  ;;that they are equal to the  characters drawn from the string STR; if
+  ;;reading and  comparing is successful:  peek one more char  from PORT
+  ;;and verify that it is EOF or a delimiter (according to DELIMITER?).
+  ;;
+  ;;If successful return DATUM, else raise an exception.
+  ;;
+  ;;This function is used to parse characters: in the format "#\newline"
+  ;;when the sequence "#\ne" has already been consumed; in this case the
+  ;;function is called as:
+  ;;
+  ;;   (char-lexeme-seq port "ewline" '(datum . #\xA))
+  ;;
+  ;;As an extension  (currently not used in the  lexer, Marco Maggi; Oct
+  ;;12, 2011), this function supports  also the case of character in the
+  ;;format "#\A" when the sequence  "#\A" has already been consumed, and
+  ;;we only  need to verify  that the  next char from  PORT is EOF  or a
+  ;;delimiter.  In this case DATUM is ignored.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (let ((ch (peek-char port)))
+    (cond ((or (eof-object? ch) (delimiter? ch))
+	   (cons 'datum (unsafe.string-ref str 0)))
+	  (($char= ch (unsafe.string-ref str 1))
+	   (read-char port)
+	   (char-lexeme* 2 str port datum))
+	  (else
+	   (%error "invalid syntax" (unsafe.string-ref str 0) ch)))))
 
-	;;string
-	(($char= #\" ch)
-	 (let ((ls (string-lexeme '() port)))
-	   (cons 'datum (reverse-list->string ls))))
+(define (char-lexeme* str.index str port datum)
+  ;;Recusrive subroutine of CHAR-LEXEME-SEQ.  Draw characters from the
+  ;;string STR, starting at STR.INDEX, and verify that they are equal to
+  ;;the  characters  read  from   PORT;  if  reading  and  comparing  is
+  ;;successful: peek one  more char from PORT and verify  that it is EOF
+  ;;or a delimiter (according to DELIMITER?).
+  ;;
+  ;;If successful return DATUM, else raise an exception.
+  ;;
+  (define-inline (recurse idx)
+    (char-lexeme* idx str port datum))
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (if (unsafe.fx= str.index (unsafe.string-length str))
+      (let ((ch (peek-char port)))
+	(cond ((eof-object? ch) datum)
+	      ((delimiter?  ch) datum)
+	      (else
+	       (%error "invalid character after sequence" (string-append str (string ch))))))
+    (let ((ch (read-char port)))
+      (cond ((eof-object? ch)
+	     (%error "invalid EOF in the middle of expected sequence" str))
+	    (($char= ch (unsafe.string-ref str str.index))
+	     (recurse (unsafe.fxadd1 str.index)))
+	    (else
+	     (%error "invalid char while scanning string" ch str))))))
 
-	;;symbol "+" or number
-	(($char= #\+ ch)
-	 (let ((ch1 (peek-char port)))
-	   (cond ((eof-object? ch1) '(datum . +))
-		 ((delimiter?  ch1)  '(datum . +))
-		 (else
-		  (cons 'datum (u:sign port '(#\+) 10 #f #f +1))))))
+
+(define (tokenize-script-initial port)
+  (let ((ch (read-char port)))
+    (cond ((eof-object? ch)
+	   ch)
+	  (($char= ch #\;)
+	   (skip-comment port)
+	   (tokenize/1 port))
+	  (($char= ch #\#)
+	   (let ((ch1 (read-char port)))
+	     (cond ((eof-object? ch1)
+		    (die/p port 'tokenize "invalid eof after #"))
+		   (($char= ch1 #\!)
+		    (skip-comment port)
+		    (tokenize/1 port))
+		   (($char= ch1 #\;)
+		    (read-as-comment port)
+		    (tokenize/1 port))
+		   (($char= ch1 #\|)
+		    (multiline-comment port)
+		    (tokenize/1 port))
+		   (else
+		    (tokenize-hash/c ch1 port)))))
+	  ((char-whitespace? ch)
+	   (tokenize/1 port))
+	  (else
+	   (tokenize/c ch port)))))
 
-	;;symbol "-", symbol "->" or number
-	(($char= #\- ch)
-	 (let ((ch1 (peek-char port)))
-	   (cond ((eof-object? ch1) '(datum . -))
-		 ((delimiter?  ch1) '(datum . -))
-		 (($char= ch1 #\>)
-		  (read-char port)
-		  (let ((ls (identifier-lexeme '() port)))
-		    (let ((str (list->string (cons* #\- #\> (reverse ls)))))
-		      (cons 'datum (string->symbol str)))))
-		 (else
-		  (cons 'datum (u:sign port '(#\-) 10 #f #f -1))))))
-
-	;;everything  staring  with  a  dot  (standalone  dot,  ellipsis
-	;;symbol, inexact number)
-	(($char= #\. ch)
-	 (tokenize-dot port))
-
-	;;symbol with syntax "|<sym>|"
-	(($char= #\| ch)
-	 (when (port-in-r6rs-mode? port)
-	   (%error "|symbol| syntax is invalid in #!r6rs mode"))
-	 (cons 'datum (string->symbol (reverse-list->string (identifier-lexeme/bar '() port)))))
-
-	;;symbol whose first char is a backslash sequence, "\x41;-ciao"
-	(($char= #\\ ch)
-	 (cons 'datum (string->symbol (reverse-list->string
-				       (identifier-lexeme/backslash '() port #f)))))
-
-;;;Unused for now.
-;;;
-;;;     (($char= #\{ ch) 'lbrace)
-
-	(($char= #\@ ch)
-	 (when (port-in-r6rs-mode? port)
-	   (%error "@-expr syntax is invalid in #!r6rs mode"))
-	 'at-expr)
-
-	(else
-	 (%error-1 "invalid syntax" ch))))
+(define (tokenize-script-initial+pos port)
+  (let* ((pos (make-compound-position port))
+	 (ch  (read-char port)))
+    (cond ((eof-object? ch)
+	   (values (eof-object) pos))
+	  (($char= ch #\;)
+	   (skip-comment port)
+	   (tokenize/1+pos port))
+	  (($char= ch #\#)
+	   (let ((pos (make-compound-position port))
+		 (ch1 (read-char port)))
+	     (cond ((eof-object? ch1)
+		    (die/p port 'tokenize "invalid eof after #"))
+		   (($char= ch1 #\!)
+		    (skip-comment port)
+		    (tokenize/1+pos port))
+		   (($char= ch1 #\;)
+		    (read-as-comment port)
+		    (tokenize/1+pos port))
+		   (($char= ch1 #\|)
+		    (multiline-comment port)
+		    (tokenize/1+pos port))
+		   (else
+		    (values (tokenize-hash/c ch1 port) pos)))))
+	  ((char-whitespace? ch)
+	   (tokenize/1+pos port))
+	  (else
+	   (values (tokenize/c ch port) pos)))))
 
 
 (define (tokenize/1 port)
@@ -1377,61 +1403,37 @@
 	   (values (tokenize/c ch port) pos)))))
 
 
-(define (tokenize-script-initial port)
-  (let ((ch (read-char port)))
-    (cond ((eof-object? ch)
-	   ch)
-	  (($char= ch #\;)
-	   (skip-comment port)
-	   (tokenize/1 port))
-	  (($char= ch #\#)
-	   (let ((ch1 (read-char port)))
+(define (tokenize-dot port)
+  ;;Read from  PORT a token starting  with a dot, the  dot being already
+  ;;read.  There return value is a datum describing the token:
+  ;;
+  ;;dot			The token is a standalone dot.
+  ;;(datum . ...)	The token is the ellipsis symbol.
+  ;;(datum . <num>)	The token is the inexact number <NUM>.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (let ((ch (peek-char port)))
+    (cond ((eof-object? ch) 'dot)
+	  ((delimiter?  ch) 'dot)
+	  (($char= ch #\.) ;a second dot, maybe a "..." opening
+	   (read-char port)
+	   (let ((ch1 (peek-char port)))
 	     (cond ((eof-object? ch1)
-		    (die/p port 'tokenize "invalid eof after #"))
-		   (($char= ch1 #\!)
-		    (skip-comment port)
-		    (tokenize/1 port))
-		   (($char= ch1 #\;)
-		    (read-as-comment port)
-		    (tokenize/1 port))
-		   (($char= ch1 #\|)
-		    (multiline-comment port)
-		    (tokenize/1 port))
+		    (%error "invalid syntax .. near end of file"))
+		   (($char= ch #\.) ;this is the third
+		    (read-char port)
+		    (let ((ch2 (peek-char port)))
+		      (cond ((eof-object? ch2) '(datum . ...))
+			    ((delimiter?  ch2) '(datum . ...))
+			    (else
+			     (%error "invalid syntax" (string-append "..." (string ch2)))))))
 		   (else
-		    (tokenize-hash/c ch1 port)))))
-	  ((char-whitespace? ch)
-	   (tokenize/1 port))
+		    (%error "invalid syntax" (string-append ".." (string ch1)))))))
 	  (else
-	   (tokenize/c ch port)))))
+	   (cons 'datum (u:dot port '(#\.) 10 #f #f +1))))))
 
-(define (tokenize-script-initial+pos port)
-  (let* ((pos (make-compound-position port))
-	 (ch  (read-char port)))
-    (cond ((eof-object? ch)
-	   (values (eof-object) pos))
-	  (($char= ch #\;)
-	   (skip-comment port)
-	   (tokenize/1+pos port))
-	  (($char= ch #\#)
-	   (let ((pos (make-compound-position port))
-		 (ch1 (read-char port)))
-	     (cond ((eof-object? ch1)
-		    (die/p port 'tokenize "invalid eof after #"))
-		   (($char= ch1 #\!)
-		    (skip-comment port)
-		    (tokenize/1+pos port))
-		   (($char= ch1 #\;)
-		    (read-as-comment port)
-		    (tokenize/1+pos port))
-		   (($char= ch1 #\|)
-		    (multiline-comment port)
-		    (tokenize/1+pos port))
-		   (else
-		    (values (tokenize-hash/c ch1 port) pos)))))
-	  ((char-whitespace? ch)
-	   (tokenize/1+pos port))
-	  (else
-	   (values (tokenize/c ch port) pos)))))
+
 
 
 (module (read-expr read-expr-script-initial)
