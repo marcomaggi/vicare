@@ -180,7 +180,7 @@
   (die/p-1 p 'read str (reverse-list->string ls)))
 
 
-;;;; characters classification
+;;;; characters classification helpers
 
 (define CHAR-FIXNUM-0		($char->fixnum #\0))
 (define CHAR-FIXNUM-a		($char->fixnum #\a))
@@ -271,7 +271,7 @@
 	     (memq (char-general-category ch) '(Nd Mc Me))))))
 
 
-;;;; conversion between characters and integers
+;;;; conversion between characters and integers helpers
 
 (define (integer->char/checked N accumulated-chars port)
   ;;Validate the  fixnum N  as valid Unicode  code point and  return the
@@ -311,7 +311,554 @@
 	(else #f)))
 
 
-;;;; tokenising identifiers
+(define (tokenize-script-initial port)
+  (let ((ch (read-char port)))
+    (cond ((eof-object? ch)
+	   ch)
+	  (($char= ch #\;)
+	   (skip-comment port)
+	   (tokenize/1 port))
+	  (($char= ch #\#)
+	   (let ((ch1 (read-char port)))
+	     (cond ((eof-object? ch1)
+		    (die/p port 'tokenize "invalid eof after #"))
+		   (($char= ch1 #\!)
+		    (skip-comment port)
+		    (tokenize/1 port))
+		   (($char= ch1 #\;)
+		    (read-as-comment port)
+		    (tokenize/1 port))
+		   (($char= ch1 #\|)
+		    (multiline-comment port)
+		    (tokenize/1 port))
+		   (else
+		    (tokenize-hash/c ch1 port)))))
+	  ((char-whitespace? ch)
+	   (tokenize/1 port))
+	  (else
+	   (tokenize/c ch port)))))
+
+(define (tokenize-script-initial+pos port)
+  (let* ((pos (make-compound-position port))
+	 (ch  (read-char port)))
+    (cond ((eof-object? ch)
+	   (values (eof-object) pos))
+	  (($char= ch #\;)
+	   (skip-comment port)
+	   (tokenize/1+pos port))
+	  (($char= ch #\#)
+	   (let ((pos (make-compound-position port))
+		 (ch1 (read-char port)))
+	     (cond ((eof-object? ch1)
+		    (die/p port 'tokenize "invalid eof after #"))
+		   (($char= ch1 #\!)
+		    (skip-comment port)
+		    (tokenize/1+pos port))
+		   (($char= ch1 #\;)
+		    (read-as-comment port)
+		    (tokenize/1+pos port))
+		   (($char= ch1 #\|)
+		    (multiline-comment port)
+		    (tokenize/1+pos port))
+		   (else
+		    (values (tokenize-hash/c ch1 port) pos)))))
+	  ((char-whitespace? ch)
+	   (tokenize/1+pos port))
+	  (else
+	   (values (tokenize/c ch port) pos)))))
+
+
+(define (tokenize/1 port)
+  ;;Start  tokenizing the next  token from  PORT, skipping  comments and
+  ;;whitespaces.  Return a datum representing the next token.
+  ;;
+  (define-inline (recurse)
+    (tokenize/1 port))
+  (let ((ch (read-char port)))
+    (cond ((eof-object? ch)
+	   (eof-object))
+	  (($char= ch #\;)
+	   (skip-comment port)
+	   (recurse))
+	  (($char= ch #\#)
+	   (let ((ch1 (read-char port)))
+	     (cond ((eof-object? ch1)
+		    (die/p port 'tokenize "invalid EOF after #"))
+		   (($char= ch1 #\;)
+		    (read-as-comment port)
+		    (recurse))
+		   (($char= ch1 #\|)
+		    (multiline-comment port)
+		    (recurse))
+		   (else
+		    (tokenize-hash/c ch1 port)))))
+	  ((char-whitespace? ch)
+	   (recurse))
+	  (else
+	   (tokenize/c ch port)))))
+
+(define (tokenize/1+pos port)
+  ;;Start  tokenizing  the next  token  from  P,  skipping comments  and
+  ;;whitespaces.   Return  two values:  a  datum  representing the  next
+  ;;token, a compound position value.
+  ;;
+  (define-inline (recurse)
+    (tokenize/1+pos port))
+  (let* ((pos (make-compound-position port))
+	 (ch  (read-char port)))
+    (cond ((eof-object? ch)
+	   (values (eof-object) pos))
+	  (($char= ch #\;)
+	   (skip-comment port)
+	   (recurse))
+	  (($char= ch #\#)
+	   (let ((pos (make-compound-position port)))
+	     (let ((ch1 (read-char port)))
+	       (cond ((eof-object? ch1)
+		      (die/p port 'tokenize "invalid eof after #"))
+		     (($char= ch1 #\;)
+		      (read-as-comment port)
+		      (recurse))
+		     (($char= ch1 #\|)
+		      (multiline-comment port)
+		      (recurse))
+		     (else
+		      (values (tokenize-hash/c ch1 port) pos))))))
+	  ((char-whitespace? ch)
+	   (recurse))
+	  (else
+	   (values (tokenize/c ch port) pos)))))
+
+
+;;;; tokenising input starting from given char
+
+(define (tokenize/c ch port)
+  ;;Recognise a  token to be read from  PORT after the char  CH has been
+  ;;read.   Return a  datum representing  a full  token already  read or
+  ;;describing a token that must still be read:
+  ;;
+  ;;lparen			The token is a left paranthesis.
+  ;;rparen			The token is a right paranthesis.
+  ;;lbrack			The token is a left bracket.
+  ;;rbrack			The token is a right bracket.
+  ;;(datum . <num>)		The token is the number <NUM>.
+  ;;(datum . <sym>)		The token is the symbol <SYM>.
+  ;;(datum . <str>)		The token is the string <STR>.
+  ;;(datum . <ch>)		The token is the character <CH>.
+  ;;(macro . quote)		The token is a quoted form.
+  ;;(macro . quasiquote)	The token is a quasiquoted form.
+  ;;(macro . unquote)		The token is an unquoted form.
+  ;;(macro . unquote-splicing)	The token is an unquoted splicing form.
+  ;;at-expr			The token is an @-expression.
+  ;;
+  ;;If CH is the character #\#:  the return value is the return value of
+  ;;TOKENIZE-HASH applied to PORT.
+  ;;
+  ;;If CH is the dot character:  the return value is the return value of
+  ;;TOKENIZE-DOT.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (define-inline (%error-1 msg . args)
+    (die/p-1 port 'tokenize msg . args))
+  (cond ((eof-object? ch)
+	 (error 'tokenize/c "hmmmm eof")
+	 (eof-object))
+
+	(($char= #\( ch)   'lparen)
+	(($char= #\) ch)   'rparen)
+	(($char= #\[ ch)   'lbrack)
+	(($char= #\] ch)   'rbrack)
+	(($char= #\' ch)   '(macro . quote))
+	(($char= #\` ch)   '(macro . quasiquote))
+
+	(($char= #\, ch)
+	 (let ((ch1 (peek-char port)))
+	   (cond ((eof-object? ch1)
+		  '(macro . unquote))
+		 (($char= ch1 #\@)
+		  (read-char port)
+		  '(macro . unquote-splicing))
+		 (else
+		  '(macro . unquote)))))
+
+	;;everything starting with a hash
+	(($char= #\# ch)
+	 (tokenize-hash port))
+
+	;;number
+	((char<=? #\0 ch #\9)
+	 (let ((d ($fx- (char->integer ch) (char->integer #\0))))
+	   (cons 'datum (u:digit+ port (list ch) 10 #f #f +1 d))))
+
+	;;symbol
+	((initial? ch)
+	 (let ((ls (reverse (identifier-lexeme (cons ch '()) port))))
+	   (cons 'datum (string->symbol (list->string ls)))))
+
+	;;string
+	(($char= #\" ch)
+	 (let ((ls (string-lexeme '() port)))
+	   (cons 'datum (reverse-list->string ls))))
+
+	;;symbol "+" or number
+	(($char= #\+ ch)
+	 (let ((ch1 (peek-char port)))
+	   (cond ((eof-object? ch1) '(datum . +))
+		 ((delimiter?  ch1)  '(datum . +))
+		 (else
+		  (cons 'datum (u:sign port '(#\+) 10 #f #f +1))))))
+
+	;;symbol "-", symbol "->" or number
+	(($char= #\- ch)
+	 (let ((ch1 (peek-char port)))
+	   (cond ((eof-object? ch1) '(datum . -))
+		 ((delimiter?  ch1) '(datum . -))
+		 (($char= ch1 #\>)
+		  (read-char port)
+		  (let ((ls (identifier-lexeme '() port)))
+		    (let ((str (list->string (cons* #\- #\> (reverse ls)))))
+		      (cons 'datum (string->symbol str)))))
+		 (else
+		  (cons 'datum (u:sign port '(#\-) 10 #f #f -1))))))
+
+	;;everything  staring  with  a  dot  (standalone  dot,  ellipsis
+	;;symbol, inexact number)
+	(($char= #\. ch)
+	 (tokenize-dot port))
+
+	;;symbol with syntax "|<sym>|"
+	(($char= #\| ch)
+	 (when (port-in-r6rs-mode? port)
+	   (%error "|symbol| syntax is invalid in #!r6rs mode"))
+	 (cons 'datum (string->symbol (reverse-list->string (identifier-lexeme/bar '() port)))))
+
+	;;symbol whose first char is a backslash sequence, "\x41;-ciao"
+	(($char= #\\ ch)
+	 (cons 'datum (string->symbol (reverse-list->string
+				       (identifier-lexeme/backslash '() port #f)))))
+
+;;;Unused for now.
+;;;
+;;;     (($char= #\{ ch) 'lbrace)
+
+	(($char= #\@ ch)
+	 (when (port-in-r6rs-mode? port)
+	   (%error "@-expr syntax is invalid in #!r6rs mode"))
+	 'at-expr)
+
+	(else
+	 (%error-1 "invalid syntax" ch))))
+
+
+;;;; tokenising input starting with #\#
+
+(define-inline (tokenize-hash port)
+  ;;Read a token from PORT.  Called after a #\# character has been read.
+  ;;
+  (tokenize-hash/c (read-char port) port))
+
+(define (tokenize-hash/c ch port)
+  ;;Recognise  a  token  to be  read  from  PORT.   Called after  a  #\#
+  ;;character has been read.  CH is the character right after the hash.
+  ;;
+  ;;Return a datum representing the token that must be read:
+  ;;
+  ;;(datum . #t)		The token is the value #t.
+  ;;(datum . #f)		The token is the value #f.
+  ;;(datum . <char>)		The token is the character <char>.
+  ;;(datum . <sym>)		The token is the symbol <sym>.
+  ;;(datum . <num>)		The token is the number <num>.
+  ;;(datum . #!eof)		The token is the "#!eof" comment.
+  ;;(macro . syntax)		The token is a syntax form: #'---.
+  ;;(macro . quasisyntax)	The token is a quasisyntax form: #`---.
+  ;;(macro . unsyntax-splicing)	The token is an unsyntax-splicing form: #,@---.
+  ;;(macro . unsyntax)		The token is an unsyntax form: #,---.
+  ;;(mark . <n>)		The token is a graph syntax mark: #<N>=---
+  ;;(ref . <n>)			The token is a graph syntax reference: #<N>#
+  ;;vparen			The token is a vector.
+  ;;vu8				The token is a u8 bytevector.
+  ;;vs8				The token is a s8 bytevector.
+  ;;
+  ;;When the token is the  "#!r6rs" or "#!vicare" comment: the port mode
+  ;;is changed  accordingly and TOKENIZE/1  is applied to the  port; the
+  ;;return value is the return value of TOKENIZE/1.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (define-inline (%error-1 msg . args)
+    (die/p-1 port 'tokenize msg . args))
+
+  (cond
+   ((eof-object? ch)
+    (%error "invalid # near end of file"))
+
+   ((or (unsafe.char= #\t ch) (unsafe.char= #\T ch)) #;(memq ch '(#\t #\T))
+    (let ((c1 (peek-char port)))
+      (cond ((eof-object? c1) '(datum . #t))
+	    ((delimiter?  c1) '(datum . #t))
+	    (else
+	     (%error (format "invalid syntax near #~a~a" ch c1))))))
+
+   ((or (unsafe.char= #\f ch) (unsafe.char= #\F ch)) #;(memq ch '(#\f #\F))
+    (let ((ch1 (peek-char port)))
+      (cond ((eof-object? ch1) '(datum . #f))
+	    ((delimiter?  ch1) '(datum . #f))
+	    (else
+	     (%error (format "invalid syntax near #~a~a" ch ch1))))))
+
+   ((unsafe.char= #\\ ch) (char-lexeme port))
+   ((unsafe.char= #\( ch) 'vparen)
+   ((unsafe.char= #\' ch) '(macro . syntax))
+   ((unsafe.char= #\` ch) '(macro . quasisyntax))
+
+   ((unsafe.char= #\, ch)
+    (let ((ch1 (peek-char port)))
+      (cond ((unsafe.char= ch1 #\@)
+	     (read-char port)
+	     '(macro . unsyntax-splicing))
+	    (else
+	     '(macro . unsyntax)))))
+
+   ;; #! comments and such
+   ((unsafe.char= #\! ch)
+    (let ((ch1 (read-char port)))
+      (when (eof-object? ch1)
+	(%error "invalid eof near #!"))
+      (case ch1
+	((#\e)
+	 (when (port-in-r6rs-mode? port)
+	   (%error-1 "invalid syntax: #!e"))
+	 (read-char* port '(#\e) "of" "eof sequence" #f #f)
+	 (cons 'datum (eof-object)))
+	((#\r)
+	 (read-char* port '(#\r) "6rs" "#!r6rs comment" #f #f)
+	 (set-port-mode! port 'r6rs)
+	 (tokenize/1 port))
+	((#\v)
+	 (read-char* port '(#\v) "icare" "#!vicare comment" #f #f)
+	 (set-port-mode! port 'vicare)
+	 (tokenize/1 port))
+	(else
+	 (%error-1 (format "invalid syntax near #!~a" ch1))))))
+
+   ((dec-digit? ch)
+    (when (port-in-r6rs-mode? port)
+      (%error-1 "graph syntax is invalid in #!r6rs mode" (format "#~a" ch)))
+    (tokenize-hashnum port (char->dec-digit ch)))
+
+   ((unsafe.char= #\: ch)
+    (when (port-in-r6rs-mode? port)
+      (%error-1 "gensym syntax is invalid in #!r6rs mode" (format "#~a" ch)))
+    (let* ((ch1 (read-char-skip-whitespace port "gensym"))
+	   (id0 (cond ((initial? ch1)
+		       (reverse-list->string (identifier-lexeme (cons ch1 '()) port)))
+		      ((unsafe.char= #\| ch1)
+		       (reverse-list->string (identifier-lexeme/bar '() port)))
+		      (else
+		       (%error-1 "invalid char inside gensym" ch1)))))
+      (cons 'datum (gensym id0))))
+
+   ;;Gensym with one of the following syntaxes:
+   ;;
+   ;;#{ciao}
+   ;;   In which "ciao" is ID0, and will become the unique string.
+   ;;
+   ;;#{|ciao|}
+   ;;   In which "ciao" is ID0, and will become the unique string.
+   ;;
+   ;;#{d |95BEx%X86N?8X&yC|}
+   ;;   In which "d" is ID0 and "95BEx%X86N?8X&yC" is ID1.
+   ;;
+   ;;#{|d| |95BEx%X86N?8X&yC|}
+   ;;   In which "d" is ID0 and "95BEx%X86N?8X&yC" is ID1.
+   ;;
+   ((unsafe.char= #\{ ch)
+    (when (port-in-r6rs-mode? port)
+      (%error-1 "gensym syntax is invalid in #!r6rs mode" "#{"))
+    (let ((ch1 (read-char-skip-whitespace port "gensym")))
+      (define-inline (%end-syntax? chX)
+	(unsafe.char= #\} chX))
+      (define-inline (%read-identifier chX)
+	(cond ((initial? chX)
+	       (reverse-list->string (identifier-lexeme (cons chX '()) port)))
+	      ((unsafe.char= #\| chX)
+	       (reverse-list->string (identifier-lexeme/bar '() port)))
+	      (else
+	       (%error-1 "invalid char inside gensym syntax" chX))))
+      (let ((id0 (%read-identifier ch1))
+	    (ch2 (read-char-skip-whitespace port "gensym")))
+	(if (%end-syntax? ch2)
+	    `(datum . ,(strings->gensym #f id0))
+	  (let* ((id1 (%read-identifier ch2))
+		 (ch3 (read-char-skip-whitespace port "gensym")))
+	    (if (%end-syntax? ch3)
+		`(datum . ,(strings->gensym id0 id1))
+	      (%error-1 "invalid char while looking for end of gensym syntax" ch3)))))))
+
+   ;;bytevectors
+   ((unsafe.char= #\v ch)
+    ;;Correct sequences of chars:
+    ;;
+    ;; ch  ch1  ch2  ch3  ch4  ch5  datum
+    ;; ----------------------------------
+    ;; v   u    8    (              #vu8
+    ;; v   s    8    (              #vs8
+    ;; v   u    1    6    l    (    #vu16l
+    ;; v   u    1    6    b    (    #vu16b
+    ;; v   s    1    6    l    (    #vs16l
+    ;; v   s    1    6    b    (    #vs16b
+    ;; v   u    3    2    l    (    #vu32l
+    ;; v   u    3    2    b    (    #vu32b
+    ;; v   s    3    2    l    (    #vs32l
+    ;; v   s    3    2    b    (    #vs32b
+    ;; v   u    6    4    l    (    #vu64l
+    ;; v   u    6    4    b    (    #vu64b
+    ;; v   s    6    4    l    (    #vs64l
+    ;; v   s    6    4    b    (    #vs64b
+    ;;
+    (let ((ch1/eof (read-char port)))
+      (define-inline (%read-bytevector)
+	(cond ((char=? #\u ch1/eof)
+	       (%read-unsigned))
+	      ((char=? #\s ch1/eof)
+	       (when (port-in-r6rs-mode? port)
+		 (%error "invalid #vs8 syntax in #!r6rs mode" "#vs8"))
+	       (%read-signed))
+	      ((eof-object? ch1/eof)
+	       (%error "invalid eof object after #v"))
+	      (else
+	       (%error (format "invalid sequence #v~a" ch1/eof)))))
+
+      (define-inline (%read-unsigned)
+	(let ((ch2/eof (read-char port)))
+	  (cond ((char=? ch2/eof #\8) ;unsigned bytes bytevector
+		 (%read-unsigned-8))
+		((eof-object? ch2/eof)
+		 (%error "invalid eof object after #vu"))
+		(else
+		 (%error-1 (format "invalid sequence #vu~a" ch2/eof))))))
+
+      (define-inline (%read-signed)
+	(let ((ch2/eof (read-char port)))
+	  (cond ((char=? ch2/eof #\8) ;signed bytes bytevector
+		 (%read-signed-8))
+		((eof-object? ch2/eof)
+		 (%error "invalid eof object after #vs"))
+		(else
+		 (%error-1 (format "invalid sequence #vs~a" ch2/eof))))))
+
+      (define-inline (%read-unsigned-8)
+	(let ((ch3/eof (read-char port)))
+	  (cond ((char=? ch3/eof #\()
+		 'vu8)
+		((eof-object? ch3/eof)
+		 (%error "invalid eof object after #vu8"))
+		(else
+		 (%error-1 (format "invalid sequence #vu8~a" ch3/eof))))))
+
+      (define-inline (%read-signed-8)
+	(let ((ch3/eof (read-char port)))
+	  (cond ((char=? ch3/eof #\()
+		 'vs8)
+		((eof-object? ch3/eof)
+		 (%error "invalid eof object after #vs8"))
+		(else
+		 (%error-1 (format "invalid sequence #vs8~a" ch3/eof))))))
+
+      (%read-bytevector)))
+
+   ((or (unsafe.char= ch #\e) (unsafe.char= ch #\E)) #;(memq ch '(#\e #\E))
+    (cons 'datum (parse-string port (list ch #\#) 10 #f 'e)))
+
+   ((or (unsafe.char= ch #\i) (unsafe.char= ch #\I)) #;(memq ch '(#\i #\I))
+    (cons 'datum (parse-string port (list ch #\#) 10 #f 'i)))
+
+   ((or (unsafe.char= ch #\b) (unsafe.char= ch #\B)) #;(memq ch '(#\b #\B))
+    (cons 'datum (parse-string port (list ch #\#) 2 2 #f)))
+
+   ((or (unsafe.char= ch #\x) (unsafe.char= ch #\X)) #;(memq ch '(#\x #\X))
+    (cons 'datum (parse-string port (list ch #\#) 16 16 #f)))
+
+   ((or (unsafe.char= ch #\o) (unsafe.char= ch #\O)) #;(memq ch '(#\o #\O))
+    (cons 'datum (parse-string port (list ch #\#) 8 8 #f)))
+
+   ((or (unsafe.char= ch #\d) (unsafe.char= ch #\D)) #;(memq ch '(#\d #\D))
+    (cons 'datum (parse-string port (list ch #\#) 10 10 #f)))
+
+;;;((unsafe.char= #\@ ch) DEAD: Unfixable due to port encoding
+;;;                 that does not allow mixing binary and
+;;;                 textual data in the same port.
+;;;                Left here for historical value
+;;; (when (port-in-r6rs-mode? port)
+;;;   (%error-1 "fasl syntax is invalid in #!r6rs mode"
+;;;      (format "#~a" ch)))
+;;; (die/p-1 port 'read "FIXME: fasl read disabled")
+;;; '(cons 'datum ($fasl-read port)))
+
+   (else
+    (%error-1 (format "invalid syntax #~a" ch)))))
+
+
+;;;; tokenising input starting with a dot
+
+(define (tokenize-dot port)
+  ;;Read from  PORT a token starting  with a dot, the  dot being already
+  ;;read.  There return value is a datum describing the token:
+  ;;
+  ;;dot			The token is a standalone dot.
+  ;;(datum . ...)	The token is the ellipsis symbol.
+  ;;(datum . <num>)	The token is the inexact number <NUM>.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (let ((ch (peek-char port)))
+    (cond ((eof-object? ch) 'dot)
+	  ((delimiter?  ch) 'dot)
+	  (($char= ch #\.) ;a second dot, maybe a "..." opening
+	   (read-char port)
+	   (let ((ch1 (peek-char port)))
+	     (cond ((eof-object? ch1)
+		    (%error "invalid syntax .. near end of file"))
+		   (($char= ch #\.) ;this is the third
+		    (read-char port)
+		    (let ((ch2 (peek-char port)))
+		      (if (or (eof-object? ch2)
+			      (delimiter?  ch2))
+			  '(datum . ...)
+			(%error "invalid syntax" (string-append "..." (string ch2))))))
+		   (else
+		    (%error "invalid syntax" (string-append ".." (string ch1)))))))
+	  (else
+	   (cons 'datum (u:dot port '(#\.) 10 #f #f +1))))))
+
+
+;;;; reading graph notation marks
+
+(define (tokenize-hashnum port N)
+  ;;Read characters from PORT parsing  a graph notation hash num mark or
+  ;;reference.  Return a datum describing the token:
+  ;;
+  ;;(mark . <num>)	The token is a new hashnum mark.
+  ;;(ref . <num>)	The token is reference to an existing hashnum.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (define-inline (%unexpected-eof-error)
+    (%error "invalid EOF while reading character"))
+  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
+    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+      . ?cond-clauses))
+  (%read-char-no-eof (port ch)
+    ((unsafe.char= #\= ch) (cons 'mark N))
+    ((unsafe.char= #\# ch) (cons 'ref  N))
+    ((dec-digit? ch)
+     (tokenize-hashnum port (unsafe.fx+ (fx* N 10) (char->dec-digit ch))))
+    (else
+     (%error "invalid char while inside a #n mark/ref" ch))))
+
+
+;;;; reading identifiers
 ;;
 ;;Three functions are involved:
 ;;
@@ -584,570 +1131,6 @@
   (main))
 
 
-;;;; reading comments
-
-(define (skip-comment port)
-  (let ((ch (read-char port)))
-    (unless (or (eof-object? ch)
-		(char-is-single-char-line-ending? ch)
-		(char-is-carriage-return? ch))
-      (skip-comment port))))
-
-(define (multiline-comment port)
-  ;;Parse a multiline comment  "#| ... |#", possibly nested.  Accumulate
-  ;;the characters in the comment, excluding the "#|" and "|#", and hand
-  ;;the  resulting string to  the function  referenced by  the parameter
-  ;;COMMENT-HANDLER.    Return  the  return   value  of   such  function
-  ;;application.
-  ;;
-  (define-inline (%multiline-error)
-    (die/p port 'tokenize "end of file encountered while inside a #|-style comment"))
-
-  (define-inline (string->reverse-list str str.start accumulated)
-    (%string->reverse-list str str.start (unsafe.string-length str) accumulated))
-  (define (%string->reverse-list str str.index str.len accumulated)
-    (if (unsafe.fx= str.index str.len)
-	accumulated
-      (%string->reverse-list str (unsafe.fxadd1 str.index) str.len
-			     (cons (unsafe.string-ref str str.index) accumulated))))
-
-  (define (accumulate-comment-chars port ac)
-    (define-inline (recurse ac)
-      (accumulate-comment-chars port ac))
-    (let ((c (read-char port)))
-      (cond ((eof-object? c)
-	     (%multiline-error))
-
-	    ;;A vertical bar character may or may not end this multiline
-	    ;;comment.
-	    (($char= #\| c)
-	     (let next-vertical-bar ((ch1 (read-char port)) (ac ac))
-	       (cond ((eof-object? ch1)
-		      (%multiline-error))
-		     (($char= #\# ch1) ;end of comment
-		      ac)
-		     (($char= #\| ch1) ;optimisation for sequence of bars?!?
-		      (next-vertical-bar (read-char port) (cons ch1 ac)))
-		     (else
-		      (recurse (cons ch1 ac))))))
-
-	    ;;A hash character  may or may not start  a nested multiline
-	    ;;comment.   Read a  nested multiline  comment, if  there is
-	    ;;one.
-	    (($char= #\# c)
-	     (let ((ch1 (read-char port)))
-	       (cond ((eof-object? ch1)
-		      (%multiline-error))
-		     (($char= #\| ch1) ;it is a nested comment
-		      (let ((v (multiline-comment port)))
-			(if (string? v)
-			    (recurse (string->reverse-list v 0 ac))
-			  (recurse ac))))
-		     (else ;it is a standalone hash char
-		      (recurse (cons ch1 (cons #\# ac)))))))
-
-	    (else
-	     (recurse (cons c ac))))))
-
-  ((comment-handler) (reverse-list->string (accumulate-comment-chars port '()))))
-
-
-(define (read-char-skip-whitespace port caller)
-  ;;Read and  discard characters from  PORT while they are  white spaces
-  ;;according  to  CHAR-WHITESPACE?.  Return  the  first character  read
-  ;;which is not a white space.
-  ;;
-  ;;CALLER must be a string  describing the token the caller is parsing,
-  ;;it is used for error reporting.
-  ;;
-  (define-inline (%error msg . args)
-    (die/p port 'tokenize msg . args))
-  (define-inline (recurse)
-    (read-char-skip-whitespace port caller))
-  (let ((ch (read-char port)))
-    (cond ((eof-object? ch)
-	   (%error "invalid EOF inside" caller))
-	  ((char-whitespace? ch)
-	   (recurse))
-	  (else ch))))
-
-
-;;;; number parser
-
-(define-syntax port-config
-  (syntax-rules (GEN-TEST GEN-ARGS FAIL EOF-ERROR GEN-DELIM-TEST)
-    ((_ GEN-ARGS k . rest) (k (p ac) . rest))
-    ((_ FAIL (p ac))
-     (num-error p "invalid numeric sequence" ac))
-    ((_ FAIL (p ac) c)
-     (num-error p "invalid numeric sequence" (cons c ac)))
-    ((_ EOF-ERROR (p ac))
-     (num-error p "invalid eof while reading number" ac))
-    ((_ GEN-DELIM-TEST c sk fk)
-     (if (delimiter? c) sk fk))
-    ((_ GEN-TEST var next fail (p ac) eof-case char-case)
-     (let ((c (peek-char p)))
-       (if (eof-object? c)
-	   (let ()
-	     (define-syntax fail
-	       (syntax-rules ()
-		 ((_) (num-error p "invalid numeric sequence" ac))))
-	     eof-case)
-	 (let ((var c))
-	   (define-syntax fail
-	     (syntax-rules ()
-	       ((_)
-		(num-error p "invalid numeric sequence" (cons var ac)))))
-	   (define-syntax next
-	     (syntax-rules ()
-	       ((_ who args (... ...))
-		(who p (cons (get-char p) ac) args (... ...)))))
-	   char-case))))))
-
-(define-string->number-parser port-config
-  (parse-string u:digit+ u:sign u:dot))
-
-
-(define (read-char* port ls str who case-insensitive? delimited?)
-  ;;Read multiple characters from PORT expecting them to be the chars in
-  ;;the string STR; this function is  used to read a chunk of token.  If
-  ;;successful return  unspecified values; if  an error occurs  raise an
-  ;;exception.
-  ;;
-  ;;LS  must  be  a  list  of  characters already  read  from  PORT  and
-  ;;recognised to be the opening of  the token: they are used to build a
-  ;;better error message.  WHO must  be a string describing the expected
-  ;;token.
-  ;;
-  ;;If CASE-INSENSITIVE? is true: the comparison between characters read
-  ;;from PORT and characters drawn from STR is case insensitive.
-  ;;
-  ;;If DELIMITED? is true: after the chars in STR have been successfully
-  ;;read from PORT, a lookahead is performed on PORT and the result must
-  ;;be EOF or a delimiter character (according to DELIMITER?).
-  ;;
-  ;;Usage example:  when reading the  comment "#!r6rs" this  function is
-  ;;called as:
-  ;;
-  ;;	(read-char* port '(#\r) "6rs" #f #f)
-  ;;
-  (define-inline (%error msg . args)
-    (die/p port 'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
-    (die/p-1 port 'tokenize msg . args))
-  (define str.len
-    (string-length str))
-  (let loop ((i 0) (ls ls))
-    (if (fx= i str.len)
-	(when delimited?
-	  (let ((ch (peek-char port)))
-	    (when (and (not (eof-object? ch))
-		       (not (delimiter?  ch)))
-	      (%error (format "invalid ~a: ~s" who (reverse-list->string (cons ch ls)))))))
-      (let ((ch (read-char port)))
-	(cond ((eof-object? ch)
-	       (%error (format "invalid eof inside ~a" who)))
-	      ((or (and (not case-insensitive?)
-			($char= ch (string-ref str i)))
-		   (and case-insensitive?
-			($char= (char-downcase ch)
-				(string-ref str i))))
-	       (loop (add1 i) (cons ch ls)))
-	      (else
-	       (%error-1 (format "invalid ~a: ~s" who (reverse-list->string (cons ch ls))))))))))
-
-
-(define (tokenize/c ch port)
-  ;;Recognise a  token to be read from  PORT after the char  CH has been
-  ;;read.   Return a  datum representing  a full  token already  read or
-  ;;describing a token that must still be read:
-  ;;
-  ;;lparen			The token is a left paranthesis.
-  ;;rparen			The token is a right paranthesis.
-  ;;lbrack			The token is a left bracket.
-  ;;rbrack			The token is a right bracket.
-  ;;(datum . <num>)		The token is the number <NUM>.
-  ;;(datum . <sym>)		The token is the symbol <SYM>.
-  ;;(datum . <str>)		The token is the string <STR>.
-  ;;(datum . <ch>)		The token is the character <CH>.
-  ;;(macro . quote)		The token is a quoted form.
-  ;;(macro . quasiquote)	The token is a quasiquoted form.
-  ;;(macro . unquote)		The token is an unquoted form.
-  ;;(macro . unquote-splicing)	The token is an unquoted splicing form.
-  ;;at-expr			The token is an @-expression.
-  ;;
-  ;;If CH is the character #\#:  the return value is the return value of
-  ;;TOKENIZE-HASH applied to PORT.
-  ;;
-  ;;If CH is the dot character:  the return value is the return value of
-  ;;TOKENIZE-DOT.
-  ;;
-  (define-inline (%error msg . args)
-    (die/p port 'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
-    (die/p-1 port 'tokenize msg . args))
-  (cond ((eof-object? ch)
-	 (error 'tokenize/c "hmmmm eof")
-	 (eof-object))
-
-	(($char= #\( ch)   'lparen)
-	(($char= #\) ch)   'rparen)
-	(($char= #\[ ch)   'lbrack)
-	(($char= #\] ch)   'rbrack)
-	(($char= #\' ch)   '(macro . quote))
-	(($char= #\` ch)   '(macro . quasiquote))
-
-	(($char= #\, ch)
-	 (let ((ch1 (peek-char port)))
-	   (cond ((eof-object? ch1)
-		  '(macro . unquote))
-		 (($char= ch1 #\@)
-		  (read-char port)
-		  '(macro . unquote-splicing))
-		 (else
-		  '(macro . unquote)))))
-
-	;;everything starting with a hash
-	(($char= #\# ch)
-	 (tokenize-hash port))
-
-	;;number
-	((char<=? #\0 ch #\9)
-	 (let ((d ($fx- (char->integer ch) (char->integer #\0))))
-	   (cons 'datum (u:digit+ port (list ch) 10 #f #f +1 d))))
-
-	;;symbol
-	((initial? ch)
-	 (let ((ls (reverse (identifier-lexeme (cons ch '()) port))))
-	   (cons 'datum (string->symbol (list->string ls)))))
-
-	;;string
-	(($char= #\" ch)
-	 (let ((ls (string-lexeme '() port)))
-	   (cons 'datum (reverse-list->string ls))))
-
-	;;symbol "+" or number
-	(($char= #\+ ch)
-	 (let ((ch1 (peek-char port)))
-	   (cond ((eof-object? ch1) '(datum . +))
-		 ((delimiter?  ch1)  '(datum . +))
-		 (else
-		  (cons 'datum (u:sign port '(#\+) 10 #f #f +1))))))
-
-	;;symbol "-", symbol "->" or number
-	(($char= #\- ch)
-	 (let ((ch1 (peek-char port)))
-	   (cond ((eof-object? ch1) '(datum . -))
-		 ((delimiter?  ch1) '(datum . -))
-		 (($char= ch1 #\>)
-		  (read-char port)
-		  (let ((ls (identifier-lexeme '() port)))
-		    (let ((str (list->string (cons* #\- #\> (reverse ls)))))
-		      (cons 'datum (string->symbol str)))))
-		 (else
-		  (cons 'datum (u:sign port '(#\-) 10 #f #f -1))))))
-
-	;;everything  staring  with  a  dot  (standalone  dot,  ellipsis
-	;;symbol, inexact number)
-	(($char= #\. ch)
-	 (tokenize-dot port))
-
-	;;symbol with syntax "|<sym>|"
-	(($char= #\| ch)
-	 (when (port-in-r6rs-mode? port)
-	   (%error "|symbol| syntax is invalid in #!r6rs mode"))
-	 (cons 'datum (string->symbol (reverse-list->string (identifier-lexeme/bar '() port)))))
-
-	;;symbol whose first char is a backslash sequence, "\x41;-ciao"
-	(($char= #\\ ch)
-	 (cons 'datum (string->symbol (reverse-list->string
-				       (identifier-lexeme/backslash '() port #f)))))
-
-;;;Unused for now.
-;;;
-;;;     (($char= #\{ ch) 'lbrace)
-
-	(($char= #\@ ch)
-	 (when (port-in-r6rs-mode? port)
-	   (%error "@-expr syntax is invalid in #!r6rs mode"))
-	 'at-expr)
-
-	(else
-	 (%error-1 "invalid syntax" ch))))
-
-
-(define-inline (tokenize-hash port)
-  ;;Read a token from PORT.  Called after a #\# character has been read.
-  ;;
-  (tokenize-hash/c (read-char port) port))
-
-(define (tokenize-hash/c ch port)
-  ;;Recognise  a  token  to be  read  from  PORT.   Called after  a  #\#
-  ;;character has been read.  CH is the character right after the hash.
-  ;;
-  ;;Return a datum representing the token that must be read:
-  ;;
-  ;;(datum . #t)		The token is the value #t.
-  ;;(datum . #f)		The token is the value #f.
-  ;;(datum . <char>)		The token is the character <char>.
-  ;;(datum . <sym>)		The token is the symbol <sym>.
-  ;;(datum . <num>)		The token is the number <num>.
-  ;;(datum . #!eof)		The token is the "#!eof" comment.
-  ;;(macro . syntax)		The token is a syntax form: #'---.
-  ;;(macro . quasisyntax)	The token is a quasisyntax form: #`---.
-  ;;(macro . unsyntax-splicing)	The token is an unsyntax-splicing form: #,@---.
-  ;;(macro . unsyntax)		The token is an unsyntax form: #,---.
-  ;;(mark . <n>)		The token is a graph syntax mark: #<N>=---
-  ;;(ref . <n>)			The token is a graph syntax reference: #<N>#
-  ;;vparen			The token is a vector.
-  ;;vu8				The token is a u8 bytevector.
-  ;;vs8				The token is a s8 bytevector.
-  ;;
-  ;;When the token is the  "#!r6rs" or "#!vicare" comment: the port mode
-  ;;is changed  accordingly and TOKENIZE/1  is applied to the  port; the
-  ;;return value is the return value of TOKENIZE/1.
-  ;;
-  (define-inline (%error msg . args)
-    (die/p port 'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
-    (die/p-1 port 'tokenize msg . args))
-
-  (cond
-   ((eof-object? ch)
-    (%error "invalid # near end of file"))
-
-   ((or (unsafe.char= #\t ch) (unsafe.char= #\T ch)) #;(memq ch '(#\t #\T))
-    (let ((c1 (peek-char port)))
-      (cond ((eof-object? c1) '(datum . #t))
-	    ((delimiter?  c1) '(datum . #t))
-	    (else
-	     (%error (format "invalid syntax near #~a~a" ch c1))))))
-
-   ((or (unsafe.char= #\f ch) (unsafe.char= #\F ch)) #;(memq ch '(#\f #\F))
-    (let ((ch1 (peek-char port)))
-      (cond ((eof-object? ch1) '(datum . #f))
-	    ((delimiter?  ch1) '(datum . #f))
-	    (else
-	     (%error (format "invalid syntax near #~a~a" ch ch1))))))
-
-   ((unsafe.char= #\\ ch) (char-lexeme port))
-   ((unsafe.char= #\( ch) 'vparen)
-   ((unsafe.char= #\' ch) '(macro . syntax))
-   ((unsafe.char= #\` ch) '(macro . quasisyntax))
-
-   ((unsafe.char= #\, ch)
-    (let ((ch1 (peek-char port)))
-      (cond ((unsafe.char= ch1 #\@)
-	     (read-char port)
-	     '(macro . unsyntax-splicing))
-	    (else
-	     '(macro . unsyntax)))))
-
-   ;; #! comments and such
-   ((unsafe.char= #\! ch)
-    (let ((ch1 (read-char port)))
-      (when (eof-object? ch1)
-	(%error "invalid eof near #!"))
-      (case ch1
-	((#\e)
-	 (when (port-in-r6rs-mode? port)
-	   (%error-1 "invalid syntax: #!e"))
-	 (read-char* port '(#\e) "of" "eof sequence" #f #f)
-	 (cons 'datum (eof-object)))
-	((#\r)
-	 (read-char* port '(#\r) "6rs" "#!r6rs comment" #f #f)
-	 (set-port-mode! port 'r6rs)
-	 (tokenize/1 port))
-	((#\v)
-	 (read-char* port '(#\v) "icare" "#!vicare comment" #f #f)
-	 (set-port-mode! port 'vicare)
-	 (tokenize/1 port))
-	(else
-	 (%error-1 (format "invalid syntax near #!~a" ch1))))))
-
-   ((dec-digit? ch)
-    (when (port-in-r6rs-mode? port)
-      (%error-1 "graph syntax is invalid in #!r6rs mode" (format "#~a" ch)))
-    (tokenize-hashnum port (char->dec-digit ch)))
-
-   ((unsafe.char= #\: ch)
-    (when (port-in-r6rs-mode? port)
-      (%error-1 "gensym syntax is invalid in #!r6rs mode" (format "#~a" ch)))
-    (let* ((ch1 (read-char-skip-whitespace port "gensym"))
-	   (id0 (cond ((initial? ch1)
-		       (reverse-list->string (identifier-lexeme (cons ch1 '()) port)))
-		      ((unsafe.char= #\| ch1)
-		       (reverse-list->string (identifier-lexeme/bar '() port)))
-		      (else
-		       (%error-1 "invalid char inside gensym" ch1)))))
-      (cons 'datum (gensym id0))))
-
-   ;;Gensym with one of the following syntaxes:
-   ;;
-   ;;#{ciao}
-   ;;   In which "ciao" is ID0, and will become the unique string.
-   ;;
-   ;;#{|ciao|}
-   ;;   In which "ciao" is ID0, and will become the unique string.
-   ;;
-   ;;#{d |95BEx%X86N?8X&yC|}
-   ;;   In which "d" is ID0 and "95BEx%X86N?8X&yC" is ID1.
-   ;;
-   ;;#{|d| |95BEx%X86N?8X&yC|}
-   ;;   In which "d" is ID0 and "95BEx%X86N?8X&yC" is ID1.
-   ;;
-   ((unsafe.char= #\{ ch)
-    (when (port-in-r6rs-mode? port)
-      (%error-1 "gensym syntax is invalid in #!r6rs mode" "#{"))
-    (let ((ch1 (read-char-skip-whitespace port "gensym")))
-      (define-inline (%end-syntax? chX)
-	(unsafe.char= #\} chX))
-      (define-inline (%read-identifier chX)
-	(cond ((initial? chX)
-	       (reverse-list->string (identifier-lexeme (cons chX '()) port)))
-	      ((unsafe.char= #\| chX)
-	       (reverse-list->string (identifier-lexeme/bar '() port)))
-	      (else
-	       (%error-1 "invalid char inside gensym syntax" chX))))
-      (let ((id0 (%read-identifier ch1))
-	    (ch2 (read-char-skip-whitespace port "gensym")))
-	(if (%end-syntax? ch2)
-	    `(datum . ,(strings->gensym #f id0))
-	  (let* ((id1 (%read-identifier ch2))
-		 (ch3 (read-char-skip-whitespace port "gensym")))
-	    (if (%end-syntax? ch3)
-		`(datum . ,(strings->gensym id0 id1))
-	      (%error-1 "invalid char while looking for end of gensym syntax" ch3)))))))
-
-   ;;bytevectors
-   ((unsafe.char= #\v ch)
-    ;;Correct sequences of chars:
-    ;;
-    ;; ch  ch1  ch2  ch3  ch4  ch5  datum
-    ;; ----------------------------------
-    ;; v   u    8    (              #vu8
-    ;; v   s    8    (              #vs8
-    ;; v   u    1    6    l    (    #vu16l
-    ;; v   u    1    6    b    (    #vu16b
-    ;; v   s    1    6    l    (    #vs16l
-    ;; v   s    1    6    b    (    #vs16b
-    ;; v   u    3    2    l    (    #vu32l
-    ;; v   u    3    2    b    (    #vu32b
-    ;; v   s    3    2    l    (    #vs32l
-    ;; v   s    3    2    b    (    #vs32b
-    ;; v   u    6    4    l    (    #vu64l
-    ;; v   u    6    4    b    (    #vu64b
-    ;; v   s    6    4    l    (    #vs64l
-    ;; v   s    6    4    b    (    #vs64b
-    ;;
-    (let ((ch1/eof (read-char port)))
-      (define-inline (%read-bytevector)
-	(cond ((char=? #\u ch1/eof)
-	       (%read-unsigned))
-	      ((char=? #\s ch1/eof)
-	       (when (port-in-r6rs-mode? port)
-		 (%error "invalid #vs8 syntax in #!r6rs mode" "#vs8"))
-	       (%read-signed))
-	      ((eof-object? ch1/eof)
-	       (%error "invalid eof object after #v"))
-	      (else
-	       (%error (format "invalid sequence #v~a" ch1/eof)))))
-
-      (define-inline (%read-unsigned)
-	(let ((ch2/eof (read-char port)))
-	  (cond ((char=? ch2/eof #\8) ;unsigned bytes bytevector
-		 (%read-unsigned-8))
-		((eof-object? ch2/eof)
-		 (%error "invalid eof object after #vu"))
-		(else
-		 (%error-1 (format "invalid sequence #vu~a" ch2/eof))))))
-
-      (define-inline (%read-signed)
-	(let ((ch2/eof (read-char port)))
-	  (cond ((char=? ch2/eof #\8) ;signed bytes bytevector
-		 (%read-signed-8))
-		((eof-object? ch2/eof)
-		 (%error "invalid eof object after #vs"))
-		(else
-		 (%error-1 (format "invalid sequence #vs~a" ch2/eof))))))
-
-      (define-inline (%read-unsigned-8)
-	(let ((ch3/eof (read-char port)))
-	  (cond ((char=? ch3/eof #\()
-		 'vu8)
-		((eof-object? ch3/eof)
-		 (%error "invalid eof object after #vu8"))
-		(else
-		 (%error-1 (format "invalid sequence #vu8~a" ch3/eof))))))
-
-      (define-inline (%read-signed-8)
-	(let ((ch3/eof (read-char port)))
-	  (cond ((char=? ch3/eof #\()
-		 'vs8)
-		((eof-object? ch3/eof)
-		 (%error "invalid eof object after #vs8"))
-		(else
-		 (%error-1 (format "invalid sequence #vs8~a" ch3/eof))))))
-
-      (%read-bytevector)))
-
-   ((or (unsafe.char= ch #\e) (unsafe.char= ch #\E)) #;(memq ch '(#\e #\E))
-    (cons 'datum (parse-string port (list ch #\#) 10 #f 'e)))
-
-   ((or (unsafe.char= ch #\i) (unsafe.char= ch #\I)) #;(memq ch '(#\i #\I))
-    (cons 'datum (parse-string port (list ch #\#) 10 #f 'i)))
-
-   ((or (unsafe.char= ch #\b) (unsafe.char= ch #\B)) #;(memq ch '(#\b #\B))
-    (cons 'datum (parse-string port (list ch #\#) 2 2 #f)))
-
-   ((or (unsafe.char= ch #\x) (unsafe.char= ch #\X)) #;(memq ch '(#\x #\X))
-    (cons 'datum (parse-string port (list ch #\#) 16 16 #f)))
-
-   ((or (unsafe.char= ch #\o) (unsafe.char= ch #\O)) #;(memq ch '(#\o #\O))
-    (cons 'datum (parse-string port (list ch #\#) 8 8 #f)))
-
-   ((or (unsafe.char= ch #\d) (unsafe.char= ch #\D)) #;(memq ch '(#\d #\D))
-    (cons 'datum (parse-string port (list ch #\#) 10 10 #f)))
-
-;;;((unsafe.char= #\@ ch) DEAD: Unfixable due to port encoding
-;;;                 that does not allow mixing binary and
-;;;                 textual data in the same port.
-;;;                Left here for historical value
-;;; (when (port-in-r6rs-mode? port)
-;;;   (%error-1 "fasl syntax is invalid in #!r6rs mode"
-;;;      (format "#~a" ch)))
-;;; (die/p-1 port 'read "FIXME: fasl read disabled")
-;;; '(cons 'datum ($fasl-read port)))
-
-   (else
-    (%error-1 (format "invalid syntax #~a" ch)))))
-
-
-;;;; reading graph notation marks
-
-(define (tokenize-hashnum port N)
-  ;;Read characters from PORT parsing  a graph notation hash num mark or
-  ;;reference.  Return a datum describing the token:
-  ;;
-  ;;(mark . <num>)	The token is a new hashnum mark.
-  ;;(ref . <num>)	The token is reference to an existing hashnum.
-  ;;
-  (define-inline (%error msg . args)
-    (die/p port 'tokenize msg . args))
-  (define-inline (%unexpected-eof-error)
-    (%error "invalid EOF while reading character"))
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
-  (%read-char-no-eof (port ch)
-    ((unsafe.char= #\= ch) (cons 'mark N))
-    ((unsafe.char= #\# ch) (cons 'ref  N))
-    ((dec-digit? ch)
-     (tokenize-hashnum port (unsafe.fx+ (fx* N 10) (char->dec-digit ch))))
-    (else
-     (%error "invalid char while inside a #n mark/ref" ch))))
-
-
 ;;;; reading characters
 
 (define (char-lexeme port)
@@ -1293,156 +1276,177 @@
   (main))
 
 
-(define (tokenize-script-initial port)
-  (let ((ch (read-char port)))
-    (cond ((eof-object? ch)
-	   ch)
-	  (($char= ch #\;)
-	   (skip-comment port)
-	   (tokenize/1 port))
-	  (($char= ch #\#)
-	   (let ((ch1 (read-char port)))
-	     (cond ((eof-object? ch1)
-		    (die/p port 'tokenize "invalid eof after #"))
-		   (($char= ch1 #\!)
-		    (skip-comment port)
-		    (tokenize/1 port))
-		   (($char= ch1 #\;)
-		    (read-as-comment port)
-		    (tokenize/1 port))
-		   (($char= ch1 #\|)
-		    (multiline-comment port)
-		    (tokenize/1 port))
-		   (else
-		    (tokenize-hash/c ch1 port)))))
-	  ((char-whitespace? ch)
-	   (tokenize/1 port))
-	  (else
-	   (tokenize/c ch port)))))
+;;;; reading numbers
 
-(define (tokenize-script-initial+pos port)
-  (let* ((pos (make-compound-position port))
-	 (ch  (read-char port)))
-    (cond ((eof-object? ch)
-	   (values (eof-object) pos))
-	  (($char= ch #\;)
-	   (skip-comment port)
-	   (tokenize/1+pos port))
-	  (($char= ch #\#)
-	   (let ((pos (make-compound-position port))
-		 (ch1 (read-char port)))
-	     (cond ((eof-object? ch1)
-		    (die/p port 'tokenize "invalid eof after #"))
-		   (($char= ch1 #\!)
-		    (skip-comment port)
-		    (tokenize/1+pos port))
-		   (($char= ch1 #\;)
-		    (read-as-comment port)
-		    (tokenize/1+pos port))
-		   (($char= ch1 #\|)
-		    (multiline-comment port)
-		    (tokenize/1+pos port))
-		   (else
-		    (values (tokenize-hash/c ch1 port) pos)))))
-	  ((char-whitespace? ch)
-	   (tokenize/1+pos port))
-	  (else
-	   (values (tokenize/c ch port) pos)))))
+(define-syntax port-config
+  (syntax-rules (GEN-TEST GEN-ARGS FAIL EOF-ERROR GEN-DELIM-TEST)
+    ((_ GEN-ARGS k . rest) (k (p ac) . rest))
+    ((_ FAIL (p ac))
+     (num-error p "invalid numeric sequence" ac))
+    ((_ FAIL (p ac) c)
+     (num-error p "invalid numeric sequence" (cons c ac)))
+    ((_ EOF-ERROR (p ac))
+     (num-error p "invalid eof while reading number" ac))
+    ((_ GEN-DELIM-TEST c sk fk)
+     (if (delimiter? c) sk fk))
+    ((_ GEN-TEST var next fail (p ac) eof-case char-case)
+     (let ((c (peek-char p)))
+       (if (eof-object? c)
+	   (let ()
+	     (define-syntax fail
+	       (syntax-rules ()
+		 ((_) (num-error p "invalid numeric sequence" ac))))
+	     eof-case)
+	 (let ((var c))
+	   (define-syntax fail
+	     (syntax-rules ()
+	       ((_)
+		(num-error p "invalid numeric sequence" (cons var ac)))))
+	   (define-syntax next
+	     (syntax-rules ()
+	       ((_ who args (... ...))
+		(who p (cons (get-char p) ac) args (... ...)))))
+	   char-case))))))
+
+(define-string->number-parser port-config
+  (parse-string u:digit+ u:sign u:dot))
 
 
-(define (tokenize/1 port)
-  ;;Start  tokenizing the next  token from  PORT, skipping  comments and
-  ;;whitespaces.  Return a datum representing the next token.
-  ;;
-  (define-inline (recurse)
-    (tokenize/1 port))
-  (let ((ch (read-char port)))
-    (cond ((eof-object? ch)
-	   (eof-object))
-	  (($char= ch #\;)
-	   (skip-comment port)
-	   (recurse))
-	  (($char= ch #\#)
-	   (let ((ch1 (read-char port)))
-	     (cond ((eof-object? ch1)
-		    (die/p port 'tokenize "invalid EOF after #"))
-		   (($char= ch1 #\;)
-		    (read-as-comment port)
-		    (recurse))
-		   (($char= ch1 #\|)
-		    (multiline-comment port)
-		    (recurse))
-		   (else
-		    (tokenize-hash/c ch1 port)))))
-	  ((char-whitespace? ch)
-	   (recurse))
-	  (else
-	   (tokenize/c ch port)))))
+;;;; reading comments
 
-(define (tokenize/1+pos port)
-  ;;Start  tokenizing  the next  token  from  P,  skipping comments  and
-  ;;whitespaces.   Return  two values:  a  datum  representing the  next
-  ;;token, a compound position value.
+(define (skip-comment port)
+  (let ((ch (read-char port)))
+    (unless (or (eof-object? ch)
+		(char-is-single-char-line-ending? ch)
+		(char-is-carriage-return? ch))
+      (skip-comment port))))
+
+(define (multiline-comment port)
+  ;;Parse a multiline comment  "#| ... |#", possibly nested.  Accumulate
+  ;;the characters in the comment, excluding the "#|" and "|#", and hand
+  ;;the  resulting string to  the function  referenced by  the parameter
+  ;;COMMENT-HANDLER.    Return  the  return   value  of   such  function
+  ;;application.
   ;;
-  (define-inline (recurse)
-    (tokenize/1+pos port))
-  (let* ((pos (make-compound-position port))
-	 (ch  (read-char port)))
-    (cond ((eof-object? ch)
-	   (values (eof-object) pos))
-	  (($char= ch #\;)
-	   (skip-comment port)
-	   (recurse))
-	  (($char= ch #\#)
-	   (let ((pos (make-compound-position port)))
+  (define-inline (%multiline-error)
+    (die/p port 'tokenize "end of file encountered while inside a #|-style comment"))
+
+  (define-inline (string->reverse-list str str.start accumulated)
+    (%string->reverse-list str str.start (unsafe.string-length str) accumulated))
+  (define (%string->reverse-list str str.index str.len accumulated)
+    (if (unsafe.fx= str.index str.len)
+	accumulated
+      (%string->reverse-list str (unsafe.fxadd1 str.index) str.len
+			     (cons (unsafe.string-ref str str.index) accumulated))))
+
+  (define (accumulate-comment-chars port ac)
+    (define-inline (recurse ac)
+      (accumulate-comment-chars port ac))
+    (let ((c (read-char port)))
+      (cond ((eof-object? c)
+	     (%multiline-error))
+
+	    ;;A vertical bar character may or may not end this multiline
+	    ;;comment.
+	    (($char= #\| c)
+	     (let next-vertical-bar ((ch1 (read-char port)) (ac ac))
+	       (cond ((eof-object? ch1)
+		      (%multiline-error))
+		     (($char= #\# ch1) ;end of comment
+		      ac)
+		     (($char= #\| ch1) ;optimisation for sequence of bars?!?
+		      (next-vertical-bar (read-char port) (cons ch1 ac)))
+		     (else
+		      (recurse (cons ch1 ac))))))
+
+	    ;;A hash character  may or may not start  a nested multiline
+	    ;;comment.   Read a  nested multiline  comment, if  there is
+	    ;;one.
+	    (($char= #\# c)
 	     (let ((ch1 (read-char port)))
 	       (cond ((eof-object? ch1)
-		      (die/p port 'tokenize "invalid eof after #"))
-		     (($char= ch1 #\;)
-		      (read-as-comment port)
-		      (recurse))
-		     (($char= ch1 #\|)
-		      (multiline-comment port)
-		      (recurse))
-		     (else
-		      (values (tokenize-hash/c ch1 port) pos))))))
-	  ((char-whitespace? ch)
-	   (recurse))
-	  (else
-	   (values (tokenize/c ch port) pos)))))
+		      (%multiline-error))
+		     (($char= #\| ch1) ;it is a nested comment
+		      (let ((v (multiline-comment port)))
+			(if (string? v)
+			    (recurse (string->reverse-list v 0 ac))
+			  (recurse ac))))
+		     (else ;it is a standalone hash char
+		      (recurse (cons ch1 (cons #\# ac)))))))
+
+	    (else
+	     (recurse (cons c ac))))))
+
+  ((comment-handler) (reverse-list->string (accumulate-comment-chars port '()))))
 
 
-(define (tokenize-dot port)
-  ;;Read from  PORT a token starting  with a dot, the  dot being already
-  ;;read.  There return value is a datum describing the token:
+;;;; character reading helpers
+
+(define (read-char* port ls str who case-insensitive? delimited?)
+  ;;Read multiple characters from PORT expecting them to be the chars in
+  ;;the string STR; this function is  used to read a chunk of token.  If
+  ;;successful return  unspecified values; if  an error occurs  raise an
+  ;;exception.
   ;;
-  ;;dot			The token is a standalone dot.
-  ;;(datum . ...)	The token is the ellipsis symbol.
-  ;;(datum . <num>)	The token is the inexact number <NUM>.
+  ;;LS  must  be  a  list  of  characters already  read  from  PORT  and
+  ;;recognised to be the opening of  the token: they are used to build a
+  ;;better error message.  WHO must  be a string describing the expected
+  ;;token.
+  ;;
+  ;;If CASE-INSENSITIVE? is true: the comparison between characters read
+  ;;from PORT and characters drawn from STR is case insensitive.
+  ;;
+  ;;If DELIMITED? is true: after the chars in STR have been successfully
+  ;;read from PORT, a lookahead is performed on PORT and the result must
+  ;;be EOF or a delimiter character (according to DELIMITER?).
+  ;;
+  ;;Usage example:  when reading the  comment "#!r6rs" this  function is
+  ;;called as:
+  ;;
+  ;;	(read-char* port '(#\r) "6rs" #f #f)
   ;;
   (define-inline (%error msg . args)
     (die/p port 'tokenize msg . args))
-  (let ((ch (peek-char port)))
-    (cond ((eof-object? ch) 'dot)
-	  ((delimiter?  ch) 'dot)
-	  (($char= ch #\.) ;a second dot, maybe a "..." opening
-	   (read-char port)
-	   (let ((ch1 (peek-char port)))
-	     (cond ((eof-object? ch1)
-		    (%error "invalid syntax .. near end of file"))
-		   (($char= ch #\.) ;this is the third
-		    (read-char port)
-		    (let ((ch2 (peek-char port)))
-		      (cond ((eof-object? ch2) '(datum . ...))
-			    ((delimiter?  ch2) '(datum . ...))
-			    (else
-			     (%error "invalid syntax" (string-append "..." (string ch2)))))))
-		   (else
-		    (%error "invalid syntax" (string-append ".." (string ch1)))))))
-	  (else
-	   (cons 'datum (u:dot port '(#\.) 10 #f #f +1))))))
+  (define-inline (%error-1 msg . args)
+    (die/p-1 port 'tokenize msg . args))
+  (define str.len
+    (string-length str))
+  (let loop ((i 0) (ls ls))
+    (if (fx= i str.len)
+	(when delimited?
+	  (let ((ch (peek-char port)))
+	    (when (and (not (eof-object? ch))
+		       (not (delimiter?  ch)))
+	      (%error (format "invalid ~a: ~s" who (reverse-list->string (cons ch ls)))))))
+      (let ((ch (read-char port)))
+	(cond ((eof-object? ch)
+	       (%error (format "invalid eof inside ~a" who)))
+	      ((or (and (not case-insensitive?)
+			(unsafe.char= ch (string-ref str i)))
+		   (and case-insensitive?
+			(unsafe.char= (char-downcase ch) (string-ref str i))))
+	       (loop (add1 i) (cons ch ls)))
+	      (else
+	       (%error-1 (format "invalid ~a: ~s" who (reverse-list->string (cons ch ls))))))))))
 
-
+(define (read-char-skip-whitespace port caller)
+  ;;Read and  discard characters from  PORT while they are  white spaces
+  ;;according  to  CHAR-WHITESPACE?.  Return  the  first character  read
+  ;;which is not a white space.
+  ;;
+  ;;CALLER must be a string  describing the token the caller is parsing,
+  ;;it is used for error reporting.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (define-inline (recurse)
+    (read-char-skip-whitespace port caller))
+  (let ((ch (read-char port)))
+    (cond ((eof-object? ch)
+	   (%error "invalid EOF inside" caller))
+	  ((char-whitespace? ch)
+	   (recurse))
+	  (else ch))))
 
 
 (module (read-expr read-expr-script-initial)
