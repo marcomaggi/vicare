@@ -454,35 +454,34 @@
     (cond ((unsafe.char= #\" ch) ;end of the string
 	   ls)
 	  ((unsafe.char= #\\ ch)
-	   (%parse-escape-sequences ls port ch))
+	   (%parse-escape-sequences ls port))
 	  (else
 	   (tokenize-string (cons ch ls) port))))
 
-  (define-inline (%parse-escape-sequences ls port ch1)
-    ;;Analyse  CH1,  then  read  chars  from  PORT,  parsing  an  escape
-    ;;sequence.   The  starting  backslash  character has  already  been
-    ;;consume and CH1 is the char right after it.
+  (define-inline (%parse-escape-sequences ls port)
+    ;;Read  chars from PORT  parsing an  escape sequence.   The starting
+    ;;backslash character has already been consumed.
     ;;
-    (%read-char-no-eof (port ch1)
+    (%read-char-no-eof (port ch)
       ;;recognise single char escape sequences
-      ((unsafe.char= #\a ch1)  (tokenize-string (cons #\x7  ls) port))
-      ((unsafe.char= #\b ch1)  (tokenize-string (cons #\x8  ls) port))
-      ((unsafe.char= #\t ch1)  (tokenize-string (cons #\x9  ls) port))
-      ((unsafe.char= #\n ch1)  (tokenize-string (cons #\xA  ls) port))
-      ((unsafe.char= #\v ch1)  (tokenize-string (cons #\xB  ls) port))
-      ((unsafe.char= #\f ch1)  (tokenize-string (cons #\xC  ls) port))
-      ((unsafe.char= #\r ch1)  (tokenize-string (cons #\xD  ls) port))
-      ((unsafe.char= #\" ch1)  (tokenize-string (cons #\x22 ls) port))
-      ((unsafe.char= #\\ ch1)  (tokenize-string (cons #\x5C ls) port))
+      ((unsafe.char= #\a ch)  (tokenize-string (cons #\x7  ls) port))
+      ((unsafe.char= #\b ch)  (tokenize-string (cons #\x8  ls) port))
+      ((unsafe.char= #\t ch)  (tokenize-string (cons #\x9  ls) port))
+      ((unsafe.char= #\n ch)  (tokenize-string (cons #\xA  ls) port))
+      ((unsafe.char= #\v ch)  (tokenize-string (cons #\xB  ls) port))
+      ((unsafe.char= #\f ch)  (tokenize-string (cons #\xC  ls) port))
+      ((unsafe.char= #\r ch)  (tokenize-string (cons #\xD  ls) port))
+      ((unsafe.char= #\" ch)  (tokenize-string (cons #\x22 ls) port))
+      ((unsafe.char= #\\ ch)  (tokenize-string (cons #\x5C ls) port))
 
       ;;inline hex escape "\xHHHH;"
-      ((unsafe.char= #\x ch1)
-       (%read-char-no-eof (port ch2)
-	 ((char->hex-digit/or-false ch2)
+      ((unsafe.char= #\x ch)
+       (%read-char-no-eof (port ch1)
+	 ((char->hex-digit/or-false ch1)
 	  => (lambda (first-digit)
-	       (%read-escape-hex-char ch2 first-digit)))
+	       (%parse-escape-hex-sequence ch1 first-digit)))
 	 (else
-	  (%error-1 "invalid character in inline hex escape while reading string" ch2))))
+	  (%error-1 "invalid character in inline hex escape while reading string" ch1))))
 
       ;;Consume the sequence:
       ;;
@@ -492,7 +491,7 @@
       ;;ending, read the line ending  (LF, CRLF, NEL, CRNEL or LS), then
       ;;read again all the white space chars.
       ;;
-      ((intraline-whitespace? ch1)
+      ((intraline-whitespace? ch)
        (let next-whitespace-char ()
 	 (%read-char-no-eof (port chX)
 	   ((intraline-whitespace? chX)
@@ -515,7 +514,7 @@
       ;;in which  the line ending  is a standalone  char LF, NEL  or LS,
       ;;without prefix intraline whitespace.
       ;;
-      ((char-is-single-char-line-ending? ch1)
+      ((char-is-single-char-line-ending? ch)
        (%discard-trailing-intraline-whitespace ls port (read-char port)))
 
       ;;Consume the sequence:
@@ -525,17 +524,17 @@
       ;;in which the line ending is CRLF or CRNEL, without prefix
       ;;intraline blanks.
       ;;
-      ((char-is-carriage-return? ch1)
-       (%read-char-no-eof (port ch2)
-	 ((char-is-newline-after-carriage-return? ch2)
+      ((char-is-carriage-return? ch)
+       (%read-char-no-eof (port ch1)
+	 ((char-is-newline-after-carriage-return? ch1)
 	  (%discard-trailing-intraline-whitespace ls port (read-char port)))
 	 (else
-	  (%discard-trailing-intraline-whitespace ls port ch2))))
+	  (%discard-trailing-intraline-whitespace ls port ch1))))
 
       (else
-       (%error-1 "invalid escape sequence while reading string" ch1))))
+       (%error-1 "invalid escape sequence while reading string" ch))))
 
-  (define-inline (%read-escape-hex-char ch first-digit)
+  (define-inline (%parse-escape-hex-sequence ch first-digit)
     ;;Read from  PORT characters composing  an escaped character  in hex
     ;;format "\xHHHH;" and return the resulting character.
     ;;
@@ -545,20 +544,18 @@
     ;;
     (let next-char ((code-point first-digit)
 		    (accum      (cons ch '(#\x #\\))))
-      (let ((chX (read-char port)))
-	(cond ((eof-object? chX)
-	       (%unexpected-eof-error))
-	      ((char->hex-digit/or-false chX)
-	       => (lambda (digit)
-		    (next-char (unsafe.fx+ (fx* code-point 16) digit)
-			       (cons chX accum))))
-	      ((unsafe.char= chX #\;)
-	       (tokenize-string (cons (integer->char/checked code-point (cons chX accum) port)
-				      ls)
-				port))
-	      (else
-	       (%error-1 "invalid char in escape sequence while reading string"
-			 (reverse-list->string (cons chX accum))))))))
+      (%read-char-no-eof (port chX)
+	((char->hex-digit/or-false chX)
+	 => (lambda (digit)
+	      (next-char (unsafe.fx+ (fx* code-point 16) digit)
+			 (cons chX accum))))
+	((unsafe.char= chX #\;)
+	 (tokenize-string (cons (integer->char/checked code-point (cons chX accum) port)
+				ls)
+			  port))
+	(else
+	 (%error-1 "invalid char in escape sequence while reading string"
+		   (reverse-list->string (cons chX accum)))))))
 
   (define (%discard-trailing-intraline-whitespace ls port ch)
     ;;Analyse CH,  and then chars read from  PORT, discarding whitespace
