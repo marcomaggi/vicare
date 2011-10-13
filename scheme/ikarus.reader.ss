@@ -1123,6 +1123,8 @@
     (%error-1 (format "invalid syntax #~a" ch)))))
 
 
+;;;; reading graph notation marks
+
 (define (tokenize-hashnum port N)
   ;;Read characters from PORT parsing  a graph notation hash num mark or
   ;;reference.  Return a datum describing the token:
