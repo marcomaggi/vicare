@@ -1870,6 +1870,50 @@ Read a bytevector as @code{#vu8(@var{octect} ...)} would do, but allow
 @var{byte} to be in the range @math{[-128, 127]}.
 @end deffn
 
+
+@deffn {Reader Syntax} {|@var{symbol}|}
+The vertical bars can be used to specify symbols whose name do not
+comply with the @rnrs{6} specifications; this syntax is available only
+when the port mode is @code{#!vicare}.  Examples:
+
+@example
+(define port (open-string-input-port "|123|"))
+(set-port-mode! port 'vicare-mode)
+(define sym (read port))
+
+(symbol? sym)           @result{} #t
+(symbol->string sym)    @result{} "123"
+@end example
+
+@noindent
+backslash sequences are allowed in bar symbols:
+
+@example
+(define port (open-string-input-port "|123-\x41;\x42;\x43;|"))
+(set-port-mode! port 'vicare-mode)
+(define sym (read port))
+
+(symbol? sym)           @result{} #t
+(symbol->string sym)    @result{} "123-\x41;\x42;\x43;"
+@end example
+
+@noindent
+notice that the sequence of characters @code{|ciao|hello|} is split into
+@code{ciao}, @code{hello}, @code{|} and the ending vertical bar would
+cause an error if read:
+
+@example
+(define port (open-string-input-port "|ciao|hello|"))
+(set-port-mode! port 'vicare-mode)
+
+(read port)             @result{} ciao
+(read port)             @result{} hello
+(port-eof? port)        @result{} #f
+(get-char port)         @result{} #\|
+(port-eof? port)        @result{} #t
+@end example
+@end deffn
+
 @c page
 @node iklib cafe
 @section Cafe

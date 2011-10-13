@@ -48,6 +48,10 @@
 	    unsafe.)
     (prefix (rename (ikarus system $chars) #;(ikarus system chars)
 		    ($char=		char=)
+		    ($char<		char<)
+		    ($char<=		char<=)
+		    ($char>		char>)
+		    ($char>=		char>=)
 		    ($char->fixnum	char->integer)
 		    ($fixnum->char	integer->char))
 	    unsafe.)
@@ -130,7 +134,7 @@
   (die/lex (annotation-source ann) who msg arg*))
 
 (define (num-error p str ls)
-  (die/p-1 p 'read str (list->string (reverse ls))))
+  (die/p-1 p 'read str (reverse-list->string ls)))
 
 
 (define (integer->char/checked N accumulated-chars port)
@@ -153,169 +157,291 @@
       (unsafe.integer->char N)
     (%error "invalid numeric value for character" (reverse-list->string accumulated-chars))))
 
-(define delimiter?
-  (lambda (c)
-    (or (char-whitespace? c)
-	(memq c '(#\( #\) #\[ #\] #\" #\# #\; #\{ #\} #\|)))))
-(define digit?
-  (lambda (c)
-    (and ($char<= #\0 c) ($char<= c #\9))))
-(define char->num
-  (lambda (c)
-    (fx- ($char->fixnum c) ($char->fixnum #\0))))
+
+(define CHAR-FIXNUM-0		($char->fixnum #\0))
+(define CHAR-FIXNUM-a		($char->fixnum #\a))
+;;(define CHAR-FIXNUM-f		($char->fixnum #\f))
+(define CHAR-FIXNUM-A		($char->fixnum #\A))
+;;(define CHAR-FIXNUM-F		($char->fixnum #\F))
+(define CHAR-FIXNUM-a-10	(unsafe.fx- CHAR-FIXNUM-a 10))
+(define CHAR-FIXNUM-A-10	(unsafe.fx- CHAR-FIXNUM-A 10))
 
-(define (initial? c)
-  (cond (($char<= c ($fixnum->char 127))
-	 (or (letter? c) (special-initial? c)))
+(define (delimiter? ch)
+  (or (char-whitespace? ch)
+      (unsafe.char= ch #\()
+      (unsafe.char= ch #\))
+      (unsafe.char= ch #\[)
+      (unsafe.char= ch #\])
+      (unsafe.char= ch #\")
+      (unsafe.char= ch #\#)
+      (unsafe.char= ch #\;)
+      (unsafe.char= ch #\{)
+      (unsafe.char= ch #\})
+      (unsafe.char= ch #\|))
+  #;(or (char-whitespace? ch)
+      (memq ch '(#\( #\) #\[ #\] #\" #\# #\; #\{ #\} #\|))))
+
+(define-inline (digit? ch)
+  (and ($char<= #\0 ch) ($char<= ch #\9)))
+
+(define (char->num ch)
+  (unsafe.fx- ($char->fixnum ch) CHAR-FIXNUM-0))
+
+(define (hex x)
+  ;;If X is a character in the range of hex digits [0-9a-fA-F]: return a
+  ;;fixnum representing such digit, else return #f.
+  ;;
+  (define-inline (y)
+    ($char->fixnum x))
+  (cond ((and ($char<= #\0 x) ($char<= x #\9))
+	 (unsafe.fx- (y) CHAR-FIXNUM-0))
+	((and ($char<= #\a x) ($char<= x #\f))
+	 (unsafe.fx- (y) CHAR-FIXNUM-a-10))
+	((and ($char<= #\A x) ($char<= x #\F))
+	 (unsafe.fx- (y) CHAR-FIXNUM-A-10))
+	(else #f)))
+
+(define (initial? ch)
+  (cond (($char<= ch #\x7F #;($fixnum->char 127))
+	 (or (letter? ch) (special-initial? ch)))
 	(else
-	 (unicode-printable-char? c))))
+	 (unicode-printable-char? ch))))
 
-(define letter?
-  (lambda (c)
-    (or (and ($char<= #\a c) ($char<= c #\z))
-	(and ($char<= #\A c) ($char<= c #\Z)))))
-(define special-initial?
-  (lambda (c)
-    (memq c '(#\! #\$ #\% #\& #\* #\/ #\: #\< #\= #\> #\? #\^ #\_ #\~))))
-(define special-subsequent?
-  (lambda (c)
-    (memq c '(#\+ #\- #\. #\@))))
-(define subsequent?
-  (lambda (c)
-    (cond
-     (($char<= c ($fixnum->char 127))
-      (or (letter? c)
-	  (digit? c)
-	  (special-initial? c)
-	  (special-subsequent? c)))
-     (else
-      (or (unicode-printable-char? c)
-	  (memq (char-general-category c) '(Nd Mc Me)))))))
-(define tokenize-identifier
-  (lambda (ls p)
-    (let ((c (peek-char p)))
-      (cond
-       ((eof-object? c) ls)
-       ((subsequent? c)
-	(read-char p)
-	(tokenize-identifier (cons c ls) p))
-       ((delimiter? c)
-	ls)
-       ((char=? c #\\)
-	(read-char p)
-	(tokenize-backslash ls p))
-       ((eq? (port-mode p) 'r6rs-mode)
-	(die/p p 'tokenize "invalid identifier syntax"
-	       (list->string (reverse (cons c ls)))))
-       (else ls)))))
+(define (letter? ch)
+  (or (and ($char<= #\a ch) ($char<= ch #\z))
+      (and ($char<= #\A ch) ($char<= ch #\Z))))
+
+(define (special-initial? ch)
+  (or (unsafe.char= ch #\!)
+      (unsafe.char= ch #\$)
+      (unsafe.char= ch #\%)
+      (unsafe.char= ch #\&)
+      (unsafe.char= ch #\*)
+      (unsafe.char= ch #\/)
+      (unsafe.char= ch #\:)
+      (unsafe.char= ch #\<)
+      (unsafe.char= ch #\=)
+      (unsafe.char= ch #\>)
+      (unsafe.char= ch #\?)
+      (unsafe.char= ch #\^)
+      (unsafe.char= ch #\_)
+      (unsafe.char= ch #\~))
+  #;(memq c '(#\! #\$ #\% #\& #\* #\/ #\: #\< #\= #\> #\? #\^ #\_ #\~)))
+
+(define (special-subsequent? ch)
+  (or (unsafe.char= ch #\+)
+      (unsafe.char= ch #\-)
+      (unsafe.char= ch #\.)
+      (unsafe.char= ch #\@))
+  #;(memq c '(#\+ #\- #\. #\@)))
+
+(define (subsequent? ch)
+  (cond ((unsafe.char<= ch #\x7F #;($fixnum->char 127))
+	 (or (letter? ch)
+	     (digit?  ch)
+	     (special-initial? ch)
+	     (special-subsequent? ch)))
+	(else
+	 (or (unicode-printable-char? ch)
+	     (memq (char-general-category ch) '(Nd Mc Me))))))
+
+
+(define (tokenize-identifier accumulated-chars port)
+  ;;Read from PORT characters from an identifier token, accumulate them,
+  ;;in reverse order and return the resulting list.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (define-inline (recurse accum)
+    (tokenize-identifier accum port))
+  (let ((ch (peek-char port)))
+    (cond ((eof-object? ch)
+	   accumulated-chars)
+	  ((subsequent? ch)
+	   (read-char port)
+	   (recurse (cons ch accumulated-chars)))
+	  ((delimiter? ch)
+	   accumulated-chars)
+	  ((unsafe.char= ch #\\)
+	   (read-char port)
+	   (tokenize-identifier/backslash accumulated-chars port))
+	  ((eq? (port-mode port) 'r6rs-mode)
+	   (%error "invalid identifier syntax" (reverse-list->string (cons ch accumulated-chars))))
+	  ;;FIXME  Is this correct?   To return  the list  if CH  is not
+	  ;;recognised?
+	  (else accumulated-chars))))
+
+
+(define (tokenize-identifier/bar accumulated-chars port)
+  ;;Read from PORT characters  from an identifier token between vertical
+  ;;bars  "|abcd|" after  the  opening bar  has  been already  consumed;
+  ;;accumulate the characters in  reverse order and return the resulting
+  ;;list.
+  ;;
+  ;;This is a syntax outside  of R6RS: identifiers between bars can hold
+  ;;any character.
+  ;;
+  (define-inline (%unexpected-eof-error . args)
+    (die/p port 'tokenize "unexpected EOF while reading symbol" . args))
+  (define-inline (recurse accum)
+    (tokenize-identifier/bar accum port))
+  (let ((ch (read-char port)))
+    (cond ((eof-object? ch)
+	   (%unexpected-eof-error))
+	  ((unsafe.char= #\\ ch)
+	   (let ((ch1 (read-char port)))
+	     (if (eof-object? ch1)
+		 (%unexpected-eof-error)
+	       (tokenize-identifier/backslash (cons ch1 accumulated-chars) port))))
+	  ((unsafe.char= #\| ch) ;end of symbol, whatever comes after
+	   accumulated-chars)
+	  (else
+	   (recurse (cons ch accumulated-chars))))))
+
+
+(define (tokenize-identifier/backslash main-ac port)
+  ;;Read from PORT characters from  an identifier token whose first char
+  ;;is a backslash sequence "\x41;" after the opening backslash has been
+  ;;already  consumed; accumulate  the characters  in reverse  order and
+  ;;return the resulting list.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (define-inline (%error-1 msg . args)
+    (die/p-1 port 'tokenize msg . args))
+  (let ((c (read-char port)))
+    (cond ((eof-object? c)
+	   (%error "invalid eof after symbol escape"))
+	  (($char= #\x c)
+	   (let ((c (read-char port)))
+	     (cond ((eof-object? c)
+		    (%error "invalid eof after \\x"))
+		   ((hex c) =>
+		    (lambda (v)
+		      (let f ((v v) (ac `(,c #\x #\\)))
+			(let ((c (read-char port)))
+			  (cond ((eof-object? c)
+				 (%error (format "invalid eof after ~a" (reverse-list->string ac))))
+				(($char= #\; c)
+				 (tokenize-identifier (cons (integer->char/checked v ac port) main-ac)
+						      port))
+				((hex c) =>
+				 (lambda (v0)
+				   (f (+ (* v 16) v0) (cons c ac))))
+				(else
+				 (%error-1 "invalid sequence" (list->string (cons c (reverse ac))))))))))
+		   (else
+		    (%error-1 (format "invalid sequence \\x~a" c))))))
+	  (else
+	   (%error-1 (format "invalid sequence \\~a" c))))))
+
+
+;;These are considered newlines.
+(define LINEFEED-CHAR-SET-1 '(#\xA #\x85 #\x2028))
+
+;;These are not newlines if they appear after CR.
+(define LINEFEED-CHAR-SET-2 '(#\xA #\x85))
+
 (define (tokenize-string ls p)
   (let ((c (read-char p)))
-    (cond
-     ((eof-object? c)
-      (die/p p 'tokenize "invalid eof inside string"))
-     (else (tokenize-string-char ls p c)))))
-(define LF1 '(#\xA #\x85 #\x2028)) ;;; these are considered newlines
-(define LF2 '(#\xA #\x85))         ;;; these are not newlines if they
-                                     ;;; appear after CR
+    (cond ((eof-object? c)
+	   (die/p p 'tokenize "invalid eof inside string"))
+	  (else
+	   (tokenize-string-char ls p c)))))
+
 (define (tokenize-string-char ls p c)
   (define (intraline-whitespace? c)
     (or (eqv? c #\x9)
 	(eq? (char-general-category c) 'Zs)))
   (define (tokenize-string-continue ls p c)
-    (cond
-     ((eof-object? c)
-      (die/p p 'tokenize "invalid eof inside string"))
-     ((intraline-whitespace? c)
-      (let f ()
-	(let ((c (read-char p)))
-	  (cond
-	   ((eof-object? c)
-	    (die/p p 'tokenize "invalid eof inside string"))
-	   ((intraline-whitespace? c) (f))
-	   (else (tokenize-string-char ls p c))))))
-     (else (tokenize-string-char ls p c))))
-  (cond
-   (($char= #\" c) ls)
-   (($char= #\\ c)
-    (let ((c (read-char p)))
-      (cond
-       ((eof-object? c)
-	(die/p p 'tokenize "invalid eof after string escape"))
-       (($char= #\a c) (tokenize-string (cons #\x7 ls) p))
-       (($char= #\b c) (tokenize-string (cons #\x8 ls) p))
-       (($char= #\t c) (tokenize-string (cons #\x9 ls) p))
-       (($char= #\n c) (tokenize-string (cons #\xA ls) p))
-       (($char= #\v c) (tokenize-string (cons #\xB ls) p))
-       (($char= #\f c) (tokenize-string (cons #\xC ls) p))
-       (($char= #\r c) (tokenize-string (cons #\xD ls) p))
-       (($char= #\" c) (tokenize-string (cons #\x22 ls) p))
-       (($char= #\\ c) (tokenize-string (cons #\x5C ls) p))
-       (($char= #\x c) ;;; unicode escape \xXXX;
-	(let ((c (read-char p)))
-	  (cond
-	   ((eof-object? c)
-	    (die/p p 'tokenize "invalid eof inside string"))
-	   ((hex c) =>
-	    (lambda (n)
-	      (let f ((n n) (ac (cons c '(#\x))))
-		(let ((c (read-char p)))
-		  (cond
-		   ((eof-object? n)
-		    (die/p p 'tokenize "invalid eof inside string"))
-		   ((hex c) =>
-		    (lambda (v) (f (+ (* n 16) v) (cons c ac))))
-		   (($char= c #\;)
-		    (tokenize-string
-		     (cons (integer->char/checked n ac p) ls) p))
-		   (else
-		    (die/p-1 p 'tokenize
-			     "invalid char in escape sequence"
-			     (list->string (reverse (cons c ac))))))))))
-	   (else
-	    (die/p-1 p 'tokenize
-		     "invalid char in escape sequence" c)))))
-       ((intraline-whitespace? c)
-	(let f ()
-	  (let ((c (read-char p)))
-	    (cond
-	     ((eof-object? c)
-	      (die/p p 'tokenize "invalid eof inside string"))
-	     ((intraline-whitespace? c) (f))
-	     ((memv c LF1)
-	      (tokenize-string-continue ls p (read-char p)))
-	     ((eqv? c #\return)
-	      (let ((c (read-char p)))
-		(cond
-		 ((memv c LF2)
+    (cond ((eof-object? c)
+	   (die/p p 'tokenize "invalid eof inside string"))
+	  ((intraline-whitespace? c)
+	   (let f ()
+	     (let ((c (read-char p)))
+	       (cond
+		((eof-object? c)
+		 (die/p p 'tokenize "invalid eof inside string"))
+		((intraline-whitespace? c) (f))
+		(else (tokenize-string-char ls p c))))))
+	  (else (tokenize-string-char ls p c))))
+  (cond (($char= #\" c) ls)
+	(($char= #\\ c)
+	 (let ((c (read-char p)))
+	   (cond ((eof-object? c)
+		  (die/p p 'tokenize "invalid eof after string escape"))
+		 (($char= #\a c) (tokenize-string (cons #\x7 ls) p))
+		 (($char= #\b c) (tokenize-string (cons #\x8 ls) p))
+		 (($char= #\t c) (tokenize-string (cons #\x9 ls) p))
+		 (($char= #\n c) (tokenize-string (cons #\xA ls) p))
+		 (($char= #\v c) (tokenize-string (cons #\xB ls) p))
+		 (($char= #\f c) (tokenize-string (cons #\xC ls) p))
+		 (($char= #\r c) (tokenize-string (cons #\xD ls) p))
+		 (($char= #\" c) (tokenize-string (cons #\x22 ls) p))
+		 (($char= #\\ c) (tokenize-string (cons #\x5C ls) p))
+		 (($char= #\x c) ;;; unicode escape \xXXX;
+		  (let ((c (read-char p)))
+		    (cond ((eof-object? c)
+			   (die/p p 'tokenize "invalid eof inside string"))
+			  ((hex c) =>
+			   (lambda (n)
+			     (let f ((n n) (ac (cons c '(#\x))))
+			       (let ((c (read-char p)))
+				 (cond ((eof-object? n)
+					(die/p p 'tokenize "invalid eof inside string"))
+				       ((hex c) =>
+					(lambda (v) (f (+ (* n 16) v) (cons c ac))))
+				       (($char= c #\;)
+					(tokenize-string
+					 (cons (integer->char/checked n ac p) ls) p))
+				       (else
+					(die/p-1 p 'tokenize
+						 "invalid char in escape sequence"
+						 (reverse-list->string (cons c ac)))))))))
+			  (else
+			   (die/p-1 p 'tokenize
+				    "invalid char in escape sequence" c)))))
+		 ((intraline-whitespace? c)
+		  (let f ()
+		    (let ((c (read-char p)))
+		      (cond ((eof-object? c)
+			     (die/p p 'tokenize "invalid eof inside string"))
+			    ((intraline-whitespace? c) (f))
+			    ((memv c LINEFEED-CHAR-SET-1)
+			     (tokenize-string-continue ls p (read-char p)))
+			    ((eqv? c #\return)
+			     (let ((c (read-char p)))
+			       (cond ((memv c LINEFEED-CHAR-SET-2)
+				      (tokenize-string-continue ls p (read-char p)))
+				     (else
+				      (tokenize-string-continue ls p c)))))
+			    (else
+			     (die/p-1 p 'tokenize
+				      "non-whitespace character after escape"))))))
+		 ((memv c LINEFEED-CHAR-SET-1)
 		  (tokenize-string-continue ls p (read-char p)))
-		 (else
-		  (tokenize-string-continue ls p c)))))
-	     (else
-	      (die/p-1 p 'tokenize
-		       "non-whitespace character after escape"))))))
-       ((memv c LF1)
-	(tokenize-string-continue ls p (read-char p)))
-       ((eqv? c #\return)
-	(let ((c (read-char p)))
-	  (cond
-	   ((memv c LF2)
-	    (tokenize-string-continue ls p (read-char p)))
-	   (else
-	    (tokenize-string-continue ls p c)))))
-       (else (die/p-1 p 'tokenize "invalid string escape" c)))))
-   ((memv c LF1)
-    (tokenize-string (cons #\linefeed ls) p))
-   ((eqv? c #\return)
-    (let ((c (peek-char p)))
-      (when (memv c LF2) (read-char p))
-      (tokenize-string (cons #\linefeed ls) p)))
-   (else
-    (tokenize-string (cons c ls) p))))
-(define skip-comment
-  (lambda (p)
-    (let ((c (read-char p)))
-      (unless (or (eof-object? c) (memv c LF1) (eqv? c #\return))
-	(skip-comment p)))))
+		 ((eqv? c #\return)
+		  (let ((c (read-char p)))
+		    (cond ((memv c LINEFEED-CHAR-SET-2)
+			   (tokenize-string-continue ls p (read-char p)))
+			  (else
+			   (tokenize-string-continue ls p c)))))
+		 (else (die/p-1 p 'tokenize "invalid string escape" c)))))
+	((memv c LINEFEED-CHAR-SET-1)
+	 (tokenize-string (cons #\linefeed ls) p))
+	((eqv? c #\return)
+	 (let ((c (peek-char p)))
+	   (when (memv c LINEFEED-CHAR-SET-2) (read-char p))
+	   (tokenize-string (cons #\linefeed ls) p)))
+	(else
+	 (tokenize-string (cons c ls) p))))
+
+(define (skip-comment port)
+  (let ((ch (read-char port)))
+    (unless (or (eof-object? ch)
+		(memv ch LINEFEED-CHAR-SET-1)
+		(unsafe.char= ch #\return))
+      (skip-comment port))))
 
 
 (define (tokenize-dot port)
@@ -380,6 +506,7 @@
 	  (else
 	   (%error "invalid syntax" (unsafe.string-ref str 0) ch)))))
 
+
 (define (tokenize-char* str.index str port datum)
   ;;Recusrive subroutine of TOKENIZE-CHAR-SEQ.  Draw characters from the
   ;;string STR, starting at STR.INDEX, and verify that they are equal to
@@ -496,29 +623,6 @@
 	       (%error "invalid syntax" (string #\# #\\ ch ch1))))))))
 
 
-(define CHAR-FIXNUM-0		($char->fixnum #\0))
-(define CHAR-FIXNUM-a		($char->fixnum #\a))
-;;(define CHAR-FIXNUM-f		($char->fixnum #\f))
-(define CHAR-FIXNUM-A		($char->fixnum #\A))
-;;(define CHAR-FIXNUM-F		($char->fixnum #\F))
-(define CHAR-FIXNUM-a-10	(unsafe.fx- CHAR-FIXNUM-a 10))
-(define CHAR-FIXNUM-A-10	(unsafe.fx- CHAR-FIXNUM-A 10))
-
-(define (hex x)
-  ;;If X is a character in the range of hex digits [0-9a-fA-F]: return a
-  ;;fixnum representing such digit, else return #f.
-  ;;
-  (define-inline (y)
-    ($char->fixnum x))
-  (cond ((and ($char<= #\0 x) ($char<= x #\9))
-	 (unsafe.fx- (y) CHAR-FIXNUM-0))
-	((and ($char<= #\a x) ($char<= x #\f))
-	 (unsafe.fx- (y) CHAR-FIXNUM-a-10))
-	((and ($char<= #\A x) ($char<= x #\F))
-	 (unsafe.fx- (y) CHAR-FIXNUM-A-10))
-	(else #f)))
-
-
 (define (multiline-comment port)
   ;;Parse a multiline comment  "#| ... |#", possibly nested.  Accumulate
   ;;the characters in the comment, excluding the "#|" and "|#", and hand
@@ -578,14 +682,24 @@
   ((comment-handler) (reverse-list->string (accumulate-comment-chars port '()))))
 
 
-(define (skip-whitespace p caller)
-  (let ((c (read-char p)))
-    (cond
-     ((eof-object? c)
-      (die/p p 'tokenize "invalid eof inside" caller))
-     ((char-whitespace? c)
-      (skip-whitespace p caller))
-     (else c))))
+(define (skip-whitespace port caller)
+  ;;Read and  discard characters from  PORT while they are  white spaces
+  ;;according  to  CHAR-WHITESPACE?.  Return  the  first character  read
+  ;;which is not a white space.
+  ;;
+  ;;CALLER must be a string  describing the token the caller is parsing,
+  ;;it is used for error reporting.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (define-inline (recurse)
+    (skip-whitespace port caller))
+  (let ((ch (read-char port)))
+    (cond ((eof-object? ch)
+	   (%error "invalid EOF inside" caller))
+	  ((char-whitespace? ch)
+	   (recurse))
+	  (else ch))))
 
 
 (define-inline (tokenize-hash port)
@@ -687,38 +801,52 @@
       (%error-1 "gensym syntax is invalid in #!r6rs mode" (format "#~a" ch)))
     (let* ((ch1 (skip-whitespace port "gensym"))
 	   (id0 (cond ((initial? ch1)
-		       (list->string (reverse (tokenize-identifier (cons ch1 '()) port))))
+		       (reverse-list->string (tokenize-identifier (cons ch1 '()) port)))
 		      (($char= #\| ch1)
-		       (list->string (reverse (tokenize-bar port '()))))
+		       (reverse-list->string (tokenize-identifier/bar '() port)))
 		      (else
 		       (%error-1 "invalid char inside gensym" ch1)))))
       (cons 'datum (gensym id0))))
 
+   ;;Gensym with one of the following syntaxes:
+   ;;
+   ;;#{ciao}
+   ;;   In which "ciao" is ID0.
+   ;;
+   ;;#{|ciao|}
+   ;;   In which "ciao" is ID0.
+   ;;
+   ;;#{d |95BEx%X86N?8X&yC|}
+   ;;   In which "d" is ID0 and "95BEx%X86N?8X&yC" is ID1.
+   ;;
+   ;;#{|d| |95BEx%X86N?8X&yC|}
+   ;;   In which "d" is ID0 and "95BEx%X86N?8X&yC" is ID1.
+   ;;
    (($char= #\{ ch)
     (when (eq? (port-mode port) 'r6rs-mode)
       (%error-1 "gensym syntax is invalid in #!r6rs mode" (format "#~a" ch)))
     (let* ((ch1 (skip-whitespace port "gensym"))
 	   (id0 (cond ((initial? ch1)
-		       (list->string (reverse (tokenize-identifier (cons ch1 '()) port))))
+		       (reverse-list->string (tokenize-identifier (cons ch1 '()) port)))
 		      (($char= #\| ch1)
-		       (list->string (reverse (tokenize-bar port '()))))
+		       (reverse-list->string (tokenize-identifier/bar '() port)))
 		      (else
-		       (%error-1 "invalid char inside gensym" ch1))))
-	   (ch1 (skip-whitespace port "gensym")))
-      (cond (($char= #\} ch1)
+		       (%error-1 "invalid char inside gensym 1" ch1))))
+	   (ch2 (skip-whitespace port "gensym")))
+      (cond (($char= #\} ch2)
 	     (cons 'datum (foreign-call "ikrt_strings_to_gensym" #f id0)))
 	    (else
-	     (let ((id1 (cond ((initial? ch1)
-			       (list->string (reverse (tokenize-identifier (cons ch1 '()) port))))
-			      (($char= #\| ch1)
-			       (list->string (reverse (tokenize-bar port '()))))
+	     (let ((id1 (cond ((initial? ch2)
+			       (reverse-list->string (tokenize-identifier (cons ch2 '()) port)))
+			      (($char= #\| ch2)
+			       (reverse-list->string (tokenize-identifier/bar '() port)))
 			      (else
-			       (%error-1 "invalid char inside gensym" ch1)))))
+			       (%error-1 "invalid char inside gensym 2" ch2)))))
 	       (let ((c (skip-whitespace port "gensym")))
-		 (cond (($char= #\} ch1)
+		 (cond (($char= #\} ch2)
 			(cons 'datum (foreign-call "ikrt_strings_to_gensym" id0 id1)))
 		       (else
-			(%error-1 "invalid char inside gensym" ch1)))))))))
+			(%error-1 "invalid char inside gensym 3" ch2)))))))))
 
    (($char= #\v ch)
     ;;Correct sequences of chars:
@@ -894,7 +1022,7 @@
 	  (let ((ch (peek-char port)))
 	    (when (and (not (eof-object? ch))
 		       (not (delimiter?  ch)))
-	      (%error (format "invalid ~a: ~s" who (list->string (reverse (cons ch ls))))))))
+	      (%error (format "invalid ~a: ~s" who (reverse-list->string (cons ch ls)))))))
       (let ((ch (read-char port)))
 	(cond ((eof-object? ch)
 	       (%error (format "invalid eof inside ~a" who)))
@@ -905,7 +1033,7 @@
 				(string-ref str i))))
 	       (loop (add1 i) (cons ch ls)))
 	      (else
-	       (%error-1 (format "invalid ~a: ~s" who (list->string (reverse (cons ch ls)))))))))))
+	       (%error-1 (format "invalid ~a: ~s" who (reverse-list->string (cons ch ls))))))))))
 
 
 (define (tokenize-hashnum p n)
@@ -919,57 +1047,6 @@
       (tokenize-hashnum p (fx+ (fx* n 10) (char->num c))))
      (else
       (die/p-1 p 'tokenize "invalid char while inside a #n mark/ref" c)))))
-
-(define tokenize-bar
-  (lambda (p ac)
-    (let ((c (read-char p)))
-      (cond
-       ((eof-object? c)
-	(die/p p 'tokenize "unexpected eof while reading symbol"))
-       (($char= #\\ c)
-	(let ((c (read-char p)))
-	  (cond
-	   ((eof-object? c)
-	    (die/p p 'tokenize "unexpected eof while reading symbol"))
-	   (else (tokenize-bar p (cons c ac))))))
-       (($char= #\| c) ac)
-       (else (tokenize-bar p (cons c ac)))))))
-
-(define (tokenize-backslash main-ac p)
-  (let ((c (read-char p)))
-    (cond
-     ((eof-object? c)
-      (die/p p 'tokenize "invalid eof after symbol escape"))
-     (($char= #\x c)
-      (let ((c (read-char p)))
-	(cond
-	 ((eof-object? c)
-	  (die/p p 'tokenize "invalid eof after \\x"))
-	 ((hex c) =>
-	  (lambda (v)
-	    (let f ((v v) (ac `(,c #\x #\\)))
-	      (let ((c (read-char p)))
-		(cond
-		 ((eof-object? c)
-		  (die/p p 'tokenize
-                         (format "invalid eof after ~a"
-                           (list->string (reverse ac)))))
-		 (($char= #\; c)
-		  (tokenize-identifier
-		   (cons (integer->char/checked v ac p) main-ac)
-		   p))
-		 ((hex c) =>
-		  (lambda (v0)
-		    (f (+ (* v 16) v0) (cons c ac))))
-		 (else
-		  (die/p-1 p 'tokenize "invalid sequence"
-			   (list->string (cons c (reverse ac))))))))))
-	 (else
-	  (die/p-1 p 'tokenize
-		   (format "invalid sequence \\x~a" c))))))
-     (else
-      (die/p-1 p 'tokenize
-	       (format "invalid sequence \\~a" c))))))
 
 
 (define (tokenize/c ch port)
@@ -1039,7 +1116,7 @@
 	;;string
 	(($char= #\" ch)
 	 (let ((ls (tokenize-string '() port)))
-	   (cons 'datum (list->string (reverse ls)))))
+	   (cons 'datum (reverse-list->string ls))))
 
 	;;symbol "+" or number
 	(($char= #\+ ch)
@@ -1071,12 +1148,11 @@
 	(($char= #\| ch)
 	 (when (eq? (port-mode port) 'r6rs-mode)
 	   (%error "|symbol| syntax is invalid in #!r6rs mode"))
-	 (let ((ls (reverse (tokenize-bar port '()))))
-	   (cons 'datum (string->symbol (list->string ls)))))
+	 (cons 'datum (string->symbol (reverse-list->string (tokenize-identifier/bar '() port)))))
 
-	;;everything starting with a backslash, for example characters
+	;;symbol whose first char is a backslash sequence, "\x41;-ciao"
 	(($char= #\\ ch)
-	 (cons 'datum (string->symbol (list->string (reverse (tokenize-backslash '() port))))))
+	 (cons 'datum (string->symbol (reverse-list->string (tokenize-identifier/backslash '() port)))))
 
 ;;;Unused for now.
 ;;;
@@ -1613,7 +1689,7 @@
        (else
 	(values '() ls))))
     (define (mksymbol ls)
-      (let ((s (string->symbol (list->string (reverse ls)))))
+      (let ((s (string->symbol (reverse-list->string ls))))
 	(values s s)))
     (let-values (((inits rest) (split ls)))
       (let ((ls (tokenize-identifier inits p)))
@@ -1815,7 +1891,7 @@
     (let-values (((t pos) (tokenize-script-initial+pos p)))
       (parse-token p locs k t pos))))
 
-#| end of module |# )
+#| end of module (read-expr read-expr-script-initial) |# )
 
 
 (define (reduce-loc! p)
@@ -1907,7 +1983,7 @@
    ((p)
     (if (input-port? p)
 	(tokenize/1 p)
-      (die 'read-token "not an input port" p)))))
+      (assertion-violation 'read-token "not an input port" p)))))
 
 (define read
   (case-lambda
@@ -1915,11 +1991,11 @@
    ((p)
     (if (input-port? p)
 	(my-read p)
-      (die 'read "not an input port" p)))))
+      (assertion-violation 'read "not an input port" p)))))
 
 (define (get-datum p)
   (unless (input-port? p)
-    (die 'get-datum "not an input port"))
+    (assertion-violation 'get-datum "not an input port"))
   (my-read p))
 
 (define comment-handler
