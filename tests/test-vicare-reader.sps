@@ -151,30 +151,30 @@
 	(list (gensym? sym) (symbol? sym) (gensym->unique-string sym)))
     => '(#t #t "95BEx%X86N?8X&yC"))
 
-  #;(check
+  (check
       (let ((sym (read (open-string-input-port "#{ciao hello}"))))
-  	(list sym (gensym? sym) (symbol? sym) (gensym->unique-string sym)))
-    => '(ciao #t #t "hello"))
+  	(list (gensym? sym) (symbol? sym) (gensym->unique-string sym)))
+    => '(#t #t "hello"))
 
-  ;; (check
-  ;;     (let ((sym (read (open-string-input-port "#{|ciao| |hello|}"))))
-  ;; 	(list sym (gensym? sym) (symbol? sym) (gensym->unique-string sym)))
-  ;;   => '(ciao #t #t "hello"))
+  (check
+      (let ((sym (read (open-string-input-port "#{|ciao| |hello|}"))))
+  	(list (gensym? sym) (symbol? sym) (gensym->unique-string sym)))
+    => '(#t #t "hello"))
 
-  ;; (check
-  ;;     (let ((sym (read (open-string-input-port "#{ciao |hello|}"))))
-  ;; 	(list sym (gensym? sym) (symbol? sym) (gensym->unique-string sym)))
-  ;;   => '(ciao #t #t "hello"))
+  (check
+      (let ((sym (read (open-string-input-port "#{ciao |hello|}"))))
+  	(list (gensym? sym) (symbol? sym) (gensym->unique-string sym)))
+    => '(#t #t "hello"))
 
-  ;; (check
-  ;;     (let ((sym (read (open-string-input-port "#{|ciao| hello}"))))
-  ;; 	(list sym (gensym? sym) (symbol? sym) (gensym->unique-string sym)))
-  ;;   => '(ciao #t #t "hello"))
+  (check
+      (let ((sym (read (open-string-input-port "#{|ciao| hello}"))))
+  	(list (gensym? sym) (symbol? sym) (gensym->unique-string sym)))
+    => '(#t #t "hello"))
 
-  ;; #;(check
-  ;;     (let ((sym (read (open-string-input-port "#{d |95BEx%X86N?8X&yC|}"))))
-  ;; 	(list sym (gensym->unique-string sym)))
-  ;;   => '(d "95BEx%X86N?8X&yC"))
+  (check
+      (let ((sym (read (open-string-input-port "#{d |95BEx%X86N?8X&yC|}"))))
+  	(gensym->unique-string sym))
+    => '"95BEx%X86N?8X&yC")
 
   #t)
 

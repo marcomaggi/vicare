@@ -790,35 +790,35 @@
    ((eof-object? ch)
     (%error "invalid # near end of file"))
 
-   ((or ($char= #\t ch) ($char= #\T ch)) #;(memq ch '(#\t #\T))
+   ((or (unsafe.char= #\t ch) (unsafe.char= #\T ch)) #;(memq ch '(#\t #\T))
     (let ((c1 (peek-char port)))
       (cond ((eof-object? c1) '(datum . #t))
 	    ((delimiter?  c1) '(datum . #t))
 	    (else
 	     (%error (format "invalid syntax near #~a~a" ch c1))))))
 
-   ((or ($char= #\f ch) ($char= #\F ch)) #;(memq ch '(#\f #\F))
+   ((or (unsafe.char= #\f ch) (unsafe.char= #\F ch)) #;(memq ch '(#\f #\F))
     (let ((ch1 (peek-char port)))
       (cond ((eof-object? ch1) '(datum . #f))
 	    ((delimiter?  ch1) '(datum . #f))
 	    (else
 	     (%error (format "invalid syntax near #~a~a" ch ch1))))))
 
-   (($char= #\\ ch) (tokenize-char port))
-   (($char= #\( ch) 'vparen)
-   (($char= #\' ch) '(macro . syntax))
-   (($char= #\` ch) '(macro . quasisyntax))
+   ((unsafe.char= #\\ ch) (tokenize-char port))
+   ((unsafe.char= #\( ch) 'vparen)
+   ((unsafe.char= #\' ch) '(macro . syntax))
+   ((unsafe.char= #\` ch) '(macro . quasisyntax))
 
-   (($char= #\, ch)
+   ((unsafe.char= #\, ch)
     (let ((ch1 (peek-char port)))
-      (cond (($char= ch1 #\@)
+      (cond ((unsafe.char= ch1 #\@)
 	     (read-char port)
 	     '(macro . unsyntax-splicing))
 	    (else
 	     '(macro . unsyntax)))))
 
    ;; #! comments and such
-   (($char= #\! ch)
+   ((unsafe.char= #\! ch)
     (let ((ch1 (read-char port)))
       (when (eof-object? ch1)
 	(%error "invalid eof near #!"))
@@ -844,13 +844,13 @@
       (%error-1 "graph syntax is invalid in #!r6rs mode" (format "#~a" ch)))
     (tokenize-hashnum port (char->dec-digit ch)))
 
-   (($char= #\: ch)
+   ((unsafe.char= #\: ch)
     (when (port-in-r6rs-mode? port)
       (%error-1 "gensym syntax is invalid in #!r6rs mode" (format "#~a" ch)))
     (let* ((ch1 (skip-whitespace port "gensym"))
 	   (id0 (cond ((initial? ch1)
 		       (reverse-list->string (tokenize-identifier (cons ch1 '()) port)))
-		      (($char= #\| ch1)
+		      ((unsafe.char= #\| ch1)
 		       (reverse-list->string (tokenize-identifier/bar '() port)))
 		      (else
 		       (%error-1 "invalid char inside gensym" ch1)))))
@@ -859,10 +859,10 @@
    ;;Gensym with one of the following syntaxes:
    ;;
    ;;#{ciao}
-   ;;   In which "ciao" is ID0.
+   ;;   In which "ciao" is ID0, and will become the unique string.
    ;;
    ;;#{|ciao|}
-   ;;   In which "ciao" is ID0.
+   ;;   In which "ciao" is ID0, and will become the unique string.
    ;;
    ;;#{d |95BEx%X86N?8X&yC|}
    ;;   In which "d" is ID0 and "95BEx%X86N?8X&yC" is ID1.
@@ -870,33 +870,32 @@
    ;;#{|d| |95BEx%X86N?8X&yC|}
    ;;   In which "d" is ID0 and "95BEx%X86N?8X&yC" is ID1.
    ;;
-   (($char= #\{ ch)
+   ((unsafe.char= #\{ ch)
     (when (port-in-r6rs-mode? port)
-      (%error-1 "gensym syntax is invalid in #!r6rs mode" (format "#~a" ch)))
+      (%error-1 "gensym syntax is invalid in #!r6rs mode" "#{"))
     (let* ((ch1 (skip-whitespace port "gensym"))
 	   (id0 (cond ((initial? ch1)
 		       (reverse-list->string (tokenize-identifier (cons ch1 '()) port)))
-		      (($char= #\| ch1)
+		      ((unsafe.char= #\| ch1)
 		       (reverse-list->string (tokenize-identifier/bar '() port)))
 		      (else
 		       (%error-1 "invalid char inside gensym 1" ch1))))
 	   (ch2 (skip-whitespace port "gensym")))
-      (cond (($char= #\} ch2)
-	     (cons 'datum (foreign-call "ikrt_strings_to_gensym" #f id0)))
-	    (else
-	     (let ((id1 (cond ((initial? ch2)
-			       (reverse-list->string (tokenize-identifier (cons ch2 '()) port)))
-			      (($char= #\| ch2)
-			       (reverse-list->string (tokenize-identifier/bar '() port)))
-			      (else
-			       (%error-1 "invalid char inside gensym 2" ch2)))))
-	       (let ((c (skip-whitespace port "gensym")))
-		 (cond (($char= #\} ch2)
-			(cons 'datum (foreign-call "ikrt_strings_to_gensym" id0 id1)))
-		       (else
-			(%error-1 "invalid char inside gensym 3" ch2)))))))))
+      (if (unsafe.char= #\} ch2)
+	  (cons 'datum (foreign-call "ikrt_strings_to_gensym" #f id0))
+	(let* ((id1 (cond ((initial? ch2)
+			   (reverse-list->string (tokenize-identifier (cons ch2 '()) port)))
+			  ((unsafe.char= #\| ch2)
+			   (reverse-list->string (tokenize-identifier/bar '() port)))
+			  (else
+			   (%error-1 "invalid char inside gensym 2" ch2))))
+	       (ch3 (skip-whitespace port "gensym")))
+	  (if (unsafe.char= #\} ch3)
+	      (cons 'datum (foreign-call "ikrt_strings_to_gensym" id0 id1))
+	    (%error-1 "invalid char inside gensym 3" ch3))))))
 
-   (($char= #\v ch)
+   ;;bytevectors
+   ((unsafe.char= #\v ch)
     ;;Correct sequences of chars:
     ;;
     ;; ch  ch1  ch2  ch3  ch4  ch5  datum
@@ -967,25 +966,25 @@
 
       (%read-bytevector)))
 
-   ((or ($char= ch #\e) ($char= ch #\E)) #;(memq ch '(#\e #\E))
+   ((or (unsafe.char= ch #\e) (unsafe.char= ch #\E)) #;(memq ch '(#\e #\E))
     (cons 'datum (parse-string port (list ch #\#) 10 #f 'e)))
 
-   ((or ($char= ch #\i) ($char= ch #\I)) #;(memq ch '(#\i #\I))
+   ((or (unsafe.char= ch #\i) (unsafe.char= ch #\I)) #;(memq ch '(#\i #\I))
     (cons 'datum (parse-string port (list ch #\#) 10 #f 'i)))
 
-   ((or ($char= ch #\b) ($char= ch #\B)) #;(memq ch '(#\b #\B))
+   ((or (unsafe.char= ch #\b) (unsafe.char= ch #\B)) #;(memq ch '(#\b #\B))
     (cons 'datum (parse-string port (list ch #\#) 2 2 #f)))
 
-   ((or ($char= ch #\x) ($char= ch #\X)) #;(memq ch '(#\x #\X))
+   ((or (unsafe.char= ch #\x) (unsafe.char= ch #\X)) #;(memq ch '(#\x #\X))
     (cons 'datum (parse-string port (list ch #\#) 16 16 #f)))
 
-   ((or ($char= ch #\o) ($char= ch #\O)) #;(memq ch '(#\o #\O))
+   ((or (unsafe.char= ch #\o) (unsafe.char= ch #\O)) #;(memq ch '(#\o #\O))
     (cons 'datum (parse-string port (list ch #\#) 8 8 #f)))
 
-   ((or ($char= ch #\d) ($char= ch #\D)) #;(memq ch '(#\d #\D))
+   ((or (unsafe.char= ch #\d) (unsafe.char= ch #\D)) #;(memq ch '(#\d #\D))
     (cons 'datum (parse-string port (list ch #\#) 10 10 #f)))
 
-;;;(($char= #\@ ch) DEAD: Unfixable due to port encoding
+;;;((unsafe.char= #\@ ch) DEAD: Unfixable due to port encoding
 ;;;                 that does not allow mixing binary and
 ;;;                 textual data in the same port.
 ;;;                Left here for historical value
