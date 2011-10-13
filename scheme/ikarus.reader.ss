@@ -311,33 +311,6 @@
 	(else #f)))
 
 
-(define (tokenize-script-initial port)
-  (let ((ch (read-char port)))
-    (cond ((eof-object? ch)
-	   ch)
-	  (($char= ch #\;)
-	   (skip-comment port)
-	   (tokenize/1 port))
-	  (($char= ch #\#)
-	   (let ((ch1 (read-char port)))
-	     (cond ((eof-object? ch1)
-		    (die/p port 'tokenize "invalid eof after #"))
-		   (($char= ch1 #\!)
-		    (skip-comment port)
-		    (tokenize/1 port))
-		   (($char= ch1 #\;)
-		    (read-as-comment port)
-		    (tokenize/1 port))
-		   (($char= ch1 #\|)
-		    (multiline-comment port)
-		    (tokenize/1 port))
-		   (else
-		    (tokenize-hash/c ch1 port)))))
-	  ((char-whitespace? ch)
-	   (tokenize/1 port))
-	  (else
-	   (tokenize/c ch port)))))
-
 (define (tokenize-script-initial+pos port)
   (let* ((pos (make-compound-position port))
 	 (ch  (read-char port)))
@@ -366,6 +339,34 @@
 	   (tokenize/1+pos port))
 	  (else
 	   (values (tokenize/c ch port) pos)))))
+
+;;; commented out because unused (Marco Maggi; Oct 13, 2011)
+#;(define (tokenize-script-initial port)
+  (let ((ch (read-char port)))
+    (cond ((eof-object? ch)
+	   ch)
+	  (($char= ch #\;)
+	   (skip-comment port)
+	   (tokenize/1 port))
+	  (($char= ch #\#)
+	   (let ((ch1 (read-char port)))
+	     (cond ((eof-object? ch1)
+		    (die/p port 'tokenize "invalid eof after #"))
+		   (($char= ch1 #\!)
+		    (skip-comment port)
+		    (tokenize/1 port))
+		   (($char= ch1 #\;)
+		    (read-as-comment port)
+		    (tokenize/1 port))
+		   (($char= ch1 #\|)
+		    (multiline-comment port)
+		    (tokenize/1 port))
+		   (else
+		    (tokenize-hash/c ch1 port)))))
+	  ((char-whitespace? ch)
+	   (tokenize/1 port))
+	  (else
+	   (tokenize/c ch port)))))
 
 
 (define (tokenize/1 port)
