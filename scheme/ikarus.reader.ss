@@ -362,15 +362,17 @@
     (die/p port 'tokenize "unexpected EOF while reading symbol" . args))
   (define-inline (recurse accum)
     (tokenize-identifier/bar accum port))
-  (let ((ch (read-char port)))
-    (cond ((eof-object? ch)
-	   (%unexpected-eof-error))
-	  ((unsafe.char= #\\ ch)
-	   (tokenize-identifier/backslash accumulated-chars port #t))
-	  ((unsafe.char= #\| ch) ;end of symbol, whatever comes after
-	   accumulated-chars)
-	  (else
-	   (recurse (cons ch accumulated-chars))))))
+  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
+    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+      . ?cond-clauses))
+
+  (%read-char-no-eof (port ch)
+    ((unsafe.char= #\\ ch)
+     (tokenize-identifier/backslash accumulated-chars port #t))
+    ((unsafe.char= #\| ch) ;end of symbol, whatever comes after
+     accumulated-chars)
+    (else
+     (recurse (cons ch accumulated-chars)))))
 
 (define (tokenize-identifier/backslash accumulated-chars port inside-bar?)
   ;;Read from PORT characters from  an identifier token whose first char
@@ -383,46 +385,41 @@
   ;;TOKENIZE-IDENTIFIER is invoked to continue reading.
   ;;
   (define-inline (%error msg . args)
-    (die/p port 'tokenize msg . args))
+    (die/p port   'tokenize msg . args))
   (define-inline (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
+  (define-inline (%unexpected-eof-error . args)
+    (%error "unexpected EOF while reading symbol" . args))
+  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
+    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+      . ?cond-clauses))
 
   (define-inline (main)
-    (let ((ch (read-char port)))
-      (cond ((eof-object? ch)
-	     (%error "invalid EOF after backslash while reading symbol" #\\))
-	    ((unsafe.char= #\x ch)
-	     (%tokenize-hex-digits))
-	    (else
-	     (%error "expected character x after backslash \
-                      while reading symbol"
-		     (string #\\ ch)
-		     (reverse-list->string accumulated-chars))))))
+    (%read-char-no-eof (port ch)
+      ((unsafe.char= #\x ch)
+       (%tokenize-hex-digits))
+      (else
+       (%error "expected character \"x\" after backslash while reading symbol"
+	       (string #\\ ch) (reverse-list->string accumulated-chars)))))
 
   (define-inline (%tokenize-hex-digits)
     (let next-digit ((code-point 0)
 		     (accumul    (list #\x #\\)))
-      (let ((ch (read-char port)))
-	(cond ((eof-object? ch)
-	       (%error "invalid EOF after backslash sequence \
-                        while reading symbol"
-		       (reverse-list->string accumul)
-		       (reverse-list->string accumulated-chars)))
-	      ((unsafe.char= #\; ch)
-	       (let ((accum (cons (integer->char/checked code-point accumul port)
-				  accumulated-chars)))
-		 (if inside-bar?
-		     (tokenize-identifier/bar accum port)
-		   (tokenize-identifier accum port))))
-	      ((char->hex-digit/or-false ch)
-	       => (lambda (digit)
-		    (next-digit (unsafe.fx+ digit (fx* code-point 16))
-				(cons ch accumul))))
-	      (else
-	       (%error "expected hex digit after backslash sequence \
-                        while reading symbol"
-		       (reverse-list->string (cons ch accumul))
-		       (reverse-list->string accumulated-chars)))))))
+      (%read-char-no-eof (port ch)
+	((unsafe.char= #\; ch)
+	 (let ((accum (cons (integer->char/checked code-point accumul port)
+			    accumulated-chars)))
+	   (if inside-bar?
+	       (tokenize-identifier/bar accum port)
+	     (tokenize-identifier accum port))))
+	((char->hex-digit/or-false ch)
+	 => (lambda (digit)
+	      (next-digit (unsafe.fx+ digit (fx* code-point 16))
+			  (cons ch accumul))))
+	(else
+	 (%error "expected hex digit after backslash sequence while reading symbol"
+		 (reverse-list->string (cons ch accumul))
+		 (reverse-list->string accumulated-chars))))))
 
   (main))
 
@@ -571,17 +568,14 @@
     ;;
     (define-inline (next-char ch)
       (tokenize-string-char ls port ch))
-    (cond ((eof-object? ch)
-	   (%unexpected-eof-error))
-	  ((intraline-whitespace? ch)
-	   (let next-whitespace-char ()
-	     (%read-char-no-eof (port ch1)
-	       ((intraline-whitespace? ch1)
-		(next-whitespace-char))
-	       (else
-		(next-char ch1)))))
-	  (else
-	   (next-char ch))))
+    (if (intraline-whitespace? ch)
+	(let next-whitespace-char ()
+	  (%read-char-no-eof (port ch1)
+	    ((intraline-whitespace? ch1)
+	     (next-whitespace-char))
+	    (else
+	     (next-char ch1))))
+      (next-char ch)))
 
   (define-inline (intraline-whitespace? ch)
     (or (unsafe.char= ch #\x9)
