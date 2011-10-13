@@ -4208,7 +4208,7 @@
 
   (check
       (port-mode (open-bytevector-input-port '#vu8()))
-    => 'vicare-mode)
+    => 'vicare)
 
   #t)
 
@@ -4221,7 +4221,7 @@
 ;;;		 (pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
-	(set-port-mode! 123 'vicare-mode))
+	(set-port-mode! 123 'vicare))
     => '(123))
 
   (check
@@ -4235,9 +4235,9 @@
 
   (check
       (let ((port (open-bytevector-input-port '#vu8())))
-	(set-port-mode! port 'r6rs-mode)
+	(set-port-mode! port 'r6rs)
 	(port-mode port))
-    => 'r6rs-mode)
+    => 'r6rs)
 
   #t)
 

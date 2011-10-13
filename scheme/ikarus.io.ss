@@ -2065,7 +2065,7 @@
 ;;Field name: mode
 ;;Accessor name: (cookie-mode COOKIE)
 ;;Mutator name: (set-cookie-mode! COOKIE MODE-SYMBOL)
-;;  Hold the symbol "vicare-mode" or "r6rs-mode".
+;;  Hold the symbol "vicare" or "r6rs".
 ;;
 ;;Field name: pos
 ;;Accessor name: (cookie-pos COOKIE)
@@ -2091,7 +2091,7 @@
   (dest mode pos row-num newline-pos))
 
 (define (default-cookie device)
-  (make-cookie device 'vicare-mode 0 0 0))
+  (make-cookie device 'vicare 0 0 0))
 
 (define (input-port-byte-position port)
   ;;Defined by  Ikarus.  Return the port  position for an  input port in
@@ -4288,7 +4288,7 @@
   (define who 'set-port-mode!)
   (%assert-argument-is-port port who)
   (case mode
-    ((r6rs-mode vicare-mode)
+    ((r6rs vicare)
      (with-port (port)
        (set! port.mode mode)))
     (else

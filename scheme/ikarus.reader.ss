@@ -88,6 +88,12 @@
   ;;
   (list->string (reverse ell)))
 
+(define-inline (port-in-r6rs-mode? port)
+  (eq? (port-mode port) 'r6rs))
+
+(define-inline (port-in-vicare-mode? port)
+  (eq? (port-mode port) 'vicare))
+
 
 ;;;; data structures
 
@@ -158,6 +164,8 @@
     (%error "invalid numeric value for character" (reverse-list->string accumulated-chars))))
 
 
+;;;; characters classification
+
 (define CHAR-FIXNUM-0		($char->fixnum #\0))
 (define CHAR-FIXNUM-a		($char->fixnum #\a))
 ;;(define CHAR-FIXNUM-f		($char->fixnum #\f))
@@ -254,7 +262,9 @@
 ;;  TOKENIZE-IDENTIFIER/BAR
 ;;  TOKENIZE-IDENTIFIER/BACKSLASH
 ;;
-;;they call each other accumulating characters in a reversed list.
+;;they call each other accumulating characters in a reversed list.  When
+;;all of  an identifier has  been read: the  return value is  always the
+;;reversed list of characters.
 ;;
 
 (define (tokenize-identifier accumulated-chars port)
@@ -276,13 +286,12 @@
 	  ((unsafe.char= ch #\\)
 	   (read-char port)
 	   (tokenize-identifier/backslash accumulated-chars port #f))
-	  ((eq? (port-mode port) 'r6rs-mode)
+	  ((port-in-r6rs-mode? port)
 	   (%error "invalid identifier syntax" (reverse-list->string (cons ch accumulated-chars))))
 	  ;;FIXME Is this  correct?  To return the list  if peeked CH is
 	  ;;not recognised?
 	  (else accumulated-chars))))
 
-
 (define (tokenize-identifier/bar accumulated-chars port)
   ;;Read from PORT characters  from an identifier token between vertical
   ;;bars  "|abcd|" after  the  opening bar  has  been already  consumed;
@@ -306,7 +315,6 @@
 	  (else
 	   (recurse (cons ch accumulated-chars))))))
 
-
 (define (tokenize-identifier/backslash accumulated-chars port inside-bar?)
   ;;Read from PORT characters from  an identifier token whose first char
   ;;is a backslash sequence "\x41;" after the opening backslash has been
@@ -802,28 +810,28 @@
 	(%error "invalid eof near #!"))
       (case ch1
 	((#\e)
-	 (when (eq? (port-mode port) 'r6rs-mode)
+	 (when (port-in-r6rs-mode? port)
 	   (%error-1 "invalid syntax: #!e"))
 	 (read-char* port '(#\e) "of" "eof sequence" #f #f)
 	 (cons 'datum (eof-object)))
 	((#\r)
 	 (read-char* port '(#\r) "6rs" "#!r6rs comment" #f #f)
-	 (set-port-mode! port 'r6rs-mode)
+	 (set-port-mode! port 'r6rs)
 	 (tokenize/1 port))
 	((#\v)
 	 (read-char* port '(#\v) "icare" "#!vicare comment" #f #f)
-	 (set-port-mode! port 'vicare-mode)
+	 (set-port-mode! port 'vicare)
 	 (tokenize/1 port))
 	(else
 	 (%error-1 (format "invalid syntax near #!~a" ch1))))))
 
    ((digit? ch)
-    (when (eq? (port-mode port) 'r6rs-mode)
+    (when (port-in-r6rs-mode? port)
       (%error-1 "graph syntax is invalid in #!r6rs mode" (format "#~a" ch)))
     (tokenize-hashnum port (char->num ch)))
 
    (($char= #\: ch)
-    (when (eq? (port-mode port) 'r6rs-mode)
+    (when (port-in-r6rs-mode? port)
       (%error-1 "gensym syntax is invalid in #!r6rs mode" (format "#~a" ch)))
     (let* ((ch1 (skip-whitespace port "gensym"))
 	   (id0 (cond ((initial? ch1)
@@ -849,7 +857,7 @@
    ;;   In which "d" is ID0 and "95BEx%X86N?8X&yC" is ID1.
    ;;
    (($char= #\{ ch)
-    (when (eq? (port-mode port) 'r6rs-mode)
+    (when (port-in-r6rs-mode? port)
       (%error-1 "gensym syntax is invalid in #!r6rs mode" (format "#~a" ch)))
     (let* ((ch1 (skip-whitespace port "gensym"))
 	   (id0 (cond ((initial? ch1)
@@ -899,7 +907,7 @@
 	(cond ((char=? #\u ch1/eof)
 	       (%read-unsigned))
 	      ((char=? #\s ch1/eof)
-	       (when (eq? (port-mode port) 'r6rs-mode)
+	       (when (port-in-r6rs-mode? port)
 		 (%error "invalid #vs8 syntax in #!r6rs mode" "#vs8"))
 	       (%read-signed))
 	      ((eof-object? ch1/eof)
@@ -967,7 +975,7 @@
 ;;;                 that does not allow mixing binary and
 ;;;                 textual data in the same port.
 ;;;                Left here for historical value
-;;; (when (eq? (port-mode port) 'r6rs-mode)
+;;; (when (port-in-r6rs-mode? port)
 ;;;   (%error-1 "fasl syntax is invalid in #!r6rs mode"
 ;;;      (format "#~a" ch)))
 ;;; (die/p-1 port 'read "FIXME: fasl read disabled")
@@ -1172,7 +1180,7 @@
 
 	;;symbol with syntax "|<sym>|"
 	(($char= #\| ch)
-	 (when (eq? (port-mode port) 'r6rs-mode)
+	 (when (port-in-r6rs-mode? port)
 	   (%error "|symbol| syntax is invalid in #!r6rs mode"))
 	 (cons 'datum (string->symbol (reverse-list->string (tokenize-identifier/bar '() port)))))
 
@@ -1186,7 +1194,7 @@
 ;;;     (($char= #\{ ch) 'lbrace)
 
 	(($char= #\@ ch)
-	 (when (eq? (port-mode port) 'r6rs-mode)
+	 (when (port-in-r6rs-mode? port)
 	   (%error "@-expr syntax is invalid in #!r6rs mode"))
 	 'at-expr)
 

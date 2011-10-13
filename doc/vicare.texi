@@ -1788,34 +1788,34 @@ is run under other implementations.
 
 
 @deffn Procedure port-mode @var{input-port}
-Accept an input port as argument and return a symbol among
-@code{r6rs-mode} and @code{vicare-mode} as result.  All input ports
-start under @code{vicare-mode} and thus accept @value{PRJNAME}--specific reader
-extensions.  When the @code{#!r6rs} token is read from a port, its mode
-changes to @code{vicare-mode}.
+Accept an input port as argument and return a symbol among: @code{r6rs},
+@code{vicare}.  All input ports start under @code{vicare} mode and thus
+accept @value{PRJNAME}--specific reader extensions.  When the
+@code{#!r6rs} token is read from a port, its mode changes to
+@code{r6rs}.
 
 @example
 > (port-mode (current-input-port))
-vicare-mode
+vicare
 > #!r6rs (port-mode (current-input-port))
-r6rs-mode
+r6rs
 > #!vicare (port-mode (current-input-port))
-vicare-mode
+vicare
 @end example
 @end deffn
 
 
 @deffn Procedure set-port-mode! @var{input-port} @var{mode}
 Modifiy the lexical syntax accepted by subsequent calls to @func{read}
-on the input port.  The mode is a symbol among @code{r6rs-mode} and
-@code{vicare-mode}.  The effect of setting the port mode is similar to
+on the input port.  The mode is a symbol among @code{r6rs} and
+@code{vicare}.  The effect of setting the port mode is similar to
 that of reading the @code{#!r6rs} or @code{#!vicare} token from that
 port.
 
 @example
-> (set-port-mode! (current-input-port) 'r6rs-mode)
+> (set-port-mode! (current-input-port) 'r6rs)
 > (port-mode (current-input-port))
-r6rs-mode
+r6rs
 @end example
 @end deffn
 
@@ -1874,7 +1874,7 @@ when the port mode is @code{#!vicare}.  Examples:
 
 @example
 (define port (open-string-input-port "|123|"))
-(set-port-mode! port 'vicare-mode)
+(set-port-mode! port 'vicare)
 (define sym (read port))
 
 (symbol? sym)           @result{} #t
@@ -1886,7 +1886,7 @@ backslash sequences are allowed in bar symbols:
 
 @example
 (define port (open-string-input-port "|123-\x41;\x42;\x43;|"))
-(set-port-mode! port 'vicare-mode)
+(set-port-mode! port 'vicare)
 (define sym (read port))
 
 (symbol? sym)           @result{} #t
@@ -1900,7 +1900,7 @@ cause an error if read:
 
 @example
 (define port (open-string-input-port "|ciao|hello|"))
-(set-port-mode! port 'vicare-mode)
+(set-port-mode! port 'vicare)
 
 (read port)             @result{} ciao
 (read port)             @result{} hello
