@@ -174,6 +174,17 @@
 (define CHAR-FIXNUM-a-10	(unsafe.fx- CHAR-FIXNUM-a 10))
 (define CHAR-FIXNUM-A-10	(unsafe.fx- CHAR-FIXNUM-A 10))
 
+(define-inline (char-is-standalone-newline? ch)
+  (or (unsafe.fx= ch #\x000A)	;; linefeed
+      (unsafe.fx= ch #\x0085)	;; next line
+      (unsafe.fx= ch #\x2028)))	;; line separator
+
+(define-inline (char-is-newline-after-carriage-return? ch)
+  ;;This is used to recognise 2-char newline sequences.
+  ;;
+  (or (unsafe.fx= ch #\x000A)	;; linefeed
+      (unsafe.fx= ch #\x0085)))	;; next line
+
 (define (delimiter? ch)
   (or (char-whitespace? ch)
       (unsafe.char= ch #\()
@@ -192,7 +203,7 @@
 (define-inline (digit? ch)
   (and ($char<= #\0 ch) ($char<= ch #\9)))
 
-(define (char->num ch)
+(define (char->dec-digit ch)
   (unsafe.fx- ($char->fixnum ch) CHAR-FIXNUM-0))
 
 (define (char->hex-digit x)
@@ -370,11 +381,7 @@
   (main))
 
 
-;;These are considered newlines.
-(define LINEFEED-CHAR-SET-1 '(#\xA #\x85 #\x2028))
-
-;;These are not newlines if they appear after CR.
-(define LINEFEED-CHAR-SET-2 '(#\xA #\x85))
+;;;; reading strings
 
 (define (tokenize-string ls p)
   (let ((c (read-char p)))
@@ -441,41 +448,35 @@
 		      (cond ((eof-object? c)
 			     (die/p p 'tokenize "invalid eof inside string"))
 			    ((intraline-whitespace? c) (f))
-			    ((memv c LINEFEED-CHAR-SET-1)
+			    ((char-is-standalone-newline? c)
 			     (tokenize-string-continue ls p (read-char p)))
 			    ((eqv? c #\return)
 			     (let ((c (read-char p)))
-			       (cond ((memv c LINEFEED-CHAR-SET-2)
+			       (cond ((char-is-newline-after-carriage-return? c)
 				      (tokenize-string-continue ls p (read-char p)))
 				     (else
 				      (tokenize-string-continue ls p c)))))
 			    (else
 			     (die/p-1 p 'tokenize
 				      "non-whitespace character after escape"))))))
-		 ((memv c LINEFEED-CHAR-SET-1)
+		 ((char-is-standalone-newline? c)
 		  (tokenize-string-continue ls p (read-char p)))
 		 ((eqv? c #\return)
 		  (let ((c (read-char p)))
-		    (cond ((memv c LINEFEED-CHAR-SET-2)
+		    (cond ((char-is-newline-after-carriage-return? c)
 			   (tokenize-string-continue ls p (read-char p)))
 			  (else
 			   (tokenize-string-continue ls p c)))))
 		 (else (die/p-1 p 'tokenize "invalid string escape" c)))))
-	((memv c LINEFEED-CHAR-SET-1)
+	((char-is-standalone-newline? c)
 	 (tokenize-string (cons #\linefeed ls) p))
-	((eqv? c #\return)
-	 (let ((c (peek-char p)))
-	   (when (memv c LINEFEED-CHAR-SET-2) (read-char p))
+	((unsafe.fx= c #\return)
+	 (let ((ch1 (peek-char p)))
+	   (when (char-is-newline-after-carriage-return? ch1)
+	     (read-char p))
 	   (tokenize-string (cons #\linefeed ls) p)))
 	(else
 	 (tokenize-string (cons c ls) p))))
-
-(define (skip-comment port)
-  (let ((ch (read-char port)))
-    (unless (or (eof-object? ch)
-		(memv ch LINEFEED-CHAR-SET-1)
-		(unsafe.char= ch #\return))
-      (skip-comment port))))
 
 
 (define (tokenize-dot port)
@@ -657,6 +658,15 @@
 	       (%error "invalid syntax" (string #\# #\\ ch ch1))))))))
 
 
+;;;; reading comments
+
+(define (skip-comment port)
+  (let ((ch (read-char port)))
+    (unless (or (eof-object? ch)
+		(char-is-standalone-newline? ch)
+		(unsafe.char= ch #\return))
+      (skip-comment port))))
+
 (define (multiline-comment port)
   ;;Parse a multiline comment  "#| ... |#", possibly nested.  Accumulate
   ;;the characters in the comment, excluding the "#|" and "|#", and hand
@@ -828,7 +838,7 @@
    ((digit? ch)
     (when (port-in-r6rs-mode? port)
       (%error-1 "graph syntax is invalid in #!r6rs mode" (format "#~a" ch)))
-    (tokenize-hashnum port (char->num ch)))
+    (tokenize-hashnum port (char->dec-digit ch)))
 
    (($char= #\: ch)
     (when (port-in-r6rs-mode? port)
@@ -1078,7 +1088,7 @@
      (($char= #\= c) (cons 'mark n))
      (($char= #\# c) (cons 'ref n))
      ((digit? c)
-      (tokenize-hashnum p (fx+ (fx* n 10) (char->num c))))
+      (tokenize-hashnum p (fx+ (fx* n 10) (char->dec-digit c))))
      (else
       (die/p-1 p 'tokenize "invalid char while inside a #n mark/ref" c)))))
 
