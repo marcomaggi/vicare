@@ -315,23 +315,23 @@
 ;;
 ;;Three functions are involved:
 ;;
-;;  TOKENIZE-IDENTIFIER
-;;  TOKENIZE-IDENTIFIER/BAR
-;;  TOKENIZE-IDENTIFIER/BACKSLASH
+;;  IDENTIFIER-LEXEME
+;;  IDENTIFIER-LEXEME/BAR
+;;  IDENTIFIER-LEXEME/BACKSLASH
 ;;
 ;;they call each other accumulating characters in a reversed list.  When
 ;;all of  an identifier has  been read: the  return value is  always the
 ;;reversed list of characters.
 ;;
 
-(define (tokenize-identifier accumulated-chars port)
+(define (identifier-lexeme accumulated-chars port)
   ;;Read from PORT characters from an identifier token, accumulate them,
   ;;in reverse order and return the resulting list.
   ;;
   (define-inline (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define-inline (recurse accum)
-    (tokenize-identifier accum port))
+    (identifier-lexeme accum port))
   (let ((ch (peek-char port)))
     (cond ((eof-object? ch)
 	   accumulated-chars)
@@ -342,14 +342,14 @@
 	   accumulated-chars)
 	  ((unsafe.char= ch #\\)
 	   (read-char port)
-	   (tokenize-identifier/backslash accumulated-chars port #f))
+	   (identifier-lexeme/backslash accumulated-chars port #f))
 	  ((port-in-r6rs-mode? port)
 	   (%error "invalid identifier syntax" (reverse-list->string (cons ch accumulated-chars))))
 	  ;;FIXME Is this  correct?  To return the list  if peeked CH is
 	  ;;not recognised?
 	  (else accumulated-chars))))
 
-(define (tokenize-identifier/bar accumulated-chars port)
+(define (identifier-lexeme/bar accumulated-chars port)
   ;;Read from PORT characters  from an identifier token between vertical
   ;;bars  "|abcd|" after  the  opening bar  has  been already  consumed;
   ;;accumulate the characters in  reverse order and return the resulting
@@ -361,28 +361,28 @@
   (define-inline (%unexpected-eof-error . args)
     (die/p port 'tokenize "unexpected EOF while reading symbol" . args))
   (define-inline (recurse accum)
-    (tokenize-identifier/bar accum port))
+    (identifier-lexeme/bar accum port))
   (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
     (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
       . ?cond-clauses))
 
   (%read-char-no-eof (port ch)
     ((unsafe.char= #\\ ch)
-     (tokenize-identifier/backslash accumulated-chars port #t))
+     (identifier-lexeme/backslash accumulated-chars port #t))
     ((unsafe.char= #\| ch) ;end of symbol, whatever comes after
      accumulated-chars)
     (else
      (recurse (cons ch accumulated-chars)))))
 
-(define (tokenize-identifier/backslash accumulated-chars port inside-bar?)
+(define (identifier-lexeme/backslash accumulated-chars port inside-bar?)
   ;;Read from PORT characters from  an identifier token whose first char
   ;;is a backslash sequence "\x41;" after the opening backslash has been
   ;;already  consumed; accumulate  the characters  in reverse  order and
   ;;return the resulting list.
   ;;
   ;;When reading the baskslash sequence is terminated: if INSIDE-BAR? is
-  ;;true  TOKENIZE-IDENTIFIER/BAR is invoked  to continue  reading, else
-  ;;TOKENIZE-IDENTIFIER is invoked to continue reading.
+  ;;true  IDENTIFIER-LEXEME/BAR is invoked  to continue  reading, else
+  ;;IDENTIFIER-LEXEME is invoked to continue reading.
   ;;
   (define-inline (%error msg . args)
     (die/p port   'tokenize msg . args))
@@ -410,8 +410,8 @@
 	 (let ((accum (cons (integer->char/checked code-point accumul port)
 			    accumulated-chars)))
 	   (if inside-bar?
-	       (tokenize-identifier/bar accum port)
-	     (tokenize-identifier accum port))))
+	       (identifier-lexeme/bar accum port)
+	     (identifier-lexeme accum port))))
 	((char->hex-digit/or-false ch)
 	 => (lambda (digit)
 	      (next-digit (unsafe.fx+ digit (fx* code-point 16))
@@ -426,7 +426,7 @@
 
 ;;;; reading strings
 
-(define (tokenize-string ls port)
+(define (string-lexeme ls port)
   (define-inline (%error msg . args)
     (die/p   port 'tokenize msg . args))
   (define-inline (%error-1 msg . args)
@@ -445,15 +445,15 @@
   (define-inline (main)
     (%read-char-no-eof (port ch)
       (else
-       (tokenize-string-char ls port ch))))
+       (string-lexeme-char ls port ch))))
 
-  (define (tokenize-string-char ls port ch)
+  (define (string-lexeme-char ls port ch)
     (cond ((unsafe.char= #\" ch) ;end of the string
 	   ls)
 	  ((unsafe.char= #\\ ch)
 	   (%parse-escape-sequences ls port))
 	  (else
-	   (tokenize-string (cons ch ls) port))))
+	   (string-lexeme (cons ch ls) port))))
 
   (define-inline (%parse-escape-sequences ls port)
     ;;Read  chars from PORT  parsing an  escape sequence.   The starting
@@ -461,15 +461,15 @@
     ;;
     (%read-char-no-eof (port ch)
       ;;recognise single char escape sequences
-      ((unsafe.char= #\a ch)  (tokenize-string (cons #\x7  ls) port))
-      ((unsafe.char= #\b ch)  (tokenize-string (cons #\x8  ls) port))
-      ((unsafe.char= #\t ch)  (tokenize-string (cons #\x9  ls) port))
-      ((unsafe.char= #\n ch)  (tokenize-string (cons #\xA  ls) port))
-      ((unsafe.char= #\v ch)  (tokenize-string (cons #\xB  ls) port))
-      ((unsafe.char= #\f ch)  (tokenize-string (cons #\xC  ls) port))
-      ((unsafe.char= #\r ch)  (tokenize-string (cons #\xD  ls) port))
-      ((unsafe.char= #\" ch)  (tokenize-string (cons #\x22 ls) port))
-      ((unsafe.char= #\\ ch)  (tokenize-string (cons #\x5C ls) port))
+      ((unsafe.char= #\a ch)  (string-lexeme (cons #\x7  ls) port))
+      ((unsafe.char= #\b ch)  (string-lexeme (cons #\x8  ls) port))
+      ((unsafe.char= #\t ch)  (string-lexeme (cons #\x9  ls) port))
+      ((unsafe.char= #\n ch)  (string-lexeme (cons #\xA  ls) port))
+      ((unsafe.char= #\v ch)  (string-lexeme (cons #\xB  ls) port))
+      ((unsafe.char= #\f ch)  (string-lexeme (cons #\xC  ls) port))
+      ((unsafe.char= #\r ch)  (string-lexeme (cons #\xD  ls) port))
+      ((unsafe.char= #\" ch)  (string-lexeme (cons #\x22 ls) port))
+      ((unsafe.char= #\\ ch)  (string-lexeme (cons #\x5C ls) port))
 
       ;;inline hex escape "\xHHHH;"
       ((unsafe.char= #\x ch)
@@ -547,7 +547,7 @@
 	      (next-char (unsafe.fx+ (fx* code-point 16) digit)
 			 (cons chX accum))))
 	((unsafe.char= chX #\;)
-	 (tokenize-string (cons (integer->char/checked code-point (cons chX accum) port)
+	 (string-lexeme (cons (integer->char/checked code-point (cons chX accum) port)
 				ls)
 			  port))
 	(else
@@ -557,7 +557,7 @@
   (define (%discard-trailing-intraline-whitespace ls port ch)
     ;;Analyse CH,  and then chars read from  PORT, discarding whitespace
     ;;characters;    at    the    first   non-whitespace    char    call
-    ;;TOKENIZE-STRING-CHAR.
+    ;;STRING-LEXEME-CHAR.
     ;;
     ;;This function  is used to consume the  second intraline whitespace
     ;;in the sequence:
@@ -567,7 +567,7 @@
     ;;                                         this one
     ;;
     (define-inline (next-char ch)
-      (tokenize-string-char ls port ch))
+      (string-lexeme-char ls port ch))
     (if (intraline-whitespace? ch)
 	(let next-whitespace-char ()
 	  (%read-char-no-eof (port ch1)
@@ -589,7 +589,7 @@
   ;;read.  There return value is a datum describing the token:
   ;;
   ;;dot			The token is a standalone dot.
-  ;;(datum . ...)	The token is the symbol "...".
+  ;;(datum . ...)	The token is the ellipsis symbol.
   ;;(datum . <num>)	The token is the inexact number <NUM>.
   ;;
   (define-inline (%error msg . args)
@@ -950,9 +950,9 @@
       (%error-1 "gensym syntax is invalid in #!r6rs mode" (format "#~a" ch)))
     (let* ((ch1 (read-char-skip-whitespace port "gensym"))
 	   (id0 (cond ((initial? ch1)
-		       (reverse-list->string (tokenize-identifier (cons ch1 '()) port)))
+		       (reverse-list->string (identifier-lexeme (cons ch1 '()) port)))
 		      ((unsafe.char= #\| ch1)
-		       (reverse-list->string (tokenize-identifier/bar '() port)))
+		       (reverse-list->string (identifier-lexeme/bar '() port)))
 		      (else
 		       (%error-1 "invalid char inside gensym" ch1)))))
       (cons 'datum (gensym id0))))
@@ -979,9 +979,9 @@
 	(unsafe.char= #\} chX))
       (define-inline (%read-identifier chX)
 	(cond ((initial? chX)
-	       (reverse-list->string (tokenize-identifier (cons chX '()) port)))
+	       (reverse-list->string (identifier-lexeme (cons chX '()) port)))
 	      ((unsafe.char= #\| chX)
-	       (reverse-list->string (tokenize-identifier/bar '() port)))
+	       (reverse-list->string (identifier-lexeme/bar '() port)))
 	      (else
 	       (%error-1 "invalid char inside gensym syntax" chX))))
       (let ((id0 (%read-identifier ch1))
@@ -1257,12 +1257,12 @@
 
 	;;symbol
 	((initial? ch)
-	 (let ((ls (reverse (tokenize-identifier (cons ch '()) port))))
+	 (let ((ls (reverse (identifier-lexeme (cons ch '()) port))))
 	   (cons 'datum (string->symbol (list->string ls)))))
 
 	;;string
 	(($char= #\" ch)
-	 (let ((ls (tokenize-string '() port)))
+	 (let ((ls (string-lexeme '() port)))
 	   (cons 'datum (reverse-list->string ls))))
 
 	;;symbol "+" or number
@@ -1280,7 +1280,7 @@
 		 ((delimiter?  ch1) '(datum . -))
 		 (($char= ch1 #\>)
 		  (read-char port)
-		  (let ((ls (tokenize-identifier '() port)))
+		  (let ((ls (identifier-lexeme '() port)))
 		    (let ((str (list->string (cons* #\- #\> (reverse ls)))))
 		      (cons 'datum (string->symbol str)))))
 		 (else
@@ -1295,12 +1295,12 @@
 	(($char= #\| ch)
 	 (when (port-in-r6rs-mode? port)
 	   (%error "|symbol| syntax is invalid in #!r6rs mode"))
-	 (cons 'datum (string->symbol (reverse-list->string (tokenize-identifier/bar '() port)))))
+	 (cons 'datum (string->symbol (reverse-list->string (identifier-lexeme/bar '() port)))))
 
 	;;symbol whose first char is a backslash sequence, "\x41;-ciao"
 	(($char= #\\ ch)
 	 (cons 'datum (string->symbol (reverse-list->string
-				       (tokenize-identifier/backslash '() port #f)))))
+				       (identifier-lexeme/backslash '() port #f)))))
 
 ;;;Unused for now.
 ;;;
@@ -1742,7 +1742,7 @@
 		  (die/p p 'read "invalid eof inside nested @-expr"))
 		 ((char=? c #\")
 		  (read-char p)
-		  (let ((c* (tokenize-string c* p)))
+		  (let ((c* (string-lexeme c* p)))
 		    (f c* pos c** c*** depth locs k)))
 		 (else
 		  (let-values (((a* a*^ locs k)
@@ -1840,7 +1840,7 @@
       (let ((s (string->symbol (reverse-list->string ls))))
 	(values s s)))
     (let-values (((inits rest) (split ls)))
-      (let ((ls (tokenize-identifier inits p)))
+      (let ((ls (identifier-lexeme inits p)))
 	(let-values (((s s^) (mksymbol ls)))
 	  (let g ((rest rest)
 		  (a* (list s))
