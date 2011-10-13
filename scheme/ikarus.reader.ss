@@ -115,6 +115,8 @@
     (cons (port-id port) (and byte (+ byte offset)))))
 
 
+;;;; exception raisers
+
 (define (die/lex pos who msg . irritants)
   (raise
    (condition (make-lexical-violation)
@@ -141,27 +143,6 @@
 
 (define-inline (num-error p str ls)
   (die/p-1 p 'read str (reverse-list->string ls)))
-
-
-(define (integer->char/checked N accumulated-chars port)
-  ;;Validate the  fixnum N  as valid Unicode  code point and  return the
-  ;;corresponding character.
-  ;;
-  ;;If  N is  invalid: raise  an exception  using  ACCUMULATED-CHARS and
-  ;;PORT.  ACCUMULATED-CHARS must be a reversed list of chars from which
-  ;;N was  parsed.  PORT  must be  the port from  which the  chars where
-  ;;drawn.
-  ;;
-  (define-inline (%error msg . args)
-    (die/p port 'tokenize msg . args))
-  (define (valid-integer-char? N)
-    (cond ((<= N #xD7FF)   #t)
-	  ((<  N #xE000)   #f)
-	  ((<= N #x10FFFF) #t)
-	  (else            #f)))
-  (if (valid-integer-char? N)
-      (unsafe.integer->char N)
-    (%error "invalid numeric value for character" (reverse-list->string accumulated-chars))))
 
 
 ;;;; characters classification
@@ -200,25 +181,8 @@
   #;(or (char-whitespace? ch)
       (memq ch '(#\( #\) #\[ #\] #\" #\# #\; #\{ #\} #\|))))
 
-(define-inline (digit? ch)
+(define-inline (dec-digit? ch)
   (and ($char<= #\0 ch) ($char<= ch #\9)))
-
-(define (char->dec-digit ch)
-  (unsafe.fx- ($char->fixnum ch) CHAR-FIXNUM-0))
-
-(define (char->hex-digit x)
-  ;;If X is a character in the range of hex digits [0-9a-fA-F]: return a
-  ;;fixnum representing such digit, else return #f.
-  ;;
-  (define-inline (y)
-    ($char->fixnum x))
-  (cond ((and ($char<= #\0 x) ($char<= x #\9))
-	 (unsafe.fx- (y) CHAR-FIXNUM-0))
-	((and ($char<= #\a x) ($char<= x #\f))
-	 (unsafe.fx- (y) CHAR-FIXNUM-a-10))
-	((and ($char<= #\A x) ($char<= x #\F))
-	 (unsafe.fx- (y) CHAR-FIXNUM-A-10))
-	(else #f)))
 
 (define (initial? ch)
   (cond (($char<= ch #\x7F #;($fixnum->char 127))
@@ -257,12 +221,52 @@
 (define (subsequent? ch)
   (cond ((unsafe.char<= ch #\x7F #;($fixnum->char 127))
 	 (or (letter? ch)
-	     (digit?  ch)
+	     (dec-digit?  ch)
 	     (special-initial? ch)
 	     (special-subsequent? ch)))
 	(else
 	 (or (unicode-printable-char? ch)
 	     (memq (char-general-category ch) '(Nd Mc Me))))))
+
+
+;;;; conversion between characters and integers
+
+(define (integer->char/checked N accumulated-chars port)
+  ;;Validate the  fixnum N  as valid Unicode  code point and  return the
+  ;;corresponding character.
+  ;;
+  ;;If  N is  invalid: raise  an exception  using  ACCUMULATED-CHARS and
+  ;;PORT.  ACCUMULATED-CHARS must be a reversed list of chars from which
+  ;;N was  parsed.  PORT  must be  the port from  which the  chars where
+  ;;drawn.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (define (valid-integer-char? N)
+    (cond ((<= N #xD7FF)   #t)
+	  ((<  N #xE000)   #f)
+	  ((<= N #x10FFFF) #t)
+	  (else            #f)))
+  (if (valid-integer-char? N)
+      (unsafe.integer->char N)
+    (%error "invalid numeric value for character" (reverse-list->string accumulated-chars))))
+
+(define (char->dec-digit ch)
+  (unsafe.fx- ($char->fixnum ch) CHAR-FIXNUM-0))
+
+(define (char->hex-digit x)
+  ;;If X is a character in the range of hex digits [0-9a-fA-F]: return a
+  ;;fixnum representing such digit, else return #f.
+  ;;
+  (define-inline (y)
+    ($char->fixnum x))
+  (cond ((and ($char<= #\0 x) ($char<= x #\9))
+	 (unsafe.fx- (y) CHAR-FIXNUM-0))
+	((and ($char<= #\a x) ($char<= x #\f))
+	 (unsafe.fx- (y) CHAR-FIXNUM-a-10))
+	((and ($char<= #\A x) ($char<= x #\F))
+	 (unsafe.fx- (y) CHAR-FIXNUM-A-10))
+	(else #f)))
 
 
 ;;;; tokenising identifiers
@@ -835,7 +839,7 @@
 	(else
 	 (%error-1 (format "invalid syntax near #!~a" ch1))))))
 
-   ((digit? ch)
+   ((dec-digit? ch)
     (when (port-in-r6rs-mode? port)
       (%error-1 "graph syntax is invalid in #!r6rs mode" (format "#~a" ch)))
     (tokenize-hashnum port (char->dec-digit ch)))
@@ -1087,7 +1091,7 @@
       (die/p p 'tokenize "invalid eof inside #n mark/ref"))
      (($char= #\= c) (cons 'mark n))
      (($char= #\# c) (cons 'ref n))
-     ((digit? c)
+     ((dec-digit? c)
       (tokenize-hashnum p (fx+ (fx* n 10) (char->dec-digit c))))
      (else
       (die/p-1 p 'tokenize "invalid char while inside a #n mark/ref" c)))))
