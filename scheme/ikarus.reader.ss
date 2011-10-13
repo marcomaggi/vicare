@@ -312,26 +312,28 @@
 
 
 (define (tokenize-script-initial+pos port)
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
   (let* ((pos (make-compound-position port))
 	 (ch  (read-char port)))
     (cond ((eof-object? ch)
-	   (values (eof-object) pos))
-	  (($char= ch #\;)
-	   (skip-comment port)
+	   (values ch pos))
+	  ((unsafe.char= ch #\;)
+	   (line-comment-lexeme-skip-including-line-ending port)
 	   (tokenize/1+pos port))
-	  (($char= ch #\#)
+	  ((unsafe.char= ch #\#)
 	   (let ((pos (make-compound-position port))
 		 (ch1 (read-char port)))
 	     (cond ((eof-object? ch1)
-		    (die/p port 'tokenize "invalid eof after #"))
-		   (($char= ch1 #\!)
-		    (skip-comment port)
+		    (%error "invalid EOF after #"))
+		   ((unsafe.char= ch1 #\!)
+		    (line-comment-lexeme-skip-including-line-ending port)
 		    (tokenize/1+pos port))
-		   (($char= ch1 #\;)
-		    (read-as-comment port)
+		   ((unsafe.char= ch1 #\;)
+		    (read-and-discard-sexp port)
 		    (tokenize/1+pos port))
-		   (($char= ch1 #\|)
-		    (multiline-comment port)
+		   ((unsafe.char= ch1 #\|)
+		    (multiline-comment-lexeme port)
 		    (tokenize/1+pos port))
 		   (else
 		    (values (tokenize-hash/c ch1 port) pos)))))
@@ -341,25 +343,26 @@
 	   (values (tokenize/c ch port) pos)))))
 
 ;;; commented out because unused (Marco Maggi; Oct 13, 2011)
+;;
 #;(define (tokenize-script-initial port)
   (let ((ch (read-char port)))
     (cond ((eof-object? ch)
 	   ch)
-	  (($char= ch #\;)
-	   (skip-comment port)
+	  ((unsafe.char= ch #\;)
+	   (line-comment-lexeme-skip-including-line-ending port)
 	   (tokenize/1 port))
-	  (($char= ch #\#)
+	  ((unsafe.char= ch #\#)
 	   (let ((ch1 (read-char port)))
 	     (cond ((eof-object? ch1)
 		    (die/p port 'tokenize "invalid eof after #"))
-		   (($char= ch1 #\!)
-		    (skip-comment port)
+		   ((unsafe.char= ch1 #\!)
+		    (line-comment-lexeme-skip-including-line-ending port)
 		    (tokenize/1 port))
-		   (($char= ch1 #\;)
-		    (read-as-comment port)
+		   ((unsafe.char= ch1 #\;)
+		    (read-and-discard-sexp port)
 		    (tokenize/1 port))
-		   (($char= ch1 #\|)
-		    (multiline-comment port)
+		   ((unsafe.char= ch1 #\|)
+		    (multiline-comment-lexeme port)
 		    (tokenize/1 port))
 		   (else
 		    (tokenize-hash/c ch1 port)))))
@@ -379,17 +382,17 @@
     (cond ((eof-object? ch)
 	   (eof-object))
 	  (($char= ch #\;)
-	   (skip-comment port)
+	   (line-comment-lexeme-skip-including-line-ending port)
 	   (recurse))
 	  (($char= ch #\#)
 	   (let ((ch1 (read-char port)))
 	     (cond ((eof-object? ch1)
 		    (die/p port 'tokenize "invalid EOF after #"))
 		   (($char= ch1 #\;)
-		    (read-as-comment port)
+		    (read-and-discard-sexp port)
 		    (recurse))
 		   (($char= ch1 #\|)
-		    (multiline-comment port)
+		    (multiline-comment-lexeme port)
 		    (recurse))
 		   (else
 		    (tokenize-hash/c ch1 port)))))
@@ -410,7 +413,7 @@
     (cond ((eof-object? ch)
 	   (values (eof-object) pos))
 	  (($char= ch #\;)
-	   (skip-comment port)
+	   (line-comment-lexeme-skip-including-line-ending port)
 	   (recurse))
 	  (($char= ch #\#)
 	   (let ((pos (make-compound-position port)))
@@ -418,10 +421,10 @@
 	       (cond ((eof-object? ch1)
 		      (die/p port 'tokenize "invalid eof after #"))
 		     (($char= ch1 #\;)
-		      (read-as-comment port)
+		      (read-and-discard-sexp port)
 		      (recurse))
 		     (($char= ch1 #\|)
-		      (multiline-comment port)
+		      (multiline-comment-lexeme port)
 		      (recurse))
 		     (else
 		      (values (tokenize-hash/c ch1 port) pos))))))
@@ -1315,14 +1318,16 @@
 
 ;;;; reading comments
 
-(define (skip-comment port)
+(define (line-comment-lexeme-skip-including-line-ending port)
   (let ((ch (read-char port)))
     (unless (or (eof-object? ch)
 		(char-is-single-char-line-ending? ch)
+		;;A standalone CR ends  the line, see R6RS syntax formal
+		;;account.
 		(char-is-carriage-return? ch))
-      (skip-comment port))))
+      (line-comment-lexeme-skip-including-line-ending port))))
 
-(define (multiline-comment port)
+(define (multiline-comment-lexeme port)
   ;;Parse a multiline comment  "#| ... |#", possibly nested.  Accumulate
   ;;the characters in the comment, excluding the "#|" and "|#", and hand
   ;;the  resulting string to  the function  referenced by  the parameter
@@ -1368,7 +1373,7 @@
 	       (cond ((eof-object? ch1)
 		      (%multiline-error))
 		     (($char= #\| ch1) ;it is a nested comment
-		      (let ((v (multiline-comment port)))
+		      (let ((v (multiline-comment-lexeme port)))
 			(if (string? v)
 			    (recurse (string->reverse-list v 0 ac))
 			  (recurse ac))))
@@ -2058,6 +2063,33 @@
 #| end of module (read-expr read-expr-script-initial) |# )
 
 
+(define read
+  (case-lambda
+   (()
+    (%read-sexp (current-input-port)))
+   ((port)
+    (unless (input-port? port)
+      (assertion-violation 'read "expected input port as argument" port))
+    (%read-sexp port))))
+
+(define (get-datum p)
+  (unless (input-port? p)
+    (assertion-violation 'get-datum "not an input port"))
+  (%read-sexp p))
+
+(define (%read-sexp p)
+  (let-values (((expr expr^ locs k) (read-expr p '() void)))
+    (if (null? locs)
+	expr
+      (begin
+       (for-each (reduce-loc! p)
+	 locs)
+       (k)
+       (if (loc? expr)
+	   (loc-value expr)
+	 expr)))))
+
+
 (define (reduce-loc! p)
   (lambda (x)
     (let ((loc (cdr x)))
@@ -2080,26 +2112,11 @@
 		    h1)))
 	    h))))))
 
-(define (read-as-comment p)
-  (begin (read-expr p '() void) (void)))
-
 (define (return-annotated x)
-  (cond
-   ((and (annotation? x) (eof-object? (annotation-expression x)))
-    (eof-object))
-   (else x)))
-
-(define my-read
-  (lambda (p)
-    (let-values (((expr expr^ locs k) (read-expr p '() void)))
-      (cond
-       ((null? locs) expr)
-       (else
-	(for-each (reduce-loc! p) locs)
-	(k)
-	(if (loc? expr)
-	    (loc-value expr)
-	  expr))))))
+  (if (and (annotation? x)
+	   (eof-object? (annotation-expression x)))
+      (eof-object)
+    x))
 
 (define read-initial
   (lambda (p)
@@ -2149,19 +2166,6 @@
 	(tokenize/1 p)
       (assertion-violation 'read-token "not an input port" p)))))
 
-(define read
-  (case-lambda
-   (() (my-read (current-input-port)))
-   ((p)
-    (if (input-port? p)
-	(my-read p)
-      (assertion-violation 'read "not an input port" p)))))
-
-(define (get-datum p)
-  (unless (input-port? p)
-    (assertion-violation 'get-datum "not an input port"))
-  (my-read p))
-
 (define comment-handler
     ;;; this is stale, maybe delete
   (make-parameter
@@ -2170,6 +2174,10 @@
       (unless (procedure? x)
 	(assertion-violation 'comment-handler "not a procedure" x))
       x)))
+
+(define (read-and-discard-sexp port)
+  (read-expr port '() void)
+  (void))
 
 
 ;;;; done
