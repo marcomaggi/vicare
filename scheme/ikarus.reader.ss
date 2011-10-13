@@ -16,14 +16,21 @@
 ;;;
 
 (library (ikarus.reader)
-  (export read read-initial read-token comment-handler get-datum
-          read-annotated read-script-annotated annotation?
-          annotation-expression annotation-source
-          annotation-stripped)
+  (export read get-datum
+	  read-initial read-token
+          read-annotated read-script-annotated
+	  comment-handler
+
+	  annotation? annotation-expression
+	  annotation-source annotation-stripped)
   (import (except (ikarus)
-		  read-char read read-token comment-handler get-datum
-		  read-annotated read-script-annotated annotation?
-		  annotation-expression annotation-source annotation-stripped)
+		  read  get-datum
+		  read-char read-token
+		  read-annotated read-script-annotated
+		  comment-handler
+
+		  annotation? annotation-expression
+		  annotation-source annotation-stripped)
     (only (ikarus.string-to-number)
 	  define-string->number-parser)
     (ikarus system $chars)
@@ -120,6 +127,19 @@
 
 (define-inline (port-in-vicare-mode? port)
   (eq? (port-mode port) 'vicare))
+
+(define-inline (source-code-port? port)
+  (and (input-port? port) (textual-port? port)))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%assert-argument-is-source-code-port who port)
+  (unless (source-code-port? port)
+    (assertion-violation who "expected textual input port as argument" port)))
+
+(define-inline (%assert-argument-is-procedure who x)
+  (unless (procedure? x)
+    (assertion-violation who "expected procedure as argument" x)))
 
 
 ;;;; interface to low level functions
@@ -309,6 +329,124 @@
 	((and ($char<= #\A x) ($char<= x #\F))
 	 (unsafe.fx- (y) CHAR-FIXNUM-A-10))
 	(else #f)))
+
+
+;;;; public functions
+
+(define read
+  (case-lambda
+   (()
+    (%read-sexp (current-input-port)))
+   ((port)
+    (%assert-argument-is-source-code-port 'read port)
+    (%read-sexp port))))
+
+(define (get-datum port)
+  (%assert-argument-is-source-code-port 'get-datum port)
+  (%read-sexp port))
+
+(define read-token
+  (case-lambda
+   (()
+    (tokenize/1 (current-input-port)))
+   ((port)
+    (%assert-argument-is-source-code-port 'read-token port)
+    (tokenize/1 port))))
+
+(define (read-initial port)
+  (let-values (((expr expr^ locs k)
+		(read-expr-script-initial port '() void)))
+    (cond ((null? locs) expr)
+	  (else
+	   (for-each (reduce-loc! port)
+	     locs)
+	   (k)
+	   (if (loc? expr)
+	       (loc-value expr)
+	     expr)))))
+
+(define read-annotated
+  (case-lambda
+   ((port)
+    (%assert-argument-is-source-code-port 'read port)
+    (let-values (((expr expr^ locs k) (read-expr port '() void)))
+      (if (null? locs)
+	  (return-annotated expr^)
+	(begin
+	 (for-each (reduce-loc! port)
+	   locs)
+	 (k)
+	 (if (loc? expr)
+	     (loc-value^ expr)
+	   (return-annotated expr^))))))
+   (()
+    (read-annotated (current-input-port)))))
+
+(define (read-script-annotated port)
+  (let-values (((expr expr^ locs k)
+		(read-expr-script-initial port '() void)))
+    (if (null? locs)
+	(return-annotated expr^)
+      (begin
+       (for-each (reduce-loc! port)
+	 locs)
+       (k)
+       (if (loc? expr)
+	   (loc-value^ expr)
+	 (return-annotated expr^))))))
+
+(define comment-handler
+  (make-parameter
+      (lambda (x) (void))
+    (lambda (x)
+      (%assert-argument-is-procedure 'comment-handler x)
+      x)))
+
+
+(define (%read-sexp port)
+  (let-values (((expr expr^ locs k) (read-expr port '() void)))
+    (if (null? locs)
+	expr
+      (begin
+       (for-each (reduce-loc! port)
+	 locs)
+       (k)
+       (if (loc? expr)
+	   (loc-value expr)
+	 expr)))))
+
+(define (reduce-loc! p)
+  (lambda (x)
+    (let ((loc (cdr x)))
+      (unless (loc-set? loc)
+	(die/p p 'read "referenced mark is not set" (car x)))
+      (when (loc? (loc-value loc))
+	(let f ((h loc) (t loc))
+	  (if (loc? h)
+	      (let ((h1 (loc-value h)))
+		(if (loc? h1)
+		    (begin
+		      (when (eq? h1 t)
+			(die/p p 'read "circular marks"))
+		      (let ((v (f (loc-value h1) (loc-value t))))
+			(set-loc-value! h1 v)
+			(set-loc-value! h v)
+			v))
+		  (begin
+		    (set-loc-value! h h1)
+		    h1)))
+	    h))))))
+
+(define (return-annotated x)
+  (if (and (annotation? x)
+	   (eof-object? (annotation-expression x)))
+      (eof-object)
+    x))
+
+
+(define (read-and-discard-sexp port)
+  (read-expr port '() void)
+  (void))
 
 
 (define (tokenize-script-initial+pos port)
@@ -2073,123 +2211,6 @@
       (parse-token p locs k t pos))))
 
 #| end of module (read-expr read-expr-script-initial) |# )
-
-
-(define read
-  (case-lambda
-   (()
-    (%read-sexp (current-input-port)))
-   ((port)
-    (unless (input-port? port)
-      (assertion-violation 'read "expected input port as argument" port))
-    (%read-sexp port))))
-
-(define (get-datum p)
-  (unless (input-port? p)
-    (assertion-violation 'get-datum "not an input port"))
-  (%read-sexp p))
-
-(define (%read-sexp p)
-  (let-values (((expr expr^ locs k) (read-expr p '() void)))
-    (if (null? locs)
-	expr
-      (begin
-       (for-each (reduce-loc! p)
-	 locs)
-       (k)
-       (if (loc? expr)
-	   (loc-value expr)
-	 expr)))))
-
-
-(define (reduce-loc! p)
-  (lambda (x)
-    (let ((loc (cdr x)))
-      (unless (loc-set? loc)
-	(die/p p 'read "referenced mark is not set" (car x)))
-      (when (loc? (loc-value loc))
-	(let f ((h loc) (t loc))
-	  (if (loc? h)
-	      (let ((h1 (loc-value h)))
-		(if (loc? h1)
-		    (begin
-		      (when (eq? h1 t)
-			(die/p p 'read "circular marks"))
-		      (let ((v (f (loc-value h1) (loc-value t))))
-			(set-loc-value! h1 v)
-			(set-loc-value! h v)
-			v))
-		  (begin
-		    (set-loc-value! h h1)
-		    h1)))
-	    h))))))
-
-(define (return-annotated x)
-  (if (and (annotation? x)
-	   (eof-object? (annotation-expression x)))
-      (eof-object)
-    x))
-
-(define read-initial
-  (lambda (p)
-    (let-values (((expr expr^ locs k) (read-expr-script-initial p '() void)))
-      (cond
-       ((null? locs) expr)
-       (else
-	(for-each (reduce-loc! p) locs)
-	(k)
-	(if (loc? expr)
-	    (loc-value expr)
-	  expr))))))
-
-(define read-annotated
-  (case-lambda
-   ((p)
-    (unless (input-port? p)
-      (error 'read-annotated "not an input port" p))
-    (let-values (((expr expr^ locs k) (read-expr p '() void)))
-      (cond
-       ((null? locs) (return-annotated expr^))
-       (else
-	(for-each (reduce-loc! p) locs)
-	(k)
-	(if (loc? expr)
-	    (loc-value^ expr)
-	  (return-annotated expr^))))))
-   (() (read-annotated (current-input-port)))))
-
-(define read-script-annotated
-  (lambda (p)
-    (let-values (((expr expr^ locs k) (read-expr-script-initial p '() void)))
-      (cond
-       ((null? locs) (return-annotated expr^))
-       (else
-	(for-each (reduce-loc! p) locs)
-	(k)
-	(if (loc? expr)
-	    (loc-value^ expr)
-	  (return-annotated expr^)))))))
-
-(define read-token
-  (case-lambda
-   (() (tokenize/1 (current-input-port)))
-   ((p)
-    (if (input-port? p)
-	(tokenize/1 p)
-      (assertion-violation 'read-token "not an input port" p)))))
-
-(define comment-handler
-    ;;; this is stale, maybe delete
-  (make-parameter
-      (lambda (x) (void))
-    (lambda (x)
-      (unless (procedure? x)
-	(assertion-violation 'comment-handler "not a procedure" x))
-      x)))
-
-(define (read-and-discard-sexp port)
-  (read-expr port '() void)
-  (void))
 
 
 ;;;; done
