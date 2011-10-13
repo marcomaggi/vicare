@@ -95,6 +95,12 @@
   (eq? (port-mode port) 'vicare))
 
 
+;;;; interface to low level functions
+
+(define-inline (strings->gensym id0 id1)
+  (foreign-call "ikrt_strings_to_gensym" id0 id1))
+
+
 ;;;; data structures
 
 (define-struct loc
@@ -730,7 +736,7 @@
   ((comment-handler) (reverse-list->string (accumulate-comment-chars port '()))))
 
 
-(define (skip-whitespace port caller)
+(define (read-char-skip-whitespace port caller)
   ;;Read and  discard characters from  PORT while they are  white spaces
   ;;according  to  CHAR-WHITESPACE?.  Return  the  first character  read
   ;;which is not a white space.
@@ -741,7 +747,7 @@
   (define-inline (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define-inline (recurse)
-    (skip-whitespace port caller))
+    (read-char-skip-whitespace port caller))
   (let ((ch (read-char port)))
     (cond ((eof-object? ch)
 	   (%error "invalid EOF inside" caller))
@@ -847,7 +853,7 @@
    ((unsafe.char= #\: ch)
     (when (port-in-r6rs-mode? port)
       (%error-1 "gensym syntax is invalid in #!r6rs mode" (format "#~a" ch)))
-    (let* ((ch1 (skip-whitespace port "gensym"))
+    (let* ((ch1 (read-char-skip-whitespace port "gensym"))
 	   (id0 (cond ((initial? ch1)
 		       (reverse-list->string (tokenize-identifier (cons ch1 '()) port)))
 		      ((unsafe.char= #\| ch1)
@@ -873,7 +879,7 @@
    ((unsafe.char= #\{ ch)
     (when (port-in-r6rs-mode? port)
       (%error-1 "gensym syntax is invalid in #!r6rs mode" "#{"))
-    (let ((ch1 (skip-whitespace port "gensym")))
+    (let ((ch1 (read-char-skip-whitespace port "gensym")))
       (define-inline (%end-syntax? chX)
 	(unsafe.char= #\} chX))
       (define-inline (%read-identifier chX)
@@ -884,13 +890,13 @@
 	      (else
 	       (%error-1 "invalid char inside gensym syntax" chX))))
       (let ((id0 (%read-identifier ch1))
-	    (ch2 (skip-whitespace port "gensym")))
+	    (ch2 (read-char-skip-whitespace port "gensym")))
 	(if (%end-syntax? ch2)
-	    (cons 'datum (foreign-call "ikrt_strings_to_gensym" #f id0))
+	    `(datum . ,(strings->gensym #f id0))
 	  (let* ((id1 (%read-identifier ch2))
-		 (ch3 (skip-whitespace port "gensym")))
+		 (ch3 (read-char-skip-whitespace port "gensym")))
 	    (if (%end-syntax? ch3)
-		(cons 'datum (foreign-call "ikrt_strings_to_gensym" id0 id1))
+		`(datum . ,(strings->gensym id0 id1))
 	      (%error-1 "invalid char while looking for end of gensym syntax" ch3)))))))
 
    ;;bytevectors
