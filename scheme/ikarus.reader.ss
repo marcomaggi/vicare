@@ -74,7 +74,7 @@
 	  (begin ?form0 ?form ...)))))))
 
 
-;;;; miscellaneous helpers
+;;;; reading and peeking characters helpers
 
 (define-inline (read-char port)
   ;;Attempt to  read a  character from PORT.   If successful  return the
@@ -82,6 +82,33 @@
   ;;return the EOF object.
   ;;
   (get-char port))
+
+(define-syntax read-char-no-eof
+  (lambda (stx)
+    (syntax-case stx ()
+      ((read-char-no-eof (?port ?ch-name ?raise-error)
+	 . ?cond-clauses)
+       (and (identifier? #'?ch-name)
+	    (identifier? #'?raise-error))
+       #'(let ((?ch-name (read-char ?port)))
+	   (cond ((eof-object? ?ch-name)
+		  (?raise-error))
+		 . ?cond-clauses))))))
+
+(define-syntax peek-char-no-eof
+  (lambda (stx)
+    (syntax-case stx ()
+      ((peek-char-no-eof (?port ?ch-name ?raise-error)
+	 . ?cond-clauses)
+       (and (identifier? #'?ch-name)
+	    (identifier? #'?raise-error))
+       #'(let ((?ch-name (peek-char ?port)))
+	   (cond ((eof-object? ?ch-name)
+		  (?raise-error))
+		 . ?cond-clauses))))))
+
+
+;;;; miscellaneous helpers
 
 (define-inline (reverse-list->string ell)
   ;;There are more efficient ways to do this, but ELL is usually short.
@@ -166,7 +193,7 @@
 (define CHAR-FIXNUM-GREATEST-ASCII
   #\x7F #;($fixnum->char 127))
 
-(define-inline (char-is-standalone-newline? ch)
+(define-inline (char-is-single-char-line-ending? ch)
   (or (unsafe.fx= ch #\x000A)	;; linefeed
       (unsafe.fx= ch #\x0085)	;; next line
       (unsafe.fx= ch #\x2028)))	;; line separator
@@ -402,18 +429,6 @@
 
 ;;;; reading strings
 
-(define-syntax read-char-no-eof
-  (lambda (stx)
-    (syntax-case stx ()
-      ((read-char-no-eof (?port ?ch-name ?raise-error)
-	 . ?cond-clauses)
-       (and (identifier? #'?ch-name)
-	    (identifier? #'?raise-error))
-       #'(let ((?ch-name (read-char ?port)))
-	   (cond ((eof-object? ?ch-name)
-		  (?raise-error))
-		 . ?cond-clauses))))))
-
 (define (tokenize-string ls port)
   (define-inline (%error msg . args)
     (die/p   port 'tokenize msg . args))
@@ -426,6 +441,10 @@
     (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
       . ?cond-clauses))
 
+  (define-inline (%peek-char-no-eof (?port ?ch-name) . ?cond-clauses)
+    (peek-char-no-eof (?port ?ch-name %unexpected-eof-error)
+      . ?cond-clauses))
+
   (define-inline (main)
     (%read-char-no-eof (port ch)
       (else
@@ -436,17 +455,6 @@
 	   ls)
 	  ((unsafe.char= #\\ ch)
 	   (%parse-escape-sequences ls port ch))
-	  ;;parse LF, NEL and LS line endings
-	  ((char-is-standalone-newline? ch)
-	   (tokenize-string (cons #\linefeed ls) port))
-	  ;;parse CRLF and CRNEL line endings
-	  ((char-is-carriage-return? ch)
-	   (let ((ch1 (peek-char port)))
-	     (when (char-is-newline-after-carriage-return? ch1)
-	       (read-char port))
-	     (tokenize-string (cons #\linefeed ls) port)))
-
-	  ;;common character, just accumulate it
 	  (else
 	   (tokenize-string (cons ch ls) port))))
 
@@ -489,7 +497,7 @@
 	 (%read-char-no-eof (port chX)
 	   ((intraline-whitespace? chX)
 	    (next-whitespace-char))
-	   ((char-is-standalone-newline? chX)
+	   ((char-is-single-char-line-ending? chX)
 	    (%discard-trailing-intraline-whitespace ls port (read-char port)))
 	   ((char-is-carriage-return? chX)
 	    (%read-char-no-eof (port chY)
@@ -507,7 +515,7 @@
       ;;in which  the line ending  is a standalone  char LF, NEL  or LS,
       ;;without prefix intraline whitespace.
       ;;
-      ((char-is-standalone-newline? ch1)
+      ((char-is-single-char-line-ending? ch1)
        (%discard-trailing-intraline-whitespace ls port (read-char port)))
 
       ;;Consume the sequence:
@@ -769,8 +777,8 @@
 (define (skip-comment port)
   (let ((ch (read-char port)))
     (unless (or (eof-object? ch)
-		(char-is-standalone-newline? ch)
-		(unsafe.char= ch #\return))
+		(char-is-single-char-line-ending? ch)
+		(char-is-carriage-return? ch))
       (skip-comment port))))
 
 (define (multiline-comment port)
@@ -2164,5 +2172,7 @@
 ;;; end of file
 ;;Local Variables:
 ;;eval: (put 'read-char-no-eof		'scheme-indent-function 1)
+;;eval: (put 'peek-char-no-eof		'scheme-indent-function 1)
 ;;eval: (put '%read-char-no-eof		'scheme-indent-function 1)
+;;eval: (put '%peek-char-no-eof		'scheme-indent-function 1)
 ;;End:
