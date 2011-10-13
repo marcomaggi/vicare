@@ -109,31 +109,31 @@
     (cons (port-id port) (and byte (+ byte offset)))))
 
 
-(define (die/lex pos who msg arg*)
+(define (die/lex pos who msg . irritants)
   (raise
    (condition (make-lexical-violation)
 	      (make-message-condition msg)
-	      (if (null? arg*)
+	      (if (null? irritants)
 		  (condition)
-		(make-irritants-condition arg*))
+		(make-irritants-condition irritants))
 	      (let ((port-id (car pos))
 		    (byte    (cdr pos)))
 		(make-source-position-condition port-id byte #f))
 	      )))
 
-(define (die/pos port offset who msg arg*)
-  (die/lex (make-compound-position/with-offset port offset) who msg arg*))
+(define-inline (die/pos port offset who msg . irritants)
+  (die/lex (make-compound-position/with-offset port offset) who msg . irritants))
 
-(define (die/p p who msg . arg*)
-  (die/pos p 0 who msg arg*))
+(define-inline (die/p p who msg . irritants)
+  (die/pos p 0 who msg . irritants))
 
-(define (die/p-1 p who msg . arg*)
-  (die/pos p -1 who msg arg*))
+(define-inline (die/p-1 p who msg . irritants)
+  (die/pos p -1 who msg . irritants))
 
-(define (die/ann ann who msg . arg*)
-  (die/lex (annotation-source ann) who msg arg*))
+(define-inline (die/ann ann who msg . irritants)
+  (die/lex (annotation-source ann) who msg . irritants))
 
-(define (num-error p str ls)
+(define-inline (num-error p str ls)
   (die/p-1 p 'read str (reverse-list->string ls)))
 
 
@@ -187,7 +187,7 @@
 (define (char->num ch)
   (unsafe.fx- ($char->fixnum ch) CHAR-FIXNUM-0))
 
-(define (hex x)
+(define (char->hex-digit x)
   ;;If X is a character in the range of hex digits [0-9a-fA-F]: return a
   ;;fixnum representing such digit, else return #f.
   ;;
@@ -246,6 +246,17 @@
 	     (memq (char-general-category ch) '(Nd Mc Me))))))
 
 
+;;;; tokenising identifiers
+;;
+;;Three functions are involved:
+;;
+;;  TOKENIZE-IDENTIFIER
+;;  TOKENIZE-IDENTIFIER/BAR
+;;  TOKENIZE-IDENTIFIER/BACKSLASH
+;;
+;;they call each other accumulating characters in a reversed list.
+;;
+
 (define (tokenize-identifier accumulated-chars port)
   ;;Read from PORT characters from an identifier token, accumulate them,
   ;;in reverse order and return the resulting list.
@@ -264,11 +275,11 @@
 	   accumulated-chars)
 	  ((unsafe.char= ch #\\)
 	   (read-char port)
-	   (tokenize-identifier/backslash accumulated-chars port))
+	   (tokenize-identifier/backslash accumulated-chars port #f))
 	  ((eq? (port-mode port) 'r6rs-mode)
 	   (%error "invalid identifier syntax" (reverse-list->string (cons ch accumulated-chars))))
-	  ;;FIXME  Is this correct?   To return  the list  if CH  is not
-	  ;;recognised?
+	  ;;FIXME Is this  correct?  To return the list  if peeked CH is
+	  ;;not recognised?
 	  (else accumulated-chars))))
 
 
@@ -289,51 +300,66 @@
     (cond ((eof-object? ch)
 	   (%unexpected-eof-error))
 	  ((unsafe.char= #\\ ch)
-	   (let ((ch1 (read-char port)))
-	     (if (eof-object? ch1)
-		 (%unexpected-eof-error)
-	       (tokenize-identifier/backslash (cons ch1 accumulated-chars) port))))
+	   (tokenize-identifier/backslash accumulated-chars port #t))
 	  ((unsafe.char= #\| ch) ;end of symbol, whatever comes after
 	   accumulated-chars)
 	  (else
 	   (recurse (cons ch accumulated-chars))))))
 
 
-(define (tokenize-identifier/backslash main-ac port)
+(define (tokenize-identifier/backslash accumulated-chars port inside-bar?)
   ;;Read from PORT characters from  an identifier token whose first char
   ;;is a backslash sequence "\x41;" after the opening backslash has been
   ;;already  consumed; accumulate  the characters  in reverse  order and
   ;;return the resulting list.
   ;;
+  ;;When reading the baskslash sequence is terminated: if INSIDE-BAR? is
+  ;;true  TOKENIZE-IDENTIFIER/BAR is invoked  to continue  reading, else
+  ;;TOKENIZE-IDENTIFIER is invoked to continue reading.
+  ;;
   (define-inline (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define-inline (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
-  (let ((c (read-char port)))
-    (cond ((eof-object? c)
-	   (%error "invalid eof after symbol escape"))
-	  (($char= #\x c)
-	   (let ((c (read-char port)))
-	     (cond ((eof-object? c)
-		    (%error "invalid eof after \\x"))
-		   ((hex c) =>
-		    (lambda (v)
-		      (let f ((v v) (ac `(,c #\x #\\)))
-			(let ((c (read-char port)))
-			  (cond ((eof-object? c)
-				 (%error (format "invalid eof after ~a" (reverse-list->string ac))))
-				(($char= #\; c)
-				 (tokenize-identifier (cons (integer->char/checked v ac port) main-ac)
-						      port))
-				((hex c) =>
-				 (lambda (v0)
-				   (f (+ (* v 16) v0) (cons c ac))))
-				(else
-				 (%error-1 "invalid sequence" (list->string (cons c (reverse ac))))))))))
-		   (else
-		    (%error-1 (format "invalid sequence \\x~a" c))))))
-	  (else
-	   (%error-1 (format "invalid sequence \\~a" c))))))
+
+  (define-inline (main)
+    (let ((ch (read-char port)))
+      (cond ((eof-object? ch)
+	     (%error "invalid EOF after backslash while reading symbol" #\\))
+	    ((unsafe.char= #\x ch)
+	     (%tokenize-hex-digits))
+	    (else
+	     (%error "expected character x after backslash \
+                      while reading symbol"
+		     (string #\\ ch)
+		     (reverse-list->string accumulated-chars))))))
+
+  (define-inline (%tokenize-hex-digits)
+    (let next-digit ((code-point 0)
+		     (accumul    (list #\x #\\)))
+      (let ((ch (read-char port)))
+	(cond ((eof-object? ch)
+	       (%error "invalid EOF after backslash sequence \
+                        while reading symbol"
+		       (reverse-list->string accumul)
+		       (reverse-list->string accumulated-chars)))
+	      ((unsafe.char= #\; ch)
+	       (let ((accum (cons (integer->char/checked code-point accumul port)
+				  accumulated-chars)))
+		 (if inside-bar?
+		     (tokenize-identifier/bar accum port)
+		   (tokenize-identifier accum port))))
+	      ((char->hex-digit ch)
+	       => (lambda (digit)
+		    (next-digit (unsafe.fx+ digit (fx* code-point 16))
+				(cons ch accumul))))
+	      (else
+	       (%error "expected hex digit after backslash sequence \
+                        while reading symbol"
+		       (reverse-list->string (cons ch accumul))
+		       (reverse-list->string accumulated-chars)))))))
+
+  (main))
 
 
 ;;These are considered newlines.
@@ -383,13 +409,13 @@
 		  (let ((c (read-char p)))
 		    (cond ((eof-object? c)
 			   (die/p p 'tokenize "invalid eof inside string"))
-			  ((hex c) =>
+			  ((char->hex-digit c) =>
 			   (lambda (n)
 			     (let f ((n n) (ac (cons c '(#\x))))
 			       (let ((c (read-char p)))
 				 (cond ((eof-object? n)
 					(die/p p 'tokenize "invalid eof inside string"))
-				       ((hex c) =>
+				       ((char->hex-digit c) =>
 					(lambda (v) (f (+ (* n 16) v) (cons c ac))))
 				       (($char= c #\;)
 					(tokenize-string
@@ -593,7 +619,7 @@
 	     (cond ((or (eof-object? ch1)
 			(delimiter?  ch1))
 		    '(datum . #\x))
-		   ((hex ch1)
+		   ((char->hex-digit ch1)
 		    => (lambda (digit)
 			 (read-char port)
 			 (let next-digit ((digit       digit)
@@ -603,7 +629,7 @@
 				    (cons 'datum (integer->char/checked digit accumulated port)))
 				   ((delimiter? chX)
 				    (cons 'datum (integer->char/checked digit accumulated port)))
-				   ((hex chX)
+				   ((char->hex-digit chX)
 				    => (lambda (digit0)
 					 (read-char port)
 					 (next-digit (+ (* digit 16) digit0)
@@ -1152,7 +1178,8 @@
 
 	;;symbol whose first char is a backslash sequence, "\x41;-ciao"
 	(($char= #\\ ch)
-	 (cons 'datum (string->symbol (reverse-list->string (tokenize-identifier/backslash '() port)))))
+	 (cons 'datum (string->symbol (reverse-list->string
+				       (tokenize-identifier/backslash '() port #f)))))
 
 ;;;Unused for now.
 ;;;

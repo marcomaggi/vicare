@@ -586,7 +586,7 @@ people.
 @menu
 * overview::                    Overview of Vicare Scheme.
 * using::                       Using the program.
-* iklib::                       @value{PRJNAME} specific libraries.
+* iklib::                       Extensions library.
 * posix::                       The @posix{} interface.
 
 Internals
@@ -1645,26 +1645,22 @@ implementations.
 
 @c page
 @node iklib
-@chapter Installed libraries
+@chapter Extensions library
 
 
 In addition to the libraries listed in the @rnrs{6} standard,
-@value{PRJNAME} contains the @library{ikarus} library which provides
-additional useful features.  The @library{ikarus} library is a composite
-library---it exports a superset of all the supported bindings of
-@rnrs{6}.
-
-While not all of the exports of @library{ikarus} are documented at this
-time, this chapter attempts to describe a few of these useful
-extensions.  Extensions to Scheme's lexical syntax are also documented.
+@value{PRJNAME} offers the @library{ikarus} library which provides
+additional features; @library{ikarus} is a composite library, it exports
+a superset of all the supported bindings of @rnrs{6}.
 
 @menu
 * iklib conditions::            Additional condition types.
-* iklib reader::                Reader.
+* iklib reader::                Extensions to the reader.
+* iklib expander::              Interface to the expander.
+* iklib environment::           Environments.
 * iklib cafe::                  Cafe.
 * iklib bytevectors::           Additional bytevector functions.
 * iklib strings::               Additional string functions.
-* iklib environment::           Environments.
 * iklib load::                  Loading source files.
 * iklib import::                Local library imports.
 * iklib modules::               Local modules.
@@ -1915,6 +1911,64 @@ cause an error if read:
 @end deffn
 
 @c page
+@node iklib expander
+@section Interface to the expander
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun expand
+Undocumented.
+@end defun
+
+
+@defun core-expand
+Undocumented.
+@end defun
+
+
+@defun expand/optimize
+Undocumented.
+@end defun
+
+
+@defun expand/scc-letrec
+Undocumented.
+@end defun
+
+@c page
+@node iklib environment
+@section Environments
+
+
+@cindex Environment, interaction
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun environment?
+Undocumented.
+@end defun
+
+
+@defun interaction-environment
+Return an environment object representing the environment active at the
+@repl{}.  To be used as argument for @func{eval}.
+@end defun
+
+
+@defun new-interaction-environment
+Undocumented.
+@end defun
+
+
+@defun environment-symbols
+Undocumented.
+@end defun
+
+@c page
 @node iklib cafe
 @section Cafe
 
@@ -2056,19 +2110,6 @@ The following bindings are exported by the @library{ikarus} library.
 @defunx latin1->string @var{bytevevctor}
 Converto to and from a Scheme string and a Scheme bytevector holding the
 Latin-1 encoding of the characters.
-@end defun
-
-@c page
-@node iklib environment
-@section Environments
-
-
-@cindex Environment, interaction
-
-
-@defun interaction-environment
-Return an environment object representing the environment active at the
-@repl{}.  To be used as argument for @func{eval}.
 @end defun
 
 @c page
