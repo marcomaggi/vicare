@@ -1107,7 +1107,7 @@ ikrt_file_size(ikptr filename, ikpcb* pcb){
     } else if (sizeof(off_t) == sizeof(long long)) {
       return ull_to_number(s.st_size, pcb);
     } else {
-      fprintf(stderr, "internal error in ikarus: invalid off_t size\n");
+      fprintf(stderr, "vicare internal error: invalid off_t size\n");
       exit(-1);
     }
   } else {

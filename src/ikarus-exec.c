@@ -1,16 +1,16 @@
 /*
  *  Ikarus Scheme -- A compiler for R6RS Scheme.
  *  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
- *  
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 3 as
  *  published by the Free Software Foundation.
- *  
+ *
  *  This program is distributed in the hope that it will be useful, but
  *  WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -23,7 +23,7 @@
 #include <string.h>
 
 
-#undef DEBUG_EXEC 
+#undef DEBUG_EXEC
 
 ikptr ik_exec_code(ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp){
   ikptr argc = ik_asm_enter(pcb, code_ptr+off_code_data, argcount, cp);
@@ -37,7 +37,7 @@ ikptr ik_exec_code(ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp){
     ikptr rp = ref(top, 0);
     long int framesize = (long int) ref(rp, disp_frame_size);
 #ifdef DEBUG_EXEC
-    fprintf(stderr, "exec framesize=0x%016lx  ksize=%ld  rp=0x%016lx\n", 
+    fprintf(stderr, "exec framesize=0x%016lx  ksize=%ld  rp=0x%016lx\n",
         framesize, k->size, rp);
 #endif
     if(framesize == 0){
@@ -59,8 +59,8 @@ ikptr ik_exec_code(ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp){
       unsigned long int idx = ((unsigned long int)(&k->next)) >> pageshift;
       ((unsigned int*)(long)(pcb->dirty_vector))[idx] = -1;
     } else if (framesize > k->size) {
-      fprintf(stderr, 
-              "ikarus internal error: invalid framesize %ld, expected %ld or less\n",
+      fprintf(stderr,
+              "vicare internal error: invalid framesize %ld, expected %ld or less\n",
           framesize, k->size);
       long int offset = ref(rp, disp_frame_offset);
       fprintf(stderr, "rp = 0x%016lx\n", rp);
