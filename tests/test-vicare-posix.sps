@@ -1,14 +1,14 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: test implementation of getpid POSIX function
+;;;Contents: test implementation of POSIX functions
 ;;;Date: Mon Jun  7, 2010
 ;;;
 ;;;Abstract
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,27 +25,29 @@
 ;;;
 
 
-(import (rnrs)
-  (ikarus)
+(import (rename (ikarus)
+		(parameterize	parametrise))
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing getpid\n")
+(display "*** testing Vicare POSIX functions\n")
 
 
-;;;; code
+(parametrise ((check-test-name	'getpid))
 
-(display "result of getpid() is " )
-(display (getpid))
-(newline)
+  (display "result of getpid() is " )
+  (display (getpid))
+  (newline)
 
-(check
-    (fixnum? (getpid))
-  => #t)
+  (check
+      (fixnum? (getpid))
+    => #t)
 
-(check
-    (fixnum? (getppid))
-  => #t)
+  (check
+      (fixnum? (getppid))
+    => #t)
+
+  #t)
 
 
 ;;;; done
