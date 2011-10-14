@@ -93,7 +93,7 @@
 
 
 (define (cannot-happen)
-  (error 'ikarus-writer "internal error"))
+  (error 'vicare-writer "vicare internal error"))
 
 (define (traverse x h)
   (define (traverse-pair x h)

@@ -99,7 +99,7 @@
     ((little)		'utf-16le-codec)
     (else
      (assertion-violation 'utf-16n-codec
-       "internal error: unknown native endianness symbol" (native-endianness)))))
+       "vicare internal error: unknown native endianness symbol" (native-endianness)))))
 
 (define (utf-bom-codec)
   'utf-bom-codec)
