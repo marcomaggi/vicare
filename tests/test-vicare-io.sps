@@ -10999,32 +10999,42 @@
 									  (eol-style none))))
 		=> LINEFEED-CHAR))
 	  (list utf-8-codec utf-16-codec utf-16le-codec utf-16be-codec latin-1-codec)))
+    (list (string->latin1 (string LINEFEED-CHAR))
+	  (string->latin1 (string CARRIAGE-RETURN-CHAR))
+	  (string->latin1 (string CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+	  (string->latin1 (string NEXT-LINE-CHAR))
+	  (string->latin1 (string CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+	  (string->latin1 (string LINE-SEPARATOR-CHAR))))
+
+  (for-each
+      (lambda (input)
+	(for-each
+	    (lambda (make-codec string->bv)
+	      (for-each
+		  (lambda (eol-style)
+		    (check
+			(peek-char (open-bytevector-input-port (string->bv input)
+							       (make-transcoder (make-codec)
+										eol-style)))
+		      => LINEFEED-CHAR))
+		'(lf cr crlf nel crnel ls)))
+	  (list utf-8-codec
+		utf-16-codec
+		utf-16le-codec
+		utf-16be-codec)
+	  (list string->utf8
+		(lambda (str)
+		  (string->utf16 str (endianness big)))
+		(lambda (str)
+		  (string->utf16 str (endianness little)))
+		(lambda (str)
+		  (string->utf16 str (endianness big))))))
     (list (string LINEFEED-CHAR)
 	  (string CARRIAGE-RETURN-CHAR)
 	  (string CARRIAGE-RETURN-CHAR LINEFEED-CHAR)
 	  (string NEXT-LINE-CHAR)
 	  (string CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR)
 	  (string LINE-SEPARATOR-CHAR)))
-
-  (for-each
-      (lambda (eol-style)
-	(for-each
-	    (lambda (input)
-	      (for-each
-		  (lambda (make-codec)
-		    (check
-			(peek-char (open-bytevector-input-port input
-							       (make-transcoder (make-codec)
-										eol-style)))
-		      => LINEFEED-CHAR))
-		(list utf-8-codec utf-16-codec utf-16le-codec utf-16be-codec latin-1-codec)))
-	  (list (string LINEFEED-CHAR)
-		(string CARRIAGE-RETURN-CHAR)
-		(string CARRIAGE-RETURN-CHAR LINEFEED-CHAR)
-		(string NEXT-LINE-CHAR)
-		(string CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR)
-		(string LINE-SEPARATOR-CHAR))))
-    '(lf cr crlf nel crnel ls))
 
   #t)
 
