@@ -586,15 +586,14 @@ people.
 @menu
 * overview::                    Overview of Vicare Scheme.
 * using::                       Using the program.
-* iklib::                       @value{PRJNAME} specific libraries.
+* iklib::                       Extensions library.
 * posix::                       The @posix{} interface.
 
 Internals
 
 * objects int::                 Builtin objects.
 * debug int::                   Debug mode.
-* compiler::                    Wild notes on the compiler
-                                internals.
+* compiler::                    Wild notes on the compiler internals.
 
 Appendices
 
@@ -1646,26 +1645,22 @@ implementations.
 
 @c page
 @node iklib
-@chapter Installed libraries
+@chapter Extensions library
 
 
 In addition to the libraries listed in the @rnrs{6} standard,
-@value{PRJNAME} contains the @library{ikarus} library which provides
-additional useful features.  The @library{ikarus} library is a composite
-library---it exports a superset of all the supported bindings of
-@rnrs{6}.
-
-While not all of the exports of @library{ikarus} are documented at this
-time, this chapter attempts to describe a few of these useful
-extensions.  Extensions to Scheme's lexical syntax are also documented.
+@value{PRJNAME} offers the @library{ikarus} library which provides
+additional features; @library{ikarus} is a composite library, it exports
+a superset of all the supported bindings of @rnrs{6}.
 
 @menu
 * iklib conditions::            Additional condition types.
-* iklib reader::                Reader.
+* iklib reader::                Extensions to the reader.
+* iklib expander::              Interface to the expander.
+* iklib environment::           Environments.
 * iklib cafe::                  Cafe.
 * iklib bytevectors::           Additional bytevector functions.
 * iklib strings::               Additional string functions.
-* iklib environment::           Environments.
 * iklib load::                  Loading source files.
 * iklib import::                Local library imports.
 * iklib modules::               Local modules.
@@ -1793,34 +1788,34 @@ is run under other implementations.
 
 
 @deffn Procedure port-mode @var{input-port}
-Accept an input port as argument and return a symbol among
-@code{r6rs-mode} and @code{vicare-mode} as result.  All input ports
-start under @code{vicare-mode} and thus accept @value{PRJNAME}--specific reader
-extensions.  When the @code{#!r6rs} token is read from a port, its mode
-changes to @code{vicare-mode}.
+Accept an input port as argument and return a symbol among: @code{r6rs},
+@code{vicare}.  All input ports start under @code{vicare} mode and thus
+accept @value{PRJNAME}--specific reader extensions.  When the
+@code{#!r6rs} token is read from a port, its mode changes to
+@code{r6rs}.
 
 @example
 > (port-mode (current-input-port))
-vicare-mode
+vicare
 > #!r6rs (port-mode (current-input-port))
-r6rs-mode
+r6rs
 > #!vicare (port-mode (current-input-port))
-vicare-mode
+vicare
 @end example
 @end deffn
 
 
 @deffn Procedure set-port-mode! @var{input-port} @var{mode}
 Modifiy the lexical syntax accepted by subsequent calls to @func{read}
-on the input port.  The mode is a symbol among @code{r6rs-mode} and
-@code{vicare-mode}.  The effect of setting the port mode is similar to
+on the input port.  The mode is a symbol among @code{r6rs} and
+@code{vicare}.  The effect of setting the port mode is similar to
 that of reading the @code{#!r6rs} or @code{#!vicare} token from that
 port.
 
 @example
-> (set-port-mode! (current-input-port) 'r6rs-mode)
+> (set-port-mode! (current-input-port) 'r6rs)
 > (port-mode (current-input-port))
-r6rs-mode
+r6rs
 @end example
 @end deffn
 
@@ -1870,6 +1865,108 @@ $
 Read a bytevector as @code{#vu8(@var{octect} ...)} would do, but allow
 @var{byte} to be in the range @math{[-128, 127]}.
 @end deffn
+
+
+@deffn {Reader Syntax} {|@var{symbol}|}
+The vertical bars can be used to specify symbols whose name do not
+comply with the @rnrs{6} specifications; this syntax is available only
+when the port mode is @code{#!vicare}.  Examples:
+
+@example
+(define port (open-string-input-port "|123|"))
+(set-port-mode! port 'vicare)
+(define sym (read port))
+
+(symbol? sym)           @result{} #t
+(symbol->string sym)    @result{} "123"
+@end example
+
+@noindent
+backslash sequences are allowed in bar symbols:
+
+@example
+(define port (open-string-input-port "|123-\x41;\x42;\x43;|"))
+(set-port-mode! port 'vicare)
+(define sym (read port))
+
+(symbol? sym)           @result{} #t
+(symbol->string sym)    @result{} "123-\x41;\x42;\x43;"
+@end example
+
+@noindent
+notice that the sequence of characters @code{|ciao|hello|} is split into
+@code{ciao}, @code{hello}, @code{|} and the ending vertical bar would
+cause an error if read:
+
+@example
+(define port (open-string-input-port "|ciao|hello|"))
+(set-port-mode! port 'vicare)
+
+(read port)             @result{} ciao
+(read port)             @result{} hello
+(port-eof? port)        @result{} #f
+(get-char port)         @result{} #\|
+(port-eof? port)        @result{} #t
+@end example
+@end deffn
+
+@c page
+@node iklib expander
+@section Interface to the expander
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun expand
+Undocumented.
+@end defun
+
+
+@defun core-expand
+Undocumented.
+@end defun
+
+
+@defun expand/optimize
+Undocumented.
+@end defun
+
+
+@defun expand/scc-letrec
+Undocumented.
+@end defun
+
+@c page
+@node iklib environment
+@section Environments
+
+
+@cindex Environment, interaction
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun environment?
+Undocumented.
+@end defun
+
+
+@defun interaction-environment
+Return an environment object representing the environment active at the
+@repl{}.  To be used as argument for @func{eval}.
+@end defun
+
+
+@defun new-interaction-environment
+Undocumented.
+@end defun
+
+
+@defun environment-symbols
+Undocumented.
+@end defun
 
 @c page
 @node iklib cafe
@@ -2013,19 +2110,6 @@ The following bindings are exported by the @library{ikarus} library.
 @defunx latin1->string @var{bytevevctor}
 Converto to and from a Scheme string and a Scheme bytevector holding the
 Latin-1 encoding of the characters.
-@end defun
-
-@c page
-@node iklib environment
-@section Environments
-
-
-@cindex Environment, interaction
-
-
-@defun interaction-environment
-Return an environment object representing the environment active at the
-@repl{}.  To be used as argument for @func{eval}.
 @end defun
 
 @c page
@@ -2958,7 +3042,9 @@ data structures is marked using the @code{#n=} and @code{#n#} notation.
 @deffn Parameter print-unicode
 @deffnx Parameter print-unicode #t
 @deffnx Parameter print-unicode #f
-Unstable.
+If set to true: print Scheme Unicode characters outside of the printable
+@ascii{} range in hex format, else print them using the encoding of the
+output port.  The default is false.
 @end deffn
 
 
@@ -3621,6 +3707,7 @@ example in the previous section):
 @menu
 * iklib io filename::           File pathname handling.
 * iklib io codecs::             Transcoders and additional codecs.
+* iklib io textual::            Additional textual port features.
 * iklib io process::            Spawning processes.
 * iklib io socket::             Using network sockets.
 * iklib io non-block::          Non--blocking mode for ports.
@@ -3665,11 +3752,11 @@ the Scheme implementation is running.  Under @value{PRJNAME} such
 default is:
 
 @example
-(make-transcoder 'utf-8-codec 'none 'replace)
+(make-transcoder (utf-8-codec) 'none 'replace)
 @end example
 
 @noindent
-and additionally the function it is a parameter, so the default can be
+and additionally the function is a parameter, so the default can be
 configured.  Notice that the following functions create Scheme ports
 using the transcoder returned by @func{native-transcoder}:
 
@@ -3681,15 +3768,79 @@ call-with-input-file    call-with-output-file
 @end deffn
 
 
+The codec returned by @func{utf-16-codec}, defined by @rnrs{6}, has
+different semantics depending upon the type of the port:
+
+@itemize
+@item
+For output and input/output ports it defaults to @utf{}-16 big endian
+(which seems mandated by the Unicode Consortium).
+
+@item
+For input ports the endianness is left unspecified until the first bytes
+are read: such bytes must be a valid @utf{}-16 Byte Order Mark which
+dynamically configures the port.@footnote{The big endian @acronym{BOM}
+for @utf{}-16 is the sequence of bytes @code{#xFE #xFF}; the little
+endian @acronym{BOM} for @utf{}-16 is the sequence of bytes @code{#xFF
+#xFE}.}
+@end itemize
+
+
 @deffn Procedure utf-16le-codec
 @deffnx Procedure utf-16be-codec
-Codecs for the @utf{}-16 encoding schemes, little endian and big
-endian..
-
+Codecs for the @utf{}-16 encoding schemes, little endian and big endian.
 A call to any of these procedures returns a value that is equal in the
 sense of @func{eqv?} to the result of any other call to the same
 procedure.
 @end deffn
+
+
+@deffn Procedure utf-bom-codec
+Codec for @utf{} encoding schemes whose data open with a Byte Order
+Mark.  A call to this procedure returns a value that is equal in the
+sense of @func{eqv?} to the result of any other call to the same
+procedure.
+@end deffn
+
+@c page
+@node iklib io textual
+@subsection Additional textual port features
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun open-string-input-port @var{string}
+@defunx open-string-input-port @var{string} @var{eol-style}
+As defined by @rnrs{6}: return a textual input port whose characters are
+drawn from @var{string}.  When @var{eol-style} is given: it must be a
+symbol selecting an end--of--line style conversion, as accepted by
+@func{eol-style}; such conversion is applied to the characters drawn
+from @var{string}.
+
+If @var{string} is modified after @func{open-string-input-port} has been
+called, the effect on the returned port is unspecified.
+@end defun
+
+
+@defun open-string-input-port/id @var{string} @var{id}
+@defunx open-string-input-port/id @var{string} @var{id} @var{eol-style}
+Like @func{open-string-input-port} but allows the specification of a
+customised port identifier @var{id}, which must be a Scheme string.
+@end defun
+
+
+@defun open-string-output-port
+@defunx open-string-output-port @var{eol-style}
+As defined by @rnrs{6}, return two values: a textual output port and an
+extraction procedure; the output port accumulates the characters written
+to it for later extraction by the procedure.
+
+As a @value{PRJNAME} extension, when @var{eol-style} is given: it must
+be a symbol selecting an end--of--line style conversion, as accepted by
+@func{eol-style}; such conversion is applied to the characters written
+to the port.
+@end defun
 
 @c page
 @node iklib io process
@@ -5398,6 +5549,23 @@ The open mode is @code{O_WRONLY | O_CREAT}.
 @item 7
 The open mode is @code{O_WRONLY}.
 @end table
+
+If successful return a fixnum representing the file descriptor; if an
+error occurs in @cfunc{open} return the return value of
+@cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_open_input_output_fd (ikptr @var{pathname}, ikptr @var{opts})
+Interface to the @cfunc{open} C function.  @glibcref{Opening and Closing
+Files, open}.  Open a file for reading and writing with configurable
+mode based on @code{O_RDWR}; the access permissions when a new file is
+created are @code{S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH}.
+
+@var{pathname} must reference a bytevector object holding the file
+pathname; @var{opts} must be a fixnum representing the opening flags, it
+has the same format of the @var{opts} argument to
+@func{ikrt_open_output_fd}.
 
 If successful return a fixnum representing the file descriptor; if an
 error occurs in @cfunc{open} return the return value of

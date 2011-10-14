@@ -503,8 +503,16 @@
                          (die 'who "division by 0" x y)
                          (if (and overflow-check? ($fx= y -1))
                              (if ($fx= x (least-fixnum))
-                                 (die 'who "result not representable as fixnum"
-                                      x y)
+;;;Flatt's  test suite for  R6RS expects  an &implementation-restriction
+;;;condition  here, in truth  for no  reason I  can figure  out.  (Marco
+;;;Maggi; Oct 14, 2011)
+				 (raise
+				  (condition
+				   (make-implementation-restriction-violation)
+				   (make-who-condition 'who)
+				   (make-message-condition "result not representable as fixnum")
+				   (make-irritants-condition (list x y))))
+                                 #;(die 'who "result not representable as fixnum" x y)
                                  ($unsafe-op x y))
                              ($unsafe-op x y))))
                  (die 'who "not a fixnum" y))
@@ -565,42 +573,54 @@
         (if (fixnum? y)
             (if ($fx= y 0)
                 (die 'fxdiv0-and-mod0 "division by 0")
-                (let-values ([(d m) ($fxdiv0-and-mod0 x y)])
-                  (if (and (fixnum? d) (fixnum? m))
-                      (values d m)
-                      (die 'fxdiv0-and-mod0
-                        "results not representable as fixnums"
-                        x y))))
-            (die 'fxdiv0-and-mod0 "not a fixnum" y))
-        (die 'fxdiv0-and-mod0 "not a fixnum" x)))
+	      (begin
+		(when (and ($fx= y -1) ($fx= x (least-fixnum)))
+		  (raise (condition
+			  (make-implementation-restriction-violation)
+			  (make-who-condition 'fxdiv0-and-mod0)
+			  (make-message-condition "result not representable as fixnum")
+			  (make-irritants-condition (list x y)))))
+		(let-values ([(d m) ($fxdiv0-and-mod0 x y)])
+		  (if (and (fixnum? d) (fixnum? m))
+		      (values d m)
+		    (die 'fxdiv0-and-mod0
+			 "results not representable as fixnums"
+			 x y)))))
+	  (die 'fxdiv0-and-mod0 "not a fixnum" y))
+      (die 'fxdiv0-and-mod0 "not a fixnum" x)))
 
   (define (fxdiv0 x y)
     (if (fixnum? x)
         (if (fixnum? y)
             (if ($fx= y 0)
                 (die 'fxdiv0 "division by 0")
-                (let ([d ($fxdiv0 x y)])
-                  (if (fixnum? d)
-                      d
-                      (die 'fxdiv0
-                        "result not representable as fixnum"
-                        x y))))
-            (die 'fxdiv0 "not a fixnum" y))
-        (die 'fxdiv0 "not a fixnum" x)))
+	      (begin
+		(when (and ($fx= y -1) ($fx= x (least-fixnum)))
+		  (raise (condition
+			  (make-implementation-restriction-violation)
+			  (make-who-condition 'fxdiv0)
+			  (make-message-condition "result not representable as fixnum")
+			  (make-irritants-condition (list x y)))))
+		(let ([d ($fxdiv0 x y)])
+		  (if (fixnum? d)
+		      d
+		    (die 'fxdiv0 "result not representable as fixnum" x y)))))
+	  (die 'fxdiv0 "not a fixnum" y))
+      (die 'fxdiv0 "not a fixnum" x)))
 
   (define (fxmod0 x y)
     (if (fixnum? x)
-        (if (fixnum? y)
-            (if ($fx= y 0)
-                (die 'fxmod0 "division by 0")
-                (let ([d ($fxmod0 x y)])
-                  (if (fixnum? d)
-                      d
-                      (die 'fxmod0
-                        "result not representable as fixnum"
-                        x y))))
-            (die 'fxmod0 "not a fixnum" y))
-        (die 'fxmod0 "not a fixnum" x)))
+	(if (fixnum? y)
+	    (if ($fx= y 0)
+		(die 'fxmod0 "division by 0")
+	      (let ([d ($fxmod0 x y)])
+		(if (fixnum? d)
+		    d
+		  (die 'fxmod0
+		       "result not representable as fixnum"
+		       x y))))
+	  (die 'fxmod0 "not a fixnum" y))
+      (die 'fxmod0 "not a fixnum" x)))
   )
 
 

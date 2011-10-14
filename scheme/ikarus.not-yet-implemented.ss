@@ -19,17 +19,11 @@
 (library (ikarus not-yet-implemented)
   (export
     bitwise-reverse-bit-field
-    bitwise-rotate-bit-field
-    make-custom-binary-input/output-port
-    make-custom-textual-input/output-port
-    open-file-input/output-port )
+    bitwise-rotate-bit-field)
 
   (import (except (ikarus)
     bitwise-reverse-bit-field
-    bitwise-rotate-bit-field
-    make-custom-binary-input/output-port
-    make-custom-textual-input/output-port
-    open-file-input/output-port))
+    bitwise-rotate-bit-field))
 
   (define-syntax not-yet
     (syntax-rules ()
@@ -56,10 +50,6 @@
   (not-yet
     ;;; should be implemented
     bitwise-rotate-bit-field bitwise-reverse-bit-field
-    ;;; won't be implemented
-    make-custom-binary-input/output-port
-    make-custom-textual-input/output-port
-    open-file-input/output-port
     ))
 
-
+;;; end of file

@@ -60,7 +60,7 @@
 (define src-dir
   (or (getenv "IKARUS_SRC_DIR") "."))
 
-(define verbose-output? #f)
+(define verbose-output? #t)
 
 (define-syntax each-for
   (syntax-rules ()
@@ -1338,6 +1338,7 @@
     (string-port-buffer-size			 i)
     (input-file-buffer-size			 i)
     (output-file-buffer-size			 i)
+    (input/output-file-buffer-size		 i)
     (output-port-buffer-mode                     i r ip)
     (port-eof?                                   i r ip)
     (port-has-port-position?                     i r ip)
@@ -1364,10 +1365,11 @@
     (transcoder-codec                            i r ip)
     (transcoder-eol-style                        i r ip)
     (transcoder-error-handling-mode              i r ip)
+    (utf-8-codec                                 i r ip)
     (utf-16-codec                                i r ip)
     (utf-16le-codec                              i)
     (utf-16be-codec                              i)
-    (utf-8-codec                                 i r ip)
+    (utf-bom-codec				 i)
     (input-port?                                 i r is ip se)
     (output-port?                                i r is ip se)
     (current-input-port                          i r ip is se)
