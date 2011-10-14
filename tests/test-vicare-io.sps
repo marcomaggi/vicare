@@ -10987,54 +10987,199 @@
   (define (%bytevector string->bytevector . chars)
     (string->bytevector (apply string chars)))
 
+  (define (string->utf16le S)
+    (string->utf16 S (endianness little)))
+
+  (define (string->utf16be S)
+    (string->utf16 S (endianness big)))
+
 ;;; --------------------------------------------------------------------
+;;; Latin-1
 
-  (for-each
-      (lambda (input)
-	(for-each
-	    (lambda (make-codec)
-	      (check
-		  (peek-char (open-bytevector-input-port input
-							 (make-transcoder (make-codec)
-									  (eol-style none))))
-		=> LINEFEED-CHAR))
-	  (list utf-8-codec utf-16-codec utf-16le-codec utf-16be-codec latin-1-codec)))
-    (list (string->latin1 (string LINEFEED-CHAR))
-	  (string->latin1 (string CARRIAGE-RETURN-CHAR))
-	  (string->latin1 (string CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-	  (string->latin1 (string NEXT-LINE-CHAR))
-	  (string->latin1 (string CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-	  (string->latin1 (string LINE-SEPARATOR-CHAR))))
+  (check
+      (peek-char (open-bytevector-input-port (string->latin1 (string LINEFEED-CHAR))
+					     (make-transcoder (latin-1-codec) (eol-style none))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->latin1 (string CARRIAGE-RETURN-CHAR))
+					     (make-transcoder (latin-1-codec) (eol-style none))))
+    => CARRIAGE-RETURN-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->latin1 (string CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+					     (make-transcoder (latin-1-codec) (eol-style none))))
+    => CARRIAGE-RETURN-CHAR)
 
-  (for-each
-      (lambda (input)
-	(for-each
-	    (lambda (make-codec string->bv)
-	      (for-each
-		  (lambda (eol-style)
-		    (check
-			(peek-char (open-bytevector-input-port (string->bv input)
-							       (make-transcoder (make-codec)
-										eol-style)))
-		      => LINEFEED-CHAR))
-		'(lf cr crlf nel crnel ls)))
-	  (list utf-8-codec
-		utf-16-codec
-		utf-16le-codec
-		utf-16be-codec)
-	  (list string->utf8
-		(lambda (str)
-		  (string->utf16 str (endianness big)))
-		(lambda (str)
-		  (string->utf16 str (endianness little)))
-		(lambda (str)
-		  (string->utf16 str (endianness big))))))
-    (list (string LINEFEED-CHAR)
-	  (string CARRIAGE-RETURN-CHAR)
-	  (string CARRIAGE-RETURN-CHAR LINEFEED-CHAR)
-	  (string NEXT-LINE-CHAR)
-	  (string CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR)
-	  (string LINE-SEPARATOR-CHAR)))
+  (check
+      (peek-char (open-bytevector-input-port (string->latin1 (string LINEFEED-CHAR))
+					     (make-transcoder (latin-1-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->latin1 (string CARRIAGE-RETURN-CHAR))
+					     (make-transcoder (latin-1-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->latin1 (string CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+					     (make-transcoder (latin-1-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+
+;;; --------------------------------------------------------------------
+;;; UTF-8
+
+  (check
+      (peek-char (open-bytevector-input-port (string->utf8 (string LINEFEED-CHAR))
+					     (make-transcoder (utf-8-codec) (eol-style none))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf8 (string CARRIAGE-RETURN-CHAR))
+					     (make-transcoder (utf-8-codec) (eol-style none))))
+    => CARRIAGE-RETURN-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf8 (string CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+					     (make-transcoder (utf-8-codec) (eol-style none))))
+    => CARRIAGE-RETURN-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf8 (string NEXT-LINE-CHAR))
+					     (make-transcoder (utf-8-codec) (eol-style none))))
+    => NEXT-LINE-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf8 (string CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+					     (make-transcoder (utf-8-codec) (eol-style none))))
+    => CARRIAGE-RETURN-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf8 (string LINE-SEPARATOR-CHAR))
+					     (make-transcoder (utf-8-codec) (eol-style none))))
+    => LINE-SEPARATOR-CHAR)
+
+  (check
+      (peek-char (open-bytevector-input-port (string->utf8 (string LINEFEED-CHAR))
+					     (make-transcoder (utf-8-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf8 (string CARRIAGE-RETURN-CHAR))
+					     (make-transcoder (utf-8-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf8 (string CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+					     (make-transcoder (utf-8-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf8 (string NEXT-LINE-CHAR))
+					     (make-transcoder (utf-8-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf8 (string CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+					     (make-transcoder (utf-8-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf8 (string LINE-SEPARATOR-CHAR))
+					     (make-transcoder (utf-8-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+
+;;; --------------------------------------------------------------------
+;;; UTF-16-LE
+
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16le (string LINEFEED-CHAR))
+					     (make-transcoder (utf-16le-codec) (eol-style none))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16le (string CARRIAGE-RETURN-CHAR))
+					     (make-transcoder (utf-16le-codec) (eol-style none))))
+    => CARRIAGE-RETURN-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16le (string CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+					     (make-transcoder (utf-16le-codec) (eol-style none))))
+    => CARRIAGE-RETURN-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16le (string NEXT-LINE-CHAR))
+					     (make-transcoder (utf-16le-codec) (eol-style none))))
+    => NEXT-LINE-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16le (string CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+					     (make-transcoder (utf-16le-codec) (eol-style none))))
+    => CARRIAGE-RETURN-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16le (string LINE-SEPARATOR-CHAR))
+					     (make-transcoder (utf-16le-codec) (eol-style none))))
+    => LINE-SEPARATOR-CHAR)
+
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16le (string LINEFEED-CHAR))
+					     (make-transcoder (utf-16le-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16le (string CARRIAGE-RETURN-CHAR))
+					     (make-transcoder (utf-16le-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16le (string CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+					     (make-transcoder (utf-16le-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16le (string NEXT-LINE-CHAR))
+					     (make-transcoder (utf-16le-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16le (string CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+					     (make-transcoder (utf-16le-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16le (string LINE-SEPARATOR-CHAR))
+					     (make-transcoder (utf-16le-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+
+;;; --------------------------------------------------------------------
+;;; UTF-16-BE
+
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16be (string LINEFEED-CHAR))
+					     (make-transcoder (utf-16be-codec) (eol-style none))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16be (string CARRIAGE-RETURN-CHAR))
+					     (make-transcoder (utf-16be-codec) (eol-style none))))
+    => CARRIAGE-RETURN-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16be (string CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+					     (make-transcoder (utf-16be-codec) (eol-style none))))
+    => CARRIAGE-RETURN-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16be (string NEXT-LINE-CHAR))
+					     (make-transcoder (utf-16be-codec) (eol-style none))))
+    => NEXT-LINE-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16be (string CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+					     (make-transcoder (utf-16be-codec) (eol-style none))))
+    => CARRIAGE-RETURN-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16be (string LINE-SEPARATOR-CHAR))
+					     (make-transcoder (utf-16be-codec) (eol-style none))))
+    => LINE-SEPARATOR-CHAR)
+
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16be (string LINEFEED-CHAR))
+					     (make-transcoder (utf-16be-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16be (string CARRIAGE-RETURN-CHAR))
+					     (make-transcoder (utf-16be-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16be (string CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
+					     (make-transcoder (utf-16be-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16be (string NEXT-LINE-CHAR))
+					     (make-transcoder (utf-16be-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16be (string CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
+					     (make-transcoder (utf-16be-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
+  (check
+      (peek-char (open-bytevector-input-port (string->utf16be (string LINE-SEPARATOR-CHAR))
+					     (make-transcoder (utf-16be-codec) (eol-style lf))))
+    => LINEFEED-CHAR)
 
   #t)
 

@@ -5177,195 +5177,7 @@
   (define-inline (%peek-utf16be ?port ?who)
     (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
 
-  (main)
-
-  #;(let ((eol-bits (%unsafe.port-eol-style-bits port)))
-    (%case-textual-input-port-fast-tag (port who)
-      ((FAST-GET-UTF8-TAG)
-       (let ((ch (%unsafe.read-char-from-port-with-fast-get-utf8-tag port who)))
-	 (define-inline (%convert-single external-ch)
-	   (if (unsafe.char= ch external-ch)
-	       LINEFEED-CHAR
-	     ch))
-	 (define-inline (%convert-double external-ch1 external-ch2)
-	   (if (unsafe.char= ch external-ch1)
-	       (%convert-double-sub ch external-ch1 external-ch2)
-	     ch))
-	 (define (%convert-double-sub ch external-ch1 external-ch2)
-	   (let ((ch2 (%unsafe.peek-char-from-port-with-fast-get-utf8-tag port who)))
-	     (cond ((eof-object? ch2)
-		    (assertion-violation who
-		      "unexpected end of input while processing end of line conversion" ch))
-		   ((unsafe.char= ch2 external-ch2)
-		    (%unsafe.read-char-from-port-with-fast-get-utf8-tag port who)
-		    LINEFEED-CHAR)
-		   (else ch))))
-	 (if (eof-object? ch)
-	     ch
-	   (%case-eol-style (eol-bits who)
-	     ((EOL-LINEFEED-TAG)
-	      ch)
-	     ((EOL-CARRIAGE-RETURN-TAG)
-	      (%convert-single CARRIAGE-RETURN-CHAR))
-	     ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-	      (%convert-double CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-	     ((EOL-NEXT-LINE-TAG)
-	      (%convert-single NEXT-LINE-CHAR))
-	     ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-	      (%convert-double CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-	     ((EOL-LINE-SEPARATOR-TAG)
-	      (%convert-single LINE-SEPARATOR-CHAR))
-	     (else
-	      ch)))))
-
-      ((FAST-GET-CHAR-TAG)
-       (let ((ch (%unsafe.read-char-from-port-with-fast-get-char-tag port who)))
-	 (define-inline (%convert-single external-ch)
-	   (if (unsafe.char= ch external-ch)
-	       LINEFEED-CHAR
-	     ch))
-	 (define-inline (%convert-double external-ch1 external-ch2)
-	   (if (unsafe.char= ch external-ch1)
-	       (%convert-double-sub ch external-ch1 external-ch2)
-	     ch))
-	 (define (%convert-double-sub ch external-ch1 external-ch2)
-	   (let ((ch2 (%unsafe.peek-char-from-port-with-fast-get-char-tag port who)))
-	     (cond ((eof-object? ch2)
-		    (assertion-violation who
-		      "unexpected end of input while processing end of line conversion" ch))
-		   ((unsafe.char= ch2 external-ch2)
-		    (%unsafe.read-char-from-port-with-fast-get-char-tag port who)
-		    LINEFEED-CHAR)
-		   (else ch))))
-	 (if (eof-object? ch)
-	     ch
-	   (%case-eol-style (eol-bits who)
-	     ((EOL-LINEFEED-TAG)
-	      ch)
-	     ((EOL-CARRIAGE-RETURN-TAG)
-	      (%convert-single CARRIAGE-RETURN-CHAR))
-	     ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-	      (%convert-double CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-	     ((EOL-NEXT-LINE-TAG)
-	      (%convert-single NEXT-LINE-CHAR))
-	     ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-	      (%convert-double CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-	     ((EOL-LINE-SEPARATOR-TAG)
-	      (%convert-single LINE-SEPARATOR-CHAR))
-	     (else
-	      ch)))))
-
-      ((FAST-GET-LATIN-TAG)
-       (let ((ch (%unsafe.read-char-from-port-with-fast-get-latin1-tag port who)))
-	 (define-inline (%convert-single external-ch)
-	   (if (unsafe.char= ch external-ch)
-	       LINEFEED-CHAR
-	     ch))
-	 (define-inline (%convert-double external-ch1 external-ch2)
-	   (if (unsafe.char= ch external-ch1)
-	       (%convert-double-sub ch external-ch1 external-ch2)
-	     ch))
-	 (define (%convert-double-sub ch external-ch1 external-ch2)
-	   (let ((ch2 (%unsafe.peek-char-from-port-with-fast-get-latin1-tag port who)))
-	     (cond ((eof-object? ch2)
-		    (assertion-violation who
-		      "unexpected end of input while processing end of line conversion" ch))
-		   ((unsafe.char= ch2 external-ch2)
-		    (%unsafe.read-char-from-port-with-fast-get-latin1-tag port who)
-		    LINEFEED-CHAR)
-		   (else ch))))
-	 (if (eof-object? ch)
-	     ch
-	   (%case-eol-style (eol-bits who)
-	     ((EOL-LINEFEED-TAG)
-	      ch)
-	     ((EOL-CARRIAGE-RETURN-TAG)
-	      (%convert-single CARRIAGE-RETURN-CHAR))
-	     ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-	      (%convert-double CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-	     ((EOL-NEXT-LINE-TAG)
-	      (assertion-violation who "unsupported EOL style by Latin-1 codec" 'nel))
-	     ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-	      (assertion-violation who "unsupported EOL style by Latin-1 codec" 'crnel))
-	     ((EOL-LINE-SEPARATOR-TAG)
-	      (assertion-violation who "unsupported EOL style by Latin-1 codec" 'ls))
-	     (else
-	      ch)))))
-
-      ((FAST-GET-UTF16LE-TAG)
-       (let ((ch (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'little)))
-	 (define-inline (%convert-single external-ch)
-	   (if (unsafe.char= ch external-ch)
-	       LINEFEED-CHAR
-	     ch))
-	 (define-inline (%convert-double external-ch1 external-ch2)
-	   (if (unsafe.char= ch external-ch1)
-	       (%convert-double-sub ch external-ch1 external-ch2)
-	     ch))
-	 (define (%convert-double-sub ch external-ch1 external-ch2)
-	   (let ((ch2 (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little 0)))
-	     (cond ((eof-object? ch2)
-		    (assertion-violation who
-		      "unexpected end of input while processing end of line conversion" ch))
-		   ((unsafe.char= ch2 external-ch2)
-		    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'little)
-		    LINEFEED-CHAR)
-		   (else ch))))
-	 (if (eof-object? ch)
-	     ch
-	   (%case-eol-style (eol-bits who)
-	     ((EOL-LINEFEED-TAG)
-	      ch)
-	     ((EOL-CARRIAGE-RETURN-TAG)
-	      (%convert-single CARRIAGE-RETURN-CHAR))
-	     ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-	      (%convert-double CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-	     ((EOL-NEXT-LINE-TAG)
-	      (%convert-single NEXT-LINE-CHAR))
-	     ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-	      (%convert-double CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-	     ((EOL-LINE-SEPARATOR-TAG)
-	      (%convert-single LINE-SEPARATOR-CHAR))
-	     (else
-	      ch)))))
-
-      ((FAST-GET-UTF16BE-TAG)
-       (let ((ch (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'big)))
-	 (define-inline (%convert-single external-ch)
-	   (if (unsafe.char= ch external-ch)
-	       LINEFEED-CHAR
-	     ch))
-	 (define-inline (%convert-double external-ch1 external-ch2)
-	   (if (unsafe.char= ch external-ch1)
-	       (%convert-double-sub ch external-ch1 external-ch2)
-	     ch))
-	 (define (%convert-double-sub ch external-ch1 external-ch2)
-	   (let ((ch2 (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big 0)))
-	     (cond ((eof-object? ch2)
-		    (assertion-violation who
-		      "unexpected end of input while processing end of line conversion" ch))
-		   ((unsafe.char= ch2 external-ch2)
-		    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'big)
-		    LINEFEED-CHAR)
-		   (else ch))))
-	 (if (eof-object? ch)
-	     ch
-	   (%case-eol-style (eol-bits who)
-	     ((EOL-LINEFEED-TAG)
-	      ch)
-	     ((EOL-CARRIAGE-RETURN-TAG)
-	      (%convert-single CARRIAGE-RETURN-CHAR))
-	     ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-	      (%convert-double CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-	     ((EOL-NEXT-LINE-TAG)
-	      (%convert-single NEXT-LINE-CHAR))
-	     ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-	      (%convert-double CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-	     ((EOL-LINE-SEPARATOR-TAG)
-	      (%convert-single LINE-SEPARATOR-CHAR))
-	     (else
-	      ch)))))
-      )))
+  (main))
 
 ;;; --------------------------------------------------------------------
 
@@ -5407,28 +5219,27 @@
   (define-inline (%do-it eol-bits ?offset-of-ch2 ?peek-char ?peek-char/offset)
     ;;Actually  perform the  lookahead.   Return the  next char  without
     ;;modifying  the  port position.   If  no  characters are  available
-    ;;return  the EOF  object.   If  the first  character  of a  2-chars
-    ;;end-of-line (EOL) is found, but an attempt to read the second char
-    ;;returns EOF: raise an assertion violation.
+    ;;return the  EOF object.  Remember  that, as mandated by  R6RS, for
+    ;;input  ports  every  line-ending  sequence of  character  must  be
+    ;;converted to linefeed when the EOL style is not NONE.
     ;;
     ;;EOL-BITS must be the port attribute bits to select the EOL style.
     ;;
     ;;?PEEK-CHAR  must  be the  identifier  of  a  macro performing  the
     ;;lookahead operation  for the next available character;  it is used
     ;;to peek the  next single char and the first char  in a sequence of
-    ;;2-chars EOL.
+    ;;2-chars line-ending.
     ;;
     ;;?PEEK-CHAR/OFFSET must be the identifier of a macro performing the
     ;;forward lookahead operation for the second character in a sequence
-    ;;of 2-chars EOL.
+    ;;of 2-chars line-ending.
     ;;
     ;;?OFFSET-OF-CH2 is the  offset of the second char  in a sequence of
-    ;;2-chars EOL;  for ports having bytevector buffer:  it is expressed
-    ;;in  bytes; for  ports having  string  buffer: it  is expressed  in
-    ;;characters.   Fortunately:  2-chars EOL  sequences  always have  a
-    ;;carriage return as first char and we know that, once the codec has
-    ;;been selected,  with all the EOL  styles the offset  of the second
-    ;;char after CR is the same.
+    ;;2-chars  line-ending; for  ports having  bytevector buffer:  it is
+    ;;expressed  in  bytes;  for  ports  having  string  buffer:  it  is
+    ;;expressed   in  characters.    Fortunately:   2-chars  line-ending
+    ;;sequences always have a carriage return as first char and we know,
+    ;;once the codec has been selected, the offset of such character.
     ;;
     (let ((ch (?peek-char port who)))
       (cond ((eof-object? ch)
@@ -5444,45 +5255,7 @@
 		     ((char-is-newline-after-carriage-return? ch2)
 		      LINEFEED-CHAR)
 		     (else ch))))
-	    (else ch)))
-
-    #;(let ((ch (?peek-char port who)))
-      (define-inline (%convert-single external-ch)
-	(if (unsafe.char= ch external-ch)
-	    LINEFEED-CHAR
-	  ch))
-      (define-inline (%convert-double external-ch1 external-ch2)
-	(if (unsafe.char= ch external-ch1)
-	    (%convert-double-sub ch external-ch1 external-ch2)
-	  ch))
-      (define (%convert-double-sub ch external-ch1 external-ch2)
-	(let ((ch2 (?peek-char/offset port who ?offset-of-ch2)))
-	  (cond ((eof-object? ch2)
-		 (assertion-violation who
-		   "unexpected end of input while processing end of line conversion" ch))
-		((unsafe.char= ch2 external-ch2)
-		 LINEFEED-CHAR)
-		(else ch))))
-      (if (eof-object? ch)
-	  ch
-	;;We do not detect  here invalid association between the Latin-1
-	;;codec and EOL styles NEL, CRNEL  and LS; we trust the state of
-	;;the port to be correct.
-	(%case-eol-style (eol-bits who)
-	  ((EOL-LINEFEED-TAG)
-	   ch)
-	  ((EOL-CARRIAGE-RETURN-TAG)
-	   (%convert-single CARRIAGE-RETURN-CHAR))
-	  ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-	   (%convert-double CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-	  ((EOL-NEXT-LINE-TAG)
-	   (%convert-single NEXT-LINE-CHAR))
-	  ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-	   (%convert-double CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-	  ((EOL-LINE-SEPARATOR-TAG)
-	   (%convert-single LINE-SEPARATOR-CHAR))
-	  (else
-	   ch)))))
+	    (else ch))))
 
   (define-inline (%peek-char ?port ?who)
     (%unsafe.peek-char-from-port-with-fast-get-char-tag ?port ?who))
