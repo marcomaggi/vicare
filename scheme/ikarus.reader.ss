@@ -47,6 +47,7 @@
 		    ($fxlogand	fxand)		 ;logic AND
 		    ($fx+	fx+)
 		    ($fx-	fx-)
+		    ($fx*	fx*)
 		    ($fx<	fx<)
 		    ($fx>	fx>)
 		    ($fx>=	fx>=)
@@ -1007,7 +1008,8 @@
     ((unsafe.char= #\= ch) (cons 'mark N))
     ((unsafe.char= #\# ch) (cons 'ref  N))
     ((dec-digit? ch)
-     (tokenize-hashnum port (unsafe.fx+ (fx* N 10) (char->dec-digit ch))))
+     (tokenize-hashnum port (let ((digit (char->dec-digit ch)))
+			      (unsafe.fx+ (unsafe.fx* N 10) digit))))
     (else
      (%error "invalid char while inside a #n mark/ref" ch))))
 
@@ -1115,7 +1117,7 @@
 	     (identifier-lexeme accum port))))
 	((char->hex-digit/or-false ch)
 	 => (lambda (digit)
-	      (next-digit (unsafe.fx+ digit (fx* code-point 16))
+	      (next-digit (unsafe.fx+ digit (unsafe.fx* code-point 16))
 			  (cons ch accumul))))
 	(else
 	 (%error "expected hex digit after backslash sequence while reading symbol"
@@ -1245,7 +1247,7 @@
       (%read-char-no-eof (port chX)
 	((char->hex-digit/or-false chX)
 	 => (lambda (digit)
-	      (next-char (unsafe.fx+ (fx* code-point 16) digit)
+	      (next-char (unsafe.fx+ (unsafe.fx* code-point 16) digit)
 			 (cons chX accum))))
 	((unsafe.char= chX #\;)
 	 (string-lexeme (cons (integer->char/checked code-point (cons chX accum) port)
