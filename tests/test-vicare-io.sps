@@ -4104,11 +4104,11 @@
     => TEST-STRING-FOR-UTF-8)
 
   (check
-      (let* ((bin-port	(open-bytevector-input-port (string->utf16 TEST-STRING-FOR-UTF-16-LE
-								   (endianness little))))
+      (let* ((bin-port	(open-bytevector-input-port (string->utf16 TEST-STRING-FOR-UTF-16-BE
+								   (endianness big))))
 	     (tran-port	(transcoded-port bin-port (make-transcoder (utf-16-codec)))))
 	(get-string-all tran-port))
-    => TEST-STRING-FOR-UTF-16-LE)
+    => TEST-STRING-FOR-UTF-16-BE)
 
   ;;There is no UTF-32 codec.
   #;(check
@@ -4154,9 +4154,9 @@
 	(let ((tran-port (transcoded-port bin-port (make-transcoder (utf-16-codec)
 								    (eol-style none)
 								    (error-handling-mode replace)))))
-	  (put-string tran-port TEST-STRING-FOR-UTF-16-LE)
-	  (utf16->string (extract) (endianness little))))
-    => TEST-STRING-FOR-UTF-16-LE)
+	  (put-string tran-port TEST-STRING-FOR-UTF-16-BE)
+	  (utf16->string (extract) (endianness big))))
+    => TEST-STRING-FOR-UTF-16-BE)
 
   (check
       (let-values (((bin-port extract) (open-bytevector-output-port)))
@@ -5594,8 +5594,8 @@
 		      (loop (cons (read-char port) L))))))))
 
     (check
-	(doit TEST-BYTEVECTOR-FOR-UTF-16-LE)
-      => TEST-STRING-FOR-UTF-16-LE)
+	(doit TEST-BYTEVECTOR-FOR-UTF-16-BE)
+      => TEST-STRING-FOR-UTF-16-BE)
 
     (check
 	(doit TEST-BYTEVECTOR-FOR-UTF-16-LE/BOM)
@@ -5614,8 +5614,8 @@
 		(let ((port (open-bytevector-input-port bv (make-transcoder (utf-16-codec)))))
 		  (read-char port)))))
 
-    (check	;little endian char, default
-	(doit ONE-WORD-UTF-16-CHAR-UTF-16-LE)
+    (check	;big endian char, default
+	(doit ONE-WORD-UTF-16-CHAR-UTF-16-BE)
       => ONE-WORD-UTF-16-CHAR)
 
     (check	;little endian char, with bom
@@ -5642,18 +5642,18 @@
 
     (check	;attempt  to read  incomplete single  word  UTF-16 char,
 		;unexpected EOF, ignore
-	(doit (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-LE 0 1) (error-handling-mode ignore))
+	(doit (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-BE 0 1) (error-handling-mode ignore))
       => `(,(eof-object) #t))
 
     (check	;attempt  to read  incomplete single  word  UTF-16 char,
 		;unexpected EOF, replace
-	(doit (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-LE 0 1) (error-handling-mode replace))
+	(doit (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-BE 0 1) (error-handling-mode replace))
       => '(#\xFFFD #t))
 
     (check	;attempt  to read  incomplete single  word  UTF-16 char,
 		;unexpected EOF, raise
-	(gdoit (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-LE 0 1) (error-handling-mode raise))
-      => (bytevector->u8-list (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-LE 0 1)))
+	(gdoit (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-BE 0 1) (error-handling-mode raise))
+      => (bytevector->u8-list (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-BE 0 1)))
 
     #f)
 
@@ -5664,8 +5664,8 @@
 		(let ((port (open-bytevector-input-port bv (make-transcoder (utf-16-codec)))))
 		  (read-char port)))))
 
-    (check	;little endian char, default
-	(doit TWO-WORDS-UTF-16-CHAR-UTF-16-LE)
+    (check	;big endian char, default
+	(doit TWO-WORDS-UTF-16-CHAR-UTF-16-BE)
       => TWO-WORDS-UTF-16-CHAR)
 
     (check	;little endian char, with bom
@@ -5693,28 +5693,28 @@
     (check	;attempt   to  read   incomplete  2-word   UTF-16  char,
 		;unexpected EOF, ignore
 	(let ((mode (error-handling-mode ignore)))
-	  (list (doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 1) mode)
-		(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 2) mode)
-		(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 3) mode)))
+	  (list (doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 1) mode)
+		(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 2) mode)
+		(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 3) mode)))
       => `((,(eof-object) #t) (,(eof-object) #t) (,(eof-object) #t)))
 
     (check	;attempt   to  read   incomplete  2-word   UTF-16  char,
 		;unexpected EOF, replace
 	(let ((mode (error-handling-mode replace)))
-	  (list (doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 1) mode)
-		(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 2) mode)
-		(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 3) mode)))
+	  (list (doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 1) mode)
+		(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 2) mode)
+		(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 3) mode)))
       => '((#\xFFFD #t) (#\xFFFD #t) (#\xFFFD #t)))
 
     (check	;attempt  to read  incomplete single  word  UTF-16 char,
 		;unexpected EOF, raise
 	(let ((mode (error-handling-mode raise)))
-	  (list (gdoit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 1) mode)
-		(gdoit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 2) mode)
-		(gdoit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 3) mode)))
-      => (list (bytevector->u8-list (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 1))
-	       (bytevector->u8-list (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 2))
-	       (bytevector->u8-list (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 3))))
+	  (list (gdoit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 1) mode)
+		(gdoit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 2) mode)
+		(gdoit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 3) mode)))
+      => (list (bytevector->u8-list (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 1))
+	       (bytevector->u8-list (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 2))
+	       (bytevector->u8-list (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 3))))
 
     #f)
 
@@ -5735,21 +5735,21 @@
 
     (check	;attempt to read corrupted 1-word UTF-16 char, ignore
 	(let ((mode (error-handling-mode ignore)))
-	  (list (doit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-LE     mode)
+	  (list (doit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-BE     mode)
 		(doit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(doit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-BE/BOM mode)))
       => `((,(eof-object) #t) (,(eof-object) #t) (,(eof-object) #t)))
 
     (check	;attempt to read corrupted 1-word UTF-16 char, replace
 	(let ((mode (error-handling-mode replace)))
-	  (list (doit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-LE     mode)
+	  (list (doit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-BE     mode)
 		(doit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(doit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-BE/BOM mode)))
       => '((#\xFFFD #t) (#\xFFFD #t) (#\xFFFD #t)))
 
     (check	;attempt to read corrupted 1-word UTF-16 char, raise
 	(let ((mode (error-handling-mode raise)))
-	  (list (gdoit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-LE     mode)
+	  (list (gdoit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-BE     mode)
 		(gdoit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(gdoit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-BE/BOM mode)))
       => `((,CORRUPTED-ONE-WORD-UTF-16-CHAR-WORD)
@@ -5775,10 +5775,10 @@
 
     (check	;attempt to read corrupted 2-word UTF-16 char, ignore
 	(let ((mode (error-handling-mode ignore)))
-	  (list (doit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-LE     mode)
+	  (list (doit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-BE     mode)
 		(doit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(doit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-BE/BOM mode)
-		(doit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-LE     mode)
+		(doit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-BE     mode)
 		(doit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(doit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-BE/BOM mode)))
       => `((,(eof-object) #t) (,(eof-object) #t) (,(eof-object) #t)
@@ -5786,10 +5786,10 @@
 
     (check	;attempt to read corrupted 2-word UTF-16 char, replace
 	(let ((mode (error-handling-mode replace)))
-	  (list (doit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-LE     mode)
+	  (list (doit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-BE     mode)
 		(doit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(doit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-BE/BOM mode)
-		(doit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-LE     mode)
+		(doit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-BE     mode)
 		(doit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(doit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-BE/BOM mode)))
       => '((#\xFFFD #t) (#\xFFFD #t) (#\xFFFD #t)
@@ -5797,10 +5797,10 @@
 
     (check	;attempt to read corrupted 2-word UTF-16 char, raise
 	(let ((mode (error-handling-mode raise)))
-	  (list (gdoit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-LE     mode)
+	  (list (gdoit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-BE     mode)
 		(gdoit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(gdoit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-BE/BOM mode)
-		(gdoit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-LE     mode)
+		(gdoit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-BE     mode)
 		(gdoit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(gdoit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-BE/BOM mode)))
       => `((,CORRUPTED1-TWO-WORDS-UTF-16-CHAR-1ST-WORD ,CORRUPTED1-TWO-WORDS-UTF-16-CHAR-2ND-WORD)
@@ -6201,8 +6201,8 @@
 		      (loop (cons (%peek-and-consume-char port) L))))))))
 
     (check
-	(doit TEST-BYTEVECTOR-FOR-UTF-16-LE)
-      => TEST-STRING-FOR-UTF-16-LE)
+	(doit TEST-BYTEVECTOR-FOR-UTF-16-BE)
+      => TEST-STRING-FOR-UTF-16-BE)
 
     (check
 	(doit TEST-BYTEVECTOR-FOR-UTF-16-LE/BOM)
@@ -6221,8 +6221,8 @@
 		(let ((port (open-bytevector-input-port bv (make-transcoder (utf-16-codec)))))
 		  (%peek-and-consume-char port)))))
 
-    (check	;little endian char, default
-	(doit ONE-WORD-UTF-16-CHAR-UTF-16-LE)
+    (check	;big endian char, default
+	(doit ONE-WORD-UTF-16-CHAR-UTF-16-BE)
       => ONE-WORD-UTF-16-CHAR)
 
     (check	;little endian char, with bom
@@ -6249,18 +6249,18 @@
 
     (check	;attempt  to peek  incomplete single  word  UTF-16 char,
 		;unexpected EOF, ignore
-	(doit (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-LE 0 1) (error-handling-mode ignore))
+	(doit (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-BE 0 1) (error-handling-mode ignore))
       => `(,(eof-object) #t))
 
     (check	;attempt  to peek  incomplete single  word  UTF-16 char,
 		;unexpected EOF, replace
-	(doit (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-LE 0 1) (error-handling-mode replace))
+	(doit (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-BE 0 1) (error-handling-mode replace))
       => '(#\xFFFD #t))
 
     (check	;attempt  to peek  incomplete single  word  UTF-16 char,
 		;unexpected EOF, raise
-	(gdoit (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-LE 0 1) (error-handling-mode raise))
-      => (bytevector->u8-list (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-LE 0 1)))
+	(gdoit (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-BE 0 1) (error-handling-mode raise))
+      => (bytevector->u8-list (subbytevector-u8 ONE-WORD-UTF-16-CHAR-UTF-16-BE 0 1)))
 
     #f)
 
@@ -6271,8 +6271,8 @@
 		(let ((port (open-bytevector-input-port bv (make-transcoder (utf-16-codec)))))
 		  (%peek-and-consume-char port)))))
 
-    (check	;little endian char, default
-	(doit TWO-WORDS-UTF-16-CHAR-UTF-16-LE)
+    (check	;big endian char, default
+	(doit TWO-WORDS-UTF-16-CHAR-UTF-16-BE)
       => TWO-WORDS-UTF-16-CHAR)
 
     (check	;little endian char, with bom
@@ -6300,28 +6300,28 @@
     (check	;attempt   to  read   incomplete  2-word   UTF-16  char,
 		;unexpected EOF, ignore
 	(let ((mode (error-handling-mode ignore)))
-	  (list (doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 1) mode)
-		(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 2) mode)
-		(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 3) mode)))
+	  (list (doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 1) mode)
+		(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 2) mode)
+		(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 3) mode)))
       => `((,(eof-object) #t) (,(eof-object) #t) (,(eof-object) #t)))
 
     (check	;attempt   to  read   incomplete  2-word   UTF-16  char,
 		;unexpected EOF, replace
 	(let ((mode (error-handling-mode replace)))
-	  (list (doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 1) mode)
-		(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 2) mode)
-		(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 3) mode)))
+	  (list (doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 1) mode)
+		(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 2) mode)
+		(doit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 3) mode)))
       => '((#\xFFFD #t) (#\xFFFD #t) (#\xFFFD #t)))
 
     (check	;attempt  to peek  incomplete single  word  UTF-16 char,
 		;unexpected EOF, raise
 	(let ((mode (error-handling-mode raise)))
-	  (list (gdoit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 1) mode)
-		(gdoit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 2) mode)
-		(gdoit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 3) mode)))
-      => (list (bytevector->u8-list (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 1))
-	       (bytevector->u8-list (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 2))
-	       (bytevector->u8-list (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-LE 0 3))))
+	  (list (gdoit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 1) mode)
+		(gdoit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 2) mode)
+		(gdoit (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 3) mode)))
+      => (list (bytevector->u8-list (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 1))
+	       (bytevector->u8-list (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 2))
+	       (bytevector->u8-list (subbytevector-u8 TWO-WORDS-UTF-16-CHAR-UTF-16-BE 0 3))))
 
     #f)
 
@@ -6342,21 +6342,21 @@
 
     (check	;attempt to peek corrupted 1-word UTF-16 char, ignore
 	(let ((mode (error-handling-mode ignore)))
-	  (list (doit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-LE     mode)
+	  (list (doit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-BE     mode)
 		(doit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(doit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-BE/BOM mode)))
       => `((,(eof-object) #t) (,(eof-object) #t) (,(eof-object) #t)))
 
     (check	;attempt to peek corrupted 1-word UTF-16 char, replace
 	(let ((mode (error-handling-mode replace)))
-	  (list (doit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-LE     mode)
+	  (list (doit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-BE     mode)
 		(doit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(doit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-BE/BOM mode)))
       => '((#\xFFFD #t) (#\xFFFD #t) (#\xFFFD #t)))
 
     (check	;attempt to peek corrupted 1-word UTF-16 char, raise
 	(let ((mode (error-handling-mode raise)))
-	  (list (gdoit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-LE     mode)
+	  (list (gdoit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-BE     mode)
 		(gdoit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(gdoit CORRUPTED-ONE-WORD-UTF-16-CHAR-UTF-16-BE/BOM mode)))
       => `((,CORRUPTED-ONE-WORD-UTF-16-CHAR-WORD)
@@ -6382,10 +6382,10 @@
 
     (check	;attempt to peek corrupted 2-word UTF-16 char, ignore
 	(let ((mode (error-handling-mode ignore)))
-	  (list (doit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-LE     mode)
+	  (list (doit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-BE     mode)
 		(doit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(doit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-BE/BOM mode)
-		(doit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-LE     mode)
+		(doit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-BE     mode)
 		(doit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(doit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-BE/BOM mode)))
       => `((,(eof-object) #t) (,(eof-object) #t) (,(eof-object) #t)
@@ -6393,10 +6393,10 @@
 
     (check 	;attempt to peek corrupted 2-word UTF-16 char, replace
 	(let ((mode (error-handling-mode replace)))
-	  (list (doit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-LE     mode)
+	  (list (doit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-BE     mode)
 		(doit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(doit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-BE/BOM mode)
-		(doit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-LE     mode)
+		(doit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-BE     mode)
 		(doit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(doit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-BE/BOM mode)))
       => '((#\xFFFD #t) (#\xFFFD #t) (#\xFFFD #t)
@@ -6404,10 +6404,10 @@
 
     (check	;attempt to peek corrupted 2-word UTF-16 char, raise
 	(let ((mode (error-handling-mode raise)))
-	  (list (gdoit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-LE     mode)
+	  (list (gdoit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-BE     mode)
 		(gdoit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(gdoit CORRUPTED1-TWO-WORDS-UTF-16-CHAR-UTF-16-BE/BOM mode)
-		(gdoit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-LE     mode)
+		(gdoit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-BE     mode)
 		(gdoit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-LE/BOM mode)
 		(gdoit CORRUPTED2-TWO-WORDS-UTF-16-CHAR-UTF-16-BE/BOM mode)))
       => `((,CORRUPTED1-TWO-WORDS-UTF-16-CHAR-1ST-WORD ,CORRUPTED1-TWO-WORDS-UTF-16-CHAR-2ND-WORD)
@@ -6634,19 +6634,19 @@
     => (eof-object))
 
   (check	;count is bigger than available data
-      (let ((port (open-bytevector-input-port (string->utf16 "ABCD" (endianness little))
+      (let ((port (open-bytevector-input-port (string->utf16 "ABCD" (endianness big))
 					      (make-transcoder (utf-16-codec)))))
 	(get-string-n port 10))
     => "ABCD")
 
-  ;; little endian, default
+  ;; big endian, default
   (let* ((src.len 1024)
   	 (src.str (let ((str (make-string src.len)))
   		    (do ((i 0 (+ 1 i)))
   			((= i src.len)
   			 str)
   		      (string-set! str i (integer->char i)))))
-	 (src.bv  (string->utf16 src.str (endianness little)))
+	 (src.bv  (string->utf16 src.str (endianness big)))
 	 (doit	(lambda (count)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
 		    (get-string-n port count)))))
@@ -6666,7 +6666,7 @@
   			 str)
   		      (string-set! str i (integer->char i)))))
 	 (src.bv  (bytevector-append BYTE-ORDER-MARK-UTF-16-LE
-				      (string->utf16 src.str (endianness little))))
+				     (string->utf16 src.str (endianness little))))
 	 (doit	(lambda (count)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
 		    (get-string-n port count)))))
@@ -6685,7 +6685,7 @@
   			 str)
   		      (string-set! str i (integer->char i)))))
 	 (src.bv  (bytevector-append BYTE-ORDER-MARK-UTF-16-BE
-				      (string->utf16 src.str (endianness big))))
+				     (string->utf16 src.str (endianness big))))
 	 (doit	(lambda (count)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
 		    (get-string-n port count)))))
@@ -7061,7 +7061,7 @@
     => (list (eof-object) "ZZZZZZZZZZ"))
 
   (check	;count is bigger than available data
-      (let ((port (open-bytevector-input-port (string->utf16 "ABCD" (endianness little))
+      (let ((port (open-bytevector-input-port (string->utf16 "ABCD" (endianness big))
 					      (make-transcoder (utf-16-codec)))))
 	(let ((dst.str		(make-string 10 #\Z))
 	      (dst.start	0)
@@ -7069,14 +7069,14 @@
 	  (list (get-string-n! port dst.str dst.start count) dst.str)))
     => '(4 "ABCDZZZZZZ"))
 
-  ;; little endian, default
+  ;; big endian, default
   (let* ((src.len 1024)
   	 (src.str (let ((str (make-string src.len)))
   		    (do ((i 0 (+ 1 i)))
   			((= i src.len)
   			 str)
   		      (string-set! str i (integer->char i)))))
-	 (src.bv  (string->utf16 src.str (endianness little)))
+	 (src.bv  (string->utf16 src.str (endianness big)))
 	 (doit	(lambda (count len)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
 		    (let ((dst.str	(make-string len #\Z))
@@ -7098,7 +7098,7 @@
   			 str)
   		      (string-set! str i (integer->char i)))))
  	 (src.bv  (bytevector-append BYTE-ORDER-MARK-UTF-16-LE
- 				      (string->utf16 src.str (endianness little))))
+				     (string->utf16 src.str (endianness little))))
 	 (doit	(lambda (count len)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
 		    (let ((dst.str	(make-string len #\Z))
@@ -7120,7 +7120,7 @@
   			 str)
   		      (string-set! str i (integer->char i)))))
  	 (src.bv  (bytevector-append BYTE-ORDER-MARK-UTF-16-BE
- 				      (string->utf16 src.str (endianness big))))
+				     (string->utf16 src.str (endianness big))))
 	 (doit	(lambda (count len)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
 		    (let ((dst.str	(make-string len #\Z))
@@ -7272,19 +7272,19 @@
     => (eof-object))
 
   (check	;some data available
-      (let ((port (open-bytevector-input-port (string->utf16 "ABCD" (endianness little))
+      (let ((port (open-bytevector-input-port (string->utf16 "ABCD" (endianness big))
 					      (make-transcoder (utf-16-codec)))))
 	(get-string-all port))
     => "ABCD")
 
-  ;; little endian, default
+  ;; big endian, default
   (let* ((src.len 1024)
   	 (src.str (let ((str (make-string src.len)))
   		    (do ((i 0 (+ 1 i)))
   			((= i src.len)
   			 str)
   		      (string-set! str i (integer->char i)))))
-	 (src.bv  (string->utf16 src.str (endianness little)))
+	 (src.bv  (string->utf16 src.str (endianness big)))
 	 (doit	(lambda (count)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
 		    (get-string-all port)))))
@@ -7472,13 +7472,13 @@
     => (eof-object))
 
   (check	;some data available, no newline
-      (let ((port (open-bytevector-input-port (string->utf16 "ABCD" (endianness little))
+      (let ((port (open-bytevector-input-port (string->utf16 "ABCD" (endianness big))
 					      (make-transcoder (utf-16-codec)))))
 	(read-line port))
     => "ABCD")
 
   (check	;some data available, newline
-      (let ((port (open-bytevector-input-port (string->utf16 "ABC\nD" (endianness little))
+      (let ((port (open-bytevector-input-port (string->utf16 "ABC\nD" (endianness big))
 					      (make-transcoder (utf-16-codec)))))
 	(read-line port))
     => "ABC")
@@ -9001,13 +9001,13 @@
   				(make-transcoder (utf-8-codec)))))
     => SPECIAL1-TEST-STRING-FOR-UTF-8)
 
-  (check	;default to little endian
+  (check	;default to big endian
       (parametrise ((test-pathname-data-func (lambda ()
-  					       TEST-STRING-FOR-UTF-16-LE)))
-  	(with-textual-output-test-pathname (utf-16le-codec)
+  					       TEST-STRING-FOR-UTF-16-BE)))
+  	(with-textual-output-test-pathname (utf-16be-codec)
   	 (open-file-output-port (test-pathname) (file-options) (buffer-mode block)
   				(make-transcoder (utf-16-codec)))))
-    => TEST-STRING-FOR-UTF-16-LE)
+    => TEST-STRING-FOR-UTF-16-BE)
 
   (check	;explicit little endianness selection
       (parametrise ((test-pathname-data-func (lambda ()
@@ -9447,12 +9447,12 @@
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
-					       TEST-BYTEVECTOR-FOR-UTF-16-LE)))
+					       TEST-BYTEVECTOR-FOR-UTF-16-BE)))
 	(with-textual-input-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
 				      (buffer-mode block)
 				      (make-transcoder (utf-16-codec)))))
-    => TEST-STRING-FOR-UTF-16-LE)
+    => TEST-STRING-FOR-UTF-16-BE)
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
@@ -9517,13 +9517,13 @@
 				       (make-transcoder (utf-8-codec)))))
     => SPECIAL1-TEST-STRING-FOR-UTF-8)
 
-  (check	;default to little endian
+  (check	;default to big endian
       (parametrise ((test-pathname-data-func (lambda ()
-  					       TEST-STRING-FOR-UTF-16-LE)))
-  	(with-textual-output-test-pathname (utf-16le-codec)
+  					       TEST-STRING-FOR-UTF-16-BE)))
+  	(with-textual-output-test-pathname (utf-16be-codec)
 	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode block)
 				       (make-transcoder (utf-16-codec)))))
-    => TEST-STRING-FOR-UTF-16-LE)
+    => TEST-STRING-FOR-UTF-16-BE)
 
   (check	;explicit little endianness selection
       (parametrise ((test-pathname-data-func (lambda ()

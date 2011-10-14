@@ -3771,8 +3771,8 @@ different semantics depending upon the type of the port:
 
 @itemize
 @item
-For output and input/output ports it defaults to @utf{}-16 little
-endian.
+For output and input/output ports it defaults to @utf{}-16 big endian
+(which seems mandated by the Unicode Consortium).
 
 @item
 For input ports the endianness is left unspecified until the first bytes

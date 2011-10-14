@@ -918,7 +918,10 @@
   ;;fast attributes.
   ;;
   ;;Notice  that  an output  port  is  never  tagged as  UTF-16  without
-  ;;selection of endianness; by default little endianness is selected.
+  ;;selection  of  endianness; by  default  big  endianness is  selected
+  ;;because  it seems  to be  mandated  by the  Unicode Consortium,  see
+  ;;<http://unicode.org/faq/utf_bom.html> question: "Why  do some of the
+  ;;UTFs have a BE or LE in their label, such as UTF-16LE?"
   ;;
 ;;;NOTE We  cannot put assertions  here because this function  is called
 ;;;upon initialisation  of the library  when the standard port  have not
@@ -931,8 +934,8 @@
       ((latin-1-codec)	(%unsafe.fxior other-attributes FAST-PUT-LATIN-TAG))
       ((utf-16le-codec)	(%unsafe.fxior other-attributes FAST-PUT-UTF16LE-TAG))
       ((utf-16be-codec)	(%unsafe.fxior other-attributes FAST-PUT-UTF16BE-TAG))
-      ;;By default we select little endian UTF-16.
-      ((utf-16-codec)	(%unsafe.fxior other-attributes FAST-PUT-UTF16LE-TAG))
+      ;;By default we select big endian UTF-16.
+      ((utf-16-codec)	(%unsafe.fxior other-attributes FAST-PUT-UTF16BE-TAG))
       (else
        (assertion-violation who "unsupported codec" (transcoder-codec maybe-transcoder))))))
 
@@ -1633,7 +1636,7 @@
   ;;endianness:  read  the  Byte   Order  Mark  and  mutate  the  port's
   ;;attributes   tagging    the   port   as    FAST-GET-UTF16BE-TAG   or
   ;;FAST-GET-UTF16LE-TAG.  Return  #t if port  is at EOF,  #f otherwise.
-  ;;If no BOM is present, select little endian by default.
+  ;;If no BOM is present, select big endian by default.
   ;;
   (with-port-having-bytevector-buffer (port)
     (let ((result-if-successful-tagging		#f)
@@ -1648,7 +1651,7 @@
 	    (set! port.fast-attributes FAST-GET-UTF16LE-TAG)
 	    result-if-successful-tagging)
 	   (if-no-match:
-	    (set! port.fast-attributes FAST-GET-UTF16LE-TAG)
+	    (set! port.fast-attributes FAST-GET-UTF16BE-TAG)
 	    result-if-successful-tagging)
 	   (if-end-of-file: result-if-end-of-file)))
 	(if-end-of-file: result-if-end-of-file)))))
@@ -2022,12 +2025,12 @@
 ;;;; cookie data structure
 ;;
 ;;An instance of  this structure is referenced by  every port structure;
-;;it  registers  the  underlying  device,  if any,  and  it  tracks  the
+;;it  registers  the  underlying  device  (if any)  and  it  tracks  the
 ;;underlying  device's  position,  number  of  rows  and  columns  (when
 ;;possible).
 ;;
 ;;The  reason  the full  port  data structure  is  split  into the  PORT
-;;structure and the COOKIE record type, is that, in some port types, the
+;;structure and the  COOKIE structure, is that, in  some port types, the
 ;;port's own internal  functions must reference some of  the guts of the
 ;;data  structure but cannot  reference the  port itself.   This problem
 ;;shows  its uglyness  when TRANSCODED-PORT  is applied  to a  port: the

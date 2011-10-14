@@ -1162,6 +1162,31 @@
 	  (else
 	   (error 'valid-code? "out of range" n))))
 
+  (define (make-u16be-bv min max)
+    ;;Build  and  return  a  bytevector holding  the  UTF-16  big-endian
+    ;;representation  of  characters  whose  integer  representation  is
+    ;;between MIN included and MAX included.
+    ;;
+    (u8-list->bytevector
+     (let loop ((i min))
+       (cond ((> i max)
+	      '())
+	     ((invalid-code? i)
+	      (loop (+ i 1)))
+	     ((< i #x10000)
+	      (cons* (fxsra i 8)
+		     (fxand i #xFF)
+		     (loop (+ i 1))))
+	     (else
+	      (let ((ii (fx- i #x10000)))
+		(let ((w1 (fxior #xD800 (fxand #x3FF (fxsra ii 10))))
+		      (w2 (fxior #xDC00 (fxand #x3FF ii))))
+		  (cons* (fxsra w1 8)
+			 (fxand w1 #xFF)
+			 (fxsra w2 8)
+			 (fxand w2 #xFF)
+			 (loop (+ i 1))))))))))
+
   (define (make-u16le-bv min max)
     ;;Build  and return  a bytevector  holding the  UTF-16 little-endian
     ;;representation  of  characters  whose  integer  representation  is
@@ -1200,11 +1225,15 @@
 	     (else
 	      (cons (integer->char i) (loop (+ i 1))))))))
 
+  (define (make-u16be-range1)
+    (make-u16be-bv 0 #x7FFF))
   (define (make-u16le-range1)
     (make-u16le-bv 0 #x7FFF))
   (define (make-utf16-string-range1)
     (make-string-slice 0 #x7FFF))
 
+  (define (make-u16be-range2)
+    (make-u16be-bv #x8000 #x10FFFF))
   (define (make-u16le-range2)
     (make-u16le-bv #x8000 #x10FFFF))
   (define (make-utf16-string-range2)
@@ -1270,8 +1299,8 @@
       => #t)
     (check
 	(test 'utf16 (utf-16-codec)
-	      (lambda (x) (string->utf16 x 'little))
-	      (lambda (x) (utf16->string x 'little)))
+	      (lambda (x) (string->utf16 x 'big))
+	      (lambda (x) (utf16->string x 'big)))
       => #t))
 
 ;;; --------------------------------------------------------------------
@@ -1320,11 +1349,11 @@
 		     (open-bytevector-input-port bv (make-transcoder (utf-16-codec) 'none 'raise)))))
 
     (test "utf16 range 1"
-  	  (test-port-string-output (make-port (make-u16le-range1))
+  	  (test-port-string-output (make-port (make-u16be-range1))
 				   (make-utf16-string-range1)))
 
     (test "utf16 range 2"
-  	  (test-port-string-output (make-port (make-u16le-range2))
+  	  (test-port-string-output (make-port (make-u16be-range2))
 				   (make-utf16-string-range2)))
     #f)
 
@@ -1350,11 +1379,11 @@
   (let ((make-port (lambda (bv)
 		     (open-bytevector-input-port bv (make-transcoder (utf-16-codec) 'none 'raise)))))
     (test "utf16 peek range 1"
-  	  (test-port-string-peeking-output (make-port (make-u16le-range1))
+  	  (test-port-string-peeking-output (make-port (make-u16be-range1))
 					   (make-utf16-string-range1)))
 
     (test "utf16 peek range 2"
-  	  (test-port-string-peeking-output (make-port (make-u16le-range2))
+  	  (test-port-string-peeking-output (make-port (make-u16be-range2))
 					   (make-utf16-string-range2)))
     #f)
 
