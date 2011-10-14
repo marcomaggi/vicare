@@ -31,7 +31,6 @@ long-test long-tests:
 # TESTS and TESTS_ENVIRONMENT are Automake variables.
 TESTS_ENVIRONMENT	= $(VICARE_RUN)
 TESTS			=	\
-	test-r6rs-arithmetic				\
 	test-r6rs-arithmetic-bitwise.sps		\
 	test-r6rs-arithmetic-fixnums.sps		\
 	test-r6rs-arithmetic-flonums.sps		\
@@ -44,7 +43,6 @@ TESTS			=	\
 	test-r6rs-eval.sps				\
 	test-r6rs-exceptions.sps			\
 	test-r6rs-hashtables.sps			\
-	test-r6rs-io					\
 	test-r6rs-io-ports.sps				\
 	test-r6rs-io-simple.sps				\
 	test-r6rs-lists.sps				\
@@ -53,7 +51,6 @@ TESTS			=	\
 	test-r6rs-programs.sps				\
 	test-r6rs-r5rs.sps				\
 	test-r6rs-reader.sps				\
-	test-r6rs-records				\
 	test-r6rs-records-procedural.sps		\
 	test-r6rs-records-syntactic.sps			\
 	test-r6rs-sorting.sps				\
@@ -81,7 +78,7 @@ TESTS			=	\
 	test-issue-022.sps				\
 	test-issue-023.sps				\
 	test-issue-024.sps				\
-	test-issue-025-sign-in-exact-rationals.sps	\
+	test-issue-025-sign-in-exact-rationals.sps
 
 #page
 ## --------------------------------------------------------------------
@@ -129,7 +126,6 @@ EXTRA_DIST =	\
 	long-test-ikarus-bignums.sps			\
 	long-test-ikarus-io.sps				\
 	\
-	test-r6rs-arithmetic				\
 	test-r6rs-arithmetic-bitwise.sps		\
 	test-r6rs-arithmetic-fixnums.sps		\
 	test-r6rs-arithmetic-flonums.sps		\
@@ -142,7 +138,6 @@ EXTRA_DIST =	\
 	test-r6rs-eval.sps				\
 	test-r6rs-exceptions.sps			\
 	test-r6rs-hashtables.sps			\
-	test-r6rs-io					\
 	test-r6rs-io-ports.sps				\
 	test-r6rs-io-simple.sps				\
 	test-r6rs-lists.sps				\
@@ -151,7 +146,6 @@ EXTRA_DIST =	\
 	test-r6rs-programs.sps				\
 	test-r6rs-r5rs.sps				\
 	test-r6rs-reader.sps				\
-	test-r6rs-records				\
 	test-r6rs-records-procedural.sps		\
 	test-r6rs-records-syntactic.sps			\
 	test-r6rs-sorting.sps				\
