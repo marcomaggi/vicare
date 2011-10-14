@@ -3042,7 +3042,9 @@ data structures is marked using the @code{#n=} and @code{#n#} notation.
 @deffn Parameter print-unicode
 @deffnx Parameter print-unicode #t
 @deffnx Parameter print-unicode #f
-Unstable.
+If set to true: print Scheme Unicode characters outside of the printable
+@ascii{} range in hex format, else print them using the encoding of the
+output port.  The default is false.
 @end deffn
 
 

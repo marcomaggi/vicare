@@ -38,7 +38,7 @@
       put-datum))
 
   (define print-unicode
-    (make-parameter #t))
+    (make-parameter #f))
 
 
 (module traversal-helpers
