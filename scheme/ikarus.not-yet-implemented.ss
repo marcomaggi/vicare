@@ -17,13 +17,8 @@
 
 
 (library (ikarus not-yet-implemented)
-  (export
-    bitwise-reverse-bit-field
-    bitwise-rotate-bit-field)
-
-  (import (except (ikarus)
-    bitwise-reverse-bit-field
-    bitwise-rotate-bit-field))
+  (export)
+  (import (ikarus))
 
   (define-syntax not-yet
     (syntax-rules ()
@@ -49,7 +44,6 @@
 
   (not-yet
     ;;; should be implemented
-    bitwise-rotate-bit-field bitwise-reverse-bit-field
     ))
 
 ;;; end of file

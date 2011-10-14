@@ -181,6 +181,11 @@ file for the list of contributors to Vicare Scheme.
   The R6RS compatibility tests are  by Matthew Flatt and are distributed
 under the GNU GPL version 2, or any later version.
 
+  The implementation  of the function  BITWISE-REVERSE-BIT-FIELD is from
+original  code  in:  Ypsilon  Scheme  System,  Copyright  (c)  2004-2009
+Y. FUJITA / LittleWing  Company Limited.  See the file "COPYING.ypsilon"
+for terms and conditions of use of this function.
+
 
 B. Bug reports
 --------------

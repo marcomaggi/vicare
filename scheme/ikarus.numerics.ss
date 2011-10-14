@@ -1,22 +1,63 @@
-;;; Ikarus Scheme -- A compiler for R6RS Scheme.
-;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;; Implementation  of FXREVERSE-BIT-FIELD  from the  original  patch by
-;;; Göran Weinholt, posted on the Ikarus bug tracker.
+;;;Implementation  of  FXREVERSE-BIT-FIELD from:
 ;;;
-;;; This program is free software: you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License version 3 as
-;;; published by the Free Software Foundation.
+;;;  Original patch by Göran Weinholt, posted on the Ikarus bug tracker.
 ;;;
-;;; This program is distributed in the hope that it will be useful, but
-;;; WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; General Public License for more details.
+;;;Implementation of BITWISE-REVERSE-BIT-FIELD from:
 ;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;  Ypsilon Scheme System
+;;;  Copyright (c) 2004-2009 Y.FUJITA / LittleWing Company Limited.
+;;;  See below for terms and conditions of use of this function.
+;;;
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under  the terms of  the GNU General  Public License version  3 as
+;;;published by the Free Software Foundation.
+;;;
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
+;;;
+;;;You should  have received  a copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+;;;License notice for BITWISE-REVERSE-BIT-FIELD
+;;;
+;;;Copyright (c) 2004-2009 Yoshikatsu Fujita. All rights reserved.
+;;;Copyright (c) 2004-2009 LittleWing Company Limited. All rights reserved.
+;;;
+;;;Redistribution and  use in source  and binary forms, with  or without
+;;;modification,  are permitted provided  that the  following conditions
+;;;are met:
+;;;
+;;;1.  Redistributions  of source code  must retain the  above copyright
+;;;notice, this list of conditions and the following disclaimer.
+;;;
+;;;2. Redistributions in binary  form must reproduce the above copyright
+;;;notice, this list  of conditions and the following  disclaimer in the
+;;;documentation and/or other materials provided with the distribution.
+;;;
+;;;3. Neither the name of the  authors nor the names of its contributors
+;;;may be used to endorse or promote products derived from this software
+;;;without specific prior written permission.
+;;;
+;;;THIS SOFTWARE  IS PROVIDED BY THE COPYRIGHT  HOLDERS AND CONTRIBUTORS
+;;;"AS IS"  AND ANY  EXPRESS OR IMPLIED  WARRANTIES, INCLUDING,  BUT NOT
+;;;LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+;;;A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT
+;;;OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+;;;SPECIAL,  EXEMPLARY,  OR CONSEQUENTIAL  DAMAGES  (INCLUDING, BUT  NOT
+;;;LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+;;;DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+;;;THEORY OF  LIABILITY, WHETHER IN CONTRACT, STRICT  LIABILITY, OR TORT
+;;;(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+;;;OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+;;;
+
+
 (library (ikarus flonums)
   (export $flonum->exact flonum-parts
           inexact->exact exact $flonum-rational? $flonum-integer? $flzero?
@@ -38,360 +79,367 @@
             flexpt flinteger? flonum-parts flonum-bytes flnan? flfinite?
             flinfinite? flround))
 
-  (define (flonum-bytes f)
-    (unless (flonum? f)
-      (die 'flonum-bytes "not a flonum" f))
+
+;;;; flonums
+
+(define (flonum-bytes f)
+  (unless (flonum? f)
+    (die 'flonum-bytes "not a flonum" f))
+  (values
+   ($flonum-u8-ref f 0)
+   ($flonum-u8-ref f 1)
+   ($flonum-u8-ref f 2)
+   ($flonum-u8-ref f 3)
+   ($flonum-u8-ref f 4)
+   ($flonum-u8-ref f 5)
+   ($flonum-u8-ref f 6)
+   ($flonum-u8-ref f 7)))
+(define (flonum-parts x)
+  (unless (flonum? x)
+    (die 'flonum-parts "not a flonum" x))
+  (let-values (((b0 b1 b2 b3 b4 b5 b6 b7) (flonum-bytes x)))
     (values
-      ($flonum-u8-ref f 0)
-      ($flonum-u8-ref f 1)
-      ($flonum-u8-ref f 2)
-      ($flonum-u8-ref f 3)
-      ($flonum-u8-ref f 4)
-      ($flonum-u8-ref f 5)
-      ($flonum-u8-ref f 6)
-      ($flonum-u8-ref f 7)))
-  (define (flonum-parts x)
-    (unless (flonum? x)
-      (die 'flonum-parts "not a flonum" x))
-    (let-values (((b0 b1 b2 b3 b4 b5 b6 b7) (flonum-bytes x)))
-      (values
-        (zero? (fxlogand b0 128))
-        (+ (fxsll (fxlogand b0 127) 4)
-           (fxsra b1 4))
-        (+ (+ b7 (fxsll b6 8) (fxsll b5 16))
-           (* (+ b4
-                 (fxsll b3 8)
-                 (fxsll b2 16)
-                 (fxsll (fxlogand b1 #b1111) 24))
-              (expt 2 24))))))
-  (define ($zero-m? f)
-    (and ($fxzero? ($flonum-u8-ref f 7))
-         ($fxzero? ($flonum-u8-ref f 6))
-         ($fxzero? ($flonum-u8-ref f 5))
-         ($fxzero? ($flonum-u8-ref f 4))
-         ($fxzero? ($flonum-u8-ref f 3))
-         ($fxzero? ($flonum-u8-ref f 2))
-         ($fxzero? ($fxlogand ($flonum-u8-ref f 1) #b1111))))
+     (zero? (fxlogand b0 128))
+     (+ (fxsll (fxlogand b0 127) 4)
+	(fxsra b1 4))
+     (+ (+ b7 (fxsll b6 8) (fxsll b5 16))
+	(* (+ b4
+	      (fxsll b3 8)
+	      (fxsll b2 16)
+	      (fxsll (fxlogand b1 #b1111) 24))
+	   (expt 2 24))))))
+(define ($zero-m? f)
+  (and ($fxzero? ($flonum-u8-ref f 7))
+       ($fxzero? ($flonum-u8-ref f 6))
+       ($fxzero? ($flonum-u8-ref f 5))
+       ($fxzero? ($flonum-u8-ref f 4))
+       ($fxzero? ($flonum-u8-ref f 3))
+       ($fxzero? ($flonum-u8-ref f 2))
+       ($fxzero? ($fxlogand ($flonum-u8-ref f 1) #b1111))))
 
-  (define ($flonum-rational? x)
-    (let ((be ($fxlogand ($flonum-sbe x)
-                ($fxsub1 ($fxsll 1 11)))))
-      ($fx< be 2047)))
+(define ($flonum-rational? x)
+  (let ((be ($fxlogand ($flonum-sbe x)
+		       ($fxsub1 ($fxsll 1 11)))))
+    ($fx< be 2047)))
 
-  (define ($flonum-integer? x)
-    (let ((be ($fxlogand ($flonum-sbe x)
-                ($fxsub1 ($fxsll 1 11)))))
-      (cond
-        (($fx= be 2047)  ;;; nans and infs
-         #f)
-        (($fx>= be 1075) ;;; magnitue large enough
-         #t)
-        (($fx= be 0) ;;; denormalized double, only +/-0.0 is integer
-         (and ($fx= ($flonum-u8-ref x 7) 0)
-              ($fx= ($flonum-u8-ref x 6) 0)
-              ($fx= ($flonum-u8-ref x 5) 0)
-              ($fx= ($flonum-u8-ref x 4) 0)
-              ($fx= ($flonum-u8-ref x 3) 0)
-              ($fx= ($flonum-u8-ref x 2) 0)
-              ($fx= ($flonum-u8-ref x 1) 0)))
-        (($fx< be ($fx+ 1075 -52)) ;;; too small to be an integer
-         #f)
-        (else ($fl= x ($$flround x))))))
+(define ($flonum-integer? x)
+  (let ((be ($fxlogand ($flonum-sbe x)
+		       ($fxsub1 ($fxsll 1 11)))))
+    (cond
+     (($fx= be 2047)  ;;; nans and infs
+      #f)
+     (($fx>= be 1075) ;;; magnitue large enough
+      #t)
+     (($fx= be 0) ;;; denormalized double, only +/-0.0 is integer
+      (and ($fx= ($flonum-u8-ref x 7) 0)
+	   ($fx= ($flonum-u8-ref x 6) 0)
+	   ($fx= ($flonum-u8-ref x 5) 0)
+	   ($fx= ($flonum-u8-ref x 4) 0)
+	   ($fx= ($flonum-u8-ref x 3) 0)
+	   ($fx= ($flonum-u8-ref x 2) 0)
+	   ($fx= ($flonum-u8-ref x 1) 0)))
+     (($fx< be ($fx+ 1075 -52)) ;;; too small to be an integer
+      #f)
+     (else ($fl= x ($$flround x))))))
 
 
-  (define ($$flround x)
-    (foreign-call "ikrt_fl_round" x ($make-flonum)))
+(define ($$flround x)
+  (foreign-call "ikrt_fl_round" x ($make-flonum)))
 
-  (define ($flround x)
+(define ($flround x)
     ;;; optimize for integer flonums case
-    (define (ratnum-round n nbe)
-      (let ((d (sll 1 nbe)))
-        (let ((q (sra n nbe))
-              (r (bitwise-and n (sub1 d))))
-          (let ((r2 (+ r r)))
-            (cond
-              ((< r2 d) q)
-              ((> r2 d) (+ q 1))
-              (else (if (even? q) q (+ q 1))))))))
+  (define (ratnum-round n nbe)
+    (let ((d (sll 1 nbe)))
+      (let ((q (sra n nbe))
+	    (r (bitwise-and n (sub1 d))))
+	(let ((r2 (+ r r)))
+	  (cond
+	   ((< r2 d) q)
+	   ((> r2 d) (+ q 1))
+	   (else (if (even? q) q (+ q 1))))))))
+  (let ((sbe ($flonum-sbe x)))
+    (let ((be ($fxlogand sbe #x7FF)))
+      (cond
+          ;;; nans/infs/magnitude large enough to be an integer
+       (($fx>= be 1075) x)
+       (else
+           ;;; this really needs to get optimized.
+	(let-values (((pos? be m) (flonum-parts x)))
+	  (cond
+	   ((= be 0) ;;; denormalized
+	    (if pos? +0.0 -0.0))
+	   (else ; normalized flonum
+	    (let ((r
+		   (inexact
+		    (ratnum-round (+ m (expt 2 52)) (- 1075 be)))))
+	      (if pos? r ($fl* r -1.0)))))))))))
+
+(define (flround x)
+  (if (flonum? x)
+      ($flround x)
+    (die 'flround "not a flonum" x)))
+
+(module ($flonum->exact)
+  (define ($flonum-signed-mantissa x)
+    (let ((b0 ($flonum-u8-ref x 0)))
+      (let ((m0 ($fx+ ($flonum-u8-ref x 7)
+		      ($fx+ ($fxsll ($flonum-u8-ref x 6) 8)
+			    ($fxsll ($flonum-u8-ref x 5) 16))))
+	    (m1 ($fx+ ($flonum-u8-ref x 4)
+		      ($fx+ ($fxsll ($flonum-u8-ref x 3) 8)
+			    ($fxsll ($flonum-u8-ref x 2) 16))))
+	    (m2 (let ((b1 ($flonum-u8-ref x 1)))
+		  (if (and ($fx= ($fxlogand b0 #x7F) 0)
+			   ($fx= ($fxsra b1 4) 0))
+		      ($fxlogand b1 #xF)
+		    ($fxlogor ($fxlogand b1 #xF) #x10)))))
+	(if ($fx= 0 ($fxlogand #x80 b0))
+	    (+ (bitwise-arithmetic-shift-left ($fxlogor m1 ($fxsll m2 24)) 24) m0)
+	  (+ (bitwise-arithmetic-shift-left
+	      ($fx- 0 ($fxlogor m1 ($fxsll m2 24))) 24)
+	     ($fx- 0 m0))))))
+  (define ($flonum->exact x)
+    (import (ikarus))
     (let ((sbe ($flonum-sbe x)))
       (let ((be ($fxlogand sbe #x7FF)))
-        (cond
-          ;;; nans/infs/magnitude large enough to be an integer
-          (($fx>= be 1075) x)
-          (else
-           ;;; this really needs to get optimized.
-           (let-values (((pos? be m) (flonum-parts x)))
-             (cond
-               ((= be 0) ;;; denormalized
-                (if pos? +0.0 -0.0))
-               (else ; normalized flonum
-                (let ((r
-                       (inexact
-                         (ratnum-round (+ m (expt 2 52)) (- 1075 be)))))
-                  (if pos? r ($fl* r -1.0)))))))))))
-
-  (define (flround x)
-    (if (flonum? x)
-        ($flround x)
-        (die 'flround "not a flonum" x)))
-
-  (module ($flonum->exact)
-    (define ($flonum-signed-mantissa x)
-      (let ((b0 ($flonum-u8-ref x 0)))
-        (let ((m0 ($fx+ ($flonum-u8-ref x 7)
-                        ($fx+ ($fxsll ($flonum-u8-ref x 6) 8)
-                              ($fxsll ($flonum-u8-ref x 5) 16))))
-              (m1 ($fx+ ($flonum-u8-ref x 4)
-                        ($fx+ ($fxsll ($flonum-u8-ref x 3) 8)
-                              ($fxsll ($flonum-u8-ref x 2) 16))))
-              (m2 (let ((b1 ($flonum-u8-ref x 1)))
-                    (if (and ($fx= ($fxlogand b0 #x7F) 0)
-                             ($fx= ($fxsra b1 4) 0))
-                        ($fxlogand b1 #xF)
-                        ($fxlogor ($fxlogand b1 #xF) #x10)))))
-          (if ($fx= 0 ($fxlogand #x80 b0))
-              (+ (bitwise-arithmetic-shift-left ($fxlogor m1 ($fxsll m2 24)) 24) m0)
-              (+ (bitwise-arithmetic-shift-left
-                   ($fx- 0 ($fxlogor m1 ($fxsll m2 24))) 24)
-                 ($fx- 0 m0))))))
-    (define ($flonum->exact x)
-      (import (ikarus))
-      (let ((sbe ($flonum-sbe x)))
-        (let ((be ($fxlogand sbe #x7FF)))
-          (cond
-            (($fx= be 2047) #f) ;;; nans/infs
-            (($fx>= be 1075)    ;;; magnitude large enough to be an integer
-             (bitwise-arithmetic-shift-left
-               ($flonum-signed-mantissa x)
-               (- be 1075)))
-            (else
+	(cond
+	 (($fx= be 2047) #f) ;;; nans/infs
+	 (($fx>= be 1075)    ;;; magnitude large enough to be an integer
+	  (bitwise-arithmetic-shift-left
+	   ($flonum-signed-mantissa x)
+	   (- be 1075)))
+	 (else
              ;;; this really needs to get optimized.
-             (let-values (((pos? be m) (flonum-parts x)))
-               (cond
-                 ((= be 0) ;;; denormalized
-                  (if (= m 0)
-                      0
-                      (* (if pos? 1 -1)
-                         (/ m (expt 2 1074)))))
-                 (else ; normalized flonum
-                  (/ (+ m (expt 2 52))
-                     (bitwise-arithmetic-shift-left
-                       (if pos? 1 -1)
-                       (- 1075 be))))))))))))
+	  (let-values (((pos? be m) (flonum-parts x)))
+	    (cond
+	     ((= be 0) ;;; denormalized
+	      (if (= m 0)
+		  0
+		(* (if pos? 1 -1)
+		   (/ m (expt 2 1074)))))
+	     (else ; normalized flonum
+	      (/ (+ m (expt 2 52))
+		 (bitwise-arithmetic-shift-left
+		  (if pos? 1 -1)
+		  (- 1075 be))))))))))))
 
-  (define (flnumerator x)
-    (unless (flonum? x)
-      (die 'flnumerator "not a flonum" x))
-    (cond
-      (($flonum-integer? x) x)
-      (($flonum-rational? x)
-       (exact->inexact (numerator ($flonum->exact x))))
-      (else x)))
+(define (flnumerator x)
+  (unless (flonum? x)
+    (die 'flnumerator "not a flonum" x))
+  (cond
+   (($flonum-integer? x) x)
+   (($flonum-rational? x)
+    (exact->inexact (numerator ($flonum->exact x))))
+   (else x)))
 
-  (define (fldenominator x)
-    (unless (flonum? x)
-      (die 'fldenominator "not a flonum" x))
-    (cond
-      (($flonum-integer? x) 1.0)
-      (($flonum-rational? x)
-       (exact->inexact (denominator ($flonum->exact x))))
-      ((flnan? x) x)
-      (else 1.0)))
+(define (fldenominator x)
+  (unless (flonum? x)
+    (die 'fldenominator "not a flonum" x))
+  (cond
+   (($flonum-integer? x) 1.0)
+   (($flonum-rational? x)
+    (exact->inexact (denominator ($flonum->exact x))))
+   ((flnan? x) x)
+   (else 1.0)))
 
-  (define (fleven? x)
+(define (fleven? x)
     ;;; FIXME: optimize
-    (unless (flonum? x)
-      (die 'fleven? "not a flonum" x))
-    (let ((v ($flonum->exact x)))
-      (cond
-        ((fixnum? v) ($fx= ($fxlogand v 1) 0))
-        ((bignum? v)
-         (foreign-call "ikrt_even_bn" v))
-        (else (die 'fleven? "not an integer flonum" x)))))
+  (unless (flonum? x)
+    (die 'fleven? "not a flonum" x))
+  (let ((v ($flonum->exact x)))
+    (cond
+     ((fixnum? v) ($fx= ($fxlogand v 1) 0))
+     ((bignum? v)
+      (foreign-call "ikrt_even_bn" v))
+     (else (die 'fleven? "not an integer flonum" x)))))
 
-  (define (flodd? x)
-    (unless (flonum? x)
-      (die 'flodd? "not a flonum" x))
+(define (flodd? x)
+  (unless (flonum? x)
+    (die 'flodd? "not a flonum" x))
     ;;; FIXME: optimize
-    (let ((v ($flonum->exact x)))
+  (let ((v ($flonum->exact x)))
+    (cond
+     ((fixnum? v) ($fx= ($fxlogand v 1) 1))
+     ((bignum? v)
+      (not (foreign-call "ikrt_even_bn" v)))
+     (else (die 'flodd? "not an integer flonum" x)))))
+
+(define (flinteger? x)
+  (if (flonum? x)
+      ($flonum-integer? x)
+    (die 'flinteger? "not a flonum" x)))
+
+(define (flinfinite? x)
+  (if (flonum? x)
+      (let ((be (fxlogand ($flonum-sbe x) (sub1 (fxsll 1 11)))))
+	(and (fx= be 2047)  ;;; nans and infs
+	     ($zero-m? x)))
+    (die 'flinfinite? "not a flonum" x)))
+
+(define (flnan? x)
+  (if (flonum? x)
+      (let ((be (fxlogand ($flonum-sbe x) (sub1 (fxsll 1 11)))))
+	(and (fx= be 2047)  ;;; nans and infs
+	     (not ($zero-m? x))))
+    (die 'flnan? "not a flonum" x)))
+
+(define (flfinite? x)
+  (if (flonum? x)
+      (let ((be (fxlogand ($flonum-sbe x) (sub1 (fxsll 1 11)))))
+	(not (fx= be 2047)))
+    (die 'flfinite? "not a flonum" x)))
+
+(define ($flzero? x)
+  (let ((be (fxlogand ($flonum-sbe x) (sub1 (fxsll 1 11)))))
+    (and
+     (fx= be 0) ;;; denormalized double, only +/-0.0 is integer
+     (and (fx= ($flonum-u8-ref x 7) 0)
+	  (fx= ($flonum-u8-ref x 6) 0)
+	  (fx= ($flonum-u8-ref x 5) 0)
+	  (fx= ($flonum-u8-ref x 4) 0)
+	  (fx= ($flonum-u8-ref x 3) 0)
+	  (fx= ($flonum-u8-ref x 2) 0)
+	  (fx= ($flonum-u8-ref x 1) 0)))))
+
+(define ($flnegative? x)
+  (let ((b0 ($flonum-u8-ref x 0)))
+    (fx> b0 127)))
+
+(define ($exact x who)
+  (import (ikarus system $compnums))
+  (cond
+   ((flonum? x)
+    (or ($flonum->exact x)
+	(die who "number has no real value" x)))
+   ((cflonum? x)
+    (make-rectangular
+     (or ($flonum->exact ($cflonum-real x))
+	 (die who "number has no real value" x))
+     (or ($flonum->exact ($cflonum-imag x))
+	 (die who "number has no real value" x))))
+   ((or (fixnum? x) (ratnum? x) (bignum? x) (compnum? x)) x)
+   (else (die who "not a number" x))))
+
+(define (inexact->exact x) ($exact x 'inexact->exact))
+(define (exact x) ($exact x 'exact))
+
+
+(define (flpositive? x)
+  (if (flonum? x)
+      ($fl> x 0.0)
+    (die 'flpositive? "not a flonum" x)))
+
+(define (flabs x)
+  (if (flonum? x)
+      (if ($fx> ($flonum-u8-ref x 0) 127)
+	  ($fl* x -1.0)
+	x)
+    (die 'flabs "not a flonum" x)))
+
+(define (fixnum->flonum x)
+  (if (fixnum? x)
+      ($fixnum->flonum x)
+    (die 'fixnum->flonum "not a fixnum")))
+
+(define (flsin x)
+  (if (flonum? x)
+      (foreign-call "ikrt_fl_sin" x)
+    (die 'flsin "not a flonum" x)))
+
+(define (flcos x)
+  (if (flonum? x)
+      (foreign-call "ikrt_fl_cos" x)
+    (die 'flcos "not a flonum" x)))
+
+(define (fltan x)
+  (if (flonum? x)
+      (foreign-call "ikrt_fl_tan" x)
+    (die 'fltan "not a flonum" x)))
+
+(define (flasin x)
+  (if (flonum? x)
+      (foreign-call "ikrt_fl_asin" x)
+    (die 'flasin "not a flonum" x)))
+
+(define (flacos x)
+  (if (flonum? x)
+      (foreign-call "ikrt_fl_acos" x)
+    (die 'flacos "not a flonum" x)))
+
+(define flatan
+  (case-lambda
+   ((x)
+    (if (flonum? x)
+	(foreign-call "ikrt_fl_atan" x)
+      (die 'flatan "not a flonum" x)))
+   ((x y)
+    (if (flonum? x)
+	(if (flonum? y)
+	    (foreign-call "ikrt_atan2" x y)
+	  (die 'flatan "not a flonum" y))
+      (die 'flatan "not a flonum" x)))))
+
+(define (flfloor x)
+  (define (ratnum-floor x)
+    (let ((n (numerator x)) (d (denominator x)))
+      (let ((q (quotient n d)))
+	(if (>= n 0) q (- q 1)))))
+  (cond
+   ((flonum? x)
+       ;;; optimize for integer flonums case
+    (let ((e ($flonum->exact x)))
       (cond
-        ((fixnum? v) ($fx= ($fxlogand v 1) 1))
-        ((bignum? v)
-         (not (foreign-call "ikrt_even_bn" v)))
-        (else (die 'flodd? "not an integer flonum" x)))))
+       ((ratnum? e)
+	(exact->inexact (ratnum-floor e)))
+       (else x))))
+   (else (die 'flfloor "not a flonum" x))))
 
-  (define (flinteger? x)
-    (if (flonum? x)
-        ($flonum-integer? x)
-        (die 'flinteger? "not a flonum" x)))
-
-  (define (flinfinite? x)
-    (if (flonum? x)
-        (let ((be (fxlogand ($flonum-sbe x) (sub1 (fxsll 1 11)))))
-          (and (fx= be 2047)  ;;; nans and infs
-               ($zero-m? x)))
-        (die 'flinfinite? "not a flonum" x)))
-
-  (define (flnan? x)
-    (if (flonum? x)
-        (let ((be (fxlogand ($flonum-sbe x) (sub1 (fxsll 1 11)))))
-          (and (fx= be 2047)  ;;; nans and infs
-               (not ($zero-m? x))))
-        (die 'flnan? "not a flonum" x)))
-
-  (define (flfinite? x)
-    (if (flonum? x)
-        (let ((be (fxlogand ($flonum-sbe x) (sub1 (fxsll 1 11)))))
-          (not (fx= be 2047)))
-        (die 'flfinite? "not a flonum" x)))
-
-  (define ($flzero? x)
-    (let ((be (fxlogand ($flonum-sbe x) (sub1 (fxsll 1 11)))))
-       (and
-         (fx= be 0) ;;; denormalized double, only +/-0.0 is integer
-         (and (fx= ($flonum-u8-ref x 7) 0)
-              (fx= ($flonum-u8-ref x 6) 0)
-              (fx= ($flonum-u8-ref x 5) 0)
-              (fx= ($flonum-u8-ref x 4) 0)
-              (fx= ($flonum-u8-ref x 3) 0)
-              (fx= ($flonum-u8-ref x 2) 0)
-              (fx= ($flonum-u8-ref x 1) 0)))))
-
-  (define ($flnegative? x)
-    (let ((b0 ($flonum-u8-ref x 0)))
-      (fx> b0 127)))
-
-  (define ($exact x who)
-    (import (ikarus system $compnums))
-    (cond
-      ((flonum? x)
-       (or ($flonum->exact x)
-           (die who "number has no real value" x)))
-      ((cflonum? x)
-       (make-rectangular
-         (or ($flonum->exact ($cflonum-real x))
-             (die who "number has no real value" x))
-         (or ($flonum->exact ($cflonum-imag x))
-             (die who "number has no real value" x))))
-      ((or (fixnum? x) (ratnum? x) (bignum? x) (compnum? x)) x)
-      (else (die who "not a number" x))))
-
-  (define (inexact->exact x) ($exact x 'inexact->exact))
-  (define (exact x) ($exact x 'exact))
-
-
-  (define (flpositive? x)
-    (if (flonum? x)
-        ($fl> x 0.0)
-        (die 'flpositive? "not a flonum" x)))
-
-  (define (flabs x)
-    (if (flonum? x)
-        (if ($fx> ($flonum-u8-ref x 0) 127)
-            ($fl* x -1.0)
-            x)
-        (die 'flabs "not a flonum" x)))
-
-  (define (fixnum->flonum x)
-    (if (fixnum? x)
-        ($fixnum->flonum x)
-        (die 'fixnum->flonum "not a fixnum")))
-
-  (define (flsin x)
-    (if (flonum? x)
-        (foreign-call "ikrt_fl_sin" x)
-        (die 'flsin "not a flonum" x)))
-
-  (define (flcos x)
-    (if (flonum? x)
-        (foreign-call "ikrt_fl_cos" x)
-        (die 'flcos "not a flonum" x)))
-
-  (define (fltan x)
-    (if (flonum? x)
-        (foreign-call "ikrt_fl_tan" x)
-        (die 'fltan "not a flonum" x)))
-
-  (define (flasin x)
-    (if (flonum? x)
-        (foreign-call "ikrt_fl_asin" x)
-        (die 'flasin "not a flonum" x)))
-
-  (define (flacos x)
-    (if (flonum? x)
-        (foreign-call "ikrt_fl_acos" x)
-        (die 'flacos "not a flonum" x)))
-
-  (define flatan
-    (case-lambda
-      ((x)
-       (if (flonum? x)
-           (foreign-call "ikrt_fl_atan" x)
-           (die 'flatan "not a flonum" x)))
-      ((x y)
-       (if (flonum? x)
-           (if (flonum? y)
-               (foreign-call "ikrt_atan2" x y)
-               (die 'flatan "not a flonum" y))
-           (die 'flatan "not a flonum" x)))))
-
-  (define (flfloor x)
-    (define (ratnum-floor x)
-      (let ((n (numerator x)) (d (denominator x)))
-        (let ((q (quotient n d)))
-          (if (>= n 0) q (- q 1)))))
-    (cond
-      ((flonum? x)
+(define (flceiling x)
+  (cond
+   ((flonum? x)
        ;;; optimize for integer flonums case
-       (let ((e ($flonum->exact x)))
-         (cond
-           ((ratnum? e)
-            (exact->inexact (ratnum-floor e)))
-           (else x))))
-      (else (die 'flfloor "not a flonum" x))))
+    (let ((e ($flonum->exact x)))
+      (cond
+       ((ratnum? e)
+	(exact->inexact (ceiling e)))
+       (else x))))
+   (else (die 'flceiling "not a flonum" x))))
 
-  (define (flceiling x)
-    (cond
-      ((flonum? x)
-       ;;; optimize for integer flonums case
-       (let ((e ($flonum->exact x)))
-         (cond
-           ((ratnum? e)
-            (exact->inexact (ceiling e)))
-           (else x))))
-      (else (die 'flceiling "not a flonum" x))))
+(define (flexp x)
+  (if (flonum? x)
+      (foreign-call "ikrt_fl_exp" x ($make-flonum))
+    (die 'flexp "not a flonum" x)))
 
-  (define (flexp x)
+(define fllog
+  (case-lambda
+   ((x)
     (if (flonum? x)
-        (foreign-call "ikrt_fl_exp" x ($make-flonum))
-        (die 'flexp "not a flonum" x)))
-
-  (define fllog
-    (case-lambda
-      ((x)
-       (if (flonum? x)
-           (foreign-call "ikrt_fl_log" x)
-           (die 'fllog "not a flonum" x)))
-      ((x y)
-       (if (flonum? x)
-           (if (flonum? y)
-               (fl/ (foreign-call "ikrt_fl_log" x)
-                    (foreign-call "ikrt_fl_log" y))
-               (die 'fllog "not a flonum" y))
-           (die 'fllog "not a flonum" x)))))
-
-  (define (flexpt x y)
+	(foreign-call "ikrt_fl_log" x)
+      (die 'fllog "not a flonum" x)))
+   ((x y)
     (if (flonum? x)
-        (if (flonum? y)
-            (let ((y^ ($flonum->exact y)))
+	(if (flonum? y)
+	    (fl/ (foreign-call "ikrt_fl_log" x)
+		 (foreign-call "ikrt_fl_log" y))
+	  (die 'fllog "not a flonum" y))
+      (die 'fllog "not a flonum" x)))))
+
+(define (flexpt x y)
+  (if (flonum? x)
+      (if (flonum? y)
+	  (let ((y^ ($flonum->exact y)))
               ;;; FIXME: performance bottleneck?
-              (cond
-                ((fixnum? y^) (inexact (expt x y^)))
-                ((bignum? y^) (inexact (expt x y^)))
-                (else
-                 (foreign-call "ikrt_flfl_expt" x y ($make-flonum)))))
-            (die 'flexpt "not a flonum" y))
-        (die 'fllog "not a flonum" x)))
+	    (cond
+	     ((fixnum? y^) (inexact (expt x y^)))
+	     ((bignum? y^) (inexact (expt x y^)))
+	     (else
+	      (foreign-call "ikrt_flfl_expt" x y ($make-flonum)))))
+	(die 'flexpt "not a flonum" y))
+    (die 'fllog "not a flonum" x)))
+
+
+;;; end of library (ikarus flonums)
+
 )
 
 
@@ -403,6 +451,7 @@
           bitwise-arithmetic-shift
           bitwise-length bitwise-copy-bit-field
           bitwise-copy-bit bitwise-bit-field
+	  bitwise-reverse-bit-field bitwise-rotate-bit-field
           positive? negative? expt gcd lcm numerator denominator
           exact-integer-sqrt
           quotient+remainder number->string min max
@@ -429,6 +478,8 @@
             bitwise-arithmetic-shift
             bitwise-length bitwise-copy-bit-field
             bitwise-copy-bit bitwise-bit-field
+	    bitwise-reverse-bit-field bitwise-rotate-bit-field
+
             positive? negative? bitwise-and bitwise-not bitwise-ior
             bitwise-xor bitwise-if
             expt gcd lcm numerator denominator
@@ -649,85 +700,88 @@
            (else (err '+ y))))
         (else (err '+ x)))))
 
-  (define binary-bitwise-and
-    (lambda (x y)
+
+;;;; binary bitwise operations
+
+(define binary-bitwise-and
+  (lambda (x y)
+    (cond
+     ((fixnum? x)
       (cond
-        ((fixnum? x)
-         (cond
-           ((fixnum? y) ($fxlogand x y))
-           ((bignum? y)
-            (foreign-call "ikrt_fxbnlogand" x y))
-           (else
-            (die 'bitwise-and "not an exact integer" y))))
-        ((bignum? x)
-         (cond
-           ((fixnum? y)
-            (foreign-call "ikrt_fxbnlogand" y x))
-           ((bignum? y)
-            (foreign-call "ikrt_bnbnlogand" x y))
-           (else
-            (die 'bitwise-and "not an exact integer" y))))
-        (else (die 'bitwise-and "not an exact integer" x)))))
-
-  (define binary-bitwise-ior
-    (lambda (x y)
+       ((fixnum? y) ($fxlogand x y))
+       ((bignum? y)
+	(foreign-call "ikrt_fxbnlogand" x y))
+       (else
+	(die 'bitwise-and "not an exact integer" y))))
+     ((bignum? x)
       (cond
-        ((fixnum? x)
-         (cond
-           ((fixnum? y) ($fxlogor x y))
-           ((bignum? y)
-            (foreign-call "ikrt_fxbnlogor" x y))
-           (else
-            (die 'bitwise-ior "not an exact integer" y))))
-        ((bignum? x)
-         (cond
-           ((fixnum? y)
-            (foreign-call "ikrt_fxbnlogor" y x))
-           ((bignum? y)
-            (foreign-call "ikrt_bnbnlogor" x y))
-           (else
-            (die 'bitwise-ior "not an exact integer" y))))
-        (else (die 'bitwise-ior "not an exact integer" x)))))
+       ((fixnum? y)
+	(foreign-call "ikrt_fxbnlogand" y x))
+       ((bignum? y)
+	(foreign-call "ikrt_bnbnlogand" x y))
+       (else
+	(die 'bitwise-and "not an exact integer" y))))
+     (else (die 'bitwise-and "not an exact integer" x)))))
 
-
-  (define binary-bitwise-xor
-    (lambda (x y)
-      (define (fxbn x y)
-        (let ((y0 (bitwise-and y (greatest-fixnum)))
-              (y1 (bitwise-arithmetic-shift-right y (- (fixnum-width) 1))))
-          (bitwise-ior
-            ($fxlogand ($fxlogxor x y0) (greatest-fixnum))
-            (bitwise-arithmetic-shift-left
-              (bitwise-arithmetic-shift-right
-                (if ($fx>= x 0) y (bitwise-not y))
-                (- (fixnum-width) 1))
-              (- (fixnum-width) 1)))))
-      (define (bnbn x y)
-        (let ((x0 (bitwise-and x (greatest-fixnum)))
-              (x1 (bitwise-arithmetic-shift-right x (- (fixnum-width) 1)))
-              (y0 (bitwise-and y (greatest-fixnum)))
-              (y1 (bitwise-arithmetic-shift-right y (- (fixnum-width) 1))))
-          (bitwise-ior
-            ($fxlogand ($fxlogxor x0 y0) (greatest-fixnum))
-            (bitwise-arithmetic-shift-left
-              (binary-bitwise-xor x1 y1)
-              (- (fixnum-width) 1)))))
+(define binary-bitwise-ior
+  (lambda (x y)
+    (cond
+     ((fixnum? x)
       (cond
-        ((fixnum? x)
-         (cond
-           ((fixnum? y) ($fxlogxor x y))
-           ((bignum? y) (fxbn x y))
-           (else
-            (die 'bitwise-xor "not an exact integer" y))))
-        ((bignum? x)
-         (cond
-           ((fixnum? y) (fxbn y x))
-           ((bignum? y) (bnbn x y))
-           (else
-            (die 'bitwise-xor "not an exact integer" y))))
-        (else (die 'bitwise-xor "not an exact integer" x)))))
+       ((fixnum? y) ($fxlogor x y))
+       ((bignum? y)
+	(foreign-call "ikrt_fxbnlogor" x y))
+       (else
+	(die 'bitwise-ior "not an exact integer" y))))
+     ((bignum? x)
+      (cond
+       ((fixnum? y)
+	(foreign-call "ikrt_fxbnlogor" y x))
+       ((bignum? y)
+	(foreign-call "ikrt_bnbnlogor" x y))
+       (else
+	(die 'bitwise-ior "not an exact integer" y))))
+     (else (die 'bitwise-ior "not an exact integer" x)))))
 
 
+(define binary-bitwise-xor
+  (lambda (x y)
+    (define (fxbn x y)
+      (let ((y0 (bitwise-and y (greatest-fixnum)))
+	    (y1 (bitwise-arithmetic-shift-right y (- (fixnum-width) 1))))
+	(bitwise-ior
+	 ($fxlogand ($fxlogxor x y0) (greatest-fixnum))
+	 (bitwise-arithmetic-shift-left
+	  (bitwise-arithmetic-shift-right
+	   (if ($fx>= x 0) y (bitwise-not y))
+	   (- (fixnum-width) 1))
+	  (- (fixnum-width) 1)))))
+    (define (bnbn x y)
+      (let ((x0 (bitwise-and x (greatest-fixnum)))
+	    (x1 (bitwise-arithmetic-shift-right x (- (fixnum-width) 1)))
+	    (y0 (bitwise-and y (greatest-fixnum)))
+	    (y1 (bitwise-arithmetic-shift-right y (- (fixnum-width) 1))))
+	(bitwise-ior
+	 ($fxlogand ($fxlogxor x0 y0) (greatest-fixnum))
+	 (bitwise-arithmetic-shift-left
+	  (binary-bitwise-xor x1 y1)
+	  (- (fixnum-width) 1)))))
+    (cond
+     ((fixnum? x)
+      (cond
+       ((fixnum? y) ($fxlogxor x y))
+       ((bignum? y) (fxbn x y))
+       (else
+	(die 'bitwise-xor "not an exact integer" y))))
+     ((bignum? x)
+      (cond
+       ((fixnum? y) (fxbn y x))
+       ((bignum? y) (bnbn x y))
+       (else
+	(die 'bitwise-xor "not an exact integer" y))))
+     (else (die 'bitwise-xor "not an exact integer" x)))))
+
+
   (define binary-
     (lambda (x y)
       (cond
@@ -1000,92 +1054,150 @@
            ((null? e*) ac)
            (else (f (binary+ ac (car e*)) (cdr e*))))))))
 
-  (define bitwise-and
-    (case-lambda
-      ((x y) (binary-bitwise-and x y))
-      ((x y z) (binary-bitwise-and (binary-bitwise-and x y) z))
-      ((a)
-       (cond
-         ((fixnum? a) a)
-         ((bignum? a) a)
-         (else (die 'bitwise-and "not a number" a))))
-      (() -1)
-      ((a b c d . e*)
-       (let f ((ac (binary-bitwise-and a
-                     (binary-bitwise-and b
-                       (binary-bitwise-and c d))))
-               (e* e*))
-         (cond
-           ((null? e*) ac)
-           (else (f (binary-bitwise-and ac (car e*)) (cdr e*))))))))
+
+;;;; bitwise operations
 
-  (define bitwise-ior
-    (case-lambda
-      ((x y) (binary-bitwise-ior x y))
-      ((x y z) (binary-bitwise-ior (binary-bitwise-ior x y) z))
-      ((a)
-       (cond
-         ((fixnum? a) a)
-         ((bignum? a) a)
-         (else (die 'bitwise-ior "not a number" a))))
-      (() 0)
-      ((a b c d . e*)
-       (let f ((ac (binary-bitwise-ior a
-                     (binary-bitwise-ior b
-                       (binary-bitwise-ior c d))))
-               (e* e*))
-         (cond
-           ((null? e*) ac)
-           (else (f (binary-bitwise-ior ac (car e*)) (cdr e*))))))))
-
-  (define bitwise-xor
-    (case-lambda
-      ((x y) (binary-bitwise-xor x y))
-      ((x y z) (binary-bitwise-xor (binary-bitwise-xor x y) z))
-      ((a)
-       (cond
-         ((fixnum? a) a)
-         ((bignum? a) a)
-         (else (die 'bitwise-xor "not a number" a))))
-      (() 0)
-      ((a b c d . e*)
-       (let f ((ac (binary-bitwise-xor a
-                     (binary-bitwise-xor b
-                       (binary-bitwise-xor c d))))
-               (e* e*))
-         (cond
-           ((null? e*) ac)
-           (else (f (binary-bitwise-xor ac (car e*)) (cdr e*))))))))
-
-  (define (bitwise-not x)
+(define bitwise-and
+  (case-lambda
+   ((x y) (binary-bitwise-and x y))
+   ((x y z) (binary-bitwise-and (binary-bitwise-and x y) z))
+   ((a)
     (cond
-      ((fixnum? x) ($fxlognot x))
-      ((bignum? x) (foreign-call "ikrt_bnlognot" x))
-      (else (die 'bitwise-not "invalid argument" x))))
+     ((fixnum? a) a)
+     ((bignum? a) a)
+     (else (die 'bitwise-and "not a number" a))))
+   (() -1)
+   ((a b c d . e*)
+    (let f ((ac (binary-bitwise-and a
+				    (binary-bitwise-and b
+							(binary-bitwise-and c d))))
+	    (e* e*))
+      (cond
+       ((null? e*) ac)
+       (else (f (binary-bitwise-and ac (car e*)) (cdr e*))))))))
 
-  (define (bitwise-if x y z)
-    (define who 'bitwise-if)
-    (define (err x) (die who "not an exact integer" x))
-    (unless (or (fixnum? x) (bignum? x)) (err x))
-    (unless (or (fixnum? y) (bignum? y)) (err y))
-    (unless (or (fixnum? z) (bignum? z)) (err z))
-    (bitwise-ior
-      (bitwise-and x y)
-      (bitwise-and (bitwise-not x) z)))
+(define bitwise-ior
+  (case-lambda
+   ((x y) (binary-bitwise-ior x y))
+   ((x y z) (binary-bitwise-ior (binary-bitwise-ior x y) z))
+   ((a)
+    (cond
+     ((fixnum? a) a)
+     ((bignum? a) a)
+     (else (die 'bitwise-ior "not a number" a))))
+   (() 0)
+   ((a b c d . e*)
+    (let f ((ac (binary-bitwise-ior a
+				    (binary-bitwise-ior b
+							(binary-bitwise-ior c d))))
+	    (e* e*))
+      (cond
+       ((null? e*) ac)
+       (else (f (binary-bitwise-ior ac (car e*)) (cdr e*))))))))
 
-  (define (bitwise-copy-bit-field x i j n)
-    (define who 'bitwise-copy-bit-field)
-    (define (err x) (die who "not an exact integer" x))
-    (define (err2 x) (die who "index must be nonnegative" x))
-    (define (err3 x y) (die who "indices must be in nondescending order" x y))
-    (unless (or (fixnum? x) (bignum? x)) (err x))
-    (unless (or (fixnum? i) (bignum? i)) (err i))
-    (unless (or (fixnum? j) (bignum? j)) (err j))
-    (unless (or (fixnum? n) (bignum? n)) (err n))
-    (when (< i 0) (err2 i))
-    (when (< j i) (err3 i j))
-    (bitwise-if (sll (sub1 (sll 1 (- j i))) i) (sll n i) x))
+(define bitwise-xor
+  (case-lambda
+   ((x y) (binary-bitwise-xor x y))
+   ((x y z) (binary-bitwise-xor (binary-bitwise-xor x y) z))
+   ((a)
+    (cond
+     ((fixnum? a) a)
+     ((bignum? a) a)
+     (else (die 'bitwise-xor "not a number" a))))
+   (() 0)
+   ((a b c d . e*)
+    (let f ((ac (binary-bitwise-xor a
+				    (binary-bitwise-xor b
+							(binary-bitwise-xor c d))))
+	    (e* e*))
+      (cond
+       ((null? e*) ac)
+       (else (f (binary-bitwise-xor ac (car e*)) (cdr e*))))))))
 
+(define (bitwise-not x)
+  (cond
+   ((fixnum? x) ($fxlognot x))
+   ((bignum? x) (foreign-call "ikrt_bnlognot" x))
+   (else (die 'bitwise-not "invalid argument" x))))
+
+(define (bitwise-if x y z)
+  (define who 'bitwise-if)
+  (define (err x) (die who "not an exact integer" x))
+  (unless (or (fixnum? x) (bignum? x)) (err x))
+  (unless (or (fixnum? y) (bignum? y)) (err y))
+  (unless (or (fixnum? z) (bignum? z)) (err z))
+  (bitwise-ior
+   (bitwise-and x y)
+   (bitwise-and (bitwise-not x) z)))
+
+(define (bitwise-copy-bit-field x i j n)
+  (define who 'bitwise-copy-bit-field)
+  (define (err x) (die who "not an exact integer" x))
+  (define (err2 x) (die who "index must be nonnegative" x))
+  (define (err3 x y) (die who "indices must be in nondescending order" x y))
+  (unless (or (fixnum? x) (bignum? x)) (err x))
+  (unless (or (fixnum? i) (bignum? i)) (err i))
+  (unless (or (fixnum? j) (bignum? j)) (err j))
+  (unless (or (fixnum? n) (bignum? n)) (err n))
+  (when (< i 0) (err2 i))
+  (when (< j i) (err3 i j))
+  (bitwise-if (sll (sub1 (sll 1 (- j i))) i) (sll n i) x))
+
+(define (bitwise-reverse-bit-field N start end)
+  (define who 'bitwise-reverse-bit-field)
+  (%assert-argument-is-exact-integer who N)
+  (%assert-argument-is-exact-non-negative-integer who start)
+  (%assert-argument-is-exact-non-negative-integer who end)
+  (%assert-arguments-are-start-and-end-bit-offsets who start end)
+  (let ((width (- end start)))
+    (if (positive? width)
+	(let loop ((reversed	0)
+		   (field	(bitwise-bit-field N start end))
+		   (width	width))
+	  (if (zero? width)
+	      (bitwise-copy-bit-field N start end reversed)
+	    (if (zero? (bitwise-and field 1))
+		(loop (bitwise-arithmetic-shift reversed 1)
+		      (bitwise-arithmetic-shift-right field 1)
+		      (- width 1))
+	      (loop (bitwise-ior (bitwise-arithmetic-shift reversed 1) 1)
+		    (bitwise-arithmetic-shift-right field 1)
+		    (- width 1)))))
+      N)))
+
+(define (bitwise-rotate-bit-field N start end count)
+  (define who 'bitwise-rotate-bit-field)
+  (%assert-argument-is-exact-integer who N)
+  (%assert-argument-is-exact-non-negative-integer who start)
+  (%assert-argument-is-exact-non-negative-integer who end)
+  (%assert-argument-is-exact-non-negative-integer who count)
+  (%assert-arguments-are-start-and-end-bit-offsets who start end)
+
+  (let ((width (- end start)))
+    (if (positive? width)
+	(let* ((count	(mod count width))
+	       (field0	(bitwise-bit-field N start end))
+	       (field1	(bitwise-arithmetic-shift-left field0 count))
+	       (field2	(bitwise-arithmetic-shift-right field0 (- width count)))
+	       (field	(bitwise-ior field1 field2)))
+	  (bitwise-copy-bit-field N start end field))
+      N)))
+
+(define (%assert-argument-is-exact-integer who obj)
+  (unless (and (integer? obj) (exact? obj))
+    (assertion-violation who "expected exact integer as argument" obj)))
+
+(define (%assert-argument-is-exact-non-negative-integer who obj)
+  (%assert-argument-is-exact-integer who obj)
+  (unless (<= 0 obj)
+    (assertion-violation who "expected non negative exact integer as argument" obj)))
+
+(define (%assert-arguments-are-start-and-end-bit-offsets who start end)
+  (unless (<= start end)
+    (assertion-violation who
+      "expected start bit offset less than or equal to end bit offset" start end)))
+
+
   (define -
     (case-lambda
       ((x y) (binary- x y))
@@ -3265,8 +3377,12 @@
            (die who "invalid index" idx1)
            (die who "negative index" idx1)))))
 
-  )
+
+;;;; done
 
+)
+
+;;; end of file
 
 (library (ikarus flonum-conversion)
   (export string->flonum flonum->string)
@@ -4263,7 +4379,10 @@
          (die 'imag-part "not a number" x)))))
 )
 
+
 (library (ikarus system flonums)
   (export $fixnum->flonum)
   (import (ikarus))
   (define $fixnum->flonum fixnum->flonum))
+
+;;; end of file

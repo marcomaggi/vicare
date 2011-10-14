@@ -1,18 +1,21 @@
-Marco  Maggi   <marco.maggi-ipsu@poste.it>  is  the  initial
-maintainer of Vicare Scheme fork.
+Marco  Maggi <marco.maggi-ipsu@poste.it>  is the  initial  maintainer of
+Vicare Scheme fork.
 
 Andreas Rottmann: provided patch to implement getpid.
 
-Göran     Weinholt:    provided    patch     to    implement
-FXREVERSE-BIT-FIELD.
+Göran Weinholt: provided patch to implement FXREVERSE-BIT-FIELD.
 
-Matthew Flatt  distributed the  R6RS test suite  embedded in
-the Vicare distribution.
+Matthew Flatt  distributed the  R6RS test suite  embedded in  the Vicare
+distribution.
+
+The  implementation of  the function  BITWISE-REVERSE-BIT-FIELD  is from
+original  code  in:  Ypsilon  Scheme  System,  Copyright  (c)  2004-2009
+Y. FUJITA / LittleWing  Company Limited.
 
 
 ### end of file
 # Local Variables:
 # mode: text
-# fill-column: 60
+# fill-column: 72
 # paragraph-start: "*"
 # End:
