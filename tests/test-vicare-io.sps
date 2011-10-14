@@ -10398,7 +10398,7 @@
       => test-string))
 
 ;;; --------------------------------------------------------------------
-;;; output ports, EOL none
+;;; input ports, EOL none
 
   (let* ((test-string "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
 	 (test-bv-utf-8		(string->utf8 test-string))
@@ -10440,60 +10440,62 @@
     #f)
 
 ;;; --------------------------------------------------------------------
-;;; output ports, EOL lf
+;;; input ports, EOL lf
 
-  (let* ((test-string "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
+  (let* ((test-string     "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
+	 (test-string-out "begin \x000A; \x000A; \x000A; \x000A; \x000A; \x000A; end")
 	 (test-bv-utf-8		(string->utf8 test-string))
 	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
 	 (test-bv-utf-16be	(string->utf16 test-string (endianness big)))
 
-	 (test-string-latin1	"begin \x000A; \x000D; \x000D;\x000A; end")
+	 (test-string-latin1		"begin \x000A; \x000D; \x000D;\x000A; end")
+	 (test-string-latin1-out	"begin \x000A; \x000A; \x000A; end")
 	 (test-bv-latin1	(string->latin1 test-string-latin1)))
 
     (check
 	(let ((port (open-string-input-port test-string (eol-style lf))))
 	  (get-string-all port))
-      => test-string)
+      => test-string-out)
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-latin1
 						(make-transcoder (latin-1-codec) (eol-style lf)))))
 	  (get-string-all port))
-      => test-string-latin1)
+      => test-string-latin1-out)
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-8
 						(make-transcoder (utf-8-codec) (eol-style lf)))))
 	  (get-string-all port))
-      => test-string)
+      => test-string-out)
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-16le
 						(make-transcoder (utf-16le-codec) (eol-style lf)))))
 	  (get-string-all port))
-      => test-string)
+      => test-string-out)
 
     (check
 	(let ((port (open-bytevector-input-port test-bv-utf-16be
 						(make-transcoder (utf-16be-codec) (eol-style lf)))))
 	  (get-string-all port))
-      => test-string)
+      => test-string-out)
 
     #f)
 
 ;;; --------------------------------------------------------------------
-;;; output ports, EOL cr
+;;; input ports, EOL cr
 
   (let* ((test-string
 	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
 	 (test-string-out
-	  "begin \x000A; \x000A; \x0085; \x2028; \x000A;\x000A; \x000A;\x0085; end")
+	  "begin \x000A; \x000A; \x000A; \x000A; \x000A; \x000A; end")
 	 (test-bv-utf-8		(string->utf8  test-string))
 	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
 	 (test-bv-utf-16be	(string->utf16 test-string (endianness big)))
 
 	 (test-string-latin1		"begin \x000A; \x000D; \x000D;\x000A; end")
-	 (test-string-latin1-out	"begin \x000A; \x000A; \x000A;\x000A; end")
+	 (test-string-latin1-out	"begin \x000A; \x000A; \x000A; end")
 	 (test-bv-latin1		(string->latin1 test-string-latin1)))
 
     (check
@@ -10528,18 +10530,18 @@
     #f)
 
 ;;; --------------------------------------------------------------------
-;;; output ports, EOL crlf
+;;; input ports, EOL crlf
 
   (let* ((test-string
 	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
 	 (test-string-out
-	  "begin \x000A; \x000D; \x0085; \x2028; \x000A; \x000D;\x0085; end")
+	  "begin \x000A; \x000A; \x000A; \x000A; \x000A; \x000A; end")
 	 (test-bv-utf-8		(string->utf8  test-string))
 	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
 	 (test-bv-utf-16be	(string->utf16 test-string (endianness big)))
 
 	 (test-string-latin1		"begin \x000A; \x000D; \x000D;\x000A; end")
-	 (test-string-latin1-out	"begin \x000A; \x000D; \x000A; end")
+	 (test-string-latin1-out	"begin \x000A; \x000A; \x000A; end")
 	 (test-bv-latin1		(string->latin1 test-string-latin1)))
 
     (check
@@ -10574,12 +10576,12 @@
     #f)
 
 ;;; --------------------------------------------------------------------
-;;; output ports, EOL nel
+;;; input ports, EOL nel
 
   (let* ((test-string
 	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
 	 (test-string-out
-	  "begin \x000A; \x000D; \x000A; \x2028; \x000D;\x000A; \x000D;\x000A; end")
+	  "begin \x000A; \x000A; \x000A; \x000A; \x000A; \x000A; end")
 	 (test-bv-utf-8		(string->utf8  test-string))
 	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
 	 (test-bv-utf-16be	(string->utf16 test-string (endianness big))))
@@ -10619,12 +10621,12 @@
     #f)
 
 ;;; --------------------------------------------------------------------
-;;; output ports, EOL crnel
+;;; input ports, EOL crnel
 
   (let* ((test-string
 	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
 	 (test-string-out
-	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000A; end")
+	  "begin \x000A; \x000A; \x000A; \x000A; \x000A; \x000A; end")
 	 (test-bv-utf-8		(string->utf8  test-string))
 	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
 	 (test-bv-utf-16be	(string->utf16 test-string (endianness big))))
@@ -10664,12 +10666,12 @@
     #f)
 
 ;;; --------------------------------------------------------------------
-;;; output ports, EOL ls
+;;; input ports, EOL ls
 
   (let* ((test-string
 	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
 	 (test-string-out
-	  "begin \x000A; \x000D; \x0085; \x000A; \x000D;\x000A; \x000D;\x0085; end")
+	  "begin \x000A; \x000A; \x000A; \x000A; \x000A; \x000A; end")
 	 (test-bv-utf-8		(string->utf8  test-string))
 	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
 	 (test-bv-utf-16be	(string->utf16 test-string (endianness big))))
@@ -10741,7 +10743,7 @@
       => test-string))
 
 ;;; --------------------------------------------------------------------
-;;; output ports, EOL none
+;;; input ports, EOL none
 
   (let* ((test-string "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
 	 (test-bv-utf-8		(string->utf8 test-string))
@@ -10783,271 +10785,53 @@
     #f)
 
 ;;; --------------------------------------------------------------------
-;;; output ports, EOL lf
+;;; input ports, EOL lf
 
   (let* ((test-string "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
+	 (test-string-out "begin \x000A; \x000A; \x000A; \x000A; \x000A; \x000A; end")
 	 (test-bv-utf-8		(string->utf8 test-string))
 	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
 	 (test-bv-utf-16be	(string->utf16 test-string (endianness big)))
 
-	 (test-string-latin1	"begin \x000A; \x000D; \x000D;\x000A; end")
+	 (test-string-latin1		"begin \x000A; \x000D; \x000D;\x000A; end")
+	 (test-string-latin1-out	"begin \x000A; \x000A; \x000A; end")
 	 (test-bv-latin1	(string->latin1 test-string-latin1)))
 
-    (check
-	(let ((port (open-string-input-port test-string (eol-style lf))))
-	  (%get-string-all port))
-      => test-string)
+    (for-each
+	(lambda (eol-style)
+	  (check
+	      (let ((port (open-bytevector-input-port test-bv-latin1
+						      (make-transcoder (latin-1-codec) eol-style))))
+		(%get-string-all port))
+	    => test-string-latin1-out))
+      '(lf cr crlf))
 
-    (check
-	(let ((port (open-bytevector-input-port test-bv-latin1
-						(make-transcoder (latin-1-codec) (eol-style lf)))))
-	  (%get-string-all port))
-      => test-string-latin1)
+    (for-each
+	(lambda (eol-style)
+	  (check
+	      (let ((port (open-string-input-port test-string eol-style)))
+		(%get-string-all port))
+	    => test-string-out)
 
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-8
-						(make-transcoder (utf-8-codec) (eol-style lf)))))
-	  (%get-string-all port))
-      => test-string)
+	  (check
+	      (let ((port (open-bytevector-input-port test-bv-utf-8
+						      (make-transcoder (utf-8-codec) eol-style))))
+		(%get-string-all port))
+	    => test-string-out)
 
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16le
-						(make-transcoder (utf-16le-codec) (eol-style lf)))))
-	  (%get-string-all port))
-      => test-string)
+	  (check
+	      (let ((port (open-bytevector-input-port test-bv-utf-16le
+						      (make-transcoder (utf-16le-codec) eol-style))))
+		(%get-string-all port))
+	    => test-string-out)
 
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16be
-						(make-transcoder (utf-16be-codec) (eol-style lf)))))
-	  (%get-string-all port))
-      => test-string)
-
-    #f)
-
-;;; --------------------------------------------------------------------
-;;; output ports, EOL cr
-
-  (let* ((test-string
-	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
-	 (test-string-out
-	  "begin \x000A; \x000A; \x0085; \x2028; \x000A;\x000A; \x000A;\x0085; end")
-	 (test-bv-utf-8		(string->utf8 test-string))
-	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
-	 (test-bv-utf-16be	(string->utf16 test-string (endianness big)))
-
-	 (test-string-latin1		"begin \x000A; \x000D; \x000D;\x000A; end")
-	 (test-string-latin1-out	"begin \x000A; \x000A; \x000A;\x000A; end")
-	 (test-bv-latin1		(string->latin1 test-string-latin1)))
-
-    (check
-	(let ((port (open-string-input-port test-string (eol-style cr))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-latin1
-						(make-transcoder (latin-1-codec) (eol-style cr)))))
-	  (%get-string-all port))
-      => test-string-latin1-out)
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-8
-						(make-transcoder (utf-8-codec) (eol-style cr)))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16le
-				      (make-transcoder (utf-16le-codec) (eol-style cr)))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16be
-				      (make-transcoder (utf-16be-codec) (eol-style cr)))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    #f)
-
-;;; --------------------------------------------------------------------
-;;; output ports, EOL crlf
-
-  (let* ((test-string
-	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
-	 (test-string-out
-	  "begin \x000A; \x000D; \x0085; \x2028; \x000A; \x000D;\x0085; end")
-	 (test-bv-utf-8		(string->utf8  test-string))
-	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
-	 (test-bv-utf-16be	(string->utf16 test-string (endianness big)))
-
-	 (test-string-latin1		"begin \x000A; \x000D; \x000D;\x000A; end")
-	 (test-string-latin1-out	"begin \x000A; \x000D; \x000A; end")
-	 (test-bv-latin1		(string->latin1 test-string-latin1)))
-
-    (check
-	(let ((port (open-string-input-port test-string (eol-style crlf))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-latin1
-						(make-transcoder (latin-1-codec) (eol-style crlf)))))
-	  (%get-string-all port))
-      => test-string-latin1-out)
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-8
-						(make-transcoder (utf-8-codec) (eol-style crlf)))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16le
-						(make-transcoder (utf-16le-codec) (eol-style crlf)))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16be
-						(make-transcoder (utf-16be-codec) (eol-style crlf)))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    #f)
-
-;;; --------------------------------------------------------------------
-;;; output ports, EOL nel
-
-  (let* ((test-string
-	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
-	 (test-string-out
-	  "begin \x000A; \x000D; \x000A; \x2028; \x000D;\x000A; \x000D;\x000A; end")
-	 (test-bv-utf-8		(string->utf8  test-string))
-	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
-	 (test-bv-utf-16be	(string->utf16 test-string (endianness big))))
-
-    (check
-	(let ((port (open-string-input-port test-string (eol-style nel))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    (check
-	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (open-bytevector-input-port '#vu8()
-				      (make-transcoder (latin-1-codec) (eol-style nel))))
-      => '(nel))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-8
-						(make-transcoder (utf-8-codec) (eol-style nel)))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16le
-						(make-transcoder (utf-16le-codec) (eol-style nel)))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16be
-						(make-transcoder (utf-16be-codec) (eol-style nel)))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    #f)
-
-;;; --------------------------------------------------------------------
-;;; output ports, EOL crnel
-
-  (let* ((test-string
-	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
-	 (test-string-out
-	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000A; end")
-	 (test-bv-utf-8		(string->utf8  test-string))
-	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
-	 (test-bv-utf-16be	(string->utf16 test-string (endianness big))))
-
-    (check
-	(let ((port (open-string-input-port test-string (eol-style crnel))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    (check
-	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (open-bytevector-input-port '#vu8()
-				      (make-transcoder (latin-1-codec) (eol-style crnel))))
-      => '(crnel))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-8
-						(make-transcoder (utf-8-codec) (eol-style crnel)))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16le
-						(make-transcoder (utf-16le-codec) (eol-style crnel)))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16be
-						(make-transcoder (utf-16be-codec) (eol-style crnel)))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    #f)
-
-;;; --------------------------------------------------------------------
-;;; output ports, EOL ls
-
-  (let* ((test-string
-	  "begin \x000A; \x000D; \x0085; \x2028; \x000D;\x000A; \x000D;\x0085; end")
-	 (test-string-out
-	  "begin \x000A; \x000D; \x0085; \x000A; \x000D;\x000A; \x000D;\x0085; end")
-	 (test-bv-utf-8		(string->utf8  test-string))
-	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
-	 (test-bv-utf-16be	(string->utf16 test-string (endianness big))))
-
-    (check
-	(let ((port (open-string-input-port test-string (eol-style ls))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    (check
-	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (open-bytevector-input-port '#vu8()
-				      (make-transcoder (latin-1-codec) (eol-style ls))))
-      => '(ls))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-8
-						(make-transcoder (utf-8-codec) (eol-style ls)))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16le
-						(make-transcoder (utf-16le-codec) (eol-style ls)))))
-	  (%get-string-all port))
-      => test-string-out)
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16be
-						(make-transcoder (utf-16be-codec) (eol-style ls)))))
-	  (%get-string-all port))
-      => test-string-out)
+	  (check
+	      (let ((port (open-bytevector-input-port test-bv-utf-16be
+						      (make-transcoder (utf-16be-codec) eol-style))))
+		(%get-string-all port))
+	    => test-string-out)
+	  #f)
+      '(lf cr crlf nel crnel ls))
 
     #f)
 
@@ -11081,7 +10865,7 @@
       => (list test-string-line test-string-rest)))
 
 ;;; --------------------------------------------------------------------
-;;; output ports, EOL none
+;;; input ports, EOL none
 
   (let* ((test-string		"begin \x000D; \x0085; \x2028; \x000D;\x0085; \x000D;\x000A; \x000A; end")
 	 (test-string-line	"begin \x000D; \x0085; \x2028; \x000D;\x0085; \x000D;")
@@ -11137,314 +10921,64 @@
     #f)
 
 ;;; --------------------------------------------------------------------
-;;; output ports, EOL lf
+;;; input ports, EOL lf
 
-  (let* ((test-string		"begin \x000D; \x0085; \x2028; \x000D;\x0085; \x000D;\x000A; \x000A; end")
-	 (test-string-line	"begin \x000D; \x0085; \x2028; \x000D;\x0085; \x000D;")
-	 (test-string-rest	" \x000A; end")
+  (let* ((test-string "A_\x000D;_B_\x0085;_C_\x2028;_D_\x000D;\x0085;_E_\x000D;\x000A;_F_\x000A;_G")
 	 (test-bv-utf-8		(string->utf8 test-string))
 	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
 	 (test-bv-utf-16be	(string->utf16 test-string (endianness big)))
 
-	 (test-string-latin1		"begin \x000D; \x000D;\x000A; \x000A; end")
-	 (test-string-latin1-line	"begin \x000D; \x000D;")
-	 (test-string-latin1-rest	" \x000A; end")
+	 (test-string-result	'("A_" "_B_" "_C_" "_D_" "_E_" "_F_" "_G"))
+
+	 (test-string-latin1		"A_\x000A;_B_\x000D;_C_\x000D;\x000A;_D")
+	 (test-string-latin1-result	'("A_" "_B_" "_C_" "_D"))
 	 (test-bv-latin1		(string->latin1 test-string-latin1)))
 
-    (check
-	(let ((port (open-string-input-port test-string (eol-style lf))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
+    (define-syntax doit
+      (syntax-rules ()
+	((_ ?port)
+	 (check
+	     (let loop ((port ?port) (lines '()))
+	       (let ((L (get-line port)))
+		 (if (eof-object? L)
+		     (reverse lines)
+		   (loop port (cons L lines)))))
+	   => test-string-result))))
 
-    (check
-	(let ((port (open-bytevector-input-port test-bv-latin1
-						(make-transcoder (latin-1-codec) (eol-style lf)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-latin1-line test-string-latin1-rest))
+    (define-syntax doit-latin1
+      (syntax-rules ()
+	((_ ?port)
+	 (check
+	     (let loop ((port ?port) (lines '()))
+	       (let ((L (get-line port)))
+		 (if (eof-object? L)
+		     (reverse lines)
+		   (loop port (cons L lines)))))
+	   => test-string-latin1-result))))
 
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-8
-						(make-transcoder (utf-8-codec) (eol-style lf)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16le
-						(make-transcoder (utf-16le-codec) (eol-style lf)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16be
-						(make-transcoder (utf-16be-codec) (eol-style lf)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
+    (doit (open-string-input-port test-string (eol-style lf)))
+    (doit (open-bytevector-input-port test-bv-utf-8
+				      (make-transcoder (utf-8-codec) (eol-style lf))))
+    (doit (open-bytevector-input-port test-bv-utf-16le
+				      (make-transcoder (utf-16le-codec) (eol-style lf))))
+    (doit (open-bytevector-input-port test-bv-utf-16be
+				      (make-transcoder (utf-16be-codec) (eol-style lf))))
+    (doit-latin1 (open-bytevector-input-port test-bv-latin1
+					     (make-transcoder (latin-1-codec) (eol-style lf))))
 
     #f)
 
-;;; --------------------------------------------------------------------
-;;; output ports, EOL cr
-
-  (let* ((test-string		"begin \x0085; \x2028; \x000D;\x0085; \x000D;\x000A; \x000A; end")
-	 (test-string-line	"begin \x0085; \x2028; ")
-	 (test-string-rest	"\x0085; \x000A;\x000A; \x000A; end")
-	 (test-bv-utf-8		(string->utf8 test-string))
-	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
-	 (test-bv-utf-16be	(string->utf16 test-string (endianness big)))
-
-	 (test-string-latin1		"begin \x000D; \x000D;\x000A; \x000A; end")
-	 (test-string-latin1-line	"begin ")
-	 (test-string-latin1-rest	" \x000A;\x000A; \x000A; end")
-	 (test-bv-latin1		(string->latin1 test-string-latin1)))
-
-    (check
-	(let ((port (open-string-input-port test-string (eol-style cr))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-latin1
-						(make-transcoder (latin-1-codec) (eol-style cr)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-latin1-line test-string-latin1-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-8
-						(make-transcoder (utf-8-codec) (eol-style cr)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16le
-						(make-transcoder (utf-16le-codec) (eol-style cr)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16be
-						(make-transcoder (utf-16be-codec) (eol-style cr)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    #f)
-
-;;; --------------------------------------------------------------------
-;;; output ports, EOL crlf
-
-  (let* ((test-string		"begin \x0085; \x2028; \x000D;\x0085; \x000D;\x000A; \x000A; end")
-	 (test-string-line	"begin \x0085; \x2028; \x000D;\x0085; ")
-	 (test-string-rest	" \x000A; end")
-	 (test-bv-utf-8		(string->utf8 test-string))
-	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
-	 (test-bv-utf-16be	(string->utf16 test-string (endianness big)))
-
-	 (test-string-latin1		"begin \x000D; \x000D;\x000A; \x000A; end")
-	 (test-string-latin1-line	"begin \x000D; ")
-	 (test-string-latin1-rest	" \x000A; end")
-	 (test-bv-latin1		(string->latin1 test-string-latin1)))
-
-    (check
-	(let ((port (open-string-input-port test-string (eol-style crlf))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-latin1
-						(make-transcoder (latin-1-codec) (eol-style crlf)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-latin1-line test-string-latin1-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-8
-						(make-transcoder (utf-8-codec) (eol-style crlf)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16le
-						(make-transcoder (utf-16le-codec) (eol-style crlf)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16be
-						(make-transcoder (utf-16be-codec) (eol-style crlf)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    #f)
-
-;;; --------------------------------------------------------------------
-;;; output ports, EOL nel
-
-  (let* ((test-string		"begin \x2028; \x000D;\x0085; \x000D;\x000A; \x0085; \x000A; end")
-	 (test-string-line	"begin \x2028; \x000D;")
-	 (test-string-rest	" \x000D;\x000A; \x000A; \x000A; end")
-	 (test-bv-utf-8		(string->utf8 test-string))
-	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
-	 (test-bv-utf-16be	(string->utf16 test-string (endianness big))))
-
-    (check
-	(let ((port (open-string-input-port test-string (eol-style nel))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-8
-						(make-transcoder (utf-8-codec) (eol-style nel)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16le
-						(make-transcoder (utf-16le-codec) (eol-style nel)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16be
-						(make-transcoder (utf-16be-codec) (eol-style nel)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    #f)
-
-;;; --------------------------------------------------------------------
-;;; output ports, EOL crnel
-
-  (let* ((test-string		"begin \x2028; \x000D;\x0085; \x000D;\x000A; \x0085; \x000A; end")
-	 (test-string-line	"begin \x2028; ")
-	 (test-string-rest	" \x000D;\x000A; \x0085; \x000A; end")
-	 (test-bv-utf-8		(string->utf8 test-string))
-	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
-	 (test-bv-utf-16be	(string->utf16 test-string (endianness big))))
-
-    (check
-	(let ((port (open-string-input-port test-string (eol-style crnel))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-8
-						(make-transcoder (utf-8-codec) (eol-style crnel)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16le
-						(make-transcoder (utf-16le-codec) (eol-style crnel)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16be
-						(make-transcoder (utf-16be-codec) (eol-style crnel)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    #f)
-
-;;; --------------------------------------------------------------------
-;;; output ports, EOL ls
-
-  (let* ((test-string		"begin \x000D;\x0085; \x2028; \x000D;\x000A; \x0085; \x000A; end")
-	 (test-string-line	"begin \x000D;\x0085; ")
-	 (test-string-rest	" \x000D;\x000A; \x0085; \x000A; end")
-	 (test-bv-utf-8		(string->utf8 test-string))
-	 (test-bv-utf-16le	(string->utf16 test-string (endianness little)))
-	 (test-bv-utf-16be	(string->utf16 test-string (endianness big))))
-
-    (check
-	(let ((port (open-string-input-port test-string (eol-style ls))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-8
-						(make-transcoder (utf-8-codec) (eol-style ls)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16le
-						(make-transcoder (utf-16le-codec) (eol-style ls)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    (check
-	(let ((port (open-bytevector-input-port test-bv-utf-16be
-						(make-transcoder (utf-16be-codec) (eol-style ls)))))
-	  (let* ((line (get-line port))
-		 (rest (get-string-all port)))
-	    (list line rest)))
-      => (list test-string-line test-string-rest))
-
-    #f)
 
   #t)
 
 
 (parametrise ((check-test-name	'eol-conversion-input-peek))
 
-  (define NEWLINE-CODE-POINT		#x000A) ;; U+000A
   (define LINEFEED-CODE-POINT		#x000A) ;; U+000A
   (define CARRIAGE-RETURN-CODE-POINT	#x000D) ;; U+000D
   (define NEXT-LINE-CODE-POINT		#x0085) ;; U+0085
   (define LINE-SEPARATOR-CODE-POINT	#x2028) ;; U+2028
 
-  (define NEWLINE-CHAR			#\x000A) ;; U+000A
   (define LINEFEED-CHAR			#\x000A) ;; U+000A
   (define CARRIAGE-RETURN-CHAR		#\x000D) ;; U+000D
   (define NEXT-LINE-CHAR		#\x0085) ;; U+0085
@@ -11453,287 +10987,44 @@
   (define (%bytevector string->bytevector . chars)
     (string->bytevector (apply string chars)))
 
-  (define-syntax open-port
-    (syntax-rules (=>)
-      ((_ ?style ?codec ?string->bytevector => (?char ...))
-       (open-bytevector-input-port (%bytevector ?string->bytevector ?char ...)
-				   (make-transcoder (?codec) ?style)))))
-
-  (define the-eol		(make-parameter #f))
-  (define the-codec		(make-parameter #f))
-  (define string-to-bytevector	(make-parameter #f))
-
-  (define-syntax doit
-    (syntax-rules ()
-      ((_ ?result)
-       (check
-	   (peek-char (open-port (the-eol) (the-codec) (string-to-bytevector) => (?result)))
-	 => ?result))
-      ((_ ?result (?char ...))
-       (check
-	   (peek-char (open-port (the-eol) (the-codec) (string-to-bytevector) => (?char ...)))
-	 => ?result))))
-
-  (define-syntax doit-incomplete-eol
-    (syntax-rules ()
-      ((_ ?char)
-       (check
-	   (guard (E ((assertion-violation? E)
-;;;		      (pretty-print (condition-message E))
-		      (condition-irritants E))
-		     (else E))
-	     (peek-char (open-port (the-eol) (the-codec) (string-to-bytevector) => (?char))))
-	 => `(,?char)))))
-
-  (define (string->utf16le str)
-    (string->utf16 str (endianness little)))
-
-  (define (string->utf16be str)
-    (string->utf16 str (endianness big)))
-
-  (define (do-all-no-conversion)
-    (parametrise ((the-codec		latin-1-codec)
-		  (string-to-bytevector	string->latin1))
-      (doit LINEFEED-CHAR)
-      (doit CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR)))
-    (parametrise ((the-codec		utf-8-codec)
-		  (string-to-bytevector	string->utf8))
-      (doit LINEFEED-CHAR)
-      (doit CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR))
-    (parametrise ((the-codec		utf-16le-codec)
-		  (string-to-bytevector	string->utf16le))
-      (doit LINEFEED-CHAR)
-      (doit CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR))
-    (parametrise ((the-codec		utf-16be-codec)
-		  (string-to-bytevector	string->utf16be))
-      (doit LINEFEED-CHAR)
-      (doit CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR)))
-
 ;;; --------------------------------------------------------------------
-;;; transcoded ports
 
-  (parametrise ((the-eol (eol-style none)))
-    (do-all-no-conversion))
+  (for-each
+      (lambda (input)
+	(for-each
+	    (lambda (make-codec)
+	      (check
+		  (peek-char (open-bytevector-input-port input
+							 (make-transcoder (make-codec)
+									  (eol-style none))))
+		=> LINEFEED-CHAR))
+	  (list utf-8-codec utf-16-codec utf-16le-codec utf-16be-codec latin-1-codec)))
+    (list (string LINEFEED-CHAR)
+	  (string CARRIAGE-RETURN-CHAR)
+	  (string CARRIAGE-RETURN-CHAR LINEFEED-CHAR)
+	  (string NEXT-LINE-CHAR)
+	  (string CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR)
+	  (string LINE-SEPARATOR-CHAR)))
 
-  (parametrise ((the-eol (eol-style lf)))
-    (do-all-no-conversion))
-
-  (parametrise ((the-eol (eol-style crlf)))
-    (parametrise ((the-codec		latin-1-codec)
-		  (string-to-bytevector	string->latin1))
-      (doit LINEFEED-CHAR)
-      (doit-incomplete-eol CARRIAGE-RETURN-CHAR)
-      (doit LINEFEED-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR)))
-    (parametrise ((the-codec		utf-8-codec)
-		  (string-to-bytevector	string->utf8))
-      (doit LINEFEED-CHAR)
-      (doit-incomplete-eol CARRIAGE-RETURN-CHAR)
-      (doit LINEFEED-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR))
-    (parametrise ((the-codec		utf-16le-codec)
-		  (string-to-bytevector	string->utf16le))
-      (doit LINEFEED-CHAR)
-      (doit-incomplete-eol CARRIAGE-RETURN-CHAR)
-      (doit LINEFEED-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR))
-    (parametrise ((the-codec		utf-16be-codec)
-		  (string-to-bytevector	string->utf16be))
-      (doit LINEFEED-CHAR)
-      (doit-incomplete-eol CARRIAGE-RETURN-CHAR)
-      (doit LINEFEED-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR)))
-
-  (parametrise ((the-eol (eol-style nel)))
-    (parametrise ((the-codec		utf-8-codec)
-		  (string-to-bytevector	string->utf8))
-      (doit LINEFEED-CHAR)
-      (doit CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit LINEFEED-CHAR (NEXT-LINE-CHAR))
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR))
-    (parametrise ((the-codec		utf-16le-codec)
-		  (string-to-bytevector	string->utf16le))
-      (doit LINEFEED-CHAR)
-      (doit CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit LINEFEED-CHAR (NEXT-LINE-CHAR))
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR))
-    (parametrise ((the-codec		utf-16be-codec)
-		  (string-to-bytevector	string->utf16be))
-      (doit LINEFEED-CHAR)
-      (doit CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit LINEFEED-CHAR (NEXT-LINE-CHAR))
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR)))
-
-  (parametrise ((the-eol (eol-style crnel)))
-    (parametrise ((the-codec		utf-8-codec)
-		  (string-to-bytevector	string->utf8))
-      (doit LINEFEED-CHAR)
-      (doit-incomplete-eol CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit LINEFEED-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR))
-    (parametrise ((the-codec		utf-16le-codec)
-		  (string-to-bytevector	string->utf16le))
-      (doit LINEFEED-CHAR)
-      (doit-incomplete-eol CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit LINEFEED-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR))
-    (parametrise ((the-codec		utf-16be-codec)
-		  (string-to-bytevector	string->utf16be))
-      (doit LINEFEED-CHAR)
-      (doit-incomplete-eol CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit LINEFEED-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR)))
-
-  (parametrise ((the-eol (eol-style ls)))
-    (parametrise ((the-codec		utf-8-codec)
-		  (string-to-bytevector	string->utf8))
-      (doit LINEFEED-CHAR)
-      (doit CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINEFEED-CHAR (LINE-SEPARATOR-CHAR)))
-    (parametrise ((the-codec		utf-16le-codec)
-		  (string-to-bytevector	string->utf16le))
-      (doit LINEFEED-CHAR)
-      (doit CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINEFEED-CHAR (LINE-SEPARATOR-CHAR)))
-    (parametrise ((the-codec		utf-16be-codec)
-		  (string-to-bytevector	string->utf16be))
-      (doit LINEFEED-CHAR)
-      (doit CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINEFEED-CHAR (LINE-SEPARATOR-CHAR))))
-
-;;; --------------------------------------------------------------------
-;;; string ports
-
-  (let-syntax ((doit (syntax-rules ()
-		       ((_ ?result)
-			(check
-			    (peek-char (open-string-input-port (string ?result)))
-			  => ?result))
-		       ((_ ?result (?char ...))
-			(check
-			    (peek-char (open-string-input-port (string ?char ...)))
-			  => ?result)))))
-
-    (doit LINEFEED-CHAR)
-    (doit CARRIAGE-RETURN-CHAR)
-    (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-    (doit NEXT-LINE-CHAR)
-    (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-    (doit LINE-SEPARATOR-CHAR)
-
-    #f)
-
-  (let ()
-    (define-syntax doit
-      (syntax-rules ()
-	((_ ?result)
-	 (check
-	     (peek-char (open-string-input-port (string ?result) (the-eol)))
-	   => ?result))
-	((_ ?result (?char ...))
-	 (check
-	     (peek-char (open-string-input-port (string ?char ...) (the-eol)))
-	   => ?result))))
-    (define-syntax doit-incomplete-eol
-      (syntax-rules ()
-	((_ ?char)
-	 (check
-	     (guard (E ((assertion-violation? E)
-;;;		      (pretty-print (condition-message E))
-			(condition-irritants E))
-		       (else E))
-	       (peek-char (open-string-input-port (string ?char) (the-eol))))
-	   => `(,?char)))))
-
-
-    (parametrise ((the-eol (eol-style none)))
-      (doit LINEFEED-CHAR)
-      (doit CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR))
-
-    (parametrise ((the-eol (eol-style lf)))
-      (doit LINEFEED-CHAR)
-      (doit CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR))
-
-    (parametrise ((the-eol (eol-style crlf)))
-      (doit LINEFEED-CHAR)
-      (doit-incomplete-eol CARRIAGE-RETURN-CHAR)
-      (doit LINEFEED-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR))
-
-    (parametrise ((the-eol (eol-style nel)))
-      (doit LINEFEED-CHAR)
-      (doit CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit LINEFEED-CHAR (NEXT-LINE-CHAR))
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR))
-
-    (parametrise ((the-eol (eol-style crnel)))
-      (doit LINEFEED-CHAR)
-      (doit-incomplete-eol CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit LINEFEED-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINE-SEPARATOR-CHAR))
-
-    (parametrise ((the-eol (eol-style ls)))
-      (doit LINEFEED-CHAR)
-      (doit CARRIAGE-RETURN-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-      (doit NEXT-LINE-CHAR)
-      (doit CARRIAGE-RETURN-CHAR (CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-      (doit LINEFEED-CHAR (LINE-SEPARATOR-CHAR)))
-
-    #f)
+  (for-each
+      (lambda (eol-style)
+	(for-each
+	    (lambda (input)
+	      (for-each
+		  (lambda (make-codec)
+		    (check
+			(peek-char (open-bytevector-input-port input
+							       (make-transcoder (make-codec)
+										eol-style)))
+		      => LINEFEED-CHAR))
+		(list utf-8-codec utf-16-codec utf-16le-codec utf-16be-codec latin-1-codec)))
+	  (list (string LINEFEED-CHAR)
+		(string CARRIAGE-RETURN-CHAR)
+		(string CARRIAGE-RETURN-CHAR LINEFEED-CHAR)
+		(string NEXT-LINE-CHAR)
+		(string CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR)
+		(string LINE-SEPARATOR-CHAR))))
+    '(lf cr crlf nel crnel ls))
 
   #t)
 

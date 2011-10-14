@@ -5127,8 +5127,59 @@
     (%do-read-char (current-input-port) 'read-char))))
 
 (define (%do-read-char port who)
-  (%assert-argument-is-port port who)
-  (let ((eol-bits (%unsafe.port-eol-style-bits port)))
+  (define-inline (main)
+    (%assert-argument-is-port port who)
+    (let ((eol-bits (%unsafe.port-eol-style-bits port)))
+      (%case-textual-input-port-fast-tag (port who)
+	((FAST-GET-UTF8-TAG)
+	 (%get-it eol-bits
+		  %unsafe.read-char-from-port-with-fast-get-utf8-tag
+		  %unsafe.peek-char-from-port-with-fast-get-utf8-tag))
+	((FAST-GET-CHAR-TAG)
+	 (%get-it eol-bits
+		  %unsafe.read-char-from-port-with-fast-get-char-tag
+		  %unsafe.peek-char-from-port-with-fast-get-char-tag))
+	((FAST-GET-LATIN-TAG)
+	 (%get-it eol-bits
+		  %unsafe.read-char-from-port-with-fast-get-latin1-tag
+		  %unsafe.peek-char-from-port-with-fast-get-latin1-tag))
+	((FAST-GET-UTF16LE-TAG)
+	 (%get-it eol-bits %read-utf16le %peek-utf16le))
+	((FAST-GET-UTF16BE-TAG)
+	 (%get-it eol-bits %read-utf16be %peek-utf16be)))))
+
+  (define-inline (%get-it eol-bits ?read-char ?peek-char)
+    (let ((ch (?read-char port who)))
+      (cond ((eof-object? ch)
+	     ch) ;return EOF
+	    ((unsafe.fxzero? eol-bits) ;EOL style none
+	     ch)
+	    ((char-is-single-char-line-ending? ch)
+	     LINEFEED-CHAR)
+	    ((char-is-carriage-return? ch)
+	     (let ((ch1 (?peek-char port who)))
+	       (cond ((eof-object? ch1)
+		      (void))
+		     ((char-is-newline-after-carriage-return? ch1)
+		      (?read-char port who)))
+	       LINEFEED-CHAR))
+	    (else ch))))
+
+  (define-inline (%read-utf16le ?port ?who)
+    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
+
+  (define-inline (%peek-utf16le ?port ?who)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
+
+  (define-inline (%read-utf16be ?port ?who)
+    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
+
+  (define-inline (%peek-utf16be ?port ?who)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
+
+  (main)
+
+  #;(let ((eol-bits (%unsafe.port-eol-style-bits port)))
     (%case-textual-input-port-fast-tag (port who)
       ((FAST-GET-UTF8-TAG)
        (let ((ch (%unsafe.read-char-from-port-with-fast-get-utf8-tag port who)))
@@ -5380,6 +5431,22 @@
     ;;char after CR is the same.
     ;;
     (let ((ch (?peek-char port who)))
+      (cond ((eof-object? ch)
+	     ch) ;return EOF
+	    ((unsafe.fxzero? eol-bits) ;EOL style none
+	     ch)
+	    ((char-is-single-char-line-ending? ch)
+	     LINEFEED-CHAR)
+	    ((char-is-carriage-return? ch)
+	     (let ((ch2 (?peek-char/offset port who ?offset-of-ch2)))
+	       (cond ((eof-object? ch2)
+		      LINEFEED-CHAR)
+		     ((char-is-newline-after-carriage-return? ch2)
+		      LINEFEED-CHAR)
+		     (else ch))))
+	    (else ch)))
+
+    #;(let ((ch (?peek-char port who)))
       (define-inline (%convert-single external-ch)
 	(if (unsafe.char= ch external-ch)
 	    LINEFEED-CHAR
