@@ -18,11 +18,17 @@
 (library (ikarus transcoders)
   (export string->utf8		utf8->string
 	  string->utf16		utf16->string
+	  string->utf16le	utf16le->string
+	  string->utf16be	utf16be->string
+	  string->utf16n	utf16n->string
 	  string->utf32		utf32->string
 	  string->bytevector	bytevector->string)
   (import (except (ikarus)
 		  string->utf8		utf8->string
 		  string->utf16		utf16->string
+		  string->utf16le	utf16le->string
+		  string->utf16be	utf16be->string
+		  string->utf16n	utf16n->string
 		  string->utf32		utf32->string
                   string->bytevector	bytevector->string)
     (ikarus system $strings)
@@ -372,6 +378,14 @@
 ;;;      W2 as its 10 low-order bits.
 ;;;   5) Add 0x10000 to U' to obtain the character value U.
 ;;;      Terminate.
+
+(define (utf16le->string bv)	(utf16->string bv (endianness little)))
+(define (utf16be->string bv)	(utf16->string bv (endianness big)))
+(define (utf16n->string  bv)	(utf16->string bv (native-endianness)))
+
+(define (string->utf16le str)	(string->utf16 str (endianness little)))
+(define (string->utf16be str)	(string->utf16 str (endianness big)))
+(define (string->utf16n  str)	(string->utf16 str (native-endianness)))
 
 (module (string->utf16)
   (define ($string->utf16 str endianness)

@@ -2108,8 +2108,20 @@ The following bindings are exported by the @library{ikarus} library.
 
 @defun string->latin1 @var{string}
 @defunx latin1->string @var{bytevevctor}
-Converto to and from a Scheme string and a Scheme bytevector holding the
+Convert to and from a Scheme string and a Scheme bytevector holding the
 Latin-1 encoding of the characters.
+@end defun
+
+
+@defun string->utf16le @var{string}
+@defunx string->utf16be @var{string}
+@defunx string->utf16n @var{string}
+@defunx utf16le->string @var{bytevector}
+@defunx utf16be->string @var{bytevector}
+@defunx utf16n->string @var{bytevector}
+Convert to and from a Scheme string and a Scheme bytevector holding the
+@utf{}-16 encoding of the characters under little, big or native
+endianness respectively.
 @end defun
 
 @c page

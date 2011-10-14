@@ -33,7 +33,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Ikarus bytevector functions\n")
+(display "*** testing Ikarus string functions\n")
 
 
 (parametrise ((check-test-name	'latin1))
@@ -81,6 +81,55 @@
 
   (check
       (latin1->string test-bytevector)
+    => test-string)
+
+  #t)
+
+
+(parametrise ((check-test-name	'utf-16))
+
+  (define test-string "ciao \x1000;")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (utf16le->string (string->utf16le test-string))
+    => test-string)
+
+  (check
+      (utf16be->string (string->utf16be test-string))
+    => test-string)
+
+  (check
+      (utf16n->string (string->utf16n test-string))
+    => test-string)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (utf16le->string (string->utf16 test-string (endianness little)))
+    => test-string)
+
+  (check
+      (utf16be->string (string->utf16 test-string (endianness big)))
+    => test-string)
+
+  (check
+      (utf16n->string (string->utf16 test-string (native-endianness)))
+    => test-string)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (utf16->string (string->utf16le test-string) (endianness little))
+    => test-string)
+
+  (check
+      (utf16->string (string->utf16be test-string) (endianness big))
+    => test-string)
+
+  (check
+      (utf16->string (string->utf16n test-string) (native-endianness))
     => test-string)
 
   #t)
