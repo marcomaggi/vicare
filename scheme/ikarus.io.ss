@@ -2892,6 +2892,27 @@
 	     (assertion-violation who
 	       "port does not support port-position operation" port))))))
 
+(define (%unsafe.port-position/tracked-position who port)
+  ;;If the port supports the GET-POSITION operation: use its own policy;
+  ;;else trust the value in the POS cookie field.
+  ;;
+  (with-port (port)
+    (let ((device-position (%unsafe.device-position/tracked-position who port)))
+      (if (%unsafe.output-port? port)
+	  (+ device-position port.buffer.index)
+	(- device-position (- port.buffer.used-size port.buffer.index))))))
+
+(define (%unsafe.device-position/tracked-position who port)
+  ;;If the port supports the GET-POSITION operation: use its own policy;
+  ;;else trust the value in the POS cookie field.
+  ;;
+  (with-port (port)
+    (if port.get-position
+	(%unsafe.device-position who port)
+      port.device.position)))
+
+;;; --------------------------------------------------------------------
+
 (define (set-port-position! port requested-port-position)
   ;;Defined by R6RS.  If  PORT is a binary port, REQUESTED-PORT-POSITION
   ;;should be a non-negative exact integer object.  If PORT is a textual
@@ -2923,7 +2944,7 @@
       (%assert-argument-is-port-position requested-port-position who)
       (let ((set-position! port.set-position!))
 	(cond ((procedure? set-position!)
-	       (let ((port.old-position (%unsafe.port-position who port)))
+	       (let ((port.old-position (%unsafe.port-position/tracked-position who port)))
 		 (unless (= port.old-position requested-port-position)
 		   (%set-with-procedure port set-position! port.old-position))))
 	      ((and (boolean? set-position!) set-position!)
@@ -3038,7 +3059,7 @@
 		   ;;               = dev.old-pos - delta-idx + delta-pos
 		   ;;
 		   (let ((delta-idx           (unsafe.fx- port.buffer.used-size port.buffer.index))
-			 (device.old-position (%unsafe.device-position who port)))
+			 (device.old-position (%unsafe.device-position/tracked-position who port)))
 		     (+ (- device.old-position delta-idx) delta-pos)))))
 	    ;;If SET-POSITION!   fails we  can assume nothing  about the
 	    ;;position in the device.
@@ -3116,7 +3137,7 @@
 	     ;;
 	     ;;which is fine for an output port with empty buffer.
 	     ;;
-	     (let* ((device.old-position (%unsafe.device-position who port))
+	     (let* ((device.old-position (%unsafe.device-position/tracked-position who port))
 		    (delta-idx           (unsafe.fx- port.buffer.used-size port.buffer.index))
 		    (device.new-position (- device.old-position delta-idx)))
 	       (set-position! device.new-position)

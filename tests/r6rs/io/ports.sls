@@ -602,7 +602,7 @@
       (test/unspec (close-port p)))
 
     ;; textual port positions are hopelessly broken in R6RS
-    #;(test-positions make-custom-textual-input-port)
+    (test-positions make-custom-textual-input-port)
 
     (let* ([accum '()]
            [p (make-custom-binary-output-port

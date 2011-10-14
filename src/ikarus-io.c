@@ -140,23 +140,24 @@ ikrt_open_input_output_fd(ikptr fn, ikptr ikopts /*, ikpcb* pcb */){
   int opts  = unfix(ikopts);
   int mode  = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
   int flags = 0;
-  /* these are the same of "ikrt_open_output_fd()" */
+  /* With   the   exception  of   O_RDWR,   these   are   the  same   of
+     "ikrt_open_output_fd()". */
   switch (opts){
-  case 0: flags = O_WRONLY | O_CREAT | O_EXCL ; /* (file-options) */
+  case 0: flags = O_RDWR | O_CREAT | O_EXCL ; /* (file-options) */
     break;
-  case 1: flags = O_WRONLY | O_TRUNC          ; /* (file-options no-create) */
+  case 1: flags = O_RDWR | O_TRUNC          ; /* (file-options no-create) */
     break;
-  case 2: flags = O_WRONLY | O_TRUNC | O_CREAT; /* (file-options no-fail) */
+  case 2: flags = O_RDWR | O_TRUNC | O_CREAT; /* (file-options no-fail) */
     break;
-  case 3: flags = O_WRONLY | O_TRUNC          ; /* (file-options no-create no-fail) */
+  case 3: flags = O_RDWR | O_TRUNC          ; /* (file-options no-create no-fail) */
     break;
-  case 4: flags = O_WRONLY | O_CREAT | O_EXCL ; /* (file-options no-truncate) */
+  case 4: flags = O_RDWR | O_CREAT | O_EXCL ; /* (file-options no-truncate) */
     break;
-  case 5: flags = O_WRONLY                    ; /* (file-options no-create no-truncate) */
+  case 5: flags = O_RDWR                    ; /* (file-options no-create no-truncate) */
     break;
-  case 6: flags = O_WRONLY | O_CREAT          ; /* (file-options no-fail no-truncate) */
+  case 6: flags = O_RDWR | O_CREAT          ; /* (file-options no-fail no-truncate) */
     break;
-  case 7: flags = O_WRONLY                    ; /* (file-options no-create no-fail no-truncate) */
+  case 7: flags = O_RDWR                    ; /* (file-options no-create no-fail no-truncate) */
     break;
   }
   int fh = open((char*)(long)(fn+off_bytevector_data), flags, mode);
