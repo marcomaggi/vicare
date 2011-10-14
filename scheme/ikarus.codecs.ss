@@ -35,14 +35,14 @@
 (library (ikarus codecs)
   (export native-eol-style
 	  latin-1-codec utf-8-codec utf-bom-codec
-	  utf-16-codec utf-16le-codec utf-16be-codec
+	  utf-16-codec utf-16le-codec utf-16be-codec utf-16n-codec
           make-transcoder native-transcoder buffer-mode?
           transcoder-codec transcoder-eol-style
           transcoder-error-handling-mode)
   (import (except (ikarus)
 		  native-eol-style
 		  latin-1-codec utf-8-codec utf-bom-codec
-		  utf-16-codec utf-16le-codec utf-16be-codec
+		  utf-16-codec utf-16le-codec utf-16be-codec utf-16n-codec
 		  make-transcoder native-transcoder
 		  buffer-mode? transcoder-codec
 		  transcoder-eol-style transcoder-error-handling-mode)
@@ -92,6 +92,14 @@
 
 (define (utf-16be-codec)
   'utf-16be-codec)
+
+(define (utf-16n-codec)
+  (case (native-endianness)
+    ((big)		'utf-16be-codec)
+    ((little)		'utf-16le-codec)
+    (else
+     (assertion-violation 'utf-16n-codec
+       "internal error: unknown native endianness symbol" (native-endianness)))))
 
 (define (utf-bom-codec)
   'utf-bom-codec)

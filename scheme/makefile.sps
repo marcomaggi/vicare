@@ -1369,6 +1369,7 @@
     (utf-16-codec                                i r ip)
     (utf-16le-codec                              i)
     (utf-16be-codec                              i)
+    (utf-16n-codec				 i)
     (utf-bom-codec				 i)
     (input-port?                                 i r is ip se)
     (output-port?                                i r is ip se)

@@ -4179,6 +4179,26 @@
   #t)
 
 
+(parametrise ((check-test-name			'transcoded-port))
+
+  (check
+      (eqv? (utf-16n-codec) (utf-16n-codec))
+    => #t)
+
+  (check
+      (eqv? (utf-16n-codec) (utf-8-codec))
+    => #f)
+
+  (check
+      (eqv? (utf-16n-codec) (case (native-endianness)
+			      ((big)	(utf-16be-codec))
+			      ((little)	(utf-16le-codec))
+			      (else	#f)))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'port-id))
 
   (check
