@@ -73,23 +73,59 @@ ikrt_open_input_fd (ikptr fn, ikptr ikopts /*, ikpcb* pcb */)
 }
 
 ikptr
-ikrt_open_output_fd(ikptr fn, ikptr ikopts /*, ikpcb* pcb */){
+ikrt_open_output_fd (ikptr fn, ikptr ikopts /*, ikpcb* pcb */)
+{
   int opts  = unfix(ikopts);
   int mode  = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
   int flags = 0;
+  /*
+   * File options:
+   *
+   *   (file-options)                                    => 0
+   *   (file-options no-create)                          => #b001 = 1
+   *   (file-options no-fail)                            => #b010 = 2
+   *   (file-options no-create no-fail)                  => #b011 = 3
+   *   (file-options no-truncate)                        => #b100 = 4
+   *   (file-options no-create no-truncate)              => #b101 = 5
+   *   (file-options no-fail no-truncate)                => #b110 = 6
+   *   (file-options no-create no-fail no-truncate)      => #b111 = 7
+   *
+   * According to R6RS:
+   *
+   *   When supplied  to an operation that  opens a file  for output, the
+   *   file-options object returned by (FILE-OPTIONS) (without arguments)
+   *   specifies that  the file is  created if it  does not exist  and an
+   *   exception with condition type "&i/o-file-already-exists" is raised
+   *   if it does exist.
+   *
+   * According to the GNU C Library documentation:
+   *
+   * O_CREAT
+   *   If set the file will be created if it does not exists.
+   *
+   * O_CREAT | O_EXCL
+   *   "open()" fails if the specified file already exists.
+   *
+   * O_TRUNC
+   *   Truncate the file to zero length.
+   */
   switch (opts){
-    /* mode 0: error if exists, create if does not exist */
-    case 0: flags = O_WRONLY | O_CREAT | O_EXCL; break;
-    /* mode 1: truncate if exists, error if not exists */
-    case 1: flags = O_WRONLY | O_TRUNC; break;
-    /* mode 2: truncate if exists, create if not exist */
-    case 2: flags = O_WRONLY | O_TRUNC | O_CREAT ; break;
-    /* mode 3: truncate if exists, error if not exists */
-    case 3: flags = O_WRONLY | O_TRUNC ; break;
-    case 4: flags = O_WRONLY | O_CREAT | O_EXCL ; break;
-    case 5: flags = O_WRONLY | O_CREAT ; break;
-    case 6: flags = O_WRONLY | O_CREAT ; break;
-    case 7: flags = O_WRONLY ; break;
+  case 0: flags = O_WRONLY | O_CREAT | O_EXCL ; /* (file-options) */
+    break;
+  case 1: flags = O_WRONLY | O_TRUNC          ; /* (file-options no-create) */
+    break;
+  case 2: flags = O_WRONLY | O_TRUNC | O_CREAT; /* (file-options no-fail) */
+    break;
+  case 3: flags = O_WRONLY | O_TRUNC          ; /* (file-options no-create no-fail) */
+    break;
+  case 4: flags = O_WRONLY | O_CREAT | O_EXCL ; /* (file-options no-truncate) */
+    break;
+  case 5: flags = O_WRONLY                    ; /* (file-options no-create no-truncate) */
+    break;
+  case 6: flags = O_WRONLY | O_CREAT          ; /* (file-options no-fail no-truncate) */
+    break;
+  case 7: flags = O_WRONLY                    ; /* (file-options no-create no-fail no-truncate) */
+    break;
   }
   int fh = open((char*)(long)(fn+off_bytevector_data), flags, mode);
   if(fh >= 0){
@@ -104,19 +140,24 @@ ikrt_open_input_output_fd(ikptr fn, ikptr ikopts /*, ikpcb* pcb */){
   int opts  = unfix(ikopts);
   int mode  = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
   int flags = 0;
+  /* these are the same of "ikrt_open_output_fd()" */
   switch (opts){
-    /* mode 0: error if exists, create if does not exist */
-    case 0: flags = O_RDWR | O_CREAT | O_EXCL; break;
-    /* mode 1: truncate if exists, error if not exists */
-    case 1: flags = O_RDWR | O_TRUNC; break;
-    /* mode 2: truncate if exists, create if not exist */
-    case 2: flags = O_RDWR | O_TRUNC | O_CREAT ; break;
-    /* mode 3: truncate if exists, error if not exists */
-    case 3: flags = O_RDWR | O_TRUNC ; break;
-    case 4: flags = O_RDWR | O_CREAT | O_EXCL ; break;
-    case 5: flags = O_RDWR | O_CREAT ; break;
-    case 6: flags = O_RDWR | O_CREAT ; break;
-    case 7: flags = O_RDWR ; break;
+  case 0: flags = O_WRONLY | O_CREAT | O_EXCL ; /* (file-options) */
+    break;
+  case 1: flags = O_WRONLY | O_TRUNC          ; /* (file-options no-create) */
+    break;
+  case 2: flags = O_WRONLY | O_TRUNC | O_CREAT; /* (file-options no-fail) */
+    break;
+  case 3: flags = O_WRONLY | O_TRUNC          ; /* (file-options no-create no-fail) */
+    break;
+  case 4: flags = O_WRONLY | O_CREAT | O_EXCL ; /* (file-options no-truncate) */
+    break;
+  case 5: flags = O_WRONLY                    ; /* (file-options no-create no-truncate) */
+    break;
+  case 6: flags = O_WRONLY | O_CREAT          ; /* (file-options no-fail no-truncate) */
+    break;
+  case 7: flags = O_WRONLY                    ; /* (file-options no-create no-fail no-truncate) */
+    break;
   }
   int fh = open((char*)(long)(fn+off_bytevector_data), flags, mode);
   if(fh >= 0){

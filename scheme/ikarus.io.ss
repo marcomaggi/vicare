@@ -434,6 +434,8 @@
     make-custom-binary-output-port
     make-custom-textual-input-port
     make-custom-textual-output-port
+    make-custom-binary-input/output-port
+    make-custom-textual-input/output-port
 
     ;; transcoders
     transcoded-port port-transcoder
@@ -538,6 +540,8 @@
 		  make-custom-binary-output-port
 		  make-custom-textual-input-port
 		  make-custom-textual-output-port
+		  make-custom-binary-input/output-port
+		  make-custom-textual-input/output-port
 
 		  ;; transcoders
 		  transcoded-port port-transcoder
@@ -1570,6 +1574,20 @@
   (define-auxiliary-syntax if-successful-match:)
   (define-auxiliary-syntax if-successful-refill:)
   (define-auxiliary-syntax room-is-needed-for:))
+
+(define-inline (char-is-single-char-line-ending? ch)
+  (or (unsafe.fx= ch #\x000A)	;; linefeed
+      (unsafe.fx= ch #\x0085)	;; next line
+      (unsafe.fx= ch #\x2028)))	;; line separator
+
+(define-inline (char-is-carriage-return? ch)
+  (unsafe.fx= ch #\xD))
+
+(define-inline (char-is-newline-after-carriage-return? ch)
+  ;;This is used to recognise 2-char newline sequences.
+  ;;
+  (or (unsafe.fx= ch #\x000A)	;; linefeed
+      (unsafe.fx= ch #\x0085)))	;; next line
 
 
 ;;;; Byte Order Mark (BOM) parsing
@@ -2623,7 +2641,7 @@
   octet)
 
 (define-inline (latin-1-code-point? code-point)
-  #t)
+  (and (unsafe.fx<= 0 code-point) (unsafe.fx<= code-point 255)))
 
 (define-inline (latin-1-encode code-point)
   code-point)
@@ -3332,6 +3350,32 @@
 	(read!			#f))
     (%make-custom-binary-port attributes identifier read! write! get-position set-position! close)))
 
+(define (make-custom-binary-input/output-port identifier read! write! get-position set-position! close)
+  ;;Defined by  R6RS.  Return a  newly created binary  input/output port
+  ;;whose byte  source and sink are arbitrary  algorithms represented by
+  ;;the READ! and WRITE!  procedures.
+  ;;
+  ;;ID must be a string  naming the new port, provided for informational
+  ;;purposes only.
+  ;;
+  ;;READ! and WRITE!  must be procedures, and should behave as specified
+  ;;for          the          MAKE-CUSTOM-BINARY-INPUT-PORT          and
+  ;;MAKE-CUSTOM-BINARY-OUTPUT-PORT procedures.
+  ;;
+  ;;Each  of the  remaining  arguments may  be  false; if  any of  those
+  ;;arguments is not false, it must  be a procedure and should behave as
+  ;;specified in the description of MAKE-CUSTOM-BINARY-INPUT-PORT.
+  ;;
+  (define who 'make-custom-binary-input/output-port)
+  (%assert-argument-is-port-identifier identifier who)
+  (%assert-value-is-read!-procedure write! who)
+  (%assert-value-is-write!-procedure write! who)
+  (%assert-value-is-maybe-close-procedure close who)
+  (%assert-value-is-maybe-get-position-procedure  get-position  who)
+  (%assert-value-is-maybe-set-position!-procedure set-position! who)
+  (let ((attributes (%unsafe.fxior BINARY-OUTPUT-PORT-BITS INPUT/OUTPUT-PORT-TAG)))
+    (%make-custom-binary-port attributes identifier read! write! get-position set-position! close)))
+
 ;;; --------------------------------------------------------------------
 
 (define (make-custom-textual-input-port identifier read! get-position set-position! close)
@@ -3441,6 +3485,17 @@
   (%assert-value-is-maybe-set-position!-procedure set-position! who)
   (let ((attributes	FAST-PUT-CHAR-TAG)
 	(read!		#f))
+    (%make-custom-textual-port attributes identifier read! write! get-position set-position! close)))
+
+(define (make-custom-textual-input/output-port identifier read! write! get-position set-position! close)
+  (define who 'make-custom-textual-input/output-port)
+  (%assert-argument-is-port-identifier identifier who)
+  (%assert-value-is-write!-procedure read! who)
+  (%assert-value-is-write!-procedure write! who)
+  (%assert-value-is-maybe-close-procedure close who)
+  (%assert-value-is-maybe-get-position-procedure  get-position  who)
+  (%assert-value-is-maybe-set-position!-procedure set-position! who)
+  (let ((attributes (%unsafe.fxior FAST-PUT-CHAR-TAG INPUT/OUTPUT-PORT-TAG)))
     (%make-custom-textual-port attributes identifier read! write! get-position set-position! close)))
 
 
@@ -4323,8 +4378,12 @@
   ;;Defined  by  R6RS.  Return  the  symbol  that represents  the
   ;;buffer mode of PORT.
   ;;
-  (%assert-value-is-output-port port 'output-port-buffer-mode)
-  'block)
+  (define who 'output-port-buffer-mode)
+  (%assert-value-is-output-port port who)
+  (with-port (port)
+    (cond (port.buffer-mode-line?	'line)
+	  (port.buffer-mode-none?	'none)
+	  (else				'block))))
 
 
 ;;;; buffer handling for output ports
@@ -6297,45 +6356,22 @@
   (define-inline (%get-it eol-bits dst.past ?read-char ?peek-char)
     (let loop ((dst.index dst.start))
       (let ((ch (?read-char port who)))
-	(define-inline (%convert-single external-ch)
-	  (if (unsafe.char= ch external-ch)
-	      LINEFEED-CHAR
-	    ch))
-	(define-inline (%convert-double external-ch1 external-ch2)
-	  (if (unsafe.char= ch external-ch1)
-	      (%convert-double-sub ch external-ch1 external-ch2)
-	    ch))
-	(define (%convert-double-sub ch external-ch1 external-ch2)
-	  (let ((ch2 (?peek-char port who)))
-	    (cond ((eof-object? ch2)
-		   (assertion-violation who
-		     "unexpected end of input while processing end of line conversion" ch))
-		  ((unsafe.char= ch2 external-ch2)
-		   (?read-char port who)
-		   LINEFEED-CHAR)
-		  (else ch))))
 	(if (eof-object? ch)
 	    (if (unsafe.fx= dst.index dst.start)
-		ch
-	      (unsafe.fx- dst.index dst.start))
-	  ;;We  do  not  detect  here invalid  association  between  the
-	  ;;Latin-1 codec and EOL styles NEL, CRNEL and LS; we trust the
-	  ;;state of the port to be correct.
-	  (let ((ch (%case-eol-style (eol-bits who)
-		      ((EOL-LINEFEED-TAG)
-		       ch)
-		      ((EOL-CARRIAGE-RETURN-TAG)
-		       (%convert-single CARRIAGE-RETURN-CHAR))
-		      ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-		       (%convert-double CARRIAGE-RETURN-CHAR LINEFEED-CHAR))
-		      ((EOL-NEXT-LINE-TAG)
-		       (%convert-single NEXT-LINE-CHAR))
-		      ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-		       (%convert-double CARRIAGE-RETURN-CHAR NEXT-LINE-CHAR))
-		      ((EOL-LINE-SEPARATOR-TAG)
-		       (%convert-single LINE-SEPARATOR-CHAR))
-		      (else
-		       ch))))
+		ch ;return EOF
+	      (unsafe.fx- dst.index dst.start)) ;return the numbe of chars read
+	  (let ((ch (cond ((unsafe.fxzero? eol-bits) ;EOL style none
+			   ch)
+			  ((char-is-single-char-line-ending? ch)
+			   LINEFEED-CHAR)
+			  ((char-is-carriage-return? ch)
+			   (let ((ch1 (?peek-char port who)))
+			     (cond ((eof-object? ch1)
+				    (void))
+				   ((char-is-newline-after-carriage-return? ch1)
+				    (?read-char port who)))
+			     LINEFEED-CHAR))
+			  (else ch))))
 	    (unsafe.string-set! dst.str dst.index ch)
 	    (let ((dst.index (unsafe.fxadd1 dst.index)))
 	      (if (unsafe.fx= dst.index dst.past)
@@ -7333,9 +7369,9 @@
   ;;string FILENAME.  If an error occurs: raise an exception.
   ;;
   (let* ((opts (if (enum-set? file-options)
-		   (%unsafe.fxior (if (enum-set-member? 'no-create   file-options) 1 0)
-				  (if (enum-set-member? 'no-fail     file-options) 2 0)
-				  (if (enum-set-member? 'no-truncate file-options) 4 0))
+		   (%unsafe.fxior (if (enum-set-member? 'no-create   file-options) #b001 0)
+				  (if (enum-set-member? 'no-fail     file-options) #b010 0)
+				  (if (enum-set-member? 'no-truncate file-options) #b100 0))
 		 (assertion-violation who "file-options is not an enum set" file-options)))
 	 (fd (platform-open-output-fd ((string->filename-func) filename) opts)))
     (if (fx< fd 0)
