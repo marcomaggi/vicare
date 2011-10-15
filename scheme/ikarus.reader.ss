@@ -150,17 +150,47 @@
 
 ;;;; data structures
 
+;;Constructor: make-loc VALUE VALUE^ SET?
+;;
+;;Predicate: loc? OBJ
+;;
+;;Field name: value
+;;Field accessor: loc-value LOC
+;;Field mutator: set-loc-value! LOC NEW-VALUE
+;;
+;;Field name: value^
+;;Field accessor: loc-value^ LOC
+;;Field mutator: set-loc-value^! LOC NEW-VALUE^
+;;
+;;Field name: set?
+;;Field accessor: loc-set? LOC
+;;Field mutator: set-loc-set?! LOC NEW-SET?
+;;
 (define-struct loc
   (value value^ set?))
 
+;;Constructor: make-annotation EXPR SOURCE STRIPPED
+;;
+;;Predicate: annotation? OBJ
+;;
+;;Field name: expression
+;;Field accessor: annotation-expression ANN
+;;Field mutator: set-annotation-expression! ANN NEW-EXPR
+;;  Expression  is  a   list/vector/id/what-have-you  that  may  contain
+;;  further annotations.
+;;
+;;Field name: source
+;;Field accessor: annotation-source ANN
+;;Field mutator: set-annotation-source! ANN NEW-SOURCE
+;;  A pair: (file-name . byte-offset)
+;;
+;;Field name: stripped
+;;Field accessor: annotation-stripped ANN
+;;Field mutator: set-annotation-stripped! ANN NEW-STRIP
+;;  Stripped is an S-expression with no annotations.
+;;
 (define-struct annotation
-  (expression
-		;A pair: (file-name . byte-offset)
-   source
-		;Expression  is a list/vector/id/what-have-you  that may
-		;contain further annotations.
-   stripped))
-		;Stripped is an s-expression with no annotations.
+  (expression source stripped))
 
 (define (make-compound-position port)
   (let* ((textual-position	(port-textual-position port))
