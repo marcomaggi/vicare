@@ -571,6 +571,9 @@
   ;;Return two values:  a datum representing the next  token, a compound
   ;;position value.
   ;;
+  ;;This function  does the same  thing of TOKENIZE/1+POS, but  does not
+  ;;track the position, which is sometimes a bit faster.
+  ;;
   (define-inline (recurse)
     (tokenize/1+pos port))
   (define-inline (%error msg . irritants)
@@ -617,8 +620,13 @@
 
 
 (define (tokenize/1 port)
-  ;;Start  tokenizing the next  token from  PORT, skipping  comments and
-  ;;whitespaces.  Return a datum representing the next token.
+  ;;Recursive  function.  Start  tokenizing  the next  datum from  PORT,
+  ;;discarding  comments  and  whitespaces; after  discarding  something
+  ;;recurse  calling itself;  if the  first  character is  a #  delegate
+  ;;actual parsing  to TOKENIZE-HASH/C; else delegate  actual parsing to
+  ;;TOKENIZE/C.
+  ;;
+  ;;Return a datum representing the next token.
   ;;
   (define-inline (recurse)
     (tokenize/1 port))
@@ -662,12 +670,13 @@
 	   (tokenize/c ch port)))))
 
 
-;;;; tokenising input starting from given char
-
 (define (tokenize/c ch port)
-  ;;Recognise a  token to be read from  PORT after the char  CH has been
-  ;;read.   Return a  datum representing  a full  token already  read or
-  ;;describing a token that must still be read:
+  ;;Parse standalone  datums and compound  datums whose syntax  does not
+  ;;start with a # character.   Read characters from PORT.  Handle CH as
+  ;;the first character of the datum, already consumed from PORT.
+  ;;
+  ;;Return a datum representing a  full token already read or describing
+  ;;a token that must still be read:
   ;;
   ;;lparen			The token is a left paranthesis.
   ;;rparen			The token is a right paranthesis.
@@ -682,9 +691,6 @@
   ;;(macro . unquote)		The token is an unquoted form.
   ;;(macro . unquote-splicing)	The token is an unquoted splicing form.
   ;;at-expr			The token is an @-expression.
-  ;;
-  ;;If CH is the character #\#:  the return value is the return value of
-  ;;TOKENIZE-HASH applied to PORT.
   ;;
   ;;If CH is the dot character:  the return value is the return value of
   ;;TOKENIZE-DOT.
@@ -714,9 +720,11 @@
 		 (else
 		  '(macro . unquote)))))
 
-	;;everything starting with a hash
-	(($char= #\# ch)
-	 (tokenize-hash port))
+;;;Commented out because CH should never be a # character.
+;;;
+;;;	;;everything starting with a hash
+;;;	(($char= #\# ch)
+;;;	 (tokenize-hash/c (read-char port) port))
 
 	;;number
 	((char<=? #\0 ch #\9)
@@ -786,16 +794,10 @@
 	 (%error-1 "invalid syntax" ch))))
 
 
-;;;; tokenising input starting with #\#
-
-(define-inline (tokenize-hash port)
-  ;;Read a token from PORT.  Called after a #\# character has been read.
-  ;;
-  (tokenize-hash/c (read-char port) port))
-
 (define (tokenize-hash/c ch port)
-  ;;Recognise  a  token  to be  read  from  PORT.   Called after  a  #\#
-  ;;character has been read.  CH is the character right after the hash.
+  ;;Parse standalone datums and compound datums whose syntax starts with
+  ;;a # character.   Read characters from PORT.  Handle  CH as the first
+  ;;character of the datum after #, already consumed from PORT.
   ;;
   ;;Return a datum representing the token that must be read:
   ;;
@@ -875,11 +877,13 @@
 	 (set-port-mode! port 'vicare)
 	 (tokenize/1 port))
 	(else
-	 (%error-1 (format "invalid syntax near #!~a" ch1))))))
+	 ;;FIXME  This  should not  be  an  error.   We should  read  an
+	 ;;identifier and discard it as comment.
+	 (%error-1 "unknown #! comment" (string #\# #\! ch1))))))
 
    ((dec-digit? ch)
     (when (port-in-r6rs-mode? port)
-      (%error-1 "graph syntax is invalid in #!r6rs mode" (format "#~a" ch)))
+      (%error-1 "graph notation marks syntax is invalid in #!r6rs mode" (string #\# ch)))
     (tokenize-hashnum port (char->dec-digit ch)))
 
    ((unsafe.char= #\: ch)
