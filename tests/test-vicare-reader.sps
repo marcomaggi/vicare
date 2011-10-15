@@ -264,6 +264,61 @@
   #t)
 
 
+(parametrise ((check-test-name	'comments))
+
+  (define-syntax doit-quoted
+    (syntax-rules ()
+      ((_ ?input ?to-be-quoted-result)
+       (check
+	   (let ((port (open-string-input-port ?input)))
+	     (read port))
+	 => (quote ?to-be-quoted-result)))))
+
+  (define-syntax doit-unquoted
+    (syntax-rules ()
+      ((_ ?input ?unquoted-result)
+       (check
+	   (let ((port (open-string-input-port ?input)))
+	     (read port))
+	 => ?unquoted-result))))
+
+;;; --------------------------------------------------------------------
+
+  (doit-quoted "#!vicare 123"		123)
+  (doit-quoted "#!r6rs   123"		123)
+  (doit-unquoted "#!eof"		(eof-object))
+
+  #t)
+
+
+(parametrise ((check-test-name	'locations))
+
+  (define-syntax doit-unquoted
+    (syntax-rules ()
+      ((_ ?input ?unquoted-result)
+       (check
+	   (let ((port (open-string-input-port ?input)))
+	     (read port))
+	 => (quote ?unquoted-result)))))
+
+;;; --------------------------------------------------------------------
+
+  (doit-unquoted "(#0=1 . #0#)" (1 . 1))
+  (doit-unquoted "(#0# . #0=1)" (1 . 1))
+
+  (doit-unquoted "(#1=ciao . #1#)" (ciao . ciao))
+
+;;; --------------------------------------------------------------------
+
+  (doit-unquoted "(#1=ciao #1# #1# #1#)" (ciao ciao ciao ciao))
+  (doit-unquoted "(#1# #1=ciao #1# #1#)" (ciao ciao ciao ciao))
+  (doit-unquoted "(#1# #1# #1=ciao #1#)" (ciao ciao ciao ciao))
+  (doit-unquoted "(#1# #1# #1# #1=ciao)" (ciao ciao ciao ciao))
+
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

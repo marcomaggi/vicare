@@ -396,65 +396,78 @@
   (%read-sexp port #t))
 
 (define (read-annotated port)
-  (%read-annotated port #f))
+  (%read-annotated-sexp port #f))
 
 (define (read-script-annotated port)
-  (%read-annotated port #t))
+  (%read-annotated-sexp port #t))
 
 
 ;;;; helpers for public functions
 
-(define (%read-sexp port initial?)
-  (let-values (((expr expr^ locs k)
-		(if initial?
+(define (%read-sexp port script?)
+  (let-values (((expr expr^ locs-alist kont)
+		(if script?
 		    (read-expr-script-initial port '() void)
 		  (read-expr port '() void))))
-    (if (null? locs)
+    (if (null? locs-alist)
 	expr
       (begin
        (for-each (reduce-loc! port)
-	 locs)
-       (k)
+	 locs-alist)
+       (kont)
        (if (loc? expr)
 	   (loc-value expr)
 	 expr)))))
 
-(define (%read-annotated port script?)
+(define (%read-annotated-sexp port script?)
   (define (%return-annotated x)
     (if (and (annotation? x)
 	     (eof-object? (annotation-expression x)))
 	(eof-object)
       x))
   (%assert-argument-is-source-code-port 'read port)
-  (let-values (((expr expr^ locs k)
+  (let-values (((expr expr^ locs-alist kont)
 		(if script?
 		    (read-expr-script-initial port '() void)
 		  (read-expr port '() void))))
-    (if (null? locs)
+    (if (null? locs-alist)
 	(%return-annotated expr^)
       (begin
 	(for-each (reduce-loc! port)
-	  locs)
-	(k)
+	  locs-alist)
+	(kont)
 	(if (loc? expr)
 	    (loc-value^ expr)
 	  (%return-annotated expr^))))))
 
-(define (read-expr port locs k)
-  (let-values (((t pos) (tokenize/1+pos port)))
-    (parse-token port locs k t pos)))
+(define (read-expr port locs-alist kont)
+  (let-values (((token pos) (tokenize/1+pos port)))
+    (parse-token port locs-alist kont token pos)))
 
-(define (read-expr-script-initial port locs k)
-  (let-values (((t pos) (tokenize-script-initial+pos port)))
-    (parse-token port locs k t pos)))
+(define (read-expr-script-initial port locs-alist kont)
+  (let-values (((token pos) (tokenize-script-initial+pos port)))
+    (parse-token port locs-alist kont token pos)))
 
-(define (reduce-loc! p)
-  (lambda (x)
+(define (reduce-loc! port)
+  ;;Subroutine of %READ-SEXP and %READ-ANNOTATED-SEXP.
+  ;;
+  ;;This computation  needs two  arguments: PORT and  an entry  from the
+  ;;LOCS-ALIST which is the result  of reading an S-expression.  PORT is
+  ;;fixed, so it  may be a little faster to make  this function return a
+  ;;closure on PORT rather than to evaluate:
+  ;;
+  ;;   (for-each (lambda (entry)
+  ;;               (reduce-loc! port entry))
+  ;;     locs-alist)
+  ;;
+  (lambda (entry)
     (define-inline (%error msg . irritants)
-      (die/p p 'read msg . irritants))
-    (let ((loc (cdr x)))
+      (die/p port 'read msg . irritants))
+    (let ((loc (cdr entry)))
       (unless (loc-set? loc)
-	(%error "referenced mark is not set" (car x)))
+	;;FIXME It  would be beautiful  to include the position  in this
+	;;error report.
+	(%error "referenced location mark is not set" (car entry)))
       (when (loc? (loc-value loc))
 	(let f ((h loc) (t loc))
 	  (if (loc? h)
@@ -473,22 +486,32 @@
 	    h))))))
 
 (define (read-and-discard-sexp port)
-  (read-expr port '() void)
+  ;;Read a  full expression and discard  it.  This is used  to consume a
+  ;;sexp commented out with "#;".
+  ;;
+  (let ((locs-alist	'())
+	(kont		void))
+    (read-expr port locs-alist kont))
   (void))
 
 
 (define (tokenize-script-initial+pos port)
-  ;;Read  a token  representing  a full  datum  (boolean, char,  string,
-  ;;symbol) or the opening of a compund datum (list, vector, bytevector)
-  ;;and return a datum describing it.  Discard comments.
+  ;;Non-recursive function.  Start tokenizing  the next datum from PORT,
+  ;;discarding comments and  whitespaces; after discarding something try
+  ;;to parse the next datum  with TOKENIZE/1+POS; if the first character
+  ;;is  a # delegate  actual parsing  to TOKENIZE-HASH/C;  else delegate
+  ;;actual parsing to TOKENIZE/C.
   ;;
-  ;;This function selects which among the functions:
+  ;;Return two values:  a datum representing the next  token, a compound
+  ;;position value.
   ;;
-  ;;   TOKENIZE/1+POS
-  ;;   TOKENIZE/C
-  ;;   TOKENIZE-HASH/C
-  ;;
-  ;;is to be called to parse the next token.
+  ;;This function does  almost the same thing of  TOKENIZE/1+POS, but in
+  ;;addition handle specially the very  first two characters if they are
+  ;;"#!" and discard the first  line up to the line-ending.  This allows
+  ;;disacarding the sharp-bang command used  in Unix systems to select a
+  ;;program to run scripts.  It also  means that if the file starts with
+  ;;a valid R6RS or Vicare sharp-bang comment (#!vicare, #!r6rs, #!eof),
+  ;;such comment will be silently discarded.
   ;;
   (define-inline (%error msg . args)
     (die/p port 'tokenize msg . args))
@@ -496,90 +519,99 @@
 	 (ch  (read-char port)))
     (cond ((eof-object? ch)
 	   (values ch pos))
+
+	  ;;discard line comments
 	  ((unsafe.char= ch #\;)
-	   (line-comment-lexeme-skip-including-line-ending port)
+	   (read-and-discard-up-to-and-including-line-ending port)
 	   (tokenize/1+pos port))
+
+	  ;;tokenise everything starting with a #
 	  ((unsafe.char= ch #\#)
-	   (let ((pos (make-compound-position port))
+	   ;;FIXME Why are we taking the position again here?
+	   (let ((pos1 (make-compound-position port))
 		 (ch1 (read-char port)))
 	     (cond ((eof-object? ch1)
 		    (%error "invalid EOF after #"))
+
+		   ;;discard tokenize sharp-bang comments
 		   ((unsafe.char= ch1 #\!)
-		    (line-comment-lexeme-skip-including-line-ending port)
+		    (read-and-discard-up-to-and-including-line-ending port)
 		    (tokenize/1+pos port))
+
+		   ;;discard sexp comments
 		   ((unsafe.char= ch1 #\;)
 		    (read-and-discard-sexp port)
 		    (tokenize/1+pos port))
+
+		   ;;discard multiline comments
 		   ((unsafe.char= ch1 #\|)
 		    (multiline-comment-lexeme port)
 		    (tokenize/1+pos port))
+
+		   ;;tokenize datums whose syntax starts with #
 		   (else
-		    (values (tokenize-hash/c ch1 port) pos)))))
+		    (values (tokenize-hash/c ch1 port) pos1)))))
+
+	  ;;discard whitespaces
 	  ((char-whitespace? ch)
 	   (tokenize/1+pos port))
+
+	  ;;tokenise every datum whose syntax does not start with a #
 	  (else
 	   (values (tokenize/c ch port) pos)))))
 
 
-;;; commented out because unused (Marco Maggi; Oct 13, 2011)
-;;
-#;(define (tokenize-script-initial port)
-  (let ((ch (read-char port)))
-    (cond ((eof-object? ch)
-	   ch)
-	  ((unsafe.char= ch #\;)
-	   (line-comment-lexeme-skip-including-line-ending port)
-	   (tokenize/1 port))
-	  ((unsafe.char= ch #\#)
-	   (let ((ch1 (read-char port)))
-	     (cond ((eof-object? ch1)
-		    (die/p port 'tokenize "invalid eof after #"))
-		   ((unsafe.char= ch1 #\!)
-		    (line-comment-lexeme-skip-including-line-ending port)
-		    (tokenize/1 port))
-		   ((unsafe.char= ch1 #\;)
-		    (read-and-discard-sexp port)
-		    (tokenize/1 port))
-		   ((unsafe.char= ch1 #\|)
-		    (multiline-comment-lexeme port)
-		    (tokenize/1 port))
-		   (else
-		    (tokenize-hash/c ch1 port)))))
-	  ((char-whitespace? ch)
-	   (tokenize/1 port))
-	  (else
-	   (tokenize/c ch port)))))
-
-
 (define (tokenize/1+pos port)
-  ;;Start  tokenizing  the next  token  from  P,  skipping comments  and
-  ;;whitespaces.   Return  two values:  a  datum  representing the  next
-  ;;token, a compound position value.
+  ;;Recursive  function.  Start  tokenizing  the next  datum from  PORT,
+  ;;discarding  comments  and  whitespaces; after  discarding  something
+  ;;recurse  calling itself;  if the  first  character is  a #  delegate
+  ;;actual parsing  to TOKENIZE-HASH/C; else delegate  actual parsing to
+  ;;TOKENIZE/C.
+  ;;
+  ;;Return two values:  a datum representing the next  token, a compound
+  ;;position value.
   ;;
   (define-inline (recurse)
     (tokenize/1+pos port))
+  (define-inline (%error msg . irritants)
+    (die/p port 'tokenize msg . irritants))
   (let* ((pos (make-compound-position port))
 	 (ch  (read-char port)))
     (cond ((eof-object? ch)
 	   (values ch pos))
+
+	  ;;discard line comments
 	  ((unsafe.char= ch #\;)
-	   (line-comment-lexeme-skip-including-line-ending port)
+	   (read-and-discard-up-to-and-including-line-ending port)
 	   (recurse))
+
+	  ;;tokenise everything starting with a #
 	  ((unsafe.char= ch #\#)
-	   (let ((pos (make-compound-position port)))
-	     (let ((ch1 (read-char port)))
-	       (cond ((eof-object? ch1)
-		      (die/p port 'tokenize "invalid eof after #"))
-		     ((unsafe.char= ch1 #\;)
-		      (read-and-discard-sexp port)
-		      (recurse))
-		     ((unsafe.char= ch1 #\|)
-		      (multiline-comment-lexeme port)
-		      (recurse))
-		     (else
-		      (values (tokenize-hash/c ch1 port) pos))))))
+	   ;;FIXME Why are we taking the position again here?
+	   (let* ((pos1 (make-compound-position port))
+		  (ch1  (read-char port)))
+	     (cond ((eof-object? ch1)
+		    (%error "invalid eof after #"))
+
+		   ;;discard sexp comments
+		   ((unsafe.char= ch1 #\;)
+		    (read-and-discard-sexp port)
+		    (recurse))
+
+		   ;;discard multiline comments
+		   ((unsafe.char= ch1 #\|)
+		    (multiline-comment-lexeme port)
+		    (recurse))
+
+		   ;;tokenize datums whose syntax starts with #
+		   (else
+		    (values (tokenize-hash/c ch1 port) pos1)))))
+
+	  ;;discard whitespaces
 	  ((char-whitespace? ch)
 	   (recurse))
+
+	  ;;tokenise every datum whose syntax does not start with a #
 	  (else
 	   (values (tokenize/c ch port) pos)))))
 
@@ -590,16 +622,18 @@
   ;;
   (define-inline (recurse)
     (tokenize/1 port))
+  (define-inline (%error msg . irritants)
+    (die/p port 'tokenize msg . irritants))
   (let ((ch (read-char port)))
     (cond ((eof-object? ch)
 	   ch)
 	  ((unsafe.char= ch #\;)
-	   (line-comment-lexeme-skip-including-line-ending port)
+	   (read-and-discard-up-to-and-including-line-ending port)
 	   (recurse))
 	  ((unsafe.char= ch #\#)
 	   (let ((ch1 (read-char port)))
 	     (cond ((eof-object? ch1)
-		    (die/p port 'tokenize "invalid EOF after #"))
+		    (%error "invalid EOF after #"))
 		   ((unsafe.char= ch1 #\;)
 		    (read-and-discard-sexp port)
 		    (recurse))
@@ -1057,7 +1091,7 @@
 	   (values (eof-object)
 		   (annotate-simple (eof-object) pos port) locs-alist kont))
 
-;;; read compound data
+;;; finish reading compound data
 
 	  ;;Read list that was opened by a round parenthesis.
 	  ((eq? token 'lparen)
@@ -1095,15 +1129,15 @@
 ;;; ((eq? token 'at-expr)
 ;;;  (read-at-expr port locs-alist kont pos))
 
-;;; read standalone datum
+;;; standalone datum parsing completion
 
 	  ((pair? token)
-	   (%parse-standalone-datum-token token))
+	   (%process-parsed-standalone-datum token))
 
 	  (else
 	   (%error-1 (format "unexpected ~s found" token)))))
 
-  (define-inline (%parse-standalone-datum-token token)
+  (define-inline (%process-parsed-standalone-datum token)
     (cond ((eq? (car token) 'datum) ;datum alraedy tokenised
 	   (values (cdr token)
 		   (annotate-simple (cdr token) pos port) locs-alist kont))
@@ -1178,9 +1212,10 @@
 			     (set-loc-set?!   loc #t)
 			     (values expr expr^ locs-alist kont))))
 		     (else
-		      (let* ((loc         (let ((expr^ 'unused)
-						(set?  #t))
-					    (make-loc expr expr^ set?)))
+		      (let* ((loc         (let ((value  expr)
+						(value^ 'unused)
+						(set?   #t))
+					    (make-loc value value^ set?)))
 			     (locs-alist1 (cons (cons N loc) locs-alist)))
 			(values expr expr^ locs-alist1 kont)))))))
 
@@ -1208,10 +1243,10 @@
 			 ;;;     expr       expr^
 			 (values (cdr pair) 'unused locs-alist kont)))
 		   (else
-		    (let* ((loc         (let ((expr  #f)
-					      (expr^ 'unused)
-					      (set?  #f))
-					  (make-loc expr expr^ set?)))
+		    (let* ((loc         (let ((value  #f)
+					      (value^ 'unused)
+					      (set?   #f))
+					  (make-loc value value^ set?)))
 			   (locs-alist1 (cons (cons N loc) locs-alist)))
 		      (values loc 'unused locs-alist1 kont))))))
 
@@ -1680,14 +1715,14 @@
 
 ;;;; reading comments
 
-(define (line-comment-lexeme-skip-including-line-ending port)
+(define (read-and-discard-up-to-and-including-line-ending port)
   (let ((ch (read-char port)))
     (unless (or (eof-object? ch)
 		(char-is-single-char-line-ending? ch)
 		;;A standalone CR ends  the line, see R6RS syntax formal
 		;;account.
 		(char-is-carriage-return? ch))
-      (line-comment-lexeme-skip-including-line-ending port))))
+      (read-and-discard-up-to-and-including-line-ending port))))
 
 (define (multiline-comment-lexeme port)
   ;;Parse a multiline comment  "#| ... |#", possibly nested.  Accumulate
