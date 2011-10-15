@@ -19,6 +19,6 @@
 (import (r6rs syntax-case)
         (r6rs test)
         (rnrs io simple))
-(display "Running tests for (rnrs syntax-case)\n")
+(display "*** Flatt's R6RS tests for (rnrs syntax-case)\n\n")
 (run-syntax-case-tests)
 (report-test-results)

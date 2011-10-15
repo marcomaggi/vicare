@@ -19,6 +19,6 @@
 (import (r6rs arithmetic flonums)
         (r6rs test)
         (rnrs io simple))
-(display "Running tests for (rnrs arithmetic flonums)\n")
+(display "*** Flatt's R6RS tests for (rnrs arithmetic flonums)\n\n")
 (run-arithmetic-flonums-tests)
 (report-test-results)

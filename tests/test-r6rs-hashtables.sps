@@ -19,6 +19,6 @@
 (import (r6rs hashtables)
         (r6rs test)
         (rnrs io simple))
-(display "Running tests for (rnrs hashtables)\n")
+(display "*** Flatt's R6RS tests for (rnrs hashtables)\n\n")
 (run-hashtables-tests)
 (report-test-results)

@@ -19,6 +19,6 @@
 (import (r6rs contrib)
         (r6rs test)
         (rnrs io simple))
-(display "Running contibuted tests\n")
+(display "*** Flatt's R6RS contibuted tests\n\n")
 (run-contrib-tests)
 (report-test-results)

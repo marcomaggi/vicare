@@ -19,6 +19,6 @@
 (import (r6rs records procedural)
         (r6rs test)
         (rnrs io simple))
-(display "Running tests for (rnrs records procedural)\n")
+(display "*** Flatt's R6RS tests for (rnrs records procedural)\n\n")
 (run-records-procedural-tests)
 (report-test-results)

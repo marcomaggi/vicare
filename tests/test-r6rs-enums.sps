@@ -19,6 +19,6 @@
 (import (r6rs enums)
         (r6rs test)
         (rnrs io simple))
-(display "Running tests for (rnrs enums)\n")
+(display "*** Flatt's R6RS tests for (rnrs enums)\n\n")
 (run-enums-tests)
 (report-test-results)

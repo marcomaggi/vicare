@@ -19,6 +19,6 @@
 (import (r6rs records syntactic)
         (r6rs test)
         (rnrs io simple))
-(display "Running tests for (rnrs records syntactic)\n")
+(display "*** Flatt's R6RS tests for (rnrs records syntactic)\n\n")
 (run-records-syntactic-tests)
 (report-test-results)

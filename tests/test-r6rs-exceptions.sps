@@ -19,6 +19,6 @@
 (import (r6rs exceptions)
         (r6rs test)
         (rnrs io simple))
-(display "Running tests for (rnrs exceptions)\n")
+(display "*** Flatt's R6RS tests for (rnrs exceptions)\n\n")
 (run-exceptions-tests)
 (report-test-results)

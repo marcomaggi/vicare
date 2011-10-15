@@ -19,6 +19,6 @@
 (import (r6rs arithmetic fixnums)
         (r6rs test)
         (rnrs io simple))
-(display "Running tests for (rnrs arithmetic fixnums)\n")
+(display "*** Flatt's R6RS tests for (rnrs arithmetic fixnums)\n\n")
 (run-arithmetic-fixnums-tests)
 (report-test-results)

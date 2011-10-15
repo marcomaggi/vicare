@@ -230,8 +230,10 @@
   (define (report-test-results)
     (if (null? failures)
         (begin
+	  (display "; *** checks *** : ")
           (display checked)
-          (display " tests passed\n"))
+	  (display " correct,")
+          (display " 0 failed.\n\n\n"))
         (begin
           (display (length failures))
           (display " tests failed:\n\n")
@@ -244,7 +246,10 @@
                       (write-result "\n " (caddr t))
                       (display "\n\n"))
                     (reverse failures))
+	  (display "; *** checks *** : ")
+	  (display (- checked (length failures)))
+	  (display " correct, ")
           (display (length failures))
-          (display " of ")
-          (display checked)
-          (display " tests failed.\n")))))
+	  (display " failed.\n\n\n")))))
+
+;;; end of file

@@ -19,6 +19,6 @@
 (import (r6rs sorting)
         (r6rs test)
         (rnrs io simple))
-(display "Running tests for (rnrs sorting)\n")
+(display "*** Flatt's R6RS tests for (rnrs sorting)\n\n")
 (run-sorting-tests)
 (report-test-results)

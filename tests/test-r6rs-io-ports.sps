@@ -19,6 +19,6 @@
 (import (r6rs io ports)
         (r6rs test)
         (rnrs io simple))
-(display "Running tests for (rnrs io ports)\n")
+(display "*** Flatt's R6RS tests for (rnrs io ports)\n\n")
 (run-io-ports-tests)
 (report-test-results)

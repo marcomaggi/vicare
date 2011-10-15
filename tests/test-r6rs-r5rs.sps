@@ -19,6 +19,6 @@
 (import (r6rs r5rs)
         (r6rs test)
         (rnrs io simple))
-(display "Running tests for (rnrs r5rs)\n")
+(display "*** Flatt's R6RS tests for (rnrs r5rs)\n\n")
 (run-r5rs-tests)
 (report-test-results)

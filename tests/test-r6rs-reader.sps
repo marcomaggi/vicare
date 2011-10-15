@@ -19,6 +19,6 @@
 (import (r6rs reader)
         (r6rs test)
         (rnrs io simple))
-(display "Running tests for (rnrs reader)\n")
+(display "*** Flatt's R6RS tests for (rnrs reader)\n\n")
 (run-reader-tests)
 (report-test-results)
