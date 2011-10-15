@@ -862,24 +862,23 @@
     (let ((ch1 (read-char port)))
       (when (eof-object? ch1)
 	(%error "invalid eof near #!"))
-      (case ch1
-	((#\e)
-	 (when (port-in-r6rs-mode? port)
-	   (%error-1 "invalid syntax: #!e"))
-	 (read-char* port '(#\e) "of" "eof sequence" #f #f)
-	 (cons 'datum (eof-object)))
-	((#\r)
-	 (read-char* port '(#\r) "6rs" "#!r6rs comment" #f #f)
-	 (set-port-mode! port 'r6rs)
-	 (tokenize/1 port))
-	((#\v)
-	 (read-char* port '(#\v) "icare" "#!vicare comment" #f #f)
-	 (set-port-mode! port 'vicare)
-	 (tokenize/1 port))
-	(else
-	 ;;FIXME  This  should not  be  an  error.   We should  read  an
-	 ;;identifier and discard it as comment.
-	 (%error-1 "unknown #! comment" (string #\# #\! ch1))))))
+      (cond ((unsafe.char= ch1 #\e)
+	     (when (port-in-r6rs-mode? port)
+	       (%error-1 "invalid syntax: #!e"))
+	     (read-char* port '(#\e) "of" "eof sequence" #f #f)
+	     (cons 'datum (eof-object)))
+	    ((unsafe.char= ch1 #\r)
+	     (read-char* port '(#\r) "6rs" "#!r6rs comment" #f #f)
+	     (set-port-mode! port 'r6rs)
+	     (tokenize/1 port))
+	    ((unsafe.char= ch1 #\v)
+	     (read-char* port '(#\v) "icare" "#!vicare comment" #f #f)
+	     (set-port-mode! port 'vicare)
+	     (tokenize/1 port))
+	    (else
+	     ;;FIXME  This  should not  be  an  error.   We should  read  an
+	     ;;identifier and discard it as comment.
+	     (%error-1 "unknown #! comment" (string #\# #\! ch1))))))
 
    ((dec-digit? ch)
     (when (port-in-r6rs-mode? port)
