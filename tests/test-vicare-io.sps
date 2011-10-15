@@ -11325,7 +11325,7 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'wrong-chars))
+(parametrise ((check-test-name	'wrong-chars-do-not-cause-infinite-loop))
 
   (check
       (let ((port (open-bytevector-input-port TEST-BYTEVECTOR-FOR-UTF-16-LE
@@ -11338,15 +11338,7 @@
 	      (o (read-char port))
 	      (s (read-char port))
 	      (x (read-char port)))
-	  (list c i a o s x)))
-    => #f)
-
-  (check
-      (let ((port (open-bytevector-input-port TEST-BYTEVECTOR-FOR-UTF-16-LE
-					      (make-transcoder (utf-8-codec)
-							       (eol-style none)
-							       (error-handling-mode replace)))))
-	(get-string-n port 20))
+	  (for-all char? (list c i a o s x))))
     => #t)
 
   (check
@@ -11354,8 +11346,58 @@
 					      (make-transcoder (utf-8-codec)
 							       (eol-style none)
 							       (error-handling-mode replace)))))
-	(get-string-all port))
+	(string? (get-string-n port 20)))
     => #t)
+
+  (check
+      (let ((port (open-bytevector-input-port TEST-BYTEVECTOR-FOR-UTF-16-LE
+					      (make-transcoder (utf-8-codec)
+							       (eol-style none)
+							       (error-handling-mode replace)))))
+	(string? (get-string-all port)))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'reading-wrong-chars))
+
+;;; UTF-8, read
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(#xFF #xFE #xFF #xFE #x20)
+					      (make-transcoder (utf-8-codec)
+							       (eol-style none)
+							       (error-handling-mode ignore)))))
+	(read-char port))
+    => #\x20)
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(#xFF #xFE #xFF #xFE #x20)
+					      (make-transcoder (utf-8-codec)
+							       (eol-style none)
+							       (error-handling-mode replace)))))
+	(read-char port))
+    => #\xFFFD)
+
+;;; --------------------------------------------------------------------
+;;; UTF-8, peek
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(#xFF #xFE #xFF #xFE #x20)
+					      (make-transcoder (utf-8-codec)
+							       (eol-style none)
+							       (error-handling-mode ignore)))))
+	(peek-char port))
+    => #\x20)
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(#xFF #xFE #xFF #xFE #x20)
+					      (make-transcoder (utf-8-codec)
+							       (eol-style none)
+							       (error-handling-mode replace)))))
+	(peek-char port))
+    => #\xFFFD)
 
   #t)
 

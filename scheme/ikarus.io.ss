@@ -5372,6 +5372,7 @@
 		     ((utf-8-first-of-four-octets? byte0)
 		      (get-4-bytes-character byte0 buffer.offset-byte0))
 		     (else
+		      (set! port.buffer.index (unsafe.fxadd1 buffer.offset-byte0))
 		      (%error-invalid-byte)))))))))
 
     (define-inline (get-single-byte-character byte0 buffer.offset-byte0)
@@ -5557,7 +5558,7 @@
 	     (let ((byte0		(unsafe.bytevector-u8-ref port.buffer buffer.offset-byte0))
 		   (buffer-offset	(unsafe.fx+ 1 buffer-offset)))
 	       (define (%error-invalid-byte)
-		 (%error-handler buffer-offset
+		 (%error-handler (unsafe.fxadd1 buffer-offset)
 				 "invalid byte while expecting first byte of UTF-8 character" byte0))
 	       (cond ((utf-8-invalid-octet? byte0)
 		      (%error-invalid-byte))
