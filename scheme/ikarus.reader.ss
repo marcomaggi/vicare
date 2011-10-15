@@ -164,12 +164,12 @@
 		;Stripped is an s-expression with no annotations.
 
 (define (make-compound-position port)
-  (let* ((textual-position '#(0 0 1 1) #;(port-textual-position port))
+  (let* ((textual-position	(port-textual-position port))
 	 (byte-offset		(vector-ref textual-position 0)))
     (cons (port-id port) byte-offset)))
 
 (define (make-compound-position/with-offset port offset)
-  (let* ((textual-position	'#(0 0 1 1) #;(port-textual-position port))
+  (let* ((textual-position	(port-textual-position port))
 	 (byte-offset		(vector-ref textual-position 0)))
     (cons (port-id port) (and byte-offset (+ byte-offset offset)))))
 

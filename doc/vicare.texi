@@ -3862,6 +3862,19 @@ be a symbol selecting an end--of--line style conversion, as accepted by
 to the port.
 @end defun
 
+
+@defun get-char-and-track-textual-position @var{port}
+Like @func{get-char} but track the textual position.  Recognise only
+linefeed characters as line-ending.
+@end defun
+
+
+@defun port-textual-position @var{port}
+Given a textual port, return the current textual position as a vector:
+@math{0}-based byte position, @math{0}-based character offset,
+@math{1}-based row number, @math{1}-based column number.
+@end defun
+
 @c page
 @node iklib io process
 @subsection Spawning processes
