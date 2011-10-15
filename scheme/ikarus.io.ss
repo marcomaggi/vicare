@@ -1523,7 +1523,10 @@
       (assertion-violation who "expected non-negative exact integer as count argument" count))))
 
 (define (%unsafe.assert-argument-is-count-from-start-in-bytevector count start dst.bv who)
-  (unless (unsafe.fx<= (unsafe.fx+ start count) (unsafe.bytevector-length dst.bv))
+  ;;We know that COUNT and START  are fixnums, but not if START+COUNT is
+  ;;a fixnum, too.
+  ;;
+  (unless (<= (+ start count) (unsafe.bytevector-length dst.bv))
     (assertion-violation who
       (string-append "count argument "
 		     (number->string count)
@@ -1531,10 +1534,13 @@
 		     (number->string start)
 		     " too big for bytevector of length "
 		     (number->string (unsafe.bytevector-length dst.bv)))
-      count)))
+      start count (unsafe.bytevector-length dst.bv))))
 
 (define (%unsafe.assert-argument-is-count-from-start-in-string count start dst.str who)
-  (unless (unsafe.fx<= (unsafe.fx+ start count) (unsafe.string-length dst.str))
+  ;;We know that COUNT and START  are fixnums, but not if START+COUNT is
+  ;;a fixnum, too.
+  ;;
+  (unless (<= (+ start count) (unsafe.string-length dst.str))
     (assertion-violation who
       (string-append "count argument "
 		     (number->string count)
@@ -1542,7 +1548,7 @@
 		     (number->string start)
 		     " too big for string of length "
 		     (number->string (unsafe.string-length dst.str)))
-      count)))
+      start count (unsafe.string-length dst.str))))
 
 
 ;;;; error helpers
@@ -6203,14 +6209,11 @@
   ;;is returned.
   ;;
   ;;IMPLEMENTATION RESTRICTION The DST.START and COUNT arguments must be
-  ;;fixnums.
+  ;;fixnums; DST.START+COUNT must be a fixnum.
   ;;
   (define-inline (main)
     (let ((dst.past (+ dst.start count))
 	  (eol-bits (%unsafe.port-eol-style-bits port)))
-      (unless (fixnum? dst.past)
-	(assertion-violation who "start+count result is not a fixnum" dst.start count))
-      (%unsafe.assert-argument-is-count-from-start-in-string count dst.start dst.str who)
       (%case-textual-input-port-fast-tag (port who)
 	((FAST-GET-UTF8-TAG)
 	 (%get-it eol-bits dst.past
@@ -6297,14 +6300,13 @@
   (if (unsafe.fxzero? requested-count)
       ""
     (let* ((dst.str	(unsafe.make-string requested-count))
-	   (dst.start	0)
-	   (count	(%unsafe.get-string-n! who port dst.str dst.start requested-count)))
+	   (count	(%unsafe.get-string-n! who port dst.str 0 requested-count)))
       (cond ((eof-object? count)
 	     count)
 	    ((unsafe.fx= count requested-count)
 	     dst.str)
 	    (else
-	     (substring dst.str dst.start count))))))
+	     (substring dst.str 0 count))))))
 
 (define (get-string-n! port dst.str dst.start count)
   ;;Defined by  R6RS.  DST.START and COUNT must  be exact, non--negative
@@ -6336,6 +6338,7 @@
   (%assert-argument-is-fixnum-start-index dst.start who)
   (%assert-argument-is-fixnum-count count who)
   (%unsafe.assert-argument-is-start-index-for-string dst.start dst.str who)
+  (%unsafe.assert-argument-is-count-from-start-in-string count dst.start dst.str who)
   (if (unsafe.fxzero? count)
       count
     (%unsafe.get-string-n! who port dst.str dst.start count)))

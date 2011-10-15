@@ -4893,7 +4893,7 @@
 		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n! port (make-bytevector 1) 0 123)))
-    => '(123))
+    => '(0 123 1))
 
   (check	;count is too big
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
@@ -4902,7 +4902,7 @@
 		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n! port (make-bytevector 1) 0 2)))
-    => '(2))
+    => '(0 2 1))
 
 ;;; --------------------------------------------------------------------
 ;;; input from a bytevector port
@@ -6805,7 +6805,7 @@
 	    (get-string-n! port dst.str dst.start count))))
     => '(1.0))
 
-  (check 	;start is not a fixnum
+  (check  	;start is not a fixnum
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
 ;;;		   (pretty-print (condition-message E))
@@ -6913,7 +6913,7 @@
 		(dst.start	1)
 		(count		(greatest-fixnum)))
 	    (get-string-n! port dst.str dst.start count))))
-    => (list 1 (greatest-fixnum)))
+    => (list 1 (greatest-fixnum) 10))
 
   (check 	;start+count is too big for string
       (let ((port (%open-disposable-textual-input-port)))
@@ -6926,7 +6926,7 @@
 		(dst.start	8)
 		(count		9))
 	    (get-string-n! port dst.str dst.start count))))
-    => '(9))
+    => '(8 9 10))
 
 ;;; --------------------------------------------------------------------
 ;;; input from a string port
@@ -7786,7 +7786,7 @@
   		   (condition-irritants E))
   		  (else E))
   	  (put-bytevector port '#vu8() 0 1)))
-    => '(1))
+    => '(0 1 0))
 
   (check	;argument is out of range for bytevector
       (let ((port (%open-disposable-binary-output-port)))
@@ -7795,7 +7795,7 @@
   		   (condition-irritants E))
   		  (else E))
   	  (put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9) 0 11)))
-    => '(11))
+    => '(0 11 10))
 
   (check	;argument is out of range for bytevector
       (let ((port (%open-disposable-binary-output-port)))
@@ -7804,7 +7804,7 @@
   		   (condition-irritants E))
   		  (else E))
   	  (put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9) 5 6)))
-    => '(6))
+    => '(5 6 10))
 
 ;;; --------------------------------------------------------------------
 ;;; no start, no count
