@@ -1046,8 +1046,7 @@
      (%error "invalid char while inside a #n mark/ref" ch))))
 
 
-(define (parse-token port locs k token pos)
-;;; k -> kont
+(define (parse-token port locs-alist kont token pos)
   (define-inline (%error   msg . irritants)
     (die/p   port 'read msg . irritants))
   (define-inline (%error-1 msg . irritants)
@@ -1056,51 +1055,58 @@
   (define-inline (main)
     (cond ((eof-object? token)
 	   (values (eof-object)
-		   (annotate-simple (eof-object) pos port) locs k))
+		   (annotate-simple (eof-object) pos port) locs-alist kont))
+
+;;; read compound data
 
 	  ;;Read list that was opened by a round parenthesis.
 	  ((eq? token 'lparen)
-	   (let-values (((ls ls^ locs k)
-			 (read-list port locs k 'rparen 'rbrack #t)))
-	     (values ls (annotate ls ls^ pos port) locs k)))
+	   (let-values (((ls ls^ locs-alist kont)
+			 (read-list port locs-alist kont 'rparen 'rbrack #t)))
+	     (values ls (annotate ls ls^ pos port) locs-alist kont)))
 
 	  ;;Read list that was opened by a square bracket.
 	  ((eq? token 'lbrack)
-	   (let-values (((ls ls^ locs k)
-			 (read-list port locs k 'rbrack 'rparen #t)))
-	     (values ls (annotate ls ls^ pos port) locs k)))
+	   (let-values (((ls ls^ locs-alist kont)
+			 (read-list port locs-alist kont 'rbrack 'rparen #t)))
+	     (values ls (annotate ls ls^ pos port) locs-alist kont)))
 
+	  ;;Read a vector opened by "#(".
 	  ((eq? token 'vparen)
-	   (let-values (((v v^ locs k)
-			 (read-vector port locs k 0 '() '())))
-	     (values v (annotate v v^ pos port) locs k)))
+	   (let-values (((v v^ locs-alist kont)
+			 (read-vector port locs-alist kont 0 '() '())))
+	     (values v (annotate v v^ pos port) locs-alist kont)))
 
+	  ;;Read a bytevector opened by "#vu8(".
 	  ((eq? token 'vu8)
-	   (let-values (((v v^ locs k)
-			 (read-u8-bytevector port locs k 0 '())))
-	     (values v (annotate v v^ pos port) locs k)))
+	   (let-values (((v v^ locs-alist kont)
+			 (read-u8-bytevector port locs-alist kont 0 '())))
+	     (values v (annotate v v^ pos port) locs-alist kont)))
 
+	  ;;Read a bytevector opened by "#vs8(".
 	  ((eq? token 'vs8)
-	   (let-values (((v v^ locs k)
-			 (read-s8-bytevector port locs k 0 '())))
-	     (values v (annotate v v^ pos port) locs k)))
+	   (let-values (((v v^ locs-alist kont)
+			 (read-s8-bytevector port locs-alist kont 0 '())))
+	     (values v (annotate v v^ pos port) locs-alist kont)))
 
 ;;;Dunno  what is an  @-expr so  commented out.   (Marco Maggi;  Oct 15,
 ;;;2011)
 ;;;
 ;;; ((eq? token 'at-expr)
-;;;  (read-at-expr port locs k pos))
+;;;  (read-at-expr port locs-alist kont pos))
+
+;;; read standalone datum
 
 	  ((pair? token)
-	   (%parse-pair-token token))
+	   (%parse-standalone-datum-token token))
 
 	  (else
 	   (%error-1 (format "unexpected ~s found" token)))))
 
-  (define-inline (%parse-pair-token token)
-    (cond ((eq? (car token) 'datum)
+  (define-inline (%parse-standalone-datum-token token)
+    (cond ((eq? (car token) 'datum) ;datum alraedy tokenised
 	   (values (cdr token)
-		   (annotate-simple (cdr token) pos port) locs k))
+		   (annotate-simple (cdr token) pos port) locs-alist kont))
 
 	  ((eq? (car token) 'macro)
 	   (let ((macro (cdr token)))
@@ -1109,44 +1115,102 @@
 		 (cond ((eof-object? token1)
 			(%error (format "invalid EOF after ~a read macro" macro)))
 		       (else
-			(parse-token port locs k token1 pos)))))
-	     (let-values (((expr expr^ locs k) (read-macro)))
+			(parse-token port locs-alist kont token1 pos)))))
+	     (let-values (((expr expr^ locs-alist kont) (read-macro)))
 	       (let ((d (list expr)) (d^ (list expr^)))
 		 (let ((x (cons macro d))
 		       (x^ (cons (annotate-simple macro pos port) d^)))
-		   (values x (annotate x x^ pos port) locs
-			   (extend-k-pair d d^ expr '() k)))))))
+		   (values x (annotate x x^ pos port) locs-alist
+			   (extend-k-pair d d^ expr '() kont)))))))
 
+	  ;;Read an expression marked with graph notation for locations.
+	  ;;
+	  ;;If an entry with the same digit N is not in LOCS-ALIST: this
+	  ;;mark is new;  create a new LOC structure,  marked as set and
+	  ;;holding the  expression, and  register it in  in LOCS-ALIST.
+	  ;;Return the expression.
+	  ;;
+	  ;;If an entry with the  same digit N is already in LOCS-ALIST,
+	  ;;and marked set: it means a mark "#N=" has already been read,
+	  ;;so raise an exception.
+	  ;;
+	  ;;If an entry with the  same digit N is already in LOCS-ALIST,
+	  ;;but marked unset: it means that one or more references "#N#"
+	  ;;have  been  already   processed;  mutate  the  existing  LOC
+	  ;;structure to  reference the expression  and mark it  as set.
+	  ;;References will  be processed later  by REDUCE-LOC!.  Return
+	  ;;the expression.
+	  ;;
+	  ;;FIXME Would it be intelligent to raise an exception, in case
+	  ;;of  multiple  reading  of  the  same  mark,  only  when  the
+	  ;;expressions differ?
+	  ;;
+	  ;;Examples:
+	  ;;
+	  ;;  #N=123
+	  ;;  #N=ciao
+	  ;;  #N=(1 2 3)
+	  ;;  #N=#(1 2 3)
+	  ;;  #N=#vu8(1 2 3)
+	  ;;
 	  ((eq? (car token) 'mark)
-	   (let ((n (cdr token)))
-	     (let-values (((expr expr^ locs k)
-			   (read-expr port locs k)))
-	       (cond ((assq n locs)
-		      => (lambda (x)
-			   (let ((loc (cdr x)))
-			     (when (loc-set? loc) ;;; FIXME: pos
-			       (%error "duplicate mark" n))
-			     (set-loc-value! loc expr)
+	   (let ((N (cdr token)))
+	     (let-values (((expr expr^ locs-alist kont)
+			   (read-expr port locs-alist kont)))
+	       (cond ((assq N locs-alist)
+		      => (lambda (pair)
+			   (let ((loc (cdr pair)))
+			     (when (loc-set? loc)
+			       ;;FIXME It  would be beautiful  to report
+			       ;;the  positions, too.   Is  it possible,
+			       ;;from  the  point   of  view  of  shared
+			       ;;contexts, to store the positions in LOC
+			       ;;itself?
+			       (%error "duplicate location mark for graph notation" N))
+			     (set-loc-value!  loc expr)
 			     (set-loc-value^! loc expr^)
-			     (set-loc-set?! loc #t)
-			     (values expr expr^ locs k))))
+			     (set-loc-set?!   loc #t)
+			     (values expr expr^ locs-alist kont))))
 		     (else
-		      (let ((loc (make-loc expr 'unused #t)))
-			(let ((locs (cons (cons n loc) locs)))
-			  (values expr expr^ locs k))))))))
+		      (let* ((loc         (let ((expr^ 'unused)
+						(set?  #t))
+					    (make-loc expr expr^ set?)))
+			     (locs-alist1 (cons (cons N loc) locs-alist)))
+			(values expr expr^ locs-alist1 kont)))))))
 
+	  ;;Process reference to graph notation location.  Example:
+	  ;;
+	  ;;  (#1=ciao #1#) => (ciao ciao)
+	  ;;
+	  ;;If an entry with the same digit N is in LOCS-ALIST: it means
+	  ;;that either the associated  mark "#N=" has already been read
+	  ;;or  another   reference  with  digit  N   has  already  been
+	  ;;processed; in any case  extract the LOC structure and return
+	  ;;it so that it can be later processed by REDUCE-LOC!.
+	  ;;
+	  ;;If an entry with digit N is not in LOCS-ALIST: it means that
+	  ;;neither the associated mark  "#N=" has been read nor another
+	  ;;reference  with digit  N  has been  processed;  in any  case
+	  ;;create  a  new  LOC  structure, marked  unset,  register  in
+	  ;;LOCS-ALIST and return  it so that it can  be later processed
+	  ;;by REDUCE-LOC!.
+	  ;;
 	  ((eq? (car token) 'ref)
-	   (let ((n (cdr token)))
-	     (cond ((assq n locs)
-		    => (lambda (x)
-			 (values (cdr x) 'unused locs k)))
+	   (let ((N (cdr token)))
+	     (cond ((assq N locs-alist)
+		    => (lambda (pair)
+			 ;;;     expr       expr^
+			 (values (cdr pair) 'unused locs-alist kont)))
 		   (else
-		    (let ((loc (make-loc #f 'unused #f)))
-		      (let ((locs (cons (cons n loc) locs)))
-			(values loc 'unused locs k)))))))
+		    (let* ((loc        (let ((expr  #f)
+					     (expr^ 'unused)
+					     (set?  #f))
+					 (make-loc expr expr^ set?)))
+			   (locs-alist (cons (cons N loc) locs-alist)))
+		      (values loc 'unused locs-alist kont))))))
 
 	  (else
-	   (%error "invalid token" token))))
+	   (%error "Vicare internal error: unknown token from reader functions" token))))
 
   (main))
 

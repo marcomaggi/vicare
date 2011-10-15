@@ -1769,7 +1769,7 @@ End--of--file marker, @code{#!eof}.
 Gensym syntax, @code{#@{gensym@}}.
 
 @item
-Graph syntax, @code{#nn= #nn#}.
+Graph syntax: @code{#nn=}, @code{#nn#}.
 @end itemize
 
 The syntax extensions are made available by default on all input ports,
