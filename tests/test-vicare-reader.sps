@@ -86,6 +86,16 @@
   (read-symbol-and-eof "|123-\\x41;\\x42;\\x43;-456|" "123-\x41;\x42;\x43;-456")
 
 ;;; --------------------------------------------------------------------
+;;; tests for bug in Ikarus' reader
+
+  #;(begin
+    (read-symbol-and-eof "..."		"...")
+    (read-symbol-and-eof ".ciao"	".ciao")
+    (read-symbol-and-eof "..ciao"	"..ciao")
+    (read-symbol-and-eof "...ciao"	"...ciao")
+    (read-symbol-and-eof "....ciao"	"....ciao"))
+
+;;; --------------------------------------------------------------------
 ;;; weird cases
 
   (check
