@@ -192,6 +192,15 @@
 (define-struct annotation
   (expression source stripped))
 
+(define (annotate-simple datum pos port)
+  (make-annotation datum pos #;(cons (port-id port) pos) datum))
+
+(define (annotate stripped expression pos port)
+  (make-annotation expression pos #;(cons (port-id port) pos) stripped))
+
+
+;;;; source position handling
+
 (define (make-compound-position port)
   (let* ((textual-position	(port-textual-position port))
 	 (byte-offset		(vector-ref textual-position 0)))
@@ -384,18 +393,7 @@
     (tokenize/1 port))))
 
 (define (read-initial port)
-  (%read-sexp port #t)
-  #;(let-values (((expr expr^ locs k)
-		))
-    (if (null? locs)
-	expr
-      (begin
-       (for-each (reduce-loc! port)
-	 locs)
-       (k)
-       (if (loc? expr)
-	   (loc-value expr)
-	 expr)))))
+  (%read-sexp port #t))
 
 (define (read-annotated port)
   (%read-annotated port #f))
@@ -441,6 +439,14 @@
 	(if (loc? expr)
 	    (loc-value^ expr)
 	  (%return-annotated expr^))))))
+
+(define (read-expr port locs k)
+  (let-values (((t pos) (tokenize/1+pos port)))
+    (parse-token port locs k t pos)))
+
+(define (read-expr-script-initial port locs k)
+  (let-values (((t pos) (tokenize-script-initial+pos port)))
+    (parse-token port locs k t pos)))
 
 (define (reduce-loc! p)
   (lambda (x)
@@ -514,6 +520,7 @@
 	  (else
 	   (values (tokenize/c ch port) pos)))))
 
+
 ;;; commented out because unused (Marco Maggi; Oct 13, 2011)
 ;;
 #;(define (tokenize-script-initial port)
@@ -544,35 +551,6 @@
 	   (tokenize/c ch port)))))
 
 
-(define (tokenize/1 port)
-  ;;Start  tokenizing the next  token from  PORT, skipping  comments and
-  ;;whitespaces.  Return a datum representing the next token.
-  ;;
-  (define-inline (recurse)
-    (tokenize/1 port))
-  (let ((ch (read-char port)))
-    (cond ((eof-object? ch)
-	   ch)
-	  ((unsafe.char= ch #\;)
-	   (line-comment-lexeme-skip-including-line-ending port)
-	   (recurse))
-	  ((unsafe.char= ch #\#)
-	   (let ((ch1 (read-char port)))
-	     (cond ((eof-object? ch1)
-		    (die/p port 'tokenize "invalid EOF after #"))
-		   ((unsafe.char= ch1 #\;)
-		    (read-and-discard-sexp port)
-		    (recurse))
-		   ((unsafe.char= ch1 #\|)
-		    (multiline-comment-lexeme port)
-		    (recurse))
-		   (else
-		    (tokenize-hash/c ch1 port)))))
-	  ((char-whitespace? ch)
-	   (recurse))
-	  (else
-	   (tokenize/c ch port)))))
-
 (define (tokenize/1+pos port)
   ;;Start  tokenizing  the next  token  from  P,  skipping comments  and
   ;;whitespaces.   Return  two values:  a  datum  representing the  next
@@ -604,6 +582,36 @@
 	   (recurse))
 	  (else
 	   (values (tokenize/c ch port) pos)))))
+
+
+(define (tokenize/1 port)
+  ;;Start  tokenizing the next  token from  PORT, skipping  comments and
+  ;;whitespaces.  Return a datum representing the next token.
+  ;;
+  (define-inline (recurse)
+    (tokenize/1 port))
+  (let ((ch (read-char port)))
+    (cond ((eof-object? ch)
+	   ch)
+	  ((unsafe.char= ch #\;)
+	   (line-comment-lexeme-skip-including-line-ending port)
+	   (recurse))
+	  ((unsafe.char= ch #\#)
+	   (let ((ch1 (read-char port)))
+	     (cond ((eof-object? ch1)
+		    (die/p port 'tokenize "invalid EOF after #"))
+		   ((unsafe.char= ch1 #\;)
+		    (read-and-discard-sexp port)
+		    (recurse))
+		   ((unsafe.char= ch1 #\|)
+		    (multiline-comment-lexeme port)
+		    (recurse))
+		   (else
+		    (tokenize-hash/c ch1 port)))))
+	  ((char-whitespace? ch)
+	   (recurse))
+	  (else
+	   (tokenize/c ch port)))))
 
 
 ;;;; tokenising input starting from given char
@@ -1036,6 +1044,89 @@
 			      (unsafe.fx+ (unsafe.fx* N 10) digit))))
     (else
      (%error "invalid char while inside a #n mark/ref" ch))))
+
+
+(define (parse-token p locs k t pos)
+  (define-inline (%error msg . irritants)
+    (die/p   p 'read msg . irritants))
+  (define-inline (%error-1 msg . irritants)
+    (die/p-1 p 'read msg . irritants))
+  (cond ((eof-object? t)
+	 (values (eof-object)
+		 (annotate-simple (eof-object) pos p) locs k))
+	((eq? t 'lparen)
+	 (let-values (((ls ls^ locs k)
+		       (read-list p locs k 'rparen 'rbrack #t)))
+	   (values ls (annotate ls ls^ pos p) locs k)))
+	((eq? t 'lbrack)
+	 (let-values (((ls ls^ locs k)
+		       (read-list p locs k 'rbrack 'rparen #t)))
+	   (values ls (annotate ls ls^ pos p) locs k)))
+	((eq? t 'vparen)
+	 (let-values (((v v^ locs k)
+		       (read-vector p locs k 0 '() '())))
+	   (values v (annotate v v^ pos p) locs k)))
+	((eq? t 'vu8)
+	 (let-values (((v v^ locs k)
+		       (read-u8-bytevector p locs k 0 '())))
+	   (values v (annotate v v^ pos p) locs k)))
+	((eq? t 'vs8)
+	 (let-values (((v v^ locs k)
+		       (read-s8-bytevector p locs k 0 '())))
+	   (values v (annotate v v^ pos p) locs k)))
+;;;Dunno  what is an  @-expr so  commented out.   (Marco Maggi;  Oct 15,
+;;;2011)
+;;;
+;;; ((eq? t 'at-expr)
+;;;  (read-at-expr p locs k pos))
+	((pair? t)
+	 (cond ((eq? (car t) 'datum)
+		(values (cdr t)
+			(annotate-simple (cdr t) pos p) locs k))
+	       ((eq? (car t) 'macro)
+		(let ((macro (cdr t)))
+		  (define (read-macro)
+		    (let-values (((t pos) (tokenize/1+pos p)))
+		      (cond ((eof-object? t)
+			     (%error
+			      (format "invalid eof after ~a read macro"
+				macro)))
+			    (else (parse-token p locs k t pos)))))
+		  (let-values (((expr expr^ locs k) (read-macro)))
+		    (let ((d (list expr)) (d^ (list expr^)))
+		      (let ((x (cons macro d))
+			    (x^ (cons (annotate-simple macro pos p) d^)))
+			(values x (annotate x x^ pos p) locs
+				(extend-k-pair d d^ expr '() k)))))))
+	       ((eq? (car t) 'mark)
+		(let ((n (cdr t)))
+		  (let-values (((expr expr^ locs k)
+				(read-expr p locs k)))
+		    (cond ((assq n locs)
+			   => (lambda (x)
+				(let ((loc (cdr x)))
+				  (when (loc-set? loc) ;;; FIXME: pos
+				    (%error "duplicate mark" n))
+				  (set-loc-value! loc expr)
+				  (set-loc-value^! loc expr^)
+				  (set-loc-set?! loc #t)
+				  (values expr expr^ locs k))))
+			  (else
+			   (let ((loc (make-loc expr 'unused #t)))
+			     (let ((locs (cons (cons n loc) locs)))
+			       (values expr expr^ locs k))))))))
+	       ((eq? (car t) 'ref)
+		(let ((n (cdr t)))
+		  (cond ((assq n locs)
+			 => (lambda (x)
+			      (values (cdr x) 'unused locs k)))
+			(else
+			 (let ((loc (make-loc #f 'unused #f)))
+			   (let ((locs (cons (cons n loc) locs)))
+			     (values loc 'unused locs k)))))))
+	       (else (%error "invalid token" t))))
+	(else
+	 (%error-1 (format "unexpected ~s found" t)))))
 
 
 ;;;; reading identifiers
@@ -1632,132 +1723,125 @@
 	  (else ch))))
 
 
-(module (read-expr read-expr-script-initial)
-  (define-syntax tokenize/1 syntax-error)
-  (define (annotate-simple datum pos p)
-    (make-annotation datum pos #;(cons (port-id p) pos) datum))
-  (define (annotate stripped expression pos p)
-    (make-annotation expression pos #;(cons (port-id p) pos) stripped))
+(define (read-list p locs k end mis init?)
+  (let-values (((t pos) (tokenize/1+pos p)))
+    (cond
+     ((eof-object? t)
+      (die/p p 'read "end of file encountered while reading list"))
+     ((eq? t end) (values '() '() locs k))
+     ((eq? t mis)
+      (die/p-1 p 'read "paren mismatch"))
+     ((eq? t 'dot)
+      (when init?
+	(die/p-1 p 'read "invalid dot while reading list"))
+      (let-values (((d d^ locs k) (read-expr p locs k)))
+	(let-values (((t pos^) (tokenize/1+pos p)))
+	  (cond
+	   ((eq? t end) (values d d^ locs k))
+	   ((eq? t mis)
+	    (die/p-1 p 'read "paren mismatch"))
+	   ((eq? t 'dot)
+	    (die/p-1 p 'read "cannot have two dots in a list"))
+	   (else
+	    (die/p-1 p 'read
+		     (format "expecting ~a, got ~a" end t)))))))
+     (else
+      (let-values (((a a^ locs k) (parse-token p locs k t pos)))
+	(let-values (((d d^ locs k) (read-list p locs k end mis #f)))
+	  (let ((x (cons a d)) (x^ (cons a^ d^)))
+	    (values x x^ locs (extend-k-pair x x^ a d k)))))))))
 
-  (define (read-list p locs k end mis init?)
-    (let-values (((t pos) (tokenize/1+pos p)))
-      (cond
-       ((eof-object? t)
-	(die/p p 'read "end of file encountered while reading list"))
-       ((eq? t end) (values '() '() locs k))
-       ((eq? t mis)
-	(die/p-1 p 'read "paren mismatch"))
-       ((eq? t 'dot)
-	(when init?
-	  (die/p-1 p 'read "invalid dot while reading list"))
-	(let-values (((d d^ locs k) (read-expr p locs k)))
-	  (let-values (((t pos^) (tokenize/1+pos p)))
-	    (cond
-	     ((eq? t end) (values d d^ locs k))
-	     ((eq? t mis)
-	      (die/p-1 p 'read "paren mismatch"))
-	     ((eq? t 'dot)
-	      (die/p-1 p 'read "cannot have two dots in a list"))
-	     (else
-	      (die/p-1 p 'read
-		       (format "expecting ~a, got ~a" end t)))))))
-       (else
-	(let-values (((a a^ locs k) (parse-token p locs k t pos)))
-	  (let-values (((d d^ locs k) (read-list p locs k end mis #f)))
-	    (let ((x (cons a d)) (x^ (cons a^ d^)))
-	      (values x x^ locs (extend-k-pair x x^ a d k)))))))))
+(define (extend-k-pair x x^ a d k)
+  (cond ((or (loc? a) (loc? d))
+	 (lambda ()
+	   (let ((a (car x)))
+	     (when (loc? a)
+	       (set-car! x (loc-value a))
+	       (set-car! x^ (loc-value^ a))))
+	   (let ((d (cdr x)))
+	     (when (loc? d)
+	       (set-cdr! x (loc-value d))
+	       (set-cdr! x^ (loc-value^ d))))
+	   (k)))
+	(else k)))
 
-  (define (extend-k-pair x x^ a d k)
-    (cond ((or (loc? a) (loc? d))
-	   (lambda ()
-	     (let ((a (car x)))
-	       (when (loc? a)
-		 (set-car! x (loc-value a))
-		 (set-car! x^ (loc-value^ a))))
-	     (let ((d (cdr x)))
-	       (when (loc? d)
-		 (set-cdr! x (loc-value d))
-		 (set-cdr! x^ (loc-value^ d))))
-	     (k)))
-	  (else k)))
+(define (vector-put v v^ k i ls ls^)
+  (cond ((null? ls) k)
+	(else
+	 (let ((a (car ls)))
+	   (vector-set! v i a)
+	   (vector-set! v^ i (car ls^))
+	   (vector-put v v^
+		       (if (loc? a)
+			   (lambda ()
+			     (vector-set! v i (loc-value a))
+			     (vector-set! v^ i (loc-value^ a))
+			     (k))
+			 k)
+		       (fxsub1 i)
+		       (cdr ls)
+		       (cdr ls^))))))
 
-  (define (vector-put v v^ k i ls ls^)
-    (cond ((null? ls) k)
+(define (read-vector p locs k count ls ls^)
+  (let-values (((token pos) (tokenize/1+pos p)))
+    (cond ((eof-object? token)
+	   (die/p p 'read "end of file encountered while reading a vector"))
+	  ((eq? token 'rparen)
+	   (let ((v  (make-vector count))
+		 (v^ (make-vector count)))
+	     (let ((k (vector-put v v^ k (fxsub1 count) ls ls^)))
+	       (values v v^ locs k))))
+	  ((eq? token 'rbrack)
+	   (die/p-1 p 'read "unexpected ) while reading a vector"))
+	  ((eq? token 'dot)
+	   (die/p-1 p 'read "unexpected . while reading a vector"))
 	  (else
-	   (let ((a (car ls)))
-	     (vector-set! v i a)
-	     (vector-set! v^ i (car ls^))
-	     (vector-put v v^
-			 (if (loc? a)
-			     (lambda ()
-			       (vector-set! v i (loc-value a))
-			       (vector-set! v^ i (loc-value^ a))
-			       (k))
-			   k)
-			 (fxsub1 i)
-			 (cdr ls)
-			 (cdr ls^))))))
+	   (let-values (((a a^ locs k) (parse-token p locs k token pos)))
+	     (read-vector p locs k (fxadd1 count)
+			  (cons a ls) (cons a^ ls^)))))))
 
-  (define (read-vector p locs k count ls ls^)
-    (let-values (((token pos) (tokenize/1+pos p)))
-      (cond ((eof-object? token)
-	     (die/p p 'read "end of file encountered while reading a vector"))
-	    ((eq? token 'rparen)
-	     (let ((v  (make-vector count))
-		   (v^ (make-vector count)))
-	       (let ((k (vector-put v v^ k (fxsub1 count) ls ls^)))
-		 (values v v^ locs k))))
-	    ((eq? token 'rbrack)
-	     (die/p-1 p 'read "unexpected ) while reading a vector"))
-	    ((eq? token 'dot)
-	     (die/p-1 p 'read "unexpected . while reading a vector"))
-	    (else
-	     (let-values (((a a^ locs k) (parse-token p locs k token pos)))
-	       (read-vector p locs k (fxadd1 count)
-			    (cons a ls) (cons a^ ls^)))))))
+(define (read-u8-bytevector p locs k count ls)
+  (let-values (((t pos) (tokenize/1+pos p)))
+    (cond
+     ((eof-object? t)
+      (die/p p 'read "end of file encountered while reading a bytevector"))
+     ((eq? t 'rparen)
+      (let ((v (u8-list->bytevector (reverse ls))))
+	(values v v locs k)))
+     ((eq? t 'rbrack)
+      (die/p-1 p 'read "unexpected ) while reading a bytevector"))
+     ((eq? t 'dot)
+      (die/p-1 p 'read "unexpected . while reading a bytevector"))
+     (else
+      (let-values (((a a^ locs k) (parse-token p locs k t pos)))
+	(unless (and (fixnum? a) (fx<= 0 a) (fx<= a 255))
+	  (die/ann a^ 'read "invalid value in a u8 bytevector" a))
+	(read-u8-bytevector p locs k (fxadd1 count) (cons a ls)))))))
 
-  (define (read-u8-bytevector p locs k count ls)
-    (let-values (((t pos) (tokenize/1+pos p)))
-      (cond
-       ((eof-object? t)
-	(die/p p 'read "end of file encountered while reading a bytevector"))
-       ((eq? t 'rparen)
-	(let ((v (u8-list->bytevector (reverse ls))))
-	  (values v v locs k)))
-       ((eq? t 'rbrack)
-	(die/p-1 p 'read "unexpected ) while reading a bytevector"))
-       ((eq? t 'dot)
-	(die/p-1 p 'read "unexpected . while reading a bytevector"))
-       (else
-	(let-values (((a a^ locs k) (parse-token p locs k t pos)))
-	  (unless (and (fixnum? a) (fx<= 0 a) (fx<= a 255))
-	    (die/ann a^ 'read "invalid value in a u8 bytevector" a))
-	  (read-u8-bytevector p locs k (fxadd1 count) (cons a ls)))))))
-
-  (define (read-s8-bytevector p locs k count ls)
-    (let-values (((t pos) (tokenize/1+pos p)))
-      (cond
-       ((eof-object? t)
-	(die/p p 'read "end of file encountered while reading a bytevector"))
-       ((eq? t 'rparen)
-	(let ((v (let ((bv ($make-bytevector count)))
-		   (let loop ((i  (- count 1))
-			      (ls ls))
-		     (if (null? ls)
-			 bv
-		       (begin
-			 ($bytevector-set! bv i (car ls))
-			 (loop (- i 1) (cdr ls))))))))
-	  (values v v locs k)))
-       ((eq? t 'rbrack)
-	(die/p-1 p 'read "unexpected ) while reading a bytevector"))
-       ((eq? t 'dot)
-	(die/p-1 p 'read "unexpected . while reading a bytevector"))
-       (else
-	(let-values (((a a^ locs k) (parse-token p locs k t pos)))
-	  (unless (and (fixnum? a) (fx<= -128 a) (fx<= a 127))
-	    (die/ann a^ 'read "invalid value in a s8 bytevector" a))
-	  (read-s8-bytevector p locs k (fxadd1 count) (cons a ls)))))))
+(define (read-s8-bytevector p locs k count ls)
+  (let-values (((t pos) (tokenize/1+pos p)))
+    (cond
+     ((eof-object? t)
+      (die/p p 'read "end of file encountered while reading a bytevector"))
+     ((eq? t 'rparen)
+      (let ((v (let ((bv ($make-bytevector count)))
+		 (let loop ((i  (- count 1))
+			    (ls ls))
+		   (if (null? ls)
+		       bv
+		     (begin
+		       ($bytevector-set! bv i (car ls))
+		       (loop (- i 1) (cdr ls))))))))
+	(values v v locs k)))
+     ((eq? t 'rbrack)
+      (die/p-1 p 'read "unexpected ) while reading a bytevector"))
+     ((eq? t 'dot)
+      (die/p-1 p 'read "unexpected . while reading a bytevector"))
+     (else
+      (let-values (((a a^ locs k) (parse-token p locs k t pos)))
+	(unless (and (fixnum? a) (fx<= -128 a) (fx<= a 127))
+	  (die/ann a^ 'read "invalid value in a s8 bytevector" a))
+	(read-s8-bytevector p locs k (fxadd1 count) (cons a ls)))))))
 
 
 ;;;Dunno  what is an  @-expr so  commented out.   (Marco Maggi;  Oct 15,
@@ -2147,103 +2231,6 @@
 	      (values a a^ locs k)))))))))
 
   (read-at-sexpr-mode p locs k))
-
-
-(define (parse-token p locs k t pos)
-  (cond
-   ((eof-object? t)
-    (values (eof-object)
-	    (annotate-simple (eof-object) pos p) locs k))
-   ((eq? t 'lparen)
-    (let-values (((ls ls^ locs k)
-		  (read-list p locs k 'rparen 'rbrack #t)))
-      (values ls (annotate ls ls^ pos p) locs k)))
-   ((eq? t 'lbrack)
-    (let-values (((ls ls^ locs k)
-		  (read-list p locs k 'rbrack 'rparen #t)))
-      (values ls (annotate ls ls^ pos p) locs k)))
-   ((eq? t 'vparen)
-    (let-values (((v v^ locs k)
-		  (read-vector p locs k 0 '() '())))
-      (values v (annotate v v^ pos p) locs k)))
-   ((eq? t 'vu8)
-    (let-values (((v v^ locs k)
-		  (read-u8-bytevector p locs k 0 '())))
-      (values v (annotate v v^ pos p) locs k)))
-   ((eq? t 'vs8)
-    (let-values (((v v^ locs k)
-		  (read-s8-bytevector p locs k 0 '())))
-      (values v (annotate v v^ pos p) locs k)))
-;;;Dunno  what is an  @-expr so  commented out.   (Marco Maggi;  Oct 15,
-;;;2011)
-;;;
-;;; ((eq? t 'at-expr)
-;;;  (read-at-expr p locs k pos))
-   ((pair? t)
-    (cond
-     ((eq? (car t) 'datum)
-      (values (cdr t)
-	      (annotate-simple (cdr t) pos p) locs k))
-     ((eq? (car t) 'macro)
-      (let ((macro (cdr t)))
-	(define (read-macro)
-	  (let-values (((t pos) (tokenize/1+pos p)))
-	    (cond
-	     ((eof-object? t)
-	      (die/p p 'read
-		     (format "invalid eof after ~a read macro"
-		       macro)))
-	     (else (parse-token p locs k t pos)))))
-	(let-values (((expr expr^ locs k) (read-macro)))
-	  (let ((d (list expr)) (d^ (list expr^)))
-	    (let ((x (cons macro d))
-		  (x^ (cons (annotate-simple macro pos p) d^)))
-	      (values x (annotate x x^ pos p) locs
-		      (extend-k-pair d d^ expr '() k)))))))
-     ((eq? (car t) 'mark)
-      (let ((n (cdr t)))
-	(let-values (((expr expr^ locs k)
-		      (read-expr p locs k)))
-	  (cond
-	   ((assq n locs) =>
-	    (lambda (x)
-	      (let ((loc (cdr x)))
-		(when (loc-set? loc) ;;; FIXME: pos
-		  (die/p p 'read "duplicate mark" n))
-		(set-loc-value! loc expr)
-		(set-loc-value^! loc expr^)
-		(set-loc-set?! loc #t)
-		(values expr expr^ locs k))))
-	   (else
-	    (let ((loc (make-loc expr 'unused #t)))
-	      (let ((locs (cons (cons n loc) locs)))
-		(values expr expr^ locs k))))))))
-     ((eq? (car t) 'ref)
-      (let ((n (cdr t)))
-	(cond
-	 ((assq n locs) =>
-	  (lambda (x)
-	    (values (cdr x) 'unused locs k)))
-	 (else
-	  (let ((loc (make-loc #f 'unused #f)))
-	    (let ((locs (cons (cons n loc) locs)))
-	      (values loc 'unused locs k)))))))
-     (else (die/p p 'read "invalid token" t))))
-   (else
-    (die/p-1 p 'read (format "unexpected ~s found" t)))))
-
-
-(define read-expr
-  (lambda (p locs k)
-    (let-values (((t pos) (tokenize/1+pos p)))
-      (parse-token p locs k t pos))))
-
-(define read-expr-script-initial
-  (lambda (p locs k)
-    (let-values (((t pos) (tokenize-script-initial+pos p)))
-      (parse-token p locs k t pos))))
-
-#| end of module (read-expr read-expr-script-initial) |# )
 
 
 ;;;; done
