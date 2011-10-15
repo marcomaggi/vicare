@@ -35,9 +35,10 @@
 
 (parametrise ((check-test-name	'getpid))
 
-  (display "result of getpid() is " )
-  (display (getpid))
-  (newline)
+  #;(begin
+    (display "result of getpid() is " )
+    (display (getpid))
+    (newline))
 
   (check
       (fixnum? (getpid))
