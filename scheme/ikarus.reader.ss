@@ -1046,87 +1046,106 @@
      (%error "invalid char while inside a #n mark/ref" ch))))
 
 
-(define (parse-token p locs k t pos)
-  (define-inline (%error msg . irritants)
-    (die/p   p 'read msg . irritants))
+(define (parse-token port locs k t pos)
+  (define-inline (%error   msg . irritants)
+    (die/p   port 'read msg . irritants))
   (define-inline (%error-1 msg . irritants)
-    (die/p-1 p 'read msg . irritants))
-  (cond ((eof-object? t)
-	 (values (eof-object)
-		 (annotate-simple (eof-object) pos p) locs k))
-	((eq? t 'lparen)
-	 (let-values (((ls ls^ locs k)
-		       (read-list p locs k 'rparen 'rbrack #t)))
-	   (values ls (annotate ls ls^ pos p) locs k)))
-	((eq? t 'lbrack)
-	 (let-values (((ls ls^ locs k)
-		       (read-list p locs k 'rbrack 'rparen #t)))
-	   (values ls (annotate ls ls^ pos p) locs k)))
-	((eq? t 'vparen)
-	 (let-values (((v v^ locs k)
-		       (read-vector p locs k 0 '() '())))
-	   (values v (annotate v v^ pos p) locs k)))
-	((eq? t 'vu8)
-	 (let-values (((v v^ locs k)
-		       (read-u8-bytevector p locs k 0 '())))
-	   (values v (annotate v v^ pos p) locs k)))
-	((eq? t 'vs8)
-	 (let-values (((v v^ locs k)
-		       (read-s8-bytevector p locs k 0 '())))
-	   (values v (annotate v v^ pos p) locs k)))
+    (die/p-1 port 'read msg . irritants))
+
+  (define-inline (main)
+    (cond ((eof-object? t)
+	   (values (eof-object)
+		   (annotate-simple (eof-object) pos port) locs k))
+
+	  ((eq? t 'lparen)
+	   (let-values (((ls ls^ locs k)
+			 (read-list port locs k 'rparen 'rbrack #t)))
+	     (values ls (annotate ls ls^ pos port) locs k)))
+
+	  ((eq? t 'lbrack)
+	   (let-values (((ls ls^ locs k)
+			 (read-list port locs k 'rbrack 'rparen #t)))
+	     (values ls (annotate ls ls^ pos port) locs k)))
+
+	  ((eq? t 'vparen)
+	   (let-values (((v v^ locs k)
+			 (read-vector port locs k 0 '() '())))
+	     (values v (annotate v v^ pos port) locs k)))
+
+	  ((eq? t 'vu8)
+	   (let-values (((v v^ locs k)
+			 (read-u8-bytevector port locs k 0 '())))
+	     (values v (annotate v v^ pos port) locs k)))
+
+	  ((eq? t 'vs8)
+	   (let-values (((v v^ locs k)
+			 (read-s8-bytevector port locs k 0 '())))
+	     (values v (annotate v v^ pos port) locs k)))
+
 ;;;Dunno  what is an  @-expr so  commented out.   (Marco Maggi;  Oct 15,
 ;;;2011)
 ;;;
 ;;; ((eq? t 'at-expr)
-;;;  (read-at-expr p locs k pos))
-	((pair? t)
-	 (cond ((eq? (car t) 'datum)
-		(values (cdr t)
-			(annotate-simple (cdr t) pos p) locs k))
-	       ((eq? (car t) 'macro)
-		(let ((macro (cdr t)))
-		  (define (read-macro)
-		    (let-values (((t pos) (tokenize/1+pos p)))
-		      (cond ((eof-object? t)
-			     (%error
-			      (format "invalid eof after ~a read macro"
-				macro)))
-			    (else (parse-token p locs k t pos)))))
-		  (let-values (((expr expr^ locs k) (read-macro)))
-		    (let ((d (list expr)) (d^ (list expr^)))
-		      (let ((x (cons macro d))
-			    (x^ (cons (annotate-simple macro pos p) d^)))
-			(values x (annotate x x^ pos p) locs
-				(extend-k-pair d d^ expr '() k)))))))
-	       ((eq? (car t) 'mark)
-		(let ((n (cdr t)))
-		  (let-values (((expr expr^ locs k)
-				(read-expr p locs k)))
-		    (cond ((assq n locs)
-			   => (lambda (x)
-				(let ((loc (cdr x)))
-				  (when (loc-set? loc) ;;; FIXME: pos
-				    (%error "duplicate mark" n))
-				  (set-loc-value! loc expr)
-				  (set-loc-value^! loc expr^)
-				  (set-loc-set?! loc #t)
-				  (values expr expr^ locs k))))
-			  (else
-			   (let ((loc (make-loc expr 'unused #t)))
-			     (let ((locs (cons (cons n loc) locs)))
-			       (values expr expr^ locs k))))))))
-	       ((eq? (car t) 'ref)
-		(let ((n (cdr t)))
-		  (cond ((assq n locs)
-			 => (lambda (x)
-			      (values (cdr x) 'unused locs k)))
-			(else
-			 (let ((loc (make-loc #f 'unused #f)))
-			   (let ((locs (cons (cons n loc) locs)))
-			     (values loc 'unused locs k)))))))
-	       (else (%error "invalid token" t))))
-	(else
-	 (%error-1 (format "unexpected ~s found" t)))))
+;;;  (read-at-expr port locs k pos))
+
+	  ((pair? t)
+	   (%parse-pair-token t))
+
+	  (else
+	   (%error-1 (format "unexpected ~s found" t)))))
+
+  (define-inline (%parse-pair-token t)
+    (cond ((eq? (car t) 'datum)
+	   (values (cdr t)
+		   (annotate-simple (cdr t) pos port) locs k))
+
+	  ((eq? (car t) 'macro)
+	   (let ((macro (cdr t)))
+	     (define (read-macro)
+	       (let-values (((t pos) (tokenize/1+pos port)))
+		 (cond ((eof-object? t)
+			(%error (format "invalid EOF after ~a read macro" macro)))
+		       (else
+			(parse-token port locs k t pos)))))
+	     (let-values (((expr expr^ locs k) (read-macro)))
+	       (let ((d (list expr)) (d^ (list expr^)))
+		 (let ((x (cons macro d))
+		       (x^ (cons (annotate-simple macro pos port) d^)))
+		   (values x (annotate x x^ pos port) locs
+			   (extend-k-pair d d^ expr '() k)))))))
+
+	  ((eq? (car t) 'mark)
+	   (let ((n (cdr t)))
+	     (let-values (((expr expr^ locs k)
+			   (read-expr port locs k)))
+	       (cond ((assq n locs)
+		      => (lambda (x)
+			   (let ((loc (cdr x)))
+			     (when (loc-set? loc) ;;; FIXME: pos
+			       (%error "duplicate mark" n))
+			     (set-loc-value! loc expr)
+			     (set-loc-value^! loc expr^)
+			     (set-loc-set?! loc #t)
+			     (values expr expr^ locs k))))
+		     (else
+		      (let ((loc (make-loc expr 'unused #t)))
+			(let ((locs (cons (cons n loc) locs)))
+			  (values expr expr^ locs k))))))))
+
+	  ((eq? (car t) 'ref)
+	   (let ((n (cdr t)))
+	     (cond ((assq n locs)
+		    => (lambda (x)
+			 (values (cdr x) 'unused locs k)))
+		   (else
+		    (let ((loc (make-loc #f 'unused #f)))
+		      (let ((locs (cons (cons n loc) locs)))
+			(values loc 'unused locs k)))))))
+
+	  (else
+	   (%error "invalid token" t))))
+
+  (main))
 
 
 ;;;; reading identifiers
