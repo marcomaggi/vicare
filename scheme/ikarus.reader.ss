@@ -506,12 +506,12 @@
   ;;position value.
   ;;
   ;;This function does  almost the same thing of  TOKENIZE/1+POS, but in
-  ;;addition handle specially the very  first two characters if they are
-  ;;"#!" and discard the first  line up to the line-ending.  This allows
-  ;;disacarding the sharp-bang command used  in Unix systems to select a
-  ;;program to run scripts.  It also  means that if the file starts with
-  ;;a valid R6RS or Vicare sharp-bang comment (#!vicare, #!r6rs, #!eof),
-  ;;such comment will be silently discarded.
+  ;;addition it handles specially the  very first two characters if they
+  ;;are "#!"  and discard  the first line  up to the  line-ending.  This
+  ;;allows disacarding  the sharp-bang command  used in Unix  systems to
+  ;;select a  program to run  scripts.  It also  means that if  the file
+  ;;starts  with a valid  R6RS or  Vicare sharp-bang  comment (#!vicare,
+  ;;#!r6rs, #!eof), such comment will be silently discarded.
   ;;
   (define-inline (%error msg . args)
     (die/p port 'tokenize msg . args))
@@ -533,7 +533,7 @@
 	     (cond ((eof-object? ch1)
 		    (%error "invalid EOF after #"))
 
-		   ;;discard tokenize sharp-bang comments
+		   ;;discard sharp-bang first line of file
 		   ((unsafe.char= ch1 #\!)
 		    (read-and-discard-up-to-and-including-line-ending port)
 		    (tokenize/1+pos port))
@@ -627,23 +627,37 @@
   (let ((ch (read-char port)))
     (cond ((eof-object? ch)
 	   ch)
+
+	  ;;discard line comments
 	  ((unsafe.char= ch #\;)
 	   (read-and-discard-up-to-and-including-line-ending port)
 	   (recurse))
+
+	  ;;tokenise everything starting with a #
 	  ((unsafe.char= ch #\#)
 	   (let ((ch1 (read-char port)))
 	     (cond ((eof-object? ch1)
 		    (%error "invalid EOF after #"))
+
+		   ;;discard sexp comments
 		   ((unsafe.char= ch1 #\;)
 		    (read-and-discard-sexp port)
 		    (recurse))
+
+		   ;;discard multiline comments
 		   ((unsafe.char= ch1 #\|)
 		    (multiline-comment-lexeme port)
 		    (recurse))
+
+		   ;;tokenize datums whose syntax starts with #
 		   (else
 		    (tokenize-hash/c ch1 port)))))
+
+	  ;;discard whitespaces
 	  ((char-whitespace? ch)
 	   (recurse))
+
+	  ;;tokenise every datum whose syntax does not start with a #
 	  (else
 	   (tokenize/c ch port)))))
 
