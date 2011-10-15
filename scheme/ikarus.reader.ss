@@ -1108,18 +1108,24 @@
 	   (values (cdr token)
 		   (annotate-simple (cdr token) pos port) locs-alist kont))
 
+	  ;;Read  a  sexp  quoted  with one  among:  QUOTE,  QUASIQUOTE,
+	  ;;UNQUOTE,  UNQUOTE-SPLICING,  SYNTAX, QUASISYNTAX,  UNSYNTAX,
+	  ;;UNSYNTAX-SPLICING.
+	  ;;
 	  ((eq? (car token) 'macro)
-	   (let ((macro (cdr token)))
-	     (define (read-macro)
+	   (let ((quoting-keyword (cdr token)))
+	     (define (%read-quoted-sexp)
 	       (let-values (((token1 pos) (tokenize/1+pos port)))
 		 (cond ((eof-object? token1)
-			(%error (format "invalid EOF after ~a read macro" macro)))
+			(%error (format "invalid EOF after ~a read macro" quoting-keyword)))
 		       (else
 			(parse-token port locs-alist kont token1 pos)))))
-	     (let-values (((expr expr^ locs-alist kont) (read-macro)))
-	       (let ((d (list expr)) (d^ (list expr^)))
-		 (let ((x (cons macro d))
-		       (x^ (cons (annotate-simple macro pos port) d^)))
+	     (let-values (((expr expr^ locs-alist kont)
+			   (%read-quoted-sexp)))
+	       (let ((d  (list expr))
+		     (d^ (list expr^)))
+		 (let ((x  (cons quoting-keyword d))
+		       (x^ (cons (annotate-simple quoting-keyword pos port) d^)))
 		   (values x (annotate x x^ pos port) locs-alist
 			   (extend-k-pair d d^ expr '() kont)))))))
 
@@ -1202,12 +1208,12 @@
 			 ;;;     expr       expr^
 			 (values (cdr pair) 'unused locs-alist kont)))
 		   (else
-		    (let* ((loc        (let ((expr  #f)
-					     (expr^ 'unused)
-					     (set?  #f))
-					 (make-loc expr expr^ set?)))
-			   (locs-alist (cons (cons N loc) locs-alist)))
-		      (values loc 'unused locs-alist kont))))))
+		    (let* ((loc         (let ((expr  #f)
+					      (expr^ 'unused)
+					      (set?  #f))
+					  (make-loc expr expr^ set?)))
+			   (locs-alist1 (cons (cons N loc) locs-alist)))
+		      (values loc 'unused locs-alist1 kont))))))
 
 	  (else
 	   (%error "Vicare internal error: unknown token from reader functions" token))))
