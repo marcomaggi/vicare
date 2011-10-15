@@ -472,7 +472,6 @@
     (printf                                      i)
     (fprintf                                     i)
     (format                                      i)
-    (comment-handler                             i)
     (print-gensym                                i symbols)
     (print-graph                                 i)
     (print-unicode                               i)

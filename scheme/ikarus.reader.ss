@@ -19,7 +19,6 @@
   (export read get-datum
 	  read-initial read-token
           read-annotated read-script-annotated
-	  comment-handler
 
 	  annotation? annotation-expression
 	  annotation-source annotation-stripped)
@@ -27,7 +26,6 @@
 		  read  get-datum
 		  read-char read-token
 		  read-annotated read-script-annotated
-		  comment-handler
 
 		  annotation? annotation-expression
 		  annotation-source annotation-stripped)
@@ -81,6 +79,11 @@
 	 ((_ ?arg ... . ?rest)
 	  (begin ?form0 ?form ...)))))))
 
+(define-syntax define-syntax*
+  (syntax-rules ()
+    ((_ (?who ?stx) . ?body)
+     (define-syntax ?who (lambda (?stx) . ?body)))))
+
 
 ;;;; reading and peeking characters helpers
 
@@ -91,29 +94,25 @@
   ;;
   (get-char port))
 
-(define-syntax read-char-no-eof
-  (lambda (stx)
-    (syntax-case stx ()
-      ((read-char-no-eof (?port ?ch-name ?raise-error)
-	 . ?cond-clauses)
-       (and (identifier? #'?ch-name)
-	    (identifier? #'?raise-error))
-       #'(let ((?ch-name (read-char ?port)))
-	   (cond ((eof-object? ?ch-name)
-		  (?raise-error))
-		 . ?cond-clauses))))))
+(define-syntax* (read-char-no-eof stx)
+  (syntax-case stx ()
+    ((read-char-no-eof (?port ?ch-name ?raise-error) . ?cond-clauses)
+     (and (identifier? #'?ch-name)
+	  (identifier? #'?raise-error))
+     #'(let ((?ch-name (read-char ?port)))
+	 (cond ((eof-object? ?ch-name)
+		(?raise-error))
+	       . ?cond-clauses)))))
 
-(define-syntax peek-char-no-eof
-  (lambda (stx)
-    (syntax-case stx ()
-      ((peek-char-no-eof (?port ?ch-name ?raise-error)
-	 . ?cond-clauses)
-       (and (identifier? #'?ch-name)
-	    (identifier? #'?raise-error))
-       #'(let ((?ch-name (peek-char ?port)))
-	   (cond ((eof-object? ?ch-name)
-		  (?raise-error))
-		 . ?cond-clauses))))))
+(define-syntax* (peek-char-no-eof stx)
+  (syntax-case stx ()
+    ((peek-char-no-eof (?port ?ch-name ?raise-error) . ?cond-clauses)
+     (and (identifier? #'?ch-name)
+	  (identifier? #'?raise-error))
+     #'(let ((?ch-name (peek-char ?port)))
+	 (cond ((eof-object? ?ch-name)
+		(?raise-error))
+	       . ?cond-clauses)))))
 
 
 ;;;; miscellaneous helpers
@@ -199,9 +198,6 @@
 
 (define-inline (die/ann ann who msg . irritants)
   (die/lex (annotation-source ann) who msg . irritants))
-
-(define-inline (num-error p str ls)
-  (die/p-1 p 'read str (reverse-list->string ls)))
 
 
 ;;;; characters classification helpers
@@ -340,14 +336,14 @@
 (define read
   (case-lambda
    (()
-    (%read-sexp (current-input-port)))
+    (%read-sexp (current-input-port) #f))
    ((port)
     (%assert-argument-is-source-code-port 'read port)
-    (%read-sexp port))))
+    (%read-sexp port #f))))
 
 (define (get-datum port)
   (%assert-argument-is-source-code-port 'get-datum port)
-  (%read-sexp port))
+  (%read-sexp port #f))
 
 (define read-token
   (case-lambda
@@ -358,57 +354,9 @@
     (tokenize/1 port))))
 
 (define (read-initial port)
-  (let-values (((expr expr^ locs k)
-		(read-expr-script-initial port '() void)))
-    (cond ((null? locs) expr)
-	  (else
-	   (for-each (reduce-loc! port)
-	     locs)
-	   (k)
-	   (if (loc? expr)
-	       (loc-value expr)
-	     expr)))))
-
-(define read-annotated
-  (case-lambda
-   ((port)
-    (%assert-argument-is-source-code-port 'read port)
-    (let-values (((expr expr^ locs k) (read-expr port '() void)))
-      (if (null? locs)
-	  (return-annotated expr^)
-	(begin
-	 (for-each (reduce-loc! port)
-	   locs)
-	 (k)
-	 (if (loc? expr)
-	     (loc-value^ expr)
-	   (return-annotated expr^))))))
-   (()
-    (read-annotated (current-input-port)))))
-
-(define (read-script-annotated port)
-  (let-values (((expr expr^ locs k)
-		(read-expr-script-initial port '() void)))
-    (if (null? locs)
-	(return-annotated expr^)
-      (begin
-       (for-each (reduce-loc! port)
-	 locs)
-       (k)
-       (if (loc? expr)
-	   (loc-value^ expr)
-	 (return-annotated expr^))))))
-
-(define comment-handler
-  (make-parameter
-      (lambda (x) (void))
-    (lambda (x)
-      (%assert-argument-is-procedure 'comment-handler x)
-      x)))
-
-
-(define (%read-sexp port)
-  (let-values (((expr expr^ locs k) (read-expr port '() void)))
+  (%read-sexp port #t)
+  #;(let-values (((expr expr^ locs k)
+		))
     (if (null? locs)
 	expr
       (begin
@@ -419,11 +367,58 @@
 	   (loc-value expr)
 	 expr)))))
 
+(define (read-annotated port)
+  (%read-annotated port #f))
+
+(define (read-script-annotated port)
+  (%read-annotated port #t))
+
+
+;;;; helpers for public functions
+
+(define (%read-sexp port initial?)
+  (let-values (((expr expr^ locs k)
+		(if initial?
+		    (read-expr-script-initial port '() void)
+		  (read-expr port '() void))))
+    (if (null? locs)
+	expr
+      (begin
+       (for-each (reduce-loc! port)
+	 locs)
+       (k)
+       (if (loc? expr)
+	   (loc-value expr)
+	 expr)))))
+
+(define (%read-annotated port script?)
+  (define (%return-annotated x)
+    (if (and (annotation? x)
+	     (eof-object? (annotation-expression x)))
+	(eof-object)
+      x))
+  (%assert-argument-is-source-code-port 'read port)
+  (let-values (((expr expr^ locs k)
+		(if script?
+		    (read-expr-script-initial port '() void)
+		  (read-expr port '() void))))
+    (if (null? locs)
+	(%return-annotated expr^)
+      (begin
+	(for-each (reduce-loc! port)
+	  locs)
+	(k)
+	(if (loc? expr)
+	    (loc-value^ expr)
+	  (%return-annotated expr^))))))
+
 (define (reduce-loc! p)
   (lambda (x)
+    (define-inline (%error msg . irritants)
+      (die/p p 'read msg . irritants))
     (let ((loc (cdr x)))
       (unless (loc-set? loc)
-	(die/p p 'read "referenced mark is not set" (car x)))
+	(%error "referenced mark is not set" (car x)))
       (when (loc? (loc-value loc))
 	(let f ((h loc) (t loc))
 	  (if (loc? h)
@@ -431,7 +426,7 @@
 		(if (loc? h1)
 		    (begin
 		      (when (eq? h1 t)
-			(die/p p 'read "circular marks"))
+			(%error "circular marks"))
 		      (let ((v (f (loc-value h1) (loc-value t))))
 			(set-loc-value! h1 v)
 			(set-loc-value! h v)
@@ -440,13 +435,6 @@
 		    (set-loc-value! h h1)
 		    h1)))
 	    h))))))
-
-(define (return-annotated x)
-  (if (and (annotation? x)
-	   (eof-object? (annotation-expression x)))
-      (eof-object)
-    x))
-
 
 (define (read-and-discard-sexp port)
   (read-expr port '() void)
@@ -1440,35 +1428,38 @@
 
 ;;;; reading numbers
 
-(define-syntax port-config
-  (syntax-rules (GEN-TEST GEN-ARGS FAIL EOF-ERROR GEN-DELIM-TEST)
-    ((_ GEN-ARGS k . rest) (k (p ac) . rest))
-    ((_ FAIL (p ac))
-     (num-error p "invalid numeric sequence" ac))
-    ((_ FAIL (p ac) c)
-     (num-error p "invalid numeric sequence" (cons c ac)))
-    ((_ EOF-ERROR (p ac))
-     (num-error p "invalid eof while reading number" ac))
-    ((_ GEN-DELIM-TEST c sk fk)
-     (if (delimiter? c) sk fk))
-    ((_ GEN-TEST var next fail (p ac) eof-case char-case)
-     (let ((c (peek-char p)))
-       (if (eof-object? c)
-	   (let ()
+(let-syntax ((num-error (syntax-rules ()
+			  ((_ p str ls)
+			   (die/p-1 p 'read str (reverse-list->string ls))))))
+  (define-syntax port-config
+    (syntax-rules (GEN-TEST GEN-ARGS FAIL EOF-ERROR GEN-DELIM-TEST)
+      ((_ GEN-ARGS k . rest) (k (p ac) . rest))
+      ((_ FAIL (p ac))
+       (num-error p "invalid numeric sequence" ac))
+      ((_ FAIL (p ac) c)
+       (num-error p "invalid numeric sequence" (cons c ac)))
+      ((_ EOF-ERROR (p ac))
+       (num-error p "invalid eof while reading number" ac))
+      ((_ GEN-DELIM-TEST c sk fk)
+       (if (delimiter? c) sk fk))
+      ((_ GEN-TEST var next fail (p ac) eof-case char-case)
+       (let ((c (peek-char p)))
+	 (if (eof-object? c)
+	     (let ()
+	       (define-syntax fail
+		 (syntax-rules ()
+		   ((_) (num-error p "invalid numeric sequence" ac))))
+	       eof-case)
+	   (let ((var c))
 	     (define-syntax fail
 	       (syntax-rules ()
-		 ((_) (num-error p "invalid numeric sequence" ac))))
-	     eof-case)
-	 (let ((var c))
-	   (define-syntax fail
-	     (syntax-rules ()
-	       ((_)
-		(num-error p "invalid numeric sequence" (cons var ac)))))
-	   (define-syntax next
-	     (syntax-rules ()
-	       ((_ who args (... ...))
-		(who p (cons (get-char p) ac) args (... ...)))))
-	   char-case))))))
+		 ((_)
+		  (num-error p "invalid numeric sequence" (cons var ac)))))
+	     (define-syntax next
+	       (syntax-rules ()
+		 ((_ who args (... ...))
+		  (who p (cons (get-char p) ac) args (... ...)))))
+	     char-case)))))))
 
 (define-string->number-parser port-config
   (parse-string u:digit+ u:sign u:dot))
@@ -1487,10 +1478,8 @@
 
 (define (multiline-comment-lexeme port)
   ;;Parse a multiline comment  "#| ... |#", possibly nested.  Accumulate
-  ;;the characters in the comment, excluding the "#|" and "|#", and hand
-  ;;the  resulting string to  the function  referenced by  the parameter
-  ;;COMMENT-HANDLER.    Return  the  return   value  of   such  function
-  ;;application.
+  ;;the  characters in  the comment,  excluding the  "#|" and  "|#", and
+  ;;discard them.
   ;;
   (define-inline (%multiline-error)
     (die/p port 'tokenize "end of file encountered while inside a #|-style comment"))
@@ -1541,7 +1530,7 @@
 	    (else
 	     (recurse (cons c ac))))))
 
-  ((comment-handler) (reverse-list->string (accumulate-comment-chars port '()))))
+  (accumulate-comment-chars port '()))
 
 
 ;;;; character reading helpers
