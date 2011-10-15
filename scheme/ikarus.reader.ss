@@ -1,4 +1,4 @@
-;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
@@ -865,14 +865,14 @@
       (cond ((unsafe.char= ch1 #\e)
 	     (when (port-in-r6rs-mode? port)
 	       (%error-1 "invalid syntax: #!e"))
-	     (read-char* port '(#\e) "of" "eof sequence" #f #f)
+	     (read-char* port '(#\e) "of" "#!eof sequence")
 	     (cons 'datum (eof-object)))
 	    ((unsafe.char= ch1 #\r)
-	     (read-char* port '(#\r) "6rs" "#!r6rs comment" #f #f)
+	     (read-char* port '(#\r) "6rs" "#!r6rs comment")
 	     (set-port-mode! port 'r6rs)
 	     (tokenize/1 port))
 	    ((unsafe.char= ch1 #\v)
-	     (read-char* port '(#\v) "icare" "#!vicare comment" #f #f)
+	     (read-char* port '(#\v) "icare" "#!vicare comment")
 	     (set-port-mode! port 'vicare)
 	     (tokenize/1 port))
 	    (else
@@ -1800,7 +1800,14 @@
 
 ;;;; character reading helpers
 
-(define (read-char* port ls str who case-insensitive? delimited?)
+(define-syntax read-char*
+  (syntax-rules ()
+    ((_ port ls str who case-insensitive? delimited?)
+     (%read-char* port ls str who case-insensitive? delimited?))
+    ((_ port ls str who)
+     (%read-char* port ls str who #f #f))))
+
+(define (%read-char* port ls str who case-insensitive? delimited?)
   ;;Read multiple characters from PORT expecting them to be the chars in
   ;;the string STR; this function is  used to read a chunk of token.  If
   ;;successful return  unspecified values; if  an error occurs  raise an
