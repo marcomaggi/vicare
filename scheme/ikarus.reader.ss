@@ -156,7 +156,7 @@
 
 (define-struct annotation
   (expression
-		;A pair of file-name x char-position.
+		;A pair: (file-name . byte-offset)
    source
 		;Expression  is a list/vector/id/what-have-you  that may
 		;contain further annotations.
@@ -164,11 +164,14 @@
 		;Stripped is an s-expression with no annotations.
 
 (define (make-compound-position port)
-  (cons (port-id port) (input-port-byte-position port)))
+  (let* ((textual-position '#(0 0 1 1) #;(port-textual-position port))
+	 (byte-offset		(vector-ref textual-position 0)))
+    (cons (port-id port) byte-offset)))
 
 (define (make-compound-position/with-offset port offset)
-  (let ((byte (input-port-byte-position port)))
-    (cons (port-id port) (and byte (+ byte offset)))))
+  (let* ((textual-position	'#(0 0 1 1) #;(port-textual-position port))
+	 (byte-offset		(vector-ref textual-position 0)))
+    (cons (port-id port) (and byte-offset (+ byte-offset offset)))))
 
 
 ;;;; exception raisers
@@ -697,10 +700,13 @@
 ;;;
 ;;;     (($char= #\{ ch) 'lbrace)
 
-	(($char= #\@ ch)
-	 (when (port-in-r6rs-mode? port)
-	   (%error "@-expr syntax is invalid in #!r6rs mode"))
-	 'at-expr)
+;;;Dunno what  is an  @-expr, so commented  out.  (Marco Maggi;  Oct 15,
+;;;2011)
+;;;
+;;;	(($char= #\@ ch)
+;;;	 (when (port-in-r6rs-mode? port)
+;;;	   (%error "@-expr syntax is invalid in #!r6rs mode"))
+;;;	 'at-expr)
 
 	(else
 	 (%error-1 "invalid syntax" ch))))
@@ -1735,7 +1741,10 @@
 	  (read-s8-bytevector p locs k (fxadd1 count) (cons a ls)))))))
 
 
-(define (read-at-expr p locs k at-pos)
+;;;Dunno  what is an  @-expr so  commented out.   (Marco Maggi;  Oct 15,
+;;;2011)
+;;;
+#;(define (read-at-expr p locs k at-pos)
   (define-struct nested (a a^))
   (define-struct nested* (a* a*^))
 
@@ -2146,8 +2155,11 @@
     (let-values (((v v^ locs k)
 		  (read-s8-bytevector p locs k 0 '())))
       (values v (annotate v v^ pos p) locs k)))
-   ((eq? t 'at-expr)
-    (read-at-expr p locs k pos))
+;;;Dunno  what is an  @-expr so  commented out.   (Marco Maggi;  Oct 15,
+;;;2011)
+;;;
+;;; ((eq? t 'at-expr)
+;;;  (read-at-expr p locs k pos))
    ((pair? t)
     (cond
      ((eq? (car t) 'datum)

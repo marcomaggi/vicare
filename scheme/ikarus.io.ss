@@ -42,8 +42,6 @@
 ;;
 ;;* Solve all the FIXME issues.
 ;;
-;;* Write tests for all the untested functions.
-;;
 ;;* FIXME If SET-PORT-POSITION!  fails  it is possible for the field POS
 ;;of  the  cookie to  become  invalid.  Should  the  port  be marked  as
 ;;corrupted?
@@ -446,8 +444,8 @@
     ;; port position
     port-position port-has-port-position?
     set-port-position! port-has-set-port-position!?
-    input-port-byte-position input-port-char-position
-    input-port-column-number input-port-row-number
+    get-char-and-track-textual-position
+    port-textual-position
 
     ;; reading chars
     get-char lookahead-char read-char peek-char
@@ -552,8 +550,8 @@
 		  ;; port position
 		  port-position port-has-port-position?
 		  set-port-position! port-has-set-port-position!?
-		  input-port-byte-position input-port-char-position
-		  input-port-column-number input-port-row-number
+		  get-char-and-track-textual-position
+		  port-textual-position
 
 		  ;; reading chars
 		  get-char lookahead-char read-char peek-char
@@ -2092,7 +2090,7 @@
 ;;input port used to read Scheme source code satisfies this requirement.
 ;;
 
-;;Constructor: (make-cookie DEST MODE POS ROW-NUM NEWLINE-POS)
+;;Constructor: (make-cookie DEST MODE POS CH-OFF ROW-NUM COL-NUM)
 ;;
 ;;Field name: dest
 ;;Accessor name: (cookie-dest COOKIE)
@@ -2109,7 +2107,8 @@
 ;;Field name: mode
 ;;Accessor name: (cookie-mode COOKIE)
 ;;Mutator name: (set-cookie-mode! COOKIE MODE-SYMBOL)
-;;  Hold the symbol "vicare" or "r6rs".
+;;  Hold  the symbol  representing  the current  port  mode, one  among:
+;;  "vicare", "r6rs".
 ;;
 ;;Field name: pos
 ;;Accessor name: (cookie-pos COOKIE)
@@ -2119,66 +2118,66 @@
 ;;  this field is set to zero.
 ;;
 ;;  It  is the  responsibility of  the *callers*  of the  port functions
-;;  READ!, WRITE!   and SET-POSITION!  to  update this field.   The port
-;;  functions  READ!,  WRITE!  and  SET-POSITION!   must  not touch  the
+;;  READ!, WRITE!  and SET-POSITION!   to update this field.  The port's
+;;  own functions  READ!, WRITE!  and SET-POSITION!  must  not touch the
 ;;  cookie.
 ;;
-;;Field name: row-num
-;;Accessor name: (cookie-row-num COOKIE)
-;;Mutator name: (set-cookie-row-num! COOKIE NEW-POS)
+;;Field name: character-offset
+;;Accessor name: (cookie-character-offset COOKIE)
+;;Mutator name: (set-cookie-character-offset! COOKIE NEW-CH-OFF)
+;;  Zero-based offset  of the current  position in a textual  input port
+;;  expressed in characters.
 ;;
-;;Field name: newline-pos
-;;Accessor name: (cookie-newline-pos COOKIE)
-;;Mutator name: (set-cookie-newline-pos! COOKIE NEW-POS)
+;;Field name: row-number
+;;Accessor name: (cookie-row-number COOKIE)
+;;Mutator name: (set-cookie-row-number! COOKIE NEW-POS)
+;;  One-based  row number  of the  current position  in a  textual input
+;;  port.
+;;
+;;Field name: column-number
+;;Accessor name: (cookie-column-number COOKIE)
+;;Mutator name: (set-cookie-column-number! COOKIE NEW-POS)
+;;  One-based column number  of the current position in  a textual input
+;;  port.
 ;;
 (define-struct cookie
-  (dest mode pos row-num newline-pos))
+  (dest mode pos character-offset row-number column-number))
 
 (define (default-cookie device)
-  (make-cookie device 'vicare 0 0 0))
+  (make-cookie device 'vicare 0 #;device-position
+	       0 #;character-offset 1 #;row-number 1 #;column-number))
 
-(define (input-port-byte-position port)
-  ;;Defined by  Ikarus.  Return the port  position for an  input port in
-  ;;octets.
+(define (get-char-and-track-textual-position port)
+  ;;Defined by  Vicare.  Like GET-CHAR  but track the  textual position.
+  ;;Recognise only linefeed characters as line-ending.
   ;;
-  (%assert-value-is-input-port port 'input-port-byte-position)
-  (if (port-has-port-position? port)
-      (port-position port)
-    #f))
+  (let* ((ch     (get-char port))
+	 (cookie ($port-cookie port)))
+    (cond ((eof-object? ch)
+	   ch)
+	  ((unsafe.char= ch #\newline)
+	   (set-cookie-character-offset! cookie (unsafe.fxadd1 (cookie-character-offset cookie)))
+	   (set-cookie-row-number!       cookie (unsafe.fxadd1 (cookie-row-number       cookie)))
+	   (set-cookie-column-number!    cookie 1)
+	   ch)
+	  (else
+	   (set-cookie-character-offset! cookie (unsafe.fxadd1 (cookie-character-offset cookie)))
+	   (set-cookie-column-number!    cookie (unsafe.fxadd1 (cookie-column-number    cookie)))
+	   ch))))
 
-(define (input-port-char-position port)
-  (input-port-byte-position port))
-
-(define (%mark/return-newline port)
-  ;;Register the presence of a #\newline character at the current
-  ;;position  in  the  port.   Return  a  newline  character  for
-  ;;convenience at the call site.
+(define (port-textual-position port)
+  ;;Defined by Vicare.  Given a textual port, return the current textual
+  ;;position  as  a vector:  0-based  byte  position, 0-based  character
+  ;;offset, 1-based row number, 1-based column number.
   ;;
-  (with-port (port)
-    (let ((cookie port.cookie))
-      (set-cookie-row-num!     cookie (+ 1 (cookie-row-num cookie)))
-      (set-cookie-newline-pos! cookie (+ port.device.position port.buffer.index))))
-  #\newline)
-
-(define (input-port-column-number port)
-  ;;Defined by  Ikarus.  Return the current column  number for an
-  ;;input port.
-  ;;
-;;;FIXME It computes the count assuming 1 octet = 1 character.
-  (%assert-value-is-input-port port 'input-port-column-number)
-  (if (port-has-port-position? port)
-      (with-port (port)
-	(- (port-position port) (cookie-newline-pos port.cookie)))
-    #f))
-
-(define (input-port-row-number port)
-  ;;Defined  by Ikarus.   Return the  current row  number  for an
-  ;;input port.
-  ;;
-;;;FIXME It computes the count assuming 1 octet = 1 character.
-  (%assert-value-is-input-port port 'input-port-row-number)
-  (with-port (port)
-    (cookie-row-num port.cookie)))
+  (define who 'port-textual-position)
+  (%assert-argument-is-port port who)
+  (%unsafe.assert-value-is-textual-port port who)
+  (let ((cookie ($port-cookie port)))
+    (vector (%unsafe.port-position who port)
+	    (cookie-character-offset cookie)
+	    (cookie-row-number       cookie)
+	    (cookie-column-number    cookie))))
 
 
 ;;;; Introduction to Unicode and UCS
@@ -5320,9 +5319,7 @@
 	      (if (utf-8-single-octet? byte0)
 		  (let ((N (utf-8-decode-single-octet byte0)))
 		    (set! port.buffer.index (unsafe.fxadd1 buffer.offset-byte0))
-		    (if (unsafe.fx= N NEWLINE-CODE-POINT)
-			(%mark/return-newline port)
-		      (unsafe.integer->char N)))
+		    (unsafe.integer->char N))
 		(%unsafe.read-char-from-port-with-utf8-codec port ?who)))
 	  (%unsafe.read-char-from-port-with-utf8-codec port ?who))))))
 
@@ -5384,9 +5381,7 @@
     (define-inline (get-single-byte-character byte0 buffer.offset-byte0)
       (let ((N (utf-8-decode-single-octet byte0)))
 	(set! port.buffer.index (unsafe.fxadd1 buffer.offset-byte0))
-	(if (unsafe.fx= N NEWLINE-CODE-POINT)
-	    (%mark/return-newline port)
-	  (unsafe.integer->char N))))
+	(unsafe.integer->char N)))
 
     (define-inline (get-2-bytes-character byte0 buffer.offset-byte0)
       (let retry-after-filling-buffer-for-1-more-byte ((buffer.offset-byte0 buffer.offset-byte0))
@@ -6054,9 +6049,7 @@
 	    (begin
 	      (set! port.buffer.index (unsafe.fxadd1 buffer.offset))
 	      (let ((byte (unsafe.bytevector-u8-ref port.buffer buffer.offset)))
-		(if (unsafe.fx= byte NEWLINE-CODE-POINT)
-		    (%mark/return-newline port)
-		  (unsafe.integer->char byte))))
+		(unsafe.integer->char byte)))
 	  (%unsafe.read/peek-char-from-port-with-latin1-codec port ?who 1 0))))))
 
 (define-inline (%unsafe.peek-char-from-port-with-fast-get-latin1-tag ?port ?who)
@@ -6127,10 +6120,7 @@
 	(if (unsafe.fx< buffer.offset port.buffer.used-size)
 	    (begin
 	      (set! port.buffer.index (unsafe.fxadd1 buffer.offset))
-	      (let ((ch (unsafe.string-ref port.buffer buffer.offset)))
-		(if (unsafe.char= ch #\newline)
-		    (%mark/return-newline port)
-		  ch)))
+	      (unsafe.string-ref port.buffer buffer.offset))
 	  (%unsafe.read/peek-char-from-port-with-string-buffer port ?who 1 0))))))
 
 (define-inline (%unsafe.peek-char-from-port-with-fast-get-char-tag ?port ?who)
