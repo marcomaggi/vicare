@@ -352,19 +352,19 @@
     (%error "invalid numeric value for character" (reverse-list->string accumulated-chars))))
 
 (define-inline (char->dec-digit ch)
-  (unsafe.fx- ($char->fixnum ch) CHAR-FIXNUM-0))
+  (unsafe.fx- (unsafe.char->fixnum ch) CHAR-FIXNUM-0))
 
 (define (char->hex-digit/or-false x)
   ;;If X is a character in the range of hex digits [0-9a-fA-F]: return a
   ;;fixnum representing such digit, else return #f.
   ;;
   (define-inline (y)
-    ($char->fixnum x))
-  (cond ((and ($char<= #\0 x) ($char<= x #\9))
+    (unsafe.char->fixnum x))
+  (cond ((and (unsafe.char<= #\0 x) (unsafe.char<= x #\9))
 	 (unsafe.fx- (y) CHAR-FIXNUM-0))
-	((and ($char<= #\a x) ($char<= x #\f))
+	((and (unsafe.char<= #\a x) (unsafe.char<= x #\f))
 	 (unsafe.fx- (y) CHAR-FIXNUM-a-10))
-	((and ($char<= #\A x) ($char<= x #\F))
+	((and (unsafe.char<= #\A x) (unsafe.char<= x #\F))
 	 (unsafe.fx- (y) CHAR-FIXNUM-A-10))
 	(else #f)))
 
@@ -546,7 +546,7 @@
 
 		   ;;discard multiline comments
 		   ((unsafe.char= ch1 #\|)
-		    (multiline-comment-lexeme port)
+		    (finish-tokenization-of-multiline-comment port)
 		    (start-tokenising/pos port))
 
 		   ;;tokenize datums whose syntax starts with #
@@ -601,7 +601,7 @@
 
 		   ;;discard multiline comments
 		   ((unsafe.char= ch1 #\|)
-		    (multiline-comment-lexeme port)
+		    (finish-tokenization-of-multiline-comment port)
 		    (recurse))
 
 		   ;;tokenize datums whose syntax starts with #
@@ -655,7 +655,7 @@
 
 		   ;;discard multiline comments
 		   ((unsafe.char= ch1 #\|)
-		    (multiline-comment-lexeme port)
+		    (finish-tokenization-of-multiline-comment port)
 		    (recurse))
 
 		   ;;tokenize datums whose syntax starts with #
@@ -851,10 +851,14 @@
 	    (else
 	     (%error (format "invalid syntax near #~a~a" ch ch1))))))
 
-   ((unsafe.char= #\\ ch) (char-lexeme port))
-   ((unsafe.char= #\( ch) 'vparen)
-   ((unsafe.char= #\' ch) '(macro . syntax))
-   ((unsafe.char= #\` ch) '(macro . quasisyntax))
+   ((unsafe.char= #\\ ch)
+    (finish-tokenization-of-char port))
+   ((unsafe.char= #\( ch)
+    'vparen)
+   ((unsafe.char= #\' ch)
+    '(macro . syntax))
+   ((unsafe.char= #\` ch)
+    '(macro . quasisyntax))
 
    ((unsafe.char= #\, ch)
     (let ((ch1 (peek-char port)))
@@ -1477,8 +1481,6 @@
   (main))
 
 
-;;;; reading strings
-
 (define (%accumulate-string-chars ls port)
   ;;Read  from PORT  characters from  the  internals of  a string  token
   ;;(after the opening double quote  has been read), accumulate them, in
@@ -1641,9 +1643,7 @@
   (main))
 
 
-;;;; reading characters
-
-(define (char-lexeme port)
+(define (finish-tokenization-of-char port)
   ;;Called after a hash character followed by a backslash character have
   ;;been read from PORT.  Read  characters from PORT parsing a character
   ;;datum; return the datum:
@@ -1663,34 +1663,44 @@
   (define-inline (main)
     (%read-char-no-eof (port ch)
       ;;There are multiple character sequences starting with "#\n".
-      (($char= #\n ch)
+      ((unsafe.char= #\n ch)
        (let ((ch1 (peek-char port)))
 	 (cond ((eof-object? ch1)
 		'(datum . #\n))
-	       (($char= #\u ch1)
+	       ((unsafe.char= #\u ch1)
 		(read-char port)
-		(char-lexeme-seq port "ul"	'(datum . #\x0)))
-	       (($char= #\e ch1)
+		(%finish-reading-character-name port "ul" '(datum . #\x0)))
+	       ((unsafe.char= #\e ch1)
 		(read-char port)
-		(char-lexeme-seq port "ewline"	'(datum . #\xA)))
+		(%finish-reading-character-name port "ewline" '(datum . #\xA)))
 	       ((delimiter? ch1)
 		'(datum . #\n))
 	       (else
 		(%error "invalid syntax" (string #\# #\\ #\n ch1))))))
 
-      (($char= #\a ch)  (char-lexeme-seq port "alarm"	'(datum . #\x7)))
-      (($char= #\b ch)  (char-lexeme-seq port "backspace" '(datum . #\x8)))
-      (($char= #\t ch)  (char-lexeme-seq port "tab"	'(datum . #\x9)))
-      (($char= #\l ch)  (char-lexeme-seq port "linefeed" '(datum . #\xA)))
-      (($char= #\v ch)  (char-lexeme-seq port "vtab"	'(datum . #\xB)))
-      (($char= #\p ch)  (char-lexeme-seq port "page"	'(datum . #\xC)))
-      (($char= #\r ch)  (char-lexeme-seq port "return"	'(datum . #\xD)))
-      (($char= #\e ch)  (char-lexeme-seq port "esc"	'(datum . #\x1B)))
-      (($char= #\s ch)  (char-lexeme-seq port "space"	'(datum . #\x20)))
-      (($char= #\d ch)  (char-lexeme-seq port "delete"	'(datum . #\x7F)))
+      ((unsafe.char= #\a ch)
+       (%finish-reading-character-name port "alarm"	'(datum . #\x7)))
+      ((unsafe.char= #\b ch)
+       (%finish-reading-character-name port "backspace"	'(datum . #\x8)))
+      ((unsafe.char= #\t ch)
+       (%finish-reading-character-name port "tab"	'(datum . #\x9)))
+      ((unsafe.char= #\l ch)
+       (%finish-reading-character-name port "linefeed"	'(datum . #\xA)))
+      ((unsafe.char= #\v ch)
+       (%finish-reading-character-name port "vtab"	'(datum . #\xB)))
+      ((unsafe.char= #\p ch)
+       (%finish-reading-character-name port "page"	'(datum . #\xC)))
+      ((unsafe.char= #\r ch)
+       (%finish-reading-character-name port "return"	'(datum . #\xD)))
+      ((unsafe.char= #\e ch)
+       (%finish-reading-character-name port "esc"	'(datum . #\x1B)))
+      ((unsafe.char= #\s ch)
+       (%finish-reading-character-name port "space"	'(datum . #\x20)))
+      ((unsafe.char= #\d ch)
+       (%finish-reading-character-name port "delete"	'(datum . #\x7F)))
 
       ;;Read the char "#\x" or a character in hex format "#\xHHHH".
-      (($char= #\x ch)
+      ((unsafe.char= #\x ch)
        (let ((ch1 (peek-char port)))
 	 (cond ((or (eof-object? ch1)
 		    (delimiter?  ch1))
@@ -1723,7 +1733,7 @@
 	     (cons 'datum ch)
 	   (%error "invalid syntax" (string #\# #\\ ch ch1)))))))
 
-  (define (char-lexeme-seq port str datum)
+  (define (%finish-reading-character-name port str datum)
     ;;Read characters  from PORT  verifying that they  are equal  to the
     ;;characters drawn from the string  STR; if reading and comparing is
     ;;successful: peek one more char from PORT and verify that it is EOF
@@ -1731,11 +1741,11 @@
     ;;
     ;;If successful return DATUM, else raise an exception.
     ;;
-    ;;This  function  is  used   to  parse  characters:  in  the  format
+    ;;This  function   is  used  to  parse  characters   in  the  format
     ;;"#\newline" when the sequence "#\ne" has already been consumed; in
     ;;this case the function is called as:
     ;;
-    ;;   (char-lexeme-seq port "ewline" '(datum . #\xA))
+    ;;   (%finish-reading-character-name port "ewline" '(datum . #\xA))
     ;;
     ;;As an extension (currently not used in the lexer, Marco Maggi; Oct
     ;;12, 2011),  this function supports  also the case of  character in
@@ -1746,41 +1756,28 @@
     (define-inline (%error msg . args)
       (die/p port 'tokenize msg . args))
     (let ((ch (peek-char port)))
-      (cond ((or (eof-object? ch) (delimiter? ch))
+      (cond ((or (eof-object? ch)
+		 (delimiter? ch))
 	     (cons 'datum (unsafe.string-ref str 0)))
-	    (($char= ch (unsafe.string-ref str 1))
+	    ((unsafe.char= ch (unsafe.string-ref str 1))
 	     (read-char port)
-	     (char-lexeme* 2 str port datum))
+	     (let loop ((str.index 2))
+		 (if (unsafe.fx= str.index (unsafe.string-length str))
+		     (let ((ch (peek-char port)))
+		       (cond ((eof-object? ch) datum)
+			     ((delimiter?  ch) datum)
+			     (else
+			      (%error "invalid character after expected sequence"
+				      (string-append str (string ch))))))
+		   (let ((ch (read-char port)))
+		     (cond ((eof-object? ch)
+			    (%error "invalid EOF in the middle of expected sequence" str))
+			   ((unsafe.char= ch (unsafe.string-ref str str.index))
+			    (loop (unsafe.fxadd1 str.index)))
+			   (else
+			    (%error "invalid char while scanning string" ch str)))))))
 	    (else
 	     (%error "invalid syntax" (unsafe.string-ref str 0) ch)))))
-
-  (define (char-lexeme* str.index str port datum)
-    ;;Draw characters  from the string  STR, starting at  STR.INDEX, and
-    ;;verify that  they are equal to  the characters read  from PORT; if
-    ;;reading and comparing is successful:  peek one more char from PORT
-    ;;and  verify  that   it  is  EOF  or  a   delimiter  (according  to
-    ;;DELIMITER?).
-    ;;
-    ;;If successful return DATUM, else raise an exception.
-    ;;
-    (define-inline (recurse idx)
-      (char-lexeme* idx str port datum))
-    (define-inline (%error msg . args)
-      (die/p port 'tokenize msg . args))
-    (if (unsafe.fx= str.index (unsafe.string-length str))
-	(let ((ch (peek-char port)))
-	  (cond ((eof-object? ch) datum)
-		((delimiter?  ch) datum)
-		(else
-		 (%error "invalid character after expected sequence"
-			 (string-append str (string ch))))))
-      (let ((ch (read-char port)))
-	(cond ((eof-object? ch)
-	       (%error "invalid EOF in the middle of expected sequence" str))
-	      (($char= ch (unsafe.string-ref str str.index))
-	       (recurse (unsafe.fxadd1 str.index)))
-	      (else
-	       (%error "invalid char while scanning string" ch str))))))
 
   (main))
 
@@ -1835,7 +1832,7 @@
 		(char-is-carriage-return? ch))
       (read-and-discard-up-to-and-including-line-ending port))))
 
-(define (multiline-comment-lexeme port)
+(define (finish-tokenization-of-multiline-comment port)
   ;;Parse a multiline comment  "#| ... |#", possibly nested.  Accumulate
   ;;the  characters in  the comment,  excluding the  "#|" and  "|#", and
   ;;discard them.
@@ -1860,13 +1857,13 @@
 
 	    ;;A vertical bar character may or may not end this multiline
 	    ;;comment.
-	    (($char= #\| c)
+	    ((unsafe.char= #\| c)
 	     (let next-vertical-bar ((ch1 (read-char port)) (ac ac))
 	       (cond ((eof-object? ch1)
 		      (%multiline-error))
-		     (($char= #\# ch1) ;end of comment
+		     ((unsafe.char= #\# ch1) ;end of comment
 		      ac)
-		     (($char= #\| ch1) ;optimisation for sequence of bars?!?
+		     ((unsafe.char= #\| ch1) ;optimisation for sequence of bars?!?
 		      (next-vertical-bar (read-char port) (cons ch1 ac)))
 		     (else
 		      (recurse (cons ch1 ac))))))
@@ -1874,12 +1871,12 @@
 	    ;;A hash character  may or may not start  a nested multiline
 	    ;;comment.   Read a  nested multiline  comment, if  there is
 	    ;;one.
-	    (($char= #\# c)
+	    ((unsafe.char= #\# c)
 	     (let ((ch1 (read-char port)))
 	       (cond ((eof-object? ch1)
 		      (%multiline-error))
-		     (($char= #\| ch1) ;it is a nested comment
-		      (let ((v (multiline-comment-lexeme port)))
+		     ((unsafe.char= #\| ch1) ;it is a nested comment
+		      (let ((v (finish-tokenization-of-multiline-comment port)))
 			(if (string? v)
 			    (recurse (string->reverse-list v 0 ac))
 			  (recurse ac))))

@@ -225,6 +225,75 @@
   #t)
 
 
+(parametrise ((check-test-name	'chars))
+
+  (define-syntax read-char-and-eof
+    (syntax-rules ()
+      ((_ ?input ?result)
+       (check
+      	   (let* ((port (open-string-input-port ?input))
+		  (obj  (read port))
+		  (eof	(port-eof? port)))
+      	     (list (char? obj) obj eof))
+      	 => (list #t ?result #t)))))
+
+;;; --------------------------------------------------------------------
+
+  (read-char-and-eof "#\\A"		(integer->char 65))
+
+;;; --------------------------------------------------------------------
+
+  (read-char-and-eof "#\\a"		#\a)
+  (read-char-and-eof "#\\b"		#\b)
+  (read-char-and-eof "#\\d"		#\d)
+  (read-char-and-eof "#\\e"		#\e)
+  (read-char-and-eof "#\\l"		#\l)
+  (read-char-and-eof "#\\n"		#\n)
+  (read-char-and-eof "#\\r"		#\r)
+  (read-char-and-eof "#\\s"		#\s)
+  (read-char-and-eof "#\\t"		#\t)
+  (read-char-and-eof "#\\p"		#\p)
+  (read-char-and-eof "#\\v"		#\v)
+
+  (read-char-and-eof "#\\nul"		#\x00)
+  (read-char-and-eof "#\\newline"	#\x0A)
+  (read-char-and-eof "#\\alarm"		#\x07)
+  (read-char-and-eof "#\\backspace"	#\x08)
+  (read-char-and-eof "#\\tab"		#\x09)
+  (read-char-and-eof "#\\linefeed"	#\x0A)
+  (read-char-and-eof "#\\vtab"		#\x0B)
+  (read-char-and-eof "#\\page"		#\x0C)
+  (read-char-and-eof "#\\return"	#\x0D)
+  (read-char-and-eof "#\\esc"		#\x1B)
+  (read-char-and-eof "#\\space"		#\x20)
+  (read-char-and-eof "#\\delete"	#\x7F)
+
+;;; --------------------------------------------------------------------
+
+  (read-char-and-eof "#\\x"		#\x)
+
+  (read-char-and-eof "#\\xA"		#\x0A)
+  (read-char-and-eof "#\\xB"		#\x0B)
+  (read-char-and-eof "#\\xC"		#\x0C)
+  (read-char-and-eof "#\\xD"		#\x0D)
+  (read-char-and-eof "#\\xE"		#\x0E)
+  (read-char-and-eof "#\\xF"		#\x0F)
+
+  (read-char-and-eof "#\\xa"		#\x0A)
+  (read-char-and-eof "#\\xb"		#\x0B)
+  (read-char-and-eof "#\\xc"		#\x0C)
+  (read-char-and-eof "#\\xd"		#\x0D)
+  (read-char-and-eof "#\\xe"		#\x0E)
+  (read-char-and-eof "#\\xf"		#\x0F)
+
+  (read-char-and-eof "#\\x01"		#\x01)
+  (read-char-and-eof "#\\x12"		#\x12)
+  (read-char-and-eof "#\\x123"		#\x123)
+  (read-char-and-eof "#\\xFAF"		#\xFAF)
+
+  #t)
+
+
 (parametrise ((check-test-name	'strings))
 
   (define-syntax read-string
