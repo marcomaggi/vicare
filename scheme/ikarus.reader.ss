@@ -500,8 +500,8 @@
   ;;discarding comments and  whitespaces; after discarding something try
   ;;to  parse the  next datum  with START-TOKENISING/POS;  if  the first
   ;;character     is    a     #    delegate     actual     parsing    to
-  ;;FINISH-TOKENIZATION-OF-HASH-DATUM/C; else delegate actual parsing to
-  ;;FINISH-TOKENIZATION-OF-NON-HASH-DATUM/C.
+  ;;FINISH-TOKENISATION-OF-HASH-DATUM/C; else delegate actual parsing to
+  ;;FINISH-TOKENISATION-OF-NON-HASH-DATUM/C.
   ;;
   ;;Return two values:  a datum representing the next  token, a compound
   ;;position value.
@@ -546,12 +546,12 @@
 
 		   ;;discard multiline comments
 		   ((unsafe.char= ch1 #\|)
-		    (finish-tokenization-of-multiline-comment port)
+		    (finish-tokenisation-of-multiline-comment port)
 		    (start-tokenising/pos port))
 
 		   ;;tokenize datums whose syntax starts with #
 		   (else
-		    (values (finish-tokenization-of-hash-datum/c ch1 port) pos1)))))
+		    (values (finish-tokenisation-of-hash-datum/c ch1 port) pos1)))))
 
 	  ;;discard whitespaces
 	  ((char-whitespace? ch)
@@ -559,15 +559,15 @@
 
 	  ;;tokenise every datum whose syntax does not start with a #
 	  (else
-	   (values (finish-tokenization-of-non-hash-datum/c ch port) pos)))))
+	   (values (finish-tokenisation-of-non-hash-datum/c ch port) pos)))))
 
 
 (define (start-tokenising/pos port)
   ;;Recursive  function.  Start  tokenizing  the next  datum from  PORT,
   ;;discarding  comments  and  whitespaces; after  discarding  something
   ;;recurse calling  itself; if  the first character  is a  #\# delegate
-  ;;actual parsing to FINISH-TOKENIZATION-OF-HASH-DATUM/C; else delegate
-  ;;actual parsing to FINISH-TOKENIZATION-OF-NON-HASH-DATUM/C.
+  ;;actual parsing to FINISH-TOKENISATION-OF-HASH-DATUM/C; else delegate
+  ;;actual parsing to FINISH-TOKENISATION-OF-NON-HASH-DATUM/C.
   ;;
   ;;Return two values:  a datum representing the next  token, a compound
   ;;position value.
@@ -601,12 +601,12 @@
 
 		   ;;discard multiline comments
 		   ((unsafe.char= ch1 #\|)
-		    (finish-tokenization-of-multiline-comment port)
+		    (finish-tokenisation-of-multiline-comment port)
 		    (recurse))
 
 		   ;;tokenize datums whose syntax starts with #
 		   (else
-		    (values (finish-tokenization-of-hash-datum/c ch1 port) pos1)))))
+		    (values (finish-tokenisation-of-hash-datum/c ch1 port) pos1)))))
 
 	  ;;discard whitespaces
 	  ((char-whitespace? ch)
@@ -614,15 +614,15 @@
 
 	  ;;tokenise every datum whose syntax does not start with a #
 	  (else
-	   (values (finish-tokenization-of-non-hash-datum/c ch port) pos)))))
+	   (values (finish-tokenisation-of-non-hash-datum/c ch port) pos)))))
 
 
 (define (start-tokenising port)
   ;;Recursive  function.  Start  tokenizing  the next  datum from  PORT,
   ;;discarding  comments  and  whitespaces; after  discarding  something
   ;;recurse  calling itself;  if the  first  character is  a #  delegate
-  ;;actual parsing to FINISH-TOKENIZATION-OF-HASH-DATUM/C; else delegate
-  ;;actual parsing to FINISH-TOKENIZATION-OF-NON-HASH-DATUM/C.
+  ;;actual parsing to FINISH-TOKENISATION-OF-HASH-DATUM/C; else delegate
+  ;;actual parsing to FINISH-TOKENISATION-OF-NON-HASH-DATUM/C.
   ;;
   ;;Return a datum representing the next token.
   ;;
@@ -655,12 +655,12 @@
 
 		   ;;discard multiline comments
 		   ((unsafe.char= ch1 #\|)
-		    (finish-tokenization-of-multiline-comment port)
+		    (finish-tokenisation-of-multiline-comment port)
 		    (recurse))
 
 		   ;;tokenize datums whose syntax starts with #
 		   (else
-		    (finish-tokenization-of-hash-datum/c ch1 port)))))
+		    (finish-tokenisation-of-hash-datum/c ch1 port)))))
 
 	  ;;discard whitespaces
 	  ((char-whitespace? ch)
@@ -668,10 +668,10 @@
 
 	  ;;tokenise every datum whose syntax does not start with a #
 	  (else
-	   (finish-tokenization-of-non-hash-datum/c ch port)))))
+	   (finish-tokenisation-of-non-hash-datum/c ch port)))))
 
 
-(define (finish-tokenization-of-non-hash-datum/c ch port)
+(define (finish-tokenisation-of-non-hash-datum/c ch port)
   ;;Parse standalone  datums and compound  datums whose syntax  does not
   ;;start with a # character.   Read characters from PORT.  Handle CH as
   ;;the first character of the datum, already consumed from PORT.
@@ -694,14 +694,14 @@
   ;;at-expr			The token is an @-expression.
   ;;
   ;;If CH is the dot character:  the return value is the return value of
-  ;;FINISH-TOKENIZATION-OF-DOT-DATUM.
+  ;;FINISH-TOKENISATION-OF-DOT-DATUM.
   ;;
   (define-inline (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define-inline (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
   (cond ((eof-object? ch)
-	 (error 'finish-tokenization-of-non-hash-datum/c "hmmmm eof")
+	 (error 'finish-tokenisation-of-non-hash-datum/c "hmmmm eof")
 	 (eof-object))
 
 	((unsafe.char= #\( ch)   'lparen)
@@ -728,7 +728,7 @@
 
 	;;symbol
 	((initial? ch)
-	 (finish-tokenization-of-identifier (cons ch '()) port))
+	 (finish-tokenisation-of-identifier (cons ch '()) port))
 
 	;;string
 	((unsafe.char= #\" ch)
@@ -759,7 +759,7 @@
 		 ;;peculiar identifier: -> <subsequent>*
 		 ((unsafe.char= ch1 #\>)
 		  (read-char port)
-		  (finish-tokenization-of-identifier '(#\> #\-) port))
+		  (finish-tokenisation-of-identifier '(#\> #\-) port))
 
 		 ;;number
 		 (else
@@ -768,17 +768,17 @@
 	;;everything  starting  with  a  dot (standalone  dot,  ellipsis
 	;;symbol, inexact number, other symbols)
 	((unsafe.char= #\. ch)
-	 (finish-tokenization-of-dot-datum port))
+	 (finish-tokenisation-of-dot-datum port))
 
 	;;symbol with syntax "|<sym>|"
 	((unsafe.char= #\| ch)
 	 (when (port-in-r6rs-mode? port)
 	   (%error "|symbol| syntax is invalid in #!r6rs mode"))
-	 (finish-tokenization-of-identifier/bar '() port))
+	 (finish-tokenisation-of-identifier/bar '() port))
 
 	;;symbol whose first char is a backslash sequence, "\x41;-ciao"
 	((unsafe.char= #\\ ch)
-	 (finish-tokenization-of-identifier/backslash '() port))
+	 (finish-tokenisation-of-identifier/backslash '() port))
 
 ;;;Unused for now.
 ;;;
@@ -796,7 +796,7 @@
 	 (%error-1 "invalid syntax" ch))))
 
 
-(define (finish-tokenization-of-hash-datum/c ch port)
+(define (finish-tokenisation-of-hash-datum/c ch port)
   ;;Parse standalone datums and compound datums whose syntax starts with
   ;;a # character.   Read characters from PORT.  Handle  CH as the first
   ;;character of the datum after #, already consumed from PORT.
@@ -852,7 +852,7 @@
 	     (%error (format "invalid syntax near #~a~a" ch ch1))))))
 
    ((unsafe.char= #\\ ch)
-    (finish-tokenization-of-char port))
+    (finish-tokenisation-of-char port))
    ((unsafe.char= #\( ch)
     'vparen)
    ((unsafe.char= #\' ch)
@@ -870,7 +870,7 @@
 
    ;; #! comments and such
    ((unsafe.char= #\! ch)
-    (let ((sym (finish-tokenization-of-identifier '() port)))
+    (let ((sym (finish-tokenisation-of-identifier '() port)))
       (case sym
 	((vicare ikarus)
 	 (set-port-mode! port 'vicare)
@@ -890,7 +890,7 @@
    ((dec-digit? ch)
     (when (port-in-r6rs-mode? port)
       (%error-1 "graph notation marks syntax is invalid in #!r6rs mode" (string #\# ch)))
-    (finish-tokenization-of-graph-location port (char->dec-digit ch)))
+    (finish-tokenisation-of-graph-location port (char->dec-digit ch)))
 
    ((unsafe.char= #\: ch)
     (when (port-in-r6rs-mode? port)
@@ -1045,7 +1045,7 @@
     (%error-1 (format "invalid syntax #~a" ch)))))
 
 
-(define (finish-tokenization-of-dot-datum port)
+(define (finish-tokenisation-of-dot-datum port)
   ;;Read from  PORT a token starting  with a dot, the  dot being already
   ;;read.  There return value is a datum describing the token:
   ;;
@@ -1088,7 +1088,7 @@
 	   (cons 'datum (u:dot port '(#\.) 10 #f #f +1))))))
 
 
-(define (finish-tokenization-of-graph-location port N)
+(define (finish-tokenisation-of-graph-location port N)
   ;;Read characters from PORT parsing  a graph notation hash num mark or
   ;;reference.  Return a datum describing the token:
   ;;
@@ -1096,7 +1096,7 @@
   ;;(ref . <num>)	The token is reference to an existing hashnum.
   ;;
   (define-inline (recurse N1)
-    (finish-tokenization-of-graph-location port N1))
+    (finish-tokenisation-of-graph-location port N1))
   (define-inline (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define-inline (%unexpected-eof-error)
@@ -1151,9 +1151,9 @@
 ;;  <digit>         -> 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 ;;
 
-(define (finish-tokenization-of-identifier accumulated-chars port)
+(define (finish-tokenisation-of-identifier accumulated-chars port)
   ;;To be called when one or more characters starting an identifier have
-  ;;been read from PORT and  we must finish the identifier tokenization.
+  ;;been read from PORT and  we must finish the identifier tokenisation.
   ;;Read the remaining characters and return:
   ;;
   ;;  (datum . <sym>)
@@ -1164,10 +1164,10 @@
 	      (reverse-list->string
 	       (%accumulate-identifier-chars accumulated-chars port)))))
 
-(define (finish-tokenization-of-identifier/bar accumulated-chars port)
+(define (finish-tokenisation-of-identifier/bar accumulated-chars port)
   ;;To be called  when one or more characters  starting an identifier in
   ;;bar  syntax  have  been  read  from  PORT and  we  must  finish  the
-  ;;identifier tokenization.  Read the remaining characters and return:
+  ;;identifier tokenisation.  Read the remaining characters and return:
   ;;
   ;;  (datum . <sym>)
   ;;
@@ -1177,9 +1177,9 @@
 	      (reverse-list->string
 	       (%accumulate-identifier-chars/bar accumulated-chars port)))))
 
-(define (finish-tokenization-of-identifier/backslash accumulated-chars port)
+(define (finish-tokenisation-of-identifier/backslash accumulated-chars port)
   ;;To be called  when a backslash character starting  an identifier has
-  ;;been read from PORT and  we must finish the identifier tokenization.
+  ;;been read from PORT and  we must finish the identifier tokenisation.
   ;;Read the remaining characters and return:
   ;;
   ;;  (datum . <sym>)
@@ -1640,7 +1640,7 @@
   (main))
 
 
-(define (finish-tokenization-of-char port)
+(define (finish-tokenisation-of-char port)
   ;;Called after a hash character followed by a backslash character have
   ;;been read from PORT.  Read  characters from PORT parsing a character
   ;;datum; return the datum:
@@ -1829,7 +1829,7 @@
 		(char-is-carriage-return? ch))
       (read-and-discard-up-to-and-including-line-ending port))))
 
-(define (finish-tokenization-of-multiline-comment port)
+(define (finish-tokenisation-of-multiline-comment port)
   ;;Parse a multiline comment  "#| ... |#", possibly nested.  Accumulate
   ;;the  characters in  the comment,  excluding the  "#|" and  "|#", and
   ;;discard them.
@@ -1873,7 +1873,7 @@
 	       (cond ((eof-object? ch1)
 		      (%multiline-error))
 		     ((unsafe.char= #\| ch1) ;it is a nested comment
-		      (let ((v (finish-tokenization-of-multiline-comment port)))
+		      (let ((v (finish-tokenisation-of-multiline-comment port)))
 			(if (string? v)
 			    (recurse (string->reverse-list v 0 ac))
 			  (recurse ac))))
