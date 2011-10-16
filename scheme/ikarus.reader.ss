@@ -144,7 +144,7 @@
 
 ;;;; interface to low level functions
 
-(define-inline (strings->gensym id0 id1)
+(define-inline (%seed-strings->gensym id0 id1)
   (foreign-call "ikrt_strings_to_gensym" id0 id1))
 
 
@@ -881,36 +881,7 @@
 	(else
 	 ;;If not recognised,  just handle it as a  comment and read the
 	 ;;next datum.
-	 (start-tokenising port))))
-
-    #;(%read-char-no-eof (port ch1)
-      ((unsafe.char= ch1 #\e)
-       (if (port-in-r6rs-mode? port)
-	   (%error-1 "invalid syntax: #!e")
-	 (begin
-	   (read-char* port '(#\e) "of" "#!eof sequence")
-	   (cons 'datum (eof-object)))))
-
-      ((unsafe.char= ch1 #\r)
-       (read-char* port '(#\r) "6rs" "#!r6rs comment")
-       (set-port-mode! port 'r6rs)
-       (start-tokenising port))
-
-      ((unsafe.char= ch1 #\v)
-       (read-char* port '(#\v) "icare" "#!vicare comment")
-       (set-port-mode! port 'vicare)
-    (start-tokenising port))
-
-      ;;This is for backwards compatibility with Ikarus's reader.
-      ((unsafe.char= ch1 #\i)
-       (read-char* port '(#\i) "karus" "#!ikarus comment")
-       (set-port-mode! port 'vicare)
-       (start-tokenising port))
-
-      (else
-       ;;FIXME  This  should not  be  an  error.   We should  read  an
-       ;;identifier and discard it as comment.
-       (%error-1 "unknown #! comment" (string #\# #\! ch1)))))
+	 (start-tokenising port)))))
 
    ((dec-digit? ch)
     (when (port-in-r6rs-mode? port)
@@ -959,11 +930,11 @@
       (let ((id0 (%read-identifier ch1))
 	    (ch2 (read-char-skip-whitespace port "gensym")))
 	(if (%end-syntax? ch2)
-	    `(datum . ,(strings->gensym #f id0))
+	    `(datum . ,(%seed-strings->gensym #f id0))
 	  (let* ((id1 (%read-identifier ch2))
 		 (ch3 (read-char-skip-whitespace port "gensym")))
 	    (if (%end-syntax? ch3)
-		`(datum . ,(strings->gensym id0 id1))
+		`(datum . ,(%seed-strings->gensym id0 id1))
 	      (%error-1 "invalid char while looking for end of gensym syntax" ch3)))))))
 
    ;;bytevectors
