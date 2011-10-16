@@ -68,6 +68,9 @@
 (define (check:write thing)
   (write thing (current-error-port)))
 
+(define (flush-checks-port)
+  (flush-output-port (current-error-port)))
+
 (define pretty-print/no-trailing-newline
   (case-lambda
    ((datum output-port)
@@ -157,7 +160,8 @@
   (newline)
   (display " ; expected result: ")
   (pretty-print expected-result)
-  (newline))
+  (newline)
+  (flush-checks-port))
 
 (define (check-report)
   (when (>= (check:mode) 1)
