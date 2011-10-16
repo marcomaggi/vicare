@@ -35,6 +35,23 @@
 (display "*** testing Vicare reader\n")
 
 
+;;;; helpers
+
+(define-syntax read-and-lexical-violation
+  (syntax-rules ()
+    ((_ ?input ?irritant)
+     (check
+	 (let ((port (open-string-input-port ?input)))
+	   (guard (E ((lexical-violation? E)
+;;;		      (pretty-print (condition-message E))
+		      (if (irritants-condition? E)
+			  (condition-irritants E)
+			'no-irritants))
+		     (else E))
+	     (read port)))
+       => '(?irritant)))))
+
+
 (parametrise ((check-test-name	'newlines))
 
   (check	;lf
@@ -86,14 +103,35 @@
   (read-symbol-and-eof "|123-\\x41;\\x42;\\x43;-456|" "123-\x41;\x42;\x43;-456")
 
 ;;; --------------------------------------------------------------------
+;;; tests for bugs in Ikarus' reader
+
+  (read-symbol-and-eof "-"		"-")
+  (read-symbol-and-eof "->"		"->")
+  (read-symbol-and-eof "->ciao"		"->ciao")
+  (read-symbol-and-eof "->-ciao"	"->-ciao")
+
+  (read-and-lexical-violation "-ciao"		"-c")
+  (read-and-lexical-violation "--ciao"		"--")
+  (read-and-lexical-violation "-->ciao"		"--")
+  (read-and-lexical-violation "-i123"		"-i1")
+  (read-and-lexical-violation "-iCIAO"		"-iC")
+  (read-and-lexical-violation "-i-ciao"		"-i-")
+
+;;; --------------------------------------------------------------------
 ;;; tests for bug in Ikarus' reader
 
-  #;(begin
-    (read-symbol-and-eof "..."		"...")
-    (read-symbol-and-eof ".ciao"	".ciao")
-    (read-symbol-and-eof "..ciao"	"..ciao")
-    (read-symbol-and-eof "...ciao"	"...ciao")
-    (read-symbol-and-eof "....ciao"	"....ciao"))
+  (read-symbol-and-eof "..."		"...")
+
+  (read-and-lexical-violation ".."		"..")
+  (read-and-lexical-violation ".ciao"		".c")
+  (read-and-lexical-violation "..ciao"		"..c")
+  (read-and-lexical-violation "...ciao"		"...c")
+  (read-and-lexical-violation "....ciao"	"....")
+
+  (read-symbol-and-eof "\\x2E;ciao"			".ciao")
+  (read-symbol-and-eof "\\x2E;\\x2E;ciao"		"..ciao")
+  (read-symbol-and-eof "\\x2E;\\x2E;\\x2E;ciao"		"...ciao")
+  (read-symbol-and-eof "\\x2E;\\x2E;\\x2E;\\x2E;ciao"	"....ciao")
 
 ;;; --------------------------------------------------------------------
 ;;; weird cases
@@ -192,13 +230,14 @@
   (define-syntax read-string
     (syntax-rules ()
       ((_ (?chars ...))
-       (read-string (?chars ...) (?chars ...)))
+       (read-string (?chars ...) (?chars ...))
+       )
       ((_ (?input-chars ...) (?result-chars ...))
        (check
-	   (let* ((str  (string #\" ?input-chars ... #\"))
-		  (port (open-string-input-port str)))
-	     (read port))
-	 => (string ?result-chars ...)))))
+      	   (let* ((str  (string #\" ?input-chars ... #\"))
+      		  (port (open-string-input-port str)))
+      	     (read port))
+      	 => (string ?result-chars ...)))))
 
   (define lf	#\x000A)
   (define cr	#\x000D)
@@ -270,6 +309,102 @@
 
   (read-string (#\A       backslash space cr nel space space #\Z) (#\A #\Z))
   (read-string (#\A space backslash space cr nel space space #\Z) (#\A space #\Z))
+
+  #t)
+
+
+(parametrise ((check-test-name	'numbers))
+
+  (define-syntax read-number-and-eof
+    (syntax-rules ()
+      ((_ ?input)
+       (read-symbol-and-eof ?input (string->number ?input)))
+      ((_ ?input ?number)
+       (check
+	   (let* ((port (open-string-input-port ?input))
+		  (obj  (read port))
+		  (eof  (port-eof? port)))
+	     (list (number? obj) obj eof))
+	 => '(#t ?number #t)))))
+
+;;; --------------------------------------------------------------------
+;;; exact integers
+
+  (read-number-and-eof "1"		+1)
+  (read-number-and-eof "12"		+12)
+  (read-number-and-eof "123"		+123)
+
+  (read-number-and-eof "+1"		+1)
+  (read-number-and-eof "+12"		+12)
+  (read-number-and-eof "+123"		+123)
+
+  (read-number-and-eof "-1"		-1)
+  (read-number-and-eof "-12"		-12)
+  (read-number-and-eof "-123"		-123)
+
+  (read-number-and-eof "#e1"		+1)
+  (read-number-and-eof "#e12"		+12)
+  (read-number-and-eof "#e123"		+123)
+
+  (read-number-and-eof "#e+1"		+1)
+  (read-number-and-eof "#e+12"		+12)
+  (read-number-and-eof "#e+123"		+123)
+
+  (read-number-and-eof "#e-1"		-1)
+  (read-number-and-eof "#e-12"		-12)
+  (read-number-and-eof "#e-123"		-123)
+
+;;; --------------------------------------------------------------------
+;;; inexact integers
+
+  (read-number-and-eof "1."		+1.0)
+  (read-number-and-eof "12."		+12.0)
+  (read-number-and-eof "123."		+123.0)
+
+  (read-number-and-eof "+1."		+1.0)
+  (read-number-and-eof "+12."		+12.0)
+  (read-number-and-eof "+123."		+123.0)
+
+  (read-number-and-eof "-1."		-1.0)
+  (read-number-and-eof "-12."		-12.0)
+  (read-number-and-eof "-123."		-123.0)
+
+  (read-number-and-eof "#i1"		+1.0)
+  (read-number-and-eof "#i12"		+12.0)
+  (read-number-and-eof "#i123"		+123.0)
+
+  (read-number-and-eof "#i+1"		+1.0)
+  (read-number-and-eof "#i+12"		+12.0)
+  (read-number-and-eof "#i+123"		+123.0)
+
+  (read-number-and-eof "#i-1"		-1.0)
+  (read-number-and-eof "#i-12"		-12.0)
+  (read-number-and-eof "#i-123"		-123.0)
+
+;;; --------------------------------------------------------------------
+;;; flonums
+
+  (read-number-and-eof ".1"		0.1)
+  (read-number-and-eof ".12"		0.12)
+  (read-number-and-eof ".123"		0.123)
+
+  (read-number-and-eof "+.1"		0.1)
+  (read-number-and-eof "+.12"		0.12)
+  (read-number-and-eof "+.123"		0.123)
+
+  (read-number-and-eof "-.1"		-0.1)
+  (read-number-and-eof "-.12"		-0.12)
+  (read-number-and-eof "-.123"		-0.123)
+
+;;; --------------------------------------------------------------------
+;;; distinguishing between numbers and symbols
+
+  (read-number-and-eof "+i"		+1i)
+  (read-number-and-eof "-i"		-1i)
+  (read-number-and-eof "-inf.0"		-inf.0)
+  (read-number-and-eof "+inf.0"		+inf.0)
+  (read-number-and-eof "-nan.0"		+nan.0)
+  (read-number-and-eof "+nan.0"		+nan.0)
 
   #t)
 
