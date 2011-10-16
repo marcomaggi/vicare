@@ -1758,6 +1758,7 @@ Return @true{} if @var{obj} is a condition object of type
 
 
 @deffn {Reader Syntax} {#!vicare}
+@deffnx {Reader Syntax} {#!ikarus}
 @value{PRJNAME} extends Scheme's lexical syntax (@rnrs{6} Chapter 4) in
 a variety of ways including:
 
@@ -1784,6 +1785,9 @@ to alert us when using non--portable features.  When writing code that's
 intended to be @value{PRJNAME}--specific, we should add the
 @code{#!vicare} token in order to get an immediate error when the code
 is run under other implementations.
+
+The comment @code{#!ikarus} is accepted for backwards compatibility with
+Ikarus Scheme.
 @end deffn
 
 

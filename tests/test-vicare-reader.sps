@@ -430,8 +430,16 @@
 ;;; --------------------------------------------------------------------
 
   (doit-quoted "#!vicare 123"		123)
+  (doit-quoted "#!ikarus 123"		123)
   (doit-quoted "#!r6rs   123"		123)
   (doit-unquoted "#!eof"		(eof-object))
+
+  ;;the ones not recognised are just comments
+  (doit-quoted "#!ciao   123"		123)
+  (doit-quoted "#!verde  123"		123)
+  (doit-quoted "#!indaco 123"		123)
+  (doit-quoted "#!rosso  123"		123)
+;;;               ^
 
   #t)
 

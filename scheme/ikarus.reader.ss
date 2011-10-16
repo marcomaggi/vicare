@@ -884,6 +884,12 @@
        (set-port-mode! port 'vicare)
        (start-tokenising port))
 
+      ;;This is for backwards compatibility with Ikarus's reader.
+      ((unsafe.char= ch1 #\i)
+       (read-char* port '(#\i) "karus" "#!ikarus comment")
+       (set-port-mode! port 'vicare)
+       (start-tokenising port))
+
       (else
        ;;FIXME  This  should not  be  an  error.   We should  read  an
        ;;identifier and discard it as comment.
