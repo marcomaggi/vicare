@@ -23,7 +23,7 @@
 	  annotation? annotation-expression
 	  annotation-source annotation-stripped)
   (import (except (ikarus)
-		  read  get-datum
+		  read get-datum
 		  read-char read-token
 		  read-annotated read-script-annotated
 
@@ -92,7 +92,7 @@
   ;;character, if  an error occurs raise  an exception, if  EOF is found
   ;;return the EOF object.
   ;;
-  (get-char port))
+  (get-char-and-track-textual-position port))
 
 (define-syntax* (read-char-no-eof stx)
   (syntax-case stx ()
@@ -1190,6 +1190,117 @@
 		(reverse-list->string
 		 (%accumulate-identifier-chars/backslash '() port #f)))))
 
+;;Three functions are involved in accumulating identifier's chars:
+;;
+;;  %ACCUMULATE-IDENTIFIER-CHARS
+;;  %ACCUMULATE-IDENTIFIER-CHARS/BAR
+;;  %ACCUMULATE-IDENTIFIER-CHARS/BACKSLASH
+;;
+;;they call each other accumulating characters in a reversed list.  When
+;;all of  an identifier has  been read: the  return value is  always the
+;;reversed list of characters.
+;;
+
+(define (%accumulate-identifier-chars accumulated-chars port)
+  ;;Read from PORT characters from an identifier token, accumulate them,
+  ;;in reverse order and return the resulting list.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (define-inline (recurse accum)
+    (%accumulate-identifier-chars accum port))
+  (let ((ch (peek-char port)))
+    (cond ((eof-object? ch)
+	   accumulated-chars)
+	  ((subsequent? ch)
+	   (read-char port)
+	   (recurse (cons ch accumulated-chars)))
+	  ((delimiter? ch)
+	   accumulated-chars)
+	  ((unsafe.char= ch #\\)
+	   (read-char port)
+	   (%accumulate-identifier-chars/backslash accumulated-chars port #f))
+	  ((port-in-r6rs-mode? port)
+	   (%error "invalid identifier syntax" (reverse-list->string (cons ch accumulated-chars))))
+	  ;;FIXME Is this  correct?  To return the list  if peeked CH is
+	  ;;not recognised?
+	  (else accumulated-chars))))
+
+(define (%accumulate-identifier-chars/bar accumulated-chars port)
+  ;;Read from PORT characters  from an identifier token between vertical
+  ;;bars  "|abcd|" after  the  opening bar  has  been already  consumed;
+  ;;accumulate the characters in  reverse order and return the resulting
+  ;;list.
+  ;;
+  ;;This is a syntax outside  of R6RS: identifiers between bars can hold
+  ;;any character.
+  ;;
+  (define-inline (%unexpected-eof-error . args)
+    (die/p port 'tokenize "unexpected EOF while reading symbol" . args))
+  (define-inline (recurse accum)
+    (%accumulate-identifier-chars/bar accum port))
+  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
+    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+      . ?cond-clauses))
+
+  (%read-char-no-eof (port ch)
+    ((unsafe.char= #\\ ch)
+     (%accumulate-identifier-chars/backslash accumulated-chars port #t))
+    ((unsafe.char= #\| ch) ;end of symbol, whatever comes after
+     accumulated-chars)
+    (else
+     (recurse (cons ch accumulated-chars)))))
+
+(define (%accumulate-identifier-chars/backslash accumulated-chars port inside-bar?)
+  ;;Read from PORT characters from  an identifier datum whose first char
+  ;;is  a backslash sequence  "\x41;", after  the opening  backslash has
+  ;;been already  consumed; accumulate  the characters in  reverse order
+  ;;and return the resulting list.
+  ;;
+  ;;When reading the baskslash sequence is terminated: if INSIDE-BAR? is
+  ;;true   %ACCUMULATE-IDENTIFIER-CHARS/BAR  is   invoked   to  continue
+  ;;reading,  else %ACCUMULATE-IDENTIFIER-CHARS  is invoked  to continue
+  ;;reading.
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port   'tokenize msg . args))
+  (define-inline (%error-1 msg . args)
+    (die/p-1 port 'tokenize msg . args))
+  (define-inline (%unexpected-eof-error . args)
+    (%error "unexpected EOF while reading symbol" . args))
+  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
+    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+      . ?cond-clauses))
+
+  (define-inline (main)
+    (%read-char-no-eof (port ch)
+      ((unsafe.char= #\x ch)
+       (%tokenize-hex-digits))
+      (else
+       (%error "expected character \"x\" after backslash while reading symbol"
+	       (string #\\ ch) (reverse-list->string accumulated-chars)))))
+
+  (define-inline (%tokenize-hex-digits)
+    (let next-digit ((code-point 0)
+		     (accumul    (list #\x #\\)))
+      (%read-char-no-eof (port ch)
+	((unsafe.char= #\; ch)
+	 (let ((accum (cons (fixnum->char/checked code-point accumul port)
+			    accumulated-chars)))
+	   (if inside-bar?
+	       (%accumulate-identifier-chars/bar accum port)
+	     (%accumulate-identifier-chars accum port))))
+	((char->hex-digit/or-false ch)
+	 => (lambda (digit)
+	      (next-digit (unsafe.fx+ digit (unsafe.fx* code-point 16))
+			  (cons ch accumul))))
+	(else
+	 (%error "expected hex digit after backslash sequence while reading symbol"
+		 (reverse-list->string (cons ch accumul))
+		 (reverse-list->string accumulated-chars))))))
+
+  (main))
+
 
 (define (parse-token port locs-alist kont token pos)
   (define-inline (%error   msg . irritants)
@@ -1363,120 +1474,6 @@
 
 	  (else
 	   (%error "Vicare internal error: unknown token from reader functions" token))))
-
-  (main))
-
-
-;;;; reading identifiers
-;;
-;;Three functions are involved:
-;;
-;;  %ACCUMULATE-IDENTIFIER-CHARS
-;;  %ACCUMULATE-IDENTIFIER-CHARS/BAR
-;;  %ACCUMULATE-IDENTIFIER-CHARS/BACKSLASH
-;;
-;;they call each other accumulating characters in a reversed list.  When
-;;all of  an identifier has  been read: the  return value is  always the
-;;reversed list of characters.
-;;
-
-(define (%accumulate-identifier-chars accumulated-chars port)
-  ;;Read from PORT characters from an identifier token, accumulate them,
-  ;;in reverse order and return the resulting list.
-  ;;
-  (define-inline (%error msg . args)
-    (die/p port 'tokenize msg . args))
-  (define-inline (recurse accum)
-    (%accumulate-identifier-chars accum port))
-  (let ((ch (peek-char port)))
-    (cond ((eof-object? ch)
-	   accumulated-chars)
-	  ((subsequent? ch)
-	   (read-char port)
-	   (recurse (cons ch accumulated-chars)))
-	  ((delimiter? ch)
-	   accumulated-chars)
-	  ((unsafe.char= ch #\\)
-	   (read-char port)
-	   (%accumulate-identifier-chars/backslash accumulated-chars port #f))
-	  ((port-in-r6rs-mode? port)
-	   (%error "invalid identifier syntax" (reverse-list->string (cons ch accumulated-chars))))
-	  ;;FIXME Is this  correct?  To return the list  if peeked CH is
-	  ;;not recognised?
-	  (else accumulated-chars))))
-
-(define (%accumulate-identifier-chars/bar accumulated-chars port)
-  ;;Read from PORT characters  from an identifier token between vertical
-  ;;bars  "|abcd|" after  the  opening bar  has  been already  consumed;
-  ;;accumulate the characters in  reverse order and return the resulting
-  ;;list.
-  ;;
-  ;;This is a syntax outside  of R6RS: identifiers between bars can hold
-  ;;any character.
-  ;;
-  (define-inline (%unexpected-eof-error . args)
-    (die/p port 'tokenize "unexpected EOF while reading symbol" . args))
-  (define-inline (recurse accum)
-    (%accumulate-identifier-chars/bar accum port))
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
-
-  (%read-char-no-eof (port ch)
-    ((unsafe.char= #\\ ch)
-     (%accumulate-identifier-chars/backslash accumulated-chars port #t))
-    ((unsafe.char= #\| ch) ;end of symbol, whatever comes after
-     accumulated-chars)
-    (else
-     (recurse (cons ch accumulated-chars)))))
-
-(define (%accumulate-identifier-chars/backslash accumulated-chars port inside-bar?)
-  ;;Read from PORT characters from  an identifier datum whose first char
-  ;;is  a backslash sequence  "\x41;", after  the opening  backslash has
-  ;;been already  consumed; accumulate  the characters in  reverse order
-  ;;and return the resulting list.
-  ;;
-  ;;When reading the baskslash sequence is terminated: if INSIDE-BAR? is
-  ;;true   %ACCUMULATE-IDENTIFIER-CHARS/BAR  is   invoked   to  continue
-  ;;reading,  else %ACCUMULATE-IDENTIFIER-CHARS  is invoked  to continue
-  ;;reading.
-  ;;
-  (define-inline (%error msg . args)
-    (die/p port   'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
-    (die/p-1 port 'tokenize msg . args))
-  (define-inline (%unexpected-eof-error . args)
-    (%error "unexpected EOF while reading symbol" . args))
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
-
-  (define-inline (main)
-    (%read-char-no-eof (port ch)
-      ((unsafe.char= #\x ch)
-       (%tokenize-hex-digits))
-      (else
-       (%error "expected character \"x\" after backslash while reading symbol"
-	       (string #\\ ch) (reverse-list->string accumulated-chars)))))
-
-  (define-inline (%tokenize-hex-digits)
-    (let next-digit ((code-point 0)
-		     (accumul    (list #\x #\\)))
-      (%read-char-no-eof (port ch)
-	((unsafe.char= #\; ch)
-	 (let ((accum (cons (fixnum->char/checked code-point accumul port)
-			    accumulated-chars)))
-	   (if inside-bar?
-	       (%accumulate-identifier-chars/bar accum port)
-	     (%accumulate-identifier-chars accum port))))
-	((char->hex-digit/or-false ch)
-	 => (lambda (digit)
-	      (next-digit (unsafe.fx+ digit (unsafe.fx* code-point 16))
-			  (cons ch accumul))))
-	(else
-	 (%error "expected hex digit after backslash sequence while reading symbol"
-		 (reverse-list->string (cons ch accumul))
-		 (reverse-list->string accumulated-chars))))))
 
   (main))
 
@@ -1965,6 +1962,8 @@
 	  (else ch))))
 
 
+;;;; compound datums
+
 (define (read-list p locs k end mis init?)
   (let-values (((t pos) (start-tokenising/pos p)))
     (cond
