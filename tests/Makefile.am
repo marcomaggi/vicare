@@ -57,6 +57,10 @@ TESTS			=	\
 	test-r6rs-syntax-case.sps			\
 	test-r6rs-unicode.sps				\
 	\
+	test-ikarus-bytevectors.sps			\
+	test-ikarus-reader.sps				\
+	test-ikarus-strings.sps				\
+	\
 	test-vicare-io.sps				\
 	test-vicare-log.sps				\
 	test-vicare-posix.sps				\
@@ -151,6 +155,11 @@ EXTRA_DIST =	\
 	test-r6rs-sorting.sps				\
 	test-r6rs-syntax-case.sps			\
 	test-r6rs-unicode.sps				\
+	\
+	test-ikarus-bytevectors.sps			\
+	test-ikarus-reader.sps				\
+	test-ikarus-strings.sps				\
+	\
 	\
 	test-vicare-io.sps				\
 	test-vicare-log.sps				\

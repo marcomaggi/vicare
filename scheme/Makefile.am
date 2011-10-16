@@ -62,7 +62,6 @@ EXTRA_DIST= last-revision						\
   tests/parse-flonums.ss						\
   tests/pointers.ss							\
   tests/r6rs-records-procedural.ss					\
-  tests/reader.ss							\
   tests/repl.ss								\
   tests/rn100								\
   tests/set-position.ss							\
