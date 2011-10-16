@@ -866,7 +866,24 @@
 
    ;; #! comments and such
    ((unsafe.char= #\! ch)
-    (%read-char-no-eof (port ch1)
+    (let ((sym (finish-tokenization-of-identifier '() port)))
+      (case sym
+	((vicare ikarus)
+	 (set-port-mode! port 'vicare)
+	 (start-tokenising port))
+	((r6rs)
+	 (set-port-mode! port 'r6rs)
+	 (start-tokenising port))
+	((eof)
+	 (if (port-in-r6rs-mode? port)
+	     (%error-1 "invalid syntax" "#!eof")
+	   `(datum . ,(eof-object))))
+	(else
+	 ;;If not recognised,  just handle it as a  comment and read the
+	 ;;next datum.
+	 (start-tokenising port))))
+
+    #;(%read-char-no-eof (port ch1)
       ((unsafe.char= ch1 #\e)
        (if (port-in-r6rs-mode? port)
 	   (%error-1 "invalid syntax: #!e")
@@ -882,7 +899,7 @@
       ((unsafe.char= ch1 #\v)
        (read-char* port '(#\v) "icare" "#!vicare comment")
        (set-port-mode! port 'vicare)
-       (start-tokenising port))
+    (start-tokenising port))
 
       ;;This is for backwards compatibility with Ikarus's reader.
       ((unsafe.char= ch1 #\i)
