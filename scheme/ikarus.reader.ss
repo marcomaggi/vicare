@@ -732,7 +732,7 @@
 
 	;;string
 	((unsafe.char= #\" ch)
-	 (let ((ls (string-lexeme '() port)))
+	 (let ((ls (%accumulate-string-chars '() port)))
 	   (cons 'datum (reverse-list->string ls))))
 
 	;;symbol "+" or number
@@ -1479,7 +1479,13 @@
 
 ;;;; reading strings
 
-(define (string-lexeme ls port)
+(define (%accumulate-string-chars ls port)
+  ;;Read  from PORT  characters from  the  internals of  a string  token
+  ;;(after the opening double quote  has been read), accumulate them, in
+  ;;reverse order and return the resulting list.
+  ;;
+  (define-inline (recurse accum)
+    (%accumulate-string-chars accum port))
   (define-inline (%error msg . args)
     (die/p   port 'tokenize msg . args))
   (define-inline (%error-1 msg . args)
@@ -1498,31 +1504,31 @@
   (define-inline (main)
     (%read-char-no-eof (port ch)
       (else
-       (string-lexeme-char ls port ch))))
+       (%accumulate-char ls port ch))))
 
-  (define (string-lexeme-char ls port ch)
+  (define (%accumulate-char ls port ch)
     (cond ((unsafe.char= #\" ch) ;end of the string
 	   ls)
 	  ((unsafe.char= #\\ ch)
-	   (%parse-escape-sequences ls port))
+	   (%parse-escape-sequence ls port))
 	  (else
-	   (string-lexeme (cons ch ls) port))))
+	   (recurse (cons ch ls)))))
 
-  (define-inline (%parse-escape-sequences ls port)
+  (define-inline (%parse-escape-sequence ls port)
     ;;Read  chars from PORT  parsing an  escape sequence.   The starting
     ;;backslash character has already been consumed.
     ;;
     (%read-char-no-eof (port ch)
       ;;recognise single char escape sequences
-      ((unsafe.char= #\a ch)  (string-lexeme (cons #\x7  ls) port))
-      ((unsafe.char= #\b ch)  (string-lexeme (cons #\x8  ls) port))
-      ((unsafe.char= #\t ch)  (string-lexeme (cons #\x9  ls) port))
-      ((unsafe.char= #\n ch)  (string-lexeme (cons #\xA  ls) port))
-      ((unsafe.char= #\v ch)  (string-lexeme (cons #\xB  ls) port))
-      ((unsafe.char= #\f ch)  (string-lexeme (cons #\xC  ls) port))
-      ((unsafe.char= #\r ch)  (string-lexeme (cons #\xD  ls) port))
-      ((unsafe.char= #\" ch)  (string-lexeme (cons #\x22 ls) port))
-      ((unsafe.char= #\\ ch)  (string-lexeme (cons #\x5C ls) port))
+      ((unsafe.char= #\a ch)  (recurse (cons #\x7  ls)))
+      ((unsafe.char= #\b ch)  (recurse (cons #\x8  ls)))
+      ((unsafe.char= #\t ch)  (recurse (cons #\x9  ls)))
+      ((unsafe.char= #\n ch)  (recurse (cons #\xA  ls)))
+      ((unsafe.char= #\v ch)  (recurse (cons #\xB  ls)))
+      ((unsafe.char= #\f ch)  (recurse (cons #\xC  ls)))
+      ((unsafe.char= #\r ch)  (recurse (cons #\xD  ls)))
+      ((unsafe.char= #\" ch)  (recurse (cons #\x22 ls)))
+      ((unsafe.char= #\\ ch)  (recurse (cons #\x5C ls)))
 
       ;;inline hex escape "\xHHHH;"
       ((unsafe.char= #\x ch)
@@ -1600,9 +1606,7 @@
 	      (next-char (unsafe.fx+ (unsafe.fx* code-point 16) digit)
 			 (cons chX accum))))
 	((unsafe.char= chX #\;)
-	 (string-lexeme (cons (fixnum->char/checked code-point (cons chX accum) port)
-				ls)
-			  port))
+	 (recurse (cons (fixnum->char/checked code-point (cons chX accum) port) ls)))
 	(else
 	 (%error-1 "invalid char in escape sequence while reading string"
 		   (reverse-list->string (cons chX accum)))))))
@@ -1610,7 +1614,7 @@
   (define (%discard-trailing-intraline-whitespace ls port ch)
     ;;Analyse CH,  and then chars read from  PORT, discarding whitespace
     ;;characters;    at    the    first   non-whitespace    char    call
-    ;;STRING-LEXEME-CHAR.
+    ;;%ACCUMULATE-CHAR.
     ;;
     ;;This function  is used to consume the  second intraline whitespace
     ;;in the sequence:
@@ -1620,7 +1624,7 @@
     ;;                                         this one
     ;;
     (define-inline (next-char ch)
-      (string-lexeme-char ls port ch))
+      (%accumulate-char ls port ch))
     (if (intraline-whitespace? ch)
 	(let next-whitespace-char ()
 	  (%read-char-no-eof (port ch1)
