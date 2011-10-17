@@ -581,6 +581,9 @@
   (read-and-lexical-violation "(.)"	no-irritants)
   (read-and-lexical-violation "(. 1)"	no-irritants)
   (read-and-lexical-violation "(1 .)"	no-irritants)
+  (read-and-lexical-violation "(1 . .)"	no-irritants)
+
+  (read-and-lexical-violation "(1 . 2 3)"	(datum . 3))
 
   #t)
 

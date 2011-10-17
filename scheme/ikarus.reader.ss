@@ -1961,14 +1961,16 @@
   (%finish-tokenisation-of-list port locs kont matching-paren wrong-paren #t))
 
 (define (%finish-tokenisation-of-list port locs kont matching-paren wrong-paren reading-first-item?)
+  (define-inline (recurse-to-read-cdr)
+    (%finish-tokenisation-of-list port locs kont matching-paren wrong-paren #f))
   (define-inline (%error msg . irritants)
     (die/p port 'read msg . irritants))
   (define-inline (%error-1 msg . irritants)
     (die/p-1 port 'read msg . irritants))
   (define-inline (%paren-symbol->char paren)
     (if (eq? paren 'RPAREN) #\) #\]))
-  (define (%mismatched-paren-error toke)
-    (%error (format "mismatching parenthesis while reading list,\
+  (define (%mismatched-paren-error)
+    (%error (format "mismatching parenthesis while reading list, \
                      expecting \"~a\" found \"~a\""
 	      (%paren-symbol->char matching-paren)
 	      (%paren-symbol->char wrong-paren))))
@@ -1983,31 +1985,33 @@
 
 	  ;;a mismatched ending parenthesis was found
 	  ((eq? token wrong-paren)
-	   (%error "paren mismatch"))
+	   (%mismatched-paren-error))
 
 	  ;;The token is  a dot, the next token must be  the last in the
 	  ;;list.
 	  ((eq? token 'dot)
 	   (when reading-first-item?
-	     (%error "invalid dot while reading list"))
-	   (let-values (((d d^ locs kont) (read-expr port locs kont)))
+	     (%error "invalid dot as first item while reading list"))
+	   (let-values (((the-cdr the-cdr^ locs kont) (read-expr port locs kont)))
 	     (let-values (((token pos^) (start-tokenising/pos port)))
 	       (cond ((eq? token matching-paren)
-		      (values d d^ locs kont))
+		      (values the-cdr the-cdr^ locs kont))
 		     ((eq? token wrong-paren)
-		      (%error "paren mismatch"))
+		      (%mismatched-paren-error))
 		     ((eq? token 'dot)
-		      (%error "cannot have two dots in a list"))
+		      (%error "invalid second dot while reading list"))
 		     (else
-		      (%error (format "expecting ~a, got ~a" matching-paren token)))))))
+		      (%error "invalid second form after dot while reading list" token))))))
 
+	  ;;It is an item.
 	  (else
-	   (let-values (((a a^ locs kont)
+	   (let-values (((the-car the-car^ locs kont)
 			 (parse-token port locs kont token pos)))
-	     (let-values (((d d^ locs kont)
-			   (%finish-tokenisation-of-list port locs kont matching-paren wrong-paren #f)))
-	       (let ((x (cons a d)) (x^ (cons a^ d^)))
-		 (values x x^ locs (extend-k-pair x x^ a d kont)))))))))
+	     (let-values (((the-cdr the-cdr^ locs kont) (recurse-to-read-cdr)))
+	       (let ((the-list  (cons the-car  the-cdr))
+		     (the-list^ (cons the-car^ the-cdr^)))
+		 (values the-list the-list^ locs
+			 (extend-k-pair the-list the-list^ the-car the-cdr kont)))))))))
 
 
 (define (extend-k-pair x x^ a d k)
