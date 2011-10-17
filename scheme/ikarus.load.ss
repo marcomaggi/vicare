@@ -23,7 +23,7 @@
     (only (psyntax library-manager)
       serialize-all current-precompiled-library-loader)
     (only (psyntax expander) compile-r6rs-top-level)
-    (only (ikarus.reader.annotated) read-script-source-file))
+    (only (ikarus.reader) read-script-source-file))
 
   (define-struct serialized-library (contents))
 

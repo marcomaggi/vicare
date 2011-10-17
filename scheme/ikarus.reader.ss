@@ -15,19 +15,22 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
+
 (library (ikarus.reader)
-  (export read get-datum
-	  read-initial read-token
+  (export read get-datum read-initial read-token
           read-annotated read-script-annotated
-	  drop-first-line-if-sharp-bang
+	  read-source-file
+	  read-library-source-file
+	  read-script-source-file
 
 	  annotation? annotation-expression
 	  annotation-source annotation-stripped)
   (import (except (ikarus)
-		  read get-datum
-		  read-char read-token
+		  read get-datum read-char read-token
 		  read-annotated read-script-annotated
-		  drop-first-line-if-sharp-bang
+		  read-source-file
+		  read-library-source-file
+		  read-script-source-file
 
 		  annotation? annotation-expression
 		  annotation-source annotation-stripped)
@@ -430,6 +433,25 @@
 
 ;;;; public functions
 
+(define (read-library-source-file filename)
+  ;;Open FILENAME with  the native transcoder, then read  and return the
+  ;;first datum.
+  ;;
+  (read-annotated (open-input-file filename)))
+
+(define (read-source-file filename)
+  ;;Open FILENAME with  the native transcoder, then read  and return all
+  ;;the datums in a list.
+  ;;
+  (let ((port (open-input-file filename)))
+    (%read-everything-annotated port (read-annotated port))))
+
+(define (read-script-source-file filename)
+  (let ((port (open-input-file filename)))
+    (%read-everything-annotated port (read-script-annotated port))))
+
+;;; --------------------------------------------------------------------
+
 (define read
   (case-lambda
    (()
@@ -475,6 +497,13 @@
 
 
 ;;;; helpers for public functions
+
+(define (%read-everything-annotated port obj)
+  (if (eof-object? obj)
+      (begin
+	(close-input-port port)
+	'())
+    (cons obj (%read-everything-annotated port (read-annotated port)))))
 
 (define (%read-sexp port script?)
   (let-values (((expr expr/ann locs-alist kont)

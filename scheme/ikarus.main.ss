@@ -83,7 +83,7 @@
     (only (ikarus.compiler) generate-debug-calls)
     (only (ikarus.debugger) guarded-start)
     (only (psyntax library-manager) current-library-expander)
-    (only (ikarus.reader.annotated) read-source-file)
+    (only (ikarus.reader) read-source-file)
     (only (ikarus.symbol-table) initialize-symbol-table!)
     (only (ikarus load) load-r6rs-script))
 

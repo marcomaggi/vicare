@@ -1,6 +1,6 @@
 #!../src/vicare -b vicare.boot --r6rs-script
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Copyright (C) 2006,2007,2008,2011  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Abstract
@@ -138,7 +138,6 @@
     "ikarus.pretty-formats.ss"
     "ikarus.writer.ss"
     "ikarus.reader.ss"
-    "ikarus.reader.annotated.ss"
     "ikarus.code-objects.ss"
     "ikarus.intel-assembler.ss"
     "ikarus.fasl.write.ss"
@@ -1561,7 +1560,6 @@
     (string->filename-func			i)
     (read-annotated				i)
     (read-script-annotated			i)
-    (drop-first-line-if-sharp-bang		i)
     (annotation?				i)
     (annotation-expression			i)
     (annotation-source				i)
