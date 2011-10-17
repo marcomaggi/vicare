@@ -43,7 +43,7 @@
      (check
 	 (let ((port (open-string-input-port ?input)))
 	   (guard (E ((lexical-violation? E)
-		      (pretty-print (condition-message E))
+;;;		      (pretty-print (condition-message E))
 		      (if (irritants-condition? E)
 			  (condition-irritants E)
 			'(no-irritants)))

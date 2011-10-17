@@ -4603,6 +4603,126 @@
   #t)
 
 
+(parametrise ((check-test-name			'lookahead-two-u8)
+	      (bytevector-port-buffer-size	8))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check	;not a port
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(lookahead-two-u8 123))
+    => '(123))
+
+  (check	;not an input port
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (lookahead-two-u8 port)))
+    => #t)
+
+  (check	;not a binary port
+      (let ((port (open-string-input-port "")))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (lookahead-two-u8 port)))
+    => #t)
+
+  (check	;not a binary port (with transcoded port)
+      (let* ((bin-port  (open-bytevector-input-port '#vu8()))
+	     (tran-port (transcoded-port bin-port (native-transcoder))))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? tran-port (car (condition-irritants E))))
+		  (else E))
+	  (lookahead-two-u8 tran-port)))
+    => #t)
+
+  (check	;not an open port (with port fast tagged at creation)
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-input-port port)
+	  (lookahead-two-u8 port)))
+    => #t)
+
+  (check	;not an open port (with port not fast tagged at creation)
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (eq? port (car (condition-irritants E))))
+		  (else E))
+	  (close-input-port port)
+	  (lookahead-two-u8 port)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8())))
+	(call-with-values
+	    (lambda ()
+	      (lookahead-two-u8 port))
+	  list))
+    => (list (eof-object) (eof-object)))
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(1))))
+	(call-with-values
+	    (lambda ()
+	      (lookahead-two-u8 port))
+	  list))
+    => (list 1 (eof-object)))
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(1 2))))
+	(call-with-values
+	    (lambda ()
+	      (lookahead-two-u8 port))
+	  list))
+    => '(1 2))
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
+	(call-with-values
+	    (lambda ()
+	      (lookahead-two-u8 port))
+	  list))
+    => '(1 2))
+
+;;; --------------------------------------------------------------------
+;;; filling the buffer
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(0 1 2 3 4 5 6 7 8 9 0))))
+	(get-bytevector-n port 8)
+	(call-with-values
+	    (lambda ()
+	      (lookahead-two-u8 port))
+	  list))
+    => '(8 9))
+
+  (check
+      (let ((port (open-bytevector-input-port '#vu8(0 1 2 3 4 5 6 7 8))))
+	(get-bytevector-n port 8)
+	(call-with-values
+	    (lambda ()
+	      (lookahead-two-u8 port))
+	  list))
+    => `(8 ,(eof-object)))
+
+  #t)
+
+
 (parametrise ((check-test-name		'get-bytevector-n-plain)
 	      (test-pathname		(make-test-pathname "get-bytevector-n.bin"))
 	      (input-file-buffer-size	100))

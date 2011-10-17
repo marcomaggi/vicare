@@ -3735,6 +3735,7 @@ example in the previous section):
 @menu
 * iklib io filename::           File pathname handling.
 * iklib io codecs::             Transcoders and additional codecs.
+* iklib io binary::             Additional binary port features.
 * iklib io textual::            Additional textual port features.
 * iklib io process::            Spawning processes.
 * iklib io socket::             Using network sockets.
@@ -3837,6 +3838,20 @@ Mark.  A call to this procedure returns a value that is equal in the
 sense of @func{eqv?} to the result of any other call to the same
 procedure.
 @end deffn
+
+@c page
+@node iklib io binary
+@subsection Additional binary port features
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun lookahead-two-u8 @var{port}
+Like @func{lookahead-u8} but peeks at @math{2} octets and return two
+values: the @eof{} object or a fixnum representing first octet, the
+@eof{} object or a fixnum representing the second octet.
+@end defun
 
 @c page
 @node iklib io textual

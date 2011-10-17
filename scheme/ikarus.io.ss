@@ -454,7 +454,7 @@
     get-string-n get-string-n! get-string-all get-line read-line
 
     ;; reading octets
-    get-u8 lookahead-u8
+    get-u8 lookahead-u8 lookahead-two-u8
 
     ;; reading bytevectors
     get-bytevector-n get-bytevector-n!
@@ -560,7 +560,7 @@
 		  get-string-n get-string-n! get-string-all get-line read-line
 
 		  ;; reading octets
-		  get-u8 lookahead-u8
+		  get-u8 lookahead-u8 lookahead-two-u8
 
 		  ;; reading bytevectors
 		  get-bytevector-n get-bytevector-n!
@@ -4923,6 +4923,39 @@
       (if-successful-refill:
        (set! port.buffer.index buffer.offset-after)
        (unsafe.bytevector-u8-ref port.buffer 0)))))
+
+(define (lookahead-two-u8 port)
+  ;;Defined  by Vicare.   Like LOOKAHEAD-U8  but peeks  at 2  octets and
+  ;;return two values: EOF or  a fixnum representing first octet, EOF or
+  ;;a fixnum representing the second octet.
+  ;;
+  (define who 'lookahead-u8)
+;;;(%assert-argument-is-port port who)
+  (define (%maybe-some-data-is-available)
+    (with-port-having-bytevector-buffer (port)
+      (let* ((buffer.offset-octet0	port.buffer.index)
+	     (buffer.offset-octet1	(unsafe.fxadd1 buffer.offset-octet0))
+	     (buffer.offset-past	(unsafe.fxadd1 buffer.offset-octet1)))
+	(cond ((unsafe.fx<= buffer.offset-past port.buffer.used-size)
+	       (values (unsafe.bytevector-u8-ref port.buffer buffer.offset-octet0)
+		       (unsafe.bytevector-u8-ref port.buffer buffer.offset-octet1)))
+	      ((unsafe.fx<= buffer.offset-octet1 port.buffer.used-size)
+	       (values (unsafe.bytevector-u8-ref port.buffer buffer.offset-octet0)
+		       (eof-object)))
+	      (else
+	       (values (eof-object) (eof-object)))))))
+  (%case-binary-input-port-fast-tag (port who)
+    ((FAST-GET-BYTE-TAG)
+     (with-port-having-bytevector-buffer (port)
+       (let* ((buffer.offset-octet0	port.buffer.index)
+	      (buffer.offset-octet1	(unsafe.fxadd1 buffer.offset-octet0))
+	      (buffer.offset-past	(unsafe.fxadd1 buffer.offset-octet1)))
+	 (if (unsafe.fx<= buffer.offset-past port.buffer.used-size)
+	     (values (unsafe.bytevector-u8-ref port.buffer buffer.offset-octet0)
+		     (unsafe.bytevector-u8-ref port.buffer buffer.offset-octet1))
+	   (%refill-bytevector-buffer-and-evaluate (port who)
+	     (if-end-of-file:       (%maybe-some-data-is-available))
+	     (if-successful-refill: (%maybe-some-data-is-available)))))))))
 
 
 ;;;; bytevector input functions

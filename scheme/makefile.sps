@@ -1313,6 +1313,7 @@
     (i/o-eagain-error?                           i)
     (lookahead-char                              i r ip)
     (lookahead-u8                                i r ip)
+    (lookahead-two-u8				 i)
     (make-bytevector                             i r bv)
     (make-custom-binary-input-port               i r ip)
     (make-custom-binary-output-port              i r ip)
