@@ -1561,6 +1561,7 @@
     (string->filename-func			i)
     (read-annotated				i)
     (read-script-annotated			i)
+    (drop-first-line-if-sharp-bang		i)
     (annotation?				i)
     (annotation-expression			i)
     (annotation-source				i)

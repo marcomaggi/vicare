@@ -19,6 +19,7 @@
   (export read get-datum
 	  read-initial read-token
           read-annotated read-script-annotated
+	  drop-first-line-if-sharp-bang
 
 	  annotation? annotation-expression
 	  annotation-source annotation-stripped)
@@ -26,6 +27,7 @@
 		  read get-datum
 		  read-char read-token
 		  read-annotated read-script-annotated
+		  drop-first-line-if-sharp-bang
 
 		  annotation? annotation-expression
 		  annotation-source annotation-stripped)
@@ -447,6 +449,20 @@
    ((port)
     (%assert-argument-is-source-code-port 'read-token port)
     (start-tokenising port))))
+
+(define (drop-first-line-if-sharp-bang port)
+  ;;Consume the first line from the  textual input PORT if the first two
+  ;;bytes  represent the  sharp-bang sequence  "#!"; this  is  useful to
+  ;;allow scripts on Unix systems  to start with the command line needed
+  ;;to use them.
+  ;;
+  ;;Notice that this  will discard valid sharp-bang comments  if the are
+  ;;at the very beginning of a file.
+  ;;
+  (let-values (((octet1 octet2) (lookahead-two-u8 port)))
+    (when (and (= octet1 (char->integer #\#))
+	       (= octet2 (char->integer #\!)))
+      (read-and-discard-up-to-and-including-line-ending port))))
 
 (define (read-initial port)
   (%read-sexp port #t))

@@ -134,6 +134,10 @@ Revised^6 Report on the algorithmic language Scheme
 @acronym{CSV}
 @end macro
 
+@macro eof{}
+@acronym{EOF}
+@end macro
+
 @macro ieee{}
 @acronym{IEEE}
 @end macro
@@ -1925,6 +1929,17 @@ cause an error if read:
 (port-eof? port)        @result{} #t
 @end example
 @end deffn
+
+
+@defun drop-first-line-if-sharp-bang @var{port}
+Consume the first line from the @strong{binary} input @var{port} if the
+first two bytes represent the sharp-bang sequence @samp{#!}; this is
+useful to allow scripts on Unix systems to start with the command line
+needed to use them.
+
+Notice that this will discard valid sharp-bang comments if the are at
+the very beginning of a file.
+@end defun
 
 @c page
 @node iklib expander
