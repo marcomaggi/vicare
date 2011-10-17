@@ -211,6 +211,9 @@
 	 (byte-offset		(vector-ref textual-position 0)))
     (cons (port-id port) (and byte-offset (+ byte-offset offset)))))
 
+(define-inline (compound-position-char textual-pos)
+  (cdr textual-pos))
+
 
 ;;;; exception raisers
 
@@ -1308,13 +1311,13 @@
 	  ;;Read list that was opened by a round parenthesis.
 	  ((eq? token 'lparen)
 	   (let-values (((ls ls/ann locs-alist kont)
-			 (finish-tokenisation-of-list port locs-alist kont 'rparen 'rbrack)))
+			 (finish-tokenisation-of-list port pos locs-alist kont 'rparen 'rbrack)))
 	     (values ls (annotate ls ls/ann pos port) locs-alist kont)))
 
 	  ;;Read list that was opened by a square bracket.
 	  ((eq? token 'lbrack)
 	   (let-values (((ls ls/ann locs-alist kont)
-			 (finish-tokenisation-of-list port locs-alist kont 'rbrack 'rparen)))
+			 (finish-tokenisation-of-list port pos locs-alist kont 'rbrack 'rparen)))
 	     (values ls (annotate ls ls/ann pos port) locs-alist kont)))
 
 	  ;;Read a vector opened by "#(".
@@ -1942,7 +1945,7 @@
 	  (else ch))))
 
 
-(define-inline (finish-tokenisation-of-list port locs kont matching-paren wrong-paren)
+(define-inline (finish-tokenisation-of-list port start-pos locs kont matching-paren wrong-paren)
   ;;Finish tokenisation  of list datum  reading from PORT; to  be called
   ;;after the opening parenthesis has been already tokenised.
   ;;
@@ -1956,6 +1959,12 @@
   ;;locations; a continuation thunk to be used to finalise references to
   ;;graph notation locations.
   ;;
+  ;;START-POS is  the compound position value  representing the position
+  ;;of the opening parenthesis; useful to report errors.
+  ;;
+  ;;LOCS is  the collection of  graph notation locations  accumulated so
+  ;;far.
+  ;;
   ;;MATCHING-PAREN must be either the symbol RPAREN or the symbol RBRACK
   ;;and it represents the token matching the opening parenthesis.
   ;;
@@ -1963,11 +1972,12 @@
   ;;and it  represents the  which, if found,  causes a  mismatch between
   ;;opening and closing parentheses.
   ;;
-  (%finish-tokenisation-of-list port locs kont matching-paren wrong-paren #t))
+  (%finish-tokenisation-of-list port start-pos locs kont matching-paren wrong-paren #t))
 
-(define (%finish-tokenisation-of-list port locs kont matching-paren wrong-paren reading-first-item?)
+(define (%finish-tokenisation-of-list port start-pos locs kont matching-paren wrong-paren
+				      reading-first-item?)
   (define-inline (recurse-to-read-cdr locs1 kont1)
-    (%finish-tokenisation-of-list port locs1 kont1 matching-paren wrong-paren #f))
+    (%finish-tokenisation-of-list port start-pos locs1 kont1 matching-paren wrong-paren #f))
   (define-inline (%error msg . irritants)
     (die/p port 'read msg . irritants))
   (define-inline (%error-1 msg . irritants)
@@ -1982,7 +1992,8 @@
 
   (let-values (((token pos) (start-tokenising/pos port)))
     (cond ((eof-object? token)
-	   (%error "unexpected end of file while reading list"))
+	   (%error (string-append "unexpected end of file while reading list started at "
+				  (number->string (compound-position-char start-pos)))))
 
 	  ;;the correct ending parenthesis was found
 	  ((eq? token matching-paren)

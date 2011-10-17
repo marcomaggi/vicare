@@ -57,7 +57,7 @@
      (check
 	 (let ((port (open-string-input-port ?input)))
 	   (guard (E ((syntax-violation? E)
-		      (pretty-print (condition-message E))
+;;;		      (pretty-print (condition-message E))
 		      (if (irritants-condition? E)
 			  (condition-irritants E)
 			'(no-irritants)))
@@ -515,14 +515,15 @@
   (doit-quoted "#!vicare 123"		123)
   (doit-quoted "#!ikarus 123"		123)
   (doit-quoted "#!r6rs   123"		123)
-  (doit-unquoted "#!eof"		(eof-object))
+  (doit-unquoted "#!eof 123"		(eof-object))
 
-  ;;the ones not recognised are just comments
+  ;;The ones not recognised  are just comments.  Test identifiers having
+  ;;the  first  char  equal to  the  first  char  of the  recognised  #!
+  ;;comments.
   (doit-quoted "#!ciao   123"		123)
   (doit-quoted "#!verde  123"		123)
   (doit-quoted "#!indaco 123"		123)
   (doit-quoted "#!rosso  123"		123)
-;;;               ^
 
   #t)
 
@@ -571,7 +572,11 @@
 ;;; --------------------------------------------------------------------
 ;;; errors
 
-  (read-and-lexical-violation "(1 2"	no-irritants)
+  ;; missing closing parenthesis
+  (read-and-lexical-violation "  (1 2"	no-irritants)
+  (read-and-lexical-violation "  [1 2"	no-irritants)
+
+  ;; mismatched parentheses
   (read-and-lexical-violation "(1 2]"	no-irritants)
   (read-and-lexical-violation "[1 2)"	no-irritants)
 
