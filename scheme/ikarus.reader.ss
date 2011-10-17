@@ -150,7 +150,7 @@
 
 ;;;; data structures
 
-;;Constructor: make-loc VALUE VALUE^ SET?
+;;Constructor: make-loc VALUE VALUE/ANN SET?
 ;;
 ;;Predicate: loc? OBJ
 ;;
@@ -160,7 +160,7 @@
 ;;
 ;;Field name: value/ann
 ;;Field accessor: loc-value/ann LOC
-;;Field mutator: set-loc-value/ann! LOC NEW-VALUE^
+;;Field mutator: set-loc-value/ann! LOC NEW-VALUE/ANN
 ;;
 ;;Field name: set?
 ;;Field accessor: loc-set? LOC
@@ -404,19 +404,19 @@
 ;;;; helpers for public functions
 
 (define (%read-sexp port script?)
-  (let-values (((expr expr^ locs-alist kont)
+  (let-values (((expr expr/ann locs-alist kont)
 		(if script?
 		    (read-expr-script-initial port '() void)
 		  (read-expr port '() void))))
     (if (null? locs-alist)
 	expr
       (begin
-       (for-each (reduce-loc! port)
-	 locs-alist)
-       (kont)
-       (if (loc? expr)
-	   (loc-value expr)
-	 expr)))))
+	(for-each (reduce-loc! port)
+	  locs-alist)
+	(kont)
+	(if (loc? expr)
+	    (loc-value expr)
+	  expr)))))
 
 (define (%read-annotated-sexp port script?)
   (define (%return-annotated x)
@@ -425,19 +425,19 @@
 	(eof-object)
       x))
   (%assert-argument-is-source-code-port 'read port)
-  (let-values (((expr expr^ locs-alist kont)
+  (let-values (((expr expr/ann locs-alist kont)
 		(if script?
 		    (read-expr-script-initial port '() void)
 		  (read-expr port '() void))))
     (if (null? locs-alist)
-	(%return-annotated expr^)
+	(%return-annotated expr/ann)
       (begin
 	(for-each (reduce-loc! port)
 	  locs-alist)
 	(kont)
 	(if (loc? expr)
 	    (loc-value/ann expr)
-	  (%return-annotated expr^))))))
+	  (%return-annotated expr/ann))))))
 
 (define (read-expr port locs-alist kont)
   (let-values (((token pos) (start-tokenising/pos port)))
@@ -1096,12 +1096,12 @@
   (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
     (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
       . ?cond-clauses))
+
   (%read-char-no-eof (port ch)
     ((unsafe.char= #\= ch) (cons 'mark N))
     ((unsafe.char= #\# ch) (cons 'ref  N))
     ((dec-digit? ch)
-     (recurse (let ((digit (char->dec-digit ch)))
-		(unsafe.fx+ (unsafe.fx* N 10) digit))))
+     (recurse (unsafe.fx+ (unsafe.fx* N 10) (char->dec-digit ch))))
     (else
      (%error "invalid char while inside a #n mark/ref" ch))))
 
@@ -1309,9 +1309,9 @@
 
 	  ;;Read list that was opened by a round parenthesis.
 	  ((eq? token 'lparen)
-	   (let-values (((ls ls^ locs-alist kont)
+	   (let-values (((ls ls/ann locs-alist kont)
 			 (finish-tokenisation-of-list port locs-alist kont 'rparen 'rbrack)))
-	     (values ls (annotate ls ls^ pos port) locs-alist kont)))
+	     (values ls (annotate ls ls/ann pos port) locs-alist kont)))
 
 	  ;;Read list that was opened by a square bracket.
 	  ((eq? token 'lbrack)
@@ -1447,15 +1447,14 @@
 	   (let ((N (cdr token)))
 	     (cond ((assq N locs-alist)
 		    => (lambda (pair)
-;;;     expr       expr^
 			 (values (cdr pair) 'unused locs-alist kont)))
 		   (else
-		    (let* ((loc         (let ((value     #f)
+		    (let* ((the-loc     (let ((value     #f)
 					      (value/ann 'unused)
 					      (set?      #f))
 					  (make-loc value value/ann set?)))
-			   (locs-alist1 (cons (cons N loc) locs-alist)))
-		      (values loc 'unused locs-alist1 kont))))))
+			   (locs-alist1 (cons (cons N the-loc) locs-alist)))
+		      (values the-loc 'unused locs-alist1 kont))))))
 
 	  (else
 	   (%error "Vicare internal error: unknown token from reader functions" token))))
