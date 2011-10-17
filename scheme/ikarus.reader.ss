@@ -1305,8 +1305,6 @@
 	   (values (eof-object)
 		   (annotate-simple (eof-object) pos port) locs-alist kont))
 
-;;; finish reading compound data
-
 	  ;;Read list that was opened by a round parenthesis.
 	  ((eq? token 'lparen)
 	   (let-values (((ls ls/ann locs-alist kont)
@@ -1315,38 +1313,36 @@
 
 	  ;;Read list that was opened by a square bracket.
 	  ((eq? token 'lbrack)
-	   (let-values (((ls ls^ locs-alist kont)
+	   (let-values (((ls ls/ann locs-alist kont)
 			 (finish-tokenisation-of-list port locs-alist kont 'rbrack 'rparen)))
-	     (values ls (annotate ls ls^ pos port) locs-alist kont)))
+	     (values ls (annotate ls ls/ann pos port) locs-alist kont)))
 
 	  ;;Read a vector opened by "#(".
 	  ((eq? token 'vparen)
-	   (let-values (((v v^ locs-alist kont)
+	   (let-values (((vec vec/ann locs-alist kont)
 			 (read-vector port locs-alist kont 0 '() '())))
-	     (values v (annotate v v^ pos port) locs-alist kont)))
+	     (values vec (annotate vec vec/ann pos port) locs-alist kont)))
 
 	  ;;Read a bytevector opened by "#vu8(".
 	  ((eq? token 'vu8)
-	   (let-values (((v v^ locs-alist kont)
+	   (let-values (((bv bv/ann locs-alist kont)
 			 (read-u8-bytevector port locs-alist kont 0 '())))
-	     (values v (annotate v v^ pos port) locs-alist kont)))
+	     (values bv (annotate bv bv/ann pos port) locs-alist kont)))
 
 	  ;;Read a bytevector opened by "#vs8(".
 	  ((eq? token 'vs8)
-	   (let-values (((v v^ locs-alist kont)
+	   (let-values (((bv bv/ann locs-alist kont)
 			 (read-s8-bytevector port locs-alist kont 0 '())))
-	     (values v (annotate v v^ pos port) locs-alist kont)))
-
-;;; standalone datum parsing completion
+	     (values bv (annotate bv bv/ann pos port) locs-alist kont)))
 
 	  ((pair? token)
-	   (%process-parsed-standalone-datum token))
+	   (%process-pair-token token))
 
 	  (else
 	   (%error-1 (format "unexpected ~s found" token)))))
 
-  (define-inline (%process-parsed-standalone-datum token)
-    (cond ((eq? (car token) 'datum) ;datum alraedy tokenised
+  (define-inline (%process-pair-token token)
+    (cond ((eq? (car token) 'datum) ;datum already tokenised
 	   (values (cdr token)
 		   (annotate-simple (cdr token) pos port) locs-alist kont))
 
@@ -1955,6 +1951,11 @@
   ;;successfully read  all the  items in the  list including  the ending
   ;;parenthesis.
   ;;
+  ;;Return four  values: the plain  S-expression being the  list itself;
+  ;;the annotated S-expression; the updated collection of graph notation
+  ;;locations; a continuation thunk to be used to finalise references to
+  ;;graph notation locations.
+  ;;
   ;;MATCHING-PAREN must be either the symbol RPAREN or the symbol RBRACK
   ;;and it represents the token matching the opening parenthesis.
   ;;
@@ -2009,8 +2010,10 @@
 
 	  ;;It is an item.
 	  (else
-	   (let*-values (((the-car the-car/ann locs1 kont1) (finalise-tokenisation port locs kont token pos))
-	   		 ((the-cdr the-cdr/ann locs2 kont2) (recurse-to-read-cdr locs1 kont1)))
+	   (let*-values (((the-car the-car/ann locs1 kont1)
+			  (finalise-tokenisation port locs kont token pos))
+	   		 ((the-cdr the-cdr/ann locs2 kont2)
+			  (recurse-to-read-cdr locs1 kont1)))
 	     (let ((the-list      (cons the-car     the-cdr))
 		   (the-list/ann  (cons the-car/ann the-cdr/ann)))
 	       (values the-list the-list/ann locs2
