@@ -43,10 +43,24 @@
      (check
 	 (let ((port (open-string-input-port ?input)))
 	   (guard (E ((lexical-violation? E)
-;;;		      (pretty-print (condition-message E))
+		      (pretty-print (condition-message E))
 		      (if (irritants-condition? E)
 			  (condition-irritants E)
-			'no-irritants))
+			'(no-irritants)))
+		     (else E))
+	     (read port)))
+       => '(?irritant)))))
+
+(define-syntax read-and-syntax-violation
+  (syntax-rules ()
+    ((_ ?input ?irritant)
+     (check
+	 (let ((port (open-string-input-port ?input)))
+	   (guard (E ((syntax-violation? E)
+		      (pretty-print (condition-message E))
+		      (if (irritants-condition? E)
+			  (condition-irritants E)
+			'(no-irritants)))
 		     (else E))
 	     (read port)))
        => '(?irritant)))))
@@ -509,6 +523,64 @@
   (doit-quoted "#!indaco 123"		123)
   (doit-quoted "#!rosso  123"		123)
 ;;;               ^
+
+  #t)
+
+
+(parametrise ((check-test-name	'lists))
+
+  (define-syntax read-list-and-eof
+    (syntax-rules ()
+      ((_ ?input ?result)
+       (check
+	   (let* ((port (open-string-input-port ?input))
+		  (obj  (read port))
+		  (eof  (port-eof? port)))
+	     (list (list? obj) obj eof))
+	 => `(#t ?result #t)))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((port (open-string-input-port "()"))
+	     (obj  (read port))
+	     (eof  (port-eof? port)))
+	(list (null? obj) obj eof))
+    => `(#t () #t))
+
+  (check
+      (let* ((port (open-string-input-port "(1 . 2)"))
+	     (obj  (read port))
+	     (eof  (port-eof? port)))
+	(list (pair? obj) obj eof))
+    => `(#t (1 . 2) #t))
+
+  (check
+      (let* ((port (open-string-input-port "(1 2 . 3)"))
+	     (obj  (read port))
+	     (eof  (port-eof? port)))
+	(list (pair? obj) obj eof))
+    => `(#t (1 2 . 3) #t))
+
+;;; --------------------------------------------------------------------
+
+  (read-list-and-eof "(1)"		(1))
+  (read-list-and-eof "(1 2)"		(1 2))
+  (read-list-and-eof "(1 2 3)"		(1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  (read-and-lexical-violation "(1 2"	no-irritants)
+  (read-and-lexical-violation "(1 2]"	no-irritants)
+  (read-and-lexical-violation "[1 2)"	no-irritants)
+
+;;; --------------------------------------------------------------------
+;;; misplaced dots
+
+  (read-and-lexical-violation "(.)"	no-irritants)
+  (read-and-lexical-violation "(. 1)"	no-irritants)
+  (read-and-lexical-violation "(1 .)"	no-irritants)
 
   #t)
 
