@@ -447,7 +447,22 @@
     (%read-everything-annotated port (read-annotated port))))
 
 (define (read-script-source-file filename)
-  (let ((port (open-input-file filename)))
+  ;;Consume  the  first  line from  the  file  if  the first  two  bytes
+  ;;represent  the sharp-bang  sequence "#!";  this is  useful  to allow
+  ;;scripts on Unix systems to start with the command line needed to use
+  ;;them.
+  ;;
+  ;;Notice that this  will discard valid sharp-bang comments  if the are
+  ;;at the very beginning of a file.
+  ;;
+  (let ((port (open-file-input-port filename)))
+    (let-values (((octet1 octet2) (lookahead-two-u8 port)))
+      (when (and (= octet1 (char->integer #\#))
+		 (= octet2 (char->integer #\!)))
+	(read-and-discard-up-to-and-including-line-ending port)))
+    (let ((port (transcoded-port port (native-transcoder))))
+      (%read-everything-annotated port (read-script-annotated port))))
+  #;(let ((port (open-input-file filename)))
     (%read-everything-annotated port (read-script-annotated port))))
 
 ;;; --------------------------------------------------------------------
@@ -471,20 +486,6 @@
    ((port)
     (%assert-argument-is-source-code-port 'read-token port)
     (start-tokenising port))))
-
-(define (drop-first-line-if-sharp-bang port)
-  ;;Consume the first line from the  textual input PORT if the first two
-  ;;bytes  represent the  sharp-bang sequence  "#!"; this  is  useful to
-  ;;allow scripts on Unix systems  to start with the command line needed
-  ;;to use them.
-  ;;
-  ;;Notice that this  will discard valid sharp-bang comments  if the are
-  ;;at the very beginning of a file.
-  ;;
-  (let-values (((octet1 octet2) (lookahead-two-u8 port)))
-    (when (and (= octet1 (char->integer #\#))
-	       (= octet2 (char->integer #\!)))
-      (read-and-discard-up-to-and-including-line-ending port))))
 
 (define (read-initial port)
   (%read-sexp port #t))

@@ -41,7 +41,7 @@ EXTRA_DIST= last-revision						\
   ikarus.io.ss ikarus.time-and-date.ss ikarus.not-yet-implemented.ss	\
   ikarus.string-to-number.ss ikarus.compiler.source-optimizer.ss	\
   ikarus.compiler.tag-annotation-analysis.ss ikarus.ontology.ss		\
-  ikarus.reader.annotated.ss ikarus.pointers.ss ikarus.equal.ss		\
+  ikarus.pointers.ss ikarus.equal.ss					\
   ikarus.symbol-table.ss ikarus.apropos.ss				\
   ikarus.debugger.ss							\
   tests/SRFI-1.ss							\
