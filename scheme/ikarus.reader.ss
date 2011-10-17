@@ -17,7 +17,7 @@
 
 
 (library (ikarus.reader)
-  (export read get-datum read-initial read-token
+  (export read get-datum read-token
           read-annotated read-script-annotated
 	  read-source-file
 	  read-library-source-file
@@ -88,6 +88,24 @@
   (syntax-rules ()
     ((_ (?who ?stx) . ?body)
      (define-syntax ?who (lambda (?stx) . ?body)))))
+
+(define-syntax unwind-protect
+  ;;Not a general UNWIND-PROTECT for Scheme, but fine here because we do
+  ;;not use continuations to escape from the body.
+  ;;
+  (syntax-rules ()
+    ((_ ?body ?cleanup0 ?cleanup ...)
+     (let ((cleanup (lambda () ?cleanup0 ?cleanup ...)))
+       (with-exception-handler
+	   (lambda (E)
+	     (cleanup)
+	     (raise E))
+	 (lambda ()
+	   (call-with-values
+	       (lambda () ?body)
+	     (lambda return-values
+	       (cleanup)
+	       (apply values return-values)))))))))
 
 
 ;;;; reading and peeking characters helpers
@@ -310,7 +328,8 @@
 ;;(define CHAR-FIXNUM-F		(unsafe.char->fixnum #\F))
 (define CHAR-FIXNUM-a-10	(unsafe.fx- CHAR-FIXNUM-a 10))
 (define CHAR-FIXNUM-A-10	(unsafe.fx- CHAR-FIXNUM-A 10))
-
+(define CHAR-FIXNUM-SHARP	(unsafe.char->fixnum #\#))
+(define CHAR-FIXNUM-BANG	(unsafe.char->fixnum #\!))
 (define CHAR-FIXNUM-GREATEST-ASCII
   #\x7F #;($fixnum->char 127))
 
@@ -437,17 +456,25 @@
   ;;Open FILENAME with  the native transcoder, then read  and return the
   ;;first datum.
   ;;
-  (read-annotated (open-input-file filename)))
+  (let ((port (open-input-file filename)))
+    (unwind-protect
+	(read-annotated port)
+      (close-input-port port))))
 
 (define (read-source-file filename)
   ;;Open FILENAME with  the native transcoder, then read  and return all
   ;;the datums in a list.
   ;;
   (let ((port (open-input-file filename)))
-    (%read-everything-annotated port (read-annotated port))))
+    (unwind-protect
+	(%read-everything-annotated port (read-annotated port))
+      (close-input-port))))
 
 (define (read-script-source-file filename)
-  ;;Consume  the  first  line from  the  file  if  the first  two  bytes
+  ;;Open FILENAME with  the native transcoder, then read  and return all
+  ;;the datums in a list.
+  ;;
+  ;;Discard  the  first  line from  the  file  if  the first  two  bytes
   ;;represent  the sharp-bang  sequence "#!";  this is  useful  to allow
   ;;scripts on Unix systems to start with the command line needed to use
   ;;them.
@@ -455,15 +482,17 @@
   ;;Notice that this  will discard valid sharp-bang comments  if the are
   ;;at the very beginning of a file.
   ;;
-  (let ((port (open-file-input-port filename)))
-    (let-values (((octet1 octet2) (lookahead-two-u8 port)))
-      (when (and (= octet1 (char->integer #\#))
-		 (= octet2 (char->integer #\!)))
-	(read-and-discard-up-to-and-including-line-ending port)))
-    (let ((port (transcoded-port port (native-transcoder))))
-      (%read-everything-annotated port (read-script-annotated port))))
-  #;(let ((port (open-input-file filename)))
-    (%read-everything-annotated port (read-script-annotated port))))
+  (let* ((port		(open-file-input-port filename))
+	 (sharp-bang?	(let-values (((octet1 octet2) (lookahead-two-u8 port)))
+			  (and (= octet1 CHAR-FIXNUM-SHARP)
+			       (= octet2 CHAR-FIXNUM-BANG))))
+	 (port		(transcoded-port port (native-transcoder))))
+    (unwind-protect
+	(begin
+	  (when sharp-bang?
+	    (read-and-discard-up-to-and-including-line-ending port))
+	  (%read-everything-annotated port (read-script-annotated port)))
+      (close-input-port port))))
 
 ;;; --------------------------------------------------------------------
 
@@ -487,9 +516,6 @@
     (%assert-argument-is-source-code-port 'read-token port)
     (start-tokenising port))))
 
-(define (read-initial port)
-  (%read-sexp port #t))
-
 (define (read-annotated port)
   (%read-annotated-sexp port #f))
 
@@ -501,9 +527,7 @@
 
 (define (%read-everything-annotated port obj)
   (if (eof-object? obj)
-      (begin
-	(close-input-port port)
-	'())
+      '()
     (cons obj (%read-everything-annotated port (read-annotated port)))))
 
 (define (%read-sexp port script?)
