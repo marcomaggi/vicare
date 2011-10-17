@@ -621,18 +621,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'script))
-
-  #;(check
-      (let ((port (open-bytevector-input-port (string->utf8 "#!ciao\n(1 2)"))))
-	(drop-first-line-if-sharp-bang port)
-	(let ((port (transcoded-port port (make-transcoder (utf-8-codec)))))
-	  (read port)))
-    => '(1 2))
-
-  #t)
-
-
 ;;;; done
 
 (check-report)
