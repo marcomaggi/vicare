@@ -483,7 +483,11 @@
   ;;at the very beginning of a file.
   ;;
   (let* ((port		(open-file-input-port filename))
-	 (sharp-bang?	(let-values (((octet1 octet2) (lookahead-two-u8 port)))
+	 (sharp-bang?	(let-values (((octet1 octet2)
+				      ;;If  an error  happens  here PORT
+				      ;;will  be   closed  by  the  port
+				      ;;guardian.
+				      (lookahead-two-u8 port)))
 			  (and (= octet1 CHAR-FIXNUM-SHARP)
 			       (= octet2 CHAR-FIXNUM-BANG))))
 	 (port		(transcoded-port port (native-transcoder))))
