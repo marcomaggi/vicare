@@ -215,7 +215,9 @@
 ;;(Marco Maggi; Oct 17, 2011).
 ;;
 
-(define (make-compound-position port)
+(define-inline (make-compound-position port)
+  (port-textual-position port))
+#;(define (make-compound-position port)
   (let* ((textual-position	(port-textual-position port))
 	 (byte			(vector-ref textual-position 0))
 	 (character		(vector-ref textual-position 1))
@@ -228,6 +230,15 @@
     (cons (port-id port) byte-offset)))
 
 (define (make-compound-position/with-offset port offset)
+  (let ((textual-position (port-textual-position port)))
+    ;;FIXME  In rare  cases:  applying  the offset  may  make the  colum
+    ;;negative!!!  But notice that, at present, the OFFSET is always -1.
+    (make-source-position-condition (port-id port)
+				    (+ offset (source-position-byte      textual-position))
+				    (+ offset (source-position-character textual-position))
+				    (source-position-line textual-position)
+				    (+ offset (source-position-column    textual-position)))))
+#;(define (make-compound-position/with-offset port offset)
   (let* ((textual-position	(port-textual-position port))
 	 (byte			(vector-ref textual-position 0))
 	 (character		(vector-ref textual-position 1))

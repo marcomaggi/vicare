@@ -3886,9 +3886,8 @@ linefeed characters as line-ending.
 
 
 @defun port-textual-position @var{port}
-Given a textual port, return the current textual position as a vector:
-@math{0}-based byte position, @math{0}-based character offset,
-@math{1}-based row number, @math{1}-based column number.
+Given a textual port, return the current textual position as a condition
+object of type @condition{source-position}.
 @end defun
 
 @c page
