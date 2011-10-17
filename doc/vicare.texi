@@ -1703,9 +1703,21 @@ has the following fields:
 A Scheme string representing the port identifier, for example the file
 name.
 
+@item byte
+An exact non--negative zero--based integer representing the byte offset
+of the position in the source.
+
 @item character
-An exact non--negative integer representing the character offset of the
-position in the source.
+An exact non--negative zero--based integer representing the character
+offset of the position in the source.
+
+@item line
+An exact non--negative one--based integer representing the line offset
+of the position in the source.
+
+@item column
+An exact non--negative one--based integer representing the column offset
+of the position in the source.
 @end table
 @end deftp
 

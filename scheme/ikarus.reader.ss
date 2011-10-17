@@ -192,39 +192,82 @@
 (define-struct annotation
   (expression source stripped))
 
-(define (annotate-simple datum pos port)
-  (make-annotation datum pos #;(cons (port-id port) pos) datum))
+(define (annotate-simple datum textual-pos port)
+  (make-annotation datum
+		   (cons (source-position-port-id   textual-pos)
+			 (source-position-character textual-pos))
+		   #;(cons (port-id port) byte)
+		   datum))
 
-(define (annotate stripped expression pos port)
-  (make-annotation expression pos #;(cons (port-id port) pos) stripped))
+(define (annotate stripped expression textual-pos port)
+  (make-annotation expression
+		   (cons (source-position-port-id   textual-pos)
+			 (source-position-character textual-pos))
+		   #;(cons (port-id port) byte)
+		   stripped))
 
 
 ;;;; source position handling
+;;
+;;The original Ikarus'  code tracked only byte offset;  the POS argument
+;;was  the byte  offset; later  I changed  the POS  argument to  a pair:
+;;port-id, byte  offset; now POS is a  &source-position condition object
+;;(Marco Maggi; Oct 17, 2011).
+;;
 
 (define (make-compound-position port)
+  (let* ((textual-position	(port-textual-position port))
+	 (byte			(vector-ref textual-position 0))
+	 (character		(vector-ref textual-position 1))
+	 (line			(vector-ref textual-position 2))
+	 (column		(vector-ref textual-position 3)))
+    (make-source-position-condition (port-id port) byte character line column)))
+#;(define (make-compound-position port)
   (let* ((textual-position	(port-textual-position port))
 	 (byte-offset		(vector-ref textual-position 0)))
     (cons (port-id port) byte-offset)))
 
 (define (make-compound-position/with-offset port offset)
   (let* ((textual-position	(port-textual-position port))
+	 (byte			(vector-ref textual-position 0))
+	 (character		(vector-ref textual-position 1))
+	 (line			(vector-ref textual-position 2))
+	 (column		(vector-ref textual-position 3)))
+    ;;FIXME  In rare  cases:  applying  the offset  may  make the  colum
+    ;;negative!!!  But notice that, at present, the OFFSET is always -1.
+    (make-source-position-condition (port-id port)
+				    (+ byte      offset)
+				    (+ character offset)
+				    line
+				    (+ column    offset))))
+#;(define (make-compound-position/with-offset port offset)
+  (let* ((textual-position	(port-textual-position port))
 	 (byte-offset		(vector-ref textual-position 0)))
     (cons (port-id port) (and byte-offset (+ byte-offset offset)))))
 
 (define-inline (compound-position-char textual-pos)
+  (source-position-character textual-pos))
+#;(define-inline (compound-position-char textual-pos)
   (cdr textual-pos))
+
+(define-inline (compound-position-line textual-pos)
+  (source-position-line textual-pos))
+
+(define-inline (compound-position-column textual-pos)
+  (source-position-column textual-pos))
 
 
 ;;;; exception raisers
 
-(define (die/lex pos who msg . irritants)
+(define (die/lex textual-pos who msg . irritants)
   (raise
    (condition (make-lexical-violation)
 	      (make-message-condition msg)
 	      (if (null? irritants)
 		  (condition)
 		(make-irritants-condition irritants))
-	      (let ((port-id (car pos))
+	      textual-pos
+	      #;(let ((port-id (car pos))
 		    (byte    (cdr pos)))
 		(make-source-position-condition port-id byte #f #f #f))
 	      )))
@@ -1992,8 +2035,11 @@
 
   (let-values (((token pos) (start-tokenising/pos port)))
     (cond ((eof-object? token)
-	   (%error (string-append "unexpected end of file while reading list started at "
-				  (number->string (compound-position-char start-pos)))))
+	   (%error (string-append "unexpected end of file while reading list \
+                                   started at line "
+				  (number->string (compound-position-line   start-pos))
+				  " column "
+				  (number->string (compound-position-column start-pos)))))
 
 	  ;;the correct ending parenthesis was found
 	  ((eq? token matching-paren)

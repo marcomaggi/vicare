@@ -710,6 +710,8 @@
     (source-position-port-id                     i)
     (source-position-byte                        i)
     (source-position-character                   i)
+    (source-position-line			 i)
+    (source-position-column			 i)
 
     ($apply-nonprocedure-error-handler           )
     ($incorrect-args-error-handler               )

@@ -2156,13 +2156,13 @@
     (cond ((eof-object? ch)
 	   ch)
 	  ((unsafe.char= ch #\newline)
-	   (set-cookie-character-offset! cookie (+ (cookie-character-offset cookie)))
-	   (set-cookie-row-number!       cookie (+ (cookie-row-number       cookie)))
+	   (set-cookie-character-offset! cookie (+ 1 (cookie-character-offset cookie)))
+	   (set-cookie-row-number!       cookie (+ 1 (cookie-row-number       cookie)))
 	   (set-cookie-column-number!    cookie 1)
 	   ch)
 	  (else
-	   (set-cookie-character-offset! cookie (+ (cookie-character-offset cookie)))
-	   (set-cookie-column-number!    cookie (+ (cookie-column-number    cookie)))
+	   (set-cookie-character-offset! cookie (+ 1 (cookie-character-offset cookie)))
+	   (set-cookie-column-number!    cookie (+ 1 (cookie-column-number    cookie)))
 	   ch))))
 
 (define (port-textual-position port)
