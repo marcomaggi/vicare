@@ -1447,7 +1447,7 @@
 	   (let ((N (cdr token)))
 	     (cond ((assq N locs-alist)
 		    => (lambda (pair)
-			 ;;;     expr       expr^
+;;;     expr       expr^
 			 (values (cdr pair) 'unused locs-alist kont)))
 		   (else
 		    (let* ((loc         (let ((value  #f)
@@ -1968,7 +1968,7 @@
   (define-inline (%error-1 msg . irritants)
     (die/p-1 port 'read msg . irritants))
   (define-inline (%paren-symbol->char paren)
-    (if (eq? paren 'RPAREN) #\) #\]))
+    (if (eq? paren 'rparen) #\) #\]))
   (define (%mismatched-paren-error)
     (%error (format "mismatching parenthesis while reading list, \
                      expecting \"~a\" found \"~a\""
@@ -2005,13 +2005,13 @@
 
 	  ;;It is an item.
 	  (else
-	   (let-values (((the-car the-car^ locs kont)
+	   (let-values (((the-car the-car/ann locs kont)
 			 (parse-token port locs kont token pos)))
-	     (let-values (((the-cdr the-cdr^ locs kont) (recurse-to-read-cdr)))
-	       (let ((the-list  (cons the-car  the-cdr))
-		     (the-list^ (cons the-car^ the-cdr^)))
-		 (values the-list the-list^ locs
-			 (extend-k-pair the-list the-list^ the-car the-cdr kont)))))))))
+	     (let-values (((the-cdr the-cdr/ann locs kont) (recurse-to-read-cdr)))
+	       (let ((the-list      (cons the-car     the-cdr))
+		     (the-list/ann  (cons the-car/ann the-cdr/ann)))
+		 (values the-list the-list/ann locs
+			 (extend-k-pair the-list the-list/ann the-car the-cdr kont)))))))))
 
 
 (define (extend-k-pair x x^ a d k)
