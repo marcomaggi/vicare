@@ -52,8 +52,9 @@
           no-nans-violation? make-no-nans-violation
           interrupted-condition? make-interrupted-condition
           make-source-position-condition source-position-condition?
-          source-position-port-id source-position-character
-	  source-position-byte
+          source-position-port-id
+	  source-position-byte source-position-character
+	  source-position-line source-position-column
 
           &condition-rtd &condition-rcd &message-rtd &message-rcd
           &warning-rtd &warning-rcd &serious-rtd &serious-rcd
@@ -136,8 +137,10 @@
 
           interrupted-condition? make-interrupted-condition
           make-source-position-condition source-position-condition?
-          source-position-port-id source-position-character
-	  source-position-byte))
+          source-position-port-id
+	  source-position-byte source-position-character
+	  source-position-line source-position-column
+	  ))
 
   (define-record-type &condition
     (nongenerative))
@@ -350,7 +353,9 @@
     make-source-position-condition source-position-condition?
     (port-id	source-position-port-id)
     (byte	source-position-byte)
-    (character	source-position-character))
+    (character	source-position-character)
+    (line	source-position-line)
+    (column	source-position-column))
 
   ;;; Vicare specific conditions
   (define-condition-type &i/o-eagain &i/o

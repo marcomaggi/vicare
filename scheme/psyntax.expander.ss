@@ -4049,7 +4049,12 @@
 
   (define (position->condition x)
     (if (pair? x)
-        (make-source-position-condition (car x) (cdr x) #f)
+	(let ((port-id		(car x))
+	      (byte		(cdr x))
+	      (character	#f)
+	      (line		#f)
+	      (column		#f))
+	  (make-source-position-condition port-id byte character line column))
       (condition)))
 
   (define (extract-position-condition x)

@@ -226,7 +226,7 @@
 		(make-irritants-condition irritants))
 	      (let ((port-id (car pos))
 		    (byte    (cdr pos)))
-		(make-source-position-condition port-id byte #f))
+		(make-source-position-condition port-id byte #f #f #f))
 	      )))
 
 (define-inline (die/pos port offset who msg . irritants)
