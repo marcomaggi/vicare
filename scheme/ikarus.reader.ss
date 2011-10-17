@@ -158,16 +158,16 @@
 ;;Field accessor: loc-value LOC
 ;;Field mutator: set-loc-value! LOC NEW-VALUE
 ;;
-;;Field name: value^
-;;Field accessor: loc-value^ LOC
-;;Field mutator: set-loc-value^! LOC NEW-VALUE^
+;;Field name: value/ann
+;;Field accessor: loc-value/ann LOC
+;;Field mutator: set-loc-value/ann! LOC NEW-VALUE^
 ;;
 ;;Field name: set?
 ;;Field accessor: loc-set? LOC
 ;;Field mutator: set-loc-set?! LOC NEW-SET?
 ;;
 (define-struct loc
-  (value value^ set?))
+  (value value/ann set?))
 
 ;;Constructor: make-annotation EXPR SOURCE STRIPPED
 ;;
@@ -436,16 +436,16 @@
 	  locs-alist)
 	(kont)
 	(if (loc? expr)
-	    (loc-value^ expr)
+	    (loc-value/ann expr)
 	  (%return-annotated expr^))))))
 
 (define (read-expr port locs-alist kont)
   (let-values (((token pos) (start-tokenising/pos port)))
-    (parse-token port locs-alist kont token pos)))
+    (finalise-tokenisation port locs-alist kont token pos)))
 
 (define (read-expr-script-initial port locs-alist kont)
   (let-values (((token pos) (tokenize-script-initial+pos port)))
-    (parse-token port locs-alist kont token pos)))
+    (finalise-tokenisation port locs-alist kont token pos)))
 
 (define (reduce-loc! port)
   ;;Subroutine  of %READ-SEXP  and  %READ-ANNOTATED-SEXP.  Finalise  the
@@ -500,8 +500,8 @@
   ;;discarding comments and  whitespaces; after discarding something try
   ;;to  parse the  next datum  with START-TOKENISING/POS;  if  the first
   ;;character     is    a     #    delegate     actual     parsing    to
-  ;;FINISH-TOKENISATION-OF-HASH-DATUM/C; else delegate actual parsing to
-  ;;FINISH-TOKENISATION-OF-NON-HASH-DATUM/C.
+  ;;ADVANCE-TOKENISATION-OF-HASH-DATUM/C;  else delegate  actual parsing
+  ;;to ADVANCE-TOKENISATION-OF-NON-HASH-DATUM/C.
   ;;
   ;;Return two values:  a datum representing the next  token, a compound
   ;;position value.
@@ -551,7 +551,7 @@
 
 		   ;;tokenize datums whose syntax starts with #
 		   (else
-		    (values (finish-tokenisation-of-hash-datum/c ch1 port) pos1)))))
+		    (values (advance-tokenisation-of-hash-datum/c ch1 port) pos1)))))
 
 	  ;;discard whitespaces
 	  ((char-whitespace? ch)
@@ -559,15 +559,15 @@
 
 	  ;;tokenise every datum whose syntax does not start with a #
 	  (else
-	   (values (finish-tokenisation-of-non-hash-datum/c ch port) pos)))))
+	   (values (advance-tokenisation-of-non-hash-datum/c ch port) pos)))))
 
 
 (define (start-tokenising/pos port)
   ;;Recursive  function.  Start  tokenizing  the next  datum from  PORT,
   ;;discarding  comments  and  whitespaces; after  discarding  something
   ;;recurse calling  itself; if  the first character  is a  #\# delegate
-  ;;actual parsing to FINISH-TOKENISATION-OF-HASH-DATUM/C; else delegate
-  ;;actual parsing to FINISH-TOKENISATION-OF-NON-HASH-DATUM/C.
+  ;;actual   parsing   to   ADVANCE-TOKENISATION-OF-HASH-DATUM/C;   else
+  ;;delegate actual parsing to ADVANCE-TOKENISATION-OF-NON-HASH-DATUM/C.
   ;;
   ;;Return two values:  a datum representing the next  token, a compound
   ;;position value.
@@ -606,7 +606,7 @@
 
 		   ;;tokenize datums whose syntax starts with #
 		   (else
-		    (values (finish-tokenisation-of-hash-datum/c ch1 port) pos1)))))
+		    (values (advance-tokenisation-of-hash-datum/c ch1 port) pos1)))))
 
 	  ;;discard whitespaces
 	  ((char-whitespace? ch)
@@ -614,15 +614,15 @@
 
 	  ;;tokenise every datum whose syntax does not start with a #
 	  (else
-	   (values (finish-tokenisation-of-non-hash-datum/c ch port) pos)))))
+	   (values (advance-tokenisation-of-non-hash-datum/c ch port) pos)))))
 
 
 (define (start-tokenising port)
   ;;Recursive  function.  Start  tokenizing  the next  datum from  PORT,
   ;;discarding  comments  and  whitespaces; after  discarding  something
   ;;recurse  calling itself;  if the  first  character is  a #  delegate
-  ;;actual parsing to FINISH-TOKENISATION-OF-HASH-DATUM/C; else delegate
-  ;;actual parsing to FINISH-TOKENISATION-OF-NON-HASH-DATUM/C.
+  ;;actual   parsing   to   ADVANCE-TOKENISATION-OF-HASH-DATUM/C;   else
+  ;;delegate actual parsing to ADVANCE-TOKENISATION-OF-NON-HASH-DATUM/C.
   ;;
   ;;Return a datum representing the next token.
   ;;
@@ -660,7 +660,7 @@
 
 		   ;;tokenize datums whose syntax starts with #
 		   (else
-		    (finish-tokenisation-of-hash-datum/c ch1 port)))))
+		    (advance-tokenisation-of-hash-datum/c ch1 port)))))
 
 	  ;;discard whitespaces
 	  ((char-whitespace? ch)
@@ -668,10 +668,10 @@
 
 	  ;;tokenise every datum whose syntax does not start with a #
 	  (else
-	   (finish-tokenisation-of-non-hash-datum/c ch port)))))
+	   (advance-tokenisation-of-non-hash-datum/c ch port)))))
 
 
-(define (finish-tokenisation-of-non-hash-datum/c ch port)
+(define (advance-tokenisation-of-non-hash-datum/c ch port)
   ;;Parse standalone  datums and compound  datums whose syntax  does not
   ;;start with a # character.   Read characters from PORT.  Handle CH as
   ;;the first character of the datum, already consumed from PORT.
@@ -700,7 +700,7 @@
   (define-inline (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
   (cond ((eof-object? ch)
-	 (error 'finish-tokenisation-of-non-hash-datum/c "hmmmm eof")
+	 (error 'advance-tokenisation-of-non-hash-datum/c "hmmmm eof")
 	 (eof-object))
 
 	((unsafe.char= #\( ch)   'lparen)
@@ -787,7 +787,7 @@
 	 (%error-1 "invalid syntax" ch))))
 
 
-(define (finish-tokenisation-of-hash-datum/c ch port)
+(define (advance-tokenisation-of-hash-datum/c ch port)
   ;;Parse standalone datums and compound datums whose syntax starts with
   ;;a # character.   Read characters from PORT.  Handle  CH as the first
   ;;character of the datum after #, already consumed from PORT.
@@ -1294,7 +1294,7 @@
   (main))
 
 
-(define (parse-token port locs-alist kont token pos)
+(define (finalise-tokenisation port locs-alist kont token pos)
   (define-inline (%error   msg . irritants)
     (die/p   port 'read msg . irritants))
   (define-inline (%error-1 msg . irritants)
@@ -1361,15 +1361,14 @@
 		 (cond ((eof-object? token1)
 			(%error (format "invalid EOF after ~a read macro" quoting-keyword)))
 		       (else
-			(parse-token port locs-alist kont token1 pos)))))
-	     (let-values (((expr expr^ locs-alist kont)
-			   (%read-quoted-sexp)))
-	       (let ((d  (list expr))
-		     (d^ (list expr^)))
-		 (let ((x  (cons quoting-keyword d))
-		       (x^ (cons (annotate-simple quoting-keyword pos port) d^)))
-		   (values x (annotate x x^ pos port) locs-alist
-			   (extend-k-pair d d^ expr '() kont)))))))
+			(finalise-tokenisation port locs-alist kont token1 pos)))))
+	     (let-values (((expr expr/ann locs-alist kont) (%read-quoted-sexp)))
+	       (let ((d     (list expr))
+		     (d/ann (list expr/ann)))
+		 (let ((x     (cons quoting-keyword d))
+		       (x/ann (cons (annotate-simple quoting-keyword pos port) d/ann)))
+		   (values x (annotate x x/ann pos port) locs-alist
+			   (extend-k-pair d d/ann expr '() kont)))))))
 
 	  ;;Read an expression marked with graph notation for locations.
 	  ;;
@@ -1403,7 +1402,7 @@
 	  ;;
 	  ((eq? (car token) 'mark)
 	   (let ((N (cdr token)))
-	     (let-values (((expr expr^ locs-alist kont)
+	     (let-values (((expr expr/ann locs-alist kont)
 			   (read-expr port locs-alist kont)))
 	       (cond ((assq N locs-alist)
 		      => (lambda (pair)
@@ -1415,17 +1414,17 @@
 			       ;;contexts, to store the positions in LOC
 			       ;;itself?
 			       (%error "duplicate location mark for graph notation" N))
-			     (set-loc-value!  loc expr)
-			     (set-loc-value^! loc expr^)
-			     (set-loc-set?!   loc #t)
-			     (values expr expr^ locs-alist kont))))
+			     (set-loc-value!     loc expr)
+			     (set-loc-value/ann! loc expr/ann)
+			     (set-loc-set?!      loc #t)
+			     (values expr expr/ann locs-alist kont))))
 		     (else
-		      (let* ((loc         (let ((value  expr)
-						(value^ 'unused)
-						(set?   #t))
-					    (make-loc value value^ set?)))
+		      (let* ((loc         (let ((value     expr)
+						(value/ann 'unused)
+						(set?      #t))
+					    (make-loc value value/ann set?)))
 			     (locs-alist1 (cons (cons N loc) locs-alist)))
-			(values expr expr^ locs-alist1 kont)))))))
+			(values expr expr/ann locs-alist1 kont)))))))
 
 	  ;;Process reference to graph notation location.  Example:
 	  ;;
@@ -1451,10 +1450,10 @@
 ;;;     expr       expr^
 			 (values (cdr pair) 'unused locs-alist kont)))
 		   (else
-		    (let* ((loc         (let ((value  #f)
-					      (value^ 'unused)
-					      (set?   #f))
-					  (make-loc value value^ set?)))
+		    (let* ((loc         (let ((value     #f)
+					      (value/ann 'unused)
+					      (set?      #f))
+					  (make-loc value value/ann set?)))
 			   (locs-alist1 (cons (cons N loc) locs-alist)))
 		      (values loc 'unused locs-alist1 kont))))))
 
@@ -1952,6 +1951,11 @@
   ;;Finish tokenisation  of list datum  reading from PORT; to  be called
   ;;after the opening parenthesis has been already tokenised.
   ;;
+  ;;This function parses the next datum then calls itself recursively to
+  ;;parse the  remaining items; whenever  this function returns,  it has
+  ;;successfully read  all the  items in the  list including  the ending
+  ;;parenthesis.
+  ;;
   ;;MATCHING-PAREN must be either the symbol RPAREN or the symbol RBRACK
   ;;and it represents the token matching the opening parenthesis.
   ;;
@@ -2006,7 +2010,7 @@
 
 	  ;;It is an item.
 	  (else
-	   (let*-values (((the-car the-car/ann locs1 kont1) (parse-token port locs kont token pos))
+	   (let*-values (((the-car the-car/ann locs1 kont1) (finalise-tokenisation port locs kont token pos))
 	   		 ((the-cdr the-cdr/ann locs2 kont2) (recurse-to-read-cdr locs1 kont1)))
 	     (let ((the-list      (cons the-car     the-cdr))
 		   (the-list/ann  (cons the-car/ann the-cdr/ann)))
@@ -2020,11 +2024,11 @@
 	   (let ((a (car x)))
 	     (when (loc? a)
 	       (set-car! x (loc-value a))
-	       (set-car! x^ (loc-value^ a))))
+	       (set-car! x^ (loc-value/ann a))))
 	   (let ((d (cdr x)))
 	     (when (loc? d)
 	       (set-cdr! x (loc-value d))
-	       (set-cdr! x^ (loc-value^ d))))
+	       (set-cdr! x^ (loc-value/ann d))))
 	   (k)))
 	(else k)))
 
@@ -2038,7 +2042,7 @@
 		       (if (loc? a)
 			   (lambda ()
 			     (vector-set! v i (loc-value a))
-			     (vector-set! v^ i (loc-value^ a))
+			     (vector-set! v^ i (loc-value/ann a))
 			     (k))
 			 k)
 		       (fxsub1 i)
@@ -2059,7 +2063,7 @@
 	  ((eq? token 'dot)
 	   (die/p-1 p 'read "unexpected \".\" while reading a vector"))
 	  (else
-	   (let-values (((a a^ locs k) (parse-token p locs k token pos)))
+	   (let-values (((a a^ locs k) (finalise-tokenisation p locs k token pos)))
 	     (read-vector p locs k (fxadd1 count)
 			  (cons a ls) (cons a^ ls^)))))))
 
@@ -2076,7 +2080,7 @@
      ((eq? t 'dot)
       (die/p-1 p 'read "unexpected . while reading a bytevector"))
      (else
-      (let-values (((a a^ locs k) (parse-token p locs k t pos)))
+      (let-values (((a a^ locs k) (finalise-tokenisation p locs k t pos)))
 	(unless (and (fixnum? a) (fx<= 0 a) (fx<= a 255))
 	  (die/ann a^ 'read "invalid value in a u8 bytevector" a))
 	(read-u8-bytevector p locs k (fxadd1 count) (cons a ls)))))))
@@ -2101,7 +2105,7 @@
      ((eq? t 'dot)
       (die/p-1 p 'read "unexpected . while reading a bytevector"))
      (else
-      (let-values (((a a^ locs k) (parse-token p locs k t pos)))
+      (let-values (((a a^ locs k) (finalise-tokenisation p locs k t pos)))
 	(unless (and (fixnum? a) (fx<= -128 a) (fx<= a 127))
 	  (die/ann a^ 'read "invalid value in a s8 bytevector" a))
 	(read-s8-bytevector p locs k (fxadd1 count) (cons a ls)))))))
