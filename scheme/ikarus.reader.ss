@@ -1961,8 +1961,8 @@
   (%finish-tokenisation-of-list port locs kont matching-paren wrong-paren #t))
 
 (define (%finish-tokenisation-of-list port locs kont matching-paren wrong-paren reading-first-item?)
-  (define-inline (recurse-to-read-cdr)
-    (%finish-tokenisation-of-list port locs kont matching-paren wrong-paren #f))
+  (define-inline (recurse-to-read-cdr locs1 kont1)
+    (%finish-tokenisation-of-list port locs1 kont1 matching-paren wrong-paren #f))
   (define-inline (%error msg . irritants)
     (die/p port 'read msg . irritants))
   (define-inline (%error-1 msg . irritants)
@@ -1992,26 +1992,25 @@
 	  ((eq? token 'dot)
 	   (when reading-first-item?
 	     (%error "invalid dot as first item while reading list"))
-	   (let-values (((the-cdr the-cdr^ locs kont) (read-expr port locs kont)))
-	     (let-values (((token pos^) (start-tokenising/pos port)))
-	       (cond ((eq? token matching-paren)
-		      (values the-cdr the-cdr^ locs kont))
-		     ((eq? token wrong-paren)
-		      (%mismatched-paren-error))
-		     ((eq? token 'dot)
-		      (%error "invalid second dot while reading list"))
-		     (else
-		      (%error "invalid second form after dot while reading list" token))))))
+	   (let*-values (((the-cdr the-cdr/ann locs1 kont1) (read-expr port locs kont))
+	   		 ((token1 pos1)                     (start-tokenising/pos port)))
+	     (cond ((eq? token1 matching-paren)
+		    (values the-cdr the-cdr/ann locs1 kont1))
+		   ((eq? token1 wrong-paren)
+		    (%mismatched-paren-error))
+		   ((eq? token1 'dot)
+		    (%error "invalid second dot while reading list"))
+		   (else
+		    (%error "invalid second form after dot while reading list" token1)))))
 
 	  ;;It is an item.
 	  (else
-	   (let-values (((the-car the-car/ann locs kont)
-			 (parse-token port locs kont token pos)))
-	     (let-values (((the-cdr the-cdr/ann locs kont) (recurse-to-read-cdr)))
-	       (let ((the-list      (cons the-car     the-cdr))
-		     (the-list/ann  (cons the-car/ann the-cdr/ann)))
-		 (values the-list the-list/ann locs
-			 (extend-k-pair the-list the-list/ann the-car the-cdr kont)))))))))
+	   (let*-values (((the-car the-car/ann locs1 kont1) (parse-token port locs kont token pos))
+	   		 ((the-cdr the-cdr/ann locs2 kont2) (recurse-to-read-cdr locs1 kont1)))
+	     (let ((the-list      (cons the-car     the-cdr))
+		   (the-list/ann  (cons the-car/ann the-cdr/ann)))
+	       (values the-list the-list/ann locs2
+		       (extend-k-pair the-list the-list/ann the-car the-cdr kont2))))))))
 
 
 (define (extend-k-pair x x^ a d k)
