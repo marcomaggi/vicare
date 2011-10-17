@@ -861,7 +861,8 @@
 
    ;; #! comments and such
    ((unsafe.char= #\! ch)
-    (let ((sym (finish-tokenisation-of-identifier '() port)))
+    (let* ((token (finish-tokenisation-of-identifier '() port))
+	   (sym   (cdr token)))
       (case sym
 	((vicare ikarus)
 	 (set-port-mode! port 'vicare)
