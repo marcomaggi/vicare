@@ -21,22 +21,24 @@
     ;; public functions
     read get-datum get-annotated-datum
 
-    ;; internal functions only for Vicare
-    read-source-file read-script-source-file read-library-source-file
-
+    ;; annotated datum inspection
     annotation? annotation-expression
-    annotation-source annotation-stripped)
+    annotation-source annotation-stripped
+
+    ;; internal functions only for Vicare
+    read-source-file read-script-source-file
+    read-library-source-file)
   (import (except (ikarus)
 		  ;; public functions
 		  read get-datum get-annotated-datum
 
-		  read-source-file read-script-source-file
-		  read-library-source-file
-
-		  read-char
-
+		  ;; annotated datum inspection
 		  annotation? annotation-expression
-		  annotation-source annotation-stripped)
+		  annotation-source annotation-stripped
+
+		  ;; internal functions only for Vicare
+		  read-source-file read-script-source-file
+		  read-library-source-file)
     (only (ikarus.string-to-number)
 	  define-string->number-parser)
     (ikarus system $chars)
@@ -113,19 +115,12 @@
 
 ;;;; reading and peeking characters helpers
 
-(define-inline (read-char port)
-  ;;Attempt to  read a  character from PORT.   If successful  return the
-  ;;character, if  an error occurs raise  an exception, if  EOF is found
-  ;;return the EOF object.
-  ;;
-  (get-char-and-track-textual-position port))
-
 (define-syntax* (read-char-no-eof stx)
   (syntax-case stx ()
     ((read-char-no-eof (?port ?ch-name ?raise-error) . ?cond-clauses)
      (and (identifier? #'?ch-name)
 	  (identifier? #'?raise-error))
-     #'(let ((?ch-name (read-char ?port)))
+     #'(let ((?ch-name (get-char-and-track-textual-position ?port)))
 	 (cond ((eof-object? ?ch-name)
 		(?raise-error))
 	       . ?cond-clauses)))))
@@ -629,7 +624,7 @@
   (define-inline (%error msg . irritants)
     (die/p port 'tokenize msg . irritants))
   (let* ((pos (make-compound-position port))
-	 (ch  (read-char port)))
+	 (ch  (get-char-and-track-textual-position port)))
     (cond ((eof-object? ch)
 	   (values ch pos))
 
@@ -642,7 +637,7 @@
 	  ((unsafe.char= ch #\#)
 	   ;;FIXME Why are we taking the position again here?
 	   (let* ((pos1 (make-compound-position port))
-		  (ch1  (read-char port)))
+		  (ch1  (get-char-and-track-textual-position port)))
 	     (cond ((eof-object? ch1)
 		    (%error "invalid eof after #"))
 
@@ -685,7 +680,7 @@
     (start-tokenising port))
   (define-inline (%error msg . irritants)
     (die/p port 'tokenize msg . irritants))
-  (let ((ch (read-char port)))
+  (let ((ch (get-char-and-track-textual-position port)))
     (cond ((eof-object? ch)
 	   ch)
 
@@ -696,7 +691,7 @@
 
 	  ;;tokenise everything starting with a #
 	  ((unsafe.char= ch #\#)
-	   (let ((ch1 (read-char port)))
+	   (let ((ch1 (get-char-and-track-textual-position port)))
 	     (cond ((eof-object? ch1)
 		    (%error "invalid EOF after #"))
 
@@ -767,7 +762,7 @@
 	   (cond ((eof-object? ch1)
 		  '(macro . unquote))
 		 ((unsafe.char= ch1 #\@)
-		  (read-char port)
+		  (get-char-and-track-textual-position port)
 		  '(macro . unquote-splicing))
 		 (else
 		  '(macro . unquote)))))
@@ -809,7 +804,7 @@
 
 		 ;;peculiar identifier: -> <subsequent>*
 		 ((unsafe.char= ch1 #\>)
-		  (read-char port)
+		  (get-char-and-track-textual-position port)
 		  (finish-tokenisation-of-identifier '(#\> #\-) port))
 
 		 ;;number
@@ -906,7 +901,7 @@
    ((unsafe.char= #\, ch)
     (let ((ch1 (peek-char port)))
       (cond ((unsafe.char= ch1 #\@)
-	     (read-char port)
+	     (get-char-and-track-textual-position port)
 	     '(macro . unsyntax-splicing))
 	    (else
 	     '(macro . unsyntax)))))
@@ -1006,7 +1001,7 @@
     ;; v   s    6    4    l    (    #vs64l
     ;; v   s    6    4    b    (    #vs64b
     ;;
-    (let ((ch1/eof (read-char port)))
+    (let ((ch1/eof (get-char-and-track-textual-position port)))
       (define-inline (%read-bytevector)
 	(cond ((char=? #\u ch1/eof)
 	       (%read-unsigned))
@@ -1020,7 +1015,7 @@
 	       (%error (format "invalid sequence #v~a" ch1/eof)))))
 
       (define-inline (%read-unsigned)
-	(let ((ch2/eof (read-char port)))
+	(let ((ch2/eof (get-char-and-track-textual-position port)))
 	  (cond ((char=? ch2/eof #\8) ;unsigned bytes bytevector
 		 (%read-unsigned-8))
 		((eof-object? ch2/eof)
@@ -1029,7 +1024,7 @@
 		 (%error-1 (format "invalid sequence #vu~a" ch2/eof))))))
 
       (define-inline (%read-signed)
-	(let ((ch2/eof (read-char port)))
+	(let ((ch2/eof (get-char-and-track-textual-position port)))
 	  (cond ((char=? ch2/eof #\8) ;signed bytes bytevector
 		 (%read-signed-8))
 		((eof-object? ch2/eof)
@@ -1038,7 +1033,7 @@
 		 (%error-1 (format "invalid sequence #vs~a" ch2/eof))))))
 
       (define-inline (%read-unsigned-8)
-	(let ((ch3/eof (read-char port)))
+	(let ((ch3/eof (get-char-and-track-textual-position port)))
 	  (cond ((char=? ch3/eof #\()
 		 'vu8)
 		((eof-object? ch3/eof)
@@ -1047,7 +1042,7 @@
 		 (%error-1 (format "invalid sequence #vu8~a" ch3/eof))))))
 
       (define-inline (%read-signed-8)
-	(let ((ch3/eof (read-char port)))
+	(let ((ch3/eof (get-char-and-track-textual-position port)))
 	  (cond ((char=? ch3/eof #\()
 		 'vs8)
 		((eof-object? ch3/eof)
@@ -1114,8 +1109,8 @@
 	  ;;first dot.
 	  ;;
 	  ((unsafe.char= ch #\.)
-	   (read-char port)
-	   (let ((ch1 (read-char port)))
+	   (get-char-and-track-textual-position port)
+	   (let ((ch1 (get-char-and-track-textual-position port)))
 	     (cond ((eof-object? ch1)
 		    (%error "invalid syntax near end of file" ".."))
 		   ((unsafe.char= ch1 #\.) ;this is the third
@@ -1257,12 +1252,12 @@
     (cond ((eof-object? ch)
 	   accumulated-chars)
 	  ((subsequent? ch)
-	   (read-char port)
+	   (get-char-and-track-textual-position port)
 	   (recurse (cons ch accumulated-chars)))
 	  ((delimiter? ch)
 	   accumulated-chars)
 	  ((unsafe.char= ch #\\)
-	   (read-char port)
+	   (get-char-and-track-textual-position port)
 	   (%accumulate-identifier-chars/backslash accumulated-chars port #f))
 	  ((port-in-r6rs-mode? port)
 	   (%error "invalid identifier syntax" (reverse-list->string (cons ch accumulated-chars))))
@@ -1584,11 +1579,11 @@
 	   ((intraline-whitespace? chX)
 	    (next-whitespace-char))
 	   ((char-is-single-char-line-ending? chX)
-	    (%discard-trailing-intraline-whitespace ls port (read-char port)))
+	    (%discard-trailing-intraline-whitespace ls port (get-char-and-track-textual-position port)))
 	   ((char-is-carriage-return? chX)
 	    (%read-char-no-eof (port chY)
 	      ((char-is-newline-after-carriage-return? chY)
-	       (%discard-trailing-intraline-whitespace ls port (read-char port)))
+	       (%discard-trailing-intraline-whitespace ls port (get-char-and-track-textual-position port)))
 	      (else
 	       (%discard-trailing-intraline-whitespace ls port chY))))
 	   (else
@@ -1602,7 +1597,7 @@
       ;;without prefix intraline whitespace.
       ;;
       ((char-is-single-char-line-ending? ch)
-       (%discard-trailing-intraline-whitespace ls port (read-char port)))
+       (%discard-trailing-intraline-whitespace ls port (get-char-and-track-textual-position port)))
 
       ;;Consume the sequence:
       ;;
@@ -1614,7 +1609,7 @@
       ((char-is-carriage-return? ch)
        (%read-char-no-eof (port ch1)
 	 ((char-is-newline-after-carriage-return? ch1)
-	  (%discard-trailing-intraline-whitespace ls port (read-char port)))
+	  (%discard-trailing-intraline-whitespace ls port (get-char-and-track-textual-position port)))
 	 (else
 	  (%discard-trailing-intraline-whitespace ls port ch1))))
 
@@ -1697,10 +1692,10 @@
 	 (cond ((eof-object? ch1)
 		'(datum . #\n))
 	       ((unsafe.char= #\u ch1)
-		(read-char port)
+		(get-char-and-track-textual-position port)
 		(%finish-reading-character-name port "ul" '(datum . #\x0)))
 	       ((unsafe.char= #\e ch1)
-		(read-char port)
+		(get-char-and-track-textual-position port)
 		(%finish-reading-character-name port "ewline" '(datum . #\xA)))
 	       ((delimiter? ch1)
 		'(datum . #\n))
@@ -1736,7 +1731,7 @@
 		'(datum . #\x))
 	       ((char->hex-digit/or-false ch1)
 		=> (lambda (digit)
-		     (read-char port)
+		     (get-char-and-track-textual-position port)
 		     (let next-digit ((digit       digit)
 				      (accumulated (cons ch1 '(#\x))))
 		       (let ((chX (peek-char port)))
@@ -1745,7 +1740,7 @@
 				(cons 'datum (fixnum->char/checked digit accumulated port)))
 			       ((char->hex-digit/or-false chX)
 				=> (lambda (digit0)
-				     (read-char port)
+				     (get-char-and-track-textual-position port)
 				     (next-digit (+ (* digit 16) digit0)
 						 (cons chX accumulated))))
 			       (else
@@ -1789,7 +1784,7 @@
 		 (delimiter? ch))
 	     (cons 'datum (unsafe.string-ref str 0)))
 	    ((unsafe.char= ch (unsafe.string-ref str 1))
-	     (read-char port)
+	     (get-char-and-track-textual-position port)
 	     (let loop ((str.index 2))
 		 (if (unsafe.fx= str.index (unsafe.string-length str))
 		     (let ((ch (peek-char port)))
@@ -1798,7 +1793,7 @@
 			     (else
 			      (%error "invalid character after expected sequence"
 				      (string-append str (string ch))))))
-		   (let ((ch (read-char port)))
+		   (let ((ch (get-char-and-track-textual-position port)))
 		     (cond ((eof-object? ch)
 			    (%error "invalid EOF in the middle of expected sequence" str))
 			   ((unsafe.char= ch (unsafe.string-ref str str.index))
@@ -1853,7 +1848,7 @@
 ;;;; reading comments
 
 (define (read-and-discard-up-to-and-including-line-ending port)
-  (let ((ch (read-char port)))
+  (let ((ch (get-char-and-track-textual-position port)))
     (unless (or (eof-object? ch)
 		(char-is-single-char-line-ending? ch)
 		;;A standalone CR ends  the line, see R6RS syntax formal
@@ -1880,20 +1875,20 @@
   (define (accumulate-comment-chars port ac)
     (define-inline (recurse ac)
       (accumulate-comment-chars port ac))
-    (let ((c (read-char port)))
+    (let ((c (get-char-and-track-textual-position port)))
       (cond ((eof-object? c)
 	     (%multiline-error))
 
 	    ;;A vertical bar character may or may not end this multiline
 	    ;;comment.
 	    ((unsafe.char= #\| c)
-	     (let next-vertical-bar ((ch1 (read-char port)) (ac ac))
+	     (let next-vertical-bar ((ch1 (get-char-and-track-textual-position port)) (ac ac))
 	       (cond ((eof-object? ch1)
 		      (%multiline-error))
 		     ((unsafe.char= #\# ch1) ;end of comment
 		      ac)
 		     ((unsafe.char= #\| ch1) ;optimisation for sequence of bars?!?
-		      (next-vertical-bar (read-char port) (cons ch1 ac)))
+		      (next-vertical-bar (get-char-and-track-textual-position port) (cons ch1 ac)))
 		     (else
 		      (recurse (cons ch1 ac))))))
 
@@ -1901,7 +1896,7 @@
 	    ;;comment.   Read a  nested multiline  comment, if  there is
 	    ;;one.
 	    ((unsafe.char= #\# c)
-	     (let ((ch1 (read-char port)))
+	     (let ((ch1 (get-char-and-track-textual-position port)))
 	       (cond ((eof-object? ch1)
 		      (%multiline-error))
 		     ((unsafe.char= #\| ch1) ;it is a nested comment
@@ -1963,7 +1958,7 @@
 	    (when (and (not (eof-object? ch))
 		       (not (delimiter?  ch)))
 	      (%error (format "invalid ~a: ~s" who (reverse-list->string (cons ch ls)))))))
-      (let ((ch (read-char port)))
+      (let ((ch (get-char-and-track-textual-position port)))
 	(cond ((eof-object? ch)
 	       (%error (format "invalid eof inside ~a" who)))
 	      ((or (and (not case-insensitive?)
@@ -1986,7 +1981,7 @@
     (die/p port 'tokenize msg . args))
   (define-inline (recurse)
     (read-char-skip-whitespace port caller))
-  (let ((ch (read-char port)))
+  (let ((ch (get-char-and-track-textual-position port)))
     (cond ((eof-object? ch)
 	   (%error "invalid EOF inside" caller))
 	  ((char-whitespace? ch)

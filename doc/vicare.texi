@@ -1931,14 +1931,10 @@ cause an error if read:
 @end deffn
 
 
-@defun drop-first-line-if-sharp-bang @var{port}
-Consume the first line from the @strong{binary} input @var{port} if the
-first two bytes represent the sharp-bang sequence @samp{#!}; this is
-useful to allow scripts on Unix systems to start with the command line
-needed to use them.
-
-Notice that this will discard valid sharp-bang comments if the are at
-the very beginning of a file.
+@defun get-annotated-datum @var{port}
+Like @func{get-datum}, but rather than returning a datum return a
+hierarchy of @code{annotation} objects with the same hierarchy of the
+datum and embedding the datum itself.
 @end defun
 
 @c page
