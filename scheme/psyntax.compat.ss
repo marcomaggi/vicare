@@ -32,7 +32,7 @@
     (only (ikarus.compiler)
 	  eval-core)
     (only (ikarus.reader)
-	  read-library-source-file
+	  read-library-source-file;this is not in makefile.sps
 	  get-annotated-datum))
 
   (define (library-version-mismatch-warning name depname filename)

@@ -17,14 +17,19 @@
 
 
 (library (ikarus.reader)
-  (export read get-datum get-annotated-datum
-	  read-source-file read-script-source-file
-	  read-library-source-file
+  (export
+    ;; public functions
+    read get-datum get-annotated-datum
 
-	  annotation? annotation-expression
-	  annotation-source annotation-stripped)
+    ;; internal functions only for Vicare
+    read-source-file read-script-source-file read-library-source-file
+
+    annotation? annotation-expression
+    annotation-source annotation-stripped)
   (import (except (ikarus)
+		  ;; public functions
 		  read get-datum get-annotated-datum
+
 		  read-source-file read-script-source-file
 		  read-library-source-file
 
@@ -417,65 +422,6 @@
 
 ;;;; public functions
 
-(define (read-library-source-file filename)
-  ;;Defined by  Ikarus.  Open FILENAME  for input only using  the native
-  ;;transcoder, then read and return the first datum; close the port.
-  ;;
-  (let ((port (open-input-file filename)))
-    (unwind-protect
-	(get-annotated-datum port)
-      (close-input-port port))))
-
-(define (read-source-file filename)
-  ;;Defined by  Ikarus.  Open FILENAME  for input only using  the native
-  ;;transcoder, then read and return all the datums in a list; close the
-  ;;port.
-  ;;
-  (let ((port (open-input-file filename)))
-    (define-inline (%next-datum)
-      (get-annotated-datum port))
-    (unwind-protect
-	(let read-next-datum ((obj (%next-datum)))
-	  (if (eof-object? obj)
-	      '()
-	    (cons obj (read-next-datum (%next-datum)))))
-      (close-input-port))))
-
-(define (read-script-source-file filename)
-  ;;Defined by  Ikarus.  Open FILENAME  for input only using  the native
-  ;;transcoder, then read and return all the datums in a list.
-  ;;
-  ;;Discard  the  first  line from  the  file  if  the first  two  bytes
-  ;;represent  the sharp-bang  sequence "#!";  this is  useful  to allow
-  ;;scripts on Unix systems to start with the command line needed to use
-  ;;them.
-  ;;
-  ;;Notice that this  will discard valid sharp-bang comments  if the are
-  ;;at the very beginning of a file.
-  ;;
-  (let* ((port		(open-file-input-port filename))
-	 (sharp-bang?	(let-values (((octet1 octet2)
-				      ;;If  an error  happens  here PORT
-				      ;;will  be   closed  by  the  port
-				      ;;guardian.
-				      (lookahead-two-u8 port)))
-			  (and (= octet1 CHAR-FIXNUM-SHARP)
-			       (= octet2 CHAR-FIXNUM-BANG))))
-	 (port		(transcoded-port port (native-transcoder))))
-    (define-inline (%next-datum)
-      (get-annotated-datum port))
-    (unwind-protect
-	(begin
-	  (when sharp-bang?
-	    (read-and-discard-up-to-and-including-line-ending port))
-	  (let read-next-datum ((obj (%next-datum)))
-	    (if (eof-object? obj)
-		'()
-	      (cons obj (read-next-datum (%next-datum))))))
-      (close-input-port port))))
-
-;;; --------------------------------------------------------------------
-
 (define read
   ;;Defined by  R6RS.  Read an external representation  from the textual
   ;;input PORT and return the datum it represents.
@@ -549,6 +495,69 @@
 	(if (loc? expr)
 	    (loc-value/ann expr)
 	  (%return-annotated expr/ann))))))
+
+
+;;;; Public functions used by Vicare itself
+;;
+;;These  functions  are exported  by  this  library  but not  listed  in
+;;"makefile.sps", so they are not visible to client code.
+;;
+
+(define (read-library-source-file filename)
+  ;;Open FILENAME for input only  using the native transcoder, then read
+  ;;and return the first datum; close the port.
+  ;;
+  (let ((port (open-input-file filename)))
+    (unwind-protect
+	(get-annotated-datum port)
+      (close-input-port port))))
+
+(define (read-source-file filename)
+  ;;Open FILENAME for input only  using the native transcoder, then read
+  ;;and return all the datums in a list; close the port.
+  ;;
+  (let ((port (open-input-file filename)))
+    (define-inline (%next-datum)
+      (get-annotated-datum port))
+    (unwind-protect
+	(let read-next-datum ((obj (%next-datum)))
+	  (if (eof-object? obj)
+	      '()
+	    (cons obj (read-next-datum (%next-datum)))))
+      (close-input-port))))
+
+(define (read-script-source-file filename)
+  ;;Open FILENAME for input only  using the native transcoder, then read
+  ;;and return all the datums in a list.
+  ;;
+  ;;Discard  the  first  line from  the  file  if  the first  two  bytes
+  ;;represent  the sharp-bang  sequence "#!";  this is  useful  to allow
+  ;;scripts on Unix systems to start with the command line needed to use
+  ;;them.
+  ;;
+  ;;Notice that this  will discard valid sharp-bang comments  if the are
+  ;;at the very beginning of a file.
+  ;;
+  (let* ((port		(open-file-input-port filename))
+	 (sharp-bang?	(let-values (((octet1 octet2)
+				      ;;If  an error  happens  here PORT
+				      ;;will  be   closed  by  the  port
+				      ;;guardian.
+				      (lookahead-two-u8 port)))
+			  (and (= octet1 CHAR-FIXNUM-SHARP)
+			       (= octet2 CHAR-FIXNUM-BANG))))
+	 (port		(transcoded-port port (native-transcoder))))
+    (define-inline (%next-datum)
+      (get-annotated-datum port))
+    (unwind-protect
+	(begin
+	  (when sharp-bang?
+	    (read-and-discard-up-to-and-including-line-ending port))
+	  (let read-next-datum ((obj (%next-datum)))
+	    (if (eof-object? obj)
+		'()
+	      (cons obj (read-next-datum (%next-datum))))))
+      (close-input-port port))))
 
 
 ;;;; helpers for public functions
