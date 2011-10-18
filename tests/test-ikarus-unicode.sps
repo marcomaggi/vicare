@@ -174,6 +174,11 @@
   (run-unicode-tests))
 
 
+(display "*** testing unicode\n" (current-error-port))
+(flush-output-port (current-error-port))
 (run-tests)
+(display "; *** done\n" (current-error-port))
+(flush-output-port (current-error-port))
+
 
 ;;; end of file

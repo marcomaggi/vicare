@@ -159,6 +159,11 @@
 	     '(lambda (y) (syntax-match y () (sub (ctx x) #'x))))))
   )
 
+(display "*** testing repl\n" (current-error-port))
+(flush-output-port (current-error-port))
 (run-tests)
+(display "; *** done\n" (current-error-port))
+(flush-output-port (current-error-port))
+
 
 ;;; end of file

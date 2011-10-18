@@ -7,7 +7,8 @@ VICARE_SELECTED_LONG_TESTS	= $(wildcard $(testdir)/long-test-*$(file)*.sps)
 VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
 VICARE_FLAGS	= -b $(VICARE_BOOT) --debug --r6rs-script
-VICARE_ENV	= VICARE_LIBRARY_PATH=$(srcdir):$(srcdir)/../lib CHECK_TEST_NAME=$(name) \
+VICARE_ENV	= VICARE_LIBRARY_PATH=$(srcdir):$(srcdir)/../lib:$(srcdir)/../scheme \
+		  CHECK_TEST_NAME=$(name) \
 		  VICARE_SRC_DIR=$(srcdir) VICARE_BUILDDIR=$(builddir)
 VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
 
@@ -73,10 +74,8 @@ TESTS			=	\
 	test-ikarus-r6rs-records-procedural.sps		\
 	test-ikarus-reader.sps				\
 	test-ikarus-repl.sps				\
-	test-ikarus-scribble.sps			\
 	test-ikarus-set-position.sps			\
 	test-ikarus-sorting.sps				\
-	test-ikarus-string-to-number.sps		\
 	test-ikarus-strings.sps				\
 	test-ikarus-symbol-table.sps			\
 	test-ikarus-unicode.sps				\
@@ -152,6 +151,7 @@ EXTRA_DIST =	\
 	long-test-ikarus-fixnums.sps			\
 	long-test-ikarus-io.sps				\
 	long-test-ikarus-parse-flonums.sps		\
+	long-test-ikarus-string-to-number.sps		\
 	\
 	test-r6rs-arithmetic-bitwise.sps		\
 	test-r6rs-arithmetic-fixnums.sps		\
@@ -195,10 +195,8 @@ EXTRA_DIST =	\
 	test-ikarus-r6rs-records-procedural.sps		\
 	test-ikarus-reader.sps				\
 	test-ikarus-repl.sps				\
-	test-ikarus-scribble.sps			\
 	test-ikarus-set-position.sps			\
 	test-ikarus-sorting.sps				\
-	test-ikarus-string-to-number.sps		\
 	test-ikarus-strings.sps				\
 	test-ikarus-symbol-table.sps			\
 	test-ikarus-unicode.sps				\

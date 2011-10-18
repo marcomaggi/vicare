@@ -96,6 +96,11 @@
   (test-setting-position-for-binary-input-files)
   (test-fixed-input-ports))
 
+(display "*** testing set-position\n" (current-error-port))
+(flush-output-port (current-error-port))
 (run-tests)
+(display "; *** done\n" (current-error-port))
+(flush-output-port (current-error-port))
+
 
 ;;; end of file

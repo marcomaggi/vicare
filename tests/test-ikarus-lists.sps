@@ -69,6 +69,11 @@
   [values (equal? (fold-right + 0 '(1 2 3) '(4 5 6)) 21)]
   )
 
+(display "*** testing lists\n" (current-error-port))
+(flush-output-port (current-error-port))
 (run-tests)
+(display "; *** done\n" (current-error-port))
+(flush-output-port (current-error-port))
+
 
 ;;; end of file

@@ -141,6 +141,11 @@
   (test-char-syntax)
   (test-reader))
 
+(display "*** testing reader\n" (current-error-port))
+(flush-output-port (current-error-port))
 (run-tests)
+(display "; *** done\n" (current-error-port))
+(flush-output-port (current-error-port))
+
 
 ;;; end of file

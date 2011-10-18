@@ -60,7 +60,7 @@
   (let ([data (map (lambda (x) (map conv (list-head x 5)))
                    (filter (lambda (x) (>= (length x) 5))
                      (get-unicode-data
-                       (src-file "unicode/UNIDATA/NormalizationTest.txt"))))])
+                       (src-file "../scheme/unicode/UNIDATA/NormalizationTest.txt"))))])
     (define NFD string-normalize-nfd)
     (define NFKD string-normalize-nfkd)
     (define NFC string-normalize-nfc)
@@ -148,6 +148,11 @@
     (test3)
     (test4)))
 
+(display "*** testing string normalization\n" (current-error-port))
+(flush-output-port (current-error-port))
 (run-tests)
+(display "\n; *** done\n" (current-error-port))
+(flush-output-port (current-error-port))
+
 
 ;;; end of file

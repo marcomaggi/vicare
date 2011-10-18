@@ -127,6 +127,11 @@
   (test-exact-integer-sqrt)
   (test-eqv))
 
+(display "*** testing numerics\n" (current-error-port))
+(flush-output-port (current-error-port))
 (run-tests)
+(display "; *** done\n" (current-error-port))
+(flush-output-port (current-error-port))
+
 
 ;;; end of file

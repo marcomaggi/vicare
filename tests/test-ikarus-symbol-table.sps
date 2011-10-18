@@ -63,6 +63,10 @@
   (test-gcable-symbols 1000000)
   (test-reference-after-gc))
 
+(display "*** testing symbol table\n" (current-error-port))
+(flush-output-port (current-error-port))
 (run-tests)
+(display "; *** done\n" (current-error-port))
+(flush-output-port (current-error-port))
 
 ;;; end of file
