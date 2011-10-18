@@ -177,7 +177,7 @@
 (define-struct loc
   (value value/ann set?))
 
-;;Constructor: make-annotation EXPR SOURCE STRIPPED
+;;Constructor: make-annotation EXPR STRIPPED SOURCE
 ;;Predicate: annotation? OBJ
 ;;
 ;;Field name: expression
@@ -189,7 +189,8 @@
 ;;Field name: source
 ;;Field accessor: annotation-source ANN
 ;;Field mutator: set-annotation-source! ANN NEW-SOURCE
-;;  A pair: (file-name . byte-offset)
+;;  A pair  (FILE-NAME . BYTE-OFFSET)  representing the position  of the
+;;  expression in the source code.  It is used by the compiler.
 ;;
 ;;Field name: stripped
 ;;Field accessor: annotation-stripped ANN
@@ -197,21 +198,19 @@
 ;;  An S-expression with no annotations.
 ;;
 (define-struct annotation
-  (expression source stripped))
+  (expression stripped source))
 
 (define-inline (annotate-simple datum textual-pos port)
-  (make-annotation datum
+  (make-annotation datum datum
 		   (cons (source-position-port-id   textual-pos)
 			 (source-position-character textual-pos))
-		   #;(cons (port-id port) byte)
-		   datum))
+		   #;(cons (port-id port) byte)))
 
 (define-inline (annotate stripped expression textual-pos port)
-  (make-annotation expression
+  (make-annotation expression stripped
 		   (cons (source-position-port-id   textual-pos)
 			 (source-position-character textual-pos))
-		   #;(cons (port-id port) byte)
-		   stripped))
+		   #;(cons (port-id port) byte)))
 
 
 ;;;; source position handling
