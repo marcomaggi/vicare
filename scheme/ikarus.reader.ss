@@ -200,17 +200,17 @@
 (define-struct annotation
   (expression stripped source))
 
-(define-inline (annotate-simple datum textual-pos port)
+(define-inline (annotate-simple datum textual-pos)
   (make-annotation datum datum
 		   (cons (source-position-port-id   textual-pos)
 			 (source-position-character textual-pos))
-		   #;(cons (port-id port) byte)))
+		   ))
 
-(define-inline (annotate stripped expression textual-pos port)
+(define-inline (annotate stripped expression textual-pos)
   (make-annotation expression stripped
 		   (cons (source-position-port-id   textual-pos)
 			 (source-position-character textual-pos))
-		   #;(cons (port-id port) byte)))
+		   ))
 
 
 ;;;; source position handling
@@ -1335,37 +1335,37 @@
   (define-inline (main)
     (cond ((eof-object? token)
 	   (values (eof-object)
-		   (annotate-simple (eof-object) pos port) locs-alist kont))
+		   (annotate-simple (eof-object) pos) locs-alist kont))
 
 	  ;;Read list that was opened by a round parenthesis.
 	  ((eq? token 'lparen)
 	   (let-values (((ls ls/ann locs-alist kont)
 			 (finish-tokenisation-of-list port pos locs-alist kont 'rparen 'rbrack)))
-	     (values ls (annotate ls ls/ann pos port) locs-alist kont)))
+	     (values ls (annotate ls ls/ann pos) locs-alist kont)))
 
 	  ;;Read list that was opened by a square bracket.
 	  ((eq? token 'lbrack)
 	   (let-values (((ls ls/ann locs-alist kont)
 			 (finish-tokenisation-of-list port pos locs-alist kont 'rbrack 'rparen)))
-	     (values ls (annotate ls ls/ann pos port) locs-alist kont)))
+	     (values ls (annotate ls ls/ann pos) locs-alist kont)))
 
 	  ;;Read a vector opened by "#(".
 	  ((eq? token 'vparen)
 	   (let-values (((vec vec/ann locs-alist kont)
 			 (read-vector port locs-alist kont 0 '() '())))
-	     (values vec (annotate vec vec/ann pos port) locs-alist kont)))
+	     (values vec (annotate vec vec/ann pos) locs-alist kont)))
 
 	  ;;Read a bytevector opened by "#vu8(".
 	  ((eq? token 'vu8)
 	   (let-values (((bv bv/ann locs-alist kont)
 			 (read-u8-bytevector port locs-alist kont 0 '())))
-	     (values bv (annotate bv bv/ann pos port) locs-alist kont)))
+	     (values bv (annotate bv bv/ann pos) locs-alist kont)))
 
 	  ;;Read a bytevector opened by "#vs8(".
 	  ((eq? token 'vs8)
 	   (let-values (((bv bv/ann locs-alist kont)
 			 (read-s8-bytevector port locs-alist kont 0 '())))
-	     (values bv (annotate bv bv/ann pos port) locs-alist kont)))
+	     (values bv (annotate bv bv/ann pos) locs-alist kont)))
 
 	  ((pair? token)
 	   (%process-pair-token token))
@@ -1376,7 +1376,7 @@
   (define-inline (%process-pair-token token)
     (cond ((eq? (car token) 'datum) ;datum already tokenised
 	   (values (cdr token)
-		   (annotate-simple (cdr token) pos port) locs-alist kont))
+		   (annotate-simple (cdr token) pos) locs-alist kont))
 
 	  ;;Read  a  sexp  quoted  with one  among:  QUOTE,  QUASIQUOTE,
 	  ;;UNQUOTE,  UNQUOTE-SPLICING,  SYNTAX, QUASISYNTAX,  UNSYNTAX,
@@ -1394,8 +1394,8 @@
 	       (let ((d     (list expr))
 		     (d/ann (list expr/ann)))
 		 (let ((x     (cons quoting-keyword d))
-		       (x/ann (cons (annotate-simple quoting-keyword pos port) d/ann)))
-		   (values x (annotate x x/ann pos port) locs-alist
+		       (x/ann (cons (annotate-simple quoting-keyword pos) d/ann)))
+		   (values x (annotate x x/ann pos) locs-alist
 			   (extend-k-pair d d/ann expr '() kont)))))))
 
 	  ;;Read an expression marked with graph notation for locations.
