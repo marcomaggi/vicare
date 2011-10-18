@@ -57,9 +57,32 @@ TESTS			=	\
 	test-r6rs-syntax-case.sps			\
 	test-r6rs-unicode.sps				\
 	\
+	test-ikarus-bignum-to-flonum.sps		\
+	test-ikarus-bitwise.sps				\
 	test-ikarus-bytevectors.sps			\
+	test-ikarus-case-folding.sps			\
+	test-ikarus-div-and-mod.sps			\
+	test-ikarus-enums.sps				\
+	test-ikarus-fasl.sps				\
+	test-ikarus-fixnums.sps				\
+	test-ikarus-fldiv-and-mod.sps			\
+	test-ikarus-guardians.sps			\
+	test-ikarus-hashtables.sps			\
+	test-ikarus-lists.sps				\
+	test-ikarus-normalization.sps			\
+	test-ikarus-numerics.sps			\
+	test-ikarus-parse-flonums.sps			\
+	test-ikarus-pointers.sps			\
+	test-ikarus-r6rs-records-procedural.sps		\
 	test-ikarus-reader.sps				\
+	test-ikarus-repl.sps				\
+	test-ikarus-scribble.sps			\
+	test-ikarus-set-position.sps			\
+	test-ikarus-sorting.sps				\
+	test-ikarus-string-to-number.sps		\
 	test-ikarus-strings.sps				\
+	test-ikarus-symbol-table.sps			\
+	test-ikarus-unicode.sps				\
 	\
 	test-vicare-io.sps				\
 	test-vicare-log.sps				\
@@ -156,10 +179,32 @@ EXTRA_DIST =	\
 	test-r6rs-syntax-case.sps			\
 	test-r6rs-unicode.sps				\
 	\
+	test-ikarus-bignum-to-flonum.sps		\
+	test-ikarus-bitwise.sps				\
 	test-ikarus-bytevectors.sps			\
+	test-ikarus-case-folding.sps			\
+	test-ikarus-div-and-mod.sps			\
+	test-ikarus-enums.sps				\
+	test-ikarus-fasl.sps				\
+	test-ikarus-fixnums.sps				\
+	test-ikarus-fldiv-and-mod.sps			\
+	test-ikarus-guardians.sps			\
+	test-ikarus-hashtables.sps			\
+	test-ikarus-lists.sps				\
+	test-ikarus-normalization.sps			\
+	test-ikarus-numerics.sps			\
+	test-ikarus-parse-flonums.sps			\
+	test-ikarus-pointers.sps			\
+	test-ikarus-r6rs-records-procedural.sps		\
 	test-ikarus-reader.sps				\
+	test-ikarus-repl.sps				\
+	test-ikarus-scribble.sps			\
+	test-ikarus-set-position.sps			\
+	test-ikarus-sorting.sps				\
+	test-ikarus-string-to-number.sps		\
 	test-ikarus-strings.sps				\
-	\
+	test-ikarus-symbol-table.sps			\
+	test-ikarus-unicode.sps				\
 	\
 	test-vicare-io.sps				\
 	test-vicare-log.sps				\

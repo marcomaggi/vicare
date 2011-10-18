@@ -12,9 +12,6 @@ vicare_test_RULES	= test tests long-test long-tests
 $(vicare_test_RULES):
 	cd tests ; $(MAKE) $(@)
 
-ikarus-tests:
-	cd scheme; $(MAKE) $(@)
-
 try-vicare-boot:
 	cd scheme; $(MAKE) $(@)
 

@@ -5,7 +5,7 @@ nodist_pkglib_DATA=vicare.boot
 EXTRA_DIST= last-revision						\
   ikarus.boot.4.prebuilt ikarus.boot.8.prebuilt				\
   vicare.boot.4.prebuilt						\
-  ikarus.enumerations.ss run-tests.ss					\
+  ikarus.enumerations.ss						\
   ikarus.exceptions.ss ikarus.apply.ss ikarus.bytevectors.ss		\
   ikarus.cafe.ss ikarus.chars.ss ikarus.code-objects.ss			\
   ikarus.codecs.ss ikarus.collect.ss ikarus.command-line.ss		\
@@ -43,62 +43,9 @@ EXTRA_DIST= last-revision						\
   ikarus.compiler.tag-annotation-analysis.ss ikarus.ontology.ss		\
   ikarus.pointers.ss ikarus.equal.ss					\
   ikarus.symbol-table.ss ikarus.apropos.ss				\
-  ikarus.debugger.ss							\
-  tests/SRFI-1.ss							\
-  tests/bignum-to-flonum.ss						\
-  tests/bitwise.ss							\
-  tests/case-folding.ss							\
-  tests/div-and-mod.ss							\
-  tests/enums.ss							\
-  tests/fasl.ss								\
-  tests/fixnums.ss							\
-  tests/fldiv-and-mod.ss						\
-  tests/framework.ss							\
-  tests/guardians.ss							\
-  tests/hashtables.ss							\
-  tests/lists.ss							\
-  tests/normalization.ss 						\
-  tests/numerics.ss							\
-  tests/parse-flonums.ss						\
-  tests/pointers.ss							\
-  tests/r6rs-records-procedural.ss					\
-  tests/repl.ss								\
-  tests/rn100								\
-  tests/set-position.ss							\
-  tests/sorting.ss							\
-  tests/string-to-number.ss						\
-  tests/strings.ss							\
-  tests/scribble.ss							\
-  tests/symbol-table.ss							\
-  tests/tests-1.1-req.scm \
-  tests/tests-1.2-req.scm \
-  tests/tests-1.3-req.scm \
-  tests/tests-1.4-req.scm \
-  tests/tests-1.5-req.scm \
-  tests/tests-1.6-req.scm \
-  tests/tests-1.7-req.scm \
-  tests/tests-1.8-req.scm \
-  tests/tests-1.9-req.scm \
-  tests/tests-2.1-req.scm \
-  tests/tests-2.2-req.scm \
-  tests/tests-2.3-req.scm \
-  tests/tests-2.4-req.scm \
-  tests/tests-2.6-req.scm \
-  tests/tests-2.8-req.scm \
-  tests/tests-2.9-req.scm \
-  tests/tests-3.1-req.scm \
-  tests/tests-3.2-req.scm \
-  tests/tests-3.3-req.scm \
-  tests/tests-3.4-req.scm \
-  tests/tests-4.1-req.scm \
-  tests/tests-4.2-req.scm \
-  tests/tests-4.3-req.scm \
-  tests/tests-5.1-req.scm \
-  tests/tests-5.2-req.scm \
-  tests/tests-5.3-req.scm \
-  tests/tests-5.6-req.scm \
-  tests/unicode.ss
+  ikarus.debugger.ss
 
+#page
 NEW_BOOT_FILE		= vicare.boot
 NEW_EXECUTABLE		= ../src/vicare
 
@@ -147,10 +94,5 @@ try-vicare-boot: $(EXTRA_DIST) ikarus.config.ss
    VICARE_LIBRARY_PATH=.:$(srcdir):$(srcdir)/../lib \
    $(NEW_EXECUTABLE) -b vicare.boot.try \
    --r6rs-script $(srcdir)/makefile.sps
-
-ikarus-tests: $(NEW_BOOT_FILE)
-	IKARUS_SRC_DIR=$(srcdir) \
-		VICARE_LIBRARY_PATH=$(srcdir) \
-		$(NEW_EXECUTABLE) -b $(NEW_BOOT_FILE) --r6rs-script $(srcdir)/run-tests.ss
 
 ### end of file

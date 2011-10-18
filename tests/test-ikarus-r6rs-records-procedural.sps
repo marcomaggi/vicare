@@ -1,13 +1,36 @@
-#!/usr/bin/env ikarus -b ikarus.boot --r6rs-script
+;;; -*- coding: utf-8-unix -*-
+;;;
+;;;Part of: Vicare
+;;;Contents: tests
+;;;Date: Tue Oct 18, 2011
+;;;
+;;;Abstract
+;;;
+;;;	Tests  from  the file  "scheme/tests/r6rs-records-procedural.ss"
+;;;	file in the original Ikarus distribution.
+;;;
+;;;Copyright (C) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
+;;;
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under the terms of the  GNU General Public License as published by
+;;;the Free Software Foundation, either version 3 of the License, or (at
+;;;your option) any later version.
+;;;
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
+;;;
+;;;You should  have received  a copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;
 
-(import 
-  (ikarus)
+#!ikarus
+(import (ikarus)
   (rnrs records inspection)
   (rnrs records procedural))
 
-
-
-(define rtd0 
+(define rtd0
   (make-record-type-descriptor 'rtd0
     #f #f #f #f
     '#((immutable x0))))
@@ -27,7 +50,7 @@
     (assert (t0? x))
     (assert (= (t0-x0 x) 5))))
 
-(define rtd1 
+(define rtd1
   (make-record-type-descriptor 'rtd1
     rtd0 #f #f #f
     '#((immutable y0) (mutable y1))))
@@ -66,7 +89,7 @@
 
 (define rcd1-17-rev
   (make-record-constructor-descriptor rtd1 rcd0-17
-    (lambda (p) 
+    (lambda (p)
       (lambda (y0 y1)
         ((p) y1 y0)))))
 
@@ -82,7 +105,7 @@
     (assert (= (t1-y1 x) 1))))
 
 (define rcd1-17-default
-  (make-record-constructor-descriptor rtd1 rcd0-17 
+  (make-record-constructor-descriptor rtd1 rcd0-17
     (lambda (p) (p))))
 
 (define make-rcd1-17-default (record-constructor rcd1-17-default))
@@ -97,23 +120,23 @@
     (assert (= (t1-y1 x) 2))))
 
 (define (test5)
-  (define :point 
+  (define :point
     (make-record-type-descriptor 'point
       #f #f #f #f
       '#((mutable x) (mutable y))))
-  
-  (define :point-cd 
+
+  (define :point-cd
     (make-record-constructor-descriptor :point #f #f))
-  
+
   (define make-point (record-constructor :point-cd))
   (define point? (record-predicate :point))
   (define point-x (record-accessor :point 0))
   (define point-y (record-accessor :point 1))
   (define set-point-x! (record-mutator :point 0))
   (define set-point-y! (record-mutator :point 1))
-  
-  (define :point2 
-    (make-record-type-descriptor 'point2 
+
+  (define :point2
+    (make-record-type-descriptor 'point2
       :point #f #f #f
       '#((mutable x) (mutable y))))
   (define make-point2
@@ -122,54 +145,54 @@
   (define point2? (record-predicate :point2))
   (define point2-xx (record-accessor :point2 0))
   (define point2-yy (record-accessor :point2 1))
-  
-  
-  
+
+
+
   (define :point-cd/abs
     (make-record-constructor-descriptor :point #f
       (lambda (new)
-        (lambda (x y) 
+        (lambda (x y)
           (printf "point/abs constr ~s ~s\n" x y)
           (let ([r (new (abs x) (abs y))])
             (printf "point/abs r=~s\n" r)
             r)))))
-  
+
   (define make-point/abs (record-constructor :point-cd/abs))
-  
-  (define :cpoint 
+
+  (define :cpoint
     (make-record-type-descriptor 'cpoint :point #f #f #f
       '#((mutable rgb))))
-  
+
   (define :cpoint-cd
     (make-record-constructor-descriptor :cpoint :point-cd
-      (lambda (p) 
-        (lambda (x y c) 
+      (lambda (p)
+        (lambda (x y c)
           (printf "cpoint constr ~s ~s ~s\n" x y c)
           (let ([r ((p x y) (color->rgb c))])
             (printf "cpoint r=~s\n" r)
             r)))))
-  
+
   (define make-cpoint
     (record-constructor :cpoint-cd))
-  
+
   (define (color->rgb c) (cons 'rgb c))
-  
+
   (define cpoint-rgb (record-accessor :cpoint 0))
-  
+
   (define cpoint/abs-cd
     (make-record-constructor-descriptor :cpoint :point-cd/abs
       (lambda (p)
-        (lambda (x y c) 
+        (lambda (x y c)
           (printf "cpoint/abs constr ~s ~s ~s\n" x y c)
           (let ([r ((p x y) (color->rgb c))])
             (printf "cpointabs r=~s\n" r)
             r)))))
-  
+
   (define make-cpoint/abs
     (record-constructor cpoint/abs-cd))
-  
+
   (printf "cpoint/abs-cd=~s\n" cpoint/abs-cd)
-  
+
   (let ()
     (define p1 (make-point 1 2))
     (assert (point? p1))
@@ -178,7 +201,7 @@
     (set-point-x! p1 5)
     (assert (= (point-x p1) 5))
     (assert (= (point-y p1) 2)))
-  
+
   (let ()
     (define p2 (make-point2 1 2 3 4))
     (assert (point? p2))
@@ -186,12 +209,12 @@
     (assert (= (point-y p2) 2))
     (assert (= (point2-xx p2) 3))
     (assert (= (point2-yy p2) 4)))
-  
-  
+
+
   (let ()
     (assert (= (point-x (make-point/abs -1 -2)) 1))
     (assert (= (point-y (make-point/abs -1 -2)) 2)))
-  
+
   (let ()
     (assert (equal? (cpoint-rgb (make-cpoint -1 -3 'red)) '(rgb . red)))
     (assert (equal? (cpoint-rgb (make-cpoint/abs -1 -3 'red)) '(rgb . red)))
@@ -219,3 +242,4 @@
 (printf "happy happy joy joy\n")
 
 
+;;; end of file
