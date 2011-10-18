@@ -58,13 +58,11 @@ TESTS			=	\
 	test-r6rs-unicode.sps				\
 	\
 	test-ikarus-bignum-to-flonum.sps		\
-	test-ikarus-bitwise.sps				\
 	test-ikarus-bytevectors.sps			\
 	test-ikarus-case-folding.sps			\
 	test-ikarus-div-and-mod.sps			\
 	test-ikarus-enums.sps				\
 	test-ikarus-fasl.sps				\
-	test-ikarus-fixnums.sps				\
 	test-ikarus-fldiv-and-mod.sps			\
 	test-ikarus-guardians.sps			\
 	test-ikarus-hashtables.sps			\
@@ -150,6 +148,8 @@ EXTRA_DIST =	\
 	long-test-r6rs-run.sps				\
 	long-test-r6rs-run-via-eval.sps			\
 	long-test-ikarus-bignums.sps			\
+	long-test-ikarus-bitwise.sps			\
+	long-test-ikarus-fixnums.sps			\
 	long-test-ikarus-io.sps				\
 	long-test-ikarus-parse-flonums.sps		\
 	\
@@ -180,13 +180,11 @@ EXTRA_DIST =	\
 	test-r6rs-unicode.sps				\
 	\
 	test-ikarus-bignum-to-flonum.sps		\
-	test-ikarus-bitwise.sps				\
 	test-ikarus-bytevectors.sps			\
 	test-ikarus-case-folding.sps			\
 	test-ikarus-div-and-mod.sps			\
 	test-ikarus-enums.sps				\
 	test-ikarus-fasl.sps				\
-	test-ikarus-fixnums.sps				\
 	test-ikarus-fldiv-and-mod.sps			\
 	test-ikarus-guardians.sps			\
 	test-ikarus-hashtables.sps			\

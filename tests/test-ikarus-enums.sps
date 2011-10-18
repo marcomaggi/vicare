@@ -65,4 +65,10 @@
       (enum-set->list (enum-set-projection e1 e2)))
     '(red black))))
 
+(display "*** testing enums\n" (current-error-port))
+(flush-output-port (current-error-port))
+(run-tests)
+(display "; *** done\n" (current-error-port))
+(flush-output-port (current-error-port))
+
 ;;; end of file
