@@ -199,14 +199,14 @@
 (define-struct annotation
   (expression source stripped))
 
-(define (annotate-simple datum textual-pos port)
+(define-inline (annotate-simple datum textual-pos port)
   (make-annotation datum
 		   (cons (source-position-port-id   textual-pos)
 			 (source-position-character textual-pos))
 		   #;(cons (port-id port) byte)
 		   datum))
 
-(define (annotate stripped expression textual-pos port)
+(define-inline (annotate stripped expression textual-pos port)
   (make-annotation expression
 		   (cons (source-position-port-id   textual-pos)
 			 (source-position-character textual-pos))
