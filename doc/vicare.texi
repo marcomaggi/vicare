@@ -1413,6 +1413,14 @@ There are a few fine points.
 
 @itemize
 @item
+If the first two bytes of a script represent the sequence @samp{#!} in
+@ascii{} encoding: the first line is discarded and not parsed as Scheme
+code.  This allows scripts on Unix systems to start with the command
+line needed to use them; notice that this will discard valid sharp--bang
+comments (like @code{#!r6rs}) if the are at the very beginning of a
+file.
+
+@item
 Under Mac OS X, if a script name ends with the @code{.command}
 extension, then it can be executed from the Finder by double--clicking
 on it.  This brings up a terminal window in which the script is
