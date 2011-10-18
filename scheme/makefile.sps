@@ -467,7 +467,6 @@
     (console-output-port                         i)
     (reset-input-port!                           i)
     (reset-output-port!                          i)
-    (read-token                                  i)
     (printf                                      i)
     (fprintf                                     i)
     (format                                      i)
@@ -1558,8 +1557,7 @@
 ;;;
     (port-id					i)
     (string->filename-func			i)
-    (read-annotated				i)
-    (read-script-annotated			i)
+    (get-annotated-datum			i)
     (annotation?				i)
     (annotation-expression			i)
     (annotation-source				i)

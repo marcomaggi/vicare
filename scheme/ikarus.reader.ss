@@ -17,20 +17,18 @@
 
 
 (library (ikarus.reader)
-  (export read get-datum read-token
-          read-annotated read-script-annotated
-	  read-source-file
+  (export read get-datum get-annotated-datum
+	  read-source-file read-script-source-file
 	  read-library-source-file
-	  read-script-source-file
 
 	  annotation? annotation-expression
 	  annotation-source annotation-stripped)
   (import (except (ikarus)
-		  read get-datum read-char read-token
-		  read-annotated read-script-annotated
-		  read-source-file
+		  read get-datum get-annotated-datum
+		  read-source-file read-script-source-file
 		  read-library-source-file
-		  read-script-source-file
+
+		  read-char
 
 		  annotation? annotation-expression
 		  annotation-source annotation-stripped)
@@ -240,17 +238,6 @@
 
 (define-inline (make-compound-position port)
   (port-textual-position port))
-#;(define (make-compound-position port)
-  (let* ((textual-position	(port-textual-position port))
-	 (byte			(vector-ref textual-position 0))
-	 (character		(vector-ref textual-position 1))
-	 (line			(vector-ref textual-position 2))
-	 (column		(vector-ref textual-position 3)))
-    (make-source-position-condition (port-id port) byte character line column)))
-#;(define (make-compound-position port)
-  (let* ((textual-position	(port-textual-position port))
-	 (byte-offset		(vector-ref textual-position 0)))
-    (cons (port-id port) byte-offset)))
 
 (define (make-compound-position/with-offset port offset)
   (let ((textual-position (port-textual-position port)))
@@ -261,28 +248,9 @@
 				    (+ offset (source-position-character textual-position))
 				    (source-position-line textual-position)
 				    (+ offset (source-position-column    textual-position)))))
-#;(define (make-compound-position/with-offset port offset)
-  (let* ((textual-position	(port-textual-position port))
-	 (byte			(vector-ref textual-position 0))
-	 (character		(vector-ref textual-position 1))
-	 (line			(vector-ref textual-position 2))
-	 (column		(vector-ref textual-position 3)))
-    ;;FIXME  In rare  cases:  applying  the offset  may  make the  colum
-    ;;negative!!!  But notice that, at present, the OFFSET is always -1.
-    (make-source-position-condition (port-id port)
-				    (+ byte      offset)
-				    (+ character offset)
-				    line
-				    (+ column    offset))))
-#;(define (make-compound-position/with-offset port offset)
-  (let* ((textual-position	(port-textual-position port))
-	 (byte-offset		(vector-ref textual-position 0)))
-    (cons (port-id port) (and byte-offset (+ byte-offset offset)))))
 
 (define-inline (compound-position-char textual-pos)
   (source-position-character textual-pos))
-#;(define-inline (compound-position-char textual-pos)
-  (cdr textual-pos))
 
 (define-inline (compound-position-line textual-pos)
   (source-position-line textual-pos))
@@ -295,16 +263,13 @@
 
 (define (die/lex textual-pos who msg . irritants)
   (raise
-   (condition (make-lexical-violation)
+   (condition (make-lexical-violation) ;mandated by R6RS
+	      (make-i/o-read-error)    ;mandated by R6RS
 	      (make-message-condition msg)
 	      (if (null? irritants)
 		  (condition)
 		(make-irritants-condition irritants))
-	      textual-pos
-	      #;(let ((port-id (car pos))
-		    (byte    (cdr pos)))
-		(make-source-position-condition port-id byte #f #f #f))
-	      )))
+	      textual-pos)))
 
 (define-inline (die/pos port offset who msg . irritants)
   (die/lex (make-compound-position/with-offset port offset) who msg . irritants))
@@ -453,26 +418,32 @@
 ;;;; public functions
 
 (define (read-library-source-file filename)
-  ;;Open FILENAME with  the native transcoder, then read  and return the
-  ;;first datum.
+  ;;Defined by  Ikarus.  Open FILENAME  for input only using  the native
+  ;;transcoder, then read and return the first datum; close the port.
   ;;
   (let ((port (open-input-file filename)))
     (unwind-protect
-	(read-annotated port)
+	(get-annotated-datum port)
       (close-input-port port))))
 
 (define (read-source-file filename)
-  ;;Open FILENAME with  the native transcoder, then read  and return all
-  ;;the datums in a list.
+  ;;Defined by  Ikarus.  Open FILENAME  for input only using  the native
+  ;;transcoder, then read and return all the datums in a list; close the
+  ;;port.
   ;;
   (let ((port (open-input-file filename)))
+    (define-inline (%next-datum)
+      (get-annotated-datum port))
     (unwind-protect
-	(%read-everything-annotated port (read-annotated port))
+	(let read-next-datum ((obj (%next-datum)))
+	  (if (eof-object? obj)
+	      '()
+	    (cons obj (read-next-datum (%next-datum)))))
       (close-input-port))))
 
 (define (read-script-source-file filename)
-  ;;Open FILENAME with  the native transcoder, then read  and return all
-  ;;the datums in a list.
+  ;;Defined by  Ikarus.  Open FILENAME  for input only using  the native
+  ;;transcoder, then read and return all the datums in a list.
   ;;
   ;;Discard  the  first  line from  the  file  if  the first  two  bytes
   ;;represent  the sharp-bang  sequence "#!";  this is  useful  to allow
@@ -491,54 +462,60 @@
 			  (and (= octet1 CHAR-FIXNUM-SHARP)
 			       (= octet2 CHAR-FIXNUM-BANG))))
 	 (port		(transcoded-port port (native-transcoder))))
+    (define-inline (%next-datum)
+      (get-annotated-datum port))
     (unwind-protect
 	(begin
 	  (when sharp-bang?
 	    (read-and-discard-up-to-and-including-line-ending port))
-	  (%read-everything-annotated port (read-script-annotated port)))
+	  (let read-next-datum ((obj (%next-datum)))
+	    (if (eof-object? obj)
+		'()
+	      (cons obj (read-next-datum (%next-datum))))))
       (close-input-port port))))
 
 ;;; --------------------------------------------------------------------
 
 (define read
+  ;;Defined by  R6RS.  Read an external representation  from the textual
+  ;;input PORT and return the datum it represents.
+  ;;
+  ;;The READ procedure operates in the same way as GET-DATUM.
+  ;;
+  ;;If  PORT  is   omitted,  it  defaults  to  the   value  returned  by
+  ;;CURRENT-INPUT-PORT.
+  ;;
   (case-lambda
    (()
-    (%read-sexp (current-input-port) #f))
+    (get-datum (current-input-port)))
    ((port)
     (%assert-argument-is-source-code-port 'read port)
-    (%read-sexp port #f))))
+    (get-datum port))))
 
 (define (get-datum port)
-  (%assert-argument-is-source-code-port 'get-datum port)
-  (%read-sexp port #f))
-
-(define read-token
-  (case-lambda
-   (()
-    (start-tokenising (current-input-port)))
-   ((port)
-    (%assert-argument-is-source-code-port 'read-token port)
-    (start-tokenising port))))
-
-(define (read-annotated port)
-  (%read-annotated-sexp port #f))
-
-(define (read-script-annotated port)
-  (%read-annotated-sexp port #t))
-
-
-;;;; helpers for public functions
-
-(define (%read-everything-annotated port obj)
-  (if (eof-object? obj)
-      '()
-    (cons obj (%read-everything-annotated port (read-annotated port)))))
-
-(define (%read-sexp port script?)
+  ;;Defined by  R6RS.  Read an external representation  from the textual
+  ;;input  PORT  and return  the  datum  it  represents.  The  GET-DATUM
+  ;;procedure returns the  next datum that can be  parsed from the given
+  ;;PORT, updating  PORT to point exactly  past the end  of the external
+  ;;representation of the object.
+  ;;
+  ;;Any <interlexeme-space> in the input is first skipped.  If an end of
+  ;;file  occurs  after  the  <interlexeme-space>,  the  EOF  object  is
+  ;;returned.
+  ;;
+  ;;If  a  character inconsistent  with  an  external representation  is
+  ;;encountered  in  the  input,   an  exception  with  condition  types
+  ;;"&lexical" and "&i/o-read" is raised.
+  ;;
+  ;;Also, if  the end of file  is encountered after the  beginning of an
+  ;;external   representation,  but   the  external   representation  is
+  ;;incomplete  and  therefore  cannot  be  parsed,  an  exception  with
+  ;;condition types "&lexical" and "&i/o-read" is raised.
+  ;;
+  (define who 'get-datum)
+  (%assert-argument-is-source-code-port who port)
   (let-values (((expr expr/ann locs-alist kont)
-		(if script?
-		    (read-expr-script-initial port '() void)
-		  (read-expr port '() void))))
+		(read-expr port '() void)))
     (if (null? locs-alist)
 	expr
       (begin
@@ -549,17 +526,20 @@
 	    (loc-value expr)
 	  expr)))))
 
-(define (%read-annotated-sexp port script?)
+(define (get-annotated-datum port)
+  ;;Defined  by Ikarus.   Like GET-DATUM,  but rather  than  returning a
+  ;;datum  return a  hierarchy of  ANNOTATION structures  with  the same
+  ;;hierarchy of the datum and embedding the datum itself.
+  ;;
+  (define who 'get-annotated-datum)
   (define (%return-annotated x)
     (if (and (annotation? x)
 	     (eof-object? (annotation-expression x)))
 	(eof-object)
       x))
-  (%assert-argument-is-source-code-port 'read port)
+  (%assert-argument-is-source-code-port who port)
   (let-values (((expr expr/ann locs-alist kont)
-		(if script?
-		    (read-expr-script-initial port '() void)
-		  (read-expr port '() void))))
+		(read-expr port '() void)))
     (if (null? locs-alist)
 	(%return-annotated expr/ann)
       (begin
@@ -570,17 +550,16 @@
 	    (loc-value/ann expr)
 	  (%return-annotated expr/ann))))))
 
+
+;;;; helpers for public functions
+
 (define (read-expr port locs-alist kont)
   (let-values (((token pos) (start-tokenising/pos port)))
     (finalise-tokenisation port locs-alist kont token pos)))
 
-(define (read-expr-script-initial port locs-alist kont)
-  (let-values (((token pos) (tokenize-script-initial+pos port)))
-    (finalise-tokenisation port locs-alist kont token pos)))
-
 (define (reduce-loc! port)
-  ;;Subroutine  of %READ-SEXP  and  %READ-ANNOTATED-SEXP.  Finalise  the
-  ;;graph notation locations.
+  ;;Subroutine of GET-DATUM and GET-ANNOTATED-DATUM.  Finalise the graph
+  ;;notation locations.
   ;;
   ;;This computation  needs two  arguments: PORT and  an entry  from the
   ;;LOCS-ALIST which is the result  of reading an S-expression.  PORT is
@@ -624,73 +603,6 @@
 	(kont		void))
     (read-expr port locs-alist kont))
   (void))
-
-
-(define (tokenize-script-initial+pos port)
-  ;;Non-recursive function.  Start tokenizing  the next datum from PORT,
-  ;;discarding comments and  whitespaces; after discarding something try
-  ;;to  parse the  next datum  with START-TOKENISING/POS;  if  the first
-  ;;character     is    a     #    delegate     actual     parsing    to
-  ;;ADVANCE-TOKENISATION-OF-HASH-DATUM/C;  else delegate  actual parsing
-  ;;to ADVANCE-TOKENISATION-OF-NON-HASH-DATUM/C.
-  ;;
-  ;;Return two values:  a datum representing the next  token, a compound
-  ;;position value.
-  ;;
-  ;;This function  does almost  the same thing  of START-TOKENISING/POS,
-  ;;but in addition  it handles specially the very  first two characters
-  ;;if they are "#!"  and discard  the first line up to the line-ending.
-  ;;This allows disacarding the  sharp-bang command used in Unix systems
-  ;;to select a program to run  scripts.  It also means that if the file
-  ;;starts  with a valid  R6RS or  Vicare sharp-bang  comment (#!vicare,
-  ;;#!r6rs, #!eof), such comment will be silently discarded.
-  ;;
-  (define-inline (%error msg . args)
-    (die/p port 'tokenize msg . args))
-  (let* ((pos (make-compound-position port))
-	 (ch  (read-char port)))
-    (cond ((eof-object? ch)
-	   (values ch pos))
-
-	  ;;discard line comments
-	  ((unsafe.char= ch #\;)
-	   (read-and-discard-up-to-and-including-line-ending port)
-	   (start-tokenising/pos port))
-
-	  ;;tokenise everything starting with a #
-	  ((unsafe.char= ch #\#)
-	   ;;FIXME Why are we taking the position again here?
-	   (let ((pos1 (make-compound-position port))
-		 (ch1 (read-char port)))
-	     (cond ((eof-object? ch1)
-		    (%error "invalid EOF after #"))
-
-		   ;;discard sharp-bang first line of file
-		   ((unsafe.char= ch1 #\!)
-		    (read-and-discard-up-to-and-including-line-ending port)
-		    (start-tokenising/pos port))
-
-		   ;;discard sexp comments
-		   ((unsafe.char= ch1 #\;)
-		    (read-and-discard-sexp port)
-		    (start-tokenising/pos port))
-
-		   ;;discard multiline comments
-		   ((unsafe.char= ch1 #\|)
-		    (finish-tokenisation-of-multiline-comment port)
-		    (start-tokenising/pos port))
-
-		   ;;tokenize datums whose syntax starts with #
-		   (else
-		    (values (advance-tokenisation-of-hash-datum/c ch1 port) pos1)))))
-
-	  ;;discard whitespaces
-	  ((char-whitespace? ch)
-	   (start-tokenising/pos port))
-
-	  ;;tokenise every datum whose syntax does not start with a #
-	  (else
-	   (values (advance-tokenisation-of-non-hash-datum/c ch port) pos)))))
 
 
 (define (start-tokenising/pos port)
