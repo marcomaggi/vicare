@@ -71,7 +71,6 @@ TESTS			=	\
 	test-ikarus-lists.sps				\
 	test-ikarus-normalization.sps			\
 	test-ikarus-numerics.sps			\
-	test-ikarus-parse-flonums.sps			\
 	test-ikarus-pointers.sps			\
 	test-ikarus-r6rs-records-procedural.sps		\
 	test-ikarus-reader.sps				\
@@ -152,6 +151,7 @@ EXTRA_DIST =	\
 	long-test-r6rs-run-via-eval.sps			\
 	long-test-ikarus-bignums.sps			\
 	long-test-ikarus-io.sps				\
+	long-test-ikarus-parse-flonums.sps		\
 	\
 	test-r6rs-arithmetic-bitwise.sps		\
 	test-r6rs-arithmetic-fixnums.sps		\
@@ -193,7 +193,6 @@ EXTRA_DIST =	\
 	test-ikarus-lists.sps				\
 	test-ikarus-normalization.sps			\
 	test-ikarus-numerics.sps			\
-	test-ikarus-parse-flonums.sps			\
 	test-ikarus-pointers.sps			\
 	test-ikarus-r6rs-records-procedural.sps		\
 	test-ikarus-reader.sps				\
