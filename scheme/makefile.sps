@@ -1557,6 +1557,7 @@
 ;;;
     (port-id					i)
     (string->filename-func			i)
+    (filename->string-func			i)
     (get-annotated-datum			i)
     (annotation?				i)
     (annotation-expression			i)

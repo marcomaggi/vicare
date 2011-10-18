@@ -51,6 +51,21 @@
   #t)
 
 
+(parametrise ((check-test-name	'directory-stream))
+
+  (check	;verify that no error occurs
+      (let ((stream (open-directory-stream "..")))
+	(let loop ((entry (read-directory-stream stream)))
+;;;(pretty-print entry)
+	  (if entry
+	      (loop (read-directory-stream stream))
+	    (close-directory-stream stream)))
+	(directory-stream? stream))
+    => #t)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

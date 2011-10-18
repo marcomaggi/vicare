@@ -46,8 +46,6 @@
 ;;of  the  cookie to  become  invalid.  Should  the  port  be marked  as
 ;;corrupted?
 ;;
-;;* Write documentation for the Ikarus-specific functions.
-;;
 
 
 ;;;; The port data structure
@@ -473,6 +471,7 @@
     reset-output-port!
     port-id
     string->filename-func
+    filename->string-func
 
     ;; spawning operative system processes
     process process-nonblocking process*
@@ -1462,11 +1461,11 @@
   (unless (or (procedure? ?proc) (not ?proc))
     (assertion-violation ?who "SET-POSITION! should be either a procedure or false" ?proc)))
 
-(define-inline (%assert-argument-is-a-filename filename who)
+(define-inline (%assert-argument-is-filename filename who)
   (unless (string? filename)
     (assertion-violation who "expected Scheme string as filename argument" filename)))
 
-(define-inline (%assert-argument-is-a-file-options obj who)
+(define-inline (%assert-argument-is-file-options obj who)
   (unless (enum-set? obj)
     (assertion-violation who "expected enum set as file-options argument" obj)))
 
@@ -1547,6 +1546,16 @@
 		     " too big for string of length "
 		     (number->string (unsafe.string-length dst.str)))
       start count (unsafe.string-length dst.str))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%assert-argument-is-directory-stream obj who)
+  (unless (directory-stream? obj)
+    (assertion-violation who "expected directory stream as argument" obj)))
+
+(define-inline (%assert-argument-is-open-directory-stream obj who)
+  (when (directory-stream-closed? obj)
+    (assertion-violation who "expected open directory stream as argument" obj)))
 
 
 ;;;; error helpers
@@ -2678,31 +2687,31 @@
 
 ;;For ports  having a  Scheme bytevector as  buffer: the  minimum buffer
 ;;size  must be big  enough to  allow the  buffer to  hold the  full UTF
-;;encoding  of a Unicode  character for  all the  supported transcoders.
+;;encoding of two Unicode  characters for all the supported transcoders.
 ;;For  ports having  a Scheme  string as  buffer: there  is  no rational
 ;;constraint on the buffer size.
 ;;
-;;It makes  sense to have  "as small as possible"  minimum buffer
-;;size to allow easy writing  of test suites exercising the logic
-;;of buffer flushing and filling.
+;;It makes sense  to have "as small as possible"  minimum buffer size to
+;;allow  easy writing  of test  suites  exercising the  logic of  buffer
+;;flushing and filling.
 ;;
 (define BUFFER-SIZE-LOWER-LIMIT		8)
 
-;;The  maximum buffer size  must be  small enough  to fit  into a
-;;fixnum, which  is defined by R6RS  to be capable  of holding at
-;;least 24 bits.
+;;The maximum  buffer size must  be small enough  to fit into  a fixnum,
+;;which is defined by R6RS to be capable of holding at least 24 bits.
+;;
 (define BUFFER-SIZE-UPPER-LIMIT		(greatest-fixnum))
 
-;;For binary ports: the default buffer size should be selected to
-;;allow efficient caching of portions of binary data blobs, which
-;;may be megabytes wide.
+;;For binary ports: the default  buffer size should be selected to allow
+;;efficient  caching of  portions of  binary  data blobs,  which may  be
+;;megabytes wide.
 ;;
 (define DEFAULT-BINARY-BLOCK-SIZE	(* 4 4096))
 
-;;For textual  ports: the default buffer size  should be selected
-;;to allow  efficient caching  of portions of  text for  the most
-;;recurring use, which  includes accumulation of "small" strings,
-;;like in the use of printf-like functions.
+;;For textual ports: the default buffer size should be selected to allow
+;;efficient  caching of  portions of  text for  the most  recurring use,
+;;which includes  accumulation of  "small" strings, like  in the  use of
+;;printf-like functions.
 ;;
 (define DEFAULT-STRING-BLOCK-SIZE	256)
 
@@ -3588,29 +3597,24 @@
     ;;
     ;;the device position equals the  bytevector length and its value in
     ;;the cookie's POS field is never mutated.
-    (let ((bv.len (unsafe.bytevector-length bv)))
-      ;;FIXME  The following is  an artificial  limitation to  allow the
-      ;;buffer to  be handled using  unsafe fixnum functions; it  can be
-      ;;removed using a custom port for big bytevectors.
-      (unless (< bv.len BUFFER-SIZE-UPPER-LIMIT)
-	(error who "input bytevector length exceeds maximum supported size" bv.len))
-      (let ((attributes		(%unsafe.fxior
+    (let* ((bv.len (unsafe.bytevector-length bv))
+	   (attributes		(%unsafe.fxior
 				 (%select-input-fast-tag-from-transcoder who maybe-transcoder)
 				 (%select-eol-style-from-transcoder who maybe-transcoder)))
-	    (buffer.index	0)
-	    (buffer.used-size	bv.len)
-	    (buffer		bv)
-	    (transcoder		maybe-transcoder)
-	    (identifier		"*bytevector-input-port*")
-	    (read!		all-data-in-buffer)
-	    (write!		#f)
-	    (get-position	#t)
-	    (set-position!	#t)
-	    (close		#f)
-	    (cookie		(default-cookie #f)))
-	(set-cookie-pos! cookie bv.len)
-	($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
-		    read! write! get-position set-position! close cookie))))))
+	   (buffer.index	0)
+	   (buffer.used-size	bv.len)
+	   (buffer		bv)
+	   (transcoder		maybe-transcoder)
+	   (identifier		"*bytevector-input-port*")
+	   (read!		all-data-in-buffer)
+	   (write!		#f)
+	   (get-position	#t)
+	   (set-position!	#t)
+	   (close		#f)
+	   (cookie		(default-cookie #f)))
+      (set-cookie-pos! cookie bv.len)
+      ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
+		  read! write! get-position set-position! close cookie)))))
 
 
 ;;;; string input ports
@@ -4671,7 +4675,7 @@
     (if (eq? port.read! all-data-in-buffer)
 	0
       (let ((buffer port.buffer))
-	;;Shift to the beginning data  alraedy in buffer but still to be
+	;;Shift to the beginning data  already in buffer but still to be
 	;;consumed; commit the new position.  Before:
 	;;
 	;;                          cookie.pos
@@ -7232,6 +7236,13 @@
 	  obj
 	(assertion-violation 'string->filename-func "expected procedure value" obj)))))
 
+(define filename->string-func
+  (make-parameter utf8->string
+    (lambda (obj)
+      (if (procedure? obj)
+	  obj
+	(assertion-violation 'filename->string-func "expected procedure value" obj)))))
+
 (define (%open-input-file-descriptor filename file-options who)
   ;;Subroutine for the  functions below opening a file  for input.  Open
   ;;and return  a file descriptor  referencing the file selected  by the
@@ -7496,8 +7507,8 @@
 
    ((filename file-options buffer-mode maybe-transcoder)
     (define who 'open-file-input-port)
-    (%assert-argument-is-a-filename filename who)
-    (%assert-argument-is-a-file-options file-options who)
+    (%assert-argument-is-filename filename who)
+    (%assert-argument-is-file-options file-options who)
     (%assert-argument-is-maybe-transcoder maybe-transcoder who)
     (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
 	   (other-attributes	buffer-mode-attrs)
@@ -7512,7 +7523,7 @@
   ;;Open FILENAME  for input, with  empty file options, and  returns the
   ;;obtained port.
   ;;
-  (%assert-argument-is-a-filename filename who)
+  (%assert-argument-is-filename filename who)
   (let ((fd			(%open-input-file-descriptor filename (file-options) who))
 	(other-attributes	0)
 	(port-id		filename)
@@ -7548,7 +7559,7 @@
   ;;unspecified.
   ;;
   (define who 'with-input-from-file)
-  (%assert-argument-is-a-filename filename who)
+  (%assert-argument-is-filename filename who)
   (%assert-argument-is-procedure  thunk    who)
   (call-with-port
       (%open-input-file-with-defaults filename who)
@@ -7571,7 +7582,7 @@
   ;;used for an I/O operation.
   ;;
   (define who 'call-with-input-file)
-  (%assert-argument-is-a-filename filename who)
+  (%assert-argument-is-filename filename who)
   (%assert-argument-is-procedure  proc  who)
   (call-with-port (%open-input-file-with-defaults filename who) proc))
 
@@ -7614,8 +7625,8 @@
 
    ((filename file-options buffer-mode maybe-transcoder)
     (define who 'open-file-output-port)
-    (%assert-argument-is-a-filename filename who)
-    (%assert-argument-is-a-file-options file-options who)
+    (%assert-argument-is-filename filename who)
+    (%assert-argument-is-file-options file-options who)
     (%assert-argument-is-maybe-transcoder maybe-transcoder who)
     (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
 	   (other-attributes	buffer-mode-attrs)
@@ -7629,7 +7640,7 @@
   ;;Open FILENAME  for output, with  empty file options, and  return the
   ;;obtained port.
   ;;
-  (%assert-argument-is-a-filename filename who)
+  (%assert-argument-is-filename filename who)
   (let ((fd			(%open-output-file-descriptor filename (file-options) who))
 	(other-attributes	0)
 	(port-id		filename)
@@ -7709,8 +7720,8 @@
 
    ((filename file-options buffer-mode maybe-transcoder)
     (define who 'open-file-input/output-port)
-    (%assert-argument-is-a-filename filename who)
-    (%assert-argument-is-a-file-options file-options who)
+    (%assert-argument-is-filename filename who)
+    (%assert-argument-is-file-options file-options who)
     (%assert-argument-is-maybe-transcoder maybe-transcoder who)
     (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
 	   (other-attributes	(%unsafe.fxior INPUT/OUTPUT-PORT-TAG buffer-mode-attrs))
@@ -8050,68 +8061,92 @@
 	(else (assertion-violation who "invalid argument" what))))
 
 
-(module (directory-stream? open-directory-stream
-			   read-directory-stream close-directory-stream)
+;;;; reading file system directories
 
-  (define-struct directory-stream (filename pointer closed?))
+(define-struct directory-stream
+  (filename pointer closed?))
 
-  (define G (make-guardian))
-
-  (define (clean-up)
-    (cond
-     ((G) =>
-      (lambda (x)
-	(close-directory-stream x #f)
-	(clean-up)))))
-
-  (define (open-directory-stream filename)
-    (define who 'open-directory-stream)
-    (unless (string? filename)
-      (assertion-violation who "not a string" filename))
-    (clean-up)
-    (let ((rv (foreign-call "ikrt_opendir" ((string->filename-func) filename))))
-      (if (fixnum? rv)
-	  (%raise-io-error who filename rv)
-	(let ((stream (make-directory-stream filename rv #f)))
-	  (G stream)
-	  stream))))
-
-  (define (read-directory-stream x)
-    (define who 'read-directory-stream)
-    (unless (directory-stream? x)
-      (assertion-violation who "not a directory stream" x))
-    (when (directory-stream-closed? x)
-      (assertion-violation who "directory stream is closed" x))
-    (let ((rv (foreign-call "ikrt_readdir" (directory-stream-pointer x))))
-      (cond
-       ((fixnum? rv)
-	(close-directory-stream x #f)
-	(%raise-io-error who (directory-stream-filename x) rv))
-       ((not rv) #f)
-       (else (utf8->string rv)))))
-
-  (define close-directory-stream
-    (case-lambda
-     ((x wanterror?)
-      (define who 'close-directory-stream)
-      (clean-up)
-      (unless (directory-stream? x)
-	(assertion-violation who "not a directory stream" x))
-      (unless (directory-stream-closed? x)
-	(set-directory-stream-closed?! x #t)
-	(let ((rv (foreign-call "ikrt_closedir"
-				(directory-stream-pointer x))))
-	  (when (and wanterror? (not (eqv? rv 0)))
-	    (%raise-io-error who (directory-stream-filename x) rv)))))
-     ((x) (close-directory-stream x #t))))
-
+(module ()
   (set-rtd-printer! (type-descriptor directory-stream)
 		    (lambda (x p wr)
-		      (fprintf p "#<directory-stream ~a>"
-			       (directory-stream-filename x)))))
+		      (display (string-append "#<directory-stream "
+					      (directory-stream-filename x)
+					      ">")))))
+#;(set-rtd-printer! (type-descriptor directory-stream)
+(lambda (x p wr)
+  (fprintf p "#<directory-stream ~a>"
+	   (directory-stream-filename x))))
 
+(define-inline (%platform-open-directory filename.bv)
+  (foreign-call "ikrt_opendir" filename.bv))
 
-		;(set-fd-nonblocking 0 'init '*stdin*)
+(define-inline (%platform-read-directory-stream stream.ptr)
+  (foreign-call "ikrt_readdir" stream.ptr))
+
+(define-inline (%platform-close-directory stream.ptr)
+  (foreign-call "ikrt_closedir" stream.ptr))
+
+;;; --------------------------------------------------------------------
+
+(define directory-stream-guardian
+  (let ((G (make-guardian)))
+    (define (close-garbage-collected-directory-streams)
+      (let ((stream (G)))
+	(when stream
+	  (close-directory-stream stream #f)
+	  (close-garbage-collected-directory-streams))))
+    (post-gc-hooks (cons close-garbage-collected-directory-streams (post-gc-hooks)))
+    G))
+
+(define (open-directory-stream filename)
+  ;;Defined by  Ikarus.  Open the file system  directory FILENAME, which
+  ;;must be a string, and return  a directory stream object to be closed
+  ;;by  CLOSE-DIRECTORY-STREAM  or  left  to automatic  closing  by  the
+  ;;garbage collector.
+  ;;
+  (define who 'open-directory-stream)
+  (%assert-argument-is-filename filename who)
+  (let ((retval (%platform-open-directory ((string->filename-func) filename))))
+    (if (fixnum? retval)
+	(%raise-io-error who filename retval)
+      (let ((stream (make-directory-stream filename retval #f)))
+	(directory-stream-guardian stream)
+	stream))))
+
+(define (read-directory-stream stream)
+  ;;Defined by Ikarus.  Return the next entry from the directory STREAM,
+  ;;or false  if no more entries  are available.  The entry  is a string
+  ;;representing a filename.  Raise an exception if an error occurs.
+  ;;
+  (define who 'read-directory-stream)
+  (%assert-argument-is-directory-stream stream who)
+  (%assert-argument-is-open-directory-stream stream who)
+  (let ((retval (%platform-read-directory-stream (directory-stream-pointer stream))))
+    (cond ((fixnum? retval)
+	   (close-directory-stream stream #f)
+	   (%raise-io-error who (directory-stream-filename stream) retval))
+	  ((not retval)
+	   #f)
+	  (else
+	   ((filename->string-func) retval)))))
+
+(define close-directory-stream
+  ;;Defined by Ikarus.  Close the  directory STREAM.  If an error occurs
+  ;;raise  an exception  only when  RAISE-ERROR? is  true.  RAISE-ERROR?
+  ;;defaults to true.
+  ;;
+  (case-lambda
+   ((stream)
+    (close-directory-stream stream #t))
+   ((stream raise-error?)
+    (define who 'close-directory-stream)
+    (%assert-argument-is-directory-stream stream who)
+    (unless (directory-stream-closed? stream)
+      (set-directory-stream-closed?! stream #t)
+      (let ((retval (%platform-close-directory (directory-stream-pointer stream))))
+	(when (and raise-error?
+		   (not (unsafe.fxzero? retval)))
+	  (%raise-io-error who (directory-stream-filename stream) retval)))))))
 
 
 ;;;; standard, console and current ports

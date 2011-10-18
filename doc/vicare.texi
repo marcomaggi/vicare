@@ -3756,9 +3756,11 @@ example in the previous section):
 * iklib io codecs::             Transcoders and additional codecs.
 * iklib io binary::             Additional binary port features.
 * iklib io textual::            Additional textual port features.
+* iklib io buffer::             Buffer size customisation.
 * iklib io process::            Spawning processes.
 * iklib io socket::             Using network sockets.
 * iklib io non-block::          Non--blocking mode for ports.
+* iklib io misc::               Miscellaneous port functions.
 @end menu
 
 @c page
@@ -3766,17 +3768,24 @@ example in the previous section):
 @subsection File pathname handling
 
 
-The following bindings are exported by the @library{ikarus} library.
-
-
-@deffn Parameter string->filename-func
 All the file--related functions defined by @rnrs{6} accept a Scheme
 string as representing a file pathname; internally such string is
 converted to a bytevector to be handed to the underlying operative
-system.
+system.  The following bindings are exported by the @library{ikarus}
+library.
 
-In @value{PRJNAME} such conversion is performed by the function returned
-by @func{string->filename-func}, which defaults to @func{string->utf8}.
+
+@deffn Parameter string->filename-func
+In @value{PRJNAME} the string--to--filename conversion is performed by
+the function returned by @func{string->filename-func}, which defaults to
+@func{string->utf8}.
+@end deffn
+
+
+@deffn Parameter filename->string-func
+In @value{PRJNAME} the filename--to--string conversion is performed by
+the function returned by @func{filename->string-func}, which defaults to
+@func{utf8->string}.
 @end deffn
 
 @c page
@@ -3872,6 +3881,21 @@ values: the @eof{} object or a fixnum representing first octet, the
 @eof{} object or a fixnum representing the second octet.
 @end defun
 
+
+@defun console-input-port
+Return the default value of the @func{current-input-port} parameter.
+@end defun
+
+
+@defun console-output-port
+Return the default value of the @func{current-outptu-port} parameter.
+@end defun
+
+
+@defun console-error-port
+Return the default value of the @func{current-error-port} parameter.
+@end defun
+
 @c page
 @node iklib io textual
 @subsection Additional textual port features
@@ -3925,8 +3949,54 @@ object of type @condition{source-position}.
 @end defun
 
 @c page
+@node iklib io buffer
+@subsection Buffer size customisation
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@deffn Parameter bytevector-port-buffer-size
+@deffnx Parameter bytevector-port-buffer-size @var{fixnum}
+Hold the buffer size for bytevector ports, like the one returned by
+@func{open-bytevector-output-port}.  It is initialised to @math{16384}.
+@end deffn
+
+
+@deffn Parameter string-port-buffer-size
+@deffnx Parameter string-port-buffer-size @var{fixnum}
+Hold the buffer size for string ports, like the one returned by
+@func{open-string-output-port}.  It is initialised to @math{256}.
+@end deffn
+
+
+@deffn Parameter input-file-buffer-size
+@deffnx Parameter input-file-buffer-size @var{fixnum}
+Hold the buffer size for input file ports, like the one returned by
+@func{open-input-file}.  It is initialised to @math{16384}.
+@end deffn
+
+
+@deffn Parameter output-file-buffer-size
+@deffnx Parameter output-file-buffer-size @var{fixnum}
+Hold the buffer size for output file ports, like the one returned by
+@func{open-output-file}.  It is initialised to @math{16384}.
+@end deffn
+
+
+@deffn Parameter input/output-file-buffer-size
+@deffnx Parameter input/output-file-buffer-size @var{fixnum}
+Hold the buffer size for input/output file ports, like the one returned
+by @func{open-file-input/output-prot}.  It is initialised to
+@math{16384}.
+@end deffn
+
+@c page
 @node iklib io process
 @subsection Spawning processes
+
+
+The following bindings are exported by the @library{ikarus} library.
 
 
 @defun process @var{command} . @var{options}
@@ -3997,6 +4067,9 @@ descriptors configured to non--blocking mode; @ref{iklib io non-block}.
 @subsubsection Establishing client network connections
 
 
+The following bindings are exported by the @library{ikarus} library.
+
+
 @defun tcp-connect @var{hostname} @var{service}
 @defunx udp-connect @var{hostname} @var{service}
 @defunx tcp-connect-nonblocking @var{hostname} @var{service}
@@ -4028,6 +4101,9 @@ See the @file{/etc/services} configuration file.
 @c page
 @node iklib io socket server
 @subsubsection Opening server network services
+
+
+The following bindings are exported by the @library{ikarus} library.
 
 
 @defun tcp-server-socket @var{server-port-number}
@@ -4137,6 +4213,18 @@ fcntl(fd, F_SETFL, O_NONBLOCK);
 @noindent
 @glibcref{Control Operations, Control Operations}@*
 @glibcref{Open-time Flags, Open-time Flags}
+
+@c page
+@node iklib io misc
+@subsection Miscellaneous port functions
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun port-id @var{port}
+Return a Scheme string representing the identifier of @var{port}.
+@end defun
 
 @c page
 @node iklib foreign
@@ -4975,6 +5063,7 @@ The @posix{} functions are exported by the @library{ikarus} library.
 * posix waitpid::               Waiting for terminated children.
 * posix signal::                Delivering signals to processes.
 * posix file::                  Interfacing with the file system.
+* posix dir::                   File system directory inspection.
 * posix env::                   Interfacing with the execution
                                 environment.
 * posix misc::                  Miscellaneous functions.
@@ -5388,6 +5477,42 @@ If an error occurs, an exception is raised.
 @var{mode} must be an exact integer selecting the permissions.
 
 @glibcref{Setting Permissions, Setting Permissions}
+@end defun
+
+@c page
+@node posix dir
+@section File system directory inspection
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun open-directory-stream @var{filename}
+Open the file system directory @var{filename}, which must be a string,
+and return a directory stream object to be closed by
+@func{close-directory-stream} or left to automatic closing by the
+garbage collector.
+@end defun
+
+
+@defun directory-stream? @var{stream}
+Return true if @var{stream} is a directory stream returned by
+@func{open-directory-stream}.
+@end defun
+
+
+@defun read-directory-stream @var{stream}
+Return the next entry from the directory @var{stream}, or false if no
+more entries are available.  The entry is a string representing a
+filename.  Raise an exception if an error occurs.
+@end defun
+
+
+@defun close-directory-stream @var{stream}
+@defunx close-directory-stream @var{stream} @var{raise-error?}
+Close the directory @var{STREAM}.  If an error occurs raise an exception
+only when @var{raise-error?} is true.  @var{raise-error?}  defaults to
+true.
 @end defun
 
 @c page
