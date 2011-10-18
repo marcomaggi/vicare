@@ -43,6 +43,10 @@
 		  bound-identifier=? datum->syntax syntax-error
 		  syntax-violation syntax->datum make-variable-transformer
 		  null-environment scheme-report-environment)
+    ;;Notice  that it  is  known by  this  library that  source-position
+    ;;objects are condition objects.  So  maybe it is better to keep the
+    ;;"-condition" suffixes in  the names.  Also these should  go in the
+    ;;compat library.
     (rename (only (ikarus)
 		  make-source-position-condition
 		  source-position-condition?
