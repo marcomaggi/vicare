@@ -112,25 +112,12 @@
 	       (cleanup)
 	       (apply values return-values)))))))))
 
-
-;;;; reading and peeking characters helpers
-
 (define-syntax* (read-char-no-eof stx)
   (syntax-case stx ()
     ((read-char-no-eof (?port ?ch-name ?raise-error) . ?cond-clauses)
      (and (identifier? #'?ch-name)
 	  (identifier? #'?raise-error))
      #'(let ((?ch-name (get-char-and-track-textual-position ?port)))
-	 (cond ((eof-object? ?ch-name)
-		(?raise-error))
-	       . ?cond-clauses)))))
-
-(define-syntax* (peek-char-no-eof stx)
-  (syntax-case stx ()
-    ((peek-char-no-eof (?port ?ch-name ?raise-error) . ?cond-clauses)
-     (and (identifier? #'?ch-name)
-	  (identifier? #'?raise-error))
-     #'(let ((?ch-name (peek-char ?port)))
 	 (cond ((eof-object? ?ch-name)
 		(?raise-error))
 	       . ?cond-clauses)))))
@@ -191,14 +178,13 @@
   (value value/ann set?))
 
 ;;Constructor: make-annotation EXPR SOURCE STRIPPED
-;;
 ;;Predicate: annotation? OBJ
 ;;
 ;;Field name: expression
 ;;Field accessor: annotation-expression ANN
 ;;Field mutator: set-annotation-expression! ANN NEW-EXPR
-;;  Expression  is  a   list/vector/id/what-have-you  that  may  contain
-;;  further annotations.
+;;  A list,  vector, identifier, what-have-you that  may contain further
+;;  annotations.
 ;;
 ;;Field name: source
 ;;Field accessor: annotation-source ANN
@@ -208,7 +194,7 @@
 ;;Field name: stripped
 ;;Field accessor: annotation-stripped ANN
 ;;Field mutator: set-annotation-stripped! ANN NEW-STRIP
-;;  Stripped is an S-expression with no annotations.
+;;  An S-expression with no annotations.
 ;;
 (define-struct annotation
   (expression source stripped))
@@ -1523,10 +1509,6 @@
     (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
       . ?cond-clauses))
 
-  (define-inline (%peek-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (peek-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
-
   (define-inline (main)
     (%read-char-no-eof (port ch)
       (else
@@ -2178,7 +2160,5 @@
 ;;; end of file
 ;;Local Variables:
 ;;eval: (put 'read-char-no-eof		'scheme-indent-function 1)
-;;eval: (put 'peek-char-no-eof		'scheme-indent-function 1)
 ;;eval: (put '%read-char-no-eof		'scheme-indent-function 1)
-;;eval: (put '%peek-char-no-eof		'scheme-indent-function 1)
 ;;End:
