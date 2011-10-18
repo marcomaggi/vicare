@@ -55,6 +55,7 @@
 
   (check	;verify that no error occurs
       (let ((stream (open-directory-stream "..")))
+;;;(pretty-print stream)
 	(let loop ((entry (read-directory-stream stream)))
 ;;;(pretty-print entry)
 	  (if entry

@@ -42,9 +42,22 @@
 ;;
 ;;* Solve all the FIXME issues.
 ;;
-;;* FIXME If SET-PORT-POSITION!  fails  it is possible for the field POS
-;;of  the  cookie to  become  invalid.  Should  the  port  be marked  as
-;;corrupted?
+;;* If SET-PORT-POSITION!  fails it is possible for the field POS of the
+;;cookie to become invalid.  Should the port be marked as corrupted?
+;;
+;;* Still to be reviewed:
+;;
+;;	tcp-connect tcp-connect-nonblocking
+;;	udp-connect udp-connect-nonblocking
+;;	tcp-server-socket tcp-server-socket-nonblocking
+;;	accept-connection accept-connection-nonblocking
+;;	close-tcp-server-socket
+;;	register-callback
+;;
+;;* Still to be documented:
+;;
+;;   reset-input-port!
+;;   reset-output-port!
 ;;
 
 
@@ -2758,7 +2771,7 @@
   ;;Customisable  buffer size  for  socket ports.   To  be used  by
   ;;TCP-CONNECT and similar.
   ;;
-  (define-buffer-size-parameter input-socket-buffer-size	(+ 128 DEFAULT-BINARY-BLOCK-SIZE))
+  (define-buffer-size-parameter input-socket-buffer-size	DEFAULT-BINARY-BLOCK-SIZE)
   (define-buffer-size-parameter output-socket-buffer-size	DEFAULT-BINARY-BLOCK-SIZE)
 
   #| end of LET-SYNTAX |# )
