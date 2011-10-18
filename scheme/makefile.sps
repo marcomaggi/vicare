@@ -797,7 +797,7 @@
     (append                                      i r ba se)
     (apply                                       i r ba se)
     (assert                                      i r ba)
-    (assertion-error                             )
+    (assertion-error				 ) ;;empty?!?
     (assertion-violation                         i r ba)
     (boolean=?                                   i r ba)
     (boolean?                                    i r ba se)

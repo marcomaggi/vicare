@@ -1,23 +1,25 @@
-;;; Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
-;;; Modified by Marco Maggi
+;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;; Permission is hereby granted, free of charge, to any person obtaining a
-;;; copy of this software and associated documentation files (the "Software"),
-;;; to deal in the Software without restriction, including without limitation
-;;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
-;;; and/or sell copies of the Software, and to permit persons to whom the
-;;; Software is furnished to do so, subject to the following conditions:
+;;;Permission is hereby granted, free of charge, to any person obtaining
+;;;a  copy of  this  software and  associated  documentation files  (the
+;;;"Software"), to  deal in the Software  without restriction, including
+;;;without limitation  the rights to use, copy,  modify, merge, publish,
+;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
+;;;permit persons to whom the Software is furnished to do so, subject to
+;;;the following conditions:
 ;;;
-;;; The above copyright notice and this permission notice shall be included in
-;;; all copies or substantial portions of the Software.
+;;;The  above  copyright notice  and  this  permission  notice shall  be
+;;;included in all copies or substantial portions of the Software.
 ;;;
-;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-;;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-;;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-;;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-;;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-;;; DEALINGS IN THE SOFTWARE.
+;;;THE  SOFTWARE IS  PROVIDED "AS  IS",  WITHOUT WARRANTY  OF ANY  KIND,
+;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
+;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
+;;;NONINFRINGEMENT.  IN NO EVENT  SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY,  WHETHER IN AN
+;;;ACTION OF  CONTRACT, TORT  OR OTHERWISE, ARISING  FROM, OUT OF  OR IN
+;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
+;;;SOFTWARE.
 
 (library (psyntax expander)
   (export identifier? syntax-dispatch
@@ -35,16 +37,24 @@
           ellipsis-map assertion-error
           environment environment? environment-symbols
           new-interaction-environment syntax-transpose)
-  (import
-    (except (rnrs)
-      environment environment? identifier?
-      eval generate-temporaries free-identifier=?
-      bound-identifier=? datum->syntax syntax-error
-      syntax-violation syntax->datum make-variable-transformer
-      null-environment scheme-report-environment)
+  (import (except (rnrs)
+		  environment environment? identifier?
+		  eval generate-temporaries free-identifier=?
+		  bound-identifier=? datum->syntax syntax-error
+		  syntax-violation syntax->datum make-variable-transformer
+		  null-environment scheme-report-environment)
+    (rename (only (ikarus)
+		  make-source-position-condition
+		  source-position-condition?
+		  source-position-port-id)
+	    (make-source-position-condition	make-source-position)
+	    (source-position-condition?		source-position?)
+	    (source-position-port-id		source-position-identifier))
     (only (ikarus)
-	  source-position-port-id
-	  source-position-byte)
+	  source-position-byte
+	  source-position-character
+	  source-position-line
+	  source-position-column)
     (rnrs base)
     (rnrs lists)
     (rnrs control)
@@ -55,7 +65,10 @@
     (psyntax compat)
     (psyntax config)
     (psyntax internal)
-    (only (rnrs syntax-case) syntax-case syntax with-syntax)
+    (only (rnrs syntax-case)
+	  syntax-case
+	  syntax
+	  with-syntax)
     (prefix (rnrs syntax-case) sys.))
 
   (define (set-cons x ls)
@@ -276,19 +289,28 @@
 
   ;;; Now to syntax objects which are records defined like:
   (define-record stx (expr mark* subst* ae*)
-    (lambda (x p wr)
-      (display "#<syntax " p)
-      (write (stx->datum x) p)
+    (lambda (x port wr)
+      ;;Record printer function.
+      ;;
+      (display "#<syntax " port)
+      (write (stx->datum x) port)
       (let ((expr (stx-expr x)))
         (when (annotation? expr)
-          (let ((src (annotation-source expr)))
-            (when (pair? src)
-              (display " [char " p)
-              (display (cdr src) p)
-              (display " of " p)
-              (display (car src) p)
-              (display "]" p)))))
-      (display ">" p)))
+          (let ((pos (annotation-textual-position expr)))
+	    (when (source-position?)
+	      (display " [line "  port) (display (source-position-line    pos) port)
+	      (display " column " port) (display (source-position-column  pos) port)
+	      (display " of " port)     (display (source-position-identifier pos) port)
+	      (display "]" port)))
+	  #;(let ((src (annotation-source expr)))
+	      (when (pair? src)
+		(display " [char " port)
+		(display (cdr src) port)
+		(display " of " port)
+		(display (car src) port)
+		(display "]" port)))
+	  ))
+      (display ">" port)))
 
   ;;; First, let's look at identifiers, since they're the real
   ;;; reason why syntax objects are here to begin with.
@@ -750,8 +772,7 @@
   ;;; - the binding of the identifier (for id-stx) or the type of
   ;;;   car of the pair.
   (define (raise-unbound-error id)
-    (syntax-violation* #f "unbound identifier" id
-      (make-undefined-violation)))
+    (%syntax-violation #f "unbound identifier" id (make-undefined-violation)))
   #;
   (define (syntax-type e r)
     (let-values ([(t0 t1 t2) (syntax-type^ e r)])
@@ -1515,14 +1536,31 @@
         ((_ expr)
          (bless `(make-promise (lambda () ,expr)))))))
 
-  (define assert-macro
-    (lambda (stx)
-      (syntax-match stx ()
-        ((_ expr)
-         (let ((pos (or (expression-position stx)
-                        (expression-position expr))))
-           (bless
-             `(or ,expr (assertion-error ',expr ',pos))))))))
+  (define (assert-macro stx)
+    ;;Defined by R6RS.  An ASSERT  form is evaluated by evaluating EXPR.
+    ;;If  EXPR returns a  true value,  that value  is returned  from the
+    ;;ASSERT  expression.   If EXPR  returns  false,  an exception  with
+    ;;condition  types  "&assertion"  and  "&message"  is  raised.   The
+    ;;message  provided  in   the  condition  object  is  implementation
+    ;;dependent.
+    ;;
+    ;;NOTE  Implementations should  exploit the  fact that  ASSERT  is a
+    ;;syntax  to  provide as  much  information  as  possible about  the
+    ;;location of the assertion failure.
+    ;;
+    (syntax-match stx ()
+      ((_ expr)
+       (let ((pos (or (expression-position stx)
+		      (expression-position expr))))
+	 (bless
+	  (if (source-position? pos)
+	      `(or ,expr
+		   (assertion-error
+		    ',expr ,(source-position-identifier pos)
+		    ,(source-position-byte pos) ,(source-position-character pos)
+		    ,(source-position-line pos) ,(source-position-column    pos)))
+	    `(or ,expr
+		 (assertion-error ',expr "unknown source" #f #f #f #f))))))))
 
   (define endianness-macro
     (lambda (stx)
@@ -4047,24 +4085,27 @@
               (assertion-violation 'bound-identifier=? "not an identifier" y))
           (assertion-violation 'bound-identifier=? "not an identifier" x))))
 
-  (define (position->condition x)
+  #;(define (position->condition x)
     (if (pair? x)
 	(let ((port-id		(car x))
 	      (byte		(cdr x))
 	      (character	#f)
 	      (line		#f)
 	      (column		#f))
-	  (make-source-position-condition port-id byte character line column))
+	  (make-source-position port-id byte character line column))
       (condition)))
 
-  (define (extract-position-condition x)
-    (position->condition (expression-position x)))
+  (define (expression->source-position-condition x)
+    (expression-position x)
+    #;(position->condition (expression-position x)))
 
   (define (expression-position x)
-    (and (stx? x)
-         (let ((x (stx-expr x)))
-           (and (annotation? x)
-                (annotation-source x)))))
+    (if (stx? x)
+	(let ((x (stx-expr x)))
+	  (if (annotation? x)
+	      (annotation-textual-position x) #;(annotation-source x)
+	    (condition)))
+      (condition)))
 
   (define (syntax-annotation x)
     (if (stx? x) (stx-expr x) x))
@@ -4077,14 +4118,22 @@
 ;              (stx->datum x)))
 ;        (stx->datum x)))
 
-  (define (assertion-error expr pos)
+  (define (assertion-error expr source-identifier
+			   byte-offset character-offset
+			   line-number column-number)
+    ;;Invoked by the expansion of the ASSERT macro to raise an assertion
+    ;;violation.
+    ;;
     (raise
-      (condition
-        (make-assertion-violation)
-        (make-who-condition 'assert)
-        (make-message-condition "assertion failed")
-        (make-irritants-condition (list expr))
-        (position->condition pos))))
+     (condition
+      (make-assertion-violation)
+      (make-who-condition 'assert)
+      (make-message-condition "assertion failed")
+      (make-irritants-condition (list expr))
+      (make-source-position source-identifier
+			    byte-offset character-offset
+			    line-number column-number)
+      #;(position->condition pos))))
 
   (define syntax-error
     (lambda (x . args)
@@ -4099,7 +4148,7 @@
           (make-syntax-violation
             (syntax->datum x)
             #f)
-          (extract-position-condition x)
+          (expression->source-position-condition x)
           (extract-trace x)))))
 
   (define (extract-trace x)
@@ -4107,48 +4156,83 @@
       make-trace trace?
       (form trace-form))
     (let f ((x x))
-      (cond
-        ((stx? x)
-         (apply condition
-            (make-trace x)
-            (map f (stx-ae* x))))
-        ((annotation? x)
-         (make-trace (make-stx x '() '() '())))
-        (else (condition)))))
-
-  (define syntax-violation*
-    (lambda (who msg form condition-object)
-       (unless (string? msg)
-         (assertion-violation 'syntax-violation "message is not a string" msg))
-       (let ((who
-              (cond
-                ((or (string? who) (symbol? who)) who)
-                ((not who)
-                 (syntax-match form ()
-                   (id (id? id) (syntax->datum id))
-                   ((id . rest) (id? id) (syntax->datum id))
-                   (_  #f)))
-                (else
-                 (assertion-violation 'syntax-violation
-                    "invalid who argument" who)))))
-         (raise
-           (condition
-             (if who
-                 (make-who-condition who)
-                 (condition))
-             (make-message-condition msg)
-             condition-object
-             (extract-position-condition form)
-             (extract-trace form))))))
+      (cond ((stx? x)
+	     (apply condition
+		    (make-trace x)
+		    (map f (stx-ae* x))))
+	    ((annotation? x)
+	     (make-trace (make-stx x '() '() '())))
+	    (else (condition)))))
 
   (define syntax-violation
+    ;;Defined  by R6RS.   WHO must  be false  or a  string or  a symbol.
+    ;;MESSAGE must be a string.  FORM must be a syntax object or a datum
+    ;;value.  SUBFORM must be a syntax object or a datum value.
+    ;;
+    ;;The  SYNTAX-VIOLATION procedure raises  an exception,  reporting a
+    ;;syntax violation.  WHO should  describe the macro transformer that
+    ;;detected the exception.  The  MESSAGE argument should describe the
+    ;;violation.  FORM should be the erroneous source syntax object or a
+    ;;datum value  representing a  form.  The optional  SUBFORM argument
+    ;;should be a syntax object  or datum value representing a form that
+    ;;more precisely locates the violation.
+    ;;
+    ;;If WHO is false, SYNTAX-VIOLATION attempts to infer an appropriate
+    ;;value for the  condition object (see below) as  follows: when FORM
+    ;;is  either  an  identifier  or  a  list-structured  syntax  object
+    ;;containing an  identifier as its first element,  then the inferred
+    ;;value is the identifier's symbol.   Otherwise, no value for WHO is
+    ;;provided as part of the condition object.
+    ;;
+    ;;The condition object provided with the exception has the following
+    ;;condition types:
+    ;;
+    ;;*  If WHO  is not  false  or can  be inferred,  the condition  has
+    ;;condition type  "&who", with  WHO as the  value of its  field.  In
+    ;;that  case,  WHO should  identify  the  procedure  or entity  that
+    ;;detected the  exception.  If it  is false, the condition  does not
+    ;;have condition type "&who".
+    ;;
+    ;;* The condition has condition type "&message", with MESSAGE as the
+    ;;value of its field.
+    ;;
+    ;;* The condition has condition type "&syntax" with FORM and SUBFORM
+    ;;as the value of its fields.  If SUBFORM is not provided, the value
+    ;;of the subform field is false.
+    ;;
     (case-lambda
-      ((who msg form) (syntax-violation who msg form #f))
-      ((who msg form subform)
-       (syntax-violation* who msg form
-          (make-syntax-violation
-            (syntax->datum form)
-            (syntax->datum subform))))))
+     ((who msg form)
+      (syntax-violation who msg form #f))
+     ((who msg form subform)
+      (%syntax-violation who msg form
+			 (make-syntax-violation (syntax->datum form)
+						(syntax->datum subform))))))
+
+  (define (%syntax-violation who msg form condition-object)
+    (unless (string? msg)
+      (assertion-violation 'syntax-violation "message is not a string" msg))
+    (let ((who (cond ((or (string? who)
+			  (symbol? who))
+		      who)
+		     ((not who)
+		      (syntax-match form ()
+			(id
+			 (id? id)
+			 (syntax->datum id))
+			((id . rest)
+			 (id? id)
+			 (syntax->datum id))
+			(_  #f)))
+		     (else
+		      (assertion-violation 'syntax-violation "invalid who argument" who)))))
+      (raise
+       (condition (if who
+		      (make-who-condition who)
+		    (condition))
+		  (make-message-condition msg)
+		  condition-object
+		  (expression->source-position-condition form)
+		  (extract-trace form)))))
 
   (define identifier? (lambda (x) (id? x)))
 

@@ -22,8 +22,8 @@
     read get-datum get-annotated-datum
 
     ;; annotated datum inspection
-    annotation? annotation-expression
-    annotation-source annotation-stripped
+    annotation? annotation-expression annotation-stripped
+    annotation-source annotation-textual-position
 
     ;; internal functions only for Vicare
     read-source-file read-script-source-file
@@ -33,8 +33,8 @@
 		  read get-datum get-annotated-datum
 
 		  ;; annotated datum inspection
-		  annotation? annotation-expression
-		  annotation-source annotation-stripped
+		  annotation? annotation-expression annotation-stripped
+		  annotation-source annotation-textual-position
 
 		  ;; internal functions only for Vicare
 		  read-source-file read-script-source-file
@@ -177,40 +177,38 @@
 (define-struct loc
   (value value/ann set?))
 
-;;Constructor: make-annotation EXPR STRIPPED SOURCE
+;;Constructor: make-annotation EXPR STRIPPED SOURCE POS
 ;;Predicate: annotation? OBJ
 ;;
 ;;Field name: expression
 ;;Field accessor: annotation-expression ANN
-;;Field mutator: set-annotation-expression! ANN NEW-EXPR
 ;;  A list,  vector, identifier, what-have-you that  may contain further
 ;;  annotations.
 ;;
-;;Field name: source
-;;Field accessor: annotation-source ANN
-;;Field mutator: set-annotation-source! ANN NEW-SOURCE
-;;  A pair  (FILE-NAME . BYTE-OFFSET)  representing the position  of the
-;;  expression in the source code.  It is used by the compiler.
-;;
 ;;Field name: stripped
 ;;Field accessor: annotation-stripped ANN
-;;Field mutator: set-annotation-stripped! ANN NEW-STRIP
 ;;  An S-expression with no annotations.
 ;;
+;;Field name: textual-position
+;;Field accessor: annotation-textual-position ANN
+;;  A  condtion  object  of  type  "&source-position"  representing  the
+;;  position of  the expression in the  source code.  It is  used by the
+;;  expander.
+;;
 (define-struct annotation
-  (expression stripped source))
+  (expression stripped source textual-position))
 
 (define-inline (annotate-simple datum textual-pos)
   (make-annotation datum datum
 		   (cons (source-position-port-id   textual-pos)
 			 (source-position-character textual-pos))
-		   ))
+		   textual-pos))
 
 (define-inline (annotate stripped expression textual-pos)
   (make-annotation expression stripped
 		   (cons (source-position-port-id   textual-pos)
 			 (source-position-character textual-pos))
-		   ))
+		   textual-pos))
 
 
 ;;;; source position handling

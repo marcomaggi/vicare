@@ -19,8 +19,10 @@
   (export define-record make-parameter parameterize format gensym
           eval-core symbol-value set-symbol-value!
           make-struct-type get-annotated-datum
-          annotation? annotation-expression annotation-source
-          annotation-stripped
+
+          annotation? annotation-expression annotation-stripped
+	  annotation-source annotation-textual-position
+
           read-library-source-file
           library-version-mismatch-warning
           library-stale-warning
@@ -33,7 +35,8 @@
 	  eval-core)
     (only (ikarus.reader)
 	  read-library-source-file;this is not in makefile.sps
-	  get-annotated-datum))
+	  get-annotated-datum
+	  annotation-textual-position))
 
   (define (library-version-mismatch-warning name depname filename)
     (fprintf (current-error-port)
