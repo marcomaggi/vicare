@@ -2476,6 +2476,7 @@
 
  /section)
 
+
 (section ;;; control operations
 
  (define-primop $fp-at-base unsafe
@@ -2558,6 +2559,7 @@
 
  /section)
 
+
 (section ;;; hash table tcbuckets
 
  (define-primop $make-tcbucket unsafe
@@ -2588,8 +2590,8 @@
 
  /section)
 
+
 (section ;;; codes
-
  (define-primop code? unsafe
    ((P x) (sec-tag-test (T x) vector-mask vector-tag #f code-tag)))
 

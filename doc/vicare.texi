@@ -455,6 +455,11 @@ Revised^6 Report on the algorithmic language Scheme
 @code{#<void>}
 @end macro
 
+
+@macro eol{}
+@acronym{EOL}
+@end macro
+
 @c page
 @c ------------------------------------------------------------
 @c Values.
@@ -6476,9 +6481,12 @@ also faster than the public interface exported by @library{ikarus} and
 * syslib fixnums::              Low level fixnum operations.
 * syslib chars::                Low level character operations.
 * syslib pairs::                Low level pair operations.
+* syslib structs::              Low level structure operations.
 * syslib vectors::              Low level vector operations.
 * syslib bytevectors::          Low level bytevector operations.
+* syslib strings::              Low level string operations.
 * syslib ports::                Low level port structures.
+* syslib transcoders::          Low level transcoder operations.
 @end menu
 
 @c page
@@ -6665,6 +6673,129 @@ Store @var{value} in the cdr location of @var{P}.
 @end deffn
 
 @c page
+@node syslib structs
+@section Low level structure operations
+
+
+A structure is a block of memory allocated as a vector; a reference to a
+structure value is a reference to a vector.  The first word of the
+structure is a word referencing the struct type descriptor.
+
+@example
+|----------------|----------| structure value
+  heap offset     vector tag
+@end example
+
+The structure type descriptor is itself a data structure; the type
+descriptor of the type descriptors is the return value of
+@func{base-rtd}.
+
+
+@deffn Syntax define-struct @meta{name} (@meta{field} ...)
+Define a new data structure type.  This macro is embedded in the
+expander and exported by the @library{ikarus} library.
+
+@meta{name} must be a symbol representing the name of the structure; it
+is used to build names for the constructor, predicate, field accessors
+and mutators.  The @meta{field} values must be symbols representing the
+names of the fields; they are used to build names for the accessors and
+mutators.
+
+The following definition:
+
+@example
+(define-struct color
+  (red green blue))
+@end example
+
+@noindent
+expands to the definition of the following bindings:
+
+@table @code
+@item color
+An identifier syntax bound to a pair whose car is the symbol @samp{$rtd}
+and whose cdr is the return value of @func{make-struct-type} applied to
+the name of the structure and the list of fields.
+
+@item make-color @var{red} @var{green} @var{blue}
+A structure constructor accepting as much arguments as there are fields.
+The constructor makes use of the @func{$struct} low level operation.
+
+@item color? @var{obj}
+A predicate to distinguish between references to @code{color} structures
+and other values.  This predicate makes use of the @func{$struct/rtd?}
+low level operation.
+
+@item color-red @var{stru}
+@itemx color-green @var{stru}
+@itemx color-blue @var{stru}
+Accessors for the fields of the structure.  These accessors make use of
+the @func{$struct/rtd?} low level operation to validate the argument and
+if successful they use @func{$struct-ref} to extract the value; if the
+argument is of invalid type: an assertion violation is raised.
+
+@item set-color-red! @var{stru} @var{red}
+@itemx set-color-green! @var{stru} @var{green}
+@itemx set-color-blue! @var{stru} @var{blue}
+Mutators for the fields of the structure.  These mutators make use of
+the @func{$struct/rtd?} low level operation to validate the argument and
+if successful they use @func{$struct-set!} to extract the value; if the
+argument is of invalid type: an assertion violation is raised.
+@end table
+@end deffn
+
+
+The arguments @var{stru} to these operations must be references to data
+structures, the arguments @var{rtd} must be references to structure type
+descriptors, the arguments @var{fx} must be fixnums of appropriate
+value.  The following bindings are exported by the @library{ikarus
+system $structs} library.
+
+
+@deffn {Unsafe Operation} base-rtd
+Return a reference to the structure type descriptor used as type for all
+the structure type descriptors.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct? @var{obj}
+Evaluate to true if @var{obj} is the reference to a structure.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct/rtd? @var{stru} @var{rtd}
+Evaluate to true if @var{stru} is a structure of type @var{rtd}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $make-struct @var{rtd} @var{fx}
+Allocate a new data structure of type @var{rtd} capable of holding
+@var{fx} words and return a reference to it.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct-rtd @var{stru}
+Return a reference to the type descriptor of @var{stru}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct-ref @var{stru} @var{fx}
+Return the value in the field at index @var{fx} of @var{stru}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct-set! @var{stru} @var{fx} @var{value}
+Store @var{value} in the field at index @var{fx} of @var{stru}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct @var{rtd} @var{value} ...
+Allocate a new data structure of type @var{rtd} capable of holding as
+many words as given @var{value} arguments and initialise the fields with
+such values.  Return a reference to the structure.
+@end deffn
+
+@c page
 @node syslib vectors
 @section Low level vector operations
 
@@ -6782,6 +6913,37 @@ Store @var{fl} at index @var{fx} of @var{bv}.
 @end deffn
 
 @c page
+@node syslib strings
+@section Low level string operations
+
+
+The arguments @var{str} to these operations must be references to
+strings, the arguments @var{fx} must be fixnums in the appropriate
+range, the arguments @var{ch} must be characters.  The following
+bindings are exported by the @library{ikarus system $strings} library.
+
+
+@deffn {Unsafe Operation} $make-string @var{fx}
+Allocate a new string capable of holding @var{fx} characters and return
+a reference to it.
+@end deffn
+
+
+@deffn {Unsafe Operation} $string-length @var{str}
+Return a fixnum representing the length of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $string-ref @var{str} @var{fx}
+Return the character at offset @var{fx} in @var{str}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $string-set! @var{str} @var{fx} @var{ch}
+Store @var{ch} at index @var{fx} of @var{str}.
+@end deffn
+
+@c page
 @node syslib ports
 @section Low level port structures
 
@@ -6858,6 +7020,36 @@ Mutator for the buffer used size field.
 
 @deffn {Unsafe Operation} $set-port-attrs! @var{port} @var{new-attrs}
 Mutator for the port attributes.
+@end deffn
+
+@c page
+@node syslib transcoders
+@section Low level transcoder operations
+
+
+A transcoder is a machine word tagged to make it of a disjoint type.
+The transcoder data (codec, @eol{} style, error handling) is encoded in
+the most significant bits of this word.
+
+@example
+|---------------------------|------------| transcoder
+       payload bits          transcoder-tag
+@end example
+
+The arguments @var{tran} to these operations must be transcoders, the
+arguments @var{fx} must be fixnums in the appropriate range.  The
+following bindings are exported by the @library{ikarus system
+$transcoders} library.
+
+
+@deffn {Unsafe Operation} $data->transcoder @var{fx}
+Encode @var{fx} as payload bits of a transcoder word and return the
+resulting transcoder.
+@end deffn
+
+
+@deffn {Unsafe Operation} $transcoder->data @var{tran}
+Extract the payload bits from a transcoder and return them as fixnum.
 @end deffn
 
 @c page
