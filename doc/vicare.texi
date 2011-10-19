@@ -6634,6 +6634,21 @@ Allocate and return a new vector value of @var{fx} elements.
 @end deffn
 
 
+@deffn {Unsafe Operation} $vector-length @var{vec}
+Evaluate to a fixnum representing the numbe of values in @var{vec}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $vector-ref @var{vec} @var{fx}
+Return the value at index @var{fx} in @var{vec}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $vector-set! @var{vec} @var{fx} @var{value}
+Store @var{value} at index @var{fx} in @var{vec}.
+@end deffn
+
+
 @c page
 @node syslib ports
 @section Low level port structures
