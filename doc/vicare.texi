@@ -1680,6 +1680,7 @@ a superset of all the supported bindings of @rnrs{6}.
 * iklib bytevectors::           Additional bytevector functions.
 * iklib strings::               Additional string functions.
 * iklib symbols::               Additional symbol functions.
+* iklib numerics::              Additional functions on numbers.
 * iklib load::                  Loading source files.
 * iklib import::                Local library imports.
 * iklib modules::               Local modules.
@@ -2226,6 +2227,46 @@ Remove property @var{key} from the list associated to @var{symbol}.
 Return a new association list representing the property list of
 @var{symbol}.  The order of the entries is the same as the property
 creation order.
+@end defun
+
+@c page
+@node iklib numerics
+@section Additional functions on numbers
+
+
+@menu
+* iklib numerics preds::        Additional numeric predicates.
+@end menu
+
+@c page
+@node iklib numerics preds
+@subsection Additional numeric predicates
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun bignum? @var{obj}
+Return true if @var{obj} is an exact integer represented by a big
+number.
+@end defun
+
+
+@defun ratnum? @var{obj}
+Return true if @var{obj} is an exact rational number.
+@end defun
+
+
+@defun cflonum? @var{obj}
+Return true if @var{obj} is a complex number having flonums as both real
+and imaginary parts.
+@end defun
+
+
+@defun compnum? @var{obj}
+Return true if @var{obj} is a complex number having any possible
+combination of number representations as real and imaginary parts, but
+not both flonums.
 @end defun
 
 @c page
@@ -6479,6 +6520,7 @@ also faster than the public interface exported by @library{ikarus} and
 
 @menu
 * syslib fixnums::              Low level fixnum operations.
+* syslib bignums::              Low level bignum operations.
 * syslib chars::                Low level character operations.
 * syslib pairs::                Low level pair operations.
 * syslib structs::              Low level structure operations.
@@ -6495,7 +6537,7 @@ also faster than the public interface exported by @library{ikarus} and
 
 
 The arguments to these operations must be fixnums.  The following
-bindings are exported by the @library{ikarus system $fixnum} library.
+bindings are exported by the @library{ikarus system $fx} library.
 
 
 @deffn {Unsafe Operation} $fxzero? @var{fx}
@@ -6597,6 +6639,61 @@ Evaluate to a fixnum which can be used as hash value.
 @strong{NOTE}  This appears to be unused in the source.
 @end quotation
 @end deffn
+
+@c page
+@node syslib bignums
+@section Low level bignum operations
+
+
+Bignums are exact integers bigger than fixnums.  @ref{iklib numerics}
+for more functions acting on bignums.
+
+The arguments @var{bn} to these operations must be bignums.  The
+following bindings are exported by the @library{ikarus system $bignums}
+library.
+
+
+@deffn {Unsafe Operation} $bignum-positive? @var{bn}
+Evaluate to true if the operand is positive.
+@end deffn
+
+
+@ignore
+ (define-primop $bignum-byte-ref unsafe
+   ((V s i)
+    (struct-case i
+		 ((constant i)
+		  (unless (fx? i) (interrupt))
+		  (prm 'sll
+		       (prm 'logand
+			    (prm 'mref (T s)
+				 (K (+ i (- disp-bignum-data record-tag))))
+			    (K 255))
+		       (K fx-shift)))
+		 ((known i t) (cogen-value-$bignum-byte-ref s i))
+		 (else
+		  (prm 'sll
+		       (prm 'srl ;;; FIXME: bref
+			    (prm 'mref (T s)
+				 (prm 'int+
+				      (prm 'sra (T i) (K fx-shift))
+                   ;;; ENDIANNESS DEPENDENCY
+				      (K (- disp-bignum-data
+					    (- wordsize 1)
+					    record-tag))))
+			    (K (* (- wordsize 1) 8)))
+		       (K fx-shift)))))
+   ((P s i) (K #t))
+   ((E s i) (nop)))
+
+ (define-primop $bignum-size unsafe
+   ((V x)
+    (prm 'sll
+	 (prm 'sra
+	      (prm 'mref (T x) (K (- record-tag)))
+	      (K bignum-length-shift))
+	 (K (* 2 fx-shift)))))
+@end ignore
 
 @c page
 @node syslib chars
