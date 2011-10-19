@@ -6496,6 +6496,8 @@ At present the port tag is @math{6} bits wide, so we have: on 32 bits
 platforms: 32 - 6 = 24 bits available for attributes; on 64 bits
 platforms: 64 - 6 = 58 bits available for attributes.
 
+See the source code for a more comprehensive documentation.
+
 The following bindings are exported by the @library{ikarus system $io}
 library.
 

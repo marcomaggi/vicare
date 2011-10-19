@@ -34,8 +34,9 @@ Straaten.
   Ikarus Scheme is an almost R6RS compliant implementation of the Scheme
 programming  language; it is  the creation  of Abdulaziz  Ghuloum, which
 retired from  development in 2010.   Vicare Scheme is an  R6RS compliant
-fork  of Ikarus Scheme,  aiming at  continuing development;  "Vicare" is
-pronounced the etruscan way.
+fork  of Ikarus  Scheme, aiming  at becoming  a native  compiler  for R6
+Scheme producing  single threaded  programs; "Vicare" is  pronounced the
+etruscan way.
 
   Current official maintainers are:
 
@@ -191,7 +192,9 @@ B. Bug reports
 --------------
 
 Bug reports  are appreciated, register  them using the issue  tracker at
-Vicare's GitHub site.
+Vicare's GitHub site:
+
+  <http://github.com/marcomaggi/vicare/issues>
 
 
 C. Resources
@@ -208,6 +211,23 @@ the home page of the Vicare project is at:
 development takes place at:
 
                  <http://github.com/marcomaggi/vicare/>
+
+  It  is suggested to  use Vicare  Scheme along  with Nausicaa,  a large
+collection of R6 Scheme libraries:
+
+	      <http://marcomaggi.github.com/nausicaa.html>
+
+  The home page of the R6RS standard is at:
+
+			 <http://www.r6rs.org>
+
+  Other known implementations of R6 Scheme:
+
+Chez Scheme	<http://www.scheme.com/>
+Larceny		<http://www.larcenists.org/>
+Mosh		<http://code.google.com/p/mosh-scheme/>
+Racket		<http://racket-lang.org/>
+Ypsilon		<http://code.google.com/p/ypsilon/>
 
 
 ### end of file
