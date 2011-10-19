@@ -1673,6 +1673,7 @@ a superset of all the supported bindings of @rnrs{6}.
 * iklib cafe::                  Cafe.
 * iklib bytevectors::           Additional bytevector functions.
 * iklib strings::               Additional string functions.
+* iklib symbols::               Additional symbol functions.
 * iklib load::                  Loading source files.
 * iklib import::                Local library imports.
 * iklib modules::               Local modules.
@@ -2157,6 +2158,68 @@ Latin-1 encoding of the characters.
 Convert to and from a Scheme string and a Scheme bytevector holding the
 @utf{}-16 encoding of the characters under little, big or native
 endianness respectively.
+@end defun
+
+@c page
+@node iklib symbols
+@section Additional symbol functions
+
+
+@menu
+* iklib symbols plists::        Property lists.
+@end menu
+
+@c page
+@node iklib symbols plists
+@subsection Property lists
+
+
+Property lists are associations key/value that can be attached to any
+Scheme symbol.  The following bindings are exported by the
+@library{ikarus} and the @library{ikarus symbols} libraries.
+
+@example
+#!ikarus
+(import (ikarus))
+
+(putprop 'ciao 'british 'hello)
+(putprop 'ciao 'spanish 'hola)
+
+(getprop 'ciao 'british)        @result{} hello
+(getprop 'ciao 'spanish)        @result{} hola
+
+(remprop 'ciao 'british)
+(getprop 'ciao 'british)        @result{} #f
+
+(property-list 'ciao)           @result{} ((spanish . hola))
+@end example
+
+
+@defun putprop @var{symbol} @var{key} @var{value}
+Add a new property @var{key} with @var{value} to the property list of
+@var{symbol}.  @var{key} must be a symbol, @var{value} can be any value.
+
+If @var{key} is already set: the old entry is mutated to reference the
+new @var{value}.
+@end defun
+
+
+@defun getprop @var{symbol} @var{key}
+Return the value of the property @var{key} in the property list of
+@var{symbol}; if @var{key} is not set return false.  @var{key} must be a
+symbol.
+@end defun
+
+
+@defun remprop @var{symbol} @var{key}
+Remove property @var{key} from the list associated to @var{symbol}.
+@end defun
+
+
+@defun property-list @var{symbol}
+Return a new association list representing the property list of
+@var{symbol}.  The order of the entries is the same as the property
+creation order.
 @end defun
 
 @c page
