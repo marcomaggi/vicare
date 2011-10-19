@@ -6536,6 +6536,21 @@ also faster than the public interface exported by @library{ikarus} and
 @section Low level fixnum operations
 
 
+A fixnum is a machine word whose two least significant bits are set to
+zero.  @rnrs{6} states that a fixnum must have at least @math{24} bits
+in which to store the number; under @value{PRJNAME}, on a 32-bit
+platform, @math{29} bits are available to store the number and @math{1}
+bit to store the sign:
+
+@example
+(greatest-fixnum)       @result{} +536870911
+(expt 2 29)             @result{} +536870912
+(- (expt 2 29) 1)       @result{} +536870911
+
+(least-fixnum)          @result{} -536870912
+(- (expt 2 29))         @result{} -536870912
+@end example
+
 The arguments to these operations must be fixnums.  The following
 bindings are exported by the @library{ikarus system $fx} library.
 

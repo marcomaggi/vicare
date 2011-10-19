@@ -785,7 +785,21 @@
  /section)
 
 
-(section ;;; fixnums
+;;;; fixnums
+;;
+;;A fixnum is a machine word whose two least significant bits are set to
+;;zero.  R6RS states  that a fixnum must have at least  24 bits in which
+;;to store  the number; on a  32-bit platform, 29 bits  are available to
+;;store the number and 1 bit to store the sign:
+;;
+;; (greatest-fixnum)       => +536870911
+;; (expt 2 29)             => +536870912
+;; (- (expt 2 29) 1)       => +536870911
+;;
+;; (least-fixnum)          => -536870912
+;; (- (expt 2 29))         => -536870912
+;;
+(section
 
  (define-primop fixnum? safe
    ((P x) (tag-test (T x) fx-mask fx-tag))
