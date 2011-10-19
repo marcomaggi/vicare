@@ -1,7 +1,17 @@
+* Overall project goals
+
+** Document the assembler
+
+** Document the compiler
+
+** Document undocumented functions
+
 * List of functions to be documented
 
+
   Some of  these may  be internal functions  which must be  removed from
-  "makefile.sps".
+  "makefile.sps".  Not  all the undocumented functions  are listed here,
+  only the ones known not to be documented.
 
 ** ikarus.symbols.ss
 
@@ -10,6 +20,8 @@
    symbol-value symbol-bound? set-symbol-value!
    reset-symbol-proc! system-value system-value-gensym
 
+
+* end
 
 ### end of file
 # Local Variables:
