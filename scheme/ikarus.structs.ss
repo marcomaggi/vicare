@@ -1,6 +1,6 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;;Modified by <marco.maggi-ipsu@poste.it>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under  the terms of  the GNU General  Public License version  3 as
@@ -16,18 +16,51 @@
 
 (library (ikarus structs)
   (export
-    make-struct-type struct-type-name struct-type-symbol
-    struct-type-field-names struct-constructor struct-predicate
-    struct-field-accessor struct-field-mutator struct? struct-rtd
+    ;; struct type descriptor constructor
+    make-struct-type
+
+    ;; struct type descriptor inspection
+    struct-type-name		struct-type-symbol
+    struct-type-field-names
+
+    ;; struct type descriptor customisation
     set-rtd-printer!
-    (rename (struct-rtd struct-type-descriptor))
-    struct-name struct-printer struct-length struct-ref struct-set!)
+
+    ;; struct constructor and predicate
+    struct?
+    struct-constructor		struct-predicate
+
+    ;; struct accessors and mutators
+    struct-ref			struct-set!
+    struct-field-accessor	struct-field-mutator
+
+    ;; structure inspection
+    struct-rtd			(rename (struct-rtd struct-type-descriptor))
+    struct-name			struct-printer
+    struct-length)
   (import (except (ikarus)
-		  make-struct-type struct-type-name struct-type-symbol
-		  struct-type-field-names struct-constructor struct-predicate
-		  struct-field-accessor struct-field-mutator struct? struct-rtd
-		  struct-type-descriptor struct-name struct-printer struct-length
-		  struct-ref struct-set! set-rtd-printer!)
+		  ;; struct type descriptor constructor
+		  make-struct-type
+
+		  ;; struct type descriptor inspection
+		  struct-type-name	struct-type-symbol
+		  struct-type-field-names
+
+		  ;; struct type descriptor customisation
+		  set-rtd-printer!
+
+		  ;; struct accessors and mutators
+		  struct?
+		  struct-constructor	struct-predicate
+
+		  ;; struct accessors and mutators
+		  struct-ref		struct-set!
+		  struct-field-accessor	struct-field-mutator
+
+		  ;; structure inspection
+		  struct-rtd		struct-type-descriptor
+		  struct-name		struct-printer
+		  struct-length)
     (ikarus system $structs)
     (ikarus system $pairs)
     (ikarus system $fx))
