@@ -86,7 +86,7 @@ TESTS			=	\
 	test-vicare-reader.sps				\
 	test-vicare-symbols.sps				\
 	\
-	test-system-fixnums.sps				\
+	test-vicare-system.sps				\
 	\
 	test-issue-001-equal-hash.sps			\
 	test-issue-006-fxreverse-bit-field.sps		\
@@ -210,7 +210,7 @@ EXTRA_DIST =	\
 	test-vicare-reader.sps				\
 	test-vicare-symbols.sps				\
 	\
-	test-system-fixnums.sps				\
+	test-vicare-system.sps				\
 	\
 	test-issue-001-equal-hash.sps			\
 	test-issue-006-fxreverse-bit-field.sps		\

@@ -6473,39 +6473,13 @@ also faster than the public interface exported by @library{ikarus} and
 @library{rnrs}.
 
 @menu
-* syslib pairs::                Low level pair operations.
 * syslib fixnums::              Low level fixnum operations.
+* syslib chars::                Low level character operations.
+* syslib pairs::                Low level pair operations.
 * syslib vectors::              Low level vector operations.
+* syslib bytevectors::          Low level bytevector operations.
 * syslib ports::                Low level port structures.
 @end menu
-
-@c page
-@node syslib pairs
-@section Low level pair operations
-
-
-The arguments @var{P} to these operations must be pairs.  The following
-bindings are exported by the @library{ikarus system $pairs} library.
-
-
-@deffn {Unsafe Operation} $car @var{P}
-Return the car of the operand.
-@end deffn
-
-
-@deffn {Unsafe Operation} $cdr @var{P}
-Return the cdr of the operand.
-@end deffn
-
-
-@deffn {Unsafe Operation} $set-car! @var{P} @var{value}
-Store @var{value} in the car location of @var{P}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $set-cdr! @var{P} @var{value}
-Store @var{value} in the cdr location of @var{P}.
-@end deffn
 
 @c page
 @node syslib fixnums
@@ -6617,6 +6591,80 @@ Evaluate to a fixnum which can be used as hash value.
 @end deffn
 
 @c page
+@node syslib chars
+@section Low level character operations
+
+
+The arguments @var{ch} to these operations must be characters, the
+arguments @var{fx} must be fixnums in the range @code{[0, #x10FFFF]} but
+not in the range @code{[#xD800, #xDFFF]}.  The following bindings are
+exported by the @library{ikarus system $chars} library.
+
+
+@deffn {Unsafe Operation} $char= @vari{ch} @varii{ch}
+Evaluate to true if the operands are equal.
+@end deffn
+
+
+@deffn {Unsafe Operation} $char< @vari{ch} @varii{ch}
+Evaluate to true if the @vari{ch} is less than @varii{ch}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $char<= @vari{ch} @varii{ch}
+Evaluate to true if the @vari{ch} is less than or equal to @varii{ch}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $char> @vari{ch} @varii{ch}
+Evaluate to true if the @vari{ch} is greater than @varii{ch}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $char>= @vari{ch} @varii{ch}
+Evaluate to true if the @vari{ch} is greater than or equal to
+@varii{ch}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fixnum->char @var{fx}
+Return a new character value whose code point equals @var{fx}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $char->fixnum @var{ch}
+Return a fixnum representing the code point of the operand.
+@end deffn
+
+@c page
+@node syslib pairs
+@section Low level pair operations
+
+
+The arguments @var{P} to these operations must be pairs.  The following
+bindings are exported by the @library{ikarus system $pairs} library.
+
+
+@deffn {Unsafe Operation} $car @var{P}
+Return the car of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cdr @var{P}
+Return the cdr of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-car! @var{P} @var{value}
+Store @var{value} in the car location of @var{P}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-cdr! @var{P} @var{value}
+Store @var{value} in the cdr location of @var{P}.
+@end deffn
+
+@c page
 @node syslib vectors
 @section Low level vector operations
 
@@ -6624,7 +6672,7 @@ Evaluate to a fixnum which can be used as hash value.
 Vectors are variable length blocks of memory capable of holding at most
 a number of values equal to the return value of @func{greatest-fixnum}.
 
-The arguments @var{VEC} to these operations must be fixnums, the
+The arguments @var{vec} to these operations must be fixnums, the
 arguments @var{fx} must be fixnums.  The following bindings are exported
 by the @library{ikarus system $vectors} library.
 
@@ -6648,6 +6696,90 @@ Return the value at index @var{fx} in @var{vec}.
 Store @var{value} at index @var{fx} in @var{vec}.
 @end deffn
 
+@c page
+@node syslib bytevectors
+@section Low level bytevector operations
+
+
+The arguments @var{bv} to these operations must be references to
+bytevectors, the arguments @var{fx} must be fixnums in the appropriate
+range, the arguments @var{fl} must be flonums.  The following bindings
+are exported by the @library{ikarus system $bytevectors} library.
+
+
+@deffn {Unsafe Operation} $make-bytevector @var{fx}
+Allocate a new bytevector capable of holding @var{fx} bytes and return a
+reference to it.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-length @var{bv}
+Return a fixnum representing the number of bytes in the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-u8-ref @var{bv} @var{fx}
+Return a fixnum representing the octet at offset @var{fx} in @var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-s8-ref @var{bv} @var{fx}
+Return a fixnum representing the byte at offset @var{fx} in @var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-set! @var{bv} @var{fx-index} @var{fx-value}
+Store the octet or byte @var{fx-value} at index @var{fx-index} of
+@var{bv}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Double--precision @ieee{} flonums
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-double-native-ref @var{bv} @var{fx}
+Return a flonum representing the value at index @var{fx} of @var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-double-native-set! @var{bv} @var{fx} @var{fl}
+Store @var{fl} at index @var{fx} of @var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-double-nonnative-ref @var{bv} @var{fx}
+Return a flonum representing the value at index @var{fx} of @var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-double-nonnative-set! @var{bv} @var{fx} @var{fl}
+Store @var{fl} at index @var{fx} of @var{bv}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Single--precision @ieee{} flonums
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-single-native-ref @var{bv} @var{fx}
+Return a flonum representing the value at index @var{fx} of @var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-single-native-set! @var{bv} @var{fx} @var{fl}
+Store @var{fl} at index @var{fx} of @var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-single-nonnative-ref @var{bv} @var{fx}
+Return a flonum representing the value at index @var{fx} of @var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-single-nonnative-set! @var{bv} @var{fx} @var{fl}
+Store @var{fl} at index @var{fx} of @var{bv}.
+@end deffn
 
 @c page
 @node syslib ports

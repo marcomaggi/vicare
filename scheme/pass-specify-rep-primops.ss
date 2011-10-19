@@ -1045,6 +1045,7 @@
 
  /section)
 
+
 (section ;;; flonums
 
  (define ($flop-aux op fl0 fl1)
@@ -1282,6 +1283,7 @@
 
  /section)
 
+
 (section ;;; ratnums
 
  (define-primop ratnum? safe
@@ -1307,6 +1309,7 @@
 
  /section)
 
+
 (section ;;; complnums
 
  (define-primop compnum? safe
@@ -1332,7 +1335,7 @@
 
  /section)
 
-
+
 (section ;;; cflonums
 
  (define-primop cflonum? safe
@@ -1358,9 +1361,8 @@
 
  /section)
 
+
 (section ;;; generic arithmetic
-
-
 
  (define (assert-fixnums a a*)
    (define (or* a a*)
@@ -1719,6 +1721,7 @@
 
  /section)
 
+
 (section ;;; structs
 
  (define-primop $struct? unsafe
@@ -1793,6 +1796,7 @@
 
  /section)
 
+
 (section ;;; characters
 
  (define-primop char? safe
