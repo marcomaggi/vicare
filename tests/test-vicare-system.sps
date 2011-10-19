@@ -29,6 +29,7 @@
 (import (rename (ikarus)
 		(parameterize	parametrise))
   (ikarus system $fx)
+  (ikarus system $flonums)
   (checks))
 
 (print-unicode #f)
@@ -36,10 +37,19 @@
 (display "*** testing Vicare low level fixnum operations\n")
 
 
-(parametrise ((check-test-name	'inthash))
+(parametrise ((check-test-name	'fixnums))
 
   (check
       (fixnum? ($fxinthash 123))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'flonums))
+
+  (check
+      (flonum? ($make-flonum))
     => #t)
 
   #t)

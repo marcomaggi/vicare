@@ -1045,7 +1045,7 @@
 		  (prm 'sll
 		       (prm 'logand
 			    (prm 'mref (T s)
-				 (K (+ i (- disp-bignum-data record-tag))))
+				 (K (+ i (- disp-bignum-data vector-tag))))
 			    (K 255))
 		       (K fx-shift)))
 		 ((known i t) (cogen-value-$bignum-byte-ref s i))
@@ -1058,7 +1058,7 @@
                    ;;; ENDIANNESS DEPENDENCY
 				      (K (- disp-bignum-data
 					    (- wordsize 1)
-					    record-tag))))
+					    vector-tag))))
 			    (K (* (- wordsize 1) 8)))
 		       (K fx-shift)))))
    ((P s i) (K #t))
@@ -1068,41 +1068,80 @@
    ((V x)
     (prm 'sll
 	 (prm 'sra
-	      (prm 'mref (T x) (K (- record-tag)))
+	      (prm 'mref (T x) (K (- vector-tag)))
 	      (K bignum-length-shift))
 	 (K (* 2 fx-shift)))))
 
  /section)
 
 
-(section ;;; flonums
+;;;; flonums
+;;
+;;A flonum  is a fixed length  memory block referenced  by machine words
+;;tagged as vectors.  The first machine word of a flonum block is tagged
+;;has  flonum  in  its  least  significant  bits and  it  has  the  most
+;;significant bits set to zero.
+;;
+;;  |------------------------|-------------| reference to flonum
+;;        heap offset          vector tag
+;;
+;;  |------------------------|-------------| flonum first word
+;;     all set to zero         flonum tag
+;;
+;;A flonum memory block is 16 bytes wide and the actual number is stored
+;;in the last two words to speed up a bit memory access by aligning data
+;;on multiples of 8.
+;;
+;;     1st word     2nd word     3rd word     4th word
+;;  |------------|------------|------------|------------|
+;;   tagged word     unused           data words
+;;
+(section
 
  (define ($flop-aux op fl0 fl1)
+   ;;Flonum operation between two operands.
+   ;;
    (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
+     ;;tag the first word of the result as flonum
      (prm 'mset x (K (- vector-tag)) (K flonum-tag))
-     (prm 'fl:load (T fl0) (K (- disp-flonum-data vector-tag)))
-     (prm op (T fl1) (K (- disp-flonum-data vector-tag)))
-     (prm 'fl:store x (K (- disp-flonum-data vector-tag)))
+     ;;load the first operand in a register for flonums
+     (prm 'fl:load  (T fl0) (K (- disp-flonum-data vector-tag)))
+     ;;perform the operation between the register and FL1
+     (prm op        (T fl1) (K (- disp-flonum-data vector-tag)))
+     ;;store the result from the register into memory referenced by X
+     (prm 'fl:store x       (K (- disp-flonum-data vector-tag)))
      x))
 
  (define ($flop-aux* op fl fl*)
+   ;;Flonum operation  between three or  more operands (but also  upon a
+   ;;single operand).
+   ;;
    (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
+     ;;tag the first word of the result as flonum
      (prm 'mset x (K (- vector-tag)) (K flonum-tag))
+     ;;load the first operand in a register for flonums
      (prm 'fl:load (T fl) (K (- disp-flonum-data vector-tag)))
      (let f ((fl* fl*))
-       (cond
-	((null? fl*) (prm 'nop))
-	(else
-	 (make-seq
-	  (prm op (T (car fl*)) (K (- disp-flonum-data vector-tag)))
-	  (f (cdr fl*))))))
+       (cond ((null? fl*)
+	      (prm 'nop))
+	     (else
+	      (make-seq
+	       ;;perform the operation between the register and the next
+	       ;;operand
+	       (prm op (T (car fl*)) (K (- disp-flonum-data vector-tag)))
+	       (f (cdr fl*))))))
+     ;;store the result from the register into memory referenced by X
      (prm 'fl:store x (K (- disp-flonum-data vector-tag)))
      x))
 
  (define ($flcmp-aux op fl0 fl1)
+   ;;Flonum comparison operation.
+   ;;
    (make-seq
+    ;; load the first operand in a register for flonums
     (prm 'fl:load (T fl0) (K (- disp-flonum-data vector-tag)))
-    (prm op (T fl1) (K (- disp-flonum-data vector-tag)))))
+    ;; perform the operation between the register and FL1
+    (prm op       (T fl1) (K (- disp-flonum-data vector-tag)))))
 
  (define-primop flonum? safe
    ((P x) (sec-tag-test (T x) vector-mask vector-tag #f flonum-tag))
@@ -1112,12 +1151,13 @@
    ((V s i)
     (struct-case i
 		 ((constant i)
+		  ;;the data area is 8 bytes wide
 		  (unless (and (fx? i) (fx<= 0 i) (fx<= i 7))
 		    (interrupt))
 		  (prm 'sll
 		       (prm 'logand
 			    (prm 'bref (T s)
-				 (K (+ (- 7 i) (- disp-flonum-data record-tag))))
+				 (K (+ (- 7 i) (- disp-flonum-data vector-tag))))
 			    (K 255))
 		       (K fx-shift)))
 		 ((known expr t)
@@ -1138,8 +1178,10 @@
    ((E x i v)
     (struct-case i
 		 ((constant i)
+		  ;;the data area is 8 bytes wide
 		  (unless (and (fx? i) (fx<= 0 i) (fx<= i 7))
 		    (interrupt))
+		  ;;store the byte
 		  (prm 'bset
 		       (T x)
 		       (K (+ (- 7 i) (- disp-flonum-data vector-tag)))
@@ -1153,10 +1195,13 @@
     (case wordsize
       ((4)
        (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
+	 ;;tag the first word of the result as flonum
 	 (prm 'mset x (K (- vector-tag)) (K flonum-tag))
+	 ;;perform the operation storing the result in a flonum register
 	 (prm 'fl:from-int
 	      (K 0) ; dummy
 	      (prm 'sra (T fx) (K fx-shift)))
+	 ;;store the result from the register into memory referenced by X
 	 (prm 'fl:store x (K (- disp-flonum-data vector-tag)))
 	 x))
       (else
@@ -1190,43 +1235,43 @@
 					  (K flonum-tag)))
 				    code)))))))
 
-		;  (define (primary-tag-tests ls)
-		;    (cond
-		;      ((null? ls) (prm 'nop))
-		;      (else
-		;       (seq*
-		;         (interrupt-unless
-		;           (tag-test (car ls) vector-mask vector-tag))
-		;         (primary-tag-tests (cdr ls))))))
-		;  (define (secondary-tag-tests ls)
-		;    (define (or* a*)
-		;      (cond
-		;        ((null? (cdr a*)) (car a*))
-		;        (else (prm 'logor (car a*) (or* (cdr a*))))))
-		;    (interrupt-unless
-		;      (prm '= (or* (map (lambda (x)
-		;                          (prm 'mref x (K (- vector-tag))))
-		;                        ls))
-		;           (K flonum-tag))))
-		;  (let ((check
-		;         (let f ((ls ls) (ac '()))
-		;           (cond
-		;             ((null? ls) ac)
-		;             (else
-		;              (struct-case (car ls)
-		;                ((constant v)
-		;                 (if (flonum? v)
-		;                     (f (cdr ls) ac)
-		;                     #f))
-		;                (else (f (cdr ls) (cons (T (car ls)) ac)))))))))
-		;    (cond
-		;      ((not check) (interrupt))
-		;      ((null? check) code)
-		;      (else
-		;       (seq*
-		;         (primary-tag-tests check)
-		;         (secondary-tag-tests check)
-		;         code)))))
+;;;  (define (primary-tag-tests ls)
+;;;    (cond
+;;;      ((null? ls) (prm 'nop))
+;;;      (else
+;;;       (seq*
+;;;         (interrupt-unless
+;;;           (tag-test (car ls) vector-mask vector-tag))
+;;;         (primary-tag-tests (cdr ls))))))
+;;;  (define (secondary-tag-tests ls)
+;;;    (define (or* a*)
+;;;      (cond
+;;;        ((null? (cdr a*)) (car a*))
+;;;        (else (prm 'logor (car a*) (or* (cdr a*))))))
+;;;    (interrupt-unless
+;;;      (prm '= (or* (map (lambda (x)
+;;;                          (prm 'mref x (K (- vector-tag))))
+;;;                        ls))
+;;;           (K flonum-tag))))
+;;;  (let ((check
+;;;         (let f ((ls ls) (ac '()))
+;;;           (cond
+;;;             ((null? ls) ac)
+;;;             (else
+;;;              (struct-case (car ls)
+;;;                ((constant v)
+;;;                 (if (flonum? v)
+;;;                     (f (cdr ls) ac)
+;;;                     #f))
+;;;                (else (f (cdr ls) (cons (T (car ls)) ac)))))))))
+;;;    (cond
+;;;      ((not check) (interrupt))
+;;;      ((null? check) code)
+;;;      (else
+;;;       (seq*
+;;;         (primary-tag-tests check)
+;;;         (secondary-tag-tests check)
+;;;         code)))))
 
  (define-primop $fl+ unsafe
    ((V x y) ($flop-aux 'fl:add! x y)))
@@ -1249,25 +1294,26 @@
    ((V x . x*) (check-flonums (cons x x*) ($flop-aux* 'fl:mul! x x*)))
    ((P . x*) (check-flonums x* (K #t)))
    ((E . x*) (check-flonums x* (nop))))
- ;;The  following implementation  of  FL-  was used  by  the compiler  to
- ;;override   the  implemtation   in   "ikarus.numerics.ss"  for   speed.
- ;;Unfortunately it does not handle correctly the case:
- ;;
- ;;  (FL- 0.0) => -0.0
- ;;
- ;;returning "+0.0" because:
- ;;
- ;;  (FL- 0.0 0.0) => 0.0
- ;;
- ;;for this reason I commented it out.  It is my understanding that there
- ;;is no way  to include conditionals in the  DEFINE-PRIMOP syntax (Marco
- ;;Maggi; Aug 27, 2011).
- ;;
- ;; (define-primop fl- safe
- ;;   ((V x) (check-flonums (list x) ($flop-aux 'fl:sub! (K 0.0) x)))
- ;;   ((V x . x*) (check-flonums (cons x x*) ($flop-aux* 'fl:sub! x x*)))
- ;;   ((P x . x*) (check-flonums (cons x x*) (K #t)))
- ;;   ((E x . x*) (check-flonums (cons x x*) (nop))))
+
+;;;FIXME The following implementation of FL- was used by the compiler to
+;;;override   the  implemtation   in  "ikarus.numerics.ss"   for  speed.
+;;;Unfortunately it does not handle correctly the case:
+;;;
+;;;  (FL- 0.0) => -0.0
+;;;
+;;;returning "+0.0" because:
+;;;
+;;;  (FL- 0.0 0.0) => 0.0
+;;;
+;;;for this  reason I  commented it out.   It there  a way to  include a
+;;;conditional to fix this implementation? (Marco Maggi; Aug 27, 2011)
+;;;
+;;; (define-primop fl- safe
+;;;   ((V x) (check-flonums (list x) ($flop-aux 'fl:sub! (K 0.0) x)))
+;;;   ((V x . x*) (check-flonums (cons x x*) ($flop-aux* 'fl:sub! x x*)))
+;;;   ((P x . x*) (check-flonums (cons x x*) (K #t)))
+;;;   ((E x . x*) (check-flonums (cons x x*) (nop))))
+
  (define-primop fl/ safe
    ((V x) (check-flonums (list x) ($flop-aux 'fl:div! (K 1.0) x)))
    ((V x . x*) (check-flonums (cons x x*) ($flop-aux* 'fl:div! x x*)))
@@ -1304,7 +1350,9 @@
  (define-primop $flonum-sbe unsafe
    ((V x)
     (prm 'sll
+	 ;;extract the 12 most significant bits
 	 (prm 'srl
+	      ;;retrieve the second data word
 	      (prm 'mref32 (T x)
 		   (K (- (+ disp-flonum-data 4) vector-tag)))
 	      (K 20))

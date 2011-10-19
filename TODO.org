@@ -30,6 +30,10 @@
   "makefile.sps".  Not  all the undocumented functions  are listed here,
   only the ones known not to be documented.
 
+** low level
+
+   $flonum-sbe
+
 ** ikarus.symbols.ss
 
    gensym-count

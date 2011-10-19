@@ -6521,6 +6521,7 @@ also faster than the public interface exported by @library{ikarus} and
 @menu
 * syslib fixnums::              Low level fixnum operations.
 * syslib bignums::              Low level bignum operations.
+* syslib flonums::              Low level flonum operations.
 * syslib chars::                Low level character operations.
 * syslib pairs::                Low level pair operations.
 * syslib structs::              Low level structure operations.
@@ -6704,6 +6705,84 @@ Return a fixnum representing the byte at index @var{fx} in the data of
 @deffn {Unsafe Operation} $bignum-size @var{bn}
 Return a fixnum representing the number of machine words in the data
 portion of a bignum memory block.
+@end deffn
+
+@c page
+@node syslib flonums
+@section Low level flonum operations
+
+
+A flonum is a fixed length memory block referenced by machine words
+tagged as vectors.  The first machine word of a flonum block is tagged
+has flonum in its least significant bits and it has the most significant
+bits set to zero.
+
+@example
+|------------------------|-------------| reference to flonum
+      heap offset          vector tag
+
+|------------------------|-------------| flonum first word
+   all set to zero         flonum tag
+@end example
+
+A flonum memory block is @math{16} bytes wide and the actual number is
+stored in the last two words to speed up a bit memory access by aligning
+data on multiples of @math{8}.
+
+@example
+   1st word     2nd word     3rd word     4th word
+|------------|------------|------------|------------|
+ tagged word     unused           data words
+@end example
+
+The arguments @var{fl} to these operations must be fixnums, the
+arguments @var{fx} must be fixnums.  The following bindings are exported
+by the @library{ikarus system $flonums} library.
+
+
+@deffn {Unsafe Operation} $make-flonum
+Allocate a new flonum memory block and return a reference to it.  Does
+not initialise the data area.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flonum-u8-ref @var{fl} @var{fx}
+Return the octet at index @var{fx} in the data area of @var{fl}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flonum-set! @var{fl} @var{fx-index} @var{fx-value}
+Store the byte or octet represented by @var{fx-value} at index
+@var{fx-index} in the data area of @var{fl}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fixnum->flonum @var{fx}
+Convert the fixnum operand into a flonum and return a reference to the
+result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fl+ @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl- @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl* @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl/ @vari{fl} @varii{fl}
+Perform arithmetic operations.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fl= @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl< @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl<= @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl> @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl>= @vari{fl} @varii{fl}
+Perform comparison operations
+@end deffn
+
+
+@deffn {Unsafe Operation} $flonum-sbe @var{fl}
+Return a fixnum@dots{} Still undocumented, read the code look at the
+format of @ieee{} double precision flonums.
 @end deffn
 
 @c page
