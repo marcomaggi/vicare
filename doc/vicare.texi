@@ -592,6 +592,7 @@ people.
 * using::                       Using the program.
 * iklib::                       Extensions library.
 * posix::                       The @posix{} interface.
+* syslib::                      Low level, fast, unsafe operations.
 
 Internals
 
@@ -6459,6 +6460,97 @@ Return a list of bytevectors representing the contents of the
 @code{environ} array; if the environment is empty (no environment
 variables set) return @code{null_object}.
 @end deftypefun
+
+@c page
+@node syslib
+@chapter Low level, fast, unsafe operations
+
+
+The bindings documented in this chapter are low level operations inlined
+by the compiler.  They are unsafe because when acting upon wrong
+arguments will cause undefined behaviour (probably a crash).  They are
+also fast.
+
+@menu
+* syslib ports::                Low level port structures.
+@end menu
+
+@c page
+@node syslib ports
+@section Low level port structures
+
+
+A port value is a block of memory allocated as a vector; a reference to
+a port value is a reference to a vector.  The first word of the vector
+is the bitwise OR between a port tag and a bitvector of port attributes.
+
+@example
+|----------------|----------| port value
+  heap offset     vector tag
+
+|----------------|----------| 1st word of port's memory block
+ port attributes   port tag
+@end example
+
+At present the port tag is @math{6} bits wide, so we have: on 32 bits
+platforms: 32 - 6 = 24 bits available for attributes; on 64 bits
+platforms: 64 - 6 = 58 bits available for attributes.
+
+The following bindings are exported by the @library{ikarus system $io}
+library.
+
+
+@defun port? @var{obj}
+Return true if @var{obj} is the reference to a port structure; return
+false otherwise.
+@end defun
+
+
+@deffn {Unsafe Operation} $make-port @var{attrs} @var{idx} @var{sz} @var{buf} @var{tr} @var{id} @var{read} @var{write} @var{getp} @var{setp} @var{cl} @var{cookie}
+Allocate a new port structure, initialise its fields with the arguments,
+return a reference to it.
+@end deffn
+
+
+@deffn {Unsafe Operation} $port-index @var{port}
+@deffnx {Unsafe Operation} $port-size @var{port}
+@deffnx {Unsafe Operation} $port-buffer @var{port}
+@deffnx {Unsafe Operation} $port-transcoder @var{port}
+@deffnx {Unsafe Operation} $port-id @var{port}
+@deffnx {Unsafe Operation} $port-read! @var{port}
+@deffnx {Unsafe Operation} $port-write! @var{port}
+@deffnx {Unsafe Operation} $port-get-position @var{port}
+@deffnx {Unsafe Operation} $port-set-position! @var{port}
+@deffnx {Unsafe Operation} $port-close @var{port}
+@deffnx {Unsafe Operation} $port-cookie @var{port}
+Accessors for the fields of a port structure.
+@end deffn
+
+
+@deffn {Unsafe Operation} $port-attrs @var{port}
+Given a port value: return a fixnum representing the port attributes.
+@end deffn
+
+
+@deffn {Safe Operation} $port-tag @var{port}
+Extract from a port reference a fixnum representing the port attributes;
+if the argument is not a port reference the return value is zero.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-port-index! @var{port} @var{new-index}
+Mutator for the buffer index field.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-port-size! @var{port} @var{new-used-size}
+Mutator for the buffer used size field.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-port-attrs! @var{port} @var{new-attrs}
+Mutator for the port attributes.
+@end deffn
 
 @c page
 @node objects int

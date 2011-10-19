@@ -2405,10 +2405,9 @@
 	 (K port-attrs-shift))))
 
  (define-primop $port-tag unsafe
-   ;;Given  a  port value  X:  return  a  fixnum representing  the  port
-   ;;attributes.  To be used when  the argument has not yet already been
-   ;;validated as port value.  Return zero if the argument is not tagged
-   ;;as port.
+   ;;Extract  from  a port  reference  a  fixnum  representing the  port
+   ;;attributes.  If  the argument  is not a  port reference  the return
+   ;;value is zero.
    ((V x)
     (make-conditional
 	(tag-test (T x) vector-mask vector-tag)
