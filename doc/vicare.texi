@@ -1677,6 +1677,7 @@ a superset of all the supported bindings of @rnrs{6}.
 * iklib expander::              Interface to the expander.
 * iklib environment::           Environments.
 * iklib cafe::                  Cafe.
+* iklib structs::               Structures and type descriptors.
 * iklib bytevectors::           Additional bytevector functions.
 * iklib strings::               Additional string functions.
 * iklib symbols::               Additional symbol functions.
@@ -2037,6 +2038,13 @@ operations of the cafe resume as normal.
 
 To exit from a cafe we can write the @code{#!eof} object.
 @end defun
+
+@c page
+@node iklib structs
+@section Structures and type descriptors
+
+
+
 
 @c page
 @node iklib bytevectors
