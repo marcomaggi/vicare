@@ -38,29 +38,6 @@
 ;;;
 
 
-;;;; To do list
-;;
-;;* Solve all the FIXME issues.
-;;
-;;* If SET-PORT-POSITION!  fails it is possible for the field POS of the
-;;cookie to become invalid.  Should the port be marked as corrupted?
-;;
-;;* Still to be reviewed:
-;;
-;;	tcp-connect tcp-connect-nonblocking
-;;	udp-connect udp-connect-nonblocking
-;;	tcp-server-socket tcp-server-socket-nonblocking
-;;	accept-connection accept-connection-nonblocking
-;;	close-tcp-server-socket
-;;	register-callback
-;;
-;;* Still to be documented:
-;;
-;;   reset-input-port!
-;;   reset-output-port!
-;;
-
-
 ;;;; The port data structure
 ;;
 ;;It  is  defined   in  "pass-specify-rep-primops.ss";  its  allocation,

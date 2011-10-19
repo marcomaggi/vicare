@@ -6,8 +6,25 @@
 
 ** Document undocumented functions
 
-* List of functions to be documented
+* Code known to be reviewed
 
+** ikarus.io.ss
+
+   Solve all the FIXME issues
+
+   If SET-PORT-POSITION!  fails it is  possible for the field POS of the
+   cookie to become invalid.  Should the port be marked as corrupted?
+
+   Functions still to be reviewed:
+
+	tcp-connect tcp-connect-nonblocking
+	udp-connect udp-connect-nonblocking
+	tcp-server-socket tcp-server-socket-nonblocking
+	accept-connection accept-connection-nonblocking
+	close-tcp-server-socket
+	register-callback
+
+* List of functions to be documented
 
   Some of  these may  be internal functions  which must be  removed from
   "makefile.sps".  Not  all the undocumented functions  are listed here,
@@ -20,6 +37,11 @@
    symbol-value symbol-bound? set-symbol-value!
    reset-symbol-proc! system-value system-value-gensym
 
+
+** ikarus.io.ss
+
+   reset-input-port!
+   reset-output-port!
 
 * end
 
