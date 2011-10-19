@@ -678,7 +678,23 @@
  /section)
 
 
-(section ;;; symbols
+;;;; symbols
+;;
+;;A symbol  is a fixed length  memory block referenced  by machine words
+;;tagged as vectors.  The first machine word of a symbol block is tagged
+;;has  symbol  in  its  least  significant  bits and  it  has  the  most
+;;significant bits set to zero.
+;;
+;;  |------------------------|-------------| reference to symbol
+;;        heap offset          vector tag
+;;
+;;  |------------------------|-------------| symbol first word
+;;     all set to zero         symbol tag
+;;
+;;A symbol memory  block is 6 words wide and  contains references to the
+;;following fields: string, ustring, value, proc, plist.
+;;
+(section
 
  (define-primop symbol? safe
    ((P x)
@@ -687,59 +703,59 @@
 
  (define-primop $make-symbol unsafe
    ((V str)
-    (with-tmp ((x (prm 'alloc (K (align symbol-record-size)) (K symbol-ptag))))
-      (prm 'mset x (K (- symbol-ptag)) (K symbol-record-tag))
-      (prm 'mset x (K (- disp-symbol-record-string symbol-ptag))  (T str))
-      (prm 'mset x (K (- disp-symbol-record-ustring symbol-ptag)) (K 0))
-      (prm 'mset x (K (- disp-symbol-record-value symbol-ptag))   (K unbound))
-      (prm 'mset x (K (- disp-symbol-record-proc symbol-ptag))    (K unbound))
-      (prm 'mset x (K (- disp-symbol-record-plist symbol-ptag))   (K nil))
+    (with-tmp ((x (prm 'alloc (K (align symbol-record-size)) (K vector-tag))))
+      (prm 'mset x (K (- vector-tag)) (K symbol-record-tag))
+      (prm 'mset x (K (- disp-symbol-record-string  vector-tag)) (T str))
+      (prm 'mset x (K (- disp-symbol-record-ustring vector-tag)) (K 0))
+      (prm 'mset x (K (- disp-symbol-record-value   vector-tag)) (K unbound))
+      (prm 'mset x (K (- disp-symbol-record-proc    vector-tag)) (K unbound))
+      (prm 'mset x (K (- disp-symbol-record-plist   vector-tag)) (K nil))
       x))
    ((P str) (K #t))
    ((E str) (nop)))
 
  (define-primop $symbol-string unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-symbol-record-string symbol-ptag))))
+   ((V x) (prm 'mref (T x) (K (- disp-symbol-record-string vector-tag))))
    ((E x) (nop)))
 
  (define-primop $set-symbol-string! unsafe
-   ((E x v) (mem-assign v (T x) (- disp-symbol-record-string symbol-ptag))))
+   ((E x v) (mem-assign v (T x) (- disp-symbol-record-string vector-tag))))
 
  (define-primop $symbol-unique-string unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-symbol-record-ustring symbol-ptag))))
+   ((V x) (prm 'mref (T x) (K (- disp-symbol-record-ustring vector-tag))))
    ((E x) (nop)))
 
  (define-primop $set-symbol-unique-string! unsafe
-   ((E x v) (mem-assign v (T x) (- disp-symbol-record-ustring symbol-ptag))))
+   ((E x v) (mem-assign v (T x) (- disp-symbol-record-ustring vector-tag))))
 
  (define-primop $symbol-plist unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-symbol-record-plist symbol-ptag))))
+   ((V x) (prm 'mref (T x) (K (- disp-symbol-record-plist vector-tag))))
    ((E x) (nop)))
 
  (define-primop $set-symbol-plist! unsafe
-   ((E x v) (mem-assign v (T x) (- disp-symbol-record-plist symbol-ptag))))
+   ((E x v) (mem-assign v (T x) (- disp-symbol-record-plist vector-tag))))
 
  (define-primop $symbol-value unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-symbol-record-value symbol-ptag))))
+   ((V x) (prm 'mref (T x) (K (- disp-symbol-record-value vector-tag))))
    ((E x) (nop)))
 
  (define-primop $set-symbol-value! unsafe
    ((E x v)
     (with-tmp ((x (T x)))
-      (prm 'mset x (K (- disp-symbol-record-value symbol-ptag)) (T v))
+      (prm 'mset x (K (- disp-symbol-record-value vector-tag)) (T v))
       (dirty-vector-set x))))
 
  (define-primop $set-symbol-proc! unsafe
    ((E x v)
     (with-tmp ((x (T x)))
-      (prm 'mset x (K (- disp-symbol-record-proc symbol-ptag)) (T v))
+      (prm 'mset x (K (- disp-symbol-record-proc vector-tag)) (T v))
       (dirty-vector-set x))))
 
  (define-primop $set-symbol-value/proc! unsafe
    ((E x v)
     (with-tmp ((x (T x)) (v (T v)))
-      (prm 'mset x (K (- disp-symbol-record-value symbol-ptag)) v)
-      (prm 'mset x (K (- disp-symbol-record-proc symbol-ptag)) v)
+      (prm 'mset x (K (- disp-symbol-record-value vector-tag)) v)
+      (prm 'mset x (K (- disp-symbol-record-proc  vector-tag)) v)
       (dirty-vector-set x))))
 
  (define-primop top-level-value safe
@@ -778,7 +794,7 @@
  (define-primop $init-symbol-function! unsafe
    ((E x v)
     (with-tmp ((x (T x)) (v (T v)))
-      (prm 'mset x (K (- disp-symbol-record-proc symbol-ptag)) v)
+      (prm 'mset x (K (- disp-symbol-record-proc vector-tag)) v)
       (dirty-vector-set x))))
 
 

@@ -6521,6 +6521,7 @@ undefined behaviour (probably a crash).  They are also faster than the
 public interface exported by @library{ikarus} and @library{rnrs}.
 
 @menu
+* syslib symbols::              Low level symbol operations.
 * syslib fixnums::              Low level fixnum operations.
 * syslib bignums::              Low level bignum operations.
 * syslib flonums::              Low level flonum operations.
@@ -6536,6 +6537,75 @@ public interface exported by @library{ikarus} and @library{rnrs}.
 * syslib ports::                Low level port structures.
 * syslib transcoders::          Low level transcoder operations.
 @end menu
+
+@c page
+@node syslib symbols
+@section Low level symbol operations
+
+
+A symbols is a variable length memory block referenced by machine words
+tagged as vectors.  The first machine word of a symbol block is tagged
+has symbol in its least significant bits and it has the most significant
+bits set to zero.
+
+@example
+|------------------------|-------------| reference to symbol
+      heap offset          vector tag
+
+|------------------------|-------------| symbol first word
+   number of words         symbol tag
+@end example
+
+A symbol memory block is @math{6} words wide and contains references to
+the following fields: @code{string}, @code{ustring}, @code{value},
+@code{proc}, @code{plist}.
+
+The arguments @var{sym} must be references to symbol blocks, the
+arguments @var{str} must be references to strings.  The following
+bindings are exported by the @library{ikarus system $symbols} library.
+
+
+@deffn {Unsafe Operation} $make-symbol @var{str}
+Allocate a new symbol block and initialise the @code{string} field with
+@var{str}; return the reference to the symbol block.
+
+The @code{ustring} is initialised to the fixnum zero.  The @code{value}
+and @code{proc} fields are initialised to a special fixnum value meaning
+``unbound''.  The @code{plist} field is initialised to null.
+@end deffn
+
+
+@deffn {Unsafe Operation} $symbol-string @var{sym}
+@deffnx {Unsafe Operation} $symbol-unique-string @var{sym}
+@deffnx {Unsafe Operation} $symbol-plist @var{sym}
+@deffnx {Unsafe Operation} $symbol-value @var{sym}
+Accessors for the fields of @var{sym}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-symbol-string! @var{sym} @var{str}
+@deffnx {Unsafe Operation} $set-symbol-unique-string! @var{sym} @var{str}
+@deffnx {Unsafe Operation} $set-symbol-plist! @var{sym} @var{ell}
+@deffnx {Unsafe Operation} $set-symbol-value! @var{sym} @var{val}
+@deffnx {Unsafe Operation} $set-symbol-proc! @var{sym} @var{proc}
+Mutators for the fields of @var{sym}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-symbol-value/proc! @var{sym} @var{val}
+Set both the fields @code{value} and @code{proc} of @var{sym} to
+@var{val}.
+@end deffn
+
+
+@deffn {Unsafe Operation} top-level-value @var{sym}
+Still to be documented.
+@end deffn
+
+
+@deffn {Unsafe Operation} $init-symbol-function! @var{sym} @var{proc}
+Still to be documented.
+@end deffn
 
 @c page
 @node syslib fixnums

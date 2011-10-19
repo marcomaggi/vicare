@@ -33,6 +33,8 @@
 ** low level
 
    $flonum-sbe
+   top-level-value
+   $init-symbol-function!
 
 ** ikarus.symbols.ss
 
