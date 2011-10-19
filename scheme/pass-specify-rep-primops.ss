@@ -1089,8 +1089,8 @@
 ;;     all set to zero         flonum tag
 ;;
 ;;A flonum memory block is 16 bytes wide and the actual number is stored
-;;in the last two words to speed up a bit memory access by aligning data
-;;on multiples of 8.
+;;in the last  two words (both on 32-bit and  64-bit platforms) to speed
+;;up a bit memory access by aligning data on multiples of 8.
 ;;
 ;;     1st word     2nd word     3rd word     4th word
 ;;  |------------|------------|------------|------------|
@@ -1361,7 +1361,28 @@
  /section)
 
 
-(section ;;; ratnums
+;;;; ratnums
+;;
+;;A ratnum  is a fixed length  memory block referenced  by machine words
+;;tagged as vectors.  The first machine word of a ratnum block is tagged
+;;has  ratnum  in  its  least  significant  bits and  it  has  the  most
+;;significant bits set to zero.
+;;
+;;  |------------------------|-------------| reference to ratnum
+;;        heap offset          vector tag
+;;
+;;  |------------------------|-------------| ratnum first word
+;;     all set to zero         ratnum tag
+;;
+;;A ratnum memory block is 4 words wide; a reference to the numerator is
+;;stored in the second word and a reference to the denominator is stored
+;;in the third word
+;;
+;;     1st word     2nd word     3rd word     4th word
+;;  |------------|------------|------------|------------|
+;;   tagged word   numerator   denominator     unused
+;;
+(section
 
  (define-primop ratnum? safe
    ((P x) (sec-tag-test (T x) vector-mask vector-tag #f ratnum-tag))

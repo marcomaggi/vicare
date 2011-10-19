@@ -6513,15 +6513,18 @@ variables set) return @code{null_object}.
 
 
 The bindings documented in this chapter are low level operations inlined
-by the compiler.  They are unsafe because when acting upon wrong
-arguments will cause undefined behaviour (probably a crash).  They are
-also faster than the public interface exported by @library{ikarus} and
-@library{rnrs}.
+by the compiler; mostly they are defined in the source file
+@file{pass-specify-rep-primops.ss}.
+
+They are unsafe because when acting upon wrong arguments will cause
+undefined behaviour (probably a crash).  They are also faster than the
+public interface exported by @library{ikarus} and @library{rnrs}.
 
 @menu
 * syslib fixnums::              Low level fixnum operations.
 * syslib bignums::              Low level bignum operations.
 * syslib flonums::              Low level flonum operations.
+* syslib ratnums::              Low level ratnum operations.
 * syslib chars::                Low level character operations.
 * syslib pairs::                Low level pair operations.
 * syslib structs::              Low level structure operations.
@@ -6712,6 +6715,10 @@ portion of a bignum memory block.
 @section Low level flonum operations
 
 
+Flonums are double--precision floating point numbers implemented as
+specified by @ieee{} 754 on the hosting platform.  @ref{iklib numerics}
+for more functions acting on flonums.
+
 A flonum is a fixed length memory block referenced by machine words
 tagged as vectors.  The first machine word of a flonum block is tagged
 has flonum in its least significant bits and it has the most significant
@@ -6726,8 +6733,8 @@ bits set to zero.
 @end example
 
 A flonum memory block is @math{16} bytes wide and the actual number is
-stored in the last two words to speed up a bit memory access by aligning
-data on multiples of @math{8}.
+stored in the last two words (both on 32-bit and 64-bit platforms) to
+speed up a bit memory access by aligning data on multiples of @math{8}.
 
 @example
    1st word     2nd word     3rd word     4th word
@@ -6735,7 +6742,7 @@ data on multiples of @math{8}.
  tagged word     unused           data words
 @end example
 
-The arguments @var{fl} to these operations must be fixnums, the
+The arguments @var{fl} to these operations must be flonums, the
 arguments @var{fx} must be fixnums.  The following bindings are exported
 by the @library{ikarus system $flonums} library.
 
@@ -6783,6 +6790,60 @@ Perform comparison operations
 @deffn {Unsafe Operation} $flonum-sbe @var{fl}
 Return a fixnum@dots{} Still undocumented, read the code look at the
 format of @ieee{} double precision flonums.
+@end deffn
+
+@c page
+@node syslib ratnums
+@section Low level ratnum operations
+
+
+Ratnums are exact rational numbers, having a fixnum or bignum as
+numerator and a fixnum or bignum as denominator.  @ref{iklib numerics}
+for more functions acting on ratnums.
+
+A ratnum is a fixed length memory block referenced by machine words
+tagged as vectors.  The first machine word of a ratnum block is tagged
+has ratnum in its least significant bits and it has the most significant
+bits set to zero.
+
+@example
+|------------------------|-------------| reference to ratnum
+      heap offset          vector tag
+
+|------------------------|-------------| ratnum first word
+   all set to zero         ratnum tag
+@end example
+
+A ratnum memory block is @math{4} words wide; a reference to the
+numerator is stored in the second word and a reference to the
+denominator is stored in the third word
+
+@example
+   1st word     2nd word     3rd word     4th word
+|------------|------------|------------|------------|
+ tagged word   numerator   denominator     unused
+@end example
+
+The arguments @var{rat} to these operations must be ratnums, the
+arguments @var{num} must be references to either fixnums or bignums.
+The following bindings are exported by the @library{ikarus system
+$ratnums} library.
+
+
+@deffn {Unsafe Operation} $make-ratnum @vari{num} @varii{num}
+Allocate a new ratnum memory block, store @vari{num} as reference to the
+numerator and @varii{num} as reference to the denominator.  Return a
+reference to the ratnum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $ratnum-n @var{rat}
+Return the a reference to the numerator.
+@end deffn
+
+
+@deffn {Unsafe Operation} $ratnum-d @var{rat}
+Return the a reference to the denominator.
 @end deffn
 
 @c page
