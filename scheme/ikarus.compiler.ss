@@ -1677,10 +1677,11 @@
   (define bytevector-mask 7)
   (define bytevector-tag 2)
   (define disp-bytevector-length 0)
-  (define disp-bytevector-data   8)
+  (define disp-bytevector-data   8) ;8 to allow the same displacement on
+				    ;both 32-bit and 64-bit platforms?
 
   (define ptag-mask 7)
-  (define symbol-ptag 5)
+  (define symbol-ptag 5) ;= vector-tag
   (define symbol-record-tag #x5F)
   (define disp-symbol-record-string  (* 1 wordsize))
   (define disp-symbol-record-ustring (* 2 wordsize))
@@ -1689,7 +1690,7 @@
   (define disp-symbol-record-plist   (* 5 wordsize))
   (define symbol-record-size         (* 6 wordsize))
 
-  (define record-tag  5)
+  (define record-tag  5) ;= vector-tag
   (define record-mask 7)
 
   (define vector-tag 5)

@@ -2044,7 +2044,190 @@ To exit from a cafe we can write the @code{#!eof} object.
 @section Structures and type descriptors
 
 
+A data structure is like a lightweight record as defined by @rnrs{6}.
+@ref{syslib structs} for more informations on the internals of data
+structures.
 
+@menu
+* iklib structs rtd::           Structure type descriptors.
+* iklib structs using::         Using data structures.
+* iklib structs inspect::       Inspecting data structures.
+@end menu
+
+@c page
+@node iklib structs rtd
+@subsection Structure type descriptors
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@deffn Syntax define-struct @meta{name} (@meta{field} ...)
+Define a new data structure type.  This macro is embedded in the
+expander.
+
+@meta{name} must be a symbol representing the name of the structure; it
+is used to build names for the constructor, predicate, field accessors
+and mutators.  The @meta{field} values must be symbols representing the
+names of the fields; they are used to build names for the accessors and
+mutators.
+
+The following definition:
+
+@example
+(define-struct color
+  (red green blue))
+@end example
+
+@noindent
+expands to the definition of the following bindings:
+
+@table @code
+@item color
+An identifier syntax bound to a pair whose car is the symbol @samp{$rtd}
+and whose cdr is the return value of @func{make-struct-type} applied to
+the name of the structure and the list of fields.
+
+@item make-color @var{red} @var{green} @var{blue}
+A structure constructor accepting as much arguments as there are fields.
+The constructor makes use of the @func{$struct} low level operation.
+
+@item color? @var{obj}
+A predicate to distinguish between references to @code{color} structures
+and other values.  This predicate makes use of the @func{$struct/rtd?}
+low level operation.
+
+@item color-red @var{stru}
+@itemx color-green @var{stru}
+@itemx color-blue @var{stru}
+Accessors for the fields of the structure.  These accessors make use of
+the @func{$struct/rtd?} low level operation to validate the argument and
+if successful they use @func{$struct-ref} to extract the value; if the
+argument is of invalid type: an assertion violation is raised.
+
+@item set-color-red! @var{stru} @var{red}
+@itemx set-color-green! @var{stru} @var{green}
+@itemx set-color-blue! @var{stru} @var{blue}
+Mutators for the fields of the structure.  These mutators make use of
+the @func{$struct/rtd?} low level operation to validate the argument and
+if successful they use @func{$struct-set!} to extract the value; if the
+argument is of invalid type: an assertion violation is raised.
+@end table
+@end deffn
+
+
+@defun make-struct-type @var{name} @var{fields}
+@defunx make-struct-type @var{name} @var{fields} @var{uid}
+Build and return a new structure type descriptor.  @var{name} must be a
+string representing the type name.  @var{fields} must be a list of
+symbols representing the field names.  The optional @var{uid} argument
+must be a symbol uniquely identifying this type; when not supplied, a
+symbol is automatically generated.
+@end defun
+
+
+@defun struct-type-name @var{rtd}
+Return a string represnting the name of structures of type @var{rtd}.
+@end defun
+
+
+@defun struct-type-symbol @var{rtd}
+Return a symbol uniquely identifying the data structure type @var{RTD}.
+@end defun
+
+
+@defun struct-type-field-names @var{rtd}
+Return a list of symbols representing the names of fields in structures
+of type @var{rtd}.
+@end defun
+
+
+@defun set-rtd-printer! @var{rtd} @var{printer}
+Select the procedure @var{printer} as printer for data structures of
+type @var{rtd}.  The printer accepts as @math{3} arguments: the
+structure to be printed, the port to which write a string represention
+of the structure with @func{display}, a function to be optionally
+applied to the field values to print them.
+@end defun
+
+@c page
+@node iklib structs using
+@subsection Using data structures
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun struct-constructor @var{rtd}
+Return a constructor function for data structures of type @var{rtd}.
+The constructor accepts as many arguments as fields defined by @var{rtd}
+and returns a new structure instance.
+@end defun
+
+
+@defun struct-predicate @var{rtd}
+Return a predicate function for structures of type @var{rtd}.
+@end defun
+
+
+@defun struct-field-accessor @var{rtd} @var{index}
+Return an accessor function for the field at @var{index} of data
+structures of type @var{rtd}.
+@end defun
+
+
+@defun struct-field-mutator @var{rtd} @var{index}
+Return a mutator function for the field at @var{index} of data
+structures of type @var{rtd}.
+@end defun
+
+@c page
+@node iklib structs inspect
+@subsection Inspecting data structures
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun struct? @var{stru}
+@defunx struct? @var{stru} @var{rtd}
+When no @var{rtd} argument is given return true if @var{stru} is a data
+structure.  When @var{rtd} is given: return true if @var{stru} is a data
+structure and it is of type @var{rtd}.
+@end defun
+
+
+@defun struct-rtd @var{stru}
+Return the @var{rtd} of the data structure @var{stru}.
+@end defun
+
+
+@defun struct-length @var{stru}
+Return the number of fields in the data structure @var{stru}.
+@end defun
+
+
+@defun struct-name @var{stru}
+Return a string representing the name of the data structure @var{stru}.
+@end defun
+
+
+@defun struct-printer @var{stru}
+Return the procedure being the printer function for the data structure
+@var{stru}.
+@end defun
+
+
+@defun struct-ref @var{stru} @var{index}
+Return the value of field at @var{index} in the data structure
+@var{stru}.
+@end defun
+
+
+@defun struct-set! @var{stru} @var{index} @var{value}
+Store @var{value} in the field at @var{index} in the data structure
+@var{stru}.
+@end defun
 
 @c page
 @node iklib bytevectors
@@ -7133,62 +7316,8 @@ tagged as vector and its first word is tagged as vector.
 @end example
 
 The type descriptor of the type descriptors is the return value of
-@func{base-rtd}.
-
-
-@deffn Syntax define-struct @meta{name} (@meta{field} ...)
-Define a new data structure type.  This macro is embedded in the
-expander and exported by the @library{ikarus} library.
-
-@meta{name} must be a symbol representing the name of the structure; it
-is used to build names for the constructor, predicate, field accessors
-and mutators.  The @meta{field} values must be symbols representing the
-names of the fields; they are used to build names for the accessors and
-mutators.
-
-The following definition:
-
-@example
-(define-struct color
-  (red green blue))
-@end example
-
-@noindent
-expands to the definition of the following bindings:
-
-@table @code
-@item color
-An identifier syntax bound to a pair whose car is the symbol @samp{$rtd}
-and whose cdr is the return value of @func{make-struct-type} applied to
-the name of the structure and the list of fields.
-
-@item make-color @var{red} @var{green} @var{blue}
-A structure constructor accepting as much arguments as there are fields.
-The constructor makes use of the @func{$struct} low level operation.
-
-@item color? @var{obj}
-A predicate to distinguish between references to @code{color} structures
-and other values.  This predicate makes use of the @func{$struct/rtd?}
-low level operation.
-
-@item color-red @var{stru}
-@itemx color-green @var{stru}
-@itemx color-blue @var{stru}
-Accessors for the fields of the structure.  These accessors make use of
-the @func{$struct/rtd?} low level operation to validate the argument and
-if successful they use @func{$struct-ref} to extract the value; if the
-argument is of invalid type: an assertion violation is raised.
-
-@item set-color-red! @var{stru} @var{red}
-@itemx set-color-green! @var{stru} @var{green}
-@itemx set-color-blue! @var{stru} @var{blue}
-Mutators for the fields of the structure.  These mutators make use of
-the @func{$struct/rtd?} low level operation to validate the argument and
-if successful they use @func{$struct-set!} to extract the value; if the
-argument is of invalid type: an assertion violation is raised.
-@end table
-@end deffn
-
+@func{base-rtd}.  @ref{iklib structs} for more informations on the
+public interface of data structures.
 
 The arguments @var{stru} to these operations must be references to data
 structures, the arguments @var{rtd} must be references to structure type
@@ -7245,8 +7374,20 @@ such values.  Return a reference to the structure.
 @section Low level vector operations
 
 
-Vectors are variable length blocks of memory capable of holding at most
-a number of values equal to the return value of @func{greatest-fixnum}.
+Vectors are variable length blocks of memory referenced by machine words
+tagged as vectors.  The first machine word of a vector block contains a
+fixnum representing the vector length; a vector is capable of holding at
+most a number of values equal to the return value of
+@func{greatest-fixnum}.  This means that the first word of a vector is
+tagged as a fixnum.
+
+@example
+|------------------------|-------------| reference to vector
+      heap offset          vector tag
+
+|------------------------|-------------| vector first word
+     number of words       fixnum tag
+@end example
 
 The arguments @var{vec} to these operations must be fixnums, the
 arguments @var{fx} must be fixnums.  The following bindings are exported
@@ -7276,6 +7417,12 @@ Store @var{value} at index @var{fx} in @var{vec}.
 @node syslib bytevectors
 @section Low level bytevector operations
 
+
+Bytevectors are blocks of memory referenced by machine words tagged as
+bytevectors.  The first word in the memory block is a fixnum
+representing the number of bytes in the data area; a bytevector is
+capable of holding at most a number of values equal to the return value
+of @func{greatest-fixnum}.
 
 The arguments @var{bv} to these operations must be references to
 bytevectors, the arguments @var{fx} must be fixnums in the appropriate
@@ -7361,6 +7508,12 @@ Store @var{fl} at index @var{fx} of @var{bv}.
 @node syslib strings
 @section Low level string operations
 
+
+Strings are blocks of memory referenced by machine words tagged as
+strings.  The first word in the memory block is a fixnum representing
+the number of characters in the data area; a string is capable of
+holding at most a number of characters equal to the return value of
+@func{greatest-fixnum}.
 
 The arguments @var{str} to these operations must be references to
 strings, the arguments @var{fx} must be fixnums in the appropriate

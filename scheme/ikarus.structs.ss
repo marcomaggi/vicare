@@ -168,7 +168,7 @@
 (define make-struct-type
   ;;Build and  return a new structure  type descriptor.  NAME  must be a
   ;;string representing the type name.  FIELDS must be a list of symbols
-  ;;representing the  field names.  The  optionsal G argument must  be a
+  ;;representing the  field names.   The optional G  argument must  be a
   ;;symbol uniquely  identifying this type; when not  supplied, a symbol
   ;;is automatically generated.
   ;;
@@ -346,7 +346,7 @@
   (rtd-length ($struct-rtd x)))
 
 (define (struct-name x)
-  ;;Return a string representing the nama of the data structure X.
+  ;;Return a string representing the name of the data structure X.
   ;;
   (define who 'struct-name)
   (%assert-argument-is-struct who x)
