@@ -4026,37 +4026,36 @@
 
   (define (bitwise-bit-set? x i)
     (define who 'bitwise-bit-set?)
-    (cond
-      ((fixnum? i)
-       (when ($fx< i 0)
-         (die who "index must be non-negative" i))
-       (cond
-         ((fixnum? x)
-          (if ($fx< i (fixnum-width))
-              ($fx= ($fxlogand ($fxsra x i) 1) 1)
-              ($fx< x 0)))
-         ((bignum? x)
-          (let ((n ($bignum-size x)))
-            (let ((m ($fx* n 8)))
-              (if ($fx< m i)
-                  (not ($bignum-positive? x))
-                  (if ($bignum-positive? x)
-                      (let ((b ($bignum-byte-ref x ($fxsra i 3))))
-                        ($fx= ($fxlogand ($fxsra b ($fxlogand i 7)) 1) 1))
-                      (= 1 (bitwise-and
-                             (bitwise-arithmetic-shift-right x i)
-                             1)))))))
-         (else (die who "not an exact integer" x))))
-      ((bignum? i)
-       (unless ($bignum-positive? i)
-         (die who "index must be non-negative"))
-       (cond
-         ((fixnum? x) ($fx< x 0))
-         ((bignum? x)
-          (= 1 (bitwise-and (bitwise-arithmetic-shift-right x i) 1)))
-         (else (die who "not an exact integer" x))))
-      (else
-       (die who "index is not an exact integer" i))))
+    (cond ((fixnum? i)
+	   (when ($fx< i 0)
+	     (die who "index must be non-negative" i))
+	   (cond ((fixnum? x)
+		  (if ($fx< i (fixnum-width))
+		      ($fx= ($fxlogand ($fxsra x i) 1) 1)
+		    ($fx< x 0)))
+		 ((bignum? x)
+		  (let ((n ($bignum-size x)))
+		    (let ((m ($fx* n 8)))
+		      (cond (($fx< m i)
+			     (not ($bignum-positive? x)))
+			    (($bignum-positive? x)
+			     (let ((b ($bignum-byte-ref x ($fxsra i 3))))
+			       ($fx= ($fxlogand ($fxsra b ($fxlogand i 7)) 1) 1)))
+			    (else
+			     (= 1 (bitwise-and (bitwise-arithmetic-shift-right x i) 1)))))))
+		 (else
+		  (die who "not an exact integer" x))))
+	  ((bignum? i)
+	   (unless ($bignum-positive? i)
+	     (die who "index must be non-negative"))
+	   (cond ((fixnum? x)
+		  ($fx< x 0))
+		 ((bignum? x)
+		  (= 1 (bitwise-and (bitwise-arithmetic-shift-right x i) 1)))
+		 (else
+		  (die who "not an exact integer" x))))
+	  (else
+	   (die who "index is not an exact integer" i))))
 
 
   (define (fxcopy-bit x i b)

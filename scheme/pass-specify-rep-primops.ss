@@ -994,7 +994,22 @@
  /section)
 
 
-(section ;;; bignums
+;;;; bignums
+;;
+;;A bignum is a variable length memory block referenced by machine words
+;;tagged as vectors.  The first machine word of a bignum block is tagged
+;;has bignum in its least significant  bits; then comes a sign bit, zero
+;;if positive; the remaining  most significant bits represent the number
+;;of words in the memory block after the first one.
+;;
+;;  |------------------------|-------------| reference to bignum
+;;        heap offset          vector tag
+;;
+;;                       sign bit
+;;  |----------------------|-|-------------| bignum first word
+;;     number of words         bignum tag
+;;
+(section
 
  (define-primop bignum? safe
    ((P x) (sec-tag-test (T x) vector-mask vector-tag bignum-mask bignum-tag))

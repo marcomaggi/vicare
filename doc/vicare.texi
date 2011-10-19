@@ -6645,8 +6645,30 @@ Evaluate to a fixnum which can be used as hash value.
 @section Low level bignum operations
 
 
-Bignums are exact integers bigger than fixnums.  @ref{iklib numerics}
-for more functions acting on bignums.
+Bignums are multi--precision exact integers bigger than fixnums; they
+are implemented using the @code{mpn} @api{} of @gnu{} @gmp{},
+@xref{Low-level Functions, mpn, Low-level Functions, gmp}.  @ref{iklib
+numerics} for more functions acting on bignums.
+
+A bignum is a variable length memory block referenced by machine words
+tagged as vectors.  The first machine word of a bignum block is tagged
+has bignum in its least significant bits; then comes a sign bit, zero if
+positive; the remaining most significant bits represent the number of
+words in the memory block after the first one.
+
+@example
+|------------------------|-------------| reference to bignum
+      heap offset          vector tag
+
+                     sign bit
+|----------------------|-|-------------| bignum first word
+   number of words         bignum tag
+@end example
+
+A pointer to the second machine word in a bignum memory block is the
+pointer of type @code{mp_limb_t} accepted by the @code{mpn_} functions
+of @gmp{}; @dfn{limb}, in @gmp{} jargon, is a machine word holding a
+portion of multi--precision number.
 
 The arguments @var{bn} to these operations must be bignums.  The
 following bindings are exported by the @library{ikarus system $bignums}
@@ -6658,42 +6680,16 @@ Evaluate to true if the operand is positive.
 @end deffn
 
 
-@ignore
- (define-primop $bignum-byte-ref unsafe
-   ((V s i)
-    (struct-case i
-		 ((constant i)
-		  (unless (fx? i) (interrupt))
-		  (prm 'sll
-		       (prm 'logand
-			    (prm 'mref (T s)
-				 (K (+ i (- disp-bignum-data record-tag))))
-			    (K 255))
-		       (K fx-shift)))
-		 ((known i t) (cogen-value-$bignum-byte-ref s i))
-		 (else
-		  (prm 'sll
-		       (prm 'srl ;;; FIXME: bref
-			    (prm 'mref (T s)
-				 (prm 'int+
-				      (prm 'sra (T i) (K fx-shift))
-                   ;;; ENDIANNESS DEPENDENCY
-				      (K (- disp-bignum-data
-					    (- wordsize 1)
-					    record-tag))))
-			    (K (* (- wordsize 1) 8)))
-		       (K fx-shift)))))
-   ((P s i) (K #t))
-   ((E s i) (nop)))
+@deffn {Unsafe Operation} $bignum-byte-ref @var{bn} @var{fx}
+Return a fixnum representing the byte at index @var{fx} in the data of
+@var{bn}.
+@end deffn
 
- (define-primop $bignum-size unsafe
-   ((V x)
-    (prm 'sll
-	 (prm 'sra
-	      (prm 'mref (T x) (K (- record-tag)))
-	      (K bignum-length-shift))
-	 (K (* 2 fx-shift)))))
-@end ignore
+
+@deffn {Unsafe Operation} $bignum-size @var{bn}
+Return a fixnum representing the number of machine words in the data
+portion of a bignum memory block.
+@end deffn
 
 @c page
 @node syslib chars
@@ -6774,17 +6770,23 @@ Store @var{value} in the cdr location of @var{P}.
 @section Low level structure operations
 
 
-A structure is a block of memory allocated as a vector; a reference to a
-structure value is a reference to a vector.  The first word of the
-structure is a word referencing the struct type descriptor.
+A data structure is a variable length block of memory allocated as a
+vector; a reference to a structure value is a machine word tagged as
+vector.  The first machine word of the structure is a reference to the
+type descriptor; a type descriptor is itself a data structure.  A block
+of memory is a data structure if and only if: a reference to it is
+tagged as vector and its first word is tagged as vector.
 
 @example
-|----------------|----------| structure value
+|----------------|----------| reference to structure
   heap offset     vector tag
+
+|----------------|----------| first word of structure
+  heap offset     vector tag    = reference to rtd
+                                = reference to structure
 @end example
 
-The structure type descriptor is itself a data structure; the type
-descriptor of the type descriptors is the return value of
+The type descriptor of the type descriptors is the return value of
 @func{base-rtd}.
 
 
@@ -6850,8 +6852,8 @@ system $structs} library.
 
 
 @deffn {Unsafe Operation} base-rtd
-Return a reference to the structure type descriptor used as type for all
-the structure type descriptors.
+Return a reference to the type descriptor used as type for all the type
+descriptors.
 @end deffn
 
 
