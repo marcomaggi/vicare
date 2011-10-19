@@ -114,7 +114,8 @@
 	(K align-shift)))
  /section)
 
-(section ;;; simple objects section
+
+(section ;;; simple objects
 
  (define-primop base-rtd safe
    ((V) (prm 'mref pcr (K pcb-base-rtd)))
@@ -298,6 +299,7 @@
 
  /section)
 
+
 (section ;;; pairs
 
  (define-primop pair? safe
@@ -456,11 +458,9 @@
    ((E) (interrupt))
    ((E . a*) (nop)))
 
-
-
-
  /section)
 
+
 (section ;;; vectors
  (section ;;; helpers
   (define (vector-range-check x idx)
@@ -657,6 +657,7 @@
 
  /section)
 
+
 (section ;;; closures
 
  (define-primop procedure? safe
@@ -782,6 +783,7 @@
 
  /section)
 
+
 (section ;;; fixnums
 
  (define-primop fixnum? safe
@@ -934,10 +936,12 @@
    ((P a b) (K #t))
    ((E a b) (nop)))
 
+;;;FIXME Is this actually finished used somewhere?
  (define-primop $int-quotient unsafe
    ((V a b)
     (prm 'sll (prm 'int-quotient (T a) (T b)) (K fx-shift))))
 
+;;;FIXME Is this actually finished and used somewhere?
  (define-primop $int-remainder unsafe
    ((V a b) (prm 'int-remainder (T a))))
 
@@ -955,6 +959,7 @@
  ;;   ((P a b) (K #t))
  ;;   ((E a b) (nop)))
 
+;;;FIXME Is this actually used somewhere?
  (define-primop $fxinthash unsafe
    ((V key)
     (with-tmp ((k (T key)))
@@ -965,30 +970,29 @@
 	      (with-tmp ((k (prm 'int+ k (prm 'logxor (prm 'sll k (K 11)) (K -1)))))
 		(with-tmp ((k (prm 'logxor k (prm 'sra k (K 16)))))
 		  (prm 'sll k (K fx-shift)))))))))))
-
-
-		;(define inthash
-		;    (lambda (key)
-		;      ;static int inthash(int key) { /* from Bob Jenkin's */
-		;      ;  key += ~(key << 15);
-		;      ;  key ^=  (key >> 10);
-		;      ;  key +=  (key << 3);
-		;      ;  key ^=  (key >> 6);
-		;      ;  key += ~(key << 11);
-		;      ;  key ^=  (key >> 16);
-		;      ;  return key;
-		;      ;}
-		;      (let* ((key ($fx+ key ($fxlognot ($fxsll key 15))))
-		;             (key ($fxlogxor key ($fxsra key 10)))
-		;             (key ($fx+ key ($fxsll key 3)))
-		;             (key ($fxlogxor key ($fxsra key 6)))
-		;             (key ($fx+ key ($fxlognot ($fxsll key 11))))
-		;             (key ($fxlogxor key ($fxsra key 16))))
-		;        key)))
-
+;;;(define inthash
+;;;    (lambda (key)
+;;;      ;static int inthash(int key) { /* from Bob Jenkin's */
+;;;      ;  /* http://burtleburtle.net/bob/hash/doobs.html */
+;;;      ;  key += ~(key << 15);
+;;;      ;  key ^=  (key >> 10);
+;;;      ;  key +=  (key << 3);
+;;;      ;  key ^=  (key >> 6);
+;;;      ;  key += ~(key << 11);
+;;;      ;  key ^=  (key >> 16);
+;;;      ;  return key;
+;;;      ;}
+;;;      (let* ((key ($fx+ key ($fxlognot ($fxsll key 15))))
+;;;             (key ($fxlogxor key ($fxsra key 10)))
+;;;             (key ($fx+ key ($fxsll key 3)))
+;;;             (key ($fxlogxor key ($fxsra key 6)))
+;;;             (key ($fx+ key ($fxlognot ($fxsll key 11))))
+;;;             (key ($fxlogxor key ($fxsra key 16))))
+;;;        key)))
 
  /section)
 
+
 (section ;;; bignums
 
  (define-primop bignum? safe

@@ -6469,11 +6469,170 @@ variables set) return @code{null_object}.
 The bindings documented in this chapter are low level operations inlined
 by the compiler.  They are unsafe because when acting upon wrong
 arguments will cause undefined behaviour (probably a crash).  They are
-also fast.
+also faster than the public interface exported by @library{ikarus} and
+@library{rnrs}.
 
 @menu
+* syslib pairs::                Low level pair operations.
+* syslib fixnums::              Low level fixnum operations.
+* syslib vectors::              Low level vector operations.
 * syslib ports::                Low level port structures.
 @end menu
+
+@c page
+@node syslib pairs
+@section Low level pair operations
+
+
+The arguments @var{P} to these operations must be pairs.  The following
+bindings are exported by the @library{ikarus system $pairs} library.
+
+
+@deffn {Unsafe Operation} $car @var{P}
+Return the car of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cdr @var{P}
+Return the cdr of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-car! @var{P} @var{value}
+Store @var{value} in the car location of @var{P}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-cdr! @var{P} @var{value}
+Store @var{value} in the cdr location of @var{P}.
+@end deffn
+
+@c page
+@node syslib fixnums
+@section Low level fixnum operations
+
+
+The arguments to these operations must be fixnums.  The following
+bindings are exported by the @library{ikarus system $fixnum} library.
+
+
+@deffn {Unsafe Operation} $fxzero? @var{fx}
+Evaluate to true if @var{fx} is zero.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fx= @vari{fx} @varii{fx}
+Evaluate to true if the arguments are equal.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fx< @vari{fx} @varii{fx}
+Evaluate to true if @vari{fx} is less than @varii{fx}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fx<= @vari{fx} @varii{fx}
+Evaluate to true if @vari{fx} is less than or equal to @varii{fx}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fx> @vari{fx} @varii{fx}
+Evaluate to true if @vari{fx} is greater than @varii{fx}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fx>= @vari{fx} @varii{fx}
+Evaluate to true if @vari{fx} is greater than or equal to @varii{fx}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxadd1 @var{fx}
+Increment the operand by one and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxsub1 @var{fx}
+Decrement the operand by one and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fx+ @vari{fx} @varii{fx}
+Sum the operands and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fx- @vari{fx} @varii{fx}
+Subtract the operands and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fx* @vari{fx} @varii{fx}
+Multiply the operands and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxlognot @var{fx}
+Perform the bitwise NOT on the operand and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxlogand @vari{fx} @varii{fx}
+Perform the bitwise AND on the operands and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxlogor @vari{fx} @varii{fx}
+Perform the bitwise inclusive OR on the operands and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxlogxor @vari{fx} @varii{fx}
+Perform the bitwise exclusive OR on the operands and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxsll @vari{fx} @varii{fx}
+Perform bitwise shift left of @vari{fx} by @varii{fx} positions and
+return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxsra @vari{fx} @varii{fx}
+Perform bitwise shift right of @vari{fx} by @varii{fx} positions and
+return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxquotient @vari{fx} @varii{fx}
+Compute the quotient between the operands and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxinthash @var{fx}
+Evaluate to a fixnum which can be used as hash value.
+
+@quotation
+@strong{NOTE}  This appears to be unused in the source.
+@end quotation
+@end deffn
+
+@c page
+@node syslib vectors
+@section Low level vector operations
+
+
+Vectors are variable length blocks of memory capable of holding at most
+a number of values equal to the return value of @func{greatest-fixnum}.
+
+The arguments @var{VEC} to these operations must be fixnums, the
+arguments @var{fx} must be fixnums.  The following bindings are exported
+by the @library{ikarus system $vectors} library.
+
+
+@deffn {Unsafe Operation} $make-vector @var{fx}
+Allocate and return a new vector value of @var{fx} elements.
+@end deffn
+
 
 @c page
 @node syslib ports
