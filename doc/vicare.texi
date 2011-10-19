@@ -6525,6 +6525,8 @@ public interface exported by @library{ikarus} and @library{rnrs}.
 * syslib bignums::              Low level bignum operations.
 * syslib flonums::              Low level flonum operations.
 * syslib ratnums::              Low level ratnum operations.
+* syslib compnums::             Low level compnum operations.
+* syslib cflonums::             Low level cflonum operations.
 * syslib chars::                Low level character operations.
 * syslib pairs::                Low level pair operations.
 * syslib structs::              Low level structure operations.
@@ -6838,18 +6840,129 @@ reference to the ratnum.
 
 
 @deffn {Unsafe Operation} $ratnum-n @var{rat}
-Return the a reference to the numerator.
+Return the reference to the numerator.
 @end deffn
 
 
 @deffn {Unsafe Operation} $ratnum-d @var{rat}
-Return the a reference to the denominator.
+Return the reference to the denominator.
+@end deffn
+
+@c page
+@node syslib compnums
+@section Low level compnum operations
+
+
+Compnums are complex numbers having a fixnum, bignum or flonum as real
+part and a fixnum, bignum or flonum as imaginary part, but @strong{not}
+both flonums.  @ref{iklib numerics} for more functions acting on
+compnums.
+
+A compnum is a fixed length memory block referenced by machine words
+tagged as vectors.  The first machine word of a compnum block is tagged
+has compnum in its least significant bits and it has the most
+significant bits set to zero.
+
+@example
+|------------------------|-------------| reference to compnum
+      heap offset          vector tag
+
+|------------------------|-------------| compnum first word
+   all set to zero         compnum tag
+@end example
+
+A compnum memory block is @math{4} words wide; a reference to the real
+part is stored in the second word and a reference to the imaginary part
+is stored in the third word
+
+@example
+   1st word     2nd word     3rd word     4th word
+|------------|------------|------------|------------|
+ tagged word   real part    imag part     unused
+@end example
+
+The arguments @var{cmp} to these operations must be compnums, the
+arguments @var{num} must be references to either fixnums, bignums or
+flonums.  The following bindings are exported by the @library{ikarus
+system $compnums} library.
+
+
+@deffn {Unsafe Operation} $make-compnum @vari{num} @varii{num}
+Allocate a new compnum memory block, store @vari{num} as reference to
+the real part and @varii{num} as reference to the imaginary part.
+Return a reference to the compnum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $compnum-real @var{cmp}
+Return the reference to the real part.
+@end deffn
+
+
+@deffn {Unsafe Operation} $compnum-imag @var{cmp}
+Return the reference to the imaginary part.
+@end deffn
+
+@c page
+@node syslib cflonums
+@section Low level cflonum operations
+
+
+Cflonums are complex numbers having a flonum as real part and flonum as
+imaginary part.  @ref{iklib numerics} for more functions acting on
+cflonums.
+
+A cflonum is a fixed length memory block referenced by machine words
+tagged as vectors.  The first machine word of a cflonum block is tagged
+has cflonum in its least significant bits and it has the most
+significant bits set to zero.
+
+@example
+|------------------------|-------------| reference to cflonum
+      heap offset          vector tag
+
+|------------------------|-------------| cflonum first word
+   all set to zero         cflonum tag
+@end example
+
+A cflonum memory block is @math{4} words wide; a reference to the real
+part is stored in the second word and a reference to the imaginary part
+is stored in the third word
+
+@example
+   1st word     2nd word     3rd word     4th word
+|------------|------------|------------|------------|
+ tagged word   real part    imag part     unused
+@end example
+
+The arguments @var{cmp} to these operations must be cflonums, the
+arguments @var{fl} must be references to flonums.  The following
+bindings are exported by the @library{ikarus system $compnums} library.
+
+
+@deffn {Unsafe Operation} $make-cflonum @vari{fl} @varii{fl}
+Allocate a new cflonum memory block, store @vari{fl} as reference to the
+real part and @varii{fl} as reference to the imaginary part.  Return a
+reference to the cflonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cflonum-real @var{cmp}
+Return the reference to the real part.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cflonum-imag @var{cmp}
+Return the reference to the imaginary part.
 @end deffn
 
 @c page
 @node syslib chars
 @section Low level character operations
 
+
+A character is a machine word whose least significant bits are set to
+the character tag.
 
 The arguments @var{ch} to these operations must be characters, the
 arguments @var{fx} must be fixnums in the range @code{[0, #x10FFFF]} but

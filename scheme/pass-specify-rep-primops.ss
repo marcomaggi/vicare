@@ -1408,7 +1408,28 @@
  /section)
 
 
-(section ;;; complnums
+;;;; compnum
+;;
+;;A compnum is  a fixed length memory block  referenced by machine words
+;;tagged  as vectors.   The first  machine word  of a  compnum  block is
+;;tagged has compnum  in its least significant bits and  it has the most
+;;significant bits set to zero.
+;;
+;;  |------------------------|-------------| reference to compnum
+;;        heap offset          vector tag
+;;
+;;  |------------------------|-------------| compnum first word
+;;     all set to zero         compnum tag
+;;
+;;A compnum memory  block is 4 words wide; a reference  to the real part
+;;is stored in the second word  and a reference to the imaginary part is
+;;stored in the third word
+;;
+;;     1st word     2nd word     3rd word     4th word
+;;  |------------|------------|------------|------------|
+;;   tagged word   real part    imag part     unused
+;;
+(section
 
  (define-primop compnum? safe
    ((P x) (sec-tag-test (T x) vector-mask vector-tag #f compnum-tag))
@@ -1434,7 +1455,28 @@
  /section)
 
 
-(section ;;; cflonums
+;;;; cflonum
+;;
+;;A cflonum is  a fixed length memory block  referenced by machine words
+;;tagged  as vectors.   The first  machine word  of a  cflonum  block is
+;;tagged has cflonum  in its least significant bits and  it has the most
+;;significant bits set to zero.
+;;
+;;  |------------------------|-------------| reference to cflonum
+;;        heap offset          vector tag
+;;
+;;  |------------------------|-------------| cflonum first word
+;;     all set to zero         cflonum tag
+;;
+;;A cflonum memory  block is 4 words wide; a reference  to the real part
+;;is stored in the second word  and a reference to the imaginary part is
+;;stored in the third word
+;;
+;;     1st word     2nd word     3rd word     4th word
+;;  |------------|------------|------------|------------|
+;;   tagged word   real part    imag part     unused
+;;
+(section
 
  (define-primop cflonum? safe
    ((P x) (sec-tag-test (T x) vector-mask vector-tag #f cflonum-tag))
@@ -1449,7 +1491,6 @@
       x))
    ((P str) (K #t))
    ((E str) (nop)))
-
 
  (define-primop $cflonum-real unsafe
    ((V x) (prm 'mref (T x) (K (- disp-cflonum-real vector-tag)))))
