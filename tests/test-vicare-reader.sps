@@ -650,6 +650,19 @@
   (read-bv-and-eof "#vs16b(-1 -2 -3)"	,(s16b-list->bytevector '(-1 -2 -3)))
 
 ;;; --------------------------------------------------------------------
+;;; 16-bit native endian
+
+  (read-bv-and-eof "#vu16n()"		,(u16n-list->bytevector '()))
+  (read-bv-and-eof "#vu16n(1)"		,(u16n-list->bytevector '(1)))
+  (read-bv-and-eof "#vu16n(1 2 3)"	,(u16n-list->bytevector '(1 2 3)))
+
+  (read-bv-and-eof "#vs16n()"		,(s16n-list->bytevector '()))
+  (read-bv-and-eof "#vs16n(1)"		,(s16n-list->bytevector '(1)))
+  (read-bv-and-eof "#vs16n(-1)"		,(s16n-list->bytevector '(-1)))
+  (read-bv-and-eof "#vs16n(1 2 3)"	,(s16n-list->bytevector '(1 2 3)))
+  (read-bv-and-eof "#vs16n(-1 -2 -3)"	,(s16n-list->bytevector '(-1 -2 -3)))
+
+;;; --------------------------------------------------------------------
 ;;; 32-bit little endian
 
   (read-bv-and-eof "#vu32l()"		,(u32l-list->bytevector '()))
@@ -676,6 +689,19 @@
   (read-bv-and-eof "#vs32b(-1 -2 -3)"	,(s32b-list->bytevector '(-1 -2 -3)))
 
 ;;; --------------------------------------------------------------------
+;;; 32-bit native endian
+
+  (read-bv-and-eof "#vu32n()"		,(u32n-list->bytevector '()))
+  (read-bv-and-eof "#vu32n(1)"		,(u32n-list->bytevector '(1)))
+  (read-bv-and-eof "#vu32n(1 2 3)"	,(u32n-list->bytevector '(1 2 3)))
+
+  (read-bv-and-eof "#vs32n()"		,(s32n-list->bytevector '()))
+  (read-bv-and-eof "#vs32n(1)"		,(s32n-list->bytevector '(1)))
+  (read-bv-and-eof "#vs32n(-1)"		,(s32n-list->bytevector '(-1)))
+  (read-bv-and-eof "#vs32n(1 2 3)"	,(s32n-list->bytevector '(1 2 3)))
+  (read-bv-and-eof "#vs32n(-1 -2 -3)"	,(s32n-list->bytevector '(-1 -2 -3)))
+
+;;; --------------------------------------------------------------------
 ;;; 64-bit little endian
 
   (read-bv-and-eof "#vu64l()"		,(u64l-list->bytevector '()))
@@ -700,6 +726,19 @@
   (read-bv-and-eof "#vs64b(-1)"		,(s64b-list->bytevector '(-1)))
   (read-bv-and-eof "#vs64b(1 2 3)"	,(s64b-list->bytevector '(1 2 3)))
   (read-bv-and-eof "#vs64b(-1 -2 -3)"	,(s64b-list->bytevector '(-1 -2 -3)))
+
+;;; --------------------------------------------------------------------
+;;; 64-bit native endian
+
+  (read-bv-and-eof "#vu64n()"		,(u64n-list->bytevector '()))
+  (read-bv-and-eof "#vu64n(1)"		,(u64n-list->bytevector '(1)))
+  (read-bv-and-eof "#vu64n(1 2 3)"	,(u64n-list->bytevector '(1 2 3)))
+
+  (read-bv-and-eof "#vs64n()"		,(s64n-list->bytevector '()))
+  (read-bv-and-eof "#vs64n(1)"		,(s64n-list->bytevector '(1)))
+  (read-bv-and-eof "#vs64n(-1)"		,(s64n-list->bytevector '(-1)))
+  (read-bv-and-eof "#vs64n(1 2 3)"	,(s64n-list->bytevector '(1 2 3)))
+  (read-bv-and-eof "#vs64n(-1 -2 -3)"	,(s64n-list->bytevector '(-1 -2 -3)))
 
   #t)
 
