@@ -98,7 +98,6 @@ TESTS			=	\
 	test-issue-013.sps				\
 	test-issue-015.sps				\
 	test-issue-017.sps				\
-	test-issue-018.sps				\
 	test-issue-020.sps				\
 	test-issue-021.sps				\
 	test-issue-022.sps				\
@@ -222,7 +221,6 @@ EXTRA_DIST =	\
 	test-issue-013.sps				\
 	test-issue-015.sps				\
 	test-issue-017.sps				\
-	test-issue-018.sps				\
 	test-issue-020.sps				\
 	test-issue-021.sps				\
 	test-issue-022.sps				\
