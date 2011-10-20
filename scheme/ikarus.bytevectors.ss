@@ -138,6 +138,22 @@
 		  subbytevector-u8	subbytevector-u8/count
 		  subbytevector-s8	subbytevector-s8/count)
     (ikarus system $fx)
+    (prefix (rename (ikarus system $fx)
+		    ($fxzero?	fxzero?)
+		    ($fxadd1	fxadd1)	 ;increment
+		    ($fxsub1	fxsub1)	 ;decrement
+		    ($fxsra	fxsra)	 ;shift right
+		    ($fxsll	fxsll)	 ;shift left
+		    ($fxlogor	fxlogor) ;inclusive logic OR
+		    ($fxlogand	fxand)	 ;logic AND
+		    ($fx+	fx+)
+		    ($fx-	fx-)
+		    ($fx<	fx<)
+		    ($fx>	fx>)
+		    ($fx>=	fx>=)
+		    ($fx<=	fx<=)
+		    ($fx=	fx=))
+	    unsafe.)
     (ikarus system $bignums)
     (ikarus system $pairs)
     (ikarus system $bytevectors)
@@ -588,7 +604,7 @@
     (%assert-argument-is-bytevector who src.bv)
     (%assert-argument-is-bytevector-start-index-8 src.start src.bv who)
     (%assert-argument-is-bytevector-end-index-8   src.end   src.bv who)
-    (%unsafe.subbytevector-u8/count src.bv src.start (- src.end src.start)))))
+    (%unsafe.subbytevector-u8/count src.bv src.start (unsafe.fx- src.end src.start)))))
 
 (define (subbytevector-u8/count src.bv src.start dst.len)
   ;;Defined  by  Vicare.  Build  and  return  a  new bytevector  holding
@@ -605,9 +621,9 @@
 
 (define (%unsafe.subbytevector-u8/count src.bv src.start dst.len)
   (let ((dst.bv ($make-bytevector dst.len)))
-    (do ((dst.index 0         (+ 1 dst.index))
-	 (src.index src.start (+ 1 src.index)))
-	((= dst.index dst.len)
+    (do ((dst.index 0         (unsafe.fx+ 1 dst.index))
+	 (src.index src.start (unsafe.fx+ 1 src.index)))
+	((unsafe.fx= dst.index dst.len)
 	 dst.bv)
       (unsafe.bytevector-set! dst.bv dst.index (unsafe.bytevector-u8-ref src.bv src.index)))))
 
@@ -628,7 +644,7 @@
     (%assert-argument-is-bytevector who src.bv)
     (%assert-argument-is-bytevector-start-index-8 src.start src.bv who)
     (%assert-argument-is-bytevector-end-index-8   src.end   src.bv who)
-    (%unsafe.subbytevector-s8/count src.bv src.start (- src.end src.start)))))
+    (%unsafe.subbytevector-s8/count src.bv src.start (unsafe.fx- src.end src.start)))))
 
 (define (subbytevector-s8/count src.bv src.start dst.len)
   ;;Defined  by  Vicare.  Build  and  return  a  new bytevector  holding
@@ -645,9 +661,9 @@
 
 (define (%unsafe.subbytevector-s8/count src.bv src.start dst.len)
   (let ((dst.bv ($make-bytevector dst.len)))
-    (do ((dst.index 0         (+ 1 dst.index))
-	 (src.index src.start (+ 1 src.index)))
-	((= dst.index dst.len)
+    (do ((dst.index 0         (unsafe.fx+ 1 dst.index))
+	 (src.index src.start (unsafe.fx+ 1 src.index)))
+	((unsafe.fx= dst.index dst.len)
 	 dst.bv)
       (unsafe.bytevector-set! dst.bv dst.index (unsafe.bytevector-s8-ref src.bv src.index)))))
 
