@@ -593,6 +593,117 @@
   #t)
 
 
+(parametrise ((check-test-name	'bytevectors))
+
+  (define-syntax read-bv-and-eof
+    (syntax-rules ()
+      ((_ ?input ?result)
+       (check
+	   (let* ((port (open-string-input-port ?input))
+		  (obj  (read port))
+		  (eof  (port-eof? port)))
+	     (list (bytevector? obj) obj eof))
+	 => `(#t ?result #t)))))
+
+;;; --------------------------------------------------------------------
+
+  (read-bv-and-eof "#vu8()"		,(u8-list->bytevector '()))
+  (read-bv-and-eof "#vu8(1)"		,(u8-list->bytevector '(1)))
+  (read-bv-and-eof "#vu8(1 2 3)"	,(u8-list->bytevector '(1 2 3)))
+
+  (read-bv-and-eof "#vs8()"		,(s8-list->bytevector '()))
+  (read-bv-and-eof "#vs8(1)"		,(s8-list->bytevector '(1)))
+  (read-bv-and-eof "#vs8(-1)"		,(s8-list->bytevector '(-1)))
+  (read-bv-and-eof "#vs8(1 2 3)"	,(s8-list->bytevector '(1 2 3)))
+  (read-bv-and-eof "#vs8(-1 -2 -3)"	,(s8-list->bytevector '(-1 -2 -3)))
+
+;;; --------------------------------------------------------------------
+;;; 16-bit little endian
+
+  (read-bv-and-eof "#vu16l(#x1234)"		#vu8(#x34 #x12))
+  (read-bv-and-eof "#vu16l(#x1234 #x5678)"	#vu8(#x34 #x12 #x78 #x56))
+
+  (read-bv-and-eof "#vu16l()"		,(u16l-list->bytevector '()))
+  (read-bv-and-eof "#vu16l(1)"		,(u16l-list->bytevector '(1)))
+  (read-bv-and-eof "#vu16l(1 2 3)"	,(u16l-list->bytevector '(1 2 3)))
+
+  (read-bv-and-eof "#vs16l()"		,(s16l-list->bytevector '()))
+  (read-bv-and-eof "#vs16l(1)"		,(s16l-list->bytevector '(1)))
+  (read-bv-and-eof "#vs16l(-1)"		,(s16l-list->bytevector '(-1)))
+  (read-bv-and-eof "#vs16l(1 2 3)"	,(s16l-list->bytevector '(1 2 3)))
+  (read-bv-and-eof "#vs16l(-1 -2 -3)"	,(s16l-list->bytevector '(-1 -2 -3)))
+
+;;; --------------------------------------------------------------------
+;;; 16-bit big endian
+
+  (read-bv-and-eof "#vu16b(#x1234)"		#vu8(#x12 #x34))
+  (read-bv-and-eof "#vu16b(#x1234 #x5678)"	#vu8(#x12 #x34 #x56 #x78))
+
+  (read-bv-and-eof "#vu16b()"		,(u16b-list->bytevector '()))
+  (read-bv-and-eof "#vu16b(1)"		,(u16b-list->bytevector '(1)))
+  (read-bv-and-eof "#vu16b(1 2 3)"	,(u16b-list->bytevector '(1 2 3)))
+
+  (read-bv-and-eof "#vs16b()"		,(s16b-list->bytevector '()))
+  (read-bv-and-eof "#vs16b(1)"		,(s16b-list->bytevector '(1)))
+  (read-bv-and-eof "#vs16b(-1)"		,(s16b-list->bytevector '(-1)))
+  (read-bv-and-eof "#vs16b(1 2 3)"	,(s16b-list->bytevector '(1 2 3)))
+  (read-bv-and-eof "#vs16b(-1 -2 -3)"	,(s16b-list->bytevector '(-1 -2 -3)))
+
+;;; --------------------------------------------------------------------
+;;; 32-bit little endian
+
+  (read-bv-and-eof "#vu32l()"		,(u32l-list->bytevector '()))
+  (read-bv-and-eof "#vu32l(1)"		,(u32l-list->bytevector '(1)))
+  (read-bv-and-eof "#vu32l(1 2 3)"	,(u32l-list->bytevector '(1 2 3)))
+
+  (read-bv-and-eof "#vs32l()"		,(s32l-list->bytevector '()))
+  (read-bv-and-eof "#vs32l(1)"		,(s32l-list->bytevector '(1)))
+  (read-bv-and-eof "#vs32l(-1)"		,(s32l-list->bytevector '(-1)))
+  (read-bv-and-eof "#vs32l(1 2 3)"	,(s32l-list->bytevector '(1 2 3)))
+  (read-bv-and-eof "#vs32l(-1 -2 -3)"	,(s32l-list->bytevector '(-1 -2 -3)))
+
+;;; --------------------------------------------------------------------
+;;; 32-bit big endian
+
+  (read-bv-and-eof "#vu32b()"		,(u32b-list->bytevector '()))
+  (read-bv-and-eof "#vu32b(1)"		,(u32b-list->bytevector '(1)))
+  (read-bv-and-eof "#vu32b(1 2 3)"	,(u32b-list->bytevector '(1 2 3)))
+
+  (read-bv-and-eof "#vs32b()"		,(s32b-list->bytevector '()))
+  (read-bv-and-eof "#vs32b(1)"		,(s32b-list->bytevector '(1)))
+  (read-bv-and-eof "#vs32b(-1)"		,(s32b-list->bytevector '(-1)))
+  (read-bv-and-eof "#vs32b(1 2 3)"	,(s32b-list->bytevector '(1 2 3)))
+  (read-bv-and-eof "#vs32b(-1 -2 -3)"	,(s32b-list->bytevector '(-1 -2 -3)))
+
+;;; --------------------------------------------------------------------
+;;; 64-bit little endian
+
+  (read-bv-and-eof "#vu64l()"		,(u64l-list->bytevector '()))
+  (read-bv-and-eof "#vu64l(1)"		,(u64l-list->bytevector '(1)))
+  (read-bv-and-eof "#vu64l(1 2 3)"	,(u64l-list->bytevector '(1 2 3)))
+
+  (read-bv-and-eof "#vs64l()"		,(s64l-list->bytevector '()))
+  (read-bv-and-eof "#vs64l(1)"		,(s64l-list->bytevector '(1)))
+  (read-bv-and-eof "#vs64l(-1)"		,(s64l-list->bytevector '(-1)))
+  (read-bv-and-eof "#vs64l(1 2 3)"	,(s64l-list->bytevector '(1 2 3)))
+  (read-bv-and-eof "#vs64l(-1 -2 -3)"	,(s64l-list->bytevector '(-1 -2 -3)))
+
+;;; --------------------------------------------------------------------
+;;; 64-bit big endian
+
+  (read-bv-and-eof "#vu64b()"		,(u64b-list->bytevector '()))
+  (read-bv-and-eof "#vu64b(1)"		,(u64b-list->bytevector '(1)))
+  (read-bv-and-eof "#vu64b(1 2 3)"	,(u64b-list->bytevector '(1 2 3)))
+
+  (read-bv-and-eof "#vs64b()"		,(s64b-list->bytevector '()))
+  (read-bv-and-eof "#vs64b(1)"		,(s64b-list->bytevector '(1)))
+  (read-bv-and-eof "#vs64b(-1)"		,(s64b-list->bytevector '(-1)))
+  (read-bv-and-eof "#vs64b(1 2 3)"	,(s64b-list->bytevector '(1 2 3)))
+  (read-bv-and-eof "#vs64b(-1 -2 -3)"	,(s64b-list->bytevector '(-1 -2 -3)))
+
+  #t)
+
+
 (parametrise ((check-test-name	'locations))
 
   (define-syntax doit-unquoted

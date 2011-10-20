@@ -1790,6 +1790,18 @@ Return @true{} if @var{obj} is a condition object of type
 @section Reader
 
 
+@menu
+* iklib reader mode::           Textual input port modes.
+* iklib reader bv::             Additional bytevector syntaxes.
+* iklib reader stx::            Miscellaneous additional syntaxes.
+* iklib reader fun::            Additional reader functions.
+@end menu
+
+@c page
+@node iklib reader mode
+@subsection Textual input port modes
+
+
 @deffn {Reader Syntax} {#!vicare}
 @deffnx {Reader Syntax} {#!ikarus}
 @value{PRJNAME} extends Scheme's lexical syntax (@rnrs{6} Chapter 4) in
@@ -1856,52 +1868,75 @@ r6rs
 @end example
 @end deffn
 
+@c page
+@node iklib reader bv
+@subsection Additional bytevector syntaxes
 
-@deffn {Reader Syntax} {#!eof}
-The end--of--file marker, @code{#!eof}, is an extension to the @rnrs{6}
-syntax.  The primary utility of the @code{#!eof} marker is to stop the
-reader (e.g. @func{read} and @func{get-datum}) from reading the rest of
-the file.
 
-@example
-(import (ikarus))
-<some code>
-(display "goodbye\n")
-
-#!eof
-<some junk>
-@end example
-
-The @code{#!eof} marker also serves as a datum in @value{PRJNAME}, much
-like @true{} and @false{}, when it is found inside other expressions.
-
-@example
-> (eof-object)
-#!eof
-> (read (open-input-string ""))
-#!eof
-> (read (open-input-string "#!eof"))
-#!eof
-> (quote #!eof)
-#!eof
-> (eof-object? '#!eof)
-#t
-> #!r6rs #!eof
-Unhandled exception
-Condition components:
-  1. &error
-  2. &who: tokenize
-  3. &message: "invalid syntax: #!e"
-> #!vicare #!eof
-$
-@end example
-@end deffn
+The following syntaxes are available only when the input port mode is
+set to @code{vicare}.
 
 
 @deffn {Reader Syntax} {#vs8(@var{byte} ...)}
 Read a bytevector as @code{#vu8(@var{octect} ...)} would do, but allow
 @var{byte} to be in the range @math{[-128, 127]}.
 @end deffn
+
+
+@deffn {Reader Syntax} {#vu16l(@var{word} ...)}
+@deffnx {Reader Syntax} {#vu16b(@var{word} ...)}
+@deffnx {Reader Syntax} {#vu16n(@var{word} ...)}
+Read a bytevector of 16-bit unsigned words stored in little, big and
+native endianness.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vs16l(@var{word} ...)}
+@deffnx {Reader Syntax} {#vs16b(@var{word} ...)}
+@deffnx {Reader Syntax} {#vs16n(@var{word} ...)}
+Read a bytevector of 16-bit signed words stored in little, big and
+native endianness.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vu32l(@var{word} ...)}
+@deffnx {Reader Syntax} {#vu32b(@var{word} ...)}
+@deffnx {Reader Syntax} {#vu32n(@var{word} ...)}
+Read a bytevector of 32-bit unsigned words stored in little, big and
+native endianness.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vs32l(@var{word} ...)}
+@deffnx {Reader Syntax} {#vs32b(@var{word} ...)}
+@deffnx {Reader Syntax} {#vs32n(@var{word} ...)}
+Read a bytevector of 32-bit signed words stored in little, big and
+native endianness.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vu64l(@var{word} ...)}
+@deffnx {Reader Syntax} {#vu64b(@var{word} ...)}
+@deffnx {Reader Syntax} {#vu64n(@var{word} ...)}
+Read a bytevector of 64-bit unsigned words stored in little, big and
+native endianness.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vs64l(@var{word} ...)}
+@deffnx {Reader Syntax} {#vs64b(@var{word} ...)}
+@deffnx {Reader Syntax} {#vs64n(@var{word} ...)}
+Read a bytevector of 64-bit signed words stored in little, big and
+native endianness.
+@end deffn
+
+@c page
+@node iklib reader stx
+@subsection Miscellaneous additional syntaxes
+
+
+The following syntaxes are available only when the input port mode is
+set to @code{vicare}.
 
 
 @deffn {Reader Syntax} {|@var{symbol}|}
@@ -1946,6 +1981,54 @@ cause an error if read:
 (port-eof? port)        @result{} #t
 @end example
 @end deffn
+
+
+@deffn {Reader Syntax} {#!eof}
+The end--of--file marker, @code{#!eof}, is an extension to the @rnrs{6}
+syntax.  The primary utility of the @code{#!eof} marker is to stop the
+reader (e.g. @func{read} and @func{get-datum}) from reading the rest of
+the file.
+
+@example
+(import (ikarus))
+<some code>
+(display "goodbye\n")
+
+#!eof
+<some junk>
+@end example
+
+The @code{#!eof} marker also serves as a datum in @value{PRJNAME}, much
+like @true{} and @false{}, when it is found inside other expressions.
+
+@example
+> (eof-object)
+#!eof
+> (read (open-input-string ""))
+#!eof
+> (read (open-input-string "#!eof"))
+#!eof
+> (quote #!eof)
+#!eof
+> (eof-object? '#!eof)
+#t
+> #!r6rs #!eof
+Unhandled exception
+Condition components:
+  1. &error
+  2. &who: tokenize
+  3. &message: "invalid syntax: #!e"
+> #!vicare #!eof
+$
+@end example
+@end deffn
+
+@c page
+@node iklib reader fun
+@subsection Additional reader functions
+
+
+The following bindings are exported by the @library{ikarus} library.
 
 
 @defun get-annotated-datum @var{port}
@@ -2304,20 +2387,69 @@ must be such that:
 @subsection Converting bytevectors
 
 
-The following bindings are exported by the @library{ikarus} library.
+These conversion functions work like @func{bytevector->u8-list} and
+@func{u8-list->bytevector}.  The following bindings are exported by the
+@library{ikarus} library.
 
 
-@deffn Procedure {bytevector->s8-list} @var{bytevector}
-@deffnx Procedure {s8-list->bytevector} @var{list}
-@var{list} must be a list of bytes.
+@defun {bytevector->s8-list} @var{bytevector}
+@defunx {s8-list->bytevector} @var{list}
+Convert between a list of signed bytes and a bytevector.
+@end defun
 
-The @func{bytevector->s8-list} procedure returns a newly allocated list
-of the bytes of @var{bytevector} in the same order.
 
-The @func{s8-list->bytevector} procedure returns a newly allocated
-bytevector whose elements are the elements of list @var{list}, in the
-same order.  It is analogous to @func{list->vector}.
-@end deffn
+@defun s16l-list->bytevector @var{list}
+@defunx s16b-list->bytevector @var{list}
+@defunx s16n-list->bytevector @var{list}
+@defunx u16l-list->bytevector @var{list}
+@defunx u16b-list->bytevector @var{list}
+@defunx u16n-list->bytevector @var{list}
+@defunx bytevector->s16l-list @var{bytevector}
+@defunx bytevector->s16b-list @var{bytevector}
+@defunx bytevector->s16n-list @var{bytevector}
+@defunx bytevector->u16l-list @var{bytevector}
+@defunx bytevector->u16b-list @var{bytevector}
+@defunx bytevector->u16n-list @var{bytevector}
+Convert between a list of signed or unsigned 16-bit words and a
+bytevector in which the words are stored in little, big or native
+endianness.
+@end defun
+
+
+@defun s32l-list->bytevector @var{list}
+@defunx s32b-list->bytevector @var{list}
+@defunx s32n-list->bytevector @var{list}
+@defunx u32l-list->bytevector @var{list}
+@defunx u32b-list->bytevector @var{list}
+@defunx u32n-list->bytevector @var{list}
+@defunx bytevector->s32l-list @var{bytevector}
+@defunx bytevector->s32b-list @var{bytevector}
+@defunx bytevector->s32n-list @var{bytevector}
+@defunx bytevector->u32l-list @var{bytevector}
+@defunx bytevector->u32b-list @var{bytevector}
+@defunx bytevector->u32n-list @var{bytevector}
+Convert between a list of signed or unsigned 32-bit words and a
+bytevector in which the words are stored in little, big or native
+endianness.
+@end defun
+
+
+@defun s64l-list->bytevector @var{list}
+@defunx s64b-list->bytevector @var{list}
+@defunx s64n-list->bytevector @var{list}
+@defunx u64l-list->bytevector @var{list}
+@defunx u64b-list->bytevector @var{list}
+@defunx u64n-list->bytevector @var{list}
+@defunx bytevector->s64l-list @var{bytevector}
+@defunx bytevector->s64b-list @var{bytevector}
+@defunx bytevector->s64n-list @var{bytevector}
+@defunx bytevector->u64l-list @var{bytevector}
+@defunx bytevector->u64b-list @var{bytevector}
+@defunx bytevector->u64n-list @var{bytevector}
+Convert between a list of signed or unsigned 64-bit words and a
+bytevector in which the words are stored in little, big or native
+endianness.
+@end defun
 
 @c page
 @node iklib bytevectors generic

@@ -1092,6 +1092,310 @@
   #t)
 
 
+(parametrise ((check-test-name	'list-to-bv))
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ ?arg ?result)
+			(check (s8-list->bytevector ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(1))
+    (doit '(+1 +2 +3)		#vu8(1 2 3))
+    (doit '(-1)			#vu8(#xFF))
+    (doit '(-1 -2 -3)		#vu8(#xFF #xFE #xFD)))
+
+;;; --------------------------------------------------------------------
+;;; 16-bit little endian
+
+  (let-syntax ((doit (syntax-rules ()
+  		       ((_ ?arg ?result)
+  			(check (u16l-list->bytevector ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(1 0))
+    (doit '(+1 +2 +3)		#vu8(1 0 2 0 3 0)))
+
+  (let-syntax ((doit (syntax-rules ()
+    		       ((_ ?arg ?result)
+    			(check (s16l-list->bytevector ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(1 0))
+    (doit '(+1 +2 +3)		#vu8(1 0 2 0 3 0))
+    (doit '(-1)			#vu8(#xFF #xFF))
+    (doit '(-1 -2 -3)		#vu8(#xFF #xFF #xFE #xFF #xFD #xFF)))
+
+;;; --------------------------------------------------------------------
+;;; 16-bit big endian
+
+  (let-syntax ((doit (syntax-rules ()
+  		       ((_ ?arg ?result)
+  			(check (u16b-list->bytevector ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(0 1))
+    (doit '(+1 +2 +3)		#vu8(0 1 0 2 0 3)))
+
+  (let-syntax ((doit (syntax-rules ()
+    		       ((_ ?arg ?result)
+    			(check (s16b-list->bytevector ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(0 1))
+    (doit '(+1 +2 +3)		#vu8(0 1 0 2 0 3))
+    (doit '(-1)			#vu8(#xFF #xFF))
+    (doit '(-1 -2 -3)		#vu8(#xFF #xFF #xFF #xFE #xFF #xFD)))
+
+;;; --------------------------------------------------------------------
+;;; 32-bit little endian
+
+  (let-syntax ((doit (syntax-rules ()
+  		       ((_ ?arg ?result)
+  			(check (u32l-list->bytevector ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(1 0 0 0))
+    (doit '(+1 +2 +3)		#vu8(1 0 0 0  2 0 0 0  3 0 0 0)))
+
+  (let-syntax ((doit (syntax-rules ()
+    		       ((_ ?arg ?result)
+    			(check (s32l-list->bytevector ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(1 0 0 0))
+    (doit '(+1 +2 +3)		#vu8(1 0 0 0  2 0 0 0  3 0 0 0))
+    (doit '(-1)			#vu8(#xFF #xFF #xFF #xFF))
+    (doit '(-1 -2 -3)		#vu8( ;;
+				     #xFF #xFF #xFF #xFF
+				     #xFE #xFF #xFF #xFF
+				     #xFD #xFF #xFF #xFF)))
+
+;;; --------------------------------------------------------------------
+;;; 32-bit big endian
+
+  (let-syntax ((doit (syntax-rules ()
+  		       ((_ ?arg ?result)
+  			(check (u32b-list->bytevector ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(0 0 0 1))
+    (doit '(+1 +2 +3)		#vu8(0 0 0 1  0 0 0 2  0 0 0 3)))
+
+  (let-syntax ((doit (syntax-rules ()
+    		       ((_ ?arg ?result)
+    			(check (s32b-list->bytevector ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(0 0 0 1))
+    (doit '(+1 +2 +3)		#vu8(0 0 0 1  0 0 0 2  0 0 0 3))
+    (doit '(-1)			#vu8(#xFF #xFF #xFF #xFF))
+    (doit '(-1 -2 -3)		#vu8( ;;
+				     #xFF #xFF #xFF #xFF
+				     #xFF #xFF #xFF #xFE
+				     #xFF #xFF #xFF #xFD)))
+
+;;; --------------------------------------------------------------------
+;;; 64-bit little endian
+
+  (let-syntax ((doit (syntax-rules ()
+  		       ((_ ?arg ?result)
+  			(check (u64l-list->bytevector ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(1 0 0 0  0 0 0 0))
+    (doit '(+1 +2 +3)		#vu8( ;;
+				     1 0 0 0  0 0 0 0
+				     2 0 0 0  0 0 0 0
+				     3 0 0 0  0 0 0 0)))
+
+  (let-syntax ((doit (syntax-rules ()
+    		       ((_ ?arg ?result)
+    			(check (s64l-list->bytevector ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(1 0 0 0  0 0 0 0))
+    (doit '(+1 +2 +3)		#vu8( ;;
+				     1 0 0 0  0 0 0 0
+				     2 0 0 0  0 0 0 0
+				     3 0 0 0  0 0 0 0))
+    (doit '(-1)			#vu8(#xFF #xFF #xFF #xFF  #xFF #xFF #xFF #xFF))
+    (doit '(-1 -2 -3)		#vu8( ;;
+				     #xFF #xFF #xFF #xFF  #xFF #xFF #xFF #xFF
+				     #xFE #xFF #xFF #xFF  #xFF #xFF #xFF #xFF
+				     #xFD #xFF #xFF #xFF  #xFF #xFF #xFF #xFF)))
+
+;;; --------------------------------------------------------------------
+;;; 64-bit big endian
+
+  (let-syntax ((doit (syntax-rules ()
+  		       ((_ ?arg ?result)
+  			(check (u64b-list->bytevector ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(0 0 0 0  0 0 0 1))
+    (doit '(+1 +2 +3)		#vu8( ;;
+				     0 0 0 0  0 0 0 1
+				     0 0 0 0  0 0 0 2
+				     0 0 0 0  0 0 0 3)))
+
+  (let-syntax ((doit (syntax-rules ()
+    		       ((_ ?arg ?result)
+    			(check (s64b-list->bytevector ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(0 0 0 0  0 0 0 1))
+    (doit '(+1 +2 +3)		#vu8( ;;
+				     0 0 0 0  0 0 0 1
+				     0 0 0 0  0 0 0 2
+				     0 0 0 0  0 0 0 3))
+    (doit '(-1)			#vu8(#xFF #xFF #xFF #xFF  #xFF #xFF #xFF #xFF))
+    (doit '(-1 -2 -3)		#vu8( ;;
+				     #xFF #xFF #xFF #xFF  #xFF #xFF #xFF #xFF
+				     #xFF #xFF #xFF #xFF  #xFF #xFF #xFF #xFE
+				     #xFF #xFF #xFF #xFF  #xFF #xFF #xFF #xFD)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bv-to-list))
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ ?result ?arg)
+			(check (bytevector->s8-list ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(1))
+    (doit '(+1 +2 +3)		#vu8(1 2 3))
+    (doit '(-1)			#vu8(#xFF))
+    (doit '(-1 -2 -3)		#vu8(#xFF #xFE #xFD)))
+
+;;; --------------------------------------------------------------------
+;;; 16-bit little endian
+
+  (let-syntax ((doit (syntax-rules ()
+  		       ((_ ?result ?arg)
+  			(check (bytevector->u16l-list ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(1 0))
+    (doit '(+1 +2 +3)		#vu8(1 0 2 0 3 0)))
+
+  (let-syntax ((doit (syntax-rules ()
+    		       ((_ ?result ?arg)
+    			(check (bytevector->s16l-list ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(1 0))
+    (doit '(+1 +2 +3)		#vu8(1 0 2 0 3 0))
+    (doit '(-1)			#vu8(#xFF #xFF))
+    (doit '(-1 -2 -3)		#vu8(#xFF #xFF #xFE #xFF #xFD #xFF)))
+
+;;; --------------------------------------------------------------------
+;;; 16-bit big endian
+
+  (let-syntax ((doit (syntax-rules ()
+  		       ((_ ?result ?arg)
+  			(check (bytevector->u16b-list ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(0 1))
+    (doit '(+1 +2 +3)		#vu8(0 1 0 2 0 3)))
+
+  (let-syntax ((doit (syntax-rules ()
+    		       ((_ ?result ?arg)
+    			(check (bytevector->s16b-list ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(0 1))
+    (doit '(+1 +2 +3)		#vu8(0 1 0 2 0 3))
+    (doit '(-1)			#vu8(#xFF #xFF))
+    (doit '(-1 -2 -3)		#vu8(#xFF #xFF #xFF #xFE #xFF #xFD)))
+
+;;; --------------------------------------------------------------------
+;;; 32-bit little endian
+
+  (let-syntax ((doit (syntax-rules ()
+  		       ((_ ?result ?arg)
+  			(check (bytevector->u32l-list ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(1 0 0 0))
+    (doit '(+1 +2 +3)		#vu8(1 0 0 0  2 0 0 0  3 0 0 0)))
+
+  (let-syntax ((doit (syntax-rules ()
+    		       ((_ ?result ?arg)
+    			(check (bytevector->s32l-list ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(1 0 0 0))
+    (doit '(+1 +2 +3)		#vu8(1 0 0 0  2 0 0 0  3 0 0 0))
+    (doit '(-1)			#vu8(#xFF #xFF #xFF #xFF))
+    (doit '(-1 -2 -3)		#vu8( ;;
+				     #xFF #xFF #xFF #xFF
+				     #xFE #xFF #xFF #xFF
+				     #xFD #xFF #xFF #xFF)))
+
+;;; --------------------------------------------------------------------
+;;; 32-bit big endian
+
+  (let-syntax ((doit (syntax-rules ()
+  		       ((_ ?result ?arg)
+  			(check (bytevector->u32b-list ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(0 0 0 1))
+    (doit '(+1 +2 +3)		#vu8(0 0 0 1  0 0 0 2  0 0 0 3)))
+
+  (let-syntax ((doit (syntax-rules ()
+    		       ((_ ?result ?arg)
+    			(check (bytevector->s32b-list ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(0 0 0 1))
+    (doit '(+1 +2 +3)		#vu8(0 0 0 1  0 0 0 2  0 0 0 3))
+    (doit '(-1)			#vu8(#xFF #xFF #xFF #xFF))
+    (doit '(-1 -2 -3)		#vu8( ;;
+				     #xFF #xFF #xFF #xFF
+				     #xFF #xFF #xFF #xFE
+				     #xFF #xFF #xFF #xFD)))
+
+;;; --------------------------------------------------------------------
+;;; 64-bit little endian
+
+  (let-syntax ((doit (syntax-rules ()
+  		       ((_ ?result ?arg)
+  			(check (bytevector->u64l-list ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(1 0 0 0  0 0 0 0))
+    (doit '(+1 +2 +3)		#vu8( ;;
+				     1 0 0 0  0 0 0 0
+				     2 0 0 0  0 0 0 0
+				     3 0 0 0  0 0 0 0)))
+
+  (let-syntax ((doit (syntax-rules ()
+    		       ((_ ?result ?arg)
+    			(check (bytevector->s64l-list ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(1 0 0 0  0 0 0 0))
+    (doit '(+1 +2 +3)		#vu8( ;;
+				     1 0 0 0  0 0 0 0
+				     2 0 0 0  0 0 0 0
+				     3 0 0 0  0 0 0 0))
+    (doit '(-1)			#vu8(#xFF #xFF #xFF #xFF  #xFF #xFF #xFF #xFF))
+    (doit '(-1 -2 -3)		#vu8( ;;
+				     #xFF #xFF #xFF #xFF  #xFF #xFF #xFF #xFF
+				     #xFE #xFF #xFF #xFF  #xFF #xFF #xFF #xFF
+				     #xFD #xFF #xFF #xFF  #xFF #xFF #xFF #xFF)))
+
+;;; --------------------------------------------------------------------
+;;; 64-bit big endian
+
+  (let-syntax ((doit (syntax-rules ()
+  		       ((_ ?result ?arg)
+  			(check (bytevector->u64b-list ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(0 0 0 0  0 0 0 1))
+    (doit '(+1 +2 +3)		#vu8( ;;
+				     0 0 0 0  0 0 0 1
+				     0 0 0 0  0 0 0 2
+				     0 0 0 0  0 0 0 3)))
+
+  (let-syntax ((doit (syntax-rules ()
+    		       ((_ ?result ?arg)
+    			(check (bytevector->s64b-list ?arg) => ?result)))))
+    (doit '()			#vu8())
+    (doit '(+1)			#vu8(0 0 0 0  0 0 0 1))
+    (doit '(+1 +2 +3)		#vu8( ;;
+				     0 0 0 0  0 0 0 1
+				     0 0 0 0  0 0 0 2
+				     0 0 0 0  0 0 0 3))
+    (doit '(-1)			#vu8(#xFF #xFF #xFF #xFF  #xFF #xFF #xFF #xFF))
+    (doit '(-1 -2 -3)		#vu8( ;;
+				     #xFF #xFF #xFF #xFF  #xFF #xFF #xFF #xFF
+				     #xFF #xFF #xFF #xFF  #xFF #xFF #xFF #xFE
+				     #xFF #xFF #xFF #xFF  #xFF #xFF #xFF #xFD)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

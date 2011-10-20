@@ -122,6 +122,14 @@
 		(?raise-error))
 	       . ?cond-clauses)))))
 
+(define-inline (%implementation-violation who msg . irritants)
+  (raise (condition
+	  (make-assertion-violation)
+	  (make-implementation-restriction-violation)
+	  (make-who-condition who)
+	  (make-message-condition msg)
+	  (make-irritants-condition irritants))))
+
 
 ;;;; miscellaneous helpers
 
@@ -176,6 +184,8 @@
 ;;
 (define-struct loc
   (value value/ann set?))
+
+(define empty-locs '())
 
 ;;Constructor: make-annotation EXPR STRIPPED SOURCE POS
 ;;Predicate: annotation? OBJ
@@ -264,7 +274,7 @@
   (die/pos p -1 who msg . irritants))
 
 (define-inline (die/ann ann who msg . irritants)
-  (die/lex (annotation-source ann) who msg . irritants))
+  (die/lex (annotation-textual-position ann) who msg . irritants))
 
 
 ;;;; characters classification helpers
@@ -439,7 +449,7 @@
   (define who 'get-datum)
   (%assert-argument-is-source-code-port who port)
   (let-values (((expr expr/ann locs-alist kont)
-		(read-expr port '() void)))
+		(read-expr port empty-locs void)))
     (if (null? locs-alist)
 	expr
       (begin
@@ -463,7 +473,7 @@
       x))
   (%assert-argument-is-source-code-port who port)
   (let-values (((expr expr/ann locs-alist kont)
-		(read-expr port '() void)))
+		(read-expr port empty-locs void)))
     (if (null? locs-alist)
 	(%return-annotated expr/ann)
       (begin
@@ -566,14 +576,14 @@
 	;;error report.
 	(%error "referenced location mark is not set" (car entry)))
       (when (loc? (loc-value loc))
-	(let f ((h loc) (t loc))
+	(let loop ((h loc) (t loc))
 	  (if (loc? h)
 	      (let ((h1 (loc-value h)))
 		(if (loc? h1)
 		    (begin
 		      (when (eq? h1 t)
 			(%error "circular marks"))
-		      (let ((v (f (loc-value h1) (loc-value t))))
+		      (let ((v (loop (loc-value h1) (loc-value t))))
 			(set-loc-value! h1 v)
 			(set-loc-value! h v)
 			v))
@@ -837,8 +847,9 @@
   ;;(mark . <n>)		The token is a graph syntax mark: #<N>=---
   ;;(ref . <n>)			The token is a graph syntax reference: #<N>#
   ;;vparen			The token is a vector.
-  ;;vu8				The token is a u8 bytevector.
-  ;;vs8				The token is a s8 bytevector.
+  ;;
+  ;;When the token is a bytevector: the return value is the return value
+  ;;of ADVANCE-TOKENISATION-OF-BYTEVECTORS.
   ;;
   ;;When the token is the  "#!r6rs" or "#!vicare" comment: the port mode
   ;;is changed accordingly and  START-TOKENISING is applied to the port;
@@ -849,7 +860,7 @@
   (define-inline (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
   (define-inline (%unexpected-eof-error)
-    (%error "invalid EOF while reading non-hash datum"))
+    (%error "invalid EOF while reading hash datum"))
   (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
     (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
       . ?cond-clauses))
@@ -965,75 +976,7 @@
 
    ;;bytevectors
    ((unsafe.char= #\v ch)
-    ;;Correct sequences of chars:
-    ;;
-    ;; ch  ch1  ch2  ch3  ch4  ch5  datum
-    ;; ----------------------------------
-    ;; v   u    8    (              #vu8
-    ;; v   s    8    (              #vs8
-    ;; v   u    1    6    l    (    #vu16l
-    ;; v   u    1    6    b    (    #vu16b
-    ;; v   s    1    6    l    (    #vs16l
-    ;; v   s    1    6    b    (    #vs16b
-    ;; v   u    3    2    l    (    #vu32l
-    ;; v   u    3    2    b    (    #vu32b
-    ;; v   s    3    2    l    (    #vs32l
-    ;; v   s    3    2    b    (    #vs32b
-    ;; v   u    6    4    l    (    #vu64l
-    ;; v   u    6    4    b    (    #vu64b
-    ;; v   s    6    4    l    (    #vs64l
-    ;; v   s    6    4    b    (    #vs64b
-    ;;
-    (let ((ch1/eof (get-char-and-track-textual-position port)))
-      (define-inline (%read-bytevector)
-	(cond ((char=? #\u ch1/eof)
-	       (%read-unsigned))
-	      ((char=? #\s ch1/eof)
-	       (when (port-in-r6rs-mode? port)
-		 (%error "invalid #vs8 syntax in #!r6rs mode" "#vs8"))
-	       (%read-signed))
-	      ((eof-object? ch1/eof)
-	       (%error "invalid eof object after #v"))
-	      (else
-	       (%error (format "invalid sequence #v~a" ch1/eof)))))
-
-      (define-inline (%read-unsigned)
-	(let ((ch2/eof (get-char-and-track-textual-position port)))
-	  (cond ((char=? ch2/eof #\8) ;unsigned bytes bytevector
-		 (%read-unsigned-8))
-		((eof-object? ch2/eof)
-		 (%error "invalid eof object after #vu"))
-		(else
-		 (%error-1 (format "invalid sequence #vu~a" ch2/eof))))))
-
-      (define-inline (%read-signed)
-	(let ((ch2/eof (get-char-and-track-textual-position port)))
-	  (cond ((char=? ch2/eof #\8) ;signed bytes bytevector
-		 (%read-signed-8))
-		((eof-object? ch2/eof)
-		 (%error "invalid eof object after #vs"))
-		(else
-		 (%error-1 (format "invalid sequence #vs~a" ch2/eof))))))
-
-      (define-inline (%read-unsigned-8)
-	(let ((ch3/eof (get-char-and-track-textual-position port)))
-	  (cond ((char=? ch3/eof #\()
-		 'vu8)
-		((eof-object? ch3/eof)
-		 (%error "invalid eof object after #vu8"))
-		(else
-		 (%error-1 (format "invalid sequence #vu8~a" ch3/eof))))))
-
-      (define-inline (%read-signed-8)
-	(let ((ch3/eof (get-char-and-track-textual-position port)))
-	  (cond ((char=? ch3/eof #\()
-		 'vs8)
-		((eof-object? ch3/eof)
-		 (%error "invalid eof object after #vs8"))
-		(else
-		 (%error-1 (format "invalid sequence #vs8~a" ch3/eof))))))
-
-      (%read-bytevector)))
+    (advance-tokenisation-of-bytevectors port))
 
    ((or (unsafe.char= ch #\e) (unsafe.char= ch #\E)) #;(memq ch '(#\e #\E))
     (cons 'datum (parse-string port (list ch #\#) 10 #f 'e)))
@@ -1065,6 +1008,245 @@
 
    (else
     (%error-1 (format "invalid syntax #~a" ch)))))
+
+
+(define (advance-tokenisation-of-bytevectors port)
+  ;;Read from  PORT the opening tag  of bytevectors up  to and including
+  ;;the  opening parentheses,  after  the #\#  and  #\v characters  have
+  ;;already been read.  Return one among:
+  ;;
+  ;;vu8				The token is a u8 bytevector.
+  ;;vs8				The token is a s8 bytevector.
+  ;;
+  ;;vu16l			The token is a u16l bytevector.
+  ;;vs16b			The token is a u16b bytevector.
+  ;;vu16n			The token is a u16n bytevector.
+  ;;
+  ;;vs16l			The token is a s16l bytevector.
+  ;;vs16b			The token is a s16b bytevector.
+  ;;vs16n			The token is a s16n bytevector.
+  ;;
+  ;;vu32l			The token is a u32l bytevector.
+  ;;vs32b			The token is a u32b bytevector.
+  ;;vu32n			The token is a u32n bytevector.
+  ;;
+  ;;vs32l			The token is a s32l bytevector.
+  ;;vs32b			The token is a s32b bytevector.
+  ;;vs32n			The token is a s32n bytevector.
+  ;;
+  ;;vu64l			The token is a u64l bytevector.
+  ;;vs64b			The token is a u64b bytevector.
+  ;;vu64n			The token is a u64n bytevector.
+  ;;
+  ;;vs64l			The token is a s64l bytevector.
+  ;;vs64b			The token is a s64b bytevector.
+  ;;vs64n			The token is a s64n bytevector.
+  ;;
+  ;;Correct sequences of chars:
+  ;;
+  ;; ch  ch1  ch2  ch3  ch4  ch5  datum
+  ;; ----------------------------------
+  ;; v   u    8    (              #vu8
+  ;; v   s    8    (              #vs8
+  ;;
+  ;; v   u    1    6    l    (    #vu16l
+  ;; v   u    1    6    b    (    #vu16b
+  ;; v   u    1    6    n    (    #vu16n
+  ;;
+  ;; v   s    1    6    l    (    #vs16l
+  ;; v   s    1    6    b    (    #vs16b
+  ;; v   s    1    6    b    (    #vs16n
+  ;;
+  ;; v   u    3    2    l    (    #vu32l
+  ;; v   u    3    2    b    (    #vu32b
+  ;; v   u    3    2    n    (    #vu32n
+  ;;
+  ;; v   s    3    2    l    (    #vs32l
+  ;; v   s    3    2    b    (    #vs32b
+  ;; v   s    3    2    b    (    #vs32n
+  ;;
+  ;; v   u    6    4    l    (    #vu64l
+  ;; v   u    6    4    b    (    #vu64b
+  ;; v   u    6    4    n    (    #vu64n
+  ;;
+  ;; v   s    6    4    l    (    #vs64l
+  ;; v   s    6    4    b    (    #vs64b
+  ;; v   s    6    4    n    (    #vs64n
+  ;;
+  (define-inline (%error msg . args)
+    (die/p port 'tokenize msg . args))
+  (define-inline (%error-1 msg . args)
+    (die/p-1 port 'tokenize msg . args))
+  (define-inline (%unexpected-eof-error)
+    (%error "invalid EOF while reading hash datum"))
+  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
+    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+      . ?cond-clauses))
+
+  (define-inline (%invalid-sequence-of-chars   . chars)
+    (%error   "invalid sequence of characters" (string . chars)))
+  (define-inline (%invalid-sequence-of-chars-1 . chars)
+    (%error-1 "invalid sequence of characters" (string . chars)))
+
+;;; --------------------------------------------------------------------
+
+  (define-inline (%read-sign-char)
+    (%read-char-no-eof (port ch1)
+      ((unsafe.char= #\u ch1)
+       (%read-unsigned))
+      ((unsafe.char= #\s ch1)
+       (when (port-in-r6rs-mode? port)
+	 (%error "invalid #vs syntax in #!r6rs mode" "#vs"))
+       (%read-signed))
+      (else
+       (%invalid-sequence-of-chars #\# #\v ch1))))
+
+  (define-inline (%read-open-paren token . chars)
+    (%read-char-no-eof (port ch)
+      ((unsafe.char= ch #\()
+       token)
+      (else
+       (%invalid-sequence-of-chars-1 . chars))))
+
+;;; --------------------------------------------------------------------
+
+  (define-inline (%read-unsigned)
+    (%read-char-no-eof (port ch2)
+      ((unsafe.char= ch2 #\8) ;unsigned 8
+       (%read-open-paren 'vu8 #\# #\v #\u #\8))
+
+      ((unsafe.char= ch2 #\1) ;unsigned 16
+       (when (port-in-r6rs-mode? port)
+	 (%error "invalid #vu1 syntax in #!r6rs mode" "#vu1"))
+       (%read-char-no-eof (port ch3)
+	 ((unsafe.char= #\6 ch3)
+	  (%read-unsigned-16))
+	 (else
+	  (%invalid-sequence-of-chars-1 #\# #\v #\u #\1 ch3))))
+
+      ((unsafe.char= ch2 #\3) ;unsigned 32
+       (when (port-in-r6rs-mode? port)
+	 (%error "invalid #vu3 syntax in #!r6rs mode" "#vu3"))
+       (%read-char-no-eof (port ch3)
+	 ((unsafe.char= #\2 ch3)
+	  (%read-unsigned-32))
+	 (else
+	  (%invalid-sequence-of-chars-1 #\# #\v #\u #\3 ch3))))
+
+      ((unsafe.char= ch2 #\6) ;unsigned 64
+       (when (port-in-r6rs-mode? port)
+	 (%error "invalid #vu6 syntax in #!r6rs mode" "#vu6"))
+       (%read-char-no-eof (port ch3)
+	 ((unsafe.char= #\4 ch3)
+	  (%read-unsigned-64))
+	 (else
+	  (%invalid-sequence-of-chars-1 #\# #\v #\u #\6 ch3))))
+
+      (else
+       (%invalid-sequence-of-chars-1 #\# #\v #\u ch2))))
+
+  (define-inline (%read-signed)
+    (%read-char-no-eof (port ch2)
+      ((unsafe.char= ch2 #\8) ;signed bytes
+       (%read-open-paren 'vs8 #\# #\v #\s #\8))
+
+      ((unsafe.char= ch2 #\1) ;signed 16
+       (%read-char-no-eof (port ch3)
+	 ((unsafe.char= #\6 ch3)
+	  (%read-signed-16))
+	 (else
+	  (%invalid-sequence-of-chars-1 #\# #\v #\s #\1 ch3))))
+
+      ((unsafe.char= ch2 #\3) ;signed 32
+       (%read-char-no-eof (port ch3)
+	 ((unsafe.char= #\2 ch3)
+	  (%read-signed-32))
+	 (else
+	  (%invalid-sequence-of-chars-1 #\# #\v #\s #\3 ch3))))
+
+      ((unsafe.char= ch2 #\6) ;signed 64
+       (%read-char-no-eof (port ch3)
+	 ((unsafe.char= #\4 ch3)
+	  (%read-signed-64))
+	 (else
+	  (%invalid-sequence-of-chars-1 #\# #\v #\s #\6 ch3))))
+
+      (else
+       (%invalid-sequence-of-chars-1 #\# #\v #\s ch2))))
+
+;;; --------------------------------------------------------------------
+
+  (define-inline (%read-unsigned-16)
+    (%read-char-no-eof (port ch4)
+      ((unsafe.char= ch4 #\l)
+       (%read-open-paren 'vu16l #\# #\v #\u #\1 #\6 #\l))
+      ((unsafe.char= ch4 #\b)
+       (%read-open-paren 'vu16b #\# #\v #\u #\1 #\6 #\b))
+      ((unsafe.char= ch4 #\n)
+       (%read-open-paren 'vu16n #\# #\v #\u #\1 #\6 #\n))
+      (else
+       (%invalid-sequence-of-chars-1 #\# #\v #\u #\1 #\6 ch4))))
+
+  (define-inline (%read-signed-16)
+    (%read-char-no-eof (port ch4)
+      ((unsafe.char= ch4 #\l)
+       (%read-open-paren 'vs16l #\# #\v #\s #\1 #\6 #\l))
+      ((unsafe.char= ch4 #\b)
+       (%read-open-paren 'vs16b #\# #\v #\s #\1 #\6 #\b))
+      ((unsafe.char= ch4 #\n)
+       (%read-open-paren 'vs16n #\# #\v #\s #\1 #\6 #\n))
+      (else
+       (%invalid-sequence-of-chars-1 #\# #\v #\s #\1 #\6 ch4))))
+
+;;; --------------------------------------------------------------------
+
+  (define-inline (%read-unsigned-32)
+    (%read-char-no-eof (port ch4)
+      ((unsafe.char= ch4 #\l)
+       (%read-open-paren 'vu32l #\# #\v #\u #\3 #\2 #\l))
+      ((unsafe.char= ch4 #\b)
+       (%read-open-paren 'vu32b #\# #\v #\u #\3 #\2 #\b))
+      ((unsafe.char= ch4 #\n)
+       (%read-open-paren 'vu32n #\# #\v #\u #\3 #\2 #\n))
+      (else
+       (%invalid-sequence-of-chars-1 #\# #\v #\u #\3 #\2 ch4))))
+
+  (define-inline (%read-signed-32)
+    (%read-char-no-eof (port ch4)
+      ((unsafe.char= ch4 #\l)
+       (%read-open-paren 'vs32l #\# #\v #\s #\3 #\2 #\l))
+      ((unsafe.char= ch4 #\b)
+       (%read-open-paren 'vs32b #\# #\v #\s #\3 #\2 #\b))
+      ((unsafe.char= ch4 #\n)
+       (%read-open-paren 'vs32n #\# #\v #\s #\3 #\2 #\n))
+      (else
+       (%invalid-sequence-of-chars-1 #\# #\v #\s #\3 #\2 ch4))))
+
+;;; --------------------------------------------------------------------
+
+  (define-inline (%read-unsigned-64)
+    (%read-char-no-eof (port ch4)
+      ((unsafe.char= ch4 #\l)
+       (%read-open-paren 'vu64l #\# #\v #\u #\6 #\4 #\l))
+      ((unsafe.char= ch4 #\b)
+       (%read-open-paren 'vu64b #\# #\v #\u #\6 #\4 #\b))
+      ((unsafe.char= ch4 #\n)
+       (%read-open-paren 'vu64n #\# #\v #\u #\6 #\4 #\n))
+      (else
+       (%invalid-sequence-of-chars-1 #\# #\v #\u #\6 #\4 ch4))))
+
+  (define-inline (%read-signed-64)
+    (%read-char-no-eof (port ch4)
+      ((unsafe.char= ch4 #\l)
+       (%read-open-paren 'vs64l #\# #\v #\s #\6 #\4 #\l))
+      ((unsafe.char= ch4 #\b)
+       (%read-open-paren 'vs64b #\# #\v #\s #\6 #\4 #\b))
+      ((unsafe.char= ch4 #\n)
+       (%read-open-paren 'vs64n #\# #\v #\s #\6 #\4 #\n))
+      (else
+       (%invalid-sequence-of-chars-1 #\# #\v #\s #\6 #\4 ch4))))
+
+  (%read-sign-char))
 
 
 (define (finish-tokenisation-of-dot-datum port)
@@ -1353,16 +1535,63 @@
 			 (read-vector port locs-alist kont 0 '() '())))
 	     (values vec (annotate vec vec/ann pos) locs-alist kont)))
 
-	  ;;Read a bytevector opened by "#vu8(".
-	  ((eq? token 'vu8)
-	   (let-values (((bv bv/ann locs-alist kont)
-			 (read-u8-bytevector port locs-alist kont 0 '())))
-	     (values bv (annotate bv bv/ann pos) locs-alist kont)))
+	  ;;Read a bytevector.
+	  ((memq token '( ;;
+			 vu8 vs8
+			 vu16l vu16b vu16n  vs16l vs16b vs16n
+			 vu32l vu32b vu32n  vs32l vs32b vs32n
+			 vu64l vu64b vu64n  vs64l vs64b vs64n))
+	   (let-values
+	       (((bv bv/ann locs-alist kont)
+		 (cond ((eq? token 'vu8)
+			(finish-tokenisation-of-bytevector-u8 port locs-alist kont 0 '()))
+		       ((eq? token 'vs8)
+			(finish-tokenisation-of-bytevector-s8 port locs-alist kont 0 '()))
 
-	  ;;Read a bytevector opened by "#vs8(".
-	  ((eq? token 'vs8)
-	   (let-values (((bv bv/ann locs-alist kont)
-			 (read-s8-bytevector port locs-alist kont 0 '())))
+		       ((eq? token 'vu16l)
+			(finish-tokenisation-of-bytevector-u16l port locs-alist kont 0 '()))
+		       ((eq? token 'vs16l)
+			(finish-tokenisation-of-bytevector-s16l port locs-alist kont 0 '()))
+
+		       ((eq? token 'vu16b)
+			(finish-tokenisation-of-bytevector-u16b port locs-alist kont 0 '()))
+		       ((eq? token 'vs16b)
+			(finish-tokenisation-of-bytevector-s16b port locs-alist kont 0 '()))
+
+		       ((eq? token 'vu16n)
+			(finish-tokenisation-of-bytevector-u16n port locs-alist kont 0 '()))
+		       ((eq? token 'vs16n)
+			(finish-tokenisation-of-bytevector-s16n port locs-alist kont 0 '()))
+
+		       ((eq? token 'vu32l)
+			(finish-tokenisation-of-bytevector-u32l port locs-alist kont 0 '()))
+		       ((eq? token 'vs32l)
+			(finish-tokenisation-of-bytevector-s32l port locs-alist kont 0 '()))
+
+		       ((eq? token 'vu32b)
+			(finish-tokenisation-of-bytevector-u32b port locs-alist kont 0 '()))
+		       ((eq? token 'vs32b)
+			(finish-tokenisation-of-bytevector-s32b port locs-alist kont 0 '()))
+
+		       ((eq? token 'vu32n)
+			(finish-tokenisation-of-bytevector-u32n port locs-alist kont 0 '()))
+		       ((eq? token 'vs32n)
+			(finish-tokenisation-of-bytevector-s32n port locs-alist kont 0 '()))
+
+		       ((eq? token 'vu64l)
+			(finish-tokenisation-of-bytevector-u64l port locs-alist kont 0 '()))
+		       ((eq? token 'vs64l)
+			(finish-tokenisation-of-bytevector-s64l port locs-alist kont 0 '()))
+
+		       ((eq? token 'vu64b)
+			(finish-tokenisation-of-bytevector-u64b port locs-alist kont 0 '()))
+		       ((eq? token 'vs64b)
+			(finish-tokenisation-of-bytevector-s64b port locs-alist kont 0 '()))
+
+		       ((eq? token 'vu64n)
+			(finish-tokenisation-of-bytevector-u64n port locs-alist kont 0 '()))
+		       ((eq? token 'vs64n)
+			(finish-tokenisation-of-bytevector-s64n port locs-alist kont 0 '())))))
 	     (values bv (annotate bv bv/ann pos) locs-alist kont)))
 
 	  ((pair? token)
@@ -2106,48 +2335,350 @@
 	     (read-vector p locs k (fxadd1 count)
 			  (cons a ls) (cons a^ ls^)))))))
 
-(define (read-u8-bytevector p locs k count ls)
-  (let-values (((t pos) (start-tokenising/pos p)))
-    (cond
-     ((eof-object? t)
-      (die/p p 'read "end of file encountered while reading a bytevector"))
-     ((eq? t 'rparen)
-      (let ((v (u8-list->bytevector (reverse ls))))
-	(values v v locs k)))
-     ((eq? t 'rbrack)
-      (die/p-1 p 'read "unexpected ) while reading a bytevector"))
-     ((eq? t 'dot)
-      (die/p-1 p 'read "unexpected . while reading a bytevector"))
-     (else
-      (let-values (((a a^ locs k) (finalise-tokenisation p locs k t pos)))
-	(unless (and (fixnum? a) (fx<= 0 a) (fx<= a 255))
-	  (die/ann a^ 'read "invalid value in a u8 bytevector" a))
-	(read-u8-bytevector p locs k (fxadd1 count) (cons a ls)))))))
+
+;;;; bytevectors tokenisation
 
-(define (read-s8-bytevector p locs k count ls)
-  (let-values (((t pos) (start-tokenising/pos p)))
-    (cond
-     ((eof-object? t)
-      (die/p p 'read "end of file encountered while reading a bytevector"))
-     ((eq? t 'rparen)
-      (let ((v (let ((bv ($make-bytevector count)))
-		 (let loop ((i  (- count 1))
-			    (ls ls))
-		   (if (null? ls)
-		       bv
-		     (begin
-		       ($bytevector-set! bv i (car ls))
-		       (loop (- i 1) (cdr ls))))))))
-	(values v v locs k)))
-     ((eq? t 'rbrack)
-      (die/p-1 p 'read "unexpected ) while reading a bytevector"))
-     ((eq? t 'dot)
-      (die/p-1 p 'read "unexpected . while reading a bytevector"))
-     (else
-      (let-values (((a a^ locs k) (finalise-tokenisation p locs k t pos)))
-	(unless (and (fixnum? a) (fx<= -128 a) (fx<= a 127))
-	  (die/ann a^ 'read "invalid value in a s8 bytevector" a))
-	(read-s8-bytevector p locs k (fxadd1 count) (cons a ls)))))))
+(define-syntax define-finish-bytevector
+  (syntax-rules ()
+    ((_ ?who ?tag ?number-pred ?<= ?number-min ?number-max ?bytes-in-word ?bytevector-set!)
+     (define (?who port locs kont count ls)
+       (define-inline (recurse locs1 kont1 count1 ls1)
+	 (?who port locs1 kont1 count1 ls1))
+       (define-inline (%error msg . irritants)
+	 (die/p port 'read msg . irritants))
+       (define-inline (%error-1 msg . irritants)
+	 (die/p-1 port 'read msg . irritants))
+
+       (define-inline (%valid-number? num)
+	 (and (?number-pred num) (?<= ?number-min num) (?<= num ?number-max)))
+       (define-inline (%make-bv the-count the-ls)
+	 (let ((bv ($make-bytevector (* ?bytes-in-word the-count))))
+	   (let loop ((i  (unsafe.fx- (unsafe.fx* count ?bytes-in-word) ?bytes-in-word))
+		      (ls the-ls))
+	     (if (null? ls)
+		 bv
+	       (begin
+		 (?bytevector-set! bv i (car ls))
+		 (loop (unsafe.fx- i ?bytes-in-word) (cdr ls)))))))
+
+       (let-values (((token pos) (start-tokenising/pos port)))
+	 (cond ((eof-object? token)
+		(%error "unexpected EOF while reading a bytevector"))
+	       ((eq? token 'rparen)
+		(let ((v (%make-bv count ls)))
+		  (values v v locs kont)))
+	       ((eq? token 'rbrack)
+		(%error-1 "unexpected ) while reading a bytevector"))
+	       ((eq? token 'dot)
+		(%error-1 "unexpected . while reading a bytevector"))
+	       (else
+		(let-values (((a a^ locs1 kont1) (finalise-tokenisation port locs kont token pos)))
+		  (unless (%valid-number? a)
+		    (die/ann a^ 'read "invalid value for this bytevector type" '?tag a))
+                  (when (<= (greatest-fixnum) (* count ?bytes-in-word))
+		    (%implementation-violation
+		     'read "number of elements too big for bytevector" count))
+		  (recurse locs1 kont1 (fxadd1 count) (cons a ls))))))))))
+
+;;; --------------------------------------------------------------------
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-u8
+  'vu8			    ;tag
+  fixnum? unsafe.fx<= 0 255 ;to validate numbers
+  1			    ;number of bytes in word
+  $bytevector-set!)	    ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-s8
+  'vs8			       ;tag
+  fixnum? unsafe.fx<= -128 127 ;to validate numbers
+  1			       ;number of bytes in word
+  $bytevector-set!)	       ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-u16l
+  'vu16l		 ;tag
+  %u16? <= U16MIN U16MAX ;to validate numbers
+  2			 ;number of bytes in word
+  %bytevector-u16l-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-u16b
+  'vu16b		 ;tag
+  %u16? <= U16MIN U16MAX ;to validate numbers
+  2			 ;number of bytes in word
+  %bytevector-u16b-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-u16n
+  'vu16n		 ;tag
+  %u16? <= U16MIN U16MAX ;to validate numbers
+  2			 ;number of bytes in word
+  %bytevector-u16n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-s16l
+  'vs16l		 ;tag
+  %s16? <= S16MIN S16MAX ;to validate numbers
+  2			 ;number of bytes in word
+  %bytevector-s16l-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-s16b
+  'vs16b		 ;tag
+  %s16? <= S16MIN S16MAX ;to validate numbers
+  2			 ;number of bytes in word
+  %bytevector-s16b-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-s16n
+  'vs16n		 ;tag
+  %s16? <= S16MIN S16MAX ;to validate numbers
+  2			 ;number of bytes in word
+  %bytevector-s16n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-u32l
+  'vu32l		 ;tag
+  %u32? <= U32MIN U32MAX ;to validate numbers
+  4			 ;number of bytes in word
+  %bytevector-u32l-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-u32b
+  'vu32b		 ;tag
+  %u32? <= U32MIN U32MAX ;to validate numbers
+  4			 ;number of bytes in word
+  %bytevector-u32b-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-u32n
+  'vu32n		 ;tag
+  %u32? <= U32MIN U32MAX ;to validate numbers
+  4			 ;number of bytes in word
+  %bytevector-u32n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-s32l
+  'vs32l		 ;tag
+  %s32? <= S32MIN S32MAX ;to validate numbers
+  4			 ;number of bytes in word
+  %bytevector-s32l-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-s32b
+  'vs32b		 ;tag
+  %s32? <= S32MIN S32MAX ;to validate numbers
+  4			 ;number of bytes in word
+  %bytevector-s32b-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-s32n
+  'vs32n		 ;tag
+  %s32? <= S32MIN S32MAX ;to validate numbers
+  4			 ;number of bytes in word
+  %bytevector-s32n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-u64l
+  'vu64l		 ;tag
+  %u64? <= U64MIN U64MAX ;to validate numbers
+  8			 ;number of bytes in word
+  %bytevector-u64l-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-u64b
+  'vu64b		 ;tag
+  %u64? <= U64MIN U64MAX ;to validate numbers
+  8			 ;number of bytes in word
+  %bytevector-u64b-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-u64n
+  'vu64n		 ;tag
+  %u64? <= U64MIN U64MAX ;to validate numbers
+  8			 ;number of bytes in word
+  %bytevector-u64n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-s64l
+  'vs64l		 ;tag
+  %s64? <= S64MIN S64MAX ;to validate numbers
+  8			 ;number of bytes in word
+  %bytevector-s64l-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-s64b
+  'vs64b		 ;tag
+  %s64? <= S64MIN S64MAX ;to validate numbers
+  8			 ;number of bytes in word
+  %bytevector-s64b-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-s64n
+  'vs64n		 ;tag
+  %s64? <= S64MIN S64MAX ;to validate numbers
+  8			 ;number of bytes in word
+  %bytevector-s64n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%bytevector-u16l-set! bv index value)
+  (bytevector-u16-set! bv index value (endianness little)))
+
+(define-inline (%bytevector-u16b-set! bv index value)
+  (bytevector-u16-set! bv index value (endianness big)))
+
+(define-inline (%bytevector-u16n-set! bv index value)
+  (bytevector-u16-native-set! bv index value))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%bytevector-s16l-set! bv index value)
+  (bytevector-s16-set! bv index value (endianness little)))
+
+(define-inline (%bytevector-s16b-set! bv index value)
+  (bytevector-s16-set! bv index value (endianness big)))
+
+(define-inline (%bytevector-s16n-set! bv index value)
+  (bytevector-s16-native-set! bv index value))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%bytevector-u32l-set! bv index value)
+  (bytevector-u32-set! bv index value (endianness little)))
+
+(define-inline (%bytevector-u32b-set! bv index value)
+  (bytevector-u32-set! bv index value (endianness big)))
+
+(define-inline (%bytevector-u32n-set! bv index value)
+  (bytevector-u32-native-set! bv index value))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%bytevector-s32l-set! bv index value)
+  (bytevector-s32-set! bv index value (endianness little)))
+
+(define-inline (%bytevector-s32b-set! bv index value)
+  (bytevector-s32-set! bv index value (endianness big)))
+
+(define-inline (%bytevector-s32n-set! bv index value)
+  (bytevector-s32-native-set! bv index value))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%bytevector-u64l-set! bv index value)
+  (bytevector-u64-set! bv index value (endianness little)))
+
+(define-inline (%bytevector-u64b-set! bv index value)
+  (bytevector-u64-set! bv index value (endianness big)))
+
+(define-inline (%bytevector-u64n-set! bv index value)
+  (bytevector-u64-native-set! bv index value))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%bytevector-s64l-set! bv index value)
+  (bytevector-s64-set! bv index value (endianness little)))
+
+(define-inline (%bytevector-s64b-set! bv index value)
+  (bytevector-s64-set! bv index value (endianness big)))
+
+(define-inline (%bytevector-s64n-set! bv index value)
+  (bytevector-s64-native-set! bv index value))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%u16? num)	(and (integer? num) (exact? num)))
+(define-inline (%s16? num)	(and (integer? num) (exact? num)))
+(define-inline (%u32? num)	(and (integer? num) (exact? num)))
+(define-inline (%s32? num)	(and (integer? num) (exact? num)))
+(define-inline (%u64? num)	(and (integer? num) (exact? num)))
+(define-inline (%s64? num)	(and (integer? num) (exact? num)))
+
+;;; --------------------------------------------------------------------
+
+(define U16MAX		(- (expt 2 16) 1))
+(define U16MIN		0)
+(define S16MAX		(- (expt 2 15) 1))
+(define S16MIN		(- (expt 2 15)))
+
+(define U32MAX		(- (expt 2 32) 1))
+(define U32MIN		0)
+(define S32MAX		(- (expt 2 31) 1))
+(define S32MIN		(- (expt 2 31)))
+
+(define U64MAX		(- (expt 2 64) 1))
+(define U64MIN		0)
+(define S64MAX		(- (expt 2 63) 1))
+(define S64MIN		(- (expt 2 63)))
+
+;;; --------------------------------------------------------------------
+
+;;; (define (finish-tokenisation-of-bytevector-u8 port locs kont count ls)
+;;;   (define-inline (recurse count1 ls1)
+;;;     (finish-tokenisation-of-bytevector-u8 port locs1 kont1 count1 ls1))
+;;;   (define-inline (%error msg . irritants)
+;;;     (die/p port 'read msg . irritants))
+;;;   (define-inline (%error-1 msg . irritants)
+;;;     (die/p-1 port 'read msg . irritants))
+;;;
+;;;   (define-inline (%valid-number? num)
+;;;     (and (fixnum? num) (fx<= 0 num) (fx<= num 255)))
+;;;   (define-inline (%make-bv the-count the-ls)
+;;;     (let ((bv ($make-bytevector the-count)))
+;;;       (let loop ((i  (- the-count 1))
+;;; 		 (ls the-ls))
+;;; 	(if (null? ls)
+;;; 	    bv
+;;; 	  (begin
+;;; 	    ($bytevector-set! bv i (car ls))
+;;; 	    (loop (- i 1) (cdr ls)))))))
+;;;
+;;;   (let-values (((token pos) (start-tokenising/pos port)))
+;;;     (cond ((eof-object? token)
+;;; 	   (%error "unexpected EOF while reading a bytevector"))
+;;; 	  ((eq? token 'rparen)
+;;; 	   (let ((v (%make-bv count ls)))
+;;; 	     (values v v locs kont)))
+;;; 	  ((eq? token 'rbrack)
+;;; 	   (%error-1 "unexpected ) while reading a bytevector"))
+;;; 	  ((eq? token 'dot)
+;;; 	   (%error-1 "unexpected . while reading a bytevector"))
+;;; 	  (else
+;;; 	   (let-values (((a a^ locs1 kont1) (finalise-tokenisation port locs kont token pos)))
+;;; 	     (unless (%valid-number? a)
+;;; 	       (die/ann a^ 'read "invalid value for this bytevector type" 'vu8 a))
+;;; 	     (recurse locs1 kont1 (fxadd1 count) (cons a ls)))))))
+
+;;; (define (finish-tokenisation-of-bytevector-s8 port locs kont count ls)
+;;;   (define-inline (recurse count1 ls1)
+;;;     (finish-tokenisation-of-bytevector-s8 port locs1 kont1 count1 ls1))
+;;;   (define-inline (%error msg . irritants)
+;;;     (die/p port 'read msg . irritants))
+;;;   (define-inline (%error-1 msg . irritants)
+;;;     (die/p-1 port 'read msg . irritants))
+;;;
+;;;   (define-inline (%valid-number? num)
+;;;     (and (fixnum? a) (fx<= -128 a) (fx<= a 127)))
+;;;   (define-inline (%make-bv the-count the-ls)
+;;;     (let ((bv ($make-bytevector the-count)))
+;;;       (let loop ((i  (- the-count 1))
+;;; 		 (ls the-ls))
+;;; 	(if (null? ls)
+;;; 	    bv
+;;; 	  (begin
+;;; 	    ($bytevector-set! bv i (car ls))
+;;; 	    (loop (- i 1) (cdr ls)))))))
+;;;
+;;;   (let-values (((token pos) (start-tokenising/pos port)))
+;;;     (cond ((eof-object? token)
+;;; 	   (%error "end of file encountered while reading a bytevector"))
+;;; 	  ((eq? token 'rparen)
+;;; 	   (let ((v (%make-bv count ls)))
+;;; 	     (values v v locs kont)))
+;;; 	  ((eq? token 'rbrack)
+;;; 	   (%error-1 "unexpected ) while reading a bytevector"))
+;;; 	  ((eq? token 'dot)
+;;; 	   (%error-1 "unexpected . while reading a bytevector"))
+;;; 	  (else
+;;; 	   (let-values (((a a^ locs1 kont1) (finalise-tokenisation port locs kont token pos)))
+;;; 	     (unless (%valid-number? a)
+;;; 	       (die/ann a^ 'read "invalid value for this bytevector type" 'vs8 a))
+;;; 	     (recurse locs1 kont1 (fxadd1 count) (cons a ls)))))))
 
 
 ;;;; done

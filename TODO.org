@@ -24,6 +24,11 @@
 	close-tcp-server-socket
 	register-callback
 
+* Miscellaneous stuff to be fixed
+
+  NATIVE-ENDIANNESS in "ikarus.bytevectors.ss" has a hard coded value of
+  LITTLE.
+
 * List of functions to be documented
 
   Some of  these may  be internal functions  which must be  removed from

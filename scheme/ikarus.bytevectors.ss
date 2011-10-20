@@ -50,6 +50,27 @@
 
     s8-list->bytevector		bytevector->s8-list
 
+    u16l-list->bytevector	bytevector->u16l-list
+    u16b-list->bytevector	bytevector->u16b-list
+    u16n-list->bytevector	bytevector->u16n-list
+    s16l-list->bytevector	bytevector->s16l-list
+    s16b-list->bytevector	bytevector->s16b-list
+    s16n-list->bytevector	bytevector->s16n-list
+
+    u32l-list->bytevector	bytevector->u32l-list
+    u32b-list->bytevector	bytevector->u32b-list
+    u32n-list->bytevector	bytevector->u32n-list
+    s32l-list->bytevector	bytevector->s32l-list
+    s32b-list->bytevector	bytevector->s32b-list
+    s32n-list->bytevector	bytevector->s32n-list
+
+    u64l-list->bytevector	bytevector->u64l-list
+    u64b-list->bytevector	bytevector->u64b-list
+    u64n-list->bytevector	bytevector->u64n-list
+    s64l-list->bytevector	bytevector->s64l-list
+    s64b-list->bytevector	bytevector->s64b-list
+    s64n-list->bytevector	bytevector->s64n-list
+
     bytevector-append)
   (import (except (ikarus)
 		  make-bytevector bytevector-length bytevector-s8-ref
@@ -83,6 +104,27 @@
 		  subbytevector-s8		subbytevector-s8/count
 
 		  s8-list->bytevector		bytevector->s8-list
+
+		  u16l-list->bytevector		bytevector->u16l-list
+		  u16b-list->bytevector		bytevector->u16b-list
+		  u16n-list->bytevector		bytevector->u16n-list
+		  s16l-list->bytevector		bytevector->s16l-list
+		  s16b-list->bytevector		bytevector->s16b-list
+		  s16n-list->bytevector		bytevector->s16n-list
+
+		  u32l-list->bytevector		bytevector->u32l-list
+		  u32b-list->bytevector		bytevector->u32b-list
+		  u32n-list->bytevector		bytevector->u32n-list
+		  s32l-list->bytevector		bytevector->s32l-list
+		  s32b-list->bytevector		bytevector->s32b-list
+		  s32n-list->bytevector		bytevector->s32n-list
+
+		  u64l-list->bytevector		bytevector->u64l-list
+		  u64b-list->bytevector		bytevector->u64b-list
+		  u64n-list->bytevector		bytevector->u64n-list
+		  s64l-list->bytevector		bytevector->s64l-list
+		  s64b-list->bytevector		bytevector->s64b-list
+		  s64n-list->bytevector		bytevector->s64n-list
 
 		  bytevector-append)
     (ikarus system $fx)
@@ -118,9 +160,6 @@
 	 ((_ ?arg ... . ?rest)
 	  (begin ?form0 ?form ...)))))))
 
-(define-inline (%implementation-violation ?who ?message . ?irritants)
-  (assertion-violation ?who ?message . ?irritants))
-
 
 ;;;; helpers
 
@@ -132,6 +171,160 @@
     (begin
       (unsafe.bytevector-set! x i fill)
       (%unsafe.bytevector-fill x ($fxadd1 i) j fill))))
+
+(define-inline (%implementation-violation who msg . irritants)
+  (raise (condition
+	  (make-assertion-violation)
+	  (make-implementation-restriction-violation)
+	  (make-who-condition who)
+	  (make-message-condition msg)
+	  (make-irritants-condition irritants))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%bytevector-u16l-set! bv index value)
+  (bytevector-u16-set! bv index value (endianness little)))
+
+(define-inline (%bytevector-u16b-set! bv index value)
+  (bytevector-u16-set! bv index value (endianness big)))
+
+(define-inline (%bytevector-u16n-set! bv index value)
+  (bytevector-u16-native-set! bv index value))
+
+(define-inline (%bytevector-u16l-ref bv index)
+  (bytevector-u16-ref bv index (endianness little)))
+
+(define-inline (%bytevector-u16b-ref bv index)
+  (bytevector-u16-ref bv index (endianness big)))
+
+(define-inline (%bytevector-u16n-ref bv index)
+  (bytevector-u16-native-ref bv index))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%bytevector-s16l-set! bv index value)
+  (bytevector-s16-set! bv index value (endianness little)))
+
+(define-inline (%bytevector-s16b-set! bv index value)
+  (bytevector-s16-set! bv index value (endianness big)))
+
+(define-inline (%bytevector-s16n-set! bv index value)
+  (bytevector-s16-native-set! bv index value))
+
+(define-inline (%bytevector-s16l-ref bv index)
+  (bytevector-s16-ref bv index (endianness little)))
+
+(define-inline (%bytevector-s16b-ref bv index)
+  (bytevector-s16-ref bv index (endianness big)))
+
+(define-inline (%bytevector-s16n-ref bv index)
+  (bytevector-s16-native-ref bv index))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%bytevector-u32l-set! bv index value)
+  (bytevector-u32-set! bv index value (endianness little)))
+
+(define-inline (%bytevector-u32b-set! bv index value)
+  (bytevector-u32-set! bv index value (endianness big)))
+
+(define-inline (%bytevector-u32n-set! bv index value)
+  (bytevector-u32-native-set! bv index value))
+
+(define-inline (%bytevector-u32l-ref bv index)
+  (bytevector-u32-ref bv index (endianness little)))
+
+(define-inline (%bytevector-u32b-ref bv index)
+  (bytevector-u32-ref bv index (endianness big)))
+
+(define-inline (%bytevector-u32n-ref bv index)
+  (bytevector-u32-native-ref bv index))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%bytevector-s32l-set! bv index value)
+  (bytevector-s32-set! bv index value (endianness little)))
+
+(define-inline (%bytevector-s32b-set! bv index value)
+  (bytevector-s32-set! bv index value (endianness big)))
+
+(define-inline (%bytevector-s32n-set! bv index value)
+  (bytevector-s32-native-set! bv index value))
+
+(define-inline (%bytevector-s32l-ref bv index)
+  (bytevector-s32-ref bv index (endianness little)))
+
+(define-inline (%bytevector-s32b-ref bv index)
+  (bytevector-s32-ref bv index (endianness big)))
+
+(define-inline (%bytevector-s32n-ref bv index)
+  (bytevector-s32-native-ref bv index))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%bytevector-u64l-set! bv index value)
+  (bytevector-u64-set! bv index value (endianness little)))
+
+(define-inline (%bytevector-u64b-set! bv index value)
+  (bytevector-u64-set! bv index value (endianness big)))
+
+(define-inline (%bytevector-u64n-set! bv index value)
+  (bytevector-u64-native-set! bv index value))
+
+(define-inline (%bytevector-u64l-ref bv index)
+  (bytevector-u64-ref bv index (endianness little)))
+
+(define-inline (%bytevector-u64b-ref bv index)
+  (bytevector-u64-ref bv index (endianness big)))
+
+(define-inline (%bytevector-u64n-ref bv index)
+  (bytevector-u64-native-ref bv index))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%bytevector-s64l-set! bv index value)
+  (bytevector-s64-set! bv index value (endianness little)))
+
+(define-inline (%bytevector-s64b-set! bv index value)
+  (bytevector-s64-set! bv index value (endianness big)))
+
+(define-inline (%bytevector-s64n-set! bv index value)
+  (bytevector-s64-native-set! bv index value))
+
+(define-inline (%bytevector-s64l-ref bv index)
+  (bytevector-s64-ref bv index (endianness little)))
+
+(define-inline (%bytevector-s64b-ref bv index)
+  (bytevector-s64-ref bv index (endianness big)))
+
+(define-inline (%bytevector-s64n-ref bv index)
+  (bytevector-s64-native-ref bv index))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%u16? num)	(and (integer? num) (exact? num)))
+(define-inline (%s16? num)	(and (integer? num) (exact? num)))
+(define-inline (%u32? num)	(and (integer? num) (exact? num)))
+(define-inline (%s32? num)	(and (integer? num) (exact? num)))
+(define-inline (%u64? num)	(and (integer? num) (exact? num)))
+(define-inline (%s64? num)	(and (integer? num) (exact? num)))
+
+;;; --------------------------------------------------------------------
+
+(define U16MAX		(- (expt 2 16) 1))
+(define U16MIN		0)
+(define S16MAX		(- (expt 2 15) 1))
+(define S16MIN		(- (expt 2 15)))
+
+(define U32MAX		(- (expt 2 32) 1))
+(define U32MIN		0)
+(define S32MAX		(- (expt 2 31) 1))
+(define S32MIN		(- (expt 2 31)))
+
+(define U64MAX		(- (expt 2 64) 1))
+(define U64MIN		0)
+(define S64MAX		(- (expt 2 63) 1))
+(define S64MIN		(- (expt 2 63)))
 
 
 ;;;; assertion helpers
@@ -685,18 +878,73 @@
       (die 'bytevector-s16-set! "not a bytevector" x))))
 
 
-;;;; bytevector/list conversion
+;;;; bytevector to list conversion
 
-(define bytevector->u8-list
-  (lambda (x)
-    (unless (bytevector? x)
-      (die 'bytevector->u8-list "not a bytevector" x))
-    (let f ((x x) (i ($bytevector-length x)) (ac '()))
-      (cond
-       (($fx= i 0) ac)
-       (else
-	(let ((i ($fxsub1 i)))
-	  (f x i (cons ($bytevector-u8-ref x i) ac))))))))
+(define (bytevector->u8-list bv)
+  (define who 'bytevector->u8-list)
+  (%assert-argument-is-bytevector bv who)
+  (let loop ((bv	bv)
+	     (i		($bytevector-length bv))
+	     (accum	'()))
+    (if ($fxzero? i)
+	accum
+      (let ((j ($fxsub1 i)))
+	(loop bv j (cons ($bytevector-u8-ref bv j) accum))))))
+
+(define (bytevector->s8-list bv)
+  (define who 'bytevector->s8-list)
+  (%assert-argument-is-bytevector bv who)
+  (let loop ((bv	bv)
+	     (i		($bytevector-length bv))
+	     (accum	'()))
+    (if ($fxzero? i)
+	accum
+      (let ((j ($fxsub1 i)))
+	(loop bv j (cons ($bytevector-s8-ref bv j) accum))))))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax define-bytevector-to-word-list
+  (syntax-rules ()
+    ((_ ?who ?tag ?bytes-in-word ?bytevector-ref)
+     (define (?who bv)
+       (%assert-argument-is-bytevector bv ?who)
+       (let* ((bv.len ($bytevector-length bv))
+	      (rest   (fxmod bv.len ?bytes-in-word)))
+	 (unless ($fxzero? rest)
+	   (assertion-violation ?who
+	     "invalid bytevector size for requested type conversion" '?tag bv.len))
+	 (let loop ((bv		bv)
+		    (i		bv.len)
+		    (accum	'()))
+	   (if ($fxzero? i)
+	       accum
+	     (let ((j ($fx- i ?bytes-in-word)))
+	       (loop bv j (cons (?bytevector-ref bv j) accum))))))))))
+
+(define-bytevector-to-word-list bytevector->u16l-list vu16l 2 %bytevector-u16l-ref)
+(define-bytevector-to-word-list bytevector->u16b-list vu16b 2 %bytevector-u16b-ref)
+(define-bytevector-to-word-list bytevector->u16n-list vu16n 2 %bytevector-u16n-ref)
+(define-bytevector-to-word-list bytevector->s16l-list vs16l 2 %bytevector-s16l-ref)
+(define-bytevector-to-word-list bytevector->s16b-list vs16b 2 %bytevector-s16b-ref)
+(define-bytevector-to-word-list bytevector->s16n-list vs16n 2 %bytevector-s16n-ref)
+
+(define-bytevector-to-word-list bytevector->u32l-list vu32l 4 %bytevector-u32l-ref)
+(define-bytevector-to-word-list bytevector->u32b-list vu32b 4 %bytevector-u32b-ref)
+(define-bytevector-to-word-list bytevector->u32n-list vu32n 4 %bytevector-u32n-ref)
+(define-bytevector-to-word-list bytevector->s32l-list vs32l 4 %bytevector-s32l-ref)
+(define-bytevector-to-word-list bytevector->s32b-list vs32b 4 %bytevector-s32b-ref)
+(define-bytevector-to-word-list bytevector->s32n-list vs32n 4 %bytevector-s32n-ref)
+
+(define-bytevector-to-word-list bytevector->u64l-list vu64l 8 %bytevector-u64l-ref)
+(define-bytevector-to-word-list bytevector->u64b-list vu64b 8 %bytevector-u64b-ref)
+(define-bytevector-to-word-list bytevector->u64n-list vu64n 8 %bytevector-u64n-ref)
+(define-bytevector-to-word-list bytevector->s64l-list vs64l 8 %bytevector-s64l-ref)
+(define-bytevector-to-word-list bytevector->s64b-list vs64b 8 %bytevector-s64b-ref)
+(define-bytevector-to-word-list bytevector->s64n-list vs64n 8 %bytevector-s64n-ref)
+
+
+;;;; list to bytevector conversion
 
 (define u8-list->bytevector
   (letrec ((race
@@ -728,16 +976,7 @@
 	(let ((s ($make-bytevector n)))
 	  (fill s 0 ls))))))
 
-(define bytevector->s8-list
-  (lambda (x)
-    (unless (bytevector? x)
-      (die 'bytevector->s8-list "not a bytevector" x))
-    (let f ((x x) (i ($bytevector-length x)) (ac '()))
-      (cond
-       (($fx= i 0) ac)
-       (else
-	(let ((i ($fxsub1 i)))
-	  (f x i (cons ($bytevector-s8-ref x i) ac))))))))
+;;; --------------------------------------------------------------------
 
 (define s8-list->bytevector
   (letrec ((race
@@ -768,6 +1007,167 @@
       (let ((n (race ls ls ls 0)))
 	(let ((s ($make-bytevector n)))
 	  (fill s 0 ls))))))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax define-word-list-to-bytevector
+  (syntax-rules ()
+    ((_ ?who ?tag ?number-pred ?<= ?number-min ?number-max ?bytes-in-word ?bytevector-set!)
+     (define (?who ls)
+       (define-inline (%valid-number? num)
+	 (and (?number-pred num)
+	      (?<= ?number-min num) (?<= num ?number-max)))
+
+       (define (%race h t ls n)
+	 (cond ((pair? h)
+		(let ((h ($cdr h)))
+		  (if (pair? h)
+		      (if (not (eq? h t))
+			  (%race ($cdr h) ($cdr t) ls (+ n 2))
+			(assertion-violation ?who "circular list" ls))
+		    (if (null? h)
+			(+ n 1)
+		      (assertion-violation ?who "not a proper list" ls)))))
+	       ((null? h)
+		n)
+	       (else
+		(assertion-violation ?who "not a proper list" ls))))
+
+       (define (%fill s i ls)
+	 (if (null? ls)
+	     s
+	   (let ((c ($car ls)))
+	     (unless (%valid-number? c)
+	       (assertion-violation ?who "invalid element for requested bytevector type" '?tag c))
+	     (?bytevector-set! s i c)
+	     (%fill s ($fx+ ?bytes-in-word i) (cdr ls)))))
+
+       (let* ((number-of-words (%race ls ls ls 0))
+	      (bv.len	       (* ?bytes-in-word number-of-words)))
+	 (unless (fixnum? bv.len)
+	   (%implementation-violation ?who "resulting bytevector size must be a fixnum" (list bv.len)))
+	 (%fill ($make-bytevector bv.len) 0 ls)))
+     )))
+
+;;; --------------------------------------------------------------------
+
+(define-word-list-to-bytevector u16l-list->bytevector
+  'vu16l		 ;tag
+  %u16? <= U16MIN U16MAX ;to validate numbers
+  2			 ;number of bytes in word
+  %bytevector-u16l-set!) ;setter
+
+(define-word-list-to-bytevector u16b-list->bytevector
+  'vu16b		 ;tag
+  %u16? <= U16MIN U16MAX ;to validate numbers
+  2			 ;number of bytes in word
+  %bytevector-u16b-set!) ;setter
+
+(define-word-list-to-bytevector u16n-list->bytevector
+  'vu16n		 ;tag
+  %u16? <= U16MIN U16MAX ;to validate numbers
+  2			 ;number of bytes in word
+  %bytevector-u16n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-word-list-to-bytevector s16l-list->bytevector
+  'vs16l		 ;tag
+  %s16? <= S16MIN S16MAX ;to validate numbers
+  2			 ;number of bytes in word
+  %bytevector-s16l-set!) ;setter
+
+(define-word-list-to-bytevector s16b-list->bytevector
+  'vs16b		 ;tag
+  %s16? <= S16MIN S16MAX ;to validate numbers
+  2			 ;number of bytes in word
+  %bytevector-s16b-set!) ;setter
+
+(define-word-list-to-bytevector s16n-list->bytevector
+  'vs16n		 ;tag
+  %s16? <= S16MIN S16MAX ;to validate numbers
+  2			 ;number of bytes in word
+  %bytevector-s16n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-word-list-to-bytevector u32l-list->bytevector
+  'vu32l		 ;tag
+  %u32? <= U32MIN U32MAX ;to validate numbers
+  4			 ;number of bytes in word
+  %bytevector-u32l-set!) ;setter
+
+(define-word-list-to-bytevector u32b-list->bytevector
+  'vu32b		 ;tag
+  %u32? <= U32MIN U32MAX ;to validate numbers
+  4			 ;number of bytes in word
+  %bytevector-u32b-set!) ;setter
+
+(define-word-list-to-bytevector u32n-list->bytevector
+  'vu32n		 ;tag
+  %u32? <= U32MIN U32MAX ;to validate numbers
+  4			 ;number of bytes in word
+  %bytevector-u32n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-word-list-to-bytevector s32l-list->bytevector
+  'vs32l		 ;tag
+  %s32? <= S32MIN S32MAX ;to validate numbers
+  4			 ;number of bytes in word
+  %bytevector-s32l-set!) ;setter
+
+(define-word-list-to-bytevector s32b-list->bytevector
+  'vs32b		 ;tag
+  %s32? <= S32MIN S32MAX ;to validate numbers
+  4			 ;number of bytes in word
+  %bytevector-s32b-set!) ;setter
+
+(define-word-list-to-bytevector s32n-list->bytevector
+  'vs32n		 ;tag
+  %s32? <= S32MIN S32MAX ;to validate numbers
+  4			 ;number of bytes in word
+  %bytevector-s32n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-word-list-to-bytevector u64l-list->bytevector
+  'vu64l		 ;tag
+  %u64? <= U64MIN U64MAX ;to validate numbers
+  8			 ;number of bytes in word
+  %bytevector-u64l-set!) ;setter
+
+(define-word-list-to-bytevector u64b-list->bytevector
+  'vu64b		 ;tag
+  %u64? <= U64MIN U64MAX ;to validate numbers
+  8			 ;number of bytes in word
+  %bytevector-u64b-set!) ;setter
+
+(define-word-list-to-bytevector u64n-list->bytevector
+  'vu64n		 ;tag
+  %u64? <= U64MIN U64MAX ;to validate numbers
+  8			 ;number of bytes in word
+  %bytevector-u64n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-word-list-to-bytevector s64l-list->bytevector
+  'vs64l		 ;tag
+  %s64? <= S64MIN S64MAX ;to validate numbers
+  8			 ;number of bytes in word
+  %bytevector-s64l-set!) ;setter
+
+(define-word-list-to-bytevector s64b-list->bytevector
+  'vs64b		 ;tag
+  %s64? <= S64MIN S64MAX ;to validate numbers
+  8			 ;number of bytes in word
+  %bytevector-s64b-set!) ;setter
+
+(define-word-list-to-bytevector s64n-list->bytevector
+  'vs64n		 ;tag
+  %s64? <= S64MIN S64MAX ;to validate numbers
+  8			 ;number of bytes in word
+  %bytevector-s64n-set!) ;setter
 
 
 ;;;; copying
