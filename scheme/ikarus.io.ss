@@ -568,6 +568,7 @@
 		  reset-output-port!
 		  port-id
 		  string->filename-func
+		  filename->string-func
 
 		  ;; spawning operative system processes
 		  process process-nonblocking process*
