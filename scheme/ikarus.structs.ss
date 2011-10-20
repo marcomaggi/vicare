@@ -383,11 +383,11 @@
 (set-rtd-fields! (base-rtd) '(name fields length printer symbol))
 (set-rtd-name! (base-rtd) "base-rtd")
 ($set-rtd-printer! (base-rtd)
-		   (lambda (struct port wr)
+		   (lambda (rtd port wr)
 		     (define who 'struct-type-printer)
 		     (%assert-argument-is-rtd who rtd)
 		     (display "#<" port)
-		     (display (rtd-name struct) port)
+		     (display (rtd-name rtd) port)
 		     (display " rtd>" port)))
 
 #| end of libray (ikarus structs) |# )
