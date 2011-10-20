@@ -57,7 +57,8 @@ all: $(nodist_pkglib_DATA)
 $(srcdir)/last-revision:
 	git show | head -1 | cut -d ' ' -f2 >$@
 
-sizeofvoidp = $(shell grep SIZEOF_VOID_P ../config.h | sed "s/.*\(.\)/\1/g")
+sizeofvoidp		= $(shell grep SIZEOF_VOID_P ../config.h | sed "s/.*\(.\)/\1/g")
+PLATFORM_ENDIANNESS	= @PLATFORM_ENDIANNESS@
 
 ikarus.config.ss: Makefile last-revision ../config.h
 	echo '(define ikarus-version "$(PACKAGE_VERSION)")' >$@
@@ -65,6 +66,7 @@ ikarus.config.ss: Makefile last-revision ../config.h
 	echo '(define ikarus-lib-dir "$(pkglibdir)")' >>$@
 	echo '(define target "$(target)")' >>$@
 	echo '(define wordsize $(sizeofvoidp))' >>$@
+	echo '(define platform-endianness (quote $(PLATFORM_ENDIANNESS)))' >>$@
 
 
 CLEANFILES=$(nodist_pkglib_DATA) ikarus.config.ss

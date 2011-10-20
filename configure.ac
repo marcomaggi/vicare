@@ -41,6 +41,8 @@ if test "$ac_cv_sizeof_void_p" = 4; then
      [use flat segment and dirty vectors (not used yet)])
 fi
 
+AC_C_BIGENDIAN([AC_SUBST(PLATFORM_ENDIANNESS,[big])],[AC_SUBST(PLATFORM_ENDIANNESS,[little])])
+
 AC_SYS_LARGEFILE
 
 # Checks for libraries.
