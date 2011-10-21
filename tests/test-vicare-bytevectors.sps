@@ -917,6 +917,66 @@
   #t)
 
 
+(parametrise ((check-test-name	'bytevector-u8))
+
+  (check
+      (let ((bv (make-bytevector 3 0)))
+	(bytevector-u8-set! bv 1 2)
+	(bytevector-u8-ref  bv 1))
+    => 2)
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #t
+	(bytevector-u8-set! #\a 1 2))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #t
+	(bytevector-u8-set! #vu8(1 2 3) #\a 2))
+    => '(#\a))
+
+  (check	;negative
+      (catch #t
+	(bytevector-u8-set! #vu8(1 2 3) -1 2))
+    => '(-1))
+
+  (check	;too high
+      (catch #t
+	(bytevector-u8-set! #vu8(1 2 3) 4 2))
+    => '(4))
+
+  (check	;too high
+      (catch #t
+	(bytevector-u8-set! #vu8(1 2 3) 3 2))
+    => '(3))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: value
+
+  (check	;not a fixnum
+      (catch #t
+	(bytevector-u8-set! #vu8(1 2 3) 1 #\a))
+    => '(#\a))
+
+  (check	;too low
+      (catch #t
+	(bytevector-u8-set! #vu8(1 2 3) 1 -1))
+    => '(-1))
+
+  (check	;too high
+      (catch #t
+	(bytevector-u8-set! #vu8(1 2 3) 1 256))
+    => '(256))
+
+  #t)
+
+
 (parametrise ((check-test-name	'list-to-bv))
 
   (let-syntax ((doit (syntax-rules ()
