@@ -374,6 +374,11 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-argument-validation (index who idx)
+  (and (fixnum? idx) (unsafe.fx<= 0 idx))
+  (assertion-violation who
+    "expected non-negative fixnum as bytevector index argument" idx))
+
 (define-argument-validation (start-index who idx)
   (and (fixnum? idx) (unsafe.fx<= 0 idx))
   (assertion-violation who
@@ -385,6 +390,35 @@
     "expected non-negative fixnum as bytevector start end argument" idx))
 
 ;;; --------------------------------------------------------------------
+
+(define-argument-validation (index-for who idx bv bytes-per-word)
+  ;;To be  used after INDEX  validation.  This validation if  for getter
+  ;;and setter indexes.  Valid scenarios:
+  ;;
+  ;;  |...|word
+  ;;  |---|---|---|---|---|---|---|---|---| bytevector
+  ;;                      ^index
+  ;;
+  ;;  |---|---|---|---|---|---|---|---|---| bytevector
+  ;;                                  ^index
+  ;;
+  ;;the following are invalid scenarios:
+  ;;
+  ;;  |---|---|---|---|---|---|---|---|---| bytevector
+  ;;                                      ^index = bv.len
+  ;;
+  ;;  |---|---|---|---|---|---|---|---|---| bytevector
+  ;;                                    ^index = bv.len
+  ;;
+  ;;  | empty bytevector
+  ;;  ^index = bv.len = 0
+  ;;
+  (unsafe.fx<= idx (unsafe.fx- (unsafe.bytevector-length bv) bytes-per-word))
+  (assertion-violation who
+    (string-append "index argument "			(number->string idx)
+		   " too big for bytevector length "	(number->string (unsafe.bytevector-length bv))
+		   " and word size "			(number->string bytes-per-word))
+    idx))
 
 (define-argument-validation (start-index-for who idx bv bytes-per-word)
   ;;To be used after  START-INDEX validation.  Valid scenarios for start
@@ -445,6 +479,54 @@
 		   " start index "			(number->string bv.start)
 		   " and word size "			(number->string bytes-per-word))
     count))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (byte who byte)
+  (and (fixnum? byte) (unsafe.fx<= -128 byte) (unsafe.fx<= byte 127))
+  (assertion-violation who
+    "expected fixnum representing byte as argument" byte))
+
+(define-argument-validation (octet who octet)
+  (and (fixnum? octet) (unsafe.fx<= 0 octet) (unsafe.fx<= octet 255))
+  (assertion-violation who
+    "expected fixnum representing octet as argument" octet))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (word-s16 who word)
+  (%s16? word)
+  (assertion-violation who
+    "expected exact integer representing signed 16-bit word as argument" word))
+
+(define-argument-validation (word-u16 who word)
+  (%u16? word)
+  (assertion-violation who
+    "expected exact integer representing unsigned 16-bit word as argument" word))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (word-s32 who word)
+  (%s32? word)
+  (assertion-violation who
+    "expected exact integer representing signed 32-bit word as argument" word))
+
+(define-argument-validation (word-u32 who word)
+  (%u32? word)
+  (assertion-violation who
+    "expected exact integer representing unsigned 32-bit word as argument" word))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (word-s64 who word)
+  (%s64? word)
+  (assertion-violation who
+    "expected exact integer representing signed 64-bit word as argument" word))
+
+(define-argument-validation (word-u64 who word)
+  (%u64? word)
+  (assertion-violation who
+    "expected exact integer representing unsigned 64-bit word as argument" word))
 
 
 ;;;; assertion helpers
@@ -852,42 +934,39 @@
 
 ;;;; 8-bit setters and getters
 
-(define bytevector-s8-ref
-  (lambda (x i)
-    (if (bytevector? x)
-	(if (and (fixnum? i) ($fx<= 0 i) ($fx< i ($bytevector-length x)))
-	    ($bytevector-s8-ref x i)
-	  (die 'bytevector-s8-ref "invalid index" i x))
-      (die 'bytevector-s8-ref "not a bytevector" x))))
+(define (bytevector-s8-ref bv index)
+  (define who 'bytevector-s8-ref)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 1))
+    ($bytevector-s8-ref bv index)))
 
-(define bytevector-u8-ref
-  (lambda (x i)
-    (if (bytevector? x)
-	(if (and (fixnum? i) ($fx<= 0 i) ($fx< i ($bytevector-length x)))
-	    ($bytevector-u8-ref x i)
-	  (die 'bytevector-u8-ref "invalid index" i x))
-      (die 'bytevector-u8-ref "not a bytevector" x))))
+(define (bytevector-u8-ref bv index)
+  (define who 'bytevector-u8-ref)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 1))
+    ($bytevector-u8-ref bv index)))
 
+(define (bytevector-s8-set! bv index byte)
+  (define who 'bytevector-s8-set!)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 1)
+       (byte		byte))
+    (unsafe.bytevector-s8-set! bv index byte)))
 
-(define bytevector-s8-set!
-  (lambda (x i v)
-    (if (bytevector? x)
-	(if (and (fixnum? i) ($fx<= 0 i) ($fx< i ($bytevector-length x)))
-	    (if (and (fixnum? v) ($fx<= -128 v) ($fx<= v 127))
-		($bytevector-set! x i v)
-	      (die 'bytevector-s8-set! "not a byte" v))
-	  (die 'bytevector-s8-set! "invalid index" i x))
-      (die 'bytevector-s8-set! "not a bytevector" x))))
-
-(define bytevector-u8-set!
-  (lambda (x i v)
-    (if (bytevector? x)
-	(if (and (fixnum? i) ($fx<= 0 i) ($fx< i ($bytevector-length x)))
-	    (if (and (fixnum? v) ($fx<= 0 v) ($fx<= v 255))
-		($bytevector-set! x i v)
-	      (die 'bytevector-u8-set! "not an octet" v))
-	  (die 'bytevector-u8-set! "invalid index" i x))
-      (die 'bytevector-u8-set! "not a bytevector" x))))
+(define (bytevector-u8-set! bv index octet)
+  (define who 'bytevector-u8-set!)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 1)
+       (octet		octet))
+    (unsafe.bytevector-u8-set! bv index octet)))
 
 
 ;;;; 16-bit setters and getters
