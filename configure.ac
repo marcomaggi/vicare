@@ -7,6 +7,16 @@ AC_CANONICAL_SYSTEM
 AM_INIT_AUTOMAKE(vicare, 0.2d0, gnu)
 AC_CONFIG_SRCDIR([src/])
 
+VICARE_ARGUMENTS_VALIDATION=1
+AC_ARG_ENABLE([arguments-validation],
+  [AS_HELP_STRING([--disable-arguments-validation],
+     [disable arguments validation in the boot image (default is enable)])],
+  [if test "z$enableval" = zno
+  then VICARE_ARGUMENTS_VALIDATION=0
+  else VICARE_ARGUMENTS_VALIDATION=1
+  fi]
+  [VICARE_ARGUMENTS_VALIDATION=1])
+AC_SUBST([VICARE_ARGUMENTS_VALIDATION],[$VICARE_ARGUMENTS_VALIDATION])
 
 AM_PROG_AS
 # Checks for programs.
@@ -40,8 +50,10 @@ if test "$ac_cv_sizeof_void_p" = 4; then
    AC_DEFINE(FLAT_TABLES, 1,
      [use flat segment and dirty vectors (not used yet)])
 fi
+AC_SUBST([VICARE_SIZE_OF_VOIDP],[$ac_cv_sizeof_void_p])
 
-AC_C_BIGENDIAN([AC_SUBST(PLATFORM_ENDIANNESS,[big])],[AC_SUBST(PLATFORM_ENDIANNESS,[little])])
+AC_C_BIGENDIAN([AC_SUBST(VICARE_PLATFORM_ENDIANNESS,[big])],
+  [AC_SUBST(VICARE_PLATFORM_ENDIANNESS,[little])])
 
 AC_SYS_LARGEFILE
 
@@ -158,6 +170,6 @@ AC_FUNC_STRFTIME
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([sigaltstack bzero gettimeofday memmove memset munmap setenv sqrt strerror getaddrinfo])
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES(Makefile src/Makefile scheme/Makefile doc/Makefile lib/Makefile tests/Makefile)
+AC_CONFIG_FILES(Makefile src/Makefile scheme/Makefile doc/Makefile lib/Makefile tests/Makefile lib/vicare/installation-configuration.sls)
 AC_OUTPUT #(Makefile src/Makefile scheme/Makefile doc/Makefile)
 

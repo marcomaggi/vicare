@@ -1,6 +1,84 @@
 ## Process this file with automake to produce Makefile.in
 
-nodist_pkglib_DATA=vicare.boot
+nodist_pkglib_DATA	= vicare.boot
+NEW_BOOT_FILE		= vicare.boot
+NEW_EXECUTABLE		= ../src/vicare
+
+#VICARE_SIZE_OF_VOIDP		= $(shell grep SIZEOF_VOID_P ../config.h | sed "s/.*\(.\)/\1/g")
+VICARE_SIZE_OF_VOIDP		= @VICARE_SIZE_OF_VOIDP@
+VICARE_PLATFORM_ENDIANNESS	= @VICARE_PLATFORM_ENDIANNESS@
+VICARE_ARGUMENTS_VALIDATION	= @VICARE_ARGUMENTS_VALIDATION@
+
+IKARUS_PREBUILT_BOOT	= $(srcdir)/ikarus.boot.$(VICARE_SIZE_OF_VOIDP).prebuilt
+VICARE_PREBUILT_BOOT	= $(srcdir)/vicare.boot.$(VICARE_SIZE_OF_VOIDP).prebuilt
+
+CLEANFILES		= $(nodist_pkglib_DATA) ikarus.config.ss
+MAINTAINERCLEANFILES	= last-revision
+
+all: $(nodist_pkglib_DATA)
+
+## --------------------------------------------------------------------
+
+$(srcdir)/last-revision:
+	git show | head -1 | cut -d ' ' -f2 >$@
+
+ikarus.config.ss: Makefile last-revision ../config.h
+	echo '(define ikarus-version "$(PACKAGE_VERSION)")' >$@
+	echo '(define ikarus-revision "$(shell cat $(srcdir)/last-revision)")' >>$@
+	echo '(define ikarus-lib-dir "$(pkglibdir)")' >>$@
+	echo '(define target "$(target)")' >>$@
+	echo '(define wordsize $(VICARE_SIZE_OF_VOIDP))' >>$@
+	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>$@
+	echo '(define arguments-validation (positive? $(VICARE_ARGUMENTS_VALIDATION)))' >>$@
+
+#page
+# To  create the  new boot  image we  use a  prebuilt boot  image; the
+# environment variable names are  hardcoded in the prebuilt boot image
+# and are the Ikarus' ones.
+#
+$(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
+	IKARUS_SRC_DIR=$(srcdir)			\
+  IKARUS_BUILD_DIR=$(builddir)				\
+  VICARE_FASL_DIRECTORY=''				\
+  VICARE_LIBRARY_PATH=.:$(srcdir):$(srcdir)/../lib	\
+  $(NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT)		\
+  --r6rs-script $(srcdir)/makefile.sps
+
+#$(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
+# 	IKARUS_SRC_DIR=$(srcdir) \
+#   IKARUS_BUILD_DIR=$(builddir) \
+#   IKARUS_FASL_DIRECTORY='' \
+#   IKARUS_LIBRARY_PATH=.:$(srcdir):$(srcdir)/../lib \
+#   $(NEW_EXECUTABLE) -b $(IKARUS_PREBUILT_BOOT) \
+#   --r6rs-script $(srcdir)/makefile.sps
+
+#page
+# We can  try to build  Vicare itself with  a newly built  boot image;
+# do this from the build directory:
+#
+#   $ cp scheme/vicare.boot scheme/vicare.boot.try
+#
+# then:
+#
+#   $ make try-vicare-boot
+#
+# when we  are sure that  the newly built  boot image is fine,  we can
+# adopt it as boot image to be distributed:
+#
+#   $ cp scheme/vicare.boot.try $(top_srcdir)/scheme/vicare.boot.4.prebuilt
+#
+# but keep backups of the original one!!!
+#
+try-vicare-boot: $(EXTRA_DIST) ikarus.config.ss
+	IKARUS_SRC_DIR=$(srcdir) \
+   IKARUS_BUILD_DIR=$(builddir) \
+   VICARE_FASL_DIRECTORY='' \
+   VICARE_LIBRARY_PATH=.:$(srcdir):$(srcdir)/../lib \
+   $(NEW_EXECUTABLE) -b vicare.boot.try \
+   --r6rs-script $(srcdir)/makefile.sps
+
+#page
+#### stuff needed by GNU Automake
 
 EXTRA_DIST= last-revision						\
   ikarus.boot.4.prebuilt ikarus.boot.8.prebuilt				\
@@ -44,57 +122,5 @@ EXTRA_DIST= last-revision						\
   ikarus.pointers.ss ikarus.equal.ss					\
   ikarus.symbol-table.ss ikarus.apropos.ss				\
   ikarus.debugger.ss
-
-#page
-NEW_BOOT_FILE		= vicare.boot
-NEW_EXECUTABLE		= ../src/vicare
-
-IKARUS_PREBUILT_BOOT_FILE	= $(srcdir)/ikarus.boot.$(sizeofvoidp).prebuilt
-VICARE_PREBUILT_BOOT_FILE	= $(srcdir)/vicare.boot.$(sizeofvoidp).prebuilt
-
-all: $(nodist_pkglib_DATA)
-
-$(srcdir)/last-revision:
-	git show | head -1 | cut -d ' ' -f2 >$@
-
-sizeofvoidp		= $(shell grep SIZEOF_VOID_P ../config.h | sed "s/.*\(.\)/\1/g")
-PLATFORM_ENDIANNESS	= @PLATFORM_ENDIANNESS@
-
-ikarus.config.ss: Makefile last-revision ../config.h
-	echo '(define ikarus-version "$(PACKAGE_VERSION)")' >$@
-	echo '(define ikarus-revision "$(shell cat $(srcdir)/last-revision)")' >>$@
-	echo '(define ikarus-lib-dir "$(pkglibdir)")' >>$@
-	echo '(define target "$(target)")' >>$@
-	echo '(define wordsize $(sizeofvoidp))' >>$@
-	echo '(define platform-endianness (quote $(PLATFORM_ENDIANNESS)))' >>$@
-
-
-CLEANFILES=$(nodist_pkglib_DATA) ikarus.config.ss
-MAINTAINERCLEANFILES=last-revision
-
-# To  create the  new  boot image  we  use a  prebuilt  boot image;  the
-# environment variable  names are hardcoded  in the prebuilt  boot image
-# and are the Ikarus' ones.
-$(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
-	IKARUS_SRC_DIR=$(srcdir) \
-  IKARUS_BUILD_DIR=$(builddir) \
-  VICARE_FASL_DIRECTORY='' \
-  VICARE_LIBRARY_PATH=.:$(srcdir):$(srcdir)/../lib \
-  $(NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT_FILE) \
-  --r6rs-script $(srcdir)/makefile.sps
-  # 	IKARUS_SRC_DIR=$(srcdir) \
-  # IKARUS_BUILD_DIR=$(builddir) \
-  # IKARUS_FASL_DIRECTORY='' \
-  # IKARUS_LIBRARY_PATH=.:$(srcdir):$(srcdir)/../lib \
-  # $(NEW_EXECUTABLE) -b $(IKARUS_PREBUILT_BOOT_FILE) \
-  # --r6rs-script $(srcdir)/makefile.sps
-
-try-vicare-boot: $(EXTRA_DIST) ikarus.config.ss
-	IKARUS_SRC_DIR=$(srcdir) \
-   IKARUS_BUILD_DIR=$(builddir) \
-   VICARE_FASL_DIRECTORY='' \
-   VICARE_LIBRARY_PATH=.:$(srcdir):$(srcdir)/../lib \
-   $(NEW_EXECUTABLE) -b vicare.boot.try \
-   --r6rs-script $(srcdir)/makefile.sps
 
 ### end of file

@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Copyright (C) 2006,2007,2008,2011  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -174,19 +174,9 @@
 		    ($bytevector-ieee-double-nonnative-set!	bytevector-ieee-double-nonnative-set!)
 		    ($bytevector-ieee-single-nonnative-set!	bytevector-ieee-single-nonnative-set!))
 	    unsafe.)
-    (vicare include))
+    (vicare include)
+    (vicare syntactic-extensions))
   (include "ikarus.config.ss") ;for platform-endianness
-
-
-;;;; syntax helpers
-
-(define-syntax define-inline
-  (syntax-rules ()
-    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-     (define-syntax ?name
-       (syntax-rules ()
-	 ((_ ?arg ... . ?rest)
-	  (begin ?form0 ?form ...)))))))
 
 
 ;;;; helpers
@@ -198,7 +188,7 @@
       (unsafe.bytevector-set! x i fill)
       (%unsafe.bytevector-fill x ($fxadd1 i) j fill))))
 
-(define-inline (%implementation-violation who msg . irritants)
+(define (%implementation-violation who msg . irritants)
   (raise (condition
 	  (make-assertion-violation)
 	  (make-implementation-restriction-violation)
@@ -328,6 +318,8 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-inline (%u8?  num)	(fixnum? num))
+(define-inline (%s8?  num)	(fixnum? num))
 (define-inline (%u16? num)	(and (integer? num) (exact? num)))
 (define-inline (%s16? num)	(and (integer? num) (exact? num)))
 (define-inline (%u32? num)	(and (integer? num) (exact? num)))
@@ -336,6 +328,11 @@
 (define-inline (%s64? num)	(and (integer? num) (exact? num)))
 
 ;;; --------------------------------------------------------------------
+
+(define U8MAX		255)
+(define U8MIN		0)
+(define S8MAX		127)
+(define S8MIN		-128)
 
 (define U16MAX		(- (expt 2 16) 1))
 (define U16MIN		0)
@@ -353,6 +350,23 @@
 (define S64MIN		(- (expt 2 63)))
 
 
+;;;; arguments validation
+
+(define-argument-validation (bytevector who bv)
+  (bytevector? bv)
+  (assertion-violation who "expected a bytevector as argument" bv))
+
+(define-argument-validation (bytevector-length who len)
+  (and (fixnum? len) (unsafe.fx>= len 0))
+  (assertion-violation who
+    "expected non-negative fixnum as bytevector length argument" len))
+
+(define-argument-validation (byte-filler who fill)
+  (and (fixnum? fill) (unsafe.fx<= -128 fill) (unsafe.fx<= fill 255))
+  (assertion-violation who
+    "expected fixnum in range [-128, 255] as bytevector fill argument" fill))
+
+
 ;;;; assertion helpers
 
 (define-inline (%assert-argument-is-bytevector who bv)
@@ -364,7 +378,7 @@
     (assertion-violation who
       "expected non-negative fixnum as bytevector length argument" len)))
 
-(define-inline (%assert-argument-is-fill who fill)
+(define-inline (%assert-argument-is-byte-filler who fill)
   (unless (and (fixnum? fill) ($fx<= -128 fill) ($fx<= fill 255))
     (assertion-violation who
       "expected fixnum in range [-128, 255] as bytevector fill argument" fill)))
@@ -374,8 +388,8 @@
 (let-syntax
     ((%define-assertion
       (syntax-rules ()
-	((_ ??who ??size ??message)
-	 (define-inline (??who ?arg bv ?who)
+	((_ ?macro ??size ??message)
+	 (define-inline (?macro ?who ?arg bv)
 	   (unless (and (integer? ?arg) (exact? ?arg))
 	     (assertion-violation ?who
 	       "expected exact integer as start index argument for bytevector" ?arg))
@@ -400,8 +414,8 @@
 (let-syntax
     ((%define-assertion
       (syntax-rules ()
-	((_ ??who ??size ??message)
-	 (define-inline (??who ?arg bv ?who)
+	((_ ?macro ??size ??message)
+	 (define-inline (?macro ?who ?arg bv)
 	   (unless (and (integer? ?arg) (exact? ?arg))
 	     (assertion-violation ?who
 	       "expected exact integer as end index argument for bytevector" ?arg))
@@ -426,8 +440,8 @@
 (let-syntax
     ((%define-assertion
       (syntax-rules ()
-	((_ ??who ??size ??message)
-	 (define-inline (??who ?arg ?bv ?start ?who)
+	((_ ?macro ??size ??message)
+	 (define-inline (?macro ?who ?arg ?bv ?start)
 	   (unless (and (integer? ?arg) (exact? ?arg))
 	     (assertion-violation ?who
 	       "expected exact integer as count argument for bytevector" ?arg))
@@ -471,13 +485,15 @@
   (case-lambda
    ((bv.len)
     (define who 'make-bytevector)
-    (%assert-argument-is-bytevector-length who bv.len)
-    ($make-bytevector bv.len))
+    (with-arguments-validation (who)
+	((bytevector-length bv.len))
+      ($make-bytevector bv.len)))
    ((bv.len fill)
     (define who 'make-bytevector)
-    (%assert-argument-is-bytevector-length who bv.len)
-    (%assert-argument-is-fill who fill)
-    (%unsafe.bytevector-fill ($make-bytevector bv.len) 0 bv.len fill))))
+    (with-arguments-validation (who)
+	((bytevector-length	bv.len)
+	 (byte-filler		fill))
+      (%unsafe.bytevector-fill ($make-bytevector bv.len) 0 bv.len fill)))))
 
 (define (bytevector-fill! bv fill)
   ;;Defined by R6RS.  The FILL argument  is as in the description of the
@@ -486,7 +502,7 @@
   ;;
   (define who 'bytevector-fill!)
   (%assert-argument-is-bytevector who bv)
-  (%assert-argument-is-fill who fill)
+  (%assert-argument-is-byte-filler who fill)
   (%unsafe.bytevector-fill bv 0 ($bytevector-length bv) fill))
 
 (define (bytevector-length bv)
@@ -555,10 +571,10 @@
   (define who 'bytevector-copy!)
   (%assert-argument-is-bytevector who src)
   (%assert-argument-is-bytevector who dst)
-  (%assert-argument-is-bytevector-start-index-8 src.start src who)
-  (%assert-argument-is-bytevector-start-index-8 dst.start dst who)
-  (%assert-argument-is-bytevector-count-8 k src src.start who)
-  (%assert-argument-is-bytevector-count-8 k dst dst.start who)
+  (%assert-argument-is-bytevector-start-index-8 who src.start src)
+  (%assert-argument-is-bytevector-start-index-8 who dst.start dst)
+  (%assert-argument-is-bytevector-count-8 who k src src.start)
+  (%assert-argument-is-bytevector-count-8 who k dst dst.start)
   (if (eq? src dst)
       (cond (($fx< dst.start src.start)
 	     (let f ((src src) (si src.start) (di dst.start) (sj ($fx+ src.start k)))
@@ -602,8 +618,8 @@
    ((src.bv src.start src.end)
     (define who 'subbytevector-u8)
     (%assert-argument-is-bytevector who src.bv)
-    (%assert-argument-is-bytevector-start-index-8 src.start src.bv who)
-    (%assert-argument-is-bytevector-end-index-8   src.end   src.bv who)
+    (%assert-argument-is-bytevector-start-index-8 who src.start src.bv)
+    (%assert-argument-is-bytevector-end-index-8   who src.end   src.bv)
     (%unsafe.subbytevector-u8/count src.bv src.start (unsafe.fx- src.end src.start)))))
 
 (define (subbytevector-u8/count src.bv src.start dst.len)
@@ -615,8 +631,8 @@
   ;;
   (define who 'subbytevector-u8/count)
   (%assert-argument-is-bytevector who src.bv)
-  (%assert-argument-is-bytevector-start-index-8 src.start src.bv who)
-  (%assert-argument-is-bytevector-count-8 dst.len src.bv src.start who)
+  (%assert-argument-is-bytevector-start-index-8 who src.start src.bv)
+  (%assert-argument-is-bytevector-count-8 who dst.len src.bv src.start)
   (%unsafe.subbytevector-u8/count src.bv src.start dst.len))
 
 (define (%unsafe.subbytevector-u8/count src.bv src.start dst.len)
@@ -642,8 +658,8 @@
    ((src.bv src.start src.end)
     (define who 'subbytevector-s8)
     (%assert-argument-is-bytevector who src.bv)
-    (%assert-argument-is-bytevector-start-index-8 src.start src.bv who)
-    (%assert-argument-is-bytevector-end-index-8   src.end   src.bv who)
+    (%assert-argument-is-bytevector-start-index-8 who src.start src.bv)
+    (%assert-argument-is-bytevector-end-index-8   who src.end   src.bv)
     (%unsafe.subbytevector-s8/count src.bv src.start (unsafe.fx- src.end src.start)))))
 
 (define (subbytevector-s8/count src.bv src.start dst.len)
@@ -655,8 +671,8 @@
   ;;
   (define who 'subbytevector-s8/count)
   (%assert-argument-is-bytevector who src.bv)
-  (%assert-argument-is-bytevector-start-index-8 src.start src.bv who)
-  (%assert-argument-is-bytevector-count-8 dst.len src.bv src.start who)
+  (%assert-argument-is-bytevector-start-index-8 who src.start src.bv)
+  (%assert-argument-is-bytevector-count-8 who dst.len src.bv src.start)
   (%unsafe.subbytevector-s8/count src.bv src.start dst.len))
 
 (define (%unsafe.subbytevector-s8/count src.bv src.start dst.len)

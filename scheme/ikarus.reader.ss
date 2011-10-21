@@ -39,6 +39,7 @@
 		  ;; internal functions only for Vicare
 		  read-source-file read-script-source-file
 		  read-library-source-file)
+    (vicare syntactic-extensions)
     (only (ikarus.string-to-number)
 	  define-string->number-parser)
     (ikarus system $chars)
@@ -80,37 +81,6 @@
 
 
 ;;;; syntax helpers
-
-(define-syntax define-inline
-  (syntax-rules ()
-    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-     (define-syntax ?name
-       (syntax-rules ()
-	 ((_ ?arg ... . ?rest)
-	  (begin ?form0 ?form ...)))))))
-
-(define-syntax define-syntax*
-  (syntax-rules ()
-    ((_ (?who ?stx) . ?body)
-     (define-syntax ?who (lambda (?stx) . ?body)))))
-
-(define-syntax unwind-protect
-  ;;Not a general UNWIND-PROTECT for Scheme, but fine here because we do
-  ;;not use continuations to escape from the body.
-  ;;
-  (syntax-rules ()
-    ((_ ?body ?cleanup0 ?cleanup ...)
-     (let ((cleanup (lambda () ?cleanup0 ?cleanup ...)))
-       (with-exception-handler
-	   (lambda (E)
-	     (cleanup)
-	     (raise E))
-	 (lambda ()
-	   (call-with-values
-	       (lambda () ?body)
-	     (lambda return-values
-	       (cleanup)
-	       (apply values return-values)))))))))
 
 (define-syntax* (read-char-no-eof stx)
   (syntax-case stx ()
