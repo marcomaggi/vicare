@@ -35,8 +35,9 @@ Straaten.
 programming  language; it is  the creation  of Abdulaziz  Ghuloum, which
 retired from  development in 2010.   Vicare Scheme is an  R6RS compliant
 fork  of Ikarus  Scheme, aiming  at becoming  a native  compiler  for R6
-Scheme  producing   single  threaded  programs  running   on  Intel  x86
-processors.  "Vicare" is pronounced the etruscan way.
+Scheme producing  single threaded programs  running on Intel  x86 32-bit
+processors;  Vicare  is  officially   not  ready  for  64-bit  machines.
+"Vicare" is pronounced the etruscan way.
 
   Current official maintainers are:
 

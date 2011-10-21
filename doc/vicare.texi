@@ -503,11 +503,11 @@ Revised^6 Report on the algorithmic language Scheme
 
 @copying
 @noindent
-This document describes version @version{} of @value{PACKAGE}, an almost
-@rnrs{6} compliant implementation of the Scheme programming language.
-Vicare (pronounced the etruscan way) is an experimental fork of Ikarus
-Scheme which aims at fixing bugs, full @rnrs{6} compliance with a
-pragmatic eye, enhancing some features like the @posix{} interface.
+This document describes version @version{} of @value{PACKAGE}, an
+@rnrs{6} compliant native compiler for the Scheme language producing
+single threaded programs running on Intel x86 32-bit processors; Vicare
+is officially not ready for 64-bit machines.  @emph{Vicare} is
+pronounced the etruscan way.
 
 The Vicarus Scheme package is distributed under the terms of the @gnu{}
 General Public License (@gpl{}) and can be downloaded from:
@@ -646,9 +646,10 @@ Van Straaten.
 Ikarus Scheme is an almost @rnrs{6} compliant implementation of the
 Scheme programming language; it is the creation of Abdulaziz Ghuloum.
 
-Vicare Scheme is an experimental fork of Ikarus Scheme which aims at
-fixing bugs, pushing compliance with @rnrs{6}, enhancing some features
-like the @posix{} interface.  Vicare is pronounced the etruscan way.
+Vicare Scheme is an @rnrs{6} compliant fork of Ikarus Scheme, aiming at
+becoming a native compiler producing single threaded programs running on
+Intel x86 32-bit processors; Vicare is officially not ready for 64-bit
+machines.  @emph{Vicare} is pronounced the etruscan way.
 
 @menu
 * overview original::           Original Ikarus Scheme.
