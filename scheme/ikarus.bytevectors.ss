@@ -174,9 +174,9 @@
 		    ($bytevector-ieee-double-nonnative-set!	bytevector-ieee-double-nonnative-set!)
 		    ($bytevector-ieee-single-nonnative-set!	bytevector-ieee-single-nonnative-set!))
 	    unsafe.)
-    (vicare include)
-    (vicare syntactic-extensions))
-  (include "ikarus.config.ss") ;for platform-endianness
+    (vicare syntactic-extensions)
+    (prefix (vicare installation-configuration)
+	    config.))
 
 
 ;;;; helpers
@@ -471,7 +471,7 @@
   ;;underlying  machine  architecture).   This  may  be  any  endianness
   ;;symbol, including a symbol other than "big" and "little".
   ;;
-  platform-endianness)
+  config.platform-endianness)
 
 (define make-bytevector
   ;;Defined  by R6RS.   Return a  newly allocated  bytevector  of BV.LEN

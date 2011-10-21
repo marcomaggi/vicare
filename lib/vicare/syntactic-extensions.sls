@@ -34,7 +34,9 @@
     define-argument-validation
     with-arguments-validation)
   (import (rnrs)
-    (for (vicare include) expand))
+    (for (prefix (vicare installation-configuration)
+		 config.)
+	 expand))
 
 
 (define-syntax define-inline
@@ -139,7 +141,6 @@
   ;;    (do-that)))
   ;;
   (lambda (stx)
-    (include "ikarus.config.ss") ;for arguments-validation
     (define (main stx)
       (syntax-case stx ()
 	((_ (?who) ((?validator ?arg ...) ...) . ?body)
@@ -150,7 +151,7 @@
 						    #'(?validator ...)
 						    #'((?arg ...) ...)
 						    body)))
-	   (if arguments-validation output-form body)))
+	   (if config.arguments-validation output-form body)))
 	(_
 	 (%synner "invalid input form" #f))))
 

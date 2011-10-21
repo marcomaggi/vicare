@@ -4,6 +4,8 @@ nodist_pkglib_DATA	= vicare.boot
 NEW_BOOT_FILE		= vicare.boot
 NEW_EXECUTABLE		= ../src/vicare
 
+BOOT_IMAGE_SEARCH_PATH	= .:$(srcdir):$(srcdir)/../lib:$(builddir)/../lib
+
 #VICARE_SIZE_OF_VOIDP		= $(shell grep SIZEOF_VOID_P ../config.h | sed "s/.*\(.\)/\1/g")
 VICARE_SIZE_OF_VOIDP		= @VICARE_SIZE_OF_VOIDP@
 VICARE_PLATFORM_ENDIANNESS	= @VICARE_PLATFORM_ENDIANNESS@
@@ -40,16 +42,16 @@ $(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
 	IKARUS_SRC_DIR=$(srcdir)			\
   IKARUS_BUILD_DIR=$(builddir)				\
   VICARE_FASL_DIRECTORY=''				\
-  VICARE_LIBRARY_PATH=.:$(srcdir):$(srcdir)/../lib	\
+  VICARE_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)		\
   $(NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT)		\
   --r6rs-script $(srcdir)/makefile.sps
 
 #$(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
-# 	IKARUS_SRC_DIR=$(srcdir) \
-#   IKARUS_BUILD_DIR=$(builddir) \
-#   IKARUS_FASL_DIRECTORY='' \
-#   IKARUS_LIBRARY_PATH=.:$(srcdir):$(srcdir)/../lib \
-#   $(NEW_EXECUTABLE) -b $(IKARUS_PREBUILT_BOOT) \
+# 	IKARUS_SRC_DIR=$(srcdir)			\
+#   IKARUS_BUILD_DIR=$(builddir)			\
+#   IKARUS_FASL_DIRECTORY=''				\
+#   IKARUS_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)	\
+#   $(NEW_EXECUTABLE) -b $(IKARUS_PREBUILT_BOOT)	\
 #   --r6rs-script $(srcdir)/makefile.sps
 
 #page
@@ -70,11 +72,11 @@ $(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
 # but keep backups of the original one!!!
 #
 try-vicare-boot: $(EXTRA_DIST) ikarus.config.ss
-	IKARUS_SRC_DIR=$(srcdir) \
-   IKARUS_BUILD_DIR=$(builddir) \
-   VICARE_FASL_DIRECTORY='' \
-   VICARE_LIBRARY_PATH=.:$(srcdir):$(srcdir)/../lib \
-   $(NEW_EXECUTABLE) -b vicare.boot.try \
+	IKARUS_SRC_DIR=$(srcdir)			\
+   IKARUS_BUILD_DIR=$(builddir)				\
+   VICARE_FASL_DIRECTORY=''				\
+   VICARE_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)	\
+   $(NEW_EXECUTABLE) -b vicare.boot.try			\
    --r6rs-script $(srcdir)/makefile.sps
 
 #page
