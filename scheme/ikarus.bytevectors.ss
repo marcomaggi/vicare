@@ -382,24 +382,42 @@
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (start-index-for who idx bv bytes-per-word)
-  ;;To be used after START-INDEX validation.
+  ;;To be used after  START-INDEX validation.  Valid scenarios for start
+  ;;indexes:
+  ;;
+  ;;  |...|word
+  ;;  |---|---|---|---|---|---|---|---|---| bytevector
+  ;;                      ^start
+  ;;
+  ;;  |---|---|---|---|---|---|---|---|---| bytevector
+  ;;                                  ^start
+  ;;
+  ;;  |---|---|---|---|---|---|---|---|---| bytevector
+  ;;                                      ^start = bv.len
+  ;;
+  ;;  | empty bytevector
+  ;;  ^start = bv.len = 0
+  ;;
+  ;;the following is an invalid scenario:
+  ;;
+  ;;  |---|---|---|---|---|---|---|---|---| bytevector
+  ;;                                    ^start = bv.len
   ;;
   (let ((bv.len (unsafe.bytevector-length bv)))
-    (or (and (unsafe.fxzero? bv.len) (unsafe.fxzero? idx))
+    (or (unsafe.fx=  idx bv.len)
 	(unsafe.fx<= idx (unsafe.fx- bv.len bytes-per-word))))
-  (let ((len (unsafe.bytevector-length bv)))
-    (assertion-violation who
-      (string-append "start index argument "		(number->string idx)
-		     " too big for bytevector length "	(number->string len)
-		     " and word size "			(number->string bytes-per-word))
-      idx)))
+  (assertion-violation who
+    (string-append "start index argument "		(number->string idx)
+		   " too big for bytevector length "	(number->string (unsafe.bytevector-length bv))
+		   " and word size "			(number->string bytes-per-word))
+    idx))
 
 (define-argument-validation (end-index-for who idx bv bytes-per-word)
-  ;;To be used after END-INDEX validation.
+  ;;To  be used after  END-INDEX validation.   An end  index can  be any
+  ;;index less than or equal to the bytevector size; also in the case of
+  ;;empty bytevector.
   ;;
-  (let ((bv.len (unsafe.bytevector-length bv)))
-    (or (and (unsafe.fxzero? bv.len) (unsafe.fxzero? idx))
-	(unsafe.fx<= idx (unsafe.fx- bv.len bytes-per-word))))
+  (unsafe.fx<= idx (unsafe.bytevector-length bv))
   (assertion-violation who
     (string-append "end index argument "		(number->string idx)
 		   " too big for bytevector length "	(number->string (unsafe.bytevector-length bv))
@@ -683,14 +701,18 @@
   (case-lambda
    ((src.bv src.start)
     (define who 'subbytevector-u8)
-    (%assert-argument-is-bytevector who src.bv)
-    (subbytevector-u8 src.bv src.start (unsafe.bytevector-length src.bv)))
+    (with-arguments-validation (who)
+	((bytevector src.bv))
+      (subbytevector-u8 src.bv src.start (unsafe.bytevector-length src.bv))))
    ((src.bv src.start src.end)
     (define who 'subbytevector-u8)
-    (%assert-argument-is-bytevector who src.bv)
-    (%assert-argument-is-bytevector-start-index-8 who src.start src.bv)
-    (%assert-argument-is-bytevector-end-index-8   who src.end   src.bv)
-    (%unsafe.subbytevector-u8/count src.bv src.start (unsafe.fx- src.end src.start)))))
+    (with-arguments-validation (who)
+	((bytevector		src.bv)
+	 (start-index		src.start)
+	 (end-index		src.end)
+	 (start-index-for	src.start src.bv 1)
+	 (end-index-for		src.end   src.bv 1))
+      (%unsafe.subbytevector-u8/count src.bv src.start (unsafe.fx- src.end src.start))))))
 
 (define (subbytevector-u8/count src.bv src.start dst.len)
   ;;Defined  by  Vicare.  Build  and  return  a  new bytevector  holding
