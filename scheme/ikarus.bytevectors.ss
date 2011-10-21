@@ -148,6 +148,7 @@
 		    ($fxlogand	fxand)	 ;logic AND
 		    ($fx+	fx+)
 		    ($fx-	fx-)
+		    ($fx*	fx*)
 		    ($fx<	fx<)
 		    ($fx>	fx>)
 		    ($fx>=	fx>=)
@@ -354,7 +355,7 @@
 
 (define-argument-validation (bytevector who bv)
   (bytevector? bv)
-  (assertion-violation who "expected a bytevector as argument" bv))
+  (assertion-violation who "expected bytevector as argument" bv))
 
 (define-argument-validation (bytevector-length who len)
   (and (fixnum? len) (unsafe.fx>= len 0))
@@ -365,6 +366,62 @@
   (and (fixnum? fill) (unsafe.fx<= -128 fill) (unsafe.fx<= fill 255))
   (assertion-violation who
     "expected fixnum in range [-128, 255] as bytevector fill argument" fill))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (start-index who idx)
+  (and (fixnum? idx) (unsafe.fx<= 0 idx))
+  (assertion-violation who
+    "expected non-negative fixnum as bytevector start index argument" idx))
+
+(define-argument-validation (end-index who idx)
+  (and (fixnum? idx) (unsafe.fx<= 0 idx))
+  (assertion-violation who
+    "expected non-negative fixnum as bytevector start end argument" idx))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (start-index-for who idx bv bytes-per-word)
+  ;;To be used after START-INDEX validation.
+  ;;
+  (let ((bv.len (unsafe.bytevector-length bv)))
+    (or (and (unsafe.fxzero? bv.len) (unsafe.fxzero? idx))
+	(unsafe.fx<= idx (unsafe.fx- bv.len bytes-per-word))))
+  (let ((len (unsafe.bytevector-length bv)))
+    (assertion-violation who
+      (string-append "start index argument "		(number->string idx)
+		     " too big for bytevector length "	(number->string len)
+		     " and word size "			(number->string bytes-per-word))
+      idx)))
+
+(define-argument-validation (end-index-for who idx bv bytes-per-word)
+  ;;To be used after END-INDEX validation.
+  ;;
+  (let ((bv.len (unsafe.bytevector-length bv)))
+    (or (and (unsafe.fxzero? bv.len) (unsafe.fxzero? idx))
+	(unsafe.fx<= idx (unsafe.fx- bv.len bytes-per-word))))
+  (assertion-violation who
+    (string-append "end index argument "		(number->string idx)
+		   " too big for bytevector length "	(number->string (unsafe.bytevector-length bv))
+		   " and word size "			(number->string bytes-per-word))
+    idx))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (count who count)
+  (and (fixnum? count) (unsafe.fx<= 0 count))
+  (assertion-violation who
+    "expected non-negative fixnum as bytevector word count argument" count))
+
+(define-argument-validation (count-for who count bv bv.start bytes-per-word)
+  (let ((end (unsafe.fx+ bv.start (unsafe.fx* count bytes-per-word))))
+    (unsafe.fx<= end (unsafe.bytevector-length bv)))
+  (assertion-violation who
+    (string-append "word count "			(number->string count)
+		   " too big for bytevector length "	(number->string (unsafe.bytevector-length bv))
+		   " start index "			(number->string bv.start)
+		   " and word size "			(number->string bytes-per-word))
+    count))
 
 
 ;;;; assertion helpers
@@ -501,17 +558,19 @@
   ;;FILL in every element of BV and returns unspecified values.
   ;;
   (define who 'bytevector-fill!)
-  (%assert-argument-is-bytevector who bv)
-  (%assert-argument-is-byte-filler who fill)
-  (%unsafe.bytevector-fill bv 0 ($bytevector-length bv) fill))
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (byte-filler	fill))
+    (%unsafe.bytevector-fill bv 0 ($bytevector-length bv) fill)))
 
 (define (bytevector-length bv)
   ;;Defined by R6RS.  Return, as  an exact integer object, the number of
   ;;bytes in BV.
   ;;
   (define who 'bytevector-length)
-  (%assert-argument-is-bytevector who bv)
-  ($bytevector-length bv))
+  (with-arguments-validation (who)
+      ((bytevector bv))
+    ($bytevector-length bv)))
 
 (define (bytevector=? x y)
   ;;Defined by R6RS.  Return  #t if X and Y are equal;  that is, if they
@@ -519,31 +578,33 @@
   ;;returns false otherwise.
   ;;
   (define who 'bytevector=?)
-  (%assert-argument-is-bytevector who x)
-  (%assert-argument-is-bytevector who y)
-  (let ((bv.len ($bytevector-length x)))
-    (and ($fx= bv.len ($bytevector-length y))
-	 (let f ((x x) (y y) (i 0) (bv.len bv.len))
-	   (or ($fx= i bv.len)
-	       (and ($fx= ($bytevector-u8-ref x i)
-			  ($bytevector-u8-ref y i))
-		    (f x y ($fxadd1 i) bv.len)))))))
+  (with-arguments-validation (who)
+      ((bytevector x)
+       (bytevector y))
+    (let ((x.len ($bytevector-length x)))
+      (and (unsafe.fx= x.len ($bytevector-length y))
+	   (let loop ((x x) (y y) (i 0) (len x.len))
+	     (or (unsafe.fx= i len)
+		 (and (unsafe.fx= ($bytevector-u8-ref x i)
+				  ($bytevector-u8-ref y i))
+		      (loop x y (unsafe.fxadd1 i) len))))))))
 
 (define (bytevector-copy src.bv)
   ;;Defined by R6RS.  Return a newly allocated copy of SRC.BV.
   ;;
   (define who 'bytevector-copy)
-  (%assert-argument-is-bytevector who src.bv)
-  (let ((src.len ($bytevector-length src.bv)))
-    (let f ((src.bv	src.bv)
-	    (dst.bv	($make-bytevector src.len))
-	    (i		0)
-	    (src.len	src.len))
-      (if ($fx= i src.len)
-	  dst.bv
-	(begin
-	  ($bytevector-set! dst.bv i ($bytevector-u8-ref src.bv i))
-	  (f src.bv dst.bv ($fxadd1 i) src.len))))))
+  (with-arguments-validation (who)
+      ((bytevector src.bv))
+    (let ((src.len ($bytevector-length src.bv)))
+      (let loop ((src.bv	src.bv)
+		 (dst.bv	($make-bytevector src.len))
+		 (i		0)
+		 (src.len	src.len))
+	(if (unsafe.fx= i src.len)
+	    dst.bv
+	  (begin
+	    ($bytevector-set! dst.bv i ($bytevector-u8-ref src.bv i))
+	    (loop src.bv dst.bv (unsafe.fxadd1 i) src.len)))))))
 
 (define (bytevector-copy! src src.start dst dst.start k)
   ;;Defined  by R6RS.   SRC  and DST  must  be bytevectors.   SRC.START,
@@ -569,36 +630,45 @@
   ;;Return unspecified values.
   ;;
   (define who 'bytevector-copy!)
-  (%assert-argument-is-bytevector who src)
-  (%assert-argument-is-bytevector who dst)
-  (%assert-argument-is-bytevector-start-index-8 who src.start src)
-  (%assert-argument-is-bytevector-start-index-8 who dst.start dst)
-  (%assert-argument-is-bytevector-count-8 who k src src.start)
-  (%assert-argument-is-bytevector-count-8 who k dst dst.start)
-  (if (eq? src dst)
-      (cond (($fx< dst.start src.start)
-	     (let f ((src src) (si src.start) (di dst.start) (sj ($fx+ src.start k)))
-	       (unless ($fx= si sj)
-		 ($bytevector-set! src di ($bytevector-u8-ref src si))
-		 (f src ($fxadd1 si) ($fxadd1 di) sj))))
+  (with-arguments-validation (who)
+      ((bytevector	src)
+       (bytevector	dst)
+       (start-index	src.start)
+       (start-index	dst.start)
+       (start-index-for	src.start src 1)
+       (start-index-for	dst.start dst 1)
+       (count		k)
+       (count-for	k src src.start 1)
+       (count-for	k dst dst.start 1))
+    (if (eq? src dst)
+	(cond ((unsafe.fx< dst.start src.start)
+	       (let loop ((src		src)
+			  (src.index	src.start)
+			  (dst.index	dst.start)
+			  (src.past	(unsafe.fx+ src.start k)))
+		 (unless (unsafe.fx= src.index src.past)
+		   ($bytevector-set! src dst.index ($bytevector-u8-ref src src.index))
+		   (loop src (unsafe.fxadd1 src.index) (unsafe.fxadd1 dst.index) src.past))))
 
-	    (($fx< src.start dst.start)
-	     (let f ((src src) (si ($fx+ src.start k)) (di ($fx+ dst.start k)) (sj src.start))
-	       (unless ($fx= si sj)
-		 (let ((si ($fxsub1 si)) (di ($fxsub1 di)))
-		   ($bytevector-set! src di ($bytevector-u8-ref src si))
-		   (f src si di sj)))))
+	      ((unsafe.fx> dst.start src.start)
+	       (let loop ((src		src)
+			  (src.index	(unsafe.fx+ src.start k))
+			  (dst.index	(unsafe.fx+ dst.start k))
+			  (src.past	src.start))
+		 (unless (unsafe.fx= src.index src.past)
+		   (let ((src.index (unsafe.fxsub1 src.index))
+			 (dst.index (unsafe.fxsub1 dst.index)))
+		     ($bytevector-set! src dst.index ($bytevector-u8-ref src src.index))
+		     (loop src src.index dst.index src.past))))))
 
-	    (else
-	     (values)))
-    (let f ((src src)
-	    (si  src.start)
-	    (dst dst)
-	    (di  dst.start)
-	    (sj  ($fx+ src.start k)))
-      (unless ($fx= si sj)
-	($bytevector-set! dst di ($bytevector-u8-ref src si))
-	(f src ($fxadd1 si) dst ($fxadd1 di) sj)))))
+      (let loop ((src		src)
+		 (src.index	src.start)
+		 (dst		dst)
+		 (dst.index	dst.start)
+		 (src.past	(unsafe.fx+ src.start k)))
+	(unless (unsafe.fx= src.index src.past)
+	  ($bytevector-set! dst dst.index ($bytevector-u8-ref src src.index))
+	  (loop src (unsafe.fxadd1 src.index) dst (unsafe.fxadd1 dst.index) src.past))))))
 
 
 ;;;; subbytevectors, bytes

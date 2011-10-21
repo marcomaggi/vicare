@@ -34,6 +34,19 @@
 (display "*** testing Vicare bytevector functions\n")
 
 
+;;;; syntax helpers
+
+(define-syntax catch
+  (syntax-rules ()
+    ((_ print? . ?body)
+     (guard (E ((assertion-violation? E)
+		(when print?
+		  (pretty-print (condition-message E)))
+		(condition-irritants E))
+	       (else E))
+       (begin . ?body)))))
+
+
 ;;;; helpers
 
 (define BIGNUM
@@ -61,36 +74,326 @@
 ;;; arguments validation: length
 
   (check	;length is not an integer
-      (guard (E ((assertion-violation? E)
-		 (pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-bytevector #\a))
+      (catch #f (make-bytevector #\a))
     => '(#\a))
 
   (check	;length is not an exact integer
-      (guard (E ((assertion-violation? E)
-		 (pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-bytevector 1.0))
+      (catch #f (make-bytevector 1.0))
     => '(1.0))
 
   (check	;length is not a fixnum
-      (guard (E ((assertion-violation? E)
-		 (pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-bytevector BIGNUM))
+      (catch #f (make-bytevector BIGNUM))
     => (list BIGNUM))
 
   (check	;length is negative
-      (guard (E ((assertion-violation? E)
-		 (pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-bytevector -2))
+      (catch #f (make-bytevector -2))
     => '(-2))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: byte filler
+
+  (check	;filler is not a fixnum
+      (catch #f (make-bytevector 3 #\a))
+    => '(#\a))
+
+  (check	;filler is too positive
+      (catch #f (make-bytevector 2 256))
+    => '(256))
+
+  (check	;filler is too negative
+      (catch #f (make-bytevector 2 -129))
+    => '(-129))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-fill-bang))
+
+  (check
+      (let ((bv (make-bytevector 0)))
+	(bytevector-fill! bv 1)
+	bv)
+    => #vu8())
+
+  (check
+      (let ((bv (make-bytevector 1)))
+	(bytevector-fill! bv 123)
+	bv)
+    => #vu8(123))
+
+  (check
+      (let ((bv (make-bytevector 3)))
+	(bytevector-fill! bv 123)
+	bv)
+    => #vu8(123 123 123))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f (bytevector-fill! #\a 1))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: byte filler
+
+  (check	;filler is not a fixnum
+      (catch #f (bytevector-fill! #vu8() #\a))
+    => '(#\a))
+
+  (check	;filler is too positive
+      (catch #f (bytevector-fill! #vu8() 256))
+    => '(256))
+
+  (check	;filler is too negative
+      (catch #f (bytevector-fill! #vu8() -129))
+    => '(-129))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-length))
+
+  (check
+      (let ((bv (make-bytevector 0)))
+	(bytevector-length bv))
+    => 0)
+
+  (check
+      (let ((bv (make-bytevector 1)))
+	(bytevector-length bv))
+    => 1)
+
+  (check
+      (let ((bv (make-bytevector 3)))
+	(bytevector-length bv))
+    => 3)
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f (bytevector-length #\a))
+    => '(#\a))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-equal))
+
+  (check
+      (let ((x (make-bytevector 0))
+	    (y (make-bytevector 0)))
+	(bytevector=? x y))
+    => #t)
+
+  (check
+      (let ((x (make-bytevector 1))
+	    (y (make-bytevector 0)))
+	(bytevector=? x y))
+    => #f)
+
+  (check
+      (let ((x (make-bytevector 0))
+	    (y (make-bytevector 1)))
+	(bytevector=? x y))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((x (make-bytevector 1 123))
+	    (y (make-bytevector 1 123)))
+	(bytevector=? x y))
+    => #t)
+
+  (check
+      (let ((x (make-bytevector 1 7))
+	    (y (make-bytevector 1 2)))
+	(bytevector=? x y))
+    => #f)
+
+  (check
+      (let ((x (make-bytevector 2 123))
+	    (y (make-bytevector 1 123)))
+	(bytevector=? x y))
+    => #f)
+
+  (check
+      (bytevector=? #vu8(1 2 3) #vu8(1 2 3))
+    => #t)
+
+  (check
+      (bytevector=? #vu8(1 2 3) #vu8(1 2 30))
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f (bytevector=? #\a #vu8()))
+    => '(#\a))
+
+  (check
+      (catch #f (bytevector=? #vu8() #\a))
+    => '(#\a))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-copy))
+
+  (check
+      (bytevector-copy #vu8())
+    => #vu8())
+
+  (check
+      (bytevector-copy #vu8(1))
+    => #vu8(1))
+
+  (check
+      (bytevector-copy #vu8(1 2 3))
+    => #vu8(1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-copy #\a))
+    => '(#\a))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-copy-bang))
+
+  (check
+      (let ((src	(bytevector-copy #vu8(1 2 3)))
+	    (dst	(bytevector-copy #vu8(0 0 0)))
+	    (src.start	0)
+	    (dst.start	0)
+	    (count	3))
+	(bytevector-copy! src src.start dst dst.start count)
+	dst)
+    => #vu8(1 2 3))
+
+  (check
+      (let ((src	(bytevector-copy #vu8(1  2  3)))
+	    (dst	(bytevector-copy #vu8(10 20 30)))
+	    (src.start	0)
+	    (dst.start	0)
+	    (count	0))
+	(bytevector-copy! src src.start dst dst.start count)
+	dst)
+    => #vu8(10 20 30))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((src	(bytevector-copy #vu8(9 10 20 30 9)))
+	    (dst	(bytevector-copy #vu8(1 2 3 4 5 6 7 8 9)))
+	    (src.start	1)
+	    (dst.start	0)
+	    (count	3))
+	(bytevector-copy! src src.start dst dst.start count)
+	dst)
+    => #vu8(10 20 30 4 5 6 7 8 9))
+
+  (check
+      (let ((src	(bytevector-copy #vu8(9 10 20 30 9)))
+	    (dst	(bytevector-copy #vu8(1 2 3 4 5 6 7 8 9)))
+	    (src.start	1)
+	    (dst.start	6)
+	    (count	3))
+	(bytevector-copy! src src.start dst dst.start count)
+	dst)
+    => #vu8(1 2 3 4 5 6 10 20 30))
+
+;;; --------------------------------------------------------------------
+;;; same bytevector
+
+  (check	;non-overlapping regions
+      (let ((bv		(bytevector-copy #vu8(0 1 2 3 4 5 6 7 8 9)))
+	    (src.start	1)
+	    (dst.start	6)
+	    (count	3))
+	(bytevector-copy! bv src.start bv dst.start count)
+	bv)
+    => #vu8(0 1 2 3 4 5 1 2 3 9))
+
+  (check	;overlapping tail/head
+      (let ((bv		(bytevector-copy #vu8(0 1 2 3 4 5 6 7 8 9)))
+	    (src.start	2)
+	    (dst.start	3)
+	    (count	3))
+	(bytevector-copy! bv src.start bv dst.start count)
+	bv)
+    => #vu8(0 1 2 2 3 4 6 7 8 9))
+
+  (check	;overlapping head/tail
+      (let ((bv		(bytevector-copy #vu8(0 1 2 3 4 5 6 7 8 9)))
+	    (src.start	3)
+	    (dst.start	2)
+	    (count	3))
+	(bytevector-copy! bv src.start bv dst.start count)
+	bv)
+    => #vu8(0 1 3 4 5 5 6 7 8 9))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-copy! #\a 0 #vu8() 0 1))
+    => '(#\a))
+
+  (check
+      (catch #f
+	(bytevector-copy! #vu8() 0 #\a 0 1))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: start index
+
+  (check	;not a fixnum
+      (append (catch #f (bytevector-copy! #vu8() #\a #vu8() 0 1))
+	      (catch #f (bytevector-copy! #vu8() 0 #vu8() #\b 1)))
+    => '(#\a #\b))
+
+  (check	;too low
+      (append (catch #f (bytevector-copy! #vu8() -1 #vu8()  0 1))
+	      (catch #f (bytevector-copy! #vu8()  0 #vu8() -2 1)))
+    => '(-1 -2))
+
+  (check	;too high
+      (append (catch #f (bytevector-copy! #vu8() 1 #vu8() 0 1))
+	      (catch #f (bytevector-copy! #vu8() 0 #vu8() 2 1)))
+    => '(1 2))
+
+  (check	;too high
+      (append (catch #f (bytevector-copy! #vu8(1 2) 10 #vu8(1 2)  0 1))
+	      (catch #f (bytevector-copy! #vu8(1 2)  0 #vu8(1 2) 20 1)))
+    => '(10 20))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: count
+
+  (check	;not a fixnum
+      (catch #f (bytevector-copy! #vu8() 0 #vu8() 0 #\a))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f (bytevector-copy! #vu8() 0 #vu8() 0 -2))
+    => '(-2))
+
+  (check	;too big for source
+      (catch #f (bytevector-copy! #vu8(1 2) 0 #vu8(1 2 3) 0 3))
+    => '(3))
+
+  (check	;too big for dest
+      (catch #f (bytevector-copy! #vu8(1 2 3) 0 #vu8(1 2) 0 3))
+    => '(3))
 
   #t)
 
@@ -929,3 +1232,6 @@
 (check-report)
 
 ;;; end of file
+;;Local Variables:
+;;eval: (put 'catch 'scheme-indent-function 1)
+;;End:
