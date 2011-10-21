@@ -182,12 +182,12 @@
 
 ;;;; helpers
 
-(define (%unsafe.bytevector-fill x i j fill)
-  (if ($fx= i j)
-      x
+(define (%unsafe.bytevector-fill bv index end fill)
+  (if (unsafe.fx= index end)
+      bv
     (begin
-      (unsafe.bytevector-set! x i fill)
-      (%unsafe.bytevector-fill x ($fxadd1 i) j fill))))
+      (unsafe.bytevector-set! bv index fill)
+      (%unsafe.bytevector-fill bv (unsafe.fxadd1 index) end fill))))
 
 (define (%implementation-violation who msg . irritants)
   (raise (condition
@@ -361,6 +361,11 @@
   (and (fixnum? len) (unsafe.fx>= len 0))
   (assertion-violation who
     "expected non-negative fixnum as bytevector length argument" len))
+
+(define-argument-validation (total-length who len)
+  (fixnum? len)
+  (%implementation-violation who
+    "total bytevector length exceeds the greatest fixnum" len))
 
 (define-argument-validation (byte-filler who fill)
   (and (fixnum? fill) (unsafe.fx<= -128 fill) (unsafe.fx<= fill 255))
@@ -722,10 +727,13 @@
   ;;   0 <= SRC.START <= SRC.START + DST.LEN <= (bytevector-length SRC.BV)
   ;;
   (define who 'subbytevector-u8/count)
-  (%assert-argument-is-bytevector who src.bv)
-  (%assert-argument-is-bytevector-start-index-8 who src.start src.bv)
-  (%assert-argument-is-bytevector-count-8 who dst.len src.bv src.start)
-  (%unsafe.subbytevector-u8/count src.bv src.start dst.len))
+  (with-arguments-validation (who)
+      ((bytevector	src.bv)
+       (start-index	src.start)
+       (start-index-for	src.start src.bv 1)
+       (count		dst.len)
+       (count-for	dst.len src.bv src.start 1))
+    (%unsafe.subbytevector-u8/count src.bv src.start dst.len)))
 
 (define (%unsafe.subbytevector-u8/count src.bv src.start dst.len)
   (let ((dst.bv ($make-bytevector dst.len)))
@@ -745,14 +753,18 @@
   (case-lambda
    ((src.bv src.start)
     (define who 'subbytevector-s8)
-    (%assert-argument-is-bytevector who src.bv)
-    (subbytevector-s8 src.bv src.start (unsafe.bytevector-length src.bv)))
+    (with-arguments-validation (who)
+	((bytevector src.bv))
+      (subbytevector-s8 src.bv src.start (unsafe.bytevector-length src.bv))))
    ((src.bv src.start src.end)
     (define who 'subbytevector-s8)
-    (%assert-argument-is-bytevector who src.bv)
-    (%assert-argument-is-bytevector-start-index-8 who src.start src.bv)
-    (%assert-argument-is-bytevector-end-index-8   who src.end   src.bv)
-    (%unsafe.subbytevector-s8/count src.bv src.start (unsafe.fx- src.end src.start)))))
+    (with-arguments-validation (who)
+	((bytevector		src.bv)
+	 (start-index		src.start)
+	 (end-index		src.end)
+	 (start-index-for	src.start src.bv 1)
+	 (end-index-for		src.end   src.bv 1))
+      (%unsafe.subbytevector-s8/count src.bv src.start (unsafe.fx- src.end src.start))))))
 
 (define (subbytevector-s8/count src.bv src.start dst.len)
   ;;Defined  by  Vicare.  Build  and  return  a  new bytevector  holding
@@ -762,10 +774,13 @@
   ;;   0 <= SRC.START <= SRC.START + DST.LEN <= (bytevector-length SRC.BV)
   ;;
   (define who 'subbytevector-s8/count)
-  (%assert-argument-is-bytevector who src.bv)
-  (%assert-argument-is-bytevector-start-index-8 who src.start src.bv)
-  (%assert-argument-is-bytevector-count-8 who dst.len src.bv src.start)
-  (%unsafe.subbytevector-s8/count src.bv src.start dst.len))
+  (with-arguments-validation (who)
+      ((bytevector	src.bv)
+       (start-index	src.start)
+       (start-index-for	src.start src.bv 1)
+       (count		dst.len)
+       (count-for	dst.len src.bv src.start 1))
+    (%unsafe.subbytevector-s8/count src.bv src.start dst.len)))
 
 (define (%unsafe.subbytevector-s8/count src.bv src.start dst.len)
   (let ((dst.bv ($make-bytevector dst.len)))
@@ -774,6 +789,65 @@
 	((unsafe.fx= dst.index dst.len)
 	 dst.bv)
       (unsafe.bytevector-set! dst.bv dst.index (unsafe.bytevector-s8-ref src.bv src.index)))))
+
+
+(define (bytevector-append . list-of-bytevectors)
+  ;;Defined by Vicare.  Concatenate  the bytevector arguments and return
+  ;;the result.  If no arguments are given: return the empty bytevector.
+  ;;
+  (define who 'bytevector-append)
+
+  (define-inline (main list-of-bvs)
+    (let ((dst.bv    ($make-bytevector (%total-length list-of-bvs 0)))
+	  (dst.start 0))
+      (%copy-bytevectors list-of-bvs dst.bv dst.start)))
+
+  (define (%total-length list-of-bvs accumulated-length)
+    ;;Validate LIST-OF-BVS as a list of bytevectors and return the total
+    ;;length  of   the  bytevectors;  if  LIST-OF-BVS   is  null  return
+    ;;ACCUMULATED-LENGTH.
+    ;;
+    (if (null? list-of-bvs) ;we know that LIST-OF-BVS is a list or null
+	(with-dangerous-arguments-validation (who)
+	    ((total-length accumulated-length))
+	  accumulated-length)
+      (let ((bv ($car list-of-bvs)))
+	(with-arguments-validation (who)
+	    ((bytevector bv))
+	  (%total-length ($cdr list-of-bvs) (+ accumulated-length ($bytevector-length bv)))))))
+
+  (define (%copy-bytevectors list-of-bvs dst.bv dst.start)
+    ;;Copy  the bytes  from  the first  bytevector  in LIST-OF-BVS  into
+    ;;DST.BV starting at DST.START,  then recurse; stop when LIST-OF-BVS
+    ;;is emtpy and return DST.BV.
+    ;;
+    (if (null? list-of-bvs)
+	dst.bv
+      (let* ((src.bv	($car list-of-bvs))
+	     (src.len	($bytevector-length src.bv))
+	     (src.start	0))
+	(%copy-bytevectors ($cdr list-of-bvs) dst.bv
+			   (%copy-bytes src.bv src.start
+					dst.bv dst.start
+					(unsafe.fx+ dst.start src.len))))))
+
+  (define (%copy-bytes src.bv src.start
+		       dst.bv dst.start
+		       dst.past)
+    ;;Copy the byte at SRC.START  in SRC.BV to the location at DST.START
+    ;;in DST.BV,  then recurse; stop when DST.START  equals DST.PAST and
+    ;;return DST.PAST.
+    ;;
+    (if (unsafe.fx= dst.start dst.past)
+	dst.past
+      (begin
+	($bytevector-set! dst.bv dst.start
+			  ($bytevector-u8-ref src.bv src.start))
+	(%copy-bytes src.bv (unsafe.fxadd1 src.start)
+		     dst.bv (unsafe.fxadd1 dst.start)
+		     dst.past))))
+
+  (main list-of-bytevectors))
 
 
 ;;;; 8-bit setters and getters
@@ -2021,45 +2095,6 @@
 (define (bytevector-s64-set! bv i n endianness)
   ($bytevector-set/64 bv i n (- (expt 2 63)) (expt 2 63)
 		      'bytevector-s64-set! bytevector-sint-set! endianness))
-
-
-(define (bytevector-append . list-of-bytevectors)
-  (define who 'bytevector-append)
-
-  (define-inline (%length list-of-bytevectors)
-    (%%length list-of-bytevectors 0))
-  (define (%%length list-of-bytevectors accumulated-length)
-    ;;Validate LIST-OF-BYTEVECTORS  as a list of  bytevectors and return
-    ;;the  total length  of the  bytevectors; if  LIST-OF-BYTEVECTORS is
-    ;;null return N.
-    ;;
-    (if (null? list-of-bytevectors)
-	accumulated-length
-      (let ((bv ($car list-of-bytevectors)))
-	(unless (bytevector? bv)
-	  (assertion-violation who "expected list of bytevectors as argument" bv))
-	(%%length ($cdr list-of-bytevectors) (+ accumulated-length ($bytevector-length bv))))))
-
-  (define (fill-bytevector dst.bv src.bv dst.index dst.past src.index)
-    (unless ($fx= dst.index dst.past)
-      ($bytevector-set! dst.bv dst.index ($bytevector-u8-ref src.bv src.index))
-      (fill-bytevector dst.bv src.bv ($fxadd1 dst.index) dst.past ($fxadd1 src.index))))
-
-  (define (fill-bytevectors dst.bv list-of-bytevectors dst.start)
-    (if (null? list-of-bytevectors)
-	dst.bv
-      (let ((src.bv ($car list-of-bytevectors)))
-	(let ((src.len ($bytevector-length src.bv)))
-	  (let ((dst.past ($fx+ dst.start src.len)))
-	    (fill-bytevector dst.bv src.bv dst.start dst.past 0)
-	    (fill-bytevectors dst.bv ($cdr list-of-bytevectors) dst.past))))))
-
-  (let ((accumulated-length (%length list-of-bytevectors)))
-    (unless (fixnum? accumulated-length)
-      (%implementation-violation who
-	"appending bytevectors would produce a bytevector who length exceeds the supported maximum"
-	accumulated-length))
-    (fill-bytevectors ($make-bytevector accumulated-length) list-of-bytevectors 0)))
 
 
 

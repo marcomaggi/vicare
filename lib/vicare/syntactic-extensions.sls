@@ -32,7 +32,8 @@
     define-syntax*
     unwind-protect
     define-argument-validation
-    with-arguments-validation)
+    with-arguments-validation
+    with-dangerous-arguments-validation)
   (import (rnrs)
     (for (prefix (vicare installation-configuration)
 		 config.)
@@ -129,6 +130,20 @@
 
 
 (define-syntax with-arguments-validation
+  ;;Perform the validation only if enabled at configure time.
+  ;;
+  (syntax-rules ()
+    ((_ . ?args)
+     (%with-arguments-validation #f . ?args))))
+
+(define-syntax with-dangerous-arguments-validation
+  ;;Dangerous validations are always performed.
+  ;;
+  (syntax-rules ()
+    ((_ . ?args)
+     (%with-arguments-validation #t . ?args))))
+
+(define-syntax %with-arguments-validation
   ;;Transform:
   ;;
   ;;  (with-arguments-validation (who)
@@ -147,15 +162,17 @@
   (lambda (stx)
     (define (main stx)
       (syntax-case stx ()
-	((_ (?who) ((?validator ?arg ...) ...) . ?body)
+	((_ ?always-include (?who) ((?validator ?arg ...) ...) . ?body)
 	 ;;Whether we  include the arguments  checking or not,  we build
 	 ;;the output form validating the input form.
-	 (let* ((body		#'(begin . ?body))
+	 (let* ((include?	(syntax->datum #'?always-include))
+		(body		#'(begin . ?body))
 		(output-form	(%build-output-form #'?who
 						    #'(?validator ...)
 						    #'((?arg ...) ...)
 						    body)))
-	   (if config.arguments-validation output-form body)))
+	   (if (or include? config.arguments-validation)
+	       output-form body)))
 	(_
 	 (%synner "invalid input form" #f))))
 

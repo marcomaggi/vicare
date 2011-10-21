@@ -858,22 +858,16 @@
   #t)
 
 
-(parametrise ((check-test-name	'append))
+(parametrise ((check-test-name	'bytevector-append))
+
+;;; arguments validation
 
   (check
-      (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(bytevector-append 123))
+      (catch #f (bytevector-append 123))
     => '(123))
 
   (check
-      (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(bytevector-append '#vu8() 123))
+      (catch #f (bytevector-append '#vu8() 123))
     => '(123))
 
 ;;; --------------------------------------------------------------------
