@@ -3829,6 +3829,8 @@
 	       (output.bvs	(cdr dev))
 	       (dev-position	(cookie-pos cookie))
 	       (new-dev-position (+ count dev-position)))
+	  ;;DANGER This check must not be removed when compiling without
+	  ;;arguments validation.
 	  (unless (fixnum? new-dev-position)
 	    (%implementation-violation who
 	      "request to write data to port would exceed maximum size of bytevectors"
@@ -4050,6 +4052,8 @@
 	       (output.strs	(cdr dev))
 	       (dev-position	(cookie-pos cookie))
 	       (new-dev-position	(+ count dev-position)))
+	  ;;DANGER This check must not be removed when compiling without
+	  ;;arguments validation.
 	  (unless (fixnum? new-dev-position)
 	    (%implementation-violation who
 	      "request to write data to port would exceed maximum size of strings" new-dev-position))
@@ -4993,9 +4997,11 @@
 		    (all-count-is-available?	(<= count amount-of-available))
 		    (amount-to-read		(if all-count-is-available? count amount-of-available))
 		    (output.len1		(unsafe.fx+ output.len amount-to-read)))
+	       ;;DANGER This  check must  not be removed  when compiling
+	       ;;without arguments validation.
 	       (unless (fixnum? output.len1)
 		 (%implementation-violation who
-		   "request to write data to port would exceed maximum size of bytevectors"
+		   "request to read data from port would exceed maximum size of bytevectors"
 		   output.len1))
 	       (let ((bv (unsafe.make-bytevector amount-to-read)))
 		 (%unsafe.bytevector-copy! port.buffer buffer.offset bv 0 amount-to-read)
@@ -5126,9 +5132,11 @@
 		  (buffer.offset		port.buffer.index)
 		  (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
 		  (output.len		(+ output.len amount-of-available)))
+	     ;;DANGER  This check  must  not be  removed when  compiling
+	     ;;without arguments validation.
 	     (unless (fixnum? output.len)
 	       (%implementation-violation who
-		 "request to write data to port would exceed maximum size of bytevectors"
+		 "request to read data from port would exceed maximum size of bytevectors"
 		 output.len))
 	     (let ((dst.bv (unsafe.make-bytevector amount-of-available)))
 	       (%unsafe.bytevector-copy! port.buffer buffer.offset dst.bv 0 amount-of-available)
