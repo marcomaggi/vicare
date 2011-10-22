@@ -1136,6 +1136,26 @@
        (* bytes-per-word ?num))))
 
   (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-u16-set! bv 0 #x0AF0 (endianness little))
+	bv)
+    => #vu8(#xF0 #x0A))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-u16-set! bv 0 #x0AF0 (endianness big))
+	bv)
+    => #vu8(#x0A #xF0))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-u16-set! bv 0 #x0AF0 (native-endianness))
+	bv)
+    => (case (native-endianness)
+	 ((big)		#vu8(#x0A #xF0))
+	 ((little)	#vu8(#xF0 #x0A))))
+
+  (check
       (let ((bv (make-bytevector (mult 3) 0)))
 	(bytevector-u16-set! bv (mult 0) 10 (endianness little))
 	(bytevector-u16-set! bv (mult 1) 20 (endianness little))
