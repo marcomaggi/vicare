@@ -7092,6 +7092,16 @@ pointer of type @code{mp_limb_t} accepted by the @code{mpn_} functions
 of @gmp{}; @dfn{limb}, in @gmp{} jargon, is a machine word holding a
 portion of multi--precision number.
 
+@value{PRJNAME} only uses a bignum to represent an exact integer when
+the value does not fit in a fixnum; it follows that the following ranges
+are enforced:
+
+@example
+negative bignums < (least-fixnum) <= all fixnums
+
+all fixnums <= (greatest-fixnum) < positive bignums
+@end example
+
 The arguments @var{bn} to these operations must be bignums.  The
 following bindings are exported by the @library{ikarus system $bignums}
 library.
