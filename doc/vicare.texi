@@ -4371,6 +4371,13 @@ to the port.
 @end defun
 
 
+@defun get-output-string @var{port}
+Return the string accumulated in the @var{port} opened by
+@func{open-string-output-port}.  This function can be called also when
+the port has been closed.
+@end defun
+
+
 @defun get-char-and-track-textual-position @var{port}
 Like @func{get-char} but track the textual position.  Recognise only
 linefeed characters as line-ending.
@@ -7105,6 +7112,45 @@ Return a fixnum representing the byte at index @var{fx} in the data of
 Return a fixnum representing the number of machine words in the data
 portion of a bignum memory block.
 @end deffn
+
+
+If we need to perform comparisons among bignums, we can use the
+following macros:
+
+@example
+(import (ikarus)
+  (only (vicare syntactic-extensions)
+        define-inline)
+  (prefix (rename (ikarus system $fx)
+                  ($fx=       fx=)
+                  ($fx<       fx<)
+                  ($fx>       fx>)
+                  ($fx>=      fx>=)
+                  ($fx<=      fx<=))
+          unsafe.))
+
+(define-inline (%unsafe.bnbncmp X Y fxcmp)
+  (fxcmp (foreign-call "ikrt_bnbncomp" X Y) 0))
+
+(define-inline (%unsafe.bnbn= X Y)
+  (%unsafe.bnbncmp X Y unsafe.fx=))
+
+(define-inline (%unsafe.bnbn< X Y)
+  (%unsafe.bnbncmp x y unsafe.fx<))
+
+(define-inline (%unsafe.bnbn> X Y)
+  (%unsafe.bnbncmp x y unsafe.fx>))
+
+(define-inline (%unsafe.bnbn<= X Y)
+  (%unsafe.bnbncmp x y unsafe.fx<=))
+
+(define-inline (%unsafe.bnbn>= X Y)
+  (%unsafe.bnbncmp x y unsafe.fx>=))
+@end example
+
+@noindent
+in which @func{define-inline} is a macro which will cause the
+comparisong macros to be expanded inline.
 
 @c page
 @node syslib flonums
