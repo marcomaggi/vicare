@@ -1127,6 +1127,160 @@
   #t)
 
 
+(parametrise ((check-test-name	'bytevector-u16-set-bang))
+
+  (define bytes-per-word	2)
+  (define-syntax mult
+    (syntax-rules ()
+      ((_ ?num)
+       (* bytes-per-word ?num))))
+
+  (check
+      (let ((bv (make-bytevector (mult 3) 0)))
+	(bytevector-u16-set! bv (mult 0) 10 (endianness little))
+	(bytevector-u16-set! bv (mult 1) 20 (endianness little))
+	(bytevector-u16-set! bv (mult 2) 30 (endianness little))
+	bv)
+    => #vu16l(10 20 30))
+
+  (check
+      (let ((bv (make-bytevector (mult 3) 0)))
+	(bytevector-u16-set! bv (mult 0) 10 (endianness big))
+	(bytevector-u16-set! bv (mult 1) 20 (endianness big))
+	(bytevector-u16-set! bv (mult 2) 30 (endianness big))
+	bv)
+    => #vu16b(10 20 30))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-u16-set! #\a 1 2 (endianness little)))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-u16-set! #vu16l(1 2 3) #\a 2 (endianness little)))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-u16-set! #vu16l(1 2 3) -1 2 (endianness little)))
+    => '(-1))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u16-set! #vu16l(1 2 3) (mult 4) 2 (endianness little)))
+    => (list (mult 4)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u16-set! #vu16l(1 2 3) (mult 3) 2 (endianness little)))
+    => (list (mult 3)))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: value
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-u16-set! #vu16l(1 2 3) 1 #\a (endianness little)))
+    => '(#\a))
+
+  (check	;too low
+      (catch #f
+	(bytevector-u16-set! #vu16l(1 2 3) 1 -1 (endianness little)))
+    => '(-1))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u16-set! #vu16l(1 2 3) 1 (+ 1 #xFFFF) (endianness little)))
+    => (list (+ 1 #xFFFF)))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: endianness
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-u16-set! #vu16l(1 2 3) 1 0 'dummy))
+    => '(dummy))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-u16-ref))
+
+  (define bytes-per-word	2)
+  (define-syntax mult
+    (syntax-rules ()
+      ((_ ?num)
+       (* bytes-per-word ?num))))
+
+  (check
+      (bytevector-u16-ref #vu8(#xF0 #x0A) 0 (endianness little))
+    => #x0AF0)
+
+  (check
+      (bytevector-u16-ref #vu8(#xF0 #x0A) 0 (endianness big))
+    => #xF00A)
+
+  (check
+      (bytevector-u16-ref #vu8(#xF0 #x0A) 0 (native-endianness))
+    => (case (native-endianness)
+	 ((big)		#xF00A)
+	 ((little)	#x0AF0)))
+
+  (check
+      (let ((bv #vu16l(1 2 3)))
+	(list (bytevector-u16-ref bv (mult 0) (endianness little))
+	      (bytevector-u16-ref bv (mult 1) (endianness little))
+	      (bytevector-u16-ref bv (mult 2) (endianness little))))
+    => '(1 2 3))
+
+  (check
+      (let ((bv #vu16b(1 2 3)))
+	(list (bytevector-u16-ref bv (mult 0) (endianness big))
+	      (bytevector-u16-ref bv (mult 1) (endianness big))
+	      (bytevector-u16-ref bv (mult 2) (endianness big))))
+    => '(1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-u16-ref #\a 1 (endianness little)))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-u16-ref #vu16l(1 2 3) #\a (endianness little)))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-u16-ref #vu16l(1 2 3) -1 (endianness little)))
+    => '(-1))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u16-ref #vu16l(1 2 3) (mult 4) (endianness little)))
+    => (list (mult 4)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u16-ref #vu16l(1 2 3) (mult 3) (endianness little)))
+    => (list (mult 3)))
+
+  #t)
+
+
 (parametrise ((check-test-name	'list-to-bv))
 
   (let-syntax ((doit (syntax-rules ()
