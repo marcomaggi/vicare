@@ -155,7 +155,9 @@
 		    ($fx<=	fx<=)
 		    ($fx=	fx=))
 	    unsafe.)
-    (ikarus system $bignums)
+    (prefix (rename (ikarus system $bignums)
+		    ($bignum-positive?		bignum-positive?))
+	    unsafe.)
     (ikarus system $pairs)
     (ikarus system $bytevectors)
     (prefix (rename (ikarus system $bytevectors)
@@ -181,6 +183,15 @@
 
 
 ;;;; helpers
+
+(define-syntax %unsafe.fxior
+  (syntax-rules ()
+    ((_ ?op1)
+     ?op1)
+    ((_ ?op1 ?op2)
+     (unsafe.fxlogor ?op1 ?op2))
+    ((_ ?op1 ?op2 . ?ops)
+     (unsafe.fxlogor ?op1 (%unsafe.fxior ?op2 . ?ops)))))
 
 (define-syntax big	(syntax-rules ()))
 (define-syntax little	(syntax-rules ()))
@@ -497,22 +508,78 @@
 		     "count argument out of range for bytevector of 64-bit words and given start index"))
 
 
+;;;; bignums comparison
+
+(define-inline (%unsafe.bnbncmp X Y fxcmp)
+  (fxcmp (foreign-call "ikrt_bnbncomp" X Y) 0))
+
+(define-inline (%unsafe.bnbn= X Y)
+  (%unsafe.bnbncmp X Y unsafe.fx=))
+
+(define-inline (%unsafe.bnbn< X Y)
+  (%unsafe.bnbncmp X Y unsafe.fx<))
+
+(define-inline (%unsafe.bnbn> X Y)
+  (%unsafe.bnbncmp X Y unsafe.fx>))
+
+(define-inline (%unsafe.bnbn<= X Y)
+  (%unsafe.bnbncmp X Y unsafe.fx<=))
+
+(define-inline (%unsafe.bnbn>= X Y)
+  (%unsafe.bnbncmp X Y unsafe.fx>=))
+
+
 ;;;; words validation
 
 (define-inline (%word? N)
-  (and (integer? N) (exact? N)))
+  (or (fixnum? N) (bignum? N)))
 
 (define-inline (%word-u8? N)
   (and (fixnum? N) (unsafe.fx<= U8MIN N) (unsafe.fx<= N U8MAX)))
 (define-inline (%word-s8? N)
   (and (fixnum? N) (unsafe.fx<= S8MIN N) (unsafe.fx<= N S8MAX)))
 
-(define-inline (%word-u16? N)	(and (%word? N) (<= U16MIN N) (<= N U16MAX)))
-(define-inline (%word-s16? N)	(and (%word? N) (<= S16MIN N) (<= N S16MAX)))
-(define-inline (%word-u32? N)	(and (%word? N) (<= U32MIN N) (<= N U32MAX)))
-(define-inline (%word-s32? N)	(and (%word? N) (<= S32MIN N) (<= N S32MAX)))
-(define-inline (%word-u64? N)	(and (%word? N) (<= U64MIN N) (<= N U64MAX)))
-(define-inline (%word-s64? N)	(and (%word? N) (<= S64MIN N) (<= N S64MAX)))
+;;; --------------------------------------------------------------------
+
+(define-inline (%word-u16? N)
+  (and (fixnum? N)
+       (unsafe.fx>= N 0)
+       (unsafe.fx<= N U16MAX)))
+
+(define-inline (%word-s16? N)
+  (and (fixnum? N)
+       (unsafe.fx>= N S16MIN)
+       (unsafe.fx<= N S16MAX)))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%word-u32? N)
+  (if (fixnum? N)
+      (unsafe.fx<= 0 N)
+    (and (bignum? N)
+	 (unsafe.bignum-positive? N)
+	 (%unsafe.bnbn<= N U32MAX))))
+
+(define-inline (%word-s32? N)
+  (or (fixnum? N)
+      (and (bignum? N)
+	   (%unsafe.bnbn>= N S32MIN)
+	   (%unsafe.bnbn<= N S32MAX))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%word-u64? N)
+  (if (fixnum? N)
+      (unsafe.fx<= 0 N)
+    (and (bignum? N)
+	 (unsafe.bignum-positive? N)
+	 (%unsafe.bnbn<= N U64MAX))))
+
+(define-inline (%word-s64? N)
+  (or (fixnum? N)
+      (and (bignum? N)
+	   (%unsafe.bnbn>= N S64MIN)
+	   (%unsafe.bnbn<= N S64MAX))))
 
 ;;; --------------------------------------------------------------------
 
@@ -529,23 +596,23 @@
 
 (define U8MAX		255)
 (define U8MIN		0)
-(define S8MAX		127)
+(define S8MAX		+127)
 (define S8MIN		-128)
 
-(define U16MAX		(- (expt 2 16) 1))
+(define U16MAX		65535)		#;(- (expt 2 16) 1)
 (define U16MIN		0)
-(define S16MAX		(- (expt 2 15) 1))
-(define S16MIN		(- (expt 2 15)))
+(define S16MAX		+32767)		#;(- (expt 2 15) 1)
+(define S16MIN		-32768)		#;(- (expt 2 15))
 
-(define U32MAX		(- (expt 2 32) 1))
+(define U32MAX		4294967295)	#;(- (expt 2 32) 1)
 (define U32MIN		0)
-(define S32MAX		(- (expt 2 31) 1))
-(define S32MIN		(- (expt 2 31)))
+(define S32MAX		+2147483647)	#;(- (expt 2 31) 1)
+(define S32MIN		-2147483648)	#;(- (expt 2 31))
 
-(define U64MAX		(- (expt 2 64) 1))
+(define U64MAX		18446744073709551615)	#;(- (expt 2 64) 1)
 (define U64MIN		0)
-(define S64MAX		(- (expt 2 63) 1))
-(define S64MIN		(- (expt 2 63)))
+(define S64MAX		+9223372036854775807)	#;(- (expt 2 63) 1)
+(define S64MIN		-9223372036854775808)	#;(- (expt 2 63))
 
 
 ;;;; endianness handling
@@ -667,6 +734,117 @@
      (identifier-syntax %unsafe.bytevector-s16b-set!))
     ((little)
      (identifier-syntax %unsafe.bytevector-s16l-set!))))
+
+
+;;;; unsafe 32-bit setters and getters
+;;
+;;                           lowest memory ------------> highest memory
+;; endianness |    word    | 1st byte | 2nd byte | 3rd byte | 4th byte |
+;; -----------+------------+----------+----------+----------+-----------
+;;   little   | #xAABBCCDD |   DD     |    CC    |    BB    |    AA
+;;    big     | #xAABBCCDD |   AA     |    BB    |    CC    |    DD
+;;
+;;NOTE  Remember that  UNSAFE.BYTEVECTOR-SET! takes  care of  storing in
+;;memory only the least significant byte of its value argument.
+;;
+
+(define-inline (%unsafe.bytevector-u32b-ref bv index)
+  (+ (sll (unsafe.bytevector-u8-ref bv index) 24)
+     (%unsafe.fxior
+      (unsafe.fxsll (unsafe.bytevector-u8-ref bv (unsafe.fxadd1 index)) 16)
+      (unsafe.fxsll (unsafe.bytevector-u8-ref bv (unsafe.fx+ index 2))  8)
+      (unsafe.bytevector-u8-ref bv (unsafe.fx+ index 3)))))
+
+(define-inline (%unsafe.bytevector-u32b-set! bv index word)
+  (let ((b (sra word 16)))
+    (unsafe.bytevector-set! bv index (unsafe.fxsra b 8))
+    (unsafe.bytevector-set! bv (unsafe.fxadd1 index) b))
+  (let ((b (bitwise-and word #xFFFF)))
+    (unsafe.bytevector-set! bv (unsafe.fx+ index 2) (unsafe.fxsra b 8))
+    (unsafe.bytevector-set! bv (unsafe.fx+ index 3) b)))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%unsafe.bytevector-u32l-ref bv index)
+  (+ (sll (unsafe.bytevector-u8-ref bv (unsafe.fx+ index 3)) 24)
+     (%unsafe.fxior
+      (unsafe.fxsll (unsafe.bytevector-u8-ref bv (unsafe.fx+ index 2)) 16)
+      (unsafe.fxsll (unsafe.bytevector-u8-ref bv (unsafe.fxadd1 index)) 8)
+      (unsafe.bytevector-u8-ref bv index))))
+
+(define-inline (%unsafe.bytevector-u32l-set! bv index word)
+  (let ((b (sra word 16)))
+    (unsafe.bytevector-set! bv (unsafe.fx+ index 3) (unsafe.fxsra b 8))
+    (unsafe.bytevector-set! bv (unsafe.fx+ index 2) b))
+  (let ((b (bitwise-and word #xFFFF)))
+    (unsafe.bytevector-set! bv (unsafe.fxadd1 index) (unsafe.fxsra b 8))
+    (unsafe.bytevector-set! bv index b)))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%unsafe.bytevector-s32b-ref bv index)
+  (+ (sll (unsafe.bytevector-s8-ref bv index) 24)
+     (%unsafe.fxior
+      (unsafe.fxsll (unsafe.bytevector-u8-ref bv (unsafe.fxadd1 index))   16)
+      (unsafe.fxsll (unsafe.bytevector-u8-ref bv (unsafe.fx+    index 2))  8)
+      (unsafe.bytevector-u8-ref bv (unsafe.fx+ index 3)))))
+
+(define-inline (%unsafe.bytevector-s32b-set! bv index word)
+  (let ((b (sra word 16)))
+    (unsafe.bytevector-set! bv index (unsafe.fxsra b 8))
+    (unsafe.bytevector-set! bv (unsafe.fxadd1 index) b))
+  (let ((b (bitwise-and word #xFFFF)))
+    (unsafe.bytevector-set! bv (unsafe.fx+ index 2) (unsafe.fxsra b 8))
+    (unsafe.bytevector-set! bv (unsafe.fx+ index 3) b)))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%unsafe.bytevector-s32l-ref bv index)
+  (+ (sll (unsafe.bytevector-s8-ref bv (unsafe.fx+ index 3)) 24)
+     (%unsafe.fxior
+      (unsafe.fxsll (unsafe.bytevector-u8-ref bv (unsafe.fx+    index 2)) 16)
+      (unsafe.fxsll (unsafe.bytevector-u8-ref bv (unsafe.fxadd1 index))    8)
+      (unsafe.bytevector-u8-ref bv index))))
+
+(define-inline (%unsafe.bytevector-s32l-set! bv index word)
+  (let ((b (sra word 16)))
+    (unsafe.bytevector-set! bv (unsafe.fx+ index 3) (unsafe.fxsra b 8))
+    (unsafe.bytevector-set! bv (unsafe.fx+ index 2) b))
+  (let ((b (bitwise-and word #xFFFF)))
+    (unsafe.bytevector-set! bv (unsafe.fxadd1 index) (unsafe.fxsra b 8))
+    (unsafe.bytevector-set! bv index b)))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax %unsafe.bytevector-u32n-ref
+  (case config.platform-endianness
+    ((big)
+     (identifier-syntax %unsafe.bytevector-u32b-ref))
+    ((little)
+     (identifier-syntax %unsafe.bytevector-u32l-ref))))
+
+(define-syntax %unsafe.bytevector-u32n-set!
+  (case config.platform-endianness
+    ((big)
+     (identifier-syntax %unsafe.bytevector-u32b-set!))
+    ((little)
+     (identifier-syntax %unsafe.bytevector-u32l-set!))))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax %unsafe.bytevector-s32n-ref
+  (case config.platform-endianness
+    ((big)
+     (identifier-syntax %unsafe.bytevector-s32b-ref))
+    ((little)
+     (identifier-syntax %unsafe.bytevector-s32l-ref))))
+
+(define-syntax %unsafe.bytevector-s32n-set!
+  (case config.platform-endianness
+    ((big)
+     (identifier-syntax %unsafe.bytevector-s32b-set!))
+    ((little)
+     (identifier-syntax %unsafe.bytevector-s32l-set!))))
 
 
 ;;;; safe setters and getters
@@ -1229,197 +1407,95 @@
 
 ;;;; 32-bit setters and getters
 
-(define bytevector-u32-ref
-  (lambda (x i end)
-    (if (bytevector? x)
-	(if (and (fixnum? i)
-		 ($fx<= 0 i)
-		 ($fx< i ($fx- ($bytevector-length x) 3)))
-	    (case end
-	      ((big)
-	       (+ (sll ($bytevector-u8-ref x i) 24)
-		  ($fxlogor
-		   ($fxsll ($bytevector-u8-ref x ($fx+ i 1)) 16)
-		   ($fxlogor
-		    ($fxsll ($bytevector-u8-ref x ($fx+ i 2)) 8)
-		    ($bytevector-u8-ref x ($fx+ i 3))))))
-	      ((little)
-	       (+ (sll ($bytevector-u8-ref x ($fx+ i 3)) 24)
-		  ($fxlogor
-		   ($fxsll ($bytevector-u8-ref x ($fx+ i 2)) 16)
-		   ($fxlogor
-		    ($fxsll ($bytevector-u8-ref x ($fx+ i 1)) 8)
-		    ($bytevector-u8-ref x i)))))
-	      (else (die 'bytevector-u32-ref "invalid endianness" end)))
-	  (die 'bytevector-u32-ref "invalid index" i))
-      (die 'bytevector-u32-ref "not a bytevector" x))))
+(define (bytevector-u32-ref bv index endianness)
+  (define who 'bytevector-u32-ref)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 4))
+    (case-endianness (who endianness)
+      ((big)
+       (%unsafe.bytevector-u32b-ref bv index))
+      ((little)
+       (%unsafe.bytevector-u32l-ref bv index)))))
 
-(define bytevector-u32-native-ref
-  (lambda (x i)
-    (if (bytevector? x)
-	(if (and (fixnum? i)
-		 ($fx<= 0 i)
-		 ($fx= 0 ($fxlogand i 3))
-		 ($fx< i ($fx- ($bytevector-length x) 3)))
-	    (+ (sll ($bytevector-u8-ref x ($fx+ i 3)) 24)
-	       ($fxlogor
-		($fxsll ($bytevector-u8-ref x ($fx+ i 2)) 16)
-		($fxlogor
-		 ($fxsll ($bytevector-u8-ref x ($fx+ i 1)) 8)
-		 ($bytevector-u8-ref x i))))
-	  (die 'bytevector-u32-native-ref "invalid index" i))
-      (die 'bytevector-u32-native-ref "not a bytevector" x))))
+(define (bytevector-u32-set! bv index word endianness)
+  (define who 'bytevector-u32-set!)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 4)
+       (word-u32	word))
+    (case-endianness (who endianness)
+      ((big)
+       (%unsafe.bytevector-u32b-set! bv index word))
+      ((little)
+       (%unsafe.bytevector-u32l-set! bv index word)))))
 
-(define bytevector-s32-ref
-  (lambda (x i end)
-    (if (bytevector? x)
-	(if (and (fixnum? i)
-		 ($fx<= 0 i)
-		 ($fx< i ($fx- ($bytevector-length x) 3)))
-	    (case end
-	      ((big)
-	       (+ (sll ($bytevector-s8-ref x i) 24)
-		  ($fxlogor
-		   ($fxsll ($bytevector-u8-ref x ($fx+ i 1)) 16)
-		   ($fxlogor
-		    ($fxsll ($bytevector-u8-ref x ($fx+ i 2)) 8)
-		    ($bytevector-u8-ref x ($fx+ i 3))))))
-	      ((little)
-	       (+ (sll ($bytevector-s8-ref x ($fx+ i 3)) 24)
-		  ($fxlogor
-		   ($fxsll ($bytevector-u8-ref x ($fx+ i 2)) 16)
-		   ($fxlogor
-		    ($fxsll ($bytevector-u8-ref x ($fx+ i 1)) 8)
-		    ($bytevector-u8-ref x i)))))
-	      (else (die 'bytevector-s32-ref "invalid endianness" end)))
-	  (die 'bytevector-s32-ref "invalid index" i))
-      (die 'bytevector-s32-ref "not a bytevector" x))))
+;;; --------------------------------------------------------------------
 
-(define bytevector-s32-native-ref
-  (lambda (x i)
-    (if (bytevector? x)
-	(if (and (fixnum? i)
-		 ($fx<= 0 i)
-		 ($fx= 0 ($fxlogand i 3))
-		 ($fx< i ($fx- ($bytevector-length x) 3)))
-	    (+ (sll ($bytevector-s8-ref x ($fx+ i 3)) 24)
-	       ($fxlogor
-		($fxsll ($bytevector-u8-ref x ($fx+ i 2)) 16)
-		($fxlogor
-		 ($fxsll ($bytevector-u8-ref x ($fx+ i 1)) 8)
-		 ($bytevector-u8-ref x i))))
-	  (die 'bytevector-s32-native-ref "invalid index" i))
-      (die 'bytevector-s32-native-ref "not a bytevector" x))))
+(define (bytevector-s32-ref bv index endianness)
+  (define who 'bytevector-s32-ref)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 4))
+    (case-endianness (who endianness)
+      ((big)
+       (%unsafe.bytevector-s32b-ref bv index))
+      ((little)
+       (%unsafe.bytevector-s32l-ref bv index)))))
 
+(define (bytevector-s32-set! bv index word endianness)
+  (define who 'bytevector-s32-set!)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 4)
+       (word-s32	word))
+    (case-endianness (who endianness)
+      ((big)
+       (%unsafe.bytevector-s32b-set! bv index word))
+      ((little)
+       (%unsafe.bytevector-s32l-set! bv index word)))))
 
-(define bytevector-u32-set!
-  (lambda (x i n end)
-    (if (bytevector? x)
-	(if (if (fixnum? n)
-		($fx>= n 0)
-	      (if (bignum? n)
-		  (<= 0 n #xFFFFFFFF)
-		#f))
-	    (if (and (fixnum? i)
-		     ($fx<= 0 i)
-		     ($fx< i ($fx- ($bytevector-length x) 3)))
-		(case end
-		  ((big)
-		   (let ((b (sra n 16)))
-		     ($bytevector-set! x i ($fxsra b 8))
-		     ($bytevector-set! x ($fx+ i 1) b))
-		   (let ((b (bitwise-and n #xFFFF)))
-		     ($bytevector-set! x ($fx+ i 2) ($fxsra b 8))
-		     ($bytevector-set! x ($fx+ i 3) b)))
-		  ((little)
-		   (let ((b (sra n 16)))
-		     ($bytevector-set! x ($fx+ i 3) ($fxsra b 8))
-		     ($bytevector-set! x ($fx+ i 2) b))
-		   (let ((b (bitwise-and n #xFFFF)))
-		     ($bytevector-set! x ($fx+ i 1) ($fxsra b 8))
-		     ($bytevector-set! x i b)))
-		  (else (die 'bytevector-u32-ref "invalid endianness" end)))
-	      (die 'bytevector-u32-set! "invalid index" i))
-	  (die 'bytevector-u32-set! "invalid value" n))
-      (die 'bytevector-u32-set! "not a bytevector" x))))
+;;; --------------------------------------------------------------------
 
-(define bytevector-u32-native-set!
-  (lambda (x i n)
-    (if (bytevector? x)
-	(if (if (fixnum? n)
-		($fx>= n 0)
-	      (if (bignum? n)
-		  (<= 0 n #xFFFFFFFF)
-		#f))
-	    (if (and (fixnum? i)
-		     ($fx<= 0 i)
-		     ($fx= 0 ($fxlogand i 3))
-		     ($fx< i ($fx- ($bytevector-length x) 3)))
-		(begin
-		  (let ((b (sra n 16)))
-		    ($bytevector-set! x ($fx+ i 3) ($fxsra b 8))
-		    ($bytevector-set! x ($fx+ i 2) b))
-		  (let ((b (bitwise-and n #xFFFF)))
-		    ($bytevector-set! x ($fx+ i 1) ($fxsra b 8))
-		    ($bytevector-set! x i b)))
-	      (die 'bytevector-u32-native-set! "invalid index" i))
-	  (die 'bytevector-u32-native-set! "invalid value" n))
-      (die 'bytevector-u32-native-set! "not a bytevector" x))))
+(define (bytevector-u32-native-ref bv index)
+  (define who 'bytevector-u32-native-ref)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 4))
+    (%unsafe.bytevector-u32n-ref bv index)))
 
+(define (bytevector-u32-native-set! bv index word)
+  (define who 'bytevector-u32-native-set!)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 4)
+       (word-u32	word))
+    (%unsafe.bytevector-u32n-set! bv index word)))
 
-(define bytevector-s32-native-set!
-  (lambda (x i n)
-    (if (bytevector? x)
-	(if (if (fixnum? n)
-		#t
-	      (if (bignum? n)
-		  (<= #x-80000000 n #x7FFFFFFF)
-		#f))
-	    (if (and (fixnum? i)
-		     ($fx<= 0 i)
-		     ($fx= 0 ($fxlogand i 3))
-		     ($fx< i ($fx- ($bytevector-length x) 3)))
-		(begin
-		  (let ((b (sra n 16)))
-		    ($bytevector-set! x ($fx+ i 3) ($fxsra b 8))
-		    ($bytevector-set! x ($fx+ i 2) b))
-		  (let ((b (bitwise-and n #xFFFF)))
-		    ($bytevector-set! x ($fx+ i 1) ($fxsra b 8))
-		    ($bytevector-set! x i b)))
-	      (die 'bytevector-s32-native-set! "invalid index" i))
-	  (die 'bytevector-s32-native-set! "invalid value" n))
-      (die 'bytevector-s32-native-set! "not a bytevector" x))))
+;;; --------------------------------------------------------------------
 
-(define bytevector-s32-set!
-  (lambda (x i n end)
-    (if (bytevector? x)
-	(if (if (fixnum? n)
-		#t
-	      (if (bignum? n)
-		  (<= #x-80000000 n #x7FFFFFFF)
-		#f))
-	    (if (and (fixnum? i)
-		     ($fx<= 0 i)
-		     ($fx< i ($fx- ($bytevector-length x) 3)))
-		(case end
-		  ((big)
-		   (let ((b (sra n 16)))
-		     ($bytevector-set! x i ($fxsra b 8))
-		     ($bytevector-set! x ($fx+ i 1) b))
-		   (let ((b (bitwise-and n #xFFFF)))
-		     ($bytevector-set! x ($fx+ i 2) ($fxsra b 8))
-		     ($bytevector-set! x ($fx+ i 3) b)))
-		  ((little)
-		   (let ((b (sra n 16)))
-		     ($bytevector-set! x ($fx+ i 3) ($fxsra b 8))
-		     ($bytevector-set! x ($fx+ i 2) b))
-		   (let ((b (bitwise-and n #xFFFF)))
-		     ($bytevector-set! x ($fx+ i 1) ($fxsra b 8))
-		     ($bytevector-set! x i b)))
-		  (else (die 'bytevector-s32-ref "invalid endianness" end)))
-	      (die 'bytevector-s32-set! "invalid index" i))
-	  (die 'bytevector-s32-set! "invalid value" n))
-      (die 'bytevector-s32-set! "not a bytevector" x))))
+(define (bytevector-s32-native-ref bv index)
+  (define who 'bytevector-s32-native-ref)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 4))
+    (%unsafe.bytevector-s32n-ref bv index)))
+
+(define (bytevector-s32-native-set! bv index word)
+  (define who 'bytevector-s32-native-set!)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 4)
+       (word-s32	word))
+    (%unsafe.bytevector-s32n-set! bv index word)))
 
 
 ;;;; bytevector to list conversion
