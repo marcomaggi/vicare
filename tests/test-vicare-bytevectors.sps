@@ -917,19 +917,21 @@
   #t)
 
 
-(parametrise ((check-test-name	'bytevector-u8))
+(parametrise ((check-test-name	'bytevector-u8-set-bang))
 
   (check
       (let ((bv (make-bytevector 3 0)))
-	(bytevector-u8-set! bv 1 2)
-	(bytevector-u8-ref  bv 1))
-    => 2)
+	(bytevector-u8-set! bv 0 10)
+	(bytevector-u8-set! bv 1 20)
+	(bytevector-u8-set! bv 2 30)
+	bv)
+    => #vu8(10 20 30))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
   (check
-      (catch #t
+      (catch #f
 	(bytevector-u8-set! #\a 1 2))
     => '(#\a))
 
@@ -937,22 +939,22 @@
 ;;; arguments validation: index
 
   (check	;not a fixnum
-      (catch #t
+      (catch #f
 	(bytevector-u8-set! #vu8(1 2 3) #\a 2))
     => '(#\a))
 
   (check	;negative
-      (catch #t
+      (catch #f
 	(bytevector-u8-set! #vu8(1 2 3) -1 2))
     => '(-1))
 
   (check	;too high
-      (catch #t
+      (catch #f
 	(bytevector-u8-set! #vu8(1 2 3) 4 2))
     => '(4))
 
   (check	;too high
-      (catch #t
+      (catch #f
 	(bytevector-u8-set! #vu8(1 2 3) 3 2))
     => '(3))
 
@@ -960,19 +962,167 @@
 ;;; arguments validation: value
 
   (check	;not a fixnum
-      (catch #t
+      (catch #f
 	(bytevector-u8-set! #vu8(1 2 3) 1 #\a))
     => '(#\a))
 
   (check	;too low
-      (catch #t
+      (catch #f
 	(bytevector-u8-set! #vu8(1 2 3) 1 -1))
     => '(-1))
 
   (check	;too high
-      (catch #t
+      (catch #f
 	(bytevector-u8-set! #vu8(1 2 3) 1 256))
     => '(256))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-u8-ref))
+
+  (check
+      (let ((bv #vu8(1 2 3)))
+	(list (bytevector-u8-ref bv 0)
+	      (bytevector-u8-ref bv 1)
+	      (bytevector-u8-ref bv 2)))
+    => '(1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-u8-ref #\a 1))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-u8-ref #vu8(1 2 3) #\a))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-u8-ref #vu8(1 2 3) -1))
+    => '(-1))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u8-ref #vu8(1 2 3) 4))
+    => '(4))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u8-ref #vu8(1 2 3) 3))
+    => '(3))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-s8-set-bang))
+
+  (check
+      (let ((bv (make-bytevector 3 0)))
+	(bytevector-s8-set! bv 0 10)
+	(bytevector-s8-set! bv 1 20)
+	(bytevector-s8-set! bv 2 30)
+	bv)
+    => #vs8(10 20 30))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-s8-set! #\a 1 2))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s8-set! #vs8(1 2 3) #\a 2))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-s8-set! #vs8(1 2 3) -1 2))
+    => '(-1))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s8-set! #vs8(1 2 3) 4 2))
+    => '(4))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s8-set! #vs8(1 2 3) 3 2))
+    => '(3))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: value
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s8-set! #vs8(1 2 3) 1 #\a))
+    => '(#\a))
+
+  (check	;too low
+      (catch #f
+	(bytevector-s8-set! #vs8(1 2 3) 1 -129))
+    => '(-129))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s8-set! #vs8(1 2 3) 1 128))
+    => '(128))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-s8-ref))
+
+  (check
+      (let ((bv #vs8(1 2 3)))
+	(list (bytevector-s8-ref bv 0)
+	      (bytevector-s8-ref bv 1)
+	      (bytevector-s8-ref bv 2)))
+    => '(1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-s8-ref #\a 1))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s8-ref #vs8(1 2 3) #\a))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-s8-ref #vs8(1 2 3) -1))
+    => '(-1))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s8-ref #vs8(1 2 3) 4))
+    => '(4))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s8-ref #vs8(1 2 3) 3))
+    => '(3))
 
   #t)
 
