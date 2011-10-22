@@ -7136,16 +7136,16 @@ following macros:
   (%unsafe.bnbncmp X Y unsafe.fx=))
 
 (define-inline (%unsafe.bnbn< X Y)
-  (%unsafe.bnbncmp x y unsafe.fx<))
+  (%unsafe.bnbncmp X Y unsafe.fx<))
 
 (define-inline (%unsafe.bnbn> X Y)
-  (%unsafe.bnbncmp x y unsafe.fx>))
+  (%unsafe.bnbncmp X Y unsafe.fx>))
 
 (define-inline (%unsafe.bnbn<= X Y)
-  (%unsafe.bnbncmp x y unsafe.fx<=))
+  (%unsafe.bnbncmp X Y unsafe.fx<=))
 
 (define-inline (%unsafe.bnbn>= X Y)
-  (%unsafe.bnbncmp x y unsafe.fx>=))
+  (%unsafe.bnbncmp X Y unsafe.fx>=))
 @end example
 
 @noindent
