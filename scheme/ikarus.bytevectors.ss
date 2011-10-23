@@ -722,7 +722,7 @@
   (let next-byte ((bv     bv)
 		  (index  index)
 		  (end    (unsafe.fx+ index 7))
-		  (word      0))
+		  (word   0))
     (let ((word (+ word (unsafe.bytevector-u8-ref bv index))))
       (if (unsafe.fx= index end)
 	  word
@@ -734,6 +734,29 @@
   (let next-byte ((bv     bv)
 		  (index  (unsafe.fx+ 7 end))
 		  (word   0))
+    (let ((word (+ word (unsafe.bytevector-u8-ref bv index))))
+      (if (unsafe.fx= index end)
+	  word
+	(next-byte bv (unsafe.fxsub1 index) (sll word 8))))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%unsafe.bytevector-s64b-ref bv index)
+  (let next-byte ((bv     bv)
+		  (index  (unsafe.fxadd1 index))
+		  (end    (unsafe.fx+ index 7))
+		  (word   (sll (unsafe.bytevector-s8-ref bv index) 8)))
+    (let ((word (+ word (unsafe.bytevector-u8-ref bv index))))
+      (if (unsafe.fx= index end)
+	  word
+	(next-byte bv (unsafe.fxadd1 index) end (sll word 8))))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (%unsafe.bytevector-s64l-ref bv end)
+  (let next-byte ((bv     bv)
+		  (index  (unsafe.fx+ 6 end))
+		  (word   (sll (unsafe.bytevector-s8-ref bv (unsafe.fx+ 7 end)) 8)))
     (let ((word (+ word (unsafe.bytevector-u8-ref bv index))))
       (if (unsafe.fx= index end)
 	  word
@@ -1412,15 +1435,60 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (bytevector-s64-ref bv i endianness)
-  ($bytevector-ref/64 bv i 'bytevector-s64-ref
-		      bytevector-sint-ref endianness))
+(define (bytevector-s64-ref bv index endianness)
+  (define who 'bytevector-s64-ref)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 8))
+    (case-endianness (who endianness)
+      ((big)
+       (%unsafe.bytevector-s64b-ref bv index))
+      ((little)
+       (%unsafe.bytevector-s64l-ref bv index)))))
+#;($bytevector-ref/64 bv i 'bytevector-s64-ref bytevector-sint-ref endianness)
 
 (define (bytevector-s64-set! bv i n endianness)
   ($bytevector-set/64 bv i n (- (expt 2 63)) (expt 2 63)
 		      'bytevector-s64-set! bytevector-sint-set! endianness))
 
 ;;; --------------------------------------------------------------------
+
+;; (define (bytevector-u64-native-ref bv index)
+;;   (define who 'bytevector-u64-native-ref)
+;;   (with-arguments-validation (who)
+;;       ((bytevector	bv)
+;;        (index		index)
+;;        (index-for	index bv 4))
+;;     (%unsafe.bytevector-u64n-ref bv index)))
+
+;; (define (bytevector-u64-native-set! bv index word)
+;;   (define who 'bytevector-u64-native-set!)
+;;   (with-arguments-validation (who)
+;;       ((bytevector	bv)
+;;        (index		index)
+;;        (index-for	index bv 4)
+;;        (word-u64	word))
+;;     (%unsafe.bytevector-u64n-set! bv index word)))
+
+;; ;;; --------------------------------------------------------------------
+
+;; (define (bytevector-s64-native-ref bv index)
+;;   (define who 'bytevector-s64-native-ref)
+;;   (with-arguments-validation (who)
+;;       ((bytevector	bv)
+;;        (index		index)
+;;        (index-for	index bv 4))
+;;     (%unsafe.bytevector-s64n-ref bv index)))
+
+;; (define (bytevector-s64-native-set! bv index word)
+;;   (define who 'bytevector-s64-native-set!)
+;;   (with-arguments-validation (who)
+;;       ((bytevector	bv)
+;;        (index		index)
+;;        (index-for	index bv 4)
+;;        (word-s64	word))
+;;     (%unsafe.bytevector-s64n-set! bv index word)))
 
 (define (bytevector-u64-native-ref bv i)
   ($bytevector-ref/64/aligned bv i 'bytevector-u64-native-ref
