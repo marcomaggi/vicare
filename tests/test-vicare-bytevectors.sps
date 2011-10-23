@@ -1498,7 +1498,7 @@
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-u32-set! bv 0 #x12345678 (endianness little))
+	(bytevector-u32-set! bv 0 #x12345678 (native-endianness))
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#x78 #x56 #x34 #x12))
@@ -1697,7 +1697,7 @@
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s32-set! bv 0 #x12345678 (endianness little))
+	(bytevector-s32-set! bv 0 #x12345678 (native-endianness))
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#x78 #x56 #x34 #x12))
@@ -1866,6 +1866,438 @@
   (check	;not a fixnum
       (catch #f
 	(bytevector-s32-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 'dummy))
+    => '(dummy))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-u64-set-bang))
+
+  (define bytes-per-word	8)
+  (define-syntax mult
+    (syntax-rules ()
+      ((_ ?num)
+       (* bytes-per-word ?num))))
+
+  (define the-bv
+    #vu8( ;;
+	 0 0 0 0   0 0 0 10
+	 0 0 0 0   0 0 0 20
+	 0 0 0 0   0 0 0 30
+	 0 0 0 0   0 0 0 40))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-u64-set! bv 0 #x0102030405060708 (endianness little))
+	bv)
+    => #vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-u64-set! bv 0 #x0102030405060708 (endianness big))
+	bv)
+    => #vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-u64-set! bv 0 #x0102030405060708 (native-endianness))
+	bv)
+    => (case (native-endianness)
+	 ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
+	 ((big)		#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))))
+
+  (check
+      (let ((bv (make-bytevector (mult 4) 0)))
+	(bytevector-u64-set! bv (mult 0) 10 (endianness little))
+	(bytevector-u64-set! bv (mult 1) 20 (endianness little))
+	(bytevector-u64-set! bv (mult 2) 30 (endianness little))
+	(bytevector-u64-set! bv (mult 3) 40 (endianness little))
+	bv)
+    => #vu8( ;;
+	    10 0 0 0   0 0 0 0
+	    20 0 0 0   0 0 0 0
+	    30 0 0 0   0 0 0 0
+	    40 0 0 0   0 0 0 0))
+
+  (check
+      (let ((bv (make-bytevector (mult 4) 0)))
+	(bytevector-u64-set! bv (mult 0) 10 (endianness big))
+	(bytevector-u64-set! bv (mult 1) 20 (endianness big))
+	(bytevector-u64-set! bv (mult 2) 30 (endianness big))
+	(bytevector-u64-set! bv (mult 3) 40 (endianness big))
+	bv)
+    => #vu8( ;;
+	    0 0 0 0   0 0 0 10
+	    0 0 0 0   0 0 0 20
+	    0 0 0 0   0 0 0 30
+	    0 0 0 0   0 0 0 40))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-u64-set! #\a 1 2 (endianness little)))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-u64-set! the-bv #\a 2 (endianness little)))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-u64-set! the-bv -1 2 (endianness little)))
+    => '(-1))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u64-set! the-bv (mult 5) 2 (endianness little)))
+    => (list (mult 5)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u64-set! the-bv (mult 4) 2 (endianness little)))
+    => (list (mult 4)))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: value
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-u64-set! the-bv 1 #\a (endianness little)))
+    => '(#\a))
+
+  (check	;too low
+      (catch #f
+	(bytevector-u64-set! the-bv 1 (least-u64*) (endianness little)))
+    => `(,(least-u64*)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u64-set! the-bv 1 (greatest-u64*) (endianness little)))
+    => `(,(greatest-u64*)))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: endianness
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-u64-set! the-bv 1 0 'dummy))
+    => '(dummy))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-u64-ref))
+
+  (define bytes-per-word	8)
+  (define-syntax mult
+    (syntax-rules ()
+      ((_ ?num)
+       (* bytes-per-word ?num))))
+
+  (define the-bv-be
+    #vu8( ;;
+	 0 0 0 0   0 0 0 10
+	 0 0 0 0   0 0 0 20
+	 0 0 0 0   0 0 0 30
+	 0 0 0 0   0 0 0 40))
+
+  (define the-bv-le
+    #vu8( ;;
+	 10 0 0 0   0 0 0 0
+	 20 0 0 0   0 0 0 0
+	 30 0 0 0   0 0 0 0
+	 40 0 0 0   0 0 0 0))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector-u64-ref #vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01) 0 (endianness little))
+    =>  #x0102030405060708)
+
+  (check
+      (bytevector-u64-ref #vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08) 0 (endianness big))
+    => #x0102030405060708)
+
+  (check
+      (bytevector-u64-ref (case (native-endianness)
+			    ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
+			    ((big)	#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08)))
+			  0 (native-endianness))
+    => #x0102030405060708)
+
+  (check
+      (list (bytevector-u64-ref the-bv-le (mult 0) (endianness little))
+	    (bytevector-u64-ref the-bv-le (mult 1) (endianness little))
+	    (bytevector-u64-ref the-bv-le (mult 2) (endianness little))
+	    (bytevector-u64-ref the-bv-le (mult 3) (endianness little)))
+    => '(10 20 30 40))
+
+  (check
+      (list (bytevector-u64-ref the-bv-be (mult 0) (endianness big))
+	    (bytevector-u64-ref the-bv-be (mult 1) (endianness big))
+	    (bytevector-u64-ref the-bv-be (mult 2) (endianness big))
+	    (bytevector-u64-ref the-bv-be (mult 3) (endianness big)))
+    => '(10 20 30 40))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-u64-ref #\a 1 (endianness little)))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-u64-ref the-bv-le #\a (endianness little)))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-u64-ref the-bv-le -1 (endianness little)))
+    => '(-1))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u64-ref the-bv-le (mult 5) (endianness little)))
+    => (list (mult 5)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u64-ref the-bv-le (mult 4) (endianness little)))
+    => (list (mult 4)))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: endianness
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-u64-ref the-bv-le 1 'dummy))
+    => '(dummy))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-s64-set-bang))
+
+  (define bytes-per-word	8)
+  (define-syntax mult
+    (syntax-rules ()
+      ((_ ?num)
+       (* bytes-per-word ?num))))
+
+  (define the-bv
+    #vu8( ;;
+	 0 0 0 0   0 0 0 10
+	 0 0 0 0   0 0 0 20
+	 0 0 0 0   0 0 0 30
+	 0 0 0 0   0 0 0 40))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s64-set! bv 0 #x0102030405060708 (endianness little))
+	bv)
+    => #vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s64-set! bv 0 #x0102030405060708 (endianness big))
+	bv)
+    => #vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s64-set! bv 0 #x0102030405060708 (native-endianness))
+	bv)
+    => (case (native-endianness)
+	 ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
+	 ((big)		#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))))
+
+  (check
+      (let ((bv (make-bytevector (mult 4) 0)))
+	(bytevector-s64-set! bv (mult 0) 10 (endianness little))
+	(bytevector-s64-set! bv (mult 1) 20 (endianness little))
+	(bytevector-s64-set! bv (mult 2) 30 (endianness little))
+	(bytevector-s64-set! bv (mult 3) 40 (endianness little))
+	bv)
+    => #vu8( ;;
+	    10 0 0 0   0 0 0 0
+	    20 0 0 0   0 0 0 0
+	    30 0 0 0   0 0 0 0
+	    40 0 0 0   0 0 0 0))
+
+  (check
+      (let ((bv (make-bytevector (mult 4) 0)))
+	(bytevector-s64-set! bv (mult 0) 10 (endianness big))
+	(bytevector-s64-set! bv (mult 1) 20 (endianness big))
+	(bytevector-s64-set! bv (mult 2) 30 (endianness big))
+	(bytevector-s64-set! bv (mult 3) 40 (endianness big))
+	bv)
+    => #vu8( ;;
+	    0 0 0 0   0 0 0 10
+	    0 0 0 0   0 0 0 20
+	    0 0 0 0   0 0 0 30
+	    0 0 0 0   0 0 0 40))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-s64-set! #\a 1 2 (endianness little)))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s64-set! the-bv #\a 2 (endianness little)))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-s64-set! the-bv -1 2 (endianness little)))
+    => '(-1))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s64-set! the-bv (mult 5) 2 (endianness little)))
+    => (list (mult 5)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s64-set! the-bv (mult 4) 2 (endianness little)))
+    => (list (mult 4)))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: value
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s64-set! the-bv 1 #\a (endianness little)))
+    => '(#\a))
+
+  (check	;too low
+      (catch #f
+	(bytevector-s64-set! the-bv 1 (least-s64*) (endianness little)))
+    => `(,(least-s64*)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s64-set! the-bv 1 (greatest-s64*) (endianness little)))
+    => `(,(greatest-s64*)))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: endianness
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s64-set! the-bv 1 0 'dummy))
+    => '(dummy))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-s64-ref))
+
+  (define bytes-per-word	8)
+  (define-syntax mult
+    (syntax-rules ()
+      ((_ ?num)
+       (* bytes-per-word ?num))))
+
+  (define the-bv-be
+    #vu8( ;;
+	 0 0 0 0   0 0 0 10
+	 0 0 0 0   0 0 0 20
+	 0 0 0 0   0 0 0 30
+	 0 0 0 0   0 0 0 40))
+
+  (define the-bv-le
+    #vu8( ;;
+	 10 0 0 0   0 0 0 0
+	 20 0 0 0   0 0 0 0
+	 30 0 0 0   0 0 0 0
+	 40 0 0 0   0 0 0 0))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector-s64-ref #vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01) 0 (endianness little))
+    =>  #x0102030405060708)
+
+  (check
+      (bytevector-s64-ref #vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08) 0 (endianness big))
+    => #x0102030405060708)
+
+  (check
+      (bytevector-s64-ref (case (native-endianness)
+			    ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
+			    ((big)	#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08)))
+			  0 (native-endianness))
+    => #x0102030405060708)
+
+  (check
+      (list (bytevector-s64-ref the-bv-le (mult 0) (endianness little))
+	    (bytevector-s64-ref the-bv-le (mult 1) (endianness little))
+	    (bytevector-s64-ref the-bv-le (mult 2) (endianness little))
+	    (bytevector-s64-ref the-bv-le (mult 3) (endianness little)))
+    => '(10 20 30 40))
+
+  (check
+      (list (bytevector-s64-ref the-bv-be (mult 0) (endianness big))
+	    (bytevector-s64-ref the-bv-be (mult 1) (endianness big))
+	    (bytevector-s64-ref the-bv-be (mult 2) (endianness big))
+	    (bytevector-s64-ref the-bv-be (mult 3) (endianness big)))
+    => '(10 20 30 40))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-s64-ref #\a 1 (endianness little)))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s64-ref the-bv-le #\a (endianness little)))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-s64-ref the-bv-le -1 (endianness little)))
+    => '(-1))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s64-ref the-bv-le (mult 5) (endianness little)))
+    => (list (mult 5)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s64-ref the-bv-le (mult 4) (endianness little)))
+    => (list (mult 4)))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: endianness
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s64-ref the-bv-le 1 'dummy))
     => '(dummy))
 
   #t)

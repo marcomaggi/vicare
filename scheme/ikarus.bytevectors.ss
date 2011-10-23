@@ -721,22 +721,23 @@
 (define-inline (%unsafe.bytevector-u64b-ref bv index)
   (let next-byte ((bv     bv)
 		  (index  index)
-		  (N      0))
-    (if (unsafe.fx= index 8)
-	N
-      (next-byte bv (unsafe.fxadd1 index)
-		 (sll (+ N (unsafe.bytevector-u8-ref bv index)) 8)))))
+		  (end    (unsafe.fx+ index 7))
+		  (word      0))
+    (let ((word (+ word (unsafe.bytevector-u8-ref bv index))))
+      (if (unsafe.fx= index end)
+	  word
+	(next-byte bv (unsafe.fxadd1 index) end (sll word 8))))))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (%unsafe.bytevector-u64l-ref bv index)
-  (let next-byte ((bv		bv)
-		  (byte-index	(unsafe.fx+ 7 index))
-		  (N		0))
-    (let ((N (+ N (unsafe.bytevector-u8-ref bv byte-index))))
-      (if (unsafe.fx= byte-index index)
-	  N
-	(next-byte bv (unsafe.fxsub1 byte-index) (sll N 8))))))
+(define-inline (%unsafe.bytevector-u64l-ref bv end)
+  (let next-byte ((bv     bv)
+		  (index  (unsafe.fx+ 7 end))
+		  (word   0))
+    (let ((word (+ word (unsafe.bytevector-u8-ref bv index))))
+      (if (unsafe.fx= index end)
+	  word
+	(next-byte bv (unsafe.fxsub1 index) (sll word 8))))))
 
 
 ;;;; safe setters and getters
