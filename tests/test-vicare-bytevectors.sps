@@ -2095,12 +2095,21 @@
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define the-bv
+  (define the-bv-le
+    #vu8( ;;
+	 10 0 0 0   0 0 0 0
+	 20 0 0 0   0 0 0 0
+	 30 0 0 0   0 0 0 0
+	 40 0 0 0   0 0 0 0))
+
+  (define the-bv-be
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
 	 0 0 0 0   0 0 0 30
 	 0 0 0 0   0 0 0 40))
+
+;;; --------------------------------------------------------------------
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
@@ -2129,11 +2138,7 @@
 	(bytevector-s64-set! bv (mult 2) 30 (endianness little))
 	(bytevector-s64-set! bv (mult 3) 40 (endianness little))
 	bv)
-    => #vu8( ;;
-	    10 0 0 0   0 0 0 0
-	    20 0 0 0   0 0 0 0
-	    30 0 0 0   0 0 0 0
-	    40 0 0 0   0 0 0 0))
+    => the-bv-le)
 
   (check
       (let ((bv (make-bytevector (mult 4) 0)))
@@ -2142,11 +2147,31 @@
 	(bytevector-s64-set! bv (mult 2) 30 (endianness big))
 	(bytevector-s64-set! bv (mult 3) 40 (endianness big))
 	bv)
-    => #vu8( ;;
-	    0 0 0 0   0 0 0 10
-	    0 0 0 0   0 0 0 20
-	    0 0 0 0   0 0 0 30
-	    0 0 0 0   0 0 0 40))
+    => the-bv-be)
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s64-set! bv 0 (greatest-s64) (endianness little))
+	bv)
+    => #vu8(#xFF #xFF #xFF #xFF #xFF #xFF #xFF 127))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s64-set! bv 0 (greatest-s64) (endianness big))
+	bv)
+    => #vu8(127 #xFF #xFF #xFF #xFF #xFF #xFF #xFF))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s64-set! bv 0 (least-s64) (endianness little))
+	bv)
+    => #vu8(0 0 0 0 0 0 0 #x80))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s64-set! bv 0 (least-s64) (endianness big))
+	bv)
+    => #vu8(#x80 0 0 0 0 0 0 0))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
@@ -2161,22 +2186,22 @@
 
   (check	;not a fixnum
       (catch #f
-	(bytevector-s64-set! the-bv #\a 2 (endianness little)))
+	(bytevector-s64-set! the-bv-le #\a 2 (endianness little)))
     => '(#\a))
 
   (check	;negative
       (catch #f
-	(bytevector-s64-set! the-bv -1 2 (endianness little)))
+	(bytevector-s64-set! the-bv-le -1 2 (endianness little)))
     => '(-1))
 
   (check	;too high
       (catch #f
-	(bytevector-s64-set! the-bv (mult 5) 2 (endianness little)))
+	(bytevector-s64-set! the-bv-le (mult 5) 2 (endianness little)))
     => (list (mult 5)))
 
   (check	;too high
       (catch #f
-	(bytevector-s64-set! the-bv (mult 4) 2 (endianness little)))
+	(bytevector-s64-set! the-bv-le (mult 4) 2 (endianness little)))
     => (list (mult 4)))
 
 ;;; --------------------------------------------------------------------
@@ -2184,17 +2209,17 @@
 
   (check	;not a fixnum
       (catch #f
-	(bytevector-s64-set! the-bv 1 #\a (endianness little)))
+	(bytevector-s64-set! the-bv-le 1 #\a (endianness little)))
     => '(#\a))
 
   (check	;too low
       (catch #f
-	(bytevector-s64-set! the-bv 1 (least-s64*) (endianness little)))
+	(bytevector-s64-set! the-bv-le 1 (least-s64*) (endianness little)))
     => `(,(least-s64*)))
 
   (check	;too high
       (catch #f
-	(bytevector-s64-set! the-bv 1 (greatest-s64*) (endianness little)))
+	(bytevector-s64-set! the-bv-le 1 (greatest-s64*) (endianness little)))
     => `(,(greatest-s64*)))
 
 ;;; --------------------------------------------------------------------
@@ -2202,7 +2227,7 @@
 
   (check	;not a fixnum
       (catch #f
-	(bytevector-s64-set! the-bv 1 0 'dummy))
+	(bytevector-s64-set! the-bv-le 1 0 'dummy))
     => '(dummy))
 
   #t)
