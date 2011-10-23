@@ -6,7 +6,10 @@
 ;;;
 ;;;Abstract
 ;;;
-;;;	Utility syntaxes used also in the source code of Vicare.
+;;;	This library is both  installed and used when expanding Vicare's
+;;;	own source code.  For this  reason it must export only: bindings
+;;;	imported  by Vicare itself,  syntaxes whose  expansion reference
+;;;	only bindings imported by Vicare itself.
 ;;;
 ;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
@@ -29,11 +32,23 @@
 (library (vicare syntactic-extensions)
   (export
     define-inline
+    define-inline-constant
     define-syntax*
     unwind-protect
     define-argument-validation
     with-arguments-validation
-    with-dangerous-arguments-validation)
+    with-dangerous-arguments-validation
+    case-word-size
+    case-endianness
+
+    ;; auxiliary syntaxes
+    big			little
+    fixnum		bignum
+    flonum		cflonum
+    compnum
+
+    ;; numeric argument dispatching
+    case-one-operand	case-two-operands)
   (import (rnrs)
     (for (prefix (vicare installation-configuration)
 		 config.)
@@ -47,6 +62,11 @@
        (syntax-rules ()
 	 ((_ ?arg ... . ?rest)
 	  (begin ?form0 ?form ...)))))))
+
+(define-syntax define-inline-constant
+  (syntax-rules ()
+    ((_ ?name ?value)
+     (define-syntax ?name (identifier-syntax ?value)))))
 
 (define-syntax define-syntax*
   (syntax-rules ()
@@ -202,8 +222,144 @@
     (main stx)))
 
 
+(define-syntax case-word-size
+  (if (= 4 config.wordsize)
+      (syntax-rules ()
+	((_ ((32) . ?body-32) ((64) . ?body-64))
+	 (begin . ?body-32)))
+    (syntax-rules ()
+      ((_ ((32) . ?body-32) ((64) . ?body-64))
+       (begin . ?body-64)))))
+
+(define-syntax big	(syntax-rules ()))
+(define-syntax little	(syntax-rules ()))
+
+(define-syntax case-endianness
+  (lambda (stx)
+    (syntax-case stx (big little)
+      ((case-endianness (?who ?endianness)
+	 ((little)	. ?lit-body)
+	 ((big)		. ?big-body))
+       (and (identifier? #'?who)
+	    (identifier? #'?endianness))
+       #'(case-endianness (?who ?endianness)
+	   ((big)	. ?big-body)
+	   ((little)	. ?lit-body)))
+
+      ((case-endianness (?who ?endianness)
+	 ((big)		. ?big-body)
+	 ((little)	. ?lit-body))
+       (and (identifier? #'?who)
+	    (identifier? #'?endianness))
+       #'(case ?endianness
+	   ((big)	. ?big-body)
+	   ((little)	. ?lit-body)
+	   (else
+	    (assertion-violation ?who "expected endianness symbol as argument" ?endianness)))))))
+
+
+;;;; math functions dispatching
+
+(define-syntax fixnum	(syntax-rules ()))
+(define-syntax bignum	(syntax-rules ()))
+(define-syntax flonum	(syntax-rules ()))
+(define-syntax cflonum	(syntax-rules ()))
+(define-syntax compnum	(syntax-rules ()))
+
+(define-syntax case-one-operand
+  (syntax-rules (fixnum bignum flonum cflonum compnum)
+    ((case-one-operand (?who ?op)
+       ((fixnum)	. ?fixnum-body)
+       ((bignum)	. ?bignum-body)
+       ((flonum)	. ?flonum-body)
+       ((cflonum)	. ?cflonum-body)
+       ((compnum)	. ?compnum-body))
+     (let ((op ?op))
+       (cond ((fixnum?  op)	. ?fixnum-body)
+	     ((bignum?  op)	. ?bignum-body)
+	     ((flonum?  op)	. ?flonum-body)
+	     ((cflonum? op)	. ?cflonum-body)
+	     ((compnum? op)	. ?compnum-body)
+	     (else
+	      (assertion-violation ?who "invalid numeric operand" op)))))))
+
+(define-syntax case-two-operands
+  (syntax-rules (fixnum bignum flonum cflonum compnum)
+    ((case-two-operands (?who ?op1 ?op2)
+       ((fixnum)
+	((fixnum)	. ?fixnum/fixnum-body)
+	((bignum)	. ?fixnum/bignum-body)
+	((flonum)	. ?fixnum/flonum-body)
+	((cflonum)	. ?fixnum/cflonum-body)
+	((compnum)	. ?fixnum/compnum-body))
+       ((bignum)
+	((fixnum)	. ?bignum/fixnum-body)
+	((bignum)	. ?bignum/bignum-body)
+	((flonum)	. ?bignum/flonum-body)
+	((cflonum)	. ?bignum/cflonum-body)
+	((compnum)	. ?bignum/compnum-body))
+       ((flonum)
+	((fixnum)	. ?flonum/fixnum-body)
+	((bignum)	. ?flonum/bignum-body)
+	((flonum)	. ?flonum/flonum-body)
+	((cflonum)	. ?flonum/cflonum-body)
+	((compnum)	. ?flonum/compnum-body))
+       ((cflonum)
+	((fixnum)	. ?cflonum/fixnum-body)
+	((bignum)	. ?cflonum/bignum-body)
+	((flonum)	. ?cflonum/flonum-body)
+	((cflonum)	. ?cflonum/cflonum-body)
+	((compnum)	. ?cflonum/compnum-body))
+       ((compnum)
+	((fixnum)	. ?compnum/fixnum-body)
+	((bignum)	. ?compnum/bignum-body)
+	((flonum)	. ?compnum/flonum-body)
+	((cflonum)	. ?compnum/cflonum-body)
+	((compnum)	. ?compnum/compnum-body)))
+     (case-one-operand (?who ?op1)
+       ((fixnum)
+	(case-one-operand (?who ?op2)
+	  ((fixnum)	. ?fixnum/fixnum-body)
+	  ((bignum)	. ?fixnum/bignum-body)
+	  ((flonum)	. ?fixnum/flonum-body)
+	  ((cflonum)	. ?fixnum/cflonum-body)
+	  ((compnum)	. ?fixnum/compnum-body)))
+       ((bignum)
+	(case-one-operand (?who ?op2)
+	  ((fixnum)	. ?bignum/fixnum-body)
+	  ((bignum)	. ?bignum/bignum-body)
+	  ((flonum)	. ?bignum/flonum-body)
+	  ((cflonum)	. ?bignum/cflonum-body)
+	  ((compnum)	. ?bignum/compnum-body)))
+       ((flonum)
+	(case-one-operand (?who ?op2)
+	  ((fixnum)	. ?flonum/fixnum-body)
+	  ((bignum)	. ?flonum/bignum-body)
+	  ((flonum)	. ?flonum/flonum-body)
+	  ((cflonum)	. ?flonum/cflonum-body)
+	  ((compnum)	. ?flonum/compnum-body)))
+       ((cflonum)
+	(case-one-operand (?who ?op2)
+	  ((fixnum)	. ?cflonum/fixnum-body)
+	  ((bignum)	. ?cflonum/bignum-body)
+	  ((flonum)	. ?cflonum/flonum-body)
+	  ((cflonum)	. ?cflonum/cflonum-body)
+	  ((compnum)	. ?cflonum/compnum-body)))
+       ((compnum)
+	(case-one-operand (?who ?op2)
+	  ((fixnum)	. ?compnum/fixnum-body)
+	  ((bignum)	. ?compnum/bignum-body)
+	  ((flonum)	. ?compnum/flonum-body)
+	  ((cflonum)	. ?compnum/cflonum-body)
+	  ((compnum)	. ?compnum/compnum-body)))))))
+
+
 ;;;; done
 
 )
 
 ;;; end of file
+;;Local Variables:
+;;eval: (put 'case-one-operand 'scheme-indent-function 1)
+;;eval: (put 'case-two-operands 'scheme-indent-function 1)
+;;End:
