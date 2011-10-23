@@ -91,9 +91,8 @@
 	    ($bytevector-length		bytevector-length)
 	    ($bytevector-u8-ref		bytevector-u8-ref)
 	    ($bytevector-s8-ref		bytevector-s8-ref)
-	    ($bytevector-set!		bytevector-set!)
-	    ($bytevector-set!		bytevector-u8-set!)
-	    ($bytevector-set!		bytevector-s8-set!)
+	    ($bytevector-u8-set!	bytevector-u8-set!)
+	    ($bytevector-s8-set!	bytevector-s8-set!)
 	    ($bytevector-ieee-double-native-ref		bytevector-ieee-double-native-ref)
 	    ($bytevector-ieee-double-nonnative-ref	bytevector-ieee-double-nonnative-ref)
 	    ($bytevector-ieee-double-native-set!	bytevector-ieee-double-native-set!)
@@ -102,6 +101,47 @@
 	    ($bytevector-ieee-single-nonnative-ref	bytevector-ieee-single-nonnative-ref)
 	    ($bytevector-ieee-double-nonnative-set!	bytevector-ieee-double-nonnative-set!)
 	    ($bytevector-ieee-single-nonnative-set!	bytevector-ieee-single-nonnative-set!))
+
+    (rename ($bytevector-u16b-ref	bytevector-u16b-ref)
+	    ($bytevector-u16b-set!	bytevector-u16b-set!)
+	    ($bytevector-u16l-ref	bytevector-u16l-ref)
+	    ($bytevector-u16l-set!	bytevector-u16l-set!)
+	    ($bytevector-s16b-ref	bytevector-s16b-ref)
+	    ($bytevector-s16b-set!	bytevector-s16b-set!)
+	    ($bytevector-s16l-ref	bytevector-s16l-ref)
+	    ($bytevector-s16l-set!	bytevector-s16l-set!)
+	    ($bytevector-u16n-ref	bytevector-u16n-ref)
+	    ($bytevector-u16n-set!	bytevector-u16n-set!)
+	    ($bytevector-s16n-ref	bytevector-s16n-ref)
+	    ($bytevector-s16n-set!	bytevector-s16n-set!)
+
+	    ($bytevector-u32b-ref	bytevector-u32b-ref)
+	    ($bytevector-u32b-set!	bytevector-u32b-set!)
+	    ($bytevector-u32l-ref	bytevector-u32l-ref)
+	    ($bytevector-u32l-set!	bytevector-u32l-set!)
+	    ($bytevector-s32b-ref	bytevector-s32b-ref)
+	    ($bytevector-s32b-set!	bytevector-s32b-set!)
+	    ($bytevector-s32l-ref	bytevector-s32l-ref)
+	    ($bytevector-s32l-set!	bytevector-s32l-set!)
+	    ($bytevector-u32n-ref	bytevector-u32n-ref)
+	    ($bytevector-u32n-set!	bytevector-u32n-set!)
+	    ($bytevector-s32n-ref	bytevector-s32n-ref)
+	    ($bytevector-s32n-set!	bytevector-s32n-set!)
+
+	    ($bytevector-u64b-ref	bytevector-u64b-ref)
+	    ($bytevector-u64b-set!	bytevector-u64b-set!)
+	    ($bytevector-u64l-ref	bytevector-u64l-ref)
+	    ($bytevector-u64l-set!	bytevector-u64l-set!)
+	    ($bytevector-s64b-ref	bytevector-s64b-ref)
+	    ($bytevector-s64b-set!	bytevector-s64b-set!)
+	    ($bytevector-s64l-ref	bytevector-s64l-ref)
+	    ($bytevector-s64l-set!	bytevector-s64l-set!)
+	    ($bytevector-u64n-ref	bytevector-u64n-ref)
+	    ($bytevector-u64n-set!	bytevector-u64n-set!)
+	    ($bytevector-s64n-ref	bytevector-s64n-ref)
+	    ($bytevector-s64n-set!	bytevector-s64n-set!)
+
+	    ($bytevector-fill!		bytevector-fill!))
 
     (rename ($car		car)
 	    ($cdr		cdr)
@@ -134,11 +174,17 @@
     (ikarus system $compnums)
     (ikarus system $pairs)
     (ikarus system $vectors)
-    (ikarus system $bytevectors)
+    (rename (ikarus system $bytevectors)
+	    ($bytevector-set!	$bytevector-set!)
+	    ($bytevector-set!	$bytevector-u8-set!)
+	    ($bytevector-set!	$bytevector-s8-set!))
     (ikarus system $chars)
     (ikarus system $strings)
     (only (vicare syntactic-extensions)
-	  define-inline))
+	  define-inline)
+    (for (prefix (vicare installation-configuration)
+		 config.)
+	 expand))
 
 
 ;;;; fixnums
@@ -218,6 +264,380 @@
 
 (define-inline (bn-ior-bn X Y)
   (foreign-call "ikrt_bnbnlogor" X Y))
+
+
+;;;; endianness handling
+;;
+;;About endianness, according to R6RS:
+;;
+;;   Endianness  describes  the encoding  of  exact  integer objects  as
+;;   several contiguous bytes in a bytevector.
+;;
+;;   The little-endian encoding places  the least significant byte of an
+;;   integer first,  with the other bytes following  in increasing order
+;;   of significance.
+;;
+;;   The  big-endian encoding  places the  most significant  byte  of an
+;;   integer first,  with the other bytes following  in decreasing order
+;;   of significance.
+;;
+
+
+;;;; unsafe 16-bit setters and getters
+;;
+;;            |            | lowest memory | highest memory
+;; endianness |    word    | location      | location
+;; -----------+------------+---------------+--------------
+;;   little   |   #xHHLL   |     LL        |     HH
+;;    big     |   #xHHLL   |     HH        |      LL
+;;
+;;
+;;NOTE  Remember that  $BYTEVECTOR-SET! takes  care of  storing in
+;;memory only the least significant byte of its value argument.
+;;
+
+(define-inline ($bytevector-u16l-ref bv index)
+  ($fxlogor
+   ;; highest memory location -> most significant byte
+   ($fxsll ($bytevector-u8-ref bv ($fxadd1 index)) 8)
+   ;; lowest memory location -> least significant byte
+   ($bytevector-u8-ref bv index)))
+
+(define-inline ($bytevector-u16l-set! bv index word)
+  ;; lowest memory location -> least significant byte
+  ($bytevector-set! bv index word)
+  ;; highest memory location -> most significant byte
+  ($bytevector-set! bv ($fxadd1 index) (fxsra word 8)))
+
+;;; --------------------------------------------------------------------
+
+(define-inline ($bytevector-u16b-ref bv index)
+  ($fxlogor
+   ;; lowest memory location -> most significant byte
+   ($fxsll ($bytevector-u8-ref bv index) 8)
+   ;; highest memory location -> least significant byte
+   ($bytevector-u8-ref bv ($fxadd1 index))))
+
+(define-inline ($bytevector-u16b-set! bv index word)
+  ;; lowest memory location -> most significant byte
+  ($bytevector-set! bv index ($fxsra word 8))
+  ;; highest memory location -> least significant byte
+  ($bytevector-set! bv ($fxadd1 index) word))
+
+;;; --------------------------------------------------------------------
+
+(define-inline ($bytevector-s16l-ref bv index)
+  ($fxlogor
+   ;; highest memory location -> most significant byte
+   ($fxsll ($bytevector-s8-ref bv ($fxadd1 index)) 8)
+   ;; lowest memory location -> least significant byte
+   ($bytevector-u8-ref bv index)))
+
+(define-inline ($bytevector-s16l-set! bv index word)
+  ;; lowest memory location -> least significant byte
+  ($bytevector-set! bv index word)
+  ;; highest memory location -> most significant byte
+  ($bytevector-set! bv ($fxadd1 index) (fxsra word 8)))
+
+;;; --------------------------------------------------------------------
+
+(define-inline ($bytevector-s16b-ref bv index)
+  ($fxlogor
+   ;; lowest memory location -> most significant byte
+   ($fxsll ($bytevector-s8-ref bv index) 8)
+   ;; highest memory location -> least significant byte
+   ($bytevector-u8-ref bv ($fxadd1 index))))
+
+(define-inline ($bytevector-s16b-set! bv index word)
+  ;; lowest memory location -> most significant byte
+  ($bytevector-set! bv index ($fxsra word 8))
+  ;; highest memory location -> least significant byte
+  ($bytevector-set! bv ($fxadd1 index) word))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax $bytevector-u16n-ref
+  (case config.platform-endianness
+    ((big)
+     (identifier-syntax $bytevector-u16b-ref))
+    ((little)
+     (identifier-syntax $bytevector-u16l-ref))))
+
+(define-syntax $bytevector-u16n-set!
+  (case config.platform-endianness
+    ((big)
+     (identifier-syntax $bytevector-u16b-set!))
+    ((little)
+     (identifier-syntax $bytevector-u16l-set!))))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax $bytevector-s16n-ref
+  (case config.platform-endianness
+    ((big)
+     (identifier-syntax $bytevector-s16b-ref))
+    ((little)
+     (identifier-syntax $bytevector-s16l-ref))))
+
+(define-syntax $bytevector-s16n-set!
+  (case config.platform-endianness
+    ((big)
+     (identifier-syntax $bytevector-s16b-set!))
+    ((little)
+     (identifier-syntax $bytevector-s16l-set!))))
+
+
+;;;; unsafe 32-bit setters and getters
+;;
+;;                           lowest memory ------------> highest memory
+;; endianness |    word    | 1st byte | 2nd byte | 3rd byte | 4th byte |
+;; -----------+------------+----------+----------+----------+-----------
+;;   little   | #xAABBCCDD |   DD     |    CC    |    BB    |    AA
+;;    big     | #xAABBCCDD |   AA     |    BB    |    CC    |    DD
+;; bit offset |            |    0     |     8    |    16    |    24
+;;
+;;NOTE  Remember that  $BYTEVECTOR-SET! takes  care of  storing in
+;;memory only the least significant byte of its value argument.
+;;
+
+(define-inline ($bytevector-u32b-ref bv index)
+  (+ (sll ($bytevector-u8-ref bv index) 24)
+     ($fxior
+      ($fxsll ($bytevector-u8-ref bv ($fxadd1 index)) 16)
+      ($fxsll ($bytevector-u8-ref bv ($fx+ index 2))  8)
+      ($bytevector-u8-ref bv ($fx+ index 3)))))
+
+(define-inline ($bytevector-u32b-set! bv index word)
+  (let ((b (sra word 16)))
+    ($bytevector-set! bv index ($fxsra b 8))
+    ($bytevector-set! bv ($fxadd1 index) b))
+  (let ((b (bitwise-and word #xFFFF)))
+    ($bytevector-set! bv ($fx+ index 2) ($fxsra b 8))
+    ($bytevector-set! bv ($fx+ index 3) b)))
+
+;;; --------------------------------------------------------------------
+
+(define-inline ($bytevector-u32l-ref bv index)
+  (+ (sll ($bytevector-u8-ref bv ($fx+ index 3)) 24)
+     ($fxior
+      ($fxsll ($bytevector-u8-ref bv ($fx+ index 2)) 16)
+      ($fxsll ($bytevector-u8-ref bv ($fxadd1 index)) 8)
+      ($bytevector-u8-ref bv index))))
+
+(define-inline ($bytevector-u32l-set! bv index word)
+  (let ((b (sra word 16)))
+    ($bytevector-set! bv ($fx+ index 3) ($fxsra b 8))
+    ($bytevector-set! bv ($fx+ index 2) b))
+  (let ((b (bitwise-and word #xFFFF)))
+    ($bytevector-set! bv ($fxadd1 index) ($fxsra b 8))
+    ($bytevector-set! bv index b)))
+
+;;; --------------------------------------------------------------------
+
+(define-inline ($bytevector-s32b-ref bv index)
+  (+ (sll ($bytevector-s8-ref bv index) 24)
+     ($fxior
+      ($fxsll ($bytevector-u8-ref bv ($fxadd1 index))   16)
+      ($fxsll ($bytevector-u8-ref bv ($fx+    index 2))  8)
+      ($bytevector-u8-ref bv ($fx+ index 3)))))
+
+(define-inline ($bytevector-s32b-set! bv index word)
+  (let ((b (sra word 16)))
+    ($bytevector-set! bv index ($fxsra b 8))
+    ($bytevector-set! bv ($fxadd1 index) b))
+  (let ((b (bitwise-and word #xFFFF)))
+    ($bytevector-set! bv ($fx+ index 2) ($fxsra b 8))
+    ($bytevector-set! bv ($fx+ index 3) b)))
+
+;;; --------------------------------------------------------------------
+
+(define-inline ($bytevector-s32l-ref bv index)
+  (+ (sll ($bytevector-s8-ref bv ($fx+ index 3)) 24)
+     ($fxior
+      ($fxsll ($bytevector-u8-ref bv ($fx+    index 2)) 16)
+      ($fxsll ($bytevector-u8-ref bv ($fxadd1 index))    8)
+      ($bytevector-u8-ref bv index))))
+
+(define-inline ($bytevector-s32l-set! bv index word)
+  (let ((b (sra word 16)))
+    ($bytevector-set! bv ($fx+ index 3) ($fxsra b 8))
+    ($bytevector-set! bv ($fx+ index 2) b))
+  (let ((b (bitwise-and word #xFFFF)))
+    ($bytevector-set! bv ($fxadd1 index) ($fxsra b 8))
+    ($bytevector-set! bv index b)))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax $bytevector-u32n-ref
+  (case config.platform-endianness
+    ((big)
+     (identifier-syntax $bytevector-u32b-ref))
+    ((little)
+     (identifier-syntax $bytevector-u32l-ref))))
+
+(define-syntax $bytevector-u32n-set!
+  (case config.platform-endianness
+    ((big)
+     (identifier-syntax $bytevector-u32b-set!))
+    ((little)
+     (identifier-syntax $bytevector-u32l-set!))))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax $bytevector-s32n-ref
+  (case config.platform-endianness
+    ((big)
+     (identifier-syntax $bytevector-s32b-ref))
+    ((little)
+     (identifier-syntax $bytevector-s32l-ref))))
+
+(define-syntax $bytevector-s32n-set!
+  (case config.platform-endianness
+    ((big)
+     (identifier-syntax $bytevector-s32b-set!))
+    ((little)
+     (identifier-syntax $bytevector-s32l-set!))))
+
+
+;;;; unsafe 64-bit setters and getters
+;;
+;;                                      lowest memory ------------> highest memory
+;; endianness |         word        | 1st | 2nd | 3rd | 4th | 5th | 6th | 7th | 8th |
+;; -----------+---------------------+-----+-----+-----+-----+-----+-----+-----+-----|
+;;   little   | #xAABBCCDD EEFFGGHH | HH  | GG  | FF  | EE  | DD  | CC  | BB  | AA
+;;    big     | #xAABBCCDD EEFFGGHH | AA  | BB  | CC  | DD  | EE  | FF  | GG  | HH
+;; bit offset |                     |  0  |  8  | 16  | 24  | 32  | 40  | 48  | 56
+;;
+;;NOTE  Remember that  $BYTEVECTOR-SET! takes  care of  storing in
+;;memory only the least significant byte of its value argument.
+;;
+
+(define-inline ($bytevector-u64b-ref bv index)
+  (let next-byte ((bv     bv)
+		  (index  index)
+		  (end    ($fx+ index 7))
+		  (word   0))
+    (let ((word (+ word ($bytevector-u8-ref bv index))))
+      (if ($fx= index end)
+	  word
+	(next-byte bv ($fxadd1 index) end (sll word 8))))))
+
+(define-inline ($bytevector-u64b-set! bv index word)
+  (let next-byte ((bv     bv)
+		  (index  ($fx+ 7 index))
+		  (end    index)
+		  (word   word))
+    ($bytevector-u8-set! bv index (bitwise-and word #xFF))
+    (unless ($fx= index end)
+      (next-byte bv ($fxsub1 index) end (sra word 8)))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline ($bytevector-u64l-ref bv end)
+  (let next-byte ((bv     bv)
+		  (index  ($fx+ 7 end))
+		  (word   0))
+    (let ((word (+ word ($bytevector-u8-ref bv index))))
+      (if ($fx= index end)
+	  word
+	(next-byte bv ($fxsub1 index) (sll word 8))))))
+
+(define-inline ($bytevector-u64l-set! bv index word)
+  (let next-byte ((bv     bv)
+		  (index  index)
+		  (end    ($fx+ 7 index))
+		  (word   word))
+    ($bytevector-u8-set! bv index (bitwise-and word #xFF))
+    (unless ($fx= index end)
+      (next-byte bv ($fxadd1 index) end (sra word 8)))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline ($bytevector-s64b-ref bv index)
+  (let next-byte ((bv     bv)
+		  (index  ($fxadd1 index))
+		  (end    ($fx+ index 7))
+		  (word   (sll ($bytevector-s8-ref bv index) 8)))
+    (let ((word (+ word ($bytevector-u8-ref bv index))))
+      (if ($fx= index end)
+	  word
+	(next-byte bv ($fxadd1 index) end (sll word 8))))))
+
+(define-inline ($bytevector-s64b-set! bv index word)
+  (let next-byte ((bv     bv)
+		  (index  ($fx+ 7 index))
+		  (end    index)
+		  (word   word))
+    (if ($fx= index end)
+	($bytevector-s8-set! bv index (bitwise-and word #xFF))
+      (begin
+	($bytevector-u8-set! bv index (bitwise-and word #xFF))
+	(next-byte bv ($fxsub1 index) end (sra word 8))))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline ($bytevector-s64l-ref bv end)
+  (let next-byte ((bv     bv)
+		  (index  ($fx+ 6 end))
+		  (word   (sll ($bytevector-s8-ref bv ($fx+ 7 end)) 8)))
+    (let ((word (+ word ($bytevector-u8-ref bv index))))
+      (if ($fx= index end)
+	  word
+	(next-byte bv ($fxsub1 index) (sll word 8))))))
+
+(define-inline ($bytevector-s64l-set! bv index word)
+  (let next-byte ((bv     bv)
+		  (index  index)
+		  (end    ($fx+ 7 index))
+		  (word   word))
+    (if ($fx= index end)
+	($bytevector-s8-set! bv index (bitwise-and word #xFF))
+      (begin
+	($bytevector-u8-set! bv index (bitwise-and word #xFF))
+	(next-byte bv ($fxadd1 index) end (sra word 8))))))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax $bytevector-u64n-ref
+  (case config.platform-endianness
+    ((big)
+     (identifier-syntax $bytevector-u64b-ref))
+    ((little)
+     (identifier-syntax $bytevector-u64l-ref))))
+
+(define-syntax $bytevector-u64n-set!
+  (case config.platform-endianness
+    ((big)
+     (identifier-syntax $bytevector-u64b-set!))
+    ((little)
+     (identifier-syntax $bytevector-u64l-set!))))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax $bytevector-s64n-ref
+  (case config.platform-endianness
+    ((big)
+     (identifier-syntax $bytevector-s64b-ref))
+    ((little)
+     (identifier-syntax $bytevector-s64l-ref))))
+
+(define-syntax $bytevector-s64n-set!
+  (case config.platform-endianness
+    ((big)
+     (identifier-syntax $bytevector-s64b-set!))
+    ((little)
+     (identifier-syntax $bytevector-s64l-set!))))
+
+
+;;;; miscellaneous bytevector operations
+
+(define-inline ($bytevector-fill! ?bv ?index ?end ?fill)
+  (let loop ((bv ?bv) (index ?index) (end ?end) (fill ?fill))
+    (if ($fx= index end)
+	bv
+      (begin
+	($bytevector-u8-set! bv index fill)
+	(loop bv ($fxadd1 index) end fill)))))
 
 
 ;;;; done
