@@ -1442,6 +1442,30 @@
 	      (bytevector-s16-ref bv (mult 2) (endianness big))))
     => '(1 2 3))
 
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s16-set! bv 0 (greatest-s16) (endianness little))
+	bv)
+    => #vu8(#xFF 127))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s16-set! bv 0 (greatest-s16) (endianness big))
+	bv)
+    => #vu8(127 #xFF))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s16-set! bv 0 (least-s16) (endianness little))
+	bv)
+    => #vu8(0 #x80))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s16-set! bv 0 (least-s16) (endianness big))
+	bv)
+    => #vu8(#x80 0))
+
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
@@ -1828,6 +1852,30 @@
 	      (bytevector-s32-ref bv (mult 2) (endianness big))
 	      (bytevector-s32-ref bv (mult 3) (endianness big))))
     => '(10 20 30 40))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s32-set! bv 0 (greatest-s32) (endianness little))
+	bv)
+    => #vu8(#xFF #xFF #xFF 127))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s32-set! bv 0 (greatest-s32) (endianness big))
+	bv)
+    => #vu8(127 #xFF #xFF #xFF))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s32-set! bv 0 (least-s32) (endianness little))
+	bv)
+    => #vu8(0 0 0 #x80))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s32-set! bv 0 (least-s32) (endianness big))
+	bv)
+    => #vu8(#x80 0 0 0))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
