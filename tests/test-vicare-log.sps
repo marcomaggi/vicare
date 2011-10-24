@@ -27,7 +27,7 @@
 ;;;
 
 
-(import (rnrs)
+(import (vicare) #;(rnrs)
   (rnrs eval)
   (checks))
 

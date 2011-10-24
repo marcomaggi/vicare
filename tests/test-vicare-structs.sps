@@ -26,7 +26,7 @@
 
 
 #!vicare
-(import (rename (ikarus)
+(import (rename (vicare) #;(ikarus)
 		(parameterize	parametrise))
   (checks))
 

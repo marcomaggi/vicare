@@ -44,6 +44,8 @@ Notes for revision 0.2d1
 
 	     <http://groups.google.com/group/vicare-users>
 
+* Added library (vicare) exporting the same bindings of (ikarus).
+
 * Review of bytevector functions.
 
 * Introduced  the configuration  option "--disable-arguments-validation"
