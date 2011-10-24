@@ -1,25 +1,29 @@
-;;; Ikarus Scheme -- A compiler for R6RS Scheme.
-;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;; This program is free software: you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License version 3 as
-;;; published by the Free Software Foundation.
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under  the terms of  the GNU General  Public License version  3 as
+;;;published by the Free Software Foundation.
 ;;;
-;;; This program is distributed in the hope that it will be useful, but
-;;; WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; General Public License for more details.
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
 ;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should  have received  a copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
+(define-syntax /section
+  (syntax-rules ()))
 (define-syntax section
   (syntax-rules (/section)
     ((section e* ... /section) (begin e* ...))))
 
-(section ;;; helpers
+
+;;;; helpers
+
+(section
 
  (define (prm op . args)
    ;;Perform  the primitive operation  OP applying  it to  the arguments
@@ -73,17 +77,17 @@
 
  (define (smart-dirty-vector-set addr what)
    (struct-case what
-		((constant t)
-		 (if (or (fx? t) (immediate? t))
-		     (prm 'nop)
-		   (dirty-vector-set addr)))
-		((known x t)
-		 (cond
-		  ((eq? (T:immediate? t) 'yes)
-		   (record-optimization 'smart-dirty-vec t)
-		   (nop))
-		  (else (smart-dirty-vector-set addr x))))
-		(else (dirty-vector-set addr))))
+     ((constant t)
+      (if (or (fx? t) (immediate? t))
+	  (prm 'nop)
+	(dirty-vector-set addr)))
+     ((known x t)
+      (cond
+       ((eq? (T:immediate? t) 'yes)
+	(record-optimization 'smart-dirty-vec t)
+	(nop))
+       (else (smart-dirty-vector-set addr x))))
+     (else (dirty-vector-set addr))))
 
  (define (slow-mem-assign v x i)
    (with-tmp ((t (prm 'int+ x (K i))))
@@ -93,25 +97,34 @@
 
  (define (mem-assign v x i)
    (struct-case v
-		((constant t)
-		 (if (or (fx? t) (immediate? t))
-		     (prm 'mset x (K i) (T v))
-		   (slow-mem-assign v x i)))
-		((known expr t)
-		 (cond
-		  ((eq? (T:immediate? t) 'yes)
-		   (record-optimization 'mem-assign v)
-		   (prm 'mset x (K i) (T expr)))
-		  (else (slow-mem-assign expr x i))))
-		(else (slow-mem-assign v x i))))
+     ((constant t)
+      (if (or (fx? t) (immediate? t))
+	  (prm 'mset x (K i) (T v))
+	(slow-mem-assign v x i)))
+     ((known expr t)
+      (cond
+       ((eq? (T:immediate? t) 'yes)
+	(record-optimization 'mem-assign v)
+	(prm 'mset x (K i) (T expr)))
+       (else (slow-mem-assign expr x i))))
+     (else (slow-mem-assign v x i))))
 
- (define (align-code unknown-amt known-amt)
+ (define (align-code unknown-amount known-amount)
+   ;;Given  a compile-time  known  amount of  bytes  and a  compile-time
+   ;;unknown amount  of bytes, compute  and return the actual  amount of
+   ;;bytes to be allocated on the heap to keep subsequence memory blocks
+   ;;allocated.
+   ;;
+   ;;See details about memory allocation in the documentation.  See also
+   ;;the ALIGN function defined in the library (ikarus.compiler).
+   ;;
    (prm 'sll
 	(prm 'sra
-	     (prm 'int+ unknown-amt
-		  (K (+ known-amt (sub1 object-alignment))))
+	     (prm 'int+ unknown-amount
+		  (K (+ known-amount (sub1 object-alignment))))
 	     (K align-shift))
 	(K align-shift)))
+
  /section)
 
 
@@ -1104,13 +1117,19 @@
 ;;  |------------------------|-------------| flonum first word
 ;;     all set to zero         flonum tag
 ;;
-;;A flonum memory block is 16 bytes wide and the actual number is stored
-;;in the last  two words (both on 32-bit and  64-bit platforms) to speed
-;;up a bit memory access by aligning data on multiples of 8.
+;;A  flonum memory  block is  16 bytes  wide on  both 32-bit  and 64-bit
+;;platforms; to allow for the same binary layout on both platforms, on a
+;;32-bit platform the actual number is stored in the last two words:
 ;;
-;;     1st word     2nd word     3rd word     4th word
+;;    1st word     2nd word     3rd word     4th word
 ;;  |------------|------------|------------|------------|
 ;;   tagged word     unused           data words
+;;
+;;on a 64-bit platform the actual number is stored in the second word:
+;;
+;;            1st word                 2nd word
+;;  |-------------------------|-------------------------|
+;;           tagged word               data word
 ;;
 (section
 
@@ -1226,9 +1245,8 @@
 
 
  (define (check-flonums ls code)
-   (cond
-    ((null? ls) code)
-    (else
+   (if (null? ls)
+       code
      (struct-case (car ls)
 		  ((constant v)
 		   (if (flonum? v)
@@ -1239,8 +1257,10 @@
 		     ((yes)
 		      (record-optimization 'check-flonum x)
 		      (check-flonums (cdr ls) code))
-		     ((no) (interrupt))
-		     (else (check-flonums (cons x (cdr ls)) code))))
+		     ((no)
+		      (interrupt))
+		     (else
+		      (check-flonums (cons x (cdr ls)) code))))
 		  (else
 		   (check-flonums (cdr ls)
 				  (with-tmp ((x (T (car ls))))
@@ -1249,7 +1269,7 @@
 				    (interrupt-unless
 				     (prm '= (prm 'mref x (K (- vector-tag)))
 					  (K flonum-tag)))
-				    code)))))))
+				    code))))))
 
 ;;;  (define (primary-tag-tests ls)
 ;;;    (cond
@@ -2063,7 +2083,33 @@
  /section)
 
 
-(section	;;; bytevectors
+;;;; bytevectors
+;;
+;;Bytevectors are blocks of memory referenced by machine words tagged as
+;;bytevectors.   The  first  word  in  the  memory  block  is  a  fixnum
+;;representing the  number of  bytes in the  data area; a  bytevector is
+;;capable of  holding at  most a  number of values  equal to  the return
+;;value of GREATEST-FIXNUM.
+;;
+;;When allocating  a bytevector capable  of holding N bytes,  the actual
+;;size of  the allocated data area  is N+1; the additional  last byte is
+;;not part of the data area and is perpetually set to zero.
+;;
+;;To  allow  for  the same  binary  layout  on  both 32-bit  and  64-bit
+;;platforms,  the data area  starts 8  bytes after  the beginning;  on a
+;;32-bit platform the layout is:
+;;
+;;    1st word   2nd word                       last byte
+;;  |----------|----------|-------------------|-----------|
+;;     length     unused        data area      set to zero
+;;
+;;on a 64-bit platform the layout is:
+;;
+;;         1st word                             last byte
+;;  |---------------------|-------------------|-----------|
+;;         length               data area      set to zero
+;;
+(section
 
  (define-primop bytevector? safe
    ((P x) (tag-test (T x) bytevector-mask bytevector-tag))
@@ -2071,36 +2117,37 @@
 
  (define-primop $make-bytevector unsafe
    ((V n)
-    (struct-case n
-		 ((constant n)
-		  (unless (fx? n) (interrupt))
-		  (with-tmp ((s (prm 'alloc
-				     (K (align (+ n 1 disp-bytevector-data)))
-				     (K bytevector-tag))))
-		    (prm 'mset s
-			 (K (- disp-bytevector-length bytevector-tag))
-			 (K (* n fx-scale)))
-		    (prm 'bset s
-			 (K (+ n (- disp-bytevector-data bytevector-tag)))
-			 (K 0))
-		    s))
-		 ((known expr t)
-		  (cogen-value-$make-bytevector expr))
-		 (else
-		  (with-tmp ((s (prm 'alloc
-				     (align-code
-				      (prm 'sra (T n) (K fx-shift))
-				      (+ disp-bytevector-data 1))
-				     (K bytevector-tag))))
-		    (prm 'mset s
-			 (K (- disp-bytevector-length bytevector-tag))
-			 (T n))
-		    (prm 'bset s
-			 (prm 'int+
-			      (prm 'sra (T n) (K fx-shift))
-			      (K (- disp-bytevector-data bytevector-tag)))
-			 (K 0))
-		    s))))
+    (struct-case n ;number of bytes
+      ((constant n)
+       (unless (fx? n) (interrupt))
+       (with-tmp ((s (prm 'alloc
+			  (K (align (+ n 1 disp-bytevector-data)))
+			  (K bytevector-tag))))
+	 ;; store the length in the first word
+	 (prm 'mset s
+	      (K (- disp-bytevector-length bytevector-tag))
+	      (K (* n fx-scale)))
+	 (prm 'bset s
+	      (K (+ n (- disp-bytevector-data bytevector-tag)))
+	      (K 0))
+	 s))
+      ((known expr t)
+       (cogen-value-$make-bytevector expr))
+      (else
+       (with-tmp ((s (prm 'alloc
+			  (align-code
+			   (prm 'sra (T n) (K fx-shift))
+			   (+ 1 disp-bytevector-data))
+			  (K bytevector-tag))))
+	 (prm 'mset s
+	      (K (- disp-bytevector-length bytevector-tag))
+	      (T n))
+	 (prm 'bset s
+	      (prm 'int+
+		   (prm 'sra (T n) (K fx-shift))
+		   (K (- disp-bytevector-data bytevector-tag)))
+	      (K 0))
+	 s))))
    ((P n) (K #t))
    ((E n) (nop)))
 
@@ -2112,48 +2159,48 @@
  (define-primop $bytevector-u8-ref unsafe
    ((V s i)
     (struct-case i
-		 ((constant i)
-		  (unless (fx? i) (interrupt))
-		  (prm 'sll
-		       (prm 'logand
-			    (prm 'bref (T s)
-				 (K (+ i (- disp-bytevector-data bytevector-tag))))
-			    (K 255))
-		       (K fx-shift)))
-		 (else
-		  (prm 'sll
-		       (prm 'logand
-			    (prm 'bref (T s)
-				 (prm 'int+
-				      (prm 'sra (T i) (K fx-shift))
-				      (K (- disp-bytevector-data bytevector-tag))))
-			    (K 255))
-		       (K fx-shift)))))
+      ((constant i)
+       (unless (fx? i) (interrupt))
+       (prm 'sll
+	    (prm 'logand
+		 (prm 'bref (T s)
+		      (K (+ i (- disp-bytevector-data bytevector-tag))))
+		 (K 255))
+	    (K fx-shift)))
+      (else
+       (prm 'sll
+	    (prm 'logand
+		 (prm 'bref (T s)
+		      (prm 'int+
+			   (prm 'sra (T i) (K fx-shift))
+			   (K (- disp-bytevector-data bytevector-tag))))
+		 (K 255))
+	    (K fx-shift)))))
    ((P s i) (K #t))
    ((E s i) (nop)))
 
  (define-primop $bytevector-s8-ref unsafe
    ((V s i)
     (struct-case i
-		 ((constant i)
-		  (unless (fx? i) (interrupt))
-		  (prm 'sra
-		       (prm 'sll
-			    (prm 'logand
-				 (prm 'bref (T s)
-				      (K (+ i (- disp-bytevector-data bytevector-tag))))
-				 (K 255))
-			    (K (- (* wordsize 8) 8)))
-		       (K (- (* wordsize 8) (+ 8 fx-shift)))))
-		 (else
-		  (prm 'sra
-		       (prm 'sll
-			    (prm 'bref (T s)
-				 (prm 'int+
-				      (prm 'sra (T i) (K fx-shift))
-				      (K (- disp-bytevector-data bytevector-tag))))
-			    (K (- (* wordsize 8) 8)))
-		       (K (- (* wordsize 8) (+ 8 fx-shift)))))))
+      ((constant i)
+       (unless (fx? i) (interrupt))
+       (prm 'sra
+	    (prm 'sll
+		 (prm 'logand
+		      (prm 'bref (T s)
+			   (K (+ i (- disp-bytevector-data bytevector-tag))))
+		      (K 255))
+		 (K (- (* wordsize 8) 8)))
+	    (K (- (* wordsize 8) (+ 8 fx-shift)))))
+      (else
+       (prm 'sra
+	    (prm 'sll
+		 (prm 'bref (T s)
+		      (prm 'int+
+			   (prm 'sra (T i) (K fx-shift))
+			   (K (- disp-bytevector-data bytevector-tag))))
+		 (K (- (* wordsize 8) 8)))
+	    (K (- (* wordsize 8) (+ 8 fx-shift)))))))
    ((P s i) (K #t))
    ((E s i) (nop)))
 
@@ -2161,39 +2208,39 @@
  (define-primop $bytevector-set! unsafe
    ((E x i c)
     (struct-case i
-		 ((constant i)
-		  (unless (fx? i) (interrupt))
-		  (struct-case c
-			       ((constant c)
-				(unless (fx? c) (interrupt))
-				(prm 'bset (T x)
-				     (K (+ i (- disp-bytevector-data bytevector-tag)))
-				     (K (cond
-					 ((<= -128 c 127) c)
-					 ((<= 128 c 255) (- c 256))
-					 (else (interrupt))))))
-			       (else
-				(prm 'bset (T x)
-				     (K (+ i (- disp-bytevector-data bytevector-tag)))
-				     (prm 'sra (T c) (K fx-shift))))))
-		 (else
-		  (struct-case c
-			       ((constant c)
-				(unless (fx? c) (interrupt))
-				(prm 'bset (T x)
-				     (prm 'int+
-					  (prm 'sra (T i) (K fx-shift))
-					  (K (- disp-bytevector-data bytevector-tag)))
-				     (K (cond
-					 ((<= -128 c 127) c)
-					 ((<= 128 c 255) (- c 256))
-					 (else (interrupt))))))
-			       (else
-				(prm 'bset (T x)
-				     (prm 'int+
-					  (prm 'sra (T i) (K fx-shift))
-					  (K (- disp-bytevector-data bytevector-tag)))
-				     (prm 'sra (T c) (K fx-shift)))))))))
+      ((constant i)
+       (unless (fx? i) (interrupt))
+       (struct-case c
+	 ((constant c)
+	  (unless (fx? c) (interrupt))
+	  (prm 'bset (T x)
+	       (K (+ i (- disp-bytevector-data bytevector-tag)))
+	       (K (cond
+		   ((<= -128 c 127) c)
+		   ((<= 128 c 255) (- c 256))
+		   (else (interrupt))))))
+	 (else
+	  (prm 'bset (T x)
+	       (K (+ i (- disp-bytevector-data bytevector-tag)))
+	       (prm 'sra (T c) (K fx-shift))))))
+      (else
+       (struct-case c
+	 ((constant c)
+	  (unless (fx? c) (interrupt))
+	  (prm 'bset (T x)
+	       (prm 'int+
+		    (prm 'sra (T i) (K fx-shift))
+		    (K (- disp-bytevector-data bytevector-tag)))
+	       (K (cond
+		   ((<= -128 c 127) c)
+		   ((<= 128 c 255) (- c 256))
+		   (else (interrupt))))))
+	 (else
+	  (prm 'bset (T x)
+	       (prm 'int+
+		    (prm 'sra (T i) (K fx-shift))
+		    (K (- disp-bytevector-data bytevector-tag)))
+	       (prm 'sra (T c) (K fx-shift)))))))))
 
  (define-primop $bytevector-ieee-double-native-ref unsafe
    ((V bv i)
@@ -2206,19 +2253,20 @@
       x)))
 
 
-;;; the following uses unsupported sse3 instructions
-		;(define-primop $bytevector-ieee-double-nonnative-ref unsafe
-		;  ((V bv i)
-		;   (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
-		;     (prm 'mset x (K (- vector-tag)) (K flonum-tag))
-		;     (prm 'fl:load
-		;       (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
-		;       (K (- disp-bytevector-data bytevector-tag)))
-		;     (prm 'fl:shuffle
-		;       (K (make-object '#vu8(7 6 2 3 4 5 1 0)))
-		;       (K (- disp-bytevector-data bytevector-tag)))
-		;     (prm 'fl:store x (K (- disp-flonum-data vector-tag)))
-		;     x)))
+;;;The following uses unsupported SSE3 instructions.
+;;;
+;;;(define-primop $bytevector-ieee-double-nonnative-ref unsafe
+;;;  ((V bv i)
+;;;   (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
+;;;     (prm 'mset x (K (- vector-tag)) (K flonum-tag))
+;;;     (prm 'fl:load
+;;;       (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
+;;;       (K (- disp-bytevector-data bytevector-tag)))
+;;;     (prm 'fl:shuffle
+;;;       (K (make-object '#vu8(7 6 2 3 4 5 1 0)))
+;;;       (K (- disp-bytevector-data bytevector-tag)))
+;;;     (prm 'fl:store x (K (- disp-flonum-data vector-tag)))
+;;;     x)))
 
  (define-primop $bytevector-ieee-double-nonnative-ref unsafe
    ((V bv i)
@@ -2295,17 +2343,18 @@
 	x))))
 
 
-;;; the following uses unsupported sse3 instructions
-		;(define-primop $bytevector-ieee-double-nonnative-set! unsafe
-		;  ((E bv i x)
-		;   (seq*
-		;     (prm 'fl:load (T x) (K (- disp-flonum-data vector-tag)))
-		;     (prm 'fl:shuffle
-		;       (K (make-object '#vu8(7 6 2 3 4 5 1 0)))
-		;       (K (- disp-bytevector-data bytevector-tag)))
-		;     (prm 'fl:store
-		;       (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
-		;       (K (- disp-bytevector-data bytevector-tag))))))
+;;;The following uses unsupported SSE3 instructions.
+;;;
+;;;(define-primop $bytevector-ieee-double-nonnative-set! unsafe
+;;;  ((E bv i x)
+;;;   (seq*
+;;;     (prm 'fl:load (T x) (K (- disp-flonum-data vector-tag)))
+;;;     (prm 'fl:shuffle
+;;;       (K (make-object '#vu8(7 6 2 3 4 5 1 0)))
+;;;       (K (- disp-bytevector-data bytevector-tag)))
+;;;     (prm 'fl:store
+;;;       (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
+;;;       (K (- disp-bytevector-data bytevector-tag))))))
 
  (define-primop $bytevector-ieee-double-nonnative-set! unsafe
    ((E bv i x)
@@ -2837,4 +2886,5 @@
 ;;;Local Variables:
 ;;;eval: (put 'make-conditional	'scheme-indent-function 1)
 ;;;eval: (put 'with-tmp		'scheme-indent-function 1)
+;;;eval: (put 'struct-case	'scheme-indent-function 1)
 ;;;End:
