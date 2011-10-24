@@ -4,11 +4,13 @@ testdir				= $(srcdir)
 VICARE_SELECTED_TESTS		= $(wildcard $(testdir)/test-*$(file)*.sps)
 VICARE_SELECTED_LONG_TESTS	= $(wildcard $(testdir)/long-test-*$(file)*.sps)
 
+VICARE_TEST_SEARCH_PATH	= $(srcdir):$(srcdir)/../lib:$(builddir)/../lib:$(srcdir)/../scheme
+
 VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
 VICARE_FLAGS	= -b $(VICARE_BOOT) --debug --r6rs-script
-VICARE_ENV	= VICARE_LIBRARY_PATH=$(srcdir):$(srcdir)/../lib:$(srcdir)/../scheme \
-		  CHECK_TEST_NAME=$(name) \
+VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH)	\
+		  CHECK_TEST_NAME=$(name)				\
 		  VICARE_SRC_DIR=$(srcdir) VICARE_BUILDDIR=$(builddir)
 VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
 
