@@ -56,7 +56,13 @@
     greatest-u32*	least-u32*
     greatest-s32*	least-s32*
     greatest-u64*	least-u64*
-    greatest-s64*	least-s64*)
+    greatest-s64*	least-s64*
+
+    ;; fixnum alignment
+    fixnum-aligned-to-2?
+    fixnum-aligned-to-4?
+    fixnum-aligned-to-8?
+    fixnum-aligned-to?)
   (import (ikarus)
     (ikarus system $fx)
     (ikarus system $bignums)
@@ -240,6 +246,67 @@
       (and (bignum? N)
 	   ($bnbn>= N S64MIN)
 	   ($bnbn<= N S64MAX))))
+
+
+;;;; vector index alignment
+;;
+;;* If an index  is a multiple of 2 its least  significant bit is set to
+;;zero:
+;;
+;;   (number->string  2 2)	=>     "10"
+;;   (number->string  4 2)	=>    "100"
+;;   (number->string  6 2)	=>    "110"
+;;   (number->string  8 2)	=>   "1000"
+;;   (number->string 10 2)	=>   "1010"
+;;       ...
+;;
+;;so to test if an index is aligned to a multiple of 2 we just do:
+;;
+;;   ($fxzero? ($fxlogand index #b1))
+;;
+;;* If an index is a multiple  of 4 its least significant 2 bits are set
+;;to zero:
+;;
+;;   (number->string  4 2)	=>    "100"
+;;   (number->string  8 2)	=>   "1000"
+;;   (number->string 12 2)	=>   "1100"
+;;   (number->string 16 2)	=>  "10000"
+;;       ...
+;;
+;;so to test if an index is aligned to a multiple of 4 we just do:
+;;
+;;   ($fxzero? ($fxlogand index #b11))
+;;
+;;* If an index is a multiple  of 8 its least significant 3 bits are set
+;;to zero:
+;;
+;;   (number->string  8 2)	=>   "1000"
+;;   (number->string 16 2)	=>  "10000"
+;;   (number->string 24 2)	=>  "11000"
+;;   (number->string 32 2)	=> "100000"
+;;       ...
+;;
+;;so to test if an index is aligned to a multiple of 8 we just do:
+;;
+;;   ($fxzero? ($fxlogand index #b111))
+;;
+;;Notice that:
+;;
+;;   sizeof(float)	=> 4
+;;   sizeof(double)	=> 8
+;;
+
+(define-inline (fixnum-aligned-to-2? N)
+  ($fxzero? ($fxlogand #b1 N)))
+
+(define-inline (fixnum-aligned-to-4? N)
+  ($fxzero? ($fxlogand #b11 N)))
+
+(define-inline (fixnum-aligned-to-8? N)
+  ($fxzero? ($fxlogand #b111 N)))
+
+(define-inline (fixnum-aligned-to? N alignment)
+  ($fxzero? (fxmod N alignment)))
 
 
 ;;;; done

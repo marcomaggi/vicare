@@ -267,12 +267,20 @@
 		   " and word size "			(number->string bytes-per-word))
     idx))
 
-(define-argument-validation (aligned-index who idx alignment)
-  (zero? (mod idx alignment))
+(define-argument-validation (aligned-index-2 who idx)
+  (fixnum-aligned-to-2? idx)
   (assertion-violation who
-    (string-append "expected bytevector index aligned to " (number->string alignment)
-		   " as argument")
-    idx))
+    "expected bytevector index aligned to multiple of 2 as argument" idx))
+
+(define-argument-validation (aligned-index-4 who idx)
+  (fixnum-aligned-to-4? idx)
+  (assertion-violation who
+    "expected bytevector index aligned to multiple of 4 as argument" idx))
+
+(define-argument-validation (aligned-index-8 who idx)
+  (fixnum-aligned-to-8? idx)
+  (assertion-violation who
+    "expected bytevector index aligned to multiple of 8 as argument" idx))
 
 ;;; --------------------------------------------------------------------
 
@@ -339,256 +347,11 @@
   (assertion-violation who
     "expected exact integer representing unsigned 64-bit word as argument" word))
 
-
-;;;; assertion helpers
-
-(define-inline (%assert-argument-is-bytevector who bv)
-  (unless (bytevector? bv)
-    (assertion-violation who "expected a bytevector as first argument" bv)))
-
-(define-inline (%assert-argument-is-bytevector-length who len)
-  (unless (and (fixnum? len) (unsafe.fx>= len 0))
-    (assertion-violation who
-      "expected non-negative fixnum as bytevector length argument" len)))
-
-(define-inline (%assert-argument-is-byte-filler who fill)
-  (unless (and (fixnum? fill) (unsafe.fx<= -128 fill) (unsafe.fx<= fill 255))
-    (assertion-violation who
-      "expected fixnum in range [-128, 255] as bytevector fill argument" fill)))
-
 ;;; --------------------------------------------------------------------
 
-(let-syntax
-    ((%define-assertion
-      (syntax-rules ()
-	((_ ?macro ??size ??message)
-	 (define-inline (?macro ?who ?arg bv)
-	   (unless (and (integer? ?arg) (exact? ?arg))
-	     (assertion-violation ?who
-	       "expected exact integer as start index argument for bytevector" ?arg))
-	   (unless (fixnum? ?arg)
-	     (%implementation-violation ?who
-	       "expected fixnum as start index argument for bytevector" ?arg))
-	   (unless (and (>= ?arg 0)
-			(<= ?arg (- (unsafe.bytevector-length bv) ??size)))
-	     (assertion-violation ?who ??message ?arg)))))))
-
-  (%define-assertion %assert-argument-is-bytevector-start-index-8 1
-		     "start index argument out of range for bytevector")
-  (%define-assertion %assert-argument-is-bytevector-start-index-16 2
-		     "start index argument out of range for bytevector of 16-bit words")
-  (%define-assertion %assert-argument-is-bytevector-start-index-32 4
-		     "start index argument out of range for bytevector of 32-bit words")
-  (%define-assertion %assert-argument-is-bytevector-start-index-64 8
-		     "start index argument out of range for bytevector of 64-bit words"))
-
-;;; --------------------------------------------------------------------
-
-(let-syntax
-    ((%define-assertion
-      (syntax-rules ()
-	((_ ?macro ??size ??message)
-	 (define-inline (?macro ?who ?arg bv)
-	   (unless (and (integer? ?arg) (exact? ?arg))
-	     (assertion-violation ?who
-	       "expected exact integer as end index argument for bytevector" ?arg))
-	   (unless (fixnum? ?arg)
-	     (%implementation-violation ?who
-	       "expected fixnum as end index argument for bytevector" ?arg))
-	   (unless (and (>= ?arg 0)
-			(<= ?arg (unsafe.bytevector-length bv)))
-	     (assertion-violation ?who ??message ?arg)))))))
-
-  (%define-assertion %assert-argument-is-bytevector-end-index-8 1
-		     "end index argument out of range for bytevector")
-  (%define-assertion %assert-argument-is-bytevector-end-index-16 2
-		     "end index argument out of range for bytevector of 16-bit words")
-  (%define-assertion %assert-argument-is-bytevector-end-index-32 4
-		     "end index argument out of range for bytevector of 32-bit words")
-  (%define-assertion %assert-argument-is-bytevector-end-index-64 8
-		     "end index argument out of range for bytevector of 64-bit words"))
-
-;;; --------------------------------------------------------------------
-
-(let-syntax
-    ((%define-assertion
-      (syntax-rules ()
-	((_ ?macro ??size ??message)
-	 (define-inline (?macro ?who ?arg ?bv ?start)
-	   (unless (and (integer? ?arg) (exact? ?arg))
-	     (assertion-violation ?who
-	       "expected exact integer as count argument for bytevector" ?arg))
-	   (unless (fixnum? ?arg)
-	     (%implementation-violation ?who
-	       "expected fixnum as count argument for bytevector" ?arg))
-	   (let ((end (+ ?start (* ?arg ??size))))
-	     (unless (and (>= end 0)
-			  (<= end (unsafe.bytevector-length ?bv)))
-	       (assertion-violation ?who ??message ?arg))))))))
-
-  (%define-assertion %assert-argument-is-bytevector-count-8 1
-		     "count argument out of range for bytevector and given start index")
-  (%define-assertion %assert-argument-is-bytevector-count-16 2
-		     "count argument out of range for bytevector of 16-bit words and given start index")
-  (%define-assertion %assert-argument-is-bytevector-count-32 4
-		     "count argument out of range for bytevector of 32-bit words and given start index")
-  (%define-assertion %assert-argument-is-bytevector-count-64 8
-		     "count argument out of range for bytevector of 64-bit words and given start index"))
-
-
-;;;; words validation
-
-(define-inline (%u8?  num)	(fixnum? num))
-(define-inline (%s8?  num)	(fixnum? num))
-(define-inline (%u16? num)	(and (integer? num) (exact? num)))
-(define-inline (%s16? num)	(and (integer? num) (exact? num)))
-(define-inline (%u32? num)	(and (integer? num) (exact? num)))
-(define-inline (%s32? num)	(and (integer? num) (exact? num)))
-(define-inline (%u64? num)	(and (integer? num) (exact? num)))
-(define-inline (%s64? num)	(and (integer? num) (exact? num)))
-
-;;; --------------------------------------------------------------------
-
-(define U8MAX		255)
-(define U8MIN		0)
-(define S8MAX		+127)
-(define S8MIN		-128)
-
-(define U16MAX		65535)		#;(- (expt 2 16) 1)
-(define U16MIN		0)
-(define S16MAX		+32767)		#;(- (expt 2 15) 1)
-(define S16MIN		-32768)		#;(- (expt 2 15))
-
-(define U32MAX		4294967295)	#;(- (expt 2 32) 1)
-(define U32MIN		0)
-(define S32MAX		+2147483647)	#;(- (expt 2 31) 1)
-(define S32MIN		-2147483648)	#;(- (expt 2 31))
-
-(define U64MAX		18446744073709551615)	#;(- (expt 2 64) 1)
-(define U64MIN		0)
-(define S64MAX		+9223372036854775807)	#;(- (expt 2 63) 1)
-(define S64MIN		-9223372036854775808)	#;(- (expt 2 63))
-
-
-;;;; safe setters and getters
-
-;; (define-inline (%bytevector-u16l-set! bv index value)
-;;   (bytevector-u16-set! bv index value (endianness little)))
-
-;; (define-inline (%bytevector-u16b-set! bv index value)
-;;   (bytevector-u16-set! bv index value (endianness big)))
-
-;; (define-inline (%bytevector-u16n-set! bv index value)
-;;   (bytevector-u16-native-set! bv index value))
-
-;; (define-inline (%bytevector-u16l-ref bv index)
-;;   (bytevector-u16-ref bv index (endianness little)))
-
-;; (define-inline (%bytevector-u16b-ref bv index)
-;;   (bytevector-u16-ref bv index (endianness big)))
-
-;; (define-inline (%bytevector-u16n-ref bv index)
-;;   (bytevector-u16-native-ref bv index))
-
-;; ;;; --------------------------------------------------------------------
-
-;; (define-inline (%bytevector-s16l-set! bv index value)
-;;   (bytevector-s16-set! bv index value (endianness little)))
-
-;; (define-inline (%bytevector-s16b-set! bv index value)
-;;   (bytevector-s16-set! bv index value (endianness big)))
-
-;; (define-inline (%bytevector-s16n-set! bv index value)
-;;   (bytevector-s16-native-set! bv index value))
-
-;; (define-inline (%bytevector-s16l-ref bv index)
-;;   (bytevector-s16-ref bv index (endianness little)))
-
-;; (define-inline (%bytevector-s16b-ref bv index)
-;;   (bytevector-s16-ref bv index (endianness big)))
-
-;; (define-inline (%bytevector-s16n-ref bv index)
-;;   (bytevector-s16-native-ref bv index))
-
-;; ;;; --------------------------------------------------------------------
-
-;; (define-inline (%bytevector-u32l-set! bv index value)
-;;   (bytevector-u32-set! bv index value (endianness little)))
-
-;; (define-inline (%bytevector-u32b-set! bv index value)
-;;   (bytevector-u32-set! bv index value (endianness big)))
-
-;; (define-inline (%bytevector-u32n-set! bv index value)
-;;   (bytevector-u32-native-set! bv index value))
-
-;; (define-inline (%bytevector-u32l-ref bv index)
-;;   (bytevector-u32-ref bv index (endianness little)))
-
-;; (define-inline (%bytevector-u32b-ref bv index)
-;;   (bytevector-u32-ref bv index (endianness big)))
-
-;; (define-inline (%bytevector-u32n-ref bv index)
-;;   (bytevector-u32-native-ref bv index))
-
-;; ;;; --------------------------------------------------------------------
-
-;; (define-inline (%bytevector-s32l-set! bv index value)
-;;   (bytevector-s32-set! bv index value (endianness little)))
-
-;; (define-inline (%bytevector-s32b-set! bv index value)
-;;   (bytevector-s32-set! bv index value (endianness big)))
-
-;; (define-inline (%bytevector-s32n-set! bv index value)
-;;   (bytevector-s32-native-set! bv index value))
-
-;; (define-inline (%bytevector-s32l-ref bv index)
-;;   (bytevector-s32-ref bv index (endianness little)))
-
-;; (define-inline (%bytevector-s32b-ref bv index)
-;;   (bytevector-s32-ref bv index (endianness big)))
-
-;; (define-inline (%bytevector-s32n-ref bv index)
-;;   (bytevector-s32-native-ref bv index))
-
-;; ;;; --------------------------------------------------------------------
-
-;; (define-inline (%bytevector-u64l-set! bv index value)
-;;   (bytevector-u64-set! bv index value (endianness little)))
-
-;; (define-inline (%bytevector-u64b-set! bv index value)
-;;   (bytevector-u64-set! bv index value (endianness big)))
-
-;; (define-inline (%bytevector-u64n-set! bv index value)
-;;   (bytevector-u64-native-set! bv index value))
-
-;; (define-inline (%bytevector-u64l-ref bv index)
-;;   (bytevector-u64-ref bv index (endianness little)))
-
-;; (define-inline (%bytevector-u64b-ref bv index)
-;;   (bytevector-u64-ref bv index (endianness big)))
-
-;; (define-inline (%bytevector-u64n-ref bv index)
-;;   (bytevector-u64-native-ref bv index))
-
-;; ;;; --------------------------------------------------------------------
-
-;; (define-inline (%bytevector-s64l-set! bv index value)
-;;   (bytevector-s64-set! bv index value (endianness little)))
-
-;; (define-inline (%bytevector-s64b-set! bv index value)
-;;   (bytevector-s64-set! bv index value (endianness big)))
-
-;; (define-inline (%bytevector-s64n-set! bv index value)
-;;   (bytevector-s64-native-set! bv index value))
-
-;; (define-inline (%bytevector-s64l-ref bv index)
-;;   (bytevector-s64-ref bv index (endianness little)))
-
-;; (define-inline (%bytevector-s64b-ref bv index)
-;;   (bytevector-s64-ref bv index (endianness big)))
-
-;; (define-inline (%bytevector-s64n-ref bv index)
-;;   (bytevector-s64-native-ref bv index))
+(define-argument-validation (flonum who word)
+  (flonum? word)
+  (assertion-violation who "expected flonum as argument" word))
 
 
 ;;;; main bytevector handling functions
@@ -997,7 +760,7 @@
       ((bytevector	bv)
        (index		index)
        (index-for	index bv 2)
-       (aligned-index	index 2))
+       (aligned-index-2	index))
     (unsafe.bytevector-u16n-ref bv index)))
 
 (define (bytevector-u16-native-set! bv index word)
@@ -1006,7 +769,7 @@
       ((bytevector	bv)
        (index		index)
        (index-for	index bv 2)
-       (aligned-index	index 2)
+       (aligned-index-2	index)
        (word-u16	word))
     (unsafe.bytevector-u16n-set! bv index word)))
 
@@ -1018,7 +781,7 @@
       ((bytevector	bv)
        (index		index)
        (index-for	index bv 2)
-       (aligned-index	index 2))
+       (aligned-index-2	index))
     (unsafe.bytevector-s16n-ref bv index)))
 
 (define (bytevector-s16-native-set! bv index word)
@@ -1027,7 +790,7 @@
       ((bytevector	bv)
        (index		index)
        (index-for	index bv 2)
-       (aligned-index	index 2)
+       (aligned-index-2	index)
        (word-s16	word))
     (unsafe.bytevector-s16n-set! bv index word)))
 
@@ -1094,7 +857,7 @@
       ((bytevector	bv)
        (index		index)
        (index-for	index bv 4)
-       (aligned-index	index 4))
+       (aligned-index-4	index))
     (unsafe.bytevector-u32n-ref bv index)))
 
 (define (bytevector-u32-native-set! bv index word)
@@ -1103,7 +866,7 @@
       ((bytevector	bv)
        (index		index)
        (index-for	index bv 4)
-       (aligned-index	index 4)
+       (aligned-index-4	index)
        (word-u32	word))
     (unsafe.bytevector-u32n-set! bv index word)))
 
@@ -1115,7 +878,7 @@
       ((bytevector	bv)
        (index		index)
        (index-for	index bv 4)
-       (aligned-index	index 4))
+       (aligned-index-4	index))
     (unsafe.bytevector-s32n-ref bv index)))
 
 (define (bytevector-s32-native-set! bv index word)
@@ -1124,7 +887,7 @@
       ((bytevector	bv)
        (index		index)
        (index-for	index bv 4)
-       (aligned-index	index 4)
+       (aligned-index-4	index)
        (word-s32	word))
     (unsafe.bytevector-s32n-set! bv index word)))
 
@@ -1191,7 +954,7 @@
       ((bytevector	bv)
        (index		index)
        (index-for	index bv 8)
-       (aligned-index	index 8))
+       (aligned-index-8	index))
     (unsafe.bytevector-u64n-ref bv index)))
 
 (define (bytevector-u64-native-set! bv index word)
@@ -1200,7 +963,7 @@
       ((bytevector	bv)
        (index		index)
        (index-for	index bv 8)
-       (aligned-index	index 8)
+       (aligned-index-8	index)
        (word-u64	word))
     (unsafe.bytevector-u64n-set! bv index word)))
 
@@ -1212,7 +975,7 @@
       ((bytevector	bv)
        (index		index)
        (index-for	index bv 8)
-       (aligned-index	index 8))
+       (aligned-index-8	index))
     (unsafe.bytevector-s64n-ref bv index)))
 
 (define (bytevector-s64-native-set! bv index word)
@@ -1221,277 +984,221 @@
       ((bytevector	bv)
        (index		index)
        (index-for	index bv 8)
-       (aligned-index	index 8)
+       (aligned-index-8	index)
        (word-s64	word))
     (unsafe.bytevector-s64n-set! bv index word)))
 
 
-;;;; bytevector to list conversion
+;;;; double-precision flonum bytevector functions
 
-(define-syntax define-bytevector-to-byte-list
-  (syntax-rules ()
-    ((_ ?who ?bytevector-ref)
-     (define (?who bv)
-       (with-arguments-validation (?who)
-	   ((bytevector bv))
-	 (let loop ((bv	    bv)
-		    (index  (unsafe.bytevector-length bv))
-		    (accum  '()))
-	   (if (unsafe.fxzero? index)
-	       accum
-	     (let ((j (unsafe.fxsub1 index)))
-	       (loop bv j (cons (?bytevector-ref bv j) accum))))))))))
+(define (bytevector-ieee-double-ref bv index endianness)
+  (define who 'bytevector-ieee-double-ref)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 8))
+    (if (fixnum-aligned-to-8? index)
+	(case-endianness (who endianness)
+	  ((little)
+	   (unsafe.bytevector-ieee-double-native-ref bv index))
+	  ((big)
+	   (unsafe.bytevector-ieee-double-nonnative-ref bv index)))
+      (case-endianness (who endianness)
+	((little)
+	 (unsafe.bytevector-ieee-double-ref/little bv index))
+	((big)
+	 (unsafe.bytevector-ieee-double-ref/big bv index))))))
 
-(define-bytevector-to-byte-list bytevector->u8-list unsafe.bytevector-u8-ref)
-
-(define (bytevector->s8-list bv)
-  (define who 'bytevector->s8-list)
-  (%assert-argument-is-bytevector who bv)
-  (let loop ((bv	bv)
-	     (i		(unsafe.bytevector-length bv))
-	     (accum	'()))
-    (if (unsafe.fxzero? i)
-	accum
-      (let ((j (unsafe.fxsub1 i)))
-	(loop bv j (cons (unsafe.bytevector-s8-ref bv j) accum))))))
+(define (bytevector-ieee-double-set! bv index X endianness)
+  (define who 'bytevector-ieee-double-set!)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 8)
+       (flonum		X))
+    (if (fixnum-aligned-to-8? index)
+	(case-endianness (who endianness)
+	  ((little)
+	   (unsafe.bytevector-ieee-double-native-set! bv index X))
+	  ((big)
+	   (unsafe.bytevector-ieee-double-nonnative-set! bv index X)))
+      (case endianness
+	((little)
+	 (unsafe.bytevector-ieee-double-set!/little bv index X))
+	((big)
+	 (unsafe.bytevector-ieee-double-set!/big bv index X))))))
 
 ;;; --------------------------------------------------------------------
 
-(define-syntax define-bytevector-to-word-list
-  (syntax-rules ()
-    ((_ ?who ?tag ?bytes-in-word ?bytevector-ref)
-     (define (?who bv)
-       (%assert-argument-is-bytevector ?who bv)
-       (let* ((bv.len (unsafe.bytevector-length bv))
-	      (rest   (fxmod bv.len ?bytes-in-word)))
-	 (unless (unsafe.fxzero? rest)
-	   (assertion-violation ?who
-	     "invalid bytevector size for requested type conversion" '?tag bv.len))
-	 (let loop ((bv		bv)
-		    (i		bv.len)
-		    (accum	'()))
-	   (if (unsafe.fxzero? i)
-	       accum
-	     (let ((j (unsafe.fx- i ?bytes-in-word)))
-	       (loop bv j (cons (?bytevector-ref bv j) accum))))))))))
+(define (bytevector-ieee-double-native-ref bv index)
+  (define who 'bytevector-ieee-double-native-ref)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 8)
+       (aligned-index-8	index))
+    (unsafe.bytevector-ieee-double-native-ref bv index)))
 
-(define-bytevector-to-word-list bytevector->u16l-list vu16l 2 unsafe.bytevector-u16l-ref)
-(define-bytevector-to-word-list bytevector->u16b-list vu16b 2 unsafe.bytevector-u16b-ref)
-(define-bytevector-to-word-list bytevector->u16n-list vu16n 2 unsafe.bytevector-u16n-ref)
-(define-bytevector-to-word-list bytevector->s16l-list vs16l 2 unsafe.bytevector-s16l-ref)
-(define-bytevector-to-word-list bytevector->s16b-list vs16b 2 unsafe.bytevector-s16b-ref)
-(define-bytevector-to-word-list bytevector->s16n-list vs16n 2 unsafe.bytevector-s16n-ref)
-
-(define-bytevector-to-word-list bytevector->u32l-list vu32l 4 unsafe.bytevector-u32l-ref)
-(define-bytevector-to-word-list bytevector->u32b-list vu32b 4 unsafe.bytevector-u32b-ref)
-(define-bytevector-to-word-list bytevector->u32n-list vu32n 4 unsafe.bytevector-u32n-ref)
-(define-bytevector-to-word-list bytevector->s32l-list vs32l 4 unsafe.bytevector-s32l-ref)
-(define-bytevector-to-word-list bytevector->s32b-list vs32b 4 unsafe.bytevector-s32b-ref)
-(define-bytevector-to-word-list bytevector->s32n-list vs32n 4 unsafe.bytevector-s32n-ref)
-
-(define-bytevector-to-word-list bytevector->u64l-list vu64l 8 unsafe.bytevector-u64l-ref)
-(define-bytevector-to-word-list bytevector->u64b-list vu64b 8 unsafe.bytevector-u64b-ref)
-(define-bytevector-to-word-list bytevector->u64n-list vu64n 8 unsafe.bytevector-u64n-ref)
-(define-bytevector-to-word-list bytevector->s64l-list vs64l 8 unsafe.bytevector-s64l-ref)
-(define-bytevector-to-word-list bytevector->s64b-list vs64b 8 unsafe.bytevector-s64b-ref)
-(define-bytevector-to-word-list bytevector->s64n-list vs64n 8 unsafe.bytevector-s64n-ref)
+(define (bytevector-ieee-double-native-set! bv index X)
+  (define who 'bytevector-ieee-double-native-set!)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 8)
+       (aligned-index-8	index)
+       (flonum		X))
+    (unsafe.bytevector-ieee-double-native-set! bv index X)))
 
 
-;;;; list to bytevector conversion
+;;;; single-precision flonum bytevector functions
 
-(define-syntax define-byte-list-to-bytevector
-  (syntax-rules ()
-    ((_ ?who ?tag ?valid-number-pred ?bytevector-set!)
-     (define (?who ls)
-       (define (race h t ls n)
-	 (if (pair? h)
-	     (let ((h ($cdr h)))
-	       (if (pair? h)
-		   (if (not (eq? h t))
-		       (race ($cdr h) ($cdr t) ls (unsafe.fx+ n 2))
-		     (assertion-violation '?who "circular list" ls))
-		 (if (null? h)
-		     (unsafe.fx+ n 1)
-		   (assertion-violation '?who "not a proper list" ls))))
-	   (if (null? h)
-	       n
-	     (assertion-violation '?who "not a proper list" ls))))
+(define (bytevector-ieee-single-ref bv index endianness)
+  (define who 'bytevector-ieee-single-ref)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 4))
+    (if (fixnum-aligned-to-4? index)
+	(case-endianness (who endianness)
+	  ((little)
+	   (unsafe.bytevector-ieee-single-native-ref bv index))
+	  ((big)
+	   (unsafe.bytevector-ieee-single-nonnative-ref bv index)))
+      (case-endianness (who endianness)
+	((little)
+	 (unsafe.bytevector-ieee-single-ref/little bv index))
+	((big)
+	 (unsafe.bytevector-ieee-single-ref/big bv index))))))
 
-       (define (fill s i ls)
-	 (if (null? ls)
-	     s
-	   (let ((c ($car ls)))
-	     (unless (?valid-number-pred c)
-	       (assertion-violation '?who "not an octet" c))
-	     (unsafe.bytevector-u8-set! s i c)
-	     (fill s (unsafe.fxadd1 i) (cdr ls)))))
-
-       (let* ((n (race ls ls ls 0))
-	      (s (unsafe.make-bytevector n)))
-	 (fill s 0 ls))))))
-
-(define-byte-list-to-bytevector u8-list->bytevector vu8 word-u8? unsafe.bytevector-u8-set!)
-(define-byte-list-to-bytevector s8-list->bytevector vs8 word-s8? unsafe.bytevector-s8-set!)
-
-;;; --------------------------------------------------------------------
-
-(define-syntax define-word-list-to-bytevector
-  (syntax-rules ()
-    ((_ ?who ?tag ?valid-number-pred ?bytes-in-word ?bytevector-set!)
-     (define (?who ls)
-       (define (%race h t ls n)
-	 (cond ((pair? h)
-		(let ((h ($cdr h)))
-		  (if (pair? h)
-		      (if (not (eq? h t))
-			  (%race ($cdr h) ($cdr t) ls (+ n 2))
-			(assertion-violation ?who "circular list" ls))
-		    (if (null? h)
-			(+ n 1)
-		      (assertion-violation ?who "not a proper list" ls)))))
-	       ((null? h)
-		n)
-	       (else
-		(assertion-violation ?who "not a proper list" ls))))
-
-       (define (%fill s i ls)
-	 (if (null? ls)
-	     s
-	   (let ((c ($car ls)))
-	     (unless (?valid-number-pred c)
-	       (assertion-violation ?who "invalid element for requested bytevector type" '?tag c))
-	     (?bytevector-set! s i c)
-	     (%fill s (unsafe.fx+ ?bytes-in-word i) (cdr ls)))))
-
-       (let* ((number-of-words (%race ls ls ls 0))
-	      (bv.len	       (* ?bytes-in-word number-of-words)))
-	 (unless (fixnum? bv.len)
-	   (%implementation-violation ?who "resulting bytevector size must be a fixnum" (list bv.len)))
-	 (%fill (unsafe.make-bytevector bv.len) 0 ls)))
-     )))
+(define (bytevector-ieee-single-set! bv index X endianness)
+  (define who 'bytevector-ieee-single-set!)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 4)
+       (flonum		X))
+    (if (fixnum-aligned-to-4? index)
+	(case-endianness (who endianness)
+	  ((little)
+	   (unsafe.bytevector-ieee-single-native-set! bv index X))
+	  ((big)
+	   (unsafe.bytevector-ieee-single-nonnative-set! bv index X)))
+      (case-endianness (who endianness)
+	((little)
+	 (unsafe.bytevector-ieee-single-set!/little bv index X))
+	((big)
+	 (unsafe.bytevector-ieee-single-set!/big bv index X))))))
 
 ;;; --------------------------------------------------------------------
 
-(define-word-list-to-bytevector u16l-list->bytevector
-  'vu16l		       ;tag
-  word-u16?		       ;to validate numbers
-  2			       ;number of bytes in word
-  unsafe.bytevector-u16l-set!) ;setter
+(define (bytevector-ieee-single-native-ref bv index)
+  (define who 'bytevector-ieee-single-native-ref)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 4)
+       (aligned-index-4	index))
+    (unsafe.bytevector-ieee-single-native-ref bv index)))
 
-(define-word-list-to-bytevector u16b-list->bytevector
-  'vu16b		       ;tag
-  word-u16?		       ;to validate numbers
-  2			       ;number of bytes in word
-  unsafe.bytevector-u16b-set!) ;setter
-
-(define-word-list-to-bytevector u16n-list->bytevector
-  'vu16n		       ;tag
-  word-u16?		       ;to validate numbers
-  2			       ;number of bytes in word
-  unsafe.bytevector-u16n-set!) ;setter
-
-;;; --------------------------------------------------------------------
-
-(define-word-list-to-bytevector s16l-list->bytevector
-  'vs16l		       ;tag
-  word-s16?		       ;to validate numbers
-  2			       ;number of bytes in word
-  unsafe.bytevector-s16l-set!) ;setter
-
-(define-word-list-to-bytevector s16b-list->bytevector
-  'vs16b		       ;tag
-  word-s16?		       ;to validate numbers
-  2			       ;number of bytes in word
-  unsafe.bytevector-s16b-set!) ;setter
-
-(define-word-list-to-bytevector s16n-list->bytevector
-  'vs16n		       ;tag
-  word-s16?		       ;to validate numbers
-  2			       ;number of bytes in word
-  unsafe.bytevector-s16n-set!) ;setter
-
-;;; --------------------------------------------------------------------
-
-(define-word-list-to-bytevector u32l-list->bytevector
-  'vu32l		       ;tag
-  word-u32?		       ;to validate numbers
-  4			       ;number of bytes in word
-  unsafe.bytevector-u32l-set!) ;setter
-
-(define-word-list-to-bytevector u32b-list->bytevector
-  'vu32b		       ;tag
-  word-u32?		       ;to validate numbers
-  4			       ;number of bytes in word
-  unsafe.bytevector-u32b-set!) ;setter
-
-(define-word-list-to-bytevector u32n-list->bytevector
-  'vu32n		       ;tag
-  word-u32?		       ;to validate numbers
-  4			       ;number of bytes in word
-  unsafe.bytevector-u32n-set!) ;setter
-
-;;; --------------------------------------------------------------------
-
-(define-word-list-to-bytevector s32l-list->bytevector
-  'vs32l		       ;tag
-  word-s32?		       ;to validate numbers
-  4			       ;number of bytes in word
-  unsafe.bytevector-s32l-set!) ;setter
-
-(define-word-list-to-bytevector s32b-list->bytevector
-  'vs32b		       ;tag
-  word-s32?		       ;to validate numbers
-  4			       ;number of bytes in word
-  unsafe.bytevector-s32b-set!) ;setter
-
-(define-word-list-to-bytevector s32n-list->bytevector
-  'vs32n		       ;tag
-  word-s32?		       ;to validate numbers
-  4			       ;number of bytes in word
-  unsafe.bytevector-s32n-set!) ;setter
-
-;;; --------------------------------------------------------------------
-
-(define-word-list-to-bytevector u64l-list->bytevector
-  'vu64l		       ;tag
-  word-u64?		       ;to validate numbers
-  8			       ;number of bytes in word
-  unsafe.bytevector-u64l-set!) ;setter
-
-(define-word-list-to-bytevector u64b-list->bytevector
-  'vu64b		       ;tag
-  word-u64?		       ;to validate numbers
-  8			       ;number of bytes in word
-  unsafe.bytevector-u64b-set!) ;setter
-
-(define-word-list-to-bytevector u64n-list->bytevector
-  'vu64n		       ;tag
-  word-u64?		       ;to validate numbers
-  8			       ;number of bytes in word
-  unsafe.bytevector-u64n-set!) ;setter
-
-;;; --------------------------------------------------------------------
-
-(define-word-list-to-bytevector s64l-list->bytevector
-  'vs64l		       ;tag
-  word-s64?		       ;to validate numbers
-  8			       ;number of bytes in word
-  unsafe.bytevector-s64l-set!) ;setter
-
-(define-word-list-to-bytevector s64b-list->bytevector
-  'vs64b		       ;tag
-  word-s64?		       ;to validate numbers
-  8			       ;number of bytes in word
-  unsafe.bytevector-s64b-set!) ;setter
-
-(define-word-list-to-bytevector s64n-list->bytevector
-  'vs64n		       ;tag
-  word-s64?		       ;to validate numbers
-  8			       ;number of bytes in word
-  unsafe.bytevector-s64n-set!) ;setter
+(define (bytevector-ieee-single-native-set! bv index X)
+  (define who 'bytevector-ieee-single-native-set!)
+  (with-arguments-validation (who)
+      ((bytevector	bv)
+       (index		index)
+       (index-for	index bv 4)
+       (aligned-index-4	index)
+       (flonum		X))
+    (unsafe.bytevector-ieee-single-native-set! bv index X)))
 
 
-;;;; platform's integer functions
+;;;; unsafe flonum setters and geters
+;;
+;;As defined  by IEEE  754: single-precision flonums  are 4  bytes long,
+;;double-precision  flonums  are 8  bytes  long.   Vicare's flonums  are
+;;double-precision.  On  big-endian platforms the order of  bytes is the
+;;same in a flonum data area and the bytevector.
+;;
+
+(define (unsafe.bytevector-ieee-double-ref/big x i)
+  (let ((y (unsafe.make-flonum)))
+    (unsafe.flonum-set! y 0 (unsafe.bytevector-u8-ref x i))
+    (unsafe.flonum-set! y 1 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 1)))
+    (unsafe.flonum-set! y 2 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 2)))
+    (unsafe.flonum-set! y 3 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 3)))
+    (unsafe.flonum-set! y 4 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 4)))
+    (unsafe.flonum-set! y 5 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 5)))
+    (unsafe.flonum-set! y 6 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 6)))
+    (unsafe.flonum-set! y 7 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 7)))
+    y))
+
+(define (unsafe.bytevector-ieee-double-set!/big x i y)
+  (unsafe.bytevector-u8-set! x i                (unsafe.flonum-u8-ref y 0))
+  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 1) (unsafe.flonum-u8-ref y 1))
+  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 2) (unsafe.flonum-u8-ref y 2))
+  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 3) (unsafe.flonum-u8-ref y 3))
+  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 4) (unsafe.flonum-u8-ref y 4))
+  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 5) (unsafe.flonum-u8-ref y 5))
+  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 6) (unsafe.flonum-u8-ref y 6))
+  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 7) (unsafe.flonum-u8-ref y 7)))
+
+(define (unsafe.bytevector-ieee-double-ref/little x i)
+  (let ((y (unsafe.make-flonum)))
+    (unsafe.flonum-set! y 7 (unsafe.bytevector-u8-ref x i))
+    (unsafe.flonum-set! y 6 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 1)))
+    (unsafe.flonum-set! y 5 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 2)))
+    (unsafe.flonum-set! y 4 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 3)))
+    (unsafe.flonum-set! y 3 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 4)))
+    (unsafe.flonum-set! y 2 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 5)))
+    (unsafe.flonum-set! y 1 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 6)))
+    (unsafe.flonum-set! y 0 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 7)))
+    y))
+
+(define (unsafe.bytevector-ieee-double-set!/little x i y)
+  (unsafe.bytevector-u8-set! x i                (unsafe.flonum-u8-ref y 7))
+  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 1) (unsafe.flonum-u8-ref y 6))
+  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 2) (unsafe.flonum-u8-ref y 5))
+  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 3) (unsafe.flonum-u8-ref y 4))
+  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 4) (unsafe.flonum-u8-ref y 3))
+  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 5) (unsafe.flonum-u8-ref y 2))
+  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 6) (unsafe.flonum-u8-ref y 1))
+  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 7) (unsafe.flonum-u8-ref y 0)))
+
+;;; --------------------------------------------------------------------
+
+(define (unsafe.bytevector-ieee-single-ref/little x i)
+  (let ((bv (make-bytevector 4)))
+    (unsafe.bytevector-u8-set! bv 0 (unsafe.bytevector-u8-ref x i))
+    (unsafe.bytevector-u8-set! bv 1 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 1)))
+    (unsafe.bytevector-u8-set! bv 2 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 2)))
+    (unsafe.bytevector-u8-set! bv 3 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 3)))
+    (unsafe.bytevector-ieee-single-native-ref bv 0)))
+
+(define (unsafe.bytevector-ieee-single-ref/big x i)
+  (let ((bv (make-bytevector 4)))
+    (unsafe.bytevector-u8-set! bv 3 (unsafe.bytevector-u8-ref x i))
+    (unsafe.bytevector-u8-set! bv 2 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 1)))
+    (unsafe.bytevector-u8-set! bv 1 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 2)))
+    (unsafe.bytevector-u8-set! bv 0 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 3)))
+    (unsafe.bytevector-ieee-single-native-ref bv 0)))
+
+(define (unsafe.bytevector-ieee-single-set!/little x i v)
+  (let ((bv (make-bytevector 4)))
+    (unsafe.bytevector-ieee-single-native-set! bv 0 v)
+    (unsafe.bytevector-u8-set! x i                (unsafe.bytevector-u8-ref bv 0))
+    (unsafe.bytevector-u8-set! x (unsafe.fx+ i 1) (unsafe.bytevector-u8-ref bv 1))
+    (unsafe.bytevector-u8-set! x (unsafe.fx+ i 2) (unsafe.bytevector-u8-ref bv 2))
+    (unsafe.bytevector-u8-set! x (unsafe.fx+ i 3) (unsafe.bytevector-u8-ref bv 3))))
+
+(define (unsafe.bytevector-ieee-single-set!/big x i v)
+  (let ((bv (make-bytevector 4)))
+    (unsafe.bytevector-ieee-single-native-set! bv 0 v)
+    (unsafe.bytevector-u8-set! x i                (unsafe.bytevector-u8-ref bv 3))
+    (unsafe.bytevector-u8-set! x (unsafe.fx+ i 1) (unsafe.bytevector-u8-ref bv 2))
+    (unsafe.bytevector-u8-set! x (unsafe.fx+ i 2) (unsafe.bytevector-u8-ref bv 1))
+    (unsafe.bytevector-u8-set! x (unsafe.fx+ i 3) (unsafe.bytevector-u8-ref bv 0))))
+
+
+;;;; any integer getters and setters, bytevector to any integer list conversion
 
 (module (bytevector-uint-ref bytevector-sint-ref
 			     bytevector->uint-list bytevector->sint-list)
@@ -1717,263 +1424,296 @@
     (else (die who "invalid endianness" endianness))))
 
 
-;;;; any integer functions
+;;;; bytevector to fixed-length word list conversion
 
-(module (uint-list->bytevector sint-list->bytevector)
-  (define (make-xint-list->bytevector who bv-set!)
-    (define (race h t ls idx endianness size)
-      (if (pair? h)
-	  (let ((h ($cdr h)) (a ($car h)))
-	    (if (pair? h)
-		(if (not (eq? h t))
-		    (let ((bv (race ($cdr h) ($cdr t) ls
-				    (unsafe.fx+ idx (unsafe.fx+ size size))
-				    endianness size)))
-		      (bv-set! bv idx a endianness size who)
-		      (bv-set! bv (unsafe.fx+ idx size) ($car h) endianness size who)
-		      bv)
-		  (die who "circular list" ls))
-	      (if (null? h)
-		  (let ((bv (make-bytevector (unsafe.fx+ idx size))))
-		    (bv-set! bv idx a endianness size who)
-		    bv)
-		(die who "not a proper list" ls))))
-	(if (null? h)
-	    (make-bytevector idx)
-	  (die who "not a proper list" ls))))
-    (lambda (ls endianness size)
-      (if (and (fixnum? size) (fx> size 0))
-	  (race ls ls ls 0 endianness size)
-	(die who "size must be a positive integer" size))))
-  (define uint-list->bytevector
-    (make-xint-list->bytevector
-     'uint-list->bytevector bytevector-uint-set!/who))
-  (define sint-list->bytevector
-    (make-xint-list->bytevector
-     'sint-list->bytevector bytevector-sint-set!/who)))
+(define-syntax define-bytevector-to-byte-list
+  (syntax-rules ()
+    ((_ ?who ?bytevector-ref)
+     (define (?who bv)
+       (with-arguments-validation (?who)
+	   ((bytevector bv))
+	 (let loop ((bv	    bv)
+		    (index  (unsafe.bytevector-length bv))
+		    (accum  '()))
+	   (if (unsafe.fxzero? index)
+	       accum
+	     (let ((j (unsafe.fxsub1 index)))
+	       (loop bv j (cons (?bytevector-ref bv j) accum))))))))))
+
+(define-bytevector-to-byte-list bytevector->u8-list unsafe.bytevector-u8-ref)
+(define-bytevector-to-byte-list bytevector->s8-list unsafe.bytevector-s8-ref)
+
+;;; --------------------------------------------------------------------
+
+(define-syntax define-bytevector-to-word-list
+  (syntax-rules ()
+    ((_ ?who ?tag ?bytes-in-word ?bytevector-ref)
+     (define (?who bv)
+       (with-arguments-validation (?who)
+	   ((bytevector bv))
+	 (let* ((bv.len (unsafe.bytevector-length bv))
+		(rest   (fxmod bv.len ?bytes-in-word)))
+	   (unless (unsafe.fxzero? rest)
+	     (assertion-violation ?who
+	       "invalid bytevector size for requested type conversion" '?tag bv.len))
+	   (let loop ((bv		bv)
+		      (i		bv.len)
+		      (accum	'()))
+	     (if (unsafe.fxzero? i)
+		 accum
+	       (let ((j (unsafe.fx- i ?bytes-in-word)))
+		 (loop bv j (cons (?bytevector-ref bv j) accum))))))))
+     )))
+
+(define-bytevector-to-word-list bytevector->u16l-list vu16l 2 unsafe.bytevector-u16l-ref)
+(define-bytevector-to-word-list bytevector->u16b-list vu16b 2 unsafe.bytevector-u16b-ref)
+(define-bytevector-to-word-list bytevector->u16n-list vu16n 2 unsafe.bytevector-u16n-ref)
+(define-bytevector-to-word-list bytevector->s16l-list vs16l 2 unsafe.bytevector-s16l-ref)
+(define-bytevector-to-word-list bytevector->s16b-list vs16b 2 unsafe.bytevector-s16b-ref)
+(define-bytevector-to-word-list bytevector->s16n-list vs16n 2 unsafe.bytevector-s16n-ref)
+
+(define-bytevector-to-word-list bytevector->u32l-list vu32l 4 unsafe.bytevector-u32l-ref)
+(define-bytevector-to-word-list bytevector->u32b-list vu32b 4 unsafe.bytevector-u32b-ref)
+(define-bytevector-to-word-list bytevector->u32n-list vu32n 4 unsafe.bytevector-u32n-ref)
+(define-bytevector-to-word-list bytevector->s32l-list vs32l 4 unsafe.bytevector-s32l-ref)
+(define-bytevector-to-word-list bytevector->s32b-list vs32b 4 unsafe.bytevector-s32b-ref)
+(define-bytevector-to-word-list bytevector->s32n-list vs32n 4 unsafe.bytevector-s32n-ref)
+
+(define-bytevector-to-word-list bytevector->u64l-list vu64l 8 unsafe.bytevector-u64l-ref)
+(define-bytevector-to-word-list bytevector->u64b-list vu64b 8 unsafe.bytevector-u64b-ref)
+(define-bytevector-to-word-list bytevector->u64n-list vu64n 8 unsafe.bytevector-u64n-ref)
+(define-bytevector-to-word-list bytevector->s64l-list vs64l 8 unsafe.bytevector-s64l-ref)
+(define-bytevector-to-word-list bytevector->s64b-list vs64b 8 unsafe.bytevector-s64b-ref)
+(define-bytevector-to-word-list bytevector->s64n-list vs64n 8 unsafe.bytevector-s64n-ref)
 
 
-;;;; floating point bytevector functions
+;;;; fixed-length word list to bytevector conversion
 
-(define (bytevector-ieee-double-native-ref bv i)
-  (define who 'bytevector-ieee-double-native-ref)
-  (if (bytevector? bv)
-      (if (and (fixnum? i)
-	       (unsafe.fx>= i 0)
-	       (unsafe.fxzero? (unsafe.fxand i 7))
-	       (unsafe.fx< i (unsafe.bytevector-length bv)))
-	  (unsafe.bytevector-ieee-double-native-ref bv i)
-	(die who "invalid index" i))
-    (die who "not a bytevector" bv)))
+(define-syntax define-byte-list-to-bytevector
+  (syntax-rules ()
+    ((_ ?who ?tag ?valid-number-pred ?bytevector-set!)
+     (define (?who ls)
+       (define (race h t ls n)
+	 (if (pair? h)
+	     (let ((h ($cdr h)))
+	       (if (pair? h)
+		   (if (not (eq? h t))
+		       (race ($cdr h) ($cdr t) ls (unsafe.fx+ n 2))
+		     (assertion-violation '?who "circular list" ls))
+		 (if (null? h)
+		     (unsafe.fx+ n 1)
+		   (assertion-violation '?who "not a proper list" ls))))
+	   (if (null? h)
+	       n
+	     (assertion-violation '?who "not a proper list" ls))))
 
-(define (bytevector-ieee-single-native-ref bv i)
-  (define who 'bytevector-ieee-single-native-ref)
-  (if (bytevector? bv)
-      (if (and (fixnum? i)
-	       (unsafe.fx>= i 0)
-	       (unsafe.fxzero? (unsafe.fxand i 3))
-	       (unsafe.fx< i (unsafe.bytevector-length bv)))
-	  (unsafe.bytevector-ieee-single-native-ref bv i)
-	(die who "invalid index" i))
-    (die who "not a bytevector" bv)))
+       (define (fill s i ls)
+	 (if (null? ls)
+	     s
+	   (let ((c ($car ls)))
+	     (unless (?valid-number-pred c)
+	       (assertion-violation '?who "not an octet" c))
+	     (unsafe.bytevector-u8-set! s i c)
+	     (fill s (unsafe.fxadd1 i) (cdr ls)))))
 
-(define (bytevector-ieee-double-native-set! bv i x)
-  (define who 'bytevector-ieee-double-native-set!)
-  (if (bytevector? bv)
-      (if (and (fixnum? i)
-	       (unsafe.fx>= i 0)
-	       (unsafe.fxzero? (unsafe.fxand i 7))
-	       (unsafe.fx< i (unsafe.bytevector-length bv)))
-	  (if (flonum? x)
-	      (unsafe.bytevector-ieee-double-native-set! bv i x)
-	    (die who "not a flonum" x))
-	(die who "invalid index" i))
-    (die who "not a bytevector" bv)))
+       (let* ((n (race ls ls ls 0))
+	      (s (unsafe.make-bytevector n)))
+	 (fill s 0 ls))))))
 
-(define (bytevector-ieee-single-native-set! bv i x)
-  (define who 'bytevector-ieee-single-native-set!)
-  (if (bytevector? bv)
-      (if (and (fixnum? i)
-	       (unsafe.fx>= i 0)
-	       (unsafe.fxzero? (unsafe.fxand i 3))
-	       (unsafe.fx< i (unsafe.bytevector-length bv)))
-	  (if (flonum? x)
-	      (unsafe.bytevector-ieee-single-native-set! bv i x)
-	    (die who "not a flonum" x))
-	(die who "invalid index" i))
-    (die who "not a bytevector" bv)))
+(define-byte-list-to-bytevector u8-list->bytevector vu8 word-u8? unsafe.bytevector-u8-set!)
+(define-byte-list-to-bytevector s8-list->bytevector vs8 word-s8? unsafe.bytevector-s8-set!)
 
-(define (unsafe.bytevector-ieee-double-ref/big x i)
-  (import (ikarus system $flonums))
-  (let ((y ($make-flonum)))
-    ($flonum-set! y 0 (unsafe.bytevector-u8-ref x i))
-    ($flonum-set! y 1 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 1)))
-    ($flonum-set! y 2 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 2)))
-    ($flonum-set! y 3 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 3)))
-    ($flonum-set! y 4 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 4)))
-    ($flonum-set! y 5 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 5)))
-    ($flonum-set! y 6 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 6)))
-    ($flonum-set! y 7 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 7)))
-    y))
+;;; --------------------------------------------------------------------
 
-(define (unsafe.bytevector-ieee-double-set!/big x i y)
-  (import (ikarus system $flonums))
-  (unsafe.bytevector-u8-set! x i          ($flonum-u8-ref y 0))
-  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 1) ($flonum-u8-ref y 1))
-  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 2) ($flonum-u8-ref y 2))
-  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 3) ($flonum-u8-ref y 3))
-  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 4) ($flonum-u8-ref y 4))
-  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 5) ($flonum-u8-ref y 5))
-  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 6) ($flonum-u8-ref y 6))
-  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 7) ($flonum-u8-ref y 7)))
+(define-syntax define-word-list-to-bytevector
+  (syntax-rules ()
+    ((_ ?who ?tag ?valid-number-pred ?bytes-in-word ?bytevector-set!)
+     (define (?who ls)
+       (define (%race h t ls n)
+	 (cond ((pair? h)
+		(let ((h ($cdr h)))
+		  (if (pair? h)
+		      (if (not (eq? h t))
+			  (%race ($cdr h) ($cdr t) ls (+ n 2))
+			(assertion-violation ?who "circular list" ls))
+		    (if (null? h)
+			(+ n 1)
+		      (assertion-violation ?who "not a proper list" ls)))))
+	       ((null? h)
+		n)
+	       (else
+		(assertion-violation ?who "not a proper list" ls))))
 
-(define (unsafe.bytevector-ieee-double-ref/little x i)
-  (import (ikarus system $flonums))
-  (let ((y ($make-flonum)))
-    ($flonum-set! y 7 (unsafe.bytevector-u8-ref x i))
-    ($flonum-set! y 6 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 1)))
-    ($flonum-set! y 5 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 2)))
-    ($flonum-set! y 4 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 3)))
-    ($flonum-set! y 3 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 4)))
-    ($flonum-set! y 2 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 5)))
-    ($flonum-set! y 1 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 6)))
-    ($flonum-set! y 0 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 7)))
-    y))
+       (define (%fill s i ls)
+	 (if (null? ls)
+	     s
+	   (let ((c ($car ls)))
+	     (unless (?valid-number-pred c)
+	       (assertion-violation ?who "invalid element for requested bytevector type" '?tag c))
+	     (?bytevector-set! s i c)
+	     (%fill s (unsafe.fx+ ?bytes-in-word i) (cdr ls)))))
 
-(define (unsafe.bytevector-ieee-double-set!/little x i y)
-  (import (ikarus system $flonums))
-  (unsafe.bytevector-u8-set! x i          ($flonum-u8-ref y 7))
-  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 1) ($flonum-u8-ref y 6))
-  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 2) ($flonum-u8-ref y 5))
-  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 3) ($flonum-u8-ref y 4))
-  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 4) ($flonum-u8-ref y 3))
-  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 5) ($flonum-u8-ref y 2))
-  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 6) ($flonum-u8-ref y 1))
-  (unsafe.bytevector-u8-set! x (unsafe.fx+ i 7) ($flonum-u8-ref y 0)))
+       (let* ((number-of-words (%race ls ls ls 0))
+	      (bv.len	       (* ?bytes-in-word number-of-words)))
+	 (unless (fixnum? bv.len)
+	   (%implementation-violation ?who "resulting bytevector size must be a fixnum" (list bv.len)))
+	 (%fill (unsafe.make-bytevector bv.len) 0 ls)))
+     )))
 
-(define (unsafe.bytevector-ieee-single-ref/little x i)
-  (let ((bv (make-bytevector 4)))
-    (unsafe.bytevector-u8-set! bv 0 (unsafe.bytevector-u8-ref x i))
-    (unsafe.bytevector-u8-set! bv 1 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 1)))
-    (unsafe.bytevector-u8-set! bv 2 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 2)))
-    (unsafe.bytevector-u8-set! bv 3 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 3)))
-    (unsafe.bytevector-ieee-single-native-ref bv 0)))
+;;; --------------------------------------------------------------------
 
-(define (unsafe.bytevector-ieee-single-ref/big x i)
-  (let ((bv (make-bytevector 4)))
-    (unsafe.bytevector-u8-set! bv 3 (unsafe.bytevector-u8-ref x i))
-    (unsafe.bytevector-u8-set! bv 2 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 1)))
-    (unsafe.bytevector-u8-set! bv 1 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 2)))
-    (unsafe.bytevector-u8-set! bv 0 (unsafe.bytevector-u8-ref x (unsafe.fx+ i 3)))
-    (unsafe.bytevector-ieee-single-native-ref bv 0)))
+(define-word-list-to-bytevector u16l-list->bytevector
+  'vu16l		       ;tag
+  word-u16?		       ;to validate numbers
+  2			       ;number of bytes in word
+  unsafe.bytevector-u16l-set!) ;setter
 
-(define (unsafe.bytevector-ieee-single-set!/little x i v)
-  (let ((bv (make-bytevector 4)))
-    (unsafe.bytevector-ieee-single-native-set! bv 0 v)
-    (unsafe.bytevector-u8-set! x i          (unsafe.bytevector-u8-ref bv 0))
-    (unsafe.bytevector-u8-set! x (unsafe.fx+ i 1) (unsafe.bytevector-u8-ref bv 1))
-    (unsafe.bytevector-u8-set! x (unsafe.fx+ i 2) (unsafe.bytevector-u8-ref bv 2))
-    (unsafe.bytevector-u8-set! x (unsafe.fx+ i 3) (unsafe.bytevector-u8-ref bv 3))))
+(define-word-list-to-bytevector u16b-list->bytevector
+  'vu16b		       ;tag
+  word-u16?		       ;to validate numbers
+  2			       ;number of bytes in word
+  unsafe.bytevector-u16b-set!) ;setter
 
-(define (unsafe.bytevector-ieee-single-set!/big x i v)
-  (let ((bv (make-bytevector 4)))
-    (unsafe.bytevector-ieee-single-native-set! bv 0 v)
-    (unsafe.bytevector-u8-set! x i          (unsafe.bytevector-u8-ref bv 3))
-    (unsafe.bytevector-u8-set! x (unsafe.fx+ i 1) (unsafe.bytevector-u8-ref bv 2))
-    (unsafe.bytevector-u8-set! x (unsafe.fx+ i 2) (unsafe.bytevector-u8-ref bv 1))
-    (unsafe.bytevector-u8-set! x (unsafe.fx+ i 3) (unsafe.bytevector-u8-ref bv 0))))
+(define-word-list-to-bytevector u16n-list->bytevector
+  'vu16n		       ;tag
+  word-u16?		       ;to validate numbers
+  2			       ;number of bytes in word
+  unsafe.bytevector-u16n-set!) ;setter
 
-(define (bytevector-ieee-double-ref bv i endianness)
-  (define who 'bytevector-ieee-double-ref)
-  (if (bytevector? bv)
-      (if (and (fixnum? i) (unsafe.fx>= i 0))
-	  (let ((len (unsafe.bytevector-length bv)))
-	    (if (and (unsafe.fxzero? (unsafe.fxand i 7)) (unsafe.fx< i len))
-		(case endianness
-		  ((little) (unsafe.bytevector-ieee-double-native-ref bv i))
-		  ((big) (unsafe.bytevector-ieee-double-nonnative-ref bv i))
-		  (else (die who "invalid endianness" endianness)))
-	      (if (unsafe.fx<= i (unsafe.fx- len 8))
-		  (case endianness
-		    ((little)
-		     (unsafe.bytevector-ieee-double-ref/little bv i))
-		    ((big)
-		     (unsafe.bytevector-ieee-double-ref/big bv i))
-		    (else (die who "invalid endianness" endianness)))
-		(die who "invalid index" i))))
-	(die who "invalid index" i))
-    (die who "not a bytevector" bv)))
+;;; --------------------------------------------------------------------
 
-(define (bytevector-ieee-single-ref bv i endianness)
-  (define who 'bytevector-ieee-single-ref)
-  (if (bytevector? bv)
-      (if (and (fixnum? i) (unsafe.fx>= i 0))
-	  (let ((len (unsafe.bytevector-length bv)))
-	    (if (and (unsafe.fxzero? (unsafe.fxand i 3)) (unsafe.fx< i len))
-		(case endianness
-		  ((little) (unsafe.bytevector-ieee-single-native-ref bv i))
-		  ((big) (unsafe.bytevector-ieee-single-nonnative-ref bv i))
-		  (else (die who "invalid endianness" endianness)))
-	      (if (unsafe.fx<= i (unsafe.fx- len 4))
-		  (case endianness
-		    ((little)
-		     (unsafe.bytevector-ieee-single-ref/little bv i))
-		    ((big)
-		     (unsafe.bytevector-ieee-single-ref/big bv i))
-		    (else (die who "invalid endianness" endianness)))
-		(die who "invalid index" i))))
-	(die who "invalid index" i))
-    (die who "not a bytevector" bv)))
+(define-word-list-to-bytevector s16l-list->bytevector
+  'vs16l		       ;tag
+  word-s16?		       ;to validate numbers
+  2			       ;number of bytes in word
+  unsafe.bytevector-s16l-set!) ;setter
 
-(define (bytevector-ieee-double-set! bv i x endianness)
-  (define who 'bytevector-ieee-double-set!)
-  (if (bytevector? bv)
-      (if (flonum? x)
-	  (if (and (fixnum? i) (unsafe.fx>= i 0))
-	      (let ((len (unsafe.bytevector-length bv)))
-		(if (and (unsafe.fxzero? (unsafe.fxand i 7)) (unsafe.fx< i len))
-		    (case endianness
-		      ((little) (unsafe.bytevector-ieee-double-native-set! bv i x))
-		      ((big) (unsafe.bytevector-ieee-double-nonnative-set! bv i x))
-		      (else
-		       (die who "invalid endianness" endianness)))
-		  (if (unsafe.fx<= i (unsafe.fx- len 8))
-		      (case endianness
-			((little)
-			 (unsafe.bytevector-ieee-double-set!/little bv i x))
-			((big)
-			 (unsafe.bytevector-ieee-double-set!/big bv i x))
-			(else
-			 (die who "invalid endianness" endianness)))
-		    (die who "invalid index" i))))
-	    (die who "invalid index" i))
-	(die who "not a flonum" x))
-    (die who "not a bytevector" bv)))
+(define-word-list-to-bytevector s16b-list->bytevector
+  'vs16b		       ;tag
+  word-s16?		       ;to validate numbers
+  2			       ;number of bytes in word
+  unsafe.bytevector-s16b-set!) ;setter
 
-(define (bytevector-ieee-single-set! bv i x endianness)
-  (define who 'bytevector-ieee-single-set!)
-  (if (bytevector? bv)
-      (if (flonum? x)
-	  (if (and (fixnum? i) (unsafe.fx>= i 0))
-	      (let ((len (unsafe.bytevector-length bv)))
-		(if (and (unsafe.fxzero? (unsafe.fxand i 3)) (unsafe.fx< i len))
-		    (case endianness
-		      ((little) (unsafe.bytevector-ieee-single-native-set! bv i x))
-		      ((big) (unsafe.bytevector-ieee-single-nonnative-set! bv i x))
-		      (else
-		       (die who "invalid endianness" endianness)))
-		  (if (unsafe.fx<= i (unsafe.fx- len 4))
-		      (case endianness
-			((little)
-			 (unsafe.bytevector-ieee-single-set!/little bv i x))
-			((big)
-			 (unsafe.bytevector-ieee-single-set!/big bv i x))
-			(else
-			 (die who "invalid endianness" endianness)))
-		    (die who "invalid index" i))))
-	    (die who "invalid index" i))
-	(die who "not a flonum" x))
-    (die who "not a bytevector" bv)))
+(define-word-list-to-bytevector s16n-list->bytevector
+  'vs16n		       ;tag
+  word-s16?		       ;to validate numbers
+  2			       ;number of bytes in word
+  unsafe.bytevector-s16n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-word-list-to-bytevector u32l-list->bytevector
+  'vu32l		       ;tag
+  word-u32?		       ;to validate numbers
+  4			       ;number of bytes in word
+  unsafe.bytevector-u32l-set!) ;setter
+
+(define-word-list-to-bytevector u32b-list->bytevector
+  'vu32b		       ;tag
+  word-u32?		       ;to validate numbers
+  4			       ;number of bytes in word
+  unsafe.bytevector-u32b-set!) ;setter
+
+(define-word-list-to-bytevector u32n-list->bytevector
+  'vu32n		       ;tag
+  word-u32?		       ;to validate numbers
+  4			       ;number of bytes in word
+  unsafe.bytevector-u32n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-word-list-to-bytevector s32l-list->bytevector
+  'vs32l		       ;tag
+  word-s32?		       ;to validate numbers
+  4			       ;number of bytes in word
+  unsafe.bytevector-s32l-set!) ;setter
+
+(define-word-list-to-bytevector s32b-list->bytevector
+  'vs32b		       ;tag
+  word-s32?		       ;to validate numbers
+  4			       ;number of bytes in word
+  unsafe.bytevector-s32b-set!) ;setter
+
+(define-word-list-to-bytevector s32n-list->bytevector
+  'vs32n		       ;tag
+  word-s32?		       ;to validate numbers
+  4			       ;number of bytes in word
+  unsafe.bytevector-s32n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-word-list-to-bytevector u64l-list->bytevector
+  'vu64l		       ;tag
+  word-u64?		       ;to validate numbers
+  8			       ;number of bytes in word
+  unsafe.bytevector-u64l-set!) ;setter
+
+(define-word-list-to-bytevector u64b-list->bytevector
+  'vu64b		       ;tag
+  word-u64?		       ;to validate numbers
+  8			       ;number of bytes in word
+  unsafe.bytevector-u64b-set!) ;setter
+
+(define-word-list-to-bytevector u64n-list->bytevector
+  'vu64n		       ;tag
+  word-u64?		       ;to validate numbers
+  8			       ;number of bytes in word
+  unsafe.bytevector-u64n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-word-list-to-bytevector s64l-list->bytevector
+  'vs64l		       ;tag
+  word-s64?		       ;to validate numbers
+  8			       ;number of bytes in word
+  unsafe.bytevector-s64l-set!) ;setter
+
+(define-word-list-to-bytevector s64b-list->bytevector
+  'vs64b		       ;tag
+  word-s64?		       ;to validate numbers
+  8			       ;number of bytes in word
+  unsafe.bytevector-s64b-set!) ;setter
+
+(define-word-list-to-bytevector s64n-list->bytevector
+  'vs64n		       ;tag
+  word-s64?		       ;to validate numbers
+  8			       ;number of bytes in word
+  unsafe.bytevector-s64n-set!) ;setter
+
+
+;;;; any integer list to bytevector functions
+
+(define uint-list->bytevector
+  (%make-xint-list->bytevector 'uint-list->bytevector bytevector-uint-set!/who))
+
+(define sint-list->bytevector
+  (%make-xint-list->bytevector 'sint-list->bytevector bytevector-sint-set!/who))
+
+(define (%make-xint-list->bytevector who bv-set!)
+  (define (race h t ls idx endianness size)
+    (if (pair? h)
+	(let ((h ($cdr h)) (a ($car h)))
+	  (if (pair? h)
+	      (if (not (eq? h t))
+		  (let ((bv (race ($cdr h) ($cdr t) ls
+				  (unsafe.fx+ idx (unsafe.fx+ size size))
+				  endianness size)))
+		    (bv-set! bv idx a endianness size who)
+		    (bv-set! bv (unsafe.fx+ idx size) ($car h) endianness size who)
+		    bv)
+		(die who "circular list" ls))
+	    (if (null? h)
+		(let ((bv (make-bytevector (unsafe.fx+ idx size))))
+		  (bv-set! bv idx a endianness size who)
+		  bv)
+	      (die who "not a proper list" ls))))
+      (if (null? h)
+	  (make-bytevector idx)
+	(die who "not a proper list" ls))))
+  (lambda (ls endianness size)
+    (if (and (fixnum? size) (fx> size 0))
+	(race ls ls ls 0 endianness size)
+      (die who "size must be a positive integer" size))))
 
 
 
