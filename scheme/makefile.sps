@@ -603,7 +603,7 @@
     ($fl<=                                       $flonums)
     ($fl>                                        $flonums)
     ($fl>=                                       $flonums)
-		;($flround                                    $flonums)
+;;;($flround                                    $flonums)
     ($fixnum->flonum                             $flonums)
     ($flonum-sbe                                 $flonums)
     ($make-bignum                                $bignums)
