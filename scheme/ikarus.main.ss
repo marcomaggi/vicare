@@ -31,16 +31,13 @@
   target)
 
 (define (init-library-path)
+  (define (prefix ext ls)
+    (append (map (lambda (x) (string-append ext x)) ls) ls))
   (library-path (append (cond ((getenv "VICARE_LIBRARY_PATH")
 			       => split-path)
 			      (else '(".")))
 			(list vicare-lib-dir)))
-  (let ((prefix (lambda (ext ls)
-		  (append (map (lambda (x) (string-append ext x)) ls) ls))))
-    (library-extensions
-     (prefix "/main"
-	     (prefix ".vicare"
-		     (library-extensions))))))
+  (library-extensions (prefix "/main" (prefix ".vicare" (library-extensions)))))
 
 (define (split-path s)
   (define (nodata i s ls)
@@ -74,9 +71,9 @@
     (newline)
     (display "Build ")
     (let-syntax ((ds (lambda (x) (date-string))))
-      ds)
+      (display ds))
     (newline))
-  (display "Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors\n
+  (display "Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors\n\
 Copyright (c) 2011 Marco Maggi\n\n"))
 
 
