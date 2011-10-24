@@ -1299,6 +1299,14 @@
 	(bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 3) (endianness little)))
     => (list (mult 3)))
 
+;;; --------------------------------------------------------------------
+;;; arguments validation: endianness
+
+  (check
+      (catch #f
+	(bytevector-u16-ref #vu8(1 0 2 0 3 0) 0 'dummy))
+    => '(dummy))
+
   #t)
 
 
@@ -1524,7 +1532,7 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
-  (check	;not a fixnum
+  (check
       (catch #f
 	(bytevector-s16-set! #vu8(1 0 2 0 3 0) 1 0 'dummy))
     => '(dummy))
@@ -1622,6 +1630,155 @@
       (catch #f
 	(bytevector-s16-ref #vu8(1 0 2 0 3 0) (mult 3) (endianness little)))
     => (list (mult 3)))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: endianness
+
+  (check
+      (catch #f
+	(bytevector-s16-ref #vu8(1 0 2 0 3 0) 0 'dummy))
+    => '(dummy))
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-s16-native-set-bang))
+
+  (define bytes-per-word	2)
+  (define-syntax mult
+    (syntax-rules ()
+      ((_ ?num)
+       (* bytes-per-word ?num))))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s16-native-set! bv 0 #x0AF0)
+	bv)
+    => (case (native-endianness)
+	 ((big)		#vu8(#x0A #xF0))
+	 ((little)	#vu8(#xF0 #x0A))))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-s16-native-set! #\a 0 2))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s16-native-set! #vu8(1 0 2 0 3 0) #\a 2))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-s16-native-set! #vu8(1 0 2 0 3 0) -1 2))
+    => '(-1))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2))
+    => (list (mult 4)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2))
+    => (list (mult 3)))
+
+  (check	;not aligned
+      (catch #f
+	(bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 3 2))
+    => '(3))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: value
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 0 #\a))
+    => '(#\a))
+
+  (check	;too low
+      (catch #f
+	(bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 0 (least-s16*)))
+    => (list (least-s16*)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 0 (greatest-s16*)))
+    => `(,(greatest-s16*)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-s16-native-ref))
+
+  (define bytes-per-word	2)
+  (define-syntax mult
+    (syntax-rules ()
+      ((_ ?num)
+       (* bytes-per-word ?num))))
+
+  (check
+      (bytevector-s16-native-ref #vu8(#x0F #x0A) 0)
+    => (case (native-endianness)
+	 ((big)		#x0F0A)
+	 ((little)	#x0A0F)))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s16-native-set! bv 0 (greatest-s16))
+	bv)
+    => (case (native-endianness)
+	 ((little)	#vu8(#xFF 127))
+	 ((big)		#vu8(127 #xFF))))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s16-native-set! bv 0 (least-s16))
+	bv)
+    => (case (native-endianness)
+	 ((little)	#vu8(0 #x80))
+	 ((big)		#vu8(#x80 0))))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-s16-native-ref #\a 0))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s16-native-ref #vu8(1 0 2 0 3 0) #\a))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-s16-native-ref #vu8(1 0 2 0 3 0) -1))
+    => '(-1))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s16-native-ref #vu8(1 0 2 0 3 0) (mult 4)))
+    => (list (mult 4)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s16-native-ref #vu8(1 0 2 0 3 0) (mult 3)))
+    => (list (mult 3)))
+
+  (check	;not aligned
+      (catch #f
+	(bytevector-s16-native-ref #vu8(1 0 2 0 3 0) 3))
+    => '(3))
 
   #t)
 
@@ -1821,6 +1978,134 @@
       (catch #f
 	(bytevector-u32-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 'dummy))
     => '(dummy))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-u32-native-set-bang))
+
+  (define bytes-per-word	4)
+  (define-syntax mult
+    (syntax-rules ()
+      ((_ ?num)
+       (* bytes-per-word ?num))))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-u32-native-set! bv 0 #x12345678)
+	bv)
+    => (case (native-endianness)
+	 ((little)	#vu8(#x78 #x56 #x34 #x12))
+	 ((big)		#vu8(#x12 #x34 #x56 #x78))))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-u32-native-set! #\a 1 2))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) #\a 2))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) -2 2))
+    => '(-2))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 5) 2))
+    => (list (mult 5)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 4) 2))
+    => (list (mult 4)))
+
+  (check	;not aligned
+      (catch #f
+	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 3 2))
+    => '(3))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: value
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 #\a))
+    => '(#\a))
+
+  (check	;too low
+      (catch #f
+	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 (least-u32*)))
+    => `(,(least-u32*)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 (greatest-u32*)))
+    => `(,(greatest-u32*)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-u32-native-ref))
+
+  (define bytes-per-word	4)
+  (define-syntax mult
+    (syntax-rules ()
+      ((_ ?num)
+       (* bytes-per-word ?num))))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-u32-native-ref (case (native-endianness)
+			      ((little)	#vu8(#x78 #x56 #x34 #x12))
+			      ((big)	#vu8(#x12 #x34 #x56 #x78)))
+			    0))
+    => #x12345678)
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-u32-native-ref #\a 0))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-u32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) #\a))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-u32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) -1))
+    => '(-1))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 5)))
+    => (list (mult 5)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 4)))
+    => (list (mult 4)))
+
+  (check	;not aligned
+      (catch #f
+	(bytevector-u32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 3))
+    => '(3))
 
   #t)
 
@@ -2045,6 +2330,150 @@
   #t)
 
 
+(parametrise ((check-test-name	'bytevector-s32-native-set-bang))
+
+  (define bytes-per-word	4)
+  (define-syntax mult
+    (syntax-rules ()
+      ((_ ?num)
+       (* bytes-per-word ?num))))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s32-native-set! bv 0 #x12345678)
+	bv)
+    => (case (native-endianness)
+	 ((little)	#vu8(#x78 #x56 #x34 #x12))
+	 ((big)		#vu8(#x12 #x34 #x56 #x78))))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-s32-native-set! #\a 0 2))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) #\a 2))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) -2 2))
+    => '(-2))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 5) 2))
+    => (list (mult 5)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 4) 2))
+    => (list (mult 4)))
+
+  (check	;not aligned
+      (catch #f
+	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 3 2))
+    => '(3))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: value
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 #\a))
+    => '(#\a))
+
+  (check	;too low
+      (catch #f
+	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 (least-s32*)))
+    => `(,(least-s32*)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 (greatest-s32*)))
+    => `(,(greatest-s32*)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-s32-native-ref))
+
+  (define bytes-per-word	4)
+  (define-syntax mult
+    (syntax-rules ()
+      ((_ ?num)
+       (* bytes-per-word ?num))))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s32-native-ref (case (native-endianness)
+				     ((little)	#vu8(#x78 #x56 #x34 #x12))
+				     ((big)	#vu8(#x12 #x34 #x56 #x78)))
+				   0))
+    => #x12345678)
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s32-native-set! bv 0 (greatest-s32))
+	bv)
+    => (case (native-endianness)
+	 ((little)	#vu8(#xFF #xFF #xFF 127))
+	 ((big)		#vu8(127 #xFF #xFF #xFF))))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s32-native-set! bv 0 (least-s32))
+	bv)
+    => (case (native-endianness)
+	 ((little)	#vu8(0 0 0 #x80))
+	 ((big)		#vu8(#x80 0 0 0))))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-s32-native-ref #\a 0))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) #\a))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-s32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) -2))
+    => '(-2))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 5)))
+    => (list (mult 5)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 4)))
+    => (list (mult 4)))
+
+  (check	;not aligned
+      (catch #f
+	(bytevector-s32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 3))
+    => '(3))
+
+  #t)
+
+
 (parametrise ((check-test-name	'bytevector-u64-set-bang))
 
   (define bytes-per-word	8)
@@ -2257,6 +2686,156 @@
       (catch #f
 	(bytevector-u64-ref the-bv-le 1 'dummy))
     => '(dummy))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-u64-native-set-bang))
+
+  (define bytes-per-word	8)
+  (define-syntax mult
+    (syntax-rules ()
+      ((_ ?num)
+       (* bytes-per-word ?num))))
+
+  (define the-bv
+    #vu8( ;;
+	 0 0 0 0   0 0 0 10
+	 0 0 0 0   0 0 0 20
+	 0 0 0 0   0 0 0 30
+	 0 0 0 0   0 0 0 40))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-u64-native-set! bv 0 #x0102030405060708)
+	bv)
+    => (case (native-endianness)
+	 ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
+	 ((big)		#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-u64-native-set! #\a 0 2))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-u64-native-set! the-bv #\a 2))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-u64-native-set! the-bv -8 2))
+    => '(-8))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u64-native-set! the-bv (mult 5) 2))
+    => (list (mult 5)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u64-native-set! the-bv (mult 4) 2))
+    => (list (mult 4)))
+
+  (check	;not aligned
+      (catch #f
+	(bytevector-u64-native-set! the-bv 3 2))
+    => '(3))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: value
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-u64-native-set! the-bv 0 #\a))
+    => '(#\a))
+
+  (check	;too low
+      (catch #f
+	(bytevector-u64-native-set! the-bv 0 (least-u64*)))
+    => `(,(least-u64*)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u64-native-set! the-bv 0 (greatest-u64*)))
+    => `(,(greatest-u64*)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-u64-native-ref))
+
+  (define bytes-per-word	8)
+  (define-syntax mult
+    (syntax-rules ()
+      ((_ ?num)
+       (* bytes-per-word ?num))))
+
+  (define the-bv-be
+    #vu8( ;;
+	 0 0 0 0   0 0 0 10
+	 0 0 0 0   0 0 0 20
+	 0 0 0 0   0 0 0 30
+	 0 0 0 0   0 0 0 40))
+
+  (define the-bv-le
+    #vu8( ;;
+	 10 0 0 0   0 0 0 0
+	 20 0 0 0   0 0 0 0
+	 30 0 0 0   0 0 0 0
+	 40 0 0 0   0 0 0 0))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector-u64-native-ref (case (native-endianness)
+				   ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
+				   ((big)	#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08)))
+				 0)
+    => #x0102030405060708)
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-u64-native-ref #\a 0))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-u64-native-ref the-bv-le #\a))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-u64-native-ref the-bv-le -2))
+    => '(-2))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u64-native-ref the-bv-le (mult 5)))
+    => (list (mult 5)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-u64-native-ref the-bv-le (mult 4)))
+    => (list (mult 4)))
+
+  (check	;not aligned
+      (catch #f
+	(bytevector-u64-native-ref the-bv-le 3))
+    => '(3))
 
   #t)
 
@@ -2498,6 +3077,181 @@
       (catch #f
 	(bytevector-s64-ref the-bv-le 1 'dummy))
     => '(dummy))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-s64-native-set-bang))
+
+  (define bytes-per-word	8)
+  (define-syntax mult
+    (syntax-rules ()
+      ((_ ?num)
+       (* bytes-per-word ?num))))
+
+  (define the-bv-le
+    #vu8( ;;
+	 10 0 0 0   0 0 0 0
+	 20 0 0 0   0 0 0 0
+	 30 0 0 0   0 0 0 0
+	 40 0 0 0   0 0 0 0))
+
+  (define the-bv-be
+    #vu8( ;;
+	 0 0 0 0   0 0 0 10
+	 0 0 0 0   0 0 0 20
+	 0 0 0 0   0 0 0 30
+	 0 0 0 0   0 0 0 40))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s64-native-set! bv 0 #x0102030405060708)
+	bv)
+    => (case (native-endianness)
+	 ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
+	 ((big)		#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s64-native-set! bv 0 (greatest-s64))
+	bv)
+    => (case (native-endianness)
+	 ((little)	#vu8(#xFF #xFF #xFF #xFF #xFF #xFF #xFF 127))
+	 ((big)		#vu8(127 #xFF #xFF #xFF #xFF #xFF #xFF #xFF))))
+
+  (check
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-s64-native-set! bv 0 (least-s64))
+	bv)
+    => (case (native-endianness)
+	 ((little)	#vu8(0 0 0 0 0 0 0 #x80))
+	 ((big)		#vu8(#x80 0 0 0 0 0 0 0))))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-s64-native-set! #\a 0 2))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s64-native-set! the-bv-le #\a 2))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-s64-native-set! the-bv-le -8 2))
+    => '(-8))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s64-native-set! the-bv-le (mult 5) 2))
+    => (list (mult 5)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s64-native-set! the-bv-le (mult 4) 2))
+    => (list (mult 4)))
+
+  (check	;not aligned
+      (catch #f
+	(bytevector-s64-native-set! the-bv-le 3 2))
+    => '(3))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: value
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s64-native-set! the-bv-le 0 #\a))
+    => '(#\a))
+
+  (check	;too low
+      (catch #f
+	(bytevector-s64-native-set! the-bv-le 0 (least-s64*)))
+    => `(,(least-s64*)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s64-native-set! the-bv-le 0 (greatest-s64*)))
+    => `(,(greatest-s64*)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-s64-native-ref))
+
+  (define bytes-per-word	8)
+  (define-syntax mult
+    (syntax-rules ()
+      ((_ ?num)
+       (* bytes-per-word ?num))))
+
+  (define the-bv-be
+    #vu8( ;;
+	 0 0 0 0   0 0 0 10
+	 0 0 0 0   0 0 0 20
+	 0 0 0 0   0 0 0 30
+	 0 0 0 0   0 0 0 40))
+
+  (define the-bv-le
+    #vu8( ;;
+	 10 0 0 0   0 0 0 0
+	 20 0 0 0   0 0 0 0
+	 30 0 0 0   0 0 0 0
+	 40 0 0 0   0 0 0 0))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector-s64-native-ref (case (native-endianness)
+				   ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
+				   ((big)	#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08)))
+				 0)
+    => #x0102030405060708)
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (check
+      (catch #f
+	(bytevector-s64-native-ref #\a 0))
+    => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check	;not a fixnum
+      (catch #f
+	(bytevector-s64-native-ref the-bv-le #\a))
+    => '(#\a))
+
+  (check	;negative
+      (catch #f
+	(bytevector-s64-native-ref the-bv-le -1))
+    => '(-1))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s64-native-ref the-bv-le (mult 5)))
+    => (list (mult 5)))
+
+  (check	;too high
+      (catch #f
+	(bytevector-s64-native-ref the-bv-le (mult 4)))
+    => (list (mult 4)))
+
+  (check	;not aligned
+      (catch #f
+	(bytevector-s64-native-ref the-bv-le 3))
+    => '(3))
 
   #t)
 
