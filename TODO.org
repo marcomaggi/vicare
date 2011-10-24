@@ -54,6 +54,11 @@
    reset-input-port!
    reset-output-port!
 
+* List of functions to be tested
+
+  The flonum getters  and setters in the bytevector  library should have
+  tests in "test-vicare-bytevectors.sps".
+
 * end
 
 ### end of file
