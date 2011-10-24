@@ -31,15 +31,23 @@
 #!r6rs
 (library (vicare installation-configuration)
   (export
-    package-version		wordsize
+    vicare-version
+    target			wordsize
     platform-endianness		arguments-validation)
   (import (rnrs))
-  (define-syntax package-version
+
+  (define-syntax vicare-version
     (identifier-syntax "@PACKAGE_VERSION@"))
+
+  (define-syntax target
+    (identifier-syntax '@target@))
+
   (define-syntax wordsize
     (identifier-syntax @VICARE_SIZE_OF_VOIDP@))
+
   (define-syntax platform-endianness
     (identifier-syntax '@VICARE_PLATFORM_ENDIANNESS@))
+
   (define-syntax arguments-validation
     (identifier-syntax (positive? @VICARE_ARGUMENTS_VALIDATION@))))
 

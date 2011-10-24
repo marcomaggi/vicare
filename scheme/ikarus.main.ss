@@ -14,66 +14,76 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-
-;;; this is here to test that we can import things from other
-;;; libraries within the compiler itself.
-
+
+;;This is  here to test that  we can import things  from other libraries
+;;within the compiler itself.
 (library (ikarus startup)
-  (export print-greeting init-library-path host-info split-path)
-  (import (except (ikarus) host-info) (vicare include))
+  (export
+    print-greeting		host-info
+    init-library-path		split-path)
+  (import (except (ikarus)
+		  host-info)
+    (vicare include))
   (include "ikarus.config.ss")
 
-  (define (host-info) target)
+
+(define (host-info)
+  target)
 
-  (define (split-path s)
-    (define (nodata i s ls)
-      (cond
-        [(= i (string-length s)) ls]
-        [(char=? (string-ref s i) #\:) (nodata (+ i 1) s ls)]
-        [else (data (+ i 1) s ls (list (string-ref s i)))]))
-    (define (data i s ls ac)
-      (cond
-        [(= i (string-length s))
-         (cons (list->string (reverse ac)) ls)]
-        [(char=? (string-ref s i) #\:)
-         (nodata (+ i 1) s
-           (cons (list->string (reverse ac)) ls))]
-        [else (data (+ i 1) s ls (cons (string-ref s i) ac))]))
-    (reverse (nodata 0 s '())))
+(define (init-library-path)
+  (library-path (append (cond ((getenv "VICARE_LIBRARY_PATH")
+			       => split-path)
+			      (else '(".")))
+			(list vicare-lib-dir)))
+  (let ((prefix (lambda (ext ls)
+		  (append (map (lambda (x) (string-append ext x)) ls) ls))))
+    (library-extensions
+     (prefix "/main"
+	     (prefix ".vicare"
+		     (library-extensions))))))
 
+(define (split-path s)
+  (define (nodata i s ls)
+    (cond ((= i (string-length s))
+	   ls)
+	  ((char=? #\: (string-ref s i))
+	   (nodata (+ i 1) s ls))
+	  (else
+	   (data (+ i 1) s ls (list (string-ref s i))))))
+  (define (data i s ls ac)
+    (cond ((= i (string-length s))
+	   (cons (list->string (reverse ac)) ls))
+	  ((char=? (string-ref s i) #\:)
+	   (nodata (+ i 1) s
+		   (cons (list->string (reverse ac)) ls)))
+	  (else
+	   (data (+ i 1) s ls (cons (string-ref s i) ac)))))
+  (reverse (nodata 0 s '())))
 
-  (define (print-greeting)
-    (printf "Vicare Scheme version ~a~a~a~a\n"
-      ikarus-version
-      (if (zero? (string-length ikarus-revision)) "" "+")
-      (if (= (fixnum-width) 30)
-          ""
-          ", 64-bit")
-      (if (zero? (string-length ikarus-revision))
-          ""
-          (format " (revision ~a, build ~a)"
-	    ikarus-revision #;(+ 1 (string->number ikarus-revision))
-            (let-syntax ([ds (lambda (x) (date-string))])
-              ds))))
-    (display "Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors\n\n"))
+(define (print-greeting)
+  (display "Vicare Scheme version ")
+  (display vicare-version)
+  (unless (zero? (string-length vicare-revision))
+    (display "+"))
+  (unless (= 30 (fixnum-width))
+    (display ", 64-bit"))
+  (newline)
+  (unless (zero? (string-length vicare-revision))
+    (display "Revision ")
+    (display vicare-revision)
+    (newline)
+    (display "Build ")
+    (let-syntax ((ds (lambda (x) (date-string))))
+      ds)
+    (newline))
+  (display "Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors\n
+Copyright (c) 2011 Marco Maggi\n\n"))
 
-  (define (init-library-path)
-    (library-path
-      (append
-        (cond
-          [(getenv "VICARE_LIBRARY_PATH") => split-path]
-          [else '(".")])
-        (list ikarus-lib-dir)))
-    (let ([prefix
-           (lambda (ext ls)
-             (append (map (lambda (x) (string-append ext x)) ls) ls))])
-      (library-extensions
-        (prefix "/main"
-          (prefix ".vicare"
-            (library-extensions)))))))
+
 
+#| end of library (ikarus startup) |# )
 
+
 ;;; Finally, we're ready to evaluate the files and enter the cafe.
 
 (library (ikarus main)
@@ -90,67 +100,67 @@
   (define rcfiles #t) ;; #f for no rcfile, list for specific list
 
   (define (parse-command-line-arguments)
-    (let f ([args (command-line-arguments)] [k void])
+    (let f ((args (command-line-arguments)) (k void))
       (define (invalid-rc-error)
         (die 'vicare "--no-rcfile is invalid with --rcfile"))
       (cond
-       [(null? args) (values '() #f #f '() k)]
-       [(member (car args) '("-d" "--debug"))
-	(f (cdr args) (lambda () (k) (generate-debug-calls #t)))]
-       [(member (car args) '("-nd" "--no-debug"))
-	(f (cdr args) (lambda () (k) (generate-debug-calls #f)))]
-       [(string=? (car args) "-O2")
-	(f (cdr args) (lambda () (k) (optimize-level 2)))]
-       [(string=? (car args) "-O1")
-	(f (cdr args) (lambda () (k) (optimize-level 1)))]
-       [(string=? (car args) "-O0")
-	(f (cdr args) (lambda () (k) (optimize-level 0)))]
-       [(string=? (car args) "--no-rcfile")
+       ((null? args) (values '() #f #f '() k))
+       ((member (car args) '("-d" "--debug"))
+	(f (cdr args) (lambda () (k) (generate-debug-calls #t))))
+       ((member (car args) '("-nd" "--no-debug"))
+	(f (cdr args) (lambda () (k) (generate-debug-calls #f))))
+       ((string=? (car args) "-O2")
+	(f (cdr args) (lambda () (k) (optimize-level 2))))
+       ((string=? (car args) "-O1")
+	(f (cdr args) (lambda () (k) (optimize-level 1))))
+       ((string=? (car args) "-O0")
+	(f (cdr args) (lambda () (k) (optimize-level 0))))
+       ((string=? (car args) "--no-rcfile")
 	(unless (boolean? rcfiles) (invalid-rc-error))
 	(set! rcfiles #f)
-	(f (cdr args) k)]
-       [(string=? (car args) "--rcfile")
-	(let ([d (cdr args)])
+	(f (cdr args) k))
+       ((string=? (car args) "--rcfile")
+	(let ((d (cdr args)))
 	  (when (null? d) (die 'vicare "--rcfile requires a script name"))
 	  (set! rcfiles
 		(cons (car d)
 		      (case rcfiles
-			[(#t) '()]
-			[(#f) (invalid-rc-error)]
-			[else rcfiles])))
-	  (f (cdr d) k))]
-       [(string=? (car args) "--")
-	(values '() #f #f (cdr args) k)]
-       [(string=? (car args) "--script")
-	(let ([d (cdr args)])
+			((#t) '())
+			((#f) (invalid-rc-error))
+			(else rcfiles))))
+	  (f (cdr d) k)))
+       ((string=? (car args) "--")
+	(values '() #f #f (cdr args) k))
+       ((string=? (car args) "--script")
+	(let ((d (cdr args)))
 	  (cond
-	   [(null? d) (die 'vicare "--script requires a script name")]
-	   [else (values '() (car d) 'script (cdr d) k)]))]
-       [(string=? (car args) "--r6rs-script")
-	(let ([d (cdr args)])
+	   ((null? d) (die 'vicare "--script requires a script name"))
+	   (else (values '() (car d) 'script (cdr d) k)))))
+       ((string=? (car args) "--r6rs-script")
+	(let ((d (cdr args)))
 	  (cond
-	   [(null? d) (die 'vicare "--r6rs-script requires a script name")]
-	   [else (values '() (car d) 'r6rs-script (cdr d) k)]))]
-       [(string=? (car args) "--r6rs-repl")
-	(let ([d (cdr args)])
+	   ((null? d) (die 'vicare "--r6rs-script requires a script name"))
+	   (else (values '() (car d) 'r6rs-script (cdr d) k)))))
+       ((string=? (car args) "--r6rs-repl")
+	(let ((d (cdr args)))
 	  (cond
-	   [(null? d) (die 'vicare "--r6rs-repl requires a script name")]
-	   [else (values '() (car d) 'r6rs-repl (cdr d) k)]))]
-       [(string=? (car args) "--compile-dependencies")
-	(let ([d (cdr args)])
+	   ((null? d) (die 'vicare "--r6rs-repl requires a script name"))
+	   (else (values '() (car d) 'r6rs-repl (cdr d) k)))))
+       ((string=? (car args) "--compile-dependencies")
+	(let ((d (cdr args)))
 	  (cond
-	   [(null? d)
-	    (die 'vicare "--compile-dependencies requires a script name")]
-	   [else
-	    (values '() (car d) 'compile (cdr d) k)]))]
-       [else
-	(let-values ([(f* script script-type a* k) (f (cdr args) k)])
-	  (values (cons (car args) f*) script script-type a* k))])))
+	   ((null? d)
+	    (die 'vicare "--compile-dependencies requires a script name"))
+	   (else
+	    (values '() (car d) 'compile (cdr d) k)))))
+       (else
+	(let-values (((f* script script-type a* k) (f (cdr args) k)))
+	  (values (cons (car args) f*) script script-type a* k))))))
 
   (initialize-symbol-table!)
   (init-library-path)
-  (let-values ([(files script script-type args init-command-line-args)
-                (parse-command-line-arguments)])
+  (let-values (((files script script-type args init-command-line-args)
+                (parse-command-line-arguments)))
 
     (define (assert-null files who)
       (unless (null? files)
@@ -165,19 +175,19 @@
 
     (define-syntax doit
       (syntax-rules ()
-        [(_ e e* ...)
-         (start (lambda () e e* ...))]))
+        ((_ e e* ...)
+         (start (lambda () e e* ...)))))
 
     (define (default-rc-files)
       (cond
-       [(getenv "VICARE_RC_FILES") => split-path]
-       [(getenv "HOME") =>
+       ((getenv "VICARE_RC_FILES") => split-path)
+       ((getenv "HOME") =>
 	(lambda (home)
-	  (let ([f (string-append home "/.vicarerc")])
+	  (let ((f (string-append home "/.vicarerc")))
 	    (if (file-exists? f)
 		(list f)
-	      '())))]
-       [else '()]))
+	      '()))))
+       (else '())))
 
     (for-each
 	(lambda (filename)
@@ -192,9 +202,9 @@
 	    (lambda ()
 	      (load-r6rs-script filename #f #t))))
       (case rcfiles
-        [(#t) (default-rc-files)]
-        [(#f) '()]
-        [else (reverse rcfiles)]))
+        ((#t) (default-rc-files))
+        ((#f) '())
+        (else (reverse rcfiles))))
 
     (init-command-line-args)
 
@@ -208,7 +218,7 @@
 
     (cond
      ((memq script-type '(r6rs-script r6rs-repl))
-      (let ([f (lambda ()
+      (let ((f (lambda ()
 		 (doit
 		  (command-line-arguments (cons script args))
 		  (for-each
@@ -218,32 +228,39 @@
 			      ((current-library-expander) src))
                           (read-source-file filename)))
 		    files)
-		  (load-r6rs-script script #f #t)))])
+		  (load-r6rs-script script #f #t)))))
 	(cond
 	 ((eq? script-type 'r6rs-script) (f))
 	 (else
 	  (print-greeting)
-	  (let ([env (f)])
+	  (let ((env (f)))
 	    (interaction-environment env)
 	    (new-cafe
 	     (lambda (x)
 	       (doit (eval x env)))))))))
-     [(eq? script-type 'compile)
+     ((eq? script-type 'compile)
       (assert-null files "--compile-dependencies")
       (doit
        (command-line-arguments (cons script args))
-       (load-r6rs-script script #t #f))]
-     [(eq? script-type 'script) ; no greeting, no cafe
+       (load-r6rs-script script #t #f)))
+     ((eq? script-type 'script) ; no greeting, no cafe
       (command-line-arguments (cons script args))
       (doit
        (for-each load files)
-       (load script))]
-     [else
+       (load script)))
+     (else
       (print-greeting)
       (command-line-arguments (cons "*interactive*" args))
       (doit (for-each load files))
       (new-cafe
        (lambda (x)
-	 (doit (eval x (interaction-environment)))))])
+	 (doit (eval x (interaction-environment)))))))
 
-    (exit 0)))
+    (exit 0))
+
+
+;;;; done
+
+#| end of library (ikarus main) |# )
+
+;;; end of file

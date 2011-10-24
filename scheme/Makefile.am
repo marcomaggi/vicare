@@ -21,13 +21,10 @@ all: $(nodist_pkglib_DATA)
 
 ## --------------------------------------------------------------------
 
-$(srcdir)/last-revision:
-	git show | head -1 | cut -d ' ' -f2 >$@
-
 ikarus.config.ss: Makefile last-revision ../config.h
-	echo '(define ikarus-version "$(PACKAGE_VERSION)")' >$@
-	echo '(define ikarus-revision "$(shell cat $(srcdir)/last-revision)")' >>$@
-	echo '(define ikarus-lib-dir "$(pkglibdir)")' >>$@
+	echo '(define vicare-version "$(PACKAGE_VERSION)")' >$@
+	echo '(define vicare-revision "$(shell cat $(srcdir)/last-revision)")' >>$@
+	echo '(define vicare-lib-dir "$(pkglibdir)")' >>$@
 	echo '(define target "$(target)")' >>$@
 	echo '(define wordsize $(VICARE_SIZE_OF_VOIDP))' >>$@
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>$@

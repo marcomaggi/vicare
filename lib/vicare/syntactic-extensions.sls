@@ -49,7 +49,7 @@
 
     ;; numeric argument dispatching
     case-one-operand	case-two-operands)
-  (import (rnrs)
+  (import (ikarus)
     (for (prefix (vicare installation-configuration)
 		 config.)
 	 expand))
@@ -191,7 +191,9 @@
 						    #'(?validator ...)
 						    #'((?arg ...) ...)
 						    body)))
-	   (if (or include? config.arguments-validation)
+	   (if (or include? config.arguments-validation
+		   (let ((S (getenv "VICARE_ARGUMENTS_VALIDATION")))
+		     (and (string? S) (string=? S "yes"))))
 	       output-form body)))
 	(_
 	 (%synner "invalid input form" #f))))
