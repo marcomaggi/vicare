@@ -203,6 +203,7 @@ C. Resources
 
 The latest version of this package can be downloaded from:
 
+	      <https://github.com/marcomaggi/vicare/tags>
             <http://github.com/marcomaggi/vicare/downloads>
 
 the home page of the Vicare project is at:
@@ -212,6 +213,10 @@ the home page of the Vicare project is at:
 development takes place at:
 
                  <http://github.com/marcomaggi/vicare/>
+
+this project has a mailing list:
+
+	     <http://groups.google.com/group/vicare-users>
 
   It  is suggested to  use Vicare  Scheme along  with Nausicaa,  a large
 collection of R6 Scheme libraries:

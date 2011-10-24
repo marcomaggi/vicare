@@ -1,0 +1,59 @@
+Subject: [announce] Vicare Scheme revision 0.2d1
+
+                             Vicare Scheme
+                             =============
+
+
+Vicare Scheme is an R6RS compliant fork of Ikarus Scheme, aiming to be a
+native compiler for R6 Scheme producing single threaded programs running
+on  Intel x86  32-bit processors;  Vicare  is officially  not ready  for
+64-bit machines.  "Vicare" is pronounced  the etruscan way.  Vicare is a
+fork of  Ikarus Scheme, an  almost R6RS compliant implementation  of the
+Scheme programming language by Abdulaziz Ghuloum.
+
+
+  The latest version of this package can be downloaded from:
+
+	      <https://github.com/marcomaggi/vicare/tags>
+            <http://github.com/marcomaggi/vicare/downloads>
+
+the home page of the Vicare project is at:
+
+               <http://marcomaggi.github.com/vicare.html>
+
+development takes place at:
+
+                 <http://github.com/marcomaggi/vicare/>
+
+this project has a mailing list:
+
+	     <http://groups.google.com/group/vicare-users>
+
+  It  is suggested to  use Vicare  Scheme along  with Nausicaa,  a large
+collection of R6 Scheme libraries:
+
+	      <http://marcomaggi.github.com/nausicaa.html>
+
+
+Notes for revision 0.2d1
+------------------------
+
+* It  appears that  Ikarus' mailing  list is  no more  working,  so this
+  project  now   has  its  own   mailing  list  for   announcements  and
+  discussions:
+
+	     <http://groups.google.com/group/vicare-users>
+
+* Review of bytevector functions.
+
+* Introduced  the configuration  option "--disable-arguments-validation"
+  to exclude  at expansion-time code validating  arguments to functions.
+  At present not many modules support this feature.
+
+
+### end of file
+# Local Variables:
+# mode: text
+# fill-column: 72
+# paragraph-start: "*"
+# End:
