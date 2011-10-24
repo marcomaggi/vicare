@@ -52,43 +52,30 @@
 
 		  ;; internal functions
 		  $unintern-gensym)
+    (vicare syntactic-extensions)
+    (prefix (vicare unsafe-operations)
+	    unsafe.)
     (except (ikarus system $symbols)
-	    $unintern-gensym)
-    (ikarus system $pairs)
-    (ikarus system $fx))
+	    $unintern-gensym))
 
 
 ;;;; syntax helpers
 
-(define-syntax define-inline
-  (syntax-rules ()
-    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-     (define-syntax ?name
-       (syntax-rules ()
-	 ((_ ?arg ... . ?rest)
-	  (begin ?form0 ?form ...)))))))
+(define-argument-validation (symbol who obj)
+  (symbol? obj)
+  (assertion-violation who "expected symbol as argument" obj))
 
-;;; --------------------------------------------------------------------
+(define-argument-validation (gensym who obj)
+  (symbol? obj)
+  (assertion-violation who "expected generated symbol as argument" obj))
 
-(define-inline (%assert-argument-is-symbol who obj . ?body)
-  (unless (symbol? who)
-    (assertion-violation who "expected symbol as argument" obj))
-  (begin (values) . ?body))
+(define-argument-validation (bound-symbol who obj)
+  (not ($unbound-object? obj))
+  (assertion-violation who "expected bound symbol as argument" obj))
 
-(define-inline (%assert-argument-is-gensym who obj . ?body)
-  (unless (symbol? who)
-    (assertion-violation who "expected generated symbol as argument" obj))
-  (begin (values) . ?body))
-
-(define-inline (%unsafe.assert-argument-is-bound-symbol who obj . ?body)
-  (when ($unbound-object? obj)
-    (assertion-violation who "expected bound symbol as argument" obj))
-  (begin (values) . ?body))
-
-(define-inline (%unsafe.assert-argument-is-procedure who obj . ?body)
-  (unless (procedure? obj)
-    (assertion-violation who "expected procedure as argument" obj))
-  (begin (values) . ?body))
+(define-argument-validation (procedure who obj)
+  (procedure? obj)
+  (assertion-violation who "expected procedure as argument" obj))
 
 
 (define gensym
@@ -112,13 +99,15 @@
 
 (define ($unintern-gensym x)
   (define who 'unintern-gensym)
-  (%assert-argument-is-symbol who x
+  (with-arguments-validation (who)
+      ((symbol x))
     (foreign-call "ikrt_unintern_gensym" x)
     (void)))
 
 (define (gensym->unique-string x)
   (define who 'gensym->unique-string)
-  (%assert-argument-is-symbol who x
+  (with-arguments-validation (who)
+      ((symbol x))
     (let ((us ($symbol-unique-string x)))
       (cond ((string? us)
 	     us)
@@ -144,7 +133,7 @@
   (make-parameter
       0
     (lambda (x)
-      (if (and (fixnum? x) ($fx>= x 0))
+      (if (and (fixnum? x) (unsafe.fx>= x 0))
 	  x
 	(assertion-violation 'gensym-count "not a valid count" x)))))
 
@@ -159,7 +148,8 @@
 
 (define (top-level-value x)
   (define who 'top-level-value)
-  (%assert-argument-is-symbol who x
+  (with-arguments-validation (who)
+      ((symbol x))
     (let ((v ($symbol-value x)))
       (when ($unbound-object? v)
 	(raise
@@ -171,41 +161,48 @@
 
 (define (top-level-bound? x)
   (define who 'top-level-bound?)
-  (%assert-argument-is-symbol who x
+  (with-arguments-validation (who)
+      ((symbol x))
     (not ($unbound-object? ($symbol-value x)))))
 
 (define (set-top-level-value! x v)
   (define who 'set-top-level-value!)
-  (%assert-argument-is-symbol who x
+  (with-arguments-validation (who)
+      ((symbol x))
     ($set-symbol-value! x v)))
 
 (define (symbol-value x)
   (define who 'symbol-value)
-  (%assert-argument-is-symbol who x
+  (with-arguments-validation (who)
+      ((symbol x))
     (let ((v ($symbol-value x)))
-      (%unsafe.assert-argument-is-bound-symbol who v
+      (with-arguments-validation (who)
+	  ((bound-symbol x))
 	v))))
 
 (define (symbol-bound? x)
   (define who 'symbol-bound?)
-  (%assert-argument-is-symbol who x
+  (with-arguments-validation (who)
+      ((symbol x))
     (not ($unbound-object? ($symbol-value x)))))
 
 (define (set-symbol-value! x v)
   (define who 'set-symbol-value!)
-  (%assert-argument-is-symbol who x
+  (with-arguments-validation (who)
+      ((symbol x))
     ($set-symbol-value! x v)
     ;;If V  is not a  procedure: raise an  exception if the  client code
     ;;attemtps to apply it.
     ($set-symbol-proc!  x (if (procedure? v)
 			      v
 			    (lambda args
-			       (assertion-violation 'apply
-				 "not a procedure" ($symbol-value x)))))))
+			      (assertion-violation 'apply
+				"not a procedure" ($symbol-value x)))))))
 
 (define (reset-symbol-proc! x)
   (define who 'reset-symbol-proc!)
-  (%assert-argument-is-symbol who x
+  (with-arguments-validation (who)
+      ((symbol x))
     (let ((v ($symbol-value x)))
       ($set-symbol-proc! x (if (procedure? v)
 			       v
@@ -225,14 +222,15 @@
   ;;string.
   ;;
   (define who 'symbol->string)
-  (%assert-argument-is-symbol who x
+  (with-arguments-validation (who)
+      ((symbol x))
     (let ((str ($symbol-string x)))
       (or str
 	  (let ((ct (gensym-count)))
 ;;;FIXME What if gensym-count is a bignum?
 	    (let ((str (string-append (gensym-prefix) (fixnum->string ct))))
 	      ($set-symbol-string! x str)
-	      (gensym-count ($fxadd1 ct))
+	      (gensym-count (unsafe.fxadd1 ct))
 	      str))))))
 
 
@@ -243,46 +241,49 @@
   ;;X.  K must be a symbol, V can be any value.
   ;;
   (define who 'putprop)
-  (%assert-argument-is-symbol who x
-    (%assert-argument-is-symbol who k
-      (let ((p ($symbol-plist x)))
-	(cond ((assq k p)
-	       => (lambda (x)
-		    (set-cdr! x v)))
-	      (else
-	       ($set-symbol-plist! x (cons (cons k v) p))))))))
+  (with-arguments-validation (who)
+      ((symbol x)
+       (symbol k))
+    (let ((p ($symbol-plist x)))
+      (cond ((assq k p)
+	     => (lambda (x)
+		  (unsafe.set-cdr! x v)))
+	    (else
+	     ($set-symbol-plist! x (cons (cons k v) p)))))))
 
 (define (getprop x k)
   ;;Return  the value  of the  property K  in the  property list  of the
   ;;symbol X; if K is not set return false.  K must be a symbol.
   ;;
   (define who 'getprop)
-  (%assert-argument-is-symbol who x
-    (%assert-argument-is-symbol who k
-      (let ((p ($symbol-plist x)))
-	(cond ((assq k p)
-	       => cdr)
-	      (else #f))))))
+  (with-arguments-validation (who)
+      ((symbol x)
+       (symbol k))
+    (let ((p ($symbol-plist x)))
+      (cond ((assq k p)
+	     => unsafe.cdr)
+	    (else #f)))))
 
 (define (remprop x k)
   ;;Remove property K from the list associated to the symbol X.
   ;;
   (define who 'remprop)
-  (%assert-argument-is-symbol who x
-    (%assert-argument-is-symbol who k
-      (let ((plist ($symbol-plist x)))
-	(unless (null? plist)
-	  (let ((a ($car plist)))
-	    (if (eq? ($car a) k)
-		($set-symbol-plist! x ($cdr plist))
-	      (let loop ((q     plist)
-			 (plist ($cdr plist)))
-		(unless (null? plist)
-		  (let ((a ($car plist)))
-		    (if (eq? ($car a) k)
-			($set-cdr! q ($cdr plist))
-		      (loop plist ($cdr plist))))))))))
-      )))
+  (with-arguments-validation (who)
+      ((symbol x)
+       (symbol k))
+    (let ((plist ($symbol-plist x)))
+      (unless (null? plist)
+	(let ((a (unsafe.car plist)))
+	  (if (eq? (unsafe.car a) k)
+	      ($set-symbol-plist! x (unsafe.cdr plist))
+	    (let loop ((q     plist)
+		       (plist (unsafe.cdr plist)))
+	      (unless (null? plist)
+		(let ((a (unsafe.car plist)))
+		  (if (eq? (unsafe.car a) k)
+		      (unsafe.set-cdr! q (unsafe.cdr plist))
+		    (loop plist (unsafe.cdr plist))))))))))
+    ))
 
 (define (property-list x)
   ;;Return a new association list  representing the property list of the
@@ -293,14 +294,15 @@
   ;;of the property list.
   ;;
   (define who 'property-list)
-  (%assert-argument-is-symbol who x
+  (with-arguments-validation (who)
+      ((symbol x))
     (let loop ((ls    ($symbol-plist x))
 	       (accum '()))
       (if (null? ls)
 	  accum
-	(let ((a ($car ls)))
-	  (loop ($cdr ls)
-		(cons (cons ($car a) ($cdr a))
+	(let ((a (unsafe.car ls)))
+	  (loop (unsafe.cdr ls)
+		(cons (cons (unsafe.car a) (unsafe.cdr a))
 		      accum)))))))
 
 
@@ -308,7 +310,8 @@
 
 (define (system-value x)
   (define who 'system-value)
-  (%assert-argument-is-symbol who x
+  (with-arguments-validation (who)
+      ((symbol x))
     (cond ((getprop x system-value-gensym)
 	   => (lambda (g)
 		(let ((v ($symbol-value g)))
@@ -326,8 +329,4 @@
 ;;; end of file
 ;;Local Variables:
 ;;coding: utf-8-unix
-;;eval: (put '%assert-argument-is-symbol 'scheme-indent-function 'my-scheme-indent-to-body)
-;;eval: (put '%assert-argument-is-gensym 'scheme-indent-function 'my-scheme-indent-to-body)
-;;eval: (put '%assert-argument-is-bound-symbol 'scheme-indent-function 'my-scheme-indent-to-body)
-;;eval: (put '%assert-argument-is-procedure 'scheme-indent-function 'my-scheme-indent-to-body)
 ;;End:

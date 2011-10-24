@@ -26,8 +26,11 @@
 
 * Miscellaneous stuff to be fixed
 
-  NATIVE-ENDIANNESS in "ikarus.bytevectors.ss" has a hard coded value of
-  LITTLE.
+** ikarus.symbols.ss
+
+   The name of  generated symbols embeds a numeric  counter which is the
+   stringification of a fixnum.   What if generating many symbols causes
+   the counter to overflow the fixnums?
 
 * List of functions to be documented
 
