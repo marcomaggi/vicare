@@ -61,20 +61,10 @@
 		  struct-rtd		struct-type-descriptor
 		  struct-name		struct-printer
 		  struct-length)
-    (ikarus system $structs)
-    (ikarus system $pairs)
-    (ikarus system $fx))
-
-
-;;;; syntax helpers
-
-(define-syntax define-inline
-  (syntax-rules ()
-    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-     (define-syntax ?name
-       (syntax-rules ()
-	 ((_ ?arg ... . ?rest)
-	  (begin ?form0 ?form ...)))))))
+    (vicare syntactic-extensions)
+    (prefix (vicare unsafe-operations)
+	    unsafe.)
+    (ikarus system $structs))
 
 
 ;;;; helpers
@@ -83,38 +73,37 @@
   (unless (symbol? x)
     (assertion-violation 'make-struct-type "not a valid field name" x)))
 
-(define-inline (%assert-argument-is-name who name)
-  (unless (string? name)
-    (assertion-violation who "expected string as name argument" name)))
+(define-argument-validation (name who name)
+  (string? name)
+  (assertion-violation who "expected string as name argument" name))
 
-(define-inline (%assert-argument-is-list-of-fields who fields)
-  (unless (list? fields)
-    (assertion-violation who "fields must be a list" fields)))
+(define-argument-validation (list-of-fields who fields)
+  (list? fields)
+  (assertion-violation who "fields must be a list" fields))
 
-(define-inline (%assert-argument-is-rtd who rtd)
-  (unless (rtd? rtd)
-    (assertion-violation who "expected structure rtd as argument" rtd)))
+(define-argument-validation (rtd who rtd)
+  (rtd? rtd)
+  (assertion-violation who "expected structure rtd as argument" rtd))
 
-(define-inline (%assert-argument-is-struct-of-type who struct rtd)
-  (unless (and ($struct? struct)
-	       (eq? rtd ($struct-rtd struct)))
-    (assertion-violation who "not a data structure of correct type" struct rtd)))
+(define-argument-validation (struct-of-type who struct rtd)
+  (and ($struct? struct)
+       (eq? rtd ($struct-rtd struct)))
+  (assertion-violation who "not a data structure of correct type" struct rtd))
 
-(define-inline (%assert-argument-is-struct who x)
-  (unless ($struct? x)
-    (assertion-violation who "expected data structure as argument" x)))
+(define-argument-validation (struct who x)
+  ($struct? x)
+  (assertion-violation who "expected data structure as argument" x))
 
-(define-inline (%assert-argument-is-index who index struct)
-  (unless (fixnum? index)
-    (assertion-violation who "expected fixnum as structure field index" index))
-  (let ((n (rtd-length ($struct-rtd struct))))
-    (unless (and ($fx>= index 0)
-		 ($fx<  index n))
-      (assertion-violation who "structure field index is out of range" index struct))))
+(define-argument-validation (index who index struct)
+  (and (fixnum? index)
+       (unsafe.fx>= index 0)
+       (unsafe.fx<  index (rtd-length ($struct-rtd struct))))
+  (assertion-violation who
+    "expected fixnum in range for structure field as index argument" index struct))
 
-(define-inline (%assert-argument-is-printer who printer)
-  (unless (procedure? printer)
-    (assertion-violation who "expected procedure as printer argument" printer)))
+(define-argument-validation (printer who printer)
+  (procedure? printer)
+  (assertion-violation who "expected procedure as printer argument" printer))
 
 
 ;;;; low level RTD operations
@@ -175,50 +164,54 @@
   (case-lambda
    ((name fields)
     (define who 'make-struct-type)
-    (%assert-argument-is-name who name)
-    (%assert-argument-is-list-of-fields who fields)
-    (for-each %field-is-a-symbol? fields)
-    (let* ((g   (gensym name))
-	   (rtd (make-rtd name fields #f g)))
-      (set-symbol-value! g rtd)
-      rtd))
+    (with-arguments-validation (who)
+	((name		 name)
+	 (list-of-fields fields))
+      (for-each %field-is-a-symbol? fields)
+      (let* ((g   (gensym name))
+	     (rtd (make-rtd name fields #f g)))
+	(set-symbol-value! g rtd)
+	rtd)))
    ((name fields g)
     (define who 'make-struct-type)
-    (%assert-argument-is-name who name)
-    (%assert-argument-is-list-of-fields who fields)
-    (for-each %field-is-a-symbol? fields)
-    (if (symbol-bound? g)
-	(let ((rtd (symbol-value g)))
-	  (unless (and (string=? name (struct-type-name rtd))
-		       (equal? fields (struct-type-field-names rtd)))
-	    (assertion-violation who
-	      "mismatching data structure definition"))
-	  rtd)
-      (let ((rtd (make-rtd name fields #f g)))
-	(set-symbol-value! g rtd)
-	rtd)))))
+    (with-arguments-validation (who)
+	((name		 name)
+	 (list-of-fields fields))
+      (for-each %field-is-a-symbol? fields)
+      (if (symbol-bound? g)
+	  (let ((rtd (symbol-value g)))
+	    (unless (and (string=? name (struct-type-name rtd))
+			 (equal? fields (struct-type-field-names rtd)))
+	      (assertion-violation who "mismatching data structure definition"))
+	    rtd)
+	(let ((rtd (make-rtd name fields #f g)))
+	  (set-symbol-value! g rtd)
+	  rtd))))))
 
 (define (struct-type-name rtd)
   ;;Return a string represnting the name of structures of type RTD.
   ;;
   (define who 'struct-type-name)
-  (%assert-argument-is-rtd who rtd)
-  (rtd-name rtd))
+  (with-arguments-validation (who)
+      ((rtd rtd))
+    (rtd-name rtd)))
 
 (define (struct-type-symbol rtd)
   ;;Return a symbol uniquely identifying the data structure type RTD.
   ;;
   (define who 'struct-type-symbol)
-  (%assert-argument-is-rtd who rtd)
-  (rtd-symbol rtd))
+  (with-arguments-validation (who)
+      ((rtd rtd))
+    (rtd-symbol rtd)))
 
 (define (struct-type-field-names rtd)
   ;;Return  a  list of  symbols  representing  the  names of  fields  in
   ;;structures of type RTD.
   ;;
   (define who 'struct-type-field-names)
-  (%assert-argument-is-rtd who rtd)
-  (rtd-fields rtd))
+  (with-arguments-validation (who)
+      ((rtd rtd))
+    (rtd-fields rtd)))
 
 (define (set-rtd-printer! rtd printer)
   ;;Select the procedure PRINTER as  printer for data structures of type
@@ -228,9 +221,10 @@
   ;;field values to print them.
   ;;
   (define who set-rtd-printer!)
-  (%assert-argument-is-rtd who rtd)
-  (%assert-argument-is-printer who printer)
-  ($set-rtd-printer! rtd printer))
+  (with-arguments-validation (who)
+      ((rtd	rtd)
+       (printer	printer))
+    ($set-rtd-printer! rtd printer)))
 
 
 ;;;; data structure functions
@@ -243,46 +237,48 @@
   (define who 'struct-constructor)
   (define (%set-fields r f* i n)
     (cond ((null? f*)
-	   (if ($fx= i n)
+	   (if (unsafe.fx= i n)
 	       r
 	     #f))
-	  (($fx< i n)
+	  ((unsafe.fx< i n)
 	   (if (null? f*)
 	       #f
 	     (begin
-	       ($struct-set! r i ($car f*))
-	       (%set-fields r ($cdr f*) ($fxadd1 i) n))))
+	       ($struct-set! r i (unsafe.car f*))
+	       (%set-fields r (unsafe.cdr f*) (unsafe.fxadd1 i) n))))
 	  (else #f)))
-  (%assert-argument-is-rtd who rtd)
-  (lambda args
-    (let* ((n (rtd-length rtd))
-	   (r ($make-struct rtd n)))
-      (or (%set-fields r args 0 n)
-	  (assertion-violation who
-	    "incorrect number of arguments to the constructor" rtd)))))
+  (with-arguments-validation (who)
+      ((rtd rtd))
+    (lambda args
+      (let* ((n (rtd-length rtd))
+	     (r ($make-struct rtd n)))
+	(or (%set-fields r args 0 n)
+	    (assertion-violation who
+	      "incorrect number of arguments to the constructor" rtd))))))
 
 (define (struct-predicate rtd)
   ;;Return a predicate function for structures of type RTD.
   ;;
   (define who 'struct-predicate)
-  (%assert-argument-is-rtd who rtd)
-  (lambda (x)
-    (and ($struct? x)
-	 (eq? rtd ($struct-rtd x)))))
+  (with-arguments-validation (who)
+      ((rtd rtd))
+    (lambda (x)
+      (and ($struct? x)
+	   (eq? rtd ($struct-rtd x))))))
 
 (define (%field-index i rtd who)
   (cond ((fixnum? i)
-	 (unless (and ($fx>= i 0) ($fx< i (rtd-length rtd)))
+	 (unless (and (unsafe.fx>= i 0) (unsafe.fx< i (rtd-length rtd)))
 	   (assertion-violation who "out of range for rtd" i rtd))
 	 i)
 	((symbol? i)
 	 (letrec ((lookup (lambda (n ls)
 			    (cond ((null? ls)
 				   (assertion-violation who "not a field" rtd))
-				  ((eq? i ($car ls))
+				  ((eq? i (unsafe.car ls))
 				   n)
 				  (else
-				   (lookup ($fx+ n 1) ($cdr ls)))))))
+				   (lookup (unsafe.fx+ n 1) (unsafe.cdr ls)))))))
 	   (lookup 0 (rtd-fields rtd))))
 	(else
 	 (assertion-violation who "not a valid index" i))))
@@ -292,22 +288,26 @@
   ;;structures of type RTD.
   ;;
   (define who 'struct-field-accessor)
-  (%assert-argument-is-rtd who rtd)
-  (let ((i (%field-index i rtd who)))
-    (lambda (x)
-      (%assert-argument-is-struct-of-type who x rtd)
-      ($struct-ref x i))))
+  (with-arguments-validation (who)
+      ((rtd rtd))
+    (let ((i (%field-index i rtd who)))
+      (lambda (x)
+	(with-arguments-validation (who)
+	    ((struct-of-type x rtd))
+	  ($struct-ref x i))))))
 
 (define (struct-field-mutator rtd i)
   ;;Return  a  mutator  function  for  the  field at  index  I  of  data
   ;;structures of type RTD.
   ;;
   (define who 'struct-field-mutator)
-  (%assert-argument-is-rtd who rtd)
-  (let ((i (%field-index i rtd 'struct-field-mutator)))
-    (lambda (x v)
-      (%assert-argument-is-struct-of-type who x rtd)
-      ($struct-set! x i v))))
+  (with-arguments-validation (who)
+      ((rtd rtd))
+    (let ((i (%field-index i rtd 'struct-field-mutator)))
+      (lambda (x v)
+	(with-arguments-validation (who)
+	    ((struct-of-type x rtd))
+	  ($struct-set! x i v))))))
 
 
 ;;;; data structure inspection
@@ -323,8 +323,8 @@
   (define who 'struct?)
   (if (null? rest)
       ($struct? x)
-    (let ((rtd ($car rest)))
-      (unless (null? ($cdr rest))
+    (let ((rtd (unsafe.car rest)))
+      (unless (null? (unsafe.cdr rest))
 	(assertion-violation who "too many arguments"))
       (unless (rtd? rtd)
 	(assertion-violation who "not an rtd"))
@@ -335,46 +335,52 @@
   ;;Return the RTD of the data structure X.
   ;;
   (define who 'struct-rtd)
-  (%assert-argument-is-struct who x)
-  ($struct-rtd x))
+  (with-arguments-validation (who)
+      ((struct x))
+    ($struct-rtd x)))
 
 (define (struct-length x)
   ;;Return the number of fields in the data structure X.
   ;;
   (define who 'struct-length)
-  (%assert-argument-is-struct who x)
-  (rtd-length ($struct-rtd x)))
+  (with-arguments-validation (who)
+      ((struct x))
+    (rtd-length ($struct-rtd x))))
 
 (define (struct-name x)
   ;;Return a string representing the name of the data structure X.
   ;;
   (define who 'struct-name)
-  (%assert-argument-is-struct who x)
-  (rtd-name ($struct-rtd x)))
+  (with-arguments-validation (who)
+      ((struct x))
+    (rtd-name ($struct-rtd x))))
 
 (define (struct-printer x)
   ;;Return  the  procedure  being  the  printer function  for  the  data
   ;;structure X.
   ;;
   (define who 'struct-printer)
-  (%assert-argument-is-struct who x)
-  (rtd-printer ($struct-rtd x)))
+  (with-arguments-validation (who)
+      ((struct x))
+    (rtd-printer ($struct-rtd x))))
 
 (define (struct-ref x i)
   ;;Return the value of field at index I in the data structure X.
   ;;
   (define who 'struct-ref)
-  (%assert-argument-is-struct who x)
-  (%assert-argument-is-index who i x)
-  ($struct-ref x i))
+  (with-arguments-validation (who)
+      ((struct	x)
+       (index	i x))
+    ($struct-ref x i)))
 
 (define (struct-set! x i v)
   ;;Store V in the field at index I in the data structure X.
   ;;
   (define who 'struct-set!)
-  (%assert-argument-is-struct who x)
-  (%assert-argument-is-index who i x)
-  ($struct-set! x i v))
+  (with-arguments-validation (who)
+      ((struct	x)
+       (index	i x))
+    ($struct-set! x i v)))
 
 
 ;;;; done
@@ -385,10 +391,11 @@
 ($set-rtd-printer! (base-rtd)
 		   (lambda (rtd port wr)
 		     (define who 'struct-type-printer)
-		     (%assert-argument-is-rtd who rtd)
-		     (display "#<" port)
-		     (display (rtd-name rtd) port)
-		     (display " rtd>" port)))
+		     (with-arguments-validation (who)
+			 ((rtd rtd))
+		       (display "#<" port)
+		       (display (rtd-name rtd) port)
+		       (display " rtd>" port))))
 
 #| end of libray (ikarus structs) |# )
 
