@@ -1344,8 +1344,15 @@ Disable loading of run--command files.
 @item --rcfile <FILE>
 Load and evaluate @file{file} at startup, before running the script.
 The file must hold a proper @rnrs{6} program, beginning with the
-@func{import} clause.
+@func{import} clause.  This option can be used multiple times.
 @end table
+
+@cindex @env{VICARE_RC_FILES}
+If neither the @option{--no-rcfile} nor the @option{--rcfile} options
+are used: a list of run--command files is read from the environment
+variable @env{VICARE_RC_FILES}, which must contain a colon separated
+list of pathnames.  If the enviroment variable is empty or unset, by
+default the file @file{~/.vicarerc} is read.
 
 @c page
 @node using script
@@ -1530,6 +1537,7 @@ for this library must still specify the library name as
 @library{yoyodyne sample}, not @library{sample}.)
 @end itemize
 
+@cindex @env{VICARE_LIBRARY_PATH}
 @value{PRJNAME} always places its own libraries at the end of the search
 path.  Other library directories can be added to the search path in two
 ways: by modifying an environment variable, or by setting
