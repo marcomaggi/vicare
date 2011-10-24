@@ -7583,6 +7583,29 @@ representing the number of bytes in the data area; a bytevector is
 capable of holding at most a number of values equal to the return value
 of @func{greatest-fixnum}.
 
+When allocating a bytevector capable of holding @math{N} bytes, the
+actual size of the allocated data area is @math{N+1}; the additional
+last byte is not part of the data area and is perpetually set to zero.
+
+To allow for the same binary layout on both 32-bit and 64-bit platforms,
+the data area starts @math{8} bytes after the beginning; on a 32-bit
+platform the layout is:
+
+@example
+  1st word   2nd word                       last byte
+|----------|----------|-------------------|-----------|
+   length     unused        data area      set to zero
+@end example
+
+@noindent
+on a 64-bit platform the layout is:
+
+@example
+       1st word                             last byte
+|---------------------|-------------------|-----------|
+       length               data area      set to zero
+@end example
+
 The arguments @var{bv} to these operations must be references to
 bytevectors, the arguments @var{fx} must be fixnums in the appropriate
 range, the arguments @var{fl} must be flonums.  The following bindings
