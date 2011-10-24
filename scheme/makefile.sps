@@ -1750,7 +1750,7 @@
   ;;collection: it  holds all the libraries in  the LIBRARY-LEGEND which
   ;;are marked as REQUIRED?.
   ;;
-  ;;If the  function is  called with no  arguments: it return  the whole
+  ;;If the  function is called with  no arguments: it  returns the whole
   ;;collection.   If the  function  is called  with  one argument:  such
   ;;argument must be a LIBRARY record  and it is added to the collection
   ;;if not already there.
