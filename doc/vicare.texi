@@ -1041,6 +1041,11 @@ installed.
 Include @value{PACKAGE}'s Foreign Function Interface, so that
 @value{PRJNAME} code can invoke C code, and vice versa; requires Libffi.
 
+@item @option{--disable-arguments-validation}
+Disable arguments validation for the functions in Vicare's boot image;
+use with care: an invalid argument will cause undefined behaviour (most
+likely a process crash).
+
 @item @env{CFLAGS}
 Specify options to be used while compiling @value{PRJNAME}'s C code.
 
