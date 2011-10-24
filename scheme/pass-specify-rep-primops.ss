@@ -34,10 +34,12 @@
  (define (nop)
    (make-primcall 'nop '()))
 
- (define (K x)
+ (define-syntax K
    ;;Build an integer constant out of X.
    ;;
-   (make-constant x))
+   (syntax-rules ()
+     ((_ x)
+      (make-constant x))))
 
  (define (tag-test x mask tag)
    ;;Primary tag test.  X must be a word referencing a Scheme value.
@@ -66,7 +68,7 @@
    (make-conditional
        (tag-test x primary-mask primary-tag)
      (tag-test (prm 'mref x (K (- primary-tag))) secondary-mask secondary-tag)
-     (make-constant #f)))
+     (K #f)))
 
  (define (dirty-vector-set address)
    (define shift-bits 2)
@@ -82,32 +84,37 @@
 	  (prm 'nop)
 	(dirty-vector-set addr)))
      ((known x t)
-      (cond
-       ((eq? (T:immediate? t) 'yes)
-	(record-optimization 'smart-dirty-vec t)
-	(nop))
-       (else (smart-dirty-vector-set addr x))))
-     (else (dirty-vector-set addr))))
-
- (define (slow-mem-assign v x i)
-   (with-tmp ((t (prm 'int+ x (K i))))
-     (make-seq
-      (prm 'mset t (K 0) (T v))
-      (dirty-vector-set t))))
+      (cond ((eq? (T:immediate? t) 'yes)
+	     (record-optimization 'smart-dirty-vec t)
+	     (nop))
+	    (else
+	     (smart-dirty-vector-set addr x))))
+     (else
+      (dirty-vector-set addr))))
 
  (define (mem-assign v x i)
+   ;;Generate the  machine code  needed to store  the machine word  V at
+   ;;heap offset delta I, expressed  in bytes, from the base heap offset
+   ;;X, expressed in bytes.
+   ;;
+   (define (slow-mem-assign v x i)
+     (with-tmp ((t (prm 'int+ x (K i))))
+       (make-seq
+	(prm 'mset t (K 0) (T v))
+	(dirty-vector-set t))))
    (struct-case v
      ((constant t)
       (if (or (fx? t) (immediate? t))
 	  (prm 'mset x (K i) (T v))
 	(slow-mem-assign v x i)))
      ((known expr t)
-      (cond
-       ((eq? (T:immediate? t) 'yes)
-	(record-optimization 'mem-assign v)
-	(prm 'mset x (K i) (T expr)))
-       (else (slow-mem-assign expr x i))))
-     (else (slow-mem-assign v x i))))
+      (cond ((eq? (T:immediate? t) 'yes)
+	     (record-optimization 'mem-assign v)
+	     (prm 'mset x (K i) (T expr)))
+	    (else
+	     (slow-mem-assign expr x i))))
+     (else
+      (slow-mem-assign v x i))))
 
  (define (align-code unknown-amount known-amount)
    ;;Given  a compile-time  known  amount of  bytes  and a  compile-time
@@ -190,7 +197,7 @@
    ((P x)
     (make-conditional
 	(tag-test (T x) fx-mask fx-tag)
-      (make-constant #t)
+      (K #t)
       (tag-test (T x) 7 7)))
    ((E x) (nop)))
 
@@ -474,7 +481,7 @@
  /section)
 
 
-(section ;;; vectors
+(section  ;;; vectors
  (section ;;; helpers
   (define (vector-range-check x idx)
     (define (check-non-vector x idx)
@@ -492,18 +499,18 @@
 	   (with-tmp ((t (prm 'logor len (T idx))))
 	     (interrupt-unless-fixnum t)))))
       (struct-case idx
-		   ((constant i)
-		    (if (and (fx? i) (>= i 0))
-			(check-fx idx)
-		      (check-? idx)))
-		   ((known idx idx-t)
-		    (case (T:fixnum? idx-t)
-		      ((yes) (check-fx idx))
-		      ((maybe) (vector-range-check x idx))
-		      (else
-		       (printf "vector check with mismatch index tag ~s" idx-t)
-		       (vector-range-check x idx))))
-		   (else (check-? idx))))
+	((constant i)
+	 (if (and (fx? i) (>= i 0))
+	     (check-fx idx)
+	   (check-? idx)))
+	((known idx idx-t)
+	 (case (T:fixnum? idx-t)
+	   ((yes) (check-fx idx))
+	   ((maybe) (vector-range-check x idx))
+	   (else
+	    (printf "vector check with mismatch index tag ~s" idx-t)
+	    (vector-range-check x idx))))
+	(else (check-? idx))))
     (define (check-vector x idx)
       (define (check-fx idx)
 	(with-tmp ((len (cogen-value-$vector-length x)))
@@ -514,23 +521,23 @@
 	 (with-tmp ((len (cogen-value-$vector-length x)))
 	   (interrupt-unless (prm 'u< (T idx) len)))))
       (struct-case idx
-		   ((constant i)
-		    (if (and (fx? i) (>= i 0))
-			(check-fx idx)
-		      (interrupt)))
-		   ((known idx idx-t)
-		    (case (T:fixnum? idx-t)
-		      ((yes) (check-fx idx))
-		      ((no)  (interrupt))
-		      (else  (check-vector x idx))))
-		   (else (check-? idx))))
+	((constant i)
+	 (if (and (fx? i) (>= i 0))
+	     (check-fx idx)
+	   (interrupt)))
+	((known idx idx-t)
+	 (case (T:fixnum? idx-t)
+	   ((yes) (check-fx idx))
+	   ((no)  (interrupt))
+	   (else  (check-vector x idx))))
+	(else (check-? idx))))
     (struct-case x
-		 ((known x t)
-		  (case (T:vector? t)
-		    ((yes) (record-optimization 'check-vector x) (check-vector x idx))
-		    ((no) (interrupt))
-		    (else (check-non-vector x idx))))
-		 (else (check-non-vector x idx))))
+      ((known x t)
+       (case (T:vector? t)
+	 ((yes) (record-optimization 'check-vector x) (check-vector x idx))
+	 ((no) (interrupt))
+	 (else (check-non-vector x idx))))
+      (else (check-non-vector x idx))))
   /section)
 
  (define-primop vector? safe
@@ -540,23 +547,23 @@
  (define-primop $make-vector unsafe
    ((V len)
     (struct-case len
-		 ((constant i)
-		  (if (and (fx? i) #f)
-		      (interrupt)
-		    (with-tmp ((v (prm 'alloc
-				       (K (align (+ (* i wordsize) disp-vector-data)))
-				       (K vector-tag))))
-		      (prm 'mset v
-			   (K (- disp-vector-length vector-tag))
-			   (K (* i fx-scale)))
-		      v)))
-		 ((known expr t)
-		  (cogen-value-$make-vector expr))
-		 (else
-		  (with-tmp ((alen (align-code (T len) disp-vector-data)))
-		    (with-tmp ((v (prm 'alloc alen (K vector-tag))))
-		      (prm 'mset v (K (- disp-vector-length vector-tag)) (T len))
-		      v)))))
+      ((constant i)
+       (if (and (fx? i) #f)
+	   (interrupt)
+	 (with-tmp ((v (prm 'alloc
+			    (K (align (+ (* i wordsize) disp-vector-data)))
+			    (K vector-tag))))
+	   (prm 'mset v
+		(K (- disp-vector-length vector-tag))
+		(K (* i fx-scale)))
+	   v)))
+      ((known expr t)
+       (cogen-value-$make-vector expr))
+      (else
+       (with-tmp ((alen (align-code (T len) disp-vector-data)))
+	 (with-tmp ((v (prm 'alloc alen (K vector-tag))))
+	   (prm 'mset v (K (- disp-vector-length vector-tag)) (T len))
+	   v)))))
    ((P len) (K #t))
    ((E len) (nop)))
 
@@ -568,18 +575,17 @@
 
  (define-primop $vector-ref unsafe
    ((V x i)	;if it appears in "for expression value" position
-    (or
-     (struct-case i
-		  ((constant i)
-		   (and (fx? i)
-			(fx>= i 0)
-			(prm 'mref (T x)
-			     (K (+ (* i wordsize) (- disp-vector-data vector-tag))))))
-		  ((known i t)
-		   (cogen-value-$vector-ref x i))
-		  (else #f))
-     (prm 'mref (T x)
-	  (prm 'int+ (T i) (K (- disp-vector-data vector-tag))))))
+    (or (struct-case i
+	  ((constant i)
+	   (and (fx? i)
+		(fx>= i 0)
+		(prm 'mref (T x)
+		     (K (+ (* i wordsize) (- disp-vector-data vector-tag))))))
+	  ((known i t)
+	   (cogen-value-$vector-ref x i))
+	  (else #f))
+	(prm 'mref (T x)
+	     (prm 'int+ (T i) (K (- disp-vector-data vector-tag))))))
    ((E x i)	;if it appears in "for side-effect" position
     (nop)))
 
@@ -591,29 +597,29 @@
  (define-primop vector-length safe
    ((V x)
     (struct-case x
-		 ((known x t)
-		  (case (T:vector? t)
-		    ((yes) (record-optimization 'vector-length x) (cogen-value-$vector-length x))
-		    ((no)  (interrupt))
-		    (else  (cogen-value-vector-length x))))
-		 (else
-		  (seq*
-		   (interrupt-unless (tag-test (T x) vector-mask vector-tag))
-		   (with-tmp ((t (cogen-value-$vector-length x)))
-		     (interrupt-unless-fixnum t)
-		     t)))))
+      ((known x t)
+       (case (T:vector? t)
+	 ((yes) (record-optimization 'vector-length x) (cogen-value-$vector-length x))
+	 ((no)  (interrupt))
+	 (else  (cogen-value-vector-length x))))
+      (else
+       (seq*
+	(interrupt-unless (tag-test (T x) vector-mask vector-tag))
+	(with-tmp ((t (cogen-value-$vector-length x)))
+	  (interrupt-unless-fixnum t)
+	  t)))))
    ((E x)
     (struct-case x
-		 ((known x t)
-		  (case (T:vector? t)
-		    ((yes) (record-optimization 'vector-length x) (nop))
-		    ((no)  (interrupt))
-		    (else  (cogen-effect-vector-length x))))
-		 (else
-		  (seq*
-		   (interrupt-unless (tag-test (T x) vector-mask vector-tag))
-		   (with-tmp ((t (cogen-value-$vector-length x)))
-		     (interrupt-unless-fixnum t))))))
+      ((known x t)
+       (case (T:vector? t)
+	 ((yes) (record-optimization 'vector-length x) (nop))
+	 ((no)  (interrupt))
+	 (else  (cogen-effect-vector-length x))))
+      (else
+       (seq*
+	(interrupt-unless (tag-test (T x) vector-mask vector-tag))
+	(with-tmp ((t (cogen-value-$vector-length x)))
+	  (interrupt-unless-fixnum t))))))
    ((P x)
     (seq* (cogen-effect-vector-length x) (K #t))))
 
@@ -628,19 +634,22 @@
 
  (define-primop $vector-set! unsafe
    ((E x i v)
+    ;; X -> reference to vector
+    ;; I -> index as fixnum
+    ;; V -> whatever Scheme value
     (struct-case i
-		 ((constant i)
-		  (if (not (fx? i))
-		      (interrupt)
-		    (mem-assign v (T x)
-				(+ (* i wordsize)
-				   (- disp-vector-data vector-tag)))))
-		 ((known i t)
-		  (cogen-effect-$vector-set! x i v))
-		 (else
-		  (mem-assign v
-			      (prm 'int+ (T x) (T i))
-			      (- disp-vector-data vector-tag))))))
+      ((constant i)
+       (if (not (fx? i))
+	   (interrupt)
+	 (mem-assign v (T x)
+		     (+ (* i wordsize)
+			(- disp-vector-data vector-tag)))))
+      ((known i t)
+       (cogen-effect-$vector-set! x i v))
+      (else
+       (mem-assign v
+		   (prm 'int+ (T x) (T i))
+		   (- disp-vector-data vector-tag))))))
 
  (define-primop vector-set! safe
    ((E x i v)
@@ -1908,7 +1917,7 @@
     (make-conditional
 	(tag-test (T x) vector-mask vector-tag)
       (prm '= (prm 'mref (T x) (K (- vector-tag))) (T rtd))
-      (make-constant #f)))
+      (K #f)))
    ((E x rtd) (nop)))
 
  (define-primop $make-struct unsafe
@@ -2671,11 +2680,9 @@
    ((E)
     (make-shortcut
      (make-conditional
-	 (make-primcall 'u<
-			(list esp (make-primcall 'mref
-						 (list pcr (make-constant pcb-frame-redline)))))
-       (make-primcall 'interrupt '())
-       (make-primcall 'nop '()))
+     	 (prm 'u< esp (prm 'mref pcr (K pcb-frame-redline)))
+       (prm 'interrupt)
+       (prm 'nop))
      (make-forcall "ik_stack_overflow" '()))))
 
  /section)
