@@ -116,8 +116,11 @@ Copyright (c) 2011 Marco Maggi\n\n"))
 	  ((member (car args) '("-nd" "--no-debug"))
 	   (next-option (cdr args) (lambda () (k) (generate-debug-calls #f))))
 
-	  ((string=? (car args) "--print-assembler")
+	  ((string=? (car args) "--print-assembly")
 	   (next-option (cdr args) (lambda () (k) (assembler-output #t))))
+
+	  ((member (car args) '("--print-optimizer" "--print-optimiser"))
+	   (next-option (cdr args) (lambda () (k) (optimizer-output #t))))
 
 	  ((string=? (car args) "-O2")
 	   (next-option (cdr args) (lambda () (k) (optimize-level 2))))

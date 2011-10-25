@@ -1346,9 +1346,13 @@ Turn off debugging mode.
 @itemx -O2
 Turn on various levels of compile optimisations.
 
-@item --print-assembler
+@item --print-assembly
 Print to the current error port the assembly instructions generated when
 compiling code.
+
+@item --print-optimizer
+@itemx --print-optimiser
+Print to the current error port the
 @end table
 
 @cindex @env{VICARE_RC_FILES}

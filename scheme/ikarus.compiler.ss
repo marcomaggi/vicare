@@ -2195,7 +2195,7 @@
          [dummy
           (begin
             (when (optimizer-output)
-               (pretty-print (unparse-pretty p)))
+               (pretty-print (unparse-pretty p) (current-error-port)))
             #f)]
          [p (rewrite-assignments p)]
          [p (if (perform-tag-analysis)
