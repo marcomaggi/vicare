@@ -1323,6 +1323,14 @@ applications nor for writing any substantial piece of code.
 The following are additional options turning on/off auxiliary behaviour.
 
 @table @code
+@item --no-rcfile
+Disable loading of run--command files.
+
+@item --rcfile <FILE>
+Load and evaluate @file{file} at startup, before running the script.
+The file must hold a proper @rnrs{6} program, beginning with the
+@func{import} clause.  This option can be used multiple times.
+
 @item -d
 @itemx --debug
 Turn on debugging mode.  With this unhandled exceptions in the program
@@ -1338,13 +1346,9 @@ Turn off debugging mode.
 @itemx -O2
 Turn on various levels of compile optimisations.
 
-@item --no-rcfile
-Disable loading of run--command files.
-
-@item --rcfile <FILE>
-Load and evaluate @file{file} at startup, before running the script.
-The file must hold a proper @rnrs{6} program, beginning with the
-@func{import} clause.  This option can be used multiple times.
+@item --print-assembler
+Print to the current error port the assembly instructions generated when
+compiling code.
 @end table
 
 @cindex @env{VICARE_RC_FILES}

@@ -1903,6 +1903,8 @@
             "not a valid location for ~s" x op))
        x)]
     [else
+;;;FIXME All  the primitives  should be supported  now, should  I remove
+;;;this?  (Marco Maggi; Oct 25, 2011)
      (let ()
        (define-condition-type &url &condition
          make-url-condition
@@ -2170,11 +2172,16 @@
    ))
 
 (define (print-instr x)
-  (cond
-    [(and (pair? x) (eq? (car x) 'seq))
-     (for-each print-instr (cdr x))]
-    [else
-     (printf "    ~s\n" x)]))
+  ;;Print to the current error port the symbolic expression representing
+  ;;the assembly  instruction X.  To  be used to log  generated assembly
+  ;;for human inspection.
+  ;;
+  (if (and (pair? x) (eq? (car x) 'seq))
+      (for-each print-instr (cdr x))
+    (let ((port (current-error-port)))
+      (display "   " port)
+      (write x port)
+      (newline port))))
 
 (define optimizer-output (make-parameter #f))
 (define perform-tag-analysis (make-parameter #t))
@@ -2203,21 +2210,19 @@
     (let ([ls* (alt-cogen p)])
       (when (assembler-output)
         (parameterize ([gensym-prefix "L"]
-                       [print-gensym #f])
-          (for-each
-            (lambda (ls)
-              (newline)
-              (for-each print-instr ls))
-            ls*)))
-      (let ([code*
-             (assemble-sources
-               (lambda (x)
-                 (if (closure? x)
-                     (if (null? (closure-free* x))
-                         (code-loc-label (closure-code x))
-                         (error 'compile "BUG: non-thunk escaped" x))
-                     #f))
-               ls*)])
+                       [print-gensym  #f])
+          (for-each (lambda (ls)
+		      (newline)
+		      (for-each print-instr ls))
+	    ls*)))
+      (let ([code* (assemble-sources
+		    (lambda (x)
+		      (if (closure? x)
+			  (if (null? (closure-free* x))
+			      (code-loc-label (closure-code x))
+			    (error 'compile "BUG: non-thunk escaped" x))
+			#f))
+		    ls*)])
         (car code*)))))
 
 (define compile-core-expr-to-port

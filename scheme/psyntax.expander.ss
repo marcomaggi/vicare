@@ -301,7 +301,7 @@
       (let ((expr (stx-expr x)))
         (when (annotation? expr)
           (let ((pos (annotation-textual-position expr)))
-	    (when (source-position?)
+	    (when (source-position? pos)
 	      (display " [line "  port) (display (source-position-line    pos) port)
 	      (display " column " port) (display (source-position-column  pos) port)
 	      (display " of " port)     (display (source-position-identifier pos) port)

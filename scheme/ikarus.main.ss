@@ -116,6 +116,9 @@ Copyright (c) 2011 Marco Maggi\n\n"))
 	  ((member (car args) '("-nd" "--no-debug"))
 	   (next-option (cdr args) (lambda () (k) (generate-debug-calls #f))))
 
+	  ((string=? (car args) "--print-assembler")
+	   (next-option (cdr args) (lambda () (k) (assembler-output #t))))
+
 	  ((string=? (car args) "-O2")
 	   (next-option (cdr args) (lambda () (k) (optimize-level 2))))
 
@@ -229,7 +232,8 @@ Copyright (c) 2011 Marco Maggi\n\n"))
       (else (reverse rcfiles))))
 
   ;;Update the global  run state with actions selected  from the command
-  ;;line: debugging mode on/off, compiler optimisation level, etc.
+  ;;line: debugging  mode on/off, compiler  optimisation level, logging,
+  ;;etc.
   (init-command-line-args)
 
   ;;Added to fix  Vicare issue #3.  The optimisation  code is unfinished

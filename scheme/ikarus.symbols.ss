@@ -65,7 +65,7 @@
   (symbol? obj)
   (assertion-violation who "expected symbol as argument" obj))
 
-(define-argument-validation (gensym who obj)
+#;(define-argument-validation (gensym who obj)
   (symbol? obj)
   (assertion-violation who "expected generated symbol as argument" obj))
 

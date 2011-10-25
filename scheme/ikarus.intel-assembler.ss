@@ -547,19 +547,21 @@
     [(4) (CODE c ac)]
     [else (REX.R 0 (CODE c ac))]))
 
-(define trace-ac
-  (let ([cache '()])
-    (lambda (ac1 what ac2)
-      (when (assembler-output)
-        (let ([diff
-               (let f ([ls ac2])
-                 (cond
-                   [(eq? ls ac1) '()]
-                   [else (cons (car ls) (f (cdr ls)))]))])
-          (unless (member diff cache)
-            (set! cache (cons diff cache))
-            (printf "~s => ~s\n" what diff))))
-      ac2)))
+;;;Commented out because it is not used (Marco Maggi; Oct 25, 2011).
+;;
+;; (define trace-ac
+;;   (let ((cache '()))
+;;     (lambda (ac1 what ac2)
+;;       (when (assembler-output)
+;;         (let ((diff (let f ((ls ac2))
+;; 		      (cond ((eq? ls ac1)
+;; 			     '())
+;; 			    (else
+;; 			     (cons (car ls) (f (cdr ls))))))))
+;;           (unless (member diff cache)
+;;             (set! cache (cons diff cache))
+;;             (printf "~s => ~s\n" what diff))))
+;;       ac2)))
 
 (define (CR c r ac)
   (REX+r r (CODE+r c r ac)))
