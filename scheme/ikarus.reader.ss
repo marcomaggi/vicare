@@ -482,7 +482,7 @@
 	  (if (eof-object? obj)
 	      '()
 	    (cons obj (read-next-datum (%next-datum)))))
-      (close-input-port))))
+      (close-input-port port))))
 
 (define (read-script-source-file filename)
   ;;Open FILENAME for input only  using the native transcoder, then read

@@ -1,0 +1,7 @@
+;;; r6rs-forms --
+
+(display "123\n")
+(flush-output-port (current-output-port))
+(define a 1)
+
+;;; end of file

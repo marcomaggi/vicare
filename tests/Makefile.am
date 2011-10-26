@@ -39,10 +39,13 @@ VICARE_TEST_RUN_ENV	= VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH)	\
 VICARE_TEST_RUN		= $(VICARE_TEST_RUN_ENV) $(VICARE) $(VICARE_TEST_RUN_FLAGS)
 
 
-.PHONY: test-run
+.PHONY: test-run test-exec-modes
 
 test-run:
 	$(VICARE_TEST_RUN)
+
+test-exec-modes:
+	$(VICARE_TEST_RUN_ENV) $(srcdir)/test-exec-modes.sh $(VICARE) $(VICARE_BOOT) $(srcdir)
 
 #page
 #### interface to "make check"
@@ -161,6 +164,10 @@ EXTRA_DIST =	\
 	r6rs/syntax-case.sls				\
 	r6rs/test.sls					\
 	r6rs/unicode.sls				\
+	\
+	exec-modes-helpers/r6rs-forms			\
+	exec-modes-helpers/r6rs-program.sps		\
+	test-exec-modes.sh				\
 	\
 	long-test-r6rs-run.sps				\
 	long-test-r6rs-run-via-eval.sps			\
