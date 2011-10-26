@@ -7,10 +7,7 @@ Subject: [announce] Vicare Scheme revision 0.2d1
 Vicare Scheme is an R6RS compliant fork of Ikarus Scheme, aiming to be a
 native compiler for R6 Scheme producing single threaded programs running
 on  Intel x86  32-bit processors;  Vicare  is officially  not ready  for
-64-bit machines.  "Vicare" is pronounced  the etruscan way.  Vicare is a
-fork of  Ikarus Scheme, an  almost R6RS compliant implementation  of the
-Scheme programming language by Abdulaziz Ghuloum.
-
+64-bit machines.  "Vicare" is pronounced the etruscan way.
 
   The  latest version  of this  package can  be downloaded  from Github,
 check first for the latest tagged revision:
@@ -54,7 +51,7 @@ Notes for revision 0.2d1
 
 * Introduced  the configuration  option "--disable-arguments-validation"
   to exclude  at expansion-time code validating  arguments to functions.
-  At present not many modules support this feature.
+  At present only a few modules support this feature.
 
 * Review  of command line  options and  execution modes.   Added options
   "--print-assembly"  and "--print-optimizer",  at present  neither very
