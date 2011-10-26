@@ -1338,9 +1338,9 @@ option can be used multiple times.
 @item -l @var{LIBFILE}
 @itemx --load-library @var{LIBFILE}
 Load @var{libfile} expecting it to contain one or more @rnrs{6}
-libraries; after executing the RC files, expand and instantiate the
-libraries adding them to the interaction environment.  This option can
-be used multiple times.
+libraries; after executing the RC files, load the libraries in the
+internal collection, but do not add them to any environment.  This
+option can be used multiple times.
 
 @item -f @var{CODEFILE}
 @itemx --eval-file @var{CODEFILE}

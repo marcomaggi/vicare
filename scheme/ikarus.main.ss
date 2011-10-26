@@ -555,9 +555,9 @@ Other options:
    -l LIBFILE
    --load-library LIBFILE
         Load LIBFILE expecting it to contain one or more R6RS libraries;
-        after  executing  the  RC  files,  expand  and  instantiate  the
-        libraries  adding  them to  the  interaction environment.   This
-        option can be used multiple times.
+        after executing the RC files, load the libraries in the internal
+        collection but do not add  them to any environment.  This option
+        can be used multiple times.
 
    -f CODEFILE
    --eval-file CODEFILE
