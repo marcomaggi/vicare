@@ -1355,6 +1355,9 @@ times.
 Add @var{directory} to the library search path.  This option can be used
 multiple times.
 
+@item --prompt @var{STRING}
+Use @var{STRING} as prompt for the @repl{}.  Defaults to @samp{vicare>}.
+
 @item -d
 @itemx --debug
 Turn on debugging mode.  With this unhandled exceptions in the program

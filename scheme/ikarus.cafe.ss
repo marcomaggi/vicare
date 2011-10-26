@@ -1,15 +1,15 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -21,16 +21,16 @@ description:
   the current cafe (if one exists).  It prompts the user for an
   expression, evaluates it, prints the result back, and repeats the
   process.  If new-cafe is called with an argument, eval, then that
-  argument must be a procedure that takes a single argument.  The 
+  argument must be a procedure that takes a single argument.  The
   eval procedure will be used to evaluate the expressions.
-  
+
   Every time a new cafe is started, the prompt is changed to reflect
   the depth of the current cafe (i.e. how many eof objects is takes
-  to exit the outermost cafe).  
-  
+  to exit the outermost cafe).
+
   Input and output performed by the cafe can be changed by the
   console-input-port and console-output-port parameters.
-  
+
   If an die occurs during reading, evaluating, or printing an
   expression, then the die is printed to the error-port and the
   operations of the cafe resume as normal.|#
@@ -39,14 +39,14 @@ description:
 
 (library (ikarus cafe)
   (export new-cafe waiter-prompt-string)
-  (import 
+  (import
     (only (rnrs) with-exception-handler)
     (except (ikarus) new-cafe waiter-prompt-string))
 
   (define eval-depth 0)
 
   (define waiter-prompt-string
-    (make-parameter ">"
+    (make-parameter "vicare>"
       (lambda (x)
         (if (string? x)
             x
@@ -64,17 +64,17 @@ description:
     (flush-output-port (console-output-port))
     (display "Unhandled exception\n" (console-error-port))
     (print-condition ex (console-error-port)))
-  
+
   (define (reset k)
     (reset-input-port! (console-input-port))
     (k))
-  
+
   (define wait1
     (lambda (eval-proc k escape-k)
       (display-prompt 0)
       (let ([x (with-exception-handler
                  (lambda (ex)
-                   (cond 
+                   (cond
                      [(lexical-violation? ex)
                       (print-ex ex)
                       (reset k)]
@@ -86,12 +86,12 @@ description:
                  (lambda ()
                    (read (console-input-port))))])
         (cond
-          [(eof-object? x) 
+          [(eof-object? x)
            (newline (console-output-port))
            (escape-k (void))]
           [else
            (call-with-values
-             (lambda () 
+             (lambda ()
                (with-exception-handler
                  (lambda (ex)
                    (if (non-continuable-violation? ex)
@@ -109,7 +109,7 @@ description:
                (unless (andmap (lambda (v) (eq? v (void))) v*)
                  (with-exception-handler
                    (lambda (ex)
-                     (cond 
+                     (cond
                        [(interrupted-condition? ex)
                         (flush-output-port (console-output-port))
                         (newline (console-output-port))
@@ -126,15 +126,15 @@ description:
       (dynamic-wind
         (lambda () (set! eval-depth (fxadd1 eval-depth)))
         (lambda ()
-          (call/cc 
+          (call/cc
             (lambda (k)
               (let loop ()
                 (call/cc
                   (lambda (k1)
-                    (with-exception-handler 
+                    (with-exception-handler
                       (lambda (ex)
                         (with-exception-handler k1
-                          (lambda () 
+                          (lambda ()
                             (flush-output-port (console-output-port))
                             (newline (console-output-port))
                             (reset k1))))
@@ -143,7 +143,7 @@ description:
         (lambda () (set! eval-depth (fxsub1 eval-depth))))))
 
   (define default-cafe-eval
-    (lambda (x) 
+    (lambda (x)
       (eval x (interaction-environment))))
 
   (define new-cafe

@@ -384,6 +384,12 @@
 	       (run-time-config-search-path-register! cfg (cadr args))
 	       (next-option (cddr args) k))))
 
+	  ((%option= "--prompt")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--prompt requires a string argument")
+	     (let ((prompt (cadr args)))
+	       (next-option (cddr args) (lambda () (k) (waiter-prompt-string prompt))))))
+
 ;;; --------------------------------------------------------------------
 ;;; program options
 
@@ -426,10 +432,9 @@
   (let-syntax ((ds (lambda (stx) (date-string))))
     (%display ds))
   (%newline)
-  (%display "\
+  (%display "
 Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors
-Copyright (c) 2011 Marco Maggi
-"))
+Copyright (c) 2011 Marco Maggi\n\n"))
 
 (define (print-version-screen)
   ;;Print the version screen.
@@ -438,10 +443,11 @@ Copyright (c) 2011 Marco Maggi
   (display "\
 This is free software; see the  source or use the '--license' option for
 copying conditions.  There is NO warranty; not  even for MERCHANTABILITY
-or FITNESS FOR A PARTICULAR PURPOSE.
-" (current-error-port)))
+or FITNESS FOR A PARTICULAR PURPOSE.\n\n" (current-error-port)))
 
 (define (print-license-screen)
+  (define port (current-error-port))
+  (print-greetings-screen)
   (display "\
 This file  is free software you  can redistribute it  and/or modify it
 under the terms of the GNU  General Public License as published by the
@@ -456,13 +462,14 @@ General Public License for more details.
 You  should have received  a copy  of the  GNU General  Public License
 along with this file; see the file COPYING.  If not, write to the Free
 Software Foundation,  Inc., 59  Temple Place -  Suite 330,  Boston, MA
-02111-1307, USA.
-" (current-error-port)))
+02111-1307, USA.\n\n" port)
+  (flush-output-port port))
 
 (define (print-version-only)
   (define port (current-error-port))
   (display config.vicare-version port)
-  (newline port))
+  (newline port)
+  (flush-output-port port))
 
 
 (define (print-help-screen)
@@ -542,6 +549,9 @@ Other options:
    --search-path DIRECTORY
         Add DIRECTORY  to the library  search path.  This option  can be
         used multiple times.
+
+   --prompt STRING
+        Use STRING as prompt for the REPL.  Defaults to \"vicare>\".
 
    -d
    --debug
