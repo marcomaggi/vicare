@@ -1,139 +1,188 @@
-;;; Ikarus Scheme -- A compiler for R6RS Scheme.
-;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; Modified by Marco Maggi
+;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;; This program is free software: you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License version 3 as
-;;; published by the Free Software Foundation.
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under  the terms of  the GNU General  Public License version  3 as
+;;;published by the Free Software Foundation.
 ;;;
-;;; This program is distributed in the hope that it will be useful, but
-;;; WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; General Public License for more details.
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
 ;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+;;;You should  have received  a copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (library (ikarus load)
-  (export load load-r6rs-script fasl-directory)
-  (import
-    (except (ikarus) fasl-directory load load-r6rs-script)
-    (only (ikarus.compiler) compile-core-expr)
+  (export
+    load
+    load-r6rs-script
+    fasl-directory)
+  (import (except (ikarus)
+		  load
+		  load-r6rs-script
+		  fasl-directory)
+    (only (ikarus.compiler)
+	  compile-core-expr)
     (only (psyntax library-manager)
-      serialize-all current-precompiled-library-loader)
-    (only (psyntax expander) compile-r6rs-top-level)
-    (only (ikarus.reader) read-script-source-file))
+	  serialize-all
+	  current-precompiled-library-loader)
+    (only (psyntax expander)
+	  compile-r6rs-top-level)
+    (only (ikarus.reader)
+	  read-script-source-file)
+    (only (vicare syntactic-extensions)
+	  unwind-protect))
 
-  (define-struct serialized-library (contents))
+
+;;;; handling of FASL repository file names
 
-  (define fasl-extension
-    (cond
-      [(<= (fixnum-width) 32) ".vicare-32bit-fasl"]
-      [else                   ".vicare-64bit-fasl"]))
+;;The file extension of serialised FASL files.
+(define FASL-EXTENSION
+  (cond ((<= (fixnum-width) 32)	".vicare-32bit-fasl")
+	(else			".vicare-64bit-fasl")))
 
-  (define fasl-directory
-    (make-parameter
-      (cond
-        [(getenv "VICARE_FASL_DIRECTORY")]
-        [(getenv "HOME") =>
-         (lambda (s)
-           (string-append s "/.vicare/precompiled"))]
-        [else ""])
-      (lambda (s)
-        (if (string? s)
-            s
-            (die 'fasl-directory "not a string" s)))))
+;;The directory under which serialised FASL files must be saved.
+;;
+(define fasl-directory
+  (make-parameter
+      (cond ((getenv "VICARE_FASL_DIRECTORY"))
+	    ((getenv "HOME")
+	     => (lambda (s)
+		  (string-append s "/.vicare/precompiled")))
+	    (else ""))
+    (lambda (s)
+      (if (string? s)
+	  s
+	(assertion-violation 'fasl-directory "not a string" s)))))
 
-  (define (fasl-path filename)
-    (let ([d (fasl-directory)])
-      (and (not (string=? d ""))
-        (string-append d (file-real-path filename) fasl-extension))))
+(define (fasl-path filename)
+  ;;Given a source  file name return the associated  full FASL file name
+  ;;using  the  current  value   of  FASL-DIRECTORY.   Return  false  if
+  ;;FASL-DIRECTORY is unset (which should never happen).
+  ;;
+  (let ((d (fasl-directory)))
+    (and (not (string=? d ""))
+	 (string-append d (file-real-path filename) FASL-EXTENSION))))
 
-  (define (load-serialized-library filename sk)
-    (let ([ikfasl (fasl-path filename)])
-      (cond
-        [(or (not ikfasl) (not (file-exists? ikfasl))) #f]
-        [(< (file-mtime ikfasl) (file-mtime filename))
-         (fprintf (current-error-port)
-            "WARNING: not using fasl file ~s because it is older \
-             than the source file ~s\n"
-           ikfasl
-           filename)
-         #f]
-        [else
-         (let ([x
-                (let ([p (open-file-input-port ikfasl)])
-                  (let ([x (fasl-read p)])
-                    (close-input-port p)
-                    x))])
-           (if (serialized-library? x)
-               (apply sk (serialized-library-contents x))
-               (begin
-                 (fprintf (current-error-port)
-                    "WARNING: not using fasl file ~s because it was \
-                     compiled with a different instance of vicare.\n"
-                    ikfasl)
-                 #f)))])))
+
+;;;; loading and serialising libraries
 
-  (define (do-serialize-library filename contents)
-    (let ([ikfasl (fasl-path filename)])
-      (cond
-        [(not ikfasl) (void)]
-        [else
-         (fprintf (current-error-port) "Serializing ~s ...\n" ikfasl)
-         (let-values ([(dir name) (split-file-name ikfasl)])
-           (make-directory* dir))
-         (let ([p (open-file-output-port ikfasl (file-options no-fail))])
-           (fasl-write (make-serialized-library contents) p)
-           (close-output-port p))])))
+(define-struct serialized-library
+  (contents))
 
-  (define load-handler
-    (lambda (x)
-      (eval x (interaction-environment))))
+(define (load-serialized-library filename sk)
+  ;;Given a source file name load  the associated FASL file and apply SK
+  ;;to the library contents, return  the result of such application.  If
+  ;;a FASL file is not available or invalid: return false.
+  ;;
+  ;;Print  to  the current  error  port  appropriate  warning about  the
+  ;;availability of the FASL file.
+  ;;
+  (let ((ikfasl (fasl-path filename)))
+    (cond ((or (not ikfasl)
+	       (not (file-exists? ikfasl)))
+	   #f)
+	  ((< (file-mtime ikfasl) (file-mtime filename))
+	   (fprintf (current-error-port)
+		    "WARNING: not using fasl file ~s because it is older \
+                     than the source file ~s\n" ikfasl filename)
+	   #f)
+	  (else
+	   (let ((x (let* ((port (open-file-input-port ikfasl))
+			   (x    (fasl-read port)))
+		      (close-input-port port)
+		      x)))
+	     (if (serialized-library? x)
+		 (apply sk (serialized-library-contents x))
+	       (begin
+		 (fprintf (current-error-port)
+			  "WARNING: not using fasl file ~s because it was \
+                           compiled with a different instance of Vicare.\n" ikfasl)
+		 #f)))))))
 
-  (define read-and-eval
-    (lambda (p eval-proc)
-      (let ([x (read p)])
-        (unless (eof-object? x)
-          (eval-proc x)
-          (read-and-eval p eval-proc)))))
+(define (do-serialize-library filename contents)
+  ;;Given the source file name of  a library file and the contents of an
+  ;;already compiled library write a FASL file in the repository.
+  ;;
+  (let ((ikfasl (fasl-path filename)))
+    (when ikfasl
+      (fprintf (current-error-port) "Serializing ~s ...\n" ikfasl)
+      (let-values (((dir name) (split-file-name ikfasl)))
+	(make-directory* dir))
+      (let ((port (open-file-output-port ikfasl (file-options no-fail))))
+	(unwind-protect
+	    (fasl-write (make-serialized-library contents) port)
+	  (close-output-port port)))
+      (fprintf (current-error-port) "Finished ~s.\n" ikfasl))))
 
-  (define load
-    ;;Load  the  source  code  from  file  X, which  must  be  a  string
-    ;;representing a  file pathname, and  transform the contents  of the
-    ;;file in a  list of symbolic expressions.  For  each library in the
-    ;;source apply EVAL-PROC to the corresponding symbolic expression.
-    ;;
-    (case-lambda
-      [(x) (load x load-handler)]
-      [(x eval-proc)
-       (unless (string? x)
-         (die 'load "not a string" x))
-       (unless (procedure? eval-proc)
-         (die 'load "not a procedure" eval-proc))
-       (let ([ls (read-script-source-file x)])
-         (let f ()
-           (unless (null? ls)
-             (let ([a (car ls)])
-               (set! ls (cdr ls))
-               (eval-proc a))
-             (f))))]))
+
+(define (load-handler x)
+  (eval x (interaction-environment)))
 
-  (define load-r6rs-script
-    (lambda (filename serialize? run?)
-      (unless (string? filename)
-        (die 'load-r6rs-script "file name is not a string" filename))
-      (let ([prog (read-script-source-file filename)])
-        (let([thunk (compile-r6rs-top-level prog)])
-          (when serialize?
-            (serialize-all
-              (lambda (file-name contents)
-                (do-serialize-library file-name contents))
-              (lambda (core-expr)
-                (compile-core-expr core-expr))))
-          (when run? (thunk))))))
+;;Commented out because unused (Marco Maggi; Oct 25, 2011).
+;;
+;; (define (read-and-eval port eval-proc)
+;;   (let ((x (read port)))
+;;     (unless (eof-object? x)
+;;       (eval-proc x)
+;;       (read-and-eval port eval-proc))))
 
-  (current-precompiled-library-loader load-serialized-library)
+(define load
+  ;;Load source code from FILENAME,  which must be a string representing
+  ;;a filename,  expecting an  R6RS program, an  R6RS library or  just a
+  ;;list of  forms and transform the contents  of the file in  a list of
+  ;;symbolic expressions.   For each form in the  source apply EVAL-PROC
+  ;;to the corresponding symbolic expression.
+  ;;
+  ;;When  EVAL-PROC  is  not  given:  the forms  are  evaluated  in  the
+  ;;current INTERACTION-ENVIRONMENT.
+  ;;
+  (case-lambda
+   ((filename)
+    (load filename load-handler))
+   ((filename eval-proc)
+    (define who 'load)
+    (unless (string? filename)
+      (assertion-violation who "expected string as filename argument" filename))
+    (unless (procedure? eval-proc)
+      (assertion-violation who
+	"expected procedure as symbolic expression evaluator argument" eval-proc))
+    (let next-form ((ls (read-script-source-file filename)))
+      (unless (null? ls)
+	(eval-proc (car ls))
+	(next-form (cdr ls)))))))
 
-  )
+(define (load-r6rs-script filename serialize? run?)
+  ;;Load source code from FILENAME,  which must be a string representing
+  ;;a filename, expecting an R6RS program or an R6RS library and compile
+  ;;it.
+  ;;
+  ;;If SERIALIZE? is true: the compiled result is serialised in the FASL
+  ;;repository.
+  ;;
+  ;;If RUN? is true: the compiled result is evaluated.
+  ;;
+  (define who 'load-r6rs-script)
+  (unless (string? filename)
+    (assertion-violation who "expected string as file name argument" filename))
+  (let* ((prog  (read-script-source-file filename))
+	 (thunk (compile-r6rs-top-level prog)))
+    (when serialize?
+      (serialize-all
+       (lambda (file-name contents)
+	 (do-serialize-library file-name contents))
+       (lambda (core-expr)
+	 (compile-core-expr core-expr))))
+    (when run?
+      (thunk))))
+
+
+;;;; done
+
+(current-precompiled-library-loader load-serialized-library)
+
+)
+
+;;; end of file

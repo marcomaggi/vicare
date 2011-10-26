@@ -118,6 +118,14 @@ variable on the command line of "make"; for example:
 will run the  "test-issue-001-equal-hash.sps" file.  The "file" variable
 is used to expand a file name with wildcards as in "test-*$(file)*.sps".
 
+  It  is possible to  run "vicare"  from the  build directory  with user
+selected command line arguments doing:
+
+   $ make test-run user_flags='...'
+
+where the contents  of the "user_flags" variable are  placed directly on
+the command line.
+
 
 6. Policy
 ---------

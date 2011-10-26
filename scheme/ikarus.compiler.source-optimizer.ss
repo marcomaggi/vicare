@@ -855,7 +855,7 @@
            [else (f (cdr lhs*) (cdr rhs*))]))]
       [else x]))
   (define optimize-level
-    (make-parameter 1
+    (make-parameter 0
       (lambda (x)
         (if (memv x '(0 1 2))
             x

@@ -25,10 +25,11 @@ ikarus.config.ss: Makefile last-revision ../config.h
 	echo '(define vicare-version "$(PACKAGE_VERSION)")' >$@
 	echo '(define vicare-revision "$(shell cat $(srcdir)/last-revision)")' >>$@
 	echo '(define vicare-lib-dir "$(pkglibdir)")' >>$@
-	echo '(define target "$(target)")' >>$@
+	echo '(define host-info "$(target)")' >>$@
 	echo '(define wordsize $(VICARE_SIZE_OF_VOIDP))' >>$@
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>$@
 	echo '(define arguments-validation (positive? $(VICARE_ARGUMENTS_VALIDATION)))' >>$@
+	echo '(define bootfile "$(pkglibdir)/vicare.boot")' >>$@
 
 #page
 # To  create the  new boot  image we  use a  prebuilt boot  image; the

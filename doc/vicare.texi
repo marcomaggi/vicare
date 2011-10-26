@@ -658,6 +658,7 @@ machines.  @emph{Vicare} is pronounced the etruscan way.
 * overview system::             System requirements.
 * overview install::            Installation and uninstallation.
 * overview restrictions::       Implementation restrictions.
+* overview repl::               The read-eval-print loop.
 @end menu
 
 @c page
@@ -1177,6 +1178,23 @@ length of a bytevector and all the valid indexes into bytevectors are
 representable as fixnums.
 @end enumerate
 
+@c page
+@node overview repl
+@section The read-eval-print loop
+
+
+Scheme implementations compliant with @rnrs{6} live in a somewhat uneasy
+tension with a standard Scheme @acronym{REPL} (read--eval--print loop),
+which the Report effectively does not define.
+
+In particular, the effect of reimporting a module, as you might do when
+reloading and rerunning a program, isn't well--defined by @rnrs{6}.
+This is a limitation caused by the particular design choices made in
+@rnrs{6}.
+
+Accordingly, the interactive mode is intended for quick experimenting
+with the built in features.  It is intended neither for developing
+applications nor for writing any substantial piece of code.
 
 @c page
 @node using
@@ -1225,35 +1243,36 @@ the session.
 @section Command line arguments
 
 
-The @value{EXECUTABLE} executable recognizes a few command line switches
-that influence how @value{PACKAGE} starts.  The following are the main
-options, driving the execution mode.
+The synopsis of the @value{EXECUTABLE} program is as follows:
+
+@smallexample
+@value{RAWEXECUTABLE} [@var{OPTIONS}] [PROGRAM]                      [-- [@var{PROGRAM OPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-script PROGRAM          [-- [@var{PROGRAM OPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-repl PROGRAM            [-- [@var{PROGRAM OPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --script CODE                  [-- [@var{PROGRAM OPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-dependencies PROGRAM [-- [@var{PROGRAM OPTS}]]
+@end smallexample
+
+@noindent
+the @var{OPTIONS} are interpreted by @value{EXECUTABLE}, @var{PROGRAM
+OPTS} can be obtained using the @func{command-line} procedure in the
+@library{rnrs programs} library; when running the @repl{}: the first
+element of the returned list will be the string @samp{*interactive*},
+corresponding to the script name in @rnrs{6}--script mode.
+
+Some options cause code to be evaluated in the interaction environment:
+it initially contains all the bindings exported from the
+@library{ikarus} library.
+
+The @value{EXECUTABLE} executable recognises a few command line switches
+that influence how @value{PACKAGE} starts; the following are the main
+options, driving the execution mode.  It is an error to put on the
+command line two or more of these options.
 
 @table @code
-@item @value{RAWEXECUTABLE} -h
-The presence of the @option{-h} flag causes @value{EXECUTABLE} to
-display a help message then to exit; the help message summarizes the
-command line switches.  No further action is performed.
-
-@item @value{RAWEXECUTABLE} -b path/to/boot/file.boot
-@itemx @value{RAWEXECUTABLE} --boot path/to/boot/file.boot
-The @option{-b} flag (which requires an extra argument) directs
-@value{EXECUTABLE} to use the specified boot file as the initial system
-boot file.  The boot file is a binary file that contains all the code
-and data of the Scheme system.  In the absence of the @option{-b} flag,
-the executable will use the default boot file.  Running
-@command{@value{RAWEXECUTABLE} -h} shows the location where the default
-boot file was installed.
-
-The rest of the command line arguments are recognized by the standard
-Scheme run time system.  They are processed after the boot file is
-loaded.
-
-@item @value{RAWEXECUTABLE} --r6rs-script script-file-name [arguments ...]
-The @option{--r6rs-script} option instructs @value{PRJNAME} that the
-supplied file is an @rnrs{6} script.  The script file name and any
-additional optional @code{arguments} can be obtained by calling the
-@func{command-line} procedure.
+@item --r6rs-script @var{PROGRAM}
+Start Vicare in @rnrs{6}--script mode.  The @var{PROGRAM} file is handled
+as an @rnrs{6} program.  Example:
 
 @example
 $ cat test.sps
@@ -1265,11 +1284,15 @@ $ @value{RAWEXECUTABLE} --r6rs-script test.sps hi there
 ("test.sps" "hi" "there")
 @end example
 
-@item @value{RAWEXECUTABLE} --script script-file-name [arguments ...]
-The @option{--script} option instructs @value{PRJNAME} that the supplied
-file is a Scheme script.  The script file name and any additional
-optional @code{arguments} can be obtained by calling the
-@func{command-line} procedure.
+@item --r6rs-repl @var{PROGRAM}
+Start Vicare in @rnrs{6}-script mode.  Act as if the
+@option{--r6rs-script} option had been used but, after the program
+execution, enter the @repl{} rather than exiting.
+
+@item --script @var{CODEFILE}
+Start Vicare in evaluation mode.  The @var{CODEFILE} is handled as a
+sequence of @rnrs{6} expressions: such expressions are used as first
+argument for @func{eval} under the interaction environment.  Example:
 
 @example
 $ cat test.sps
@@ -1280,56 +1303,54 @@ $ @value{RAWEXECUTABLE} --script test.sps hi there
 ("test.sps" "hi" "there")
 @end example
 
-When @option{--script} is used: all the scripts loaded are accepted as
-Scheme scripts without the @func{import} or @func{library} forms.
-
-@item @value{RAWEXECUTABLE} --r6rs-repl <FILE> ... [-- arguments ...]
-Start interactive mode, but load and evaluate @file{FILE} first.
-
-@item @value{RAWEXECUTABLE} --compile-dependencies <FILE> ... [-- arguments ...]
-Load the program or library @file{FILE} and compile all the libraries on
-which it depends.
-
-@item @value{RAWEXECUTABLE} <file> ... [-- arguments ...]
-The lack of an @option{--r6rs-script} argument causes @value{PRJNAME} to
-start in interactive mode.  Each @code{file} is first loaded in the
-interaction environment.  The interaction environment initially contains
-all the bindings exported from the @library{ikarus} library.
-
-The optional @code{arguments} following the @code{--} marker can be
-obtained by calling the @func{command-line} procedure.  In interactive
-mode, the first element of the returned list will be the string
-@code{*interactive*}, corresponding to the script name in
-@rnrs{6}--script mode.
-
-@quotation
-@strong{NOTE} @rnrs{6} lives in a somewhat uneasy tension with a
-standard Scheme @acronym{REPL} (read--eval--print loop), which the
-Report effectively does not define.  In particular, the effect of
-reimporting a module, as you might do when reloading and rerunning a
-program, isn't well--defined by @rnrs{6}.
-
-This is a limitation caused by the particular design choices made in
-@rnrs{6}; it's hoped that a future revision to the language will repair
-this particular problem.  Even so, we hope to achieve better interaction
-between loading and libraries in the future.
-
-Accordingly, the interactive mode is intended for quick experimenting
-with the built--in features.  It is intended neither for developing
-applications nor for writing any substantial piece of code.
-@end quotation
+@item --compile-dependencies @var{IMPORTS-FILE}
+Load the @rnrs{6} program @var{IMPORTS-FILE}, compile all the libraries
+upon which it depends and store them in the FASL repository.
+@var{IMPORTS-FILE} itself is not evaluated.
 @end table
 
-The following are additional options turning on/off auxiliary behaviour.
+When none of these options is given, but a standalone @var{PROGRAM}
+argument is present on the command line: act as if the
+@option{--r6rs-script} option had been used with the given file name.
+If no standalone @var{PROGRAM} argument is present: enter the @repl{}.
+
+The rest of the command line arguments are recognised by the standard
+Scheme run time system.
 
 @table @code
+@item -b path/to/boot/file.boot
+@itemx --boot path/to/boot/file.boot
+Use the specified boot file as the initial system boot file.  The boot
+file is a binary file that contains all the code and data of the Scheme
+system.  In the absence of the @option{-b} flag, the executable will use
+the default boot file.  Running @value{EXECUTABLE} with the @option{-h}
+option shows the location where the default boot file was installed.
+
 @item --no-rcfile
 Disable loading of run--command files.
 
-@item --rcfile <FILE>
-Load and evaluate @file{file} at startup, before running the script.
-The file must hold a proper @rnrs{6} program, beginning with the
-@func{import} clause.  This option can be used multiple times.
+@item --rcfile @var{FILE}
+Load and evaluate @var{FILE} as an @rnrs{6} program at startup, before
+loading libraries, evaluating codes and running the main script.  This
+option can be used multiple times.
+
+@item -l @var{LIBFILE}
+@itemx --load-library @var{LIBFILE}
+Load @var{libfile} expecting it to contain one or more @rnrs{6}
+libraries; after executing the RC files, expand and instantiate the
+libraries adding them to the interaction environment.  This option can
+be used multiple times.
+
+@item -f @var{CODEFILE}
+@itemx --eval-file @var{CODEFILE}
+Load @var{CODEFILE} expecting it to contain valid @rnrs{6} expressions;
+after instantiating the libraries hand the code to @func{eval} under the
+interaction environment.  This option can be used multiple times.
+
+@item -L @var{DIRECTORY}
+@itemx --search-path @var{DIRECTORY}
+Add @var{directory} to the library search path.  This option can be used
+multiple times.
 
 @item -d
 @itemx --debug
@@ -1344,7 +1365,7 @@ Turn off debugging mode.
 @item -O0
 @itemx -O1
 @itemx -O2
-Turn on various levels of compile optimisations.
+Turn on various levels of compile optimisations (currently unsupported).
 
 @item --print-assembly
 Print to the current error port the assembly instructions generated when
@@ -1352,7 +1373,26 @@ compiling code.
 
 @item --print-optimizer
 @itemx --print-optimiser
-Print to the current error port the
+Print to the current error port a symbolic expression which results from
+running the optimiser.
+
+@item -V
+@itemx --version
+Display the version message then exit.
+
+@item --version-only
+Display only the version number on the standard error port, followed by
+a newline, then exit.
+
+@item --license
+Display the license message then exit.
+
+@item -h
+Display the help message then exit.
+
+@item --
+Mark the end of @value{EXECUTABLE} options; all the arguments after this
+marker can be obtained by calling the @func{command-line} procedure.
 @end table
 
 @cindex @env{VICARE_RC_FILES}
@@ -1360,7 +1400,8 @@ If neither the @option{--no-rcfile} nor the @option{--rcfile} options
 are used: a list of run--command files is read from the environment
 variable @env{VICARE_RC_FILES}, which must contain a colon separated
 list of pathnames.  If the enviroment variable is empty or unset, by
-default the file @file{~/.vicarerc} is read.
+default the file @file{.vicarerc} is used searching it in the directory
+selected by the @env{HOME} environment variable.
 
 @c page
 @node using script
@@ -1370,7 +1411,7 @@ default the file @file{~/.vicarerc} is read.
 Scheme scripts can be executed using the following command:
 
 @example
-@value{RAWEXECUTABLE} --r6rs-script @var{script-name}
+@value{RAWEXECUTABLE} @var{PROGRAM}
 @end example
 
 @noindent
@@ -1618,9 +1659,9 @@ Append each of the following strings to the rootname, in order, until a
 matching file is found:
 
 @example
-/main.ikarus.sls
-/main.ikarus.ss
-/main.ikarus.scm
+/main.vicare.sls
+/main.vicare.ss
+/main.vicare.scm
 /main.sls
 /main.ss
 /main.scm

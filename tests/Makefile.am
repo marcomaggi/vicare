@@ -29,9 +29,23 @@ long-test long-tests:
 	@echo
 
 #page
-## --------------------------------------------------------------------
-## Interface to "make check".
-## --------------------------------------------------------------------
+#### running vicare from the build directory
+
+# The variable "user_flags"  is for the user to be  set on the command
+# line of "make".
+VICARE_TEST_RUN_FLAGS	= -b $(VICARE_BOOT) $(user_flags)
+VICARE_TEST_RUN_ENV	= VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH)	\
+			  VICARE_SRC_DIR=$(srcdir) VICARE_BUILDDIR=$(builddir)
+VICARE_TEST_RUN		= $(VICARE_TEST_RUN_ENV) $(VICARE) $(VICARE_TEST_RUN_FLAGS)
+
+
+.PHONY: test-run
+
+test-run:
+	$(VICARE_TEST_RUN)
+
+#page
+#### interface to "make check"
 
 # TESTS and TESTS_ENVIRONMENT are Automake variables.
 TESTS_ENVIRONMENT	= $(VICARE_RUN)
@@ -110,9 +124,7 @@ TESTS			=	\
 	test-issue-025-sign-in-exact-rationals.sps
 
 #page
-## --------------------------------------------------------------------
-## Extra files to be distributed.
-## --------------------------------------------------------------------
+#### extra files to be distributed
 
 EXTRA_DIST =	\
 	checks.sls					\
