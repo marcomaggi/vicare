@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(vicare, 0.2d0, marco.maggi-ipsu@poste.it)
+AC_INIT(vicare, 0.2d1, marco.maggi-ipsu@poste.it)
 AC_CANONICAL_SYSTEM
-AM_INIT_AUTOMAKE(vicare, 0.2d0, gnu)
+AM_INIT_AUTOMAKE(vicare, 0.2d1, gnu)
 AC_CONFIG_SRCDIR([src/])
 
 VICARE_ARGUMENTS_VALIDATION=1
