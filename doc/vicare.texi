@@ -1287,7 +1287,8 @@ $ @value{RAWEXECUTABLE} --r6rs-script test.sps hi there
 @item --r6rs-repl @var{PROGRAM}
 Start Vicare in @rnrs{6}-script mode.  Act as if the
 @option{--r6rs-script} option had been used but, after the program
-execution, enter the @repl{} rather than exiting.
+execution, enter the @repl{} rather than exiting.  This allows
+inspection of bindings and state left behind by the program.
 
 @item --script @var{CODEFILE}
 Start Vicare in evaluation mode.  The @var{CODEFILE} is handled as a
@@ -1345,7 +1346,9 @@ be used multiple times.
 @itemx --eval-file @var{CODEFILE}
 Load @var{CODEFILE} expecting it to contain valid @rnrs{6} expressions;
 after instantiating the libraries hand the code to @func{eval} under the
-interaction environment.  This option can be used multiple times.
+interaction environment.  Bindings left behind by this code are
+available if we enter the @repl{}.  This option can be used multiple
+times.
 
 @item -L @var{DIRECTORY}
 @itemx --search-path @var{DIRECTORY}

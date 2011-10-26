@@ -82,7 +82,7 @@
 (define-struct run-time-config
   (exec-mode
 		;A  symbol representing  the  requested execution  mode:
-		;R6RS-SCRIPT, SCRIPT, COMPILE, REPL.
+		;R6RS-SCRIPT, R6RS-REPL, SCRIPT, COMPILE, REPL.
    script
 		;A  string representing  a file  name: the  main script.
 		;When in  R6RS-SCRIPT or COMPILE  mode: it must  hold an
@@ -391,7 +391,7 @@
 	   (set-run-time-config-program-options! cfg (cdr args))
 	   (%return cfg k))
 
-	  (else	;error
+	  (else
 	   (let ((X (car args)))
 	     (cond ((char=? #\- (string-ref X 0))
 		    (%error-and-exit (string-append "unknown option \"" X "\"")))
@@ -399,8 +399,8 @@
 		    (%error-and-exit "program file name given after mode option"))
 		   (else
 		    (set-run-time-config-exec-mode! cfg 'r6rs-script)
-		    (set-run-time-config-script!    cfg (car args))
-		    (next-option (cddr args) k))))))))
+		    (set-run-time-config-script!    cfg X)
+		    (next-option (cdr args) k))))))))
 
 
 (define (print-greetings-screen)
@@ -486,9 +486,10 @@ Options controlling execution modes:
        	as an R6RS program.
 
    --r6rs-repl PROGRAM
-        Start Vicare  in R6RS-script mode.  Act as if  the --r6rs-script
-	option had been  used but, after the script execution, enter the
-	REPL rather than exiting.
+        Start Vicare  in R6RS-script mode.  Act as  if the --r6rs-script
+        option had been used but,  after the script execution, enter the
+        REPL rather  than exiting.   This allows inspection  of bindings
+        and state left behind by the program.
 
    --script CODEFILE
         Start Vicare in  evaluation mode.  The CODEFILE is  handled as a
@@ -530,8 +531,9 @@ Other options:
    --eval-file CODEFILE
         Load CODEFILE  expecting it  to contain valid  R6RS expressions;
 	after instantiating  the libraries hand  the code to  EVAL under
-	the interaction environment.  This option can  be used  multiple
-        times.
+	the interaction environment.  Bindings  left behind by this code
+	are  available if we  enter the  REPL. This  option can  be used
+	multiple times.
 
    --no-greetings
         Suppress greetings when entering the REPL.
@@ -680,6 +682,10 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	    cfg.load-libraries))))
 
 (define (load-eval-files cfg)
+  ;;Load and  eval selected code  files in the  interaction environment.
+  ;;Bindings  left behind by  this code  are available  if we  enter the
+  ;;REPL.
+  ;;
   (with-run-time-config (cfg)
     (doit (for-each loading.load cfg.eval-files))))
 
@@ -721,11 +727,11 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	       (current-error-port)))
     (optimize-level 0)
 
-    (command-line-arguments
-     (cons (if (eq? 'interactive-repl cfg.exec-mode)
-	       "*interactive*"
-	     cfg.script)
-	   cfg.program-options))
+    (cond ((eq? 'repl cfg.exec-mode)
+	   (command-line-arguments (cons "*interactive*" cfg.program-options)))
+	  (cfg.script
+	   (command-line-arguments (cons cfg.script      cfg.program-options))))
+
     (load-libraries  cfg)
     (load-eval-files cfg)
 
@@ -747,7 +753,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
        (load-evaluated-script cfg))
 
       ;;When no options selected: just enter a clean REPL.
-      ((interactive-repl)
+      ((repl)
        (%print-greetings)
        (new-cafe (lambda (x)
 		   (doit (eval x (interaction-environment))))))
