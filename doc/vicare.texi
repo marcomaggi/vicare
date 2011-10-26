@@ -1350,6 +1350,13 @@ interaction environment.  Bindings left behind by this code are
 available if we enter the @repl{}.  This option can be used multiple
 times.
 
+@item -e @var{EXPRESSION}
+@itemx --eval-expr @var{EXPRESSION}
+After instantiating the libraries hand the @var{EXPRESSION} to
+@func{eval} under the interaction environment.  Bindings left behind by
+this code are available if we enter the @repl{}. This option can be used
+multiple times.
+
 @item -L @var{DIRECTORY}
 @itemx --search-path @var{DIRECTORY}
 Add @var{directory} to the library search path.  This option can be used

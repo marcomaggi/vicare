@@ -76,6 +76,14 @@
     ((_ ?filename (serialize? ?ser) (run? ?run))
      (loading.load-r6rs-script ?filename ?ser ?run))))
 
+(define (%string->sexp expr-string)
+  (let loop ((port     (open-string-input-port expr-string))
+	     (the-expr '()))
+    (let ((form (read port)))
+      (if (eof-object? form)
+	  (cons 'begin (reverse the-expr))
+	(loop port (cons form the-expr))))))
+
 
 ;;;; data types
 
@@ -102,10 +110,20 @@
 		;interaction environment, after  the RC files and before
 		;the load scripts.
 
-   eval-files
-		;Null  or a  list  of strings  representing file  names:
-		;source code to  be loaded and handed to  EVAL under the
-		;interaction  environment;  before  the main  script  is
+   eval-codes
+		;Null or  an alist with entries:
+		;
+		;	(file . FILENAME)
+		;	(expr . EXPRESSION)
+		;
+		;FILENAME is a string  representing a file names: source
+		;code  to  be  loaded  and  handed  to  EVAL  under  the
+		;interaction  environment.
+		;
+		;EXPRESSION  is a  symbolic expression  to be  handed to
+		;EVAL under the interaction environment.
+		;
+		;This  code  is  evaluated  before the  main  script  is
 		;evaluated, but after the libraries have been loaded.
 
    program-options
@@ -125,8 +143,8 @@
 (define-inline (run-time-config-load-libraries-register! cfg pathname)
   (set-run-time-config-load-libraries! cfg (cons pathname (run-time-config-load-libraries cfg))))
 
-(define-inline (run-time-config-eval-files-register! cfg pathname)
-  (set-run-time-config-eval-files! cfg (cons pathname (run-time-config-eval-files cfg))))
+(define-inline (run-time-config-eval-codes-register! cfg pathname)
+  (set-run-time-config-eval-codes! cfg (cons pathname (run-time-config-eval-codes cfg))))
 
 (define-inline (run-time-config-search-path-register! cfg pathname)
   (set-run-time-config-search-path! cfg (cons pathname (run-time-config-search-path cfg))))
@@ -160,7 +178,7 @@
 	      (CFG.SCRIPT		(%dot-id ".script"))
 	      (CFG.RCFILES		(%dot-id ".rcfiles"))
 	      (CFG.LOAD-LIBRARIES	(%dot-id ".load-libraries"))
-	      (CFG.EVAL-FILES		(%dot-id ".eval-files"))
+	      (CFG.EVAL-CODES		(%dot-id ".eval-codes"))
 	      (CFG.PROGRAM-OPTIONS	(%dot-id ".program-options"))
 	      (CFG.NO-GREETINGS		(%dot-id ".no-greetings"))
 	      (CFG.SEARCH-PATH		(%dot-id ".search-path")))
@@ -185,11 +203,11 @@
 					  (run-time-config-load-libraries ?cfg))
 					 ((set! _ ?val)
 					  (set-run-time-config-load-libraries! ?cfg ?val))))
-		  (CFG.EVAL-FILES	(identifier-syntax
+		  (CFG.EVAL-CODES	(identifier-syntax
 					 (_
-					  (run-time-config-eval-files ?cfg))
+					  (run-time-config-eval-codes ?cfg))
 					 ((set! _ ?val)
-					  (set-run-time-config-eval-files! ?cfg ?val))))
+					  (set-run-time-config-eval-codes! ?cfg ?val))))
 		  (CFG.PROGRAM-OPTIONS	(identifier-syntax
 					 (_
 					  (run-time-config-program-options ?cfg))
@@ -237,7 +255,7 @@
 			  #f		;script
 			  #f		;rcfiles
 			  '()		;load-libraries
-			  '()		;eval-files
+			  '()		;eval-codes
 			  '()		;program-options
 			  #f		;no-greetings
 			  '()))		;search-path
@@ -259,7 +277,7 @@
 	(when (list? rcfiles)
 	  (set-run-time-config-rcfiles!    cfg (reverse rcfiles))))
       (set-run-time-config-load-libraries! cfg (reverse (run-time-config-load-libraries cfg)))
-      (set-run-time-config-eval-files!     cfg (reverse (run-time-config-eval-files   cfg)))
+      (set-run-time-config-eval-codes!     cfg (reverse (run-time-config-eval-codes   cfg)))
       (values cfg k))
 
     (cond ((null? args)
@@ -358,21 +376,28 @@
 
 	  ((%option= "--rcfile")
 	   (if (null? (cdr args))
-	       (%error-and-exit "--rcfile requires a script name")
+	       (%error-and-exit "--rcfile requires a file name argument")
 	     (begin
 	       (run-time-config-rcfiles-register! cfg (cadr args))
 	       (next-option (cddr args) k))))
 
 	  ((%option= "-f" "--eval-file")
 	   (if (null? (cdr args))
-	       (%error-and-exit "-e or --eval-script requires a script name")
+	       (%error-and-exit "-f or --eval-file requires a file name argument")
 	     (begin
-	       (run-time-config-eval-files-register! cfg (cadr args))
+	       (run-time-config-eval-codes-register! cfg (cons 'file (cadr args)))
+	       (next-option (cddr args) k))))
+
+	  ((%option= "-e" "--eval-expr")
+	   (if (null? (cdr args))
+	       (%error-and-exit "-e or --eval-expr requires an expression argument")
+	     (begin
+	       (run-time-config-eval-codes-register! cfg (cons 'expr (%string->sexp (cadr args))))
 	       (next-option (cddr args) k))))
 
 	  ((%option= "-l" "--load-library")
 	   (if (null? (cdr args))
-	       (%error-and-exit "-l or --eval-script requires a script name")
+	       (%error-and-exit "-l or --eval-script requires a file name argument")
 	     (begin
 	       (run-time-config-load-libraries-register! cfg (cadr args))
 	       (next-option (cddr args) k))))
@@ -542,6 +567,13 @@ Other options:
 	are  available if we  enter the  REPL. This  option can  be used
 	multiple times.
 
+   -e EXPRESSION
+   --eval-expr EXPRESSION
+        After instantiating  the libraries  hand the EXPRESSION  to EVAL
+	under the interaction environment.  Bindings left behind by this
+	code are available if we enter the REPL. This option can be used
+	multiple times.
+
    --no-greetings
         Suppress greetings when entering the REPL.
 
@@ -691,13 +723,23 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 			(read-source-file filename)))
 	    cfg.load-libraries))))
 
-(define (load-eval-files cfg)
-  ;;Load and  eval selected code  files in the  interaction environment.
+(define (evaluate-codes cfg)
+  ;;Load and  eval selected code  files in the  interaction environment;
+  ;;evaluate  selected  expressions   in  the  interaction  environment.
   ;;Bindings  left behind by  this code  are available  if we  enter the
   ;;REPL.
   ;;
   (with-run-time-config (cfg)
-    (doit (for-each loading.load cfg.eval-files))))
+    (doit (for-each (lambda (entry)
+		      (case (car entry)
+			((file)
+			 (loading.load (cdr entry)))
+			((expr)
+			 (eval (cdr entry) (interaction-environment)))
+			(else
+			 (assertion-violation 'vicare
+			   "*** Vicare internal error: unknown evaluation code type" (car entry)))))
+	    cfg.eval-codes))))
 
 (define (load-r6rs-program cfg)
   ;;Execute  the  selected main  script  as  R6RS  program.  Return  the
@@ -742,8 +784,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	  (cfg.script
 	   (command-line-arguments (cons cfg.script      cfg.program-options))))
 
-    (load-libraries  cfg)
-    (load-eval-files cfg)
+    (load-libraries cfg)
+    (evaluate-codes cfg)
 
     (case cfg.exec-mode
       ((r6rs-script)

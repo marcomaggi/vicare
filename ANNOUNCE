@@ -42,7 +42,7 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d1
 ------------------------
 
-* It  appears that  Ikarus' mailing  list is  no more  working,  so this
+* It  appears that  Ikarus' mailing  list is  working no  more,  so this
   project  now   has  its  own   mailing  list  for   announcements  and
   discussions:
 
@@ -56,8 +56,9 @@ Notes for revision 0.2d1
   to exclude  at expansion-time code validating  arguments to functions.
   At present not many modules support this feature.
 
-* Added  options to  "vicare": --print-assembly,  --print-optimizer.  At
-  present neither very useful, nor human-friendly.
+* Review  of command line  options and  execution modes.   Added options
+  "--print-assembly"  and "--print-optimizer",  at present  neither very
+  useful, nor human-friendly.
 
 
 ### end of file
