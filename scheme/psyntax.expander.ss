@@ -36,7 +36,9 @@
           interaction-environment
           ellipsis-map assertion-error
           environment environment? environment-symbols
-          new-interaction-environment syntax-transpose)
+          new-interaction-environment syntax-transpose
+
+	  top-level-expander)
   (import (except (rnrs)
 		  environment environment? identifier?
 		  eval generate-temporaries free-identifier=?
