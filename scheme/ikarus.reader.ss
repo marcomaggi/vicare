@@ -115,7 +115,7 @@
 ;;
 ;;Field name: stripped
 ;;Field accessor: annotation-stripped ANN
-;;  An S-expression with no annotations.
+;;  The same S-expression of the EXPRESSION field with no annotations.
 ;;
 ;;Field name: textual-position
 ;;Field accessor: annotation-textual-position ANN
@@ -560,7 +560,7 @@
   ;;
   (lambda (entry)
     (define-inline (%error msg . irritants)
-      (die/p port 'read msg . irritants))
+      (die/p port 'vicare-reader msg . irritants))
     (let ((loc (cdr entry)))
       (unless (loc-set? loc)
 	;;FIXME It  would be beautiful  to include the position  in this
@@ -994,7 +994,7 @@
 ;;; (when (port-in-r6rs-mode? port)
 ;;;   (%error-1 "fasl syntax is invalid in #!r6rs mode"
 ;;;      (format "#~a" ch)))
-;;; (die/p-1 port 'read "FIXME: fasl read disabled")
+;;; (die/p-1 port 'vicare-reader "FIXME: fasl read disabled")
 ;;; '(cons 'datum ($fasl-read port)))
 
    (else
@@ -1504,9 +1504,9 @@
 
 (define (finalise-tokenisation port locations kont token pos)
   (define-inline (%error   msg . irritants)
-    (die/p   port 'read msg . irritants))
+    (die/p   port 'vicare-reader msg . irritants))
   (define-inline (%error-1 msg . irritants)
-    (die/p-1 port 'read msg . irritants))
+    (die/p-1 port 'vicare-reader msg . irritants))
 
   (define-inline (main)
     (cond ((eof-object? token)
@@ -2017,7 +2017,7 @@
 
 (let-syntax ((num-error (syntax-rules ()
 			  ((_ p str ls)
-			   (die/p-1 p 'read str (reverse-list->string ls))))))
+			   (die/p-1 p 'vicare-reader str (reverse-list->string ls))))))
   (define-syntax port-config
     (syntax-rules (GEN-TEST GEN-ARGS FAIL EOF-ERROR GEN-DELIM-TEST)
       ((_ GEN-ARGS k . rest) (k (p ac) . rest))
@@ -2230,9 +2230,9 @@
   (define-inline (recurse-to-read-cdr locs1 kont1)
     (%finish-tokenisation-of-list port start-pos locs1 kont1 matching-paren wrong-paren #f))
   (define-inline (%error msg . irritants)
-    (die/p port 'read msg . irritants))
+    (die/p port 'vicare-reader msg . irritants))
   (define-inline (%error-1 msg . irritants)
-    (die/p-1 port 'read msg . irritants))
+    (die/p-1 port 'vicare-reader msg . irritants))
   (define-inline (%paren-symbol->char paren)
     (if (eq? paren 'rparen) #\) #\]))
   (define (%mismatched-paren-error)
@@ -2327,9 +2327,9 @@
   (define-inline (recurse locs1 kont1 ls1 ls1/ann)
     (finish-tokenisation-of-vector port locs1 kont1 (fxadd1 count) ls1 ls1/ann))
   (define-inline (%error msg . irritants)
-    (die/p port 'read msg . irritants))
+    (die/p port 'vicare-reader msg . irritants))
   (define-inline (%error-1 msg . irritants)
-    (die/p-1 port 'read msg . irritants))
+    (die/p-1 port 'vicare-reader msg . irritants))
 
   (define-inline (main)
     (let-values (((token pos)
@@ -2384,9 +2384,9 @@
        (define-inline (recurse locs1 kont1 count1 ls1)
 	 (?who port locs1 kont1 count1 ls1))
        (define-inline (%error msg . irritants)
-	 (die/p port 'read msg . irritants))
+	 (die/p port 'vicare-reader msg . irritants))
        (define-inline (%error-1 msg . irritants)
-	 (die/p-1 port 'read msg . irritants))
+	 (die/p-1 port 'vicare-reader msg . irritants))
 
        (define-inline (%make-bv the-count the-ls)
 	 (let ((bv ($make-bytevector (* ?bytes-in-word the-count))))
@@ -2411,10 +2411,10 @@
 	       (else
 		(let-values (((a a^ locs1 kont1) (finalise-tokenisation port locs kont token pos)))
 		  (unless (?number-pred a)
-		    (die/ann a^ 'read "invalid value for this bytevector type" '?tag a))
+		    (die/ann a^ 'vicare-reader "invalid value for this bytevector type" '?tag a))
                   (when (<= (greatest-fixnum) (* count ?bytes-in-word))
 		    (%implementation-violation
-		     'read "number of elements too big for bytevector" count))
+		     'vicare-reader "number of elements too big for bytevector" count))
 		  (recurse locs1 kont1 (fxadd1 count) (cons a ls))))))))))
 
 ;;; --------------------------------------------------------------------
