@@ -7,16 +7,20 @@ AC_CANONICAL_SYSTEM
 AM_INIT_AUTOMAKE(vicare, 0.2d1, gnu)
 AC_CONFIG_SRCDIR([src/])
 
-VICARE_ARGUMENTS_VALIDATION=1
+vicare_ARGUMENTS_VALIDATION=1
+AC_MSG_CHECKING([whether arguments validation is enabled])
 AC_ARG_ENABLE([arguments-validation],
   [AS_HELP_STRING([--disable-arguments-validation],
      [disable arguments validation in the boot image (default is enable)])],
-  [if test "z$enableval" = zno
-  then VICARE_ARGUMENTS_VALIDATION=0
-  else VICARE_ARGUMENTS_VALIDATION=1
-  fi]
-  [VICARE_ARGUMENTS_VALIDATION=1])
-AC_SUBST([VICARE_ARGUMENTS_VALIDATION],[$VICARE_ARGUMENTS_VALIDATION])
+  [AC_MSG_RESULT([$enableval])
+  if test "z$enableval" = zno
+  then vicare_ARGUMENTS_VALIDATION=0
+  else vicare_ARGUMENTS_VALIDATION=1
+  fi],
+  [vicare_ARGUMENTS_VALIDATION=1
+   AC_MSG_RESULT([yes])])
+
+AC_SUBST([VICARE_ARGUMENTS_VALIDATION],[$vicare_ARGUMENTS_VALIDATION])
 
 AM_PROG_AS
 # Checks for programs.
@@ -168,6 +172,9 @@ AC_FUNC_STAT
 AC_FUNC_STRFTIME
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([sigaltstack bzero gettimeofday memmove memset munmap setenv sqrt strerror getaddrinfo])
+
+AC_CACHE_SAVE
+
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES(Makefile src/Makefile scheme/Makefile doc/Makefile lib/Makefile tests/Makefile lib/vicare/installation-configuration.sls)
 AC_OUTPUT #(Makefile src/Makefile scheme/Makefile doc/Makefile)
