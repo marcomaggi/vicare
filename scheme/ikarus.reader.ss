@@ -2357,12 +2357,13 @@
 
   (define (%store-items-in-vector vec vec/ann kont index ls ls/ann)
     (define-inline (recurse kont1)
-      (%store-items-in-vector vec vec/ann kont1 (unsafe.fxsub1 index) (cdr ls) (cdr ls/ann)))
+      (%store-items-in-vector vec vec/ann kont1 (unsafe.fxsub1 index)
+			      (unsafe.cdr ls) (unsafe.cdr ls/ann)))
     (if (null? ls)
 	kont
-      (let ((item (car ls)))
+      (let ((item (unsafe.car ls)))
 	(vector-set! vec     index item)
-	(vector-set! vec/ann index (car ls/ann))
+	(vector-set! vec/ann index (unsafe.car ls/ann))
 	(recurse (if (loc? item)
 		     (lambda ()
 		       ;;When we  are sure  that all the  locations have
