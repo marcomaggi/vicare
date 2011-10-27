@@ -40,6 +40,8 @@
 		  read-source-file read-script-source-file
 		  read-library-source-file)
     (vicare syntactic-extensions)
+    (prefix (vicare unsafe-operations)
+	    unsafe.)
     (only (ikarus.string-to-number)
 	  define-string->number-parser)
     (ikarus system $chars)
@@ -1502,7 +1504,7 @@
 	  ;;Read a vector opened by "#(".
 	  ((eq? token 'vparen)
 	   (let-values (((vec vec/ann locs-alist kont)
-			 (read-vector port locs-alist kont 0 '() '())))
+			 (finish-tokenisation-of-vector port locs-alist kont 0 '() '())))
 	     (values vec (annotate vec vec/ann pos) locs-alist kont)))
 
 	  ;;Read a bytevector.
@@ -2270,40 +2272,68 @@
 	   (k)))
 	(else k)))
 
-(define (vector-put v v^ k i ls ls^)
-  (cond ((null? ls) k)
-	(else
-	 (let ((a (car ls)))
-	   (vector-set! v i a)
-	   (vector-set! v^ i (car ls^))
-	   (vector-put v v^
-		       (if (loc? a)
-			   (lambda ()
-			     (vector-set! v i (loc-value a))
-			     (vector-set! v^ i (loc-value/ann a))
-			     (k))
-			 k)
-		       (fxsub1 i)
-		       (cdr ls)
-		       (cdr ls^))))))
+
+(define (finish-tokenisation-of-vector port locs kont count ls ls/ann)
+  ;;Finish tokenising a vector reading  from PORT after the opening "#("
+  ;;has been already consumed.  This function recursively invokes itself
+  ;;to parse the next item in  the vector until a closing parenthesis is
+  ;;read.
+  ;;
+  ;;COUNT is the number of items  in the vector, zero upon entering this
+  ;;recursive function for the first time.
+  ;;
+  ;;LS is  the reversed list  of items collected  so far; LS/ANN  is the
+  ;;annotated reversed  list of  items collected so  far.  Both  are nil
+  ;;upon entering this recursive function for the first time.
+  ;;
+  ;;Return 4 values:  the vector datum, the annotated  vector datum, the
+  ;;graph notation locations alist, a  thunk to be evaluated to finalise
+  ;;the graph notation locations.
+  ;;
+  (define-inline (recurse locs1 kont1 ls1 ls1/ann)
+    (finish-tokenisation-of-vector port locs1 kont1 (fxadd1 count) ls1 ls1/ann))
+  (define-inline (%error msg . irritants)
+    (die/p port 'read msg . irritants))
+  (define-inline (%error-1 msg . irritants)
+    (die/p-1 port 'read msg . irritants))
 
-(define (read-vector p locs k count ls ls^)
-  (let-values (((token pos) (start-tokenising/pos p)))
-    (cond ((eof-object? token)
-	   (die/p p 'read "end of file encountered while reading a vector"))
-	  ((eq? token 'rparen)
-	   (let ((v  (make-vector count))
-		 (v^ (make-vector count)))
-	     (let ((k (vector-put v v^ k (fxsub1 count) ls ls^)))
-	       (values v v^ locs k))))
-	  ((eq? token 'rbrack)
-	   (die/p-1 p 'read "unexpected \")\" while reading a vector"))
-	  ((eq? token 'dot)
-	   (die/p-1 p 'read "unexpected \".\" while reading a vector"))
-	  (else
-	   (let-values (((a a^ locs k) (finalise-tokenisation p locs k token pos)))
-	     (read-vector p locs k (fxadd1 count)
-			  (cons a ls) (cons a^ ls^)))))))
+  (define-inline (main)
+    (let-values (((token pos)
+		  ;;start tokenising the next item
+		  (start-tokenising/pos port)))
+      (cond ((eof-object? token)
+	     (%error "end of file encountered while reading vector"))
+	    ((eq? token 'rparen)
+	     (let* ((vec     (make-vector count))
+		    (vec/ann (make-vector count))
+		    (kont1   (%store-items-in-vector vec vec/ann kont (fxsub1 count) ls ls/ann)))
+	       (values vec vec/ann locs kont1)))
+	    ((eq? token 'rbrack)
+	     (%error-1 "unexpected \")\" while reading vector"))
+	    ((eq? token 'dot)
+	     (%error-1 "unexpected \".\" while reading vector"))
+	    (else
+	     (let-values (((item item/ann locs1 kont1)
+			   ;;finish tokenising the next item
+			   (finalise-tokenisation port locs kont token pos)))
+	       (recurse locs1 kont1 (cons item ls) (cons item/ann ls/ann)))))))
+
+  (define (%store-items-in-vector vec vec/ann kont index ls ls/ann)
+    (define-inline (recurse kont1)
+      (%store-items-in-vector vec vec/ann kont1 (unsafe.fxsub1 index) (cdr ls) (cdr ls/ann)))
+    (if (null? ls)
+	kont
+      (let ((item (car ls)))
+	(vector-set! vec     index item)
+	(vector-set! vec/ann index (car ls/ann))
+	(recurse (if (loc? item)
+		     (lambda ()
+		       (vector-set! vec     index (loc-value     item))
+		       (vector-set! vec/ann index (loc-value/ann item))
+		       (kont))
+		   kont)))))
+
+  (main))
 
 
 ;;;; bytevectors tokenisation

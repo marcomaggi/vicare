@@ -593,6 +593,48 @@
   #t)
 
 
+(parametrise ((check-test-name	'vectors))
+
+  (define-syntax read-vector-and-eof
+    (syntax-rules ()
+      ((_ ?input ?result)
+       (check
+	   (let* ((port (open-string-input-port ?input))
+		  (obj  (read port))
+		  (eof  (port-eof? port)))
+	     (list (vector? obj) obj eof))
+	 => `(#t ?result #t)))))
+
+;;; --------------------------------------------------------------------
+
+  (read-vector-and-eof "#()"		#())
+  (read-vector-and-eof "#(1)"		#(1))
+  (read-vector-and-eof "#(1 2)"		#(1 2))
+  (read-vector-and-eof "#(1 2 3)"	#(1 2 3))
+
+  (read-vector-and-eof "#(#0=1 2 3)"		#(1 2 3))
+  (read-vector-and-eof "#(#0=1 2 #0#)"		#(1 2 1))
+  (read-vector-and-eof "#(#0#  2 #0=3)"		#(3 2 3))
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  ;; missing closing parenthesis
+  (read-and-lexical-violation "  #(1 2"	no-irritants)
+
+  ;; mismatched parentheses
+  (read-and-lexical-violation "#(1 2]"	no-irritants)
+
+;;; --------------------------------------------------------------------
+;;; misplaced dots
+
+  (read-and-lexical-violation "#(.)"	no-irritants)
+  (read-and-lexical-violation "#(. 1)"	no-irritants)
+  (read-and-lexical-violation "#(1 .)"	no-irritants)
+
+  #t)
+
+
 (parametrise ((check-test-name	'bytevectors))
 
   (define-syntax read-bv-and-eof
