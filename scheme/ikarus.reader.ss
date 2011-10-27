@@ -1552,17 +1552,18 @@
 	   (let ((quoting-keyword (cdr token)))
 	     (define (%read-quoted-sexp)
 	       (let-values (((token1 pos) (start-tokenising/pos port)))
-		 (cond ((eof-object? token1)
-			(%error (format "invalid EOF after ~a read macro" quoting-keyword)))
-		       (else
-			(finalise-tokenisation port locs-alist kont token1 pos)))))
+		 (if (eof-object? token1)
+		     (%error (string-append "invalid EOF after "
+					    (symbol->string quoting-keyword)
+					    " read macro" ))
+		   (finalise-tokenisation port locs-alist kont token1 pos))))
 	     (let-values (((expr expr/ann locs-alist kont) (%read-quoted-sexp)))
 	       (let ((d     (list expr))
 		     (d/ann (list expr/ann)))
 		 (let ((x     (cons quoting-keyword d))
 		       (x/ann (cons (annotate-simple quoting-keyword pos) d/ann)))
 		   (values x (annotate x x/ann pos) locs-alist
-			   (extend-k-pair d d/ann expr '() kont)))))))
+			   (extend-graph-notation-kont-for-pair d d/ann expr '() kont)))))))
 
 	  ;;Read an expression marked with graph notation for locations.
 	  ;;
@@ -2222,22 +2223,29 @@
 	     (let ((the-list      (cons the-car     the-cdr))
 		   (the-list/ann  (cons the-car/ann the-cdr/ann)))
 	       (values the-list the-list/ann locs2
-		       (extend-k-pair the-list the-list/ann the-car the-cdr kont2))))))))
+		       (extend-graph-notation-kont-for-pair the-list the-list/ann
+							    the-car the-cdr kont2))))))))
 
-
-(define (extend-k-pair x x^ a d k)
-  (cond ((or (loc? a) (loc? d))
-	 (lambda ()
-	   (let ((a (car x)))
-	     (when (loc? a)
-	       (set-car! x (loc-value a))
-	       (set-car! x^ (loc-value/ann a))))
-	   (let ((d (cdr x)))
-	     (when (loc? d)
-	       (set-cdr! x (loc-value d))
-	       (set-cdr! x^ (loc-value/ann d))))
-	   (k)))
-	(else k)))
+(define (extend-graph-notation-kont-for-pair pair pair/ann the-car the-cdr kont)
+  ;;Return a new KONT thunk to finalise the graph notation locations for
+  ;;a pair.
+  ;;
+  (if (or (loc? the-car)
+	  (loc? the-cdr))
+      (lambda ()
+	;;When we  are sure that all  the locations have  been found and
+	;;the corresponding datums  gathered: substitute the LOC structs
+	;;in the pair with the corresponding datum and annotated datum.
+	(let ((the-car1 (unsafe.car pair)))
+	  (when (loc? the-car1)
+	    (unsafe.set-car! pair     (loc-value     the-car1))
+	    (unsafe.set-car! pair/ann (loc-value/ann the-car1))))
+	(let ((the-cdr1 (unsafe.cdr pair)))
+	  (when (loc? the-cdr1)
+	    (unsafe.set-cdr! pair     (loc-value     the-cdr1))
+	    (unsafe.set-cdr! pair/ann (loc-value/ann the-cdr1))))
+	(kont))
+    kont))
 
 
 (define (finish-tokenisation-of-vector port locs kont count ls ls/ann)
