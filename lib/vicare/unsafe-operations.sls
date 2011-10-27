@@ -11,6 +11,10 @@
 ;;;	imported  by Vicare itself,  syntaxes whose  expansion reference
 ;;;	only bindings imported by Vicare itself.
 ;;;
+;;;	  In general: all the syntaxes must be used with arguments which
+;;;	can be evaluated  multiple times, in practice it  is safe to use
+;;;	the syntaxes only with identifiers or constant values.
+;;;
 ;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -512,89 +516,103 @@
 ;;memory only the least significant byte of its value argument.
 ;;
 
-(define-inline ($bytevector-u64b-ref bv index)
-  (let next-byte ((bv     bv)
-		  (index  index)
-		  (end    ($fx+ index 7))
-		  (word   0))
-    (let ((word (+ word ($bytevector-u8-ref bv index))))
-      (if ($fx= index end)
-	  word
-	(next-byte bv ($fxadd1 index) end (sll word 8))))))
+(define-inline ($bytevector-u64b-ref ?bv ?index)
+  (let ((index ?index))
+    (let next-byte ((bv     ?bv)
+		    (index  index)
+		    (end    ($fx+ index 7))
+		    (word   0))
+      (let ((word (+ word ($bytevector-u8-ref bv index))))
+	(if ($fx= index end)
+	    word
+	  (next-byte bv ($fxadd1 index) end (sll word 8)))))))
 
-(define-inline ($bytevector-u64b-set! bv index word)
-  (let next-byte ((bv     bv)
-		  (index  ($fx+ 7 index))
-		  (end    index)
-		  (word   word))
-    ($bytevector-u8-set! bv index (bitwise-and word #xFF))
-    (unless ($fx= index end)
-      (next-byte bv ($fxsub1 index) end (sra word 8)))))
-
-;;; --------------------------------------------------------------------
-
-(define-inline ($bytevector-u64l-ref bv end)
-  (let next-byte ((bv     bv)
-		  (index  ($fx+ 7 end))
-		  (word   0))
-    (let ((word (+ word ($bytevector-u8-ref bv index))))
-      (if ($fx= index end)
-	  word
-	(next-byte bv ($fxsub1 index) (sll word 8))))))
-
-(define-inline ($bytevector-u64l-set! bv index word)
-  (let next-byte ((bv     bv)
-		  (index  index)
-		  (end    ($fx+ 7 index))
-		  (word   word))
-    ($bytevector-u8-set! bv index (bitwise-and word #xFF))
-    (unless ($fx= index end)
-      (next-byte bv ($fxadd1 index) end (sra word 8)))))
-
-;;; --------------------------------------------------------------------
-
-(define-inline ($bytevector-s64b-ref bv index)
-  (let next-byte ((bv     bv)
-		  (index  ($fxadd1 index))
-		  (end    ($fx+ index 7))
-		  (word   (sll ($bytevector-s8-ref bv index) 8)))
-    (let ((word (+ word ($bytevector-u8-ref bv index))))
-      (if ($fx= index end)
-	  word
-	(next-byte bv ($fxadd1 index) end (sll word 8))))))
-
-(define-inline ($bytevector-s64b-set! bv index word)
-  (let next-byte ((bv     bv)
-		  (index  ($fx+ 7 index))
-		  (end    index)
-		  (word   word))
-    (if ($fx= index end)
-	($bytevector-s8-set! bv index (bitwise-and word #xFF))
-      (begin
-	($bytevector-u8-set! bv index (bitwise-and word #xFF))
+(define-inline ($bytevector-u64b-set! ?bv ?index ?word)
+  (let ((index  ?index)
+	(word	?word))
+    (let next-byte ((bv     ?bv)
+		    (index  ($fx+ 7 index))
+		    (end    index)
+		    (word   word))
+      ($bytevector-u8-set! bv index (bitwise-and word #xFF))
+      (unless ($fx= index end)
 	(next-byte bv ($fxsub1 index) end (sra word 8))))))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline ($bytevector-s64l-ref bv end)
-  (let next-byte ((bv     bv)
-		  (index  ($fx+ 6 end))
-		  (word   (sll ($bytevector-s8-ref bv ($fx+ 7 end)) 8)))
-    (let ((word (+ word ($bytevector-u8-ref bv index))))
-      (if ($fx= index end)
-	  word
-	(next-byte bv ($fxsub1 index) (sll word 8))))))
+(define-inline ($bytevector-u64l-ref ?bv ?end)
+  (let ((end ?end))
+    (let next-byte ((bv     ?bv)
+		    (index  ($fx+ 7 end))
+		    (word   0))
+      (let ((word (+ word ($bytevector-u8-ref bv index))))
+	(if ($fx= index end)
+	    word
+	  (next-byte bv ($fxsub1 index) (sll word 8)))))))
 
-(define-inline ($bytevector-s64l-set! bv index word)
-  (let next-byte ((bv     bv)
-		  (index  index)
-		  (end    ($fx+ 7 index))
-		  (word   word))
-    (if ($fx= index end)
-	($bytevector-s8-set! bv index (bitwise-and word #xFF))
-      (begin
-	($bytevector-u8-set! bv index (bitwise-and word #xFF))
+(define-inline ($bytevector-u64l-set! ?bv ?index ?word)
+  (let ((index	?index)
+	(word	?word))
+    (let next-byte ((bv     ?bv)
+		    (index  index)
+		    (end    ($fx+ 7 index))
+		    (word   word))
+      ($bytevector-u8-set! bv index (bitwise-and word #xFF))
+      (unless ($fx= index end)
 	(next-byte bv ($fxadd1 index) end (sra word 8))))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline ($bytevector-s64b-ref ?bv ?index)
+  (let ((bv	?bv)
+	(index	?index))
+    (let next-byte ((bv     bv)
+		    (index  ($fxadd1 index))
+		    (end    ($fx+ index 7))
+		    (word   (sll ($bytevector-s8-ref bv index) 8)))
+      (let ((word (+ word ($bytevector-u8-ref bv index))))
+	(if ($fx= index end)
+	    word
+	  (next-byte bv ($fxadd1 index) end (sll word 8)))))))
+
+(define-inline ($bytevector-s64b-set! ?bv ?index ?word)
+  (let ((index	?index)
+	(word	?word))
+    (let next-byte ((bv     ?bv)
+		    (index  ($fx+ 7 index))
+		    (end    index)
+		    (word   word))
+      (if ($fx= index end)
+	  ($bytevector-s8-set! bv index (bitwise-and word #xFF))
+	(begin
+	  ($bytevector-u8-set! bv index (bitwise-and word #xFF))
+	  (next-byte bv ($fxsub1 index) end (sra word 8)))))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline ($bytevector-s64l-ref ?bv ?end)
+  (let ((bv	?bv)
+	(end	?end))
+    (let next-byte ((bv     bv)
+		    (index  ($fx+ 6 end))
+		    (word   (sll ($bytevector-s8-ref bv ($fx+ 7 end)) 8)))
+      (let ((word (+ word ($bytevector-u8-ref bv index))))
+	(if ($fx= index end)
+	    word
+	  (next-byte bv ($fxsub1 index) (sll word 8)))))))
+
+(define-inline ($bytevector-s64l-set! ?bv ?index ?word)
+  (let ((index	?index)
+	(word	?word))
+    (let next-byte ((bv     ?bv)
+		    (index  index)
+		    (end    ($fx+ 7 index))
+		    (word   word))
+      (if ($fx= index end)
+	  ($bytevector-s8-set! bv index (bitwise-and word #xFF))
+	(begin
+	  ($bytevector-u8-set! bv index (bitwise-and word #xFF))
+	  (next-byte bv ($fxadd1 index) end (sra word 8)))))))
 
 ;;; --------------------------------------------------------------------
 
