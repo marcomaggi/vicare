@@ -443,14 +443,17 @@
   (read-number-and-eof "1."		+1.0)
   (read-number-and-eof "12."		+12.0)
   (read-number-and-eof "123."		+123.0)
+  (read-number-and-eof "123.0"		+123.0)
 
   (read-number-and-eof "+1."		+1.0)
   (read-number-and-eof "+12."		+12.0)
   (read-number-and-eof "+123."		+123.0)
+  (read-number-and-eof "+123.0"		+123.0)
 
   (read-number-and-eof "-1."		-1.0)
   (read-number-and-eof "-12."		-12.0)
   (read-number-and-eof "-123."		-123.0)
+  (read-number-and-eof "-123.0"		-123.0)
 
   (read-number-and-eof "#i1"		+1.0)
   (read-number-and-eof "#i12"		+12.0)
@@ -467,6 +470,10 @@
 ;;; --------------------------------------------------------------------
 ;;; flonums
 
+  (read-number-and-eof "123.456"	+123.456)
+  (read-number-and-eof "-123.456"	-123.456)
+  (read-number-and-eof "+123.456"	+123.456)
+
   (read-number-and-eof ".1"		0.1)
   (read-number-and-eof ".12"		0.12)
   (read-number-and-eof ".123"		0.123)
@@ -478,6 +485,25 @@
   (read-number-and-eof "-.1"		-0.1)
   (read-number-and-eof "-.12"		-0.12)
   (read-number-and-eof "-.123"		-0.123)
+
+;;; --------------------------------------------------------------------
+;;; cflonums
+
+  (read-number-and-eof "1.1+2.2i"	1.1+2.2i)
+  (read-number-and-eof "1.+2.2i"	1.0+2.2i)
+  (read-number-and-eof "1.1+2.i"	1.0+2.i)
+  (read-number-and-eof "1.+2.i"		1.+2.i)
+  (read-number-and-eof "1.+2.i"		1.+2.i)
+
+  (read-number-and-eof "1.1@2.2"	1.1@2.2)
+  (read-number-and-eof "1.@2.2"		1.0@2.2)
+  (read-number-and-eof "1.1@2."		1.0@2.)
+  (read-number-and-eof "1.@2."		1.@2.)
+  (read-number-and-eof "1.@2."		1.@2.)
+
+;;; --------------------------------------------------------------------
+;;;
+
 
 ;;; --------------------------------------------------------------------
 ;;; distinguishing between numbers and symbols

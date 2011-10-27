@@ -567,10 +567,10 @@
   (lambda (entry)
     (define-inline (%error msg . irritants)
       (die/p port 'vicare-reader msg . irritants))
-    (let ((loc (cdr entry)))
+    (let ((loc (unsafe.cdr entry)))
       (unless (loc-set? loc)
 	(die/lex (loc-textual-position loc) 'vicare-reader
-		 "referenced location mark is not set" (car entry)))
+		 "referenced location mark is not set" (unsafe.car entry)))
       (when (loc? (loc-value loc))
 	(let loop ((h loc) (t loc))
 	  (if (loc? h)
@@ -1602,117 +1602,119 @@
 	   (%error-1 (format "unexpected ~s found" token)))))
 
   (define-inline (%process-pair-token token)
-    (cond ((eq? (car token) 'datum) ;datum already tokenised
-	   (values (cdr token)
-		   (annotate-simple (cdr token) pos) locations kont))
+    (let ((class (unsafe.car token)))
+      (cond ((eq? class 'datum) ;datum already tokenised
+	     (let ((X (unsafe.cdr token)))
+	       (values X (annotate-simple X pos) locations kont)))
 
-	  ;;Read  a  sexp  quoted  with one  among:  QUOTE,  QUASIQUOTE,
-	  ;;UNQUOTE,  UNQUOTE-SPLICING,  SYNTAX, QUASISYNTAX,  UNSYNTAX,
-	  ;;UNSYNTAX-SPLICING.
-	  ;;
-	  ((eq? (car token) 'macro)
-	   (let ((quoting-keyword (cdr token)))
-	     (define (%read-quoted-sexp)
-	       (let-values (((token1 pos) (start-tokenising/pos port)))
-		 (if (eof-object? token1)
-		     (%error (string-append "invalid EOF after "
-					    (symbol->string quoting-keyword)
-					    " read macro" ))
-		   (finalise-tokenisation port locations kont token1 pos))))
-	     (let-values (((expr expr/ann locations kont) (%read-quoted-sexp)))
-	       (let ((d     (list expr))
-		     (d/ann (list expr/ann)))
-		 (let ((x     (cons quoting-keyword d))
-		       (x/ann (cons (annotate-simple quoting-keyword pos) d/ann)))
-		   (values x (annotate x x/ann pos) locations
-			   (extend-graph-notation-kont-for-pair d d/ann expr '() kont)))))))
+	    ;;Read  a sexp  quoted  with one  among: QUOTE,  QUASIQUOTE,
+	    ;;UNQUOTE, UNQUOTE-SPLICING,  SYNTAX, QUASISYNTAX, UNSYNTAX,
+	    ;;UNSYNTAX-SPLICING.
+	    ;;
+	    ((eq? class 'macro)
+	     (let ((quoting-keyword (unsafe.cdr token)))
+	       (define (%read-quoted-sexp)
+		 (let-values (((token1 pos) (start-tokenising/pos port)))
+		   (if (eof-object? token1)
+		       (%error (string-append "invalid EOF after "
+					      (symbol->string quoting-keyword)
+					      " read macro" ))
+		     (finalise-tokenisation port locations kont token1 pos))))
+	       (let-values (((expr expr/ann locations kont) (%read-quoted-sexp)))
+		 (let ((d     (list expr))
+		       (d/ann (list expr/ann)))
+		   (let ((x     (cons quoting-keyword d))
+			 (x/ann (cons (annotate-simple quoting-keyword pos) d/ann)))
+		     (values x (annotate x x/ann pos) locations
+			     (extend-graph-notation-kont-for-pair d d/ann expr '() kont)))))))
 
-	  ;;Read an expression marked with graph notation for locations;
-	  ;;whatever we do  either we return the expression  or raise an
-	  ;;exception.
-	  ;;
-	  ;;If an entry with the same digit N is not in LOCATIONS: this
-	  ;;mark is new;  create a new LOC structure,  marked as set and
-	  ;;holding the  expression, and  register it in  in LOCATIONS.
-	  ;;Return the expression.
-	  ;;
-	  ;;If an entry with the  same digit N is already in LOCATIONS,
-	  ;;and marked set: it means a mark "#N=" has already been read,
-	  ;;so raise an exception.
-	  ;;
-	  ;;If an entry with the  same digit N is already in LOCATIONS,
-	  ;;but marked unset: it means that one or more references "#N#"
-	  ;;have  been  already   processed;  mutate  the  existing  LOC
-	  ;;structure to  reference the expression  and mark it  as set.
-	  ;;References will  be processed later  by REDUCE-LOC!.  Return
-	  ;;the expression.
-	  ;;
-	  ;;FIXME Would it be intelligent to raise an exception, in case
-	  ;;of  multiple  reading  of  the  same  mark,  only  when  the
-	  ;;expressions  differ?    Would  checking  equality   of  such
-	  ;;expressions generate infinite loops?
-	  ;;
-	  ;;Examples:
-	  ;;
-	  ;;  #N=123
-	  ;;  #N=ciao
-	  ;;  #N=(1 2 3)
-	  ;;  #N=#(1 2 3)
-	  ;;  #N=#vu8(1 2 3)
-	  ;;
-	  ((eq? (car token) 'mark)
-	   (let ((N (cdr token)))
-	     (let-values (((expr expr/ann locations kont)
-			   (read-expr port locations kont)))
+	    ;;Read  an   expression  marked  with   graph  notation  for
+	    ;;locations; whatever we do  either we return the expression
+	    ;;or raise an exception.
+	    ;;
+	    ;;If an  entry with  the same digit  N is not  in LOCATIONS:
+	    ;;this mark  is new; create  a new LOC structure,  marked as
+	    ;;set  and holding  the expression,  and register  it  in in
+	    ;;LOCATIONS.  Return the expression.
+	    ;;
+	    ;;If an entry with the same digit N is already in LOCATIONS,
+	    ;;and marked  set: it  means a mark  "#N=" has  already been
+	    ;;read, so raise an exception.
+	    ;;
+	    ;;If an entry with the same digit N is already in LOCATIONS,
+	    ;;but  marked unset: it  means that  one or  more references
+	    ;;"#N#" have been already processed; mutate the existing LOC
+	    ;;structure to reference the  expression and mark it as set.
+	    ;;References will be processed later by REDUCE-LOC!.  Return
+	    ;;the expression.
+	    ;;
+	    ;;FIXME Would  it be intelligent  to raise an  exception, in
+	    ;;case of multiple  reading of the same mark,  only when the
+	    ;;expressions  differ?   Would  checking  equality  of  such
+	    ;;expressions generate infinite loops?
+	    ;;
+	    ;;Examples:
+	    ;;
+	    ;;  #N=123
+	    ;;  #N=ciao
+	    ;;  #N=(1 2 3)
+	    ;;  #N=#(1 2 3)
+	    ;;  #N=#vu8(1 2 3)
+	    ;;
+	    ((eq? class 'mark)
+	     (let ((N (unsafe.cdr token)))
+	       (let-values (((expr expr/ann locations kont)
+			     (read-expr port locations kont)))
+		 (cond ((assq N locations)
+			=> (lambda (pair)
+			     (let ((loc (unsafe.cdr pair)))
+			       (when (loc-set? loc)
+				 (die/lex (condition (loc-textual-position loc) pos)
+					  'vicare-reader "duplicate location mark for graph notation" N))
+			       (set-loc-value!     loc expr)
+			       (set-loc-value/ann! loc expr/ann)
+			       (set-loc-set?!      loc #t)
+			       (values expr expr/ann locations kont))))
+		       (else
+			(let* ((loc         (let ((value     expr)
+						  (value/ann 'unused)
+						  (set?      #t))
+					      (make-loc value value/ann set? pos)))
+			       (locations1 (cons (cons N loc) locations)))
+			  (values expr expr/ann locations1 kont)))))))
+
+	    ;;Process reference to graph notation location; we return an
+	    ;;expression or a LOC structure.
+	    ;;
+	    ;;If  an entry with  the same  digit N  is in  LOCATIONS: it
+	    ;;means that  either the  associated mark "#N="  has already
+	    ;;been read  or another reference  with digit N  has already
+	    ;;been processed; in any  case extract the LOC structure and
+	    ;;return  it   so  that  it   can  be  later   processed  by
+	    ;;REDUCE-LOC!.
+	    ;;
+	    ;;If an  entry with  digit N is  not in LOCATIONS:  it means
+	    ;;that neither  the associated mark "#N=" has  been read nor
+	    ;;another reference with digit  N has been processed; in any
+	    ;;case create a new LOC structure, marked unset, register it
+	    ;;in  LOCATIONS  and return  it  so  that  it can  be  later
+	    ;;processed by REDUCE-LOC!.
+	    ;;
+	    ((eq? class 'ref)
+	     (let ((N (unsafe.cdr token)))
 	       (cond ((assq N locations)
 		      => (lambda (pair)
-			   (let ((loc (cdr pair)))
-			     (when (loc-set? loc)
-			       (die/lex (condition (loc-textual-position loc) pos)
-					'vicare-reader "duplicate location mark for graph notation" N))
-			     (set-loc-value!     loc expr)
-			     (set-loc-value/ann! loc expr/ann)
-			     (set-loc-set?!      loc #t)
-			     (values expr expr/ann locations kont))))
+			   (values (unsafe.cdr pair) 'unused locations kont)))
 		     (else
-		      (let* ((loc         (let ((value     expr)
+		      (let* ((the-loc     (let ((value     #f)
 						(value/ann 'unused)
-						(set?      #t))
+						(set?      #f))
 					    (make-loc value value/ann set? pos)))
-			     (locations1 (cons (cons N loc) locations)))
-			(values expr expr/ann locations1 kont)))))))
+			     (locations1 (cons (cons N the-loc) locations)))
+			(values the-loc 'unused locations1 kont))))))
 
-	  ;;Process reference  to graph notation location;  we return an
-	  ;;expression or a LOC structure.
-	  ;;
-	  ;;If an entry with the same digit N is in LOCATIONS: it means
-	  ;;that either the associated  mark "#N=" has already been read
-	  ;;or  another   reference  with  digit  N   has  already  been
-	  ;;processed; in any case  extract the LOC structure and return
-	  ;;it so that it can be later processed by REDUCE-LOC!.
-	  ;;
-	  ;;If an entry with digit N is not in LOCATIONS: it means that
-	  ;;neither the associated mark  "#N=" has been read nor another
-	  ;;reference  with digit  N  has been  processed;  in any  case
-	  ;;create  a new LOC  structure, marked  unset, register  it in
-	  ;;LOCATIONS and return  it so that it can  be later processed
-	  ;;by REDUCE-LOC!.
-	  ;;
-	  ((eq? (car token) 'ref)
-	   (let ((N (cdr token)))
-	     (cond ((assq N locations)
-		    => (lambda (pair)
-			 (values (cdr pair) 'unused locations kont)))
-		   (else
-		    (let* ((the-loc     (let ((value     #f)
-					      (value/ann 'unused)
-					      (set?      #f))
-					  (make-loc value value/ann set? pos)))
-			   (locations1 (cons (cons N the-loc) locations)))
-		      (values the-loc 'unused locations1 kont))))))
-
-	  (else
-	   (%error "Vicare internal error: unknown token from reader functions" token))))
+	    (else
+	     (%error "Vicare internal error: unknown token from reader functions" token)))))
 
   (main))
 
