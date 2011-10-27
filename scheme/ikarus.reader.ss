@@ -103,29 +103,8 @@
   (foreign-call "ikrt_strings_to_gensym" id0 id1))
 
 
-;;;; data structures
-
-;;Constructor: make-loc VALUE VALUE/ANN SET?
+;;;; annotated datums
 ;;
-;;Predicate: loc? OBJ
-;;
-;;Field name: value
-;;Field accessor: loc-value LOC
-;;Field mutator: set-loc-value! LOC NEW-VALUE
-;;
-;;Field name: value/ann
-;;Field accessor: loc-value/ann LOC
-;;Field mutator: set-loc-value/ann! LOC NEW-VALUE/ANN
-;;
-;;Field name: set?
-;;Field accessor: loc-set? LOC
-;;Field mutator: set-loc-set?! LOC NEW-SET?
-;;
-(define-struct loc
-  (value value/ann set?))
-
-(define empty-locs '())
-
 ;;Constructor: make-annotation EXPR STRIPPED SOURCE POS
 ;;Predicate: annotation? OBJ
 ;;
@@ -158,6 +137,79 @@
 		   (cons (source-position-port-id   textual-pos)
 			 (source-position-character textual-pos))
 		   textual-pos))
+
+
+;;;; graph notation location structures
+;;
+;;Graph  notation  allows  the   construction  at  read-time  of  shared
+;;structures as described by SRFI 38:
+;;
+;;   <http://srfi.schemers.org/srfi-38/srfi-38.html>
+;;
+;;Graph notation  markers and references are supported  inside lists and
+;;vectors; a mark  has syntax "#N=<expr>" a reference  has syntax "#N#",
+;;where N is an exact integer.  Examples:
+;;
+;;  (#1=ciao #1#)	=> (ciao ciao)
+;;  (#1# #1=ciao)	=> (ciao ciao)
+;;
+;;The reader builds a tree  of datums representing a symbolic expression
+;;and keeps a collection of locations, currently an association list:
+;;
+;;* Whenever  a new mark is found,  its associated datum is  read.  If a
+;;LOC structure  with the  same number is  already in the  collection in
+;;"unset" state: the datum is stored in the structure, its state changed
+;;to "set" and the datum is returned.  Else a new LOC structure in "set"
+;;state  is registered  in the  collection, holding  the datum,  and the
+;;datum is returned.
+;;
+;;* Whenever  a reference  is found:  if a LOC  structure with  the same
+;;number  is already  in the  collection, the  associated  expression is
+;;extracted  and used  as datum;  else a  new LOC  structure  in "unset"
+;;state, holding  the datum,  is both registered  in the  collection and
+;;returned as result of the reading.
+;;
+;;At the end  of the reading the tree  may contain unresolved references
+;;represented by  LOC structures; if  all the referenced  locations have
+;;been read, each LOC structure  is substituted by the associated datum.
+;;This  substitution,  also  called  "reduction",  is  performed  by  an
+;;appropriate thunk incrementally built  while reading the expression to
+;;keep track of  unresolved references; such thunk is  the KONT argument
+;;of many reader functions in this library.
+;;
+;;
+;;Constructor: make-loc VALUE VALUE/ANN SET?
+;;Predicate: loc? OBJ
+;;
+;;Field name: value
+;;Field accessor: loc-value LOC
+;;Field mutator: set-loc-value! LOC NEW-VALUE
+;;   The expression marked by a graph location.
+;;
+;;Field name: value/ann
+;;Field accessor: loc-value/ann LOC
+;;Field mutator: set-loc-value/ann! LOC NEW-VALUE/ANN
+;;   The expression  marked by a  graph location, wrapped  in ANNOTATION
+;;   data structures.
+;;
+;;Field name: set?
+;;Field accessor: loc-set? LOC
+;;Field mutator: set-loc-set?! LOC NEW-SET?
+;;
+;;   A boolean value.
+;;
+;;   True  if the  datum associated  to this  location has  already been
+;;   read; in this case the VLAUE and VALUE/ANN fields contain the datum
+;;   and the  annotated datum.
+;;
+;;   False if  the datum associated to  this location hasn  not yet been
+;;   read;  in  this  case   the  VLAUE  and  VALUE/ANN  fields  contain
+;;   meaningless values.
+;;
+(define-struct loc
+  (value value/ann set?))
+
+(define EMPTY-LOCATIONS-COLLECTION '())
 
 
 ;;;; source position handling
@@ -387,13 +439,13 @@
   ;;
   (define who 'get-datum)
   (%assert-argument-is-source-code-port who port)
-  (let-values (((expr expr/ann locs-alist kont)
-		(read-expr port empty-locs void)))
-    (if (null? locs-alist)
+  (let-values (((expr expr/ann locations kont)
+		(read-expr port EMPTY-LOCATIONS-COLLECTION void)))
+    (if (null? locations)
 	expr
       (begin
 	(for-each (reduce-loc! port)
-	  locs-alist)
+	  locations)
 	(kont)
 	(if (loc? expr)
 	    (loc-value expr)
@@ -411,13 +463,13 @@
 	(eof-object)
       x))
   (%assert-argument-is-source-code-port who port)
-  (let-values (((expr expr/ann locs-alist kont)
-		(read-expr port empty-locs void)))
-    (if (null? locs-alist)
+  (let-values (((expr expr/ann locations kont)
+		(read-expr port EMPTY-LOCATIONS-COLLECTION void)))
+    (if (null? locations)
 	(%return-annotated expr/ann)
       (begin
 	(for-each (reduce-loc! port)
-	  locs-alist)
+	  locations)
 	(kont)
 	(if (loc? expr)
 	    (loc-value/ann expr)
@@ -489,22 +541,22 @@
 
 ;;;; helpers for public functions
 
-(define (read-expr port locs-alist kont)
+(define (read-expr port locations kont)
   (let-values (((token pos) (start-tokenising/pos port)))
-    (finalise-tokenisation port locs-alist kont token pos)))
+    (finalise-tokenisation port locations kont token pos)))
 
 (define (reduce-loc! port)
   ;;Subroutine of GET-DATUM and GET-ANNOTATED-DATUM.  Finalise the graph
   ;;notation locations.
   ;;
   ;;This computation  needs two  arguments: PORT and  an entry  from the
-  ;;LOCS-ALIST which is the result  of reading an S-expression.  PORT is
+  ;;LOCATIONS which is the result  of reading an S-expression.  PORT is
   ;;fixed, so it  may be a little faster to make  this function return a
   ;;closure on PORT rather than to evaluate:
   ;;
   ;;   (for-each (lambda (entry)
   ;;               (reduce-loc! port entry))
-  ;;     locs-alist)
+  ;;     locations)
   ;;
   (lambda (entry)
     (define-inline (%error msg . irritants)
@@ -535,9 +587,9 @@
   ;;Read a  full expression and discard  it.  This is used  to consume a
   ;;sexp commented out with "#;".
   ;;
-  (let ((locs-alist	'())
+  (let ((locations	'())
 	(kont		void))
-    (read-expr port locs-alist kont))
+    (read-expr port locations kont))
   (void))
 
 
@@ -1232,8 +1284,13 @@
 
 
 (define (finish-tokenisation-of-graph-location port N)
-  ;;Read characters from PORT parsing  a graph notation hash num mark or
-  ;;reference.  Return a datum describing the token:
+  ;;Recursive  function.   Read characters  from  PORT  parsing a  graph
+  ;;notation hash num mark or  reference after the opening #\# character
+  ;;and  the first  digit have  been already  consumed.  Return  a datum
+  ;;describing the token:
+  ;;
+  ;;N is  an exact integer representing the  location number accumulated
+  ;;so far.
   ;;
   ;;(mark . <num>)	The token is a new hashnum mark.
   ;;(ref . <num>)	The token is reference to an existing hashnum.
@@ -1445,7 +1502,7 @@
   (main))
 
 
-(define (finalise-tokenisation port locs-alist kont token pos)
+(define (finalise-tokenisation port locations kont token pos)
   (define-inline (%error   msg . irritants)
     (die/p   port 'read msg . irritants))
   (define-inline (%error-1 msg . irritants)
@@ -1454,25 +1511,25 @@
   (define-inline (main)
     (cond ((eof-object? token)
 	   (values (eof-object)
-		   (annotate-simple (eof-object) pos) locs-alist kont))
+		   (annotate-simple (eof-object) pos) locations kont))
 
 	  ;;Read list that was opened by a round parenthesis.
 	  ((eq? token 'lparen)
-	   (let-values (((ls ls/ann locs-alist kont)
-			 (finish-tokenisation-of-list port pos locs-alist kont 'rparen 'rbrack)))
-	     (values ls (annotate ls ls/ann pos) locs-alist kont)))
+	   (let-values (((ls ls/ann locations kont)
+			 (finish-tokenisation-of-list port pos locations kont 'rparen 'rbrack)))
+	     (values ls (annotate ls ls/ann pos) locations kont)))
 
 	  ;;Read list that was opened by a square bracket.
 	  ((eq? token 'lbrack)
-	   (let-values (((ls ls/ann locs-alist kont)
-			 (finish-tokenisation-of-list port pos locs-alist kont 'rbrack 'rparen)))
-	     (values ls (annotate ls ls/ann pos) locs-alist kont)))
+	   (let-values (((ls ls/ann locations kont)
+			 (finish-tokenisation-of-list port pos locations kont 'rbrack 'rparen)))
+	     (values ls (annotate ls ls/ann pos) locations kont)))
 
 	  ;;Read a vector opened by "#(".
 	  ((eq? token 'vparen)
-	   (let-values (((vec vec/ann locs-alist kont)
-			 (finish-tokenisation-of-vector port locs-alist kont 0 '() '())))
-	     (values vec (annotate vec vec/ann pos) locs-alist kont)))
+	   (let-values (((vec vec/ann locations kont)
+			 (finish-tokenisation-of-vector port locations kont 0 '() '())))
+	     (values vec (annotate vec vec/ann pos) locations kont)))
 
 	  ;;Read a bytevector.
 	  ((memq token '( ;;
@@ -1481,57 +1538,57 @@
 			 vu32l vu32b vu32n  vs32l vs32b vs32n
 			 vu64l vu64b vu64n  vs64l vs64b vs64n))
 	   (let-values
-	       (((bv bv/ann locs-alist kont)
+	       (((bv bv/ann locations kont)
 		 (cond ((eq? token 'vu8)
-			(finish-tokenisation-of-bytevector-u8 port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-u8 port locations kont 0 '()))
 		       ((eq? token 'vs8)
-			(finish-tokenisation-of-bytevector-s8 port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-s8 port locations kont 0 '()))
 
 		       ((eq? token 'vu16l)
-			(finish-tokenisation-of-bytevector-u16l port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-u16l port locations kont 0 '()))
 		       ((eq? token 'vs16l)
-			(finish-tokenisation-of-bytevector-s16l port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-s16l port locations kont 0 '()))
 
 		       ((eq? token 'vu16b)
-			(finish-tokenisation-of-bytevector-u16b port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-u16b port locations kont 0 '()))
 		       ((eq? token 'vs16b)
-			(finish-tokenisation-of-bytevector-s16b port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-s16b port locations kont 0 '()))
 
 		       ((eq? token 'vu16n)
-			(finish-tokenisation-of-bytevector-u16n port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-u16n port locations kont 0 '()))
 		       ((eq? token 'vs16n)
-			(finish-tokenisation-of-bytevector-s16n port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-s16n port locations kont 0 '()))
 
 		       ((eq? token 'vu32l)
-			(finish-tokenisation-of-bytevector-u32l port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-u32l port locations kont 0 '()))
 		       ((eq? token 'vs32l)
-			(finish-tokenisation-of-bytevector-s32l port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-s32l port locations kont 0 '()))
 
 		       ((eq? token 'vu32b)
-			(finish-tokenisation-of-bytevector-u32b port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-u32b port locations kont 0 '()))
 		       ((eq? token 'vs32b)
-			(finish-tokenisation-of-bytevector-s32b port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-s32b port locations kont 0 '()))
 
 		       ((eq? token 'vu32n)
-			(finish-tokenisation-of-bytevector-u32n port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-u32n port locations kont 0 '()))
 		       ((eq? token 'vs32n)
-			(finish-tokenisation-of-bytevector-s32n port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-s32n port locations kont 0 '()))
 
 		       ((eq? token 'vu64l)
-			(finish-tokenisation-of-bytevector-u64l port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-u64l port locations kont 0 '()))
 		       ((eq? token 'vs64l)
-			(finish-tokenisation-of-bytevector-s64l port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-s64l port locations kont 0 '()))
 
 		       ((eq? token 'vu64b)
-			(finish-tokenisation-of-bytevector-u64b port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-u64b port locations kont 0 '()))
 		       ((eq? token 'vs64b)
-			(finish-tokenisation-of-bytevector-s64b port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-s64b port locations kont 0 '()))
 
 		       ((eq? token 'vu64n)
-			(finish-tokenisation-of-bytevector-u64n port locs-alist kont 0 '()))
+			(finish-tokenisation-of-bytevector-u64n port locations kont 0 '()))
 		       ((eq? token 'vs64n)
-			(finish-tokenisation-of-bytevector-s64n port locs-alist kont 0 '())))))
-	     (values bv (annotate bv bv/ann pos) locs-alist kont)))
+			(finish-tokenisation-of-bytevector-s64n port locations kont 0 '())))))
+	     (values bv (annotate bv bv/ann pos) locations kont)))
 
 	  ((pair? token)
 	   (%process-pair-token token))
@@ -1542,7 +1599,7 @@
   (define-inline (%process-pair-token token)
     (cond ((eq? (car token) 'datum) ;datum already tokenised
 	   (values (cdr token)
-		   (annotate-simple (cdr token) pos) locs-alist kont))
+		   (annotate-simple (cdr token) pos) locations kont))
 
 	  ;;Read  a  sexp  quoted  with one  among:  QUOTE,  QUASIQUOTE,
 	  ;;UNQUOTE,  UNQUOTE-SPLICING,  SYNTAX, QUASISYNTAX,  UNSYNTAX,
@@ -1556,27 +1613,29 @@
 		     (%error (string-append "invalid EOF after "
 					    (symbol->string quoting-keyword)
 					    " read macro" ))
-		   (finalise-tokenisation port locs-alist kont token1 pos))))
-	     (let-values (((expr expr/ann locs-alist kont) (%read-quoted-sexp)))
+		   (finalise-tokenisation port locations kont token1 pos))))
+	     (let-values (((expr expr/ann locations kont) (%read-quoted-sexp)))
 	       (let ((d     (list expr))
 		     (d/ann (list expr/ann)))
 		 (let ((x     (cons quoting-keyword d))
 		       (x/ann (cons (annotate-simple quoting-keyword pos) d/ann)))
-		   (values x (annotate x x/ann pos) locs-alist
+		   (values x (annotate x x/ann pos) locations
 			   (extend-graph-notation-kont-for-pair d d/ann expr '() kont)))))))
 
-	  ;;Read an expression marked with graph notation for locations.
+	  ;;Read an expression marked with graph notation for locations;
+	  ;;whatever we do  either we return the expression  or raise an
+	  ;;exception.
 	  ;;
-	  ;;If an entry with the same digit N is not in LOCS-ALIST: this
+	  ;;If an entry with the same digit N is not in LOCATIONS: this
 	  ;;mark is new;  create a new LOC structure,  marked as set and
-	  ;;holding the  expression, and  register it in  in LOCS-ALIST.
+	  ;;holding the  expression, and  register it in  in LOCATIONS.
 	  ;;Return the expression.
 	  ;;
-	  ;;If an entry with the  same digit N is already in LOCS-ALIST,
+	  ;;If an entry with the  same digit N is already in LOCATIONS,
 	  ;;and marked set: it means a mark "#N=" has already been read,
 	  ;;so raise an exception.
 	  ;;
-	  ;;If an entry with the  same digit N is already in LOCS-ALIST,
+	  ;;If an entry with the  same digit N is already in LOCATIONS,
 	  ;;but marked unset: it means that one or more references "#N#"
 	  ;;have  been  already   processed;  mutate  the  existing  LOC
 	  ;;structure to  reference the expression  and mark it  as set.
@@ -1585,7 +1644,8 @@
 	  ;;
 	  ;;FIXME Would it be intelligent to raise an exception, in case
 	  ;;of  multiple  reading  of  the  same  mark,  only  when  the
-	  ;;expressions differ?
+	  ;;expressions  differ?    Would  checking  equality   of  such
+	  ;;expressions generate infinite loops?
 	  ;;
 	  ;;Examples:
 	  ;;
@@ -1597,9 +1657,9 @@
 	  ;;
 	  ((eq? (car token) 'mark)
 	   (let ((N (cdr token)))
-	     (let-values (((expr expr/ann locs-alist kont)
-			   (read-expr port locs-alist kont)))
-	       (cond ((assq N locs-alist)
+	     (let-values (((expr expr/ann locations kont)
+			   (read-expr port locations kont)))
+	       (cond ((assq N locations)
 		      => (lambda (pair)
 			   (let ((loc (cdr pair)))
 			     (when (loc-set? loc)
@@ -1612,44 +1672,43 @@
 			     (set-loc-value!     loc expr)
 			     (set-loc-value/ann! loc expr/ann)
 			     (set-loc-set?!      loc #t)
-			     (values expr expr/ann locs-alist kont))))
+			     (values expr expr/ann locations kont))))
 		     (else
 		      (let* ((loc         (let ((value     expr)
 						(value/ann 'unused)
 						(set?      #t))
 					    (make-loc value value/ann set?)))
-			     (locs-alist1 (cons (cons N loc) locs-alist)))
-			(values expr expr/ann locs-alist1 kont)))))))
+			     (locations1 (cons (cons N loc) locations)))
+			(values expr expr/ann locations1 kont)))))))
 
-	  ;;Process reference to graph notation location.  Example:
+	  ;;Process reference  to graph notation location;  we return an
+	  ;;expression or a LOC structure.
 	  ;;
-	  ;;  (#1=ciao #1#) => (ciao ciao)
-	  ;;
-	  ;;If an entry with the same digit N is in LOCS-ALIST: it means
+	  ;;If an entry with the same digit N is in LOCATIONS: it means
 	  ;;that either the associated  mark "#N=" has already been read
 	  ;;or  another   reference  with  digit  N   has  already  been
 	  ;;processed; in any case  extract the LOC structure and return
 	  ;;it so that it can be later processed by REDUCE-LOC!.
 	  ;;
-	  ;;If an entry with digit N is not in LOCS-ALIST: it means that
+	  ;;If an entry with digit N is not in LOCATIONS: it means that
 	  ;;neither the associated mark  "#N=" has been read nor another
 	  ;;reference  with digit  N  has been  processed;  in any  case
-	  ;;create  a  new  LOC  structure, marked  unset,  register  in
-	  ;;LOCS-ALIST and return  it so that it can  be later processed
+	  ;;create  a new LOC  structure, marked  unset, register  it in
+	  ;;LOCATIONS and return  it so that it can  be later processed
 	  ;;by REDUCE-LOC!.
 	  ;;
 	  ((eq? (car token) 'ref)
 	   (let ((N (cdr token)))
-	     (cond ((assq N locs-alist)
+	     (cond ((assq N locations)
 		    => (lambda (pair)
-			 (values (cdr pair) 'unused locs-alist kont)))
+			 (values (cdr pair) 'unused locations kont)))
 		   (else
 		    (let* ((the-loc     (let ((value     #f)
 					      (value/ann 'unused)
 					      (set?      #f))
 					  (make-loc value value/ann set?)))
-			   (locs-alist1 (cons (cons N the-loc) locs-alist)))
-		      (values the-loc 'unused locs-alist1 kont))))))
+			   (locations1 (cons (cons N the-loc) locations)))
+		      (values the-loc 'unused locations1 kont))))))
 
 	  (else
 	   (%error "Vicare internal error: unknown token from reader functions" token))))
