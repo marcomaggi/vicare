@@ -208,9 +208,12 @@
 
   (define-syntax gen-empty
     (syntax-rules (eof)
-      ((_ C Ca) (C EOF-ERROR Ca))
-      ((_ C Ca ((eof) then) . rest) then)
-      ((_ C Ca other . rest) (gen-empty C Ca . rest))))
+      ((_ C Ca)
+       (C EOF-ERROR Ca))
+      ((_ C Ca ((eof) then) . rest)
+       then)
+      ((_ C Ca other . rest)
+       (gen-empty C Ca . rest))))
 
   (define-syntax gen-delimiter
     (syntax-rules (eof)
@@ -222,18 +225,20 @@
        (C GEN-DELIM-TEST c
 	  then
 	  (C FAIL Ca c)))
-      ((_ C Ca c other . rest) (gen-delimiter C Ca c . rest))))
+      ((_ C Ca c other . rest)
+       (gen-delimiter C Ca c . rest))))
 
   (define-syntax gen-char
     (syntax-rules (eof =>)
-      ((_ C Ca c dc) dc)
+      ((_ C Ca c dc)
+       dc)
       ((_ C Ca c dc ((eof) then) . rest)
        (gen-char C Ca c dc . rest))
       ((_ C Ca c dc ((test . args) => result then) . rest)
-       (cond
-	((test c . args) =>
-	 (lambda (result) then))
-	(else (gen-char C Ca c dc . rest))))
+       (cond ((test c . args)
+	      => (lambda (result) then))
+	     (else
+	      (gen-char C Ca c dc . rest))))
       ((_ C Ca c dc (ls then) . rest)
        (if (memv c 'ls)
 	   then
@@ -279,6 +284,9 @@
 	       ...))))))
 
   (define-syntax define-parser
+    ;;Interface  to  DEFINE-PARSER^  which  only  introduces  ORIG*  and
+    ;;reorganises the order of the arguments.
+    ;;
     (lambda (x)
       (syntax-case x ()
 	((_ definer next fail (name* (arg** ...) clause** ...) ...)
@@ -541,7 +549,7 @@
        (define-syntax fail
 	 (syntax-rules ()
 	   ((_) #f)))
-       (if (fx=? i n)
+       (if (unsafe.fx= i n)
 	   sk
 	 (let ((var (unsafe.string-ref s i)))
 	   (define-syntax next
