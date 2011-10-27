@@ -24,6 +24,72 @@
 	close-tcp-server-socket
 	register-callback
 
+** list of file still to review
+
+   scheme/ikarus.chars.ss
+   scheme/ikarus.enumerations.ss
+   scheme/ikarus.pairs.ss
+   scheme/ikarus.lists.ss
+   scheme/ikarus.strings.ss
+   scheme/ikarus.vectors.ss
+   scheme/ikarus.pointers.ss
+   scheme/ikarus.numerics.ss
+   scheme/ikarus.conditions.ss
+   scheme/ikarus.cafe.ss
+   scheme/ikarus.records.procedural.ss
+
+   scheme/ikarus.posix.ss
+   scheme/ikarus.exceptions.ss
+   scheme/ikarus.debugger.ss
+
+   scheme/ikarus.apply.ss
+   scheme/ikarus.apropos.ss
+   scheme/ikarus.code-objects.ss
+   scheme/ikarus.collect.ss
+   scheme/ikarus.control.ss
+   scheme/ikarus.date-string.ss
+   scheme/ikarus.equal.ss
+   scheme/ikarus.fasl.ss
+   scheme/ikarus.fasl.write.ss
+   scheme/ikarus.fixnums.ss
+   scheme/ikarus.guardians.ss
+   scheme/ikarus.handlers.ss
+   scheme/ikarus.hash-tables.ss
+   scheme/ikarus.multiple-values.ss
+   scheme/ikarus.predicates.ss
+   scheme/ikarus.pretty-formats.ss
+   scheme/ikarus.pretty-print.ss
+   scheme/ikarus.promises.ss
+   scheme/ikarus.singular-objects.ss
+   scheme/ikarus.sort.ss
+   scheme/ikarus.symbol-table.ss
+   scheme/ikarus.time-and-date.ss
+   scheme/ikarus.timer.ss
+   scheme/ikarus.unicode-conversion.ss
+   scheme/ikarus.unicode.ss
+   scheme/ikarus.writer.ss
+
+   scheme/ikarus.compiler.ss
+   scheme/ikarus.compiler.altcogen.ss
+   scheme/ikarus.compiler.ontology.ss
+   scheme/ikarus.compiler.optimize-letrec.ss
+   scheme/ikarus.compiler.source-optimizer.ss
+   scheme/ikarus.compiler.tag-annotation-analysis.ss
+   scheme/pass-specify-rep.ss
+   scheme/pass-specify-rep-primops.ss
+   scheme/ikarus.intel-assembler.ss
+
+   scheme/psyntax.builders.ss
+   scheme/psyntax.compat.ss
+   scheme/psyntax.config.ss
+   scheme/psyntax.expander.ss
+   scheme/psyntax.internal.ss
+   scheme/psyntax.library-manager.ss
+
+** list of files that maybe will be reviewed
+
+   scheme/x86-64-repl.ss
+
 * Miscellaneous stuff to be fixed
 
 ** ikarus.symbols.ss
