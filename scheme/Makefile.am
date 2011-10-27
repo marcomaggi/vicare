@@ -116,7 +116,7 @@ EXTRA_DIST= last-revision						\
   unicode/UNIDATA/CompositionExclusions.txt				\
   unicode/UNIDATA/PropList.txt						\
   unicode/UNIDATA/UnicodeData.txt					\
-  ikarus.io.ss ikarus.time-and-date.ss ikarus.not-yet-implemented.ss	\
+  ikarus.io.ss ikarus.time-and-date.ss					\
   ikarus.string-to-number.ss ikarus.compiler.source-optimizer.ss	\
   ikarus.compiler.tag-annotation-analysis.ss				\
   ikarus.compiler.ontology.ss						\

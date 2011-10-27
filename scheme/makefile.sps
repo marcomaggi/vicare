@@ -160,12 +160,7 @@
     "ikarus.enumerations.ss"
     "ikarus.command-line.ss"
     "ikarus.pointers.ss"
-;;;It should be all implemented now.  (Marco Maggi; Oct 14, 2011)
-;;;
-;;;    "ikarus.not-yet-implemented.ss"
-
 ;;; "ikarus.trace.ss"
-
     "ikarus.debugger.ss"
     "ikarus.main.ss"
     ))
