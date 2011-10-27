@@ -206,8 +206,14 @@
 ;;   read;  in  this  case   the  VLAUE  and  VALUE/ANN  fields  contain
 ;;   meaningless values.
 ;;
+;;Field name: textual-position
+;;Field accessor: loc-textual-position ANN
+;;  A  condtion  object  of  type  "&source-position"  representing  the
+;;  position of the  location in the source code.  It  is used to report
+;;  better errors.
+;;
 (define-struct loc
-  (value value/ann set?))
+  (value value/ann set? textual-position))
 
 (define EMPTY-LOCATIONS-COLLECTION '())
 
@@ -563,9 +569,8 @@
       (die/p port 'vicare-reader msg . irritants))
     (let ((loc (cdr entry)))
       (unless (loc-set? loc)
-	;;FIXME It  would be beautiful  to include the position  in this
-	;;error report.
-	(%error "referenced location mark is not set" (car entry)))
+	(die/lex (loc-textual-position loc) 'vicare-reader
+		 "referenced location mark is not set" (car entry)))
       (when (loc? (loc-value loc))
 	(let loop ((h loc) (t loc))
 	  (if (loc? h)
@@ -1663,12 +1668,8 @@
 		      => (lambda (pair)
 			   (let ((loc (cdr pair)))
 			     (when (loc-set? loc)
-			       ;;FIXME It  would be beautiful  to report
-			       ;;the  positions, too.   Is  it possible,
-			       ;;from  the  point   of  view  of  shared
-			       ;;contexts, to store the positions in LOC
-			       ;;itself?
-			       (%error "duplicate location mark for graph notation" N))
+			       (die/lex (condition (loc-textual-position loc) pos)
+					'vicare-reader "duplicate location mark for graph notation" N))
 			     (set-loc-value!     loc expr)
 			     (set-loc-value/ann! loc expr/ann)
 			     (set-loc-set?!      loc #t)
@@ -1677,7 +1678,7 @@
 		      (let* ((loc         (let ((value     expr)
 						(value/ann 'unused)
 						(set?      #t))
-					    (make-loc value value/ann set?)))
+					    (make-loc value value/ann set? pos)))
 			     (locations1 (cons (cons N loc) locations)))
 			(values expr expr/ann locations1 kont)))))))
 
@@ -1706,7 +1707,7 @@
 		    (let* ((the-loc     (let ((value     #f)
 					      (value/ann 'unused)
 					      (set?      #f))
-					  (make-loc value value/ann set?)))
+					  (make-loc value value/ann set? pos)))
 			   (locations1 (cons (cons N the-loc) locations)))
 		      (values the-loc 'unused locations1 kont))))))
 
