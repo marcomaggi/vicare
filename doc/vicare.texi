@@ -2397,11 +2397,11 @@ Store @var{value} in the field at @var{index} in the data structure
 
 
 @menu
-* iklib lists::                 Weak pairs.
+* iklib lists weak::            Weak pairs.
 @end menu
 
 @c page
-@node iklib lists
+@node iklib lists weak
 @subsection Weak pairs
 
 
