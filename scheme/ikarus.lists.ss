@@ -317,56 +317,63 @@
   (%race ls ls ls x))
 
 
-(define memp
-  (letrec ((race
-	    (lambda (h t ls p)
-	      (if (pair? h)
-		  (if (p (unsafe.car h))
-		      h
-		    (let ((h (unsafe.cdr h)))
-		      (if (pair? h)
-			  (if (p (unsafe.car h))
-			      h
-			    (if (not (eq? h t))
-				(race (unsafe.cdr h) (unsafe.cdr t) ls p)
-			      (assertion-violation 'memp "circular list" ls)))
-			(if (null? h)
-			    '#f
-			  (assertion-violation 'memp EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
-		(if (null? h)
-		    '#f
-		  (assertion-violation 'memp EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
-    (lambda (p ls)
-      (unless (procedure? p)
-	(assertion-violation 'memp "not a procedure" p))
-      (race ls ls ls p))))
+(define (memp p ls)
+  (define who 'memp)
+  (define (%race h t ls p)
+    (cond ((pair? h)
+	   (if (p (unsafe.car h))
+	       h
+	     (let ((h (unsafe.cdr h)))
+	       (cond ((pair? h)
+		      (cond ((p (unsafe.car h))
+			     h)
+			    ((not (eq? h t))
+			     (%race (unsafe.cdr h) (unsafe.cdr t) ls p))
+			    (else
+			     (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls))))
+		     ((null? h)
+		      #f)
+		     (else
+		      (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
+	  ((null? h)
+	   #f)
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+  (with-arguments-validation (who)
+      ((procedure p))
+    (%race ls ls ls p)))
 
-(define find
-  (letrec ((race
-	    (lambda (h t ls p)
-	      (if (pair? h)
-		  (let ((a (unsafe.car h)))
-		    (if (p a)
-			a
-		      (let ((h (unsafe.cdr h)))
-			(if (pair? h)
-			    (let ((a (unsafe.car h)))
-			      (if (p a)
-				  a
-				(if (not (eq? h t))
-				    (race (unsafe.cdr h) (unsafe.cdr t) ls p)
-				  (assertion-violation 'find "circular list" ls))))
-			  (if (null? h)
-			      '#f
-			    (assertion-violation 'find EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
-		(if (null? h)
-		    '#f
-		  (assertion-violation 'find EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
-    (lambda (p ls)
-      (unless (procedure? p)
-	(assertion-violation 'find "not a procedure" p))
-      (race ls ls ls p))))
+
+(define (find p ls)
+  (define who 'find)
+  (define (%race h t ls p)
+    (cond ((pair? h)
+	   (let ((a (unsafe.car h)))
+	     (if (p a)
+		 a
+	       (let ((h (unsafe.cdr h)))
+		 (cond ((pair? h)
+			(let ((a (unsafe.car h)))
+			  (cond ((p a)
+				 a)
+				((not (eq? h t))
+				 (%race (unsafe.cdr h) (unsafe.cdr t) ls p))
+				(else
+				 (assertion-violation who
+				   CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))))
+		       ((null? h)
+			#f)
+		       (else
+			(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))))
+	  ((null? h)
+	   #f)
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+  (with-arguments-validation (who)
+      ((procedure p))
+    (%race ls ls ls p)))
 
+
 (define assq
   (letrec ((race
 	    (lambda (x h t ls)
