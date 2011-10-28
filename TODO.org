@@ -24,12 +24,10 @@
 	close-tcp-server-socket
 	register-callback
 
-** list of file still to review
+** list of files still to review
 
    scheme/ikarus.chars.ss
    scheme/ikarus.enumerations.ss
-   scheme/ikarus.pairs.ss
-   scheme/ikarus.lists.ss
    scheme/ikarus.strings.ss
    scheme/ikarus.vectors.ss
    scheme/ikarus.pointers.ss
