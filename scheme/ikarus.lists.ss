@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (library (ikarus lists)
-  (export $memq list? list cons* make-list append length list-ref reverse
+  (export list? list cons* make-list append length list-ref reverse
           last-pair memq memp memv member find assq assp assv assoc
           remq remv remove remp filter map for-each andmap ormap list-tail
           partition for-all exists fold-left fold-right)
@@ -66,12 +66,21 @@
 (define MALFORMED_ALIST_AS_ARGUMENT
   "malformed alist as argument")
 
+(define LIST_WAS_ALTERED_WHILE_PROCESSING
+  "list was altered while processing")
+
+(define LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS
+  "length mismatch among list arguments")
+
 
-(define ($memq x ls)
-  (and (pair? ls)
-       (if (eq? x (unsafe.car ls))
-	   ls
-	 ($memq x (unsafe.cdr ls)))))
+;;Commented out because  it appears to be useless:  $MEMQ is a primitive
+;;operation (Marco Maggi; Oct 28, 2011).
+;;
+;; (define ($memq x ls)
+;;   (and (pair? ls)
+;;        (if (eq? x (unsafe.car ls))
+;; 	   ls
+;; 	 ($memq x (unsafe.cdr ls)))))
 
 (define list (lambda x x))
 
@@ -550,131 +559,141 @@
 
 (module (map)
   (define who 'map)
-  (define len
-    (lambda (h t n)
-      (if (pair? h)
-	  (let ((h (unsafe.cdr h)))
-	    (if (pair? h)
-		(if (eq? h t)
-		    (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
-		  (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2)))
-	      (if (null? h)
-		  (unsafe.fxadd1 n)
-		(assertion-violation who "improper list"))))
-	(if (null? h)
-	    n
-	  (assertion-violation who "improper list")))))
-  (define map1
-    (lambda (f a d n)
-      (cond
-       ((pair? d)
-	(if (unsafe.fxzero? n)
-	    (assertion-violation who "list was altered!")
-	  (cons (f a) (map1 f (unsafe.car d) (unsafe.cdr d) (unsafe.fxsub1 n)))))
-       ((null? d)
-	(if (unsafe.fxzero? n)
-	    (cons (f a) '())
-	  (assertion-violation who "list was altered")))
-       (else (assertion-violation who "list was altered")))))
-  (define map2
-    (lambda (f a1 a2 d1 d2 n)
-      (cond
-       ((pair? d1)
-	(cond
-	 ((pair? d2)
-	  (if (unsafe.fxzero? n)
-	      (assertion-violation who "list was altered")
-	    (cons (f a1 a2)
-		  (map2 f
-			(unsafe.car d1) (unsafe.car d2)
-			(unsafe.cdr d1) (unsafe.cdr d2)
-			(unsafe.fxsub1 n)))))
-	 ((null? d2) (assertion-violation who "length mismatch"))
-	 (else (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
-       ((null? d1)
-	(cond
-	 ((null? d2)
-	  (if (unsafe.fxzero? n)
-	      (cons (f a1 a2) '())
-	    (assertion-violation who "list was altered")))
-	 (else
-	  (assertion-violation who
-	       (if (list? d2) "length mismatch" EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
-       (else (assertion-violation who "list was altered")))))
-  (define cars
-    (lambda (ls*)
-      (cond
-       ((null? ls*) '())
-       (else
-	(let ((a (car ls*)))
-	  (cond
-	   ((pair? a)
-	    (cons (car a) (cars (cdr ls*))))
-	   (else
-	    (assertion-violation 'map "length mismatch"))))))))
-  (define cdrs
-    (lambda (ls*)
-      (cond
-       ((null? ls*) '())
-       (else
-	(let ((a (car ls*)))
-	  (cond
-	   ((pair? a)
-	    (cons (cdr a) (cdrs (cdr ls*))))
-	   (else
-	    (assertion-violation 'map "length mismatch"))))))))
+
+  (define (len h t n)
+    (cond ((pair? h)
+	   (let ((h (unsafe.cdr h)))
+	     (cond ((pair? h)
+		    (if (eq? h t)
+			(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
+		      (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2))))
+		   ((null? h)
+		    (unsafe.fxadd1 n))
+		   (else
+		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+	  ((null? h)
+	   n)
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
+
+  (define (map1 f a d n)
+    (cond ((pair? d)
+	   (if (unsafe.fxzero? n)
+	       (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
+	     (cons (f a) (map1 f (unsafe.car d) (unsafe.cdr d) (unsafe.fxsub1 n)))))
+	  ((null? d)
+	   (if (unsafe.fxzero? n)
+	       (cons (f a) '())
+	     (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
+	  (else
+	   (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
+
+  (define (map2 f a1 a2 d1 d2 n)
+    (cond
+     ((pair? d1)
+      (cond ((pair? d2)
+	     (if (unsafe.fxzero? n)
+		 (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
+	       (cons (f a1 a2)
+		     (map2 f
+			   (unsafe.car d1) (unsafe.car d2)
+			   (unsafe.cdr d1) (unsafe.cdr d2)
+			   (unsafe.fxsub1 n)))))
+	    ((null? d2)
+	     (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
+	    (else
+	     (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
+     ((null? d1)
+      (cond ((null? d2)
+	     (if (unsafe.fxzero? n)
+		 (cons (f a1 a2) '())
+	       (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
+	    (else
+	     (assertion-violation who
+	       (if (list? d2)
+		   LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS
+		 EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+     (else
+      (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
+
+  (define (cars ls*)
+    (if (null? ls*)
+	'()
+      (let ((a (car ls*)))
+	(if (pair? a)
+	    (cons (car a) (cars (cdr ls*)))
+	  (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))))
+
+  (define (cdrs ls*)
+    (if (null? ls*)
+	'()
+      (let ((a (car ls*)))
+	(if (pair? a)
+	    (cons (cdr a) (cdrs (cdr ls*)))
+	  (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))))
+
   (define (err-mutated all-lists)
-    (apply assertion-violation 'map "some lists were mutated during operation" all-lists))
+    (apply assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING all-lists))
+
   (define (err-mismatch all-lists)
-    (apply assertion-violation 'map "length mismatch" all-lists))
+    (apply assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS all-lists))
+
   (define (err-invalid all-lists)
-    (apply assertion-violation 'map "invalid arguments" all-lists))
-  (define mapm
-    (lambda (f ls ls* n all-lists)
-      (cond
-       ((null? ls)
-	(if (andmap null? ls*)
-	    (if (fxzero? n)
-		'()
-	      (err-mutated all-lists))
-	  (err-mismatch all-lists)))
-       ((fxzero? n) (err-mutated all-lists))
-       (else
-	(cons
-	 (apply f (car ls) (cars ls*))
-	 (mapm f (cdr ls) (cdrs ls*) (fxsub1 n) all-lists))))))
+    (apply assertion-violation who "invalid arguments" all-lists))
+
+  (define (mapm f ls ls* n all-lists)
+    (cond ((null? ls)
+	   (if (andmap null? ls*)
+	       (if (fxzero? n)
+		   '()
+		 (err-mutated all-lists))
+	     (err-mismatch all-lists)))
+	  ((fxzero? n)
+	   (err-mutated all-lists))
+	  (else
+	   (cons (apply f (car ls) (cars ls*))
+		 (mapm f (cdr ls) (cdrs ls*) (fxsub1 n) all-lists)))))
+
   (define map
     (case-lambda
      ((f ls)
-      (unless (procedure? f)
-	(assertion-violation who "not a procedure" f))
-      (cond
-       ((pair? ls)
-	(let ((d (unsafe.cdr ls)))
-	  (map1 f (unsafe.car ls) d (len d d 0))))
-       ((null? ls) '())
-       (else (err-invalid (list ls)))))
-     ((f ls ls2)
-      (unless (procedure? f)
-	(assertion-violation who "not a procedure" f))
-      (cond
-       ((pair? ls)
-	(if (pair? ls2)
-	    (let ((d (unsafe.cdr ls)))
-	      (map2 f (unsafe.car ls) (unsafe.car ls2) d (unsafe.cdr ls2) (len d d 0)))
-	  (err-invalid (list ls ls2))))
-       ((and (null? ls) (null? ls2)) '())
-       (else (err-invalid (list ls ls2)))))
-     ((f ls . ls*)
-      (unless (procedure? f)
-	(assertion-violation who "not a procedure" f))
-      (cond
-       ((pair? ls)
-	(let ((n (len ls ls 0)))
-	  (mapm f ls ls* n (cons ls ls*))))
-       ((and (null? ls) (andmap null? ls*)) '())
-       (else (err-invalid (cons ls ls*))))))))
+      (with-arguments-validation (who)
+	  ((procedure f))
+	(cond ((pair? ls)
+	       (let ((d (unsafe.cdr ls)))
+		 (map1 f (unsafe.car ls) d (len d d 0))))
+	      ((null? ls)
+	       '())
+	      (else
+	       (err-invalid (list ls))))))
 
+     ((f ls ls2)
+      (with-arguments-validation (who)
+	  ((procedure f))
+	(cond ((pair? ls)
+	       (if (pair? ls2)
+		   (let ((d (unsafe.cdr ls)))
+		     (map2 f (unsafe.car ls) (unsafe.car ls2) d (unsafe.cdr ls2) (len d d 0)))
+		 (err-invalid (list ls ls2))))
+	      ((and (null? ls) (null? ls2))
+	       '())
+	      (else
+	       (err-invalid (list ls ls2))))))
+
+     ((f ls . ls*)
+      (with-arguments-validation (who)
+	  ((procedure f))
+	(cond ((pair? ls)
+	       (let ((n (len ls ls 0)))
+		 (mapm f ls ls* n (cons ls ls*))))
+	      ((and (null? ls) (andmap null? ls*))
+	       '())
+	      (else
+	       (err-invalid (cons ls ls*))))))))
+
+  #| end of module |# )
+
+
 (module (for-each)
   (define who 'for-each)
   (define len
@@ -687,24 +706,24 @@
 		  (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2)))
 	      (if (null? h)
 		  (unsafe.fxadd1 n)
-		(assertion-violation who "improper list"))))
+		(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
 	(if (null? h)
 	    n
-	  (assertion-violation who "improper list")))))
+	  (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
   (define for-each1
     (lambda (f a d n)
       (cond
        ((pair? d)
 	(if (unsafe.fxzero? n)
-	    (assertion-violation who "list was altered!")
+	    (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
 	  (begin
 	    (f a)
 	    (for-each1 f (unsafe.car d) (unsafe.cdr d) (unsafe.fxsub1 n)))))
        ((null? d)
 	(if (unsafe.fxzero? n)
 	    (f a)
-	  (assertion-violation who "list was altered")))
-       (else (assertion-violation who "list was altered")))))
+	  (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
+       (else (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))))
   (define for-each2
     (lambda (f a1 a2 d1 d2 n)
       (cond
@@ -712,22 +731,22 @@
 	(cond
 	 ((pair? d2)
 	  (if (unsafe.fxzero? n)
-	      (assertion-violation who "list was altered")
+	      (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
 	    (begin
 	      (f a1 a2)
 	      (for-each2 f
 			 (unsafe.car d1) (unsafe.car d2)
 			 (unsafe.cdr d1) (unsafe.cdr d2)
 			 (unsafe.fxsub1 n)))))
-	 (else (assertion-violation who "length mismatch"))))
+	 (else (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))))
        ((null? d1)
 	(cond
 	 ((null? d2)
 	  (if (unsafe.fxzero? n)
 	      (f a1 a2)
-	    (assertion-violation who "list was altered")))
-	 (else (assertion-violation who "length mismatch"))))
-       (else (assertion-violation who "list was altered")))))
+	    (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
+	 (else (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))))
+       (else (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))))
   (define for-each
     (case-lambda
      ((f ls)
@@ -738,7 +757,7 @@
 	(let ((d (unsafe.cdr ls)))
 	  (for-each1 f (unsafe.car ls) d (len d d 0))))
        ((null? ls) (void))
-       (else (assertion-violation who "improper list"))))
+       (else (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
      ((f ls ls2)
       (unless (procedure? f)
 	(assertion-violation who "not a procedure" f))
@@ -748,11 +767,11 @@
 	    (let ((d (unsafe.cdr ls)))
 	      (for-each2 f
 			 (unsafe.car ls) (unsafe.car ls2) d (unsafe.cdr ls2) (len d d 0)))
-	  (assertion-violation who "length mismatch")))
+	  (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
        ((null? ls)
 	(if (null? ls2)
 	    (void)
-	  (assertion-violation who "length mismatch")))
+	  (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
        (else (assertion-violation who "not a list"))))
      ((f ls . ls*)
       (unless (procedure? f)
@@ -788,23 +807,23 @@
 		  (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2)))
 	      (if (null? h)
 		  (unsafe.fxadd1 n)
-		(assertion-violation who "improper list"))))
+		(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
 	(if (null? h)
 	    n
-	  (assertion-violation who "improper list")))))
+	  (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
   (define andmap1
     (lambda (f a d n)
       (cond
        ((pair? d)
 	(if (unsafe.fxzero? n)
-	    (assertion-violation who "list was altered!")
+	    (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
 	  (and (f a)
 	       (andmap1 f (unsafe.car d) (unsafe.cdr d) (unsafe.fxsub1 n)))))
        ((null? d)
 	(if (unsafe.fxzero? n)
 	    (f a)
-	  (assertion-violation who "list was altered")))
-       (else (assertion-violation who "list was altered")))))
+	  (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
+       (else (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))))
   (define andmap2
     (lambda (f a1 a2 d1 d2 n)
       (cond
@@ -812,22 +831,22 @@
 	(cond
 	 ((pair? d2)
 	  (if (unsafe.fxzero? n)
-	      (assertion-violation who "list was altered")
+	      (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
 	    (and
 	     (f a1 a2)
 	     (andmap2 f
                       (unsafe.car d1) (unsafe.car d2)
                       (unsafe.cdr d1) (unsafe.cdr d2)
                       (unsafe.fxsub1 n)))))
-	 (else (assertion-violation who "length mismatch"))))
+	 (else (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))))
        ((null? d1)
 	(cond
 	 ((null? d2)
 	  (if (unsafe.fxzero? n)
 	      (f a1 a2)
-	    (assertion-violation who "list was altered")))
-	 (else (assertion-violation who "length mismatch"))))
-       (else (assertion-violation who "list was altered")))))
+	    (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
+	 (else (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))))
+       (else (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))))
   (define andmap
     (case-lambda
      ((f ls)
@@ -838,7 +857,7 @@
 	(let ((d (unsafe.cdr ls)))
 	  (andmap1 f (unsafe.car ls) d (len d d 0))))
        ((null? ls) #t)
-       (else (assertion-violation who "improper list"))))
+       (else (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
      ((f ls ls2)
       (unless (procedure? f)
 	(assertion-violation who "not a procedure" f))
@@ -848,11 +867,11 @@
 	    (let ((d (unsafe.cdr ls)))
 	      (andmap2 f
 		       (unsafe.car ls) (unsafe.car ls2) d (unsafe.cdr ls2) (len d d 0)))
-	  (assertion-violation who "length mismatch")))
+	  (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
        ((null? ls)
 	(if (null? ls2)
 	    #t
-	  (assertion-violation who "length mismatch")))
+	  (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
        (else (assertion-violation who "not a list"))))
      ((f ls . ls*)
       (unless (procedure? f)
@@ -874,23 +893,23 @@
 		  (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2)))
 	      (if (null? h)
 		  (unsafe.fxadd1 n)
-		(assertion-violation who "improper list"))))
+		(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
 	(if (null? h)
 	    n
-	  (assertion-violation who "improper list")))))
+	  (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
   (define ormap1
     (lambda (f a d n)
       (cond
        ((pair? d)
 	(if (unsafe.fxzero? n)
-	    (assertion-violation who "list was altered!")
+	    (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
 	  (or (f a)
 	      (ormap1 f (unsafe.car d) (unsafe.cdr d) (unsafe.fxsub1 n)))))
        ((null? d)
 	(if (unsafe.fxzero? n)
 	    (f a)
-	  (assertion-violation who "list was altered")))
-       (else (assertion-violation who "list was altered")))))
+	  (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
+       (else (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))))
   (define ormap
     (case-lambda
      ((f ls)
@@ -901,7 +920,7 @@
 	(let ((d (unsafe.cdr ls)))
 	  (ormap1 f (unsafe.car ls) d (len d d 0))))
        ((null? ls) #f)
-       (else (assertion-violation who "improper list"))))
+       (else (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
      (_ (assertion-violation who "vararg not supported yet")))))
 
 
@@ -947,7 +966,7 @@
 	 (or (null? ls) (and (null? (car ls)) (null*? (cdr ls)))))
        (define (err* ls*)
 	 (if (null? ls*)
-	     (assertion-violation who "length mismatch")
+	     (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)
 	   (if (list? (car ls*))
 	       (err* (cdr ls*))
 	     (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
@@ -960,7 +979,7 @@
 		 (let-values (((cars cdrs) (cars+cdrs (cdr ls) (cdr ls*))))
 		   (values (cons (car a) cars) (cons (cdr a) cdrs)))
 	       (if (list? (car ls*))
-		   (assertion-violation who "length mismatch")
+		   (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)
 		 (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*))))))))
        (define (loop1 f a h t ls)
 	 (if (pair? h)
@@ -1024,7 +1043,7 @@
     (or (null? ls) (and (null? (car ls)) (null*? (cdr ls)))))
   (define (err* ls*)
     (if (null? ls*)
-	(assertion-violation who "length mismatch")
+	(assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)
       (if (list? (car ls*))
 	  (err* (cdr ls*))
 	(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
@@ -1037,7 +1056,7 @@
 	    (let-values (((cars cdrs) (cars+cdrs (cdr ls) (cdr ls*))))
 	      (values (cons (car a) cars) (cons (cdr a) cdrs)))
 	  (if (list? (car ls*))
-	      (assertion-violation who "length mismatch")
+	      (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)
 	    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*))))))))
   (define (loop1 f nil h t ls)
     (if (pair? h)
@@ -1088,7 +1107,7 @@
     (or (null? ls) (and (null? (car ls)) (null*? (cdr ls)))))
   (define (err* ls*)
     (if (null? ls*)
-	(assertion-violation who "length mismatch")
+	(assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)
       (if (list? (car ls*))
 	  (err* (cdr ls*))
 	(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
@@ -1101,7 +1120,7 @@
 	    (let-values (((cars cdrs) (cars+cdrs (cdr ls) (cdr ls*))))
 	      (values (cons (car a) cars) (cons (cdr a) cdrs)))
 	  (if (list? (car ls*))
-	      (assertion-violation who "length mismatch")
+	      (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)
 	    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*))))))))
   (define (loop1 f nil h t ls)
     (if (pair? h)
