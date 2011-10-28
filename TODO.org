@@ -26,9 +26,9 @@
 
 ** list of files still to review
 
+   scheme/ikarus.strings.ss
    scheme/ikarus.chars.ss
    scheme/ikarus.enumerations.ss
-   scheme/ikarus.strings.ss
    scheme/ikarus.pointers.ss
    scheme/ikarus.numerics.ss
    scheme/ikarus.conditions.ss
@@ -39,7 +39,6 @@
    scheme/ikarus.exceptions.ss
    scheme/ikarus.debugger.ss
 
-   scheme/ikarus.apply.ss
    scheme/ikarus.apropos.ss
    scheme/ikarus.code-objects.ss
    scheme/ikarus.collect.ss
