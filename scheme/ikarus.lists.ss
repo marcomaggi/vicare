@@ -44,6 +44,25 @@
   (and (fixnum? obj) (unsafe.fx>= obj 0))
   (assertion-violation who "expected non-negative fixnum list index argument" obj))
 
+(define-argument-validation (procedure who obj)
+  (procedure? obj)
+  (assertion-violation who "expected procedure as argument" obj))
+
+
+;;;; constants
+
+(define EXPECTED_PROPER_LIST_AS_ARGUMENT
+  "expected proper list as argument")
+
+(define CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT
+  "circular list is invalid as argument")
+
+(define IMPROPER_LIST_IS_INVALID_AS_ARGUMENT
+  "improper list is invalid as argument")
+
+(define INDEX_IS_OUT_OF_RANGE
+  "index is out of range")
+
 
 (define ($memq x ls)
   (and (pair? ls)
@@ -94,21 +113,21 @@
 	     (if (pair? h)
 		 (if (not (eq? h t))
 		     (%race (unsafe.cdr h) (unsafe.cdr t) ls (unsafe.fx+ n 2))
-		   (assertion-violation who "circular list is invalid as argument" ls))
+		   (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls))
 	       (if (null? h)
 		   (unsafe.fx+ n 1)
-		 (assertion-violation who "improper list is invalid as argument" ls)))))
+		 (assertion-violation who IMPROPER_LIST_IS_INVALID_AS_ARGUMENT ls)))))
 	  ((null? h)
 	   n)
 	  (else
-	   (assertion-violation who "not a proper list" ls))))
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (%race ls ls ls 0))
 
 
 (define (list-ref the-list the-index)
   (define who 'list-ref)
   (define (%error-index-out-of-range)
-    (assertion-violation who "index is out of range" the-index the-list))
+    (assertion-violation who INDEX_IS_OUT_OF_RANGE the-index the-list))
   (define-argument-validation (in-range who obj)
     (pair? obj)
     (%error-index-out-of-range))
@@ -122,7 +141,7 @@
 	  ((null? ls)
 	   (%error-index-out-of-range))
 	  (else
-	   (assertion-violation who "expected proper list as argument" the-list))))
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT the-list))))
   (with-arguments-validation (who)
       ((index the-index))
     (%unsafe.list-ref the-list the-index)))
@@ -136,9 +155,9 @@
 	  ((pair? ls)
 	   (%unsafe.list-tail (unsafe.cdr ls) (unsafe.fxsub1 i)))
 	  ((null? ls)
-	   (assertion-violation who "index is out of range" index list))
+	   (assertion-violation who INDEX_IS_OUT_OF_RANGE index list))
 	  (else
-	   (assertion-violation who "expected proper list as argument" list))))
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT list))))
   (with-arguments-validation (who)
       ((index index))
     (%unsafe.list-tail list index)))
@@ -157,15 +176,15 @@
 		      (if (not (eq? h t))
 			  (let ((a2 (unsafe.car h)))
 			    (reverse (unsafe.cdr h) (unsafe.cdr t) ls (cons a2 (cons a1 ac))))
-			(assertion-violation who "circular list is invalid as argument" ls)))
+			(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
 		     ((null? h)
 		      (cons a1 ac))
 		     (else
-		      (assertion-violation who "expected proper list as argument" ls)))))
+		      (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 	    ((null? h)
 	     ac)
 	    (else
-	     (assertion-violation who "expected proper list as argument" ls))))
+	     (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
 
     (define (rev! ls ac)
       (if (null? ls)
@@ -192,103 +211,112 @@
 	     (cond ((pair? h)
 		    (if (not (eq? h t))
 			(%race (unsafe.cdr h) (unsafe.cdr t) ls (cons (unsafe.car h) ac))
-		      (assertion-violation who "circular list is invalid as argument" ls)))
+		      (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
 		   ((null? h)
 		    ac)
 		   (else
-		    (assertion-violation who "expected proper list as argument" ls)))))
+		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 	  ((null? h)
 	   ac)
 	  (else
-	   (assertion-violation who "expected proper list as argument" ls))))
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (%race x x x '()))
 
 
-(define last-pair
-  (letrec ((race
-	    (lambda (h t ls last)
-	      (if (pair? h)
-		  (let ((h (unsafe.cdr h)) (last h))
-		    (if (pair? h)
-			(if (not (eq? h t))
-			    (race (unsafe.cdr h) (unsafe.cdr t) ls h)
-			  (die 'last-pair "circular list" ls))
-		      last))
-		last))))
-    (lambda (x)
-      (if (pair? x)
-	  (let ((d (cdr x)))
-	    (race d d x x))
-	(die 'last-pair "not a pair" x)))))
+(define (last-pair x)
+  (define who 'last-pair)
+  (define (%race h t ls last)
+    (if (pair? h)
+	(let ((h (unsafe.cdr h)) (last h))
+	  (if (pair? h)
+	      (if (not (eq? h t))
+		  (%race (unsafe.cdr h) (unsafe.cdr t) ls h)
+		(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls))
+	    last))
+      last))
+  (with-arguments-validation (who)
+      ((pair x))
+    (let ((d (unsafe.cdr x)))
+      (%race d d x x))))
 
 
-(define memq
-  (letrec ((race
-	    (lambda (h t ls x)
-	      (if (pair? h)
-		  (if (eq? (unsafe.car h) x)
-		      h
-		    (let ((h (unsafe.cdr h)))
-		      (if (pair? h)
-			  (if (eq? (unsafe.car h) x)
-			      h
-			    (if (not (eq? h t))
-				(race (unsafe.cdr h) (unsafe.cdr t) ls x)
-			      (die 'memq "circular list" ls)))
-			(if (null? h)
-			    '#f
-			  (die 'memq "not a proper list" ls)))))
-		(if (null? h)
-		    '#f
-		  (die 'memq "not a proper list" ls))))))
-    (lambda (x ls)
-      (race ls ls ls x))))
+(define (memq x ls)
+  (define who 'memq)
+  (define (%race h t ls x)
+    (cond ((pair? h)
+	   (if (eq? (unsafe.car h) x)
+	       h
+	     (let ((h (unsafe.cdr h)))
+	       (cond ((pair? h)
+		      (cond ((eq? (unsafe.car h) x)
+			     h)
+			    ((not (eq? h t))
+			     (%race (unsafe.cdr h) (unsafe.cdr t) ls x))
+			    (else
+			     (assertion-violation who
+			       CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls))))
+		     ((null? h)
+		      #f)
+		     (else
+		      (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
+	  ((null? h)
+	   #f)
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+  (%race ls ls ls x))
 
-(define memv
-  (letrec ((race
-	    (lambda (h t ls x)
-	      (if (pair? h)
-		  (if (eqv? (unsafe.car h) x)
-		      h
-		    (let ((h (unsafe.cdr h)))
-		      (if (pair? h)
-			  (if (eqv? (unsafe.car h) x)
-			      h
-			    (if (not (eq? h t))
-				(race (unsafe.cdr h) (unsafe.cdr t) ls x)
-			      (die 'memv "circular list" ls)))
-			(if (null? h)
-			    '#f
-			  (die 'memv "not a proper list" ls)))))
-		(if (null? h)
-		    '#f
-		  (die 'memv "not a proper list" ls))))))
-    (lambda (x ls)
-      (race ls ls ls x))))
+
+(define (memv x ls)
+  (define who 'memv)
+  (define (%race h t ls x)
+    (cond ((pair? h)
+	   (if (eqv? (unsafe.car h) x)
+	       h
+	     (let ((h (unsafe.cdr h)))
+	       (cond ((pair? h)
+		      (cond ((eqv? (unsafe.car h) x)
+			     h)
+			    ((not (eq? h t))
+			     (%race (unsafe.cdr h) (unsafe.cdr t) ls x))
+			    (else
+			     (assertion-violation who
+			       CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls))))
+		     ((null? h)
+		      #f)
+		     (else
+		      (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
+	  ((null? h)
+	   #f)
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+  (%race ls ls ls x))
 
-(define member
-  (letrec ((race
-	    (lambda (h t ls x)
-	      (if (pair? h)
-		  (if (equal? (unsafe.car h) x)
-		      h
-		    (let ((h (unsafe.cdr h)))
-		      (if (pair? h)
-			  (if (equal? (unsafe.car h) x)
-			      h
-			    (if (not (eq? h t))
-				(race (unsafe.cdr h) (unsafe.cdr t) ls x)
-			      (die 'member "circular list" ls)))
-			(if (null? h)
-			    '#f
-			  (die 'member "not a proper list" ls)))))
-		(if (null? h)
-		    '#f
-		  (die 'member "not a proper list" ls))))))
-    (lambda (x ls)
-      (race ls ls ls x))))
+
+(define (member x ls)
+  (define who 'member)
+  (define (%race h t ls x)
+    (cond ((pair? h)
+	   (if (equal? (unsafe.car h) x)
+	       h
+	     (let ((h (unsafe.cdr h)))
+	       (cond ((pair? h)
+		      (cond ((equal? (unsafe.car h) x)
+			     h)
+			    ((not (eq? h t))
+			     (%race (unsafe.cdr h) (unsafe.cdr t) ls x))
+			    (else
+			     (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls))))
+		     ((null? h)
+		      #f)
+		     (else
+		      (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
+	  ((null? h)
+	   #f)
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+  (%race ls ls ls x))
 
-
+
 (define memp
   (letrec ((race
 	    (lambda (h t ls p)
@@ -301,16 +329,16 @@
 			      h
 			    (if (not (eq? h t))
 				(race (unsafe.cdr h) (unsafe.cdr t) ls p)
-			      (die 'memp "circular list" ls)))
+			      (assertion-violation 'memp "circular list" ls)))
 			(if (null? h)
 			    '#f
-			  (die 'memp "not a proper list" ls)))))
+			  (assertion-violation 'memp EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 		(if (null? h)
 		    '#f
-		  (die 'memp "not a proper list" ls))))))
+		  (assertion-violation 'memp EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
     (lambda (p ls)
       (unless (procedure? p)
-	(die 'memp "not a procedure" p))
+	(assertion-violation 'memp "not a procedure" p))
       (race ls ls ls p))))
 
 (define find
@@ -327,16 +355,16 @@
 				  a
 				(if (not (eq? h t))
 				    (race (unsafe.cdr h) (unsafe.cdr t) ls p)
-				  (die 'find "circular list" ls))))
+				  (assertion-violation 'find "circular list" ls))))
 			  (if (null? h)
 			      '#f
-			    (die 'find "not a proper list" ls))))))
+			    (assertion-violation 'find EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
 		(if (null? h)
 		    '#f
-		  (die 'find "not a proper list" ls))))))
+		  (assertion-violation 'find EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
     (lambda (p ls)
       (unless (procedure? p)
-	(die 'find "not a procedure" p))
+	(assertion-violation 'find "not a procedure" p))
       (race ls ls ls p))))
 
 (define assq
@@ -354,16 +382,16 @@
 					(if (eq? (unsafe.car a) x)
 					    a
 					  (race x (unsafe.cdr h) (unsafe.cdr t) ls))
-				      (die 'assq "malformed alist"
+				      (assertion-violation 'assq "malformed alist"
 					   ls)))
-				(die 'assq "circular list" ls))
+				(assertion-violation 'assq "circular list" ls))
 			    (if (null? h)
 				#f
-			      (die 'assq "not a proper list" ls))))
-		      (die 'assq "malformed alist" ls)))
+			      (assertion-violation 'assq EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+		      (assertion-violation 'assq "malformed alist" ls)))
 		(if (null? h)
 		    #f
-		  (die 'assq "not a proper list" ls))))))
+		  (assertion-violation 'assq EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
     (lambda (x ls)
       (race x ls ls ls))))
 
@@ -383,19 +411,19 @@
 					(if (p (unsafe.car a))
 					    a
 					  (race p (unsafe.cdr h) (unsafe.cdr t) ls))
-				      (die 'assp "malformed alist"
+				      (assertion-violation 'assp "malformed alist"
 					   ls)))
-				(die 'assp "circular list" ls))
+				(assertion-violation 'assp "circular list" ls))
 			    (if (null? h)
 				#f
-			      (die 'assp "not a proper list" ls))))
-		      (die 'assp "malformed alist" ls)))
+			      (assertion-violation 'assp EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+		      (assertion-violation 'assp "malformed alist" ls)))
 		(if (null? h)
 		    #f
-		  (die 'assp "not a proper list" ls))))))
+		  (assertion-violation 'assp EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
     (lambda (p ls)
       (unless (procedure? p)
-	(die 'assp "not a procedure" p))
+	(assertion-violation 'assp "not a procedure" p))
       (race p ls ls ls))))
 
 (define assv
@@ -413,16 +441,16 @@
 					(if (eqv? (unsafe.car a) x)
 					    a
 					  (race x (unsafe.cdr h) (unsafe.cdr t) ls))
-				      (die 'assv "malformed alist"
+				      (assertion-violation 'assv "malformed alist"
 					   ls)))
-				(die 'assv "circular list" ls))
+				(assertion-violation 'assv "circular list" ls))
 			    (if (null? h)
 				#f
-			      (die 'assv "not a proper list" ls))))
-		      (die 'assv "malformed alist" ls)))
+			      (assertion-violation 'assv EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+		      (assertion-violation 'assv "malformed alist" ls)))
 		(if (null? h)
 		    #f
-		  (die 'assv "not a proper list" ls))))))
+		  (assertion-violation 'assv EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
     (lambda (x ls)
       (race x ls ls ls))))
 
@@ -441,16 +469,16 @@
 					(if (equal? (unsafe.car a) x)
 					    a
 					  (race x (unsafe.cdr h) (unsafe.cdr t) ls))
-				      (die 'assoc "malformed alist"
+				      (assertion-violation 'assoc "malformed alist"
 					   ls)))
-				(die 'assoc "circular list" ls))
+				(assertion-violation 'assoc "circular list" ls))
 			    (if (null? h)
 				#f
-			      (die 'assoc "not a proper list" ls))))
-		      (die 'assoc "malformed alist" ls)))
+			      (assertion-violation 'assoc EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+		      (assertion-violation 'assoc "malformed alist" ls)))
 		(if (null? h)
 		    #f
-		  (die 'assoc "not a proper list" ls))))))
+		  (assertion-violation 'assoc EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
     (lambda (x ls)
       (race x ls ls ls))))
 
@@ -470,23 +498,23 @@
 				       (if (cmp (unsafe.car h) x)
 					   (race (unsafe.cdr h) (unsafe.cdr t) ls x)
 					 (cons (unsafe.car h) (race (unsafe.cdr h) (unsafe.cdr t) ls x)))
-				     (die 'name "circular list" ls))
+				     (assertion-violation 'name "circular list" ls))
 				 (if (null? h)
 				     '()
-				   (die 'name "not a proper list" ls))))
+				   (assertion-violation 'name EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
 			   (let ((a0 (unsafe.car h)) (h (unsafe.cdr h)))
 			     (if (pair? h)
 				 (if (not (eq? h t))
 				     (if (cmp (unsafe.car h) x)
 					 (cons a0 (race (unsafe.cdr h) (unsafe.cdr t) ls x))
 				       (cons* a0 (unsafe.car h) (race (unsafe.cdr h) (unsafe.cdr t) ls x)))
-				   (die 'name "circular list" ls))
+				   (assertion-violation 'name "circular list" ls))
 			       (if (null? h)
 				   (list a0)
-				 (die 'name "not a proper list" ls)))))
+				 (assertion-violation 'name EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 		       (if (null? h)
 			   '()
-			 (die 'name "not a proper list" ls))))))
+			 (assertion-violation 'name EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
 	   (lambda (x ls)
 	     (check x ls)
 	     (race ls ls ls x)))))))
@@ -496,11 +524,11 @@
   (define-remover remp (lambda (elt p) (p elt))
     (lambda (x ls)
       (unless (procedure? x)
-	(die 'remp "not a procedure" x))))
+	(assertion-violation 'remp "not a procedure" x))))
   (define-remover filter (lambda (elt p) (not (p elt)))
     (lambda (x ls)
       (unless (procedure? x)
-	(die 'filter "not a procedure" x)))))
+	(assertion-violation 'filter "not a procedure" x)))))
 
 
 (module (map)
@@ -511,26 +539,26 @@
 	  (let ((h (unsafe.cdr h)))
 	    (if (pair? h)
 		(if (eq? h t)
-		    (die who "circular list")
+		    (assertion-violation who "circular list")
 		  (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2)))
 	      (if (null? h)
 		  (unsafe.fxadd1 n)
-		(die who "improper list"))))
+		(assertion-violation who "improper list"))))
 	(if (null? h)
 	    n
-	  (die who "improper list")))))
+	  (assertion-violation who "improper list")))))
   (define map1
     (lambda (f a d n)
       (cond
        ((pair? d)
 	(if (unsafe.fxzero? n)
-	    (die who "list was altered!")
+	    (assertion-violation who "list was altered!")
 	  (cons (f a) (map1 f (unsafe.car d) (unsafe.cdr d) (unsafe.fxsub1 n)))))
        ((null? d)
 	(if (unsafe.fxzero? n)
 	    (cons (f a) '())
-	  (die who "list was altered")))
-       (else (die who "list was altered")))))
+	  (assertion-violation who "list was altered")))
+       (else (assertion-violation who "list was altered")))))
   (define map2
     (lambda (f a1 a2 d1 d2 n)
       (cond
@@ -538,24 +566,24 @@
 	(cond
 	 ((pair? d2)
 	  (if (unsafe.fxzero? n)
-	      (die who "list was altered")
+	      (assertion-violation who "list was altered")
 	    (cons (f a1 a2)
 		  (map2 f
 			(unsafe.car d1) (unsafe.car d2)
 			(unsafe.cdr d1) (unsafe.cdr d2)
 			(unsafe.fxsub1 n)))))
-	 ((null? d2) (die who "length mismatch"))
-	 (else (die who "not a proper list"))))
+	 ((null? d2) (assertion-violation who "length mismatch"))
+	 (else (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
        ((null? d1)
 	(cond
 	 ((null? d2)
 	  (if (unsafe.fxzero? n)
 	      (cons (f a1 a2) '())
-	    (die who "list was altered")))
+	    (assertion-violation who "list was altered")))
 	 (else
-	  (die who
-	       (if (list? d2) "length mismatch" "not a proper list")))))
-       (else (die who "list was altered")))))
+	  (assertion-violation who
+	       (if (list? d2) "length mismatch" EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+       (else (assertion-violation who "list was altered")))))
   (define cars
     (lambda (ls*)
       (cond
@@ -566,7 +594,7 @@
 	   ((pair? a)
 	    (cons (car a) (cars (cdr ls*))))
 	   (else
-	    (die 'map "length mismatch"))))))))
+	    (assertion-violation 'map "length mismatch"))))))))
   (define cdrs
     (lambda (ls*)
       (cond
@@ -577,13 +605,13 @@
 	   ((pair? a)
 	    (cons (cdr a) (cdrs (cdr ls*))))
 	   (else
-	    (die 'map "length mismatch"))))))))
+	    (assertion-violation 'map "length mismatch"))))))))
   (define (err-mutated all-lists)
-    (apply die 'map "some lists were mutated during operation" all-lists))
+    (apply assertion-violation 'map "some lists were mutated during operation" all-lists))
   (define (err-mismatch all-lists)
-    (apply die 'map "length mismatch" all-lists))
+    (apply assertion-violation 'map "length mismatch" all-lists))
   (define (err-invalid all-lists)
-    (apply die 'map "invalid arguments" all-lists))
+    (apply assertion-violation 'map "invalid arguments" all-lists))
   (define mapm
     (lambda (f ls ls* n all-lists)
       (cond
@@ -602,7 +630,7 @@
     (case-lambda
      ((f ls)
       (unless (procedure? f)
-	(die who "not a procedure" f))
+	(assertion-violation who "not a procedure" f))
       (cond
        ((pair? ls)
 	(let ((d (unsafe.cdr ls)))
@@ -611,7 +639,7 @@
        (else (err-invalid (list ls)))))
      ((f ls ls2)
       (unless (procedure? f)
-	(die who "not a procedure" f))
+	(assertion-violation who "not a procedure" f))
       (cond
        ((pair? ls)
 	(if (pair? ls2)
@@ -622,7 +650,7 @@
        (else (err-invalid (list ls ls2)))))
      ((f ls . ls*)
       (unless (procedure? f)
-	(die who "not a procedure" f))
+	(assertion-violation who "not a procedure" f))
       (cond
        ((pair? ls)
 	(let ((n (len ls ls 0)))
@@ -638,28 +666,28 @@
 	  (let ((h (unsafe.cdr h)))
 	    (if (pair? h)
 		(if (eq? h t)
-		    (die who "circular list")
+		    (assertion-violation who "circular list")
 		  (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2)))
 	      (if (null? h)
 		  (unsafe.fxadd1 n)
-		(die who "improper list"))))
+		(assertion-violation who "improper list"))))
 	(if (null? h)
 	    n
-	  (die who "improper list")))))
+	  (assertion-violation who "improper list")))))
   (define for-each1
     (lambda (f a d n)
       (cond
        ((pair? d)
 	(if (unsafe.fxzero? n)
-	    (die who "list was altered!")
+	    (assertion-violation who "list was altered!")
 	  (begin
 	    (f a)
 	    (for-each1 f (unsafe.car d) (unsafe.cdr d) (unsafe.fxsub1 n)))))
        ((null? d)
 	(if (unsafe.fxzero? n)
 	    (f a)
-	  (die who "list was altered")))
-       (else (die who "list was altered")))))
+	  (assertion-violation who "list was altered")))
+       (else (assertion-violation who "list was altered")))))
   (define for-each2
     (lambda (f a1 a2 d1 d2 n)
       (cond
@@ -667,67 +695,67 @@
 	(cond
 	 ((pair? d2)
 	  (if (unsafe.fxzero? n)
-	      (die who "list was altered")
+	      (assertion-violation who "list was altered")
 	    (begin
 	      (f a1 a2)
 	      (for-each2 f
 			 (unsafe.car d1) (unsafe.car d2)
 			 (unsafe.cdr d1) (unsafe.cdr d2)
 			 (unsafe.fxsub1 n)))))
-	 (else (die who "length mismatch"))))
+	 (else (assertion-violation who "length mismatch"))))
        ((null? d1)
 	(cond
 	 ((null? d2)
 	  (if (unsafe.fxzero? n)
 	      (f a1 a2)
-	    (die who "list was altered")))
-	 (else (die who "length mismatch"))))
-       (else (die who "list was altered")))))
+	    (assertion-violation who "list was altered")))
+	 (else (assertion-violation who "length mismatch"))))
+       (else (assertion-violation who "list was altered")))))
   (define for-each
     (case-lambda
      ((f ls)
       (unless (procedure? f)
-	(die who "not a procedure" f))
+	(assertion-violation who "not a procedure" f))
       (cond
        ((pair? ls)
 	(let ((d (unsafe.cdr ls)))
 	  (for-each1 f (unsafe.car ls) d (len d d 0))))
        ((null? ls) (void))
-       (else (die who "improper list"))))
+       (else (assertion-violation who "improper list"))))
      ((f ls ls2)
       (unless (procedure? f)
-	(die who "not a procedure" f))
+	(assertion-violation who "not a procedure" f))
       (cond
        ((pair? ls)
 	(if (pair? ls2)
 	    (let ((d (unsafe.cdr ls)))
 	      (for-each2 f
 			 (unsafe.car ls) (unsafe.car ls2) d (unsafe.cdr ls2) (len d d 0)))
-	  (die who "length mismatch")))
+	  (assertion-violation who "length mismatch")))
        ((null? ls)
 	(if (null? ls2)
 	    (void)
-	  (die who "length mismatch")))
-       (else (die who "not a list"))))
+	  (assertion-violation who "length mismatch")))
+       (else (assertion-violation who "not a list"))))
      ((f ls . ls*)
       (unless (procedure? f)
-	(die 'for-each "not a procedure" f))
+	(assertion-violation 'for-each "not a procedure" f))
       (unless (list? ls)
-	(die 'for-each "not a list" ls))
+	(assertion-violation 'for-each "not a list" ls))
       (let ((n (length ls)))
 	(for-each
 	    (lambda (x)
 	      (unless (and (list? x) (= (length x) n))
-		(die 'for-each "not a list" x)))
+		(assertion-violation 'for-each "not a list" x)))
 	  ls*)
 	(let loop ((n (length ls)) (ls ls) (ls* ls*))
 	  (cond
 	   ((unsafe.fx= n 0)
 	    (unless (and (null? ls) (andmap null? ls*))
-	      (die 'for-each "list modified" f)))
+	      (assertion-violation 'for-each "list modified" f)))
 	   (else
 	    (unless (and (pair? ls) (andmap pair? ls*))
-	      (die 'for-each "list modified" f))
+	      (assertion-violation 'for-each "list modified" f))
 	    (apply f (car ls) (map car ls*))
 	    (loop (fx- n 1) (cdr ls) (map cdr ls*))))))))))
 
@@ -739,27 +767,27 @@
 	  (let ((h (unsafe.cdr h)))
 	    (if (pair? h)
 		(if (eq? h t)
-		    (die who "circular list")
+		    (assertion-violation who "circular list")
 		  (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2)))
 	      (if (null? h)
 		  (unsafe.fxadd1 n)
-		(die who "improper list"))))
+		(assertion-violation who "improper list"))))
 	(if (null? h)
 	    n
-	  (die who "improper list")))))
+	  (assertion-violation who "improper list")))))
   (define andmap1
     (lambda (f a d n)
       (cond
        ((pair? d)
 	(if (unsafe.fxzero? n)
-	    (die who "list was altered!")
+	    (assertion-violation who "list was altered!")
 	  (and (f a)
 	       (andmap1 f (unsafe.car d) (unsafe.cdr d) (unsafe.fxsub1 n)))))
        ((null? d)
 	(if (unsafe.fxzero? n)
 	    (f a)
-	  (die who "list was altered")))
-       (else (die who "list was altered")))))
+	  (assertion-violation who "list was altered")))
+       (else (assertion-violation who "list was altered")))))
   (define andmap2
     (lambda (f a1 a2 d1 d2 n)
       (cond
@@ -767,52 +795,52 @@
 	(cond
 	 ((pair? d2)
 	  (if (unsafe.fxzero? n)
-	      (die who "list was altered")
+	      (assertion-violation who "list was altered")
 	    (and
 	     (f a1 a2)
 	     (andmap2 f
                       (unsafe.car d1) (unsafe.car d2)
                       (unsafe.cdr d1) (unsafe.cdr d2)
                       (unsafe.fxsub1 n)))))
-	 (else (die who "length mismatch"))))
+	 (else (assertion-violation who "length mismatch"))))
        ((null? d1)
 	(cond
 	 ((null? d2)
 	  (if (unsafe.fxzero? n)
 	      (f a1 a2)
-	    (die who "list was altered")))
-	 (else (die who "length mismatch"))))
-       (else (die who "list was altered")))))
+	    (assertion-violation who "list was altered")))
+	 (else (assertion-violation who "length mismatch"))))
+       (else (assertion-violation who "list was altered")))))
   (define andmap
     (case-lambda
      ((f ls)
       (unless (procedure? f)
-	(die who "not a procedure" f))
+	(assertion-violation who "not a procedure" f))
       (cond
        ((pair? ls)
 	(let ((d (unsafe.cdr ls)))
 	  (andmap1 f (unsafe.car ls) d (len d d 0))))
        ((null? ls) #t)
-       (else (die who "improper list"))))
+       (else (assertion-violation who "improper list"))))
      ((f ls ls2)
       (unless (procedure? f)
-	(die who "not a procedure" f))
+	(assertion-violation who "not a procedure" f))
       (cond
        ((pair? ls)
 	(if (pair? ls2)
 	    (let ((d (unsafe.cdr ls)))
 	      (andmap2 f
 		       (unsafe.car ls) (unsafe.car ls2) d (unsafe.cdr ls2) (len d d 0)))
-	  (die who "length mismatch")))
+	  (assertion-violation who "length mismatch")))
        ((null? ls)
 	(if (null? ls2)
 	    #t
-	  (die who "length mismatch")))
-       (else (die who "not a list"))))
+	  (assertion-violation who "length mismatch")))
+       (else (assertion-violation who "not a list"))))
      ((f ls . ls*)
       (unless (procedure? f)
-	(die who "not a procedure" f))
-      (die who "vararg not yet supported")))))
+	(assertion-violation who "not a procedure" f))
+      (assertion-violation who "vararg not yet supported")))))
 
 
 
@@ -825,39 +853,39 @@
 	  (let ((h (unsafe.cdr h)))
 	    (if (pair? h)
 		(if (eq? h t)
-		    (die who "circular list")
+		    (assertion-violation who "circular list")
 		  (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2)))
 	      (if (null? h)
 		  (unsafe.fxadd1 n)
-		(die who "improper list"))))
+		(assertion-violation who "improper list"))))
 	(if (null? h)
 	    n
-	  (die who "improper list")))))
+	  (assertion-violation who "improper list")))))
   (define ormap1
     (lambda (f a d n)
       (cond
        ((pair? d)
 	(if (unsafe.fxzero? n)
-	    (die who "list was altered!")
+	    (assertion-violation who "list was altered!")
 	  (or (f a)
 	      (ormap1 f (unsafe.car d) (unsafe.cdr d) (unsafe.fxsub1 n)))))
        ((null? d)
 	(if (unsafe.fxzero? n)
 	    (f a)
-	  (die who "list was altered")))
-       (else (die who "list was altered")))))
+	  (assertion-violation who "list was altered")))
+       (else (assertion-violation who "list was altered")))))
   (define ormap
     (case-lambda
      ((f ls)
       (unless (procedure? f)
-	(die who "not a procedure" f))
+	(assertion-violation who "not a procedure" f))
       (cond
        ((pair? ls)
 	(let ((d (unsafe.cdr ls)))
 	  (ormap1 f (unsafe.car ls) d (len d d 0))))
        ((null? ls) #f)
-       (else (die who "improper list"))))
-     (_ (die who "vararg not supported yet")))))
+       (else (assertion-violation who "improper list"))))
+     (_ (assertion-violation who "vararg not supported yet")))))
 
 
 
@@ -868,7 +896,7 @@
 		  (let ((a0 (unsafe.car h)) (h (unsafe.cdr h)))
 		    (if (pair? h)
 			(if (eq? h t)
-			    (die 'partition "circular list" ls)
+			    (assertion-violation 'partition "circular list" ls)
 			  (let ((a1 (unsafe.car h)))
 			    (let-values (((a* b*) (race (unsafe.cdr h) (unsafe.cdr t) ls p)))
 			      (if (p a0)
@@ -882,13 +910,13 @@
 			  (if (p a0)
 			      (values (list a0) '())
 			    (values '() (list a0)))
-			(die 'parititon "not a proper list" ls))))
+			(assertion-violation 'parititon EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
 		(if (null? h)
 		    (values '() '())
-		  (die 'parition "not a proper list" ls))))))
+		  (assertion-violation 'parition EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
     (lambda (p ls)
       (unless (procedure? p)
-	(die 'partition "not a procedure" p))
+	(assertion-violation 'partition "not a procedure" p))
       (race ls ls ls p))))
 
 
@@ -902,10 +930,10 @@
 	 (or (null? ls) (and (null? (car ls)) (null*? (cdr ls)))))
        (define (err* ls*)
 	 (if (null? ls*)
-	     (die who "length mismatch")
+	     (assertion-violation who "length mismatch")
 	   (if (list? (car ls*))
 	       (err* (cdr ls*))
-	     (die who "not a proper list" (car ls*)))))
+	     (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
        (define (cars+cdrs ls ls*)
 	 (cond
 	  ((null? ls) (values '() '()))
@@ -915,23 +943,23 @@
 		 (let-values (((cars cdrs) (cars+cdrs (cdr ls) (cdr ls*))))
 		   (values (cons (car a) cars) (cons (cdr a) cdrs)))
 	       (if (list? (car ls*))
-		   (die who "length mismatch")
-		 (die who "not a proper list" (car ls*))))))))
+		   (assertion-violation who "length mismatch")
+		 (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*))))))))
        (define (loop1 f a h t ls)
 	 (if (pair? h)
 	     (let ((b (car h)) (h (cdr h)))
 	       (combine (f a)
 			(if (pair? h)
 			    (if (eq? h t)
-				(die who "circular" ls)
+				(assertion-violation who "circular" ls)
 			      (let ((c (car h)) (h (cdr h)))
 				(combine (f b) (loop1 f c h (cdr t) ls))))
 			  (if (null? h)
 			      (f b)
-			    (combine (f b) (die who "not a proper list" ls))))))
+			    (combine (f b) (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
 	   (if (null? h)
 	       (f a)
-	     (combine (f a) (die who "not a proper list" ls)))))
+	     (combine (f a) (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
        (define (loopn f a a* h h* t ls ls*)
 	 (if (pair? h)
 	     (let-values (((b* h*) (cars+cdrs h* ls*)))
@@ -939,7 +967,7 @@
 		 (combine (apply f a a*)
 			  (if (pair? h)
 			      (if (eq? h t)
-				  (die who "circular" ls)
+				  (assertion-violation who "circular" ls)
 				(let-values (((c* h*) (cars+cdrs h* ls*)))
 				  (let ((c (car h)) (h (cdr h)))
 				    (combine (apply f b b*)
@@ -954,15 +982,15 @@
 	 (case-lambda
 	  ((f ls)
 	   (unless (procedure? f)
-	     (die who "not a procedure" f))
+	     (assertion-violation who "not a procedure" f))
 	   (if (pair? ls)
 	       (loop1 f (car ls) (cdr ls) (cdr ls) ls)
 	     (if (null? ls)
 		 (combine)
-	       (die who "not a list" ls))))
+	       (assertion-violation who "not a list" ls))))
 	  ((f ls . ls*)
 	   (unless (procedure? f)
-	     (die who "not a procedure" f))
+	     (assertion-violation who "not a procedure" f))
 	   (if (pair? ls)
 	       (let-values (((cars cdrs) (cars+cdrs ls* ls*)))
 		 (loopn f (car ls) cars (cdr ls) cdrs (cdr ls) ls ls*))
@@ -979,10 +1007,10 @@
     (or (null? ls) (and (null? (car ls)) (null*? (cdr ls)))))
   (define (err* ls*)
     (if (null? ls*)
-	(die who "length mismatch")
+	(assertion-violation who "length mismatch")
       (if (list? (car ls*))
 	  (err* (cdr ls*))
-	(die who "not a proper list" (car ls*)))))
+	(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
   (define (cars+cdrs ls ls*)
     (cond
      ((null? ls) (values '() '()))
@@ -992,29 +1020,29 @@
 	    (let-values (((cars cdrs) (cars+cdrs (cdr ls) (cdr ls*))))
 	      (values (cons (car a) cars) (cons (cdr a) cdrs)))
 	  (if (list? (car ls*))
-	      (die who "length mismatch")
-	    (die who "not a proper list" (car ls*))))))))
+	      (assertion-violation who "length mismatch")
+	    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*))))))))
   (define (loop1 f nil h t ls)
     (if (pair? h)
 	(let ((a (car h)) (h (cdr h)))
 	  (if (pair? h)
 	      (if (eq? h t)
-		  (die who "circular" ls)
+		  (assertion-violation who "circular" ls)
 		(let ((b (car h)) (h (cdr h)) (t (cdr t)))
 		  (loop1 f (f (f nil a) b) h t ls)))
 	    (if (null? h)
 		(f nil a)
-	      (die who "not a proper list" ls))))
+	      (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
       (if (null? h)
 	  nil
-	(die who "not a proper list" ls))))
+	(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (define (loopn f nil h h* t ls ls*)
     (if (pair? h)
 	(let-values (((a* h*) (cars+cdrs h* ls*)))
 	  (let ((a (car h)) (h (cdr h)))
 	    (if (pair? h)
 		(if (eq? h t)
-		    (die who "circular" ls)
+		    (assertion-violation who "circular" ls)
 		  (let-values (((b* h*) (cars+cdrs h* ls*)))
 		    (let ((b (car h)) (h (cdr h)) (t (cdr t)))
 		      (loopn f
@@ -1030,11 +1058,11 @@
     (case-lambda
      ((f nil ls)
       (unless (procedure? f)
-	(die who "not a procedure" f))
+	(assertion-violation who "not a procedure" f))
       (loop1 f nil ls ls ls))
      ((f nil ls . ls*)
       (unless (procedure? f)
-	(die who "not a procedure" f))
+	(assertion-violation who "not a procedure" f))
       (loopn f nil ls ls* ls ls ls*)))))
 
 (module (fold-right)
@@ -1043,10 +1071,10 @@
     (or (null? ls) (and (null? (car ls)) (null*? (cdr ls)))))
   (define (err* ls*)
     (if (null? ls*)
-	(die who "length mismatch")
+	(assertion-violation who "length mismatch")
       (if (list? (car ls*))
 	  (err* (cdr ls*))
-	(die who "not a proper list" (car ls*)))))
+	(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
   (define (cars+cdrs ls ls*)
     (cond
      ((null? ls) (values '() '()))
@@ -1056,29 +1084,29 @@
 	    (let-values (((cars cdrs) (cars+cdrs (cdr ls) (cdr ls*))))
 	      (values (cons (car a) cars) (cons (cdr a) cdrs)))
 	  (if (list? (car ls*))
-	      (die who "length mismatch")
-	    (die who "not a proper list" (car ls*))))))))
+	      (assertion-violation who "length mismatch")
+	    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*))))))))
   (define (loop1 f nil h t ls)
     (if (pair? h)
 	(let ((a (car h)) (h (cdr h)))
 	  (if (pair? h)
 	      (if (eq? h t)
-		  (die who "circular" ls)
+		  (assertion-violation who "circular" ls)
 		(let ((b (car h)) (h (cdr h)) (t (cdr t)))
 		  (f a (f b (loop1 f nil h t ls)))))
 	    (if (null? h)
 		(f a nil)
-	      (die who "not a proper list" ls))))
+	      (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
       (if (null? h)
 	  nil
-	(die who "not a proper list" ls))))
+	(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (define (loopn f nil h h* t ls ls*)
     (if (pair? h)
 	(let-values (((a* h*) (cars+cdrs h* ls*)))
 	  (let ((a (car h)) (h (cdr h)))
 	    (if (pair? h)
 		(if (eq? h t)
-		    (die who "circular" ls)
+		    (assertion-violation who "circular" ls)
 		  (let-values (((b* h*) (cars+cdrs h* ls*)))
 		    (let ((b (car h)) (h (cdr h)) (t (cdr t)))
 		      (apply f a
@@ -1097,11 +1125,11 @@
     (case-lambda
      ((f nil ls)
       (unless (procedure? f)
-	(die who "not a procedure" f))
+	(assertion-violation who "not a procedure" f))
       (loop1 f nil ls ls ls))
      ((f nil ls . ls*)
       (unless (procedure? f)
-	(die who "not a procedure" f))
+	(assertion-violation who "not a procedure" f))
       (loopn f nil ls ls* ls ls ls*))
      )))
 
