@@ -36,6 +36,10 @@
   (pair? obj)
   (assertion-violation who "argument does not have required pair structure" obj))
 
+(define-argument-validation (list who obj)
+  (list? obj)
+  (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT obj))
+
 (define-argument-validation (length who obj)
   (and (fixnum? obj) (unsafe.fx>= obj 0))
   (assertion-violation who "expected non-negative fixnum list length argument" obj))
@@ -696,105 +700,109 @@
 
 (module (for-each)
   (define who 'for-each)
-  (define len
-    (lambda (h t n)
-      (if (pair? h)
-	  (let ((h (unsafe.cdr h)))
-	    (if (pair? h)
-		(if (eq? h t)
-		    (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
-		  (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2)))
-	      (if (null? h)
-		  (unsafe.fxadd1 n)
-		(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
-	(if (null? h)
-	    n
-	  (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
-  (define for-each1
-    (lambda (f a d n)
-      (cond
-       ((pair? d)
-	(if (unsafe.fxzero? n)
-	    (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
-	  (begin
-	    (f a)
-	    (for-each1 f (unsafe.car d) (unsafe.cdr d) (unsafe.fxsub1 n)))))
-       ((null? d)
-	(if (unsafe.fxzero? n)
-	    (f a)
-	  (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
-       (else (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))))
-  (define for-each2
-    (lambda (f a1 a2 d1 d2 n)
-      (cond
-       ((pair? d1)
-	(cond
-	 ((pair? d2)
-	  (if (unsafe.fxzero? n)
-	      (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
-	    (begin
-	      (f a1 a2)
-	      (for-each2 f
-			 (unsafe.car d1) (unsafe.car d2)
-			 (unsafe.cdr d1) (unsafe.cdr d2)
-			 (unsafe.fxsub1 n)))))
-	 (else (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))))
-       ((null? d1)
-	(cond
-	 ((null? d2)
-	  (if (unsafe.fxzero? n)
-	      (f a1 a2)
-	    (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
-	 (else (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))))
-       (else (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))))
+
+  (define (len h t n)
+    (cond ((pair? h)
+	   (let ((h (unsafe.cdr h)))
+	     (cond ((pair? h)
+		    (if (eq? h t)
+			(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
+		      (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2))))
+		   ((null? h)
+		    (unsafe.fxadd1 n))
+		   (else
+		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+	  ((null? h)
+	   n)
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
+
+  (define (for-each1 f a d n)
+    (cond ((pair? d)
+	   (if (unsafe.fxzero? n)
+	       (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
+	     (begin
+	       (f a)
+	       (for-each1 f (unsafe.car d) (unsafe.cdr d) (unsafe.fxsub1 n)))))
+	  ((null? d)
+	   (if (unsafe.fxzero? n)
+	       (f a)
+	     (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
+	  (else
+	   (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
+
+  (define (for-each2 f a1 a2 d1 d2 n)
+    (cond ((pair? d1)
+	   (if (pair? d2)
+	       (if (unsafe.fxzero? n)
+		   (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
+		 (begin
+		   (f a1 a2)
+		   (for-each2 f
+			      (unsafe.car d1) (unsafe.car d2)
+			      (unsafe.cdr d1) (unsafe.cdr d2)
+			      (unsafe.fxsub1 n))))
+	     (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
+	  ((null? d1)
+	   (if (null? d2)
+	       (if (unsafe.fxzero? n)
+		   (f a1 a2)
+		 (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))
+	     (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
+	  (else
+	   (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
+
   (define for-each
     (case-lambda
      ((f ls)
-      (unless (procedure? f)
-	(assertion-violation who "not a procedure" f))
-      (cond
-       ((pair? ls)
-	(let ((d (unsafe.cdr ls)))
-	  (for-each1 f (unsafe.car ls) d (len d d 0))))
-       ((null? ls) (void))
-       (else (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
-     ((f ls ls2)
-      (unless (procedure? f)
-	(assertion-violation who "not a procedure" f))
-      (cond
-       ((pair? ls)
-	(if (pair? ls2)
-	    (let ((d (unsafe.cdr ls)))
-	      (for-each2 f
-			 (unsafe.car ls) (unsafe.car ls2) d (unsafe.cdr ls2) (len d d 0)))
-	  (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
-       ((null? ls)
-	(if (null? ls2)
-	    (void)
-	  (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
-       (else (assertion-violation who "not a list"))))
-     ((f ls . ls*)
-      (unless (procedure? f)
-	(assertion-violation 'for-each "not a procedure" f))
-      (unless (list? ls)
-	(assertion-violation 'for-each "not a list" ls))
-      (let ((n (length ls)))
-	(for-each
-	    (lambda (x)
-	      (unless (and (list? x) (= (length x) n))
-		(assertion-violation 'for-each "not a list" x)))
-	  ls*)
-	(let loop ((n (length ls)) (ls ls) (ls* ls*))
-	  (cond
-	   ((unsafe.fx= n 0)
-	    (unless (and (null? ls) (andmap null? ls*))
-	      (assertion-violation 'for-each "list modified" f)))
-	   (else
-	    (unless (and (pair? ls) (andmap pair? ls*))
-	      (assertion-violation 'for-each "list modified" f))
-	    (apply f (car ls) (map car ls*))
-	    (loop (fx- n 1) (cdr ls) (map cdr ls*))))))))))
+      (with-arguments-validation (who)
+	  ((procedure f))
+	(cond ((pair? ls)
+	       (let ((d (unsafe.cdr ls)))
+		 (for-each1 f (unsafe.car ls) d (len d d 0))))
+	      ((null? ls)
+	       (void))
+	      (else
+	       (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
 
+     ((f ls ls2)
+      (with-arguments-validation (who)
+	  ((procedure f))
+	(cond ((pair? ls)
+	       (if (pair? ls2)
+		   (let ((d (unsafe.cdr ls)))
+		     (for-each2 f (unsafe.car ls) (unsafe.car ls2) d (unsafe.cdr ls2) (len d d 0)))
+		 (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
+	      ((null? ls)
+	       (if (null? ls2)
+		   (void)
+		 (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
+	      (else
+	       (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+
+     ((f ls . ls*)
+      (with-arguments-validation (who)
+	  ((procedure	f)
+	   (list	ls))
+	(let ((n (length ls)))
+	  (for-each (lambda (x)
+		      (unless (and (list? x) (= (length x) n))
+			(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT x)))
+	    ls*)
+	  (let loop ((n (length ls)) (ls ls) (ls* ls*))
+	    (if (unsafe.fx= n 0)
+		(unless (and (null? ls) (andmap null? ls*))
+		  (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING f))
+	      (begin
+	       (unless (and (pair? ls) (andmap pair? ls*))
+		 (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING f))
+	       (apply f (car ls) (map car ls*))
+	       (loop (fx- n 1) (cdr ls) (map cdr ls*))))))))
+     ))
+
+  #| end of module |#)
+
+
 (module (andmap)
   (define who 'andmap)
   (define len
@@ -872,15 +880,13 @@
 	(if (null? ls2)
 	    #t
 	  (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
-       (else (assertion-violation who "not a list"))))
+       (else (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
      ((f ls . ls*)
       (unless (procedure? f)
 	(assertion-violation who "not a procedure" f))
       (assertion-violation who "vararg not yet supported")))))
 
-
-
-
+
 (module (ormap)
   (define who 'ormap)
   (define len
@@ -923,8 +929,7 @@
        (else (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
      (_ (assertion-violation who "vararg not supported yet")))))
 
-
-
+
 (define partition
   (letrec ((%race
 	    (lambda (h t ls p)
@@ -956,7 +961,6 @@
       (%race ls ls ls p))))
 
 
-
 (define-syntax define-iterator
   (syntax-rules ()
     ((_ name combine)
@@ -1023,7 +1027,7 @@
 	       (loop1 f (car ls) (cdr ls) (cdr ls) ls)
 	     (if (null? ls)
 		 (combine)
-	       (assertion-violation who "not a list" ls))))
+	       (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
 	  ((f ls . ls*)
 	   (unless (procedure? f)
 	     (assertion-violation who "not a procedure" f))
@@ -1037,6 +1041,7 @@
 (define-iterator for-all and)
 (define-iterator exists  or)
 
+
 (module (fold-left)
   (define who 'fold-left)
   (define (null*? ls)
@@ -1101,6 +1106,7 @@
 	(assertion-violation who "not a procedure" f))
       (loopn f nil ls ls* ls ls ls*)))))
 
+
 (module (fold-right)
   (define who 'fold-right)
   (define (null*? ls)
