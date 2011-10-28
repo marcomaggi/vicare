@@ -5612,6 +5612,12 @@ Return the void value.  It is the value returned by forms that do not
 return a meaningful value.
 @end defun
 
+
+@defun host-info
+Return a string being the value @gnu{} Autoconf assigned to the
+@code{target} variable.  Example: @code{i686-pc-linux-gnu}.
+@end defun
+
 @c page
 @node posix
 @chapter The @posix{} interface
