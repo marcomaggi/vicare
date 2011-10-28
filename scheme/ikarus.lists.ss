@@ -804,90 +804,100 @@
 
 
 (module (andmap)
+  ;;ANDMAP should be the same as R6RS's FOR-ALL (Marco Maggi; Oct 28, 2011).
+  ;;
   (define who 'andmap)
-  (define len
-    (lambda (h t n)
-      (if (pair? h)
-	  (let ((h (unsafe.cdr h)))
-	    (if (pair? h)
-		(if (eq? h t)
-		    (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
-		  (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2)))
-	      (if (null? h)
-		  (unsafe.fxadd1 n)
-		(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
-	(if (null? h)
-	    n
-	  (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
-  (define andmap1
-    (lambda (f a d n)
-      (cond
-       ((pair? d)
-	(if (unsafe.fxzero? n)
-	    (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
-	  (and (f a)
-	       (andmap1 f (unsafe.car d) (unsafe.cdr d) (unsafe.fxsub1 n)))))
-       ((null? d)
-	(if (unsafe.fxzero? n)
-	    (f a)
-	  (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
-       (else (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))))
-  (define andmap2
-    (lambda (f a1 a2 d1 d2 n)
-      (cond
-       ((pair? d1)
-	(cond
-	 ((pair? d2)
-	  (if (unsafe.fxzero? n)
-	      (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
-	    (and
-	     (f a1 a2)
-	     (andmap2 f
-                      (unsafe.car d1) (unsafe.car d2)
-                      (unsafe.cdr d1) (unsafe.cdr d2)
-                      (unsafe.fxsub1 n)))))
-	 (else (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))))
-       ((null? d1)
-	(cond
-	 ((null? d2)
-	  (if (unsafe.fxzero? n)
-	      (f a1 a2)
-	    (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
-	 (else (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))))
-       (else (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))))
+
+  (define (len h t n)
+    (cond ((pair? h)
+	   (let ((h (unsafe.cdr h)))
+	     (cond ((pair? h)
+		    (if (eq? h t)
+			(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
+		      (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2))))
+		   ((null? h)
+		    (unsafe.fxadd1 n))
+		   (else
+		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+	  ((null? h)
+	   n)
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
+
+  (define (andmap1 f a d n)
+    (cond ((pair? d)
+	   (if (unsafe.fxzero? n)
+	       (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
+	     (and (f a)
+		  (andmap1 f (unsafe.car d) (unsafe.cdr d) (unsafe.fxsub1 n)))))
+	  ((null? d)
+	   (if (unsafe.fxzero? n)
+	       (f a)
+	     (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
+	  (else
+	   (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
+
+  (define (andmap2 f a1 a2 d1 d2 n)
+    (cond ((pair? d1)
+	   (if (pair? d2)
+	       (if (unsafe.fxzero? n)
+		   (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
+		 (and (f a1 a2)
+		      (andmap2 f
+			       (unsafe.car d1) (unsafe.car d2)
+			       (unsafe.cdr d1) (unsafe.cdr d2)
+			       (unsafe.fxsub1 n))))
+	     (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
+	  ((null? d1)
+	   (if (null? d2)
+	       (if (unsafe.fxzero? n)
+		   (f a1 a2)
+		 (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))
+	     (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
+	  (else
+	   (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
+
   (define andmap
     (case-lambda
      ((f ls)
-      (unless (procedure? f)
-	(assertion-violation who "not a procedure" f))
-      (cond
-       ((pair? ls)
-	(let ((d (unsafe.cdr ls)))
-	  (andmap1 f (unsafe.car ls) d (len d d 0))))
-       ((null? ls) #t)
-       (else (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
+      (with-arguments-validation (who)
+	  ((procedure f))
+	(cond ((pair? ls)
+	       (let ((d (unsafe.cdr ls)))
+		 (andmap1 f (unsafe.car ls) d (len d d 0))))
+	      ((null? ls)
+	       #t)
+	      (else
+	       (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+
      ((f ls ls2)
-      (unless (procedure? f)
-	(assertion-violation who "not a procedure" f))
-      (cond
-       ((pair? ls)
-	(if (pair? ls2)
-	    (let ((d (unsafe.cdr ls)))
-	      (andmap2 f
-		       (unsafe.car ls) (unsafe.car ls2) d (unsafe.cdr ls2) (len d d 0)))
-	  (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
-       ((null? ls)
-	(if (null? ls2)
-	    #t
-	  (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
-       (else (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
+      (with-arguments-validation (who)
+	  ((procedure f))
+	(cond ((pair? ls)
+	       (if (pair? ls2)
+		   (let ((d (unsafe.cdr ls)))
+		     (andmap2 f
+			      (unsafe.car ls) (unsafe.car ls2) d (unsafe.cdr ls2) (len d d 0)))
+		 (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
+	      ((null? ls)
+	       (if (null? ls2)
+		   #t
+		 (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
+	      (else
+	       (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+
      ((f ls . ls*)
-      (unless (procedure? f)
-	(assertion-violation who "not a procedure" f))
-      (assertion-violation who "vararg not yet supported")))))
+      (with-arguments-validation (who)
+	  ((procedure f))
+	(assertion-violation who "vararg not yet supported")))
+     ))
+
+  #| end of module |# )
 
 
 (module (ormap)
+  ;;ANDMAP should be the same as R6RS's EXISTS (Marco Maggi; Oct 28, 2011).
+  ;;
   (define who 'ormap)
   (define len
     (lambda (h t n)
