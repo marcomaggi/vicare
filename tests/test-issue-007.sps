@@ -40,7 +40,13 @@
 ;; (display "#x")(display (number->string m 16))(newline)
 ;; (display "#b")(display (number->string m 2))(newline)
 
-(apply + (make-list m 1))
+(check
+    (guard (E ((assertion-violation? E)
+;;;	       (pretty-print (condition-message E))
+	       #t)
+	      (else E))
+      (apply + (make-list m 1)))
+  => #t)
 
 
 ;;;; done
