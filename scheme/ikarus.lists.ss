@@ -63,6 +63,9 @@
 (define INDEX_IS_OUT_OF_RANGE
   "index is out of range")
 
+(define MALFORMED_ALIST_AS_ARGUMENT
+  "malformed alist as argument")
+
 
 (define ($memq x ls)
   (and (pair? ls)
@@ -374,170 +377,177 @@
     (%race ls ls ls p)))
 
 
-(define assq
-  (letrec ((race
-	    (lambda (x h t ls)
-	      (if (pair? h)
-		  (let ((a (unsafe.car h)) (h (unsafe.cdr h)))
-		    (if (pair? a)
-			(if (eq? (unsafe.car a) x)
-			    a
-			  (if (pair? h)
-			      (if (not (eq? h t))
-				  (let ((a (unsafe.car h)))
-				    (if (pair? a)
-					(if (eq? (unsafe.car a) x)
-					    a
-					  (race x (unsafe.cdr h) (unsafe.cdr t) ls))
-				      (assertion-violation 'assq "malformed alist"
-					   ls)))
-				(assertion-violation 'assq "circular list" ls))
-			    (if (null? h)
-				#f
-			      (assertion-violation 'assq EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
-		      (assertion-violation 'assq "malformed alist" ls)))
-		(if (null? h)
-		    #f
-		  (assertion-violation 'assq EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
-    (lambda (x ls)
-      (race x ls ls ls))))
+(define (assq x ls)
+  (define who 'assq)
+  (define (%race x h t ls)
+    (cond ((pair? h)
+	   (let ((a (unsafe.car h)) (h (unsafe.cdr h)))
+	     (if (pair? a)
+		 (cond ((eq? (unsafe.car a) x)
+			a)
+		       ((pair? h)
+			(if (not (eq? h t))
+			    (let ((a (unsafe.car h)))
+			      (if (pair? a)
+				  (if (eq? (unsafe.car a) x)
+				      a
+				    (%race x (unsafe.cdr h) (unsafe.cdr t) ls))
+				(assertion-violation who
+				  MALFORMED_ALIST_AS_ARGUMENT ls)))
+			  (assertion-violation who
+			    CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
+		       ((null? h)
+			#f)
+		       (else
+			(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))
+	       (assertion-violation who MALFORMED_ALIST_AS_ARGUMENT ls))))
+	  ((null? h)
+	   #f)
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+  (%race x ls ls ls))
 
+
+(define (assp p ls)
+  (define who 'assp)
+  (define (%race p h t ls)
+    (cond ((pair? h)
+	   (let ((a (unsafe.car h)) (h (unsafe.cdr h)))
+	     (if (pair? a)
+		 (cond ((p (unsafe.car a))
+			a)
+		       ((pair? h)
+			(if (not (eq? h t))
+			    (let ((a (unsafe.car h)))
+			      (if (pair? a)
+				  (if (p (unsafe.car a))
+				      a
+				    (%race p (unsafe.cdr h) (unsafe.cdr t) ls))
+				(assertion-violation who
+				  MALFORMED_ALIST_AS_ARGUMENT ls)))
+			  (assertion-violation who
+			    CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
+		       ((null? h)
+			#f)
+		       (else
+			(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))
+	       (assertion-violation who MALFORMED_ALIST_AS_ARGUMENT ls))))
+	  ((null? h)
+	   #f)
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+  (with-arguments-validation (who)
+      ((procedure p))
+    (%race p ls ls ls)))
 
-(define assp
-  (letrec ((race
-	    (lambda (p h t ls)
-	      (if (pair? h)
-		  (let ((a (unsafe.car h)) (h (unsafe.cdr h)))
-		    (if (pair? a)
-			(if (p (unsafe.car a))
-			    a
-			  (if (pair? h)
-			      (if (not (eq? h t))
-				  (let ((a (unsafe.car h)))
-				    (if (pair? a)
-					(if (p (unsafe.car a))
-					    a
-					  (race p (unsafe.cdr h) (unsafe.cdr t) ls))
-				      (assertion-violation 'assp "malformed alist"
-					   ls)))
-				(assertion-violation 'assp "circular list" ls))
-			    (if (null? h)
-				#f
-			      (assertion-violation 'assp EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
-		      (assertion-violation 'assp "malformed alist" ls)))
-		(if (null? h)
-		    #f
-		  (assertion-violation 'assp EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
-    (lambda (p ls)
-      (unless (procedure? p)
-	(assertion-violation 'assp "not a procedure" p))
-      (race p ls ls ls))))
+
+(define (assv x ls)
+  (define who 'assv)
+  (define (%race x h t ls)
+    (cond ((pair? h)
+	   (let ((a (unsafe.car h)) (h (unsafe.cdr h)))
+	     (if (pair? a)
+		 (cond ((eqv? (unsafe.car a) x)
+			a)
+		       ((pair? h)
+			(if (not (eq? h t))
+			    (let ((a (unsafe.car h)))
+			      (if (pair? a)
+				  (if (eqv? (unsafe.car a) x)
+				      a
+				    (%race x (unsafe.cdr h) (unsafe.cdr t) ls))
+				(assertion-violation who MALFORMED_ALIST_AS_ARGUMENT ls)))
+			  (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
+		       ((null? h)
+			#f)
+		       (else
+			(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))
+	       (assertion-violation who MALFORMED_ALIST_AS_ARGUMENT ls))))
+	  ((null? h)
+	   #f)
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+  (%race x ls ls ls))
 
-(define assv
-  (letrec ((race
-	    (lambda (x h t ls)
-	      (if (pair? h)
-		  (let ((a (unsafe.car h)) (h (unsafe.cdr h)))
-		    (if (pair? a)
-			(if (eqv? (unsafe.car a) x)
-			    a
-			  (if (pair? h)
-			      (if (not (eq? h t))
-				  (let ((a (unsafe.car h)))
-				    (if (pair? a)
-					(if (eqv? (unsafe.car a) x)
-					    a
-					  (race x (unsafe.cdr h) (unsafe.cdr t) ls))
-				      (assertion-violation 'assv "malformed alist"
-					   ls)))
-				(assertion-violation 'assv "circular list" ls))
-			    (if (null? h)
-				#f
-			      (assertion-violation 'assv EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
-		      (assertion-violation 'assv "malformed alist" ls)))
-		(if (null? h)
-		    #f
-		  (assertion-violation 'assv EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
-    (lambda (x ls)
-      (race x ls ls ls))))
+
+(define (assoc x ls)
+  (define who 'assoc)
+  (define (%race x h t ls)
+    (cond ((pair? h)
+	   (let ((a (unsafe.car h)) (h (unsafe.cdr h)))
+	     (if (pair? a)
+		 (cond ((equal? (unsafe.car a) x)
+			a)
+		       ((pair? h)
+			(if (not (eq? h t))
+			    (let ((a (unsafe.car h)))
+			      (if (pair? a)
+				  (if (equal? (unsafe.car a) x)
+				      a
+				    (%race x (unsafe.cdr h) (unsafe.cdr t) ls))
+				(assertion-violation who MALFORMED_ALIST_AS_ARGUMENT ls)))
+			  (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
+		       ((null? h)
+			#f)
+		       (else
+			(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))
+	       (assertion-violation who MALFORMED_ALIST_AS_ARGUMENT ls))))
+	  ((null? h)
+	   #f)
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+  (%race x ls ls ls))
 
-(define assoc
-  (letrec ((race
-	    (lambda (x h t ls)
-	      (if (pair? h)
-		  (let ((a (unsafe.car h)) (h (unsafe.cdr h)))
-		    (if (pair? a)
-			(if (equal? (unsafe.car a) x)
-			    a
-			  (if (pair? h)
-			      (if (not (eq? h t))
-				  (let ((a (unsafe.car h)))
-				    (if (pair? a)
-					(if (equal? (unsafe.car a) x)
-					    a
-					  (race x (unsafe.cdr h) (unsafe.cdr t) ls))
-				      (assertion-violation 'assoc "malformed alist"
-					   ls)))
-				(assertion-violation 'assoc "circular list" ls))
-			    (if (null? h)
-				#f
-			      (assertion-violation 'assoc EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
-		      (assertion-violation 'assoc "malformed alist" ls)))
-		(if (null? h)
-		    #f
-		  (assertion-violation 'assoc EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
-    (lambda (x ls)
-      (race x ls ls ls))))
+
+(define-syntax define-remover
+  (syntax-rules ()
+    ((_ ?name ?cmp ?check)
+     (define (?name x ls)
+       (define who '?name)
+       (define (%race h t ls x)
+	 (cond ((pair? h)
+		(if (?cmp (unsafe.car h) x)
+		    (let ((h (unsafe.cdr h)))
+		      (cond ((pair? h)
+			     (if (not (eq? h t))
+				 (if (?cmp (unsafe.car h) x)
+				     (%race (unsafe.cdr h) (unsafe.cdr t) ls x)
+				   (cons (unsafe.car h) (%race (unsafe.cdr h) (unsafe.cdr t) ls x)))
+			       (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
+			    ((null? h)
+			     '())
+			    (else
+			     (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+		  (let ((a0 (unsafe.car h)) (h (unsafe.cdr h)))
+		    (cond ((pair? h)
+			   (if (not (eq? h t))
+			       (if (?cmp (unsafe.car h) x)
+				   (cons a0 (%race (unsafe.cdr h) (unsafe.cdr t) ls x))
+				 (cons* a0 (unsafe.car h) (%race (unsafe.cdr h) (unsafe.cdr t) ls x)))
+			     (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
+			  ((null? h)
+			   (list a0))
+			  (else
+			   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
+	       ((null? h)
+		'())
+	       (else
+		(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	 (with-arguments-validation (who)
+	     ((?check x))
+	   (%race ls ls ls x))))))
 
+(define-remover remq eq? #t)
 
-(module (remq remv remove remp filter)
-  (define-syntax define-remover
-    (syntax-rules ()
-      ((_ name cmp check)
-       (define name
-	 (letrec ((race
-		   (lambda (h t ls x)
-		     (if (pair? h)
-			 (if (cmp (unsafe.car h) x)
-			     (let ((h (unsafe.cdr h)))
-			       (if (pair? h)
-				   (if (not (eq? h t))
-				       (if (cmp (unsafe.car h) x)
-					   (race (unsafe.cdr h) (unsafe.cdr t) ls x)
-					 (cons (unsafe.car h) (race (unsafe.cdr h) (unsafe.cdr t) ls x)))
-				     (assertion-violation 'name "circular list" ls))
-				 (if (null? h)
-				     '()
-				   (assertion-violation 'name EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
-			   (let ((a0 (unsafe.car h)) (h (unsafe.cdr h)))
-			     (if (pair? h)
-				 (if (not (eq? h t))
-				     (if (cmp (unsafe.car h) x)
-					 (cons a0 (race (unsafe.cdr h) (unsafe.cdr t) ls x))
-				       (cons* a0 (unsafe.car h) (race (unsafe.cdr h) (unsafe.cdr t) ls x)))
-				   (assertion-violation 'name "circular list" ls))
-			       (if (null? h)
-				   (list a0)
-				 (assertion-violation 'name EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
-		       (if (null? h)
-			   '()
-			 (assertion-violation 'name EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
-	   (lambda (x ls)
-	     (check x ls)
-	     (race ls ls ls x)))))))
-  (define-remover remq eq? (lambda (x ls) #t))
-  (define-remover remv eqv? (lambda (x ls) #t))
-  (define-remover remove equal? (lambda (x ls) #t))
-  (define-remover remp (lambda (elt p) (p elt))
-    (lambda (x ls)
-      (unless (procedure? x)
-	(assertion-violation 'remp "not a procedure" x))))
-  (define-remover filter (lambda (elt p) (not (p elt)))
-    (lambda (x ls)
-      (unless (procedure? x)
-	(assertion-violation 'filter "not a procedure" x)))))
+(define-remover remv eqv? #t)
 
+(define-remover remove equal? #t)
 
+(define-remover remp (lambda (elt p) (p elt)) procedure)
+
+(define-remover filter (lambda (elt p) (not (p elt))) procedure)
+
+
 (module (map)
   (define who 'map)
   (define len
@@ -546,7 +556,7 @@
 	  (let ((h (unsafe.cdr h)))
 	    (if (pair? h)
 		(if (eq? h t)
-		    (assertion-violation who "circular list")
+		    (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
 		  (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2)))
 	      (if (null? h)
 		  (unsafe.fxadd1 n)
@@ -673,7 +683,7 @@
 	  (let ((h (unsafe.cdr h)))
 	    (if (pair? h)
 		(if (eq? h t)
-		    (assertion-violation who "circular list")
+		    (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
 		  (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2)))
 	      (if (null? h)
 		  (unsafe.fxadd1 n)
@@ -774,7 +784,7 @@
 	  (let ((h (unsafe.cdr h)))
 	    (if (pair? h)
 		(if (eq? h t)
-		    (assertion-violation who "circular list")
+		    (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
 		  (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2)))
 	      (if (null? h)
 		  (unsafe.fxadd1 n)
@@ -860,7 +870,7 @@
 	  (let ((h (unsafe.cdr h)))
 	    (if (pair? h)
 		(if (eq? h t)
-		    (assertion-violation who "circular list")
+		    (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
 		  (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2)))
 	      (if (null? h)
 		  (unsafe.fxadd1 n)
@@ -897,15 +907,15 @@
 
 
 (define partition
-  (letrec ((race
+  (letrec ((%race
 	    (lambda (h t ls p)
 	      (if (pair? h)
 		  (let ((a0 (unsafe.car h)) (h (unsafe.cdr h)))
 		    (if (pair? h)
 			(if (eq? h t)
-			    (assertion-violation 'partition "circular list" ls)
+			    (assertion-violation 'partition CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)
 			  (let ((a1 (unsafe.car h)))
-			    (let-values (((a* b*) (race (unsafe.cdr h) (unsafe.cdr t) ls p)))
+			    (let-values (((a* b*) (%race (unsafe.cdr h) (unsafe.cdr t) ls p)))
 			      (if (p a0)
 				  (if (p a1)
 				      (values (cons* a0 a1 a*) b*)
@@ -924,9 +934,9 @@
     (lambda (p ls)
       (unless (procedure? p)
 	(assertion-violation 'partition "not a procedure" p))
-      (race ls ls ls p))))
+      (%race ls ls ls p))))
 
-
+
 
 (define-syntax define-iterator
   (syntax-rules ()

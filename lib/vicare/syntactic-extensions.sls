@@ -179,6 +179,19 @@
   ;;    (do-this)
   ;;    (do-that)))
   ;;
+  ;;As a special case:
+  ;;
+  ;;  (with-arguments-validation (who)
+  ;;       ((#t  X))
+  ;;    (do-this)
+  ;;    (do-that))
+  ;;
+  ;;expands to:
+  ;;
+  ;;  (begin
+  ;;    (do-this)
+  ;;    (do-that))
+  ;;
   (lambda (stx)
     (define (main stx)
       (syntax-case stx ()
@@ -202,6 +215,10 @@
       (syntax-case validators ()
 	(()
 	 body)
+	;;Accept #t as special validator meaning "always valid"; this is
+	;;sometimes useful when composing syntax output forms.
+	((#t . ?other-validators)
+	 (%build-output-form who #'?other-validators list-of-args body))
 	((?validator . ?other-validators)
 	 (identifier? #'?validator)
 	 (let ((str (symbol->string (syntax->datum #'?validator))))
