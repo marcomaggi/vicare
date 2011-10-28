@@ -71,6 +71,18 @@
   (unsafe.fx< idx (unsafe.string-length str))
   (assertion-violation who "index is out of range for string" idx str))
 
+(define-argument-validation (start-for who idx len)
+  (unsafe.fx<= idx len)
+  (assertion-violation who "start index argument out of range for string" idx len))
+
+(define-argument-validation (end-for who idx len)
+  (unsafe.fx<= idx len)
+  (assertion-violation who "end index argument out of range for string" idx len))
+
+(define-argument-validation (start-end who start end)
+  (unsafe.fx<= start end)
+  (assertion-violation who "start and end index arguments are in decreasing order" start end))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (latin1 who code-point str)
@@ -80,31 +92,51 @@
     (unsafe.fixnum->char code-point) str))
 
 
-(define (string-length x)
+(define (string-length str)
+  ;;Defined by R6RS.   Return the number of characters  in the given STR
+  ;;as an exact integer object.
+  ;;
   (define who 'string-length)
   (with-arguments-validation (who)
-      ((string x))
-    (unsafe.string-length x)))
+      ((string str))
+    (unsafe.string-length str)))
 
-(define (string-ref s i)
+(define (string-ref str idx)
+  ;;Defined by  R6RS.  IDX  must be  a valid index  of STR.   Return the
+  ;;character at offset IDX of STR using zero-origin indexing.
+  ;;
+  ;;NOTE Implementors should make STRING-REF run in constant time.
+  ;;
   (define who 'string-ref)
   (with-arguments-validation (who)
-      ((string		s)
-       (index		i)
-       (index-for	i s))
-    (unsafe.string-ref s i)))
+      ((string     str)
+       (index      idx)
+       (index-for  idx str))
+    (unsafe.string-ref str idx)))
 
-(define (string-set! s i c)
+(define (string-set! str idx ch)
+  ;;Defined by  R6RS.  IDX must  be a valid  index of STR.  Store  CH in
+  ;;element IDX of STR and return unspecified values.
+  ;;
+  ;;Passing an immutable string to STRING-SET! should cause an exception
+  ;;with condition type @condition{assertion} to be raised.
+  ;;
+  ;;NOTE Implementors should make STRING-SET!  run in constant time.
+  ;;
   (define who 'string-set!)
   (with-arguments-validation (who)
-      ((string		s)
-       (index		i)
-       (index-for	i s)
-       (char		c))
-    (unsafe.string-set! s i c)))
+      ((string		str)
+       (index		idx)
+       (index-for	idx str)
+       (char		ch))
+    (unsafe.string-set! str idx ch)))
 
 
 (define make-string
+  ;;Defined by R6RS.  Return a newly allocated string of length LEN.  If
+  ;;FILL is  given, then all elements  of the string  are initialized to
+  ;;FILL, otherwise the contents of the string are unspecified.
+  ;;
   (case-lambda
    ((len)
     (make-string len #\x0))
@@ -123,6 +155,9 @@
 	    (loop str (unsafe.fxadd1 idx) len))))))))
 
 (define string
+  ;;Defined by  R6RS.  Return a  newly allocated string composed  of the
+  ;;arguments.
+  ;;
   (case-lambda
    (() "")
    ((one)
@@ -188,54 +223,63 @@
 	      (loop str (unsafe.fxadd1 idx) (unsafe.cdr chars))))))))))
 
 
-(module (substring)
-  (define fill
-    (lambda (s d si sj di)
-      (cond
-       ((unsafe.fx= si sj) d)
-       (else
-	(unsafe.string-set! d di (unsafe.string-ref s si))
-	(fill s d (unsafe.fxadd1 si) sj (unsafe.fxadd1 di))))))
-  (define substring
-    (lambda (s n m)
-      (unless (string? s)
-	(die 'substring "not a string" s))
-      (let ((len (unsafe.string-length s)))
-	(unless (and (fixnum? n)
-		     (unsafe.fx>= n 0)
-		     (unsafe.fx<= n len))
-	  (die 'substring "not a valid start index" n s))
-	(unless (and (fixnum? m)
-		     (unsafe.fx>= m 0)
-		     (unsafe.fx<= m len))
-	  (die 'substring "not a valid end index" m s))
-	(unless (unsafe.fx<= n m)
-	  (die 'substring "indices are in decreasing order" n m))
-	(let ((len (unsafe.fx- m n)))
-	  (if (unsafe.fx> len 0)
-	      (fill s (unsafe.make-string len) n m 0)
-	    ""))))))
+(define (substring str start end)
+  ;;Defined by  R6RS.  STR must be a  string, and START and  END must be
+  ;;exact integer objects satisfying:
+  ;;
+  ;; 0 <= START <= END <= (string-length STR)
+  ;;
+  ;;Return a  newly allocated string  formed from the characters  of STR
+  ;;beginning  with index START  (inclusive) and  ending with  index END
+  ;;(exclusive).
+  ;;
+  (define who 'substring)
+  (with-arguments-validation (who)
+      ((string	str)
+       (index	start)
+       (index	end))
+    (let ((len (unsafe.string-length str)))
+      (with-arguments-validation (who)
+	  ((start-for	start len)
+	   (end-for	end   len)
+	   (start-end	start end))
+	(unsafe.substring str start end)))))
+
+(define (string-copy str)
+  ;;Defined  by  R6RS.  Return  a  newly  allocated  copy of  the  given
+  ;;STR.
+  ;;
+  (define who 'string-copy)
+  (with-arguments-validation (who)
+      ((string str))
+    (let ((end (unsafe.string-length str)))
+      (unsafe.substring str start end))))
 
 
-(define string-copy
-  (lambda (s)
-    (if (string? s)
-	(substring s 0 (string-length s))
-      (die 'string-copy "not a string" s))))
-
 (module (string=?)
+
+  (define who 'string=?)
+
+  (define string=?
+    (case-lambda
+     ((str str1)
+      (with-arguments-validation (who)
+	  ((string  str)
+	   (string  str1))
+	(let ((len (unsafe.string-length str)))
+	  (and (unsafe.fx= len (unsafe.string-length str1))
+	       (bstring=? str str1 0 len)))))
+     ((str . s*)
+      (with-arguments-validation (who)
+	  ((string  str))
+	(strings=? str s* (unsafe.string-length str))))))
+
   (define bstring=?
     (lambda (s1 s2 i j)
       (or (unsafe.fx= i j)
 	  (and (unsafe.char= (unsafe.string-ref s1 i) (unsafe.string-ref s2 i))
 	       (bstring=? s1 s2 (unsafe.fxadd1 i) j)))))
-  (define check-strings-and-return-false
-    (lambda (s*)
-      (cond
-       ((null? s*) #f)
-       ((string? (unsafe.car s*))
-	(check-strings-and-return-false (unsafe.cdr s*)))
-       (else (err (unsafe.car s*))))))
+
   (define strings=?
     (lambda (s s* n)
       (or (null? s*)
@@ -246,24 +290,20 @@
 		(and (strings=? s (unsafe.cdr s*) n)
 		     (bstring=? s a 0 n))
 	      (check-strings-and-return-false (unsafe.cdr s*)))))))
+
+  (define check-strings-and-return-false
+    (lambda (s*)
+      (cond
+       ((null? s*) #f)
+       ((string? (unsafe.car s*))
+	(check-strings-and-return-false (unsafe.cdr s*)))
+       (else (err (unsafe.car s*))))))
   (define (err x)
     (die 'string=? "not a string" x))
-  (define string=?
-    (case-lambda
-     ((s s1)
-      (if (string? s)
-	  (if (string? s1)
-	      (let ((n (unsafe.string-length s)))
-		(and (unsafe.fx= n (unsafe.string-length s1))
-		     (bstring=? s s1 0 n)))
-	    (err s1))
-	(err s)))
-     ((s . s*)
-      (if (string? s)
-	  (strings=? s s* (unsafe.string-length s))
-	(err s))))))
 
+  #| end of module |#)
 
+
 (define string-cmp
   (lambda (who cmp s1 s*)
     (if (string? s1)

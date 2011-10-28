@@ -145,7 +145,8 @@
 	    ($bytevector-s64n-ref	bytevector-s64n-ref)
 	    ($bytevector-s64n-set!	bytevector-s64n-set!)
 
-	    ($bytevector-fill!		bytevector-fill!))
+	    ($bytevector-fill!		bytevector-fill!)
+	    ($bytevector-copy!		bytevector-copy!))
 
     (rename ($car		car)
 	    ($cdr		cdr)
@@ -169,6 +170,10 @@
 	    ($string-length	string-length)
 	    ($string-ref	string-ref)
 	    ($string-set!	string-set!))
+
+    (rename ($string-copy!	string-copy!)
+	    ($string-fill!	string-fill!)
+	    ($substring		substring))
     )
   (import (ikarus)
     (ikarus system $fx)
@@ -656,6 +661,47 @@
       (begin
 	($bytevector-u8-set! bv index fill)
 	(loop bv ($fxadd1 index) end fill)))))
+
+(define-inline ($bytevector-copy! ?src.str ?src.start ?src.end
+				  ?dst.str ?dst.start ?dst.end)
+  (let loop ((src.str ?src.str) (src.start ?src.start) (src.end ?src.end)
+	     (dst.str ?dst.str) (dst.start ?dst.start) (dst.end ?dst.end))
+    (if ($fx= src.start dst.start)
+	dst.str
+      (begin
+       ($bytevector-set! dst.str dst.start ($bytevector-u8-ref src.str src.start))
+       (loop src.str ($fxadd1 src.start) src.end
+	     dst.str ($fxadd1 dst.start) dst.end)))))
+
+
+;;;; miscellaneous string operations
+
+(define-inline ($string-fill! ?str ?index ?end ?fill)
+  (let loop ((str ?str) (index ?index) (end ?end) (fill ?fill))
+    (if ($fx= index end)
+	str
+      (begin
+	($string-set! str index fill)
+	(loop str ($fxadd1 index) end fill)))))
+
+(define-inline ($string-copy! ?src.str ?src.start ?src.end
+			      ?dst.str ?dst.start ?dst.end)
+  (let loop ((src.str ?src.str) (src.start ?src.start) (src.end ?src.end)
+	     (dst.str ?dst.str) (dst.start ?dst.start) (dst.end ?dst.end))
+    (if ($fx= src.start dst.start)
+	dst.str
+      (begin
+       ($string-set! dst.str dst.start ($string-ref src.str src.start))
+       (loop src.str ($fxadd1 src.start) src.end
+	     dst.str ($fxadd1 dst.start) dst.end)))))
+
+(define-inline ($substring ?str ?start ?end)
+  (let ((dst.len ($fx- ?end ?start)))
+    (if ($fx< 0 dst.len)
+	(let ((dst.str ($make-string dst.len)))
+	  ($string-copy! ?str ?start ?end dst.str 0 dst.len)
+	  dst.str)
+      "")))
 
 
 ;;;; done
