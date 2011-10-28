@@ -1756,6 +1756,7 @@ of @rnrs{6}; @library{vicare} exports the same bindings of
 * iklib environment::           Environments.
 * iklib cafe::                  Cafe.
 * iklib structs::               Structures and type descriptors.
+* iklib lists::                 Additional list functions.
 * iklib bytevectors::           Additional bytevector functions.
 * iklib strings::               Additional string functions.
 * iklib symbols::               Additional symbol functions.
@@ -2388,6 +2389,35 @@ Return the value of field at @var{index} in the data structure
 @defun struct-set! @var{stru} @var{index} @var{value}
 Store @var{value} in the field at @var{index} in the data structure
 @var{stru}.
+@end defun
+
+@c page
+@node iklib lists
+@section Additional list functions
+
+
+@menu
+* iklib lists::                 Weak pairs.
+@end menu
+
+@c page
+@node iklib lists
+@subsection Weak pairs
+
+
+Weak references do not cause the referenced value to be considered used
+by the garbage collector.  The following bindings are exported by the
+@library{ikarus} library.
+
+
+@defun weak-cons @var{A} @var{D}
+Like @func{cons} build and return a new pair, but holding weak
+references to @var{A} and @var{D}.
+@end defun
+
+
+@defun weak-pair? @var{obj}
+Return true if @var{obj} is a weak pair.
 @end defun
 
 @c page
