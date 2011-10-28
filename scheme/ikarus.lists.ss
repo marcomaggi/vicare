@@ -1082,136 +1082,168 @@
 
 (module (fold-left)
   (define who 'fold-left)
+
   (define (null*? ls)
     (or (null? ls) (and (null? (car ls)) (null*? (cdr ls)))))
+
   (define (err* ls*)
-    (if (null? ls*)
-	(assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)
-      (if (list? (car ls*))
-	  (err* (cdr ls*))
-	(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
+    (cond ((null? ls*)
+	   (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
+	  ((list? (car ls*))
+	   (err* (cdr ls*)))
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
+
   (define (cars+cdrs ls ls*)
-    (cond
-     ((null? ls) (values '() '()))
-     (else
+    (if (null? ls)
+	(values '() '())
       (let ((a (car ls)))
-	(if (pair? a)
-	    (let-values (((cars cdrs) (cars+cdrs (cdr ls) (cdr ls*))))
-	      (values (cons (car a) cars) (cons (cdr a) cdrs)))
-	  (if (list? (car ls*))
-	      (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)
-	    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*))))))))
+	(cond ((pair? a)
+	       (let-values (((cars cdrs) (cars+cdrs (cdr ls) (cdr ls*))))
+		 (values (cons (car a) cars) (cons (cdr a) cdrs))))
+	      ((list? (car ls*))
+	       (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
+	      (else
+	       (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))))
+
   (define (loop1 f nil h t ls)
-    (if (pair? h)
-	(let ((a (car h)) (h (cdr h)))
-	  (if (pair? h)
-	      (if (eq? h t)
-		  (assertion-violation who "circular" ls)
-		(let ((b (car h)) (h (cdr h)) (t (cdr t)))
-		  (loop1 f (f (f nil a) b) h t ls)))
-	    (if (null? h)
-		(f nil a)
-	      (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
-      (if (null? h)
-	  nil
-	(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+    (cond ((pair? h)
+	   (let ((a (car h)) (h (cdr h)))
+	     (cond ((pair? h)
+		    (if (eq? h t)
+			(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)
+		      (let ((b (car h)) (h (cdr h)) (t (cdr t)))
+			(loop1 f (f (f nil a) b) h t ls))))
+		   ((null? h)
+		    (f nil a))
+		   (else
+		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
+	  ((null? h)
+	   nil)
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+
   (define (loopn f nil h h* t ls ls*)
-    (if (pair? h)
-	(let-values (((a* h*) (cars+cdrs h* ls*)))
-	  (let ((a (car h)) (h (cdr h)))
-	    (if (pair? h)
-		(if (eq? h t)
-		    (assertion-violation who "circular" ls)
-		  (let-values (((b* h*) (cars+cdrs h* ls*)))
-		    (let ((b (car h)) (h (cdr h)) (t (cdr t)))
-		      (loopn f
-			     (apply f (apply f nil a a*) b b*)
-			     h h* t ls ls*))))
-	      (if (and (null? h) (null*? h*))
-		  (apply f nil a a*)
-		(err* (cons ls ls*))))))
-      (if (and (null? h) (null*? h*))
-	  nil
-	(err* (cons ls ls*)))))
+    (cond ((pair? h)
+	   (let-values (((a* h*) (cars+cdrs h* ls*)))
+	     (let ((a (car h)) (h (cdr h)))
+	       (cond ((pair? h)
+		      (if (eq? h t)
+			  (assertion-violation who
+			    CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)
+			(let-values (((b* h*) (cars+cdrs h* ls*)))
+			  (let ((b (car h)) (h (cdr h)) (t (cdr t)))
+			    (loopn f
+				   (apply f (apply f nil a a*) b b*)
+				   h h* t ls ls*)))))
+		     ((and (null?  h)
+			   (null*? h*))
+		      (apply f nil a a*))
+		     (else
+		      (err* (cons ls ls*)))))))
+	  ((and (null? h) (null*? h*))
+	   nil)
+	  (else
+	   (err* (cons ls ls*)))))
+
   (define fold-left
     (case-lambda
      ((f nil ls)
-      (unless (procedure? f)
-	(assertion-violation who "not a procedure" f))
-      (loop1 f nil ls ls ls))
+      (with-arguments-validation (who)
+	  ((procedure f))
+	(loop1 f nil ls ls ls)))
      ((f nil ls . ls*)
-      (unless (procedure? f)
-	(assertion-violation who "not a procedure" f))
-      (loopn f nil ls ls* ls ls ls*)))))
+      (with-arguments-validation (who)
+	  ((procedure f))
+	(loopn f nil ls ls* ls ls ls*)))))
+
+  #| end of module |# )
 
 
 (module (fold-right)
   (define who 'fold-right)
+
   (define (null*? ls)
     (or (null? ls) (and (null? (car ls)) (null*? (cdr ls)))))
+
   (define (err* ls*)
-    (if (null? ls*)
-	(assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)
-      (if (list? (car ls*))
-	  (err* (cdr ls*))
-	(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
+    (cond ((null? ls*)
+	   (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
+	  ((list? (car ls*))
+	   (err* (cdr ls*)))
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
+
   (define (cars+cdrs ls ls*)
-    (cond
-     ((null? ls) (values '() '()))
-     (else
+    (if (null? ls)
+	(values '() '())
       (let ((a (car ls)))
-	(if (pair? a)
-	    (let-values (((cars cdrs) (cars+cdrs (cdr ls) (cdr ls*))))
-	      (values (cons (car a) cars) (cons (cdr a) cdrs)))
-	  (if (list? (car ls*))
-	      (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)
-	    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*))))))))
+	(cond ((pair? a)
+	       (let-values (((cars cdrs) (cars+cdrs (cdr ls) (cdr ls*))))
+		 (values (cons (car a) cars) (cons (cdr a) cdrs))))
+	      ((list? (car ls*))
+	       (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
+	      (else
+	       (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))))
+
   (define (loop1 f nil h t ls)
-    (if (pair? h)
-	(let ((a (car h)) (h (cdr h)))
-	  (if (pair? h)
-	      (if (eq? h t)
-		  (assertion-violation who "circular" ls)
-		(let ((b (car h)) (h (cdr h)) (t (cdr t)))
-		  (f a (f b (loop1 f nil h t ls)))))
-	    (if (null? h)
-		(f a nil)
-	      (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
-      (if (null? h)
-	  nil
-	(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+    (cond ((pair? h)
+	   (let ((a (car h)) (h (cdr h)))
+	     (cond ((pair? h)
+		    (if (eq? h t)
+			(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)
+		      (let ((b (car h)) (h (cdr h)) (t (cdr t)))
+			(f a (f b (loop1 f nil h t ls))))))
+		   ((null? h)
+		    (f a nil))
+		   (else
+		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
+	  ((null? h)
+	   nil)
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+
   (define (loopn f nil h h* t ls ls*)
-    (if (pair? h)
-	(let-values (((a* h*) (cars+cdrs h* ls*)))
-	  (let ((a (car h)) (h (cdr h)))
-	    (if (pair? h)
-		(if (eq? h t)
-		    (assertion-violation who "circular" ls)
-		  (let-values (((b* h*) (cars+cdrs h* ls*)))
-		    (let ((b (car h)) (h (cdr h)) (t (cdr t)))
-		      (apply f a
-			     (append a*
-				     (list
-				      (apply f
-					     b (append b*
-						       (list (loopn f nil h h* t ls ls*))))))))))
-	      (if (and (null? h) (null*? h*))
-		  (apply f a (append a* (list nil)))
-		(err* (cons ls ls*))))))
-      (if (and (null? h) (null*? h*))
-	  nil
-	(err* (cons ls ls*)))))
+    (cond ((pair? h)
+	   (let-values (((a* h*) (cars+cdrs h* ls*)))
+	     (let ((a (car h)) (h (cdr h)))
+	       (cond ((pair? h)
+		      (if (eq? h t)
+			  (assertion-violation who
+			    CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)
+			(let-values (((b* h*) (cars+cdrs h* ls*)))
+			  (let ((b (car h))
+				(h (cdr h))
+				(t (cdr t)))
+			    (apply f a
+				   (append
+				    a* (list
+					(apply f
+					       b (append
+						  b* (list (loopn f nil h h* t ls ls*)))))))))))
+		     ((and (null?  h)
+			   (null*? h*))
+		      (apply f a (append a* (list nil))))
+		     (else
+		      (err* (cons ls ls*)))))))
+	  ((and (null? h) (null*? h*))
+	   nil)
+	  (else
+	   (err* (cons ls ls*)))))
+
   (define fold-right
     (case-lambda
      ((f nil ls)
-      (unless (procedure? f)
-	(assertion-violation who "not a procedure" f))
-      (loop1 f nil ls ls ls))
+      (with-arguments-validation (who)
+	  ((procedure f))
+	(loop1 f nil ls ls ls)))
      ((f nil ls . ls*)
-      (unless (procedure? f)
-	(assertion-violation who "not a procedure" f))
-      (loopn f nil ls ls* ls ls ls*))
-     )))
+      (with-arguments-validation (who)
+	  ((procedure f))
+	(loopn f nil ls ls* ls ls ls*)))
+     ))
+
+  #| end of module |#)
 
 
 ;;;; done
