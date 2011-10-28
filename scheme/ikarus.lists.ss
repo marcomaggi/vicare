@@ -899,76 +899,87 @@
   ;;ANDMAP should be the same as R6RS's EXISTS (Marco Maggi; Oct 28, 2011).
   ;;
   (define who 'ormap)
-  (define len
-    (lambda (h t n)
-      (if (pair? h)
-	  (let ((h (unsafe.cdr h)))
-	    (if (pair? h)
-		(if (eq? h t)
-		    (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
-		  (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2)))
-	      (if (null? h)
-		  (unsafe.fxadd1 n)
-		(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
-	(if (null? h)
-	    n
-	  (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
-  (define ormap1
-    (lambda (f a d n)
-      (cond
-       ((pair? d)
-	(if (unsafe.fxzero? n)
-	    (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
-	  (or (f a)
-	      (ormap1 f (unsafe.car d) (unsafe.cdr d) (unsafe.fxsub1 n)))))
-       ((null? d)
-	(if (unsafe.fxzero? n)
-	    (f a)
-	  (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
-       (else (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))))
+
+  (define (len h t n)
+    (cond ((pair? h)
+	   (let ((h (unsafe.cdr h)))
+	     (cond ((pair? h)
+		    (if (eq? h t)
+			(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
+		      (len (unsafe.cdr h) (unsafe.cdr t) (unsafe.fx+ n 2))))
+		   ((null? h)
+		    (unsafe.fxadd1 n))
+		   (else
+		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+	  ((null? h)
+	   n)
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
+
+  (define (ormap1 f a d n)
+    (cond ((pair? d)
+	   (if (unsafe.fxzero? n)
+	       (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
+	     (or (f a)
+		 (ormap1 f (unsafe.car d) (unsafe.cdr d) (unsafe.fxsub1 n)))))
+	  ((null? d)
+	   (if (unsafe.fxzero? n)
+	       (f a)
+	     (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
+	  (else
+	   (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
+
   (define ormap
     (case-lambda
      ((f ls)
-      (unless (procedure? f)
-	(assertion-violation who "not a procedure" f))
-      (cond
-       ((pair? ls)
-	(let ((d (unsafe.cdr ls)))
-	  (ormap1 f (unsafe.car ls) d (len d d 0))))
-       ((null? ls) #f)
-       (else (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
-     (_ (assertion-violation who "vararg not supported yet")))))
+      (with-arguments-validation (who)
+	  ((procedure f))
+	(cond ((pair? ls)
+	       (let ((d (unsafe.cdr ls)))
+		 (ormap1 f (unsafe.car ls) d (len d d 0))))
+	      ((null? ls)
+	       #f)
+	      (else
+	       (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+     (_
+      (assertion-violation who "vararg not supported yet"))
+     ))
+
+  #| end of module |#)
 
 
-(define partition
-  (letrec ((%race
-	    (lambda (h t ls p)
-	      (if (pair? h)
-		  (let ((a0 (unsafe.car h)) (h (unsafe.cdr h)))
-		    (if (pair? h)
-			(if (eq? h t)
-			    (assertion-violation 'partition CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)
-			  (let ((a1 (unsafe.car h)))
-			    (let-values (((a* b*) (%race (unsafe.cdr h) (unsafe.cdr t) ls p)))
-			      (if (p a0)
-				  (if (p a1)
-				      (values (cons* a0 a1 a*) b*)
-				    (values (cons a0 a*) (cons a1 b*)))
-				(if (p a1)
-				    (values (cons a1 a*) (cons a0 b*))
-				  (values a* (cons* a0 a1 b*)))))))
-		      (if (null? h)
-			  (if (p a0)
-			      (values (list a0) '())
-			    (values '() (list a0)))
-			(assertion-violation 'parititon EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
-		(if (null? h)
-		    (values '() '())
-		  (assertion-violation 'parition EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
-    (lambda (p ls)
-      (unless (procedure? p)
-	(assertion-violation 'partition "not a procedure" p))
-      (%race ls ls ls p))))
+(define (partition p ls)
+  (define who 'partition)
+  (define (%race h t ls p)
+    (cond ((pair? h)
+	   (let ((a0 (unsafe.car h))
+		 (h  (unsafe.cdr h)))
+	     (cond ((pair? h)
+		    (if (eq? h t)
+			(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)
+		      (let ((a1 (unsafe.car h)))
+			(let-values (((a* b*) (%race (unsafe.cdr h) (unsafe.cdr t) ls p)))
+			  (cond ((p a0)
+				 (if (p a1)
+				     (values (cons* a0 a1 a*) b*)
+				   (values (cons a0 a*) (cons a1 b*))))
+				((p a1)
+				 (values (cons a1 a*) (cons a0 b*)))
+				(else
+				 (values a* (cons* a0 a1 b*))))))))
+		   ((null? h)
+		    (if (p a0)
+			(values (list a0) '())
+		      (values '() (list a0))))
+		   (else
+		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
+	  ((null? h)
+	   (values '() '()))
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+  (with-arguments-validation (who)
+      ((procedure p))
+    (%race ls ls ls p)))
 
 
 (define-syntax define-iterator
