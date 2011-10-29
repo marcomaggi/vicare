@@ -9,7 +9,6 @@
 ;;;	Some tests  are from the file  "scheme/tests/strings.ss" file in
 ;;;	the original Ikarus distribution.
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -28,114 +27,8 @@
 
 
 #!vicare
-(import (rename (ikarus)
-		(parameterize	parametrise))
-  (checks)
-  (ikarus-test-framework))
+(import (ikarus))
 
-(check-set-mode! 'report-failed)
-(display "*** testing Ikarus string functions\n")
-
-
-(parametrise ((check-test-name	'latin1))
-
-  (define test-string
-    (let* ((str.len 256)
-	   (str     (make-string str.len)))
-      (do ((i 0 (+ 1 i)))
-	  ((= i str.len)
-	   str)
-	(string-set! str i (integer->char i)))))
-
-  (define test-bytevector
-    (let* ((bv.len 256)
-	   (bv     (make-bytevector bv.len)))
-      (do ((i 0 (+ 1 i)))
-	  ((= i bv.len)
-	   bv)
-	(bytevector-u8-set! bv i i))))
-
-;;; --------------------------------------------------------------------
-;;; argument check
-
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(string->latin1 123))
-    => '(123))
-
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(latin1->string 123))
-    => '(123))
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (string->latin1 test-string)
-    => test-bytevector)
-
-  (check
-      (latin1->string test-bytevector)
-    => test-string)
-
-  #t)
-
-
-(parametrise ((check-test-name	'utf-16))
-
-  (define test-string "ciao \x1000;")
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (utf16le->string (string->utf16le test-string))
-    => test-string)
-
-  (check
-      (utf16be->string (string->utf16be test-string))
-    => test-string)
-
-  (check
-      (utf16n->string (string->utf16n test-string))
-    => test-string)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (utf16le->string (string->utf16 test-string (endianness little)))
-    => test-string)
-
-  (check
-      (utf16be->string (string->utf16 test-string (endianness big)))
-    => test-string)
-
-  (check
-      (utf16n->string (string->utf16 test-string (native-endianness)))
-    => test-string)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (utf16->string (string->utf16le test-string) (endianness little))
-    => test-string)
-
-  (check
-      (utf16->string (string->utf16be test-string) (endianness big))
-    => test-string)
-
-  (check
-      (utf16->string (string->utf16n test-string) (native-endianness))
-    => test-string)
-
-  #t)
-
-
 (define-tests test-strings
   [values
    (string-ci=? "Strasse" "Stra\xDF;e")]
@@ -153,11 +46,10 @@
   [values (string-ci=? "\xDF;\xDF;" "SSSS")]
   )
 
+(display "*** testing strings\n" (current-error-port))
+(flush-output-port (current-error-port))
 (test-strings)
-
-
-;;;; done
-
-(check-report)
+(display "; *** done\n" (current-error-port))
+(flush-output-port (current-error-port))
 
 ;;; end of file

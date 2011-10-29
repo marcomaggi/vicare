@@ -16,31 +16,39 @@
 
 
 (library (ikarus strings)
-  (export string-length string-ref string-set! make-string string->list
-          string-append substring string list->string uuid
-          string-copy string-for-each string-fill!
-          string=? string<? string<=? string>? string>=?
-          string-copy!
+  (export
+    make-string		string
+    substring		string-length
+    string-ref		string-set!
+    string->list	list->string
+    string-append	string-for-each
+    string-copy		string-copy!
+    string-fill!
+    string=?
+    string<?		string<=?
+    string>?		string>=?
+    uuid
 
-	  ;; Vicare specific
-	  string->latin1	latin1->string)
-  (import (except (ikarus) string-length string-ref string-set! make-string
-		  string->list string-append substring string
-		  list->string uuid string-copy string-for-each
-		  string=? string<? string<=? string>? string>=?
-		  string-fill! string-copy!
+    ;; Vicare specific
+    string->latin1	latin1->string)
+  (import (except (ikarus)
+		  make-string		string
+		  substring		string-length
+		  string-ref		string-set!
+		  string->list		list->string
+		  string-append		string-for-each
+		  string-copy		string-copy!
+		  string-fill!
+		  string=?
+		  string<?		string<=?
+		  string>?		string>=?
+		  uuid
 
 		  ;; Vicare specific
 		  string->latin1	latin1->string)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
-	    unsafe.)
-    (ikarus system $strings)
-    (ikarus system $fx)
-    (ikarus system $chars)
-    (ikarus system $bytevectors)
-    (ikarus system $pairs)
-    )
+	    unsafe.))
 
 
 ;;;; arguments validation
@@ -129,6 +137,19 @@
   (unsafe.string-copy! src.str src.start
 		       dst.str dst.start
 		       src.end))
+
+(define (emergency-platform-write-fd str)
+  ;;Interface to the system  "write()" function.  In case something goes
+  ;;wrong while modifying  the code in this library, it  may be that the
+  ;;compiled  image  fails  to  write  understandable  messages  to  the
+  ;;standard ports  using the R6RS functions.  This  macro allows direct
+  ;;interface to the platform's stderr.
+  ;;
+  (let ((bv (string->utf8 str)))
+    (foreign-call "ikrt_write_fd" 2 bv 0 (unsafe.bytevector-length bv))
+    ;;and a newline
+    (foreign-call "ikrt_write_fd" 2 '#vu8(10) 0 1)))
+
 
 
 (define (string-length str)
@@ -574,7 +595,7 @@
 	  (let ((dst.str (unsafe.make-string dst.len)))
 	    (%unsafe.string-copy! str1 0 dst.str 0    len1)
 	    (%unsafe.string-copy! str2 0 dst.str len1 len2)
-	    (%unsafe.string-copy! str3 0 dst.str len2 len3)
+	    (%unsafe.string-copy! str3 0 dst.str (unsafe.fx+ len1 len2) len3)
 	    dst.str)))))
 
    ((str1 . strs)
@@ -589,11 +610,12 @@
 
     (define (%fill-strings dst.str strs dst.start)
       (if (null? strs)
-	  dst.str
+	  (begin
+	    dst.str)
 	(let* ((src.str (unsafe.car strs))
 	       (src.len (unsafe.string-length src.str)))
 	  (begin
-	    (unsafe.string-copy! dst.str dst.start src.str 0 src.len)
+	    (unsafe.string-copy! src.str 0 dst.str dst.start src.len)
 	    (%fill-strings dst.str (unsafe.cdr strs) (unsafe.fx+ dst.start src.len))))))
 
     (let ((dst.len (%length-and-validation (cons str1 strs) 0)))
@@ -734,6 +756,8 @@
 
 
 (define (uuid)
+  ;;Defined by Ikarus.  Attempt the generation of a unique string.
+  ;;
   (define who 'uuid)
   (let* ((s (unsafe.make-bytevector 16))
 	 (r (foreign-call "ik_uuid" s)))

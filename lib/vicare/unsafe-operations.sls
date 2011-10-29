@@ -13,7 +13,24 @@
 ;;;
 ;;;	  In general: all the syntaxes must be used with arguments which
 ;;;	can be evaluated  multiple times, in practice it  is safe to use
-;;;	the syntaxes only with identifiers or constant values.
+;;;	the syntaxes  only with arguments being  identifiers or constant
+;;;	values.
+;;;
+;;;Endianness handling
+;;;
+;;;	About endianness, according to R6RS:
+;;;
+;;;	   Endianness describes the encoding of exact integer objects as
+;;;	   several contiguous bytes in a bytevector.
+;;;
+;;;        The little-endian encoding  places the least significant byte
+;;;        of  an  integer first,  with  the  other  bytes following  in
+;;;        increasing order of significance.
+;;;
+;;;        The big-endian  encoding places the most  significant byte of
+;;;        an  integer   first,  with  the  other   bytes  following  in
+;;;        decreasing order of significance.
+;;;
 ;;;
 ;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
@@ -42,7 +59,7 @@
 	    ($fxsll	fxsll)		;shift left
 	    ($fxlogor	fxlogor)	;inclusive logic OR
 	    ($fxlogxor	fxlogxor)	;exlusive logic OR
-	    ($fxlogand	fxand)		;logic AND
+	    ($fxlogand	fxlogand)	;logic AND
 	    ($fx+	fx+)
 	    ($fx-	fx-)
 	    ($fx*	fx*)
@@ -52,8 +69,11 @@
 	    ($fx<=	fx<=)
 	    ($fx=	fx=))
 
-    (rename ($fxior	fxior)		;multiple arguments inclusive OR
+    (rename ($fxand	fxand)		;multiple arguments AND
+	    ($fxior	fxior)		;multiple arguments inclusive OR
 	    ($fxxor	fxxor))		;multiple arguments exclusive OR
+
+;;; --------------------------------------------------------------------
 
     (rename ($bignum-positive?		bignum-positive?)
 	    ($bignum-byte-ref		bignum-byte-ref)
@@ -65,9 +85,13 @@
 	    ($bnbn<=			bnbn<=)
 	    ($bnbn>=			bnbn>=))
 
+;;; --------------------------------------------------------------------
+
     (rename ($make-ratnum		make-ratnum)
 	    ($ratnum-n			ratnum-n)
 	    ($ratnum-d			ratnum-d))
+
+;;; --------------------------------------------------------------------
 
     (rename ($make-flonum		make-flonum)
 	    ($flonum-u8-ref		flonum-u8-ref)
@@ -84,12 +108,16 @@
 	    ($fl>=			fl>=)
 	    ($flonum-sbe		flonum-sbe))
 
+;;; --------------------------------------------------------------------
+
     (rename ($make-cflonum		make-cflonum)
 	    ($cflonum-real		cflonum-real)
 	    ($cflonum-imag		cflonum-imag)
 	    ($make-compnum		make-compnum)
 	    ($compnum-real		compnum-real)
 	    ($compnum-imag		compnum-imag))
+
+;;; --------------------------------------------------------------------
 
     (rename ($make-bytevector		make-bytevector)
 	    ($bytevector-length		bytevector-length)
@@ -145,18 +173,26 @@
 	    ($bytevector-s64n-ref	bytevector-s64n-ref)
 	    ($bytevector-s64n-set!	bytevector-s64n-set!)
 
-	    ($bytevector-fill!		bytevector-fill!)
-	    ($bytevector-copy!		bytevector-copy!))
+	    ($bytevector-fill!			bytevector-fill!)
+	    ($bytevector-copy!			bytevector-copy!)
+	    ($bytevector-self-copy-forwards!	bytevector-self-copy-forwards!)
+	    ($bytevector-self-copy-backwards!	bytevector-self-copy-backwards!))
+
+;;; --------------------------------------------------------------------
 
     (rename ($car		car)
 	    ($cdr		cdr)
 	    ($set-car!		set-car!)
 	    ($set-cdr!		set-cdr!))
 
+;;; --------------------------------------------------------------------
+
     (rename ($make-vector	make-vector)
 	    ($vector-length	vector-length)
 	    ($vector-ref	vector-ref)
 	    ($vector-set!	vector-set!))
+
+;;; --------------------------------------------------------------------
 
     (rename ($char=		char=)
 	    ($char<		char<)
@@ -165,6 +201,8 @@
 	    ($char<=		char<=)
 	    ($char->fixnum	char->fixnum)
 	    ($fixnum->char	fixnum->char))
+
+;;; --------------------------------------------------------------------
 
     (rename ($make-string	make-string)
 	    ($string-length	string-length)
@@ -176,7 +214,8 @@
 	    ($string-self-copy-backwards!	string-self-copy-backwards!)
 	    ($string-fill!			string-fill!)
 	    ($substring				substring))
-    )
+
+    #| end of export |# )
   (import (ikarus)
     (ikarus system $fx)
     (ikarus system $bignums)
@@ -199,6 +238,15 @@
 
 
 ;;;; fixnums
+
+(define-syntax $fxand
+  (syntax-rules ()
+    ((_ ?op1)
+     ?op1)
+    ((_ ?op1 ?op2)
+     ($fxlogand ?op1 ?op2))
+    ((_ ?op1 ?op2 . ?ops)
+     ($fxlogand ?op1 ($fxand ?op2 . ?ops)))))
 
 (define-syntax $fxior
   (syntax-rules ()
@@ -275,23 +323,6 @@
 
 (define-inline (bn-ior-bn X Y)
   (foreign-call "ikrt_bnbnlogor" X Y))
-
-
-;;;; endianness handling
-;;
-;;About endianness, according to R6RS:
-;;
-;;   Endianness  describes  the encoding  of  exact  integer objects  as
-;;   several contiguous bytes in a bytevector.
-;;
-;;   The little-endian encoding places  the least significant byte of an
-;;   integer first,  with the other bytes following  in increasing order
-;;   of significance.
-;;
-;;   The  big-endian encoding  places the  most significant  byte  of an
-;;   integer first,  with the other bytes following  in decreasing order
-;;   of significance.
-;;
 
 
 ;;;; unsafe 16-bit setters and getters
@@ -657,6 +688,9 @@
 ;;;; miscellaneous bytevector operations
 
 (define-inline ($bytevector-fill! ?bv ?index ?end ?fill)
+  ;;Fill the  positions in ?BV  from ?INDEX inclusive to  ?END exclusive
+  ;;with ?FILL.
+  ;;
   (let loop ((bv ?bv) (index ?index) (end ?end) (fill ?fill))
     (if ($fx= index end)
 	bv
@@ -667,22 +701,55 @@
 (define-inline ($bytevector-copy! ?src.bv ?src.start
 				  ?dst.bv ?dst.start
 				  ?src.end)
+  ;;Copy the characters of ?SRC.BV from ?SRC.START inclusive to ?SRC.end
+  ;;exclusive, to ?DST.BV starting at ?DST.START inclusive.
+  ;;
   (let loop ((src.bv ?src.bv) (src.start ?src.start)
 	     (dst.bv ?dst.bv) (dst.start ?dst.start)
 	     (src.end ?src.end))
     (if ($fx= src.start src.end)
 	dst.bv
       (begin
-	($bytevector-set! dst.bv dst.start ($bytevector-u8-ref src.bv src.start))
+	($bytevector-u8-set! dst.bv dst.start ($bytevector-u8-ref src.bv src.start))
 	(loop src.bv ($fxadd1 src.start)
 	      dst.bv ($fxadd1 dst.start)
 	      src.end)))))
 
+(define-inline ($bytevector-self-copy-forwards! ?bv ?src.start ?dst.start ?count)
+  ;;Copy ?COUNT  octets of ?BV  from ?SRC.START inclusive to  ?BV itself
+  ;;starting at ?DST.START inclusive.   The copy happens forwards, so it
+  ;;is suitable for the case ?SRC.START > ?DST.START.
+  ;;
+  (let loop ((bv	?bv)
+	     (src.start	?src.start)
+	     (dst.start	?dst.start)
+	     (src.end	($fx+ ?src.start ?count)))
+    (unless ($fx= src.start src.end)
+      ($bytevector-u8-set! bv dst.start ($bytevector-u8-ref bv src.start))
+      (loop bv ($fxadd1 src.start) ($fxadd1 dst.start) src.end))))
+
+(define-inline ($bytevector-self-copy-backwards! ?bv ?src.start ?dst.start ?count)
+  ;;Copy ?COUNT  octets of ?BV  from ?SRC.START inclusive to  ?BV itself
+  ;;starting at ?DST.START inclusive.  The copy happens backwards, so it
+  ;;is suitable for the case ?SRC.START < ?DST.START.
+  ;;
+  (let loop ((bv	?bv)
+	     (src.start	($fx+ ?src.start ?count))
+	     (dst.start	($fx+ ?dst.start ?count))
+	     (src.end	?src.start))
+    (unless ($fx= src.start src.end)
+      (let ((src.start ($fxsub1 src.start))
+	    (dst.start ($fxsub1 dst.start)))
+	($bytevector-u8-set! bv dst.start ($bytevector-u8-ref bv src.start))
+	(loop bv src.start dst.start src.end)))))
 
 
 ;;;; miscellaneous string operations
 
 (define-inline ($string-fill! ?str ?index ?end ?fill)
+  ;;Fill the positions  in ?STR from ?INDEX inclusive  to ?END exclusive
+  ;;with ?FILL.
+  ;;
   (let loop ((str ?str) (index ?index) (end ?end) (fill ?fill))
     (if ($fx= index end)
 	str
@@ -693,6 +760,9 @@
 (define-inline ($string-copy! ?src.str ?src.start
 			      ?dst.str ?dst.start
 			      ?src.end)
+  ;;Copy  the  characters  of  ?SRC.STR  from  ?SRC.START  inclusive  to
+  ;;?SRC.end exclusive, to ?DST.STR starting at ?DST.START inclusive.
+  ;;
   (let loop ((src.str ?src.str) (src.start ?src.start)
 	     (dst.str ?dst.str) (dst.start ?dst.start)
 	     (src.end ?src.end))
@@ -705,6 +775,10 @@
 	      src.end)))))
 
 (define-inline ($string-self-copy-forwards! ?str ?src.start ?dst.start ?count)
+  ;;Copy  ?COUNT characters of  ?STR from  ?SRC.START inclusive  to ?STR
+  ;;itself starting at ?DST.START inclusive.  The copy happens forwards,
+  ;;so it is suitable for the case ?SRC.START > ?DST.START.
+  ;;
   (let loop ((str	?str)
 	     (src.start	?src.start)
 	     (dst.start	?dst.start)
@@ -714,6 +788,10 @@
       (loop str ($fxadd1 src.start) ($fxadd1 dst.start) src.end))))
 
 (define-inline ($string-self-copy-backwards! ?str ?src.start ?dst.start ?count)
+  ;;Copy  ?COUNT characters of  ?STR from  ?SRC.START inclusive  to ?STR
+  ;;itself   starting  at  ?DST.START   inclusive.   The   copy  happens
+  ;;backwards, so it is suitable for the case ?SRC.START < ?DST.START.
+  ;;
   (let loop ((str	?str)
 	     (src.start	($fx+ ?src.start ?count))
 	     (dst.start	($fx+ ?dst.start ?count))
@@ -725,6 +803,9 @@
 	(loop str src.start dst.start src.end)))))
 
 (define-inline ($substring ?str ?start ?end)
+  ;;Return  a  new  string  holding  characters from  ?STR  from  ?START
+  ;;inclusive to ?END exclusive.
+  ;;
   (let ((dst.len ($fx- ?end ?start)))
     (if ($fx< 0 dst.len)
 	(let ((dst.str ($make-string dst.len)))
