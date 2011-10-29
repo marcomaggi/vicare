@@ -57,11 +57,21 @@
   (bytevector? obj)
   (assertion-violation who "expected bytevector as argument" obj))
 
+(define-argument-validation (procedure who obj)
+  (procedure? obj)
+  (assertion-violation who "expected procedure as argument" obj))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (length who obj)
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as string length argument" obj))
+
+(define-argument-validation (has-length who str len)
+  (unsafe.fx= len (unsafe.string-length str))
+  (assertion-violation who "length mismatch in argument strings" len str))
+
+;;; --------------------------------------------------------------------
 
 (define-argument-validation (index who obj)
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
@@ -85,11 +95,40 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-argument-validation (count who obj)
+  (fixnum? obj)
+  (assertion-violation who "expected non-negative fixnum as characters count argument" obj))
+
+(define-argument-validation (count-for who count start len)
+  (unsafe.fx<= (unsafe.fx+ start count) len)
+  (assertion-violation who
+    (string-append "count argument out of range for string of length " (number->string len)
+		   " and start index " (number->string start))
+    count))
+
+;;; --------------------------------------------------------------------
+
 (define-argument-validation (latin1 who code-point str)
   (unsafe.fx< code-point 256)
   (assertion-violation who
     "expected only Latin-1 characters in string argument"
     (unsafe.fixnum->char code-point) str))
+
+
+;;;; constants
+
+(define EXPECTED_PROPER_LIST_AS_ARGUMENT
+  "expected proper list as argument")
+
+
+;;;; helpers
+
+(define (%unsafe.string-copy! src.str src.start
+			      dst.str dst.start
+			      src.end)
+  (unsafe.string-copy! src.str src.start
+		       dst.str dst.start
+		       src.end))
 
 
 (define (string-length str)
@@ -253,372 +292,454 @@
   (with-arguments-validation (who)
       ((string str))
     (let ((end (unsafe.string-length str)))
-      (unsafe.substring str start end))))
+      (unsafe.substring str 0 end))))
 
 
-(module (string=?)
+(define string=?
+  ;;Defined by R6RS.   Return #t if the strings are  the same length and
+  ;;contain the same characters in the same positions.  Otherwise return
+  ;;#f.
+  ;;
+  (case-lambda
+   ((str1 str2)
+    (define who 'string=?)
+    (with-arguments-validation (who)
+	((string  str1)
+	 (string  str2))
+      (let ((len (unsafe.string-length str1)))
+	(and (unsafe.fx= len (unsafe.string-length str2))
+	     (%unsafe.two-strings=? str1 str2 0 len)))))
+   ((str1 . strs)
+    (define who 'string=?)
+    (with-arguments-validation (who)
+	((string  str1))
+      (let next-string ((str1 str1)
+			(strs strs)
+			(len  (unsafe.string-length str1)))
+	(or (null? strs)
+	    (let ((str2 (unsafe.car strs)))
+	      (with-arguments-validation (who)
+		  ((string str2))
+		(if (unsafe.fx= len (unsafe.string-length str2))
+		    (and (next-string str1 (unsafe.cdr strs) len)
+			 (%unsafe.two-strings=? str1 str2 0 len))
+		  (%check-strings-and-return-false (unsafe.cdr strs)))))))))))
 
-  (define who 'string=?)
+(define (%unsafe.two-strings=? str1 str2 index end)
+  ;;Unsafely compare  two strings from  INDEX included to  END excluded;
+  ;;return #t or #f.
+  ;;
+  (or (unsafe.fx= index end)
+      (and (unsafe.char= (unsafe.string-ref str1 index)
+			 (unsafe.string-ref str2 index))
+	   (%unsafe.two-strings=? str1 str2 (unsafe.fxadd1 index) end))))
 
-  (define string=?
-    (case-lambda
-     ((str str1)
+(define (%check-strings-and-return-false who strs)
+  ;;Verify that the list (already validated) STRS contains only strings;
+  ;;if successful return #f, else raise an assertion violation.
+  ;;
+  (if (null? strs)
+      #f
+    (let ((str (unsafe.car strs)))
       (with-arguments-validation (who)
-	  ((string  str)
-	   (string  str1))
-	(let ((len (unsafe.string-length str)))
-	  (and (unsafe.fx= len (unsafe.string-length str1))
-	       (bstring=? str str1 0 len)))))
-     ((str . s*)
-      (with-arguments-validation (who)
-	  ((string  str))
-	(strings=? str s* (unsafe.string-length str))))))
-
-  (define bstring=?
-    (lambda (s1 s2 i j)
-      (or (unsafe.fx= i j)
-	  (and (unsafe.char= (unsafe.string-ref s1 i) (unsafe.string-ref s2 i))
-	       (bstring=? s1 s2 (unsafe.fxadd1 i) j)))))
-
-  (define strings=?
-    (lambda (s s* n)
-      (or (null? s*)
-	  (let ((a (unsafe.car s*)))
-	    (unless (string? a)
-	      (die 'string=? "not a string" a))
-	    (if (unsafe.fx= n (unsafe.string-length a))
-		(and (strings=? s (unsafe.cdr s*) n)
-		     (bstring=? s a 0 n))
-	      (check-strings-and-return-false (unsafe.cdr s*)))))))
-
-  (define check-strings-and-return-false
-    (lambda (s*)
-      (cond
-       ((null? s*) #f)
-       ((string? (unsafe.car s*))
-	(check-strings-and-return-false (unsafe.cdr s*)))
-       (else (err (unsafe.car s*))))))
-  (define (err x)
-    (die 'string=? "not a string" x))
-
-  #| end of module |#)
+	  ((string str))
+	(%check-strings-and-return-false who (unsafe.cdr strs))))))
 
 
-(define string-cmp
-  (lambda (who cmp s1 s*)
-    (if (string? s1)
-	(let f ((s1 s1) (s* s*))
-	  (cond
-	   ((null? s*) #t)
-	   (else
-	    (let ((s2 (car s*)))
-	      (if (string? s2)
-		  (if (cmp s1 s2)
-		      (f s2 (cdr s*))
-		    (let f ((s* (cdr s*)))
-		      (cond
-		       ((null? s*) #f)
-		       ((string? (car s*))
-			(f (cdr s*)))
-		       (else
-			(die who "not a string"
-			     (car s*))))))
-		(die who "not a string" s2))))))
-      (die who "not a string" s1))))
+;;;; string comparison
+;;
+;;Defined by R6RS.  These procedures are the lexicographic extensions to
+;;strings of  the corresponding  orderings on characters.   For example,
+;;STRING<?   is the  lexicographic ordering  on strings  induced  by the
+;;ordering CHAR<?  on characters.  If  two strings differ in  length but
+;;are  the same  up to  the length  of the  shorter string,  the shorter
+;;string  is considered  to be  lexicographically less  than  the longer
+;;string.
+;;
 
-(define (unsafe.string<? s1 s2)
-  (let ((n1 (unsafe.string-length s1))
-	(n2 (unsafe.string-length s2)))
-    (if (unsafe.fx< n1 n2)
-	(let f ((i 0) (n n1) (s1 s1) (s2 s2))
-	  (if (unsafe.fx= i n)
-	      #t
-	    (let ((c1 (unsafe.string-ref s1 i))
-		  (c2 (unsafe.string-ref s2 i)))
-	      (if (unsafe.char< c1 c2)
-		  #t
-		(if (unsafe.char= c1 c2)
-		    (f (unsafe.fxadd1 i) n s1 s2)
-		  #f)))))
-      (let f ((i 0) (n n2) (s1 s1) (s2 s2))
-	(if (unsafe.fx= i n)
-	    #f
-	  (let ((c1 (unsafe.string-ref s1 i))
-		(c2 (unsafe.string-ref s2 i)))
-	    (if (unsafe.char< c1 c2)
-		#t
-	      (if (unsafe.char= c1 c2)
-		  (f (unsafe.fxadd1 i) n s1 s2)
-		#f))))))))
-
-(define (unsafe.string<=? s1 s2)
-  (let ((n1 (unsafe.string-length s1))
-	(n2 (unsafe.string-length s2)))
-    (if (unsafe.fx<= n1 n2)
-	(let f ((i 0) (n n1) (s1 s1) (s2 s2))
-	  (if (unsafe.fx= i n)
-	      #t
-	    (let ((c1 (unsafe.string-ref s1 i))
-		  (c2 (unsafe.string-ref s2 i)))
-	      (if (unsafe.char< c1 c2)
-		  #t
-		(if (unsafe.char= c1 c2)
-		    (f (unsafe.fxadd1 i) n s1 s2)
-		  #f)))))
-      (let f ((i 0) (n n2) (s1 s1) (s2 s2))
-	(if (unsafe.fx= i n)
-	    #f
-	  (let ((c1 (unsafe.string-ref s1 i))
-		(c2 (unsafe.string-ref s2 i)))
-	    (if (unsafe.char< c1 c2)
-		#t
-	      (if (unsafe.char= c1 c2)
-		  (f (unsafe.fxadd1 i) n s1 s2)
-		#f))))))))
-
-(define (unsafe.string>? s1 s2)
-  (unsafe.string<? s2 s1))
-
-(define (unsafe.string>=? s1 s2)
-  (unsafe.string<=? s2 s1))
+(define (%string-cmp who cmp str1 strs)
+  ;;Subroutine of the comparison functions.
+  ;;
+  (with-arguments-validation (who)
+      ((string	str1))
+    (let next-string ((str1 str1)
+		      (strs strs))
+      (or (null? strs)
+	  (let ((str2 (unsafe.car strs)))
+	    (with-arguments-validation (who)
+		((string str2))
+	      (if (cmp str1 str2)
+		  (next-string str2 (unsafe.cdr strs))
+		(%check-strings-and-return-false who strs))))))))
 
 (define string<?
   (case-lambda
-   ((s1 s2)
-    (if (string? s1)
-	(if (string? s2)
-	    (unsafe.string<? s1 s2)
-	  (die 'string<? "not a string" s2))
-      (die 'string<? "not a string" s2)))
-   ((s . s*)
-    (string-cmp 'string<? unsafe.string<? s s*))))
+   ((str1 s2)
+    (define who 'string<?)
+    (with-arguments-validation (who)
+	((string str1)
+	 (string s2))
+      (%unsafe.string<? str1 s2)))
+   ((str . strs)
+    (%string-cmp 'string<? %unsafe.string<? str strs))))
 
 (define string<=?
   (case-lambda
-   ((s1 s2)
-    (if (string? s1)
-	(if (string? s2)
-	    (unsafe.string<=? s1 s2)
-	  (die 'string<=? "not a string" s2))
-      (die 'string<=? "not a string" s2)))
-   ((s . s*)
-    (string-cmp 'string<=? unsafe.string<=? s s*))))
+   ((str1 s2)
+    (define who 'string<=?)
+    (with-arguments-validation (who)
+	((string str1)
+	 (string s2))
+      (%unsafe.string<=? str1 s2)))
+   ((str . strs)
+    (%string-cmp 'string<=? %unsafe.string<=? str strs))))
 
 (define string>?
   (case-lambda
-   ((s1 s2)
-    (if (string? s1)
-	(if (string? s2)
-	    (unsafe.string>? s1 s2)
-	  (die 'string>? "not a string" s2))
-      (die 'string>? "not a string" s2)))
-   ((s . s*)
-    (string-cmp 'string>? unsafe.string>? s s*))))
+   ((str1 s2)
+    (define who 'string>?)
+    (with-arguments-validation (who)
+	((string str1)
+	 (string s2))
+      (%unsafe.string>? str1 s2)))
+   ((str . strs)
+    (%string-cmp 'string>? %unsafe.string>? str strs))))
 
 (define string>=?
   (case-lambda
-   ((s1 s2)
-    (if (string? s1)
-	(if (string? s2)
-	    (unsafe.string>=? s1 s2)
-	  (die 'string>=? "not a string" s2))
-      (die 'string>=? "not a string" s2)))
-   ((s . s*)
-    (string-cmp 'string>=? unsafe.string>=? s s*))))
+   ((str1 s2)
+    (define who 'string>=?)
+    (with-arguments-validation (who)
+	((string str1)
+	 (string s2))
+      (%unsafe.string>=? str1 s2)))
+   ((str . strs)
+    (%string-cmp 'string>=? %unsafe.string>=? str strs))))
 
-(define string->list
-  (lambda (x)
-    (unless (string? x)
-      (die 'string->list "not a string" x))
-    (let f ((x x) (i (unsafe.string-length x)) (ac '()))
-      (cond
-       ((unsafe.fxzero? i) ac)
-       (else
+
+(define (%unsafe.string<? str1 str2)
+  (let ((len1 (unsafe.string-length str1))
+	(len2 (unsafe.string-length str2)))
+    (if (unsafe.fx< len1 len2)
+	(let next-char ((idx  0)
+			(len1 len1)
+			(str1 str1)
+			(str2 str2))
+	  (or (unsafe.fx= idx len1)
+	      (let ((ch1 (unsafe.string-ref str1 idx))
+		    (ch2 (unsafe.string-ref str2 idx)))
+		(or (unsafe.char< ch1 ch2)
+		    (if (unsafe.char= ch1 ch2)
+			(next-char (unsafe.fxadd1 idx) len1 str1 str2)
+		      #f)))))
+      (let next-char ((idx  0)
+		      (len2 len2)
+		      (str1 str1)
+		      (str2 str2))
+	(if (unsafe.fx= idx len2)
+	    #f
+	  (let ((ch1 (unsafe.string-ref str1 idx))
+		(ch2 (unsafe.string-ref str2 idx)))
+	    (or (unsafe.char< ch1 ch2)
+		(if (unsafe.char= ch1 ch2)
+		    (next-char (unsafe.fxadd1 idx) len2 str1 str2)
+		  #f))))))))
+
+(define (%unsafe.string<=? str1 str2)
+  (let ((len1 (unsafe.string-length str1))
+	(len2 (unsafe.string-length str2)))
+    (if (unsafe.fx<= len1 len2)
+	(let next-char ((idx  0)
+			(len1 len1)
+			(str1 str1)
+			(str2 str2))
+	  (or (unsafe.fx= idx len1)
+	      (let ((ch1 (unsafe.string-ref str1 idx))
+		    (ch2 (unsafe.string-ref str2 idx)))
+		(or (unsafe.char< ch1 ch2)
+		    (if (unsafe.char= ch1 ch2)
+			(next-char (unsafe.fxadd1 idx) len1 str1 str2)
+		      #f)))))
+      (let next-char ((idx  0)
+		      (len2 len2)
+		      (str1 str1)
+		      (str2 str2))
+	(if (unsafe.fx= idx len2)
+	    #f
+	  (let ((ch1 (unsafe.string-ref str1 idx))
+		(ch2 (unsafe.string-ref str2 idx)))
+	    (or (unsafe.char< ch1 ch2)
+		(if (unsafe.char= ch1 ch2)
+		    (next-char (unsafe.fxadd1 idx) len2 str1 str2)
+		  #f))))))))
+
+(define (%unsafe.string>? str1 str2)
+  (%unsafe.string<? str2 str1))
+
+(define (%unsafe.string>=? str1 str2)
+  (%unsafe.string<=? str2 str1))
+
+
+(define (string->list str)
+  ;;Defined by  R6RS.  Return a  newly allocated list of  the characters
+  ;;that make up the given string.
+  ;;
+  (define who 'string->list)
+  (with-arguments-validation (who)
+      ((string str))
+    (let next-char ((str   str)
+		    (i   (unsafe.string-length str))
+		    (ac  '()))
+      (if (unsafe.fxzero? i)
+	  ac
 	(let ((i (unsafe.fxsub1 i)))
-	  (f x i (cons (unsafe.string-ref x i) ac))))))))
+	  (next-char str i (cons (unsafe.string-ref str i) ac)))))))
 
+
+(define (list->string ls)
+  ;;Defined by  R6RS.  Return a  newly allocated string formed  from the
+  ;;characters in LS.
+  ;;
+  (define who 'list->string)
+  (define (race h t ls n)
+    (cond ((pair? h)
+	   (let ((h (unsafe.cdr h)))
+	     (if (pair? h)
+		 (if (not (eq? h t))
+		     (race (unsafe.cdr h) (unsafe.cdr t) ls (unsafe.fx+ n 2))
+		   (assertion-violation who "circular list is invalid as argument" ls))
+	       (if (null? h)
+		   (unsafe.fx+ n 1)
+		 (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
+	  ((null? h)
+	   n)
+	  (else
+	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
 
-(define list->string
-  (letrec ((race
-	    (lambda (h t ls n)
-	      (if (pair? h)
-		  (let ((h (unsafe.cdr h)))
-		    (if (pair? h)
-			(if (not (eq? h t))
-			    (race (unsafe.cdr h) (unsafe.cdr t) ls (unsafe.fx+ n 2))
-			  (die 'reverse "circular list" ls))
-		      (if (null? h)
-			  (unsafe.fx+ n 1)
-			(die 'reverse "not a proper list" ls))))
-		(if (null? h)
-		    n
-		  (die 'reverse "not a proper list" ls)))))
-	   (fill
-	    (lambda (s i ls)
-	      (cond
-	       ((null? ls) s)
-	       (else
-		(let ((c (unsafe.car ls)))
-		  (unless (char? c)
-		    (die 'list->string "not a character" c))
-		  (unsafe.string-set! s i c)
-		  (fill s (unsafe.fxadd1 i) (cdr ls))))))))
-    (lambda (ls)
-      (let ((n (race ls ls ls 0)))
-	(let ((s (unsafe.make-string n)))
-	  (fill s 0 ls))))))
+  (define (fill s i ls)
+    (if (null? ls)
+	s
+      (let ((c (unsafe.car ls)))
+	(with-arguments-validation (who)
+	    ((char c))
+	  (unsafe.string-set! s i c)
+	  (fill s (unsafe.fxadd1 i) (unsafe.cdr ls))))))
 
-(module (string-append)
-  ;; FIXME: make nonconsing on 0,1,2, and 3 args
-  (define length*
-    (lambda (s* n)
-      (cond
-       ((null? s*) n)
-       (else
-	(let ((a (unsafe.car s*)))
-	  (unless (string? a)
-	    (die 'string-append "not a string" a))
-	  (length* (unsafe.cdr s*) (unsafe.fx+ n (unsafe.string-length a))))))))
-  (define fill-string
-    (lambda (s a si sj ai)
-      (unless (unsafe.fx= si sj)
-	(unsafe.string-set! s si (unsafe.string-ref a ai))
-	(fill-string s a (unsafe.fxadd1 si) sj (unsafe.fxadd1 ai)))))
-  (define fill-strings
-    (lambda (s s* i)
-      (cond
-       ((null? s*) s)
-       (else
-	(let ((a (unsafe.car s*)))
-	  (let ((n (unsafe.string-length a)))
-	    (let ((j (unsafe.fx+ i n)))
-	      (fill-string s a i j 0)
-	      (fill-strings s (unsafe.cdr s*) j))))))))
-  (define string-append
-    (lambda s*
-      (let ((n (length* s* 0)))
-	(let ((s (unsafe.make-string n)))
-	  (fill-strings s s* 0))))))
+  (let ((len (race ls ls ls 0)))
+    (with-arguments-validation (who)
+	((length len))
+      (fill (unsafe.make-string len) 0 ls))))
 
+
+(define string-append
+  ;;Defined by  R6RS.  Return a newly allocated  string whose characters
+  ;;form the concatenation of the given strings.
+  ;;
+  (case-lambda
+   (() "")
 
-(module (string-for-each)
-  (define who 'string-for-each)
-  (define string-for-each
-    (case-lambda
-     ((p v)
-      (unless (procedure? p)
-	(die who "not a procedure" p))
-      (unless (string? v)
-	(die who "not a string" v))
-      (let f ((p p) (v v) (i 0) (n (string-length v)))
-	(cond
-	 ((unsafe.fx= i n) (void))
-	 (else
-	  (p (string-ref v i))
-	  (f p v (unsafe.fxadd1 i) n)))))
-     ((p v0 v1)
-      (unless (procedure? p)
-	(die who "not a procedure" p))
-      (unless (string? v0)
-	(die who "not a string" v0))
-      (unless (string? v1)
-	(die who "not a string" v1))
-      (let ((n (string-length v0)))
-	(unless (unsafe.fx= n (unsafe.string-length v1))
-	  (die who "length mismatch" v0 v1))
-	(let f ((p p) (v0 v0) (v1 v1) (i 0) (n n))
-	  (cond
-	   ((unsafe.fx= i n) (void))
-	   (else
-	    (p (unsafe.string-ref v0 i) (unsafe.string-ref v1 i))
-	    (f p v0 v1 (unsafe.fxadd1 i) n))))))
-     ((p v0 v1 . v*)
-      (unless (procedure? p)
-	(die who "not a procedure" p))
-      (unless (string? v0)
-	(die who "not a string" v0))
-      (unless (string? v1)
-	(die who "not a string" v1))
-      (let ((n (string-length v0)))
-	(unless (unsafe.fx= n (unsafe.string-length v1))
-	  (die who "length mismatch" v0 v1))
-	(let f ((v* v*) (n n))
-	  (unless (null? v*)
-	    (let ((a (unsafe.car v*)))
-	      (unless (string? a)
-		(die who "not a string" a))
-	      (unless (unsafe.fx= (unsafe.string-length a) n)
-		(die who "length mismatch")))
-	    (f (unsafe.cdr v*) n)))
-	(let f ((p p) (v0 v0) (v1 v1) (v* v*) (i 0) (n n))
-	  (cond
-	   ((unsafe.fx= i n) (void))
-	   (else
-	    (apply p (unsafe.string-ref v0 i) (unsafe.string-ref v1 i)
-		   (let f ((i i) (v* v*))
-		     (if (null? v*)
-			 '()
-		       (cons (unsafe.string-ref (unsafe.car v*) i)
-			     (f i (unsafe.cdr v*))))))
-	    (f p v0 v1 v* (unsafe.fxadd1 i) n)))))))))
+   ((str)
+    (define who 'string-append)
+    (with-arguments-validation (who)
+	((string str))
+      str))
 
-(define (string-fill! v fill)
-  (unless (string? v)
-    (die 'string-fill! "not a vector" v))
-  (unless (char? fill)
-    (die 'string-fill! "not a character" fill))
-  (let f ((v v) (i 0) (n (unsafe.string-length v)) (fill fill))
-    (unless (unsafe.fx= i n)
-      (unsafe.string-set! v i fill)
-      (f v (unsafe.fxadd1 i) n fill))))
+   ((str1 str2)
+    (define who 'string-append)
+    (with-arguments-validation (who)
+	((string str1)
+	 (string str2))
+      (let* ((len1	(unsafe.string-length str1))
+	     (len2	(unsafe.string-length str2))
+	     (dst.len	(+ len1 len2)))
+	(with-arguments-validation (who)
+	    ((length dst.len))
+	  (let ((dst.str (unsafe.make-string dst.len)))
+	    (%unsafe.string-copy! str1 0 dst.str 0    len1)
+	    (%unsafe.string-copy! str2 0 dst.str len1 len2)
+	    dst.str)))))
 
+   ((str1 str2 str3)
+    (define who 'string-append)
+    (with-arguments-validation (who)
+	((string str1)
+	 (string str2)
+	 (string str3))
+      (let* ((len1	(unsafe.string-length str1))
+	     (len2	(unsafe.string-length str2))
+	     (len3	(unsafe.string-length str3))
+	     (dst.len	(+ len1 len2 len3)))
+	(with-arguments-validation (who)
+	    ((length  dst.len))
+	  (let ((dst.str (unsafe.make-string dst.len)))
+	    (%unsafe.string-copy! str1 0 dst.str 0    len1)
+	    (%unsafe.string-copy! str2 0 dst.str len1 len2)
+	    (%unsafe.string-copy! str3 0 dst.str len2 len3)
+	    dst.str)))))
 
-(define string-copy!
-  (lambda (src src-start dst dst-start k)
-    (cond
-     ((or (not (fixnum? src-start)) (unsafe.fx< src-start 0))
-      (die 'string-copy! "not a valid starting index" src-start))
-     ((or (not (fixnum? dst-start)) (unsafe.fx< dst-start 0))
-      (die 'string-copy! "not a valid starting index" dst-start))
-     ((or (not (fixnum? k)) (unsafe.fx< k 0))
-      (die 'string-copy! "not a valid length" k))
-     ((not (string? src))
-      (die 'string-copy! "not a string" src))
-     ((not (string? dst))
-      (die 'string-copy! "not a string" dst))
-     ((let ((n (unsafe.fx+ src-start k)))
-	(or (unsafe.fx< n 0) (unsafe.fx> n (unsafe.string-length src))))
-      (die 'string-copy! "out of range" src-start k))
-     ((let ((n (unsafe.fx+ dst-start k)))
-	(or (unsafe.fx< n 0) (unsafe.fx> n (unsafe.string-length dst))))
-      (die 'string-copy! "out of range" dst-start k))
-     ((eq? src dst)
-      (cond
-       ((unsafe.fx< dst-start src-start)
-	(let f ((src src) (si src-start) (di dst-start) (sj (unsafe.fx+ src-start k)))
-	  (unless (unsafe.fx= si sj)
-	    (unsafe.string-set! src di (unsafe.string-ref src si))
-	    (f src (unsafe.fxadd1 si) (unsafe.fxadd1 di) sj))))
-       ((unsafe.fx< src-start dst-start)
-	(let f ((src src) (si (unsafe.fx+ src-start k)) (di (unsafe.fx+ dst-start k)) (sj src-start))
-	  (unless (unsafe.fx= si sj)
-	    (let ((si (unsafe.fxsub1 si)) (di (unsafe.fxsub1 di)))
-	      (unsafe.string-set! src di (unsafe.string-ref src si))
-	      (f src si di sj)))))
-       (else (void))))
-     (else
-      (let f ((src src) (si src-start) (dst dst) (di dst-start) (sj (unsafe.fx+ src-start k)))
-	(unless (unsafe.fx= si sj)
-	  (unsafe.string-set! dst di (unsafe.string-ref src si))
-	  (f src (unsafe.fxadd1 si) dst (unsafe.fxadd1 di) sj)))))))
+   ((str1 . strs)
+    (define who 'string-append)
+    (define (%length-and-validation strs len)
+      (if (null? strs)
+	  len
+	(let ((str (unsafe.car strs)))
+	  (with-arguments-validation (who)
+	      ((string str))
+	    (%length-and-validation (unsafe.cdr strs) (+ len (unsafe.string-length str)))))))
 
-(define uuid
-  (lambda ()
-    (let ((s (unsafe.make-bytevector 16)))
-      (let ((r (foreign-call "ik_uuid" s)))
-	(if (bytevector? r)
-	    (utf8->string r)
-	  (error 'uuid "cannot obtain unique id"))))))
+    (define (%fill-strings dst.str strs dst.start)
+      (if (null? strs)
+	  dst.str
+	(let* ((src.str (unsafe.car strs))
+	       (src.len (unsafe.string-length src.str)))
+	  (begin
+	    (unsafe.string-copy! dst.str dst.start src.str 0 src.len)
+	    (%fill-strings dst.str (unsafe.cdr strs) (unsafe.fx+ dst.start src.len))))))
+
+    (let ((dst.len (%length-and-validation (cons str1 strs) 0)))
+      (with-arguments-validation (who)
+	  ((length dst.len))
+	(%fill-strings (unsafe.make-string dst.len) strs 0))))))
+
+
+(define string-for-each
+  ;;Defined  by R6RS.  The  STRS must  all have  the same  length.  PROC
+  ;;should accept as many arguments as there are STRS.
+  ;;
+  ;;The  STRING-FOR-EACH  procedure  applies  PROC element-wise  to  the
+  ;;characters of the STRS for its side effects, in order from the first
+  ;;characters to the  last.  PROC is always called  in the same dynamic
+  ;;environment  as  STRING-FOR-EACH  itself.   The  return  values  are
+  ;;unspecified.
+  ;;
+  ;;Analogous to FOR-EACH.
+  ;;
+  ;;Implementation responsibilities:  the implementation must  check the
+  ;;restrictions on @var{proc} to the extent performed by applying it as
+  ;;described.   An   implementation  may  check  whether   PROC  is  an
+  ;;appropriate argument before applying it.
+  ;;
+  (case-lambda
+   ((proc str)
+    (define who 'string-for-each)
+    (with-arguments-validation (who)
+	((procedure	proc)
+	 (string	str))
+      (let next-char ((proc		proc)
+		      (str		str)
+		      (str.index	0)
+		      (str.len		(unsafe.string-length str)))
+	(unless (unsafe.fx= str.index str.len)
+	  (proc (unsafe.string-ref str str.index))
+	  (next-char proc str (unsafe.fxadd1 str.index) str.len)))))
+
+   ((proc str0 str1)
+    (define who 'string-for-each)
+    (with-arguments-validation (who)
+	((procedure	proc)
+	 (string	str0)
+	 (string	str1))
+      (let ((str.len (unsafe.string-length str0)))
+	(with-arguments-validation (who)
+	    ((has-length str1 str.len))
+	  (let next-char ((proc		proc)
+			  (str0		str0)
+			  (str1		str1)
+			  (str.index	0)
+			  (str.len	str.len))
+	    (unless (unsafe.fx= str.index str.len)
+	      (proc (unsafe.string-ref str0 str.index)
+		    (unsafe.string-ref str1 str.index))
+	      (next-char proc str0 str1 (unsafe.fxadd1 str.index) str.len)))))))
+
+   ((proc str0 str1 . strs)
+    (define who 'string-for-each)
+    (with-arguments-validation (who)
+	((procedure	proc)
+	 (string	str0)
+	 (string	str1))
+      (let ((str.len (unsafe.string-length str0)))
+	(with-arguments-validation (who)
+	    ((has-length str1 str.len))
+
+	  ;; validate the rest strings
+	  (let next-string ((strs	strs)
+			    (str.len	str.len))
+	    (unless (null? strs)
+	      (let ((str (unsafe.car strs)))
+		(with-arguments-validation (who)
+		    ((string      str)
+		     (has-length  str str.len))
+		  (next-string (unsafe.cdr strs) str.len)))))
+
+	  ;; do the application
+	  (let next-char ((proc		proc)
+			  (str0		str0)
+			  (str1		str1)
+			  (strs		strs)
+			  (str.index	0)
+			  (str.len	str.len))
+	    (unless (unsafe.fx= str.index str.len)
+	      (apply proc
+		     (unsafe.string-ref str0 str.index)
+		     (unsafe.string-ref str1 str.index)
+		     (let next-string ((str.index str.index)
+				       (strs      strs))
+		       (if (null? strs)
+			   '()
+			 (cons (unsafe.string-ref (unsafe.car strs) str.index)
+			       (next-string str.index (unsafe.cdr strs))))))
+	      (next-char proc str0 str1 strs (unsafe.fxadd1 str.index) str.len)))
+	  ))))
+   ))
+
+
+(define (string-fill! str fill)
+  ;;Defined by R6RS.   Store FILL in every element of  the given STR and
+  ;;return unspecified values.
+  ;;
+  (define who 'string-fill!)
+  (with-arguments-validation (who)
+      ((string	str)
+       (char	fill))
+    (let ((len (unsafe.string-length str)))
+      (unsafe.string-fill! str 0 len fill))))
+
+
+(define (string-copy! src.str src.start dst.str dst.start count)
+  ;;Defined by  Ikarus.  Copy COUNT characters from  SRC.STR starting at
+  ;;SRC.START  (inclusive)  to DST.STR  starting  at DST.START.   Return
+  ;;unspecified values.
+  ;;
+  (define who 'string-copy!)
+  (with-arguments-validation (who)
+      ((string		src.str)
+       (string		dst.str)
+       (index		src.start)
+       (index-for	src.start src.str)
+       (index		dst.start)
+       (index-for	dst.start dst.str)
+       (count		count))
+    (let ((src.len (unsafe.string-length src.str))
+	  (dst.len (unsafe.string-length dst.str)))
+      (with-arguments-validation (who)
+	  ((count-for	count src.start src.len)
+	   (count-for	count dst.start dst.len))
+	(if (eq? src.str dst.str)
+	    (if (unsafe.fx< dst.start src.start)
+		(unsafe.string-self-copy-forwards! src.str src.start dst.start count)
+	      (unsafe.string-self-copy-backwards! src.str src.start dst.start count))
+	  (let ((src.end (unsafe.fx+ src.start count)))
+	    (unsafe.string-copy! src.str src.start dst.str dst.start src.end)))))))
+
+
+(define (uuid)
+  (define who 'uuid)
+  (let* ((s (unsafe.make-bytevector 16))
+	 (r (foreign-call "ik_uuid" s)))
+    (if (bytevector? r)
+	(utf8->string r)
+      (error who "cannot obtain unique id"))))
 
 
 (define (string->latin1 str)

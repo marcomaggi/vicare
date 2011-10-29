@@ -2580,6 +2580,13 @@ arguments are given: return the empty bytevector.
 The following bindings are exported by the @library{ikarus} library.
 
 
+@defun string-copy! @var{src.str} @var{src.start} @var{dst.str} @var{dst.start} @var{count}
+Copy @var{count} characters from @var{src.str} starting at
+@var{src.start} (inclusive) to @var{dst.str} starting at
+@var{dst.start}.  Return unspecified values.
+@end defun
+
+
 @defun string->latin1 @var{string}
 @defunx latin1->string @var{bytevevctor}
 Convert to and from a Scheme string and a Scheme bytevector holding the
@@ -2596,6 +2603,12 @@ Latin-1 encoding of the characters.
 Convert to and from a Scheme string and a Scheme bytevector holding the
 @utf{}-16 encoding of the characters under little, big or native
 endianness respectively.
+@end defun
+
+
+@defun uuid
+Attempt to build a unique string and return it.  If an internal error
+occurs because of impossible generation: raise an error.
 @end defun
 
 @c page

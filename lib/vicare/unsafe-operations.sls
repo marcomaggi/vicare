@@ -171,9 +171,11 @@
 	    ($string-ref	string-ref)
 	    ($string-set!	string-set!))
 
-    (rename ($string-copy!	string-copy!)
-	    ($string-fill!	string-fill!)
-	    ($substring		substring))
+    (rename ($string-copy!			string-copy!)
+	    ($string-self-copy-forwards!	string-self-copy-forwards!)
+	    ($string-self-copy-backwards!	string-self-copy-backwards!)
+	    ($string-fill!			string-fill!)
+	    ($substring				substring))
     )
   (import (ikarus)
     (ikarus system $fx)
@@ -662,16 +664,20 @@
 	($bytevector-u8-set! bv index fill)
 	(loop bv ($fxadd1 index) end fill)))))
 
-(define-inline ($bytevector-copy! ?src.str ?src.start ?src.end
-				  ?dst.str ?dst.start ?dst.end)
-  (let loop ((src.str ?src.str) (src.start ?src.start) (src.end ?src.end)
-	     (dst.str ?dst.str) (dst.start ?dst.start) (dst.end ?dst.end))
-    (if ($fx= src.start dst.start)
-	dst.str
+(define-inline ($bytevector-copy! ?src.bv ?src.start
+				  ?dst.bv ?dst.start
+				  ?src.end)
+  (let loop ((src.bv ?src.bv) (src.start ?src.start)
+	     (dst.bv ?dst.bv) (dst.start ?dst.start)
+	     (src.end ?src.end))
+    (if ($fx= src.start src.end)
+	dst.bv
       (begin
-       ($bytevector-set! dst.str dst.start ($bytevector-u8-ref src.str src.start))
-       (loop src.str ($fxadd1 src.start) src.end
-	     dst.str ($fxadd1 dst.start) dst.end)))))
+	($bytevector-set! dst.bv dst.start ($bytevector-u8-ref src.bv src.start))
+	(loop src.bv ($fxadd1 src.start)
+	      dst.bv ($fxadd1 dst.start)
+	      src.end)))))
+
 
 
 ;;;; miscellaneous string operations
@@ -684,22 +690,45 @@
 	($string-set! str index fill)
 	(loop str ($fxadd1 index) end fill)))))
 
-(define-inline ($string-copy! ?src.str ?src.start ?src.end
-			      ?dst.str ?dst.start ?dst.end)
-  (let loop ((src.str ?src.str) (src.start ?src.start) (src.end ?src.end)
-	     (dst.str ?dst.str) (dst.start ?dst.start) (dst.end ?dst.end))
-    (if ($fx= src.start dst.start)
+(define-inline ($string-copy! ?src.str ?src.start
+			      ?dst.str ?dst.start
+			      ?src.end)
+  (let loop ((src.str ?src.str) (src.start ?src.start)
+	     (dst.str ?dst.str) (dst.start ?dst.start)
+	     (src.end ?src.end))
+    (if ($fx= src.start src.end)
 	dst.str
       (begin
-       ($string-set! dst.str dst.start ($string-ref src.str src.start))
-       (loop src.str ($fxadd1 src.start) src.end
-	     dst.str ($fxadd1 dst.start) dst.end)))))
+	($string-set! dst.str dst.start ($string-ref src.str src.start))
+	(loop src.str ($fxadd1 src.start)
+	      dst.str ($fxadd1 dst.start)
+	      src.end)))))
+
+(define-inline ($string-self-copy-forwards! ?str ?src.start ?dst.start ?count)
+  (let loop ((str	?str)
+	     (src.start	?src.start)
+	     (dst.start	?dst.start)
+	     (src.end	($fx+ ?src.start ?count)))
+    (unless ($fx= src.start src.end)
+      ($string-set! str dst.start ($string-ref str src.start))
+      (loop str ($fxadd1 src.start) ($fxadd1 dst.start) src.end))))
+
+(define-inline ($string-self-copy-backwards! ?str ?src.start ?dst.start ?count)
+  (let loop ((str	?str)
+	     (src.start	($fx+ ?src.start ?count))
+	     (dst.start	($fx+ ?dst.start ?count))
+	     (src.end	?src.start))
+    (unless ($fx= src.start src.end)
+      (let ((src.start ($fxsub1 src.start))
+	    (dst.start ($fxsub1 dst.start)))
+	($string-set! str dst.start ($string-ref str src.start))
+	(loop str src.start dst.start src.end)))))
 
 (define-inline ($substring ?str ?start ?end)
   (let ((dst.len ($fx- ?end ?start)))
     (if ($fx< 0 dst.len)
 	(let ((dst.str ($make-string dst.len)))
-	  ($string-copy! ?str ?start ?end dst.str 0 dst.len)
+	  ($string-copy! ?str ?start dst.str 0 ?end)
 	  dst.str)
       "")))
 
