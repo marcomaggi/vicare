@@ -34,6 +34,496 @@
 (display "*** testing Vicare string functions\n")
 
 
+;;;; syntax helpers
+
+(define-syntax catch
+  (syntax-rules ()
+    ((_ print? . ?body)
+     (guard (E ((assertion-violation? E)
+		(when print?
+		  (pretty-print (condition-message E)))
+		(condition-irritants E))
+	       (else E))
+       (begin . ?body)))))
+
+
+(parametrise ((check-test-name	'string-length))
+
+  (check
+      (string-length "")
+    => 0)
+
+  (check
+      (string-length "a")
+    => 1)
+
+  (check
+      (string-length "abc")
+    => 3)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (catch #f
+	(string-length 123))
+    => '(123))
+
+  #t)
+
+
+(parametrise ((check-test-name	'string-ref))
+
+  (check
+      (string-ref "a" 0)
+    => #\a)
+
+  (check
+      (string-ref "abc" 2)
+    => #\c)
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: string
+
+  (check
+      (catch #f
+	(string-ref 123 1))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+;;;FIXME
+  #;(check
+      (catch #t
+	(string-ref "" #\a))
+    => '(#\a))
+
+  (check
+      (catch #f
+	(string-ref "" -1))
+    => '(-1))
+
+  (check
+      (catch #f
+	(string-ref "" (+ 1 (greatest-fixnum))))
+    => (list (+ 1 (greatest-fixnum))))
+
+  (check
+      (catch #f
+	(string-ref "" 0))
+    => '(0 ""))
+
+  (check
+      (catch #f
+	(string-ref "abc" 10))
+    => '(10 "abc"))
+
+  #t)
+
+
+(parametrise ((check-test-name	'string-set-bang))
+
+  (check
+      (let ((str (string #\a #\b #\c)))
+	(string-set! str 0 #\9)
+	str)
+    => "9bc")
+
+  (check
+      (let ((str (string #\a #\b #\c)))
+	(string-set! str 1 #\9)
+	str)
+    => "a9c")
+
+  (check
+      (let ((str (string #\a #\b #\c)))
+	(string-set! str 2 #\9)
+	str)
+    => "ab9")
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: string
+
+  (check
+      (catch #f
+	(string-set! 123 1 #\a))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: index
+
+  (check
+      (catch #f
+	(string-set! (string #\a #\b #\c) #\a #\b))
+    => '(#\a))
+
+  (check
+      (catch #f
+	(string-set! (string #\a #\b #\c) -1 #\a))
+    => '(-1))
+
+  (check
+      (catch #f
+	(string-set! (string #\a #\b #\c) (+ 1 (greatest-fixnum)) #\a))
+    => (list (+ 1 (greatest-fixnum))))
+
+  (check
+      (catch #f
+	(string-set! (string) 0 #\a))
+    => '(0 ""))
+
+  (check
+      (catch #f
+	(string-set! (string #\a #\b #\c) 10 #\9))
+    => `(10 "abc"))
+
+  #t)
+
+
+(parametrise ((check-test-name	'make-string))
+
+  (check
+      (make-string 0)
+    => "")
+
+  (check
+      (make-string 1)
+    => "\x0;")
+
+  (check
+      (make-string 3)
+    => "\x0;\x0;\x0;")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (make-string 0 #\A)
+    => "")
+
+  (check
+      (make-string 1 #\A)
+    => "A")
+
+  (check
+      (make-string 3 #\A)
+    => "AAA")
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: length
+
+  (check	;not a number
+      (catch #f
+	(make-string #t #\A))
+    => '(#t))
+
+  (check	;negative
+      (catch #f
+	(make-string -1 #\A))
+    => '(-1))
+
+  (check	;not a fixnum
+      (catch #f
+	(make-string (+ 1 (greatest-fixnum)) #\A))
+    => (list (+ 1 (greatest-fixnum))))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: character
+
+  (check	;not a character
+      (catch #f
+	(make-string 1 #t))
+    => '(#t))
+
+  #t)
+
+
+(parametrise ((check-test-name	'string))
+
+  (check
+      (string)
+    => "")
+
+  (check
+      (string #\a)
+    => "a")
+
+  (check
+      (string #\a #\b #\c)
+    => "abc")
+
+  (check
+      (string #\a #\b #\c #\d)
+    => "abcd")
+
+  (check
+      (string #\a #\b #\c #\d #\e #\f #\g)
+    => "abcdefg")
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check
+      (catch #f
+	(string 1))
+    => '(1))
+
+  (check
+      (catch #f
+	(string #\a 1))
+    => '(1))
+
+  (check
+      (catch #f
+	(string #\a #\b 1))
+    => '(1))
+
+  (check
+      (catch #f
+	(string #\a #\b #\c 1))
+    => '(1))
+
+  (check
+      (catch #f
+	(string #\a #\b #\c #\d 1))
+    => '(1))
+
+  (check
+      (catch #f
+	(string #\a #\b #\c #\d #\e 1))
+    => '(1))
+
+  #t)
+
+
+(parametrise ((check-test-name	'substring))
+
+  (check
+      (substring "" 0 0)
+    => "")
+
+  (check
+      (substring "a" 0 0)
+    => "")
+
+  (check
+      (substring "abc" 0 0)
+    => "")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (substring "a" 1 1)
+    => "")
+
+  (check
+      (substring "abc" 1 1)
+    => "")
+
+  (check
+      (substring "abc" 3 3)
+    => "")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (substring "a" 0 1)
+    => "a")
+
+  (check
+      (substring "abc" 1 2)
+    => "b")
+
+  (check
+      (substring "abc" 2 3)
+    => "c")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (substring "abc" 0 3)
+    => "abc")
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: string
+
+  (check
+      (catch #f
+	(substring 123 1 1))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: start index
+
+  (check	;not a number
+      (catch #f
+	(substring "abcd" #t 1))
+    => '(#t))
+
+  (check	;negative
+      (catch #f
+	(substring "abcd" -1 1))
+    => '(-1))
+
+  (check	;not a fixnum
+      (catch #f
+	(substring "abcd" (+ 1 (greatest-fixnum)) 1))
+    => (list (+ 1 (greatest-fixnum))))
+
+  (check	;too big for string
+      (catch #f
+	(substring "abcd" 5 6))
+    => '(5 4))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: end index
+
+  (check	;not a number
+      (catch #f
+	(substring "abcd" 1 #t))
+    => '(#t))
+
+  (check	;negative
+      (catch #f
+	(substring "abcd" 1 -1))
+    => '(-1))
+
+  (check	;not a fixnum
+      (catch #f
+	(substring "abcd" 1 (+ 1 (greatest-fixnum))))
+    => (list (+ 1 (greatest-fixnum))))
+
+  (check	;too big for string
+      (catch #f
+	(substring "abcd" 2 6))
+    => '(6 4))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: indexes
+
+  (check	;incorrect order
+      (catch #f
+	(substring "abcd" 2 1))
+    => '(2 1))
+
+  #t)
+
+
+(parametrise ((check-test-name	'string-copy))
+
+  (check
+      (string-copy "")
+    => "")
+
+  (check
+      (string-copy "a")
+    => "a")
+
+  (check
+      (string-copy "abc")
+    => "abc")
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: string
+
+  (check
+      (catch #f
+	(string-copy 123))
+    => '(123))
+
+  #t)
+
+
+(parametrise ((check-test-name	'string-equal))
+
+  (check
+      (string=? "" "")
+    => #t)
+
+  (check
+      (string=? "" "" "")
+    => #t)
+
+  (check
+      (string=? "a" "a")
+    => #t)
+
+  (check
+      (string=? "a" "a" "a")
+    => #t)
+
+  (check
+      (string=? "abc" "abc")
+    => #t)
+
+  (check
+      (string=? "abc" "abc" "abc")
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string=? "a" "")
+    => #f)
+
+  (check
+      (string=? "" "a")
+    => #f)
+
+  (check
+      (string=? "a" "" "")
+    => #f)
+
+  (check
+      (string=? "" "a" "")
+    => #f)
+
+  (check
+      (string=? "" "" "a")
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string=? "abc" "a")
+    => #f)
+
+  (check
+      (string=? "a" "abc")
+    => #f)
+
+  (check
+      (string=? "a" "abc" "abc")
+    => #f)
+
+  (check
+      (string=? "abc" "a" "abc")
+    => #f)
+
+  (check
+      (string=? "abc" "abc" "a")
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check
+      (catch #f
+	(string=? 123 ""))
+    => '(123))
+
+  (check
+      (catch #f
+	(string=? "" 123))
+    => '(123))
+
+  (check
+      (catch #f
+	(string=? "" "" 123))
+    => '(123))
+
+  #t)
+
+
 (parametrise ((check-test-name	'latin1))
 
   (define test-string
@@ -138,3 +628,6 @@
 (check-report)
 
 ;;; end of file
+;;Local Variables:
+;;eval: (put 'catch 'scheme-indent-function 1)
+;;End:
