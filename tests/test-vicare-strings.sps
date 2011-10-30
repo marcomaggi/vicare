@@ -707,6 +707,67 @@
   #t)
 
 
+(parametrise ((check-test-name	'list-to-string))
+
+  (check
+      (list->string '())
+    => "")
+
+  (check
+      (list->string '(#\a))
+    => "a")
+
+  (check
+      (list->string '(#\a #\b #\c))
+    => "abc")
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check	;not a list
+      (catch #f
+	(list->string 123))
+    => '(123))
+
+  (check	;not a list of chars
+      (catch #f
+	(list->string '(1)))
+    => '(1))
+
+  (check	;not a list of chars
+      (catch #f
+	(list->string '(#\a 1)))
+    => '(1))
+
+  (check	;not a proper list
+      (catch #f
+	(list->string '(#\a #\b . #\c)))
+    => '((#\a #\b . #\c)))
+
+  (check	;not a proper list
+      (catch #f
+	(list->string '(#\a . #\c)))
+    => '((#\a . #\c)))
+
+  (let ((circ '#0=(#\a #\b #\c . #0#)))
+    (check	;circular list
+	(catch #f
+	  (list->string circ))
+      => (list circ)))
+
+  ;;This consumes too much memory on my small computer (Marco Maggi; Oct
+  ;;30, 2011).
+  ;;
+  ;; (let* ((tail (make-list (greatest-fixnum) #\a))
+  ;; 	 (ell  (cons #\a tail)))
+  ;;   (check
+  ;; 	(catch #f
+  ;; 	  (list->string ell))
+  ;;     => ell))
+
+  #t)
+
+
 (parametrise ((check-test-name	'latin1))
 
   (define test-string
