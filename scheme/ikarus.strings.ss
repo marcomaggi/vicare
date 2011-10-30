@@ -86,25 +86,33 @@
   (assertion-violation who "expected non-negative fixnum as string index argument" obj))
 
 (define-argument-validation (index-for who idx str)
+  ;;To be used after INDEX validation.
+  ;;
   (unsafe.fx< idx (unsafe.string-length str))
   (assertion-violation who "index is out of range for string" idx str))
 
 (define-argument-validation (start-for who idx len)
+  ;;To be used after INDEX validation.
+  ;;
   (unsafe.fx<= idx len)
   (assertion-violation who "start index argument out of range for string" idx len))
 
 (define-argument-validation (end-for who idx len)
+  ;;To be used after INDEX validation.
+  ;;
   (unsafe.fx<= idx len)
   (assertion-violation who "end index argument out of range for string" idx len))
 
 (define-argument-validation (start-end who start end)
+  ;;To be used after INDEX validation.
+  ;;
   (unsafe.fx<= start end)
   (assertion-violation who "start and end index arguments are in decreasing order" start end))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (count who obj)
-  (fixnum? obj)
+  (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as characters count argument" obj))
 
 (define-argument-validation (count-for who count start len)
@@ -766,21 +774,24 @@
       ((string		src.str)
        (string		dst.str)
        (index		src.start)
-       (index-for	src.start src.str)
+       (start-for	src.start src.str)
        (index		dst.start)
-       (index-for	dst.start dst.str)
+       (start-for	dst.start dst.str)
        (count		count))
     (let ((src.len (unsafe.string-length src.str))
 	  (dst.len (unsafe.string-length dst.str)))
       (with-arguments-validation (who)
 	  ((count-for	count src.start src.len)
 	   (count-for	count dst.start dst.len))
-	(if (eq? src.str dst.str)
-	    (if (unsafe.fx< dst.start src.start)
-		(unsafe.string-self-copy-forwards! src.str src.start dst.start count)
-	      (unsafe.string-self-copy-backwards! src.str src.start dst.start count))
-	  (let ((src.end (unsafe.fx+ src.start count)))
-	    (unsafe.string-copy! src.str src.start dst.str dst.start src.end)))))))
+	(cond ((unsafe.fxzero? count)
+	       (void))
+	      ((eq? src.str dst.str)
+	       (if (unsafe.fx< dst.start src.start)
+		   (unsafe.string-self-copy-forwards! src.str src.start dst.start count)
+		 (unsafe.string-self-copy-backwards! src.str src.start dst.start count)))
+	      (else
+	       (let ((src.end (unsafe.fx+ src.start count)))
+		 (unsafe.string-copy! src.str src.start dst.str dst.start src.end))))))))
 
 
 (define (uuid)

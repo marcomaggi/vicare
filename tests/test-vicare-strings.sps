@@ -988,6 +988,86 @@
   #t)
 
 
+(parametrise ((check-test-name	'string-fill-bang))
+
+  (check
+      (string-fill! "" #\a)
+    => "")
+
+  (check
+      (string-fill! (string #\b) #\a)
+    => "a")
+
+  (check
+      (string-fill! (string #\b #\c #\d) #\a)
+    => "aaa")
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: string
+
+  (check
+      (catch #f
+	(string-fill! 123 #\a))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: filler
+
+  (check
+      (catch #f
+	(string-fill! "" 123))
+    => '(123))
+
+  #t)
+
+
+(parametrise ((check-test-name	'string-copy-bang))
+
+  (check
+      (let ((dst ""))
+	(string-copy! "" 0 dst 0 0)
+	dst)
+    => "")
+
+  (check
+      (let ((dst (string-copy "abcdefghilm")))
+	(string-copy! "" 0 dst 0 0)
+	dst)
+    => "abcdefghilm")
+
+  (check
+      (let ((dst (string-copy "abcdefghilm")))
+	(string-copy! "ABC" 0 dst 0 3)
+	dst)
+    => "ABCdefghilm")
+
+  (check
+      (let ((dst (string-copy "abcdefghilm")))
+	(string-copy! "ABC" 0 dst 1 3)
+	dst)
+    => "aABCefghilm")
+
+  (check
+      (let ((dst (string-copy "abcdefghilm")))
+	(string-copy! "ABC" 0 dst 7 3)
+	dst)
+    => "abcdefgABCm")
+
+  (check
+      (let ((dst (string-copy "abcdefghilm")))
+	(string-copy! "ABC" 0 dst 8 3)
+	dst)
+    => "abcdefghABC")
+
+  (check
+      (let ((dst (string-copy "abcdefghilm")))
+	(string-copy! "012ABC" 3 dst 8 3)
+	dst)
+    => "abcdefghABC")
+
+  #t)
+
+
 (parametrise ((check-test-name	'latin1))
 
   (define test-string
