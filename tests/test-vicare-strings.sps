@@ -524,6 +524,189 @@
   #t)
 
 
+(parametrise ((check-test-name	'string-cmp))
+
+  (check-for-false
+   (string<? "abcd" "abcd"))
+
+  (check-for-true
+   (string<? "abc" "abcd"))
+
+  (check-for-false
+   (string<? "abcd" "abc"))
+
+  (check-for-true
+   (string<? "ABcd" "abcd"))
+
+  (check-for-false
+   (string<? "abcd" "a2cd"))
+
+  (check-for-true
+   (string<? "abc" "abcd" "abcde"))
+
+  (check-for-false
+   (string<? "abc" "abcde" "abcd"))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (string<=? "abcd" "abcd"))
+
+  (check-for-true
+   (string<=? "abc" "abcd"))
+
+  (check-for-false
+   (string<=? "abcd" "abc"))
+
+  (check-for-true
+   (string<=? "ABcd" "abcd"))
+
+  (check-for-false
+   (string<=? "abcd" "a2cd"))
+
+  (check-for-true
+   (string<=? "abc" "abcd" "abcde"))
+
+  (check-for-false
+   (string<=? "abc" "abcde" "abcd"))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false
+   (string>? "abcd" "abcd"))
+
+  (check-for-true
+   (string>? "abcd" "abc"))
+
+  (check-for-false
+   (string>? "abc" "abcd"))
+
+  (check-for-true
+   (string>? "abcd" "ABcd"))
+
+  (check-for-false
+   (string>? "a2cd" "abcd"))
+
+  (check-for-true
+   (string>? "abcde" "abcd" "abc"))
+
+  (check-for-false
+   (string>? "abcd" "abcde" "abc"))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (string>=? "abcd" "abcd"))
+
+  (check-for-true
+   (string>=? "abcd" "abc"))
+
+  (check-for-false
+   (string>=? "abc" "abcd"))
+
+  (check-for-true
+   (string>=? "abcd" "ABcd"))
+
+  (check-for-false
+   (string>=? "a2cd" "abcd"))
+
+  (check-for-true
+   (string>=? "abcde" "abcd" "abc"))
+
+  (check-for-false
+   (string>=? "abcd" "abcde" "abc"))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check
+      (catch #f
+	(string<? 123 "abc"))
+    => '(123))
+
+  (check
+      (catch #f
+	(string<? "abc" 123))
+    => '(123))
+
+  (check
+      (catch #f
+	(string<? "abc" "def" 123))
+    => '(123))
+
+  (check
+      (catch #f
+	(string<=? 123 "abc"))
+    => '(123))
+
+  (check
+      (catch #f
+	(string<=? "abc" 123))
+    => '(123))
+
+  (check
+      (catch #f
+	(string<=? "abc" "def" 123))
+    => '(123))
+
+  (check
+      (catch #f
+	(string>? 123 "abc"))
+    => '(123))
+
+  (check
+      (catch #f
+	(string>? "abc" 123))
+    => '(123))
+
+  (check
+      (catch #f
+	(string>? "abc" "def" 123))
+    => '(123))
+
+  (check
+      (catch #f
+	(string>=? 123 "abc"))
+    => '(123))
+
+  (check
+      (catch #f
+	(string>=? "abc" 123))
+    => '(123))
+
+  (check
+      (catch #f
+	(string>=? "abc" "def" 123))
+    => '(123))
+
+  #t)
+
+
+(parametrise ((check-test-name	'string-to-list))
+
+  (check
+      (string->list "")
+    => '())
+
+  (check
+      (string->list "a")
+    => '(#\a))
+
+  (check
+      (string->list "abc")
+    => '(#\a #\b #\c))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check
+      (catch #f
+	(string->list 123))
+    => '(123))
+
+  #t)
+
+
 (parametrise ((check-test-name	'latin1))
 
   (define test-string
