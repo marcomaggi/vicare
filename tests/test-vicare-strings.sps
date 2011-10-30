@@ -1065,6 +1065,60 @@
 	dst)
     => "abcdefghABC")
 
+;;; --------------------------------------------------------------------
+;;; overlapping source and destination, forwards copy
+
+  (check
+      (let ((str (string-copy "abcdefghilm")))
+	(string-copy! str 0 str 3 3)
+	str)
+    => "abcabcghilm")
+
+  (check
+      (let ((str (string-copy "abcdefghilm")))
+	(string-copy! str 0 str 2 3)
+	str)
+    => "ababcfghilm")
+
+  (check
+      (let ((str (string-copy "abcdefghilm")))
+	(string-copy! str 0 str 1 3)
+	str)
+    => "aabcefghilm")
+
+  (check
+      (let ((str (string-copy "abcdefghilm")))
+	(string-copy! str 0 str 0 3)
+	str)
+    => "abcdefghilm")
+
+;;; --------------------------------------------------------------------
+;;; overlapping source and destination, backwards copy
+
+  (check
+      (let ((str (string-copy "abcdefghilm")))
+	(string-copy! str 3 str 0 3)
+	str)
+    => "defdefghilm")
+
+  (check
+      (let ((str (string-copy "abcdefghilm")))
+	(string-copy! str 2 str 0 3)
+	str)
+    => "cdedefghilm")
+
+  (check
+      (let ((str (string-copy "abcdefghilm")))
+	(string-copy! str 1 str 0 3)
+	str)
+    => "bcddefghilm")
+
+  (check
+      (let ((str (string-copy "abcdefghilm")))
+	(string-copy! str 0 str 0 3)
+	str)
+    => "abcdefghilm")
+
   #t)
 
 
