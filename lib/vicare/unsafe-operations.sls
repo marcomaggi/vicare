@@ -761,7 +761,7 @@
 			      ?dst.str ?dst.start
 			      ?src.end)
   ;;Copy  the  characters  of  ?SRC.STR  from  ?SRC.START  inclusive  to
-  ;;?SRC.end exclusive, to ?DST.STR starting at ?DST.START inclusive.
+  ;;?SRC.END exclusive, to ?DST.STR starting at ?DST.START inclusive.
   ;;
   (let loop ((src.str ?src.str) (src.start ?src.start)
 	     (dst.str ?dst.str) (dst.start ?dst.start)

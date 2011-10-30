@@ -768,6 +768,226 @@
   #t)
 
 
+(parametrise ((check-test-name	'string-append))
+
+  (check
+      (string-append)
+    => "")
+
+  (check
+      (string-append "")
+    => "")
+
+  (check
+      (string-append "" "" "")
+    => "")
+
+  (check
+      (string-append "" "" "" "")
+    => "")
+
+  (check
+      (string-append "" "" "" "" "")
+    => "")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string-append "a")
+    => "a")
+
+  (check
+      (string-append "a" "b")
+    => "ab")
+
+  (check
+      (string-append "a" "b" "c")
+    => "abc")
+
+  (check
+      (string-append "a" "b" "c" "d")
+    => "abcd")
+
+  (check
+      (string-append "a" "b" "c" "d" "e")
+    => "abcde")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string-append "abc")
+    => "abc")
+
+  (check
+      (string-append "abc" "def")
+    => "abcdef")
+
+  (check
+      (string-append "abc" "def" "ghi")
+    => "abcdefghi")
+
+  (check
+      (string-append "abc" "def" "ghi" "lmn")
+    => "abcdefghilmn")
+
+  (check
+      (string-append "abc" "def" "ghi" "lmn" "opq")
+    => "abcdefghilmnopq")
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check
+      (catch #f
+	(string-append 123))
+    => '(123))
+
+  (check
+      (catch #f
+	(string-append "a" 123))
+    => '(123))
+
+  (check
+      (catch #f
+	(string-append "a" "b" 123))
+    => '(123))
+
+  (check
+      (catch #f
+	(string-append "a" "b" "c" 123))
+    => '(123))
+
+  (check
+      (catch #f
+	(string-append "a" "b" "c" "d" 123))
+    => '(123))
+
+  (check
+      (catch #f
+	(string-append "a" "b" "c" "d" "e" 123))
+    => '(123))
+
+
+  #t)
+
+
+(parametrise ((check-test-name	'string-for-each))
+
+  (check
+      (with-result
+       (string-for-each (lambda (ch)
+			  (add-result ch))
+	 ""))
+    => `(,(void) ()))
+
+  (check
+      (with-result
+       (string-for-each (lambda (ch)
+			  (add-result ch))
+	 "a"))
+    => `(,(void) (#\a)))
+
+  (check
+      (with-result
+       (string-for-each (lambda (ch)
+			  (add-result ch))
+	 "abc"))
+    => `(,(void) (#\a #\b #\c)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+       (string-for-each (lambda (ch1 ch2)
+			  (add-result (cons ch1 ch2)))
+	 "" ""))
+    => `(,(void) ()))
+
+  (check
+      (with-result
+       (string-for-each (lambda (ch1 ch2)
+			  (add-result (cons ch1 ch2)))
+	 "a" "b"))
+    => `(,(void) ((#\a . #\b))))
+
+  (check
+      (with-result
+       (string-for-each (lambda (ch1 ch2)
+			  (add-result (cons ch1 ch2)))
+	 "abc" "def"))
+    => `(,(void) ((#\a . #\d)
+		  (#\b . #\e)
+		  (#\c . #\f))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+       (string-for-each (lambda (ch1 ch2 ch3)
+			  (add-result (list ch1 ch2 ch3)))
+	 "" "" ""))
+    => `(,(void) ()))
+
+  (check
+      (with-result
+       (string-for-each (lambda (ch1 ch2 ch3)
+			  (add-result (list ch1 ch2 ch3)))
+	 "a" "b" "c"))
+    => `(,(void) ((#\a #\b #\c))))
+
+  (check
+      (with-result
+       (string-for-each (lambda (ch1 ch2 ch3)
+			  (add-result (list ch1 ch2 ch3)))
+	 "abc" "def" "ghi"))
+    => `(,(void) ((#\a #\d #\g)
+		  (#\b #\e #\h)
+		  (#\c #\f #\i))))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: procedure
+
+  (check
+      (catch #f
+	(string-for-each 123 ""))
+    => '(123))
+
+  (check
+      (catch #f
+	(string-for-each 123 "" ""))
+    => '(123))
+
+  (check
+      (catch #f
+	(string-for-each 123 "" "" ""))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: strings
+
+  (check
+      (catch #f
+	(string-for-each values 123))
+    => '(123))
+
+  (check
+      (catch #f
+	(string-for-each values "" 123))
+    => '(123))
+
+  (check
+      (catch #f
+	(string-for-each values "" "" 123))
+    => '(123))
+
+  (check
+      (catch #f
+	(string-for-each values "" "" "" 123))
+    => '(123))
+
+  #t)
+
+
 (parametrise ((check-test-name	'latin1))
 
   (define test-string

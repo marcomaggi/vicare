@@ -138,7 +138,7 @@
 		       dst.str dst.start
 		       src.end))
 
-(define (emergency-platform-write-fd str)
+#;(define (emergency-platform-write-fd str)
   ;;Interface to the system  "write()" function.  In case something goes
   ;;wrong while modifying  the code in this library, it  may be that the
   ;;compiled  image  fails  to  write  understandable  messages  to  the
@@ -603,6 +603,29 @@
 	    (%unsafe.string-copy! str3 0 dst.str (unsafe.fx+ len1 len2) len3)
 	    dst.str)))))
 
+   ((str1 str2 str3 str4)
+    (define who 'string-append)
+    (with-arguments-validation (who)
+	((string  str1)
+	 (string  str2)
+	 (string  str3)
+	 (string  str4))
+      (let* ((len1	(unsafe.string-length str1))
+	     (len2	(unsafe.string-length str2))
+	     (len3	(unsafe.string-length str3))
+	     (len4	(unsafe.string-length str4))
+	     (dst.len	(+ len1 len2 len3 len4)))
+	(with-arguments-validation (who)
+	    ((length  dst.len))
+	  (let ((dst.str (unsafe.make-string dst.len)))
+	    (%unsafe.string-copy! str1 0 dst.str 0    len1)
+	    (%unsafe.string-copy! str2 0 dst.str len1 len2)
+	    (let ((dst.start (unsafe.fx+ len1 len2)))
+	      (%unsafe.string-copy! str3 0 dst.str dst.start len3)
+	      (let ((dst.start (unsafe.fx+ dst.start len3)))
+		(%unsafe.string-copy! str4 0 dst.str dst.start len4)))
+	    dst.str)))))
+
    ((str1 . strs)
     (define who 'string-append)
     (define (%length-and-validation strs len)
@@ -615,15 +638,15 @@
 
     (define (%fill-strings dst.str strs dst.start)
       (if (null? strs)
-	  (begin
-	    dst.str)
+	  dst.str
 	(let* ((src.str (unsafe.car strs))
 	       (src.len (unsafe.string-length src.str)))
 	  (begin
 	    (unsafe.string-copy! src.str 0 dst.str dst.start src.len)
 	    (%fill-strings dst.str (unsafe.cdr strs) (unsafe.fx+ dst.start src.len))))))
 
-    (let ((dst.len (%length-and-validation (cons str1 strs) 0)))
+    (let* ((strs    (cons str1 strs))
+           (dst.len (%length-and-validation strs 0)))
       (with-arguments-validation (who)
 	  ((length dst.len))
 	(%fill-strings (unsafe.make-string dst.len) strs 0))))))
