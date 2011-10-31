@@ -92,11 +92,20 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-;;;FIXME
-  #;(check
-      (catch #t
-	(string-ref "" #\a))
-    => '(#\a))
+  (check
+      (catch #f
+  	(string-ref "ciao" #\d))
+    => '(#\d))
+
+  (check
+      (catch #f
+  	(string-ref "ciao" 'd))
+    => '(d))
+
+  (check
+      (catch #f
+  	(string-ref "ciao" "d"))
+    => '("d"))
 
   (check
       (catch #f

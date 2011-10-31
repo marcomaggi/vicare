@@ -146,7 +146,7 @@
 		       dst.str dst.start
 		       src.end))
 
-#;(define (emergency-platform-write-fd str)
+(define (emergency-platform-write-fd str)
   ;;Interface to the system  "write()" function.  In case something goes
   ;;wrong while modifying  the code in this library, it  may be that the
   ;;compiled  image  fails  to  write  understandable  messages  to  the

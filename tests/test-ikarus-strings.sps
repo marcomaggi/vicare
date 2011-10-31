@@ -27,7 +27,8 @@
 
 
 #!vicare
-(import (ikarus))
+(import (ikarus)
+  (ikarus-test-framework))
 
 (define-tests test-strings
   [values

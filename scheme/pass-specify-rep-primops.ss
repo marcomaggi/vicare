@@ -132,6 +132,29 @@
 	     (K align-shift))
 	(K align-shift)))
 
+ (define (assert-fixnum x)
+   (struct-case x
+     ((constant i)
+      (if (fx? i) (nop) (interrupt)))
+     ((known expr t)
+      (case (T:fixnum? t)
+	((yes) (nop))
+	((no)  (interrupt))
+	(else  (assert-fixnum expr))))
+     (else
+      (interrupt-unless (cogen-pred-fixnum? x)))))
+
+ (define (assert-string x)
+   (struct-case x
+     ((constant s) (if (string? s) (nop) (interrupt)))
+     ((known expr t)
+      (case (T:string? t)
+	((yes) (record-optimization 'assert-string x) (nop))
+	((no)  (interrupt))
+	(else  (assert-string expr))))
+     (else
+      (interrupt-unless (cogen-pred-string? x)))))
+
  /section)
 
 
@@ -160,9 +183,9 @@
 
  (define (equable-constant? x)
    (struct-case x
-		((constant xv) (equable? xv))
-		((known x t) (equable-constant? x))
-		(else #f)))
+     ((constant xv) (equable? xv))
+     ((known x t) (equable-constant? x))
+     (else #f)))
 
  (define-primop eqv? safe
    ((P x y)
@@ -233,41 +256,41 @@
  (define-primop $memq safe
    ((P x ls)
     (struct-case ls
-		 ((constant ls)
-		  (cond
-		   ((not (list? ls)) (interrupt))
-		   (else
-		    (with-tmp ((x (T x)))
-		      (let f ((ls ls))
-			(cond
-			 ((null? ls) (K #f))
-			 ((null? (cdr ls)) (prm '= x (T (K (car ls)))))
-			 (else
-			  (make-conditional
-			      (prm '= x (T (K (car ls))))
-			    (K #t)
-			    (f (cdr ls))))))))))
-		 ((known expr t)
-		  (cogen-pred-$memq x expr))
-		 (else (interrupt))))
+      ((constant ls)
+       (cond
+	((not (list? ls)) (interrupt))
+	(else
+	 (with-tmp ((x (T x)))
+	   (let f ((ls ls))
+	     (cond
+	      ((null? ls) (K #f))
+	      ((null? (cdr ls)) (prm '= x (T (K (car ls)))))
+	      (else
+	       (make-conditional
+		   (prm '= x (T (K (car ls))))
+		 (K #t)
+		 (f (cdr ls))))))))))
+      ((known expr t)
+       (cogen-pred-$memq x expr))
+      (else (interrupt))))
    ((V x ls)
     (struct-case ls
-		 ((constant ls)
-		  (cond
-		   ((not (list? ls)) (interrupt))
-		   (else
-		    (with-tmp ((x (T x)))
-		      (let f ((ls ls))
-			(cond
-			 ((null? ls) (K bool-f))
-			 (else
-			  (make-conditional
-			      (prm '= x (T (K (car ls))))
-			    (T (K ls))
-			    (f (cdr ls))))))))))
-		 ((known expr t)
-		  (cogen-value-$memq x expr))
-		 (else (interrupt))))
+      ((constant ls)
+       (cond
+	((not (list? ls)) (interrupt))
+	(else
+	 (with-tmp ((x (T x)))
+	   (let f ((ls ls))
+	     (cond
+	      ((null? ls) (K bool-f))
+	      (else
+	       (make-conditional
+		   (prm '= x (T (K (car ls))))
+		 (T (K ls))
+		 (f (cdr ls))))))))))
+      ((known expr t)
+       (cogen-value-$memq x expr))
+      (else (interrupt))))
    ((E x ls) (nop)))
 
  (define-primop memq safe
@@ -275,13 +298,13 @@
    ((V x ls) (cogen-value-$memq x ls))
    ((E x ls)
     (struct-case ls
-		 ((constant ls)
-		  (cond
-		   ((list? ls) (nop))
-		   (else (interrupt))))
-		 ((known expr t)
-		  (cogen-effect-memq x expr))
-		 (else (interrupt)))))
+      ((constant ls)
+       (cond
+	((list? ls) (nop))
+	(else (interrupt))))
+      ((known expr t)
+       (cogen-effect-memq x expr))
+      (else (interrupt)))))
 
  (define (equable? x)
    (or (fx? x) (not (number? x))))
@@ -289,38 +312,47 @@
  (define-primop memv safe
    ((V x ls)
     (struct-case ls
-		 ((constant lsv)
-		  (cond
-		   ((and (list? lsv) (andmap equable? lsv))
-		    (cogen-value-$memq x ls))
-		   (else (interrupt))))
-		 ((known expr t)
-		  (cogen-value-memv x expr))
-		 (else (interrupt))))
+      ((constant lsv)
+       (cond
+	((and (list? lsv) (andmap equable? lsv))
+	 (cogen-value-$memq x ls))
+	(else (interrupt))))
+      ((known expr t)
+       (cogen-value-memv x expr))
+      (else (interrupt))))
    ((P x ls)
     (struct-case ls
-		 ((constant lsv)
-		  (cond
-		   ((and (list? lsv) (andmap equable? lsv))
-		    (cogen-pred-$memq x ls))
-		   (else (interrupt))))
-		 ((known expr t)
-		  (cogen-pred-memv x expr))
-		 (else (interrupt))))
+      ((constant lsv)
+       (cond
+	((and (list? lsv) (andmap equable? lsv))
+	 (cogen-pred-$memq x ls))
+	(else (interrupt))))
+      ((known expr t)
+       (cogen-pred-memv x expr))
+      (else (interrupt))))
    ((E x ls)
     (struct-case ls
-		 ((constant lsv)
-		  (cond
-		   ((list? lsv) (nop))
-		   (else (interrupt))))
-		 ((known expr t)
-		  (cogen-effect-memv x expr))
-		 (else (interrupt)))))
+      ((constant lsv)
+       (cond
+	((list? lsv) (nop))
+	(else (interrupt))))
+      ((known expr t)
+       (cogen-effect-memv x expr))
+      (else (interrupt)))))
 
  /section)
 
 
-(section ;;; pairs
+;;;; pairs
+;;
+;;A  pair is  a fixed-length  block of  memory composed  of  two machine
+;;words; the least significant bits of  a reference to a pair are a pair
+;;tag.
+;;
+;;  |------------------------|-------------| reference to pair
+;;        heap offset           pair tag
+;;
+(section
 
  (define-primop pair? safe
    ((P x)
@@ -358,13 +390,13 @@
 
  (define (assert-pair x)
    (struct-case x
-		((known x t)
-		 (case (T:pair? t)
-		   ((yes) (record-optimization 'assert-pair x) (nop))
-		   ((no)  (interrupt))
-		   (else  (assert-pair x))))
-		(else
-		 (interrupt-unless (tag-test x pair-mask pair-tag)))))
+     ((known x t)
+      (case (T:pair? t)
+	((yes) (record-optimization 'assert-pair x) (nop))
+	((no)  (interrupt))
+	(else  (assert-pair x))))
+     (else
+      (interrupt-unless (tag-test x pair-mask pair-tag)))))
 
  (define-primop car safe
    ((V x)
@@ -418,22 +450,22 @@
  (define-primop cdadr  safe ((V x) (expand-cxr x '(d a d))))
  (define-primop cddar  safe ((V x) (expand-cxr x '(d d a))))
  (define-primop cdddr  safe ((V x) (expand-cxr x '(d d d))))
-		;(define-primop caaaar safe ((V x) (expand-cxr x '(a a a a))))
-		;(define-primop caaadr safe ((V x) (expand-cxr x '(a a a d))))
-		;(define-primop caadar safe ((V x) (expand-cxr x '(a a d a))))
-		;(define-primop caaddr safe ((V x) (expand-cxr x '(a a d d))))
-		;(define-primop cadaar safe ((V x) (expand-cxr x '(a d a a))))
-		;(define-primop cadadr safe ((V x) (expand-cxr x '(a d a d))))
-		;(define-primop caddar safe ((V x) (expand-cxr x '(a d d a))))
+;;;(define-primop caaaar safe ((V x) (expand-cxr x '(a a a a))))
+;;;(define-primop caaadr safe ((V x) (expand-cxr x '(a a a d))))
+;;;(define-primop caadar safe ((V x) (expand-cxr x '(a a d a))))
+;;;(define-primop caaddr safe ((V x) (expand-cxr x '(a a d d))))
+;;;(define-primop cadaar safe ((V x) (expand-cxr x '(a d a a))))
+;;;(define-primop cadadr safe ((V x) (expand-cxr x '(a d a d))))
+;;;(define-primop caddar safe ((V x) (expand-cxr x '(a d d a))))
  (define-primop cadddr safe ((V x) (expand-cxr x '(a d d d))))
-		;(define-primop cdaaar safe ((V x) (expand-cxr x '(d a a a))))
-		;(define-primop cdaadr safe ((V x) (expand-cxr x '(d a a d))))
-		;(define-primop cdadar safe ((V x) (expand-cxr x '(d a d a))))
-		;(define-primop cdaddr safe ((V x) (expand-cxr x '(d a d d))))
-		;(define-primop cddaar safe ((V x) (expand-cxr x '(d d a a))))
-		;(define-primop cddadr safe ((V x) (expand-cxr x '(d d a d))))
-		;(define-primop cdddar safe ((V x) (expand-cxr x '(d d d a))))
-		;(define-primop cddddr safe ((V x) (expand-cxr x '(d d d d))))
+;;;(define-primop cdaaar safe ((V x) (expand-cxr x '(d a a a))))
+;;;(define-primop cdaadr safe ((V x) (expand-cxr x '(d a a d))))
+;;;(define-primop cdadar safe ((V x) (expand-cxr x '(d a d a))))
+;;;(define-primop cdaddr safe ((V x) (expand-cxr x '(d a d d))))
+;;;(define-primop cddaar safe ((V x) (expand-cxr x '(d d a a))))
+;;;(define-primop cddadr safe ((V x) (expand-cxr x '(d d a d))))
+;;;(define-primop cdddar safe ((V x) (expand-cxr x '(d d d a))))
+;;;(define-primop cddddr safe ((V x) (expand-cxr x '(d d d d))))
 
 
  (define-primop list safe
@@ -688,14 +720,14 @@
  (define-primop $cpref unsafe
    ((V x i)
     (struct-case i
-		 ((constant i)
-		  (unless (fx? i) (interrupt))
-		  (prm 'mref (T x)
-		       (K (+ (- disp-closure-data closure-tag)
-			     (* i wordsize)))))
-		 ((known expr t)
-		  (cogen-value-$cpref x expr))
-		 (else (interrupt)))))
+      ((constant i)
+       (unless (fx? i) (interrupt))
+       (prm 'mref (T x)
+	    (K (+ (- disp-closure-data closure-tag)
+		  (* i wordsize)))))
+      ((known expr t)
+       (cogen-value-$cpref x expr))
+      (else (interrupt)))))
 
  /section)
 
@@ -783,34 +815,34 @@
  (define-primop top-level-value safe
    ((V x)
     (struct-case x
-		 ((constant s)
-		  (if (symbol? s)
-		      (with-tmp ((v (cogen-value-$symbol-value x)))
-			(interrupt-when (cogen-pred-$unbound-object? v))
-			v)
-		    (interrupt)))
-		 ((known expr t)
-		  (cogen-value-top-level-value expr))
-		 (else
-		  (with-tmp ((x (T x)))
-		    (interrupt-unless (cogen-pred-symbol? x))
-		    (with-tmp ((v (cogen-value-$symbol-value x)))
-		      (interrupt-when (cogen-pred-$unbound-object? v))
-		      v)))))
+      ((constant s)
+       (if (symbol? s)
+	   (with-tmp ((v (cogen-value-$symbol-value x)))
+	     (interrupt-when (cogen-pred-$unbound-object? v))
+	     v)
+	 (interrupt)))
+      ((known expr t)
+       (cogen-value-top-level-value expr))
+      (else
+       (with-tmp ((x (T x)))
+	 (interrupt-unless (cogen-pred-symbol? x))
+	 (with-tmp ((v (cogen-value-$symbol-value x)))
+	   (interrupt-when (cogen-pred-$unbound-object? v))
+	   v)))))
    ((E x)
     (struct-case x
-		 ((constant s)
-		  (if (symbol? s)
-		      (with-tmp ((v (cogen-value-$symbol-value x)))
-			(interrupt-when (cogen-pred-$unbound-object? v)))
-		    (interrupt)))
-		 ((known expr t)
-		  (cogen-effect-top-level-value expr))
-		 (else
-		  (with-tmp ((x (T x)))
-		    (interrupt-unless (cogen-pred-symbol? x))
-		    (with-tmp ((v (cogen-value-$symbol-value x)))
-		      (interrupt-when (cogen-pred-$unbound-object? v))))))))
+      ((constant s)
+       (if (symbol? s)
+	   (with-tmp ((v (cogen-value-$symbol-value x)))
+	     (interrupt-when (cogen-pred-$unbound-object? v)))
+	 (interrupt)))
+      ((known expr t)
+       (cogen-effect-top-level-value expr))
+      (else
+       (with-tmp ((x (T x)))
+	 (interrupt-unless (cogen-pred-symbol? x))
+	 (with-tmp ((v (cogen-value-$symbol-value x)))
+	   (interrupt-when (cogen-pred-$unbound-object? v))))))))
 
 
  (define-primop $init-symbol-function! unsafe
@@ -906,18 +938,18 @@
  (define-primop $fx* unsafe
    ((V a b)
     (struct-case a
-		 ((constant a)
-		  (unless (fx? a) (interrupt))
-		  (prm 'int* (T b) (K a)))
-		 ((known a t) (cogen-value-$fx* a b))
-		 (else
-		  (struct-case b
-			       ((constant b)
-				(unless (fx? b) (interrupt))
-				(prm 'int* (T a) (K b)))
-			       ((known b t) (cogen-value-$fx* a b))
-			       (else
-				(prm 'int* (T a) (prm 'sra (T b) (K fx-shift))))))))
+      ((constant a)
+       (unless (fx? a) (interrupt))
+       (prm 'int* (T b) (K a)))
+      ((known a t) (cogen-value-$fx* a b))
+      (else
+       (struct-case b
+	 ((constant b)
+	  (unless (fx? b) (interrupt))
+	  (prm 'int* (T a) (K b)))
+	 ((known b t) (cogen-value-$fx* a b))
+	 (else
+	  (prm 'int* (T a) (prm 'sra (T b) (K fx-shift))))))))
    ((P x y) (K #t))
    ((E x y) (nop)))
 
@@ -949,36 +981,36 @@
  (define-primop $fxsll unsafe
    ((V x i)
     (struct-case i
-		 ((constant i)
-		  (unless (fx? i) (interrupt))
-		  (prm 'sll (T x) (K i)))
-		 ((known i t) (cogen-value-$fxsll x i))
-		 (else
-		  (prm 'sll (T x) (prm 'sra (T i) (K fx-shift))))))
+      ((constant i)
+       (unless (fx? i) (interrupt))
+       (prm 'sll (T x) (K i)))
+      ((known i t) (cogen-value-$fxsll x i))
+      (else
+       (prm 'sll (T x) (prm 'sra (T i) (K fx-shift))))))
    ((P x i) (K #t))
    ((E x i) (nop)))
 
  (define-primop $fxsra unsafe
    ((V x i)
     (struct-case i
-		 ((constant i)
-		  (unless (fx? i) (interrupt))
-		  (prm 'logand
-		       (prm 'sra (T x)
-			    (K (if (< i (* wordsize 8))
-				   i
-				 (- (* wordsize 8) 1))))
-		       (K (* -1 fx-scale))))
-		 ((known i t) (cogen-value-$fxsra x i))
-		 (else
-		  (with-tmp ((i (prm 'sra (T i) (K fx-shift))))
-		    (with-tmp ((i (make-conditional
-				      (prm '< i (K (* 8 wordsize)))
-				    i
-				    (K (- (* 8 wordsize) 1)))))
-		      (prm 'logand
-			   (prm 'sra (T x) i)
-			   (K (* -1 fx-scale))))))))
+      ((constant i)
+       (unless (fx? i) (interrupt))
+       (prm 'logand
+	    (prm 'sra (T x)
+		 (K (if (< i (* wordsize 8))
+			i
+		      (- (* wordsize 8) 1))))
+	    (K (* -1 fx-scale))))
+      ((known i t) (cogen-value-$fxsra x i))
+      (else
+       (with-tmp ((i (prm 'sra (T i) (K fx-shift))))
+	 (with-tmp ((i (make-conditional
+			   (prm '< i (K (* 8 wordsize)))
+			 i
+			 (K (- (* 8 wordsize) 1)))))
+	   (prm 'logand
+		(prm 'sra (T x) i)
+		(K (* -1 fx-scale))))))))
    ((P x i) (K #t))
    ((E x i) (nop)))
 
@@ -1078,27 +1110,27 @@
  (define-primop $bignum-byte-ref unsafe
    ((V s i)
     (struct-case i
-		 ((constant i)
-		  (unless (fx? i) (interrupt))
-		  (prm 'sll
-		       (prm 'logand
-			    (prm 'mref (T s)
-				 (K (+ i (- disp-bignum-data vector-tag))))
-			    (K 255))
-		       (K fx-shift)))
-		 ((known i t) (cogen-value-$bignum-byte-ref s i))
-		 (else
-		  (prm 'sll
-		       (prm 'srl ;;; FIXME: bref
-			    (prm 'mref (T s)
-				 (prm 'int+
-				      (prm 'sra (T i) (K fx-shift))
-                   ;;; ENDIANNESS DEPENDENCY
-				      (K (- disp-bignum-data
-					    (- wordsize 1)
-					    vector-tag))))
-			    (K (* (- wordsize 1) 8)))
-		       (K fx-shift)))))
+      ((constant i)
+       (unless (fx? i) (interrupt))
+       (prm 'sll
+	    (prm 'logand
+		 (prm 'mref (T s)
+		      (K (+ i (- disp-bignum-data vector-tag))))
+		 (K 255))
+	    (K fx-shift)))
+      ((known i t) (cogen-value-$bignum-byte-ref s i))
+      (else
+       (prm 'sll
+	    (prm 'srl ;;; FIXME: bref
+		 (prm 'mref (T s)
+		      (prm 'int+
+			   (prm 'sra (T i) (K fx-shift))
+;;; ENDIANNESS DEPENDENCY
+			   (K (- disp-bignum-data
+				 (- wordsize 1)
+				 vector-tag))))
+		 (K (* (- wordsize 1) 8)))
+	    (K fx-shift)))))
    ((P s i) (K #t))
    ((E s i) (nop)))
 
@@ -1194,19 +1226,19 @@
  (define-primop $flonum-u8-ref unsafe
    ((V s i)
     (struct-case i
-		 ((constant i)
-		  ;;the data area is 8 bytes wide
-		  (unless (and (fx? i) (fx<= 0 i) (fx<= i 7))
-		    (interrupt))
-		  (prm 'sll
-		       (prm 'logand
-			    (prm 'bref (T s)
-				 (K (+ (- 7 i) (- disp-flonum-data vector-tag))))
-			    (K 255))
-		       (K fx-shift)))
-		 ((known expr t)
-		  (cogen-value-$flonum-u8-ref s expr))
-		 (else (interrupt))))
+      ((constant i)
+       ;;the data area is 8 bytes wide
+       (unless (and (fx? i) (fx<= 0 i) (fx<= i 7))
+	 (interrupt))
+       (prm 'sll
+	    (prm 'logand
+		 (prm 'bref (T s)
+		      (K (+ (- 7 i) (- disp-flonum-data vector-tag))))
+		 (K 255))
+	    (K fx-shift)))
+      ((known expr t)
+       (cogen-value-$flonum-u8-ref s expr))
+      (else (interrupt))))
    ((P s i) (K #t))
    ((E s i) (nop)))
 
@@ -1221,18 +1253,18 @@
  (define-primop $flonum-set! unsafe
    ((E x i v)
     (struct-case i
-		 ((constant i)
-		  ;;the data area is 8 bytes wide
-		  (unless (and (fx? i) (fx<= 0 i) (fx<= i 7))
-		    (interrupt))
-		  ;;store the byte
-		  (prm 'bset
-		       (T x)
-		       (K (+ (- 7 i) (- disp-flonum-data vector-tag)))
-		       (prm 'sra (T v) (K fx-shift))))
-		 ((known expr t)
-		  (cogen-effect-$flonum-set! x expr v))
-		 (else (interrupt)))))
+      ((constant i)
+       ;;the data area is 8 bytes wide
+       (unless (and (fx? i) (fx<= 0 i) (fx<= i 7))
+	 (interrupt))
+       ;;store the byte
+       (prm 'bset
+	    (T x)
+	    (K (+ (- 7 i) (- disp-flonum-data vector-tag)))
+	    (prm 'sra (T v) (K fx-shift))))
+      ((known expr t)
+       (cogen-effect-$flonum-set! x expr v))
+      (else (interrupt)))))
 
  (define-primop $fixnum->flonum unsafe
    ((V fx)
@@ -1257,28 +1289,28 @@
    (if (null? ls)
        code
      (struct-case (car ls)
-		  ((constant v)
-		   (if (flonum? v)
-		       (check-flonums (cdr ls) code)
-		     (interrupt)))
-		  ((known x t)
-		   (case (T:flonum? t)
-		     ((yes)
-		      (record-optimization 'check-flonum x)
-		      (check-flonums (cdr ls) code))
-		     ((no)
-		      (interrupt))
-		     (else
-		      (check-flonums (cons x (cdr ls)) code))))
-		  (else
-		   (check-flonums (cdr ls)
-				  (with-tmp ((x (T (car ls))))
-				    (interrupt-unless
-				     (tag-test x vector-mask vector-tag))
-				    (interrupt-unless
-				     (prm '= (prm 'mref x (K (- vector-tag)))
-					  (K flonum-tag)))
-				    code))))))
+       ((constant v)
+	(if (flonum? v)
+	    (check-flonums (cdr ls) code)
+	  (interrupt)))
+       ((known x t)
+	(case (T:flonum? t)
+	  ((yes)
+	   (record-optimization 'check-flonum x)
+	   (check-flonums (cdr ls) code))
+	  ((no)
+	   (interrupt))
+	  (else
+	   (check-flonums (cons x (cdr ls)) code))))
+       (else
+	(check-flonums (cdr ls)
+		       (with-tmp ((x (T (car ls))))
+			 (interrupt-unless
+			  (tag-test x vector-mask vector-tag))
+			 (interrupt-unless
+			  (prm '= (prm 'mref x (K (- vector-tag)))
+			       (K flonum-tag)))
+			 code))))))
 
 ;;;  (define (primary-tag-tests ls)
 ;;;    (cond
@@ -1555,17 +1587,17 @@
       (else (or* (prm 'logor a (T (car a*))) (cdr a*)))))
    (define (known-fixnum? x)
      (struct-case x
-		  ((constant i) (fx? i))
-		  ((known x t)
-		   (case (T:fixnum? t)
-		     ((yes) (record-optimization 'assert-fixnum x) #t)
-		     (else  #f)))
-		  (else #f)))
+       ((constant i) (fx? i))
+       ((known x t)
+	(case (T:fixnum? t)
+	  ((yes) (record-optimization 'assert-fixnum x) #t)
+	  (else  #f)))
+       (else #f)))
    (define (known-non-fixnum? x)
      (struct-case x
-		  ((constant i) (not (fx? i)))
-		  ((known x t) (eq? (T:fixnum? t) 'no))
-		  (else #f)))
+       ((constant i) (not (fx? i)))
+       ((known x t) (eq? (T:fixnum? t) 'no))
+       (else #f)))
    (let-values (((fx* others) (partition known-fixnum? (cons a a*))))
      (let-values (((nfx* others) (partition known-non-fixnum?  others)))
        (cond
@@ -1733,16 +1765,16 @@
 	    (prm 'sra b (K fx-shift)))))
    (define (cogen-*-constant a b)
      (struct-case a
-		  ((constant ak)
-		   (if (fx? ak)
-		       (begin
-			 (interrupt)
-			 (with-tmp ((b (T b)))
-			   (assert-fixnum b)
-			   (prm 'int*/overflow a b)))
-		     (interrupt)))
-		  ((known x t) (cogen-*-constant x b))
-		  (else #f)))
+       ((constant ak)
+	(if (fx? ak)
+	    (begin
+	      (interrupt)
+	      (with-tmp ((b (T b)))
+		(assert-fixnum b)
+		(prm 'int*/overflow a b)))
+	  (interrupt)))
+       ((known x t) (cogen-*-constant x b))
+       (else #f)))
    (or (cogen-*-constant a b)
        (cogen-*-constant b a)
        (cogen-*-non-constants a b)))
@@ -1793,66 +1825,66 @@
  (define-primop fxarithmetic-shift-left safe
    ((V x n)
     (struct-case n
-		 ((constant i)
-		  (cond
-		   ((and (fx? i)
-			 (>= i 0)
-			 (< i (- (* wordsize 8) fx-shift)))
-		    (with-tmp ((x (T x)))
-		      (assert-fixnum x)
-		      (cond
-		       ((< i 6)
-			(let f ((i i))
-			  (cond
-			   ((zero? i) x)
-			   (else
-			    (interrupt)
-			    (prm 'sll/overflow (f (- i 1)) (K 1))))))
-		       (else
-			(with-tmp ((x2 (prm 'sll x (K i))))
-			  (interrupt-unless (prm '= (prm 'sra x2 (K i)) x))
-			  x2)))))
-		   (else
-		    (interrupt))))
-		 (else
-		  (with-tmp ((x (T x)) (n (T n)))
-		    (assert-fixnums x (list n))
-		    (with-tmp ((n (prm 'sra n (K fx-shift))))
-		      (interrupt-when
-		       (prm '< n (K 0)))
-		      (interrupt-when
-		       (prm '>= n (K (- (* wordsize 8) fx-shift))))
-		      (with-tmp ((x2 (prm 'sll x n)))
-			(interrupt-unless (prm '= (prm 'sra x2 n) x))
-			x2)))))))
+      ((constant i)
+       (cond
+	((and (fx? i)
+	      (>= i 0)
+	      (< i (- (* wordsize 8) fx-shift)))
+	 (with-tmp ((x (T x)))
+	   (assert-fixnum x)
+	   (cond
+	    ((< i 6)
+	     (let f ((i i))
+	       (cond
+		((zero? i) x)
+		(else
+		 (interrupt)
+		 (prm 'sll/overflow (f (- i 1)) (K 1))))))
+	    (else
+	     (with-tmp ((x2 (prm 'sll x (K i))))
+	       (interrupt-unless (prm '= (prm 'sra x2 (K i)) x))
+	       x2)))))
+	(else
+	 (interrupt))))
+      (else
+       (with-tmp ((x (T x)) (n (T n)))
+	 (assert-fixnums x (list n))
+	 (with-tmp ((n (prm 'sra n (K fx-shift))))
+	   (interrupt-when
+	    (prm '< n (K 0)))
+	   (interrupt-when
+	    (prm '>= n (K (- (* wordsize 8) fx-shift))))
+	   (with-tmp ((x2 (prm 'sll x n)))
+	     (interrupt-unless (prm '= (prm 'sra x2 n) x))
+	     x2)))))))
 
 
 
  (define-primop fxarithmetic-shift-right safe
    ((V x n)
     (struct-case n
-     ;;; FIXME: check for known types
-		 ((constant i)
-		  (cond
-		   ((and (fx? i)
-			 (>= i 0)
-			 (< i (- (* wordsize 8) fx-shift)))
-		    (prm 'sll
-			 (prm 'sra (T x) (K (+ i fx-shift)))
-			 (K fx-shift)))
-		   (else
-		    (interrupt))))
-		 (else
-		  (with-tmp ((x (T x)) (n (T n)))
-		    (assert-fixnums x (list n))
-		    (with-tmp ((n (prm 'sra n (K fx-shift))))
-		      (interrupt-when
-		       (prm '< n (K 0)))
-		      (interrupt-when
-		       (prm '>= n (K (- (* wordsize 8) fx-shift))))
-		      (prm 'sll
-			   (prm 'sra (prm 'sra x n) (K fx-shift))
-			   (K fx-shift))))))))
+;;; FIXME: check for known types
+      ((constant i)
+       (cond
+	((and (fx? i)
+	      (>= i 0)
+	      (< i (- (* wordsize 8) fx-shift)))
+	 (prm 'sll
+	      (prm 'sra (T x) (K (+ i fx-shift)))
+	      (K fx-shift)))
+	(else
+	 (interrupt))))
+      (else
+       (with-tmp ((x (T x)) (n (T n)))
+	 (assert-fixnums x (list n))
+	 (with-tmp ((n (prm 'sra n (K fx-shift))))
+	   (interrupt-when
+	    (prm '< n (K 0)))
+	   (interrupt-when
+	    (prm '>= n (K (- (* wordsize 8) fx-shift))))
+	   (prm 'sll
+		(prm 'sra (prm 'sra x n) (K fx-shift))
+		(K fx-shift))))))))
 
 
  (define (log2 n)
@@ -1867,46 +1899,65 @@
  (define-primop div safe
    ((V x n)
     (struct-case n
-		 ((constant i)
-		  (cond
-		   ((and (fx? i) (> i 0) (log2 i)) =>
-		    (lambda (bits)
-		      (seq*
-		       (interrupt-unless (cogen-pred-fixnum? x))
-		       (prm 'sll
-			    (prm 'sra (T x) (K (+ bits fx-shift)))
-			    (K fx-shift)))))
-		   (else
-		    (interrupt))))
-		 ((known expr t)
-		  (cogen-value-div x expr))
-		 (else (interrupt)))))
+      ((constant i)
+       (cond
+	((and (fx? i) (> i 0) (log2 i)) =>
+	 (lambda (bits)
+	   (seq*
+	    (interrupt-unless (cogen-pred-fixnum? x))
+	    (prm 'sll
+		 (prm 'sra (T x) (K (+ bits fx-shift)))
+		 (K fx-shift)))))
+	(else
+	 (interrupt))))
+      ((known expr t)
+       (cogen-value-div x expr))
+      (else (interrupt)))))
 
  (define-primop quotient safe
    ((V x n)
     (struct-case n
-		 ((constant i)
-		  (if (eqv? i 2)
-		      (seq*
-		       (interrupt-unless (cogen-pred-fixnum? x))
-		       (make-conditional
-			   (prm '< (T x) (K 0))
-			 (prm 'logand
-			      (prm 'int+
-				   (prm 'sra (T x) (K 1))
-				   (K (fxsll 1 (sub1 fx-shift))))
-			      (K (fxsll -1 fx-shift)))
-			 (prm 'logand
-			      (prm 'sra (T x) (K 1))
-			      (K (fxsll -1 fx-shift)))))
-		    (interrupt)))
-		 ((known expr t) (cogen-value-quotient x expr))
-		 (else (interrupt)))))
+      ((constant i)
+       (if (eqv? i 2)
+	   (seq*
+	    (interrupt-unless (cogen-pred-fixnum? x))
+	    (make-conditional
+		(prm '< (T x) (K 0))
+	      (prm 'logand
+		   (prm 'int+
+			(prm 'sra (T x) (K 1))
+			(K (fxsll 1 (sub1 fx-shift))))
+		   (K (fxsll -1 fx-shift)))
+	      (prm 'logand
+		   (prm 'sra (T x) (K 1))
+		   (K (fxsll -1 fx-shift)))))
+	 (interrupt)))
+      ((known expr t) (cogen-value-quotient x expr))
+      (else (interrupt)))))
 
  /section)
 
 
-(section ;;; structs
+;;;; structs
+;;
+;;A data structure  is a variable length block of  memory allocated as a
+;;vector; a reference  to a structure value is a  machine word tagged as
+;;vector.  The first machine word of the structure is a reference to the
+;;type  descriptor; a  type descriptor  is itself  a data  structure.  A
+;;block of memory is a data structure  if and only if: a reference to it
+;;is tagged as vector and its first word is tagged as vector.
+;;
+;; |----------------|----------| reference to structure
+;;   heap offset     vector tag
+;;
+;; |----------------|----------| first word of structure
+;;   heap offset     vector tag    = reference to rtd
+;;                                 = reference to structure
+;;
+;;The type  descriptor of  the type descriptors  is the return  value of
+;;BASE-RTD.
+;;
+(section
 
  (define-primop $struct? unsafe
    ((P x) (sec-tag-test (T x) vector-mask vector-tag vector-mask vector-tag))
@@ -1923,20 +1974,20 @@
  (define-primop $make-struct unsafe
    ((V rtd len)
     (struct-case len
-		 ((constant i)
-		  (unless (fx? i) (interrupt))
-		  (with-tmp ((t (prm 'alloc
-				     (K (align (+ (* i wordsize) disp-struct-data)))
-				     (K vector-tag))))
-		    (prm 'mset t (K (- disp-struct-rtd vector-tag)) (T rtd))
-		    t))
-		 ((known expr t)
-		  (cogen-value-$make-struct rtd expr))
-		 (else
-		  (with-tmp ((ln (align-code len disp-struct-data)))
-		    (with-tmp ((t (prm 'alloc ln (K vector-tag))))
-		      (prm 'mset t (K (- disp-struct-rtd vector-tag)) (T rtd))
-		      t)))))
+      ((constant i)
+       (unless (fx? i) (interrupt))
+       (with-tmp ((t (prm 'alloc
+			  (K (align (+ (* i wordsize) disp-struct-data)))
+			  (K vector-tag))))
+	 (prm 'mset t (K (- disp-struct-rtd vector-tag)) (T rtd))
+	 t))
+      ((known expr t)
+       (cogen-value-$make-struct rtd expr))
+      (else
+       (with-tmp ((ln (align-code len disp-struct-data)))
+	 (with-tmp ((t (prm 'alloc ln (K vector-tag))))
+	   (prm 'mset t (K (- disp-struct-rtd vector-tag)) (T rtd))
+	   t)))))
    ((P rtd len) (K #t))
    ((E rtd len) (nop)))
 
@@ -1981,7 +2032,16 @@
  /section)
 
 
-(section ;;; characters
+;;;; characters
+;;
+;;A character is a machine word  whose least significant bits are set to
+;;the character tag.
+;;
+;;The most  significant bits, interpreted  as integer, represent  a code
+;;point  in  the range  [0,  #x10FFFF] but  not  in  the range  [#xD800,
+;;#xDFFF].
+;;
+(section
 
  (define-primop char? safe
    ((P x) (tag-test (T x) char-mask char-tag))
@@ -2028,14 +2088,14 @@
       (else (or* (prm 'logor a (T (car a*))) (cdr a*)))))
    (define (known-char? x)
      (struct-case x
-		  ((constant i) (char? i))
-		  ((known x t) (eq? (T:char? t) 'yes))
-		  (else #f)))
+       ((constant i) (char? i))
+       ((known x t) (eq? (T:char? t) 'yes))
+       (else #f)))
    (define (known-non-char? x)
      (struct-case x
-		  ((constant i) (not (char? i)))
-		  ((known x t) (eq? (T:char? t) 'no))
-		  (else #f)))
+       ((constant i) (not (char? i)))
+       ((known x t) (eq? (T:char? t) 'no))
+       (else #f)))
    (let-values (((fx* others) (partition known-char? (cons a a*))))
      (let-values (((nfx* others) (partition known-non-char?  others)))
        (cond
@@ -2411,7 +2471,18 @@
  /section)
 
 
-(section	;;; strings
+;;;; strings
+;;
+;;Strings are  blocks of  memory referenced by  machine words  tagged as
+;;strings; the first  word in the memory block  is a fixnum representing
+;;the number  of characters  in the  data area; a  string is  capable of
+;;holding at  most a number of  characters equal to the  return value of
+;;GREATEST-FIXNUM.
+;;
+;;  |------------------------|-------------| reference to string
+;;        heap offset          string tag
+;;
+(section
 
  (define-primop string? safe
    ((P x) (tag-test (T x) string-mask string-tag))
@@ -2420,25 +2491,25 @@
  (define-primop $make-string unsafe
    ((V n)
     (struct-case n
-		 ((constant n)
-		  (unless (fx? n) (interrupt))
-		  (with-tmp ((s (prm 'alloc
-				     (K (align (+ (* n wordsize) disp-string-data)))
-				     (K string-tag))))
-		    (prm 'mset s
-			 (K (- disp-string-length string-tag))
-			 (K (* n fx-scale)))
-		    s))
-		 ((known expr)
-		  (cogen-value-$make-string expr))
-		 (else
-		  (with-tmp ((s (prm 'alloc
-				     (align-code (T n) disp-string-data)
-				     (K string-tag))))
-		    (prm 'mset s
-			 (K (- disp-string-length string-tag))
-			 (T n))
-		    s))))
+      ((constant n)
+       (unless (fx? n) (interrupt))
+       (with-tmp ((s (prm 'alloc
+			  (K (align (+ (* n wordsize) disp-string-data)))
+			  (K string-tag))))
+	 (prm 'mset s
+	      (K (- disp-string-length string-tag))
+	      (K (* n fx-scale)))
+	 s))
+      ((known expr)
+       (cogen-value-$make-string expr))
+      (else
+       (with-tmp ((s (prm 'alloc
+			  (align-code (T n) disp-string-data)
+			  (K string-tag))))
+	 (prm 'mset s
+	      (K (- disp-string-length string-tag))
+	      (T n))
+	 s))))
    ((P n) (K #t))
    ((E n) (nop)))
 
@@ -2451,82 +2522,79 @@
  (define-primop $string-ref unsafe
    ((V s i)
     (struct-case i
-		 ((constant i)
-		  (unless (fx? i) (interrupt))
-		  (prm 'mref32 (T s)
-		       (K (+ (* i char-size)
-			     (- disp-string-data string-tag)))))
-		 (else
-		  (prm 'mref32 (T s)
-		       (prm 'int+
-			    (cond
-			     ((= wordsize char-size) (T i))
-			     ((= wordsize 8) (prm 'sra (T i) (K 1)))
-			     (else (error '$string-ref "invalid operand")))
-			    (K (- disp-string-data string-tag)))))))
+      ((constant i)
+       (unless (fx? i) (interrupt))
+       (prm 'mref32 (T s)
+	    (K (+ (* i char-size)
+		  (- disp-string-data string-tag)))))
+      (else
+       (prm 'mref32 (T s)
+	    (prm 'int+
+		 (cond
+		  ((= wordsize char-size) (T i))
+		  ((= wordsize 8) (prm 'sra (T i) (K 1)))
+		  (else (error '$string-ref "invalid operand")))
+		 (K (- disp-string-data string-tag)))))))
    ((P s i) (K #t))
    ((E s i) (nop)))
 
- (define assert-fixnum
-   (case-lambda
-    ((x)
-     (struct-case x
-		  ((constant i)
-		   (if (fx? i) (nop) (interrupt)))
-		  ((known expr t)
-		   (case (T:fixnum? t)
-		     ((yes) (nop))
-		     ((no)  (interrupt))
-		     (else  (assert-fixnum expr))))
-		  (else (interrupt-unless (cogen-pred-fixnum? x)))))))
-
- (define (assert-string x)
-   (struct-case x
-		((constant s) (if (string? s) (nop) (interrupt)))
-		((known expr t)
-		 (case (T:string? t)
-		   ((yes) (record-optimization 'assert-string x) (nop))
-		   ((no)  (interrupt))
-		   (else  (assert-string expr))))
-		(else (interrupt-unless (cogen-pred-string? x)))))
-
- (define-primop string-ref safe
-   ((V s i)
-    (seq*
-     (assert-fixnum i)
-     (assert-string s)
-     (interrupt-unless (prm 'u< (T i) (cogen-value-$string-length s)))
-     (cogen-value-$string-ref s i)))
-   ((P s i)
-    (seq*
-     (assert-fixnum i)
-     (assert-string s)
-     (interrupt-unless (prm 'u< (T i) (cogen-value-$string-length s)))
-     (K #t)))
-   ((E s i)
-    (seq*
-     (assert-fixnum i)
-     (assert-string s)
-     (interrupt-unless (prm 'u< (T i) (cogen-value-$string-length s))))))
+;;;(Marco Maggi; Oct  31, 2011) Commented out because  it appears not to
+;;;cause  incorrect code  generation when  the index  argument is  not a
+;;;fixnum; specifically:
+;;;
+;;;   (guard (E ((assertion-violation? E)
+;;;              #t)
+;;;             (else E))
+;;;     (string-ref "ciao" #\Z))
+;;;
+;;;causes a weird error while compiling:
+;;;
+;;;Exception trapped by debugger.
+;;; Condition components:
+;;;   1. &assertion
+;;;   2. &who: *
+;;;   3. &message: "not a number"
+;;;   4. &irritants: (#\d)
+;;;[t] Trace. [r] Reraise exception. [c] Continue. [q] Quit. [?] Help.
+;;;vicare>
+;;;
+;;;(define-primop string-ref safe
+;;;  ((V s i)
+;;;   (seq*
+;;;    (assert-fixnum i)
+;;;    (assert-string s)
+;;;    (interrupt-unless (prm 'u< (T i) (cogen-value-$string-length s)))
+;;;    (cogen-value-$string-ref s i)))
+;;;  ((P s i)
+;;;   (seq*
+;;;    (assert-fixnum i)
+;;;    (assert-string s)
+;;;    (interrupt-unless (prm 'u< (T i) (cogen-value-$string-length s)))
+;;;    (K #t)))
+;;;  ((E s i)
+;;;   (seq*
+;;;    (assert-fixnum i)
+;;;    (assert-string s)
+;;;    (interrupt-unless (prm 'u< (T i) (cogen-value-$string-length s))))))
 
  (define-primop $string-set! unsafe
    ((E x i c)
     (struct-case i
-		 ((constant i)
-		  (unless (fx? i) (interrupt))
-		  (prm 'mset32 (T x)
-		       (K (+ (* i char-size)
-			     (- disp-string-data string-tag)))
-		       (T c)))
-		 (else
-		  (prm 'mset32 (T x)
-		       (prm 'int+
-			    (cond
-			     ((= wordsize char-size) (T i))
-			     ((= wordsize 8) (prm 'sra (T i) (K 1)))
-			     (else (error '$string-set! "invalid operand")))
-			    (K (- disp-string-data string-tag)))
-		       (T c))))))
+      ((constant i)
+       (unless (fx? i) (interrupt))
+       (prm 'mset32 (T x)
+	    (K (+ (* i char-size)
+		  (- disp-string-data string-tag)))
+	    (T c)))
+      (else
+       (prm 'mset32 (T x)
+	    (prm 'int+
+		 (cond
+		  ((= wordsize char-size) (T i))
+		  ((= wordsize 8) (prm 'sra (T i) (K 1)))
+		  (else (error '$string-set! "invalid operand")))
+		 (K (- disp-string-data string-tag)))
+	    (T c))))))
 
  /section)
 
@@ -2551,7 +2619,6 @@
 ;;
 ;;bits available for attributes.
 ;;
-
 (section
  (define-primop port? safe
    ((P x) (sec-tag-test (T x) vector-mask vector-tag port-mask port-tag))
@@ -2670,7 +2737,7 @@
 
  (define-primop $swap-engine-counter! unsafe
    ((V x)
-   ;;; FIXME: should be atomic swap instead of load and set!
+;;; FIXME: should be atomic swap instead of load and set!
     (with-tmp ((x0 (T x)))
       (with-tmp ((t (prm 'mref pcr (K pcb-engine-counter))))
 	(prm 'mset pcr (K pcb-engine-counter) x0)
@@ -2861,15 +2928,15 @@
 
 
 ;;;; port transcoders
-
+;;
+;;A transcoder  is a  word tagged to  make it  of a disjoint  type.  The
+;;transcoder data (codec,  EOL style, error handling) is  encoded in the
+;;most significant bits of this word.
+;;
+;;  |---------------------------|------------| transcoder
+;;         payload bits          transcoder-tag
+;;
 (section
- ;;A transcoder  is a word  tagged to make  it of a disjoint  type.  The
- ;;transcoder data (codec, EOL style,  error handling) is encoded in the
- ;;most significant bits of this word.
- ;;
- ;;  |---------------------------|------------| transcoder
- ;;         payload bits          transcoder-tag
- ;;
 
  (define-primop transcoder? unsafe
    ((P x) (tag-test (T x) transcoder-mask transcoder-tag)))

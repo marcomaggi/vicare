@@ -7556,6 +7556,14 @@ Return a fixnum representing the code point of the operand.
 @section Low level pair operations
 
 
+A pair is a fixed--length block of memory composed of two machine words;
+the least significant bits of a reference to a pair are a pair tag.
+
+@example
+|------------------------|-------------| reference to pair
+      heap offset           pair tag
+@end example
+
 The arguments @var{P} to these operations must be pairs.  The following
 bindings are exported by the @library{ikarus system $pairs} library.
 
