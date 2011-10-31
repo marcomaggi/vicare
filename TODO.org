@@ -49,7 +49,6 @@
    scheme/ikarus.handlers.ss
    scheme/ikarus.hash-tables.ss
    scheme/ikarus.multiple-values.ss
-   scheme/ikarus.predicates.ss
    scheme/ikarus.pretty-formats.ss
    scheme/ikarus.pretty-print.ss
    scheme/ikarus.promises.ss
