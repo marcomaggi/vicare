@@ -45,7 +45,6 @@
    scheme/ikarus.fasl.ss
    scheme/ikarus.fasl.write.ss
    scheme/ikarus.fixnums.ss
-   scheme/ikarus.guardians.ss
    scheme/ikarus.handlers.ss
    scheme/ikarus.hash-tables.ss
    scheme/ikarus.multiple-values.ss

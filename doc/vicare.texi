@@ -9575,8 +9575,6 @@ R. Kent Dybvig.  In @emph{ICFP '07: Proceedings of the 2007 ACM SIGPLAN
 international conference on Functional programming}, pages 303--314.
 New York, NY, USA, 2007.  ACM.
 
-
-
 @c page
 @node concept index
 @appendix An entry for each concept
