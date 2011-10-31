@@ -26,7 +26,6 @@
 
 ** list of files still to review
 
-   scheme/ikarus.strings.ss
    scheme/ikarus.chars.ss
    scheme/ikarus.enumerations.ss
    scheme/ikarus.pointers.ss
