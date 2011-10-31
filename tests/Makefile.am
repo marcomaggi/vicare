@@ -233,13 +233,19 @@ EXTRA_DIST =	\
 	test-ikarus-symbol-table.sps			\
 	test-ikarus-unicode.sps				\
 	\
+	test-vicare-bytevectors.sps			\
+	test-vicare-chars.sps				\
 	test-vicare-io.sps				\
+	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
 	test-vicare-posix.sps				\
+	test-vicare-promises.sps			\
 	test-vicare-reader.sps				\
+	test-vicare-strings.sps				\
+	test-vicare-structs.sps				\
 	test-vicare-symbols.sps				\
-	\
 	test-vicare-system.sps				\
+	test-vicare-vectors.sps				\
 	\
 	test-issue-001-equal-hash.sps			\
 	test-issue-006-fxreverse-bit-field.sps		\
