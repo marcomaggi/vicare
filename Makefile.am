@@ -3,7 +3,7 @@
 AUTOMAKE_OPTIONS	= foreign
 SUBDIRS			= src scheme doc lib tests
 EXTRA_DIST		= README COPYING GPL-3 configure.sh \
-			  scripts/make-last-revision
+			  scripts/make-last-revision prepare.sh
 dist_doc_DATA		= README COPYING GPL-3
 
 vicare_test_RULES	= test tests long-test long-tests test-run test-exec-modes
