@@ -130,7 +130,14 @@ TESTS			=	\
 #### extra files to be distributed
 
 EXTRA_DIST =	\
+	ikarus-test-framework.sls			\
 	checks.sls					\
+	lists.sls					\
+	lists/low.sls					\
+	lists/stx.sls					\
+	TEST-SOURCE-FILE.txt				\
+	rn100						\
+	\
 	r6rs						\
 	r6rs/README.txt					\
 	r6rs/arithmetic					\
