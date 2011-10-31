@@ -1943,7 +1943,7 @@
 		=> (lambda (digit)
 		     (get-char-and-track-textual-position port)
 		     (let next-digit ((digit       digit)
-				      (accumulated (cons ch1 '(#\x))))
+				      (accumulated (cons ch1 '(#\x #\\))))
 		       (let ((chX (peek-char port)))
 			 (cond ((or (eof-object? chX)
 				    (delimiter? chX))
