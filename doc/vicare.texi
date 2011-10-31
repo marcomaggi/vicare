@@ -5671,6 +5671,40 @@ Return a string being the value @gnu{} Autoconf assigned to the
 @code{target} variable.  Example: @code{i686-pc-linux-gnu}.
 @end defun
 
+
+@defun apropos @var{key}
+Given a string or symbol @var{key}, search among the internally
+installed libraries all the exported bindings having @var{key} as
+substring of their name and print a report to the standard output port.
+Useful when using the @repl{}.  Example:
+
+@example
+vicare> (apropos "-length")
+*** in library (ikarus):
+(bitwise-length bytevector-length string-length
+  struct-length vector-length)
+
+*** in library (rnrs):
+(bitwise-length bytevector-length string-length
+  vector-length)
+
+*** in library (rnrs arithmetic bitwise):
+(bitwise-length)
+
+*** in library (rnrs base):
+(string-length vector-length)
+
+*** in library (rnrs bytevectors):
+(bytevector-length)
+
+*** in library (vicare):
+(bitwise-length bytevector-length string-length
+  struct-length vector-length)
+
+vicare>
+@end example
+@end defun
+
 @c page
 @node posix
 @chapter The @posix{} interface
