@@ -192,6 +192,12 @@
 	    ($vector-ref	vector-ref)
 	    ($vector-set!	vector-set!))
 
+    (rename ($vector-copy!			vector-copy!)
+	    ($vector-self-copy-forwards!	vector-self-copy-forwards!)
+	    ($vector-self-copy-backwards!	vector-self-copy-backwards!)
+	    ($vector-fill!			vector-fill!)
+	    ($subvector				subvector))
+
 ;;; --------------------------------------------------------------------
 
     (rename ($char=		char=)
@@ -812,6 +818,76 @@
 	  ($string-copy! ?str ?start dst.str 0 ?end)
 	  dst.str)
       "")))
+
+
+;;;; miscellaneous vector operations
+
+(define-inline ($vector-fill! ?vec ?index ?end ?fill)
+  ;;Fill the positions  in ?VEC from ?INDEX inclusive  to ?END exclusive
+  ;;with ?FILL.
+  ;;
+  (let loop ((vec ?vec) (index ?index) (end ?end) (fill ?fill))
+    (if ($fx= index end)
+	vec
+      (begin
+	($vector-set! vec index fill)
+	(loop vec ($fxadd1 index) end fill)))))
+
+(define-inline ($vector-copy! ?src.vec ?src.start
+			      ?dst.vec ?dst.start
+			      ?src.end)
+  ;;Copy  the items of  ?SRC.VEC from  ?SRC.START inclusive  to ?SRC.END
+  ;;exclusive, to ?DST.VEC starting at ?DST.START inclusive.
+  ;;
+  (let loop ((src.vec ?src.vec) (src.start ?src.start)
+	     (dst.vec ?dst.vec) (dst.start ?dst.start)
+	     (src.end ?src.end))
+    (if ($fx= src.start src.end)
+	dst.vec
+      (begin
+	($vector-set! dst.vec dst.start ($vector-ref src.vec src.start))
+	(loop src.vec ($fxadd1 src.start)
+	      dst.vec ($fxadd1 dst.start)
+	      src.end)))))
+
+(define-inline ($vector-self-copy-forwards! ?vec ?src.start ?dst.start ?count)
+  ;;Copy ?COUNT items  of ?VEC from ?SRC.START inclusive  to ?VEC itself
+  ;;starting at ?DST.START inclusive.   The copy happens forwards, so it
+  ;;is suitable for the case ?SRC.START > ?DST.START.
+  ;;
+  (let loop ((vec	?vec)
+	     (src.start	?src.start)
+	     (dst.start	?dst.start)
+	     (src.end	($fx+ ?src.start ?count)))
+    (unless ($fx= src.start src.end)
+      ($vector-set! vec dst.start ($vector-ref vec src.start))
+      (loop vec ($fxadd1 src.start) ($fxadd1 dst.start) src.end))))
+
+(define-inline ($vector-self-copy-backwards! ?vec ?src.start ?dst.start ?count)
+  ;;Copy ?COUNT items  of ?VEC from ?SRC.START inclusive  to ?VEC itself
+  ;;starting at ?DST.START inclusive.  The copy happens backwards, so it
+  ;;is suitable for the case ?SRC.START < ?DST.START.
+  ;;
+  (let loop ((vec	?vec)
+	     (src.start	($fx+ ?src.start ?count))
+	     (dst.start	($fx+ ?dst.start ?count))
+	     (src.end	?src.start))
+    (unless ($fx= src.start src.end)
+      (let ((src.start ($fxsub1 src.start))
+	    (dst.start ($fxsub1 dst.start)))
+	($vector-set! vec dst.start ($vector-ref vec src.start))
+	(loop vec src.start dst.start src.end)))))
+
+(define-inline ($subvector ?vec ?start ?end)
+  ;;Return a new vector holding items from ?VEC from ?START inclusive to
+  ;;?END exclusive.
+  ;;
+  (let ((dst.len ($fx- ?end ?start)))
+    (if ($fx< 0 dst.len)
+	(let ((dst.vec ($make-vector dst.len)))
+	  ($vector-copy! ?vec ?start dst.vec 0 ?end)
+	  dst.vec)
+      '#())))
 
 
 ;;;; done

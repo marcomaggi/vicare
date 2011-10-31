@@ -1759,6 +1759,7 @@ of @rnrs{6}; @library{vicare} exports the same bindings of
 * iklib lists::                 Additional list functions.
 * iklib bytevectors::           Additional bytevector functions.
 * iklib strings::               Additional string functions.
+* iklib vectors::               Additional vector functions.
 * iklib symbols::               Additional symbol functions.
 * iklib numerics::              Additional functions on numbers.
 * iklib load::                  Loading source files.
@@ -2609,6 +2610,45 @@ endianness respectively.
 @defun uuid
 Attempt to build a unique string and return it.  If an internal error
 occurs because of impossible generation: raise an error.
+@end defun
+
+@c page
+@node iklib vectors
+@section Additional vector functions
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun subvector @var{vec} @var{start} @var{end}
+@var{vec} must be a vector, and @var{start} and @var{end} must be exact
+integer objects satisfying:
+
+@example
+0 <= @var{start} <= @var{end} <= (vector-length @var{vec})
+@end example
+
+Return a newly allocated vector formed from the items of @var{vec}
+beginning with index @var{start} (inclusive) and ending with index
+@var{end} (exclusive).
+@end defun
+
+
+@defun vector-append @var{vec} ...
+Return a newly allocated vector whose items form the concatenation of
+the given vectors.
+@end defun
+
+
+@defun vector-copy @var{vec}
+Return a newly allocated copy of the given vector.
+@end defun
+
+
+@defun vector-copy! @var{src.vec} @var{src.start} @var{dst.vec} @var{dst.start} @var{count}
+Copy @var{count} items from @var{src.vec} starting at @var{src.start}
+(inclusive) to @var{dst.vec} starting at @var{dst.start}.  Return
+unspecified values.
 @end defun
 
 @c page

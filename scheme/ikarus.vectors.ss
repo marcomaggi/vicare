@@ -15,14 +15,22 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (library (ikarus vectors)
-  (export make-vector vector vector-length vector-ref vector-set!
-          vector->list list->vector vector-map vector-for-each
-          vector-fill!)
-  (import (except (ikarus) make-vector vector
-		  vector-length vector-ref vector-set!
-		  vector->list list->vector vector-map vector-for-each
-		  vector-fill!)
-    (ikarus system $vectors)
+  (export
+    make-vector		vector
+    subvector		vector-length
+    vector-ref		vector-set!
+    vector->list	list->vector
+    vector-map		vector-for-each
+    vector-fill!	vector-append
+    vector-copy		vector-copy!)
+  (import (except (ikarus)
+		  make-vector		vector
+		  subvector		vector-length
+		  vector-ref		vector-set!
+		  vector->list		list->vector
+		  vector-map		vector-for-each
+		  vector-fill!		vector-append
+		  vector-copy		vector-copy!)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
 	    unsafe.))
@@ -38,18 +46,54 @@
   (procedure? obj)
   (assertion-violation who "expected procedure as argument" obj))
 
+;;; --------------------------------------------------------------------
+
 (define-argument-validation (length who obj)
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as vector length argument" obj))
 
 (define-argument-validation (index who obj)
-  (fixnum? obj)
+  (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected fixnum as vector index argument" obj))
 
 (define-argument-validation (index-for who idx vec)
-  (and (unsafe.fx>= idx 0)
-       (unsafe.fx<  idx (unsafe.vector-length vec)))
+  (unsafe.fx< idx (unsafe.vector-length vec))
   (assertion-violation who "index argument is out of range for vector" idx vec))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (start-for who idx len)
+  ;;To be used after INDEX validation.
+  ;;
+  (unsafe.fx<= idx len)
+  (assertion-violation who "start index argument out of range for vector" idx len))
+
+(define-argument-validation (end-for who idx len)
+  ;;To be used after INDEX validation.
+  ;;
+  (unsafe.fx<= idx len)
+  (assertion-violation who "end index argument out of range for vector" idx len))
+
+(define-argument-validation (start-end who start end)
+  ;;To be used after INDEX validation.
+  ;;
+  (unsafe.fx<= start end)
+  (assertion-violation who "start and end index arguments are in decreasing order" start end))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (count who obj)
+  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (assertion-violation who "expected non-negative fixnum as items count argument" obj))
+
+(define-argument-validation (count-for who count start len)
+  (unsafe.fx<= (unsafe.fx+ start count) len)
+  (assertion-violation who
+    (vector-append "count argument out of range for vector of length " (number->string len)
+		   " and start index " (number->string start))
+    count))
+
+;;; --------------------------------------------------------------------
 
 (define-argument-validation (vector-of-length who vec len)
   (unsafe.fx= len (unsafe.vector-length vec))
@@ -76,29 +120,50 @@
   "expected proper list as argument")
 
 
-(define (vector-length x)
+;;;; helpers
+
+(define (%unsafe.vector-copy! src.vec src.start
+			      dst.vec dst.start
+			      src.end)
+  (unsafe.vector-copy! src.vec src.start
+		       dst.vec dst.start
+		       src.end))
+
+
+(define (vector-length vec)
+  ;;Defined by R6RS.   Return the number of elements in  VEC as an exact
+  ;;integer object.
+  ;;
   (with-arguments-validation (vector-length)
-      ((vector x))
-    (unsafe.vector-length x)))
+      ((vector vec))
+    (unsafe.vector-length vec)))
 
 (define make-vector
+  ;;Defined by R6RS.   Return a newly allocated vector  of LEN elements.
+  ;;If a second  argument is given, then each  element is initialized to
+  ;;FILL.    Otherwise  the   initial  contents   of  each   element  is
+  ;;unspecified.
+  ;;
   (case-lambda
-   ((n)
-    (make-vector n (void)))
-   ((n fill)
+   ((len)
+    (make-vector len (void)))
+   ((len fill)
     (with-arguments-validation (make-vector)
-	((length n))
-      (let loop ((v	(unsafe.make-vector n))
+	((length len))
+      (let loop ((vec	(unsafe.make-vector len))
 		 (i	0)
-		 (n	n)
+		 (len	len)
 		 (fill	fill))
-	(if (unsafe.fx= i n)
-	    v
+	(if (unsafe.fx= i len)
+	    vec
 	  (begin
-	   (unsafe.vector-set! v i fill)
-	   (loop v (unsafe.fxadd1 i) n fill))))))))
+	    (unsafe.vector-set! vec i fill)
+	    (loop vec (unsafe.fxadd1 i) len fill))))))))
 
 (define vector
+  ;;Defined  by R6RS.  Return  a newly  allocated vector  whose elements
+  ;;contain the given arguments.  Analogous to LIST.
+  ;;
   (case-lambda
    (()
     '#())
@@ -141,46 +206,64 @@
 	  ((length n))
 	(loop (unsafe.make-vector n) ls 0 n))))))
 
-(define (vector-fill! v fill)
+(define (vector-fill! vec fill)
+  ;;Defined by  R6RS.  Store  FILL in every  element of VEC  and returns
+  ;;unspecified.
+  ;;
   (with-arguments-validation (vector-fill!)
-      ((vector v))
-    (let f ((v    v)
+      ((vector vec))
+    (let f ((vec  vec)
 	    (i    0)
-	    (n    (unsafe.vector-length v))
+	    (len  (unsafe.vector-length vec))
 	    (fill fill))
-      (unless (unsafe.fx= i n)
-	(unsafe.vector-set! v i fill)
-	(f v (unsafe.fxadd1 i) n fill)))))
+      (unless (unsafe.fx= i len)
+	(unsafe.vector-set! vec i fill)
+	(f vec (unsafe.fxadd1 i) len fill)))))
 
 
-(define (vector-ref v i)
+(define (vector-ref vec idx)
+  ;;Defined by  R6RS.  IDX  must be  a valid index  of VEC.   Return the
+  ;;contents of element IDX of VEC.
+  ;;
   (with-arguments-validation (vector-ref)
-      ((vector		v)
-       (index		i)
-       (index-for	i v))
-    (unsafe.vector-ref v i)))
+      ((vector		vec)
+       (index		idx)
+       (index-for	idx vec))
+    (unsafe.vector-ref vec idx)))
 
-(define (vector-set! v i c)
+(define (vector-set! vec idx new-item)
+  ;;Defined by R6RS.  IDX must be  a valid index of VEC.  Store NEW-ITEM
+  ;;in element IDX of VEC, and return unspecified values.
+  ;;
+  ;;Passing an immutable vector to VECTOR-SET! should cause an exception
+  ;;with condition type "&assertion" to be raised.
+  ;;
   (with-arguments-validation (vector-set!)
-      ((vector		v)
-       (index		i)
-       (index-for	i v))
-    (unsafe.vector-set! v i c)))
+      ((vector		vec)
+       (index		idx)
+       (index-for	idx vec))
+    (unsafe.vector-set! vec idx new-item)))
 
 
-(define (vector->list v)
-  (define (f v i ls)
-    (if (unsafe.fx< i 0)
+(define (vector->list vec)
+  ;;Defined  by R6RS.   Return a  newly  allocated list  of the  objects
+  ;;contained in the elements of V.
+  ;;
+  (define (f vec idx ls)
+    (if (unsafe.fx< idx 0)
 	ls
-      (f v (unsafe.fxsub1 i) (cons (unsafe.vector-ref v i) ls))))
+      (f vec (unsafe.fxsub1 idx) (cons (unsafe.vector-ref vec idx) ls))))
   (with-arguments-validation (vector->list)
-      ((vector v))
-    (let ((n (unsafe.vector-length v)))
-      (if (unsafe.fxzero? n)
+      ((vector vec))
+    (let ((len (unsafe.vector-length vec)))
+      (if (unsafe.fxzero? len)
 	  '()
-	(f v (unsafe.fxsub1 n) '())))))
+	(f vec (unsafe.fxsub1 len) '())))))
 
 (define (list->vector ls)
+  ;;Defined by R6RS.   Return a newly created vector  initialized to the
+  ;;elements of the list LS.
+  ;;
   (define who 'list->vector)
   (define (race h t ls n)
     (cond ((pair? h)
@@ -213,6 +296,24 @@
 
 
 (module (vector-map)
+  ;;Defined  by R6RS.   The  vector  arguments must  all  have the  same
+  ;;length.  The procedure should accept  as many arguments as there are
+  ;;vector arguments and return a single value.
+  ;;
+  ;;The VECTOR-MAP  procedure applies P element-wise to  the elements of
+  ;;the vectors  and returns a  vector of the  results, in order.   P is
+  ;;always called in the  same dynamic environment as VECTOR-MAP itself.
+  ;;The order  in which P is applied  to the elements of  the vectors is
+  ;;unspecified.  If multiple returns  occur from VECTOR-MAP, the return
+  ;;values returned by earlier returns are not mutated.
+  ;;
+  ;;Analogous to MAP.
+  ;;
+  ;;IMPLEMENTATION  RESPONSIBILITIES The  implementation must  check the
+  ;;restrictions  on  P  to  the  extent performed  by  applying  it  as
+  ;;described.  An implementation may  check whether P is an appropriate
+  ;;argument before applying it.
+  ;;
   (define who 'vector-map)
 
   (define (ls->vec ls n)
@@ -327,6 +428,21 @@
 
 
 (define vector-for-each
+  ;;Defined  by R6RS.   The  vector  arguments must  all  have the  same
+  ;;length.  The  procedure P should  accept as many arguments  as there
+  ;;are vectors.   The VECTOR-FOR-EACH procedure  applies P element-wise
+  ;;to the elements  of the vectors for its side  effects, in order from
+  ;;the first  elements to  the last.   P is always  called in  the same
+  ;;dynamic environment as VECTOR-FOR-EACH itself.  The return values of
+  ;;VECTOR-FOR-EACH are unspecified.
+  ;;
+  ;;Analogous to FOR-EACH.
+  ;;
+  ;;IMPLEMENTATION  RESPONSIBILITIES The  implementation must  check the
+  ;;restrictions  on  P  to  the  extent performed  by  applying  it  as
+  ;;described.  An implementation may  check whether P is an appropriate
+  ;;argument before applying it.
+  ;;
   (case-lambda
    ((p v)
     (define who 'vector-for-each)
@@ -379,6 +495,164 @@
 				 (f i (unsafe.cdr v*))))))
 		(f p v0 v1 v* (unsafe.fxadd1 i) n))))))))
    ))
+
+
+(define vector-append
+  ;;Defined by Vicare.  Return a newly allocated vector whose items form
+  ;;the concatenation of the given vectors.
+  ;;
+  (case-lambda
+   (() '#())
+
+   ((vec)
+    (define who 'vector-append)
+    (with-arguments-validation (who)
+	((vector vec))
+      vec))
+
+   ((vec1 vec2)
+    (define who 'vector-append)
+    (with-arguments-validation (who)
+	((vector vec1)
+	 (vector vec2))
+      (let* ((len1	(unsafe.vector-length vec1))
+	     (len2	(unsafe.vector-length vec2))
+	     (dst.len	(+ len1 len2)))
+	(with-arguments-validation (who)
+	    ((length dst.len))
+	  (let ((dst.vec (unsafe.make-vector dst.len)))
+	    (%unsafe.vector-copy! vec1 0 dst.vec 0    len1)
+	    (%unsafe.vector-copy! vec2 0 dst.vec len1 len2)
+	    dst.vec)))))
+
+   ((vec1 vec2 vec3)
+    (define who 'vector-append)
+    (with-arguments-validation (who)
+	((vector vec1)
+	 (vector vec2)
+	 (vector vec3))
+      (let* ((len1	(unsafe.vector-length vec1))
+	     (len2	(unsafe.vector-length vec2))
+	     (len3	(unsafe.vector-length vec3))
+	     (dst.len	(+ len1 len2 len3)))
+	(with-arguments-validation (who)
+	    ((length  dst.len))
+	  (let ((dst.vec (unsafe.make-vector dst.len)))
+	    (%unsafe.vector-copy! vec1 0 dst.vec 0    len1)
+	    (%unsafe.vector-copy! vec2 0 dst.vec len1 len2)
+	    (%unsafe.vector-copy! vec3 0 dst.vec (unsafe.fx+ len1 len2) len3)
+	    dst.vec)))))
+
+   ((vec1 vec2 vec3 vec4)
+    (define who 'vector-append)
+    (with-arguments-validation (who)
+	((vector  vec1)
+	 (vector  vec2)
+	 (vector  vec3)
+	 (vector  vec4))
+      (let* ((len1	(unsafe.vector-length vec1))
+	     (len2	(unsafe.vector-length vec2))
+	     (len3	(unsafe.vector-length vec3))
+	     (len4	(unsafe.vector-length vec4))
+	     (dst.len	(+ len1 len2 len3 len4)))
+	(with-arguments-validation (who)
+	    ((length  dst.len))
+	  (let ((dst.vec (unsafe.make-vector dst.len)))
+	    (%unsafe.vector-copy! vec1 0 dst.vec 0    len1)
+	    (%unsafe.vector-copy! vec2 0 dst.vec len1 len2)
+	    (let ((dst.start (unsafe.fx+ len1 len2)))
+	      (%unsafe.vector-copy! vec3 0 dst.vec dst.start len3)
+	      (let ((dst.start (unsafe.fx+ dst.start len3)))
+		(%unsafe.vector-copy! vec4 0 dst.vec dst.start len4)))
+	    dst.vec)))))
+
+   ((vec1 . vecs)
+    (define who 'vector-append)
+    (define (%length-and-validation vecs len)
+      (if (null? vecs)
+	  len
+	(let ((vec (unsafe.car vecs)))
+	  (with-arguments-validation (who)
+	      ((vector vec))
+	    (%length-and-validation (unsafe.cdr vecs) (+ len (unsafe.vector-length vec)))))))
+
+    (define (%fill-vectors dst.vec vecs dst.start)
+      (if (null? vecs)
+	  dst.vec
+	(let* ((src.vec (unsafe.car vecs))
+	       (src.len (unsafe.vector-length src.vec)))
+	  (begin
+	    (unsafe.vector-copy! src.vec 0 dst.vec dst.start src.len)
+	    (%fill-vectors dst.vec (unsafe.cdr vecs) (unsafe.fx+ dst.start src.len))))))
+
+    (let* ((vecs    (cons vec1 vecs))
+           (dst.len (%length-and-validation vecs 0)))
+      (with-arguments-validation (who)
+	  ((length dst.len))
+	(%fill-vectors (unsafe.make-vector dst.len) vecs 0))))))
+
+
+(define (subvector vec start end)
+  ;;Defined by Vicare.  VEC must be  a vector, and START and END must be
+  ;;exact integer objects satisfying:
+  ;;
+  ;; 0 <= START <= END <= (vector-length VEC)
+  ;;
+  ;;Return  a  newly allocated  vector  formed  from  the items  of  VEC
+  ;;beginning  with index START  (inclusive) and  ending with  index END
+  ;;(exclusive).
+  ;;
+  (define who 'subvector)
+  (with-arguments-validation (who)
+      ((vector	vec)
+       (index	start)
+       (index	end))
+    (let ((len (unsafe.vector-length vec)))
+      (with-arguments-validation (who)
+	  ((start-for	start len)
+	   (end-for	end   len)
+	   (start-end	start end))
+	(unsafe.subvector vec start end)))))
+
+(define (vector-copy vec)
+  ;;Defined by Vicare.  Return a newly allocated copy of the given VEC.
+  ;;
+  (define who 'vector-copy)
+  (with-arguments-validation (who)
+      ((vector vec))
+    (let ((end (unsafe.vector-length vec)))
+      (unsafe.subvector vec 0 end))))
+
+(define (vector-copy! src.vec src.start dst.vec dst.start count)
+  ;;Defined  by  Vicare.  Copy  COUNT  items  from  SRC.VEC starting  at
+  ;;SRC.START  (inclusive)  to DST.VEC  starting  at DST.START.   Return
+  ;;unspecified values.
+  ;;
+  (define who 'vector-copy!)
+  (with-arguments-validation (who)
+      ((vector		src.vec)
+       (vector		dst.vec)
+       (index		src.start)
+       (start-for	src.start src.vec)
+       (index		dst.start)
+       (start-for	dst.start dst.vec)
+       (count		count))
+    (let ((src.len (unsafe.vector-length src.vec))
+	  (dst.len (unsafe.vector-length dst.vec)))
+      (with-arguments-validation (who)
+	  ((count-for	count src.start src.len)
+	   (count-for	count dst.start dst.len))
+	(cond ((unsafe.fxzero? count)
+	       (void))
+	      ((eq? src.vec dst.vec)
+	       (cond ((unsafe.fx< dst.start src.start)
+		      (unsafe.vector-self-copy-forwards!  src.vec src.start dst.start count))
+		     ((unsafe.fx> dst.start src.start)
+		      (unsafe.vector-self-copy-backwards! src.vec src.start dst.start count))
+		     (else (void))))
+	      (else
+	       (let ((src.end (unsafe.fx+ src.start count)))
+		 (unsafe.vector-copy! src.vec src.start dst.vec dst.start src.end))))))))
 
 
 ;;;; done
