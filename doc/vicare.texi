@@ -2180,13 +2180,17 @@ Undocumented.
 @section Cafe
 
 
-@defun new-cafe @var{eval}
-The procedure @func{new-cafe} starts a new read--eval--print loop inside
-the current cafe (if one exists).  It prompts the user for an
-expression, evaluates it, prints the result back, and repeats the
-process.  If @func{new-cafe} is called with an argument, @var{eval},
-then that argument must be a procedure that takes a single argument.
-The @var{eval} procedure will be used to evaluate the expressions.
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun new-cafe
+@defunx new-cafe @var{eval}
+Start a new read--eval--print loop (@repl{}) inside the current cafe (if
+one exists).  It prompts the user for an expression, evaluates it,
+prints the result back, and repeats the process.  If @func{new-cafe} is
+called with an argument, @var{eval}, then that argument must be a
+procedure that takes a single argument.  The @var{eval} procedure will
+be used to evaluate the expressions.
 
 Every time a new cafe is started, the prompt is changed to reflect the
 depth of the current cafe (i.e. how many eof objects is takes to exit
@@ -2195,11 +2199,11 @@ the outermost cafe).
 Input and output performed by the cafe can be changed by the
 @func{console-input-port} and @func{console-output-port} parameters.
 
-If a @func{die} occurs during reading, evaluating, or printing an
-expression, then the die is printed to the error--port and the
+If an error occurs during reading, evaluating, or printing an
+expression, then the error message is printed to the error--port and the
 operations of the cafe resume as normal.
 
-To exit from a cafe we can write the @code{#!eof} object.
+To exit from a cafe we can write the @eof{} object.
 @end defun
 
 @c page
