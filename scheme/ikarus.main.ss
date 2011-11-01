@@ -50,7 +50,7 @@
 	  read-source-file
 	  read-script-source-file)
     (only (ikarus.symbol-table)
-	  initialize-symbol-table!)
+	  $initialize-symbol-table!)
     (prefix (only (ikarus load)
 		  load
 		  load-r6rs-script)
@@ -800,7 +800,9 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 ;;;; main expressions
 
-(initialize-symbol-table!)
+;;See "ikarus.symbol-table.ss" for an explanation of this.
+($initialize-symbol-table!)
+
 (let-values (((cfg execution-state-initialisation-according-to-command-line-options)
 	      (parse-command-line-arguments)))
   (with-run-time-config (cfg)

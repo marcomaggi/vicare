@@ -7138,6 +7138,28 @@ Still to be documented.
 Still to be documented.
 @end deffn
 
+
+@defun $symbol-table-size
+Return the number of interned symbols.
+@end defun
+
+
+@defun $log-symbol-table-status
+Write to the current error port a description of the current symbol
+table status.  Example:
+
+@example
+vicare> (import (ikarus system $symbols))
+vicare> ($log-symbol-table-status)
+Vicare internal symbol table status:
+        number of interned symbols: 2962
+        number of hash table buckets: 4096
+
+vicare>
+@end example
+@end defun
+
+
 @c page
 @node syslib fixnums
 @section Low level fixnum operations

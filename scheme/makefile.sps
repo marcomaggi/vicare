@@ -657,6 +657,7 @@
     ($symbol-table-size				$symbols)
     ($init-symbol-value!)
     ($unbound-object?				$symbols)
+    ($log-symbol-table-status			$symbols)
 ;;;
     (base-rtd					$structs)
     ($struct-set!				$structs)
