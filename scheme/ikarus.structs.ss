@@ -186,7 +186,11 @@
 	  (let ((rtd (symbol-value uid)))
 	    (unless (and (string=? name (struct-type-name rtd))
 			 (equal? fields (struct-type-field-names rtd)))
-	      (assertion-violation who "mismatching data structure definition"))
+	      (assertion-violation who
+		"mismatching data structure definition, \
+                 selected UID already bound non type descriptor \
+                 value or to type descriptor not matching this \
+                 definition"))
 	    rtd)
 	(let ((rtd (make-rtd name fields #f uid)))
 	  (set-symbol-value! uid rtd)
