@@ -2682,8 +2682,40 @@ unspecified values.
 
 
 @menu
+* iklib symbols value::         Symbol values.
 * iklib symbols plists::        Property lists.
 @end menu
+
+@c page
+@node iklib symbols value
+@subsection Symbol values
+
+
+Symbol values have miscellaneous uses; for example when a symbol is the
+unique identifier for a data structure, its symbol value field is set to
+the type descriptor of the data structure.  @ref{syslib symbols} for
+more details on symbol values.
+
+The following bindings are exported by the @library{ikarus} and the
+@library{ikarus symbols} libraries.
+
+
+@defun set-symbol-value! @var{sym} @var{value}
+Store @var{value} in the @func{$symbol-value} field of the symbol
+@var{sym}.
+@end defun
+
+
+@defun symbol-value @var{sym}
+Return the value in the @func{$symbol-value} field of the symbol
+@var{sym}.
+@end defun
+
+
+@defun symbol-bound? @var{sym}
+Return true if @var{sym} is a symbol and its @func{$symbol-value} field
+is set to the special ``unbound'' machine word value.
+@end defun
 
 @c page
 @node iklib symbols plists
@@ -7126,8 +7158,8 @@ Allocate a new symbol block and initialise the @code{string} field with
 @var{str}; return the reference to the symbol block.
 
 The @code{ustring} is initialised to the fixnum zero.  The @code{value}
-and @code{proc} fields are initialised to a special fixnum value meaning
-``unbound''.  The @code{plist} field is initialised to null.
+and @code{proc} fields are initialised to a special machine word value
+meaning ``unbound''.  The @code{plist} field is initialised to null.
 @end deffn
 
 
@@ -7151,6 +7183,12 @@ Mutators for the fields of @var{sym}.
 @deffn {Unsafe Operation} $set-symbol-value/proc! @var{sym} @var{val}
 Set both the fields @code{value} and @code{proc} of @var{sym} to
 @var{val}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $unbound-object? @var{sym}
+Return true if the @func{$symbol-value} field of @var{sym} is set to the
+special ``unbound'' machine word value.
 @end deffn
 
 
