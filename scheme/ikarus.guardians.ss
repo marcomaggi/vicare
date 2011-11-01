@@ -15,8 +15,9 @@
 
 ;;To understand guardians see:
 ;;
-;;    Dybvig, Bruggeman, Eby.   "Guardians in a Generation-Based Garbage
-;;    Collector".
+;;  Dybvig,  Bruggeman, Eby.  "Guardians  in a  Generation-Based Garbage
+;;  Collector".   In  Proceedings  of  the  SIGPLAN  '93  Conference  on
+;;  Programming Language Design and Implementation, 207-216, June 1993.
 ;;
 ;;The procedure MAKE-GUARDIAN is copied verbatim from this paper.
 ;;
