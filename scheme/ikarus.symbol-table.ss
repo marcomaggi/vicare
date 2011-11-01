@@ -37,9 +37,9 @@
   (assertion-violation who "expected string as argument" obj))
 
 
-;;;; data types
+;;;; symbol table data structure
 
-;;A  SYMBOL-TABLE structure  is in  practice a  hash table  holding weak
+;;A SYMBOL-TABLE  structure is, in  practice, a hash table  holding weak
 ;;references to  interned symbols.  When the number  of interned symbols
 ;;equals the number of buckets (whatever the distribution), the table is
 ;;enlarged  doubling  the  number   of  buckets.   The  table  is  never
@@ -61,11 +61,11 @@
 ;;  A bitmask used to convert a  symbol's hash number into an index into
 ;;  the vector in the VEC field as follows:
 ;;
-;;    (define index (fxlogand mask (symbol-hash symbol)))
+;;    (define index ($fxlogand mask (symbol-hash symbol)))
 ;;
-;;Field name: vec
-;;Accessor: symbol-table-vec TABLE
-;;Mutator: set-symbol-table-vec! TABLE
+;;Field name: buckets
+;;Accessor: symbol-table-buckets TABLE
+;;Mutator: set-symbol-table-buckets! TABLE
 ;;  Actual collection of interned symbols, this is the vector of buckets
 ;;  of the  hash table.  Each  element in the  vector is a list  of weak
 ;;  pairs holding  the interned symbols.  The maximum  number of buckets
@@ -82,10 +82,7 @@
 ;;  a new symbol is interned.
 ;;
 (define-struct symbol-table
-  (size mask vec guardian))
-
-(define MAX-NUMBER-OF-BUCKETS
-  (fxdiv (greatest-fixnum) 2))
+  (size mask buckets guardian))
 
 
 ;;This is  the actual table used  at run-time.  Notice that  the mask is
@@ -96,8 +93,36 @@
 ;;4096.  (Marco Maggi; Oct 31, 2011)
 ;;
 (define THE-SYMBOL-TABLE
-  (make-symbol-table 0 4095 (make-vector 4096 '()) (make-guardian))
-  #;(make-symbol-table 0 #b11 (make-vector 4 '()) (make-guardian)))
+  (let* ((G (make-guardian))
+	 (T (make-symbol-table 0 4095 (make-vector 4096 '()) G)
+	    #;(make-symbol-table 0 #b11 (make-vector 4 '()) G)))
+    (define (cleanup)
+      (do ((sym (G) (G)))
+	  ((not sym))
+	(if (dead? sym)
+	    (unintern sym T)
+	  (G sym))))
+    (post-gc-hooks (cons cleanup (post-gc-hooks)))
+    T))
+
+(define MAX-NUMBER-OF-BUCKETS
+  (fxdiv (greatest-fixnum) 2))
+
+(define ($initialize-symbol-table!)
+  ;;Retrieve  the vector  used by  the  symbol table  in the  "vicare"
+  ;;executable (constructed  while booting), retrieve  all the entries
+  ;;from it and store them in THE-SYMBOL-TABLE.
+  ;;
+  ;;This function must be called only once at start up.
+  ;;
+  (define (intern-car x)
+    (when (pair? x)
+      (let ((sym (unsafe.car x)))
+	(intern-symbol! sym
+			(unsafe.fxand (symbol-hash sym) (symbol-table-mask THE-SYMBOL-TABLE))
+			THE-SYMBOL-TABLE))
+      (intern-car (unsafe.cdr x))))
+  (vector-for-each intern-car (foreign-call "ikrt_get_symbol_table")))
 
 (define ($symbol-table-size)
   (symbol-table-size THE-SYMBOL-TABLE))
@@ -117,57 +142,35 @@
   (%display ($symbol-table-size))
   (%newline)
   (%display "\tnumber of hash table buckets: ")
-  (%display (vector-length (symbol-table-vec THE-SYMBOL-TABLE)))
+  (%display (vector-length (symbol-table-buckets THE-SYMBOL-TABLE)))
   (%newline)
   (%newline)
   (flush-output-port port))
 
-(define ($initialize-symbol-table!)
-  ;;Retrieve  the vector  used by  the  symbol table  in the  "vicare"
-  ;;executable (constructed  while booting), retrieve  all the entries
-  ;;from it and store them in THE-SYMBOL-TABLE.
-  ;;
-  (define (intern-car x)
-    (when (pair? x)
-      (let ((sym (unsafe.car x)))
-	(intern-symbol! sym
-			(unsafe.fxand (symbol-hash sym) (symbol-table-mask THE-SYMBOL-TABLE))
-			THE-SYMBOL-TABLE))
-      (intern-car (unsafe.cdr x))))
-  (vector-for-each intern-car (foreign-call "ikrt_get_symbol_table")))
-
 
-(define (string->symbol x)
-  ;;Defined by R6RS.  Return a symbol whose name is X.
+(define (string->symbol str)
+  ;;Defined by R6RS.  Return a symbol whose name is STR.
   ;;
-  ;;Lookup the  symbol in  the symbol table:  if it is  already there,
-  ;;return it; else create a new entry.
+  ;;Lookup  the symbol  in the  symbol table:  if it  is  already there,
+  ;;return it; else create a new entry and return the new symbol.
   ;;
   (define who 'string->symbol)
-  (with-arguments-validation (who)
-      ((string  x))
-    (lookup x (string-hash x) THE-SYMBOL-TABLE)))
-
-(define (lookup str ih table)
-  ;;Subroutine of  STRING->SYMBOL.  Search for  the string STR  in TABLE
-  ;;using IH  as its hash  number.  STR must  be the name of  an already
-  ;;interned  symbol or  a  symbol to  be  interned.  TABLE  must be  an
-  ;;instance  of  SYMBOL-TABLE structure.   Return  a  reference to  the
-  ;;interned symbol.
-  ;;
-  (define (chain-lookup str idx table ls)
+  (define (lookup str idx table ls)
     (if (null? ls)
-	(let ((sym (intern str idx table)))
-;;; doesn't need eq? check there
-	  (bleed-guardian sym table))
-      (let ((a (unsafe.car ls)))
-	;;FIXME  Can we use  $SYMBOL-STRING rather  than SYMBOL->STRING?
-	;;(Marco Maggi; Oct 31, 2011)
-	(if (string=? str (symbol->string a))
-	    (bleed-guardian a table)
-	  (chain-lookup str idx table (unsafe.cdr ls))))))
-  (let ((idx (unsafe.fxand ih (symbol-table-mask table))))
-    (chain-lookup str idx table (vector-ref (symbol-table-vec table) idx))))
+	(bleed-guardian (intern str idx table) table)
+      (let ((interned-symbol (unsafe.car ls)))
+	;;FIXME  Can we  use $SYMBOL-STRING  rather  than SYMBOL->STRING
+	;;here?  (Marco Maggi; Oct 31, 2011)
+	(if (string=? str (symbol->string interned-symbol))
+	    (bleed-guardian interned-symbol table)
+	  (lookup str idx table (unsafe.cdr ls))))))
+
+  (with-arguments-validation (who)
+      ((string  str))
+    (let* ((idx (unsafe.fxand (string-hash str)
+			      (symbol-table-mask THE-SYMBOL-TABLE)))
+	   (list-of-interned-symbols (vector-ref (symbol-table-buckets THE-SYMBOL-TABLE) idx)))
+      (lookup str idx THE-SYMBOL-TABLE list-of-interned-symbols))))
 
 
 (define (intern str idx table)
@@ -191,7 +194,7 @@
     (if (unsafe.fx= number-of-interned-symbols (greatest-fixnum))
 	(assertion-violation 'intern-symbol!
 	  "reached maximum number of interned symbols" sym)
-      (let ((vec (symbol-table-vec table)))
+      (let ((vec (symbol-table-buckets table)))
 	(vector-set! vec idx (weak-cons sym (vector-ref vec idx)))
 	((symbol-table-guardian table) sym)
 	(let ((n (unsafe.fxadd1 number-of-interned-symbols)))
@@ -199,9 +202,25 @@
 	  (when (unsafe.fx= n (symbol-table-mask table))
 	    (extend-table table)))))))
 
+
+(define (dead? sym)
+  ;;Evaluate to true if SYM is unused, even by the REPL.
+  ;;
+  (and ($unbound-object? ($symbol-value sym))
+       (null? ($symbol-plist sym))))
+
 (define (bleed-guardian sym table)
   ;;Subroutine of LOOKUP.  Scan the  symbols queried in the guardian for
-  ;;removal from TABLE.  Notice that this can happen:
+  ;;removal from TABLE.
+  ;;
+  ;;*NOTE* The  original version of  this function was written  when the
+  ;;CLEANUP function for the guardian was not called by the POST-GC-HOOK
+  ;;as it is now; rather, the guardian was cleared by this function when
+  ;;a new symbol was interned by STRING->SYMBOL.  We are keeping the old
+  ;;logic in this function because  it does not hurt.  (Marco Maggi; Nov
+  ;;1, 2011)
+  ;;
+  ;;Notice that this can happen:
   ;;
   ;;1. The symbol CIAO is interned.
   ;,
@@ -217,9 +236,6 @@
   ;;If  a symbol queried  in the  guardian for  removal is  not unbound:
   ;;unintern it.
   ;;
-  (define-inline (dead? sym)
-    (and ($unbound-object? ($symbol-value sym))
-	 (null? ($symbol-plist sym))))
   (let ((g (symbol-table-guardian table)))
     (cond ((g) => (lambda (a)
 		    (let loop ((a a))
@@ -237,7 +253,7 @@
   ;;
   (set-symbol-table-size! table (unsafe.fxsub1 (symbol-table-size table)))
   (let ((idx (unsafe.fxand (symbol-hash sym) (symbol-table-mask table)))
-	(vec (symbol-table-vec table)))
+	(vec (symbol-table-buckets table)))
     (let ((ls (vector-ref vec idx)))
       (if (eq? (unsafe.car ls) sym)
 	  (vector-set! vec idx (cdr ls))
@@ -252,7 +268,7 @@
   ;;Double the size of the vector in TABLE, which must be an instance of
   ;;SYMBOL-TABLE structure.
   ;;
-  (let* ((vec1	(symbol-table-vec table))
+  (let* ((vec1	(symbol-table-buckets table))
 	 (len1	(unsafe.vector-length vec1)))
     ;;Do not allow the vector length to exceed the maximum fixnum.
     (when (unsafe.fx< len1 MAX-NUMBER-OF-BUCKETS)
@@ -276,7 +292,7 @@
 	;;Insert in the new vector all the entries in the old vector.
 	(vector-for-each insert vec1)
 	;;Update the TABLE structure.
-	(set-symbol-table-vec!  table vec2)
+	(set-symbol-table-buckets!  table vec2)
 	(set-symbol-table-mask! table mask)))))
 
 
