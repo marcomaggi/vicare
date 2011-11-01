@@ -7131,7 +7131,7 @@ public interface exported by @library{ikarus} and @library{rnrs}.
 @section Low level symbol operations
 
 
-A symbols is a variable length memory block referenced by machine words
+A symbol is a variable length memory block referenced by machine words
 tagged as vectors.  The first machine word of a symbol block is tagged
 has symbol in its least significant bits and it has the most significant
 bits set to zero.
@@ -7141,7 +7141,7 @@ bits set to zero.
       heap offset          vector tag
 
 |------------------------|-------------| symbol first word
-   number of words         symbol tag
+   all set to zero         symbol tag
 @end example
 
 A symbol memory block is @math{6} words wide and contains references to
@@ -7159,7 +7159,7 @@ Allocate a new symbol block and initialise the @code{string} field with
 
 The @code{ustring} is initialised to the fixnum zero.  The @code{value}
 and @code{proc} fields are initialised to a special machine word value
-meaning ``unbound''.  The @code{plist} field is initialised to null.
+meaning ``unbound''.  The @code{plist} field is initialised to nil.
 @end deffn
 
 
@@ -7202,6 +7202,10 @@ Still to be documented.
 @end deffn
 
 
+The following bindings are related to the symbol table collecting
+interned symbols.
+
+
 @defun $symbol-table-size
 Return the number of interned symbols.
 @end defun
@@ -7221,7 +7225,6 @@ Vicare internal symbol table status:
 vicare>
 @end example
 @end defun
-
 
 @c page
 @node syslib fixnums
