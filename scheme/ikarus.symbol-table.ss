@@ -204,7 +204,8 @@
 
 
 (define (dead? sym)
-  ;;Evaluate to true if SYM is unused, even by the REPL.
+  ;;Evaluate to true if  SYM is unused, even by the REPL  and as UID for
+  ;;data structures.
   ;;
   (and ($unbound-object? ($symbol-value sym))
        (null? ($symbol-plist sym))))

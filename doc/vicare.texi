@@ -2283,9 +2283,13 @@ argument is of invalid type: an assertion violation is raised.
 @defunx make-struct-type @var{name} @var{fields} @var{uid}
 Build and return a new structure type descriptor.  @var{name} must be a
 string representing the type name.  @var{fields} must be a list of
-symbols representing the field names.  The optional @var{uid} argument
-must be a symbol uniquely identifying this type; when not supplied, a
-symbol is automatically generated.
+symbols representing the field names.
+
+The optional @var{uid} argument must be a symbol uniquely identifying
+this type; when not supplied, a symbol is automatically generated.  The
+@func{$symbol-value} field of @var{uid} is set to the newly created RTD;
+if @var{uid} already has a symbol value: such value must be a struct
+descriptor equal to the newly created RTD.
 @end defun
 
 

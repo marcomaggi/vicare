@@ -157,9 +157,13 @@
 (define make-struct-type
   ;;Build and  return a new structure  type descriptor.  NAME  must be a
   ;;string representing the type name.  FIELDS must be a list of symbols
-  ;;representing the  field names.   The optional G  argument must  be a
-  ;;symbol uniquely  identifying this type; when not  supplied, a symbol
-  ;;is automatically generated.
+  ;;representing the  field names.
+  ;;
+  ;;The optional UID argument must be a symbol uniquely identifying this
+  ;;type; when  not supplied, a symbol is  automatically generated.  The
+  ;;$SYMBOL-VALUE field of  UID is set to the RTD; if  UID already has a
+  ;;symbol value,  such value must be  a struct descriptor  equal to the
+  ;;newly created RTD.
   ;;
   (case-lambda
    ((name fields)
@@ -168,24 +172,24 @@
 	((name		 name)
 	 (list-of-fields fields))
       (for-each %field-is-a-symbol? fields)
-      (let* ((g   (gensym name))
-	     (rtd (make-rtd name fields #f g)))
-	(set-symbol-value! g rtd)
+      (let* ((uid (gensym name))
+	     (rtd (make-rtd name fields #f uid)))
+	(set-symbol-value! uid rtd)
 	rtd)))
-   ((name fields g)
+   ((name fields uid)
     (define who 'make-struct-type)
     (with-arguments-validation (who)
 	((name		 name)
 	 (list-of-fields fields))
       (for-each %field-is-a-symbol? fields)
-      (if (symbol-bound? g)
-	  (let ((rtd (symbol-value g)))
+      (if (symbol-bound? uid)
+	  (let ((rtd (symbol-value uid)))
 	    (unless (and (string=? name (struct-type-name rtd))
 			 (equal? fields (struct-type-field-names rtd)))
 	      (assertion-violation who "mismatching data structure definition"))
 	    rtd)
-	(let ((rtd (make-rtd name fields #f g)))
-	  (set-symbol-value! g rtd)
+	(let ((rtd (make-rtd name fields #f uid)))
+	  (set-symbol-value! uid rtd)
 	  rtd))))))
 
 (define (struct-type-name rtd)
