@@ -196,6 +196,20 @@ original  code  in:  Ypsilon  Scheme  System,  Copyright  (c)  2004-2009
 Y. FUJITA / LittleWing  Company Limited.  See the file "COPYING.ypsilon"
 for terms and conditions of use of this function.
 
+  The implementation of EQUAL? comes from:
+
+    Michael D.   Adams and  R.  Kent Dybvig.   "Efficient nondestructive
+    equality checking for trees and graphs."  In ICFP '08: Proceeding of
+    the  13th   ACM  SIGPLAN  international   conference  on  Functional
+    programming,  pages 179-188.  ACM,  New York,  NY, USA,  2008.  ISBN
+    978-1-59593-919-7. doi: 10.1145/1411204.1411230.
+
+  The implementation of MAKE-GUARDIAN comes from:
+
+    Dybvig,  Bruggeman, Eby.  "Guardians  in a  Generation-Based Garbage
+    Collector".   In  Proceedings  of  the  SIGPLAN  '93  Conference  on
+    Programming Language Design and Implementation, 207-216, June 1993.
+
 
 B. Bug reports
 --------------
