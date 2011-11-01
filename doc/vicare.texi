@@ -2691,10 +2691,11 @@ unspecified values.
 @subsection Symbol values
 
 
-Symbol values have miscellaneous uses; for example when a symbol is the
-unique identifier for a data structure, its symbol value field is set to
-the type descriptor of the data structure.  @ref{syslib symbols} for
-more details on symbol values.
+Symbol values have miscellaneous uses: when a symbol is the unique
+identifier for a data structure, its symbol value field is set to the
+type descriptor of the data structure; when a symbol is the unique label
+of a binding in the expander, its symbol value is a reference to the
+binding.  @ref{syslib symbols} for more details on symbol values.
 
 The following bindings are exported by the @library{ikarus} and the
 @library{ikarus symbols} libraries.
