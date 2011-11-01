@@ -31,18 +31,24 @@ long-test long-tests:
 #page
 #### running vicare from the build directory
 
+VIE			= $(srcdir)/../scripts/vie
+
 # The variable "user_flags"  is for the user to be  set on the command
 # line of "make".
 VICARE_TEST_RUN_FLAGS	= -b $(VICARE_BOOT) $(user_flags)
 VICARE_TEST_RUN_ENV	= VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH)	\
 			  VICARE_SRC_DIR=$(srcdir) VICARE_BUILDDIR=$(builddir)
 VICARE_TEST_RUN		= $(VICARE_TEST_RUN_ENV) $(VICARE) $(VICARE_TEST_RUN_FLAGS)
+VICARE_TEST_VIE		= $(VICARE_TEST_RUN_ENV) $(VIE) $(VICARE) $(VICARE_TEST_RUN_FLAGS)
 
 
-.PHONY: test-run test-exec-modes
+.PHONY: test-run test-vie test-exec-modes
 
 test-run:
 	$(VICARE_TEST_RUN)
+
+test-vie:
+	$(VICARE_TEST_VIE)
 
 test-exec-modes:
 	$(VICARE_TEST_RUN_ENV) $(srcdir)/test-exec-modes.sh $(VICARE) $(VICARE_BOOT) $(srcdir)

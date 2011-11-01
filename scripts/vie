@@ -1,0 +1,55 @@
+#!/bin/sh
+#
+# Vicare Scheme GNU Readline wrapper using Rlwrap.  Take arguments
+# from the command line and execute them under rlwrap.
+
+## ------------------------------------------------------------
+## Configuration variables.
+
+rlwrap_PROGRAM=$(type -p rlwrap)
+
+COMPLETIONS_FILE=/home/marco/.vicare_completions
+COMPLETIONS_OPTION=--file=${COMPLETIONS_FILE}
+
+## ------------------------------------------------------------
+## Data variables.
+
+# Do NOT include '\!' and '?' in this string.
+BREAK_CHARS="\"#'(),;\`\\|[]{}"
+
+## ------------------------------------------------------------
+## Check programs and data files existence.
+
+function error () {
+    local MESSAGE=${1:?"missing message argument to function '${FUNCNAME}'"}
+    printf 'ike error: %s\n' "${MESSAGE}" >&2
+    exit 2
+}
+function warning () {
+    local MESSAGE=${1:?"missing message argument to function '${FUNCNAME}'"}
+    printf 'ike warning: %s\n' "${MESSAGE}" >&2
+}
+
+test -x "${rlwrap_PROGRAM}" || error "cannot find program 'rlwrap'"
+
+if ! test -f "${COMPLETIONS_FILE}" ; then
+    warning "cannot find completions file '${COMPLETIONS_FILE}'"
+    COMPLETIONS_OPTION=
+fi
+
+## ------------------------------------------------------------
+## Run.
+
+exec "${rlwrap_PROGRAM}"                                        \
+    --ansi-colour-aware                                         \
+    --break-chars=${BREAK_CHARS}                                \
+    --complete-filenames                                        \
+    --history-no-dupes=2                                        \
+    --multi-line                                                \
+    --prompt-colour='1;31'                                      \
+    --quote-characters='"'                                      \
+    --remember                                                  \
+    ${COMPLETIONS_OPTION}                                       \
+    "$@"
+
+### end of file
