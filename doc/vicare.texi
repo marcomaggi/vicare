@@ -2413,12 +2413,33 @@ by the garbage collector.  The following bindings are exported by the
 
 @defun weak-cons @var{A} @var{D}
 Like @func{cons} build and return a new pair, but holding weak
-references to @var{A} and @var{D}.
+references to @var{A}; notice that the reference to @var{D} is not weak.
+This function allows to build a non--weak list spine holding weak
+references to values.
 @end defun
 
 
 @defun weak-pair? @var{obj}
 Return true if @var{obj} is a weak pair.
+@end defun
+
+
+@defun bwp-obejct? @var{obj}
+Return true if @var{obj} is a weak reference to a value which has been
+already garbage collected.  Example:
+
+@example
+vicare> (define x (weak-cons (cons 1 2) #f))
+vicare> x
+((1 . 2) . #f)
+vicare> (bwp-object? (car x))
+#f
+vicare> (collect)
+vicare> x
+ (#!bwp . #f)
+vicare> (bwp-object? (car x))
+#t
+@end example
 @end defun
 
 @c page
