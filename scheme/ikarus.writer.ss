@@ -667,13 +667,13 @@
     (let ([h (make-eq-hashtable)])
       (traverse x h)
       (wr x p #t h 0))
-    (flush-output-port p))
+    #;(flush-output-port p))
 
   (define (display-to-port x p)
     (let ([h (make-eq-hashtable)])
       (traverse x h)
       (wr x p #f h 0))
-    (flush-output-port p))
+    #;(flush-output-port p))
 
   (define formatter
     (lambda (who p fmt args)
@@ -746,7 +746,7 @@
                (write-char c p)
                (f (fxadd1 i) args)]))))
       ;;; then flush
-      (flush-output-port p)))
+      #;(flush-output-port p)))
 
   (define fprintf
     (lambda (p fmt . args)
