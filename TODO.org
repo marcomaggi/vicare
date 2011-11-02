@@ -80,6 +80,15 @@
 
 * Miscellaneous stuff to be fixed
 
+** ikarus.io.ss
+
+   Something is causing an "invalid  frame size" error with some builds.
+   I guess it is caused by something in the I/O module, particularly the
+   guardian used to close garbage  collected ports.  For this reason the
+   CLOSE-PORT call in the guardian  cleanup function is commented out to
+   test if  the problem  still manifests itself.   Once fixed,  the call
+   must be reincluded.
+
 ** ikarus.symbols.ss
 
    The name of  generated symbols embeds a numeric  counter which is the

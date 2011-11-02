@@ -2834,8 +2834,13 @@
 	  ;;Notice that, as defined  by R6RS, CLOSE-PORT does nothing if
 	  ;;PORT has already been closed.
 ;;; (with-port (port)
-;;;   (emergency-platform-write-fd (string-append "closing guarded port " port.id)))
-	  (close-port port)
+;;;   (emergency-platform-write-fd (string-append "closing guarded port " port.ID)))
+
+;;;FIXME This CLOSE-PORT is the  whole purpose of having a guardian.  It
+;;;is commented  out to investigate if  it is causing  an "invalid frame
+;;;size" error with  some builds.  Once the problem  is fixed, it should
+;;;be reincluded.  (Marco Maggi; Nov  2, 2011)
+#;	  (close-port port)
 	  (close-garbage-collected-ports))))
     (post-gc-hooks (cons close-garbage-collected-ports (post-gc-hooks)))
     G))
@@ -4279,7 +4284,6 @@
   (%unsafe.assert-value-is-open-port   port who)
   (%unsafe.assert-argument-is-not-input/output-port port who)
   (with-port-having-bytevector-buffer (port)
-
     (let ((transcoded-port ($make-port
 			    (%unsafe.fxior
 			     (cond (port.is-input?
