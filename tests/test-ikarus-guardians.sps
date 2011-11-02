@@ -58,9 +58,7 @@
   (assert (null? ls)))
 
 (display "*** testing Ikarus guardians\n\n" (current-error-port))
-(flush-output-port (current-error-port))
 (test1)
 (display "\n\n; *** done\n" (current-error-port))
-(flush-output-port (current-error-port))
 
 ;;; end of file

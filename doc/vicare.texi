@@ -4903,6 +4903,13 @@ The following bindings are exported by the @library{ikarus} library.
 Return a Scheme string representing the identifier of @var{port}.
 @end defun
 
+
+@defun set-port-buffer-mode! @var{port} @var{buffer-mode}
+Reset the port buffer mode to @var{buffer-mode}, which must be one of
+the arguments accepted by @func{buffer-mode}.  It is an error to select
+@code{line} mode if @var{port} is a binary port.
+@end defun
+
 @c page
 @node iklib foreign
 @section The @library{vicare foreign} library

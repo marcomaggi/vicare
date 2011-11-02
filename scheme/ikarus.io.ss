@@ -457,6 +457,7 @@
     ;; port configuration
     port-mode set-port-mode!
     output-port-buffer-mode
+    set-port-buffer-mode!
     reset-input-port!
     reset-output-port!
     port-id
@@ -564,6 +565,7 @@
 		  ;; port configuration
 		  port-mode set-port-mode!
 		  output-port-buffer-mode
+		  set-port-buffer-mode!
 		  reset-input-port!
 		  reset-output-port!
 		  port-id
@@ -4421,6 +4423,9 @@
 	  (else
 	   (eof-object? (lookahead-u8 port))))))
 
+
+;;;; buffer mode
+
 (define (output-port-buffer-mode port)
   ;;Defined  by  R6RS.  Return  the  symbol  that represents  the
   ;;buffer mode of PORT.
@@ -4431,6 +4436,27 @@
     (cond (port.buffer-mode-line?	'line)
 	  (port.buffer-mode-none?	'none)
 	  (else				'block))))
+
+(define (set-port-buffer-mode! port mode)
+  ;;Defined by Vicare.  Reset the port buffer mode.
+  ;;
+  (define who 'set-port-buffer-mode!)
+  (%assert-argument-is-port port who)
+  (with-port (port)
+    (case mode
+      ((line)
+       (if (%unsafe.textual-port? port)
+	   (set! port.attributes (%unsafe.fxior (%unsafe.port-nullify-eol-style-bits port.attributes)
+						BUFFER-MODE-LINE-TAG))
+	 (assertion-violation who
+	   "invalid line buffer mode for binary port" port)))
+      ((none)
+       (set! port.attributes (%unsafe.fxior (%unsafe.port-nullify-eol-style-bits port.attributes)
+					    BUFFER-MODE-NONE-TAG)))
+      ((block)
+       (set! port.attributes (%unsafe.port-nullify-eol-style-bits port.attributes)))
+      (else
+       (assertion-violation who "invalid symbol as buffer mode argument" mode)))))
 
 
 ;;;; buffer handling for output ports
@@ -8230,7 +8256,9 @@
   ;;does, the transcoder is implementation dependent.
   ;;
   (make-parameter
-      (transcoded-port (standard-error-port) (native-transcoder))
+      (let ((port (transcoded-port (standard-error-port) (native-transcoder))))
+	(set-port-buffer-mode! port (buffer-mode line))
+	port)
     (lambda (x)
       (define who 'current-error-port)
       (%assert-value-is-output-port x who)

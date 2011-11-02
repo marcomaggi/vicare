@@ -35,7 +35,7 @@
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare input/output functions\n")
+(display "*** testing Vicare input/output functions\n" (current-error-port))
 
 
 ;;;; syntax helpers
@@ -4276,6 +4276,71 @@
       (let-values (((port extract) (open-bytevector-output-port)))
 	(output-port-buffer-mode port))
     => 'block)
+
+  #t)
+
+
+(parametrise ((check-test-name	'set-port-buffer-mode-bang))
+
+  (check
+      (let ((port (%open-disposable-binary-output-port)))
+	(set-port-buffer-mode! port (buffer-mode block))
+	(output-port-buffer-mode port))
+    => 'block)
+
+  (check
+      (let ((port (%open-disposable-binary-output-port)))
+	(set-port-buffer-mode! port (buffer-mode none))
+	(output-port-buffer-mode port))
+    => 'none)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((port (%open-disposable-textual-output-port)))
+	(set-port-buffer-mode! port (buffer-mode block))
+	(output-port-buffer-mode port))
+    => 'block)
+
+  (check
+      (let ((port (%open-disposable-textual-output-port)))
+	(set-port-buffer-mode! port (buffer-mode none))
+	(output-port-buffer-mode port))
+    => 'none)
+
+  (check
+      (let ((port (%open-disposable-textual-output-port)))
+	(set-port-buffer-mode! port (buffer-mode line))
+	(output-port-buffer-mode port))
+    => 'line)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(set-port-buffer-mode! 123 (buffer-mode none)))
+    => '(123))
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(set-port-buffer-mode! (%open-disposable-textual-output-port)
+			       'ciao))
+    => '(ciao))
+
+  (check
+      (let ((port (%open-disposable-binary-output-port)))
+	(guard (E ((assertion-violation? E)
+;;;		   (pretty-print (condition-message E))
+		   (equal? port (car (condition-irritants E))))
+		  (else E))
+	  (set-port-buffer-mode! port (buffer-mode line))))
+    => #t)
 
   #t)
 

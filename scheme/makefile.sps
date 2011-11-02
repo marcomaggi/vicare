@@ -1389,6 +1389,7 @@
     (output-file-buffer-size			i v)
     (input/output-file-buffer-size		i v)
     (output-port-buffer-mode			i v r ip)
+    (set-port-buffer-mode!			i v)
     (port-eof?					i v r ip)
     (port-has-port-position?			i v r ip)
     (port-has-set-port-position!?		i v r ip)
