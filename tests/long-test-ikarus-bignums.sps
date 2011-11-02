@@ -33,7 +33,8 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Ikarus bignum functions\n")
+(check-display "*** testing Ikarus bignum functions\n")
+(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 
 
 (parametrise ((check-test-name	'reader))

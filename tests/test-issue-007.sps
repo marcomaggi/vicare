@@ -29,16 +29,16 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing issue 7\n")
+(check-display "*** testing issue 7\n")
 
 
 ;;;; code
 
 ;;Note: it does NOT crash when using 1057111.
 (define m 1057112)
-;; (display m)(newline)
-;; (display "#x")(display (number->string m 16))(newline)
-;; (display "#b")(display (number->string m 2))(newline)
+;; (check-display m)(newline)
+;; (check-display "#x")(check-display (number->string m 16))(newline)
+;; (check-display "#b")(check-display (number->string m 2))(newline)
 
 (check
     (guard (E ((assertion-violation? E)

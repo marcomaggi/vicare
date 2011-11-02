@@ -30,7 +30,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing issue 8, letrec constraints\n")
+(check-display "*** testing issue 8, letrec constraints\n")
 
 
 ;;;; code

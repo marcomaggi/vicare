@@ -213,9 +213,9 @@
                   (write-result prefix v))
                 (multiple-results-values v))]
      [(approx? v)
-      (display prefix)
-      (display "approximately ")
-      (write (approx-value v))]
+      (display prefix (current-error-port))
+      (display "approximately " (current-error-port))
+      (write (approx-value v) (current-error-port))]
      [(alts? v)
       (write-result (string-append prefix "   ")
                     (car (alts-values v)))
@@ -224,32 +224,32 @@
                                 v))
                 (cdr (alts-values v)))]
      [else
-      (display prefix)
-      (write v)]))
+      (display prefix (current-error-port))
+      (write v (current-error-port))]))
 
   (define (report-test-results)
     (if (null? failures)
         (begin
-	  (display "; *** checks *** : ")
-          (display checked)
-	  (display " correct,")
-          (display " 0 failed.\n\n\n"))
+	  (display "; *** checks *** : " (current-error-port))
+          (display checked (current-error-port))
+	  (display " correct," (current-error-port))
+          (display " 0 failed.\n\n\n" (current-error-port)))
         (begin
-          (display (length failures))
-          (display " tests failed:\n\n")
+          (display (length failures) (current-error-port))
+          (display " tests failed:\n\n" (current-error-port))
           (for-each (lambda (t)
-                      (display "Expression:\n ")
-                      (write (car t))
-                      (display "\nResult:")
+                      (display "Expression:\n " (current-error-port))
+                      (write (car t) (current-error-port))
+                      (display "\nResult:" (current-error-port))
                       (write-result "\n " (cadr t))
-                      (display "\nExpected:")
+                      (display "\nExpected:" (current-error-port))
                       (write-result "\n " (caddr t))
-                      (display "\n\n"))
+                      (display "\n\n" (current-error-port)))
                     (reverse failures))
-	  (display "; *** checks *** : ")
-	  (display (- checked (length failures)))
-	  (display " correct, ")
-          (display (length failures))
-	  (display " failed.\n\n\n")))))
+	  (display "; *** checks *** : " (current-error-port))
+	  (display (- checked (length failures)) (current-error-port))
+	  (display " correct, " (current-error-port))
+          (display (length failures) (current-error-port))
+	  (display " failed.\n\n\n" (current-error-port))))))
 
 ;;; end of file

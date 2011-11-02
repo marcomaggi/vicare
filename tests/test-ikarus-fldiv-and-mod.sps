@@ -120,9 +120,7 @@
   (test -17.0 -inf.0 #f))
 
 (display "*** testing fldiv and mod\n" (current-error-port))
-(flush-output-port (current-error-port))
 (run-tests)
 (display "; *** done\n" (current-error-port))
-(flush-output-port (current-error-port))
 
 ;;; end of file

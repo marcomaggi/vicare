@@ -19,6 +19,7 @@
 (import (r6rs mutable-pairs)
         (r6rs test)
         (rnrs io simple))
-(display "*** Flatt's R6RS tests for (rnrs mutable-pairs)\n\n")
+(display "*** Flatt's R6RS tests for (rnrs mutable-pairs)\n\n"
+	 (current-error-port))
 (run-mutable-pairs-tests)
 (report-test-results)

@@ -30,7 +30,8 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing issue 18\n")
+(check-display "*** testing issue 18\n")
+(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 
 
 (check (string->number "1-1")		=> #f)

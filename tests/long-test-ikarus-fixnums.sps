@@ -189,10 +189,9 @@
       (test-fx 0 (least-fixnum) #xFF)
     (test-fx 0 (least-fixnum) #xFF00000000)) )
 
+(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 (display "*** testing fixnums\n" (current-error-port))
-(flush-output-port (current-error-port))
 (run-tests)
 (display "; *** done\n" (current-error-port))
-(flush-output-port (current-error-port))
 
 ;;; end of file

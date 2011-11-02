@@ -223,7 +223,7 @@
     )
   )
 
-
+(set-port-buffer-mode! (current-output-port) (buffer-mode line))
 (test0)
 (printf "test0 ok\n")
 (test1)

@@ -30,7 +30,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare POSIX functions\n")
+(check-display "*** testing Vicare POSIX functions\n")
 
 
 (parametrise ((check-test-name	'getpid))
@@ -55,9 +55,9 @@
 
   (check	;verify that no error occurs
       (let ((stream (open-directory-stream "..")))
-;;;(pretty-print stream)
+;;;(check-pretty-print stream)
 	(let loop ((entry (read-directory-stream stream)))
-;;;(pretty-print entry)
+;;;(check-pretty-print entry)
 	  (if entry
 	      (loop (read-directory-stream stream))
 	    (close-directory-stream stream)))

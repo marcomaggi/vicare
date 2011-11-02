@@ -32,7 +32,7 @@
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare symbols\n")
+(check-display "*** testing Vicare symbols\n")
 
 
 (parametrise ((check-test-name	'plists))

@@ -106,10 +106,9 @@
   (test-base-cases)
   (test-other-cases))
 
+(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 (display "*** testing bitwise operations\n" (current-error-port))
-(flush-output-port (current-error-port))
 (run-tests)
 (display "; *** done\n" (current-error-port))
-(flush-output-port (current-error-port))
 
 ;;; end of file

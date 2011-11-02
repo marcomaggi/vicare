@@ -29,7 +29,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing equal-hash\n")
+(check-display "*** testing equal-hash\n")
 
 
 ;;;; code

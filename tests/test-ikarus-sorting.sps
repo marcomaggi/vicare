@@ -129,11 +129,9 @@
   (test-vector-sort)
   (test-list-sort))
 
+(set-port-buffer-mode! (current-output-port) (buffer-mode line))
 (display "*** testing sorting\n" (current-error-port))
-(flush-output-port (current-error-port))
 (run-tests)
 (display "; *** done\n" (current-error-port))
-(flush-output-port (current-error-port))
-
 
 ;;; end of file

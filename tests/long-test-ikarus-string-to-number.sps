@@ -366,11 +366,9 @@
 
   )
 
+(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 (display "*** testing string to number\n" (current-error-port))
-(flush-output-port (current-error-port))
 (run-tests)
 (display "; *** done\n" (current-error-port))
-(flush-output-port (current-error-port))
-
 
 ;;; end of file

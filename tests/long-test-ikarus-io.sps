@@ -34,7 +34,8 @@
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)
-(display "*** testing Ikarus input/output functions\n")
+(check-display "*** testing Ikarus input/output functions\n")
+(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 
 ;; (bytevector-port-buffer-size	256)
 ;; (string-port-buffer-size	256)

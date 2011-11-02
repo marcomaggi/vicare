@@ -19,6 +19,7 @@
 (import (r6rs contrib)
         (r6rs test)
         (rnrs io simple))
-(display "*** Flatt's R6RS contibuted tests\n\n")
+(display "*** Flatt's R6RS contibuted tests\n\n"
+	 (current-error-port))
 (run-contrib-tests)
 (report-test-results)

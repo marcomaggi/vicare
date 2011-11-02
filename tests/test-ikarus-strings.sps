@@ -48,9 +48,7 @@
   )
 
 (display "*** testing strings\n" (current-error-port))
-(flush-output-port (current-error-port))
 (test-strings)
 (display "; *** done\n" (current-error-port))
-(flush-output-port (current-error-port))
 
 ;;; end of file

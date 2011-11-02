@@ -57,6 +57,7 @@
        [else (f i)])))
   (assert (null? ls)))
 
+(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 (display "*** testing Ikarus guardians\n\n" (current-error-port))
 (test1)
 (display "\n\n; *** done\n" (current-error-port))

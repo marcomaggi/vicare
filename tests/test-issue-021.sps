@@ -39,7 +39,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing issue 21, delete character is printed unescaped\n")
+(check-display "*** testing issue 21, delete character is printed unescaped\n")
 
 
 (check

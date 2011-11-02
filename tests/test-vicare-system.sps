@@ -34,7 +34,7 @@
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare low level fixnum operations\n")
+(check-display "*** testing Vicare low level fixnum operations\n")
 
 
 (parametrise ((check-test-name	'fixnums))

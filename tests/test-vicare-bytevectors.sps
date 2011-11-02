@@ -32,7 +32,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare bytevector functions\n")
+(check-display "*** testing Vicare bytevector functions\n")
 
 
 ;;;; syntax helpers
@@ -42,7 +42,7 @@
     ((_ print? . ?body)
      (guard (E ((assertion-violation? E)
 		(when print?
-		  (pretty-print (condition-message E)))
+		  (check-pretty-print (condition-message E)))
 		(condition-irritants E))
 	       (else E))
        (begin . ?body)))))
@@ -405,7 +405,7 @@
 
   (check	;argument is not a bytevector
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8 "ciao" 1))
@@ -416,7 +416,7 @@
 
   (check	;start index not an integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8 '#vu8() #\a))
@@ -424,7 +424,7 @@
 
   (check	;start index not an exact integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8 '#vu8() 1.0))
@@ -432,7 +432,7 @@
 
   (check	;start index is negative
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8 '#vu8() -1))
@@ -440,7 +440,7 @@
 
   (check	;start index too big
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8 '#vu8() 1))
@@ -451,7 +451,7 @@
 
   (check	;end index not an integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8 '#vu8(1) 0 #\a))
@@ -459,7 +459,7 @@
 
   (check	;end index not an exact integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8 '#vu8(1) 0 1.0))
@@ -467,7 +467,7 @@
 
   (check	;end index is negative
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8 '#vu8(1) 0 -1))
@@ -475,7 +475,7 @@
 
   (check	;end index too big
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8 '#vu8(1) 0 2))
@@ -520,7 +520,7 @@
 
   (check	;argument is not a bytevector
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8/count "ciao" 1 1))
@@ -531,7 +531,7 @@
 
   (check	;start index not an integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8/count '#vu8() #\a 1))
@@ -539,7 +539,7 @@
 
   (check	;start index not an exact integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8/count '#vu8() 1.0 1))
@@ -547,7 +547,7 @@
 
   (check	;start index is negative
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8/count '#vu8() -1 1))
@@ -555,7 +555,7 @@
 
   (check	;start index too big
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8/count '#vu8() 1 1))
@@ -566,7 +566,7 @@
 
   (check	;end index not an integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8/count '#vu8(1) 0 #\a))
@@ -574,7 +574,7 @@
 
   (check	;end index not an exact integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8/count '#vu8(1) 0 1.0))
@@ -582,7 +582,7 @@
 
   (check	;end index is negative
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8/count '#vu8(1) 0 -1))
@@ -590,7 +590,7 @@
 
   (check	;end index too big
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-u8/count '#vu8(1) 0 2))
@@ -635,7 +635,7 @@
 
   (check	;argument is not a bytevector
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8 "ciao" 1))
@@ -646,7 +646,7 @@
 
   (check	;start index not an integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8 '#vs8() #\a))
@@ -654,7 +654,7 @@
 
   (check	;start index not an exact integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8 '#vs8() 1.0))
@@ -662,7 +662,7 @@
 
   (check	;start index is negative
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8 '#vs8() -1))
@@ -670,7 +670,7 @@
 
   (check	;start index too big
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8 '#vs8() 1))
@@ -681,7 +681,7 @@
 
   (check	;end index not an integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8 '#vs8(1) 0 #\a))
@@ -689,7 +689,7 @@
 
   (check	;end index not an exact integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8 '#vs8(1) 0 1.0))
@@ -697,7 +697,7 @@
 
   (check	;end index is negative
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8 '#vs8(1) 0 -1))
@@ -705,7 +705,7 @@
 
   (check	;end index too big
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8 '#vs8(1) 0 2))
@@ -750,7 +750,7 @@
 
   (check	;argument is not a bytevector
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8/count "ciao" 1 1))
@@ -761,7 +761,7 @@
 
   (check	;start index not an integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8/count '#vs8() #\a 1))
@@ -769,7 +769,7 @@
 
   (check	;start index not an exact integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8/count '#vs8() 1.0 1))
@@ -777,7 +777,7 @@
 
   (check	;start index is negative
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8/count '#vs8() -1 1))
@@ -785,7 +785,7 @@
 
   (check	;start index too big
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8/count '#vs8() 1 1))
@@ -796,7 +796,7 @@
 
   (check	;end index not an integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8/count '#vs8(1) 0 #\a))
@@ -804,7 +804,7 @@
 
   (check	;end index not an exact integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8/count '#vs8(1) 0 1.0))
@@ -812,7 +812,7 @@
 
   (check	;end index is negative
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8/count '#vs8(1) 0 -1))
@@ -820,7 +820,7 @@
 
   (check	;end index too big
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(subbytevector-s8/count '#vs8(1) 0 2))

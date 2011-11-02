@@ -19,6 +19,7 @@
 (import (r6rs control)
         (r6rs test)
         (rnrs io simple))
-(display "*** Flatt's R6RS tests for (rnrs control)\n\n")
+(display "*** Flatt's R6RS tests for (rnrs control)\n\n"
+	 (current-error-port))
 (run-control-tests)
 (report-test-results)

@@ -1058,4 +1058,9 @@
    (list->string (map car case-fold-mapping))
    (list->string (apply append (map cdr case-fold-mapping)))))
 
+(set-port-buffer-mode! (current-output-port) (buffer-mode none))
+(display "*** testing Ikarus case folding\n" (current-error-port))
+(run-tests)
+(display "; *** done\n" (current-error-port))
+
 ;;; end of file

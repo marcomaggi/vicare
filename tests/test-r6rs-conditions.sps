@@ -19,6 +19,7 @@
 (import (r6rs conditions)
         (r6rs test)
         (rnrs io simple))
-(display "*** Flatt's R6RS tests for (rnrs conditions)\n\n")
+(display "*** Flatt's R6RS tests for (rnrs conditions)\n\n"
+	 (current-error-port))
 (run-conditions-tests)
 (report-test-results)

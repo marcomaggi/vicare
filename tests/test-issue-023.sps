@@ -30,7 +30,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing issue 23, missing atan implementation complex numbers\n")
+(check-display "*** testing issue 23, missing atan implementation complex numbers\n")
 
 
 ;;;; helpers

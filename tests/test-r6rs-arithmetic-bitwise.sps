@@ -19,6 +19,7 @@
 (import (r6rs arithmetic bitwise)
         (r6rs test)
         (rnrs io simple))
-(display "*** Flatt's R6RS tests for (rnrs arithmetic bitwise)\n\n")
+(display "*** Flatt's R6RS tests for (rnrs arithmetic bitwise)\n\n"
+	 (current-error-port))
 (run-arithmetic-bitwise-tests)
 (report-test-results)

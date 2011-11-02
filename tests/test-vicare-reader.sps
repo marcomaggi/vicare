@@ -32,7 +32,7 @@
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare reader\n")
+(check-display "*** testing Vicare reader\n")
 
 
 ;;;; helpers
@@ -43,7 +43,7 @@
      (check
 	 (let ((port (open-string-input-port ?input)))
 	   (guard (E ((lexical-violation? E)
-;;;		      (pretty-print (condition-message E))
+;;;		      (check-pretty-print (condition-message E))
 		      (if (irritants-condition? E)
 			  (condition-irritants E)
 			'(no-irritants)))
@@ -57,7 +57,7 @@
      (check
 	 (let ((port (open-string-input-port ?input)))
 	   (guard (E ((syntax-violation? E)
-;;;		      (pretty-print (condition-message E))
+;;;		      (check-pretty-print (condition-message E))
 		      (if (irritants-condition? E)
 			  (condition-irritants E)
 			'(no-irritants)))
@@ -190,7 +190,7 @@
   (check	;invalid backslash sequence
       (let ((port (open-string-input-port "ciao-\\xZ;")))
 	(guard (E ((lexical-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (read port)))

@@ -19,6 +19,7 @@
 (import (r6rs eval)
         (r6rs test)
         (rnrs io simple))
-(display "*** Flatt's R6RS tests for (rnrs eval)\n\n")
+(display "*** Flatt's R6RS tests for (rnrs eval)\n\n"
+	 (current-error-port))
 (run-eval-tests)
 (report-test-results)

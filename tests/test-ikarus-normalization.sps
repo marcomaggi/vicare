@@ -149,10 +149,7 @@
     (test4)))
 
 (display "*** testing string normalization\n" (current-error-port))
-(flush-output-port (current-error-port))
 (run-tests)
 (display "\n; *** done\n" (current-error-port))
-(flush-output-port (current-error-port))
-
 
 ;;; end of file

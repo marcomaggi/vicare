@@ -28,7 +28,6 @@
 #!r6rs
 (library (checks)
   (export
-
     ;; bindings from the SRFI
     check
     check-report
@@ -43,7 +42,13 @@
     false-if-exception check-for-true check-for-false
 
     ;; selecting tests
-    check-test-name)
+    check-test-name
+
+    ;; output
+    check-display
+    check-write
+    check-newline
+    check-pretty-print)
   (import (rename (ikarus)
 		  (display	ikarus:display)
 		  (write	ikarus:write)
@@ -53,38 +58,35 @@
 
 ;;; utilities
 
-(define (display thing)
+(define (check-display thing)
   (ikarus:display thing (current-error-port)))
 
-(define (write thing)
+(define (check-write thing)
   (ikarus:write thing (current-error-port)))
 
-(define (newline)
+(define (check-newline)
   (ikarus:newline (current-error-port)))
 
-(define (pretty-print thing)
+(define (check-pretty-print thing)
   (ikarus:pretty-print thing (current-error-port)))
-
-(define (check:write thing)
-  (write thing (current-error-port)))
 
 (define (flush-checks-port)
   (flush-output-port (current-error-port)))
 
-(define pretty-print/no-trailing-newline
+(define check-pretty-print/no-trailing-newline
   (case-lambda
    ((datum output-port)
     (let* ((os	(call-with-string-output-port
-		    (lambda (sop) (pretty-print datum sop))))
+		    (lambda (sop) (check-pretty-print datum sop))))
 	   (len	(string-length os))
 	   (os	(if (and (positive? len)
 			 (char=? #\newline
 				 (string-ref os (- len 1))))
 		    (substring os 0 (- len 1))
 		  os)))
-      (display os output-port)))
+      (check-display os output-port)))
    ((datum)
-    (pretty-print/no-trailing-newline datum (current-error-port)))))
+    (check-pretty-print/no-trailing-newline datum (current-error-port)))))
 
 (define (string-prefix? prefix the-string)
   (or (eq? prefix the-string)
@@ -139,54 +141,54 @@
 ;;; reporting
 
 (define (check:report-expression expression)
-  (newline)
-  (pretty-print expression)
-  (display " => "))
+  (check-newline)
+  (check-pretty-print expression)
+  (check-display " => "))
 
 (define (check:report-actual-result actual-result)
-  (pretty-print actual-result)
-  (display " ; "))
+  (check-pretty-print actual-result)
+  (check-display " ; "))
 
 (define (check:report-correct cases)
-  (display "correct")
+  (check-display "correct")
   (if (not (= cases 1))
-      (begin (display " (")
-	     (display cases)
-	     (display " cases checked)")))
-  (newline))
+      (begin (check-display " (")
+	     (check-display cases)
+	     (check-display " cases checked)")))
+  (check-newline))
 
 (define (check:report-failed expected-result)
-  (display "*** failed ***")
-  (newline)
-  (display " ; expected result: ")
-  (pretty-print expected-result)
-  (newline)
+  (check-display "*** failed ***")
+  (check-newline)
+  (check-display " ; expected result: ")
+  (check-pretty-print expected-result)
+  (check-newline)
   (flush-checks-port))
 
 (define (check-report)
   (when (>= (check:mode) 1)
-    (newline)
-    (display "; *** checks *** : ")
-    (display check:correct)
-    (display " correct, ")
-    (display (length check:failed))
-    (display " failed.")
+    (check-newline)
+    (check-display "; *** checks *** : ")
+    (check-display check:correct)
+    (check-display " correct, ")
+    (check-display (length check:failed))
+    (check-display " failed.")
     (if (or (null? check:failed) (<= (check:mode) 1))
 	(begin
-	  (newline)
-	  (newline)
-	  (newline))
+	  (check-newline)
+	  (check-newline)
+	  (check-newline))
       (let* ((w (car (reverse check:failed)))
 	     (expression (car w))
 	     (actual-result (cadr w))
 	     (expected-result (caddr w)))
-	(display " First failed example:")
-	(newline)
+	(check-display " First failed example:")
+	(check-newline)
 	(check:report-expression expression)
 	(check:report-actual-result actual-result)
 	(check:report-failed expected-result)
-	(newline)
-	(newline)))
+	(check-newline)
+	(check-newline)))
     (flush-output-port (current-error-port))))
 
 (define (check-passed? expected-total-count)

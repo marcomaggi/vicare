@@ -39,7 +39,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing issue 20, shared structures displayed peculiarly\n")
+(check-display "*** testing issue 20, shared structures displayed peculiarly\n")
 
 
 (check

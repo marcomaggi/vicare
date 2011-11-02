@@ -105,6 +105,7 @@
   (printf "testing memory access (~s combination for type ~s)\n"
 	  (length combinations)
 	  type)
+  (flush-output-port (current-output-port))
   (for-each
       (lambda (n)
         (let ([m
@@ -157,10 +158,7 @@
   )
 
 (display "*** testing pointers\n" (current-error-port))
-(flush-output-port (current-error-port))
 (run-tests)
 (display "; *** done\n" (current-error-port))
-(flush-output-port (current-error-port))
-
 
 ;;; end of file

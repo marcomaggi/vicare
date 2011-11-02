@@ -19,6 +19,7 @@
 (import (r6rs unicode)
         (r6rs test)
         (rnrs io simple))
-(display "*** Flatt's R6RS tests for (rnrs unicode)\n\n")
+(display "*** Flatt's R6RS tests for (rnrs unicode)\n\n"
+	 (current-error-port))
 (run-unicode-tests)
 (report-test-results)

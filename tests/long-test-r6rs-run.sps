@@ -16,7 +16,6 @@
 ;;;02110-1301 USA.
 
 #!r6rs
-
 (import (rnrs)
         (r6rs test)
         (r6rs base)
@@ -74,3 +73,4 @@
 
 (report-test-results)
 
+;;; end of file

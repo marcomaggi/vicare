@@ -19,6 +19,7 @@
 (import (r6rs programs)
         (r6rs test)
         (rnrs io simple))
-(display "*** Flatt's R6RS tests for (rnrs programs)\n\n")
+(display "*** Flatt's R6RS tests for (rnrs programs)\n\n"
+	 (current-error-port))
 (run-programs-tests)
 (report-test-results)

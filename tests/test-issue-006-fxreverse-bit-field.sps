@@ -30,7 +30,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing fxreverse-bit-field\n")
+(check-display "*** testing fxreverse-bit-field\n")
 
 
 ;;;; code

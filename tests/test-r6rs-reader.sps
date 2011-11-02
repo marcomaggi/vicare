@@ -19,6 +19,7 @@
 (import (r6rs reader)
         (r6rs test)
         (rnrs io simple))
-(display "*** Flatt's R6RS tests for (rnrs reader)\n\n")
+(display "*** Flatt's R6RS tests for (rnrs reader)\n\n"
+	 (current-error-port))
 (run-reader-tests)
 (report-test-results)

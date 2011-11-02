@@ -30,7 +30,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing issue 13, string-titlecase segfault\n")
+(check-display "*** testing issue 13, string-titlecase segfault\n")
 
 
 ;;;; code

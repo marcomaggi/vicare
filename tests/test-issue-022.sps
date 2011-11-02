@@ -36,7 +36,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing issue 22, missing one-operand division operation for flonum complex numbers\n")
+(check-display "*** testing issue 22, missing one-operand division operation for flonum complex numbers\n")
 
 
 (define (quasi=? a b)

@@ -32,7 +32,7 @@
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare structs\n")
+(check-display "*** testing Vicare structs\n")
 
 
 ;;;; helpers
@@ -42,7 +42,7 @@
     ((_ print? . ?body)
      (guard (E ((assertion-violation? E)
 		(when print?
-		  (pretty-print (condition-message E)))
+		  (check-pretty-print (condition-message E)))
 		(condition-irritants E))
 	       (else E))
        (begin . ?body)))))

@@ -79,7 +79,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing issue 24, wrong unary minus sign handling for complex numbers\n")
+(check-display "*** testing issue 24, wrong unary minus sign handling for complex numbers\n")
 
 
 ;;;; helpers

@@ -19,6 +19,7 @@
 (import (r6rs hashtables)
         (r6rs test)
         (rnrs io simple))
-(display "*** Flatt's R6RS tests for (rnrs hashtables)\n\n")
+(display "*** Flatt's R6RS tests for (rnrs hashtables)\n\n"
+	 (current-error-port))
 (run-hashtables-tests)
 (report-test-results)

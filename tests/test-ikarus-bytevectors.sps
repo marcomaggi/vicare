@@ -33,7 +33,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Ikarus bytevector functions\n")
+(check-display "*** testing Ikarus bytevector functions\n")
 
 
 ;;;; helpers

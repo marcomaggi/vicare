@@ -40,7 +40,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing issue 25, wrong handling of sign in exact rationals\n")
+(check-display "*** testing issue 25, wrong handling of sign in exact rationals\n")
 
 
 ;;;; tests

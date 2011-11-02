@@ -19,6 +19,7 @@
 (import (r6rs bytevectors)
         (r6rs test)
         (rnrs io simple))
-(display "*** Flatt's R6RS tests for (rnrs bytevectors)\n\n")
+(display "*** Flatt's R6RS tests for (rnrs bytevectors)\n\n"
+	 (current-error-port))
 (run-bytevectors-tests)
 (report-test-results)

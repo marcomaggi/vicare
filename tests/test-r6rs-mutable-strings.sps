@@ -19,6 +19,7 @@
 (import (r6rs mutable-strings)
         (r6rs test)
         (rnrs io simple))
-(display "*** Flatt's R6RS tests for (rnrs mutable-strings)\n\n")
+(display "*** Flatt's R6RS tests for (rnrs mutable-strings)\n\n"
+	 (current-error-port))
 (run-mutable-strings-tests)
 (report-test-results)

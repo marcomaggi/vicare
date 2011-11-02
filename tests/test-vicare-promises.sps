@@ -31,7 +31,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare promises functions\n")
+(check-display "*** testing Vicare promises functions\n")
 
 
 (check

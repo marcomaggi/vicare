@@ -31,7 +31,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare vector functions\n")
+(check-display "*** testing Vicare vector functions\n")
 
 
 ;;;; syntax helpers
@@ -41,7 +41,7 @@
     ((_ print? . ?body)
      (guard (E ((assertion-violation? E)
 		(when print?
-		  (pretty-print (condition-message E)))
+		  (check-pretty-print (condition-message E)))
 		(condition-irritants E))
 	       (else E))
        (begin . ?body)))))

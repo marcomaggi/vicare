@@ -35,7 +35,7 @@
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare input/output functions\n" (current-error-port))
+(check-display "*** testing Vicare input/output functions\n")
 
 
 ;;;; syntax helpers
@@ -737,7 +737,7 @@
 
   (check	;ID is not a string
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-binary-input-port 123	     ;id
@@ -749,7 +749,7 @@
 
   (check	;READ! is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-binary-input-port "test"	     ;id
@@ -761,7 +761,7 @@
 
   (check	;GET-POSITION is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-binary-input-port "test"	     ;id
@@ -773,7 +773,7 @@
 
   (check	;SET-POSITION! is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-binary-input-port "test"	     ;id
@@ -785,7 +785,7 @@
 
   (check	;CLOSE is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-binary-input-port "test"	   ;id
@@ -1009,7 +1009,7 @@
 
   (check	;ID is not a string
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-binary-output-port 123	      ;id
@@ -1021,7 +1021,7 @@
 
   (check	;WRITE! is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-binary-output-port "test"	      ;id
@@ -1033,7 +1033,7 @@
 
   (check	;GET-POSITION is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-binary-output-port "test"	      ;id
@@ -1045,7 +1045,7 @@
 
   (check	;SET-POSITION! is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-binary-output-port "test"	      ;id
@@ -1057,7 +1057,7 @@
 
   (check	;CLOSE is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-binary-output-port "test"	    ;id
@@ -1360,7 +1360,7 @@
 
   (check	;ID is not a string
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-textual-input-port 123	     ;id
@@ -1372,7 +1372,7 @@
 
   (check	;READ! is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-textual-input-port "test"	     ;id
@@ -1384,7 +1384,7 @@
 
   (check	;GET-POSITION is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-textual-input-port "test"	     ;id
@@ -1396,7 +1396,7 @@
 
   (check	;SET-POSITION! is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-textual-input-port "test"	     ;id
@@ -1408,7 +1408,7 @@
 
   (check	;CLOSE is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-textual-input-port "test"	   ;id
@@ -1604,7 +1604,7 @@
 
   (check	;ID is not a string
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-textual-output-port 123	       ;id
@@ -1616,7 +1616,7 @@
 
   (check	;WRITE! is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-textual-output-port "test"	       ;id
@@ -1628,7 +1628,7 @@
 
   (check	;GET-POSITION is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-textual-output-port "test"	       ;id
@@ -1640,7 +1640,7 @@
 
   (check	;SET-POSITION! is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-textual-output-port "test"	       ;id
@@ -1652,7 +1652,7 @@
 
   (check	;CLOSE is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(make-custom-textual-output-port "test"	     ;id
@@ -1924,7 +1924,7 @@
 
   (check	;argument is not a bytevector
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-bytevector-input-port 123))
@@ -1932,7 +1932,7 @@
 
   (check	;argument is not a transcoder
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-bytevector-input-port '#vu8(1) 123))
@@ -2080,7 +2080,7 @@
 
   (check	;argument is not a string
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-string-input-port 123))
@@ -2228,7 +2228,7 @@
 
   (check	;argument is not a string
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(with-input-from-string 123 values))
@@ -2236,7 +2236,7 @@
 
   (check	;argument is not a thunk
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(with-input-from-string "ciao" 123))
@@ -2425,7 +2425,7 @@
 
   (check	;argument is not a transcoder
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(let-values (((port extract) (open-bytevector-output-port 123)))
@@ -2704,7 +2704,7 @@
 
   (check	;argument is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(call-with-bytevector-output-port 123 #f))
@@ -2712,7 +2712,7 @@
 
   (check	;argument is not a transcoder
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(call-with-bytevector-output-port (lambda (port) #f) 123))
@@ -3218,7 +3218,7 @@
   ;;
   ;; (check
   ;;     (guard (E ((assertion-violation? E)
-  ;; 		 (pretty-print (condition-message E))
+  ;; 		 (check-pretty-print (condition-message E))
   ;; 		 (condition-irritants E))
   ;; 		(else E))
   ;; 	(let-values (((port extract) (open-string-output-port)))
@@ -3477,7 +3477,7 @@
 
   (check	;argument is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(call-with-string-output-port 123))
@@ -3725,7 +3725,7 @@
 
   (check	;argument is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(with-output-to-string 123))
@@ -3960,7 +3960,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(with-output-to-port 123 (lambda () #f)))
@@ -3968,7 +3968,7 @@
 
   (check	;argument is not an output port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (car (condition-irritants E)))
 		(else E))
 	(with-output-to-port (current-input-port) (lambda () #f)))
@@ -3977,7 +3977,7 @@
   (check	;argument is not a textual port
       (let-values (((port extract) (open-bytevector-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (with-output-to-port port (lambda () #f))))
@@ -3985,7 +3985,7 @@
 
   (check	;argument is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(with-output-to-port (current-output-port) 123))
@@ -4011,7 +4011,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(call-with-port 123 values))
@@ -4020,7 +4020,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-port port)
@@ -4029,7 +4029,7 @@
 
   (check	;argument is not a procedure
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(call-with-port (current-output-port) 123))
@@ -4056,7 +4056,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(transcoded-port 123 (native-transcoder)))
@@ -4064,7 +4064,7 @@
 
   (check	;argument is not a transcoder
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(let ((bin-port (open-bytevector-input-port '#vu8())))
@@ -4207,7 +4207,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(port-id 123))
@@ -4220,7 +4220,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(port-mode 123))
@@ -4238,7 +4238,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(set-port-mode! 123 'vicare))
@@ -4246,7 +4246,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(set-port-mode! (open-bytevector-input-port '#vu8())
@@ -4266,7 +4266,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(output-port-buffer-mode 123))
@@ -4318,7 +4318,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(set-port-buffer-mode! 123 (buffer-mode none)))
@@ -4326,7 +4326,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(set-port-buffer-mode! (%open-disposable-textual-output-port)
@@ -4336,7 +4336,7 @@
   (check
       (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (equal? port (car (condition-irritants E))))
 		  (else E))
 	  (set-port-buffer-mode! port (buffer-mode line))))
@@ -4349,7 +4349,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(port-eof? 123))
@@ -4358,7 +4358,7 @@
   (check
       (let-values (((port extract) (open-bytevector-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (port-eof? port)))
@@ -4367,7 +4367,7 @@
   (check
       (let ((port (open-bytevector-input-port '#vu8())))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -4397,7 +4397,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(flush-output-port 123))
@@ -4406,7 +4406,7 @@
   (check
       (let ((port (open-bytevector-input-port '#vu8())))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (flush-output-port port)))
@@ -4415,7 +4415,7 @@
   (check
       (let-values (((port extract) (open-bytevector-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-output-port port)
@@ -4479,7 +4479,7 @@
 
   (check	;not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(get-u8 123))
@@ -4488,7 +4488,7 @@
   (check	;not an input port
       (let-values (((port extract) (open-bytevector-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (get-u8 port)))
@@ -4497,7 +4497,7 @@
   (check	;not a binary port
       (let ((port (open-string-input-port "")))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (get-u8 port)))
@@ -4507,7 +4507,7 @@
       (let* ((bin-port  (open-bytevector-input-port '#vu8()))
 	     (tran-port (transcoded-port bin-port (native-transcoder))))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? tran-port (car (condition-irritants E))))
 		  (else E))
 	  (get-u8 tran-port)))
@@ -4516,7 +4516,7 @@
   (check	;not an open port (with port fast tagged at creation)
       (let ((port (open-bytevector-input-port '#vu8())))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -4526,7 +4526,7 @@
   (check	;not an open port (with port not fast tagged at creation)
       (let ((port (make-test-bytevector-input-port '#vu8())))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -4593,7 +4593,7 @@
 
   (check	;not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(lookahead-u8 123))
@@ -4602,7 +4602,7 @@
   (check	;not an input port
       (let-values (((port extract) (open-bytevector-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (lookahead-u8 port)))
@@ -4611,7 +4611,7 @@
   (check	;not a binary port
       (let ((port (open-string-input-port "")))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (lookahead-u8 port)))
@@ -4621,7 +4621,7 @@
       (let* ((bin-port  (open-bytevector-input-port '#vu8()))
 	     (tran-port (transcoded-port bin-port (native-transcoder))))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? tran-port (car (condition-irritants E))))
 		  (else E))
 	  (lookahead-u8 tran-port)))
@@ -4630,7 +4630,7 @@
   (check	;not an open port (with port fast tagged at creation)
       (let ((port (open-bytevector-input-port '#vu8())))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -4640,7 +4640,7 @@
   (check	;not an open port (with port not fast tagged at creation)
       (let ((port (make-test-bytevector-input-port '#vu8())))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -4676,7 +4676,7 @@
 
   (check	;not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(lookahead-two-u8 123))
@@ -4685,7 +4685,7 @@
   (check	;not an input port
       (let-values (((port extract) (open-bytevector-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (lookahead-two-u8 port)))
@@ -4694,7 +4694,7 @@
   (check	;not a binary port
       (let ((port (open-string-input-port "")))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (lookahead-two-u8 port)))
@@ -4704,7 +4704,7 @@
       (let* ((bin-port  (open-bytevector-input-port '#vu8()))
 	     (tran-port (transcoded-port bin-port (native-transcoder))))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? tran-port (car (condition-irritants E))))
 		  (else E))
 	  (lookahead-two-u8 tran-port)))
@@ -4713,7 +4713,7 @@
   (check	;not an open port (with port fast tagged at creation)
       (let ((port (open-bytevector-input-port '#vu8())))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -4723,7 +4723,7 @@
   (check	;not an open port (with port not fast tagged at creation)
       (let ((port (open-bytevector-input-port '#vu8())))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -4796,7 +4796,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(get-bytevector-n 123 1))
@@ -4805,7 +4805,7 @@
   (check	;argument is not an input port
       (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (get-bytevector-n port 1)))
@@ -4814,7 +4814,7 @@
   (check	;argument is not a binary port
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (get-bytevector-n port 1)))
@@ -4823,7 +4823,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -4836,7 +4836,7 @@
   (check	;count is not an integer
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n port #\a)))
@@ -4845,7 +4845,7 @@
   (check 	;count is not an exact integer
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n port 1.0)))
@@ -4854,7 +4854,7 @@
   (check 	;count is negative
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n port -3)))
@@ -4956,7 +4956,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(get-bytevector-n! 123 (make-bytevector 1) 0 1))
@@ -4965,7 +4965,7 @@
   (check	;argument is not an input port
       (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (get-bytevector-n! port (make-bytevector 1) 0 1)))
@@ -4974,7 +4974,7 @@
   (check	;argument is not a binary port
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (get-bytevector-n! port  (make-bytevector 1) 0 1)))
@@ -4983,7 +4983,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -4996,7 +4996,7 @@
   (check	;argument is not a bytevector
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n! port  123 0 1)))
@@ -5008,7 +5008,7 @@
   (check	;argument start index is not an integer
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n! port  (make-bytevector 1) #\a 1)))
@@ -5017,7 +5017,7 @@
   (check	;argument start index is not an exact integer
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n! port  (make-bytevector 1) 1.0 1)))
@@ -5026,7 +5026,7 @@
   (check	;argument start index is negative
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n! port  (make-bytevector 1) -1 1)))
@@ -5035,7 +5035,7 @@
   (check	;argument start index is too big
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n! port  (make-bytevector 1) 2 1)))
@@ -5047,7 +5047,7 @@
   (check	;count is not an integer
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n! port (make-bytevector 1) 0 #\a)))
@@ -5056,7 +5056,7 @@
   (check	;count is not an exact integer
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n! port (make-bytevector 1) 0 1.0)))
@@ -5065,7 +5065,7 @@
   (check	;count is negative
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n! port (make-bytevector 1) 0 -1)))
@@ -5074,7 +5074,7 @@
   (check	;count is too big
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n! port (make-bytevector 1) 0 123)))
@@ -5083,7 +5083,7 @@
   (check	;count is too big
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-bytevector-n! port (make-bytevector 1) 0 2)))
@@ -5234,7 +5234,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(get-bytevector-some 123))
@@ -5243,7 +5243,7 @@
   (check	;argument is not an input port
       (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (get-bytevector-some port)))
@@ -5252,7 +5252,7 @@
   (check	;argument is not a binary port
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (get-bytevector-some port)))
@@ -5261,7 +5261,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -5333,7 +5333,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(get-bytevector-all 123))
@@ -5342,7 +5342,7 @@
   (check	;argument is not an input port
       (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (get-bytevector-all port)))
@@ -5351,7 +5351,7 @@
   (check	;argument is not a binary port
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (get-bytevector-all port)))
@@ -5360,7 +5360,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -5418,7 +5418,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(read-char 123))
@@ -5427,7 +5427,7 @@
   (check	;argument is not an input port
       (let ((port (%open-disposable-textual-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (read-char port)))
@@ -5436,7 +5436,7 @@
   (check	;argument is not a textual port
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (read-char port)))
@@ -5445,7 +5445,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -5516,7 +5516,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -5564,7 +5564,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -5613,7 +5613,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -5656,7 +5656,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -5688,7 +5688,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -5720,7 +5720,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -5758,7 +5758,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -5840,7 +5840,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -5890,7 +5890,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -5933,7 +5933,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -5973,7 +5973,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -6049,7 +6049,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(peek-char 123))
@@ -6058,7 +6058,7 @@
   (check	;argument is not an input port
       (let ((port (%open-disposable-textual-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (peek-char port)))
@@ -6067,7 +6067,7 @@
   (check	;argument is not a textual port
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (peek-char port)))
@@ -6076,7 +6076,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -6123,7 +6123,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -6171,7 +6171,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -6220,7 +6220,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -6263,7 +6263,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -6295,7 +6295,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -6327,7 +6327,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -6365,7 +6365,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -6447,7 +6447,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -6497,7 +6497,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -6540,7 +6540,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -6580,7 +6580,7 @@
 		    (list ch (port-eof? port)))))
 	 (gdoit	(lambda (bv mode)
 		  (guard (E ((i/o-decoding-error? E)
-;;;			     (pretty-print (condition-message E))
+;;;			     (check-pretty-print (condition-message E))
 			     (condition-irritants E))
 			    (else E))
 		    (doit bv mode)))))
@@ -6651,7 +6651,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(get-string-n 123 1))
@@ -6660,7 +6660,7 @@
   (check	;argument is not an input port
       (let ((port (%open-disposable-textual-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (get-string-n port 1)))
@@ -6669,7 +6669,7 @@
   (check	;argument is not a textual port
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (get-string-n port 1)))
@@ -6678,7 +6678,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -6691,7 +6691,7 @@
   (check	;count is not an integer
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-string-n port #\a)))
@@ -6700,7 +6700,7 @@
   (check 	;count is not an exact integer
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-string-n port 1.0)))
@@ -6709,7 +6709,7 @@
   (check 	;count is negative
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-string-n port -3)))
@@ -6718,7 +6718,7 @@
   (check 	;count is not a fixnum
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (get-string-n port (+ 1 (greatest-fixnum)))))
@@ -6911,7 +6911,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(let ((port		123)
@@ -6924,7 +6924,7 @@
   (check	;argument is not an input port
       (let ((port (%open-disposable-textual-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (let ((port		port)
@@ -6937,7 +6937,7 @@
   (check	;argument is not a textual port
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (let ((port		port)
@@ -6950,7 +6950,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -6967,7 +6967,7 @@
   (check	;start is not an integer
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (let ((port		port)
@@ -6980,7 +6980,7 @@
   (check 	;start is not an exact integer
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (let ((port		port)
@@ -6993,7 +6993,7 @@
   (check  	;start is not a fixnum
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (let ((port		port)
@@ -7006,7 +7006,7 @@
   (check 	;start is negative
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (let ((port		port)
@@ -7019,7 +7019,7 @@
   (check 	;start is too big for string
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (let ((port		port)
@@ -7035,7 +7035,7 @@
   (check	;count is not an integer
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (let ((port		port)
@@ -7048,7 +7048,7 @@
   (check 	;count is not an exact integer
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (let ((port		port)
@@ -7061,7 +7061,7 @@
   (check 	;count is not a fixnum
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (let ((port		port)
@@ -7074,7 +7074,7 @@
   (check 	;count is negative
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (let ((port		port)
@@ -7090,7 +7090,7 @@
   (check 	;start+count is not a fixnum
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (let ((port		port)
@@ -7103,7 +7103,7 @@
   (check 	;start+count is too big for string
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (let ((port		port)
@@ -7349,7 +7349,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(get-string-all 123))
@@ -7358,7 +7358,7 @@
   (check	;argument is not an input port
       (let ((port (%open-disposable-textual-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (get-string-all port)))
@@ -7367,7 +7367,7 @@
   (check	;argument is not a textual port
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (get-string-all port)))
@@ -7376,7 +7376,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -7540,7 +7540,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(read-line 123))
@@ -7549,7 +7549,7 @@
   (check	;argument is not an input port
       (let ((port (%open-disposable-textual-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (read-line port)))
@@ -7558,7 +7558,7 @@
   (check	;argument is not a textual port
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (read-line port)))
@@ -7567,7 +7567,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-input-port port)
@@ -7715,7 +7715,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(put-u8 123 1))
@@ -7724,7 +7724,7 @@
   (check	;argument is not an output port
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (put-u8 port 1)))
@@ -7733,7 +7733,7 @@
   (check	;argument is not a binary port
       (let ((port (%open-disposable-textual-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (put-u8 port 1)))
@@ -7742,7 +7742,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-output-port port)
@@ -7754,7 +7754,7 @@
 
   (check	;octet is not an integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(let ((port (%open-disposable-binary-output-port)))
@@ -7763,7 +7763,7 @@
 
   (check	;octet is not an exact integer
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(let ((port (%open-disposable-binary-output-port)))
@@ -7772,7 +7772,7 @@
 
   (check	;octet is negative
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(let ((port (%open-disposable-binary-output-port)))
@@ -7781,7 +7781,7 @@
 
   (check	;octet is too big
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(let ((port (%open-disposable-binary-output-port)))
@@ -7790,7 +7790,7 @@
 
   (check	;octet is not a fixnum
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(let ((port (%open-disposable-binary-output-port)))
@@ -7831,7 +7831,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(put-bytevector 123 '#vu8()))
@@ -7840,7 +7840,7 @@
   (check	;argument is not an output port
       (let ((port (%open-disposable-binary-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (put-bytevector port '#vu8())))
@@ -7849,7 +7849,7 @@
   (check	;argument is not a binary port
       (let ((port (%open-disposable-textual-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (put-bytevector port '#vu8())))
@@ -7858,7 +7858,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
-;;		   (pretty-print (condition-message E))
+;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-output-port port)
@@ -7871,7 +7871,7 @@
   (check	;argument is not a bytevector
       (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (put-bytevector port #\a)))
@@ -7883,7 +7883,7 @@
   (check	;argument is not an integer
       (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (put-bytevector port '#vu8() #\a)))
@@ -7892,7 +7892,7 @@
   (check	;argument is not an exact integer
       (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (put-bytevector port '#vu8() 1.0)))
@@ -7901,7 +7901,7 @@
   (check	;argument is not a fixnum
       (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (put-bytevector port '#vu8() (+ 1 (greatest-fixnum)))))
@@ -7910,7 +7910,7 @@
   (check	;argument is negative
       (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (put-bytevector port '#vu8() -1)))
@@ -7919,7 +7919,7 @@
   (check	;argument is out of range for bytevector
       (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (put-bytevector port '#vu8() 1)))
@@ -7931,7 +7931,7 @@
   (check	;argument is not an integer
       (let ((port (%open-disposable-binary-output-port)))
   	(guard (E ((assertion-violation? E)
-;;;  		   (pretty-print (condition-message E))
+;;;  		   (check-pretty-print (condition-message E))
   		   (condition-irritants E))
   		  (else E))
   	  (put-bytevector port '#vu8() 0 #\a)))
@@ -7940,7 +7940,7 @@
   (check	;argument is not an exact integer
       (let ((port (%open-disposable-binary-output-port)))
   	(guard (E ((assertion-violation? E)
-;;;  		   (pretty-print (condition-message E))
+;;;  		   (check-pretty-print (condition-message E))
   		   (condition-irritants E))
   		  (else E))
   	  (put-bytevector port '#vu8() 0 1.0)))
@@ -7949,7 +7949,7 @@
   (check	;argument is not a fixnum
       (let ((port (%open-disposable-binary-output-port)))
   	(guard (E ((assertion-violation? E)
-;;;  		   (pretty-print (condition-message E))
+;;;  		   (check-pretty-print (condition-message E))
   		   (condition-irritants E))
   		  (else E))
   	  (put-bytevector port '#vu8() 0 (+ 1 (greatest-fixnum)))))
@@ -7958,7 +7958,7 @@
   (check	;argument is negative
       (let ((port (%open-disposable-binary-output-port)))
   	(guard (E ((assertion-violation? E)
-;;;  		   (pretty-print (condition-message E))
+;;;  		   (check-pretty-print (condition-message E))
   		   (condition-irritants E))
   		  (else E))
   	  (put-bytevector port '#vu8() 0 -1)))
@@ -7967,7 +7967,7 @@
   (check	;argument is out of range for bytevector
       (let ((port (%open-disposable-binary-output-port)))
   	(guard (E ((assertion-violation? E)
-;;;  		   (pretty-print (condition-message E))
+;;;  		   (check-pretty-print (condition-message E))
   		   (condition-irritants E))
   		  (else E))
   	  (put-bytevector port '#vu8() 0 1)))
@@ -7976,7 +7976,7 @@
   (check	;argument is out of range for bytevector
       (let ((port (%open-disposable-binary-output-port)))
   	(guard (E ((assertion-violation? E)
-;;;  		   (pretty-print (condition-message E))
+;;;  		   (check-pretty-print (condition-message E))
   		   (condition-irritants E))
   		  (else E))
   	  (put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9) 0 11)))
@@ -7985,7 +7985,7 @@
   (check	;argument is out of range for bytevector
       (let ((port (%open-disposable-binary-output-port)))
   	(guard (E ((assertion-violation? E)
-;;;  		   (pretty-print (condition-message E))
+;;;  		   (check-pretty-print (condition-message E))
   		   (condition-irritants E))
   		  (else E))
   	  (put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9) 5 6)))
@@ -8104,7 +8104,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(put-char 123 #\a))
@@ -8113,7 +8113,7 @@
   (check	;argument is not an output port
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (put-char port #\a)))
@@ -8122,7 +8122,7 @@
   (check	;argument is not a textual port
       (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (put-char port #\a)))
@@ -8131,7 +8131,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-textual-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-output-port port)
@@ -8143,7 +8143,7 @@
 
   (check	;argument is not a char
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(let ((port (%open-disposable-textual-output-port)))
@@ -8273,7 +8273,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(write-char #\a 123))
@@ -8282,7 +8282,7 @@
   (check	;argument is not an output port
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (write-char #\a port)))
@@ -8291,7 +8291,7 @@
   (check	;argument is not a textual port
       (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (write-char #\a port)))
@@ -8300,7 +8300,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-textual-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-output-port port)
@@ -8312,7 +8312,7 @@
 
   (check	;argument is not a char
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(let ((port (%open-disposable-textual-output-port)))
@@ -8442,7 +8442,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(put-string 123 "a"))
@@ -8451,7 +8451,7 @@
   (check	;argument is not an output port
       (let ((port (%open-disposable-textual-input-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (put-string port "a")))
@@ -8460,7 +8460,7 @@
   (check	;argument is not a textual port
       (let ((port (%open-disposable-binary-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (put-string port "a")))
@@ -8469,7 +8469,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-textual-output-port)))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (close-output-port port)
@@ -8481,7 +8481,7 @@
 
   (check	;argument is not a char
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(let ((port (%open-disposable-textual-output-port)))
@@ -8587,7 +8587,7 @@
 
   (check	;argument is not a port
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(newline 123))
@@ -8596,7 +8596,7 @@
   (check	;argument is not an output port
       (let ((port (%open-disposable-textual-input-port)))
   	(guard (E ((assertion-violation? E)
-;;;  		   (pretty-print (condition-message E))
+;;;  		   (check-pretty-print (condition-message E))
   		   (eq? port (car (condition-irritants E))))
   		  (else E))
   	  (newline port)))
@@ -8605,7 +8605,7 @@
   (check	;argument is not a textual port
       (let ((port (%open-disposable-binary-output-port)))
   	(guard (E ((assertion-violation? E)
-;;;  		   (pretty-print (condition-message E))
+;;;  		   (check-pretty-print (condition-message E))
   		   (eq? port (car (condition-irritants E))))
   		  (else E))
   	  (newline port)))
@@ -8614,7 +8614,7 @@
   (check	;argument is not an open port
       (let ((port (%open-disposable-textual-output-port)))
   	(guard (E ((assertion-violation? E)
-;;;  		   (pretty-print (condition-message E))
+;;;  		   (check-pretty-print (condition-message E))
   		   (eq? port (car (condition-irritants E))))
   		  (else E))
   	  (close-output-port port)
@@ -8700,7 +8700,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-file-input-port 123))
@@ -8711,7 +8711,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-file-input-port "123" 123))
@@ -8722,7 +8722,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-file-input-port "123" (file-options) 'ciao))
@@ -8733,7 +8733,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-file-input-port "123" (file-options) (buffer-mode block) 123))
@@ -8840,7 +8840,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-input-file 123))
@@ -8927,7 +8927,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(with-input-from-file 123 values))
@@ -8938,7 +8938,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(with-input-from-file "ciao" 123))
@@ -9017,7 +9017,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(call-with-input-file 123 values))
@@ -9028,7 +9028,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(call-with-input-file "ciao" 123))
@@ -9122,7 +9122,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-file-output-port 123))
@@ -9133,7 +9133,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-file-output-port "123" 123))
@@ -9144,7 +9144,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-file-output-port "123" (file-options) 'ciao))
@@ -9155,7 +9155,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-file-output-port "123" (file-options) (buffer-mode block) 123))
@@ -9255,7 +9255,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-output-file 123))
@@ -9325,7 +9325,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(with-output-to-file 123 values))
@@ -9336,7 +9336,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(with-output-to-file "ciao" 123))
@@ -9406,7 +9406,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(call-with-output-file 123 values))
@@ -9417,7 +9417,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(call-with-output-file "ciao" 123))
@@ -9567,7 +9567,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-file-input/output-port 123))
@@ -9578,7 +9578,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-file-input/output-port "123" 123))
@@ -9589,7 +9589,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-file-input/output-port "123" (file-options) 'ciao))
@@ -9600,7 +9600,7 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
+;;;		 (check-pretty-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
 	(open-file-input/output-port "123" (file-options) (buffer-mode block) 123))
@@ -10067,7 +10067,7 @@
 
     (check
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (open-bytevector-output-port (make-transcoder (latin-1-codec) (eol-style nel))))
@@ -10115,7 +10115,7 @@
 
     (check
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (open-bytevector-output-port (make-transcoder (latin-1-codec) (eol-style crnel))))
@@ -10163,7 +10163,7 @@
 
     (check
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (open-bytevector-output-port (make-transcoder (latin-1-codec) (eol-style ls))))
@@ -10452,7 +10452,7 @@
 
     (check
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (open-bytevector-output-port (make-transcoder (latin-1-codec) (eol-style nel))))
@@ -10500,7 +10500,7 @@
 
     (check
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (open-bytevector-output-port (make-transcoder (latin-1-codec) (eol-style crnel))))
@@ -10548,7 +10548,7 @@
 
     (check
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (open-bytevector-output-port (make-transcoder (latin-1-codec) (eol-style ls))))
@@ -10798,7 +10798,7 @@
 
     (check
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (open-bytevector-input-port '#vu8()
@@ -10843,7 +10843,7 @@
 
     (check
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (open-bytevector-input-port '#vu8()
@@ -10888,7 +10888,7 @@
 
     (check
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (condition-irritants E))
 		  (else E))
 	  (open-bytevector-input-port '#vu8()
@@ -11421,7 +11421,7 @@
       (let ((port (open-bytevector-input-port TEST-BV-UTF-8
 					      (make-transcoder (utf-bom-codec)))))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (get-string-all port)))
@@ -11452,7 +11452,7 @@
       (let ((port (open-bytevector-input-port TEST-BV-UTF-8
 					      (make-transcoder (utf-bom-codec)))))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (get-char port)))
@@ -11483,7 +11483,7 @@
       (let ((port (open-bytevector-input-port TEST-BV-UTF-8
 					      (make-transcoder (utf-bom-codec)))))
 	(guard (E ((assertion-violation? E)
-;;;		   (pretty-print (condition-message E))
+;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
 		  (else E))
 	  (lookahead-char port)))

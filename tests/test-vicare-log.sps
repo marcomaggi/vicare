@@ -32,7 +32,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing log\n")
+(check-display "*** testing log\n")
 
 (define (real-quasi=? ra rb)
   (or (and (infinite? ra)
