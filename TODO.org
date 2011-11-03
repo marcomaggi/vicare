@@ -145,6 +145,10 @@
    Crazy?  Is  it possible  to replace the  dependency upon  libffi with
    code generated at runtime by GNU Lightning?
 
+** Event loop
+
+   Optionally rely on libev for a sophisticated internal event loop?
+
 * end
 
 ### end of file
