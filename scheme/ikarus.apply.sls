@@ -33,7 +33,7 @@
 ;;As comparison:  LispWorks for Unix  sets this value to  300, LispWorks
 ;;for Windows and LispWorks for Linux set this value to 255.
 ;;
-(define CALL-ARGUMENTS-LIMIT 1024)
+(define CALL-ARGUMENTS-LIMIT 8192)
 
 
 ;;;; helpers
