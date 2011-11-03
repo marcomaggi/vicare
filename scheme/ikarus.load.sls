@@ -115,7 +115,7 @@
 	(unwind-protect
 	    (fasl-write (make-serialized-library contents) port)
 	  (close-output-port port)))
-      (fprintf (current-error-port) "Finished ~s.\n" ikfasl))))
+      (fprintf (current-error-port) "Done.\n" ikfasl))))
 
 
 (define (load-handler x)
