@@ -40,7 +40,6 @@
    scheme/ikarus.collect.ss
    scheme/ikarus.control.ss
    scheme/ikarus.date-string.ss
-   scheme/ikarus.equal.ss
    scheme/ikarus.fasl.ss
    scheme/ikarus.fasl.write.ss
    scheme/ikarus.fixnums.ss
