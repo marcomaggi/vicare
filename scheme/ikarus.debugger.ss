@@ -27,9 +27,11 @@
 		  make-traced-procedure
 		  make-traced-macro
 
-		  display write newline printf pretty-print)
+		  display write newline printf pretty-print
+		  print-condition)
     (prefix (only (ikarus)
-		  display write newline printf pretty-print)
+		  display write newline printf pretty-print
+		  print-condition)
 	    ikarus.))
 
 
@@ -81,6 +83,11 @@
 (define (pretty-print thing)
   (let ((port (console-output-port)))
     (ikarus.pretty-print thing)
+    (flush-output-port port)))
+
+(define (print-condition con)
+  (let ((port (console-output-port)))
+    (ikarus.print-condition con port)
     (flush-output-port port)))
 
 (define (with-output-to-string/limit x len)
