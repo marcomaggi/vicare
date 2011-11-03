@@ -1176,6 +1176,14 @@ representable as fixnums.
 Scheme bytevectors can hold at most @code{(greatest-fixnum)} bytes; the
 length of a bytevector and all the valid indexes into bytevectors are
 representable as fixnums.
+
+@item
+The last argument to @func{apply} can be a list of at most @math{8192}
+values.  This is an artificially set limit to avoid problems with huge
+values (it could be greater than this).  As comparison: LispWorks for
+Unix sets this value to 300, LispWorks for Windows and LispWorks for
+Linux set this value to 255 (last verified from its online documenattion
+in November, 2011).
 @end enumerate
 
 @c page
