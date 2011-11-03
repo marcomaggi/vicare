@@ -89,6 +89,18 @@
     (fixandgo f a0 a1 ls d (unsafe.cdr d))))
 
 (define apply
+  ;;Defined  by  R6RS.   LS  must  be  a list.   PROC  should  accept  N
+  ;;arguments, where N is number of arguments A plus the length of LS.
+  ;;
+  ;;The APPLY procedure calls PROC with the elements of the list:
+  ;;
+  ;;   (append (list A ...) LS)
+  ;;
+  ;;as the actual arguments.
+  ;;
+  ;;If a  call to APPLY occurs  in a tail  context, the call to  PROC is
+  ;;also in a tail context.
+  ;;
   (case-lambda
    ((f ls)
     (with-arguments-validation (who)
