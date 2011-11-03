@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.2d1
+Subject: [announce] Vicare Scheme revision 0.2d2
 
                              Vicare Scheme
                              =============
@@ -29,6 +29,25 @@ this project has a mailing list:
 collection of R6 Scheme libraries:
 
 	      <http://marcomaggi.github.com/nausicaa.html>
+
+
+Notes for revision 0.2d2
+------------------------
+
+* The  default   list  of  library   file  extensions  now   holds  just
+  ".vicare.sls" and ".sls"; the new option --more-file-extensions allows
+  to restore the old behviour of searching for many file extensions plus
+  the "main" file trick.
+
+* Some documentation has been written; other reviewed.
+
+* More code reviewed with support for optional arguments validation.
+
+* Updated  functions to  properly rely  on I/O  port's own  buffer mode;
+  DISPLAY, WRITE, NEWLINE do not force a flush anymore.
+
+* Added  SET-PORT-BUFFER-MODE! to  reconfigure the  mode of  an existing
+  port.
 
 
 Notes for revision 0.2d1
