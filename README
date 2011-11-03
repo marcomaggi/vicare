@@ -204,6 +204,10 @@ for terms and conditions of use of this function.
     programming,  pages 179-188.  ACM,  New York,  NY, USA,  2008.  ISBN
     978-1-59593-919-7. doi: 10.1145/1411204.1411230.
 
+and the online distribution which is Copyright (c) 2008 Michael D. Adams
+and R. Kent Dybvig, see  the file "ikarus.equal.ss" for the full license
+notice.
+
   The implementation of MAKE-GUARDIAN comes from:
 
     Dybvig,  Bruggeman, Eby.  "Guardians  in a  Generation-Based Garbage
