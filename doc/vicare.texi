@@ -4523,6 +4523,8 @@ Codec for @utf{} encoding schemes whose data open with a Byte Order
 Mark.  A call to this procedure returns a value that is equal in the
 sense of @func{eqv?} to the result of any other call to the same
 procedure.
+
+At present this codec is supported only by input ports.
 @end deffn
 
 @c page
