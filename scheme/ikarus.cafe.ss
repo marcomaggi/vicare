@@ -25,18 +25,26 @@
 (define eval-depth 0)
 
 (define waiter-prompt-string
-  (make-parameter "vicare>"
+  (make-parameter "vicare"
     (lambda (x)
       (if (string? x)
 	  x
 	(assertion-violation 'waiter-prompt-string "not a string" x)))))
 
-(define (display-prompt i)
-  (if (= i eval-depth)
-      (display " " (console-output-port))
-    (begin
-      (display (waiter-prompt-string) (console-output-port))
-      (display-prompt (+ 1 i)))))
+(define NESTED-PROMPT-CHAR #\>)
+
+(define (display-prompt)
+  (define port (console-output-port))
+  (display (waiter-prompt-string) port)
+  (let next-level ((i    0)
+		   (port port))
+    (if (= i eval-depth)
+	(begin
+	  (display " " port)
+	  (flush-output-port port))
+      (begin
+	(display NESTED-PROMPT-CHAR port)
+	(next-level (+ 1 i) port)))))
 
 (define (print-ex ex)
   (flush-output-port (console-output-port))
@@ -104,7 +112,7 @@
   ;;EXIT-REPL-K must  be an escape procedure  to be called  to exit this
   ;;REPL, for example when the  EOF object is read.
   ;;
-  (display-prompt 0)
+  (display-prompt)
   (let ((x (with-exception-handler
 	       (lambda (ex)
 		 ;;If an error occurs  while READing, reset the port and

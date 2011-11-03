@@ -1363,7 +1363,9 @@ Add @var{directory} to the library search path.  This option can be used
 multiple times.
 
 @item --prompt @var{STRING}
-Use @var{STRING} as prompt for the @repl{}.  Defaults to @samp{vicare>}.
+Use @var{STRING} as prompt for the @repl{}.  Defaults to @samp{vicare},
+to which the character @samp{>} is appended for each nested @repl{}
+level.  @ref{iklib cafe} for more details.
 
 @item -d
 @itemx --debug
