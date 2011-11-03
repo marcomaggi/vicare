@@ -29,7 +29,6 @@
    scheme/ikarus.enumerations.ss
    scheme/ikarus.pointers.ss
    scheme/ikarus.numerics.ss
-   scheme/ikarus.conditions.ss
    scheme/ikarus.records.procedural.ss
 
    scheme/ikarus.posix.ss
