@@ -4541,17 +4541,20 @@ values: the @eof{} object or a fixnum representing first octet, the
 
 
 @defun console-input-port
-Return the default value of the @func{current-input-port} parameter.
+Return the default value of the @func{current-input-port} parameter.  It
+is used by the @repl{}.
 @end defun
 
 
 @defun console-output-port
 Return the default value of the @func{current-outptu-port} parameter.
+It is used by the @repl{}.
 @end defun
 
 
 @defun console-error-port
-Return the default value of the @func{current-error-port} parameter.
+Return the default value of the @func{current-error-port} parameter.  It
+is used by the @repl{}.
 @end defun
 
 @c page
