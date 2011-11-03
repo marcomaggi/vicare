@@ -37,18 +37,18 @@ ikarus.config.ss: Makefile last-revision ../config.h
 # and are the Ikarus' ones.
 #
 $(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
-	IKARUS_SRC_DIR=$(srcdir)			\
-  IKARUS_BUILD_DIR=$(builddir)				\
+	VICARE_SRC_DIR=$(srcdir)			\
+  VICARE_BUILD_DIR=$(builddir)				\
   VICARE_FASL_DIRECTORY=''				\
   VICARE_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)		\
   $(NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT)		\
   --r6rs-script $(srcdir)/makefile.sps
 
 #$(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
-# 	IKARUS_SRC_DIR=$(srcdir)			\
-#   IKARUS_BUILD_DIR=$(builddir)			\
-#   IKARUS_FASL_DIRECTORY=''				\
-#   IKARUS_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)	\
+# 	VICARE_SRC_DIR=$(srcdir)			\
+#   VICARE_BUILD_DIR=$(builddir)			\
+#   VICARE_FASL_DIRECTORY=''				\
+#   VICARE_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)	\
 #   $(NEW_EXECUTABLE) -b $(IKARUS_PREBUILT_BOOT)	\
 #   --r6rs-script $(srcdir)/makefile.sps
 
@@ -70,8 +70,8 @@ $(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
 # but keep backups of the original one!!!
 #
 try-vicare-boot: $(EXTRA_DIST) ikarus.config.ss
-	IKARUS_SRC_DIR=$(srcdir)			\
-   IKARUS_BUILD_DIR=$(builddir)				\
+	VICARE_SRC_DIR=$(srcdir)			\
+   VICARE_BUILD_DIR=$(builddir)				\
    VICARE_FASL_DIRECTORY=''				\
    VICARE_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)	\
    $(NEW_EXECUTABLE) -b vicare.boot.try			\

@@ -60,7 +60,7 @@
   "vicare.boot")
 
 (define src-dir
-  (or (getenv "IKARUS_SRC_DIR") "."))
+  (or (getenv "VICARE_SRC_DIR") "."))
 
 (define verbose-output? #t)
 
