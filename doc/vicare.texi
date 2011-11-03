@@ -1755,6 +1755,7 @@ of @rnrs{6}; @library{vicare} exports the same bindings of
 * iklib conditions::            Additional condition types.
 * iklib reader::                Extensions to the reader.
 * iklib expander::              Interface to the expander.
+* iklib shared::                Shared structures graph notation.
 * iklib environment::           Environments.
 * iklib cafe::                  Cafe.
 * iklib structs::               Structures and type descriptors.
@@ -1897,7 +1898,7 @@ End--of--file marker, @code{#!eof}.
 Gensym syntax, @code{#@{gensym@}}.
 
 @item
-Graph syntax: @code{#nn=}, @code{#nn#}.
+Shared structures graph notation: @code{#nn=}, @code{#nn#}.
 @end itemize
 
 The syntax extensions are made available by default on all input ports,
@@ -2145,6 +2146,102 @@ Undocumented.
 @defun expand/scc-letrec
 Undocumented.
 @end defun
+
+@c page
+@node iklib shared
+@section Shared structures graph notation
+
+
+This feature of the reader is derived from the @srfi{} 38 ``External
+Representation for Data With Shared Structure'':
+
+@center @url{http://srfi.schemers.org/srfi-38/srfi-38.html}
+
+This graph notation allows the reader to build symbolic expressions with
+graph structure including cycles.  @strong{Shared structures must always
+be used inside quoted datums}; if we create a cycle in a symbolic
+expression passed as code to the expander: the result will be an
+infinite loop.  Graph notation is available only when the textual input
+port is configured in @code{#!vicare} mode.
+
+Graph notation extends the @rnrs{6} syntax with these additional cases:
+
+@example
+<lexeme>                -> <r6rs lexeme>
+                         | <defining datum>
+                         | <defined datum>
+<defining datum>        -> #<indexnum>=<r6rs lexeme>
+<defined datum>         -> #<indexnum>#
+<indexnum>              -> <digit>+
+@end example
+
+@noindent
+where @code{<r6rs lexeme>} is the lexeme definition in @rnrs{6}.
+
+
+@deffn Parameter print-graph
+@deffnx Parameter print-graph #t
+@deffnx Parameter print-graph #f
+The graph notation is a way of marking and referencing parts of a data
+structure and, consequently, creating shared and cyclic data structures
+at read time instead of resorting to explicit mutation at run time.  The
+@code{#n=} marks the following data structure with mark @var{n}, where
+@var{n} is a nonnegative integer.  The @code{#n#} references the data
+structure marked @var{n}.  Marks can be assigned and referenced in any
+order but each mark must be assigned to exactly once in an expression.
+
+@example
+> (let ([x '#0=(1 2 3)])
+    (eq? x '#0#))
+#t
+> (let ([x '#0#] [y '#0=(1 2 3)])
+    (eq? x y))
+#t
+> (eq? (cdr '(12 . #1#)) '#1=(1 2 3))
+#t
+> (let ([x '#1=(#1# . #1#)])
+    (and (eq? x (car x))
+         (eq? x (cdr x))))
+#t
+@end example
+
+The @func{print-graph} parameter controls how the writers (e.g.
+@func{pretty-print} and @func{write}) handle shared and cyclic data
+structures.  In @value{PRJNAME}, all writers detect cyclic data structures and
+they all terminate on all input, cyclic or otherwise.
+
+If the value of @func{print-graph} is set to @false{} (the default),
+then the writers do not attempt to detect shared data structures.  Any
+part of the input that is shared is printed as if no sharing is present.
+If the value of @func{print-graph} is set to @true{}, all sharing of
+data structures is marked using the @code{#n=} and @code{#n#} notation.
+
+@example
+> (parameterize ([print-graph #f])
+    (let ([x (list 1 2 3 4)])
+      (pretty-print (list x x x))))
+((1 2 3 4) (1 2 3 4) (1 2 3 4))
+
+> (parameterize ([print-graph #t])
+    (let ([x (list 1 2 3 4)])
+      (pretty-print (list x x x))))
+(#0=(1 2 3 4) #0# #0#)
+
+> (parameterize ([print-graph #f])
+    (let ([x (list 1 2)])
+      (let ([y (list x x x x)])
+        (set-car! (last-pair y) y)
+        (pretty-print (list y y)))))
+(#0=((1 2) (1 2) (1 2) #0#) #0#)
+
+> (parameterize ([print-graph #t])
+    (let ([x (list 1 2)])
+      (let ([y (list x x x x)])
+        (set-car! (last-pair y) y)
+        (pretty-print (list y y)))))
+(#0=(#1=(1 2) #1# #1# #0#) #0#)
+@end example
+@end deffn
 
 @c page
 @node iklib environment
@@ -3676,71 +3773,6 @@ collected in a string.
 The procedure @func{fprintf} is similar to @func{printf} except that the
 output port to which the output is sent is specified as the first
 argument.
-@end deffn
-
-
-@deffn Parameter print-graph
-@deffnx Parameter print-graph #t
-@deffnx Parameter print-graph #f
-The graph notation is a way of marking and referencing parts of a data
-structure and, consequently, creating shared and cyclic data structures
-at read time instead of resorting to explicit mutation at run time.  The
-@code{#n=} marks the following data structure with mark @var{n}, where
-@var{n} is a nonnegative integer.  The @code{#n#} references the data
-structure marked @var{n}.  Marks can be assigned and referenced in any
-order but each mark must be assigned to exactly once in an expression.
-
-@example
-> (let ([x '#0=(1 2 3)])
-    (eq? x '#0#))
-#t
-> (let ([x '#0#] [y '#0=(1 2 3)])
-    (eq? x y))
-#t
-> (eq? (cdr '(12 . #1#)) '#1=(1 2 3))
-#t
-> (let ([x '#1=(#1# . #1#)])
-    (and (eq? x (car x))
-         (eq? x (cdr x))))
-#t
-@end example
-
-The @func{print-graph} parameter controls how the writers (e.g.
-@func{pretty-print} and @func{write}) handle shared and cyclic data
-structures.  In @value{PRJNAME}, all writers detect cyclic data structures and
-they all terminate on all input, cyclic or otherwise.
-
-If the value of @func{print-graph} is set to @false{} (the default),
-then the writers do not attempt to detect shared data structures.  Any
-part of the input that is shared is printed as if no sharing is present.
-If the value of @func{print-graph} is set to @true{}, all sharing of
-data structures is marked using the @code{#n=} and @code{#n#} notation.
-
-@example
-> (parameterize ([print-graph #f])
-    (let ([x (list 1 2 3 4)])
-      (pretty-print (list x x x))))
-((1 2 3 4) (1 2 3 4) (1 2 3 4))
-
-> (parameterize ([print-graph #t])
-    (let ([x (list 1 2 3 4)])
-      (pretty-print (list x x x))))
-(#0=(1 2 3 4) #0# #0#)
-
-> (parameterize ([print-graph #f])
-    (let ([x (list 1 2)])
-      (let ([y (list x x x x)])
-        (set-car! (last-pair y) y)
-        (pretty-print (list y y)))))
-(#0=((1 2) (1 2) (1 2) #0#) #0#)
-
-> (parameterize ([print-graph #t])
-    (let ([x (list 1 2)])
-      (let ([y (list x x x x)])
-        (set-car! (last-pair y) y)
-        (pretty-print (list y y)))))
-(#0=(#1=(1 2) #1# #1# #0#) #0#)
-@end example
 @end deffn
 
 
