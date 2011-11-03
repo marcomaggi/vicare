@@ -51,6 +51,8 @@
 (strip-source-info #t)
 (current-letrec-pass 'scc)
 
+(set-port-buffer-mode! (current-output-port) (buffer-mode none))
+
 
 ;;;; helpers
 
