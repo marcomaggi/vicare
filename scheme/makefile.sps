@@ -84,10 +84,13 @@
 
 (define debug-printf
   (if verbose-output?
-      printf
+      (lambda args
+	(apply fprintf (console-error-port) args))
     (case-lambda
-     ((str) (printf str))
-     ((str . args) (printf ".")))))
+     ((str)
+      (fprintf (console-error-port) str))
+     ((str . args)
+      (fprintf (console-error-port) ".")))))
 
 
 (define scheme-library-files
@@ -1840,7 +1843,7 @@
 		(else
 		 ;;Core primitive with no backing definition, assumed to
 		 ;;be defined in other strata of the system
-		 ;; (printf "undefined primitive ~s\n" x)
+		 ;; (fprintf (console-error-port) "undefined primitive ~s\n" x)
 		 (let ((label (gensym)))
 		   (export-subst (cons x label))
 		   (export-env (cons label (cons 'core-prim x)))))))))
@@ -2036,7 +2039,7 @@
 
 ;(print-missing-prims)
 
-(printf "Happy Happy Joy Joy\n")
+(fprintf (console-error-port) "Happy Happy Joy Joy\n")
 
 ;;; end of file
 ;;; Local Variables:
