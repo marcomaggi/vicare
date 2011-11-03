@@ -119,6 +119,18 @@
   The flonum getters  and setters in the bytevector  library should have
   tests in "test-vicare-bytevectors.sps".
 
+* Stuff to think about for the future
+
+** Introduce immutable datums
+
+   Strings  and  bytevectors  read   from  the  source  code  should  be
+   immutable.
+
+** Unique strings in compiled code
+
+   Equal strings read from different places in the source code should be
+   stored only once in the FASL file.
+
 * end
 
 ### end of file
