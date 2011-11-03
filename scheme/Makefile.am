@@ -80,48 +80,89 @@ try-vicare-boot: $(EXTRA_DIST) ikarus.config.ss
 #page
 #### stuff needed by GNU Automake
 
-EXTRA_DIST= last-revision						\
-  ikarus.boot.4.prebuilt ikarus.boot.8.prebuilt				\
-  vicare.boot.4.prebuilt						\
-  ikarus.enumerations.ss						\
-  ikarus.exceptions.ss ikarus.apply.ss ikarus.bytevectors.ss		\
-  ikarus.cafe.ss ikarus.chars.ss ikarus.code-objects.ss			\
-  ikarus.codecs.ss ikarus.collect.ss ikarus.command-line.ss		\
-  ikarus.compiler.altcogen.ss ikarus.compiler.ss			\
-  ikarus.compiler.source-optimizer.ss					\
-  ikarus.compiler.optimize-letrec.ss					\
-  ikarus.control.ss							\
-  ikarus.date-string.ss ikarus.fasl.ss ikarus.fasl.write.ss		\
-  ikarus.fixnums.ss ikarus.guardians.ss ikarus.handlers.ss		\
-  ikarus.hash-tables.ss ikarus.intel-assembler.ss			\
-  ikarus.lists.ss ikarus.load.ss ikarus.main.ss				\
-  ikarus.multiple-values.ss ikarus.numerics.ss				\
-  ikarus.pairs.ss ikarus.posix.ss ikarus.predicates.ss			\
-  ikarus.pretty-print.ss ikarus.pretty-formats.ss			\
-  ikarus.promises.ss ikarus.reader.ss					\
-  ikarus.records.procedural.ss ikarus.conditions.ss			\
-  ikarus.singular-objects.ss ikarus.sort.ss ikarus.strings.ss		\
-  ikarus.structs.ss ikarus.symbols.ss ikarus.timer.ss			\
-  ikarus.unicode-conversion.ss ikarus.unicode.ss			\
-  ikarus.vectors.ss ikarus.writer.ss makefile.sps			\
-  pass-specify-rep-primops.ss pass-specify-rep.ss psyntax.builders.ss	\
-  psyntax.compat.ss psyntax.config.ss psyntax.expander.ss		\
-  psyntax.internal.ss psyntax.library-manager.ss			\
-  unicode/unicode-char-cases.ss unicode/unicode-charinfo.ss		\
-  unicode-data.ss unicode/unicode-data.ss				\
-  unicode/UNIDATA/CaseFolding.txt					\
-  unicode/UNIDATA/NormalizationTest.txt					\
-  unicode/UNIDATA/SpecialCasing.txt					\
-  unicode/UNIDATA/WordBreakProperty.txt					\
-  unicode/UNIDATA/CompositionExclusions.txt				\
-  unicode/UNIDATA/PropList.txt						\
-  unicode/UNIDATA/UnicodeData.txt					\
-  ikarus.io.ss ikarus.time-and-date.ss					\
-  ikarus.string-to-number.ss ikarus.compiler.source-optimizer.ss	\
-  ikarus.compiler.tag-annotation-analysis.ss				\
-  ikarus.compiler.ontology.ss						\
-  ikarus.pointers.ss ikarus.equal.ss					\
-  ikarus.symbol-table.ss ikarus.apropos.ss				\
-  ikarus.debugger.ss
+EXTRA_DIST= last-revision				\
+	ikarus.boot.4.prebuilt				\
+	ikarus.boot.8.prebuilt				\
+	vicare.boot.4.prebuilt				\
+	\
+	ikarus.compiler.sls				\
+	ikarus.compiler.altcogen.ss			\
+	ikarus.compiler.ontology.ss			\
+	ikarus.compiler.optimize-letrec.ss		\
+	ikarus.compiler.source-optimizer.ss		\
+	ikarus.compiler.tag-annotation-analysis.ss	\
+	pass-specify-rep-primops.ss			\
+	pass-specify-rep.ss				\
+	\
+	ikarus.apply.sls				\
+	ikarus.apropos.sls				\
+	ikarus.bytevectors.sls				\
+	ikarus.cafe.sls					\
+	ikarus.chars.sls				\
+	ikarus.code-objects.sls				\
+	ikarus.codecs.sls				\
+	ikarus.collect.sls				\
+	ikarus.command-line.sls				\
+	ikarus.conditions.sls				\
+	ikarus.control.sls				\
+	ikarus.date-string.sls				\
+	ikarus.debugger.sls				\
+	ikarus.enumerations.sls				\
+	ikarus.equal.sls				\
+	ikarus.exceptions.sls				\
+	ikarus.fasl.sls					\
+	ikarus.fasl.write.sls				\
+	ikarus.fixnums.sls				\
+	ikarus.guardians.sls				\
+	ikarus.handlers.sls				\
+	ikarus.hash-tables.sls				\
+	ikarus.intel-assembler.sls			\
+	ikarus.io.sls					\
+	ikarus.lists.sls				\
+	ikarus.load.sls					\
+	ikarus.main.sls					\
+	ikarus.multiple-values.sls			\
+	ikarus.numerics.sls				\
+	ikarus.pairs.sls				\
+	ikarus.pointers.sls				\
+	ikarus.posix.sls				\
+	ikarus.predicates.sls				\
+	ikarus.pretty-formats.sls			\
+	ikarus.pretty-print.sls				\
+	ikarus.promises.sls				\
+	ikarus.reader.sls				\
+	ikarus.records.procedural.sls			\
+	ikarus.singular-objects.sls			\
+	ikarus.sort.sls					\
+	ikarus.string-to-number.sls 			\
+	ikarus.strings.sls				\
+	ikarus.structs.sls				\
+	ikarus.symbol-table.sls				\
+	ikarus.symbols.sls				\
+	ikarus.time-and-date.sls			\
+	ikarus.timer.sls				\
+	ikarus.unicode-conversion.sls			\
+	ikarus.unicode.sls				\
+	ikarus.vectors.sls				\
+	ikarus.writer.sls makefile.sps			\
+	\
+	psyntax.builders.sls				\
+	psyntax.compat.sls				\
+	psyntax.config.sls				\
+	psyntax.expander.sls				\
+	psyntax.internal.sls				\
+	psyntax.library-manager.sls			\
+	\
+	unicode-data.sls				\
+	unicode/unicode-char-cases.ss			\
+	unicode/unicode-charinfo.ss			\
+	unicode/unicode-data.ss				\
+	unicode/UNIDATA/CaseFolding.txt			\
+	unicode/UNIDATA/CompositionExclusions.txt	\
+	unicode/UNIDATA/NormalizationTest.txt		\
+	unicode/UNIDATA/PropList.txt			\
+	unicode/UNIDATA/SpecialCasing.txt		\
+	unicode/UNIDATA/UnicodeData.txt			\
+	unicode/UNIDATA/WordBreakProperty.txt
 
 ### end of file

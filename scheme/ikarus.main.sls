@@ -1,18 +1,18 @@
-;;; Ikarus Scheme -- A compiler for R6RS Scheme.
-;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;; This program is free software: you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License version 3 as
-;;; published by the Free Software Foundation.
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under  the terms of  the GNU General  Public License version  3 as
+;;;published by the Free Software Foundation.
 ;;;
-;;; This program is distributed in the hope that it will be useful, but
-;;; WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; General Public License for more details.
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
 ;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should  have received  a copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 ;;This is  here to test that  we can import things  from other libraries
@@ -142,6 +142,10 @@
    search-path
 		;Null or a list of strings representing directory names:
 		;additional locations in which to search for libraries.
+
+   more-file-extensions
+		;Turn  on search  for more  library file  extension than
+		;".vicare.sls" and ".sls".
    ))
 
 (define-inline (run-time-config-load-libraries-register! cfg pathname)
@@ -185,48 +189,71 @@
 	      (CFG.EVAL-CODES		(%dot-id ".eval-codes"))
 	      (CFG.PROGRAM-OPTIONS	(%dot-id ".program-options"))
 	      (CFG.NO-GREETINGS		(%dot-id ".no-greetings"))
-	      (CFG.SEARCH-PATH		(%dot-id ".search-path")))
+	      (CFG.SEARCH-PATH		(%dot-id ".search-path"))
+	      (CFG.MORE-FILE-EXTENSIONS	(%dot-id ".more-file-extensions")))
 	   #'(let-syntax
-		 ((CFG.EXEC-MODE	(identifier-syntax
-					 (_
-					  (run-time-config-exec-mode ?cfg))
-					 ((set! _ ?val)
-					  (set-run-time-config-exec-mode! ?cfg ?val))))
-		  (CFG.SCRIPT		(identifier-syntax
-					 (_
-					  (run-time-config-script ?cfg))
-					 ((set! _ ?val)
-					  (set-run-time-config-script! ?cfg ?val))))
-		  (CFG.RCFILES	(identifier-syntax
-					 (_
-					  (run-time-config-rcfiles ?cfg))
-					 ((set! _ ?val)
-					  (set-run-time-config-rcfiles! ?cfg ?val))))
-		  (CFG.LOAD-LIBRARIES	(identifier-syntax
-					 (_
-					  (run-time-config-load-libraries ?cfg))
-					 ((set! _ ?val)
-					  (set-run-time-config-load-libraries! ?cfg ?val))))
-		  (CFG.EVAL-CODES	(identifier-syntax
-					 (_
-					  (run-time-config-eval-codes ?cfg))
-					 ((set! _ ?val)
-					  (set-run-time-config-eval-codes! ?cfg ?val))))
-		  (CFG.PROGRAM-OPTIONS	(identifier-syntax
-					 (_
-					  (run-time-config-program-options ?cfg))
-					 ((set! _ ?val)
-					  (set-run-time-config-program-options! ?cfg ?val))))
-		  (CFG.NO-GREETINGS	(identifier-syntax
-					 (_
-					  (run-time-config-no-greetings ?cfg))
-					 ((set! _ ?val)
-					  (set-run-time-config-no-greetings! ?cfg ?val))))
-		  (CFG.SEARCH-PATH	(identifier-syntax
-					 (_
-					  (run-time-config-search-path ?cfg))
-					 ((set! _ ?val)
-					  (set-run-time-config-search-path! ?cfg ?val)))))
+		 ((CFG.EXEC-MODE
+		   (identifier-syntax
+		    (_
+		     (run-time-config-exec-mode ?cfg))
+		    ((set! _ ?val)
+		     (set-run-time-config-exec-mode! ?cfg ?val))))
+
+		  (CFG.SCRIPT
+		   (identifier-syntax
+		    (_
+		     (run-time-config-script ?cfg))
+		    ((set! _ ?val)
+		     (set-run-time-config-script! ?cfg ?val))))
+
+		  (CFG.RCFILES
+		   (identifier-syntax
+		    (_
+		     (run-time-config-rcfiles ?cfg))
+		    ((set! _ ?val)
+		     (set-run-time-config-rcfiles! ?cfg ?val))))
+
+		  (CFG.LOAD-LIBRARIES
+		   (identifier-syntax
+		    (_
+		     (run-time-config-load-libraries ?cfg))
+		    ((set! _ ?val)
+		     (set-run-time-config-load-libraries! ?cfg ?val))))
+
+		  (CFG.EVAL-CODES
+		   (identifier-syntax
+		    (_
+		     (run-time-config-eval-codes ?cfg))
+		    ((set! _ ?val)
+		     (set-run-time-config-eval-codes! ?cfg ?val))))
+
+		  (CFG.PROGRAM-OPTIONS
+		   (identifier-syntax
+		    (_
+		     (run-time-config-program-options ?cfg))
+		    ((set! _ ?val)
+		     (set-run-time-config-program-options! ?cfg ?val))))
+
+		  (CFG.NO-GREETINGS
+		   (identifier-syntax
+		    (_
+		     (run-time-config-no-greetings ?cfg))
+		    ((set! _ ?val)
+		     (set-run-time-config-no-greetings! ?cfg ?val))))
+
+		  (CFG.SEARCH-PATH
+		   (identifier-syntax
+		    (_
+		     (run-time-config-search-path ?cfg))
+		    ((set! _ ?val)
+		     (set-run-time-config-search-path! ?cfg ?val))))
+
+		  (CFG.MORE-FILE-EXTENSIONS
+		   (identifier-syntax
+		    (_
+		     (run-time-config-more-file-extensions ?cfg))
+		    ((set! _ ?val)
+		     (set-run-time-config-more-file-extensions! ?cfg ?val)))))
 	       . ?body)))))))
 
 
@@ -262,7 +289,9 @@
 			  '()		;eval-codes
 			  '()		;program-options
 			  #f		;no-greetings
-			  '()))		;search-path
+			  '()		;search-path
+			  #f		;more-file-extensions
+			  ))
 
   (let next-option ((args	(command-line-arguments))
 		    (k		void))
@@ -357,7 +386,7 @@
 		  (next-option (cddr args) k))))
 
 ;;; --------------------------------------------------------------------
-;;; Vicare options
+;;; Vicare options without argument
 
 	  ((%option= "-d" "--debug")
 	   (next-option (cdr args) (lambda () (k) (generate-debug-calls #t))))
@@ -387,6 +416,13 @@
 	  ((%option= "--no-rcfile")
 	   (run-time-config-rcfiles-register! cfg #f)
 	   (next-option (cdr args) k))
+
+	  ((%option= "--more-file-extensions")
+	   (set-run-time-config-more-file-extensions! cfg #t)
+	   (next-option (cdr args) k))
+
+;;; --------------------------------------------------------------------
+;;; Vicare options with argument
 
 	  ((%option= "--rcfile")
 	   (if (null? (cdr args))
@@ -602,8 +638,13 @@ Other options:
         Add DIRECTORY  to the library  search path.  This option  can be
         used multiple times.
 
+   --more-file-extensions
+        Rather   than    searching   only   libraries   with   extension
+        \".vicare.sls\"  and \".sls\",  search also  for \".vicare.ss\",
+        \".ss\", \".vicare.scm\", \".scm\" and the \"main\" file.
+
    --prompt STRING
-        Use STRING as prompt for the REPL.  Defaults to \"vicare>\".
+        Use STRING as prompt for the REPL.  Defaults to \"vicare\".
 
    -d
    --debug
@@ -657,7 +698,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 
 (define (init-library-path cfg)
-  (define (prefix ext ls)
+  (define (%prefix ext ls)
     (append (map (lambda (x)
 		   (string-append ext x))
 	      ls)
@@ -668,7 +709,9 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 				 => split-path)
 				(else '(".")))
 			  (list config.vicare-lib-dir)))
-    (library-extensions (prefix "/main" (prefix ".vicare" (library-extensions))))))
+    (when cfg.more-file-extensions
+      (library-extensions (%prefix "/main"
+				   (%prefix ".vicare" '(".sls" ".ss" ".scm")))))))
 
 (define (split-path s)
   (define (nodata i s ls)

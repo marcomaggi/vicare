@@ -12,7 +12,7 @@
 ;;;
 ;;;	  This program works  hand-in-hand with the expander, especially
 ;;;	  the   library   (psyntax    library-manager)   in   the   file
-;;;	  "psyntax.library-manager.ss".
+;;;	  "psyntax.library-manager.sls".
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under  the terms of  the GNU General  Public License version  3 as
@@ -85,12 +85,18 @@
 (define debug-printf
   (if verbose-output?
       (lambda args
-	(apply fprintf (console-error-port) args))
+	(let ((port (console-error-port)))
+	  (apply fprintf port args)
+	  (flush-output-port port)))
     (case-lambda
      ((str)
-      (fprintf (console-error-port) str))
+      (let ((port (console-error-port)))
+	(fprintf port str)
+	(flush-output-port port)))
      ((str . args)
-      (fprintf (console-error-port) ".")))))
+      (let ((port (console-error-port)))
+	(fprintf port ".")
+	(flush-output-port port))))))
 
 
 (define scheme-library-files
@@ -109,65 +115,65 @@
   ;;does  not itself  cause an  error (which  may lead  to  the infamous
   ;;Error: Error: Error: Error: Error: Error: Error: Error: Error: ...).
   ;;
-  '("ikarus.singular-objects.ss"
-    "ikarus.handlers.ss"
-    "ikarus.multiple-values.ss"
-    "ikarus.control.ss"
-    "ikarus.exceptions.ss"
-    "ikarus.collect.ss"
-    "ikarus.apply.ss"
-    "ikarus.predicates.ss"
-    "ikarus.equal.ss"
-    "ikarus.pairs.ss"
-    "ikarus.lists.ss"
-    "ikarus.fixnums.ss"
-    "ikarus.chars.ss"
-    "ikarus.structs.ss"
-    "ikarus.records.procedural.ss"
-    "ikarus.strings.ss"
-    "ikarus.unicode-conversion.ss"
-    "ikarus.date-string.ss"
-    "ikarus.symbols.ss"
-    "ikarus.vectors.ss"
-    "ikarus.unicode.ss"
-    "ikarus.string-to-number.ss"
-    "ikarus.numerics.ss"
-    "ikarus.conditions.ss"
-    "ikarus.guardians.ss"
-    "ikarus.symbol-table.ss"
-    "ikarus.codecs.ss"
-    "ikarus.bytevectors.ss"
-    "ikarus.posix.ss"
-    "ikarus.io.ss"
-    "ikarus.hash-tables.ss"
-    "ikarus.pretty-formats.ss"
-    "ikarus.writer.ss"
-    "ikarus.reader.ss"
-    "ikarus.code-objects.ss"
-    "ikarus.intel-assembler.ss"
-    "ikarus.fasl.write.ss"
-    "ikarus.fasl.ss"
-    "ikarus.compiler.ss"
-    "psyntax.compat.ss"
-    "psyntax.library-manager.ss"
-    "psyntax.internal.ss"
-    "psyntax.config.ss"
-    "psyntax.builders.ss"
-    "psyntax.expander.ss"
-    "ikarus.apropos.ss"
-    "ikarus.load.ss"
-    "ikarus.pretty-print.ss"
-    "ikarus.cafe.ss"
-    "ikarus.timer.ss"
-    "ikarus.time-and-date.ss"
-    "ikarus.sort.ss"
-    "ikarus.promises.ss"
-    "ikarus.enumerations.ss"
-    "ikarus.command-line.ss"
-    "ikarus.pointers.ss"
-;;; "ikarus.trace.ss"
-    "ikarus.debugger.ss"
-    "ikarus.main.ss"
+  '("ikarus.singular-objects.sls"
+    "ikarus.handlers.sls"
+    "ikarus.multiple-values.sls"
+    "ikarus.control.sls"
+    "ikarus.exceptions.sls"
+    "ikarus.collect.sls"
+    "ikarus.apply.sls"
+    "ikarus.predicates.sls"
+    "ikarus.equal.sls"
+    "ikarus.pairs.sls"
+    "ikarus.lists.sls"
+    "ikarus.fixnums.sls"
+    "ikarus.chars.sls"
+    "ikarus.structs.sls"
+    "ikarus.records.procedural.sls"
+    "ikarus.strings.sls"
+    "ikarus.unicode-conversion.sls"
+    "ikarus.date-string.sls"
+    "ikarus.symbols.sls"
+    "ikarus.vectors.sls"
+    "ikarus.unicode.sls"
+    "ikarus.string-to-number.sls"
+    "ikarus.numerics.sls"
+    "ikarus.conditions.sls"
+    "ikarus.guardians.sls"
+    "ikarus.symbol-table.sls"
+    "ikarus.codecs.sls"
+    "ikarus.bytevectors.sls"
+    "ikarus.posix.sls"
+    "ikarus.io.sls"
+    "ikarus.hash-tables.sls"
+    "ikarus.pretty-formats.sls"
+    "ikarus.writer.sls"
+    "ikarus.reader.sls"
+    "ikarus.code-objects.sls"
+    "ikarus.intel-assembler.sls"
+    "ikarus.fasl.write.sls"
+    "ikarus.fasl.sls"
+    "ikarus.compiler.sls"
+    "psyntax.compat.sls"
+    "psyntax.library-manager.sls"
+    "psyntax.internal.sls"
+    "psyntax.config.sls"
+    "psyntax.builders.sls"
+    "psyntax.expander.sls"
+    "ikarus.apropos.sls"
+    "ikarus.load.sls"
+    "ikarus.pretty-print.sls"
+    "ikarus.cafe.sls"
+    "ikarus.timer.sls"
+    "ikarus.time-and-date.sls"
+    "ikarus.sort.sls"
+    "ikarus.promises.sls"
+    "ikarus.enumerations.sls"
+    "ikarus.command-line.sls"
+    "ikarus.pointers.sls"
+;;; "ikarus.trace.sls"
+    "ikarus.debugger.sls"
+    "ikarus.main.sls"
     ))
 
 

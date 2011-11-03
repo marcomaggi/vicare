@@ -1362,6 +1362,12 @@ multiple times.
 Add @var{directory} to the library search path.  This option can be used
 multiple times.
 
+@item --more-file-extensions
+Rather than searching only libraries with extension @samp{.vicare.sls}
+and @samp{.sls}, search also for @samp{.vicare.ss}, @samp{.ss},
+@samp{.vicare.scm}, @samp{.scm} and the @samp{main} file.  @ref{using
+libraries searching} for more details.
+
 @item --prompt @var{STRING}
 Use @var{STRING} as prompt for the @repl{}.  Defaults to @samp{vicare},
 to which the character @samp{>} is appended for each nested @repl{}
@@ -1573,9 +1579,10 @@ name is a common error.
 In @value{PRJNAME}, a library is a file with the same name as the last
 component of the library name.  For example, the library
 @library{sample} will correspond to a file named @file{sample.sls}
-somewhere in the file system.  The file extension @code{sls} stands for
+somewhere in the file system.  The file extension @code{.sls} stands for
 ``Scheme library source''; although @value{PRJNAME} will also accept the
-extensions @code{ss} and @code{scm}, these really indicate scripts,
+extensions @code{.ss} and @code{.scm} when the command line option
+@option{--more-file-extensions} is used, these really indicate scripts
 rather than libraries.
 
 @value{PRJNAME} has a search algorithm for libraries that is similar to
@@ -1596,9 +1603,9 @@ directory on the path for a file named @file{sample.sls}.
 @item
 Importing @library{yoyodyne sample} causes @value{PRJNAME} to look in
 each directory on the path for a directory named @file{yoyodyne}, and
-within that a file named @file{sample.sls}.  (The @func{library} form
-for this library must still specify the library name as
-@library{yoyodyne sample}, not @library{sample}.)
+within that a file named @file{sample.sls}.  The @func{library} form for
+this library must still specify the library name as @library{yoyodyne
+sample}, not @library{sample}.
 @end itemize
 
 @cindex @env{VICARE_LIBRARY_PATH}
@@ -1638,21 +1645,25 @@ set @code{(library-path)}, as the user's file hierarchies might not
 match yours.  For most libraries, simply telling the user to install the
 library in one of the libraries on the search path is good enough.
 
-There are two refinements of the library search algorithm.
+There are two refinements of the library search algorithm, which are
+performed when the @option{--more-file-extensions} command line option
+is used.
 
 @itemize
 @item
 A common pattern is to distribute a main library along with a number of
 additional extensions: we might have a main library named @library{lib},
 and additional optional extensions named @library{lib extras} and
-@library{lib frills}.  Although the previous packaging method can be
-used, @value{PRJNAME} allows you to use a simpler technique where the
-main library is stored in @file{lib/main.sls}, and the extensions are
-stored in @file{lib/extras.sls} and @file{lib/frills.sls}, respectively.
+@library{lib frills}.
+
+Although the previous packaging method can be used, @value{PRJNAME}
+allows you to use a simpler technique where the main library is stored
+in @file{lib/main.sls}, and the extensions are stored in
+@file{lib/extras.sls} and @file{lib/frills.sls}, respectively.
 
 @item
 @value{PRJNAME} will also look in @file{lib/main.vicare.sls} before
-trying @file{lib/main.sls}.  This allows you to provide an
+trying @file{lib/main.sls}.  This allows you to provide a
 @value{PRJNAME}--specific implementation as well as a generic
 implementation.
 @end itemize
@@ -1662,8 +1673,25 @@ implementation.
 @subsection Library search algorithm summary
 
 
-@value{PRJNAME} attempts to import the library @library{a b c} as
-follows, for each directory in the search path:
+By default, @value{PRJNAME} attempts to import the library @library{a b
+c} as follows, for each directory in the search path:
+
+@enumerate
+@item
+Build the rootname @file{a/b/c}.
+
+@item
+Append each of the following strings to the rootname, in order, until a
+matching file is found:
+
+@example
+.vicare.sls
+.sls
+@end example
+@end enumerate
+
+When the the command line option @option{--more-file-extensions} is
+used, for each directory in the search path:
 
 @enumerate
 @item
@@ -1689,7 +1717,7 @@ matching file is found:
 @end example
 @end enumerate
 
-If there is no match, then the import is in error.
+If there is no match, then the import request is in error.
 
 @c page
 @node using libraries examples
