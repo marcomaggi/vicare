@@ -1498,6 +1498,10 @@
   (port? obj)
   (assertion-violation who "expected port as argument" obj))
 
+(define-argument-validation (port-mode who obj)
+  (or (eq? obj 'r6rs) (eq? obj 'vicare))
+  (assertion-violation who "expected supported port mode as argument" obj))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (input-port who obj)
@@ -1521,7 +1525,7 @@
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (unsafe.not-input/output-port who obj)
-  (not (%unsafe.input-and-output-port? ?port))
+  (not (%unsafe.input-and-output-port? obj))
   (assertion-violation who "invalid input/output port as argument" obj))
 
 ;;; --------------------------------------------------------------------
@@ -3227,38 +3231,39 @@
     ;;unspecified.
     ;;
     (define who 'open-bytevector-input-port)
-    (%assert-value-is-bytevector bv who)
-    (%assert-argument-is-maybe-transcoder maybe-transcoder who)
-    ;;The input  bytevector is  itself the buffer!!!   The port is  in a
-    ;;state equivalent to the following:
-    ;;
-    ;;                                           device position
-    ;;                                                  v
-    ;;   |----------------------------------------------| device
-    ;;   |*******************+**************************| buffer
-    ;;   ^                   ^                          ^
-    ;;   0            index = port position       used-size = size
-    ;;
-    ;;the device position equals the  bytevector length and its value in
-    ;;the cookie's POS field is never mutated.
-    (let* ((bv.len (unsafe.bytevector-length bv))
-	   (attributes		(unsafe.fxior
-				 (%select-input-fast-tag-from-transcoder who maybe-transcoder)
-				 (%select-eol-style-from-transcoder who maybe-transcoder)))
-	   (buffer.index	0)
-	   (buffer.used-size	bv.len)
-	   (buffer		bv)
-	   (transcoder		maybe-transcoder)
-	   (identifier		"*bytevector-input-port*")
-	   (read!		all-data-in-buffer)
-	   (write!		#f)
-	   (get-position	#t)
-	   (set-position!	#t)
-	   (close		#f)
-	   (cookie		(default-cookie #f)))
-      (set-cookie-pos! cookie bv.len)
-      ($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
-		  read! write! get-position set-position! close cookie)))))
+    (with-arguments-validation (who)
+	((bytevector        bv)
+	 (maybe-transcoder  maybe-transcoder))
+      ;;The input bytevector  is itself the buffer!!!  The  port is in a
+      ;;state equivalent to the following:
+      ;;
+      ;;                                           device position
+      ;;                                                  v
+      ;;   |----------------------------------------------| device
+      ;;   |*******************+**************************| buffer
+      ;;   ^                   ^                          ^
+      ;;   0            index = port position       used-size = size
+      ;;
+      ;;the device  position equals the bytevector length  and its value
+      ;;in the cookie's POS field is never mutated.
+      (let* ((bv.len (unsafe.bytevector-length bv))
+	     (attributes		(unsafe.fxior
+					 (%select-input-fast-tag-from-transcoder who maybe-transcoder)
+					 (%select-eol-style-from-transcoder who maybe-transcoder)))
+	     (buffer.index	0)
+	     (buffer.used-size	bv.len)
+	     (buffer		bv)
+	     (transcoder		maybe-transcoder)
+	     (identifier		"*bytevector-input-port*")
+	     (read!		all-data-in-buffer)
+	     (write!		#f)
+	     (get-position	#t)
+	     (set-position!	#t)
+	     (close		#f)
+	     (cookie		(default-cookie #f)))
+	(set-cookie-pos! cookie bv.len)
+	($make-port attributes buffer.index buffer.used-size buffer transcoder identifier
+		    read! write! get-position set-position! close cookie))))))
 
 
 ;;;; string input ports
@@ -3291,43 +3296,43 @@
     (open-string-input-port/id str id 'none))
    ((str id eol-style)
     (define who 'open-string-input-port)
-    (unless (string? str)
-      (assertion-violation who "not a string" str))
-    (%assert-argument-is-port-identifier id who)
-    ;;The input string  is itself the buffer!!!  The port  is in a state
-    ;;equivalent to the following:
-    ;;
-    ;;                                           device position
-    ;;                                                  v
-    ;;   |----------------------------------------------| device
-    ;;   |*******************+**************************| buffer
-    ;;   ^                   ^                          ^
-    ;;   0            index = port position       used-size = size
-    ;;
-    ;;the device position equals the  string length and its value in the
-    ;;cookie's POS field is never mutated.
-    (let ((str.len (string-length str)))
-      (unless (< str.len BUFFER-SIZE-UPPER-LIMIT)
-	(error who "input string length exceeds maximum supported size" str.len))
-      (let ((attributes		(unsafe.fxior
+    (with-arguments-validation (who)
+	((string	   str)
+	 (port-identifier  id))
+      ;;The input string is itself the buffer!!!  The port is in a state
+      ;;equivalent to the following:
+      ;;
+      ;;                                           device position
+      ;;                                                  v
+      ;;   |----------------------------------------------| device
+      ;;   |*******************+**************************| buffer
+      ;;   ^                   ^                          ^
+      ;;   0            index = port position       used-size = size
+      ;;
+      ;;the device  position equals the  string length and its  value in
+      ;;the cookie's POS field is never mutated.
+      (let ((str.len (string-length str)))
+	(unless (< str.len BUFFER-SIZE-UPPER-LIMIT)
+	  (error who "input string length exceeds maximum supported size" str.len))
+	(let ((attributes	(unsafe.fxior
 				 FAST-GET-CHAR-TAG
 				 (or (%symbol->eol-attrs eol-style)
 				     (assertion-violation who
 				       "expected EOL style as argument" eol-style))
 				 DEFAULT-OTHER-ATTRS))
-	    (buffer.index	0)
-	    (buffer.used-size	str.len)
-	    (buffer		str)
-	    (transcoder		#t)
-	    (read!		all-data-in-buffer)
-	    (write!		#f)
-	    (get-position	#t)
-	    (set-position!	#t)
-	    (close		#f)
-	    (cookie		(default-cookie #f)))
-	(set-cookie-pos! cookie str.len)
-	($make-port attributes buffer.index buffer.used-size buffer transcoder id
-		    read! write! get-position set-position! close cookie))))))
+	      (buffer.index	0)
+	      (buffer.used-size	str.len)
+	      (buffer		str)
+	      (transcoder	#t)
+	      (read!		all-data-in-buffer)
+	      (write!		#f)
+	      (get-position	#t)
+	      (set-position!	#t)
+	      (close		#f)
+	      (cookie		(default-cookie #f)))
+	  (set-cookie-pos! cookie str.len)
+	  ($make-port attributes buffer.index buffer.used-size buffer transcoder id
+		      read! write! get-position set-position! close cookie)))))))
 
 (define (with-input-from-string string thunk)
   ;;Defined by Ikarus.   THUNK must be a procedure  and must accept zero
@@ -3346,10 +3351,11 @@
   ;;after THUNK is returned, the behavior is unspecified.
   ;;
   (define who 'with-input-from-string)
-  (%assert-argument-is-string    string who)
-  (%assert-argument-is-procedure thunk  who)
-  (parameterize ((current-input-port (open-string-input-port string)))
-    (thunk)))
+  (with-arguments-validation (who)
+      ((string    string)
+       (procedure thunk))
+    (parameterize ((current-input-port (open-string-input-port string)))
+      (thunk))))
 
 
 ;;;; generic port functions
@@ -3366,15 +3372,16 @@
   ;;used for an input or output operation.
   ;;
   (define who 'call-with-port)
-  (%assert-argument-is-port port who)
-  (%unsafe.assert-value-is-open-port port who)
-  (%assert-argument-is-procedure proc who)
-  (call-with-values
-      (lambda ()
-	(proc port))
-    (lambda vals
-      (%unsafe.close-port port who)
-      (apply values vals))))
+  (with-arguments-validation (who)
+      ((port		 port)
+       (unsafe.open-port port)
+       (procedure	 proc))
+    (call-with-values
+	(lambda ()
+	  (proc port))
+      (lambda vals
+	(%unsafe.close-port port who)
+	(apply values vals)))))
 
 
 ;;;; bytevector output ports
@@ -3384,206 +3391,207 @@
    (()
     (open-bytevector-output-port #f))
    ((maybe-transcoder)
-    ;;Defined  by  R6RS.    MAYBE-TRANSCODER  must  be  either  a
-    ;;transcoder or false.
+    ;;Defined by R6RS.  MAYBE-TRANSCODER  must be either a transcoder or
+    ;;false.
     ;;
-    ;;The   OPEN-BYTEVECTOR-OUTPUT-PORT  procedure   returns  two
-    ;;values: an  output port  and an extraction  procedure.  The
-    ;;output port  accumulates the bytes written to  it for later
-    ;;extraction by the procedure.
+    ;;The OPEN-BYTEVECTOR-OUTPUT-PORT  procedure returns two  values: an
+    ;;output  port  and  an   extraction  procedure.   The  output  port
+    ;;accumulates the  bytes written to  it for later extraction  by the
+    ;;procedure.
     ;;
-    ;;If  MAYBE-TRANSCODER  is   a  transcoder,  it  becomes  the
-    ;;transcoder associated  with the port.   If MAYBE-TRANSCODER
-    ;;is false or absent, the port will be a binary port and will
-    ;;support    the    PORT-POSITION   and    SET-PORT-POSITION!
-    ;;operations.  Otherwise the port will be a textual port, and
-    ;;whether     it    supports     the     PORT-POSITION    and
-    ;;SET-PORT-POSITION!  operations  is implementation dependent
-    ;;(and possibly transcoder-dependent).
+    ;;If  MAYBE-TRANSCODER is  a transcoder,  it becomes  the transcoder
+    ;;associated with the port.  If MAYBE-TRANSCODER is false or absent,
+    ;;the port will be a  binary port and will support the PORT-POSITION
+    ;;and SET-PORT-POSITION!  operations.  Otherwise  the port will be a
+    ;;textual  port,  and  whether  it supports  the  PORT-POSITION  and
+    ;;SET-PORT-POSITION!   operations is  implementation  dependent (and
+    ;;possibly transcoder-dependent).
     ;;
-    ;;The extraction procedure  takes no arguments.  When called,
-    ;;it  returns  a  bytevector  consisting of  all  the  port's
-    ;;accumulated  bytes   (regardless  of  the   port's  current
-    ;;position), removes the accumulated bytes from the port, and
-    ;;resets the port's position.
+    ;;The  extraction procedure  takes  no arguments.   When called,  it
+    ;;returns  a bytevector  consisting  of all  the port's  accumulated
+    ;;bytes  (regardless of  the port's  current position),  removes the
+    ;;accumulated bytes from the port, and resets the port's position.
     ;;
     (define who 'open-bytevector-output-port)
-    (%assert-argument-is-maybe-transcoder maybe-transcoder who)
-    (let ((cookie (default-cookie '(0 . ()))))
-      ;;The most  common use of  this port type  is to append  bytes and
-      ;;finally extract the whole output bytevector:
-      ;;
-      ;;  (call-with-values
-      ;;      open-bytevector-output-port
-      ;;    (lambda (port extract)
-      ;;      (put-bytevector port '#vu8(1 2 3))
-      ;;      ...
-      ;;      (extract)))
-      ;;
-      ;;for  this reason  we  implement the  device  of the  port to  be
-      ;;somewhat efficient for such use.
-      ;;
-      ;;The  device is  a pair  stored in  the cookie;  the  cdr, called
-      ;;OUTPUT.BVS  in the  code, holds  null or  a list  of accumulated
-      ;;bytevectors; the  car, called OUTPUT.LEN in the  code, holds the
-      ;;total number of bytes accumulated so far.
-      ;;
-      ;;Whenever data  is flushed from the  buffer to the  device: a new
-      ;;bytevector  is   prepended  to  OUTPUT.BVS   and  OUTPUT.LEN  is
-      ;;incremented accordingly.  When  the extract function is invoked:
-      ;;OUTPUT.BVS  is  reversed  and  concatenated obtaining  a  single
-      ;;bytevector of length OUTPUT.LEN.
-      ;;
-      ;;This situation is violated  if SET-PORT-POSITION!  is applied to
-      ;;the port  to move the position  before the end of  the data.  If
-      ;;this  happens:  SET-POSITION!   converts  OUTPUT.BVS to  a  list
-      ;;holding a single full bytevector (OUTPUT.LEN is left unchanged).
-      ;;
-      ;;Whenever OUTPUT.BVS  holds a single bytevector  and the position
-      ;;is   less   than  such   bytevector   length:   it  means   that
-      ;;SET-PORT-POSITION!  was used.
-      ;;
-      ;;Remember that bytevectors hold at most (GREATEST-FIXNUM) bytes.
-      ;;
-      ;;Notice how the internal  functions are closures upon the cookie,
-      ;;not the port.
-      ;;
-      (define (%%serialise-device! who reset?)
-	(let* ((dev		(cookie-dest cookie))
-	       (output.len	(car dev))
-	       (output.bvs	(cdr dev)))
-	  (cond ((unsafe.fxzero? output.len)
-		 ;;No bytes accumulated, the device is empty.
-		 '#vu8())
-		((null? (cdr output.bvs))
-		 ;;The device has already been serialised.
-		 (when reset?
-		   (set-cookie-dest! cookie '(0 . ())))
-		 (car output.bvs))
-		(else
-		 ;;The device needs to be serialised.
-		 (let ((bv (%unsafe.bytevector-reverse-and-concatenate who output.bvs output.len)))
-		   (set-cookie-dest! cookie (if reset?
-						'(0 . ())
-					      `(,output.len . (,bv))))
-		   bv)))))
-      (define-inline (%serialise-device! who)
-	(%%serialise-device! who #f))
-      (define-inline (%serialise-device-and-reset! who)
-	(%%serialise-device! who #t))
-
-      (define (write! src.bv src.start count)
-	;;Write data to the device.
+    (with-arguments-validation (who)
+	((maybe-transcoder maybe-transcoder))
+      (let ((cookie (default-cookie '(0 . ()))))
+	;;The most common  use of this port type is  to append bytes and
+	;;finally extract the whole output bytevector:
 	;;
-	(define who 'open-bytevector-output-port/write!)
-	(debug-assert (and (fixnum? count) (<= 0 count)))
-	(let* ((dev		(cookie-dest cookie))
-	       (output.len	(car dev))
-	       (output.bvs	(cdr dev))
-	       (dev-position	(cookie-pos cookie))
-	       (new-dev-position (+ count dev-position)))
-	  ;;DANGER This check must not be removed when compiling without
-	  ;;arguments validation.
-	  (unless (fixnum? new-dev-position)
-	    (%implementation-violation who
-	      "request to write data to port would exceed maximum size of bytevectors"
-	      new-dev-position))
-	  (if (unsafe.fx< dev-position output.len)
-	      ;;The  current  position  was  set  inside  the  already
+	;;  (call-with-values
+	;;      open-bytevector-output-port
+	;;    (lambda (port extract)
+	;;      (put-bytevector port '#vu8(1 2 3))
+	;;      ...
+	;;      (extract)))
+	;;
+	;;for  this reason we  implement the  device of  the port  to be
+	;;somewhat efficient for such use.
+	;;
+	;;The device  is a  pair stored in  the cookie; the  cdr, called
+	;;OUTPUT.BVS in  the code, holds  null or a list  of accumulated
+	;;bytevectors; the car, called OUTPUT.LEN in the code, holds the
+	;;total number of bytes accumulated so far.
+	;;
+	;;Whenever data is flushed from  the buffer to the device: a new
+	;;bytevector  is  prepended  to  OUTPUT.BVS  and  OUTPUT.LEN  is
+	;;incremented  accordingly.    When  the  extract   function  is
+	;;invoked: OUTPUT.BVS  is reversed and  concatenated obtaining a
+	;;single bytevector of length OUTPUT.LEN.
+	;;
+	;;This situation  is violated if  SET-PORT-POSITION!  is applied
+	;;to the port  to move the position before the  end of the data.
+	;;If this happens: SET-POSITION!   converts OUTPUT.BVS to a list
+	;;holding   a  single  full   bytevector  (OUTPUT.LEN   is  left
+	;;unchanged).
+	;;
+	;;Whenever OUTPUT.BVS holds a single bytevector and the position
+	;;is   less  than   such  bytevector   length:  it   means  that
+	;;SET-PORT-POSITION!  was used.
+	;;
+	;;Remember that bytevectors hold at most a number of bytes equal
+	;;to the return value of GREATEST-FIXNUM.
+	;;
+	;;Notice  how  the  internal  functions are  closures  upon  the
+	;;cookie, not the port.
+	;;
+	(define (%%serialise-device! who reset?)
+	  (let* ((dev		(cookie-dest cookie))
+		 (output.len	(car dev))
+		 (output.bvs	(cdr dev)))
+	    (cond ((unsafe.fxzero? output.len)
+		   ;;No bytes accumulated, the device is empty.
+		   '#vu8())
+		  ((null? (cdr output.bvs))
+		   ;;The device has already been serialised.
+		   (when reset?
+		     (set-cookie-dest! cookie '(0 . ())))
+		   (car output.bvs))
+		  (else
+		   ;;The device needs to be serialised.
+		   (let ((bv (%unsafe.bytevector-reverse-and-concatenate who output.bvs output.len)))
+		     (set-cookie-dest! cookie (if reset?
+						  '(0 . ())
+						`(,output.len . (,bv))))
+		     bv)))))
+	(define-inline (%serialise-device! who)
+	  (%%serialise-device! who #f))
+	(define-inline (%serialise-device-and-reset! who)
+	  (%%serialise-device! who #t))
+
+	(define (write! src.bv src.start count)
+	  ;;Write data to the device.
+	  ;;
+	  (define who 'open-bytevector-output-port/write!)
+	  (debug-assert (and (fixnum? count) (<= 0 count)))
+	  (let* ((dev		(cookie-dest cookie))
+		 (output.len	(car dev))
+		 (output.bvs	(cdr dev))
+		 (dev-position	(cookie-pos cookie))
+		 (new-dev-position (+ count dev-position)))
+	    ;;DANGER  This  check must  not  be  removed when  compiling
+	    ;;without arguments validation.
+	    (unless (fixnum? new-dev-position)
+	      (%implementation-violation who
+		"request to write data to port would exceed maximum size of bytevectors"
+		new-dev-position))
+	    (if (unsafe.fx< dev-position output.len)
+		;;The  current  position  was  set  inside  the  already
+		;;accumulated data.
+		(write!/overwrite src.bv src.start count
+				  output.len output.bvs
+				  dev-position new-dev-position)
+	      ;;The  current  position is  at  the  end  of the  already
 	      ;;accumulated data.
-	      (write!/overwrite src.bv src.start count
-				output.len output.bvs
-				dev-position new-dev-position)
-	    ;;The  current  position is  at  the  end  of the  already
-	    ;;accumulated data.
-	    (write!/append src.bv src.start count output.bvs new-dev-position))
-	  count))
+	      (write!/append src.bv src.start count output.bvs new-dev-position))
+	    count))
 
-      (define-inline (write!/overwrite src.bv src.start count
-				       output.len output.bvs
-				       dev-position new-dev-position)
-	;;Write  data to  the device,  overwriting some  of  the already
-	;;existing  data.  The device  is already  composed of  a single
-	;;bytevector of length OUTPUT.LEN in the car of OUTPUT.BVS.
-	;;
-	(let* ((dst.bv   (car output.bvs))
-	       (dst.len  output.len)
-	       (dst.room (unsafe.fx- dst.len dev-position)))
-	  (debug-assert (fixnum? dst.room))
-	  (if (unsafe.fx<= count dst.room)
-	      ;;The new data fits  in the single bytevector.  There is
-	      ;;no need to update the device.
-	      (unsafe.bytevector-copy!/count src.bv src.start dst.bv dev-position count)
-	    (begin
-	      ;;The new  data goes part  in the single  bytevector and
-	      ;;part  in a  new  bytevector.  We  need  to update  the
-	      ;;device.
-	      (unsafe.bytevector-copy!/count src.bv src.start dst.bv dev-position dst.room)
-	      (let* ((src.start (unsafe.fx+ src.start dst.room))
-		     (count     (unsafe.fx- count     dst.room)))
-		(write!/append src.bv src.start count output.bvs new-dev-position))))))
+	(define-inline (write!/overwrite src.bv src.start count
+					 output.len output.bvs
+					 dev-position new-dev-position)
+	  ;;Write data  to the device,  overwriting some of  the already
+	  ;;existing data.   The device is already composed  of a single
+	  ;;bytevector of length OUTPUT.LEN in the car of OUTPUT.BVS.
+	  ;;
+	  (let* ((dst.bv   (car output.bvs))
+		 (dst.len  output.len)
+		 (dst.room (unsafe.fx- dst.len dev-position)))
+	    (debug-assert (fixnum? dst.room))
+	    (if (unsafe.fx<= count dst.room)
+		;;The new data fits  in the single bytevector.  There is
+		;;no need to update the device.
+		(unsafe.bytevector-copy!/count src.bv src.start dst.bv dev-position count)
+	      (begin
+		;;The new  data goes part  in the single  bytevector and
+		;;part  in a  new  bytevector.  We  need  to update  the
+		;;device.
+		(unsafe.bytevector-copy!/count src.bv src.start dst.bv dev-position dst.room)
+		(let* ((src.start (unsafe.fx+ src.start dst.room))
+		       (count     (unsafe.fx- count     dst.room)))
+		  (write!/append src.bv src.start count output.bvs new-dev-position))))))
 
-      (define-inline (write!/append src.bv src.start count output.bvs new-dev-position)
-	;;Append new  data to the  accumulated bytevectors.  We  need to
-	;;update the device.
-	;;
-	(let ((dst.bv (unsafe.make-bytevector count)))
-	  (unsafe.bytevector-copy!/count src.bv src.start dst.bv 0 count)
-	  (set-cookie-dest! cookie `(,new-dev-position . (,dst.bv . ,output.bvs)))))
+	(define-inline (write!/append src.bv src.start count output.bvs new-dev-position)
+	  ;;Append new data to  the accumulated bytevectors.  We need to
+	  ;;update the device.
+	  ;;
+	  (let ((dst.bv (unsafe.make-bytevector count)))
+	    (unsafe.bytevector-copy!/count src.bv src.start dst.bv 0 count)
+	    (set-cookie-dest! cookie `(,new-dev-position . (,dst.bv . ,output.bvs)))))
 
-      (define (set-position! new-position)
-	;;NEW-POSITION has  already been  validated as exact  integer by
-	;;the procedure SET-PORT-POSITION!.  The buffer has already been
-	;;flushed by  SET-PORT-POSITION!.  Here  we only have  to verify
-	;;that the value  is valid as offset inside  the underlying full
-	;;bytevector.   If this validation  succeeds: SET-PORT-POSITION!
-	;;will store the position in the cookie.
-	;;
-	(define who 'open-bytevector-output-port/set-position!)
-	(unless (and (fixnum? new-position)
-		     (or (unsafe.fx=  new-position (cookie-pos cookie))
-			 (unsafe.fx<= new-position
-				      (unsafe.bytevector-length (%serialise-device! who)))))
-	  (raise (condition
-		  (make-who-condition who)
-		  (make-message-condition "attempt to set bytevector output port position beyond limit")
-		  (make-i/o-invalid-position-error new-position)))))
+	(define (set-position! new-position)
+	  ;;NEW-POSITION has already been  validated as exact integer by
+	  ;;the  procedure SET-PORT-POSITION!.   The buffer  has already
+	  ;;been flushed  by SET-PORT-POSITION!.   Here we only  have to
+	  ;;verify  that  the  value  is  valid  as  offset  inside  the
+	  ;;underlying  full bytevector.   If this  validation succeeds:
+	  ;;SET-PORT-POSITION!  will store the position in the cookie.
+	  ;;
+	  (define who 'open-bytevector-output-port/set-position!)
+	  (unless (and (fixnum? new-position)
+		       (or (unsafe.fx=  new-position (cookie-pos cookie))
+			   (unsafe.fx<= new-position
+					(unsafe.bytevector-length (%serialise-device! who)))))
+	    (raise (condition
+		    (make-who-condition who)
+		    (make-message-condition "attempt to set bytevector output port position beyond limit")
+		    (make-i/o-invalid-position-error new-position)))))
 
-      (let* ((attributes	(%select-output-fast-tag-from-transcoder
+	(let* ((attributes	(%select-output-fast-tag-from-transcoder
 				 who maybe-transcoder PORT-WITH-EXTRACTION-TAG
 				 (%select-eol-style-from-transcoder who maybe-transcoder)
 				 DEFAULT-OTHER-ATTRS))
-	     (buffer.index	0)
-	     (buffer.used-size	0)
-	     (buffer		(unsafe.make-bytevector (bytevector-port-buffer-size)))
-	     (identifier	"*bytevector-output-port*")
-	     (read!		#f)
-	     (get-position	#t)
-	     (close		#f))
+	       (buffer.index	0)
+	       (buffer.used-size	0)
+	       (buffer		(unsafe.make-bytevector (bytevector-port-buffer-size)))
+	       (identifier	"*bytevector-output-port*")
+	       (read!		#f)
+	       (get-position	#t)
+	       (close		#f))
 
-	(define port
-	  ($make-port attributes buffer.index buffer.used-size buffer
-		      maybe-transcoder identifier
-		      read! write! get-position set-position! close cookie))
+	  (define port
+	    ($make-port attributes buffer.index buffer.used-size buffer
+			maybe-transcoder identifier
+			read! write! get-position set-position! close cookie))
 
-	(define (extract)
-	  ;;The  extraction function.   Flush the  buffer to  the device
-	  ;;list,  convert  the  device  list to  a  single  bytevector.
-	  ;;Return the single bytevector and reset the port to its empty
-	  ;;state.
-	  ;;
-	  ;;This  function can  be called  also when  the port  has been
-	  ;;closed.
-	  ;;
-	  (define who 'open-bytevector-output-port/extract)
-	  (with-port (port)
-	    (%unsafe.flush-output-port port who)
-	    (let ((bv (%serialise-device-and-reset! who)))
-	      (port.buffer.reset-to-empty!)
-	      (set! port.device.position 0)
-	      bv)))
+	  (define (extract)
+	    ;;The extraction  function.  Flush the buffer  to the device
+	    ;;list,  convert the  device  list to  a single  bytevector.
+	    ;;Return  the single bytevector  and reset  the port  to its
+	    ;;empty state.
+	    ;;
+	    ;;This function  can be called  also when the port  has been
+	    ;;closed.
+	    ;;
+	    (define who 'open-bytevector-output-port/extract)
+	    (with-port (port)
+	      (%unsafe.flush-output-port port who)
+	      (let ((bv (%serialise-device-and-reset! who)))
+		(port.buffer.reset-to-empty!)
+		(set! port.device.position 0)
+		bv)))
 
-	(values port extract))))))
+	  (values port extract)))))))
 
 (define call-with-bytevector-output-port
   (case-lambda
@@ -3605,11 +3613,12 @@
     ;;for a call to OPEN-BYTEVECTOR-OUTPUT-PORT.
     ;;
     (define who 'call-with-bytevector-output-port)
-    (%assert-argument-is-procedure proc who)
-    (%assert-argument-is-maybe-transcoder transcoder who)
-    (let-values (((port extract) (open-bytevector-output-port transcoder)))
-      (proc port)
-      (extract)))))
+    (with-arguments-validation (who)
+	((procedure		proc)
+	 (maybe-transcoder	transcoder))
+      (let-values (((port extract) (open-bytevector-output-port transcoder)))
+	(proc port)
+	(extract))))))
 
 
 ;;;; string output ports
@@ -3813,33 +3822,34 @@
   (define who 'get-output-string)
   (define (wrong-port-error)
     (assertion-violation who "not an output-string port" port))
-  (%assert-argument-is-port port who)
-  (with-port-having-string-buffer (port)
-    (unless (%unsafe.textual-output-port? port)
-      (wrong-port-error))
-    (let ((cookie port.cookie))
-      (unless (cookie? cookie)
+  (with-arguments-validation (who)
+      ((port port))
+    (with-port-having-string-buffer (port)
+      (unless (%unsafe.textual-output-port? port)
 	(wrong-port-error))
-      (let ((dev port.device))
-	(unless (and (pair?   dev)
-		     (fixnum? (car dev))
-		     (or (null? (cdr dev))
-			 (pair? (cdr dev))))
-	  (wrong-port-error)))
-      (%unsafe.flush-output-port port who)
-      (let* ((dev		port.device) ;flushing the buffer can change the device!!!
-	     (output.len	(car dev))
-	     (output.strs	(cdr dev)))
-	(set! port.device.position 0)
-	(set! port.device '(0 . ()))
-	(cond ((unsafe.fxzero? output.len)
-	       ;;No bytes accumulated, the device is empty.
-	       "")
-	      ((null? (cdr output.strs))
-	       ;;The device has already been serialised.
-	       (car output.strs))
-	      (else
-	       (%unsafe.string-reverse-and-concatenate who output.strs output.len)))))))
+      (let ((cookie port.cookie))
+	(unless (cookie? cookie)
+	  (wrong-port-error))
+	(let ((dev port.device))
+	  (unless (and (pair?   dev)
+		       (fixnum? (car dev))
+		       (or (null? (cdr dev))
+			   (pair? (cdr dev))))
+	    (wrong-port-error)))
+	(%unsafe.flush-output-port port who)
+	(let* ((dev		port.device) ;flushing the buffer can change the device!!!
+	       (output.len	(car dev))
+	       (output.strs	(cdr dev)))
+	  (set! port.device.position 0)
+	  (set! port.device '(0 . ()))
+	  (cond ((unsafe.fxzero? output.len)
+		 ;;No bytes accumulated, the device is empty.
+		 "")
+		((null? (cdr output.strs))
+		 ;;The device has already been serialised.
+		 (car output.strs))
+		(else
+		 (%unsafe.string-reverse-and-concatenate who output.strs output.len))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3860,10 +3870,11 @@
   ;;operations.
   ;;
   (define who 'call-with-string-output-port)
-  (%assert-argument-is-procedure proc who)
-  (let-values (((port getter) (open-string-output-port)))
-    (proc port)
-    (getter)))
+  (with-arguments-validation (who)
+      ((procedure proc))
+    (let-values (((port getter) (open-string-output-port)))
+      (proc port)
+      (getter))))
 
 (define (with-output-to-string proc)
   ;;Defined  by  Ikarus.   Create  a  textual  output  port  that
@@ -3877,11 +3888,12 @@
   ;;current position) is returned and the port is closed.
   ;;
   (define who 'with-output-to-string)
-  (%assert-argument-is-procedure proc who)
-  (let-values (((port extract) (open-string-output-port)))
-    (parameterize ((current-output-port port))
-      (proc))
-    (extract)))
+  (with-arguments-validation (who)
+      ((procedure proc))
+    (let-values (((port extract) (open-string-output-port)))
+      (parameterize ((current-output-port port))
+	(proc))
+      (extract))))
 
 
 ;;;; output to current output port
@@ -3895,11 +3907,12 @@
   ;;supposed to return a textual output port.
   ;;
   (define who 'with-output-to-port)
-  (%assert-argument-is-procedure proc who)
-  (%assert-value-is-output-port port who)
-  (%unsafe.assert-value-is-textual-port port who)
-  (parameterize ((current-output-port port))
-    (proc)))
+  (with-arguments-validation (who)
+      ((procedure		proc)
+       (output-port		port)
+       (unsafe.textual-port	port))
+    (parameterize ((current-output-port port))
+      (proc))))
 
 
 ;;;; transcoded ports
@@ -3924,36 +3937,37 @@
   ;;output operations.
   ;;
   (define who 'transcoded-port)
-  (%assert-argument-is-port port who)
-  (%assert-argument-is-transcoder transcoder who)
-  (%unsafe.assert-value-is-binary-port port who)
-  (%unsafe.assert-value-is-open-port   port who)
-  (%unsafe.assert-argument-is-not-input/output-port port who)
-  (with-port-having-bytevector-buffer (port)
-    (let ((transcoded-port ($make-port
-			    (unsafe.fxior
-			     (cond (port.is-input?
-				    (%select-input-fast-tag-from-transcoder who transcoder))
-				   (port.is-output?
-				    (%select-output-fast-tag-from-transcoder who transcoder))
-				   (else
-				    (assertion-violation who "port is neither input nor output!" port)))
-			     (%unsafe.port-nullify-eol-style-bits port.other-attributes)
-			     (%select-eol-style-from-transcoder who transcoder))
-			    port.buffer.index port.buffer.used-size port.buffer
-			    transcoder port.id
-			    port.read! port.write! port.get-position port.set-position! port.close
-			    port.cookie)))
-      ;;If the binary  port accumulates bytes for later  extraction by a
-      ;;function, we  flush the  buffer now and  set the buffer  mode to
-      ;;none;  this way  the  buffer is  kept  empty by  all the  output
-      ;;functions.   This  allows the  original  extraction function  to
-      ;;still process correctly the device.
-      (when port.with-extraction?
-	(%unsafe.flush-output-port port who)
-  	($set-port-buffer-mode-to-none! transcoded-port))
-      (port.mark-as-closed!)
-      (%port->maybe-guarded-port transcoded-port))))
+  (with-arguments-validation (who)
+      ((port				port)
+       (transcoder			transcoder)
+       (unsafe.binary-port		port)
+       (unsafe.open-port		port)
+       (unsafe.not-input/output-port	port))
+    (with-port-having-bytevector-buffer (port)
+      (let ((transcoded-port ($make-port
+			      (unsafe.fxior
+			       (cond (port.is-input?
+				      (%select-input-fast-tag-from-transcoder who transcoder))
+				     (port.is-output?
+				      (%select-output-fast-tag-from-transcoder who transcoder))
+				     (else
+				      (assertion-violation who "port is neither input nor output!" port)))
+			       (%unsafe.port-nullify-eol-style-bits port.other-attributes)
+			       (%select-eol-style-from-transcoder who transcoder))
+			      port.buffer.index port.buffer.used-size port.buffer
+			      transcoder port.id
+			      port.read! port.write! port.get-position port.set-position! port.close
+			      port.cookie)))
+	;;If the binary  port accumulates bytes for later  extraction by a
+	;;function, we  flush the  buffer now and  set the buffer  mode to
+	;;none;  this way  the  buffer is  kept  empty by  all the  output
+	;;functions.   This  allows the  original  extraction function  to
+	;;still process correctly the device.
+	(when port.with-extraction?
+	  (%unsafe.flush-output-port port who)
+	  ($set-port-buffer-mode-to-none! transcoded-port))
+	(port.mark-as-closed!)
+	(%port->maybe-guarded-port transcoded-port)))))
 
 (define (port-transcoder port)
   ;;Defined by R6RS.  Return  the transcoder associated with PORT
@@ -3961,10 +3975,12 @@
   ;;returns  false  if  PORT  is  binary  or  does  not  have  an
   ;;associated transcoder.
   ;;
-  (%assert-argument-is-port port 'port-transcoder)
-  (with-port (port)
-    (let ((tr port.transcoder))
-      (and (transcoder? tr) tr))))
+  (define who 'port-transcoder)
+  (with-arguments-validation (who)
+      ((port port))
+    (with-port (port)
+      (let ((tr port.transcoder))
+	(and (transcoder? tr) tr)))))
 
 
 ;;;; closing ports
@@ -3973,8 +3989,9 @@
   ;;Defined  by Ikarus.   Return true  if PORT  has  already been
   ;;closed.
   ;;
-  (%assert-argument-is-port port 'port-closed?)
-  (%unsafe.port-closed? port))
+  (with-arguments-validation ('port-closed?)
+      ((port port))
+    (%unsafe.port-closed? port)))
 
 (define (%unsafe.port-closed? port)
   (with-port (port)
@@ -3989,22 +4006,25 @@
   ;;values.
   ;;
   (define who 'close-port)
-  (%assert-argument-is-port port who)
-  (%unsafe.close-port port who))
+  (with-arguments-validation (who)
+      ((port port))
+    (%unsafe.close-port port who)))
 
 (define (close-input-port port)
   ;;Define by R6RS.  Close an input port.
   ;;
   (define who 'close-input-port)
-  (%assert-value-is-input-port port who)
-  (%unsafe.close-port port who))
+  (with-arguments-validation (who)
+      ((input-port port))
+    (%unsafe.close-port port who)))
 
 (define (close-output-port port)
   ;;Define by R6RS.  Close an output port.
   ;;
   (define who 'close-output-port)
-  (%assert-value-is-output-port port who)
-  (%unsafe.close-port port who))
+  (with-arguments-validation (who)
+      ((output-port port))
+    (%unsafe.close-port port who)))
 
 (define (%unsafe.close-port port who)
   ;;Subroutine     for    CLOSE-PORT,     CLOSE-INPUT-PORT    and
@@ -4028,50 +4048,52 @@
 (define (port-id port)
   ;;Defined by Ikarus.  Return the string identifier of a port.
   ;;
-  (%assert-argument-is-port port 'port-id)
-  (with-port (port)
-    port.id))
+  (define who 'port-id)
+  (with-arguments-validation (who)
+      ((port port))
+    (with-port (port)
+      port.id)))
 
 (define (port-mode port)
   ;;Defined by Ikarus.  The port mode is used only by the reader.
   ;;
-  (%assert-argument-is-port port 'port-mode)
-  (with-port (port)
-    port.mode))
+  (define who 'port-mode)
+  (with-arguments-validation (who)
+      ((port port))
+    (with-port (port)
+      port.mode)))
 
 (define (set-port-mode! port mode)
   ;;Defined by Ikarus.  The port mode is used only by the reader.
   ;;
   (define who 'set-port-mode!)
-  (%assert-argument-is-port port who)
-  (case mode
-    ((r6rs vicare)
-     (with-port (port)
-       (set! port.mode mode)))
-    (else
-     (assertion-violation who "invalid mode" mode))))
+  (with-arguments-validation (who)
+      ((port      port)
+       (port-mode mode))
+    (with-port (port)
+      (set! port.mode mode))))
 
 (define (port-eof? port)
-  ;;Defined by R6RS.   PORT must be an input  port.  Return #t if
-  ;;the LOOKAHEAD-U8 procedure (if PORT  is a binary port) or the
-  ;;LOOKAHEAD-CHAR procedure  (if PORT  is a textual  port) would
-  ;;return the  EOF object, and #f otherwise.   The operation may
-  ;;block  indefinitely if  no  data is  available  but the  port
-  ;;cannot be determined to be at end of file.
+  ;;Defined by  R6RS.  PORT  must be  an input port.   Return #t  if the
+  ;;LOOKAHEAD-U8  procedure   (if  PORT  is   a  binary  port)   or  the
+  ;;LOOKAHEAD-CHAR procedure  (if PORT is  a textual port)  would return
+  ;;the  EOF  object,  and   #f  otherwise.   The  operation  may  block
+  ;;indefinitely  if  no  data  is  available but  the  port  cannot  be
+  ;;determined to be at end of file.
   ;;
   (define who 'port-eof?)
-  (%assert-argument-is-port port who)
-  (%unsafe.assert-value-is-input-port port who)
-  (with-port (port)
-    (%unsafe.assert-value-is-open-port port who)
-    ;;Checking the  buffer status  is the fastest  path to
-    ;;the result.
-    (cond ((unsafe.fx< port.buffer.index port.buffer.used-size)
-	   #f)
-	  (port.transcoder
-	   (eof-object? (lookahead-char port)))
-	  (else
-	   (eof-object? (lookahead-u8 port))))))
+  (with-arguments-validation (who)
+      ((port              port)
+       (unsafe.input-port port)
+       (unsafe.open-port  port))
+    (with-port (port)
+      ;;Checking the buffer status is the fastest path to the result.
+      (cond ((unsafe.fx< port.buffer.index port.buffer.used-size)
+	     #f)
+	    (port.transcoder
+	     (eof-object? (lookahead-char port)))
+	    (else
+	     (eof-object? (lookahead-u8 port)))))))
 
 
 ;;;; buffer mode
@@ -4081,32 +4103,33 @@
   ;;buffer mode of PORT.
   ;;
   (define who 'output-port-buffer-mode)
-  (%assert-value-is-output-port port who)
-  (with-port (port)
-    (cond (port.buffer-mode-line?	'line)
-	  (port.buffer-mode-none?	'none)
-	  (else				'block))))
+  (with-arguments-validation (who)
+      ((output-port port))
+    (with-port (port)
+      (cond (port.buffer-mode-line?	'line)
+	    (port.buffer-mode-none?	'none)
+	    (else			'block)))))
 
 (define (set-port-buffer-mode! port mode)
   ;;Defined by Vicare.  Reset the port buffer mode.
   ;;
   (define who 'set-port-buffer-mode!)
-  (%assert-argument-is-port port who)
-  (with-port (port)
-    (case mode
-      ((line)
-       (if (%unsafe.textual-port? port)
+  (with-arguments-validation (who)
+      ((port port))
+    (with-port (port)
+      (case mode
+	((line)
+	 (with-arguments-validation (who)
+	     ((unsafe.textual-port port))
 	   (set! port.attributes (unsafe.fxior (%unsafe.port-nullify-eol-style-bits port.attributes)
-						BUFFER-MODE-LINE-TAG))
-	 (assertion-violation who
-	   "invalid line buffer mode for binary port" port)))
-      ((none)
-       (set! port.attributes (unsafe.fxior (%unsafe.port-nullify-eol-style-bits port.attributes)
-					    BUFFER-MODE-NONE-TAG)))
-      ((block)
-       (set! port.attributes (%unsafe.port-nullify-eol-style-bits port.attributes)))
-      (else
-       (assertion-violation who "invalid symbol as buffer mode argument" mode)))))
+					       BUFFER-MODE-LINE-TAG))))
+	((none)
+	 (set! port.attributes (unsafe.fxior (%unsafe.port-nullify-eol-style-bits port.attributes)
+					     BUFFER-MODE-NONE-TAG)))
+	((block)
+	 (set! port.attributes (%unsafe.port-nullify-eol-style-bits port.attributes)))
+	(else
+	 (assertion-violation who "invalid symbol as buffer mode argument" mode))))))
 
 
 ;;;; buffer handling for output ports
@@ -4124,10 +4147,11 @@
     ;;See %UNSAFE.FLUSH-OUTPUT-PORT for further details.
     ;;
     (define who who)
-    (%assert-argument-is-port            port who)
-    (%unsafe.assert-value-is-output-port port who)
-    (%unsafe.assert-value-is-open-port   port who)
-    (%unsafe.flush-output-port port who))))
+    (with-arguments-validation (who)
+	((port               port)
+	 (unsafe.output-port port)
+	 (unsafe.open-port   port))
+      (%unsafe.flush-output-port port who)))))
 
 ;;; --------------------------------------------------------------------
 
