@@ -4358,71 +4358,74 @@
   ;;
   ;;This should be the only function calling the port's READ!  function.
   ;;
-  (with-port-having-bytevector-buffer (port)
-    ;;Textual  ports (with  transcoder) can  be built  on top  of binary
-    ;;input  ports; when  this happens:  the underlying  binary  port is
-    ;;closed "in  a special  way" which still  allows the  upper textual
-    ;;port to  access the  device.  If PORT  is such an  underlying port
-    ;;this function must  not be applied to it.   The following check is
-    ;;to avoid such a mistake by internal functions; this mistake should
-    ;;not happen if the functions have no bugs.
-    (%unsafe.assert-value-is-open-port port who)
-    (if (eq? port.read! all-data-in-buffer)
-	0
-      (let ((buffer port.buffer))
-	;;Shift to the beginning data  already in buffer but still to be
-	;;consumed; commit the new position.  Before:
-	;;
-	;;                          cookie.pos
-	;;                              v           device
-	;; |----------------------------+-------------|
-	;;       |**********+###########+---------|
-	;;                  ^           ^       buffer
-	;;                index     used size
-	;;
-	;;after:
-	;;
-	;;                          cookie.pos
-	;;                              v           device
-	;; |----------------------------+-------------|
-	;;                 |+###########+-------------------|
-	;;                  ^           ^                 buffer
-	;;                index     used size
-	;;
-	(let* ((buffer.index	port.buffer.index)
-	       (delta		(unsafe.fx- port.buffer.used-size buffer.index)))
-	  (unless (unsafe.fxzero? delta)
-	    (unsafe.bytevector-copy!/count buffer buffer.index buffer 0 delta))
-	  (set! port.buffer.index     0)
-	  (set! port.buffer.used-size delta))
-	;;Fill the buffer with data from the device.  Before:
-	;;
-	;;                          cookie.pos
-	;;                              v           device
-	;; |----------------------------+-------------|
-	;;                 |+***********+-------------------|
-	;;                  ^           ^                 buffer
-	;;                index     used size
-	;;
-	;;after:
-	;;
-	;;                                        cookie.pos
-	;;                                            v
-	;; |------------------------------------------|device
-	;;                 |+*************************+-----|
-	;;                  ^                         ^   buffer
-	;;                index                   used size
-	;;
-	(let* ((max   (unsafe.fx- port.buffer.size port.buffer.used-size))
-	       (count (port.read! buffer port.buffer.used-size max)))
-	  (unless (fixnum? count)
-	    (assertion-violation who "invalid return value from read! procedure" count))
-	  (unless (and (unsafe.fx>= count 0)
-		       (unsafe.fx<= count max))
-	    (assertion-violation who "read! returned a value out of range" count))
-	  (port.device.position.incr!  count)
-	  (port.buffer.used-size.incr! count)
-	  count)))))
+  (with-arguments-validation (who)
+      ;;Textual ports  (with transcoder) can  be built on top  of binary
+      ;;input ports;  when this happens:  the underlying binary  port is
+      ;;closed "in a  special way" which still allows  the upper textual
+      ;;port to access the device.
+      ;;
+      ;;If PORT  is such  an underlying port  this function must  not be
+      ;;applied to it.   The following check is to  avoid such a mistake
+      ;;by  internal functions; this  mistake should  not happen  if the
+      ;;functions have no bugs.
+      ((unsafe.open-port port))
+    (with-port-having-bytevector-buffer (port)
+      (if (eq? port.read! all-data-in-buffer)
+	  0
+	(let ((buffer port.buffer))
+	  ;;Shift to the  beginning data already in buffer  but still to
+	  ;;be consumed; commit the new position.  Before:
+	  ;;
+	  ;;                          cookie.pos
+	  ;;                              v           device
+	  ;; |----------------------------+-------------|
+	  ;;       |**********+###########+---------|
+	  ;;                  ^           ^       buffer
+	  ;;                index     used size
+	  ;;
+	  ;;after:
+	  ;;
+	  ;;                          cookie.pos
+	  ;;                              v           device
+	  ;; |----------------------------+-------------|
+	  ;;                 |+###########+-------------------|
+	  ;;                  ^           ^                 buffer
+	  ;;                index     used size
+	  ;;
+	  (let* ((buffer.index	port.buffer.index)
+		 (delta		(unsafe.fx- port.buffer.used-size buffer.index)))
+	    (unless (unsafe.fxzero? delta)
+	      (unsafe.bytevector-copy!/count buffer buffer.index buffer 0 delta))
+	    (set! port.buffer.index     0)
+	    (set! port.buffer.used-size delta))
+	  ;;Fill the buffer with data from the device.  Before:
+	  ;;
+	  ;;                          cookie.pos
+	  ;;                              v           device
+	  ;; |----------------------------+-------------|
+	  ;;                 |+***********+-------------------|
+	  ;;                  ^           ^                 buffer
+	  ;;                index     used size
+	  ;;
+	  ;;after:
+	  ;;
+	  ;;                                        cookie.pos
+	  ;;                                            v
+	  ;; |------------------------------------------|device
+	  ;;                 |+*************************+-----|
+	  ;;                  ^                         ^   buffer
+	  ;;                index                   used size
+	  ;;
+	  (let* ((max   (unsafe.fx- port.buffer.size port.buffer.used-size))
+		 (count (port.read! buffer port.buffer.used-size max)))
+	    (unless (fixnum? count)
+	      (assertion-violation who "invalid return value from read! procedure" count))
+	    (unless (and (unsafe.fx>= count 0)
+			 (unsafe.fx<= count max))
+	      (assertion-violation who "read! returned a value out of range" count))
+	    (port.device.position.incr!  count)
+	    (port.buffer.used-size.incr! count)
+	    count))))))
 
 
 ;;;; string buffer handling for input ports
@@ -4509,63 +4512,64 @@
   ;;
   ;;This should be the only function calling the port's READ!  function.
   ;;
-  (with-port-having-string-buffer (port)
-    (%unsafe.assert-value-is-open-port port who)
-    (if (eq? port.read! all-data-in-buffer)
-	0
-      (let ((buffer port.buffer))
-	;;Shift to the beginning data  alraedy in buffer but still to be
-	;;consumed; commit the new position.  Before:
-	;;
-	;;                          cookie.pos
-	;;                              v           device
-	;; |----------------------------+-------------|
-	;;       |**********+###########+---------|
-	;;                  ^           ^       buffer
-	;;                index     used size
-	;;
-	;;after:
-	;;
-	;;                          cookie.pos
-	;;                              v           device
-	;; |----------------------------+-------------|
-	;;                 |+###########+-------------------|
-	;;                  ^           ^                 buffer
-	;;                index     used size
-	;;
-	(let ((delta (unsafe.fx- port.buffer.used-size port.buffer.index)))
-	  (unless (unsafe.fxzero? delta)
-	    (unsafe.string-copy!/count buffer port.buffer.index buffer 0 delta))
-	  (set! port.buffer.index     0)
-	  (set! port.buffer.used-size delta))
-	;;Fill the buffer with data from the device.  Before:
-	;;
-	;;                          cookie.pos
-	;;                              v           device
-	;; |----------------------------+-------------|
-	;;                 |+***********+-------------------|
-	;;                  ^           ^                 buffer
-	;;                index     used size
-	;;
-	;;after:
-	;;
-	;;                                        cookie.pos
-	;;                                            v
-	;; |------------------------------------------|device
-	;;                 |+*************************+-----|
-	;;                  ^                         ^   buffer
-	;;                index                   used size
-	;;
-	(let* ((max   (unsafe.fx- port.buffer.size port.buffer.used-size))
-	       (count (port.read! buffer port.buffer.used-size max)))
-	  (unless (fixnum? count)
-	    (assertion-violation who "invalid return value from read! procedure" count))
-	  (unless (and (unsafe.fx>= count 0)
-		       (unsafe.fx<= count max))
-	    (assertion-violation who "read! returned a value out of range" count))
-	  (port.device.position.incr!  count)
-	  (port.buffer.used-size.incr! count)
-	  count)))))
+  (with-arguments-validation (who)
+      ((unsafe.open-port port))
+    (with-port-having-string-buffer (port)
+      (if (eq? port.read! all-data-in-buffer)
+	  0
+	(let ((buffer port.buffer))
+	  ;;Shift to the  beginning data alraedy in buffer  but still to
+	  ;;be consumed; commit the new position.  Before:
+	  ;;
+	  ;;                          cookie.pos
+	  ;;                              v           device
+	  ;; |----------------------------+-------------|
+	  ;;       |**********+###########+---------|
+	  ;;                  ^           ^       buffer
+	  ;;                index     used size
+	  ;;
+	  ;;after:
+	  ;;
+	  ;;                          cookie.pos
+	  ;;                              v           device
+	  ;; |----------------------------+-------------|
+	  ;;                 |+###########+-------------------|
+	  ;;                  ^           ^                 buffer
+	  ;;                index     used size
+	  ;;
+	  (let ((delta (unsafe.fx- port.buffer.used-size port.buffer.index)))
+	    (unless (unsafe.fxzero? delta)
+	      (unsafe.string-copy!/count buffer port.buffer.index buffer 0 delta))
+	    (set! port.buffer.index     0)
+	    (set! port.buffer.used-size delta))
+	  ;;Fill the buffer with data from the device.  Before:
+	  ;;
+	  ;;                          cookie.pos
+	  ;;                              v           device
+	  ;; |----------------------------+-------------|
+	  ;;                 |+***********+-------------------|
+	  ;;                  ^           ^                 buffer
+	  ;;                index     used size
+	  ;;
+	  ;;after:
+	  ;;
+	  ;;                                        cookie.pos
+	  ;;                                            v
+	  ;; |------------------------------------------|device
+	  ;;                 |+*************************+-----|
+	  ;;                  ^                         ^   buffer
+	  ;;                index                   used size
+	  ;;
+	  (let* ((max   (unsafe.fx- port.buffer.size port.buffer.used-size))
+		 (count (port.read! buffer port.buffer.used-size max)))
+	    (unless (fixnum? count)
+	      (assertion-violation who "invalid return value from read! procedure" count))
+	    (unless (and (unsafe.fx>= count 0)
+			 (unsafe.fx<= count max))
+	      (assertion-violation who "read! returned a value out of range" count))
+	    (port.device.position.incr!  count)
+	    (port.buffer.used-size.incr! count)
+	    count))))))
 
 
 ;;;; byte input functions
@@ -4582,7 +4586,6 @@
   ;;buffer, if the buffer is empty: we call a subroutine.
   ;;
   (define who 'get-u8)
-;;;(%assert-argument-is-port port who)
   (%case-binary-input-port-fast-tag (port who)
     ((FAST-GET-BYTE-TAG)
      (with-port-having-bytevector-buffer (port)
@@ -4601,7 +4604,6 @@
   ;;buffer, if the buffer is empty: we call a subroutine.
   ;;
   (define who 'lookahead-u8)
-;;;(%assert-argument-is-port port who)
   (%case-binary-input-port-fast-tag (port who)
     ((FAST-GET-BYTE-TAG)
      (with-port-having-bytevector-buffer (port)
@@ -4629,7 +4631,6 @@
   ;;a fixnum representing the second octet.
   ;;
   (define who 'lookahead-u8)
-;;;(%assert-argument-is-port port who)
   (define (%maybe-some-data-is-available)
     (with-port-having-bytevector-buffer (port)
       (let* ((buffer.offset-octet0	port.buffer.index)
@@ -4680,7 +4681,6 @@
   ;;IMPLEMENTATION RESTRICTION The COUNT argument must be a fixnum.
   ;;
   (define who 'get-bytevector-n)
-;;;(%assert-argument-is-port port who)
   (%case-binary-input-port-fast-tag (port who)
     ((FAST-GET-BYTE-TAG)
      (with-port-having-bytevector-buffer (port)
@@ -4744,38 +4744,38 @@
   ;;IMPLEMENTATION RESTRICTION The COUNT argument must be a fixnum.
   ;;
   (define who 'get-bytevector-n!)
-;;;(%assert-argument-is-port port who)
   (%case-binary-input-port-fast-tag (port who)
     ((FAST-GET-BYTE-TAG)
-     (with-port-having-bytevector-buffer (port)
-       (%assert-value-is-bytevector dst.bv    who)
+     (with-arguments-validation (who)
+	 ((bytevector dst.bv))
        (%assert-argument-is-fixnum-start-index dst.start who)
        (%assert-argument-is-fixnum-count count who)
        (%unsafe.assert-argument-is-start-index-for-bytevector dst.start dst.bv who)
        (%unsafe.assert-argument-is-count-from-start-in-bytevector count dst.start dst.bv who)
-       (if (zero? count)
-	   count
-	 (let retry-after-filling-buffer ((tmp.start dst.start)
-					  (count     count))
-	   (define (%data-available-in-buffer)
-	     (let* ((buffer.used-size		port.buffer.used-size)
-		    (buffer.offset		port.buffer.index)
-		    (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
-		    (all-count-is-available?	(<= count amount-of-available))
-		    (amount-to-read		(if all-count-is-available? count amount-of-available)))
-	       (unsafe.bytevector-copy!/count port.buffer buffer.offset dst.bv tmp.start amount-to-read)
-	       (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-read))
-	       (let ((tmp.start (+ tmp.start amount-to-read)))
-		 (if all-count-is-available?
-		     (- tmp.start dst.start)
-		   (retry-after-filling-buffer tmp.start (- count amount-to-read))))))
-	   (%maybe-refill-bytevector-buffer-and-evaluate (port who)
-	     (data-is-needed-at: port.buffer.index)
-	     (if-end-of-file: (if (= tmp.start dst.start)
-				  (eof-object)
-				(- tmp.start dst.start)))
-	     (if-successful-refill: (%data-available-in-buffer))
-	     (if-available-data: (%data-available-in-buffer)))))))))
+       (with-port-having-bytevector-buffer (port)
+	 (if (zero? count)
+	     count
+	   (let retry-after-filling-buffer ((tmp.start dst.start)
+					    (count     count))
+	     (define (%data-available-in-buffer)
+	       (let* ((buffer.used-size		port.buffer.used-size)
+		      (buffer.offset		port.buffer.index)
+		      (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
+		      (all-count-is-available?	(<= count amount-of-available))
+		      (amount-to-read		(if all-count-is-available? count amount-of-available)))
+		 (unsafe.bytevector-copy!/count port.buffer buffer.offset dst.bv tmp.start amount-to-read)
+		 (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-read))
+		 (let ((tmp.start (+ tmp.start amount-to-read)))
+		   (if all-count-is-available?
+		       (- tmp.start dst.start)
+		     (retry-after-filling-buffer tmp.start (- count amount-to-read))))))
+	     (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	       (data-is-needed-at: port.buffer.index)
+	       (if-end-of-file: (if (= tmp.start dst.start)
+				    (eof-object)
+				  (- tmp.start dst.start)))
+	       (if-successful-refill: (%data-available-in-buffer))
+	       (if-available-data: (%data-available-in-buffer))))))))))
 
 (define (get-bytevector-some port)
   ;;Defined  by R6RS.   Read from  the  binary input  PORT, blocking  as
@@ -4790,7 +4790,6 @@
   ;;object is returned.
   ;;
   (define who 'get-bytevector-some)
-;;;(%assert-argument-is-port port who)
   (%case-binary-input-port-fast-tag (port who)
     ((FAST-GET-BYTE-TAG)
      (with-port-having-bytevector-buffer (port)
@@ -4821,7 +4820,6 @@
   ;;will become available, even if some bytes are already available.
   ;;
   (define who 'get-bytevector-all)
-;;;(%assert-argument-is-port port who)
   (%case-binary-input-port-fast-tag (port who)
     ((FAST-GET-BYTE-TAG)
      (with-port-having-bytevector-buffer (port)
@@ -4891,7 +4889,6 @@
 
 (define (%do-read-char port who)
   (define-inline (main)
-;;;(%assert-argument-is-port port who)
     (%case-textual-input-port-fast-tag (port who)
       ((FAST-GET-UTF8-TAG)
        (%get-it %unsafe.read-char-from-port-with-fast-get-utf8-tag
@@ -4960,7 +4957,6 @@
 
 (define (%do-peek-char port who)
   (define-inline (main)
-;;;(%assert-argument-is-port port who)
     (%case-textual-input-port-fast-tag (port who)
       ((FAST-GET-UTF8-TAG)
        (%do-it 1
@@ -6026,18 +6022,19 @@
   ;;fixnum.
   ;;
   (define who 'get-string-n)
-  (%assert-argument-is-port port who)
-  (%assert-argument-is-fixnum-count requested-count who)
-  (if (unsafe.fxzero? requested-count)
-      ""
-    (let* ((dst.str	(unsafe.make-string requested-count))
-	   (count	(%unsafe.get-string-n! who port dst.str 0 requested-count)))
-      (cond ((eof-object? count)
-	     count)
-	    ((unsafe.fx= count requested-count)
-	     dst.str)
-	    (else
-	     (substring dst.str 0 count))))))
+  (with-arguments-validation (who)
+      ((port port))
+    (%assert-argument-is-fixnum-count requested-count who)
+    (if (unsafe.fxzero? requested-count)
+	""
+      (let* ((dst.str	(unsafe.make-string requested-count))
+	     (count	(%unsafe.get-string-n! who port dst.str 0 requested-count)))
+	(cond ((eof-object? count)
+	       count)
+	      ((unsafe.fx= count requested-count)
+	       dst.str)
+	      (else
+	       (unsafe.substring dst.str 0 count)))))))
 
 (define (get-string-n! port dst.str dst.start count)
   ;;Defined by  R6RS.  DST.START and COUNT must  be exact, non--negative
@@ -6064,15 +6061,16 @@
   ;;fixnums.
   ;;
   (define who 'get-string-n!)
-  (%assert-argument-is-port port who)
-  (%assert-argument-is-string dst.str who)
-  (%assert-argument-is-fixnum-start-index dst.start who)
-  (%assert-argument-is-fixnum-count count who)
-  (%unsafe.assert-argument-is-start-index-for-string dst.start dst.str who)
-  (%unsafe.assert-argument-is-count-from-start-in-string count dst.start dst.str who)
-  (if (unsafe.fxzero? count)
-      count
-    (%unsafe.get-string-n! who port dst.str dst.start count)))
+  (with-arguments-validation (who)
+      ((port		port)
+       (string		dst.str))
+    (%assert-argument-is-fixnum-start-index dst.start who)
+    (%assert-argument-is-fixnum-count count who)
+    (%unsafe.assert-argument-is-start-index-for-string dst.start dst.str who)
+    (%unsafe.assert-argument-is-count-from-start-in-string count dst.start dst.str who)
+    (if (unsafe.fxzero? count)
+	count
+      (%unsafe.get-string-n! who port dst.str dst.start count))))
 
 (define (get-string-all port)
   ;;Defined by R6RS.   Read from the textual input PORT  until an end of
@@ -6088,24 +6086,25 @@
   ;;is the greatest fixnum.
   ;;
   (define who 'get-string-all)
-  (%assert-argument-is-port port who)
-  (let ((dst.len (string-port-buffer-size)))
-    (let next-buffer-string ((output.len	0)
-			     (output.strs	'())
-			     (dst.str		(unsafe.make-string dst.len)))
-      (let ((count (%unsafe.get-string-n! who port dst.str 0 dst.len)))
-	(cond ((eof-object? count)
-	       (if (null? output.strs)
-		   count
-		 (%unsafe.string-reverse-and-concatenate who output.strs output.len)))
-	      ((unsafe.fx= count dst.len)
-	       (next-buffer-string (unsafe.fx+ output.len dst.len)
-				   (cons dst.str output.strs)
-				   (unsafe.make-string dst.len)))
-	      (else
-	       (%unsafe.string-reverse-and-concatenate who
-						       (cons (substring dst.str 0 count) output.strs)
-						       (unsafe.fx+ count output.len))))))))
+  (with-arguments-validation (who)
+      ((port port))
+    (let ((dst.len (string-port-buffer-size)))
+      (let next-buffer-string ((output.len	0)
+			       (output.strs	'())
+			       (dst.str		(unsafe.make-string dst.len)))
+	(let ((count (%unsafe.get-string-n! who port dst.str 0 dst.len)))
+	  (cond ((eof-object? count)
+		 (if (null? output.strs)
+		     count
+		   (%unsafe.string-reverse-and-concatenate who output.strs output.len)))
+		((unsafe.fx= count dst.len)
+		 (next-buffer-string (unsafe.fx+ output.len dst.len)
+				     (cons dst.str output.strs)
+				     (unsafe.make-string dst.len)))
+		(else
+		 (%unsafe.string-reverse-and-concatenate who
+							 (cons (substring dst.str 0 count) output.strs)
+							 (unsafe.fx+ count output.len)))))))))
 
 
 ;;;; string line input
@@ -6142,7 +6141,6 @@
 
 (define (%do-get-line port who)
   (define-inline (main)
-;;;(%assert-argument-is-port port who)
     (%case-textual-input-port-fast-tag (port who)
       ((FAST-GET-UTF8-TAG)
        (%get-it %unsafe.read-char-from-port-with-fast-get-utf8-tag
@@ -6219,24 +6217,24 @@
   ;;unspecified values.
   ;;
   (define who 'put-u8)
-;;;(%assert-argument-is-port port who)
   (%case-binary-output-port-fast-tag (port who)
     ((FAST-PUT-BYTE-TAG)
-     (with-port-having-bytevector-buffer (port)
-       (%assert-argument-is-an-octet octet who)
-       (%flush-bytevector-buffer-and-evaluate (port who)
-	 (room-is-needed-for: 1)
-	 (if-available-room:
-	  (let* ((buffer.index		port.buffer.index)
-		 (buffer.past		(unsafe.fxadd1 buffer.index))
-		 (buffer.used-size	port.buffer.used-size))
-	    (debug-assert (<= buffer.index buffer.used-size))
-	    (unsafe.bytevector-u8-set! port.buffer buffer.index octet)
-	    (when (unsafe.fx= buffer.index buffer.used-size)
-	      (set! port.buffer.used-size buffer.past))
-	    (set! port.buffer.index buffer.past))))
-       (when port.buffer-mode-none?
-	 (%unsafe.flush-output-port port who))))))
+     (with-arguments-validation (who)
+	 ((octet octet))
+       (with-port-having-bytevector-buffer (port)
+	 (%flush-bytevector-buffer-and-evaluate (port who)
+	   (room-is-needed-for: 1)
+	   (if-available-room:
+	    (let* ((buffer.index	port.buffer.index)
+		   (buffer.past		(unsafe.fxadd1 buffer.index))
+		   (buffer.used-size	port.buffer.used-size))
+	      (debug-assert (<= buffer.index buffer.used-size))
+	      (unsafe.bytevector-u8-set! port.buffer buffer.index octet)
+	      (when (unsafe.fx= buffer.index buffer.used-size)
+		(set! port.buffer.used-size buffer.past))
+	      (set! port.buffer.index buffer.past))))
+	 (when port.buffer-mode-none?
+	   (%unsafe.flush-output-port port who)))))))
 
 (define put-bytevector
   ;;Defined by R6RS.  START and COUNT must be non-negative exact integer
@@ -6252,31 +6250,31 @@
   (case-lambda
    ((port bv)
     (define who 'put-bytevector)
-;;;(%assert-argument-is-port port who)
     (%case-binary-output-port-fast-tag (port who)
       ((FAST-PUT-BYTE-TAG)
-       (%assert-value-is-bytevector bv who)
-       (%unsafe.put-bytevector port bv 0 (unsafe.bytevector-length bv) who))))
+       (with-arguments-validation (who)
+	   ((bytevector bv))
+	 (%unsafe.put-bytevector port bv 0 (unsafe.bytevector-length bv) who)))))
    ((port bv start)
     (define who 'put-bytevector)
-;;;(%assert-argument-is-port port who)
     (%case-binary-output-port-fast-tag (port who)
       ((FAST-PUT-BYTE-TAG)
-       (%assert-value-is-bytevector bv who)
-       (%assert-argument-is-fixnum-start-index start who)
-       (%unsafe.assert-argument-is-start-index-for-bytevector start bv who)
-       (%unsafe.put-bytevector port bv start (unsafe.fx- (unsafe.bytevector-length bv) start) who))))
+       (with-arguments-validation (who)
+	   ((bytevector bv))
+	 (%assert-argument-is-fixnum-start-index start who)
+	 (%unsafe.assert-argument-is-start-index-for-bytevector start bv who)
+	 (%unsafe.put-bytevector port bv start (unsafe.fx- (unsafe.bytevector-length bv) start) who)))))
    ((port bv start count)
     (define who 'put-bytevector)
-;;;(%assert-argument-is-port port who)
     (%case-binary-output-port-fast-tag (port who)
       ((FAST-PUT-BYTE-TAG)
-       (%assert-value-is-bytevector bv who)
-       (%assert-argument-is-fixnum-start-index start who)
-       (%unsafe.assert-argument-is-start-index-for-bytevector start bv who)
-       (%assert-argument-is-fixnum-count count who)
-       (%unsafe.assert-argument-is-count-from-start-in-bytevector count start bv who)
-       (%unsafe.put-bytevector port bv start count who))))))
+       (with-arguments-validation (who)
+	   ((bytevector bv))
+	 (%assert-argument-is-fixnum-start-index start who)
+	 (%unsafe.assert-argument-is-start-index-for-bytevector start bv who)
+	 (%assert-argument-is-fixnum-count count who)
+	 (%unsafe.assert-argument-is-count-from-start-in-bytevector count start bv who)
+	 (%unsafe.put-bytevector port bv start count who)))))))
 
 (define (%unsafe.put-bytevector port src.bv src.start count who)
   ;;Write COUNT  bytes from the  bytevector SRC.BV to the  binary output
@@ -6334,153 +6332,154 @@
   (%do-put-char port ch 'put-char))
 
 (define (%do-put-char port ch who)
-  (%assert-argument-is-port port who)
-  (%assert-argument-is-char ch   who)
-  (let* ((code-point	(unsafe.char->fixnum ch))
-	 (newline?	(unsafe.fx= code-point LINEFEED-CODE-POINT))
-	 (eol-bits	(%unsafe.port-eol-style-bits port)))
-    (%case-textual-output-port-fast-tag (port who)
-      ((FAST-PUT-UTF8-TAG)
-       (if newline?
-	   (%case-eol-style (eol-bits who)
-	     ((EOL-LINEFEED-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf8-tag port ch code-point who))
-	     ((EOL-CARRIAGE-RETURN-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf8-tag
-	       port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who))
-	     ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf8-tag
-	       port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
-	      (%unsafe.put-char-to-port-with-fast-utf8-tag
-	       port LINEFEED-CHAR LINEFEED-CODE-POINT who))
-	     ((EOL-NEXT-LINE-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf8-tag
-	       port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who))
-	     ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf8-tag
-	       port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
-	      (%unsafe.put-char-to-port-with-fast-utf8-tag
-	       port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who))
-	     ((EOL-LINE-SEPARATOR-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf8-tag
-	       port LINE-SEPARATOR-CHAR LINE-SEPARATOR-CODE-POINT who))
-	     (else
-	      (%unsafe.put-char-to-port-with-fast-utf8-tag port ch code-point who)))
-	 (%unsafe.put-char-to-port-with-fast-utf8-tag port ch code-point who)))
+  (with-arguments-validation (who)
+      ((port port)
+       (char ch))
+    (let* ((code-point	(unsafe.char->fixnum ch))
+	   (newline?	(unsafe.fx= code-point LINEFEED-CODE-POINT))
+	   (eol-bits	(%unsafe.port-eol-style-bits port)))
+      (%case-textual-output-port-fast-tag (port who)
+	((FAST-PUT-UTF8-TAG)
+	 (if newline?
+	     (%case-eol-style (eol-bits who)
+	       ((EOL-LINEFEED-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf8-tag port ch code-point who))
+	       ((EOL-CARRIAGE-RETURN-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf8-tag
+		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who))
+	       ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf8-tag
+		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
+		(%unsafe.put-char-to-port-with-fast-utf8-tag
+		 port LINEFEED-CHAR LINEFEED-CODE-POINT who))
+	       ((EOL-NEXT-LINE-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf8-tag
+		 port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who))
+	       ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf8-tag
+		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
+		(%unsafe.put-char-to-port-with-fast-utf8-tag
+		 port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who))
+	       ((EOL-LINE-SEPARATOR-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf8-tag
+		 port LINE-SEPARATOR-CHAR LINE-SEPARATOR-CODE-POINT who))
+	       (else
+		(%unsafe.put-char-to-port-with-fast-utf8-tag port ch code-point who)))
+	   (%unsafe.put-char-to-port-with-fast-utf8-tag port ch code-point who)))
 
-      ((FAST-PUT-CHAR-TAG)
-       (if newline?
-	   (%case-eol-style (eol-bits who)
-	     ((EOL-LINEFEED-TAG)
-	      (%unsafe.put-char-to-port-with-fast-char-tag port ch code-point who))
-	     ((EOL-CARRIAGE-RETURN-TAG)
-	      (%unsafe.put-char-to-port-with-fast-char-tag
-	       port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who))
-	     ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-	      (%unsafe.put-char-to-port-with-fast-char-tag
-	       port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
-	      (%unsafe.put-char-to-port-with-fast-char-tag
-	       port LINEFEED-CHAR LINEFEED-CODE-POINT who))
-	     ((EOL-NEXT-LINE-TAG)
-	      (%unsafe.put-char-to-port-with-fast-char-tag
-	       port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who))
-	     ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-	      (%unsafe.put-char-to-port-with-fast-char-tag
-	       port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
-	      (%unsafe.put-char-to-port-with-fast-char-tag
-	       port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who))
-	     ((EOL-LINE-SEPARATOR-TAG)
-	      (%unsafe.put-char-to-port-with-fast-char-tag
-	       port LINE-SEPARATOR-CHAR LINE-SEPARATOR-CODE-POINT who))
-	     (else
-	      (%unsafe.put-char-to-port-with-fast-char-tag port ch code-point who)))
-	 (%unsafe.put-char-to-port-with-fast-char-tag port ch code-point who)))
+	((FAST-PUT-CHAR-TAG)
+	 (if newline?
+	     (%case-eol-style (eol-bits who)
+	       ((EOL-LINEFEED-TAG)
+		(%unsafe.put-char-to-port-with-fast-char-tag port ch code-point who))
+	       ((EOL-CARRIAGE-RETURN-TAG)
+		(%unsafe.put-char-to-port-with-fast-char-tag
+		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who))
+	       ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+		(%unsafe.put-char-to-port-with-fast-char-tag
+		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
+		(%unsafe.put-char-to-port-with-fast-char-tag
+		 port LINEFEED-CHAR LINEFEED-CODE-POINT who))
+	       ((EOL-NEXT-LINE-TAG)
+		(%unsafe.put-char-to-port-with-fast-char-tag
+		 port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who))
+	       ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+		(%unsafe.put-char-to-port-with-fast-char-tag
+		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
+		(%unsafe.put-char-to-port-with-fast-char-tag
+		 port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who))
+	       ((EOL-LINE-SEPARATOR-TAG)
+		(%unsafe.put-char-to-port-with-fast-char-tag
+		 port LINE-SEPARATOR-CHAR LINE-SEPARATOR-CODE-POINT who))
+	       (else
+		(%unsafe.put-char-to-port-with-fast-char-tag port ch code-point who)))
+	   (%unsafe.put-char-to-port-with-fast-char-tag port ch code-point who)))
 
-      ((FAST-PUT-LATIN-TAG)
-       (if newline?
-	   (%case-eol-style (eol-bits who)
-	     ((EOL-LINEFEED-TAG)
-	      (%unsafe.put-char-to-port-with-fast-latin1-tag port ch code-point who))
-	     ((EOL-CARRIAGE-RETURN-TAG)
-	      (%unsafe.put-char-to-port-with-fast-latin1-tag
-	       port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who))
-	     ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-	      (%unsafe.put-char-to-port-with-fast-latin1-tag
-	       port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
-	      (%unsafe.put-char-to-port-with-fast-latin1-tag
-	       port LINEFEED-CHAR LINEFEED-CODE-POINT who))
-	     ((EOL-NEXT-LINE-TAG)
-	      (assertion-violation who
-		"EOL style NEL unsupported by Latin-1 codecs" port))
-	     ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-	      (assertion-violation who
-		"EOL style CRNEL unsupported by Latin-1 codecs" port))
-	     ((EOL-LINE-SEPARATOR-TAG)
-	      (assertion-violation who
-		"EOL style LS unsupported by Latin-1 transcoders" port))
-	     (else
-	      (%unsafe.put-char-to-port-with-fast-latin1-tag port ch code-point who)))
-	 (%unsafe.put-char-to-port-with-fast-latin1-tag port ch code-point who)))
+	((FAST-PUT-LATIN-TAG)
+	 (if newline?
+	     (%case-eol-style (eol-bits who)
+	       ((EOL-LINEFEED-TAG)
+		(%unsafe.put-char-to-port-with-fast-latin1-tag port ch code-point who))
+	       ((EOL-CARRIAGE-RETURN-TAG)
+		(%unsafe.put-char-to-port-with-fast-latin1-tag
+		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who))
+	       ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+		(%unsafe.put-char-to-port-with-fast-latin1-tag
+		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
+		(%unsafe.put-char-to-port-with-fast-latin1-tag
+		 port LINEFEED-CHAR LINEFEED-CODE-POINT who))
+	       ((EOL-NEXT-LINE-TAG)
+		(assertion-violation who
+		  "EOL style NEL unsupported by Latin-1 codecs" port))
+	       ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+		(assertion-violation who
+		  "EOL style CRNEL unsupported by Latin-1 codecs" port))
+	       ((EOL-LINE-SEPARATOR-TAG)
+		(assertion-violation who
+		  "EOL style LS unsupported by Latin-1 transcoders" port))
+	       (else
+		(%unsafe.put-char-to-port-with-fast-latin1-tag port ch code-point who)))
+	   (%unsafe.put-char-to-port-with-fast-latin1-tag port ch code-point who)))
 
-      ((FAST-PUT-UTF16LE-TAG)
-       (if newline?
-	   (%case-eol-style (eol-bits who)
-	     ((EOL-LINEFEED-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'little))
-	     ((EOL-CARRIAGE-RETURN-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag
-	       port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'little))
-	     ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag
-	       port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'little)
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag
-	       port LINEFEED-CHAR LINEFEED-CODE-POINT who 'little))
-	     ((EOL-NEXT-LINE-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag
-	       port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who 'little))
-	     ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag
-	       port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'little)
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag
-	       port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who 'little))
-	     ((EOL-LINE-SEPARATOR-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag
-	       port LINE-SEPARATOR-CHAR LINE-SEPARATOR-CODE-POINT who 'little))
-	     (else
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'little)))
-	 (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'little)))
+	((FAST-PUT-UTF16LE-TAG)
+	 (if newline?
+	     (%case-eol-style (eol-bits who)
+	       ((EOL-LINEFEED-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'little))
+	       ((EOL-CARRIAGE-RETURN-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'little))
+	       ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'little)
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		 port LINEFEED-CHAR LINEFEED-CODE-POINT who 'little))
+	       ((EOL-NEXT-LINE-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		 port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who 'little))
+	       ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'little)
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		 port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who 'little))
+	       ((EOL-LINE-SEPARATOR-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		 port LINE-SEPARATOR-CHAR LINE-SEPARATOR-CODE-POINT who 'little))
+	       (else
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'little)))
+	   (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'little)))
 
-      ((FAST-PUT-UTF16BE-TAG)
-       (if newline?
-	   (%case-eol-style (eol-bits who)
-	     ((EOL-LINEFEED-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'big))
-	     ((EOL-CARRIAGE-RETURN-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag
-	       port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'big))
-	     ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag
-	       port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'big)
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag
-	       port LINEFEED-CHAR LINEFEED-CODE-POINT who 'big))
-	     ((EOL-NEXT-LINE-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag
-	       port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who 'big))
-	     ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag
-	       port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'big)
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag
-	       port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who 'big))
-	     ((EOL-LINE-SEPARATOR-TAG)
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag
-	       port LINE-SEPARATOR-CHAR LINE-SEPARATOR-CODE-POINT who 'big))
-	     (else
-	      (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'big)))
-	 (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'big))))
+	((FAST-PUT-UTF16BE-TAG)
+	 (if newline?
+	     (%case-eol-style (eol-bits who)
+	       ((EOL-LINEFEED-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'big))
+	       ((EOL-CARRIAGE-RETURN-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'big))
+	       ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'big)
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		 port LINEFEED-CHAR LINEFEED-CODE-POINT who 'big))
+	       ((EOL-NEXT-LINE-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		 port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who 'big))
+	       ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'big)
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		 port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who 'big))
+	       ((EOL-LINE-SEPARATOR-TAG)
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		 port LINE-SEPARATOR-CHAR LINE-SEPARATOR-CODE-POINT who 'big))
+	       (else
+		(%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'big)))
+	   (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'big))))
 
-    (when (or (%unsafe.port-buffer-mode-none? port)
-	      (and newline? (%unsafe.port-buffer-mode-line? port)))
-      (%unsafe.flush-output-port port who))))
+      (when (or (%unsafe.port-buffer-mode-none? port)
+		(and newline? (%unsafe.port-buffer-mode-line? port)))
+	(%unsafe.flush-output-port port who)))))
 
 ;;; --------------------------------------------------------------------
 ;;; PUT-CHAR for port with string buffer
@@ -6718,25 +6717,28 @@
   (case-lambda
    ((port str)
     (define who 'put-string)
-    (%assert-argument-is-port port who)
-    (%assert-argument-is-string str who)
-    (%unsafe.put-string port str 0 (unsafe.string-length str) who))
+    (with-arguments-validation (who)
+	((port   port)
+	 (string str))
+      (%unsafe.put-string port str 0 (unsafe.string-length str) who)))
    ((port str start)
     (define who 'put-string)
-    (%assert-argument-is-port port who)
-    (%assert-argument-is-string str who)
-    (%assert-argument-is-fixnum-start-index start who)
-    (%unsafe.assert-argument-is-start-index-for-string start str who)
-    (%unsafe.put-string port str start (unsafe.fx- (unsafe.string-length str) start) who))
+    (with-arguments-validation (who)
+	((port		port)
+	 (string	str))
+      (%assert-argument-is-fixnum-start-index start who)
+      (%unsafe.assert-argument-is-start-index-for-string start str who)
+      (%unsafe.put-string port str start (unsafe.fx- (unsafe.string-length str) start) who)))
    ((port str start count)
     (define who 'put-string)
-    (%assert-argument-is-port port who)
-    (%assert-argument-is-string str who)
-    (%assert-argument-is-fixnum-start-index start who)
-    (%unsafe.assert-argument-is-start-index-for-string start str who)
-    (%assert-argument-is-fixnum-count count who)
-    (%unsafe.assert-argument-is-count-from-start-in-string count start str who)
-    (%unsafe.put-string port str start count who))))
+    (with-arguments-validation (who)
+	((port		port)
+	 (string	str))
+      (%assert-argument-is-fixnum-start-index start who)
+      (%unsafe.assert-argument-is-start-index-for-string start str who)
+      (%assert-argument-is-fixnum-count count who)
+      (%unsafe.assert-argument-is-count-from-start-in-string count start str who)
+      (%unsafe.put-string port str start count who)))))
 
 (define (%unsafe.put-string port src.str src.start count who)
   (define-inline (%put-it ?buffer-mode-line ?eol-bits ?put-char)
