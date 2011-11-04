@@ -6440,6 +6440,38 @@ primitive.  For example, for @func{getpid} add:
 @section Internals: handling @code{errno} codes
 
 
+@value{PRJNAME} makes use of the platform's own @code{errno} codes; they
+are negated to make them different from file descriptors, and so
+distinguishable when used as single return values from C functions, and
+converted to fixnums.
+
+
+@deftypefun ikptr ik_errno_to_code (void)
+Negate the current @code{errno} value and convert it into a fixnum,
+return the result.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_strerror (ikptr @var{ec}, ikpcb * @var{pcb})
+Interface to the @cfunc{strerror} C function.  @glibcref{Error Messages,
+strerror}.
+
+Convert a negative fixnum, representing a negated @code{errno} code,
+into a bytevector holding the string message which describes it; return
+a reference to the bytevector.  If @var{ec} is invalid: return
+@code{false_object}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_last_errno (ikpcb * pcb)
+Return a fixnum representing the negated value of @code{errno} right
+after the last call to a foreign function through the @ffi{}.
+@end deftypefun
+
+
+@ignore
+This is the documentation for the old Ikarus code.
+
 @deftypefun ikptr ik_errno_to_code (void)
 Apply @cfunc{ik_errno_num_to_code} to the current @code{errno} value.
 @end deftypefun
@@ -6475,6 +6507,7 @@ reference to the bytevector.  If @var{ec} is invalid: return
 Return an exact integer representing the value of @code{errno} right
 after the last call to a foreign function through the @ffi{}.
 @end deftypefun
+@end ignore
 
 @c page
 @node posix int fd

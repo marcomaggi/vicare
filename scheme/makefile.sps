@@ -143,6 +143,7 @@
     "ikarus.symbol-table.sls"
     "ikarus.codecs.sls"
     "ikarus.bytevectors.sls"
+    "ikarus.errno.sls"
     "ikarus.posix.sls"
     "ikarus.io.sls"
     "ikarus.hash-tables.sls"
@@ -1724,6 +1725,7 @@
     (free					$for)
     (memcpy					$for)
     (errno					$for)
+    (errno->string				$for)
     (pointer-ref-c-signed-char			$for)
     (pointer-ref-c-signed-short			$for)
     (pointer-ref-c-signed-int			$for)

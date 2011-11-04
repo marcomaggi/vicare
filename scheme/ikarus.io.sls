@@ -596,8 +596,7 @@
 	    unsafe.)
     (vicare unsafe-unicode)
     (vicare unsafe-capi)
-    (only (vicare errno)
-	  case-errno))
+    (vicare errno))
 
 
 ;;;; emergency debugging
@@ -6589,19 +6588,6 @@
 
 ;;;; platform I/O error handling
 
-;;Notice that  the following are the  codes normalised to  the values in
-;;POSIX IEEE  Std 1003.1 2004 Edition,  which may be  different from the
-;;ones of  the underlying  platform.  In particular  these codes  may be
-;;different from the ones exported by the (vicare errno) library.
-;;
-(define ERRNO-CODE-EAGAIN	(normalised-errno-EAGAIN))
-(define ERRNO-CODE-EACCES	(normalised-errno-EACCES))
-(define ERRNO-CODE-EFAULT	(normalised-errno-EFAULT))
-(define ERRNO-CODE-EROFS	(normalised-errno-EROFS))
-(define ERRNO-CODE-EEXIST	(normalised-errno-EEXIST))
-(define ERRNO-CODE-EIO		(normalised-errno-EIO))
-(define ERRNO-CODE-ENOENT	(normalised-errno-ENOENT))
-
 (define (%raise-eagain-error who port)
   ;;Raise an exception to signal  that a system call was interrupted and
   ;;returned the EAGAIN errno code.
@@ -6609,7 +6595,7 @@
   (raise
    (condition (make-i/o-eagain)
 	      (make-who-condition who)
-	      (make-message-condition (strerror ERRNO-CODE-EAGAIN))
+	      (make-message-condition (strerror EAGAIN))
 	      (if port
 		  (make-i/o-port-error port)
 		(condition)))))
@@ -6625,15 +6611,15 @@
 		(make-who-condition who)
 		(make-message-condition (strerror errno))
 		(case-errno errno
-		  ((ERRNO-CODE-EACCES ERRNO-CODE-EFAULT) ;why is EFAULT included here?
+		  ((EACCES EFAULT) ;why is EFAULT included here?
 		   (make-i/o-file-protection-error port-identifier))
-		  ((ERRNO-CODE-EROFS)
+		  ((EROFS)
 		   (make-i/o-file-is-read-only-error port-identifier))
-		  ((ERRNO-CODE-EEXIST)
+		  ((EEXIST)
 		   (make-i/o-file-already-exists-error port-identifier))
-		  ((ERRNO-CODE-EIO)
+		  ((EIO)
 		   (make-i/o-error))
-		  ((ERRNO-CODE-ENOENT)
+		  ((ENOENT)
 		   (make-i/o-file-does-not-exist-error port-identifier))
 		  (else
 		   (if port-identifier
@@ -6734,7 +6720,7 @@
     (let ((count (platform-read-fd fd dst.bv dst.start requested-count)))
       (cond ((unsafe.fx>= count 0)
 	     count)
-	    ((unsafe.fx= count ERRNO-CODE-EAGAIN)
+	    ((unsafe.fx= count EAGAIN)
 	     (%raise-eagain-error who #f))
 	    (else
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
@@ -6781,7 +6767,7 @@
     (let ((count (platform-write-fd fd src.bv src.start requested-count)))
       (cond ((unsafe.fx>= count 0)
 	     count)
-	    ((unsafe.fx= count ERRNO-CODE-EAGAIN)
+	    ((unsafe.fx= count EAGAIN)
 	     (%raise-eagain-error who #f))
 	    (else
 	     (%raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
@@ -6827,7 +6813,7 @@
     (let ((count (platform-read-fd fd dst.bv dst.start requested-count)))
       (cond ((unsafe.fx>= count 0)
 	     count)
-	    ((unsafe.fx= count ERRNO-CODE-EAGAIN)
+	    ((unsafe.fx= count EAGAIN)
 	     (%raise-eagain-error who #f))
 	    (else
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
@@ -6836,7 +6822,7 @@
     (let ((count (platform-write-fd fd src.bv src.start requested-count)))
       (cond ((unsafe.fx>= count 0)
 	     count)
-	    ((unsafe.fx= count ERRNO-CODE-EAGAIN)
+	    ((unsafe.fx= count EAGAIN)
 	     (%raise-eagain-error who #f))
 	    (else
 	     (%raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
@@ -7417,7 +7403,7 @@
       (assertion-violation who "server is closed" s))
     (let ((sock (foreign-call "ikrt_accept" fd bv)))
       (cond
-       ((eq? sock ERRNO-CODE-EAGAIN)
+       ((eq? sock EAGAIN)
 	(call/cc
 	    (lambda (k)
 	      (add-io-event fd k 'r)

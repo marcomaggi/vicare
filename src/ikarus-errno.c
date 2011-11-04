@@ -1,19 +1,19 @@
 /*
- *  Ikarus Scheme -- A compiler for R6RS Scheme.
- *  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
- *  Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+ * Ikarus Scheme -- A compiler for R6RS Scheme.
+ * Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+ * Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
  *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 3 as
- *  published by the Free Software Foundation.
+ * This program is free software:  you can redistribute it and/or modify
+ * it under  the terms of  the GNU General  Public License version  3 as
+ * published by the Free Software Foundation.
  *
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ * This program is  distributed in the hope that it  will be useful, but
+ * WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+ * MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+ * General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * You should  have received  a copy of  the GNU General  Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 
@@ -21,6 +21,40 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ikarus-data.h"
+
+ikptr
+ik_errno_to_code (void)
+/* Negate the current errno value and convert it into a fixnum. */
+{
+  int en = - errno;
+  return fix(en);
+}
+ikptr
+ikrt_strerror(ikptr negated_errno_code, ikpcb* pcb)
+{
+  int   code = - unfix(negated_errno_code);
+  errno = 0;
+  char* es = strerror(code);
+  if (errno) {
+    return false_object;
+  } else {
+    int   len = strlen(es);
+    ikptr bv  = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1))
+      + bytevector_tag;
+    ref(bv, off_bytevector_length) = fix(len);
+    memcpy((char*)(bv+off_bytevector_data), es, len+1);
+    return bv;
+  }
+}
+
+
+#if 0
+/* The  following is  the  original code  in  Ikarus' distribution.   It
+   converts  the platform's  errno codes  into normalised  negated codes
+   from POSIX IEEE Std 1003.1  2004 Edition.  It was really fascinating,
+   but  was it  good?  With  the new  code above  we use  the platform's
+   codes, and  rely on  the external library  (vicare errno)  to provide
+   symbols for many errno codes.  (Marco Maggi; Nov 4, 2011) */
 
 typedef struct errno_info {
   int n;
@@ -188,8 +222,6 @@ ik_errno_ENOENT (void)
 {
   return ik_errno_num_to_code(ENOENT);
 }
-
-
 ikptr
 ikrt_errno_code_to_name(ikptr ec, ikpcb* pcb){
   /* Used by Scheme to get the name of the errno corresponding
@@ -235,4 +267,6 @@ ikrt_strerror(ikptr ec, ikpcb* pcb){
   }
   return false_object;
 }
+#endif
 
+/* end of file */
