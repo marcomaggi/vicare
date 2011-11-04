@@ -7208,30 +7208,33 @@
 
    ((filename file-options buffer-mode maybe-transcoder)
     (define who 'open-file-input-port)
-    (%assert-argument-is-filename filename who)
-    (%assert-argument-is-file-options file-options who)
-    (%assert-argument-is-maybe-transcoder maybe-transcoder who)
-    (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
-	   (other-attributes	buffer-mode-attrs)
-	   (fd			(%open-input-file-descriptor filename file-options who))
-	   (port-identifier	filename)
-	   (buffer-size		(input-file-buffer-size))
-	   (close-function	#t))
-      (%file-descriptor->input-port fd other-attributes port-identifier buffer-size
-				    maybe-transcoder close-function who)))))
+    (with-arguments-validation (who)
+	((filename		filename)
+	 (file-options		file-options)
+	 (maybe-transcoder	maybe-transcoder))
+      (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
+	     (other-attributes	buffer-mode-attrs)
+	     (fd		(%open-input-file-descriptor filename file-options who))
+	     (port-identifier	filename)
+	     (buffer-size	(input-file-buffer-size))
+	     (close-function	#t))
+	(%file-descriptor->input-port fd other-attributes port-identifier buffer-size
+				      maybe-transcoder close-function who))))))
 
 (define (%open-input-file-with-defaults filename who)
   ;;Open FILENAME  for input, with  empty file options, and  returns the
   ;;obtained port.
   ;;
-  (%assert-argument-is-filename filename who)
-  (let ((fd			(%open-input-file-descriptor filename (file-options) who))
-	(other-attributes	0)
-	(port-id		filename)
-	(buffer.size		(input-file-buffer-size))
-	(transcoder		(native-transcoder))
-	(close-function		#t))
-    (%file-descriptor->input-port fd other-attributes port-id buffer.size transcoder close-function who)))
+  (with-arguments-validation (who)
+      ((filename filename))
+    (let ((fd			(%open-input-file-descriptor filename (file-options) who))
+	  (other-attributes	0)
+	  (port-id		filename)
+	  (buffer.size		(input-file-buffer-size))
+	  (transcoder		(native-transcoder))
+	  (close-function	#t))
+      (%file-descriptor->input-port fd other-attributes port-id buffer.size
+				    transcoder close-function who))))
 
 (define (open-input-file filename)
   ;;Defined by  R6RS.  Open FILENAME  for input, with  empty file
@@ -7260,13 +7263,14 @@
   ;;unspecified.
   ;;
   (define who 'with-input-from-file)
-  (%assert-argument-is-filename filename who)
-  (%assert-argument-is-procedure  thunk    who)
-  (call-with-port
-      (%open-input-file-with-defaults filename who)
-    (lambda (port)
-      (parameterize ((current-input-port port))
-	(thunk)))))
+  (with-arguments-validation (who)
+      ((filename   filename)
+       (procedure  thunk))
+    (call-with-port
+	(%open-input-file-with-defaults filename who)
+      (lambda (port)
+	(parameterize ((current-input-port port))
+	  (thunk))))))
 
 (define (call-with-input-file filename proc)
   ;;Defined by R6RS.  PROC should accept one argument.
@@ -7283,9 +7287,10 @@
   ;;used for an I/O operation.
   ;;
   (define who 'call-with-input-file)
-  (%assert-argument-is-filename filename who)
-  (%assert-argument-is-procedure  proc  who)
-  (call-with-port (%open-input-file-with-defaults filename who) proc))
+  (with-arguments-validation (who)
+      ((filename   filename)
+       (procedure  proc))
+    (call-with-port (%open-input-file-with-defaults filename who) proc)))
 
 
 ;;;; output ports wrapping platform file descriptors
@@ -7326,29 +7331,32 @@
 
    ((filename file-options buffer-mode maybe-transcoder)
     (define who 'open-file-output-port)
-    (%assert-argument-is-filename filename who)
-    (%assert-argument-is-file-options file-options who)
-    (%assert-argument-is-maybe-transcoder maybe-transcoder who)
-    (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
-	   (other-attributes	buffer-mode-attrs)
-	   (fd			(%open-output-file-descriptor filename file-options who))
-	   (port-identifier	filename)
-	   (buffer-size		(output-file-buffer-size)))
-      (%file-descriptor->output-port fd other-attributes port-identifier
-				     buffer-size maybe-transcoder #t who)))))
+    (with-arguments-validation (who)
+	((filename		filename)
+	 (file-options		file-options)
+	 (maybe-transcoder	maybe-transcoder))
+      (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
+	     (other-attributes	buffer-mode-attrs)
+	     (fd		(%open-output-file-descriptor filename file-options who))
+	     (port-identifier	filename)
+	     (buffer-size	(output-file-buffer-size)))
+	(%file-descriptor->output-port fd other-attributes port-identifier
+				       buffer-size maybe-transcoder #t who))))))
 
 (define (%open-output-file-with-defaults filename who)
   ;;Open FILENAME  for output, with  empty file options, and  return the
   ;;obtained port.
   ;;
-  (%assert-argument-is-filename filename who)
-  (let ((fd			(%open-output-file-descriptor filename (file-options) who))
-	(other-attributes	0)
-	(port-id		filename)
-	(buffer.size		(output-file-buffer-size))
-	(transcoder		(native-transcoder))
-	(close-function		#t))
-    (%file-descriptor->output-port fd other-attributes port-id buffer.size transcoder close-function who)))
+  (with-arguments-validation (who)
+      ((filename filename))
+    (let ((fd			(%open-output-file-descriptor filename (file-options) who))
+	  (other-attributes	0)
+	  (port-id		filename)
+	  (buffer.size		(output-file-buffer-size))
+	  (transcoder		(native-transcoder))
+	  (close-function	#t))
+      (%file-descriptor->output-port fd other-attributes port-id buffer.size
+				     transcoder close-function who))))
 
 (define (open-output-file filename)
   ;;Defined by R6RS.  Open FILENAME for output, with empty file options,
@@ -7374,11 +7382,12 @@
   ;;after THUNK is returned, the behavior is unspecified.
   ;;
   (define who 'with-output-to-file)
-  (%assert-argument-is-procedure thunk who)
-  (call-with-port (%open-output-file-with-defaults filename who)
-    (lambda (port)
-      (parameterize ((current-output-port port))
-	(thunk)))))
+  (with-arguments-validation (who)
+      ((procedure thunk))
+    (call-with-port (%open-output-file-with-defaults filename who)
+      (lambda (port)
+	(parameterize ((current-output-port port))
+	  (thunk))))))
 
 (define (call-with-output-file filename proc)
   ;;Defined by R6RS.  PROC should accept one argument.
@@ -7395,8 +7404,9 @@
   ;;used for an I/O operation.
   ;;
   (define who 'call-with-output-file)
-  (%assert-argument-is-procedure proc who)
-  (call-with-port (%open-output-file-with-defaults filename who) proc))
+  (with-arguments-validation (who)
+      ((procedure proc))
+    (call-with-port (%open-output-file-with-defaults filename who) proc)))
 
 
 ;;;; input/output ports wrapping platform file descriptors
@@ -7421,16 +7431,17 @@
 
    ((filename file-options buffer-mode maybe-transcoder)
     (define who 'open-file-input/output-port)
-    (%assert-argument-is-filename filename who)
-    (%assert-argument-is-file-options file-options who)
-    (%assert-argument-is-maybe-transcoder maybe-transcoder who)
-    (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
-	   (other-attributes	(unsafe.fxior INPUT/OUTPUT-PORT-TAG buffer-mode-attrs))
-	   (fd			(%open-input/output-file-descriptor filename file-options who))
-	   (port-identifier	filename)
-	   (buffer-size		(input/output-file-buffer-size)))
-      (%file-descriptor->input/output-port fd other-attributes port-identifier
-					   buffer-size maybe-transcoder #t who)))))
+    (with-arguments-validation (who)
+	((filename		filename)
+	 (file-options		file-options)
+	 (maybe-transcoder	maybe-transcoder))
+      (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
+	     (other-attributes	(unsafe.fxior INPUT/OUTPUT-PORT-TAG buffer-mode-attrs))
+	     (fd		(%open-input/output-file-descriptor filename file-options who))
+	     (port-identifier	filename)
+	     (buffer-size	(input/output-file-buffer-size)))
+	(%file-descriptor->input/output-port fd other-attributes port-identifier
+					     buffer-size maybe-transcoder #t who))))))
 
 
 (define (process cmd . args)
@@ -7806,13 +7817,14 @@
   ;;garbage collector.
   ;;
   (define who 'open-directory-stream)
-  (%assert-argument-is-filename filename who)
-  (let ((retval (%platform-open-directory ((string->filename-func) filename))))
-    (if (fixnum? retval)
-	(%raise-io-error who filename retval)
-      (let ((stream (make-directory-stream filename retval #f)))
-	(directory-stream-guardian stream)
-	stream))))
+  (with-arguments-validation (who)
+      ((filename filename))
+    (let ((retval (%platform-open-directory ((string->filename-func) filename))))
+      (if (fixnum? retval)
+	  (%raise-io-error who filename retval)
+	(let ((stream (make-directory-stream filename retval #f)))
+	  (directory-stream-guardian stream)
+	  stream)))))
 
 (define (read-directory-stream stream)
   ;;Defined by Ikarus.  Return the next entry from the directory STREAM,
@@ -7820,16 +7832,17 @@
   ;;representing a filename.  Raise an exception if an error occurs.
   ;;
   (define who 'read-directory-stream)
-  (%assert-argument-is-directory-stream stream who)
-  (%assert-argument-is-open-directory-stream stream who)
-  (let ((retval (%platform-read-directory-stream (directory-stream-pointer stream))))
-    (cond ((fixnum? retval)
-	   (close-directory-stream stream #f)
-	   (%raise-io-error who (directory-stream-filename stream) retval))
-	  ((not retval)
-	   #f)
-	  (else
-	   ((filename->string-func) retval)))))
+  (with-arguments-validation (who)
+      ((directory-stream       stream)
+       (open-directory-stream  stream))
+    (let ((retval (%platform-read-directory-stream (directory-stream-pointer stream))))
+      (cond ((fixnum? retval)
+	     (close-directory-stream stream #f)
+	     (%raise-io-error who (directory-stream-filename stream) retval))
+	    ((not retval)
+	     #f)
+	    (else
+	     ((filename->string-func) retval))))))
 
 (define close-directory-stream
   ;;Defined by Ikarus.  Close the  directory STREAM.  If an error occurs
@@ -7841,13 +7854,14 @@
     (close-directory-stream stream #t))
    ((stream raise-error?)
     (define who 'close-directory-stream)
-    (%assert-argument-is-directory-stream stream who)
-    (unless (directory-stream-closed? stream)
-      (set-directory-stream-closed?! stream #t)
-      (let ((retval (%platform-close-directory (directory-stream-pointer stream))))
-	(when (and raise-error?
-		   (not (unsafe.fxzero? retval)))
-	  (%raise-io-error who (directory-stream-filename stream) retval)))))))
+    (with-arguments-validation (who)
+	((directory-stream stream))
+      (unless (directory-stream-closed? stream)
+	(set-directory-stream-closed?! stream #t)
+	(let ((retval (%platform-close-directory (directory-stream-pointer stream))))
+	  (when (and raise-error?
+		     (not (unsafe.fxzero? retval)))
+	    (%raise-io-error who (directory-stream-filename stream) retval))))))))
 
 
 ;;;; standard, console and current ports
@@ -7897,9 +7911,10 @@
       (transcoded-port (standard-input-port) (native-transcoder))
     (lambda (x)
       (define who 'current-input-port)
-      (%assert-value-is-input-port x who)
-      (%unsafe.assert-value-is-textual-port x who)
-      x)))
+      (with-arguments-validation (who)
+	  ((input-port x)
+	   (unsafe.textual-port x))
+	x))))
 
 (define current-output-port
   ;;Defined by  R6RS.  Hold the default textual  port for regular
@@ -7916,9 +7931,10 @@
       (transcoded-port (standard-output-port) (native-transcoder))
     (lambda (x)
       (define who 'current-output-port)
-      (%assert-value-is-output-port x who)
-      (%unsafe.assert-value-is-textual-port x who)
-      x)))
+      (with-arguments-validation (who)
+	  ((output-port         x)
+	   (unsafe.textual-port x))
+	x))))
 
 (define current-error-port
   ;;Defined  by R6RS.  Hold  the default  textual port  for error
@@ -7937,9 +7953,10 @@
 	port)
     (lambda (x)
       (define who 'current-error-port)
-      (%assert-value-is-output-port x who)
-      (%unsafe.assert-value-is-textual-port x who)
-      x)))
+      (with-arguments-validation (who)
+	  ((output-port         x)
+	   (unsafe.textual-port x))
+	x))))
 
 (define console-output-port
   ;;Defined by Ikarus.  Return a default textual port for output;
