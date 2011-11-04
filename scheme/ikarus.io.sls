@@ -6634,16 +6634,18 @@
 (define string->filename-func
   (make-parameter string->utf8
     (lambda (obj)
-      (if (procedure? obj)
-	  obj
-	(assertion-violation 'string->filename-func "expected procedure value" obj)))))
+      (define who 'string->filename-func)
+      (with-arguments-validation (who)
+	  ((procedure obj))
+	obj))))
 
 (define filename->string-func
   (make-parameter utf8->string
     (lambda (obj)
-      (if (procedure? obj)
-	  obj
-	(assertion-violation 'filename->string-func "expected procedure value" obj)))))
+      (define who 'filename->string-func)
+      (with-arguments-validation (who)
+	  ((procedure obj))
+	obj))))
 
 (define (%open-input-file-descriptor filename file-options who)
   ;;Subroutine for the  functions below opening a file  for input.  Open
