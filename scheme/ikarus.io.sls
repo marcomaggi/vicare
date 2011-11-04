@@ -1127,15 +1127,16 @@
 	  (identifier? #'?who))
      #'(let retry-after-tagging-port ((m ($port-fast-attrs-or-zero ?port)))
 	 (define (%validate-and-tag)
-	   (%assert-argument-is-port ?port ?who)
-	   (%unsafe.assert-value-is-input-port   ?port ?who)
-	   (%unsafe.assert-value-is-textual-port ?port ?who)
-	   (%unsafe.assert-value-is-open-port    ?port ?who)
-	   (%parse-bom-and-add-fast-tag (?who ?port)
-	     (if-successful-match:
-	      (retry-after-tagging-port ($port-fast-attrs ?port)))
-	     (if-end-of-file: (eof-object))
-	     (if-no-match-raise-assertion-violation)))
+	   (with-arguments-validation (?who)
+	       ((port ?port)
+		(unsafe.input-port   ?port)
+		(unsafe.textual-port ?port)
+		(unsafe.open-port    ?port))
+	     (%parse-bom-and-add-fast-tag (?who ?port)
+	       (if-successful-match:
+		(retry-after-tagging-port ($port-fast-attrs ?port)))
+	       (if-end-of-file: (eof-object))
+	       (if-no-match-raise-assertion-violation))))
 	 (define (%reconfigure-as-input fast-attrs)
 	   (%unsafe.reconfigure-output-buffer-to-input-buffer ?port ?who)
 	   ($set-port-fast-attrs! ?port fast-attrs)
@@ -1197,7 +1198,7 @@
      (and (identifier? #'?port)
 	  (identifier? #'?who))
      #'(let retry-after-tagging-port ((m ($port-fast-attrs-or-zero ?port)))
-	 (define (%validate-and-tag)
+	 (define (%validate)
 	   (%assert-argument-is-port ?port ?who)
 	   (%unsafe.assert-value-is-textual-port ?port ?who)
 	   (%unsafe.assert-value-is-output-port  ?port ?who)
@@ -1234,9 +1235,9 @@
 		      ((unsafe.fx= m FAST-GET-BYTE-TAG)
 		       (assertion-violation ?who "expected textual port" ?port))
 		      (else
-		       (%validate-and-tag))))
+		       (%validate))))
 	       (else
-		(%validate-and-tag)))))))
+		(%validate)))))))
 
 ;;; --------------------------------------------------------------------
 ;;; Backup of original Ikarus values
@@ -1271,29 +1272,13 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (%assert-value-is-input-port ?port ?who)
-  (unless (input-port? ?port)
-    (assertion-violation ?who "not an input port" ?port)))
-
 (define-inline (%unsafe.assert-value-is-input-port ?port ?who)
   (unless (%unsafe.input-port? ?port)
     (assertion-violation ?who "not an input port" ?port)))
 
-;;; --------------------------------------------------------------------
-
-(define-inline (%assert-value-is-output-port ?port ?who)
-  (unless (output-port? ?port)
-    (assertion-violation ?who "not an output port" ?port)))
-
 (define-inline (%unsafe.assert-value-is-output-port ?port ?who)
   (unless (%unsafe.output-port? ?port)
     (assertion-violation ?who "not an output port" ?port)))
-
-;;; --------------------------------------------------------------------
-
-(define-inline (%unsafe.assert-argument-is-not-input/output-port ?port ?who)
-  (when (%unsafe.input-and-output-port? ?port)
-    (assertion-violation ?who "invalid input/output port as argument" ?port)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1307,189 +1292,9 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (%assert-value-is-open-port ?port ?who)
-  (when (port-closed? ?port)
-    (assertion-violation ?who "port is closed" ?port)))
-
 (define-inline (%unsafe.assert-value-is-open-port ?port ?who)
   (when (%unsafe.port-closed? ?port)
     (assertion-violation ?who "port is closed" ?port)))
-
-;;; --------------------------------------------------------------------
-
-(define-inline (%assert-argument-is-port-position position who)
-  (unless (and (or (fixnum? position)
-		   (bignum? position))
-	       (>= position 0))
-    (raise
-     (condition (make-who-condition who)
-		(make-message-condition "position must be a nonnegative exact integer")
-		(make-i/o-invalid-position-error position)))))
-
-(define-inline (%assert-value-is-get-position-result ?position ?port ?who)
-  (unless (and (or (fixnum? ?position)
-		   (bignum? ?position))
-	       (>= ?position 0))
-    (assertion-violation ?who "invalid value returned by get-position" ?port ?position)))
-
-(define-inline (%assert-argument-is-transcoder ?transcoder ?who)
-  (unless (transcoder? ?transcoder)
-    (assertion-violation ?who "not a transcoder" ?transcoder)))
-
-(define-inline (%assert-argument-is-maybe-transcoder ?maybe-transcoder ?who)
-  (when (and ?maybe-transcoder (not (transcoder? ?maybe-transcoder)))
-    (assertion-violation ?who
-      "expected false or a transcoder object as optional transcoder argument"
-      ?maybe-transcoder)))
-
-;;; --------------------------------------------------------------------
-
-(define-inline (%assert-argument-is-an-octet ?value ?who)
-  (let ((x ?value))
-    (unless (and (fixnum? x)
-		 (unsafe.fx>= x 0)
-		 (unsafe.fx<= x 255))
-      (assertion-violation ?who "expected octet Scheme fixnum as argument" ?value))))
-
-(define-inline (%assert-argument-is-char ?obj ?who)
-  (unless (char? ?obj)
-    (assertion-violation ?who "expected Scheme character as argument" ?obj)))
-
-(define-inline (%assert-value-is-fixnum ?obj ?who)
-  (unless (fixnum? ?obj)
-    (assertion-violation ?who "not a fixnum" ?obj)))
-
-(define-inline (%assert-value-is-bytevector ?obj ?who)
-  (unless (bytevector? ?obj)
-    (assertion-violation ?who "not a bytevector" ?obj)))
-
-(define-inline (%assert-argument-is-string ?obj ?who)
-  (unless (string? ?obj)
-    (assertion-violation ?who "expected string as argument" ?obj)))
-
-(define-inline (%assert-argument-is-procedure ?proc ?who)
-  (unless (procedure? ?proc)
-    (assertion-violation ?who "expected procedure as argument" ?proc)))
-
-(define-inline (%assert-argument-is-port-identifier ?identifier ?who)
-  (unless (string? ?identifier)
-    (assertion-violation ?who "ID is not a string" ?identifier)))
-
-(define-inline (%assert-value-is-read!-procedure ?proc ?who)
-  (unless (procedure? ?proc)
-    (assertion-violation ?who "READ! is not a procedure" ?proc)))
-
-(define-inline (%assert-value-is-write!-procedure ?proc ?who)
-  (unless (procedure? ?proc)
-    (assertion-violation ?who "WRITE! is not a procedure" ?proc)))
-
-(define-inline (%assert-value-is-maybe-close-procedure ?proc ?who)
-  (unless (or (procedure? ?proc) (not ?proc))
-    (assertion-violation ?who "CLOSE should be either a procedure or false" ?proc)))
-
-(define-inline (%assert-value-is-maybe-get-position-procedure ?proc ?who)
-  (unless (or (procedure? ?proc) (not ?proc))
-    (assertion-violation ?who "GET-POSITION should be either a procedure or false" ?proc)))
-
-(define-inline (%assert-value-is-maybe-set-position!-procedure ?proc ?who)
-  (unless (or (procedure? ?proc) (not ?proc))
-    (assertion-violation ?who "SET-POSITION! should be either a procedure or false" ?proc)))
-
-(define-inline (%assert-argument-is-filename filename who)
-  (unless (string? filename)
-    (assertion-violation who "expected Scheme string as filename argument" filename)))
-
-(define-inline (%assert-argument-is-file-options obj who)
-  (unless (enum-set? obj)
-    (assertion-violation who "expected enum set as file-options argument" obj)))
-
-;;; --------------------------------------------------------------------
-
-(define (%assert-argument-is-fixnum-start-index start who)
-  ;;A fixnum  is an exact  integer, but I  do the check twice  because I
-  ;;like descriptive error messages (Marco Maggi; Oct 1, 2011).
-  (unless (and (integer? start) (exact? start))
-    (assertion-violation who "expected exact integer as start index argument" start))
-  (unless (fixnum? start)
-    (assertion-violation who "expected fixnum as start index argument" start))
-  (unless (unsafe.fx>= start 0)
-    (assertion-violation who "expected non-negative fixnum as start index argument" start)))
-
-(define (%unsafe.assert-argument-is-start-index-for-bytevector dst.start dst.bv who)
-  ;;Notice that start=length is valid is the count argument is zero
-  (unless (unsafe.fx<= dst.start (unsafe.bytevector-length dst.bv))
-    (assertion-violation who
-      (string-append "start index argument "
-		     (number->string dst.start)
-		     " too big for bytevector of length "
-		     (number->string (unsafe.bytevector-length dst.bv)))
-      dst.start)))
-
-(define (%unsafe.assert-argument-is-start-index-for-string dst.start dst.str who)
-  ;;Notice that start=length is valid is the count argument is zero
-  (unless (unsafe.fx< dst.start (unsafe.string-length dst.str))
-    (assertion-violation who
-      (string-append "start index argument "
-		     (number->string dst.start)
-		     " too big for string of length "
-		     (number->string (unsafe.string-length dst.str)))
-      dst.start)))
-
-;;; --------------------------------------------------------------------
-
-(define (%assert-argument-is-count ?count ?who)
-  (let ((count ?count))
-    (unless (and (integer? count) (exact? count))
-      (assertion-violation ?who "expected exact integer as count argument" count))
-    (unless (>= count 0)
-      (assertion-violation ?who "expected non-negative exact integer as count argument" count))))
-
-(define (%assert-argument-is-fixnum-count count who)
-  (let ((count count))
-    (unless (and (integer? count) (exact? count))
-      (assertion-violation who "expected exact integer as count argument" count))
-    (unless (fixnum? count)
-      (assertion-violation who "count argument must be a fixnum" count))
-    (unless (unsafe.fx>= count 0)
-      (assertion-violation who "expected non-negative exact integer as count argument" count))))
-
-(define (%unsafe.assert-argument-is-count-from-start-in-bytevector count start dst.bv who)
-  ;;We know that COUNT and START  are fixnums, but not if START+COUNT is
-  ;;a fixnum, too.
-  ;;
-  (unless (<= (+ start count) (unsafe.bytevector-length dst.bv))
-    (assertion-violation who
-      (string-append "count argument "
-		     (number->string count)
-		     " from start index "
-		     (number->string start)
-		     " too big for bytevector of length "
-		     (number->string (unsafe.bytevector-length dst.bv)))
-      start count (unsafe.bytevector-length dst.bv))))
-
-(define (%unsafe.assert-argument-is-count-from-start-in-string count start dst.str who)
-  ;;We know that COUNT and START  are fixnums, but not if START+COUNT is
-  ;;a fixnum, too.
-  ;;
-  (unless (<= (+ start count) (unsafe.string-length dst.str))
-    (assertion-violation who
-      (string-append "count argument "
-		     (number->string count)
-		     " from start index "
-		     (number->string start)
-		     " too big for string of length "
-		     (number->string (unsafe.string-length dst.str)))
-      start count (unsafe.string-length dst.str))))
-
-;;; --------------------------------------------------------------------
-
-(define-inline (%assert-argument-is-directory-stream obj who)
-  (unless (directory-stream? obj)
-    (assertion-violation who "expected directory stream as argument" obj)))
-
-(define-inline (%assert-argument-is-open-directory-stream obj who)
-  (when (directory-stream-closed? obj)
-    (assertion-violation who "expected open directory stream as argument" obj)))
 
 
 ;;;; arguments validation
@@ -7714,14 +7519,18 @@
 	(assertion-violation who "failed to shutdown")))))
 
 (define (reset-input-port! p)
-  (%assert-value-is-input-port p 'reset-input-port!)
-  ($set-port-index! p ($port-size p))
-  (unregister-callback p))
+  (define who 'reset-input-port!)
+  (with-arguments-validation (who)
+      ((input-port p))
+    ($set-port-index! p ($port-size p))
+    (unregister-callback p)))
 
 (define (reset-output-port! p)
-  (%assert-value-is-output-port p 'reset-output-port!)
-  ($set-port-index! p 0)
-  (unregister-callback p))
+  (define who 'reset-output-port!)
+  (with-arguments-validation (who)
+      ((output-port p))
+    ($set-port-index! p 0)
+    (unregister-callback p)))
 
 (define (unregister-callback what)
   (define who 'unregister-callback)
@@ -7738,22 +7547,23 @@
 
 (define (register-callback what proc)
   (define who 'register-callback)
-  (%assert-argument-is-procedure proc who)
-  (cond ((output-port? what)
-	 (with-port (what)
-	   (let ((c what.device))
-	     (unless (fixnum? c)
-	       (assertion-violation who "not a file-based port" what))
-	     (add-io-event c proc 'w))))
-	((input-port? what)
-	 (with-port (what)
-	 (let ((c what.device))
-	   (unless (fixnum? c)
-	     (assertion-violation who "not a file-based port" what))
-	   (add-io-event c proc 'r))))
-	((tcp-server? what)
-	 (add-io-event (tcp-server-fd what) proc 'r))
-	(else (assertion-violation who "invalid argument" what))))
+  (with-arguments-validation (who)
+      ((procedure proc))
+    (cond ((output-port? what)
+	   (with-port (what)
+	     (let ((c what.device))
+	       (unless (fixnum? c)
+		 (assertion-violation who "not a file-based port" what))
+	       (add-io-event c proc 'w))))
+	  ((input-port? what)
+	   (with-port (what)
+	     (let ((c what.device))
+	       (unless (fixnum? c)
+		 (assertion-violation who "not a file-based port" what))
+	       (add-io-event c proc 'r))))
+	  ((tcp-server? what)
+	   (add-io-event (tcp-server-fd what) proc 'r))
+	  (else (assertion-violation who "invalid argument" what)))))
 
 
 ;;;; reading file system directories
