@@ -1,8 +1,12 @@
 ## Process this file with automake to produce Makefile.in
 
 libvicaredir		= $(pkglibdir)/vicare
+
+EXTRA_DIST		= vicare/errno.sls.in			\
+			  vicare/installation-configuration.sls.in
+
 dist_libvicare_DATA	= vicare/foreign.sls			\
-			  vicare/errno.sls.in			\
+			  vicare/errno.sls			\
 			  vicare/ipc.sls			\
 			  vicare/include.sls			\
 			  vicare/syntactic-extensions.sls	\
@@ -12,6 +16,6 @@ dist_libvicare_DATA	= vicare/foreign.sls			\
 			  vicare/unsafe-unicode.sls		\
 			  vicare/unsafe-capi.sls		\
 			  vicare/words.sls			\
-			  vicare/installation-configuration.sls.in
+			  vicare/installation-configuration.sls
 
 ### end of file
