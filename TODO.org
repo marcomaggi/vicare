@@ -79,12 +79,30 @@
 
 ** ikarus.io.ss
 
+*** Crash because of "invalid frame size"
+
    Something is causing an "invalid  frame size" error with some builds.
    I guess it is caused by something in the I/O module, particularly the
    guardian used to close garbage  collected ports.  For this reason the
    CLOSE-PORT call in the guardian  cleanup function is commented out to
    test if  the problem  still manifests itself.   Once fixed,  the call
    must be reincluded.
+
+*** errno codes
+
+   This library is using  "normalised" errno codes: platform's own errno
+   codes are  converted by the C  function "ik_errno_num_to_code()" into
+   codes  in the  POSIX IEEE  Std 1003.1  2004 Edition.   This  looks so
+   fascinating!
+
+   But is it also good?
+
+   Today,  Vicare   ships  with  a  (vicare   errno)  library  exporting
+   identifier   syntaxes  expanding  to   platform's  own   errno  codes
+   determined by the "configure" script.  These are the ones that should
+   be used by  libraries depending upon Vicare's FFI.   Notice that this
+   library is NOT compatible  with "ikrt_strerror()", which requires the
+   normalised codes.
 
 ** ikarus.symbols.ss
 

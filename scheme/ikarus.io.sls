@@ -591,11 +591,13 @@
     ;;and $SET-PORT-* bindings.
     (ikarus system $io)
     (prefix (only (ikarus) port?) primop.)
+    (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
     (vicare unsafe-unicode)
     (vicare unsafe-capi)
-    (vicare syntactic-extensions))
+    (only (vicare errno)
+	  case-errno))
 
 
 ;;;; emergency debugging
@@ -6587,20 +6589,18 @@
 
 ;;;; platform I/O error handling
 
-(define errno-code-EAGAIN
-  (foreign-call "ik_errno_EAGAIN"))
-(define errno-code-EACCES
-  (foreign-call "ik_errno_EACCES"))
-(define errno-code-EFAULT
-  (foreign-call "ik_errno_EFAULT"))
-(define errno-code-EROFS
-  (foreign-call "ik_errno_EROFS"))
-(define errno-code-EEXIST
-  (foreign-call "ik_errno_EEXIST"))
-(define errno-code-EIO
-  (foreign-call "ik_errno_EIO"))
-(define errno-code-ENOENT
-  (foreign-call "ik_errno_ENOENT"))
+;;Notice that  the following are the  codes normalised to  the values in
+;;POSIX IEEE  Std 1003.1 2004 Edition,  which may be  different from the
+;;ones of  the underlying  platform.  In particular  these codes  may be
+;;different from the ones exported by the (vicare errno) library.
+;;
+(define ERRNO-CODE-EAGAIN	(normalised-errno-EAGAIN))
+(define ERRNO-CODE-EACCES	(normalised-errno-EACCES))
+(define ERRNO-CODE-EFAULT	(normalised-errno-EFAULT))
+(define ERRNO-CODE-EROFS	(normalised-errno-EROFS))
+(define ERRNO-CODE-EEXIST	(normalised-errno-EEXIST))
+(define ERRNO-CODE-EIO		(normalised-errno-EIO))
+(define ERRNO-CODE-ENOENT	(normalised-errno-ENOENT))
 
 (define (%raise-eagain-error who port)
   ;;Raise an exception to signal  that a system call was interrupted and
@@ -6609,7 +6609,7 @@
   (raise
    (condition (make-i/o-eagain)
 	      (make-who-condition who)
-	      (make-message-condition (strerror errno-code-EAGAIN))
+	      (make-message-condition (strerror ERRNO-CODE-EAGAIN))
 	      (if port
 		  (make-i/o-port-error port)
 		(condition)))))
@@ -6624,21 +6624,21 @@
      (condition base-condition
 		(make-who-condition who)
 		(make-message-condition (strerror errno))
-		(cond ((or (unsafe.fx= errno errno-code-EACCES)
-			   (unsafe.fx= errno errno-code-EFAULT)) ;why is EFAULT included here?
-		       (make-i/o-file-protection-error port-identifier))
-		      ((unsafe.fx= errno errno-code-EROFS)
-		       (make-i/o-file-is-read-only-error port-identifier))
-		      ((unsafe.fx= errno errno-code-EEXIST)
-		       (make-i/o-file-already-exists-error port-identifier))
-		      ((unsafe.fx= errno errno-code-EIO)
-		       (make-i/o-error))
-		      ((unsafe.fx= errno errno-code-ENOENT)
-		       (make-i/o-file-does-not-exist-error port-identifier))
-		      (else
-		       (if port-identifier
-			   (make-irritants-condition (list port-identifier))
-			 (condition)))))))
+		(case-errno errno
+		  ((ERRNO-CODE-EACCES ERRNO-CODE-EFAULT) ;why is EFAULT included here?
+		   (make-i/o-file-protection-error port-identifier))
+		  ((ERRNO-CODE-EROFS)
+		   (make-i/o-file-is-read-only-error port-identifier))
+		  ((ERRNO-CODE-EEXIST)
+		   (make-i/o-file-already-exists-error port-identifier))
+		  ((ERRNO-CODE-EIO)
+		   (make-i/o-error))
+		  ((ERRNO-CODE-ENOENT)
+		   (make-i/o-file-does-not-exist-error port-identifier))
+		  (else
+		   (if port-identifier
+		       (make-irritants-condition (list port-identifier))
+		     (condition)))))))
    ((who port-identifier errno)
     (%raise-io-error who port-identifier errno (make-error)))))
 
@@ -6734,7 +6734,7 @@
     (let ((count (platform-read-fd fd dst.bv dst.start requested-count)))
       (cond ((unsafe.fx>= count 0)
 	     count)
-	    ((unsafe.fx= count errno-code-EAGAIN)
+	    ((unsafe.fx= count ERRNO-CODE-EAGAIN)
 	     (%raise-eagain-error who #f))
 	    (else
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
@@ -6781,7 +6781,7 @@
     (let ((count (platform-write-fd fd src.bv src.start requested-count)))
       (cond ((unsafe.fx>= count 0)
 	     count)
-	    ((unsafe.fx= count errno-code-EAGAIN)
+	    ((unsafe.fx= count ERRNO-CODE-EAGAIN)
 	     (%raise-eagain-error who #f))
 	    (else
 	     (%raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
@@ -6827,7 +6827,7 @@
     (let ((count (platform-read-fd fd dst.bv dst.start requested-count)))
       (cond ((unsafe.fx>= count 0)
 	     count)
-	    ((unsafe.fx= count errno-code-EAGAIN)
+	    ((unsafe.fx= count ERRNO-CODE-EAGAIN)
 	     (%raise-eagain-error who #f))
 	    (else
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
@@ -6836,7 +6836,7 @@
     (let ((count (platform-write-fd fd src.bv src.start requested-count)))
       (cond ((unsafe.fx>= count 0)
 	     count)
-	    ((unsafe.fx= count errno-code-EAGAIN)
+	    ((unsafe.fx= count ERRNO-CODE-EAGAIN)
 	     (%raise-eagain-error who #f))
 	    (else
 	     (%raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
@@ -7417,7 +7417,7 @@
       (assertion-violation who "server is closed" s))
     (let ((sock (foreign-call "ikrt_accept" fd bv)))
       (cond
-       ((eq? sock errno-code-EAGAIN)
+       ((eq? sock ERRNO-CODE-EAGAIN)
 	(call/cc
 	    (lambda (k)
 	      (add-io-event fd k 'r)
@@ -7708,6 +7708,7 @@
 ;;; Local Variables:
 ;;; coding: utf-8-unix
 ;;; fill-column: 72
+;;; eval: (put 'case-errno				'scheme-indent-function 1)
 ;;; eval: (put 'with-port				'scheme-indent-function 1)
 ;;; eval: (put 'with-port-having-bytevector-buffer	'scheme-indent-function 1)
 ;;; eval: (put 'with-port-having-string-buffer		'scheme-indent-function 1)

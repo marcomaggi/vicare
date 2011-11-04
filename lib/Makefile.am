@@ -1,7 +1,9 @@
 ## Process this file with automake to produce Makefile.in
 
 libvicaredir		= $(pkglibdir)/vicare
-dist_libvicare_DATA	= vicare/foreign.sls vicare/ipc.sls	\
+dist_libvicare_DATA	= vicare/foreign.sls			\
+			  vicare/errno.sls.in			\
+			  vicare/ipc.sls			\
 			  vicare/include.sls			\
 			  vicare/syntactic-extensions.sls	\
 			  vicare/flonum-parser.sls		\

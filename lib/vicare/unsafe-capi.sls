@@ -31,6 +31,15 @@
 (library (vicare unsafe-capi)
   (export
 
+    ;; normalised errno codes
+    normalised-errno-EAGAIN
+    normalised-errno-EACCES
+    normalised-errno-EFAULT
+    normalised-errno-EROFS
+    normalised-errno-EEXIST
+    normalised-errno-EIO
+    normalised-errno-ENOENT
+
     ;; platform API for file descriptors
     platform-open-input-fd
     platform-open-output-fd
@@ -39,12 +48,41 @@
     platform-write-fd
     platform-set-position
     platform-close-fd
-
-
     )
   (import (ikarus)
     (only (vicare syntactic-extensions)
 	  define-inline))
+
+
+;;;; normalised errno codes
+;;
+;;Notice that  the values returned  by the following function  calls are
+;;the  codes normalised  to the  values in  POSIX IEEE  Std  1003.1 2004
+;;Edition,  which may  be  different  from the  ones  of the  underlying
+;;platform.  In  particular these codes  may be different from  the ones
+;;exported by the (vicare errno) library.
+;;
+
+(define-inline (normalised-errno-EAGAIN)
+  (foreign-call "ik_errno_EAGAIN"))
+
+(define-inline (normalised-errno-EACCES)
+  (foreign-call "ik_errno_EACCES"))
+
+(define-inline (normalised-errno-EFAULT)
+  (foreign-call "ik_errno_EFAULT"))
+
+(define-inline (normalised-errno-EROFS)
+  (foreign-call "ik_errno_EROFS"))
+
+(define-inline (normalised-errno-EEXIST)
+  (foreign-call "ik_errno_EEXIST"))
+
+(define-inline (normalised-errno-EIO)
+  (foreign-call "ik_errno_EIO"))
+
+(define-inline (normalised-errno-ENOENT)
+  (foreign-call "ik_errno_ENOENT"))
 
 
 ;;;; platform API for file descriptors

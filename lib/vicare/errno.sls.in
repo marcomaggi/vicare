@@ -1,0 +1,246 @@
+;;;
+;;;Part of: Vicare
+;;;Contents: errno codes
+;;;Date: Fri Nov  4, 2011
+;;;
+;;;Abstract
+;;;
+;;;	Exports  bindings for  each "errno"  constant.  This  library is
+;;;     derived from code in Nausicaa.   Notice that this library is NOT
+;;;     compatible with "ikrt_strerror()", which requires the normalised
+;;;     codes.
+;;;
+;;;Copyright (c) 2008-2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under the terms of the  GNU General Public License as published by
+;;;the Free Software Foundation, either version 3 of the License, or (at
+;;;your option) any later version.
+;;;
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
+;;;
+;;;You should  have received  a copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+
+
+#!r6rs
+(library (vicare errno)
+  (export
+    case-errno
+
+    ;; codes
+    E2BIG		EACCES		EADDRINUSE
+    EADDRNOTAVAIL	EADV		EAFNOSUPPORT
+    EAGAIN		EALREADY	EBADE
+    EBADF		EBADFD		EBADMSG
+    EBADR		EBADRQC		EBADSLT
+    EBFONT		EBUSY		ECANCELED
+    ECHILD		ECHRNG		ECOMM
+    ECONNABORTED	ECONNREFUSED	ECONNRESET
+    EDEADLK		EDEADLOCK	EDESTADDRREQ
+    EDOM		EDOTDOT		EDQUOT
+    EEXIST		EFAULT		EFBIG
+    EHOSTDOWN		EHOSTUNREACH	EIDRM
+    EILSEQ		EINPROGRESS	EINTR
+    EINVAL		EIO		EISCONN
+    EISDIR		EISNAM		EKEYEXPIRED
+    EKEYREJECTED	EKEYREVOKED	EL2HLT
+    EL2NSYNC		EL3HLT		EL3RST
+    ELIBACC		ELIBBAD		ELIBEXEC
+    ELIBMAX		ELIBSCN		ELNRNG
+    ELOOP		EMEDIUMTYPE	EMFILE
+    EMLINK		EMSGSIZE	EMULTIHOP
+    ENAMETOOLONG	ENAVAIL		ENETDOWN
+    ENETRESET		ENETUNREACH	ENFILE
+    ENOANO		ENOBUFS		ENOCSI
+    ENODATA		ENODEV		ENOENT
+    ENOEXEC		ENOKEY		ENOLCK
+    ENOLINK		ENOMEDIUM	ENOMEM
+    ENOMSG		ENONET		ENOPKG
+    ENOPROTOOPT		ENOSPC		ENOSR
+    ENOSTR		ENOSYS		ENOTBLK
+    ENOTCONN		ENOTDIR		ENOTEMPTY
+    ENOTNAM		ENOTRECOVERABLE	ENOTSOCK
+    ENOTTY		ENOTUNIQ	ENXIO
+    EOPNOTSUPP		EOVERFLOW	EOWNERDEAD
+    EPERM		EPFNOSUPPORT	EPIPE
+    EPROTO		EPROTONOSUPPORT	EPROTOTYPE
+    ERANGE		EREMCHG		EREMOTE
+    EREMOTEIO		ERESTART	EROFS
+    ESHUTDOWN		ESOCKTNOSUPPORT	ESPIPE
+    ESRCH		ESRMNT		ESTALE
+    ESTRPIPE		ETIME		ETIMEDOUT
+    ETOOMANYREFS	ETXTBSY		EUCLEAN
+    EUNATCH		EUSERS		EWOULDBLOCK
+    EXDEV		EXFULL)
+  (import (ikarus)
+    (only (vicare syntactic-extensions)
+	  define-inline-constant)
+    (prefix (vicare unsafe-operations)
+	    unsafe.))
+
+
+(define-syntax case-errno
+  (syntax-rules (else)
+    ((_ ?errno ((?code0 ?code ...) . ?body) ... (else . ?else-body))
+     (let ((errno ?errno))
+       (cond ((and (unsafe.fx= errno ?code0)
+		   (unsafe.fx= errno ?code)
+		   ...)
+	      . ?body)
+	     ...)))
+    ((_ ((?code0 ?code ...) . ?body) ...)
+     (let ((errno ?errno))
+       (cond ((and (unsafe.fx= errno ?code0)
+		   (unsafe.fx= errno ?code)
+		   ...)
+	      . ?body)
+	     ...
+	     (else . ?else-body))))
+    ))
+
+
+;;;; constants
+
+(define-inline-constant E2BIG		@VALUEOF_E2BIG@)
+(define-inline-constant EACCES		@VALUEOF_EACCES@)
+(define-inline-constant EADDRINUSE	@VALUEOF_EADDRINUSE@)
+(define-inline-constant EADDRNOTAVAIL	@VALUEOF_EADDRNOTAVAIL@)
+(define-inline-constant EADV		@VALUEOF_EADV@)
+(define-inline-constant EAFNOSUPPORT	@VALUEOF_EAFNOSUPPORT@)
+(define-inline-constant EAGAIN		@VALUEOF_EAGAIN@)
+(define-inline-constant EALREADY	@VALUEOF_EALREADY@)
+(define-inline-constant EBADE		@VALUEOF_EBADE@)
+(define-inline-constant EBADF		@VALUEOF_EBADF@)
+(define-inline-constant EBADFD		@VALUEOF_EBADFD@)
+(define-inline-constant EBADMSG		@VALUEOF_EBADMSG@)
+(define-inline-constant EBADR		@VALUEOF_EBADR@)
+(define-inline-constant EBADRQC		@VALUEOF_EBADRQC@)
+(define-inline-constant EBADSLT		@VALUEOF_EBADSLT@)
+(define-inline-constant EBFONT		@VALUEOF_EBFONT@)
+(define-inline-constant EBUSY		@VALUEOF_EBUSY@)
+(define-inline-constant ECANCELED	@VALUEOF_ECANCELED@)
+(define-inline-constant ECHILD		@VALUEOF_ECHILD@)
+(define-inline-constant ECHRNG		@VALUEOF_ECHRNG@)
+(define-inline-constant ECOMM		@VALUEOF_ECOMM@)
+(define-inline-constant ECONNABORTED	@VALUEOF_ECONNABORTED@)
+(define-inline-constant ECONNREFUSED	@VALUEOF_ECONNREFUSED@)
+(define-inline-constant ECONNRESET	@VALUEOF_ECONNRESET@)
+(define-inline-constant EDEADLK		@VALUEOF_EDEADLK@)
+(define-inline-constant EDEADLOCK	@VALUEOF_EDEADLOCK@)
+(define-inline-constant EDESTADDRREQ	@VALUEOF_EDESTADDRREQ@)
+(define-inline-constant EDOM		@VALUEOF_EDOM@)
+(define-inline-constant EDOTDOT		@VALUEOF_EDOTDOT@)
+(define-inline-constant EDQUOT		@VALUEOF_EDQUOT@)
+(define-inline-constant EEXIST		@VALUEOF_EEXIST@)
+(define-inline-constant EFAULT		@VALUEOF_EFAULT@)
+(define-inline-constant EFBIG		@VALUEOF_EFBIG@)
+(define-inline-constant EHOSTDOWN	@VALUEOF_EHOSTDOWN@)
+(define-inline-constant EHOSTUNREACH	@VALUEOF_EHOSTUNREACH@)
+(define-inline-constant EIDRM		@VALUEOF_EIDRM@)
+(define-inline-constant EILSEQ		@VALUEOF_EILSEQ@)
+(define-inline-constant EINPROGRESS	@VALUEOF_EINPROGRESS@)
+(define-inline-constant EINTR		@VALUEOF_EINTR@)
+(define-inline-constant EINVAL		@VALUEOF_EINVAL@)
+(define-inline-constant EIO		@VALUEOF_EIO@)
+(define-inline-constant EISCONN		@VALUEOF_EISCONN@)
+(define-inline-constant EISDIR		@VALUEOF_EISDIR@)
+(define-inline-constant EISNAM		@VALUEOF_EISNAM@)
+(define-inline-constant EKEYEXPIRED	@VALUEOF_EKEYEXPIRED@)
+(define-inline-constant EKEYREJECTED	@VALUEOF_EKEYREJECTED@)
+(define-inline-constant EKEYREVOKED	@VALUEOF_EKEYREVOKED@)
+(define-inline-constant EL2HLT		@VALUEOF_EL2HLT@)
+(define-inline-constant EL2NSYNC	@VALUEOF_EL2NSYNC@)
+(define-inline-constant EL3HLT		@VALUEOF_EL3HLT@)
+(define-inline-constant EL3RST		@VALUEOF_EL3RST@)
+(define-inline-constant ELIBACC		@VALUEOF_ELIBACC@)
+(define-inline-constant ELIBBAD		@VALUEOF_ELIBBAD@)
+(define-inline-constant ELIBEXEC	@VALUEOF_ELIBEXEC@)
+(define-inline-constant ELIBMAX		@VALUEOF_ELIBMAX@)
+(define-inline-constant ELIBSCN		@VALUEOF_ELIBSCN@)
+(define-inline-constant ELNRNG		@VALUEOF_ELNRNG@)
+(define-inline-constant ELOOP		@VALUEOF_ELOOP@)
+(define-inline-constant EMEDIUMTYPE	@VALUEOF_EMEDIUMTYPE@)
+(define-inline-constant EMFILE		@VALUEOF_EMFILE@)
+(define-inline-constant EMLINK		@VALUEOF_EMLINK@)
+(define-inline-constant EMSGSIZE	@VALUEOF_EMSGSIZE@)
+(define-inline-constant EMULTIHOP	@VALUEOF_EMULTIHOP@)
+(define-inline-constant ENAMETOOLONG	@VALUEOF_ENAMETOOLONG@)
+(define-inline-constant ENAVAIL		@VALUEOF_ENAVAIL@)
+(define-inline-constant ENETDOWN	@VALUEOF_ENETDOWN@)
+(define-inline-constant ENETRESET	@VALUEOF_ENETRESET@)
+(define-inline-constant ENETUNREACH	@VALUEOF_ENETUNREACH@)
+(define-inline-constant ENFILE		@VALUEOF_ENFILE@)
+(define-inline-constant ENOANO		@VALUEOF_ENOANO@)
+(define-inline-constant ENOBUFS		@VALUEOF_ENOBUFS@)
+(define-inline-constant ENOCSI		@VALUEOF_ENOCSI@)
+(define-inline-constant ENODATA		@VALUEOF_ENODATA@)
+(define-inline-constant ENODEV		@VALUEOF_ENODEV@)
+(define-inline-constant ENOENT		@VALUEOF_ENOENT@)
+(define-inline-constant ENOEXEC		@VALUEOF_ENOEXEC@)
+(define-inline-constant ENOKEY		@VALUEOF_ENOKEY@)
+(define-inline-constant ENOLCK		@VALUEOF_ENOLCK@)
+(define-inline-constant ENOLINK		@VALUEOF_ENOLINK@)
+(define-inline-constant ENOMEDIUM	@VALUEOF_ENOMEDIUM@)
+(define-inline-constant ENOMEM		@VALUEOF_ENOMEM@)
+(define-inline-constant ENOMSG		@VALUEOF_ENOMSG@)
+(define-inline-constant ENONET		@VALUEOF_ENONET@)
+(define-inline-constant ENOPKG		@VALUEOF_ENOPKG@)
+(define-inline-constant ENOPROTOOPT	@VALUEOF_ENOPROTOOPT@)
+(define-inline-constant ENOSPC		@VALUEOF_ENOSPC@)
+(define-inline-constant ENOSR		@VALUEOF_ENOSR@)
+(define-inline-constant ENOSTR		@VALUEOF_ENOSTR@)
+(define-inline-constant ENOSYS		@VALUEOF_ENOSYS@)
+(define-inline-constant ENOTBLK		@VALUEOF_ENOTBLK@)
+(define-inline-constant ENOTCONN	@VALUEOF_ENOTCONN@)
+(define-inline-constant ENOTDIR		@VALUEOF_ENOTDIR@)
+(define-inline-constant ENOTEMPTY	@VALUEOF_ENOTEMPTY@)
+(define-inline-constant ENOTNAM		@VALUEOF_ENOTNAM@)
+(define-inline-constant ENOTRECOVERABLE	@VALUEOF_ENOTRECOVERABLE@)
+(define-inline-constant ENOTSOCK	@VALUEOF_ENOTSOCK@)
+(define-inline-constant ENOTTY		@VALUEOF_ENOTTY@)
+(define-inline-constant ENOTUNIQ	@VALUEOF_ENOTUNIQ@)
+(define-inline-constant ENXIO		@VALUEOF_ENXIO@)
+(define-inline-constant EOPNOTSUPP	@VALUEOF_EOPNOTSUPP@)
+(define-inline-constant EOVERFLOW	@VALUEOF_EOVERFLOW@)
+(define-inline-constant EOWNERDEAD	@VALUEOF_EOWNERDEAD@)
+(define-inline-constant EPERM		@VALUEOF_EPERM@)
+(define-inline-constant EPFNOSUPPORT	@VALUEOF_EPFNOSUPPORT@)
+(define-inline-constant EPIPE		@VALUEOF_EPIPE@)
+(define-inline-constant EPROTO		@VALUEOF_EPROTO@)
+(define-inline-constant EPROTONOSUPPORT	@VALUEOF_EPROTONOSUPPORT@)
+(define-inline-constant EPROTOTYPE	@VALUEOF_EPROTOTYPE@)
+(define-inline-constant ERANGE		@VALUEOF_ERANGE@)
+(define-inline-constant EREMCHG		@VALUEOF_EREMCHG@)
+(define-inline-constant EREMOTE		@VALUEOF_EREMOTE@)
+(define-inline-constant EREMOTEIO	@VALUEOF_EREMOTEIO@)
+(define-inline-constant ERESTART	@VALUEOF_ERESTART@)
+(define-inline-constant EROFS		@VALUEOF_EROFS@)
+(define-inline-constant ESHUTDOWN	@VALUEOF_ESHUTDOWN@)
+(define-inline-constant ESOCKTNOSUPPORT	@VALUEOF_ESOCKTNOSUPPORT@)
+(define-inline-constant ESPIPE		@VALUEOF_ESPIPE@)
+(define-inline-constant ESRCH		@VALUEOF_ESRCH@)
+(define-inline-constant ESRMNT		@VALUEOF_ESRMNT@)
+(define-inline-constant ESTALE		@VALUEOF_ESTALE@)
+(define-inline-constant ESTRPIPE	@VALUEOF_ESTRPIPE@)
+(define-inline-constant ETIME		@VALUEOF_ETIME@)
+(define-inline-constant ETIMEDOUT	@VALUEOF_ETIMEDOUT@)
+(define-inline-constant ETOOMANYREFS	@VALUEOF_ETOOMANYREFS@)
+(define-inline-constant ETXTBSY		@VALUEOF_ETXTBSY@)
+(define-inline-constant EUCLEAN		@VALUEOF_EUCLEAN@)
+(define-inline-constant EUNATCH		@VALUEOF_EUNATCH@)
+(define-inline-constant EUSERS		@VALUEOF_EUSERS@)
+(define-inline-constant EWOULDBLOCK	@VALUEOF_EWOULDBLOCK@)
+(define-inline-constant EXDEV		@VALUEOF_EXDEV@)
+(define-inline-constant EXFULL		@VALUEOF_EXFULL@)
+
+
+;;;; done
+
+)
+
+;;; end of file
