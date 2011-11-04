@@ -594,6 +594,7 @@
     (prefix (vicare unsafe-operations)
 	    unsafe.)
     (vicare unsafe-unicode)
+    (vicare unsafe-capi)
     (vicare syntactic-extensions))
 
 
@@ -6582,66 +6583,6 @@
     (%do-put-char (current-output-port) #\newline 'newline))
    ((port)
     (%do-put-char port #\newline 'newline))))
-
-
-;;;; platform API for file descriptors
-;;
-;;See detailed documentation of the C functions in the Texinfo file.
-;;
-
-(define-inline (platform-open-input-fd pathname-bv open-options)
-  ;;Interface  to "open()".   Open  a file  descriptor  for reading;  if
-  ;;successful  return  a  non-negative  fixnum  representing  the  file
-  ;;descriptor;  else return  a  negative fixnum  representing an  ERRNO
-  ;;code.
-  ;;
-  (foreign-call "ikrt_open_input_fd" pathname-bv open-options))
-
-(define-inline (platform-open-output-fd pathname-bv open-options)
-  ;;Interface  to "open()".   Open  a file  descriptor  for writing;  if
-  ;;successful  return  a  non-negative  fixnum  representing  the  file
-  ;;descriptor;  else return  a  negative fixnum  representing an  ERRNO
-  ;;code.
-  ;;
-  (foreign-call "ikrt_open_output_fd" pathname-bv open-options))
-
-(define-inline (platform-open-input/output-fd pathname-bv open-options)
-  ;;Interface to "open()".  Open  a file descriptor for reading writing;
-  ;;if  successful return  a non-negative  fixnum representing  the file
-  ;;descriptor;  else return  a  negative fixnum  representing an  ERRNO
-  ;;code.
-  ;;
-  (foreign-call "ikrt_open_input_output_fd" pathname-bv open-options))
-
-(define-inline (platform-read-fd fd dst.bv dst.start requested-count)
-  ;;Interface to "read()".  Read data  from the file descriptor into the
-  ;;supplied  bytevector;  if successful  return  a non-negative  fixnum
-  ;;representind  the  number of  bytes  actually  read;  else return  a
-  ;;negative fixnum representing an ERRNO code.
-  ;;
-  (foreign-call "ikrt_read_fd" fd dst.bv dst.start requested-count))
-
-(define-inline (platform-write-fd fd src.bv src.start requested-count)
-  ;;Interface to "write()".  Write  data from the supplied bytevector to
-  ;;the  file descriptor;  if  successful return  a non-negative  fixnum
-  ;;representind  the number of  bytes actually  written; else  return a
-  ;;negative fixnum representing an ERRNO code.
-  ;;
-  (foreign-call "ikrt_write_fd" fd src.bv src.start requested-count))
-
-(define-inline (platform-set-position fd position)
-  ;;Interface to "lseek()".  Set  the cursor position.  POSITION must be
-  ;;an  exact integer in  the range  of the  "off_t" platform  type.  If
-  ;;successful return false; if an error occurs return a negative fixnum
-  ;;representing an  ERRNO code.
-  ;;
-  (foreign-call "ikrt_set_position" fd position))
-
-(define-inline (platform-close-fd fd)
-  ;;Interface to "close()".  Close  the file descriptor and return false
-  ;;or a fixnum representing an ERRNO code.
-  ;;
-  (foreign-call "ikrt_close_fd" fd))
 
 
 ;;;; platform I/O error handling
