@@ -31,24 +31,25 @@
 #!r6rs
 (library (vicare syntactic-extensions)
   (export
-    define-inline
-    define-inline-constant
-    define-syntax*
-    unwind-protect
+    ;; miscellaneous extensions
+    define-inline		define-inline-constant
+    define-syntax*		define-auxiliary-syntaxes
+    debug-assert		unwind-protect
+
+    ;; arguments validation
     define-argument-validation
     with-arguments-validation
     with-dangerous-arguments-validation
-    case-word-size
-    case-endianness
+
+    ;; miscellaneous dispatching
+    case-word-size		case-endianness
+    case-one-operand		case-two-operands
 
     ;; auxiliary syntaxes
     big			little
     fixnum		bignum
     flonum		cflonum
-    compnum
-
-    ;; numeric argument dispatching
-    case-one-operand	case-two-operands)
+    compnum)
   (import (ikarus)
     (for (prefix (vicare installation-configuration)
 		 config.)
@@ -90,6 +91,30 @@
 	     (lambda return-values
 	       (cleanup)
 	       (apply values return-values)))))))))
+
+(define-syntax debug-assert
+  ;;This is meant to expand to nothing when debugging is turned off.
+  ;;
+  (if #t
+      (syntax-rules ()
+  	((_ ?pred)
+  	 (assert ?pred)))
+    (syntax-rules ()
+      ((_ ?pred)
+       (values)))))
+
+(define-syntax define-auxiliary-syntaxes
+  (syntax-rules ()
+    ((_ ?name)
+     (define-syntax ?name (syntax-rules ())))
+    ((_ ?name0 ?name ...)
+     (begin
+       (define-syntax ?name0 (syntax-rules ()))
+       (define-auxiliary-syntaxes ?name ...)))
+    ((_)	;allows this  syntax to be called with  no arguments and
+		;still expand to a definition
+     (define-syntax dummy (syntax-rules ())))
+    ))
 
 
 (define-syntax define-argument-validation

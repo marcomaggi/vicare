@@ -591,39 +591,9 @@
     ;;and $SET-PORT-* bindings.
     (ikarus system $io)
     (prefix (only (ikarus) port?) primop.)
-    (prefix (rename (ikarus system $fx) #;(ikarus fixnums unsafe)
-		    ($fxzero?	fxzero?)
-		    ($fxadd1	fxadd1)	 ;increment
-		    ($fxsub1	fxsub1)	 ;decrement
-		    ($fxsra	fxsra)	 ;shift right
-		    ($fxsll	fxsll)	 ;shift left
-		    ($fxlogor	fxlogor) ;inclusive logic OR
-		    ($fxlogand	fxand)	 ;logic AND
-		    ($fx+	fx+)
-		    ($fx-	fx-)
-		    ($fx<	fx<)
-		    ($fx>	fx>)
-		    ($fx>=	fx>=)
-		    ($fx<=	fx<=)
-		    ($fx=	fx=))
+    (prefix (vicare unsafe-operations)
 	    unsafe.)
-    (prefix (rename (ikarus system $chars) #;(ikarus system chars)
-		    ($char=		char=)
-		    ($char->fixnum	char->integer)
-		    ($fixnum->char	integer->char))
-	    unsafe.)
-    (prefix (rename (ikarus system $bytevectors) #;(ikarus system bytevectors)
-		    ($make-bytevector	make-bytevector)
-		    ($bytevector-length	bytevector-length)
-		    ($bytevector-set!	bytevector-u8-set!)
-		    ($bytevector-u8-ref	bytevector-u8-ref))
-	    unsafe.)
-    (prefix (rename (ikarus system $strings) #;(ikarus system strings)
-		    ($make-string	make-string)
-		    ($string-length	string-length)
-		    ($string-ref	string-ref)
-		    ($string-set!	string-set!))
-	    unsafe.))
+    (vicare syntactic-extensions))
 
 
 ;;;; emergency debugging
@@ -639,33 +609,6 @@
     (foreign-call "ikrt_write_fd" 2 bv 0 (unsafe.bytevector-length bv))
     ;;and a newline
     (foreign-call "ikrt_write_fd" 2 '#vu8(10) 0 1)))
-
-
-;;;; syntax helpers
-
-(define-syntax define-inline
-  (syntax-rules ()
-    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-     (define-syntax ?name
-       (syntax-rules ()
-	 ((_ ?arg ... . ?rest)
-	  (begin ?form0 ?form ...)))))))
-
-(define-syntax define-syntax*
-  (syntax-rules ()
-    ((_ (?who ?stx) . ?body)
-     (define-syntax ?who (lambda (?stx) . ?body)))))
-
-(define-syntax %debug-assert
-  ;;This is meant to expand to nothing when debugging is turned off.
-  ;;
-  (if #t
-      (syntax-rules ()
-  	((_ ?pred)
-  	 (assert ?pred)))
-    (syntax-rules ()
-      ((_ ?pred)
-       (values)))))
 
 
 ;;;; port attributes
@@ -768,10 +711,10 @@
 ;;
 ;;					  32109876543210
 (define PORT-TYPE-MASK			#b00000000001111)
-(define BINARY-INPUT-PORT-BITS		(%unsafe.fxior BINARY-PORT-TAG  INPUT-PORT-TAG))
-(define BINARY-OUTPUT-PORT-BITS		(%unsafe.fxior BINARY-PORT-TAG  OUTPUT-PORT-TAG))
-(define TEXTUAL-INPUT-PORT-BITS		(%unsafe.fxior TEXTUAL-PORT-TAG INPUT-PORT-TAG))
-(define TEXTUAL-OUTPUT-PORT-BITS	(%unsafe.fxior TEXTUAL-PORT-TAG OUTPUT-PORT-TAG))
+(define BINARY-INPUT-PORT-BITS		(unsafe.fxior BINARY-PORT-TAG  INPUT-PORT-TAG))
+(define BINARY-OUTPUT-PORT-BITS		(unsafe.fxior BINARY-PORT-TAG  OUTPUT-PORT-TAG))
+(define TEXTUAL-INPUT-PORT-BITS		(unsafe.fxior TEXTUAL-PORT-TAG INPUT-PORT-TAG))
+(define TEXTUAL-OUTPUT-PORT-BITS	(unsafe.fxior TEXTUAL-PORT-TAG OUTPUT-PORT-TAG))
 
 ;;The following  tag constants allow  fast classification of  open input
 ;;ports by doing:
@@ -787,24 +730,24 @@
 (define FAST-GET-BYTE-TAG        BINARY-INPUT-PORT-BITS)
 ;;
 ;;This one is used for textual input ports, having a string buffer.
-(define FAST-GET-CHAR-TAG	(%unsafe.fxior FAST-CHAR-TEXT-TAG  TEXTUAL-INPUT-PORT-BITS))
+(define FAST-GET-CHAR-TAG	(unsafe.fxior FAST-CHAR-TEXT-TAG  TEXTUAL-INPUT-PORT-BITS))
 ;;
 ;;The following  are used for  textual input ports, having  a bytevector
 ;;buffer and a  transcoder, from which characters in  some encoding must
 ;;be read.
-(define FAST-GET-UTF8-TAG	(%unsafe.fxior FAST-U8-TEXT-TAG    TEXTUAL-INPUT-PORT-BITS))
+(define FAST-GET-UTF8-TAG	(unsafe.fxior FAST-U8-TEXT-TAG    TEXTUAL-INPUT-PORT-BITS))
 		;Tag for textual input  ports with bytevector buffer and
 		;UTF-8 transcoder.
-(define FAST-GET-LATIN-TAG	(%unsafe.fxior FAST-LATIN-TEXT-TAG TEXTUAL-INPUT-PORT-BITS))
+(define FAST-GET-LATIN-TAG	(unsafe.fxior FAST-LATIN-TEXT-TAG TEXTUAL-INPUT-PORT-BITS))
 		;Tag for textual input  ports with bytevector buffer and
 		;Latin-1 transcoder.
-(define FAST-GET-UTF16BE-TAG	(%unsafe.fxior FAST-U16BE-TEXT-TAG TEXTUAL-INPUT-PORT-BITS))
+(define FAST-GET-UTF16BE-TAG	(unsafe.fxior FAST-U16BE-TEXT-TAG TEXTUAL-INPUT-PORT-BITS))
 		;Tag for textual input  ports with bytevector buffer and
 		;UTF-16 big endian transcoder.
-(define FAST-GET-UTF16LE-TAG	(%unsafe.fxior FAST-U16LE-TEXT-TAG TEXTUAL-INPUT-PORT-BITS))
+(define FAST-GET-UTF16LE-TAG	(unsafe.fxior FAST-U16LE-TEXT-TAG TEXTUAL-INPUT-PORT-BITS))
 		;Tag for textual input  ports with bytevector buffer and
 		;UTF-16 little endian transcoder.
-(define INIT-GET-UTF16-TAG	(%unsafe.fxior INIT-U16-TEXT-TAG TEXTUAL-INPUT-PORT-BITS))
+(define INIT-GET-UTF16-TAG	(unsafe.fxior INIT-U16-TEXT-TAG TEXTUAL-INPUT-PORT-BITS))
 		;Tag for textual input  ports with bytevector buffer and
 		;UTF-16 transcoder  not yet recognised as  little or big
 		;endian:  endianness selection  is performed  by reading
@@ -825,24 +768,24 @@
 (define FAST-PUT-BYTE-TAG	BINARY-OUTPUT-PORT-BITS)
 ;;
 ;;This one is used for textual output ports, having a string buffer.
-(define FAST-PUT-CHAR-TAG	(%unsafe.fxior FAST-CHAR-TEXT-TAG  TEXTUAL-OUTPUT-PORT-BITS))
+(define FAST-PUT-CHAR-TAG	(unsafe.fxior FAST-CHAR-TEXT-TAG  TEXTUAL-OUTPUT-PORT-BITS))
 ;;
 ;;The following are  used for textual output ports,  having a bytevector
 ;;buffer and a transcoder, to  which characters in some encoding must be
 ;;written.
-(define FAST-PUT-UTF8-TAG	(%unsafe.fxior FAST-U8-TEXT-TAG    TEXTUAL-OUTPUT-PORT-BITS))
+(define FAST-PUT-UTF8-TAG	(unsafe.fxior FAST-U8-TEXT-TAG    TEXTUAL-OUTPUT-PORT-BITS))
 		;Tag for textual output ports with bytevector buffer and
 		;UTF-8 transcoder.
-(define FAST-PUT-LATIN-TAG	(%unsafe.fxior FAST-LATIN-TEXT-TAG TEXTUAL-OUTPUT-PORT-BITS))
+(define FAST-PUT-LATIN-TAG	(unsafe.fxior FAST-LATIN-TEXT-TAG TEXTUAL-OUTPUT-PORT-BITS))
 		;Tag for textual output ports with bytevector buffer and
 		;Latin-1 transcoder.
-(define FAST-PUT-UTF16BE-TAG	(%unsafe.fxior FAST-U16BE-TEXT-TAG TEXTUAL-OUTPUT-PORT-BITS))
+(define FAST-PUT-UTF16BE-TAG	(unsafe.fxior FAST-U16BE-TEXT-TAG TEXTUAL-OUTPUT-PORT-BITS))
 		;Tag for textual output ports with bytevector buffer and
 		;UTF-16 big endian transcoder.
-(define FAST-PUT-UTF16LE-TAG	(%unsafe.fxior FAST-U16LE-TEXT-TAG TEXTUAL-OUTPUT-PORT-BITS))
+(define FAST-PUT-UTF16LE-TAG	(unsafe.fxior FAST-U16LE-TEXT-TAG TEXTUAL-OUTPUT-PORT-BITS))
 		;Tag for textual output ports with bytevector buffer and
 		;UTF-16 little endian transcoder.
-(define INIT-PUT-UTF16-TAG	(%unsafe.fxior FAST-PUT-UTF16BE-TAG FAST-PUT-UTF16LE-TAG))
+(define INIT-PUT-UTF16-TAG	(unsafe.fxior FAST-PUT-UTF16BE-TAG FAST-PUT-UTF16LE-TAG))
 		;Tag for textual output ports with bytevector buffer and
 		;UTF-16 transcoder  with data  not yet recognised  to be
 		;little  or  big endian:  selection  is performed  after
@@ -864,7 +807,7 @@
      (%%select-input-fast-tag-from-transcoder ?who ?transcoder ?other-attribute))
     ((_ ?who ?transcoder ?other-attribute . ?other-attributes)
      (%%select-input-fast-tag-from-transcoder ?who ?transcoder
-					      (%unsafe.fxior ?other-attribute . ?other-attributes)))))
+					      (unsafe.fxior ?other-attribute . ?other-attributes)))))
 
 (define (%%select-input-fast-tag-from-transcoder who maybe-transcoder other-attributes)
   ;;Return  a fixnum  containing the  tag attributes  for an  input port
@@ -877,19 +820,19 @@
 ;;;yet  been  fully constructed.   A  failing  assertion  would use  the
 ;;;standard ports, causing a segfault.
   (if (not maybe-transcoder)
-      (%unsafe.fxior other-attributes FAST-GET-BYTE-TAG)
+      (unsafe.fxior other-attributes FAST-GET-BYTE-TAG)
     (case (transcoder-codec maybe-transcoder)
-      ((utf-8-codec)	(%unsafe.fxior other-attributes FAST-GET-UTF8-TAG))
-      ((latin-1-codec)	(%unsafe.fxior other-attributes	FAST-GET-LATIN-TAG))
-      ((utf-16le-codec)	(%unsafe.fxior other-attributes FAST-GET-UTF16LE-TAG))
-      ((utf-16be-codec)	(%unsafe.fxior other-attributes FAST-GET-UTF16BE-TAG))
+      ((utf-8-codec)	(unsafe.fxior other-attributes FAST-GET-UTF8-TAG))
+      ((latin-1-codec)	(unsafe.fxior other-attributes	FAST-GET-LATIN-TAG))
+      ((utf-16le-codec)	(unsafe.fxior other-attributes FAST-GET-UTF16LE-TAG))
+      ((utf-16be-codec)	(unsafe.fxior other-attributes FAST-GET-UTF16BE-TAG))
       ;;The      selection     between      FAST-GET-UTF16LE-TAG     and
       ;;FAST-GET-UTF16BE-TAG is performed as part of the Byte Order Mark
       ;;(BOM) reading operation when the first char is read.
-      ((utf-16-codec)	(%unsafe.fxior other-attributes INIT-GET-UTF16-TAG))
+      ((utf-16-codec)	(unsafe.fxior other-attributes INIT-GET-UTF16-TAG))
       ;;If no codec  is recognised, wait to read  the first character to
       ;;tag the port according to the Byte Order Mark.
-      (else		(%unsafe.fxior other-attributes TEXTUAL-INPUT-PORT-BITS)))))
+      (else		(unsafe.fxior other-attributes TEXTUAL-INPUT-PORT-BITS)))))
 
 (define-syntax %select-output-fast-tag-from-transcoder
   ;;When using  this macro without specifying the  other attributes: the
@@ -904,7 +847,7 @@
      (%%select-output-fast-tag-from-transcoder ?who ?transcoder ?other-attribute))
     ((_ ?who ?transcoder ?other-attribute . ?other-attributes)
      (%%select-output-fast-tag-from-transcoder ?who ?transcoder
-					       (%unsafe.fxior ?other-attribute . ?other-attributes)))))
+					       (unsafe.fxior ?other-attribute . ?other-attributes)))))
 
 (define (%%select-output-fast-tag-from-transcoder who maybe-transcoder other-attributes)
   ;;Return a  fixnum containing  the tag attributes  for an  output port
@@ -923,14 +866,14 @@
 ;;;yet  been  fully constructed.   A  failing  assertion  would use  the
 ;;;standard ports, causing a segfault.
   (if (not maybe-transcoder)
-      (%unsafe.fxior other-attributes FAST-PUT-BYTE-TAG)
+      (unsafe.fxior other-attributes FAST-PUT-BYTE-TAG)
     (case (transcoder-codec maybe-transcoder)
-      ((utf-8-codec)	(%unsafe.fxior other-attributes FAST-PUT-UTF8-TAG))
-      ((latin-1-codec)	(%unsafe.fxior other-attributes FAST-PUT-LATIN-TAG))
-      ((utf-16le-codec)	(%unsafe.fxior other-attributes FAST-PUT-UTF16LE-TAG))
-      ((utf-16be-codec)	(%unsafe.fxior other-attributes FAST-PUT-UTF16BE-TAG))
+      ((utf-8-codec)	(unsafe.fxior other-attributes FAST-PUT-UTF8-TAG))
+      ((latin-1-codec)	(unsafe.fxior other-attributes FAST-PUT-LATIN-TAG))
+      ((utf-16le-codec)	(unsafe.fxior other-attributes FAST-PUT-UTF16LE-TAG))
+      ((utf-16be-codec)	(unsafe.fxior other-attributes FAST-PUT-UTF16BE-TAG))
       ;;By default we select big endian UTF-16.
-      ((utf-16-codec)	(%unsafe.fxior other-attributes FAST-PUT-UTF16BE-TAG))
+      ((utf-16-codec)	(unsafe.fxior other-attributes FAST-PUT-UTF16BE-TAG))
       (else
        (assertion-violation who "unsupported codec" (transcoder-codec maybe-transcoder))))))
 
@@ -946,7 +889,7 @@
 (define-inline ($mark-port-closed! ?port)
   ;;Set the CLOSED?  bit to 1 in the attributes or PORT.
   ;;
-  ($set-port-attrs! ?port (%unsafe.fxior CLOSED-PORT-TAG ($port-attrs ?port))))
+  ($set-port-attrs! ?port (unsafe.fxior CLOSED-PORT-TAG ($port-attrs ?port))))
 
 ;;This  mask  is used  to  nullify  the buffer  mode  bits  in a  fixnum
 ;;representing port attributes.
@@ -958,11 +901,11 @@
   ($set-port-attrs! ?port (unsafe.fxand BUFFER-MODE-NOT-MASK ($port-attrs ?port))))
 
 (define-inline ($set-port-buffer-mode-to-none! ?port)
-  ($set-port-attrs! ?port (%unsafe.fxior (unsafe.fxand BUFFER-MODE-NOT-MASK ($port-attrs ?port))
+  ($set-port-attrs! ?port (unsafe.fxior (unsafe.fxand BUFFER-MODE-NOT-MASK ($port-attrs ?port))
 					 BUFFER-MODE-NONE-TAG)))
 
 (define-inline ($set-port-buffer-mode-to-line! ?port)
-  ($set-port-attrs! ?port (%unsafe.fxior (unsafe.fxand BUFFER-MODE-NOT-MASK ($port-attrs ?port))
+  ($set-port-attrs! ?port (unsafe.fxior (unsafe.fxand BUFFER-MODE-NOT-MASK ($port-attrs ?port))
 					 BUFFER-MODE-LINE-TAG)))
 
 ;;; --------------------------------------------------------------------
@@ -984,7 +927,7 @@
 (define-inline ($set-port-fast-attrs! port fast-attrs)
   ;;Store new fast attributes in the tag of PORT.
   ;;
-  ($set-port-attrs! port (%unsafe.fxior ($port-other-attrs port) fast-attrs)))
+  ($set-port-attrs! port (unsafe.fxior ($port-other-attrs port) fast-attrs)))
 
 (define-inline ($port-fast-attrs-or-zero obj)
   ;;Given  a Scheme  value:  if it  is  a port  value  extract the  fast
@@ -1574,29 +1517,16 @@
 (define UTF-16-BIG-ENDIAN-BYTE-ORDER-MARK-LIST		'(#xFE #xFF))
 (define UTF-16-LITTLE-ENDIAN-BYTE-ORDER-MARK-LIST	'(#xFF #xFE))
 
-(define-syntax %unsafe.fxior
-  (syntax-rules ()
-    ((_ ?op1)
-     ?op1)
-    ((_ ?op1 ?op2)
-     (unsafe.fxlogor ?op1 ?op2))
-    ((_ ?op1 ?op2 . ?ops)
-     (unsafe.fxlogor ?op1 (%unsafe.fxior ?op2 . ?ops)))))
-
-;;; auxiliary syntaxes
-(let-syntax
-    ((define-auxiliary-syntax (syntax-rules ()
-				((_ ?who)
-				 (define-syntax ?who (syntax-rules ()))))))
-  (define-auxiliary-syntax data-is-needed-at:)
-  (define-auxiliary-syntax if-available-data:)
-  (define-auxiliary-syntax if-available-room:)
-  (define-auxiliary-syntax if-end-of-file:)
-  (define-auxiliary-syntax if-no-match-raise-assertion-violation)
-  (define-auxiliary-syntax if-no-match:)
-  (define-auxiliary-syntax if-successful-match:)
-  (define-auxiliary-syntax if-successful-refill:)
-  (define-auxiliary-syntax room-is-needed-for:))
+(define-auxiliary-syntaxes
+  data-is-needed-at:
+  if-available-data:
+  if-available-room:
+  if-end-of-file:
+  if-no-match-raise-assertion-violation
+  if-no-match:
+  if-successful-match:
+  if-successful-refill:
+  room-is-needed-for:)
 
 (define-inline (char-is-single-char-line-ending? ch)
   (or (unsafe.fx= ch #\x000A)	;; linefeed
@@ -1721,7 +1651,7 @@
   ;;Notice that Latin-1 encoding has no BOM.
   ;;
   (with-port-having-bytevector-buffer (port)
-    (%debug-assert port.transcoder)
+    (debug-assert port.transcoder)
     (case (transcoder-codec port.transcoder)
       ((utf-8-codec)
        (%parse-byte-order-mark (who port UTF-8-BYTE-ORDER-MARK-LIST)
@@ -1786,30 +1716,6 @@
 
 
 ;;;; bytevector helpers
-
-(define (%unsafe.bytevector-u16-ref bv index endianness)
-  ;;Like BYTEVECTOR-U16-REF  defined by R6RS.  Assume  all the arguments
-  ;;to  have been  already validated;  expect the  index integers  to be
-  ;;fixnums.
-  ;;
-  (if (eq? endianness 'little)
-      (%unsafe.fxior (unsafe.bytevector-u8-ref bv index)
-		     (unsafe.fxsll (unsafe.bytevector-u8-ref bv (unsafe.fxadd1 index)) 8))
-    (%unsafe.fxior (unsafe.bytevector-u8-ref bv (unsafe.fxadd1 index))
-		   (unsafe.fxsll (unsafe.bytevector-u8-ref bv index) 8))))
-
-(define (%unsafe.bytevector-u16-set! bv index word endianness)
-  ;;Like BYTEVECTOR-U16-SET!  defined by R6RS.  Assume all the arguments
-  ;;to  have been  already validated;  expect the  index integers  to be
-  ;;fixnums.
-  ;;
-  (if (eq? endianness 'little)
-      (begin
-	(unsafe.bytevector-u8-set! bv index                 (unsafe.fxand word #xFF))
-	(unsafe.bytevector-u8-set! bv (unsafe.fxadd1 index) (unsafe.fxsra word 8)))
-    (begin
-      (unsafe.bytevector-u8-set! bv index                 (unsafe.fxsra word 8))
-      (unsafe.bytevector-u8-set! bv (unsafe.fxadd1 index) (unsafe.fxand word #xFF)))))
 
 (define (%unsafe.bytevector-copy! src.bv src.start dst.bv dst.start count)
   ;;Like BYTEVECTOR-COPY!   defined by  R6RS.  Assume all  the arguments
@@ -2351,7 +2257,7 @@
   ;;Decode the  code point of a  Unicode character from  a 2-octets UTF-8
   ;;encoding.
   ;;
-  (%unsafe.fxior (unsafe.fxsll (unsafe.fxand octet0 #b11111) 6)
+  (unsafe.fxior (unsafe.fxsll (unsafe.fxand octet0 #b11111) 6)
 		 (unsafe.fxand octet1 #b111111)))
 
 (define-inline (utf-8-valid-code-point-from-2-octets? code-point)
@@ -2373,13 +2279,13 @@
   ;;Evaluate to true if OCTET1 and OCTET2 are valid as second and third of
   ;;3-octets UTF-8 encoding of a Unicode character.
   ;;
-  (unsafe.fx= (unsafe.fxsra (%unsafe.fxior octet1 octet2) 6) #b10))
+  (unsafe.fx= (unsafe.fxsra (unsafe.fxior octet1 octet2) 6) #b10))
 
 (define-inline (utf-8-decode-three-octets octet0 octet1 octet2)
   ;;Decode the  code point of a  Unicode character from  a 3-octets UTF-8
   ;;encoding.
   ;;
-  (%unsafe.fxior (unsafe.fxsll (unsafe.fxand octet0   #b1111) 12)
+  (unsafe.fxior (unsafe.fxsll (unsafe.fxand octet0   #b1111) 12)
 		 (unsafe.fxsll (unsafe.fxand octet1 #b111111)  6)
 		 (unsafe.fxand octet2 #b111111)))
 
@@ -2403,13 +2309,13 @@
   ;;Evaluate  to true if  OCTET1, OCTET2  and OCTET3  are valid  as second,
   ;;third and fourth of 4-octets UTF-8 encoding of a Unicode character.
   ;;
-  (unsafe.fx= (unsafe.fxsra (%unsafe.fxior octet1 octet2 octet3) 6) #b10))
+  (unsafe.fx= (unsafe.fxsra (unsafe.fxior octet1 octet2 octet3) 6) #b10))
 
 (define-inline (utf-8-decode-four-octets octet0 octet1 octet2 octet3)
   ;;Decode the  code point of a  Unicode character from  a 4-octets UTF-8
   ;;encoding.
   ;;
-  (%unsafe.fxior (unsafe.fxsll (unsafe.fxand octet0    #b111) 18)
+  (unsafe.fxior (unsafe.fxsll (unsafe.fxand octet0    #b111) 18)
 		 (unsafe.fxsll (unsafe.fxand octet1 #b111111) 12)
 		 (unsafe.fxsll (unsafe.fxand octet2 #b111111)  6)
 		 (unsafe.fxand octet3 #b111111)))
@@ -2440,10 +2346,10 @@
        (unsafe.fx<= code-point #x7FF)))
 
 (define-inline (utf-8-encode-first-of-two-octets code-point)
-  (%unsafe.fxior #b11000000 (unsafe.fxsra code-point 6)))
+  (unsafe.fxior #b11000000 (unsafe.fxsra code-point 6)))
 
 (define-inline (utf-8-encode-second-of-two-octets code-point)
-  (%unsafe.fxior #b10000000 (unsafe.fxand code-point #b111111)))
+  (unsafe.fxior #b10000000 (unsafe.fxand code-point #b111111)))
 
 ;;; --------------------------------------------------------------------
 ;;; encoding code points to 3-octet UTF-8
@@ -2453,13 +2359,13 @@
        (unsafe.fx<= code-point #xFFFF)))
 
 (define-inline (utf-8-encode-first-of-three-octets code-point)
-  (%unsafe.fxior #b11100000 (unsafe.fxsra code-point 12)))
+  (unsafe.fxior #b11100000 (unsafe.fxsra code-point 12)))
 
 (define-inline (utf-8-encode-second-of-three-octets code-point)
-  (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra code-point 6) #b111111)))
+  (unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra code-point 6) #b111111)))
 
 (define-inline (utf-8-encode-third-of-three-octets code-point)
-  (%unsafe.fxior #b10000000 (unsafe.fxand code-point #b111111)))
+  (unsafe.fxior #b10000000 (unsafe.fxand code-point #b111111)))
 
 ;;; --------------------------------------------------------------------
 ;;; encoding code points to 4-octet UTF-8
@@ -2469,16 +2375,16 @@
        (unsafe.fx<= code-point #x10FFFF)))
 
 (define-inline (utf-8-encode-first-of-four-octets code-point)
-  (%unsafe.fxior #b11110000 (unsafe.fxsra code-point 18)))
+  (unsafe.fxior #b11110000 (unsafe.fxsra code-point 18)))
 
 (define-inline (utf-8-encode-second-of-four-octets code-point)
-  (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra code-point 12) #b111111)))
+  (unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra code-point 12) #b111111)))
 
 (define-inline (utf-8-encode-third-of-four-octets code-point)
-  (%unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra code-point 6) #b111111)))
+  (unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra code-point 6) #b111111)))
 
 (define-inline (utf-8-encode-fourth-of-four-octets code-point)
-  (%unsafe.fxior #b10000000 (unsafe.fxand code-point #b111111)))
+  (unsafe.fxior #b10000000 (unsafe.fxand code-point #b111111)))
 
 ;;; --------------------------------------------------------------------
 
@@ -2592,7 +2498,7 @@
   ;;surrogate pair UTF-16 encoding.
   ;;
   (unsafe.fx+ #x10000
-	      (%unsafe.fxior (unsafe.fxsll (unsafe.fxand word0 #x3FF) 10)
+	      (unsafe.fxior (unsafe.fxsll (unsafe.fxand word0 #x3FF) 10)
 			     (unsafe.fxand word1 #x3FF))))
 
 ;;; --------------------------------------------------------------------
@@ -2613,10 +2519,10 @@
        (unsafe.fx<  code-point #x10FFFF)))
 
 (define-inline (utf-16-encode-first-of-two-words code-point)
-  (%unsafe.fxior #xD800 (unsafe.fxsra (unsafe.fx- code-point #x10000) 10)))
+  (unsafe.fxior #xD800 (unsafe.fxsra (unsafe.fx- code-point #x10000) 10)))
 
 (define-inline (utf-16-encode-second-of-two-words code-point)
-  (%unsafe.fxior #xDC00 (unsafe.fxand (unsafe.fx- code-point #x10000) (- (unsafe.fxsll 1 10) 1))))
+  (unsafe.fxior #xDC00 (unsafe.fxand (unsafe.fx- code-point #x10000) (- (unsafe.fxsll 1 10) 1))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3243,8 +3149,8 @@
                (%unsafe.flush-output-port port who)
 	       (set-position! device.new-position)
 	       (set! port.device.position device.new-position)
-	       (%debug-assert (zero? port.buffer.index))
-	       (%debug-assert (zero? port.buffer.used-size))))
+	       (debug-assert (zero? port.buffer.index))
+	       (debug-assert (zero? port.buffer.used-size))))
 	    ((and (boolean? set-position!) set-position!)
 	     ;;The  cookie's  POS field  holds  a  value representing  a
 	     ;;correct and immutable device position.  For this port the
@@ -3281,7 +3187,7 @@
 	(transcoder		#f)
 	(cookie			(default-cookie #f)))
     (%port->maybe-guarded-port
-     ($make-port (%unsafe.fxior attributes GUARDED-PORT-TAG)
+     ($make-port (unsafe.fxior attributes GUARDED-PORT-TAG)
 		 buffer.index buffer.used-size buffer transcoder identifier
 		 read! write! get-position set-position! close cookie))))
 
@@ -3298,7 +3204,7 @@
 	(transcoder		#t)
 	(cookie			(default-cookie #f)))
     (%port->maybe-guarded-port
-     ($make-port (%unsafe.fxior attributes GUARDED-PORT-TAG)
+     ($make-port (unsafe.fxior attributes GUARDED-PORT-TAG)
 		 buffer.index buffer.used-size buffer transcoder identifier
 		 read! write! get-position set-position! close cookie))))
 
@@ -3428,7 +3334,7 @@
   (%assert-value-is-maybe-close-procedure close who)
   (%assert-value-is-maybe-get-position-procedure  get-position  who)
   (%assert-value-is-maybe-set-position!-procedure set-position! who)
-  (let ((attributes (%unsafe.fxior BINARY-OUTPUT-PORT-BITS INPUT/OUTPUT-PORT-TAG)))
+  (let ((attributes (unsafe.fxior BINARY-OUTPUT-PORT-BITS INPUT/OUTPUT-PORT-TAG)))
     (%make-custom-binary-port attributes identifier read! write! get-position set-position! close)))
 
 ;;; --------------------------------------------------------------------
@@ -3550,7 +3456,7 @@
   (%assert-value-is-maybe-close-procedure close who)
   (%assert-value-is-maybe-get-position-procedure  get-position  who)
   (%assert-value-is-maybe-set-position!-procedure set-position! who)
-  (let ((attributes (%unsafe.fxior FAST-PUT-CHAR-TAG INPUT/OUTPUT-PORT-TAG)))
+  (let ((attributes (unsafe.fxior FAST-PUT-CHAR-TAG INPUT/OUTPUT-PORT-TAG)))
     (%make-custom-textual-port attributes identifier read! write! get-position set-position! close)))
 
 
@@ -3596,7 +3502,7 @@
     ;;the device position equals the  bytevector length and its value in
     ;;the cookie's POS field is never mutated.
     (let* ((bv.len (unsafe.bytevector-length bv))
-	   (attributes		(%unsafe.fxior
+	   (attributes		(unsafe.fxior
 				 (%select-input-fast-tag-from-transcoder who maybe-transcoder)
 				 (%select-eol-style-from-transcoder who maybe-transcoder)))
 	   (buffer.index	0)
@@ -3663,7 +3569,7 @@
     (let ((str.len (string-length str)))
       (unless (< str.len BUFFER-SIZE-UPPER-LIMIT)
 	(error who "input string length exceeds maximum supported size" str.len))
-      (let ((attributes		(%unsafe.fxior
+      (let ((attributes		(unsafe.fxior
 				 FAST-GET-CHAR-TAG
 				 (or (%symbol->eol-attrs eol-style)
 				     (assertion-violation who
@@ -3830,7 +3736,7 @@
 	;;Write data to the device.
 	;;
 	(define who 'open-bytevector-output-port/write!)
-	(%debug-assert (and (fixnum? count) (<= 0 count)))
+	(debug-assert (and (fixnum? count) (<= 0 count)))
 	(let* ((dev		(cookie-dest cookie))
 	       (output.len	(car dev))
 	       (output.bvs	(cdr dev))
@@ -3863,7 +3769,7 @@
 	(let* ((dst.bv   (car output.bvs))
 	       (dst.len  output.len)
 	       (dst.room (unsafe.fx- dst.len dev-position)))
-	  (%debug-assert (fixnum? dst.room))
+	  (debug-assert (fixnum? dst.room))
 	  (if (unsafe.fx<= count dst.room)
 	      ;;The new data fits  in the single bytevector.  There is
 	      ;;no need to update the device.
@@ -4053,7 +3959,7 @@
 	;;Write data to the device.
 	;;
 	(define who 'open-string-output-port/write!)
-	(%debug-assert (and (fixnum? count) (<= 0 count)))
+	(debug-assert (and (fixnum? count) (<= 0 count)))
 	(let* ((dev		(cookie-dest cookie))
 	       (output.len	(car dev))
 	       (output.strs	(cdr dev))
@@ -4083,7 +3989,7 @@
 	(let* ((dst.str  (car output.strs))
 	       (dst.len  output.len)
 	       (dst.room (unsafe.fx- dst.len dev-position)))
-	  (%debug-assert (fixnum? dst.room))
+	  (debug-assert (fixnum? dst.room))
 	  (if (unsafe.fx<= count dst.room)
 	      ;;The new  data fits  in the single  string.  There  is no
 	      ;;need to update the device.
@@ -4121,7 +4027,7 @@
 		  (make-message-condition "attempt to set string output port position beyond limit")
 		  (make-i/o-invalid-position-error new-position)))))
 
-      (let* ((attributes	(%unsafe.fxior FAST-PUT-CHAR-TAG
+      (let* ((attributes	(unsafe.fxior FAST-PUT-CHAR-TAG
 					       (or (%symbol->eol-attrs eol-style)
 						   (assertion-violation who
 						     "expected EOL style as argument" eol-style))
@@ -4285,7 +4191,7 @@
   (%unsafe.assert-argument-is-not-input/output-port port who)
   (with-port-having-bytevector-buffer (port)
     (let ((transcoded-port ($make-port
-			    (%unsafe.fxior
+			    (unsafe.fxior
 			     (cond (port.is-input?
 				    (%select-input-fast-tag-from-transcoder who transcoder))
 				   (port.is-output?
@@ -4450,12 +4356,12 @@
     (case mode
       ((line)
        (if (%unsafe.textual-port? port)
-	   (set! port.attributes (%unsafe.fxior (%unsafe.port-nullify-eol-style-bits port.attributes)
+	   (set! port.attributes (unsafe.fxior (%unsafe.port-nullify-eol-style-bits port.attributes)
 						BUFFER-MODE-LINE-TAG))
 	 (assertion-violation who
 	   "invalid line buffer mode for binary port" port)))
       ((none)
-       (set! port.attributes (%unsafe.fxior (%unsafe.port-nullify-eol-style-bits port.attributes)
+       (set! port.attributes (unsafe.fxior (%unsafe.port-nullify-eol-style-bits port.attributes)
 					    BUFFER-MODE-NONE-TAG)))
       ((block)
        (set! port.attributes (%unsafe.port-nullify-eol-style-bits port.attributes)))
@@ -4496,7 +4402,7 @@
 	   (if (unsafe.fx<= ?number-of-bytes (unsafe.fx- port.buffer.size port.buffer.index))
 	       (begin . ?available-body)
 	     (begin
-	       (%debug-assert (= port.buffer.used-size port.buffer.index))
+	       (debug-assert (= port.buffer.used-size port.buffer.index))
 	       (%unsafe.flush-output-port port ?who)
 	       (try-again-after-flushing-buffer)))))))))
 
@@ -4511,7 +4417,7 @@
 	   (if (unsafe.fx<= ?number-of-bytes (unsafe.fx- port.buffer.size port.buffer.index))
 	       (begin . ?available-body)
 	     (begin
-	       (%debug-assert (= port.buffer.used-size port.buffer.index))
+	       (debug-assert (= port.buffer.used-size port.buffer.index))
 	       (%unsafe.flush-output-port port ?who)
 	       (try-again-after-flushing-buffer)))))))))
 
@@ -4946,7 +4852,7 @@
   ;;from PORT, set the buffer index to BUFFER.OFFSET-AFTER.
   ;;
   (with-port-having-bytevector-buffer (port)
-    (%debug-assert (fx= port.buffer.index port.buffer.used-size))
+    (debug-assert (fx= port.buffer.index port.buffer.used-size))
     (%refill-bytevector-buffer-and-evaluate (port who)
       (if-end-of-file: (eof-object))
       (if-successful-refill:
@@ -5390,7 +5296,7 @@
 	      (if (utf-8-single-octet? byte0)
 		  (let ((N (utf-8-decode-single-octet byte0)))
 		    (set! port.buffer.index (unsafe.fxadd1 buffer.offset-byte0))
-		    (unsafe.integer->char N))
+		    (unsafe.fixnum->char N))
 		(%unsafe.read-char-from-port-with-utf8-codec port ?who)))
 	  (%unsafe.read-char-from-port-with-utf8-codec port ?who))))))
 
@@ -5406,7 +5312,7 @@
 	(if (unsafe.fx< buffer.offset-byte0 port.buffer.used-size)
 	    (let ((byte0 (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte0)))
 	      (if (utf-8-single-octet? byte0)
-		  (unsafe.integer->char (utf-8-decode-single-octet byte0))
+		  (unsafe.fixnum->char (utf-8-decode-single-octet byte0))
 		(%unsafe.peek-char-from-port-with-utf8-codec port ?who 0)))
 	  (%unsafe.peek-char-from-port-with-utf8-codec port ?who 0))))))
 
@@ -5452,7 +5358,7 @@
     (define-inline (get-single-byte-character byte0 buffer.offset-byte0)
       (let ((N (utf-8-decode-single-octet byte0)))
 	(set! port.buffer.index (unsafe.fxadd1 buffer.offset-byte0))
-	(unsafe.integer->char N)))
+	(unsafe.fixnum->char N)))
 
     (define-inline (get-2-bytes-character byte0 buffer.offset-byte0)
       (let retry-after-filling-buffer-for-1-more-byte ((buffer.offset-byte0 buffer.offset-byte0))
@@ -5476,7 +5382,7 @@
 		     ((utf-8-second-of-two-octets? byte1)
 		      (let ((N (utf-8-decode-two-octets byte0 byte1)))
 			(if (utf-8-valid-code-point-from-2-octets? N)
-			    (unsafe.integer->char N)
+			    (unsafe.fixnum->char N)
 			  (%error-handler "invalid code point as result \
                                            of decoding 2-byte UTF-8 character"
 					  byte0 byte1 N))))
@@ -5512,7 +5418,7 @@
 		     ((utf-8-second-and-third-of-three-octets? byte1 byte2)
 		      (let ((N (utf-8-decode-three-octets byte0 byte1 byte2)))
 			(if (utf-8-valid-code-point-from-3-octets? N)
-			    (unsafe.integer->char N)
+			    (unsafe.fixnum->char N)
 			  (%error-handler "invalid code point as result \
                                            of decoding 3-byte UTF-8 character"
 					  byte0 byte1 byte2 N))))
@@ -5554,7 +5460,7 @@
 		     ((utf-8-second-third-and-fourth-of-four-octets? byte1 byte2 byte3)
 		      (let ((N (utf-8-decode-four-octets byte0 byte1 byte2 byte3)))
 			(if (utf-8-valid-code-point-from-4-octets? N)
-			    (unsafe.integer->char N)
+			    (unsafe.fixnum->char N)
 			  (%error-handler "invalid code point as result \
                                            of decoding 4-byte UTF-8 character"
 					  byte0 byte1 byte2 byte3 N))))
@@ -5635,7 +5541,7 @@
 	       (cond ((utf-8-invalid-octet? byte0)
 		      (%error-invalid-byte))
 		     ((utf-8-single-octet? byte0)
-		      (unsafe.integer->char (utf-8-decode-single-octet byte0)))
+		      (unsafe.fixnum->char (utf-8-decode-single-octet byte0)))
 		     ((utf-8-first-of-two-octets? byte0)
 		      (peek-2-bytes-character byte0 buffer.offset-byte0))
 		     ((utf-8-first-of-three-octets? byte0)
@@ -5666,7 +5572,7 @@
 		     ((utf-8-second-of-two-octets? byte1)
 		      (let ((N (utf-8-decode-two-octets byte0 byte1)))
 			(if (utf-8-valid-code-point-from-2-octets? N)
-			    (unsafe.integer->char N)
+			    (unsafe.fixnum->char N)
 			  (%error-handler buffer-offset
 					  "invalid code point as result \
                                            of decoding 2-byte UTF-8 character"
@@ -5702,7 +5608,7 @@
 		     ((utf-8-second-and-third-of-three-octets? byte1 byte2)
 		      (let ((N (utf-8-decode-three-octets byte0 byte1 byte2)))
 			(if (utf-8-valid-code-point-from-3-octets? N)
-			    (unsafe.integer->char N)
+			    (unsafe.fixnum->char N)
 			  (%error-handler buffer-offset
 					  "invalid code point as result of \
                                            decoding 3-byte UTF-8 character"
@@ -5744,7 +5650,7 @@
 		     ((utf-8-second-third-and-fourth-of-four-octets? byte1 byte2 byte3)
 		      (let ((N (utf-8-decode-four-octets byte0 byte1 byte2 byte3)))
 			(if (utf-8-valid-code-point-from-4-octets? N)
-			    (unsafe.integer->char N)
+			    (unsafe.fixnum->char N)
 			  (%error-handler buffer-offset
 					  "invalid code point as result \
                                            of decoding 4-bytes UTF-8 character"
@@ -5863,16 +5769,16 @@
       (define errmsg
 	"invalid code point decoded from UTF-16 surrogate pair")
       (cond ((unsafe.fx<= char-code-point #xD7FF)
-	     (unsafe.integer->char char-code-point))
+	     (unsafe.fixnum->char char-code-point))
 	    ((unsafe.fx<  char-code-point #xE000)
 	     (%error-handler errmsg char-code-point))
 	    ((unsafe.fx<= char-code-point #x10FFFF)
-	     (unsafe.integer->char char-code-point))
+	     (unsafe.fixnum->char char-code-point))
 	    (else
 	     (%error-handler errmsg char-code-point))))
 
     (define-inline (%word-ref buffer.offset)
-      (%unsafe.bytevector-u16-ref port.buffer buffer.offset endianness))
+      (unsafe.bytevector-u16-ref port.buffer buffer.offset endianness))
 
     (let* ((buffer.offset-word0 port.buffer.index)
 	   (buffer.offset-word1 (unsafe.fx+ 2 buffer.offset-word0))
@@ -6026,16 +5932,16 @@
       ;;
       (let ((errmsg "invalid code point decoded from UTF-16 surrogate pair"))
 	(cond ((unsafe.fx<= char-code-point #xD7FF)
-	       (unsafe.integer->char char-code-point))
+	       (unsafe.fixnum->char char-code-point))
 	      ((unsafe.fx<  char-code-point #xE000)
 	       (%error-handler buffer-offset errmsg (list char-code-point)))
 	      ((unsafe.fx<= char-code-point #x10FFFF)
-	       (unsafe.integer->char char-code-point))
+	       (unsafe.fixnum->char char-code-point))
 	      (else
 	       (%error-handler buffer-offset errmsg (list char-code-point))))))
 
     (define-inline (%word-ref buffer.offset)
-      (%unsafe.bytevector-u16-ref port.buffer buffer.offset endianness))
+      (unsafe.bytevector-u16-ref port.buffer buffer.offset endianness))
 
     (let* ((buffer.offset-word0 (unsafe.fx+ port.buffer.index buffer-offset))
 	   (buffer.offset-word1 (unsafe.fx+ 2 buffer.offset-word0))
@@ -6120,7 +6026,7 @@
 	    (begin
 	      (set! port.buffer.index (unsafe.fxadd1 buffer.offset))
 	      (let ((byte (unsafe.bytevector-u8-ref port.buffer buffer.offset)))
-		(unsafe.integer->char byte)))
+		(unsafe.fixnum->char byte)))
 	  (%unsafe.read/peek-char-from-port-with-latin1-codec port ?who 1 0))))))
 
 (define-inline (%unsafe.peek-char-from-port-with-fast-get-latin1-tag ?port ?who)
@@ -6134,7 +6040,7 @@
     (with-port-having-bytevector-buffer (port)
       (let ((buffer.offset-byte port.buffer.index))
 	(if (unsafe.fx< buffer.offset-byte port.buffer.used-size)
-	    (unsafe.integer->char (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte))
+	    (unsafe.fixnum->char (unsafe.bytevector-u8-ref port.buffer buffer.offset-byte))
 	  (%unsafe.read/peek-char-from-port-with-latin1-codec port ?who 0 0))))))
 
 (define (%unsafe.read/peek-char-from-port-with-latin1-codec port who buffer-index-increment offset)
@@ -6167,7 +6073,7 @@
     (define (%available-data buffer.offset)
       (unless (unsafe.fxzero? buffer-index-increment)
 	(port.buffer.index.incr! buffer-index-increment))
-      (unsafe.integer->char (unsafe.bytevector-u8-ref port.buffer buffer.offset)))
+      (unsafe.fixnum->char (unsafe.bytevector-u8-ref port.buffer buffer.offset)))
     (let ((buffer.offset (unsafe.fx+ offset port.buffer.index)))
       (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	(data-is-needed-at: buffer.offset)
@@ -6560,7 +6466,7 @@
 	  (let* ((buffer.index		port.buffer.index)
 		 (buffer.past		(unsafe.fxadd1 buffer.index))
 		 (buffer.used-size	port.buffer.used-size))
-	    (%debug-assert (<= buffer.index buffer.used-size))
+	    (debug-assert (<= buffer.index buffer.used-size))
 	    (unsafe.bytevector-u8-set! port.buffer buffer.index octet)
 	    (when (unsafe.fx= buffer.index buffer.used-size)
 	      (set! port.buffer.used-size buffer.past))
@@ -6633,7 +6539,7 @@
 	       (%unsafe.flush-output-port port who)))
 	    (else
 	     ;;The buffer can hold some but not all of the COUNT bytes.
-	     (%debug-assert (unsafe.fx> count room))
+	     (debug-assert (unsafe.fx> count room))
 	     (%unsafe.bytevector-copy! src.bv src.start port.buffer port.buffer.index room)
 	     (set! port.buffer.index     port.buffer.size)
 	     (set! port.buffer.used-size port.buffer.size)
@@ -6666,7 +6572,7 @@
 (define (%do-put-char port ch who)
   (%assert-argument-is-port port who)
   (%assert-argument-is-char ch   who)
-  (let* ((code-point	(unsafe.char->integer ch))
+  (let* ((code-point	(unsafe.char->fixnum ch))
 	 (newline?	(unsafe.fx= code-point LINEFEED-CODE-POINT))
 	 (eol-bits	(%unsafe.port-eol-style-bits port)))
     (%case-textual-output-port-fast-tag (port who)
@@ -6924,7 +6830,7 @@
 		     (retry-after-flushing-buffer))))))))
 
 	(else
-	 (%debug-assert (utf-8-four-octets-code-point? code-point))
+	 (debug-assert (utf-8-four-octets-code-point? code-point))
 	 (let ((octet0 (utf-8-encode-first-of-four-octets  code-point))
 	       (octet1 (utf-8-encode-second-of-four-octets code-point))
 	       (octet2 (utf-8-encode-third-of-four-octets  code-point))
@@ -6962,7 +6868,7 @@
 	       (let* ((buffer.offset-word0	port.buffer.index)
 		      (buffer.past		(unsafe.fx+ 2 buffer.offset-word0)))
 		 (define-inline (%buffer-set! offset word)
-		   (%unsafe.bytevector-u16-set! port.buffer offset word endianness))
+		   (unsafe.bytevector-u16-set! port.buffer offset word endianness))
 		 (if (unsafe.fx<= buffer.past port.buffer.size)
 		     (begin
 		       (%buffer-set! buffer.offset-word0 word0)
@@ -6981,7 +6887,7 @@
 		      (buffer.offset-word1	(unsafe.fx+ 2 buffer.offset-word0))
 		      (buffer.past		(unsafe.fx+ 2 buffer.offset-word1)))
 		 (define-inline (%buffer-set! offset word)
-		   (%unsafe.bytevector-u16-set! port.buffer offset word endianness))
+		   (unsafe.bytevector-u16-set! port.buffer offset word endianness))
 		 (if (unsafe.fx<= buffer.past port.buffer.size)
 		     (begin
 		       (%buffer-set! buffer.offset-word0 word0)
@@ -7074,7 +6980,7 @@
 		    (src.past  (unsafe.fx+ src.start count)))
       (unless (unsafe.fx= src.index src.past)
 	(let* ((ch		(unsafe.string-ref src.str src.index))
-	       (code-point	(unsafe.char->integer ch))
+	       (code-point	(unsafe.char->fixnum ch))
 	       (newline?	(unsafe.fx= code-point LINEFEED-CODE-POINT))
 	       (flush?		(and ?buffer-mode-line newline?)))
 	  (if newline?
@@ -7293,7 +7199,7 @@
   ;;string FILENAME.  If an error occurs: raise an exception.
   ;;
   (let* ((opts (if (enum-set? file-options)
-		   (%unsafe.fxior (if (enum-set-member? 'no-create   file-options) #b001 0)
+		   (unsafe.fxior (if (enum-set-member? 'no-create   file-options) #b001 0)
 				  (if (enum-set-member? 'no-fail     file-options) #b010 0)
 				  (if (enum-set-member? 'no-truncate file-options) #b100 0))
 		 (assertion-violation who "file-options is not an enum set" file-options)))
@@ -7311,7 +7217,7 @@
   (let* ((opts (if (enum-set? file-options)
 		   ;;In  future  the  options   for  I/O  ports  may  be
 		   ;;different from the ones of output-only ports.
-		   (%unsafe.fxior (if (enum-set-member? 'no-create   file-options) 1 0)
+		   (unsafe.fxior (if (enum-set-member? 'no-create   file-options) 1 0)
 				  (if (enum-set-member? 'no-fail     file-options) 2 0)
 				  (if (enum-set-member? 'no-truncate file-options) 4 0))
 		 (assertion-violation who "file-options is not an enum set" file-options)))
@@ -7753,7 +7659,7 @@
     (%assert-argument-is-file-options file-options who)
     (%assert-argument-is-maybe-transcoder maybe-transcoder who)
     (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
-	   (other-attributes	(%unsafe.fxior INPUT/OUTPUT-PORT-TAG buffer-mode-attrs))
+	   (other-attributes	(unsafe.fxior INPUT/OUTPUT-PORT-TAG buffer-mode-attrs))
 	   (fd			(%open-input/output-file-descriptor filename file-options who))
 	   (port-identifier	filename)
 	   (buffer-size		(input/output-file-buffer-size)))

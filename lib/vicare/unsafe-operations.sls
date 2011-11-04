@@ -147,6 +147,9 @@
 	    ($bytevector-s16n-ref	bytevector-s16n-ref)
 	    ($bytevector-s16n-set!	bytevector-s16n-set!)
 
+	    ($bytevector-u16-ref	bytevector-u16-ref)
+	    ($bytevector-u16-set!	bytevector-u16-set!)
+
 	    ($bytevector-u32b-ref	bytevector-u32b-ref)
 	    ($bytevector-u32b-set!	bytevector-u32b-set!)
 	    ($bytevector-u32l-ref	bytevector-u32l-ref)
@@ -433,6 +436,26 @@
      (identifier-syntax $bytevector-s16b-set!))
     ((little)
      (identifier-syntax $bytevector-s16l-set!))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline ($bytevector-u16-ref bv index endianness)
+  ;;Like BYTEVECTOR-U16-REF  defined by R6RS.  Assume  all the arguments
+  ;;to  have been  already validated;  expect the  index integers  to be
+  ;;fixnums.
+  ;;
+  (if (eq? endianness 'big)
+      ($bytevector-u16b-ref bv index)
+    ($bytevector-u16l-ref bv index)))
+
+(define-inline ($bytevector-u16-set! bv index word endianness)
+  ;;Like BYTEVECTOR-U16-SET!  defined by R6RS.  Assume all the arguments
+  ;;to  have been  already validated;  expect the  index integers  to be
+  ;;fixnums.
+  ;;
+  (if (eq? endianness 'big)
+      ($bytevector-u16b-set! bv index word)
+    ($bytevector-u16l-set! bv index word)))
 
 
 ;;;; unsafe 32-bit setters and getters
