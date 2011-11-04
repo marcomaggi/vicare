@@ -178,6 +178,7 @@
 
 	    ($bytevector-fill!			bytevector-fill!)
 	    ($bytevector-copy!			bytevector-copy!)
+	    ($bytevector-copy!/count		bytevector-copy!/count)
 	    ($bytevector-self-copy-forwards!	bytevector-self-copy-forwards!)
 	    ($bytevector-self-copy-backwards!	bytevector-self-copy-backwards!))
 
@@ -219,6 +220,7 @@
 	    ($string-set!	string-set!))
 
     (rename ($string-copy!			string-copy!)
+	    ($string-copy!/count		string-copy!/count)
 	    ($string-self-copy-forwards!	string-self-copy-forwards!)
 	    ($string-self-copy-backwards!	string-self-copy-backwards!)
 	    ($string-fill!			string-fill!)
@@ -730,7 +732,7 @@
 (define-inline ($bytevector-copy! ?src.bv ?src.start
 				  ?dst.bv ?dst.start
 				  ?src.end)
-  ;;Copy the characters of ?SRC.BV from ?SRC.START inclusive to ?SRC.end
+  ;;Copy  the octets of  ?SRC.BV from  ?SRC.START inclusive  to ?SRC.END
   ;;exclusive, to ?DST.BV starting at ?DST.START inclusive.
   ;;
   (let loop ((src.bv ?src.bv) (src.start ?src.start)
@@ -743,6 +745,15 @@
 	(loop src.bv ($fxadd1 src.start)
 	      dst.bv ($fxadd1 dst.start)
 	      src.end)))))
+
+(define-inline ($bytevector-copy!/count ?src.bv ?src.start ?dst.bv ?dst.start ?count)
+  ;;Copy ?COUNT octets from  ?SRC.BV starting at ?SRC.START inclusive to
+  ;;?DST.BV starting at ?DST.START inclusive.
+  ;;
+  (let ((src.end ($fx+ ?src.start ?count)))
+    ($bytevector-copy! ?src.bv ?src.start
+		       ?dst.bv ?dst.start
+		       src.end)))
 
 (define-inline ($bytevector-self-copy-forwards! ?bv ?src.start ?dst.start ?count)
   ;;Copy ?COUNT  octets of ?BV  from ?SRC.START inclusive to  ?BV itself
@@ -802,6 +813,15 @@
 	(loop src.str ($fxadd1 src.start)
 	      dst.str ($fxadd1 dst.start)
 	      src.end)))))
+
+(define-inline ($string-copy!/count ?src.str ?src.start ?dst.str ?dst.start ?count)
+  ;;Copy  ?COUNT   characters  from  ?SRC.STR   starting  at  ?SRC.START
+  ;;inclusive to ?DST.STR starting at ?DST.START inclusive.
+  ;;
+  (let ((src.end ($fx+ ?src.start ?count)))
+    ($string-copy! ?src.str ?src.start
+		   ?dst.str ?dst.start
+		   src.end)))
 
 (define-inline ($string-self-copy-forwards! ?str ?src.start ?dst.start ?count)
   ;;Copy  ?COUNT characters of  ?STR from  ?SRC.START inclusive  to ?STR

@@ -1717,19 +1717,6 @@
 
 ;;;; bytevector helpers
 
-(define (%unsafe.bytevector-copy! src.bv src.start dst.bv dst.start count)
-  ;;Like BYTEVECTOR-COPY!   defined by  R6RS.  Assume all  the arguments
-  ;;have been  already validated;  expect all the  exact integers  to be
-  ;;fixnums; perform the copy from the START indexes forwards.
-  ;;
-  ;;FIXME This should be implemented in C.
-  ;;
-  (when (unsafe.fx> count 0)
-    (unsafe.bytevector-u8-set! dst.bv dst.start (unsafe.bytevector-u8-ref src.bv src.start))
-    (%unsafe.bytevector-copy! src.bv (unsafe.fxadd1 src.start)
-			      dst.bv (unsafe.fxadd1 dst.start)
-			      (unsafe.fxsub1 count))))
-
 (define (%unsafe.bytevector-reverse-and-concatenate who list-of-bytevectors dst.len)
   ;;Reverse  LIST-OF-BYTEVECTORS and  concatenate its  bytevector items;
   ;;return  the result.  The  resulting list  must have  length DST.LEN.
@@ -1747,24 +1734,11 @@
       (let* ((src.bv    (car list-of-bytevectors))
 	     (src.len   (unsafe.bytevector-length src.bv))
 	     (dst.start (unsafe.fx- dst.start src.len)))
-	(%unsafe.bytevector-copy! src.bv 0 dst.bv dst.start src.len)
+	(unsafe.bytevector-copy!/count src.bv 0 dst.bv dst.start src.len)
 	(next-bytevector dst.bv (cdr list-of-bytevectors) dst.start)))))
 
 
 ;;;; string helpers
-
-(define (%unsafe.string-copy! src.str src.start dst.str dst.start count)
-  ;;Like BYTEVECTOR-COPY!  defined by  R6RS, but for strings; expect all
-  ;;the exact  integers to be fixnums;  perform the copy  from the start
-  ;;indexes forwards.
-  ;;
-  ;;FIXME This should be implemented in C.
-  ;;
-  (when (unsafe.fx> count 0)
-    (unsafe.string-set! dst.str dst.start (unsafe.string-ref src.str src.start))
-    (%unsafe.string-copy! src.str (unsafe.fxadd1 src.start)
-			  dst.str (unsafe.fxadd1 dst.start)
-			  (unsafe.fxsub1 count))))
 
 (define (%unsafe.string-reverse-and-concatenate who list-of-strings dst.len)
   ;;Reverse LIST-OF-STRINGS and concatenate its string items; return the
@@ -1782,7 +1756,7 @@
       (let* ((src.str   (car list-of-strings))
 	     (src.len   (unsafe.string-length src.str))
 	     (dst.start (unsafe.fx- dst.start src.len)))
-	(%unsafe.string-copy! src.str 0 dst.str dst.start src.len)
+	(unsafe.string-copy!/count src.str 0 dst.str dst.start src.len)
 	(next-string dst.str (cdr list-of-strings) dst.start)))))
 
 
@@ -3773,12 +3747,12 @@
 	  (if (unsafe.fx<= count dst.room)
 	      ;;The new data fits  in the single bytevector.  There is
 	      ;;no need to update the device.
-	      (%unsafe.bytevector-copy! src.bv src.start dst.bv dev-position count)
+	      (unsafe.bytevector-copy!/count src.bv src.start dst.bv dev-position count)
 	    (begin
 	      ;;The new  data goes part  in the single  bytevector and
 	      ;;part  in a  new  bytevector.  We  need  to update  the
 	      ;;device.
-	      (%unsafe.bytevector-copy! src.bv src.start dst.bv dev-position dst.room)
+	      (unsafe.bytevector-copy!/count src.bv src.start dst.bv dev-position dst.room)
 	      (let* ((src.start (unsafe.fx+ src.start dst.room))
 		     (count     (unsafe.fx- count     dst.room)))
 		(write!/append src.bv src.start count output.bvs new-dev-position))))))
@@ -3788,7 +3762,7 @@
 	;;update the device.
 	;;
 	(let ((dst.bv (unsafe.make-bytevector count)))
-	  (%unsafe.bytevector-copy! src.bv src.start dst.bv 0 count)
+	  (unsafe.bytevector-copy!/count src.bv src.start dst.bv 0 count)
 	  (set-cookie-dest! cookie `(,new-dev-position . (,dst.bv . ,output.bvs)))))
 
       (define (set-position! new-position)
@@ -3993,11 +3967,11 @@
 	  (if (unsafe.fx<= count dst.room)
 	      ;;The new  data fits  in the single  string.  There  is no
 	      ;;need to update the device.
-	      (%unsafe.string-copy! src.str src.start dst.str dev-position count)
+	      (unsafe.string-copy!/count src.str src.start dst.str dev-position count)
 	    (begin
 	      ;;The new data goes part  in the single string and part in
 	      ;;a new string.  We need to update the device.
-	      (%unsafe.string-copy! src.str src.start dst.str dev-position dst.room)
+	      (unsafe.string-copy!/count src.str src.start dst.str dev-position dst.room)
 	      (let* ((src.start (unsafe.fx+ src.start dst.room))
 		     (count     (unsafe.fx- count     dst.room)))
 		(write!/append src.str src.start count output.strs new-dev-position))))))
@@ -4007,7 +3981,7 @@
 	;;the device.
 	;;
 	(let ((dst.str (unsafe.make-string count)))
-	  (%unsafe.string-copy! src.str src.start dst.str 0 count)
+	  (unsafe.string-copy!/count src.str src.start dst.str 0 count)
 	  (set-cookie-dest! cookie `(,new-dev-position . (,dst.str . ,output.strs)))))
 
       (define (set-position! new-position)
@@ -4628,7 +4602,7 @@
 	(let* ((buffer.index	port.buffer.index)
 	       (delta		(unsafe.fx- port.buffer.used-size buffer.index)))
 	  (unless (unsafe.fxzero? delta)
-	    (%unsafe.bytevector-copy! buffer buffer.index buffer 0 delta))
+	    (unsafe.bytevector-copy!/count buffer buffer.index buffer 0 delta))
 	  (set! port.buffer.index     0)
 	  (set! port.buffer.used-size delta))
 	;;Fill the buffer with data from the device.  Before:
@@ -4771,7 +4745,7 @@
 	;;
 	(let ((delta (unsafe.fx- port.buffer.used-size port.buffer.index)))
 	  (unless (unsafe.fxzero? delta)
-	    (%unsafe.string-copy! buffer port.buffer.index buffer 0 delta))
+	    (unsafe.string-copy!/count buffer port.buffer.index buffer 0 delta))
 	  (set! port.buffer.index     0)
 	  (set! port.buffer.used-size delta))
 	;;Fill the buffer with data from the device.  Before:
@@ -4940,7 +4914,7 @@
 		   "request to read data from port would exceed maximum size of bytevectors"
 		   output.len1))
 	       (let ((bv (unsafe.make-bytevector amount-to-read)))
-		 (%unsafe.bytevector-copy! port.buffer buffer.offset bv 0 amount-to-read)
+		 (unsafe.bytevector-copy!/count port.buffer buffer.offset bv 0 amount-to-read)
 		 (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-read))
 		 (let ((list-of-bytevectors1 (cons bv list-of-bytevectors)))
 		   (if all-count-is-available?
@@ -4999,7 +4973,7 @@
 		    (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
 		    (all-count-is-available?	(<= count amount-of-available))
 		    (amount-to-read		(if all-count-is-available? count amount-of-available)))
-	       (%unsafe.bytevector-copy! port.buffer buffer.offset dst.bv tmp.start amount-to-read)
+	       (unsafe.bytevector-copy!/count port.buffer buffer.offset dst.bv tmp.start amount-to-read)
 	       (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-read))
 	       (let ((tmp.start (+ tmp.start amount-to-read)))
 		 (if all-count-is-available?
@@ -5036,7 +5010,7 @@
 		  (buffer.offset	port.buffer.index)
 		  (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
 		  (dst.bv		(unsafe.make-bytevector amount-of-available)))
-	     (%unsafe.bytevector-copy! port.buffer buffer.offset dst.bv 0 amount-of-available)
+	     (unsafe.bytevector-copy!/count port.buffer buffer.offset dst.bv 0 amount-of-available)
 	     (set! port.buffer.index buffer.used-size)
 	     dst.bv))
 	 (%maybe-refill-bytevector-buffer-and-evaluate (port who)
@@ -5075,7 +5049,7 @@
 		 "request to read data from port would exceed maximum size of bytevectors"
 		 output.len))
 	     (let ((dst.bv (unsafe.make-bytevector amount-of-available)))
-	       (%unsafe.bytevector-copy! port.buffer buffer.offset dst.bv 0 amount-of-available)
+	       (unsafe.bytevector-copy!/count port.buffer buffer.offset dst.bv 0 amount-of-available)
 	       (set! port.buffer.index buffer.used-size)
 	       (retry-after-filling-buffer output.len
 					   (cons dst.bv list-of-bytevectors)))))
@@ -6531,7 +6505,7 @@
 	    ((unsafe.fx<= count room)
 	     ;;Success!!! There is enough room  in the buffer for all of
 	     ;;the COUNT octets.
-	     (%unsafe.bytevector-copy! src.bv src.start port.buffer port.buffer.index count)
+	     (unsafe.bytevector-copy!/count src.bv src.start port.buffer port.buffer.index count)
 	     (port.buffer.index.incr! count)
 	     (when (unsafe.fx< port.buffer.used-size port.buffer.index)
 	       (set! port.buffer.used-size port.buffer.index))
@@ -6540,7 +6514,7 @@
 	    (else
 	     ;;The buffer can hold some but not all of the COUNT bytes.
 	     (debug-assert (unsafe.fx> count room))
-	     (%unsafe.bytevector-copy! src.bv src.start port.buffer port.buffer.index room)
+	     (unsafe.bytevector-copy!/count src.bv src.start port.buffer port.buffer.index room)
 	     (set! port.buffer.index     port.buffer.size)
 	     (set! port.buffer.used-size port.buffer.size)
 	     (%unsafe.flush-output-port port who)
