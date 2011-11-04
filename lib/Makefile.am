@@ -7,6 +7,7 @@ dist_libvicare_DATA	= vicare/foreign.sls vicare/ipc.sls	\
 			  vicare/flonum-parser.sls		\
 			  vicare/flonum-formatter.sls		\
 			  vicare/unsafe-operations.sls		\
+			  vicare/unsafe-unicode.sls		\
 			  vicare/words.sls			\
 			  vicare/installation-configuration.sls.in
 
