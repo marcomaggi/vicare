@@ -1269,9 +1269,6 @@
   (unless (port? ?port)
     (assertion-violation ?who "expected port as argument" ?port)))
 
-(define-inline (%implementation-violation ?who ?message . ?irritants)
-  (assertion-violation ?who ?message . ?irritants))
-
 ;;; --------------------------------------------------------------------
 
 (define-inline (%assert-value-is-input-port ?port ?who)
@@ -1495,7 +1492,237 @@
     (assertion-violation who "expected open directory stream as argument" obj)))
 
 
+;;;; arguments validation
+
+(define-argument-validation (port who obj)
+  (port? obj)
+  (assertion-violation who "expected port as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (input-port who obj)
+  (input-port? obj)
+  (assertion-violation who "expected input port as argument" obj))
+
+(define-argument-validation (unsafe.input-port who obj)
+  (%unsafe.input-port? obj)
+  (assertion-violation who "expected input port as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (output-port who obj)
+  (output-port? obj)
+  (assertion-violation who "expected output port as argument" obj))
+
+(define-argument-validation (unsafe.output-port who obj)
+  (%unsafe.output-port? obj)
+  (assertion-violation who "expected output port as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (unsafe.not-input/output-port who obj)
+  (not (%unsafe.input-and-output-port? ?port))
+  (assertion-violation who "invalid input/output port as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (unsafe.binary-port who obj)
+  (%unsafe.binary-port? obj)
+  (assertion-violation who "expected binary port as argument" obj))
+
+(define-argument-validation (unsafe.textual-port who obj)
+  (%unsafe.textual-port? obj)
+  (assertion-violation who "expected textual port as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (open-port who obj)
+  (not (port-closed? obj))
+  (assertion-violation who "expected open port as argument" obj))
+
+(define-argument-validation (unsafe.open-port who obj)
+  (not (%unsafe.port-closed? obj))
+  (assertion-violation who "expected open port as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (port-position who position)
+  (and (or (fixnum? position)
+	   (bignum? position))
+       (>= position 0))
+  (raise
+   (condition (make-who-condition who)
+	      (make-message-condition "position must be a nonnegative exact integer")
+	      (make-i/o-invalid-position-error position))))
+
+(define-argument-validation (get-position-result who position port)
+  (and (or (fixnum? position)
+	   (bignum? position))
+       (>= position 0))
+  (assertion-violation who "invalid value returned by get-position" port position))
+
+(define-argument-validation (transcoder who obj)
+  (transcoder? obj)
+  (assertion-violation who "expected transcoder as argument" obj))
+
+(define-argument-validation (maybe-transcoder who obj)
+  (or (not obj) (transcoder? obj))
+  (assertion-violation who
+    "expected false or a transcoder object as optional transcoder argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (octet who obj)
+  (and (fixnum? obj)
+       (unsafe.fx>= obj 0)
+       (unsafe.fx<= obj 255))
+  (assertion-violation who "expected fixnum in the range for octets as argument" obj))
+
+(define-argument-validation (char who obj)
+  (char? obj)
+  (assertion-violation who "expected character as argument" obj))
+
+(define-argument-validation (fixnum who obj)
+  (fixnum? obj)
+  (assertion-violation who "expected fixnum as argument" obj))
+
+(define-argument-validation (bytevector who obj)
+  (bytevector? obj)
+  (assertion-violation who "expected bytevector as argument" obj))
+
+(define-argument-validation (string who obj)
+  (string? obj)
+  (assertion-violation who "expected string as argument" obj))
+
+(define-argument-validation (procedure who obj)
+  (procedure? obj)
+  (assertion-violation who "expected procedure as argument" obj))
+
+(define-argument-validation (port-identifier who obj)
+  (string? obj)
+  (assertion-violation who "ID is not a string" obj))
+
+(define-argument-validation (read!-procedure who obj)
+  (procedure? obj)
+  (assertion-violation who "READ! is not a procedure" obj))
+
+(define-argument-validation (write!-procedure who obj)
+  (procedure? obj)
+  (assertion-violation who "WRITE! is not a procedure" obj))
+
+(define-argument-validation (maybe-close-procedure who obj)
+  (or (procedure? obj) (not obj))
+  (assertion-violation who "CLOSE should be either a procedure or false" obj))
+
+(define-argument-validation (maybe-get-position-procedure who obj)
+  (or (procedure? obj) (not obj))
+  (assertion-violation who "GET-POSITION should be either a procedure or false" obj))
+
+(define-argument-validation (maybe-set-position!-procedure who obj)
+  (or (procedure? obj) (not obj))
+  (assertion-violation who "SET-POSITION! should be either a procedure or false" obj))
+
+(define-argument-validation (filename who obj)
+  (string? obj)
+  (assertion-violation who "expected string as filename argument" obj))
+
+(define-argument-validation (file-options who obj)
+  (enum-set? obj)
+  (assertion-violation who "expected enum set as file-options argument" obj))
+
+;;; --------------------------------------------------------------------
+
+#;(define (%assert-argument-is-fixnum-start-index start who)
+  ;;A fixnum  is an exact  integer, but I  do the check twice  because I
+  ;;like descriptive error messages (Marco Maggi; Oct 1, 2011).
+  (unless (and (integer? start) (exact? start))
+    (assertion-violation who "expected exact integer as start index argument" start))
+  (unless (fixnum? start)
+    (assertion-violation who "expected fixnum as start index argument" start))
+  (unless (unsafe.fx>= start 0)
+    (assertion-violation who "expected non-negative fixnum as start index argument" start)))
+
+#;(define (%unsafe.assert-argument-is-start-index-for-bytevector dst.start dst.bv who)
+  ;;Notice that start=length is valid is the count argument is zero
+  (unless (unsafe.fx<= dst.start (unsafe.bytevector-length dst.bv))
+    (assertion-violation who
+      (string-append "start index argument "
+		     (number->string dst.start)
+		     " too big for bytevector of length "
+		     (number->string (unsafe.bytevector-length dst.bv)))
+      dst.start)))
+
+#;(define (%unsafe.assert-argument-is-start-index-for-string dst.start dst.str who)
+  ;;Notice that start=length is valid is the count argument is zero
+  (unless (unsafe.fx< dst.start (unsafe.string-length dst.str))
+    (assertion-violation who
+      (string-append "start index argument "
+		     (number->string dst.start)
+		     " too big for string of length "
+		     (number->string (unsafe.string-length dst.str)))
+      dst.start)))
+
+;;; --------------------------------------------------------------------
+
+#;(define (%assert-argument-is-count ?count ?who)
+  (let ((count ?count))
+    (unless (and (integer? count) (exact? count))
+      (assertion-violation ?who "expected exact integer as count argument" count))
+    (unless (>= count 0)
+      (assertion-violation ?who "expected non-negative exact integer as count argument" count))))
+
+#;(define (%assert-argument-is-fixnum-count count who)
+  (let ((count count))
+    (unless (and (integer? count) (exact? count))
+      (assertion-violation who "expected exact integer as count argument" count))
+    (unless (fixnum? count)
+      (assertion-violation who "count argument must be a fixnum" count))
+    (unless (unsafe.fx>= count 0)
+      (assertion-violation who "expected non-negative exact integer as count argument" count))))
+
+#;(define (%unsafe.assert-argument-is-count-from-start-in-bytevector count start dst.bv who)
+  ;;We know that COUNT and START  are fixnums, but not if START+COUNT is
+  ;;a fixnum, too.
+  ;;
+  (unless (<= (+ start count) (unsafe.bytevector-length dst.bv))
+    (assertion-violation who
+      (string-append "count argument "
+		     (number->string count)
+		     " from start index "
+		     (number->string start)
+		     " too big for bytevector of length "
+		     (number->string (unsafe.bytevector-length dst.bv)))
+      start count (unsafe.bytevector-length dst.bv))))
+
+#;(define (%unsafe.assert-argument-is-count-from-start-in-string count start dst.str who)
+  ;;We know that COUNT and START  are fixnums, but not if START+COUNT is
+  ;;a fixnum, too.
+  ;;
+  (unless (<= (+ start count) (unsafe.string-length dst.str))
+    (assertion-violation who
+      (string-append "count argument "
+		     (number->string count)
+		     " from start index "
+		     (number->string start)
+		     " too big for string of length "
+		     (number->string (unsafe.string-length dst.str)))
+      start count (unsafe.string-length dst.str))))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (directory-stream who obj)
+  (directory-stream? obj)
+  (assertion-violation who "expected directory stream as argument" obj))
+
+(define-argument-validation (open-directory-stream who obj)
+  (not (directory-stream-closed? obj))
+  (assertion-violation who "expected open directory stream as argument" obj))
+
+
 ;;;; error helpers
+
+(define-inline (%implementation-violation ?who ?message . ?irritants)
+  (assertion-violation ?who ?message . ?irritants))
 
 (define (%raise-port-position-out-of-range who port new-position)
   (raise (condition
@@ -2054,14 +2281,15 @@
   ;;offset, 1-based row number, 1-based column number.
   ;;
   (define who 'port-textual-position)
-  (%assert-argument-is-port port who)
-  (%unsafe.assert-value-is-textual-port port who)
-  (let ((cookie ($port-cookie port)))
-    (make-source-position-condition (port-id port)
-				    (%unsafe.port-position who port)
-				    (cookie-character-offset cookie)
-				    (cookie-row-number       cookie)
-				    (cookie-column-number    cookie))))
+  (with-arguments-validation (who)
+      ((port			port)
+       (unsafe.textual-port	port))
+    (let ((cookie ($port-cookie port)))
+      (make-source-position-condition (port-id port)
+				      (%unsafe.port-position who port)
+				      (cookie-character-offset cookie)
+				      (cookie-row-number       cookie)
+				      (cookie-column-number    cookie)))))
 
 
 ;;;; port's buffer size customisation
@@ -2237,10 +2465,12 @@
   ;;Accept a port  as argument and return the port  itself.  If the port
   ;;wraps a platform descriptor: register it in the guardian.
   ;;
-  (%assert-argument-is-port port '%port->maybe-guarded-port)
-  (when (%unsafe.guarded-port? port)
-    (port-guardian port))
-  port)
+  (define who '%port->maybe-guarded-port)
+  (with-arguments-validation (who)
+      ((port port))
+    (when (%unsafe.guarded-port? port)
+      (port-guardian port))
+    port))
 
 
 ;;;; port position
@@ -2249,18 +2479,22 @@
   ;;Defined by R6RS.   Return #t if the port  supports the PORT-POSITION
   ;;operation, and #f otherwise.
   ;;
-  (%assert-argument-is-port port 'port-has-port-position?)
-  (with-port (port)
-    (and port.get-position #t)))
+  (define who 'port-has-port-position?)
+  (with-arguments-validation (who)
+      ((port port))
+    (with-port (port)
+      (and port.get-position #t))))
 
 (define (port-has-set-port-position!? port)
   ;;Defined   by  R6RS.   The   PORT-HAS-SET-PORT-POSITION!?   procedure
   ;;returns #t  if the port supports  the SET-PORT-POSITION!  operation,
   ;;and #f otherwise.
   ;;
-  (%assert-argument-is-port port 'port-has-set-port-position!?)
-  (with-port (port)
-    (and port.set-position! #t)))
+  (define who  'port-has-set-port-position!?)
+  (with-arguments-validation (who)
+      ((port port))
+    (with-port (port)
+      (and port.set-position! #t))))
 
 (define (port-position port)
   ;;Defined by R6RS.  For a binary port, PORT-POSITION returns the index
@@ -2280,8 +2514,9 @@
   ;;not necessarily correspond to a octet or character position.
   ;;
   (define who 'port-position)
-  (%assert-argument-is-port port who)
-  (%unsafe.port-position who port))
+  (with-arguments-validation (who)
+      ((port port))
+    (%unsafe.port-position who port)))
 
 (define (%unsafe.port-position who port)
   ;;Return the current port position for PORT.
@@ -2304,8 +2539,9 @@
 	     ;;The port has a device whose position cannot be tracked by
 	     ;;the cookie's POS field.
 	     (let ((device-position (getpos)))
-	       (%assert-value-is-get-position-result device-position port who)
-	       device-position))
+	       (with-arguments-validation (who)
+		   ((get-position-result device-position port))
+		 device-position)))
 	    ((and (boolean? getpos) getpos)
 	     ;;The  cookie's  POS  field  correctly tracks  the  current
 	     ;;device position.
@@ -2362,18 +2598,19 @@
   (define who 'set-port-position!)
   (with-port (port)
     (define-inline (main)
-      (%assert-argument-is-port port who)
-      (%assert-argument-is-port-position requested-port-position who)
-      (let ((set-position! port.set-position!))
-	(cond ((procedure? set-position!)
-	       (let ((port.old-position (%unsafe.port-position/tracked-position who port)))
-		 (unless (= port.old-position requested-port-position)
-		   (%set-with-procedure port set-position! port.old-position))))
-	      ((and (boolean? set-position!) set-position!)
-	       (%set-with-boolean port))
-	      (else
-	       (assertion-violation who
-		 "port does not support SET-PORT-POSITION! operation" port)))))
+      (with-arguments-validation (who)
+	  ((port		port)
+	   (port-position	requested-port-position))
+	(let ((set-position! port.set-position!))
+	  (cond ((procedure? set-position!)
+		 (let ((port.old-position (%unsafe.port-position/tracked-position who port)))
+		   (unless (= port.old-position requested-port-position)
+		     (%set-with-procedure port set-position! port.old-position))))
+		((and (boolean? set-position!) set-position!)
+		 (%set-with-boolean port))
+		(else
+		 (assertion-violation who
+		   "port does not support SET-PORT-POSITION! operation" port))))))
 
     (define-inline (%set-with-procedure port set-position! port.old-position)
       ;;The SET-POSITION!   field is  a procedure: an  underlying device
@@ -2744,14 +2981,15 @@
   ;;unspecified.
   ;;
   (define who 'make-custom-binary-input-port)
-  (%assert-argument-is-port-identifier identifier who)
-  (%assert-value-is-read!-procedure read! who)
-  (%assert-value-is-maybe-close-procedure close who)
-  (%assert-value-is-maybe-get-position-procedure  get-position  who)
-  (%assert-value-is-maybe-set-position!-procedure set-position! who)
-  (let ((attributes		BINARY-INPUT-PORT-BITS)
-	(write!			#f))
-    (%make-custom-binary-port attributes identifier read! write! get-position set-position! close)))
+  (with-arguments-validation (who)
+      ((port-identifier			identifier)
+       (read!-procedure			read!)
+       (maybe-close-procedure		close)
+       (maybe-get-position-procedure	get-position)
+       (maybe-set-position!-procedure	set-position!))
+    (let ((attributes		BINARY-INPUT-PORT-BITS)
+	  (write!			#f))
+      (%make-custom-binary-port attributes identifier read! write! get-position set-position! close))))
 
 (define (make-custom-binary-output-port identifier write! get-position set-position! close)
   ;;Defined by  R6RS.  Return a newly created  binary output port
@@ -2784,14 +3022,15 @@
   ;;behavior of the resulting port is unspecified.
   ;;
   (define who 'make-custom-binary-output-port)
-  (%assert-argument-is-port-identifier identifier who)
-  (%assert-value-is-write!-procedure write! who)
-  (%assert-value-is-maybe-close-procedure close who)
-  (%assert-value-is-maybe-get-position-procedure  get-position  who)
-  (%assert-value-is-maybe-set-position!-procedure set-position! who)
-  (let ((attributes		BINARY-OUTPUT-PORT-BITS)
-	(read!			#f))
-    (%make-custom-binary-port attributes identifier read! write! get-position set-position! close)))
+  (with-arguments-validation (who)
+      ((port-identifier			identifier)
+       (write!-procedure		write!)
+       (maybe-close-procedure		close)
+       (maybe-get-position-procedure	get-position)
+       (maybe-set-position!-procedure	set-position!))
+    (let ((attributes		BINARY-OUTPUT-PORT-BITS)
+	  (read!			#f))
+      (%make-custom-binary-port attributes identifier read! write! get-position set-position! close))))
 
 (define (make-custom-binary-input/output-port identifier read! write! get-position set-position! close)
   ;;Defined by  R6RS.  Return a  newly created binary  input/output port
@@ -2810,14 +3049,15 @@
   ;;specified in the description of MAKE-CUSTOM-BINARY-INPUT-PORT.
   ;;
   (define who 'make-custom-binary-input/output-port)
-  (%assert-argument-is-port-identifier identifier who)
-  (%assert-value-is-read!-procedure write! who)
-  (%assert-value-is-write!-procedure write! who)
-  (%assert-value-is-maybe-close-procedure close who)
-  (%assert-value-is-maybe-get-position-procedure  get-position  who)
-  (%assert-value-is-maybe-set-position!-procedure set-position! who)
-  (let ((attributes (unsafe.fxior BINARY-OUTPUT-PORT-BITS INPUT/OUTPUT-PORT-TAG)))
-    (%make-custom-binary-port attributes identifier read! write! get-position set-position! close)))
+  (with-arguments-validation (who)
+      ((port-identifier			identifier)
+       (read!-procedure			read!)
+       (write!-procedure		write!)
+       (maybe-close-procedure		close)
+       (maybe-get-position-procedure	get-position)
+       (maybe-set-position!-procedure	set-position!))
+    (let ((attributes (unsafe.fxior BINARY-OUTPUT-PORT-BITS INPUT/OUTPUT-PORT-TAG)))
+      (%make-custom-binary-port attributes identifier read! write! get-position set-position! close))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2876,14 +3116,15 @@
   ;;unspecified.
   ;;
   (define who 'make-custom-textual-input-port)
-  (%assert-argument-is-port-identifier identifier who)
-  (%assert-value-is-read!-procedure read! who)
-  (%assert-value-is-maybe-close-procedure close who)
-  (%assert-value-is-maybe-get-position-procedure  get-position  who)
-  (%assert-value-is-maybe-set-position!-procedure set-position! who)
-  (let ((attributes		FAST-GET-CHAR-TAG)
-	(write!			#f))
-    (%make-custom-textual-port attributes identifier read! write! get-position set-position! close)))
+  (with-arguments-validation (who)
+      ((port-identifier			identifier)
+       (read!-procedure			read!)
+       (maybe-close-procedure		close)
+       (maybe-get-position-procedure	get-position)
+       (maybe-set-position!-procedure	set-position!))
+    (let ((attributes	FAST-GET-CHAR-TAG)
+	  (write!	#f))
+      (%make-custom-textual-port attributes identifier read! write! get-position set-position! close))))
 
 (define (make-custom-textual-output-port identifier write! get-position set-position! close)
   ;;Defined by R6RS.  Return  a newly created textual output port
@@ -2921,25 +3162,42 @@
   ;;behavior of the resulting port is unspecified.
   ;;
   (define who 'make-custom-textual-output-port)
-  (%assert-argument-is-port-identifier identifier who)
-  (%assert-value-is-write!-procedure write! who)
-  (%assert-value-is-maybe-close-procedure close who)
-  (%assert-value-is-maybe-get-position-procedure  get-position  who)
-  (%assert-value-is-maybe-set-position!-procedure set-position! who)
-  (let ((attributes	FAST-PUT-CHAR-TAG)
-	(read!		#f))
-    (%make-custom-textual-port attributes identifier read! write! get-position set-position! close)))
+  (with-arguments-validation (who)
+      ((port-identifier			identifier)
+       (write!-procedure		write!)
+       (maybe-close-procedure		close)
+       (maybe-get-position-procedure	get-position)
+       (maybe-set-position!-procedure	set-position!))
+    (let ((attributes	FAST-PUT-CHAR-TAG)
+	  (read!	#f))
+      (%make-custom-textual-port attributes identifier read! write! get-position set-position! close))))
 
 (define (make-custom-textual-input/output-port identifier read! write! get-position set-position! close)
+  ;;Defined by  R6RS.  Return a newly created  textual input/output port
+  ;;whose textual  source and sink are  arbitrary algorithms represented
+  ;;by the READ! and WRITE! procedures.
+  ;;
+  ;;IDENTIFIER  must be  a  string  naming the  new  port, provided  for
+  ;;informational purposes only.
+  ;;
+  ;;READ!   and  WRITE!   must  be  procedures,  and  should  behave  as
+  ;;specified     for     the     MAKE-CUSTOM-TEXTUAL-INPUT-PORT     and
+  ;;MAKE-CUSTOM-TEXTUAL-OUTPUT-PORT procedures.
+  ;;
+  ;;Each  of the  remaining  arguments may  be  false; if  any of  those
+  ;;arguments is not false, it must  be a procedure and should behave as
+  ;;specified in the description of MAKE-CUSTOM-TEXTUAL-INPUT-PORT.
+  ;;
   (define who 'make-custom-textual-input/output-port)
-  (%assert-argument-is-port-identifier identifier who)
-  (%assert-value-is-write!-procedure read! who)
-  (%assert-value-is-write!-procedure write! who)
-  (%assert-value-is-maybe-close-procedure close who)
-  (%assert-value-is-maybe-get-position-procedure  get-position  who)
-  (%assert-value-is-maybe-set-position!-procedure set-position! who)
-  (let ((attributes (unsafe.fxior FAST-PUT-CHAR-TAG INPUT/OUTPUT-PORT-TAG)))
-    (%make-custom-textual-port attributes identifier read! write! get-position set-position! close)))
+  (with-arguments-validation (who)
+      ((port-identifier			identifier)
+       (read!-procedure			read!)
+       (write!-procedure		write!)
+       (maybe-close-procedure		close)
+       (maybe-get-position-procedure	get-position)
+       (maybe-set-position!-procedure	set-position!))
+    (let ((attributes (unsafe.fxior FAST-PUT-CHAR-TAG INPUT/OUTPUT-PORT-TAG)))
+      (%make-custom-textual-port attributes identifier read! write! get-position set-position! close))))
 
 
 ;;;; bytevector input ports
