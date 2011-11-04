@@ -1636,81 +1636,63 @@
 
 ;;; --------------------------------------------------------------------
 
-#;(define (%assert-argument-is-fixnum-start-index start who)
-  ;;A fixnum  is an exact  integer, but I  do the check twice  because I
-  ;;like descriptive error messages (Marco Maggi; Oct 1, 2011).
-  (unless (and (integer? start) (exact? start))
-    (assertion-violation who "expected exact integer as start index argument" start))
-  (unless (fixnum? start)
-    (assertion-violation who "expected fixnum as start index argument" start))
-  (unless (unsafe.fx>= start 0)
-    (assertion-violation who "expected non-negative fixnum as start index argument" start)))
+(define-argument-validation (fixnum-start-index who start)
+  (and (fixnum? start) (unsafe.fx>= start 0))
+  (assertion-violation who "expected non-negative fixnum as start index argument" start))
 
-#;(define (%unsafe.assert-argument-is-start-index-for-bytevector dst.start dst.bv who)
+(define-argument-validation (unsafe.start-index-for-bytevector who dst.start dst.bv)
   ;;Notice that start=length is valid is the count argument is zero
-  (unless (unsafe.fx<= dst.start (unsafe.bytevector-length dst.bv))
-    (assertion-violation who
-      (string-append "start index argument "
-		     (number->string dst.start)
-		     " too big for bytevector of length "
-		     (number->string (unsafe.bytevector-length dst.bv)))
-      dst.start)))
+  (unsafe.fx<= dst.start (unsafe.bytevector-length dst.bv))
+  (assertion-violation who
+    (string-append "start index argument " (number->string dst.start)
+		   " too big for bytevector of length "
+		   (number->string (unsafe.bytevector-length dst.bv)))
+    dst.start))
 
-#;(define (%unsafe.assert-argument-is-start-index-for-string dst.start dst.str who)
+(define-argument-validation (unsafe.start-index-for-string who dst.start dst.str)
   ;;Notice that start=length is valid is the count argument is zero
-  (unless (unsafe.fx< dst.start (unsafe.string-length dst.str))
-    (assertion-violation who
-      (string-append "start index argument "
-		     (number->string dst.start)
-		     " too big for string of length "
-		     (number->string (unsafe.string-length dst.str)))
-      dst.start)))
+  (unsafe.fx< dst.start (unsafe.string-length dst.str))
+  (assertion-violation who
+    (string-append "start index argument " (number->string dst.start)
+		   " too big for string of length " (number->string (unsafe.string-length dst.str)))
+    dst.start))
 
 ;;; --------------------------------------------------------------------
 
-#;(define (%assert-argument-is-count ?count ?who)
-  (let ((count ?count))
-    (unless (and (integer? count) (exact? count))
-      (assertion-violation ?who "expected exact integer as count argument" count))
-    (unless (>= count 0)
-      (assertion-violation ?who "expected non-negative exact integer as count argument" count))))
+(define-argument-validation (count who count)
+  (and (integer? count)
+       (exact? count)
+       (>= count 0))
+  (assertion-violation who "expected non-negative exact integer as count argument" count))
 
-#;(define (%assert-argument-is-fixnum-count count who)
-  (let ((count count))
-    (unless (and (integer? count) (exact? count))
-      (assertion-violation who "expected exact integer as count argument" count))
-    (unless (fixnum? count)
-      (assertion-violation who "count argument must be a fixnum" count))
-    (unless (unsafe.fx>= count 0)
-      (assertion-violation who "expected non-negative exact integer as count argument" count))))
+(define-argument-validation (fixnum-count who count)
+  (and (fixnum? count)
+       (unsafe.fx>= count 0))
+  (assertion-violation who "expected non-negative fixnum as count argument" count))
 
-#;(define (%unsafe.assert-argument-is-count-from-start-in-bytevector count start dst.bv who)
+(define-argument-validation (unsafe.count-from-start-in-bytevector who count start dst.bv)
   ;;We know that COUNT and START  are fixnums, but not if START+COUNT is
   ;;a fixnum, too.
   ;;
-  (unless (<= (+ start count) (unsafe.bytevector-length dst.bv))
-    (assertion-violation who
-      (string-append "count argument "
-		     (number->string count)
-		     " from start index "
-		     (number->string start)
-		     " too big for bytevector of length "
-		     (number->string (unsafe.bytevector-length dst.bv)))
-      start count (unsafe.bytevector-length dst.bv))))
+  (<= (+ start count) (unsafe.bytevector-length dst.bv))
+  (assertion-violation who
+    (string-append "count argument "    (number->string count)
+		   " from start index " (number->string start)
+		   " too big for bytevector of length "
+		   (number->string (unsafe.bytevector-length dst.bv)))
+    start count (unsafe.bytevector-length dst.bv)))
 
-#;(define (%unsafe.assert-argument-is-count-from-start-in-string count start dst.str who)
+(define-argument-validation (unsafe.count-from-start-in-string who count start dst.str)
   ;;We know that COUNT and START  are fixnums, but not if START+COUNT is
   ;;a fixnum, too.
   ;;
-  (unless (<= (+ start count) (unsafe.string-length dst.str))
-    (assertion-violation who
-      (string-append "count argument "
-		     (number->string count)
-		     " from start index "
-		     (number->string start)
-		     " too big for string of length "
-		     (number->string (unsafe.string-length dst.str)))
-      start count (unsafe.string-length dst.str))))
+  (<= (+ start count) (unsafe.string-length dst.str))
+  (assertion-violation who
+    (string-append "count argument "    (number->string count)
+		   " from start index " (number->string start)
+		   " too big for string of length "
+		   (number->string (unsafe.string-length dst.str)))
+    start count (unsafe.string-length dst.str)))
 
 ;;; --------------------------------------------------------------------
 
@@ -4683,42 +4665,43 @@
   (define who 'get-bytevector-n)
   (%case-binary-input-port-fast-tag (port who)
     ((FAST-GET-BYTE-TAG)
-     (with-port-having-bytevector-buffer (port)
-       (%assert-argument-is-fixnum-count count who)
-       (if (zero? count)
-	   (quote #vu8())
-	 (let retry-after-filling-buffer ((output.len		0)
-					  (list-of-bytevectors	'())
-					  (count		count))
-	   (define (%data-available-in-buffer)
-	     (let* ((buffer.used-size		port.buffer.used-size)
-		    (buffer.offset		port.buffer.index)
-		    (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
-		    (all-count-is-available?	(<= count amount-of-available))
-		    (amount-to-read		(if all-count-is-available? count amount-of-available))
-		    (output.len1		(unsafe.fx+ output.len amount-to-read)))
-	       ;;DANGER This  check must  not be removed  when compiling
-	       ;;without arguments validation.
-	       (unless (fixnum? output.len1)
-		 (%implementation-violation who
-		   "request to read data from port would exceed maximum size of bytevectors"
-		   output.len1))
-	       (let ((bv (unsafe.make-bytevector amount-to-read)))
-		 (unsafe.bytevector-copy!/count port.buffer buffer.offset bv 0 amount-to-read)
-		 (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-read))
-		 (let ((list-of-bytevectors1 (cons bv list-of-bytevectors)))
-		   (if all-count-is-available?
-		       (%unsafe.bytevector-reverse-and-concatenate who list-of-bytevectors1 output.len1)
-		     (retry-after-filling-buffer output.len1 list-of-bytevectors1
-						 (- count amount-of-available)))))))
-	   (%maybe-refill-bytevector-buffer-and-evaluate (port who)
-	     (data-is-needed-at: port.buffer.index)
-	     (if-end-of-file:
-	      (if (zero? output.len)
-		  (eof-object)
-		(%unsafe.bytevector-reverse-and-concatenate who list-of-bytevectors output.len)))
-	     (if-successful-refill: (%data-available-in-buffer))
-	     (if-available-data: (%data-available-in-buffer)))))))))
+     (with-arguments-validation (who)
+	 ((fixnum-count count))
+       (with-port-having-bytevector-buffer (port)
+	 (if (zero? count)
+	     (quote #vu8())
+	   (let retry-after-filling-buffer ((output.len		  0)
+					    (list-of-bytevectors  '())
+					    (count		  count))
+	     (define (%data-available-in-buffer)
+	       (let* ((buffer.used-size		port.buffer.used-size)
+		      (buffer.offset		port.buffer.index)
+		      (amount-of-available	(unsafe.fx- buffer.used-size buffer.offset))
+		      (all-count-is-available?	(<= count amount-of-available))
+		      (amount-to-read		(if all-count-is-available? count amount-of-available))
+		      (output.len1		(unsafe.fx+ output.len amount-to-read)))
+		 ;;DANGER This  check must  not be removed  when compiling
+		 ;;without arguments validation.
+		 (unless (fixnum? output.len1)
+		   (%implementation-violation who
+		     "request to read data from port would exceed maximum size of bytevectors"
+		     output.len1))
+		 (let ((bv (unsafe.make-bytevector amount-to-read)))
+		   (unsafe.bytevector-copy!/count port.buffer buffer.offset bv 0 amount-to-read)
+		   (set! port.buffer.index (unsafe.fx+ buffer.offset amount-to-read))
+		   (let ((list-of-bytevectors1 (cons bv list-of-bytevectors)))
+		     (if all-count-is-available?
+			 (%unsafe.bytevector-reverse-and-concatenate who list-of-bytevectors1 output.len1)
+		       (retry-after-filling-buffer output.len1 list-of-bytevectors1
+						   (- count amount-of-available)))))))
+	     (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	       (data-is-needed-at: port.buffer.index)
+	       (if-end-of-file:
+		(if (zero? output.len)
+		    (eof-object)
+		  (%unsafe.bytevector-reverse-and-concatenate who list-of-bytevectors output.len)))
+	       (if-successful-refill: (%data-available-in-buffer))
+	       (if-available-data: (%data-available-in-buffer))))))))))
 
 (define (get-bytevector-n! port dst.bv dst.start count)
   ;;Defined  by R6RS.   COUNT  must be  an  exact, non-negative  integer
@@ -4747,11 +4730,11 @@
   (%case-binary-input-port-fast-tag (port who)
     ((FAST-GET-BYTE-TAG)
      (with-arguments-validation (who)
-	 ((bytevector dst.bv))
-       (%assert-argument-is-fixnum-start-index dst.start who)
-       (%assert-argument-is-fixnum-count count who)
-       (%unsafe.assert-argument-is-start-index-for-bytevector dst.start dst.bv who)
-       (%unsafe.assert-argument-is-count-from-start-in-bytevector count dst.start dst.bv who)
+	 ((bytevector		dst.bv)
+	  (fixnum-start-index	dst.start)
+	  (fixnum-count		count)
+	  (unsafe.start-index-for-bytevector	  dst.start dst.bv)
+	  (unsafe.count-from-start-in-bytevector  count dst.start dst.bv))
        (with-port-having-bytevector-buffer (port)
 	 (if (zero? count)
 	     count
@@ -6023,8 +6006,8 @@
   ;;
   (define who 'get-string-n)
   (with-arguments-validation (who)
-      ((port port))
-    (%assert-argument-is-fixnum-count requested-count who)
+      ((port          port)
+       (fixnum-count  requested-count))
     (if (unsafe.fxzero? requested-count)
 	""
       (let* ((dst.str	(unsafe.make-string requested-count))
@@ -6062,12 +6045,12 @@
   ;;
   (define who 'get-string-n!)
   (with-arguments-validation (who)
-      ((port		port)
-       (string		dst.str))
-    (%assert-argument-is-fixnum-start-index dst.start who)
-    (%assert-argument-is-fixnum-count count who)
-    (%unsafe.assert-argument-is-start-index-for-string dst.start dst.str who)
-    (%unsafe.assert-argument-is-count-from-start-in-string count dst.start dst.str who)
+      ((port		    port)
+       (string		    dst.str)
+       (fixnum-start-index  dst.start)
+       (fixnum-count	    count)
+       (unsafe.start-index-for-string      dst.start dst.str)
+       (unsafe.count-from-start-in-string  count dst.start dst.str))
     (if (unsafe.fxzero? count)
 	count
       (%unsafe.get-string-n! who port dst.str dst.start count))))
@@ -6260,20 +6243,20 @@
     (%case-binary-output-port-fast-tag (port who)
       ((FAST-PUT-BYTE-TAG)
        (with-arguments-validation (who)
-	   ((bytevector bv))
-	 (%assert-argument-is-fixnum-start-index start who)
-	 (%unsafe.assert-argument-is-start-index-for-bytevector start bv who)
+	   ((bytevector          bv)
+	    (fixnum-start-index  start)
+	    (unsafe.start-index-for-bytevector start bv))
 	 (%unsafe.put-bytevector port bv start (unsafe.fx- (unsafe.bytevector-length bv) start) who)))))
    ((port bv start count)
     (define who 'put-bytevector)
     (%case-binary-output-port-fast-tag (port who)
       ((FAST-PUT-BYTE-TAG)
        (with-arguments-validation (who)
-	   ((bytevector bv))
-	 (%assert-argument-is-fixnum-start-index start who)
-	 (%unsafe.assert-argument-is-start-index-for-bytevector start bv who)
-	 (%assert-argument-is-fixnum-count count who)
-	 (%unsafe.assert-argument-is-count-from-start-in-bytevector count start bv who)
+	   ((bytevector          bv)
+	    (fixnum-start-index  start)
+	    (unsafe.start-index-for-bytevector start bv)
+	    (fixnum-count        count)
+	    (unsafe.count-from-start-in-bytevector count start bv))
 	 (%unsafe.put-bytevector port bv start count who)))))))
 
 (define (%unsafe.put-bytevector port src.bv src.start count who)
@@ -6725,19 +6708,19 @@
     (define who 'put-string)
     (with-arguments-validation (who)
 	((port		port)
-	 (string	str))
-      (%assert-argument-is-fixnum-start-index start who)
-      (%unsafe.assert-argument-is-start-index-for-string start str who)
+	 (string	str)
+	 (fixnum-start-index            start)
+	 (unsafe.start-index-for-string start str))
       (%unsafe.put-string port str start (unsafe.fx- (unsafe.string-length str) start) who)))
    ((port str start count)
     (define who 'put-string)
     (with-arguments-validation (who)
 	((port		port)
-	 (string	str))
-      (%assert-argument-is-fixnum-start-index start who)
-      (%unsafe.assert-argument-is-start-index-for-string start str who)
-      (%assert-argument-is-fixnum-count count who)
-      (%unsafe.assert-argument-is-count-from-start-in-string count start str who)
+	 (string	str)
+	 (fixnum-start-index             start)
+	 (unsafe.start-index-for-string  start str)
+	 (fixnum-count                       count)
+	 (unsafe.count-from-start-in-string  count start str))
       (%unsafe.put-string port str start count who)))))
 
 (define (%unsafe.put-string port src.str src.start count who)
