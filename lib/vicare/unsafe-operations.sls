@@ -212,6 +212,10 @@
 	    ($char->fixnum	char->fixnum)
 	    ($fixnum->char	fixnum->char))
 
+    (rename ($char-is-single-char-line-ending?		char-is-single-char-line-ending?)
+	    ($char-is-carriage-return?			char-is-carriage-return?)
+	    ($char-is-newline-after-carriage-return?	char-is-newline-after-carriage-return?))
+
 ;;; --------------------------------------------------------------------
 
     (rename ($make-string	make-string)
@@ -931,6 +935,56 @@
 	  ($vector-copy! ?vec ?start dst.vec 0 ?end)
 	  dst.vec)
       '#())))
+
+
+;;;; characters
+
+;;; Line endings
+;;
+;;R6RS defines  the following standalone and sequences  of characters as
+;;line endings:
+;;
+;;   #\x000A		linefeed
+;;   #\x000D		carriage return
+;;   #\x0085		next line
+;;   #\x2028		line separator
+;;   #\x000D #\000A	carriage return + linefeed
+;;   #\x000D #\0085	carriage return + next line
+;;
+;;to  process line  endings  from a  textual  input port,  we should  do
+;;something like this:
+;;
+;; (let ((ch (read-char port)))
+;;   (cond ((eof-object? ch)
+;;          (handle-eof))
+;;         (($char-is-single-char-line-ending? ch)
+;;          (handle-ending ch))
+;;         (($char-is-carriage-return? ch)
+;;          (let ((ch1 (peek-char port)))
+;;            (cond ((eof-object? ch1)
+;;                   (handle-ending ch))
+;;                  (($char-is-newline-after-carriage-return? ch1)
+;;                   (read-char port)
+;;                   (handle-ending ch ch1))
+;;                  (else
+;;                   (handle-ending ch))))
+;;         (else
+;;          (handle-other-char ch)))))
+;;
+
+(define-inline ($char-is-single-char-line-ending? ch)
+  (or ($fx= ch #\x000A)	  ;linefeed
+      ($fx= ch #\x0085)	  ;next line
+      ($fx= ch #\x2028))) ;line separator
+
+(define-inline ($char-is-carriage-return? ch)
+  ($fx= ch #\xD))
+
+(define-inline ($char-is-newline-after-carriage-return? ch)
+  ;;This is used to recognise 2-char newline sequences.
+  ;;
+  (or ($fx= ch #\x000A)	  ;linefeed
+      ($fx= ch #\x0085))) ;next line
 
 
 ;;;; done

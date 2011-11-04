@@ -1547,20 +1547,6 @@
   if-successful-refill:
   room-is-needed-for:)
 
-(define-inline (char-is-single-char-line-ending? ch)
-  (or (unsafe.fx= ch #\x000A)	;; linefeed
-      (unsafe.fx= ch #\x0085)	;; next line
-      (unsafe.fx= ch #\x2028)))	;; line separator
-
-(define-inline (char-is-carriage-return? ch)
-  (unsafe.fx= ch #\xD))
-
-(define-inline (char-is-newline-after-carriage-return? ch)
-  ;;This is used to recognise 2-char newline sequences.
-  ;;
-  (or (unsafe.fx= ch #\x000A)	;; linefeed
-      (unsafe.fx= ch #\x0085)))	;; next line
-
 
 ;;;; Byte Order Mark (BOM) parsing
 
@@ -4699,13 +4685,13 @@
 	     ch) ;return EOF
 	    ((unsafe.fxzero? eol-bits) ;EOL style none
 	     ch)
-	    ((char-is-single-char-line-ending? ch)
+	    ((unsafe.char-is-single-char-line-ending? ch)
 	     LINEFEED-CHAR)
-	    ((char-is-carriage-return? ch)
+	    ((unsafe.char-is-carriage-return? ch)
 	     (let ((ch1 (?peek-char port who)))
 	       (cond ((eof-object? ch1)
 		      (void))
-		     ((char-is-newline-after-carriage-return? ch1)
+		     ((unsafe.char-is-newline-after-carriage-return? ch1)
 		      (?read-char port who)))
 	       LINEFEED-CHAR))
 	    (else ch))))
@@ -4790,13 +4776,13 @@
 	     ch) ;return EOF
 	    ((unsafe.fxzero? eol-bits) ;EOL style none
 	     ch)
-	    ((char-is-single-char-line-ending? ch)
+	    ((unsafe.char-is-single-char-line-ending? ch)
 	     LINEFEED-CHAR)
-	    ((char-is-carriage-return? ch)
+	    ((unsafe.char-is-carriage-return? ch)
 	     (let ((ch2 (?peek-char/offset port who ?offset-of-ch2)))
 	       (cond ((eof-object? ch2)
 		      LINEFEED-CHAR)
-		     ((char-is-newline-after-carriage-return? ch2)
+		     ((unsafe.char-is-newline-after-carriage-return? ch2)
 		      LINEFEED-CHAR)
 		     (else ch))))
 	    (else ch))))
@@ -5756,13 +5742,13 @@
 	      (unsafe.fx- dst.index dst.start)) ;return the numbe of chars read
 	  (let ((ch (cond ((unsafe.fxzero? eol-bits) ;EOL style none
 			   ch)
-			  ((char-is-single-char-line-ending? ch)
+			  ((unsafe.char-is-single-char-line-ending? ch)
 			   LINEFEED-CHAR)
-			  ((char-is-carriage-return? ch)
+			  ((unsafe.char-is-carriage-return? ch)
 			   (let ((ch1 (?peek-char port who)))
 			     (cond ((eof-object? ch1)
 				    (void))
-				   ((char-is-newline-after-carriage-return? ch1)
+				   ((unsafe.char-is-newline-after-carriage-return? ch1)
 				    (?read-char port who)))
 			     LINEFEED-CHAR))
 			  (else ch))))
@@ -5962,13 +5948,13 @@
   (define-inline (%convert-if-line-ending eol-bits ch ?read-char ?peek-char)
     (cond ((unsafe.fxzero? eol-bits) ;EOL style none
 	   ch)
-	  ((char-is-single-char-line-ending? ch)
+	  ((unsafe.char-is-single-char-line-ending? ch)
 	   LINEFEED-CHAR)
-	  ((char-is-carriage-return? ch)
+	  ((unsafe.char-is-carriage-return? ch)
 	   (let ((ch1 (?peek-char port who)))
 	     (cond ((eof-object? ch1)
 		    (void))
-		   ((char-is-newline-after-carriage-return? ch1)
+		   ((unsafe.char-is-newline-after-carriage-return? ch1)
 		    (?read-char port who)))
 	     LINEFEED-CHAR))
 	  (else ch)))
