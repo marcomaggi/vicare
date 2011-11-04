@@ -610,9 +610,9 @@
   ;;interface to the platform's stderr.
   ;;
   (let ((bv (string->utf8 str)))
-    (foreign-call "ikrt_write_fd" 2 bv 0 (unsafe.bytevector-length bv))
+    (platform-write-fd 2 bv 0 (unsafe.bytevector-length bv))
     ;;and a newline
-    (foreign-call "ikrt_write_fd" 2 '#vu8(10) 0 1)))
+    (platform-write-fd 2 '#vu8(10) 0 1)))
 
 
 ;;;; port attributes
@@ -7509,15 +7509,6 @@
   (fprintf p "#<directory-stream ~a>"
 	   (directory-stream-filename x))))
 
-(define-inline (%platform-open-directory filename.bv)
-  (foreign-call "ikrt_opendir" filename.bv))
-
-(define-inline (%platform-read-directory-stream stream.ptr)
-  (foreign-call "ikrt_readdir" stream.ptr))
-
-(define-inline (%platform-close-directory stream.ptr)
-  (foreign-call "ikrt_closedir" stream.ptr))
-
 ;;; --------------------------------------------------------------------
 
 (define directory-stream-guardian
@@ -7539,7 +7530,7 @@
   (define who 'open-directory-stream)
   (with-arguments-validation (who)
       ((filename filename))
-    (let ((retval (%platform-open-directory ((string->filename-func) filename))))
+    (let ((retval (platform-open-directory ((string->filename-func) filename))))
       (if (fixnum? retval)
 	  (%raise-io-error who filename retval)
 	(let ((stream (make-directory-stream filename retval #f)))
@@ -7555,7 +7546,7 @@
   (with-arguments-validation (who)
       ((directory-stream       stream)
        (open-directory-stream  stream))
-    (let ((retval (%platform-read-directory-stream (directory-stream-pointer stream))))
+    (let ((retval (platform-read-directory-stream (directory-stream-pointer stream))))
       (cond ((fixnum? retval)
 	     (close-directory-stream stream #f)
 	     (%raise-io-error who (directory-stream-filename stream) retval))
@@ -7578,7 +7569,7 @@
 	((directory-stream stream))
       (unless (directory-stream-closed? stream)
 	(set-directory-stream-closed?! stream #t)
-	(let ((retval (%platform-close-directory (directory-stream-pointer stream))))
+	(let ((retval (platform-close-directory (directory-stream-pointer stream))))
 	  (when (and raise-error?
 		     (not (unsafe.fxzero? retval)))
 	    (%raise-io-error who (directory-stream-filename stream) retval))))))))

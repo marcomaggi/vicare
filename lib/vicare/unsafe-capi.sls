@@ -48,7 +48,11 @@
     platform-write-fd
     platform-set-position
     platform-close-fd
-    )
+
+    ;; reading file system directories
+    platform-open-directory
+    platform-read-directory-stream
+    platform-close-directory)
   (import (ikarus)
     (only (vicare syntactic-extensions)
 	  define-inline))
@@ -143,6 +147,18 @@
   ;;or a fixnum representing an ERRNO code.
   ;;
   (foreign-call "ikrt_close_fd" fd))
+
+
+;;;; reading file system directories
+
+(define-inline (platform-open-directory filename.bv)
+  (foreign-call "ikrt_opendir" filename.bv))
+
+(define-inline (platform-read-directory-stream stream.ptr)
+  (foreign-call "ikrt_readdir" stream.ptr))
+
+(define-inline (platform-close-directory stream.ptr)
+  (foreign-call "ikrt_closedir" stream.ptr))
 
 
 ;;;; done
