@@ -60,6 +60,8 @@
 		  wstatus-received-signal)
     (only (ikarus errno)
 	  errno->string)
+    (only (ikarus.interprocess-signals)
+	  interprocess-signal->string)
     (vicare errno)
     (vicare syntactic-extensions)
     (vicare unsafe-capi)
@@ -68,6 +70,14 @@
 
 
 ;;;; arguments validation
+
+(define-argument-validation (pid who obj)
+  (fixnum? obj)
+  (assertion-violation who "expected fixnum pid as argument" obj))
+
+(define-argument-validation (signal who obj)
+  (fixnum? obj)
+  (assertion-violation who "expected fixnum signal code as argument" obj))
 
 (define-argument-validation (procedure who obj)
   (procedure? obj)
@@ -91,61 +101,15 @@
 	     (parent-proc pid))))))
 
 
-;;;; signal handling
-
-(define SIGNAL-NAMES-ALIST
-  ;; From ikarus-process.c
-  '((1 . SIGABRT)
-    (2 . SIGALRM)
-    (3 . SIGBUS)
-    (4 . SIGCHLD)
-    (5 . SIGCONT)
-    (6 . SIGFPE)
-    (7 . SIGHUP)
-    (8 . SIGILL)
-    (9 . SIGINT)
-    (10 . SIGKILL)
-    (11 . SIGPIPE)
-    (12 . SIGQUIT)
-    (13 . SIGSEGV)
-    (14 . SIGSTOP)
-    (15 . SIGTERM)
-    (16 . SIGTSTP)
-    (17 . SIGTTIN)
-    (18 . SIGTTOU)
-    (19 . SIGUSR1)
-    (20 . SIGUSR2)
-    (21 . SIGPOLL)
-    (22 . SIGPROF)
-    (23 . SIGSYS)
-    (24 . SIGTRAP)
-    (25 . SIGURG)
-    (26 . SIGVTALRM)
-    (27 . SIGXCPU)
-    (28 . SIGXFSZ)))
-
-(define (signal-code->signal-name sigcode)
-  (cond ((assv sigcode SIGNAL-NAMES-ALIST)
-	 => cdr)
-	(else sigcode)))
-
-(define (signal-name->signal-code signame)
-  (cond ((find (lambda (p)
-		 (eqv? (cdr p) signame))
-	   SIGNAL-NAMES-ALIST)
-	 => car)
-	(else #f)))
-
-
-(define (kill pid signame)
+(define (kill pid signum)
   (define who 'kill)
-  (unless (fixnum? pid) (die who "not a fixnum" pid))
-  (unless (symbol? signame) (die who "not a symbol" signame))
-  (let ((r (foreign-call "ikrt_kill" pid
-			 (or (signal-name->signal-code signame)
-			     (die who "invalid signal name" signame)))))
-    (when (fx< r 0)
-      (error who (strerror r) pid signame))))
+  (with-arguments-validation (who)
+      ((pid	pid)
+       (signal	signum))
+    (let ((r (foreign-call "ikrt_kill" pid signum)))
+      (when (unsafe.fx< r 0)
+	(error who (strerror r) pid signum
+	       (interprocess-signal->string signum))))))
 
 (define-struct wstatus (pid exit-status received-signal))
 
@@ -164,9 +128,7 @@
     (let ((r (foreign-call "ikrt_waitpid" (make-wstatus #f #f #f) pid block?)))
       (cond
        ((wstatus? r)
-	(set-wstatus-received-signal! r
-				      (signal-code->signal-name
-				       (wstatus-received-signal r)))
+	(set-wstatus-received-signal! r (interprocess-signal->string (wstatus-received-signal r)))
 	r)
        ((and want-error? (not (eqv? r 0)))
 	(error who (strerror r) pid))
