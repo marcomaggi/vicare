@@ -70,7 +70,7 @@
 ;;;; arguments validation
 
 (define-argument-validation (procedure who obj)
-  (procedure? who)
+  (procedure? obj)
   (assertion-violation who "expected procedure as argument" obj))
 
 

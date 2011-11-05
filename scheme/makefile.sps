@@ -144,6 +144,7 @@
     "ikarus.codecs.sls"
     "ikarus.bytevectors.sls"
     "ikarus.errno.sls"
+    "ikarus.interprocess-signals.sls"
     "ikarus.posix.sls"
     "ikarus.io.sls"
     "ikarus.hash-tables.sls"
@@ -1726,6 +1727,7 @@
     (memcpy					$for)
     (errno					$for)
     (errno->string				$for)
+    (interprocess-signal->string		$for)
     (pointer-ref-c-signed-char			$for)
     (pointer-ref-c-signed-short			$for)
     (pointer-ref-c-signed-int			$for)

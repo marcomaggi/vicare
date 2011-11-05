@@ -44,18 +44,20 @@
 (define-syntax errno-vector
   (lambda (stx)
     (define (%mk-vector)
-      (let ((ev (make-vector (+ 1 (fold-left (lambda (max pair)
-					       (let ((code (fx- (cdr pair))))
-						 (if (< max code)
-						     code
-						   max)))
-				    0 errno-alist))
-			     ;;All the unused positions are set to #f.
-			     #f)))
+      (let* ((max	(fold-left (lambda (max pair)
+				     (let ((code (cdr pair)))
+				       (cond ((not code)		max)
+					     ((< max (fx- code))	(fx- code))
+					     (else			max))))
+			  0 errno-alist))
+	     (vec.len	(fx+ 1 max))
+	     ;;All the unused positions are set to #f.
+	     (vec	(make-vector vec.len #f)))
 	(for-each (lambda (pair)
-		    (vector-set! ev (fx- (cdr pair)) (car pair)))
+		    (when (cdr pair)
+		      (vector-set! vec (fx- (cdr pair)) (car pair))))
 	  errno-alist)
-	ev))
+	vec))
 
     (define errno-alist
       `((E2BIG			. ,E2BIG)
