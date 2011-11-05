@@ -60,6 +60,8 @@
 	    ($fxlogor	fxlogor)	;inclusive logic OR
 	    ($fxlogxor	fxlogxor)	;exlusive logic OR
 	    ($fxlogand	fxlogand)	;logic AND
+	    ($fxlognot	fxlognot)	;logic not
+	    ($fxlognot	fxnot)		;logic not
 	    ($fx+	fx+)
 	    ($fx-	fx-)
 	    ($fx*	fx*)
