@@ -14,89 +14,127 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 (library (ikarus.posix)
   (export
-    posix-fork fork waitpid getpid getppid system file-exists? delete-file
-    nanosleep getenv setenv unsetenv env environ split-file-name
-    file-ctime file-mtime file-real-path current-directory
-    file-regular? file-directory? file-readable? file-writable?
-    file-executable? file-size rename-file file-symbolic-link?
-    make-symbolic-link make-hard-link directory-list make-directory
-    make-directory* delete-directory change-mode kill strerror
-    wstatus-pid wstatus-exit-status wstatus-received-signal)
-  (import
-    (rnrs bytevectors)
-    (except (ikarus)
-	    nanosleep posix-fork fork waitpid getpid getppid system file-exists?
-	    delete-file getenv setenv unsetenv env environ split-file-name
-	    file-ctime file-mtime file-real-path current-directory
-	    file-regular? file-directory? file-readable? file-writable?
-	    file-executable? file-size rename-file file-symbolic-link?
-	    make-symbolic-link make-hard-link directory-list
-	    make-directory make-directory* delete-directory change-mode
-	    kill strerror wstatus-pid wstatus-exit-status
-	    wstatus-received-signal)
+    posix-fork			fork
+    waitpid			kill
+    getpid			getppid
+    system
+    nanosleep
+
+    getenv			setenv
+    unsetenv			env
+    environ
+
+    file-exists?		delete-file
+    rename-file			split-file-name
+    file-real-path
+
+    current-directory		directory-list
+    make-directory		make-directory*
+    delete-directory
+
+    file-ctime			file-mtime
+    file-regular?		file-directory?
+    file-readable?		file-writable?
+    file-executable?		file-symbolic-link?
+    file-size
+
+    make-symbolic-link		make-hard-link
+
+    change-mode
+
+    strerror
+    wstatus-pid			wstatus-exit-status
+    wstatus-received-signal)
+  (import (except (ikarus)
+		  nanosleep posix-fork fork waitpid getpid getppid system file-exists?
+		  delete-file getenv setenv unsetenv env environ split-file-name
+		  file-ctime file-mtime file-real-path current-directory
+		  file-regular? file-directory? file-readable? file-writable?
+		  file-executable? file-size rename-file file-symbolic-link?
+		  make-symbolic-link make-hard-link directory-list
+		  make-directory make-directory* delete-directory change-mode
+		  kill strerror wstatus-pid wstatus-exit-status
+		  wstatus-received-signal)
     (only (ikarus errno)
 	  errno->string)
-    (vicare errno))
+    (vicare errno)
+    (vicare syntactic-extensions)
+    (vicare unsafe-capi)
+    (prefix (vicare unsafe-operations)
+	    unsafe.))
+
+
+;;;; arguments validation
+
+(define-argument-validation (procedure who obj)
+  (procedure? who)
+  (assertion-violation who "expected procedure as argument" obj))
 
 
 (define (posix-fork)
-  (foreign-call "ikrt_fork"))
+  (platform-fork-process))
 
 (define (fork parent-proc child-proc)
-  (let ((pid (posix-fork)))
-    (cond
-     ((fx= pid 0) (child-proc))
-     ((fx< pid 0) (raise/strerror 'fork pid))
-     (else (parent-proc pid)))))
+  (define who 'fork)
+  (with-arguments-validation (who)
+      ((procedure  parent-proc)
+       (procedure  child-proc))
+    (let ((pid (platform-fork-process)))
+      (cond ((unsafe.fx= pid 0)
+	     (child-proc))
+	    ((unsafe.fx< pid 0)
+	     (raise/strerror who pid))
+	    (else
+	     (parent-proc pid))))))
 
 
-(module (signal-code->signal-name signal-name->signal-code)
-  (define signal-names-al
-    ;; From ikarus-process.c
-    '((1 . SIGABRT)
-      (2 . SIGALRM)
-      (3 . SIGBUS)
-      (4 . SIGCHLD)
-      (5 . SIGCONT)
-      (6 . SIGFPE)
-      (7 . SIGHUP)
-      (8 . SIGILL)
-      (9 . SIGINT)
-      (10 . SIGKILL)
-      (11 . SIGPIPE)
-      (12 . SIGQUIT)
-      (13 . SIGSEGV)
-      (14 . SIGSTOP)
-      (15 . SIGTERM)
-      (16 . SIGTSTP)
-      (17 . SIGTTIN)
-      (18 . SIGTTOU)
-      (19 . SIGUSR1)
-      (20 . SIGUSR2)
-      (21 . SIGPOLL)
-      (22 . SIGPROF)
-      (23 . SIGSYS)
-      (24 . SIGTRAP)
-      (25 . SIGURG)
-      (26 . SIGVTALRM)
-      (27 . SIGXCPU)
-      (28 . SIGXFSZ)))
+;;;; signal handling
 
-  (define (signal-code->signal-name sigcode)
-    (cond ((assv sigcode signal-names-al)
-	   => cdr)
-	  (else sigcode)))
+(define SIGNAL-NAMES-ALIST
+  ;; From ikarus-process.c
+  '((1 . SIGABRT)
+    (2 . SIGALRM)
+    (3 . SIGBUS)
+    (4 . SIGCHLD)
+    (5 . SIGCONT)
+    (6 . SIGFPE)
+    (7 . SIGHUP)
+    (8 . SIGILL)
+    (9 . SIGINT)
+    (10 . SIGKILL)
+    (11 . SIGPIPE)
+    (12 . SIGQUIT)
+    (13 . SIGSEGV)
+    (14 . SIGSTOP)
+    (15 . SIGTERM)
+    (16 . SIGTSTP)
+    (17 . SIGTTIN)
+    (18 . SIGTTOU)
+    (19 . SIGUSR1)
+    (20 . SIGUSR2)
+    (21 . SIGPOLL)
+    (22 . SIGPROF)
+    (23 . SIGSYS)
+    (24 . SIGTRAP)
+    (25 . SIGURG)
+    (26 . SIGVTALRM)
+    (27 . SIGXCPU)
+    (28 . SIGXFSZ)))
 
-  (define (signal-name->signal-code signame)
-    (cond ((find (lambda (p)
-		   (eqv? (cdr p) signame))
-	     signal-names-al)
-	   => car)
-	  (else #f)))
+(define (signal-code->signal-name sigcode)
+  (cond ((assv sigcode SIGNAL-NAMES-ALIST)
+	 => cdr)
+	(else sigcode)))
 
-  #| end of module |# )
+(define (signal-name->signal-code signame)
+  (cond ((find (lambda (p)
+		 (eqv? (cdr p) signame))
+	   SIGNAL-NAMES-ALIST)
+	 => car)
+	(else #f)))
 
 
 (define (kill pid signame)

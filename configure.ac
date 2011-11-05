@@ -1,4 +1,3 @@
-#                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
@@ -6,6 +5,9 @@ AC_INIT(vicare, 0.2d2, marco.maggi-ipsu@poste.it)
 AC_CANONICAL_SYSTEM
 AM_INIT_AUTOMAKE(vicare, 0.2d2, gnu)
 AC_CONFIG_SRCDIR([src/])
+
+#page
+#### additional configuration command line options
 
 vicare_ARGUMENTS_VALIDATION=1
 AC_MSG_CHECKING([whether arguments validation is enabled])
@@ -21,6 +23,9 @@ AC_ARG_ENABLE([arguments-validation],
    AC_MSG_RESULT([yes])])
 
 AC_SUBST([VICARE_ARGUMENTS_VALIDATION],[$vicare_ARGUMENTS_VALIDATION])
+
+#page
+#### basic system inspection
 
 AM_PROG_AS
 # Checks for programs.
@@ -66,19 +71,66 @@ AC_SEARCH_LIBS(cos, m,, [AC_MSG_ERROR([Cannot find libm])])
 AC_SEARCH_LIBS(nanosleep, rt,, [AC_MSG_ERROR([Cannot find nanosleep])])
 AC_SEARCH_LIBS(socket, socket,, [AC_MSG_ERROR([Cannot find socket])])
 
-
-# Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-
-
 AC_CHECK_HEADERS([assert.h dlfcn.h errno.h fcntl.h signal.h \
                   stdint.h stdlib.h string.h strings.h \
                   sys/mman.h sys/resource.h sys/stat.h \
                   sys/time.h sys/types.h sys/wait.h time.h \
                   unistd.h])
 
+AC_C_CONST
+AC_C_INLINE
+AC_C_RESTRICT
+AC_TYPE_SIZE_T
+AC_HEADER_TIME
+AC_STRUCT_TM
+
 AC_CACHE_SAVE
+
+#page
+#### other system inspection
+
+AC_CHECK_MEMBER([struct stat.st_mtimespec],
+   AC_DEFINE(HAVE_STAT_ST_MTIMESPEC, 1,
+             [stat struct has st_mtimespec field]),
+   [],
+   [[#include <sys/stat.h>]])
+
+AC_CHECK_MEMBER([struct stat.st_mtim],
+   AC_DEFINE(HAVE_STAT_ST_MTIM, 1,
+             [stat struct has st_mtim field]),
+   [],
+   [[#include <sys/stat.h>]])
+
+AC_CHECK_MEMBER([struct stat.st_ctimespec],
+   AC_DEFINE(HAVE_STAT_ST_CTIMESPEC, 1,
+             [stat struct has st_ctimespec field]),
+   [],
+   [[#include <sys/stat.h>]])
+
+AC_CHECK_MEMBER([struct stat.st_ctim],
+   AC_DEFINE(HAVE_STAT_ST_CTIM, 1,
+             [stat struct has st_ctim field]),
+   [],
+   [[#include <sys/stat.h>]])
+
+#page
+#### checks for library functions
+
+AC_FUNC_FORK
+AC_FUNC_MALLOC
+AC_FUNC_MEMCMP
+AC_FUNC_MMAP
+AC_FUNC_STAT
+AC_FUNC_STRFTIME
+AC_FUNC_STRTOD
+AC_CHECK_FUNCS([sigaltstack bzero gettimeofday memmove memset munmap setenv sqrt strerror getaddrinfo])
+
+AC_CACHE_SAVE
+
+#page
+#### external libraries
 
 AC_CHECK_LIB(pthread, main)
 
@@ -130,41 +182,35 @@ fi # "$enable_ffi" != no
 
 AC_DEFINE_UNQUOTED(ENABLE_LIBFFI, [$libffi_val], [adds support for libffi])
 
-AC_CHECK_MEMBER([struct stat.st_mtimespec],
-   AC_DEFINE(HAVE_STAT_ST_MTIMESPEC, 1,
-             [stat struct has st_mtimespec field]),
-   [],
-   [[#include <sys/stat.h>]])
-
-AC_CHECK_MEMBER([struct stat.st_mtim],
-   AC_DEFINE(HAVE_STAT_ST_MTIM, 1,
-             [stat struct has st_mtim field]),
-   [],
-   [[#include <sys/stat.h>]])
-
-AC_CHECK_MEMBER([struct stat.st_ctimespec],
-   AC_DEFINE(HAVE_STAT_ST_CTIMESPEC, 1,
-             [stat struct has st_ctimespec field]),
-   [],
-   [[#include <sys/stat.h>]])
-
-AC_CHECK_MEMBER([struct stat.st_ctim],
-   AC_DEFINE(HAVE_STAT_ST_CTIM, 1,
-             [stat struct has st_ctim field]),
-   [],
-   [[#include <sys/stat.h>]])
-
 AC_CACHE_SAVE
 
-# Checks for typedefs, structures, and compiler characteristics.
-AC_C_CONST
-AC_C_INLINE
-AC_C_RESTRICT
-AC_TYPE_SIZE_T
-AC_HEADER_TIME
-AC_STRUCT_TM
+#page
+#### custom macros
 
-AC_CACHE_SAVE
+m4_define([VICARE_INCLUDES],[
+AC_INCLUDES_DEFAULT
+#ifdef HAVE_ERRNO_H
+#  include <errno.h>
+#endif
+#ifdef HAVE_FCNTL_H
+#  include <fcntl.h>
+#endif
+#ifdef HAVE_INTTYPES_H
+#  include <inttypes.h>
+#endif
+#ifdef HAVE_LIMITS_H
+#  include <limits.h>
+#endif
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif
+#ifdef HAVE_STDINT_H
+#  include <stdint.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
+])
 
 AC_DEFUN([VICARE_VALUEOF_TEST],[
   valueof_$1="#f"
@@ -172,12 +218,13 @@ AC_DEFUN([VICARE_VALUEOF_TEST],[
     [vicare_cv_valueof_$1],
     [AC_COMPUTE_INT([vicare_cv_valueof_$1],
        [$2],
-       [#ifdef HAVE_ERRNO_H
-#  include <errno.h>
-#endif],
+       [VICARE_INCLUDES],
        [vicare_cv_valueof_$1="#f"])])
    VALUEOF_$1="$vicare_cv_valueof_$1"
    AC_SUBST([VALUEOF_$1])])
+
+#page
+#### errno codes
 
 AC_DEFUN([VICARE_ERRNO_TEST],[VICARE_VALUEOF_TEST([$1],[$1])])
 
@@ -315,20 +362,71 @@ VICARE_ERRNO_TEST([ENOTRECOVERABLE])
 
 AC_CACHE_SAVE
 
-# Checks for library functions.
-AC_FUNC_FORK
-AC_FUNC_MALLOC
-AC_FUNC_MEMCMP
-AC_FUNC_MMAP
-AC_FUNC_STAT
-AC_FUNC_STRFTIME
-AC_FUNC_STRTOD
-AC_CHECK_FUNCS([sigaltstack bzero gettimeofday memmove memset munmap setenv sqrt strerror getaddrinfo])
+#page
+#### interprocess signal constants
 
-AC_CACHE_SAVE
+AC_DEFUN([VICARE_SIGNAL_TEST],[VICARE_VALUEOF_TEST([$1],[$1])])
+
+VICARE_SIGNAL_TEST([NSIG])
+
+# program error
+VICARE_SIGNAL_TEST([SIGFPE])
+VICARE_SIGNAL_TEST([SIGILL])
+VICARE_SIGNAL_TEST([SIGSEGV])
+VICARE_SIGNAL_TEST([SIGBUS])
+VICARE_SIGNAL_TEST([SIGABRT])
+VICARE_SIGNAL_TEST([SIGIOT])
+VICARE_SIGNAL_TEST([SIGTRAP])
+VICARE_SIGNAL_TEST([SIGEMT])
+VICARE_SIGNAL_TEST([SIGSYS])
+
+# termination
+VICARE_SIGNAL_TEST([SIGTERM])
+VICARE_SIGNAL_TEST([SIGINT])
+VICARE_SIGNAL_TEST([SIGQUIT])
+VICARE_SIGNAL_TEST([SIGKILL])
+VICARE_SIGNAL_TEST([SIGHUP])
+
+# alarm
+VICARE_SIGNAL_TEST([SIGALRM])
+VICARE_SIGNAL_TEST([SIGVRALRM])
+VICARE_SIGNAL_TEST([SIGPROF])
+
+# asynchronous I/O
+VICARE_SIGNAL_TEST([SIGIO])
+VICARE_SIGNAL_TEST([SIGURG])
+VICARE_SIGNAL_TEST([SIGPOLL])
+
+# job control
+VICARE_SIGNAL_TEST([SIGCHLD])
+VICARE_SIGNAL_TEST([SIGCLD])
+VICARE_SIGNAL_TEST([SIGCONT])
+VICARE_SIGNAL_TEST([SIGSTOP])
+VICARE_SIGNAL_TEST([SIGTSTP])
+VICARE_SIGNAL_TEST([SIGTTIN])
+VICARE_SIGNAL_TEST([SIGTTOU])
+
+# operation error
+VICARE_SIGNAL_TEST([SIGPIPE])
+VICARE_SIGNAL_TEST([SIGLOST])
+VICARE_SIGNAL_TEST([SIGXCPU])
+VICARE_SIGNAL_TEST([SIGXSFZ])
+
+# misc
+VICARE_SIGNAL_TEST([SIGUSR1])
+VICARE_SIGNAL_TEST([SIGUSR2])
+VICARE_SIGNAL_TEST([SIGWINCH])
+VICARE_SIGNAL_TEST([SIGINFO])
+
+#page
+#### finish
 
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES(Makefile src/Makefile scheme/Makefile doc/Makefile lib/Makefile tests/Makefile lib/vicare/installation-configuration.sls lib/vicare/errno.sls)
+AC_CONFIG_FILES(Makefile src/Makefile scheme/Makefile doc/Makefile lib/Makefile tests/Makefile lib/vicare/installation-configuration.sls lib/vicare/errno.sls lib/vicare/interprocess-signals.sls)
 AC_OUTPUT #(Makefile src/Makefile scheme/Makefile doc/Makefile)
 
 ### end of file
+# Local Variables:
+# mode: autoconf
+# page-delimiter: "^#page"
+# End:

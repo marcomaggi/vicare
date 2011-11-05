@@ -1,0 +1,118 @@
+;;;
+;;;Part of: Vicare
+;;;Contents: interprocess signals numbers
+;;;Date: Sat Nov  5, 2011
+;;;
+;;;Abstract
+;;;
+;;;
+;;;
+;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;
+;;;This  program  is free  software:  you  can redistribute  it
+;;;and/or modify it  under the terms of the  GNU General Public
+;;;License as published by the Free Software Foundation, either
+;;;version  3 of  the License,  or (at  your option)  any later
+;;;version.
+;;;
+;;;This  program is  distributed in  the hope  that it  will be
+;;;useful, but  WITHOUT ANY WARRANTY; without  even the implied
+;;;warranty  of  MERCHANTABILITY or  FITNESS  FOR A  PARTICULAR
+;;;PURPOSE.   See  the  GNU  General Public  License  for  more
+;;;details.
+;;;
+;;;You should  have received a  copy of the GNU  General Public
+;;;License   along   with    this   program.    If   not,   see
+;;;<http://www.gnu.org/licenses/>.
+;;;
+
+
+(library (vicare interprocess-signals)
+  (export
+    ;; program error
+    SIGFPE		SIGILL		SIGSEGV
+    SIGBUS		SIGABRT		SIGIOT
+    SIGTRAP		SIGEMT		SIGSYS
+
+    ;; termination
+    SIGTERM		SIGINT		SIGQUIT
+    SIGKILL		SIGHUP
+
+    ;; alarm
+    SIGALRM		SIGVRALRM	SIGPROF
+
+    ;; asynchronous I/O
+    SIGIO		SIGURG		SIGPOLL
+
+    ;; job control
+    SIGCHLD		SIGCLD		SIGCONT
+    SIGSTOP		SIGTSTP		SIGTTIN
+    SIGTTOU
+
+    ;; operation error
+    SIGPIPE		SIGLOST		SIGXCPU
+    SIGXSFZ
+
+    ;; misc
+    SIGUSR1		SIGUSR2		SIGWINCH
+    SIGINFO)
+  (import (ikarus)
+    (only (vicare syntactic-extensions)
+	  define-inline-constant))
+
+
+;;; program error
+(define-inline-constant SIGFPE		@VALUEOF_SIGFPE@)
+(define-inline-constant SIGILL		@VALUEOF_SIGILL@)
+(define-inline-constant SIGSEGV		@VALUEOF_SIGSEGV@)
+(define-inline-constant SIGBUS		@VALUEOF_SIGBUS@)
+(define-inline-constant SIGABRT		@VALUEOF_SIGABRT@)
+(define-inline-constant SIGIOT		@VALUEOF_SIGIOT@)
+(define-inline-constant SIGTRAP		@VALUEOF_SIGTRAP@)
+(define-inline-constant SIGEMT		@VALUEOF_SIGEMT@)
+(define-inline-constant SIGSYS		@VALUEOF_SIGSYS@)
+
+;;; termination
+(define-inline-constant SIGTERM		@VALUEOF_SIGTERM@)
+(define-inline-constant SIGINT		@VALUEOF_SIGINT@)
+(define-inline-constant SIGQUIT		@VALUEOF_SIGQUIT@)
+(define-inline-constant SIGKILL		@VALUEOF_SIGKILL@)
+(define-inline-constant SIGHUP		@VALUEOF_SIGHUP@)
+
+;;; alarm
+(define-inline-constant SIGALRM		@VALUEOF_SIGALRM@)
+(define-inline-constant SIGVRALRM	@VALUEOF_SIGVRALRM@)
+(define-inline-constant SIGPROF		@VALUEOF_SIGPROF@)
+
+;;; asynchronous I/O
+(define-inline-constant SIGIO		@VALUEOF_SIGIO@)
+(define-inline-constant SIGURG		@VALUEOF_SIGURG@)
+(define-inline-constant SIGPOLL		@VALUEOF_SIGPOLL@)
+
+;;; job control
+(define-inline-constant SIGCHLD		@VALUEOF_SIGCHLD@)
+(define-inline-constant SIGCLD		@VALUEOF_SIGCLD@)
+(define-inline-constant SIGCONT		@VALUEOF_SIGCONT@)
+(define-inline-constant SIGSTOP		@VALUEOF_SIGSTOP@)
+(define-inline-constant SIGTSTP		@VALUEOF_SIGTSTP@)
+(define-inline-constant SIGTTIN		@VALUEOF_SIGTTIN@)
+(define-inline-constant SIGTTOU		@VALUEOF_SIGTTOU@)
+
+;;; operation error
+(define-inline-constant SIGPIPE		@VALUEOF_SIGPIPE@)
+(define-inline-constant SIGLOST		@VALUEOF_SIGLOST@)
+(define-inline-constant SIGXCPU		@VALUEOF_SIGXCPU@)
+(define-inline-constant SIGXSFZ		@VALUEOF_SIGXSFZ@)
+
+;;; misc
+(define-inline-constant SIGUSR1		@VALUEOF_SIGUSR1@)
+(define-inline-constant SIGUSR2		@VALUEOF_SIGUSR2@)
+(define-inline-constant SIGWINCH	@VALUEOF_SIGWINCH@)
+(define-inline-constant SIGINFO		@VALUEOF_SIGINFO@)
+
+
+;;;; done
+
+)
+
+;;; end of file

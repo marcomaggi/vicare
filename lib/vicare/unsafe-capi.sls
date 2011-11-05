@@ -31,6 +31,9 @@
 (library (vicare unsafe-capi)
   (export
 
+    ;; processes
+    platform-fork-process
+
     ;; platform API for file descriptors
     platform-open-input-fd
     platform-open-output-fd
@@ -47,6 +50,12 @@
   (import (ikarus)
     (only (vicare syntactic-extensions)
 	  define-inline))
+
+
+;;;; processes
+
+(define-inline (platform-fork-process)
+  (foreign-call "ikrt_fork"))
 
 
 ;;;; platform API for file descriptors
