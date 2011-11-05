@@ -4000,6 +4000,9 @@
       (let ((n (bitwise-not n)))
 	(bitwise-not (poscount n ($fx- ($bignum-size n) 4) 0)))))
   (define (fxbit-count n)
+    ;;FIXME  To be  checked against  R6RS  errata (Marco  Maggi; Nov  5,
+    ;;2011).
+    ;;
     (cond
      ((fixnum? n) ($fxbitcount n))
      (else (die 'fxbit-count "not a fixnum" n))))
