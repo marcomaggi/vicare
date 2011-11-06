@@ -81,8 +81,6 @@ try-vicare-boot: $(EXTRA_DIST) ikarus.config.ss
 #### stuff needed by GNU Automake
 
 EXTRA_DIST= last-revision				\
-	ikarus.boot.4.prebuilt				\
-	ikarus.boot.8.prebuilt				\
 	vicare.boot.4.prebuilt				\
 	\
 	ikarus.compiler.sls				\

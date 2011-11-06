@@ -488,7 +488,7 @@ Revised^6 Report on the algorithmic language Scheme
 
 @c To be used as @value{COPYRIGHT_YEARS} whenever we need to include the
 @c list of copyright years.
-@set COPYRIGHT_YEARS            2006-2011
+@set COPYRIGHT_YEARS            2010-2011
 
 
 @set TARBALLURL                 @url{http://github.com/marcomaggi/vicare/downloads}
@@ -525,8 +525,11 @@ development takes place at:
 @center @url{http://github.com/marcomaggi/vicare/}
 
 @noindent
-Copyright @copyright{} @value{COPYRIGHT_YEARS} by Abdulaziz Ghuloum.@*
-This document was modified by the @value{PACKAGE} contributors.
+Copyright @copyright{} @value{COPYRIGHT_YEARS} by Marco Maggi.@*
+Copyright @copyright{} 2006-2010 by Abdulaziz Ghuloum.
+
+This document is derived from the original Ikarus documentation by the
+@value{PACKAGE} contributors.
 
 @quotation
 This program is free software: you can redistribute it and/or modify it
@@ -544,11 +547,6 @@ along with this program.  If not, see
 @end quotation
 
 Trademarks used herein are the property of their respective owners.
-
-This document is derived from the original Ikarus documentation,
-reformatted in Texinfo; the reformatting author and maintainer is Marco
-Maggi @email{marco.maggi-ipsu@@poste.it} with contributions by other
-people.
 @end copying
 
 @c page
@@ -4935,7 +4933,7 @@ invoked by the @value{PRJNAME} event loop.
 
 @quotation
 @fixme{What are the parameters that get passed to @var{proc}?  Look for
-@func{make-t} and @func{t-proc} in @file{ikarus.io.ss}.}
+@func{make-t} and @func{t-proc} in @file{ikarus.io.sls}.}
 @end quotation
 @end defun
 
@@ -6362,7 +6360,7 @@ positive exact integers.  If an error occurs an exception is raised.
 The C language--level implementation is mostly in the files
 @file{src/ikarus-runtime.c} and @file{src/ikarus-io.c}; the
 Scheme--level implementation is in the library @library{ikarus.posix},
-file @file{scheme/ikarus.posix.ss}.
+file @file{scheme/ikarus.posix.sls}.
 
 File pathnames are always bytevector objects and the C language level,
 while they are strings at the Scheme language level; the conversion is
@@ -6387,7 +6385,7 @@ order.  For example, for @func{getpid} add:
 @end example
 
 @item
-In the file @file{scheme/ikarus.posix.ss}: add the binding to both the
+In the file @file{scheme/ikarus.posix.sls}: add the binding to both the
 export list of @library{ikarus.posix} and to the @code{except} import
 list from @library{ikarus}; add the function implementation calling the
 foreign function.  For example, for @func{getpid} add:
@@ -8756,19 +8754,19 @@ Turn off debugging mode.  The parameter @func{generate-debug-calls} is
 set to false.
 @end table
 
-The implementation is mostly in @file{ikarus.debugger.ss} and
-@file{ikarus.compiler.ss}.
+The implementation is mostly in @file{ikarus.debugger.sls} and
+@file{ikarus.compiler.sls}.
 
 
 @deffn Parameter generate-debug-calls
 Set to true when debug mode is turned on.  Defined in
-@file{ikarus.compiler.ss}, configured in @file{ikarus.main.ss}.
+@file{ikarus.compiler.sls}, configured in @file{ikarus.main.sls}.
 @end deffn
 
 
 @defun guarded-start @var{proc}
 Evaluate the procedure @var{proc} under the debugging infrastructure.
-It is used in the @library{ikarus main} library (@file{ikarus.main.ss})
+It is used in the @library{ikarus main} library (@file{ikarus.main.sls})
 to start the execution of a program and all the other execution modes.
 
 @var{proc} is evaluated under the installation of an exception handler

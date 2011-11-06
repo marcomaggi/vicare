@@ -34,10 +34,15 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d2
 ------------------------
 
+* Tarballs extracted from GitHub's  "extract tagged revision" feature do
+  not work because of missing files,  so this project is back on relying
+  only  on  full repository  checkouts  and  release  tarballs from  the
+  download area.
+
 * The  default   list  of  library   file  extensions  now   holds  just
   ".vicare.sls" and ".sls"; the new option --more-file-extensions allows
-  to restore the old behviour of searching for many file extensions plus
-  the "main" file trick.
+  to restore  the old  behaviour of searching  for many  file extensions
+  plus the "main" file trick.
 
 * Some documentation has been written; other reviewed.
 
