@@ -8276,16 +8276,16 @@ the Scheme language compiler @file{ikarus.compiler.sls}.
 
 @c page
 @node objects refs
-@section Builtin object references
+@section Built in object references
 
 
 @deftp {Object Reference} ikptr
-In general, it is a reference to a builtin object, implemented as an
+In general, it is a reference to a built in object, implemented as an
 @code{unsigned long int}; it can be:
 
 @itemize
 @item
-A tagged pointer referencing a memory block holding a builtin object;
+A tagged pointer referencing a memory block holding a built in object;
 the pointer is aligned in such a way that the @math{3} least significant
 bits are set to zero, the tag is stored in those @math{3} bits.
 
@@ -8390,7 +8390,7 @@ An @code{ikptr} value representing @false{}.
 
 @c page
 @node objects alloc
-@section Allocating memory for builtin objects
+@section Allocating memory for built in objects
 
 
 In short, memory allocation is performed as follows:
@@ -8592,7 +8592,7 @@ ikptr     bv = ik_safe_alloc(pcb, aligned_size) + bytevector_tag;
 @cfunc{ik_safe_alloc} returns an @code{ikptr} value representing the
 aligned pointer, having the @math{3} least significant bits set to zero;
 we add to it the bytevector tag (an integer value fitting in @math{3}
-bits) which allows to recognise bytevectors among all the other builtin
+bits) which allows to recognise bytevectors among all the other built in
 objects.
 
 We have to explicitly store the bytevector length in the memory block as
@@ -8674,7 +8674,7 @@ ikptr     vec = ik_safe_alloc(pcb, aligned_size) + vector_tag;
 @cfunc{ik_safe_alloc} returns an @code{ikptr} value representing the
 aligned pointer, having the @math{3} least significant bits set to zero;
 we add to it the vector tag (an integer value fitting in @math{3} bits)
-which allows to recognise vectors among all the other builtin objects.
+which allows to recognise vectors among all the other built in objects.
 
 We have to explicitly store the vector length in the memory block as a
 fixnum, so usually a full allocation looks like this:
