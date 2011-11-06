@@ -40,13 +40,9 @@
 #include "ikarus-winmmap.h"
 #endif
 
-
-extern ikptr ik_errno_to_code();
+ikptr ik_errno_to_code (void);
 
 int total_allocated_pages = 0;
-
-extern char **environ;
-
 
 #define segment_size  (pagesize*pagesize/4)
 #define segment_shift (pageshift+pageshift-2)
@@ -264,11 +260,12 @@ ik_munmap(ikptr mem, unsigned long int size){
 
 int total_malloced = 0;
 
+
 void*
 ik_malloc(int size){
   void* x = malloc(size);
   if(x == NULL){
-    fprintf(stderr, "malloc failed: %s\n", strerror(errno));
+    fprintf(stderr, "vicare error: malloc failed: %s\n", strerror(errno));
     exit(-1);
   }
   total_malloced += size;
@@ -280,7 +277,7 @@ void ik_free(void* x, int size){
   free(x);
 }
 
-
+
 #define CACHE_SIZE (pagesize * 1) /* must be multiple of pagesize*/
 
 ikpcb* ik_make_pcb(){
@@ -401,82 +398,84 @@ void ik_delete_pcb(ikpcb* pcb){
   ik_free(pcb, sizeof(ikpcb));
 }
 
+
 ikptr
-ik_safe_alloc(ikpcb* pcb, int size){
+ik_safe_alloc (ikpcb* pcb, int size)
+{
   assert(size == align(size));
-  ikptr ap = pcb->allocation_pointer;
-  ikptr ep = pcb->heap_base + pcb->heap_size;
-  ikptr nap = ap + size;
-  if(nap < ep){
-    pcb->allocation_pointer = nap;
-    return ap;
+  ikptr alloc_ptr       = pcb->allocation_pointer;
+  ikptr end_ptr         = pcb->heap_base + pcb->heap_size;
+  ikptr new_alloc_ptr   = alloc_ptr + size;
+  /* If there  is room  in the  current heap block:  update the  pcb and
+     return the offset. */
+  if (new_alloc_ptr < end_ptr) {
+    pcb->allocation_pointer = new_alloc_ptr;
+    return alloc_ptr;
   }
-  else {
-    ik_collect(size, pcb);
-    ikptr ap = pcb->allocation_pointer;
-    ikptr ep = pcb->heap_base + pcb->heap_size;
-    ikptr nap = ap + size;
-    if(nap < ep){
-      pcb->allocation_pointer = nap;
-      return ap;
+  /* No room in the current heap block: run GC. */
+  ik_collect(size, pcb);
+  {
+    ikptr alloc_ptr     = pcb->allocation_pointer;
+    ikptr end_ptr       = pcb->heap_base + pcb->heap_size;
+    ikptr new_alloc_ptr = alloc_ptr + size;
+    if (new_alloc_ptr < end_ptr) {
+      pcb->allocation_pointer = new_alloc_ptr;
+      return alloc_ptr;
     } else {
-      fprintf(stderr,
-              "ikaurs: BUG: collector did not leave enough room for %d\n",
-               size);
+      fprintf(stderr, "vicare: BUG: collector did not leave enough room for %d\n", size);
       exit(-1);
     }
   }
 }
 
-
-
-
+
 ikptr
-ik_unsafe_alloc(ikpcb* pcb, int size){
+ik_unsafe_alloc (ikpcb* pcb, int size)
+{
   assert(size == align(size));
-  ikptr ap = pcb->allocation_pointer;
-  ikptr ep = pcb->heap_base + pcb->heap_size;
-  ikptr nap = ap + size;
-  if(nap < ep){
-    pcb->allocation_pointer = nap;
-    return ap;
+  ikptr alloc_ptr       = pcb->allocation_pointer;
+  ikptr end_ptr         = pcb->heap_base + pcb->heap_size;
+  ikptr new_alloc_ptr   = alloc_ptr + size;
+  /* If there  is room  in the  current heap block:  update the  pcb and
+     return the offset. */
+  if (new_alloc_ptr < end_ptr) {
+    pcb->allocation_pointer = new_alloc_ptr;
+    return alloc_ptr;
   }
-  else {
-    if(ap){
-      ikpages* p = ik_malloc(sizeof(ikpages));
-      p->base = pcb->heap_base;
-      p->size = pcb->heap_size;
-      p->next = pcb->heap_pages;
-      pcb->heap_pages = p;
-    }
-
-    { /* ACCOUNTING */
-      long int bytes =
-        ((long int)pcb->allocation_pointer) -
-        ((long int)pcb->heap_base);
-      long int minor = bytes + pcb->allocation_count_minor;
-      while(minor >= most_bytes_in_minor){
-        minor -= most_bytes_in_minor;
-        pcb->allocation_count_major++;
-      }
-      pcb->allocation_count_minor = minor;
-    }
-
-    int new_size = (size > IK_HEAP_EXT_SIZE) ? size : IK_HEAP_EXT_SIZE;
-    new_size += 2 * 4096;
-    new_size = align_to_next_page(new_size);
-    ap = ik_mmap_mixed(new_size, pcb);
-    pcb->heap_base = ap;
-    pcb->heap_size = new_size;
-    pcb->allocation_redline = ap + new_size - 2 * 4096;
-    nap = ap + size;
-    pcb->allocation_pointer = nap;
-    return ap;
+  /* No room in the current heap block: run GC. */
+  if (alloc_ptr) {
+    ikpages* p = ik_malloc(sizeof(ikpages));
+    p->base = pcb->heap_base;
+    p->size = pcb->heap_size;
+    p->next = pcb->heap_pages;
+    pcb->heap_pages = p;
   }
+
+  { /* ACCOUNTING */
+    long int bytes =
+      ((long int)pcb->allocation_pointer) -
+      ((long int)pcb->heap_base);
+    long int minor = bytes + pcb->allocation_count_minor;
+    while(minor >= most_bytes_in_minor){
+      minor -= most_bytes_in_minor;
+      pcb->allocation_count_major++;
+    }
+    pcb->allocation_count_minor = minor;
+  }
+
+  int new_size = (size > IK_HEAP_EXT_SIZE) ? size : IK_HEAP_EXT_SIZE;
+  new_size += 2 * 4096;
+  new_size = align_to_next_page(new_size);
+  alloc_ptr = ik_mmap_mixed(new_size, pcb);
+  pcb->heap_base = alloc_ptr;
+  pcb->heap_size = new_size;
+  pcb->allocation_redline = alloc_ptr + new_size - 2 * 4096;
+  new_alloc_ptr = alloc_ptr + size;
+  pcb->allocation_pointer = new_alloc_ptr;
+  return alloc_ptr;
 }
 
-
-
+
 void ik_error(ikptr args){
   fprintf(stderr, "Error: ");
   ik_fprint(stderr, args);
@@ -514,6 +513,7 @@ void ik_stack_overflow(ikpcb* pcb){
   return;
 }
 
+
 /*
 char* ik_uuid(char* str){
   assert((36 << fx_shift) == (int) ref(str, disp_string_length - string_tag));
@@ -553,172 +553,7 @@ ikptr ik_uuid(ikptr bv){
   return bv;
 }
 
-
-ikptr
-ikrt_stat(ikptr filename, ikptr follow /*, ikpcb* pcb */){
-  char* fn = (char*)(filename + off_bytevector_data);
-  struct stat s;
-  int r;
-  if(follow == false_object){
-    r = lstat(fn, &s);
-  } else{
-    r = stat(fn, &s);
-  }
-  if(r == 0){
-    if(S_ISREG(s.st_mode)){
-      return fix(1);
-    }
-    else if(S_ISDIR(s.st_mode)){
-      return fix(2);
-    }
-    else if(S_ISLNK(s.st_mode)){
-      return fix(3);
-    }
-    else {
-      return fix(0);
-    }
-  }
-  return ik_errno_to_code();
-}
-
-
-/* ikrt_file_exists needs to be removed.
-   This is here only to be able to use old ikarus.boot.prebuilt */
-ikptr
-ikrt_file_exists(ikptr filename /*, ikpcb* pcb */){
-  switch (ikrt_stat(filename, true_object /*, pcb */)){
-    case fix(0):
-    case fix(1):
-    case fix(2):
-    case fix(3):
-      return true_object;
-    default:
-      return false_object;
-  }
-}
-
-ikptr
-ikrt_delete_file(ikptr filename){
-  char* str;
-  if(tagof(filename) == bytevector_tag){
-    str = (char*)(long)(filename + off_bytevector_data);
-  } else {
-    fprintf(stderr, "bug in ikrt_delete_file\n");
-    exit(-1);
-  }
-  int err = unlink(str);
-  if(err == 0){
-    return true_object;
-  }
-  return ik_errno_to_code();
-}
-
-ikptr
-ikrt_directory_list(ikptr filename, ikpcb* pcb){
-  DIR* dir;
-  struct dirent* de;
-  if((dir = opendir((char*)(filename + off_bytevector_data))) == NULL){
-    return ik_errno_to_code();
-  }
-  ikptr ac = null_object;
-  pcb->root0 = &ac;
-  while(1){
-    errno = 0;
-    de = readdir(dir);
-    if(de == NULL){
-      pcb->root0 = 0;
-      ikptr retval = (errno ? ik_errno_to_code() : ac);
-      closedir(dir);
-      return retval;
-    }
-    int len = strlen(de->d_name);
-    ikptr bv = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1))
-               + bytevector_tag;
-    ref(bv, off_bytevector_length) = fix(len);
-    memcpy((char*)(bv+off_bytevector_data), de->d_name, len+1);
-    pcb->root1 = &bv;
-    ikptr p = ik_safe_alloc(pcb, pair_size) + pair_tag;
-    pcb->root1 = 0;
-    ref(p, off_car) = bv;
-    ref(p, off_cdr) = ac;
-    ac = p;
-  }
-}
-
-ikptr
-ikrt_mkdir(ikptr path, ikptr mode /*, ikpcb* pcb */){
-  int r = mkdir((char*)(path+off_bytevector_data), unfix(mode));
-  if(r == 0){
-    return true_object;
-  }
-  return ik_errno_to_code();
-}
-
-ikptr
-ikrt_rmdir(ikptr path /*, ikpcb* pcb */){
-  int r = rmdir((char*)(path+off_bytevector_data));
-  if(r == 0){
-    return true_object;
-  }
-  return ik_errno_to_code();
-}
-
-ikptr
-ikrt_chmod(ikptr path, ikptr mode /*, ikpcb* pcb */){
-  int r = chmod((char*)(path+off_bytevector_data), (mode_t)unfix(mode));
-  if(r == 0){
-    return true_object;
-  }
-  return ik_errno_to_code();
-}
-
-ikptr
-ikrt_symlink(ikptr to, ikptr path /*, ikpcb* pcb */){
-  int r = symlink((char*)(to+off_bytevector_data), (char*)(path+off_bytevector_data));
-  if(r == 0){
-    return true_object;
-  }
-  return ik_errno_to_code();
-}
-
-ikptr
-ikrt_link(ikptr to, ikptr path /*, ikpcb* pcb */){
-  int r = link((char*)(to+off_bytevector_data), (char*)(path+off_bytevector_data));
-  if(r == 0){
-    return true_object;
-  }
-  return ik_errno_to_code();
-}
-
-ikptr
-ikrt_realpath(ikptr bv, ikpcb* pcb){
-  char buff[PATH_MAX];
-  char* p = realpath((char*)(bv+off_bytevector_data), buff);
-  if(p == NULL){
-    return ik_errno_to_code();
-  }
-  int n = strlen(p);
-  ikptr r = ik_safe_alloc(pcb, align(disp_bytevector_data+n+1));
-  ref(r, 0) = fix(n);
-  memcpy((char*)(r+disp_bytevector_data), p, n+1);
-  return r+bytevector_tag;
-}
-
-ikptr
-ikrt_system(ikptr str){
-  if(tagof(str) == bytevector_tag){
-    int r = system((char*)(long)(str+off_bytevector_data));
-    if(r >= 0) {
-      return fix(r);
-    } else {
-      return ik_errno_to_code();
-    }
-  } else {
-    fprintf(stderr, "bug in ikrt_system\n");
-    exit(-1);
-  }
-}
-
+
 static char*
 mtname(unsigned int n){
   if(n == mainheap_type)  { return "HEAP_T"; }
@@ -886,60 +721,6 @@ ikrt_stats_now(ikptr t, ikpcb* pcb){
 }
 
 ikptr
-ikrt_current_time(ikptr t){
-  struct timeval s;
-  gettimeofday(&s, 0);
-  /* this will break in 8,727,224 years if we stay in 32-bit ptrs */
-  ref(t, off_record_data + 0*wordsize) = fix(s.tv_sec / 1000000);
-  ref(t, off_record_data + 1*wordsize) = fix(s.tv_sec % 1000000);
-  ref(t, off_record_data + 2*wordsize) = fix(s.tv_usec);
-  return t;
-}
-
-ikptr
-ikrt_gmt_offset(ikptr t){
-  time_t clock =
-    unfix(ref(t, off_record_data + 0*wordsize)) * 1000000
-    + unfix(ref(t, off_record_data + 1*wordsize));
-  struct tm* m = gmtime(&clock);
-  time_t gmtclock = mktime(m);
-  return fix(clock - gmtclock);
-  /*
-  struct tm* m = localtime(&clock);
-  ikptr r = fix(m->tm_gmtoff);
-  return r;
-  */
-}
-
-ikptr
-ikrt_fork(){
-  int pid = fork();
-  if(pid >= 0){
-    return fix(pid);
-  } else {
-    return ik_errno_to_code();
-  }
-}
-
-
-
-ikptr
-ikrt_getenv(ikptr bv, ikpcb* pcb){
-  char* v = getenv((char*)(long)(bv + off_bytevector_data));
-  if(v){
-    long int n = strlen(v);
-    ikptr s = ik_safe_alloc(pcb, align(n+disp_bytevector_data+1))
-              + bytevector_tag;
-    ref(s, -bytevector_tag) = fix(n);
-    memcpy((char*)(long)(s+off_bytevector_data), v, n+1);
-    return s;
-  }
-  else {
-    return false_object;
-  }
-}
-
-ikptr
 ikrt_make_vector1(ikptr len, ikpcb* pcb){
   int intlen = (int)len;
   if(is_fixnum(len) && (intlen >= 0)){
@@ -968,163 +749,11 @@ ikrt_make_vector2(ikptr len, ikptr obj, ikpcb* pcb){
 }
 #endif
 
-
-ikptr
-ikrt_setenv(ikptr key, ikptr val, ikptr overwrite){
-  int err = setenv((char*)(key+off_bytevector_data),
-                   (char*)(val+off_bytevector_data),
-                   overwrite!=false_object);
-  if(err){
-    return false_object;
-  } else {
-    return true_object;
-  }
-}
-
-ikptr
-ikrt_unsetenv(ikptr key){
-  unsetenv((char*)(key+off_bytevector_data));
-  return void_object;
-}
-
-
-
-ikptr
-ikrt_environ(ikpcb* pcb){
-  char** es = environ;
-  int i; char* e;
-  ikptr ac = null_object;
-  pcb->root0 = &ac;
-  for(i=0; (e=es[i]); i++){
-    long int n = strlen(e);
-    ikptr s = ik_safe_alloc(pcb, align(n+disp_bytevector_data+1))
-      + bytevector_tag;
-    ref(s, -bytevector_tag) = fix(n);
-    memcpy((char*)(long)(s+off_bytevector_data), e, n+1);
-    pcb->root1 = &s;
-    ikptr p = ik_safe_alloc(pcb, pair_size) + pair_tag;
-    pcb->root1 = 0;
-    ref(p, off_cdr) = ac;
-    ref(p, off_car) = s;
-    ac = p;
-  }
-  pcb->root0 = 0;
-  return ac;
-}
-
-ikptr
-ikrt_exit(ikptr status, ikpcb* pcb){
-  ik_delete_pcb(pcb);
-  assert(total_allocated_pages == 0);
-  if(is_fixnum(status)){
-    exit(unfix(status));
-  } else {
-    exit(EXIT_FAILURE);
-  }
-}
-
-ikptr
-ikrt_nanosleep(ikptr secs, ikptr nsecs /*, ikpcb* pcb */){
-  struct timespec t;
-  t.tv_sec =
-    is_fixnum(secs)
-      ? (unsigned long) unfix(secs)
-      : ref(secs, off_bignum_data);
-  t.tv_nsec =
-    is_fixnum(nsecs)
-      ? (unsigned long) unfix(nsecs)
-      : ref(nsecs, off_bignum_data);
-  return fix(nanosleep(&t, NULL));
-}
-
-ikptr
-ikrt_chdir(ikptr pathbv /*, ikpcb* pcb */){
-  int err = chdir(off_bytevector_data+(char*)pathbv);
-  if(err == 0){
-    return true_object;
-  }
-  return ik_errno_to_code();
-}
-
-ikptr
-ikrt_getcwd(ikpcb* pcb){
-  char buff[MAXPATHLEN+1];
-  char* path = getcwd(buff, MAXPATHLEN);
-  if(! path){
-    return ik_errno_to_code();
-  }
-  int len = strlen(path);
-  ikptr bv = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1));
-  ref(bv,0) = fix(len);
-  memcpy(disp_bytevector_data+(char*)(bv), path, len+1);
-  return bv+bytevector_tag;
-}
-
-
-
+
 ikptr
 ikrt_debug(ikptr x){
   fprintf(stderr, "DEBUG 0x%016lx\n", (long int)x);
   return 0;
-}
-
-ikptr
-ikrt_access(ikptr filename, ikptr how /*, ikpcb* pcb */){
-  char* fn = (char*)(filename + off_bytevector_data);
-  int r;
-  int ik_how;
-  int c_how;
-
-  ik_how = unfix(how);
-  if (ik_how == 0) {
-    c_how = F_OK;
-  } else {
-    c_how = 0;
-    if (ik_how & 1) c_how |= R_OK;
-    if (ik_how & 2) c_how |= W_OK;
-    if (ik_how & 4) c_how |= X_OK;
-  }
-
-  r = access(fn, c_how);
-  if (r == 0) {
-    return true_object;
-  } else if ((errno == EACCES) ||
-             (errno == EROFS) ||
-             (errno == ETXTBSY)) {
-    return false_object;
-  } else {
-    return ik_errno_to_code();
-  }
-}
-
-ikptr
-ikrt_file_size(ikptr filename, ikpcb* pcb){
-  char* fn = (char*)(filename + off_bytevector_data);
-  struct stat s;
-  int r = stat(fn, &s);
-  if (r == 0) {
-    if (sizeof(off_t) == sizeof(long)) {
-      return u_to_number(s.st_size, pcb);
-    } else if (sizeof(off_t) == sizeof(long long)) {
-      return ull_to_number(s.st_size, pcb);
-    } else {
-      fprintf(stderr, "vicare internal error: invalid off_t size\n");
-      exit(-1);
-    }
-  } else {
-    return ik_errno_to_code();
-  }
-}
-
-ikptr
-ikrt_rename_file(ikptr src, ikptr dst /* ikpcb* pcb */){
-  int err = rename((char*)(src + off_bytevector_data),
-                   (char*)(dst + off_bytevector_data));
-  if (err == 0) {
-    return true_object;
-  } else {
-    return ik_errno_to_code();
-  }
 }
 
 ikptr

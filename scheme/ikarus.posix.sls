@@ -137,15 +137,14 @@
     (with-arguments-validation (who)
 	((pid      pid)
 	 (boolean  block?))
-
-    (let ((r (foreign-call "ikrt_waitpid" (make-wstatus #f #f #f) pid block?)))
-      (cond
-       ((wstatus? r)
-	(set-wstatus-received-signal! r (interprocess-signal->string (wstatus-received-signal r)))
-	r)
-       ((and want-error? (not (eqv? r 0)))
-	(error who (strerror r) pid))
-       (else #f))))))
+      (let ((r (foreign-call "ikrt_waitpid" (make-wstatus #f #f #f) pid block?)))
+	(cond
+	 ((wstatus? r)
+	  (set-wstatus-received-signal! r (interprocess-signal->string (wstatus-received-signal r)))
+	  r)
+	 ((and want-error? (not (eqv? r 0)))
+	  (error who (strerror r) pid))
+	 (else #f)))))))
 
 
 ;;;; interprocess signal handling

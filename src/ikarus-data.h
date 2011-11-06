@@ -1,18 +1,19 @@
 /*
- *  Ikarus Scheme -- A compiler for R6RS Scheme.
- *  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
- *  
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 3 as
- *  published by the Free Software Foundation.
- *  
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
- *  
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Ikarus Scheme -- A compiler for R6RS Scheme.
+ * Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+ * Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+ *
+ * This program is free software:  you can redistribute it and/or modify
+ * it under  the terms of  the GNU General  Public License version  3 as
+ * published by the Free Software Foundation.
+ *
+ * This program is  distributed in the hope that it  will be useful, but
+ * WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+ * MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+ * General Public License for more details.
+ *
+ * You should  have received  a copy of  the GNU General  Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 
@@ -75,6 +76,7 @@ extern int hash_table_count;
 #define pagesize 4096
 #define generation_count 5  /* generations 0 (nursery), 1, 2, 3, 4 */
 
+/* FIXME This should be a "uintptr_t" (Marco Maggi; Nov  6, 2011). */
 typedef unsigned long int ikptr;
 
 typedef int ikchar;
@@ -133,10 +135,10 @@ typedef struct ikpcb{
   callback_locative* callbacks;
   ikptr* root0;
   ikptr* root1;
-  unsigned int* segment_vector; 
+  unsigned int* segment_vector;
   ikptr weak_pairs_ap;
   ikptr weak_pairs_ep;
-  ikptr   heap_base; 
+  ikptr   heap_base;
   unsigned long int   heap_size;
   ikpages* heap_pages;
   ikpage* cached_pages; /* pages cached so that we don't map/unmap */
@@ -157,7 +159,7 @@ typedef struct ikpcb{
   int allocation_count_major;
   struct timeval collect_utime;
   struct timeval collect_stime;
-  struct timeval collect_rtime; 
+  struct timeval collect_rtime;
   int last_errno;
 } ikpcb;
 
@@ -168,14 +170,16 @@ typedef struct {
   ikptr next;
 } cont;
 
-
-
-
+
 ikpcb* ik_collect(unsigned long int, ikpcb*);
 void ikarus_usage_short(void);
 
 void* ik_malloc(int);
 void ik_free(void*, int);
+
+ikptr ik_underflow_handler(ikpcb*);
+ikptr ik_unsafe_alloc(ikpcb* pcb, int size);
+ikptr ik_safe_alloc(ikpcb* pcb, int size);
 
 ikptr ik_mmap(unsigned long int);
 ikptr ik_mmap_typed(unsigned long int size, unsigned int type, ikpcb*);
@@ -196,16 +200,14 @@ ikptr ik_exec_code(ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp);
 void ik_print(ikptr x);
 void ik_fprint(FILE*, ikptr x);
 
-ikptr ikrt_string_to_symbol(ikptr, ikpcb*);
-ikptr ikrt_strings_to_gensym(ikptr, ikptr,  ikpcb*);
-
-ikptr ik_cstring_to_symbol(char*, ikpcb*);
-
 ikptr ik_asm_enter(ikpcb*, ikptr code_object, ikptr arg, ikptr cp);
 ikptr ik_asm_reenter(ikpcb*, ikptr code_object, ikptr val);
-ikptr ik_underflow_handler(ikpcb*);
-ikptr ik_unsafe_alloc(ikpcb* pcb, int size);
-ikptr ik_safe_alloc(ikpcb* pcb, int size);
+
+
+ikptr ikrt_string_to_symbol     (ikptr, ikpcb*);
+ikptr ikrt_strings_to_gensym    (ikptr, ikptr,  ikpcb*);
+
+ikptr ik_cstring_to_symbol(char*, ikpcb*);
 
 ikptr u_to_number(unsigned long, ikpcb*);
 ikptr ull_to_number(unsigned long long, ikpcb*);
@@ -215,12 +217,13 @@ ikptr d_to_number(double x, ikpcb* pcb);
 ikptr make_pointer(long x, ikpcb* pcb);
 long long extract_num_longlong(ikptr x);
 
+
 #define IK_HEAP_EXT_SIZE  (32 * 4096)
 #define IK_HEAPSIZE       (1024 * ((wordsize==4)?1:2) * 4096) /* 4/8 MB */
 
 #define wordsize ((int)(sizeof(ikptr)))
 #define wordshift ((wordsize == 4)?2:3)
-#define align_shift (wordshift + 1) 
+#define align_shift (wordshift + 1)
 #define align_size (2 * wordsize)
 #define fx_shift wordshift
 #define fx_mask (wordsize - 1)
@@ -255,13 +258,19 @@ long long extract_num_longlong(ikptr x);
 
 #define immediate_tag 7
 
-#define false_object      ((ikptr)0x2F)
-#define true_object       ((ikptr)0x3F)
-#define null_object       ((ikptr)0x4F)
-#define void_object       ((ikptr)0x7F)
-#define bwp_object        ((ikptr)0x8F)
+#define false_object            ((ikptr)0x2F)
+#define true_object             ((ikptr)0x3F)
+#define null_object             ((ikptr)0x4F)
+#define void_object             ((ikptr)0x7F)
 
-#define unbound_object    ((ikptr)0x6F)
+/* Special machine word value stored in locations that used to hold weak
+   references to values which have been already garbage collected. */
+#define bwp_object              ((ikptr)0x8F)
+
+/* Special machine word value stored  in the "value" and "proc" field of
+   Scheme symbol memory blocks to signal that these fields are unset. */
+#define unbound_object          ((ikptr)0x6F)
+
 #define char_tag       0x0F
 #define char_mask      0xFF
 #define char_shift        8
@@ -306,11 +315,11 @@ long long extract_num_longlong(ikptr x);
 #define disp_symbol_record_proc     (4 * wordsize)
 #define disp_symbol_record_plist    (5 * wordsize)
 #define symbol_record_size          (6 * wordsize)
-#define off_symbol_record_string  (disp_symbol_record_string  - record_tag) 
-#define off_symbol_record_ustring (disp_symbol_record_ustring - record_tag) 
-#define off_symbol_record_value   (disp_symbol_record_value   - record_tag) 
-#define off_symbol_record_proc    (disp_symbol_record_proc    - record_tag) 
-#define off_symbol_record_plist   (disp_symbol_record_plist   - record_tag) 
+#define off_symbol_record_string  (disp_symbol_record_string  - record_tag)
+#define off_symbol_record_ustring (disp_symbol_record_ustring - record_tag)
+#define off_symbol_record_value   (disp_symbol_record_value   - record_tag)
+#define off_symbol_record_proc    (disp_symbol_record_proc    - record_tag)
+#define off_symbol_record_plist   (disp_symbol_record_plist   - record_tag)
 
 #define closure_tag  3
 #define closure_mask 7
@@ -337,12 +346,12 @@ long long extract_num_longlong(ikptr x);
 #define disp_rtd_symbol   (5 * wordsize)
 #define rtd_size          (6 * wordsize)
 
-#define off_rtd_rtd     (disp_rtd_rtd     - rtd_tag) 
-#define off_rtd_name    (disp_rtd_name    - rtd_tag) 
-#define off_rtd_length  (disp_rtd_length  - rtd_tag) 
-#define off_rtd_fields  (disp_rtd_fields  - rtd_tag) 
-#define off_rtd_printer (disp_rtd_printer - rtd_tag) 
-#define off_rtd_symbol  (disp_rtd_symbol  - rtd_tag) 
+#define off_rtd_rtd     (disp_rtd_rtd     - rtd_tag)
+#define off_rtd_name    (disp_rtd_name    - rtd_tag)
+#define off_rtd_length  (disp_rtd_length  - rtd_tag)
+#define off_rtd_fields  (disp_rtd_fields  - rtd_tag)
+#define off_rtd_printer (disp_rtd_printer - rtd_tag)
+#define off_rtd_symbol  (disp_rtd_symbol  - rtd_tag)
 
 #define continuation_tag      ((ikptr)0x1F)
 #define disp_continuation_top   (1 * wordsize)
@@ -356,7 +365,7 @@ long long extract_num_longlong(ikptr x);
 #define disp_system_continuation_unused  (3 * wordsize)
 #define system_continuation_size         (4 * wordsize)
 
-#define off_continuation_top   (disp_continuation_top  - vector_tag) 
+#define off_continuation_top   (disp_continuation_top  - vector_tag)
 #define off_continuation_size  (disp_continuation_size - vector_tag)
 #define off_continuation_next  (disp_continuation_next - vector_tag)
 

@@ -8280,25 +8280,9 @@ the Scheme language compiler @file{ikarus.compiler.sls}.
 
 
 @deftp {Object Reference} ikptr
-In general, it is a reference to a built in object, implemented as an
-@code{unsigned long int}; it can be:
-
-@itemize
-@item
-A tagged pointer referencing a memory block holding a built in object;
-the pointer is aligned in such a way that the @math{3} least significant
-bits are set to zero, the tag is stored in those @math{3} bits.
-
-@item
-An embedded fixnum, in which case the @math{2} least significant bits
-are set to zero; the fixnum can be extracted with the @func{fix} macro.
-
-@item
-An embedded constant value, in which case all the @math{3} least
-significant bits are set to one.
-@end itemize
-
-The definition assumes that:
+An immediate built in object or a reference to a built in object;
+implemented as an @code{unsigned long int} it is meant to be the size of
+a machine word.  The definition assumes that:
 
 @itemize
 @item
@@ -8335,11 +8319,11 @@ Extract the @math{3} least significant bits of an @code{ikptr} value.
 
 
 @defmac ref (@var{ptr}, @var{offset})
-Expand to the word at @var{offset} past @var{ptr}; it can be used either
-as operand or as left--side of an assignment.  The ``word'' is the
-unsigned integer type used in the type definition of @code{ikptr};
-@var{ptr} can be a pointer of any type: it is cast to a ``pointer to
-words''.  Example:
+Expand to the machine word at @var{offset} past @var{ptr}; it can be
+used either as operand or as left--side of an assignment.  The ``word''
+is the unsigned integer type used in the type definition of
+@code{ikptr}; @var{ptr} can be a pointer of any type: it is cast to a
+``pointer to words''.  Example:
 
 @example
 char *   p = ...;
@@ -8358,35 +8342,38 @@ q = ref(p, 3);          /* retrieve the third word in
 @section Constant values
 
 
-@defmac false_object
-An @code{ikptr} value representing @false{}.
+@defmac false_object 0x2F
+Special machine word value representing @false{}.
 @end defmac
 
 
-@defmac true_object
-An @code{ikptr} value representing @true{}.
+@defmac true_object 0x3F
+Special machine word value representing @true{}.
 @end defmac
 
 
-@defmac null_object
-An @code{ikptr} value representing null (the empty list).
+@defmac null_object 0x4F
+Special machine word value representing nil, the empty list.
 @end defmac
 
 
-@defmac void_object
-An @code{ikptr} value representing @void{}, the return value of
+@defmac void_object 0x7F
+Special machine word value representing @void{}, the return value of
 functions returning no value.
 @end defmac
 
 
-@ignore
-This is some sort of reset value related to the garbace collection.
-
-@defmac bwp_object
-An @code{ikptr} value representing @false{}.
+@defmac bwp_object 0x8F
+Special machine word value stored in locations that used to hold weak
+references to values which have been already garbage collected.
 @end defmac
 
-@end ignore
+
+@defmac unbound_object 0x6F
+Special machine word value stored in the @code{value} and @code{proc}
+field of Scheme symbol memory blocks to signal that these fields are
+unset.
+@end defmac
 
 @c page
 @node objects alloc
