@@ -100,7 +100,6 @@ TESTS			=	\
 	test-ikarus-pointers.sps			\
 	test-ikarus-r6rs-records-procedural.sps		\
 	test-ikarus-reader.sps				\
-	test-ikarus-repl.sps				\
 	test-ikarus-set-position.sps			\
 	test-ikarus-sorting.sps				\
 	test-ikarus-strings.sps				\
@@ -239,7 +238,6 @@ EXTRA_DIST =	\
 	test-ikarus-pointers.sps			\
 	test-ikarus-r6rs-records-procedural.sps		\
 	test-ikarus-reader.sps				\
-	test-ikarus-repl.sps				\
 	test-ikarus-set-position.sps			\
 	test-ikarus-sorting.sps				\
 	test-ikarus-strings.sps				\
