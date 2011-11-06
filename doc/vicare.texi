@@ -8157,14 +8157,24 @@ if an error occurs: return an encoded @code{errno} value.
 @end deftypefun
 
 
-@deftypefun ikptr ikrt_system (ikptr @var{command})
+@deftypefun ikptr ikrt_posix_system (ikptr @var{command})
 Interface to the C function @cfunc{system}, @glibcref{Running a Command,
 system}.  Execute a command through the system shell; @var{command} must
 reference a bytevector object holding the command to execute.  If
-successful return the exit status of the executed process; if an error
-occurs in @cfunc{system}, return the return value of
-@cfunc{ik_errno_to_code}.
+successful return the exit status of the executed process, see below how
+to interpret this value; if an error occurs in @cfunc{system}, return an
+encoded @code{errno} value.
 @end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_wifexited (ikptr @var{fx_status})
+Interface to the C macro @cfunc{WIFEXITED}, @glibcref{Process Completion
+Status, WIFEXITED}.  @var{fx_status} must be the exit status of a
+proecess, for example the return value of @cfunc{system} or the status
+acquired by @cfunc{waitpid}.  Return true if the process terminated
+normally with @cfunc{exit}.
+@end deftypefun
+
 
 @c page
 @node capi posix time

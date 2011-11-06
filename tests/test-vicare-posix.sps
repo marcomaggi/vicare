@@ -33,6 +33,24 @@
 (check-display "*** testing Vicare POSIX functions\n")
 
 
+(parametrise ((check-test-name	'system))
+
+  (check
+      (system "echo innocuous output from system call ; exit 0")
+    => 0)
+
+  (check
+      (let ((status (system "echo innocuous output from system call ; exit 0")))
+	(WIFEXITED status))
+    => #t)
+
+  (check
+      (system "echo innocuous output from system call ; exit 4")
+    => 1)
+
+  #t)
+
+
 (parametrise ((check-test-name	'getpid))
 
   #;(begin

@@ -5,7 +5,9 @@
 
   Abstract
 
-
+        Interface to POSIX functions.  For the full documentation of the
+        functions in this module,  see the official Vicare documentation
+        in Texinfo format.
 
   Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
@@ -56,6 +58,32 @@ extern char **environ;
 
 
 ikptr
+ikrt_posix_system (ikptr str)
+/* Interface to "system()". */
+{
+  assert(bytevector_tag == tagof(str));
+  errno = 0;
+  int retval = system((char*)(long)(str+off_bytevector_data));
+  if (retval >= 0)
+    return fix(retval);
+  else
+    return ik_errno_to_code();
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ik_system (ikptr str) {
+  return ikrt_posix_system(str);
+}
+
+ikptr
+ikrt_posix_wifexited (ikptr fx_status)
+{
+  int   status = unfix(fx_status);
+  return (WIFEXITED(status))? true_object : false_object;
+}
+
+
+ikptr
 ikrt_stat (ikptr filename, ikptr follow /*, ikpcb* pcb */)
 {
   char* fn = (char*)(filename + off_bytevector_data);
@@ -80,22 +108,21 @@ ikrt_stat (ikptr filename, ikptr follow /*, ikpcb* pcb */)
   return ik_errno_to_code();
 }
 
+
 ikptr
-ikrt_delete_file(ikptr filename){
-  char* str;
-  if(tagof(filename) == bytevector_tag){
-    str = (char*)(long)(filename + off_bytevector_data);
-  } else {
-    fprintf(stderr, "bug in ikrt_delete_file\n");
-    exit(-1);
-  }
-  int err = unlink(str);
-  if(err == 0){
+ikrt_delete_file (ikptr filename)
+/* Interface to "unlink()". */
+{
+  assert(bytevector_tag == tagof(filename));
+  char* str = (char*)(long)(filename + off_bytevector_data);
+  int   err = unlink(str);
+  if (0 == err)
     return true_object;
-  }
-  return ik_errno_to_code();
+  else
+    return ik_errno_to_code();
 }
 
+
 ikptr
 ikrt_directory_list(ikptr filename, ikpcb* pcb){
   DIR* dir;
@@ -185,26 +212,6 @@ ikrt_realpath(ikptr bv, ikpcb* pcb){
   ref(r, 0) = fix(n);
   memcpy((char*)(r+disp_bytevector_data), p, n+1);
   return r+bytevector_tag;
-}
-
-ikptr
-ikrt_system(ikptr str){
-  if(tagof(str) == bytevector_tag){
-    int r = system((char*)(long)(str+off_bytevector_data));
-    if(r >= 0) {
-      return fix(r);
-    } else {
-      return ik_errno_to_code();
-    }
-  } else {
-    fprintf(stderr, "bug in ikrt_system\n");
-    exit(-1);
-  }
-}
-/* FIXME Stale.  To be removed at the next boot image rotation. */
-ikptr
-ik_system(ikptr str) {
-  return ikrt_system(str);
 }
 
 ikptr

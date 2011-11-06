@@ -18,7 +18,10 @@
 (library (ikarus.posix)
   (export
     posix-fork			fork
-    waitpid			kill
+    waitpid
+    WIFEXITED
+
+    kill
     getpid			getppid
     system
     nanosleep
@@ -79,6 +82,14 @@
   (boolean? obj)
   (assertion-violation who "expected boolean as argument" obj))
 
+(define-argument-validation (fixnum who obj)
+  (fixnum? obj)
+  (assertion-violation who "expected fixnum as argument" obj))
+
+(define-argument-validation (string who obj)
+  (string? obj)
+  (assertion-violation who "expected string as argument" obj))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (pid who obj)
@@ -94,6 +105,15 @@
 
 (define-struct wstatus
   (pid exit-status received-signal))
+
+(define (system x)
+  (define who 'system)
+  (with-arguments-validation (who)
+      ((string  x))
+    (let ((rv (platform-posix-system (string->utf8 x))))
+      (if (unsafe.fx< rv 0)
+	  (raise/strerror who rv)
+	rv))))
 
 (define (posix-fork)
   ;;Low  level interface  to  the  C function  "fork()".   Create a  new
@@ -146,6 +166,12 @@
 	  (error who (strerror r) pid))
 	 (else #f)))))))
 
+(define (WIFEXITED status)
+  (define who 'WIFEXITED)
+  (with-arguments-validation (who)
+      ((fixnum  status))
+    (platform-posix-wifexited status)))
+
 
 ;;;; interprocess signal handling
 
@@ -165,14 +191,6 @@
 
 (define (getppid)
   (foreign-call "ikrt_getppid"))
-
-(define (system x)
-  (unless (string? x)
-    (die 'system "not a string" x))
-  (let ((rv (foreign-call "ikrt_system" (string->utf8 x))))
-    (if (fx< rv 0)
-	(raise/strerror 'system rv)
-      rv)))
 
 (define (stat path follow who)
   (unless (string? path)
