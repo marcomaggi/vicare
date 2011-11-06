@@ -596,11 +596,11 @@ Trademarks used herein are the property of their respective owners.
 * iklib::                       Extensions library.
 * posix::                       The @posix{} interface.
 * syslib::                      Low level, fast, unsafe operations.
+* capi::                        C language programming interface.
 
 Internals
 
-* capi::                        C language programming interface.
-* objects int::                 Builtin objects.
+* objects::                     Built in objects.
 * debug int::                   Debug mode.
 * compiler::                    Wild notes on the compiler internals.
 
@@ -8256,31 +8256,26 @@ variables set) return @code{null_object}.
 @end deftypefun
 
 @c page
-@node objects int
-@chapter Internals: builtin objects
+@node objects
+@chapter Built in objects
 
+
+Built in objects are implemented in the C language portion of the source
+code; the overall definitions are in the C language file
+@file{ikarus-data.h} and the definition of many values is duplicated in
+the Scheme language compiler @file{ikarus.compiler.sls}.
 
 @menu
-* objects int intro::           Introduction to buitin objects.
-* objects int refs::            Builtin object references.
-* objects int const::           Constant values.
-* objects int alloc::           Allocating memory for builtin
-                                objects.
-* objects int fixnum::          Fixnum objects.
-* objects int bytevector::      Bytevector objects.
-* objects int vector::          Vector objects.
+* objects refs::                Builtin object references.
+* objects const::               Constant values.
+* objects alloc::               Allocating memory for builtin objects.
+* objects fixnum::              Fixnum objects.
+* objects bytevector::          Bytevector objects.
+* objects vector::              Vector objects.
 @end menu
 
 @c page
-@node objects int intro
-@section Introduction to buitin objects
-
-
-Builtin objects are implemented in the C language portion of the source
-code; the overall definitions are in @file{src/ikarus-data.h}.
-
-@c page
-@node objects int refs
+@node objects refs
 @section Builtin object references
 
 
@@ -8359,7 +8354,7 @@ q = ref(p, 3);          /* retrieve the third word in
 @end defmac
 
 @c page
-@node objects int const
+@node objects const
 @section Constant values
 
 
@@ -8394,7 +8389,7 @@ An @code{ikptr} value representing @false{}.
 @end ignore
 
 @c page
-@node objects int alloc
+@node objects alloc
 @section Allocating memory for builtin objects
 
 
@@ -8518,7 +8513,7 @@ is terminated with exit status @code{-1}.
 
 
 @c page
-@node objects int fixnum
+@node objects fixnum
 @section Fixnum objects
 
 
@@ -8575,7 +8570,7 @@ long int  m = unfix(p);
 @end example
 
 @c page
-@node objects int bytevector
+@node objects bytevector
 @section Bytevector objects
 
 
@@ -8656,7 +8651,7 @@ the bytevector memory block.
 @end defmac
 
 @c page
-@node objects int vector
+@node objects vector
 @section Vector objects
 
 
