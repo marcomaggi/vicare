@@ -705,7 +705,7 @@ ikrt_realpath(ikptr bv, ikpcb* pcb){
 }
 
 ikptr
-ik_system(ikptr str){
+ikrt_system(ikptr str){
   if(tagof(str) == bytevector_tag){
     int r = system((char*)(long)(str+off_bytevector_data));
     if(r >= 0) {
@@ -714,7 +714,7 @@ ik_system(ikptr str){
       return ik_errno_to_code();
     }
   } else {
-    fprintf(stderr, "bug in ik_system\n");
+    fprintf(stderr, "bug in ikrt_system\n");
     exit(-1);
   }
 }

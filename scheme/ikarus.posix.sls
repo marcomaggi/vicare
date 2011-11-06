@@ -71,6 +71,16 @@
 
 ;;;; arguments validation
 
+(define-argument-validation (procedure who obj)
+  (procedure? obj)
+  (assertion-violation who "expected procedure as argument" obj))
+
+(define-argument-validation (boolean who obj)
+  (boolean? obj)
+  (assertion-violation who "expected boolean as argument" obj))
+
+;;; --------------------------------------------------------------------
+
 (define-argument-validation (pid who obj)
   (fixnum? obj)
   (assertion-violation who "expected fixnum pid as argument" obj))
@@ -79,15 +89,26 @@
   (fixnum? obj)
   (assertion-violation who "expected fixnum signal code as argument" obj))
 
-(define-argument-validation (procedure who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
-
 
+;;;; forking processes
+
+(define-struct wstatus
+  (pid exit-status received-signal))
+
 (define (posix-fork)
+  ;;Low  level interface  to  the  C function  "fork()".   Create a  new
+  ;;process; if successful return a non-negative fixnum representing the
+  ;;the return value of "fork()";  if an error occurs: return an encoded
+  ;;errno value.
+  ;;
   (platform-fork-process))
 
 (define (fork parent-proc child-proc)
+  ;;High-level  interface to  the  C function  "fork()".   Create a  new
+  ;;process; if successful return a non-negative fixnum representing the
+  ;;the return value of "fork()";  if an error occurs: return an encoded
+  ;;errno value.
+  ;;
   (define who 'fork)
   (with-arguments-validation (who)
       ((procedure  parent-proc)
@@ -100,7 +121,35 @@
 	    (else
 	     (parent-proc pid))))))
 
+(define waitpid
+  ;; If block? is #f and waitpid() would have blocked,
+  ;; or if want-error? is #f and there was an error,
+  ;; the value returned is #f
+  (case-lambda
+   (()
+    (waitpid -1 #t #t))
+   ((pid)
+    (waitpid pid #t #t))
+   ((pid block?)
+    (waitpid pid block? #t))
+   ((pid block? want-error?)
+    (define who 'waitpid)
+    (with-arguments-validation (who)
+	((pid      pid)
+	 (boolean  block?))
+
+    (let ((r (foreign-call "ikrt_waitpid" (make-wstatus #f #f #f) pid block?)))
+      (cond
+       ((wstatus? r)
+	(set-wstatus-received-signal! r (interprocess-signal->string (wstatus-received-signal r)))
+	r)
+       ((and want-error? (not (eqv? r 0)))
+	(error who (strerror r) pid))
+       (else #f))))))
+
 
+;;;; interprocess signal handling
+
 (define (kill pid signum)
   (define who 'kill)
   (with-arguments-validation (who)
@@ -111,29 +160,7 @@
 	(error who (strerror r) pid signum
 	       (interprocess-signal->string signum))))))
 
-(define-struct wstatus (pid exit-status received-signal))
-
-(define waitpid
-  ;; If block? is #f and waitpid() would have blocked,
-  ;; or if want-error? is #f and there was an error,
-  ;; the value returned is #f
-  (case-lambda
-   (() (waitpid -1 #t #t))
-   ((pid) (waitpid pid #t #t))
-   ((pid block?) (waitpid pid block? #t))
-   ((pid block? want-error?)
-    (define who 'waitpid)
-    (unless (fixnum? pid) (die who "not a fixnum" pid))
-    (unless (boolean? block?) (die who "not a boolean" block?))
-    (let ((r (foreign-call "ikrt_waitpid" (make-wstatus #f #f #f) pid block?)))
-      (cond
-       ((wstatus? r)
-	(set-wstatus-received-signal! r (interprocess-signal->string (wstatus-received-signal r)))
-	r)
-       ((and want-error? (not (eqv? r 0)))
-	(error who (strerror r) pid))
-       (else #f))))))
-
+
 (define (getpid)
   (foreign-call "ikrt_getpid"))
 
@@ -143,7 +170,7 @@
 (define (system x)
   (unless (string? x)
     (die 'system "not a string" x))
-  (let ((rv (foreign-call "ik_system" (string->utf8 x))))
+  (let ((rv (foreign-call "ikrt_system" (string->utf8 x))))
     (if (fx< rv 0)
 	(raise/strerror 'system rv)
       rv)))
