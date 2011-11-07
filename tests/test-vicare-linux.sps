@@ -37,6 +37,22 @@
 (parametrise ((check-test-name	'termination-status))
 
   (check
+      (let* ((child_pid #f)
+	     (info      (fork (lambda (pid) ;parent
+				(set! child_pid pid)
+				(waitid P_PID pid WEXITED))
+			      (lambda () ;child
+				(exit 10)))))
+	(list (= child_pid (siginfo_t-si_pid info))
+	      (fixnum? (siginfo_t-si_uid info))
+	      (siginfo_t-si_status  info)
+	      (siginfo_t-si_signo   info)
+	      (siginfo_t-si_code    info)))
+	=> `(#t #t 10 ,SIGCLD ,CLD_EXITED))
+
+;;; --------------------------------------------------------------------
+
+  (check
       (let ((status (system "exit 0")))
 	(WIFCONTINUED status))
     => #f)

@@ -30,13 +30,16 @@
 
 ;;; miscellaneous platform constants
 
-    ;; waitpid constants
-    WAIT_ANY		WAIT_MYPGRP
-    WNOHANG		WUNTRACED
-    WCONTINUED
+    ;; constants for waitpid and similar
+    WAIT_ANY		WAIT_MYPGRP	WCONTINUED
+    WEXITED		WNOHANG		WNOWAIT
+    WSTOPPED		WUNTRACED
+    P_PID		P_PGID		P_ALL
+    CLD_CONTINUED	CLD_DUMPED	CLD_EXITED
+    CLD_KILLED		CLD_STOPPED	CLD_TRAPPED
 
 ;;; errno codes
-    errno-code case-errno
+    errno-code		case-errno
 
     ;; codes
     E2BIG		EACCES		EADDRINUSE
@@ -123,12 +126,25 @@
 
 ;;;; miscellaneous platform constants
 
-;; waitpid constants
+;; constants for waitpid
 (define-inline-constant WAIT_ANY		@VALUEOF_WAIT_ANY@)
 (define-inline-constant WAIT_MYPGRP		@VALUEOF_WAIT_MYPGRP@)
-(define-inline-constant WNOHANG			@VALUEOF_WNOHANG@)
-(define-inline-constant WUNTRACED		@VALUEOF_WUNTRACED@)
 (define-inline-constant WCONTINUED		@VALUEOF_WCONTINUED@)
+(define-inline-constant WEXITED			@VALUEOF_WEXITED@)
+(define-inline-constant WNOHANG			@VALUEOF_WNOHANG@)
+(define-inline-constant WNOWAIT			@VALUEOF_WNOWAIT@)
+(define-inline-constant WSTOPPED		@VALUEOF_WSTOPPED@)
+(define-inline-constant WUNTRACED		@VALUEOF_WUNTRACED@)
+(define-inline-constant P_PID			@VALUEOF_P_PID@)
+(define-inline-constant P_PGID			@VALUEOF_P_PGID@)
+(define-inline-constant P_ALL			@VALUEOF_P_ALL@)
+(define-inline-constant CLD_CONTINUED		@VALUEOF_CLD_CONTINUED@)
+(define-inline-constant CLD_DUMPED		@VALUEOF_CLD_DUMPED@)
+(define-inline-constant CLD_EXITED		@VALUEOF_CLD_EXITED@)
+(define-inline-constant CLD_KILLED		@VALUEOF_CLD_KILLED@)
+(define-inline-constant CLD_STOPPED		@VALUEOF_CLD_STOPPED@)
+(define-inline-constant CLD_TRAPPED		@VALUEOF_CLD_TRAPPED@)
+
 
 
 ;;;; friendly interface

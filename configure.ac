@@ -430,12 +430,24 @@ AC_CACHE_SAVE
 
 AC_DEFUN([VICARE_CONSTANT_TEST],[VICARE_VALUEOF_TEST([$1],[$1])])
 
-## waitpid constants
+## constants for waitpid and similar
 VICARE_CONSTANT_TEST([WAIT_ANY])
 VICARE_CONSTANT_TEST([WAIT_MYPGRP])
-VICARE_CONSTANT_TEST([WNOHANG])
-VICARE_CONSTANT_TEST([WUNTRACED])
 VICARE_CONSTANT_TEST([WCONTINUED])
+VICARE_CONSTANT_TEST([WEXITED])
+VICARE_CONSTANT_TEST([WNOHANG])
+VICARE_CONSTANT_TEST([WNOWAIT])
+VICARE_CONSTANT_TEST([WSTOPPED])
+VICARE_CONSTANT_TEST([WUNTRACED])
+VICARE_CONSTANT_TEST([P_PID])
+VICARE_CONSTANT_TEST([P_PGID])
+VICARE_CONSTANT_TEST([P_ALL])
+VICARE_CONSTANT_TEST([CLD_CONTINUED])
+VICARE_CONSTANT_TEST([CLD_DUMPED])
+VICARE_CONSTANT_TEST([CLD_EXITED])
+VICARE_CONSTANT_TEST([CLD_KILLED])
+VICARE_CONSTANT_TEST([CLD_STOPPED])
+VICARE_CONSTANT_TEST([CLD_TRAPPED])
 
 AC_CACHE_SAVE
 
@@ -459,6 +471,34 @@ int main (void)
 AC_DEFINE_UNQUOTED([HAVE_WIFCONTINUED],
   $vicare_cv_HAVE_WIFCONTINUED,
   [whether the Linux specific WIFCONTINUED macro is available])
+
+dnl --------------------------------------------------------------------
+
+AC_CACHE_CHECK([availability of waitid],
+  [vicare_cv_HAVE_WAITID],
+  [AC_COMPILE_IFELSE([AC_LANG_SOURCE([AC_INCLUDES_DEFAULT
+#ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_WAIT_H
+#  include <sys/wait.h>
+#endif
+int main (void)
+{
+  idtype_t  idtype  = P_PID;
+  id_t      id      = 0;
+  siginfo_t info;
+  int       options = 0;
+  int retval = waitid(idtype, id, &info, options);
+  return 0;
+}])],
+    [vicare_cv_HAVE_WAITID=1],
+    [vicare_cv_HAVE_WAITID=0])])
+AC_DEFINE_UNQUOTED([HAVE_WAITID],
+  $vicare_cv_HAVE_WAITID,
+  [whether the Linux specific waitid function is available])
+
+dnl --------------------------------------------------------------------
 
 AC_CACHE_SAVE
 

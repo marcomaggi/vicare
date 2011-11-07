@@ -5922,9 +5922,10 @@ value of @cfunc{fork}; if an error occurs: return an encoded
 @defun fork @var{parent-proc} @var{child-thunk}
 High level interface to the C function @cfunc{fork}.  Create a new
 process by forking the current one; if successful the parent process
-applies @var{parent-proc} to a fixnum representing the child process
-pid; if successful: the child process evaluates the @var{child-thunk};
-if an error occurs: an exception is raised.
+applies @var{parent-proc} to a fixnum representing the child process pid
+and return its return value; if successful: the child process evaluates
+the @var{child-thunk} and returns its return value; if an error occurs:
+an exception is raised.
 
 @example
 (fork
@@ -6351,6 +6352,39 @@ behaviour is undefined.
 @c page
 @node linux status
 @section Process termination status
+
+
+@defun waitid @var{idtype} @var{id} @var{options}
+Interface to the Linux specific C function @cfunc{waitid}, see the
+@cfunc{waitid} manual page for details.  Wait for the termination of one
+or more child processes with finer control of @func{waitpid}.  All the
+arguments must be fixnums.  If successful: return an instance of
+structure @code{siginfo_t}, else raise an exception.
+@end defun
+
+
+@deftp Struct siginfo_t
+Data structure used by @func{waitid} to report its result; it has the
+following fields:
+
+@example
+si_pid si_uid si_signo si_status si_code
+@end example
+
+See the @cfunc{waitid} manual page for details.
+@end deftp
+
+
+@defun make-siginfo_t @var{pid} @var{uid} @var{signo} @var{status} @var{code}
+@defunx siginfo_t? @var{obj}
+@defunx siginfo_t-si_pid
+@defunx siginfo_t-si_uid
+@defunx siginfo_t-si_signo
+@defunx siginfo_t-si_status
+@defunx siginfo_t-si_code
+Constructor, predicate and field accessors for structures of type
+@code{siginfo_t}.
+@end defun
 
 
 The following functions accept as argument a fixnum representing the
@@ -8317,6 +8351,17 @@ variables set) return @code{null_object}.
 @subsection Process termination status
 
 
+@deftypefun ikptr ikrt_linux_waitid (ikptr @var{idtype}, ikptr @var{id}, ikptr @var{info}, ikptr @var{options})
+Interface to the Linux specific C function @cfunc{waitid}, see the
+@cfunc{waitid} manual page for details.  Wait for the termination of one
+or more child processes with finer control of @cfunc{waitpid}.  The
+arguments @var{idtype}, @var{id} and @var{options} must be fixnums.
+@var{info} must be a reference to a structure of type @code{siginfo_t},
+@ref{linux status} for details.  If successful: return @var{info}
+itself, else raise an exception.
+@end deftypefun
+
+
 The following functions accept as argument a fixnum representing the
 process termination status, for example the return value of
 @cfunc{system} or the status acquired by @cfunc{waitpid}.
@@ -8788,6 +8833,20 @@ vector length is a fixnum.
 Notice that on both @math{32} bits and @math{64} bits platforms: the
 first byte of the data area is at the same offset from the first byte of
 the vector memory block.
+
+Example, to fill a vector of 5 items with fixnums we should do:
+
+@example
+ikptr
+some_function (ikptr the_vec)
+@{
+  ref(the_vec, off_vector_data+0*wordsize) = fix(10);
+  ref(the_vec, off_vector_data+1*wordsize) = fix(20);
+  ref(the_vec, off_vector_data+2*wordsize) = fix(30);
+  ref(the_vec, off_vector_data+3*wordsize) = fix(40);
+  ref(the_vec, off_vector_data+4*wordsize) = fix(50);
+@}
+@end example
 @end defmac
 
 @c page

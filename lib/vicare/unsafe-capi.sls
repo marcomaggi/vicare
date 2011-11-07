@@ -38,7 +38,7 @@
     posix-fork			posix-system
 
     ;; process termination status
-    posix-waitpid
+    posix-waitpid		linux-waitid
     posix-WIFEXITED		posix-WEXITSTATUS
     posix-WIFSIGNALED		posix-WTERMSIG
     posix-WCOREDUMP		posix-WIFSTOPPED
@@ -108,6 +108,9 @@
 
 (define-inline (linux-WIFCONTINUED status)
   (foreign-call "ikrt_linux_WIFCONTINUED" status))
+
+(define-inline (linux-waitid idtype id info options)
+  (foreign-call "ikrt_linux_waitid" idtype id info options))
 
 
 ;;;; platform API for file descriptors

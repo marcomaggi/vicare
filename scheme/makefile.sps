@@ -570,6 +570,15 @@
 
 ;;; Linux functions
     (WIFCONTINUED				i v)
+    (waitid					i v)
+    (make-siginfo_t				i v)
+    (siginfo_t?					i v)
+    (siginfo_t-si_pid				i v)
+    (siginfo_t-si_uid				i v)
+    (siginfo_t-si_signo				i v)
+    (siginfo_t-si_status			i v)
+    (siginfo_t-si_code				i v)
+
 
     (accept-connection				i v)
     (accept-connection-nonblocking		i v)

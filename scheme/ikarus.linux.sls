@@ -28,10 +28,20 @@
 (library (ikarus.linux)
   (export
     ;; process termination status
+    waitid
+    make-siginfo_t		siginfo_t?
+    siginfo_t-si_pid		siginfo_t-si_uid
+    siginfo_t-si_signo		siginfo_t-si_status
+    siginfo_t-si_code
     WIFCONTINUED
     )
   (import (except (ikarus)
 		  ;; process termination status
+		  waitid
+		  make-siginfo_t		siginfo_t?
+		  siginfo_t-si_pid		siginfo_t-si_uid
+		  siginfo_t-si_signo		siginfo_t-si_status
+		  siginfo_t-si_code
 		  WIFCONTINUED
 
 		  )
@@ -73,6 +83,17 @@
 
 
 ;;;; process termination status
+
+(define-struct siginfo_t
+  (si_pid si_uid si_signo si_status si_code))
+
+(define (waitid idtype id options)
+  (define who 'waitid)
+  (with-arguments-validation (who)
+      ((fixnum  idtype)
+       (fixnum	id)
+       (fixnum	options))
+    (capi.linux-waitid idtype id (make-siginfo_t #f #f #f #f #f) options)))
 
 (define (WIFCONTINUED status)
   (define who 'WIFCONTINUED)

@@ -36,6 +36,8 @@
     define-syntax*		define-auxiliary-syntaxes
     debug-assert		unwind-protect
 
+    begin0			begin0-let
+
     ;; arguments validation
     define-argument-validation
     with-arguments-validation
@@ -56,6 +58,8 @@
 	 expand))
 
 
+;;;; some defining syntaxes
+
 (define-syntax define-inline
   (syntax-rules ()
     ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
@@ -73,6 +77,42 @@
   (syntax-rules ()
     ((_ (?who ?stx) . ?body)
      (define-syntax ?who (lambda (?stx) . ?body)))))
+
+(define-syntax define-auxiliary-syntaxes
+  (syntax-rules ()
+    ((_ ?name)
+     (define-syntax ?name (syntax-rules ())))
+    ((_ ?name0 ?name ...)
+     (begin
+       (define-syntax ?name0 (syntax-rules ()))
+       (define-auxiliary-syntaxes ?name ...)))
+    ((_)	;allows this  syntax to be called with  no arguments and
+		;still expand to a definition
+     (define-syntax dummy (syntax-rules ())))
+    ))
+
+
+;;;; other syntaxes
+
+(define-syntax begin0
+  ;;This  syntax  comes from  the  R6RS  original  document, Appendix  A
+  ;;``Formal semantics''.
+  (syntax-rules ()
+    ((_ ?expr0 ?expr ...)
+     (call-with-values
+	 (lambda () ?expr0)
+       (lambda args
+	 ?expr ...
+	 (apply values args))))))
+
+(define-syntax begin0-let
+  (syntax-rules ()
+    ((_ ((?var0 ?init0) (?var ?init) ...) ?form0 ?form ...)
+     (let ((?var0 ?init0)
+	   (?var  ?init)
+	   ...)
+       ?form0 ?form ...
+       ?var0))))
 
 (define-syntax unwind-protect
   ;;Not a  general UNWIND-PROTECT for Scheme,  but fine where  we do not
@@ -102,19 +142,6 @@
     (syntax-rules ()
       ((_ ?pred)
        (values)))))
-
-(define-syntax define-auxiliary-syntaxes
-  (syntax-rules ()
-    ((_ ?name)
-     (define-syntax ?name (syntax-rules ())))
-    ((_ ?name0 ?name ...)
-     (begin
-       (define-syntax ?name0 (syntax-rules ()))
-       (define-auxiliary-syntaxes ?name ...)))
-    ((_)	;allows this  syntax to be called with  no arguments and
-		;still expand to a definition
-     (define-syntax dummy (syntax-rules ())))
-    ))
 
 
 (define-syntax define-argument-validation
