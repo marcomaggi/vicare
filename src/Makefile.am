@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
 bin_PROGRAMS = vicare
-#bin_PROGRAMS = ikarus scheme-script
+#bin_PROGRAMS = ikarus
 
 SRCS	= \
 	ikarus-collect.c		\
