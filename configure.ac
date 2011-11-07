@@ -6,6 +6,8 @@ AC_CANONICAL_SYSTEM
 AM_INIT_AUTOMAKE(vicare, 0.2d2, gnu)
 AC_CONFIG_SRCDIR([src/])
 
+AC_LANG([C])
+
 #page
 #### additional configuration command line options
 
@@ -210,10 +212,13 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_UNISTD_H
 #  include <unistd.h>
 #endif
+#ifdef HAVE_SYS_WAIT_H
+#  include <sys/wait.h>
+#endif
 ])
 
 AC_DEFUN([VICARE_VALUEOF_TEST],[
-  valueof_$1="#f"
+  VALUEOF_$1="#f"
   AC_CACHE_CHECK([the value of '$2'],
     [vicare_cv_valueof_$1],
     [AC_COMPUTE_INT([vicare_cv_valueof_$1],
@@ -418,14 +423,44 @@ VICARE_SIGNAL_TEST([SIGUSR2])
 VICARE_SIGNAL_TEST([SIGWINCH])
 VICARE_SIGNAL_TEST([SIGINFO])
 
+AC_CACHE_SAVE
+
 #page
 #### miscellaneous platform constants
 
 AC_DEFUN([VICARE_CONSTANT_TEST],[VICARE_VALUEOF_TEST([$1],[$1])])
 
+## waitpid constants
 VICARE_CONSTANT_TEST([WAIT_ANY])
 VICARE_CONSTANT_TEST([WAIT_MYPGRP])
+VICARE_CONSTANT_TEST([WNOHANG])
+VICARE_CONSTANT_TEST([WUNTRACED])
+VICARE_CONSTANT_TEST([WCONTINUED])
 
+AC_CACHE_SAVE
+
+#page
+#### tests for GNU+Linux specific features
+
+AC_CACHE_CHECK([availability of WIFCONTINUED],
+  [vicare_cv_HAVE_WIFCONTINUED],
+  [AC_COMPILE_IFELSE([AC_LANG_SOURCE([AC_INCLUDES_DEFAULT
+#ifdef HAVE_SYS_WAIT_H
+#  include <sys/wait.h>
+#endif
+int main (void)
+{
+  int status = 0;
+  int retval = WIFCONTINUED(status);
+  return 0;
+}])],
+    [vicare_cv_HAVE_WIFCONTINUED=1],
+    [vicare_cv_HAVE_WIFCONTINUED=0])])
+AC_DEFINE_UNQUOTED([HAVE_WIFCONTINUED],
+  $vicare_cv_HAVE_WIFCONTINUED,
+  [whether the Linux specific WIFCONTINUED macro is available])
+
+AC_CACHE_SAVE
 
 #page
 #### finish

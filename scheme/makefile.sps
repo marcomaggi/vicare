@@ -144,6 +144,7 @@
     "ikarus.codecs.sls"
     "ikarus.bytevectors.sls"
     "ikarus.posix.sls"
+    "ikarus.linux.sls"
     "ikarus.io.sls"
     "ikarus.hash-tables.sls"
     "ikarus.pretty-formats.sls"
@@ -566,6 +567,9 @@
     (system					i v)
     (unsetenv					i v)
     (waitpid					i v)
+
+;;; Linux functions
+    (WIFCONTINUED				i v)
 
     (accept-connection				i v)
     (accept-connection-nonblocking		i v)

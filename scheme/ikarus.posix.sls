@@ -439,12 +439,15 @@
 
 ;;;; process termination status
 
-(define (waitpid pid block?)
+(define (waitpid pid options)
   (define who 'waitpid)
   (with-arguments-validation (who)
-      ((pid      pid)
-       (boolean  block?))
-    (capi.posix-waitpid pid block?)))
+      ((pid	pid)
+       (fixnum	options))
+    (let ((rv (capi.posix-waitpid pid options)))
+      (if (unsafe.fx< rv 0)
+	  (raise/strerror who rv)
+	rv))))
 
 (let-syntax
     ((define-termination-status (syntax-rules ()

@@ -24,6 +24,7 @@ SRCS	= \
 	ikarus-getaddrinfo.h		\
 	ikarus-getaddrinfo.c		\
 	ikarus-posix.c			\
+	ikarus-linux.c			\
 	ikarus-main.h			\
 	ikarus-pointers.c		\
 	ikarus-ffi.c

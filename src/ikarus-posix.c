@@ -180,6 +180,7 @@ ik_system (ikptr str) {
 ikptr
 ikrt_posix_fork (void)
 {
+  errno = 0;
   int pid = fork();
   if (pid >= 0) {
     return fix(pid);
@@ -200,20 +201,16 @@ ikrt_fork (void)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_waitpid (ikptr pid, ikptr block)
+ikrt_posix_waitpid (ikptr pid, ikptr options)
 {
-  int status, options = 0;
-  if (false_object == block) {
-    options = WNOHANG;
-  }
-  pid_t r = waitpid(unfix(pid), &status, options);
-  if (r > 0) {
-    return fix(r);
-  } else if(r == 0) {  /* would have blocked */
-    return fix(0);
-  } else {
+  int   status;
+  pid_t retval;
+  errno  = 0;
+  retval = waitpid(unfix(pid), &status, unfix(options));
+  if (0 <= retval)
+    return fix(retval);
+  else
     return ik_errno_to_code();
-  }
 }
 /* FIXME STALE To be removed at the next boot image rotation. */
 ikptr

@@ -42,7 +42,7 @@
     posix-WIFEXITED		posix-WEXITSTATUS
     posix-WIFSIGNALED		posix-WTERMSIG
     posix-WCOREDUMP		posix-WIFSTOPPED
-    posix-WSTOPSIG
+    posix-WSTOPSIG		linux-WIFCONTINUED
 
     ;; platform API for file descriptors
     platform-open-input-fd
@@ -82,29 +82,32 @@
 
 ;;;; porcess termination status
 
-(define-inline (posix-waitpid pid block?)
-  (foreign-call "ikrt_posix_waitpid" pid block?))
+(define-inline (posix-waitpid pid options)
+  (foreign-call "ikrt_posix_waitpid" pid options))
 
-(define-inline (posix-WIFEXITED fx-status)
-  (foreign-call "ikrt_posix_WIFEXITED" fx-status))
+(define-inline (posix-WIFEXITED status)
+  (foreign-call "ikrt_posix_WIFEXITED" status))
 
-(define-inline (posix-WEXITSTATUS fx-status)
-  (foreign-call "ikrt_posix_WEXITSTATUS" fx-status))
+(define-inline (posix-WEXITSTATUS status)
+  (foreign-call "ikrt_posix_WEXITSTATUS" status))
 
-(define-inline (posix-WIFSIGNALED fx-status)
-  (foreign-call "ikrt_posix_WIFSIGNALED" fx-status))
+(define-inline (posix-WIFSIGNALED status)
+  (foreign-call "ikrt_posix_WIFSIGNALED" status))
 
-(define-inline (posix-WTERMSIG fx-status)
-  (foreign-call "ikrt_posix_WTERMSIG" fx-status))
+(define-inline (posix-WTERMSIG status)
+  (foreign-call "ikrt_posix_WTERMSIG" status))
 
-(define-inline (posix-WCOREDUMP fx-status)
-  (foreign-call "ikrt_posix_WCOREDUMP" fx-status))
+(define-inline (posix-WCOREDUMP status)
+  (foreign-call "ikrt_posix_WCOREDUMP" status))
 
-(define-inline (posix-WIFSTOPPED fx-status)
-  (foreign-call "ikrt_posix_WIFSTOPPED" fx-status))
+(define-inline (posix-WIFSTOPPED status)
+  (foreign-call "ikrt_posix_WIFSTOPPED" status))
 
-(define-inline (posix-WSTOPSIG fx-status)
-  (foreign-call "ikrt_posix_WSTOPSIG" fx-status))
+(define-inline (posix-WSTOPSIG status)
+  (foreign-call "ikrt_posix_WSTOPSIG" status))
+
+(define-inline (linux-WIFCONTINUED status)
+  (foreign-call "ikrt_linux_WIFCONTINUED" status))
 
 
 ;;;; platform API for file descriptors

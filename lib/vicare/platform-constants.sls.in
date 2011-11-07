@@ -29,8 +29,11 @@
   (export
 
 ;;; miscellaneous platform constants
-    WAIT_ANY
-    WAIT_MYPGRP
+
+    ;; waitpid constants
+    WAIT_ANY		WAIT_MYPGRP
+    WNOHANG		WUNTRACED
+    WCONTINUED
 
 ;;; errno codes
     errno-code case-errno
@@ -120,8 +123,12 @@
 
 ;;;; miscellaneous platform constants
 
+;; waitpid constants
 (define-inline-constant WAIT_ANY		@VALUEOF_WAIT_ANY@)
 (define-inline-constant WAIT_MYPGRP		@VALUEOF_WAIT_MYPGRP@)
+(define-inline-constant WNOHANG			@VALUEOF_WNOHANG@)
+(define-inline-constant WUNTRACED		@VALUEOF_WUNTRACED@)
+(define-inline-constant WCONTINUED		@VALUEOF_WCONTINUED@)
 
 
 ;;;; friendly interface

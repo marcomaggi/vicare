@@ -595,6 +595,7 @@ Trademarks used herein are the property of their respective owners.
 * using::                       Using the program.
 * iklib::                       Extensions library.
 * posix::                       The @posix{} interface.
+* linux::                       The @gnu{}+Linux interface.
 * syslib::                      Low level, fast, unsafe operations.
 * capi::                        C language programming interface.
 
@@ -5943,75 +5944,16 @@ if an error occurs: an exception is raised.
 @section Process termination status.
 
 
-@defun waitpid [@var{pid} [@var{block?} [@var{want-error?}]]]
-Wait for another process termination using the system @cfunc{waitpid}
-function and return informations about its status.
+@defun waitpid @var{pid} @var{options}
+Interface to the C function @cfunc{waitpid}, @glibcref{Process
+Completion, waitpid}.  Request status informations on a process or group
+of processes knowing the identifier.  If successful return a fixnum
+representing the status; if an error occurs: an exception is raised.
 
-If successful and there is a child waiting to be noticed: the returned
-value is a record of type @code{wstatus}, whose interface is described
-below.  If successful but no child is waiting to be noticed: the
-returned value is @false{}.
-
-If an error occurs and @var{want-error?} is @true{}, an exception is
-raised.  If an error occurs and @var{want-error?} is @false{}: the
-return value is @false{}.  @var{want-error?} defaults to @true{}.
-
-@var{pid} is the id of the process to wait for; it defaults to
-@code{-1}.  If it is:
-
-@table @asis
-@item @emph{a positive integer}
-return informations about the process having that pid;
-
-@item @code{0}
-return informations about a process in the set of terminated children in
-the same group of the calling process; if more eligible children exists,
-one is selected at random;
-
-@item @code{-1}
-return informations about a process in the set of terminated children;
-if more eligible children exists, one is selected at random;
-
-@item @emph{a negative integer other than @code{-1}}
-wait for a process in the set of terminated children whose process group
-id is equal to the absolute value of @var{pid}.
-@end table
-
-If @var{block?} is @true{} (the default), then the process is suspended
-waiting for an eligible child; if @var{block?} is @false{} the process
-is not suspended and the return value is @false{}.
-
-@glibcref{Process Completion, Process Completion}
+The fixnum @var{pid} selects the target of the request; the fixnum
+@var{options} must be the logical OR (@func{fxior}) of platform specific
+constants specifying how to wait for the availability of the status.
 @end defun
-
-
-The following example tests @func{waitpid}:
-
-@example
-(fork
-   (lambda (child-pid)
-     (printf "in parent, child pid = ~s\n" child-pid)
-     (let ([status (waitpid child-pid)])
-       (printf "in parent, child status: ~s\n" status)))
-   (lambda ()
-     (printf "in child\n")
-     (exit 1)))
-@end example
-
-@noindent
-the following example test killing with a signal:
-
-@example
-(fork
-   (lambda (child-pid)
-     (printf "in parent, child pid = ~s\n" child-pid)
-     (kill child-pid 'SIGKILL)
-     (let ([status (waitpid child-pid)])
-       (printf "in parent, child status: ~s\n" status)))
-   (lambda ()
-     (printf "in child\n")
-     (nanosleep 5 0)))
-@end example
 
 
 The following functions accept as argument a fixnum representing the
@@ -6380,6 +6322,45 @@ Suspend the process for the selected time; it makes use of the system
 positive exact integers.  If an error occurs an exception is raised.
 
 @glibcref{Sleeping, Sleeping}
+@end defun
+
+@c page
+@node linux
+@chapter The @gnu{}+Linux interface
+
+
+The functions described in this chapter are exported by the libraries
+@library{ikarus} and @library{vicare}.  The @api{} attempts to create a
+one--to--one Scheme functions mapping towards Linux functions, keeping
+the same semantics as much as possible; the platform's own documentation
+is relevant at the Scheme level.
+
+All the constants needed to use the interface are available as
+identifier syntaxes exported by the @library{vicare platform-constants}
+library; if a constant value is not exported file a feature request for
+the project.  If a constant is not defined on a platform: its value is
+set to @false{}.
+
+On non-Linux platform we must avoid calling these functions, else the
+behaviour is undefined.
+
+@menu
+* linux status::                Process termination status.
+@end menu
+
+@c page
+@node linux status
+@section Process termination status
+
+
+The following functions accept as argument a fixnum representing the
+process termination status, for example the return value of
+@cfunc{system} or the status acquired by @cfunc{waitpid}.
+
+
+@defun WIFCONTINUED @var{status}
+Interface to the Linux specific C macro @cfunc{WIFCONTINUED}.  Return
+true if the process was resumed by delivery of @code{SIGCONT}.
 @end defun
 
 @c page
@@ -7424,8 +7405,13 @@ The executable @value{EXECUTABLE} defines a number of C language
 functions that can be invoked by compiled code to access various
 services, both to handle startup and to access the operative system.
 
+When on a @gnu{}+Linux system: the Linux specific functions are
+available; when on other systems: calling such functions will terminate
+the process.
+
 @menu
 * capi posix::                  C language level @posix{} interface.
+* capi linux::                  C language level Linux interface.
 @end menu
 
 @c page
@@ -8168,6 +8154,15 @@ process termination status, for example the return value of
 @cfunc{system} or the status acquired by @cfunc{waitpid}.
 
 
+@deftypefun ikptr ikrt_posix_waitpid (ikptr @var{pid}, ikptr @var{options})
+Interface to the C function @cfunc{waitpid}, @glibcref{Process
+Completion, waitpid}.  Request status informations on a process or group
+of processes knowing the identifier.  If successful return a fixnum
+representing the status; if an error occurs: return an encoded
+@code{errno} value.
+@end deftypefun
+
+
 @deftypefun ikptr ikrt_posix_WIFEXITED (ikptr @var{status})
 Interface to the C macro @cfunc{WIFEXITED}, @glibcref{Process Completion
 Status, WIFEXITED}.  Return true if the process terminated normally with
@@ -8307,6 +8302,31 @@ Return a list of bytevectors representing the contents of the
 @code{environ} array; if the environment is empty (no environment
 variables set) return @code{null_object}.
 @end deftypefun
+
+@c page
+@node capi linux
+@section C language level Linux interface
+
+
+@menu
+* capi linux status::           Process termination status.
+@end menu
+
+@c page
+@node capi linux status
+@subsection Process termination status
+
+
+The following functions accept as argument a fixnum representing the
+process termination status, for example the return value of
+@cfunc{system} or the status acquired by @cfunc{waitpid}.
+
+
+@deftypefun ikptr ikrt_linux_WIFCONTINUED (ikptr @var{status})
+Interface to the Linux specific C macro @cfunc{WIFCONTINUED}.  Return
+true if the process was resumed by delivery of @code{SIGCONT}.
+@end deftypefun
+
 
 @c page
 @node objects
