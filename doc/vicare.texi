@@ -5886,16 +5886,34 @@ Return the process identifier of the parent as a fixnum.
 @section Spawning processes and the like
 
 
+@defun system @var{command}
+Interface to the C function @cfunc{system}, @glibcref{Running a Command,
+system}.  Execute a command through the system shell; @var{command} must
+be a string holding the command to execute.  If successful return the
+termination status of the executed process, @ref{posix status} for
+details; if an error occurs: an exception is raised.
+
+@example
+(system "ls -l")
+@end example
+@end defun
+
+
+@defun posix-fork
+Low level interface to the C function @cfunc{fork}, @glibcref{Creating a
+Process, fork}.  Create a new process by forking the current one; if
+successful return a non--negative fixnum representing the the return
+value of @cfunc{fork}; if an error occurs: return an encoded
+@code{errno} value.
+@end defun
+
+
 @defun fork @var{parent-proc} @var{child-thunk}
-Fork a new process using the system @cfunc{fork} function.
-
-If the operation is successful: in the parent process @var{parent-proc}
-is evaluated by applying it to an exact integer representing the child
-pid; in the child process @var{child-thunk} is evaluated.
-
-If an error occurs: an exception is raised.
-
-Example:
+High level interface to the C function @cfunc{fork}.  Create a new
+process by forking the current one; if successful the parent process
+applies @var{parent-proc} to a fixnum representing the child process
+pid; if successful: the child process evaluates the @var{child-thunk};
+if an error occurs: an exception is raised.
 
 @example
 (fork
@@ -5907,24 +5925,8 @@ Example:
 
 (printf "here we are in the parent\n")
 @end example
-
-@glibcref{Creating a Process, Creating a Process}
 @end defun
 
-
-@defun system @var{command-string}
-Executes a command using the @cfunc{system} function, which uses the
-system shell.  If success: return the exit code of the process.  If
-error: raise an exception.
-
-Example:
-
-@example
-(system "ls -l")
-@end example
-
-@glibcref{Running a Command, Running a Command}
-@end defun
 
 @c page
 @node posix status
@@ -7447,7 +7449,7 @@ adaptation.
 * capi posix fd::               File descriptors.
 * capi posix pid::              Process identifier functions.
 * capi posix files::            File system interface.
-* capi posix exec::             Executing processes.
+* capi posix process::          Forking and executing processes.
 * capi posix status::           Process termination status.
 * capi posix time::             Time and date.
 * capi posix env::              Environment variables.
@@ -8125,32 +8127,25 @@ If successful return @code{true_object}; if an error occurs in
 @end deftypefun
 
 @c page
-@node capi posix exec
-@subsection Executing processes
-
-
-@deftypefun ikptr ikrt_exit (ikptr @var{status}, ikpcb * @var{pcb})
-Interface to the C function @cfunc{exit}, @glibcref{Normal Termination,
-exit}.  Exit the current process; if @var{status} is a fixnum, it is
-used as exit status; else the exit status is @code{EXIT_FAILURE}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_fork (void)
-Low level interface to the C function @cfunc{fork}, @glibcref{Creating a
-Process, fork}.  Create a new process; if successful return a
-non--negative fixnum representing the the return value of @cfunc{fork};
-if an error occurs: return an encoded @code{errno} value.
-@end deftypefun
+@node capi posix process
+@subsection Forking and executing processes
 
 
 @deftypefun ikptr ikrt_posix_system (ikptr @var{command})
 Interface to the C function @cfunc{system}, @glibcref{Running a Command,
 system}.  Execute a command through the system shell; @var{command} must
 reference a bytevector object holding the command to execute.  If
-successful return the exit status of the executed process, see below how
-to interpret this value; if an error occurs in @cfunc{system}, return an
+successful return the termination status of the executed process,
+@ref{capi posix status} for details; if an error occurs: return an
 encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_fork (void)
+Interface to the C function @cfunc{fork}, @glibcref{Creating a Process,
+fork}.  Create a new process by forking the current; if successful
+return a non--negative fixnum representing the the return value of
+@cfunc{fork}; if an error occurs: return an encoded @code{errno} value.
 @end deftypefun
 
 @c page

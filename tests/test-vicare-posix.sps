@@ -64,8 +64,27 @@
 (parametrise ((check-test-name	'system))
 
   (check
-      (system "echo innocuous output from system call ; exit 0")
+      (system "echo innocuous output from 'system()' call ; exit 0")
     => 0)
+
+  #t)
+
+
+(parametrise ((check-test-name	'fork))
+
+  (check
+      (fork (lambda (child-pid)
+	      (display (format "after fork in parent, parent pid=~s, child pid=~s\n"
+			 (getpid) child-pid)
+		       (current-error-port))
+	      #t)
+	    (lambda ()
+	      (display (format "after fork in child,  parent pid=~s, child pid=~s\n"
+			 (getppid) (getpid))
+		       (current-error-port))
+	      (exit)))
+    => #t)
+
 
   #t)
 

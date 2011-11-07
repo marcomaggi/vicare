@@ -23,6 +23,9 @@
     ;; interprocess singnal codes handling
     interprocess-signal->string
 
+    ;; error handling
+    strerror
+
     ;; executing processes
     posix-fork			fork
     system
@@ -64,11 +67,7 @@
 
     change-mode
 
-    nanosleep
-
-    strerror
-    wstatus-pid			wstatus-exit-status
-    wstatus-received-signal)
+    nanosleep)
   (import (except (ikarus)
 		  ;; errno handling
 		  errno->string
@@ -115,10 +114,7 @@
 
 		  change-mode
 
-		  strerror
-		  wstatus-pid			wstatus-exit-status
-		  wstatus-received-signal
-		  )
+		  strerror)
     (vicare errno)
     (vicare interprocess-signals)
     (vicare syntactic-extensions)
@@ -405,37 +401,36 @@
   (define INTERPROCESS-SIGNAL-VECTOR (make-interprocess-signal-vector)))
 
 
-;;;; forking processes
+;;;; process identifiers
+
+(define (getpid)
+  (capi.posix-getpid))
+
+(define (getppid)
+  (capi.posix-getppid))
+
+
+;;;; executing and forking processes
 
 (define (system x)
   (define who 'system)
   (with-arguments-validation (who)
       ((string  x))
-    (let ((rv (capi.platform-posix-system (string->utf8 x))))
+    (let ((rv (capi.posix-system (string->utf8 x))))
       (if (unsafe.fx< rv 0)
 	  (raise/strerror who rv)
 	rv))))
 
 (define (posix-fork)
-  ;;Low  level interface  to  the  C function  "fork()".   Create a  new
-  ;;process; if successful return a non-negative fixnum representing the
-  ;;the return value of "fork()";  if an error occurs: return an encoded
-  ;;errno value.
-  ;;
-  (capi.platform-fork-process))
+  (capi.posix-fork))
 
 (define (fork parent-proc child-proc)
-  ;;High-level  interface to  the  C function  "fork()".   Create a  new
-  ;;process; if successful return a non-negative fixnum representing the
-  ;;the return value of "fork()";  if an error occurs: return an encoded
-  ;;errno value.
-  ;;
   (define who 'fork)
   (with-arguments-validation (who)
       ((procedure  parent-proc)
        (procedure  child-proc))
-    (let ((pid (capi.platform-fork-process)))
-      (cond ((unsafe.fx= pid 0)
+    (let ((pid (capi.posix-fork)))
+      (cond ((unsafe.fxzero? pid)
 	     (child-proc))
 	    ((unsafe.fx< pid 0)
 	     (raise/strerror who pid))
@@ -445,30 +440,12 @@
 
 ;;;; process termination status
 
-(define waitpid
-  ;; If block? is #f and waitpid() would have blocked,
-  ;; or if want-error? is #f and there was an error,
-  ;; the value returned is #f
-  (case-lambda
-   (()
-    (waitpid -1 #t #t))
-   ((pid)
-    (waitpid pid #t #t))
-   ((pid block?)
-    (waitpid pid block? #t))
-   ((pid block? want-error?)
-    (define who 'waitpid)
-    (with-arguments-validation (who)
-	((pid      pid)
-	 (boolean  block?))
-      (let ((r (foreign-call "ikrt_waitpid" (make-wstatus #f #f #f) pid block?)))
-	(cond
-	 ((wstatus? r)
-	  (set-wstatus-received-signal! r (interprocess-signal->string (wstatus-received-signal r)))
-	  r)
-	 ((and want-error? (not (eqv? r 0)))
-	  (error who (strerror r) pid))
-	 (else #f)))))))
+(define (waitpid pid block?)
+  (define who 'waitpid)
+  (with-arguments-validation (who)
+      ((pid      pid)
+       (boolean  block?))
+    (capi.posix-waitpid pid block?)))
 
 (let-syntax
     ((define-termination-status (syntax-rules ()
@@ -498,15 +475,6 @@
       (when (unsafe.fx< r 0)
 	(error who (strerror r) pid signum
 	       (interprocess-signal->string signum))))))
-
-
-;;;; process identifiers
-
-(define (getpid)
-  (capi.posix-getpid))
-
-(define (getppid)
-  (capi.posix-getpid))
 
 
 (define (stat path follow who)

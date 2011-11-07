@@ -127,6 +127,35 @@ ikrt_strerror(ikptr negated_errno_code, ikpcb* pcb)
 
 
 /** --------------------------------------------------------------------
+ ** Process identifiers.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_getpid(void)
+{
+  return fix(getpid());
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_getpid(void)
+{
+  return ikrt_getpid();
+}
+
+ikptr
+ikrt_posix_getppid(void)
+{
+  return fix(getppid());
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_getppid(void)
+{
+  return ikrt_getppid();
+}
+
+
+/** --------------------------------------------------------------------
  ** Executing processes.
  ** ----------------------------------------------------------------- */
 
@@ -148,10 +177,49 @@ ik_system (ikptr str) {
   return ikrt_posix_system(str);
 }
 
+ikptr
+ikrt_posix_fork (void)
+{
+  int pid = fork();
+  if (pid >= 0) {
+    return fix(pid);
+  } else {
+    return ik_errno_to_code();
+  }
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_fork (void)
+{
+  return ikrt_posix_fork();
+}
+
 
 /** --------------------------------------------------------------------
  ** Process exit status.
  ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_waitpid (ikptr pid, ikptr block)
+{
+  int status, options = 0;
+  if (false_object == block) {
+    options = WNOHANG;
+  }
+  pid_t r = waitpid(unfix(pid), &status, options);
+  if (r > 0) {
+    return fix(r);
+  } else if(r == 0) {  /* would have blocked */
+    return fix(0);
+  } else {
+    return ik_errno_to_code();
+  }
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_waitpid(ikptr rvec, ikptr pid, ikptr block /*, ikpcb* pcb */) {
+  return false_object;
+}
 
 ikptr
 ikrt_posix_WIFEXITED (ikptr fx_status)
@@ -353,17 +421,6 @@ ikrt_gmt_offset(ikptr t){
   return r;
   */
 }
-
-ikptr
-ikrt_fork(){
-  int pid = fork();
-  if(pid >= 0){
-    return fix(pid);
-  } else {
-    return ik_errno_to_code();
-  }
-}
-
 
 
 ikptr
@@ -749,56 +806,6 @@ ikrt_kill(ikptr pid, ikptr sigcode /*, ikpcb* pcb */){
     return fix(0);
   }
   return ik_errno_to_code();
-}
-
-ikptr
-ikrt_waitpid(ikptr rvec, ikptr pid, ikptr block /*, ikpcb* pcb */){
-  /* rvec is assumed to come in as #(#f #f #f) */
-  int status, options = 0;
-  if(block == false_object){
-    options = WNOHANG;
-  }
-  pid_t r = waitpid(unfix(pid), &status, options);
-  if(r > 0){
-    ref(rvec, off_record_data+0*wordsize) = fix(r);
-    if(WIFEXITED(status)) {
-      ref(rvec, off_record_data+1*wordsize) = fix(WEXITSTATUS(status));
-    }
-    if(WIFSIGNALED(status)) {
-      ref(rvec, off_record_data+2*wordsize) =
-        ik_signal_num_to_code(WTERMSIG(status));
-    }
-    return rvec;
-  } else if(r == 0){  /* would have blocked */
-    return fix(0);
-  } else {
-    return ik_errno_to_code();
-  }
-}
-
-
-ikptr
-ikrt_posix_getpid(void)
-{
-  return fix(getpid());
-}
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_getpid(void)
-{
-  return ikrt_getpid();
-}
-
-ikptr
-ikrt_posix_getppid(void)
-{
-  return fix(getppid());
-}
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_getppid(void)
-{
-  return ikrt_getppid();
 }
 
 /* end of file */

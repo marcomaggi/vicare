@@ -31,22 +31,18 @@
 (library (vicare unsafe-capi)
   (export
 
-    ;; processes
-    platform-fork-process
-    platform-posix-system
+    ;; process identifiers
+    posix-getpid		posix-getppid
+
+    ;; executing and forking processes
+    posix-fork			posix-system
 
     ;; process termination status
-    posix-WIFEXITED
-    posix-WEXITSTATUS
-    posix-WIFSIGNALED
-    posix-WTERMSIG
-    posix-WCOREDUMP
-    posix-WIFSTOPPED
+    posix-waitpid
+    posix-WIFEXITED		posix-WEXITSTATUS
+    posix-WIFSIGNALED		posix-WTERMSIG
+    posix-WCOREDUMP		posix-WIFSTOPPED
     posix-WSTOPSIG
-
-    ;; process identifier
-    posix-getpid
-    posix-getppid
 
     ;; platform API for file descriptors
     platform-open-input-fd
@@ -66,16 +62,28 @@
 	  define-inline))
 
 
-;;;; processes
+;;;; process identifiers
 
-(define-inline (platform-fork-process)
-  (foreign-call "ikrt_fork"))
+(define-inline (posix-getpid)
+  (foreign-call "ikrt_posix_getpid"))
 
-(define-inline (platform-posix-system command-bv)
+(define-inline (posix-getppid)
+  (foreign-call "ikrt_posix_getppid"))
+
+
+;;;; executing and forking processes
+
+(define-inline (posix-fork)
+  (foreign-call "ikrt_posix_fork"))
+
+(define-inline (posix-system command-bv)
   (foreign-call "ikrt_posix_system" command-bv))
 
 
 ;;;; porcess termination status
+
+(define-inline (posix-waitpid pid block?)
+  (foreign-call "ikrt_posix_waitpid" pid block?))
 
 (define-inline (posix-WIFEXITED fx-status)
   (foreign-call "ikrt_posix_WIFEXITED" fx-status))
@@ -97,15 +105,6 @@
 
 (define-inline (posix-WSTOPSIG fx-status)
   (foreign-call "ikrt_posix_WSTOPSIG" fx-status))
-
-
-;;;; process identifier
-
-(define-inline (posix-getpid)
-  (foreign-call "ikrt_posix_getpid"))
-
-(define-inline (posix-getppid)
-  (foreign-call "ikrt_posix_getppid"))
 
 
 ;;;; platform API for file descriptors
