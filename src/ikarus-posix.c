@@ -96,6 +96,36 @@ list_to_vec (ikptr x) {
 }
 
 
+/** --------------------------------------------------------------------
+ ** Errno handling.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ik_errno_to_code (void)
+/* Negate the current errno value and convert it into a fixnum. */
+{
+  int en = - errno;
+  return fix(en);
+}
+ikptr
+ikrt_strerror(ikptr negated_errno_code, ikpcb* pcb)
+{
+  int   code = - unfix(negated_errno_code);
+  errno = 0;
+  char* es = strerror(code);
+  if (errno) {
+    return false_object;
+  } else {
+    int   len = strlen(es);
+    ikptr bv  = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1))
+      + bytevector_tag;
+    ref(bv, off_bytevector_length) = fix(len);
+    memcpy((char*)(bv+off_bytevector_data), es, len+1);
+    return bv;
+  }
+}
+
+
 ikptr
 ikrt_posix_system (ikptr str)
 /* Interface to "system()". */
@@ -701,19 +731,29 @@ ikrt_waitpid(ikptr rvec, ikptr pid, ikptr block /*, ikpcb* pcb */){
   }
 }
 
+
 ikptr
-ikrt_getpid(void)
+ikrt_posix_getpid(void)
 {
   return fix(getpid());
 }
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_getpid(void)
+{
+  return ikrt_getpid();
+}
 
 ikptr
-ikrt_getppid(void)
+ikrt_posix_getppid(void)
 {
   return fix(getppid());
 }
-
-
-
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_getppid(void)
+{
+  return ikrt_getppid();
+}
 
 /* end of file */

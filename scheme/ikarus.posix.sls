@@ -24,8 +24,10 @@
     waitpid
     WIFEXITED
 
-    kill
+    ;; process identifier
     getpid			getppid
+
+    kill
     system
     nanosleep
 
@@ -193,12 +195,15 @@
 	       (interprocess-signal->string signum))))))
 
 
+;;;; process identifiers
+
 (define (getpid)
-  (foreign-call "ikrt_getpid"))
+  (posix-getpid))
 
 (define (getppid)
-  (foreign-call "ikrt_getppid"))
+  (posix-getpid))
 
+
 (define (stat path follow who)
   (unless (string? path)
     (die who "not a string" path))

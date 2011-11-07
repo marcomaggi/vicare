@@ -38,6 +38,10 @@
     ;; process exit status
     platform-posix-WIFEXITED
 
+    ;; process identifier
+    posix-getpid
+    posix-getppid
+
     ;; platform API for file descriptors
     platform-open-input-fd
     platform-open-output-fd
@@ -69,6 +73,15 @@
 
 (define-inline (platform-posix-WIFEXITED fx-status)
   (foreign-call "ikrt_posix_WIFEXITED" fx-status))
+
+
+;;;; process identifier
+
+(define-inline (posix-getpid)
+  (foreign-call "ikrt_posix_getpid"))
+
+(define-inline (posix-getppid)
+  (foreign-call "ikrt_posix_getppid"))
 
 
 ;;;; platform API for file descriptors

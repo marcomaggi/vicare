@@ -7771,13 +7771,13 @@ occurs in @cfunc{shutdown}, return the return value of
 @subsection Process identifier functions
 
 
-@deftypefun ikptr ikrt_getpid (void)
+@deftypefun ikptr ikrt_posix_getpid (void)
 Return the process identifier as fixnum.  @glibcref{Process
 Identification, getpid}.
 @end deftypefun
 
 
-@deftypefun ikptr ikrt_getppid (void)
+@deftypefun ikptr ikrt_posix_getppid (void)
 Return the parent process identifier as fixnum.  @glibcref{Process
 Identification, getpid}.
 @end deftypefun
