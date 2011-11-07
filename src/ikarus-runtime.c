@@ -476,11 +476,13 @@ ik_unsafe_alloc (ikpcb* pcb, int size)
 }
 
 
-void ik_error(ikptr args){
-  fprintf(stderr, "Error: ");
+void
+ik_error (ikptr args)
+{
+  fprintf(stderr, "Vicare error: ");
   ik_fprint(stderr, args);
   fprintf(stderr, "\n");
-  exit(0);
+  exit(EXIT_FAILURE);
 }
 
 
