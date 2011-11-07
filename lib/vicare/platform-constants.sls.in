@@ -38,6 +38,10 @@
     CLD_CONTINUED	CLD_DUMPED	CLD_EXITED
     CLD_KILLED		CLD_STOPPED	CLD_TRAPPED
 
+;;;These are not fixnums.
+;;;
+;;;__WCLONE		__WALL		__WNOTHREAD
+
 ;;; errno codes
     errno-code		case-errno
 
@@ -144,6 +148,12 @@
 (define-inline-constant CLD_KILLED		@VALUEOF_CLD_KILLED@)
 (define-inline-constant CLD_STOPPED		@VALUEOF_CLD_STOPPED@)
 (define-inline-constant CLD_TRAPPED		@VALUEOF_CLD_TRAPPED@)
+
+;;; These are not fixnums.
+;;
+;; (define-inline-constant __WCLONE		@VALUEOF___WCLONE@)
+;; (define-inline-constant __WALL		@VALUEOF___WALL@)
+;; (define-inline-constant __WNOTHREAD		@VALUEOF___WNOTHREAD@)
 
 
 
