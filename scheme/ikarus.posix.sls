@@ -17,8 +17,15 @@
 
 (library (ikarus.posix)
   (export
+    ;; errno codes handling
+    errno->string
+
+    ;; interprocess singnal codes handling
+    interprocess-signal->string
+
     ;; executing processes
     posix-fork			fork
+    system
 
     ;; process exit status
     waitpid
@@ -28,7 +35,6 @@
     getpid			getppid
 
     kill
-    system
     nanosleep
 
     getenv			setenv
@@ -57,22 +63,57 @@
     wstatus-pid			wstatus-exit-status
     wstatus-received-signal)
   (import (except (ikarus)
-		  nanosleep posix-fork fork waitpid getpid getppid system file-exists?
-		  delete-file getenv setenv unsetenv env environ split-file-name
-		  file-ctime file-mtime file-real-path current-directory
-		  file-regular? file-directory? file-readable? file-writable?
-		  file-executable? file-size rename-file file-symbolic-link?
-		  make-symbolic-link make-hard-link directory-list
-		  make-directory make-directory* delete-directory change-mode
-		  kill strerror wstatus-pid wstatus-exit-status
-		  wstatus-received-signal)
-    (only (ikarus errno)
-	  errno->string)
-    (only (ikarus.interprocess-signals)
-	  interprocess-signal->string)
+		  ;; errno handling
+		  errno->string
+
+		  ;; interprocess singnal codes handling
+		  interprocess-signal->string
+
+		  ;; executing processes
+		  posix-fork			fork
+		  system
+
+		  ;; process exit status
+		  waitpid
+		  WIFEXITED
+
+		  ;; process identifier
+		  getpid			getppid
+
+		  kill
+		  nanosleep
+
+		  getenv			setenv
+		  unsetenv			env
+		  environ
+
+		  file-exists?		delete-file
+		  rename-file			split-file-name
+		  file-real-path
+
+		  current-directory		directory-list
+		  make-directory		make-directory*
+		  delete-directory
+
+		  file-ctime			file-mtime
+		  file-regular?		file-directory?
+		  file-readable?		file-writable?
+		  file-executable?		file-symbolic-link?
+		  file-size
+
+		  make-symbolic-link		make-hard-link
+
+		  change-mode
+
+		  strerror
+		  wstatus-pid			wstatus-exit-status
+		  wstatus-received-signal
+		  )
     (vicare errno)
+    (vicare interprocess-signals)
     (vicare syntactic-extensions)
-    (vicare unsafe-capi)
+    (prefix (vicare unsafe-capi)
+	    capi.)
     (prefix (vicare unsafe-operations)
 	    unsafe.))
 
@@ -106,6 +147,254 @@
   (assertion-violation who "expected fixnum signal code as argument" obj))
 
 
+;;;; errno handling
+
+(define (errno->string negated-errno-code)
+  ;;Convert an errno  code as represented by the  (vicare errno) library
+  ;;into a string representing the errno code symbol.
+  ;;
+  (define who 'errno->string)
+  (with-arguments-validation (who)
+      ((fixnum negated-errno-code))
+    (let ((errno-code (unsafe.fx- 0 negated-errno-code)))
+      (and (unsafe.fx> errno-code 0)
+	   (unsafe.fx< errno-code (vector-length ERRNO-VECTOR))
+	   (vector-ref ERRNO-VECTOR errno-code)))))
+
+(let-syntax
+    ((make-errno-vector
+      (lambda (stx)
+	(define (%mk-vector)
+	  (let* ((max	(fold-left (lambda (max pair)
+				     (let ((code (cdr pair)))
+				       (cond ((not code)
+					      max)
+					     ((< max (fx- code))
+					      (fx- code))
+					     (else
+					      max))))
+			  0 errno-alist))
+		 (vec.len	(fx+ 1 max))
+		 ;;All the unused positions are set to #f.
+		 (vec	(make-vector vec.len #f)))
+	    (for-each (lambda (pair)
+			(when (cdr pair)
+			  (vector-set! vec (fx- (cdr pair)) (car pair))))
+	      errno-alist)
+	    vec))
+	(define errno-alist
+	  `(("E2BIG"		. ,E2BIG)
+	    ("EACCES"		. ,EACCES)
+	    ("EADDRINUSE"	. ,EADDRINUSE)
+	    ("EADDRNOTAVAIL"	. ,EADDRNOTAVAIL)
+	    ("EADV"		. ,EADV)
+	    ("EAFNOSUPPORT"	. ,EAFNOSUPPORT)
+	    ("EAGAIN"		. ,EAGAIN)
+	    ("EALREADY"		. ,EALREADY)
+	    ("EBADE"		. ,EBADE)
+	    ("EBADF"		. ,EBADF)
+	    ("EBADFD"		. ,EBADFD)
+	    ("EBADMSG"		. ,EBADMSG)
+	    ("EBADR"		. ,EBADR)
+	    ("EBADRQC"		. ,EBADRQC)
+	    ("EBADSLT"		. ,EBADSLT)
+	    ("EBFONT"		. ,EBFONT)
+	    ("EBUSY"		. ,EBUSY)
+	    ("ECANCELED"	. ,ECANCELED)
+	    ("ECHILD"		. ,ECHILD)
+	    ("ECHRNG"		. ,ECHRNG)
+	    ("ECOMM"		. ,ECOMM)
+	    ("ECONNABORTED"	. ,ECONNABORTED)
+	    ("ECONNREFUSED"	. ,ECONNREFUSED)
+	    ("ECONNRESET"	. ,ECONNRESET)
+	    ("EDEADLK"		. ,EDEADLK)
+	    ("EDEADLOCK"	. ,EDEADLOCK)
+	    ("EDESTADDRREQ"	. ,EDESTADDRREQ)
+	    ("EDOM"		. ,EDOM)
+	    ("EDOTDOT"		. ,EDOTDOT)
+	    ("EDQUOT"		. ,EDQUOT)
+	    ("EEXIST"		. ,EEXIST)
+	    ("EFAULT"		. ,EFAULT)
+	    ("EFBIG"		. ,EFBIG)
+	    ("EHOSTDOWN"	. ,EHOSTDOWN)
+	    ("EHOSTUNREACH"	. ,EHOSTUNREACH)
+	    ("EIDRM"		. ,EIDRM)
+	    ("EILSEQ"		. ,EILSEQ)
+	    ("EINPROGRESS"	. ,EINPROGRESS)
+	    ("EINTR"		. ,EINTR)
+	    ("EINVAL"		. ,EINVAL)
+	    ("EIO"		. ,EIO)
+	    ("EISCONN"		. ,EISCONN)
+	    ("EISDIR"		. ,EISDIR)
+	    ("EISNAM"		. ,EISNAM)
+	    ("EKEYEXPIRED"	. ,EKEYEXPIRED)
+	    ("EKEYREJECTED"	. ,EKEYREJECTED)
+	    ("EKEYREVOKED"	. ,EKEYREVOKED)
+	    ("EL2HLT"		. ,EL2HLT)
+	    ("EL2NSYNC"		. ,EL2NSYNC)
+	    ("EL3HLT"		. ,EL3HLT)
+	    ("EL3RST"		. ,EL3RST)
+	    ("ELIBACC"		. ,ELIBACC)
+	    ("ELIBBAD"		. ,ELIBBAD)
+	    ("ELIBEXEC"		. ,ELIBEXEC)
+	    ("ELIBMAX"		. ,ELIBMAX)
+	    ("ELIBSCN"		. ,ELIBSCN)
+	    ("ELNRNG"		. ,ELNRNG)
+	    ("ELOOP"		. ,ELOOP)
+	    ("EMEDIUMTYPE"	. ,EMEDIUMTYPE)
+	    ("EMFILE"		. ,EMFILE)
+	    ("EMLINK"		. ,EMLINK)
+	    ("EMSGSIZE"		. ,EMSGSIZE)
+	    ("EMULTIHOP"	. ,EMULTIHOP)
+	    ("ENAMETOOLONG"	. ,ENAMETOOLONG)
+	    ("ENAVAIL"		. ,ENAVAIL)
+	    ("ENETDOWN"		. ,ENETDOWN)
+	    ("ENETRESET"	. ,ENETRESET)
+	    ("ENETUNREACH"	. ,ENETUNREACH)
+	    ("ENFILE"		. ,ENFILE)
+	    ("ENOANO"		. ,ENOANO)
+	    ("ENOBUFS"		. ,ENOBUFS)
+	    ("ENOCSI"		. ,ENOCSI)
+	    ("ENODATA"		. ,ENODATA)
+	    ("ENODEV"		. ,ENODEV)
+	    ("ENOENT"		. ,ENOENT)
+	    ("ENOEXEC"		. ,ENOEXEC)
+	    ("ENOKEY"		. ,ENOKEY)
+	    ("ENOLCK"		. ,ENOLCK)
+	    ("ENOLINK"		. ,ENOLINK)
+	    ("ENOMEDIUM"	. ,ENOMEDIUM)
+	    ("ENOMEM"		. ,ENOMEM)
+	    ("ENOMSG"		. ,ENOMSG)
+	    ("ENONET"		. ,ENONET)
+	    ("ENOPKG"		. ,ENOPKG)
+	    ("ENOPROTOOPT"	. ,ENOPROTOOPT)
+	    ("ENOSPC"		. ,ENOSPC)
+	    ("ENOSR"		. ,ENOSR)
+	    ("ENOSTR"		. ,ENOSTR)
+	    ("ENOSYS"		. ,ENOSYS)
+	    ("ENOTBLK"		. ,ENOTBLK)
+	    ("ENOTCONN"		. ,ENOTCONN)
+	    ("ENOTDIR"		. ,ENOTDIR)
+	    ("ENOTEMPTY"	. ,ENOTEMPTY)
+	    ("ENOTNAM"		. ,ENOTNAM)
+	    ("ENOTRECOVERABLE"	. ,ENOTRECOVERABLE)
+	    ("ENOTSOCK"		. ,ENOTSOCK)
+	    ("ENOTTY"		. ,ENOTTY)
+	    ("ENOTUNIQ"		. ,ENOTUNIQ)
+	    ("ENXIO"		. ,ENXIO)
+	    ("EOPNOTSUPP"	. ,EOPNOTSUPP)
+	    ("EOVERFLOW"	. ,EOVERFLOW)
+	    ("EOWNERDEAD"	. ,EOWNERDEAD)
+	    ("EPERM"		. ,EPERM)
+	    ("EPFNOSUPPORT"	. ,EPFNOSUPPORT)
+	    ("EPIPE"		. ,EPIPE)
+	    ("EPROTO"		. ,EPROTO)
+	    ("EPROTONOSUPPORT"	. ,EPROTONOSUPPORT)
+	    ("EPROTOTYPE"	. ,EPROTOTYPE)
+	    ("ERANGE"		. ,ERANGE)
+	    ("EREMCHG"		. ,EREMCHG)
+	    ("EREMOTE"		. ,EREMOTE)
+	    ("EREMOTEIO"	. ,EREMOTEIO)
+	    ("ERESTART"		. ,ERESTART)
+	    ("EROFS"		. ,EROFS)
+	    ("ESHUTDOWN"	. ,ESHUTDOWN)
+	    ("ESOCKTNOSUPPORT"	. ,ESOCKTNOSUPPORT)
+	    ("ESPIPE"		. ,ESPIPE)
+	    ("ESRCH"		. ,ESRCH)
+	    ("ESRMNT"		. ,ESRMNT)
+	    ("ESTALE"		. ,ESTALE)
+	    ("ESTRPIPE"		. ,ESTRPIPE)
+	    ("ETIME"		. ,ETIME)
+	    ("ETIMEDOUT"	. ,ETIMEDOUT)
+	    ("ETOOMANYREFS"	. ,ETOOMANYREFS)
+	    ("ETXTBSY"		. ,ETXTBSY)
+	    ("EUCLEAN"		. ,EUCLEAN)
+	    ("EUNATCH"		. ,EUNATCH)
+	    ("EUSERS"		. ,EUSERS)
+	    ("EWOULDBLOCK"	. ,EWOULDBLOCK)
+	    ("EXDEV"		. ,EXDEV)
+	    ("EXFULL"		. ,EXFULL)))
+	(syntax-case stx ()
+	  ((?ctx)
+	   #`(quote #,(datum->syntax #'?ctx (%mk-vector))))))))
+
+  (define ERRNO-VECTOR (make-errno-vector)))
+
+
+;;;; interprocess singnal codes handling
+
+(define (interprocess-signal->string interprocess-signal-code)
+  ;;Convert an  interprocess signal code  as represented by  the (vicare
+  ;;interprocess-signals)  library   into  a  string   representing  the
+  ;;interprocess signal symbol.
+  ;;
+  (define who 'interprocess-signal->string)
+  (with-arguments-validation (who)
+      ((fixnum  interprocess-signal-code))
+    (and (unsafe.fx> interprocess-signal-code 0)
+	 (unsafe.fx< interprocess-signal-code (vector-length INTERPROCESS-SIGNAL-VECTOR))
+	 (vector-ref INTERPROCESS-SIGNAL-VECTOR interprocess-signal-code))))
+
+(let-syntax
+    ((make-interprocess-signal-vector
+      (lambda (stx)
+	(define (%mk-vector)
+	  (let* ((max	(fold-left (lambda (max pair)
+				     (let ((code (cdr pair)))
+				       (cond ((not code)	max)
+					     ((< max code)	code)
+					     (else		max))))
+			  0 interprocess-signal-alist))
+		 (vec.len	(fx+ 1 max))
+		 ;;All the unused positions are set to #f.
+		 (vec	(make-vector vec.len #f)))
+	    (for-each (lambda (pair)
+			(when (cdr pair)
+			  (vector-set! vec (cdr pair) (car pair))))
+	      interprocess-signal-alist)
+	    vec))
+	(define interprocess-signal-alist
+	  `(("SIGFPE"		. ,SIGFPE)
+	    ("SIGILL"		. ,SIGILL)
+	    ("SIGSEGV"		. ,SIGSEGV)
+	    ("SIGBUS"		. ,SIGBUS)
+	    ("SIGABRT"		. ,SIGABRT)
+	    ("SIGIOT"		. ,SIGIOT)
+	    ("SIGTRAP"		. ,SIGTRAP)
+	    ("SIGEMT"		. ,SIGEMT)
+	    ("SIGSYS"		. ,SIGSYS)
+	    ("SIGTERM"		. ,SIGTERM)
+	    ("SIGINT"		. ,SIGINT)
+	    ("SIGQUIT"		. ,SIGQUIT)
+	    ("SIGKILL"		. ,SIGKILL)
+	    ("SIGHUP"		. ,SIGHUP)
+	    ("SIGALRM"		. ,SIGALRM)
+	    ("SIGVRALRM"	. ,SIGVRALRM)
+	    ("SIGPROF"		. ,SIGPROF)
+	    ("SIGIO"		. ,SIGIO)
+	    ("SIGURG"		. ,SIGURG)
+	    ("SIGPOLL"		. ,SIGPOLL)
+	    ("SIGCHLD"		. ,SIGCHLD)
+	    ("SIGCLD"		. ,SIGCLD)
+	    ("SIGCONT"		. ,SIGCONT)
+	    ("SIGSTOP"		. ,SIGSTOP)
+	    ("SIGTSTP"		. ,SIGTSTP)
+	    ("SIGTTIN"		. ,SIGTTIN)
+	    ("SIGTTOU"		. ,SIGTTOU)
+	    ("SIGPIPE"		. ,SIGPIPE)
+	    ("SIGLOST"		. ,SIGLOST)
+	    ("SIGXCPU"		. ,SIGXCPU)
+	    ("SIGXSFZ"		. ,SIGXSFZ)
+	    ("SIGUSR1"		. ,SIGUSR1)
+	    ("SIGUSR2"		. ,SIGUSR2)
+	    ("SIGWINCH"		. ,SIGWINCH)
+	    ("SIGINFO"		. ,SIGINFO)))
+	(syntax-case stx ()
+	  ((?ctx)
+	   #`(quote #,(datum->syntax #'?ctx (%mk-vector))))))))
+  (define INTERPROCESS-SIGNAL-VECTOR (make-interprocess-signal-vector)))
+
+
 ;;;; forking processes
 
 (define-struct wstatus
@@ -115,7 +404,7 @@
   (define who 'system)
   (with-arguments-validation (who)
       ((string  x))
-    (let ((rv (platform-posix-system (string->utf8 x))))
+    (let ((rv (capi.platform-posix-system (string->utf8 x))))
       (if (unsafe.fx< rv 0)
 	  (raise/strerror who rv)
 	rv))))
@@ -126,7 +415,7 @@
   ;;the return value of "fork()";  if an error occurs: return an encoded
   ;;errno value.
   ;;
-  (platform-fork-process))
+  (capi.platform-fork-process))
 
 (define (fork parent-proc child-proc)
   ;;High-level  interface to  the  C function  "fork()".   Create a  new
@@ -138,7 +427,7 @@
   (with-arguments-validation (who)
       ((procedure  parent-proc)
        (procedure  child-proc))
-    (let ((pid (platform-fork-process)))
+    (let ((pid (capi.platform-fork-process)))
       (cond ((unsafe.fx= pid 0)
 	     (child-proc))
 	    ((unsafe.fx< pid 0)
@@ -179,7 +468,7 @@
   (define who 'WIFEXITED)
   (with-arguments-validation (who)
       ((fixnum  status))
-    (platform-posix-WIFEXITED status)))
+    (capi.platform-posix-WIFEXITED status)))
 
 
 ;;;; interprocess signal handling
@@ -198,10 +487,10 @@
 ;;;; process identifiers
 
 (define (getpid)
-  (posix-getpid))
+  (capi.posix-getpid))
 
 (define (getppid)
-  (posix-getpid))
+  (capi.posix-getpid))
 
 
 (define (stat path follow who)

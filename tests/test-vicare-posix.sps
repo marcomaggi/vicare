@@ -27,10 +27,38 @@
 
 (import (rename (vicare) #;(ikarus)
 		(parameterize	parametrise))
+  (vicare errno)
+  (vicare interprocess-signals)
   (checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare POSIX functions\n")
+
+
+(parametrise ((check-test-name	'errno-strings))
+
+  (check
+      (errno->string EPERM)
+    => "EPERM")
+
+  (check
+      (errno->string EEXIST)
+    => "EEXIST")
+
+  #t)
+
+
+(parametrise ((check-test-name	'signal-strings))
+
+  (check
+      (interprocess-signal->string SIGKILL)
+    => "SIGKILL")
+
+  (check
+      (interprocess-signal->string SIGSEGV)
+    => "SIGSEGV")
+
+  #t)
 
 
 (parametrise ((check-test-name	'system))

@@ -143,8 +143,6 @@
     "ikarus.symbol-table.sls"
     "ikarus.codecs.sls"
     "ikarus.bytevectors.sls"
-    "ikarus.errno.sls"
-    "ikarus.interprocess-signals.sls"
     "ikarus.posix.sls"
     "ikarus.io.sls"
     "ikarus.hash-tables.sls"
@@ -545,20 +543,36 @@
     (code?					i v)
     (immediate?					i v)
     (pointer-value				i v)
+
 ;;; POSIX functions
+    (WIFEXITED					i v)
+    (accept-connection				i v)
+    (accept-connection-nonblocking		i v)
+    (close-tcp-server-socket			i v)
+    (errno->string				i v)
     (fork					i v)
-    (system					i v)
+    (getpid					i v)
+    (getppid					i v)
+    (interprocess-signal->string		i v)
+    (kill					i v)
     (process					i v)
     (process*					i v)
     (process-nonblocking			i v)
+    (system					i v)
+    (tcp-connect				i v)
+    (tcp-connect-nonblocking			i v)
+    (tcp-server-socket				i v)
+    (tcp-server-socket-nonblocking		i v)
+    (udp-connect				i v)
+    (udp-connect-nonblocking			i v)
     (waitpid					i v)
-    (wstatus-pid				i v)
     (wstatus-exit-status			i v)
+    (wstatus-pid				i v)
     (wstatus-received-signal			i v)
-    (WIFEXITED					i v)
-    (kill					i v)
-    (getpid					i v)
-    (getppid					i v)
+
+    (register-callback				i v)
+
+;;;
     (apropos					i v)
     (installed-libraries			i v)
     (uninstall-library				i v)
@@ -1697,16 +1711,7 @@
     (&interrupted-rcd)
     (&source-rtd)
     (&source-rcd)
-    (tcp-connect				i v)
-    (udp-connect				i v)
-    (tcp-connect-nonblocking			i v)
-    (udp-connect-nonblocking			i v)
-    (tcp-server-socket				i v)
-    (tcp-server-socket-nonblocking		i v)
-    (accept-connection				i v)
-    (accept-connection-nonblocking		i v)
-    (close-tcp-server-socket			i v)
-    (register-callback				i v)
+
     (input-socket-buffer-size			i v)
     (output-socket-buffer-size			i v)
     (ellipsis-map)
@@ -1728,8 +1733,6 @@
     (free					$for)
     (memcpy					$for)
     (errno					$for)
-    (errno->string				$for)
-    (interprocess-signal->string		$for)
     (pointer-ref-c-signed-char			$for)
     (pointer-ref-c-signed-short			$for)
     (pointer-ref-c-signed-int			$for)

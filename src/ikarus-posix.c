@@ -126,6 +126,10 @@ ikrt_strerror(ikptr negated_errno_code, ikpcb* pcb)
 }
 
 
+/** --------------------------------------------------------------------
+ ** Executing processes.
+ ** ----------------------------------------------------------------- */
+
 ikptr
 ikrt_posix_system (ikptr str)
 /* Interface to "system()". */
@@ -143,6 +147,11 @@ ikptr
 ik_system (ikptr str) {
   return ikrt_posix_system(str);
 }
+
+
+/** --------------------------------------------------------------------
+ ** Process exit status.
+ ** ----------------------------------------------------------------- */
 
 ikptr
 ikrt_posix_WIFEXITED (ikptr fx_status)
