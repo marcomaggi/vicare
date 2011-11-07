@@ -1,16 +1,16 @@
 /*
  *  Ikarus Scheme -- A compiler for R6RS Scheme.
  *  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
- *  
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 3 as
  *  published by the Free Software Foundation.
- *  
+ *
  *  This program is distributed in the hope that it will be useful, but
  *  WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -45,7 +45,7 @@ static int isa_vector(ikptr x){
 
 
 
-static void 
+static void
 verify_code(char* x, char* base, unsigned int* svec, unsigned int* dvec){
   assert(ref(x, 0) == code_tag);
   ikptr rvec = ref(x, disp_code_reloc_vector);
@@ -72,14 +72,14 @@ verify_code(char* x, char* base, unsigned int* svec, unsigned int* dvec){
   }
 }
 
-static void 
+static void
 verify_object(ikptr x, char* base, unsigned int* svec, unsigned int* dvec){
-  x=x; base=base; svec=svec; dvec=dvec; /* no warning */ 
+  x=x; base=base; svec=svec; dvec=dvec; /* no warning */
 }
 
 
 static char*
-verify_code_small(char* p, int s, unsigned int d, 
+verify_code_small(char* p, int s, unsigned int d,
     char* base, unsigned int* svec, unsigned int* dvec){
   char* q = p + pagesize;
   s=s; d=d; /* no warning */
@@ -103,7 +103,7 @@ verify_code_small(char* p, int s, unsigned int d,
 }
 
 static char*
-verify_code_large(char* p, unsigned int s, unsigned int d, 
+verify_code_large(char* p, unsigned int s, unsigned int d,
     char* base, unsigned int* svec, unsigned int* dvec){
   s=s; d=d; /* no warning */
   ikptr fst = ref(p, 0);
@@ -118,14 +118,14 @@ verify_code_large(char* p, unsigned int s, unsigned int d,
 }
 
 static char*
-verify_code_page(char* p, unsigned int s, unsigned int d, 
+verify_code_page(char* p, unsigned int s, unsigned int d,
     char* base, unsigned int* svec, unsigned int* dvec){
   ikptr fst = ref(p, 0);
   fst += 0;
   if(fst != code_tag){
-    fprintf(stderr, "non code object with tag %p found\n", 
+    fprintf(stderr, "non code object with tag %p found\n",
         (void*)(long)fst);
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   int code_size = unfix(ref(p, disp_code_code_size));
   assert(code_size >= 0);
@@ -141,10 +141,10 @@ verify_code_page(char* p, unsigned int s, unsigned int d,
 }
 
 
-      
+
 
 static char*
-verify_pointers_page(char* p, unsigned int s, unsigned int d, 
+verify_pointers_page(char* p, unsigned int s, unsigned int d,
     char* base, unsigned int* svec, unsigned int* dvec){
   s=s; d=d; /* no warning */
   {
@@ -155,7 +155,7 @@ verify_pointers_page(char* p, unsigned int s, unsigned int d,
     }
   }
   //fprintf(stderr, "pointers verif incomplete\n");
-  return p+pagesize; 
+  return p+pagesize;
 }
 
 static char*
@@ -196,7 +196,7 @@ verify_page(char* p, char* base, unsigned int* svec, unsigned int* dvec){
     return p+pagesize;
   }
   fprintf(stderr, "type=0x%08x\n", type);
-  exit(-1);
+  exit(EXIT_FAILURE);
 }
 
 void

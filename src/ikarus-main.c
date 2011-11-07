@@ -64,15 +64,15 @@ ikarus_main (int argc, char** argv, char* boot_file)
     fprintf(stderr, "your CPU does not support the SSE2 instruction set.\n");
     fprintf(stderr, "Refer to the Vicare Scheme User's Guide for the\n");
     fprintf(stderr, "minimum hardware requirements.\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   if(sizeof(mp_limb_t) != sizeof(long int)) {
     fprintf(stderr, "ERROR: limb size does not match\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   if(mp_bits_per_limb != (8*sizeof(long int))) {
     fprintf(stderr, "ERROR: invalid bits_per_limb=%d\n", mp_bits_per_limb);
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   ikpcb* pcb = ik_make_pcb();
   the_pcb = pcb;
@@ -152,7 +152,7 @@ register_handlers() {
   int err = sigaction(SIGINT, &sa, 0);
   if(err) {
     fprintf(stderr, "Sigaction Failed: %s\n", strerror(errno));
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
 
   /* ignore sigpipes */
@@ -163,7 +163,7 @@ register_handlers() {
     int err = sigprocmask(SIG_SETMASK, &set, &set);
     if(err) {
       fprintf(stderr, "Sigprocmask Failed: %s\n", strerror(errno));
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
   }
 }
@@ -192,7 +192,7 @@ register_alt_stack() {
 //  char* stk = ik_mmap(SIGSTKSZ);
   if(stk == (char*)-1) {
     fprintf(stderr, "Cannot maloc an alt stack\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
 
   stack_t sa;
@@ -202,7 +202,7 @@ register_alt_stack() {
   int err = sigaltstack(&sa, 0);
   if(err) {
     fprintf(stderr, "Cannot set alt stack: %s\n", strerror(errno));
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
 #endif
 }

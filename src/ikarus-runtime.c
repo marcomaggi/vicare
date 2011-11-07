@@ -223,7 +223,7 @@ ik_mmap(unsigned long int size){
   /* FIXME: check if in range */
   if(mem == MAP_FAILED){
     fprintf(stderr, "Mapping (0x%lx bytes) failed: %s\n", size, strerror(errno));
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
 #else
   char* mem = win_mmap(mapsize);
@@ -247,7 +247,7 @@ ik_munmap(ikptr mem, unsigned long int size){
   int err = munmap((char*)mem, mapsize);
   if(err != 0){
     fprintf(stderr, "ik_munmap failed: %s\n", strerror(errno));
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
 #else
   win_munmap((char*)mem, mapsize);
@@ -266,7 +266,7 @@ ik_malloc(int size){
   void* x = malloc(size);
   if(x == NULL){
     fprintf(stderr, "vicare error: malloc failed: %s\n", strerror(errno));
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   total_malloced += size;
   return x;
@@ -423,7 +423,7 @@ ik_safe_alloc (ikpcb* pcb, int size)
       return alloc_ptr;
     } else {
       fprintf(stderr, "vicare: BUG: collector did not leave enough room for %d\n", size);
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
   }
 }

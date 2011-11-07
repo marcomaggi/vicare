@@ -1,16 +1,16 @@
 /*
  *  Ikarus Scheme -- A compiler for R6RS Scheme.
  *  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
- *  
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 3 as
  *  published by the Free Software Foundation.
- *  
+ *
  *  This program is distributed in the hope that it will be useful, but
  *  WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -34,7 +34,7 @@ make_symbol_table(ikpcb* pcb){
 
 
 /* one-at-a-time from http://burtleburtle.net/bob/hash/doobs.html */
-static long int 
+static long int
 compute_hash(ikptr str){
   long int len = unfix(ref(str, off_string_length));
   int* data = (int*)(str + off_string_data);
@@ -55,7 +55,7 @@ compute_hash(ikptr str){
   return (h >= 0) ? h : (1 - h);
 }
 
-ikptr 
+ikptr
 ikrt_string_hash(ikptr str){
   return (ikptr)(compute_hash(str) & (~ fx_mask));
 }
@@ -64,15 +64,15 @@ static int strings_eqp(ikptr str1, ikptr str2){
   ikptr len = ref(str1, off_string_length);
   if(len == ref(str2, off_string_length)){
     return
-      (memcmp((char*)(long)str1+off_string_data, 
-              (char*)(long)str2+off_string_data, 
+      (memcmp((char*)(long)str1+off_string_data,
+              (char*)(long)str2+off_string_data,
               unfix(len) * string_char_size)
        == 0);
   }
   return 0;
 }
 
-static ikptr 
+static ikptr
 ik_make_symbol(ikptr str, ikptr ustr, ikpcb* pcb){
   ikptr sym = ik_unsafe_alloc(pcb, symbol_record_size) + record_tag;
   ref(sym, -record_tag) = symbol_record_tag;
@@ -193,19 +193,19 @@ ikrt_get_symbol_table(ikpcb* pcb){
   ikptr st = pcb->symbol_table;
   pcb->symbol_table = false_object;
   if(st == false_object) {
-    fprintf(stderr, "bug in ikarus, attempt to access dead symbol table\n");
-    exit(-1);
+    fprintf(stderr, "Vicare error: attempt to access dead symbol table\n");
+    exit(EXIT_FAILURE);
   }
   return st;
 }
 
 
-ikptr 
+ikptr
 ikrt_string_to_symbol(ikptr str, ikpcb* pcb){
   ikptr st = pcb->symbol_table;
   if(st == false_object) {
-    fprintf(stderr, "bug in ikarus, attempt to access dead symbol table\n");
-    exit(-1);
+    fprintf(stderr, "Vicare error: attempt to access dead symbol table\n");
+    exit(EXIT_FAILURE);
   }
   if(st == 0){
     st = make_symbol_table(pcb);
@@ -214,12 +214,12 @@ ikrt_string_to_symbol(ikptr str, ikpcb* pcb){
   return intern_string(str, st, pcb);
 }
 
-ikptr 
+ikptr
 ik_intern_string(ikptr str, ikpcb* pcb){
   return ikrt_string_to_symbol(str, pcb);
 }
 
-ikptr 
+ikptr
 ikrt_strings_to_gensym(ikptr str, ikptr ustr, ikpcb* pcb){
   ikptr st = pcb->gensym_table;
   if(st == 0){

@@ -407,9 +407,6 @@
 
 ;;;; forking processes
 
-(define-struct wstatus
-  (pid exit-status received-signal))
-
 (define (system x)
   (define who 'system)
   (with-arguments-validation (who)

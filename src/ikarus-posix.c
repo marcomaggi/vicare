@@ -85,7 +85,7 @@ list_to_vec (ikptr x) {
   int n = list_length(x);
   char** vec = malloc((n+1) * sizeof(char*));
   if (vec == NULL)
-    exit(-1);
+    exit(EXIT_FAILURE);
   int i;
   for (i=0; i<n; i++) {
     vec[i] = (char*)(long)ref(x, off_car) + off_bytevector_data;
@@ -514,7 +514,7 @@ ikrt_file_size(ikptr filename, ikpcb* pcb){
       return ull_to_number(s.st_size, pcb);
     } else {
       fprintf(stderr, "vicare internal error: invalid off_t size\n");
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
   } else {
     return ik_errno_to_code();
@@ -644,7 +644,7 @@ ikrt_process(ikptr rvec, ikptr env, ikptr cmd, ikptr argv /*, ikpcb* pcb */){
     fprintf(stderr, "failed to exec %s: %s\n",
         (char*)(long)(cmd+off_bytevector_data),
         strerror(errno));
-    exit(-1);
+    exit(EXIT_FAILURE);
   } else if(pid > 0){
     /* parent */
     ref(rvec,off_vector_data+0*wordsize) = fix(pid);

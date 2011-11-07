@@ -1,16 +1,16 @@
 /*
  *  Ikarus Scheme -- A compiler for R6RS Scheme.
  *  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
- *  
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 3 as
  *  published by the Free Software Foundation.
- *  
+ *
  *  This program is distributed in the hope that it will be useful, but
  *  WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -49,26 +49,26 @@ typedef struct {
 
 static ikptr ik_fasl_read(ikpcb* pcb, fasl_port* p);
 
-void ik_fasl_load(ikpcb* pcb, char* fasl_file){ 
+void ik_fasl_load(ikpcb* pcb, char* fasl_file){
   int fd = open(fasl_file, O_RDONLY);
   if(fd == -1){
-    fprintf(stderr, 
+    fprintf(stderr,
             "ikarus: failed to open boot file \"%s\": %s\n",
             fasl_file,
             strerror(errno));
     ikarus_usage_short();
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   int filesize;
   {
     struct stat buf;
     int err = fstat(fd, &buf);
     if(err != 0){
-      fprintf(stderr,  
+      fprintf(stderr,
               "ikarus: failed to stat \"%s\": %s\n",
-              fasl_file, 
+              fasl_file,
               strerror(errno));
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
     filesize = buf.st_size;
   }
@@ -81,11 +81,11 @@ void ik_fasl_load(ikpcb* pcb, char* fasl_file){
       fd,
       0);
   if(mem == MAP_FAILED){
-    fprintf(stderr, 
+    fprintf(stderr,
             "ikarus: mapping failed for %s: %s\n",
             fasl_file,
             strerror(errno));
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   fasl_port p;
   p.membase = mem;
@@ -106,7 +106,7 @@ void ik_fasl_load(ikpcb* pcb, char* fasl_file){
       int err = munmap(mem, mapsize);
       if(err != 0){
         fprintf(stderr, "Failed to unmap fasl file: %s\n", strerror(errno));
-        exit(-1);
+        exit(EXIT_FAILURE);
       }
       close(fd);
     }
@@ -121,7 +121,7 @@ void ik_fasl_load(ikpcb* pcb, char* fasl_file){
   }
 }
 
-static ikptr 
+static ikptr
 alloc_code(long int size, ikpcb* pcb, fasl_port* p){
   long int asize = align(size);
   ikptr ap = p->code_ap;
@@ -132,7 +132,7 @@ alloc_code(long int size, ikpcb* pcb, fasl_port* p){
   } else if (asize < pagesize){
     ikptr mem = ik_mmap_code(pagesize, 0, pcb);
     long int bytes_remaining = pagesize - asize;
-    long int previous_bytes = 
+    long int previous_bytes =
       ((unsigned long int)p->code_ep) - ((unsigned long int)ap);
     if(bytes_remaining <= previous_bytes){
       return mem;
@@ -160,7 +160,7 @@ ik_relocate_code(ikptr code){
     long int r = unfix(ref(p, 0));
     if(r == 0){
       fprintf(stderr, "unset reloc!\n");
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
     long int tag = r & 3;
     long int code_off = r >> 2;
@@ -168,7 +168,7 @@ ik_relocate_code(ikptr code){
       /* vanilla object */
       ref(data, code_off) = ref(p, wordsize);
       p += (2*wordsize);
-    } 
+    }
     else if(tag == 2){
       /* displaced object */
       long int obj_off = unfix(ref(p, wordsize));
@@ -200,21 +200,21 @@ ik_relocate_code(ikptr code){
         name = (char*)(long) str + off_bytevector_data;
       } else {
         fprintf(stderr, "foreign name is not a bytevector\n");
-        exit(-1);
+        exit(EXIT_FAILURE);
       }
       dlerror();
       void* sym = dlsym(RTLD_DEFAULT, name);
       char* err = dlerror();
       if(err){
         fprintf(stderr, "failed to find foreign name %s: %s\n", name, err);
-        exit(-1);
+        exit(EXIT_FAILURE);
       }
       ref(data,code_off) = (ikptr)sym;
       p += (2*wordsize);
     }
     else {
       fprintf(stderr, "invalid reloc 0x%016lx (tag=%ld)\n", r, tag);
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
   }
 }
@@ -227,7 +227,7 @@ static char fasl_read_byte(fasl_port* p){
     return c;
   } else {
     fprintf(stderr, "fasl_read_byte: read beyond eof\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
 }
 
@@ -237,7 +237,7 @@ static void fasl_read_buf(fasl_port* p, void* buf, int n){
     p->memp += n;
   } else {
     fprintf(stderr, "fasl_read_buf: read beyond eof\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
 }
 typedef struct{
@@ -258,18 +258,18 @@ static ikptr do_read(ikpcb* pcb, fasl_port* p){
     c = fasl_read_byte(p);
     if(idx <= 0){
       fprintf(stderr, "fasl_read: invalid index %d\n", idx);
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
     if(p->marks){
       if(idx >= p->marks_size){
         fprintf(stderr, "BUG: mark too big: %d\n", idx);
-        exit(-1);
+        exit(EXIT_FAILURE);
       }
       if(idx < p->marks_size){
         if(p->marks[idx] != 0){
           fprintf(stderr, "mark %d already set\n", idx);
           ik_print(p->marks[idx]);
-          exit(-1);
+          exit(EXIT_FAILURE);
         }
       }
     }
@@ -392,7 +392,7 @@ static ikptr do_read(ikpcb* pcb, fasl_port* p){
     unsigned char x = (unsigned char) fasl_read_byte(p);
     return int_to_scheme_char(x);
   }
-  else if(c == 'G'){ 
+  else if(c == 'G'){
     /* G is for gensym */
     ikptr pretty = do_read(pcb, p);
     ikptr unique = do_read(pcb, p);
@@ -456,18 +456,18 @@ static ikptr do_read(ikpcb* pcb, fasl_port* p){
     fasl_read_buf(p, &idx, sizeof(int));
     if(idx <= 0){
       fprintf(stderr, "invalid index for ref %d\n", idx);
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
     if(idx >= p->marks_size){
       fprintf(stderr, "invalid index for ref %d\n", idx);
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
     ikptr obj = p->marks[idx];
     if(obj){
       return obj;
     } else {
       fprintf(stderr, "reference to uninitialized mark %d\n", idx);
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
   }
   else if(c == 'v'){
@@ -505,7 +505,7 @@ static ikptr do_read(ikpcb* pcb, fasl_port* p){
     fasl_read_buf(p, &len, sizeof(long int));
     if(len < 0){
       fprintf(stderr, "invalid len=%ld\n", len);
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
     ikptr pair = ik_unsafe_alloc(pcb, pair_size * (len+1)) + pair_tag;
     if(put_mark_index){
@@ -545,9 +545,9 @@ static ikptr do_read(ikpcb* pcb, fasl_port* p){
     }
     if(len & 3){
       fprintf(stderr, "Error in fasl-read: invalid bignum length %ld\n", len);
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
-    unsigned long int tag = bignum_tag | (sign << bignum_sign_shift) | 
+    unsigned long int tag = bignum_tag | (sign << bignum_sign_shift) |
       ((len >> 2) << bignum_length_shift);
     ikptr x = ik_unsafe_alloc(pcb, align(len + disp_bignum_data)) + vector_tag;
     ref(x, -vector_tag) = (ikptr) tag;
@@ -561,7 +561,7 @@ static ikptr do_read(ikpcb* pcb, fasl_port* p){
     ikptr real = do_read(pcb, p);
     ikptr imag = do_read(pcb, p);
     ikptr x;
-    if ((tagof(real) == vector_tag) 
+    if ((tagof(real) == vector_tag)
          && (ref(real, -vector_tag) == flonum_tag)){
       x = ik_unsafe_alloc(pcb, cflonum_size);
       ref(x, 0) = cflonum_tag;;
@@ -581,7 +581,7 @@ static ikptr do_read(ikpcb* pcb, fasl_port* p){
   }
   else {
     fprintf(stderr, "invalid type '%c' (0x%02x) found in fasl file\n", c, c);
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
 }
 
@@ -592,7 +592,7 @@ static ikptr ik_fasl_read(ikpcb* pcb, fasl_port* p){
   fasl_read_buf(p, buf, IK_FASL_HEADER_LEN);
   if(strncmp(buf, IK_FASL_HEADER, IK_FASL_HEADER_LEN) != 0){
     fprintf(stderr, "invalid fasl header\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   return do_read(pcb, p);
 }

@@ -19,7 +19,7 @@ alloc(size_t n, int m) {
   void* x = calloc(n, m);
   if (x == NULL) {
     fprintf(stderr, "ERROR (ikarus): calloc failed!\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   return x;
 }
@@ -31,7 +31,7 @@ scheme_to_ffi_record_type_cast(ikptr vec){
   ikptr lenptr = ref(vec, -vector_tag);
   if (! is_fixnum(lenptr)) {
     fprintf(stderr, "NOT A VECTOR 0x%016lx\n", vec);
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   long n = unfix(lenptr);
   ffi_type* t = alloc(sizeof(ffi_type), 1);
@@ -71,11 +71,11 @@ scheme_to_ffi_type_cast(ikptr nptr){
       case 14: return &ffi_type_pointer;
       default:
         fprintf(stderr, "INVALID ARG %ld", n);
-        exit(-1);
+        exit(EXIT_FAILURE);
     }
   } else {
     fprintf(stderr, "INVALID ARG %ld", nptr);
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
 }
 
@@ -95,7 +95,7 @@ static void
 scheme_to_ffi_record_value_cast(ffi_type* t, ikptr nptr, ikptr p, void* r) {
   if (t->type != FFI_TYPE_STRUCT) {
     fprintf(stderr, "not a struct type\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   ffi_type** ts = t->elements;
   char* buf = r;
@@ -142,11 +142,11 @@ scheme_to_ffi_value_cast(ffi_type* t, ikptr nptr, ikptr p, void* r) {
        { *((void**)r) = (void*)ref(p, off_pointer_data); return; }
       default:
         fprintf(stderr, "INVALID ARG %ld", n);
-        exit(-1);
+        exit(EXIT_FAILURE);
     }
   } else {
     fprintf(stderr, "INVALID TYPE  0x%016lx\n", nptr);
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
 }
 
@@ -170,7 +170,7 @@ ffi_to_scheme_value_cast(int n, void* p, ikpcb* pcb) {
     case 14: return make_pointer((long)*((void**)p), pcb);
     default:
       fprintf(stderr, "INVALID ARG %d", n);
-      exit(-1);
+      exit(EXIT_FAILURE);
   }
 }
 
@@ -303,7 +303,7 @@ ikrt_call_back(ikptr proc, ikpcb* pcb) {
   sk = pcb->next_k - vector_tag;
   if (ref(sk, 0) != system_continuation_tag) {
     fprintf(stderr, "vicare internal error: invalid system cont\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   pcb->next_k = ref(sk, disp_system_continuation_next);
   ref(sk, disp_system_continuation_next) = pcb->next_k;
@@ -364,7 +364,7 @@ ikrt_ffi_call(ikptr data, ikptr argsvec, ikpcb* pcb)  {
   sk = pcb->next_k - vector_tag;
   if (ref(sk, 0) != system_continuation_tag) {
     fprintf(stderr, "vicare internal error: invalid system cont\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   pcb->next_k = ref(sk, disp_system_continuation_next);
   pcb->system_stack = ref(sk, disp_system_continuation_top);
@@ -458,7 +458,7 @@ ikrt_prepare_callback(ikptr data, ikpcb* pcb){
   callback_locative* loc = malloc(sizeof(callback_locative));
   if(!loc) {
     fprintf(stderr, "ERROR: ikarus malloc error\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
 
   ffi_status st =

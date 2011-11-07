@@ -44,7 +44,7 @@ static ikptr
 verify_bignum(ikptr x, char* caller){
   if(tagof(x) != vector_tag){
     fprintf(stderr, "Error in (%s) invalid primary tag 0x%016lx\n", caller, x);
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   ikptr fst = ref(x, -vector_tag);
   long int limb_count = ((unsigned long int) fst) >> bignum_length_shift;
@@ -52,7 +52,7 @@ verify_bignum(ikptr x, char* caller){
     fprintf(stderr,
         "Error in (%s) invalid limb count in fst=0x%016lx\n",
         caller, (long int)fst);
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   int pos;
   if((long int)fst & bignum_sign_mask){
@@ -65,7 +65,7 @@ verify_bignum(ikptr x, char* caller){
   if(last_limb == 0){
     fprintf(stderr,
         "Error in (%s) invalid last limb = 0x%016lx", caller, last_limb);
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   if(limb_count == 1){
     if(pos){
@@ -73,14 +73,14 @@ verify_bignum(ikptr x, char* caller){
         fprintf(stderr,
                 "Error in (%s) should be a positive fixnum: 0x%016lx\n",
                 caller, last_limb);
-        exit(-1);
+        exit(EXIT_FAILURE);
       }
     } else {
       if(last_limb <= most_negative_fixnum){
         fprintf(stderr,
                 "Error in (%s) should be a negative fixnum: 0x%016lx\n",
                 caller, last_limb);
-        exit(-1);
+        exit(EXIT_FAILURE);
       }
     }
   }
@@ -196,7 +196,7 @@ ikrt_fxbnplus(ikptr x, ikptr y, ikpcb* pcb){
                   intx);
       if(borrow){
         fprintf(stderr, "Error: BUG in borrow1 %ld\n", borrow);
-        exit(-1);
+        exit(EXIT_FAILURE);
       }
       long int result_size =
         (ref(r, disp_bignum_data + (limb_count-1)*wordsize))
@@ -232,7 +232,7 @@ ikrt_fxbnplus(ikptr x, ikptr y, ikpcb* pcb){
                   - intx);
       if(borrow){
         fprintf(stderr, "Error: BUG in borrow2\n");
-        exit(-1);
+        exit(EXIT_FAILURE);
       }
       long int result_size =
         (ref(r, disp_bignum_data + (limb_count-1)*wordsize) == 0)
@@ -366,7 +366,7 @@ ikrt_bnbnplus(ikptr x, ikptr y, ikpcb* pcb){
               n2);
     if(burrow){
       fprintf(stderr, "BUG: Burrow error in bnbn+\n");
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
     long int len = n1;
     while(ref(res, disp_bignum_data + (len-1)*wordsize) == 0){
@@ -510,7 +510,7 @@ ikrt_fxbnminus(ikptr x, ikptr y, ikpcb* pcb){
                   intx);
       if(borrow){
         fprintf(stderr, "Error: BUG in borrow3\n");
-        exit(-1);
+        exit(EXIT_FAILURE);
       }
       long int result_size =
         (ref(r, disp_bignum_data + (limb_count-1)*wordsize))
@@ -546,7 +546,7 @@ ikrt_fxbnminus(ikptr x, ikptr y, ikpcb* pcb){
                   - intx);
       if(borrow){
         fprintf(stderr, "Error: BUG in borrow4\n");
-        exit(-1);
+        exit(EXIT_FAILURE);
       }
       long int result_size =
         (ref(r, disp_bignum_data + (limb_count-1)*wordsize) == 0)
@@ -639,7 +639,7 @@ ikrt_bnfxminus(ikptr x, ikptr y, ikpcb* pcb){
                   -inty);
       if(borrow){
         fprintf(stderr, "Error: BUG in borrow5\n");
-        exit(-1);
+        exit(EXIT_FAILURE);
       }
       long int result_size =
         (ref(r, disp_bignum_data + (limb_count-1)*wordsize))
@@ -675,7 +675,7 @@ ikrt_bnfxminus(ikptr x, ikptr y, ikpcb* pcb){
                   inty);
       if(borrow){
         fprintf(stderr, "Error: BUG in borrow6\n");
-        exit(-1);
+        exit(EXIT_FAILURE);
       }
       long int result_size =
         (ref(r, disp_bignum_data + (limb_count-1)*wordsize) == 0)
@@ -812,7 +812,7 @@ ikrt_bnbnminus(ikptr x, ikptr y, ikpcb* pcb){
               n2);
     if(burrow){
       fprintf(stderr, "BUG: Burrow error in bnbn-\n");
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
     long int len = n1;
     while(ref(res, disp_bignum_data + (len-1)*wordsize) == 0){
@@ -1556,7 +1556,7 @@ ikrt_bignum_shift_right(ikptr x, ikptr y, ikpcb* pcb){
           new_limb_count);
       return normalize_bignum(new_limb_count, 1 << bignum_sign_shift, r);
       fprintf(stderr, "not yet for negative bignum_shift\n");
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
   } else {
     if(new_limb_count <= 0){
@@ -1876,7 +1876,7 @@ ikrt_bignum_to_bytevector(ikptr x, ikpcb* pcb){
   long int limb_count = bnfst_limb_count(fst);
   if(limb_count <= 0){
     fprintf(stderr, "BUG: nbtostring: invalid length %ld\n", limb_count);
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   long int sign_bit = bignum_sign_mask & (long int) fst;
   long int nbsize = limb_count * sizeof(mp_limb_t);
@@ -1885,7 +1885,7 @@ ikrt_bignum_to_bytevector(ikptr x, ikpcb* pcb){
   unsigned char* mem = malloc(mem_req);
   if(! mem){
     fprintf(stderr, "Error allocating space for bignum\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   memcpy((char*)(long)mem,
          (char*)(long)x - vector_tag + disp_bignum_data,
