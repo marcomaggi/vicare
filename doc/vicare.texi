@@ -8390,6 +8390,7 @@ the Scheme language compiler @file{ikarus.compiler.sls}.
 * objects fixnum::              Fixnum objects.
 * objects bytevector::          Bytevector objects.
 * objects vector::              Vector objects.
+* objects struct::              Struct objects.
 @end menu
 
 @c page
@@ -8837,7 +8838,7 @@ the vector memory block.
 Example, to fill a vector of 5 items with fixnums we should do:
 
 @example
-ikptr
+void
 some_function (ikptr the_vec)
 @{
   ref(the_vec, off_vector_data+0*wordsize) = fix(10);
@@ -8845,6 +8846,59 @@ some_function (ikptr the_vec)
   ref(the_vec, off_vector_data+2*wordsize) = fix(30);
   ref(the_vec, off_vector_data+3*wordsize) = fix(40);
   ref(the_vec, off_vector_data+4*wordsize) = fix(50);
+@}
+@end example
+@end defmac
+
+@c page
+@node objects struct
+@section Struct objects
+
+
+Data structure objects are allocated on the heap, @ref{syslib structs}
+for details on the binary layout; structures are best allocated at the
+Scheme level using the functions from the @library{vicare} library,
+@ref{iklib structs} for details.  It is sometimes convenient to access a
+structure at the C level, especially when interfacing with foreign
+libraries.
+
+
+@defmac disp_record_rtd
+Displacement of the @rtd{} from the beginning of a structure block.  The
+number of bytes to add to an untagged pointer to structure to get the
+pointer to the first byte in the word holding the @rtd{}.
+@end defmac
+
+
+@defmac disp_record_data
+Displacement of data area.  The number of bytes to add to an untagged
+pointer to structure to get the pointer to the first byte of the first
+field in the data area.
+@end defmac
+
+
+@defmac off_record_rtd
+An integer to add to a tagged structure reference (@code{ikptr}) to
+retrieve the pointer to the first byte of the @rtd{}.
+@end defmac
+
+
+@defmac off_record_data
+An integer to add to a tagged structure reference (@code{ikptr}) to
+retrieve the pointer to the first byte of the first field of the
+structure.
+
+Example, to fill a structure of 5 fields with fixnums we should do:
+
+@example
+void
+some_function (ikptr the_struct)
+@{
+  ref(the_struct, off_vector_data+0*wordsize) = fix(10);
+  ref(the_struct, off_vector_data+1*wordsize) = fix(20);
+  ref(the_struct, off_vector_data+2*wordsize) = fix(30);
+  ref(the_struct, off_vector_data+3*wordsize) = fix(40);
+  ref(the_struct, off_vector_data+4*wordsize) = fix(50);
 @}
 @end example
 @end defmac
