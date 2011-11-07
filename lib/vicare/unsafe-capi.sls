@@ -34,7 +34,9 @@
     ;; processes
     platform-fork-process
     platform-posix-system
-    platform-posix-wifexited
+
+    ;; process exit status
+    platform-posix-WIFEXITED
 
     ;; platform API for file descriptors
     platform-open-input-fd
@@ -62,8 +64,11 @@
 (define-inline (platform-posix-system command-bv)
   (foreign-call "ikrt_posix_system" command-bv))
 
-(define-inline (platform-posix-wifexited fx-status)
-  (foreign-call "ikrt_posix_wifexited" fx-status))
+;;; --------------------------------------------------------------------
+;;; porcess exit status
+
+(define-inline (platform-posix-WIFEXITED fx-status)
+  (foreign-call "ikrt_posix_WIFEXITED" fx-status))
 
 
 ;;;; platform API for file descriptors

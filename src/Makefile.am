@@ -21,7 +21,6 @@ SRCS	= \
 	ikarus-enter.S			\
 	cpu_has_sse2.S			\
 	ikarus-io.c			\
-	ikarus-process.c		\
 	ikarus-getaddrinfo.h		\
 	ikarus-getaddrinfo.c		\
 	ikarus-posix.c			\

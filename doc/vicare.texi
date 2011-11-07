@@ -7392,8 +7392,27 @@ services, both to handle startup and to access the operative system.
 @section C language level @posix{} interface
 
 
+Several files are involved in the full implementation of the @posix{}
+interface:
+
+@example
+src/ikarus-posix.c
+lib/vicare/unsafe-capi.sls
+scheme/ikarus.posix.sls
+scheme/makefile.sps
+tests/test-vicare-posix.sps
+@end example
+
+File pathnames are bytevectors at the C language level and strings at
+the Scheme language level; the conversion is performed with the function
+in the parameter @func{string->filename-func}.
+
+The authoritative documentation for all the interface functions is the
+one of the C library on the platform's operative system; this file gives
+only a brief overview of the features and explains the Scheme
+adaptation.
+
 @menu
-* capi posix intro::            Introduction to the @posix{} @api{}.
 * capi posix adding::           How to add a @posix{} primitive.
 * capi posix errno::            Handling @code{errno} codes.
 * capi posix fd::               File descriptors.
@@ -7405,85 +7424,64 @@ services, both to handle startup and to access the operative system.
 @end menu
 
 @c page
-@node capi posix intro
-@subsection Introduction to the @posix{} @api{}
-
-
-The C language--level implementation is mostly in the files
-@file{src/ikarus-runtime.c} and @file{src/ikarus-io.c}; the
-Scheme--level implementation is in the library @library{ikarus.posix},
-file @file{scheme/ikarus.posix.sls}.
-
-File pathnames are always bytevector objects and the C language level,
-while they are strings at the Scheme language level; the conversion is
-performed with @func{string->utf8}.
-
-@c page
 @node capi posix adding
 @subsection How to add a @posix{} primitive
 
 
 We must remember that the @posix{} primitives end up exported by both
-the @library{vicare} and @library{ikarus} libraries; to add a @posix{}
-primitive we should follow these steps:
+the @library{vicare} and @library{ikarus} libraries; following the
+example of the @cfunc{getpid} function, to add a @posix{} primitive we
+should follow these steps:
 
 @enumerate
 @item
+In the file @file{src/ikarus-posix.c} add the primitive C language
+function:
+
+@example
+ikptr
+ikrt_posix_getpid(void)
+@{
+  int   retval = getpid();
+  return fix(retval);
+@}
+@end example
+
+@item
+In the file @file{lib/vicare/unsafe-capi.sls} add the following macro
+definition to the library:
+
+@example
+(define-inline (posix-getpid)
+  (foreign-call "ikrt_posix_getpid"))
+@end example
+
+@noindent
+and add the binding to the export list.
+
+@item
+In the file @file{scheme/ikarus.posix.sls}: add the binding to both the
+export list of the library and to the @code{except} import list from
+@library{ikarus}; add the function implementation calling a syntax
+associated to the foreign function:
+
+@example
+(define (getpid)
+  (posix-getpid))
+@end example
+
+@item
 In the file @file{scheme/makefile.sps}: add an entry for the function to
-the list bound to @code{identifier->library-map}, respect alphabetic
-order.  For example, for @func{getpid} add:
+the list bound to @code{identifier->library-map} to have the function
+exported by @library{ikarus} and @library{vicare}:
 
 @example
 (getpid         i v)
 @end example
 
 @item
-In the file @file{scheme/ikarus.posix.sls}: add the binding to both the
-export list of @library{ikarus.posix} and to the @code{except} import
-list from @library{ikarus}; add the function implementation calling the
-foreign function.  For example, for @func{getpid} add:
-
-@example
-(define getppid
-  (lambda ()
-    (foreign-call "ikrt_getppid")))
-@end example
-
-@item
-Select an appropriate C language file in the @file{src} subdirectory and
-add the primitive function.  For example, for @func{getpid} in the file
-@file{ikarus-process.c} add:
-
-@example
-ikptr
-ikrt_getpid(void)
-@{
-  return fix(getpid());
-@}
-@end example
-
-@item
-Add a file to the @file{tests} subdirectory with tests for the new
-primitive.  For example, for @func{getpid} add:
-
-@example
-(import (rnrs)
-  (ikarus)
-  (checks))
-
-(check-set-mode! 'report-failed)
-(display "*** testing getpid\n")
-
-(display "result of getpid() is " )
-(display (getpid))
-(newline)
-
-(check
-    (fixnum? (getpid))
-  => #t)
-
-(check-report)
-@end example
+In the file @file{tests/test-vicare-posix.sps} add test cases for the
+function.
 @end enumerate
 
 @c page
@@ -7494,23 +7492,23 @@ primitive.  For example, for @func{getpid} add:
 @value{PRJNAME} makes use of the platform's own @code{errno} codes; they
 are negated to make them different from file descriptors, and so
 distinguishable when used as single return values from C functions, and
-converted to fixnums.
+converted to fixnums.  Example: if the C language code for @code{EPERM}
+is the integer @code{1}, the corresponding Scheme language value is the
+fixnum @code{-1}.
 
 
 @deftypefun ikptr ik_errno_to_code (void)
-Negate the current @code{errno} value and convert it into a fixnum,
-return the result.
+Negate the current @code{errno} value and convert the result into a
+fixnum, return the fixnum.  When an error occurs: many functions call
+this function and return its return value.
 @end deftypefun
 
 
 @deftypefun ikptr ikrt_strerror (ikptr @var{ec}, ikpcb * @var{pcb})
-Interface to the @cfunc{strerror} C function.  @glibcref{Error Messages,
-strerror}.
-
-Convert a negative fixnum, representing a negated @code{errno} code,
+Interface to the C function @cfunc{strerror}, @glibcref{Error Messages,
+strerror}.  Convert a fixnum representing an encoded @code{errno} code
 into a bytevector holding the string message which describes it; return
-a reference to the bytevector.  If @var{ec} is invalid: return
-@code{false_object}.
+a reference to the bytevector; if @var{ec} is invalid: return false.
 @end deftypefun
 
 
@@ -7518,47 +7516,6 @@ a reference to the bytevector.  If @var{ec} is invalid: return
 Return a fixnum representing the negated value of @code{errno} right
 after the last call to a foreign function through the @ffi{}.
 @end deftypefun
-
-
-@ignore
-This is the documentation for the old Ikarus code.
-
-@deftypefun ikptr ik_errno_to_code (void)
-Apply @cfunc{ik_errno_num_to_code} to the current @code{errno} value.
-@end deftypefun
-
-
-@deftypefun ikptr ik_errno_num_to_code (int @var{en})
-Convert the @code{errno} value @var{en} into an internal representation
-as fixnum, then return the fixnum.  If @var{en} is an unknown
-@code{errno} value, return a fixnum representing @math{-99999}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_errno_code_to_name (ikptr @var{ec}, ikpcb * @var{pcb})
-Convert a fixnum, internal, representation of an @code{errno} code into
-a bytevector holding the string representation of that code; return a
-reference to the bytevector.  If @var{ec} is invalid: return
-@code{false_object}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_strerror (ikptr @var{ec}, ikpcb * @var{pcb})
-Interface to the @cfunc{strerror} C function.  @glibcref{Error Messages,
-strerror}.
-
-Convert a fixnum, internal, representation of an @code{errno} code into
-a bytevector holding the string message which describes it; return a
-reference to the bytevector.  If @var{ec} is invalid: return
-@code{false_object}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_last_errno (ikpcb * pcb)
-Return an exact integer representing the value of @code{errno} right
-after the last call to a foreign function through the @ffi{}.
-@end deftypefun
-@end ignore
 
 @c page
 @node capi posix fd
@@ -8167,7 +8124,7 @@ encoded @code{errno} value.
 @end deftypefun
 
 
-@deftypefun ikptr ikrt_posix_wifexited (ikptr @var{fx_status})
+@deftypefun ikptr ikrt_posix_WIFEXITED (ikptr @var{fx_status})
 Interface to the C macro @cfunc{WIFEXITED}, @glibcref{Process Completion
 Status, WIFEXITED}.  @var{fx_status} must be the exit status of a
 proecess, for example the return value of @cfunc{system} or the status

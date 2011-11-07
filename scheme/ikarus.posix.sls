@@ -17,7 +17,10 @@
 
 (library (ikarus.posix)
   (export
+    ;; executing processes
     posix-fork			fork
+
+    ;; process exit status
     waitpid
     WIFEXITED
 
@@ -141,6 +144,9 @@
 	    (else
 	     (parent-proc pid))))))
 
+
+;;;; process exit status
+
 (define waitpid
   ;; If block? is #f and waitpid() would have blocked,
   ;; or if want-error? is #f and there was an error,
@@ -166,11 +172,12 @@
 	  (error who (strerror r) pid))
 	 (else #f)))))))
 
+
 (define (WIFEXITED status)
   (define who 'WIFEXITED)
   (with-arguments-validation (who)
       ((fixnum  status))
-    (platform-posix-wifexited status)))
+    (platform-posix-WIFEXITED status)))
 
 
 ;;;; interprocess signal handling
