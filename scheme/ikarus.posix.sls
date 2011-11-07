@@ -115,9 +115,8 @@
 		  change-mode
 
 		  strerror)
-    (vicare errno)
-    (vicare interprocess-signals)
     (vicare syntactic-extensions)
+    (vicare platform-constants)
     (prefix (vicare unsafe-capi)
 	    capi.)
     (prefix (vicare unsafe-operations)

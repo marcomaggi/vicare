@@ -419,10 +419,19 @@ VICARE_SIGNAL_TEST([SIGWINCH])
 VICARE_SIGNAL_TEST([SIGINFO])
 
 #page
+#### miscellaneous platform constants
+
+AC_DEFUN([VICARE_CONSTANT_TEST],[VICARE_VALUEOF_TEST([$1],[$1])])
+
+VICARE_CONSTANT_TEST([WAIT_ANY])
+VICARE_CONSTANT_TEST([WAIT_MYPGRP])
+
+
+#page
 #### finish
 
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES(Makefile src/Makefile scheme/Makefile doc/Makefile lib/Makefile tests/Makefile lib/vicare/installation-configuration.sls lib/vicare/errno.sls lib/vicare/interprocess-signals.sls)
+AC_CONFIG_FILES(Makefile src/Makefile scheme/Makefile doc/Makefile lib/Makefile tests/Makefile lib/vicare/installation-configuration.sls lib/vicare/platform-constants.sls)
 AC_OUTPUT #(Makefile src/Makefile scheme/Makefile doc/Makefile)
 
 ### end of file

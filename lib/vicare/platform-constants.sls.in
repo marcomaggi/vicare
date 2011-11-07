@@ -1,0 +1,407 @@
+;;;
+;;;Part of: Vicare
+;;;Contents: platform constants
+;;;Date: Mon Nov  7, 2011
+;;;
+;;;Abstract
+;;;
+;;;	Export an  identifier syntax  for each platform  constant.  This
+;;;	library can be used also by Vicare's source code.
+;;;
+;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under the terms of the  GNU General Public License as published by
+;;;the Free Software Foundation, either version 3 of the License, or (at
+;;;your option) any later version.
+;;;
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
+;;;
+;;;You should  have received  a copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+
+
+(library (vicare platform-constants)
+  (export
+
+;;; miscellaneous platform constants
+    WAIT_ANY
+    WAIT_MYPGRP
+
+;;; errno codes
+    errno-code case-errno
+
+    ;; codes
+    E2BIG		EACCES		EADDRINUSE
+    EADDRNOTAVAIL	EADV		EAFNOSUPPORT
+    EAGAIN		EALREADY	EBADE
+    EBADF		EBADFD		EBADMSG
+    EBADR		EBADRQC		EBADSLT
+    EBFONT		EBUSY		ECANCELED
+    ECHILD		ECHRNG		ECOMM
+    ECONNABORTED	ECONNREFUSED	ECONNRESET
+    EDEADLK		EDEADLOCK	EDESTADDRREQ
+    EDOM		EDOTDOT		EDQUOT
+    EEXIST		EFAULT		EFBIG
+    EHOSTDOWN		EHOSTUNREACH	EIDRM
+    EILSEQ		EINPROGRESS	EINTR
+    EINVAL		EIO		EISCONN
+    EISDIR		EISNAM		EKEYEXPIRED
+    EKEYREJECTED	EKEYREVOKED	EL2HLT
+    EL2NSYNC		EL3HLT		EL3RST
+    ELIBACC		ELIBBAD		ELIBEXEC
+    ELIBMAX		ELIBSCN		ELNRNG
+    ELOOP		EMEDIUMTYPE	EMFILE
+    EMLINK		EMSGSIZE	EMULTIHOP
+    ENAMETOOLONG	ENAVAIL		ENETDOWN
+    ENETRESET		ENETUNREACH	ENFILE
+    ENOANO		ENOBUFS		ENOCSI
+    ENODATA		ENODEV		ENOENT
+    ENOEXEC		ENOKEY		ENOLCK
+    ENOLINK		ENOMEDIUM	ENOMEM
+    ENOMSG		ENONET		ENOPKG
+    ENOPROTOOPT		ENOSPC		ENOSR
+    ENOSTR		ENOSYS		ENOTBLK
+    ENOTCONN		ENOTDIR		ENOTEMPTY
+    ENOTNAM		ENOTRECOVERABLE	ENOTSOCK
+    ENOTTY		ENOTUNIQ	ENXIO
+    EOPNOTSUPP		EOVERFLOW	EOWNERDEAD
+    EPERM		EPFNOSUPPORT	EPIPE
+    EPROTO		EPROTONOSUPPORT	EPROTOTYPE
+    ERANGE		EREMCHG		EREMOTE
+    EREMOTEIO		ERESTART	EROFS
+    ESHUTDOWN		ESOCKTNOSUPPORT	ESPIPE
+    ESRCH		ESRMNT		ESTALE
+    ESTRPIPE		ETIME		ETIMEDOUT
+    ETOOMANYREFS	ETXTBSY		EUCLEAN
+    EUNATCH		EUSERS		EWOULDBLOCK
+    EXDEV		EXFULL
+
+;;; interprocess signals
+    ;; program error
+    SIGFPE		SIGILL		SIGSEGV
+    SIGBUS		SIGABRT		SIGIOT
+    SIGTRAP		SIGEMT		SIGSYS
+
+    ;; termination
+    SIGTERM		SIGINT		SIGQUIT
+    SIGKILL		SIGHUP
+
+    ;; alarm
+    SIGALRM		SIGVRALRM	SIGPROF
+
+    ;; asynchronous I/O
+    SIGIO		SIGURG		SIGPOLL
+
+    ;; job control
+    SIGCHLD		SIGCLD		SIGCONT
+    SIGSTOP		SIGTSTP		SIGTTIN
+    SIGTTOU
+
+    ;; operation error
+    SIGPIPE		SIGLOST		SIGXCPU
+    SIGXSFZ
+
+    ;; misc
+    SIGUSR1		SIGUSR2		SIGWINCH
+    SIGINFO
+
+    )
+  (import (ikarus)
+    (only (vicare syntactic-extensions)
+	  define-inline-constant)
+    (prefix (vicare unsafe-operations)
+	    unsafe.))
+
+
+;;;; miscellaneous platform constants
+
+(define-inline-constant WAIT_ANY		@VALUEOF_WAIT_ANY@)
+(define-inline-constant WAIT_MYPGRP		@VALUEOF_WAIT_MYPGRP@)
+
+
+;;;; friendly interface
+
+(define-syntax errno-code
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?code)
+       (identifier? #'?code)
+       (let ((sym (syntax->datum #'?code)))
+	 (define them
+	   '(E2BIG		EACCES		EADDRINUSE
+	     EADDRNOTAVAIL	EADV		EAFNOSUPPORT
+	     EAGAIN		EALREADY	EBADE
+	     EBADF		EBADFD		EBADMSG
+	     EBADR		EBADRQC		EBADSLT
+	     EBFONT		EBUSY		ECANCELED
+	     ECHILD		ECHRNG		ECOMM
+	     ECONNABORTED	ECONNREFUSED	ECONNRESET
+	     EDEADLK		EDEADLOCK	EDESTADDRREQ
+	     EDOM		EDOTDOT		EDQUOT
+	     EEXIST		EFAULT		EFBIG
+	     EHOSTDOWN		EHOSTUNREACH	EIDRM
+	     EILSEQ		EINPROGRESS	EINTR
+	     EINVAL		EIO		EISCONN
+	     EISDIR		EISNAM		EKEYEXPIRED
+	     EKEYREJECTED	EKEYREVOKED	EL2HLT
+	     EL2NSYNC		EL3HLT		EL3RST
+	     ELIBACC		ELIBBAD		ELIBEXEC
+	     ELIBMAX		ELIBSCN		ELNRNG
+	     ELOOP		EMEDIUMTYPE	EMFILE
+	     EMLINK		EMSGSIZE	EMULTIHOP
+	     ENAMETOOLONG	ENAVAIL		ENETDOWN
+	     ENETRESET		ENETUNREACH	ENFILE
+	     ENOANO		ENOBUFS		ENOCSI
+	     ENODATA		ENODEV		ENOENT
+	     ENOEXEC		ENOKEY		ENOLCK
+	     ENOLINK		ENOMEDIUM	ENOMEM
+	     ENOMSG		ENONET		ENOPKG
+	     ENOPROTOOPT	ENOSPC		ENOSR
+	     ENOSTR		ENOSYS		ENOTBLK
+	     ENOTCONN		ENOTDIR		ENOTEMPTY
+	     ENOTNAM		ENOTRECOVERABLE	ENOTSOCK
+	     ENOTTY		ENOTUNIQ	ENXIO
+	     EOPNOTSUPP		EOVERFLOW	EOWNERDEAD
+	     EPERM		EPFNOSUPPORT	EPIPE
+	     EPROTO		EPROTONOSUPPORT	EPROTOTYPE
+	     ERANGE		EREMCHG		EREMOTE
+	     EREMOTEIO		ERESTART	EROFS
+	     ESHUTDOWN		ESOCKTNOSUPPORT	ESPIPE
+	     ESRCH		ESRMNT		ESTALE
+	     ESTRPIPE		ETIME		ETIMEDOUT
+	     ETOOMANYREFS	ETXTBSY		EUCLEAN
+	     EUNATCH		EUSERS		EWOULDBLOCK
+	     EXDEV		EXFULL))
+	 (if (memq sym them)
+	     #'?code
+	   (syntax-violation 'errno-code "invalid symbol as errno code" (syntax->datum stx) sym)))))))
+
+(define-syntax case-errno
+  (syntax-rules (else)
+    ((_ ?errno ((?code0 ?code ...) . ?body) ... (else . ?else-body))
+     (let ((errno ?errno))
+       (cond ((and (unsafe.fx= errno ?code0)
+		   (unsafe.fx= errno ?code)
+		   ...)
+	      . ?body)
+	     ...)))
+    ((_ ((?code0 ?code ...) . ?body) ...)
+     (let ((errno ?errno))
+       (cond ((and (unsafe.fx= errno (errno-code ?code0))
+		   (unsafe.fx= errno (errno-code ?code))
+		   ...)
+	      . ?body)
+	     ...
+	     (else . ?else-body))))
+    ))
+
+
+;;;; errno codes
+
+(define-syntax neg
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?code)
+       (let ((N (syntax->datum #'?code)))
+	 (if (number? N)
+	     (- N)
+	   #f))))))
+
+(define-inline-constant E2BIG		(neg @VALUEOF_E2BIG@))
+(define-inline-constant EACCES		(neg @VALUEOF_EACCES@))
+(define-inline-constant EADDRINUSE	(neg @VALUEOF_EADDRINUSE@))
+(define-inline-constant EADDRNOTAVAIL	(neg @VALUEOF_EADDRNOTAVAIL@))
+(define-inline-constant EADV		(neg @VALUEOF_EADV@))
+(define-inline-constant EAFNOSUPPORT	(neg @VALUEOF_EAFNOSUPPORT@))
+(define-inline-constant EAGAIN		(neg @VALUEOF_EAGAIN@))
+(define-inline-constant EALREADY	(neg @VALUEOF_EALREADY@))
+(define-inline-constant EBADE		(neg @VALUEOF_EBADE@))
+(define-inline-constant EBADF		(neg @VALUEOF_EBADF@))
+(define-inline-constant EBADFD		(neg @VALUEOF_EBADFD@))
+(define-inline-constant EBADMSG		(neg @VALUEOF_EBADMSG@))
+(define-inline-constant EBADR		(neg @VALUEOF_EBADR@))
+(define-inline-constant EBADRQC		(neg @VALUEOF_EBADRQC@))
+(define-inline-constant EBADSLT		(neg @VALUEOF_EBADSLT@))
+(define-inline-constant EBFONT		(neg @VALUEOF_EBFONT@))
+(define-inline-constant EBUSY		(neg @VALUEOF_EBUSY@))
+(define-inline-constant ECANCELED	(neg @VALUEOF_ECANCELED@))
+(define-inline-constant ECHILD		(neg @VALUEOF_ECHILD@))
+(define-inline-constant ECHRNG		(neg @VALUEOF_ECHRNG@))
+(define-inline-constant ECOMM		(neg @VALUEOF_ECOMM@))
+(define-inline-constant ECONNABORTED	(neg @VALUEOF_ECONNABORTED@))
+(define-inline-constant ECONNREFUSED	(neg @VALUEOF_ECONNREFUSED@))
+(define-inline-constant ECONNRESET	(neg @VALUEOF_ECONNRESET@))
+(define-inline-constant EDEADLK		(neg @VALUEOF_EDEADLK@))
+(define-inline-constant EDEADLOCK	(neg @VALUEOF_EDEADLOCK@))
+(define-inline-constant EDESTADDRREQ	(neg @VALUEOF_EDESTADDRREQ@))
+(define-inline-constant EDOM		(neg @VALUEOF_EDOM@))
+(define-inline-constant EDOTDOT		(neg @VALUEOF_EDOTDOT@))
+(define-inline-constant EDQUOT		(neg @VALUEOF_EDQUOT@))
+(define-inline-constant EEXIST		(neg @VALUEOF_EEXIST@))
+(define-inline-constant EFAULT		(neg @VALUEOF_EFAULT@))
+(define-inline-constant EFBIG		(neg @VALUEOF_EFBIG@))
+(define-inline-constant EHOSTDOWN	(neg @VALUEOF_EHOSTDOWN@))
+(define-inline-constant EHOSTUNREACH	(neg @VALUEOF_EHOSTUNREACH@))
+(define-inline-constant EIDRM		(neg @VALUEOF_EIDRM@))
+(define-inline-constant EILSEQ		(neg @VALUEOF_EILSEQ@))
+(define-inline-constant EINPROGRESS	(neg @VALUEOF_EINPROGRESS@))
+(define-inline-constant EINTR		(neg @VALUEOF_EINTR@))
+(define-inline-constant EINVAL		(neg @VALUEOF_EINVAL@))
+(define-inline-constant EIO		(neg @VALUEOF_EIO@))
+(define-inline-constant EISCONN		(neg @VALUEOF_EISCONN@))
+(define-inline-constant EISDIR		(neg @VALUEOF_EISDIR@))
+(define-inline-constant EISNAM		(neg @VALUEOF_EISNAM@))
+(define-inline-constant EKEYEXPIRED	(neg @VALUEOF_EKEYEXPIRED@))
+(define-inline-constant EKEYREJECTED	(neg @VALUEOF_EKEYREJECTED@))
+(define-inline-constant EKEYREVOKED	(neg @VALUEOF_EKEYREVOKED@))
+(define-inline-constant EL2HLT		(neg @VALUEOF_EL2HLT@))
+(define-inline-constant EL2NSYNC	(neg @VALUEOF_EL2NSYNC@))
+(define-inline-constant EL3HLT		(neg @VALUEOF_EL3HLT@))
+(define-inline-constant EL3RST		(neg @VALUEOF_EL3RST@))
+(define-inline-constant ELIBACC		(neg @VALUEOF_ELIBACC@))
+(define-inline-constant ELIBBAD		(neg @VALUEOF_ELIBBAD@))
+(define-inline-constant ELIBEXEC	(neg @VALUEOF_ELIBEXEC@))
+(define-inline-constant ELIBMAX		(neg @VALUEOF_ELIBMAX@))
+(define-inline-constant ELIBSCN		(neg @VALUEOF_ELIBSCN@))
+(define-inline-constant ELNRNG		(neg @VALUEOF_ELNRNG@))
+(define-inline-constant ELOOP		(neg @VALUEOF_ELOOP@))
+(define-inline-constant EMEDIUMTYPE	(neg @VALUEOF_EMEDIUMTYPE@))
+(define-inline-constant EMFILE		(neg @VALUEOF_EMFILE@))
+(define-inline-constant EMLINK		(neg @VALUEOF_EMLINK@))
+(define-inline-constant EMSGSIZE	(neg @VALUEOF_EMSGSIZE@))
+(define-inline-constant EMULTIHOP	(neg @VALUEOF_EMULTIHOP@))
+(define-inline-constant ENAMETOOLONG	(neg @VALUEOF_ENAMETOOLONG@))
+(define-inline-constant ENAVAIL		(neg @VALUEOF_ENAVAIL@))
+(define-inline-constant ENETDOWN	(neg @VALUEOF_ENETDOWN@))
+(define-inline-constant ENETRESET	(neg @VALUEOF_ENETRESET@))
+(define-inline-constant ENETUNREACH	(neg @VALUEOF_ENETUNREACH@))
+(define-inline-constant ENFILE		(neg @VALUEOF_ENFILE@))
+(define-inline-constant ENOANO		(neg @VALUEOF_ENOANO@))
+(define-inline-constant ENOBUFS		(neg @VALUEOF_ENOBUFS@))
+(define-inline-constant ENOCSI		(neg @VALUEOF_ENOCSI@))
+(define-inline-constant ENODATA		(neg @VALUEOF_ENODATA@))
+(define-inline-constant ENODEV		(neg @VALUEOF_ENODEV@))
+(define-inline-constant ENOENT		(neg @VALUEOF_ENOENT@))
+(define-inline-constant ENOEXEC		(neg @VALUEOF_ENOEXEC@))
+(define-inline-constant ENOKEY		(neg @VALUEOF_ENOKEY@))
+(define-inline-constant ENOLCK		(neg @VALUEOF_ENOLCK@))
+(define-inline-constant ENOLINK		(neg @VALUEOF_ENOLINK@))
+(define-inline-constant ENOMEDIUM	(neg @VALUEOF_ENOMEDIUM@))
+(define-inline-constant ENOMEM		(neg @VALUEOF_ENOMEM@))
+(define-inline-constant ENOMSG		(neg @VALUEOF_ENOMSG@))
+(define-inline-constant ENONET		(neg @VALUEOF_ENONET@))
+(define-inline-constant ENOPKG		(neg @VALUEOF_ENOPKG@))
+(define-inline-constant ENOPROTOOPT	(neg @VALUEOF_ENOPROTOOPT@))
+(define-inline-constant ENOSPC		(neg @VALUEOF_ENOSPC@))
+(define-inline-constant ENOSR		(neg @VALUEOF_ENOSR@))
+(define-inline-constant ENOSTR		(neg @VALUEOF_ENOSTR@))
+(define-inline-constant ENOSYS		(neg @VALUEOF_ENOSYS@))
+(define-inline-constant ENOTBLK		(neg @VALUEOF_ENOTBLK@))
+(define-inline-constant ENOTCONN	(neg @VALUEOF_ENOTCONN@))
+(define-inline-constant ENOTDIR		(neg @VALUEOF_ENOTDIR@))
+(define-inline-constant ENOTEMPTY	(neg @VALUEOF_ENOTEMPTY@))
+(define-inline-constant ENOTNAM		(neg @VALUEOF_ENOTNAM@))
+(define-inline-constant ENOTRECOVERABLE	(neg @VALUEOF_ENOTRECOVERABLE@))
+(define-inline-constant ENOTSOCK	(neg @VALUEOF_ENOTSOCK@))
+(define-inline-constant ENOTTY		(neg @VALUEOF_ENOTTY@))
+(define-inline-constant ENOTUNIQ	(neg @VALUEOF_ENOTUNIQ@))
+(define-inline-constant ENXIO		(neg @VALUEOF_ENXIO@))
+(define-inline-constant EOPNOTSUPP	(neg @VALUEOF_EOPNOTSUPP@))
+(define-inline-constant EOVERFLOW	(neg @VALUEOF_EOVERFLOW@))
+(define-inline-constant EOWNERDEAD	(neg @VALUEOF_EOWNERDEAD@))
+(define-inline-constant EPERM		(neg @VALUEOF_EPERM@))
+(define-inline-constant EPFNOSUPPORT	(neg @VALUEOF_EPFNOSUPPORT@))
+(define-inline-constant EPIPE		(neg @VALUEOF_EPIPE@))
+(define-inline-constant EPROTO		(neg @VALUEOF_EPROTO@))
+(define-inline-constant EPROTONOSUPPORT	(neg @VALUEOF_EPROTONOSUPPORT@))
+(define-inline-constant EPROTOTYPE	(neg @VALUEOF_EPROTOTYPE@))
+(define-inline-constant ERANGE		(neg @VALUEOF_ERANGE@))
+(define-inline-constant EREMCHG		(neg @VALUEOF_EREMCHG@))
+(define-inline-constant EREMOTE		(neg @VALUEOF_EREMOTE@))
+(define-inline-constant EREMOTEIO	(neg @VALUEOF_EREMOTEIO@))
+(define-inline-constant ERESTART	(neg @VALUEOF_ERESTART@))
+(define-inline-constant EROFS		(neg @VALUEOF_EROFS@))
+(define-inline-constant ESHUTDOWN	(neg @VALUEOF_ESHUTDOWN@))
+(define-inline-constant ESOCKTNOSUPPORT	(neg @VALUEOF_ESOCKTNOSUPPORT@))
+(define-inline-constant ESPIPE		(neg @VALUEOF_ESPIPE@))
+(define-inline-constant ESRCH		(neg @VALUEOF_ESRCH@))
+(define-inline-constant ESRMNT		(neg @VALUEOF_ESRMNT@))
+(define-inline-constant ESTALE		(neg @VALUEOF_ESTALE@))
+(define-inline-constant ESTRPIPE	(neg @VALUEOF_ESTRPIPE@))
+(define-inline-constant ETIME		(neg @VALUEOF_ETIME@))
+(define-inline-constant ETIMEDOUT	(neg @VALUEOF_ETIMEDOUT@))
+(define-inline-constant ETOOMANYREFS	(neg @VALUEOF_ETOOMANYREFS@))
+(define-inline-constant ETXTBSY		(neg @VALUEOF_ETXTBSY@))
+(define-inline-constant EUCLEAN		(neg @VALUEOF_EUCLEAN@))
+(define-inline-constant EUNATCH		(neg @VALUEOF_EUNATCH@))
+(define-inline-constant EUSERS		(neg @VALUEOF_EUSERS@))
+(define-inline-constant EWOULDBLOCK	(neg @VALUEOF_EWOULDBLOCK@))
+(define-inline-constant EXDEV		(neg @VALUEOF_EXDEV@))
+(define-inline-constant EXFULL		(neg @VALUEOF_EXFULL@))
+
+
+;;;; interprocess signals
+
+;;; program error
+(define-inline-constant SIGFPE		@VALUEOF_SIGFPE@)
+(define-inline-constant SIGILL		@VALUEOF_SIGILL@)
+(define-inline-constant SIGSEGV		@VALUEOF_SIGSEGV@)
+(define-inline-constant SIGBUS		@VALUEOF_SIGBUS@)
+(define-inline-constant SIGABRT		@VALUEOF_SIGABRT@)
+(define-inline-constant SIGIOT		@VALUEOF_SIGIOT@)
+(define-inline-constant SIGTRAP		@VALUEOF_SIGTRAP@)
+(define-inline-constant SIGEMT		@VALUEOF_SIGEMT@)
+(define-inline-constant SIGSYS		@VALUEOF_SIGSYS@)
+
+;;; termination
+(define-inline-constant SIGTERM		@VALUEOF_SIGTERM@)
+(define-inline-constant SIGINT		@VALUEOF_SIGINT@)
+(define-inline-constant SIGQUIT		@VALUEOF_SIGQUIT@)
+(define-inline-constant SIGKILL		@VALUEOF_SIGKILL@)
+(define-inline-constant SIGHUP		@VALUEOF_SIGHUP@)
+
+;;; alarm
+(define-inline-constant SIGALRM		@VALUEOF_SIGALRM@)
+(define-inline-constant SIGVRALRM	@VALUEOF_SIGVRALRM@)
+(define-inline-constant SIGPROF		@VALUEOF_SIGPROF@)
+
+;;; asynchronous I/O
+(define-inline-constant SIGIO		@VALUEOF_SIGIO@)
+(define-inline-constant SIGURG		@VALUEOF_SIGURG@)
+(define-inline-constant SIGPOLL		@VALUEOF_SIGPOLL@)
+
+;;; job control
+(define-inline-constant SIGCHLD		@VALUEOF_SIGCHLD@)
+(define-inline-constant SIGCLD		@VALUEOF_SIGCLD@)
+(define-inline-constant SIGCONT		@VALUEOF_SIGCONT@)
+(define-inline-constant SIGSTOP		@VALUEOF_SIGSTOP@)
+(define-inline-constant SIGTSTP		@VALUEOF_SIGTSTP@)
+(define-inline-constant SIGTTIN		@VALUEOF_SIGTTIN@)
+(define-inline-constant SIGTTOU		@VALUEOF_SIGTTOU@)
+
+;;; operation error
+(define-inline-constant SIGPIPE		@VALUEOF_SIGPIPE@)
+(define-inline-constant SIGLOST		@VALUEOF_SIGLOST@)
+(define-inline-constant SIGXCPU		@VALUEOF_SIGXCPU@)
+(define-inline-constant SIGXSFZ		@VALUEOF_SIGXSFZ@)
+
+;;; misc
+(define-inline-constant SIGUSR1		@VALUEOF_SIGUSR1@)
+(define-inline-constant SIGUSR2		@VALUEOF_SIGUSR2@)
+(define-inline-constant SIGWINCH	@VALUEOF_SIGWINCH@)
+(define-inline-constant SIGINFO		@VALUEOF_SIGINFO@)
+
+
+;;;; done
+
+)
+
+;;; end of file
+;; Local Variables:
+;; mode: scheme
+;; End:

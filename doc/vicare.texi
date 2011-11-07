@@ -5853,7 +5853,17 @@ vicare>
 @chapter The @posix{} interface
 
 
-The @posix{} functions are exported by the @library{ikarus} library.
+The @posix{} functions are exported by the @library{ikarus} and
+@library{vicare} libraries.  The @api{} attempts to create a
+one--to--one Scheme functions mapping towards @posix{} functions,
+keeping the same semantics as much as possible; the platform's own
+documentation is relevant at the Scheme level.
+
+All the constants needed to use the interface are available as
+identifier syntaxes exported by the @library{vicare platform-constants}
+library; if a constant value is not exported file a feature request for
+the project.  If a constant is not defined on a platform: its value is
+set to @false{}.
 
 @menu
 * posix pid::                   Process identifier functions.

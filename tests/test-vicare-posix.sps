@@ -27,8 +27,7 @@
 
 (import (rename (vicare) #;(ikarus)
 		(parameterize	parametrise))
-  (vicare errno)
-  (vicare interprocess-signals)
+  (vicare platform-constants)
   (checks))
 
 (check-set-mode! 'report-failed)
