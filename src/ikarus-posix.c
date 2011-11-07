@@ -159,6 +159,42 @@ ikrt_posix_WIFEXITED (ikptr fx_status)
   int   status = unfix(fx_status);
   return (WIFEXITED(status))? true_object : false_object;
 }
+ikptr
+ikrt_posix_WEXITSTATUS (ikptr fx_status)
+{
+  int   status = unfix(fx_status);
+  return fix(WEXITSTATUS(status));
+}
+ikptr
+ikrt_posix_WIFSIGNALED (ikptr fx_status)
+{
+  int   status = unfix(fx_status);
+  return (WIFSIGNALED(status))? true_object : false_object;
+}
+ikptr
+ikrt_posix_WTERMSIG (ikptr fx_status)
+{
+  int   status = unfix(fx_status);
+  return fix(WTERMSIG(status));
+}
+ikptr
+ikrt_posix_WCOREDUMP (ikptr fx_status)
+{
+  int   status = unfix(fx_status);
+  return (WCOREDUMP(status))? true_object : false_object;
+}
+ikptr
+ikrt_posix_WIFSTOPPED (ikptr fx_status)
+{
+  int   status = unfix(fx_status);
+  return (WIFSTOPPED(status))? true_object : false_object;
+}
+ikptr
+ikrt_posix_WSTOPSIG (ikptr fx_status)
+{
+  int   status = unfix(fx_status);
+  return fix(WSTOPSIG(status));
+}
 
 
 ikptr

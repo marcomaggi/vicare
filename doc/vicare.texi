@@ -5858,7 +5858,7 @@ The @posix{} functions are exported by the @library{ikarus} library.
 @menu
 * posix pid::                   Process identifier functions.
 * posix process::               Spawning processes and the like.
-* posix waitpid::               Waiting for terminated children.
+* posix status::                Process termination status.
 * posix signal::                Delivering signals to processes.
 * posix file::                  Interfacing with the file system.
 * posix dir::                   File system directory inspection.
@@ -5927,8 +5927,8 @@ Example:
 @end defun
 
 @c page
-@node posix waitpid
-@section Waiting for terminated children
+@node posix status
+@section Process termination status.
 
 
 @defun waitpid [@var{pid} [@var{block?} [@var{want-error?}]]]
@@ -6001,33 +6001,62 @@ the following example test killing with a signal:
      (nanosleep 5 0)))
 @end example
 
-@c ------------------------------------------------------------
 
-@subsubheading Status record interface
-
-@ignore
-Notice that in @value{PRJNAME} 1648 the predicate WSTATUS? is not exported from
-the library.  Dunny why.
-@end ignore
+The following functions accept as argument a fixnum representing the
+process termination status, for example the return value of
+@func{system} or the status acquired by @func{waitpid}.
 
 
-@defun wstatus-pid @var{status}
-Return the pid of the process extracting it from @var{status}.
+@defun WIFEXITED @var{status}
+Interface to the C macro @cfunc{WIFEXITED}, @glibcref{Process Completion
+Status, WIFEXITED}.  Return true if the process terminated normally with
+@cfunc{exit}.
 @end defun
 
 
-@defun wstatus-exit-status @var{status}
-Return the exit code of the process extracting it from @var{status}.  If
-the process was stopped by a signal: the return value is @false{}.
+@defun WEXITSTATUS @var{status}
+Interface to the C macro @cfunc{WEXITSTATUS}, @glibcref{Process
+Completion Status, WEXITSTATUS}.  If @func{WIFEXITED} applied to
+@var{status} would return true: return the low--order @math{8} bits from
+the exit status, which is the process exit status selected with
+@cfunc{exit}.
 @end defun
 
 
-@defun wstatus-received-signal @var{status}
-Return a symbol representing the signal that caused the termination of
-the child process.  If no signal was received: return @false{}.
+@defun WIFSIGNALED @var{status}
+Interface to the C macro @cfunc{WIFSIGNALED}, @glibcref{Process
+Completion Status, WIFSIGNALED}.  Return true if the process terminated
+because it received an interprocess signal which was not handled.
 @end defun
 
 
+@defun WTERMSIG @var{status}
+Interface to the C macro @cfunc{WTERMSIG}, @glibcref{Process Completion
+Status, WTERMSIG}.  If @func{WIFSIGNALED} applied to @var{status} would
+return true: return the number of the interprocess signal that
+terminated the process.
+@end defun
+
+
+@defun WCOREDUMP @var{status}
+Interface to the C macro @cfunc{WCOREDUMP}, @glibcref{Process Completion
+Status, WCOREDUMP}.  Return true if the process terminated and produced
+a core dump.
+@end defun
+
+
+@defun WIFSTOPPED @var{status}
+Interface to the C macro @cfunc{WIFSTOPPED}, @glibcref{Process
+Completion Status, WIFSTOPPED}.  Return true if the process is stopped.
+@end defun
+
+
+@defun WSTOPSIG @var{status}
+Interface to the C macro @cfunc{WSTOPSIG}, @glibcref{Process Completion
+Status, WSTOPSIG}.  If @func{WIFSTOPPED} applied to @var{status} would
+return true: return the number of the interprocess signal that caused
+the process to stop.
+@end defun
 
 @c page
 @node posix signal
@@ -7419,6 +7448,7 @@ adaptation.
 * capi posix pid::              Process identifier functions.
 * capi posix files::            File system interface.
 * capi posix exec::             Executing processes.
+* capi posix status::           Process termination status.
 * capi posix time::             Time and date.
 * capi posix env::              Environment variables.
 @end menu
@@ -8123,15 +8153,66 @@ to interpret this value; if an error occurs in @cfunc{system}, return an
 encoded @code{errno} value.
 @end deftypefun
 
+@c page
+@node capi posix status
+@subsection Process termination status
 
-@deftypefun ikptr ikrt_posix_WIFEXITED (ikptr @var{fx_status})
+
+The following functions accept as argument a fixnum representing the
+process termination status, for example the return value of
+@cfunc{system} or the status acquired by @cfunc{waitpid}.
+
+
+@deftypefun ikptr ikrt_posix_WIFEXITED (ikptr @var{status})
 Interface to the C macro @cfunc{WIFEXITED}, @glibcref{Process Completion
-Status, WIFEXITED}.  @var{fx_status} must be the exit status of a
-proecess, for example the return value of @cfunc{system} or the status
-acquired by @cfunc{waitpid}.  Return true if the process terminated
-normally with @cfunc{exit}.
+Status, WIFEXITED}.  Return true if the process terminated normally with
+@cfunc{exit}.
 @end deftypefun
 
+
+@deftypefun ikptr ikrt_posix_WEXITSTATUS (ikptr @var{status})
+Interface to the C macro @cfunc{WEXITSTATUS}, @glibcref{Process
+Completion Status, WEXITSTATUS}.  If @cfunc{WIFEXITED} applied to
+@var{status} would return true: return the low--order @math{8} bits from
+the exit status, which is the process exit status selected with
+@cfunc{exit}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_WIFSIGNALED (ikptr @var{status})
+Interface to the C macro @cfunc{WIFSIGNALED}, @glibcref{Process
+Completion Status, WIFSIGNALED}.  Return true if the process terminated
+because it received an interprocess signal which was not handled.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_WTERMSIG (ikptr @var{status})
+Interface to the C macro @cfunc{WTERMSIG}, @glibcref{Process Completion
+Status, WTERMSIG}.  If @cfunc{WIFSIGNALED} applied to @var{status} would
+return true: return the number of the interprocess signal that
+terminated the process.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_WCOREDUMP (ikptr @var{status})
+Interface to the C macro @cfunc{WCOREDUMP}, @glibcref{Process Completion
+Status, WCOREDUMP}.  Return true if the process terminated and produced
+a core dump.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_WIFSTOPPED (ikptr @var{status})
+Interface to the C macro @cfunc{WIFSTOPPED}, @glibcref{Process
+Completion Status, WIFSTOPPED}.  Return true if the process is stopped.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_WSTOPSIG (ikptr @var{status})
+Interface to the C macro @cfunc{WSTOPSIG}, @glibcref{Process Completion
+Status, WSTOPSIG}.  If @cfunc{WIFSTOPPED} applied to @var{status} would
+return true: return the number of the interprocess signal that caused
+the process to stop.
+@end deftypefun
 
 @c page
 @node capi posix time

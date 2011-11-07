@@ -35,8 +35,14 @@
     platform-fork-process
     platform-posix-system
 
-    ;; process exit status
-    platform-posix-WIFEXITED
+    ;; process termination status
+    posix-WIFEXITED
+    posix-WEXITSTATUS
+    posix-WIFSIGNALED
+    posix-WTERMSIG
+    posix-WCOREDUMP
+    posix-WIFSTOPPED
+    posix-WSTOPSIG
 
     ;; process identifier
     posix-getpid
@@ -68,11 +74,29 @@
 (define-inline (platform-posix-system command-bv)
   (foreign-call "ikrt_posix_system" command-bv))
 
-;;; --------------------------------------------------------------------
-;;; porcess exit status
+
+;;;; porcess termination status
 
-(define-inline (platform-posix-WIFEXITED fx-status)
+(define-inline (posix-WIFEXITED fx-status)
   (foreign-call "ikrt_posix_WIFEXITED" fx-status))
+
+(define-inline (posix-WEXITSTATUS fx-status)
+  (foreign-call "ikrt_posix_WEXITSTATUS" fx-status))
+
+(define-inline (posix-WIFSIGNALED fx-status)
+  (foreign-call "ikrt_posix_WIFSIGNALED" fx-status))
+
+(define-inline (posix-WTERMSIG fx-status)
+  (foreign-call "ikrt_posix_WTERMSIG" fx-status))
+
+(define-inline (posix-WCOREDUMP fx-status)
+  (foreign-call "ikrt_posix_WCOREDUMP" fx-status))
+
+(define-inline (posix-WIFSTOPPED fx-status)
+  (foreign-call "ikrt_posix_WIFSTOPPED" fx-status))
+
+(define-inline (posix-WSTOPSIG fx-status)
+  (foreign-call "ikrt_posix_WSTOPSIG" fx-status))
 
 
 ;;;; process identifier

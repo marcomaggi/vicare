@@ -67,14 +67,62 @@
       (system "echo innocuous output from system call ; exit 0")
     => 0)
 
+  #t)
+
+
+(parametrise ((check-test-name	'termination-status))
+
   (check
-      (let ((status (system "echo innocuous output from system call ; exit 0")))
+      (let ((status (system "exit 0")))
 	(WIFEXITED status))
     => #t)
 
+;;; --------------------------------------------------------------------
+
   (check
-      (system "echo innocuous output from system call ; exit 4")
+      (let ((status (system "exit 0")))
+	(and (WIFEXITED status)
+	     (WEXITSTATUS status)))
+    => 0)
+
+  (check
+      (let ((status (system "exit 1")))
+	(and (WIFEXITED status)
+	     (WEXITSTATUS status)))
     => 1)
+
+  (check
+      (let ((status (system "exit 2")))
+	(and (WIFEXITED status)
+	     (WEXITSTATUS status)))
+    => 2)
+
+  (check
+      (let ((status (system "exit 4")))
+	(and (WIFEXITED status)
+	     (WEXITSTATUS status)))
+    => 4)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((status (system "exit 0")))
+	(WIFSIGNALED status))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((status (system "exit 0")))
+	(WCOREDUMP status))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((status (system "exit 0")))
+	(WIFSTOPPED status))
+    => #f)
 
   #t)
 

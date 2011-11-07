@@ -29,18 +29,23 @@
 
     ;; process exit status
     waitpid
-    WIFEXITED
+    WIFEXITED			WEXITSTATUS
+    WIFSIGNALED			WTERMSIG
+    WCOREDUMP			WIFSTOPPED
+    WSTOPSIG
 
     ;; process identifier
     getpid			getppid
 
-    kill
-    nanosleep
-
+    ;; system environment variables
     getenv			setenv
     unsetenv			env
     environ
 
+    ;; interprocess signals
+    kill
+
+    ;; file system interface
     file-exists?		delete-file
     rename-file			split-file-name
     file-real-path
@@ -59,6 +64,8 @@
 
     change-mode
 
+    nanosleep
+
     strerror
     wstatus-pid			wstatus-exit-status
     wstatus-received-signal)
@@ -75,7 +82,10 @@
 
 		  ;; process exit status
 		  waitpid
-		  WIFEXITED
+		  WIFEXITED			WEXITSTATUS
+		  WIFSIGNALED			WTERMSIG
+		  WCOREDUMP			WIFSTOPPED
+		  WSTOPSIG
 
 		  ;; process identifier
 		  getpid			getppid
@@ -436,7 +446,7 @@
 	     (parent-proc pid))))))
 
 
-;;;; process exit status
+;;;; process termination status
 
 (define waitpid
   ;; If block? is #f and waitpid() would have blocked,
@@ -463,12 +473,21 @@
 	  (error who (strerror r) pid))
 	 (else #f)))))))
 
-
-(define (WIFEXITED status)
-  (define who 'WIFEXITED)
-  (with-arguments-validation (who)
-      ((fixnum  status))
-    (capi.platform-posix-WIFEXITED status)))
+(let-syntax
+    ((define-termination-status (syntax-rules ()
+				  ((_ ?who ?primitive)
+				   (define (?who status)
+				     (define who '?who)
+				     (with-arguments-validation (who)
+					 ((fixnum  status))
+				       (?primitive status)))))))
+  (define-termination-status WIFEXITED		capi.posix-WIFEXITED)
+  (define-termination-status WEXITSTATUS	capi.posix-WEXITSTATUS)
+  (define-termination-status WIFSIGNALED	capi.posix-WIFSIGNALED)
+  (define-termination-status WTERMSIG		capi.posix-WTERMSIG)
+  (define-termination-status WCOREDUMP		capi.posix-WCOREDUMP)
+  (define-termination-status WIFSTOPPED		capi.posix-WIFSTOPPED)
+  (define-termination-status WSTOPSIG		capi.posix-WSTOPSIG))
 
 
 ;;;; interprocess signal handling
