@@ -566,6 +566,7 @@
     (setenv					i v)
     (system					i v)
     (unsetenv					i v)
+    (wait					i v)
     (waitpid					i v)
 
 ;;; Linux functions

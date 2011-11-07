@@ -84,6 +84,28 @@
 	      (exit)))
     => #t)
 
+  #t)
+
+
+(parametrise ((check-test-name	'waiting))
+
+  (check
+      (let ((status (fork (lambda (pid)
+			    (wait))
+			  (lambda ()
+			    (nanosleep 0 1000)
+			    (exit 0)))))
+	(WIFEXITED status))
+    => #t)
+
+  (check
+      (let ((status (fork (lambda (pid)
+			    (waitpid pid 0))
+			  (lambda ()
+			    (nanosleep 0 1000)
+			    (exit 0)))))
+	(WIFEXITED status))
+    => #t)
 
   #t)
 

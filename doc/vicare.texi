@@ -5957,6 +5957,14 @@ constants specifying how to wait for the availability of the status.
 @end defun
 
 
+@defun wait
+Interface to the C function @cfunc{wait}, @glibcref{Process Completion,
+wait}.  Request status informations on any process or group of
+processes.  If successful return a fixnum representing the status; if an
+error occurs: an exception is raised.
+@end defun
+
+
 The following functions accept as argument a fixnum representing the
 process termination status, for example the return value of
 @func{system} or the status acquired by @func{waitpid}.
@@ -8194,6 +8202,14 @@ Completion, waitpid}.  Request status informations on a process or group
 of processes knowing the identifier.  If successful return a fixnum
 representing the status; if an error occurs: return an encoded
 @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_wait (void)
+Interface to the C function @cfunc{wait}, @glibcref{Process Completion,
+wait}.  Request status informations on any process or group of
+processes.  If successful return a fixnum representing the status; if an
+error occurs: return an encoded @code{errno} value.
 @end deftypefun
 
 

@@ -31,7 +31,7 @@
     system
 
     ;; process exit status
-    waitpid
+    waitpid			wait
     WIFEXITED			WEXITSTATUS
     WIFSIGNALED			WTERMSIG
     WCOREDUMP			WIFSTOPPED
@@ -448,6 +448,13 @@
       (if (unsafe.fx< rv 0)
 	  (raise/strerror who rv)
 	rv))))
+
+(define (wait)
+  (define who 'wait)
+  (let ((rv (capi.posix-wait)))
+    (if (unsafe.fx< rv 0)
+	(raise/strerror who rv)
+      rv)))
 
 (let-syntax
     ((define-termination-status (syntax-rules ()

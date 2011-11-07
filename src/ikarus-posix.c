@@ -208,7 +208,7 @@ ikrt_posix_waitpid (ikptr pid, ikptr options)
   errno  = 0;
   retval = waitpid(unfix(pid), &status, unfix(options));
   if (0 <= retval)
-    return fix(retval);
+    return fix(status);
   else
     return ik_errno_to_code();
 }
@@ -216,6 +216,18 @@ ikrt_posix_waitpid (ikptr pid, ikptr options)
 ikptr
 ikrt_waitpid(ikptr rvec, ikptr pid, ikptr block /*, ikpcb* pcb */) {
   return false_object;
+}
+ikptr
+ikrt_posix_wait (void)
+{
+  int   status;
+  pid_t retval;
+  errno  = 0;
+  retval = wait(&status);
+  if (0 <= retval)
+    return fix(status);
+  else
+    return ik_errno_to_code();
 }
 
 ikptr
