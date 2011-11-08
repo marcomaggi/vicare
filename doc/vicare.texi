@@ -8770,21 +8770,28 @@ long int  m = unfix(p);
 @section Bytevector objects
 
 
-Bytevector objects are allocated on the heap; there is no function to
-allocate a bytevector, we have to call @cfunc{ik_safe_alloc} explicitly;
-to perform the allocation we compute the whole size of the bytevector
-data area, add to it room for meta data and finally compute the aligned
-block size:
+Bytevector objects are allocated on the heap using
+@cfunc{ik_safe_alloc}; to perform the allocation we compute the whole
+size of the bytevector data area, add to it room for meta data and
+finally compute the aligned block size:
 
 @example
-ikpcb     pcb = ...;
-long int  requested_size = ...;
-long int  block_size     = disp_bytevector_data + requested_size;
-lont int  aligned_size   = align(block_size);
-ikptr     bv = ik_safe_alloc(pcb, aligned_size) + bytevector_tag;
+ikpcb     pcb        = ...;
+long int  bv_len     = ...;
+long int  block_size = disp_bytevector_data + bv_len + 1;
+lont int  align_size = align(block_size);
+ikptr     bv = ik_safe_alloc(pcb, aligned_size)
+             + bytevector_tag;
 @end example
 
 @noindent
+we have to remember that it is convention of the internal functions of
+@value{PRJNAME} to allocate one byte more than the requested size and to
+set that final byte to zero; whenever the functions modify the contents
+of a bytevector data area, they always set the byte after the last used
+one to zero, to allow for the bytevector to be used as C string.
+@ref{syslib bytevectors} for details on memory layout of bytevectors.
+
 @cfunc{ik_safe_alloc} returns an @code{ikptr} value representing the
 aligned pointer, having the @math{3} least significant bits set to zero;
 we add to it the bytevector tag (an integer value fitting in @math{3}
@@ -8792,21 +8799,34 @@ bits) which allows to recognise bytevectors among all the other built in
 objects.
 
 We have to explicitly store the bytevector length in the memory block as
-a fixnum, so usually a full allocation looks like this:
+a fixnum and set the last byte to zero, so usually a full allocation
+looks like this:
 
 @example
-ikpcb     pcb;
-long int  size;
-ikptr     bv;
-uint8_t * data_area;
+ikptr
+ik_bytevector_alloc (ikpcb * pcb, long int bv_len)
+@{
+  long int  aligned_size;
+  ikptr     bv;
+  char *    data;
+  aligned_size = align(disp_bytevector_data + bv_len + 1);
+  bv           = ik_safe_alloc(pcb, aligned_size)
+                 + bytevector_tag;
+  ref(bv, off_bytevector_length) = fix(bv_len);
+  data = (char *)(long)(bv + off_bytevector_data);
+  data[bv_len] = '\0';
+  return bv;
+@}
+@end example
 
-pcb  = ...;
-size = ...;
-bv   = ik_safe_alloc(pcb, align(disp_bytevector_data+size))
-       + bytevector_tag;
+@noindent
+and to access the data area we do:
 
-ref(bv, off_bytevector_length) = fix(size);
-data_area = bv + off_bytevector_data;
+@example
+ikptr      bv = ...;
+uint8_t *  data_area;
+
+data_area = (uint8_t *)(long)(bv + off_bytevector_data);
 @end example
 
 

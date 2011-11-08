@@ -51,6 +51,8 @@ int     ik_list_length (ikptr x);
 void    ik_list_to_argv (ikptr x, char **argv);
 char**  ik_list_to_vec (ikptr x);
 
+ikptr   ik_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes);
+
 
 
 /** --------------------------------------------------------------------

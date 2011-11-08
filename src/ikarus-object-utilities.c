@@ -82,7 +82,26 @@ ik_list_to_vec (ikptr x)
   return vec;
 }
 
+
+/** --------------------------------------------------------------------
+ ** Scheme bytevector utilities.
+ ** ----------------------------------------------------------------- */
 
-
+ikptr
+ik_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes)
+{
+  long int  aligned_size;
+  ikptr     bv;
+  char *    data;
+  aligned_size = align(disp_bytevector_data
+                       + requested_number_of_bytes
+                       + 1);
+  bv           = ik_safe_alloc(pcb, aligned_size)
+                 + bytevector_tag;
+  ref(bv, off_bytevector_length) = fix(requested_number_of_bytes);
+  data = (char *)(long)(bv + off_bytevector_data);
+  data[requested_number_of_bytes] = '\0';
+  return bv;
+}
 
 /* end of file */
