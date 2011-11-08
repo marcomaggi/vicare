@@ -133,14 +133,17 @@ Notice how the bsd manpages have incorrect type for the handler.
          struct sigaction * restrict oact);
 #endif
 
-void handler(int signo, siginfo_t* info, void* uap) {
+void
+handler (int signo, siginfo_t* info, void* uap)
+{
   signo=signo; info=info; uap=uap; /* no warning */
   the_pcb->engine_counter = fix(-1);
   the_pcb->interrupted = 1;
 }
 
 void
-register_handlers() {
+register_handlers (void)
+{
   struct sigaction sa;
   sa.sa_sigaction = handler;
 #ifdef __CYGWIN__
@@ -150,8 +153,8 @@ register_handlers() {
 #endif
   sigemptyset(&sa.sa_mask);
   int err = sigaction(SIGINT, &sa, 0);
-  if(err) {
-    fprintf(stderr, "Sigaction Failed: %s\n", strerror(errno));
+  if (err) {
+    fprintf(stderr, "Vicare error: sigaction failed: %s\n", strerror(errno));
     exit(EXIT_FAILURE);
   }
 
@@ -161,7 +164,7 @@ register_handlers() {
     sigprocmask(0, 0, &set); /* get the set */
     sigaddset(&set, SIGPIPE);
     int err = sigprocmask(SIG_SETMASK, &set, &set);
-    if(err) {
+    if (err) {
       fprintf(stderr, "Sigprocmask Failed: %s\n", strerror(errno));
       exit(EXIT_FAILURE);
     }
