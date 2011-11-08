@@ -63,7 +63,7 @@ ik_errno_to_code (void)
   return fix(en);
 }
 ikptr
-ikrt_strerror (ikptr negated_errno_code, ikpcb* pcb)
+ikrt_posix_strerror (ikptr negated_errno_code, ikpcb* pcb)
 {
   int   code = - unfix(negated_errno_code);
   errno = 0;
@@ -78,6 +78,12 @@ ikrt_strerror (ikptr negated_errno_code, ikpcb* pcb)
     memcpy((char*)(bv+off_bytevector_data), es, len+1);
     return bv;
   }
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_strerror (ikptr negated_errno_code, ikpcb* pcb)
+{
+  return ikrt_posix_strerror(negated_errno_code, pcb);
 }
 
 
@@ -265,6 +271,38 @@ ikrt_posix_WSTOPSIG (ikptr fx_status)
 {
   int   status = unfix(fx_status);
   return fix(WSTOPSIG(status));
+}
+
+
+/** --------------------------------------------------------------------
+ ** Delivering interprocess signals.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_raise (ikptr fx_signum)
+{
+  int r = raise(unfix(fx_signum));
+  return (0 == r)? fix(0) : ik_errno_to_code();
+}
+ikptr
+ikrt_posix_kill (ikptr fx_pid, ikptr fx_signum)
+{
+  pid_t pid    = unfix(fx_pid);
+  int   signum = unfix(fx_signum);
+  int   r = kill(pid, signum);
+  return (0 == r)? fix(0) : ik_errno_to_code();
+}
+/* FIXME STALE To be removed at the next boot image rotation */
+ikptr
+ikrt_kill (ikptr pid, ikptr sigcode /*, ikpcb* pcb */)
+{
+  return ikrt_posix_kill(pid, sigcode);
+}
+ikptr
+ikrt_posix_pause (void)
+{
+  pause();
+  return void_object;
 }
 
 
@@ -725,90 +763,6 @@ ikrt_process(ikptr rvec, ikptr env, ikptr cmd, ikptr argv /*, ikpcb* pcb */){
   } else {
     return ik_errno_to_code();
   }
-}
-
-typedef struct signal_info {
-  int n;
-  ikptr c;
-} signal_info;
-
-#define signal_info_table_len 28
-
-static signal_info signal_info_table[signal_info_table_len] = {
-  /* Signals from POSIX */
-  {SIGABRT,     fix(1)},
-  {SIGALRM,     fix(2)},
-  {SIGBUS,      fix(3)},
-  {SIGCHLD,     fix(4)},
-  {SIGCONT,     fix(5)},
-  {SIGFPE,      fix(6)},
-  {SIGHUP,      fix(7)},
-  {SIGILL,      fix(8)},
-  {SIGINT,      fix(9)},
-  {SIGKILL,     fix(10)},
-  {SIGPIPE,     fix(11)},
-  {SIGQUIT,     fix(12)},
-  {SIGSEGV,     fix(13)},
-  {SIGSTOP,     fix(14)},
-  {SIGTERM,     fix(15)},
-  {SIGTSTP,     fix(16)},
-  {SIGTTIN,     fix(17)},
-  {SIGTTOU,     fix(18)},
-  {SIGUSR1,     fix(19)},
-  {SIGUSR2,     fix(20)},
-#ifdef SIGPOLL
-  {SIGPOLL,     fix(21)},
-#else
-  {SIGEMT,      fix(21)},
-#endif
-  {SIGPROF,     fix(22)},
-  {SIGSYS,      fix(23)},
-  {SIGTRAP,     fix(24)},
-  {SIGURG,      fix(25)},
-  {SIGVTALRM,   fix(26)},
-  {SIGXCPU,     fix(27)},
-  {SIGXFSZ,     fix(28)}
-};
-
-
-ikptr
-ik_signal_num_to_code(int signum){
-  signal_info* si;
-  int i;
-  for(i=0; i < signal_info_table_len; i++){
-    si = &signal_info_table[i];
-    if(si->n == signum){
-      return si->c;
-    }
-  }
-  fprintf(stderr, "\n*** ik_signal_num_to_code: Don't know signal %d ***\n\n",
-          signum);
-  return fix(99999);
-}
-
-int
-ik_signal_code_to_num(ikptr sigcode){
-  signal_info* si;
-  int i;
-  for(i=0; i < signal_info_table_len; i++){
-    si = &signal_info_table[i];
-    if(si->c == sigcode){
-      return si->n;
-    }
-  }
-  fprintf(stderr, "ik_signal_code_to_num: Don't know code %ld\n",
-          unfix(sigcode));
-  exit(EXIT_FAILURE);
-  return 0;
-}
-
-ikptr
-ikrt_kill(ikptr pid, ikptr sigcode /*, ikpcb* pcb */){
-  int r = kill((pid_t)unfix(pid), ik_signal_code_to_num(sigcode));
-  if(r == 0){
-    return fix(0);
-  }
-  return ik_errno_to_code();
 }
 
 /* end of file */

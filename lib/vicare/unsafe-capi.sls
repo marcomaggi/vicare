@@ -31,6 +31,9 @@
 (library (vicare unsafe-capi)
   (export
 
+    ;; error handling
+    posix-strerror
+
     ;; process identifiers
     posix-getpid		posix-getppid
 
@@ -46,6 +49,10 @@
     posix-WIFSIGNALED		posix-WTERMSIG
     posix-WCOREDUMP		posix-WIFSTOPPED
     posix-WSTOPSIG		linux-WIFCONTINUED
+
+    ;; delivering interprocess signals
+    posix-raise			posix-kill
+    posix-pause
 
     ;; platform API for file descriptors
     platform-open-input-fd
@@ -63,6 +70,13 @@
   (import (ikarus)
     (only (vicare syntactic-extensions)
 	  define-inline))
+
+
+;;;; error handling
+
+(define-inline (posix-strerror errno)
+  (foreign-call "ikrt_posix_strerror" errno))
+
 
 
 ;;;; process identifiers
@@ -126,6 +140,18 @@
 
 (define-inline (linux-WIFCONTINUED status)
   (foreign-call "ikrt_linux_WIFCONTINUED" status))
+
+
+;;;; delivering interprocess signals
+
+(define-inline (posix-raise signum)
+  (foreign-call "ikrt_posix_raise" signum))
+
+(define-inline (posix-kill pid signum)
+  (foreign-call "ikrt_posix_kill" pid signum))
+
+(define-inline (posix-pause)
+  (foreign-call "ikrt_posix_pause"))
 
 
 ;;;; platform API for file descriptors

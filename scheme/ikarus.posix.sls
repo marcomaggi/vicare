@@ -26,6 +26,9 @@
     ;; error handling
     strerror
 
+    ;; process identifier
+    getpid			getppid
+
     ;; executing processes
     posix-fork			fork
     system
@@ -40,16 +43,14 @@
     WCOREDUMP			WIFSTOPPED
     WSTOPSIG
 
-    ;; process identifier
-    getpid			getppid
-
     ;; system environment variables
     getenv			setenv
     unsetenv			env
     environ
 
     ;; interprocess signals
-    kill
+    raise-signal		kill
+    pause
 
     ;; file system interface
     file-exists?		delete-file
@@ -157,6 +158,38 @@
 (define-argument-validation (list-of-strings who obj)
   (for-all string? obj)
   (assertion-violation who "expected list of strings as argument" obj))
+
+
+;;;; errors handling
+
+(define (strerror errno)
+  (define who 'strerror)
+  (with-arguments-validation (who)
+      ((fixnum  errno))
+    (let ((msg (capi.posix-strerror errno)))
+      (if msg
+	  (string-append (errno->string errno) ": " (utf8->string msg))
+	(string-append "unknown errno code " (number->string (- errno)))))))
+
+(define raise/strerror
+  (case-lambda
+   ((who errno-code)
+    (raise/strerror who errno-code #f))
+   ((who errno-code filename)
+    (raise (condition
+	    (make-error)
+	    (make-who-condition who)
+	    (make-message-condition (strerror errno-code))
+	    (if filename
+		(make-i/o-filename-error filename)
+	      (condition)))))))
+
+(define (raise-errno-error who errno . irritants)
+  (raise (condition
+	  (make-error)
+	  (make-who-condition who)
+	  (make-message-condition (strerror errno))
+	  (make-irritants-condition irritants))))
 
 
 ;;;; errno handling
@@ -526,15 +559,25 @@
 
 ;;;; interprocess signal handling
 
+(define (raise-signal signum)
+  (define who 'raise-signal)
+  (with-arguments-validation (who)
+      ((signal	signum))
+    (let ((rv (capi.posix-raise signum)))
+      (when (unsafe.fx< rv 0)
+	(raise-errno-error who rv signum (interprocess-signal->string signum))))))
+
 (define (kill pid signum)
   (define who 'kill)
   (with-arguments-validation (who)
       ((pid	pid)
        (signal	signum))
-    (let ((r (foreign-call "ikrt_kill" pid signum)))
-      (when (unsafe.fx< r 0)
-	(error who (strerror r) pid signum
-	       (interprocess-signal->string signum))))))
+    (let ((rv (capi.posix-kill pid signum)))
+      (when (unsafe.fx< rv 0)
+	(raise-errno-error who rv signum (interprocess-signal->string signum))))))
+
+(define (pause)
+  (capi.posix-pause))
 
 
 (define (stat path follow who)
@@ -872,35 +915,6 @@
 	  (unless (eq? rv #t)
 	    (raise/strerror 'current-directory rv x)))
       (die 'current-directory "not a string" x)))))
-
-(define raise/strerror
-  (case-lambda
-   ((who errno-code)
-    (raise/strerror who errno-code #f))
-   ((who errno-code filename)
-    (raise
-     (condition
-      (make-error)
-      (make-who-condition who)
-      (make-message-condition (strerror errno-code))
-      (if filename
-	  (make-i/o-filename-error filename)
-	(condition)))))))
-
-(define strerror
-  (lambda (errno-code)
-    (define who 'strerror)
-    (unless (fixnum? errno-code)
-      (die who "not a fixnum" errno-code))
-    (let ((emsg (foreign-call "ikrt_strerror" errno-code)))
-      (if emsg
-	  (let ((errno-name (errno->string errno-code)))
-	    #;(assert errno-name)
-	    (format "~a: ~a"
-	      errno-name #;(utf8->string errno-name)
-	      (utf8->string emsg)))
-	(format "Ikarus's ~a: don't know Ikarus errno code ~s"
-	  who errno-code)))))
 
 
 ;;;; done

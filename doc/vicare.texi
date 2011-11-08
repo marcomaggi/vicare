@@ -6069,79 +6069,27 @@ the process to stop.
 @section Delivering signals to processes
 
 
-@cindex @code{SIGABRT}
-@cindex @code{SIGALRM}
-@cindex @code{SIGBUS}
-@cindex @code{SIGCHLD}
-@cindex @code{SIGCONT}
-@cindex @code{SIGFPE}
-@cindex @code{SIGHUP}
-@cindex @code{SIGILL}
-@cindex @code{SIGINT}
-@cindex @code{SIGKILL}
-@cindex @code{SIGPIPE}
-@cindex @code{SIGQUIT}
-@cindex @code{SIGSEGV}
-@cindex @code{SIGSTOP}
-@cindex @code{SIGTERM}
-@cindex @code{SIGTSTP}
-@cindex @code{SIGTTIN}
-@cindex @code{SIGTTOU}
-@cindex @code{SIGUSR1}
-@cindex @code{SIGUSR2}
-@cindex @code{SIGPOLL}
-@cindex @code{SIGPROF}
-@cindex @code{SIGSYS}
-@cindex @code{SIGTRAP}
-@cindex @code{SIGURG}
-@cindex @code{SIGVTALRM}
-@cindex @code{SIGXCPU}
-@cindex @code{SIGXFSZ}
-
-
-@defun kill @var{pid} @var{signame}
-Send the signal selected by @var{signame} to the process or group of
-processes selected by @var{pid}.  Make use of the system @cfunc{kill}
-function.  If an error occurs: an exception is raised.
-
-Following is the meaning of @var{pid}:
-
-@table @code
-@item @var{pid} > 0
-deliver the signal to the process having @var{pid} as identifier;
-
-@item @var{pid} == 0
-deliver the signal to all the process in the group of the sender;
-
-@item @var{pid} == -1
-deliver the signal to all the process having the same effective user
-identifier of the sender; see the whole documentation in the system
-library;
-
-@item @var{pid} < -1
-deliver the signal to all the process in the group having identifier
-equal to the absolute value of @var{pid}.
-@end table
-
-@var{signame} must be a symbol specifying a signal.  Supported signal
-names follow:
-
-@example
-SIGABRT         SIGALRM         SIGBUS
-SIGCHLD         SIGCONT         SIGFPE
-SIGHUP          SIGILL          SIGINT
-SIGKILL         SIGPIPE         SIGQUIT
-SIGSEGV         SIGSTOP         SIGTERM
-SIGTSTP         SIGTTIN         SIGTTOU
-SIGUSR1         SIGUSR2         SIGPOLL
-SIGPROF         SIGSYS          SIGTRAP
-SIGURG          SIGVTALRM       SIGXCPU
-SIGXFSZ
-@end example
-
-@glibcref{Signaling Another Process, Signaling Another Process}@*
-@glibcref{Standard Signals, Standard Signals}
+@defun raise-signal @var{signum}
+Interface to the C function @cfunc{raise}, @glibcref{Signaling Yourself,
+raise}.  Send the selected signal to the calling process.  If successful
+return zero, else raise an exception.
 @end defun
+
+
+@defun kill @var{pid} @var{signum}
+Interface to the C function @cfunc{kill}, @glibcref{Signaling Another
+Process, kill}.  Send the selected signal to selected process.  If
+successful return zero, else raise an exception.
+@end defun
+
+
+@defun pause
+Interface to the C function @cfunc{pause}, @glibcref{Using Pause,
+pause}.  Suspend the process until a signal is received; return the void
+object.
+@end defun
+
+
 
 @c page
 @node posix file
@@ -7532,6 +7480,7 @@ adaptation.
 * capi posix files::            File system interface.
 * capi posix process::          Forking and executing processes.
 * capi posix status::           Process termination status.
+* capi posix signals::          Delivering interprocess signals.
 * capi posix time::             Time and date.
 * capi posix env::              Environment variables.
 @end menu
@@ -8337,6 +8286,32 @@ Status, WSTOPSIG}.  If @cfunc{WIFSTOPPED} applied to @var{status} would
 return true: return the number of the interprocess signal that caused
 the process to stop.
 @end deftypefun
+
+@c page
+@node capi posix signals
+@subsection Delivering interprocess signals
+
+
+@deftypefun ikptr ikrt_posix_raise (ikptr @var{signum})
+Interface to the C function @cfunc{raise}, @glibcref{Signaling Yourself,
+raise}.  Send the selected signal to the calling process.  If successful
+return zero, else return an encoded @code{errno} code.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_kill (ikptr @var{pid}, ikptr @var{signum})
+Interface to the C function @cfunc{kill}, @glibcref{Signaling Another
+Process, kill}.  Send the selected signal to selected process.  If
+successful return zero, else return an encoded @code{errno} code.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_pause (void)
+Interface to the C function @cfunc{pause}, @glibcref{Using Pause,
+pause}.  Suspend the process until a signal is received.  Return the
+void object.
+@end deftypefun
+
 
 @c page
 @node capi posix time
