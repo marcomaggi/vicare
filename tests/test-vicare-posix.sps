@@ -110,6 +110,88 @@
   #t)
 
 
+(parametrise ((check-test-name	'exec))
+
+;;; execv
+
+  (check
+      (fork (lambda (pid)
+	      (let ((status (waitpid pid 0)))
+		(and (WIFEXITED status)
+		     (WEXITSTATUS status))))
+	    (lambda ()
+	      (execv "/bin/ls" '("ls" "Makefile"))
+	      (exit 9)))
+    => 0)
+
+;;; --------------------------------------------------------------------
+;;; execl
+
+  (check
+      (fork (lambda (pid)
+	      (let ((status (waitpid pid 0)))
+		(and (WIFEXITED status)
+		     (WEXITSTATUS status))))
+	    (lambda ()
+	      (execl "/bin/ls" "ls" "Makefile")
+	      (exit 9)))
+    => 0)
+
+;;; --------------------------------------------------------------------
+;;; execve
+
+  (check
+      (fork (lambda (pid)
+	      (let ((status (waitpid pid 0)))
+		(and (WIFEXITED status)
+		     (WEXITSTATUS status))))
+	    (lambda ()
+	      (execve "/bin/ls" '("ls" "Makefile") '("VALUE=123"))
+	      (exit 9)))
+    => 0)
+
+;;; --------------------------------------------------------------------
+;;; execle
+
+  (check
+      (fork (lambda (pid)
+	      (let ((status (waitpid pid 0)))
+		(and (WIFEXITED status)
+		     (WEXITSTATUS status))))
+	    (lambda ()
+	      (execle "/bin/ls" '("ls" "Makefile") "VALUE=123")
+	      (exit 9)))
+    => 0)
+
+;;; --------------------------------------------------------------------
+;;; execvp
+
+  (check
+      (fork (lambda (pid)
+	      (let ((status (waitpid pid 0)))
+		(and (WIFEXITED status)
+		     (WEXITSTATUS status))))
+	    (lambda ()
+	      (execvp "ls" '("ls" "Makefile"))
+	      (exit 9)))
+    => 0)
+
+;;; --------------------------------------------------------------------
+;;; execlp
+
+  (check
+      (fork (lambda (pid)
+	      (let ((status (waitpid pid 0)))
+		(and (WIFEXITED status)
+		     (WEXITSTATUS status))))
+	    (lambda ()
+	      (execlp "ls" "ls" "Makefile")
+	      (exit 9)))
+    => 0)
+
+  #t)
+
+
 (parametrise ((check-test-name	'termination-status))
 
   (check

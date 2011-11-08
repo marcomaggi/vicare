@@ -36,6 +36,8 @@
 
     ;; executing and forking processes
     posix-fork			posix-system
+    posix-execv			posix-execve
+    posix-execvp
 
     ;; process termination status
     posix-waitpid		linux-waitid
@@ -79,6 +81,15 @@
 
 (define-inline (posix-system command-bv)
   (foreign-call "ikrt_posix_system" command-bv))
+
+(define-inline (posix-execv filename-bv argv-list)
+  (foreign-call "ikrt_posix_execv" filename-bv argv-list))
+
+(define-inline (posix-execve filename-bv argv-list env-list)
+  (foreign-call "ikrt_posix_execve" filename-bv argv-list env-list))
+
+(define-inline (posix-execvp filename-bv argv-list)
+  (foreign-call "ikrt_posix_execvp" filename-bv argv-list))
 
 
 ;;;; porcess termination status

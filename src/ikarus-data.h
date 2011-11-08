@@ -16,15 +16,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+/** --------------------------------------------------------------------
+ ** Headers.
+ ** ----------------------------------------------------------------- */
 
-
-#ifndef IKARUS_H
-#define IKARUS_H
+#ifndef IKARUS_DATA_H
+#define IKARUS_DATA_H
 #include "ikarus-getaddrinfo.h"
 
 #include <stdio.h>
 #include <sys/resource.h>
 
+
 extern int total_allocated_pages;
 extern int total_malloced;
 extern int hash_table_count;
@@ -436,4 +440,11 @@ long long extract_num_longlong(ikptr x);
 #define pointer_size          (2 * wordsize)
 #define off_pointer_data      (disp_pointer_data - vector_tag)
 
-#endif
+
+/** --------------------------------------------------------------------
+ ** Done.
+ ** ----------------------------------------------------------------- */
+
+#endif /* ifndef IKARUS_DATA_H */
+
+/* end of file */

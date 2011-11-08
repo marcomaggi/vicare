@@ -31,17 +31,11 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
-#include "ikarus-data.h"
-#include <assert.h>
+#include "ikarus.h"
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <limits.h>
 #include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
 #include <sys/mman.h>
 #include <sys/param.h>
 #include <sys/resource.h>
@@ -58,45 +52,6 @@
 
 
 /** --------------------------------------------------------------------
- ** Prototypes and external definitions.
- ** ----------------------------------------------------------------- */
-
-ikptr ik_errno_to_code (void);
-
-extern char **environ;
-
-
-/** --------------------------------------------------------------------
- ** Scheme values helpers.
- ** ----------------------------------------------------------------- */
-
-static int
-list_length (ikptr x)
-{
-  int n = 0;
-  while (tagof(x) == pair_tag) {
-    n++;
-    x = ref(x, off_cdr);
-  }
-  return n;
-}
-static char**
-list_to_vec (ikptr x) {
-  int n = list_length(x);
-  char** vec = malloc((n+1) * sizeof(char*));
-  if (vec == NULL)
-    exit(EXIT_FAILURE);
-  int i;
-  for (i=0; i<n; i++) {
-    vec[i] = (char*)(long)ref(x, off_car) + off_bytevector_data;
-    x = ref(x, off_cdr);
-  }
-  vec[n] = 0;
-  return vec;
-}
-
-
-/** --------------------------------------------------------------------
  ** Errno handling.
  ** ----------------------------------------------------------------- */
 
@@ -108,7 +63,7 @@ ik_errno_to_code (void)
   return fix(en);
 }
 ikptr
-ikrt_strerror(ikptr negated_errno_code, ikpcb* pcb)
+ikrt_strerror (ikptr negated_errno_code, ikpcb* pcb)
 {
   int   code = - unfix(negated_errno_code);
   errno = 0;
@@ -193,6 +148,45 @@ ikptr
 ikrt_fork (void)
 {
   return ikrt_posix_fork();
+}
+ikptr
+ikrt_posix_execv (ikptr bv_filename, ikptr list_argv)
+{
+  char *  filename = (char *)(long)(bv_filename + off_bytevector_data);
+  int     argc     = ik_list_length(list_argv);
+  char *  argv[1+argc];
+  ik_list_to_argv(list_argv, argv);
+  errno   = 0;
+  execv(filename, argv);
+  /* If we are here: an error occurred. */
+  return ik_errno_to_code();
+}
+ikptr
+ikrt_posix_execve (ikptr bv_filename, ikptr list_argv, ikptr list_envv)
+{
+  char *  filename = (char *)(long)(bv_filename + off_bytevector_data);
+  int     argc = ik_list_length(list_argv);
+  char *  argv[1+argc];
+  int     envc = ik_list_length(list_envv);
+  char *  envv[1+envc];
+  ik_list_to_argv(list_argv, argv);
+  ik_list_to_argv(list_envv, envv);
+  errno  = 0;
+  execve(filename, argv, envv);
+  /* If we are here: an error occurred. */
+  return ik_errno_to_code();
+}
+ikptr
+ikrt_posix_execvp (ikptr bv_filename, ikptr list_argv)
+{
+  char *  filename = (char *)(long)(bv_filename + off_bytevector_data);
+  int     argc = ik_list_length(list_argv);
+  char *  argv[1+argc];
+  ik_list_to_argv(list_argv, argv);
+  errno  = 0;
+  execvp(filename, argv);
+  /* If we are here: an error occurred. */
+  return ik_errno_to_code();
 }
 
 
@@ -697,8 +691,8 @@ ikrt_process(ikptr rvec, ikptr env, ikptr cmd, ikptr argv /*, ikpcb* pcb */){
       if(dup(stderr_fd) == -1) exit(1);
     }
     char *cmd_str = (char*)(long)(cmd+off_bytevector_data);
-    char **env_strs = env == false_object ? 0 : list_to_vec(env);
-    char **argv_strs = list_to_vec(argv);
+    char **env_strs = env == false_object ? 0 : ik_list_to_vec(env);
+    char **argv_strs = ik_list_to_vec(argv);
     if (env_strs && search_p)
       execvpe_(cmd_str, argv_strs, env_strs);
     else if (env_strs)

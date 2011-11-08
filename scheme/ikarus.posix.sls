@@ -29,6 +29,9 @@
     ;; executing processes
     posix-fork			fork
     system
+    execv			execve
+    execl			execle
+    execvp			execlp
 
     ;; process exit status
     waitpid			wait
@@ -150,6 +153,10 @@
 (define-argument-validation (signal who obj)
   (fixnum? obj)
   (assertion-violation who "expected fixnum signal code as argument" obj))
+
+(define-argument-validation (list-of-strings who obj)
+  (for-all string? obj)
+  (assertion-violation who "expected list of strings as argument" obj))
 
 
 ;;;; errno handling
@@ -435,6 +442,50 @@
 	     (raise/strerror who pid))
 	    (else
 	     (parent-proc pid))))))
+
+(define (execl filename . argv)
+  (execv filename argv))
+
+(define (execv filename argv)
+  (define who 'execv)
+  (with-arguments-validation (who)
+      ((string		filename)
+       (list-of-strings	argv))
+    (let ((rv (capi.posix-execv ((string->filename-func) filename)
+				(map string->utf8 argv))))
+      (if (unsafe.fx< rv 0)
+	  (raise/strerror who rv)
+	rv))))
+
+(define (execle filename argv . env)
+  (execve filename argv env))
+
+(define (execve filename argv env)
+  (define who 'execve)
+  (with-arguments-validation (who)
+      ((string		filename)
+       (list-of-strings	argv)
+       (list-of-strings	env))
+    (let ((rv (capi.posix-execve ((string->filename-func) filename)
+				 (map string->utf8 argv)
+				 (map string->utf8 env))))
+      (if (unsafe.fx< rv 0)
+	  (raise/strerror who rv)
+	rv))))
+
+(define (execlp filename . argv)
+  (execvp filename argv))
+
+(define (execvp filename argv)
+  (define who 'execvp)
+  (with-arguments-validation (who)
+      ((string		filename)
+       (list-of-strings	argv))
+    (let ((rv (capi.posix-execvp ((string->filename-func) filename)
+				 (map string->utf8 argv))))
+      (if (unsafe.fx< rv 0)
+	  (raise/strerror who rv)
+	rv))))
 
 
 ;;;; process termination status
