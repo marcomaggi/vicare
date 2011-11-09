@@ -2433,6 +2433,12 @@ descriptor equal to the newly created RTD.
 @end defun
 
 
+@deffn Syntax type-descriptor @meta{name}
+Evaluate to the type descriptor of the data structure @meta{name}, which
+must be the first argument to a previous use of @func{define-struct}.
+@end deffn
+
+
 @defun struct-type-name @var{rtd}
 Return a string represnting the name of structures of type @var{rtd}.
 @end defun
