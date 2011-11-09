@@ -4497,7 +4497,7 @@ example in the previous section):
 
 All the file--related functions defined by @rnrs{6} accept a Scheme
 string as representing a file pathname; internally such string is
-converted to a bytevector to be handed to the underlying operative
+converted to a bytevector to be handed to the underlying operating
 system.  The following bindings are exported by the @library{ikarus}
 library.
 
@@ -5868,7 +5868,7 @@ the project.  If a constant is not defined on a platform: its value is
 set to @false{}.
 
 @menu
-* posix env::                   Operative system environment variables.
+* posix env::                   Operating system environment variables.
 * posix pid::                   Process identifier functions.
 * posix process::               Spawning processes and the like.
 * posix status::                Process termination status.
@@ -6380,12 +6380,12 @@ positive exact integers.  If an error occurs an exception is raised.
 
 
 @menu
-* glibc env::                   Operative system environment variables.
+* glibc env::                   Operating system environment variables.
 @end menu
 
 @c page
 @node glibc env
-@section Operative system environment variables
+@section Operating system environment variables
 
 
 @defun clearenv
@@ -6415,13 +6415,13 @@ On non-Linux platform we must avoid calling these functions, else the
 behaviour is undefined.
 
 @menu
-* linux env::                   Operative system environment variables.
+* linux env::                   Operating system environment variables.
 * linux status::                Process termination status.
 @end menu
 
 @c page
 @node linux env
-@section Operative system environment variables
+@section Operating system environment variables
 
 
 @defun clearenv
@@ -7518,7 +7518,7 @@ Extract the payload bits from a transcoder and return them as fixnum.
 
 The executable @value{EXECUTABLE} defines a number of C language
 functions that can be invoked by compiled code to access various
-services, both to handle startup and to access the operative system.
+services, both to handle startup and to access the operating system.
 
 When on a @gnu{}+Linux system: the Linux specific functions are
 available; when on other systems: calling such functions will terminate
@@ -7552,14 +7552,14 @@ the Scheme language level; the conversion is performed with the function
 in the parameter @func{string->filename-func}.
 
 The authoritative documentation for all the interface functions is the
-one of the C library on the platform's operative system; this file gives
+one of the C library on the platform's operating system; this file gives
 only a brief overview of the features and explains the Scheme
 adaptation.
 
 @menu
 * capi posix adding::           How to add a @posix{} primitive.
 * capi posix errno::            Handling @code{errno} codes.
-* capi posix env::              Operative system environment variables.
+* capi posix env::              Operating system environment variables.
 * capi posix fd::               File descriptors.
 * capi posix pid::              Process identifier functions.
 * capi posix files::            File system interface.
@@ -8520,12 +8520,12 @@ true if the process was resumed by delivery of @code{SIGCONT}.
 
 
 @menu
-* capi glibc env::              Operative system environment variables.
+* capi glibc env::              Operating system environment variables.
 @end menu
 
 @c page
 @node capi glibc env
-@subsection Operative system environment variables
+@subsection Operating system environment variables
 
 
 @deftypefun ikrt ikrt_glibc_clearenv (void)

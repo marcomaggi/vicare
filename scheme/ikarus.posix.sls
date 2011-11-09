@@ -451,7 +451,7 @@
   (define INTERPROCESS-SIGNAL-VECTOR (make-interprocess-signal-vector)))
 
 
-;;;; operative system environment variables
+;;;; operating system environment variables
 
 (define (getenv key)
   (define who 'getenv)

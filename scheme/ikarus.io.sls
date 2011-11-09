@@ -464,7 +464,7 @@
     string->filename-func
     filename->string-func
 
-    ;; spawning operative system processes
+    ;; spawning operating system processes
     process process-nonblocking process*
 
     ;; networking
@@ -572,7 +572,7 @@
 		  string->filename-func
 		  filename->string-func
 
-		  ;; spawning operative system processes
+		  ;; spawning operating system processes
 		  process process-nonblocking process*
 
 		  ;; networking
@@ -1984,7 +1984,7 @@
 ;;Field name: dest
 ;;Accessor name: (cookie-dest COOKIE)
 ;;  If an underlying device exists:  this field holds a reference to it,
-;;  for  example   a  fixnum  representing  an   operative  system  file
+;;  for  example   a  fixnum  representing  an   operating  system  file
 ;;  descriptor.
 ;;
 ;;  If no device exists: this field is set to false.

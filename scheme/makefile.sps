@@ -6,7 +6,7 @@
 ;;;Abstract
 ;;;
 ;;;	This  file  is  an  R6RS-compliant Scheme  program,  using  some
-;;;	Vicare's  extension.   When  run  in the  appropriate  operative
+;;;	Vicare's  extension.   When  run  in the  appropriate  operating
 ;;;	system   environment:    it   rebuilds   Vicare's    boot   file
 ;;;	"vicare.boot".
 ;;;

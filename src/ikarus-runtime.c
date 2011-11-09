@@ -16,33 +16,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+/** --------------------------------------------------------------------
+ ** Headers.
+ ** ----------------------------------------------------------------- */
 
-#include "ikarus-data.h"
-#include <time.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <limits.h>
+#include "ikarus.h"
+#include <dirent.h>
 #include <fcntl.h>
-#include <string.h>
-#include <strings.h>
-#include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include <assert.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <sys/wait.h>
 #include <sys/param.h>
-#include <dirent.h>
-#ifdef __CYGWIN__
-#include "ikarus-winmmap.h"
-#endif
+#include <sys/resource.h>
+#include <sys/time.h>
+#include <sys/wait.h>
 
-ikptr ik_errno_to_code (void);
+
+/** --------------------------------------------------------------------
+ ** Prototypes and internal definitions.
+ ** ----------------------------------------------------------------- */
 
 int total_allocated_pages = 0;
+int total_malloced = 0;
 
 #define segment_size  (pagesize*pagesize/4)
 #define segment_shift (pageshift+pageshift-2)
@@ -51,6 +49,7 @@ int total_allocated_pages = 0;
 ikptr ik_mmap(unsigned long int size);
 void ik_munmap(ikptr mem, unsigned long int size);
 
+
 static void
 extend_table_maybe(ikptr p, unsigned long int size, ikpcb* pcb){
   assert(size == align_to_next_page(size));
@@ -258,8 +257,7 @@ ik_munmap(ikptr mem, unsigned long int size){
 #endif
 }
 
-int total_malloced = 0;
-
+/* end of file */
 
 void*
 ik_malloc(int size){

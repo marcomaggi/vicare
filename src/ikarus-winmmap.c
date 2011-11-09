@@ -15,28 +15,35 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #ifdef __CYGWIN__
 
+
+/** --------------------------------------------------------------------
+ ** Headers.
+ ** ----------------------------------------------------------------- */
 
+#include "ikarus.h"
 #include <sys/mman.h>
 #include <stdio.h>
 #include <strings.h>
 #include <errno.h>
 #include <assert.h>
 
+
+/** --------------------------------------------------------------------
+ ** Internal definitions.
+ ** ----------------------------------------------------------------- */
+
 #define pagesize 4096
 #define pageshift 12
 #define segment_size (16*pagesize)
 #define segment_shift (4+pageshift)
-#include "ikarus-winmmap.h"
-
-/* vim:syntax=c */
 
 static unsigned short* table = 0;
 static char* ap = 0;
 static size_t as = 0;
 
+
 static void*
 do_mmap(size_t n){
   void* x = mmap(0, n, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
@@ -109,3 +116,5 @@ win_mmap(size_t size){
 }
 
 #endif
+
+/* end of file */

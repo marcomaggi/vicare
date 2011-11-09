@@ -34,7 +34,7 @@
     ;; error handling
     posix-strerror
 
-    ;; operative system environment variables
+    ;; operating system environment variables
     posix-getenv		posix-setenv
     posix-unsetenv		posix-environ
     glibc-clearenv
@@ -84,7 +84,7 @@
 
 
 
-;;;; operative system environment variables
+;;;; operating system environment variables
 
 (define-inline (posix-getenv varname-bv)
   (foreign-call "ikrt_posix_getenv" varname-bv))

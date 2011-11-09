@@ -28,7 +28,6 @@ SRCS	= \
 	ikarus-verify-integrity.c	\
 	ikarus-weak-pairs.c		\
 	ikarus-winmmap.c		\
-	ikarus-winmmap.h		\
 	ikarus.h
 
 vicare_SOURCES = $(SRCS) ikarus.c

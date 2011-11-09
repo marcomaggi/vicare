@@ -27,11 +27,11 @@
 
 (library (ikarus.glibc)
   (export
-    ;; operative system environment variables
+    ;; operating system environment variables
     clearenv
     )
   (import (except (ikarus)
-		  ;; operative system environment variables
+		  ;; operating system environment variables
 		  clearenv
 		  )
     (vicare syntactic-extensions)
@@ -85,7 +85,7 @@
   (assertion-violation who "expected fixnum signal code as argument" obj))
 
 
-;;;; operative system environment variables
+;;;; operating system environment variables
 
 (define-for-glibc (clearenv)
   (capi.glibc-clearenv))

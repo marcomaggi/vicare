@@ -28,6 +28,7 @@
 #  include <config.h>
 #endif
 #include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,6 +43,11 @@
  ** ----------------------------------------------------------------- */
 
 extern char **environ;
+
+#ifdef __CYGWIN__
+void    win_munmap(char* addr, size_t size);
+char*   win_mmap(size_t size);
+#endif
 
 int     ikarus_main (int argc, char** argv, char* boot_file);
 
