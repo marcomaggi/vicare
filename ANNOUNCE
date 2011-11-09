@@ -9,9 +9,11 @@ native compiler for R6 Scheme producing single threaded programs running
 on  Intel x86  32-bit processors;  Vicare  is officially  not ready  for
 64-bit machines.  "Vicare" is pronounced the etruscan way.
 
-  The latest version of this package can be downloaded from Github:
+  The latest  version of this package  can be downloaded  from Github or
+Google Code:
 
             <http://github.com/marcomaggi/vicare/downloads>
+	<http://code.google.com/p/vicare-scheme/downloads/list>
 
 the home page of the Vicare project is at:
 
