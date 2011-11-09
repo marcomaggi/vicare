@@ -595,6 +595,7 @@ Trademarks used herein are the property of their respective owners.
 * using::                       Using the program.
 * iklib::                       Extensions library.
 * posix::                       The @posix{} interface.
+* glibc::                       The @gnu{} C Library interface.
 * linux::                       The @gnu{}+Linux interface.
 * syslib::                      Low level, fast, unsafe operations.
 * capi::                        C language programming interface.
@@ -6371,6 +6372,26 @@ Suspend the process for the selected time; it makes use of the system
 positive exact integers.  If an error occurs an exception is raised.
 
 @glibcref{Sleeping, Sleeping}
+@end defun
+
+@c page
+@node glibc
+@chapter The @gnu{} C Library interface
+
+
+@menu
+* glibc env::                   Operative system environment variables.
+@end menu
+
+@c page
+@node glibc env
+@section Operative system environment variables
+
+
+@defun clearenv
+Interface to the C function @cfunc{clearenv}, @glibcref{Environment
+Access, clearenv}.  Remove all the entries from the environment.  Return
+unspecified values.
 @end defun
 
 @c page
