@@ -60,6 +60,90 @@
   #t)
 
 
+(parametrise ((check-test-name	'environ))
+
+  (check
+      (getenv "CIAO-CIAO-CIAO-MARE")
+    => #f)
+
+  (check
+      (let ()
+	(setenv "CIAO" "" #t)
+	(getenv "CIAO"))
+    => "")
+
+  (check
+      (let ()
+	(unsetenv "CIAO")
+	(setenv "CIAO" "fusilli" #t)
+	(getenv "CIAO"))
+    => "fusilli")
+
+  (check
+      (let ()
+	(unsetenv "CIAO")
+	(setenv "CIAO" "fusilli" #t)
+	(setenv "CIAO" "spaghetti" #f)
+	(getenv "CIAO"))
+    => "fusilli")
+
+  (check
+      (let ()
+	(unsetenv "SALUT")
+	(setenv "SALUT" "fusilli" #t)
+	(setenv "SALUT" "fusilli" #f)
+	(getenv "SALUT"))
+    => "fusilli")
+
+;;; --------------------------------------------------------------------
+
+;;;  (pretty-print (environ))
+;;;  (pretty-print (hashtable-keys (environ-table)))(newline)
+
+  (check
+      (let ((table (environ-table)))
+	(hashtable-contains? table "PATH"))
+    => #t)
+
+  (check
+      (hashtable-contains? (environ->table (table->environ (environ->table (environ)))) "PATH")
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (begin
+	(setenv "CIAO" "ciao" #t)
+	(unsetenv "CIAO")
+	(getenv "CIAO"))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  ;; (check
+  ;;     (begin
+  ;; 	(clearenv)
+  ;; 	(putenv* 'CIAO "ciao")
+  ;; 	(getenv 'CIAO))
+  ;;   => "ciao")
+
+  ;; (check
+  ;;     (begin
+  ;; 	(clearenv)
+  ;; 	(putenv "CIAO=ciao")
+  ;; 	(getenv 'CIAO))
+  ;;   => "ciao")
+
+  ;; (check
+  ;;     (guard (E ((assertion-violation? E)
+  ;; 		 #t)
+  ;; 		(else (condition-message E)))
+  ;; 	(putenv 'CIAO "ciao"))
+  ;;   => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'system))
 
   (check

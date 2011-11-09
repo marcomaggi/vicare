@@ -306,6 +306,91 @@ ikrt_posix_pause (void)
 }
 
 
+/** --------------------------------------------------------------------
+ ** Operative system environment variables.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_getenv (ikptr bv, ikpcb* pcb)
+{
+  char * v = getenv((char*)(long)(bv + off_bytevector_data));
+  if (v) {
+    long int n = strlen(v);
+    ikptr s = ik_safe_alloc(pcb, align(n+disp_bytevector_data+1))
+      + bytevector_tag;
+    ref(s, -bytevector_tag) = fix(n);
+    memcpy((char*)(long)(s+off_bytevector_data), v, n+1);
+    return s;
+  } else {
+    return false_object;
+  }
+}
+ikptr
+ikrt_posix_setenv (ikptr key, ikptr val, ikptr overwrite)
+{
+  int err = setenv((char*)(key+off_bytevector_data),
+                   (char*)(val+off_bytevector_data),
+                   overwrite!=false_object);
+  return (err)? false_object : true_object;
+}
+ikptr
+ikrt_posix_unsetenv (ikptr key)
+{
+#if (1 == UNSETENV_HAS_RETURN_VALUE)
+  int rv = unsetenv((char*)(key+off_bytevector_data));
+  return (0 == rv)? true_object : false_object;
+#else
+  unsetenv((char*)(key+off_bytevector_data));
+  return true_object;
+#endif
+}
+ikptr
+ikrt_posix_environ (ikpcb* pcb)
+{
+  char **       es = environ;
+  int           i;
+  char *        e;
+  ikptr         ac = null_object;
+  pcb->root0 = &ac;
+  for (i=0; (e=es[i]); i++) {
+    long int bv_len = strlen(e);
+    ikptr    s = ik_safe_alloc(pcb, align(bv_len+disp_bytevector_data+1)) + bytevector_tag;
+    ref(s, off_bytevector_length) = fix(bv_len);
+    memcpy((char*)(long)(s+off_bytevector_data), e, bv_len+1);
+    pcb->root1 = &s;
+    ikptr p = ik_safe_alloc(pcb, pair_size) + pair_tag;
+    pcb->root1 = 0;
+    ref(p, off_cdr) = ac;
+    ref(p, off_car) = s;
+    ac = p;
+  }
+  pcb->root0 = 0;
+  return ac;
+}
+
+/* FIXME STALE To be removed after the next boot image rotation. */
+ikptr
+ikrt_getenv (ikptr bv, ikpcb* pcb)
+{
+  return ikrt_posix_getenv (bv, pcb);
+}
+ikptr
+ikrt_setenv (ikptr key, ikptr val, ikptr overwrite)
+{
+  return ikrt_posix_setenv (key, val, overwrite);
+}
+ikptr
+ikrt_unsetenv (ikptr key)
+{
+  return ikrt_posix_unsetenv (key);
+}
+ikptr
+ikrt_environ (ikpcb* pcb)
+{
+  return ikrt_posix_environ (pcb);
+}
+
+
 ikptr
 ikrt_stat (ikptr filename, ikptr follow /*, ikpcb* pcb */)
 {
@@ -463,65 +548,6 @@ ikrt_gmt_offset(ikptr t){
   */
 }
 
-
-ikptr
-ikrt_getenv(ikptr bv, ikpcb* pcb){
-  char* v = getenv((char*)(long)(bv + off_bytevector_data));
-  if(v){
-    long int n = strlen(v);
-    ikptr s = ik_safe_alloc(pcb, align(n+disp_bytevector_data+1))
-              + bytevector_tag;
-    ref(s, -bytevector_tag) = fix(n);
-    memcpy((char*)(long)(s+off_bytevector_data), v, n+1);
-    return s;
-  }
-  else {
-    return false_object;
-  }
-}
-
-ikptr
-ikrt_setenv(ikptr key, ikptr val, ikptr overwrite){
-  int err = setenv((char*)(key+off_bytevector_data),
-                   (char*)(val+off_bytevector_data),
-                   overwrite!=false_object);
-  if(err){
-    return false_object;
-  } else {
-    return true_object;
-  }
-}
-
-ikptr
-ikrt_unsetenv(ikptr key){
-  unsetenv((char*)(key+off_bytevector_data));
-  return void_object;
-}
-
-
-
-ikptr
-ikrt_environ(ikpcb* pcb){
-  char** es = environ;
-  int i; char* e;
-  ikptr ac = null_object;
-  pcb->root0 = &ac;
-  for(i=0; (e=es[i]); i++){
-    long int n = strlen(e);
-    ikptr s = ik_safe_alloc(pcb, align(n+disp_bytevector_data+1))
-      + bytevector_tag;
-    ref(s, -bytevector_tag) = fix(n);
-    memcpy((char*)(long)(s+off_bytevector_data), e, n+1);
-    pcb->root1 = &s;
-    ikptr p = ik_safe_alloc(pcb, pair_size) + pair_tag;
-    pcb->root1 = 0;
-    ref(p, off_cdr) = ac;
-    ref(p, off_car) = s;
-    ac = p;
-  }
-  pcb->root0 = 0;
-  return ac;
-}
 
 ikptr
 ikrt_exit(ikptr status, ikpcb* pcb){

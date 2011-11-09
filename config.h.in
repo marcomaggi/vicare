@@ -20,6 +20,9 @@
 /* Define to 1 if you have the `bzero' function. */
 #undef HAVE_BZERO
 
+/* Define to 1 if you have the `clearenv' function. */
+#undef HAVE_CLEARENV
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
@@ -199,6 +202,9 @@
 
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
 #undef TM_IN_SYS_TIME
+
+/* whether the function unsetenv has a return value */
+#undef UNSETENV_HAS_RETURN_VALUE
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */

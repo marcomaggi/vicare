@@ -127,7 +127,7 @@ AC_FUNC_MMAP
 AC_FUNC_STAT
 AC_FUNC_STRFTIME
 AC_FUNC_STRTOD
-AC_CHECK_FUNCS([sigaltstack bzero gettimeofday memmove memset munmap setenv sqrt strerror getaddrinfo])
+AC_CHECK_FUNCS([sigaltstack bzero gettimeofday memmove memset munmap setenv clearenv sqrt strerror getaddrinfo])
 
 AC_CACHE_SAVE
 
@@ -456,6 +456,25 @@ dnl VICARE_CONSTANT_TEST([__WALL])
 dnl VICARE_CONSTANT_TEST([__WNOTHREAD])
 
 AC_CACHE_SAVE
+
+#page
+#### tests for specific features
+
+AC_CACHE_CHECK([if unsetenv has return value],
+  [vicare_cv_UNSETENV_HAS_RETURN_VALUE],
+  [AC_COMPILE_IFELSE([AC_LANG_SOURCE([AC_INCLUDES_DEFAULT
+int main (void)
+{
+  int retval = unsetenv("PATH");
+  return 0;
+}])],
+    [vicare_cv_UNSETENV_HAS_RETURN_VALUE=1],
+    [vicare_cv_UNSETENV_HAS_RETURN_VALUE=0])])
+AC_DEFINE_UNQUOTED([UNSETENV_HAS_RETURN_VALUE],
+  $vicare_cv_UNSETENV_HAS_RETURN_VALUE,
+  [whether the function unsetenv has a return value])
+
+
 
 #page
 #### tests for GNU+Linux specific features

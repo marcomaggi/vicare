@@ -26,6 +26,12 @@
     ;; error handling
     strerror
 
+    ;; system environment variables
+    getenv			setenv
+    unsetenv
+    environ			environ-table
+    environ->table		table->environ
+
     ;; process identifier
     getpid			getppid
 
@@ -42,11 +48,6 @@
     WIFSIGNALED			WTERMSIG
     WCOREDUMP			WIFSTOPPED
     WSTOPSIG
-
-    ;; system environment variables
-    getenv			setenv
-    unsetenv			env
-    environ
 
     ;; interprocess signals
     raise-signal		kill
@@ -73,34 +74,44 @@
 
     nanosleep)
   (import (except (ikarus)
-		  ;; errno handling
+		  ;; errno codes handling
 		  errno->string
 
 		  ;; interprocess singnal codes handling
 		  interprocess-signal->string
 
+		  ;; error handling
+		  strerror
+
+		  ;; system environment variables
+		  getenv			setenv
+		  unsetenv
+		  environ			environ-table
+		  environ->table		table->environ
+
+		  ;; process identifier
+		  getpid			getppid
+
 		  ;; executing processes
 		  posix-fork			fork
 		  system
+		  execv				execve
+		  execl				execle
+		  execvp			execlp
 
 		  ;; process exit status
-		  waitpid
+		  waitpid			wait
 		  WIFEXITED			WEXITSTATUS
 		  WIFSIGNALED			WTERMSIG
 		  WCOREDUMP			WIFSTOPPED
 		  WSTOPSIG
 
-		  ;; process identifier
-		  getpid			getppid
+		  ;; interprocess signals
+		  raise-signal			kill
+		  pause
 
-		  kill
-		  nanosleep
-
-		  getenv			setenv
-		  unsetenv			env
-		  environ
-
-		  file-exists?		delete-file
+		  ;; file system interface
+		  file-exists?			delete-file
 		  rename-file			split-file-name
 		  file-real-path
 
@@ -118,7 +129,7 @@
 
 		  change-mode
 
-		  strerror)
+		  nanosleep)
     (vicare syntactic-extensions)
     (vicare platform-constants)
     (prefix (vicare unsafe-capi)
@@ -438,6 +449,80 @@
 	  ((?ctx)
 	   #`(quote #,(datum->syntax #'?ctx (%mk-vector))))))))
   (define INTERPROCESS-SIGNAL-VECTOR (make-interprocess-signal-vector)))
+
+
+;;;; operative system environment variables
+
+(define (getenv key)
+  (define who 'getenv)
+  (with-arguments-validation (who)
+      ((string  key))
+    (let ((rv (capi.posix-getenv (string->utf8 key))))
+      (and rv (utf8->string rv)))))
+
+(define setenv
+  (case-lambda
+   ((key val)
+    (setenv key val #t))
+   ((key val overwrite)
+    (define who 'setenv)
+    (with-arguments-validation (who)
+	((string  key)
+	 (string  val))
+      (unless (capi.posix-setenv (string->utf8 key)
+				 (string->utf8 val)
+				 overwrite)
+	(error who "cannot setenv" key val overwrite))))))
+
+(define (unsetenv key)
+  (define who 'unsetenv)
+  (with-arguments-validation (who)
+      ((string  key))
+    (capi.posix-unsetenv (string->utf8 key))))
+
+(define (%find-index-of-= str idx str.len)
+  ;;Scan STR starint at index IDX  and up to STR.LEN for the position of
+  ;;the character #\=.  Return the index or STR.LEN.
+  ;;
+  (cond ((unsafe.fx= idx str.len)
+	 idx)
+	((unsafe.char= #\= (unsafe.string-ref str idx))
+	 idx)
+	(else
+	 (%find-index-of-= str (unsafe.fxadd1 idx) str.len))))
+
+(define (environ)
+  (map (lambda (bv)
+	 (let* ((str     (utf8->string bv))
+		(str.len (unsafe.string-length str))
+		(idx     (%find-index-of-= str 0 str.len)))
+	   (cons (substring str 0 idx)
+		 (if (unsafe.fx< (unsafe.fxadd1 idx) str.len)
+		     (substring str (unsafe.fxadd1 idx) str.len)
+		   ""))))
+    (capi.posix-environ)))
+
+(define (environ-table)
+  (environ->table (environ)))
+
+(define (environ->table environ)
+  (begin0-let ((table (make-hashtable string-hash string=?)))
+    (for-each (lambda (pair)
+		(hashtable-set! table (car pair) (cdr pair)))
+      environ)))
+
+(define (table->environ table)
+  (let-values (((names values) (hashtable-entries table)))
+    (let ((len     (unsafe.vector-length names))
+	  (environ '()))
+      (let loop ((i       0)
+		 (environ '()))
+	(if (unsafe.fx= i len)
+	    environ
+	  (loop (unsafe.fxadd1 i)
+		(cons (cons (unsafe.vector-ref names  i)
+			    (unsafe.vector-ref values i))
+		      environ)))))))
 
 
 ;;;; process identifiers
@@ -812,77 +897,6 @@
 	  (error who "unexpected value returned from OS" s x))
 	s))
      (else (raise/strerror who v x)))))
-
-(define (getenv key)
-  (define who 'getenv)
-  (define ($getenv-str key)
-    (define ($getenv-bv key)
-      (foreign-call "ikrt_getenv" key))
-    (let ((rv ($getenv-bv (string->utf8 key))))
-      (and rv (utf8->string rv))))
-  (if (string? key)
-      ($getenv-str key)
-    (die who "key is not a string" key)))
-
-(define ($setenv key val overwrite)
-  (foreign-call "ikrt_setenv"
-		(string->utf8 key) (string->utf8 val) overwrite))
-
-(define setenv
-  (case-lambda
-   ((key val overwrite)
-    (define who 'setenv)
-    (if (string? key)
-	(if (string? val)
-	    (unless ($setenv key val overwrite)
-	      (error who "cannot setenv"))
-	  (die who "invalid value" val))
-      (die who "invalid key" key)))
-   ((key val) (setenv key val #t))))
-
-(define (unsetenv key)
-  (define who 'unsetenv)
-  (if (string? key)
-      (foreign-call "ikrt_unsetenv" (string->utf8 key))
-    (die who "invalid key" key)))
-
-(define env
-  (let ()
-    (define env
-      (case-lambda
-       ((key)
-	(if (string? key)
-	    (foreign-call "ikrt_getenv" key)
-	  (die 'env "the key is not a string" key)))
-       ((key val) (env key val #t))
-       ((key val overwrite?)
-	(if (string? key)
-	    (if (string? val)
-		(unless (foreign-call "ikrt_setenv" key val overwrite?)
-		  (die 'env "failed" key val))
-	      (die 'env "the value is not a string" val))
-	  (die 'env "the key is not a string" key)))))
-    (define busted (lambda args (die 'env "BUG: busted!")))
-    busted))
-
-
-(define environ
-  (lambda ()
-    (map
-        (lambda (bv)
-          (let ((s (utf8->string bv)))
-            (define (loc= s i n)
-              (cond
-	       ((fx= i n) i)
-	       ((char=? (string-ref s i) #\=) i)
-	       (else (loc= s (fx+ i 1) n))))
-            (let ((n (string-length s)))
-              (let ((i (loc= s 0 n)))
-                (cons (substring s 0 i)
-                      (if (fx< (fxadd1 i) n)
-                          (substring s (fxadd1 i) n)
-			""))))))
-      (foreign-call "ikrt_environ"))))
 
 (define (nanosleep secs nsecs)
   (import (ikarus system $fx))

@@ -34,6 +34,11 @@
     ;; error handling
     posix-strerror
 
+    ;; operative system environment variables
+    posix-getenv		posix-setenv
+    posix-unsetenv		posix-environ
+    linux-clearenv
+
     ;; process identifiers
     posix-getpid		posix-getppid
 
@@ -77,6 +82,24 @@
 (define-inline (posix-strerror errno)
   (foreign-call "ikrt_posix_strerror" errno))
 
+
+
+;;;; operative system environment variables
+
+(define-inline (posix-getenv varname-bv)
+  (foreign-call "ikrt_posix_getenv" varname-bv))
+
+(define-inline (posix-setenv varname-bv value-bv replace-bool)
+  (foreign-call "ikrt_posix_setenv" varname-bv value-bv replace-bool))
+
+(define-inline (posix-unsetenv varname-bv)
+  (foreign-call "ikrt_posix_unsetenv" varname-bv))
+
+(define-inline (linux-clearenv)
+  (foreign-call "ikrt_linux_clearenv"))
+
+(define-inline (posix-environ)
+  (foreign-call "ikrt_posix_environ"))
 
 
 ;;;; process identifiers

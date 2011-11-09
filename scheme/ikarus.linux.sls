@@ -27,6 +27,9 @@
 
 (library (ikarus.linux)
   (export
+    ;; operative system environment variables
+    clearenv
+
     ;; process termination status
     waitid
     make-siginfo_t		siginfo_t?
@@ -36,6 +39,9 @@
     WIFCONTINUED
     )
   (import (except (ikarus)
+		  ;; operative system environment variables
+		  clearenv
+
 		  ;; process termination status
 		  waitid
 		  make-siginfo_t		siginfo_t?
@@ -80,6 +86,12 @@
 (define-argument-validation (signal who obj)
   (fixnum? obj)
   (assertion-violation who "expected fixnum signal code as argument" obj))
+
+
+;;;; operative system environment variables
+
+(define (clearenv)
+  (capi.linux-clearenv))
 
 
 ;;;; process termination status

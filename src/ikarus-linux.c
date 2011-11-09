@@ -59,13 +59,30 @@ ikptr ik_errno_to_code (void);
 
 
 /** --------------------------------------------------------------------
+ ** Operative system environment variables.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_linux_clearenv (void)
+{
+#ifdef HAVE_CLEARENV
+  clearenv();
+  return void_object;
+#else
+  fprintf(stderr, "Vicare error: called Linux specific function, %s\n", __func__);
+  exit(EXIT_FAILURE);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
  ** Process exit status.
  ** ----------------------------------------------------------------- */
 
 ikptr
 ikrt_linux_WIFCONTINUED (ikptr fx_status)
 {
-#if (1 == HAVE_WIFCONTINUED)
+#ifdef HAVE_WIFCONTINUED
   int   status = unfix(fx_status);
   return (WIFCONTINUED(status))? true_object : false_object;
 #else
@@ -77,7 +94,7 @@ ikrt_linux_WIFCONTINUED (ikptr fx_status)
 ikptr
 ikrt_linux_waitid (ikptr fx_idtype, ikptr fx_id, ikptr struct_info, ikptr fx_options)
 {
-#if (1 == HAVE_WAITID)
+#ifdef HAVE_WAITID
   idtype_t  idtype  = unfix(fx_idtype);
   id_t      id      = unfix(fx_id);
   siginfo_t info;
@@ -113,6 +130,5 @@ ikrt_linux_waitid (ikptr fx_idtype, ikptr fx_id, ikptr struct_info, ikptr fx_opt
   exit(EXIT_FAILURE);
 #endif
 }
-
 
 /* end of file */

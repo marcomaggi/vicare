@@ -5867,16 +5867,83 @@ the project.  If a constant is not defined on a platform: its value is
 set to @false{}.
 
 @menu
+* posix env::                   Operative system environment variables.
 * posix pid::                   Process identifier functions.
 * posix process::               Spawning processes and the like.
 * posix status::                Process termination status.
 * posix signal::                Delivering signals to processes.
 * posix file::                  Interfacing with the file system.
 * posix dir::                   File system directory inspection.
-* posix env::                   Interfacing with the execution
-                                environment.
 * posix misc::                  Miscellaneous functions.
 @end menu
+
+@c page
+@node posix env
+@section Interfacing with the execution environment
+
+
+The Scheme level representation of environment variables names and
+values is a string, but internally it is a bytevector; strings are
+internally converted to bytevectors using @func{string->utf8}.
+
+
+@defun getenv @var{varname}
+Interface to the C function @cfunc{getenv}, @glibcref{Environment
+Access, getenv}.  Retrieve the value of environment variables.
+@var{variable} must reference a string object representing the name of
+the environment variable.  If the environment variable is set: return a
+string representing its value; else return false.
+
+@example
+(getenv "PATH")
+@result{} "/usr/local/bin:/usr/bin:/bin"
+@end example
+@end defun
+
+
+@defun setenv @var{variable} @var{value} @var{overwrite}
+Interface to the C function @cfunc{setenv}, @glibcref{Environment
+Access, setenv}.  Set a new value for an environment variable.
+
+@var{variable} must reference a string object representing the name of
+the environment variable; @var{value} must reference a string object
+representing the new value.  If @var{overwrite} is false and the
+environment variable already exists: the environment variable is left
+untouched; else the new value is set, either creating a new environment
+variable or replacing the old value.
+
+If successful return true, if an error occurs in @cfunc{setenv} return
+false.
+@end defun
+
+
+@defun unsetenv @var{variable}
+Interface to the C function @cfunc{unsetenv}, @glibcref{Environment
+Access, unsetenv}.  Unset an environment variable.  @var{variable} must
+reference a string object representing the name of the environment
+variable.  Return true if @var{variable} has the correct format, else
+return false; there is no way to know if a variable was actually unset.
+@end defun
+
+
+@defun environ
+Interface to the global C variable @code{environ}, @glibcref{Environment
+Access, unsetenv}.  Retrieve the full environment.  Return a list of
+strings representing the contents of the @code{environ} array; if the
+environment is empty (no environment variables set) return nil.
+@end defun
+
+
+@defun environ-table
+Internally invoke @func{environ} and convert the alist of strings into a
+hashtable; return the hashtable.  Both keys and values are strings.
+@end defun
+
+
+@defun environ->table @var{environ}
+@defunx table->environ @var{table}
+Convert between an alist in ``environ'' format and a hashtable.
+@end defun
 
 @c page
 @node posix pid
@@ -6285,24 +6352,6 @@ true.
 @end defun
 
 @c page
-@node posix env
-@section Interfacing with the execution environment
-
-
-@defun getenv @var{varname}
-Return the current value, as a string, of the system environment
-variable selected by the string @var{varname}.  If the variable is not
-set: @false{} is returned.
-
-Example:
-
-@example
-(getenv "PATH")
-@result{} "/usr/local/bin:/usr/bin:/bin"
-@end example
-@end defun
-
-@c page
 @node posix misc
 @section Miscellaneous functions
 
@@ -6345,8 +6394,20 @@ On non-Linux platform we must avoid calling these functions, else the
 behaviour is undefined.
 
 @menu
+* linux env::                   Operative system environment variables.
 * linux status::                Process termination status.
 @end menu
+
+@c page
+@node linux env
+@section Operative system environment variables
+
+
+@defun clearenv
+Interface to the C function @cfunc{clearenv}, @glibcref{Environment
+Access, clearenv}.  Remove all the entries from the environment.  Return
+unspecified values.
+@end defun
 
 @c page
 @node linux status
@@ -7475,6 +7536,7 @@ adaptation.
 @menu
 * capi posix adding::           How to add a @posix{} primitive.
 * capi posix errno::            Handling @code{errno} codes.
+* capi posix env::              Operative system environment variables.
 * capi posix fd::               File descriptors.
 * capi posix pid::              Process identifier functions.
 * capi posix files::            File system interface.
@@ -7482,7 +7544,6 @@ adaptation.
 * capi posix status::           Process termination status.
 * capi posix signals::          Delivering interprocess signals.
 * capi posix time::             Time and date.
-* capi posix env::              Environment variables.
 @end menu
 
 @c page
@@ -7577,6 +7638,52 @@ a reference to the bytevector; if @var{ec} is invalid: return false.
 @deftypefun ikptr ikrt_last_errno (ikpcb * pcb)
 Return a fixnum representing the negated value of @code{errno} right
 after the last call to a foreign function through the @ffi{}.
+@end deftypefun
+
+@c page
+@node capi posix env
+@subsection Accessing environment variables
+
+
+@deftypefun ikptr ikrt_posix_getenv (ikptr @var{variable}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getenv}, @glibcref{Environment
+Access, getenv}.  Retrieve the value of environment variables.
+@var{variable} must reference a bytevector object representing the name
+of the environment variable.  If the environment variable is set: return
+a bytevector representing its value; else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_setenv (ikptr @var{variable}, ikptr @var{value}, ikptr @var{overwrite})
+Interface to the C function @cfunc{setenv}, @glibcref{Environment
+Access, setenv}.  Set a new value for an environment variable.
+
+@var{variable} must reference a bytevector object representing the name
+of the environment variable; @var{value} must reference a bytevector
+object representing the new value.  If @var{overwrite} is
+@code{false_object} and the environment variable already exists: the
+environment variable is left untouched; else the new value is set,
+either creating a new environment variable or replacing the old value.
+
+If successful return @code{true_object}; if an error occurs in
+@cfunc{setenv} return @code{false_object}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_unsetenv (ikptr @var{variable})
+Interface to the C function @cfunc{unsetenv}, @glibcref{Environment
+Access, unsetenv}.  Unset an environment variable.  @var{variable} must
+reference a bytevector object representing the name of the environment
+variable.  Return true if @var{variable} has the correct format, else
+return false; there is no way to know if a variable was actually unset.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_environ (ikpcb * @var{pcb})
+Interface to the global C variable @code{environ}, @glibcref{Environment
+Access, unsetenv}.  Retrieve the full environment.  Return a list of
+bytevectors representing the contents of the @code{environ} array; if
+the environment is empty (no environment variables set) return nil.
 @end deftypefun
 
 @c page
@@ -8350,66 +8457,26 @@ is stored in a single limb (see the @code{mpn_} @api{} in @gmp{}).
 @end deftypefun
 
 @c page
-@node capi posix env
-@subsection Accessing environment variables
-
-
-@deftypefun ikptr ikrt_getenv (ikptr @var{variable}, ikpcb * @var{pcb})
-Interface to the @cfunc{getenv} C function.  @glibcref{Environment
-Access, getenv}.  Retrieve the value of environment variables.
-
-@var{variable} must reference a bytevector object representing the name
-of the environment variable.
-
-If the environment variable is set: return a bytevector representing its
-value; else return @code{false_object}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_setenv (ikptr @var{variable}, ikptr @var{value}, ikptr @var{overwrite})
-Interface to the @cfunc{setenv} C function.  @glibcref{Environment
-Access, setenv}.  Set a new value for an environment variable.
-
-@var{variable} must reference a bytevector object representing the name
-of the environment variable; @var{value} must reference a bytevector
-object representing the new value.  If @var{overwrite} is
-@code{false_object} and the environment variable already exists: the
-environment variable is left untouched; else the new value is set,
-either creating a new environment variable or replacing the old value.
-
-If successful return @code{true_object}; if an error occurs in
-@cfunc{setenv} return @code{false_object}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_unsetenv (ikptr @var{variable})
-Interface to the @cfunc{unsetenv} C function.  @glibcref{Environment
-Access, unsetenv}.  Unset an environment variable.
-
-@var{variable} must reference a bytevector object representing the name
-of the environment variable.
-
-Return void.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_environ (ikpcb * @var{pcb})
-Interface to the @code{environ} global C variable.
-@glibcref{Environment Access, unsetenv}.  Retrieve the full environment.
-
-Return a list of bytevectors representing the contents of the
-@code{environ} array; if the environment is empty (no environment
-variables set) return @code{null_object}.
-@end deftypefun
-
-@c page
 @node capi linux
 @section C language level Linux interface
 
 
 @menu
+* capi linux env::              Operative system environment variables.
 * capi linux status::           Process termination status.
 @end menu
+
+@c page
+@node capi linux env
+@subsection Operative system environment variables
+
+
+@deftypefun ikrt ikrt_linux_clearenv (void)
+Interface to the C function @cfunc{clearenv}, @glibcref{Environment
+Access, clearenv}.  Remove all the entries from the environment.  Return
+the void object.
+@end deftypefun
+
 
 @c page
 @node capi linux status
