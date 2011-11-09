@@ -53,6 +53,19 @@
     raise-signal		kill
     pause
 
+    ;; file system inspection
+    stat			lstat
+    fstat
+    make-struct-stat		struct-stat?
+    struct-stat-st_mode		struct-stat-st_ino
+    struct-stat-st_dev		struct-stat-st_nlink
+    struct-stat-st_uid		struct-stat-st_gid
+    struct-stat-st_size
+    struct-stat-st_atime	struct-stat-st_atime_usec
+    struct-stat-st_mtime	struct-stat-st_mtime_usec
+    struct-stat-st_ctime	struct-stat-st_ctime_usec
+    struct-stat-st_blocks	struct-stat-st_blksize
+
     ;; file system interface
     file-exists?		delete-file
     rename-file			split-file-name
@@ -110,6 +123,19 @@
 		  raise-signal			kill
 		  pause
 
+		  ;; file system inspection
+		  stat				lstat
+		  fstat
+		  make-struct-stat		struct-stat?
+		  struct-stat-st_mode		struct-stat-st_ino
+		  struct-stat-st_dev		struct-stat-st_nlink
+		  struct-stat-st_uid		struct-stat-st_gid
+		  struct-stat-st_size
+		  struct-stat-st_atime		struct-stat-st_atime_usec
+		  struct-stat-st_mtime		struct-stat-st_mtime_usec
+		  struct-stat-st_ctime		struct-stat-st_ctime_usec
+		  struct-stat-st_blocks		struct-stat-st_blksize
+
 		  ;; file system interface
 		  file-exists?			delete-file
 		  rename-file			split-file-name
@@ -162,9 +188,17 @@
   (fixnum? obj)
   (assertion-violation who "expected fixnum pid as argument" obj))
 
+(define-argument-validation (file-descriptor who obj)
+  (fixnum? obj)
+  (assertion-violation who "expected fixnum file descriptor as argument" obj))
+
 (define-argument-validation (signal who obj)
   (fixnum? obj)
   (assertion-violation who "expected fixnum signal code as argument" obj))
+
+(define-argument-validation (pathname who obj)
+  (string? obj)
+  (assertion-violation who "expected string as pathname argument" obj))
 
 (define-argument-validation (list-of-strings who obj)
   (for-all string? obj)
@@ -665,7 +699,76 @@
   (capi.posix-pause))
 
 
-(define (stat path follow who)
+;;;; file system inspection
+
+(define-struct struct-stat
+  ;;The  order of  the fields  must match  the order  in the  C function
+  ;;"fill_stat_struct()".
+  ;;
+  (st_mode st_ino st_dev st_nlink
+	   st_uid st_gid st_size
+	   st_atime st_atime_usec
+	   st_mtime st_mtime_usec
+	   st_ctime st_ctime_usec
+	   st_blocks st_blksize))
+
+(define (%struct-stat-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-stat\"")
+  (%display " st_mode=#o")	(%display (number->string (struct-stat-st_mode S) 8))
+  (%display " st_ino=")		(%display (struct-stat-st_ino S))
+  (%display " st_dev=")		(%display (struct-stat-st_dev S))
+  (%display " st_nlink=")	(%display (struct-stat-st_nlink S))
+  (%display " st_uid=")		(%display (struct-stat-st_uid S))
+  (%display " st_gid=")		(%display (struct-stat-st_gid S))
+  (%display " st_size=")	(%display (struct-stat-st_size S))
+  (%display " st_atime=")	(%display (struct-stat-st_atime S))
+  (%display " st_atime_usec=")	(%display (struct-stat-st_atime_usec S))
+  (%display " st_mtime=")	(%display (struct-stat-st_mtime S))
+  (%display " st_mtime_usec=")	(%display (struct-stat-st_mtime_usec S))
+  (%display " st_ctime=")	(%display (struct-stat-st_ctime S))
+  (%display " st_ctime_usec=")	(%display (struct-stat-st_ctime_usec S))
+  (%display " st_blocks=")	(%display (struct-stat-st_blocks S))
+  (%display " st_blksize=")	(%display (struct-stat-st_blksize S))
+  (%display "]"))
+
+(define-inline (%make-stat)
+  (make-struct-stat #f #f #f #f #f
+		    #f #f #f #f #f
+		    #f #f #f #f #f))
+
+(define (stat pathname)
+  (define who 'stat)
+  (with-arguments-validation (who)
+      ((pathname  pathname))
+    (let* ((S  (%make-stat))
+	   (rv (capi.posix-stat ((string->filename-func) pathname) S)))
+      (if (unsafe.fx< rv 0)
+	  (raise-errno-error who rv pathname)
+	S))))
+
+(define (lstat pathname)
+  (define who 'stat)
+  (with-arguments-validation (who)
+      ((pathname  pathname))
+    (let* ((S  (%make-stat))
+	   (rv (capi.posix-lstat ((string->filename-func) pathname) S)))
+      (if (unsafe.fx< rv 0)
+	  (raise-errno-error who rv pathname)
+	S))))
+
+(define (fstat fd)
+  (define who 'stat)
+  (with-arguments-validation (who)
+      ((file-descriptor  fd))
+    (let* ((S  (%make-stat))
+	   (rv (capi.posix-lstat fd S)))
+      (if (unsafe.fx< rv 0)
+	  (raise-errno-error who rv fd)
+	S))))
+
+(define (%stat path follow who)
   (unless (string? path)
     (die who "not a string" path))
   (let ((r (foreign-call "ikrt_stat" ((string->filename-func) path) follow)))
@@ -681,6 +784,7 @@
 	 (else
 	  (raise/strerror who r path)))))))
 
+
 (define (split-file-name str)
   (define who 'split-file-name)
   (define path-sep #\/)
@@ -714,22 +818,22 @@
    ((path)
     (file-exists? path #t))
    ((path follow)
-    (and (stat path follow 'file-exists?) #t))))
+    (and (%stat path follow 'file-exists?) #t))))
 
 (define file-regular?
   (case-lambda
    ((path) (file-regular? path #t))
    ((path follow)
-    (eq? 'regular (stat path follow 'file-regular?)))))
+    (eq? 'regular (%stat path follow 'file-regular?)))))
 
 (define file-directory?
   (case-lambda
    ((path) (file-directory? path #t))
    ((path follow)
-    (eq? 'directory (stat path follow 'file-directory?)))))
+    (eq? 'directory (%stat path follow 'file-directory?)))))
 
 (define (file-symbolic-link? path)
-  (eq? 'symlink (stat path #f 'file-symbolic-link?)))
+  (eq? 'symlink (%stat path #f 'file-symbolic-link?)))
 
 (define file-readable?
   (lambda (path)
@@ -932,6 +1036,8 @@
 
 
 ;;;; done
+
+(set-rtd-printer! (type-descriptor struct-stat) %struct-stat-printer)
 
 )
 

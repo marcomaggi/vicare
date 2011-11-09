@@ -59,6 +59,10 @@
     posix-raise			posix-kill
     posix-pause
 
+    ;; file system inspection
+    posix-stat			posix-lstat
+    posix-fstat
+
     ;; platform API for file descriptors
     platform-open-input-fd
     platform-open-output-fd
@@ -175,6 +179,18 @@
 
 (define-inline (posix-pause)
   (foreign-call "ikrt_posix_pause"))
+
+
+;;;; file system inspection
+
+(define-inline (posix-stat filename-bv stat-struct)
+  (foreign-call "ikrt_posix_stat" filename-bv stat-struct))
+
+(define-inline (posix-lstat filename-bv stat-struct)
+  (foreign-call "ikrt_posix_lstat" filename-bv stat-struct))
+
+(define-inline (posix-fstat fd stat-struct)
+  (foreign-call "ikrt_posix_fstat" fd stat-struct))
 
 
 ;;;; platform API for file descriptors

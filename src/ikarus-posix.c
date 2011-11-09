@@ -35,6 +35,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <stdint.h>
 #include <time.h>
 #include <unistd.h>
 #include <sys/mman.h>
@@ -79,6 +80,91 @@ ikptr
 ikrt_strerror (ikptr negated_errno_code, ikpcb* pcb)
 {
   return ikrt_posix_strerror(negated_errno_code, pcb);
+}
+
+
+/** --------------------------------------------------------------------
+ ** Operating system environment variables.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_getenv (ikptr bv, ikpcb* pcb)
+{
+  char * v = getenv((char*)(long)(bv + off_bytevector_data));
+  if (v) {
+    long int n = strlen(v);
+    ikptr s = ik_safe_alloc(pcb, align(n+disp_bytevector_data+1))
+      + bytevector_tag;
+    ref(s, -bytevector_tag) = fix(n);
+    memcpy((char*)(long)(s+off_bytevector_data), v, n+1);
+    return s;
+  } else {
+    return false_object;
+  }
+}
+ikptr
+ikrt_posix_setenv (ikptr key, ikptr val, ikptr overwrite)
+{
+  int err = setenv((char*)(key+off_bytevector_data),
+                   (char*)(val+off_bytevector_data),
+                   overwrite!=false_object);
+  return (err)? false_object : true_object;
+}
+ikptr
+ikrt_posix_unsetenv (ikptr key)
+{
+#if (1 == UNSETENV_HAS_RETURN_VALUE)
+  int rv = unsetenv((char*)(key+off_bytevector_data));
+  return (0 == rv)? true_object : false_object;
+#else
+  unsetenv((char*)(key+off_bytevector_data));
+  return true_object;
+#endif
+}
+ikptr
+ikrt_posix_environ (ikpcb* pcb)
+{
+  char **       es = environ;
+  int           i;
+  char *        e;
+  ikptr         ac = null_object;
+  pcb->root0 = &ac;
+  for (i=0; (e=es[i]); i++) {
+    long int bv_len = strlen(e);
+    ikptr    s = ik_safe_alloc(pcb, align(bv_len+disp_bytevector_data+1)) + bytevector_tag;
+    ref(s, off_bytevector_length) = fix(bv_len);
+    memcpy((char*)(long)(s+off_bytevector_data), e, bv_len+1);
+    pcb->root1 = &s;
+    ikptr p = ik_safe_alloc(pcb, pair_size) + pair_tag;
+    pcb->root1 = 0;
+    ref(p, off_cdr) = ac;
+    ref(p, off_car) = s;
+    ac = p;
+  }
+  pcb->root0 = 0;
+  return ac;
+}
+
+/* FIXME STALE To be removed after the next boot image rotation. */
+ikptr
+ikrt_getenv (ikptr bv, ikpcb* pcb)
+{
+  return ikrt_posix_getenv (bv, pcb);
+}
+ikptr
+ikrt_setenv (ikptr key, ikptr val, ikptr overwrite)
+{
+  return ikrt_posix_setenv (key, val, overwrite);
+}
+ikptr
+ikrt_unsetenv (ikptr key)
+{
+  return ikrt_posix_unsetenv (key);
+}
+ikptr
+ikrt_environ (ikpcb* pcb)
+{
+  return ikrt_posix_environ (pcb);
 }
 
 
@@ -302,94 +388,129 @@ ikrt_posix_pause (void)
 
 
 /** --------------------------------------------------------------------
- ** Operative system environment variables.
+ ** File system inspection.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ikrt_posix_getenv (ikptr bv, ikpcb* pcb)
+static ikptr
+fill_stat_struct (struct stat * S, ikptr D, ikpcb* pcb)
 {
-  char * v = getenv((char*)(long)(bv + off_bytevector_data));
-  if (v) {
-    long int n = strlen(v);
-    ikptr s = ik_safe_alloc(pcb, align(n+disp_bytevector_data+1))
-      + bytevector_tag;
-    ref(s, -bytevector_tag) = fix(n);
-    memcpy((char*)(long)(s+off_bytevector_data), v, n+1);
-    return s;
-  } else {
-    return false_object;
-  }
-}
-ikptr
-ikrt_posix_setenv (ikptr key, ikptr val, ikptr overwrite)
-{
-  int err = setenv((char*)(key+off_bytevector_data),
-                   (char*)(val+off_bytevector_data),
-                   overwrite!=false_object);
-  return (err)? false_object : true_object;
-}
-ikptr
-ikrt_posix_unsetenv (ikptr key)
-{
-#if (1 == UNSETENV_HAS_RETURN_VALUE)
-  int rv = unsetenv((char*)(key+off_bytevector_data));
-  return (0 == rv)? true_object : false_object;
+#if (4 == VICARE_SIZE_OF_VOIDP)
+  /* 32-bit platforms */
+  ref(D, off_record_data+0*wordsize) = u_to_number((unsigned long)S->st_mode, pcb);
+  ref(D, off_record_data+1*wordsize) = u_to_number((unsigned long)S->st_ino, pcb);
+  ref(D, off_record_data+2*wordsize) = s_to_number((long)S->st_dev, pcb);
+  ref(D, off_record_data+3*wordsize) = u_to_number((long)S->st_nlink, pcb);
+
+  ref(D, off_record_data+4*wordsize) = u_to_number((unsigned long)S->st_uid, pcb);
+  ref(D, off_record_data+5*wordsize) = u_to_number((unsigned long)S->st_gid, pcb);
+  ref(D, off_record_data+6*wordsize) = ull_to_number((unsigned long long)S->st_size, pcb);
+
+  ref(D, off_record_data+7*wordsize) = s_to_number((long)S->st_atime, pcb);
+#ifdef HAVE_STAT_ST_ATIME_USEC
+  ref(D, off_record_data+8*wordsize) = u_to_number((unsigned long)S->st_atime_usec, pcb);
 #else
-  unsetenv((char*)(key+off_bytevector_data));
-  return true_object;
+  ref(D, off_record_data+8*wordsize) = false_object;
 #endif
+
+  ref(D, off_record_data+9*wordsize)  = s_to_number((long)S->st_mtime, pcb);
+#ifdef HAVE_STAT_ST_MTIME_USEC
+  ref(D, off_record_data+10*wordsize) = u_to_number((unsigned long)S->st_mtime_usec, pcb);
+#else
+  ref(D, off_record_data+10*wordsize) = false_object;
+#endif
+
+  ref(D, off_record_data+11*wordsize) = s_to_number((long)S->st_ctime, pcb);
+#ifdef HAVE_STAT_ST_CTIME_USEC
+  ref(D, off_record_data+12*wordsize) = u_to_number((unsigned long)S->st_ctime_usec, pcb);
+#else
+  ref(D, off_record_data+12*wordsize) = false_object;
+#endif
+
+  ref(D, off_record_data+13*wordsize) = ull_to_number((unsigned long long)S->st_blocks, pcb);
+  ref(D, off_record_data+14*wordsize) = ull_to_number((unsigned long long)S->st_blksize, pcb);
+#else
+  /* 64-bit platforms */
+  ref(D, off_record_data+0*wordsize) = ull_to_number((unsigned long long)S->st_mode, pcb);
+  ref(D, off_record_data+1*wordsize) = ull_to_number((unsigned long long)S->st_ino, pcb);
+  ref(D, off_record_data+2*wordsize) = sll_to_number((long)S->st_dev, pcb);
+  ref(D, off_record_data+3*wordsize) = ull_to_number((long)S->st_nlink, pcb);
+
+  ref(D, off_record_data+4*wordsize) = ull_to_number((unsigned long long)S->st_uid, pcb);
+  ref(D, off_record_data+5*wordsize) = ull_to_number((unsigned long long)S->st_gid, pcb);
+  ref(D, off_record_data+6*wordsize) = ull_to_number((unsigned long long)S->st_size, pcb);
+
+  ref(D, off_record_data+7*wordsize) = sll_to_number((long)S->st_atime, pcb);
+#ifdef HAVE_STAT_ST_ATIME_USEC
+  ref(D, off_record_data+8*wordsize) = ull_to_number((unsigned long long)S->st_atime_usec, pcb);
+#else
+  ref(D, off_record_data+8*wordsize) = false_object;
+#endif
+
+  ref(D, off_record_data+9*wordsize)  = sll_to_number((long)S->st_mtime, pcb);
+#ifdef HAVE_STAT_ST_MTIME_USEC
+  ref(D, off_record_data+10*wordsize) = ull_to_number((unsigned long long)S->st_mtime_usec, pcb);
+#else
+  ref(D, off_record_data+10*wordsize) = false_object;
+#endif
+
+  ref(D, off_record_data+11*wordsize) = sll_to_number((long)S->st_ctime, pcb);
+#ifdef HAVE_STAT_ST_CTIME_USEC
+  ref(D, off_record_data+12*wordsize) = ull_to_number((unsigned long long)S->st_ctime_usec, pcb);
+#else
+  ref(D, off_record_data+12*wordsize) = false_object;
+#endif
+
+  ref(D, off_record_data+13*wordsize) = ull_to_number((unsigned long long)S->st_blocks, pcb);
+  ref(D, off_record_data+14*wordsize) = ull_to_number((unsigned long long)S->st_blksize, pcb);
+#endif
+  return 0;
 }
-ikptr
-ikrt_posix_environ (ikpcb* pcb)
+static ikptr
+posix_stat (ikptr filename_bv, ikptr stat_struct, int follow_symlinks, ikpcb* pcb)
 {
-  char **       es = environ;
-  int           i;
-  char *        e;
-  ikptr         ac = null_object;
-  pcb->root0 = &ac;
-  for (i=0; (e=es[i]); i++) {
-    long int bv_len = strlen(e);
-    ikptr    s = ik_safe_alloc(pcb, align(bv_len+disp_bytevector_data+1)) + bytevector_tag;
-    ref(s, off_bytevector_length) = fix(bv_len);
-    memcpy((char*)(long)(s+off_bytevector_data), e, bv_len+1);
-    pcb->root1 = &s;
-    ikptr p = ik_safe_alloc(pcb, pair_size) + pair_tag;
-    pcb->root1 = 0;
-    ref(p, off_cdr) = ac;
-    ref(p, off_car) = s;
-    ac = p;
+  char *        filename;
+  struct stat   S;
+  int           rv;
+  filename = (char*)(long)(filename_bv + off_bytevector_data);
+  if (follow_symlinks) {
+    rv = stat(filename, &S);
+  } else {
+    rv = lstat(filename, &S);
   }
-  pcb->root0 = 0;
-  return ac;
+  if (0 == rv) {
+    return fill_stat_struct(&S, stat_struct, pcb);
+  } else {
+    return ik_errno_to_code();
+  }
+}
+ikptr
+ikrt_posix_stat (ikptr filename_bv, ikptr stat_struct, ikpcb* pcb)
+{
+  return posix_stat(filename_bv, stat_struct, 1, pcb);
+}
+ikptr
+ikrt_posix_lstat (ikptr filename_bv, ikptr stat_struct, ikpcb* pcb)
+{
+  return posix_stat(filename_bv, stat_struct, 0, pcb);
+}
+ikptr
+ikrt_posix_fstat (ikptr fd_fx, ikptr stat_struct, ikpcb* pcb)
+{
+  struct stat   S;
+  int           rv;
+  rv = fstat(unfix(fd_fx), &S);
+  if (0 == rv) {
+    return fill_stat_struct(&S, stat_struct, pcb);
+  } else {
+    return ik_errno_to_code();
+  }
 }
 
-/* FIXME STALE To be removed after the next boot image rotation. */
-ikptr
-ikrt_getenv (ikptr bv, ikpcb* pcb)
-{
-  return ikrt_posix_getenv (bv, pcb);
-}
-ikptr
-ikrt_setenv (ikptr key, ikptr val, ikptr overwrite)
-{
-  return ikrt_posix_setenv (key, val, overwrite);
-}
-ikptr
-ikrt_unsetenv (ikptr key)
-{
-  return ikrt_posix_unsetenv (key);
-}
-ikptr
-ikrt_environ (ikpcb* pcb)
-{
-  return ikrt_posix_environ (pcb);
-}
-
-
+/* FIXME STALE To be removed at the next boot image rotation. */
 ikptr
 ikrt_stat (ikptr filename, ikptr follow /*, ikpcb* pcb */)
 {
-  char* fn = (char*)(filename + off_bytevector_data);
+  char* fn = (char*)(long)(filename + off_bytevector_data);
   struct stat s;
   int r;
   if (false_object == follow) {
@@ -409,6 +530,25 @@ ikrt_stat (ikptr filename, ikptr follow /*, ikpcb* pcb */)
     }
   }
   return ik_errno_to_code();
+}
+
+ikptr
+ikrt_realpath (ikptr pathname_bv, ikpcb* pcb)
+{
+  char *        pathname;
+  char          buff[PATH_MAX];
+  char *        rv;
+  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
+  rv       = realpath(pathname, buff);
+  if (NULL == rv) {
+    return ik_errno_to_code();
+  } else {
+    int         n = strlen(rv);
+    uint8_t *   r = ik_safe_alloc(pcb, align(disp_bytevector_data+n+1));
+    ref(r, 0) = fix(n);
+    memcpy((r+disp_bytevector_data), rv, n+1);
+    return (ikptr)(r+bytevector_tag);
+  }
 }
 
 
@@ -476,6 +616,7 @@ ikrt_rmdir(ikptr path /*, ikpcb* pcb */){
   return ik_errno_to_code();
 }
 
+
 ikptr
 ikrt_chmod(ikptr path, ikptr mode /*, ikpcb* pcb */){
   int r = chmod((char*)(path+off_bytevector_data), (mode_t)unfix(mode));
@@ -503,19 +644,6 @@ ikrt_link(ikptr to, ikptr path /*, ikpcb* pcb */){
   return ik_errno_to_code();
 }
 
-ikptr
-ikrt_realpath(ikptr bv, ikpcb* pcb){
-  char buff[PATH_MAX];
-  char* p = realpath((char*)(bv+off_bytevector_data), buff);
-  if(p == NULL){
-    return ik_errno_to_code();
-  }
-  int n = strlen(p);
-  ikptr r = ik_safe_alloc(pcb, align(disp_bytevector_data+n+1));
-  ref(r, 0) = fix(n);
-  memcpy((char*)(r+disp_bytevector_data), p, n+1);
-  return r+bytevector_tag;
-}
 
 ikptr
 ikrt_current_time(ikptr t){

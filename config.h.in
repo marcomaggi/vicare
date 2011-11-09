@@ -91,17 +91,26 @@
    zero-length file name argument. */
 #undef HAVE_STAT_EMPTY_STRING_BUG
 
+/* stat struct has st_atime_usec field */
+#undef HAVE_STAT_ST_ATIME_USEC
+
 /* stat struct has st_ctim field */
 #undef HAVE_STAT_ST_CTIM
 
 /* stat struct has st_ctimespec field */
 #undef HAVE_STAT_ST_CTIMESPEC
 
+/* stat struct has st_ctime_usec field */
+#undef HAVE_STAT_ST_CTIME_USEC
+
 /* stat struct has st_mtim field */
 #undef HAVE_STAT_ST_MTIM
 
 /* stat struct has st_mtimespec field */
 #undef HAVE_STAT_ST_MTIMESPEC
+
+/* stat struct has st_mtime_usec field */
+#undef HAVE_STAT_ST_MTIME_USEC
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
@@ -205,6 +214,9 @@
 
 /* whether the function unsetenv has a return value */
 #undef UNSETENV_HAS_RETURN_VALUE
+
+/* size of words */
+#undef VICARE_SIZE_OF_VOIDP
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */

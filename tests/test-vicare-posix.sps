@@ -144,6 +144,24 @@
   #t)
 
 
+(parametrise ((check-test-name	'getpid))
+
+  #;(begin
+    (display "result of getpid() is " )
+    (display (getpid))
+    (newline))
+
+  (check
+      (fixnum? (getpid))
+    => #t)
+
+  (check
+      (fixnum? (getppid))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'system))
 
   (check
@@ -333,19 +351,18 @@
   #t)
 
 
-(parametrise ((check-test-name	'getpid))
-
-  #;(begin
-    (display "result of getpid() is " )
-    (display (getpid))
-    (newline))
+(parametrise ((check-test-name	'stat))
 
   (check
-      (fixnum? (getpid))
+      (let ((S (stat "Makefile")))
+	(check-pretty-print S)
+	(struct-stat? S))
     => #t)
 
   (check
-      (fixnum? (getppid))
+      (let ((S (lstat "Makefile")))
+	(check-pretty-print S)
+	(struct-stat? S))
     => #t)
 
   #t)

@@ -61,6 +61,9 @@ if test "$ac_cv_sizeof_void_p" = 4; then
      [use flat segment and dirty vectors (not used yet)])
 fi
 AC_SUBST([VICARE_SIZE_OF_VOIDP],[$ac_cv_sizeof_void_p])
+AC_DEFINE_UNQUOTED([VICARE_SIZE_OF_VOIDP],
+  [$ac_cv_sizeof_void_p],
+  [size of words])
 
 AC_C_BIGENDIAN([AC_SUBST(VICARE_PLATFORM_ENDIANNESS,[big])],
   [AC_SUBST(VICARE_PLATFORM_ENDIANNESS,[little])])
@@ -114,6 +117,24 @@ AC_CHECK_MEMBER([struct stat.st_ctimespec],
 AC_CHECK_MEMBER([struct stat.st_ctim],
    AC_DEFINE(HAVE_STAT_ST_CTIM, 1,
              [stat struct has st_ctim field]),
+   [],
+   [[#include <sys/stat.h>]])
+
+AC_CHECK_MEMBER([struct stat.st_atime_usec],
+   AC_DEFINE(HAVE_STAT_ST_ATIME_USEC, 1,
+             [stat struct has st_atime_usec field]),
+   [],
+   [[#include <sys/stat.h>]])
+
+AC_CHECK_MEMBER([struct stat.st_mtime_usec],
+   AC_DEFINE(HAVE_STAT_ST_MTIME_USEC, 1,
+             [stat struct has st_mtime_usec field]),
+   [],
+   [[#include <sys/stat.h>]])
+
+AC_CHECK_MEMBER([struct stat.st_ctime_usec],
+   AC_DEFINE(HAVE_STAT_ST_CTIME_USEC, 1,
+             [stat struct has st_ctime_usec field]),
    [],
    [[#include <sys/stat.h>]])
 
