@@ -127,7 +127,7 @@ AC_FUNC_MMAP
 AC_FUNC_STAT
 AC_FUNC_STRFTIME
 AC_FUNC_STRTOD
-AC_CHECK_FUNCS([sigaltstack bzero gettimeofday memmove memset munmap setenv clearenv sqrt strerror getaddrinfo])
+AC_CHECK_FUNCS([sigaltstack bzero gettimeofday memmove memset munmap setenv sqrt strerror getaddrinfo])
 
 AC_CACHE_SAVE
 
@@ -474,7 +474,10 @@ AC_DEFINE_UNQUOTED([UNSETENV_HAS_RETURN_VALUE],
   $vicare_cv_UNSETENV_HAS_RETURN_VALUE,
   [whether the function unsetenv has a return value])
 
+#page
+#### tests for GNU C Library specific features
 
+AC_CHECK_FUNCS([clearenv])
 
 #page
 #### tests for GNU+Linux specific features

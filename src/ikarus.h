@@ -33,6 +33,7 @@
 #include <string.h>
 #include <strings.h>
 #include <limits.h>
+#include <errno.h>
 #include "ikarus-data.h"
 
 

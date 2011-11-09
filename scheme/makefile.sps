@@ -144,6 +144,7 @@
     "ikarus.codecs.sls"
     "ikarus.bytevectors.sls"
     "ikarus.posix.sls"
+    "ikarus.glibc.sls"
     "ikarus.linux.sls"
     "ikarus.io.sls"
     "ikarus.hash-tables.sls"
@@ -553,7 +554,6 @@
     (WIFSTOPPED					i v)
     (WSTOPSIG					i v)
     (WTERMSIG					i v)
-    (clearenv					i v)
     (environ					i v)
     (environ-table				i v)
     (environ->table				i v)
@@ -580,6 +580,9 @@
     (unsetenv					i v)
     (wait					i v)
     (waitpid					i v)
+
+;;; GNU C Library functions
+    (clearenv					i v)
 
 ;;; Linux functions
     (WIFCONTINUED				i v)

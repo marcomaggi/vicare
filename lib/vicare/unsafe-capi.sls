@@ -37,7 +37,7 @@
     ;; operative system environment variables
     posix-getenv		posix-setenv
     posix-unsetenv		posix-environ
-    linux-clearenv
+    glibc-clearenv
 
     ;; process identifiers
     posix-getpid		posix-getppid
@@ -95,8 +95,8 @@
 (define-inline (posix-unsetenv varname-bv)
   (foreign-call "ikrt_posix_unsetenv" varname-bv))
 
-(define-inline (linux-clearenv)
-  (foreign-call "ikrt_linux_clearenv"))
+(define-inline (glibc-clearenv)
+  (foreign-call "ikrt_glibc_clearenv"))
 
 (define-inline (posix-environ)
   (foreign-call "ikrt_posix_environ"))

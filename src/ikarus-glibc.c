@@ -1,7 +1,7 @@
 /*
   Part of: Vicare
-  Contents: interface to Linux functions
-  Date: Mon Nov  7, 2011
+  Contents: interface to GNU C Library functions
+  Date: Wed Nov  9, 2011
 
   Abstract
 
@@ -29,23 +29,11 @@
  ** ----------------------------------------------------------------- */
 
 #include "ikarus.h"
-#include <dirent.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <time.h>
-#include <unistd.h>
-#include <sys/mman.h>
-#include <sys/param.h>
-#include <sys/resource.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/wait.h>
 
 static void
 feature_failure (const char * funcname)
 {
-  fprintf(stderr, "Vicare error: called GNU+Linux specific function, %s\n", funcname);
+  fprintf(stderr, "Vicare error: called GNU C Library specific function, %s\n", funcname);
   exit(EXIT_FAILURE);
 }
 
@@ -58,41 +46,15 @@ ikptr ik_errno_to_code (void);
 
 
 /** --------------------------------------------------------------------
- ** Process exit status.
+ ** Operative system environment variables.
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_linux_WIFCONTINUED (ikptr fx_status)
+ikrt_glibc_clearenv (void)
 {
-#ifdef HAVE_WIFCONTINUED
-  int   status = unfix(fx_status);
-  return (WIFCONTINUED(status))? true_object : false_object;
-#else
-  feature_failure(__func__);
-#endif
-}
-
-ikptr
-ikrt_linux_waitid (ikptr fx_idtype, ikptr fx_id, ikptr struct_info, ikptr fx_options)
-{
-#ifdef HAVE_WAITID
-  idtype_t  idtype  = unfix(fx_idtype);
-  id_t      id      = unfix(fx_id);
-  siginfo_t info;
-  int       options = unfix(fx_options);
-  int       retval;
-  errno  = 0;
-  retval = waitid(idtype, id, &info, options);
-  if (0 <= retval) {
-    ref(struct_info, off_record_data+0*wordsize) = fix(info.si_pid);
-    ref(struct_info, off_record_data+1*wordsize) = fix(info.si_uid);
-    ref(struct_info, off_record_data+2*wordsize) = fix(info.si_signo);
-    ref(struct_info, off_record_data+3*wordsize) = fix(info.si_status);
-    ref(struct_info, off_record_data+4*wordsize) = fix(info.si_code);
-    return struct_info;
-  } else {
-    return ik_errno_to_code();
-  }
+#ifdef HAVE_CLEARENV
+  clearenv();
+  return void_object;
 #else
   feature_failure(__func__);
 #endif

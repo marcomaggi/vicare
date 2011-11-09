@@ -7505,7 +7505,9 @@ the process.
 
 @menu
 * capi posix::                  C language level @posix{} interface.
-* capi linux::                  C language level Linux interface.
+* capi linux::                  C language level @gnu{}+Linux interface.
+* capi glibc::                  C language level @gnu{} C Library
+                                interface.
 @end menu
 
 @c page
@@ -8458,25 +8460,12 @@ is stored in a single limb (see the @code{mpn_} @api{} in @gmp{}).
 
 @c page
 @node capi linux
-@section C language level Linux interface
+@section C language level @gnu{}+Linux interface
 
 
 @menu
-* capi linux env::              Operative system environment variables.
 * capi linux status::           Process termination status.
 @end menu
-
-@c page
-@node capi linux env
-@subsection Operative system environment variables
-
-
-@deftypefun ikrt ikrt_linux_clearenv (void)
-Interface to the C function @cfunc{clearenv}, @glibcref{Environment
-Access, clearenv}.  Remove all the entries from the environment.  Return
-the void object.
-@end deftypefun
-
 
 @c page
 @node capi linux status
@@ -8504,6 +8493,25 @@ Interface to the Linux specific C macro @cfunc{WIFCONTINUED}.  Return
 true if the process was resumed by delivery of @code{SIGCONT}.
 @end deftypefun
 
+@c page
+@node capi glibc
+@section C language level @gnu{} C Library interface
+
+
+@menu
+* capi glibc env::              Operative system environment variables.
+@end menu
+
+@c page
+@node capi glibc env
+@subsection Operative system environment variables
+
+
+@deftypefun ikrt ikrt_glibc_clearenv (void)
+Interface to the C function @cfunc{clearenv}, @glibcref{Environment
+Access, clearenv}.  Remove all the entries from the environment.  Return
+the void object.
+@end deftypefun
 
 @c page
 @node objects

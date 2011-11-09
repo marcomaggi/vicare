@@ -14,6 +14,7 @@ SRCS	= \
 	ikarus-flonums.c		\
 	ikarus-getaddrinfo.c		\
 	ikarus-getaddrinfo.h		\
+	ikarus-glibc.c			\
 	ikarus-io.c			\
 	ikarus-linux.c			\
 	ikarus-main.c			\

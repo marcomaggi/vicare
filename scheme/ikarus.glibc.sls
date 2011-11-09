@@ -1,8 +1,8 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare
-;;;Contents: Linux platform API
-;;;Date: Mon Nov  7, 2011
+;;;Contents: GNU C Library platform API
+;;;Date: Wed Nov  9, 2011
 ;;;
 ;;;Abstract
 ;;;
@@ -25,25 +25,14 @@
 ;;;
 
 
-(library (ikarus.linux)
+(library (ikarus.glibc)
   (export
-    ;; process termination status
-    waitid
-    make-siginfo_t		siginfo_t?
-    siginfo_t-si_pid		siginfo_t-si_uid
-    siginfo_t-si_signo		siginfo_t-si_status
-    siginfo_t-si_code
-    WIFCONTINUED
+    ;; operative system environment variables
+    clearenv
     )
   (import (except (ikarus)
-		  ;; process termination status
-		  waitid
-		  make-siginfo_t		siginfo_t?
-		  siginfo_t-si_pid		siginfo_t-si_uid
-		  siginfo_t-si_signo		siginfo_t-si_status
-		  siginfo_t-si_code
-		  WIFCONTINUED
-
+		  ;; operative system environment variables
+		  clearenv
 		  )
     (vicare syntactic-extensions)
     (vicare platform-constants)
@@ -55,7 +44,7 @@
 
 ;;;; helpers
 
-(define-syntax define-for-linux
+(define-syntax define-for-glibc
   (if #t
       (syntax-rules ()
 	((_ (?who . ?args) . ?body)
@@ -64,7 +53,7 @@
       ((_ (?who . ?args) . ?body)
        (define (?who . ?args)
 	 (assertion-violation '?who
-	   "attempt to call unimplemented GNU+Linux function"))))))
+	   "attempt to call unimplemented GNU C Library function"))))))
 
 
 ;;;; arguments validation
@@ -96,24 +85,10 @@
   (assertion-violation who "expected fixnum signal code as argument" obj))
 
 
-;;;; process termination status
+;;;; operative system environment variables
 
-(define-struct siginfo_t
-  (si_pid si_uid si_signo si_status si_code))
-
-(define-for-linux (waitid idtype id options)
-  (define who 'waitid)
-  (with-arguments-validation (who)
-      ((fixnum  idtype)
-       (fixnum	id)
-       (fixnum	options))
-    (capi.linux-waitid idtype id (make-siginfo_t #f #f #f #f #f) options)))
-
-(define-for-linux (WIFCONTINUED status)
-  (define who 'WIFCONTINUED)
-  (with-arguments-validation (who)
-      ((fixnum  status))
-    (capi.linux-WIFCONTINUED status)))
+(define-for-glibc (clearenv)
+  (capi.glibc-clearenv))
 
 
 ;;;; done
@@ -122,5 +97,5 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'define-for-linux 'scheme-indent-function 1)
+;; eval: (put 'define-for-glibc 'scheme-indent-function 1)
 ;; End:
