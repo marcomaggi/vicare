@@ -37,6 +37,7 @@
 #include <signal.h>
 #include <stdint.h>
 #include <time.h>
+#include <utime.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/param.h>
@@ -865,7 +866,7 @@ ikrt_realpath (ikptr pathname_bv, ikpcb* pcb)
 
 
 /** --------------------------------------------------------------------
- ** Onwers and permissions.
+ ** Setting onwers, permissions, times.
  ** ----------------------------------------------------------------- */
 
 ikptr
@@ -943,6 +944,84 @@ ikrt_posix_getumask (void)
   mode_t  mask = umask(0);
   umask(mask);
   return fix((long) mask);
+}
+ikptr
+ikrt_posix_utime (ikptr pathname_bv, ikptr atime_sec_fx, ikptr mtime_sec_fx)
+{
+  char *          pathname;
+  struct utimbuf  T;
+  int             rv;
+  pathname  = (char*)(long)(pathname_bv+off_bytevector_data);
+  T.actime  = unfix(atime_sec_fx);
+  T.modtime = unfix(mtime_sec_fx);
+  errno     = 0;
+  rv        = utime(pathname, &T);
+  if (0 == rv) {
+    return fix(0);
+  } else {
+    return ik_errno_to_code();
+  }
+}
+ikptr
+ikrt_posix_utimes (ikptr pathname_bv,
+                   ikptr atime_sec_fx, ikptr atime_usec_fx,
+                   ikptr mtime_sec_fx, ikptr mtime_usec_fx)
+{
+  char *          pathname;
+  struct timeval  T[2];
+  int             rv;
+  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
+  T[0].tv_sec  = unfix(atime_sec_fx);
+  T[0].tv_usec = unfix(atime_usec_fx);
+  T[1].tv_sec  = unfix(mtime_sec_fx);
+  T[1].tv_usec = unfix(mtime_usec_fx);
+  errno        = 0;
+  rv           = utimes(pathname, T);
+  if (0 == rv) {
+    return fix(0);
+  } else {
+    return ik_errno_to_code();
+  }
+}
+ikptr
+ikrt_posix_lutimes (ikptr pathname_bv,
+                    ikptr atime_sec_fx, ikptr atime_usec_fx,
+                    ikptr mtime_sec_fx, ikptr mtime_usec_fx)
+{
+  char *          pathname;
+  struct timeval  T[2];
+  int             rv;
+  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
+  T[0].tv_sec  = unfix(atime_sec_fx);
+  T[0].tv_usec = unfix(atime_usec_fx);
+  T[1].tv_sec  = unfix(mtime_sec_fx);
+  T[1].tv_usec = unfix(mtime_usec_fx);
+  errno        = 0;
+  rv           = lutimes(pathname, T);
+  if (0 == rv) {
+    return fix(0);
+  } else {
+    return ik_errno_to_code();
+  }
+}
+ikptr
+ikrt_posix_futimes (ikptr fd,
+                    ikptr atime_sec_fx, ikptr atime_usec_fx,
+                    ikptr mtime_sec_fx, ikptr mtime_usec_fx)
+{
+  struct timeval  T[2];
+  int             rv;
+  T[0].tv_sec  = unfix(atime_sec_fx);
+  T[0].tv_usec = unfix(atime_usec_fx);
+  T[1].tv_sec  = unfix(mtime_sec_fx);
+  T[1].tv_usec = unfix(mtime_usec_fx);
+  errno        = 0;
+  rv           = futimes(unfix(fd), T);
+  if (0 == rv) {
+    return fix(0);
+  } else {
+    return ik_errno_to_code();
+  }
 }
 
 

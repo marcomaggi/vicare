@@ -76,6 +76,8 @@
     posix-chown				posix-fchown
     posix-chmod				posix-fchmod
     posix-umask				posix-getumask
+    posix-utime				posix-utimes
+    posix-lutimes			posix-futimes
 
     ;; platform API for file descriptors
     platform-open-input-fd
@@ -289,6 +291,19 @@
 (define-inline (posix-getumask)
   (foreign-call "ikrt_posix_getumask"))
 
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-utime pathname-bv atime-sec mtime-sec)
+  (foreign-call "ikrt_posix_utime" pathname-bv atime-sec mtime-sec))
+
+(define-inline (posix-utimes pathname-bv atime-sec atime-usec mtime-sec mtime-usec)
+  (foreign-call "ikrt_posix_utimes" pathname-bv atime-sec atime-usec mtime-sec mtime-usec))
+
+(define-inline (posix-lutimes pathname-bv atime-sec atime-usec mtime-sec mtime-usec)
+  (foreign-call "ikrt_posix_lutimes" pathname-bv atime-sec atime-usec mtime-sec mtime-usec))
+
+(define-inline (posix-futimes fd atime-sec atime-usec mtime-sec mtime-usec)
+  (foreign-call "ikrt_posix_futimes" fd atime-sec atime-usec mtime-sec mtime-usec))
 
 
 ;;;; platform API for file descriptors

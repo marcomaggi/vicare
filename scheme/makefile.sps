@@ -591,6 +591,10 @@
     (unsetenv					i v)
     (wait					i v)
     (waitpid					i v)
+    (utime					i v)
+    (utimes					i v)
+    (lutimes					i v)
+    (futimes					i v)
 
     (make-struct-stat				i v)
     (struct-stat?				i v)

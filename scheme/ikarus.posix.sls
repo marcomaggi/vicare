@@ -89,6 +89,8 @@
     chown			fchown
     chmod			fchmod
     umask			getumask
+    utime			utimes
+    lutimes			futimes
 
     ;; file system interface
     delete-file
@@ -177,6 +179,8 @@
 		  chown				fchown
 		  chmod				fchmod
 		  umask				getumask
+		  utime				utimes
+		  lutimes			futimes
 
 		  ;; file system interface
 		  delete-file
@@ -246,6 +250,16 @@
 (define-argument-validation (struct-stat who obj)
   (struct-stat? obj)
   (assertion-violation who "expected struct stat instance as argument" obj))
+
+(define-argument-validation (secfx who obj)
+  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (assertion-violation who "expected non-negative fixnum as seconds count argument" obj))
+
+(define-argument-validation (usecfx who obj)
+  (and (fixnum? obj)
+       (unsafe.fx>= obj 0)
+       (unsafe.fx<= obj 999999))
+  (assertion-violation who "expected non-negative fixnum as nanoseconds count argument" obj))
 
 
 ;;;; errors handling
@@ -1001,6 +1015,61 @@
 
 (define (getumask)
   (capi.posix-getumask))
+
+;;; --------------------------------------------------------------------
+
+(define (utime pathname atime mtime)
+  (define who 'utime)
+  (with-arguments-validation (who)
+      ((pathname  pathname)
+       (secfx     atime)
+       (secfx     mtime))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-utime pathname.bv atime mtime)))
+	(if (unsafe.fxzero? rv)
+	    rv
+	  (raise-errno-error who rv pathname atime mtime))))))
+
+(define (utimes pathname atime.sec atime.usec mtime.sec mtime.usec)
+  (define who 'utimes)
+  (with-arguments-validation (who)
+      ((pathname  pathname)
+       (secfx     atime.sec)
+       (usecfx    atime.usec)
+       (secfx     mtime.sec)
+       (usecfx    mtime.usec))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-utimes pathname.bv atime.sec atime.usec mtime.sec mtime.usec)))
+	(if (unsafe.fxzero? rv)
+	    rv
+	  (raise-errno-error who rv pathname atime.sec atime.usec mtime.sec mtime.usec))))))
+
+(define (lutimes pathname atime.sec atime.usec mtime.sec mtime.usec)
+  (define who 'lutimes)
+  (with-arguments-validation (who)
+      ((pathname  pathname)
+       (secfx     atime.sec)
+       (usecfx    atime.usec)
+       (secfx     mtime.sec)
+       (usecfx    mtime.usec))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-lutimes pathname.bv atime.sec atime.usec mtime.sec mtime.usec)))
+	(if (unsafe.fxzero? rv)
+	    rv
+	  (raise-errno-error who rv pathname atime.sec atime.usec mtime.sec mtime.usec))))))
+
+(define (futimes fd atime.sec atime.usec mtime.sec mtime.usec)
+  (define who 'futimes)
+  (with-arguments-validation (who)
+      ((file-descriptor  fd)
+       (secfx     atime.sec)
+       (usecfx    atime.usec)
+       (secfx     mtime.sec)
+       (usecfx    mtime.usec))
+    (let ((rv (capi.posix-futimes fd atime.sec atime.usec mtime.sec mtime.usec)))
+      (if (unsafe.fxzero? rv)
+	  rv
+	(raise-errno-error who rv fd atime.sec atime.usec mtime.sec mtime.usec)))))
 
 
 (define (split-file-name str)

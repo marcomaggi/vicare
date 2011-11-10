@@ -6375,6 +6375,33 @@ fixnum.
 @end defun
 
 
+@defun utime @var{pathname} @var{atime_sec} @var{mtime_sec}
+Interface to the C function @cfunc{utime}, @glibcref{File Times, utime}.
+Set the access and modification times of the file system entry selected
+by @var{pathname} to the specified counts of seconds; both
+@var{atime_sec} and @var{mtime_sec} must be fixnums.  If successful
+return zero, else raise an exception.
+@end defun
+
+
+@defun utimes @var{pathname} @var{atime_sec} @var{atime_usec} @var{mtime_sec} @var{mtime_usec}
+@defunx lutimes @var{pathname} @var{atime_sec} @var{atime_usec} @var{mtime_sec} @var{mtime_usec}
+Interface to the C functions @cfunc{utimes} and @cfunc{lutimes},
+@glibcref{File Times, utimes}.  Set the access and modification times of
+the file system entry selected by @var{pathname} to the specified counts
+of seconds and microseconds; all the numeric arguments must be fixnums.
+If successful return zero, else raise an exception.
+@end defun
+
+
+@defun futimes @var{fd} @var{atime_sec} @var{atime_usec} @var{mtime_sec} @var{mtime_usec}
+Interface to the C function @cfunc{futimes}, @glibcref{File Times,
+futimes}.  Set the access and modification times of the file system
+entry associated to @var{fd} to the specified counts of seconds and
+microseconds; all the numeric arguments must be fixnums.  If successful
+return zero, else raise an exception.
+@end defun
+
 @c ------------------------------------------------------------
 
 @subsubheading Current working directory
@@ -8607,6 +8634,36 @@ which must be a fixnum and return the previous mask as a fixnum.
 Interface to the C function @cfunc{getumask}, @glibcref{Setting
 Permissions, getumask}.  Return the current file creation mask as a
 fixnum.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_utime (ikptr @var{pathname}, ikptr @var{atime_sec}, ikptr @var{mtime_sec})
+Interface to the C function @cfunc{utime}, @glibcref{File Times, utime}.
+Set the access and modification times of the file system entry selected
+by @var{pathname}, which must be a bytevector, to the specified counts
+of seconds; both @var{atime_sec} and @var{mtime_sec} must be fixnums.
+If successful return zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_utimes (ikptr @var{pathname}, ikptr @var{atime_sec}, ikptr @var{atime_usec}, ikptr @var{mtime_sec}, ikptr @var{mtime_usec})
+@deftypefunx ikptr ikrt_posix_lutimes (ikptr @var{pathname}, ikptr @var{atime_sec}, ikptr @var{atime_usec}, ikptr @var{mtime_sec}, ikptr @var{mtime_usec})
+Interface to the C functions @cfunc{utimes} and @cfunc{lutimes},
+@glibcref{File Times, utimes}.  Set the access and modification times of
+the file system entry selected by @var{pathname}, which must be a
+bytevector, to the specified counts of seconds and microseconds; all the
+numeric arguments must be fixnums.  If successful return zero, else
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_futimes (ikptr @var{fd}, ikptr @var{atime_sec}, ikptr @var{atime_usec}, ikptr @var{mtime_sec}, ikptr @var{mtime_usec})
+Interface to the C function @cfunc{futimes}, @glibcref{File Times,
+futimes}.  Set the access and modification times of the file system
+entry associated to @var{fd}, which must be a fixnum representing a file
+descriptor, to the specified counts of seconds and microseconds; all the
+numeric arguments must be fixnums.  If successful return zero, else
+return an encoded @code{errno} value.
 @end deftypefun
 
 

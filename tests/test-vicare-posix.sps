@@ -467,6 +467,32 @@
 	(umask mask))
     => #o755)
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-temporary-file ("tmp")
+	(utime "tmp" 12 34)
+	(list (file-atime "tmp")
+	      (file-mtime "tmp")))
+    => (list (* #e1e9 12)
+	     (* #e1e9 34)))
+
+  (check
+      (with-temporary-file ("tmp")
+	(utimes "tmp" 12 0 34 0)
+	(list (file-atime "tmp")
+	      (file-mtime "tmp")))
+    => (list (* #e1e9 12)
+	     (* #e1e9 34)))
+
+  (check
+      (with-temporary-file ("tmp")
+	(lutimes "tmp" 12 0 34 0)
+	(list (file-atime "tmp")
+	      (file-mtime "tmp")))
+    => (list (* #e1e9 12)
+	     (* #e1e9 34)))
+
   #t)
 
 
