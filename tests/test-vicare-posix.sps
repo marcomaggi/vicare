@@ -387,6 +387,15 @@
     (check (S_ISSOCK mode)	=> #f)
     (check (S_ISFIFO mode)	=> #f))
 
+;;; --------------------------------------------------------------------
+
+  (check (file-exists? "Makefile")		=> #t)
+  (check (file-exists? "this-does-not-exists")	=> #f)
+
+  (check
+      (realpath "Makefile")
+    => "Makefile")
+
   #t)
 
 

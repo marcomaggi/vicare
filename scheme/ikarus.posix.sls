@@ -77,10 +77,11 @@
     S_ISLNK			S_ISSOCK
     S_ISFIFO
 
+    realpath			file-exists?
+
     ;; file system interface
-    file-exists?		delete-file
+    delete-file
     rename-file			split-file-name
-    file-real-path
 
     current-directory		directory-list
     make-directory		make-directory*
@@ -158,10 +159,11 @@
 		  S_ISLNK			S_ISSOCK
 		  S_ISFIFO
 
+		  realpath			file-exists?
+
 		  ;; file system interface
-		  file-exists?			delete-file
+		  delete-file
 		  rename-file			split-file-name
-		  file-real-path
 
 		  current-directory		directory-list
 		  make-directory		make-directory*
@@ -629,10 +631,10 @@
   (with-arguments-validation (who)
       ((pathname	filename)
        (list-of-strings	argv))
-    (with-pathnames (filename)
-      (let ((rv (capi.posix-execv filename (map string->utf8 argv))))
+    (with-pathnames ((filename.bv filename))
+      (let ((rv (capi.posix-execv filename.bv (map string->utf8 argv))))
 	(if (unsafe.fx< rv 0)
-	    (raise/strerror who rv)
+	    (raise-errno-error who rv filename argv)
 	  rv)))))
 
 (define (execle filename argv . env)
@@ -644,12 +646,12 @@
       ((pathname	filename)
        (list-of-strings	argv)
        (list-of-strings	env))
-    (with-pathnames (filename)
-      (let ((rv (capi.posix-execve filename
+    (with-pathnames ((filename.bv filename))
+      (let ((rv (capi.posix-execve filename.bv
 				   (map string->utf8 argv)
 				   (map string->utf8 env))))
 	(if (unsafe.fx< rv 0)
-	    (raise/strerror who rv)
+	    (raise-errno-error who rv filename argv env)
 	  rv)))))
 
 (define (execlp filename . argv)
@@ -660,10 +662,10 @@
   (with-arguments-validation (who)
       ((pathname	filename)
        (list-of-strings	argv))
-    (with-pathnames (filename)
-      (let ((rv (capi.posix-execvp filename (map string->utf8 argv))))
+    (with-pathnames ((filename.bv filename))
+      (let ((rv (capi.posix-execvp filename.bv (map string->utf8 argv))))
 	(if (unsafe.fx< rv 0)
-	    (raise/strerror who rv)
+	    (raise-errno-error who rv filename argv)
 	  rv)))))
 
 
@@ -769,9 +771,9 @@
   (define who 'stat)
   (with-arguments-validation (who)
       ((pathname  pathname))
-    (with-pathnames (pathname)
+    (with-pathnames ((pathname.bv pathname))
       (let* ((S  (%make-stat))
-	     (rv (capi.posix-stat pathname S)))
+	     (rv (capi.posix-stat pathname.bv S)))
 	(if (unsafe.fx< rv 0)
 	    (raise-errno-error who rv pathname)
 	  S)))))
@@ -780,9 +782,9 @@
   (define who 'stat)
   (with-arguments-validation (who)
       ((pathname  pathname))
-    (with-pathnames (pathname)
+    (with-pathnames ((pathname.bv pathname))
       (let* ((S  (%make-stat))
-	     (rv (capi.posix-lstat pathname S)))
+	     (rv (capi.posix-lstat pathname.bv S)))
 	(if (unsafe.fx< rv 0)
 	    (raise-errno-error who rv pathname)
 	  S)))))
@@ -806,8 +808,8 @@
 			  (define who '?who)
 			  (with-arguments-validation (who)
 			      ((pathname  pathname))
-			    (with-pathnames (pathname)
-			      (let ((rv (?func pathname follow-symlinks?)))
+			    (with-pathnames ((pathname.bv pathname))
+			      (let ((rv (?func pathname.bv follow-symlinks?)))
 				(if (boolean? rv)
 				    rv
 				  (raise-errno-error who rv pathname))))))
@@ -841,6 +843,20 @@
 
 ;;; --------------------------------------------------------------------
 
+(define (file-exists? pathname)
+  ;;Defined by R6RS.
+  ;;
+  (define who 'file-exists?)
+  (with-arguments-validation (who)
+      ((pathname  pathname))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-file-exists? pathname.bv)))
+	(if (boolean? rv)
+	    rv
+	  (raise-errno-error who rv pathname))))))
+
+;;; --------------------------------------------------------------------
+
 (define (%stat path follow who)
   (unless (string? path)
     (die who "not a string" path))
@@ -856,6 +872,21 @@
 	 ((ENOTDIR) #f) ;; from ikarus-errno.c: ENOTDIR -- path does not exist
 	 (else
 	  (raise/strerror who r path)))))))
+
+
+;;;; symbolic links
+
+(define (realpath pathname)
+  (define who 'realpath)
+  (with-arguments-validation (who)
+      ((pathname  pathname))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-realpath pathname.bv)))
+	(if (bytevector? rv)
+	    (if (bytevector? pathname)
+		rv
+	      ((filename->string-func) rv))
+	  (raise-errno-error who rv pathname))))))
 
 
 (define (split-file-name str)
@@ -886,12 +917,6 @@
     (unless (boolean? r) (raise/strerror who r path))
     r))
 
-(define file-exists?
-  (case-lambda
-   ((path)
-    (file-exists? path #t))
-   ((path follow)
-    (and (%stat path follow 'file-exists?) #t))))
 
 (define file-regular?
   (case-lambda
@@ -1060,20 +1085,6 @@
 (define (file-mtime x)
   ($file-time x 'file-mtime
 	      (lambda (u) (foreign-call "ikrt_file_mtime2" u))))
-
-(define (file-real-path x)
-  (define who 'file-real-path)
-  (unless (string? x)
-    (die who "not a string" x))
-  (let ((v (foreign-call "ikrt_realpath" ((string->filename-func) x))))
-    (cond
-     ((bytevector? v)
-      (let ((s (utf8->string v)))
-	(when (or (string=? s "")
-		  (not (char=? (string-ref s 0) #\/)))
-	  (error who "unexpected value returned from OS" s x))
-	s))
-     (else (raise/strerror who v x)))))
 
 (define (nanosleep secs nsecs)
   (import (ikarus system $fx))

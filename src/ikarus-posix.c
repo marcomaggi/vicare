@@ -472,6 +472,7 @@ posix_stat (ikptr filename_bv, ikptr stat_struct, int follow_symlinks, ikpcb* pc
   struct stat   S;
   int           rv;
   filename = (char*)(long)(filename_bv + off_bytevector_data);
+  errno    = 0;
   if (follow_symlinks) {
     rv = stat(filename, &S);
   } else {
@@ -498,6 +499,7 @@ ikrt_posix_fstat (ikptr fd_fx, ikptr stat_struct, ikpcb* pcb)
 {
   struct stat   S;
   int           rv;
+  errno = 0;
   rv = fstat(unfix(fd_fx), &S);
   if (0 == rv) {
     return fill_stat_struct(&S, stat_struct, pcb);
@@ -541,6 +543,7 @@ file_is_p (ikptr pathname_bv, ikptr follow_symlinks, int flag)
   struct stat   S;
   int           rv;
   pathname = (char*)(long)(pathname_bv + off_bytevector_data);
+  errno    = 0;
   if (false_object == follow_symlinks) {
     rv = lstat(pathname, &S);
   } else {
@@ -575,6 +578,7 @@ FILE_IS_P(ikrt_file_is_fifo,            S_IFIFO)
      struct stat   S;                                                   \
      int           rv;                                                  \
      pathname = (char*)(long)(pathname_bv + off_bytevector_data);       \
+     errno    = 0;                                                      \
      if (false_object == follow_symlinks) {                             \
        rv = lstat(pathname, &S);                                        \
      } else {                                                           \
@@ -594,7 +598,25 @@ SPECIAL_FILE_IS_P(ikrt_file_is_shared_memory,S_TYPEISSHM)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_realpath (ikptr pathname_bv, ikpcb* pcb)
+ikrt_posix_file_exists (ikptr pathname_bv)
+{
+  char *        pathname;
+  struct stat   S;
+  int           rv;
+  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
+  errno    = 0;
+  rv = stat(pathname, &S);
+  if (0 == rv) {
+    return true_object;
+  } else if ((ENOENT == errno) || (ENOTDIR == errno)) {
+    return false_object;
+  } else {
+    return ik_errno_to_code();
+  }
+}
+
+ikptr
+ikrt_posix_realpath (ikptr pathname_bv, ikpcb* pcb)
 {
   char *        pathname;
   char          buff[PATH_MAX];
@@ -610,6 +632,12 @@ ikrt_realpath (ikptr pathname_bv, ikpcb* pcb)
     memcpy((r+disp_bytevector_data), rv, n+1);
     return (ikptr)(r+bytevector_tag);
   }
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_realpath (ikptr pathname_bv, ikpcb* pcb)
+{
+  return ikrt_posix_realpath(pathname_bv, pcb);
 }
 
 

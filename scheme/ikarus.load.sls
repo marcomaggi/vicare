@@ -23,6 +23,8 @@
 		  load
 		  load-r6rs-script
 		  fasl-directory)
+    (only (ikarus.posix)
+	  realpath)
     (only (ikarus.compiler)
 	  compile-core-expr)
     (only (psyntax library-manager)
@@ -64,7 +66,7 @@
   ;;
   (let ((d (fasl-directory)))
     (and (not (string=? d ""))
-	 (string-append d (file-real-path filename) FASL-EXTENSION))))
+	 (string-append d (realpath filename) FASL-EXTENSION))))
 
 
 ;;;; loading and serialising libraries

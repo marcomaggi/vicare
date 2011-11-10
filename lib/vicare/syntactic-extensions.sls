@@ -145,10 +145,10 @@
 
 (define-syntax with-pathnames
   (syntax-rules ()
-    ((_ (?pathname ...) . ?body)
-     (let ((?pathname (if (bytevector? ?pathname)
-			  ?pathname
-			((string->filename-func) ?pathname)))
+    ((_ ((?pathname-bv ?pathname) ...) . ?body)
+     (let ((?pathname-bv (if (bytevector? ?pathname)
+			     ?pathname
+			   ((string->filename-func) ?pathname)))
 	   ...)
        . ?body))))
 

@@ -35,38 +35,39 @@
     posix-strerror
 
     ;; operating system environment variables
-    posix-getenv		posix-setenv
-    posix-unsetenv		posix-environ
+    posix-getenv			posix-setenv
+    posix-unsetenv			posix-environ
     glibc-clearenv
 
     ;; process identifiers
-    posix-getpid		posix-getppid
+    posix-getpid			posix-getppid
 
     ;; executing and forking processes
-    posix-fork			posix-system
-    posix-execv			posix-execve
+    posix-fork				posix-system
+    posix-execv				posix-execve
     posix-execvp
 
     ;; process termination status
-    posix-waitpid		linux-waitid
+    posix-waitpid			linux-waitid
     posix-wait
-    posix-WIFEXITED		posix-WEXITSTATUS
-    posix-WIFSIGNALED		posix-WTERMSIG
-    posix-WCOREDUMP		posix-WIFSTOPPED
-    posix-WSTOPSIG		linux-WIFCONTINUED
+    posix-WIFEXITED			posix-WEXITSTATUS
+    posix-WIFSIGNALED			posix-WTERMSIG
+    posix-WCOREDUMP			posix-WIFSTOPPED
+    posix-WSTOPSIG			linux-WIFCONTINUED
 
     ;; delivering interprocess signals
-    posix-raise			posix-kill
+    posix-raise				posix-kill
     posix-pause
 
     ;; file system inspection
-    posix-stat			posix-lstat
+    posix-stat				posix-lstat
     posix-fstat
-    posix-file-is-directory?	posix-file-is-char-device?
-    posix-file-is-block-device?	posix-file-is-regular-file?
+    posix-file-is-directory?		posix-file-is-char-device?
+    posix-file-is-block-device?		posix-file-is-regular-file?
     posix-file-is-symbolic-link?	posix-file-is-socket?
-    posix-file-is-fifo?		posix-file-is-message-queue?
-    posix-file-is-semaphore?	posix-file-is-shared-memory?
+    posix-file-is-fifo?			posix-file-is-message-queue?
+    posix-file-is-semaphore?		posix-file-is-shared-memory?
+    posix-file-exists?			posix-realpath
 
     ;; platform API for file descriptors
     platform-open-input-fd
@@ -231,6 +232,13 @@
 (define-inline (posix-file-is-shared-memory? pathname-bv follow)
   (foreign-call "ikrt_file_is_shared_memory" pathname-bv follow))
 
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-realpath pathname-bv)
+  (foreign-call "ikrt_posix_realpath" pathname-bv))
+
+(define-inline (posix-file-exists? pathname-bv)
+  (foreign-call "ikrt_posix_file_exists" pathname-bv))
 
 
 ;;;; platform API for file descriptors
