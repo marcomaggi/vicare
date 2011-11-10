@@ -62,6 +62,11 @@
     ;; file system inspection
     posix-stat			posix-lstat
     posix-fstat
+    posix-file-is-directory?	posix-file-is-char-device?
+    posix-file-is-block-device?	posix-file-is-regular-file?
+    posix-file-is-symbolic-link?	posix-file-is-socket?
+    posix-file-is-fifo?		posix-file-is-message-queue?
+    posix-file-is-semaphore?	posix-file-is-shared-memory?
 
     ;; platform API for file descriptors
     platform-open-input-fd
@@ -191,6 +196,41 @@
 
 (define-inline (posix-fstat fd stat-struct)
   (foreign-call "ikrt_posix_fstat" fd stat-struct))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-file-is-directory? pathname-bv follow)
+  (foreign-call "ikrt_file_is_directory" pathname-bv follow))
+
+(define-inline (posix-file-is-char-device? pathname-bv follow)
+  (foreign-call "ikrt_file_is_char_device" pathname-bv follow))
+
+(define-inline (posix-file-is-block-device? pathname-bv follow)
+  (foreign-call "ikrt_file_is_block_device" pathname-bv follow))
+
+(define-inline (posix-file-is-regular-file? pathname-bv follow)
+  (foreign-call "ikrt_file_is_regular_file" pathname-bv follow))
+
+(define-inline (posix-file-is-symbolic-link? pathname-bv follow)
+  (foreign-call "ikrt_file_is_symbolic_link" pathname-bv follow))
+
+(define-inline (posix-file-is-socket? pathname-bv follow)
+  (foreign-call "ikrt_file_is_socket" pathname-bv follow))
+
+(define-inline (posix-file-is-fifo? pathname-bv follow)
+  (foreign-call "ikrt_file_is_fifo" pathname-bv follow))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-file-is-message-queue? pathname-bv follow)
+  (foreign-call "ikrt_file_is_message_queue" pathname-bv follow))
+
+(define-inline (posix-file-is-semaphore? pathname-bv follow)
+  (foreign-call "ikrt_file_is_semaphore" pathname-bv follow))
+
+(define-inline (posix-file-is-shared-memory? pathname-bv follow)
+  (foreign-call "ikrt_file_is_shared_memory" pathname-bv follow))
+
 
 
 ;;;; platform API for file descriptors

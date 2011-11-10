@@ -532,6 +532,67 @@ ikrt_stat (ikptr filename, ikptr follow /*, ikpcb* pcb */)
   return ik_errno_to_code();
 }
 
+/* ------------------------------------------------------------------ */
+
+static ikptr
+file_is_p (ikptr pathname_bv, ikptr follow_symlinks, int flag)
+{
+  char *        pathname;
+  struct stat   S;
+  int           rv;
+  pathname = (char*)(long)(pathname_bv + off_bytevector_data);
+  if (false_object == follow_symlinks) {
+    rv = lstat(pathname, &S);
+  } else {
+    rv = stat(pathname, &S);
+  }
+  if (0 == rv) {
+    /* NOTE It is not enough to do "S.st_mode & flag", we really have to
+       do "flag == (S.st_mode & flag)". */
+    return (flag == (S.st_mode & flag))? true_object : false_object;
+  } else {
+    return ik_errno_to_code();
+  }
+}
+
+#define FILE_IS_P(WHO,FLAG)                                     \
+  ikptr WHO (ikptr pathname_bv, ikptr follow_symlinks)          \
+  { return file_is_p(pathname_bv, follow_symlinks, FLAG); }
+
+FILE_IS_P(ikrt_file_is_directory,       S_IFDIR)
+FILE_IS_P(ikrt_file_is_char_device,     S_IFCHR)
+FILE_IS_P(ikrt_file_is_block_device,    S_IFBLK)
+FILE_IS_P(ikrt_file_is_regular_file,    S_IFREG)
+FILE_IS_P(ikrt_file_is_symbolic_link,   S_IFLNK)
+FILE_IS_P(ikrt_file_is_socket,          S_IFSOCK)
+FILE_IS_P(ikrt_file_is_fifo,            S_IFIFO)
+
+#define SPECIAL_FILE_IS_P(WHO,PRED)                                     \
+   ikptr                                                                \
+   WHO (ikptr pathname_bv, ikptr follow_symlinks)                       \
+   {                                                                    \
+     char *        pathname;                                            \
+     struct stat   S;                                                   \
+     int           rv;                                                  \
+     pathname = (char*)(long)(pathname_bv + off_bytevector_data);       \
+     if (false_object == follow_symlinks) {                             \
+       rv = lstat(pathname, &S);                                        \
+     } else {                                                           \
+       rv = stat(pathname, &S);                                         \
+     }                                                                  \
+     if (0 == rv) {                                                     \
+       return (PRED(&S))? true_object : false_object;                   \
+     } else {                                                           \
+       return ik_errno_to_code();                                       \
+     }                                                                  \
+   }
+
+SPECIAL_FILE_IS_P(ikrt_file_is_message_queue,S_TYPEISMQ)
+SPECIAL_FILE_IS_P(ikrt_file_is_semaphore,S_TYPEISSEM)
+SPECIAL_FILE_IS_P(ikrt_file_is_shared_memory,S_TYPEISSHM)
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikrt_realpath (ikptr pathname_bv, ikpcb* pcb)
 {
@@ -544,7 +605,7 @@ ikrt_realpath (ikptr pathname_bv, ikpcb* pcb)
     return ik_errno_to_code();
   } else {
     int         n = strlen(rv);
-    uint8_t *   r = ik_safe_alloc(pcb, align(disp_bytevector_data+n+1));
+    uint8_t *   r = (uint8_t *)ik_safe_alloc(pcb, align(disp_bytevector_data+n+1));
     ref(r, 0) = fix(n);
     memcpy((r+disp_bytevector_data), rv, n+1);
     return (ikptr)(r+bytevector_tag);

@@ -365,6 +365,28 @@
 	(struct-stat? S))
     => #t)
 
+;;; --------------------------------------------------------------------
+
+  (check (file-is-directory?		"Makefile" #f)	=> #f)
+  (check (file-is-char-device?		"Makefile" #f)	=> #f)
+  (check (file-is-block-device?		"Makefile" #f)	=> #f)
+  (check (file-is-regular-file?		"Makefile" #f)	=> #t)
+  (check (file-is-symbolic-link?	"Makefile" #f)	=> #f)
+  (check (file-is-socket?		"Makefile" #f)	=> #f)
+  (check (file-is-fifo?			"Makefile" #f)	=> #f)
+  (check (file-is-message-queue?	"Makefile" #f)	=> #f)
+  (check (file-is-semaphore?		"Makefile" #f)	=> #f)
+  (check (file-is-shared-memory?	"Makefile" #f)	=> #f)
+
+  (let ((mode (struct-stat-st_mode (stat "Makefile"))))
+    (check (S_ISDIR mode)	=> #f)
+    (check (S_ISCHR mode)	=> #f)
+    (check (S_ISBLK mode)	=> #f)
+    (check (S_ISREG mode)	=> #t)
+    (check (S_ISLNK mode)	=> #f)
+    (check (S_ISSOCK mode)	=> #f)
+    (check (S_ISFIFO mode)	=> #f))
+
   #t)
 
 

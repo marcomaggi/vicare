@@ -42,6 +42,11 @@
 ;;;
 ;;;__WCLONE		__WALL		__WNOTHREAD
 
+;;; constants for file system inspection
+    S_IFDIR		S_IFCHR		S_IFBLK
+    S_IFREG		S_IFLNK		S_IFSOCK
+    S_IFIFO
+
 ;;; errno codes
     errno-code		case-errno
 
@@ -155,6 +160,14 @@
 ;; (define-inline-constant __WALL		@VALUEOF___WALL@)
 ;; (define-inline-constant __WNOTHREAD		@VALUEOF___WNOTHREAD@)
 
+;; constants for file system inspection
+(define-inline-constant S_IFDIR			@VALUEOF_S_IFDIR@)
+(define-inline-constant S_IFCHR			@VALUEOF_S_IFCHR@)
+(define-inline-constant S_IFBLK			@VALUEOF_S_IFBLK@)
+(define-inline-constant S_IFREG			@VALUEOF_S_IFREG@)
+(define-inline-constant S_IFLNK			@VALUEOF_S_IFLNK@)
+(define-inline-constant S_IFSOCK		@VALUEOF_S_IFSOCK@)
+(define-inline-constant S_IFIFO			@VALUEOF_S_IFIFO@)
 
 
 ;;;; friendly interface

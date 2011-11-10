@@ -66,6 +66,17 @@
     struct-stat-st_ctime	struct-stat-st_ctime_usec
     struct-stat-st_blocks	struct-stat-st_blksize
 
+    file-is-directory?		file-is-char-device?
+    file-is-block-device?	file-is-regular-file?
+    file-is-symbolic-link?	file-is-socket?
+    file-is-fifo?		file-is-message-queue?
+    file-is-semaphore?		file-is-shared-memory?
+
+    S_ISDIR			S_ISCHR
+    S_ISBLK			S_ISREG
+    S_ISLNK			S_ISSOCK
+    S_ISFIFO
+
     ;; file system interface
     file-exists?		delete-file
     rename-file			split-file-name
@@ -136,6 +147,17 @@
 		  struct-stat-st_ctime		struct-stat-st_ctime_usec
 		  struct-stat-st_blocks		struct-stat-st_blksize
 
+		  file-is-directory?		file-is-char-device?
+		  file-is-block-device?		file-is-regular-file?
+		  file-is-symbolic-link?	file-is-socket?
+		  file-is-fifo?			file-is-message-queue?
+		  file-is-semaphore?		file-is-shared-memory?
+
+		  S_ISDIR			S_ISCHR
+		  S_ISBLK			S_ISREG
+		  S_ISLNK			S_ISSOCK
+		  S_ISFIFO
+
 		  ;; file system interface
 		  file-exists?			delete-file
 		  rename-file			split-file-name
@@ -203,6 +225,10 @@
 (define-argument-validation (list-of-strings who obj)
   (for-all string? obj)
   (assertion-violation who "expected list of strings as argument" obj))
+
+(define-argument-validation (struct-stat who obj)
+  (struct-stat? obj)
+  (assertion-violation who "expected struct stat instance as argument" obj))
 
 
 ;;;; errors handling
@@ -767,6 +793,49 @@
       (if (unsafe.fx< rv 0)
 	  (raise-errno-error who rv fd)
 	S))))
+
+;;; --------------------------------------------------------------------
+
+(let-syntax
+    ((define-file-is (syntax-rules ()
+		       ((_ ?who ?func)
+			(define (?who pathname follow-symlinks?)
+			  (define who '?who)
+			  (with-arguments-validation (who)
+			      ((pathname  pathname))
+			    (let ((rv (?func ((string->filename-func) pathname) follow-symlinks?)))
+			      (if (boolean? rv)
+				  rv
+				(raise-errno-error who rv pathname)))))
+			))))
+  (define-file-is file-is-directory?		capi.posix-file-is-directory?)
+  (define-file-is file-is-char-device?		capi.posix-file-is-char-device?)
+  (define-file-is file-is-block-device?		capi.posix-file-is-block-device?)
+  (define-file-is file-is-regular-file?		capi.posix-file-is-regular-file?)
+  (define-file-is file-is-symbolic-link?	capi.posix-file-is-symbolic-link?)
+  (define-file-is file-is-socket?		capi.posix-file-is-socket?)
+  (define-file-is file-is-fifo?			capi.posix-file-is-fifo?)
+  (define-file-is file-is-message-queue?	capi.posix-file-is-message-queue?)
+  (define-file-is file-is-semaphore?		capi.posix-file-is-semaphore?)
+  (define-file-is file-is-shared-memory?	capi.posix-file-is-shared-memory?))
+
+(let-syntax
+    ((define-file-is (syntax-rules ()
+		       ((_ ?who ?flag)
+			(define (?who mode)
+			  (with-arguments-validation (?who)
+			      ((fixnum  mode))
+			    (unsafe.fx= ?flag (unsafe.fxand ?flag mode))))
+			))))
+  (define-file-is S_ISDIR	S_IFDIR)
+  (define-file-is S_ISCHR	S_IFCHR)
+  (define-file-is S_ISBLK	S_IFBLK)
+  (define-file-is S_ISREG	S_IFREG)
+  (define-file-is S_ISLNK	S_IFLNK)
+  (define-file-is S_ISSOCK	S_IFSOCK)
+  (define-file-is S_ISFIFO	S_IFIFO))
+
+;;; --------------------------------------------------------------------
 
 (define (%stat path follow who)
   (unless (string? path)

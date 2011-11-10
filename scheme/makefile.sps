@@ -602,6 +602,25 @@
     (struct-stat-st_blocks			i v)
     (struct-stat-st_blksize			i v)
 
+    (file-is-directory?				i v)
+    (file-is-char-device?			i v)
+    (file-is-block-device?			i v)
+    (file-is-regular-file?			i v)
+    (file-is-symbolic-link?			i v)
+    (file-is-socket?				i v)
+    (file-is-fifo?				i v)
+    (file-is-message-queue?			i v)
+    (file-is-semaphore?				i v)
+    (file-is-shared-memory?			i v)
+
+    (S_ISDIR					i v)
+    (S_ISCHR					i v)
+    (S_ISBLK					i v)
+    (S_ISREG					i v)
+    (S_ISLNK					i v)
+    (S_ISSOCK					i v)
+    (S_ISFIFO					i v)
+
 ;;; GNU C Library functions
     (clearenv					i v)
 
