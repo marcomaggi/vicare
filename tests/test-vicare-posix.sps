@@ -406,6 +406,10 @@
   (check (access "Makefile" F_OK)		=> #t)
   (check (access "Makefile" (fxand R_OK W_OK))	=> #t)
 
+  (check (file-readable? "Makefile")		=> #t)
+  (check (file-writable? "Makefile")		=> #t)
+  (check (file-executable? "Makefile")		=> #f)
+
   #t)
 
 

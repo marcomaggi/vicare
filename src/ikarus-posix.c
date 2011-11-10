@@ -388,7 +388,7 @@ ikrt_posix_pause (void)
 
 
 /** --------------------------------------------------------------------
- ** File system inspection.
+ ** Miscellaneous stat functions.
  ** ----------------------------------------------------------------- */
 
 static ikptr
@@ -536,6 +536,38 @@ ikrt_stat (ikptr filename, ikptr follow /*, ikpcb* pcb */)
 
 /* ------------------------------------------------------------------ */
 
+ikptr
+ikrt_posix_file_size(ikptr filename, ikpcb* pcb) {
+  char *        pathname;
+  struct stat   S;
+  int           rv;
+  pathname = (char*)(filename + off_bytevector_data);
+  errno    = 0;
+  rv       = stat(pathname, &S);
+  if (0 == rv) {
+    if (sizeof(off_t) == sizeof(long)) {
+      return u_to_number(S.st_size, pcb);
+    } else if (sizeof(off_t) == sizeof(long long)) {
+      return ull_to_number(S.st_size, pcb);
+    } else {
+      fprintf(stderr, "vicare internal error: invalid off_t size\n");
+      exit(EXIT_FAILURE);
+    }
+  } else {
+    return ik_errno_to_code();
+  }
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_file_size(ikptr filename, ikpcb* pcb) {
+  return ikrt_posix_file_size(filename, pcb);
+}
+
+
+/** --------------------------------------------------------------------
+ ** File type predicates.
+ ** ----------------------------------------------------------------- */
+
 static ikptr
 file_is_p (ikptr pathname_bv, ikptr follow_symlinks, int flag)
 {
@@ -595,49 +627,11 @@ SPECIAL_FILE_IS_P(ikrt_file_is_message_queue,S_TYPEISMQ)
 SPECIAL_FILE_IS_P(ikrt_file_is_semaphore,S_TYPEISSEM)
 SPECIAL_FILE_IS_P(ikrt_file_is_shared_memory,S_TYPEISSHM)
 
-/* ------------------------------------------------------------------ */
+
+/** --------------------------------------------------------------------
+ ** Testing file access.
+ ** ----------------------------------------------------------------- */
 
-ikptr
-ikrt_posix_file_exists (ikptr pathname_bv)
-{
-  char *        pathname;
-  struct stat   S;
-  int           rv;
-  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
-  errno    = 0;
-  rv = stat(pathname, &S);
-  if (0 == rv) {
-    return true_object;
-  } else if ((ENOENT == errno) || (ENOTDIR == errno)) {
-    return false_object;
-  } else {
-    return ik_errno_to_code();
-  }
-}
-ikptr
-ikrt_posix_realpath (ikptr pathname_bv, ikpcb* pcb)
-{
-  char *        pathname;
-  char          buff[PATH_MAX];
-  char *        rv;
-  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
-  rv       = realpath(pathname, buff);
-  if (NULL == rv) {
-    return ik_errno_to_code();
-  } else {
-    int         n = strlen(rv);
-    uint8_t *   r = (uint8_t *)ik_safe_alloc(pcb, align(disp_bytevector_data+n+1));
-    ref(r, 0) = fix(n);
-    memcpy((r+disp_bytevector_data), rv, n+1);
-    return (ikptr)(r+bytevector_tag);
-  }
-}
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_realpath (ikptr pathname_bv, ikpcb* pcb)
-{
-  return ikrt_posix_realpath(pathname_bv, pcb);
-}
 ikptr
 ikrt_posix_access (ikptr filename, ikptr how)
 {
@@ -685,33 +679,27 @@ ikrt_access (ikptr filename, ikptr how)
 }
 
 ikptr
-ikrt_posix_file_size(ikptr filename, ikpcb* pcb) {
+ikrt_posix_file_exists (ikptr pathname_bv)
+{
   char *        pathname;
   struct stat   S;
   int           rv;
-  pathname = (char*)(filename + off_bytevector_data);
+  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
   errno    = 0;
-  rv       = stat(pathname, &S);
+  rv = stat(pathname, &S);
   if (0 == rv) {
-    if (sizeof(off_t) == sizeof(long)) {
-      return u_to_number(S.st_size, pcb);
-    } else if (sizeof(off_t) == sizeof(long long)) {
-      return ull_to_number(S.st_size, pcb);
-    } else {
-      fprintf(stderr, "vicare internal error: invalid off_t size\n");
-      exit(EXIT_FAILURE);
-    }
+    return true_object;
+  } else if ((ENOENT == errno) || (ENOTDIR == errno)) {
+    return false_object;
   } else {
     return ik_errno_to_code();
   }
 }
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_file_size(ikptr filename, ikpcb* pcb) {
-  return ikrt_posix_file_size(filename, pcb);
-}
 
-/* ------------------------------------------------------------------ */
+
+/** --------------------------------------------------------------------
+ ** File times.
+ ** ----------------------------------------------------------------- */
 
 static ikptr
 timespec_bytevector (struct timespec* s, ikpcb* pcb) {
@@ -781,6 +769,37 @@ ikrt_file_mtime (ikptr filename, ikptr res) {
   ref(res, off_car) = fix(s.st_mtime);
   ref(res, off_cdr) = 0;
   return fix(0);
+}
+
+
+/** --------------------------------------------------------------------
+ ** Symbolic links.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_realpath (ikptr pathname_bv, ikpcb* pcb)
+{
+  char *        pathname;
+  char          buff[PATH_MAX];
+  char *        rv;
+  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
+  errno    = 0;
+  rv       = realpath(pathname, buff);
+  if (NULL == rv) {
+    return ik_errno_to_code();
+  } else {
+    int         n = strlen(rv);
+    uint8_t *   r = (uint8_t *)ik_safe_alloc(pcb, align(disp_bytevector_data+n+1));
+    ref(r, 0) = fix(n);
+    memcpy((r+disp_bytevector_data), rv, n+1);
+    return (ikptr)(r+bytevector_tag);
+  }
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_realpath (ikptr pathname_bv, ikpcb* pcb)
+{
+  return ikrt_posix_realpath(pathname_bv, pcb);
 }
 
 
