@@ -29,19 +29,19 @@
   (export
     ;; process termination status
     waitid
-    make-siginfo_t		siginfo_t?
-    siginfo_t-si_pid		siginfo_t-si_uid
-    siginfo_t-si_signo		siginfo_t-si_status
-    siginfo_t-si_code
+    make-struct-siginfo_t		struct-siginfo_t?
+    struct-siginfo_t-si_pid		struct-siginfo_t-si_uid
+    struct-siginfo_t-si_signo		struct-siginfo_t-si_status
+    struct-siginfo_t-si_code
     WIFCONTINUED
     )
   (import (except (ikarus)
 		  ;; process termination status
 		  waitid
-		  make-siginfo_t		siginfo_t?
-		  siginfo_t-si_pid		siginfo_t-si_uid
-		  siginfo_t-si_signo		siginfo_t-si_status
-		  siginfo_t-si_code
+		  make-struct-siginfo_t		struct-siginfo_t?
+		  struct-siginfo_t-si_pid	struct-siginfo_t-si_uid
+		  struct-siginfo_t-si_signo	struct-siginfo_t-si_status
+		  struct-siginfo_t-si_code
 		  WIFCONTINUED
 
 		  )
@@ -98,7 +98,7 @@
 
 ;;;; process termination status
 
-(define-struct siginfo_t
+(define-struct struct-siginfo_t
   (si_pid si_uid si_signo si_status si_code))
 
 (define-for-linux (waitid idtype id options)
@@ -107,7 +107,7 @@
       ((fixnum  idtype)
        (fixnum	id)
        (fixnum	options))
-    (capi.linux-waitid idtype id (make-siginfo_t #f #f #f #f #f) options)))
+    (capi.linux-waitid idtype id (make-struct-siginfo_t #f #f #f #f #f) options)))
 
 (define-for-linux (WIFCONTINUED status)
   (define who 'WIFCONTINUED)

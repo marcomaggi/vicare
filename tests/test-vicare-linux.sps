@@ -43,11 +43,11 @@
 				(waitid P_PID pid WEXITED))
 			      (lambda () ;child
 				(exit 10)))))
-	(list (= child_pid (siginfo_t-si_pid info))
-	      (fixnum? (siginfo_t-si_uid info))
-	      (siginfo_t-si_status  info)
-	      (siginfo_t-si_signo   info)
-	      (siginfo_t-si_code    info)))
+	(list (= child_pid (struct-siginfo_t-si_pid info))
+	      (fixnum? (struct-siginfo_t-si_uid info))
+	      (struct-siginfo_t-si_status  info)
+	      (struct-siginfo_t-si_signo   info)
+	      (struct-siginfo_t-si_code    info)))
 	=> `(#t #t 10 ,SIGCLD ,CLD_EXITED))
 
 ;;; --------------------------------------------------------------------

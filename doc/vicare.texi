@@ -6554,11 +6554,11 @@ Interface to the Linux specific C function @cfunc{waitid}, see the
 @cfunc{waitid} manual page for details.  Wait for the termination of one
 or more child processes with finer control of @func{waitpid}.  All the
 arguments must be fixnums.  If successful: return an instance of
-structure @code{siginfo_t}, else raise an exception.
+structure @code{struct-siginfo_t}, else raise an exception.
 @end defun
 
 
-@deftp Struct siginfo_t
+@deftp Struct struct-siginfo_t
 Data structure used by @func{waitid} to report its result; it has the
 following fields:
 
@@ -6570,15 +6570,15 @@ See the @cfunc{waitid} manual page for details.
 @end deftp
 
 
-@defun make-siginfo_t @var{pid} @var{uid} @var{signo} @var{status} @var{code}
-@defunx siginfo_t? @var{obj}
-@defunx siginfo_t-si_pid
-@defunx siginfo_t-si_uid
-@defunx siginfo_t-si_signo
-@defunx siginfo_t-si_status
-@defunx siginfo_t-si_code
+@defun make-struct-siginfo_t @var{pid} @var{uid} @var{signo} @var{status} @var{code}
+@defunx struct-siginfo_t? @var{obj}
+@defunx struct-siginfo_t-si_pid
+@defunx struct-siginfo_t-si_uid
+@defunx struct-siginfo_t-si_signo
+@defunx struct-siginfo_t-si_status
+@defunx struct-siginfo_t-si_code
 Constructor, predicate and field accessors for structures of type
-@code{siginfo_t}.
+@code{struct-siginfo_t}.
 @end defun
 
 
@@ -8654,9 +8654,9 @@ Interface to the Linux specific C function @cfunc{waitid}, see the
 @cfunc{waitid} manual page for details.  Wait for the termination of one
 or more child processes with finer control of @cfunc{waitpid}.  The
 arguments @var{idtype}, @var{id} and @var{options} must be fixnums.
-@var{info} must be a reference to a structure of type @code{siginfo_t},
-@ref{linux status} for details.  If successful: return @var{info}
-itself, else raise an exception.
+@var{info} must be a reference to a structure of type
+@code{struct-siginfo_t}, @ref{linux status} for details.  If successful:
+return @var{info} itself, else raise an exception.
 @end deftypefun
 
 
