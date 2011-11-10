@@ -76,14 +76,12 @@
     file-writable?		file-executable?
     file-atime			file-ctime
     file-mtime
+    file-size			file-exists?
 
     S_ISDIR			S_ISCHR
     S_ISBLK			S_ISREG
     S_ISLNK			S_ISSOCK
     S_ISFIFO
-
-    realpath			file-exists?
-    file-size
 
     ;; file system muators
     chown			fchown
@@ -92,6 +90,10 @@
     utime			utimes
     lutimes			futimes
 
+    ;; hard and symbolic links
+    link			symlink
+    readlink			realpath
+
     ;; file system interface
     delete-file
     rename-file			split-file-name
@@ -99,10 +101,6 @@
     current-directory		directory-list
     make-directory		make-directory*
     delete-directory
-
-    make-symbolic-link		make-hard-link
-
-    change-mode
 
     nanosleep)
   (import (except (ikarus)
@@ -160,20 +158,16 @@
 		  file-is-symbolic-link?	file-is-socket?
 		  file-is-fifo?			file-is-message-queue?
 		  file-is-semaphore?		file-is-shared-memory?
-
 		  access			file-readable?
 		  file-writable?		file-executable?
-
 		  file-ctime			file-mtime
 		  file-atime
+		  file-size			file-exists?
 
 		  S_ISDIR			S_ISCHR
 		  S_ISBLK			S_ISREG
 		  S_ISLNK			S_ISSOCK
 		  S_ISFIFO
-
-		  realpath			file-exists?
-		  file-size
 
 		  ;; file system muators
 		  chown				fchown
@@ -182,6 +176,10 @@
 		  utime				utimes
 		  lutimes			futimes
 
+		  ;; hard and symbolic links
+		  link				symlink
+		  readlink			realpath
+
 		  ;; file system interface
 		  delete-file
 		  rename-file			split-file-name
@@ -189,10 +187,6 @@
 		  current-directory		directory-list
 		  make-directory		make-directory*
 		  delete-directory
-
-		  make-symbolic-link		make-hard-link
-
-		  change-mode
 
 		  nanosleep)
     (vicare syntactic-extensions)
@@ -940,22 +934,7 @@
   (define-file-time file-ctime	capi.posix-file-ctime))
 
 
-;;;; symbolic links
-
-(define (realpath pathname)
-  (define who 'realpath)
-  (with-arguments-validation (who)
-      ((pathname  pathname))
-    (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-realpath pathname.bv)))
-	(if (bytevector? rv)
-	    (if (bytevector? pathname)
-		rv
-	      ((filename->string-func) rv))
-	  (raise-errno-error who rv pathname))))))
-
-
-;;;; file system mutators
+;;;; file system attributes mutators
 
 (define (chown pathname owner group)
   (define who 'chown)
@@ -1072,6 +1051,57 @@
 	(raise-errno-error who rv fd atime.sec atime.usec mtime.sec mtime.usec)))))
 
 
+;;;; symbolic links
+
+(define (link old-pathname new-pathname)
+  (define who 'link)
+  (with-arguments-validation (who)
+      ((pathname  old-pathname)
+       (pathname  new-pathname))
+    (with-pathnames ((old-pathname.bv old-pathname)
+		     (new-pathname.bv new-pathname))
+      (let ((rv (capi.posix-link old-pathname.bv new-pathname.bv)))
+	(if (unsafe.fxzero? rv)
+	    rv
+	  (raise-errno-error who rv old-pathname new-pathname))))))
+
+(define (symlink file-pathname link-pathname)
+  (define who 'symlink)
+  (with-arguments-validation (who)
+      ((pathname  file-pathname)
+       (pathname  link-pathname))
+    (with-pathnames ((file-pathname.bv file-pathname)
+		     (link-pathname.bv link-pathname))
+      (let ((rv (capi.posix-symlink file-pathname.bv link-pathname.bv)))
+	(if (unsafe.fxzero? rv)
+	    rv
+	  (raise-errno-error who rv file-pathname link-pathname))))))
+
+(define (readlink link-pathname)
+  (define who 'readlink)
+  (with-arguments-validation (who)
+      ((pathname  link-pathname))
+    (with-pathnames ((link-pathname.bv link-pathname))
+      (let ((rv (capi.posix-readlink link-pathname.bv)))
+	(if (bytevector? rv)
+	    (if (bytevector? link-pathname)
+		rv
+	      ((filename->string-func) rv))
+	  (raise-errno-error who rv link-pathname))))))
+
+(define (realpath pathname)
+  (define who 'realpath)
+  (with-arguments-validation (who)
+      ((pathname  pathname))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-realpath pathname.bv)))
+	(if (bytevector? rv)
+	    (if (bytevector? pathname)
+		rv
+	      ((filename->string-func) rv))
+	  (raise-errno-error who rv pathname))))))
+
+
 (define (split-file-name str)
   (define who 'split-file-name)
   (define path-sep #\/)
@@ -1094,6 +1124,8 @@
    (else (values "" str))))
 
 (define delete-file
+  ;;Defined by R6RS.
+  ;;
   (lambda (x)
     (define who 'delete-file)
     (unless (string? x)
@@ -1174,34 +1206,6 @@
       (if want-error?
 	  (unless (eq? r #t) (raise/strerror who r path))
 	(eq? r #t))))))
-
-(define change-mode
-  (lambda (path mode)
-    (define who 'change-mode)
-    (unless (string? path)
-      (die who "not a string" path))
-    (unless (fixnum? mode)
-      (die who "not a fixnum" mode))
-    (let ((r (foreign-call "ikrt_chmod" ((string->filename-func) path) mode)))
-      (unless (eq? r #t)
-	(raise/strerror who r path)))))
-
-(define ($make-link to path who proc)
-  (unless (and (string? to) (string? path))
-    (die who "not a string" (if (string? to) path to)))
-  (let ((r (proc ((string->filename-func) to) ((string->filename-func) path))))
-    (unless (eq? r #t)
-      (raise/strerror who r path))))
-
-(define (make-symbolic-link to path)
-  ($make-link to path 'make-symbolic-link
-	      (lambda (u-to u-path)
-		(foreign-call "ikrt_symlink" u-to u-path))))
-
-(define (make-hard-link to path)
-  ($make-link to path 'make-hard-link
-	      (lambda (u-to u-path)
-		(foreign-call "ikrt_link" u-to u-path))))
 
 (define (nanosleep secs nsecs)
   (import (ikarus system $fx))

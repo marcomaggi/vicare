@@ -35,6 +35,18 @@
 (check-display "*** testing Vicare POSIX functions\n")
 
 
+;;;; helpers
+
+(define-syntax with-temporary-file
+  (syntax-rules ()
+    ((_ (?pathname) . ?body)
+     (let ((ptn ?pathname))
+       (system (string-append "echo 123 > " ptn))
+       (unwind-protect
+	   (begin . ?body)
+	 (system (string-append "rm -f " ptn)))))))
+
+
 (parametrise ((check-test-name	'errno-strings))
 
   (check
@@ -394,10 +406,6 @@
   (check (file-exists? "this-does-not-exists")	=> #f)
 
   (check
-      (realpath "Makefile")
-    => "Makefile")
-
-  (check
       (exact? (file-size "Makefile"))
     => #t)
 
@@ -435,17 +443,6 @@
 
 
 (parametrise ((check-test-name	'file-system))
-
-  (define-syntax with-temporary-file
-    (syntax-rules ()
-      ((_ (?pathname) . ?body)
-       (let ((ptn ?pathname))
-	 (system (string-append "echo 123 > " ptn))
-	 (unwind-protect
-	     (begin . ?body)
-	   (system (string-append "rm -f " ptn)))))))
-
-;;; --------------------------------------------------------------------
 
   (check
       (with-temporary-file ("tmp")
@@ -492,6 +489,47 @@
 	      (file-mtime "tmp")))
     => (list (* #e1e9 12)
 	     (* #e1e9 34)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'links))
+
+  (check
+      (with-temporary-file ("one")
+	(unwind-protect
+	    (begin
+	      (link "one" "two")
+	      (file-is-regular-file? "two" #f))
+	  (system "rm -f two")))
+    => #t)
+
+  (check
+      (with-temporary-file ("one")
+  	(unwind-protect
+  	    (begin
+  	      (symlink "one" "two")
+  	      (file-is-symbolic-link? "two" #f))
+  	  (system "rm -f two")))
+    => #t)
+
+  (check
+      (with-temporary-file ("one")
+  	(unwind-protect
+  	    (begin
+  	      (symlink "one" "two")
+  	      (readlink "two"))
+  	  (system "rm -f two")))
+    => "one")
+
+  (check
+      (with-temporary-file ("one")
+  	(unwind-protect
+  	    (begin
+  	      (symlink "one" "two")
+  	      (realpath "two"))
+  	  (system "rm -f two")))
+    => "one")
 
   #t)
 

@@ -5882,6 +5882,7 @@ set to @false{}.
 * posix signal::                Delivering signals to processes.
 * posix stat::                  File system inspection.
 * posix file::                  Interfacing with the file system.
+* posix link::                  Hard and symbolic links.
 * posix dir::                   File system directory inspection.
 * posix misc::                  Miscellaneous functions.
 @end menu
@@ -6244,16 +6245,16 @@ fstat}.  Inspect the file system entry associated to the file descriptor
 @end defun
 
 
-@defun file-is-directory @var{pathname} @var{follow-symlinks?}
-@defunx file-is-char-device @var{pathname} @var{follow-symlinks?}
-@defunx file-is-block-device @var{pathname} @var{follow-symlinks?}
-@defunx file-is-regular-file @var{pathname} @var{follow-symlinks?}
-@defunx file-is-symbolic-link @var{pathname} @var{follow-symlinks?}
-@defunx file-is-socket @var{pathname} @var{follow-symlinks?}
-@defunx file-is-fifo @var{pathname} @var{follow-symlinks?}
-@defunx file-is-message-queue @var{pathname} @var{follow-symlinks?}
-@defunx file-is-semaphore @var{pathname} @var{follow-symlinks?}
-@defunx file-is-shared-memory @var{pathname} @var{follow-symlinks?}
+@defun file-is-directory? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-char-device? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-block-device? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-regular-file? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-symbolic-link? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-socket? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-fifo? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-message-queue? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-semaphore? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-shared-memory? @var{pathname} @var{follow-symlinks?}
 Return @true{} or @false{} if the file system entry selected by
 @var{pathname} is of the specified type; if an error occurs: an
 exception is raised.  When @var{follow-symlinks?} is true: @cfunc{stat}
@@ -6271,15 +6272,6 @@ is used to inspect the entry, else @cfunc{lstat} is used.
 Return @true{} or @false{} if the argument is associated to a file
 system entry of the specified type.  @var{st_mode} must be the value of
 the @code{st_mode} field of a @code{struct-stat} instance.
-@end defun
-
-
-@defun realpath @var{pathname}
-Interface to the C function @cfunc{realpath}, @glibcref{Symbolic Links,
-realpath}.  If @var{pathname} references a symbolic link: follow it and
-return the real pathname; if an error occurs: an exception is raised.
-When @var{pathname} is a bytevector: the returned value is a bytevector.
-When @var{pathname} is a string: the returned value is a string.
 @end defun
 
 
@@ -6402,105 +6394,43 @@ microseconds; all the numeric arguments must be fixnums.  If successful
 return zero, else raise an exception.
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node posix link
+@section Hard and symbolic links
 
-@subsubheading Current working directory
 
-
-@defun current-directory [@var{pathname}]
-When invoked with an argument, change the current working directory to
-the one selected by the string @var{pathname}.  Make use of the system
-@cfunc{chdir} function.
-
-When invoked without argument, return a string representing the current
-working directory pathname.  Make use of the system @cfunc{getcwd}
-function.
-
-If an error occurs, an exception is raised.
-
-@glibcref{Working Directory, Working Directory}
+@defun link @var{old_pathname} @var{new_pathname}
+Interface to the C function @cfunc{link}, @glibcref{Hard Links, link}.
+Create a hard link @var{new_pathname} to the source file system entry
+@var{old_pathname}.  If successful return zero, else raise an exception.
 @end defun
 
 
-@c ------------------------------------------------------------
-
-@subsubheading Inspecting the file system
-
-
-@defun directory-list @var{pathname}
-Build and return the list of strings representing the entries in the
-directory selected by the string @var{pathname}.  Make use of the
-@cfunc{opendir}, @cfunc{readdir}, @cfunc{closedir} system functions.
-
-If an error occurs, an exception is raised.
-
-@glibcref{Opening a Directory, Opening a Directory}@*
-@glibcref{Reading/Closing Directory, Reading/Closing Directory}
+@defun symlink @var{file_pathname} @var{link_pathname}
+Interface to the C function @cfunc{symlink}, @glibcref{Symbolic Links,
+symlink}.  Create a symbolic link @var{link_pathname} to the source file
+system entry @var{file_pathname}.  If successful return zero, else raise
+an exception.
 @end defun
 
 
-@c ------------------------------------------------------------
-
-@subsubheading Creation
-
-
-@defun make-symbolic-link @var{to} @var{pathname}
-Create a symbolic link whose pathname is the string @var{pathname}
-referencing the @var{to} string pathname.  Make use of the
-@cfunc{symlink} system function.  If an error occurs, an exception is
-raised.
-
-@glibcref{Symbolic Links, Symbolic Links}
+@defun readlink @var{link_pathname}
+Interface to the C function @cfunc{readlink}, @glibcref{Symbolic Links,
+readlink}.  If @var{pathname} references a symbolic link: follow it once
+and return the referenced pathname; if an error occurs raise an
+exception.  When @var{pathname} is a bytevector: the returned value is a
+bytevector.  When @var{pathname} is a string: the returned value is a
+string.
 @end defun
 
 
-@defun make-directory @var{pathname} [@var{mode}]
-Create a directory with name selected by the string @var{pathname}.
-Make use of the @cfunc{mkdir} system function.  If an error occurs, an
-exception is raised.
-
-@var{mode} must be an exact integere selecting the access permissions
-for the directory; it defaults to @samp{#o755}.
-
-@glibcref{Creating Directories, Creating Directories}
-@end defun
-
-@c ------------------------------------------------------------
-
-@subsubheading Deletion
-
-
-@defun delete-file @var{pathname}
-Remove from the system the file selected by the @var{pathname} string.
-Make use of the @cfunc{unlink} system function.  If an error occurs, an
-exception is raised.
-
-@glibcref{Deleting Files, Deleting Files}
-@end defun
-
-
-@defun delete-directory @var{pathname}
-Remove from the system the directory selected by the @var{pathname}
-string.  Make use of the @cfunc{rmdir} system function.  If an error
-occurs, an exception is raised.
-
-@glibcref{Deleting Files, Deleting Files}
-@end defun
-
-
-@c ------------------------------------------------------------
-
-@subsubheading Permissions
-
-
-@defun change-mode @var{pathname} @var{mode}
-Change the access permissions of the file or directory selected by the
-@var{pathname} string.  Make use of the @cfunc{chmod} system function.
-If an error occurs, an exception is raised.
-
-@var{mode} must be an exact integer selecting the permissions.
-
-@glibcref{Setting Permissions, Setting Permissions}
+@defun realpath @var{pathname}
+Interface to the C function @cfunc{realpath}, @glibcref{Symbolic Links,
+realpath}.  If @var{pathname} references a symbolic link: follow it and
+return the real canonicalised pathname; if an error occurs: an exception
+is raised.  When @var{pathname} is a bytevector: the returned value is a
+bytevector.  When @var{pathname} is a string: the returned value is a
+string.
 @end defun
 
 @c page
@@ -6537,6 +6467,62 @@ filename.  Raise an exception if an error occurs.
 Close the directory @var{STREAM}.  If an error occurs raise an exception
 only when @var{raise-error?} is true.  @var{raise-error?}  defaults to
 true.
+@end defun
+
+
+@subsubheading Current working directory
+
+
+@defun current-directory [@var{pathname}]
+When invoked with an argument, change the current working directory to
+the one selected by the string @var{pathname}.  Make use of the system
+@cfunc{chdir} function.
+
+When invoked without argument, return a string representing the current
+working directory pathname.  Make use of the system @cfunc{getcwd}
+function.
+
+If an error occurs, an exception is raised.
+
+@glibcref{Working Directory, Working Directory}
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Inspecting the file system
+
+
+@defun directory-list @var{pathname}
+Build and return the list of strings representing the entries in the
+directory selected by the string @var{pathname}.  Make use of the
+@cfunc{opendir}, @cfunc{readdir}, @cfunc{closedir} system functions.
+
+If an error occurs, an exception is raised.
+
+@glibcref{Opening a Directory, Opening a Directory}@*
+@glibcref{Reading/Closing Directory, Reading/Closing Directory}
+@end defun
+
+
+@defun make-directory @var{pathname} [@var{mode}]
+Create a directory with name selected by the string @var{pathname}.
+Make use of the @cfunc{mkdir} system function.  If an error occurs, an
+exception is raised.
+
+@var{mode} must be an exact integere selecting the access permissions
+for the directory; it defaults to @samp{#o755}.
+
+@glibcref{Creating Directories, Creating Directories}
+@end defun
+
+
+@defun delete-directory @var{pathname}
+Remove from the system the directory selected by the @var{pathname}
+string.  Make use of the @cfunc{rmdir} system function.  If an error
+occurs, an exception is raised.
+
+@glibcref{Deleting Files, Deleting Files}
 @end defun
 
 @c page
@@ -7754,6 +7740,7 @@ adaptation.
 * capi posix signals::          Delivering interprocess signals.
 * capi posix stat::             File system inspection.
 * capi posix file::             File system interface.
+* capi posix link::             Hard and symbolic links.
 * capi posix time::             Time and date.
 @end menu
 
@@ -8543,15 +8530,6 @@ is used.
 @end deftypefun
 
 
-@deftypefun ikptr ikrt_posix_realpath (ikptr @var{pathname})
-Interface to the C function @cfunc{realpath}, @glibcref{Symbolic Links,
-realpath}.  If @var{pathname} references a symbolic link: follow it and
-return the real pathname; if an error occurs: an exception is raised.
-When @var{pathname} is a bytevector: the returned value is a bytevector.
-When @var{pathname} is a string: the returned value is a string.
-@end deftypefun
-
-
 @deftypefun ikptr ikrt_posix_access (ikptr @var{pathname}, ikptr @var{how})
 Interface to the C function @cfunc{access}, @glibcref{Testing File
 Access, access}.  Test the access mode selected by @var{how}, which must
@@ -8666,6 +8644,41 @@ numeric arguments must be fixnums.  If successful return zero, else
 return an encoded @code{errno} value.
 @end deftypefun
 
+@c page
+@node capi posix link
+@subsection Hard and symbolic links
+
+
+@deftypefun ikptr ikrt_posix_link (ikptr @var{old_pathname}, ikptr @var{new_pathname})
+Interface to the C function @cfunc{link}, @glibcref{Hard Links, link}.
+Create a hard link @var{new_pathname} to the source file system entry
+@var{old_pathname}.  If successful return zero, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_symlink (ikptr @var{file_pathname}, ikptr @var{link_pathname})
+Interface to the C function @cfunc{symlink}, @glibcref{Symbolic Links,
+symlink}.  Create a symbolic link @var{link_pathname} to the source file
+system entry @var{file_pathname}.  If successful return zero, else
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_readlink (ikptr @var{link_pathname}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{readlink}, @glibcref{Symbolic Links,
+readlink}.  If @var{pathname} references a symbolic link: follow it once
+and return the referenced pathname as bytevector; if an error occurs:
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_realpath (ikptr @var{pathname})
+Interface to the C function @cfunc{realpath}, @glibcref{Symbolic Links,
+realpath}.  If @var{pathname} references a symbolic link: follow it and
+return the real pathname as bytevector; if an error occurs: return an
+encoded @code{errno} value.
+@end deftypefun
 
 @c page
 @node capi posix time

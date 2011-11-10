@@ -835,37 +835,6 @@ ikrt_file_mtime2 (ikptr filename, ikpcb* pcb) {
 
 
 /** --------------------------------------------------------------------
- ** Symbolic links.
- ** ----------------------------------------------------------------- */
-
-ikptr
-ikrt_posix_realpath (ikptr pathname_bv, ikpcb* pcb)
-{
-  char *        pathname;
-  char          buff[PATH_MAX];
-  char *        rv;
-  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
-  errno    = 0;
-  rv       = realpath(pathname, buff);
-  if (NULL == rv) {
-    return ik_errno_to_code();
-  } else {
-    int         n = strlen(rv);
-    uint8_t *   r = (uint8_t *)ik_safe_alloc(pcb, align(disp_bytevector_data+n+1));
-    ref(r, 0) = fix(n);
-    memcpy((r+disp_bytevector_data), rv, n+1);
-    return (ikptr)(r+bytevector_tag);
-  }
-}
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_realpath (ikptr pathname_bv, ikpcb* pcb)
-{
-  return ikrt_posix_realpath(pathname_bv, pcb);
-}
-
-
-/** --------------------------------------------------------------------
  ** Setting onwers, permissions, times.
  ** ----------------------------------------------------------------- */
 
@@ -1025,69 +994,109 @@ ikrt_posix_futimes (ikptr fd,
 }
 
 
+/** --------------------------------------------------------------------
+ ** Hard and symbolic links.
+ ** ----------------------------------------------------------------- */
+
 ikptr
-ikrt_delete_file (ikptr pathname)
-/* Interface to "unlink()". */
+ikrt_posix_link (ikptr old_pathname_bv, ikptr new_pathname_bv)
 {
-  assert(bytevector_tag == tagof(pathname));
-  char* str = (char*)(long)(pathname + off_bytevector_data);
-  int   err = unlink(str);
-  if (0 == err)
-    return true_object;
-  else
-    return ik_errno_to_code();
-}
-
-ikptr
-ikrt_symlink(ikptr to, ikptr path /*, ikpcb* pcb */){
-  int r = symlink((char*)(to+off_bytevector_data), (char*)(path+off_bytevector_data));
-  if(r == 0){
-    return true_object;
-  }
-  return ik_errno_to_code();
-}
-
-ikptr
-ikrt_link(ikptr to, ikptr path /*, ikpcb* pcb */){
-  int r = link((char*)(to+off_bytevector_data), (char*)(path+off_bytevector_data));
-  if(r == 0){
-    return true_object;
-  }
-  return ik_errno_to_code();
-}
-ikptr
-ikrt_chdir(ikptr pathbv /*, ikpcb* pcb */){
-  int err = chdir(off_bytevector_data+(char*)pathbv);
-  if(err == 0){
-    return true_object;
-  }
-  return ik_errno_to_code();
-}
-ikptr
-ikrt_getcwd(ikpcb* pcb){
-  char buff[MAXPATHLEN+1];
-  char* path = getcwd(buff, MAXPATHLEN);
-  if(! path){
-    return ik_errno_to_code();
-  }
-  int len = strlen(path);
-  ikptr bv = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1));
-  ref(bv,0) = fix(len);
-  memcpy(disp_bytevector_data+(char*)(bv), path, len+1);
-  return bv+bytevector_tag;
-}
-
-ikptr
-ikrt_rename_file(ikptr src, ikptr dst /* ikpcb* pcb */){
-  int err = rename((char*)(src + off_bytevector_data),
-                   (char*)(dst + off_bytevector_data));
-  if (err == 0) {
-    return true_object;
+  char *        old_pathname = (char*)(long)(old_pathname_bv+off_bytevector_data);
+  char *        new_pathname = (char*)(long)(new_pathname_bv+off_bytevector_data);
+  int           rv;
+  errno = 0;
+  rv    = link(old_pathname, new_pathname);
+  if (0 == rv) {
+    return fix(0);
   } else {
     return ik_errno_to_code();
   }
 }
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_link (ikptr to, ikptr path)
+{
+  return ikrt_posix_link(to, path);
+}
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_symlink (ikptr file_pathname_bv, ikptr link_pathname_bv)
+{
+  char *        file_pathname = (char*)(long)(file_pathname_bv+off_bytevector_data);
+  char *        link_pathname = (char*)(long)(link_pathname_bv+off_bytevector_data);
+  int           rv;
+  errno = 0;
+  rv    = symlink(file_pathname, link_pathname);
+  if (0 == rv) {
+    return fix(0);
+  } else {
+    return ik_errno_to_code();
+  }
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_symlink(ikptr to, ikptr path)
+{
+  return ikrt_posix_symlink(to, path);
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_readlink (ikptr link_pathname_bv, ikpcb * pcb)
+{
+  char *        link_pathname = (char*)(long)(link_pathname_bv+off_bytevector_data);
+  size_t        max_len;
+  int           rv;
+  for (max_len=PATH_MAX;; max_len *= 2) {
+    char        file_pathname[max_len];
+    errno = 0;
+    rv    = readlink(link_pathname, file_pathname, max_len);
+    if (rv < 0) {
+      return ik_errno_to_code();
+    } else if (rv == max_len) {
+      continue;
+    } else {
+      ikptr     bv  = ik_safe_alloc(pcb, align(disp_bytevector_data+rv+1)) + bytevector_tag;
+      char *    data;
+      ref(bv, off_bytevector_length) = fix(rv);
+      data = (char*)(bv+off_bytevector_data);
+      memcpy(data, file_pathname, rv);
+      data[rv] = '\0';
+      return bv;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_realpath (ikptr pathname_bv, ikpcb* pcb)
+{
+  char *        pathname;
+  char          buff[PATH_MAX];
+  char *        rv;
+  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
+  errno    = 0;
+  rv       = realpath(pathname, buff);
+  if (NULL == rv) {
+    return ik_errno_to_code();
+  } else {
+    int         n = strlen(rv);
+    uint8_t *   r = (uint8_t *)ik_safe_alloc(pcb, align(disp_bytevector_data+n+1));
+    ref(r, 0) = fix(n);
+    memcpy((r+disp_bytevector_data), rv, n+1);
+    return (ikptr)(r+bytevector_tag);
+  }
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_realpath (ikptr pathname_bv, ikpcb* pcb)
+{
+  return ikrt_posix_realpath(pathname_bv, pcb);
+}
 
 
 ikptr
@@ -1140,8 +1149,55 @@ ikrt_rmdir(ikptr path /*, ikpcb* pcb */){
   return ik_errno_to_code();
 }
 
-
 
+ikptr
+ikrt_chdir(ikptr pathbv /*, ikpcb* pcb */){
+  int err = chdir(off_bytevector_data+(char*)pathbv);
+  if(err == 0){
+    return true_object;
+  }
+  return ik_errno_to_code();
+}
+ikptr
+ikrt_getcwd(ikpcb* pcb){
+  char buff[MAXPATHLEN+1];
+  char* path = getcwd(buff, MAXPATHLEN);
+  if(! path){
+    return ik_errno_to_code();
+  }
+  int len = strlen(path);
+  ikptr bv = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1));
+  ref(bv,0) = fix(len);
+  memcpy(disp_bytevector_data+(char*)(bv), path, len+1);
+  return bv+bytevector_tag;
+}
+
+
+ikptr
+ikrt_delete_file (ikptr pathname)
+/* Interface to "unlink()". */
+{
+  assert(bytevector_tag == tagof(pathname));
+  char* str = (char*)(long)(pathname + off_bytevector_data);
+  int   err = unlink(str);
+  if (0 == err)
+    return true_object;
+  else
+    return ik_errno_to_code();
+}
+ikptr
+ikrt_rename_file(ikptr src, ikptr dst /* ikpcb* pcb */){
+  int err = rename((char*)(src + off_bytevector_data),
+                   (char*)(dst + off_bytevector_data));
+  if (err == 0) {
+    return true_object;
+  } else {
+    return ik_errno_to_code();
+  }
+}
+
+
+
 ikptr
 ikrt_current_time(ikptr t){
   struct timeval s;

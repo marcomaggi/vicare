@@ -67,7 +67,7 @@
     posix-file-is-symbolic-link?	posix-file-is-socket?
     posix-file-is-fifo?			posix-file-is-message-queue?
     posix-file-is-semaphore?		posix-file-is-shared-memory?
-    posix-file-exists?			posix-realpath
+    posix-file-exists?
     posix-file-size			posix-access
     posix-file-atime			posix-file-mtime
     posix-file-ctime
@@ -78,6 +78,10 @@
     posix-umask				posix-getumask
     posix-utime				posix-utimes
     posix-lutimes			posix-futimes
+
+    ;; hard and symbolic links
+    posix-link				posix-symlink
+    posix-readlink			posix-realpath
 
     ;; platform API for file descriptors
     platform-open-input-fd
@@ -251,9 +255,6 @@
 (define-inline (posix-file-size pathname-bv)
   (foreign-call "ikrt_posix_file_size" pathname-bv))
 
-(define-inline (posix-realpath pathname-bv)
-  (foreign-call "ikrt_posix_realpath" pathname-bv))
-
 (define-inline (posix-access pathname-bv how-fx)
   (foreign-call "ikrt_posix_access" pathname-bv how-fx))
 
@@ -304,6 +305,21 @@
 
 (define-inline (posix-futimes fd atime-sec atime-usec mtime-sec mtime-usec)
   (foreign-call "ikrt_posix_futimes" fd atime-sec atime-usec mtime-sec mtime-usec))
+
+
+;;;; hard and symbolic links
+
+(define-inline (posix-link old-pathname-bv new-pathname-bv)
+  (foreign-call "ikrt_posix_link" old-pathname-bv new-pathname-bv))
+
+(define-inline (posix-symlink file-pathname-bv link-pathname-bv)
+  (foreign-call "ikrt_posix_symlink" file-pathname-bv link-pathname-bv))
+
+(define-inline (posix-readlink link-pathname-bv)
+  (foreign-call "ikrt_posix_readlink" link-pathname-bv))
+
+(define-inline (posix-realpath pathname-bv)
+  (foreign-call "ikrt_posix_realpath" pathname-bv))
 
 
 ;;;; platform API for file descriptors
