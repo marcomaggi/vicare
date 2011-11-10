@@ -69,6 +69,8 @@
     posix-file-is-semaphore?		posix-file-is-shared-memory?
     posix-file-exists?			posix-realpath
     posix-file-size			posix-access
+    posix-file-atime			posix-file-mtime
+    posix-file-ctime
 
     ;; platform API for file descriptors
     platform-open-input-fd
@@ -246,6 +248,17 @@
 
 (define-inline (posix-access pathname-bv how-fx)
   (foreign-call "ikrt_posix_access" pathname-bv how-fx))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-file-atime pathname-bv vector)
+  (foreign-call "ikrt_posix_file_atime" pathname-bv vector))
+
+(define-inline (posix-file-mtime pathname-bv vector)
+  (foreign-call "ikrt_posix_file_mtime" pathname-bv vector))
+
+(define-inline (posix-file-ctime pathname-bv vector)
+  (foreign-call "ikrt_posix_file_ctime" pathname-bv vector))
 
 
 ;;;; platform API for file descriptors

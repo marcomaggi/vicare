@@ -702,6 +702,87 @@ ikrt_posix_file_exists (ikptr pathname_bv)
  ** ----------------------------------------------------------------- */
 
 static ikptr
+timespec_vector (struct timespec * T, ikptr vector, ikpcb* pcb)
+{
+  ref(vector, off_vector_data+0*wordsize) = s_to_number((long)(T->tv_sec),  pcb);
+  ref(vector, off_vector_data+1*wordsize) = s_to_number((long)(T->tv_nsec), pcb);
+  return fix(0);
+}
+ikptr
+ikrt_posix_file_ctime (ikptr pathname_bv, ikptr vector, ikpcb* pcb) {
+  char*         pathname;
+  struct stat   S;
+  int           rv;
+  pathname = (char*)(long)(pathname_bv + off_bytevector_data);
+  errno = 0;
+  rv    = stat(pathname, &S);
+  if (0 == rv) {
+#if HAVE_STAT_ST_CTIMESPEC
+    return timespec_vector(&S.st_ctimespec, vector, pcb);
+#elif HAVE_STAT_ST_CTIM
+    return timespec_vector(&S.st_ctim, vector, pcb);
+#else
+    struct timespec ts;
+    ts.tv_sec  = s.st_ctime;
+    ts.tv_nsec = 0;
+    return timespec_vector(&ts, vector, pcb);
+#endif
+  } else {
+    return ik_errno_to_code();
+  }
+}
+
+ikptr
+ikrt_posix_file_mtime (ikptr pathname_bv, ikptr vector, ikpcb* pcb) {
+  char*         pathname;
+  struct stat   S;
+  int           rv;
+  pathname = (char*)(long)(pathname_bv + off_bytevector_data);
+  errno = 0;
+  rv    = stat(pathname, &S);
+  if (0 == rv) {
+#if HAVE_STAT_ST_MTIMESPEC
+    return timespec_vector(&S.st_mtimespec, vector, pcb);
+#elif HAVE_STAT_ST_MTIM
+    return timespec_vector(&S.st_mtim, vector, pcb);
+#else
+    struct timespec ts;
+    ts.tv_sec  = s.st_mtime;
+    ts.tv_nsec = 0;
+    return timespec_vector(&ts, vector, pcb);
+#endif
+  } else {
+    return ik_errno_to_code();
+  }
+}
+
+ikptr
+ikrt_posix_file_atime (ikptr pathname_bv, ikptr vector, ikpcb* pcb) {
+  char*         pathname;
+  struct stat   S;
+  int           rv;
+  pathname = (char*)(long)(pathname_bv + off_bytevector_data);
+  errno = 0;
+  rv    = stat(pathname, &S);
+  if (0 == rv) {
+#if HAVE_STAT_ST_ATIMESPEC
+    return timespec_vector(&S.st_atimespec, vector, pcb);
+#elif HAVE_STAT_ST_ATIM
+    return timespec_vector(&S.st_atim, vector, pcb);
+#else
+    struct timespec ts;
+    ts.tv_sec  = s.st_atime;
+    ts.tv_nsec = 0;
+    return timespec_vector(&ts, vector, pcb);
+#endif
+  } else {
+    return ik_errno_to_code();
+  }
+}
+
+
+/* FIXME STALE To be removed at the next boot image rotation. */
+static ikptr
 timespec_bytevector (struct timespec* s, ikpcb* pcb) {
   int len = sizeof(struct timespec);
   ikptr r = ik_safe_alloc(pcb, align(disp_bytevector_data+len+3));
@@ -712,6 +793,7 @@ timespec_bytevector (struct timespec* s, ikpcb* pcb) {
   *((char*)(r+disp_bytevector_data+len+2)) = 0;
   return r + bytevector_tag;
 }
+/* FIXME STALE To be removed at the next boot image rotation. */
 ikptr
 ikrt_file_ctime2 (ikptr filename, ikpcb* pcb) {
   struct stat s;
@@ -730,6 +812,7 @@ ikrt_file_ctime2 (ikptr filename, ikpcb* pcb) {
   return timespec_bytevector(&ts, pcb);
 #endif
 }
+/* FIXME STALE To be removed at the next boot image rotation. */
 ikptr
 ikrt_file_mtime2 (ikptr filename, ikpcb* pcb) {
   struct stat s;
@@ -747,28 +830,6 @@ ikrt_file_mtime2 (ikptr filename, ikpcb* pcb) {
   ts.tv_nsec = 0;
   return timespec_bytevector(&ts, pcb);
 #endif
-}
-ikptr
-ikrt_file_ctime (ikptr filename, ikptr res){
-  struct stat s;
-  int err = stat((char*)(filename + off_bytevector_data), &s);
-  if (err) {
-    return ik_errno_to_code();
-  }
-  ref(res, off_car) = fix(s.st_ctime);
-  ref(res, off_cdr) = 0;
-  return fix(0);
-}
-ikptr
-ikrt_file_mtime (ikptr filename, ikptr res) {
-  struct stat s;
-  int err = stat((char*)(filename + off_bytevector_data), &s);
-  if (err) {
-    return ik_errno_to_code();
-  }
-  ref(res, off_car) = fix(s.st_mtime);
-  ref(res, off_cdr) = 0;
-  return fix(0);
 }
 
 

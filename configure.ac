@@ -98,6 +98,26 @@ AC_CACHE_SAVE
 #page
 #### other system inspection
 
+AC_CHECK_MEMBER([struct stat.st_atimespec],
+   AC_DEFINE(HAVE_STAT_ST_ATIMESPEC, 1,
+             [stat struct has st_atimespec field]),
+   [],
+   [[#include <sys/stat.h>]])
+
+AC_CHECK_MEMBER([struct stat.st_atim],
+   AC_DEFINE(HAVE_STAT_ST_ATIM, 1,
+             [stat struct has st_atim field]),
+   [],
+   [[#include <sys/stat.h>]])
+
+AC_CHECK_MEMBER([struct stat.st_atime_usec],
+   AC_DEFINE(HAVE_STAT_ST_ATIME_USEC, 1,
+             [stat struct has st_atime_usec field]),
+   [],
+   [[#include <sys/stat.h>]])
+
+dnl --------------------------------------------------------------------
+
 AC_CHECK_MEMBER([struct stat.st_mtimespec],
    AC_DEFINE(HAVE_STAT_ST_MTIMESPEC, 1,
              [stat struct has st_mtimespec field]),
@@ -110,6 +130,14 @@ AC_CHECK_MEMBER([struct stat.st_mtim],
    [],
    [[#include <sys/stat.h>]])
 
+AC_CHECK_MEMBER([struct stat.st_mtime_usec],
+   AC_DEFINE(HAVE_STAT_ST_MTIME_USEC, 1,
+             [stat struct has st_mtime_usec field]),
+   [],
+   [[#include <sys/stat.h>]])
+
+dnl --------------------------------------------------------------------
+
 AC_CHECK_MEMBER([struct stat.st_ctimespec],
    AC_DEFINE(HAVE_STAT_ST_CTIMESPEC, 1,
              [stat struct has st_ctimespec field]),
@@ -119,18 +147,6 @@ AC_CHECK_MEMBER([struct stat.st_ctimespec],
 AC_CHECK_MEMBER([struct stat.st_ctim],
    AC_DEFINE(HAVE_STAT_ST_CTIM, 1,
              [stat struct has st_ctim field]),
-   [],
-   [[#include <sys/stat.h>]])
-
-AC_CHECK_MEMBER([struct stat.st_atime_usec],
-   AC_DEFINE(HAVE_STAT_ST_ATIME_USEC, 1,
-             [stat struct has st_atime_usec field]),
-   [],
-   [[#include <sys/stat.h>]])
-
-AC_CHECK_MEMBER([struct stat.st_mtime_usec],
-   AC_DEFINE(HAVE_STAT_ST_MTIME_USEC, 1,
-             [stat struct has st_mtime_usec field]),
    [],
    [[#include <sys/stat.h>]])
 

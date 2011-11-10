@@ -6313,6 +6313,15 @@ call to @cfunc{stat}.  If successful: return an exact integer
 representing the size, else raise an exception.
 @end defun
 
+
+@defun file-atime @var{pathname}
+@defunx file-mtime @var{pathname}
+@defunx file-ctime @var{pathname}
+Return an exact integer representing the access, modification and
+creation times for @var{pathname}.  If an error occurs: raise an
+exception.
+@end defun
+
 @c page
 @node posix file
 @section Interfacing with the file system
@@ -8662,6 +8671,20 @@ Determine the size of the file selected by @var{filename}, which must be
 a bytevector, relying on a call to @cfunc{stat}.  If successful: return
 an exact integer representing the size, else return an encoded
 @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_file_atime (ikptr @var{pathname}, ikptr @var{vector}, ikpcb * @var{pcb})
+@deftypefunx ikptr ikrt_posix_file_mtime (ikptr @var{pathname}, ikptr @var{vector}, ikpcb * @var{pcb})
+@deftypefunx ikptr ikrt_posix_file_ctime (ikptr @var{pathname}, ikptr @var{vector}, ikpcb * @var{pcb})
+Compute an exact integer representing the access, modification and
+creation times for @var{pathname}, which must be a bytevector.  If
+successful return zero, else return an encoded @code{errno} value.
+
+The @var{vector} argument must be a vector which is mutated as follows:
+the first item holds an exact integer representing the number of
+seconds, the second item holds an exact integer representing the number
+of microseconds.
 @end deftypefun
 
 @c page

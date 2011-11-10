@@ -892,20 +892,24 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (file-atime pathname)
-  (define who 'file-atime)
-  (with-arguments-validation (who)
-      ((pathname  pathname))
-    (with-pathnames ((pathname.bv  pathname))
-      #f)))
-
-(define (file-ctime x)
-  ($file-time x 'file-ctime
-	      (lambda (u) (foreign-call "ikrt_file_ctime2" u))))
-
-(define (file-mtime x)
-  ($file-time x 'file-mtime
-	      (lambda (u) (foreign-call "ikrt_file_mtime2" u))))
+(let-syntax
+    ((define-file-time (syntax-rules ()
+			 ((_ ?who ?func)
+			  (define (?who pathname)
+			    (define who '?who)
+			    (with-arguments-validation (who)
+				((pathname  pathname))
+			      (with-pathnames ((pathname.bv  pathname))
+				(let* ((timespec (unsafe.make-vector 2))
+				       (rv       (?func pathname.bv timespec)))
+				  (if (unsafe.fxzero? rv)
+				      (+ (* #e1e9 (unsafe.vector-ref timespec 0))
+					 (unsafe.vector-ref timespec 1))
+				    (raise-errno-error who rv pathname))))))
+			  ))))
+  (define-file-time file-atime	capi.posix-file-atime)
+  (define-file-time file-mtime	capi.posix-file-mtime)
+  (define-file-time file-ctime	capi.posix-file-ctime))
 
 
 ;;;; symbolic links

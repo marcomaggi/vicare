@@ -410,6 +410,26 @@
   (check (file-writable? "Makefile")		=> #t)
   (check (file-executable? "Makefile")		=> #f)
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((time (file-atime "Makefile")))
+;;;	(check-pretty-print time)
+	(exact? time))
+    => #t)
+
+  (check
+      (let ((time (file-mtime "Makefile")))
+;;;	(check-pretty-print time)
+	(exact? time))
+    => #t)
+
+  (check
+      (let ((time (file-ctime "Makefile")))
+;;;	(check-pretty-print time)
+	(exact? time))
+    => #t)
+
   #t)
 
 
