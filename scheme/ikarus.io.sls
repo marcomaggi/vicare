@@ -595,7 +595,8 @@
     (prefix (vicare unsafe-operations)
 	    unsafe.)
     (vicare unsafe-unicode)
-    (vicare unsafe-capi)
+    (except (vicare unsafe-capi)
+	    posix-fork)
     (vicare errno))
 
 

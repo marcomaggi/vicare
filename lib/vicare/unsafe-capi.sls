@@ -85,7 +85,8 @@
     platform-open-directory
     platform-read-directory-stream
     platform-close-directory)
-  (import (ikarus)
+  (import (except (ikarus)
+		  posix-fork)
     (only (vicare syntactic-extensions)
 	  define-inline))
 

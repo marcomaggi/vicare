@@ -36,7 +36,7 @@
                                     #'form #'filename)
                                  (let ([x (string-append (car ls) "/" x)])
                                    (if (file-exists? x)
-                                       (file-real-path x)
+                                       (realpath x)
                                        (f (cdr ls)))))))
                        (syntax-violation #f
                           "file name must be a nonempty string"
