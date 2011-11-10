@@ -372,88 +372,7 @@ ikrt_shutdown(ikptr s /*, ikpcb* pcb*/){
   return 0;
 }
 
-
-static ikptr
-timespec_bytevector(struct timespec* s, ikpcb* pcb) {
-  int len = sizeof(struct timespec);
-  ikptr r = ik_safe_alloc(pcb, align(disp_bytevector_data+len+3));
-  ref(r, 0) = fix(len+2);
-  *((char*)(r+disp_bytevector_data+0)) = sizeof(s->tv_sec);
-  *((char*)(r+disp_bytevector_data+1)) = sizeof(s->tv_nsec);
-  memcpy((char*)(r+disp_bytevector_data+2), s, len);
-  *((char*)(r+disp_bytevector_data+len+2)) = 0;
-  return r + bytevector_tag;
-}
-
-
-ikptr
-ikrt_file_ctime2(ikptr filename, ikpcb* pcb){
-  struct stat s;
-  int err = stat((char*)(filename + off_bytevector_data), &s);
-  if(err) {
-    return ik_errno_to_code();
-  }
-#if HAVE_STAT_ST_CTIMESPEC
-  return timespec_bytevector(&s.st_ctimespec, pcb);
-#elif HAVE_STAT_ST_CTIM
-  return timespec_bytevector(&s.st_ctim, pcb);
-#else
-  struct timespec ts;
-  ts.tv_sec = s.st_ctime;
-  ts.tv_nsec = 0;
-  return timespec_bytevector(&ts, pcb);
-#endif
-}
-
-ikptr
-ikrt_file_mtime2(ikptr filename, ikpcb* pcb){
-  struct stat s;
-  int err = stat((char*)(filename + off_bytevector_data), &s);
-  if(err) {
-    return ik_errno_to_code();
-  }
-#if HAVE_STAT_ST_MTIMESPEC
-  return timespec_bytevector(&s.st_mtimespec, pcb);
-#elif HAVE_STAT_ST_MTIM
-  return timespec_bytevector(&s.st_mtim, pcb);
-#else
-  struct timespec ts;
-  ts.tv_sec = s.st_mtime;
-  ts.tv_nsec = 0;
-  return timespec_bytevector(&ts, pcb);
-#endif
-}
-
-
-
-
-ikptr
-ikrt_file_ctime(ikptr filename, ikptr res){
-  struct stat s;
-  int err = stat((char*)(filename + off_bytevector_data), &s);
-  if(err) {
-    return ik_errno_to_code();
-  }
-
-  ref(res, off_car) = fix(s.st_ctime);
-  ref(res, off_cdr) = 0;
-  return fix(0);
-}
-
-ikptr
-ikrt_file_mtime(ikptr filename, ikptr res){
-  struct stat s;
-  int err = stat((char*)(filename + off_bytevector_data), &s);
-  if(err) {
-    return ik_errno_to_code();
-  }
-
-  ref(res, off_car) = fix(s.st_mtime);
-  ref(res, off_cdr) = 0;
-  return fix(0);
-}
-
-
+
 ikptr
 ikrt_opendir(ikptr dirname, ikpcb* pcb){
   DIR* d = opendir((char*)(dirname+off_bytevector_data));
@@ -488,3 +407,5 @@ ikrt_closedir(ikptr ptr, ikpcb* pcb){
   }
   return 0;
 }
+
+/* end of file */

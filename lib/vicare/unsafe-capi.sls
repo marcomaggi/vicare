@@ -68,6 +68,7 @@
     posix-file-is-fifo?			posix-file-is-message-queue?
     posix-file-is-semaphore?		posix-file-is-shared-memory?
     posix-file-exists?			posix-realpath
+    posix-file-size			posix-access
 
     ;; platform API for file descriptors
     platform-open-input-fd
@@ -234,11 +235,17 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-inline (posix-file-exists? pathname-bv)
+  (foreign-call "ikrt_posix_file_exists" pathname-bv))
+
+(define-inline (posix-file-size pathname-bv)
+  (foreign-call "ikrt_posix_file_size" pathname-bv))
+
 (define-inline (posix-realpath pathname-bv)
   (foreign-call "ikrt_posix_realpath" pathname-bv))
 
-(define-inline (posix-file-exists? pathname-bv)
-  (foreign-call "ikrt_posix_file_exists" pathname-bv))
+(define-inline (posix-access pathname-bv how-fx)
+  (foreign-call "ikrt_posix_access" pathname-bv how-fx))
 
 
 ;;;; platform API for file descriptors

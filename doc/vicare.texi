@@ -6283,6 +6283,36 @@ When @var{pathname} is a string: the returned value is a string.
 @end defun
 
 
+@defun access @var{pathname} @var{how}
+Interface to the C function @cfunc{access}, @glibcref{Testing File
+Access, access}.  Test the access mode selected by @var{how}, which must
+be a fixnum, for the file system entry selected by @var{pathname}.
+Return @true{} or @false{} if the access is possible or not; if an error
+occurs: an exception is raised.
+@end defun
+
+
+@defun file-readable? @var{pathname}
+@defunx file-writable? @var{pathname}
+@defunx file-executable? @var{pathname}
+Return @true{} or @false{} if the file system entry selected by
+@var{pathname} is accessible in the specified mode.  These functions are
+equivalent but slower, respectively, to the following calls:
+
+@example
+(access pathname R_OK)
+(access pathname W_OK)
+(access pathname X_OK)
+@end example
+@end defun
+
+
+@defun file-size @var{filename}
+Determine the size of the file selected by @var{filename} relying on a
+call to @cfunc{stat}.  If successful: return an exact integer
+representing the size, else raise an exception.
+@end defun
+
 @c page
 @node posix file
 @section Interfacing with the file system
@@ -8615,6 +8645,23 @@ realpath}.  If @var{pathname} references a symbolic link: follow it and
 return the real pathname; if an error occurs: an exception is raised.
 When @var{pathname} is a bytevector: the returned value is a bytevector.
 When @var{pathname} is a string: the returned value is a string.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_access (ikptr @var{pathname}, ikptr @var{how})
+Interface to the C function @cfunc{access}, @glibcref{Testing File
+Access, access}.  Test the access mode selected by @var{how}, which must
+be a fixnum, for the file system entry selected by @var{pathname}, which
+must be a bytevector.  Return @true{} or @false{} or an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_file_size (ikptr @var{filename}, ikpcb * @var{pcb})
+Determine the size of the file selected by @var{filename}, which must be
+a bytevector, relying on a call to @cfunc{stat}.  If successful: return
+an exact integer representing the size, else return an encoded
+@code{errno} value.
 @end deftypefun
 
 @c page

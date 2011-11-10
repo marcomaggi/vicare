@@ -83,8 +83,6 @@
       [hashtable?            boolean]
       [hashtable-mutable?    boolean]
       [file-exists?          boolean]
-      [file-regular?         boolean]
-      [file-directory?       boolean]
       [file-readable?        boolean]
       [file-writable?        boolean]
       [file-executable?      boolean]

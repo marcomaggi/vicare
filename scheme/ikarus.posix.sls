@@ -72,12 +72,18 @@
     file-is-fifo?		file-is-message-queue?
     file-is-semaphore?		file-is-shared-memory?
 
+    access			file-readable?
+    file-writable?		file-executable?
+    file-atime			file-ctime
+    file-mtime
+
     S_ISDIR			S_ISCHR
     S_ISBLK			S_ISREG
     S_ISLNK			S_ISSOCK
     S_ISFIFO
 
     realpath			file-exists?
+    file-size
 
     ;; file system interface
     delete-file
@@ -86,12 +92,6 @@
     current-directory		directory-list
     make-directory		make-directory*
     delete-directory
-
-    file-ctime			file-mtime
-    file-regular?		file-directory?
-    file-readable?		file-writable?
-    file-executable?		file-symbolic-link?
-    file-size
 
     make-symbolic-link		make-hard-link
 
@@ -154,12 +154,19 @@
 		  file-is-fifo?			file-is-message-queue?
 		  file-is-semaphore?		file-is-shared-memory?
 
+		  access			file-readable?
+		  file-writable?		file-executable?
+
+		  file-ctime			file-mtime
+		  file-atime
+
 		  S_ISDIR			S_ISCHR
 		  S_ISBLK			S_ISREG
 		  S_ISLNK			S_ISSOCK
 		  S_ISFIFO
 
 		  realpath			file-exists?
+		  file-size
 
 		  ;; file system interface
 		  delete-file
@@ -168,12 +175,6 @@
 		  current-directory		directory-list
 		  make-directory		make-directory*
 		  delete-directory
-
-		  file-ctime			file-mtime
-		  file-regular?		file-directory?
-		  file-readable?		file-writable?
-		  file-executable?		file-symbolic-link?
-		  file-size
 
 		  make-symbolic-link		make-hard-link
 
@@ -855,23 +856,56 @@
 	    rv
 	  (raise-errno-error who rv pathname))))))
 
+(define (access pathname how)
+  (define who 'access)
+  (with-arguments-validation (who)
+      ((pathname  pathname)
+       (fixnum	  how))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-access pathname.bv how)))
+	(if (boolean? rv)
+	    rv
+	  (raise-errno-error who rv pathname how))))))
+
 ;;; --------------------------------------------------------------------
 
-(define (%stat path follow who)
-  (unless (string? path)
-    (die who "not a string" path))
-  (let ((r (foreign-call "ikrt_stat" ((string->filename-func) path) follow)))
-    (case r
-      ((0) 'unknown)
-      ((1) 'regular)
-      ((2) 'directory)
-      ((3) 'symlink)
-      (else
-       (case-errno r
-	 ((ENOENT)  #f) ;; from ikarus-errno.c: ENOENT -- path does not exist
-	 ((ENOTDIR) #f) ;; from ikarus-errno.c: ENOTDIR -- path does not exist
-	 (else
-	  (raise/strerror who r path)))))))
+(define (file-readable? pathname)
+  (access pathname R_OK))
+
+(define (file-writable? pathname)
+  (access pathname W_OK))
+
+(define (file-executable? pathname)
+  (access pathname X_OK))
+
+;;; --------------------------------------------------------------------
+
+(define (file-size pathname)
+  (define who 'file-size)
+  (with-arguments-validation (who)
+      ((pathname pathname))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((v (capi.posix-file-size pathname.bv)))
+	(if (>= v 0)
+	    v
+	  (raise/strerror who v pathname))))))
+
+;;; --------------------------------------------------------------------
+
+(define (file-atime pathname)
+  (define who 'file-atime)
+  (with-arguments-validation (who)
+      ((pathname  pathname))
+    (with-pathnames ((pathname.bv  pathname))
+      #f)))
+
+(define (file-ctime x)
+  ($file-time x 'file-ctime
+	      (lambda (u) (foreign-call "ikrt_file_ctime2" u))))
+
+(define (file-mtime x)
+  ($file-time x 'file-mtime
+	      (lambda (u) (foreign-call "ikrt_file_mtime2" u))))
 
 
 ;;;; symbolic links
@@ -909,51 +943,6 @@
        (let ((i (fx+ i 1)))
 	 (substring str i (string-length str) )))))
    (else (values "" str))))
-
-(define (access path how who)
-  (unless (string? path)
-    (die who "filename not a string" path))
-  (let ((r (foreign-call "ikrt_access" ((string->filename-func) path) how)))
-    (unless (boolean? r) (raise/strerror who r path))
-    r))
-
-
-(define file-regular?
-  (case-lambda
-   ((path) (file-regular? path #t))
-   ((path follow)
-    (eq? 'regular (%stat path follow 'file-regular?)))))
-
-(define file-directory?
-  (case-lambda
-   ((path) (file-directory? path #t))
-   ((path follow)
-    (eq? 'directory (%stat path follow 'file-directory?)))))
-
-(define (file-symbolic-link? path)
-  (eq? 'symlink (%stat path #f 'file-symbolic-link?)))
-
-(define file-readable?
-  (lambda (path)
-    (access path 1 'file-readable?)))
-
-(define file-writable?
-  (lambda (path)
-    (access path 2 'file-writable?)))
-
-(define file-executable?
-  (lambda (path)
-    (access path 4 'file-executable?)))
-
-(define file-size
-  (lambda (path)
-    (define who 'file-size)
-    (unless (string? path)
-      (die who "filename is not a string" path))
-    (let* ((v (foreign-call "ikrt_file_size" ((string->filename-func) path))))
-      (if (>= v 0)
-	  v
-	(raise/strerror who v path)))))
 
 (define delete-file
   (lambda (x)
@@ -1011,7 +1000,7 @@
     (let f ((dirname dirname0))
       (cond
        ((file-exists? dirname)
-	(unless (file-directory? dirname)
+	(unless (file-is-directory? dirname)
 	  (die who
                (format "path component ~a is not a directory" dirname)
                dirname0)))
@@ -1077,14 +1066,6 @@
 	      #e1e9)
 	   (bytevector-uint-ref v (+ 2 n0) (native-endianness) n1))))
      (else (raise/strerror who v x)))))
-
-(define (file-ctime x)
-  ($file-time x 'file-ctime
-	      (lambda (u) (foreign-call "ikrt_file_ctime2" u))))
-
-(define (file-mtime x)
-  ($file-time x 'file-mtime
-	      (lambda (u) (foreign-call "ikrt_file_mtime2" u))))
 
 (define (nanosleep secs nsecs)
   (import (ikarus system $fx))

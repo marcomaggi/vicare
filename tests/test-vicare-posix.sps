@@ -396,6 +396,16 @@
       (realpath "Makefile")
     => "Makefile")
 
+  (check
+      (exact? (file-size "Makefile"))
+    => #t)
+
+  (check (access "Makefile" R_OK)		=> #t)
+  (check (access "Makefile" W_OK)		=> #t)
+  (check (access "Makefile" X_OK)		=> #f)
+  (check (access "Makefile" F_OK)		=> #t)
+  (check (access "Makefile" (fxand R_OK W_OK))	=> #t)
+
   #t)
 
 
