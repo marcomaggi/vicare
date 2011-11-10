@@ -6274,7 +6274,7 @@ the @code{st_mode} field of a @code{struct-stat} instance.
 @end defun
 
 
-@defun realpath? @var{pathname}
+@defun realpath @var{pathname}
 Interface to the C function @cfunc{realpath}, @glibcref{Symbolic Links,
 realpath}.  If @var{pathname} references a symbolic link: follow it and
 return the real pathname; if an error occurs: an exception is raised.
@@ -8648,7 +8648,7 @@ is used.
 @end deftypefun
 
 
-@deftypefun realpath? @var{pathname}
+@deftypefun ikptr ikrt_posix_realpath (ikptr @var{pathname})
 Interface to the C function @cfunc{realpath}, @glibcref{Symbolic Links,
 realpath}.  If @var{pathname} references a symbolic link: follow it and
 return the real pathname; if an error occurs: an exception is raised.
