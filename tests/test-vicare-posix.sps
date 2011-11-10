@@ -28,6 +28,7 @@
 (import (rename (vicare) #;(ikarus)
 		(parameterize	parametrise))
   (vicare platform-constants)
+  (vicare syntactic-extensions)
   (checks))
 
 (check-set-mode! 'report-failed)
@@ -433,6 +434,27 @@
   #t)
 
 
+(parametrise ((check-test-name	'file-system))
+
+  (define-syntax with-temporary-file
+    (syntax-rules ()
+      ((_ (?pathname) . ?body)
+       (let ((ptn ?pathname))
+	 (system (string-append "echo 123 > " ptn))
+	 (unwind-protect
+	     (begin . ?body)
+	   (system (string-append "rm -f " ptn)))))))
+
+  (check
+      (with-temporary-file ("tmp")
+	(chown "tmp" 1000 1000))
+    => 0)
+
+
+
+  #t)
+
+
 (parametrise ((check-test-name	'directory-stream))
 
   (check	;verify that no error occurs
@@ -454,3 +476,6 @@
 (check-report)
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'with-temporary-file 'scheme-indent-function 1)
+;; End:

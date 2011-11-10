@@ -85,6 +85,9 @@
     realpath			file-exists?
     file-size
 
+    ;; file system muators
+    chown			fchown
+
     ;; file system interface
     delete-file
     rename-file			split-file-name
@@ -168,6 +171,9 @@
 		  realpath			file-exists?
 		  file-size
 
+		  ;; file system muators
+		  chown				fchown
+
 		  ;; file system interface
 		  delete-file
 		  rename-file			split-file-name
@@ -212,6 +218,10 @@
 (define-argument-validation (pid who obj)
   (fixnum? obj)
   (assertion-violation who "expected fixnum pid as argument" obj))
+
+(define-argument-validation (gid who obj)
+  (fixnum? obj)
+  (assertion-violation who "expected fixnum gid as argument" obj))
 
 (define-argument-validation (file-descriptor who obj)
   (fixnum? obj)
@@ -925,6 +935,34 @@
 		rv
 	      ((filename->string-func) rv))
 	  (raise-errno-error who rv pathname))))))
+
+
+;;;; file system mutators
+
+(define (chown pathname owner group)
+  (define who 'chown)
+  (with-arguments-validation (who)
+      ((pathname  pathname)
+       (pid       owner)
+       (gid	  group))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-chown pathname.bv owner group)))
+	(if (unsafe.fxzero? rv)
+	    rv
+	  (raise-errno-error who rv pathname owner group))))))
+
+(define (fchown pathname owner group)
+  (define who 'fchown)
+  (with-arguments-validation (who)
+      ((pathname  pathname)
+       (pid       owner)
+       (gid	  group))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-fchown pathname.bv owner group)))
+	(if (unsafe.fxzero? rv)
+	    rv
+	  (raise-errno-error who rv pathname owner group))))))
+
 
 
 (define (split-file-name str)

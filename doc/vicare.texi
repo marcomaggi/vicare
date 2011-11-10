@@ -6327,6 +6327,25 @@ exception.
 @section Interfacing with the file system
 
 
+@defun chown @var{pathname} @var{owner} @var{group}
+Interface to the C function @cfunc{chown}, @glibcref{File Owner, chown}.
+Changes the owner and group of the file system entry selected by
+@var{pathname}.  @var{owner} and @var{group} must be fixnums.  If
+successful return zero, else raise an exception.
+@end defun
+
+
+@defun fchown @var{fd} @var{owner} @var{group}
+Interface to the C function @cfunc{fchown}, @glibcref{File Owner,
+fchown}.  Changes the owner and group of the file system entry selected
+by @var{fd}, which must be a fixnum representing a platform file
+descriptor.  @var{owner} and @var{group} must be fixnums.  If successful
+return zero, else raise an exception.
+@end defun
+
+
+
+
 @subsubheading Current working directory
 
 
@@ -6359,59 +6378,6 @@ If an error occurs, an exception is raised.
 
 @glibcref{Opening a Directory, Opening a Directory}@*
 @glibcref{Reading/Closing Directory, Reading/Closing Directory}
-@end defun
-
-
-@defun file-ctime @var{pathname}
-Return the time of the last modification to the attributes of the file;
-makes use of the @cfunc{stat} system function, and return the
-@code{st_ctime} field of the @code{stat} data structure.
-
-The returned value is an exact integer, representing the number of
-seconds elapsed since the Epoch (00:00:00 on January 1, 1970,
-Coordinated Universal Time).
-
-If an error occurs, an exception is raised.
-
-@glibcref{Reading Attributes, Reading Attributes}
-@end defun
-
-
-@c ------------------------------------------------------------
-
-@subsubheading Inspecting file types
-
-For the following functions: if @var{follow} is @true{}, the default,
-make use of the @cfunc{stat} system function; if @var{follow} is
-@false{}, make use of the @cfunc{lstat} system function.
-
-@glibcref{Reading Attributes, Reading Attributes}
-
-
-@defun file-exists? @var{pathname} [@var{follow}]
-Return @true{} if @var{pathname} exists on the file system; otherwise
-return @false{}.  If an error occurs, an exception is raised.
-@end defun
-
-
-@defun file-regular? @var{pathname} [@var{follow}]
-Return @true{} if @var{pathname} exists on the file system and it is a
-regular file; otherwise return @false{}.  If an error occurs, an
-exception is raised.
-@end defun
-
-
-@defun file-directory? @var{pathname} [@var{follow}]
-Return @true{} if @var{pathname} exists on the file system and it is a
-directory; otherwise return @false{}.  If an error occurs, an exception
-is raised.
-@end defun
-
-
-@defun file-symbolic-link? @var{pathname} [@var{follow}]
-Return @true{} if @var{pathname} exists on the file system and it is a
-symbolic link; otherwise return @false{}.  If an error occurs, an
-exception is raised.
 @end defun
 
 
@@ -7725,11 +7691,11 @@ adaptation.
 * capi posix env::              Operating system environment variables.
 * capi posix fd::               File descriptors.
 * capi posix pid::              Process identifier functions.
-* capi posix files::            File system interface.
 * capi posix process::          Forking and executing processes.
 * capi posix status::           Process termination status.
 * capi posix signals::          Delivering interprocess signals.
 * capi posix stat::             File system inspection.
+* capi posix file::             File system interface.
 * capi posix time::             Time and date.
 @end menu
 
@@ -8139,147 +8105,16 @@ Identification, getpid}.
 @end deftypefun
 
 @c page
+@ignore
 @node capi posix files
 @subsection File system interface
 
 
 @menu
-* capi posix files stat::       Status and access permissions.
 * capi posix files dir::        Handling directories.
 * capi posix files link::       Handling links and symbolic links.
 @end menu
 
-@c page
-@node capi posix files stat
-@subsubsection Status and access permissions
-
-
-@deftypefun ikptr ikrt_stat (ikptr @var{pathname}, ikptr @var{follow})
-Interface to the @cfunc{stat} and @cfunc{lstat} C functions.
-@glibcref{Reading Attributes, stat}.
-
-@var{pathname} must reference a bytevector object holding a file
-pathname; when @var{follow} is @code{false_object} @cfunc{lstat} is
-used, else @cfunc{stat} is used.
-
-If successful return a fixnum object: @samp{1} if @var{pathname} is a
-regular file, @samp{2} if it is a directory, @samp{3} if it is a
-symbolic link, @samp{0} otherwise.  If an error occurs in @cfunc{stat}
-or @cfunc{lstat}: return the result of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_chmod (ikptr @var{pathname}, ikptr @var{mode})
-Interface to the @cfunc{chmod} C function.  @glibcref{Setting
-Permissions, chmod}.  Change the access permissions of a file.
-
-@var{pathname} must reference a bytevector object holding the file
-pathname; @var{mode} must be a fixnum representing the file permissions.
-
-If successful, return @code{true_object}; if an error occurs in
-@cfunc{chmod}, return the return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_access (ikptr @var{pathname}, ikptr @var{how})
-Interface to the @cfunc{access} C function.  @glibcref{Testing File
-Access, access}.  Test access permissions for a file.
-
-@var{pathname} must reference a bytevector object holding a file
-pathname; @var{how} must be a fixnum: if zero the mode is @code{F_OK},
-else it is an OR combination built as follows:
-
-@itemize
-@item
-If the first bit of @var{how} is set: @code{R_OK} is added.
-
-@item
-If the second bit of @var{how} is set: @code{W_OK} is added.
-
-@item
-If the third bit of @var{how} is set: @code{X_OK} is added.
-@end itemize
-
-If successful return @code{true_object}; if an error occurs in
-@cfunc{access} with @code{errno} set to @code{EACCES}, @code{EROFS} or
-@code{ETXTBSY} return @code{false_object}; if an error occurs in
-@cfunc{access} under any other condition, return the return value of
-@cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_file_size (ikptr @var{pathname}, ikpcb * @var{pcb})
-Interface to the @cfunc{stat} C function.  @glibcref{Reading Attributes,
-stat}.  Retrieve the size of a file.
-
-@var{pathname} must reference a bytevector object holding a file
-pathname.
-
-If successful return an exact integer representing the file size
-(according to the @code{st_size} field of @code{struct stat}); if an
-error occurs in @cfunc{stat}, return the return value of
-@cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_file_mtime2 (ikptr @var{pathname}, ikpcb * @var{pcb})
-@deftypefunx ikptr ikrt_file_ctime2 (ikptr @var{pathname}, ikpcb * @var{pcb})
-Interface to the @cfunc{stat} and @cfunc{lstat} C functions.
-@glibcref{Reading Attributes, stat}.  Acquire the time of the last
-modification or attribute modification for a file.
-
-@var{pathname} must reference a bytevector object holding the file
-pathname.
-
-If successful return a reference to a bytevector holding a packed
-representation of a @code{struct timespec} representing the modification
-time; if an error occurs in @cfunc{stat}, return the return value of
-@cfunc{ik_errno_to_code}.
-
-The packed representation of @code{struct timespec} in a bytevector can
-be inspected as follows:
-
-@example
-(define bv --)  ;the bytevector
-
-;; the size of the tv_sec  field in bytes
-(define tv_sec-size
-  (bytevector-u8-ref bv 0))
-
-;;the size of the tv_nsec field in bytes
-(define tv_nsec-size
-  (bytevector-u8-ref bv 1))
-
-(define tv_sec
-  (bytevector-uint-ref v 2 (native-endianness) tv_sec-size))
-
-(define tv_nsec
-  (bytevector-uint-ref v (+ 2 tv_sec-size) (native-endianness)
-                       tv_nsec-size))
-@end example
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_file_mtime (ikptr @var{pathname}, ikpcb @var{result})
-@deftypefunx ikptr ikrt_file_ctime (ikptr @var{pathname}, ikpcb @var{result})
-Interface to the @cfunc{stat} and @cfunc{lstat} C functions.
-@glibcref{Reading Attributes, stat}.  Acquire the time of the last
-modification or attribute modification for a file.
-
-@var{pathname} must reference a bytevector object holding the file
-pathname; @var{result} must reference a pair which will be mutated to
-hold the result.
-
-If successful store the modification time in the car of the @var{result}
-pair and set the cdr to raw zero; if an error occurs in @cfunc{stat},
-return the return value of @cfunc{ik_errno_to_code}.
-
-@quotation
-@strong{NOTE} Use of this function appears to be deprecated.
-@end quotation
-@end deftypefun
-
-@c page
 @node capi posix files dir
 @subsubsection Handling directories
 
@@ -8449,6 +8284,8 @@ old and new pathnames.
 If successful return @code{true_object}; if an error occurs in
 @cfunc{rename}, return the return value of @cfunc{ik_errno_to_code}.
 @end deftypefun
+
+@end ignore
 
 @c page
 @node capi posix process
@@ -8686,6 +8523,29 @@ the first item holds an exact integer representing the number of
 seconds, the second item holds an exact integer representing the number
 of microseconds.
 @end deftypefun
+
+@c page
+@node capi posix file
+@subsection File system interface
+
+
+@deftypefun ikptr ikrt_posix_chown (ikptr @var{pathname}, ikptr @var{owner}, ikptr @var{group})
+Interface to the C function @cfunc{chown}, @glibcref{File Owner, chown}.
+Changes the owner and group of the file system entry selected by
+@var{pathname}, which must be a bytevector.  @var{owner} and @var{group}
+must be fixnums.  If successful return zero, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_fchown (ikptr @var{fd}, ikptr @var{owner}, ikptr @var{group})
+Interface to the C function @cfunc{fchown}, @glibcref{File Owner,
+fchown}.  Changes the owner and group of the file system entry selected
+by @var{fd}, which must be a fixnum representing a platform file
+descriptor.  @var{owner} and @var{group} must be fixnums.  If successful
+return zero, else return an encoded @code{errno} value.
+@end deftypefun
+
 
 @c page
 @node capi posix time

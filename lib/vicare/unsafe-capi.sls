@@ -72,6 +72,9 @@
     posix-file-atime			posix-file-mtime
     posix-file-ctime
 
+    ;; file system interface
+    posix-chown				posix-fchown
+
     ;; platform API for file descriptors
     platform-open-input-fd
     platform-open-output-fd
@@ -260,6 +263,15 @@
 
 (define-inline (posix-file-ctime pathname-bv vector)
   (foreign-call "ikrt_posix_file_ctime" pathname-bv vector))
+
+
+;;;; file system interface
+
+(define-inline (posix-chown pathname-bv owner-fx group-fx)
+  (foreign-call "ikrt_posix_chown" pathname-bv owner-fx group-fx))
+
+(define-inline (posix-fchown fd owner-fx group-fx)
+  (foreign-call "ikrt_posix_fchown" fd owner-fx group-fx))
 
 
 ;;;; platform API for file descriptors

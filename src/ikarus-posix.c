@@ -869,11 +869,38 @@ ikrt_realpath (ikptr pathname_bv, ikpcb* pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_delete_file (ikptr filename)
+ikrt_posix_chown (ikptr pathname_bv, ikptr owner_fx, ikptr group_fx)
+{
+  char *  pathname;
+  int     rv;
+  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
+  errno    = 0;
+  rv       = chown(pathname, unfix(owner_fx), unfix(group_fx));
+  if (0 == rv) {
+    return fix(0);
+  } else {
+    return ik_errno_to_code();
+  }
+}
+ikptr
+ikrt_posix_fchown (ikptr fd, ikptr owner_fx, ikptr group_fx)
+{
+  int     rv;
+  errno    = 0;
+  rv       = fchown(unfix(fd), unfix(owner_fx), unfix(group_fx));
+  if (0 == rv) {
+    return fix(0);
+  } else {
+    return ik_errno_to_code();
+  }
+}
+
+ikptr
+ikrt_delete_file (ikptr pathname)
 /* Interface to "unlink()". */
 {
-  assert(bytevector_tag == tagof(filename));
-  char* str = (char*)(long)(filename + off_bytevector_data);
+  assert(bytevector_tag == tagof(pathname));
+  char* str = (char*)(long)(pathname + off_bytevector_data);
   int   err = unlink(str);
   if (0 == err)
     return true_object;
