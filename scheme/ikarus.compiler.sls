@@ -1903,8 +1903,10 @@
             "not a valid location for ~s" x op))
        x)]
     [else
-;;;FIXME All  the primitives  should be supported  now, should  I remove
-;;;this?  (Marco Maggi; Oct 25, 2011)
+;;;All the  primitives should  be supported now,  so this code  does not
+;;;signal an unimplemented primitive.  But it can happen when adding new
+;;;functio  to forget  to  add  them to  "makefile.sps",  and this  code
+;;;signals this.  (Marco Maggi; Thu Nov 10, 2011)
      (let ()
        (define-condition-type &url &condition
          make-url-condition
@@ -1914,7 +1916,7 @@
          (condition
            (make-error)
            (make-who-condition 'ikarus)
-           (make-message-condition "primitive not supported yet")
+           (make-message-condition "primitive not supported yet or forgot to export it")
            (make-message-condition
              "please file a bug report to help us prioritize our goals")
            (make-url-condition
