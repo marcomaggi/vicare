@@ -75,6 +75,7 @@
     ;; file system interface
     posix-chown				posix-fchown
     posix-chmod				posix-fchmod
+    posix-umask				posix-getumask
 
     ;; platform API for file descriptors
     platform-open-input-fd
@@ -281,6 +282,13 @@
 
 (define-inline (posix-fchmod pathname-bv mode-fx)
   (foreign-call "ikrt_posix_fchmod" pathname-bv mode-fx))
+
+(define-inline (posix-umask mask-fx)
+  (foreign-call "ikrt_posix_umask" mask-fx))
+
+(define-inline (posix-getumask)
+  (foreign-call "ikrt_posix_getumask"))
+
 
 
 ;;;; platform API for file descriptors

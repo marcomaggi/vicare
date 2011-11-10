@@ -6361,6 +6361,22 @@ successful return zero, else raise an exception.
 @end defun
 
 
+@defun umask @var{mask}
+Interface to the C function @cfunc{umask}, @glibcref{Setting
+Permissions, umask}.  Set the current file creation mask to @var{mask},
+which must be a fixnum, and return the previous mask as a fixnum.
+@end defun
+
+
+@defun getumask
+Interface to the C function @cfunc{getumask}, @glibcref{Setting
+Permissions, getumask}.  Return the current file creation mask as a
+fixnum.
+@end defun
+
+
+@c ------------------------------------------------------------
+
 @subsubheading Current working directory
 
 
@@ -8577,6 +8593,20 @@ Permissions, fchmod}.  Change to @var{mode}, which must be a fixnum, the
 access permissions for the file system entry associated to @var{fd},
 which must be a fixnum representing a platform file descriptor.  If
 successful return zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_umask (ikptr @var{mask})
+Interface to the C function @cfunc{umask}, @glibcref{Setting
+Permissions, umask}.  Set the current file creation mask to @var{mask}
+which must be a fixnum and return the previous mask as a fixnum.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getumask (void)
+Interface to the C function @cfunc{getumask}, @glibcref{Setting
+Permissions, getumask}.  Return the current file creation mask as a
+fixnum.
 @end deftypefun
 
 

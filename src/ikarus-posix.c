@@ -930,7 +930,20 @@ ikrt_posix_fchmod (ikptr fd, ikptr mode_fx)
     return ik_errno_to_code();
   }
 }
-
+ikptr
+ikrt_posix_umask (ikptr mask_fx)
+{
+  mode_t  mask = unfix(mask_fx);
+  mode_t  rv   = umask(mask);
+  return fix((long) rv);
+}
+ikptr
+ikrt_posix_getumask (void)
+{
+  mode_t  mask = umask(0);
+  umask(mask);
+  return fix((long) mask);
+}
 
 
 ikptr

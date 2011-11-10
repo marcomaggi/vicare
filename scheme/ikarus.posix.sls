@@ -88,6 +88,7 @@
     ;; file system muators
     chown			fchown
     chmod			fchmod
+    umask			getumask
 
     ;; file system interface
     delete-file
@@ -175,6 +176,7 @@
 		  ;; file system muators
 		  chown				fchown
 		  chmod				fchmod
+		  umask				getumask
 
 		  ;; file system interface
 		  delete-file
@@ -965,6 +967,8 @@
 	    rv
 	  (raise-errno-error who rv pathname owner group))))))
 
+;;; --------------------------------------------------------------------
+
 (define (chmod pathname mode)
   (define who 'chmod)
   (with-arguments-validation (who)
@@ -987,6 +991,16 @@
 	    rv
 	  (raise-errno-error who rv pathname mode))))))
 
+;;; --------------------------------------------------------------------
+
+(define (umask mask)
+  (define who 'umask)
+  (with-arguments-validation (who)
+      ((fixnum  mask))
+    (capi.posix-umask mask)))
+
+(define (getumask)
+  (capi.posix-getumask))
 
 
 (define (split-file-name str)
