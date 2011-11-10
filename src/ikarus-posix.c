@@ -865,7 +865,7 @@ ikrt_realpath (ikptr pathname_bv, ikpcb* pcb)
 
 
 /** --------------------------------------------------------------------
- ** File system mutators.
+ ** Onwers and permissions.
  ** ----------------------------------------------------------------- */
 
 ikptr
@@ -894,7 +894,45 @@ ikrt_posix_fchown (ikptr fd, ikptr owner_fx, ikptr group_fx)
     return ik_errno_to_code();
   }
 }
+ikptr
+ikrt_posix_chmod (ikptr pathname_bv, ikptr mode_fx)
+{
+  char *        pathname;
+  int           rv;
+  mode_t        mode;
+  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
+  mode     = unfix(mode_fx);
+  errno    = 0;
+  rv       = chmod(pathname, mode);
+  if (0 == rv) {
+    return fix(0);
+  } else {
+    return ik_errno_to_code();
+  }
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_chmod (ikptr path, ikptr mode)
+{
+  return ikrt_chmod(path, mode);
+}
+ikptr
+ikrt_posix_fchmod (ikptr fd, ikptr mode_fx)
+{
+  int           rv;
+  mode_t        mode;
+  mode     = unfix(mode_fx);
+  errno    = 0;
+  rv       = fchmod(unfix(fd), mode);
+  if (0 == rv) {
+    return fix(0);
+  } else {
+    return ik_errno_to_code();
+  }
+}
 
+
+
 ikptr
 ikrt_delete_file (ikptr pathname)
 /* Interface to "unlink()". */
@@ -906,14 +944,6 @@ ikrt_delete_file (ikptr pathname)
     return true_object;
   else
     return ik_errno_to_code();
-}
-ikptr
-ikrt_chmod(ikptr path, ikptr mode /*, ikpcb* pcb */){
-  int r = chmod((char*)(path+off_bytevector_data), (mode_t)unfix(mode));
-  if(r == 0){
-    return true_object;
-  }
-  return ik_errno_to_code();
 }
 
 ikptr

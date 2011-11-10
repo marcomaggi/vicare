@@ -445,11 +445,19 @@
 	     (begin . ?body)
 	   (system (string-append "rm -f " ptn)))))))
 
+;;; --------------------------------------------------------------------
+
   (check
       (with-temporary-file ("tmp")
 	(chown "tmp" 1000 1000))
     => 0)
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-temporary-file ("tmp")
+	(chmod "tmp" #o755))
+    => 0)
 
 
   #t)

@@ -87,6 +87,7 @@
 
     ;; file system muators
     chown			fchown
+    chmod			fchmod
 
     ;; file system interface
     delete-file
@@ -173,6 +174,7 @@
 
 		  ;; file system muators
 		  chown				fchown
+		  chmod				fchmod
 
 		  ;; file system interface
 		  delete-file
@@ -962,6 +964,28 @@
 	(if (unsafe.fxzero? rv)
 	    rv
 	  (raise-errno-error who rv pathname owner group))))))
+
+(define (chmod pathname mode)
+  (define who 'chmod)
+  (with-arguments-validation (who)
+      ((pathname  pathname)
+       (fixnum    mode))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-chmod pathname.bv mode)))
+	(if (unsafe.fxzero? rv)
+	    rv
+	  (raise-errno-error who rv pathname mode))))))
+
+(define (fchmod pathname mode)
+  (define who 'fchmod)
+  (with-arguments-validation (who)
+      ((pathname  pathname)
+       (fixnum    mode))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-fchmod pathname.bv mode)))
+	(if (unsafe.fxzero? rv)
+	    rv
+	  (raise-errno-error who rv pathname mode))))))
 
 
 

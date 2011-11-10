@@ -74,6 +74,7 @@
 
     ;; file system interface
     posix-chown				posix-fchown
+    posix-chmod				posix-fchmod
 
     ;; platform API for file descriptors
     platform-open-input-fd
@@ -272,6 +273,14 @@
 
 (define-inline (posix-fchown fd owner-fx group-fx)
   (foreign-call "ikrt_posix_fchown" fd owner-fx group-fx))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-chmod pathname-bv mode-fx)
+  (foreign-call "ikrt_posix_chmod" pathname-bv mode-fx))
+
+(define-inline (posix-fchmod pathname-bv mode-fx)
+  (foreign-call "ikrt_posix_fchmod" pathname-bv mode-fx))
 
 
 ;;;; platform API for file descriptors
