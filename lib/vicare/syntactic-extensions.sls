@@ -35,8 +35,8 @@
     define-inline		define-inline-constant
     define-syntax*		define-auxiliary-syntaxes
     debug-assert		unwind-protect
-
     begin0			begin0-let
+    with-pathnames
 
     ;; arguments validation
     define-argument-validation
@@ -142,6 +142,15 @@
     (syntax-rules ()
       ((_ ?pred)
        (values)))))
+
+(define-syntax with-pathnames
+  (syntax-rules ()
+    ((_ (?pathname ...) . ?body)
+     (let ((?pathname (if (bytevector? ?pathname)
+			  ?pathname
+			((string->filename-func) ?pathname)))
+	   ...)
+       . ?body))))
 
 
 (define-syntax define-argument-validation
