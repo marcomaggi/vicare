@@ -587,6 +587,7 @@
     (raise-signal				i v)
     (readlink					i v)
     (realpath					i v)
+    (rename					i v)
     (setenv					i v)
     (stat					i v)
     (symlink					i v)
@@ -594,6 +595,7 @@
     (table->environ				i v)
     (umask					i v)
     (unsetenv					i v)
+    (unlink					i v)
     (utime					i v)
     (utimes					i v)
     (wait					i v)
@@ -644,7 +646,6 @@
     (S_ISSOCK					i v)
     (S_ISFIFO					i v)
 
-    (rename-file				i v)
     (current-directory				i v)
     (directory-list				i v)
     (make-directory				i v)

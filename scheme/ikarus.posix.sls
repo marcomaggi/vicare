@@ -93,10 +93,11 @@
     ;; hard and symbolic links
     link			symlink
     readlink			realpath
+    delete-file			unlink
+    rename
 
     ;; file system interface
-    delete-file
-    rename-file			split-file-name
+    split-file-name
 
     current-directory		directory-list
     make-directory		make-directory*
@@ -179,10 +180,11 @@
 		  ;; hard and symbolic links
 		  link				symlink
 		  readlink			realpath
+		  delete-file			unlink
+		  rename
 
 		  ;; file system interface
-		  delete-file
-		  rename-file			split-file-name
+		  split-file-name
 
 		  current-directory		directory-list
 		  make-directory		make-directory*
@@ -1051,7 +1053,7 @@
 	(raise-errno-error who rv fd atime.sec atime.usec mtime.sec mtime.usec)))))
 
 
-;;;; symbolic links
+;;;; hard and symbolic links
 
 (define (link old-pathname new-pathname)
   (define who 'link)
@@ -1101,6 +1103,32 @@
 	      ((filename->string-func) rv))
 	  (raise-errno-error who rv pathname))))))
 
+;;; --------------------------------------------------------------------
+
+(define unlink delete-file)
+
+(define (delete-file pathname)
+  ;;Defined by R6RS.
+  ;;
+  (define who 'delete-file)
+  (with-arguments-validation (who)
+      ((pathname pathname))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-unlink pathname.bv)))
+	(unless (unsafe.fxzero? rv)
+	  (raise-errno-error who rv pathname))))))
+
+(define (rename old-pathname new-pathname)
+  (define who 'rename)
+  (with-arguments-validation (who)
+      ((pathname  old-pathname)
+       (pathname  new-pathname))
+    (with-pathnames ((old-pathname.bv old-pathname)
+		     (new-pathname.bv new-pathname))
+      (let ((rv (capi.posix-rename old-pathname.bv new-pathname.bv)))
+	(unless (unsafe.fxzero? rv)
+	  (raise-errno-error who rv old-pathname new-pathname))))))
+
 
 (define (split-file-name str)
   (define who 'split-file-name)
@@ -1122,30 +1150,6 @@
        (let ((i (fx+ i 1)))
 	 (substring str i (string-length str) )))))
    (else (values "" str))))
-
-(define delete-file
-  ;;Defined by R6RS.
-  ;;
-  (lambda (x)
-    (define who 'delete-file)
-    (unless (string? x)
-      (die who "filename is not a string" x))
-    (let ((v (foreign-call "ikrt_delete_file" ((string->filename-func) x))))
-      (unless (eq? v #t)
-	(raise/strerror who v x)))))
-
-(define rename-file
-  (lambda (src dst)
-    (define who 'rename-file)
-    (unless (string? src)
-      (die who "source file name is not a string" src))
-    (unless (string? dst)
-      (die who "destination file name is not a string" dst))
-    (let ((v (foreign-call "ikrt_rename_file"
-			   ((string->filename-func) src)
-			   ((string->filename-func) dst))))
-      (unless (eq? v #t)
-	(raise/strerror who v src)))))
 
 (define directory-list
   (lambda (path)

@@ -6433,6 +6433,24 @@ bytevector.  When @var{pathname} is a string: the returned value is a
 string.
 @end defun
 
+
+@defun unlink @var{pathname}
+Interface to the C function @cfunc{unlink}, @glibcref{Deleting Files,
+unlink}.  Delete the file system entry referenced by @var{pathname},
+which must be a bytevector.  If successful return unspecified values,
+else raise an exception.
+
+This function is the same of @func{delete-file} defined by @rnrs{6}.
+@end defun
+
+
+@defun rename @var{old-pathname} @var{new-pathname}
+Interface to the C function @cfunc{rename}, @glibcref{Renaming Files,
+rename}.  Rename the file system entry @var{old-pathname} to
+@var{new-pathname}.  If successful return unspecified values, else
+return an encoded @code{errno} value.
+@end defun
+
 @c page
 @node posix dir
 @section File system directory inspection
@@ -8678,6 +8696,22 @@ Interface to the C function @cfunc{realpath}, @glibcref{Symbolic Links,
 realpath}.  If @var{pathname} references a symbolic link: follow it and
 return the real pathname as bytevector; if an error occurs: return an
 encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_unlink (ikptr @var{pathname})
+Interface to the C function @cfunc{unlink}, @glibcref{Deleting Files,
+unlink}.  Delete the file system entry referenced by @var{pathname},
+which must be a bytevector.  If successful return zero, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_rename (ikptr @var{old_pathname}, ikptr @var{new_pathname})
+Interface to the C function @cfunc{rename}, @glibcref{Renaming Files,
+rename}.  Rename the file system entry @var{old_pathname} to
+@var{new_pathname}, both of which must be bytevectors.  If successful
+return zero, else return an encoded @code{errno} value.
 @end deftypefun
 
 @c page

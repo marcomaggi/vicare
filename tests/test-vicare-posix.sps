@@ -531,6 +531,25 @@
   	  (system "rm -f two")))
     => "one")
 
+  (check
+      (with-temporary-file ("one")
+  	(unwind-protect
+  	    (begin
+  	      (rename "one" "two")
+  	      (list (file-exists? "one")
+		    (file-exists? "two")))
+  	  (system "rm -f two")))
+    => '(#f #t))
+
+  (check
+      (with-temporary-file ("one")
+  	(unwind-protect
+  	    (begin
+  	      (unlink "one")
+  	      (file-exists? "one"))
+  	  (system "rm -f one")))
+    => #f)
+
   #t)
 
 

@@ -82,6 +82,7 @@
     ;; hard and symbolic links
     posix-link				posix-symlink
     posix-readlink			posix-realpath
+    posix-unlink			posix-rename
 
     ;; platform API for file descriptors
     platform-open-input-fd
@@ -320,6 +321,12 @@
 
 (define-inline (posix-realpath pathname-bv)
   (foreign-call "ikrt_posix_realpath" pathname-bv))
+
+(define-inline (posix-unlink pathname-bv)
+  (foreign-call "ikrt_posix_unlink" pathname-bv))
+
+(define-inline (posix-rename old-pathname-bv new-pathname-bv)
+  (foreign-call "ikrt_posix_rename" old-pathname-bv new-pathname-bv))
 
 
 ;;;; platform API for file descriptors
