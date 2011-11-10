@@ -1058,19 +1058,6 @@
 	      (lambda (u-to u-path)
 		(foreign-call "ikrt_link" u-to u-path))))
 
-(define ($file-time x who proc)
-  (unless (string? x)
-    (die who "not a string" x))
-  (let ((v (proc ((string->filename-func) x))))
-    (cond
-     ((bytevector? v)
-      (let ((n0 (bytevector-u8-ref v 0))
-	    (n1 (bytevector-u8-ref v 1)))
-	(+ (* (bytevector-uint-ref v 2 (native-endianness) n0)
-	      #e1e9)
-	   (bytevector-uint-ref v (+ 2 n0) (native-endianness) n1))))
-     (else (raise/strerror who v x)))))
-
 (define (nanosleep secs nsecs)
   (import (ikarus system $fx))
   (unless (cond
