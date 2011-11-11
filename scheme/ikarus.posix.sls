@@ -105,11 +105,9 @@
     ;; file system interface
     split-file-name
 
-    current-directory		directory-list
-    make-directory		make-directory*
-    delete-directory
-
-    nanosleep)
+    ;; interface to "select()"
+    nanosleep
+    )
   (import (except (ikarus)
 		  ;; errno codes handling
 		  errno->string
@@ -194,15 +192,11 @@
 		  mkdir				rmdir
 		  getcwd			getcwd/string
 		  chdir				fchdir
-
-		  ;; file system interface
 		  split-file-name
 
-		  current-directory		directory-list
-		  make-directory		make-directory*
-		  delete-directory
-
-		  nanosleep)
+		  ;; interface to "select()"
+		  nanosleep
+		  )
     (vicare syntactic-extensions)
     (vicare platform-constants)
     (prefix (vicare unsafe-capi)
@@ -1196,7 +1190,8 @@
       (unless (unsafe.fxzero? rv)
 	(raise-errno-error who rv fd)))))
 
-
+;;; --------------------------------------------------------------------
+
 (define (split-file-name str)
   (define who 'split-file-name)
   (define path-sep #\/)
@@ -1208,75 +1203,19 @@
 	  (if (char=? (string-ref str i) c)
 	      i
 	    (f i))))))
-  (unless (string? str) (die who "not a string" str))
-  (cond
-   ((find-last path-sep str) =>
-    (lambda (i)
-      (values
-       (substring str 0 i)
-       (let ((i (fx+ i 1)))
-	 (substring str i (string-length str) )))))
-   (else (values "" str))))
+  (with-arguments-validation (who)
+      ((string  str))
+    (cond ((find-last path-sep str)
+	   => (lambda (i)
+		(values
+		 (substring str 0 i)
+		 (let ((i (fx+ i 1)))
+		   (substring str i (string-length str) )))))
+	  (else
+	   (values "" str)))))
 
-(define directory-list
-  (lambda (path)
-    (define who 'directory-list)
-    (unless (string? path)
-      (die who "not a string" path))
-    (let ((r (foreign-call "ikrt_directory_list" ((string->filename-func) path))))
-      (if (fixnum? r)
-	  (raise/strerror who r path)
-	(map utf8->string (reverse r))))))
-
-(define ($make-directory path mode who)
-  (unless (string? path)
-    (die who "not a string" path))
-  (unless (fixnum? mode)
-    (die who "not a fixnum" mode))
-  (let ((r (foreign-call "ikrt_mkdir" ((string->filename-func) path) mode)))
-    (unless (eq? r #t)
-      (raise/strerror who r path))))
-
-(define default-dir-mode #o755)
-
-(define make-directory
-  (case-lambda
-   ((path) (make-directory path default-dir-mode))
-   ((path mode) ($make-directory path mode 'make-directory))))
-
-(module (make-directory*)
-  (define who 'make-directory*)
-  (define (mkdir* dirname0 mode)
-    (unless (string? dirname0)
-      (die who "not a string" dirname0))
-    (let f ((dirname dirname0))
-      (cond
-       ((file-exists? dirname)
-	(unless (file-is-directory? dirname)
-	  (die who
-               (format "path component ~a is not a directory" dirname)
-               dirname0)))
-       (else
-	(let-values (((base suffix) (split-file-name dirname)))
-	  (unless (string=? base "") (f base))
-	  (unless (string=? suffix "")
-	    ($make-directory dirname mode who)))))))
-  (define make-directory*
-    (case-lambda
-     ((name) (mkdir* name default-dir-mode))
-     ((name mode) (mkdir* name mode)))))
-
-(define delete-directory
-  (case-lambda
-   ((path) (delete-directory path #f))
-   ((path want-error?)
-    (define who 'delete-directory)
-    (unless (string? path)
-      (die who "not a string" path))
-    (let ((r (foreign-call "ikrt_rmdir" ((string->filename-func) path))))
-      (if want-error?
-	  (unless (eq? r #t) (raise/strerror who r path))
-	(eq? r #t))))))
+
+;;;; interface to "select()"
 
 (define (nanosleep secs nsecs)
   (import (ikarus system $fx))
@@ -1295,20 +1234,6 @@
     (unless (eq? rv 0)
       (error 'nanosleep "failed"))))
 
-
-(define current-directory
-  (case-lambda
-   (()
-    (let ((v (foreign-call "ikrt_getcwd")))
-      (if (bytevector? v)
-	  (utf8->string v)
-	(raise/strerror 'current-directory v))))
-   ((x)
-    (if (string? x)
-	(let ((rv (foreign-call "ikrt_chdir" ((string->filename-func) x))))
-	  (unless (eq? rv #t)
-	    (raise/strerror 'current-directory rv x)))
-      (die 'current-directory "not a string" x)))))
 
 
 ;;;; done

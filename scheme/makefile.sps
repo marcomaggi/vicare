@@ -654,11 +654,6 @@
     (S_ISSOCK					i v)
     (S_ISFIFO					i v)
 
-    (current-directory				i v)
-    (directory-list				i v)
-    (make-directory				i v)
-    (make-directory*				i v)
-    (delete-directory				i v)
     (directory-stream?				i v)
     (open-directory-stream			i v)
     (read-directory-stream			i v)

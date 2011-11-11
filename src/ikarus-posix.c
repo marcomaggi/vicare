@@ -1248,40 +1248,11 @@ ikrt_posix_fchdir (ikptr fd)
     return ik_errno_to_code();
 }
 
-/* ------------------------------------------------------------------ */
-
+/* FIXME STALE To be removed at the next boot image rotation. */
 ikptr
 ikrt_directory_list(ikptr filename, ikpcb* pcb){
-  DIR* dir;
-  struct dirent* de;
-  if((dir = opendir((char*)(filename + off_bytevector_data))) == NULL){
-    return ik_errno_to_code();
-  }
-  ikptr ac = null_object;
-  pcb->root0 = &ac;
-  while(1){
-    errno = 0;
-    de = readdir(dir);
-    if(de == NULL){
-      pcb->root0 = 0;
-      ikptr retval = (errno ? ik_errno_to_code() : ac);
-      closedir(dir);
-      return retval;
-    }
-    int len = strlen(de->d_name);
-    ikptr bv = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1))
-               + bytevector_tag;
-    ref(bv, off_bytevector_length) = fix(len);
-    memcpy((char*)(bv+off_bytevector_data), de->d_name, len+1);
-    pcb->root1 = &bv;
-    ikptr p = ik_safe_alloc(pcb, pair_size) + pair_tag;
-    pcb->root1 = 0;
-    ref(p, off_car) = bv;
-    ref(p, off_cdr) = ac;
-    ac = p;
-  }
+  return false_object;
 }
-
 
 
 ikptr

@@ -5911,8 +5911,8 @@ stat} for details.
 
 The proper data type for file system pathnames is the bytevector; all
 the functions requiring a pathname as argument accept both a bytevector
-and a string as a convenient @api{}.  String pathnames are converted to
-and from bytevectors using the functions referenced by the parameters
+and a string for convenience.  String pathnames are converted to and
+from bytevectors using the functions referenced by the parameters
 @func{string->filename-func} and @func{filename->string-func}.
 
 Whenever a system call returns a file system pathname: two functions are

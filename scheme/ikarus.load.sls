@@ -24,6 +24,8 @@
 		  load-r6rs-script
 		  fasl-directory)
     (prefix (only (ikarus.posix)
+		  mkdir
+		  split-file-name
 		  realpath/string)
 	    posix.)
     (only (ikarus.compiler)
@@ -112,8 +114,8 @@
   (let ((ikfasl (fasl-path filename)))
     (when ikfasl
       (fprintf (current-error-port) "Serializing ~s ...\n" ikfasl)
-      (let-values (((dir name) (split-file-name ikfasl)))
-	(make-directory* dir))
+      (let-values (((dir name) (posix.split-file-name ikfasl)))
+	(posix.mkdir dir))
       (let ((port (open-file-output-port ikfasl (file-options no-fail))))
 	(unwind-protect
 	    (fasl-write (make-serialized-library contents) port)
