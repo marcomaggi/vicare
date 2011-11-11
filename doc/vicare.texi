@@ -5884,6 +5884,7 @@ set to @false{}.
 * posix file::                  Interfacing with the file system.
 * posix link::                  Hard and symbolic links.
 * posix dir::                   File system directories.
+* posix fd::                    File descriptors.
 * posix time::                  Time related functions.
 * posix misc::                  Miscellaneous functions.
 @end menu
@@ -6626,6 +6627,73 @@ stream referenced by @var{stream}, which must be an instance of
 @code{directory-stream}; @var{pos} must be the return value of a
 previous call to @func{telldir}.  Return unspecified values.
 @end defun
+
+@c page
+@node posix fd
+@section File descriptors
+
+
+@defun open @var{pathname} @var{flags} @var{mode}
+Interface to the C function @cfunc{open}, @glibcref{Opening and Closing
+Files, open}.  Open a file descriptor for the file system entry
+@var{pathname}; @var{flags} and @var{mode} must be fixnums.  If
+successful return a fixnum representing the file descriptor, else raise
+an exception.
+@end defun
+
+
+@defun close @var{fd}
+Interface to the C function @cfunc{close}, @glibcref{Opening and Closing
+Files, close}.  Close a file descriptor represented by @var{fd}, which
+must be a fixnum.  If successful return unspecified values, else raise
+an exception.
+@end defun
+
+
+@defun posix-read @var{fd} @var{buffer} @var{size}
+Interface to the C function @cfunc{read}, @glibcref{I/O Primitives,
+read}.  Read at most @var{size} bytes from the file descriptor @var{fd}
+and store them in the bytevector @var{buffer}; @var{fd} and @var{size}
+must be fixnums.  If successful return a non--negative fixnum
+representing the number of bytes read, else raise an exception.
+@end defun
+
+
+@defun pread @var{fd} @var{buffer} @var{size} @var{off}
+Interface to the C function @cfunc{pread}, @glibcref{I/O Primitives,
+pread}.  Like @func{posix-read}, but start reading at offset @var{off}
+from the start of the file; @var{off} must be a non--negative exact
+integer.
+@end defun
+
+
+@defun posix-write @var{fd} @var{buffer} @var{size}
+Interface to the C function @cfunc{write}, @glibcref{I/O Primitives,
+write}.  Write at most @var{size} bytes to the file descriptor @var{fd}
+from the bytevector @var{buffer}; @var{fd} and @var{size} must be
+fixnums.  If successful return a non--negative fixnum representing the
+number of written bytes, else raise an exception.
+@end defun
+
+
+@defun pwrite @var{fd} @var{buffer} @var{size} @var{off}
+Interface to the C function @cfunc{pwrite}, @glibcref{I/O Primitives,
+pwrite}.  Like @func{posix-write}, but start writing at offset @var{off}
+from the start of the file; @var{off} must be a non--negative exact
+integer.
+@end defun
+
+
+@defun lseek @var{fd} @var{off} @var{whence}
+Interface to the C function @cfunc{lseek}, @glibcref{File Position
+Primitive, lseek}.  Change the file position of the file descriptor
+@var{fd} to @var{off} from @var{whence}; @var{whence} must a fixnum,
+@var{off} must be an exact integer.  If successful return a
+non--negative exact integer representing the number of bytes from the
+beginning of the file, else raise an exception.
+@end defun
+
+
 
 @c page
 @node posix time
@@ -7878,7 +7946,7 @@ adaptation.
 * capi posix adding::           How to add a @posix{} primitive.
 * capi posix errno::            Handling @code{errno} codes.
 * capi posix env::              Operating system environment variables.
-* capi posix fd::               File descriptors.
+* capi posix port::             File descriptors and Scheme ports.
 * capi posix pid::              Process identifier functions.
 * capi posix process::          Forking and executing processes.
 * capi posix status::           Process termination status.
@@ -7887,6 +7955,7 @@ adaptation.
 * capi posix file::             File system interface.
 * capi posix link::             Hard and symbolic links.
 * capi posix dir::              File system directories.
+* capi posix fd::               File descriptors at low level.
 * capi posix time::             Time and date.
 @end menu
 
@@ -8031,22 +8100,20 @@ the environment is empty (no environment variables set) return nil.
 @end deftypefun
 
 @c page
-@node capi posix fd
-@subsection Internals: file descriptors
+@node capi posix port
+@subsection File descriptors and Scheme ports
 
-
-File descriptors are represented as fixnums.
 
 @menu
-* capi posix fd open::          Opening and closing file descriptors.
-* capi posix fd seek::          Handling file descriptor cursor.
-* capi posix fd rw::            Reading and writing.
-* capi posix fd event::         Handling file descriptor events.
-* capi posix fd net::           Handling sockets.
+* capi posix port open::        Opening and closing file descriptors.
+* capi posix port seek::        Handling file descriptor cursor.
+* capi posix port rw::          Reading and writing.
+* capi posix port event::       Handling file descriptor events.
+* capi posix port net::         Handling sockets.
 @end menu
 
 @c page
-@node capi posix fd open
+@node capi posix port open
 @subsubsection Opening and closing file descriptors
 
 
@@ -8132,7 +8199,7 @@ error occurs in @cfunc{open} return the return value of
 @end deftypefun
 
 @c page
-@node capi posix fd seek
+@node capi posix port seek
 @subsubsection Handling file descriptor cursor
 
 
@@ -8148,7 +8215,7 @@ If successful return @code{false_object}; if an error occurs in
 @end deftypefun
 
 @c page
-@node capi posix fd rw
+@node capi posix port rw
 @subsubsection Reading and writing
 
 
@@ -8184,7 +8251,7 @@ written; if an error occurs in @cfunc{write} return the return value of
 @end deftypefun
 
 @c page
-@node capi posix fd event
+@node capi posix port event
 @subsubsection Handling file descriptor events
 
 
@@ -8216,7 +8283,7 @@ occurs in @cfunc{fcntl} return the return value of
 @end deftypefun
 
 @c page
-@node capi posix fd net
+@node capi posix port net
 @subsubsection Handling sockets
 
 
@@ -8775,6 +8842,72 @@ Directory, seekdir}.  Set to @var{pos} the position of the directory
 stream referenced by @var{pointer}, which must be a pointer object;
 @var{pos} must be the return value of a previous call to
 @cfunc{telldir}.  Return the void object.
+@end deftypefun
+
+@c page
+@node capi posix fd
+@subsection File descriptors at low level
+
+
+@deftypefun ikptr ikrt_posix_open (ikptr @var{pathname}, ikptr @var{flags}, ikptr @var{mode})
+Interface to the C function @cfunc{open}, @glibcref{Opening and Closing
+Files, open}.  Open a file descriptor for the file system entry
+@var{pathname}, which must be a bytevector; @var{flags} and @var{mode}
+must be fixnums.  If successful return a fixnum representing the file
+descriptor, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_close (ikptr @var{fd})
+Interface to the C function @cfunc{close}, @glibcref{Opening and Closing
+Files, close}.  Close a file descriptor represented by @var{fd}, which
+must be a fixnum.  If successful return the fixnum zero, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_read (ikptr @var{fd}, ikptr @var{buffer}, ikptr @var{size})
+Interface to the C function @cfunc{read}, @glibcref{I/O Primitives,
+read}.  Read at most @var{size} bytes from the file descriptor @var{fd}
+and store them in the bytevector @var{buffer}; @var{fd} and @var{size}
+must be fixnums.  If successful return a non--negative fixnum
+representing the number of bytes read, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_pread (ikptr @var{fd}, ikptr @var{buffer}, ikptr @var{size}, ikptr @var{off})
+Interface to the C function @cfunc{pread}, @glibcref{I/O Primitives,
+pread}.  Like @cfunc{ikrt_posix_read}, but start reading at offset
+@var{off} from the start of the file; @var{off} must be a non--negative
+exact integer.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_write (ikptr @var{fd}, ikptr @var{buffer}, ikptr @var{size})
+Interface to the C function @cfunc{write}, @glibcref{I/O Primitives,
+write}.  Write at most @var{size} bytes to the file descriptor @var{fd}
+from the bytevector @var{buffer}; @var{fd} and @var{size} must be
+fixnums.  If successful return a non--negative fixnum representing the
+number of written bytes, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_pwrite (ikptr @var{fd}, ikptr @var{buffer}, ikptr @var{size}, ikptr @var{off})
+Interface to the C function @cfunc{pwrite}, @glibcref{I/O Primitives,
+pwrite}.  Like @cfunc{ikrt_posix_write}, but start writing at offset
+@var{off} from the start of the file; @var{off} must be a non--negative
+exact integer.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_lseek (ikptr @var{fd}, ikptr @var{off}, ikptr @var{whence}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{lseek}, @glibcref{File Position
+Primitive, lseek}.  Change the file position of the file descriptor
+@var{fd} to @var{off} from @var{whence}; @var{fd} and @var{whence} must
+be fixnums, @var{off} must be an exact integer.  If successful return a
+non--negative exact integer representing the number of bytes from the
+beginning of the file, else return an encoded @code{errno} value.
 @end deftypefun
 
 @c page

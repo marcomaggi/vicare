@@ -97,14 +97,20 @@
     ;; temporary files and directories
     glibc-mkstemp			glibc-mkdtemp
 
+    ;; file descriptors
+    posix-open				posix-close
+    posix-read				posix-pread
+    posix-write				posix-pwrite
+    posix-lseek
+
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
     platform-open-input/output-fd	platform-close-fd
     platform-read-fd			platform-write-fd
     platform-set-position)
   (import (except (ikarus)
-		  posix-fork
-		  posix-remove)
+		  posix-fork		posix-remove
+		  posix-read		posix-write)
     (only (vicare syntactic-extensions)
 	  define-inline))
 
@@ -391,6 +397,32 @@
 
 (define-inline (glibc-mkdtemp template-bv)
   (foreign-call "ikrt_glibc_mkdtemp" template-bv))
+
+
+;;;; file descriptors
+
+(define-inline (posix-open pathname flags mode)
+  (foreign-call "ikrt_posix_open" pathname flags mode))
+
+(define-inline (posix-close fd)
+  (foreign-call "ikrt_posix_close" fd))
+
+(define-inline (posix-read fd buffer size)
+  (foreign-call "ikrt_posix_read" fd buffer size))
+
+(define-inline (posix-pread fd buffer size off)
+  (foreign-call "ikrt_posix_pread" fd buffer size off))
+
+(define-inline (posix-write fd buffer size)
+  (foreign-call "ikrt_posix_write" fd buffer size))
+
+(define-inline (posix-pwrite fd buffer size off)
+  (foreign-call "ikrt_posix_pwrite" fd buffer size off))
+
+(define-inline (posix-lseek fd off whence)
+  (foreign-call "ikrt_posix_lseek" fd off whence))
+
+;;; --------------------------------------------------------------------
 
 
 ;;;; platform API for file descriptors

@@ -110,8 +110,13 @@
     directory-stream-pathname	directory-stream-pointer
     directory-stream-fd		directory-stream-closed?
 
-    ;; file system interface
     split-file-name
+
+    ;; file descriptors
+    open			close
+    posix-read			pread
+    posix-write			pwrite
+    lseek
 
     ;; interface to "select()"
     nanosleep
@@ -211,6 +216,12 @@
 
 		  split-file-name
 
+		  ;; file descriptors
+		  open				close
+		  posix-read			pread
+		  posix-write			pwrite
+		  lseek
+
 		  ;; interface to "select()"
 		  nanosleep
 		  )
@@ -240,11 +251,9 @@
   (string? obj)
   (assertion-violation who "expected string as argument" obj))
 
-(define-argument-validation (dirpos who obj)
-  (and (or (fixnum? obj) (bignum? obj))
-       (<= 0 obj))
-  (assertion-violation who
-    "expected non-negative exact integer as directory stream position argument" obj))
+(define-argument-validation (bytevector who obj)
+  (bytevector? obj)
+  (assertion-violation who "expected bytevector as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -293,6 +302,18 @@
 (define-argument-validation (open-directory-stream who obj)
   (not (directory-stream-closed? obj))
   (assertion-violation who "expected open directory stream as argument" obj))
+
+(define-argument-validation (dirpos who obj)
+  (and (or (fixnum? obj) (bignum? obj))
+       (<= 0 obj))
+  (assertion-violation who
+    "expected non-negative exact integer as directory stream position argument" obj))
+
+(define-argument-validation (offset who obj)
+  (and (or (fixnum? obj) (bignum? obj))
+       (<= 0 obj))
+  (assertion-violation who
+    "expected non-negative exact integer as offset argument" obj))
 
 
 ;;;; errors handling
@@ -1361,6 +1382,86 @@
        (open-directory-stream	stream)
        (dirpos			pos))
     (capi.posix-seekdir (directory-stream-pointer stream) pos)))
+
+
+;;;; file descriptors
+
+(define (open pathname flags mode)
+  (define who 'open)
+  (with-arguments-validation (who)
+      ((pathname  pathname)
+       (fixnum    flags)
+       (fixnum    mode))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-open pathname.bv flags mode)))
+	(if (unsafe.fx<= 0 rv)
+	    rv
+	  (raise-errno-error who rv pathname flags mode))))))
+
+(define (close fd)
+  (define who 'close)
+  (with-arguments-validation (who)
+      ((file-descriptor  fd))
+    (let ((rv (capi.posix-close fd)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv fd)))))
+
+(define (posix-read fd buffer size)
+  (define who 'posix-read)
+  (with-arguments-validation (who)
+      ((file-descriptor  fd)
+       (bytevector	 buffer)
+       (fixnum		 size))
+    (let ((rv (capi.posix-read fd buffer size)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv fd)))))
+
+(define (pread fd buffer size off)
+  (define who 'pread)
+  (with-arguments-validation (who)
+      ((file-descriptor  fd)
+       (bytevector	 buffer)
+       (fixnum		 size)
+       (offset		 off))
+    (let ((rv (capi.posix-pread fd buffer size off)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv fd)))))
+
+(define (posix-write fd buffer size)
+  (define who 'posix-write)
+  (with-arguments-validation (who)
+      ((file-descriptor  fd)
+       (bytevector	 buffer)
+       (fixnum		 size))
+    (let ((rv (capi.posix-write fd buffer size)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv fd)))))
+
+(define (pwrite fd buffer size off)
+  (define who 'pwrite)
+  (with-arguments-validation (who)
+      ((file-descriptor  fd)
+       (bytevector	 buffer)
+       (fixnum		 size)
+       (offset		 off))
+    (let ((rv (capi.posix-pwrite fd buffer size off)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv fd)))))
+
+(define (lseek fd off whence)
+  (define who 'lseek)
+  (with-arguments-validation (who)
+      ((file-descriptor  fd)
+       (offset		 off)
+       (fixnum		 whence))
+    (let ((rv (capi.posix-lseek fd off whence)))
+      (if (negative? rv)
+	  (raise-errno-error who rv fd off whence)
+	rv))))
 
 
 ;;;; interface to "select()"

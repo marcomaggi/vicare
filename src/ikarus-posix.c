@@ -31,6 +31,9 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
+/* This causes inclusion of "pread".  (Marco Maggi; Nov 11, 2011) */
+#define _GNU_SOURCE     1
+
 #include "ikarus.h"
 #include <dirent.h>
 #include <fcntl.h>
@@ -1380,6 +1383,109 @@ ikrt_posix_seekdir (ikptr pointer, ikptr pos_num)
 /** --------------------------------------------------------------------
  ** File descriptors.
  ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_open (ikptr pathname_bv, ikptr flags, ikptr mode)
+{
+  char *        pathname;
+  int           rv;
+  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  errno    = 0;
+  rv       = open(pathname, unfix(flags), unfix(mode));
+  if (0 <= rv)
+    return fix(rv);
+  else
+    return ik_errno_to_code();
+}
+ikptr
+ikrt_posix_close (ikptr fd)
+{
+  int           rv;
+  errno    = 0;
+  rv       = close(unfix(fd));
+  if (0 == rv)
+    return fix(0);
+  else
+    return ik_errno_to_code();
+}
+ikptr
+ikrt_posix_read (ikptr fd, ikptr buffer_bv, ikptr size_fx)
+{
+  void *        buffer;
+  size_t        size;
+  ssize_t       rv;
+  buffer   = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv);
+  size     = (size_t)unfix(size_fx);
+  errno    = 0;
+  rv       = read(unfix(fd), buffer, size);
+  if (0 <= rv)
+    return fix(rv);
+  else
+    return ik_errno_to_code();
+}
+ikptr
+ikrt_posix_pread (ikptr fd, ikptr buffer_bv, ikptr size_fx, ikptr off_num)
+{
+  void *        buffer;
+  size_t        size;
+  off_t         off;
+  ssize_t       rv;
+  buffer   = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv);
+  size     = (size_t)unfix(size_fx);
+  off      = (off_t) extract_num_longlong(off_num);
+  errno    = 0;
+  rv       = pread(unfix(fd), buffer, size, off);
+  if (0 <= rv)
+    return fix(rv);
+  else
+    return ik_errno_to_code();
+}
+ikptr
+ikrt_posix_write (ikptr fd, ikptr buffer_bv, ikptr size_fx)
+{
+  void *        buffer;
+  size_t        size;
+  ssize_t       rv;
+  buffer   = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv);
+  size     = (size_t)unfix(size_fx);
+  errno    = 0;
+  rv       = write(unfix(fd), buffer, size);
+  if (0 <= rv)
+    return fix(rv);
+  else
+    return ik_errno_to_code();
+}
+ikptr
+ikrt_posix_pwrite (ikptr fd, ikptr buffer_bv, ikptr size_fx, ikptr off_num)
+{
+  void *        buffer;
+  size_t        size;
+  off_t         off;
+  ssize_t       rv;
+  buffer   = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv);
+  size     = (size_t)unfix(size_fx);
+  off      = (off_t) extract_num_longlong(off_num);
+  errno    = 0;
+  rv       = pwrite(unfix(fd), buffer, size, off);
+  if (0 <= rv)
+    return fix(rv);
+  else
+    return ik_errno_to_code();
+}
+ikptr
+ikrt_posix_lseek (ikptr fd, ikptr off_num, ikptr whence_fx, ikpcb * pcb)
+{
+  off_t         off;
+  off_t         rv;
+  off    = extract_num_longlong(off_num);
+  errno  = 0;
+  rv     = lseek(unfix(fd), off, unfix(whence_fx));
+  if (0 <= rv)
+    return sll_to_number((long long)rv, pcb);
+  else
+    return ik_errno_to_code();
+}
+
 
 
 /** --------------------------------------------------------------------

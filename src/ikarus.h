@@ -51,6 +51,9 @@
 #define VICARE_BYTEVECTOR_DATA_UINT8P(BV)               \
   ((uint8_t*)(long)((BV) + off_bytevector_data))
 
+#define VICARE_BYTEVECTOR_DATA_VOIDP(BV)                \
+  ((void*)(long)((BV) + off_bytevector_data))
+
 
 /** --------------------------------------------------------------------
  ** Prototypes and external definitions.

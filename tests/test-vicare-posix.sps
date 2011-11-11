@@ -616,6 +616,41 @@
   #t)
 
 
+(parametrise ((check-test-name	'fds))
+
+  (check
+      (begin
+	(system "rm -f tmp")
+	(let ((fd (open "tmp"
+			(fxior O_CREAT O_EXCL O_RDWR)
+			(fxior S_IRUSR S_IWUSR))))
+	  (unwind-protect
+	      (begin
+		(posix-write fd '#vu8(1 2 3 4) 4)
+		(lseek fd 0 SEEK_SET)
+		(let ((buffer (make-bytevector 4)))
+		  (list (posix-read fd buffer 4) buffer)))
+	    (close fd))))
+    => '(4 #vu8(1 2 3 4)))
+
+  (check
+      (begin
+	(system "rm -f tmp")
+	(let ((fd (open "tmp"
+			(fxior O_CREAT O_EXCL O_RDWR)
+			(fxior S_IRUSR S_IWUSR))))
+	  (unwind-protect
+	      (begin
+		(pwrite fd '#vu8(1 2 3 4) 4 0)
+		(lseek fd 0 SEEK_SET)
+		(let ((buffer (make-bytevector 4)))
+		  (list (pread fd buffer 4 0) buffer)))
+	    (close fd))))
+    => '(4 #vu8(1 2 3 4)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

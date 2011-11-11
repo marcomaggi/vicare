@@ -626,6 +626,13 @@
     (utimes					i v)
     (wait					i v)
     (waitpid					i v)
+    (open					i v)
+    (close					i v)
+    (posix-read					i v)
+    (pread					i v)
+    (posix-write				i v)
+    (pwrite					i v)
+    (lseek					i v)
 
     (make-struct-stat				i v)
     (struct-stat?				i v)

@@ -215,12 +215,13 @@ ikptr ik_cstring_to_symbol(char*, ikpcb*);
 
 ikptr u_to_number(unsigned long, ikpcb*);
 ikptr ull_to_number(unsigned long long, ikpcb*);
-ikptr normalize_bignum(long int limbs, int sign, ikptr r);
 ikptr s_to_number(signed long x, ikpcb* pcb);
+ikptr sll_to_number(signed long long n, ikpcb* pcb);
 ikptr d_to_number(double x, ikpcb* pcb);
 ikptr make_pointer(long x, ikpcb* pcb);
 long      extract_num (ikptr x);
 long long extract_num_longlong(ikptr x);
+ikptr normalize_bignum(long int limbs, int sign, ikptr r);
 
 
 #define IK_HEAP_EXT_SIZE  (32 * 4096)
