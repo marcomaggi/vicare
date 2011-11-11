@@ -101,6 +101,13 @@
     mkdir			rmdir
     getcwd			getcwd/string
     chdir			fchdir
+    opendir			fdopendir
+    readdir			readdir/string
+    closedir
+
+    make-directory-stream	directory-stream?
+    directory-stream-pathname	directory-stream-pointer
+    directory-stream-fd		directory-stream-closed?
 
     ;; file system interface
     split-file-name
@@ -192,6 +199,14 @@
 		  mkdir				rmdir
 		  getcwd			getcwd/string
 		  chdir				fchdir
+		  opendir			fdopendir
+		  readdir			readdir/string
+		  closedir
+
+		  make-directory-stream		directory-stream?
+		  directory-stream-pathname	directory-stream-pointer
+		  directory-stream-fd		directory-stream-closed?
+
 		  split-file-name
 
 		  ;; interface to "select()"
@@ -262,6 +277,14 @@
        (unsafe.fx>= obj 0)
        (unsafe.fx<= obj 999999))
   (assertion-violation who "expected non-negative fixnum as nanoseconds count argument" obj))
+
+(define-argument-validation (directory-stream who obj)
+  (directory-stream? obj)
+  (assertion-violation who "expected directory stream as argument" obj))
+
+(define-argument-validation (open-directory-stream who obj)
+  (not (directory-stream-closed? obj))
+  (assertion-violation who "expected open directory stream as argument" obj))
 
 
 ;;;; errors handling
@@ -775,7 +798,7 @@
 (define (%struct-stat-printer S port sub-printer)
   (define-inline (%display thing)
     (display thing port))
-  (%display "#[\"struct-stat\"")
+  (%display "#[struct-stat")
   (%display " st_mode=#o")	(%display (number->string (struct-stat-st_mode S) 8))
   (%display " st_ino=")		(%display (struct-stat-st_ino S))
   (%display " st_dev=")		(%display (struct-stat-st_dev S))
@@ -1215,6 +1238,82 @@
 	   (values "" str)))))
 
 
+;;;; inspecting file system directories
+
+(define-struct directory-stream
+  (pathname pointer fd closed?))
+
+(define (%directory-stream-printer struct port sub-printer)
+  (display "#[directory-stream" port)
+  (display " pathname=\"" port) (display (directory-stream-pathname struct) port)
+  (display "\"" port)
+  (display " pointer="    port) (display (directory-stream-pointer  struct) port)
+  (display " fd="         port) (display (directory-stream-fd       struct) port)
+  (display " closed?="    port) (display (directory-stream-closed?  struct) port)
+  (display "]" port))
+
+(define directory-stream-guardian
+  (let ((G (make-guardian)))
+    (define (close-garbage-collected-directory-streams)
+      (let ((stream (G)))
+	(when stream
+	  (unless (directory-stream-closed? stream)
+	    (set-directory-stream-closed?! stream #t)
+	    (capi.posix-closedir (directory-stream-pointer stream)))
+	  (close-garbage-collected-directory-streams))))
+    (post-gc-hooks (cons close-garbage-collected-directory-streams (post-gc-hooks)))
+    G))
+
+(define (opendir pathname)
+  (define who 'opendir)
+  (with-arguments-validation (who)
+      ((pathname  pathname))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-opendir pathname.bv)))
+	(if (fixnum? rv)
+	    (raise-errno-error who rv pathname)
+	  (begin0-let ((stream (make-directory-stream pathname rv #f #f)))
+	    (directory-stream-guardian stream)))))))
+
+(define (fdopendir fd)
+  (define who 'fdopendir)
+  (with-arguments-validation (who)
+      ((file-descriptor  fd))
+    (let ((rv (capi.posix-fdopendir fd)))
+      (if (fixnum? rv)
+	  (raise-errno-error who rv fd)
+	(begin0-let ((stream (make-directory-stream #f rv fd #f)))
+	  (directory-stream-guardian stream))))))
+
+(define (readdir stream)
+  (define who 'readdir)
+  (with-arguments-validation (who)
+      ((directory-stream       stream)
+       (open-directory-stream  stream))
+    (let ((rv (capi.posix-readdir (directory-stream-pointer stream))))
+      (cond ((fixnum? rv)
+	     (set-directory-stream-closed?! stream #t)
+	     (raise-errno-error who rv stream))
+	    ((not rv)
+	     (set-directory-stream-closed?! stream #t)
+	     #f)
+	    (else rv)))))
+
+(define (readdir/string stream)
+  (let ((rv (readdir stream)))
+    (and rv ((filename->string-func) rv))))
+
+(define (closedir stream)
+  (define who 'closedir)
+  (with-arguments-validation (who)
+      ((directory-stream stream))
+    (unless (directory-stream-closed? stream)
+      (set-directory-stream-closed?! stream #t)
+      (let ((rv (capi.posix-closedir (directory-stream-pointer stream))))
+	(unless (unsafe.fxzero? rv)
+	  (raise-errno-error who rv stream))))))
+
+
 ;;;; interface to "select()"
 
 (define (nanosleep secs nsecs)
@@ -1239,6 +1338,9 @@
 ;;;; done
 
 (set-rtd-printer! (type-descriptor struct-stat) %struct-stat-printer)
+
+(set-rtd-printer! (type-descriptor directory-stream)
+		  %directory-stream-printer)
 
 )
 

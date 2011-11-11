@@ -1254,6 +1254,88 @@ ikrt_directory_list(ikptr filename, ikpcb* pcb){
   return false_object;
 }
 
+ikptr
+ikrt_posix_opendir (ikptr pathname_bv, ikpcb * pcb)
+{
+  char *        pathname;
+  DIR *         stream;
+  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  errno    = 0;
+  stream   = opendir(pathname);
+  if (NULL == stream) {
+    return ik_errno_to_code();
+  } else {
+    ikptr       pointer = make_pointer((long)stream, pcb);
+    return pointer;
+  }
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_opendir(ikptr dirname, ikpcb* pcb)
+{
+  return ikrt_posix_opendir(dirname, pcb);
+}
+ikptr
+ikrt_posix_fdopendir (ikptr fd, ikpcb * pcb)
+{
+  DIR *         stream;
+  errno    = 0;
+  stream   = fdopendir(unfix(fd));
+  if (NULL == stream) {
+    return ik_errno_to_code();
+  } else {
+    ikptr       pointer = make_pointer((long)stream, pcb);
+    return pointer;
+  }
+}
+ikptr
+ikrt_posix_readdir (ikptr pointer, ikpcb * pcb)
+{
+  DIR *           stream = (DIR *) ref(pointer, off_pointer_data);
+  struct dirent * entry;
+  errno = 0;
+  entry = readdir(stream);
+  if (NULL == entry) {
+    closedir(stream);
+    if (0 == errno)
+      return false_object;
+    else
+      return ik_errno_to_code();
+  } else {
+    int     len  = strlen(entry->d_name);
+    ikptr   bv   = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1)) + bytevector_tag;
+    char *  data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+    ref(bv, off_bytevector_length) = fix(len);
+    memcpy(data, entry->d_name, len+1);
+    return bv;
+  }
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_readdir (ikptr ptr, ikpcb* pcb)
+{
+  return ikrt_posix_readdir (ptr, pcb);
+}
+
+ikptr
+ikrt_posix_closedir (ikptr pointer, ikpcb * pcb)
+{
+  DIR *  stream = (DIR *) ref(pointer, off_pointer_data);
+  int    rv;
+  errno = 0;
+  rv    = closedir(stream);
+  if (0 == rv)
+    return fix(0);
+  else
+    return ik_errno_to_code();
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_closedir (ikptr ptr, ikpcb* pcb)
+{
+  return ikrt_posix_closedir(ptr, pcb);
+}
+
 
 ikptr
 ikrt_current_time(ikptr t){

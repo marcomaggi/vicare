@@ -29,6 +29,8 @@
  ** ----------------------------------------------------------------- */
 
 #include "ikarus.h"
+#include <dirent.h>
+#include <sys/types.h>
 
 static void
 feature_failure (const char * funcname)
@@ -48,6 +50,28 @@ ikrt_glibc_clearenv (void)
 #ifdef HAVE_CLEARENV
   clearenv();
   return void_object;
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
+ ** Inspecting file system directories.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_glibc_dirfd (ikptr pointer)
+{
+#ifdef HAVE_DIRFD
+  DIR *  stream = ref(pointer, off_pointer_data);
+  int    rv;
+  errno = 0;
+  rv    = dirfd(stream);
+  if (-1 == rv)
+    return ik_errno_to_code();
+  else
+    return fix(rv);
 #else
   feature_failure(__func__);
 #endif

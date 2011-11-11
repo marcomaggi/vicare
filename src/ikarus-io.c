@@ -16,25 +16,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+/** --------------------------------------------------------------------
+ ** Headers.
+ ** ----------------------------------------------------------------- */
 
-#include <stdio.h>
+#include "ikarus.h"
 #include <fcntl.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/uio.h>
+#include <netdb.h>
+#include <netinet/in.h>
 #include <unistd.h>
 #include <sys/socket.h>
-#include <netdb.h>
-#include <string.h>
-#include <netinet/in.h>
-#include <dirent.h>
-#include "ikarus-data.h"
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/uio.h>
 
-extern ikptr ik_errno_to_code();
+
+/** --------------------------------------------------------------------
+ ** File descriptors handling for Scheme ports.
+ ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_close_fd(ikptr fd /*, ikpcb* pcb */){
+ikrt_close_fd(ikptr fd /*, ikpcb* pcb */)
+{
   int err = close(unfix(fd));
   if(err == -1){
     return ik_errno_to_code();
@@ -42,9 +46,9 @@ ikrt_close_fd(ikptr fd /*, ikpcb* pcb */){
     return false_object;;
   }
 }
-
 ikptr
-ikrt_set_position(ikptr fd, ikptr pos /*, ikpcb* pcb */){
+ikrt_set_position(ikptr fd, ikptr pos /*, ikpcb* pcb */)
+{
   off_t offset = extract_num_longlong(pos);
   off_t err = lseek(unfix(fd), offset, SEEK_SET);
   if(err == -1){
@@ -53,8 +57,6 @@ ikrt_set_position(ikptr fd, ikptr pos /*, ikpcb* pcb */){
     return false_object;;
   }
 }
-
-
 ikptr
 ikrt_open_input_fd (ikptr fn, ikptr ikopts /*, ikpcb* pcb */)
 {
@@ -71,7 +73,6 @@ ikrt_open_input_fd (ikptr fn, ikptr ikopts /*, ikpcb* pcb */)
     return ik_errno_to_code();
   }
 }
-
 ikptr
 ikrt_open_output_fd (ikptr fn, ikptr ikopts /*, ikpcb* pcb */)
 {
@@ -134,7 +135,6 @@ ikrt_open_output_fd (ikptr fn, ikptr ikopts /*, ikpcb* pcb */)
     return ik_errno_to_code();
   }
 }
-
 ikptr
 ikrt_open_input_output_fd(ikptr fn, ikptr ikopts /*, ikpcb* pcb */){
   int opts  = unfix(ikopts);
@@ -167,7 +167,6 @@ ikrt_open_input_output_fd(ikptr fn, ikptr ikopts /*, ikpcb* pcb */){
     return ik_errno_to_code();
   }
 }
-
 ikptr
 ikrt_read_fd(ikptr fd, ikptr bv, ikptr off, ikptr cnt /*, ikpcb* pcb */){
 #if 0
@@ -186,7 +185,6 @@ ikrt_read_fd(ikptr fd, ikptr bv, ikptr off, ikptr cnt /*, ikpcb* pcb */){
     return ik_errno_to_code();
   }
 }
-
 ikptr
 ikrt_write_fd(ikptr fd, ikptr bv, ikptr off, ikptr cnt /*, ikpcb* pcb */){
 #if 0
@@ -215,9 +213,7 @@ ikrt_write_fd(ikptr fd, ikptr bv, ikptr off, ikptr cnt /*, ikpcb* pcb */){
     return ik_errno_to_code();
   }
 }
-
-
-
+
 static ikptr
 do_connect(ikptr host, ikptr srvc, int socket_type){
   struct addrinfo* info;
@@ -367,42 +363,6 @@ ikrt_shutdown(ikptr s /*, ikpcb* pcb*/){
   int err = shutdown(unfix(s), SHUT_RDWR);
 #endif
   if(err < 0){
-    return ik_errno_to_code();
-  }
-  return 0;
-}
-
-
-ikptr
-ikrt_opendir(ikptr dirname, ikpcb* pcb){
-  DIR* d = opendir((char*)(dirname+off_bytevector_data));
-  if(d == NULL){
-    return ik_errno_to_code();
-  }
-  return(make_pointer((long)d, pcb));
-}
-
-ikptr
-ikrt_readdir(ikptr ptr, ikpcb* pcb){
-  DIR* d = (DIR*) ref(ptr, off_pointer_data);
-  errno = 0;
-  struct dirent* ent = readdir(d);
-  if (ent == NULL){
-    return (errno ? ik_errno_to_code() : false_object);
-  }
-  int len = strlen(ent->d_name);
-  ikptr bv = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1))
-             + bytevector_tag;
-  ref(bv, -bytevector_tag) = fix(len);
-  memcpy((char*)(bv+off_bytevector_data), ent->d_name, len+1);
-  return bv;
-}
-
-ikptr
-ikrt_closedir(ikptr ptr, ikpcb* pcb){
-  DIR* d = (DIR*) ref(ptr, off_pointer_data);
-  int rv = closedir(d);
-  if (rv == -1){
     return ik_errno_to_code();
   }
   return 0;

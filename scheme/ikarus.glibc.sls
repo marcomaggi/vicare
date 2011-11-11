@@ -29,11 +29,22 @@
   (export
     ;; operating system environment variables
     clearenv
+
+    ;; file system directories
+    dirfd
     )
   (import (except (ikarus)
 		  ;; operating system environment variables
 		  clearenv
+
+		  ;; file system directories
+		  dirfd
 		  )
+    (prefix (only (ikarus.posix)
+		  directory-stream?
+		  directory-stream-closed?
+		  directory-stream-pointer)
+	    posix.)
     (vicare syntactic-extensions)
     (vicare platform-constants)
     (prefix (vicare unsafe-capi)
@@ -54,6 +65,13 @@
        (define (?who . ?args)
 	 (assertion-violation '?who
 	   "attempt to call unimplemented GNU C Library function"))))))
+
+(define (raise-errno-error who errno . irritants)
+  (raise (condition
+	  (make-error)
+	  (make-who-condition who)
+	  (make-message-condition (strerror errno))
+	  (make-irritants-condition irritants))))
 
 
 ;;;; arguments validation
@@ -84,11 +102,32 @@
   (fixnum? obj)
   (assertion-violation who "expected fixnum signal code as argument" obj))
 
+(define-argument-validation (directory-stream who obj)
+  (posix.directory-stream? obj)
+  (assertion-violation who "expected directory stream as argument" obj))
+
+(define-argument-validation (open-directory-stream who obj)
+  (not (posix.directory-stream-closed? obj))
+  (assertion-violation who "expected open directory stream as argument" obj))
+
 
 ;;;; operating system environment variables
 
 (define-for-glibc (clearenv)
   (capi.glibc-clearenv))
+
+
+;;;; file system directories
+
+(define-for-glibc (dirfd stream)
+  (define who 'dirfd)
+  (with-arguments-validation (who)
+      ((directory-stream       stream)
+       (open-directory-stream  stream))
+    (let ((rv (capi.glibc-dirfd (posix.directory-stream-pointer stream))))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv stream)))))
 
 
 ;;;; done

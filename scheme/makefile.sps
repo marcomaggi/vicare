@@ -558,6 +558,7 @@
     (chdir					i v)
     (chmod					i v)
     (chown					i v)
+    (closedir					i v)
     (environ					i v)
     (environ->table				i v)
     (environ-table				i v)
@@ -571,6 +572,7 @@
     (fchdir					i v)
     (fchmod					i v)
     (fchown					i v)
+    (fdopendir					i v)
     (fork					i v)
     (fstat					i v)
     (futimes					i v)
@@ -587,9 +589,12 @@
     (lutimes					i v)
     (mkdir					i v)
     (nanosleep					i v)
+    (opendir					i v)
     (pause					i v)
     (posix-fork					i v)
     (raise-signal				i v)
+    (readdir					i v)
+    (readdir/string				i v)
     (readlink					i v)
     (readlink/string				i v)
     (realpath					i v)
@@ -654,14 +659,18 @@
     (S_ISSOCK					i v)
     (S_ISFIFO					i v)
 
+    (make-directory-stream			i v)
     (directory-stream?				i v)
-    (open-directory-stream			i v)
-    (read-directory-stream			i v)
-    (close-directory-stream			i v)
+    (directory-stream-pathname			i v)
+    (directory-stream-pointer			i v)
+    (directory-stream-fd			i v)
+    (directory-stream-closed?			i v)
+
     (split-file-name				i v)
 
 ;;; GNU C Library functions
     (clearenv					i v)
+    (dirfd					i v)
 
 ;;; Linux functions
     (WIFCONTINUED				i v)

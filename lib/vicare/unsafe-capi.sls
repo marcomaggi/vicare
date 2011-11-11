@@ -88,6 +88,9 @@
     posix-mkdir				posix-rmdir
     posix-getcwd			posix-chdir
     posix-fchdir
+    posix-opendir			posix-fdopendir
+    posix-readdir			posix-closedir
+    glibc-dirfd
 
     ;; platform API for file descriptors
     platform-open-input-fd
@@ -96,12 +99,8 @@
     platform-read-fd
     platform-write-fd
     platform-set-position
-    platform-close-fd
+    platform-close-fd)
 
-    ;; reading file system directories
-    platform-open-directory
-    platform-read-directory-stream
-    platform-close-directory)
   (import (except (ikarus)
 		  posix-fork)
     (only (vicare syntactic-extensions)
@@ -351,6 +350,23 @@
 (define-inline (posix-fchdir fd)
   (foreign-call "ikrt_posix_fchdir" fd))
 
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-opendir filename.bv)
+  (foreign-call "ikrt_posix_opendir" filename.bv))
+
+(define-inline (posix-fdopendir filename.bv)
+  (foreign-call "ikrt_posix_fdopendir" filename.bv))
+
+(define-inline (glibc-dirfd stream-ptr)
+  (foreign-call "ikrt_glibc_dirfd" stream-ptr))
+
+(define-inline (posix-readdir stream.ptr)
+  (foreign-call "ikrt_posix_readdir" stream.ptr))
+
+(define-inline (posix-closedir stream.ptr)
+  (foreign-call "ikrt_posix_closedir" stream.ptr))
+
 
 ;;;; platform API for file descriptors
 ;;
@@ -410,18 +426,6 @@
   ;;or a fixnum representing an ERRNO code.
   ;;
   (foreign-call "ikrt_close_fd" fd))
-
-
-;;;; reading file system directories
-
-(define-inline (platform-open-directory filename.bv)
-  (foreign-call "ikrt_opendir" filename.bv))
-
-(define-inline (platform-read-directory-stream stream.ptr)
-  (foreign-call "ikrt_readdir" stream.ptr))
-
-(define-inline (platform-close-directory stream.ptr)
-  (foreign-call "ikrt_closedir" stream.ptr))
 
 
 ;;;; done

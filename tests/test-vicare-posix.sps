@@ -579,15 +579,14 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check	;verify that no error occurs
-      (let ((stream (open-directory-stream "..")))
-;;;(check-pretty-print stream)
-	(let loop ((entry (read-directory-stream stream)))
-;;;(check-pretty-print entry)
-	  (if entry
-	      (loop (read-directory-stream stream))
-	    (close-directory-stream stream)))
-	(directory-stream? stream))
+  (check	;verify that no error occurs, even when double closing
+      (let ((stream (opendir "..")))
+	(check-pretty-print stream)
+	(do ((entry (readdir/string stream) (readdir/string stream)))
+	    ((not entry)
+	     (closedir stream)
+	     (directory-stream? stream))
+	  (check-pretty-print (list 'directory-entry entry))))
     => #t)
 
   #t)

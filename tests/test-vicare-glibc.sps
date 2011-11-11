@@ -28,13 +28,36 @@
 (import (rename (vicare)
 		(parameterize	parametrise))
   (vicare platform-constants)
+  (vicare syntactic-extensions)
   (checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare GNU C Library functions\n")
 
 
-(parametrise ((check-test-name	'stuff))
+(parametrise ((check-test-name	'directories))
+
+  (check
+      (let* ((stream (opendir ".."))
+	     (fd     (dirfd stream)))
+	(closedir stream)
+	(fixnum? fd))
+    => #t)
+
+  (let ((pwd (getcwd/string)))
+    (check
+	(begin
+	  (mkdir "one" S_IRWXU)
+	  (unwind-protect
+	      (let ((stream (opendir "one")))
+		(unwind-protect
+		    (let ((fd (dirfd stream)))
+		      (fchdir fd)
+		      (getcwd/string))
+		  (closedir stream)))
+	    (chdir pwd)
+	    (rmdir "one")))
+      => (string-append pwd "/one")))
 
   #t)
 

@@ -6511,91 +6511,86 @@ exception.
 @end defun
 
 
+@deftp {Structure Type} directory-stream
+Opaque data structure type used in the inspection of file system
+directory entries.  Instances of this type can be destroyed by
+@func{closedir}, but they are also automatically and correctly destroyed
+by the garbage collector.  It has the following fields:
 
-@c ------------------------------------------------------------
+@table @code
+@item pathname
+False or a string representing the pathname.
 
-@defun open-directory-stream @var{filename}
-Open the file system directory @var{filename}, which must be a string,
-and return a directory stream object to be closed by
-@func{close-directory-stream} or left to automatic closing by the
-garbage collector.
+@item pointer
+A pointer object referencing the directory.
+
+@item fd
+False or a fixnum representing the file descriptor associated to the
+directory.
+
+@item closed?
+A boolean, true if this stream has already been closed.
+@end table
+@end deftp
+
+
+@defun make-directory-stream @var{pathname} @var{pointer} @var{fd} @var{closed?}
+Constructor for @code{directory-stream}.
 @end defun
 
 
-@defun directory-stream? @var{stream}
-Return true if @var{stream} is a directory stream returned by
-@func{open-directory-stream}.
+@defun directory-stream? @var{obj}
+Return true if @var{obj} is an instance of @code{directory-stream}.
 @end defun
 
 
-@defun read-directory-stream @var{stream}
-Return the next entry from the directory @var{stream}, or false if no
-more entries are available.  The entry is a string representing a
-filename.  Raise an exception if an error occurs.
+@defun directory-stream-pathname @var{stream}
+@defunx directory-stream-pointer @var{stream}
+@defunx directory-stream-fd @var{stream}
+@defunx directory-stream-closed? @var{stream}
+Accessors for the fields of @code{directory-stream}.
 @end defun
 
 
-@defun close-directory-stream @var{stream}
-@defunx close-directory-stream @var{stream} @var{raise-error?}
-Close the directory @var{STREAM}.  If an error occurs raise an exception
-only when @var{raise-error?} is true.  @var{raise-error?}  defaults to
-true.
+@defun opendir @var{pathname}
+Interface to the C function @cfunc{opendir}, @glibcref{Opening a
+Directory, opendir}.  Open a directory stream for the inspection of the
+file system entry @var{pathname}.  If successful return an instance of
+@code{directory-stream}, else raise an exception.
 @end defun
 
 
-@subsubheading Current working directory
-
-
-@defun current-directory [@var{pathname}]
-When invoked with an argument, change the current working directory to
-the one selected by the string @var{pathname}.  Make use of the system
-@cfunc{chdir} function.
-
-When invoked without argument, return a string representing the current
-working directory pathname.  Make use of the system @cfunc{getcwd}
-function.
-
-If an error occurs, an exception is raised.
-
-@glibcref{Working Directory, Working Directory}
+@defun fdopendir @var{fd}
+Interface to the C function @cfunc{fdopendir}, @glibcref{Opening a
+Directory, fdopendir}.  Open a directory stream for the inspection of
+the file system entry associated to @var{fd}, which must be a fixnum
+representing a file descriptor.  If successful return an instance of
+@code{directory-stream}, else raise an exception.
 @end defun
 
 
-@c ------------------------------------------------------------
+@defun readdir @var{stream}
+@defunx readdir/string @var{stream}
+Interface to the C function @cfunc{readdir}, @glibcref{Reading/Closing
+Directory, readdir}.  Acquire the next entry from a directory stream
+referenced by @var{stream}, which must be an instance of
+@code{directory-stream}.  If successful and an entry is available:
+@func{readdir} returns a pathname as a bytevector, @func{readdir/string}
+returns a pathname as a string; if successful and no more entries are
+available: return @false{}; else raise an exception.
 
-@subsubheading Inspecting the file system
-
-
-@defun directory-list @var{pathname}
-Build and return the list of strings representing the entries in the
-directory selected by the string @var{pathname}.  Make use of the
-@cfunc{opendir}, @cfunc{readdir}, @cfunc{closedir} system functions.
-
-If an error occurs, an exception is raised.
-
-@glibcref{Opening a Directory, Opening a Directory}@*
-@glibcref{Reading/Closing Directory, Reading/Closing Directory}
+When no more entries are available or an error occurs: the directory
+stream is closed.
 @end defun
 
 
-@defun make-directory @var{pathname} [@var{mode}]
-Create a directory with name selected by the string @var{pathname}.
-Make use of the @cfunc{mkdir} system function.  If an error occurs, an
-exception is raised.
+@defun closedir @var{stream}
+Interface to the C function @cfunc{closedir}, @glibcref{Reading/Closing
+Directory, closedir}.  Close the directory stream referenced by
+@var{stream}, which must be an instance of @code{directory-stream}.  If
+successful return unspecified values, else raise an exception.
 
-@var{mode} must be an exact integere selecting the access permissions
-for the directory; it defaults to @samp{#o755}.
-
-@glibcref{Creating Directories, Creating Directories}
-@end defun
-
-
-@defun delete-directory @var{pathname}
-Remove from the system the directory selected by the @var{pathname}
-string.  Make use of the @cfunc{rmdir} system function.  If an error
-occurs, an exception is raised.
-
-@glibcref{Deleting Files, Deleting Files}
+This function has no effect if @var{stream} has been already closed.
 @end defun
 
 @c page
@@ -6627,6 +6622,7 @@ positive exact integers.  If an error occurs an exception is raised.
 
 @menu
 * glibc env::                   Operating system environment variables.
+* glibc dir::                   File system directories.
 @end menu
 
 @c page
@@ -6638,6 +6634,19 @@ positive exact integers.  If an error occurs an exception is raised.
 Interface to the C function @cfunc{clearenv}, @glibcref{Environment
 Access, clearenv}.  Remove all the entries from the environment.  Return
 unspecified values.
+@end defun
+
+@c page
+@node glibc dir
+@section File system directories
+
+
+@defun dirfd @var{stream}
+Interface to the C function @cfunc{dirfd}, @glibcref{Opening a
+Directory, dirfd}.  Acquire a file descriptor associated to
+@var{stream}, which must be an instance of @code{directory-stream};
+@ref{posix dir} for details.  If successful return a fixnum representing
+the file descriptor, else raise an exception.
 @end defun
 
 @c page
@@ -8634,105 +8643,42 @@ encoded @code{errno} value.
 @end deftypefun
 
 
-@c ------------------------------------------------------------
-
-@deftypefun ikptr ikrt_directory_list (ikptr @var{pathname}, ikpcb * @var{pcb})
-Interface to the @cfunc{opendir}, @cfunc{readdir} and @cfunc{closedir} C
-functions.  @glibcref{Accessing Directories, Accessing Directories}.
-Inspect the contents of the selected directory.
-
-@var{pathname} must reference a bytevector object holding a file
-pathname.
-
-If successful, return a list of bytevectors representing the names of
-the entries in the directory.  If an error occurs in the C functions,
-return the return value of @cfunc{ik_errno_to_code}.
+@deftypefun ikptr ikrt_posix_opendir (ikptr @var{pathname}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{opendir}, @glibcref{Opening a
+Directory, opendir}.  Open a directory stream for the inspection of the
+file system entry @var{pathname}, which must be a bytevector.  If
+successful return a pointer object, else return an encoded @code{errno}
+value.
 @end deftypefun
 
 
-@deftypefun ikptr ikrt_opendir (ikptr @var{pathname}, ikpcb * @var{pcb})
-Interface to the @cfunc{opendir} C function.  @glibcref{Accessing
-Directories, Accessing Directories}.  Open a directory stream.
-
-@var{pathname} must reference a bytevector object holding a directory
-pathname.
-
-If successful, return a reference to a pointer object referencing the
-directory entry; if an error occurs in @cfunc{opendir}, return the
-return value of @cfunc{ik_errno_to_code}.
+@deftypefun ikptr ikrt_posix_fdopendir (ikptr @var{fd}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{fdopendir}, @glibcref{Opening a
+Directory, fdopendir}.  Open a directory stream for the inspection of
+the file system entry associated to @var{fd}, which must be a fixnum
+representing a file descriptor.  If successful return a pointer object,
+else return an encoded @code{errno} value.
 @end deftypefun
 
 
-@deftypefun ikptr ikrt_closedir (ikptr @var{stream}, ikpcb * @var{pcb})
-Interface to the @cfunc{closedir} C function.  @glibcref{Accessing
-Directories, Accessing Directories}.  Close a directory stream.
+@deftypefun ikptr ikrt_posix_readdir (ikptr @var{pointer}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{readdir}, @glibcref{Reading/Closing
+Directory, readdir}.  Acquire the next entry from a directory stream
+referenced by @var{pointer}, which must be a pointer object.  If
+successful and an entry is available: return a pointer object; if
+successful and no more entries are available: return the false object;
+else return an encoded @code{errno} value.
 
-@var{stream} must reference a pointer object referencing a directory
-stream.
-
-If successful, return a raw C language zero; if an error occurs in
-@cfunc{closedir}, return the return value of @cfunc{ik_errno_to_code}.
+When no more entries are available or an error occurs: the directory
+stream is closed.
 @end deftypefun
 
 
-@deftypefun ikptr ikrt_readdir (ikptr @var{stream}, ikpcb * @var{pcb})
-Interface to the @cfunc{readdir} C function.  @glibcref{Accessing
-Directories, Accessing Directories}.  Read a directory entry from a
-directory stream.
-
-@var{stream} must reference a pointer object referencing a directory
-stream.
-
-If successful return a reference to a bytevector object holding the name
-of the directory entry; if an error occurs in @cfunc{readdir}, return
-the return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_mkdir (ikptr @var{pathname}, ikptr @var{mode})
-Interface to the @cfunc{mkdir} C function.  @glibcref{Creating
-Directories, mkdir}.
-
-@var{pathname} must reference a bytevector object holding the new
-directory pathname; @var{mode} must be a fixnum representing the file
-permissions for the new directory.
-
-If successful, return @code{true_object}; if an error occurs in
-@cfunc{mkdir}, return the return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_rmdir (ikptr @var{pathname})
-Interface to the @cfunc{rmdir} C function.  @glibcref{Deleting Files,
-rmdir}.  Remove a directory.
-
-@var{pathname} must reference a bytevector object holding the directory
-pathname.
-
-If successful, return @code{true_object}; if an error occurs in
-@cfunc{rmdir}, return the return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_chdir (ikptr @var{pathname})
-Interface to the @cfunc{chdir} C function.  @glibcref{Working Directory,
-chdir}.  Change the current working directory.
-
-@var{pathname} must reference a bytevector object holding the directory
-pathname.
-
-If successful, return @code{true_object}; if an error occurs in
-@cfunc{chdir}, return the return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_getcwd (ikpcb * @var{pcb})
-Interface to the @cfunc{getcwd} C function.  @glibcref{Working
-Directory, getcwd}.  Retrieve the current working directory.
-
-If successful, return a reference to a bytevector object holding the
-current working directory pathname; if an error occurs in
-@cfunc{getcwd}, return the return value of @cfunc{ik_errno_to_code}.
+@deftypefun ikptr ikrt_posix_closedir (ikptr @var{pointer}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{closedir}, @glibcref{Reading/Closing
+Directory, closedir}.  Close the directory stream referenced by
+@var{pointer}, which must be a pointer object.  If successful return the
+fixnum zero, else return an encoded @code{errno} value.
 @end deftypefun
 
 @c page
@@ -8813,6 +8759,7 @@ true if the process was resumed by delivery of @code{SIGCONT}.
 
 @menu
 * capi glibc env::              Operating system environment variables.
+* capi glibc dir::              File system directories.
 @end menu
 
 @c page
@@ -8824,6 +8771,19 @@ true if the process was resumed by delivery of @code{SIGCONT}.
 Interface to the C function @cfunc{clearenv}, @glibcref{Environment
 Access, clearenv}.  Remove all the entries from the environment.  Return
 the void object.
+@end deftypefun
+
+@c page
+@node capi glibc dir
+@subsection File system directories
+
+
+@deftypefun ikptr ikrt_glibc_dirfd (ikptr @var{pointer})
+Interface to the C function @cfunc{dirfd}, @glibcref{Opening a
+Directory, dirfd}.  Acquire a file descriptor associated to the
+directory entry referenced by @var{pointer}, which must be a pointer
+object to a directory entry.  If successful return a fixnum representing
+the file descriptor, else return an encoded @code{errno} value.
 @end deftypefun
 
 @c page

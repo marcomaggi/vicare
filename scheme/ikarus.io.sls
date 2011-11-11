@@ -474,11 +474,7 @@
     accept-connection accept-connection-nonblocking
     close-tcp-server-socket
     register-callback
-    input-socket-buffer-size output-socket-buffer-size
-
-    ;; directory inspection
-    open-directory-stream directory-stream?
-    read-directory-stream close-directory-stream)
+    input-socket-buffer-size output-socket-buffer-size)
   (import (except (ikarus)
 		  ;; port parameters
 		  standard-input-port standard-output-port standard-error-port
@@ -582,11 +578,7 @@
 		  accept-connection accept-connection-nonblocking
 		  close-tcp-server-socket
 		  register-callback
-		  input-socket-buffer-size output-socket-buffer-size
-
-		  ;; directory inspection
-		  open-directory-stream directory-stream?
-		  read-directory-stream close-directory-stream)
+		  input-socket-buffer-size output-socket-buffer-size)
     ;;This internal  library is  the one exporting:  $MAKE-PORT, $PORT-*
     ;;and $SET-PORT-* bindings.
     (ikarus system $io)
@@ -1501,16 +1493,6 @@
 		   " too big for string of length "
 		   (number->string (unsafe.string-length dst.str)))
     start count (unsafe.string-length dst.str)))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (directory-stream who obj)
-  (directory-stream? obj)
-  (assertion-violation who "expected directory stream as argument" obj))
-
-(define-argument-validation (open-directory-stream who obj)
-  (not (directory-stream-closed? obj))
-  (assertion-violation who "expected open directory stream as argument" obj))
 
 
 ;;;; error helpers
@@ -7480,88 +7462,6 @@
 	  ((tcp-server? what)
 	   (add-io-event (tcp-server-fd what) proc 'r))
 	  (else (assertion-violation who "invalid argument" what)))))
-
-
-;;;; reading file system directories
-
-(define-struct directory-stream
-  (filename pointer closed?))
-
-(module ()
-  (set-rtd-printer! (type-descriptor directory-stream)
-		    (lambda (x p wr)
-		      (display (string-append "#<directory-stream "
-					      (directory-stream-filename x)
-					      ">")))))
-#;(set-rtd-printer! (type-descriptor directory-stream)
-(lambda (x p wr)
-  (fprintf p "#<directory-stream ~a>"
-	   (directory-stream-filename x))))
-
-;;; --------------------------------------------------------------------
-
-(define directory-stream-guardian
-  (let ((G (make-guardian)))
-    (define (close-garbage-collected-directory-streams)
-      (let ((stream (G)))
-	(when stream
-	  (close-directory-stream stream #f)
-	  (close-garbage-collected-directory-streams))))
-    (post-gc-hooks (cons close-garbage-collected-directory-streams (post-gc-hooks)))
-    G))
-
-(define (open-directory-stream filename)
-  ;;Defined by  Ikarus.  Open the file system  directory FILENAME, which
-  ;;must be a string, and return  a directory stream object to be closed
-  ;;by  CLOSE-DIRECTORY-STREAM  or  left  to automatic  closing  by  the
-  ;;garbage collector.
-  ;;
-  (define who 'open-directory-stream)
-  (with-arguments-validation (who)
-      ((filename filename))
-    (let ((retval (platform-open-directory ((string->filename-func) filename))))
-      (if (fixnum? retval)
-	  (%raise-io-error who filename retval)
-	(let ((stream (make-directory-stream filename retval #f)))
-	  (directory-stream-guardian stream)
-	  stream)))))
-
-(define (read-directory-stream stream)
-  ;;Defined by Ikarus.  Return the next entry from the directory STREAM,
-  ;;or false  if no more entries  are available.  The entry  is a string
-  ;;representing a filename.  Raise an exception if an error occurs.
-  ;;
-  (define who 'read-directory-stream)
-  (with-arguments-validation (who)
-      ((directory-stream       stream)
-       (open-directory-stream  stream))
-    (let ((retval (platform-read-directory-stream (directory-stream-pointer stream))))
-      (cond ((fixnum? retval)
-	     (close-directory-stream stream #f)
-	     (%raise-io-error who (directory-stream-filename stream) retval))
-	    ((not retval)
-	     #f)
-	    (else
-	     ((filename->string-func) retval))))))
-
-(define close-directory-stream
-  ;;Defined by Ikarus.  Close the  directory STREAM.  If an error occurs
-  ;;raise  an exception  only when  RAISE-ERROR? is  true.  RAISE-ERROR?
-  ;;defaults to true.
-  ;;
-  (case-lambda
-   ((stream)
-    (close-directory-stream stream #t))
-   ((stream raise-error?)
-    (define who 'close-directory-stream)
-    (with-arguments-validation (who)
-	((directory-stream stream))
-      (unless (directory-stream-closed? stream)
-	(set-directory-stream-closed?! stream #t)
-	(let ((retval (platform-close-directory (directory-stream-pointer stream))))
-	  (when (and raise-error?
-		     (not (unsafe.fxzero? retval)))
-	    (%raise-io-error who (directory-stream-filename stream) retval))))))))
 
 
 ;;;; standard, console and current ports
