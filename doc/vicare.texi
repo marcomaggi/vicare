@@ -6448,10 +6448,18 @@ returns a string.
 @defun unlink @var{pathname}
 Interface to the C function @cfunc{unlink}, @glibcref{Deleting Files,
 unlink}.  Delete the file system entry referenced by @var{pathname},
-which must be a bytevector.  If successful return unspecified values,
+which must reference a file.  If successful return unspecified values,
 else raise an exception.
 
 This function is the same of @func{delete-file} defined by @rnrs{6}.
+@end defun
+
+
+@defun posix-remove @var{pathname}
+Interface to the C function @cfunc{remove}, @glibcref{Deleting Files,
+remove}.  Delete the file system entry referenced by @var{pathname},
+which can reference a file or directory.  If successful return
+unspecified values, else raise an exception.
 @end defun
 
 
@@ -8609,8 +8617,16 @@ encoded @code{errno} value.
 @deftypefun ikptr ikrt_posix_unlink (ikptr @var{pathname})
 Interface to the C function @cfunc{unlink}, @glibcref{Deleting Files,
 unlink}.  Delete the file system entry referenced by @var{pathname},
-which must be a bytevector.  If successful return zero, else return an
-encoded @code{errno} value.
+which must be a bytevector and referencing a file.  If successful return
+zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_remove (ikptr @var{pathname})
+Interface to the C function @cfunc{remove}, @glibcref{Deleting Files,
+remove}.  Delete the file system entry referenced by @var{pathname},
+which must be a bytevector and referencing a file or directory.  If
+successful return zero, else return an encoded @code{errno} value.
 @end deftypefun
 
 

@@ -82,7 +82,8 @@
     ;; hard and symbolic links
     posix-link				posix-symlink
     posix-readlink			posix-realpath
-    posix-unlink			posix-rename
+    posix-unlink			posix-remove
+    posix-rename
 
     ;; file system directories
     posix-mkdir				posix-rmdir
@@ -93,17 +94,14 @@
     posix-rewinddir			posix-telldir
     posix-seekdir			glibc-dirfd
 
-    ;; platform API for file descriptors
-    platform-open-input-fd
-    platform-open-output-fd
-    platform-open-input/output-fd
-    platform-read-fd
-    platform-write-fd
-    platform-set-position
-    platform-close-fd)
-
+    ;; platform API for file descriptors and Scheme ports
+    platform-open-input-fd		platform-open-output-fd
+    platform-open-input/output-fd	platform-close-fd
+    platform-read-fd			platform-write-fd
+    platform-set-position)
   (import (except (ikarus)
-		  posix-fork)
+		  posix-fork
+		  posix-remove)
     (only (vicare syntactic-extensions)
 	  define-inline))
 
@@ -329,6 +327,9 @@
 
 (define-inline (posix-unlink pathname-bv)
   (foreign-call "ikrt_posix_unlink" pathname-bv))
+
+(define-inline (posix-remove pathname-bv)
+  (foreign-call "ikrt_posix_remove" pathname-bv))
 
 (define-inline (posix-rename old-pathname-bv new-pathname-bv)
   (foreign-call "ikrt_posix_rename" old-pathname-bv new-pathname-bv))

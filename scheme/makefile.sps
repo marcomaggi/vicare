@@ -606,6 +606,7 @@
     (readlink/string				i v)
     (realpath					i v)
     (realpath/string				i v)
+    (posix-remove				i v)
     (rename					i v)
     (rewinddir					i v)
     (rmdir					i v)

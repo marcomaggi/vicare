@@ -1119,6 +1119,18 @@ ikrt_delete_file (ikptr pathname)
 {
   return ikrt_posix_unlink(pathname);
 }
+ikptr
+ikrt_posix_remove (ikptr pathname_bv)
+{
+  char * pathname = (char*)(long)(pathname_bv + off_bytevector_data);
+  int    rv;
+  errno = 0;
+  rv    = remove(pathname);
+  if (0 == rv)
+    return fix(0);
+  else
+    return ik_errno_to_code();
+}
 
 ikptr
 ikrt_posix_rename (ikptr old_pathname_bv, ikptr new_pathname_bv)
@@ -1355,11 +1367,13 @@ ikrt_posix_telldir (ikptr pointer, ikpcb * pcb)
   pos = telldir(stream);
   return s_to_number(pos, pcb);
 }
+ikptr
 ikrt_posix_seekdir (ikptr pointer, ikptr pos_num)
 {
   DIR *  stream = (DIR *) ref(pointer, off_pointer_data);
   long   pos    = extract_num(pos_num);
   seekdir(stream, pos);
+  return void_object;
 }
 
 
@@ -1414,7 +1428,6 @@ ikrt_nanosleep(ikptr secs, ikptr nsecs /*, ikpcb* pcb */){
       : ref(nsecs, off_bignum_data);
   return fix(nanosleep(&t, NULL));
 }
-
 
 
 static int

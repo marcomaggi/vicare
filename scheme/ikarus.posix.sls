@@ -95,7 +95,7 @@
     readlink			readlink/string
     realpath			realpath/string
     delete-file			unlink
-    rename
+    posix-remove		rename
 
     ;; file system directories
     mkdir			rmdir
@@ -194,7 +194,7 @@
 		  readlink			readlink/string
 		  realpath			realpath/string
 		  delete-file			unlink
-		  rename
+		  posix-remove			rename
 
 		  ;; file system directories
 		  mkdir				rmdir
@@ -324,6 +324,14 @@
 	  (make-error)
 	  (make-who-condition who)
 	  (make-message-condition (strerror errno))
+	  (make-irritants-condition irritants))))
+
+(define (raise-errno-error/filename who errno filename . irritants)
+  (raise (condition
+	  (make-error)
+	  (make-who-condition who)
+	  (make-message-condition (strerror errno))
+	  (make-i/o-filename-error filename)
 	  (make-irritants-condition irritants))))
 
 
@@ -1154,6 +1162,15 @@
       ((pathname pathname))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-unlink pathname.bv)))
+	(unless (unsafe.fxzero? rv)
+	  (raise-errno-error/filename who rv pathname))))))
+
+(define (posix-remove pathname)
+  (define who 'posix-remove)
+  (with-arguments-validation (who)
+      ((pathname pathname))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-remove pathname.bv)))
 	(unless (unsafe.fxzero? rv)
 	  (raise-errno-error who rv pathname))))))
 

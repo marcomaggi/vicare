@@ -550,6 +550,15 @@
   	  (system "rm -f one")))
     => #f)
 
+  (check
+      (with-temporary-file ("one")
+  	(unwind-protect
+  	    (begin
+  	      (posix-remove "one")
+  	      (file-exists? "one"))
+  	  (system "rm -f one")))
+    => #f)
+
   #t)
 
 
