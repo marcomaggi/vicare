@@ -219,6 +219,7 @@ ikptr normalize_bignum(long int limbs, int sign, ikptr r);
 ikptr s_to_number(signed long x, ikpcb* pcb);
 ikptr d_to_number(double x, ikpcb* pcb);
 ikptr make_pointer(long x, ikpcb* pcb);
+long      extract_num (ikptr x);
 long long extract_num_longlong(ikptr x);
 
 

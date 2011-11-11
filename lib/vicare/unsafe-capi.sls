@@ -90,7 +90,8 @@
     posix-fchdir
     posix-opendir			posix-fdopendir
     posix-readdir			posix-closedir
-    glibc-dirfd
+    posix-rewinddir			posix-telldir
+    posix-seekdir			glibc-dirfd
 
     ;; platform API for file descriptors
     platform-open-input-fd
@@ -366,6 +367,17 @@
 
 (define-inline (posix-closedir stream.ptr)
   (foreign-call "ikrt_posix_closedir" stream.ptr))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-rewinddir stream.ptr)
+  (foreign-call "ikrt_posix_rewinddir" stream.ptr))
+
+(define-inline (posix-telldir stream.ptr)
+  (foreign-call "ikrt_posix_telldir" stream.ptr))
+
+(define-inline (posix-seekdir stream.ptr pos.num)
+  (foreign-call "ikrt_posix_seekdir" stream.ptr pos.num))
 
 
 ;;;; platform API for file descriptors

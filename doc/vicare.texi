@@ -6593,6 +6593,31 @@ successful return unspecified values, else raise an exception.
 This function has no effect if @var{stream} has been already closed.
 @end defun
 
+
+@defun rewinddir @var{stream}
+Interface to the C function @cfunc{rewinddir}, @glibcref{Random Access
+Directory, rewinddir}.  Rewind to the beginning the directory stream
+referenced by @var{stream}, which must be an instance of
+@code{directory-stream}.  Return unspecified values.
+@end defun
+
+
+@defun telldir @var{stream}
+Interface to the C function @cfunc{telldir}, @glibcref{Random Access
+Directory, telldir}.  Return an exact integer representing the current
+position in the directory stream referenced by @var{stream}, which must
+be an instance of @code{directory-stream}.
+@end defun
+
+
+@defun seekdir @var{pointer} @var{pos}
+Interface to the C function @cfunc{seekdir}, @glibcref{Random Access
+Directory, seekdir}.  Set to @var{pos} the position of the directory
+stream referenced by @var{stream}, which must be an instance of
+@code{directory-stream}; @var{pos} must be the return value of a
+previous call to @func{telldir}.  Return unspecified values.
+@end defun
+
 @c page
 @node posix misc
 @section Miscellaneous functions
@@ -8679,6 +8704,31 @@ Interface to the C function @cfunc{closedir}, @glibcref{Reading/Closing
 Directory, closedir}.  Close the directory stream referenced by
 @var{pointer}, which must be a pointer object.  If successful return the
 fixnum zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_rewinddir (ikptr @var{pointer})
+Interface to the C function @cfunc{rewinddir}, @glibcref{Random Access
+Directory, rewinddir}.  Rewind to the beginning the directory stream
+referenced by @var{pointer}, which must be a pointer object.  Return the
+void object.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_telldir (ikptr @var{pointer})
+Interface to the C function @cfunc{telldir}, @glibcref{Random Access
+Directory, telldir}.  Return an exact integer representing the current
+position in the directory stream referenced by @var{pointer}, which must
+be a pointer object.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_seekdir (ikptr @var{pointer}, ikptr @var{pos})
+Interface to the C function @cfunc{seekdir}, @glibcref{Random Access
+Directory, seekdir}.  Set to @var{pos} the position of the directory
+stream referenced by @var{pointer}, which must be a pointer object;
+@var{pos} must be the return value of a previous call to
+@cfunc{telldir}.  Return the void object.
 @end deftypefun
 
 @c page

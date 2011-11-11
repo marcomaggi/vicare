@@ -589,6 +589,21 @@
 	  (check-pretty-print (list 'directory-entry entry))))
     => #t)
 
+  (check	;verify that no error occurs, even when double closing
+      (let ((stream (opendir "..")))
+	(check-pretty-print stream)
+	(do ((i 0 (+ 1 i)))
+	    ((= 2 i)))
+	(let ((pos (telldir stream)))
+	  (rewinddir stream)
+	  (seekdir stream pos))
+	(do ((entry (readdir/string stream) (readdir/string stream)))
+	    ((not entry)
+	     (closedir stream)
+	     (directory-stream? stream))
+	  (check-pretty-print (list 'directory-entry entry))))
+    => #t)
+
   #t)
 
 

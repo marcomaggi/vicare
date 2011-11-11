@@ -64,7 +64,7 @@ ikptr
 ikrt_glibc_dirfd (ikptr pointer)
 {
 #ifdef HAVE_DIRFD
-  DIR *  stream = ref(pointer, off_pointer_data);
+  DIR *  stream = (DIR *)ref(pointer, off_pointer_data);
   int    rv;
   errno = 0;
   rv    = dirfd(stream);

@@ -103,7 +103,8 @@
     chdir			fchdir
     opendir			fdopendir
     readdir			readdir/string
-    closedir
+    closedir			rewinddir
+    telldir			seekdir
 
     make-directory-stream	directory-stream?
     directory-stream-pathname	directory-stream-pointer
@@ -201,7 +202,8 @@
 		  chdir				fchdir
 		  opendir			fdopendir
 		  readdir			readdir/string
-		  closedir
+		  closedir			rewinddir
+		  telldir			seekdir
 
 		  make-directory-stream		directory-stream?
 		  directory-stream-pathname	directory-stream-pointer
@@ -237,6 +239,12 @@
 (define-argument-validation (string who obj)
   (string? obj)
   (assertion-violation who "expected string as argument" obj))
+
+(define-argument-validation (dirpos who obj)
+  (and (or (fixnum? obj) (bignum? obj))
+       (<= 0 obj))
+  (assertion-violation who
+    "expected non-negative exact integer as directory stream position argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -1312,6 +1320,30 @@
       (let ((rv (capi.posix-closedir (directory-stream-pointer stream))))
 	(unless (unsafe.fxzero? rv)
 	  (raise-errno-error who rv stream))))))
+
+;;; --------------------------------------------------------------------
+
+(define (rewinddir stream)
+  (define who 'rewinddir)
+  (with-arguments-validation (who)
+      ((directory-stream       stream)
+       (open-directory-stream  stream))
+    (capi.posix-rewinddir (directory-stream-pointer stream))))
+
+(define (telldir stream)
+  (define who 'telldir)
+  (with-arguments-validation (who)
+      ((directory-stream       stream)
+       (open-directory-stream  stream))
+    (capi.posix-telldir (directory-stream-pointer stream))))
+
+(define (seekdir stream pos)
+  (define who 'rewinddir)
+  (with-arguments-validation (who)
+      ((directory-stream	stream)
+       (open-directory-stream	stream)
+       (dirpos			pos))
+    (capi.posix-seekdir (directory-stream-pointer stream) pos)))
 
 
 ;;;; interface to "select()"

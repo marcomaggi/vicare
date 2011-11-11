@@ -1302,6 +1302,10 @@ ikrt_posix_readdir (ikptr pointer, ikpcb * pcb)
     else
       return ik_errno_to_code();
   } else {
+    /* The  only field  in  "struct dirent"  we  can trust  to exist  is
+       "d_name".   Notice that  the documentation  of glibc  describes a
+       "d_namlen"  field  which  does   not  exist  on  Linux,  see  the
+       "readdir(3)" manual page. */
     int     len  = strlen(entry->d_name);
     ikptr   bv   = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1)) + bytevector_tag;
     char *  data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
@@ -1334,6 +1338,28 @@ ikptr
 ikrt_closedir (ikptr ptr, ikpcb* pcb)
 {
   return ikrt_posix_closedir(ptr, pcb);
+}
+
+ikptr
+ikrt_posix_rewinddir (ikptr pointer)
+{
+  DIR *  stream = (DIR *) ref(pointer, off_pointer_data);
+  rewinddir(stream);
+  return void_object;
+}
+ikptr
+ikrt_posix_telldir (ikptr pointer, ikpcb * pcb)
+{
+  DIR *  stream = (DIR *) ref(pointer, off_pointer_data);
+  long   pos;
+  pos = telldir(stream);
+  return s_to_number(pos, pcb);
+}
+ikrt_posix_seekdir (ikptr pointer, ikptr pos_num)
+{
+  DIR *  stream = (DIR *) ref(pointer, off_pointer_data);
+  long   pos    = extract_num(pos_num);
+  seekdir(stream, pos);
 }
 
 
