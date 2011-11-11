@@ -33,11 +33,13 @@
 #include <sys/types.h>
 
 static void
-feature_failure (const char * funcname)
+feature_failure_ (const char * funcname)
 {
   fprintf(stderr, "Vicare error: called GNU C Library specific function, %s\n", funcname);
   exit(EXIT_FAILURE);
 }
+
+#define feature_failure(FN)     { feature_failure_(FN); return void_object; }
 
 
 /** --------------------------------------------------------------------
@@ -72,6 +74,46 @@ ikrt_glibc_dirfd (ikptr pointer)
     return ik_errno_to_code();
   else
     return fix(rv);
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
+ ** Temporary files and directories.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_glibc_mkstemp (ikptr template_bv, ikpcb * pcb)
+{
+#ifdef HAVE_MKSTEMP
+  char *        template;
+  int           rv;
+  template = VICARE_BYTEVECTOR_DATA_CHARP(template_bv);
+  errno    = 0;
+  rv       = mkstemp(template);
+  if (-1 == rv)
+    return ik_errno_to_code();
+  else
+    return fix(rv);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_mkdtemp (ikptr template_bv, ikpcb * pcb)
+{
+#ifdef HAVE_MKDTEMP
+  char *        template;
+  char *        rv;
+  template = VICARE_BYTEVECTOR_DATA_CHARP(template_bv);
+  errno    = 0;
+  rv       = mkdtemp(template);
+  if (NULL == rv)
+    return ik_errno_to_code();
+  else
+    return template_bv;
 #else
   feature_failure(__func__);
 #endif

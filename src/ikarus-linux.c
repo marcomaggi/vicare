@@ -43,11 +43,13 @@
 #include <sys/wait.h>
 
 static void
-feature_failure (const char * funcname)
+feature_failure_ (const char * funcname)
 {
   fprintf(stderr, "Vicare error: called GNU+Linux specific function, %s\n", funcname);
   exit(EXIT_FAILURE);
 }
+
+#define feature_failure(FN)     { feature_failure_(FN); return void_object; }
 
 
 /** --------------------------------------------------------------------

@@ -1377,6 +1377,15 @@ ikrt_posix_seekdir (ikptr pointer, ikptr pos_num)
 }
 
 
+/** --------------------------------------------------------------------
+ ** File descriptors.
+ ** ----------------------------------------------------------------- */
+
+
+/** --------------------------------------------------------------------
+ ** Time related functions.
+ ** ----------------------------------------------------------------- */
+
 ikptr
 ikrt_current_time(ikptr t){
   struct timeval s;
@@ -1402,19 +1411,6 @@ ikrt_gmt_offset(ikptr t){
   return r;
   */
 }
-
-
-ikptr
-ikrt_exit(ikptr status, ikpcb* pcb){
-  ik_delete_pcb(pcb);
-  assert(total_allocated_pages == 0);
-  if(is_fixnum(status)){
-    exit(unfix(status));
-  } else {
-    exit(EXIT_FAILURE);
-  }
-}
-
 ikptr
 ikrt_nanosleep(ikptr secs, ikptr nsecs /*, ikpcb* pcb */){
   struct timespec t;
@@ -1430,6 +1426,13 @@ ikrt_nanosleep(ikptr secs, ikptr nsecs /*, ikpcb* pcb */){
 }
 
 
+/** --------------------------------------------------------------------
+ ** Miscellaneous functions.
+ ** ----------------------------------------------------------------- */
+
+
+
+/* FIXME STALE To be removed at the next boot image rotation. */
 static int
 execvpe_(const char *cmd, char *const *argv, char *const *envp){
   char *path = NULL;
@@ -1487,6 +1490,7 @@ execvpe_(const char *cmd, char *const *argv, char *const *envp){
   return -1;
 }
 
+/* FIXME STALE To be removed at the next boot image rotation. */
 ikptr
 ikrt_process(ikptr rvec, ikptr env, ikptr cmd, ikptr argv /*, ikpcb* pcb */){
   int infds[2];

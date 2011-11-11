@@ -32,6 +32,9 @@
 
     ;; file system directories
     dirfd
+
+    ;; temporary files and directories
+    mkstemp		mkdtemp
     )
   (import (except (ikarus)
 		  ;; operating system environment variables
@@ -92,6 +95,10 @@
   (string? obj)
   (assertion-violation who "expected string as argument" obj))
 
+(define-argument-validation (bytevector who obj)
+  (bytevector? obj)
+  (assertion-violation who "expected bytevector as argument" obj))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (pid who obj)
@@ -128,6 +135,27 @@
       (if (unsafe.fx<= 0 rv)
 	  rv
 	(raise-errno-error who rv stream)))))
+
+
+;;;; temporary files and directories
+
+(define (mkstemp template)
+  (define who 'mkstemp)
+  (with-arguments-validation (who)
+      ((bytevector  template))
+    (let ((rv (capi.glibc-mkstemp template)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv template)))))
+
+(define (mkdtemp template)
+  (define who 'mkdtemp)
+  (with-arguments-validation (who)
+      ((bytevector  template))
+    (let ((rv (capi.glibc-mkdtemp template)))
+      (if (fixnum? rv)
+	  (raise-errno-error who rv template)
+	rv))))
 
 
 ;;;; done

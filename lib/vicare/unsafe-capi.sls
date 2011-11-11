@@ -94,6 +94,9 @@
     posix-rewinddir			posix-telldir
     posix-seekdir			glibc-dirfd
 
+    ;; temporary files and directories
+    glibc-mkstemp			glibc-mkdtemp
+
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
     platform-open-input/output-fd	platform-close-fd
@@ -379,6 +382,15 @@
 
 (define-inline (posix-seekdir stream.ptr pos.num)
   (foreign-call "ikrt_posix_seekdir" stream.ptr pos.num))
+
+
+;;;; temporary files and directories
+
+(define-inline (glibc-mkstemp template-bv)
+  (foreign-call "ikrt_glibc_mkstemp" template-bv))
+
+(define-inline (glibc-mkdtemp template-bv)
+  (foreign-call "ikrt_glibc_mkdtemp" template-bv))
 
 
 ;;;; platform API for file descriptors

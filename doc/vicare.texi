@@ -5884,6 +5884,7 @@ set to @false{}.
 * posix file::                  Interfacing with the file system.
 * posix link::                  Hard and symbolic links.
 * posix dir::                   File system directories.
+* posix time::                  Time related functions.
 * posix misc::                  Miscellaneous functions.
 @end menu
 
@@ -6627,6 +6628,19 @@ previous call to @func{telldir}.  Return unspecified values.
 @end defun
 
 @c page
+@node posix time
+@section Time related functions
+
+
+@defun nanosleep @var{seconds} @var{nanoseconds}
+Suspend the process for the selected time; it makes use of the system
+@cfunc{nanosleep} function.  @var{seconds} and @var{nanoseconds} must be
+positive exact integers.  If an error occurs an exception is raised.
+
+@glibcref{Sleeping, Sleeping}
+@end defun
+
+@c page
 @node posix misc
 @section Miscellaneous functions
 
@@ -6640,14 +6654,6 @@ is not a valid @code{errno} value: return a string telling it.
 @end defun
 
 
-@defun nanosleep @var{seconds} @var{nanoseconds}
-Suspend the process for the selected time; it makes use of the system
-@cfunc{nanosleep} function.  @var{seconds} and @var{nanoseconds} must be
-positive exact integers.  If an error occurs an exception is raised.
-
-@glibcref{Sleeping, Sleeping}
-@end defun
-
 @c page
 @node glibc
 @chapter The @gnu{} C Library interface
@@ -6656,6 +6662,7 @@ positive exact integers.  If an error occurs an exception is raised.
 @menu
 * glibc env::                   Operating system environment variables.
 * glibc dir::                   File system directories.
+* glibc temp::                  Temporary files and directories.
 @end menu
 
 @c page
@@ -6680,6 +6687,29 @@ Directory, dirfd}.  Acquire a file descriptor associated to
 @var{stream}, which must be an instance of @code{directory-stream};
 @ref{posix dir} for details.  If successful return a fixnum representing
 the file descriptor, else raise an exception.
+@end defun
+
+@c page
+@node glibc temp
+@section Temporary files and directories
+
+
+@defun mkstemp @var{template}
+Interface to the C function @cfunc{mkstemp}, @glibcref{Temporary Files,
+mkstemp}.  Create a temporary file, create it and open a file descriptor
+for reading and writing.  @var{template} must be a mutable bytevector
+holding a template pathname on entering and the actual pathname on
+returning.  If successful return a file descriptor, else raise an
+exception.
+@end defun
+
+
+@defun mkdtemp @var{template}
+Interface to the C function @cfunc{mkdtemp}, @glibcref{Temporary Files,
+mkdtemp}.  Create a temporary directory for reading and writing.
+@var{template} must be a mutable bytevector holding a template pathname
+on entering and the actual pathname on returning.  If successful return
+@var{template} itself, else raise an exception.
 @end defun
 
 @c page
@@ -8755,32 +8785,25 @@ stream referenced by @var{pointer}, which must be a pointer object;
 @deftypefun ikptr ikrt_current_time (ikptr @var{time})
 Interface to the @cfunc{gettimeofday} C function.
 @glibcref{High-Resolution Calendar, gettimeofday}.  Retrieve the current
-time.
-
-@var{time} must reference a @code{time} internal structure, which is
-filled with three values: megaseconds, seconds and microseconds.
-
+time.  @var{time} must reference a @code{time} internal structure, which
+is filled with three values: megaseconds, seconds and microseconds.
 Always return @var{time} itself.
 @end deftypefun
 
 
 @deftypefun ikptr ikrt_gmt_offset (ikptr @var{time})
 Compute the offset in seconds between the local time and the
-@acronym{UTC} time.
-
-@var{time} must reference a @code{time} internal structure, already
-filled with megaseconds, seconds and microseconds.
-
+@acronym{UTC} time.  @var{time} must reference a @code{time} internal
+structure, already filled with megaseconds, seconds and microseconds.
 Return a fixnum representing the offset.
 @end deftypefun
 
 
 @deftypefun ikptr ikrt_nanosleep (ikptr @var{secs}, ikptr @var{nsecs})
 Interface to the @cfunc{nanosleep} C function.  @glibcref{Sleeping,
-nanosleep}.  Halt the current process.
-
-@var{secs} and @var{nsecs} must be fixnums or exact integers whose value
-is stored in a single limb (see the @code{mpn_} @api{} in @gmp{}).
+nanosleep}.  Halt the current process.  @var{secs} and @var{nsecs} must
+be fixnums or exact integers whose value is stored in a single limb (see
+the @code{mpn_} @api{} in @gmp{}).
 @end deftypefun
 
 @c page
@@ -8826,6 +8849,7 @@ true if the process was resumed by delivery of @code{SIGCONT}.
 @menu
 * capi glibc env::              Operating system environment variables.
 * capi glibc dir::              File system directories.
+* capi glibc temp::             Temporary files and directories.
 @end menu
 
 @c page
@@ -8850,6 +8874,29 @@ Directory, dirfd}.  Acquire a file descriptor associated to the
 directory entry referenced by @var{pointer}, which must be a pointer
 object to a directory entry.  If successful return a fixnum representing
 the file descriptor, else return an encoded @code{errno} value.
+@end deftypefun
+
+@c page
+@node capi glibc temp
+@subsection Temporary files and directories
+
+
+@deftypefun ikptr ikrt_glibc_mkstemp (ikptr @var{template}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{mkstemp}, @glibcref{Temporary Files,
+mkstemp}.  Create a temporary file, open it and open a file descriptor
+for reading and writing.  @var{template} must be a mutable bytevector
+holding a template pathname on entering and the actual pathname on
+returning.  If successful return a file descriptor, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_glibc_mkdtemp (ikptr @var{template}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{mkdtemp}, @glibcref{Temporary Files,
+mkdtemp}.  Create a temporary directory for reading and writing.
+@var{template} must be a mutable bytevector holding a template pathname
+on entering and the actual pathname on returning.  If successful return
+@var{template} itself, else return an encoded @code{errno} value.
 @end deftypefun
 
 @c page

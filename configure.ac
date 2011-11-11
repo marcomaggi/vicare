@@ -770,7 +770,7 @@ AC_DEFINE_UNQUOTED([UNSETENV_HAS_RETURN_VALUE],
 #page
 #### tests for GNU C Library specific features
 
-AC_CHECK_FUNCS([clearenv dirfd])
+AC_CHECK_FUNCS([clearenv dirfd mkstemp mkdtemp])
 
 #page
 #### tests for GNU+Linux specific features

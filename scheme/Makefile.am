@@ -124,6 +124,7 @@ EXTRA_DIST= last-revision				\
 	ikarus.pairs.sls				\
 	ikarus.pointers.sls				\
 	ikarus.posix.sls				\
+	ikarus.glibc.sls				\
 	ikarus.linux.sls				\
 	ikarus.predicates.sls				\
 	ikarus.pretty-formats.sls			\

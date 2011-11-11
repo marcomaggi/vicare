@@ -62,6 +62,30 @@
   #t)
 
 
+(parametrise ((check-test-name	'temporary))
+
+  (check
+      (let* ((template	((string->filename-func) "/tmp/tmp.XXXXXX"))
+	     (fd	(mkstemp template)))
+;;;	(check-pretty-print ((filename->string-func) template))
+	(unwind-protect
+	    (fixnum? fd)
+	  #f))
+    => #t)
+
+  (check
+      (let* ((template	((string->filename-func) "/tmp/tmp.XXXXXX"))
+	     (name	(mkdtemp template)))
+;;;	(check-pretty-print ((filename->string-func) template))
+;;;	(check-pretty-print ((filename->string-func) name))
+	(unwind-protect
+	    (bytevector? name)
+	  #f))
+    => #t)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

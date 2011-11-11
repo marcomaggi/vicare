@@ -750,6 +750,10 @@ ikrt_make_vector2(ikptr len, ikptr obj, ikpcb* pcb){
 #endif
 
 
+/** --------------------------------------------------------------------
+ ** Miscellaneous functions.
+ ** ----------------------------------------------------------------- */
+
 ikptr
 ikrt_debug(ikptr x){
   fprintf(stderr, "DEBUG 0x%016lx\n", (long int)x);
@@ -762,6 +766,24 @@ ikrt_last_errno(ikpcb* pcb)
   int   negated_errno_code = - pcb->last_errno;
   return fix(negated_errno_code);
   /*  return s_to_number(pcb->last_errno, pcb); */
+}
+
+
+/** --------------------------------------------------------------------
+ ** Termination.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_exit (ikptr status, ikpcb* pcb)
+/* This is nor for the public API. */
+{
+  ik_delete_pcb(pcb);
+  assert(total_allocated_pages == 0);
+  if(is_fixnum(status)){
+    exit(unfix(status));
+  } else {
+    exit(EXIT_FAILURE);
+  }
 }
 
 /* end of file */
