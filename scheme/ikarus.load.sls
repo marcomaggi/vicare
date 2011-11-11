@@ -24,7 +24,7 @@
 		  load-r6rs-script
 		  fasl-directory)
     (prefix (only (ikarus.posix)
-		  realpath)
+		  realpath/string)
 	    posix.)
     (only (ikarus.compiler)
 	  compile-core-expr)
@@ -67,7 +67,7 @@
   ;;
   (let ((d (fasl-directory)))
     (and (not (string=? d ""))
-	 (string-append d (posix.realpath filename) FASL-EXTENSION))))
+	 (string-append d (posix.realpath/string filename) FASL-EXTENSION))))
 
 
 ;;;; loading and serialising libraries

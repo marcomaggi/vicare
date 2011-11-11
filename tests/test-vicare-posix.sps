@@ -518,7 +518,7 @@
   	(unwind-protect
   	    (begin
   	      (symlink "one" "two")
-  	      (readlink "two"))
+  	      (readlink/string "two"))
   	  (system "rm -f two")))
     => "one")
 
@@ -527,7 +527,7 @@
   	(unwind-protect
   	    (begin
   	      (symlink "one" "two")
-  	      (realpath "two"))
+  	      (realpath/string "two"))
   	  (system "rm -f two")))
     => (string-append (getcwd/string) "/one"))
 

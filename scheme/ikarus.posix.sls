@@ -92,7 +92,8 @@
 
     ;; hard and symbolic links
     link			symlink
-    readlink			realpath
+    readlink			readlink/string
+    realpath			realpath/string
     delete-file			unlink
     rename
 
@@ -184,7 +185,8 @@
 
 		  ;; hard and symbolic links
 		  link				symlink
-		  readlink			realpath
+		  readlink			readlink/string
+		  realpath			realpath/string
 		  delete-file			unlink
 		  rename
 
@@ -1096,10 +1098,11 @@
     (with-pathnames ((link-pathname.bv link-pathname))
       (let ((rv (capi.posix-readlink link-pathname.bv)))
 	(if (bytevector? rv)
-	    (if (bytevector? link-pathname)
-		rv
-	      ((filename->string-func) rv))
+	    rv
 	  (raise-errno-error who rv link-pathname))))))
+
+(define (readlink/string link-pathname)
+  ((filename->string-func) (readlink link-pathname)))
 
 (define (realpath pathname)
   (define who 'realpath)
@@ -1108,10 +1111,11 @@
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-realpath pathname.bv)))
 	(if (bytevector? rv)
-	    (if (bytevector? pathname)
-		rv
-	      ((filename->string-func) rv))
+	    rv
 	  (raise-errno-error who rv pathname))))))
+
+(define (realpath/string pathname)
+  ((filename->string-func) (realpath pathname)))
 
 ;;; --------------------------------------------------------------------
 

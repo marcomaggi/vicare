@@ -5909,6 +5909,17 @@ It must be an instance of @code{struct-stat} data structure, @ref{posix
 stat} for details.
 @end table
 
+The proper data type for file system pathnames is the bytevector; all
+the functions requiring a pathname as argument accept both a bytevector
+and a string as a convenient @api{}.  String pathnames are converted to
+and from bytevectors using the functions referenced by the parameters
+@func{string->filename-func} and @func{filename->string-func}.
+
+Whenever a system call returns a file system pathname: two functions are
+provided by the @posix{} @api{}, one returning a bytevector and one
+returning a string; the one returning a string has name ending with the
+suffix @samp{/string}.
+
 @c page
 @node posix env
 @section Interfacing with the execution environment
@@ -6415,22 +6426,22 @@ an exception.
 
 
 @defun readlink @var{link_pathname}
+@defunx readlink/string @var{link_pathname}
 Interface to the C function @cfunc{readlink}, @glibcref{Symbolic Links,
 readlink}.  If @var{pathname} references a symbolic link: follow it once
 and return the referenced pathname; if an error occurs raise an
-exception.  When @var{pathname} is a bytevector: the returned value is a
-bytevector.  When @var{pathname} is a string: the returned value is a
-string.
+exception.  @func{readlink} returns a bytevector; @func{readlink/string}
+returns a string.
 @end defun
 
 
 @defun realpath @var{pathname}
+@defunx realpath/string @var{pathname}
 Interface to the C function @cfunc{realpath}, @glibcref{Symbolic Links,
 realpath}.  If @var{pathname} references a symbolic link: follow it and
 return the real canonicalised pathname; if an error occurs: an exception
-is raised.  When @var{pathname} is a bytevector: the returned value is a
-bytevector.  When @var{pathname} is a string: the returned value is a
-string.
+is raised.  @func{realpath} returns a bytevector; @func{realpath/string}
+returns a string.
 @end defun
 
 
