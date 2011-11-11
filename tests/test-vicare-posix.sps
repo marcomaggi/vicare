@@ -648,6 +648,26 @@
 	    (close fd))))
     => '(4 #vu8(1 2 3 4)))
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+       (system "rm -f tmp")
+       (let ((fd (open "tmp"
+		       (fxior O_CREAT O_EXCL O_RDWR)
+		       (fxior S_IRUSR S_IWUSR))))
+	 (unwind-protect
+	     (begin
+	       (add-result (writev fd '(#vu8(0 1 2 3) #vu8(4 5 6 7) #vu8(8 9))))
+	       (lseek fd 0 SEEK_SET)
+	       (let ((buffers (list (make-bytevector 4)
+				    (make-bytevector 4)
+				    (make-bytevector 2))))
+		 (add-result (readv fd buffers))
+		 buffers))
+	   (close fd))))
+    => '((#vu8(0 1 2 3) #vu8(4 5 6 7) #vu8(8 9)) (10 10)))
+
   #t)
 
 

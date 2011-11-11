@@ -48,6 +48,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/uio.h>
 #include <sys/wait.h>
 
 
@@ -1484,6 +1485,53 @@ ikrt_posix_lseek (ikptr fd, ikptr off_num, ikptr whence_fx, ikpcb * pcb)
     return sll_to_number((long long)rv, pcb);
   else
     return ik_errno_to_code();
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_readv (ikptr fd, ikptr buffers, ikpcb * pcb)
+{
+  int           number_of_buffers = ik_list_length(buffers);
+  {
+    struct iovec  bufs[number_of_buffers];
+    ikptr         bv;
+    int           i;
+    ssize_t       rv;
+    for (i=0; pair_tag == tagof(buffers); buffers=ref(buffers, off_cdr), ++i) {
+      bv      = ref(buffers, off_car);
+      bufs[i].iov_base = VICARE_BYTEVECTOR_DATA_VOIDP(bv);
+      bufs[i].iov_len  = unfix(VICARE_BYTEVECTOR_LENGTH_FX(bv));
+    }
+    errno    = 0;
+    rv       = readv(unfix(fd), bufs, number_of_buffers);
+    if (0 <= rv)
+      return sll_to_number((long long)rv, pcb);
+    else
+      return ik_errno_to_code();
+  }
+}
+ikptr
+ikrt_posix_writev (ikptr fd, ikptr buffers, ikpcb * pcb)
+{
+  int           number_of_buffers = ik_list_length(buffers);
+  {
+    struct iovec  bufs[number_of_buffers];
+    ikptr         bv;
+    int           i;
+    ssize_t       rv;
+    for (i=0; pair_tag == tagof(buffers); buffers=ref(buffers, off_cdr), ++i) {
+      bv      = ref(buffers, off_car);
+      bufs[i].iov_base = VICARE_BYTEVECTOR_DATA_VOIDP(bv);
+      bufs[i].iov_len  = unfix(VICARE_BYTEVECTOR_LENGTH_FX(bv));
+    }
+    errno    = 0;
+    rv       = writev(unfix(fd), bufs, number_of_buffers);
+    if (0 <= rv)
+      return sll_to_number((long long)rv, pcb);
+    else
+      return ik_errno_to_code();
+  }
 }
 
 

@@ -633,6 +633,8 @@
     (posix-write				i v)
     (pwrite					i v)
     (lseek					i v)
+    (readv					i v)
+    (writev					i v)
 
     (make-struct-stat				i v)
     (struct-stat?				i v)

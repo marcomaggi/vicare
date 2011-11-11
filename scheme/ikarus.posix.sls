@@ -117,6 +117,7 @@
     posix-read			pread
     posix-write			pwrite
     lseek
+    readv			writev
 
     ;; interface to "select()"
     nanosleep
@@ -221,6 +222,7 @@
 		  posix-read			pread
 		  posix-write			pwrite
 		  lseek
+		  readv				writev
 
 		  ;; interface to "select()"
 		  nanosleep
@@ -280,6 +282,10 @@
 (define-argument-validation (list-of-strings who obj)
   (for-all string? obj)
   (assertion-violation who "expected list of strings as argument" obj))
+
+(define-argument-validation (list-of-bytevectors who obj)
+  (for-all bytevector? obj)
+  (assertion-violation who "expected list of bytevectors as argument" obj))
 
 (define-argument-validation (struct-stat who obj)
   (struct-stat? obj)
@@ -1461,6 +1467,28 @@
     (let ((rv (capi.posix-lseek fd off whence)))
       (if (negative? rv)
 	  (raise-errno-error who rv fd off whence)
+	rv))))
+
+;;; --------------------------------------------------------------------
+
+(define (readv fd buffers)
+  (define who 'readv)
+  (with-arguments-validation (who)
+      ((file-descriptor		fd)
+       (list-of-bytevectors	buffers))
+    (let ((rv (capi.posix-readv fd buffers)))
+      (if (negative? rv)
+	  (raise-errno-error who rv fd buffers)
+	rv))))
+
+(define (writev fd buffers)
+  (define who 'writev)
+  (with-arguments-validation (who)
+      ((file-descriptor		fd)
+       (list-of-bytevectors	buffers))
+    (let ((rv (capi.posix-writev fd buffers)))
+      (if (negative? rv)
+	  (raise-errno-error who rv fd buffers)
 	rv))))
 
 

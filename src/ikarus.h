@@ -43,7 +43,7 @@
  ** ----------------------------------------------------------------- */
 
 #define VICARE_BYTEVECTOR_LENGTH_FX(BV)                 \
-  ((BV) + off_bytevector_length)
+  ref((BV), off_bytevector_length)
 
 #define VICARE_BYTEVECTOR_DATA_CHARP(BV)                \
   ((char*)(long)((BV) + off_bytevector_data))

@@ -102,6 +102,7 @@
     posix-read				posix-pread
     posix-write				posix-pwrite
     posix-lseek
+    posix-readv				posix-writev
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -423,6 +424,12 @@
   (foreign-call "ikrt_posix_lseek" fd off whence))
 
 ;;; --------------------------------------------------------------------
+
+(define-inline (posix-readv fd buffers)
+  (foreign-call "ikrt_posix_readv" fd buffers))
+
+(define-inline (posix-writev fd buffers)
+  (foreign-call "ikrt_posix_writev" fd buffers))
 
 
 ;;;; platform API for file descriptors

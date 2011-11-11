@@ -6639,6 +6639,19 @@ Files, open}.  Open a file descriptor for the file system entry
 @var{pathname}; @var{flags} and @var{mode} must be fixnums.  If
 successful return a fixnum representing the file descriptor, else raise
 an exception.
+
+Example:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare platform-constants))
+
+(define fd
+  (open "name.ext"
+        (fxior O_CREAT O_EXCL O_RDWR)
+        (fxior S_IRUSR S_IWUSR)))
+@end example
 @end defun
 
 
@@ -6693,6 +6706,24 @@ non--negative exact integer representing the number of bytes from the
 beginning of the file, else raise an exception.
 @end defun
 
+@c ------------------------------------------------------------
+
+@defun readv @var{fd} @var{buffers}
+Interface to the C function @cfunc{readv}, @glibcref{Scatter-Gather,
+readv}.  Read bytes from the file descriptor @var{fd} and store them
+into the list of bytevectors referenced by @var{buffers}.  If successful
+return a non--negative exact integer representing the number of bytes
+actually read, else raise an exception.
+@end defun
+
+
+@defun writev @var{fd} @var{buffers}
+Interface to the C function @cfunc{writev}, @glibcref{Scatter-Gather,
+writev}.  Write bytes to the file descriptor @var{fd} from the list of
+bytevectors referenced by @var{buffers}.  If successful return a
+non--negative exact integer representing the number of bytes actually
+written, else raise an exception.
+@end defun
 
 
 @c page
@@ -8909,6 +8940,26 @@ be fixnums, @var{off} must be an exact integer.  If successful return a
 non--negative exact integer representing the number of bytes from the
 beginning of the file, else return an encoded @code{errno} value.
 @end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_readv (ikptr @var{fd}, ikptr @var{buffers}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{readv}, @glibcref{Scatter-Gather,
+readv}.  Read bytes from the file descriptor @var{fd} and store them
+into the list of bytevectors referenced by @var{buffers}.  If successful
+return a non--negative exact integer representing the number of bytes
+actually read, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_writev (ikptr @var{fd}, ikptr @var{buffers}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{writev}, @glibcref{Scatter-Gather,
+writev}.  Write bytes to the file descriptor @var{fd} from the list of
+bytevectors referenced by @var{buffers}.  If successful return a
+non--negative exact integer representing the number of bytes actually
+written, else return an encoded @code{errno} value.
+@end deftypefun
+
 
 @c page
 @node capi posix time
