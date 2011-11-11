@@ -1073,22 +1073,23 @@ ikrt_posix_readlink (ikptr link_pathname_bv, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_realpath (ikptr pathname_bv, ikpcb* pcb)
+ikrt_posix_realpath (ikptr link_pathname_bv, ikpcb* pcb)
 {
-  char *        pathname;
+  char *        link_pathname;
+  char *        file_pathname;
   char          buff[PATH_MAX];
-  char *        rv;
-  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
-  errno    = 0;
-  rv       = realpath(pathname, buff);
-  if (NULL == rv) {
+  link_pathname = (char*)(long)(link_pathname_bv+off_bytevector_data);
+  errno         = 0;
+  file_pathname = realpath(link_pathname, buff);
+  if (NULL == file_pathname) {
     return ik_errno_to_code();
   } else {
-    int         n = strlen(rv);
-    uint8_t *   r = (uint8_t *)ik_safe_alloc(pcb, align(disp_bytevector_data+n+1));
-    ref(r, 0) = fix(n);
-    memcpy((r+disp_bytevector_data), rv, n+1);
-    return (ikptr)(r+bytevector_tag);
+    int         len  = strlen(file_pathname);
+    ikptr       bv   = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1)) + bytevector_tag;
+    char *      data = (char*)(long)(bv+off_bytevector_data);
+    ref(bv, off_bytevector_length) = fix(len);
+    memcpy(data, file_pathname, len+1);
+    return bv;
   }
 }
 /* FIXME STALE To be removed at the next boot image rotation. */
@@ -1141,6 +1142,114 @@ ikrt_rename_file(ikptr src, ikptr dst)
 }
 
 
+/** --------------------------------------------------------------------
+ ** File system directories.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_mkdir (ikptr pathname_bv, ikptr mode)
+{
+  char *        pathname;
+  int           rv;
+  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  errno    = 0;
+  rv       = mkdir(pathname, unfix(mode));
+  if (0 == rv)
+    return fix(0);
+  else
+    return ik_errno_to_code();
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_mkdir (ikptr path, ikptr mode)
+{
+  return ikrt_posix_mkdir(path, mode);
+}
+
+ikptr
+ikrt_posix_rmdir (ikptr pathname_bv)
+{
+  char *        pathname;
+  int           rv;
+  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  errno    = 0;
+  rv       = rmdir(pathname);
+  if (0 == rv)
+    return fix(0);
+  else
+    return ik_errno_to_code();
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_rmdir(ikptr path /*, ikpcb* pcb */)
+{
+  return ikrt_posix_rmdir(path);
+}
+
+ikptr
+ikrt_posix_getcwd (ikpcb * pcb)
+{
+  size_t        max_len;
+  char *        pathname;
+  for (max_len=256;; max_len*=2) {
+    char        buffer[max_len];
+    errno    = 0;
+    pathname = getcwd(buffer, max_len);
+    if (NULL == pathname) {
+      if (ERANGE == errno)
+        continue;
+      else
+        return ik_errno_to_code();
+    } else {
+      int       len  = strlen(pathname);
+      ikptr     bv   = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1)) + bytevector_tag;
+      char *    data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+      ref(bv, off_bytevector_length) = fix(len);
+      memcpy(data, pathname, len+1);
+      return bv;
+    }
+  }
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_getcwd(ikpcb* pcb) {
+  return ikrt_posix_getcwd(pcb);
+}
+
+ikptr
+ikrt_posix_chdir (ikptr pathname_bv)
+{
+  char *        pathname;
+  int           rv;
+  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  errno    = 0;
+  rv       = chdir(pathname);
+  if (0 == rv)
+    return fix(0);
+  else
+    return ik_errno_to_code();
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_chdir(ikptr pathbv /*, ikpcb* pcb */)
+{
+  return ikrt_posix_chdir(pathbv);
+}
+
+ikptr
+ikrt_posix_fchdir (ikptr fd)
+{
+  int           rv;
+  errno    = 0;
+  rv       = fchdir(unfix(fd));
+  if (0 == rv)
+    return fix(0);
+  else
+    return ik_errno_to_code();
+}
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikrt_directory_list(ikptr filename, ikpcb* pcb){
   DIR* dir;
@@ -1173,46 +1282,6 @@ ikrt_directory_list(ikptr filename, ikpcb* pcb){
   }
 }
 
-ikptr
-ikrt_mkdir(ikptr path, ikptr mode /*, ikpcb* pcb */){
-  int r = mkdir((char*)(path+off_bytevector_data), unfix(mode));
-  if(r == 0){
-    return true_object;
-  }
-  return ik_errno_to_code();
-}
-
-ikptr
-ikrt_rmdir(ikptr path /*, ikpcb* pcb */){
-  int r = rmdir((char*)(path+off_bytevector_data));
-  if(r == 0){
-    return true_object;
-  }
-  return ik_errno_to_code();
-}
-
-
-ikptr
-ikrt_chdir(ikptr pathbv /*, ikpcb* pcb */){
-  int err = chdir(off_bytevector_data+(char*)pathbv);
-  if(err == 0){
-    return true_object;
-  }
-  return ik_errno_to_code();
-}
-ikptr
-ikrt_getcwd(ikpcb* pcb){
-  char buff[MAXPATHLEN+1];
-  char* path = getcwd(buff, MAXPATHLEN);
-  if(! path){
-    return ik_errno_to_code();
-  }
-  int len = strlen(path);
-  ikptr bv = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1));
-  ref(bv,0) = fix(len);
-  memcpy(disp_bytevector_data+(char*)(bv), path, len+1);
-  return bv+bytevector_tag;
-}
 
 
 ikptr

@@ -39,6 +39,20 @@
 
 
 /** --------------------------------------------------------------------
+ ** Utility macros.
+ ** ----------------------------------------------------------------- */
+
+#define VICARE_BYTEVECTOR_LENGTH_FX(BV)                 \
+  ((BV) + off_bytevector_length)
+
+#define VICARE_BYTEVECTOR_DATA_CHARP(BV)                \
+  ((char*)(long)((BV) + off_bytevector_data))
+
+#define VICARE_BYTEVECTOR_DATA_UINT8P(BV)               \
+  ((uint8_t*)(long)((BV) + off_bytevector_data))
+
+
+/** --------------------------------------------------------------------
  ** Prototypes and external definitions.
  ** ----------------------------------------------------------------- */
 

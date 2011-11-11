@@ -529,7 +529,7 @@
   	      (symlink "one" "two")
   	      (realpath "two"))
   	  (system "rm -f two")))
-    => "one")
+    => (string-append (getcwd/string) "/one"))
 
   (check
       (with-temporary-file ("one")
@@ -553,7 +553,31 @@
   #t)
 
 
-(parametrise ((check-test-name	'directory-stream))
+(parametrise ((check-test-name	'directories))
+
+  (check
+      (with-result
+       (unwind-protect
+	   (begin
+	     (mkdir "one" S_IRWXU)
+	     (add-result (file-exists? "one"))
+	     (rmdir "one")
+	     (file-exists? "one"))
+	 (system "rm -fr one")))
+    => '(#f (#t)))
+
+  (let ((pwd (getcwd/string)))
+    (check
+	(unwind-protect
+	    (begin
+	      (mkdir "one" S_IRWXU)
+	      (chdir "one")
+	      (getcwd/string))
+	  (chdir pwd)
+	  (system "rm -fr one"))
+      => (string-append pwd "/one")))
+
+;;; --------------------------------------------------------------------
 
   (check	;verify that no error occurs
       (let ((stream (open-directory-stream "..")))

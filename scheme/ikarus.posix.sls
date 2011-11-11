@@ -96,6 +96,11 @@
     delete-file			unlink
     rename
 
+    ;; file system directories
+    mkdir			rmdir
+    getcwd			getcwd/string
+    chdir			fchdir
+
     ;; file system interface
     split-file-name
 
@@ -182,6 +187,11 @@
 		  readlink			realpath
 		  delete-file			unlink
 		  rename
+
+		  ;; file system directories
+		  mkdir				rmdir
+		  getcwd			getcwd/string
+		  chdir				fchdir
 
 		  ;; file system interface
 		  split-file-name
@@ -1128,6 +1138,59 @@
       (let ((rv (capi.posix-rename old-pathname.bv new-pathname.bv)))
 	(unless (unsafe.fxzero? rv)
 	  (raise-errno-error who rv old-pathname new-pathname))))))
+
+
+;;;; file system directories
+
+(define (mkdir pathname mode)
+  (define who 'mkdir)
+  (with-arguments-validation (who)
+      ((pathname  pathname)
+       (fixnum	  mode))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-mkdir pathname.bv mode)))
+	(unless (unsafe.fxzero? rv)
+	  (raise-errno-error who rv pathname mode))))))
+
+(define (rmdir pathname)
+  (define who 'rmdir)
+  (with-arguments-validation (who)
+      ((pathname  pathname))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-rmdir pathname.bv)))
+	(unless (unsafe.fxzero? rv)
+	  (raise-errno-error who rv pathname))))))
+
+(define (getcwd)
+  (define who 'getcwd)
+  (let ((rv (capi.posix-getcwd)))
+    (if (bytevector? rv)
+	rv
+      (raise-errno-error who rv))))
+
+(define (getcwd/string)
+  (define who 'getcwd)
+  (let ((rv (capi.posix-getcwd)))
+    (if (bytevector? rv)
+	((filename->string-func) rv)
+      (raise-errno-error who rv))))
+
+(define (chdir pathname)
+  (define who 'chdir)
+  (with-arguments-validation (who)
+      ((pathname  pathname))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-chdir pathname.bv)))
+	(unless (unsafe.fxzero? rv)
+	  (raise-errno-error who rv pathname))))))
+
+(define (fchdir fd)
+  (define who 'fchdir)
+  (with-arguments-validation (who)
+      ((file-descriptor  fd))
+    (let ((rv (capi.posix-fchdir fd)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv fd)))))
 
 
 (define (split-file-name str)

@@ -84,6 +84,11 @@
     posix-readlink			posix-realpath
     posix-unlink			posix-rename
 
+    ;; file system directories
+    posix-mkdir				posix-rmdir
+    posix-getcwd			posix-chdir
+    posix-fchdir
+
     ;; platform API for file descriptors
     platform-open-input-fd
     platform-open-output-fd
@@ -327,6 +332,24 @@
 
 (define-inline (posix-rename old-pathname-bv new-pathname-bv)
   (foreign-call "ikrt_posix_rename" old-pathname-bv new-pathname-bv))
+
+
+;;;; file system directories
+
+(define-inline (posix-mkdir pathname-bv mode)
+  (foreign-call "ikrt_posix_mkdir" pathname-bv mode))
+
+(define-inline (posix-rmdir pathname-bv)
+  (foreign-call "ikrt_posix_rmdir" pathname-bv))
+
+(define-inline (posix-getcwd)
+  (foreign-call "ikrt_posix_getcwd"))
+
+(define-inline (posix-chdir pathname-bv)
+  (foreign-call "ikrt_posix_chdir" pathname-bv))
+
+(define-inline (posix-fchdir fd)
+  (foreign-call "ikrt_posix_fchdir" fd))
 
 
 ;;;; platform API for file descriptors

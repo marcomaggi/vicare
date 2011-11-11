@@ -5883,7 +5883,7 @@ set to @false{}.
 * posix stat::                  File system inspection.
 * posix file::                  Interfacing with the file system.
 * posix link::                  Hard and symbolic links.
-* posix dir::                   File system directory inspection.
+* posix dir::                   File system directories.
 * posix misc::                  Miscellaneous functions.
 @end menu
 
@@ -6453,11 +6453,55 @@ return an encoded @code{errno} value.
 
 @c page
 @node posix dir
-@section File system directory inspection
+@section File system directories
 
 
-The following bindings are exported by the @library{ikarus} library.
+@defun mkdir @var{pathname} @var{mode}
+Interface to the C function @cfunc{mkdir}, @glibcref{Creating
+Directories, mkdir}.  Create a new directory file system entry with name
+@var{pathname}; @var{mode} must be a fixnum specifying access
+permissions.  If successful return unspecified values, else raise an
+exception.
+@end defun
 
+
+@defun rmdir @var{pathname}
+Interface to the C function @cfunc{rmdir}, @glibcref{Creating
+Directories, rmdir}.  Remove the directory file system entry selected by
+@var{pathname}.  If successful return unspecified values, else raise an
+exception.
+@end defun
+
+
+@defun getcwd
+@defunx getcwd/string
+Interface to the C function @cfunc{getcwd}, @glibcref{Working Directory,
+getcwd}.  Acquire the pathname of the current working directory.  If
+successful @func{getcwd} returns a bytevector holding the pathname,
+@func{getcwd/string} returns a string holding the pathname; else an
+exception is raised.
+@end defun
+
+
+@defun chdir @var{pathname}
+Interface to the C function @cfunc{chdir}, @glibcref{Working Directory,
+chdir}.  Change the current working directory to the file system entry
+selected by @var{pathname}.  If successful return unspecified values,
+else raise an exception.
+@end defun
+
+
+@defun fchdir @var{fd}
+Interface to the C function @cfunc{fchdir}, @glibcref{Working Directory,
+fchdir}.  Change the current working directory to the file system entry
+associated to @var{fd}, which must be a fixnum representing a file
+descriptor.  If successful return unspecified values, else raise an
+exception.
+@end defun
+
+
+
+@c ------------------------------------------------------------
 
 @defun open-directory-stream @var{filename}
 Open the file system directory @var{filename}, which must be a string,
@@ -7759,6 +7803,7 @@ adaptation.
 * capi posix stat::             File system inspection.
 * capi posix file::             File system interface.
 * capi posix link::             Hard and symbolic links.
+* capi posix dir::              File system directories.
 * capi posix time::             Time and date.
 @end menu
 
@@ -8168,189 +8213,6 @@ Identification, getpid}.
 @end deftypefun
 
 @c page
-@ignore
-@node capi posix files
-@subsection File system interface
-
-
-@menu
-* capi posix files dir::        Handling directories.
-* capi posix files link::       Handling links and symbolic links.
-@end menu
-
-@node capi posix files dir
-@subsubsection Handling directories
-
-
-@deftypefun ikptr ikrt_directory_list (ikptr @var{pathname}, ikpcb * @var{pcb})
-Interface to the @cfunc{opendir}, @cfunc{readdir} and @cfunc{closedir} C
-functions.  @glibcref{Accessing Directories, Accessing Directories}.
-Inspect the contents of the selected directory.
-
-@var{pathname} must reference a bytevector object holding a file
-pathname.
-
-If successful, return a list of bytevectors representing the names of
-the entries in the directory.  If an error occurs in the C functions,
-return the return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_opendir (ikptr @var{pathname}, ikpcb * @var{pcb})
-Interface to the @cfunc{opendir} C function.  @glibcref{Accessing
-Directories, Accessing Directories}.  Open a directory stream.
-
-@var{pathname} must reference a bytevector object holding a directory
-pathname.
-
-If successful, return a reference to a pointer object referencing the
-directory entry; if an error occurs in @cfunc{opendir}, return the
-return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_closedir (ikptr @var{stream}, ikpcb * @var{pcb})
-Interface to the @cfunc{closedir} C function.  @glibcref{Accessing
-Directories, Accessing Directories}.  Close a directory stream.
-
-@var{stream} must reference a pointer object referencing a directory
-stream.
-
-If successful, return a raw C language zero; if an error occurs in
-@cfunc{closedir}, return the return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_readdir (ikptr @var{stream}, ikpcb * @var{pcb})
-Interface to the @cfunc{readdir} C function.  @glibcref{Accessing
-Directories, Accessing Directories}.  Read a directory entry from a
-directory stream.
-
-@var{stream} must reference a pointer object referencing a directory
-stream.
-
-If successful return a reference to a bytevector object holding the name
-of the directory entry; if an error occurs in @cfunc{readdir}, return
-the return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_mkdir (ikptr @var{pathname}, ikptr @var{mode})
-Interface to the @cfunc{mkdir} C function.  @glibcref{Creating
-Directories, mkdir}.
-
-@var{pathname} must reference a bytevector object holding the new
-directory pathname; @var{mode} must be a fixnum representing the file
-permissions for the new directory.
-
-If successful, return @code{true_object}; if an error occurs in
-@cfunc{mkdir}, return the return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_rmdir (ikptr @var{pathname})
-Interface to the @cfunc{rmdir} C function.  @glibcref{Deleting Files,
-rmdir}.  Remove a directory.
-
-@var{pathname} must reference a bytevector object holding the directory
-pathname.
-
-If successful, return @code{true_object}; if an error occurs in
-@cfunc{rmdir}, return the return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_chdir (ikptr @var{pathname})
-Interface to the @cfunc{chdir} C function.  @glibcref{Working Directory,
-chdir}.  Change the current working directory.
-
-@var{pathname} must reference a bytevector object holding the directory
-pathname.
-
-If successful, return @code{true_object}; if an error occurs in
-@cfunc{chdir}, return the return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_getcwd (ikpcb * @var{pcb})
-Interface to the @cfunc{getcwd} C function.  @glibcref{Working
-Directory, getcwd}.  Retrieve the current working directory.
-
-If successful, return a reference to a bytevector object holding the
-current working directory pathname; if an error occurs in
-@cfunc{getcwd}, return the return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-@c page
-@node capi posix files link
-@subsubsection Handling links and symbolic links
-
-
-@deftypefun ikptr ikrt_link (ikptr @var{old_pathname}, ikptr @var{pathname})
-Interface to the @cfunc{link} C function.  @glibcref{Hard Links, link}.
-Create a hard link.
-
-@var{old_pathname} must reference a bytevector object holding the old
-file pathname; @var{pathname} must reference a bytevector object holding
-the new hard link pathname.
-
-If successful, return @code{true_object}; if an error occurs in
-@cfunc{link}, return the return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_delete_file (ikptr @var{pathname})
-Interface to the @cfunc{unlink} C function.  @glibcref{Deleting Files,
-unlink}.  Remove a file selected by pathname.
-
-@var{pathname} must reference a bytevector object holding a file
-pathname.  If an error occurs in @cfunc{unlink}: return the result of
-@cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_symlink (ikptr @var{old_pathname}, ikptr @var{pathname})
-Interface to the @cfunc{symlink} C function.  @glibcref{Symbolic Links,
-symlink}.  Create a symbolic link.
-
-@var{old_pathname} must reference a bytevector object holding the old
-file pathname; @var{pathname} must reference a bytevector object holding
-the new symbolic link pathname.
-
-If successful, return @code{true_object}; if an error occurs in
-@cfunc{symlink}, return the return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_realpath (ikptr @var{pathname}, ikpcb * @var{pcb})
-Interface to the @cfunc{realpath} C function.  @glibcref{Symbolic Links,
-realpath}.  Acquire the absolute name of the selected file, removing
-dot, double--dot components and repeated separators, and following
-symbolic links.
-
-@var{pathname} must reference a bytevector object holding the file
-pathname.
-
-If successful, return a bytevector holding the canonicalised pathname;
-if an error occurs in @cfunc{realpath}, return the return value of
-@cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_rename_file (ikptr @var{src}, ikptr @var{dst})
-Interface to the @cfunc{rename} C function.  @glibcref{Renaming Files,
-rename}.
-
-@var{src} and @var{dst} must reference bytevector objects holding the
-old and new pathnames.
-
-If successful return @code{true_object}; if an error occurs in
-@cfunc{rename}, return the return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-@end ignore
-
-@c page
 @node capi posix process
 @subsection Forking and executing processes
 
@@ -8712,6 +8574,154 @@ Interface to the C function @cfunc{rename}, @glibcref{Renaming Files,
 rename}.  Rename the file system entry @var{old_pathname} to
 @var{new_pathname}, both of which must be bytevectors.  If successful
 return zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+@c page
+@node capi posix dir
+@subsection File system directories
+
+
+@deftypefun ikptr ikrt_posix_mkdir (ikptr @var{pathname}, ikptr @var{mode})
+Interface to the C function @cfunc{mkdir}, @glibcref{Creating
+Directories, mkdir}.  Create a new directory file system entry with name
+@var{pathname}, which must be a bytevector; @var{mode} must be a fixnum
+specifying access permissions.  If successful return the fixnum zero,
+else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_rmdir (ikptr @var{pathname})
+Interface to the C function @cfunc{rmdir}, @glibcref{Creating
+Directories, rmdir}.  Remove the directory file system entry selected by
+@var{pathname}, which must be a bytevector.  If successful return the
+fixnum zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getcwd (ikpcb * @var{pcb})
+Interface to the C function @cfunc{getcwd}, @glibcref{Working Directory,
+getcwd}.  Acquire the pathname of the current working directory.  If
+successful return a bytevector holding the pathname, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_chdir (ikptr @var{pathname})
+Interface to the C function @cfunc{chdir}, @glibcref{Working Directory,
+chdir}.  Change the current working directory to the file system entry
+selected by @var{pathname}, which must be a bytevector.  If successful
+return the fixnum zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_fchdir (ikptr @var{fd})
+Interface to the C function @cfunc{fchdir}, @glibcref{Working Directory,
+fchdir}.  Change the current working directory to the file system entry
+associated to @var{fd}, which must be a fixnum representing a file
+descriptor.  If successful return the fixnum zero, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_directory_list (ikptr @var{pathname}, ikpcb * @var{pcb})
+Interface to the @cfunc{opendir}, @cfunc{readdir} and @cfunc{closedir} C
+functions.  @glibcref{Accessing Directories, Accessing Directories}.
+Inspect the contents of the selected directory.
+
+@var{pathname} must reference a bytevector object holding a file
+pathname.
+
+If successful, return a list of bytevectors representing the names of
+the entries in the directory.  If an error occurs in the C functions,
+return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_opendir (ikptr @var{pathname}, ikpcb * @var{pcb})
+Interface to the @cfunc{opendir} C function.  @glibcref{Accessing
+Directories, Accessing Directories}.  Open a directory stream.
+
+@var{pathname} must reference a bytevector object holding a directory
+pathname.
+
+If successful, return a reference to a pointer object referencing the
+directory entry; if an error occurs in @cfunc{opendir}, return the
+return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_closedir (ikptr @var{stream}, ikpcb * @var{pcb})
+Interface to the @cfunc{closedir} C function.  @glibcref{Accessing
+Directories, Accessing Directories}.  Close a directory stream.
+
+@var{stream} must reference a pointer object referencing a directory
+stream.
+
+If successful, return a raw C language zero; if an error occurs in
+@cfunc{closedir}, return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_readdir (ikptr @var{stream}, ikpcb * @var{pcb})
+Interface to the @cfunc{readdir} C function.  @glibcref{Accessing
+Directories, Accessing Directories}.  Read a directory entry from a
+directory stream.
+
+@var{stream} must reference a pointer object referencing a directory
+stream.
+
+If successful return a reference to a bytevector object holding the name
+of the directory entry; if an error occurs in @cfunc{readdir}, return
+the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_mkdir (ikptr @var{pathname}, ikptr @var{mode})
+Interface to the @cfunc{mkdir} C function.  @glibcref{Creating
+Directories, mkdir}.
+
+@var{pathname} must reference a bytevector object holding the new
+directory pathname; @var{mode} must be a fixnum representing the file
+permissions for the new directory.
+
+If successful, return @code{true_object}; if an error occurs in
+@cfunc{mkdir}, return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_rmdir (ikptr @var{pathname})
+Interface to the @cfunc{rmdir} C function.  @glibcref{Deleting Files,
+rmdir}.  Remove a directory.
+
+@var{pathname} must reference a bytevector object holding the directory
+pathname.
+
+If successful, return @code{true_object}; if an error occurs in
+@cfunc{rmdir}, return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_chdir (ikptr @var{pathname})
+Interface to the @cfunc{chdir} C function.  @glibcref{Working Directory,
+chdir}.  Change the current working directory.
+
+@var{pathname} must reference a bytevector object holding the directory
+pathname.
+
+If successful, return @code{true_object}; if an error occurs in
+@cfunc{chdir}, return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_getcwd (ikpcb * @var{pcb})
+Interface to the @cfunc{getcwd} C function.  @glibcref{Working
+Directory, getcwd}.  Retrieve the current working directory.
+
+If successful, return a reference to a bytevector object holding the
+current working directory pathname; if an error occurs in
+@cfunc{getcwd}, return the return value of @cfunc{ik_errno_to_code}.
 @end deftypefun
 
 @c page
