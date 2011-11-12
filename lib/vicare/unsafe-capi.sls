@@ -103,6 +103,7 @@
     posix-write				posix-pwrite
     posix-lseek
     posix-readv				posix-writev
+    posix-fcntl
 
     ;; file system synchronisation
     glibc-sync				glibc-fsync
@@ -434,6 +435,11 @@
 
 (define-inline (posix-writev fd buffers)
   (foreign-call "ikrt_posix_writev" fd buffers))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-fcntl fd command arg)
+  (foreign-call "ikrt_posix_fcntl" fd command arg))
 
 
 ;;;; file system synchronisation

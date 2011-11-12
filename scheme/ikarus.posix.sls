@@ -118,6 +118,7 @@
     posix-write			pwrite
     lseek
     readv			writev
+    fcntl
 
     ;; interface to "select()"
     nanosleep
@@ -223,10 +224,13 @@
 		  posix-write			pwrite
 		  lseek
 		  readv				writev
+		  fcntl
 
 		  ;; interface to "select()"
 		  nanosleep
 		  )
+    (only (ikarus.pointers)
+	  pointer?)
     (vicare syntactic-extensions)
     (vicare platform-constants)
     (prefix (vicare unsafe-capi)
@@ -320,6 +324,10 @@
        (<= 0 obj))
   (assertion-violation who
     "expected non-negative exact integer as offset argument" obj))
+
+(define-argument-validation (fixnum/pointer/false who obj)
+  (or (not obj) (fixnum? obj) (pointer? obj))
+  (assertion-violation who "expected false, fixnum or pointer as argument" obj))
 
 
 ;;;; errors handling
@@ -1490,6 +1498,19 @@
       (if (negative? rv)
 	  (raise-errno-error who rv fd buffers)
 	rv))))
+
+;;; --------------------------------------------------------------------
+
+(define (fcntl fd command arg)
+  (define who 'fcntl)
+  (with-arguments-validation (who)
+      ((file-descriptor		fd)
+       (fixnum			command)
+       (fixnum/pointer/false	arg))
+    (let ((rv (capi.posix-fcntl fd command arg)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv fd command arg)))))
 
 
 ;;;; interface to "select()"

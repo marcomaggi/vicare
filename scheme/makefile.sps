@@ -143,6 +143,7 @@
     "ikarus.symbol-table.sls"
     "ikarus.codecs.sls"
     "ikarus.bytevectors.sls"
+    "ikarus.pointers.sls"
     "ikarus.posix.sls"
     "ikarus.glibc.sls"
     "ikarus.linux.sls"
@@ -172,7 +173,10 @@
     "ikarus.promises.sls"
     "ikarus.enumerations.sls"
     "ikarus.command-line.sls"
-    "ikarus.pointers.sls"
+;;;Moved pointers up before the posix library.
+;;;
+;;; "ikarus.pointers.sls"
+
 ;;; "ikarus.trace.sls"
     "ikarus.debugger.sls"
     "ikarus.main.sls"
@@ -567,6 +571,7 @@
     (chdir					i v)
     (chmod					i v)
     (chown					i v)
+    (close					i v)
     (closedir					i v)
     (environ					i v)
     (environ->table				i v)
@@ -581,6 +586,7 @@
     (fchdir					i v)
     (fchmod					i v)
     (fchown					i v)
+    (fcntl					i v)
     (fdopendir					i v)
     (fork					i v)
     (fstat					i v)
@@ -594,19 +600,26 @@
     (interprocess-signal->string		i v)
     (kill					i v)
     (link					i v)
+    (lseek					i v)
     (lstat					i v)
     (lutimes					i v)
     (mkdir					i v)
     (nanosleep					i v)
+    (open					i v)
     (opendir					i v)
     (pause					i v)
     (posix-fork					i v)
+    (posix-read					i v)
     (posix-remove				i v)
+    (posix-write				i v)
+    (pread					i v)
+    (pwrite					i v)
     (raise-signal				i v)
     (readdir					i v)
     (readdir/string				i v)
     (readlink					i v)
     (readlink/string				i v)
+    (readv					i v)
     (realpath					i v)
     (realpath/string				i v)
     (rename					i v)
@@ -626,14 +639,6 @@
     (utimes					i v)
     (wait					i v)
     (waitpid					i v)
-    (open					i v)
-    (close					i v)
-    (posix-read					i v)
-    (pread					i v)
-    (posix-write				i v)
-    (pwrite					i v)
-    (lseek					i v)
-    (readv					i v)
     (writev					i v)
 
     (make-struct-stat				i v)

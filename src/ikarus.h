@@ -76,6 +76,8 @@
 #define VICARE_BYTEVECTOR_DATA_VOIDP(BV)                \
   ((void*)(long)((BV) + off_bytevector_data))
 
+#define IS_POINTER(X)   (pointer_tag == (((long)(X)) & pointer_tag))
+
 
 /** --------------------------------------------------------------------
  ** Prototypes and external definitions.

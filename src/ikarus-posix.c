@@ -1551,6 +1551,27 @@ ikrt_posix_select_fd (ikptr fd)
 
 /* ------------------------------------------------------------------ */
 
+ikptr
+ikrt_posix_fcntl (ikptr fd, ikptr command, ikptr arg)
+{
+
+  int           rv = -1;
+  errno = 0;
+  if (is_fixnum(arg)) {
+    long        val = (long)unfix(arg);
+    rv = fcntl(unfix(fd), unfix(command), val);
+  } else if (false_object == arg) {
+    rv = fcntl(unfix(fd), unfix(command));
+  } else {
+    void *      val = (void *) ref(arg, off_pointer_data);
+    rv = fcntl(unfix(fd), unfix(command), val);
+  }
+  if (-1 == rv)
+    return ik_errno_to_code();
+  else
+    return fix(rv);
+}
+
 
 /** --------------------------------------------------------------------
  ** Time related functions.

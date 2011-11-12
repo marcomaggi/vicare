@@ -668,6 +668,19 @@
 	   (close fd))))
     => '((#vu8(0 1 2 3) #vu8(4 5 6 7) #vu8(8 9)) (10 10)))
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (begin
+	(system "rm -f tmp")
+	(let ((fd (open "tmp"
+			(fxior O_CREAT O_EXCL O_RDWR)
+			(fxior S_IRUSR S_IWUSR))))
+	  (unwind-protect
+	      (fixnum? (fcntl fd F_GETFL #f))
+	    (close fd))))
+    => #t)
+
   #t)
 
 
