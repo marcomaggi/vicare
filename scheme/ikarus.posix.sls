@@ -118,7 +118,7 @@
     posix-write			pwrite
     lseek
     readv			writev
-    fcntl
+    fcntl			ioctl
     dup				dup2
 
     ;; interface to "select()"
@@ -225,7 +225,7 @@
 		  posix-write			pwrite
 		  lseek
 		  readv				writev
-		  fcntl
+		  fcntl				ioctl
 		  dup				dup2
 
 		  ;; interface to "select()"
@@ -1514,6 +1514,21 @@
 	 (fixnum		command)
 	 (fixnum/pointer/false	arg))
       (let ((rv (capi.posix-fcntl fd command arg)))
+	(if (unsafe.fx<= 0 rv)
+	    rv
+	  (raise-errno-error who rv fd command arg)))))))
+
+(define ioctl
+  (case-lambda
+   ((fd command)
+    (ioctl fd command #f))
+   ((fd command arg)
+    (define who 'ioctl)
+    (with-arguments-validation (who)
+	((file-descriptor	fd)
+	 (fixnum		command)
+	 (fixnum/pointer/false	arg))
+      (let ((rv (capi.posix-ioctl fd command arg)))
 	(if (unsafe.fx<= 0 rv)
 	    rv
 	  (raise-errno-error who rv fd command arg)))))))

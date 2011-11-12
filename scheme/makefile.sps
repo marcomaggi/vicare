@@ -600,6 +600,7 @@
     (getppid					i v)
     (getumask					i v)
     (interprocess-signal->string		i v)
+    (ioctl					i v)
     (kill					i v)
     (link					i v)
     (lseek					i v)

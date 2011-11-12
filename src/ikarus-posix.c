@@ -42,6 +42,7 @@
 #include <time.h>
 #include <utime.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/param.h>
 #include <sys/resource.h>
@@ -1565,6 +1566,26 @@ ikrt_posix_fcntl (ikptr fd, ikptr command, ikptr arg)
   } else {
     void *      val = (void *) ref(arg, off_pointer_data);
     rv = fcntl(unfix(fd), unfix(command), val);
+  }
+  if (-1 == rv)
+    return ik_errno_to_code();
+  else
+    return fix(rv);
+}
+ikptr
+ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
+{
+
+  int           rv = -1;
+  errno = 0;
+  if (is_fixnum(arg)) {
+    long        val = (long)unfix(arg);
+    rv = ioctl(unfix(fd), unfix(command), val);
+  } else if (false_object == arg) {
+    rv = ioctl(unfix(fd), unfix(command));
+  } else {
+    void *      val = (void *) ref(arg, off_pointer_data);
+    rv = ioctl(unfix(fd), unfix(command), val);
   }
   if (-1 == rv)
     return ik_errno_to_code();

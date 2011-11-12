@@ -103,7 +103,7 @@
     posix-write				posix-pwrite
     posix-lseek
     posix-readv				posix-writev
-    posix-fcntl
+    posix-fcntl				posix-ioctl
     posix-dup				posix-dup2
 
     ;; file system synchronisation
@@ -441,6 +441,11 @@
 
 (define-inline (posix-fcntl fd command arg)
   (foreign-call "ikrt_posix_fcntl" fd command arg))
+
+(define-inline (posix-ioctl fd command arg)
+  (foreign-call "ikrt_posix_ioctl" fd command arg))
+
+;;; --------------------------------------------------------------------
 
 (define-inline (posix-dup fd)
   (foreign-call "ikrt_posix_dup" fd))

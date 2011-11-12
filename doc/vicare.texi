@@ -6767,6 +6767,19 @@ successful return a fixnum representing the return value of
 @end defun
 
 
+@defun ioctl @var{fd} @var{command}
+@defunx ioctl @var{fd} @var{command} @var{arg}
+Interface to the C function @cfunc{ioctl}, @glibcref{IOCTLs, ioctl}.
+Perform the operation specified by @var{command} on the file descriptor
+@var{fd} using @var{arg}; @var{fd} and @var{command} must be fixnums;
+@var{arg} must be @false{} a fixnum or a pointer, if it is @false{} or
+not given no argument is handed to @cfunc{ioctl}.  If successful return
+a fixnum representing the return value of @cfunc{ioctl}, else raise an
+exception.
+@end defun
+
+@c ------------------------------------------------------------
+
 @defun dup @var{fd}
 Interface to the C function @cfunc{dup}, @glibcref{Duplicating
 Descriptors, dup}.  Duplicate the file descriptor @var{fd}.  If
@@ -9056,6 +9069,17 @@ fixnums; @var{arg} must be the false object a fixnum or a pointer, if it
 is @false{} no argument is handed to @cfunc{fcntl}.  If successful
 return a fixnum representing the return value of @cfunc{fcntl}, else
 return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_ioctl (ikptr @var{fd}, ikptr @var{command}, ikptr @var{arg})
+Interface to the C function @cfunc{ioctl}, @glibcref{IOCTLs, ioctl}.
+Perform the operation specified by @var{command} on the file descriptor
+@var{fd} using @var{arg}; @var{fd} and @var{command} must be fixnums;
+@var{arg} must be the false object a fixnum or a pointer, if it is
+@false{} no argument is handed to @cfunc{ioctl}.  If successful return a
+fixnum representing the return value of @cfunc{ioctl}, else return an
+encoded @code{errno} value.
 @end deftypefun
 
 

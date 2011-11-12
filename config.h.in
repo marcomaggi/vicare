@@ -190,6 +190,9 @@
 /* Define to 1 if you have the `sync' function. */
 #undef HAVE_SYNC
 
+/* Define to 1 if you have the <sys/ioctl.h> header file. */
+#undef HAVE_SYS_IOCTL_H
+
 /* Define to 1 if you have the <sys/mman.h> header file. */
 #undef HAVE_SYS_MMAN_H
 
