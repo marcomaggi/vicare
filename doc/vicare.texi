@@ -9264,6 +9264,7 @@ the Scheme language compiler @file{ikarus.compiler.sls}.
 * objects const::               Constant values.
 * objects alloc::               Allocating memory for builtin objects.
 * objects fixnum::              Fixnum objects.
+* objects pair::                Pair objects.
 * objects bytevector::          Bytevector objects.
 * objects vector::              Vector objects.
 * objects struct::              Struct objects.
@@ -9550,6 +9551,81 @@ long int  n = 123L;
 ikptr     p = fix(n);
 long int  m = unfix(p);
 @end example
+
+@c page
+@node objects pair
+@section Pair objects
+
+
+Pairs are allocated as follows:
+
+@example
+ikpcb *  pcb = ...;
+ikptr    pair;
+
+pair = ik_safe_alloc(pcb, pair_size) + pair_tag;
+@end example
+
+@noindent
+the car and cdr of a pair are extracted as follows:
+
+@example
+ikptr   pair, the_car, the_cdr;
+
+the_car = ref(pair, off_car);
+the_cdr = ref(pair, off_cdr);
+@end example
+
+@noindent
+the car and cdr of a pair are set as follows:
+
+ikptr   pair, the_car, the_cdr;
+
+@example
+ref(pair, off_car) = the_car;
+ref(pair, off_cdr) = the_car;
+@end example
+
+
+@defmac is_pair (ikptr @var{X})
+Evaluate to true if the machine word @var{X} is tagged as pair.
+@end defmac
+
+
+@defmac pair_mask
+@defmacx pair_tag
+The constant @code{pair_mask} is the bit pattern used to isolate a pair
+tag from a machine word; the constant @code{pair_tag} is the bit pattern
+that identifies machine words as pairs.
+
+@example
+ikptr  word = ...;
+long   pattern;
+int    true_if_pair;
+
+pattern      = ((long)word) & pair_mask;
+true_if_pair = (pattern == pair_tag);
+@end example
+@end defmac
+
+@defmac pair_size
+The number of bytes in a pair memory block.
+@end defmac
+
+
+@defmac disp_car
+@defmacx disp_cdr
+Integer constant values representing the offsets of the car and cdr from
+the beginning of a pair memory block.
+@end defmac
+
+
+@defmac off_car
+@defmacx off_cdr
+Integer constant values to be added to a pointer tagged as pair to
+retrieve the car and the cdr from a pair memory block.  To be used as
+second argument to @cfunc{ref}.
+@end defmac
 
 @c page
 @node objects bytevector
