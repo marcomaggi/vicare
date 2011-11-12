@@ -36,8 +36,7 @@
     getpid			getppid
 
     ;; executing processes
-    posix-fork			fork
-    system
+    fork			system
     execv			execve
     execl			execle
     execvp			execlp
@@ -144,8 +143,7 @@
 		  getpid			getppid
 
 		  ;; executing processes
-		  posix-fork			fork
-		  system
+		  fork				system
 		  execv				execve
 		  execl				execle
 		  execvp			execlp
@@ -714,21 +712,26 @@
 	  (raise/strerror who rv)
 	rv))))
 
-(define (posix-fork)
-  (capi.posix-fork))
-
-(define (fork parent-proc child-proc)
-  (define who 'fork)
-  (with-arguments-validation (who)
-      ((procedure  parent-proc)
-       (procedure  child-proc))
-    (let ((pid (capi.posix-fork)))
-      (cond ((unsafe.fxzero? pid)
-	     (child-proc))
-	    ((unsafe.fx< pid 0)
-	     (raise/strerror who pid))
-	    (else
-	     (parent-proc pid))))))
+(define fork
+  (case-lambda
+   (()
+    (define who 'fork)
+    (let ((rv (capi.posix-fork)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv))))
+   ((parent-proc child-proc)
+    (define who 'fork)
+    (with-arguments-validation (who)
+	((procedure  parent-proc)
+	 (procedure  child-proc))
+      (let ((pid (capi.posix-fork)))
+	(cond ((unsafe.fxzero? pid)
+	       (child-proc))
+	      ((unsafe.fx< pid 0)
+	       (raise/strerror who pid))
+	      (else
+	       (parent-proc pid))))))))
 
 (define (execl filename . argv)
   (execv filename argv))

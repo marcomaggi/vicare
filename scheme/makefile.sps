@@ -611,7 +611,6 @@
     (open					i v)
     (opendir					i v)
     (pause					i v)
-    (posix-fork					i v)
     (posix-read					i v)
     (posix-remove				i v)
     (posix-write				i v)

@@ -586,9 +586,9 @@
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
+    (prefix (vicare unsafe-capi)
+	    capi.)
     (vicare unsafe-unicode)
-    (except (vicare unsafe-capi)
-	    posix-fork)
     (vicare errno))
 
 
@@ -602,9 +602,9 @@
   ;;interface to the platform's stderr.
   ;;
   (let ((bv (string->utf8 str)))
-    (platform-write-fd 2 bv 0 (unsafe.bytevector-length bv))
+    (capi.platform-write-fd 2 bv 0 (unsafe.bytevector-length bv))
     ;;and a newline
-    (platform-write-fd 2 '#vu8(10) 0 1)))
+    (capi.platform-write-fd 2 '#vu8(10) 0 1)))
 
 
 ;;;; port attributes
@@ -6640,7 +6640,7 @@
   ;;FILE-OPTIONS is ignored, no flags are supported.
   ;;
   (let* ((opts 0)
-	 (fd   (platform-open-input-fd ((string->filename-func) filename) opts)))
+	 (fd   (capi.platform-open-input-fd ((string->filename-func) filename) opts)))
     (if (fx< fd 0)
 	(%raise-io-error who filename fd)
       fd)))
@@ -6655,7 +6655,7 @@
 				  (if (enum-set-member? 'no-fail     file-options) #b010 0)
 				  (if (enum-set-member? 'no-truncate file-options) #b100 0))
 		 (assertion-violation who "file-options is not an enum set" file-options)))
-	 (fd (platform-open-output-fd ((string->filename-func) filename) opts)))
+	 (fd (capi.platform-open-output-fd ((string->filename-func) filename) opts)))
     (if (fx< fd 0)
 	(%raise-io-error who filename fd)
       fd)))
@@ -6673,7 +6673,7 @@
 				  (if (enum-set-member? 'no-fail     file-options) 2 0)
 				  (if (enum-set-member? 'no-truncate file-options) 4 0))
 		 (assertion-violation who "file-options is not an enum set" file-options)))
-	 (fd (platform-open-input/output-fd ((string->filename-func) filename) opts)))
+	 (fd (capi.platform-open-input/output-fd ((string->filename-func) filename) opts)))
     (if (fx< fd 0)
 	(%raise-io-error who filename fd)
       fd)))
@@ -6702,7 +6702,7 @@
 	  (else #f)))
 
   (define (read! dst.bv dst.start requested-count)
-    (let ((count (platform-read-fd fd dst.bv dst.start requested-count)))
+    (let ((count (capi.platform-read-fd fd dst.bv dst.start requested-count)))
       (cond ((unsafe.fx>= count 0)
 	     count)
 	    ((unsafe.fx= count EAGAIN)
@@ -6749,7 +6749,7 @@
 	  (else #f)))
 
   (define (write! src.bv src.start requested-count)
-    (let ((count (platform-write-fd fd src.bv src.start requested-count)))
+    (let ((count (capi.platform-write-fd fd src.bv src.start requested-count)))
       (cond ((unsafe.fx>= count 0)
 	     count)
 	    ((unsafe.fx= count EAGAIN)
@@ -6795,7 +6795,7 @@
 	  (else #f)))
 
   (define (read! dst.bv dst.start requested-count)
-    (let ((count (platform-read-fd fd dst.bv dst.start requested-count)))
+    (let ((count (capi.platform-read-fd fd dst.bv dst.start requested-count)))
       (cond ((unsafe.fx>= count 0)
 	     count)
 	    ((unsafe.fx= count EAGAIN)
@@ -6804,7 +6804,7 @@
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
   (define (write! src.bv src.start requested-count)
-    (let ((count (platform-write-fd fd src.bv src.start requested-count)))
+    (let ((count (capi.platform-write-fd fd src.bv src.start requested-count)))
       (cond ((unsafe.fx>= count 0)
 	     count)
 	    ((unsafe.fx= count EAGAIN)
@@ -6831,7 +6831,7 @@
   ;;a port wrapping the platform's file descriptor FD.
   ;;
   (lambda (position)
-    (let ((errno (platform-set-position fd position)))
+    (let ((errno (capi.platform-set-position fd position)))
       (when errno
 	(%raise-io-error 'set-position! port-identifier errno
 			 (make-i/o-invalid-position-error position))))))
@@ -6842,7 +6842,7 @@
   ;;descriptors, and in general can be used for any platform descriptor.
   ;;
   (lambda ()
-    (let ((errno (platform-close-fd fd)))
+    (let ((errno (capi.platform-close-fd fd)))
       (when errno
 	(%raise-io-error 'close port-identifier errno)))))
 

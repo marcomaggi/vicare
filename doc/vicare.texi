@@ -6050,22 +6050,21 @@ details; if an error occurs: an exception is raised.
 @end defun
 
 
-@defun posix-fork
-Low level interface to the C function @cfunc{fork}, @glibcref{Creating a
-Process, fork}.  Create a new process by forking the current one; if
-successful return a non--negative fixnum representing the the return
-value of @cfunc{fork}; if an error occurs: return an encoded
-@code{errno} value.
-@end defun
+@defun fork
+@defunx fork @var{parent-proc} @var{child-thunk}
+Interface to the C function @cfunc{fork}, @glibcref{Creating a Process,
+fork}.
 
+When called with no arguments: create a new process by forking the
+current one; if successful return a non--negative fixnum representing
+the the return value of @cfunc{fork}, else raise an exception.
 
-@defun fork @var{parent-proc} @var{child-thunk}
-High level interface to the C function @cfunc{fork}.  Create a new
-process by forking the current one; if successful the parent process
-applies @var{parent-proc} to a fixnum representing the child process pid
-and return its return value; if successful: the child process evaluates
-the @var{child-thunk} and returns its return value; if an error occurs:
-an exception is raised.
+When called with two arguments: create a new process by forking the
+current one; if successful the parent process applies @var{parent-proc}
+to a fixnum representing the child process pid and return its return
+value; if successful: the child process evaluates the @var{child-thunk}
+and returns its return value; if an error occurs: an exception is
+raised.
 
 @example
 (fork

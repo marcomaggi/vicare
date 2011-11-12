@@ -116,7 +116,7 @@
     platform-read-fd			platform-write-fd
     platform-set-position)
   (import (except (ikarus)
-		  posix-fork		posix-remove
+		  posix-remove
 		  posix-read		posix-write)
     (only (vicare syntactic-extensions)
 	  define-inline))
