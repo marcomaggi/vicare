@@ -268,7 +268,7 @@
   (assertion-violation who "expected fixnum gid as argument" obj))
 
 (define-argument-validation (file-descriptor who obj)
-  (fixnum? obj)
+  (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected fixnum file descriptor as argument" obj))
 
 (define-argument-validation (signal who obj)

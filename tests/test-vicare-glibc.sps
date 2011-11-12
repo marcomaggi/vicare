@@ -86,6 +86,17 @@
   #t)
 
 
+(parametrise ((check-test-name	'sync))
+
+  (check
+      (begin
+	(sync)
+	#t)
+    => #t)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

@@ -595,8 +595,6 @@
     (lstat					i v)
     (lutimes					i v)
     (mkdir					i v)
-    (mkdtemp					i v)
-    (mkstemp					i v)
     (nanosleep					i v)
     (opendir					i v)
     (pause					i v)
@@ -685,6 +683,11 @@
 ;;; GNU C Library functions
     (clearenv					i v)
     (dirfd					i v)
+    (fdatasync					i v)
+    (fsync					i v)
+    (mkdtemp					i v)
+    (mkstemp					i v)
+    (sync					i v)
 
 ;;; Linux functions
     (WIFCONTINUED				i v)

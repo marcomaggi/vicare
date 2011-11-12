@@ -35,6 +35,10 @@
 
     ;; temporary files and directories
     mkstemp		mkdtemp
+
+    ;; file system synchronisation
+    sync		fsync
+    fdatasync
     )
   (import (except (ikarus)
 		  ;; operating system environment variables
@@ -42,6 +46,13 @@
 
 		  ;; file system directories
 		  dirfd
+
+		  ;; temporary files and directories
+		  mkstemp		mkdtemp
+
+		  ;; file system synchronisation
+		  sync			fsync
+		  fdatasync
 		  )
     (prefix (only (ikarus.posix)
 		  directory-stream?
@@ -117,6 +128,10 @@
   (not (posix.directory-stream-closed? obj))
   (assertion-violation who "expected open directory stream as argument" obj))
 
+(define-argument-validation (file-descriptor who obj)
+  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (assertion-violation who "expected fixnum file descriptor as argument" obj))
+
 
 ;;;; operating system environment variables
 
@@ -139,7 +154,7 @@
 
 ;;;; temporary files and directories
 
-(define (mkstemp template)
+(define-for-glibc (mkstemp template)
   (define who 'mkstemp)
   (with-arguments-validation (who)
       ((bytevector  template))
@@ -148,7 +163,7 @@
 	  rv
 	(raise-errno-error who rv template)))))
 
-(define (mkdtemp template)
+(define-for-glibc (mkdtemp template)
   (define who 'mkdtemp)
   (with-arguments-validation (who)
       ((bytevector  template))
@@ -156,6 +171,31 @@
       (if (fixnum? rv)
 	  (raise-errno-error who rv template)
 	rv))))
+
+
+;;;; file system synchronisation
+
+(define-for-glibc (sync)
+  (define who 'sync)
+  (let ((rv (capi.glibc-sync)))
+    (unless (unsafe.fxzero? rv)
+      (raise-errno-error who rv))))
+
+(define-for-glibc (fsync fd)
+  (define who 'fsync)
+  (with-arguments-validation (who)
+      ((file-descriptor  fd))
+    (let ((rv (capi.glibc-fsync fd)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv fd)))))
+
+(define-for-glibc (fdatasync fd)
+  (define who 'fdatasync)
+  (with-arguments-validation (who)
+      ((file-descriptor  fd))
+    (let ((rv (capi.glibc-fdatasync fd)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv fd)))))
 
 
 ;;;; done

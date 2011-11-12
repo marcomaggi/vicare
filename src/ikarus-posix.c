@@ -1534,6 +1534,22 @@ ikrt_posix_writev (ikptr fd, ikptr buffers, ikpcb * pcb)
   }
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_select (ikptr ndfs,
+                   ikptr read_fds, ikptr write_fds, ikptr except_fds,
+                   ikptr sec, ikptr usec)
+{
+  return void_object;
+}
+ikptr
+ikrt_posix_select_fd (ikptr fd)
+{
+  return void_object;
+}
+
+/* ------------------------------------------------------------------ */
 
 
 /** --------------------------------------------------------------------

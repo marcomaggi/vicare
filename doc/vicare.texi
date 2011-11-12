@@ -6762,6 +6762,7 @@ is not a valid @code{errno} value: return a string telling it.
 * glibc env::                   Operating system environment variables.
 * glibc dir::                   File system directories.
 * glibc temp::                  Temporary files and directories.
+* glibc sync::                  File system synchronisation.
 @end menu
 
 @c page
@@ -6809,6 +6810,34 @@ mkdtemp}.  Create a temporary directory for reading and writing.
 @var{template} must be a mutable bytevector holding a template pathname
 on entering and the actual pathname on returning.  If successful return
 @var{template} itself, else raise an exception.
+@end defun
+
+@c page
+@node glibc sync
+@section File system synchronisation
+
+
+@defun sync
+Interface to the C function @cfunc{sync}, @glibcref{Synchronizing I/O}.
+Flush kernel buffer data and meta informations to the file system
+devices.  If successful return unspecified values, else raise an
+exception.
+@end defun
+
+
+@defun fsync @var{fd}
+Interface to the C function @cfunc{fsync}, @glibcref{Synchronizing I/O}.
+Flush kernel buffer data and meta informations to the file system device
+for the file descriptor @var{fd}.  If successful return unspecified
+values, else raise an exception.
+@end defun
+
+
+@defun fdatasync @var{fd}
+Interface to the C function @cfunc{fdatasync}, @glibcref{Synchronizing
+I/O}.  Flush kernel buffer data to the file system device for the file
+descriptor @var{fd}.  If successful return unspecified values, else
+raise an exception.
 @end defun
 
 @c page
@@ -9034,6 +9063,7 @@ true if the process was resumed by delivery of @code{SIGCONT}.
 * capi glibc env::              Operating system environment variables.
 * capi glibc dir::              File system directories.
 * capi glibc temp::             Temporary files and directories.
+* capi glibc sync::             File system synchronisation.
 @end menu
 
 @c page
@@ -9081,6 +9111,34 @@ mkdtemp}.  Create a temporary directory for reading and writing.
 @var{template} must be a mutable bytevector holding a template pathname
 on entering and the actual pathname on returning.  If successful return
 @var{template} itself, else return an encoded @code{errno} value.
+@end deftypefun
+
+@c page
+@node capi glibc sync
+@subsection File system synchronisation
+
+
+@deftypefun ikptr ikrt_glibc_sync (void)
+Interface to the C function @cfunc{sync}, @glibcref{Synchronizing I/O}.
+Flush kernel buffer data and meta informations to the file system
+devices.  If successful return the fixnum zero, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_glibc_fsync (ikptr @var{fd})
+Interface to the C function @cfunc{fsync}, @glibcref{Synchronizing I/O}.
+Flush kernel buffer data and meta informations to the file system device
+for the file descriptor @var{fd}.  If successful return the fixnum zero,
+else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_glibc_fdatasync (ikptr @var{fd})
+Interface to the C function @cfunc{fdatasync}, @glibcref{Synchronizing
+I/O}.  Flush kernel buffer data to the file system device for the file
+descriptor @var{fd}.  If successful return the fixnum zero, else return
+an encoded @code{errno} value.
 @end deftypefun
 
 @c page

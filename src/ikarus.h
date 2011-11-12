@@ -39,6 +39,28 @@
 
 
 /** --------------------------------------------------------------------
+ ** Helper macros.
+ ** ----------------------------------------------------------------- */
+
+/* The macro VICARE_UNUSED indicates  that a function, function argument
+   or variable may potentially be unused.  Usage examples:
+
+   static int unused_function (char arg) VICARE_UNUSED;
+   int foo (char unused_argument VICARE_UNUSED);
+   int unused_variable VICARE_UNUSED;
+*/
+#ifdef __GNUC__
+#  define VICARE_UNUSED		__attribute__((unused))
+#else
+#  define VICARE_UNUSED		/* empty */
+#endif
+
+#ifndef __GNUC__
+#  define __attribute__(...)	/* empty */
+#endif
+
+
+/** --------------------------------------------------------------------
  ** Utility macros.
  ** ----------------------------------------------------------------- */
 

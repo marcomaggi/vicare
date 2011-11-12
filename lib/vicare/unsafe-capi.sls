@@ -104,6 +104,10 @@
     posix-lseek
     posix-readv				posix-writev
 
+    ;; file system synchronisation
+    glibc-sync				glibc-fsync
+    glibc-fdatasync
+
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
     platform-open-input/output-fd	platform-close-fd
@@ -430,6 +434,18 @@
 
 (define-inline (posix-writev fd buffers)
   (foreign-call "ikrt_posix_writev" fd buffers))
+
+
+;;;; file system synchronisation
+
+(define-inline (glibc-sync)
+  (foreign-call "ikrt_glibc_sync"))
+
+(define-inline (glibc-fsync fd)
+  (foreign-call "ikrt_glibc_fsync" fd))
+
+(define-inline (glibc-fdatasync fd)
+  (foreign-call "ikrt_glibc_fdatasync" fd))
 
 
 ;;;; platform API for file descriptors

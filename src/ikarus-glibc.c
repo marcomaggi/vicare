@@ -30,9 +30,10 @@
 
 #include "ikarus.h"
 #include <dirent.h>
+#include <unistd.h>
 #include <sys/types.h>
 
-static void
+static VICARE_UNUSED void
 feature_failure_ (const char * funcname)
 {
   fprintf(stderr, "Vicare error: called GNU C Library specific function, %s\n", funcname);
@@ -118,5 +119,60 @@ ikrt_glibc_mkdtemp (ikptr template_bv, ikpcb * pcb)
   feature_failure(__func__);
 #endif
 }
+
+
+/** --------------------------------------------------------------------
+ ** File system synchronisation.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_glibc_sync (void)
+{
+#ifdef HAVE_SYNC
+  /* On Linux there  is no return value, despite what  the GNU C Library
+     documentation states. */
+  sync();
+  return fix(0);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_fsync (ikptr fd)
+{
+#ifdef HAVE_FSYNC
+  int   rv;
+  errno = 0;
+  rv    = fsync(unfix(fd));
+  if (0 == rv)
+    return fix(0);
+  else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_fdatasync (ikptr fd)
+{
+#ifdef HAVE_FDATASYNC
+  int   rv;
+  errno = 0;
+  rv    = fdatasync(unfix(fd));
+  if (0 == rv)
+    return fix(0);
+  else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
+ ** Miscellaneous functions.
+ ** ----------------------------------------------------------------- */
+
+
 
 /* end of file */
