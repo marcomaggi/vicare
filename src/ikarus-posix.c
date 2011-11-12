@@ -1620,6 +1620,25 @@ ikrt_posix_dup2 (ikptr old, ikptr new)
     return fix(0);
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_pipe (ikpcb * pcb)
+{
+  int           rv;
+  int           fds[2];
+  errno = 0;
+  rv    = pipe(fds);
+  if (-1 == rv)
+    return ik_errno_to_code();
+  else {
+    ikptr pair = ik_safe_alloc(pcb, pair_size) + pair_tag;
+    ref(pair, off_car) = fix(fds[0]);
+    ref(pair, off_cdr) = fix(fds[1]);
+    return pair;
+  }
+}
+
 
 /** --------------------------------------------------------------------
  ** Time related functions.
