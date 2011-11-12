@@ -15,11 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
-
-#include "ikarus-data.h"
-#include <stdlib.h>
-#include <assert.h>
+#include "ikarus.h"
 
 static long int
 page_idx(void* x){

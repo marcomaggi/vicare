@@ -17,10 +17,7 @@
 
 
 
-#include "ikarus-data.h"
-#include <strings.h>
-#include <string.h>
-#include <stdlib.h>
+#include "ikarus.h"
 
 static ikptr
 make_symbol_table(ikpcb* pcb){

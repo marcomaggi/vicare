@@ -9596,7 +9596,7 @@ Evaluate to true if the machine word @var{X} is tagged as pair.
 @defmacx pair_tag
 The constant @code{pair_mask} is the bit pattern used to isolate a pair
 tag from a machine word; the constant @code{pair_tag} is the bit pattern
-that identifies machine words as pairs.
+that identifies machine words as references to pairs.
 
 @example
 ikptr  word = ...;

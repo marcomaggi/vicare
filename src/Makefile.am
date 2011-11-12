@@ -6,14 +6,12 @@ bin_PROGRAMS = vicare
 SRCS	= \
 	cpu_has_sse2.S			\
 	ikarus-collect.c		\
-	ikarus-data.h			\
 	ikarus-enter.S			\
 	ikarus-exec.c			\
 	ikarus-fasl.c			\
 	ikarus-ffi.c			\
 	ikarus-flonums.c		\
 	ikarus-getaddrinfo.c		\
-	ikarus-getaddrinfo.h		\
 	ikarus-glibc.c			\
 	ikarus-io.c			\
 	ikarus-linux.c			\

@@ -24,10 +24,6 @@
 
 #include "ikarus.h"
 #include <sys/mman.h>
-#include <stdio.h>
-#include <strings.h>
-#include <errno.h>
-#include <assert.h>
 
 
 /** --------------------------------------------------------------------
