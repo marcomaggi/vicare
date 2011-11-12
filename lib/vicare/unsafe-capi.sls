@@ -104,6 +104,7 @@
     posix-lseek
     posix-readv				posix-writev
     posix-fcntl
+    posix-dup				posix-dup2
 
     ;; file system synchronisation
     glibc-sync				glibc-fsync
@@ -440,6 +441,12 @@
 
 (define-inline (posix-fcntl fd command arg)
   (foreign-call "ikrt_posix_fcntl" fd command arg))
+
+(define-inline (posix-dup fd)
+  (foreign-call "ikrt_posix_dup" fd))
+
+(define-inline (posix-dup2 old new)
+  (foreign-call "ikrt_posix_dup2" old new))
 
 
 ;;;; file system synchronisation

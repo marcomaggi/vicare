@@ -1572,6 +1572,33 @@ ikrt_posix_fcntl (ikptr fd, ikptr command, ikptr arg)
     return fix(rv);
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_dup (ikptr fd)
+{
+
+  int           rv;
+  errno = 0;
+  rv    = dup(unfix(fd));
+  if (-1 == rv)
+    return ik_errno_to_code();
+  else
+    return fix(rv);
+}
+ikptr
+ikrt_posix_dup2 (ikptr old, ikptr new)
+{
+
+  int           rv;
+  errno = 0;
+  rv    = dup2(unfix(old), unfix(new));
+  if (-1 == rv)
+    return ik_errno_to_code();
+  else
+    return fix(0);
+}
+
 
 /** --------------------------------------------------------------------
  ** Time related functions.

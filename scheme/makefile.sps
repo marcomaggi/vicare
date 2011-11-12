@@ -573,6 +573,8 @@
     (chown					i v)
     (close					i v)
     (closedir					i v)
+    (dup					i v)
+    (dup2					i v)
     (environ					i v)
     (environ->table				i v)
     (environ-table				i v)

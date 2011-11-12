@@ -119,6 +119,7 @@
     lseek
     readv			writev
     fcntl
+    dup				dup2
 
     ;; interface to "select()"
     nanosleep
@@ -225,6 +226,7 @@
 		  lseek
 		  readv				writev
 		  fcntl
+		  dup				dup2
 
 		  ;; interface to "select()"
 		  nanosleep
@@ -1515,6 +1517,26 @@
 	(if (unsafe.fx<= 0 rv)
 	    rv
 	  (raise-errno-error who rv fd command arg)))))))
+
+;;; --------------------------------------------------------------------
+
+(define (dup fd)
+  (define who 'dup)
+  (with-arguments-validation (who)
+      ((file-descriptor  fd))
+    (let ((rv (capi.posix-dup fd)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv fd)))))
+
+(define (dup2 old new)
+  (define who 'dup2)
+  (with-arguments-validation (who)
+      ((file-descriptor  old)
+       (file-descriptor  new))
+    (let ((rv (capi.posix-dup2 old new)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv old new)))))
 
 
 ;;;; interface to "select()"

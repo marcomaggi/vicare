@@ -6766,6 +6766,23 @@ successful return a fixnum representing the return value of
 @cfunc{fcntl}, else raise an exception.
 @end defun
 
+
+@defun dup @var{fd}
+Interface to the C function @cfunc{dup}, @glibcref{Duplicating
+Descriptors, dup}.  Duplicate the file descriptor @var{fd}.  If
+successful return a non--negative fixnum representing the new
+descriptor, else raise an exception.
+@end defun
+
+
+@defun dup2 @var{old} @var{new}
+Interface to the C function @cfunc{dup2}, @glibcref{Duplicating
+Descriptors, dup}.  Duplicate the file descriptor @var{old} to
+@var{new}.  If successful return unspecified values, else raise an
+exception.
+@end defun
+
+
 @c page
 @node posix time
 @section Time related functions
@@ -9041,6 +9058,21 @@ return a fixnum representing the return value of @cfunc{fcntl}, else
 return an encoded @code{errno} value.
 @end deftypefun
 
+
+@deftypefun ikptr ikrt_posix_dup (ikptr @var{fd})
+Interface to the C function @cfunc{dup}, @glibcref{Duplicating
+Descriptors, dup}.  Duplicate the file descriptor @var{fd}.  If
+successful return a non--negative fixnum representing the new
+descriptor, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_dup2 (ikptr @var{old}, ikptr @var{new})
+Interface to the C function @cfunc{dup2}, @glibcref{Duplicating
+Descriptors, dup}.  Duplicate the file descriptor @var{old} to
+@var{new}.  If successful return the fixnum zero, else return an encoded
+@code{errno} value.
+@end deftypefun
 
 @c page
 @node capi posix time
