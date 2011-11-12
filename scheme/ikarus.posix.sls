@@ -119,6 +119,7 @@
     readv			writev
     fcntl			ioctl
     dup				dup2
+    pipe
 
     ;; interface to "select()"
     nanosleep
@@ -225,6 +226,7 @@
 		  readv				writev
 		  fcntl				ioctl
 		  dup				dup2
+		  pipe
 
 		  ;; interface to "select()"
 		  nanosleep
@@ -1555,6 +1557,16 @@
     (let ((rv (capi.posix-dup2 old new)))
       (unless (unsafe.fxzero? rv)
 	(raise-errno-error who rv old new)))))
+
+;;; --------------------------------------------------------------------
+
+(define (pipe)
+  (define who 'pipe)
+  (let ((rv (capi.posix-pipe)))
+    (if (pair? rv)
+	(values (car rv) (cdr rv))
+      (raise-errno-error who rv))))
+
 
 
 ;;;; interface to "select()"

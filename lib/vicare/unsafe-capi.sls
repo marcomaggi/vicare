@@ -105,6 +105,7 @@
     posix-readv				posix-writev
     posix-fcntl				posix-ioctl
     posix-dup				posix-dup2
+    posix-pipe
 
     ;; file system synchronisation
     glibc-sync				glibc-fsync
@@ -452,6 +453,11 @@
 
 (define-inline (posix-dup2 old new)
   (foreign-call "ikrt_posix_dup2" old new))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-pipe)
+  (foreign-call "ikrt_posix_pipe"))
 
 
 ;;;; file system synchronisation
