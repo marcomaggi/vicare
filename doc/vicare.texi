@@ -6755,14 +6755,15 @@ written, else raise an exception.
 
 @c ------------------------------------------------------------
 
-@defun fcntl @var{fd} @var{command} @var{arg}
+@defun fcntl @var{fd} @var{command}
+@defunx fcntl @var{fd} @var{command} @var{arg}
 Interface to the C function @cfunc{fcntl}, @glibcref{Control Operations,
 fcntl}.  Perform the operation specified by @var{command} on the file
 descriptor @var{fd} using @var{arg}; @var{fd} and @var{command} must be
 fixnums; @var{arg} must be @false{} a fixnum or a pointer, if it is
-@false{} no argument is handed to @cfunc{fcntl}.  If successful return a
-fixnum representing the return value of @cfunc{fcntl}, else raise an
-exception.
+@false{} or not given no argument is handed to @cfunc{fcntl}.  If
+successful return a fixnum representing the return value of
+@cfunc{fcntl}, else raise an exception.
 @end defun
 
 @c page

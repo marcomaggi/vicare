@@ -1501,16 +1501,20 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (fcntl fd command arg)
-  (define who 'fcntl)
-  (with-arguments-validation (who)
-      ((file-descriptor		fd)
-       (fixnum			command)
-       (fixnum/pointer/false	arg))
-    (let ((rv (capi.posix-fcntl fd command arg)))
-      (if (unsafe.fx<= 0 rv)
-	  rv
-	(raise-errno-error who rv fd command arg)))))
+(define fcntl
+  (case-lambda
+   ((fd command)
+    (fcntl fd command #f))
+   ((fd command arg)
+    (define who 'fcntl)
+    (with-arguments-validation (who)
+	((file-descriptor	fd)
+	 (fixnum		command)
+	 (fixnum/pointer/false	arg))
+      (let ((rv (capi.posix-fcntl fd command arg)))
+	(if (unsafe.fx<= 0 rv)
+	    rv
+	  (raise-errno-error who rv fd command arg)))))))
 
 
 ;;;; interface to "select()"
