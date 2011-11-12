@@ -312,6 +312,8 @@
 						      &i/o-encoding-rcd)))
     (&i/o-eagain			($core-rtd . (&i/o-eagain-rtd
     						      &i/o-eagain-rcd)))
+    (&errno				($core-rtd . (&errno-rtd
+    						      &errno-rcd)))
     (&no-infinities			($core-rtd . (&no-infinities-rtd
 						      &no-infinities-rcd)))
     (&no-nans				($core-rtd . (&no-nans-rtd
@@ -1523,6 +1525,8 @@
     (i/o-write-error?				i v r ip is fi)
     (&i/o-eagain				i v)
     (i/o-eagain-error?				i v)
+    (&errno					i v)
+    (errno-condition?				i v)
     (lookahead-char				i v r ip)
     (lookahead-u8				i v r ip)
     (lookahead-two-u8				i v)
@@ -1546,6 +1550,8 @@
     (make-i/o-read-error			i v r ip is fi)
     (make-i/o-write-error			i v r ip is fi)
     (make-i/o-eagain				i v)
+    (make-errno-condition			i v)
+    (condition-errno				i v)
     (latin-1-codec				i v r ip)
     (make-transcoder				i v r ip)
     (native-eol-style				i v r ip)

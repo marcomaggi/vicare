@@ -79,7 +79,10 @@
           &source-position-rtd &source-position-rcd
 
 	  &i/o-eagain make-i/o-eagain i/o-eagain-error?
-	  &i/o-eagain-rtd &i/o-eagain-rcd)
+	  &i/o-eagain-rtd &i/o-eagain-rcd
+
+	  &errno make-errno-condition errno-condition?
+	  condition-errno)
   (import (except (ikarus)
 		  define-condition-type condition? simple-conditions
 		  condition condition-predicate condition-accessor
@@ -128,6 +131,9 @@
 
 		  &i/o-eagain make-i/o-eagain i/o-eagain-error?
 		  &i/o-eagain-rtd &i/o-eagain-rcd
+
+		  &errno make-errno-condition errno-condition?
+		  condition-errno
 
 		  interrupted-condition? make-interrupted-condition
 		  make-source-position-condition source-position-condition?
@@ -452,6 +458,10 @@
 
 (define-condition-type &i/o-eagain &i/o
   make-i/o-eagain i/o-eagain-error?)
+
+(define-condition-type &errno &condition
+  make-errno-condition errno-condition?
+  (code		condition-errno))
 
 
 ;;;; printing condition objects

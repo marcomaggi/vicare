@@ -5875,6 +5875,7 @@ set to @false{}.
 
 @menu
 * posix conventions::           Conventions about the @posix{} @api{}.
+* posix conditions::            Condition object types.
 * posix env::                   Operating system environment variables.
 * posix pid::                   Process identifier functions.
 * posix process::               Spawning processes and the like.
@@ -5921,6 +5922,33 @@ Whenever a system call returns a file system pathname: two functions are
 provided by the @posix{} @api{}, one returning a bytevector and one
 returning a string; the one returning a string has name ending with the
 suffix @samp{/string}.
+
+@c page
+@node posix conditions
+@section Condition object types
+
+
+@deftp {Condition Type} &errno
+Condition object type representing system errors described by an encoded
+@code{errno} value; it is derived from @condition{condition}.
+@end deftp
+
+
+@defun make-errno-condition @var{errno}
+Build and return a new @condition{errno} condition object holding the
+given encoded @code{errno} value.
+@end defun
+
+
+@defun errno-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of @condition{errno}.
+@end defun
+
+
+@defun condition-errno @var{obj}
+Accessor for the encoded @code{errno} value in @var{obj}, which must be
+an instance of @condition{errno}.
+@end defun
 
 @c page
 @node posix env
