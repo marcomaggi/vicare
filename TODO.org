@@ -167,6 +167,14 @@
 
    Optionally rely on libev for a sophisticated internal event loop?
 
+** glibc interesting functions
+
+*** asynchronous input/output
+
+    Could it work with Vicare?
+
+** Linux interesting functions
+
 * end
 
 ### end of file
