@@ -29,6 +29,10 @@
 #include <sys/resource.h>
 
 
+/** --------------------------------------------------------------------
+ ** Global constants.
+ ** ----------------------------------------------------------------- */
+
 extern int total_allocated_pages;
 extern int total_malloced;
 extern int hash_table_count;
@@ -80,12 +84,38 @@ extern int hash_table_count;
 #define pagesize 4096
 #define generation_count 5  /* generations 0 (nursery), 1, 2, 3, 4 */
 
-/* FIXME This should be a "uintptr_t" (Marco Maggi; Nov  6, 2011). */
-typedef unsigned long int ikptr;
+#define IK_HEAP_EXT_SIZE  (32 * 4096)
+#define IK_HEAPSIZE       (1024 * ((wordsize==4)?1:2) * 4096) /* 4/8 MB */
 
-typedef int ikchar;
+#define IK_FASL_HEADER \
+  ((sizeof(ikptr) == 4) ? "#@IK01" : "#@IK02")
+#define IK_FASL_HEADER_LEN (strlen(IK_FASL_HEADER))
 
-void ik_error(ikptr args);
+#define pagesize   4096
+#define pageshift    12
+
+#define page_index(x)   \
+  (((unsigned long)(x)) >> pageshift)
+
+#define align_to_next_page(x) \
+  (((pagesize - 1 + (unsigned long)(x)) >> pageshift) << pageshift)
+
+#define align_to_prev_page(x) \
+  ((((unsigned long)(x)) >> pageshift) << pageshift)
+
+#define call_instruction_size \
+  ((wordsize == 4) ? 5 : 10)
+#define disp_frame_size   (- (call_instruction_size + 3 * wordsize))
+#define disp_frame_offset (- (call_instruction_size + 2 * wordsize))
+#define disp_multivale_rp (- (call_instruction_size + 1 * wordsize))
+
+
+/** --------------------------------------------------------------------
+ ** Global data types.
+ ** ----------------------------------------------------------------- */
+
+/* FIXME Should this be a "uintptr_t"? (Marco Maggi; Nov  6, 2011). */
+typedef unsigned long       ikptr;
 
 typedef struct ikpage{
   ikptr base;
@@ -103,12 +133,11 @@ typedef struct ikdl{ /* double-link */
   struct ikdl* next;
 } ikdl;
 
-
 #define ik_ptr_page_size \
-  ((pagesize - sizeof(long int) - sizeof(struct ik_ptr_page*))/sizeof(ikptr))
+  ((pagesize - sizeof(long) - sizeof(struct ik_ptr_page*))/sizeof(ikptr))
 
 typedef struct ik_ptr_page{
-  long int count;
+  long count;
   struct ik_ptr_page* next;
   ikptr ptr[ik_ptr_page_size];
 } ik_ptr_page;
@@ -143,14 +172,14 @@ typedef struct ikpcb{
   ikptr weak_pairs_ap;
   ikptr weak_pairs_ep;
   ikptr   heap_base;
-  unsigned long int   heap_size;
+  unsigned long   heap_size;
   ikpages* heap_pages;
   ikpage* cached_pages; /* pages cached so that we don't map/unmap */
   ikpage* uncached_pages; /* ikpages cached so that we don't malloc/free */
   ikptr cached_pages_base;
   int cached_pages_size;
   ikptr   stack_base;
-  unsigned long int   stack_size;
+  unsigned long   stack_size;
   ikptr   symbol_table;
   ikptr   gensym_table;
   ik_ptr_page* protected_list[generation_count];
@@ -170,103 +199,71 @@ typedef struct ikpcb{
 typedef struct {
   ikptr tag;
   ikptr top;
-  long int size;
+  long size;
   ikptr next;
 } cont;
 
 
-ikpcb* ik_collect(unsigned long int, ikpcb*);
-void ikarus_usage_short(void);
+/** --------------------------------------------------------------------
+ ** Function prototypes.
+ ** ----------------------------------------------------------------- */
 
-void* ik_malloc(int);
-void ik_free(void*, int);
+void    ik_error                (ikptr args);
 
-ikptr ik_underflow_handler(ikpcb*);
-ikptr ik_unsafe_alloc(ikpcb* pcb, int size);
-ikptr ik_safe_alloc(ikpcb* pcb, int size);
+ikpcb * ik_collect              (unsigned long, ikpcb*);
 
-ikptr ik_mmap(unsigned long int);
-ikptr ik_mmap_typed(unsigned long int size, unsigned int type, ikpcb*);
-ikptr ik_mmap_ptr(unsigned long int size, int gen, ikpcb*);
-ikptr ik_mmap_data(unsigned long int size, int gen, ikpcb*);
-ikptr ik_mmap_code(unsigned long int size, int gen, ikpcb*);
-ikptr ik_mmap_mixed(unsigned long int size, ikpcb*);
-void ik_munmap(ikptr, unsigned long int);
-void ik_munmap_from_segment(ikptr, unsigned long int, ikpcb*);
-ikpcb* ik_make_pcb();
-void ik_delete_pcb(ikpcb*);
-void ik_free_symbol_table(ikpcb* pcb);
+void*   ik_malloc               (int);
+void    ik_free                 (void*, int);
 
-void ik_fasl_load(ikpcb* pcb, char* filename);
-void ik_relocate_code(ikptr);
+ikptr   ik_underflow_handler    (ikpcb*);
+ikptr   ik_unsafe_alloc         (ikpcb* pcb, int size);
+ikptr   ik_safe_alloc           (ikpcb* pcb, int size);
 
-ikptr ik_exec_code(ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp);
-void ik_print(ikptr x);
-void ik_fprint(FILE*, ikptr x);
+ikptr   ik_mmap                 (unsigned long);
+ikptr   ik_mmap_typed           (unsigned long size, unsigned type, ikpcb*);
+ikptr   ik_mmap_ptr             (unsigned long size, int gen, ikpcb*);
+ikptr   ik_mmap_data            (unsigned long size, int gen, ikpcb*);
+ikptr   ik_mmap_code            (unsigned long size, int gen, ikpcb*);
+ikptr   ik_mmap_mixed           (unsigned long size, ikpcb*);
+void    ik_munmap               (ikptr, unsigned long);
+void    ik_munmap_from_segment  (ikptr, unsigned long, ikpcb*);
+ikpcb * ik_make_pcb             (void);
+void    ik_delete_pcb           (ikpcb*);
+void    ik_free_symbol_table    (ikpcb* pcb);
 
-ikptr ik_asm_enter(ikpcb*, ikptr code_object, ikptr arg, ikptr cp);
-ikptr ik_asm_reenter(ikpcb*, ikptr code_object, ikptr val);
+void    ik_fasl_load            (ikpcb* pcb, char* filename);
+void    ik_relocate_code        (ikptr);
 
-
-ikptr ikrt_string_to_symbol     (ikptr, ikpcb*);
-ikptr ikrt_strings_to_gensym    (ikptr, ikptr,  ikpcb*);
+ikptr   ik_exec_code            (ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp);
+void    ik_print                (ikptr x);
+void    ik_fprint               (FILE*, ikptr x);
 
-ikptr ik_cstring_to_symbol(char*, ikpcb*);
-
-ikptr u_to_number(unsigned long, ikpcb*);
-ikptr ull_to_number(unsigned long long, ikpcb*);
-ikptr s_to_number(signed long x, ikpcb* pcb);
-ikptr sll_to_number(signed long long n, ikpcb* pcb);
-ikptr d_to_number(double x, ikpcb* pcb);
-ikptr make_pointer(long x, ikpcb* pcb);
-long      extract_num (ikptr x);
-long long extract_num_longlong(ikptr x);
-ikptr normalize_bignum(long int limbs, int sign, ikptr r);
+ikptr   ik_asm_enter            (ikpcb*, ikptr code_object, ikptr arg, ikptr cp);
+ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
 
 
-#define IK_HEAP_EXT_SIZE  (32 * 4096)
-#define IK_HEAPSIZE       (1024 * ((wordsize==4)?1:2) * 4096) /* 4/8 MB */
+/** --------------------------------------------------------------------
+ ** Basic object related macros.
+ ** ----------------------------------------------------------------- */
 
-#define wordsize ((int)(sizeof(ikptr)))
-#define wordshift ((wordsize == 4)?2:3)
-#define align_shift (wordshift + 1)
-#define align_size (2 * wordsize)
-#define fx_shift wordshift
-#define fx_mask (wordsize - 1)
+#define wordsize        ((int)(sizeof(ikptr)))
+#define wordshift       ((4 == wordsize)? 2 : 3)
+#define align_shift     (1 + wordshift)
+#define align_size      (2 * wordsize)
+#define immediate_tag   7
 
-#define align(n) \
-  ((((n) + align_size - 1) >>  align_shift) << align_shift)
+#define tagof(X)        (((int)(X)) & 7)
 
-#define IK_FASL_HEADER \
-  ((sizeof(ikptr) == 4) ? "#@IK01" : "#@IK02")
-#define IK_FASL_HEADER_LEN (strlen(IK_FASL_HEADER))
+#define ref(X,N) \
+  (((ikptr*)(((long)(X)) + ((long)(N))))[0])
 
-#define code_pri_tag vector_tag
-#define code_tag                 ((ikptr)0x2F)
-#define disp_code_code_size      (1 * wordsize)
-#define disp_code_reloc_vector   (2 * wordsize)
-#define disp_code_freevars       (3 * wordsize)
-#define disp_code_annotation     (4 * wordsize)
-#define disp_code_unused         (5 * wordsize)
-#define disp_code_data           (6 * wordsize)
-#define off_code_annotation (disp_code_annotation - code_pri_tag)
-#define off_code_data (disp_code_data - code_pri_tag)
-#define off_code_reloc_vector (disp_code_reloc_vector - code_pri_tag)
-
-#define unfix(x) (((long int)(x)) >> fx_shift)
-#define fix(x)   ((ikptr)(((long int)(x)) << fx_shift))
-#define is_fixnum(x) ((((unsigned long)(x)) & fx_mask) == 0)
-
-#define ref(x,n) \
-  (((ikptr*)(((long int)(x)) + ((long int)(n))))[0])
-
-#define tagof(x) (((int)(x)) & 7)
-
-#define immediate_tag 7
+#define align(N) \
+  ((((N) + align_size - 1) >>  align_shift) << align_shift)
 
 #define false_object            ((ikptr)0x2F)
 #define true_object             ((ikptr)0x3F)
 #define null_object             ((ikptr)0x4F)
+#define eof_object              ((ikptr)0x5F)
 #define void_object             ((ikptr)0x7F)
 
 /* Special machine word value stored in locations that used to hold weak
@@ -277,89 +274,262 @@ ikptr normalize_bignum(long int limbs, int sign, ikptr r);
    Scheme symbol memory blocks to signal that these fields are unset. */
 #define unbound_object          ((ikptr)0x6F)
 
-#define char_tag       0x0F
-#define char_mask      0xFF
-#define char_shift        8
-#define int_to_scheme_char(x) \
-  ((ikptr)((((unsigned long int)(x)) << char_shift) | char_tag))
-#define pair_size        (2 * wordsize)
-#define pair_mask 7
-#define pair_tag 1
-#define disp_car    0
-#define disp_cdr    wordsize
-#define off_car (disp_car - pair_tag)
-#define off_cdr (disp_cdr - pair_tag)
-#define is_char(x)   ((char_mask & (int)(x)) == char_tag)
-#define string_tag        6
-#define disp_string_length    0
-#define disp_string_data      wordsize
-#define off_string_length (disp_string_length - string_tag)
-#define off_string_data (disp_string_data - string_tag)
+
+/** --------------------------------------------------------------------
+ ** Code objects.
+ ** ----------------------------------------------------------------- */
+
+#define code_pri_tag            vector_tag
+#define code_tag                ((ikptr)0x2F)
+#define disp_code_code_size     (1 * wordsize)
+#define disp_code_reloc_vector  (2 * wordsize)
+#define disp_code_freevars      (3 * wordsize)
+#define disp_code_annotation    (4 * wordsize)
+#define disp_code_unused        (5 * wordsize)
+#define disp_code_data          (6 * wordsize)
+#define off_code_annotation     (disp_code_annotation   - code_pri_tag)
+#define off_code_data           (disp_code_data         - code_pri_tag)
+#define off_code_reloc_vector   (disp_code_reloc_vector - code_pri_tag)
+
+
+/** --------------------------------------------------------------------
+ ** Fixnum objects.
+ ** ----------------------------------------------------------------- */
+
+#define fx_tag          0
+#define fx_shift        wordshift
+#define fx_mask         (wordsize - 1)
+
+#define unfix(X)        \
+  (((long)(X)) >> fx_shift)
+
+#define fix(X)          \
+  ((ikptr)(((long)(X)) << fx_shift))
+
+#define is_fixnum(X)    \
+  ((((unsigned long)(X)) & fx_mask) == fx_tag)
+
+
+/** --------------------------------------------------------------------
+ ** Pair objects.
+ ** ----------------------------------------------------------------- */
+
+#define pair_size       (2 * wordsize)
+#define pair_mask       7 /* #b 0000 0111 */
+#define pair_tag        1
+#define disp_car        0
+#define disp_cdr        wordsize
+#define off_car         (disp_car - pair_tag)
+#define off_cdr         (disp_cdr - pair_tag)
+
+#define is_pair(X)      \
+  ((((long)(X)) & pair_mask) == pair_tag)
+
+
+/** --------------------------------------------------------------------
+ ** Character objects.
+ ** ----------------------------------------------------------------- */
+
+typedef int ikchar;
+
+#define char_tag        0x0F
+#define char_mask       0xFF
+#define char_shift      8
+
+#define is_char(X)              \
+  ((char_mask & (int)(X)) == char_tag)
+
+#define int_to_scheme_char(X)   \
+  ((ikptr)((((unsigned long)(X)) << char_shift) | char_tag))
+
+#define integer_to_char(X)      \
+  ((ikchar)((((int)(X)) << char_shift) + char_tag))
+
+
+/** --------------------------------------------------------------------
+ ** String objects.
+ ** ----------------------------------------------------------------- */
+
+#define string_char_size        4
+#define string_tag              6
+#define disp_string_length      0
+#define disp_string_data        wordsize
+#define off_string_length       (disp_string_length - string_tag)
+#define off_string_data         (disp_string_data - string_tag)
 
 #define string_set(x,i,c) \
   (((ikchar*)(((long)(x)) + off_string_data))[i] = ((ikchar)(c)))
-#define integer_to_char(x) \
-  ((ikchar)((((int)(x)) << char_shift) + char_tag))
-#define string_char_size 4
 
-#define vector_tag 5
-#define disp_vector_length 0
-#define disp_vector_data   wordsize
-#define off_vector_data   (disp_vector_data - vector_tag)
-#define off_vector_length (disp_vector_length - vector_tag)
+ikptr   ikrt_string_to_symbol   (ikptr, ikpcb *);
+ikptr   ikrt_strings_to_gensym  (ikptr, ikptr,  ikpcb*);
 
-#define bytevector_tag 2
-#define disp_bytevector_length 0
-#define disp_bytevector_data   8 /* not f(wordsize) */
-#define off_bytevector_length (disp_bytevector_length - bytevector_tag)
-#define off_bytevector_data   (disp_bytevector_data - bytevector_tag)
+
+/** --------------------------------------------------------------------
+ ** Symbol objects.
+ ** ----------------------------------------------------------------- */
 
-#define symbol_record_tag ((ikptr) 0x5F)
-#define disp_symbol_record_string   (1 * wordsize)
-#define disp_symbol_record_ustring  (2 * wordsize)
-#define disp_symbol_record_value    (3 * wordsize)
-#define disp_symbol_record_proc     (4 * wordsize)
-#define disp_symbol_record_plist    (5 * wordsize)
-#define symbol_record_size          (6 * wordsize)
-#define off_symbol_record_string  (disp_symbol_record_string  - record_tag)
-#define off_symbol_record_ustring (disp_symbol_record_ustring - record_tag)
-#define off_symbol_record_value   (disp_symbol_record_value   - record_tag)
-#define off_symbol_record_proc    (disp_symbol_record_proc    - record_tag)
-#define off_symbol_record_plist   (disp_symbol_record_plist   - record_tag)
+#define symbol_record_tag               ((ikptr) 0x5F)
+#define disp_symbol_record_string       (1 * wordsize)
+#define disp_symbol_record_ustring      (2 * wordsize)
+#define disp_symbol_record_value        (3 * wordsize)
+#define disp_symbol_record_proc         (4 * wordsize)
+#define disp_symbol_record_plist        (5 * wordsize)
+#define symbol_record_size              (6 * wordsize)
+#define off_symbol_record_string        (disp_symbol_record_string  - record_tag)
+#define off_symbol_record_ustring       (disp_symbol_record_ustring - record_tag)
+#define off_symbol_record_value         (disp_symbol_record_value   - record_tag)
+#define off_symbol_record_proc          (disp_symbol_record_proc    - record_tag)
+#define off_symbol_record_plist         (disp_symbol_record_plist   - record_tag)
 
-#define closure_tag  3
-#define closure_mask 7
-#define disp_closure_code 0
-#define disp_closure_data wordsize
-#define off_closure_code (disp_closure_code - closure_tag)
-#define off_closure_data (disp_closure_data - closure_tag)
+ikptr   ik_cstring_to_symbol    (char*, ikpcb*);
 
-#define is_closure(x) ((((long int)(x)) & closure_mask) == closure_tag)
-#define is_pair(x) ((((long int)(x)) & pair_mask) == pair_tag)
+
+/** --------------------------------------------------------------------
+ ** Number objects.
+ ** ----------------------------------------------------------------- */
 
-#define record_tag vector_tag
-#define disp_record_rtd 0
-#define disp_record_data wordsize
-#define off_record_rtd  (disp_record_rtd  - record_tag)
-#define off_record_data (disp_record_data - record_tag)
+#define bignum_mask             0x7
+#define bignum_tag              0x3
+#define bignum_sign_mask        0x8
+#define bignum_sign_shift       3
+#define bignum_length_shift     4
+#define disp_bignum_data        wordsize
+#define off_bignum_data         (disp_bignum_data - vector_tag)
 
-#define rtd_tag record_tag
-#define disp_rtd_rtd      0
-#define disp_rtd_name     (1 * wordsize)
-#define disp_rtd_length   (2 * wordsize)
-#define disp_rtd_fields   (3 * wordsize)
-#define disp_rtd_printer  (4 * wordsize)
-#define disp_rtd_symbol   (5 * wordsize)
-#define rtd_size          (6 * wordsize)
+#define ratnum_tag              ((ikptr) 0x27)
+#define disp_ratnum_num         (1 * wordsize)
+#define disp_ratnum_den         (2 * wordsize)
+#define disp_ratnum_unused      (3 * wordsize)
+#define ratnum_size             (4 * wordsize)
 
-#define off_rtd_rtd     (disp_rtd_rtd     - rtd_tag)
-#define off_rtd_name    (disp_rtd_name    - rtd_tag)
-#define off_rtd_length  (disp_rtd_length  - rtd_tag)
-#define off_rtd_fields  (disp_rtd_fields  - rtd_tag)
-#define off_rtd_printer (disp_rtd_printer - rtd_tag)
-#define off_rtd_symbol  (disp_rtd_symbol  - rtd_tag)
+#define flonum_tag              ((ikptr)0x17)
+#define flonum_size             16
+#define disp_flonum_data        8 /* not f(wordsize) */
+#define off_flonum_data         (disp_flonum_data - vector_tag)
 
-#define continuation_tag      ((ikptr)0x1F)
+#define flonum_data(X)  \
+  (*((double*)(((char*)(long)(X)) + off_flonum_data)))
+
+#define compnum_tag             ((ikptr) 0x37)
+#define disp_compnum_real       (1 * wordsize)
+#define disp_compnum_imag       (2 * wordsize)
+#define disp_compnum_unused     (3 * wordsize)
+#define compnum_size            (4 * wordsize)
+
+#define cflonum_tag             ((ikptr) 0x47)
+#define disp_cflonum_real       (1 * wordsize)
+#define disp_cflonum_imag       (2 * wordsize)
+#define disp_cflonum_unused     (3 * wordsize)
+#define cflonum_size            (4 * wordsize)
+
+ikptr   u_to_number             (unsigned long, ikpcb*);
+ikptr   ull_to_number           (unsigned long long, ikpcb*);
+
+ikptr   s_to_number             (signed long x, ikpcb* pcb);
+ikptr   sll_to_number           (signed long long n, ikpcb* pcb);
+
+ikptr   d_to_number             (double x, ikpcb* pcb);
+
+long      extract_num           (ikptr x);
+long long extract_num_longlong  (ikptr x);
+
+ikptr   normalize_bignum        (long limbs, int sign, ikptr r);
+
+
+/** --------------------------------------------------------------------
+ ** Pointer objects.
+ ** ----------------------------------------------------------------- */
+
+#define pointer_tag           ((ikptr) 0x107)
+#define disp_pointer_data     (1 * wordsize)
+#define pointer_size          (2 * wordsize)
+#define off_pointer_data      (disp_pointer_data - vector_tag)
+
+ikptr   make_pointer    (long x, ikpcb* pcb);
+
+
+/** --------------------------------------------------------------------
+ ** Vector objects.
+ ** ----------------------------------------------------------------- */
+
+#define vector_mask             7
+#define vector_tag              5
+#define disp_vector_length      0
+#define disp_vector_data        wordsize
+#define off_vector_data         (disp_vector_data   - vector_tag)
+#define off_vector_length       (disp_vector_length - vector_tag)
+
+#define is_vector(X)    \
+  ((((long)(X)) & vector_mask) == vector_tag)
+
+
+/** --------------------------------------------------------------------
+ ** Bytevector objects.
+ ** ----------------------------------------------------------------- */
+
+#define bytevector_tag          2
+#define disp_bytevector_length  0
+#define disp_bytevector_data    8 /* not f(wordsize) */
+#define off_bytevector_length   (disp_bytevector_length - bytevector_tag)
+#define off_bytevector_data     (disp_bytevector_data   - bytevector_tag)
+
+
+/** --------------------------------------------------------------------
+ ** Struct objects.
+ ** ----------------------------------------------------------------- */
+
+#define record_tag              vector_tag
+#define disp_record_rtd         0
+#define disp_record_data        wordsize
+#define off_record_rtd          (disp_record_rtd  - record_tag)
+#define off_record_data         (disp_record_data - record_tag)
+
+#define rtd_tag                 record_tag
+#define disp_rtd_rtd            0
+#define disp_rtd_name           (1 * wordsize)
+#define disp_rtd_length         (2 * wordsize)
+#define disp_rtd_fields         (3 * wordsize)
+#define disp_rtd_printer        (4 * wordsize)
+#define disp_rtd_symbol         (5 * wordsize)
+#define rtd_size                (6 * wordsize)
+
+#define off_rtd_rtd             (disp_rtd_rtd     - rtd_tag)
+#define off_rtd_name            (disp_rtd_name    - rtd_tag)
+#define off_rtd_length          (disp_rtd_length  - rtd_tag)
+#define off_rtd_fields          (disp_rtd_fields  - rtd_tag)
+#define off_rtd_printer         (disp_rtd_printer - rtd_tag)
+#define off_rtd_symbol          (disp_rtd_symbol  - rtd_tag)
+
+
+/** --------------------------------------------------------------------
+ ** Port objects.
+ ** ----------------------------------------------------------------- */
+
+#define port_tag        0x3F
+#define port_mask       0x3F
+#define port_size       (14 * wordsize)
+
+
+/** --------------------------------------------------------------------
+ ** Closure objects.
+ ** ----------------------------------------------------------------- */
+
+#define closure_tag             3
+#define closure_mask            7
+#define disp_closure_code       0
+#define disp_closure_data       wordsize
+#define off_closure_code        (disp_closure_code - closure_tag)
+#define off_closure_data        (disp_closure_data - closure_tag)
+
+#define is_closure(X)   \
+  ((((long)(X)) & closure_mask) == closure_tag)
+
+
+/** --------------------------------------------------------------------
+ ** Continuation objects.
+ ** ----------------------------------------------------------------- */
+
+#define continuation_tag        ((ikptr)0x1F)
 #define disp_continuation_top   (1 * wordsize)
 #define disp_continuation_size  (2 * wordsize)
 #define disp_continuation_next  (3 * wordsize)
@@ -375,72 +545,21 @@ ikptr normalize_bignum(long int limbs, int sign, ikptr r);
 #define off_continuation_size  (disp_continuation_size - vector_tag)
 #define off_continuation_next  (disp_continuation_next - vector_tag)
 
-#define pagesize   4096
-#define pageshift    12
-#define align_to_next_page(x) \
-  (((pagesize - 1 + (unsigned long int)(x)) >> pageshift) << pageshift)
-#define align_to_prev_page(x) \
-  ((((unsigned long int)(x)) >> pageshift) << pageshift)
+
+/** --------------------------------------------------------------------
+ ** Tcbucket objects.
+ ** ----------------------------------------------------------------- */
 
-#define call_instruction_size \
-  ((wordsize == 4) ? 5 : 10)
-#define disp_frame_size   (- (call_instruction_size + 3 * wordsize))
-#define disp_frame_offset (- (call_instruction_size + 2 * wordsize))
-#define disp_multivale_rp (- (call_instruction_size + 1 * wordsize))
+#define disp_tcbucket_tconc     (0 * wordsize)
+#define disp_tcbucket_key       (1 * wordsize)
+#define disp_tcbucket_val       (2 * wordsize)
+#define disp_tcbucket_next      (3 * wordsize)
+#define tcbucket_size           (4 * wordsize)
 
-#define port_tag      0x3F
-#define port_mask     0x3F
-#define port_size     (14 * wordsize)
-
-#define disp_tcbucket_tconc        (0 * wordsize)
-#define disp_tcbucket_key          (1 * wordsize)
-#define disp_tcbucket_val          (2 * wordsize)
-#define disp_tcbucket_next         (3 * wordsize)
-#define tcbucket_size              (4 * wordsize)
-#define off_tcbucket_tconc       (disp_tcbucket_tconc - vector_tag)
-#define off_tcbucket_key         (disp_tcbucket_key   - vector_tag)
-#define off_tcbucket_val         (disp_tcbucket_val   - vector_tag)
-#define off_tcbucket_next        (disp_tcbucket_next  - vector_tag)
-
-#define bignum_mask       0x7
-#define bignum_tag        0x3
-#define bignum_sign_mask  0x8
-#define bignum_sign_shift   3
-#define bignum_length_shift 4
-#define disp_bignum_data wordsize
-#define off_bignum_data (disp_bignum_data - vector_tag)
-
-#define flonum_tag  ((ikptr)0x17)
-#define flonum_size         16
-#define disp_flonum_data     8 /* not f(wordsize) */
-#define off_flonum_data (disp_flonum_data - vector_tag)
-#define flonum_data(x) (*((double*)(((char*)(long)(x))+off_flonum_data)))
-
-#define ratnum_tag           ((ikptr) 0x27)
-#define disp_ratnum_num     (1 * wordsize)
-#define disp_ratnum_den     (2 * wordsize)
-#define disp_ratnum_unused  (3 * wordsize)
-#define ratnum_size         (4 * wordsize)
-
-#define compnum_tag           ((ikptr) 0x37)
-#define disp_compnum_real     (1 * wordsize)
-#define disp_compnum_imag     (2 * wordsize)
-#define disp_compnum_unused   (3 * wordsize)
-#define compnum_size          (4 * wordsize)
-
-#define cflonum_tag           ((ikptr) 0x47)
-#define disp_cflonum_real     (1 * wordsize)
-#define disp_cflonum_imag     (2 * wordsize)
-#define disp_cflonum_unused   (3 * wordsize)
-#define cflonum_size          (4 * wordsize)
-
-#define ik_eof_p(x) ((x) == ik_eof_object)
-#define page_index(x) (((unsigned long int)(x)) >> pageshift)
-
-#define pointer_tag           ((ikptr) 0x107)
-#define disp_pointer_data     (1 * wordsize)
-#define pointer_size          (2 * wordsize)
-#define off_pointer_data      (disp_pointer_data - vector_tag)
+#define off_tcbucket_tconc      (disp_tcbucket_tconc - vector_tag)
+#define off_tcbucket_key        (disp_tcbucket_key   - vector_tag)
+#define off_tcbucket_val        (disp_tcbucket_val   - vector_tag)
+#define off_tcbucket_next       (disp_tcbucket_next  - vector_tag)
 
 
 /** --------------------------------------------------------------------

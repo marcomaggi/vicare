@@ -49,6 +49,12 @@ typedef struct {
 
 static ikptr ik_fasl_read(ikpcb* pcb, fasl_port* p);
 
+static void
+ikarus_usage_short (void)
+{
+  fprintf(stderr, "vicare -h for more help\n");
+}
+
 void ik_fasl_load(ikpcb* pcb, char* fasl_file){
   int fd = open(fasl_file, O_RDONLY);
   if(fd == -1){

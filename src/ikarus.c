@@ -25,10 +25,6 @@
 #include "bootfileloc.h"
 
 
-void ikarus_usage_short(){
-  fprintf(stderr, "vicare -h for more help\n");
-}
-
 int
 main (int argc, char** argv)
 {
