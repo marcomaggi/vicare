@@ -4490,7 +4490,6 @@ example in the previous section):
 * iklib io binary::             Additional binary port features.
 * iklib io textual::            Additional textual port features.
 * iklib io buffer::             Buffer size customisation.
-* iklib io process::            Spawning processes.
 * iklib io socket::             Using network sockets.
 * iklib io non-block::          Non--blocking mode for ports.
 * iklib io misc::               Miscellaneous port functions.
@@ -4634,6 +4633,24 @@ Return the default value of the @func{current-error-port} parameter.  It
 is used by the @repl{} and the debugger.
 @end defun
 
+
+@defun make-binary-file-descriptor-input-port @var{fd} @var{identifier}
+@defunx make-binary-file-descriptor-output-port @var{fd} @var{identifier}
+Build and return binary Scheme ports using the platform file descriptor
+@var{fd} as device.  @var{identifier} must be a string used for better
+error reporting.  Closing the Scheme ports will close the file
+descriptors too.
+@end defun
+
+
+@defun make-binary-file-descriptor-input-port* @var{fd} @var{identifier}
+@defunx make-binary-file-descriptor-output-port* @var{fd} @var{identifier}
+Build and return binary Scheme ports using the platform file descriptor
+@var{fd} as device.  @var{identifier} must be a string used for better
+error reporting.  Closing the Scheme ports will @strong{not} close the
+file descriptors.
+@end defun
+
 @c page
 @node iklib io textual
 @subsection Additional textual port features
@@ -4693,6 +4710,24 @@ Given a textual port, return the current textual position as a condition
 object of type @condition{source-position}.
 @end defun
 
+
+@defun make-textual-file-descriptor-input-port @var{fd} @var{identifier} @var{transcoder}
+@defunx make-textual-file-descriptor-output-port @var{fd} @var{identifier} @var{transcoder}
+Build and return textual Scheme ports using the platform file descriptor
+@var{fd} as device.  @var{identifier} must be a string used for better
+error reporting.  @var{transcoder} must be a transcoder object.  Closing
+the Scheme ports will close the file descriptors too.
+@end defun
+
+
+@defun make-textual-file-descriptor-input-port* @var{fd} @var{identifier} @var{transcoder}
+@defunx make-textual-file-descriptor-output-port* @var{fd} @var{identifier} @var{transcoder}
+Build and return textual Scheme ports using the platform file descriptor
+@var{fd} as device.  @var{identifier} must be a string used for better
+error reporting.  @var{transcoder} must be a transcoder object.  Closing
+the Scheme ports will @strong{not} close the file descriptors.
+@end defun
+
 @c page
 @node iklib io buffer
 @subsection Buffer size customisation
@@ -4749,66 +4784,6 @@ Hold the buffer size for input socket ports.  It is initialised to
 Hold the buffer size for output socket ports.  It is initialised to
 @math{16384}.
 @end deffn
-
-@c page
-@node iklib io process
-@subsection Spawning processes
-
-
-The following bindings are exported by the @library{ikarus} library.
-
-
-@defun process @var{command} . @var{options}
-Run a subprocess with a set of command line options.  @var{command} is a
-string selecting the executable pathname.  @var{options} is a list of
-strings interpreted as command line options.
-
-If @var{command} does not not contain a @code{/} character, the command
-is searched in the directories listed in the @env{PATH} environment
-variable.
-
-Return multiple values:
-
-@enumerate
-@item
-The subprocess pid.
-
-@item
-An output port that writes to the subprocess' standard input channel.
-
-@item
-An input port that reads from the subprocess' standard output channel.
-
-@item
-An input port that reads from the subprocess' standard error channel.
-@end enumerate
-
-If an error occurs: an exception is raised.
-
-Example:
-
-@example
-(let-values
-    (((pid stdin-output-port stdout-input-port stderr-input-port)
-      (process "ls" "-l")))
-  (do-something))
-@end example
-
-@quotation
-@forunix{} @func{process} makes use of the @cfunc{fork} and
-@cfunc{execvp} system functions.@*
-
-@glibcref{Creating a Process, Creating a Process}@* @glibcref{Executing
-a File, Executing a File}@* @glibcref{Standard Environment, Standard
-Environment Variables}
-@end quotation
-@end defun
-
-
-@defun process-nonblocking @var{command} . @var{options}
-Like @func{process} but the returned ports have their underlying file
-descriptors configured to non--blocking mode; @ref{iklib io non-block}.
-@end defun
 
 @c page
 @node iklib io socket
@@ -6849,9 +6824,51 @@ parent:
       (let ((buf (make-bytevector 1)))
         (posix-write 1 '#vu8(1) 1)
         (posix-read  0 buf 1)
-        (check-pretty-print buf)
         (exit 0)))))
 @result{} #vu8(1)
+@end example
+
+@noindent
+here is how to fork a process and setup stdin and stdout in the children
+to use newly created pipe file descriptors, through Scheme ports, to
+communicate with the parent:
+
+@example
+#!r6rs
+(import (vicare))
+
+(let-values (((child-stdin       parent-to-child) (pipe))
+             ((parent-from-child child-stdout)    (pipe)))
+  (fork
+   (lambda (pid)        ;parent
+     (let* ((inp (make-textual-file-descriptor-input-port
+                  parent-from-child "in" (native-transcoder)))
+            (oup (make-textual-file-descriptor-output-port
+                  parent-to-child "out" (native-transcoder)))
+            (buf (get-string-n inp 4)))
+       (display "hello" oup)
+       (flush-output-port oup)
+       buf))
+
+   (lambda ()           ;child
+
+     (begin      ;setup stdin
+       (close-input-port (current-input-port))
+       (current-input-port
+        (make-textual-file-descriptor-input-port
+         child-stdin "*stdin*" (native-transcoder))))
+
+     (begin ;setup stdout
+       (close-output-port (current-output-port))
+       (current-output-port
+        (make-textual-file-descriptor-output-port
+         child-stdout "*stdout*" (native-transcoder))))
+
+     (display "ciao")
+     (flush-output-port (current-output-port))
+     (get-string-n (current-input-port) 5)
+     (exit 0))))
+@result{} "ciao"
 @end example
 @end defun
 

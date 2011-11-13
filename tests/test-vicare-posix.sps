@@ -694,7 +694,7 @@
 	  bv))
     => '#vu8(1 2 3 4))
 
-  (check
+  (check	;raw pipes to child process
       (let-values (((child-stdin       parent-to-child) (pipe))
 		   ((parent-from-child child-stdout)    (pipe)))
 	(fork (lambda (pid) ;parent
@@ -718,6 +718,41 @@
 		  (assert (equal? buf '#vu8(2)))
 		  (exit 0)))))
     => '#vu8(1))
+
+  (check	;port pipes to child process
+      (let-values (((child-stdin       parent-to-child) (pipe))
+		   ((parent-from-child child-stdout)    (pipe)))
+	(fork
+	 (lambda (pid) ;parent
+	   (let* ((inp (make-textual-file-descriptor-input-port
+			parent-from-child "in" (native-transcoder)))
+		  (oup (make-textual-file-descriptor-output-port
+			parent-to-child "out" (native-transcoder)))
+		  (buf (get-string-n inp 4)))
+	     (display "hello" oup)
+	     (flush-output-port oup)
+	     buf))
+	 (lambda ()	       ;child
+	   (guard (E (else
+		      (check-pretty-print E)
+		      (exit 1)))
+	     (begin      ;setup stdin
+	       (close-input-port (current-input-port))
+	       (current-input-port
+		(make-textual-file-descriptor-input-port
+		 child-stdin "*stdin*" (native-transcoder))))
+	     (begin ;setup stdout
+	       (close-output-port (current-output-port))
+	       (current-output-port
+		(make-textual-file-descriptor-output-port
+		 child-stdout "*stdout*" (native-transcoder))))
+	     (display "ciao")
+	     (flush-output-port (current-output-port))
+	     (let ((data (get-string-n (current-input-port) 5)))
+;;;	       (check-pretty-print data)
+	       (assert (equal? data "hello"))
+	       (exit 0))))))
+    => "ciao")
 
   #t)
 

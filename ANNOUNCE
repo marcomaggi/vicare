@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.2d2
+Subject: [announce] Vicare Scheme revision 0.2d3
 
                              Vicare Scheme
                              =============
@@ -35,6 +35,24 @@ this project has a mailing list:
 collection of R6 Scheme libraries:
 
 	      <http://marcomaggi.github.com/nausicaa.html>
+
+
+Notes for revision 0.2d3
+------------------------
+
+* Restructured most of the POSIX API, in a way non-backwards compatible.
+  Still no sockets API available in this release.
+
+* Added the functions:
+
+    make-binary-file-descriptor-input-port
+    make-binary-file-descriptor-input-port*
+    make-binary-file-descriptor-output-port
+    make-binary-file-descriptor-output-port*
+    make-textual-file-descriptor-input-port
+    make-textual-file-descriptor-input-port*
+    make-textual-file-descriptor-output-port
+    make-textual-file-descriptor-output-port*
 
 
 Notes for revision 0.2d2

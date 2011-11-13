@@ -423,6 +423,16 @@
     make-custom-binary-input/output-port
     make-custom-textual-input/output-port
 
+    ;; file descriptor ports
+    make-binary-file-descriptor-input-port
+    make-binary-file-descriptor-input-port*
+    make-binary-file-descriptor-output-port
+    make-binary-file-descriptor-output-port*
+    make-textual-file-descriptor-input-port
+    make-textual-file-descriptor-input-port*
+    make-textual-file-descriptor-output-port
+    make-textual-file-descriptor-output-port*
+
     ;; transcoders
     transcoded-port port-transcoder
 
@@ -463,9 +473,6 @@
     port-id
     string->filename-func
     filename->string-func
-
-    ;; spawning operating system processes
-    process process-nonblocking process*
 
     ;; networking
     tcp-connect tcp-connect-nonblocking
@@ -527,6 +534,16 @@
 		  make-custom-binary-input/output-port
 		  make-custom-textual-input/output-port
 
+		  ;; file descriptor ports
+		  make-binary-file-descriptor-input-port
+		  make-binary-file-descriptor-input-port*
+		  make-binary-file-descriptor-output-port
+		  make-binary-file-descriptor-output-port*
+		  make-textual-file-descriptor-input-port
+		  make-textual-file-descriptor-input-port*
+		  make-textual-file-descriptor-output-port
+		  make-textual-file-descriptor-output-port*
+
 		  ;; transcoders
 		  transcoded-port port-transcoder
 
@@ -567,9 +584,6 @@
 		  port-id
 		  string->filename-func
 		  filename->string-func
-
-		  ;; spawning operating system processes
-		  process process-nonblocking process*
 
 		  ;; networking
 		  tcp-connect tcp-connect-nonblocking
@@ -7130,89 +7144,81 @@
 					     buffer-size maybe-transcoder #t who))))))
 
 
-(define (process cmd . args)
-  (%spawn-process 'process #t #t #f #f #f #f cmd args))
+;;;; platform file descriptor ports
 
-(define (process* search? env stdin stdout stderr cmd . args)
-  (%spawn-process 'process* search? #t env stdin stdout stderr cmd args))
+(define (make-binary-file-descriptor-input-port fd port-identifier)
+  (define who 'make-binary-file-descriptor-input-port)
+  (let ((other-attributes	0)
+	(buffer.size		(input-file-buffer-size))
+	(transcoder		#f)
+	(close-function		#t))
+    (%file-descriptor->input-port fd other-attributes port-identifier buffer.size
+				  transcoder close-function who)))
 
-(define (process-nonblocking cmd . args)
-  (%spawn-process 'process-nonblocking #t #f #f #f #f cmd args))
+(define (make-binary-file-descriptor-input-port* fd port-identifier)
+  (define who 'make-binary-file-descriptor-input-port*)
+  (let ((other-attributes	0)
+	(buffer.size		(input-file-buffer-size))
+	(transcoder		#f)
+	(close-function		#f))
+    (%file-descriptor->input-port fd other-attributes port-identifier buffer.size
+				  transcoder close-function who)))
 
-(define (%spawn-process who search? blocking? env stdin stdout stderr cmd args)
-  (define (port->fd port port-pred arg-name port-type)
-    (with-port (port)
-      (cond ((and (boolean? port) (not port))
-	     -1)
-	    ((port-pred port)
-	     (if port.device.is-descriptor?
-		 port.device
-	       (assertion-violation who
-		 (string-append arg-name " is not a file-based port") stdin)))
-	    (else
-	     (assertion-violation who
-	       (string-append arg-name " is neither false nor an " port-type) stdin)))))
+;;; --------------------------------------------------------------------
 
-  (define (pair->env-utf8 pair)
-    (let* ((key-utf8 (string->utf8 (car pair)))
-	   (val-utf8 (string->utf8 (cdr pair)))
-	   (key-len (bytevector-length key-utf8))
-	   (val-len (bytevector-length val-utf8))
-	   (result (make-bytevector (+ key-len val-len 2))))
-      (bytevector-copy! key-utf8 0 result 0 key-len)
-      (bytevector-u8-set! result key-len (char->integer #\=))
-      (bytevector-copy! val-utf8 0 result (+ key-len 1) val-len)
-      (bytevector-u8-set! result (+ key-len val-len 1) 0)
-      result))
+(define (make-textual-file-descriptor-input-port fd port-identifier transcoder)
+  (define who 'make-textual-file-descriptor-input-port)
+  (let ((other-attributes	0)
+	(buffer.size		(input-file-buffer-size))
+	(close-function		#t))
+    (%file-descriptor->input-port fd other-attributes port-identifier buffer.size
+				  transcoder close-function who)))
 
-  (let ((stdin-fd (port->fd stdin input-port? "stdin" "input port"))
-	(stdout-fd (port->fd stdout output-port? "stdout" "output port"))
-	(stderr-fd (port->fd stderr output-port? "stderr" "output port")))
-    (unless (string? cmd)
-      (assertion-violation who "command is not a string" cmd))
-    (unless (andmap string? args)
-      (assertion-violation who "all command arguments must be strings"))
-    (let ((r (foreign-call "ikrt_process"
-			   (vector search? stdin-fd stdout-fd stderr-fd)
-			   (and env (map pair->env-utf8 env))
-			   (string->utf8 cmd)
-			   (map string->utf8 (cons cmd args)))))
-      (if (fixnum? r)
-	  (%raise-io-error who cmd r)
-	(begin
-	  (unless blocking?
-	    (or stdin (set-fd-nonblocking (vector-ref r 1) who cmd))
-	    (or stdout (set-fd-nonblocking (vector-ref r 2) who cmd))
-	    (or stderr (set-fd-nonblocking (vector-ref r 3) who cmd)))
-	  (values
-	   (vector-ref r 0) ; pid
-	   (and (not stdin)
-		(let ((fd		(vector-ref r 1))
-		      (other-attributes	0)
-		      (port-identifier	cmd)
-		      (buffer.size	(output-file-buffer-size))
-		      (transcoder	#f)
-		      (close-function	#t))
-		  (%file-descriptor->output-port fd other-attributes port-identifier buffer.size
-						 transcoder close-function who)))
-	   (and (not stdout)
-		(let ((fd		(vector-ref r 2))
-		      (other-attributes	0)
-		      (port-identifier	cmd)
-		      (buffer.size	(input-file-buffer-size))
-		      (transcoder	#f)
-		      (close-function	#t))
-		  (%file-descriptor->input-port fd other-attributes port-identifier buffer.size
-						transcoder close-function who)))
-	   (and (not stderr)
-		(let ((fd		(vector-ref r 3))
-		      (other-attributes	0)
-		      (port-identifier	cmd)
-		      (buffer.size	(input-file-buffer-size))
-		      (transcoder	#f)
-		      (close-function	#t))
-		  (%file-descriptor->input-port fd other-attributes port-identifier buffer.size
-						transcoder close-function who)))))))))
+(define (make-textual-file-descriptor-input-port* fd port-identifier transcoder)
+  (define who 'make-textual-file-descriptor-input-port*)
+  (let ((other-attributes	0)
+	(buffer.size		(input-file-buffer-size))
+	(close-function		#f))
+    (%file-descriptor->input-port fd other-attributes port-identifier buffer.size
+				  transcoder close-function who)))
+
+;;; --------------------------------------------------------------------
+
+(define (make-binary-file-descriptor-output-port fd port-identifier)
+  (define who 'make-binary-file-descriptor-output-port)
+  (let ((other-attributes	0)
+	(buffer.size		(output-file-buffer-size))
+	(transcoder		#f)
+	(close-function		#t))
+    (%file-descriptor->output-port fd other-attributes port-identifier buffer.size
+				   transcoder close-function who)))
+
+(define (make-binary-file-descriptor-output-port* fd port-identifier)
+  (define who 'make-binary-file-descriptor-output-port*)
+  (let ((other-attributes	0)
+	(buffer.size		(output-file-buffer-size))
+	(transcoder		#f)
+	(close-function		#f))
+    (%file-descriptor->output-port fd other-attributes port-identifier buffer.size
+				   transcoder close-function who)))
+
+;;; --------------------------------------------------------------------
+
+(define (make-textual-file-descriptor-output-port fd port-identifier transcoder)
+  (define who 'make-textual-file-descriptor-output-port)
+  (let ((other-attributes	0)
+	(buffer.size		(output-file-buffer-size))
+	(close-function		#t))
+    (%file-descriptor->output-port fd other-attributes port-identifier buffer.size
+				   transcoder close-function who)))
+
+(define (make-textual-file-descriptor-output-port* fd port-identifier transcoder)
+  (define who 'make-textual-file-descriptor-output-port*)
+  (let ((other-attributes	0)
+	(buffer.size		(output-file-buffer-size))
+	(close-function		#f))
+    (%file-descriptor->output-port fd other-attributes port-identifier buffer.size
+				   transcoder close-function who)))
 
 
 ;;;; platform socket functions
