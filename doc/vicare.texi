@@ -6882,6 +6882,15 @@ communicate with the parent:
 @end example
 @end defun
 
+
+@defun mkfifo @var{pathname} @var{mode}
+Interface to the C function @cfunc{mkfifo}, @glibcref{FIFO Special
+Files, mkfifo}.  Create a FIFO special file with name @var{pathname} and
+mode @var{mode}, which must be a fixnum.  If successful return
+unspecified values, else raise an exception.
+@end defun
+
+
 @c page
 @node posix time
 @section Time related functions
@@ -9190,6 +9199,15 @@ Interface to the C function @cfunc{pipe}, @glibcref{Creating a Pipe,
 pipe}.  Create a pair of file descriptors connected through a pipe.  If
 successful return a pair whose car and cdr are fixnums representing the
 file descriptors, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_mkfifo (ikptr @var{pathname}, ikptr @var{mode})
+Interface to the C function @cfunc{mkfifo}, @glibcref{FIFO Special
+Files, mkfifo}.  Create a FIFO special file with name @var{pathname},
+which must be a bytevector, and mode @var{mode}, which must be a fixnum.
+If successful return the fixnum zero, else return an encoded
+@code{errno} value.
 @end deftypefun
 
 @c page

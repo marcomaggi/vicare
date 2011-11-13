@@ -105,7 +105,7 @@
     posix-readv				posix-writev
     posix-fcntl				posix-ioctl
     posix-dup				posix-dup2
-    posix-pipe
+    posix-pipe				posix-mkfifo
 
     ;; file system synchronisation
     glibc-sync				glibc-fsync
@@ -458,6 +458,9 @@
 
 (define-inline (posix-pipe)
   (foreign-call "ikrt_posix_pipe"))
+
+(define-inline (posix-mkfifo pathname-bv mode)
+  (foreign-call "ikrt_posix_mkfifo" pathname-bv mode))
 
 
 ;;;; file system synchronisation

@@ -119,7 +119,7 @@
     readv			writev
     fcntl			ioctl
     dup				dup2
-    pipe
+    pipe			mkfifo
 
     ;; interface to "select()"
     nanosleep
@@ -226,7 +226,7 @@
 		  readv				writev
 		  fcntl				ioctl
 		  dup				dup2
-		  pipe
+		  pipe				mkfifo
 
 		  ;; interface to "select()"
 		  nanosleep
@@ -1567,6 +1567,15 @@
 	(values (car rv) (cdr rv))
       (raise-errno-error who rv))))
 
+(define (mkfifo pathname mode)
+  (define who 'pipe)
+  (with-arguments-validation (who)
+      ((pathname  pathname)
+       (fixnum    mode))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-mkfifo pathname.bv mode)))
+	(unless (unsafe.fxzero? rv)
+	  (raise-errno-error who rv pathname mode))))))
 
 
 ;;;; interface to "select()"

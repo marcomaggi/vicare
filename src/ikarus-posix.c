@@ -1638,6 +1638,19 @@ ikrt_posix_pipe (ikpcb * pcb)
     return pair;
   }
 }
+ikptr
+ikrt_posix_mkfifo (ikptr pathname_bv, ikptr mode)
+{
+  char *        pathname;
+  int           rv;
+  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  errno    = 0;
+  rv       = mkfifo(pathname, unfix(mode));
+  if (0 == rv)
+    return fix(0);
+  else
+    return ik_errno_to_code();
+}
 
 
 /** --------------------------------------------------------------------

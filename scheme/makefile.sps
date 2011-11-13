@@ -607,6 +607,7 @@
     (lstat					i v)
     (lutimes					i v)
     (mkdir					i v)
+    (mkfifo					i v)
     (nanosleep					i v)
     (open					i v)
     (opendir					i v)
