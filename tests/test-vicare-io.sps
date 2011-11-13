@@ -9307,11 +9307,15 @@
 	      (test-pathname	(make-test-pathname "port-fd.bin")))
 
   (check
-      (let* ((port (open-output-file (test-pathname)))
-	     (fd   (port-fd port)))
-	(close-output-port port)
-	(fixnum? fd))
-    => #t)
+      (check.with-result
+	  (cleanup-test-pathname)
+	(let* ((port (open-output-file (test-pathname)))
+	       (fd   (port-fd port)))
+	  (close-output-port port)
+	  (check.add-result (fixnum? fd)))
+	(cleanup-test-pathname)
+	#t)
+    => '(#t (#t)))
 
   #t)
 
