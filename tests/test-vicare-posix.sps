@@ -368,13 +368,13 @@
 
   (check
       (let ((S (stat "Makefile")))
-	(check-pretty-print S)
+;;;	(check-pretty-print S)
 	(struct-stat? S))
     => #t)
 
   (check
       (let ((S (lstat "Makefile")))
-	(check-pretty-print S)
+;;;	(check-pretty-print S)
 	(struct-stat? S))
     => #t)
 
@@ -590,17 +590,18 @@
 
   (check	;verify that no error occurs, even when double closing
       (let ((stream (opendir "..")))
-	(check-pretty-print stream)
+;;;	(check-pretty-print stream)
 	(do ((entry (readdir/string stream) (readdir/string stream)))
 	    ((not entry)
 	     (closedir stream)
 	     (directory-stream? stream))
-	  (check-pretty-print (list 'directory-entry entry))))
+;;;	  (check-pretty-print (list 'directory-entry entry))
+	  #f))
     => #t)
 
   (check	;verify that no error occurs, even when double closing
       (let ((stream (opendir "..")))
-	(check-pretty-print stream)
+;;;	(check-pretty-print stream)
 	(do ((i 0 (+ 1 i)))
 	    ((= 2 i)))
 	(let ((pos (telldir stream)))
@@ -610,7 +611,8 @@
 	    ((not entry)
 	     (closedir stream)
 	     (directory-stream? stream))
-	  (check-pretty-print (list 'directory-entry entry))))
+;;;	  (check-pretty-print (list 'directory-entry entry))
+	  #f))
     => #t)
 
   #t)
@@ -680,6 +682,42 @@
 	      (fixnum? (fcntl fd F_GETFL #f))
 	    (close fd))))
     => #t)
+
+;;; --------------------------------------------------------------------
+;;; pipe
+
+  (check
+      (let-values (((in ou) (pipe)))
+	(posix-write ou '#vu8(1 2 3 4) 4)
+	(let ((bv (make-bytevector 4)))
+	  (posix-read in bv 4)
+	  bv))
+    => '#vu8(1 2 3 4))
+
+  (check
+      (let-values (((child-stdin       parent-to-child) (pipe))
+		   ((parent-from-child child-stdout)    (pipe)))
+	(fork (lambda (pid) ;parent
+		(let ((buf (make-bytevector 1)))
+		  (posix-read  parent-from-child buf 1)
+		  (posix-write parent-to-child   '#vu8(2) 1)
+		  buf))
+	      (lambda () ;child
+		(begin ;setup stdin
+		  (close-input-port (current-input-port))
+		  (dup2 child-stdin 0)
+		  (close child-stdin))
+		(begin ;setup stdout
+		  (close-output-port (current-output-port))
+		  (dup2 child-stdout 1)
+		  (close child-stdout))
+		(let ((buf (make-bytevector 1)))
+		  (posix-write 1 '#vu8(1) 1)
+		  (posix-read  0 buf 1)
+;;;		  (check-pretty-print buf)
+		  (assert (equal? buf '#vu8(2)))
+		  (exit 0)))))
+    => '#vu8(1))
 
   #t)
 

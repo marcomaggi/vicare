@@ -6800,6 +6800,59 @@ Interface to the C function @cfunc{pipe}, @glibcref{Creating a Pipe,
 pipe}.  Create a pair of file descriptors connected through a pipe.  If
 successful return two values being fixnums representing the file
 descriptors, else raise an exception.
+
+Simple example of process writing to itself through a pipe:
+
+@example
+#!r6rs
+(import (vicare))
+
+(let-values (((in ou) (pipe)))
+  (posix-write ou '#vu8(1 2 3 4) 4)
+  (let ((bv (make-bytevector 4)))
+    (posix-read in bv 4)
+    bv))
+@result{} #vu8(1 2 3 4)
+@end example
+
+@noindent
+here is how to fork a process and setup stdin and stdout in the children
+to use newly created pipe file descriptors to communicate with the
+parent:
+
+@example
+#!r6rs
+(import (vicare))
+
+(let-values
+    (((child-stdin       parent-to-child) (pipe))
+     ((parent-from-child child-stdout)    (pipe)))
+  (fork
+
+    (lambda (pid) ;parent
+      (let ((buf (make-bytevector 1)))
+        (posix-read  parent-from-child buf 1)
+        (posix-write parent-to-child '#vu8(2) 1)
+        buf))
+
+    (lambda () ;child
+      (begin ;setup stdin
+        (close-input-port (current-input-port))
+        (dup2 child-stdin 0)
+        (close child-stdin))
+
+      (begin ;setup stdout
+        (close-output-port (current-output-port))
+        (dup2 child-stdout 1)
+        (close child-stdout))
+
+      (let ((buf (make-bytevector 1)))
+        (posix-write 1 '#vu8(1) 1)
+        (posix-read  0 buf 1)
+        (check-pretty-print buf)
+        (exit 0)))))
+@result{} #vu8(1)
+@end example
 @end defun
 
 @c page
