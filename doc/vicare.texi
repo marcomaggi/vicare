@@ -4636,6 +4636,7 @@ is used by the @repl{} and the debugger.
 
 @defun make-binary-file-descriptor-input-port @var{fd} @var{identifier}
 @defunx make-binary-file-descriptor-output-port @var{fd} @var{identifier}
+@defunx make-binary-file-descriptor-input/output-port @var{fd} @var{identifier}
 Build and return binary Scheme ports using the platform file descriptor
 @var{fd} as device.  @var{identifier} must be a string used for better
 error reporting.  Closing the Scheme ports will close the file
@@ -4645,6 +4646,7 @@ descriptors too.
 
 @defun make-binary-file-descriptor-input-port* @var{fd} @var{identifier}
 @defunx make-binary-file-descriptor-output-port* @var{fd} @var{identifier}
+@defunx make-binary-file-descriptor-input/output-port* @var{fd} @var{identifier}
 Build and return binary Scheme ports using the platform file descriptor
 @var{fd} as device.  @var{identifier} must be a string used for better
 error reporting.  Closing the Scheme ports will @strong{not} close the
@@ -4713,6 +4715,7 @@ object of type @condition{source-position}.
 
 @defun make-textual-file-descriptor-input-port @var{fd} @var{identifier} @var{transcoder}
 @defunx make-textual-file-descriptor-output-port @var{fd} @var{identifier} @var{transcoder}
+@defunx make-textual-file-descriptor-input/output-port @var{fd} @var{identifier} @var{transcoder}
 Build and return textual Scheme ports using the platform file descriptor
 @var{fd} as device.  @var{identifier} must be a string used for better
 error reporting.  @var{transcoder} must be a transcoder object.  Closing
@@ -4722,6 +4725,7 @@ the Scheme ports will close the file descriptors too.
 
 @defun make-textual-file-descriptor-input-port* @var{fd} @var{identifier} @var{transcoder}
 @defunx make-textual-file-descriptor-output-port* @var{fd} @var{identifier} @var{transcoder}
+@defunx make-textual-file-descriptor-input/output-port* @var{fd} @var{identifier} @var{transcoder}
 Build and return textual Scheme ports using the platform file descriptor
 @var{fd} as device.  @var{identifier} must be a string used for better
 error reporting.  @var{transcoder} must be a transcoder object.  Closing

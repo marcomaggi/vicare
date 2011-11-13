@@ -428,10 +428,14 @@
     make-binary-file-descriptor-input-port*
     make-binary-file-descriptor-output-port
     make-binary-file-descriptor-output-port*
+    make-binary-file-descriptor-input/output-port
+    make-binary-file-descriptor-input/output-port*
     make-textual-file-descriptor-input-port
     make-textual-file-descriptor-input-port*
     make-textual-file-descriptor-output-port
     make-textual-file-descriptor-output-port*
+    make-textual-file-descriptor-input/output-port
+    make-textual-file-descriptor-input/output-port*
 
     ;; transcoders
     transcoded-port port-transcoder
@@ -539,10 +543,14 @@
 		  make-binary-file-descriptor-input-port*
 		  make-binary-file-descriptor-output-port
 		  make-binary-file-descriptor-output-port*
+		  make-binary-file-descriptor-input/output-port
+		  make-binary-file-descriptor-input/output-port*
 		  make-textual-file-descriptor-input-port
 		  make-textual-file-descriptor-input-port*
 		  make-textual-file-descriptor-output-port
 		  make-textual-file-descriptor-output-port*
+		  make-textual-file-descriptor-input/output-port
+		  make-textual-file-descriptor-input/output-port*
 
 		  ;; transcoders
 		  transcoded-port port-transcoder
@@ -7219,6 +7227,44 @@
 	(close-function		#f))
     (%file-descriptor->output-port fd other-attributes port-identifier buffer.size
 				   transcoder close-function who)))
+
+;;; --------------------------------------------------------------------
+
+(define (make-binary-file-descriptor-input/output-port fd port-identifier)
+  (define who 'make-binary-file-descriptor-input/output-port)
+  (let ((other-attributes	0)
+	(buffer.size		(input/output-file-buffer-size))
+	(transcoder		#f)
+	(close-function		#t))
+    (%file-descriptor->input/output-port fd other-attributes port-identifier buffer.size
+					 transcoder close-function who)))
+
+(define (make-binary-file-descriptor-input/output-port* fd port-identifier)
+  (define who 'make-binary-file-descriptor-input/output-port*)
+  (let ((other-attributes	0)
+	(buffer.size		(input/output-file-buffer-size))
+	(transcoder		#f)
+	(close-function		#f))
+    (%file-descriptor->input/output-port fd other-attributes port-identifier buffer.size
+					 transcoder close-function who)))
+
+;;; --------------------------------------------------------------------
+
+(define (make-textual-file-descriptor-input/output-port fd port-identifier transcoder)
+  (define who 'make-textual-file-descriptor-input/output-port)
+  (let ((other-attributes	0)
+	(buffer.size		(input/output-file-buffer-size))
+	(close-function		#t))
+    (%file-descriptor->input/output-port fd other-attributes port-identifier buffer.size
+					 transcoder close-function who)))
+
+(define (make-textual-file-descriptor-input/output-port* fd port-identifier transcoder)
+  (define who 'make-textual-file-descriptor-input/output-port*)
+  (let ((other-attributes	0)
+	(buffer.size		(input/output-file-buffer-size))
+	(close-function		#f))
+    (%file-descriptor->input/output-port fd other-attributes port-identifier buffer.size
+					 transcoder close-function who)))
 
 
 ;;;; platform socket functions

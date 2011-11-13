@@ -49,10 +49,14 @@ Notes for revision 0.2d3
     make-binary-file-descriptor-input-port*
     make-binary-file-descriptor-output-port
     make-binary-file-descriptor-output-port*
+    make-binary-file-descriptor-input/output-port
+    make-binary-file-descriptor-input/output-port*
     make-textual-file-descriptor-input-port
     make-textual-file-descriptor-input-port*
     make-textual-file-descriptor-output-port
     make-textual-file-descriptor-output-port*
+    make-textual-file-descriptor-input/output-port
+    make-textual-file-descriptor-input/output-port*
 
 
 Notes for revision 0.2d2
