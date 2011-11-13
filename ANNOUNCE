@@ -57,6 +57,7 @@ Notes for revision 0.2d3
     make-textual-file-descriptor-output-port*
     make-textual-file-descriptor-input/output-port
     make-textual-file-descriptor-input/output-port*
+    port-fd
 
 
 Notes for revision 0.2d2

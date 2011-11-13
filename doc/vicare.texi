@@ -4960,6 +4960,12 @@ fcntl(fd, F_SETFL, O_NONBLOCK);
 The following bindings are exported by the @library{ikarus} library.
 
 
+@defun port-fd @var{port}
+If @var{port} is a port with a file descriptor as device: return a
+fixnum representing the device, else return @false{}.
+@end defun
+
+
 @defun port-id @var{port}
 Return a Scheme string representing the identifier of @var{port}.
 @end defun

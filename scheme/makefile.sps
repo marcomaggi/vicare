@@ -1764,6 +1764,7 @@
     (make-file-options				i v)
 ;;;
     (port-id					i v)
+    (port-fd					i v)
     (string->filename-func			i v)
     (filename->string-func			i v)
     (get-annotated-datum			i v)

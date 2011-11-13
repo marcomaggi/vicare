@@ -9303,6 +9303,19 @@
   #t)
 
 
+(parametrise ((check-test-name	'port-fd)
+	      (test-pathname	(make-test-pathname "port-fd.bin")))
+
+  (check
+      (let* ((port (open-output-file (test-pathname)))
+	     (fd   (port-fd port)))
+	(close-output-port port)
+	(fixnum? fd))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name		'with-output-to-file)
 	      (test-pathname		(make-test-pathname "with-output-to-file.bin"))
 	      (input-file-buffer-size	9))

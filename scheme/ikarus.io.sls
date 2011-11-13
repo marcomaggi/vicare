@@ -469,14 +469,11 @@
     put-char write-char put-string newline
 
     ;; port configuration
-    port-mode set-port-mode!
-    output-port-buffer-mode
-    set-port-buffer-mode!
-    reset-input-port!
-    reset-output-port!
-    port-id
-    string->filename-func
-    filename->string-func
+    port-mode			set-port-mode!
+    output-port-buffer-mode	set-port-buffer-mode!
+    reset-input-port!		reset-output-port!
+    port-id			port-fd
+    string->filename-func	filename->string-func
 
     ;; networking
     tcp-connect tcp-connect-nonblocking
@@ -584,14 +581,11 @@
 		  put-char write-char put-string newline
 
 		  ;; port configuration
-		  port-mode set-port-mode!
-		  output-port-buffer-mode
-		  set-port-buffer-mode!
-		  reset-input-port!
-		  reset-output-port!
-		  port-id
-		  string->filename-func
-		  filename->string-func
+		  port-mode			set-port-mode!
+		  output-port-buffer-mode	set-port-buffer-mode!
+		  reset-input-port!		reset-output-port!
+		  port-id			port-fd
+		  string->filename-func		filename->string-func
 
 		  ;; networking
 		  tcp-connect tcp-connect-nonblocking
@@ -679,7 +673,8 @@
 ;;        true if port is in the guardian       |
 ;;   true if port has an extract function      |
 ;;                         EOL style bits   |||
-;;                            unused bits ||
+;;     true if the device is a file desc.  |
+;;                            unused bits |
 ;;                                        321098765432109876543210
 (define INPUT/OUTPUT-PORT-TAG		#b000000000100000000000000)
 		;Used to tag ports that are both input and output.
@@ -696,6 +691,9 @@
 		;to be later retrieved by an extraction function.  These
 		;ports need special treatement when a transcoded port is
 		;created on top of them.  See TRANSCODED-PORT.
+(define PORT-WITH-FD-DEVICE		#b010000000000000000000000)
+		;Used  to  tag ports  that  have  a  file descriptor  as
+		;device.
 
 ;;                                                321098765432109876543210
 (define EOL-STYLE-MASK				#b001110000000000000000000)
@@ -1829,6 +1827,8 @@
 		;true if the port is closed
 	    (PORT.GUARDED?			(%dot-id ".guarded?"))
 		;true if the port is registered in the port guardian
+	    (PORT.FD-DEVICE?			(%dot-id ".fd-device?"))
+		;true if the port has a file descriptor as device
 	    (PORT.WITH-EXTRACTION?		(%dot-id ".with-extraction?"))
 		;true if the port has an associated extraction function
 	    (PORT.IS-INPUT-AND-OUTPUT?		(%dot-id ".is-input-and-output?"))
@@ -1865,8 +1865,6 @@
 		;method, increment the POS field of the cookie
 	    (PORT.MODE				(%dot-id ".mode"))
 		;Scheme symbol, select the port mode
-	    (PORT.DEVICE.IS-DESCRIPTOR?		(%dot-id ".device.is-descriptor?"))
-		;true if the device is a fixnum (it is interpreted as platform descriptor)
 	    )
 	 #'(let-syntax
 	       ((PORT.TAG		(identifier-syntax ($port-tag		?port)))
@@ -1881,6 +1879,7 @@
 		(PORT.COOKIE		(identifier-syntax ($port-cookie	?port)))
 		(PORT.CLOSED?		(identifier-syntax (%unsafe.port-closed? ?port)))
 		(PORT.GUARDED?		(identifier-syntax (%unsafe.guarded-port? ?port)))
+		(PORT.FD-DEVICE?	(identifier-syntax (%unsafe.port-with-fd-device? ?port)))
 		(PORT.WITH-EXTRACTION?	(identifier-syntax (%unsafe.port-with-extraction? ?port)))
 		(PORT.IS-INPUT-AND-OUTPUT? (identifier-syntax (%unsafe.input-and-output-port? ?port)))
 		(PORT.IS-INPUT?		(identifier-syntax (%unsafe.input-port? ?port)))
@@ -1949,8 +1948,6 @@
 		   (identifier-syntax
 		    (_			(cookie-mode PORT.COOKIE))
 		    ((set! _ ?new-mode)	(set-cookie-mode! PORT.COOKIE ?new-mode))))
-		  (PORT.DEVICE.IS-DESCRIPTOR?
-		   (identifier-syntax (fixnum? (cookie-dest PORT.COOKIE))))
 		  )
 	       . ?body)))))))
 
@@ -2211,6 +2208,7 @@
 
   (define-unsafe-predicate %unsafe.guarded-port?		GUARDED-PORT-TAG)
   (define-unsafe-predicate %unsafe.port-with-extraction?	PORT-WITH-EXTRACTION-TAG)
+  (define-unsafe-predicate %unsafe.port-with-fd-device?		PORT-WITH-FD-DEVICE)
   )
 
 
@@ -6733,7 +6731,8 @@
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
   (let ((attributes		(%select-input-fast-tag-from-transcoder
-				 who maybe-transcoder other-attributes GUARDED-PORT-TAG
+				 who maybe-transcoder
+				 other-attributes GUARDED-PORT-TAG PORT-WITH-FD-DEVICE
 				 (%select-eol-style-from-transcoder who maybe-transcoder)
 				 DEFAULT-OTHER-ATTRS))
 	(buffer.index		0)
@@ -6780,7 +6779,8 @@
 	     (%raise-io-error 'write! port-identifier requested-count (make-i/o-write-error))))))
 
   (let ((attributes		(%select-output-fast-tag-from-transcoder
-				 who transcoder other-attributes GUARDED-PORT-TAG
+				 who transcoder
+				 other-attributes GUARDED-PORT-TAG PORT-WITH-FD-DEVICE
 				 (%select-eol-style-from-transcoder who transcoder)
 				 DEFAULT-OTHER-ATTRS))
 	(buffer.index		0)
@@ -6836,7 +6836,7 @@
 
   (let ((attributes		(%select-input/output-fast-tag-from-transcoder
 				 who transcoder other-attributes
-				 INPUT/OUTPUT-PORT-TAG GUARDED-PORT-TAG
+				 INPUT/OUTPUT-PORT-TAG GUARDED-PORT-TAG PORT-WITH-FD-DEVICE
 				 (%select-eol-style-from-transcoder who transcoder)
 				 DEFAULT-OTHER-ATTRS))
 	(buffer.index		0)
@@ -6875,6 +6875,17 @@
     ((none)	BUFFER-MODE-NONE-TAG)
     (else
      (assertion-violation who "invalid buffer-mode argument" buffer-mode))))
+
+(define (port-fd port)
+  ;;Defined by  Vicare.  If  PORT is  a port with  a file  descriptor as
+  ;;device: return a fixnum representing the device, else return false.
+  ;;
+  (define who 'port-fd)
+  (with-arguments-validation (who)
+      ((port	port))
+    (with-port (port)
+      (and port.fd-device?
+	   port.device))))
 
 
 ;;;; input ports wrapping platform file descriptors
