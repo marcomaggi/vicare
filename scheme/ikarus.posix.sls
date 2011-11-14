@@ -124,7 +124,9 @@
 
     ;; time functions
     nanosleep
-    )
+
+    ;; miscellaneous functions
+    file-descriptor?)
   (import (except (ikarus)
 		  ;; errno codes handling
 		  errno->string
@@ -232,7 +234,9 @@
 
 		  ;; interface to "select()"
 		  nanosleep
-		  )
+
+		  ;; miscellaneous functions
+		  file-descriptor?)
     (only (ikarus.pointers)
 	  pointer?)
     (vicare syntactic-extensions)
@@ -245,7 +249,7 @@
 
 ;;;; helpers
 
-(define-inline (file-descriptor? obj)
+(define-inline (%file-descriptor? obj)
   (and (fixnum? obj)
        (unsafe.fx>= obj 0)
        (unsafe.fx<  obj FD_SETSIZE)))
@@ -284,7 +288,7 @@
   (assertion-violation who "expected fixnum gid as argument" obj))
 
 (define-argument-validation (file-descriptor who obj)
-  (file-descriptor? obj)
+  (%file-descriptor? obj)
   (assertion-violation who "expected fixnum file descriptor as argument" obj))
 
 (define-argument-validation (signal who obj)
@@ -342,13 +346,13 @@
   (assertion-violation who "expected false, fixnum or pointer as argument" obj))
 
 (define-argument-validation (false/fd who obj)
-  (or (not obj) (file-descriptor? obj))
+  (or (not obj) (%file-descriptor? obj))
   (assertion-violation who "expected false or file descriptor as argument" obj))
 
 (define-argument-validation (list-of-fds who obj)
   (and (list? obj)
        (for-all (lambda (fd)
-		  (file-descriptor? fd))
+		  (%file-descriptor? fd))
 	 obj))
   (assertion-violation who "expected list of file descriptors as argument" obj))
 
@@ -1636,7 +1640,7 @@
 	  (raise-errno-error who rv pathname mode))))))
 
 
-;;;; interface to "select()"
+;;;; time functions
 
 (define (nanosleep secs nsecs)
   (import (ikarus system $fx))
@@ -1655,6 +1659,12 @@
     (unless (eq? rv 0)
       (error 'nanosleep "failed"))))
 
+
+
+;;;; miscellaneous functions
+
+(define (file-descriptor? obj)
+  (%file-descriptor? obj))
 
 
 ;;;; done

@@ -6952,6 +6952,11 @@ is not a valid @code{errno} value: return a string telling it.
 @end defun
 
 
+@defun file-descriptor? @var{obj}
+Return true if @var{obj} is a non--negative fixnum less than the value
+of @code{FD_SETSIZE}.
+@end defun
+
 @c page
 @node glibc
 @chapter The @gnu{} C Library interface

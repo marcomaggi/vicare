@@ -590,6 +590,7 @@
     (fchown					i v)
     (fcntl					i v)
     (fdopendir					i v)
+    (file-descriptor?				i v)
     (fork					i v)
     (fstat					i v)
     (futimes					i v)
