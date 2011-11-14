@@ -81,12 +81,6 @@ ikrt_posix_strerror (ikptr negated_errno_code, ikpcb* pcb)
     return bv;
   }
 }
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_strerror (ikptr negated_errno_code, ikpcb* pcb)
-{
-  return ikrt_posix_strerror(negated_errno_code, pcb);
-}
 
 
 /** --------------------------------------------------------------------
@@ -151,12 +145,6 @@ ikrt_posix_environ (ikpcb* pcb)
   return ac;
 }
 
-/* FIXME STALE To be removed after the next boot image rotation. */
-ikptr
-ikrt_getenv (ikptr bv, ikpcb* pcb)
-{
-  return ikrt_posix_getenv (bv, pcb);
-}
 ikptr
 ikrt_setenv (ikptr key, ikptr val, ikptr overwrite)
 {
@@ -183,23 +171,10 @@ ikrt_posix_getpid(void)
 {
   return fix(getpid());
 }
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_getpid(void)
-{
-  return ikrt_getpid();
-}
-
 ikptr
 ikrt_posix_getppid(void)
 {
   return fix(getppid());
-}
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_getppid(void)
-{
-  return ikrt_getppid();
 }
 
 
@@ -209,7 +184,6 @@ ikrt_getppid(void)
 
 ikptr
 ikrt_posix_system (ikptr str)
-/* Interface to "system()". */
 {
   assert(bytevector_tag == tagof(str));
   errno = 0;
@@ -219,12 +193,6 @@ ikrt_posix_system (ikptr str)
   else
     return ik_errno_to_code();
 }
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ik_system (ikptr str) {
-  return ikrt_posix_system(str);
-}
-
 ikptr
 ikrt_posix_fork (void)
 {
@@ -235,12 +203,6 @@ ikrt_posix_fork (void)
   } else {
     return ik_errno_to_code();
   }
-}
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_fork (void)
-{
-  return ikrt_posix_fork();
 }
 ikptr
 ikrt_posix_execv (ikptr bv_filename, ikptr list_argv)
@@ -298,11 +260,6 @@ ikrt_posix_waitpid (ikptr pid, ikptr options)
     return fix(status);
   else
     return ik_errno_to_code();
-}
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_waitpid(ikptr rvec, ikptr pid, ikptr block /*, ikpcb* pcb */) {
-  return false_object;
 }
 ikptr
 ikrt_posix_wait (void)
@@ -378,12 +335,6 @@ ikrt_posix_kill (ikptr fx_pid, ikptr fx_signum)
   int   signum = unfix(fx_signum);
   int   r = kill(pid, signum);
   return (0 == r)? fix(0) : ik_errno_to_code();
-}
-/* FIXME STALE To be removed at the next boot image rotation */
-ikptr
-ikrt_kill (ikptr pid, ikptr sigcode /*, ikpcb* pcb */)
-{
-  return ikrt_posix_kill(pid, sigcode);
 }
 ikptr
 ikrt_posix_pause (void)
@@ -514,32 +465,6 @@ ikrt_posix_fstat (ikptr fd_fx, ikptr stat_struct, ikpcb* pcb)
   }
 }
 
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_stat (ikptr filename, ikptr follow /*, ikpcb* pcb */)
-{
-  char* fn = (char*)(long)(filename + off_bytevector_data);
-  struct stat s;
-  int r;
-  if (false_object == follow) {
-    r = lstat(fn, &s);
-  } else{
-    r = stat(fn, &s);
-  }
-  if (0 == r) {
-    if (S_ISREG(s.st_mode)) {
-      return fix(1);
-    } else if(S_ISDIR(s.st_mode)) {
-      return fix(2);
-    } else if(S_ISLNK(s.st_mode)){
-      return fix(3);
-    } else {
-      return fix(0);
-    }
-  }
-  return ik_errno_to_code();
-}
-
 /* ------------------------------------------------------------------ */
 
 ikptr
@@ -562,11 +487,6 @@ ikrt_posix_file_size(ikptr filename, ikpcb* pcb) {
   } else {
     return ik_errno_to_code();
   }
-}
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_file_size(ikptr filename, ikpcb* pcb) {
-  return ikrt_posix_file_size(filename, pcb);
 }
 
 
@@ -655,35 +575,6 @@ ikrt_posix_access (ikptr filename, ikptr how)
     return ik_errno_to_code();
   }
 }
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_access (ikptr filename, ikptr how)
-{
-  char* pathname = (char*)(filename + off_bytevector_data);
-  int   r;
-  int   ik_how;
-  int   c_how;
-  ik_how = unfix(how);
-  if (ik_how == 0) {
-    c_how = F_OK;
-  } else {
-    c_how = 0;
-    if (ik_how & 1) c_how |= R_OK;
-    if (ik_how & 2) c_how |= W_OK;
-    if (ik_how & 4) c_how |= X_OK;
-  }
-  r = access(pathname, c_how);
-  if (r == 0) {
-    return true_object;
-  } else if ((errno == EACCES) ||
-             (errno == EROFS) ||
-             (errno == ETXTBSY)) {
-    return false_object;
-  } else {
-    return ik_errno_to_code();
-  }
-}
-
 ikptr
 ikrt_posix_file_exists (ikptr pathname_bv)
 {
@@ -786,58 +677,6 @@ ikrt_posix_file_atime (ikptr pathname_bv, ikptr vector, ikpcb* pcb) {
   }
 }
 
-
-/* FIXME STALE To be removed at the next boot image rotation. */
-static ikptr
-timespec_bytevector (struct timespec* s, ikpcb* pcb) {
-  int len = sizeof(struct timespec);
-  ikptr r = ik_safe_alloc(pcb, align(disp_bytevector_data+len+3));
-  ref(r, 0) = fix(len+2);
-  *((char*)(r+disp_bytevector_data+0)) = sizeof(s->tv_sec);
-  *((char*)(r+disp_bytevector_data+1)) = sizeof(s->tv_nsec);
-  memcpy((char*)(r+disp_bytevector_data+2), s, len);
-  *((char*)(r+disp_bytevector_data+len+2)) = 0;
-  return r + bytevector_tag;
-}
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_file_ctime2 (ikptr filename, ikpcb* pcb) {
-  struct stat s;
-  int err = stat((char*)(filename + off_bytevector_data), &s);
-  if(err) {
-    return ik_errno_to_code();
-  }
-#if HAVE_STAT_ST_CTIMESPEC
-  return timespec_bytevector(&s.st_ctimespec, pcb);
-#elif HAVE_STAT_ST_CTIM
-  return timespec_bytevector(&s.st_ctim, pcb);
-#else
-  struct timespec ts;
-  ts.tv_sec = s.st_ctime;
-  ts.tv_nsec = 0;
-  return timespec_bytevector(&ts, pcb);
-#endif
-}
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_file_mtime2 (ikptr filename, ikpcb* pcb) {
-  struct stat s;
-  int err = stat((char*)(filename + off_bytevector_data), &s);
-  if(err) {
-    return ik_errno_to_code();
-  }
-#if HAVE_STAT_ST_MTIMESPEC
-  return timespec_bytevector(&s.st_mtimespec, pcb);
-#elif HAVE_STAT_ST_MTIM
-  return timespec_bytevector(&s.st_mtim, pcb);
-#else
-  struct timespec ts;
-  ts.tv_sec = s.st_mtime;
-  ts.tv_nsec = 0;
-  return timespec_bytevector(&ts, pcb);
-#endif
-}
-
 
 /** --------------------------------------------------------------------
  ** Setting onwers, permissions, times.
@@ -884,12 +723,6 @@ ikrt_posix_chmod (ikptr pathname_bv, ikptr mode_fx)
   } else {
     return ik_errno_to_code();
   }
-}
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_chmod (ikptr path, ikptr mode)
-{
-  return ikrt_chmod(path, mode);
 }
 ikptr
 ikrt_posix_fchmod (ikptr fd, ikptr mode_fx)
@@ -1017,12 +850,6 @@ ikrt_posix_link (ikptr old_pathname_bv, ikptr new_pathname_bv)
     return ik_errno_to_code();
   }
 }
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_link (ikptr to, ikptr path)
-{
-  return ikrt_posix_link(to, path);
-}
 
 /* ------------------------------------------------------------------ */
 
@@ -1039,12 +866,6 @@ ikrt_posix_symlink (ikptr file_pathname_bv, ikptr link_pathname_bv)
   } else {
     return ik_errno_to_code();
   }
-}
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_symlink(ikptr to, ikptr path)
-{
-  return ikrt_posix_symlink(to, path);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1097,12 +918,6 @@ ikrt_posix_realpath (ikptr link_pathname_bv, ikpcb* pcb)
     return bv;
   }
 }
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_realpath (ikptr pathname_bv, ikpcb* pcb)
-{
-  return ikrt_posix_realpath(pathname_bv, pcb);
-}
 
 /* ------------------------------------------------------------------ */
 
@@ -1117,12 +932,6 @@ ikrt_posix_unlink (ikptr pathname_bv)
     return fix(0);
   else
     return ik_errno_to_code();
-}
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_delete_file (ikptr pathname)
-{
-  return ikrt_posix_unlink(pathname);
 }
 ikptr
 ikrt_posix_remove (ikptr pathname_bv)
@@ -1151,12 +960,6 @@ ikrt_posix_rename (ikptr old_pathname_bv, ikptr new_pathname_bv)
     return ik_errno_to_code();
   }
 }
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_rename_file(ikptr src, ikptr dst)
-{
-  return ikrt_posix_rename(src, dst);
-}
 
 
 /** --------------------------------------------------------------------
@@ -1176,13 +979,6 @@ ikrt_posix_mkdir (ikptr pathname_bv, ikptr mode)
   else
     return ik_errno_to_code();
 }
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_mkdir (ikptr path, ikptr mode)
-{
-  return ikrt_posix_mkdir(path, mode);
-}
-
 ikptr
 ikrt_posix_rmdir (ikptr pathname_bv)
 {
@@ -1196,13 +992,6 @@ ikrt_posix_rmdir (ikptr pathname_bv)
   else
     return ik_errno_to_code();
 }
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_rmdir(ikptr path /*, ikpcb* pcb */)
-{
-  return ikrt_posix_rmdir(path);
-}
-
 ikptr
 ikrt_posix_getcwd (ikpcb * pcb)
 {
@@ -1227,12 +1016,6 @@ ikrt_posix_getcwd (ikpcb * pcb)
     }
   }
 }
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_getcwd(ikpcb* pcb) {
-  return ikrt_posix_getcwd(pcb);
-}
-
 ikptr
 ikrt_posix_chdir (ikptr pathname_bv)
 {
@@ -1246,13 +1029,6 @@ ikrt_posix_chdir (ikptr pathname_bv)
   else
     return ik_errno_to_code();
 }
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_chdir(ikptr pathbv /*, ikpcb* pcb */)
-{
-  return ikrt_posix_chdir(pathbv);
-}
-
 ikptr
 ikrt_posix_fchdir (ikptr fd)
 {
@@ -1264,13 +1040,6 @@ ikrt_posix_fchdir (ikptr fd)
   else
     return ik_errno_to_code();
 }
-
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_directory_list(ikptr filename, ikpcb* pcb){
-  return false_object;
-}
-
 ikptr
 ikrt_posix_opendir (ikptr pathname_bv, ikpcb * pcb)
 {
@@ -1285,12 +1054,6 @@ ikrt_posix_opendir (ikptr pathname_bv, ikpcb * pcb)
     ikptr       pointer = make_pointer((long)stream, pcb);
     return pointer;
   }
-}
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_opendir(ikptr dirname, ikpcb* pcb)
-{
-  return ikrt_posix_opendir(dirname, pcb);
 }
 ikptr
 ikrt_posix_fdopendir (ikptr fd, ikpcb * pcb)
@@ -1331,13 +1094,6 @@ ikrt_posix_readdir (ikptr pointer, ikpcb * pcb)
     return bv;
   }
 }
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_readdir (ikptr ptr, ikpcb* pcb)
-{
-  return ikrt_posix_readdir (ptr, pcb);
-}
-
 ikptr
 ikrt_posix_closedir (ikptr pointer, ikpcb * pcb)
 {
@@ -1350,13 +1106,6 @@ ikrt_posix_closedir (ikptr pointer, ikpcb * pcb)
   else
     return ik_errno_to_code();
 }
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_closedir (ikptr ptr, ikpcb* pcb)
-{
-  return ikrt_posix_closedir(ptr, pcb);
-}
-
 ikptr
 ikrt_posix_rewinddir (ikptr pointer)
 {
@@ -1825,141 +1574,5 @@ ikrt_nanosleep(ikptr secs, ikptr nsecs /*, ikpcb* pcb */){
  ** ----------------------------------------------------------------- */
 
 
-
-/* FIXME STALE To be removed at the next boot image rotation. */
-static int
-execvpe_(const char *cmd, char *const *argv, char *const *envp){
-  char *path = NULL;
-  const char *searchpath;
-  const char *sep;
-  size_t cmd_len;
-
-  if (cmd[0] == '/')
-    execve(cmd, argv, envp);
-
-  searchpath = getenv("PATH");
-  if (searchpath == NULL)
-    searchpath = "/bin:/usr/bin";
-
-  cmd_len = strlen(cmd);
-
-  sep = NULL;
-  do {
-    size_t prefix_len, path_len;
-
-    sep = strchr(searchpath, ':');
-    if (sep == NULL) {
-      sep = searchpath + strlen(searchpath);
-    }
-
-    prefix_len = (sep - searchpath);
-    path_len = prefix_len + cmd_len + 2;
-    path = realloc(path, path_len);
-    if (path == NULL) {
-      errno = ENOMEM;
-      return -1;
-    }
-    memcpy(path, searchpath, prefix_len);
-    if (prefix_len == 0 || searchpath[prefix_len - 1] == '/') {
-      memcpy(path + prefix_len, cmd, cmd_len + 1);
-    } else {
-      path[prefix_len] = '/';
-      memcpy(path + prefix_len + 1, cmd, cmd_len + 1);
-    }
-
-    execve(path, argv, envp);
-    switch (errno) {
-    case E2BIG:
-    case ENOEXEC:
-    case ENOMEM:
-    case ETXTBSY:
-      break; /* these are treated as error, abort search */
-    }
-
-    searchpath = sep + 1;
-  } while (sep[0] != '\0');
-
-  if (path) free(path);
-
-  return -1;
-}
-
-/* FIXME STALE To be removed at the next boot image rotation. */
-ikptr
-ikrt_process(ikptr rvec, ikptr env, ikptr cmd, ikptr argv /*, ikpcb* pcb */){
-  int infds[2];
-  int outfds[2];
-  int errfds[2];
-  int search_p = ref(rvec, off_vector_data+0*wordsize) != false_object;
-  int stdin_fd = unfix(ref(rvec, off_vector_data+1*wordsize));
-  int stdout_fd = unfix(ref(rvec, off_vector_data+2*wordsize));
-  int stderr_fd = unfix(ref(rvec, off_vector_data+3*wordsize));
-
-  if(stdin_fd < 0 && pipe(infds))  return ik_errno_to_code();
-  if(stdout_fd < 0 && pipe(outfds)) return ik_errno_to_code();
-  if(stderr_fd < 0 && pipe(errfds)) return ik_errno_to_code();
-  pid_t pid = fork();
-  if(pid == 0){
-    /* child */
-    if (stdin_fd < 0){
-      if(close(infds[1]))  exit(1);
-      stdin_fd = infds[0];
-    }
-    if (stdout_fd < 0){
-      if(close(outfds[0])) exit(1);
-      stdout_fd = outfds[1];
-    }
-    if (stderr_fd < 0){
-        if(close(errfds[0])) exit(1);
-        stderr_fd = errfds[1];
-    }
-    if (stdin_fd != 0){
-      if(close(0))             exit(1);
-      if(dup(stdin_fd) == -1)  exit(1);
-    }
-    if (stdout_fd != 1){
-      if(close(1))             exit(1);
-      if(dup(stdout_fd) == -1) exit(1);
-    }
-    if (stderr_fd != 2){
-      if(close(2))             exit(2);
-      if(dup(stderr_fd) == -1) exit(1);
-    }
-    char *cmd_str = (char*)(long)(cmd+off_bytevector_data);
-    char **env_strs = env == false_object ? 0 : ik_list_to_vec(env);
-    char **argv_strs = ik_list_to_vec(argv);
-    if (env_strs && search_p)
-      execvpe_(cmd_str, argv_strs, env_strs);
-    else if (env_strs)
-      execve(cmd_str, argv_strs, env_strs);
-    else if (search_p)
-      execvp(cmd_str, argv_strs);
-    else
-      execv(cmd_str, argv_strs);
-    fprintf(stderr, "failed to exec %s: %s\n",
-        (char*)(long)(cmd+off_bytevector_data),
-        strerror(errno));
-    exit(EXIT_FAILURE);
-  } else if(pid > 0){
-    /* parent */
-    ref(rvec,off_vector_data+0*wordsize) = fix(pid);
-
-    if (stdin_fd < 0) {
-      close(infds[0]); /* ignore errors */
-      ref(rvec,off_vector_data+1*wordsize) = fix(infds[1]);
-    }
-    if (stdout_fd < 0) {
-      close(outfds[1]);
-      ref(rvec,off_vector_data+2*wordsize) = fix(outfds[0]);
-    }
-    if (stderr_fd < 0) {
-      close(errfds[1]);
-      ref(rvec,off_vector_data+3*wordsize) = fix(errfds[0]);
-    }
-    return rvec;
-  } else {
-    return ik_errno_to_code();
-  }
-}
 
 /* end of file */
