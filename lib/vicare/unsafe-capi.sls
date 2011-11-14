@@ -103,6 +103,7 @@
     posix-write				posix-pwrite
     posix-lseek
     posix-readv				posix-writev
+    posix-select			posix-select-fd
     posix-fcntl				posix-ioctl
     posix-dup				posix-dup2
     posix-pipe				posix-mkfifo
@@ -437,6 +438,14 @@
 
 (define-inline (posix-writev fd buffers)
   (foreign-call "ikrt_posix_writev" fd buffers))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-select nfds read_fds write_fds except_fds sec usec)
+  (foreign-call "ikrt_posix_select" nfds read_fds write_fds except_fds sec usec))
+
+(define-inline (posix-select-fd fd sec usec)
+  (foreign-call "ikrt_posix_select_fd" fd sec usec))
 
 ;;; --------------------------------------------------------------------
 

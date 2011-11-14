@@ -1538,16 +1538,139 @@ ikrt_posix_writev (ikptr fd, ikptr buffers, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_select (ikptr ndfs,
-                   ikptr read_fds, ikptr write_fds, ikptr except_fds,
-                   ikptr sec, ikptr usec)
+ikrt_posix_select (ikptr nfds_fx,
+                   ikptr read_fds_ell, ikptr write_fds_ell, ikptr except_fds_ell,
+                   ikptr sec, ikptr usec,
+                   ikpcb * pcb)
 {
-  return void_object;
+  ikptr                 L;      /* iterator for input lists */
+  ikptr                 R;      /* output list of read-ready fds */
+  ikptr                 W;      /* output list of write-ready fds */
+  ikptr                 E;      /* output list of except-ready fds */
+  ikptr                 vec;    /* the vector to be returned to the caller */
+  fd_set                read_fds;
+  fd_set                write_fds;
+  fd_set                except_fds;
+  struct timeval        timeout;
+  int                   fd, nfds=0;
+  int                   rv;
+  /* Fill the fdset for read-ready descriptors. */
+  FD_ZERO(&read_fds);
+  for (L=read_fds_ell; pair_tag == tagof(L); L = ref(L, off_cdr)) {
+    fd = unfix(ref(L, off_car));
+    if (nfds < fd)
+      nfds = fd;
+    FD_SET(fd, &read_fds);
+  }
+  /* Fill the fdset for write-ready descriptors. */
+  FD_ZERO(&write_fds);
+  for (L=write_fds_ell; pair_tag == tagof(L); L = ref(L, off_cdr)) {
+    fd = unfix(ref(L, off_car));
+    if (nfds < fd)
+      nfds = fd;
+    FD_SET(fd, &write_fds);
+  }
+  /* Fill the fdset for except-ready descriptors. */
+  FD_ZERO(&except_fds);
+  for (L=except_fds_ell; pair_tag == tagof(L); L = ref(L, off_cdr)) {
+    fd = unfix(ref(L, off_car));
+    if (nfds < fd)
+      nfds = fd;
+    FD_SET(fd, &except_fds);
+  }
+  /* Perform the selection. */
+  if (false_object == nfds_fx)
+    ++nfds;
+  else
+    nfds = unfix(nfds_fx);
+  timeout.tv_sec  = unfix(sec);
+  timeout.tv_usec = unfix(usec);
+  errno = 0;
+  rv    = select(nfds, &read_fds, &write_fds, &except_fds, &timeout);
+  if (0 == rv) { /* timeout has expired */
+    return fix(0);
+  } else if (-1 == rv) { /* an error occurred */
+    return ik_errno_to_code();
+  } else { /* success, let's harvest the fds */
+    /* Build the vector  to be returned and prevent  it from being garbage
+       collected while building other objects. */
+    vec = ik_safe_alloc(pcb, align(disp_vector_data+3*wordsize)) + vector_tag;
+    ref(vec, off_vector_length) = fix(3);
+    ref(vec, off_vector_data+0*wordsize) = null_object;
+    ref(vec, off_vector_data+1*wordsize) = null_object;
+    ref(vec, off_vector_data+2*wordsize) = null_object;
+    pcb->root0 = &vec;
+    {
+      /* Build a list of read-ready file descriptors. */
+      for (L=read_fds_ell, R=null_object; pair_tag == tagof(L); L=ref(L,off_cdr)) {
+        ikptr fdx = ref(L, off_car);
+        if (FD_ISSET(unfix(fdx), &read_fds)) {
+          ikptr P = ik_safe_alloc(pcb, pair_size) + pair_tag;
+          ref(P, off_car) = fdx;
+          ref(P, off_cdr) = R;
+          ref(vec, off_vector_data+0*wordsize) = P;
+          R = P;
+        }
+      }
+      /* Build a list of write-ready file descriptors. */
+      for (L=write_fds_ell, W=null_object; pair_tag == tagof(L); L = ref(L, off_cdr)) {
+        ikptr fdx = ref(L, off_car);
+        if (FD_ISSET(unfix(fdx), &write_fds)) {
+          ikptr P = ik_safe_alloc(pcb, pair_size) + pair_tag;
+          ref(P, off_car) = fdx;
+          ref(P, off_cdr) = W;
+          ref(vec, off_vector_data+1*wordsize) = W = P;
+        }
+      }
+      /* Build a list of except-ready file descriptors. */
+      for (L=except_fds_ell, E=null_object; pair_tag == tagof(L); L = ref(L, off_cdr)) {
+        ikptr fdx = ref(L, off_car);
+        if (FD_ISSET(unfix(fdx), &except_fds)) {
+          ikptr P = ik_safe_alloc(pcb, pair_size) + pair_tag;
+          ref(P, off_car) = fdx;
+          ref(P, off_cdr) = E;
+          ref(vec, off_vector_data+2*wordsize) = E = P;
+        }
+      }
+    }
+    pcb->root0 = NULL;
+    return vec;
+  }
 }
 ikptr
-ikrt_posix_select_fd (ikptr fd)
+ikrt_posix_select_fd (ikptr fdx, ikptr sec, ikptr usec, ikpcb * pcb)
 {
-  return void_object;
+  ikptr                 vec;    /* the vector to be returned to the caller */
+  fd_set                read_fds;
+  fd_set                write_fds;
+  fd_set                except_fds;
+  struct timeval        timeout;
+  int                   fd;
+  int                   rv;
+  FD_ZERO(&read_fds);
+  FD_ZERO(&write_fds);
+  FD_ZERO(&except_fds);
+  fd = unfix(fdx);
+  FD_SET(fd, &read_fds);
+  FD_SET(fd, &write_fds);
+  FD_SET(fd, &except_fds);
+  timeout.tv_sec  = unfix(sec);
+  timeout.tv_usec = unfix(usec);
+  errno = 0;
+  rv    = select(1+fd, &read_fds, &write_fds, &except_fds, &timeout);
+  if (0 == rv) { /* timeout has expired */
+    return fix(0);
+  } else if (-1 == rv) { /* an error occurred */
+    return ik_errno_to_code();
+  } else { /* success, let's harvest the events */
+    /* Build the vector to be returned. */
+    vec = ik_safe_alloc(pcb, align(disp_vector_data+3)) + vector_tag;
+    ref(vec, off_vector_length) = fix(3);
+    ref(vec, off_vector_data+0*wordsize) = (FD_ISSET(fd, &read_fds))?   fdx : false_object;
+    ref(vec, off_vector_data+1*wordsize) = (FD_ISSET(fd, &write_fds))?  fdx : false_object;
+    ref(vec, off_vector_data+2*wordsize) = (FD_ISSET(fd, &except_fds))? fdx : false_object;
+    return vec;
+  }
 }
 
 /* ------------------------------------------------------------------ */

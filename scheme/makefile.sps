@@ -630,6 +630,8 @@
     (rewinddir					i v)
     (rmdir					i v)
     (seekdir					i v)
+    (select					i v)
+    (select-fd					i v)
     (setenv					i v)
     (stat					i v)
     (symlink					i v)

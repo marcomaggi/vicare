@@ -1,6 +1,6 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under  the terms of  the GNU General  Public License version  3 as
@@ -117,11 +117,12 @@
     posix-write			pwrite
     lseek
     readv			writev
+    select			select-fd
     fcntl			ioctl
     dup				dup2
     pipe			mkfifo
 
-    ;; interface to "select()"
+    ;; time functions
     nanosleep
     )
   (import (except (ikarus)
@@ -224,6 +225,7 @@
 		  posix-write			pwrite
 		  lseek
 		  readv				writev
+		  select			select-fd
 		  fcntl				ioctl
 		  dup				dup2
 		  pipe				mkfifo
@@ -286,11 +288,11 @@
   (assertion-violation who "expected string or bytevector as pathname argument" obj))
 
 (define-argument-validation (list-of-strings who obj)
-  (for-all string? obj)
+  (and (list? obj) (for-all string? obj))
   (assertion-violation who "expected list of strings as argument" obj))
 
 (define-argument-validation (list-of-bytevectors who obj)
-  (for-all bytevector? obj)
+  (and (list? obj) (for-all bytevector? obj))
   (assertion-violation who "expected list of bytevectors as argument" obj))
 
 (define-argument-validation (struct-stat who obj)
@@ -330,6 +332,17 @@
 (define-argument-validation (fixnum/pointer/false who obj)
   (or (not obj) (fixnum? obj) (pointer? obj))
   (assertion-violation who "expected false, fixnum or pointer as argument" obj))
+
+(define-argument-validation (false/fd who obj)
+  (or (not obj) (fixnum? obj) (unsafe.fx<= 0 obj))
+  (assertion-violation who "expected false or file descriptor as argument" obj))
+
+(define-argument-validation (list-of-fds who obj)
+  (and (list? obj)
+       (for-all (lambda (fd)
+		  (and (fixnum? fd) (unsafe.fx<= 0 fd)))
+	 obj))
+  (assertion-violation who "expected list of file descriptors as argument" obj))
 
 
 ;;;; errors handling
@@ -1505,6 +1518,43 @@
       (if (negative? rv)
 	  (raise-errno-error who rv fd buffers)
 	rv))))
+
+;;; --------------------------------------------------------------------
+
+(define (select nfds read-fds write-fds except-fds sec usec)
+  (define who 'select)
+  (with-arguments-validation (who)
+      ((false/fd	nfds)
+       (list-of-fds	read-fds)
+       (list-of-fds	write-fds)
+       (list-of-fds	except-fds)
+       (secfx		sec)
+       (usecfx		usec))
+    (let ((rv (capi.posix-select nfds read-fds write-fds except-fds sec usec)))
+      (if (fixnum? rv)
+	  (if (unsafe.fxzero? rv)
+	      (values '() '() '()) ;timeout expired
+	    (raise-errno-error who rv nfds read-fds write-fds except-fds sec usec))
+	;; success, extract lists of ready fds
+	(values (unsafe.vector-ref rv 0)
+		(unsafe.vector-ref rv 1)
+		(unsafe.vector-ref rv 2))))))
+
+(define (select-fd fd sec usec)
+  (define who 'select-fd)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd)
+       (secfx		sec)
+       (usecfx		usec))
+    (let ((rv (capi.posix-select-fd fd sec usec)))
+      (if (fixnum? rv)
+	  (if (unsafe.fxzero? rv)
+	      (values #f #f #f) ;timeout expired
+	    (raise-errno-error who rv fd sec usec))
+	;; success, extract the statuses
+	(values (unsafe.vector-ref rv 0)
+		(unsafe.vector-ref rv 1)
+		(unsafe.vector-ref rv 2))))))
 
 ;;; --------------------------------------------------------------------
 

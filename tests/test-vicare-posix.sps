@@ -754,6 +754,70 @@
 	       (exit 0))))))
     => "ciao")
 
+;;; --------------------------------------------------------------------
+;;; select
+
+  (let-values (((in ou) (pipe)))
+    (unwind-protect
+	(check	;timeout
+	    (let-values (((r w e) (select #f `(,in) '() `(,in ,ou) 0 0)))
+	      (list r w e))
+	  => '(() () ()))
+      (close in)
+      (close ou)))
+
+  (let-values (((in ou) (pipe)))
+    (unwind-protect
+	(check	;read ready
+	    (begin
+	      (posix-write ou '#vu8(1) 1)
+	      (let-values (((r w e) (select #f `(,in) '() `(,in) 0 0)))
+		(list r w e)))
+	  => `((,in) () ()))
+      (close in)
+      (close ou)))
+
+  (let-values (((in ou) (pipe)))
+    (unwind-protect
+	(check	;write ready
+	    (let-values (((r w e) (select #f '() `(,ou) `(,ou) 0 0)))
+	      (list r w e))
+	  => `(() (,ou) ()))
+      (close in)
+      (close ou)))
+
+;;; --------------------------------------------------------------------
+;;; select-fd
+
+  (let-values (((in ou) (pipe)))
+    (unwind-protect
+	(check	;timeout
+	    (let-values (((r w e) (select-fd in 0 0)))
+	      (list r w e))
+	  => '(#f #f #f))
+      (close in)
+      (close ou)))
+
+  (let-values (((in ou) (pipe)))
+    (unwind-protect
+	(check	;read ready
+	    (begin
+	      (posix-write ou '#vu8(1) 1)
+	      (let-values (((r w e) (select-fd in 0 0)))
+		(list r w e)))
+	  => `(,in #f #f))
+      (close in)
+      (close ou)))
+
+  (let-values (((in ou) (pipe)))
+    (unwind-protect
+	(check	;write ready
+	    (let-values (((r w e) (select-fd ou 0 0)))
+	      (list r w e))
+	  => `(#f ,ou #f))
+      (close in)
+      (close ou)))
+
   #t)
 
 

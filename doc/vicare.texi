@@ -6739,6 +6739,40 @@ written, else raise an exception.
 
 @c ------------------------------------------------------------
 
+@defun select @var{nfds} @var{read-fds} @var{write-fds} @var{except-fds} @var{sec} @var{usec}
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for read, write or exceptional events on selected lists
+of file descriptors.
+
+@var{nfds} must be false or a non--negative fixnum, when false it
+defaults to the maximum file descriptor value in the given lists; it is
+the maximum file descriptor number in the sets to be checked for events,
+plus one.  @var{read-fds}, @var{write-fds} and @var{except-fds} must be
+nil or lists of file descriptors to be checked for events.  @var{sec}
+and @var{usec} must be fixnums representing timeout seconds and
+microseconds.
+
+If the timeout expires before any event arrives: return 3 values all
+being nil.  If an error occurs: raise an exception.  Else return 3
+values being lists of file descriptors, respectively, ready for reading,
+writing or an exceptional condition.
+@end defun
+
+
+@defun select-fd @var{fd} @var{sec} @var{usec}
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for read, write or exceptional events on the single file
+descriptor @var{fd}.  @var{sec} and @var{usec} must be fixnums
+representing timeout seconds and microseconds.
+
+If the timeout expires before any event arrives: return 3 values all
+being false.  If an error occurs: raise an exception.  Else return 3
+values being false or @var{fd}, respectively, if @var{fd} is ready for
+reading, writing or an exceptional condition.
+@end defun
+
+@c ------------------------------------------------------------
+
 @defun fcntl @var{fd} @var{command}
 @defunx fcntl @var{fd} @var{command} @var{arg}
 Interface to the C function @cfunc{fcntl}, @glibcref{Control Operations,
@@ -9156,6 +9190,41 @@ written, else return an encoded @code{errno} value.
 
 @c ------------------------------------------------------------
 
+@deftypefun ikptr ikrt_posix_select (ikptr @var{nfds}, ikptr @var{read_fds}, ikptr @var{write_fds}, ikptr @var{except_fds}, ikptr @var{sec}, ikptr @var{usec}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for read, write or exceptional events on selected lists
+of file descriptors.
+
+@var{nfds} must be false or a non--negative fixnum, when false it
+defaults to the maximum file descriptor value in the given lists; it is
+the maximum file descriptor number in the sets to be checked for events,
+plus one.  @var{read_fds}, @var{write_fds} and @var{except_fds} must be
+nil or lists of file descriptors to be checked for events.  @var{sec}
+and @var{usec} must be fixnums representing timeout seconds and
+microseconds.
+
+Return the fixnum zero if the timeout expired before any event arrived;
+else return a vector of 3 elements being lists of file descriptors,
+respectively, ready for reading, writing or an exceptional condition.
+If an error occurs: return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_select_fd (ikptr @var{fd}, ikptr @var{sec}, ikptr @var{usec}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for read, write or exceptional events on the single file
+descriptor @var{fd}.  @var{sec} and @var{usec} must be fixnums
+representing timeout seconds and microseconds.
+
+Return the fixnum zero if the timeout expired before any event arrived;
+else return a vector of 3 elements being false or @var{fd},
+respectively, if @var{fd} is ready for reading, writing or an
+exceptional condition.  If an error occurs: return an encoded
+@code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
 @deftypefun ikptr ikrt_posix_fcntl (ikptr @var{fd}, ikptr @var{command}, ikptr @var{arg})
 Interface to the C function @cfunc{fcntl}, @glibcref{Control Operations,
 fcntl}.  Perform the operation specified by @var{command} on the file
@@ -9177,6 +9246,7 @@ fixnum representing the return value of @cfunc{ioctl}, else return an
 encoded @code{errno} value.
 @end deftypefun
 
+@c ------------------------------------------------------------
 
 @deftypefun ikptr ikrt_posix_dup (ikptr @var{fd})
 Interface to the C function @cfunc{dup}, @glibcref{Duplicating
@@ -9193,6 +9263,7 @@ Descriptors, dup}.  Duplicate the file descriptor @var{old} to
 @code{errno} value.
 @end deftypefun
 
+@c ------------------------------------------------------------
 
 @deftypefun ikptr ikrt_posix_pipe (ikpcb * @var{pcb})
 Interface to the C function @cfunc{pipe}, @glibcref{Creating a Pipe,
@@ -9854,7 +9925,7 @@ finally compute the aligned block size:
 @example
 ikpcb     pcb = ...;
 long int  number_of_elements = ...;
-long int  requested_size = sizeof(ikptr) * number_of_elements;
+long int  requested_size = wordsize * number_of_elements;
 long int  block_size     = disp_vector_data + requested_size;
 lont int  aligned_size   = align(block_size);
 ikptr     vec = ik_safe_alloc(pcb, aligned_size) + vector_tag;
@@ -9871,17 +9942,26 @@ fixnum, so usually a full allocation looks like this:
 
 @example
 ikpcb     pcb;
-long int  size;
-ikptr     bv;
-uint8_t * data_area;
+long int  len;
+ikptr     vec;
 
 pcb  = ...;
-size = ...;
-bv   = ik_safe_alloc(pcb, align(disp_vector_data+size))
+len  = ...;
+vec  = ik_safe_alloc(pcb, align(disp_vector_data+wordsize*len))
        + vector_tag;
 
-ref(bv, off_vector_length) = fix(size);
-data_area = bv + off_vector_data;
+ref(vec, off_vector_length) = fix(len);
+@end example
+
+@noindent
+to fill a vector of 5 items with fixnums we should do:
+
+@example
+ref(vec, off_vector_data+0*wordsize) = fix(10);
+ref(vec, off_vector_data+1*wordsize) = fix(20);
+ref(vec, off_vector_data+2*wordsize) = fix(30);
+ref(vec, off_vector_data+3*wordsize) = fix(40);
+ref(vec, off_vector_data+4*wordsize) = fix(50);
 @end example
 
 
@@ -9918,20 +9998,6 @@ vector length is a fixnum.
 Notice that on both @math{32} bits and @math{64} bits platforms: the
 first byte of the data area is at the same offset from the first byte of
 the vector memory block.
-
-Example, to fill a vector of 5 items with fixnums we should do:
-
-@example
-void
-some_function (ikptr the_vec)
-@{
-  ref(the_vec, off_vector_data+0*wordsize) = fix(10);
-  ref(the_vec, off_vector_data+1*wordsize) = fix(20);
-  ref(the_vec, off_vector_data+2*wordsize) = fix(30);
-  ref(the_vec, off_vector_data+3*wordsize) = fix(40);
-  ref(the_vec, off_vector_data+4*wordsize) = fix(50);
-@}
-@end example
 @end defmac
 
 @c page
