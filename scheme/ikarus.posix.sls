@@ -368,22 +368,10 @@
 	  (string-append (errno->string errno) ": " (utf8->string msg))
 	(string-append "unknown errno code " (number->string (- errno)))))))
 
-(define raise/strerror
-  (case-lambda
-   ((who errno-code)
-    (raise/strerror who errno-code #f))
-   ((who errno-code filename)
-    (raise (condition
-	    (make-error)
-	    (make-who-condition who)
-	    (make-message-condition (strerror errno-code))
-	    (if filename
-		(make-i/o-filename-error filename)
-	      (condition)))))))
-
 (define (raise-errno-error who errno . irritants)
   (raise (condition
 	  (make-error)
+	  (make-errno-condition errno)
 	  (make-who-condition who)
 	  (make-message-condition (strerror errno))
 	  (make-irritants-condition irritants))))
@@ -391,6 +379,7 @@
 (define (raise-errno-error/filename who errno filename . irritants)
   (raise (condition
 	  (make-error)
+	  (make-errno-condition errno)
 	  (make-who-condition who)
 	  (make-message-condition (strerror errno))
 	  (make-i/o-filename-error filename)
@@ -736,7 +725,7 @@
       ((string  x))
     (let ((rv (capi.posix-system (string->utf8 x))))
       (if (unsafe.fx< rv 0)
-	  (raise/strerror who rv)
+	  (raise-errno-error who rv x)
 	rv))))
 
 (define fork
@@ -752,13 +741,13 @@
     (with-arguments-validation (who)
 	((procedure  parent-proc)
 	 (procedure  child-proc))
-      (let ((pid (capi.posix-fork)))
-	(cond ((unsafe.fxzero? pid)
+      (let ((rv (capi.posix-fork)))
+	(cond ((unsafe.fxzero? rv)
 	       (child-proc))
-	      ((unsafe.fx< pid 0)
-	       (raise/strerror who pid))
+	      ((unsafe.fx< rv 0)
+	       (raise-errno-error who rv))
 	      (else
-	       (parent-proc pid))))))))
+	       (parent-proc rv))))))))
 
 (define (execl filename . argv)
   (execv filename argv))
@@ -815,14 +804,14 @@
        (fixnum	options))
     (let ((rv (capi.posix-waitpid pid options)))
       (if (unsafe.fx< rv 0)
-	  (raise/strerror who rv)
+	  (raise-errno-error who rv pid options)
 	rv))))
 
 (define (wait)
   (define who 'wait)
   (let ((rv (capi.posix-wait)))
     (if (unsafe.fx< rv 0)
-	(raise/strerror who rv)
+	(raise-errno-error who rv)
       rv)))
 
 (let-syntax
@@ -1024,7 +1013,7 @@
       (let ((v (capi.posix-file-size pathname.bv)))
 	(if (>= v 0)
 	    v
-	  (raise/strerror who v pathname))))))
+	  (raise-errno-error/filename who v pathname))))))
 
 ;;; --------------------------------------------------------------------
 
