@@ -3,7 +3,7 @@
 AUTOMAKE_OPTIONS	= foreign
 SUBDIRS			= src scheme doc lib tests
 EXTRA_DIST		= README COPYING GPL-3		\
-			  configure.sh prepare.sh	\
+			  configure.sh			\
 			  scripts/make-last-revision	\
 			  scripts/vie
 dist_doc_DATA		= README COPYING GPL-3
