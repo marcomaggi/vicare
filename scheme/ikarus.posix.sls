@@ -243,6 +243,14 @@
 	    unsafe.))
 
 
+;;;; helpers
+
+(define-inline (file-descriptor? obj)
+  (and (fixnum? obj)
+       (unsafe.fx>= obj 0)
+       (unsafe.fx<  obj FD_SETSIZE)))
+
+
 ;;;; arguments validation
 
 (define-argument-validation (procedure who obj)
@@ -276,7 +284,7 @@
   (assertion-violation who "expected fixnum gid as argument" obj))
 
 (define-argument-validation (file-descriptor who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (file-descriptor? obj)
   (assertion-violation who "expected fixnum file descriptor as argument" obj))
 
 (define-argument-validation (signal who obj)
@@ -334,13 +342,13 @@
   (assertion-violation who "expected false, fixnum or pointer as argument" obj))
 
 (define-argument-validation (false/fd who obj)
-  (or (not obj) (fixnum? obj) (unsafe.fx<= 0 obj))
+  (or (not obj) (file-descriptor? obj))
   (assertion-violation who "expected false or file descriptor as argument" obj))
 
 (define-argument-validation (list-of-fds who obj)
   (and (list? obj)
        (for-all (lambda (fd)
-		  (and (fixnum? fd) (unsafe.fx<= 0 fd)))
+		  (file-descriptor? fd))
 	 obj))
   (assertion-violation who "expected list of file descriptors as argument" obj))
 
