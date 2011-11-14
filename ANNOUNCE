@@ -40,6 +40,8 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d3
 ------------------------
 
+* The configuration process is now really long (sorry).
+
 * Restructured most of the POSIX API, in a way non-backwards compatible.
   Still no sockets API available in this release.
 
@@ -58,6 +60,9 @@ Notes for revision 0.2d3
     make-textual-file-descriptor-input/output-port
     make-textual-file-descriptor-input/output-port*
     port-fd
+
+* Added  experimental boot image  for 64-bit  platforms, generated  on a
+  32-bit machine.  Hope it works.
 
 
 Notes for revision 0.2d2
