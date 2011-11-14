@@ -115,7 +115,7 @@
     (when ikfasl
       (fprintf (current-error-port) "Serializing ~s ...\n" ikfasl)
       (let-values (((dir name) (posix.split-file-name ikfasl)))
-	(posix.mkdir dir))
+	(posix.mkdir dir #o755))
       (let ((port (open-file-output-port ikfasl (file-options no-fail))))
 	(unwind-protect
 	    (fasl-write (make-serialized-library contents) port)

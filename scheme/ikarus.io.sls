@@ -605,7 +605,7 @@
     (prefix (vicare unsafe-capi)
 	    capi.)
     (vicare unsafe-unicode)
-    (vicare errno))
+    (vicare platform-constants))
 
 
 ;;;; emergency debugging
