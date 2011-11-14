@@ -608,6 +608,7 @@
     (lstat					i v)
     (lutimes					i v)
     (mkdir					i v)
+    (mkdir/parents				i v)
     (mkfifo					i v)
     (nanosleep					i v)
     (open					i v)

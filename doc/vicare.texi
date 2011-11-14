@@ -5908,6 +5908,12 @@ provided by the @posix{} @api{}, one returning a bytevector and one
 returning a string; the one returning a string has name ending with the
 suffix @samp{/string}.
 
+Whenever a function in the @posix{} @api{} fails: it raises an exception
+with compound condition type @condition{error}, @condition{errno},
+@condition{who}, @condition{message}, @condition{irritants}; if the
+function involves a file, the additional type @condition{i/o-filename}
+is present.
+
 @c page
 @node posix conditions
 @section Condition object types
@@ -6495,6 +6501,14 @@ Directories, mkdir}.  Create a new directory file system entry with name
 @var{pathname}; @var{mode} must be a fixnum specifying access
 permissions.  If successful return unspecified values, else raise an
 exception.
+@end defun
+
+
+@defun mkdir/parents @var{pathname} @var{mode}
+Create a new directory file system entry with name @var{pathname} and
+all its parents if they do not exist; @var{mode} must be a fixnum
+specifying access permissions for all the components.  If successful
+return unspecified values, else raise an exception.
 @end defun
 
 

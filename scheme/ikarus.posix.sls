@@ -97,7 +97,8 @@
     posix-remove		rename
 
     ;; file system directories
-    mkdir			rmdir
+    mkdir			mkdir/parents
+    rmdir
     getcwd			getcwd/string
     chdir			fchdir
     opendir			fdopendir
@@ -207,7 +208,8 @@
 		  posix-remove			rename
 
 		  ;; file system directories
-		  mkdir				rmdir
+		  mkdir				mkdir/parents
+		  rmdir
 		  getcwd			getcwd/string
 		  chdir				fchdir
 		  opendir			fdopendir
@@ -901,7 +903,7 @@
       (let* ((S  (%make-stat))
 	     (rv (capi.posix-stat pathname.bv S)))
 	(if (unsafe.fx< rv 0)
-	    (raise-errno-error who rv pathname)
+	    (raise-errno-error/filename who rv pathname)
 	  S)))))
 
 (define (lstat pathname)
@@ -912,7 +914,7 @@
       (let* ((S  (%make-stat))
 	     (rv (capi.posix-lstat pathname.bv S)))
 	(if (unsafe.fx< rv 0)
-	    (raise-errno-error who rv pathname)
+	    (raise-errno-error/filename who rv pathname)
 	  S)))))
 
 (define (fstat fd)
@@ -938,7 +940,7 @@
 			      (let ((rv (?func pathname.bv follow-symlinks?)))
 				(if (boolean? rv)
 				    rv
-				  (raise-errno-error who rv pathname))))))
+				  (raise-errno-error/filename who rv pathname))))))
 			))))
   (define-file-is file-is-directory?		capi.posix-file-is-directory?)
   (define-file-is file-is-char-device?		capi.posix-file-is-char-device?)
@@ -979,7 +981,7 @@
       (let ((rv (capi.posix-file-exists? pathname.bv)))
 	(if (boolean? rv)
 	    rv
-	  (raise-errno-error who rv pathname))))))
+	  (raise-errno-error/filename who rv pathname))))))
 
 (define (access pathname how)
   (define who 'access)
@@ -990,7 +992,7 @@
       (let ((rv (capi.posix-access pathname.bv how)))
 	(if (boolean? rv)
 	    rv
-	  (raise-errno-error who rv pathname how))))))
+	  (raise-errno-error/filename who rv pathname how))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1030,7 +1032,7 @@
 				  (if (unsafe.fxzero? rv)
 				      (+ (* #e1e9 (unsafe.vector-ref timespec 0))
 					 (unsafe.vector-ref timespec 1))
-				    (raise-errno-error who rv pathname))))))
+				    (raise-errno-error/filename who rv pathname))))))
 			  ))))
   (define-file-time file-atime	capi.posix-file-atime)
   (define-file-time file-mtime	capi.posix-file-mtime)
@@ -1049,19 +1051,18 @@
       (let ((rv (capi.posix-chown pathname.bv owner group)))
 	(if (unsafe.fxzero? rv)
 	    rv
-	  (raise-errno-error who rv pathname owner group))))))
+	  (raise-errno-error/filename who rv pathname owner group))))))
 
-(define (fchown pathname owner group)
+(define (fchown fd owner group)
   (define who 'fchown)
   (with-arguments-validation (who)
-      ((pathname  pathname)
-       (pid       owner)
-       (gid	  group))
-    (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-fchown pathname.bv owner group)))
-	(if (unsafe.fxzero? rv)
-	    rv
-	  (raise-errno-error who rv pathname owner group))))))
+      ((file-descriptor	fd)
+       (pid		owner)
+       (gid		group))
+    (let ((rv (capi.posix-fchown fd owner group)))
+      (if (unsafe.fxzero? rv)
+	  rv
+	(raise-errno-error who rv fd owner group)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1074,18 +1075,17 @@
       (let ((rv (capi.posix-chmod pathname.bv mode)))
 	(if (unsafe.fxzero? rv)
 	    rv
-	  (raise-errno-error who rv pathname mode))))))
+	  (raise-errno-error/filename who rv pathname mode))))))
 
-(define (fchmod pathname mode)
+(define (fchmod fd mode)
   (define who 'fchmod)
   (with-arguments-validation (who)
-      ((pathname  pathname)
-       (fixnum    mode))
-    (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-fchmod pathname.bv mode)))
-	(if (unsafe.fxzero? rv)
-	    rv
-	  (raise-errno-error who rv pathname mode))))))
+      ((file-descriptor fd)
+       (fixnum		mode))
+    (let ((rv (capi.posix-fchmod fd mode)))
+      (if (unsafe.fxzero? rv)
+	  rv
+	(raise-errno-error who rv fd mode)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1110,7 +1110,7 @@
       (let ((rv (capi.posix-utime pathname.bv atime mtime)))
 	(if (unsafe.fxzero? rv)
 	    rv
-	  (raise-errno-error who rv pathname atime mtime))))))
+	  (raise-errno-error/filename who rv pathname atime mtime))))))
 
 (define (utimes pathname atime.sec atime.usec mtime.sec mtime.usec)
   (define who 'utimes)
@@ -1124,7 +1124,7 @@
       (let ((rv (capi.posix-utimes pathname.bv atime.sec atime.usec mtime.sec mtime.usec)))
 	(if (unsafe.fxzero? rv)
 	    rv
-	  (raise-errno-error who rv pathname atime.sec atime.usec mtime.sec mtime.usec))))))
+	  (raise-errno-error/filename who rv pathname atime.sec atime.usec mtime.sec mtime.usec))))))
 
 (define (lutimes pathname atime.sec atime.usec mtime.sec mtime.usec)
   (define who 'lutimes)
@@ -1138,7 +1138,7 @@
       (let ((rv (capi.posix-lutimes pathname.bv atime.sec atime.usec mtime.sec mtime.usec)))
 	(if (unsafe.fxzero? rv)
 	    rv
-	  (raise-errno-error who rv pathname atime.sec atime.usec mtime.sec mtime.usec))))))
+	  (raise-errno-error/filename who rv pathname atime.sec atime.usec mtime.sec mtime.usec))))))
 
 (define (futimes fd atime.sec atime.usec mtime.sec mtime.usec)
   (define who 'futimes)
@@ -1166,7 +1166,7 @@
       (let ((rv (capi.posix-link old-pathname.bv new-pathname.bv)))
 	(if (unsafe.fxzero? rv)
 	    rv
-	  (raise-errno-error who rv old-pathname new-pathname))))))
+	  (raise-errno-error/filename who rv old-pathname new-pathname))))))
 
 (define (symlink file-pathname link-pathname)
   (define who 'symlink)
@@ -1178,7 +1178,7 @@
       (let ((rv (capi.posix-symlink file-pathname.bv link-pathname.bv)))
 	(if (unsafe.fxzero? rv)
 	    rv
-	  (raise-errno-error who rv file-pathname link-pathname))))))
+	  (raise-errno-error/filename who rv file-pathname link-pathname))))))
 
 (define (readlink link-pathname)
   (define who 'readlink)
@@ -1188,7 +1188,7 @@
       (let ((rv (capi.posix-readlink link-pathname.bv)))
 	(if (bytevector? rv)
 	    rv
-	  (raise-errno-error who rv link-pathname))))))
+	  (raise-errno-error/filename who rv link-pathname))))))
 
 (define (readlink/string link-pathname)
   ((filename->string-func) (readlink link-pathname)))
@@ -1201,7 +1201,7 @@
       (let ((rv (capi.posix-realpath pathname.bv)))
 	(if (bytevector? rv)
 	    rv
-	  (raise-errno-error who rv pathname))))))
+	  (raise-errno-error/filename who rv pathname))))))
 
 (define (realpath/string pathname)
   ((filename->string-func) (realpath pathname)))
@@ -1228,7 +1228,7 @@
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-remove pathname.bv)))
 	(unless (unsafe.fxzero? rv)
-	  (raise-errno-error who rv pathname))))))
+	  (raise-errno-error/filename who rv pathname))))))
 
 (define (rename old-pathname new-pathname)
   (define who 'rename)
@@ -1239,7 +1239,7 @@
 		     (new-pathname.bv new-pathname))
       (let ((rv (capi.posix-rename old-pathname.bv new-pathname.bv)))
 	(unless (unsafe.fxzero? rv)
-	  (raise-errno-error who rv old-pathname new-pathname))))))
+	  (raise-errno-error/filename who rv old-pathname new-pathname))))))
 
 
 ;;;; file system directories
@@ -1252,7 +1252,22 @@
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-mkdir pathname.bv mode)))
 	(unless (unsafe.fxzero? rv)
-	  (raise-errno-error who rv pathname mode))))))
+	  (raise-errno-error/filename who rv pathname mode))))))
+
+(define (mkdir/parents pathname mode)
+  (define who 'mkdir/parents)
+  (with-arguments-validation (who)
+      ((pathname  pathname)
+       (fixnum	  mode))
+    (let next-component ((pathname pathname))
+      (if (file-exists? pathname)
+	  (unless (file-is-directory? pathname #f)
+	    (error who "path component is not a directory" pathname))
+	(let-values (((base suffix) (split-file-name pathname)))
+	  (unless (unsafe.fxzero? (unsafe.string-length base))
+	    (next-component base))
+	  (unless (unsafe.fxzero? (unsafe.string-length suffix))
+	    (mkdir pathname mode)))))))
 
 (define (rmdir pathname)
   (define who 'rmdir)
@@ -1261,7 +1276,7 @@
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-rmdir pathname.bv)))
 	(unless (unsafe.fxzero? rv)
-	  (raise-errno-error who rv pathname))))))
+	  (raise-errno-error/filename who rv pathname))))))
 
 (define (getcwd)
   (define who 'getcwd)
@@ -1284,7 +1299,7 @@
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-chdir pathname.bv)))
 	(unless (unsafe.fxzero? rv)
-	  (raise-errno-error who rv pathname))))))
+	  (raise-errno-error/filename who rv pathname))))))
 
 (define (fchdir fd)
   (define who 'fchdir)
@@ -1352,7 +1367,7 @@
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-opendir pathname.bv)))
 	(if (fixnum? rv)
-	    (raise-errno-error who rv pathname)
+	    (raise-errno-error/filename who rv pathname)
 	  (begin0-let ((stream (make-directory-stream pathname rv #f #f)))
 	    (directory-stream-guardian stream)))))))
 
@@ -1431,7 +1446,7 @@
       (let ((rv (capi.posix-open pathname.bv flags mode)))
 	(if (unsafe.fx<= 0 rv)
 	    rv
-	  (raise-errno-error who rv pathname flags mode))))))
+	  (raise-errno-error/filename who rv pathname flags mode))))))
 
 (define (close fd)
   (define who 'close)
@@ -1626,7 +1641,7 @@
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-mkfifo pathname.bv mode)))
 	(unless (unsafe.fxzero? rv)
-	  (raise-errno-error who rv pathname mode))))))
+	  (raise-errno-error/filename who rv pathname mode))))))
 
 
 ;;;; time functions
