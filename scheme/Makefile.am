@@ -103,6 +103,7 @@ try-vicare-boot: $(EXTRA_DIST) ikarus.config.ss
 
 EXTRA_DIST= last-revision				\
 	vicare.boot.4.prebuilt				\
+	vicare.boot.8.prebuilt				\
 	\
 	ikarus.compiler.sls				\
 	ikarus.compiler.altcogen.ss			\
