@@ -46,6 +46,7 @@
 #include <sys/mman.h>
 #include <sys/param.h>
 #include <sys/resource.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -143,22 +144,6 @@ ikrt_posix_environ (ikpcb* pcb)
   }
   pcb->root0 = 0;
   return ac;
-}
-
-ikptr
-ikrt_setenv (ikptr key, ikptr val, ikptr overwrite)
-{
-  return ikrt_posix_setenv (key, val, overwrite);
-}
-ikptr
-ikrt_unsetenv (ikptr key)
-{
-  return ikrt_posix_unsetenv (key);
-}
-ikptr
-ikrt_environ (ikpcb* pcb)
-{
-  return ikrt_posix_environ (pcb);
 }
 
 
@@ -1518,6 +1503,27 @@ ikrt_posix_mkfifo (ikptr pathname_bv, ikptr mode)
   pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   rv       = mkfifo(pathname, unfix(mode));
+  if (0 == rv)
+    return fix(0);
+  else
+    return ik_errno_to_code();
+}
+
+
+/** --------------------------------------------------------------------
+ ** Network sockets.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_bind (ikptr sock, ikptr sockaddr_bv)
+{
+  struct sockaddr *     addr;
+  socklen_t             len;
+  int                   rv;
+  addr  = VICARE_BYTEVECTOR_DATA_VOIDP(sockaddr_bv);
+  len   = unfix(VICARE_BYTEVECTOR_LENGTH_FX(sockaddr_bv));
+  errno = 0;
+  rv    = bind(unfix(sock), addr, len);
   if (0 == rv)
     return fix(0);
   else

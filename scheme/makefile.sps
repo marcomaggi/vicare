@@ -568,6 +568,7 @@
     (WSTOPSIG					i v)
     (WTERMSIG					i v)
     (access					i v)
+    (bind					i v)
     (chdir					i v)
     (chmod					i v)
     (chown					i v)

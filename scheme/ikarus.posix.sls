@@ -123,6 +123,9 @@
     dup				dup2
     pipe			mkfifo
 
+    ;; sockets
+    bind
+
     ;; time functions
     nanosleep
 
@@ -234,7 +237,10 @@
 		  dup				dup2
 		  pipe				mkfifo
 
-		  ;; interface to "select()"
+		  ;; sockets
+		  bind
+
+		  ;; time functions
 		  nanosleep
 
 		  ;; miscellaneous functions
@@ -1642,6 +1648,17 @@
       (let ((rv (capi.posix-mkfifo pathname.bv mode)))
 	(unless (unsafe.fxzero? rv)
 	  (raise-errno-error/filename who rv pathname mode))))))
+
+
+;;;; sockets
+
+(define (bind sock sockaddr)
+  (define who 'bind)
+  (with-arguments-validation (who)
+      ((bytevector	sockaddr))
+    (let ((rv (capi.posix-bind sock sockaddr)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock sockaddr)))))
 
 
 ;;;; time functions

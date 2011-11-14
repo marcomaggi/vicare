@@ -112,6 +112,9 @@
     glibc-sync				glibc-fsync
     glibc-fdatasync
 
+    ;; network sockets
+    posix-bind
+
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
     platform-open-input/output-fd	platform-close-fd
@@ -482,6 +485,13 @@
 
 (define-inline (glibc-fdatasync fd)
   (foreign-call "ikrt_glibc_fdatasync" fd))
+
+
+;;;; network sockets
+
+(define-inline (posix-bind sock sockaddr-bv)
+  (foreign-call "ikrt_posix_bind" sock sockaddr-bv))
+
 
 
 ;;;; platform API for file descriptors

@@ -38,7 +38,8 @@
         cp0-size-limit cp0-effort-limit
         expand/optimize expand/scc-letrec expand optimizer-output
         tag-analysis-output perform-tag-analysis
-        current-core-eval current-letrec-pass)
+        current-core-eval current-letrec-pass
+	bind)
     (vicare include)
     (ikarus.fasl.write)
     (ikarus.intel-assembler))

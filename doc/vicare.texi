@@ -5871,6 +5871,7 @@ set to @false{}.
 * posix link::                  Hard and symbolic links.
 * posix dir::                   File system directories.
 * posix fd::                    File descriptors.
+* posix socket::                Network sockets.
 * posix time::                  Time related functions.
 * posix misc::                  Miscellaneous functions.
 @end menu
@@ -6937,6 +6938,11 @@ Files, mkfifo}.  Create a FIFO special file with name @var{pathname} and
 mode @var{mode}, which must be a fixnum.  If successful return
 unspecified values, else raise an exception.
 @end defun
+
+@c page
+@node posix socket
+@section Network sockets
+
 
 
 @c page
@@ -8234,6 +8240,7 @@ adaptation.
 * capi posix link::             Hard and symbolic links.
 * capi posix dir::              File system directories.
 * capi posix fd::               File descriptors at low level.
+* capi posix socket::           Network sockets.
 * capi posix time::             Time and date.
 @end menu
 
@@ -9299,6 +9306,11 @@ which must be a bytevector, and mode @var{mode}, which must be a fixnum.
 If successful return the fixnum zero, else return an encoded
 @code{errno} value.
 @end deftypefun
+
+@c page
+@node capi posix socket
+@subsection Network sockets
+
 
 @c page
 @node capi posix time
