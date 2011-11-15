@@ -7101,6 +7101,23 @@ the name or false if @var{index} is invalid.
 @end defun
 
 
+@defun if-nameindex
+Interface to the C function @cfunc{if_nameindex}, @glibcref{Interface
+Naming, if_nameindex}.  Build and return an association list having
+fixnums as keys and strings as values; the fixnums are the interface
+indexes, the strings are the corresponding interface names.
+
+@example
+(import (vicare))
+
+(if-nameindex)
+@result{} ((4 . "wlan0")
+    (2 . "eth0")
+    (1 . "lo"))
+@end example
+@end defun
+
+
 @c page
 @node linux
 @chapter The @gnu{}+Linux interface
@@ -9539,6 +9556,14 @@ Naming, if_indextoname}.  Convert the index associated to an interface
 to the corresponding string name.  @var{index} must be a fixnum
 representing the index.  Return a bytevector holding the name or false
 if @var{index} is invalid.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_glibc_if_nameindex (ikpcb * @var{pcb})
+Interface to the C function @cfunc{if_nameindex}, @glibcref{Interface
+Naming, if_nameindex}.  Build and return an association list having
+fixnums as keys and bytevectors as values; the fixnums are the interface
+indexes, the bytevectors are the corresponding interface names.
 @end deftypefun
 
 
