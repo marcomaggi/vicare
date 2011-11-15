@@ -821,6 +821,15 @@
   #t)
 
 
+(parametrise ((check-test-name	'sockets))
+
+  (check
+      (sockaddr-un-pathname/string (make-sockaddr-un "/tmp/marco/the-unix-socket"))
+    => "/tmp/marco/the-unix-socket")
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

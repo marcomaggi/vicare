@@ -697,6 +697,11 @@
 
     (split-file-name				i v)
 
+    (make-sockaddr-un				i v)
+    (sockaddr-un-pathname			i v)
+    (sockaddr-un-pathname/string		i v)
+
+
 ;;; GNU C Library functions
     (clearenv					i v)
     (dirfd					i v)

@@ -116,6 +116,7 @@
     posix-bind				posix-getsockname
     glibc-if-nametoindex		glibc-if-indextoname
     glibc-if-nameindex
+    posix-make-sockaddr-un		posix-sockaddr-un-pathname
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -507,6 +508,14 @@
 
 (define-inline (glibc-if-nameindex)
   (foreign-call "ikrt_glibc_if_nameindex"))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-make-sockaddr-un pathname-bv)
+  (foreign-call "ikrt_posix_make_sockaddr_un" pathname-bv))
+
+(define-inline (posix-sockaddr-un-pathname addr)
+  (foreign-call "ikrt_posix_sockaddr_un_pathname" addr))
 
 
 ;;;; platform API for file descriptors

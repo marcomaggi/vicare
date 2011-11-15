@@ -125,6 +125,9 @@
 
     ;; sockets
     bind			getsockname
+    make-sockaddr-un
+    sockaddr-un-pathname	sockaddr-un-pathname/string
+
 
     ;; time functions
     nanosleep
@@ -239,6 +242,8 @@
 
 		  ;; sockets
 		  bind				getsockname
+		  make-sockaddr-un
+		  sockaddr-un-pathname		sockaddr-un-pathname/string
 
 		  ;; time functions
 		  nanosleep
@@ -1668,6 +1673,27 @@
       (if (bytevector? rv)
 	  rv
 	(raise-errno-error who rv sock)))))
+
+;;; --------------------------------------------------------------------
+
+(define (make-sockaddr-un pathname)
+  (define who 'make-sockaddr-un)
+  (with-arguments-validation (who)
+      ((pathname	pathname))
+    (with-pathnames ((pathname.bv pathname))
+      (capi.posix-make-sockaddr-un pathname.bv))))
+
+(define (sockaddr-un-pathname addr)
+  (define who 'sockaddr-un-pathname)
+  (with-arguments-validation (who)
+      ((bytevector	addr))
+    (let ((rv (capi.posix-sockaddr-un-pathname addr)))
+      (if (bytevector? rv)
+	  rv
+	(error who "expected bytevector holding \"struct sockaddr_un\" as argument" addr)))))
+
+(define (sockaddr-un-pathname/string addr)
+  ((filename->string-func) (sockaddr-un-pathname addr)))
 
 
 ;;;; time functions

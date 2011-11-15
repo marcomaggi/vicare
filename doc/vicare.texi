@@ -6944,6 +6944,27 @@ unspecified values, else raise an exception.
 @section Network sockets
 
 
+@defun make-sockaddr-un @var{pathname}
+Given a @var{pathname} representing the pathname of a local socket,
+build and return a bytevector holding the @code{struct sockaddr_un}
+representing it.
+@end defun
+
+
+@defun sockaddr-un-pathname @var{addr}
+@defunx sockaddr-un-pathname/string @var{addr}
+Giben a bytevector @var{addr}, which must be the return value of a
+previous call to @func{make-sockaddr-un}, holding a @code{struct
+sockaddr_un}: @func{sockaddr-un-pathname} builds and returns a
+bytevector holding the corresponding socket pathname,
+@func{sockaddr-un-pathname/string} builds and returns a string holding
+the corresponding socket pathname.  If the data in @var{addr} is
+invalid: an exception is raised.
+@end defun
+
+@c ------------------------------------------------------------
+
+
 
 @c page
 @node posix time
@@ -9381,6 +9402,23 @@ Address, getsockname}.  Retrieve informations about the address bound to
 the socket descriptor @var{sock}.  If successful return a bytevector
 holding the @code{struct sockaddr}, else return an encoded @code{errno}
 value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_make_sockaddr_un (ikptr @var{pathname}, ikpcb * @var{pcb})
+Given a bytevector @var{pathname} representing the pathname of a local
+socket, build and return a bytevector holding the @code{struct
+sockaddr_un} representing it.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_sockaddr_un_pathname (ikptr @var{addr}, ikpcb * @var{pcb})
+Giben a bytevector @var{addr}, which must be the return value of a
+previous call to @cfunc{ikrt_posix_make_sockaddr_un}, holding a
+@code{struct sockaddr_un} build and return a bytevector holding the
+corresponding socket pathname.  If the data in @var{addr} is invalid:
+return false.
 @end deftypefun
 
 

@@ -51,6 +51,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/uio.h>
+#include <sys/un.h>
 #include <sys/wait.h>
 
 
@@ -1547,6 +1548,50 @@ ikrt_posix_getsockname (ikptr sock, ikpcb * pcb)
     return bv;
   } else {
     return ik_errno_to_code();
+  }
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_make_sockaddr_un (ikptr pathname_bv, ikpcb * pcb)
+{
+  char *                pathname;
+  long                  pathname_len;
+  pathname     = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  pathname_len = unfix(VICARE_BYTEVECTOR_LENGTH_FX(pathname_bv));
+  {
+#undef SIZE
+#define SIZE    (sizeof(struct sockaddr_un)+pathname_len) /* better safe than sorry */
+    uint8_t               buffer[SIZE];
+    struct sockaddr_un *  name = (void *)buffer;
+    ikptr                 addr_bv;
+    long                  addr_len;
+    char *                data;
+    name->sun_family = AF_LOCAL;
+    memcpy(name->sun_path, pathname, pathname_len+1);
+    addr_len = SUN_LEN(name);
+    addr_bv  = ik_bytevector_alloc(pcb, addr_len);
+    data     = VICARE_BYTEVECTOR_DATA_CHARP(addr_bv);
+    memcpy(data, name, addr_len);
+    return addr_bv;
+  }
+}
+ikptr
+ikrt_posix_sockaddr_un_pathname (ikptr addr_bv, ikpcb * pcb)
+{
+  struct sockaddr_un *  addr = VICARE_BYTEVECTOR_DATA_VOIDP(addr_bv);
+  if (AF_LOCAL == addr->sun_family) {
+    ikptr               pathname_bv;
+    long                pathname_len;
+    char *              pathname;
+    pathname_len = strlen(addr->sun_path);
+    pathname_bv  = ik_bytevector_alloc(pcb, pathname_len);
+    pathname     = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+    memcpy(pathname, addr->sun_path, pathname_len+1);
+    return pathname_bv;
+  } else {
+    return false_object;
   }
 }
 
