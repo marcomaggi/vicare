@@ -9349,6 +9349,24 @@ If successful return the fixnum zero, else return an encoded
 @subsection Network sockets
 
 
+@deftypefun ikptr ikrt_posix_bind (ikptr @var{sock}, ikptr @var{sockaddr})
+Interface to the C function @cfunc{bind}, @glibcref{Setting Address,
+bind}.  Binds the socket descriptor @var{sock} to the address specified
+by the @code{struct sockaddr} in the bytevector @var{sockaddr}.  If
+successful return the fixnum zero, else return an encoded @code{errno}
+value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getsockname (ikptr @var{sock}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getsockanme}, @glibcref{Setting
+Address, getsockname}.  Retrieve informations about the address bound to
+the socket descriptor @var{sock}.  If successful return a bytevector
+holding the @code{struct sockaddr}, else return an encoded @code{errno}
+value.
+@end deftypefun
+
+
 @c page
 @node capi posix time
 @subsection Time and date
