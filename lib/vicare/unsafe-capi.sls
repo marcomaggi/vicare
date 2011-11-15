@@ -115,6 +115,7 @@
     ;; network sockets
     posix-bind				posix-getsockname
     glibc-if-nametoindex		glibc-if-indextoname
+    glibc-if-nameindex
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -503,6 +504,9 @@
 
 (define-inline (glibc-if-indextoname index)
   (foreign-call "ikrt_glibc_if_indextoname" index))
+
+(define-inline (glibc-if-nameindex)
+  (foreign-call "ikrt_glibc_if_nameindex"))
 
 
 ;;;; platform API for file descriptors

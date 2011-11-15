@@ -106,6 +106,8 @@
   (check (if-nametoindex "lo")		=> 1)
   (check (if-nametoindex "eth0")	=> 2)
 
+  (check-pretty-print (list 'alist-of-ifaces (if-nameindex)))
+
 ;;; --------------------------------------------------------------------
 
   #t)

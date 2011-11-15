@@ -707,6 +707,7 @@
     (sync					i v)
     (if-nametoindex				i v)
     (if-indextoname				i v)
+    (if-nameindex				i v)
 
 ;;; Linux functions
     (WIFCONTINUED				i v)

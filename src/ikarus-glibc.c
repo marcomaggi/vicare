@@ -203,6 +203,38 @@ ikrt_glibc_if_indextoname (ikptr index, ikpcb * pcb)
     return bv;
   }
 }
+ikptr
+ikrt_glibc_if_nameindex (ikpcb * pcb) {
+  struct if_nameindex * arry;           /* the list of interfaces */
+  ikptr         alist = null_object;    /* the result alist */
+  ikptr         spine;                  /* the next pair to prepend to the alist */
+  ikptr         entry;                  /* the next alist entry */
+  long          len;                    /* the length of interface name */
+  ikptr         bv;                     /* bytevector holding the interface name */
+  char *        data;                   /* data area in the bytevector */
+  int           i;
+  pcb->root0 = &alist;
+  arry = if_nameindex();
+  for (i=0; 0 != arry[i].if_index; ++i) {
+    /* Add a pair to the alist spine. */
+    spine = ik_safe_alloc(pcb, pair_size) + pair_tag;
+    ref(spine, off_cdr) = alist;
+    alist               = spine;
+    /* Add an entry to the alist. */
+    entry = ik_safe_alloc(pcb, pair_size) + pair_tag;
+    ref(spine, off_car) = entry;
+    /* Fill the entry. */
+    len  = strlen(arry[i].if_name);
+    bv   = ik_bytevector_alloc(pcb, len);
+    data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+    memcpy(data, arry[i].if_name, len);
+    ref(entry, off_car) = fix(arry[i].if_index);
+    ref(entry, off_cdr) = bv;
+  }
+  if_freenameindex(arry);
+  pcb->root0 = NULL;
+  return alist;
+}
 
 
 /** --------------------------------------------------------------------

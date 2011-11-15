@@ -42,6 +42,7 @@
 
     ;; sockets
     if-nametoindex		if-indextoname
+    if-nameindex
     )
   (import (except (ikarus)
 		  ;; operating system environment variables
@@ -59,6 +60,7 @@
 
 		  ;; sockets
 		  if-nametoindex		if-indextoname
+		  if-nameindex
 		  )
     (prefix (only (ikarus.posix)
 		  directory-stream?
@@ -219,6 +221,11 @@
     (let ((rv (capi.glibc-if-indextoname index)))
       (and rv (utf8->string rv)))))
 
+(define-for-glibc (if-nameindex)
+  (let ((rv (capi.glibc-if-nameindex)))
+    (map (lambda (entry)
+	   (cons (car entry) (utf8->string (cdr entry))))
+      rv)))
 
 
 ;;;; done
