@@ -97,6 +97,20 @@
   #t)
 
 
+(parametrise ((check-test-name	'sockets))
+
+  (check (if-indextoname 0)	=> #f)
+  (check (if-indextoname 1)	=> "lo")
+  (check (if-indextoname 2)	=> "eth0")
+
+  (check (if-nametoindex "lo")		=> 1)
+  (check (if-nametoindex "eth0")	=> 2)
+
+;;; --------------------------------------------------------------------
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

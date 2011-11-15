@@ -31,6 +31,7 @@
 #include "ikarus.h"
 #include <dirent.h>
 #include <unistd.h>
+#include <net/if.h>
 #include <sys/types.h>
 
 static VICARE_UNUSED void
@@ -166,6 +167,41 @@ ikrt_glibc_fdatasync (ikptr fd)
 #else
   feature_failure(__func__);
 #endif
+}
+
+
+/** --------------------------------------------------------------------
+ ** Sockets.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_glibc_if_nametoindex (ikptr name_bv)
+{
+  char *        name;
+  unsigned int  rv;
+  name  = VICARE_BYTEVECTOR_DATA_CHARP(name_bv);
+  rv    = if_nametoindex(name);
+  if (0 == rv)
+    return false_object;
+  else
+    return fix((long)rv);
+}
+ikptr
+ikrt_glibc_if_indextoname (ikptr index, ikpcb * pcb)
+{
+  char          buffer[1+IFNAMSIZ];
+  unsigned      i = (unsigned)unfix(index);
+  char *        rv;
+  rv = if_indextoname(i, buffer);
+  if (NULL == rv) {
+    return false_object;
+  } else {
+    long        len  = strlen(buffer);
+    ikptr       bv   = ik_bytevector_alloc(pcb, len);
+    char *      data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+    memcpy(data, buffer, len+1);
+    return bv;
+  }
 }
 
 

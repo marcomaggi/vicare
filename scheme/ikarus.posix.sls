@@ -124,7 +124,7 @@
     pipe			mkfifo
 
     ;; sockets
-    bind
+    bind			getsockname
 
     ;; time functions
     nanosleep
@@ -238,7 +238,7 @@
 		  pipe				mkfifo
 
 		  ;; sockets
-		  bind
+		  bind				getsockname
 
 		  ;; time functions
 		  nanosleep
@@ -1659,6 +1659,15 @@
     (let ((rv (capi.posix-bind sock sockaddr)))
       (unless (unsafe.fxzero? rv)
 	(raise-errno-error who rv sock sockaddr)))))
+
+(define (getsockname sock)
+  (define who 'getsockname)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock))
+    (let ((rv (capi.posix-getsockname sock)))
+      (if (bytevector? rv)
+	  rv
+	(raise-errno-error who rv sock)))))
 
 
 ;;;; time functions

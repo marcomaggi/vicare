@@ -6987,6 +6987,7 @@ of @code{FD_SETSIZE}.
 * glibc dir::                   File system directories.
 * glibc temp::                  Temporary files and directories.
 * glibc sync::                  File system synchronisation.
+* glibc socket::                Network sockets.
 @end menu
 
 @c page
@@ -7063,6 +7064,42 @@ I/O}.  Flush kernel buffer data to the file system device for the file
 descriptor @var{fd}.  If successful return unspecified values, else
 raise an exception.
 @end defun
+
+@c page
+@node glibc socket
+@section Network sockets
+
+
+@defun if-nametoindex @var{name}
+Interface to the C function @cfunc{if_nametoindex}, @glibcref{Interface
+Naming, if_nametoindex}.  Convert the string @var{name} representing a
+network interface to the corresponding internal index.  Return a fixnum
+representing the index or false if @var{name} is invalid.
+
+@example
+(import (vicare))
+
+(if-indextoname 0)      @result{} #f
+(if-indextoname 1)      @result{} "lo"
+(if-indextoname 2)      @result{} "eth0"
+@end example
+@end defun
+
+
+@defun ikptr if-indextoname @var{index}
+Interface to the C function @cfunc{if_indextoname}, @glibcref{Interface
+Naming, if_indextoname}.  Convert the fixnum @var{index} associated to
+an interface to the corresponding string name.  Return a string holding
+the name or false if @var{index} is invalid.
+
+@example
+(import (vicare))
+
+(if-nametoindex "lo")   @result{} 1
+(if-nametoindex "eth0") @result{} 2
+@end example
+@end defun
+
 
 @c page
 @node linux
@@ -9386,6 +9423,7 @@ true if the process was resumed by delivery of @code{SIGCONT}.
 * capi glibc dir::              File system directories.
 * capi glibc temp::             Temporary files and directories.
 * capi glibc sync::             File system synchronisation.
+* capi glibc socket::           Network sockets.
 @end menu
 
 @c page
@@ -9462,6 +9500,29 @@ I/O}.  Flush kernel buffer data to the file system device for the file
 descriptor @var{fd}.  If successful return the fixnum zero, else return
 an encoded @code{errno} value.
 @end deftypefun
+
+@c page
+@node capi glibc socket
+@subsection Network sockets
+
+
+@deftypefun ikptr ikrt_glibc_if_nametoindex (ikptr @var{name})
+Interface to the C function @cfunc{if_nametoindex}, @glibcref{Interface
+Naming, if_nametoindex}.  Convert a string representing a network
+interface to the corresponding internal index.  @var{name} must be a
+bytevector holding the @utf{}-8 representation of the string.  Return a
+fixnum representing the index or false if @var{name} is invalid.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_glibc_if_indextoname (ikptr @var{index}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{if_indextoname}, @glibcref{Interface
+Naming, if_indextoname}.  Convert the index associated to an interface
+to the corresponding string name.  @var{index} must be a fixnum
+representing the index.  Return a bytevector holding the name or false
+if @var{index} is invalid.
+@end deftypefun
+
 
 @c page
 @node objects

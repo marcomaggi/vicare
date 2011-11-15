@@ -1529,6 +1529,26 @@ ikrt_posix_bind (ikptr sock, ikptr sockaddr_bv)
   else
     return ik_errno_to_code();
 }
+ikptr
+ikrt_posix_getsockname (ikptr sock, ikpcb * pcb)
+{
+  char                  buffer[1024]; /* enough? */
+  struct sockaddr *     addr = (void *)buffer;
+  socklen_t             len;
+  int                   rv;
+  errno = 0;
+  rv    = getsockname(unfix(sock), addr, &len);
+  if (0 == rv) {
+    ikptr bv  = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1))
+      + bytevector_tag;
+    ref(bv, off_bytevector_length) = fix(len);
+    buffer[len] = '\0';
+    memcpy((char*)(bv+off_bytevector_data), (void *)addr, len+1);
+    return bv;
+  } else {
+    return ik_errno_to_code();
+  }
+}
 
 
 /** --------------------------------------------------------------------

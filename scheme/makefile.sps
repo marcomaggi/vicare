@@ -600,6 +600,7 @@
     (getenv					i v)
     (getpid					i v)
     (getppid					i v)
+    (getsockname				i v)
     (getumask					i v)
     (interprocess-signal->string		i v)
     (ioctl					i v)
@@ -704,6 +705,8 @@
     (mkdtemp					i v)
     (mkstemp					i v)
     (sync					i v)
+    (if-nametoindex				i v)
+    (if-indextoname				i v)
 
 ;;; Linux functions
     (WIFCONTINUED				i v)

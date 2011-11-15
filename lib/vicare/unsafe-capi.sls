@@ -113,7 +113,8 @@
     glibc-fdatasync
 
     ;; network sockets
-    posix-bind
+    posix-bind				posix-getsockname
+    glibc-if-nametoindex		glibc-if-indextoname
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -492,6 +493,16 @@
 (define-inline (posix-bind sock sockaddr-bv)
   (foreign-call "ikrt_posix_bind" sock sockaddr-bv))
 
+(define-inline (posix-getsockname sock)
+  (foreign-call "ikrt_posix_getsockname" sock))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (glibc-if-nametoindex name)
+  (foreign-call "ikrt_glibc_if_nametoindex" name))
+
+(define-inline (glibc-if-indextoname index)
+  (foreign-call "ikrt_glibc_if_indextoname" index))
 
 
 ;;;; platform API for file descriptors
