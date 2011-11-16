@@ -631,22 +631,55 @@ int     ikarus_main (int argc, char** argv, char* boot_file);
 
 ikptr   ik_errno_to_code (void);
 
-/* object utilities */
+
+/** --------------------------------------------------------------------
+ ** Object utilities: lists.
+ ** ----------------------------------------------------------------- */
+
 int     ik_list_length          (ikptr x);
 void    ik_list_to_argv         (ikptr x, char **argv);
 char**  ik_list_to_vec          (ikptr x);
 
 #define ik_pair_alloc(PCB)      (ik_safe_alloc((PCB), align(pair_size)) + pair_tag)
+
+#define VICARE_CAR(PAIR)                ref((PAIR), off_car)
+#define VICARE_CDR(PAIR)                ref((PAIR), off_cdr)
+
+#define VICARE_SET_CAR(PAIR,VALUE)      ref((PAIR), off_car) = (VALUE)
+#define VICARE_SET_CDR(PAIR,VALUE)      ref((PAIR), off_cdr) = (VALUE)
+
+#define VICARE_SET_CAR2(PAIR,VALUE1,VALUE2)      ref((PAIR), off_car) = (VALUE1) = (VALUE2)
+#define VICARE_SET_CDR2(PAIR,VALUE1,VALUE2)      ref((PAIR), off_cdr) = (VALUE1) = (VALUE2)
+
+
+/** --------------------------------------------------------------------
+ ** Object utilities: bytevectors.
+ ** ----------------------------------------------------------------- */
+
 ikptr   ik_bytevector_alloc     (ikpcb * pcb, long int requested_number_of_bytes);
+
+
+/** --------------------------------------------------------------------
+ ** Object utilities: vectors.
+ ** ----------------------------------------------------------------- */
+
 ikptr   ik_vector_alloc         (ikpcb * pcb, long int requested_number_of_items);
 
+
+/** --------------------------------------------------------------------
+ ** Object utilities: data structures.
+ ** ----------------------------------------------------------------- */
+
 ikptr   ik_struct_alloc         (ikpcb * pcb, ikptr rtd, long number_of_fields);
+
 #define VICARE_STRUCT_REF(STRUCT,FIELD)         \
   ref((STRUCT), (off_record_data+(FIELD)*wordsize))
+
 #define VICARE_STRUCT_SET(STRUCT,FIELD,VALUE)   \
   ref((STRUCT), (off_record_data+(FIELD)*wordsize)) = (VALUE)
 
-ikptr   ik_hostent_to_struct    (ikptr rtd, struct hostent * src, ikpcb * pcb);
+#define VICARE_STRUCT_SET2(STRUCT,FIELD,VALUE1,VALUE2)          \
+  ref((STRUCT), (off_record_data+(FIELD)*wordsize)) = (VALUE1) = (VALUE2)
 
 
 /** --------------------------------------------------------------------

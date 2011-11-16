@@ -1811,6 +1811,69 @@ ikrt_posix_inet_ntop (ikptr af, ikptr host_address_bv, ikpcb * pcb)
 
 /* ------------------------------------------------------------------ */
 
+static ikptr
+hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
+/* Makes use of "pcb->root1" only,  so that "pcb->root0" is available to
+   the caller. */
+{
+  ikptr dst = ik_struct_alloc(pcb, rtd, 6);
+  pcb->root1 = &dst;
+#if 0
+  ref(dst, off_record_data+0*wordsize) = false_object;
+  ref(dst, off_record_data+1*wordsize) = false_object;
+  ref(dst, off_record_data+2*wordsize) = false_object;
+  ref(dst, off_record_data+3*wordsize) = false_object;
+#else
+  { /* store the official host name */
+    long        name_len = strlen(src->h_name);
+    ikptr       name_bv  = ik_bytevector_alloc(pcb, name_len);
+    char *      name     = VICARE_BYTEVECTOR_DATA_CHARP(name_bv);
+    memcpy(name, src->h_name, name_len+1);
+    VICARE_STRUCT_SET(dst, 0, name_bv);
+  }
+  { /* store the list of aliases */
+    ikptr       list_of_aliases = null_object;
+    int         i;
+    ref(dst, off_record_data+1*wordsize) = list_of_aliases;
+    for (i=0; NULL!=src->h_aliases[i]; ++i) {
+      ikptr     pair      = ik_pair_alloc(pcb);
+      VICARE_SET_CDR(pair, list_of_aliases);
+      VICARE_STRUCT_SET2(dst, 1, list_of_aliases, pair);
+      long      alias_len = strlen(src->h_aliases[i]);
+      ikptr     alias_bv  = ik_bytevector_alloc(pcb, alias_len);
+      char *    alias     = VICARE_BYTEVECTOR_DATA_CHARP(alias_bv);
+      memcpy(alias, src->h_aliases[i], alias_len);
+      VICARE_SET_CAR(pair, alias_bv);
+    }
+  }
+  /* store the host address type */
+  VICARE_STRUCT_SET(dst, 2, fix(src->h_addrtype));
+  /* store the host address structure length */
+  VICARE_STRUCT_SET(dst, 3, fix(src->h_length));
+  ikptr first_addr = false_object;
+  { /* store the reversed list of addresses */
+    ikptr       list_of_addrs = null_object;
+    int         i;
+    ref(dst, off_record_data+4*wordsize) = list_of_addrs;
+    for (i=0; NULL!=src->h_addr_list[i]; ++i) {
+      ikptr     pair     = ik_pair_alloc(pcb);
+      VICARE_SET_CDR(pair, list_of_addrs);
+      VICARE_STRUCT_SET2(dst, 4, list_of_addrs, pair);
+      ikptr     addr_bv  = ik_bytevector_alloc(pcb, src->h_length);
+      char *    addr     = VICARE_BYTEVECTOR_DATA_CHARP(addr_bv);
+      memcpy(addr, src->h_addr_list[i], src->h_length);
+      VICARE_SET_CAR(pair, addr_bv);
+      if (0 == i)
+        first_addr = addr_bv;
+    }
+  }
+  /* store the first in the list of addresses */
+  VICARE_STRUCT_SET(dst, 5, first_addr);
+#endif
+  pcb->root1 = NULL;
+  return dst;
+}
+
 ikptr
 ikrt_posix_gethostbyname (ikptr rtd, ikptr hostname_bv, ikpcb * pcb)
 {
@@ -1821,7 +1884,7 @@ ikrt_posix_gethostbyname (ikptr rtd, ikptr hostname_bv, ikpcb * pcb)
   h_errno  = 0;
   rv       = gethostbyname(hostname);
   if (NULL != rv) {
-    return ik_hostent_to_struct(rtd, rv, pcb);
+    return hostent_to_struct(rtd, rv, pcb);
   } else {
     return fix(-h_errno);
   }
@@ -1836,7 +1899,7 @@ ikrt_posix_gethostbyname2 (ikptr rtd, ikptr hostname_bv, ikptr af, ikpcb * pcb)
   h_errno  = 0;
   rv       = gethostbyname2(hostname, unfix(af));
   if (NULL != rv) {
-    return ik_hostent_to_struct(rtd, rv, pcb);
+    return hostent_to_struct(rtd, rv, pcb);
   } else {
     return fix(-h_errno);
   }
@@ -1855,14 +1918,11 @@ ikrt_posix_gethostbyaddr (ikptr rtd, ikptr host_address_bv, ikpcb * pcb)
   h_errno  = 0;
   rv       = gethostbyaddr(host_address, host_address_len, format);
   if (NULL != rv) {
-    return ik_hostent_to_struct(rtd, rv, pcb);
+    return hostent_to_struct(rtd, rv, pcb);
   } else {
     return fix(-h_errno);
   }
 }
-
-/* ------------------------------------------------------------------ */
-
 ikptr
 ikrt_posix_host_entries (ikptr rtd, ikpcb * pcb)
 {
@@ -1872,9 +1932,8 @@ ikrt_posix_host_entries (ikptr rtd, ikpcb * pcb)
   sethostent(1);
   for (entry=gethostent(); entry; entry=gethostent()) {
     ikptr  pair        = ik_pair_alloc(pcb);
-    ref(pair, off_cdr) = list_of_entries;
-    list_of_entries    = pair;
-    ref(pair, off_car) = ik_hostent_to_struct(rtd, entry, pcb);
+    VICARE_SET_CDR2(pair, list_of_entries, pair);
+    VICARE_SET_CAR(pair, hostent_to_struct(rtd, entry, pcb));
   }
   endhostent();
   pcb->root0 = NULL;
