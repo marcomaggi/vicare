@@ -657,6 +657,7 @@
     (inet-ntop					i v)
     (inet-ntop/string				i v)
     (gethostbyname				i v)
+    (gethostbyname2				i v)
     (h_errno->string				i v)
     (h_strerror					i v)
 

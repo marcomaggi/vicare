@@ -7248,6 +7248,14 @@ of @code{struct-hostent}.  If an error occurs, return an encoded
 @end example
 @end defun
 
+
+@defun gethostbyname2 @var{hostname} @var{addrtype}
+Interface to the C function @cfunc{gethostbyname2}, @glibcref{Host Names,
+gethostbyname2}.  Like @func{gethostbyname} but allows the selection of
+the address type with the parameter @var{addrtype} which must be
+@code{AF_INET} or @code{AF_INET6}.
+@end defun
+
 @c page
 @node posix time
 @section Time related functions
@@ -9793,6 +9801,14 @@ gethostbyname}.  Given the bytevector @var{hostname} holding the
 @ascii{} representation of a host name, build and return an instance of
 @code{struct-hostent} using @var{rtd} as its type descriptor.  If an
 error occurs, return an encoded @code{h_errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_gethostbyname2 (ikptr @var{rtd}, ikptr @var{hostname}, ikptr @var{addrtype}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{gethostbyname2}, @glibcref{Host
+Names, gethostbyname2}.  Like @cfunc{ikrt_posix_gethostbyname} but
+allows the selection of the address type with @var{addrtype} which must
+be @code{AF_INET} or @code{AF_INET6}.
 @end deftypefun
 
 

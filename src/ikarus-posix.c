@@ -1901,6 +1901,21 @@ ikrt_posix_gethostbyname (ikptr rtd, ikptr hostname_bv, ikpcb * pcb)
     return fix(-h_errno);
   }
 }
+ikptr
+ikrt_posix_gethostbyname2 (ikptr rtd, ikptr hostname_bv, ikptr af, ikpcb * pcb)
+{
+  char *                hostname;
+  struct hostent *      rv;
+  hostname = VICARE_BYTEVECTOR_DATA_CHARP(hostname_bv);
+  errno    = 0;
+  h_errno  = 0;
+  rv       = gethostbyname2(hostname, unfix(af));
+  if (NULL != rv) {
+    return hostent_to_struct(rtd, rv, pcb);
+  } else {
+    return fix(-h_errno);
+  }
+}
 
 
 /** --------------------------------------------------------------------

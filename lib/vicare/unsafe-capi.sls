@@ -123,7 +123,7 @@
     posix-in6addr_loopback		posix-in6addr_any
     posix-inet_aton			posix-inet_ntoa
     posix-inet_pton			posix-inet_ntop
-    posix-gethostbyname
+    posix-gethostbyname			posix-gethostbyname2
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -574,6 +574,9 @@
 
 (define-inline (posix-gethostbyname rtd hostname)
   (foreign-call "ikrt_posix_gethostbyname" rtd hostname))
+
+(define-inline (posix-gethostbyname2 rtd hostname addrtype)
+  (foreign-call "ikrt_posix_gethostbyname2" rtd hostname addrtype))
 
 
 ;;;; platform API for file descriptors
