@@ -7075,7 +7075,14 @@ in6_addr} and as fixnum.  If the data in @var{socket_address} is
 invalid: an exception is raised.
 @end defun
 
+@c ------------------------------------------------------------
 
+@defun in6addr_loopback
+@defunx in6addr_any
+Build and return a bytevector holding the constant structures of type
+@code{struct in6_addr} defined by @code{in6addr_loopback} and
+@code{in6addr_any}.
+@end defun
 
 @c page
 @node posix time
@@ -9570,6 +9577,14 @@ in6_addr} and as fixnum.  If the data in @var{socket_address} is
 invalid: return false.
 @end deftypefun
 
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_in6addr_loopback (ikpcb * @var{pcb})
+@deftypefunx ikptr ikrt_posix_in6addr_any (ikpcb * @var{pcb})
+Build and return a bytevector holding the constant structures of type
+@code{struct in6_addr} defined by @code{in6addr_loopback} and
+@code{in6addr_any}.
+@end deftypefun
 
 
 @c page

@@ -1685,6 +1685,38 @@ ikrt_posix_sockaddr_in6_in6_port (ikptr socket_address_bv)
     fix((long)socket_address->sin6_port) : false_object;
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_in6addr_loopback (ikpcb * pcb)
+{
+  static const struct in6_addr addr = IN6ADDR_LOOPBACK_INIT;
+  ikptr                 bv;
+  char *                data;
+#undef BV_LEN
+#define BV_LEN          sizeof(struct in6_addr)
+  bv    = ik_bytevector_alloc(pcb, BV_LEN);
+  data  = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+  data[BV_LEN] = '\0';
+  memcpy(data, &addr, BV_LEN);
+  return bv;
+}
+ikptr
+ikrt_posix_in6addr_any (ikpcb * pcb)
+{
+  static const struct in6_addr addr = IN6ADDR_ANY_INIT;
+  ikptr                 bv;
+  char *                data;
+#undef BV_LEN
+#define BV_LEN          sizeof(struct in6_addr)
+  bv    = ik_bytevector_alloc(pcb, BV_LEN);
+  data  = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+  data[BV_LEN] = '\0';
+  memcpy(data, &addr, BV_LEN);
+  return bv;
+}
+
+
 
 /** --------------------------------------------------------------------
  ** Time related functions.

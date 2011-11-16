@@ -845,6 +845,15 @@
 	      (sockaddr_in.in_port sockaddr)))
     => '(#vu8(127 0 0 1) 88))
 
+  (check
+      (let* ((addr	(let ((bv (make-bytevector 4)))
+			  (bytevector-u32-set! bv 0 INADDR_BROADCAST (endianness big))
+			  bv))
+	     (sockaddr (make-sockaddr_in addr 88)))
+	(list (sockaddr_in.in_addr sockaddr)
+	      (sockaddr_in.in_port sockaddr)))
+    => '(#vu8(255 255 255 255) 88))
+
 ;;; --------------------------------------------------------------------
 
   (check
@@ -852,6 +861,16 @@
 	(list (sockaddr_in6.in6_addr sockaddr)
 	      (sockaddr_in6.in6_port sockaddr)))
     => '(#vu16b(1 2 3 4  5 6 7 8) 88))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (in6addr_loopback)
+    => '#vu8(0 0 0 0   0 0 0 0   0 0 0 0   0 0 0 1))
+
+  (check
+      (in6addr_any)
+    => '#vu8(0 0 0 0   0 0 0 0   0 0 0 0   0 0 0 0))
 
   #t)
 

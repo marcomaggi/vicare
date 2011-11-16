@@ -120,6 +120,7 @@
     posix-make-sockaddr_in		posix-make-sockaddr_in6
     posix-sockaddr_in.in_addr		posix-sockaddr_in6.in6_addr
     posix-sockaddr_in.in_port		posix-sockaddr_in6.in6_port
+    posix-in6addr_loopback		posix-in6addr_any
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -541,6 +542,14 @@
 
 (define-inline (posix-sockaddr_in6.in6_port sockaddr)
   (foreign-call "ikrt_posix_sockaddr_in6_in6_port" sockaddr))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-in6addr_loopback)
+  (foreign-call "ikrt_posix_in6addr_loopback"))
+
+(define-inline (posix-in6addr_any)
+  (foreign-call "ikrt_posix_in6addr_any"))
 
 
 ;;;; platform API for file descriptors

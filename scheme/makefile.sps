@@ -709,6 +709,9 @@
     (sockaddr_in6.in6_addr			i v)
     (sockaddr_in6.in6_port			i v)
 
+    (in6addr_loopback				i v)
+    (in6addr_any				i v)
+
 ;;; GNU C Library functions
     (clearenv					i v)
     (dirfd					i v)

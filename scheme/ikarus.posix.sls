@@ -130,6 +130,7 @@
     make-sockaddr_in		make-sockaddr_in6
     sockaddr_in.in_addr		sockaddr_in6.in6_addr
     sockaddr_in.in_port		sockaddr_in6.in6_port
+    in6addr_loopback		in6addr_any
 
     ;; time functions
     nanosleep
@@ -249,6 +250,7 @@
 		  make-sockaddr_in		make-sockaddr_in6
 		  sockaddr_in.in_addr		sockaddr_in6.in6_addr
 		  sockaddr_in.in_port		sockaddr_in6.in6_port
+		  in6addr_loopback		in6addr_any
 
 		  ;; time functions
 		  nanosleep
@@ -1753,6 +1755,14 @@
       (if (fixnum? rv)
 	  rv
 	(error who "expected bytevector holding \"struct sockaddr_in6\" as argument" sockaddr)))))
+
+;;; --------------------------------------------------------------------
+
+(define (in6addr_loopback)
+  (capi.posix-in6addr_loopback))
+
+(define (in6addr_any)
+  (capi.posix-in6addr_any))
 
 
 ;;;; time functions
