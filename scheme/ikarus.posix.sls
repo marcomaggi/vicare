@@ -134,6 +134,12 @@
     inet-aton			inet-ntoa
     inet-pton			inet-ntop
     inet-ntoa/string		inet-ntop/string
+    gethostbyname
+
+    make-struct-hostent		struct-hostent?
+    struct-hostent-h_name	struct-hostent-h_aliases
+    struct-hostent-h_addrtype	struct-hostent-h_length
+    struct-hostent-h_addr_list	struct-hostent-h_addr
 
     ;; time functions
     nanosleep
@@ -257,6 +263,12 @@
 		  inet-aton			inet-ntoa
 		  inet-pton			inet-ntop
 		  inet-ntoa/string		inet-ntop/string
+		  gethostbyname
+
+		  make-struct-hostent		struct-hostent?
+		  struct-hostent-h_name		struct-hostent-h_aliases
+		  struct-hostent-h_addrtype	struct-hostent-h_length
+		  struct-hostent-h_addr_list	struct-hostent-h_addr
 
 		  ;; time functions
 		  nanosleep
@@ -1825,6 +1837,60 @@
 (define (inet-ntop/string af addr)
   (utf8->string (inet-ntop af addr)))
 
+;;; --------------------------------------------------------------------
+
+(define-struct struct-hostent
+  (h_name	;0, bytevector, official host name
+   h_aliases	;1, list of bytevectors, host name aliases
+   h_addrtype	;2, fixnum, AF_INET or AF_INET6
+   h_length	;3, length of address bytevector
+   h_addr_list	;4, list of bytevectors holding "struct in_addr" or "struct in6_addr"
+   h_addr	;5, bytevector, first in the list of host addresses
+   ))
+
+(define (%struct-hostent-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-hostent\"")
+
+  (%display " h_name=\"")
+  (%display (utf8->string (struct-hostent-h_name S)))
+  (%display "\"")
+
+  (%display " h_aliases=")
+  (%display (map utf8->string (struct-hostent-h_aliases S)))
+
+  (%display " h_addrtype=")
+  (%display (if (unsafe.fx= AF_INET (struct-hostent-h_addrtype S))
+		"AF_INET" "AF_INET6"))
+
+  (%display " h_length=")
+  (%display (struct-hostent-h_length S))
+
+  (%display " h_addr_list=")
+  (%display (struct-hostent-h_addr_list S))
+
+  (%display " h_addr=")
+  (%display (struct-hostent-h_addr S))
+
+  (%display "]"))
+
+;;; --------------------------------------------------------------------
+
+(define (gethostbyname hostname)
+  (define who 'gethostbyname)
+  (with-arguments-validation (who)
+      ((string/bytevector  hostname))
+    (let ((rv (capi.posix-gethostbyname (type-descriptor struct-hostent)
+					(if (bytevector? hostname)
+					    hostname
+					  (string->utf8 hostname)))))
+      (if (fixnum? rv)
+	  rv
+	(begin
+	  (set-struct-hostent-h_addr_list! rv (reverse (struct-hostent-h_addr_list rv)))
+	  rv)))))
+
 
 ;;;; time functions
 
@@ -1855,10 +1921,9 @@
 
 ;;;; done
 
-(set-rtd-printer! (type-descriptor struct-stat) %struct-stat-printer)
-
-(set-rtd-printer! (type-descriptor directory-stream)
-		  %directory-stream-printer)
+(set-rtd-printer! (type-descriptor struct-stat)		%struct-stat-printer)
+(set-rtd-printer! (type-descriptor directory-stream)	%directory-stream-printer)
+(set-rtd-printer! (type-descriptor struct-hostent)	%struct-hostent-printer)
 
 )
 

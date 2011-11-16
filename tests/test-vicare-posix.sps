@@ -930,6 +930,20 @@
       (inet-ntop/string AF_INET6 '#vu16b(1 2 3 4 5 6 7 8))
     => "1:2:3:4:5:6:7:8")
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((S (gethostbyname "localhost")))
+(check-pretty-print S)
+	(list (struct-hostent? S)
+	      (utf8->string (struct-hostent-h_name S))
+	      (struct-hostent-h_aliases   S)
+	      (struct-hostent-h_addrtype  S)
+	      (struct-hostent-h_length    S)
+	      (struct-hostent-h_addr_list S)
+	      (struct-hostent-h_addr      S)))
+    => `(#t "localhost" () ,AF_INET 4 (#vu8(127 0 0 1)) #vu8(127 0 0 1)))
+
   #t)
 
 

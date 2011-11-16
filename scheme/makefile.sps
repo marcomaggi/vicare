@@ -656,6 +656,7 @@
     (inet-pton					i v)
     (inet-ntop					i v)
     (inet-ntop/string				i v)
+    (gethostbyname				i v)
 
     (make-struct-stat				i v)
     (struct-stat?				i v)
@@ -717,6 +718,15 @@
 
     (in6addr_loopback				i v)
     (in6addr_any				i v)
+
+    (make-struct-hostent			i v)
+    (struct-hostent?				i v)
+    (struct-hostent-h_name			i v)
+    (struct-hostent-h_aliases			i v)
+    (struct-hostent-h_addrtype			i v)
+    (struct-hostent-h_length			i v)
+    (struct-hostent-h_addr_list			i v)
+    (struct-hostent-h_addr			i v)
 
 ;;; GNU C Library functions
     (clearenv					i v)

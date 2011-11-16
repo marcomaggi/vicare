@@ -7166,6 +7166,70 @@ corresponding @ascii{} presentation of the Internet address.  If the
 arguments are invalid: an exception is raised.
 @end defun
 
+@c ------------------------------------------------------------
+
+@deftp {Struct Type} struct-hostent
+Data structure type used to represent at the Scheme level @code{struct
+hostent} values.  It has the following fields:
+
+@table @code
+@item h_name
+Bytevector, the official host name.
+
+@item h_aliases
+List of bytevectors, host name aliases.
+
+@item h_addrtype
+Fixnum, @code{AF_INET} or @code{AF_INET6}.
+
+@item h_length
+Fixnum, number of bytes in each host address bytevector.
+
+@item h_addr_list
+List of bytevectors each holding @code{struct in_addr} or @code{struct
+in6_addr}.
+
+@item h_addr
+Bytevector, it is the first in the list @code{h_addr_list}.
+@end table
+@end deftp
+
+
+@defun gethostbyname @var{hostname}
+Interface to the C function @cfunc{gethostbyname}, @glibcref{Host Names,
+gethostbyname}.  Given the string or bytevector @var{hostname} holding
+the @ascii{} representation of a host name, build and return an instance
+of @code{struct-hostent}.  If an error occurs, return an encoded
+@code{h_errno} value.
+
+@example
+(import (vicare))
+
+(gethostbyname "github.com")
+@result{} #["struct-hostent"
+       h_name="github.com"
+       h_aliases=()
+       h_addrtype=AF_INET
+       h_length=4
+       h_addr_list=(#vu8(207 97 227 239))
+       h_addr=#vu8(207 97 227 239)]
+
+(gethostbyname "google.com")
+@result{} #["struct-hostent"
+       h_name="google.com"
+       h_aliases=()
+       h_addrtype=AF_INET
+       h_length=4
+       h_addr_list=(#vu8(209 85 148 103)
+                    #vu8(209 85 148 99)
+                    #vu8(209 85 148 104)
+                    #vu8(209 85 148 105)
+                    #vu8(209 85 148 106)
+                    #vu8(209 85 148 147))
+       h_addr=#vu8(209 85 148 103)]
+@end example
+@end defun
+
 @c page
 @node posix time
 @section Time related functions
@@ -9701,6 +9765,16 @@ the bytevector @var{host_address} holding a @code{struct in_addr} or
 @code{struct in6_addr}, build and return a bytevector holding the
 corresponding @ascii{} presentation of the Internet address .  If the
 arguments are invalid: return false.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_gethostbyname (ikptr @var{rtd}, ikptr @var{hostname}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{gethostbyname}, @glibcref{Host Names,
+gethostbyname}.  Given the bytevector @var{hostname} holding the
+@ascii{} representation of a host name, build and return an instance of
+@code{struct-hostent} using @var{rtd} as its type descriptor.  If an
+error occurs, return an encoded @code{h_errno} value.
 @end deftypefun
 
 
