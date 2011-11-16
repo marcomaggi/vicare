@@ -396,6 +396,7 @@
     ($boot		(psyntax system $bootstrap)		#f	#t)
     (ne			(psyntax null-environment-5)		#f	#f)
     (se			(psyntax scheme-report-environment-5)	#f	#f)
+    (glibc		(vicare glibc)				#t	#f)
     ))
 
 
@@ -736,16 +737,16 @@
     (struct-hostent-h_addr			i v)
 
 ;;; GNU C Library functions
-    (clearenv					i v)
-    (dirfd					i v)
-    (fdatasync					i v)
-    (fsync					i v)
-    (mkdtemp					i v)
-    (mkstemp					i v)
-    (sync					i v)
-    (if-nametoindex				i v)
-    (if-indextoname				i v)
-    (if-nameindex				i v)
+    (clearenv					glibc)
+    (dirfd					glibc)
+    (fdatasync					glibc)
+    (fsync					glibc)
+    (mkdtemp					glibc)
+    (mkstemp					glibc)
+    (sync					glibc)
+    (if-nametoindex				glibc)
+    (if-indextoname				glibc)
+    (if-nameindex				glibc)
 
 ;;; Linux functions
     (WIFCONTINUED				i v)

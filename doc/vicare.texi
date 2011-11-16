@@ -7326,6 +7326,9 @@ of @code{FD_SETSIZE}.
 @chapter The @gnu{} C Library interface
 
 
+The following bindings are exported by the @library{vicare glibc}
+library.
+
 @menu
 * glibc env::                   Operating system environment variables.
 * glibc dir::                   File system directories.
@@ -7339,6 +7342,10 @@ of @code{FD_SETSIZE}.
 @section Operating system environment variables
 
 
+The following bindings are exported by the @library{vicare glibc}
+library.
+
+
 @defun clearenv
 Interface to the C function @cfunc{clearenv}, @glibcref{Environment
 Access, clearenv}.  Remove all the entries from the environment.  Return
@@ -7348,6 +7355,10 @@ unspecified values.
 @c page
 @node glibc dir
 @section File system directories
+
+
+The following bindings are exported by the @library{vicare glibc}
+library.
 
 
 @defun dirfd @var{stream}
@@ -7361,6 +7372,10 @@ the file descriptor, else raise an exception.
 @c page
 @node glibc temp
 @section Temporary files and directories
+
+
+The following bindings are exported by the @library{vicare glibc}
+library.
 
 
 @defun mkstemp @var{template}
@@ -7384,6 +7399,10 @@ on entering and the actual pathname on returning.  If successful return
 @c page
 @node glibc sync
 @section File system synchronisation
+
+
+The following bindings are exported by the @library{vicare glibc}
+library.
 
 
 @defun sync
@@ -7412,6 +7431,10 @@ raise an exception.
 @c page
 @node glibc socket
 @section Network sockets
+
+
+The following bindings are exported by the @library{vicare glibc}
+library.
 
 
 @defun if-nametoindex @var{name}
