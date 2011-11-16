@@ -44,6 +44,7 @@
 #include <time.h>
 #include <utime.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/param.h>
@@ -1542,11 +1543,10 @@ ikrt_posix_getsockname (ikptr sock, ikpcb * pcb)
   errno = 0;
   rv    = getsockname(unfix(sock), addr, &len);
   if (0 == rv) {
-    ikptr bv  = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1))
-      + bytevector_tag;
-    ref(bv, off_bytevector_length) = fix(len);
+    ikptr  bv   = ik_bytevector_alloc(pcb, len);
+    char * data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
     buffer[len] = '\0';
-    memcpy((char*)(bv+off_bytevector_data), (void *)addr, len+1);
+    memcpy(data, addr, len+1);
     return bv;
   } else {
     return ik_errno_to_code();
@@ -1604,18 +1604,15 @@ ikrt_posix_make_sockaddr_in (ikptr host_address_bv, ikptr port, ikpcb * pcb)
 {
   struct in_addr *      host_address = (void *)VICARE_BYTEVECTOR_DATA_CHARP(host_address_bv);
   struct sockaddr_in *  socket_address;
-  char *                data;
-  ikptr                 bv;
+  ikptr                 socket_address_bv;
 #undef BV_LEN
 #define BV_LEN  sizeof(struct sockaddr_in)
-  bv   = ik_bytevector_alloc(pcb, BV_LEN);
-  data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
-  data[BV_LEN]   = '\0';
-  socket_address = (struct sockaddr_in *) data;
+  socket_address_bv          = ik_bytevector_alloc(pcb, BV_LEN);
+  socket_address             = VICARE_BYTEVECTOR_DATA_VOIDP(socket_address_bv);
   socket_address->sin_family = AF_INET;
   socket_address->sin_port   = (unsigned short int)unfix(port);
   memcpy(&(socket_address->sin_addr), host_address, sizeof(struct in_addr));
-  return bv;
+  return socket_address_bv;
 }
 ikptr
 ikrt_posix_sockaddr_in_in_addr (ikptr socket_address_bv, ikpcb * pcb)
@@ -1624,11 +1621,12 @@ ikrt_posix_sockaddr_in_in_addr (ikptr socket_address_bv, ikpcb * pcb)
   if (AF_INET == socket_address->sin_family) {
 #undef BV_LEN
 #define BV_LEN  sizeof(struct in_addr)
-    ikptr       bv   = ik_bytevector_alloc(pcb, BV_LEN);
-    char *      data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
-    data[BV_LEN] = '\0';
-    memcpy(data, &(socket_address->sin_addr), BV_LEN);
-    return bv;
+    ikptr               host_address_bv;
+    struct in_addr *    host_address;
+    host_address_bv = ik_bytevector_alloc(pcb, BV_LEN);
+    host_address    = VICARE_BYTEVECTOR_DATA_VOIDP(host_address_bv);
+    memcpy(host_address, &(socket_address->sin_addr), BV_LEN);
+    return host_address_bv;
   } else {
     return false_object;
   }
@@ -1648,18 +1646,15 @@ ikrt_posix_make_sockaddr_in6 (ikptr host_address_bv, ikptr port, ikpcb * pcb)
 {
   struct in6_addr *     host_address = (void *)VICARE_BYTEVECTOR_DATA_CHARP(host_address_bv);
   struct sockaddr_in6 * socket_address;
-  char *                data;
-  ikptr                 bv;
+  ikptr                 socket_address_bv;
 #undef BV_LEN
 #define BV_LEN  sizeof(struct sockaddr_in6)
-  bv   = ik_bytevector_alloc(pcb, BV_LEN);
-  data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
-  data[BV_LEN]   = '\0';
-  socket_address = (struct sockaddr_in6 *) data;
+  socket_address_bv           = ik_bytevector_alloc(pcb, BV_LEN);
+  socket_address              = VICARE_BYTEVECTOR_DATA_VOIDP(socket_address_bv);
   socket_address->sin6_family = AF_INET6;
   socket_address->sin6_port   = (unsigned short int)unfix(port);
   memcpy(&(socket_address->sin6_addr), host_address, sizeof(struct in6_addr));
-  return bv;
+  return socket_address_bv;
 }
 ikptr
 ikrt_posix_sockaddr_in6_in6_addr (ikptr socket_address_bv, ikpcb * pcb)
@@ -1668,11 +1663,12 @@ ikrt_posix_sockaddr_in6_in6_addr (ikptr socket_address_bv, ikpcb * pcb)
   if (AF_INET6 == socket_address->sin6_family) {
 #undef BV_LEN
 #define BV_LEN  sizeof(struct in6_addr)
-    ikptr       bv   = ik_bytevector_alloc(pcb, BV_LEN);
-    char *      data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
-    data[BV_LEN] = '\0';
-    memcpy(data, &(socket_address->sin6_addr), BV_LEN);
-    return bv;
+    ikptr               host_address_bv;
+    struct in6_addr *   host_address;
+    host_address_bv = ik_bytevector_alloc(pcb, BV_LEN);
+    host_address    =  VICARE_BYTEVECTOR_DATA_VOIDP(host_address_bv);
+    memcpy(host_address, &(socket_address->sin6_addr), BV_LEN);
+    return host_address_bv;
   } else {
     return false_object;
   }
@@ -1690,32 +1686,47 @@ ikrt_posix_sockaddr_in6_in6_port (ikptr socket_address_bv)
 ikptr
 ikrt_posix_in6addr_loopback (ikpcb * pcb)
 {
-  static const struct in6_addr addr = IN6ADDR_LOOPBACK_INIT;
-  ikptr                 bv;
-  char *                data;
+  static const struct in6_addr constant_host_address = IN6ADDR_LOOPBACK_INIT;
+  ikptr                 host_address_bv;
+  struct in6_addr *     host_address;
 #undef BV_LEN
 #define BV_LEN          sizeof(struct in6_addr)
-  bv    = ik_bytevector_alloc(pcb, BV_LEN);
-  data  = VICARE_BYTEVECTOR_DATA_CHARP(bv);
-  data[BV_LEN] = '\0';
-  memcpy(data, &addr, BV_LEN);
-  return bv;
+  host_address_bv = ik_bytevector_alloc(pcb, BV_LEN);
+  host_address    = VICARE_BYTEVECTOR_DATA_VOIDP(host_address_bv);
+  memcpy(host_address, &constant_host_address, BV_LEN);
+  return host_address_bv;
 }
 ikptr
 ikrt_posix_in6addr_any (ikpcb * pcb)
 {
-  static const struct in6_addr addr = IN6ADDR_ANY_INIT;
-  ikptr                 bv;
-  char *                data;
+  static const struct in6_addr constant_host_address = IN6ADDR_ANY_INIT;
+  ikptr                 host_address_bv;
+  struct in6_addr *     host_address;
 #undef BV_LEN
 #define BV_LEN          sizeof(struct in6_addr)
-  bv    = ik_bytevector_alloc(pcb, BV_LEN);
-  data  = VICARE_BYTEVECTOR_DATA_CHARP(bv);
-  data[BV_LEN] = '\0';
-  memcpy(data, &addr, BV_LEN);
-  return bv;
+  host_address_bv = ik_bytevector_alloc(pcb, BV_LEN);
+  host_address    = VICARE_BYTEVECTOR_DATA_VOIDP(host_address_bv);
+  memcpy(host_address, &constant_host_address, BV_LEN);
+  return host_address_bv;
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_inet_aton (ikptr name_bv, ikpcb * pcb)
+{
+  ikptr                 host_address_bv;
+  struct in_addr *      host_address;
+  void *                name;
+  int                   rv;
+#undef BV_LEN
+#define BV_LEN          sizeof(struct in_addr)
+  host_address_bv = ik_bytevector_alloc(pcb, BV_LEN);
+  host_address    = VICARE_BYTEVECTOR_DATA_VOIDP(host_address_bv);
+  name            = VICARE_BYTEVECTOR_DATA_VOIDP(name_bv);
+  rv = inet_aton(name, host_address);
+  return (0 != rv)? host_address_bv : false_object;
+}
 
 
 /** --------------------------------------------------------------------
