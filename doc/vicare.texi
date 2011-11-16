@@ -7272,14 +7272,6 @@ of @code{struct-hostent}.  If an error occurs, return an encoded
 @end defun
 
 
-@defun gethostbyname2 @var{hostname} @var{addrtype}
-Interface to the C function @cfunc{gethostbyname2}, @glibcref{Host Names,
-gethostbyname2}.  Like @func{gethostbyname} but allows the selection of
-the address type with the parameter @var{addrtype} which must be
-@code{AF_INET} or @code{AF_INET6}.
-@end defun
-
-
 @defun gethostbyaddr @var{addr}
 Interface to the C function @cfunc{gethostbyaddr}, @glibcref{Host Names,
 gethostbyaddr}.  Given the bytevector @var{addr} holding a @code{struct
@@ -7287,6 +7279,14 @@ in_addr} or a @code{struct in6_addr}, build and return an instance of
 @code{struct-hostent}; the type of address is automatically inferred
 from the length of the bytevector.  If an error occurs: an exception is
 raised.
+@end defun
+
+
+@defun host-entries
+Interface to the C functions @cfunc{sethostent}, @cfunc{gethostent} and
+@cfunc{endhostent}, @glibcref{Host Names, gethostbyaddr}.  Build and
+return a list of @code{struct-hostent} representing the entries in the
+hosts database.
 @end defun
 
 @c page
@@ -7461,6 +7461,14 @@ indexes, the strings are the corresponding interface names.
 @end example
 @end defun
 
+@c ------------------------------------------------------------
+
+@defun gethostbyname2 @var{hostname} @var{addrtype}
+Interface to the C function @cfunc{gethostbyname2}, @glibcref{Host Names,
+gethostbyname2}.  Like @func{gethostbyname} but allows the selection of
+the address type with the parameter @var{addrtype} which must be
+@code{AF_INET} or @code{AF_INET6}.
+@end defun
 
 @c page
 @node linux
@@ -9837,14 +9845,6 @@ error occurs, return an encoded @code{h_errno} value.
 @end deftypefun
 
 
-@deftypefun ikptr ikrt_posix_gethostbyname2 (ikptr @var{rtd}, ikptr @var{hostname}, ikptr @var{addrtype}, ikpcb * @var{pcb})
-Interface to the C function @cfunc{gethostbyname2}, @glibcref{Host
-Names, gethostbyname2}.  Like @cfunc{ikrt_posix_gethostbyname} but
-allows the selection of the address type with @var{addrtype} which must
-be @code{AF_INET} or @code{AF_INET6}.
-@end deftypefun
-
-
 @deftypefun ikptr ikrt_posix_gethostbyaddr (ikptr @var{rtd}, ikptr @var{addr}, ikpcb * @var{pcb})
 Interface to the C function @cfunc{gethostbyaddr}, @glibcref{Host Names,
 gethostbyaddr}.  Given the bytevector @var{addr} holding a @code{struct
@@ -9852,6 +9852,14 @@ in_addr} or a @code{struct in6_addr}, build and return an instance of
 @code{struct-hostent} using @var{rtd} as its type descriptor; the type
 of address is automatically inferred from the length of the bytevector.
 If an error occurs, return an encoded @code{h_errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_host_entries (ikptr @var{rtd}, ikpcb * pcb)
+Interface to the C functions @cfunc{sethostent}, @cfunc{gethostent} and
+@cfunc{endhostent}, @glibcref{Host Names, gethostbyaddr}.  Build and
+return a list of @code{struct-hostent} representing the entries in the
+hosts database, using @var{rtd} as type descriptor.
 @end deftypefun
 
 @c page
@@ -10036,6 +10044,14 @@ fixnums as keys and bytevectors as values; the fixnums are the interface
 indexes, the bytevectors are the corresponding interface names.
 @end deftypefun
 
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_glibc_gethostbyname2 (ikptr @var{rtd}, ikptr @var{hostname}, ikptr @var{addrtype}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{gethostbyname2}, @glibcref{Host
+Names, gethostbyname2}.  Like @cfunc{ikrt_posix_gethostbyname} but
+allows the selection of the address type with @var{addrtype} which must
+be @code{AF_INET} or @code{AF_INET6}.
+@end deftypefun
 
 @c page
 @node objects

@@ -37,19 +37,15 @@
 #include "ikarus.h"
 #include <dirent.h>
 #include <fcntl.h>
-#include <netdb.h>
-#include <netinet/in.h>
 #include <signal.h>
 #include <stdint.h>
 #include <time.h>
 #include <utime.h>
 #include <unistd.h>
-#include <arpa/inet.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/param.h>
 #include <sys/resource.h>
-#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -1815,77 +1811,6 @@ ikrt_posix_inet_ntop (ikptr af, ikptr host_address_bv, ikpcb * pcb)
 
 /* ------------------------------------------------------------------ */
 
-static ikptr
-hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
-{
-  ikptr dst = ik_safe_alloc(pcb, align(disp_record_data+6*wordsize)) + vector_tag;
-  pcb->root0 = &dst;
-  ref(dst, off_record_rtd) = rtd;
-#if 0
-  ref(dst, off_record_data+0*wordsize) = false_object;
-  ref(dst, off_record_data+1*wordsize) = false_object;
-  ref(dst, off_record_data+2*wordsize) = false_object;
-  ref(dst, off_record_data+3*wordsize) = false_object;
-#else
-  { /* store the official host name */
-    long        name_len = strlen(src->h_name);
-    ikptr       name_bv  = ik_bytevector_alloc(pcb, name_len);
-    char *      name     = VICARE_BYTEVECTOR_DATA_CHARP(name_bv);
-    memcpy(name, src->h_name, name_len+1);
-    ref(dst, off_record_data+0*wordsize) = name_bv;
-  }
-  { /* store the list of aliases */
-    ikptr       list_of_aliases = null_object;
-    int         i;
-    pcb->root1 = &list_of_aliases;
-    for (i=0; NULL!=src->h_aliases[i]; ++i) {
-      ikptr     pair      = ik_safe_alloc(pcb, align(pair_size)) + pair_tag;
-      ref(pair, off_cdr)  = list_of_aliases;
-      list_of_aliases     = pair;
-      long      alias_len = strlen(src->h_aliases[i]);
-      ikptr     alias_bv  = ik_bytevector_alloc(pcb, alias_len);
-      char *    alias     = VICARE_BYTEVECTOR_DATA_CHARP(alias_bv);
-      memcpy(alias, src->h_aliases[i], alias_len);
-      ref(pair, off_car) = alias_bv;
-    }
-    ref(dst, off_record_data+1*wordsize) = list_of_aliases;
-    pcb->root1 = NULL;
-  }
-  { /* store the host address type */
-    ref(dst, off_record_data+2*wordsize) = fix(src->h_addrtype);
-  }
-  { /* store the host address structure length */
-    ref(dst, off_record_data+3*wordsize) = fix(src->h_length);
-  }
-  ikptr first_addr = false_object;
-  { /* store the reversed list of addresses */
-    ikptr       list_of_addrs = null_object;
-    int         i;
-    pcb->root1 = &list_of_addrs;
-    for (i=0; NULL!=src->h_addr_list[i]; ++i) {
-      ikptr     pair     = ik_safe_alloc(pcb, align(pair_size)) + pair_tag;
-      ref(pair, off_cdr) = list_of_addrs;
-      list_of_addrs      = pair;
-      ikptr     addr_bv  = ik_bytevector_alloc(pcb, src->h_length);
-      char *    addr     = VICARE_BYTEVECTOR_DATA_CHARP(addr_bv);
-      memcpy(addr, src->h_addr_list[i], src->h_length);
-      ref(pair, off_car) = addr_bv;
-      if (0 == i)
-        first_addr = addr_bv;
-    }
-    pcb->root1 = NULL;
-    ref(dst, off_record_data+4*wordsize) = list_of_addrs;
-  }
-  { /* store the first in the list of addresses */
-    ref(dst, off_record_data+5*wordsize) = first_addr;
-  }
-#endif
-  pcb->root0 = NULL;
-  return dst;
-}
-
-/* ------------------------------------------------------------------ */
-
 ikptr
 ikrt_posix_gethostbyname (ikptr rtd, ikptr hostname_bv, ikpcb * pcb)
 {
@@ -1896,7 +1821,7 @@ ikrt_posix_gethostbyname (ikptr rtd, ikptr hostname_bv, ikpcb * pcb)
   h_errno  = 0;
   rv       = gethostbyname(hostname);
   if (NULL != rv) {
-    return hostent_to_struct(rtd, rv, pcb);
+    return ik_hostent_to_struct(rtd, rv, pcb);
   } else {
     return fix(-h_errno);
   }
@@ -1911,7 +1836,7 @@ ikrt_posix_gethostbyname2 (ikptr rtd, ikptr hostname_bv, ikptr af, ikpcb * pcb)
   h_errno  = 0;
   rv       = gethostbyname2(hostname, unfix(af));
   if (NULL != rv) {
-    return hostent_to_struct(rtd, rv, pcb);
+    return ik_hostent_to_struct(rtd, rv, pcb);
   } else {
     return fix(-h_errno);
   }
@@ -1930,10 +1855,30 @@ ikrt_posix_gethostbyaddr (ikptr rtd, ikptr host_address_bv, ikpcb * pcb)
   h_errno  = 0;
   rv       = gethostbyaddr(host_address, host_address_len, format);
   if (NULL != rv) {
-    return hostent_to_struct(rtd, rv, pcb);
+    return ik_hostent_to_struct(rtd, rv, pcb);
   } else {
     return fix(-h_errno);
   }
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_host_entries (ikptr rtd, ikpcb * pcb)
+{
+  ikptr                 list_of_entries = null_object;
+  struct hostent *      entry;
+  pcb->root0 = &list_of_entries;
+  sethostent(1);
+  for (entry=gethostent(); entry; entry=gethostent()) {
+    ikptr  pair        = ik_pair_alloc(pcb);
+    ref(pair, off_cdr) = list_of_entries;
+    list_of_entries    = pair;
+    ref(pair, off_car) = ik_hostent_to_struct(rtd, entry, pcb);
+  }
+  endhostent();
+  pcb->root0 = NULL;
+  return list_of_entries;
 }
 
 

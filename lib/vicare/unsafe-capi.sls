@@ -124,7 +124,7 @@
     posix-inet_aton			posix-inet_ntoa
     posix-inet_pton			posix-inet_ntop
     posix-gethostbyname			posix-gethostbyname2
-    posix-gethostbyaddr
+    posix-gethostbyaddr			posix-host-entries
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -581,6 +581,9 @@
 
 (define-inline (posix-gethostbyaddr rtd addr)
   (foreign-call "ikrt_posix_gethostbyaddr" rtd addr))
+
+(define-inline (posix-host-entries rtd)
+  (foreign-call "ikrt_posix_host_entries" rtd))
 
 
 ;;;; platform API for file descriptors

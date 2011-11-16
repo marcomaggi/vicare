@@ -968,6 +968,10 @@
 	      (struct-hostent-h_addr      S)))
     => `(#t "localhost" () ,AF_INET 4 (#vu8(127 0 0 1)) #vu8(127 0 0 1)))
 
+  (check-pretty-print (cons '/etc/hosts (host-entries)))
+
+;;; --------------------------------------------------------------------
+
   #t)
 
 

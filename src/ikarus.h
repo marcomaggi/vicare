@@ -29,12 +29,15 @@
 #endif
 #include <assert.h>
 #include <errno.h>
+#include <limits.h>
+#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <limits.h>
-#include <errno.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <sys/resource.h>
 
 
@@ -178,7 +181,8 @@ typedef struct callback_locative{
   struct callback_locative* next;
 } callback_locative;
 
-typedef struct ikpcb{
+typedef struct ikpcb
+{
   /* the first locations may be accessed by some     */
   /* compiled code to perform overflow/underflow ops */
   ikptr   allocation_pointer;           /* offset =  0 */
@@ -628,11 +632,14 @@ int     ikarus_main (int argc, char** argv, char* boot_file);
 ikptr   ik_errno_to_code (void);
 
 /* object utilities */
-int     ik_list_length (ikptr x);
-void    ik_list_to_argv (ikptr x, char **argv);
-char**  ik_list_to_vec (ikptr x);
+int     ik_list_length          (ikptr x);
+void    ik_list_to_argv         (ikptr x, char **argv);
+char**  ik_list_to_vec          (ikptr x);
 
-ikptr   ik_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes);
+#define ik_pair_alloc(PCB)      (ik_safe_alloc((PCB), pair_size) + pair_tag)
+ikptr   ik_bytevector_alloc     (ikpcb * pcb, long int requested_number_of_bytes);
+
+ikptr   ik_hostent_to_struct    (ikptr rtd, struct hostent * src, ikpcb * pcb);
 
 
 /** --------------------------------------------------------------------

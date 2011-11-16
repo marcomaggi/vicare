@@ -609,6 +609,7 @@
     (getumask					i v)
     (h_errno->string				i v)
     (h_strerror					i v)
+    (host-entries				i v)
     (inet-aton					i v)
     (inet-ntoa					i v)
     (inet-ntoa/string				i v)

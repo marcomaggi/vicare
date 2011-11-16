@@ -133,7 +133,7 @@
     inet-pton			inet-ntop
     inet-ntoa/string		inet-ntop/string
     gethostbyname		gethostbyname2
-    gethostbyaddr
+    gethostbyaddr		host-entries
 
     make-struct-hostent		struct-hostent?
     struct-hostent-h_name	struct-hostent-h_aliases
@@ -261,7 +261,7 @@
 		  inet-pton			inet-ntop
 		  inet-ntoa/string		inet-ntop/string
 		  gethostbyname			gethostbyname2
-		  gethostbyaddr
+		  gethostbyaddr			host-entries
 
 		  make-struct-hostent		struct-hostent?
 		  struct-hostent-h_name		struct-hostent-h_aliases
@@ -1989,6 +1989,9 @@
 	(begin
 	  (set-struct-hostent-h_addr_list! rv (reverse (struct-hostent-h_addr_list rv)))
 	  rv)))))
+
+(define (host-entries)
+  (capi.posix-host-entries (type-descriptor struct-hostent)))
 
 
 ;;;; time functions
