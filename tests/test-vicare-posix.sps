@@ -837,14 +837,21 @@
     => '(#vu8(1 2 3 4) 88))
 
   (check
+      (let* ((addr	(let ((bv (make-bytevector 4)))
+			  (bytevector-u32-set! bv 0 INADDR_LOOPBACK (endianness big))
+			  bv))
+	     (sockaddr (make-sockaddr_in addr 88)))
+	(list (sockaddr_in.in_addr sockaddr)
+	      (sockaddr_in.in_port sockaddr)))
+    => '(#vu8(127 0 0 1) 88))
+
+;;; --------------------------------------------------------------------
+
+  (check
       (let ((sockaddr (make-sockaddr_in6 '#vu16b(1 2 3 4  5 6 7 8) 88)))
 	(list (sockaddr_in6.in6_addr sockaddr)
 	      (sockaddr_in6.in6_port sockaddr)))
     => '(#vu16b(1 2 3 4  5 6 7 8) 88))
-
-    ;; make-sockaddr_in		make-sockaddr_in6
-    ;; sockaddr_in.in_addr		sockaddr_in6.in6_addr
-    ;; sockaddr_in.in_port		sockaddr_in6.in6_port
 
   #t)
 

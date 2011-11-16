@@ -7002,6 +7002,22 @@ level as follows:
 @end example
 
 @noindent
+and we can use constant values to initialise the fields:
+
+@example
+(import (vicare)
+  (vicare platform-constants))
+
+(define addr (make-bytevector 4))
+(bytevector-u32-set! bv 0 INADDR_LOOPBACK (endianness big))
+
+(define sockaddr (make-sockaddr_in addr 88))
+
+(sockaddr_in.in_addr sockaddr)  @result{} #vu8(127 0 0 1)
+(sockaddr_in.in_port sockaddr)  @result{} 88
+@end example
+
+@noindent
 care must be taken when handling such raw values.
 
 
