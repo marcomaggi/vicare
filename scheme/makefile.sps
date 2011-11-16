@@ -650,6 +650,9 @@
     (wait					i v)
     (waitpid					i v)
     (writev					i v)
+    (inet-aton					i v)
+    (inet-ntoa					i v)
+    (inet-ntoa/string				i v)
 
     (make-struct-stat				i v)
     (struct-stat?				i v)

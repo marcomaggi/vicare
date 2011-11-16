@@ -131,6 +131,8 @@
     sockaddr_in.in_addr		sockaddr_in6.in6_addr
     sockaddr_in.in_port		sockaddr_in6.in6_port
     in6addr_loopback		in6addr_any
+    inet-aton			inet-ntoa
+    inet-ntoa/string
 
     ;; time functions
     nanosleep
@@ -251,6 +253,9 @@
 		  sockaddr_in.in_addr		sockaddr_in6.in6_addr
 		  sockaddr_in.in_port		sockaddr_in6.in6_port
 		  in6addr_loopback		in6addr_any
+		  inet-aton			inet-ntoa
+		  inet-ntoa/string
+
 
 		  ;; time functions
 		  nanosleep
@@ -375,6 +380,10 @@
 		  (%file-descriptor? fd))
 	 obj))
   (assertion-violation who "expected list of file descriptors as argument" obj))
+
+(define-argument-validation (string/bytevector who obj)
+  (or (string? obj) (bytevector? obj))
+  (assertion-violation who "expected string or bytevector as argument" obj))
 
 
 ;;;; errors handling
@@ -1763,6 +1772,30 @@
 
 (define (in6addr_any)
   (capi.posix-in6addr_any))
+
+;;; --------------------------------------------------------------------
+
+(define (inet-aton dotted-quad)
+  (define who 'inet-aton)
+  (with-arguments-validation (who)
+      ((string/bytevector  dotted-quad))
+    (let ((rv (capi.posix-inet_aton (if (string? dotted-quad)
+					(string->utf8 dotted-quad)
+				      dotted-quad))))
+      (if (bytevector? rv)
+	  rv
+	(error who
+	  "expected string or bytevector holding an ASCII dotted quad as argument"
+	  dotted-quad)))))
+
+(define (inet-ntoa addr)
+  (define who 'inet-ntoa)
+  (with-arguments-validation (who)
+      ((bytevector  addr))
+    (capi.posix-inet_ntoa addr)))
+
+(define (inet-ntoa/string addr)
+  (utf8->string (inet-ntoa addr)))
 
 
 ;;;; time functions

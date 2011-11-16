@@ -7084,6 +7084,39 @@ Build and return a bytevector holding the constant structures of type
 @code{in6addr_any}.
 @end defun
 
+@c ------------------------------------------------------------
+
+Dotted quad address representations can be handled as follows:
+
+@example
+(import (vicare))
+
+(inet-aton "127.0.0.1") @result{} #vu8(127 0 0 1)
+(inet-aton "ciao")      @error{} invalid argument
+
+(inet-ntoa/string '#vu8(127 0 0 1))
+@result{} "127.0.0.1"
+@end example
+
+
+@defun inet-aton @var{dotted-quad}
+@ascii{} to number.  Given the bytevector @var{dotted-quad} holding the
+@ascii{} dotted quad representation of a host address, build and return
+a bytevector holding the corresponding @code{struct in_addr}.  If
+@var{dotted-quad} is invalid: an exception is raised.
+@end defun
+
+
+@defun inet-ntoa @var{host-address}
+@defunx inet-ntoa/string @var{host-address}
+Number to @ascii{}.  Given the bytevector @var{host-address} holding a
+@code{struct in_addr}: @func{inet-ntoa} builds and returns a bytevector
+holding the corresponding @ascii{} dotted quad representation,
+@func{inet-ntoa/string} builds and returns a string holding the
+corresponding @ascii{} dotted quad representation.
+@end defun
+
+
 @c page
 @node posix time
 @section Time related functions
@@ -9586,6 +9619,21 @@ Build and return a bytevector holding the constant structures of type
 @code{in6addr_any}.
 @end deftypefun
 
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_inet_aton (ikptr @var{dotted_quad}, ikpcb * @var{pcb})
+Given the bytevector @var{dotted_quad} holding the @ascii{} dotted quad
+representation of a host address, build and return a bytevector holding
+the corresponding @code{struct in_addr}.  If @var{dotted_quad} is
+invalid: return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_inet_ntoa (ikptr @var{host_address}, ikpcb * @var{pcb})
+Given the bytevector @var{host_address} holding a @code{struct in_addr},
+build and return a bytevector holding the corresponding @ascii{} dotted
+quad representation.
+@end deftypefun
 
 @c page
 @node capi posix time

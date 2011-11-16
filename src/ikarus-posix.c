@@ -1713,19 +1713,35 @@ ikrt_posix_in6addr_any (ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_inet_aton (ikptr name_bv, ikpcb * pcb)
+ikrt_inet_aton (ikptr dotted_quad_bv, ikpcb * pcb)
 {
+  void *                dotted_quad;
   ikptr                 host_address_bv;
   struct in_addr *      host_address;
-  void *                name;
   int                   rv;
 #undef BV_LEN
 #define BV_LEN          sizeof(struct in_addr)
   host_address_bv = ik_bytevector_alloc(pcb, BV_LEN);
   host_address    = VICARE_BYTEVECTOR_DATA_VOIDP(host_address_bv);
-  name            = VICARE_BYTEVECTOR_DATA_VOIDP(name_bv);
-  rv = inet_aton(name, host_address);
+  dotted_quad     = VICARE_BYTEVECTOR_DATA_VOIDP(dotted_quad_bv);
+  rv = inet_aton(dotted_quad, host_address);
   return (0 != rv)? host_address_bv : false_object;
+}
+ikptr
+ikrt_inet_ntoa (ikptr host_address_bv, ikpcb * pcb)
+{
+  struct in_addr *      host_address;
+  ikptr                 dotted_quad_bv;
+  char *                dotted_quad;
+  char *                data;
+  long                  data_len;
+  host_address   = VICARE_BYTEVECTOR_DATA_VOIDP(host_address_bv);
+  data           = inet_ntoa(*host_address);
+  data_len       = strlen(data);
+  dotted_quad_bv = ik_bytevector_alloc(pcb, data_len);
+  dotted_quad    = VICARE_BYTEVECTOR_DATA_CHARP(dotted_quad_bv);
+  memcpy(dotted_quad, data, data_len);
+  return dotted_quad_bv;
 }
 
 

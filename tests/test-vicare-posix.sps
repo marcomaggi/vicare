@@ -38,6 +38,26 @@
 
 ;;;; helpers
 
+(define-syntax catch
+  (syntax-rules ()
+    ((_ print? . ?body)
+     (guard (E ((assertion-violation? E)
+		(when print?
+		  (check-pretty-print (condition-message E)))
+		(condition-irritants E))
+	       (else E))
+       (begin . ?body)))))
+
+(define-syntax catch-error
+  (syntax-rules ()
+    ((_ print? . ?body)
+     (guard (E ((error? E)
+		(when print?
+		  (check-pretty-print (condition-message E)))
+		(condition-irritants E))
+	       (else E))
+       (begin . ?body)))))
+
 (define-syntax with-temporary-file
   (syntax-rules ()
     ((_ (?pathname) . ?body)
@@ -872,6 +892,21 @@
       (in6addr_any)
     => '#vu8(0 0 0 0   0 0 0 0   0 0 0 0   0 0 0 0))
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (inet-aton "127.0.0.1")
+    => '#vu8(127 0 0 1))
+
+  (check
+      (catch-error #f
+	(inet-aton "ciao"))
+    => '("ciao"))
+
+  (check
+      (inet-ntoa/string '#vu8(127 0 0 1))
+    => "127.0.0.1")
+
   #t)
 
 
@@ -882,4 +917,6 @@
 ;;; end of file
 ;; Local Variables:
 ;; eval: (put 'with-temporary-file 'scheme-indent-function 1)
+;; eval: (put 'catch 'scheme-indent-function 1)
+;; eval: (put 'catch-error 'scheme-indent-function 1)
 ;; End:
