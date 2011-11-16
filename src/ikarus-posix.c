@@ -1893,6 +1893,7 @@ ikrt_posix_gethostbyname (ikptr rtd, ikptr hostname_bv, ikpcb * pcb)
   struct hostent *      rv;
   hostname = VICARE_BYTEVECTOR_DATA_CHARP(hostname_bv);
   errno    = 0;
+  h_errno  = 0;
   rv       = gethostbyname(hostname);
   if (NULL != rv) {
     return hostent_to_struct(rtd, rv, pcb);

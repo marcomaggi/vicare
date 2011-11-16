@@ -149,8 +149,6 @@
 
     INADDR_LOOPBACK INADDR_ANY INADDR_BROADCAST INADDR_NONE INET_ADDRSTRLEN INET6_ADDRSTRLEN
 
-    HOST_NOT_FOUND TRY_AGAIN NO_RECOVERY NO_ADDRESS
-
 ;;; errno codes
     errno-code		case-errno
 
@@ -200,6 +198,13 @@
     EUNATCH		EUSERS		EWOULDBLOCK
     EXDEV		EXFULL
 
+;;; h_errno codes
+    h_errno-code	case-h_errno
+
+    ;; codes
+    HOST_NOT_FOUND	TRY_AGAIN	NO_RECOVERY
+    NO_ADDRESS
+
 ;;; interprocess signals
     ;; program error
     SIGFPE		SIGILL		SIGSEGV
@@ -235,6 +240,18 @@
 	  define-inline-constant)
     (prefix (vicare unsafe-operations)
 	    unsafe.))
+
+
+;;;; helpers
+
+(define-syntax neg
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?code)
+       (let ((N (syntax->datum #'?code)))
+	 (if (number? N)
+	     (- N)
+	   #f))))))
 
 
 ;;;; miscellaneous platform constants
@@ -800,13 +817,8 @@
 (define-inline-constant INET_ADDRSTRLEN		@VALUEOF_INET_ADDRSTRLEN@)
 (define-inline-constant INET6_ADDRSTRLEN	@VALUEOF_INET6_ADDRSTRLEN@)
 
-(define-inline-constant HOST_NOT_FOUND		@VALUEOF_HOST_NOT_FOUND@)
-(define-inline-constant TRY_AGAIN		@VALUEOF_TRY_AGAIN@)
-(define-inline-constant NO_RECOVERY		@VALUEOF_NO_RECOVERY@)
-(define-inline-constant NO_ADDRESS		@VALUEOF_NO_ADDRESS@)
-
 
-;;;; friendly interface
+;;;; errno friendly interface
 
 (define-syntax errno-code
   (lambda (stx)
@@ -884,15 +896,6 @@
 
 
 ;;;; errno codes
-
-(define-syntax neg
-  (lambda (stx)
-    (syntax-case stx ()
-      ((_ ?code)
-       (let ((N (syntax->datum #'?code)))
-	 (if (number? N)
-	     (- N)
-	   #f))))))
 
 (define-inline-constant E2BIG		(neg @VALUEOF_E2BIG@))
 (define-inline-constant EACCES		(neg @VALUEOF_EACCES@))
@@ -1025,6 +1028,47 @@
 (define-inline-constant EWOULDBLOCK	(neg @VALUEOF_EWOULDBLOCK@))
 (define-inline-constant EXDEV		(neg @VALUEOF_EXDEV@))
 (define-inline-constant EXFULL		(neg @VALUEOF_EXFULL@))
+
+
+;;;; h_errno friendly interface
+
+(define-syntax h_errno-code
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?code)
+       (identifier? #'?code)
+       (let ((sym (syntax->datum #'?code)))
+	 (define them '(HOST_NOT_FOUND TRY_AGAIN NO_RECOVERY NO_ADDRESS))
+	 (if (memq sym them)
+	     #'?code
+	   (syntax-violation 'h_errno-code "invalid symbol as h_errno code" (syntax->datum stx) sym)))))))
+
+(define-syntax case-h_errno
+  (syntax-rules (else)
+    ((_ ?h_errno ((?code0 ?code ...) . ?body) ... (else . ?else-body))
+     (let ((h_errno ?h_errno))
+       (cond ((and (unsafe.fx= h_errno ?code0)
+		   (unsafe.fx= h_errno ?code)
+		   ...)
+	      . ?body)
+	     ...)))
+    ((_ ((?code0 ?code ...) . ?body) ...)
+     (let ((h_errno ?h_errno))
+       (cond ((and (unsafe.fx= h_errno (h_errno-code ?code0))
+		   (unsafe.fx= h_errno (h_errno-code ?code))
+		   ...)
+	      . ?body)
+	     ...
+	     (else . ?else-body))))
+    ))
+
+
+;;;; h_errno codes
+
+(define-inline-constant HOST_NOT_FOUND	(neg @VALUEOF_HOST_NOT_FOUND@))
+(define-inline-constant TRY_AGAIN	(neg @VALUEOF_TRY_AGAIN@))
+(define-inline-constant NO_RECOVERY	(neg @VALUEOF_NO_RECOVERY@))
+(define-inline-constant NO_ADDRESS	(neg @VALUEOF_NO_ADDRESS@))
 
 
 ;;;; interprocess signals

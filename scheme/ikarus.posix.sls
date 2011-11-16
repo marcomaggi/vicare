@@ -17,14 +17,12 @@
 
 (library (ikarus.posix)
   (export
-    ;; errno codes handling
-    errno->string
+    ;; errno and h_errno codes handling
+    errno->string		h_errno->string
+    strerror			h_strerror
 
     ;; interprocess singnal codes handling
     interprocess-signal->string
-
-    ;; error handling
-    strerror
 
     ;; system environment variables
     getenv			setenv
@@ -147,14 +145,12 @@
     ;; miscellaneous functions
     file-descriptor?)
   (import (except (ikarus)
-		  ;; errno codes handling
-		  errno->string
+		  ;; errno and h_errno codes handling
+		  errno->string			h_errno->string
+		  strerror			h_strerror
 
 		  ;; interprocess singnal codes handling
 		  interprocess-signal->string
-
-		  ;; error handling
-		  strerror
 
 		  ;; system environment variables
 		  getenv			setenv
@@ -427,12 +423,22 @@
 	  (make-i/o-filename-error filename)
 	  (make-irritants-condition irritants))))
 
+(define (raise-h_errno-error who h_errno . irritants)
+  (raise (condition
+	  (make-error)
+;;;FIXME Define "&h_errno" condition type?
+;;;	  (make-h_errno-condition h_errno)
+	  (make-who-condition who)
+	  (make-message-condition (h_strerror h_errno))
+	  (make-irritants-condition irritants))))
+
 
 ;;;; errno handling
 
 (define (errno->string negated-errno-code)
-  ;;Convert an errno  code as represented by the  (vicare errno) library
-  ;;into a string representing the errno code symbol.
+  ;;Convert   an   errno   code    as   represented   by   the   (vicare
+  ;;platform-constants)  library into  a string  representing  the errno
+  ;;code symbol.
   ;;
   (define who 'errno->string)
   (with-arguments-validation (who)
@@ -600,6 +606,68 @@
 	   #`(quote #,(datum->syntax #'?ctx (%mk-vector))))))))
 
   (define ERRNO-VECTOR (make-errno-vector)))
+
+
+;;;; h_errno handling
+
+(define (h_errno->string negated-h_errno-code)
+  ;;Convert   an   h_errno   code   as  represented   by   the   (vicare
+  ;;platform-constants) library  into a string  representing the h_errno
+  ;;code symbol.
+  ;;
+  (define who 'h_errno->string)
+  (with-arguments-validation (who)
+      ((fixnum negated-h_errno-code))
+    (let ((h_errno-code (unsafe.fx- 0 negated-h_errno-code)))
+      (and (unsafe.fx> h_errno-code 0)
+	   (unsafe.fx< h_errno-code (vector-length H_ERRNO-VECTOR))
+	   (vector-ref H_ERRNO-VECTOR h_errno-code)))))
+
+(let-syntax
+    ((make-h_errno-vector
+      (lambda (stx)
+	(define (%mk-vector)
+	  (let* ((max	(fold-left (lambda (max pair)
+				     (let ((code (cdr pair)))
+				       (cond ((not code)
+					      max)
+					     ((< max (fx- code))
+					      (fx- code))
+					     (else
+					      max))))
+			  0 h_errno-alist))
+		 (vec.len	(fx+ 1 max))
+		 ;;All the unused positions are set to #f.
+		 (vec	(make-vector vec.len #f)))
+	    (for-each (lambda (pair)
+			(when (cdr pair)
+			  (vector-set! vec (fx- (cdr pair)) (car pair))))
+	      h_errno-alist)
+	    vec))
+	(define h_errno-alist
+	  `(("HOST_NOT_FOUND"		. ,HOST_NOT_FOUND)
+	    ("TRY_AGAIN"		. ,TRY_AGAIN)
+	    ("NO_RECOVERY"		. ,NO_RECOVERY)
+	    ("NO_ADDRESS"		. ,NO_ADDRESS)))
+	(syntax-case stx ()
+	  ((?ctx)
+	   #`(quote #,(datum->syntax #'?ctx (%mk-vector))))))))
+
+  (define H_ERRNO-VECTOR (make-h_errno-vector)))
+
+(define (h_strerror h_errno)
+  (define who 'h_strerror)
+  (with-arguments-validation (who)
+      ((fixnum  h_errno))
+    (let ((msg (case-h_errno h_errno
+		 ((HOST_NOT_FOUND)	"no such host is known in the database")
+		 ((TRY_AGAIN)		"the server could not be contacted")
+		 ((NO_RECOVERY)		"non-recoverable error")
+		 ((NO_ADDRESS)		"host entry exists but without Internet address")
+		 (else			#f))))
+      (if msg
+	  (string-append (h_errno->string h_errno) ": " msg)
+	(string-append "unknown h_errno code " (number->string (- h_errno)))))))
 
 
 ;;;; interprocess singnal codes handling
@@ -1886,7 +1954,7 @@
 					    hostname
 					  (string->utf8 hostname)))))
       (if (fixnum? rv)
-	  rv
+	  (raise-h_errno-error who rv hostname)
 	(begin
 	  (set-struct-hostent-h_addr_list! rv (reverse (struct-hostent-h_addr_list rv)))
 	  rv)))))

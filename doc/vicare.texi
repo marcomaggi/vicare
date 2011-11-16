@@ -5910,10 +5910,15 @@ returning a string; the one returning a string has name ending with the
 suffix @samp{/string}.
 
 Whenever a function in the @posix{} @api{} fails: it raises an exception
-with compound condition type @condition{error}, @condition{errno},
-@condition{who}, @condition{message}, @condition{irritants}; if the
-function involves a file, the additional type @condition{i/o-filename}
-is present.
+with compound condition type @condition{error}, @condition{who},
+@condition{message}, @condition{irritants}; if the error is described by
+an @code{errno} value, an additional @condition{errno} component is
+present; if the function involves a file, an additional type
+@condition{i/o-filename} is present.
+
+Values of the @code{errno} C language variable are negated and encoded
+as fixnums.  Values of the @code{h_errno} C language variable are
+negated and encoded as fixnums.
 
 @c page
 @node posix conditions
@@ -6948,6 +6953,19 @@ With the purpose of keeping at the Scheme level the same semantics of
 the C level @posix{} @api{}, socket--related data structures are stored
 in bytevectors; such raw manipulation can cause the process to crash if
 we mishandle the values.
+
+@c ------------------------------------------------------------
+
+@defun h_errno->string @var{h_errno-code}
+Convert an encoded @code{h_errno} value to the corresponding symbolic
+string.
+@end defun
+
+
+@defun h_strerror @var{h_errno-code}
+Convert an encoded @code{h_errno} value to the corresponding descriptive
+error message string.
+@end defun
 
 @c ------------------------------------------------------------
 

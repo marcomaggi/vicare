@@ -657,6 +657,8 @@
     (inet-ntop					i v)
     (inet-ntop/string				i v)
     (gethostbyname				i v)
+    (h_errno->string				i v)
+    (h_strerror					i v)
 
     (make-struct-stat				i v)
     (struct-stat?				i v)
