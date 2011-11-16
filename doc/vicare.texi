@@ -6944,14 +6944,14 @@ unspecified values, else raise an exception.
 @section Network sockets
 
 
-With the purpose of maintaining at the Scheme level the same semantics
-of the C level @posix{} @api{}, socket--related data structures are
-stored in bytevectors; such raw manipulation can cause process crash if
+With the purpose of keeping at the Scheme level the same semantics of
+the C level @posix{} @api{}, socket--related data structures are stored
+in bytevectors; such raw manipulation can cause the process to crash if
 we mishandle the values.
 
 @c ------------------------------------------------------------
 
-Instandes of @code{struct sockaddr_un} can be handled at the Scheme
+Instances of @code{struct sockaddr_un} can be handled at the Scheme
 level as follows:
 
 @example
@@ -6975,15 +6975,15 @@ representing it.
 @end defun
 
 
-@defun sockaddr_un.pathname @var{addr}
-@defunx sockaddr_un.pathname/string @var{addr}
-Giben a bytevector @var{addr}, which must be the return value of a
-previous call to @func{make-sockaddr_un}, holding a @code{struct
+@defun sockaddr_un.pathname @var{socket_address}
+@defunx sockaddr_un.pathname/string @var{socket_address}
+Given a bytevector @var{socket_address}, which must be the return value
+of a previous call to @func{make-sockaddr_un}, holding a @code{struct
 sockaddr_un}: @func{sockaddr_un.pathname} builds and returns a
 bytevector holding the corresponding socket pathname,
 @func{sockaddr_un.pathname/string} builds and returns a string holding
-the corresponding socket pathname.  If the data in @var{addr} is
-invalid: an exception is raised.
+the corresponding socket pathname.  If the data in @var{socket_address}
+is invalid: an exception is raised.
 @end defun
 
 @c ------------------------------------------------------------
@@ -7018,7 +7018,8 @@ this data.
 Given a bytevector @var{socket-address} holding a @code{struct
 sockaddr_in}, extract the @code{in_addr} and @code{in_port} fields and
 return them as bytevector holding the corresponding @code{struct
-in_addr} and as fixnum.
+in_addr} and as fixnum.  If the data in @var{socket_address} is invalid:
+an exception is raised.
 @end defun
 
 @c ------------------------------------------------------------
@@ -7054,7 +7055,8 @@ with this data.
 Given a bytevector @var{socket-address} holding a @code{struct
 sockaddr_in6}, extract the @code{in6_addr} and @code{in6_port} fields
 and return them as bytevector holding the corresponding @code{struct
-in6_addr} and as fixnum.
+in6_addr} and as fixnum.  If the data in @var{socket_address} is
+invalid: an exception is raised.
 @end defun
 
 
@@ -9506,12 +9508,12 @@ sockaddr_un} representing it.
 @end deftypefun
 
 
-@deftypefun ikptr ikrt_posix_sockaddr_un_pathname (ikptr @var{addr}, ikpcb * @var{pcb})
-Giben a bytevector @var{addr}, which must be the return value of a
-previous call to @cfunc{ikrt_posix_make_sockaddr_un}, holding a
+@deftypefun ikptr ikrt_posix_sockaddr_un_pathname (ikptr @var{socket_address}, ikpcb * @var{pcb})
+Given a bytevector @var{socket_address}, which must be the return value
+of a previous call to @cfunc{ikrt_posix_make_sockaddr_un}, holding a
 @code{struct sockaddr_un} build and return a bytevector holding the
-corresponding socket pathname.  If the data in @var{addr} is invalid:
-return false.
+corresponding socket pathname.  If the data in @var{socket_address} is
+invalid: return false.
 @end deftypefun
 
 @c ------------------------------------------------------------
@@ -9529,7 +9531,8 @@ this data.
 Given a bytevector @var{socket_address} holding a @code{struct
 sockaddr_in}, extract the @code{in_addr} and @code{in_port} fields and
 return them as bytevector holding the corresponding @code{struct
-in_addr} and as fixnum.
+in_addr} and as fixnum.  If the data in @var{socket_address} is invalid:
+return false.
 @end deftypefun
 
 @c ------------------------------------------------------------
@@ -9547,7 +9550,8 @@ with this data.
 Given a bytevector @var{socket_address} holding a @code{struct
 sockaddr_in6}, extract the @code{in6_addr} and @code{in6_port} fields
 and return them as bytevector holding the corresponding @code{struct
-in6_addr} and as fixnum.
+in6_addr} and as fixnum.  If the data in @var{socket_address} is
+invalid: return false.
 @end deftypefun
 
 
