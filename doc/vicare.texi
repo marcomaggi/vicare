@@ -5947,6 +5947,29 @@ Accessor for the encoded @code{errno} value in @var{obj}, which must be
 an instance of @condition{errno}.
 @end defun
 
+
+@deftp {Condition Type} &h_errno
+Condition object type representing system errors described by an encoded
+@code{h_errno} value; it is derived from @condition{condition}.
+@end deftp
+
+
+@defun make-h_errno-condition @var{h_errno}
+Build and return a new @condition{h_errno} condition object holding the
+given encoded @code{h_errno} value.
+@end defun
+
+
+@defun h_errno-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of @condition{h_errno}.
+@end defun
+
+
+@defun condition-h_errno @var{obj}
+Accessor for the encoded @code{h_errno} value in @var{obj}, which must be
+an instance of @condition{h_errno}.
+@end defun
+
 @c page
 @node posix env
 @section Interfacing with the execution environment
