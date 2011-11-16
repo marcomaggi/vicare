@@ -7098,6 +7098,9 @@ Dotted quad address representations can be handled as follows:
 @result{} "127.0.0.1"
 @end example
 
+@noindent
+care must be taken when handling such raw values.
+
 
 @defun inet-aton @var{dotted-quad}
 @ascii{} to number.  Given the bytevector @var{dotted-quad} holding the
@@ -7116,6 +7119,52 @@ holding the corresponding @ascii{} dotted quad representation,
 corresponding @ascii{} dotted quad representation.
 @end defun
 
+@c ------------------------------------------------------------
+
+Addresses in presentation format can be handled as follows:
+
+@example
+#!vicare
+(import (vicare)
+  (vicare platform-constants))
+
+(inet-pton AF_INET "127.0.0.1") @result{} #vu8(127 0 0 1)
+(inet-pton AF_INET "ciao")      @error{} invalid arguments
+
+(inet-pton AF_INET6 "1:2:3:4:5:6:7:8")
+@result{} #vu16b(1 2 3 4 5 6 7 8)
+
+(inet-ntop/string AF_INET '#vu8(127 0 0 1))
+@result{} "127.0.0.1"
+
+(inet-ntop/string AF_INET6 '#vu16b(1 2 3 4 5 6 7 8))
+@result{} "1:2:3:4:5:6:7:8"
+@end example
+
+@noindent
+care must be taken when handling such raw values.
+
+
+@defun inet-pton @var{af} @var{presentation}
+Given the fixnum @var{af}, being @code{AF_INET} or @code{AF_INET6}, and
+the string or bytevector @var{presentation} holding the @ascii{}
+presentation of an Internet address, build and return a bytevector
+holding the corresponding @code{struct in_addr} or @code{struct
+in6_addr}.  If either @var{af} or @var{presentation} is invalid: raise
+an exception.
+@end defun
+
+
+@defun inet-ntop @var{af} @var{host-address}
+@defunx inet-ntop/string @var{af} @var{host-address}
+Given the fixnum @var{af}, being @code{AF_INET} or @code{AF_INET6}, and
+the bytevector @var{host-address} holding a @code{struct in_addr} or
+@code{struct in6_addr}: @func{inet-ntop} builds and returns a bytevector
+holding the corresponding @ascii{} presentation of the Internet address,
+@func{inet-ntop/string} builds and returns a string holding the
+corresponding @ascii{} presentation of the Internet address.  If the
+arguments are invalid: an exception is raised.
+@end defun
 
 @c page
 @node posix time
@@ -9634,6 +9683,26 @@ Given the bytevector @var{host_address} holding a @code{struct in_addr},
 build and return a bytevector holding the corresponding @ascii{} dotted
 quad representation.
 @end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_inet_pton (ikptr @var{af}, ikptr @var{presentation}, ikpcb * @var{pcb})
+Given the fixnum @var{af}, being @code{AF_INET} or @code{AF_INET6}, and
+the bytevector @var{presentation} holding the @ascii{} presentation of
+an Internet address, build and return a bytevector holding the
+corresponding @code{struct in_addr} or @code{struct in6_addr}.  If
+either @var{af} or @var{presentation} is invalid: return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_inet_ntop (ikptr @var{af}, ikptr @var{host_address}, ikpcb * @var{pcb})
+Given the fixnum @var{af}, being @code{AF_INET} or @code{AF_INET6}, and
+the bytevector @var{host_address} holding a @code{struct in_addr} or
+@code{struct in6_addr}, build and return a bytevector holding the
+corresponding @ascii{} presentation of the Internet address .  If the
+arguments are invalid: return false.
+@end deftypefun
+
 
 @c page
 @node capi posix time

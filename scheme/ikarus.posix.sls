@@ -132,7 +132,8 @@
     sockaddr_in.in_port		sockaddr_in6.in6_port
     in6addr_loopback		in6addr_any
     inet-aton			inet-ntoa
-    inet-ntoa/string
+    inet-pton			inet-ntop
+    inet-ntoa/string		inet-ntop/string
 
     ;; time functions
     nanosleep
@@ -254,8 +255,8 @@
 		  sockaddr_in.in_port		sockaddr_in6.in6_port
 		  in6addr_loopback		in6addr_any
 		  inet-aton			inet-ntoa
-		  inet-ntoa/string
-
+		  inet-pton			inet-ntop
+		  inet-ntoa/string		inet-ntop/string
 
 		  ;; time functions
 		  nanosleep
@@ -1796,6 +1797,33 @@
 
 (define (inet-ntoa/string addr)
   (utf8->string (inet-ntoa addr)))
+
+;;; --------------------------------------------------------------------
+
+(define (inet-pton af presentation)
+  (define who 'inet-pton)
+  (with-arguments-validation (who)
+      ((fixnum		   af)
+       (string/bytevector  presentation))
+    (let ((rv (capi.posix-inet_pton af (if (string? presentation)
+					   (string->utf8 presentation)
+					 presentation))))
+      (if (bytevector? rv)
+	  rv
+	(error who "invalid arguments" af presentation)))))
+
+(define (inet-ntop af addr)
+  (define who 'inet-ptoa)
+  (with-arguments-validation (who)
+      ((fixnum	    af)
+       (bytevector  addr))
+    (let ((rv (capi.posix-inet_ntop af addr)))
+      (if (bytevector? rv)
+	  rv
+	(error who "invalid arguments" af addr)))))
+
+(define (inet-ntop/string af addr)
+  (utf8->string (inet-ntop af addr)))
 
 
 ;;;; time functions

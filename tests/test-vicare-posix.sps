@@ -907,6 +907,29 @@
       (inet-ntoa/string '#vu8(127 0 0 1))
     => "127.0.0.1")
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (inet-pton AF_INET "127.0.0.1")
+    => '#vu8(127 0 0 1))
+
+  (check
+      (catch-error #f
+	(inet-pton AF_INET "ciao"))
+    => `(,AF_INET "ciao"))
+
+  (check
+      (inet-pton AF_INET6 "1:2:3:4:5:6:7:8")
+    => '#vu16b(1 2 3 4 5 6 7 8))
+
+  (check
+      (inet-ntop/string AF_INET '#vu8(127 0 0 1))
+    => "127.0.0.1")
+
+  (check
+      (inet-ntop/string AF_INET6 '#vu16b(1 2 3 4 5 6 7 8))
+    => "1:2:3:4:5:6:7:8")
+
   #t)
 
 

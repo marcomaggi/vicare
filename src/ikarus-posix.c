@@ -57,6 +57,9 @@
 #include <sys/un.h>
 #include <sys/wait.h>
 
+#define SIZEOF_STRUCT_IN_ADDR           sizeof(struct in_addr)
+#define SIZEOF_STRUCT_IN6_ADDR          sizeof(struct in6_addr)
+
 
 /** --------------------------------------------------------------------
  ** Errno handling.
@@ -1713,7 +1716,7 @@ ikrt_posix_in6addr_any (ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_inet_aton (ikptr dotted_quad_bv, ikpcb * pcb)
+ikrt_posix_inet_aton (ikptr dotted_quad_bv, ikpcb * pcb)
 {
   void *                dotted_quad;
   ikptr                 host_address_bv;
@@ -1728,7 +1731,7 @@ ikrt_inet_aton (ikptr dotted_quad_bv, ikpcb * pcb)
   return (0 != rv)? host_address_bv : false_object;
 }
 ikptr
-ikrt_inet_ntoa (ikptr host_address_bv, ikpcb * pcb)
+ikrt_posix_inet_ntoa (ikptr host_address_bv, ikpcb * pcb)
 {
   struct in_addr *      host_address;
   ikptr                 dotted_quad_bv;
@@ -1742,6 +1745,72 @@ ikrt_inet_ntoa (ikptr host_address_bv, ikpcb * pcb)
   dotted_quad    = VICARE_BYTEVECTOR_DATA_CHARP(dotted_quad_bv);
   memcpy(dotted_quad, data, data_len);
   return dotted_quad_bv;
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_inet_pton (ikptr af, ikptr presentation_bv, ikpcb * pcb)
+{
+  void *        presentation;
+  ikptr         host_address_bv;
+  int           rv;
+  switch (unfix(af)) {
+  case AF_INET:
+    {
+#undef BV_LEN
+#define BV_LEN          sizeof(struct in_addr)
+      struct in_addr *      host_address;
+      host_address_bv = ik_bytevector_alloc(pcb, BV_LEN);
+      host_address    = VICARE_BYTEVECTOR_DATA_VOIDP(host_address_bv);
+      presentation    = VICARE_BYTEVECTOR_DATA_VOIDP(presentation_bv);
+      rv = inet_pton(unfix(af), presentation, host_address);
+      return (0 < rv)? host_address_bv : false_object;
+    }
+  case AF_INET6:
+    {
+#undef BV_LEN
+#define BV_LEN          sizeof(struct in6_addr)
+      struct in6_addr *      host_address;
+      host_address_bv = ik_bytevector_alloc(pcb, BV_LEN);
+      host_address    = VICARE_BYTEVECTOR_DATA_VOIDP(host_address_bv);
+      presentation    = VICARE_BYTEVECTOR_DATA_VOIDP(presentation_bv);
+      rv = inet_pton(unfix(af), presentation, host_address);
+      return (0 < rv)? host_address_bv : false_object;
+    }
+  default:
+    return false_object;
+  }
+}
+ikptr
+ikrt_posix_inet_ntop (ikptr af, ikptr host_address_bv, ikpcb * pcb)
+{
+  switch (unfix(af)) {
+  case AF_INET:
+  case AF_INET6:
+    {
+      void *            host_address;
+      socklen_t         buflen = 256;
+      char              buffer[buflen];
+      const char *      rv;
+      host_address = VICARE_BYTEVECTOR_DATA_VOIDP(host_address_bv);
+      rv = inet_ntop(unfix(af), host_address, buffer, buflen);
+      if (NULL != rv) {
+        ikptr     presentation_bv;
+        char *    presentation;
+        long      presentation_len;
+        presentation_len = strlen(buffer);
+        presentation_bv  = ik_bytevector_alloc(pcb, presentation_len);
+        presentation     = VICARE_BYTEVECTOR_DATA_CHARP(presentation_bv);
+        memcpy(presentation, buffer, presentation_len);
+        return presentation_bv;
+      } else {
+        return false_object;
+      }
+    }
+  default:
+    return false_object;
+  }
 }
 
 

@@ -122,8 +122,7 @@
     posix-sockaddr_in.in_port		posix-sockaddr_in6.in6_port
     posix-in6addr_loopback		posix-in6addr_any
     posix-inet_aton			posix-inet_ntoa
-;;;    posix-inet_pton			posix-inet_ntop
-
+    posix-inet_pton			posix-inet_ntop
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -557,18 +556,18 @@
 ;;; --------------------------------------------------------------------
 
 (define-inline (posix-inet_aton dotted-quad)
-  (foreign-call "ikrt_inet_aton" dotted-quad))
+  (foreign-call "ikrt_posix_inet_aton" dotted-quad))
 
 (define-inline (posix-inet_ntoa addr)
-  (foreign-call "ikrt_inet_ntoa" addr))
+  (foreign-call "ikrt_posix_inet_ntoa" addr))
 
 ;;; --------------------------------------------------------------------
 
-;; (define-inline (posix-inet_pton dotted-quad)
-;;   (foreign-call "ikrt_inet_pton" dotted-quad))
+(define-inline (posix-inet_pton af presentation)
+  (foreign-call "ikrt_posix_inet_pton" af presentation))
 
-;; (define-inline (posix-inet_ntop addr)
-;;   (foreign-call "ikrt_inet_ntop" addr))
+(define-inline (posix-inet_ntop af addr)
+  (foreign-call "ikrt_posix_inet_ntop" af addr))
 
 
 ;;;; platform API for file descriptors

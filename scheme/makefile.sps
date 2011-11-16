@@ -653,6 +653,9 @@
     (inet-aton					i v)
     (inet-ntoa					i v)
     (inet-ntoa/string				i v)
+    (inet-pton					i v)
+    (inet-ntop					i v)
+    (inet-ntop/string				i v)
 
     (make-struct-stat				i v)
     (struct-stat?				i v)
