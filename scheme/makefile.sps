@@ -697,9 +697,9 @@
 
     (split-file-name				i v)
 
-    (make-sockaddr-un				i v)
-    (sockaddr-un-pathname			i v)
-    (sockaddr-un-pathname/string		i v)
+    (make-sockaddr_un				i v)
+    (sockaddr_un.pathname			i v)
+    (sockaddr_un.pathname/string		i v)
 
     (make-sockaddr_in				i v)
     (sockaddr_in.in_addr			i v)

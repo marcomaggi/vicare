@@ -116,7 +116,7 @@
     posix-bind				posix-getsockname
     glibc-if-nametoindex		glibc-if-indextoname
     glibc-if-nameindex
-    posix-make-sockaddr-un		posix-sockaddr-un-pathname
+    posix-make-sockaddr_un		posix-sockaddr_un.pathname
     posix-make-sockaddr_in		posix-make-sockaddr_in6
     posix-sockaddr_in.in_addr		posix-sockaddr_in6.in6_addr
     posix-sockaddr_in.in_port		posix-sockaddr_in6.in6_port
@@ -514,10 +514,10 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (posix-make-sockaddr-un pathname-bv)
+(define-inline (posix-make-sockaddr_un pathname-bv)
   (foreign-call "ikrt_posix_make_sockaddr_un" pathname-bv))
 
-(define-inline (posix-sockaddr-un-pathname addr)
+(define-inline (posix-sockaddr_un.pathname addr)
   (foreign-call "ikrt_posix_sockaddr_un_pathname" addr))
 
 ;;; --------------------------------------------------------------------

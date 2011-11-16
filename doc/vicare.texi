@@ -6944,25 +6944,66 @@ unspecified values, else raise an exception.
 @section Network sockets
 
 
-@defun make-sockaddr-un @var{pathname}
+With the purpose of maintaining at the Scheme level the same semantics
+of the C level @posix{} @api{}, socket--related data structures are
+stored in bytevectors; such raw manipulation can cause process crash if
+we mishandle the values.
+
+@c ------------------------------------------------------------
+
+Instandes of @code{struct sockaddr_un} can be handled at the Scheme
+level as follows:
+
+@example
+(import (vicare))
+
+(define sockaddr
+  (make-sockaddr_un "/tmp/the-unix-socket"))
+
+(sockaddr_un.pathname/string sockaddr)
+@result{} "/tmp/the-unix-socket"
+@end example
+
+@noindent
+care must be taken when handling such raw values.
+
+
+@defun make-sockaddr_un @var{pathname}
 Given a @var{pathname} representing the pathname of a local socket,
 build and return a bytevector holding the @code{struct sockaddr_un}
 representing it.
 @end defun
 
 
-@defun sockaddr-un-pathname @var{addr}
-@defunx sockaddr-un-pathname/string @var{addr}
+@defun sockaddr_un.pathname @var{addr}
+@defunx sockaddr_un.pathname/string @var{addr}
 Giben a bytevector @var{addr}, which must be the return value of a
-previous call to @func{make-sockaddr-un}, holding a @code{struct
-sockaddr_un}: @func{sockaddr-un-pathname} builds and returns a
+previous call to @func{make-sockaddr_un}, holding a @code{struct
+sockaddr_un}: @func{sockaddr_un.pathname} builds and returns a
 bytevector holding the corresponding socket pathname,
-@func{sockaddr-un-pathname/string} builds and returns a string holding
+@func{sockaddr_un.pathname/string} builds and returns a string holding
 the corresponding socket pathname.  If the data in @var{addr} is
 invalid: an exception is raised.
 @end defun
 
 @c ------------------------------------------------------------
+
+Instances of @code{struct sockaddr_in} can be handled at the Scheme
+level as follows:
+
+@example
+(import (vicare))
+
+(define sockaddr
+  (make-sockaddr_in '#vu8(1 2 3 4) 88))
+
+(sockaddr_in.in_addr sockaddr)  @result{} #vu8(1 2 3 4)
+(sockaddr_in.in_port sockaddr)  @result{} 88
+@end example
+
+@noindent
+care must be taken when handling such raw values.
+
 
 @defun make-sockaddr_in @var{host-address} @var{port}
 Given a bytevector @var{host-address} holding a @code{struct in_addr}
@@ -6982,8 +7023,26 @@ in_addr} and as fixnum.
 
 @c ------------------------------------------------------------
 
-@defun make-sockaddr_in6 @var{host_address} @var{port}
-Given a bytevector @var{host_address} holding a @code{struct in6_addr}
+Instances of @code{struct sockaddr_in6} can be handled at the Scheme
+level as follows:
+
+@example
+#!vicare
+(import (vicare))
+
+(define sockaddr
+  (make-sockaddr_in6 '#vu16b(1 2 3 4  5 6 7 8) 88))
+
+(sockaddr_in6.in6_addr sockaddr) @result{} #vu16b(1 2 3 4  5 6 7 8)
+(sockaddr_in6.in6_port sockaddr) @result{} 88
+@end example
+
+@noindent
+care must be taken when handling such raw values.
+
+
+@defun make-sockaddr_in6 @var{host-address} @var{port}
+Given a bytevector @var{host-address} holding a @code{struct in6_addr}
 and a fixnum @var{port} representing a network port number, build and
 return a bytevector holding a @code{struct sockaddr_in6} initialised
 with this data.

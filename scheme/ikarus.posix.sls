@@ -125,8 +125,8 @@
 
     ;; sockets
     bind			getsockname
-    make-sockaddr-un
-    sockaddr-un-pathname	sockaddr-un-pathname/string
+    make-sockaddr_un
+    sockaddr_un.pathname	sockaddr_un.pathname/string
     make-sockaddr_in		make-sockaddr_in6
     sockaddr_in.in_addr		sockaddr_in6.in6_addr
     sockaddr_in.in_port		sockaddr_in6.in6_port
@@ -244,8 +244,8 @@
 
 		  ;; sockets
 		  bind				getsockname
-		  make-sockaddr-un
-		  sockaddr-un-pathname		sockaddr-un-pathname/string
+		  make-sockaddr_un
+		  sockaddr_un.pathname		sockaddr_un.pathname/string
 		  make-sockaddr_in		make-sockaddr_in6
 		  sockaddr_in.in_addr		sockaddr_in6.in6_addr
 		  sockaddr_in.in_port		sockaddr_in6.in6_port
@@ -1681,24 +1681,24 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (make-sockaddr-un pathname)
-  (define who 'make-sockaddr-un)
+(define (make-sockaddr_un pathname)
+  (define who 'make-sockaddr_un)
   (with-arguments-validation (who)
       ((pathname	pathname))
     (with-pathnames ((pathname.bv pathname))
-      (capi.posix-make-sockaddr-un pathname.bv))))
+      (capi.posix-make-sockaddr_un pathname.bv))))
 
-(define (sockaddr-un-pathname addr)
-  (define who 'sockaddr-un-pathname)
+(define (sockaddr_un.pathname addr)
+  (define who 'sockaddr_un.pathname)
   (with-arguments-validation (who)
       ((bytevector	addr))
-    (let ((rv (capi.posix-sockaddr-un-pathname addr)))
+    (let ((rv (capi.posix-sockaddr_un.pathname addr)))
       (if (bytevector? rv)
 	  rv
 	(error who "expected bytevector holding \"struct sockaddr_un\" as argument" addr)))))
 
-(define (sockaddr-un-pathname/string addr)
-  ((filename->string-func) (sockaddr-un-pathname addr)))
+(define (sockaddr_un.pathname/string addr)
+  ((filename->string-func) (sockaddr_un.pathname addr)))
 
 ;;; --------------------------------------------------------------------
 
