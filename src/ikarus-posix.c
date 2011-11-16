@@ -1857,7 +1857,7 @@ hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
   { /* store the host address structure length */
     ref(dst, off_record_data+3*wordsize) = fix(src->h_length);
   }
-  ikptr first_addr;
+  ikptr first_addr = false_object;
   { /* store the reversed list of addresses */
     ikptr       list_of_addrs = null_object;
     int         i;
@@ -1910,6 +1910,25 @@ ikrt_posix_gethostbyname2 (ikptr rtd, ikptr hostname_bv, ikptr af, ikpcb * pcb)
   errno    = 0;
   h_errno  = 0;
   rv       = gethostbyname2(hostname, unfix(af));
+  if (NULL != rv) {
+    return hostent_to_struct(rtd, rv, pcb);
+  } else {
+    return fix(-h_errno);
+  }
+}
+ikptr
+ikrt_posix_gethostbyaddr (ikptr rtd, ikptr host_address_bv, ikpcb * pcb)
+{
+  void *                host_address;
+  size_t                host_address_len;
+  int                   format;
+  struct hostent *      rv;
+  host_address     = VICARE_BYTEVECTOR_DATA_VOIDP(host_address_bv);
+  host_address_len = (size_t)unfix(VICARE_BYTEVECTOR_LENGTH_FX(host_address_bv));
+  format   = (sizeof(struct in_addr) == host_address_len)? AF_INET : AF_INET6;
+  errno    = 0;
+  h_errno  = 0;
+  rv       = gethostbyaddr(host_address, host_address_len, format);
   if (NULL != rv) {
     return hostent_to_struct(rtd, rv, pcb);
   } else {

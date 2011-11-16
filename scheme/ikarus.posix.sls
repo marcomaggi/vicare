@@ -133,6 +133,7 @@
     inet-pton			inet-ntop
     inet-ntoa/string		inet-ntop/string
     gethostbyname		gethostbyname2
+    gethostbyaddr
 
     make-struct-hostent		struct-hostent?
     struct-hostent-h_name	struct-hostent-h_aliases
@@ -260,6 +261,7 @@
 		  inet-pton			inet-ntop
 		  inet-ntoa/string		inet-ntop/string
 		  gethostbyname			gethostbyname2
+		  gethostbyaddr
 
 		  make-struct-hostent		struct-hostent?
 		  struct-hostent-h_name		struct-hostent-h_aliases
@@ -1973,6 +1975,17 @@
 					 addrtype)))
       (if (fixnum? rv)
 	  (raise-h_errno-error who rv hostname addrtype)
+	(begin
+	  (set-struct-hostent-h_addr_list! rv (reverse (struct-hostent-h_addr_list rv)))
+	  rv)))))
+
+(define (gethostbyaddr addr)
+  (define who 'gethostbyaddr)
+  (with-arguments-validation (who)
+      ((bytevector  addr))
+    (let ((rv (capi.posix-gethostbyaddr (type-descriptor struct-hostent) addr)))
+      (if (fixnum? rv)
+	  (raise-h_errno-error who rv addr)
 	(begin
 	  (set-struct-hostent-h_addr_list! rv (reverse (struct-hostent-h_addr_list rv)))
 	  rv)))))

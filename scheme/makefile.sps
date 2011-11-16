@@ -600,6 +600,7 @@
     (getcwd					i v)
     (getcwd/string				i v)
     (getenv					i v)
+    (gethostbyaddr				i v)
     (gethostbyname				i v)
     (gethostbyname2				i v)
     (getpid					i v)

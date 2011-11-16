@@ -934,7 +934,7 @@
 
   (check
       (let ((S (gethostbyname "localhost")))
-(check-pretty-print S)
+;;;(check-pretty-print S)
 	(list (struct-hostent? S)
 	      (utf8->string (struct-hostent-h_name S))
 	      (struct-hostent-h_aliases   S)
@@ -946,7 +946,19 @@
 
   (check
       (let ((S (gethostbyname2 "localhost" AF_INET)))
-(check-pretty-print S)
+;;;(check-pretty-print S)
+	(list (struct-hostent? S)
+	      (utf8->string (struct-hostent-h_name S))
+	      (struct-hostent-h_aliases   S)
+	      (struct-hostent-h_addrtype  S)
+	      (struct-hostent-h_length    S)
+	      (struct-hostent-h_addr_list S)
+	      (struct-hostent-h_addr      S)))
+    => `(#t "localhost" () ,AF_INET 4 (#vu8(127 0 0 1)) #vu8(127 0 0 1)))
+
+  (check
+      (let ((S (gethostbyaddr '#vu8(127 0 0 1))))
+;;;(check-pretty-print S)
 	(list (struct-hostent? S)
 	      (utf8->string (struct-hostent-h_name S))
 	      (struct-hostent-h_aliases   S)
