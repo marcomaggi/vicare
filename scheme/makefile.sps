@@ -397,6 +397,7 @@
     (ne			(psyntax null-environment-5)		#f	#f)
     (se			(psyntax scheme-report-environment-5)	#f	#f)
     (glibc		(vicare glibc)				#t	#f)
+    (linux		(vicare linux)				#t	#f)
     ))
 
 
@@ -749,16 +750,16 @@
     (if-nameindex				glibc)
 
 ;;; Linux functions
-    (WIFCONTINUED				i v)
-    (waitid					i v)
+    (WIFCONTINUED				linux)
+    (waitid					linux)
 
-    (make-struct-siginfo_t			i v)
-    (struct-siginfo_t?				i v)
-    (struct-siginfo_t-si_pid			i v)
-    (struct-siginfo_t-si_uid			i v)
-    (struct-siginfo_t-si_signo			i v)
-    (struct-siginfo_t-si_status			i v)
-    (struct-siginfo_t-si_code			i v)
+    (make-struct-siginfo_t			linux)
+    (struct-siginfo_t?				linux)
+    (struct-siginfo_t-si_pid			linux)
+    (struct-siginfo_t-si_uid			linux)
+    (struct-siginfo_t-si_signo			linux)
+    (struct-siginfo_t-si_status			linux)
+    (struct-siginfo_t-si_code			linux)
 
 ;;;
     (accept-connection				i v)

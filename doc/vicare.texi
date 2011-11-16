@@ -7326,8 +7326,20 @@ of @code{FD_SETSIZE}.
 @chapter The @gnu{} C Library interface
 
 
-The following bindings are exported by the @library{vicare glibc}
-library.
+The functions described in this chapter are exported by the library
+@library{vicare glibc}.  The @api{} attempts to create a one--to--one
+Scheme functions mapping towards @gnu{} C Library functions, keeping the
+same semantics as much as possible; the platform's own documentation is
+relevant at the Scheme level.
+
+All the constants needed to use the interface are available as
+identifier syntaxes exported by the @library{vicare platform-constants}
+library; if a constant value is not exported file a feature request for
+the project.  If a constant is not defined on a platform: its value is
+set to @false{}.
+
+On non--@gnu{} C Library platforms we must avoid calling these
+functions, else the behaviour is undefined.
 
 @menu
 * glibc env::                   Operating system environment variables.
@@ -7498,11 +7510,11 @@ the address type with the parameter @var{addrtype} which must be
 @chapter The @gnu{}+Linux interface
 
 
-The functions described in this chapter are exported by the libraries
-@library{ikarus} and @library{vicare}.  The @api{} attempts to create a
-one--to--one Scheme functions mapping towards Linux functions, keeping
-the same semantics as much as possible; the platform's own documentation
-is relevant at the Scheme level.
+The functions described in this chapter are exported by the library
+@library{vicare linux}.  The @api{} attempts to create a one--to--one
+Scheme functions mapping towards Linux functions, keeping the same
+semantics as much as possible; the platform's own documentation is
+relevant at the Scheme level.
 
 All the constants needed to use the interface are available as
 identifier syntaxes exported by the @library{vicare platform-constants}
@@ -7510,7 +7522,7 @@ library; if a constant value is not exported file a feature request for
 the project.  If a constant is not defined on a platform: its value is
 set to @false{}.
 
-On non-Linux platform we must avoid calling these functions, else the
+On non--Linux platforms we must avoid calling these functions, else the
 behaviour is undefined.
 
 @menu
@@ -7523,6 +7535,10 @@ behaviour is undefined.
 @section Operating system environment variables
 
 
+The following bindings are exported by the @library{vicare linux}
+library.
+
+
 @defun clearenv
 Interface to the C function @cfunc{clearenv}, @glibcref{Environment
 Access, clearenv}.  Remove all the entries from the environment.  Return
@@ -7532,6 +7548,10 @@ unspecified values.
 @c page
 @node linux status
 @section Process termination status
+
+
+The following bindings are exported by the @library{vicare linux}
+library.
 
 
 @defun waitid @var{idtype} @var{id} @var{options}
