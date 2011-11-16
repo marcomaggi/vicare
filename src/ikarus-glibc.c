@@ -217,11 +217,11 @@ ikrt_glibc_if_nameindex (ikpcb * pcb) {
   arry = if_nameindex();
   for (i=0; 0 != arry[i].if_index; ++i) {
     /* Add a pair to the alist spine. */
-    spine = ik_safe_alloc(pcb, pair_size) + pair_tag;
+    spine = ik_pair_alloc(pcb);
     ref(spine, off_cdr) = alist;
     alist               = spine;
     /* Add an entry to the alist. */
-    entry = ik_safe_alloc(pcb, pair_size) + pair_tag;
+    entry = ik_pair_alloc(pcb);
     ref(spine, off_car) = entry;
     /* Fill the entry. */
     len  = strlen(arry[i].if_name);

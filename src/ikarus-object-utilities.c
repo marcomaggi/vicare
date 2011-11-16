@@ -102,6 +102,36 @@ ik_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes)
 
 
 /** --------------------------------------------------------------------
+ ** Scheme vector utilities.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ik_vector_alloc (ikpcb * pcb, long int requested_number_of_items)
+{
+  long int  aligned_size;
+  ikptr     vec;
+  aligned_size = align(disp_vector_data + requested_number_of_items * wordsize);
+  vec          = ik_safe_alloc(pcb, aligned_size) + vector_tag;
+  ref(vec, off_vector_length) = fix(requested_number_of_items);
+  return vec;
+}
+
+
+/** --------------------------------------------------------------------
+ ** Scheme struct utilities.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ik_struct_alloc (ikpcb * pcb, ikptr rtd, long int number_of_fields)
+{
+  long  aligned_size = align(disp_record_data + number_of_fields * wordsize);
+  ikptr data         = ik_safe_alloc(pcb, aligned_size) + vector_tag;
+  ref(data, off_record_rtd) = rtd;
+  return data;
+}
+
+
+/** --------------------------------------------------------------------
  ** Specific data utilities.
  ** ----------------------------------------------------------------- */
 
@@ -110,9 +140,8 @@ ik_hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
 /* Makes use of "pcb->root1" only,  so that "pcb->root0" is available to
    the caller. */
 {
-  ikptr dst = ik_safe_alloc(pcb, align(disp_record_data+6*wordsize)) + vector_tag;
+  ikptr dst = ik_struct_alloc(pcb, rtd, 6);
   pcb->root1 = &dst;
-  ref(dst, off_record_rtd) = rtd;
 #if 0
   ref(dst, off_record_data+0*wordsize) = false_object;
   ref(dst, off_record_data+1*wordsize) = false_object;
@@ -124,14 +153,14 @@ ik_hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
     ikptr       name_bv  = ik_bytevector_alloc(pcb, name_len);
     char *      name     = VICARE_BYTEVECTOR_DATA_CHARP(name_bv);
     memcpy(name, src->h_name, name_len+1);
-    ref(dst, off_record_data+0*wordsize) = name_bv;
+    VICARE_STRUCT_SET(dst, 0, name_bv);
   }
   { /* store the list of aliases */
     ikptr       list_of_aliases = null_object;
     int         i;
     ref(dst, off_record_data+1*wordsize) = list_of_aliases;
     for (i=0; NULL!=src->h_aliases[i]; ++i) {
-      ikptr     pair      = ik_safe_alloc(pcb, align(pair_size)) + pair_tag;
+      ikptr     pair      = ik_pair_alloc(pcb);
       ref(pair, off_cdr)  = list_of_aliases;
       ref(dst, off_record_data+1*wordsize) = list_of_aliases = pair;
       long      alias_len = strlen(src->h_aliases[i]);
@@ -153,7 +182,7 @@ ik_hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
     int         i;
     ref(dst, off_record_data+4*wordsize) = list_of_addrs;
     for (i=0; NULL!=src->h_addr_list[i]; ++i) {
-      ikptr     pair     = ik_safe_alloc(pcb, align(pair_size)) + pair_tag;
+      ikptr     pair     = ik_pair_alloc(pcb);
       ref(pair, off_cdr) = list_of_addrs;
       ref(dst, off_record_data+4*wordsize) = list_of_addrs = pair;
       ikptr     addr_bv  = ik_bytevector_alloc(pcb, src->h_length);

@@ -139,7 +139,7 @@ ikrt_posix_environ (ikpcb* pcb)
     ref(s, off_bytevector_length) = fix(bv_len);
     memcpy((char*)(long)(s+off_bytevector_data), e, bv_len+1);
     pcb->root1 = &s;
-    ikptr p = ik_safe_alloc(pcb, align(pair_size)) + pair_tag;
+    ikptr p = ik_pair_alloc(pcb);
     pcb->root1 = 0;
     ref(p, off_cdr) = ac;
     ref(p, off_car) = s;
@@ -1342,7 +1342,7 @@ ikrt_posix_select (ikptr nfds_fx,
       for (L=read_fds_ell, R=null_object; pair_tag == tagof(L); L=ref(L,off_cdr)) {
         ikptr fdx = ref(L, off_car);
         if (FD_ISSET(unfix(fdx), &read_fds)) {
-          ikptr P = ik_safe_alloc(pcb, align(pair_size)) + pair_tag;
+          ikptr P = ik_pair_alloc(pcb);
           ref(P, off_car) = fdx;
           ref(P, off_cdr) = R;
           ref(vec, off_vector_data+0*wordsize) = P;
@@ -1353,7 +1353,7 @@ ikrt_posix_select (ikptr nfds_fx,
       for (L=write_fds_ell, W=null_object; pair_tag == tagof(L); L = ref(L, off_cdr)) {
         ikptr fdx = ref(L, off_car);
         if (FD_ISSET(unfix(fdx), &write_fds)) {
-          ikptr P = ik_safe_alloc(pcb, align(pair_size)) + pair_tag;
+          ikptr P = ik_pair_alloc(pcb);
           ref(P, off_car) = fdx;
           ref(P, off_cdr) = W;
           ref(vec, off_vector_data+1*wordsize) = W = P;
@@ -1363,7 +1363,7 @@ ikrt_posix_select (ikptr nfds_fx,
       for (L=except_fds_ell, E=null_object; pair_tag == tagof(L); L = ref(L, off_cdr)) {
         ikptr fdx = ref(L, off_car);
         if (FD_ISSET(unfix(fdx), &except_fds)) {
-          ikptr P = ik_safe_alloc(pcb, align(pair_size)) + pair_tag;
+          ikptr P = ik_pair_alloc(pcb);
           ref(P, off_car) = fdx;
           ref(P, off_cdr) = E;
           ref(vec, off_vector_data+2*wordsize) = E = P;
@@ -1492,7 +1492,7 @@ ikrt_posix_pipe (ikpcb * pcb)
   if (-1 == rv)
     return ik_errno_to_code();
   else {
-    ikptr pair = ik_safe_alloc(pcb, align(pair_size)) + pair_tag;
+    ikptr pair = ik_pair_alloc(pcb);
     ref(pair, off_car) = fix(fds[0]);
     ref(pair, off_cdr) = fix(fds[1]);
     return pair;
