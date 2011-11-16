@@ -127,7 +127,9 @@
     bind			getsockname
     make-sockaddr-un
     sockaddr-un-pathname	sockaddr-un-pathname/string
-
+    make-sockaddr_in		make-sockaddr_in6
+    sockaddr_in.in_addr		sockaddr_in6.in6_addr
+    sockaddr_in.in_port		sockaddr_in6.in6_port
 
     ;; time functions
     nanosleep
@@ -244,6 +246,9 @@
 		  bind				getsockname
 		  make-sockaddr-un
 		  sockaddr-un-pathname		sockaddr-un-pathname/string
+		  make-sockaddr_in		make-sockaddr_in6
+		  sockaddr_in.in_addr		sockaddr_in6.in6_addr
+		  sockaddr_in.in_port		sockaddr_in6.in6_port
 
 		  ;; time functions
 		  nanosleep
@@ -1694,6 +1699,60 @@
 
 (define (sockaddr-un-pathname/string addr)
   ((filename->string-func) (sockaddr-un-pathname addr)))
+
+;;; --------------------------------------------------------------------
+
+(define (make-sockaddr_in addr port)
+  (define who 'make-sockaddr_in)
+  (with-arguments-validation (who)
+      ((bytevector	addr)
+       (fixnum		port))
+    (capi.posix-make-sockaddr_in addr port)))
+
+(define (sockaddr_in.in_addr sockaddr)
+  (define who 'sockaddr_in.in_addr)
+  (with-arguments-validation (who)
+      ((bytevector	sockaddr))
+    (let ((rv (capi.posix-sockaddr_in.in_addr sockaddr)))
+      (if (bytevector? rv)
+	  rv
+	(error who "expected bytevector holding \"struct sockaddr_in\" as argument" sockaddr)))))
+
+(define (sockaddr_in.in_port sockaddr)
+  (define who 'sockaddr_in.in_port)
+  (with-arguments-validation (who)
+      ((bytevector	sockaddr))
+    (let ((rv (capi.posix-sockaddr_in.in_port sockaddr)))
+      (if (fixnum? rv)
+	  rv
+	(error who "expected bytevector holding \"struct sockaddr_in\" as argument" sockaddr)))))
+
+;;; --------------------------------------------------------------------
+
+(define (make-sockaddr_in6 addr port)
+  (define who 'make-sockaddr_in6)
+  (with-arguments-validation (who)
+      ((bytevector	addr)
+       (fixnum		port))
+    (capi.posix-make-sockaddr_in6 addr port)))
+
+(define (sockaddr_in6.in6_addr sockaddr)
+  (define who 'sockaddr_in6.in6_addr)
+  (with-arguments-validation (who)
+      ((bytevector	sockaddr))
+    (let ((rv (capi.posix-sockaddr_in6.in6_addr sockaddr)))
+      (if (bytevector? rv)
+	  rv
+	(error who "expected bytevector holding \"struct sockaddr_in6\" as argument" sockaddr)))))
+
+(define (sockaddr_in6.in6_port sockaddr)
+  (define who 'sockaddr_in6.in6_port)
+  (with-arguments-validation (who)
+      ((bytevector	sockaddr))
+    (let ((rv (capi.posix-sockaddr_in6.in6_port sockaddr)))
+      (if (fixnum? rv)
+	  rv
+	(error who "expected bytevector holding \"struct sockaddr_in6\" as argument" sockaddr)))))
 
 
 ;;;; time functions

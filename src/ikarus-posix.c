@@ -37,6 +37,8 @@
 #include "ikarus.h"
 #include <dirent.h>
 #include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
 #include <signal.h>
 #include <stdint.h>
 #include <time.h>
@@ -1593,6 +1595,94 @@ ikrt_posix_sockaddr_un_pathname (ikptr addr_bv, ikpcb * pcb)
   } else {
     return false_object;
   }
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_make_sockaddr_in (ikptr host_address_bv, ikptr port, ikpcb * pcb)
+{
+  struct in_addr *      host_address = (void *)VICARE_BYTEVECTOR_DATA_CHARP(host_address_bv);
+  struct sockaddr_in *  socket_address;
+  char *                data;
+  ikptr                 bv;
+#undef BV_LEN
+#define BV_LEN  sizeof(struct sockaddr_in)
+  bv   = ik_bytevector_alloc(pcb, BV_LEN);
+  data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+  data[BV_LEN]   = '\0';
+  socket_address = (struct sockaddr_in *) data;
+  socket_address->sin_family = AF_INET;
+  socket_address->sin_port   = (unsigned short int)unfix(port);
+  memcpy(&(socket_address->sin_addr), host_address, sizeof(struct in_addr));
+  return bv;
+}
+ikptr
+ikrt_posix_sockaddr_in_in_addr (ikptr socket_address_bv, ikpcb * pcb)
+{
+  struct sockaddr_in *  socket_address = VICARE_BYTEVECTOR_DATA_VOIDP(socket_address_bv);
+  if (AF_INET == socket_address->sin_family) {
+#undef BV_LEN
+#define BV_LEN  sizeof(struct in_addr)
+    ikptr       bv   = ik_bytevector_alloc(pcb, BV_LEN);
+    char *      data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+    data[BV_LEN] = '\0';
+    memcpy(data, &(socket_address->sin_addr), BV_LEN);
+    return bv;
+  } else {
+    return false_object;
+  }
+}
+ikptr
+ikrt_posix_sockaddr_in_in_port (ikptr socket_address_bv)
+{
+  struct sockaddr_in *  socket_address = VICARE_BYTEVECTOR_DATA_VOIDP(socket_address_bv);
+  return (AF_INET == socket_address->sin_family)?
+    fix((long)socket_address->sin_port) : false_object;
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_make_sockaddr_in6 (ikptr host_address_bv, ikptr port, ikpcb * pcb)
+{
+  struct in6_addr *     host_address = (void *)VICARE_BYTEVECTOR_DATA_CHARP(host_address_bv);
+  struct sockaddr_in6 * socket_address;
+  char *                data;
+  ikptr                 bv;
+#undef BV_LEN
+#define BV_LEN  sizeof(struct sockaddr_in6)
+  bv   = ik_bytevector_alloc(pcb, BV_LEN);
+  data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+  data[BV_LEN]   = '\0';
+  socket_address = (struct sockaddr_in6 *) data;
+  socket_address->sin6_family = AF_INET6;
+  socket_address->sin6_port   = (unsigned short int)unfix(port);
+  memcpy(&(socket_address->sin6_addr), host_address, sizeof(struct in6_addr));
+  return bv;
+}
+ikptr
+ikrt_posix_sockaddr_in6_in6_addr (ikptr socket_address_bv, ikpcb * pcb)
+{
+  struct sockaddr_in6 *  socket_address = VICARE_BYTEVECTOR_DATA_VOIDP(socket_address_bv);
+  if (AF_INET6 == socket_address->sin6_family) {
+#undef BV_LEN
+#define BV_LEN  sizeof(struct in6_addr)
+    ikptr       bv   = ik_bytevector_alloc(pcb, BV_LEN);
+    char *      data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+    data[BV_LEN] = '\0';
+    memcpy(data, &(socket_address->sin6_addr), BV_LEN);
+    return bv;
+  } else {
+    return false_object;
+  }
+}
+ikptr
+ikrt_posix_sockaddr_in6_in6_port (ikptr socket_address_bv)
+{
+  struct sockaddr_in6 *  socket_address = VICARE_BYTEVECTOR_DATA_VOIDP(socket_address_bv);
+  return (AF_INET6 == socket_address->sin6_family)?
+    fix((long)socket_address->sin6_port) : false_object;
 }
 
 

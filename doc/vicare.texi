@@ -6964,6 +6964,40 @@ invalid: an exception is raised.
 
 @c ------------------------------------------------------------
 
+@defun make-sockaddr_in @var{host-address} @var{port}
+Given a bytevector @var{host-address} holding a @code{struct in_addr}
+and a fixnum @var{port} representing a network port number, build and
+return a bytevector holding a @code{struct sockaddr_in} initialised with
+this data.
+@end defun
+
+
+@defun sockaddr_in.in_addr @var{socket-address}
+@defunx sockaddr_in.in_port @var{socket-address}
+Given a bytevector @var{socket-address} holding a @code{struct
+sockaddr_in}, extract the @code{in_addr} and @code{in_port} fields and
+return them as bytevector holding the corresponding @code{struct
+in_addr} and as fixnum.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun make-sockaddr_in6 @var{host_address} @var{port}
+Given a bytevector @var{host_address} holding a @code{struct in6_addr}
+and a fixnum @var{port} representing a network port number, build and
+return a bytevector holding a @code{struct sockaddr_in6} initialised
+with this data.
+@end defun
+
+
+@defun sockaddr_in6.in6_addr @var{socket-address}
+@defunx sockaddr_in6.in6_port @var{socket-address}
+Given a bytevector @var{socket-address} holding a @code{struct
+sockaddr_in6}, extract the @code{in6_addr} and @code{in6_port} fields
+and return them as bytevector holding the corresponding @code{struct
+in6_addr} and as fixnum.
+@end defun
+
 
 
 @c page
@@ -9420,6 +9454,43 @@ previous call to @cfunc{ikrt_posix_make_sockaddr_un}, holding a
 corresponding socket pathname.  If the data in @var{addr} is invalid:
 return false.
 @end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_make_sockaddr_in (ikptr @var{host_address}, ikptr @var{port}, ikpcb * @var{pcb})
+Given a bytevector @var{host_address} holding a @code{struct in_addr}
+and a fixnum @var{port} representing a network port number, build and
+return a bytevector holding a @code{struct sockaddr_in} initialised with
+this data.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_sockaddr_in_in_addr (ikptr @var{socket_address}, ikpcb * @var{pcb})
+@deftypefunx ikptr ikrt_posix_sockaddr_in_in_port (ikptr @var{socket_address})
+Given a bytevector @var{socket_address} holding a @code{struct
+sockaddr_in}, extract the @code{in_addr} and @code{in_port} fields and
+return them as bytevector holding the corresponding @code{struct
+in_addr} and as fixnum.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_make_sockaddr_in6 (ikptr @var{host_address}, ikptr @var{port}, ikpcb * @var{pcb})
+Given a bytevector @var{host_address} holding a @code{struct in6_addr}
+and a fixnum @var{port} representing a network port number, build and
+return a bytevector holding a @code{struct sockaddr_in6} initialised
+with this data.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_sockaddr_in6_in6_addr (ikptr @var{socket_address}, ikpcb * @var{pcb})
+@deftypefunx ikptr ikrt_posix_sockaddr_in6_in6_port (ikptr @var{socket_address})
+Given a bytevector @var{socket_address} holding a @code{struct
+sockaddr_in6}, extract the @code{in6_addr} and @code{in6_port} fields
+and return them as bytevector holding the corresponding @code{struct
+in6_addr} and as fixnum.
+@end deftypefun
+
 
 
 @c page

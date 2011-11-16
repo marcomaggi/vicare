@@ -117,6 +117,9 @@
     glibc-if-nametoindex		glibc-if-indextoname
     glibc-if-nameindex
     posix-make-sockaddr-un		posix-sockaddr-un-pathname
+    posix-make-sockaddr_in		posix-make-sockaddr_in6
+    posix-sockaddr_in.in_addr		posix-sockaddr_in6.in6_addr
+    posix-sockaddr_in.in_port		posix-sockaddr_in6.in6_port
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -516,6 +519,28 @@
 
 (define-inline (posix-sockaddr-un-pathname addr)
   (foreign-call "ikrt_posix_sockaddr_un_pathname" addr))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-make-sockaddr_in addr port)
+  (foreign-call "ikrt_posix_make_sockaddr_in" addr port))
+
+(define-inline (posix-sockaddr_in.in_addr sockaddr)
+  (foreign-call "ikrt_posix_sockaddr_in_in_addr" sockaddr))
+
+(define-inline (posix-sockaddr_in.in_port sockaddr)
+  (foreign-call "ikrt_posix_sockaddr_in_in_port" sockaddr))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-make-sockaddr_in6 addr port)
+  (foreign-call "ikrt_posix_make_sockaddr_in6" addr port))
+
+(define-inline (posix-sockaddr_in6.in6_addr sockaddr)
+  (foreign-call "ikrt_posix_sockaddr_in6_in6_addr" sockaddr))
+
+(define-inline (posix-sockaddr_in6.in6_port sockaddr)
+  (foreign-call "ikrt_posix_sockaddr_in6_in6_port" sockaddr))
 
 
 ;;;; platform API for file descriptors

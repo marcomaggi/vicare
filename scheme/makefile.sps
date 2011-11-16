@@ -701,6 +701,13 @@
     (sockaddr-un-pathname			i v)
     (sockaddr-un-pathname/string		i v)
 
+    (make-sockaddr_in				i v)
+    (sockaddr_in.in_addr			i v)
+    (sockaddr_in.in_port			i v)
+
+    (make-sockaddr_in6				i v)
+    (sockaddr_in6.in6_addr			i v)
+    (sockaddr_in6.in6_port			i v)
 
 ;;; GNU C Library functions
     (clearenv					i v)
