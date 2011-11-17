@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.2d3
+Subject: [announce] Vicare Scheme revision 0.2d4
 
                              Vicare Scheme
                              =============
@@ -35,6 +35,22 @@ this project has a mailing list:
 collection of R6 Scheme libraries:
 
 	      <http://marcomaggi.github.com/nausicaa.html>
+
+
+Notes for revision 0.2d4
+------------------------
+
+* The POSIX API  is exported by the (vicare posix)  library, and also by
+  (ikarus) and (vicare).
+
+* The GNU C Library API is exported by the (vicare glibc) library.
+
+* The Linux API is exported by the (vicare linux) library.
+
+* Socket functions have been added to the POSIX API.
+
+* Some documentation on handling Scheme  objects at the C language level
+  has been written.
 
 
 Notes for revision 0.2d3
