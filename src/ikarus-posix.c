@@ -1939,6 +1939,11 @@ ikrt_posix_host_entries (ikptr rtd, ikpcb * pcb)
   pcb->root0 = NULL;
   return list_of_entries;
 }
+ikptr
+ikrt_posix_getaddrinfo (ikptr node, ikptr service, ikpcb * pcb)
+{
+  return void_object;
+}
 
 
 /** --------------------------------------------------------------------
