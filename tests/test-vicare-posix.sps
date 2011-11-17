@@ -975,6 +975,22 @@
 
 ;;; --------------------------------------------------------------------
 
+  (check
+      (let* ((hints	(make-struct-addrinfo AI_CANONNAME AF_INET SOCK_STREAM 0 #f #f #f))
+	     (rv	(px.getaddrinfo "localhost" "smtp" hints)))
+	rv)
+    => #f)
+
+  (check
+      (let ((rv (px.getaddrinfo "localhost" "smtp" #f)))
+	rv)
+    => #f)
+
+  (check
+      (let ((rv (px.getaddrinfo "localhost" #f #f)))
+	rv)
+    => #f)
+
   #t)
 
 

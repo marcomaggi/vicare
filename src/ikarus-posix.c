@@ -1939,10 +1939,100 @@ ikrt_posix_host_entries (ikptr rtd, ikpcb * pcb)
   pcb->root0 = NULL;
   return list_of_entries;
 }
-ikptr
-ikrt_posix_getaddrinfo (ikptr node, ikptr service, ikpcb * pcb)
+
+/* ------------------------------------------------------------------ */
+
+static ikptr
+addrinfo_to_struct (ikpcb * pcb, ikptr rtd, struct addrinfo * src, int with_canon_name)
 {
-  return void_object;
+  ikptr         dst = ik_struct_alloc(pcb, rtd, 7);
+  ikptr         sockaddr_bv;
+  void *        sockaddr_data;
+  ikptr         canon_name_bv;
+  void *        canon_name_data;
+  size_t        canon_name_len;
+  pcb->root1 = &dst;
+  {
+    VICARE_STRUCT_SET(dst, 0, fix(src->ai_flags));
+    VICARE_STRUCT_SET(dst, 1, fix(src->ai_family));
+    VICARE_STRUCT_SET(dst, 2, fix(src->ai_socktype));
+    VICARE_STRUCT_SET(dst, 3, fix(src->ai_protocol));
+    VICARE_STRUCT_SET(dst, 4, fix(src->ai_addrlen));
+    {
+      sockaddr_bv   = ik_bytevector_alloc(pcb, src->ai_addrlen);
+      sockaddr_data = VICARE_BYTEVECTOR_DATA_VOIDP(sockaddr_bv);
+      memcpy(sockaddr_data, src->ai_addr, src->ai_addrlen);
+      VICARE_STRUCT_SET(dst, 5, sockaddr_bv);
+    }
+    if (with_canon_name && src->ai_canonname) {
+      canon_name_len  = strlen(src->ai_canonname);
+      canon_name_bv   = ik_bytevector_alloc(pcb, (long)canon_name_len);
+      canon_name_data = VICARE_BYTEVECTOR_DATA_VOIDP(canon_name_bv);
+      memcpy(canon_name_data, src->ai_canonname, canon_name_len);
+      VICARE_STRUCT_SET(dst, 6, canon_name_bv);
+    } else {
+      VICARE_STRUCT_SET(dst, 6, false_object);
+    }
+  }
+  pcb->root1 = NULL;
+  return dst;
+}
+ikptr
+ikrt_posix_getaddrinfo (ikptr rtd, ikptr node_bv, ikptr service_bv, ikptr hints_struct, ikpcb * pcb)
+{
+  const char *          node;
+  const char *          service;
+  struct addrinfo       hints;
+  struct addrinfo *     hints_p;
+  struct addrinfo *     result;
+  struct addrinfo *     iter;
+  int                   rv, with_canon_name;
+  ikptr                 list_of_addrinfo = null_object;
+  node    = (false_object != node_bv)?    VICARE_BYTEVECTOR_DATA_CHARP(node_bv)    : NULL;
+  service = (false_object != service_bv)? VICARE_BYTEVECTOR_DATA_CHARP(service_bv) : NULL;
+  memset(&hints, '\0', sizeof(struct addrinfo));
+  if (false_object == hints_struct) {
+    hints_p         = NULL;
+    with_canon_name = 0;
+  } else {
+    hints_p = &hints;
+    hints.ai_flags        = unfix(VICARE_STRUCT_REF(hints_struct, 0));
+    hints.ai_family       = unfix(VICARE_STRUCT_REF(hints_struct, 1));
+    hints.ai_socktype     = unfix(VICARE_STRUCT_REF(hints_struct, 2));
+    hints.ai_protocol     = unfix(VICARE_STRUCT_REF(hints_struct, 3));
+    with_canon_name       = AI_CANONNAME & hints.ai_flags;
+  }
+  rv      = getaddrinfo(node, service, hints_p, &result);
+  if (0 == rv) {
+    pcb->root0 = &list_of_addrinfo;
+    for (iter = result; iter; iter = iter->ai_next) {
+      ikptr       pair = ik_pair_alloc(pcb);
+      VICARE_SET_CDR(pair, list_of_addrinfo);
+      list_of_addrinfo = pair;
+      VICARE_SET_CAR(pair, addrinfo_to_struct(pcb, rtd, iter, with_canon_name));
+    }
+    pcb->root0 = NULL;
+    freeaddrinfo(result);
+    return list_of_addrinfo;
+  } else {
+    /* The  GAI_  codes  are  already  negative in  the  GNU  C  Library
+       headers. */
+    return fix(rv);
+  }
+}
+ikptr
+ikrt_posix_gai_strerror (ikptr error_code, ikpcb * pcb)
+{
+  const char *  message;
+  ikptr         message_bv;
+  size_t        message_len;
+  char *        message_data;
+  message      = gai_strerror(unfix(error_code));
+  message_len  = strlen(message);
+  message_bv   = ik_bytevector_alloc(pcb, (long)message_len);
+  message_data = VICARE_BYTEVECTOR_DATA_CHARP(message_bv);
+  memcpy(message_data, message, message_len);
+  return message_bv;
 }
 
 

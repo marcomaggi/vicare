@@ -125,6 +125,7 @@
     posix-inet_pton			posix-inet_ntop
     posix-gethostbyname			posix-gethostbyname2
     posix-gethostbyaddr			posix-host-entries
+    posix-getaddrinfo			posix-gai_strerror
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -584,6 +585,12 @@
 
 (define-inline (posix-host-entries rtd)
   (foreign-call "ikrt_posix_host_entries" rtd))
+
+(define-inline (posix-getaddrinfo rtd node service hints)
+  (foreign-call "ikrt_posix_getaddrinfo" rtd node service hints))
+
+(define-inline (posix-gai_strerror code)
+  (foreign-call "ikrt_posix_gai_strerror" code))
 
 
 ;;;; platform API for file descriptors

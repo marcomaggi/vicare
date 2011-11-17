@@ -18,127 +18,134 @@
 (library (ikarus.posix)
   (export
     ;; errno and h_errno codes handling
-    errno->string		h_errno->string
-    strerror			h_strerror
+    errno->string			h_errno->string
+    strerror				h_strerror
 
     ;; interprocess singnal codes handling
     interprocess-signal->string
 
     ;; system environment variables
-    getenv			setenv
+    getenv				setenv
     unsetenv
-    environ			environ-table
-    environ->table		table->environ
+    environ				environ-table
+    environ->table			table->environ
 
     ;; process identifier
-    getpid			getppid
+    getpid				getppid
 
     ;; executing processes
-    fork			system
-    execv			execve
-    execl			execle
-    execvp			execlp
+    fork				system
+    execv				execve
+    execl				execle
+    execvp				execlp
 
     ;; process exit status
-    waitpid			wait
-    WIFEXITED			WEXITSTATUS
-    WIFSIGNALED			WTERMSIG
-    WCOREDUMP			WIFSTOPPED
+    waitpid				wait
+    WIFEXITED				WEXITSTATUS
+    WIFSIGNALED				WTERMSIG
+    WCOREDUMP				WIFSTOPPED
     WSTOPSIG
 
     ;; interprocess signals
-    raise-signal		kill
+    raise-signal			kill
     pause
 
     ;; file system inspection
-    stat			lstat
+    stat				lstat
     fstat
-    make-struct-stat		struct-stat?
-    struct-stat-st_mode		struct-stat-st_ino
-    struct-stat-st_dev		struct-stat-st_nlink
-    struct-stat-st_uid		struct-stat-st_gid
+    make-struct-stat			struct-stat?
+    struct-stat-st_mode			struct-stat-st_ino
+    struct-stat-st_dev			struct-stat-st_nlink
+    struct-stat-st_uid			struct-stat-st_gid
     struct-stat-st_size
-    struct-stat-st_atime	struct-stat-st_atime_usec
-    struct-stat-st_mtime	struct-stat-st_mtime_usec
-    struct-stat-st_ctime	struct-stat-st_ctime_usec
-    struct-stat-st_blocks	struct-stat-st_blksize
+    struct-stat-st_atime		struct-stat-st_atime_usec
+    struct-stat-st_mtime		struct-stat-st_mtime_usec
+    struct-stat-st_ctime		struct-stat-st_ctime_usec
+    struct-stat-st_blocks		struct-stat-st_blksize
 
-    file-is-directory?		file-is-char-device?
-    file-is-block-device?	file-is-regular-file?
-    file-is-symbolic-link?	file-is-socket?
-    file-is-fifo?		file-is-message-queue?
-    file-is-semaphore?		file-is-shared-memory?
+    file-is-directory?			file-is-char-device?
+    file-is-block-device?		file-is-regular-file?
+    file-is-symbolic-link?		file-is-socket?
+    file-is-fifo?			file-is-message-queue?
+    file-is-semaphore?			file-is-shared-memory?
 
-    access			file-readable?
-    file-writable?		file-executable?
-    file-atime			file-ctime
+    access				file-readable?
+    file-writable?			file-executable?
+    file-atime				file-ctime
     file-mtime
-    file-size			file-exists?
+    file-size				file-exists?
 
-    S_ISDIR			S_ISCHR
-    S_ISBLK			S_ISREG
-    S_ISLNK			S_ISSOCK
+    S_ISDIR				S_ISCHR
+    S_ISBLK				S_ISREG
+    S_ISLNK				S_ISSOCK
     S_ISFIFO
 
     ;; file system muators
-    chown			fchown
-    chmod			fchmod
-    umask			getumask
-    utime			utimes
-    lutimes			futimes
+    chown				fchown
+    chmod				fchmod
+    umask				getumask
+    utime				utimes
+    lutimes				futimes
 
     ;; hard and symbolic links
-    link			symlink
-    readlink			readlink/string
-    realpath			realpath/string
-    delete-file			unlink
-    posix-remove		rename
+    link				symlink
+    readlink				readlink/string
+    realpath				realpath/string
+    delete-file				unlink
+    posix-remove			rename
 
     ;; file system directories
-    mkdir			mkdir/parents
+    mkdir				mkdir/parents
     rmdir
-    getcwd			getcwd/string
-    chdir			fchdir
-    opendir			fdopendir
-    readdir			readdir/string
-    closedir			rewinddir
-    telldir			seekdir
+    getcwd				getcwd/string
+    chdir				fchdir
+    opendir				fdopendir
+    readdir				readdir/string
+    closedir				rewinddir
+    telldir				seekdir
 
-    make-directory-stream	directory-stream?
-    directory-stream-pathname	directory-stream-pointer
-    directory-stream-fd		directory-stream-closed?
+    make-directory-stream		directory-stream?
+    directory-stream-pathname		directory-stream-pointer
+    directory-stream-fd			directory-stream-closed?
 
     split-file-name
 
     ;; file descriptors
-    open			close
-    posix-read			pread
-    posix-write			pwrite
+    open				close
+    posix-read				pread
+    posix-write				pwrite
     lseek
-    readv			writev
-    select			select-fd
-    fcntl			ioctl
-    dup				dup2
-    pipe			mkfifo
+    readv				writev
+    select				select-fd
+    fcntl				ioctl
+    dup					dup2
+    pipe				mkfifo
 
     ;; sockets
-    bind			getsockname
+    bind				getsockname
     make-sockaddr_un
-    sockaddr_un.pathname	sockaddr_un.pathname/string
-    make-sockaddr_in		make-sockaddr_in6
-    sockaddr_in.in_addr		sockaddr_in6.in6_addr
-    sockaddr_in.in_port		sockaddr_in6.in6_port
-    in6addr_loopback		in6addr_any
-    inet-aton			inet-ntoa
-    inet-pton			inet-ntop
-    inet-ntoa/string		inet-ntop/string
-    gethostbyname		gethostbyname2
-    gethostbyaddr		host-entries
+    sockaddr_un.pathname		sockaddr_un.pathname/string
+    make-sockaddr_in			make-sockaddr_in6
+    sockaddr_in.in_addr			sockaddr_in6.in6_addr
+    sockaddr_in.in_port			sockaddr_in6.in6_port
+    in6addr_loopback			in6addr_any
+    inet-aton				inet-ntoa
+    inet-pton				inet-ntop
+    inet-ntoa/string			inet-ntop/string
+    gethostbyname			gethostbyname2
+    gethostbyaddr			host-entries
+    getaddrinfo				gai-strerror
 
-    make-struct-hostent		struct-hostent?
-    struct-hostent-h_name	struct-hostent-h_aliases
-    struct-hostent-h_addrtype	struct-hostent-h_length
-    struct-hostent-h_addr_list	struct-hostent-h_addr
+    make-struct-hostent			struct-hostent?
+    struct-hostent-h_name		struct-hostent-h_aliases
+    struct-hostent-h_addrtype		struct-hostent-h_length
+    struct-hostent-h_addr_list		struct-hostent-h_addr
+
+    make-struct-addrinfo		struct-addrinfo?
+    struct-addrinfo-ai_flags		struct-addrinfo-ai_family
+    struct-addrinfo-ai_socktype		struct-addrinfo-ai_protocol
+    struct-addrinfo-ai_addrlen		struct-addrinfo-ai_addr
+    struct-addrinfo-ai_canonname
 
     ;; time functions
     nanosleep
@@ -262,11 +269,18 @@
 		  inet-ntoa/string		inet-ntop/string
 		  gethostbyname			gethostbyname2
 		  gethostbyaddr			host-entries
+		  getaddrinfo			gai-strerror
 
 		  make-struct-hostent		struct-hostent?
 		  struct-hostent-h_name		struct-hostent-h_aliases
 		  struct-hostent-h_addrtype	struct-hostent-h_length
 		  struct-hostent-h_addr_list	struct-hostent-h_addr
+
+		  make-struct-addrinfo		struct-addrinfo?
+		  struct-addrinfo-ai_flags	struct-addrinfo-ai_family
+		  struct-addrinfo-ai_socktype	struct-addrinfo-ai_protocol
+		  struct-addrinfo-ai_addrlen	struct-addrinfo-ai_addr
+		  struct-addrinfo-ai_canonname
 
 		  ;; time functions
 		  nanosleep
@@ -286,9 +300,44 @@
 ;;;; helpers
 
 (define-inline (%file-descriptor? obj)
+  ;;Do  what  is  possible   to  recognised  fixnums  representing  file
+  ;;descriptors.
+  ;;
   (and (fixnum? obj)
        (unsafe.fx>= obj 0)
        (unsafe.fx<  obj FD_SETSIZE)))
+
+(define-syntax with-bytevectors
+  ;;Used to  preprocess function arguments which must  be bytevectors or
+  ;;strings;  the  strings are  converted  to  bytevectors.  This  macro
+  ;;assumes that the arguments have already been validated.
+  ;;
+  ;;The ?VALUE.BV and ?VALUE input forms must be identifiers.
+  ;;
+  (syntax-rules ()
+    ((_ ((?value.bv ?value) ...) . ?body)
+     (let ((?value.bv (if (bytevector? ?value)
+			  ?value
+			(string->latin1 ?value)))
+	   ...)
+       . ?body))))
+
+(define-syntax with-bytevectors/or-false
+  ;;Used  to preprocess  function arguments  which must  be bytevectors,
+  ;;strings or  false; the strings  are converted to  bytevectors.  This
+  ;;macro assumes that the arguments have already been validated.
+  ;;
+  ;;The ?VALUE.BV and ?VALUE input forms must be identifiers.
+  ;;
+  (syntax-rules ()
+    ((_ ((?value.bv ?value) ...) . ?body)
+     (let ((?value.bv (cond ((bytevector? ?value)
+			     ?value)
+			    ((string? ?value)
+			     (string->latin1 ?value))
+			    (else ?value)))
+	   ...)
+       . ?body))))
 
 
 ;;;; arguments validation
@@ -395,6 +444,20 @@
 (define-argument-validation (string/bytevector who obj)
   (or (string? obj) (bytevector? obj))
   (assertion-violation who "expected string or bytevector as argument" obj))
+
+(define-argument-validation (string/bytevector/false who obj)
+  (or (not obj) (string? obj) (bytevector? obj))
+  (assertion-violation who "expected false, string or bytevector as argument" obj))
+
+(define-argument-validation (af-inet who obj)
+  (and (fixnum? obj)
+       (or (unsafe.fx= obj AF_INET)
+	   (unsafe.fx= obj AF_INET6)))
+  (assertion-violation who "expected a fixnum among AF_INET and AF_INET6 as argument" obj))
+
+(define-argument-validation (addrinfo/false who obj)
+  (or (not obj) (struct-addrinfo? obj))
+  (assertion-violation who "expected an instance of struct-addrinfo as argument" obj))
 
 
 ;;;; errors handling
@@ -1887,7 +1950,7 @@
 (define (inet-pton af presentation)
   (define who 'inet-pton)
   (with-arguments-validation (who)
-      ((fixnum		   af)
+      ((af-inet		   af)
        (string/bytevector  presentation))
     (let ((rv (capi.posix-inet_pton af (if (string? presentation)
 					   (string->utf8 presentation)
@@ -1899,7 +1962,7 @@
 (define (inet-ntop af addr)
   (define who 'inet-ptoa)
   (with-arguments-validation (who)
-      ((fixnum	    af)
+      ((af-inet	    af)
        (bytevector  addr))
     (let ((rv (capi.posix-inet_ntop af addr)))
       (if (bytevector? rv)
@@ -1967,7 +2030,7 @@
   (define who 'gethostbyname2)
   (with-arguments-validation (who)
       ((string/bytevector  hostname)
-       (fixnum		   addrtype))
+       (af-inet		   addrtype))
     (let ((rv (capi.posix-gethostbyname2 (type-descriptor struct-hostent)
 					 (if (bytevector? hostname)
 					     hostname
@@ -1992,6 +2055,65 @@
 
 (define (host-entries)
   (capi.posix-host-entries (type-descriptor struct-hostent)))
+
+;;; --------------------------------------------------------------------
+
+(define-struct struct-addrinfo
+  (ai_flags		;0, fixnum
+   ai_family		;1, fixnum
+   ai_socktype		;2, fixnum
+   ai_protocol		;3, fixnum
+   ai_addrlen		;4, fixnum
+   ai_addr		;5, bytevector
+   ai_canonname))	;6, false or bytevector
+
+(define (%struct-addrinfo-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-addrinfo\"")
+  (%display " ai_flags=")	(%display (struct-addrinfo-ai_flags	S))
+  (%display " ai_family=")	(%display (let ((N (struct-addrinfo-ai_family S)))
+					    (cond ((unsafe.fx= N AF_INET)	"AF_INET")
+						  ((unsafe.fx= N AF_INET6)	"AF_INET6")
+						  (else				N))))
+  (%display " ai_socktype=")	(%display (let ((N (struct-addrinfo-ai_socktype S)))
+					    (cond ((unsafe.fx= N SOCK_STREAM)	"SOCK_STREAM")
+						  ((unsafe.fx= N SOCK_DGRAM)	"SOCK_DGRAM")
+						  (else				N))))
+  (%display " ai_protocol=")	(%display (struct-addrinfo-ai_protocol	S))
+  (%display " ai_addrlen=")	(%display (struct-addrinfo-ai_addrlen	S))
+  (%display " ai_addr=")	(%display (struct-addrinfo-ai_addr	S))
+  (%display " ai_canonname=")	(let ((name (struct-addrinfo-ai_canonname S)))
+				  (if name
+				      (begin
+					(%display "\"")
+					(%display (latin1->string name))
+					(%display "\""))
+				    (%display #f)))
+  (%display "]"))
+
+(define (getaddrinfo node service hints)
+  (define who 'getaddrinfo)
+  (with-arguments-validation (who)
+      ((string/bytevector/false	node)
+       (string/bytevector/false	service)
+       (addrinfo/false		hints))
+    (with-bytevectors/or-false ((node.bv	node)
+				(service.bv	service))
+      (let ((rv (capi.posix-getaddrinfo (type-descriptor struct-addrinfo)
+					node.bv service.bv hints)))
+	(if (fixnum? rv)
+	    (raise
+	     (condition (make-who-condition who)
+			(make-message-condition (gai-strerror rv))
+			(make-irritants-condition (list node service hints))))
+	  rv)))))
+
+(define (gai-strerror code)
+  (define who 'gai-strerror)
+  (with-arguments-validation (who)
+      ((fixnum   code))
+    (latin1->string (capi.posix-gai_strerror code))))
 
 
 ;;;; time functions
@@ -2026,10 +2148,13 @@
 (set-rtd-printer! (type-descriptor struct-stat)		%struct-stat-printer)
 (set-rtd-printer! (type-descriptor directory-stream)	%directory-stream-printer)
 (set-rtd-printer! (type-descriptor struct-hostent)	%struct-hostent-printer)
+(set-rtd-printer! (type-descriptor struct-addrinfo)	%struct-addrinfo-printer)
 
 )
 
 ;;; end of file
 ;; Local Variables:
 ;; eval: (put 'with-pathnames 'scheme-indent-function 1)
+;; eval: (put 'with-bytevectors 'scheme-indent-function 1)
+;; eval: (put 'with-bytevectors/or-false 'scheme-indent-function 1)
 ;; End:

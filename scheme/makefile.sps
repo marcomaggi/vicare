@@ -600,6 +600,8 @@
     (fork					i v posix)
     (fstat					i v posix)
     (futimes					i v posix)
+    (gai-strerror				i v posix)
+    (getaddrinfo				i v posix)
     (getcwd					i v posix)
     (getcwd/string				i v posix)
     (getenv					i v posix)
@@ -737,6 +739,16 @@
     (struct-hostent-h_length			i v posix)
     (struct-hostent-h_addr_list			i v posix)
     (struct-hostent-h_addr			i v posix)
+
+    (make-struct-addrinfo			i v posix)
+    (struct-addrinfo?				i v posix)
+    (struct-addrinfo-ai_flags			i v posix)
+    (struct-addrinfo-ai_family			i v posix)
+    (struct-addrinfo-ai_socktype		i v posix)
+    (struct-addrinfo-ai_protocol		i v posix)
+    (struct-addrinfo-ai_addrlen			i v posix)
+    (struct-addrinfo-ai_addr			i v posix)
+    (struct-addrinfo-ai_canonname		i v posix)
 
 ;;; Ikarus POSIX functions
     (accept-connection				i v posix)
