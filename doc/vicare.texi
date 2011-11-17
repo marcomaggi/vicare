@@ -6977,20 +6977,30 @@ the C level @posix{} @api{}, socket--related data structures are stored
 in bytevectors; such raw manipulation can cause the process to crash if
 we mishandle the values.
 
-@c ------------------------------------------------------------
+@menu
+* posix socket addresses::      Netword address structures.
+* posix socket hosts::          Network hosts database.
+* posix socket protocols::      Network protocols database.
+* posix socket misc::           Error and miscellaneous functions.
+@end menu
 
-@defun h_errno->string @var{h_errno-code}
-Convert an encoded @code{h_errno} value to the corresponding symbolic
-string.
-@end defun
+@c page
+@node posix socket addresses
+@subsection Netword address structures
 
 
-@defun h_strerror @var{h_errno-code}
-Convert an encoded @code{h_errno} value to the corresponding descriptive
-error message string.
-@end defun
+@menu
+* posix socket addresses local:: Local addresses.
+* posix socket addresses in::    @ip{}v4 addresses.
+* posix socket addresses in6::   @ip{}v6 addresses.
+* posix socket addresses rep::   @ascii{} address representations.
+* posix socket addresses info::  Host address informations.
+@end menu
 
-@c ------------------------------------------------------------
+@c page
+@node posix socket addresses local
+@subsubsection Local addresses
+
 
 Instances of @code{struct sockaddr_un} can be handled at the Scheme
 level as follows:
@@ -7027,7 +7037,10 @@ the corresponding socket pathname.  If the data in @var{socket_address}
 is invalid: an exception is raised.
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node posix socket addresses in
+@subsubsection @ip{}v4 addresses
+
 
 Instances of @code{struct sockaddr_in} can be handled at the Scheme
 level as follows:
@@ -7079,7 +7092,10 @@ in_addr} and as fixnum.  If the data in @var{socket_address} is invalid:
 an exception is raised.
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node posix socket addresses in6
+@subsubsection @ip{}v6 addresses
+
 
 Instances of @code{struct sockaddr_in6} can be handled at the Scheme
 level as follows:
@@ -7125,7 +7141,10 @@ Build and return a bytevector holding the constant structures of type
 @code{in6addr_any}.
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node posix socket addresses rep
+@subsubsection @ascii{} address representations
+
 
 Dotted quad address representations can be handled as follows:
 
@@ -7207,89 +7226,10 @@ corresponding @ascii{} presentation of the Internet address.  If the
 arguments are invalid: an exception is raised.
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node posix socket addresses info
+@subsubsection Host address informations
 
-@deftp {Struct Type} struct-hostent
-Data structure type used to represent at the Scheme level @code{struct
-hostent} values.  It has the following fields:
-
-@table @code
-@item h_name
-Bytevector, the official host name.
-
-@item h_aliases
-List of bytevectors, host name aliases.
-
-@item h_addrtype
-Fixnum, @code{AF_INET} or @code{AF_INET6}.
-
-@item h_length
-Fixnum, number of bytes in each host address bytevector.
-
-@item h_addr_list
-List of bytevectors each holding @code{struct in_addr} or @code{struct
-in6_addr}.
-
-@item h_addr
-Bytevector, it is the first in the list @code{h_addr_list}.
-@end table
-@end deftp
-
-
-@defun gethostbyname @var{hostname}
-Interface to the C function @cfunc{gethostbyname}, @glibcref{Host Names,
-gethostbyname}.  Given the string or bytevector @var{hostname} holding
-the @ascii{} representation of a host name, build and return an instance
-of @code{struct-hostent}.  If an error occurs, return an encoded
-@code{h_errno} value.
-
-@example
-(import (vicare))
-
-(gethostbyname "github.com")
-@result{} #["struct-hostent"
-       h_name="github.com"
-       h_aliases=()
-       h_addrtype=AF_INET
-       h_length=4
-       h_addr_list=(#vu8(207 97 227 239))
-       h_addr=#vu8(207 97 227 239)]
-
-(gethostbyname "google.com")
-@result{} #["struct-hostent"
-       h_name="google.com"
-       h_aliases=()
-       h_addrtype=AF_INET
-       h_length=4
-       h_addr_list=(#vu8(209 85 148 103)
-                    #vu8(209 85 148 99)
-                    #vu8(209 85 148 104)
-                    #vu8(209 85 148 105)
-                    #vu8(209 85 148 106)
-                    #vu8(209 85 148 147))
-       h_addr=#vu8(209 85 148 103)]
-@end example
-@end defun
-
-
-@defun gethostbyaddr @var{addr}
-Interface to the C function @cfunc{gethostbyaddr}, @glibcref{Host Names,
-gethostbyaddr}.  Given the bytevector @var{addr} holding a @code{struct
-in_addr} or a @code{struct in6_addr}, build and return an instance of
-@code{struct-hostent}; the type of address is automatically inferred
-from the length of the bytevector.  If an error occurs: an exception is
-raised.
-@end defun
-
-
-@defun host-entries
-Interface to the C functions @cfunc{sethostent}, @cfunc{gethostent} and
-@cfunc{endhostent}, @glibcref{Host Names, gethostbyaddr}.  Build and
-return a list of @code{struct-hostent} representing the entries in the
-hosts database.
-@end defun
-
-@c ------------------------------------------------------------
 
 @deftp {Structure Type} struct-addrinfo
 Scheme level representation of @code{struct addrinfo}.  It has the
@@ -7378,14 +7318,194 @@ exception.
 @end example
 @end defun
 
+@c page
+@node posix socket hosts
+@subsection Network hosts database
+
+
+@deftp {Struct Type} struct-hostent
+Data structure type used to represent at the Scheme level @code{struct
+hostent} values.  It has the following fields:
+
+@table @code
+@item h_name
+Bytevector, the official host name.
+
+@item h_aliases
+List of bytevectors, host name aliases.
+
+@item h_addrtype
+Fixnum, @code{AF_INET} or @code{AF_INET6}.
+
+@item h_length
+Fixnum, number of bytes in each host address bytevector.
+
+@item h_addr_list
+List of bytevectors each holding @code{struct in_addr} or @code{struct
+in6_addr}.
+
+@item h_addr
+Bytevector, it is the first in the list @code{h_addr_list}.
+@end table
+@end deftp
+
+
+@defun gethostbyname @var{hostname}
+Interface to the C function @cfunc{gethostbyname}, @glibcref{Host Names,
+gethostbyname}.  Given the string or bytevector @var{hostname} holding
+the @ascii{} representation of a host name, build and return an instance
+of @code{struct-hostent}.  If an error occurs, return an encoded
+@code{h_errno} value.
+
+@example
+(import (vicare))
+
+(gethostbyname "github.com")
+@result{} #["struct-hostent"
+       h_name="github.com"
+       h_aliases=()
+       h_addrtype=AF_INET
+       h_length=4
+       h_addr_list=(#vu8(207 97 227 239))
+       h_addr=#vu8(207 97 227 239)]
+
+(gethostbyname "google.com")
+@result{} #["struct-hostent"
+       h_name="google.com"
+       h_aliases=()
+       h_addrtype=AF_INET
+       h_length=4
+       h_addr_list=(#vu8(209 85 148 103)
+                    #vu8(209 85 148 99)
+                    #vu8(209 85 148 104)
+                    #vu8(209 85 148 105)
+                    #vu8(209 85 148 106)
+                    #vu8(209 85 148 147))
+       h_addr=#vu8(209 85 148 103)]
+@end example
+@end defun
+
+
+@defun gethostbyaddr @var{addr}
+Interface to the C function @cfunc{gethostbyaddr}, @glibcref{Host Names,
+gethostbyaddr}.  Given the bytevector @var{addr} holding a @code{struct
+in_addr} or a @code{struct in6_addr}, build and return an instance of
+@code{struct-hostent}; the type of address is automatically inferred
+from the length of the bytevector.  If an error occurs: an exception is
+raised.
+@end defun
+
+
+@defun host-entries
+Interface to the C functions @cfunc{sethostent}, @cfunc{gethostent} and
+@cfunc{endhostent}, @glibcref{Host Names, gethostbyaddr}.  Build and
+return a list of @code{struct-hostent} representing the entries in the
+hosts database.
+@end defun
+
+@c page
+@node posix socket protocols
+@subsection Network protocols database
+
+
+@deftp {Structure Type} struct-protoent
+Scheme level representation of @code{struct protoent}.  It has the
+following fields:
+
+@table @code
+@item p_name
+Bytevector, the @ascii{} coding of the official protocol name.
+
+@item p_aliases
+Null or list of bytevectors, the @ascii{} codings of protocol name
+aliases.
+
+@item p_proto
+Fixnum, the protocol number.
+@end table
+@end deftp
+
+
+@defun make-struct-protoent @var{name} @var{aliases} @var{proto}
+Build and return an instance of @code{struct-protoent}.
+@end defun
+
+
+@defun struct-protoent-p_name @var{protoent}
+@defunx struct-protoent-p_aliases @var{protoent}
+@defunx struct-protoent-p_proto @var{protoent}
+Accessors for the fields of @code{struct-protoent}.
+@end defun
+
+
+@defun getprotobyname @var{name}
+Interface to the C function @cfunc{getprotobyname}, @glibcref{Protocols
+Database, getprotobyname}.  Given a string or bytevector @var{name}
+holding the @ascii{} coding of a network protocol name, query the
+network protocols database and build an instance of
+@code{struct-protoent} mirroring the resulting @code{struct protoent}
+entry.  If successful return the data structure, else raise an
+exception.
+
+@example
+(getprotobyname "udp")
+@result{} #["struct-protoent"
+        p_name="udp"
+        p_aliases=(UDP)
+        p_proto=17]
+@end example
+@end defun
+
+
+@defun getprotobynumber @var{proto_num}
+Interface to the C function @cfunc{getprotobynumber},
+@glibcref{Protocols Database, getprotobynumber}.  Given a fixnum
+@var{proto_num} being the number of a network protocol, query the
+network protocols database and build an instance of
+@code{struct-protoent} mirroring the resulting @code{struct protoent}
+entry.  If successful return the data structure, else raise an
+exception.
+
+@example
+(getprotobynumber 17)
+@result{} #["struct-protoent"
+        p_name="udp"
+        p_aliases=(UDP)
+        p_proto=17]
+@end example
+@end defun
+
+
+@defun protocol-entries
+Interface to the C functions @cfunc{setprotoent}, @cfunc{getprotoent}
+and @cfunc{endprotoent}, @glibcref{Protocols Database, setprotoent}.
+Scan the network protocol database and build a list of
+@code{struct-protoent} mirroring the resulting @code{struct protoent}
+entries.  Return the list of structures.
+@end defun
+
+@c page
+@node posix socket misc
+@subsection Error and miscellaneous functions
+
+
+@defun h_errno->string @var{h_errno-code}
+Convert an encoded @code{h_errno} value to the corresponding symbolic
+string.
+@end defun
+
+
+@defun h_strerror @var{h_errno-code}
+Convert an encoded @code{h_errno} value to the corresponding descriptive
+error message string.
+@end defun
+
 
 @defun gai-strerror @var{error-code}
 Interface to the C function @cfunc{gai_strerror}, see the manual page
 @code{gai_strerror(3)}.  Convert an @code{EAI_} error code into the
 corresponding error message, return a string holding such message.
 @end defun
-
-
 
 @c page
 @node posix time
@@ -10030,6 +10150,38 @@ corresponding error message, return a bytevector holding such message in
 @ascii{} coding.
 @end deftypefun
 
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_getprotobyname (ikptr @var{rtd}, ikptr @var{name}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getprotobyname}, @glibcref{Protocols
+Database, getprotobyname}.  Given a bytevector @var{name} holding the
+@ascii{} coding of a network protocol name, query the network protocols
+database and build an instance of @code{struct-protoent} mirroring the
+resulting @code{struct protoent} entry; @var{rtd} must be the type
+descriptor of @code{struct-protoent}.  If successful return the data
+structure, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getprotobynumber (ikptr @var{rtd}, ikptr @var{proto_num}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getprotobynumber},
+@glibcref{Protocols Database, getprotobynumber}.  Given a fixnum
+@var{proto_num} being the number of a network protocol, query the
+network protocols database and build an instance of
+@code{struct-protoent} mirroring the resulting @code{struct protoent}
+entry; @var{rtd} must be the type descriptor of @code{struct-protoent}.
+If successful return the data structure, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_protocol_entries (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C functions @cfunc{setprotoent}, @cfunc{getprotoent}
+and @cfunc{endprotoent}, @glibcref{Protocols Database, setprotoent}.
+Scan the network protocol database and build a list of
+@code{struct-protoent} mirroring the resulting @code{struct protoent}
+entries; @var{rtd} must be the type descriptor of
+@code{struct-protoent}.  Return the list of structures.
+@end deftypefun
 
 @c page
 @node capi posix time

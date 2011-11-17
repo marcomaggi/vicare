@@ -126,6 +126,8 @@
     posix-gethostbyname			posix-gethostbyname2
     posix-gethostbyaddr			posix-host-entries
     posix-getaddrinfo			posix-gai_strerror
+    posix-getprotobyname		posix-getprotobynumber
+    posix-protocol-entries
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -591,6 +593,17 @@
 
 (define-inline (posix-gai_strerror code)
   (foreign-call "ikrt_posix_gai_strerror" code))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-getprotobyname rtd name)
+  (foreign-call "ikrt_posix_getprotobyname" rtd name))
+
+(define-inline (posix-getprotobynumber rtd num)
+  (foreign-call "ikrt_posix_getprotobynumber" rtd num))
+
+(define-inline (posix-protocol-entries rtd)
+  (foreign-call "ikrt_posix_protocol_entries" rtd))
 
 
 ;;;; platform API for file descriptors

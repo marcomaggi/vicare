@@ -135,6 +135,8 @@
     gethostbyname			gethostbyname2
     gethostbyaddr			host-entries
     getaddrinfo				gai-strerror
+    getprotobyname			getprotobynumber
+    protocol-entries
 
     make-struct-hostent			struct-hostent?
     struct-hostent-h_name		struct-hostent-h_aliases
@@ -146,6 +148,10 @@
     struct-addrinfo-ai_socktype		struct-addrinfo-ai_protocol
     struct-addrinfo-ai_addrlen		struct-addrinfo-ai_addr
     struct-addrinfo-ai_canonname
+
+    make-struct-protoent		struct-protoent?
+    struct-protoent-p_name		struct-protoent-p_aliases
+    struct-protoent-p_proto
 
     ;; time functions
     nanosleep
@@ -270,6 +276,8 @@
 		  gethostbyname			gethostbyname2
 		  gethostbyaddr			host-entries
 		  getaddrinfo			gai-strerror
+		  getprotobyname		getprotobynumber
+		  protocol-entries
 
 		  make-struct-hostent		struct-hostent?
 		  struct-hostent-h_name		struct-hostent-h_aliases
@@ -281,6 +289,10 @@
 		  struct-addrinfo-ai_socktype	struct-addrinfo-ai_protocol
 		  struct-addrinfo-ai_addrlen	struct-addrinfo-ai_addr
 		  struct-addrinfo-ai_canonname
+
+		  make-struct-protoent		struct-protoent?
+		  struct-protoent-p_name	struct-protoent-p_aliases
+		  struct-protoent-p_proto
 
 		  ;; time functions
 		  nanosleep
@@ -2122,6 +2134,46 @@
       ((fixnum   code))
     (latin1->string (capi.posix-gai_strerror code))))
 
+;;; --------------------------------------------------------------------
+
+(define-struct struct-protoent
+  (p_name p_aliases p_proto))
+
+(define (%struct-protoent-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-protoent\"")
+  (%display " p_name=\"")
+  (%display (latin1->string (struct-protoent-p_name S)))
+  (%display "\"")
+  (%display " p_aliases=")
+  (%display (map latin1->string (struct-protoent-p_aliases S)))
+  (%display " p_proto=")
+  (%display (struct-protoent-p_proto S))
+  (%display "]"))
+
+(define (getprotobyname name)
+  (define who 'getprotobyname)
+  (with-arguments-validation (who)
+      ((string/bytevector	name))
+    (with-bytevectors ((name.bv name))
+      (let ((rv (capi.posix-getprotobyname (type-descriptor struct-protoent) name.bv)))
+	(if (not rv)
+	    (error who "unknown network protocol" name)
+	  rv)))))
+
+(define (getprotobynumber number)
+  (define who 'getprotobynumber)
+  (with-arguments-validation (who)
+      ((fixnum	number))
+    (let ((rv (capi.posix-getprotobynumber (type-descriptor struct-protoent) number)))
+      (if (not rv)
+	  (error who "unknown network protocol" number)
+	rv))))
+
+(define (protocol-entries)
+  (capi.posix-protocol-entries (type-descriptor struct-protoent)))
+
 
 ;;;; time functions
 
@@ -2156,6 +2208,7 @@
 (set-rtd-printer! (type-descriptor directory-stream)	%directory-stream-printer)
 (set-rtd-printer! (type-descriptor struct-hostent)	%struct-hostent-printer)
 (set-rtd-printer! (type-descriptor struct-addrinfo)	%struct-addrinfo-printer)
+(set-rtd-printer! (type-descriptor struct-protoent)	%struct-protoent-printer)
 
 )
 

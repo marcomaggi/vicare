@@ -975,21 +975,54 @@
 
 ;;; --------------------------------------------------------------------
 
+  ;;GETADDRINFO  works only  when we  are  connected on  the Net  (Marco
+  ;;Maggi; Thu Nov 17, 2011).
+  (when #f
+    (check
+	(let* ((hints	(make-struct-addrinfo AI_CANONNAME AF_INET SOCK_STREAM 0 #f #f #f))
+	       (rv	(px.getaddrinfo "localhost" "smtp" hints)))
+	  (for-all struct-addrinfo? rv))
+      => #t)
+
+    (check
+	(let ((rv (px.getaddrinfo "localhost" "smtp" #f)))
+	  (for-all struct-addrinfo? rv))
+      => #t)
+
+    (check
+	(let ((rv (px.getaddrinfo "localhost" #f #f)))
+	  (for-all struct-addrinfo? rv))
+      => #t)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+
   (check
-      (let* ((hints	(make-struct-addrinfo AI_CANONNAME AF_INET SOCK_STREAM 0 #f #f #f))
-	     (rv	(px.getaddrinfo "localhost" "smtp" hints)))
-	(for-all struct-addrinfo? rv))
+      (let ((rv (px.getprotobyname "icmp")))
+;;;	(check-pretty-print rv)
+	(px.struct-protoent? rv))
     => #t)
 
   (check
-      (let ((rv (px.getaddrinfo "localhost" "smtp" #f)))
-	(for-all struct-addrinfo? rv))
+      (let ((rv (px.getprotobyname "udp")))
+;;;	(check-pretty-print rv)
+	(px.struct-protoent? rv))
     => #t)
 
   (check
-      (let ((rv (px.getaddrinfo "localhost" #f #f)))
-	(for-all struct-addrinfo? rv))
+      (let ((rv (px.getprotobyname "tcp")))
+;;;	(check-pretty-print rv)
+	(px.struct-protoent? rv))
     => #t)
+
+  (check
+      (let ((rv (px.getprotobynumber 6)))
+;;;	(check-pretty-print rv)
+	(px.struct-protoent? rv))
+    => #t)
+
+;;;  (check-pretty-print (px.protocol-entries))
 
   #t)
 

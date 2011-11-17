@@ -1813,8 +1813,9 @@ ikrt_posix_inet_ntop (ikptr af, ikptr host_address_bv, ikpcb * pcb)
 
 static ikptr
 hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
-/* Makes use of "pcb->root1" only,  so that "pcb->root0" is available to
-   the caller. */
+/* Convert  a  C  language   "strut  hostent"  into  a  Scheme  language
+   "struct-hostent".    Makes  use   of  "pcb->root1"   only,   so  that
+   "pcb->root0" is available to the caller. */
 {
   ikptr dst = ik_struct_alloc(pcb, rtd, 6);
   pcb->root1 = &dst;
@@ -1944,6 +1945,9 @@ ikrt_posix_host_entries (ikptr rtd, ikpcb * pcb)
 
 static ikptr
 addrinfo_to_struct (ikpcb * pcb, ikptr rtd, struct addrinfo * src, int with_canon_name)
+/* Convert  a  C  language  "struct  addrinfo" into  a  Scheme  language
+   "struct-addrinfo".    Make  use   of  "pcb->root1"   only,   so  that
+   "pcb->root0" is available to the caller. */
 {
   ikptr         dst = ik_struct_alloc(pcb, rtd, 7);
   ikptr         sockaddr_bv;
@@ -2002,7 +2006,7 @@ ikrt_posix_getaddrinfo (ikptr rtd, ikptr node_bv, ikptr service_bv, ikptr hints_
     hints.ai_protocol     = unfix(VICARE_STRUCT_REF(hints_struct, 3));
     with_canon_name       = AI_CANONNAME & hints.ai_flags;
   }
-  rv      = getaddrinfo(node, service, hints_p, &result);
+  rv = getaddrinfo(node, service, hints_p, &result);
   if (0 == rv) {
     pcb->root0 = &list_of_addrinfo;
     for (iter = result; iter; iter = iter->ai_next) {
@@ -2033,6 +2037,77 @@ ikrt_posix_gai_strerror (ikptr error_code, ikpcb * pcb)
   message_data = VICARE_BYTEVECTOR_DATA_CHARP(message_bv);
   memcpy(message_data, message, message_len);
   return message_bv;
+}
+
+/* ------------------------------------------------------------------ */
+
+static ikptr
+protoent_to_struct (ikpcb * pcb, ikptr rtd, struct protoent * src)
+/* Convert  a  C  language  "struct  protoent" into  a  Scheme  language
+   "struct-protoent".    Make  use   of  "pcb->root1"   only,   so  that
+   "pcb->root0" is available to the caller. */
+{
+  ikptr         dst;
+  ikptr         list_of_aliases = null_object;
+  int           i;
+  dst = ik_struct_alloc(pcb, rtd, 3);
+  pcb->root1 = &dst;
+  {
+    {
+      size_t    name_len = strlen(src->p_name);
+      ikptr     name_bv  = ik_bytevector_alloc(pcb, name_len);
+      char *    name     = VICARE_BYTEVECTOR_DATA_CHARP(name_bv);
+      memcpy(name, src->p_name, name_len);
+      VICARE_STRUCT_SET(dst, 0, name_bv);
+    }
+    for (i=0; src->p_aliases[i]; ++i) {
+      ikptr     pair = ik_pair_alloc(pcb);
+      VICARE_SET_CDR(pair, list_of_aliases);
+      list_of_aliases = pair;
+      VICARE_STRUCT_SET(dst, 1, list_of_aliases);
+      size_t    alias_len = strlen(src->p_aliases[i]);
+      ikptr     alias_bv  = ik_bytevector_alloc(pcb, (long)alias_len);
+      char *    alias     = VICARE_BYTEVECTOR_DATA_CHARP(alias_bv);
+      memcpy(alias, src->p_aliases[i], alias_len);
+      VICARE_SET_CAR(pair, alias_bv);
+    }
+    VICARE_STRUCT_SET(dst, 2, fix(src->p_proto));
+  }
+  pcb->root1 = NULL;
+  return dst;
+}
+ikptr
+ikrt_posix_getprotobyname (ikptr rtd, ikptr name_bv, ikpcb * pcb)
+{
+  char *                name;
+  struct protoent *     entry;
+  name  = VICARE_BYTEVECTOR_DATA_CHARP(name_bv);
+  entry = getprotobyname(name);
+  return (NULL != entry)? protoent_to_struct(pcb, rtd, entry) : false_object;
+}
+ikptr
+ikrt_posix_getprotobynumber (ikptr rtd, ikptr proto_num, ikpcb * pcb)
+{
+  struct protoent *     entry;
+  entry = getprotobynumber(unfix(proto_num));
+  return (NULL != entry)? protoent_to_struct(pcb, rtd, entry) : false_object;
+}
+ikptr
+ikrt_posix_protocol_entries (ikptr rtd, ikpcb * pcb)
+{
+  ikptr                 list_of_entries = null_object;
+  struct protoent *     entry;
+  pcb->root0 = &list_of_entries;
+  setprotoent(1);
+  for (entry=getprotoent(); entry; entry=getprotoent()) {
+    ikptr  pair = ik_pair_alloc(pcb);
+    VICARE_SET_CDR(pair, list_of_entries);
+    list_of_entries = pair;
+    VICARE_SET_CAR(pair, protoent_to_struct(pcb, rtd, entry));
+  }
+  endprotoent();
+  pcb->root0 = NULL;
+  return list_of_entries;
 }
 
 
