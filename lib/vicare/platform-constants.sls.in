@@ -212,7 +212,9 @@
 
 ;;; sockets constants
     SOCK_STREAM		SOCK_DGRAM	SOCK_RAW
-    SOCK_RDM		SOCK_SEQPACKET
+    SOCK_RDM		SOCK_SEQPACKET	SOCK_DCCP
+    SOCK_PACKET		SOCK_CLOEXEC	SOCK_NONBLOCK
+
     AF_LOCAL		PF_LOCAL
     AF_UNIX		PF_UNIX
     AF_FILE		PF_FILE
@@ -861,11 +863,18 @@
 
 (define-inline-constant MNT_FORCE		@VALUEOF_MNT_FORCE@)
 
+;; on the GNU C Library see /usr/include/bits/socket.h
 (define-inline-constant SOCK_STREAM		@VALUEOF_SOCK_STREAM@)
 (define-inline-constant SOCK_DGRAM		@VALUEOF_SOCK_DGRAM@)
 (define-inline-constant SOCK_RAW		@VALUEOF_SOCK_RAW@)
 (define-inline-constant SOCK_RDM		@VALUEOF_SOCK_RDM@)
 (define-inline-constant SOCK_SEQPACKET		@VALUEOF_SOCK_SEQPACKET@)
+(define-inline-constant SOCK_DCCP		@VALUEOF_SOCK_DCCP@)
+(define-inline-constant SOCK_PACKET		@VALUEOF_SOCK_PACKET@)
+(define-inline-constant SOCK_CLOEXEC		@VALUEOF_SOCK_CLOEXEC@)
+(define-inline-constant SOCK_NONBLOCK		@VALUEOF_SOCK_NONBLOCK@)
+
+;; on the GNU C Library see /usr/include/bits/socket.h
 (define-inline-constant AF_LOCAL		@VALUEOF_AF_LOCAL@)
 (define-inline-constant PF_LOCAL		@VALUEOF_PF_LOCAL@)
 (define-inline-constant AF_UNIX			@VALUEOF_AF_UNIX@)
@@ -885,10 +894,12 @@
 (define-inline-constant IPPORT_USERRESERVED	@VALUEOF_IPPORT_USERRESERVED@)
 (define-inline-constant IFNAMSIZ		@VALUEOF_IFNAMSIZ@)
 
+;; on the GNU C Library see /usr/include/bits/socket.h
 (define-inline-constant MSG_OOB			@VALUEOF_MSG_OOB@)
 (define-inline-constant MSG_PEEK		@VALUEOF_MSG_PEEK@)
 (define-inline-constant MSG_DONTROUTE		@VALUEOF_MSG_DONTROUTE@)
 
+;; on the GNU C Library see /usr/include/bits/socket.h
 (define-inline-constant SOL_SOCKET		@VALUEOF_SOL_SOCKET@)
 (define-inline-constant SO_DEBUG		@VALUEOF_SO_DEBUG@)
 (define-inline-constant SO_REUSEADDR		@VALUEOF_SO_REUSEADDR@)

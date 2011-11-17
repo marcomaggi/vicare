@@ -7289,6 +7289,104 @@ return a list of @code{struct-hostent} representing the entries in the
 hosts database.
 @end defun
 
+@c ------------------------------------------------------------
+
+@deftp {Structure Type} struct-addrinfo
+Scheme level representation of @code{struct addrinfo}.  It has the
+following fields:
+
+@table @code
+@item ai_flags
+Fixnum.
+
+@item ai_family
+Fixnum, specifies the Internet address family; @code{AF_INET},
+@code{AF_INET6} of @code{AF_UNSPEC}.
+
+@item ai_socktype
+Fixnum, specifies the socket type; @code{SOCK_STREAM}, @code{SOCK_DGRAM}
+or other @code{SOCK_} value.
+
+@item ai_protocol
+Fixnum, specifies the protocol of the socket address.
+
+@item ai_addrlen
+Fixnum, the number of bytes in the bytevector referenced by
+@code{ai_addr}.
+
+@item ai_addr
+Bytevector, holds an instance of @code{struct sockaddr} of
+@code{ai_addrlen} bytes.
+
+@item ai_canonname
+False or bytevector, represents the canoncal name of the host when
+available.
+@end table
+@end deftp
+
+
+@defun make-struct-addrinfo @var{flags} @var{family} @var{socktype} @var{protocol} @var{addrlen} @var{addr} @var{canonname}
+Build and return an instance of @code{struct-addrinfo}.
+@end defun
+
+
+@defun struct-addrinfo? @var{obj}
+Return true if @var{obj} is an instance of @code{struct-addrinfo}.
+@end defun
+
+
+@defun struct-addrinfo-ai_flags @var{addrinfo}
+@defunx struct-addrinfo-ai_family @var{addrinfo}
+@defunx struct-addrinfo-ai_socktype @var{addrinfo}
+@defunx struct-addrinfo-ai_protocol @var{addrinfo}
+@defunx struct-addrinfo-ai_addrlen @var{addrinfo}
+@defunx struct-addrinfo-ai_addr @var{addrinfo}
+@defunx struct-addrinfo-ai_canonname @var{addrinfo}
+Accessors for the fields of @code{struct-addrinfo}.
+@end defun
+
+
+@defun getaddrinfo @var{node} @var{service} @var{hints}
+Interface to the C function @cfunc{getaddrinfo}, see the manual page
+@code{getaddrinfo(3)}.  Given the strings or bytevectors @var{node} and
+@var{service} identifying an Internet host and a service, build a list
+of @code{struct-addrinfo} instances representing addresses to which
+sockets can be bound or connected.
+
+Both @var{node} and @var{service} can be false, in which case the
+corresponding arguments handed to the C function are @code{NULL}.
+@var{hints} must be an instance of @code{struct-addrinfo} used to select
+matching hosts.
+
+If successful: return the list of data structures, else raise an
+exception.
+
+@example
+(getaddrinfo "github.com" "smtp" #f)
+@result{} (#["struct-addrinfo"
+        ai_flags=40             ai_family=AF_INET
+        ai_socktype=SOCK_DGRAM  ai_protocol=17
+        ai_addrlen=16
+        ai_addr=#vu8(2 0 0 25 207 97 227 239 0 0 0 0 0 0 0 0)
+        ai_canonname=#f]
+    #["struct-addrinfo"
+        ai_flags=40             ai_family=AF_INET
+        ai_socktype=SOCK_STREAM ai_protocol=6
+        ai_addrlen=16
+        ai_addr=#vu8(2 0 0 25 207 97 227 239 0 0 0 0 0 0 0 0)
+        ai_canonname=#f])
+@end example
+@end defun
+
+
+@defun gai-strerror @var{error-code}
+Interface to the C function @cfunc{gai_strerror}, see the manual page
+@code{gai_strerror(3)}.  Convert an @code{EAI_} error code into the
+corresponding error message, return a string holding such message.
+@end defun
+
+
+
 @c page
 @node posix time
 @section Time related functions
@@ -9904,6 +10002,34 @@ Interface to the C functions @cfunc{sethostent}, @cfunc{gethostent} and
 return a list of @code{struct-hostent} representing the entries in the
 hosts database, using @var{rtd} as type descriptor.
 @end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getaddrinfo (ikptr @var{rtd}, ikptr @var{node}, ikptr @var{service}, ikptr @var{hints}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getaddrinfo}, see the manual page
+@code{getaddrinfo(3)}.  Given the bytevectors @var{node} and
+@var{service} identifying an Internet host and a service, build a list
+of @code{struct-addrinfo} instances representing addresses to which
+sockets can be bound or connected.
+
+Both @var{node} and @var{service} can be false, in which case the
+corresponding arguments handed to the C function are @code{NULL}.
+
+@var{hints} must be an instance of @code{struct-addrinfo} used to select
+matching hosts.  @var{rtd} must be the type descriptor of
+@code{struct-addrinfo}.
+
+If successful: return the list of data structures, else return a fixnum
+representing an @code{EAI_} error code.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_gai_strerror (ikptr @var{error_code}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{gai_strerror}, see the manual page
+@code{gai_strerror(3)}.  Convert a @code{EAI_} error code into the
+corresponding error message, return a bytevector holding such message in
+@ascii{} coding.
+@end deftypefun
+
 
 @c page
 @node capi posix time
