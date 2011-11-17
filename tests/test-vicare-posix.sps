@@ -971,7 +971,11 @@
 	      (px.struct-hostent-h_addr      S)))
     => `(#t "localhost" () ,AF_INET 4 (#vu8(127 0 0 1)) #vu8(127 0 0 1)))
 
-  (check-pretty-print (cons '/etc/hosts (px.host-entries)))
+  (check
+      (for-all px.struct-hostent? (px.host-entries))
+    => #t)
+
+;;;  (check-pretty-print (cons '/etc/hosts (px.host-entries)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1023,6 +1027,38 @@
     => #t)
 
 ;;;  (check-pretty-print (px.protocol-entries))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((rv (px.getservbyname "smtp" "tcp")))
+;;;	(check-pretty-print rv)
+	(px.struct-servent? rv))
+    => #t)
+
+  (check
+      (let ((rv (px.getservbyname "http" "tcp")))
+;;;	(check-pretty-print rv)
+	(px.struct-servent? rv))
+    => #t)
+
+  (check
+      (let ((rv (px.getservbyname "ntp" "tcp")))
+;;;	(check-pretty-print rv)
+	(px.struct-servent? rv))
+    => #t)
+
+  (check
+      (let ((rv (px.getservbyport 25 "tcp")))
+;;;	(check-pretty-print rv)
+	(px.struct-servent? rv))
+    => #t)
+
+  (check
+      (for-all px.struct-servent? (px.service-entries))
+    => #t)
+
+;;;  (check-pretty-print (px.service-entries))
 
   #t)
 

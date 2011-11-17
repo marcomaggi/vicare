@@ -1835,7 +1835,7 @@ hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
   { /* store the list of aliases */
     ikptr       list_of_aliases = null_object;
     int         i;
-    ref(dst, off_record_data+1*wordsize) = list_of_aliases;
+    VICARE_STRUCT_SET(dst, 1, list_of_aliases);
     for (i=0; NULL!=src->h_aliases[i]; ++i) {
       ikptr     pair      = ik_pair_alloc(pcb);
       VICARE_SET_CDR(pair, list_of_aliases);
@@ -1855,7 +1855,7 @@ hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
   { /* store the reversed list of addresses */
     ikptr       list_of_addrs = null_object;
     int         i;
-    ref(dst, off_record_data+4*wordsize) = list_of_addrs;
+    VICARE_STRUCT_SET(dst, 4, list_of_addrs);
     for (i=0; NULL!=src->h_addr_list[i]; ++i) {
       ikptr     pair     = ik_pair_alloc(pcb);
       VICARE_SET_CDR(pair, list_of_addrs);
@@ -1933,7 +1933,8 @@ ikrt_posix_host_entries (ikptr rtd, ikpcb * pcb)
   sethostent(1);
   for (entry=gethostent(); entry; entry=gethostent()) {
     ikptr  pair        = ik_pair_alloc(pcb);
-    VICARE_SET_CDR2(pair, list_of_entries, pair);
+    VICARE_SET_CDR(pair, list_of_entries);
+    list_of_entries = pair;
     VICARE_SET_CAR(pair, hostent_to_struct(rtd, entry, pcb));
   }
   endhostent();
@@ -2060,6 +2061,7 @@ protoent_to_struct (ikpcb * pcb, ikptr rtd, struct protoent * src)
       memcpy(name, src->p_name, name_len);
       VICARE_STRUCT_SET(dst, 0, name_bv);
     }
+    VICARE_STRUCT_SET(dst, 1, list_of_aliases);
     for (i=0; src->p_aliases[i]; ++i) {
       ikptr     pair = ik_pair_alloc(pcb);
       VICARE_SET_CDR(pair, list_of_aliases);
@@ -2106,6 +2108,89 @@ ikrt_posix_protocol_entries (ikptr rtd, ikpcb * pcb)
     VICARE_SET_CAR(pair, protoent_to_struct(pcb, rtd, entry));
   }
   endprotoent();
+  pcb->root0 = NULL;
+  return list_of_entries;
+}
+
+/* ------------------------------------------------------------------ */
+
+static ikptr
+servent_to_struct (ikpcb * pcb, ikptr rtd, struct servent * src)
+/* Convert  a  C  language  "struct  servent" into  a  Scheme  language
+   "struct-servent".    Make  use   of  "pcb->root1"   only,   so  that
+   "pcb->root0" is available to the caller. */
+{
+  ikptr         dst;
+  ikptr         list_of_aliases = null_object;
+  int           i;
+  dst = ik_struct_alloc(pcb, rtd, 4);
+  pcb->root1 = &dst;
+  {
+    {
+      size_t    name_len = strlen(src->s_name);
+      ikptr     name_bv  = ik_bytevector_alloc(pcb, name_len);
+      char *    name     = VICARE_BYTEVECTOR_DATA_CHARP(name_bv);
+      memcpy(name, src->s_name, name_len);
+      VICARE_STRUCT_SET(dst, 0, name_bv);
+    }
+    VICARE_STRUCT_SET(dst, 1, list_of_aliases);
+    for (i=0; src->s_aliases[i]; ++i) {
+      ikptr     pair = ik_pair_alloc(pcb);
+      VICARE_SET_CDR(pair, list_of_aliases);
+      list_of_aliases = pair;
+      VICARE_STRUCT_SET(dst, 1, list_of_aliases);
+      size_t    alias_len = strlen(src->s_aliases[i]);
+      ikptr     alias_bv  = ik_bytevector_alloc(pcb, (long)alias_len);
+      char *    alias     = VICARE_BYTEVECTOR_DATA_CHARP(alias_bv);
+      memcpy(alias, src->s_aliases[i], alias_len);
+      VICARE_SET_CAR(pair, alias_bv);
+    }
+    VICARE_STRUCT_SET(dst, 2, fix((long)ntohs((uint16_t)(src->s_port))));
+    {
+      size_t    proto_len = strlen(src->s_proto);
+      ikptr     proto_bv  = ik_bytevector_alloc(pcb, proto_len);
+      char *    proto     = VICARE_BYTEVECTOR_DATA_CHARP(proto_bv);
+      memcpy(proto, src->s_proto, proto_len);
+      VICARE_STRUCT_SET(dst, 3, proto_bv);
+    }
+  }
+  pcb->root1 = NULL;
+  return dst;
+}
+ikptr
+ikrt_posix_getservbyname (ikptr rtd, ikptr name_bv, ikptr proto_bv, ikpcb * pcb)
+{
+  char *                name;
+  char *                proto;
+  struct servent *      entry;
+  name  = VICARE_BYTEVECTOR_DATA_CHARP(name_bv);
+  proto = VICARE_BYTEVECTOR_DATA_CHARP(proto_bv);
+  entry = getservbyname(name, proto);
+  return (NULL != entry)? servent_to_struct(pcb, rtd, entry) : false_object;
+}
+ikptr
+ikrt_posix_getservbyport (ikptr rtd, ikptr port, ikptr proto_bv, ikpcb * pcb)
+{
+  char *                proto;
+  struct servent *      entry;
+  proto = VICARE_BYTEVECTOR_DATA_CHARP(proto_bv);
+  entry = getservbyport((int)htons((uint16_t)unfix(port)), proto);
+  return (NULL != entry)? servent_to_struct(pcb, rtd, entry) : false_object;
+}
+ikptr
+ikrt_posix_service_entries (ikptr rtd, ikpcb * pcb)
+{
+  ikptr                 list_of_entries = null_object;
+  struct servent *      entry;
+  pcb->root0 = &list_of_entries;
+  setservent(1);
+  for (entry=getservent(); entry; entry=getservent()) {
+    ikptr  pair = ik_pair_alloc(pcb);
+    VICARE_SET_CDR(pair, list_of_entries);
+    list_of_entries = pair;
+    VICARE_SET_CAR(pair, servent_to_struct(pcb, rtd, entry));
+  }
+  endservent();
   pcb->root0 = NULL;
   return list_of_entries;
 }

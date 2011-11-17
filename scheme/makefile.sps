@@ -612,6 +612,8 @@
     (getppid					i v posix)
     (getprotobyname				i v posix)
     (getprotobynumber				i v posix)
+    (getservbyname				i v posix)
+    (getservbyport				i v posix)
     (getsockname				i v posix)
     (getumask					i v posix)
     (h_errno->string				i v posix)
@@ -643,6 +645,7 @@
     (posix-write				i v posix)
     (pread					i v posix)
     (protocol-entries				i v posix)
+    (service-entries				i v posix)
     (pwrite					i v posix)
     (raise-signal				i v posix)
     (readdir					i v posix)
@@ -758,6 +761,13 @@
     (struct-protoent-p_name			i v posix)
     (struct-protoent-p_aliases			i v posix)
     (struct-protoent-p_proto			i v posix)
+
+    (make-struct-servent			i v posix)
+    (struct-servent?				i v posix)
+    (struct-servent-s_name			i v posix)
+    (struct-servent-s_aliases			i v posix)
+    (struct-servent-s_port			i v posix)
+    (struct-servent-s_proto			i v posix)
 
 ;;; Ikarus POSIX functions
     (accept-connection				i v posix)

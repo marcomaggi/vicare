@@ -136,7 +136,8 @@
     gethostbyaddr			host-entries
     getaddrinfo				gai-strerror
     getprotobyname			getprotobynumber
-    protocol-entries
+    getservbyname			getservbyport
+    protocol-entries			service-entries
 
     make-struct-hostent			struct-hostent?
     struct-hostent-h_name		struct-hostent-h_aliases
@@ -152,6 +153,10 @@
     make-struct-protoent		struct-protoent?
     struct-protoent-p_name		struct-protoent-p_aliases
     struct-protoent-p_proto
+
+    make-struct-servent			struct-servent?
+    struct-servent-s_name		struct-servent-s_aliases
+    struct-servent-s_port		struct-servent-s_proto
 
     ;; time functions
     nanosleep
@@ -277,7 +282,8 @@
 		  gethostbyaddr			host-entries
 		  getaddrinfo			gai-strerror
 		  getprotobyname		getprotobynumber
-		  protocol-entries
+		  getservbyname			getservbyport
+		  protocol-entries		service-entries
 
 		  make-struct-hostent		struct-hostent?
 		  struct-hostent-h_name		struct-hostent-h_aliases
@@ -293,6 +299,10 @@
 		  make-struct-protoent		struct-protoent?
 		  struct-protoent-p_name	struct-protoent-p_aliases
 		  struct-protoent-p_proto
+
+		  make-struct-servent		struct-servent?
+		  struct-servent-s_name		struct-servent-s_aliases
+		  struct-servent-s_port		struct-servent-s_proto
 
 		  ;; time functions
 		  nanosleep
@@ -2174,6 +2184,55 @@
 (define (protocol-entries)
   (capi.posix-protocol-entries (type-descriptor struct-protoent)))
 
+;;; --------------------------------------------------------------------
+
+(define-struct struct-servent
+  (s_name s_aliases s_port s_proto))
+
+(define (%struct-servent-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-servent\"")
+  (%display " s_name=\"")
+  (%display (latin1->string (struct-servent-s_name S)))
+  (%display "\"")
+  (%display " s_aliases=")
+  (%display (map latin1->string (struct-servent-s_aliases S)))
+  (%display " s_port=")
+  (%display (struct-servent-s_port S))
+  (%display " s_proto=")
+  (%display (latin1->string (struct-servent-s_proto S)))
+  (%display "]"))
+
+(define servent-rtd
+  (type-descriptor struct-servent))
+
+(define (getservbyname name protocol)
+  (define who 'getservbyname)
+  (with-arguments-validation (who)
+      ((string/bytevector	name)
+       (string/bytevector	protocol))
+    (with-bytevectors ((name.bv		name)
+		       (protocol.bv	protocol))
+      (let ((rv (capi.posix-getservbyname servent-rtd name.bv protocol.bv)))
+	(if (not rv)
+	    (error who "unknown network service" name protocol)
+	  rv)))))
+
+(define (getservbyport port protocol)
+  (define who 'getservbyport)
+  (with-arguments-validation (who)
+      ((fixnum			port)
+       (string/bytevector	protocol))
+    (with-bytevectors ((protocol.bv protocol))
+      (let ((rv (capi.posix-getservbyport servent-rtd port protocol.bv)))
+	(if (not rv)
+	    (error who "unknown network service" port protocol)
+	  rv)))))
+
+(define (service-entries)
+  (capi.posix-service-entries servent-rtd))
+
 
 ;;;; time functions
 
@@ -2209,6 +2268,7 @@
 (set-rtd-printer! (type-descriptor struct-hostent)	%struct-hostent-printer)
 (set-rtd-printer! (type-descriptor struct-addrinfo)	%struct-addrinfo-printer)
 (set-rtd-printer! (type-descriptor struct-protoent)	%struct-protoent-printer)
+(set-rtd-printer! (type-descriptor struct-servent)	%struct-servent-printer)
 
 )
 

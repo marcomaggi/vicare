@@ -1,7 +1,7 @@
 /*
  * Ikarus Scheme -- A compiler for R6RS Scheme.
+ * Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
  * Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
- * Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
  *
  * This program is free software:  you can redistribute it and/or modify
  * it under  the terms of  the GNU General  Public License version  3 as
@@ -647,9 +647,6 @@ char**  ik_list_to_vec          (ikptr x);
 
 #define VICARE_SET_CAR(PAIR,VALUE)      ref((PAIR), off_car) = (VALUE)
 #define VICARE_SET_CDR(PAIR,VALUE)      ref((PAIR), off_cdr) = (VALUE)
-
-#define VICARE_SET_CAR2(PAIR,VALUE1,VALUE2)      ref((PAIR), off_car) = (VALUE1) = (VALUE2)
-#define VICARE_SET_CDR2(PAIR,VALUE1,VALUE2)      ref((PAIR), off_cdr) = (VALUE1) = (VALUE2)
 
 
 /** --------------------------------------------------------------------

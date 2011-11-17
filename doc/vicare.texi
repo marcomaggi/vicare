@@ -6981,6 +6981,7 @@ we mishandle the values.
 * posix socket addresses::      Netword address structures.
 * posix socket hosts::          Network hosts database.
 * posix socket protocols::      Network protocols database.
+* posix socket services::       Network services database.
 * posix socket misc::           Error and miscellaneous functions.
 @end menu
 
@@ -7482,6 +7483,100 @@ and @cfunc{endprotoent}, @glibcref{Protocols Database, setprotoent}.
 Scan the network protocol database and build a list of
 @code{struct-protoent} mirroring the resulting @code{struct protoent}
 entries.  Return the list of structures.
+@end defun
+
+@c page
+@node posix socket services
+@subsection Network services database
+
+
+@deftp {Structure Type} struct-servent
+Scheme level representation of @code{struct servent}.  It has the
+following fields:
+
+@table @code
+@item s_name
+Bytevector, the @ascii{} coding of the official service name.
+
+@item s_aliases
+Null or list of bytevectors, the @ascii{} codings of service name
+aliases.
+
+@item s_port
+Fixnum, the port number.
+
+@item s_proto
+Bytevector, @ascii{} coding of the associated protocol name.
+@end table
+@end deftp
+
+
+@defun make-struct-servent @var{name} @var{aliases} @var{port} @var{proto}
+Build and return an instance of @code{struct-servent}.
+@end defun
+
+
+@defun struct-servent-s_name @var{servent}
+@defunx struct-servent-s_aliases @var{servent}
+@defunx struct-servent-s_proto @var{servent}
+@defunx struct-servent-s_port @var{servent}
+Accessors for the fields of @code{struct-servent}.
+@end defun
+
+
+@defun getservbyname @var{name} @var{protocol}
+Interface to the C function @cfunc{getservbyname}, @glibcref{Services
+Database, getservbyname}.  Given the strings or bytevectors @var{name}
+and @var{protocol} holding the @ascii{} coding of a network service name
+and protocol, query the network services database and build an instance
+of @code{struct-servent} mirroring the resulting @code{struct servent}
+entry.  If successful return the data structure, else raise an
+exception.
+
+@example
+(getservbyname "smtp" "tcp")
+@result{} #["struct-servent"
+        s_name="smtp"
+        s_aliases=(mail)
+        s_port=25
+        s_proto=tcp]
+
+(getservbyname "ntp" "udp")
+@result{} #["struct-servent"
+        s_name="ntp"
+        s_aliases=()
+        s_port=123
+        s_proto=udp]
+@end example
+@end defun
+
+
+@defun getservbynumber @var{port} @var{protocol}
+Interface to the C function @cfunc{getservbynumber}, @glibcref{Services
+Database, getservbynumber}.  Given a fixnum @var{port} and a string or
+bytevector @var{protocol} being the port number and protocol name of a
+network service, query the network services database and build an
+instance of @code{struct-servent} mirroring the resulting @code{struct
+servent} entry.  If successful return the data structure, else raise an
+exception.
+
+@example
+(getservbyport 80 "tcp")
+@result{} #["struct-servent"
+        s_name="http"
+        s_aliases=(www-http www)
+        s_port=80
+        s_proto=tcp]
+@end example
+@end defun
+
+
+@defun service-entries
+Interface to the C functions @cfunc{setservent}, @cfunc{getservent} and
+@cfunc{endservent}, @glibcref{Services Database, setservent}.  Scan the
+network service database and build a list of @code{struct-servent}
+mirroring the resulting @code{struct servent} entries.  Return the list
+of structures.
 @end defun
 
 @c page
@@ -10181,6 +10276,40 @@ Scan the network protocol database and build a list of
 @code{struct-protoent} mirroring the resulting @code{struct protoent}
 entries; @var{rtd} must be the type descriptor of
 @code{struct-protoent}.  Return the list of structures.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_getservbyname (ikptr @var{rtd}, ikptr @var{name}, ikptr @var{protocol}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getservbyname}, @glibcref{Services
+Database, getservbyname}.  Given the bytevectors @var{name} and
+@var{protocol} holding the @ascii{} coding of a network service name and
+protocol, query the network services database and build an instance of
+@code{struct-servent} mirroring the resulting @code{struct servent}
+entry.  @var{rtd} must be the type descriptor of @code{struct-servent}.
+If successful return the data structure, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getservbynumber (ikptr @var{rtd}, ikptr @var{port}, ikptr @var{protocol}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getservbynumber}, @glibcref{Services
+Database, getservbynumber}.  Given a fixnum @var{port} and a string or
+bytevector @var{protocol} being the port number and protocol name of a
+network service, query the network services database and build an
+instance of @code{struct-servent} mirroring the resulting @code{struct
+servent} entry.  @var{rtd} must be the type descriptor of
+@code{struct-servent}.  If successful return the data structure, else
+raise an exception.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_service_entries (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C functions @cfunc{setservent}, @cfunc{getservent} and
+@cfunc{endservent}, @glibcref{Services Database, setservent}.  Scan the
+network service database and build a list of @code{struct-servent}
+mirroring the resulting @code{struct servent} entries.  @var{rtd} must
+be the type descriptor of @code{struct-servent}.  Return the list of
+structures.
 @end deftypefun
 
 @c page
