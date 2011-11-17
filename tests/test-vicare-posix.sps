@@ -978,18 +978,18 @@
   (check
       (let* ((hints	(make-struct-addrinfo AI_CANONNAME AF_INET SOCK_STREAM 0 #f #f #f))
 	     (rv	(px.getaddrinfo "localhost" "smtp" hints)))
-	rv)
-    => #f)
+	(for-all struct-addrinfo? rv))
+    => #t)
 
   (check
       (let ((rv (px.getaddrinfo "localhost" "smtp" #f)))
-	rv)
-    => #f)
+	(for-all struct-addrinfo? rv))
+    => #t)
 
   (check
       (let ((rv (px.getaddrinfo "localhost" #f #f)))
-	rv)
-    => #f)
+	(for-all struct-addrinfo? rv))
+    => #t)
 
   #t)
 
