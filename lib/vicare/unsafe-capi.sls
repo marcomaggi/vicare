@@ -129,6 +129,8 @@
     posix-getprotobyname		posix-getprotobynumber
     posix-getservbyname			posix-getservbyport
     posix-protocol-entries		posix-service-entries
+    posix-socket			posix-shutdown
+    posix-socketpair
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -616,6 +618,17 @@
 
 (define-inline (posix-service-entries rtd)
   (foreign-call "ikrt_posix_service_entries" rtd))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-socket namespace style protocol)
+  (foreign-call "ikrt_posix_socket" namespace style protocol))
+
+(define-inline (posix-shutdown sock how)
+  (foreign-call "ikrt_posix_shutdown" sock how))
+
+(define-inline (posix-socketpair namespace style protocol)
+  (foreign-call "ikrt_posix_socketpair" namespace style protocol))
 
 
 ;;;; platform API for file descriptors

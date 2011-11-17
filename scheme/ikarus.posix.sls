@@ -138,6 +138,9 @@
     getprotobyname			getprotobynumber
     getservbyname			getservbyport
     protocol-entries			service-entries
+    socket				shutdown
+    socketpair
+
 
     make-struct-hostent			struct-hostent?
     struct-hostent-h_name		struct-hostent-h_aliases
@@ -284,6 +287,8 @@
 		  getprotobyname		getprotobynumber
 		  getservbyname			getservbyport
 		  protocol-entries		service-entries
+		  socket			shutdown
+		  socketpair
 
 		  make-struct-hostent		struct-hostent?
 		  struct-hostent-h_name		struct-hostent-h_aliases
@@ -2232,6 +2237,39 @@
 
 (define (service-entries)
   (capi.posix-service-entries servent-rtd))
+
+;;; --------------------------------------------------------------------
+
+(define (socket namespace style protocol)
+  (define who 'socket)
+  (with-arguments-validation (who)
+      ((fixnum	namespace)
+       (fixnum	style)
+       (fixnum	protocol))
+    (let ((rv (capi.posix-socket namespace style protocol)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv namespace style protocol)))))
+
+(define (shutdown sock how)
+  (define who 'shutdown)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (fixnum		how))
+    (let ((rv (capi.posix-shutdown sock how)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock how)))))
+
+(define (socketpair namespace style protocol)
+  (define who 'socketpair)
+  (with-arguments-validation (who)
+      ((fixnum	namespace)
+       (fixnum	style)
+       (fixnum	protocol))
+    (let ((rv (capi.posix-socketpair namespace style protocol)))
+      (if (pair? rv)
+	  (values (car rv) (cdr rv))
+	(raise-errno-error who rv namespace style protocol)))))
 
 
 ;;;; time functions

@@ -2195,6 +2195,47 @@ ikrt_posix_service_entries (ikptr rtd, ikpcb * pcb)
   return list_of_entries;
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_socket (ikptr namespace, ikptr style, ikptr protocol)
+{
+  int   rv;
+  errno = 0;
+  rv    = socket(unfix(namespace), unfix(style), unfix(protocol));
+  if (0 <= rv)
+    return fix(rv);
+  else
+    return ik_errno_to_code();
+}
+ikptr
+ikrt_posix_shutdown (ikptr sock, ikptr how)
+{
+  int   rv;
+  errno = 0;
+  rv    = shutdown(unfix(sock), unfix(how));
+  if (0 == rv)
+    return fix(0);
+  else
+    return ik_errno_to_code();
+}
+ikptr
+ikrt_posix_socketpair (ikptr namespace, ikptr style, ikptr protocol, ikpcb * pcb)
+{
+  int   rv;
+  int   fds[2];
+  errno = 0;
+  rv    = socketpair(unfix(namespace), unfix(style), unfix(protocol), fds);
+  if (0 == rv) {
+    ikptr       pair = ik_pair_alloc(pcb);
+    VICARE_SET_CAR(pair, fix(fds[0]));
+    VICARE_SET_CDR(pair, fix(fds[1]));
+    return pair;
+  } else {
+    return ik_errno_to_code();
+  }
+}
+
 
 /** --------------------------------------------------------------------
  ** Time related functions.

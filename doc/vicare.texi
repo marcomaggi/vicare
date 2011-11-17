@@ -6982,6 +6982,7 @@ we mishandle the values.
 * posix socket hosts::          Network hosts database.
 * posix socket protocols::      Network protocols database.
 * posix socket services::       Network services database.
+* posix socket socket::         Network sockets operations.
 * posix socket misc::           Error and miscellaneous functions.
 @end menu
 
@@ -7578,6 +7579,52 @@ network service database and build a list of @code{struct-servent}
 mirroring the resulting @code{struct servent} entries.  Return the list
 of structures.
 @end defun
+
+@c page
+@node posix socket socket
+@subsection Network sockets operations
+
+
+@defun socket @var{namespace} @var{style} @var{protocol}
+Interface to the C function @cfunc{socket}, @glibcref{Creating a Socket,
+socket}.  Create a new socket descriptor and return it as non--negative
+fixnum; if an error occurs raise an exception.  All the arguments must
+be fixnums.
+@end defun
+
+
+@defun shutdown @var{sock} @var{how}
+Interface to the C function @cfunc{shutdown}, @glibcref{Closing a
+Socket, shutdown}.  Close the socket @var{sock} according to @var{how},
+which can be one of the constants @code{SHUT_RD}, @code{SHUT_WR} or
+@code{SHUT_RDWR}.  If successful return unspecified values, else raise
+an exception.
+@end defun
+
+
+@defun socketpair @var{namespace} @var{style} @var{protocol}
+Interface to the C function @cfunc{socketpair}, @glibcref{Socket Pairs,
+socketpair}.  Create a pairs of connected sockets and return two values
+being the descriptors as non--negative fixnums; if an error occurs raise
+an exception.  All the arguments must be fixnums; @var{namespace} must
+be @code{AF_LOCAL}.
+
+@example
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let-values (((a b) (px.socketpair AF_LOCAL SOCK_DGRAM 0)))
+  (px.posix-write a '#vu8(1 2 3 4) 4)
+  (let ((buf (make-bytevector 4)))
+    (px.posix-read b buf 4)
+    (px.shutdown a SHUT_RDWR)
+    (px.shutdown b SHUT_RDWR)
+    buf))
+@result{} #vu8(1 2 3 4)
+@end example
+@end defun
+
 
 @c page
 @node posix socket misc
@@ -10310,6 +10357,32 @@ network service database and build a list of @code{struct-servent}
 mirroring the resulting @code{struct servent} entries.  @var{rtd} must
 be the type descriptor of @code{struct-servent}.  Return the list of
 structures.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_socket (ikptr @var{namespace}, ikptr @var{style}, ikptr @var{protocol})
+Interface to the C function @cfunc{socket}, @glibcref{Creating a Socket,
+socket}.  Create a new socket descriptor and return it as non--negative
+fixnum; if an error occurs return an encoded @code{errno} value.  All
+the arguments must be fixnums.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_shutdown (ikptr @var{sock}, ikptr @var{how})
+Interface to the C function @cfunc{shutdown}, @glibcref{Closing a
+Socket, shutdown}.  Close the socket @var{sock} according to @var{how}.
+If successful return the fixnum zero, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_socketpair (ikptr @var{namespace}, ikptr @var{style}, ikptr @var{protocol}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{socketpair}, @glibcref{Socket Pairs,
+socketpair}.  Create a pairs of connected sockets and return a pair
+holding the descriptors as non--negative fixnums; if an error occurs
+return an encoded @code{errno} value.  All the arguments must be
+fixnums, but @var{pcb}.
 @end deftypefun
 
 @c page

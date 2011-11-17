@@ -675,6 +675,9 @@
     (wait					i v posix)
     (waitpid					i v posix)
     (writev					i v posix)
+    (socket					i v posix)
+    (shutdown					i v posix)
+    (socketpair					i v posix)
 
     (make-struct-stat				i v posix)
     (struct-stat?				i v posix)
