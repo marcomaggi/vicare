@@ -2435,7 +2435,10 @@ ikrt_posix_getsockopt_int (ikptr sock, ikptr level, ikptr optname, ikpcb * pcb)
   errno = 0;
   rv    = getsockopt(unfix(sock), unfix(level), unfix(optname), &optval, &optlen);
   if (0 == rv) {
-    return s_to_number((long)optval, pcb);
+    ikptr       pair = ik_pair_alloc(pcb);
+    VICARE_SET_CAR(pair, s_to_number((long)optval, pcb));
+    VICARE_SET_CDR(pair, true_object);
+    return pair;
   } else {
     return ik_errno_to_code();
   }
@@ -2449,7 +2452,10 @@ ikrt_posix_getsockopt_size_t (ikptr sock, ikptr level, ikptr optname, ikpcb * pc
   errno = 0;
   rv    = getsockopt(unfix(sock), unfix(level), unfix(optname), &optval, &optlen);
   if (0 == rv) {
-    return s_to_number((long)optval, pcb);
+    ikptr       pair = ik_pair_alloc(pcb);
+    VICARE_SET_CAR(pair, s_to_number((long)optval, pcb));
+    VICARE_SET_CDR(pair, true_object);
+    return pair;
   } else {
     return ik_errno_to_code();
   }

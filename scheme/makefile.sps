@@ -687,7 +687,11 @@
     (sendto					i v posix)
     (recvfrom					i v posix)
     (setsockopt					i v posix)
+    (setsockopt/int				i v posix)
+    (setsockopt/size_t				i v posix)
     (getsockopt					i v posix)
+    (getsockopt/int				i v posix)
+    (getsockopt/size_t				i v posix)
 
     (make-struct-stat				i v posix)
     (struct-stat?				i v posix)

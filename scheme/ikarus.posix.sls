@@ -145,6 +145,8 @@
     send				recv
     sendto				recvfrom
     setsockopt				getsockopt
+    setsockopt/int			getsockopt/int
+    setsockopt/size_t			getsockopt/size_t
 
     make-struct-hostent			struct-hostent?
     struct-hostent-h_name		struct-hostent-h_aliases
@@ -298,6 +300,8 @@
 		  send				recv
 		  sendto			recvfrom
 		  setsockopt			getsockopt
+		  setsockopt/int		getsockopt/int
+		  setsockopt/size_t		getsockopt/size_t
 
 		  make-struct-hostent		struct-hostent?
 		  struct-hostent-h_name		struct-hostent-h_aliases
@@ -2400,6 +2404,30 @@
       (unless (unsafe.fxzero? rv)
 	(raise-errno-error who rv sock level option optval)))))
 
+(define (getsockopt/int sock level option)
+  (define who 'getsockopt/int)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (fixnum		level)
+       (fixnum		option))
+    (let ((rv (capi.posix-getsockopt/int sock level option)))
+      (if (unsafe.fxzero? rv)
+	  rv
+	(raise-errno-error who rv sock level option)))))
+
+(define (getsockopt/size_t sock level option)
+  (define who 'getsockopt/size_t)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (fixnum		level)
+       (fixnum		option))
+    (let ((rv (capi.posix-getsockopt/size_t sock level option)))
+      (if (unsafe.fxzero? rv)
+	  rv
+	(raise-errno-error who rv sock level option)))))
+
+;;; --------------------------------------------------------------------
+
 (define (setsockopt sock level option optval)
   (define who 'setsockopt)
   (with-arguments-validation (who)
@@ -2409,6 +2437,30 @@
        (bytevector	optval))
     (let ((rv (capi.posix-setsockopt sock level option optval)))
       (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock level option optval)))))
+
+(define (setsockopt/int sock level option optval)
+  (define who 'setsockopt/int)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (fixnum		level)
+       (fixnum		option)
+       (bytevector	optval))
+    (let ((rv (capi.posix-setsockopt/int sock level option optval)))
+      (if (pair? rv)
+	  (car rv)
+	(raise-errno-error who rv sock level option optval)))))
+
+(define (setsockopt/size_t sock level option optval)
+  (define who 'setsockopt/size_t)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (fixnum		level)
+       (fixnum		option)
+       (bytevector	optval))
+    (let ((rv (capi.posix-setsockopt/size_t sock level option optval)))
+      (if (pair? rv)
+	  (car rv)
 	(raise-errno-error who rv sock level option optval)))))
 
 

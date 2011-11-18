@@ -136,6 +136,8 @@
     posix-send				posix-recv
     posix-sendto			posix-recvfrom
     posix-setsockopt			posix-getsockopt
+    posix-setsockopt/int		posix-getsockopt/int
+    posix-setsockopt/size_t		posix-getsockopt/size_t
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -641,11 +643,15 @@
 (define-inline (posix-bind sock sockaddr)
   (foreign-call "ikrt_posix_bind" sock sockaddr))
 
+;;; --------------------------------------------------------------------
+
 (define-inline (posix-getpeername sock)
   (foreign-call "ikrt_posix_getpeername" sock))
 
 (define-inline (posix-getsockname sock)
   (foreign-call "ikrt_posix_getsockname" sock))
+
+;;; --------------------------------------------------------------------
 
 (define-inline (posix-send sock buffer size flags)
   (foreign-call "ikrt_posix_send" sock buffer size flags))
@@ -659,11 +665,25 @@
 (define-inline (posix-recvfrom sock buffer size flags)
   (foreign-call "ikrt_posix_recvfrom" sock buffer size flags))
 
-(define-inline (posix-getsockopt sock level option optval)
-  (foreign-call "ikrt_posix_getsockopt" sock level option optval))
+;;; --------------------------------------------------------------------
 
 (define-inline (posix-setsockopt sock level option optval)
   (foreign-call "ikrt_posix_setsockopt" sock level option optval))
+
+(define-inline (posix-setsockopt/int sock level option optval)
+  (foreign-call "ikrt_posix_setsockopt_int" sock level option optval))
+
+(define-inline (posix-setsockopt/size_t sock level option optval)
+  (foreign-call "ikrt_posix_setsockopt_size_t" sock level option optval))
+
+(define-inline (posix-getsockopt sock level option optval)
+  (foreign-call "ikrt_posix_getsockopt" sock level option optval))
+
+(define-inline (posix-getsockopt/int sock level option)
+  (foreign-call "ikrt_posix_getsockopt_int" sock level option))
+
+(define-inline (posix-getsockopt/size_t sock level option)
+  (foreign-call "ikrt_posix_getsockopt_size_t" sock level option))
 
 
 ;;;; platform API for file descriptors
