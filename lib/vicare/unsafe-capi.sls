@@ -113,7 +113,6 @@
     glibc-fdatasync
 
     ;; network sockets
-    posix-bind				posix-getsockname
     glibc-if-nametoindex		glibc-if-indextoname
     glibc-if-nameindex
     posix-make-sockaddr_un		posix-sockaddr_un.pathname
@@ -131,6 +130,12 @@
     posix-protocol-entries		posix-service-entries
     posix-socket			posix-shutdown
     posix-socketpair
+    posix-connect			posix-listen
+    posix-accept			posix-bind
+    posix-getpeername			posix-getsockname
+    posix-send				posix-recv
+    posix-sendto			posix-recvfrom
+    posix-setsockopt			posix-getsockopt
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -506,14 +511,6 @@
 
 ;;;; network sockets
 
-(define-inline (posix-bind sock sockaddr-bv)
-  (foreign-call "ikrt_posix_bind" sock sockaddr-bv))
-
-(define-inline (posix-getsockname sock)
-  (foreign-call "ikrt_posix_getsockname" sock))
-
-;;; --------------------------------------------------------------------
-
 (define-inline (glibc-if-nametoindex name)
   (foreign-call "ikrt_glibc_if_nametoindex" name))
 
@@ -629,6 +626,44 @@
 
 (define-inline (posix-socketpair namespace style protocol)
   (foreign-call "ikrt_posix_socketpair" namespace style protocol))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-connect sock sockaddr)
+  (foreign-call "ikrt_posix_connect" sock sockaddr))
+
+(define-inline (posix-listen sock max-pending-conns)
+  (foreign-call "ikrt_posix_listen" sock max-pending-conns))
+
+(define-inline (posix-accept sock)
+  (foreign-call "ikrt_posix_accept" sock))
+
+(define-inline (posix-bind sock sockaddr)
+  (foreign-call "ikrt_posix_bind" sock sockaddr))
+
+(define-inline (posix-getpeername sock)
+  (foreign-call "ikrt_posix_getpeername" sock))
+
+(define-inline (posix-getsockname sock)
+  (foreign-call "ikrt_posix_getsockname" sock))
+
+(define-inline (posix-send sock buffer size flags)
+  (foreign-call "ikrt_posix_send" sock buffer size flags))
+
+(define-inline (posix-recv sock buffer size flags)
+  (foreign-call "ikrt_posix_recv" sock buffer size flags))
+
+(define-inline (posix-sendto sock buffer size flags addr)
+  (foreign-call "ikrt_posix_sendto" sock buffer size flags addr))
+
+(define-inline (posix-recvfrom sock buffer size flags)
+  (foreign-call "ikrt_posix_recvfrom" sock buffer size flags))
+
+(define-inline (posix-getsockopt sock level option optval)
+  (foreign-call "ikrt_posix_getsockopt" sock level option optval))
+
+(define-inline (posix-setsockopt sock level option optval)
+  (foreign-call "ikrt_posix_setsockopt" sock level option optval))
 
 
 ;;;; platform API for file descriptors

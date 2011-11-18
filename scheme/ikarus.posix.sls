@@ -122,7 +122,6 @@
     pipe				mkfifo
 
     ;; sockets
-    bind				getsockname
     make-sockaddr_un
     sockaddr_un.pathname		sockaddr_un.pathname/string
     make-sockaddr_in			make-sockaddr_in6
@@ -140,7 +139,12 @@
     protocol-entries			service-entries
     socket				shutdown
     socketpair
-
+    connect				listen
+    accept				bind
+    getpeername				getsockname
+    send				recv
+    sendto				recvfrom
+    setsockopt				getsockopt
 
     make-struct-hostent			struct-hostent?
     struct-hostent-h_name		struct-hostent-h_aliases
@@ -271,7 +275,6 @@
 		  pipe				mkfifo
 
 		  ;; sockets
-		  bind				getsockname
 		  make-sockaddr_un
 		  sockaddr_un.pathname		sockaddr_un.pathname/string
 		  make-sockaddr_in		make-sockaddr_in6
@@ -289,6 +292,12 @@
 		  protocol-entries		service-entries
 		  socket			shutdown
 		  socketpair
+		  connect			listen
+		  accept			bind
+		  getpeername			getsockname
+		  send				recv
+		  sendto			recvfrom
+		  setsockopt			getsockopt
 
 		  make-struct-hostent		struct-hostent?
 		  struct-hostent-h_name		struct-hostent-h_aliases
@@ -452,6 +461,10 @@
        (<= 0 obj))
   (assertion-violation who
     "expected non-negative exact integer as offset argument" obj))
+
+(define-argument-validation (fixnum/false who obj)
+  (or (not obj) (fixnum? obj))
+  (assertion-violation who "expected false or fixnum as argument" obj))
 
 (define-argument-validation (fixnum/pointer/false who obj)
   (or (not obj) (fixnum? obj) (pointer? obj))
@@ -1658,46 +1671,54 @@
       (unless (unsafe.fxzero? rv)
 	(raise-errno-error who rv fd)))))
 
-(define (posix-read fd buffer size)
-  (define who 'posix-read)
-  (with-arguments-validation (who)
-      ((file-descriptor  fd)
-       (bytevector	 buffer)
-       (fixnum		 size))
-    (let ((rv (capi.posix-read fd buffer size)))
-      (if (unsafe.fx<= 0 rv)
-	  rv
-	(raise-errno-error who rv fd)))))
+(define posix-read
+  (case-lambda
+   ((fd buffer)
+    (posix-read fd buffer #f))
+   ((fd buffer size)
+    (define who 'posix-read)
+    (with-arguments-validation (who)
+	((file-descriptor  fd)
+	 (bytevector	 buffer)
+	 (fixnum/false	 size))
+      (let ((rv (capi.posix-read fd buffer size)))
+	(if (unsafe.fx<= 0 rv)
+	    rv
+	  (raise-errno-error who rv fd)))))))
 
 (define (pread fd buffer size off)
   (define who 'pread)
   (with-arguments-validation (who)
       ((file-descriptor  fd)
        (bytevector	 buffer)
-       (fixnum		 size)
+       (fixnum/false	 size)
        (offset		 off))
     (let ((rv (capi.posix-pread fd buffer size off)))
       (if (unsafe.fx<= 0 rv)
 	  rv
 	(raise-errno-error who rv fd)))))
 
-(define (posix-write fd buffer size)
-  (define who 'posix-write)
-  (with-arguments-validation (who)
-      ((file-descriptor  fd)
-       (bytevector	 buffer)
-       (fixnum		 size))
-    (let ((rv (capi.posix-write fd buffer size)))
-      (if (unsafe.fx<= 0 rv)
-	  rv
-	(raise-errno-error who rv fd)))))
+(define posix-write
+  (case-lambda
+   ((fd buffer)
+    (posix-write fd buffer #f))
+   ((fd buffer size)
+    (define who 'posix-write)
+    (with-arguments-validation (who)
+	((file-descriptor  fd)
+	 (bytevector	 buffer)
+	 (fixnum/false	 size))
+      (let ((rv (capi.posix-write fd buffer size)))
+	(if (unsafe.fx<= 0 rv)
+	    rv
+	  (raise-errno-error who rv fd)))))))
 
 (define (pwrite fd buffer size off)
   (define who 'pwrite)
   (with-arguments-validation (who)
       ((file-descriptor  fd)
        (bytevector	 buffer)
-       (fixnum		 size)
+       (fixnum/false	 size)
        (offset		 off))
     (let ((rv (capi.posix-pwrite fd buffer size off)))
       (if (unsafe.fx<= 0 rv)
@@ -1847,25 +1868,6 @@
 
 
 ;;;; sockets
-
-(define (bind sock sockaddr)
-  (define who 'bind)
-  (with-arguments-validation (who)
-      ((bytevector	sockaddr))
-    (let ((rv (capi.posix-bind sock sockaddr)))
-      (unless (unsafe.fxzero? rv)
-	(raise-errno-error who rv sock sockaddr)))))
-
-(define (getsockname sock)
-  (define who 'getsockname)
-  (with-arguments-validation (who)
-      ((file-descriptor	sock))
-    (let ((rv (capi.posix-getsockname sock)))
-      (if (bytevector? rv)
-	  rv
-	(raise-errno-error who rv sock)))))
-
-;;; --------------------------------------------------------------------
 
 (define (make-sockaddr_un pathname)
   (define who 'make-sockaddr_un)
@@ -2270,6 +2272,144 @@
       (if (pair? rv)
 	  (values (car rv) (cdr rv))
 	(raise-errno-error who rv namespace style protocol)))))
+
+;;; --------------------------------------------------------------------
+
+(define (connect sock sockaddr)
+  (define who 'connect)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (bytevector	sockaddr))
+    (let ((rv (capi.posix-connect sock sockaddr)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock sockaddr)))))
+
+(define (listen sock max-pending-conns)
+  (define who 'listen)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (fixnum		max-pending-conns))
+    (let ((rv (capi.posix-listen sock max-pending-conns)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock max-pending-conns)))))
+
+(define (accept sock)
+  (define who 'accept)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock))
+    (let ((rv (capi.posix-accept sock)))
+      (cond ((pair? rv)
+	     (values (unsafe.car rv) (unsafe.cdr rv)))
+	    ((unsafe.fx= rv EWOULDBLOCK)
+	     (values #f #f))
+	    (else
+	     (raise-errno-error who rv sock))))))
+
+(define (bind sock sockaddr)
+  (define who 'bind)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (bytevector	sockaddr))
+    (let ((rv (capi.posix-bind sock sockaddr)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock sockaddr)))))
+
+;;; --------------------------------------------------------------------
+
+(define (getpeername sock)
+  (define who 'getpeername)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock))
+    (let ((rv (capi.posix-getpeername sock)))
+      (if (bytevector? rv)
+	  rv
+	(raise-errno-error who rv sock)))))
+
+(define (getsockname sock)
+  (define who 'getsockname)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock))
+    (let ((rv (capi.posix-getsockname sock)))
+      (if (bytevector? rv)
+	  rv
+	(raise-errno-error who rv sock)))))
+
+;;; --------------------------------------------------------------------
+
+(define (send sock buffer size flags)
+  (define who 'send)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (bytevector	buffer)
+       (fixnum/false	size)
+       (fixnum		flags))
+    (let ((rv (capi.posix-send sock buffer size flags)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv sock buffer size flags)))))
+
+(define (recv sock buffer size flags)
+  (define who 'recv)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (bytevector	buffer)
+       (fixnum/false	size)
+       (fixnum		flags))
+    (let ((rv (capi.posix-recv sock buffer size flags)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv sock buffer size flags)))))
+
+;;; --------------------------------------------------------------------
+
+(define (sendto sock buffer size flags addr)
+  (define who 'sendto)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (bytevector	buffer)
+       (fixnum/false	size)
+       (fixnum		flags)
+       (bytevector	addr))
+    (let ((rv (capi.posix-sendto sock buffer size flags addr)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv sock buffer size flags addr)))))
+
+(define (recvfrom sock buffer size flags)
+  (define who 'recvfrom)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (bytevector	buffer)
+       (fixnum/false	size)
+       (fixnum		flags))
+    (let ((rv (capi.posix-recvfrom sock buffer size flags)))
+      (if (pair? rv)
+	  (values (car rv) (cdr rv))
+	(raise-errno-error who rv sock buffer size flags)))))
+
+;;; --------------------------------------------------------------------
+
+(define (getsockopt sock level option optval)
+  (define who 'getsockopt)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (fixnum		level)
+       (fixnum		option)
+       (bytevector	optval))
+    (let ((rv (capi.posix-getsockopt sock level option optval)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock level option optval)))))
+
+(define (setsockopt sock level option optval)
+  (define who 'setsockopt)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (fixnum		level)
+       (fixnum		option)
+       (bytevector	optval))
+    (let ((rv (capi.posix-setsockopt sock level option optval)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock level option optval)))))
 
 
 ;;;; time functions

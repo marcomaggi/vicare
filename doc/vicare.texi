@@ -6718,12 +6718,14 @@ an exception.
 @end defun
 
 
-@defun posix-read @var{fd} @var{buffer} @var{size}
+@defun posix-read @var{fd} @var{buffer}
+@defunx posix-read @var{fd} @var{buffer} @var{size}
 Interface to the C function @cfunc{read}, @glibcref{I/O Primitives,
-read}.  Read at most @var{size} bytes from the file descriptor @var{fd}
-and store them in the bytevector @var{buffer}; @var{fd} and @var{size}
-must be fixnums.  If successful return a non--negative fixnum
-representing the number of bytes read, else raise an exception.
+read}.  Read bytes from the file descriptor @var{fd} and store them in
+the bytevector @var{buffer}; if @var{size} is a fixnum, read @var{size}
+bytes; if @var{size} is false or not given, read a number of bytes equal
+to the length of @var{buffer}.  If successful return a non--negative
+fixnum representing the number of bytes read, else raise an exception.
 @end defun
 
 
@@ -6735,12 +6737,14 @@ integer.
 @end defun
 
 
-@defun posix-write @var{fd} @var{buffer} @var{size}
+@defun posix-write @var{fd} @var{buffer}
+@defunx posix-write @var{fd} @var{buffer} @var{size}
 Interface to the C function @cfunc{write}, @glibcref{I/O Primitives,
-write}.  Write at most @var{size} bytes to the file descriptor @var{fd}
-from the bytevector @var{buffer}; @var{fd} and @var{size} must be
-fixnums.  If successful return a non--negative fixnum representing the
-number of written bytes, else raise an exception.
+write}.  Write bytes to the file descriptor @var{fd} from the bytevector
+@var{buffer}; if @var{size} is a fixnum, read @var{size} bytes; if
+@var{size} is false or not given, read a number of bytes equal to the
+length of @var{buffer}.  If successful return a non--negative fixnum
+representing the number of written bytes, else raise an exception.
 @end defun
 
 
@@ -7625,6 +7629,143 @@ be @code{AF_LOCAL}.
 @end example
 @end defun
 
+@c ------------------------------------------------------------
+
+@defun connect @var{sock} @var{addr}
+Interface to the C function @cfunc{connect}, @glibcref{Connecting,
+connect}.  Connect the socket @var{sock} to the address specified by the
+bytevector @var{addr} which must hold a concrete instance of
+@code{struct sockaddr}.  If successful return unspecified values, else
+raise an exception.
+@end defun
+
+
+@defun listen @var{sock} @var{pending_conns}
+Interface to the C function @cfunc{listen}, @glibcref{Listening,
+listen}.  Enable the socket @var{sock} to accept connections; the fixnum
+@var{pending_conns} specifies the maximum length of the pending
+connection requests queue.  If successful return unspecified values,
+else raise an exception.
+@end defun
+
+
+@defun accept @var{sock}
+Interface to the C function @cfunc{accept}, @glibcref{Accepting
+Connections, accept}.  Accept an incoming connection to the server
+socket @var{sock}.
+
+If successful and a connection is accepted return two values: a
+non--negative fixnum representing the socket, a bytevector representing
+the client address as @code{struct sockaddr}.
+
+If successful and no connection is accepted return two values both being
+false; this is the case of @cfunc{accept} returning @code{EWOULDBLOCK}
+which means that @var{sock} is in non--blocking mode and no pending
+connections exist.
+
+If an error occurs raise an exception.
+@end defun
+
+
+@defun bind @var{sock} @var{sockaddr}
+Interface to the C function @cfunc{bind}, @glibcref{Setting Address,
+bind}.  Bind the socket descriptor @var{sock} to the address specified
+by the @code{struct sockaddr} in the bytevector @var{sockaddr}.  If
+successful return unspecified values, else raise an exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun getpeername @var{sock}
+Interface to the C function @cfunc{getpeername}, @glibcref{Who is
+Connected, getpeername}.  Retrieve informations about the address of the
+socket to which the @var{sock} socket is connected to.  If successful
+return a bytevector holding a @code{struct sockaddr}, else raise an
+exception.
+@end defun
+
+
+@defun getsockname @var{sock}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getsockanme}, @glibcref{Setting
+Address, getsockname}.  Retrieve informations about the address bound to
+the socket descriptor @var{sock}.  If successful return a bytevector
+holding the @code{struct sockaddr}, else raise an exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun send @var{sock} @var{buffer} @var{size} @var{flags}
+Interface to the C function @cfunc{send}, @glibcref{Sending Data, send}.
+Like @cfunc{write} but with the additional argument @var{flags} which
+must be a fixnum: write data from the bytevector @var{buffer} to the
+socket @var{sock}; if @var{size} is a fixnum, write @var{size} bytes; if
+@var{size} is false, write a number of bytes equal to the length of
+@var{buffer}.  If successful return a non--negative fixnum representing
+the number of bytes actually sent, else raise an exception.
+@end defun
+
+
+@defun recv @var{sock} @var{buffer} @var{size} @var{flags}
+Interface to the C function @cfunc{recv}, @glibcref{Receiving Data,
+recv}.  Like @cfunc{read} but with the additional argument @var{flags}
+which must be a fixnum: read data from @var{sock} and store it in the
+bytevector @var{buffer}; if @var{size} is a fixnum, read @var{size}
+bytes; if @var{size} is false, read a number of bytes equal to the
+length of @var{buffer}.  If successful return a non--negative fixnum
+representing the number of bytes actually received, else raise an
+exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun sendto @var{sock} @var{buffer} @var{size} @var{flags} @var{addr}
+Interface to the C function @cfunc{sendto}, @glibcref{Sending Datagrams,
+sendto}.  Like @cfunc{send} but with the additional argument @var{addr}
+which must be a bytevector holding a @code{struct sockaddr}: write data
+from the bytevector @var{buffer} to the socket @var{sock} to the
+destination specified by @var{addr}.
+
+If @var{size} is a fixnum, write @var{size} bytes; if @var{size} is
+false, write a number of bytes equal to the length of @var{buffer}.
+
+If successful return a non--negative fixnum representing the number of
+bytes actually sent, else raise an exception.
+@end defun
+
+
+@defun recvfrom @var{sock} @var{buffer} @var{size} @var{flags}
+Interface to the C function @cfunc{recvfrom}, @glibcref{Receiving
+Datagrams, recvfrom}.  Like @cfunc{recv} but additionally retrieve
+informations about the address of the sender: read data from @var{sock}
+and store it in the bytevector @var{buffer}.
+
+If @var{size} is a fixnum, read @var{size} bytes; if @var{size} is
+false, read a number of bytes equal to the length of @var{buffer}.
+
+If successful return two values: a non--negative fixnum representing the
+number of bytes actually received, a bytevector holding a @code{struct
+sockaddr} representing the address of the sender; else raise an
+exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun getsockopt @var{sock} @var{level} @var{option} @var{optval}
+Interface to the C function @cfunc{getsockopt}, @glibcref{Socket Option
+Function, getsockopt}.  Retrieve the value of @var{option} of socket
+@var{sock} at @var{level} and store it in the bytevector @var{optval}.
+@var{option} and @var{level} must be fixnums.  If successful return
+unspecified values, else raise an exception.
+@end defun
+
+
+@defun setsockopt @var{sock} @var{level} @var{option} @var{optval}
+Interface to the C function @cfunc{setsockopt}, @glibcref{Socket Option
+Function, setsockopt}.  Set a new value for @var{option} of socket
+@var{sock} at @var{level} reading it from the bytevector @var{optval}.
+@var{option} and @var{level} must be fixnums.  If successful return
+unspecified values, else raise an exception.
+@end defun
 
 @c page
 @node posix socket misc
@@ -9962,9 +10103,10 @@ encoded @code{errno} value.
 
 @deftypefun ikptr ikrt_posix_read (ikptr @var{fd}, ikptr @var{buffer}, ikptr @var{size})
 Interface to the C function @cfunc{read}, @glibcref{I/O Primitives,
-read}.  Read at most @var{size} bytes from the file descriptor @var{fd}
-and store them in the bytevector @var{buffer}; @var{fd} and @var{size}
-must be fixnums.  If successful return a non--negative fixnum
+read}.  Read bytes from the file descriptor @var{fd} and store them in
+the bytevector @var{buffer}; if @var{size} is a fixnum, read @var{size}
+bytes; if @var{size} is false, read a number of bytes equal to the
+length of @var{buffer}.  If successful return a non--negative fixnum
 representing the number of bytes read, else return an encoded
 @code{errno} value.
 @end deftypefun
@@ -9980,10 +10122,11 @@ exact integer.
 
 @deftypefun ikptr ikrt_posix_write (ikptr @var{fd}, ikptr @var{buffer}, ikptr @var{size})
 Interface to the C function @cfunc{write}, @glibcref{I/O Primitives,
-write}.  Write at most @var{size} bytes to the file descriptor @var{fd}
-from the bytevector @var{buffer}; @var{fd} and @var{size} must be
-fixnums.  If successful return a non--negative fixnum representing the
-number of written bytes, else return an encoded @code{errno} value.
+write}.  Write bytes to the file descriptor @var{fd} from the bytevector
+@var{buffer}; if @var{size} is a fixnum, write @var{size} bytes; if
+@var{size} is false, write a number of bytes equal to the length of
+@var{buffer}.  If successful return a non--negative fixnum representing
+the number of written bytes, else return an encoded @code{errno} value.
 @end deftypefun
 
 
@@ -10121,24 +10264,7 @@ If successful return the fixnum zero, else return an encoded
 @subsection Network sockets
 
 
-@deftypefun ikptr ikrt_posix_bind (ikptr @var{sock}, ikptr @var{sockaddr})
-Interface to the C function @cfunc{bind}, @glibcref{Setting Address,
-bind}.  Binds the socket descriptor @var{sock} to the address specified
-by the @code{struct sockaddr} in the bytevector @var{sockaddr}.  If
-successful return the fixnum zero, else return an encoded @code{errno}
-value.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_posix_getsockname (ikptr @var{sock}, ikpcb * @var{pcb})
-Interface to the C function @cfunc{getsockanme}, @glibcref{Setting
-Address, getsockname}.  Retrieve informations about the address bound to
-the socket descriptor @var{sock}.  If successful return a bytevector
-holding the @code{struct sockaddr}, else return an encoded @code{errno}
-value.
-@end deftypefun
-
-@c ------------------------------------------------------------
+@subsubheading Address structures
 
 @deftypefun ikptr ikrt_posix_make_sockaddr_un (ikptr @var{pathname}, ikpcb * @var{pcb})
 Given a bytevector @var{pathname} representing the pathname of a local
@@ -10239,6 +10365,9 @@ arguments are invalid: return false.
 
 @c ------------------------------------------------------------
 
+@subsubheading Host address resolution
+
+
 @deftypefun ikptr ikrt_posix_gethostbyname (ikptr @var{rtd}, ikptr @var{hostname}, ikpcb * @var{pcb})
 Interface to the C function @cfunc{gethostbyname}, @glibcref{Host Names,
 gethostbyname}.  Given the bytevector @var{hostname} holding the
@@ -10294,6 +10423,9 @@ corresponding error message, return a bytevector holding such message in
 
 @c ------------------------------------------------------------
 
+@subsubheading Network protocols
+
+
 @deftypefun ikptr ikrt_posix_getprotobyname (ikptr @var{rtd}, ikptr @var{name}, ikpcb * @var{pcb})
 Interface to the C function @cfunc{getprotobyname}, @glibcref{Protocols
 Database, getprotobyname}.  Given a bytevector @var{name} holding the
@@ -10326,6 +10458,9 @@ entries; @var{rtd} must be the type descriptor of
 @end deftypefun
 
 @c ------------------------------------------------------------
+
+@subsubheading Network services
+
 
 @deftypefun ikptr ikrt_posix_getservbyname (ikptr @var{rtd}, ikptr @var{name}, ikptr @var{protocol}, ikpcb * @var{pcb})
 Interface to the C function @cfunc{getservbyname}, @glibcref{Services
@@ -10361,6 +10496,9 @@ structures.
 
 @c ------------------------------------------------------------
 
+@subsubheading Sockets creation and shutdown
+
+
 @deftypefun ikptr ikrt_posix_socket (ikptr @var{namespace}, ikptr @var{style}, ikptr @var{protocol})
 Interface to the C function @cfunc{socket}, @glibcref{Creating a Socket,
 socket}.  Create a new socket descriptor and return it as non--negative
@@ -10383,6 +10521,142 @@ socketpair}.  Create a pairs of connected sockets and return a pair
 holding the descriptors as non--negative fixnums; if an error occurs
 return an encoded @code{errno} value.  All the arguments must be
 fixnums, but @var{pcb}.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Socket operations
+
+
+@deftypefun ikptr ikrt_posix_connect (ikptr @var{sock}, ikptr @var{addr})
+Interface to the C function @cfunc{connect}, @glibcref{Connecting,
+connect}.  Connect the socket @var{sock} to the address specified by the
+bytevector @var{addr} which must hold a concrete instance of
+@code{struct sockaddr}.  If successful return the fixnum zero, else
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_listen (ikptr @var{sock}, ikptr @var{pending_conns})
+Interface to the C function @cfunc{listen}, @glibcref{Listening,
+listen}.  Enable the socket @var{sock} to accept connections; the fixnum
+@var{pending_conns} specifies the maximum length of the pending
+connection requests queue.  If successful return the fixnum zero, else
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_accept (ikptr @var{sock}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{accept}, @glibcref{Accepting
+Connections, accept}.  Accept an incoming connection to the server
+socket @var{sock}.  If successful return a pair whose car is a
+non--negative fixnum representing the socket and whose cdr is a
+bytevector representing the client address as @code{struct sockaddr};
+else return an encoded @code{errno} value, including @code{EWOULDBLOCK}
+which means that @var{sock} is in non--blocking mode and no pending
+connections exist.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_bind (ikptr @var{sock}, ikptr @var{sockaddr})
+Interface to the C function @cfunc{bind}, @glibcref{Setting Address,
+bind}.  Bind the socket descriptor @var{sock} to the address specified
+by the @code{struct sockaddr} in the bytevector @var{sockaddr}.  If
+successful return the fixnum zero, else return an encoded @code{errno}
+value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getpeername (ikptr @var{sock}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getpeername}, @glibcref{Who is
+Connected, getpeername}.  Retrieve informations about the address of the
+socket to which the @var{sock} socket is connected to.  If successful
+return a bytevector holding a @code{struct sockaddr}, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getsockname (ikptr @var{sock}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getsockanme}, @glibcref{Setting
+Address, getsockname}.  Retrieve informations about the address bound to
+the socket descriptor @var{sock}.  If successful return a bytevector
+holding the @code{struct sockaddr}, else return an encoded @code{errno}
+value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_send (ikptr @var{sock}, ikptr @var{buffer}, ikptr @var{size}, ikptr @var{flags})
+Interface to the C function @cfunc{send}, @glibcref{Sending Data, send}.
+Like @cfunc{write} but with the additional argument @var{flags} which
+must be a fixnum: write data from the bytevector @var{buffer} to the
+socket @var{sock}; if @var{size} is a fixnum, write @var{size} bytes; if
+@var{size} is false, write a number of bytes equal to the length of
+@var{buffer}.  If successful return a non--negative fixnum representing
+the number of bytes actually sent, else return an encoded @code{errno}
+value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_recv (ikptr @var{sock}, ikptr @var{buffer}, ikptr @var{size}, ikptr @var{flags})
+Interface to the C function @cfunc{recv}, @glibcref{Receiving Data,
+recv}.  Like @cfunc{read} but with the additional argument @var{flags}
+which must be a fixnum: read data from @var{sock} and store it in the
+bytevector @var{buffer}; if @var{size} is a fixnum, read @var{size}
+bytes; if @var{size} is false, read a number of bytes equal to the
+length of @var{buffer}.  If successful return a non--negative fixnum
+representing the number of bytes actually received, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_sendto (ikptr @var{sock}, ikptr @var{buffer}, ikptr @var{size}, ikptr @var{flags}, ikptr @var{addr})
+Interface to the C function @cfunc{sendto}, @glibcref{Sending Datagrams,
+sendto}.  Like @cfunc{send} but with the additional argument @var{addr}
+which must be a bytevector holding a @code{struct sockaddr}: write data
+from the bytevector @var{buffer} to the socket @var{sock} to the
+destination specified by @var{addr}.
+
+If @var{size} is a fixnum, write @var{size} bytes; if @var{size} is
+false, write a number of bytes equal to the length of @var{buffer}.
+
+If successful return a non--negative fixnum representing the number of
+bytes actually sent, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_recvfrom (ikptr @var{sock}, ikptr @var{buffer}, ikptr @var{size}, ikptr @var{flags}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{recvfrom}, @glibcref{Receiving
+Datagrams, recvfrom}.  Like @cfunc{recv} but additionally retrieve
+informations about the address of the sender: read data from @var{sock}
+and store it in the bytevector @var{buffer}.
+
+If @var{size} is a fixnum, read @var{size} bytes; if @var{size} is
+false, read a number of bytes equal to the length of @var{buffer}.
+
+If successful return a pair whose car is a non--negative fixnum
+representing the number of bytes actually received and whose cdr is a
+bytevector holding a @code{struct sockaddr} representing the address of
+the sender; else return an encoded @code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_getsockopt (ikptr @var{sock}, ikptr @var{level}, ikptr @var{option}, ikptr @var{optval}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getsockopt}, @glibcref{Socket Option
+Function, getsockopt}.  Retrieve the value of @var{option} of socket
+@var{sock} at @var{level} and store it in the bytevector @var{optval}.
+@var{option} and @var{level} must be fixnums.  If successful return the
+fixnum zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_setsockopt (ikptr @var{sock}, ikptr @var{level}, ikptr @var{option}, ikptr @var{optval}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{setsockopt}, @glibcref{Socket Option
+Function, setsockopt}.  Set a new value for @var{option} of socket
+@var{sock} at @var{level} reading it from the bytevector @var{optval}.
+@var{option} and @var{level} must be fixnums.  If successful return the
+fixnum zero, else return an encoded @code{errno} value.
 @end deftypefun
 
 @c page
