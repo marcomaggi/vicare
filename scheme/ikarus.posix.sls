@@ -147,6 +147,8 @@
     setsockopt				getsockopt
     setsockopt/int			getsockopt/int
     setsockopt/size_t			getsockopt/size_t
+    getnetbyname			getnetbyaddr
+    network-entries
 
     make-struct-hostent			struct-hostent?
     struct-hostent-h_name		struct-hostent-h_aliases
@@ -166,6 +168,10 @@
     make-struct-servent			struct-servent?
     struct-servent-s_name		struct-servent-s_aliases
     struct-servent-s_port		struct-servent-s_proto
+
+    make-struct-netent			struct-netent?
+    struct-netent-n_name		struct-netent-n_aliases
+    struct-netent-n_addrtype		struct-netent-n_net
 
     ;; time functions
     nanosleep
@@ -302,6 +308,8 @@
 		  setsockopt			getsockopt
 		  setsockopt/int		getsockopt/int
 		  setsockopt/size_t		getsockopt/size_t
+		  getnetbyname			getnetbyaddr
+		  network-entries
 
 		  make-struct-hostent		struct-hostent?
 		  struct-hostent-h_name		struct-hostent-h_aliases
@@ -321,6 +329,10 @@
 		  make-struct-servent		struct-servent?
 		  struct-servent-s_name		struct-servent-s_aliases
 		  struct-servent-s_port		struct-servent-s_proto
+
+		  make-struct-netent		struct-netent?
+		  struct-netent-n_name		struct-netent-n_aliases
+		  struct-netent-n_addrtype	struct-netent-n_net
 
 		  ;; time functions
 		  nanosleep
@@ -404,6 +416,36 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-argument-validation (fixnum/false who obj)
+  (or (not obj) (fixnum? obj))
+  (assertion-violation who "expected false or fixnum as argument" obj))
+
+(define-argument-validation (fixnum/pointer/false who obj)
+  (or (not obj) (fixnum? obj) (pointer? obj))
+  (assertion-violation who "expected false, fixnum or pointer as argument" obj))
+
+(define-argument-validation (exact-integer who obj)
+  (or (fixnum? obj) (bignum? obj))
+  (assertion-violation who "expected exact integer as argument" obj))
+
+(define-argument-validation (list-of-strings who obj)
+  (and (list? obj) (for-all string? obj))
+  (assertion-violation who "expected list of strings as argument" obj))
+
+(define-argument-validation (list-of-bytevectors who obj)
+  (and (list? obj) (for-all bytevector? obj))
+  (assertion-violation who "expected list of bytevectors as argument" obj))
+
+(define-argument-validation (string/bytevector who obj)
+  (or (string? obj) (bytevector? obj))
+  (assertion-violation who "expected string or bytevector as argument" obj))
+
+(define-argument-validation (string/bytevector/false who obj)
+  (or (not obj) (string? obj) (bytevector? obj))
+  (assertion-violation who "expected false, string or bytevector as argument" obj))
+
+;;; --------------------------------------------------------------------
+
 (define-argument-validation (pid who obj)
   (fixnum? obj)
   (assertion-violation who "expected fixnum pid as argument" obj))
@@ -423,14 +465,6 @@
 (define-argument-validation (pathname who obj)
   (or (bytevector? obj) (string? obj))
   (assertion-violation who "expected string or bytevector as pathname argument" obj))
-
-(define-argument-validation (list-of-strings who obj)
-  (and (list? obj) (for-all string? obj))
-  (assertion-violation who "expected list of strings as argument" obj))
-
-(define-argument-validation (list-of-bytevectors who obj)
-  (and (list? obj) (for-all bytevector? obj))
-  (assertion-violation who "expected list of bytevectors as argument" obj))
 
 (define-argument-validation (struct-stat who obj)
   (struct-stat? obj)
@@ -466,14 +500,6 @@
   (assertion-violation who
     "expected non-negative exact integer as offset argument" obj))
 
-(define-argument-validation (fixnum/false who obj)
-  (or (not obj) (fixnum? obj))
-  (assertion-violation who "expected false or fixnum as argument" obj))
-
-(define-argument-validation (fixnum/pointer/false who obj)
-  (or (not obj) (fixnum? obj) (pointer? obj))
-  (assertion-violation who "expected false, fixnum or pointer as argument" obj))
-
 (define-argument-validation (false/fd who obj)
   (or (not obj) (%file-descriptor? obj))
   (assertion-violation who "expected false or file descriptor as argument" obj))
@@ -485,14 +511,6 @@
 	 obj))
   (assertion-violation who "expected list of file descriptors as argument" obj))
 
-(define-argument-validation (string/bytevector who obj)
-  (or (string? obj) (bytevector? obj))
-  (assertion-violation who "expected string or bytevector as argument" obj))
-
-(define-argument-validation (string/bytevector/false who obj)
-  (or (not obj) (string? obj) (bytevector? obj))
-  (assertion-violation who "expected false, string or bytevector as argument" obj))
-
 (define-argument-validation (af-inet who obj)
   (and (fixnum? obj)
        (or (unsafe.fx= obj AF_INET)
@@ -502,6 +520,13 @@
 (define-argument-validation (addrinfo/false who obj)
   (or (not obj) (struct-addrinfo? obj))
   (assertion-violation who "expected an instance of struct-addrinfo as argument" obj))
+
+(define-argument-validation (netaddr who obj)
+  (or (fixnum? obj) (bignum? obj)
+      (and (bytevector? obj)
+	   (= 4 (bytevector-length obj))))
+  (assertion-violation who
+    "expected exact integer or 32-bit bytevector as network address argument" obj))
 
 
 ;;;; errors handling
@@ -2246,6 +2271,66 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-struct struct-netent
+  (n_name n_aliases n_addrtype n_net))
+
+(define (%struct-netent-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-netent\"")
+  (%display " n_name=\"")
+  (%display (latin1->string (struct-netent-n_name S)))
+  (%display "\"")
+  (%display " n_aliases=")
+  (%display (map latin1->string (struct-netent-n_aliases S)))
+  (%display " n_addrtype=")
+  (%display (let ((type (struct-netent-n_addrtype S)))
+	      (cond ((unsafe.fx= type AF_INET)
+		     "AF_INET")
+		    ((unsafe.fx= type AF_INET6)
+		     "AF_INET6")
+		    (else type))))
+  (%display " n_net=")
+  (%display (struct-netent-n_net S))
+  (%display "]"))
+
+(define netent-rtd
+  (type-descriptor struct-netent))
+
+(define (%netaddr->bytevector S)
+  (let ((net (make-bytevector 4)))
+    (bytevector-u32-set! net 0 (struct-netent-n_net S) (endianness big))
+    (set-struct-netent-n_net! S net)
+    S))
+
+(define (getnetbyname name)
+  (define who 'getnetbyname)
+  (with-arguments-validation (who)
+      ((string/bytevector  name))
+    (with-bytevectors ((name.bv  name))
+      (let ((rv (capi.posix-getnetbyname netent-rtd name.bv)))
+	(if (not rv)
+	    (error who "unknown network" name)
+	  (%netaddr->bytevector rv))))))
+
+(define (getnetbyaddr net type)
+  (define who 'getnetbyaddr)
+  (with-arguments-validation (who)
+      ((netaddr  net)
+       (fixnum   type))
+    (let* ((net	(if (bytevector? net)
+		    (bytevector-u32-ref net 0 (endianness big))
+		  net))
+	   (rv	(capi.posix-getnetbyaddr netent-rtd net type)))
+      (if (not rv)
+	  (error who "unknown network" net type)
+	(%netaddr->bytevector rv)))))
+
+(define (network-entries)
+  (map %netaddr->bytevector (capi.posix-network-entries netent-rtd)))
+
+;;; --------------------------------------------------------------------
+
 (define (socket namespace style protocol)
   (define who 'socket)
   (with-arguments-validation (who)
@@ -2499,6 +2584,7 @@
 (set-rtd-printer! (type-descriptor struct-addrinfo)	%struct-addrinfo-printer)
 (set-rtd-printer! (type-descriptor struct-protoent)	%struct-protoent-printer)
 (set-rtd-printer! (type-descriptor struct-servent)	%struct-servent-printer)
+(set-rtd-printer! (type-descriptor struct-netent)	%struct-netent-printer)
 
 )
 

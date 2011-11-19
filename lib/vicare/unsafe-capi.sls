@@ -128,6 +128,8 @@
     posix-getprotobyname		posix-getprotobynumber
     posix-getservbyname			posix-getservbyport
     posix-protocol-entries		posix-service-entries
+    posix-getnetbyname			posix-getnetbyaddr
+    posix-network-entries
     posix-socket			posix-shutdown
     posix-socketpair
     posix-connect			posix-listen
@@ -617,6 +619,17 @@
 
 (define-inline (posix-service-entries rtd)
   (foreign-call "ikrt_posix_service_entries" rtd))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-getnetbyname rtd name)
+  (foreign-call "ikrt_posix_getnetbyname" rtd name))
+
+(define-inline (posix-getnetbyaddr rtd net type)
+  (foreign-call "ikrt_posix_getnetbyaddr" rtd net type))
+
+(define-inline (posix-network-entries rtd)
+  (foreign-call "ikrt_posix_network_entries" rtd))
 
 ;;; --------------------------------------------------------------------
 

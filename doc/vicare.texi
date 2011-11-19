@@ -6982,17 +6982,18 @@ in bytevectors; such raw manipulation can cause the process to crash if
 we mishandle the values.
 
 @menu
-* posix socket addresses::      Netword address structures.
+* posix socket addresses::      Network address structures.
 * posix socket hosts::          Network hosts database.
 * posix socket protocols::      Network protocols database.
 * posix socket services::       Network services database.
+* posix socket networks::       Networks database.
 * posix socket socket::         Network sockets operations.
 * posix socket misc::           Error and miscellaneous functions.
 @end menu
 
 @c page
 @node posix socket addresses
-@subsection Netword address structures
+@subsection Network address structures
 
 
 @menu
@@ -7582,6 +7583,94 @@ Interface to the C functions @cfunc{setservent}, @cfunc{getservent} and
 network service database and build a list of @code{struct-servent}
 mirroring the resulting @code{struct servent} entries.  Return the list
 of structures.
+@end defun
+
+@c page
+@node posix socket networks
+@subsection Networks database
+
+
+@deftp struct-netent
+Scheme level representation of @code{struct netent}.  It has the
+following fields:
+
+@table @code
+@item n_name
+Bytevector, @ascii{} coding of the official network name.
+
+@item n_aliases
+List of bytevectors, alias names for the network.
+
+@item n_addrtype
+Fixnum, the network type.
+
+@item n_net
+32-bit bytevector, the network number in network byte order.
+@end table
+@end deftp
+
+
+@defun make-struct-netent @var{name} @var{aliases} @var{addrtype} @var{net}
+Build and return a new instance of @code{struct-netent}.
+@end defun
+
+
+@defun struct-netent-n_name @var{netent}
+@defunx struct-netent-n_aliases @var{netent}
+@defunx struct-netent-n_addrtype @var{netent}
+@defunx struct-netent-n_net @var{netent}
+Accessors for the fields of @code{struct-netent}.
+@end defun
+
+
+@defun struct-netent? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-netent}.
+@end defun
+
+
+@defun getnetbyname @var{name}
+Interface to the C function @cfunc{getnetbyname}, @glibcref{Networks
+Database, getnetbyname}.  Given the bytevector @var{name} holding the
+@ascii{} coding of a network name, query the networks database and build
+an instance of @code{struct-netent} mirroring the resulting @code{struct
+netent} entry.  If successful return the data structure, else raise an
+exception.
+
+@example
+(getnetbyname "loopback")
+@result{} #["struct-netent"
+        n_name="loopback"
+        n_aliases=()
+        n_addrtype=AF_INET
+        n_net=#vu8(127 0 0 0)]
+@end example
+@end defun
+
+
+@defun getnetbyaddr @var{net} @var{type}
+Interface to the C function @cfunc{getnetbyaddr}, @glibcref{Networks
+Database, getnetbyaddr}.  Given an exact integer or bytevector @var{net}
+representing a network number and the fixnum @var{type} representing a
+network type, query the networks database and build an instance of
+@code{struct-netent} mirroring the resulting @code{struct netent} entry.
+If successful return the data structure, else raise an exception.
+
+@example
+(getnetbyaddr '#vu8(127 0 0 0) AF_INET)
+@result{} #["struct-netent"
+        n_name="loopback"
+        n_aliases=()
+        n_addrtype=AF_INET
+        n_net=#vu8(127 0 0 0)]
+@end example
+@end defun
+
+
+@defun network_entries
+Interface to the C functions @cfunc{setnetent}, @cfunc{getnetent} and
+@cfunc{endnetent}, @glibcref{Networks Database, setnetent}.  Scan the
+networks database and build a list of @code{struct-netent} mirroring the
+resulting @code{struct netent} entries.  Return the list of structures.
 @end defun
 
 @c page
@@ -10481,7 +10570,7 @@ network service, query the network services database and build an
 instance of @code{struct-servent} mirroring the resulting @code{struct
 servent} entry.  @var{rtd} must be the type descriptor of
 @code{struct-servent}.  If successful return the data structure, else
-raise an exception.
+return false.
 @end deftypefun
 
 
@@ -10492,6 +10581,41 @@ network service database and build a list of @code{struct-servent}
 mirroring the resulting @code{struct servent} entries.  @var{rtd} must
 be the type descriptor of @code{struct-servent}.  Return the list of
 structures.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Networks database
+
+
+@deftypefun ikptr ikrt_posix_getnetbyname (ikptr @var{rtd}, ikptr @var{name}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getnetbyname}, @glibcref{Networks
+Database, getnetbyname}.  Given the bytevector @var{name} holding the
+@ascii{} coding of a network name, query the networks database and build
+an instance of @code{struct-netent} mirroring the resulting @code{struct
+netent} entry.  @var{rtd} must be the type descriptor of
+@code{struct-netent}.  If successful return the data structure, else
+return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getnetbyaddr (ikptr @var{rtd}, ikptr @var{net}, ikptr @var{type}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getnetbyaddr}, @glibcref{Networks
+Database, getnetbyaddr}.  Given an exact integer @var{net} representing
+a network number and the fixnum @var{type} representing a network type,
+query the networks database and build an instance of
+@code{struct-netent} mirroring the resulting @code{struct netent} entry.
+@var{rtd} must be the type descriptor of @code{struct-netent}.  If
+successful return the data structure, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_network_entries (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C functions @cfunc{setnetent}, @cfunc{getnetent} and
+@cfunc{endnetent}, @glibcref{Networks Database, setnetent}.  Scan the
+networks database and build a list of @code{struct-netent} mirroring the
+resulting @code{struct netent} entries.  @var{rtd} must be the type
+descriptor of @code{struct-netent}.  Return the list of structures.
 @end deftypefun
 
 @c ------------------------------------------------------------

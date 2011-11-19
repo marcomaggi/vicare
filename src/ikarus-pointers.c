@@ -375,17 +375,29 @@ ikrt_ref_ulonglong(ikptr p, ikptr off , ikpcb* pcb) {
 }
 
 long
-extract_num(ikptr x) {
-  if (is_fixnum(x)) {
+extract_num (ikptr x)
+{
+  if (is_fixnum(x))
     return unfix(x);
-  } else if (x == void_object) {
+  else if (x == void_object)
     return 0;
-  } else {
-    if (bnfst_negative(ref(x, -vector_tag))){
+  else {
+    if (bnfst_negative(ref(x, -vector_tag)))
       return (long)(-ref(x, wordsize-vector_tag));
-    } else {
+    else
       return (long)(ref(x, wordsize-vector_tag));
-    }
+  }
+}
+unsigned long
+extract_unum (ikptr x)
+{
+  if (is_fixnum(x))
+    return unfix(x);
+  else if (x == void_object)
+    return 0;
+  else {
+    assert(! bnfst_negative(ref(x, -vector_tag)));
+    return (unsigned long)(ref(x, wordsize-vector_tag));
   }
 }
 

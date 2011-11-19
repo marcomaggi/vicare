@@ -2164,6 +2164,67 @@ ikrt_posix_service_entries (ikptr rtd, ikpcb * pcb)
 
 /* ------------------------------------------------------------------ */
 
+static ikptr
+netent_to_struct (ikpcb * pcb, ikptr rtd, struct netent * src)
+/* Convert  a  C  language   "struct  netent"  into  a  Scheme  language
+   "struct-netent".  Make use of "pcb->root1" only, so that "pcb->root0"
+   is available to the caller. */
+{
+  ikptr         dst;
+  ikptr         list_of_aliases = null_object;
+  int           i;
+  dst = ik_struct_alloc(pcb, rtd, 4);
+  pcb->root1 = &dst;
+  {
+    VICARE_STRUCT_SET(dst, 0, ik_bytevector_from_cstring(pcb, src->n_name));
+    VICARE_STRUCT_SET(dst, 1, list_of_aliases);
+    for (i=0; src->n_aliases[i]; ++i) {
+      VICARE_DECLARE_ALLOC_AND_CONS(pair, list_of_aliases, pcb);
+      VICARE_STRUCT_SET(dst, 1, list_of_aliases);
+      VICARE_SET_CAR(pair, ik_bytevector_from_cstring(pcb, src->n_aliases[i]));
+    }
+    VICARE_STRUCT_SET(dst, 2, fix(src->n_addrtype));
+    VICARE_STRUCT_SET(dst, 3, ull_to_number((unsigned long long)src->n_net, pcb));
+  }
+  pcb->root1 = NULL;
+  return dst;
+}
+ikptr
+ikrt_posix_getnetbyname (ikptr rtd, ikptr name_bv, ikpcb * pcb)
+{
+  char *                name;
+  struct netent *       entry;
+  name  = VICARE_BYTEVECTOR_DATA_CHARP(name_bv);
+  entry = getnetbyname(name);
+  return (NULL != entry)? netent_to_struct(pcb, rtd, entry) : false_object;
+}
+ikptr
+ikrt_posix_getnetbyaddr (ikptr rtd, ikptr net_num, ikptr type, ikpcb * pcb)
+{
+  uint32_t              net;
+  struct netent *       entry;
+  net = (uint32_t)extract_unum(net_num);
+  entry = getnetbyaddr(net, unfix(type));
+  return (NULL != entry)? netent_to_struct(pcb, rtd, entry) : false_object;
+}
+ikptr
+ikrt_posix_network_entries (ikptr rtd, ikpcb * pcb)
+{
+  ikptr                 list_of_entries = null_object;
+  struct netent *       entry;
+  pcb->root0 = &list_of_entries;
+  setnetent(1);
+  for (entry=getnetent(); entry; entry=getnetent()) {
+    VICARE_DECLARE_ALLOC_AND_CONS(pair, list_of_entries, pcb);
+    VICARE_SET_CAR(pair, netent_to_struct(pcb, rtd, entry));
+  }
+  endnetent();
+  pcb->root0 = NULL;
+  return list_of_entries;
+}
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikrt_posix_socket (ikptr namespace, ikptr style, ikptr protocol)
 {

@@ -1062,6 +1062,34 @@
 
 ;;; --------------------------------------------------------------------
 
+  (when #f
+
+    (check
+	(let ((rv (px.getnetbyname "loopback")))
+	  (check-pretty-print rv)
+	  (px.struct-netent? rv))
+      => #t)
+
+    (check
+	(let ((rv (px.getnetbyaddr (bytevector-u32-ref '#vu8(127 0 0 0) 0 (endianness big))
+				   AF_INET)))
+	  (check-pretty-print rv)
+	  (px.struct-netent? rv))
+      => #t)
+
+    (check
+	(for-all px.struct-netent? (px.network-entries))
+      => #t)
+
+    (check-pretty-print (px.network-entries))
+
+    #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'net))
+
   (check
       (let-values (((a b) (px.socketpair AF_LOCAL SOCK_DGRAM 0)))
 	(px.posix-write a '#vu8(1 2 3 4) 4)
@@ -1071,6 +1099,7 @@
 	  (px.shutdown b SHUT_RDWR)
 	  buf))
     => '#vu8(1 2 3 4))
+
 
   #t)
 

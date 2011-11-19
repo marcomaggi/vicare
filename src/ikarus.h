@@ -346,7 +346,7 @@ ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
 
 
 /** --------------------------------------------------------------------
- ** Pair objects.
+ ** Pair and list objects.
  ** ----------------------------------------------------------------- */
 
 #define pair_size       (2 * wordsize)
@@ -359,6 +359,24 @@ ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
 
 #define is_pair(X)      \
   ((((long)(X)) & pair_mask) == pair_tag)
+
+int     ik_list_length          (ikptr x);
+void    ik_list_to_argv         (ikptr x, char **argv);
+char**  ik_list_to_vec          (ikptr x);
+
+#define ik_pair_alloc(PCB)      (ik_safe_alloc((PCB), align(pair_size)) + pair_tag)
+
+#define VICARE_CAR(PAIR)                ref((PAIR), off_car)
+#define VICARE_CDR(PAIR)                ref((PAIR), off_cdr)
+
+#define VICARE_SET_CAR(PAIR,VALUE)      ref((PAIR), off_car) = (VALUE)
+#define VICARE_SET_CDR(PAIR,VALUE)      ref((PAIR), off_cdr) = (VALUE)
+
+#define VICARE_DECLARE_ALLOC_AND_CONS(PAIR,LIST,PCB)    \
+  ikptr PAIR = ik_pair_alloc(PCB);                      \
+  VICARE_SET_CDR(PAIR,LIST);                            \
+  LIST=PAIR;
+
 
 
 /** --------------------------------------------------------------------
@@ -465,8 +483,9 @@ ikptr   sll_to_number           (signed long long n, ikpcb* pcb);
 
 ikptr   d_to_number             (double x, ikpcb* pcb);
 
-long      extract_num           (ikptr x);
-long long extract_num_longlong  (ikptr x);
+long            extract_num             (ikptr x);
+unsigned long   extract_unum            (ikptr x);
+long long       extract_num_longlong    (ikptr x);
 
 ikptr   normalize_bignum        (long limbs, int sign, ikptr r);
 
@@ -482,6 +501,8 @@ ikptr   normalize_bignum        (long limbs, int sign, ikptr r);
 
 ikptr   make_pointer    (long x, ikpcb* pcb);
 
+#define IS_POINTER(X)   (pointer_tag == (((long)(X)) & pointer_tag))
+
 
 /** --------------------------------------------------------------------
  ** Vector objects.
@@ -494,19 +515,41 @@ ikptr   make_pointer    (long x, ikpcb* pcb);
 #define off_vector_data         (disp_vector_data   - vector_tag)
 #define off_vector_length       (disp_vector_length - vector_tag)
 
-#define is_vector(X)    \
+#define IS_VECTOR(X)    \
   ((((long)(X)) & vector_mask) == vector_tag)
+
+ikptr   ik_vector_alloc         (ikpcb * pcb, long int requested_number_of_items);
 
 
 /** --------------------------------------------------------------------
  ** Bytevector objects.
  ** ----------------------------------------------------------------- */
 
+#define bytevector_mask         7
 #define bytevector_tag          2
 #define disp_bytevector_length  0
 #define disp_bytevector_data    8 /* not f(wordsize) */
 #define off_bytevector_length   (disp_bytevector_length - bytevector_tag)
 #define off_bytevector_data     (disp_bytevector_data   - bytevector_tag)
+
+#define IS_BYTEVECTOR(X)    \
+  ((((long)(X)) & bytevector_mask) == bytevector_tag)
+
+extern ikptr   ik_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes);
+extern ikptr   ik_bytevector_from_cstring       (ikpcb * pcb, char * cstr);
+extern ikptr   ik_bytevector_from_cstring_len   (ikpcb * pcb, char * cstr, size_t len);
+
+#define VICARE_BYTEVECTOR_LENGTH_FX(BV)                 \
+  ref((BV), off_bytevector_length)
+
+#define VICARE_BYTEVECTOR_DATA_CHARP(BV)                \
+  ((char*)(long)((BV) + off_bytevector_data))
+
+#define VICARE_BYTEVECTOR_DATA_UINT8P(BV)               \
+  ((uint8_t*)(long)((BV) + off_bytevector_data))
+
+#define VICARE_BYTEVECTOR_DATA_VOIDP(BV)                \
+  ((void*)(long)((BV) + off_bytevector_data))
 
 
 /** --------------------------------------------------------------------
@@ -534,6 +577,17 @@ ikptr   make_pointer    (long x, ikpcb* pcb);
 #define off_rtd_fields          (disp_rtd_fields  - rtd_tag)
 #define off_rtd_printer         (disp_rtd_printer - rtd_tag)
 #define off_rtd_symbol          (disp_rtd_symbol  - rtd_tag)
+
+ikptr   ik_struct_alloc         (ikpcb * pcb, ikptr rtd, long number_of_fields);
+
+#define VICARE_STRUCT_REF(STRUCT,FIELD)         \
+  ref((STRUCT), (off_record_data+(FIELD)*wordsize))
+
+#define VICARE_STRUCT_SET(STRUCT,FIELD,VALUE)   \
+  ref((STRUCT), (off_record_data+(FIELD)*wordsize)) = (VALUE)
+
+#define VICARE_STRUCT_SET2(STRUCT,FIELD,VALUE1,VALUE2)          \
+  ref((STRUCT), (off_record_data+(FIELD)*wordsize)) = (VALUE1) = (VALUE2)
 
 
 /** --------------------------------------------------------------------
@@ -598,25 +652,6 @@ ikptr   make_pointer    (long x, ikpcb* pcb);
 
 
 /** --------------------------------------------------------------------
- ** Utility macros.
- ** ----------------------------------------------------------------- */
-
-#define VICARE_BYTEVECTOR_LENGTH_FX(BV)                 \
-  ref((BV), off_bytevector_length)
-
-#define VICARE_BYTEVECTOR_DATA_CHARP(BV)                \
-  ((char*)(long)((BV) + off_bytevector_data))
-
-#define VICARE_BYTEVECTOR_DATA_UINT8P(BV)               \
-  ((uint8_t*)(long)((BV) + off_bytevector_data))
-
-#define VICARE_BYTEVECTOR_DATA_VOIDP(BV)                \
-  ((void*)(long)((BV) + off_bytevector_data))
-
-#define IS_POINTER(X)   (pointer_tag == (((long)(X)) & pointer_tag))
-
-
-/** --------------------------------------------------------------------
  ** Prototypes and external definitions.
  ** ----------------------------------------------------------------- */
 
@@ -630,53 +665,6 @@ char*   win_mmap(size_t size);
 int     ikarus_main (int argc, char** argv, char* boot_file);
 
 ikptr   ik_errno_to_code (void);
-
-
-/** --------------------------------------------------------------------
- ** Object utilities: lists.
- ** ----------------------------------------------------------------- */
-
-int     ik_list_length          (ikptr x);
-void    ik_list_to_argv         (ikptr x, char **argv);
-char**  ik_list_to_vec          (ikptr x);
-
-#define ik_pair_alloc(PCB)      (ik_safe_alloc((PCB), align(pair_size)) + pair_tag)
-
-#define VICARE_CAR(PAIR)                ref((PAIR), off_car)
-#define VICARE_CDR(PAIR)                ref((PAIR), off_cdr)
-
-#define VICARE_SET_CAR(PAIR,VALUE)      ref((PAIR), off_car) = (VALUE)
-#define VICARE_SET_CDR(PAIR,VALUE)      ref((PAIR), off_cdr) = (VALUE)
-
-
-/** --------------------------------------------------------------------
- ** Object utilities: bytevectors.
- ** ----------------------------------------------------------------- */
-
-ikptr   ik_bytevector_alloc     (ikpcb * pcb, long int requested_number_of_bytes);
-
-
-/** --------------------------------------------------------------------
- ** Object utilities: vectors.
- ** ----------------------------------------------------------------- */
-
-ikptr   ik_vector_alloc         (ikpcb * pcb, long int requested_number_of_items);
-
-
-/** --------------------------------------------------------------------
- ** Object utilities: data structures.
- ** ----------------------------------------------------------------- */
-
-ikptr   ik_struct_alloc         (ikpcb * pcb, ikptr rtd, long number_of_fields);
-
-#define VICARE_STRUCT_REF(STRUCT,FIELD)         \
-  ref((STRUCT), (off_record_data+(FIELD)*wordsize))
-
-#define VICARE_STRUCT_SET(STRUCT,FIELD,VALUE)   \
-  ref((STRUCT), (off_record_data+(FIELD)*wordsize)) = (VALUE)
-
-#define VICARE_STRUCT_SET2(STRUCT,FIELD,VALUE1,VALUE2)          \
-  ref((STRUCT), (off_record_data+(FIELD)*wordsize)) = (VALUE1) = (VALUE2)
 
 
 /** --------------------------------------------------------------------

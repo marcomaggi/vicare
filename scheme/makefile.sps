@@ -692,6 +692,9 @@
     (getsockopt					i v posix)
     (getsockopt/int				i v posix)
     (getsockopt/size_t				i v posix)
+    (getnetbyname				i v posix)
+    (getnetbyaddr				i v posix)
+    (network-entries				i v posix)
 
     (make-struct-stat				i v posix)
     (struct-stat?				i v posix)
@@ -785,6 +788,13 @@
     (struct-servent-s_aliases			i v posix)
     (struct-servent-s_port			i v posix)
     (struct-servent-s_proto			i v posix)
+
+    (make-struct-netent				i v posix)
+    (struct-netent?				i v posix)
+    (struct-netent-n_name			i v posix)
+    (struct-netent-n_aliases			i v posix)
+    (struct-netent-n_addrtype			i v posix)
+    (struct-netent-n_net			i v posix)
 
 ;;; Ikarus POSIX functions
     (accept-connection				i v posix)
