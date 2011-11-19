@@ -7666,7 +7666,7 @@ If successful return the data structure, else raise an exception.
 @end defun
 
 
-@defun network_entries
+@defun network-entries
 Interface to the C functions @cfunc{setnetent}, @cfunc{getnetent} and
 @cfunc{endnetent}, @glibcref{Networks Database, setnetent}.  Scan the
 networks database and build a list of @code{struct-netent} mirroring the
