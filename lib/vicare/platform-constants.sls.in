@@ -28,6 +28,19 @@
 (library (vicare platform-constants)
   (export
 
+    SIZEOF_SIZE_T	SIZEOF_SSIZE_T
+    SIZE_T_MAX
+    SSIZE_T_MAX		SSIZE_T_MIN
+
+    CHAR_BIT		SCHAR_MIN	SCHAR_MAX
+    UCHAR_MAX		CHAR_MIN	CHAR_MAX
+    SHRT_MIN		SHRT_MAX	USHRT_MAX
+    INT_MIN		INT_MAX		UINT_MAX
+    LONG_MIN		LONG_MAX	ULONG_MAX
+    LONG_LONG_MIN	LONG_LONG_MAX	ULONG_LONG_MAX
+    WCHAR_MAX
+
+
 ;;; miscellaneous platform constants
 
     ;; constants for waitpid and similar
@@ -334,7 +347,9 @@
     (only (vicare syntactic-extensions)
 	  define-inline-constant)
     (prefix (vicare unsafe-operations)
-	    unsafe.))
+	    unsafe.)
+    (prefix (vicare words)
+	    words.))
 
 
 ;;;; helpers
@@ -350,6 +365,44 @@
 
 
 ;;;; miscellaneous platform constants
+
+(define-inline-constant SIZEOF_SIZE_T		@SIZEOF_SIZE_T@)
+(define-inline-constant SIZEOF_SSIZE_T		@SIZEOF_SSIZE_T@)
+
+(define-syntax SIZE_T_MAX
+  (if (= 4 @SIZEOF_SIZE_T@)
+      (identifier-syntax (words.greatest-u32))
+    (identifier-syntax (words.greatest-u64))))
+
+(define-syntax SSIZE_T_MAX
+  (if (= 4 @SIZEOF_SSIZE_T@)
+      (identifier-syntax (words.greatest-s32))
+    (identifier-syntax (words.greatest-s64))))
+
+(define-syntax SSIZE_T_MIN
+  (if (= 4 @SIZEOF_SSIZE_T@)
+      (identifier-syntax (words.least-s32))
+    (identifier-syntax (words.least-s64))))
+
+(define-inline-constant CHAR_BIT		@VALUEOF_CHAR_BIT@)
+(define-inline-constant SCHAR_MIN		@VALUEOF_SCHAR_MIN@)
+(define-inline-constant SCHAR_MAX		@VALUEOF_SCHAR_MAX@)
+(define-inline-constant UCHAR_MAX		@VALUEOF_UCHAR_MAX@)
+(define-inline-constant CHAR_MIN		@VALUEOF_CHAR_MIN@)
+(define-inline-constant CHAR_MAX		@VALUEOF_CHAR_MAX@)
+(define-inline-constant SHRT_MIN		@VALUEOF_SHRT_MIN@)
+(define-inline-constant SHRT_MAX		@VALUEOF_SHRT_MAX@)
+(define-inline-constant USHRT_MAX		@VALUEOF_USHRT_MAX@)
+(define-inline-constant INT_MIN			@VALUEOF_INT_MIN@)
+(define-inline-constant INT_MAX			@VALUEOF_INT_MAX@)
+(define-inline-constant UINT_MAX		@VALUEOF_UINT_MAX@)
+(define-inline-constant LONG_MIN		@VALUEOF_LONG_MIN@)
+(define-inline-constant LONG_MAX		@VALUEOF_LONG_MAX@)
+(define-inline-constant ULONG_MAX		@VALUEOF_ULONG_MAX@)
+(define-inline-constant LONG_LONG_MIN		@VALUEOF_LONG_LONG_MIN@)
+(define-inline-constant LONG_LONG_MAX		@VALUEOF_LONG_LONG_MAX@)
+(define-inline-constant ULONG_LONG_MAX		@VALUEOF_ULONG_LONG_MAX@)
+(define-inline-constant WCHAR_MAX		@VALUEOF_WCHAR_MAX@)
 
 ;; constants for waitpid
 (define-inline-constant WAIT_ANY		@VALUEOF_WAIT_ANY@)

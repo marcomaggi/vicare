@@ -359,6 +359,14 @@
        (unsafe.fx>= obj 0)
        (unsafe.fx<  obj FD_SETSIZE)))
 
+(define-inline (%platform-int? obj)
+  (and (or (fixnum? obj) (bignum? obj))
+       (<= INT_MIN obj INT_MAX)))
+
+(define-inline (%platform-size_t? obj)
+  (and (or (fixnum? obj) (bignum? obj))
+       (<= 0 obj SIZE_T_MAX)))
+
 (define-syntax with-bytevectors
   ;;Used to  preprocess function arguments which must  be bytevectors or
   ;;strings;  the  strings are  converted  to  bytevectors.  This  macro
@@ -527,6 +535,16 @@
 	   (= 4 (bytevector-length obj))))
   (assertion-violation who
     "expected exact integer or 32-bit bytevector as network address argument" obj))
+
+(define-argument-validation (platform-int who obj)
+  (%platform-int? obj)
+  (assertion-violation who
+    "expected exact integer in platform's \"int\" range as argument" obj))
+
+(define-argument-validation (platform-size_t who obj)
+  (%platform-size_t? obj)
+  (assertion-violation who
+    "expected exact integer in platform's \"size_t\" range as argument" obj))
 
 
 ;;;; errors handling
@@ -2496,8 +2514,8 @@
        (fixnum		level)
        (fixnum		option))
     (let ((rv (capi.posix-getsockopt/int sock level option)))
-      (if (unsafe.fxzero? rv)
-	  rv
+      (if (pair? rv)
+	  (car rv)
 	(raise-errno-error who rv sock level option)))))
 
 (define (getsockopt/size_t sock level option)
@@ -2507,8 +2525,8 @@
        (fixnum		level)
        (fixnum		option))
     (let ((rv (capi.posix-getsockopt/size_t sock level option)))
-      (if (unsafe.fxzero? rv)
-	  rv
+      (if (pair? rv)
+	  (car rv)
 	(raise-errno-error who rv sock level option)))))
 
 ;;; --------------------------------------------------------------------
@@ -2530,10 +2548,9 @@
       ((file-descriptor	sock)
        (fixnum		level)
        (fixnum		option)
-       (bytevector	optval))
+       (platform-int	optval))
     (let ((rv (capi.posix-setsockopt/int sock level option optval)))
-      (if (pair? rv)
-	  (car rv)
+      (unless (unsafe.fxzero? rv)
 	(raise-errno-error who rv sock level option optval)))))
 
 (define (setsockopt/size_t sock level option optval)
@@ -2542,10 +2559,9 @@
       ((file-descriptor	sock)
        (fixnum		level)
        (fixnum		option)
-       (bytevector	optval))
+       (platform-size_t	optval))
     (let ((rv (capi.posix-setsockopt/size_t sock level option optval)))
-      (if (pair? rv)
-	  (car rv)
+      (unless (unsafe.fxzero? rv)
 	(raise-errno-error who rv sock level option optval)))))
 
 

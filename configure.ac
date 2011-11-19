@@ -584,6 +584,8 @@ AC_DEFUN([VICARE_CONSTANT_TESTS],[m4_map_args_w($1,[VICARE_CONSTANT_TEST(],[)])]
 AC_DEFUN([VICARE_STRING_CONSTANT_TEST],[VICARE_STRINGOF_TEST([$1],[$1])])
 AC_DEFUN([VICARE_STRING_CONSTANT_TESTS],[m4_map_args_w($1,[VICARE_STRING_CONSTANT_TEST(],[)])])
 
+VICARE_CONSTANT_TESTS([CHAR_BIT SCHAR_MIN SCHAR_MAX UCHAR_MAX CHAR_MIN CHAR_MAX SHRT_MIN SHRT_MAX USHRT_MAX INT_MIN INT_MAX UINT_MAX LONG_MIN LONG_MAX ULONG_MAX LONG_LONG_MIN LONG_LONG_MAX ULONG_LONG_MAX WCHAR_MAX])
+
 ## constants for waitpid and similar
 VICARE_CONSTANT_TEST([WAIT_ANY])
 VICARE_CONSTANT_TEST([WAIT_MYPGRP])
@@ -774,6 +776,22 @@ int main (void)
 AC_DEFINE_UNQUOTED([UNSETENV_HAS_RETURN_VALUE],
   $vicare_cv_UNSETENV_HAS_RETURN_VALUE,
   [whether the function unsetenv has a return value])
+
+AC_CACHE_CHECK([the size of 'size_t'],
+  [vicare_cv_sizeof_size_t],
+  [AC_COMPUTE_INT([vicare_cv_sizeof_size_t],
+     [sizeof(size_t)],
+     [AC_INCLUDES_DEFAULT])
+   SIZEOF_SIZE_T="$vicare_cv_sizeof_size_t"])
+AC_SUBST([SIZEOF_SIZE_T])
+
+AC_CACHE_CHECK([the size of 'ssize_t'],
+  [vicare_cv_sizeof_ssize_t],
+  [AC_COMPUTE_INT([vicare_cv_sizeof_ssize_t],
+     [sizeof(ssize_t)],
+     [AC_INCLUDES_DEFAULT])
+   SIZEOF_SSIZE_T="$vicare_cv_sizeof_ssize_t"])
+AC_SUBST([SIZEOF_SSIZE_T])
 
 #page
 #### tests for GNU C Library specific features
