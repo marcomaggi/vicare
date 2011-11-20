@@ -218,6 +218,42 @@ ikrt_write_fd(ikptr fd, ikptr bv, ikptr off, ikptr cnt /*, ikpcb* pcb */){
  ** Original Ikarus networking interface.
  ** ----------------------------------------------------------------- */
 
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_tcp_connect(ikptr host, ikptr srvc /*, ikpcb* pcb */){
+  return false_object;
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_udp_connect(ikptr host, ikptr srvc /*, ikpcb* pcb */){
+  return false_object;
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_make_fd_nonblocking(ikptr fdptr /*, ikpcb* pcb */){
+  return false_object;
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_select(ikptr fds, ikptr rfds, ikptr wfds, ikptr xfds /*, ikpcb* pcb */){
+  return false_object;
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_listen(ikptr port /*, ikpcb* pcb */){
+  return false_object;
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_accept(ikptr s, ikptr bv /*, ikpcb* pcb */){
+  return false_object;
+}
+/* FIXME STALE To be removed at the next boot image rotation. */
+ikptr
+ikrt_shutdown(ikptr s /*, ikpcb* pcb*/){
+  return false_object;
+}
+
 #if 0
 static ikptr
 do_connect(ikptr host, ikptr srvc, int socket_type){
