@@ -527,9 +527,9 @@
 		 #;(apply + (map vector-length (map cdr rf)))))
     (display (record-type-name rtd) port)
     (case rf-len
-      ((0)
+      ((0)	;Most condition objects have no fields...
        (newline port))
-      ((1)
+      ((1)	;... or only one field.
        (display ": " port)
        (write ((record-accessor (caar rf) 0) x) port)
        (newline port))
