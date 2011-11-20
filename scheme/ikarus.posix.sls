@@ -147,6 +147,7 @@
     setsockopt				getsockopt
     setsockopt/int			getsockopt/int
     setsockopt/size_t			getsockopt/size_t
+    setsockopt/linger			getsockopt/linger
     getnetbyname			getnetbyaddr
     network-entries
 
@@ -308,6 +309,7 @@
 		  setsockopt			getsockopt
 		  setsockopt/int		getsockopt/int
 		  setsockopt/size_t		getsockopt/size_t
+		  setsockopt/linger		getsockopt/linger
 		  getnetbyname			getnetbyaddr
 		  network-entries
 
@@ -536,8 +538,8 @@
   (assertion-violation who
     "expected exact integer or 32-bit bytevector as network address argument" obj))
 
-(define-argument-validation (platform-int who obj)
-  (%platform-int? obj)
+(define-argument-validation (platform-int/boolean who obj)
+  (or (boolean? obj) (%platform-int? obj))
   (assertion-violation who
     "expected exact integer in platform's \"int\" range as argument" obj))
 
@@ -2545,10 +2547,10 @@
 (define (setsockopt/int sock level option optval)
   (define who 'setsockopt/int)
   (with-arguments-validation (who)
-      ((file-descriptor	sock)
-       (fixnum		level)
-       (fixnum		option)
-       (platform-int	optval))
+      ((file-descriptor		sock)
+       (fixnum			level)
+       (fixnum			option)
+       (platform-int/boolean	optval))
     (let ((rv (capi.posix-setsockopt/int sock level option optval)))
       (unless (unsafe.fxzero? rv)
 	(raise-errno-error who rv sock level option optval)))))
@@ -2563,6 +2565,27 @@
     (let ((rv (capi.posix-setsockopt/size_t sock level option optval)))
       (unless (unsafe.fxzero? rv)
 	(raise-errno-error who rv sock level option optval)))))
+
+;;; --------------------------------------------------------------------
+
+(define (setsockopt/linger sock onoff linger)
+  (define who 'setsockopt/linger)
+  (with-arguments-validation (who)
+      ((file-descriptor		sock)
+       (boolean			onoff)
+       (fixnum			linger))
+    (let ((rv (capi.posix-setsockopt/linger sock onoff linger)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock onoff linger)))))
+
+(define (getsockopt/linger sock)
+  (define who 'getsockopt/linger)
+  (with-arguments-validation (who)
+      ((file-descriptor  sock))
+    (let ((rv (capi.posix-getsockopt/linger sock)))
+      (if (pair? rv)
+	  (values (car rv) (cdr rv))
+	(raise-errno-error who rv sock)))))
 
 
 ;;;; time functions

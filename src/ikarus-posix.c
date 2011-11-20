@@ -2467,22 +2467,22 @@ ikrt_posix_setsockopt (ikptr sock, ikptr level, ikptr optname, ikptr optval_bv)
   return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikrt_posix_setsockopt_int (ikptr sock, ikptr level, ikptr optname, ikptr optval_num)
 {
-  int           optval = (int)extract_num(optval_num);
+  int           optval;
   socklen_t     optlen = sizeof(int);
   int           rv;
-  errno = 0;
-  rv    = setsockopt(unfix(sock), unfix(level), unfix(optname), &optval, optlen);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
-}
-ikptr
-ikrt_posix_setsockopt_size_t (ikptr sock, ikptr level, ikptr optname, ikptr optval_num)
-{
-  size_t        optval = (size_t)extract_num(optval_num);
-  socklen_t     optlen = sizeof(size_t);
-  int           rv;
+  if (true_object == optval_num)
+    optval = 1;
+  else if (false_object == optval_num)
+    optval = 0;
+  else {
+    long        num = extract_num(optval_num);
+    optval = (int)num;
+  }
   errno = 0;
   rv    = setsockopt(unfix(sock), unfix(level), unfix(optname), &optval, optlen);
   return (0 == rv)? fix(0) : ik_errno_to_code();
@@ -2504,6 +2504,19 @@ ikrt_posix_getsockopt_int (ikptr sock, ikptr level, ikptr optname, ikpcb * pcb)
     return ik_errno_to_code();
   }
 }
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_setsockopt_size_t (ikptr sock, ikptr level, ikptr optname, ikptr optval_num)
+{
+  size_t        optval = (size_t)extract_num(optval_num);
+  socklen_t     optlen = sizeof(size_t);
+  int           rv;
+  errno = 0;
+  rv    = setsockopt(unfix(sock), unfix(level), unfix(optname), &optval, optlen);
+  return (0 == rv)? fix(0) : ik_errno_to_code();
+}
 ikptr
 ikrt_posix_getsockopt_size_t (ikptr sock, ikptr level, ikptr optname, ikpcb * pcb)
 {
@@ -2520,6 +2533,37 @@ ikrt_posix_getsockopt_size_t (ikptr sock, ikptr level, ikptr optname, ikpcb * pc
   } else {
     return ik_errno_to_code();
   }
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_setsockopt_linger (ikptr sock, ikptr onoff, ikptr linger)
+{
+  struct linger optval;
+  socklen_t     optlen = sizeof(struct linger);
+  int           rv;
+  optval.l_onoff  = (true_object == onoff)? 1 : 0;
+  optval.l_linger = unfix(linger);
+  errno = 0;
+  rv    = setsockopt(unfix(sock), SOL_SOCKET, SO_LINGER, &optval, optlen);
+  return (0 == rv)? fix(0) : ik_errno_to_code();
+}
+ikptr
+ikrt_posix_getsockopt_linger (ikptr sock, ikpcb * pcb)
+{
+  struct linger optval;
+  socklen_t     optlen = sizeof(struct linger);
+  int           rv;
+  errno = 0;
+  rv    = getsockopt(unfix(sock), SOL_SOCKET, SO_LINGER, &optval, &optlen);
+  if (0 == rv) {
+    ikptr       pair = ik_pair_alloc(pcb);
+    VICARE_SET_CAR(pair, optval.l_onoff? true_object : false_object);
+    VICARE_SET_CDR(pair, fix(optval.l_linger));
+    return pair;
+  } else
+    return ik_errno_to_code();
 }
 
 

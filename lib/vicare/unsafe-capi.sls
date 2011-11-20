@@ -140,6 +140,7 @@
     posix-setsockopt			posix-getsockopt
     posix-setsockopt/int		posix-getsockopt/int
     posix-setsockopt/size_t		posix-getsockopt/size_t
+    posix-setsockopt/linger		posix-getsockopt/linger
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -697,6 +698,12 @@
 
 (define-inline (posix-getsockopt/size_t sock level option)
   (foreign-call "ikrt_posix_getsockopt_size_t" sock level option))
+
+(define-inline (posix-setsockopt/linger sock onoff linger)
+  (foreign-call "ikrt_posix_setsockopt_linger" sock onoff linger))
+
+(define-inline (posix-getsockopt/linger sock)
+  (foreign-call "ikrt_posix_getsockopt_linger" sock))
 
 
 ;;;; platform API for file descriptors

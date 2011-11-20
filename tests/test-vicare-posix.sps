@@ -1112,279 +1112,112 @@
 
   (check
       (let ((sock   (px.socket AF_LOCAL SOCK_STREAM 0)))
-	(px.setsockopt/int sock SOL_SOCKET SO_REUSEADDR 1)
+	(px.setsockopt/int sock SOL_SOCKET SO_REUSEADDR #t)
 	(let ((result (px.getsockopt/int sock SOL_SOCKET SO_REUSEADDR)))
 	  (px.shutdown sock SHUT_RDWR)
 	  result))
     => 1)
 
-  ;;SETSOCKOPT fails with "permission denied".
-  ;;
-  ;; (check
-  ;;     (with-compensations
-  ;; 	(let ((sock (make-sock/c)))
-  ;; 	  (px.setsockopt sock (socket-option debug) #t)
-  ;; 	  (px.getsockopt sock (socket-option debug))))
-  ;;   => #t)
+  (check
+      (let ((sock   (px.socket AF_LOCAL SOCK_STREAM 0)))
+	(px.setsockopt/int sock SOL_SOCKET SO_REUSEADDR #f)
+	(let ((result (px.getsockopt/int sock SOL_SOCKET SO_REUSEADDR)))
+	  (px.shutdown sock SHUT_RDWR)
+	  result))
+    => 0)
+
+  (check
+      (let* ((sock   (px.socket AF_LOCAL SOCK_STREAM 0))
+	     (result (px.getsockopt/int sock SOL_SOCKET SO_KEEPALIVE)))
+	(px.shutdown sock SHUT_RDWR)
+	result)
+    => 0)
+
+  (check
+      (let ((sock   (px.socket AF_LOCAL SOCK_STREAM 0)))
+	(px.setsockopt/int sock SOL_SOCKET SO_KEEPALIVE #t)
+	(let ((result (px.getsockopt/int sock SOL_SOCKET SO_KEEPALIVE)))
+	  (px.shutdown sock SHUT_RDWR)
+	  result))
+    => 1)
+
+  (check
+      (let* ((sock   (px.socket AF_LOCAL SOCK_STREAM 0))
+	     (result (px.getsockopt/size_t sock SOL_SOCKET SO_SNDBUF)))
+	(px.shutdown sock SHUT_RDWR)
+	result)
+    => 112640)
+
+;;;This test behaves  like this for no documented  reason; it looks like
+;;;the  size of  the buffer  set  by SO_SNDBUF  is a  suggestion to  the
+;;;system, rather than a strict order.
+;;;
+  (check
+      (let ((sock   (px.socket AF_LOCAL SOCK_STREAM 0)))
+	(px.setsockopt/size_t sock SOL_SOCKET SO_SNDBUF 3000)
+	(let ((result (px.getsockopt/size_t sock SOL_SOCKET SO_SNDBUF)))
+	  (px.shutdown sock SHUT_RDWR)
+	  result))
+    => 6000)
+
+  (check
+      (let* ((sock   (px.socket AF_LOCAL SOCK_STREAM 0))
+	     (result (px.getsockopt/int sock SOL_SOCKET SO_TYPE)))
+	(px.shutdown sock SHUT_RDWR)
+	result)
+    => SOCK_STREAM)
+
+  (check
+      (let ((sock   (px.socket AF_LOCAL SOCK_STREAM 0)))
+	(let-values (((onoff linger) (px.getsockopt/linger sock)))
+	  (px.shutdown sock SHUT_RDWR)
+	  (cons onoff linger)))
+    => '(#f . 0))
+
+  (check
+      (let ((sock   (px.socket AF_LOCAL SOCK_STREAM 0)))
+	(px.setsockopt/linger sock #t 123)
+	(let-values (((onoff linger) (px.getsockopt/linger sock)))
+	  (px.shutdown sock SHUT_RDWR)
+	  (cons onoff linger)))
+    => '(#t . 123))
 
 ;;; --------------------------------------------------------------------
+;;; AF_LOCAL, SOCK_STREAM
 
-;;   (check
-;;       (with-compensations
-;; 	(px.getsockopt (make-sock/c) (socket-option reuseaddr)))
-;;     => #f)
-
-;;   (check
-;;       (with-compensations
-;; 	(let ((sock (make-sock/c)))
-;; 	  (px.setsockopt sock (socket-option reuseaddr) #t)
-;; 	  (px.getsockopt sock (socket-option reuseaddr))))
-;;     => #t)
-
-;; ;;; --------------------------------------------------------------------
-
-;;   (check
-;;       (with-compensations
-;; 	(px.getsockopt (make-sock/c) (socket-option keepalive)))
-;;     => #f)
-
-;;   (check
-;;       (with-compensations
-;; 	(let ((sock (make-sock/c)))
-;; 	  (px.setsockopt sock (socket-option keepalive) #t)
-;; 	  (px.getsockopt sock (socket-option keepalive))))
-;;     => #t)
-
-;; ;;; --------------------------------------------------------------------
-
-;;   (check
-;;       (with-compensations
-;; 	(px.getsockopt (make-sock/c) (socket-option dontroute)))
-;;     => #f)
-
-;;   (check
-;;       (with-compensations
-;; 	(let ((sock (make-sock/c)))
-;; 	  (px.setsockopt sock (socket-option dontroute) #t)
-;; 	  (px.getsockopt sock (socket-option dontroute))))
-;;     => #t)
-
-;; ;;; --------------------------------------------------------------------
-
-;;   (check
-;;       (with-compensations
-;; 	(px.getsockopt (make-sock/c) (socket-option broadcast)))
-;;     => #f)
-
-;;   (check
-;;       (with-compensations
-;; 	(let ((sock (make-sock/c)))
-;; 	  (px.setsockopt sock (socket-option broadcast) #t)
-;; 	  (px.getsockopt sock (socket-option broadcast))))
-;;     => #t)
-
-;; ;;; --------------------------------------------------------------------
-
-;;   (check
-;;       (with-compensations
-;; 	(px.getsockopt (make-sock/c) (socket-option oobinline)))
-;;     => #f)
-
-;;   (check
-;;       (with-compensations
-;; 	(let ((sock (make-sock/c)))
-;; 	  (px.setsockopt sock (socket-option oobinline) #t)
-;; 	  (px.getsockopt sock (socket-option oobinline))))
-;;     => #t)
-
-;; ;;; --------------------------------------------------------------------
-
-;;   ;; (check
-;;   ;;     (with-compensations
-;;   ;; 	(px.getsockopt (make-sock/c) (socket-option sndbuf)))
-;;   ;;   => 111616)
-
-;; ;;;This test fails  for no documented reason; it looks  like the size of
-;; ;;;the buffer  set by  SO_SNDBUF is a  suggestion to the  system, rather
-;; ;;;than  a  strict  order.   See  also  the  proof  C  language  program
-;; ;;;"src/proofs/socket-options.c".
-;; ;;;
-;;   (check
-;;       (with-compensations
-;; 	(let ((sock (make-sock/c)))
-;; 	  (px.setsockopt sock (socket-option sndbuf) 1000)
-;; 	  (px.getsockopt sock (socket-option sndbuf))))
-;;     => 1000)
-
-;; ;;; --------------------------------------------------------------------
-
-;;   ;; (check
-;;   ;;     (with-compensations
-;;   ;; 	(px.getsockopt (make-sock/c) (socket-option rcvbuf)))
-;;   ;;   => 111616)
-
-;; ;;;This test fails  for no documented reason; it looks  like the size of
-;; ;;;the buffer  set by  SO_RCVBUF is a  suggestion to the  system, rather
-;; ;;;than  a  strict  order.   See  also  the  proof  C  language  program
-;; ;;;"src/proofs/socket-options.c".
-;; ;;;
-;;   (check
-;;       (with-compensations
-;; 	(let ((sock (make-sock/c)))
-;; 	  (px.setsockopt sock (socket-option rcvbuf) 1000)
-;; 	  (px.getsockopt sock (socket-option rcvbuf))))
-;;     => 1000)
-
-;; ;;; --------------------------------------------------------------------
-
-;;   (check
-;;       (with-compensations
-;; 	(px.getsockopt (make-sock/c) (socket-option linger)))
-;;     => #f)
-
-;;   (check
-;;       (with-compensations
-;; 	(let ((sock (make-sock/c)))
-;; 	  (px.setsockopt sock (socket-option linger) 100)
-;; 	  (px.getsockopt sock (socket-option linger))))
-;;     => 100)
-
-;;   (check
-;;       (with-compensations
-;; 	(let ((sock (make-sock/c)))
-;; 	  (px.setsockopt sock (socket-option linger) 0)
-;; 	  (px.getsockopt sock (socket-option linger))))
-;;     => #f)
-
-;;   (check
-;;       (with-compensations
-;; 	(let ((sock (make-sock/c)))
-;; 	  (px.setsockopt sock (socket-option linger) 100)
-;; 	  (px.setsockopt sock (socket-option linger) #f)
-;; 	  (px.getsockopt sock (socket-option linger))))
-;;     => #f)
-
-;; ;;; --------------------------------------------------------------------
-
-;;   (check
-;;       (with-compensations
-;; 	(px.getsockopt (make-sock/c) (socket-option style)))
-;;     (=> enum-set=?) (socket-style stream))
-
-;; ;;; --------------------------------------------------------------------
-
-;;   (check
-;;       (with-compensations
-;; 	(px.getsockopt (make-sock/c) (socket-option error)))
-;;     => 0)
-
-;;   #t)
-
-;; 
-;; (parametrise ((check-test-name	'local-stream))
-
-;;   (define (make-sock/c)
-;;     (letrec ((sock (compensate
-;; 		       (px.socket* (namespace local) (style stream))
-;; 		     (with
-;; 		      (px.close sock)))))
-;;       sock))
-
-;;   (check	;strings
-;;       (with-result
-;;        (with-compensations
-;; 	 (let* ((pathname	(string-append (px.getenv "TMPDIR") "/proof"))
-;; 		(sockaddr	(make-<sockaddr-un> pathname)))
-;; 	   (when (file-exists? pathname)
-;; 	     (px.unlink pathname))
-;; 	   (push-compensation (when (file-exists? pathname)
-;; 				(px.unlink pathname)))
-;; 	   (letrec ((master-sock (make-sock/c))
-;; 		    (client-sock (make-sock/c)))
-;; 	     (px.setsockopt master-sock (socket-option reuseaddr) #t)
-;; 	     (px.bind   master-sock sockaddr)
-;; 	     (px.listen master-sock 2)
-;; 	     (px.connect client-sock sockaddr)
-;; 	     (receive (server-sock client-address)
-;; 		 (px.accept master-sock)
-;; 	       (push-compensation (px.close server-sock))
-;; 	       (add-result (<sockaddr-un>? sockaddr))
-;; 	       (px.send/string server-sock "ciao client")
-;; 	       (add-result (px.recv/string client-sock 100))
-;; 	       (px.send/string client-sock "ciao server")
-;; 	       (add-result (px.recv/string server-sock 100))
-;; 	       (px.send/string server-sock "quit client")
-;; 	       (add-result (px.recv/string client-sock 100))
-;; 	       (px.send/string client-sock "quit server")
-;; 	       (add-result (px.recv/string server-sock 100))
-;; 	       (px.shutdown* server-sock both)
-;; 	       (px.shutdown* client-sock both)
-;; 	       #t)))))
-;;     => '(#t (#t "ciao client" "ciao server" "quit client" "quit server")))
-
-;; ;;; --------------------------------------------------------------------
-
-;;   (check 	;bytevectors
-;;       (with-result
-;;        (with-compensations
-;; 	 (let* ((pathname	(string-append (px.getenv "TMPDIR") "/proof"))
-;; 		(sockaddr	(make-<sockaddr-un> pathname)))
-;; 	   (when (file-exists? pathname)
-;; 	     (px.unlink pathname))
-;; 	   (push-compensation (when (file-exists? pathname)
-;; 				(px.unlink pathname)))
-;; 	   (letrec ((master-sock (make-sock/c))
-;; 		    (client-sock (make-sock/c)))
-;; 	     (px.setsockopt master-sock (socket-option reuseaddr) #t)
-;; 	     (px.bind   master-sock sockaddr)
-;; 	     (px.listen master-sock 2)
-;; 	     (px.connect client-sock sockaddr)
-;; 	     (receive (server-sock client-address)
-;; 		 (px.accept master-sock)
-;; 	       (push-compensation (px.close server-sock))
-;; 	       (add-result (<sockaddr-un>? sockaddr))
-;; 	       (px.send/bytevector server-sock (string->utf8 "ciao client"))
-;; 	       (add-result (utf8->string (px.recv/bytevector client-sock 100)))
-;; 	       (px.send/bytevector client-sock (string->utf8 "ciao server"))
-;; 	       (add-result (utf8->string (px.recv/bytevector server-sock 100)))
-;; 	       (px.send/bytevector server-sock (string->utf8 "quit client"))
-;; 	       (add-result (utf8->string (px.recv/bytevector client-sock 100)))
-;; 	       (px.send/bytevector client-sock (string->utf8 "quit server"))
-;; 	       (add-result (utf8->string (px.recv/bytevector server-sock 100)))
-;; 	       #t)))))
-;;     => '(#t (#t "ciao client" "ciao server" "quit client" "quit server")))
-
-;; ;;; --------------------------------------------------------------------
-
-;;   (check	;memblocks
-;;       (with-result
-;;        (with-compensations
-;; 	 (let* ((pathname	(string-append (px.getenv "TMPDIR") "/proof"))
-;; 		(sockaddr	(make-<sockaddr-un> pathname)))
-;; 	   (when (file-exists? pathname)
-;; 	     (px.unlink pathname))
-;; 	   (push-compensation (when (file-exists? pathname)
-;; 				(px.unlink pathname)))
-;; 	   (letrec ((master-sock (make-sock/c))
-;; 		    (client-sock (make-sock/c)))
-;; 	     (px.setsockopt master-sock (socket-option reuseaddr) #t)
-;; 	     (px.bind   master-sock sockaddr)
-;; 	     (px.listen master-sock 2)
-;; 	     (px.connect client-sock sockaddr)
-;; 	     (receive (server-sock client-address)
-;; 		 (px.accept master-sock)
-;; 	       (push-compensation (px.close server-sock))
-;; 	       (add-result (<sockaddr-un>? sockaddr))
-;; 	       (px.send/memblock server-sock (string->memblock "ciao client" malloc/c))
-;; 	       (add-result (memblock->string (px.recv/memblock client-sock 100 malloc/c)))
-;; 	       (px.send/memblock client-sock (string->memblock "ciao server" malloc/c))
-;; 	       (add-result (memblock->string (px.recv/memblock server-sock 100 malloc/c)))
-;; 	       (px.send/memblock server-sock (string->memblock "quit client" malloc/c))
-;; 	       (add-result (memblock->string (px.recv/memblock client-sock 100 malloc/c)))
-;; 	       (px.send/memblock client-sock (string->memblock "quit server" malloc/c))
-;; 	       (add-result (memblock->string (px.recv/memblock server-sock 100 malloc/c)))
-;; 	       #t)))))
-;;     => '(#t (#t "ciao client" "ciao server" "quit client" "quit server")))
+  (check
+      (with-result
+       (let* ((pathname	(string-append (px.getenv "TMPDIR") "/proof"))
+	      (sockaddr	(make-sockaddr_un pathname)))
+	 (when (file-exists? pathname)
+	   (px.unlink pathname))
+	 (unwind-protect
+	     (letrec ((server-master-sock (px.socket AF_LOCAL SOCK_STREAM 0))
+		      (client-sock        (px.socket AF_LOCAL SOCK_STREAM 0)))
+	       (unwind-protect
+		   (begin
+		     (px.setsockopt/int server-master-sock SOL_SOCKET SO_REUSEADDR #t)
+		     (px.bind   server-master-sock sockaddr)
+		     (px.listen server-master-sock 2)
+		     (px.connect client-sock sockaddr)
+		     (let-values (((server-sock client-address) (px.accept server-master-sock)))
+		       (unwind-protect
+			   (begin
+			     (px.send server-sock '#vu8(1 2 3) 3 0)
+			     (let ((bv (make-bytevector 3)))
+			       (px.recv client-sock bv 3 0)
+			       (add-result bv))
+			     (px.send client-sock '#vu8(4 5 6) 3 0)
+			     (let ((bv (make-bytevector 3)))
+			       (px.recv server-sock bv 3 0)
+			       (add-result bv))
+			     #t)
+			 (px.close server-sock))))
+		 (px.shutdown server-master-sock SHUT_RDWR)
+		 (px.shutdown client-sock SHUT_RDWR)))
+	   (when (file-exists? pathname)
+	     (px.unlink pathname)))))
+    => '(#t (#vu8(1 2 3) #vu8(4 5 6))))
 
 ;; ;;; --------------------------------------------------------------------
 
