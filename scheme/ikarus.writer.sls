@@ -517,7 +517,7 @@
              (write-char #\. p)
              (write-char #\. p)
              (write-char #\. p)]
-            [else (error 'write-peculiear "BUG")])))
+            [else (error 'write-peculiar "BUG")])))
         (if m
             (if (peculiar-symbol-string? str)
                 (write-peculiar str p)
