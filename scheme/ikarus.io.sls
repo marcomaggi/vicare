@@ -377,9 +377,10 @@
     standard-input-port standard-output-port standard-error-port
     current-input-port  current-output-port  current-error-port
     console-output-port console-error-port   console-input-port
-    bytevector-port-buffer-size string-port-buffer-size
-    input-file-buffer-size	output-file-buffer-size
-    input/output-file-buffer-size
+
+    bytevector-port-buffer-size		string-port-buffer-size
+    input-file-buffer-size		output-file-buffer-size
+    input/output-file-buffer-size	input/output-socket-buffer-size
 
     ;; predicates
     port? input-port? output-port? textual-port? binary-port?
@@ -476,13 +477,10 @@
     string->filename-func	filename->string-func
 
     ;; networking
-    tcp-connect tcp-connect-nonblocking
-    udp-connect udp-connect-nonblocking
-    tcp-server-socket tcp-server-socket-nonblocking
-    accept-connection accept-connection-nonblocking
-    close-tcp-server-socket
-    register-callback
-    input-socket-buffer-size output-socket-buffer-size)
+    make-binary-socket-input/output-port
+    make-binary-socket-input/output-port*
+    make-textual-socket-input/output-port
+    make-textual-socket-input/output-port*)
   (import (except (ikarus)
 		  ;; port parameters
 		  standard-input-port standard-output-port standard-error-port
@@ -490,7 +488,7 @@
 		  console-output-port console-error-port   console-input-port
 		  bytevector-port-buffer-size	string-port-buffer-size
 		  input-file-buffer-size	output-file-buffer-size
-		  input/output-file-buffer-size
+		  input/output-file-buffer-size	input/output-socket-buffer-size
 
 		  ;; predicates
 		  port? input-port? output-port? textual-port? binary-port?
@@ -588,13 +586,10 @@
 		  string->filename-func		filename->string-func
 
 		  ;; networking
-		  tcp-connect tcp-connect-nonblocking
-		  udp-connect udp-connect-nonblocking
-		  tcp-server-socket tcp-server-socket-nonblocking
-		  accept-connection accept-connection-nonblocking
-		  close-tcp-server-socket
-		  register-callback
-		  input-socket-buffer-size output-socket-buffer-size)
+		  make-binary-socket-input/output-port
+		  make-binary-socket-input/output-port*
+		  make-textual-socket-input/output-port
+		  make-textual-socket-input/output-port*)
     ;;This internal  library is  the one exporting:  $MAKE-PORT, $PORT-*
     ;;and $SET-PORT-* bindings.
     (ikarus system $io)
@@ -2128,28 +2123,36 @@
 					      (define ?who
 						(%make-buffer-size-parameter ?init ?who))))))
 
-  ;;Customisable buffer  size for bytevector ports.  To  be used by
-  ;;OPEN-BYTEVECTOR-OUTPUT-PORT and similar.
+  ;;Customisable buffer size for bytevector ports.  To be used by:
+  ;;
+  ;;   OPEN-BYTEVECTOR-OUTPUT-PORT
+  ;;
+  ;;and similar.
   ;;
   (define-buffer-size-parameter bytevector-port-buffer-size	DEFAULT-BINARY-BLOCK-SIZE)
 
-  ;;Customisable  buffer size  for  string ports.   To  be used  by
-  ;;OPEN-STRING-OUTPUT-PORT and similar.
+  ;;Customisable buffer size for string ports.  To be used by:
+  ;;
+  ;;   OPEN-STRING-OUTPUT-PORT
+  ;;
+  ;;and similar.
   ;;
   (define-buffer-size-parameter string-port-buffer-size		DEFAULT-STRING-BLOCK-SIZE)
 
-  ;;Customisable  buffer  size  for  file  ports.  To  be  used  by
-  ;;OPEN-FILE-INPUT-PORT, OPEN-FILE-OUTPUT-PORT and similar.
+  ;;Customisable buffer size for file ports.  To be used by:
+  ;;
+  ;;  OPEN-FILE-INPUT-PORT
+  ;;  OPEN-FILE-OUTPUT-PORT
+  ;;
+  ;;and similar.
   ;;
   (define-buffer-size-parameter input-file-buffer-size		DEFAULT-BINARY-BLOCK-SIZE)
   (define-buffer-size-parameter output-file-buffer-size		DEFAULT-BINARY-BLOCK-SIZE)
   (define-buffer-size-parameter input/output-file-buffer-size	DEFAULT-BINARY-BLOCK-SIZE)
 
-  ;;Customisable  buffer size  for  socket ports.   To  be used  by
-  ;;TCP-CONNECT and similar.
+  ;;Customisable buffer size for socket ports.
   ;;
-  (define-buffer-size-parameter input-socket-buffer-size	DEFAULT-BINARY-BLOCK-SIZE)
-  (define-buffer-size-parameter output-socket-buffer-size	DEFAULT-BINARY-BLOCK-SIZE)
+  (define-buffer-size-parameter input/output-socket-buffer-size	DEFAULT-BINARY-BLOCK-SIZE)
 
   #| end of LET-SYNTAX |# )
 
@@ -7278,253 +7281,58 @@
 					 transcoder close-function who)))
 
 
-;;;; platform socket functions
+;;;; platform socket descriptor ports
 
-(define (set-fd-nonblocking fd who id)
-  (let ((rv (foreign-call "ikrt_make_fd_nonblocking" fd)))
-    (unless (eq? rv 0)
-      (%raise-io-error who id rv))))
+(define (make-binary-socket-input/output-port sock port-identifier)
+  (define who 'make-binary-socket-input/output-port)
+  (let ((other-attributes	0)
+	(buffer.size		(input/output-socket-buffer-size))
+	(transcoder		#f)
+	(close-function		#t))
+    (%file-descriptor->input/output-port sock other-attributes port-identifier buffer.size
+					 transcoder close-function who)))
 
-(define (socket->ports socket who id block?)
-  (if (< socket 0)
-      (%raise-io-error who id socket)
-    (let ((close
-	   (let ((closed-once? #f))
-	     (lambda ()
-	       (if closed-once?
-		   ((%make-close-function-for-platform-descriptor-port id socket))
-		 (set! closed-once? #t))))))
-      (unless block?
-	(set-fd-nonblocking socket who id))
-      (values
-       (%file-descriptor->input-port  socket 0
-				      id (input-socket-buffer-size)  #f close who)
-       (%file-descriptor->output-port socket 0
-				      id (output-socket-buffer-size) #f close who)))))
+(define (make-binary-socket-input/output-port* sock port-identifier)
+  (define who 'make-binary-socket-input/output-port)
+  (let ((other-attributes	0)
+	(buffer.size		(input/output-socket-buffer-size))
+	(transcoder		#f)
+	(close-function		#f))
+    (%file-descriptor->input/output-port sock other-attributes port-identifier buffer.size
+					 transcoder close-function who)))
 
-(define-syntax define-connector
-  (syntax-rules ()
-    ((_ who foreign-name block?)
-     (define (who host srvc)
-       (unless (and (string? host) (string? srvc))
-	 (assertion-violation 'who "host and service must both be strings" host srvc))
-       (socket->ports
-	(or (foreign-call foreign-name
-			  (string->utf8 host) (string->utf8 srvc))
-	    (assertion-violation 'who "failed to resolve host name or connect" host srvc))
-	'who
-	(string-append host ":" srvc)
-	block?)))))
+;;; --------------------------------------------------------------------
 
-(define-connector tcp-connect             "ikrt_tcp_connect" #t)
-(define-connector udp-connect             "ikrt_udp_connect" #t)
-(define-connector tcp-connect-nonblocking "ikrt_tcp_connect" #f)
-(define-connector udp-connect-nonblocking "ikrt_udp_connect" #f)
+(define (make-textual-socket-input/output-port sock port-identifier transcoder)
+  (define who 'make-textual-socket-input/output-port)
+  (let ((other-attributes	0)
+	(buffer.size		(input/output-socket-buffer-size))
+	(close-function		#t))
+    (%file-descriptor->input/output-port sock other-attributes port-identifier buffer.size
+					 transcoder close-function who)))
+
+(define (make-textual-socket-input/output-port* sock port-identifier transcoder)
+  (define who 'make-textual-socket-input/output-port)
+  (let ((other-attributes	0)
+	(buffer.size		(input/output-socket-buffer-size))
+	(close-function		#f))
+    (%file-descriptor->input/output-port sock other-attributes port-identifier buffer.size
+					 transcoder close-function who)))
 
 
-(module (add-io-event rem-io-event process-events)
-  (define-struct t (fd proc type))
-    ;;; callbacks
-  (define pending '())
-  (define out-queue '())
-  (define in-queue '())
-
-  (define (process-events)
-    (if (null? out-queue)
-	(if (null? in-queue)
-	    (if (null? pending)
-		(error 'process-events "no more events")
-	      (begin
-		(do-select)
-		(process-events)))
-	  (begin
-	    (set! out-queue (reverse in-queue))
-	    (set! in-queue '())
-	    (process-events)))
-      (let ((t (car out-queue)))
-	(set! out-queue (cdr out-queue))
-	((t-proc t))
-	(process-events))))
-
-  (define (add-io-event fd proc event-type)
-    (set! pending
-	  (cons (make-t fd proc event-type) pending)))
-
-  (define (rem-io-event fd)
-    (define (p x) (eq? (t-fd x) fd))
-    (set! pending (remp p pending))
-    (set! out-queue (remp p out-queue))
-    (set! in-queue (remp p in-queue)))
-
-  (define (get-max-fd)
-    (assert (pair? pending))
-    (let f ((m (t-fd (car pending)))
-	    (ls (cdr pending)))
-      (cond
-       ((null? ls) m)
-       (else (f (max m (t-fd (car ls))) (cdr ls))))))
-
-  (define (do-select)
-    (let ((n (add1 (get-max-fd))))
-      (let ((vecsize (div (+ n 7) 8)))
-	(let ((rbv (make-bytevector vecsize 0))
-	      (wbv (make-bytevector vecsize 0))
-	      (xbv (make-bytevector vecsize 0)))
-            ;;; add all fds to their bytevectors depending on type
-	  (for-each
-              (lambda (t)
-                (let ((fd (t-fd t)))
-                  (let ((i (div fd 8)) (j (mod fd 8)))
-                    (let ((bv (case (t-type t)
-                                ((r) rbv)
-                                ((w) wbv)
-                                ((x) xbv)
-                                (else
-                                 (error 'do-select "invalid type" t)))))
-                      (bytevector-u8-set! bv i
-					  (fxlogor (fxsll 1 j)
-						   (bytevector-u8-ref bv i)))))))
-	    pending)
-            ;;; do select
-	  (let ((rv (foreign-call "ikrt_select" n rbv wbv xbv)))
-	    (when (< rv 0)
-	      (%raise-io-error 'select #f rv)))
-            ;;; go through fds again and see if they're selected
-	  (for-each
-              (lambda (t)
-                (let ((fd (t-fd t)))
-                  (let ((i (div fd 8)) (j (mod fd 8)))
-                    (let ((bv (case (t-type t)
-                                ((r) rbv)
-                                ((w) wbv)
-                                ((x) xbv)
-                                (else
-                                 (error 'do-select "invalid type" t)))))
-                      (cond
-		       ((fxzero?
-			 (fxlogand (fxsll 1 j)
-				   (bytevector-u8-ref bv i)))
-                         ;;; not selected
-			(set! pending (cons t pending)))
-		       (else
-                         ;;; ready
-			(set! in-queue (cons t in-queue))))))))
-	    (let ((ls pending))
-	      (set! pending '())
-	      ls))))))
-  #| end of module |# )
-
-
-(define-struct tcp-server (portnum fd))
-
-(define (tcp-server-socket portnum)
-  (unless (fixnum? portnum)
-    (error 'tcp-server-socket "not a fixnum" portnum))
-  (let ((sock (foreign-call "ikrt_listen" portnum)))
-    (cond
-     ((fx>= sock 0) (make-tcp-server portnum sock))
-     (else (assertion-violation 'tcp-server-socket "failed to start server")))))
-
-(define (tcp-server-socket-nonblocking portnum)
-  (let ((s (tcp-server-socket portnum)))
-    (set-fd-nonblocking (tcp-server-fd s)
-			'tcp-server-socket-nonblocking
-			'#f)
-    s))
-
-
-(define (do-accept-connection s who blocking?)
-  (define (make-socket-info x)
-    (unless (= (bytevector-length x) 16)
-      (error who "BUG: unexpected return value" x))
-    (format "~s.~s.~s.~s:~s"
-      (bytevector-u8-ref x 4)
-      (bytevector-u8-ref x 5)
-      (bytevector-u8-ref x 6)
-      (bytevector-u8-ref x 7)
-      (+ (* 256 (bytevector-u8-ref x 2))
-	 (bytevector-u8-ref x 3))))
-  (unless (tcp-server? s)
-    (assertion-violation who "not a tcp server" s))
-  (let ((fd (tcp-server-fd s)) (bv (make-bytevector 16)))
-    (unless fd
-      (assertion-violation who "server is closed" s))
-    (let ((sock (foreign-call "ikrt_accept" fd bv)))
-      (cond
-       ((eq? sock EAGAIN)
-	(call/cc
-	    (lambda (k)
-	      (add-io-event fd k 'r)
-	      (process-events)))
-	(do-accept-connection s who blocking?))
-       ((< sock 0)
-	(%raise-io-error who s sock))
-       (else
-	(socket->ports sock who (make-socket-info bv) blocking?))))))
-
-(define (accept-connection s)
-  (do-accept-connection s 'accept-connection #t))
-
-(define (accept-connection-nonblocking s)
-  (do-accept-connection s 'accept-connection-nonblocking #f))
-
-(define (close-tcp-server-socket s)
-  (define who 'close-tcp-server-socket)
-  (unless (tcp-server? s)
-    (assertion-violation who "not a tcp server" s))
-  (let ((fd (tcp-server-fd s)))
-    (unless fd
-      (assertion-violation who "server is closed" s))
-    (let ((rv (foreign-call "ikrt_shutdown" fd)))
-      (when (fx< rv 0)
-	(assertion-violation who "failed to shutdown")))))
-
-(define (reset-input-port! p)
+(define (reset-input-port! port)
   (define who 'reset-input-port!)
   (with-arguments-validation (who)
-      ((input-port p))
-    ($set-port-index! p ($port-size p))
-    (unregister-callback p)))
+      ((input-port port))
+    (with-port (port)
+      (set! port.buffer.index port.buffer.used-size))))
 
-(define (reset-output-port! p)
+(define (reset-output-port! port)
   (define who 'reset-output-port!)
   (with-arguments-validation (who)
-      ((output-port p))
-    ($set-port-index! p 0)
-    (unregister-callback p)))
-
-(define (unregister-callback what)
-  (define who 'unregister-callback)
-  (cond ((or (output-port? what)
-	     (input-port?  what))
-	 (with-port (what)
-	   (let ((c what.device))
-	     (unless (fixnum? c)
-	       (assertion-violation who "not a file-based port" what))
-	     (rem-io-event c))))
-	((tcp-server? what)
-	 (rem-io-event (tcp-server-fd what)))
-	(else (assertion-violation who "invalid argument" what))))
-
-(define (register-callback what proc)
-  (define who 'register-callback)
-  (with-arguments-validation (who)
-      ((procedure proc))
-    (cond ((output-port? what)
-	   (with-port (what)
-	     (let ((c what.device))
-	       (unless (fixnum? c)
-		 (assertion-violation who "not a file-based port" what))
-	       (add-io-event c proc 'w))))
-	  ((input-port? what)
-	   (with-port (what)
-	     (let ((c what.device))
-	       (unless (fixnum? c)
-		 (assertion-violation who "not a file-based port" what))
-	       (add-io-event c proc 'r))))
-	  ((tcp-server? what)
-	   (add-io-event (tcp-server-fd what) proc 'r))
-	  (else (assertion-violation who "invalid argument" what)))))
+      ((output-port port))
+    (with-port (port)
+      (set! port.buffer.index 0))))
 
 
 ;;;; standard, console and current ports

@@ -214,6 +214,11 @@ ikrt_write_fd(ikptr fd, ikptr bv, ikptr off, ikptr cnt /*, ikpcb* pcb */){
   }
 }
 
+/** --------------------------------------------------------------------
+ ** Original Ikarus networking interface.
+ ** ----------------------------------------------------------------- */
+
+#if 0
 static ikptr
 do_connect(ikptr host, ikptr srvc, int socket_type){
   struct addrinfo* info;
@@ -367,5 +372,6 @@ ikrt_shutdown(ikptr s /*, ikpcb* pcb*/){
   }
   return 0;
 }
+#endif
 
 /* end of file */
