@@ -37,48 +37,46 @@
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_close_fd(ikptr fd /*, ikpcb* pcb */)
+ikrt_close_fd (ikptr fd /*, ikpcb* pcb */)
 {
-  int err = close(unfix(fd));
-  if(err == -1){
-    return ik_errno_to_code();
-  } else {
-    return false_object;;
-  }
+  int   rv;
+  errno = 0;
+  rv    = close(unfix(fd));
+  return (-1 != rv)? false_object : ik_errno_to_code();
 }
 ikptr
-ikrt_set_position(ikptr fd, ikptr pos /*, ikpcb* pcb */)
+ikrt_set_position (ikptr fd, ikptr pos /*, ikpcb* pcb */)
 {
-  off_t offset = extract_num_longlong(pos);
-  off_t err = lseek(unfix(fd), offset, SEEK_SET);
-  if(err == -1){
-    return ik_errno_to_code();
-  } else {
-    return false_object;;
-  }
+  off_t         offset;
+  off_t         rv;
+  offset = extract_num_longlong(pos);
+  errno  = 0;
+  rv     = lseek(unfix(fd), offset, SEEK_SET);
+  return (-1 != rv)? false_object : ik_errno_to_code();
 }
 ikptr
-ikrt_open_input_fd (ikptr fn, ikptr ikopts /*, ikpcb* pcb */)
+ikrt_open_input_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
 {
-  int opts  = unfix(ikopts);
-  /* no special flags supported at present */
-  int flags = O_RDONLY;
-  /* the "mode" value is used  only when creating the file, which should
-     not happen here */
-  int mode  = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-  int fh = open((char*)(long)(fn+off_bytevector_data), flags, mode);
-  if (fh >= 0){
-    return fix(fh);
-  } else {
-    return ik_errno_to_code();
-  }
+  const char *  pathname;
+  VICARE_UNUSED int opts  = unfix(ikopts);
+  int           flags = O_RDONLY; /* no special flags supported at present */
+  /* The "mode" value is used  only when creating the file, which should
+     not happen here. */
+  int           mode  = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+  int           fd;
+  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  errno    = 0;
+  fd       = open(pathname, flags, mode);
+  return (0 <= fd)? fix(fd) : ik_errno_to_code();
 }
 ikptr
-ikrt_open_output_fd (ikptr fn, ikptr ikopts /*, ikpcb* pcb */)
+ikrt_open_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
 {
-  int opts  = unfix(ikopts);
-  int mode  = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-  int flags = 0;
+  const char *  pathname;
+  int           opts  = unfix(ikopts);
+  int           mode  = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+  int           flags = 0;
+  int           fd;
   /*
    * File options:
    *
@@ -128,21 +126,22 @@ ikrt_open_output_fd (ikptr fn, ikptr ikopts /*, ikpcb* pcb */)
   case 7: flags = O_WRONLY                    ; /* (file-options no-create no-fail no-truncate) */
     break;
   }
-  int fh = open((char*)(long)(fn+off_bytevector_data), flags, mode);
-  if(fh >= 0){
-    return fix(fh);
-  } else {
-    return ik_errno_to_code();
-  }
+  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  errno    = 0;
+  fd       = open(pathname, flags, mode);
+  return (0 <= fd)? fix(fd) : ik_errno_to_code();
 }
 ikptr
-ikrt_open_input_output_fd(ikptr fn, ikptr ikopts /*, ikpcb* pcb */){
-  int opts  = unfix(ikopts);
-  int mode  = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-  int flags = 0;
+ikrt_open_input_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
+{
+  const char *  pathname;
+  int           opts  = unfix(ikopts);
+  int           mode  = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+  int           flags = 0;
+  int           fd;
   /* With   the   exception  of   O_RDWR,   these   are   the  same   of
      "ikrt_open_output_fd()". */
-  switch (opts){
+  switch (opts) {
   case 0: flags = O_RDWR | O_CREAT | O_EXCL ; /* (file-options) */
     break;
   case 1: flags = O_RDWR | O_TRUNC          ; /* (file-options no-create) */
@@ -160,59 +159,33 @@ ikrt_open_input_output_fd(ikptr fn, ikptr ikopts /*, ikpcb* pcb */){
   case 7: flags = O_RDWR                    ; /* (file-options no-create no-fail no-truncate) */
     break;
   }
-  int fh = open((char*)(long)(fn+off_bytevector_data), flags, mode);
-  if(fh >= 0){
-    return fix(fh);
-  } else {
-    return ik_errno_to_code();
-  }
+  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  errno = 0;
+  fd    = open(pathname, flags, mode);
+  return (0 <= fd)? fix(fd) : ik_errno_to_code();
 }
 ikptr
-ikrt_read_fd(ikptr fd, ikptr bv, ikptr off, ikptr cnt /*, ikpcb* pcb */){
-#if 0
-  fprintf(stderr, "READ: %d\n", unfix(fd));
-#endif
-  ssize_t bytes =
-   read(unfix(fd),
-        (char*)(long)(bv+off_bytevector_data+unfix(off)),
-        unfix(cnt));
-#if 0
-  fprintf(stderr, "BYTES: %d\n", bytes);
-#endif
-  if(bytes >= 0){
-    return fix(bytes);
-  } else {
-    return ik_errno_to_code();
-  }
+ikrt_read_fd (ikptr fd, ikptr bv, ikptr off, ikptr cnt /*, ikpcb* pcb */)
+{
+  ssize_t       rv;
+  uint8_t *     buffer;
+  buffer = VICARE_BYTEVECTOR_DATA_VOIDP(bv) + unfix(off);
+  errno  = 0;
+  rv     = read(unfix(fd), buffer, unfix(cnt));
+  return (0 <= rv)? fix(rv) : ik_errno_to_code();
 }
 ikptr
-ikrt_write_fd(ikptr fd, ikptr bv, ikptr off, ikptr cnt /*, ikpcb* pcb */){
-#if 0
-  if (0) {
-    fprintf(stderr, "WRITE %d, %p %d %d %d\n",
-         unfix(fd),
-         bv,
-         unfix(ref(bv, off_bytevector_length)),
-         unfix(off),
-        unfix(cnt));
-    int i;
-    for(i=0; i<100; i++){
-      fprintf(stderr, "bv[%d]=0x%02x ", i,
-             ((char*)(bv+off_bytevector_data))[i]);
-    }
-    fprintf(stderr, "\n");
-  }
-#endif
-  ssize_t bytes =
-   write(unfix(fd),
-         (char*)(long)(bv+off_bytevector_data+unfix(off)),
-         unfix(cnt));
-  if(bytes >= 0){
-    return fix(bytes);
-  } else {
-    return ik_errno_to_code();
-  }
+ikrt_write_fd (ikptr fd, ikptr bv, ikptr off, ikptr cnt /*, ikpcb* pcb */)
+{
+  ssize_t       rv;
+  uint8_t *     buffer;
+  buffer = VICARE_BYTEVECTOR_DATA_VOIDP(bv) + unfix(off);
+  errno  = 0;
+  rv     = write(unfix(fd), buffer, unfix(cnt));
+  return (0 <= rv)? fix(rv) : ik_errno_to_code();
 }
+
+/* end of file */
 
 /** --------------------------------------------------------------------
  ** Original Ikarus networking interface.
