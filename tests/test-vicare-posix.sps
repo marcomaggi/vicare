@@ -1282,6 +1282,52 @@
 	 #t))
     => '(#t (#vu8(1 2 3))))
 
+  (check	;fork process, textual port input/output
+      (with-result
+       (let* ((pathname	(string-append (px.getenv "TMPDIR") "/proof"))
+	      (sockaddr	(make-sockaddr_un pathname)))
+	 (define (parent pid)
+	   (let ((server-sock (px.socket AF_LOCAL SOCK_STREAM 0)))
+	     (unwind-protect
+		 (begin
+		   (px.setsockopt/int server-sock SOL_SOCKET SO_REUSEADDR #t)
+		   (px.bind   server-sock sockaddr)
+		   (px.listen server-sock 2)
+		   (let-values (((sock client-address) (px.accept server-sock)))
+		     (px.setsockopt/linger sock #t 1)
+		     (let ((port (make-textual-socket-input/output-port sock "*parent-sock*"
+									(native-transcoder))))
+		       (unwind-protect
+			   (let ((S (make-string 4)))
+			     (put-string port "ciao")
+			     (flush-output-port port)
+			     (get-string-n! port S 0 4)
+			     (add-result S))
+			 (close-port port)))))
+	       (px.close server-sock)
+	       (px.waitpid pid 0))))
+	 (define (child)
+	   (nanosleep 1 0) ;give parent the time to listen
+	   (let* ((sock (px.socket AF_LOCAL SOCK_STREAM 0))
+		  (port (make-textual-socket-input/output-port sock "*child-sock*"
+							       (native-transcoder))))
+	     (px.setsockopt/linger sock #t 1)
+	     (unwind-protect
+		 (begin
+		   (px.connect sock sockaddr)
+		   (assert (equal? "ciao" (get-string-n port 4)))
+		   (put-string port "ciao")
+		   (flush-output-port port))
+	       (close-port port)))
+	   (exit 0))
+	 (when (file-exists? pathname)
+	   (px.unlink pathname))
+	 (fork parent child)
+	 (when (file-exists? pathname)
+	   (px.unlink pathname))
+	 #t))
+    => '(#t ("ciao")))
+
 ;; ;;; --------------------------------------------------------------------
 
 ;;   (check	;processes

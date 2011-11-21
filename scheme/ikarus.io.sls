@@ -7393,16 +7393,16 @@
   (let ((other-attributes	0)
 	(buffer.size		(input/output-socket-buffer-size))
 	(close-function		#t))
-    (%file-descriptor->input/output-port sock other-attributes port-identifier buffer.size
-					 transcoder close-function who)))
+    (%socket->input/output-port sock other-attributes port-identifier buffer.size
+				transcoder close-function who)))
 
 (define (make-textual-socket-input/output-port* sock port-identifier transcoder)
   (define who 'make-textual-socket-input/output-port)
   (let ((other-attributes	0)
 	(buffer.size		(input/output-socket-buffer-size))
 	(close-function		#f))
-    (%file-descriptor->input/output-port sock other-attributes port-identifier buffer.size
-					 transcoder close-function who)))
+    (%socket->input/output-port sock other-attributes port-identifier buffer.size
+				transcoder close-function who)))
 
 
 (define (reset-input-port! port)
