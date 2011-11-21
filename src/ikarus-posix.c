@@ -1427,9 +1427,15 @@ ikrt_posix_fcntl (ikptr fd, ikptr command, ikptr arg)
     rv = fcntl(unfix(fd), unfix(command), val);
   } else if (false_object == arg) {
     rv = fcntl(unfix(fd), unfix(command));
-  } else {
-    void *      val = (void *) ref(arg, off_pointer_data);
+  } else if (IS_BYTEVECTOR(arg)) {
+    void *      val = VICARE_BYTEVECTOR_DATA_VOIDP(arg);
     rv = fcntl(unfix(fd), unfix(command), val);
+  } else if (IS_POINTER(arg)) {
+    void *      val = VICARE_POINTER_DATA_VOIDP(arg);
+    rv = fcntl(unfix(fd), unfix(command), val);
+  } else {
+    fprintf(stderr, "*** Vicare error: invalid last argument to fcntl()");
+    exit(EXIT_FAILURE);
   }
   if (-1 == rv)
     return ik_errno_to_code();
@@ -1447,9 +1453,15 @@ ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
     rv = ioctl(unfix(fd), unfix(command), val);
   } else if (false_object == arg) {
     rv = ioctl(unfix(fd), unfix(command));
-  } else {
-    void *      val = (void *) ref(arg, off_pointer_data);
+  } else if (IS_BYTEVECTOR(arg)) {
+    void *      val = VICARE_BYTEVECTOR_DATA_VOIDP(arg);
     rv = ioctl(unfix(fd), unfix(command), val);
+  } else if (IS_POINTER(arg)) {
+    void *      val = VICARE_POINTER_DATA_VOIDP(arg);
+    rv = ioctl(unfix(fd), unfix(command), val);
+  } else {
+    fprintf(stderr, "*** Vicare error: invalid last argument to ioctl()");
+    exit(EXIT_FAILURE);
   }
   if (-1 == rv)
     return ik_errno_to_code();

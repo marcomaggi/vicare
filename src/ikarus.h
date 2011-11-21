@@ -503,6 +503,9 @@ ikptr   make_pointer    (long x, ikpcb* pcb);
 
 #define IS_POINTER(X)   (pointer_tag == (((long)(X)) & pointer_tag))
 
+#define VICARE_POINTER_DATA_VOIDP(X)  \
+  ((void *)ref((X), off_pointer_data))
+
 
 /** --------------------------------------------------------------------
  ** Vector objects.
