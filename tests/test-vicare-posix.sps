@@ -1091,7 +1091,7 @@
 (parametrise ((check-test-name	'net))
 
   (check
-      (let-values (((a b) (px.socketpair AF_LOCAL SOCK_DGRAM 0)))
+      (let-values (((a b) (px.socketpair PF_LOCAL SOCK_DGRAM 0)))
 	(px.posix-write a '#vu8(1 2 3 4) 4)
 	(let ((buf (make-bytevector 4)))
 	  (px.posix-read b buf 4)
@@ -1104,14 +1104,14 @@
 ;;; options
 
   (check
-      (let* ((sock   (px.socket AF_LOCAL SOCK_STREAM 0))
+      (let* ((sock   (px.socket PF_LOCAL SOCK_STREAM 0))
 	     (result (px.getsockopt/int sock SOL_SOCKET SO_DEBUG)))
 	(px.shutdown sock SHUT_RDWR)
 	result)
     => 0)
 
   (check
-      (let ((sock   (px.socket AF_LOCAL SOCK_STREAM 0)))
+      (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
 	(px.setsockopt/int sock SOL_SOCKET SO_REUSEADDR #t)
 	(let ((result (px.getsockopt/int sock SOL_SOCKET SO_REUSEADDR)))
 	  (px.shutdown sock SHUT_RDWR)
@@ -1119,7 +1119,7 @@
     => 1)
 
   (check
-      (let ((sock   (px.socket AF_LOCAL SOCK_STREAM 0)))
+      (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
 	(px.setsockopt/int sock SOL_SOCKET SO_REUSEADDR #f)
 	(let ((result (px.getsockopt/int sock SOL_SOCKET SO_REUSEADDR)))
 	  (px.shutdown sock SHUT_RDWR)
@@ -1127,14 +1127,14 @@
     => 0)
 
   (check
-      (let* ((sock   (px.socket AF_LOCAL SOCK_STREAM 0))
+      (let* ((sock   (px.socket PF_LOCAL SOCK_STREAM 0))
 	     (result (px.getsockopt/int sock SOL_SOCKET SO_KEEPALIVE)))
 	(px.shutdown sock SHUT_RDWR)
 	result)
     => 0)
 
   (check
-      (let ((sock   (px.socket AF_LOCAL SOCK_STREAM 0)))
+      (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
 	(px.setsockopt/int sock SOL_SOCKET SO_KEEPALIVE #t)
 	(let ((result (px.getsockopt/int sock SOL_SOCKET SO_KEEPALIVE)))
 	  (px.shutdown sock SHUT_RDWR)
@@ -1142,7 +1142,7 @@
     => 1)
 
   (check
-      (let* ((sock   (px.socket AF_LOCAL SOCK_STREAM 0))
+      (let* ((sock   (px.socket PF_LOCAL SOCK_STREAM 0))
 	     (result (px.getsockopt/size_t sock SOL_SOCKET SO_SNDBUF)))
 	(px.shutdown sock SHUT_RDWR)
 	result)
@@ -1153,7 +1153,7 @@
 ;;;system, rather than a strict order.
 ;;;
   (check
-      (let ((sock   (px.socket AF_LOCAL SOCK_STREAM 0)))
+      (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
 	(px.setsockopt/size_t sock SOL_SOCKET SO_SNDBUF 3000)
 	(let ((result (px.getsockopt/size_t sock SOL_SOCKET SO_SNDBUF)))
 	  (px.shutdown sock SHUT_RDWR)
@@ -1161,21 +1161,21 @@
     => 6000)
 
   (check
-      (let* ((sock   (px.socket AF_LOCAL SOCK_STREAM 0))
+      (let* ((sock   (px.socket PF_LOCAL SOCK_STREAM 0))
 	     (result (px.getsockopt/int sock SOL_SOCKET SO_TYPE)))
 	(px.shutdown sock SHUT_RDWR)
 	result)
     => SOCK_STREAM)
 
   (check
-      (let ((sock   (px.socket AF_LOCAL SOCK_STREAM 0)))
+      (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
 	(let-values (((onoff linger) (px.getsockopt/linger sock)))
 	  (px.shutdown sock SHUT_RDWR)
 	  (cons onoff linger)))
     => '(#f . 0))
 
   (check
-      (let ((sock   (px.socket AF_LOCAL SOCK_STREAM 0)))
+      (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
 	(px.setsockopt/linger sock #t 123)
 	(let-values (((onoff linger) (px.getsockopt/linger sock)))
 	  (px.shutdown sock SHUT_RDWR)
@@ -1183,20 +1183,21 @@
     => '(#t . 123))
 
 ;;; --------------------------------------------------------------------
-;;; AF_LOCAL, SOCK_STREAM
+;;; PF_LOCAL, SOCK_STREAM
 
   (check	;fork process, raw bytevector input/output
       (with-result
        (let* ((pathname	(string-append (px.getenv "TMPDIR") "/proof"))
 	      (sockaddr	(make-sockaddr_un pathname)))
 	 (define (parent pid)
-	   (let ((server-sock (px.socket AF_LOCAL SOCK_STREAM 0)))
+	   (let ((server-sock (px.socket PF_LOCAL SOCK_STREAM 0)))
 	     (unwind-protect
 		 (begin
 		   (px.setsockopt/int server-sock SOL_SOCKET SO_REUSEADDR #t)
 		   (px.bind   server-sock sockaddr)
 		   (px.listen server-sock 2)
 		   (let-values (((sock client-address) (px.accept server-sock)))
+;;;		     (check-pretty-print (sockaddr_un.pathname/string client-address))
 		     (px.setsockopt/linger sock #t 1)
 		     (unwind-protect
 			 (let ((bv (make-bytevector 3)))
@@ -1208,7 +1209,7 @@
 	       (px.waitpid pid 0))))
 	 (define (child)
 	   (nanosleep 1 0) ;give parent the time to listen
-	   (let ((sock (px.socket AF_LOCAL SOCK_STREAM 0)))
+	   (let ((sock (px.socket PF_LOCAL SOCK_STREAM 0)))
 	     (px.setsockopt/linger sock #t 1)
 	     (unwind-protect
 		 (let ((bv (make-bytevector 3)))
@@ -1231,7 +1232,7 @@
        (let* ((pathname	(string-append (px.getenv "TMPDIR") "/proof"))
 	      (sockaddr	(make-sockaddr_un pathname)))
 	 (define (parent pid)
-	   (let ((server-sock (px.socket AF_LOCAL SOCK_STREAM 0)))
+	   (let ((server-sock (px.socket PF_LOCAL SOCK_STREAM 0)))
 	     (unwind-protect
 		 (begin
 		   (px.setsockopt/int server-sock SOL_SOCKET SO_REUSEADDR #t)
@@ -1257,7 +1258,7 @@
 	       (px.waitpid pid 0))))
 	 (define (child)
 	   (nanosleep 1 0) ;give parent the time to listen
-	   (let* ((sock (px.socket AF_LOCAL SOCK_STREAM 0))
+	   (let* ((sock (px.socket PF_LOCAL SOCK_STREAM 0))
 		  (port (make-binary-socket-input/output-port sock "*child-sock*")))
 	     (px.setsockopt/linger sock #t 1)
 	     (unwind-protect
@@ -1287,7 +1288,7 @@
        (let* ((pathname	(string-append (px.getenv "TMPDIR") "/proof"))
 	      (sockaddr	(make-sockaddr_un pathname)))
 	 (define (parent pid)
-	   (let ((server-sock (px.socket AF_LOCAL SOCK_STREAM 0)))
+	   (let ((server-sock (px.socket PF_LOCAL SOCK_STREAM 0)))
 	     (unwind-protect
 		 (begin
 		   (px.setsockopt/int server-sock SOL_SOCKET SO_REUSEADDR #t)
@@ -1308,7 +1309,7 @@
 	       (px.waitpid pid 0))))
 	 (define (child)
 	   (nanosleep 1 0) ;give parent the time to listen
-	   (let* ((sock (px.socket AF_LOCAL SOCK_STREAM 0))
+	   (let* ((sock (px.socket PF_LOCAL SOCK_STREAM 0))
 		  (port (make-textual-socket-input/output-port sock "*child-sock*"
 							       (native-transcoder))))
 	     (px.setsockopt/linger sock #t 1)
@@ -1328,346 +1329,142 @@
 	 #t))
     => '(#t ("ciao")))
 
-;; ;;; --------------------------------------------------------------------
+;;; --------------------------------------------------------------------
+;;; PF_LOCAL SOCK_DGRAM
 
-;;   (check	;processes
-;;       (with-compensations
-;; 	(let* ((pathname (string-append (px.getenv "TMPDIR") "/proof"))
-;; 	       (sockaddr (make-<sockaddr-un> pathname)))
-;; 	  (when (file-exists? pathname)
-;; 	    (px.unlink pathname))
-;; 	  (let ((pid (px.fork)))
-;; 	    (if pid
-;; 		(begin ;parent, server
-;; 		  (push-compensation (when (file-exists? pathname)
-;; 				       (px.remove pathname)))
-;; 		  (letrec ((server-sock (make-sock/c)))
-;; 		    (px.setsockopt server-sock (socket-option reuseaddr) #t)
-;; 		    (px.bind   server-sock sockaddr)
-;; 		    (px.listen server-sock 2)
-;; 		    (receive (client-sock client-address)
-;; 			(px.accept server-sock)
-;; 		      (push-compensation (px.close client-sock))
-;; 		      (with-result
-;; 		       (add-result (<sockaddr-un>? client-address))
-;; 		       (px.send/string client-sock "ciao client")
-;; 		       (add-result (px.recv/string client-sock 100))
-;; 		       (px.send/string client-sock "quit client")
-;; 		       (add-result (px.recv/string client-sock 100))
-;; 		       (receive (pid1 status)
-;; 			   (px.waitpid pid 0)
-;; 			 (pid=? pid pid1))))))
-;; 	      (begin ;child, client
-;; 		(letrec ((client-sock (make-sock/c)))
-;; 		  ;;Give the  server some time to setup  itself and reach
-;; 		  ;;the ACCEPT call.
-;; 		  (wait-for-awhile)
-;; 		  (px.connect client-sock sockaddr)
-;; 		  (px.recv/string client-sock 100)
-;; 		  (px.send/string client-sock "ciao server")
-;; 		  (px.recv/string client-sock 100)
-;; 		  (px.send/string client-sock "quit server")
-;; 		  (exit)))))))
-;;     => '(#t (#t "ciao server" "quit server")))
+;;;FIXME
+  #;(check	;fork process, raw bytevector input/output
+      (with-result
+       (let* ((tmpdir	 (px.getenv "TMPDIR"))
+	      (pathname1 (string-append tmpdir "/proof-1"))
+	      (pathname2 (string-append tmpdir "/proof-2"))
+	      (sockaddr1 (make-sockaddr_un pathname1))
+	      (sockaddr2 (make-sockaddr_un pathname2)))
+;;;(check-pretty-print (sockaddr_un.pathname/string sockaddr1))
+;;;(check-pretty-print (sockaddr_un.pathname/string sockaddr2))
+	 (define (parent pid)
+	   (let ((sock (px.socket PF_LOCAL SOCK_DGRAM 0)))
+	     (unwind-protect
+		 (begin
+		   (px.bind sock sockaddr1)
+		   (nanosleep 1 0) ;give child the time
+		   (let ((bv (make-bytevector 3)))
+  		     (check-pretty-print 'parent-sending)
+		     (px.sendto sock '#vu8(1 2 3) 3 0 sockaddr2)
+		     (check-pretty-print 'parent-sent)
+		     (px.recvfrom sock bv #f 0)
+		     (add-result bv)))
+	       (px.close sock)
+	       (px.waitpid pid 0))))
+	 (define (child)
+           (let ((sock (px.socket PF_LOCAL SOCK_DGRAM 0)))
+             (unwind-protect
+		 (let ((bv (make-bytevector 3)))
+                   (px.bind sock sockaddr2)
+		   (nanosleep 1 0) ;give parent the time
+		   (check-pretty-print 'child-recv)
+		   (let-values (((len address) (px.recvfrom sock bv #f 0)))
+		     (check-pretty-print 'child-recv-done)
+		     (assert (equal? bv '#vu8(1 2 3)))
+		     (px.sendto sock bv #f 0 address))
+		   #t)
+	       (px.close sock)))
+	   (exit 0))
+	 (when (file-exists? pathname1) (px.unlink pathname1))
+	 (when (file-exists? pathname2) (px.unlink pathname2))
+	 (fork parent child)
+	 (when (file-exists? pathname1) (px.unlink pathname1))
+	 (when (file-exists? pathname2) (px.unlink pathname2))
+	 #t))
+    => '(#t (#vu8(1 2 3))))
 
-;; ;;; --------------------------------------------------------------------
+;;; --------------------------------------------------------------------
+;;; PF_INET SOCK_STREAM
 
-;;   (let* ((pathname (string-append (px.getenv "TMPDIR") "/proof")))
-;;     (when (file-exists? pathname)
-;;       (px.unlink pathname))
+  (when #f ;the firewall must allow it
+    (check ;fork process, raw bytevector input/output
+	(with-result
+	 (let ((sockaddr (make-sockaddr_in '#vu8(127 0 0 1) 8080)))
+	   (define (parent pid)
+	     (let ((server-sock (px.socket PF_INET SOCK_STREAM 0)))
+	       (unwind-protect
+		   (begin
+		     (px.setsockopt/int server-sock SOL_SOCKET SO_REUSEADDR #t)
+		     (px.bind   server-sock sockaddr)
+;;;		   (check-pretty-print 'server-listening)
+		     (px.listen server-sock 2)
+		     (let-values (((sock client-address) (px.accept server-sock)))
+;;;		     (check-pretty-print 'server-accepted)
+		       (px.setsockopt/linger sock #t 1)
+		       (unwind-protect
+			   (let ((bv (make-bytevector 3)))
+			     (px.posix-write sock '#vu8(1 2 3))
+			     (px.posix-read  sock bv)
+			     (add-result bv))
+			 (px.close sock))))
+		 (px.close server-sock)
+		 (px.waitpid pid 0))))
+	   (define (child)
+	     (nanosleep 1 0) ;give parent the time to listen
+	     (let ((sock (px.socket PF_INET SOCK_STREAM 0)))
+	       (px.setsockopt/linger sock #t 1)
+	       (unwind-protect
+		   (let ((bv (make-bytevector 3)))
+;;;		   (check-pretty-print 'client-connecting)
+		     (px.connect sock sockaddr)
+;;;		   (check-pretty-print 'client-connected)
+		     (px.posix-read sock bv)
+		     (assert (equal? bv '#vu8(1 2 3)))
+		     (px.posix-write sock bv))
+		 (px.close sock)))
+	     (exit 0))
+	   (fork parent child)
+	   #t))
+      => '(#t (#vu8(1 2 3)))))
 
-;;     (check	;get peer address
-;; 	(with-result
-;; 	 (with-compensations
-;; 	   (letrec ((sockaddr (make-<sockaddr-un> pathname)))
-;; 	     (letrec ((master-sock (make-sock/c))
-;; 		      (client-sock (make-sock/c)))
-;; 	       (px.setsockopt master-sock (socket-option reuseaddr) #t)
-;; 	       (compensate
-;; 		   (px.bind master-sock sockaddr)
-;; 		 (with
-;; 		  (when (file-exists? pathname)
-;; 		    (px.unlink pathname))))
-;; 	       (px.listen master-sock 2)
-;; 	       (px.connect client-sock sockaddr)
-;; 	       (let ((client-sockaddr (px.getsockname client-sock))
-;; 		     (server-sockaddr (px.getpeername client-sock)))
-;; 		 (add-result (<sockaddr-un>-pathname server-sockaddr))
-;; 		 (add-result (<sockaddr-un>-pathname client-sockaddr))
-;; 		 #t)))))
-;;       => `(#t (,pathname ""))))
+;;; --------------------------------------------------------------------
+;;; PF_INET6 SOCK_STREAM
 
-;;   #t)
-
-;; 
-;; (parametrise ((check-test-name	'local-datagram))
-
-;;   (define (make-sock/c)
-;;     (letrec ((sock (compensate
-;; 		       (px.socket* (namespace local)
-;; 				      (style datagram))
-;; 		     (with
-;; 		      (px.close sock)))))
-;;       sock))
-
-;;   (check	;strings
-;;       (with-result
-;;        (with-compensations
-;; 	 (let* ((TMPDIR		(px.getenv "TMPDIR"))
-;; 		(one-pathname	(string-append TMPDIR "/proof-one"))
-;; 		(two-pathname	(string-append TMPDIR "/proof-two")))
-;; 	   (when (file-exists? one-pathname) (px.unlink one-pathname))
-;; 	   (when (file-exists? two-pathname) (px.unlink two-pathname))
-;; 	   (let ((one-addr	(make-<sockaddr-un> one-pathname))
-;; 		 (two-addr	(make-<sockaddr-un> two-pathname)))
-;; 	     (push-compensation (when (file-exists? one-pathname)
-;; 				  (px.unlink one-pathname)))
-;; 	     (push-compensation (when (file-exists? two-pathname)
-;; 				  (px.unlink two-pathname)))
-;; 	     (let ((one-sock (make-sock/c))
-;; 		   (two-sock (make-sock/c)))
-;; 	       (px.bind one-sock one-addr)
-;; 	       (px.bind two-sock two-addr)
-;; 	       (px.sendto/string one-sock "ciao i'm one" two-addr)
-;; 	       (receive (result peer-address)
-;; 		   (px.recvfrom/string two-sock 100)
-;; 		 (add-result result)
-;; 		 (px.sendto/string two-sock "ciao i'm two" peer-address))
-;; 	       (receive (result peer-address)
-;; 		   (px.recvfrom/string one-sock 100)
-;; 		 (add-result result)
-;; 		 (px.sendto/string one-sock "one quits" peer-address))
-;; 	       (receive (result peer-address)
-;; 		   (px.recvfrom/string two-sock 100)
-;; 		 (add-result result)
-;; 		 (px.sendto/string one-sock "two quits" peer-address))
-;; 	       (receive (result peer-address)
-;; 	       	 (px.recvfrom/string one-sock 100)
-;; 	         (add-result result))
-;; 	       #t)))))
-;;     => '(#t ("ciao i'm one" "ciao i'm two" "one quits" "two quits")))
-
-;; ;;; --------------------------------------------------------------------
-
-;;   (check	;processes
-;;       (with-result
-;;        (with-compensations
-;; 	 (let* ((TMPDIR		(px.getenv "TMPDIR"))
-;; 		(one-pathname	(string-append TMPDIR "/proof-one"))
-;; 		(two-pathname	(string-append TMPDIR "/proof-two")))
-;; 	   (when (file-exists? one-pathname) (px.unlink one-pathname))
-;; 	   (when (file-exists? two-pathname) (px.unlink two-pathname))
-;; 	   (let ((one-addr	(make-<sockaddr-un> one-pathname))
-;; 		 (two-addr	(make-<sockaddr-un> two-pathname)))
-;; 	     (push-compensation (when (file-exists? one-pathname)
-;; 				  (px.unlink one-pathname)))
-;; 	     (push-compensation (when (file-exists? two-pathname)
-;; 				  (px.unlink two-pathname)))
-;; 	     (let ((pid (px.fork)))
-;; 	       (if pid
-;; 		   (let ((sock (make-sock/c))) ;parent, one
-;; 		     (px.bind sock one-addr)
-;; 		     (wait-for-awhile)
-;; 		     (px.sendto/string sock "ciao i'm one" two-addr)
-;; 		     (receive (result peer-address)
-;; 			 (px.recvfrom/string sock 100)
-;; 		       (add-result result)
-;; 		       (px.sendto/string sock "one quits" peer-address))
-;; 		     (receive (result peer-address)
-;; 			 (px.recvfrom/string sock 100)
-;; 		       (add-result result))
-;; 		     (receive (pid1 status)
-;; 			 (px.waitpid pid 0)
-;; 		       (pid=? pid pid1)))
-;; 		 (let ((sock (make-sock/c))) ;child, two
-;; 		   (px.bind sock two-addr)
-;; 		   (wait-for-awhile)
-;; 		   (receive (result peer-address)
-;; 		       (px.recvfrom/string sock 100)
-;; 		     (px.sendto/string sock "ciao i'm two" peer-address))
-;; 		   (receive (result peer-address)
-;; 		       (px.recvfrom/string sock 100)
-;; 		     (px.sendto/string sock "two quits" peer-address))
-;; 		   (exit))))))))
-;;     => '(#t ("ciao i'm two" "two quits")))
-
-;; ;;; --------------------------------------------------------------------
-
-;;   (let* ((TMPDIR	(px.getenv "TMPDIR"))
-;; 	 (one-pathname	(string-append TMPDIR "/proof-one"))
-;; 	 (two-pathname	(string-append TMPDIR "/proof-two")))
-
-;;     (check	;get sock name
-;; 	;;Notice that  on Linux GETPEERNAME does not  work with datagram
-;; 	;;sockets, it raises the "endpoint not connected" error.
-;; 	(with-result
-;; 	 (with-compensations
-;; 	   (when (file-exists? one-pathname) (px.unlink one-pathname))
-;; 	   (when (file-exists? two-pathname) (px.unlink two-pathname))
-;; 	   (let ((one-addr (make-<sockaddr-un> one-pathname))
-;; 		 (two-addr (make-<sockaddr-un> two-pathname))
-;; 		 (one-sock (make-sock/c))
-;; 		 (two-sock (make-sock/c)))
-;; 	       (compensate
-;; 		   (px.bind one-sock one-addr)
-;; 		 (with
-;; 		  (when (file-exists? one-pathname)
-;; 		    (px.unlink one-pathname))))
-;; 	       (compensate
-;; 		   (px.bind two-sock two-addr)
-;; 		 (with
-;; 		  (when (file-exists? two-pathname)
-;; 		    (px.unlink two-pathname))))
-;; 	       (px.sendto/string one-sock "ciao i'm one" two-addr)
-;; 	       (let ((one-sockaddr (px.getsockname one-sock)))
-;; 		 (add-result (<sockaddr-un>-pathname one-sockaddr))
-;; 		 #t))))
-;;       => `(#t (,one-pathname))))
-
-;;   #t)
-
-;; 
-;; (parametrise ((check-test-name	'inet-stream))
-
-;;   (define (make-sock/c)
-;;     (letrec ((sock (compensate
-;; 		       (px.socket* (namespace inet)
-;; 				      (style stream))
-;; 		     (with
-;; 		      (px.close sock)))))
-;;       sock))
-
-;;   (define (make-sock6/c)
-;;     (letrec ((sock (compensate
-;; 		       (px.socket* (namespace inet6)
-;; 				      (style stream))
-;; 		     (with
-;; 		      (px.close sock)))))
-;;       sock))
-
-;;   (check	;inet
-;;       (with-result
-;;        (with-compensations
-;;   	 (let ((hostent (px.gethostbyname "localhost")))
-;; 	   (when hostent
-;; 	     (let ((sockaddr	(make-<sockaddr-in> (car (<hostent>-addrlist hostent)) tcp/ip-port))
-;; 		   (master-sock	(make-sock/c))
-;; 		   (client-sock	(make-sock/c)))
-;; 	       (px.setsockopt master-sock (socket-option reuseaddr) #t)
-;; 	       (px.bind   master-sock sockaddr)
-;; 	       (px.listen master-sock 2)
-;; 	       (px.connect client-sock sockaddr)
-;; 	       (receive (server-sock client-address)
-;; 		   (px.accept master-sock)
-;; 		 (push-compensation (px.close server-sock))
-;; 		 (px.send/string server-sock "ciao client")
-;; 		 (add-result (px.recv/string client-sock 100))
-;; 		 (px.send/string client-sock "ciao server")
-;; 		 (add-result (px.recv/string server-sock 100))
-;; 		 (px.send/string server-sock "quit client")
-;; 		 (add-result (px.recv/string client-sock 100))
-;; 		 (px.send/string client-sock "quit server")
-;; 		 (add-result (px.recv/string server-sock 100))
-;; 		 #t))))))
-;;     => '(#t ("ciao client" "ciao server" "quit client" "quit server")))
-
-;;   (check	;inet6
-;;       (with-result
-;;        (with-compensations
-;; 	 (let ((sockaddr	(make-<sockaddr-in6> '#vu8(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1) tcp/ip-port))
-;; 	       (master-sock	(make-sock6/c))
-;; 	       (client-sock	(make-sock6/c)))
-;; 	   (px.setsockopt master-sock (socket-option reuseaddr) #t)
-;; 	   (px.bind   master-sock sockaddr)
-;; 	   (px.listen master-sock 2)
-;; 	   (px.connect client-sock sockaddr)
-;; 	   (receive (server-sock client-address)
-;; 	       (px.accept master-sock)
-;; 	     (push-compensation (px.close server-sock))
-;; 	     (px.send/string server-sock "ciao client")
-;; 	     (add-result (px.recv/string client-sock 100))
-;; 	     (px.send/string client-sock "ciao server")
-;; 	     (add-result (px.recv/string server-sock 100))
-;; 	     (px.send/string server-sock "quit client")
-;; 	     (add-result (px.recv/string client-sock 100))
-;; 	     (px.send/string client-sock "quit server")
-;; 	     (add-result (px.recv/string server-sock 100))
-;; 	     #t))))
-;;     => '(#t ("ciao client" "ciao server" "quit client" "quit server")))
-
-;; ;;; --------------------------------------------------------------------
-
-;;   (check	;get peer name, inet
-;;       (with-result
-;;        (with-compensations
-;;   	 (let ((hostent (px.gethostbyname "localhost")))
-;; 	   (when hostent
-;; 	     (let ((sockaddr	(make-<sockaddr-in> (car (<hostent>-addrlist hostent)) tcp/ip-port))
-;; 		   (master-sock	(make-sock/c))
-;; 		   (client-sock	(make-sock/c)))
-;; 	       (px.setsockopt master-sock (socket-option reuseaddr) #t)
-;; 	       (px.bind   master-sock sockaddr)
-;; 	       (px.listen master-sock 2)
-;; 	       (px.connect client-sock sockaddr)
-;; 	       (receive (server-sock client-address)
-;; 		   (px.accept master-sock)
-;; 		 (let ((master-sockaddr (px.getsockname master-sock))
-;; 		       (server-sockaddr (px.getsockname server-sock))
-;; 		       (client-sockaddr (px.getpeername server-sock)))
-;; 		   (add-result (px.inet-ntoa (<sockaddr-in>-addr server-sockaddr)))
-;; 		   (add-result (px.inet-ntoa (<sockaddr-in>-addr client-sockaddr)))
-;; 		   (add-result (<sockaddr-in>-port master-sockaddr))
-;; 		   #t)))))))
-;;     => `(#t ("127.0.0.1" "127.0.0.1" ,tcp/ip-port)))
-
-;;   (check	;get peer name, inet6
-;;       (with-result
-;;        (with-compensations
-;; 	 (let ((sockaddr	(make-<sockaddr-in6> '#vu8(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1) tcp/ip-port))
-;; 	       (master-sock	(make-sock6/c))
-;; 	       (client-sock	(make-sock6/c)))
-;; 	   (px.setsockopt master-sock (socket-option reuseaddr) #t)
-;; 	   (px.bind   master-sock sockaddr)
-;; 	   (px.listen master-sock 2)
-;; 	   (px.connect client-sock sockaddr)
-;; 	   (receive (server-sock client-address)
-;; 	       (px.accept master-sock)
-;; 	     (let ((master-sockaddr (px.getsockname master-sock))
-;; 		   (server-sockaddr (px.getsockname server-sock))
-;; 		   (client-sockaddr (px.getpeername server-sock)))
-;; 	       (add-result (px.inet-ntop (socket-address-format inet6)
-;; 					    (<sockaddr-in6>-addr server-sockaddr)))
-;; 	       (add-result (px.inet-ntop (socket-address-format inet6)
-;; 					    (<sockaddr-in6>-addr client-sockaddr)))
-;; 	       (add-result (<sockaddr-in6>-port master-sockaddr))
-;; 	       #t)))))
-;;     => `(#t ("::1" "::1" ,tcp/ip-port)))
-
-;;   #t)
-
-;; 
-;; (parametrise ((check-test-name	'socketpair))
-
-;;   (check
-;;       (with-result
-;;        (with-compensations
-;;   	 (receive (one-sock two-sock)
-;; 	     (px.socketpair* (namespace local) (style stream))
-;; 	   (push-compensation (px.close one-sock))
-;; 	   (push-compensation (px.close two-sock))
-;; 	   (px.send/string one-sock "ciao two")
-;; 	   (add-result (px.recv/string two-sock 100))
-;; 	   (px.send/string two-sock "ciao one")
-;; 	   (add-result (px.recv/string one-sock 100))
-;; 	   (px.send/string one-sock "quit two")
-;; 	   (add-result (px.recv/string two-sock 100))
-;; 	   (px.send/string two-sock "quit one")
-;; 	   (add-result (px.recv/string one-sock 100))
-;; 	   #t)))
-;;     => '(#t ("ciao two" "ciao one" "quit two" "quit one")))
-
-;;   #t)
-
+  (when #f	;the firewall must allow it
+    (check	;fork process, raw bytevector input/output
+	(with-result
+	 (let ((sockaddr (make-sockaddr_in6 '#vu8(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1) 8080)))
+	   (define (parent pid)
+	     (let ((server-sock (px.socket PF_INET6 SOCK_STREAM 0)))
+	       (unwind-protect
+		   (begin
+		     (px.setsockopt/int server-sock SOL_SOCKET SO_REUSEADDR #t)
+		     (px.bind   server-sock sockaddr)
+;;;		   (check-pretty-print 'server-listening)
+		     (px.listen server-sock 2)
+		     (let-values (((sock client-address) (px.accept server-sock)))
+;;;		     (check-pretty-print 'server-accepted)
+		       (px.setsockopt/linger sock #t 1)
+		       (unwind-protect
+			   (let ((bv (make-bytevector 3)))
+			     (px.posix-write sock '#vu8(1 2 3))
+			     (px.posix-read  sock bv)
+			     (add-result bv))
+			 (px.close sock))))
+		 (px.close server-sock)
+		 (px.waitpid pid 0))))
+	   (define (child)
+	     (nanosleep 1 0) ;give parent the time to listen
+	     (let ((sock (px.socket PF_INET6 SOCK_STREAM 0)))
+	       (px.setsockopt/linger sock #t 1)
+	       (unwind-protect
+		   (let ((bv (make-bytevector 3)))
+;;;		   (check-pretty-print 'client-connecting)
+		     (px.connect sock sockaddr)
+;;;		   (check-pretty-print 'client-connected)
+		     (px.posix-read sock bv)
+		     (assert (equal? bv '#vu8(1 2 3)))
+		     (px.posix-write sock bv))
+		 (px.close sock)))
+	     (exit 0))
+	   (fork parent child)
+	   #t))
+      => '(#t (#vu8(1 2 3)))))
 
   #t)
 

@@ -2314,7 +2314,7 @@ ikrt_posix_bind (ikptr sock, ikptr sockaddr_bv)
   socklen_t             len;
   int                   rv;
   addr  = VICARE_BYTEVECTOR_DATA_VOIDP(sockaddr_bv);
-  len   = unfix(VICARE_BYTEVECTOR_LENGTH_FX(sockaddr_bv));
+  len   = (socklen_t)unfix(VICARE_BYTEVECTOR_LENGTH_FX(sockaddr_bv));
   errno = 0;
   rv    = bind(unfix(sock), addr, len);
   return (0 == rv)? fix(0) : ik_errno_to_code();
@@ -2405,7 +2405,9 @@ ikrt_posix_sendto (ikptr sock, ikptr buffer_bv, ikptr size_fx, ikptr flags, ikpt
   addr     = VICARE_BYTEVECTOR_DATA_VOIDP(addr_bv);
   addr_len = (socklen_t)unfix(VICARE_BYTEVECTOR_LENGTH_FX(buffer_bv));
   errno    = 0;
+  fprintf(stderr, "%s: sending\n", __func__);
   rv       = sendto(unfix(sock), buffer, size, unfix(flags), addr, addr_len);
+  fprintf(stderr, "%s: sending done\n", __func__);
   return (0 <= rv)? fix(rv) : ik_errno_to_code();
 }
 ikptr
@@ -2423,7 +2425,9 @@ ikrt_posix_recvfrom (ikptr sock, ikptr buffer_bv, ikptr size_fx, ikptr flags, ik
   size       = (size_t)((false_object != size_fx)?
                         unfix(size_fx) : unfix(VICARE_BYTEVECTOR_LENGTH_FX(buffer_bv)));
   errno      = 0;
+  fprintf(stderr, "%s: receiving\n", __func__);
   rv         = recvfrom(unfix(sock), buffer, size, unfix(flags), addr, &addr_len);
+  fprintf(stderr, "%s: receiving done\n", __func__);
   if (0 <= rv) {
     ikptr       pair;
     ikptr       addr_bv;
