@@ -1608,6 +1608,7 @@
     (port-fd					i v)
     (string->filename-func			i v)
     (filename->string-func			i v)
+    (port-dump-status				i v)
     (port-closed?				i v)
 ;;; (ikarus system $io)
     ($make-port					$io)

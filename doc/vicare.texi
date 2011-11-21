@@ -5003,6 +5003,12 @@ the arguments accepted by @func{buffer-mode}.  It is an error to select
 @code{line} mode if @var{port} is a binary port.
 @end defun
 
+
+@defun port-dump-status @var{port}
+To be used for debugging purposes.  Write to the current error port some
+informations on the internals of @var{port}.
+@end defun
+
 @c page
 @node iklib foreign
 @section The @library{vicare foreign} library

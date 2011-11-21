@@ -957,7 +957,7 @@
 (define (environ->table environ)
   (begin0-let ((table (make-hashtable string-hash string=?)))
     (for-each (lambda (pair)
-		(hashtable-set! table (car pair) (cdr pair)))
+		(hashtable-set! table (unsafe.car pair) (unsafe.cdr pair)))
       environ)))
 
 (define (table->environ table)
@@ -1902,7 +1902,7 @@
   (define who 'pipe)
   (let ((rv (capi.posix-pipe)))
     (if (pair? rv)
-	(values (car rv) (cdr rv))
+	(values (unsafe.car rv) (unsafe.cdr rv))
       (raise-errno-error who rv))))
 
 (define (mkfifo pathname mode)
@@ -2379,7 +2379,7 @@
        (fixnum	protocol))
     (let ((rv (capi.posix-socketpair namespace style protocol)))
       (if (pair? rv)
-	  (values (car rv) (cdr rv))
+	  (values (unsafe.car rv) (unsafe.cdr rv))
 	(raise-errno-error who rv namespace style protocol)))))
 
 ;;; --------------------------------------------------------------------
@@ -2493,7 +2493,7 @@
        (fixnum		flags))
     (let ((rv (capi.posix-recvfrom sock buffer size flags)))
       (if (pair? rv)
-	  (values (car rv) (cdr rv))
+	  (values (unsafe.car rv) (unsafe.cdr rv))
 	(raise-errno-error who rv sock buffer size flags)))))
 
 ;;; --------------------------------------------------------------------
@@ -2517,7 +2517,7 @@
        (fixnum		option))
     (let ((rv (capi.posix-getsockopt/int sock level option)))
       (if (pair? rv)
-	  (car rv)
+	  (unsafe.car rv)
 	(raise-errno-error who rv sock level option)))))
 
 (define (getsockopt/size_t sock level option)
@@ -2528,7 +2528,7 @@
        (fixnum		option))
     (let ((rv (capi.posix-getsockopt/size_t sock level option)))
       (if (pair? rv)
-	  (car rv)
+	  (unsafe.car rv)
 	(raise-errno-error who rv sock level option)))))
 
 ;;; --------------------------------------------------------------------
@@ -2584,7 +2584,7 @@
       ((file-descriptor  sock))
     (let ((rv (capi.posix-getsockopt/linger sock)))
       (if (pair? rv)
-	  (values (car rv) (cdr rv))
+	  (values (unsafe.car rv) (unsafe.cdr rv))
 	(raise-errno-error who rv sock)))))
 
 
@@ -2593,12 +2593,12 @@
 (define (nanosleep secs nsecs)
   (import (ikarus system $fx))
   (unless (cond
-	   ((fixnum? secs) ($fx>= secs 0))
+	   ((fixnum? secs) (unsafe.fx>= secs 0))
 	   ((bignum? secs) (<= 0 secs (- (expt 2 32) 1)))
 	   (else (die 'nanosleep "not an exact integer" secs)))
     (die 'nanosleep "seconds must be a nonnegative integer <=" secs))
   (unless (cond
-	   ((fixnum? nsecs) ($fx>= nsecs 0))
+	   ((fixnum? nsecs) (unsafe.fx>= nsecs 0))
 	   ((bignum? nsecs) (<= 0 nsecs 999999999))
 	   (else (die 'nanosleep "not an exact integer" nsecs)))
     (die 'nanosleep "nanoseconds must be an integer \
