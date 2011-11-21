@@ -1090,11 +1090,23 @@
 
 (parametrise ((check-test-name	'net))
 
-  (check
+  (define run-inet-tests? #t) ;the firewall must allow it
+
+  (check	;socketpair, posix-read, posix-write
       (let-values (((a b) (px.socketpair PF_LOCAL SOCK_DGRAM 0)))
 	(px.posix-write a '#vu8(1 2 3 4) 4)
 	(let ((buf (make-bytevector 4)))
 	  (px.posix-read b buf 4)
+	  (px.shutdown a SHUT_RDWR)
+	  (px.shutdown b SHUT_RDWR)
+	  buf))
+    => '#vu8(1 2 3 4))
+
+  (check	;socketpair, send, recv
+      (let-values (((a b) (px.socketpair PF_LOCAL SOCK_DGRAM 0)))
+	(px.send a '#vu8(1 2 3 4) 4 0)
+	(let ((buf (make-bytevector 4)))
+	  (px.recv b buf 4 0)
 	  (px.shutdown a SHUT_RDWR)
 	  (px.shutdown b SHUT_RDWR)
 	  buf))
@@ -1208,7 +1220,7 @@
 	       (px.close server-sock)
 	       (px.waitpid pid 0))))
 	 (define (child)
-	   (nanosleep 1 0) ;give parent the time to listen
+	   (nanosleep 0 1000000) ;give parent the time to listen
 	   (let ((sock (px.socket PF_LOCAL SOCK_STREAM 0)))
 	     (px.setsockopt/linger sock #t 1)
 	     (unwind-protect
@@ -1219,11 +1231,9 @@
 		   (px.posix-write sock bv))
 	       (px.close sock)))
 	   (exit 0))
-	 (when (file-exists? pathname)
-	   (px.unlink pathname))
+	 (when (file-exists? pathname) (px.unlink pathname))
 	 (fork parent child)
-	 (when (file-exists? pathname)
-	   (px.unlink pathname))
+	 (when (file-exists? pathname) (px.unlink pathname))
 	 #t))
     => '(#t (#vu8(1 2 3))))
 
@@ -1243,43 +1253,29 @@
 		     (let ((port (make-binary-socket-input/output-port sock "*parent-sock*")))
 		       (unwind-protect
 			   (let ((bv (make-bytevector 3)))
-;;;			     (check-pretty-print "writing parent")
 			     (put-bytevector port '#vu8(1 2 3))
 			     (flush-output-port port)
-;;;			     (check-pretty-print "done writing parent")
-;;;			     (check-pretty-print "reading parent")
 			     (get-bytevector-n! port bv 0 3)
-;;;			     (check-pretty-print "done reading parent")
 			     (add-result bv))
-;;;			 (check-pretty-print "closing parent")
-;;;			 (port-dump-status port)
 			 (close-port port)))))
 	       (px.close server-sock)
 	       (px.waitpid pid 0))))
 	 (define (child)
-	   (nanosleep 1 0) ;give parent the time to listen
+	   (nanosleep 0 1000000) ;give parent the time to listen
 	   (let* ((sock (px.socket PF_LOCAL SOCK_STREAM 0))
 		  (port (make-binary-socket-input/output-port sock "*child-sock*")))
 	     (px.setsockopt/linger sock #t 1)
 	     (unwind-protect
 		 (begin
 		   (px.connect sock sockaddr)
-;;;		   (check-pretty-print "reading child")
 		   (assert (equal? '#vu8(1 2 3) (get-bytevector-n port 3)))
-;;;		   (check-pretty-print "done reading child")
-;;;		   (check-pretty-print "writing child")
 		   (put-bytevector port '#vu8(1 2 3))
-		   (flush-output-port port)
-		   #;(check-pretty-print "done writing child"))
-;;;	       (check-pretty-print "closing child")
+		   (flush-output-port port))
 	       (close-port port)))
-;;;	   (check-pretty-print "exiting child")
 	   (exit 0))
-	 (when (file-exists? pathname)
-	   (px.unlink pathname))
+	 (when (file-exists? pathname) (px.unlink pathname))
 	 (fork parent child)
-	 (when (file-exists? pathname)
-	   (px.unlink pathname))
+	 (when (file-exists? pathname) (px.unlink pathname))
 	 #t))
     => '(#t (#vu8(1 2 3))))
 
@@ -1308,7 +1304,7 @@
 	       (px.close server-sock)
 	       (px.waitpid pid 0))))
 	 (define (child)
-	   (nanosleep 1 0) ;give parent the time to listen
+	   (nanosleep 0 1000000) ;give parent the time to listen
 	   (let* ((sock (px.socket PF_LOCAL SOCK_STREAM 0))
 		  (port (make-textual-socket-input/output-port sock "*child-sock*"
 							       (native-transcoder))))
@@ -1332,57 +1328,56 @@
 ;;; --------------------------------------------------------------------
 ;;; PF_LOCAL SOCK_DGRAM
 
-;;;FIXME
-  #;(check	;fork process, raw bytevector input/output
-      (with-result
-       (let* ((tmpdir	 (px.getenv "TMPDIR"))
-	      (pathname1 (string-append tmpdir "/proof-1"))
-	      (pathname2 (string-append tmpdir "/proof-2"))
-	      (sockaddr1 (make-sockaddr_un pathname1))
-	      (sockaddr2 (make-sockaddr_un pathname2)))
+  (let* ((tmpdir	(px.getenv "TMPDIR"))
+	 (pathname1	(string-append tmpdir "/proof-1"))
+	 (pathname2	(string-append tmpdir "/proof-2")))
+    (check	;fork process, raw bytevector input/output
+	(with-result
+	 (let ((sockaddr1 (make-sockaddr_un pathname1))
+	       (sockaddr2 (make-sockaddr_un pathname2)))
 ;;;(check-pretty-print (sockaddr_un.pathname/string sockaddr1))
 ;;;(check-pretty-print (sockaddr_un.pathname/string sockaddr2))
-	 (define (parent pid)
-	   (let ((sock (px.socket PF_LOCAL SOCK_DGRAM 0)))
-	     (unwind-protect
-		 (begin
-		   (px.bind sock sockaddr1)
-		   (nanosleep 1 0) ;give child the time
-		   (let ((bv (make-bytevector 3)))
-  		     (check-pretty-print 'parent-sending)
+	   (define (parent pid)
+	     (let ((sock (px.socket PF_LOCAL SOCK_DGRAM 0)))
+	       (unwind-protect
+		   (let ((buffer (make-bytevector 3)))
+		     (px.bind sock sockaddr1)
+		     (nanosleep 0 1000000) ;give child some time
 		     (px.sendto sock '#vu8(1 2 3) 3 0 sockaddr2)
-		     (check-pretty-print 'parent-sent)
-		     (px.recvfrom sock bv #f 0)
-		     (add-result bv)))
-	       (px.close sock)
-	       (px.waitpid pid 0))))
-	 (define (child)
-           (let ((sock (px.socket PF_LOCAL SOCK_DGRAM 0)))
-             (unwind-protect
-		 (let ((bv (make-bytevector 3)))
-                   (px.bind sock sockaddr2)
-		   (nanosleep 1 0) ;give parent the time
-		   (check-pretty-print 'child-recv)
-		   (let-values (((len address) (px.recvfrom sock bv #f 0)))
-		     (check-pretty-print 'child-recv-done)
-		     (assert (equal? bv '#vu8(1 2 3)))
-		     (px.sendto sock bv #f 0 address))
-		   #t)
-	       (px.close sock)))
-	   (exit 0))
-	 (when (file-exists? pathname1) (px.unlink pathname1))
-	 (when (file-exists? pathname2) (px.unlink pathname2))
-	 (fork parent child)
-	 (when (file-exists? pathname1) (px.unlink pathname1))
-	 (when (file-exists? pathname2) (px.unlink pathname2))
-	 #t))
-    => '(#t (#vu8(1 2 3))))
+		     (let-values (((len sockaddr) (px.recvfrom sock buffer #f 0)))
+		       (add-result len)
+		       (add-result (sockaddr_un.pathname/string sockaddr))
+		       (add-result buffer)
+		       #t))
+		 (px.close sock)
+		 (px.waitpid pid 0))))
+	   (define (child)
+	     (let ((sock (px.socket PF_LOCAL SOCK_DGRAM 0)))
+	       (unwind-protect
+		   (let ((buffer (make-bytevector 3)))
+		     (px.bind sock sockaddr2)
+		     (nanosleep 0 1000000) ;give parent some time
+		     (let-values (((len sockaddr) (px.recvfrom sock buffer #f 0)))
+		       (assert (equal? 3 len))
+		       (assert (equal? pathname1 (sockaddr_un.pathname/string sockaddr)))
+		       (assert (equal? buffer '#vu8(1 2 3)))
+		       (px.sendto sock '#vu8(4 5 6) #f 0 sockaddr)
+		       #t))
+		 (px.close sock)))
+	     (exit 0))
+	   (when (file-exists? pathname1) (px.unlink pathname1))
+	   (when (file-exists? pathname2) (px.unlink pathname2))
+	   (fork parent child)
+	   (when (file-exists? pathname1) (px.unlink pathname1))
+	   (when (file-exists? pathname2) (px.unlink pathname2))
+	   #t))
+      => `(#t (3 ,pathname2 #vu8(4 5 6)))))
 
 ;;; --------------------------------------------------------------------
 ;;; PF_INET SOCK_STREAM
 
-  (when #f ;the firewall must allow it
-    (check ;fork process, raw bytevector input/output
+  (when (or #f run-inet-tests?)
+    (check	;fork process, raw bytevector input/output
 	(with-result
 	 (let ((sockaddr (make-sockaddr_in '#vu8(127 0 0 1) 8080)))
 	   (define (parent pid)
@@ -1391,10 +1386,8 @@
 		   (begin
 		     (px.setsockopt/int server-sock SOL_SOCKET SO_REUSEADDR #t)
 		     (px.bind   server-sock sockaddr)
-;;;		   (check-pretty-print 'server-listening)
 		     (px.listen server-sock 2)
 		     (let-values (((sock client-address) (px.accept server-sock)))
-;;;		     (check-pretty-print 'server-accepted)
 		       (px.setsockopt/linger sock #t 1)
 		       (unwind-protect
 			   (let ((bv (make-bytevector 3)))
@@ -1410,9 +1403,7 @@
 	       (px.setsockopt/linger sock #t 1)
 	       (unwind-protect
 		   (let ((bv (make-bytevector 3)))
-;;;		   (check-pretty-print 'client-connecting)
 		     (px.connect sock sockaddr)
-;;;		   (check-pretty-print 'client-connected)
 		     (px.posix-read sock bv)
 		     (assert (equal? bv '#vu8(1 2 3)))
 		     (px.posix-write sock bv))
@@ -1425,7 +1416,7 @@
 ;;; --------------------------------------------------------------------
 ;;; PF_INET6 SOCK_STREAM
 
-  (when #f	;the firewall must allow it
+  (when (or #f run-inet-tests?)
     (check	;fork process, raw bytevector input/output
 	(with-result
 	 (let ((sockaddr (make-sockaddr_in6 '#vu8(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1) 8080)))
@@ -1435,10 +1426,8 @@
 		   (begin
 		     (px.setsockopt/int server-sock SOL_SOCKET SO_REUSEADDR #t)
 		     (px.bind   server-sock sockaddr)
-;;;		   (check-pretty-print 'server-listening)
 		     (px.listen server-sock 2)
 		     (let-values (((sock client-address) (px.accept server-sock)))
-;;;		     (check-pretty-print 'server-accepted)
 		       (px.setsockopt/linger sock #t 1)
 		       (unwind-protect
 			   (let ((bv (make-bytevector 3)))
@@ -1454,9 +1443,7 @@
 	       (px.setsockopt/linger sock #t 1)
 	       (unwind-protect
 		   (let ((bv (make-bytevector 3)))
-;;;		   (check-pretty-print 'client-connecting)
 		     (px.connect sock sockaddr)
-;;;		   (check-pretty-print 'client-connected)
 		     (px.posix-read sock bv)
 		     (assert (equal? bv '#vu8(1 2 3)))
 		     (px.posix-write sock bv))
@@ -1465,6 +1452,80 @@
 	   (fork parent child)
 	   #t))
       => '(#t (#vu8(1 2 3)))))
+
+;;; --------------------------------------------------------------------
+;;; PF_INET SOCK_DGRAM
+
+  (when (or #f run-inet-tests?)
+    (check	;fork process, raw bytevector input/output
+	(with-result
+	 (let ((sockaddr1 (make-sockaddr_in '#vu8(127 0 0 1) 8080))
+	       (sockaddr2 (make-sockaddr_in '#vu8(127 0 0 1) 8081)))
+	   (define (parent pid)
+	     (let ((sock (px.socket PF_INET SOCK_DGRAM 0)))
+	       (unwind-protect
+		   (let ((buffer (make-bytevector 3)))
+		     (px.bind sock sockaddr1)
+		     (px.setsockopt/int sock SOL_SOCKET SO_REUSEADDR #t)
+		     (nanosleep 0 1000000) ;give child some time
+		     (px.sendto sock '#vu8(1 2 3) #f 0 sockaddr2)
+		     (let-values (((len sockaddr) (px.recvfrom sock buffer #f 0)))
+		       (add-result len)
+		       (add-result (bytevector-copy buffer))
+		       (add-result (sockaddr_in.in_addr sockaddr))
+		       (add-result (sockaddr_in.in_port sockaddr))))
+		 (px.close sock)
+		 (px.waitpid pid 0))))
+	   (define (child)
+	     (let ((sock (px.socket PF_INET SOCK_DGRAM 0)))
+	       (unwind-protect
+		   (let ((buffer (make-bytevector 3)))
+		     (px.bind sock sockaddr2)
+		     (px.setsockopt/linger sock #t 1)
+		     (nanosleep 0 1000000) ;give parent some time
+		     (let-values (((len sockaddr) (px.recvfrom sock buffer #f 0)))
+		       (assert (equal? 3 len))
+		       (assert (equal? '#vu8(1 2 3) buffer))
+		       (assert (equal? '#vu8(127 0 0 1) (sockaddr_in.in_addr sockaddr)))
+		       (assert (equal? 8080 (sockaddr_in.in_port sockaddr)))
+		       (px.sendto sock '#vu8(4 5 6) #f 0 sockaddr)))
+		 (px.close sock)))
+	     (exit 0))
+	   (fork parent child)
+	   #t))
+      => '(#t (3 #vu8(4 5 6) #vu8(127 0 0 1) 8081))))
+
+  (when (or #f run-inet-tests?)
+    (check	;raw bytevector input/output
+	(with-result
+	 (let ((sockaddr1	(make-sockaddr_in '#vu8(127 0 0 1) 8080))
+	       (sockaddr2	(make-sockaddr_in '#vu8(127 0 0 1) 8081))
+	       (sock1	(px.socket PF_INET SOCK_DGRAM 0))
+	       (sock2	(px.socket PF_INET SOCK_DGRAM 0)))
+	   (unwind-protect
+	       (let ((buffer (make-bytevector 3)))
+		 (px.bind sock1 sockaddr1)
+		 (px.bind sock2 sockaddr2)
+		 (px.setsockopt/int sock1 SOL_SOCKET SO_REUSEADDR #t)
+		 (px.setsockopt/int sock2 SOL_SOCKET SO_REUSEADDR #t)
+		 (px.sendto sock1 '#vu8(1 2 3) #f 0 sockaddr2)
+		 (let-values (((len sockaddr) (px.recvfrom sock2 buffer #f 0)))
+		   (add-result len)
+		   (add-result (bytevector-copy buffer))
+		   (add-result (sockaddr_in.in_addr sockaddr))
+		   (add-result (sockaddr_in.in_port sockaddr))
+		   (px.sendto sock2 '#vu8(4 5 6) #f 0 sockaddr)
+		   (let-values (((len sockaddr) (px.recvfrom sock1 buffer #f 0)))
+		     (add-result len)
+		     (add-result (bytevector-copy buffer))
+		     (add-result (sockaddr_in.in_addr sockaddr))
+		     (add-result (sockaddr_in.in_port sockaddr))))
+		 #t)
+	     (px.close sock1)
+	     (px.close sock2))))
+      => '(#t ( ;;
+	       3 #vu8(1 2 3) #vu8(127 0 0 1) 8080
+	       3 #vu8(4 5 6) #vu8(127 0 0 1) 8081))))
 
   #t)
 
