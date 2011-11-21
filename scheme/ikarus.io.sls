@@ -475,6 +475,7 @@
     reset-input-port!		reset-output-port!
     port-id			port-fd
     string->filename-func	filename->string-func
+    port-dump-status
 
     ;; networking
     make-binary-socket-input/output-port
@@ -584,6 +585,7 @@
 		  reset-input-port!		reset-output-port!
 		  port-id			port-fd
 		  string->filename-func		filename->string-func
+		  port-dump-status
 
 		  ;; networking
 		  make-binary-socket-input/output-port
@@ -2214,6 +2216,18 @@
   (define-unsafe-predicate %unsafe.port-with-fd-device?		PORT-WITH-FD-DEVICE)
   )
 
+(define (%unsafe.last-port-operation-was-output? port)
+  (with-port (port)
+;;;FIXME  It  would be  better  to use  a  CASE  syntax specialised  for
+;;;fixnums.
+    (let ((m port.fast-attributes))
+      (or (unsafe.fx= m FAST-PUT-BYTE-TAG)
+	  (unsafe.fx= m FAST-PUT-CHAR-TAG)
+	  (unsafe.fx= m FAST-PUT-UTF8-TAG)
+	  (unsafe.fx= m FAST-PUT-LATIN-TAG)
+	  (unsafe.fx= m FAST-PUT-UTF16BE-TAG)
+	  (unsafe.fx= m FAST-PUT-UTF16LE-TAG)))))
+
 
 ;;;; guarded ports
 ;;
@@ -3817,7 +3831,9 @@
   ;;
   (with-port (port)
     (unless port.closed?
-      (when port.write! ;works with both output and I/O ports
+      (when (or port.is-output?
+		(and port.is-input-and-output?
+		     (%unsafe.last-port-operation-was-output? port)))
 	(%unsafe.flush-output-port port who))
       (port.mark-as-closed!)
       (when (procedure? port.close)
@@ -3875,6 +3891,22 @@
 	     (eof-object? (lookahead-char port)))
 	    (else
 	     (eof-object? (lookahead-u8 port)))))))
+
+(define (port-dump-status port)
+  (define port
+    (current-error-port))
+  (define-inline (%display thing)
+    (display thing port))
+  (define-inline (%newline)
+    (newline port))
+  (with-port (port)
+    (%display "port-id: ")			(%display (port-id port))
+    (%newline)
+    (%display "port.buffer.index: ")		(%display port.buffer.index)
+    (%newline)
+    (%display "port.buffer.used-size: ")	(%display port.buffer.used-size)
+    (%newline)
+    ))
 
 
 ;;;; buffer mode
@@ -6882,13 +6914,13 @@
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
   (define (write! src.bv src.start requested-count)
-    (let ((count (capi.platform-write-fd sock src.bv src.start requested-count)))
-      (cond ((unsafe.fx>= count 0)
-	     count)
-	    ((unsafe.fx= count EAGAIN)
+    (let ((rv (capi.platform-write-fd sock src.bv src.start requested-count)))
+      (cond ((unsafe.fx>= rv 0)
+	     rv)
+	    ((unsafe.fx= rv EAGAIN)
 	     (%raise-eagain-error who #f))
 	    (else
-	     (%raise-io-error 'write! port-identifier count (make-i/o-write-error))))))
+	     (%raise-io-error 'write! port-identifier rv (make-i/o-write-error))))))
 
   (let ((attributes		(%select-input/output-fast-tag-from-transcoder
 				 who transcoder other-attributes
