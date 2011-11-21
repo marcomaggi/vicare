@@ -4809,16 +4809,9 @@ by @func{open-file-input/output-prot}.  It is initialised to
 @end deffn
 
 
-@deffn Parameter input-socket-buffer-size
-@deffnx Parameter input-socket-buffer-size @var{fixnum}
-Hold the buffer size for input socket ports.  It is initialised to
-@math{16384}.
-@end deffn
-
-
-@deffn Parameter output-socket-buffer-size
-@deffnx Parameter output-socket-buffer-size @var{fixnum}
-Hold the buffer size for output socket ports.  It is initialised to
+@deffn Parameter input/output-socket-buffer-size
+@deffnx Parameter input/output-socket-buffer-size @var{fixnum}
+Hold the buffer size for socket ports.  It is initialised to
 @math{16384}.
 @end deffn
 

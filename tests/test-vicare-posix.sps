@@ -1185,39 +1185,92 @@
 ;;; --------------------------------------------------------------------
 ;;; AF_LOCAL, SOCK_STREAM
 
-  (check
+  (check	;fork process, raw bytevector input/output
       (with-result
        (let* ((pathname	(string-append (px.getenv "TMPDIR") "/proof"))
 	      (sockaddr	(make-sockaddr_un pathname)))
+	 (define (parent pid)
+	   (let ((server-sock (px.socket AF_LOCAL SOCK_STREAM 0)))
+	     (unwind-protect
+		 (begin
+		   (px.setsockopt/int server-sock SOL_SOCKET SO_REUSEADDR #t)
+		   (px.bind   server-sock sockaddr)
+		   (px.listen server-sock 2)
+		   (let-values (((sock client-address) (px.accept server-sock)))
+		     (px.setsockopt/linger sock #t 1)
+		     (unwind-protect
+			 (let ((bv (make-bytevector 3)))
+			   (px.posix-write sock '#vu8(1 2 3))
+			   (px.posix-read  sock bv)
+			   (add-result bv))
+		       (px.close sock))))
+	       (px.close server-sock)
+	       (px.waitpid pid 0))))
+	 (define (child)
+	   (nanosleep 1 0) ;give parent the time to listen
+	   (let ((sock (px.socket AF_LOCAL SOCK_STREAM 0)))
+	     (px.setsockopt/linger sock #t 1)
+	     (unwind-protect
+		 (let ((bv (make-bytevector 3)))
+		   (px.connect sock sockaddr)
+		   (px.posix-read sock bv)
+		   (add-result bv)
+		   (px.posix-write sock bv))
+	       (px.close sock)))
+	   (exit 0))
 	 (when (file-exists? pathname)
 	   (px.unlink pathname))
-	 (unwind-protect
-	     (letrec ((server-master-sock (px.socket AF_LOCAL SOCK_STREAM 0))
-		      (client-sock        (px.socket AF_LOCAL SOCK_STREAM 0)))
-	       (unwind-protect
-		   (begin
-		     (px.setsockopt/int server-master-sock SOL_SOCKET SO_REUSEADDR #t)
-		     (px.bind   server-master-sock sockaddr)
-		     (px.listen server-master-sock 2)
-		     (px.connect client-sock sockaddr)
-		     (let-values (((server-sock client-address) (px.accept server-master-sock)))
+	 (fork parent child)
+	 (when (file-exists? pathname)
+	   (px.unlink pathname))
+	 #t))
+    => '(#t (#vu8(1 2 3))))
+
+  (check	;fork process, binary port input/output
+      (with-result
+       (let* ((pathname	(string-append (px.getenv "TMPDIR") "/proof"))
+	      (sockaddr	(make-sockaddr_un pathname)))
+	 (define (parent pid)
+	   (let ((server-sock (px.socket AF_LOCAL SOCK_STREAM 0)))
+	     (unwind-protect
+		 (begin
+		   (px.setsockopt/int server-sock SOL_SOCKET SO_REUSEADDR #t)
+		   (px.bind   server-sock sockaddr)
+		   (px.listen server-sock 2)
+		   (let-values (((sock client-address) (px.accept server-sock)))
+		     (let ((port (make-binary-socket-input/output-port sock "*sock*")))
 		       (unwind-protect
-			   (begin
-			     (px.send server-sock '#vu8(1 2 3) 3 0)
-			     (let ((bv (make-bytevector 3)))
-			       (px.recv client-sock bv 3 0)
-			       (add-result bv))
-			     (px.send client-sock '#vu8(4 5 6) 3 0)
-			     (let ((bv (make-bytevector 3)))
-			       (px.recv server-sock bv 3 0)
-			       (add-result bv))
-			     #t)
-			 (px.close server-sock))))
-		 (px.shutdown server-master-sock SHUT_RDWR)
-		 (px.shutdown client-sock SHUT_RDWR)))
-	   (when (file-exists? pathname)
-	     (px.unlink pathname)))))
-    => '(#t (#vu8(1 2 3) #vu8(4 5 6))))
+			   (let ((bv (make-bytevector 3)))
+			     (put-bytevector port '#vu8(1 2 3))
+			     (flush-output-port port)
+(check-pretty-print "flushed\n")
+			     (get-bytevector-n! port bv 0 3)
+(check-pretty-print "read\n")
+(check-pretty-print bv)
+			     (add-result bv))
+			 (close-port port)))))
+	       (px.close server-sock)
+	       (px.waitpid pid 0))))
+	 (define (child)
+	   (nanosleep 1 0) ;give parent the time to listen
+	   (let ((sock (px.socket AF_LOCAL SOCK_STREAM 0)))
+	     (unwind-protect
+		 (let ((bv (make-bytevector 3)))
+		   (px.connect sock sockaddr)
+		   (px.posix-read sock bv)
+(assert (equal? bv '#vu8(1 2 3)))
+(check-pretty-print bv)
+		   (add-result bv)
+		   (px.posix-write sock bv))
+	       (px.close sock)))
+	   (exit 0))
+	 (when (file-exists? pathname)
+	   (px.unlink pathname))
+	 (fork parent child)
+	 (when (file-exists? pathname)
+	   (px.unlink pathname))
+	 #t))
+    => '(#t (#vu8(1 2 3))))
 
 ;; ;;; --------------------------------------------------------------------
 
