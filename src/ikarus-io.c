@@ -165,27 +165,26 @@ ikrt_open_input_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
   return (0 <= fd)? fix(fd) : ik_errno_to_code();
 }
 ikptr
-ikrt_read_fd (ikptr fd, ikptr bv, ikptr off, ikptr cnt /*, ikpcb* pcb */)
+ikrt_read_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_count /*, ikpcb* pcb */)
 {
   ssize_t       rv;
   uint8_t *     buffer;
-  buffer = VICARE_BYTEVECTOR_DATA_VOIDP(bv) + unfix(off);
+  buffer = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv) + unfix(buffer_offset);
   errno  = 0;
-  rv     = read(unfix(fd), buffer, unfix(cnt));
+  rv     = read(unfix(fd), buffer, unfix(requested_count));
   return (0 <= rv)? fix(rv) : ik_errno_to_code();
 }
 ikptr
-ikrt_write_fd (ikptr fd, ikptr bv, ikptr off, ikptr cnt /*, ikpcb* pcb */)
+ikrt_write_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_count /*, ikpcb* pcb */)
 {
   ssize_t       rv;
   uint8_t *     buffer;
-  buffer = VICARE_BYTEVECTOR_DATA_VOIDP(bv) + unfix(off);
+  buffer = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv) + unfix(buffer_offset);
   errno  = 0;
-  rv     = write(unfix(fd), buffer, unfix(cnt));
+  rv     = write(unfix(fd), buffer, unfix(requested_count));
   return (0 <= rv)? fix(rv) : ik_errno_to_code();
 }
 
-/* end of file */
 
 /** --------------------------------------------------------------------
  ** Original Ikarus networking interface.
