@@ -1916,12 +1916,10 @@
        (raise
          (condition
            (make-error)
-           (make-who-condition 'ikarus)
+           (make-who-condition 'vicare)
            (make-message-condition "primitive not supported yet or forgot to export it")
-           (make-message-condition
-             "please file a bug report to help us prioritize our goals")
-           (make-url-condition
-             "https://bugs.launchpad.net/ikarus/+filebug")
+           (make-message-condition "please file a bug report to help us prioritize our goals")
+           (make-url-condition "http://github.com/marcomaggi/vicare")
            (make-irritants-condition (list op)))))]))
 
 ;(define (primref-loc op)
