@@ -6857,10 +6857,10 @@ reading, writing or an exceptional condition.
 Interface to the C function @cfunc{fcntl}, @glibcref{Control Operations,
 fcntl}.  Perform the operation specified by @var{command} on the file
 descriptor @var{fd} using @var{arg}; @var{fd} and @var{command} must be
-fixnums; @var{arg} must be @false{} a fixnum or a pointer, if it is
-@false{} or not given no argument is handed to @cfunc{fcntl}.  If
-successful return a fixnum representing the return value of
-@cfunc{fcntl}, else raise an exception.
+fixnums; @var{arg} must be @false{}, a fixnum, a bytevector or a
+pointer, if it is @false{} or not given no argument is handed to
+@cfunc{fcntl}.  If successful return a fixnum representing the return
+value of @cfunc{fcntl}, else raise an exception.
 @end defun
 
 
@@ -6869,10 +6869,10 @@ successful return a fixnum representing the return value of
 Interface to the C function @cfunc{ioctl}, @glibcref{IOCTLs, ioctl}.
 Perform the operation specified by @var{command} on the file descriptor
 @var{fd} using @var{arg}; @var{fd} and @var{command} must be fixnums;
-@var{arg} must be @false{} a fixnum or a pointer, if it is @false{} or
-not given no argument is handed to @cfunc{ioctl}.  If successful return
-a fixnum representing the return value of @cfunc{ioctl}, else raise an
-exception.
+@var{arg} must be @false{}, a fixnum, a bytevector or a pointer, if it
+is @false{} or not given no argument is handed to @cfunc{ioctl}.  If
+successful return a fixnum representing the return value of
+@cfunc{ioctl}, else raise an exception.
 @end defun
 
 @c ------------------------------------------------------------
@@ -7021,6 +7021,7 @@ we mishandle the values.
 * posix socket networks::       Networks database.
 * posix socket socket::         Network sockets operations.
 * posix socket misc::           Error and miscellaneous functions.
+* posix socket examples::       Examples of clients and servers.
 @end menu
 
 @c page
@@ -7806,7 +7807,7 @@ exception.
 @end defun
 
 
-@defun getsockname @var{sock}, ikpcb * @var{pcb})
+@defun getsockname @var{sock}
 Interface to the C function @cfunc{getsockanme}, @glibcref{Setting
 Address, getsockname}.  Retrieve informations about the address bound to
 the socket descriptor @var{sock}.  If successful return a bytevector
@@ -7910,6 +7911,129 @@ Interface to the C function @cfunc{gai_strerror}, see the manual page
 @code{gai_strerror(3)}.  Convert an @code{EAI_} error code into the
 corresponding error message, return a string holding such message.
 @end defun
+
+@c page
+@node posix socket examples
+@subsection Examples of clients and servers
+
+
+Basically a @tcp{}/@ip{} server should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let ((sockaddr    (make-sockaddr_in '#vu8(127 0 0 1) 8080))
+      (server-sock (px.socket PF_INET SOCK_STREAM 0)))
+  (px.bind   server-sock sockaddr)
+  (px.listen server-sock 2)
+  (let-values (((sock client-address)
+                (px.accept server-sock)))
+    ;; ... talk with the client through SOCK ...
+    (px.close sock))
+  (px.close server-sock))
+@end example
+
+@noindent
+while a @tcp{}/@ip{} client should to:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let ((sockaddr (make-sockaddr_in '#vu8(127 0 0 1) 8080))
+      (sock     (px.socket PF_INET SOCK_STREAM 0)))
+  (px.connect sock sockaddr)
+  ;; ... talk to the server through SOCK ...
+  (px.close sock))
+@end example
+
+A @udp{}/@ip{} ``server'' should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let ((sockaddr   (make-sockaddr_in '#vu8(127 0 0 1) 8080))
+      (sock       (px.socket PF_INET SOCK_DGRAM 0))
+      (in-buffer  (make-bytevector 1024))
+      (out-buffer (make-bytevector 1024)))
+  (px.bind sock sockaddr)
+  (let-values (((len sockaddr)
+                (px.recvfrom sock in-buffer #f 0)))
+    ;; ... process the received packet ...
+    ;; ... prepare the answer ...
+    (px.sendto sock out-buffer #f 0 sockaddr))
+  (px.close sock))
+@end example
+
+@noindent
+while a @udp{}/@ip{} ``client'' should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let ((sockaddr   (make-sockaddr_in '#vu8(127 0 0 1) 8081))
+      (sock       (px.socket PF_INET SOCK_DGRAM 0))
+      (out-buffer (make-bytevector 1024))
+      (in-buffer  (make-bytevector 1024)))
+  (px.bind sock sockaddr)
+  ;; ... prepare the request ...
+  (px.sendto sock out-buffer #f 0 sockaddr)
+  (let-values (((len sockaddr)
+                (px.recvfrom sock in-buffer #f 0)))
+    ;; ... process the received packet ...
+    )
+  (px.close sock))
+@end example
+
+A Unix--domain socket server should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let* ((tmpdir       (px.getenv "TMPDIR"))
+       (pathname     (string-append tmpdir "/use-me"))
+       (sockaddr     (make-sockaddr_un pathname))
+       (server-sock  (px.socket PF_LOCAL SOCK_STREAM 0)))
+  (px.bind   server-sock sockaddr)
+  (px.listen server-sock 2)
+  (let-values (((sock client-address)
+                (px.accept server-sock)))
+    ;; ... talk to the client through SOCK ...
+    (px.close sock))
+  (px.close server-sock))
+@end example
+
+@noindent
+while a Unix--domain socket client should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let* ((tmpdir    (px.getenv "TMPDIR"))
+       (pathname  (string-append tmpdir "/use-me"))
+       (sockaddr  (make-sockaddr_un pathname))
+       (sock      (px.socket PF_LOCAL SOCK_STREAM 0)))
+  (px.connect sock sockaddr)
+  ;; ... talk to the server through SOCK ...
+  (px.close sock))
+@end example
 
 @c page
 @node posix time
@@ -10328,10 +10452,10 @@ exceptional condition.  If an error occurs: return an encoded
 Interface to the C function @cfunc{fcntl}, @glibcref{Control Operations,
 fcntl}.  Perform the operation specified by @var{command} on the file
 descriptor @var{fd} using @var{arg}; @var{fd} and @var{command} must be
-fixnums; @var{arg} must be the false object a fixnum or a pointer, if it
-is @false{} no argument is handed to @cfunc{fcntl}.  If successful
-return a fixnum representing the return value of @cfunc{fcntl}, else
-return an encoded @code{errno} value.
+fixnums; @var{arg} must be the false object, a fixnum, a bytevector or a
+pointer, if it is @false{} no argument is handed to @cfunc{fcntl}.  If
+successful return a fixnum representing the return value of
+@cfunc{fcntl}, else return an encoded @code{errno} value.
 @end deftypefun
 
 
@@ -10339,10 +10463,10 @@ return an encoded @code{errno} value.
 Interface to the C function @cfunc{ioctl}, @glibcref{IOCTLs, ioctl}.
 Perform the operation specified by @var{command} on the file descriptor
 @var{fd} using @var{arg}; @var{fd} and @var{command} must be fixnums;
-@var{arg} must be the false object a fixnum or a pointer, if it is
-@false{} no argument is handed to @cfunc{ioctl}.  If successful return a
-fixnum representing the return value of @cfunc{ioctl}, else return an
-encoded @code{errno} value.
+@var{arg} must be the false object, a fixnum, a bytevector or a pointer,
+if it is @false{} no argument is handed to @cfunc{ioctl}.  If successful
+return a fixnum representing the return value of @cfunc{ioctl}, else
+return an encoded @code{errno} value.
 @end deftypefun
 
 @c ------------------------------------------------------------
