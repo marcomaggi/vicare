@@ -27,10 +27,10 @@
 		  make-traced-procedure
 		  make-traced-macro
 
-		  display write newline printf pretty-print
+		  display write newline printf pretty-print write-char
 		  print-condition)
     (prefix (only (ikarus)
-		  display write newline printf pretty-print
+		  display write newline printf pretty-print write-char
 		  print-condition)
 	    ikarus.))
 
@@ -60,27 +60,32 @@
 
 ;;;; helpers
 
-(define (display thing)
+(define (%display thing)
   (let ((port (console-output-port)))
     (ikarus.display thing port)
     (flush-output-port port)))
 
-(define (write thing)
+(define (%write thing)
   (let ((port (console-output-port)))
     (ikarus.write thing port)
     (flush-output-port port)))
 
-(define (newline)
+(define (%write-char thing)
+  (let ((port (console-output-port)))
+    (ikarus.write-char thing port)
+    (flush-output-port port)))
+
+(define (%newline)
   (let ((port (console-output-port)))
     (ikarus.newline port)
     (flush-output-port port)))
 
-(define (printf . args)
+(define (%printf . args)
   (let ((port (console-output-port)))
     (apply fprintf port args)
     (flush-output-port port)))
 
-(define (pretty-print thing)
+(define (%pretty-print thing)
   (let ((port (console-output-port)))
     (ikarus.pretty-print thing)
     (flush-output-port port)))
@@ -112,8 +117,7 @@
 					     count)
 					   #f #f #f))
         (parameterize ((print-graph #f))
-          (write x p)
-          (flush-output-port p))
+          (%write x))
         (substring str 0 n))))
 
 
@@ -137,37 +141,37 @@
 		 (set-scell-ocell! *scell* #f)
 		 (cond ((scell-trace *scell*)
 			=> (lambda (n)
-			     (display-return-trace n ((scell-filter *scell*) v*)))))
+			     (%display-return-trace n ((scell-filter *scell*) v*)))))
 		 (apply values v*))))
 	   (lambda ()
 	     (post)
 	     (set! *scell* (scell-prev *scell*))))))))
 
 
-(module (display-return-trace make-traced-procedure make-traced-macro)
+(module (%display-return-trace make-traced-procedure make-traced-macro)
   (define *trace-depth* 0)
 
-  (define (display-prefix n)
+  (define (%display-prefix n)
     (let f ((i 0))
       (unless (= i n)
-	(display (if (even? i) "|" " "))
+	(%display (if (even? i) "|" " "))
 	(f (+ i 1)))))
 
-  (define (display-call-trace n ls)
-    (display-prefix n)
-    (write ls)
-    (newline))
+  (define (%display-call-trace n ls)
+    (%display-prefix n)
+    (%write ls)
+    (%newline))
 
-  (define (display-return-trace n ls)
-    (display-prefix n)
+  (define (%display-return-trace n ls)
+    (%display-prefix n)
     (unless (null? ls)
-      (write (car ls))
+      (%write (car ls))
       (let f ((ls (cdr ls)))
 	(unless (null? ls)
-	  (write-char #\space)
-	  (write (car ls))
+	  (%write-char #\space)
+	  (%write (car ls))
 	  (f (cdr ls)))))
-    (newline))
+    (%newline))
 
   (define make-traced-procedure
     (case-lambda
@@ -180,7 +184,7 @@
 	 (lambda ()
 	   (set-scell-trace!  *scell* *trace-depth*)
 	   (set-scell-filter! *scell* filter)
-	   (display-call-trace *trace-depth* (filter (cons name args)))
+	   (%display-call-trace *trace-depth* (filter (cons name args)))
 	   (apply proc args))
 	 (lambda ()
 	   (set! *trace-depth* (sub1 *trace-depth*))))))))
@@ -280,39 +284,39 @@
 	(format "~a#..." (substring x 0 56))
       x))
   (let ((n (car x)) (x (cdr x)))
-    ;;      (printf " [~a] ~s\n" n (trace-expr x))
-    (printf " [~a] " n)
-    (pretty-print (trace-expr x))
+    ;;      (%printf " [~a] ~s\n" n (trace-expr x))
+    (%printf " [~a] " n)
+    (%pretty-print (trace-expr x))
     (let ((src (trace-src x)))
       (when (pair? src)
-	(printf "     source: char ~a of ~a\n" (cdr src) (car src))))
-    (printf "     operator: ~s\n" (trace-rator x))
-    (printf "     operands: ")
+	(%printf "     source: char ~a of ~a\n" (cdr src) (car src))))
+    (%printf "     operator: ~s\n" (trace-rator x))
+    (%printf "     operands: ")
     (let ((ls (map (lambda (x)
 		     (with-output-to-string/limit x 80))
 		(trace-rands x))))
       (if (< (apply + 1 (length ls) (map string-length ls)) 60)
-	  (write (trace-rands x))
+	  (%write (trace-rands x))
 	(begin
-	  (display "(")
+	  (%display "(")
 	  (let f ((a (car ls)) (ls (cdr ls)))
-	    (display (chop a))
+	    (%display (chop a))
 	    (if (null? ls)
-		(display ")")
+		(%display ")")
 	      (begin
-		(display "\n                ")
+		(%display "\n                ")
 		(f (car ls) (cdr ls))))))))
-    (newline)))
+    (%newline)))
 
 (define (print-step x)
   (let ((n (car x)) (ls (cdr x)))
     (unless (null? ls)
-      (printf "FRAME ~s:\n" n)
+      (%printf "FRAME ~s:\n" n)
       (for-each print-trace (reverse ls)))))
 
 (define (print-all-traces)
   (let ((ls (reverse (get-traces))))
-    (printf "CALL FRAMES:\n")
+    (%printf "CALL FRAMES:\n")
     (for-each print-step ls)))
 
 (define (guarded-start proc)
@@ -320,9 +324,9 @@
       (lambda (con)
         (define (enter-debugger con)
           (define (help)
-            (printf "Exception trapped by debugger.\n")
+            (%printf "Exception trapped by debugger.\n")
             (print-condition con)
-            (printf "~a\n"
+            (%printf "~a\n"
 		    (string-append
 		     "[t] Trace. "
 		     "[r] Reraise exception. "
@@ -340,7 +344,7 @@
 		      ((T t) (print-all-traces))
 		      ((C c) (k void))
 		      ((?)   (help))
-		      (else (printf "invalid option\n")))))
+		      (else (%printf "invalid option\n")))))
 		 void))))
         (if (serious-condition? con)
             (enter-debugger con)
