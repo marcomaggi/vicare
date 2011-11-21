@@ -1064,15 +1064,15 @@
 		   (unsafe.fx= errno ?code)
 		   ...)
 	      . ?body)
-	     ...)))
+	     ...
+	     (else . ?else-body))))
     ((_ ((?code0 ?code ...) . ?body) ...)
      (let ((errno ?errno))
        (cond ((and (unsafe.fx= errno (errno-code ?code0))
 		   (unsafe.fx= errno (errno-code ?code))
 		   ...)
 	      . ?body)
-	     ...
-	     (else . ?else-body))))
+	     ...)))
     ))
 
 
@@ -1232,15 +1232,15 @@
 		   (unsafe.fx= h_errno ?code)
 		   ...)
 	      . ?body)
-	     ...)))
+	     ...
+	     (else . ?else-body))))
     ((_ ((?code0 ?code ...) . ?body) ...)
      (let ((h_errno ?h_errno))
        (cond ((and (unsafe.fx= h_errno (h_errno-code ?code0))
 		   (unsafe.fx= h_errno (h_errno-code ?code))
 		   ...)
 	      . ?body)
-	     ...
-	     (else . ?else-body))))
+	     ...)))
     ))
 
 
