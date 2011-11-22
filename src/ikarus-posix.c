@@ -736,126 +736,79 @@ ikrt_posix_futimes (ikptr fd,
 ikptr
 ikrt_posix_link (ikptr old_pathname_bv, ikptr new_pathname_bv)
 {
-  char *        old_pathname = (char*)(long)(old_pathname_bv+off_bytevector_data);
-  char *        new_pathname = (char*)(long)(new_pathname_bv+off_bytevector_data);
+  char *        old_pathname = VICARE_BYTEVECTOR_DATA_CHARP(old_pathname_bv);
+  char *        new_pathname = VICARE_BYTEVECTOR_DATA_CHARP(new_pathname_bv);
   int           rv;
   errno = 0;
   rv    = link(old_pathname, new_pathname);
-  if (0 == rv) {
-    return fix(0);
-  } else {
-    return ik_errno_to_code();
-  }
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
-
-/* ------------------------------------------------------------------ */
-
 ikptr
-ikrt_posix_symlink (ikptr file_pathname_bv, ikptr link_pathname_bv)
+ikrt_posix_symlink (ikptr true_pathname_bv, ikptr link_pathname_bv)
 {
-  char *        file_pathname = (char*)(long)(file_pathname_bv+off_bytevector_data);
-  char *        link_pathname = (char*)(long)(link_pathname_bv+off_bytevector_data);
+  char *        true_pathname = VICARE_BYTEVECTOR_DATA_CHARP(true_pathname_bv);
+  char *        link_pathname = VICARE_BYTEVECTOR_DATA_CHARP(link_pathname_bv);
   int           rv;
   errno = 0;
-  rv    = symlink(file_pathname, link_pathname);
-  if (0 == rv) {
-    return fix(0);
-  } else {
-    return ik_errno_to_code();
-  }
+  rv    = symlink(true_pathname, link_pathname);
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
-
-/* ------------------------------------------------------------------ */
-
 ikptr
 ikrt_posix_readlink (ikptr link_pathname_bv, ikpcb * pcb)
 {
-  char *        link_pathname = (char*)(long)(link_pathname_bv+off_bytevector_data);
+  char *        link_pathname = VICARE_BYTEVECTOR_DATA_CHARP(link_pathname_bv);
   size_t        max_len;
   int           rv;
   for (max_len=PATH_MAX;; max_len *= 2) {
-    char        file_pathname[max_len];
+    char        true_pathname[max_len];
     errno = 0;
-    rv    = readlink(link_pathname, file_pathname, max_len);
-    if (rv < 0) {
+    rv    = readlink(link_pathname, true_pathname, max_len);
+    if (rv < 0)
       return ik_errno_to_code();
-    } else if (rv == max_len) {
+    else if (rv == max_len)
       continue;
-    } else {
-      ikptr     bv  = ik_safe_alloc(pcb, align(disp_bytevector_data+rv+1)) + bytevector_tag;
-      char *    data;
-      ref(bv, off_bytevector_length) = fix(rv);
-      data = (char*)(bv+off_bytevector_data);
-      memcpy(data, file_pathname, rv);
-      data[rv] = '\0';
-      return bv;
-    }
+    else
+      return ik_bytevector_from_cstring_len(pcb, true_pathname, rv);
   }
 }
-
-/* ------------------------------------------------------------------ */
-
 ikptr
 ikrt_posix_realpath (ikptr link_pathname_bv, ikpcb* pcb)
 {
   char *        link_pathname;
-  char *        file_pathname;
+  char *        true_pathname;
   char          buff[PATH_MAX];
-  link_pathname = (char*)(long)(link_pathname_bv+off_bytevector_data);
+  link_pathname = VICARE_BYTEVECTOR_DATA_CHARP(link_pathname_bv);
   errno         = 0;
-  file_pathname = realpath(link_pathname, buff);
-  if (NULL == file_pathname) {
-    return ik_errno_to_code();
-  } else {
-    int         len  = strlen(file_pathname);
-    ikptr       bv   = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1)) + bytevector_tag;
-    char *      data = (char*)(long)(bv+off_bytevector_data);
-    ref(bv, off_bytevector_length) = fix(len);
-    memcpy(data, file_pathname, len+1);
-    return bv;
-  }
+  true_pathname = realpath(link_pathname, buff);
+  return (true_pathname)? ik_bytevector_from_cstring(pcb, true_pathname) : ik_errno_to_code();
 }
-
-/* ------------------------------------------------------------------ */
-
 ikptr
 ikrt_posix_unlink (ikptr pathname_bv)
 {
-  char * pathname = (char*)(long)(pathname_bv + off_bytevector_data);
+  char * pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   int    rv;
   errno = 0;
   rv    = unlink(pathname);
-  if (0 == rv)
-    return fix(0);
-  else
-    return ik_errno_to_code();
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_remove (ikptr pathname_bv)
 {
-  char * pathname = (char*)(long)(pathname_bv + off_bytevector_data);
+  char * pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   int    rv;
   errno = 0;
   rv    = remove(pathname);
-  if (0 == rv)
-    return fix(0);
-  else
-    return ik_errno_to_code();
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
-
 ikptr
 ikrt_posix_rename (ikptr old_pathname_bv, ikptr new_pathname_bv)
 {
-  char *        old_pathname = (char*)(long)(old_pathname_bv+off_bytevector_data);
-  char *        new_pathname = (char*)(long)(new_pathname_bv+off_bytevector_data);
+  char *        old_pathname = VICARE_BYTEVECTOR_DATA_CHARP(old_pathname_bv);
+  char *        new_pathname = VICARE_BYTEVECTOR_DATA_CHARP(new_pathname_bv);
   int           rv;
   errno = 0;
   rv    = rename(old_pathname, new_pathname);
-  if (0 == rv) {
-    return fix(0);
-  } else {
-    return ik_errno_to_code();
-  }
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 
 
@@ -871,10 +824,7 @@ ikrt_posix_mkdir (ikptr pathname_bv, ikptr mode)
   pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   rv       = mkdir(pathname, unfix(mode));
-  if (0 == rv)
-    return fix(0);
-  else
-    return ik_errno_to_code();
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_rmdir (ikptr pathname_bv)
@@ -884,10 +834,7 @@ ikrt_posix_rmdir (ikptr pathname_bv)
   pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   rv       = rmdir(pathname);
-  if (0 == rv)
-    return fix(0);
-  else
-    return ik_errno_to_code();
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_getcwd (ikpcb * pcb)
@@ -903,14 +850,8 @@ ikrt_posix_getcwd (ikpcb * pcb)
         continue;
       else
         return ik_errno_to_code();
-    } else {
-      int       len  = strlen(pathname);
-      ikptr     bv   = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1)) + bytevector_tag;
-      char *    data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
-      ref(bv, off_bytevector_length) = fix(len);
-      memcpy(data, pathname, len+1);
-      return bv;
-    }
+    } else
+      return ik_bytevector_from_cstring(pcb, pathname);
   }
 }
 ikptr
@@ -921,10 +862,7 @@ ikrt_posix_chdir (ikptr pathname_bv)
   pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   rv       = chdir(pathname);
-  if (0 == rv)
-    return fix(0);
-  else
-    return ik_errno_to_code();
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_fchdir (ikptr fd)
@@ -932,10 +870,7 @@ ikrt_posix_fchdir (ikptr fd)
   int           rv;
   errno    = 0;
   rv       = fchdir(unfix(fd));
-  if (0 == rv)
-    return fix(0);
-  else
-    return ik_errno_to_code();
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_opendir (ikptr pathname_bv, ikpcb * pcb)
@@ -945,12 +880,7 @@ ikrt_posix_opendir (ikptr pathname_bv, ikpcb * pcb)
   pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   stream   = opendir(pathname);
-  if (NULL == stream) {
-    return ik_errno_to_code();
-  } else {
-    ikptr       pointer = ikrt_pointer_alloc((long)stream, pcb);
-    return pointer;
-  }
+  return (stream)? ikrt_pointer_alloc((long)stream, pcb) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_fdopendir (ikptr fd, ikpcb * pcb)
@@ -958,17 +888,12 @@ ikrt_posix_fdopendir (ikptr fd, ikpcb * pcb)
   DIR *         stream;
   errno    = 0;
   stream   = fdopendir(unfix(fd));
-  if (NULL == stream) {
-    return ik_errno_to_code();
-  } else {
-    ikptr       pointer = ikrt_pointer_alloc((long)stream, pcb);
-    return pointer;
-  }
+  return (stream)? ikrt_pointer_alloc((long)stream, pcb) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_readdir (ikptr pointer, ikpcb * pcb)
 {
-  DIR *           stream = (DIR *) ref(pointer, off_pointer_data);
+  DIR *           stream = (DIR *) VICARE_POINTER_DATA_VOIDP(pointer);
   struct dirent * entry;
   errno = 0;
   entry = readdir(stream);
@@ -978,42 +903,33 @@ ikrt_posix_readdir (ikptr pointer, ikpcb * pcb)
       return false_object;
     else
       return ik_errno_to_code();
-  } else {
+  } else
     /* The  only field  in  "struct dirent"  we  can trust  to exist  is
        "d_name".   Notice that  the documentation  of glibc  describes a
        "d_namlen"  field  which  does   not  exist  on  Linux,  see  the
        "readdir(3)" manual page. */
-    int     len  = strlen(entry->d_name);
-    ikptr   bv   = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1)) + bytevector_tag;
-    char *  data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
-    ref(bv, off_bytevector_length) = fix(len);
-    memcpy(data, entry->d_name, len+1);
-    return bv;
-  }
+    return ik_bytevector_from_cstring(pcb, entry->d_name);
 }
 ikptr
 ikrt_posix_closedir (ikptr pointer, ikpcb * pcb)
 {
-  DIR *  stream = (DIR *) ref(pointer, off_pointer_data);
+  DIR *  stream = (DIR *) VICARE_POINTER_DATA_VOIDP(pointer);
   int    rv;
   errno = 0;
   rv    = closedir(stream);
-  if (0 == rv)
-    return fix(0);
-  else
-    return ik_errno_to_code();
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_rewinddir (ikptr pointer)
 {
-  DIR *  stream = (DIR *) ref(pointer, off_pointer_data);
+  DIR *  stream = (DIR *) VICARE_POINTER_DATA_VOIDP(pointer);
   rewinddir(stream);
   return void_object;
 }
 ikptr
 ikrt_posix_telldir (ikptr pointer, ikpcb * pcb)
 {
-  DIR *  stream = (DIR *) ref(pointer, off_pointer_data);
+  DIR *  stream = (DIR *) VICARE_POINTER_DATA_VOIDP(pointer);
   long   pos;
   pos = telldir(stream);
   return s_to_number(pos, pcb);
@@ -1021,7 +937,7 @@ ikrt_posix_telldir (ikptr pointer, ikpcb * pcb)
 ikptr
 ikrt_posix_seekdir (ikptr pointer, ikptr pos_num)
 {
-  DIR *  stream = (DIR *) ref(pointer, off_pointer_data);
+  DIR *  stream = (DIR *) VICARE_POINTER_DATA_VOIDP(pointer);
   long   pos    = extract_num(pos_num);
   seekdir(stream, pos);
   return void_object;
@@ -1040,10 +956,7 @@ ikrt_posix_open (ikptr pathname_bv, ikptr flags, ikptr mode)
   pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   rv       = open(pathname, unfix(flags), unfix(mode));
-  if (0 <= rv)
-    return fix(rv);
-  else
-    return ik_errno_to_code();
+  return (0 <= rv)? fix(rv) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_close (ikptr fd)
@@ -1051,10 +964,7 @@ ikrt_posix_close (ikptr fd)
   int           rv;
   errno    = 0;
   rv       = close(unfix(fd));
-  if (0 == rv)
-    return fix(0);
-  else
-    return ik_errno_to_code();
+  return (0 <= rv)? fix(rv) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_read (ikptr fd, ikptr buffer_bv, ikptr size_fx)
@@ -1067,10 +977,7 @@ ikrt_posix_read (ikptr fd, ikptr buffer_bv, ikptr size_fx)
                       unfix(size_fx) : unfix(VICARE_BYTEVECTOR_LENGTH_FX(buffer_bv)));
   errno    = 0;
   rv       = read(unfix(fd), buffer, size);
-  if (0 <= rv)
-    return fix(rv);
-  else
-    return ik_errno_to_code();
+  return (0 <= rv)? fix(rv) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_pread (ikptr fd, ikptr buffer_bv, ikptr size_fx, ikptr off_num)
@@ -1085,10 +992,7 @@ ikrt_posix_pread (ikptr fd, ikptr buffer_bv, ikptr size_fx, ikptr off_num)
   off      = (off_t) extract_num_longlong(off_num);
   errno    = 0;
   rv       = pread(unfix(fd), buffer, size, off);
-  if (0 <= rv)
-    return fix(rv);
-  else
-    return ik_errno_to_code();
+  return (0 <= rv)? fix(rv) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_write (ikptr fd, ikptr buffer_bv, ikptr size_fx)
@@ -1101,10 +1005,7 @@ ikrt_posix_write (ikptr fd, ikptr buffer_bv, ikptr size_fx)
                       unfix(size_fx) : unfix(VICARE_BYTEVECTOR_LENGTH_FX(buffer_bv)));
   errno    = 0;
   rv       = write(unfix(fd), buffer, size);
-  if (0 <= rv)
-    return fix(rv);
-  else
-    return ik_errno_to_code();
+  return (0 <= rv)? fix(rv) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_pwrite (ikptr fd, ikptr buffer_bv, ikptr size_fx, ikptr off_num)
@@ -1119,10 +1020,7 @@ ikrt_posix_pwrite (ikptr fd, ikptr buffer_bv, ikptr size_fx, ikptr off_num)
   off      = (off_t) extract_num_longlong(off_num);
   errno    = 0;
   rv       = pwrite(unfix(fd), buffer, size, off);
-  if (0 <= rv)
-    return fix(rv);
-  else
-    return ik_errno_to_code();
+  return (0 <= rv)? fix(rv) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_lseek (ikptr fd, ikptr off_num, ikptr whence_fx, ikpcb * pcb)
@@ -1132,10 +1030,7 @@ ikrt_posix_lseek (ikptr fd, ikptr off_num, ikptr whence_fx, ikpcb * pcb)
   off    = extract_num_longlong(off_num);
   errno  = 0;
   rv     = lseek(unfix(fd), off, unfix(whence_fx));
-  if (0 <= rv)
-    return sll_to_number((long long)rv, pcb);
-  else
-    return ik_errno_to_code();
+  return (0 <= rv)? sll_to_number((long long)rv, pcb) : ik_errno_to_code();
 }
 
 /* ------------------------------------------------------------------ */
@@ -1144,45 +1039,35 @@ ikptr
 ikrt_posix_readv (ikptr fd, ikptr buffers, ikpcb * pcb)
 {
   int           number_of_buffers = ik_list_length(buffers);
-  {
-    struct iovec  bufs[number_of_buffers];
-    ikptr         bv;
-    int           i;
-    ssize_t       rv;
-    for (i=0; pair_tag == tagof(buffers); buffers=ref(buffers, off_cdr), ++i) {
-      bv      = ref(buffers, off_car);
-      bufs[i].iov_base = VICARE_BYTEVECTOR_DATA_VOIDP(bv);
-      bufs[i].iov_len  = unfix(VICARE_BYTEVECTOR_LENGTH_FX(bv));
-    }
-    errno    = 0;
-    rv       = readv(unfix(fd), bufs, number_of_buffers);
-    if (0 <= rv)
-      return sll_to_number((long long)rv, pcb);
-    else
-      return ik_errno_to_code();
+  struct iovec  bufs[number_of_buffers];
+  ikptr         bv;
+  int           i;
+  ssize_t       rv;
+  for (i=0; pair_tag == tagof(buffers); buffers=ref(buffers, off_cdr), ++i) {
+    bv      = ref(buffers, off_car);
+    bufs[i].iov_base = VICARE_BYTEVECTOR_DATA_VOIDP(bv);
+    bufs[i].iov_len  = unfix(VICARE_BYTEVECTOR_LENGTH_FX(bv));
   }
+  errno    = 0;
+  rv       = readv(unfix(fd), bufs, number_of_buffers);
+  return (0 <= rv)? sll_to_number((long long)rv, pcb) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_writev (ikptr fd, ikptr buffers, ikpcb * pcb)
 {
   int           number_of_buffers = ik_list_length(buffers);
-  {
-    struct iovec  bufs[number_of_buffers];
-    ikptr         bv;
-    int           i;
-    ssize_t       rv;
-    for (i=0; pair_tag == tagof(buffers); buffers=ref(buffers, off_cdr), ++i) {
-      bv      = ref(buffers, off_car);
-      bufs[i].iov_base = VICARE_BYTEVECTOR_DATA_VOIDP(bv);
-      bufs[i].iov_len  = unfix(VICARE_BYTEVECTOR_LENGTH_FX(bv));
-    }
-    errno    = 0;
-    rv       = writev(unfix(fd), bufs, number_of_buffers);
-    if (0 <= rv)
-      return sll_to_number((long long)rv, pcb);
-    else
-      return ik_errno_to_code();
+  struct iovec  bufs[number_of_buffers];
+  ikptr         bv;
+  int           i;
+  ssize_t       rv;
+  for (i=0; pair_tag == tagof(buffers); buffers=ref(buffers, off_cdr), ++i) {
+    bv      = ref(buffers, off_car);
+    bufs[i].iov_base = VICARE_BYTEVECTOR_DATA_VOIDP(bv);
+    bufs[i].iov_len  = unfix(VICARE_BYTEVECTOR_LENGTH_FX(bv));
   }
+  errno    = 0;
+  rv       = writev(unfix(fd), bufs, number_of_buffers);
+  return (0 <= rv)? sll_to_number((long long)rv, pcb) : ik_errno_to_code();
 }
 
 /* ------------------------------------------------------------------ */
@@ -1256,9 +1141,9 @@ ikrt_posix_select (ikptr nfds_fx,
         ikptr fdx = ref(L, off_car);
         if (FD_ISSET(unfix(fdx), &read_fds)) {
           ikptr P = ik_pair_alloc(pcb);
-          ref(P, off_car) = fdx;
-          ref(P, off_cdr) = R;
-          ref(vec, off_vector_data+0*wordsize) = P;
+          VICARE_SET_CAR(P, fdx);
+          VICARE_SET_CDR(P, R);
+          VICARE_VECTOR_SET(vec, 0, P);
           R = P;
         }
       }
@@ -1267,9 +1152,9 @@ ikrt_posix_select (ikptr nfds_fx,
         ikptr fdx = ref(L, off_car);
         if (FD_ISSET(unfix(fdx), &write_fds)) {
           ikptr P = ik_pair_alloc(pcb);
-          ref(P, off_car) = fdx;
-          ref(P, off_cdr) = W;
-          ref(vec, off_vector_data+1*wordsize) = W = P;
+          VICARE_SET_CAR(P, fdx);
+          VICARE_SET_CDR(P, W);
+          VICARE_VECTOR_SET2(vec, 1, W, P);
         }
       }
       /* Build a list of except-ready file descriptors. */
@@ -1277,9 +1162,9 @@ ikrt_posix_select (ikptr nfds_fx,
         ikptr fdx = ref(L, off_car);
         if (FD_ISSET(unfix(fdx), &except_fds)) {
           ikptr P = ik_pair_alloc(pcb);
-          ref(P, off_car) = fdx;
-          ref(P, off_cdr) = E;
-          ref(vec, off_vector_data+2*wordsize) = E = P;
+          VICARE_SET_CAR(P, fdx);
+          VICARE_SET_CDR(P, E);
+          VICARE_VECTOR_SET2(vec, 2, E, P);
         }
       }
     }
@@ -1313,12 +1198,10 @@ ikrt_posix_select_fd (ikptr fdx, ikptr sec, ikptr usec, ikpcb * pcb)
   } else if (-1 == rv) { /* an error occurred */
     return ik_errno_to_code();
   } else { /* success, let's harvest the events */
-    /* Build the vector to be returned. */
-    vec = ik_safe_alloc(pcb, align(disp_vector_data+3)) + vector_tag;
-    ref(vec, off_vector_length) = fix(3);
-    ref(vec, off_vector_data+0*wordsize) = (FD_ISSET(fd, &read_fds))?   fdx : false_object;
-    ref(vec, off_vector_data+1*wordsize) = (FD_ISSET(fd, &write_fds))?  fdx : false_object;
-    ref(vec, off_vector_data+2*wordsize) = (FD_ISSET(fd, &except_fds))? fdx : false_object;
+    vec = ik_vector_alloc(pcb, 3);
+    VICARE_VECTOR_SET(vec, 0, (FD_ISSET(fd, &read_fds))?   fdx : false_object);
+    VICARE_VECTOR_SET(vec, 1, (FD_ISSET(fd, &write_fds))?  fdx : false_object);
+    VICARE_VECTOR_SET(vec, 2, (FD_ISSET(fd, &except_fds))? fdx : false_object);
     return vec;
   }
 }
@@ -1328,7 +1211,6 @@ ikrt_posix_select_fd (ikptr fdx, ikptr sec, ikptr usec, ikpcb * pcb)
 ikptr
 ikrt_posix_fcntl (ikptr fd, ikptr command, ikptr arg)
 {
-
   int           rv = -1;
   errno = 0;
   if (is_fixnum(arg)) {
@@ -1346,15 +1228,11 @@ ikrt_posix_fcntl (ikptr fd, ikptr command, ikptr arg)
     fprintf(stderr, "*** Vicare error: invalid last argument to fcntl()");
     exit(EXIT_FAILURE);
   }
-  if (-1 == rv)
-    return ik_errno_to_code();
-  else
-    return fix(rv);
+  return (-1 != rv)? fix(rv) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
 {
-
   int           rv = -1;
   errno = 0;
   if (is_fixnum(arg)) {
@@ -1372,10 +1250,7 @@ ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
     fprintf(stderr, "*** Vicare error: invalid last argument to ioctl()");
     exit(EXIT_FAILURE);
   }
-  if (-1 == rv)
-    return ik_errno_to_code();
-  else
-    return fix(rv);
+  return (-1 != rv)? fix(rv) : ik_errno_to_code();
 }
 
 /* ------------------------------------------------------------------ */
@@ -1383,26 +1258,18 @@ ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
 ikptr
 ikrt_posix_dup (ikptr fd)
 {
-
   int           rv;
   errno = 0;
   rv    = dup(unfix(fd));
-  if (-1 == rv)
-    return ik_errno_to_code();
-  else
-    return fix(rv);
+  return (-1 != rv)? fix(rv) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_dup2 (ikptr old, ikptr new)
 {
-
   int           rv;
   errno = 0;
   rv    = dup2(unfix(old), unfix(new));
-  if (-1 == rv)
-    return ik_errno_to_code();
-  else
-    return fix(0);
+  return (-1 != rv)? fix(0) : ik_errno_to_code();
 }
 
 /* ------------------------------------------------------------------ */
@@ -1418,8 +1285,8 @@ ikrt_posix_pipe (ikpcb * pcb)
     return ik_errno_to_code();
   else {
     ikptr pair = ik_pair_alloc(pcb);
-    ref(pair, off_car) = fix(fds[0]);
-    ref(pair, off_cdr) = fix(fds[1]);
+    VICARE_SET_CAR(pair, fix(fds[0]));
+    VICARE_SET_CDR(pair, fix(fds[1]));
     return pair;
   }
 }
@@ -1431,10 +1298,7 @@ ikrt_posix_mkfifo (ikptr pathname_bv, ikptr mode)
   pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   rv       = mkfifo(pathname, unfix(mode));
-  if (0 == rv)
-    return fix(0);
-  else
-    return ik_errno_to_code();
+  return (0 <= rv)? fix(rv) : ik_errno_to_code();
 }
 
 
@@ -1454,34 +1318,17 @@ ikrt_posix_make_sockaddr_un (ikptr pathname_bv, ikpcb * pcb)
 #define SIZE    (sizeof(struct sockaddr_un)+pathname_len) /* better safe than sorry */
     uint8_t               bytes[SIZE];
     struct sockaddr_un *  name = (void *)bytes;
-    ikptr                 addr_bv;
-    long                  addr_len;
-    char *                data;
     name->sun_family = AF_LOCAL;
     memcpy(name->sun_path, pathname, pathname_len+1);
-    addr_len = SUN_LEN(name);
-    addr_bv  = ik_bytevector_alloc(pcb, addr_len);
-    data     = VICARE_BYTEVECTOR_DATA_CHARP(addr_bv);
-    memcpy(data, name, addr_len);
-    return addr_bv;
+    return ik_bytevector_from_memory_block(pcb, name, SUN_LEN(name));
   }
 }
 ikptr
 ikrt_posix_sockaddr_un_pathname (ikptr addr_bv, ikpcb * pcb)
 {
   struct sockaddr_un *  addr = VICARE_BYTEVECTOR_DATA_VOIDP(addr_bv);
-  if (AF_LOCAL == addr->sun_family) {
-    ikptr               pathname_bv;
-    long                pathname_len;
-    char *              pathname;
-    pathname_len = strlen(addr->sun_path);
-    pathname_bv  = ik_bytevector_alloc(pcb, pathname_len);
-    pathname     = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
-    memcpy(pathname, addr->sun_path, pathname_len+1);
-    return pathname_bv;
-  } else {
-    return false_object;
-  }
+  return (AF_LOCAL == addr->sun_family)?
+    ik_bytevector_from_cstring(pcb, addr->sun_path) : false_object;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1772,11 +1619,7 @@ ikrt_posix_gethostbyname (ikptr rtd, ikptr hostname_bv, ikpcb * pcb)
   errno    = 0;
   h_errno  = 0;
   rv       = gethostbyname(hostname);
-  if (NULL != rv) {
-    return hostent_to_struct(rtd, rv, pcb);
-  } else {
-    return fix(-h_errno);
-  }
+  return (NULL != rv)? hostent_to_struct(rtd, rv, pcb) : fix(-h_errno);
 }
 ikptr
 ikrt_posix_gethostbyname2 (ikptr rtd, ikptr hostname_bv, ikptr af, ikpcb * pcb)
@@ -1787,11 +1630,7 @@ ikrt_posix_gethostbyname2 (ikptr rtd, ikptr hostname_bv, ikptr af, ikpcb * pcb)
   errno    = 0;
   h_errno  = 0;
   rv       = gethostbyname2(hostname, unfix(af));
-  if (NULL != rv) {
-    return hostent_to_struct(rtd, rv, pcb);
-  } else {
-    return fix(-h_errno);
-  }
+  return (NULL != rv)? hostent_to_struct(rtd, rv, pcb) : fix(-h_errno);
 }
 ikptr
 ikrt_posix_gethostbyaddr (ikptr rtd, ikptr host_address_bv, ikpcb * pcb)
@@ -1806,11 +1645,7 @@ ikrt_posix_gethostbyaddr (ikptr rtd, ikptr host_address_bv, ikpcb * pcb)
   errno    = 0;
   h_errno  = 0;
   rv       = gethostbyaddr(host_address, host_address_len, format);
-  if (NULL != rv) {
-    return hostent_to_struct(rtd, rv, pcb);
-  } else {
-    return fix(-h_errno);
-  }
+  return (NULL != rv)? hostent_to_struct(rtd, rv, pcb) : fix(-h_errno);
 }
 ikptr
 ikrt_posix_host_entries (ikptr rtd, ikpcb * pcb)
@@ -2174,9 +2009,8 @@ ikrt_posix_socketpair (ikptr namespace, ikptr style, ikptr protocol, ikpcb * pcb
     VICARE_SET_CAR(pair, fix(fds[0]));
     VICARE_SET_CDR(pair, fix(fds[1]));
     return pair;
-  } else {
+  } else
     return ik_errno_to_code();
-  }
 }
 ikptr
 ikrt_posix_connect (ikptr sock, ikptr addr_bv)
@@ -2224,9 +2058,8 @@ ikrt_posix_accept (ikptr sock, ikpcb * pcb)
     }
     pcb->root0 = NULL;
     return pair;
-  } else {
+  } else
     return ik_errno_to_code();
-  }
 }
 ikptr
 ikrt_posix_bind (ikptr sock, ikptr sockaddr_bv)
@@ -2256,9 +2089,8 @@ ikrt_posix_getpeername (ikptr sock, ikpcb * pcb)
     void *      addr_data = VICARE_BYTEVECTOR_DATA_VOIDP(addr_bv);
     memcpy(addr_data, addr, addr_len);
     return addr_bv;
-  } else {
+  } else
     return ik_errno_to_code();
-  }
 }
 ikptr
 ikrt_posix_getsockname (ikptr sock, ikpcb * pcb)
@@ -2276,9 +2108,8 @@ ikrt_posix_getsockname (ikptr sock, ikpcb * pcb)
     void * addr_data = VICARE_BYTEVECTOR_DATA_VOIDP(addr_bv);
     memcpy(addr_data, addr, addr_len);
     return addr_bv;
-  } else {
+  } else
     return ik_errno_to_code();
-  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -2360,9 +2191,8 @@ ikrt_posix_recvfrom (ikptr sock, ikptr buffer_bv, ikptr size_fx, ikptr flags, ik
     }
     pcb->root0 = NULL;
     return pair;
-  } else {
+  } else
     return ik_errno_to_code();
-  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -2451,9 +2281,8 @@ ikrt_posix_getsockopt_size_t (ikptr sock, ikptr level, ikptr optname, ikpcb * pc
     VICARE_SET_CAR(pair, s_to_number((long)optval, pcb));
     VICARE_SET_CDR(pair, true_object);
     return pair;
-  } else {
+  } else
     return ik_errno_to_code();
-  }
 }
 
 /* ------------------------------------------------------------------ */

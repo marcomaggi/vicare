@@ -528,11 +528,14 @@ ikptr   ikrt_is_pointer         (ikptr x);
 
 ikptr   ik_vector_alloc         (ikpcb * pcb, long int requested_number_of_items);
 
-#define VICARE_VECTOR_SET(vec,idx,value)        \
+#define VICARE_VECTOR_REF(vec,idx)                      \
+  ref((vec),off_vector_data+(idx)*wordsize)
+
+#define VICARE_VECTOR_SET(vec,idx,value)                \
   ref((vec),off_vector_data+(idx)*wordsize) = (value)
 
-#define VICARE_VECTOR_REF(vec,idx)              \
-  ref((vec),off_vector_data+(idx)*wordsize)
+#define VICARE_VECTOR_SET2(vec,idx,value1,value2)       \
+  ref((vec),off_vector_data+(idx)*wordsize) = (value1) = (value2)
 
 
 /** --------------------------------------------------------------------
@@ -552,6 +555,7 @@ ikptr   ik_vector_alloc         (ikpcb * pcb, long int requested_number_of_items
 extern ikptr   ik_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes);
 extern ikptr   ik_bytevector_from_cstring       (ikpcb * pcb, char * cstr);
 extern ikptr   ik_bytevector_from_cstring_len   (ikpcb * pcb, char * cstr, size_t len);
+extern ikptr   ik_bytevector_from_memory_block  (ikpcb * pcb, void * memory, size_t length);
 
 #define VICARE_BYTEVECTOR_LENGTH_FX(BV)                 \
   ref((BV), off_bytevector_length)

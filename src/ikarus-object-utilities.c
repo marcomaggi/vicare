@@ -116,6 +116,14 @@ ik_bytevector_from_cstring_len (ikpcb * pcb, char * cstr, size_t len)
   memcpy(data, cstr, len);
   return bv;
 }
+ikptr
+ik_bytevector_from_memory_block (ikpcb * pcb, void * memory, size_t length)
+{
+  ikptr     bv   = ik_bytevector_alloc(pcb, length);
+  void *    data = VICARE_BYTEVECTOR_DATA_VOIDP(bv);
+  memcpy(data, memory, length);
+  return bv;
+}
 
 
 /** --------------------------------------------------------------------
