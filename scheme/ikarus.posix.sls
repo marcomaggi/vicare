@@ -580,10 +580,7 @@
 (define (raise-h_errno-error who h_errno . irritants)
   (raise (condition
 	  (make-error)
-;;;FIXME Uncomment  this at the  next boot image rotation  (Marco Maggi;
-;;;Wed Nov 16, 2011).
-;;;
-;;;(make-h_errno-condition h_errno)
+	  (make-h_errno-condition h_errno)
 	  (make-who-condition who)
 	  (make-message-condition (h_strerror h_errno))
 	  (make-irritants-condition irritants))))
