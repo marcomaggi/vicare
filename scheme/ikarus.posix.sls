@@ -183,13 +183,18 @@
     setreuid				setregid
     getlogin				getlogin/string
     getpwuid				getpwnam
-    user-entries
+    getgrgid				getgrnam
+    user-entries			group-entries
 
     make-struct-passwd			struct-passwd?
     struct-passwd-pw_name		struct-passwd-pw_passwd
     struct-passwd-pw_uid		struct-passwd-pw_gid
     struct-passwd-pw_gecos		struct-passwd-pw_dir
     struct-passwd-pw_shell
+
+    make-struct-group			struct-group?
+    struct-group-gr_name		struct-group-gr_gid
+    struct-group-gr_mem
 
     ;; time functions
     nanosleep
@@ -362,13 +367,18 @@
 		  setreuid			setregid
 		  getlogin			getlogin/string
 		  getpwuid			getpwnam
-		  user-entries
+		  getgrgid			getgrnam
+		  user-entries			group-entries
 
 		  make-struct-passwd		struct-passwd?
 		  struct-passwd-pw_name		struct-passwd-pw_passwd
 		  struct-passwd-pw_uid		struct-passwd-pw_gid
 		  struct-passwd-pw_gecos	struct-passwd-pw_dir
 		  struct-passwd-pw_shell
+
+		  make-struct-group		struct-group?
+		  struct-group-gr_name		struct-group-gr_gid
+		  struct-group-gr_mem
 
 		  ;; time functions
 		  nanosleep
@@ -2737,7 +2747,7 @@
     (capi.posix-getpwuid passwd-rtd uid)))
 
 (define (getpwnam name)
-  (define who 'getpwname)
+  (define who 'getpwnam)
   (with-arguments-validation (who)
       ((string/bytevector  name))
     (with-bytevectors ((name.bv name))
@@ -2745,6 +2755,43 @@
 
 (define (user-entries)
   (capi.posix-user-entries passwd-rtd))
+
+;;; --------------------------------------------------------------------
+
+(define-struct struct-group
+  (gr_name	;0, bytevector, group name
+   gr_gid	;1, fixnum, group ID
+   gr_mem	;2, list of bytevectors, user names
+   ))
+
+(define (%struct-group-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-group\"")
+  (%display " gr_name=\"")	(%display (latin1->string (struct-group-gr_name S)))  (%display "\"")
+  (%display " gr_gid=")		(%display (struct-group-gr_gid S))
+  (%display " gr_mem=")
+  (%display (map latin1->string (struct-group-gr_mem S)))
+  (%display "]"))
+
+(define group-rtd
+  (type-descriptor struct-group))
+
+(define (getgrgid gid)
+  (define who 'getgrgid)
+  (with-arguments-validation (who)
+      ((fixnum	gid))
+    (capi.posix-getgrgid group-rtd gid)))
+
+(define (getgrnam name)
+  (define who 'getgrnam)
+  (with-arguments-validation (who)
+      ((string/bytevector  name))
+    (with-bytevectors ((name.bv name))
+      (capi.posix-getgrnam group-rtd name.bv))))
+
+(define (group-entries)
+  (capi.posix-group-entries group-rtd))
 
 
 ;;;; time functions
@@ -2784,6 +2831,7 @@
 (set-rtd-printer! (type-descriptor struct-servent)	%struct-servent-printer)
 (set-rtd-printer! (type-descriptor struct-netent)	%struct-netent-printer)
 (set-rtd-printer! (type-descriptor struct-passwd)	%struct-passwd-printer)
+(set-rtd-printer! (type-descriptor struct-group)	%struct-group-printer)
 
 )
 

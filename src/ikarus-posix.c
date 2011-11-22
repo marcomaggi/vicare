@@ -37,6 +37,7 @@
 #include "ikarus.h"
 #include <dirent.h>
 #include <fcntl.h>
+#include <grp.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdint.h>
@@ -2483,6 +2484,66 @@ ikrt_posix_user_entries (ikptr rtd, ikpcb * pcb)
     VICARE_SET_CAR(pair, passwd_to_struct(rtd, entry, pcb));
   }
   endpwent();
+  pcb->root0 = NULL;
+  return list_of_entries;
+}
+
+/* ------------------------------------------------------------------ */
+
+static ikptr
+group_to_struct (ikptr rtd, struct group * src, ikpcb * pcb)
+/* Convert  a   C  language  "strut   group"  into  a   Scheme  language
+   "struct-group".  Makes use of "pcb->root1" only, so that "pcb->root0"
+   is available to the caller. */
+{
+  ikptr dst = ik_struct_alloc(pcb, rtd, 3);
+  pcb->root1 = &dst;
+  VICARE_STRUCT_SET(dst, 0, ik_bytevector_from_cstring(pcb, src->gr_name));
+  VICARE_STRUCT_SET(dst, 1, fix(src->gr_gid));
+  {
+    ikptr       list_of_users = null_object;
+    int         i;
+    VICARE_STRUCT_SET(dst, 2, list_of_users);
+    for (i=0; src->gr_mem[i]; ++i) {
+      ikptr     pair      = ik_pair_alloc(pcb);
+      VICARE_SET_CDR(pair, list_of_users);
+      VICARE_STRUCT_SET2(dst, 2, list_of_users, pair);
+      VICARE_SET_CAR(pair, ik_bytevector_from_cstring(pcb, src->gr_mem[i]));
+    }
+  }
+  pcb->root1 = NULL;
+  return dst;
+}
+ikptr
+ikrt_posix_getgrgid (ikptr rtd, ikptr gid, ikpcb * pcb)
+{
+  struct group *       entry;
+  entry = getgrgid(unfix(gid));
+  return (entry)? group_to_struct(rtd, entry, pcb) : false_object;
+}
+ikptr
+ikrt_posix_getgrnam (ikptr rtd, ikptr name_bv, ikpcb * pcb)
+{
+  char *                name;
+  struct group *       entry;
+  name  = VICARE_BYTEVECTOR_DATA_CHARP(name_bv);
+  entry = getgrnam(name);
+  return (entry)? group_to_struct(rtd, entry, pcb) : false_object;
+}
+ikptr
+ikrt_posix_group_entries (ikptr rtd, ikpcb * pcb)
+{
+  ikptr                 list_of_entries = null_object;
+  struct group *        entry;
+  pcb->root0 = &list_of_entries;
+  setpwent();
+  for (entry=getgrent(); entry; entry=getgrent()) {
+    ikptr  pair        = ik_pair_alloc(pcb);
+    VICARE_SET_CDR(pair, list_of_entries);
+    list_of_entries = pair;
+    VICARE_SET_CAR(pair, group_to_struct(rtd, entry, pcb));
+  }
+  endgrent();
   pcb->root0 = NULL;
   return list_of_entries;
 }

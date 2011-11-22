@@ -157,7 +157,8 @@
     posix-setreuid			posix-setregid
     posix-getlogin
     posix-getpwuid			posix-getpwnam
-    posix-user-entries
+    posix-getgrgid			posix-getgrnam
+    posix-user-entries			posix-group-entries
     )
   (import (except (ikarus)
 		  posix-remove
@@ -832,6 +833,17 @@
 
 (define-inline (posix-user-entries rtd)
   (foreign-call "ikrt_posix_user_entries" rtd))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-getgrgid rtd gid)
+  (foreign-call "ikrt_posix_getgrgid" rtd gid))
+
+(define-inline (posix-getgrnam rtd name)
+  (foreign-call "ikrt_posix_getgrnam" rtd name))
+
+(define-inline (posix-group-entries rtd)
+  (foreign-call "ikrt_posix_group_entries" rtd))
 
 
 ;;;; done

@@ -1852,6 +1852,9 @@
     (getpwuid					i v posix)
     (getpwnam					i v posix)
     (user-entries				i v posix)
+    (getgrgid					i v posix)
+    (getgrnam					i v posix)
+    (group-entries				i v posix)
 ;;;
     (make-struct-stat				i v posix)
     (struct-stat?				i v posix)
@@ -1962,6 +1965,12 @@
     (struct-passwd-pw_gecos			i v posix)
     (struct-passwd-pw_dir			i v posix)
     (struct-passwd-pw_shell			i v posix)
+;;;
+    (make-struct-group				i v posix)
+    (struct-group?				i v posix)
+    (struct-group-gr_name			i v posix)
+    (struct-group-gr_gid			i v posix)
+    (struct-group-gr_mem			i v posix)
 
 ;;; GNU C Library functions
     (clearenv					glibc)

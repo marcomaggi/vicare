@@ -8392,6 +8392,61 @@ database of users and return a list of @code{struct-passwd} representing
 the entries.
 @end defun
 
+@c ------------------------------------------------------------
+
+@deftp {Structure Type} struct-group
+Scheme level representation of @code{struct group}.  It has the
+following fields:
+
+@table @code
+@item gr_name
+Bytevector, group name.
+
+@item gr_gid
+Fixnum, group ID.
+
+@item gr_mem
+List of bytevectors, user names.
+@end table
+@end deftp
+
+
+@defun make-struct-group @var{name} @var{gid} @var{mem}
+Build and return a new instance of @code{struct-group}.
+@end defun
+
+
+@defun struct-group-gr_name @var{group}
+@defunx struct-group-gr_gid @var{group}
+@defunx struct-group-gr_mem @var{group}
+Accessors for the fields of @code{struct-group}.
+@end defun
+
+
+@defun getgrgid @var{gid}
+Interface to the C function @cfunc{getgrgid}, @glibcref{Lookup Group,
+getgrgid}.  Retrieve informations on the group with identifier
+@var{gid}, which must be a fixnum.  If successful return an instance of
+@code{struct-group}; if a group with such an ID does not exists: return
+false.
+@end defun
+
+
+@defun getgrnam @var{name}
+Interface to the C function @cfunc{getgrnam}, @glibcref{Lookup Group,
+getgrnam}.  Retrieve informations on the group with name represented in
+@ascii{} coding in the string or bytevector @var{name}.  If successful
+return an instance of @code{struct-group}; if a group with such an ID
+does not exists: return false.
+@end defun
+
+
+@defun group-entries
+Interface to the C functions @cfunc{setgrent}, @cfunc{getgrent} and
+@cfunc{endgrent}, @glibcref{Scanning All Groups, setgrent}.  Iterate the
+database of groups and return a list of @code{struct-group} representing
+the entries.
+@end defun
 
 @c page
 @node posix time
@@ -11411,7 +11466,7 @@ descriptor; if a user with such an ID does not exists: return false.
 @deftypefun ikptr ikrt_posix_getpwnam (ikptr @var{rtd}, ikptr @var{name}, ikpcb * @var{pcb})
 Interface to the C function @cfunc{getpwnam}, @glibcref{Lookup User,
 getpwnam}.  Retrieve informations on the user with name represented in
-@ascii{} coding in the bytevector @var{name}.  If successful return an
+@ascii{} coding by the bytevector @var{name}.  If successful return an
 instance of @code{struct-passwd} initialised with @var{rtd}, which must
 be its type descriptor; if a user with such an ID does not exists:
 return false.
@@ -11424,6 +11479,35 @@ Interface to the C functions @cfunc{setpwent}, @cfunc{getpwent} and
 database of users and return a list of @code{struct-passwd} representing
 the entries; the structures are initialised with @var{rtd} which must be
 the type descriptor of @code{struct-passwd}.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_getgrgid (ikptr @var{rtd}, ikptr @var{gid}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getgrgid}, @glibcref{Lookup Group,
+getgrgid}.  Retrieve informations on the group with identifier
+@var{gid}, which must be a fixnum.  If successful return an instance of
+@code{struct-group} initialised with @var{rtd}, which must be its type
+descriptor; if a group with such an ID does not exists: return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getgrnam (ikptr @var{rtd}, ikptr @var{name}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getgrnam}, @glibcref{Lookup Group,
+getgrnam}.  Retrieve informations on the group with name represented in
+@ascii{} coding by the bytevector @var{name}.  If successful return an
+instance of @code{struct-group} initialised with @var{rtd}, which must
+be its type descriptor; if a group with such an ID does not exists:
+return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_group_entries (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C functions @cfunc{setgrent}, @cfunc{getgrent} and
+@cfunc{endgrent}, @glibcref{Scanning All Groups, setgrent}.  Iterate the
+database of groups and return a list of @code{struct-group} representing
+the entries; the structures are initialised with @var{rtd} which must be
+the type descriptor of @code{struct-group}.
 @end deftypefun
 
 @c page
