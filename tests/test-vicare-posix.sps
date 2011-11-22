@@ -1090,7 +1090,8 @@
 
 (parametrise ((check-test-name	'net))
 
-  (define run-inet-tests? #t) ;the firewall must allow it
+  (define run-inet-tests? ;the firewall must allow it
+    (or #f (px.getenv "RUN_INET_TESTS")))
 
   (check	;socketpair, posix-read, posix-write
       (let-values (((a b) (px.socketpair PF_LOCAL SOCK_DGRAM 0)))
@@ -1377,7 +1378,7 @@
 ;;; PF_INET SOCK_STREAM
 
   (when (or #f run-inet-tests?)
-    (check	;fork process, raw bytevector input/output
+    (check	;fork process, raw bytevector input/output, getpeername, getsockname
 	(with-result
 	 (let ((sockaddr (make-sockaddr_in '#vu8(127 0 0 1) 8080)))
 	   (define (parent pid)
@@ -1388,9 +1389,16 @@
 		     (px.bind   server-sock sockaddr)
 		     (px.listen server-sock 2)
 		     (let-values (((sock client-address) (px.accept server-sock)))
-		       (px.setsockopt/linger sock #t 1)
 		       (unwind-protect
 			   (let ((bv (make-bytevector 3)))
+			     (px.setsockopt/linger sock #t 1)
+			     (let ((sockaddr (px.getsockname sock)))
+			       (add-result (sockaddr_in.in_addr sockaddr))
+			       (add-result (sockaddr_in.in_port sockaddr)))
+			     (let ((sockaddr (px.getpeername sock)))
+			       (add-result (sockaddr_in.in_addr sockaddr))
+			       ;;nobody knows the port number
+			       #;(add-result (sockaddr_in.in_port sockaddr)))
 			     (px.posix-write sock '#vu8(1 2 3))
 			     (px.posix-read  sock bv)
 			     (add-result bv))
@@ -1400,10 +1408,16 @@
 	   (define (child)
 	     (nanosleep 1 0) ;give parent the time to listen
 	     (let ((sock (px.socket PF_INET SOCK_STREAM 0)))
-	       (px.setsockopt/linger sock #t 1)
 	       (unwind-protect
 		   (let ((bv (make-bytevector 3)))
+		     (px.setsockopt/linger sock #t 1)
 		     (px.connect sock sockaddr)
+		     (let ((sockaddr (px.getpeername sock)))
+		       (assert (equal? '#vu8(127 0 0 1) (sockaddr_in.in_addr sockaddr)))
+		       (assert (equal? 8080 (sockaddr_in.in_port sockaddr))))
+		     (let ((sockaddr (px.getsockname sock)))
+		       (assert (equal? '#vu8(127 0 0 1) (sockaddr_in.in_addr sockaddr)))
+		       (assert (fixnum? (sockaddr_in.in_port sockaddr))))
 		     (px.posix-read sock bv)
 		     (assert (equal? bv '#vu8(1 2 3)))
 		     (px.posix-write sock bv))
@@ -1411,7 +1425,54 @@
 	     (exit 0))
 	   (fork parent child)
 	   #t))
-      => '(#t (#vu8(1 2 3)))))
+      => '(#t (#vu8(127 0 0 1) 8080 #vu8(127 0 0 1) #vu8(1 2 3)))))
+
+  (when (or #f run-inet-tests?)
+    (check 'this ;fork process, raw bytevector input/output, Out Of Band data
+      (with-result
+       (let ((sockaddr (make-sockaddr_in '#vu8(127 0 0 1) 8080)))
+	 (define (parent pid)
+	   (let ((server-sock (px.socket PF_INET SOCK_STREAM 0)))
+	     (unwind-protect
+		 (begin
+		   (px.setsockopt/int server-sock SOL_SOCKET SO_REUSEADDR #t)
+		   (px.bind   server-sock sockaddr)
+		   (px.listen server-sock 2)
+		   (let-values (((sock client-address) (px.accept server-sock)))
+		     (unwind-protect
+			 (let ((bv (make-bytevector 10)))
+			   (px.setsockopt/linger sock #t 1)
+			   (let loop ()
+			     (let-values  (((rd wr ex) (select-fd sock 2 0)))
+			       (cond (ex
+				      (let ((len (px.recv sock bv #f MSG_OOB)))
+					(add-result (list 'oob (subbytevector-u8 bv 0 len)))
+					(loop)))
+				     (rd
+				      (let ((len (px.recv sock bv #f 0)))
+					(when (positive? len)
+					  (add-result (subbytevector-u8 bv 0 len))
+					  (loop))))
+				     (else (loop))))))
+		       (px.close sock))))
+	       (px.close server-sock)
+	       (px.waitpid pid 0))))
+	 (define (child)
+	   (nanosleep 0 1000000) ;give parent the time to listen
+	   (let ((sock (px.socket PF_INET SOCK_STREAM 0)))
+	     (unwind-protect
+		 (let ((bv (make-bytevector 3)))
+		   (px.connect sock sockaddr)
+		   (px.setsockopt/linger sock #t 2)
+		   (px.send sock '#vu8(1 2 3) #f 0)
+		   (nanosleep 0 1000000) ;give it some thrill
+		   (px.send sock '#vu8(4 5 6) #f MSG_OOB)
+		   (px.send sock '#vu8(7 8 9) #f 0))
+	       (px.close sock)))
+	   (exit 0))
+	 (fork parent child)
+	 #t))
+      => '(#t (#vu8(1 2 3) (oob #vu8(6)) #vu8(4 5) #vu8(7 8 9)))))
 
 ;;; --------------------------------------------------------------------
 ;;; PF_INET6 SOCK_STREAM

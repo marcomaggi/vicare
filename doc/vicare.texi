@@ -8035,6 +8035,61 @@ while a Unix--domain socket client should do:
   (px.close sock))
 @end example
 
+To receive incoming data and Out Of Band data, a @tcp{}/@ip{} server
+should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let ((sockaddr    (make-sockaddr_in '#vu8(127 0 0 1) 8080))
+      (server-sock (px.socket PF_INET SOCK_STREAM 0)))
+  (px.bind   server-sock sockaddr)
+  (px.listen server-sock 2)
+  (let*-values
+      (((sock client-address) (px.accept server-sock))
+       ((bv)                  (make-bytevector 10)))
+    (let loop ()
+      (let-values (((rd wr ex) (select-fd sock 2 0)))
+        (cond (ex
+               (let ((len (px.recv sock bv #f MSG_OOB)))
+                 ;; process data in BV between 0 and LEN,
+                 ;; which should be 1
+                 (loop)))
+              (rd
+               (let ((len (px.recv sock bv #f 0)))
+                 (when (positive? len)
+                   ;; process data in BV between 0
+                   ;; and LEN
+                   (loop))))
+              (else (loop)))))
+    (px.close sock))
+  (px.close server-sock))
+@end example
+
+@noindent
+to send outgoing data and Out Of Band data, a @tcp{}/@ip{} client should
+do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let ((sockaddr  (make-sockaddr_in '#vu8(127 0 0 1) 8080))
+      (sock      (px.socket PF_INET SOCK_STREAM 0)))
+  (px.connect sock sockaddr)
+  (px.send sock '#vu8(1 2 3) #f 0)
+  ;; only the single byte 6 (the last) is sent as
+  ;; OOB data, 4 and 5 are sent as ordinary data
+  (px.send sock '#vu8(4 5 6) #f MSG_OOB)
+  (px.send sock '#vu8(7 8 9) #f 0)
+  (px.close sock))
+@end example
+
 @c page
 @node posix time
 @section Time related functions
