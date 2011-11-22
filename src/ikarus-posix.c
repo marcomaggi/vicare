@@ -71,19 +71,10 @@ ik_errno_to_code (void)
 ikptr
 ikrt_posix_strerror (ikptr negated_errno_code, ikpcb* pcb)
 {
-  int   code = - unfix(negated_errno_code);
+  int    code = - unfix(negated_errno_code);
   errno = 0;
-  char* es = strerror(code);
-  if (errno) {
-    return false_object;
-  } else {
-    int   len = strlen(es);
-    ikptr bv  = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1))
-      + bytevector_tag;
-    ref(bv, off_bytevector_length) = fix(len);
-    memcpy((char*)(bv+off_bytevector_data), es, len+1);
-    return bv;
-  }
+  char * error_message = strerror(code);
+  return errno? false_object : ik_bytevector_from_cstring(pcb, error_message);
 }
 
 
@@ -94,59 +85,41 @@ ikrt_posix_strerror (ikptr negated_errno_code, ikpcb* pcb)
 ikptr
 ikrt_posix_getenv (ikptr bv, ikpcb* pcb)
 {
-  char * v = getenv((char*)(long)(bv + off_bytevector_data));
-  if (v) {
-    long int n = strlen(v);
-    ikptr s = ik_safe_alloc(pcb, align(n+disp_bytevector_data+1))
-      + bytevector_tag;
-    ref(s, -bytevector_tag) = fix(n);
-    memcpy((char*)(long)(s+off_bytevector_data), v, n+1);
-    return s;
-  } else {
-    return false_object;
-  }
+  char *  str = getenv(VICARE_BYTEVECTOR_DATA_CHARP(bv));
+  return (str)? ik_bytevector_from_cstring(pcb, str) : false_object;
 }
 ikptr
 ikrt_posix_setenv (ikptr key, ikptr val, ikptr overwrite)
 {
-  int err = setenv((char*)(key+off_bytevector_data),
-                   (char*)(val+off_bytevector_data),
-                   overwrite!=false_object);
+  int   err = setenv(VICARE_BYTEVECTOR_DATA_CHARP(key),
+                     VICARE_BYTEVECTOR_DATA_CHARP(val),
+                     (overwrite != false_object));
   return (err)? false_object : true_object;
 }
 ikptr
 ikrt_posix_unsetenv (ikptr key)
 {
+  char *        varname = VICARE_BYTEVECTOR_DATA_CHARP(key);
 #if (1 == UNSETENV_HAS_RETURN_VALUE)
-  int rv = unsetenv((char*)(key+off_bytevector_data));
+  int           rv = unsetenv(varname);
   return (0 == rv)? true_object : false_object;
 #else
-  unsetenv((char*)(key+off_bytevector_data));
+  unsetenv(varname);
   return true_object;
 #endif
 }
 ikptr
 ikrt_posix_environ (ikpcb* pcb)
 {
-  char **       es = environ;
+  ikptr         list_of_entries = null_object;
   int           i;
-  char *        e;
-  ikptr         ac = null_object;
-  pcb->root0 = &ac;
-  for (i=0; (e=es[i]); i++) {
-    long int bv_len = strlen(e);
-    ikptr    s = ik_safe_alloc(pcb, align(bv_len+disp_bytevector_data+1)) + bytevector_tag;
-    ref(s, off_bytevector_length) = fix(bv_len);
-    memcpy((char*)(long)(s+off_bytevector_data), e, bv_len+1);
-    pcb->root1 = &s;
-    ikptr p = ik_pair_alloc(pcb);
-    pcb->root1 = 0;
-    ref(p, off_cdr) = ac;
-    ref(p, off_car) = s;
-    ac = p;
+  pcb->root0 = &list_of_entries;
+  for (i=0; environ[i]; ++i) {
+    VICARE_DECLARE_ALLOC_AND_CONS(pair, list_of_entries, pcb);
+    VICARE_SET_CAR(pair, ik_bytevector_from_cstring(pcb, environ[i]));
   }
   pcb->root0 = 0;
-  return ac;
+  return list_of_entries;
 }
 
 
@@ -171,61 +144,55 @@ ikrt_posix_getppid(void)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_system (ikptr str)
+ikrt_posix_system (ikptr command)
 {
-  assert(bytevector_tag == tagof(str));
+  int           rv;
   errno = 0;
-  int retval = system((char*)(long)(str+off_bytevector_data));
-  if (retval >= 0)
-    return fix(retval);
-  else
-    return ik_errno_to_code();
+  rv    = system(VICARE_BYTEVECTOR_DATA_CHARP(command));
+  return (0 <= rv)? fix(rv) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_fork (void)
 {
+  int   pid;
   errno = 0;
-  int pid = fork();
-  if (pid >= 0) {
-    return fix(pid);
-  } else {
-    return ik_errno_to_code();
-  }
+  pid   = fork();
+  return (0 <= pid)? fix(pid) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_execv (ikptr bv_filename, ikptr list_argv)
+ikrt_posix_execv (ikptr filename_bv, ikptr argv_list)
 {
-  char *  filename = (char *)(long)(bv_filename + off_bytevector_data);
-  int     argc     = ik_list_length(list_argv);
+  char *  filename = VICARE_BYTEVECTOR_DATA_CHARP(filename_bv);
+  int     argc     = ik_list_length(argv_list);
   char *  argv[1+argc];
-  ik_list_to_argv(list_argv, argv);
+  ik_list_to_argv(argv_list, argv);
   errno   = 0;
   execv(filename, argv);
   /* If we are here: an error occurred. */
   return ik_errno_to_code();
 }
 ikptr
-ikrt_posix_execve (ikptr bv_filename, ikptr list_argv, ikptr list_envv)
+ikrt_posix_execve (ikptr filename_bv, ikptr argv_list, ikptr envv_list)
 {
-  char *  filename = (char *)(long)(bv_filename + off_bytevector_data);
-  int     argc = ik_list_length(list_argv);
+  char *  filename = VICARE_BYTEVECTOR_DATA_CHARP(filename_bv);
+  int     argc = ik_list_length(argv_list);
   char *  argv[1+argc];
-  int     envc = ik_list_length(list_envv);
+  int     envc = ik_list_length(envv_list);
   char *  envv[1+envc];
-  ik_list_to_argv(list_argv, argv);
-  ik_list_to_argv(list_envv, envv);
+  ik_list_to_argv(argv_list, argv);
+  ik_list_to_argv(envv_list, envv);
   errno  = 0;
   execve(filename, argv, envv);
   /* If we are here: an error occurred. */
   return ik_errno_to_code();
 }
 ikptr
-ikrt_posix_execvp (ikptr bv_filename, ikptr list_argv)
+ikrt_posix_execvp (ikptr filename_bv, ikptr argv_list)
 {
-  char *  filename = (char *)(long)(bv_filename + off_bytevector_data);
-  int     argc = ik_list_length(list_argv);
+  char *  filename = VICARE_BYTEVECTOR_DATA_CHARP(filename_bv);
+  int     argc = ik_list_length(argv_list);
   char *  argv[1+argc];
-  ik_list_to_argv(list_argv, argv);
+  ik_list_to_argv(argv_list, argv);
   errno  = 0;
   execvp(filename, argv);
   /* If we are here: an error occurred. */
@@ -241,27 +208,20 @@ ikptr
 ikrt_posix_waitpid (ikptr pid, ikptr options)
 {
   int   status;
-  pid_t retval;
+  pid_t rv;
   errno  = 0;
-  retval = waitpid(unfix(pid), &status, unfix(options));
-  if (0 <= retval)
-    return fix(status);
-  else
-    return ik_errno_to_code();
+  rv     = waitpid(unfix(pid), &status, unfix(options));
+  return (0 <= rv)? fix(status) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_wait (void)
 {
   int   status;
-  pid_t retval;
+  pid_t rv;
   errno  = 0;
-  retval = wait(&status);
-  if (0 <= retval)
-    return fix(status);
-  else
-    return ik_errno_to_code();
+  rv     = wait(&status);
+  return (0 <= rv)? fix(status) : ik_errno_to_code();
 }
-
 ikptr
 ikrt_posix_WIFEXITED (ikptr fx_status)
 {
@@ -416,18 +376,10 @@ posix_stat (ikptr filename_bv, ikptr stat_struct, int follow_symlinks, ikpcb* pc
   char *        filename;
   struct stat   S;
   int           rv;
-  filename = (char*)(long)(filename_bv + off_bytevector_data);
+  filename = VICARE_BYTEVECTOR_DATA_CHARP(filename_bv);
   errno    = 0;
-  if (follow_symlinks) {
-    rv = stat(filename, &S);
-  } else {
-    rv = lstat(filename, &S);
-  }
-  if (0 == rv) {
-    return fill_stat_struct(&S, stat_struct, pcb);
-  } else {
-    return ik_errno_to_code();
-  }
+  rv = (follow_symlinks)? stat(filename, &S) : lstat(filename, &S);
+  return (0 == rv)? fill_stat_struct(&S, stat_struct, pcb) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_stat (ikptr filename_bv, ikptr stat_struct, ikpcb* pcb)
@@ -445,31 +397,28 @@ ikrt_posix_fstat (ikptr fd_fx, ikptr stat_struct, ikpcb* pcb)
   struct stat   S;
   int           rv;
   errno = 0;
-  rv = fstat(unfix(fd_fx), &S);
-  if (0 == rv) {
-    return fill_stat_struct(&S, stat_struct, pcb);
-  } else {
-    return ik_errno_to_code();
-  }
+  rv    = fstat(unfix(fd_fx), &S);
+  return (0 == rv)? fill_stat_struct(&S, stat_struct, pcb) : ik_errno_to_code();
 }
 
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_file_size(ikptr filename, ikpcb* pcb) {
-  char *        pathname;
+ikrt_posix_file_size(ikptr filename_bv, ikpcb* pcb)
+{
+  char *        filename;
   struct stat   S;
   int           rv;
-  pathname = (char*)(filename + off_bytevector_data);
+  filename = VICARE_BYTEVECTOR_DATA_CHARP(filename_bv);
   errno    = 0;
-  rv       = stat(pathname, &S);
+  rv       = stat(filename, &S);
   if (0 == rv) {
     if (sizeof(off_t) == sizeof(long)) {
       return u_to_number(S.st_size, pcb);
     } else if (sizeof(off_t) == sizeof(long long)) {
       return ull_to_number(S.st_size, pcb);
     } else {
-      fprintf(stderr, "vicare internal error: invalid off_t size\n");
+      fprintf(stderr, "Vicare internal error: invalid off_t size\n");
       exit(EXIT_FAILURE);
     }
   } else {
@@ -488,20 +437,15 @@ file_is_p (ikptr pathname_bv, ikptr follow_symlinks, int flag)
   char *        pathname;
   struct stat   S;
   int           rv;
-  pathname = (char*)(long)(pathname_bv + off_bytevector_data);
+  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
-  if (false_object == follow_symlinks) {
-    rv = lstat(pathname, &S);
-  } else {
-    rv = stat(pathname, &S);
-  }
-  if (0 == rv) {
+  rv       = (false_object == follow_symlinks)? lstat(pathname, &S) : stat(pathname, &S);
+  if (0 == rv)
     /* NOTE It is not enough to do "S.st_mode & flag", we really have to
        do "flag == (S.st_mode & flag)". */
     return (flag == (S.st_mode & flag))? true_object : false_object;
-  } else {
+  else
     return ik_errno_to_code();
-  }
 }
 
 #define FILE_IS_P(WHO,FLAG)                                     \
@@ -523,13 +467,9 @@ FILE_IS_P(ikrt_file_is_fifo,            S_IFIFO)
      char *        pathname;                                            \
      struct stat   S;                                                   \
      int           rv;                                                  \
-     pathname = (char*)(long)(pathname_bv + off_bytevector_data);       \
+     pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);              \
      errno    = 0;                                                      \
-     if (false_object == follow_symlinks) {                             \
-       rv = lstat(pathname, &S);                                        \
-     } else {                                                           \
-       rv = stat(pathname, &S);                                         \
-     }                                                                  \
+     rv = (false_object == follow_symlinks)? lstat(pathname, &S) : stat(pathname, &S);  \
      if (0 == rv) {                                                     \
        return (PRED(&S))? true_object : false_object;                   \
      } else {                                                           \
@@ -547,10 +487,10 @@ SPECIAL_FILE_IS_P(ikrt_file_is_shared_memory,S_TYPEISSHM)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_access (ikptr filename, ikptr how)
+ikrt_posix_access (ikptr pathname_bv, ikptr how)
 {
-  char* pathname = (char*)(filename + off_bytevector_data);
-  int   rv;
+  char *        pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  int           rv;
   errno = 0;
   rv    = access(pathname, unfix(how));
   if (0 == rv) {
@@ -569,7 +509,7 @@ ikrt_posix_file_exists (ikptr pathname_bv)
   char *        pathname;
   struct stat   S;
   int           rv;
-  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
+  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   rv = stat(pathname, &S);
   if (0 == rv) {
@@ -589,18 +529,19 @@ ikrt_posix_file_exists (ikptr pathname_bv)
 static ikptr
 timespec_vector (struct timespec * T, ikptr vector, ikpcb* pcb)
 {
-  ref(vector, off_vector_data+0*wordsize) = s_to_number((long)(T->tv_sec),  pcb);
-  ref(vector, off_vector_data+1*wordsize) = s_to_number((long)(T->tv_nsec), pcb);
+  VICARE_VECTOR_SET(vector, 0, s_to_number((long)(T->tv_sec),  pcb));
+  VICARE_VECTOR_SET(vector, 1, s_to_number((long)(T->tv_nsec), pcb));
   return fix(0);
 }
 ikptr
-ikrt_posix_file_ctime (ikptr pathname_bv, ikptr vector, ikpcb* pcb) {
+ikrt_posix_file_ctime (ikptr pathname_bv, ikptr vector, ikpcb* pcb)
+{
   char*         pathname;
   struct stat   S;
   int           rv;
-  pathname = (char*)(long)(pathname_bv + off_bytevector_data);
-  errno = 0;
-  rv    = stat(pathname, &S);
+  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  errno    = 0;
+  rv       = stat(pathname, &S);
   if (0 == rv) {
 #if HAVE_STAT_ST_CTIMESPEC
     return timespec_vector(&S.st_ctimespec, vector, pcb);
@@ -616,15 +557,15 @@ ikrt_posix_file_ctime (ikptr pathname_bv, ikptr vector, ikpcb* pcb) {
     return ik_errno_to_code();
   }
 }
-
 ikptr
-ikrt_posix_file_mtime (ikptr pathname_bv, ikptr vector, ikpcb* pcb) {
+ikrt_posix_file_mtime (ikptr pathname_bv, ikptr vector, ikpcb* pcb)
+{
   char*         pathname;
   struct stat   S;
   int           rv;
-  pathname = (char*)(long)(pathname_bv + off_bytevector_data);
-  errno = 0;
-  rv    = stat(pathname, &S);
+  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  errno    = 0;
+  rv       = stat(pathname, &S);
   if (0 == rv) {
 #if HAVE_STAT_ST_MTIMESPEC
     return timespec_vector(&S.st_mtimespec, vector, pcb);
@@ -640,15 +581,15 @@ ikrt_posix_file_mtime (ikptr pathname_bv, ikptr vector, ikpcb* pcb) {
     return ik_errno_to_code();
   }
 }
-
 ikptr
-ikrt_posix_file_atime (ikptr pathname_bv, ikptr vector, ikpcb* pcb) {
+ikrt_posix_file_atime (ikptr pathname_bv, ikptr vector, ikpcb* pcb)
+{
   char*         pathname;
   struct stat   S;
   int           rv;
-  pathname = (char*)(long)(pathname_bv + off_bytevector_data);
-  errno = 0;
-  rv    = stat(pathname, &S);
+  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  errno    = 0;
+  rv       = stat(pathname, &S);
   if (0 == rv) {
 #if HAVE_STAT_ST_ATIMESPEC
     return timespec_vector(&S.st_atimespec, vector, pcb);
@@ -675,14 +616,10 @@ ikrt_posix_chown (ikptr pathname_bv, ikptr owner_fx, ikptr group_fx)
 {
   char *  pathname;
   int     rv;
-  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
+  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   rv       = chown(pathname, unfix(owner_fx), unfix(group_fx));
-  if (0 == rv) {
-    return fix(0);
-  } else {
-    return ik_errno_to_code();
-  }
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_fchown (ikptr fd, ikptr owner_fx, ikptr group_fx)
@@ -690,11 +627,7 @@ ikrt_posix_fchown (ikptr fd, ikptr owner_fx, ikptr group_fx)
   int     rv;
   errno    = 0;
   rv       = fchown(unfix(fd), unfix(owner_fx), unfix(group_fx));
-  if (0 == rv) {
-    return fix(0);
-  } else {
-    return ik_errno_to_code();
-  }
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_chmod (ikptr pathname_bv, ikptr mode_fx)
@@ -702,15 +635,11 @@ ikrt_posix_chmod (ikptr pathname_bv, ikptr mode_fx)
   char *        pathname;
   int           rv;
   mode_t        mode;
-  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
+  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   mode     = unfix(mode_fx);
   errno    = 0;
   rv       = chmod(pathname, mode);
-  if (0 == rv) {
-    return fix(0);
-  } else {
-    return ik_errno_to_code();
-  }
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_fchmod (ikptr fd, ikptr mode_fx)
@@ -720,11 +649,7 @@ ikrt_posix_fchmod (ikptr fd, ikptr mode_fx)
   mode     = unfix(mode_fx);
   errno    = 0;
   rv       = fchmod(unfix(fd), mode);
-  if (0 == rv) {
-    return fix(0);
-  } else {
-    return ik_errno_to_code();
-  }
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_umask (ikptr mask_fx)
@@ -746,16 +671,12 @@ ikrt_posix_utime (ikptr pathname_bv, ikptr atime_sec_fx, ikptr mtime_sec_fx)
   char *          pathname;
   struct utimbuf  T;
   int             rv;
-  pathname  = (char*)(long)(pathname_bv+off_bytevector_data);
+  pathname  = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   T.actime  = unfix(atime_sec_fx);
   T.modtime = unfix(mtime_sec_fx);
   errno     = 0;
   rv        = utime(pathname, &T);
-  if (0 == rv) {
-    return fix(0);
-  } else {
-    return ik_errno_to_code();
-  }
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_utimes (ikptr pathname_bv,
@@ -765,18 +686,14 @@ ikrt_posix_utimes (ikptr pathname_bv,
   char *          pathname;
   struct timeval  T[2];
   int             rv;
-  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
+  pathname     = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   T[0].tv_sec  = unfix(atime_sec_fx);
   T[0].tv_usec = unfix(atime_usec_fx);
   T[1].tv_sec  = unfix(mtime_sec_fx);
   T[1].tv_usec = unfix(mtime_usec_fx);
   errno        = 0;
   rv           = utimes(pathname, T);
-  if (0 == rv) {
-    return fix(0);
-  } else {
-    return ik_errno_to_code();
-  }
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_lutimes (ikptr pathname_bv,
@@ -786,18 +703,14 @@ ikrt_posix_lutimes (ikptr pathname_bv,
   char *          pathname;
   struct timeval  T[2];
   int             rv;
-  pathname = (char*)(long)(pathname_bv+off_bytevector_data);
+  pathname     = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   T[0].tv_sec  = unfix(atime_sec_fx);
   T[0].tv_usec = unfix(atime_usec_fx);
   T[1].tv_sec  = unfix(mtime_sec_fx);
   T[1].tv_usec = unfix(mtime_usec_fx);
   errno        = 0;
   rv           = lutimes(pathname, T);
-  if (0 == rv) {
-    return fix(0);
-  } else {
-    return ik_errno_to_code();
-  }
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_futimes (ikptr fd,
@@ -812,11 +725,7 @@ ikrt_posix_futimes (ikptr fd,
   T[1].tv_usec = unfix(mtime_usec_fx);
   errno        = 0;
   rv           = futimes(unfix(fd), T);
-  if (0 == rv) {
-    return fix(0);
-  } else {
-    return ik_errno_to_code();
-  }
+  return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 
 

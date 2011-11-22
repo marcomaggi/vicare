@@ -528,6 +528,12 @@ ikptr   ikrt_is_pointer         (ikptr x);
 
 ikptr   ik_vector_alloc         (ikpcb * pcb, long int requested_number_of_items);
 
+#define VICARE_VECTOR_SET(vec,idx,value)        \
+  ref((vec),off_vector_data+(idx)*wordsize) = (value)
+
+#define VICARE_VECTOR_REF(vec,idx)              \
+  ref((vec),off_vector_data+(idx)*wordsize)
+
 
 /** --------------------------------------------------------------------
  ** Bytevector objects.
