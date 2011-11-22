@@ -95,13 +95,6 @@ ikrt_pointer_alloc (long memory, ikpcb * pcb)
   ref(r, wordsize) = (ikptr)memory;
   return r+vector_tag;
 }
-/* FIXME  STALE To be  removed at  the next  boot image  rotation (Marco
-   Maggi; Tue Nov 22, 2011). */
-ikptr
-make_pointer (long memory, ikpcb * pcb)
-{
-  return ikrt_pointer_alloc(memory, pcb);
-}
 ikptr
 ikrt_is_pointer (ikptr x)
 {
@@ -110,13 +103,6 @@ ikrt_is_pointer (ikptr x)
   } else {
     return false_object;
   }
-}
-/* FIXME  STALE To be  removed at  the next  boot image  rotation (Marco
-   Maggi; Tue Nov 22, 2011). */
-ikptr
-ikrt_isapointer (ikptr x, ikpcb* pcb)
-{
-  return ikrt_is_pointer(x);
 }
 
 
