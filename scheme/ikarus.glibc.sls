@@ -34,11 +34,15 @@
     dirfd
 
     ;; temporary files and directories
-    mkstemp		mkdtemp
+    mkstemp			mkdtemp
 
     ;; file system synchronisation
-    sync		fsync
+    sync			fsync
     fdatasync
+
+    ;; sockets
+    if-nametoindex		if-indextoname
+    if-nameindex
     )
   (import (except (ikarus)
 		  ;; operating system environment variables
@@ -48,11 +52,15 @@
 		  dirfd
 
 		  ;; temporary files and directories
-		  mkstemp		mkdtemp
+		  mkstemp			mkdtemp
 
 		  ;; file system synchronisation
-		  sync			fsync
+		  sync				fsync
 		  fdatasync
+
+		  ;; sockets
+		  if-nametoindex		if-indextoname
+		  if-nameindex
 		  )
     (prefix (only (ikarus.posix)
 		  directory-stream?
@@ -196,6 +204,31 @@
     (let ((rv (capi.glibc-fdatasync fd)))
       (unless (unsafe.fxzero? rv)
 	(raise-errno-error who rv fd)))))
+
+
+;;;; sockets
+
+(define-for-glibc (if-nametoindex name)
+  (define who 'if-nametoindex)
+  (with-arguments-validation (who)
+      ((string	name))
+    (capi.glibc-if-nametoindex (string->utf8 name))))
+
+(define-for-glibc (if-indextoname index)
+  (define who 'if-indextoname)
+  (with-arguments-validation (who)
+      ((fixnum	index))
+    (let ((rv (capi.glibc-if-indextoname index)))
+      (and rv (utf8->string rv)))))
+
+(define-for-glibc (if-nameindex)
+  (let ((rv (capi.glibc-if-nameindex)))
+    (map (lambda (entry)
+	   (cons (car entry) (utf8->string (cdr entry))))
+      rv)))
+
+;;; --------------------------------------------------------------------
+
 
 
 ;;;; done

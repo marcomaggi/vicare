@@ -81,8 +81,9 @@
 	  &i/o-eagain make-i/o-eagain i/o-eagain-error?
 	  &i/o-eagain-rtd &i/o-eagain-rcd
 
-	  &errno make-errno-condition errno-condition?
-	  condition-errno)
+	  &errno make-errno-condition errno-condition? condition-errno
+	  &h_errno make-h_errno-condition h_errno-condition? condition-h_errno
+	  )
   (import (except (ikarus)
 		  define-condition-type condition? simple-conditions
 		  condition condition-predicate condition-accessor
@@ -134,6 +135,9 @@
 
 		  &errno make-errno-condition errno-condition?
 		  condition-errno
+
+		  &h_errno make-h_errno-condition h_errno-condition?
+		  condition-h_errno
 
 		  interrupted-condition? make-interrupted-condition
 		  make-source-position-condition source-position-condition?
@@ -463,6 +467,10 @@
   make-errno-condition errno-condition?
   (code		condition-errno))
 
+(define-condition-type &h_errno &condition
+  make-h_errno-condition h_errno-condition?
+  (code		condition-h_errno))
+
 
 ;;;; printing condition objects
 
@@ -519,9 +527,9 @@
 		 #;(apply + (map vector-length (map cdr rf)))))
     (display (record-type-name rtd) port)
     (case rf-len
-      ((0)
+      ((0)	;Most condition objects have no fields...
        (newline port))
-      ((1)
+      ((1)	;... or only one field.
        (display ": " port)
        (write ((record-accessor (caar rf) 0) x) port)
        (newline port))

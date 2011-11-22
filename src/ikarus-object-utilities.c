@@ -99,5 +99,60 @@ ik_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes)
   data[requested_number_of_bytes] = '\0';
   return bv;
 }
+ikptr
+ik_bytevector_from_cstring (ikpcb * pcb, char * cstr)
+{
+  size_t    len  = strlen(cstr);
+  ikptr     bv   = ik_bytevector_alloc(pcb, len);
+  char *    data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+  memcpy(data, cstr, len);
+  return bv;
+}
+ikptr
+ik_bytevector_from_cstring_len (ikpcb * pcb, char * cstr, size_t len)
+{
+  ikptr     bv   = ik_bytevector_alloc(pcb, len);
+  char *    data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+  memcpy(data, cstr, len);
+  return bv;
+}
+ikptr
+ik_bytevector_from_memory_block (ikpcb * pcb, void * memory, size_t length)
+{
+  ikptr     bv   = ik_bytevector_alloc(pcb, length);
+  void *    data = VICARE_BYTEVECTOR_DATA_VOIDP(bv);
+  memcpy(data, memory, length);
+  return bv;
+}
+
+
+/** --------------------------------------------------------------------
+ ** Scheme vector utilities.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ik_vector_alloc (ikpcb * pcb, long int requested_number_of_items)
+{
+  long int  aligned_size;
+  ikptr     vec;
+  aligned_size = align(disp_vector_data + requested_number_of_items * wordsize);
+  vec          = ik_safe_alloc(pcb, aligned_size) + vector_tag;
+  ref(vec, off_vector_length) = fix(requested_number_of_items);
+  return vec;
+}
+
+
+/** --------------------------------------------------------------------
+ ** Scheme struct utilities.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ik_struct_alloc (ikpcb * pcb, ikptr rtd, long int number_of_fields)
+{
+  long  aligned_size = align(disp_record_data + number_of_fields * wordsize);
+  ikptr data         = ik_safe_alloc(pcb, aligned_size) + vector_tag;
+  ref(data, off_record_rtd) = rtd;
+  return data;
+}
 
 /* end of file */

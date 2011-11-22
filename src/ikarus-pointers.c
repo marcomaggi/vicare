@@ -1,18 +1,128 @@
+/*
+  Part of: Vicare
+  Contents: interface to POSIX functions
+  Date: Sun Nov  6, 2011
+
+  Abstract
+
+        This  file is  without  license notice  in  the original  Ikarus
+        distribution for no reason I can know.
+
+  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+
+  This program is  free software: you can redistribute  it and/or modify
+  it under the  terms of the GNU General Public  License as published by
+  the Free Software Foundation, either  version 3 of the License, or (at
+  your option) any later version.
+
+  This program  is distributed in the  hope that it will  be useful, but
+  WITHOUT   ANY  WARRANTY;   without  even   the  implied   warranty  of
+  MERCHANTABILITY  or FITNESS  FOR A  PARTICULAR PURPOSE.   See  the GNU
+  General Public License for more details.
+
+  You  should have received  a copy  of the  GNU General  Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+
+/** --------------------------------------------------------------------
+ ** Headers.
+ ** ----------------------------------------------------------------- */
 
 #include "ikarus.h"
 #include <dlfcn.h>
-#include <string.h>
-#include <stdlib.h>
 #include <gmp.h>
 
+#ifndef RTLD_LOCAL
+#  define RTLD_LOCAL    0 /* for cygwin, possibly incorrect */
+#endif
+
+
+/** --------------------------------------------------------------------
+ ** Shared libraries interface.
+ ** ----------------------------------------------------------------- */
+
 ikptr
-ikrt_isapointer(ikptr x, ikpcb* pcb){
+ikrt_dlerror (ikpcb* pcb)
+{
+  char* str = dlerror();
+  if (NULL == str)
+    return false_object;
+  else {
+    int         len  = strlen(str);
+    ikptr       bv   = ik_bytevector_alloc(pcb, len);
+    void *      data = VICARE_BYTEVECTOR_DATA_VOIDP(bv);
+    memcpy(data, str, len);
+    return bv;
+  }
+}
+ikptr
+ikrt_dlopen (ikptr library_name_bv, ikptr load_lazy, ikptr load_global, ikpcb* pcb)
+{
+  int           flags;
+  char *        name;
+  void *        memory;
+  flags  =
+    ((load_lazy   == false_object) ? RTLD_NOW   : RTLD_LAZY) |
+    ((load_global == false_object) ? RTLD_LOCAL : RTLD_GLOBAL);
+  name   = (false_object == library_name_bv)? NULL : VICARE_BYTEVECTOR_DATA_CHARP(library_name_bv);
+  memory = dlopen(name, flags);
+  return (NULL == memory)? false_object : ikrt_pointer_alloc((long)memory, pcb);
+}
+ikptr
+ikrt_dlclose (ikptr x /*, ikpcb* pcb*/)
+{
+  int   rv = dlclose(VICARE_POINTER_DATA_VOIDP(x));
+  return (0 == rv) ? true_object : false_object;
+}
+ikptr
+ikrt_dlsym (ikptr handle, ikptr sym, ikpcb* pcb)
+{
+  void *  memory = dlsym(VICARE_POINTER_DATA_VOIDP(handle), VICARE_BYTEVECTOR_DATA_CHARP(sym));
+  return (NULL == memory)? false_object : ikrt_pointer_alloc((long)memory, pcb);
+}
+
+
+/** --------------------------------------------------------------------
+ ** Basic pointer object operations.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_pointer_alloc (long memory, ikpcb * pcb)
+{
+  ikptr r = ik_safe_alloc(pcb, pointer_size);
+  ref(r, 0) = pointer_tag;
+  ref(r, wordsize) = (ikptr)memory;
+  return r+vector_tag;
+}
+/* FIXME  STALE To be  removed at  the next  boot image  rotation (Marco
+   Maggi; Tue Nov 22, 2011). */
+ikptr
+make_pointer (long memory, ikpcb * pcb)
+{
+  return ikrt_pointer_alloc(memory, pcb);
+}
+ikptr
+ikrt_is_pointer (ikptr x)
+{
   if ((tagof(x) == vector_tag) && (ref(x, -vector_tag) == pointer_tag)) {
     return true_object;
   } else {
     return false_object;
   }
 }
+/* FIXME  STALE To be  removed at  the next  boot image  rotation (Marco
+   Maggi; Tue Nov 22, 2011). */
+ikptr
+ikrt_isapointer (ikptr x, ikpcb* pcb)
+{
+  return ikrt_is_pointer(x);
+}
+
+
+/** --------------------------------------------------------------------
+ ** Other pointer operations.
+ ** ----------------------------------------------------------------- */
 
 ikptr
 ikrt_pointer_to_int(ikptr x, ikpcb* pcb) {
@@ -36,18 +146,11 @@ ikrt_pointer_to_int(ikptr x, ikpcb* pcb) {
   }
 }
 
-ikptr
-make_pointer(long x, ikpcb* pcb) {
-  ikptr r = ik_safe_alloc(pcb, pointer_size);
-  ref(r, 0) = pointer_tag;
-  ref(r, wordsize) = (ikptr)x;
-  return r+vector_tag;
-}
+#define bnfst_negative(x)       (((unsigned long int)(x)) & bignum_sign_mask)
 
-#define bnfst_negative(x) \
-  (((unsigned long int)(x)) & bignum_sign_mask)
 static long
-integer_to_long(ikptr x) {
+integer_to_long(ikptr x)
+{
   if (is_fixnum(x)) {
     return ((long)x) >> fx_shift;
   } else {
@@ -58,202 +161,77 @@ integer_to_long(ikptr x) {
     }
   }
 }
-
 ikptr
-ikrt_fx_to_pointer(ikptr x, ikpcb* pcb) {
-  return make_pointer(unfix(x), pcb);
+ikrt_fx_to_pointer(ikptr x, ikpcb* pcb)
+{
+  return ikrt_pointer_alloc(unfix(x), pcb);
 }
-
 ikptr
-ikrt_bn_to_pointer(ikptr x, ikpcb* pcb) {
+ikrt_bn_to_pointer (ikptr x, ikpcb* pcb)
+{
   if(bnfst_negative(ref(x, -vector_tag))){
-    return make_pointer(-ref(x, wordsize-vector_tag), pcb);
+    return ikrt_pointer_alloc(-ref(x, wordsize-vector_tag), pcb);
   } else {
-    return make_pointer(ref(x, wordsize-vector_tag), pcb);
+    return ikrt_pointer_alloc(ref(x, wordsize-vector_tag), pcb);
   }
 }
 
 #if 0
 ikptr
-ikrt_pointer_null(ikptr x /*, ikpcb* pcb*/) {
+ikrt_pointer_null(ikptr x /*, ikpcb* pcb*/)
+{
   return ref(x, off_pointer_data) ? true_object : false_object;
 }
 #endif
 
-ikptr
-ikrt_dlerror(ikpcb* pcb) {
-  char* str = dlerror();
-  if (str == NULL) {
-    return false_object;
-  }
-  int len = strlen(str);
-  ikptr bv = ik_safe_alloc(pcb, align(disp_bytevector_data + len + 1));
-  ref(bv, 0) = fix(len);
-  memcpy((void*)(bv+disp_bytevector_data), str, len+1);
-  return bv+bytevector_tag;
-}
-
-#ifndef RTLD_LOCAL
-#define RTLD_LOCAL 0 /* for cygwin, possibly incorrect */
-#endif
+
+/** --------------------------------------------------------------------
+ ** C language level memory operations.
+ ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_dlopen(ikptr x, ikptr load_lazy, ikptr load_global, ikpcb* pcb) {
-  int flags =
-    ((load_lazy == false_object) ? RTLD_NOW : RTLD_LAZY) |
-    ((load_global == false_object) ? RTLD_LOCAL : RTLD_GLOBAL);
-  char* name =
-    (x == false_object)
-      ? NULL
-      : (char*)(x + off_bytevector_data);
-  void* p = dlopen(name, flags);
-  if (p == NULL) {
-    return false_object;
-  } else {
-    return make_pointer((long int) p, pcb);
-  }
-}
-
-ikptr
-ikrt_dlclose(ikptr x /*, ikpcb* pcb*/) {
-  int r = dlclose((void*) ref(x, off_pointer_data));
-  return (r == 0) ? true_object : false_object;
-}
-
-
-ikptr
-ikrt_dlsym(ikptr handle, ikptr sym, ikpcb* pcb) {
-  void* p = dlsym((void*)ref(handle, off_pointer_data),
-                  ((char*)sym) + off_bytevector_data);
-  if (p == NULL) {
-    return false_object;
-  } else {
-    return make_pointer((long int) p, pcb);
-  }
-}
-
-
-ikptr
-ikrt_malloc(ikptr len, ikpcb* pcb) {
+ikrt_malloc (ikptr len, ikpcb* pcb)
+{
   void* p = malloc(unfix(len));
   if (p == NULL) {
     return false_object;
   } else {
-    return make_pointer((long int) p, pcb);
+    return ikrt_pointer_alloc((long int) p, pcb);
   }
 }
-
 ikptr
-ikrt_free(ikptr x) {
+ikrt_free(ikptr x)
+{
   free((void*) ref(x, off_pointer_data));
   return void_object;
 }
-
 ikptr
-ikrt_memcpy_to_bv(ikptr dst, ikptr dst_off, ikptr src, ikptr count
-    /*, ikpcb* pcb */) {
+ikrt_memcpy_to_bv(ikptr dst, ikptr dst_off, ikptr src, ikptr count /*, ikpcb* pcb */)
+{
   void *src_ptr, *dst_ptr;
-
   src_ptr = (void *)ref(src, off_pointer_data);
   dst_ptr = (void *)(dst + off_bytevector_data + unfix(dst_off));
   memcpy(dst_ptr, src_ptr, unfix(count));
   return void_object;
 }
-
 ikptr
-ikrt_memcpy_from_bv(ikptr dst, ikptr src, ikptr src_off, ikptr count
-    /*, ikpcb* pcb */) {
+ikrt_memcpy_from_bv (ikptr dst, ikptr src, ikptr src_off, ikptr count /*, ikpcb* pcb */)
+{
   void *src_ptr, *dst_ptr;
-
   src_ptr = (void *)(src + off_bytevector_data + unfix(src_off));
   dst_ptr = (void *)ref(dst, off_pointer_data);
   memcpy(dst_ptr, src_ptr, unfix(count));
   return void_object;
 }
 
-ikptr
-ikrt_ref_char(ikptr p, ikptr off /*, ikpcb* pcb*/) {
-  return fix(*((signed char*)(((long)ref(p, off_pointer_data)) + unfix(off))));
-}
+
+/** --------------------------------------------------------------------
+ ** Scheme objects to C numbers.
+ ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_ref_uchar(ikptr p, ikptr off /*, ikpcb* pcb*/) {
-  return fix(*((unsigned char*)(((long)ref(p, off_pointer_data)) + unfix(off))));
-}
-
-ikptr
-ikrt_ref_short(ikptr p, ikptr off /*, ikpcb* pcb*/) {
-  return fix(*((signed short*)(((long)ref(p, off_pointer_data)) + unfix(off))));
-}
-
-ikptr
-ikrt_ref_ushort(ikptr p, ikptr off /*, ikpcb* pcb*/) {
-  return fix(*((unsigned short*)(((long)ref(p, off_pointer_data)) + unfix(off))));
-}
-
-ikptr
-ikrt_ref_pointer(ikptr p, ikptr off, ikpcb* pcb) {
-  long idx = integer_to_long(off);
-  void* ptr = (void*)ref(p, off_pointer_data);
-  return make_pointer(ref(ptr, idx), pcb);
-}
-
-ikptr
-ikrt_set_pointer(ikptr p, ikptr off, ikptr v /*, ikpcb* pcb*/) {
-  long idx = integer_to_long(off);
-  void* ptr = (void*)ref(p, off_pointer_data);
-  ref(ptr, idx) = ref(v, off_pointer_data);
-  return void_object;
-}
-
-static ikptr
-double_to_flonum(double x, ikpcb* pcb){
-  ikptr r = ik_safe_alloc(pcb, flonum_size) + vector_tag;
-  ref(r, -vector_tag) = flonum_tag;
-  flonum_data(r) = x;
-  return r;
-}
-
-ikptr
-ikrt_set_float(ikptr p, ikptr off, ikptr v /*, ikpcb* pcb*/) {
-  long idx = integer_to_long(off);
-  ikptr ptr = ref(p, off_pointer_data);
-  *((float*)(ptr+idx)) = flonum_data(v);
-  return void_object;
-}
-
-ikptr
-ikrt_ref_float(ikptr p, ikptr off, ikpcb* pcb) {
-  long idx = integer_to_long(off);
-  ikptr ptr = ref(p, off_pointer_data);
-  double v = *((float*)(ptr+idx));
-  return double_to_flonum(v, pcb);
-}
-
-
-ikptr
-ikrt_set_double(ikptr p, ikptr off, ikptr v /*, ikpcb* pcb*/) {
-  long idx = integer_to_long(off);
-  ikptr ptr = ref(p, off_pointer_data);
-  *((double*)(ptr+idx)) = flonum_data(v);
-  return void_object;
-}
-
-ikptr
-ikrt_ref_double(ikptr p, ikptr off, ikpcb* pcb) {
-  long idx = integer_to_long(off);
-  ikptr ptr = ref(p, off_pointer_data);
-  double v = *((double*)(ptr+idx));
-  return double_to_flonum(v, pcb);
-}
-
-
-
-
-
-
-ikptr
-s_to_number(signed long n, ikpcb* pcb) {
+s_to_number(signed long n, ikpcb* pcb)
+{
   ikptr fx = fix(n);
   if (unfix(fx) == n) {
     return fx;
@@ -271,9 +249,9 @@ s_to_number(signed long n, ikpcb* pcb) {
   }
   return bn+vector_tag;
 }
-
 ikptr
-sll_to_number(signed long long n, ikpcb* pcb) {
+sll_to_number(signed long long n, ikpcb* pcb)
+{
   if (((signed long long)(signed long) n) == n) {
     return s_to_number(n, pcb);
   }
@@ -291,10 +269,9 @@ sll_to_number(signed long long n, ikpcb* pcb) {
   }
   return bn+vector_tag;
 }
-
-
 ikptr
-u_to_number(unsigned long n, ikpcb* pcb) {
+u_to_number(unsigned long n, ikpcb* pcb)
+{
   unsigned long mxn = ((unsigned long)-1)>>(fx_shift+1);
   if (n <= mxn) {
     return fix(n);
@@ -304,10 +281,9 @@ u_to_number(unsigned long n, ikpcb* pcb) {
   ref(bn, disp_bignum_data) = (ikptr)n;
   return bn+vector_tag;
 }
-
-
 ikptr
-ull_to_number(unsigned long long n, ikpcb* pcb) {
+ull_to_number(unsigned long long n, ikpcb* pcb)
+{
   if (((unsigned long long)(unsigned long) n) == n) {
     return u_to_number(n, pcb);
   }
@@ -315,77 +291,46 @@ ull_to_number(unsigned long long n, ikpcb* pcb) {
   bcopy((char*)(&n), (char*)(bn+disp_bignum_data), sizeof(long long));
   return normalize_bignum(sizeof(long long)/sizeof(mp_limb_t), 0, bn);
 }
-
 ikptr
-d_to_number(double n, ikpcb* pcb) {
+d_to_number(double n, ikpcb* pcb)
+{
   ikptr x = ik_safe_alloc(pcb, flonum_size) + vector_tag;
   ref(x, -vector_tag) = flonum_tag;
   flonum_data(x) = n;
   return x;
 }
-
-ikptr
-ikrt_ref_int(ikptr p, ikptr off , ikpcb* pcb) {
-  signed int r =
-    *((signed int*)(((long)ref(p, off_pointer_data)) + unfix(off)));
-  if (wordsize == 8) {
-    return fix(r);
-  } else {
-    return s_to_number(r, pcb);
-  }
+static ikptr
+double_to_flonum (double x, ikpcb* pcb)
+{
+  ikptr r = ik_safe_alloc(pcb, flonum_size) + vector_tag;
+  ref(r, -vector_tag) = flonum_tag;
+  flonum_data(r) = x;
+  return r;
 }
-
-ikptr
-ikrt_ref_uint(ikptr p, ikptr off , ikpcb* pcb) {
-  unsigned int r =
-    *((unsigned int*)(((long)ref(p, off_pointer_data)) + unfix(off)));
-  if (wordsize == 8) {
-    return fix(r);
-  } else {
-    return u_to_number(r, pcb);
-  }
-}
-
-ikptr
-ikrt_ref_long(ikptr p, ikptr off , ikpcb* pcb) {
-  signed long r =
-    *((signed long*)(((long)ref(p, off_pointer_data)) + unfix(off)));
-  return s_to_number(r, pcb);
-}
-
-ikptr
-ikrt_ref_ulong(ikptr p, ikptr off , ikpcb* pcb) {
-  unsigned long r =
-    *((unsigned long*)(((long)ref(p, off_pointer_data)) + unfix(off)));
-  return u_to_number(r, pcb);
-}
-
-ikptr
-ikrt_ref_longlong(ikptr p, ikptr off , ikpcb* pcb) {
-  signed long long r =
-    *((signed long long*)(((long)ref(p, off_pointer_data)) + unfix(off)));
-  return sll_to_number(r, pcb);
-}
-
-ikptr
-ikrt_ref_ulonglong(ikptr p, ikptr off , ikpcb* pcb) {
-  unsigned long long r =
-    *((unsigned long long*)(((long)ref(p, off_pointer_data)) + unfix(off)));
-  return ull_to_number(r, pcb);
-}
-
 long
-extract_num(ikptr x) {
-  if (is_fixnum(x)) {
+extract_num (ikptr x)
+{
+  if (is_fixnum(x))
     return unfix(x);
-  } else if (x == void_object) {
+  else if (x == void_object)
     return 0;
-  } else {
-    if (bnfst_negative(ref(x, -vector_tag))){
+  else {
+    if (bnfst_negative(ref(x, -vector_tag)))
       return (long)(-ref(x, wordsize-vector_tag));
-    } else {
+    else
       return (long)(ref(x, wordsize-vector_tag));
-    }
+  }
+}
+unsigned long
+extract_unum (ikptr x)
+{
+  if (is_fixnum(x))
+    return unfix(x);
+  else if (x == void_object)
+    return 0;
+  else {
+    assert(! bnfst_negative(ref(x, -vector_tag)));
+    return (unsigned long)(ref(x, wordsize-vector_tag));
   }
 }
 
@@ -413,41 +358,160 @@ extract_num_longlong(ikptr x) {
   }
 }
 
-
+
+/** --------------------------------------------------------------------
+ ** Raw memory getters through pointers.
+ ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_set_char(ikptr p, ikptr off, ikptr v/*, ikpcb* pcb*/) {
-  *((char*)(((long)ref(p, off_pointer_data)) + unfix(off))) =
-    extract_num(v);
+ikrt_ref_char(ikptr p, ikptr off /*, ikpcb* pcb*/)
+{
+  return fix(*((signed char*)(((long)ref(p, off_pointer_data)) + unfix(off))));
+}
+ikptr
+ikrt_ref_uchar(ikptr p, ikptr off /*, ikpcb* pcb*/)
+{
+  return fix(*((unsigned char*)(((long)ref(p, off_pointer_data)) + unfix(off))));
+}
+ikptr
+ikrt_ref_short(ikptr p, ikptr off /*, ikpcb* pcb*/)
+{
+  return fix(*((signed short*)(((long)ref(p, off_pointer_data)) + unfix(off))));
+}
+ikptr
+ikrt_ref_ushort(ikptr p, ikptr off /*, ikpcb* pcb*/)
+{
+  return fix(*((unsigned short*)(((long)ref(p, off_pointer_data)) + unfix(off))));
+}
+ikptr
+ikrt_ref_pointer(ikptr p, ikptr off, ikpcb* pcb)
+{
+  long idx = integer_to_long(off);
+  void* ptr = (void*)ref(p, off_pointer_data);
+  return ikrt_pointer_alloc(ref(ptr, idx), pcb);
+}
+ikptr
+ikrt_ref_float(ikptr p, ikptr off, ikpcb* pcb)
+{
+  long idx = integer_to_long(off);
+  ikptr ptr = ref(p, off_pointer_data);
+  double v = *((float*)(ptr+idx));
+  return double_to_flonum(v, pcb);
+}
+ikptr
+ikrt_ref_double(ikptr p, ikptr off, ikpcb* pcb)
+{
+  long idx = integer_to_long(off);
+  ikptr ptr = ref(p, off_pointer_data);
+  double v = *((double*)(ptr+idx));
+  return double_to_flonum(v, pcb);
+}
+ikptr
+ikrt_ref_int(ikptr p, ikptr off , ikpcb* pcb) {
+  signed int r =
+    *((signed int*)(((long)ref(p, off_pointer_data)) + unfix(off)));
+  if (wordsize == 8) {
+    return fix(r);
+  } else {
+    return s_to_number(r, pcb);
+  }
+}
+ikptr
+ikrt_ref_uint(ikptr p, ikptr off , ikpcb* pcb)
+{
+  unsigned int r =
+    *((unsigned int*)(((long)ref(p, off_pointer_data)) + unfix(off)));
+  if (wordsize == 8) {
+    return fix(r);
+  } else {
+    return u_to_number(r, pcb);
+  }
+}
+ikptr
+ikrt_ref_long(ikptr p, ikptr off , ikpcb* pcb)
+{
+  signed long r = *((signed long*)(((long)ref(p, off_pointer_data)) + unfix(off)));
+  return s_to_number(r, pcb);
+}
+ikptr
+ikrt_ref_ulong(ikptr p, ikptr off , ikpcb* pcb)
+{
+  unsigned long r = *((unsigned long*)(((long)ref(p, off_pointer_data)) + unfix(off)));
+  return u_to_number(r, pcb);
+}
+ikptr
+ikrt_ref_longlong(ikptr p, ikptr off , ikpcb* pcb)
+{
+  signed long long r = *((signed long long*)(((long)ref(p, off_pointer_data)) + unfix(off)));
+  return sll_to_number(r, pcb);
+}
+ikptr
+ikrt_ref_ulonglong(ikptr p, ikptr off , ikpcb* pcb)
+{
+  unsigned long long r = *((unsigned long long*)(((long)ref(p, off_pointer_data)) + unfix(off)));
+  return ull_to_number(r, pcb);
+}
+
+
+/** --------------------------------------------------------------------
+ ** Raw memory setters through pointers.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_set_char (ikptr pointer, ikptr byte_offset, ikptr value /*, ikpcb* pcb*/)
+{
+  long  memory = VICARE_POINTER_DATA_LONG(pointer) + unfix(byte_offset);
+  *((char*)memory) = extract_num(value);
+  return void_object;
+}
+ikptr
+ikrt_set_short (ikptr pointer, ikptr byte_offset, ikptr value /*, ikpcb* pcb*/)
+{
+  long  memory = VICARE_POINTER_DATA_LONG(pointer) + unfix(byte_offset);
+  *((short*)memory) = extract_num(value);
+  return void_object;
+}
+ikptr
+ikrt_set_int (ikptr pointer, ikptr byte_offset, ikptr value /*, ikpcb* pcb*/)
+{
+  long  memory = VICARE_POINTER_DATA_LONG(pointer) + unfix(byte_offset);
+  *((int*)memory) = extract_num(value);
+  return void_object;
+}
+ikptr
+ikrt_set_long (ikptr pointer, ikptr byte_offset, ikptr value /*, ikpcb* pcb*/)
+{
+  long  memory = VICARE_POINTER_DATA_LONG(pointer) + unfix(byte_offset);
+  *((long*)memory) = extract_num(value);
+  return void_object;
+}
+ikptr
+ikrt_set_longlong (ikptr pointer, ikptr byte_offset, ikptr value /*, ikpcb* pcb*/)
+{
+  long  memory = VICARE_POINTER_DATA_LONG(pointer) + unfix(byte_offset);
+  *((long long*)memory) = extract_num_longlong(value);
+  return void_object;
+}
+ikptr
+ikrt_set_double (ikptr pointer, ikptr byte_offset, ikptr value /*, ikpcb* pcb*/)
+{
+  long  memory = VICARE_POINTER_DATA_LONG(pointer) + unfix(byte_offset);
+  *((double*)memory) = flonum_data(value);
+  return void_object;
+}
+ikptr
+ikrt_set_float (ikptr pointer, ikptr byte_offset, ikptr value /*, ikpcb* pcb*/)
+{
+  long  memory = VICARE_POINTER_DATA_LONG(pointer) + unfix(byte_offset);
+  *((float*)memory) = flonum_data(value);
+  return void_object;
+}
+ikptr
+ikrt_set_pointer (ikptr pointer, ikptr byte_offset, ikptr value /*, ikpcb* pcb*/)
+{
+  long  memory = VICARE_POINTER_DATA_LONG(pointer) + unfix(byte_offset);
+  *((long *)memory) = VICARE_POINTER_DATA_LONG(value);
   return void_object;
 }
 
-ikptr
-ikrt_set_short(ikptr p, ikptr off, ikptr v/*, ikpcb* pcb*/) {
-  *((short*)(((long)ref(p, off_pointer_data)) + unfix(off))) =
-    extract_num(v);
-  return void_object;
-}
-
-ikptr
-ikrt_set_int(ikptr p, ikptr off, ikptr v/*, ikpcb* pcb*/) {
-  *((int*)(((long)ref(p, off_pointer_data)) + unfix(off))) =
-    extract_num(v);
-  return void_object;
-}
-
-ikptr
-ikrt_set_long(ikptr p, ikptr off, ikptr v/*, ikpcb* pcb*/) {
-  *((long*)(((long)ref(p, off_pointer_data)) + unfix(off))) =
-    extract_num(v);
-  return void_object;
-}
-
-ikptr
-ikrt_set_longlong(ikptr p, ikptr off, ikptr v/*, ikpcb* pcb*/) {
-  *((long long*)(((long)ref(p, off_pointer_data)) + unfix(off))) =
-    extract_num_longlong(v);
-  return void_object;
-}
-
-
+/* end of file */

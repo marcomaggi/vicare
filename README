@@ -10,8 +10,6 @@ Topics
   2. License
   4. Install
   5. Testing
-  6. Policy
-  7. Contributing
   A. Credits
   B. Bug reports
   C. Resources
@@ -126,59 +124,13 @@ selected command line arguments doing:
 where the contents  of the "user_flags" variable are  placed directly on
 the command line.
 
+  The  file "test-vicare-posix.sps" contains  tests for  network sockets
+which are  normally disabled because  the firewall rules on  the hosting
+machine must  allo connections on 127.0.0.1:8080  and 127.0.0.1:8081; to
+enable these tests run make with the environment variable RUN_INET_TESTS
+set to something:
 
-6. Policy
----------
-
-Vicare has the following short and midterm goals:
-
-* Allow the installation  of both Ikarus and Vicare  without conflict in
-  installed files and directories.
-
-* Document  the  internals  of   the  distribution,  both  the  building
-  infrastructure and the source code.
-
-* Fix bugs.
-
-* Enforce compliance with R6RS, keeping a pragmatic eye at issues.
-
-* Enhance the POSIX interface.
-
-* Avoid the distribution of companion libraries: only code directly used
-  in Vicare's internals is distribted.   It is always possible to fork a
-  branch  and build a  "batteries included"  distribution as  a separate
-  project.
-
-
-7. Contributing
----------------
-
-If you  feel the need to  contribute bug reports, bug  fixes, patches or
-documentation to  Vicare Scheme: you  are welcome.  For bug  reports and
-patches, you should adhere to the following rules:
-
-* Vicare  is hosted  at  GitHub, so  first  of all  an  issue should  be
-  registered at the development site:
-
-                 <http://github.com/marcomaggi/vicare/>
-
-* Patches are accepted  only if they come with  documentation and tests,
-  but  drop a  note to  the maintainers  anyway.  For  patches enhancing
-  compliance with R6RS, documentation is not needed.
-
-* Big and revolutionary patches will be rejected.  It is always possible
-  to  fork a  branch and  develop whatever  experimental reorganisation,
-  rewriting or  enhancement (for example  support for other  CPUs).  Big
-  changes can be merged later if they are successful.
-
-  For  documentation  contributions,  you  can email  directly  Vicare's
-maintainers  with  or  without   opening  an  issue  about  undocumented
-features.  Documentation in patches should  be added to the Texinfo file
-"doc/vicare.texi",  but pure  ASCII documentation  may be  accepted (and
-formatted by the maintainer) if it is not too long.
-
-  Tests  for  patches must  be  added  under  the "tests"  subdirectory,
-ideally by creating a new test file.
+   $ make test file=vicare-posix RUN_INET_TESTS=1
 
 
 A. Credits
@@ -221,7 +173,7 @@ B. Bug reports
 Bug reports  are appreciated, register  them using the issue  tracker at
 Vicare's GitHub site:
 
-  <http://github.com/marcomaggi/vicare/issues>
+	      <http://github.com/marcomaggi/vicare/issues>
 
 
 C. Resources

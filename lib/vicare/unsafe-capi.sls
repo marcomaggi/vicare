@@ -113,7 +113,34 @@
     glibc-fdatasync
 
     ;; network sockets
-    posix-bind
+    glibc-if-nametoindex		glibc-if-indextoname
+    glibc-if-nameindex
+    posix-make-sockaddr_un		posix-sockaddr_un.pathname
+    posix-make-sockaddr_in		posix-make-sockaddr_in6
+    posix-sockaddr_in.in_addr		posix-sockaddr_in6.in6_addr
+    posix-sockaddr_in.in_port		posix-sockaddr_in6.in6_port
+    posix-in6addr_loopback		posix-in6addr_any
+    posix-inet_aton			posix-inet_ntoa
+    posix-inet_pton			posix-inet_ntop
+    posix-gethostbyname			posix-gethostbyname2
+    posix-gethostbyaddr			posix-host-entries
+    posix-getaddrinfo			posix-gai_strerror
+    posix-getprotobyname		posix-getprotobynumber
+    posix-getservbyname			posix-getservbyport
+    posix-protocol-entries		posix-service-entries
+    posix-getnetbyname			posix-getnetbyaddr
+    posix-network-entries
+    posix-socket			posix-shutdown
+    posix-socketpair
+    posix-connect			posix-listen
+    posix-accept			posix-bind
+    posix-getpeername			posix-getsockname
+    posix-send				posix-recv
+    posix-sendto			posix-recvfrom
+    posix-setsockopt			posix-getsockopt
+    posix-setsockopt/int		posix-getsockopt/int
+    posix-setsockopt/size_t		posix-getsockopt/size_t
+    posix-setsockopt/linger		posix-getsockopt/linger
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -489,9 +516,194 @@
 
 ;;;; network sockets
 
-(define-inline (posix-bind sock sockaddr-bv)
-  (foreign-call "ikrt_posix_bind" sock sockaddr-bv))
+(define-inline (glibc-if-nametoindex name)
+  (foreign-call "ikrt_glibc_if_nametoindex" name))
 
+(define-inline (glibc-if-indextoname index)
+  (foreign-call "ikrt_glibc_if_indextoname" index))
+
+(define-inline (glibc-if-nameindex)
+  (foreign-call "ikrt_glibc_if_nameindex"))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-make-sockaddr_un pathname-bv)
+  (foreign-call "ikrt_posix_make_sockaddr_un" pathname-bv))
+
+(define-inline (posix-sockaddr_un.pathname addr)
+  (foreign-call "ikrt_posix_sockaddr_un_pathname" addr))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-make-sockaddr_in addr port)
+  (foreign-call "ikrt_posix_make_sockaddr_in" addr port))
+
+(define-inline (posix-sockaddr_in.in_addr sockaddr)
+  (foreign-call "ikrt_posix_sockaddr_in_in_addr" sockaddr))
+
+(define-inline (posix-sockaddr_in.in_port sockaddr)
+  (foreign-call "ikrt_posix_sockaddr_in_in_port" sockaddr))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-make-sockaddr_in6 addr port)
+  (foreign-call "ikrt_posix_make_sockaddr_in6" addr port))
+
+(define-inline (posix-sockaddr_in6.in6_addr sockaddr)
+  (foreign-call "ikrt_posix_sockaddr_in6_in6_addr" sockaddr))
+
+(define-inline (posix-sockaddr_in6.in6_port sockaddr)
+  (foreign-call "ikrt_posix_sockaddr_in6_in6_port" sockaddr))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-in6addr_loopback)
+  (foreign-call "ikrt_posix_in6addr_loopback"))
+
+(define-inline (posix-in6addr_any)
+  (foreign-call "ikrt_posix_in6addr_any"))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-inet_aton dotted-quad)
+  (foreign-call "ikrt_posix_inet_aton" dotted-quad))
+
+(define-inline (posix-inet_ntoa addr)
+  (foreign-call "ikrt_posix_inet_ntoa" addr))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-inet_pton af presentation)
+  (foreign-call "ikrt_posix_inet_pton" af presentation))
+
+(define-inline (posix-inet_ntop af addr)
+  (foreign-call "ikrt_posix_inet_ntop" af addr))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-gethostbyname rtd hostname)
+  (foreign-call "ikrt_posix_gethostbyname" rtd hostname))
+
+(define-inline (posix-gethostbyname2 rtd hostname addrtype)
+  (foreign-call "ikrt_posix_gethostbyname2" rtd hostname addrtype))
+
+(define-inline (posix-gethostbyaddr rtd addr)
+  (foreign-call "ikrt_posix_gethostbyaddr" rtd addr))
+
+(define-inline (posix-host-entries rtd)
+  (foreign-call "ikrt_posix_host_entries" rtd))
+
+(define-inline (posix-getaddrinfo rtd node service hints)
+  (foreign-call "ikrt_posix_getaddrinfo" rtd node service hints))
+
+(define-inline (posix-gai_strerror code)
+  (foreign-call "ikrt_posix_gai_strerror" code))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-getprotobyname rtd name)
+  (foreign-call "ikrt_posix_getprotobyname" rtd name))
+
+(define-inline (posix-getprotobynumber rtd num)
+  (foreign-call "ikrt_posix_getprotobynumber" rtd num))
+
+(define-inline (posix-protocol-entries rtd)
+  (foreign-call "ikrt_posix_protocol_entries" rtd))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-getservbyname rtd name protocol)
+  (foreign-call "ikrt_posix_getservbyname" rtd name protocol))
+
+(define-inline (posix-getservbyport rtd port protocol)
+  (foreign-call "ikrt_posix_getservbyport" rtd port protocol))
+
+(define-inline (posix-service-entries rtd)
+  (foreign-call "ikrt_posix_service_entries" rtd))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-getnetbyname rtd name)
+  (foreign-call "ikrt_posix_getnetbyname" rtd name))
+
+(define-inline (posix-getnetbyaddr rtd net type)
+  (foreign-call "ikrt_posix_getnetbyaddr" rtd net type))
+
+(define-inline (posix-network-entries rtd)
+  (foreign-call "ikrt_posix_network_entries" rtd))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-socket namespace style protocol)
+  (foreign-call "ikrt_posix_socket" namespace style protocol))
+
+(define-inline (posix-shutdown sock how)
+  (foreign-call "ikrt_posix_shutdown" sock how))
+
+(define-inline (posix-socketpair namespace style protocol)
+  (foreign-call "ikrt_posix_socketpair" namespace style protocol))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-connect sock sockaddr)
+  (foreign-call "ikrt_posix_connect" sock sockaddr))
+
+(define-inline (posix-listen sock max-pending-conns)
+  (foreign-call "ikrt_posix_listen" sock max-pending-conns))
+
+(define-inline (posix-accept sock)
+  (foreign-call "ikrt_posix_accept" sock))
+
+(define-inline (posix-bind sock sockaddr)
+  (foreign-call "ikrt_posix_bind" sock sockaddr))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-getpeername sock)
+  (foreign-call "ikrt_posix_getpeername" sock))
+
+(define-inline (posix-getsockname sock)
+  (foreign-call "ikrt_posix_getsockname" sock))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-send sock buffer size flags)
+  (foreign-call "ikrt_posix_send" sock buffer size flags))
+
+(define-inline (posix-recv sock buffer size flags)
+  (foreign-call "ikrt_posix_recv" sock buffer size flags))
+
+(define-inline (posix-sendto sock buffer size flags addr)
+  (foreign-call "ikrt_posix_sendto" sock buffer size flags addr))
+
+(define-inline (posix-recvfrom sock buffer size flags)
+  (foreign-call "ikrt_posix_recvfrom" sock buffer size flags))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-setsockopt sock level option optval)
+  (foreign-call "ikrt_posix_setsockopt" sock level option optval))
+
+(define-inline (posix-setsockopt/int sock level option optval)
+  (foreign-call "ikrt_posix_setsockopt_int" sock level option optval))
+
+(define-inline (posix-setsockopt/size_t sock level option optval)
+  (foreign-call "ikrt_posix_setsockopt_size_t" sock level option optval))
+
+(define-inline (posix-getsockopt sock level option optval)
+  (foreign-call "ikrt_posix_getsockopt" sock level option optval))
+
+(define-inline (posix-getsockopt/int sock level option)
+  (foreign-call "ikrt_posix_getsockopt_int" sock level option))
+
+(define-inline (posix-getsockopt/size_t sock level option)
+  (foreign-call "ikrt_posix_getsockopt_size_t" sock level option))
+
+(define-inline (posix-setsockopt/linger sock onoff linger)
+  (foreign-call "ikrt_posix_setsockopt_linger" sock onoff linger))
+
+(define-inline (posix-getsockopt/linger sock)
+  (foreign-call "ikrt_posix_getsockopt_linger" sock))
 
 
 ;;;; platform API for file descriptors

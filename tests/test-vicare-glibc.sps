@@ -27,6 +27,8 @@
 
 (import (rename (vicare)
 		(parameterize	parametrise))
+  (prefix (vicare glibc)
+	  glibc.)
   (vicare platform-constants)
   (vicare syntactic-extensions)
   (checks))
@@ -39,7 +41,7 @@
 
   (check
       (let* ((stream (opendir ".."))
-	     (fd     (dirfd stream)))
+	     (fd     (glibc.dirfd stream)))
 	(closedir stream)
 	(fixnum? fd))
     => #t)
@@ -51,7 +53,7 @@
 	  (unwind-protect
 	      (let ((stream (opendir "one")))
 		(unwind-protect
-		    (let ((fd (dirfd stream)))
+		    (let ((fd (glibc.dirfd stream)))
 		      (fchdir fd)
 		      (getcwd/string))
 		  (closedir stream)))
@@ -66,7 +68,7 @@
 
   (check
       (let* ((template	((string->filename-func) "/tmp/tmp.XXXXXX"))
-	     (fd	(mkstemp template)))
+	     (fd	(glibc.mkstemp template)))
 ;;;	(check-pretty-print ((filename->string-func) template))
 	(unwind-protect
 	    (fixnum? fd)
@@ -75,7 +77,7 @@
 
   (check
       (let* ((template	((string->filename-func) "/tmp/tmp.XXXXXX"))
-	     (name	(mkdtemp template)))
+	     (name	(glibc.mkdtemp template)))
 ;;;	(check-pretty-print ((filename->string-func) template))
 ;;;	(check-pretty-print ((filename->string-func) name))
 	(unwind-protect
@@ -90,9 +92,25 @@
 
   (check
       (begin
-	(sync)
+	(glibc.sync)
 	#t)
     => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'sockets))
+
+  (check (glibc.if-indextoname 0)	=> #f)
+  (check (glibc.if-indextoname 1)	=> "lo")
+  (check (glibc.if-indextoname 2)	=> "eth0")
+
+  (check (glibc.if-nametoindex "lo")		=> 1)
+  (check (glibc.if-nametoindex "eth0")	=> 2)
+
+  (check-pretty-print (list 'alist-of-ifaces (glibc.if-nameindex)))
+
+;;; --------------------------------------------------------------------
 
   #t)
 

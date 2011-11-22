@@ -17,114 +17,162 @@
 
 (library (ikarus.posix)
   (export
-    ;; errno codes handling
-    errno->string
+    ;; errno and h_errno codes handling
+    errno->string			h_errno->string
+    strerror				h_strerror
 
     ;; interprocess singnal codes handling
     interprocess-signal->string
 
-    ;; error handling
-    strerror
-
     ;; system environment variables
-    getenv			setenv
+    getenv				setenv
     unsetenv
-    environ			environ-table
-    environ->table		table->environ
+    environ				environ-table
+    environ->table			table->environ
 
     ;; process identifier
-    getpid			getppid
+    getpid				getppid
 
     ;; executing processes
-    fork			system
-    execv			execve
-    execl			execle
-    execvp			execlp
+    fork				system
+    execv				execve
+    execl				execle
+    execvp				execlp
 
     ;; process exit status
-    waitpid			wait
-    WIFEXITED			WEXITSTATUS
-    WIFSIGNALED			WTERMSIG
-    WCOREDUMP			WIFSTOPPED
+    waitpid				wait
+    WIFEXITED				WEXITSTATUS
+    WIFSIGNALED				WTERMSIG
+    WCOREDUMP				WIFSTOPPED
     WSTOPSIG
 
     ;; interprocess signals
-    raise-signal		kill
+    raise-signal			kill
     pause
 
     ;; file system inspection
-    stat			lstat
+    stat				lstat
     fstat
-    make-struct-stat		struct-stat?
-    struct-stat-st_mode		struct-stat-st_ino
-    struct-stat-st_dev		struct-stat-st_nlink
-    struct-stat-st_uid		struct-stat-st_gid
+    make-struct-stat			struct-stat?
+    struct-stat-st_mode			struct-stat-st_ino
+    struct-stat-st_dev			struct-stat-st_nlink
+    struct-stat-st_uid			struct-stat-st_gid
     struct-stat-st_size
-    struct-stat-st_atime	struct-stat-st_atime_usec
-    struct-stat-st_mtime	struct-stat-st_mtime_usec
-    struct-stat-st_ctime	struct-stat-st_ctime_usec
-    struct-stat-st_blocks	struct-stat-st_blksize
+    struct-stat-st_atime		struct-stat-st_atime_usec
+    struct-stat-st_mtime		struct-stat-st_mtime_usec
+    struct-stat-st_ctime		struct-stat-st_ctime_usec
+    struct-stat-st_blocks		struct-stat-st_blksize
 
-    file-is-directory?		file-is-char-device?
-    file-is-block-device?	file-is-regular-file?
-    file-is-symbolic-link?	file-is-socket?
-    file-is-fifo?		file-is-message-queue?
-    file-is-semaphore?		file-is-shared-memory?
+    file-is-directory?			file-is-char-device?
+    file-is-block-device?		file-is-regular-file?
+    file-is-symbolic-link?		file-is-socket?
+    file-is-fifo?			file-is-message-queue?
+    file-is-semaphore?			file-is-shared-memory?
 
-    access			file-readable?
-    file-writable?		file-executable?
-    file-atime			file-ctime
+    access				file-readable?
+    file-writable?			file-executable?
+    file-atime				file-ctime
     file-mtime
-    file-size			file-exists?
+    file-size				file-exists?
 
-    S_ISDIR			S_ISCHR
-    S_ISBLK			S_ISREG
-    S_ISLNK			S_ISSOCK
+    S_ISDIR				S_ISCHR
+    S_ISBLK				S_ISREG
+    S_ISLNK				S_ISSOCK
     S_ISFIFO
 
     ;; file system muators
-    chown			fchown
-    chmod			fchmod
-    umask			getumask
-    utime			utimes
-    lutimes			futimes
+    chown				fchown
+    chmod				fchmod
+    umask				getumask
+    utime				utimes
+    lutimes				futimes
 
     ;; hard and symbolic links
-    link			symlink
-    readlink			readlink/string
-    realpath			realpath/string
-    delete-file			unlink
-    posix-remove		rename
+    link				symlink
+    readlink				readlink/string
+    realpath				realpath/string
+    delete-file				unlink
+    posix-remove			rename
 
     ;; file system directories
-    mkdir			mkdir/parents
+    mkdir				mkdir/parents
     rmdir
-    getcwd			getcwd/string
-    chdir			fchdir
-    opendir			fdopendir
-    readdir			readdir/string
-    closedir			rewinddir
-    telldir			seekdir
+    getcwd				getcwd/string
+    chdir				fchdir
+    opendir				fdopendir
+    readdir				readdir/string
+    closedir				rewinddir
+    telldir				seekdir
 
-    make-directory-stream	directory-stream?
-    directory-stream-pathname	directory-stream-pointer
-    directory-stream-fd		directory-stream-closed?
+    make-directory-stream		directory-stream?
+    directory-stream-pathname		directory-stream-pointer
+    directory-stream-fd			directory-stream-closed?
 
     split-file-name
 
     ;; file descriptors
-    open			close
-    posix-read			pread
-    posix-write			pwrite
+    open				close
+    posix-read				pread
+    posix-write				pwrite
     lseek
-    readv			writev
-    select			select-fd
-    fcntl			ioctl
-    dup				dup2
-    pipe			mkfifo
+    readv				writev
+    select				select-fd
+    fcntl				ioctl
+    dup					dup2
+    pipe				mkfifo
 
     ;; sockets
-    bind
+    make-sockaddr_un
+    sockaddr_un.pathname		sockaddr_un.pathname/string
+    make-sockaddr_in			make-sockaddr_in6
+    sockaddr_in.in_addr			sockaddr_in6.in6_addr
+    sockaddr_in.in_port			sockaddr_in6.in6_port
+    in6addr_loopback			in6addr_any
+    inet-aton				inet-ntoa
+    inet-pton				inet-ntop
+    inet-ntoa/string			inet-ntop/string
+    gethostbyname			gethostbyname2
+    gethostbyaddr			host-entries
+    getaddrinfo				gai-strerror
+    getprotobyname			getprotobynumber
+    getservbyname			getservbyport
+    protocol-entries			service-entries
+    socket				shutdown
+    socketpair
+    connect				listen
+    accept				bind
+    getpeername				getsockname
+    send				recv
+    sendto				recvfrom
+    setsockopt				getsockopt
+    setsockopt/int			getsockopt/int
+    setsockopt/size_t			getsockopt/size_t
+    setsockopt/linger			getsockopt/linger
+    getnetbyname			getnetbyaddr
+    network-entries
+
+    make-struct-hostent			struct-hostent?
+    struct-hostent-h_name		struct-hostent-h_aliases
+    struct-hostent-h_addrtype		struct-hostent-h_length
+    struct-hostent-h_addr_list		struct-hostent-h_addr
+
+    make-struct-addrinfo		struct-addrinfo?
+    struct-addrinfo-ai_flags		struct-addrinfo-ai_family
+    struct-addrinfo-ai_socktype		struct-addrinfo-ai_protocol
+    struct-addrinfo-ai_addrlen		struct-addrinfo-ai_addr
+    struct-addrinfo-ai_canonname
+
+    make-struct-protoent		struct-protoent?
+    struct-protoent-p_name		struct-protoent-p_aliases
+    struct-protoent-p_proto
+
+    make-struct-servent			struct-servent?
+    struct-servent-s_name		struct-servent-s_aliases
+    struct-servent-s_port		struct-servent-s_proto
+
+    make-struct-netent			struct-netent?
+    struct-netent-n_name		struct-netent-n_aliases
+    struct-netent-n_addrtype		struct-netent-n_net
 
     ;; time functions
     nanosleep
@@ -132,14 +180,12 @@
     ;; miscellaneous functions
     file-descriptor?)
   (import (except (ikarus)
-		  ;; errno codes handling
-		  errno->string
+		  ;; errno and h_errno codes handling
+		  errno->string			h_errno->string
+		  strerror			h_strerror
 
 		  ;; interprocess singnal codes handling
 		  interprocess-signal->string
-
-		  ;; error handling
-		  strerror
 
 		  ;; system environment variables
 		  getenv			setenv
@@ -238,7 +284,57 @@
 		  pipe				mkfifo
 
 		  ;; sockets
-		  bind
+		  make-sockaddr_un
+		  sockaddr_un.pathname		sockaddr_un.pathname/string
+		  make-sockaddr_in		make-sockaddr_in6
+		  sockaddr_in.in_addr		sockaddr_in6.in6_addr
+		  sockaddr_in.in_port		sockaddr_in6.in6_port
+		  in6addr_loopback		in6addr_any
+		  inet-aton			inet-ntoa
+		  inet-pton			inet-ntop
+		  inet-ntoa/string		inet-ntop/string
+		  gethostbyname			gethostbyname2
+		  gethostbyaddr			host-entries
+		  getaddrinfo			gai-strerror
+		  getprotobyname		getprotobynumber
+		  getservbyname			getservbyport
+		  protocol-entries		service-entries
+		  socket			shutdown
+		  socketpair
+		  connect			listen
+		  accept			bind
+		  getpeername			getsockname
+		  send				recv
+		  sendto			recvfrom
+		  setsockopt			getsockopt
+		  setsockopt/int		getsockopt/int
+		  setsockopt/size_t		getsockopt/size_t
+		  setsockopt/linger		getsockopt/linger
+		  getnetbyname			getnetbyaddr
+		  network-entries
+
+		  make-struct-hostent		struct-hostent?
+		  struct-hostent-h_name		struct-hostent-h_aliases
+		  struct-hostent-h_addrtype	struct-hostent-h_length
+		  struct-hostent-h_addr_list	struct-hostent-h_addr
+
+		  make-struct-addrinfo		struct-addrinfo?
+		  struct-addrinfo-ai_flags	struct-addrinfo-ai_family
+		  struct-addrinfo-ai_socktype	struct-addrinfo-ai_protocol
+		  struct-addrinfo-ai_addrlen	struct-addrinfo-ai_addr
+		  struct-addrinfo-ai_canonname
+
+		  make-struct-protoent		struct-protoent?
+		  struct-protoent-p_name	struct-protoent-p_aliases
+		  struct-protoent-p_proto
+
+		  make-struct-servent		struct-servent?
+		  struct-servent-s_name		struct-servent-s_aliases
+		  struct-servent-s_port		struct-servent-s_proto
+
+		  make-struct-netent		struct-netent?
+		  struct-netent-n_name		struct-netent-n_aliases
+		  struct-netent-n_addrtype	struct-netent-n_net
 
 		  ;; time functions
 		  nanosleep
@@ -258,9 +354,52 @@
 ;;;; helpers
 
 (define-inline (%file-descriptor? obj)
+  ;;Do  what  is  possible   to  recognised  fixnums  representing  file
+  ;;descriptors.
+  ;;
   (and (fixnum? obj)
        (unsafe.fx>= obj 0)
        (unsafe.fx<  obj FD_SETSIZE)))
+
+(define-inline (%platform-int? obj)
+  (and (or (fixnum? obj) (bignum? obj))
+       (<= INT_MIN obj INT_MAX)))
+
+(define-inline (%platform-size_t? obj)
+  (and (or (fixnum? obj) (bignum? obj))
+       (<= 0 obj SIZE_T_MAX)))
+
+(define-syntax with-bytevectors
+  ;;Used to  preprocess function arguments which must  be bytevectors or
+  ;;strings;  the  strings are  converted  to  bytevectors.  This  macro
+  ;;assumes that the arguments have already been validated.
+  ;;
+  ;;The ?VALUE.BV and ?VALUE input forms must be identifiers.
+  ;;
+  (syntax-rules ()
+    ((_ ((?value.bv ?value) ...) . ?body)
+     (let ((?value.bv (if (bytevector? ?value)
+			  ?value
+			(string->latin1 ?value)))
+	   ...)
+       . ?body))))
+
+(define-syntax with-bytevectors/or-false
+  ;;Used  to preprocess  function arguments  which must  be bytevectors,
+  ;;strings or  false; the strings  are converted to  bytevectors.  This
+  ;;macro assumes that the arguments have already been validated.
+  ;;
+  ;;The ?VALUE.BV and ?VALUE input forms must be identifiers.
+  ;;
+  (syntax-rules ()
+    ((_ ((?value.bv ?value) ...) . ?body)
+     (let ((?value.bv (cond ((bytevector? ?value)
+			     ?value)
+			    ((string? ?value)
+			     (string->latin1 ?value))
+			    (else ?value)))
+	   ...)
+       . ?body))))
 
 
 ;;;; arguments validation
@@ -287,6 +426,36 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-argument-validation (fixnum/false who obj)
+  (or (not obj) (fixnum? obj))
+  (assertion-violation who "expected false or fixnum as argument" obj))
+
+(define-argument-validation (fixnum/pointer/false who obj)
+  (or (not obj) (fixnum? obj) (pointer? obj))
+  (assertion-violation who "expected false, fixnum or pointer as argument" obj))
+
+(define-argument-validation (exact-integer who obj)
+  (or (fixnum? obj) (bignum? obj))
+  (assertion-violation who "expected exact integer as argument" obj))
+
+(define-argument-validation (list-of-strings who obj)
+  (and (list? obj) (for-all string? obj))
+  (assertion-violation who "expected list of strings as argument" obj))
+
+(define-argument-validation (list-of-bytevectors who obj)
+  (and (list? obj) (for-all bytevector? obj))
+  (assertion-violation who "expected list of bytevectors as argument" obj))
+
+(define-argument-validation (string/bytevector who obj)
+  (or (string? obj) (bytevector? obj))
+  (assertion-violation who "expected string or bytevector as argument" obj))
+
+(define-argument-validation (string/bytevector/false who obj)
+  (or (not obj) (string? obj) (bytevector? obj))
+  (assertion-violation who "expected false, string or bytevector as argument" obj))
+
+;;; --------------------------------------------------------------------
+
 (define-argument-validation (pid who obj)
   (fixnum? obj)
   (assertion-violation who "expected fixnum pid as argument" obj))
@@ -306,14 +475,6 @@
 (define-argument-validation (pathname who obj)
   (or (bytevector? obj) (string? obj))
   (assertion-violation who "expected string or bytevector as pathname argument" obj))
-
-(define-argument-validation (list-of-strings who obj)
-  (and (list? obj) (for-all string? obj))
-  (assertion-violation who "expected list of strings as argument" obj))
-
-(define-argument-validation (list-of-bytevectors who obj)
-  (and (list? obj) (for-all bytevector? obj))
-  (assertion-violation who "expected list of bytevectors as argument" obj))
 
 (define-argument-validation (struct-stat who obj)
   (struct-stat? obj)
@@ -349,10 +510,6 @@
   (assertion-violation who
     "expected non-negative exact integer as offset argument" obj))
 
-(define-argument-validation (fixnum/pointer/false who obj)
-  (or (not obj) (fixnum? obj) (pointer? obj))
-  (assertion-violation who "expected false, fixnum or pointer as argument" obj))
-
 (define-argument-validation (false/fd who obj)
   (or (not obj) (%file-descriptor? obj))
   (assertion-violation who "expected false or file descriptor as argument" obj))
@@ -363,6 +520,33 @@
 		  (%file-descriptor? fd))
 	 obj))
   (assertion-violation who "expected list of file descriptors as argument" obj))
+
+(define-argument-validation (af-inet who obj)
+  (and (fixnum? obj)
+       (or (unsafe.fx= obj AF_INET)
+	   (unsafe.fx= obj AF_INET6)))
+  (assertion-violation who "expected a fixnum among AF_INET and AF_INET6 as argument" obj))
+
+(define-argument-validation (addrinfo/false who obj)
+  (or (not obj) (struct-addrinfo? obj))
+  (assertion-violation who "expected an instance of struct-addrinfo as argument" obj))
+
+(define-argument-validation (netaddr who obj)
+  (or (fixnum? obj) (bignum? obj)
+      (and (bytevector? obj)
+	   (= 4 (bytevector-length obj))))
+  (assertion-violation who
+    "expected exact integer or 32-bit bytevector as network address argument" obj))
+
+(define-argument-validation (platform-int/boolean who obj)
+  (or (boolean? obj) (%platform-int? obj))
+  (assertion-violation who
+    "expected exact integer in platform's \"int\" range as argument" obj))
+
+(define-argument-validation (platform-size_t who obj)
+  (%platform-size_t? obj)
+  (assertion-violation who
+    "expected exact integer in platform's \"size_t\" range as argument" obj))
 
 
 ;;;; errors handling
@@ -393,12 +577,24 @@
 	  (make-i/o-filename-error filename)
 	  (make-irritants-condition irritants))))
 
+(define (raise-h_errno-error who h_errno . irritants)
+  (raise (condition
+	  (make-error)
+;;;FIXME Uncomment  this at the  next boot image rotation  (Marco Maggi;
+;;;Wed Nov 16, 2011).
+;;;
+;;;(make-h_errno-condition h_errno)
+	  (make-who-condition who)
+	  (make-message-condition (h_strerror h_errno))
+	  (make-irritants-condition irritants))))
+
 
 ;;;; errno handling
 
 (define (errno->string negated-errno-code)
-  ;;Convert an errno  code as represented by the  (vicare errno) library
-  ;;into a string representing the errno code symbol.
+  ;;Convert   an   errno   code    as   represented   by   the   (vicare
+  ;;platform-constants)  library into  a string  representing  the errno
+  ;;code symbol.
   ;;
   (define who 'errno->string)
   (with-arguments-validation (who)
@@ -568,6 +764,68 @@
   (define ERRNO-VECTOR (make-errno-vector)))
 
 
+;;;; h_errno handling
+
+(define (h_errno->string negated-h_errno-code)
+  ;;Convert   an   h_errno   code   as  represented   by   the   (vicare
+  ;;platform-constants) library  into a string  representing the h_errno
+  ;;code symbol.
+  ;;
+  (define who 'h_errno->string)
+  (with-arguments-validation (who)
+      ((fixnum negated-h_errno-code))
+    (let ((h_errno-code (unsafe.fx- 0 negated-h_errno-code)))
+      (and (unsafe.fx> h_errno-code 0)
+	   (unsafe.fx< h_errno-code (vector-length H_ERRNO-VECTOR))
+	   (vector-ref H_ERRNO-VECTOR h_errno-code)))))
+
+(let-syntax
+    ((make-h_errno-vector
+      (lambda (stx)
+	(define (%mk-vector)
+	  (let* ((max	(fold-left (lambda (max pair)
+				     (let ((code (cdr pair)))
+				       (cond ((not code)
+					      max)
+					     ((< max (fx- code))
+					      (fx- code))
+					     (else
+					      max))))
+			  0 h_errno-alist))
+		 (vec.len	(fx+ 1 max))
+		 ;;All the unused positions are set to #f.
+		 (vec	(make-vector vec.len #f)))
+	    (for-each (lambda (pair)
+			(when (cdr pair)
+			  (vector-set! vec (fx- (cdr pair)) (car pair))))
+	      h_errno-alist)
+	    vec))
+	(define h_errno-alist
+	  `(("HOST_NOT_FOUND"		. ,HOST_NOT_FOUND)
+	    ("TRY_AGAIN"		. ,TRY_AGAIN)
+	    ("NO_RECOVERY"		. ,NO_RECOVERY)
+	    ("NO_ADDRESS"		. ,NO_ADDRESS)))
+	(syntax-case stx ()
+	  ((?ctx)
+	   #`(quote #,(datum->syntax #'?ctx (%mk-vector))))))))
+
+  (define H_ERRNO-VECTOR (make-h_errno-vector)))
+
+(define (h_strerror h_errno)
+  (define who 'h_strerror)
+  (with-arguments-validation (who)
+      ((fixnum  h_errno))
+    (let ((msg (case-h_errno h_errno
+		 ((HOST_NOT_FOUND)	"no such host is known in the database")
+		 ((TRY_AGAIN)		"the server could not be contacted")
+		 ((NO_RECOVERY)		"non-recoverable error")
+		 ((NO_ADDRESS)		"host entry exists but without Internet address")
+		 (else			#f))))
+      (if msg
+	  (string-append (h_errno->string h_errno) ": " msg)
+	(string-append "unknown h_errno code " (number->string (- h_errno)))))))
+
+
 ;;;; interprocess singnal codes handling
 
 (define (interprocess-signal->string interprocess-signal-code)
@@ -699,7 +957,7 @@
 (define (environ->table environ)
   (begin0-let ((table (make-hashtable string-hash string=?)))
     (for-each (lambda (pair)
-		(hashtable-set! table (car pair) (cdr pair)))
+		(hashtable-set! table (unsafe.car pair) (unsafe.cdr pair)))
       environ)))
 
 (define (table->environ table)
@@ -1462,46 +1720,54 @@
       (unless (unsafe.fxzero? rv)
 	(raise-errno-error who rv fd)))))
 
-(define (posix-read fd buffer size)
-  (define who 'posix-read)
-  (with-arguments-validation (who)
-      ((file-descriptor  fd)
-       (bytevector	 buffer)
-       (fixnum		 size))
-    (let ((rv (capi.posix-read fd buffer size)))
-      (if (unsafe.fx<= 0 rv)
-	  rv
-	(raise-errno-error who rv fd)))))
+(define posix-read
+  (case-lambda
+   ((fd buffer)
+    (posix-read fd buffer #f))
+   ((fd buffer size)
+    (define who 'posix-read)
+    (with-arguments-validation (who)
+	((file-descriptor  fd)
+	 (bytevector	 buffer)
+	 (fixnum/false	 size))
+      (let ((rv (capi.posix-read fd buffer size)))
+	(if (unsafe.fx<= 0 rv)
+	    rv
+	  (raise-errno-error who rv fd)))))))
 
 (define (pread fd buffer size off)
   (define who 'pread)
   (with-arguments-validation (who)
       ((file-descriptor  fd)
        (bytevector	 buffer)
-       (fixnum		 size)
+       (fixnum/false	 size)
        (offset		 off))
     (let ((rv (capi.posix-pread fd buffer size off)))
       (if (unsafe.fx<= 0 rv)
 	  rv
 	(raise-errno-error who rv fd)))))
 
-(define (posix-write fd buffer size)
-  (define who 'posix-write)
-  (with-arguments-validation (who)
-      ((file-descriptor  fd)
-       (bytevector	 buffer)
-       (fixnum		 size))
-    (let ((rv (capi.posix-write fd buffer size)))
-      (if (unsafe.fx<= 0 rv)
-	  rv
-	(raise-errno-error who rv fd)))))
+(define posix-write
+  (case-lambda
+   ((fd buffer)
+    (posix-write fd buffer #f))
+   ((fd buffer size)
+    (define who 'posix-write)
+    (with-arguments-validation (who)
+	((file-descriptor  fd)
+	 (bytevector	 buffer)
+	 (fixnum/false	 size))
+      (let ((rv (capi.posix-write fd buffer size)))
+	(if (unsafe.fx<= 0 rv)
+	    rv
+	  (raise-errno-error who rv fd)))))))
 
 (define (pwrite fd buffer size off)
   (define who 'pwrite)
   (with-arguments-validation (who)
       ((file-descriptor  fd)
        (bytevector	 buffer)
-       (fixnum		 size)
+       (fixnum/false	 size)
        (offset		 off))
     (let ((rv (capi.posix-pwrite fd buffer size off)))
       (if (unsafe.fx<= 0 rv)
@@ -1636,7 +1902,7 @@
   (define who 'pipe)
   (let ((rv (capi.posix-pipe)))
     (if (pair? rv)
-	(values (car rv) (cdr rv))
+	(values (unsafe.car rv) (unsafe.cdr rv))
       (raise-errno-error who rv))))
 
 (define (mkfifo pathname mode)
@@ -1652,13 +1918,674 @@
 
 ;;;; sockets
 
+(define (make-sockaddr_un pathname)
+  (define who 'make-sockaddr_un)
+  (with-arguments-validation (who)
+      ((pathname	pathname))
+    (with-pathnames ((pathname.bv pathname))
+      (capi.posix-make-sockaddr_un pathname.bv))))
+
+(define (sockaddr_un.pathname addr)
+  (define who 'sockaddr_un.pathname)
+  (with-arguments-validation (who)
+      ((bytevector	addr))
+    (let ((rv (capi.posix-sockaddr_un.pathname addr)))
+      (if (bytevector? rv)
+	  rv
+	(error who "expected bytevector holding \"struct sockaddr_un\" as argument" addr)))))
+
+(define (sockaddr_un.pathname/string addr)
+  ((filename->string-func) (sockaddr_un.pathname addr)))
+
+;;; --------------------------------------------------------------------
+
+(define (make-sockaddr_in addr port)
+  (define who 'make-sockaddr_in)
+  (with-arguments-validation (who)
+      ((bytevector	addr)
+       (fixnum		port))
+    (capi.posix-make-sockaddr_in addr port)))
+
+(define (sockaddr_in.in_addr sockaddr)
+  (define who 'sockaddr_in.in_addr)
+  (with-arguments-validation (who)
+      ((bytevector	sockaddr))
+    (let ((rv (capi.posix-sockaddr_in.in_addr sockaddr)))
+      (if (bytevector? rv)
+	  rv
+	(error who "expected bytevector holding \"struct sockaddr_in\" as argument" sockaddr)))))
+
+(define (sockaddr_in.in_port sockaddr)
+  (define who 'sockaddr_in.in_port)
+  (with-arguments-validation (who)
+      ((bytevector	sockaddr))
+    (let ((rv (capi.posix-sockaddr_in.in_port sockaddr)))
+      (if (fixnum? rv)
+	  rv
+	(error who "expected bytevector holding \"struct sockaddr_in\" as argument" sockaddr)))))
+
+;;; --------------------------------------------------------------------
+
+(define (make-sockaddr_in6 addr port)
+  (define who 'make-sockaddr_in6)
+  (with-arguments-validation (who)
+      ((bytevector	addr)
+       (fixnum		port))
+    (capi.posix-make-sockaddr_in6 addr port)))
+
+(define (sockaddr_in6.in6_addr sockaddr)
+  (define who 'sockaddr_in6.in6_addr)
+  (with-arguments-validation (who)
+      ((bytevector	sockaddr))
+    (let ((rv (capi.posix-sockaddr_in6.in6_addr sockaddr)))
+      (if (bytevector? rv)
+	  rv
+	(error who "expected bytevector holding \"struct sockaddr_in6\" as argument" sockaddr)))))
+
+(define (sockaddr_in6.in6_port sockaddr)
+  (define who 'sockaddr_in6.in6_port)
+  (with-arguments-validation (who)
+      ((bytevector	sockaddr))
+    (let ((rv (capi.posix-sockaddr_in6.in6_port sockaddr)))
+      (if (fixnum? rv)
+	  rv
+	(error who "expected bytevector holding \"struct sockaddr_in6\" as argument" sockaddr)))))
+
+;;; --------------------------------------------------------------------
+
+(define (in6addr_loopback)
+  (capi.posix-in6addr_loopback))
+
+(define (in6addr_any)
+  (capi.posix-in6addr_any))
+
+;;; --------------------------------------------------------------------
+
+(define (inet-aton dotted-quad)
+  (define who 'inet-aton)
+  (with-arguments-validation (who)
+      ((string/bytevector  dotted-quad))
+    (let ((rv (capi.posix-inet_aton (if (string? dotted-quad)
+					(string->utf8 dotted-quad)
+				      dotted-quad))))
+      (if (bytevector? rv)
+	  rv
+	(error who
+	  "expected string or bytevector holding an ASCII dotted quad as argument"
+	  dotted-quad)))))
+
+(define (inet-ntoa addr)
+  (define who 'inet-ntoa)
+  (with-arguments-validation (who)
+      ((bytevector  addr))
+    (capi.posix-inet_ntoa addr)))
+
+(define (inet-ntoa/string addr)
+  (utf8->string (inet-ntoa addr)))
+
+;;; --------------------------------------------------------------------
+
+(define (inet-pton af presentation)
+  (define who 'inet-pton)
+  (with-arguments-validation (who)
+      ((af-inet		   af)
+       (string/bytevector  presentation))
+    (let ((rv (capi.posix-inet_pton af (if (string? presentation)
+					   (string->utf8 presentation)
+					 presentation))))
+      (if (bytevector? rv)
+	  rv
+	(error who "invalid arguments" af presentation)))))
+
+(define (inet-ntop af addr)
+  (define who 'inet-ptoa)
+  (with-arguments-validation (who)
+      ((af-inet	    af)
+       (bytevector  addr))
+    (let ((rv (capi.posix-inet_ntop af addr)))
+      (if (bytevector? rv)
+	  rv
+	(error who "invalid arguments" af addr)))))
+
+(define (inet-ntop/string af addr)
+  (utf8->string (inet-ntop af addr)))
+
+;;; --------------------------------------------------------------------
+
+(define-struct struct-hostent
+  (h_name	;0, bytevector, official host name
+   h_aliases	;1, list of bytevectors, host name aliases
+   h_addrtype	;2, fixnum, AF_INET or AF_INET6
+   h_length	;3, length of address bytevector
+   h_addr_list	;4, list of bytevectors holding "struct in_addr" or "struct in6_addr"
+   h_addr	;5, bytevector, first in the list of host addresses
+   ))
+
+(define (%struct-hostent-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-hostent\"")
+
+  (%display " h_name=\"")
+  (%display (utf8->string (struct-hostent-h_name S)))
+  (%display "\"")
+
+  (%display " h_aliases=")
+  (%display (map utf8->string (struct-hostent-h_aliases S)))
+
+  (%display " h_addrtype=")
+  (%display (if (unsafe.fx= AF_INET (struct-hostent-h_addrtype S))
+		"AF_INET" "AF_INET6"))
+
+  (%display " h_length=")
+  (%display (struct-hostent-h_length S))
+
+  (%display " h_addr_list=")
+  (%display (struct-hostent-h_addr_list S))
+
+  (%display " h_addr=")
+  (%display (struct-hostent-h_addr S))
+
+  (%display "]"))
+
+;;; --------------------------------------------------------------------
+
+(define (gethostbyname hostname)
+  (define who 'gethostbyname)
+  (with-arguments-validation (who)
+      ((string/bytevector  hostname))
+    (let ((rv (capi.posix-gethostbyname (type-descriptor struct-hostent)
+					(if (bytevector? hostname)
+					    hostname
+					  (string->utf8 hostname)))))
+      (if (fixnum? rv)
+	  (raise-h_errno-error who rv hostname)
+	(begin
+	  (set-struct-hostent-h_addr_list! rv (reverse (struct-hostent-h_addr_list rv)))
+	  rv)))))
+
+(define (gethostbyname2 hostname addrtype)
+  (define who 'gethostbyname2)
+  (with-arguments-validation (who)
+      ((string/bytevector  hostname)
+       (af-inet		   addrtype))
+    (let ((rv (capi.posix-gethostbyname2 (type-descriptor struct-hostent)
+					 (if (bytevector? hostname)
+					     hostname
+					   (string->utf8 hostname))
+					 addrtype)))
+      (if (fixnum? rv)
+	  (raise-h_errno-error who rv hostname addrtype)
+	(begin
+	  (set-struct-hostent-h_addr_list! rv (reverse (struct-hostent-h_addr_list rv)))
+	  rv)))))
+
+(define (gethostbyaddr addr)
+  (define who 'gethostbyaddr)
+  (with-arguments-validation (who)
+      ((bytevector  addr))
+    (let ((rv (capi.posix-gethostbyaddr (type-descriptor struct-hostent) addr)))
+      (if (fixnum? rv)
+	  (raise-h_errno-error who rv addr)
+	(begin
+	  (set-struct-hostent-h_addr_list! rv (reverse (struct-hostent-h_addr_list rv)))
+	  rv)))))
+
+(define (host-entries)
+  (capi.posix-host-entries (type-descriptor struct-hostent)))
+
+;;; --------------------------------------------------------------------
+
+(define-struct struct-addrinfo
+  (ai_flags		;0, fixnum
+   ai_family		;1, fixnum
+   ai_socktype		;2, fixnum
+   ai_protocol		;3, fixnum
+   ai_addrlen		;4, fixnum
+   ai_addr		;5, bytevector
+   ai_canonname))	;6, false or bytevector
+
+(define (%struct-addrinfo-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-addrinfo\"")
+  (%display " ai_flags=")	(%display (struct-addrinfo-ai_flags	S))
+  (%display " ai_family=")
+  (%display (let ((N (struct-addrinfo-ai_family S)))
+	      (cond ((unsafe.fx= N AF_INET)	"AF_INET")
+		    ((unsafe.fx= N AF_INET6)	"AF_INET6")
+		    ((unsafe.fx= N AF_UNSPEC)	"AF_UNSPEC")
+		    (else			N))))
+  (%display " ai_socktype=")
+  (%display (let ((N (struct-addrinfo-ai_socktype S)))
+	      (cond ((unsafe.fx= N SOCK_STREAM)		"SOCK_STREAM")
+		    ((unsafe.fx= N SOCK_DGRAM)		"SOCK_DGRAM")
+		    ((unsafe.fx= N SOCK_RAW)		"SOCK_RAW")
+		    ((unsafe.fx= N SOCK_RDM)		"SOCK_RDM")
+		    ((unsafe.fx= N SOCK_SEQPACKET)	"SOCK_SEQPACKET")
+		    ((unsafe.fx= N SOCK_DCCP)		"SOCK_DCCP")
+		    (else				N))))
+  (%display " ai_protocol=")	(%display (struct-addrinfo-ai_protocol	S))
+  (%display " ai_addrlen=")	(%display (struct-addrinfo-ai_addrlen	S))
+  (%display " ai_addr=")	(%display (struct-addrinfo-ai_addr	S))
+  (%display " ai_canonname=")	(let ((name (struct-addrinfo-ai_canonname S)))
+				  (if name
+				      (begin
+					(%display "\"")
+					(%display (latin1->string name))
+					(%display "\""))
+				    (%display #f)))
+  (%display "]"))
+
+(define (getaddrinfo node service hints)
+  (define who 'getaddrinfo)
+  (with-arguments-validation (who)
+      ((string/bytevector/false	node)
+       (string/bytevector/false	service)
+       (addrinfo/false		hints))
+    (with-bytevectors/or-false ((node.bv	node)
+				(service.bv	service))
+      (let ((rv (capi.posix-getaddrinfo (type-descriptor struct-addrinfo)
+					node.bv service.bv hints)))
+	(if (fixnum? rv)
+	    (raise
+	     (condition (make-who-condition who)
+			(make-message-condition (gai-strerror rv))
+			(make-irritants-condition (list node service hints))))
+	  rv)))))
+
+(define (gai-strerror code)
+  (define who 'gai-strerror)
+  (with-arguments-validation (who)
+      ((fixnum   code))
+    (latin1->string (capi.posix-gai_strerror code))))
+
+;;; --------------------------------------------------------------------
+
+(define-struct struct-protoent
+  (p_name p_aliases p_proto))
+
+(define (%struct-protoent-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-protoent\"")
+  (%display " p_name=\"")
+  (%display (latin1->string (struct-protoent-p_name S)))
+  (%display "\"")
+  (%display " p_aliases=")
+  (%display (map latin1->string (struct-protoent-p_aliases S)))
+  (%display " p_proto=")
+  (%display (struct-protoent-p_proto S))
+  (%display "]"))
+
+(define (getprotobyname name)
+  (define who 'getprotobyname)
+  (with-arguments-validation (who)
+      ((string/bytevector	name))
+    (with-bytevectors ((name.bv name))
+      (let ((rv (capi.posix-getprotobyname (type-descriptor struct-protoent) name.bv)))
+	(if (not rv)
+	    (error who "unknown network protocol" name)
+	  rv)))))
+
+(define (getprotobynumber number)
+  (define who 'getprotobynumber)
+  (with-arguments-validation (who)
+      ((fixnum	number))
+    (let ((rv (capi.posix-getprotobynumber (type-descriptor struct-protoent) number)))
+      (if (not rv)
+	  (error who "unknown network protocol" number)
+	rv))))
+
+(define (protocol-entries)
+  (capi.posix-protocol-entries (type-descriptor struct-protoent)))
+
+;;; --------------------------------------------------------------------
+
+(define-struct struct-servent
+  (s_name s_aliases s_port s_proto))
+
+(define (%struct-servent-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-servent\"")
+  (%display " s_name=\"")
+  (%display (latin1->string (struct-servent-s_name S)))
+  (%display "\"")
+  (%display " s_aliases=")
+  (%display (map latin1->string (struct-servent-s_aliases S)))
+  (%display " s_port=")
+  (%display (struct-servent-s_port S))
+  (%display " s_proto=")
+  (%display (latin1->string (struct-servent-s_proto S)))
+  (%display "]"))
+
+(define servent-rtd
+  (type-descriptor struct-servent))
+
+(define (getservbyname name protocol)
+  (define who 'getservbyname)
+  (with-arguments-validation (who)
+      ((string/bytevector	name)
+       (string/bytevector	protocol))
+    (with-bytevectors ((name.bv		name)
+		       (protocol.bv	protocol))
+      (let ((rv (capi.posix-getservbyname servent-rtd name.bv protocol.bv)))
+	(if (not rv)
+	    (error who "unknown network service" name protocol)
+	  rv)))))
+
+(define (getservbyport port protocol)
+  (define who 'getservbyport)
+  (with-arguments-validation (who)
+      ((fixnum			port)
+       (string/bytevector	protocol))
+    (with-bytevectors ((protocol.bv protocol))
+      (let ((rv (capi.posix-getservbyport servent-rtd port protocol.bv)))
+	(if (not rv)
+	    (error who "unknown network service" port protocol)
+	  rv)))))
+
+(define (service-entries)
+  (capi.posix-service-entries servent-rtd))
+
+;;; --------------------------------------------------------------------
+
+(define-struct struct-netent
+  (n_name n_aliases n_addrtype n_net))
+
+(define (%struct-netent-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-netent\"")
+  (%display " n_name=\"")
+  (%display (latin1->string (struct-netent-n_name S)))
+  (%display "\"")
+  (%display " n_aliases=")
+  (%display (map latin1->string (struct-netent-n_aliases S)))
+  (%display " n_addrtype=")
+  (%display (let ((type (struct-netent-n_addrtype S)))
+	      (cond ((unsafe.fx= type AF_INET)
+		     "AF_INET")
+		    ((unsafe.fx= type AF_INET6)
+		     "AF_INET6")
+		    (else type))))
+  (%display " n_net=")
+  (%display (struct-netent-n_net S))
+  (%display "]"))
+
+(define netent-rtd
+  (type-descriptor struct-netent))
+
+(define (%netaddr->bytevector S)
+  (let ((net (make-bytevector 4)))
+    (bytevector-u32-set! net 0 (struct-netent-n_net S) (endianness big))
+    (set-struct-netent-n_net! S net)
+    S))
+
+(define (getnetbyname name)
+  (define who 'getnetbyname)
+  (with-arguments-validation (who)
+      ((string/bytevector  name))
+    (with-bytevectors ((name.bv  name))
+      (let ((rv (capi.posix-getnetbyname netent-rtd name.bv)))
+	(if (not rv)
+	    (error who "unknown network" name)
+	  (%netaddr->bytevector rv))))))
+
+(define (getnetbyaddr net type)
+  (define who 'getnetbyaddr)
+  (with-arguments-validation (who)
+      ((netaddr  net)
+       (fixnum   type))
+    (let* ((net	(if (bytevector? net)
+		    (bytevector-u32-ref net 0 (endianness big))
+		  net))
+	   (rv	(capi.posix-getnetbyaddr netent-rtd net type)))
+      (if (not rv)
+	  (error who "unknown network" net type)
+	(%netaddr->bytevector rv)))))
+
+(define (network-entries)
+  (map %netaddr->bytevector (capi.posix-network-entries netent-rtd)))
+
+;;; --------------------------------------------------------------------
+
+(define (socket namespace style protocol)
+  (define who 'socket)
+  (with-arguments-validation (who)
+      ((fixnum	namespace)
+       (fixnum	style)
+       (fixnum	protocol))
+    (let ((rv (capi.posix-socket namespace style protocol)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv namespace style protocol)))))
+
+(define (shutdown sock how)
+  (define who 'shutdown)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (fixnum		how))
+    (let ((rv (capi.posix-shutdown sock how)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock how)))))
+
+(define (socketpair namespace style protocol)
+  (define who 'socketpair)
+  (with-arguments-validation (who)
+      ((fixnum	namespace)
+       (fixnum	style)
+       (fixnum	protocol))
+    (let ((rv (capi.posix-socketpair namespace style protocol)))
+      (if (pair? rv)
+	  (values (unsafe.car rv) (unsafe.cdr rv))
+	(raise-errno-error who rv namespace style protocol)))))
+
+;;; --------------------------------------------------------------------
+
+(define (connect sock sockaddr)
+  (define who 'connect)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (bytevector	sockaddr))
+    (let ((rv (capi.posix-connect sock sockaddr)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock sockaddr)))))
+
+(define (listen sock max-pending-conns)
+  (define who 'listen)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (fixnum		max-pending-conns))
+    (let ((rv (capi.posix-listen sock max-pending-conns)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock max-pending-conns)))))
+
+(define (accept sock)
+  (define who 'accept)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock))
+    (let ((rv (capi.posix-accept sock)))
+      (cond ((pair? rv)
+	     (values (unsafe.car rv) (unsafe.cdr rv)))
+	    ((unsafe.fx= rv EWOULDBLOCK)
+	     (values #f #f))
+	    (else
+	     (raise-errno-error who rv sock))))))
+
 (define (bind sock sockaddr)
   (define who 'bind)
   (with-arguments-validation (who)
-      ((bytevector	sockaddr))
+      ((file-descriptor	sock)
+       (bytevector	sockaddr))
     (let ((rv (capi.posix-bind sock sockaddr)))
       (unless (unsafe.fxzero? rv)
 	(raise-errno-error who rv sock sockaddr)))))
+
+;;; --------------------------------------------------------------------
+
+(define (getpeername sock)
+  (define who 'getpeername)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock))
+    (let ((rv (capi.posix-getpeername sock)))
+      (if (bytevector? rv)
+	  rv
+	(raise-errno-error who rv sock)))))
+
+(define (getsockname sock)
+  (define who 'getsockname)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock))
+    (let ((rv (capi.posix-getsockname sock)))
+      (if (bytevector? rv)
+	  rv
+	(raise-errno-error who rv sock)))))
+
+;;; --------------------------------------------------------------------
+
+(define (send sock buffer size flags)
+  (define who 'send)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (bytevector	buffer)
+       (fixnum/false	size)
+       (fixnum		flags))
+    (let ((rv (capi.posix-send sock buffer size flags)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv sock buffer size flags)))))
+
+(define (recv sock buffer size flags)
+  (define who 'recv)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (bytevector	buffer)
+       (fixnum/false	size)
+       (fixnum		flags))
+    (let ((rv (capi.posix-recv sock buffer size flags)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv sock buffer size flags)))))
+
+;;; --------------------------------------------------------------------
+
+(define (sendto sock buffer size flags addr)
+  (define who 'sendto)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (bytevector	buffer)
+       (fixnum/false	size)
+       (fixnum		flags)
+       (bytevector	addr))
+    (let ((rv (capi.posix-sendto sock buffer size flags addr)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv sock buffer size flags addr)))))
+
+(define (recvfrom sock buffer size flags)
+  (define who 'recvfrom)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (bytevector	buffer)
+       (fixnum/false	size)
+       (fixnum		flags))
+    (let ((rv (capi.posix-recvfrom sock buffer size flags)))
+      (if (pair? rv)
+	  (values (unsafe.car rv) (unsafe.cdr rv))
+	(raise-errno-error who rv sock buffer size flags)))))
+
+;;; --------------------------------------------------------------------
+
+(define (getsockopt sock level option optval)
+  (define who 'getsockopt)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (fixnum		level)
+       (fixnum		option)
+       (bytevector	optval))
+    (let ((rv (capi.posix-getsockopt sock level option optval)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock level option optval)))))
+
+(define (getsockopt/int sock level option)
+  (define who 'getsockopt/int)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (fixnum		level)
+       (fixnum		option))
+    (let ((rv (capi.posix-getsockopt/int sock level option)))
+      (if (pair? rv)
+	  (unsafe.car rv)
+	(raise-errno-error who rv sock level option)))))
+
+(define (getsockopt/size_t sock level option)
+  (define who 'getsockopt/size_t)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (fixnum		level)
+       (fixnum		option))
+    (let ((rv (capi.posix-getsockopt/size_t sock level option)))
+      (if (pair? rv)
+	  (unsafe.car rv)
+	(raise-errno-error who rv sock level option)))))
+
+;;; --------------------------------------------------------------------
+
+(define (setsockopt sock level option optval)
+  (define who 'setsockopt)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (fixnum		level)
+       (fixnum		option)
+       (bytevector	optval))
+    (let ((rv (capi.posix-setsockopt sock level option optval)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock level option optval)))))
+
+(define (setsockopt/int sock level option optval)
+  (define who 'setsockopt/int)
+  (with-arguments-validation (who)
+      ((file-descriptor		sock)
+       (fixnum			level)
+       (fixnum			option)
+       (platform-int/boolean	optval))
+    (let ((rv (capi.posix-setsockopt/int sock level option optval)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock level option optval)))))
+
+(define (setsockopt/size_t sock level option optval)
+  (define who 'setsockopt/size_t)
+  (with-arguments-validation (who)
+      ((file-descriptor	sock)
+       (fixnum		level)
+       (fixnum		option)
+       (platform-size_t	optval))
+    (let ((rv (capi.posix-setsockopt/size_t sock level option optval)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock level option optval)))))
+
+;;; --------------------------------------------------------------------
+
+(define (setsockopt/linger sock onoff linger)
+  (define who 'setsockopt/linger)
+  (with-arguments-validation (who)
+      ((file-descriptor		sock)
+       (boolean			onoff)
+       (fixnum			linger))
+    (let ((rv (capi.posix-setsockopt/linger sock onoff linger)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv sock onoff linger)))))
+
+(define (getsockopt/linger sock)
+  (define who 'getsockopt/linger)
+  (with-arguments-validation (who)
+      ((file-descriptor  sock))
+    (let ((rv (capi.posix-getsockopt/linger sock)))
+      (if (pair? rv)
+	  (values (unsafe.car rv) (unsafe.cdr rv))
+	(raise-errno-error who rv sock)))))
 
 
 ;;;; time functions
@@ -1666,12 +2593,12 @@
 (define (nanosleep secs nsecs)
   (import (ikarus system $fx))
   (unless (cond
-	   ((fixnum? secs) ($fx>= secs 0))
+	   ((fixnum? secs) (unsafe.fx>= secs 0))
 	   ((bignum? secs) (<= 0 secs (- (expt 2 32) 1)))
 	   (else (die 'nanosleep "not an exact integer" secs)))
     (die 'nanosleep "seconds must be a nonnegative integer <=" secs))
   (unless (cond
-	   ((fixnum? nsecs) ($fx>= nsecs 0))
+	   ((fixnum? nsecs) (unsafe.fx>= nsecs 0))
 	   ((bignum? nsecs) (<= 0 nsecs 999999999))
 	   (else (die 'nanosleep "not an exact integer" nsecs)))
     (die 'nanosleep "nanoseconds must be an integer \
@@ -1690,14 +2617,19 @@
 
 ;;;; done
 
-(set-rtd-printer! (type-descriptor struct-stat) %struct-stat-printer)
-
-(set-rtd-printer! (type-descriptor directory-stream)
-		  %directory-stream-printer)
+(set-rtd-printer! (type-descriptor struct-stat)		%struct-stat-printer)
+(set-rtd-printer! (type-descriptor directory-stream)	%directory-stream-printer)
+(set-rtd-printer! (type-descriptor struct-hostent)	%struct-hostent-printer)
+(set-rtd-printer! (type-descriptor struct-addrinfo)	%struct-addrinfo-printer)
+(set-rtd-printer! (type-descriptor struct-protoent)	%struct-protoent-printer)
+(set-rtd-printer! (type-descriptor struct-servent)	%struct-servent-printer)
+(set-rtd-printer! (type-descriptor struct-netent)	%struct-netent-printer)
 
 )
 
 ;;; end of file
 ;; Local Variables:
 ;; eval: (put 'with-pathnames 'scheme-indent-function 1)
+;; eval: (put 'with-bytevectors 'scheme-indent-function 1)
+;; eval: (put 'with-bytevectors/or-false 'scheme-indent-function 1)
 ;; End:

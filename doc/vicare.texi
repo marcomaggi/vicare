@@ -4653,6 +4653,22 @@ error reporting.  Closing the Scheme ports will @strong{not} close the
 file descriptors.
 @end defun
 
+
+@defun make-binary-socket-input/output-port @var{sock} @var{identifier}
+Build and return a binary Scheme port using the platform socket
+descriptor @var{sock} as device.  @var{identifier} must be a string used
+for better error reporting.  Closing the Scheme port will close the
+socket descriptor too.
+@end defun
+
+
+@defun make-binary-socket-input/output-port* @var{sock} @var{identifier}
+Build and return a binary Scheme port using the platform socket
+descriptor @var{sock} as device.  @var{identifier} must be a string used
+for better error reporting.  Closing the Scheme port will @strong{not}
+close the socket descriptor.
+@end defun
+
 @c page
 @node iklib io textual
 @subsection Additional textual port features
@@ -4732,6 +4748,23 @@ error reporting.  @var{transcoder} must be a transcoder object.  Closing
 the Scheme ports will @strong{not} close the file descriptors.
 @end defun
 
+
+@defun make-textual-socket-input/output-port @var{sock} @var{identifier} @var{transcoder}
+Build and return a textual Scheme port using the platform socket
+descriptor @var{sock} as device.  @var{identifier} must be a string used
+for better error reporting.  @var{transcoder} must be a transcoder
+object.  Closing the Scheme port will close the socket descriptor too.
+@end defun
+
+
+@defun make-textual-socket-input/output-port* @var{sock} @var{identifier} @var{transcoder}
+Build and return a textual Scheme port using the platform socket
+descriptor @var{sock} as device.  @var{identifier} must be a string used
+for better error reporting.  @var{transcoder} must be a transcoder
+object.  Closing the Scheme port will @strong{not} close the socket
+descriptor.
+@end defun
+
 @c page
 @node iklib io buffer
 @subsection Buffer size customisation
@@ -4776,16 +4809,9 @@ by @func{open-file-input/output-prot}.  It is initialised to
 @end deffn
 
 
-@deffn Parameter input-socket-buffer-size
-@deffnx Parameter input-socket-buffer-size @var{fixnum}
-Hold the buffer size for input socket ports.  It is initialised to
-@math{16384}.
-@end deffn
-
-
-@deffn Parameter output-socket-buffer-size
-@deffnx Parameter output-socket-buffer-size @var{fixnum}
-Hold the buffer size for output socket ports.  It is initialised to
+@deffn Parameter input/output-socket-buffer-size
+@deffnx Parameter input/output-socket-buffer-size @var{fixnum}
+Hold the buffer size for socket ports.  It is initialised to
 @math{16384}.
 @end deffn
 
@@ -4975,6 +5001,12 @@ Return a Scheme string representing the identifier of @var{port}.
 Reset the port buffer mode to @var{buffer-mode}, which must be one of
 the arguments accepted by @func{buffer-mode}.  It is an error to select
 @code{line} mode if @var{port} is a binary port.
+@end defun
+
+
+@defun port-dump-status @var{port}
+To be used for debugging purposes.  Write to the current error port some
+informations on the internals of @var{port}.
 @end defun
 
 @c page
@@ -5846,11 +5878,11 @@ vicare>
 @chapter The @posix{} interface
 
 
-The @posix{} functions are exported by the @library{ikarus} and
-@library{vicare} libraries.  The @api{} attempts to create a
-one--to--one Scheme functions mapping towards @posix{} functions,
-keeping the same semantics as much as possible; the platform's own
-documentation is relevant at the Scheme level.
+The @posix{} functions are exported by the @library{vicare posix},
+@library{ikarus} and @library{vicare} libraries.  The @api{} attempts to
+create a one--to--one Scheme functions mapping towards @posix{}
+functions, keeping the same semantics as much as possible; the
+platform's own documentation is relevant at the Scheme level.
 
 All the constants needed to use the interface are available as
 identifier syntaxes exported by the @library{vicare platform-constants}
@@ -5910,10 +5942,15 @@ returning a string; the one returning a string has name ending with the
 suffix @samp{/string}.
 
 Whenever a function in the @posix{} @api{} fails: it raises an exception
-with compound condition type @condition{error}, @condition{errno},
-@condition{who}, @condition{message}, @condition{irritants}; if the
-function involves a file, the additional type @condition{i/o-filename}
-is present.
+with compound condition type @condition{error}, @condition{who},
+@condition{message}, @condition{irritants}; if the error is described by
+an @code{errno} value, an additional @condition{errno} component is
+present; if the function involves a file, an additional type
+@condition{i/o-filename} is present.
+
+Values of the @code{errno} C language variable are negated and encoded
+as fixnums.  Values of the @code{h_errno} C language variable are
+negated and encoded as fixnums.
 
 @c page
 @node posix conditions
@@ -5940,6 +5977,29 @@ Return @true{} if @var{obj} is an instance of @condition{errno}.
 @defun condition-errno @var{obj}
 Accessor for the encoded @code{errno} value in @var{obj}, which must be
 an instance of @condition{errno}.
+@end defun
+
+
+@deftp {Condition Type} &h_errno
+Condition object type representing system errors described by an encoded
+@code{h_errno} value; it is derived from @condition{condition}.
+@end deftp
+
+
+@defun make-h_errno-condition @var{h_errno}
+Build and return a new @condition{h_errno} condition object holding the
+given encoded @code{h_errno} value.
+@end defun
+
+
+@defun h_errno-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of @condition{h_errno}.
+@end defun
+
+
+@defun condition-h_errno @var{obj}
+Accessor for the encoded @code{h_errno} value in @var{obj}, which must be
+an instance of @condition{h_errno}.
 @end defun
 
 @c page
@@ -6690,12 +6750,14 @@ an exception.
 @end defun
 
 
-@defun posix-read @var{fd} @var{buffer} @var{size}
+@defun posix-read @var{fd} @var{buffer}
+@defunx posix-read @var{fd} @var{buffer} @var{size}
 Interface to the C function @cfunc{read}, @glibcref{I/O Primitives,
-read}.  Read at most @var{size} bytes from the file descriptor @var{fd}
-and store them in the bytevector @var{buffer}; @var{fd} and @var{size}
-must be fixnums.  If successful return a non--negative fixnum
-representing the number of bytes read, else raise an exception.
+read}.  Read bytes from the file descriptor @var{fd} and store them in
+the bytevector @var{buffer}; if @var{size} is a fixnum, read @var{size}
+bytes; if @var{size} is false or not given, read a number of bytes equal
+to the length of @var{buffer}.  If successful return a non--negative
+fixnum representing the number of bytes read, else raise an exception.
 @end defun
 
 
@@ -6707,12 +6769,14 @@ integer.
 @end defun
 
 
-@defun posix-write @var{fd} @var{buffer} @var{size}
+@defun posix-write @var{fd} @var{buffer}
+@defunx posix-write @var{fd} @var{buffer} @var{size}
 Interface to the C function @cfunc{write}, @glibcref{I/O Primitives,
-write}.  Write at most @var{size} bytes to the file descriptor @var{fd}
-from the bytevector @var{buffer}; @var{fd} and @var{size} must be
-fixnums.  If successful return a non--negative fixnum representing the
-number of written bytes, else raise an exception.
+write}.  Write bytes to the file descriptor @var{fd} from the bytevector
+@var{buffer}; if @var{size} is a fixnum, read @var{size} bytes; if
+@var{size} is false or not given, read a number of bytes equal to the
+length of @var{buffer}.  If successful return a non--negative fixnum
+representing the number of written bytes, else raise an exception.
 @end defun
 
 
@@ -6793,10 +6857,10 @@ reading, writing or an exceptional condition.
 Interface to the C function @cfunc{fcntl}, @glibcref{Control Operations,
 fcntl}.  Perform the operation specified by @var{command} on the file
 descriptor @var{fd} using @var{arg}; @var{fd} and @var{command} must be
-fixnums; @var{arg} must be @false{} a fixnum or a pointer, if it is
-@false{} or not given no argument is handed to @cfunc{fcntl}.  If
-successful return a fixnum representing the return value of
-@cfunc{fcntl}, else raise an exception.
+fixnums; @var{arg} must be @false{}, a fixnum, a bytevector or a
+pointer, if it is @false{} or not given no argument is handed to
+@cfunc{fcntl}.  If successful return a fixnum representing the return
+value of @cfunc{fcntl}, else raise an exception.
 @end defun
 
 
@@ -6805,10 +6869,10 @@ successful return a fixnum representing the return value of
 Interface to the C function @cfunc{ioctl}, @glibcref{IOCTLs, ioctl}.
 Perform the operation specified by @var{command} on the file descriptor
 @var{fd} using @var{arg}; @var{fd} and @var{command} must be fixnums;
-@var{arg} must be @false{} a fixnum or a pointer, if it is @false{} or
-not given no argument is handed to @cfunc{ioctl}.  If successful return
-a fixnum representing the return value of @cfunc{ioctl}, else raise an
-exception.
+@var{arg} must be @false{}, a fixnum, a bytevector or a pointer, if it
+is @false{} or not given no argument is handed to @cfunc{ioctl}.  If
+successful return a fixnum representing the return value of
+@cfunc{ioctl}, else raise an exception.
 @end defun
 
 @c ------------------------------------------------------------
@@ -6944,6 +7008,1087 @@ unspecified values, else raise an exception.
 @section Network sockets
 
 
+With the purpose of keeping at the Scheme level the same semantics of
+the C level @posix{} @api{}, socket--related data structures are stored
+in bytevectors; such raw manipulation can cause the process to crash if
+we mishandle the values.
+
+@menu
+* posix socket addresses::      Network address structures.
+* posix socket hosts::          Network hosts database.
+* posix socket protocols::      Network protocols database.
+* posix socket services::       Network services database.
+* posix socket networks::       Networks database.
+* posix socket socket::         Network sockets operations.
+* posix socket misc::           Error and miscellaneous functions.
+* posix socket examples::       Examples of clients and servers.
+@end menu
+
+@c page
+@node posix socket addresses
+@subsection Network address structures
+
+
+@menu
+* posix socket addresses local:: Local addresses.
+* posix socket addresses in::    @ip{}v4 addresses.
+* posix socket addresses in6::   @ip{}v6 addresses.
+* posix socket addresses rep::   @ascii{} address representations.
+* posix socket addresses info::  Host address informations.
+@end menu
+
+@c page
+@node posix socket addresses local
+@subsubsection Local addresses
+
+
+Instances of @code{struct sockaddr_un} can be handled at the Scheme
+level as follows:
+
+@example
+(import (vicare))
+
+(define sockaddr
+  (make-sockaddr_un "/tmp/the-unix-socket"))
+
+(sockaddr_un.pathname/string sockaddr)
+@result{} "/tmp/the-unix-socket"
+@end example
+
+@noindent
+care must be taken when handling such raw values.
+
+
+@defun make-sockaddr_un @var{pathname}
+Given a @var{pathname} representing the pathname of a local socket,
+build and return a bytevector holding the @code{struct sockaddr_un}
+representing it.
+@end defun
+
+
+@defun sockaddr_un.pathname @var{socket_address}
+@defunx sockaddr_un.pathname/string @var{socket_address}
+Given a bytevector @var{socket_address}, which must be the return value
+of a previous call to @func{make-sockaddr_un}, holding a @code{struct
+sockaddr_un}: @func{sockaddr_un.pathname} builds and returns a
+bytevector holding the corresponding socket pathname,
+@func{sockaddr_un.pathname/string} builds and returns a string holding
+the corresponding socket pathname.  If the data in @var{socket_address}
+is invalid: an exception is raised.
+@end defun
+
+@c page
+@node posix socket addresses in
+@subsubsection @ip{}v4 addresses
+
+
+Instances of @code{struct sockaddr_in} can be handled at the Scheme
+level as follows:
+
+@example
+(import (vicare))
+
+(define sockaddr
+  (make-sockaddr_in '#vu8(1 2 3 4) 88))
+
+(sockaddr_in.in_addr sockaddr)  @result{} #vu8(1 2 3 4)
+(sockaddr_in.in_port sockaddr)  @result{} 88
+@end example
+
+@noindent
+and we can use constant values to initialise the fields:
+
+@example
+(import (vicare)
+  (vicare platform-constants))
+
+(define addr (make-bytevector 4))
+(bytevector-u32-set! bv 0 INADDR_LOOPBACK (endianness big))
+
+(define sockaddr (make-sockaddr_in addr 88))
+
+(sockaddr_in.in_addr sockaddr)  @result{} #vu8(127 0 0 1)
+(sockaddr_in.in_port sockaddr)  @result{} 88
+@end example
+
+@noindent
+care must be taken when handling such raw values.
+
+
+@defun make-sockaddr_in @var{host-address} @var{port}
+Given a bytevector @var{host-address} holding a @code{struct in_addr}
+and a fixnum @var{port} representing a network port number, build and
+return a bytevector holding a @code{struct sockaddr_in} initialised with
+this data.
+@end defun
+
+
+@defun sockaddr_in.in_addr @var{socket-address}
+@defunx sockaddr_in.in_port @var{socket-address}
+Given a bytevector @var{socket-address} holding a @code{struct
+sockaddr_in}, extract the @code{in_addr} and @code{in_port} fields and
+return them as bytevector holding the corresponding @code{struct
+in_addr} and as fixnum.  If the data in @var{socket_address} is invalid:
+an exception is raised.
+@end defun
+
+@c page
+@node posix socket addresses in6
+@subsubsection @ip{}v6 addresses
+
+
+Instances of @code{struct sockaddr_in6} can be handled at the Scheme
+level as follows:
+
+@example
+#!vicare
+(import (vicare))
+
+(define sockaddr
+  (make-sockaddr_in6 '#vu16b(1 2 3 4  5 6 7 8) 88))
+
+(sockaddr_in6.in6_addr sockaddr) @result{} #vu16b(1 2 3 4  5 6 7 8)
+(sockaddr_in6.in6_port sockaddr) @result{} 88
+@end example
+
+@noindent
+care must be taken when handling such raw values.
+
+
+@defun make-sockaddr_in6 @var{host-address} @var{port}
+Given a bytevector @var{host-address} holding a @code{struct in6_addr}
+and a fixnum @var{port} representing a network port number, build and
+return a bytevector holding a @code{struct sockaddr_in6} initialised
+with this data.
+@end defun
+
+
+@defun sockaddr_in6.in6_addr @var{socket-address}
+@defunx sockaddr_in6.in6_port @var{socket-address}
+Given a bytevector @var{socket-address} holding a @code{struct
+sockaddr_in6}, extract the @code{in6_addr} and @code{in6_port} fields
+and return them as bytevector holding the corresponding @code{struct
+in6_addr} and as fixnum.  If the data in @var{socket_address} is
+invalid: an exception is raised.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun in6addr_loopback
+@defunx in6addr_any
+Build and return a bytevector holding the constant structures of type
+@code{struct in6_addr} defined by @code{in6addr_loopback} and
+@code{in6addr_any}.
+@end defun
+
+@c page
+@node posix socket addresses rep
+@subsubsection @ascii{} address representations
+
+
+Dotted quad address representations can be handled as follows:
+
+@example
+(import (vicare))
+
+(inet-aton "127.0.0.1") @result{} #vu8(127 0 0 1)
+(inet-aton "ciao")      @error{} invalid argument
+
+(inet-ntoa/string '#vu8(127 0 0 1))
+@result{} "127.0.0.1"
+@end example
+
+@noindent
+care must be taken when handling such raw values.
+
+
+@defun inet-aton @var{dotted-quad}
+@ascii{} to number.  Given the bytevector @var{dotted-quad} holding the
+@ascii{} dotted quad representation of a host address, build and return
+a bytevector holding the corresponding @code{struct in_addr}.  If
+@var{dotted-quad} is invalid: an exception is raised.
+@end defun
+
+
+@defun inet-ntoa @var{host-address}
+@defunx inet-ntoa/string @var{host-address}
+Number to @ascii{}.  Given the bytevector @var{host-address} holding a
+@code{struct in_addr}: @func{inet-ntoa} builds and returns a bytevector
+holding the corresponding @ascii{} dotted quad representation,
+@func{inet-ntoa/string} builds and returns a string holding the
+corresponding @ascii{} dotted quad representation.
+@end defun
+
+@c ------------------------------------------------------------
+
+Addresses in presentation format can be handled as follows:
+
+@example
+#!vicare
+(import (vicare)
+  (vicare platform-constants))
+
+(inet-pton AF_INET "127.0.0.1") @result{} #vu8(127 0 0 1)
+(inet-pton AF_INET "ciao")      @error{} invalid arguments
+
+(inet-pton AF_INET6 "1:2:3:4:5:6:7:8")
+@result{} #vu16b(1 2 3 4 5 6 7 8)
+
+(inet-ntop/string AF_INET '#vu8(127 0 0 1))
+@result{} "127.0.0.1"
+
+(inet-ntop/string AF_INET6 '#vu16b(1 2 3 4 5 6 7 8))
+@result{} "1:2:3:4:5:6:7:8"
+@end example
+
+@noindent
+care must be taken when handling such raw values.
+
+
+@defun inet-pton @var{af} @var{presentation}
+Given the fixnum @var{af}, being @code{AF_INET} or @code{AF_INET6}, and
+the string or bytevector @var{presentation} holding the @ascii{}
+presentation of an Internet address, build and return a bytevector
+holding the corresponding @code{struct in_addr} or @code{struct
+in6_addr}.  If either @var{af} or @var{presentation} is invalid: raise
+an exception.
+@end defun
+
+
+@defun inet-ntop @var{af} @var{host-address}
+@defunx inet-ntop/string @var{af} @var{host-address}
+Given the fixnum @var{af}, being @code{AF_INET} or @code{AF_INET6}, and
+the bytevector @var{host-address} holding a @code{struct in_addr} or
+@code{struct in6_addr}: @func{inet-ntop} builds and returns a bytevector
+holding the corresponding @ascii{} presentation of the Internet address,
+@func{inet-ntop/string} builds and returns a string holding the
+corresponding @ascii{} presentation of the Internet address.  If the
+arguments are invalid: an exception is raised.
+@end defun
+
+@c page
+@node posix socket addresses info
+@subsubsection Host address informations
+
+
+@deftp {Structure Type} struct-addrinfo
+Scheme level representation of @code{struct addrinfo}.  It has the
+following fields:
+
+@table @code
+@item ai_flags
+Fixnum.
+
+@item ai_family
+Fixnum, specifies the Internet address family; @code{AF_INET},
+@code{AF_INET6} of @code{AF_UNSPEC}.
+
+@item ai_socktype
+Fixnum, specifies the socket type; @code{SOCK_STREAM}, @code{SOCK_DGRAM}
+or other @code{SOCK_} value.
+
+@item ai_protocol
+Fixnum, specifies the protocol of the socket address.
+
+@item ai_addrlen
+Fixnum, the number of bytes in the bytevector referenced by
+@code{ai_addr}.
+
+@item ai_addr
+Bytevector, holds an instance of @code{struct sockaddr} of
+@code{ai_addrlen} bytes.
+
+@item ai_canonname
+False or bytevector, represents the canoncal name of the host when
+available.
+@end table
+@end deftp
+
+
+@defun make-struct-addrinfo @var{flags} @var{family} @var{socktype} @var{protocol} @var{addrlen} @var{addr} @var{canonname}
+Build and return an instance of @code{struct-addrinfo}.
+@end defun
+
+
+@defun struct-addrinfo? @var{obj}
+Return true if @var{obj} is an instance of @code{struct-addrinfo}.
+@end defun
+
+
+@defun struct-addrinfo-ai_flags @var{addrinfo}
+@defunx struct-addrinfo-ai_family @var{addrinfo}
+@defunx struct-addrinfo-ai_socktype @var{addrinfo}
+@defunx struct-addrinfo-ai_protocol @var{addrinfo}
+@defunx struct-addrinfo-ai_addrlen @var{addrinfo}
+@defunx struct-addrinfo-ai_addr @var{addrinfo}
+@defunx struct-addrinfo-ai_canonname @var{addrinfo}
+Accessors for the fields of @code{struct-addrinfo}.
+@end defun
+
+
+@defun getaddrinfo @var{node} @var{service} @var{hints}
+Interface to the C function @cfunc{getaddrinfo}, see the manual page
+@code{getaddrinfo(3)}.  Given the strings or bytevectors @var{node} and
+@var{service} identifying an Internet host and a service, build a list
+of @code{struct-addrinfo} instances representing addresses to which
+sockets can be bound or connected.
+
+Both @var{node} and @var{service} can be false, in which case the
+corresponding arguments handed to the C function are @code{NULL}.
+@var{hints} must be an instance of @code{struct-addrinfo} used to select
+matching hosts.
+
+If successful: return the list of data structures, else raise an
+exception.
+
+@example
+(getaddrinfo "github.com" "smtp" #f)
+@result{} (#["struct-addrinfo"
+        ai_flags=40             ai_family=AF_INET
+        ai_socktype=SOCK_DGRAM  ai_protocol=17
+        ai_addrlen=16
+        ai_addr=#vu8(2 0 0 25 207 97 227 239 0 0 0 0 0 0 0 0)
+        ai_canonname=#f]
+    #["struct-addrinfo"
+        ai_flags=40             ai_family=AF_INET
+        ai_socktype=SOCK_STREAM ai_protocol=6
+        ai_addrlen=16
+        ai_addr=#vu8(2 0 0 25 207 97 227 239 0 0 0 0 0 0 0 0)
+        ai_canonname=#f])
+@end example
+@end defun
+
+@c page
+@node posix socket hosts
+@subsection Network hosts database
+
+
+@deftp {Struct Type} struct-hostent
+Data structure type used to represent at the Scheme level @code{struct
+hostent} values.  It has the following fields:
+
+@table @code
+@item h_name
+Bytevector, the official host name.
+
+@item h_aliases
+List of bytevectors, host name aliases.
+
+@item h_addrtype
+Fixnum, @code{AF_INET} or @code{AF_INET6}.
+
+@item h_length
+Fixnum, number of bytes in each host address bytevector.
+
+@item h_addr_list
+List of bytevectors each holding @code{struct in_addr} or @code{struct
+in6_addr}.
+
+@item h_addr
+Bytevector, it is the first in the list @code{h_addr_list}.
+@end table
+@end deftp
+
+
+@defun gethostbyname @var{hostname}
+Interface to the C function @cfunc{gethostbyname}, @glibcref{Host Names,
+gethostbyname}.  Given the string or bytevector @var{hostname} holding
+the @ascii{} representation of a host name, build and return an instance
+of @code{struct-hostent}.  If an error occurs, return an encoded
+@code{h_errno} value.
+
+@example
+(import (vicare))
+
+(gethostbyname "github.com")
+@result{} #["struct-hostent"
+       h_name="github.com"
+       h_aliases=()
+       h_addrtype=AF_INET
+       h_length=4
+       h_addr_list=(#vu8(207 97 227 239))
+       h_addr=#vu8(207 97 227 239)]
+
+(gethostbyname "google.com")
+@result{} #["struct-hostent"
+       h_name="google.com"
+       h_aliases=()
+       h_addrtype=AF_INET
+       h_length=4
+       h_addr_list=(#vu8(209 85 148 103)
+                    #vu8(209 85 148 99)
+                    #vu8(209 85 148 104)
+                    #vu8(209 85 148 105)
+                    #vu8(209 85 148 106)
+                    #vu8(209 85 148 147))
+       h_addr=#vu8(209 85 148 103)]
+@end example
+@end defun
+
+
+@defun gethostbyaddr @var{addr}
+Interface to the C function @cfunc{gethostbyaddr}, @glibcref{Host Names,
+gethostbyaddr}.  Given the bytevector @var{addr} holding a @code{struct
+in_addr} or a @code{struct in6_addr}, build and return an instance of
+@code{struct-hostent}; the type of address is automatically inferred
+from the length of the bytevector.  If an error occurs: an exception is
+raised.
+@end defun
+
+
+@defun host-entries
+Interface to the C functions @cfunc{sethostent}, @cfunc{gethostent} and
+@cfunc{endhostent}, @glibcref{Host Names, gethostbyaddr}.  Build and
+return a list of @code{struct-hostent} representing the entries in the
+hosts database.
+@end defun
+
+@c page
+@node posix socket protocols
+@subsection Network protocols database
+
+
+@deftp {Structure Type} struct-protoent
+Scheme level representation of @code{struct protoent}.  It has the
+following fields:
+
+@table @code
+@item p_name
+Bytevector, the @ascii{} coding of the official protocol name.
+
+@item p_aliases
+Null or list of bytevectors, the @ascii{} codings of protocol name
+aliases.
+
+@item p_proto
+Fixnum, the protocol number.
+@end table
+@end deftp
+
+
+@defun make-struct-protoent @var{name} @var{aliases} @var{proto}
+Build and return an instance of @code{struct-protoent}.
+@end defun
+
+
+@defun struct-protoent-p_name @var{protoent}
+@defunx struct-protoent-p_aliases @var{protoent}
+@defunx struct-protoent-p_proto @var{protoent}
+Accessors for the fields of @code{struct-protoent}.
+@end defun
+
+
+@defun getprotobyname @var{name}
+Interface to the C function @cfunc{getprotobyname}, @glibcref{Protocols
+Database, getprotobyname}.  Given a string or bytevector @var{name}
+holding the @ascii{} coding of a network protocol name, query the
+network protocols database and build an instance of
+@code{struct-protoent} mirroring the resulting @code{struct protoent}
+entry.  If successful return the data structure, else raise an
+exception.
+
+@example
+(getprotobyname "udp")
+@result{} #["struct-protoent"
+        p_name="udp"
+        p_aliases=(UDP)
+        p_proto=17]
+@end example
+@end defun
+
+
+@defun getprotobynumber @var{proto_num}
+Interface to the C function @cfunc{getprotobynumber},
+@glibcref{Protocols Database, getprotobynumber}.  Given a fixnum
+@var{proto_num} being the number of a network protocol, query the
+network protocols database and build an instance of
+@code{struct-protoent} mirroring the resulting @code{struct protoent}
+entry.  If successful return the data structure, else raise an
+exception.
+
+@example
+(getprotobynumber 17)
+@result{} #["struct-protoent"
+        p_name="udp"
+        p_aliases=(UDP)
+        p_proto=17]
+@end example
+@end defun
+
+
+@defun protocol-entries
+Interface to the C functions @cfunc{setprotoent}, @cfunc{getprotoent}
+and @cfunc{endprotoent}, @glibcref{Protocols Database, setprotoent}.
+Scan the network protocol database and build a list of
+@code{struct-protoent} mirroring the resulting @code{struct protoent}
+entries.  Return the list of structures.
+@end defun
+
+@c page
+@node posix socket services
+@subsection Network services database
+
+
+@deftp {Structure Type} struct-servent
+Scheme level representation of @code{struct servent}.  It has the
+following fields:
+
+@table @code
+@item s_name
+Bytevector, the @ascii{} coding of the official service name.
+
+@item s_aliases
+Null or list of bytevectors, the @ascii{} codings of service name
+aliases.
+
+@item s_port
+Fixnum, the port number.
+
+@item s_proto
+Bytevector, @ascii{} coding of the associated protocol name.
+@end table
+@end deftp
+
+
+@defun make-struct-servent @var{name} @var{aliases} @var{port} @var{proto}
+Build and return an instance of @code{struct-servent}.
+@end defun
+
+
+@defun struct-servent-s_name @var{servent}
+@defunx struct-servent-s_aliases @var{servent}
+@defunx struct-servent-s_proto @var{servent}
+@defunx struct-servent-s_port @var{servent}
+Accessors for the fields of @code{struct-servent}.
+@end defun
+
+
+@defun getservbyname @var{name} @var{protocol}
+Interface to the C function @cfunc{getservbyname}, @glibcref{Services
+Database, getservbyname}.  Given the strings or bytevectors @var{name}
+and @var{protocol} holding the @ascii{} coding of a network service name
+and protocol, query the network services database and build an instance
+of @code{struct-servent} mirroring the resulting @code{struct servent}
+entry.  If successful return the data structure, else raise an
+exception.
+
+@example
+(getservbyname "smtp" "tcp")
+@result{} #["struct-servent"
+        s_name="smtp"
+        s_aliases=(mail)
+        s_port=25
+        s_proto=tcp]
+
+(getservbyname "ntp" "udp")
+@result{} #["struct-servent"
+        s_name="ntp"
+        s_aliases=()
+        s_port=123
+        s_proto=udp]
+@end example
+@end defun
+
+
+@defun getservbynumber @var{port} @var{protocol}
+Interface to the C function @cfunc{getservbynumber}, @glibcref{Services
+Database, getservbynumber}.  Given a fixnum @var{port} and a string or
+bytevector @var{protocol} being the port number and protocol name of a
+network service, query the network services database and build an
+instance of @code{struct-servent} mirroring the resulting @code{struct
+servent} entry.  If successful return the data structure, else raise an
+exception.
+
+@example
+(getservbyport 80 "tcp")
+@result{} #["struct-servent"
+        s_name="http"
+        s_aliases=(www-http www)
+        s_port=80
+        s_proto=tcp]
+@end example
+@end defun
+
+
+@defun service-entries
+Interface to the C functions @cfunc{setservent}, @cfunc{getservent} and
+@cfunc{endservent}, @glibcref{Services Database, setservent}.  Scan the
+network service database and build a list of @code{struct-servent}
+mirroring the resulting @code{struct servent} entries.  Return the list
+of structures.
+@end defun
+
+@c page
+@node posix socket networks
+@subsection Networks database
+
+
+@deftp struct-netent
+Scheme level representation of @code{struct netent}.  It has the
+following fields:
+
+@table @code
+@item n_name
+Bytevector, @ascii{} coding of the official network name.
+
+@item n_aliases
+List of bytevectors, alias names for the network.
+
+@item n_addrtype
+Fixnum, the network type.
+
+@item n_net
+32-bit bytevector, the network number in network byte order.
+@end table
+@end deftp
+
+
+@defun make-struct-netent @var{name} @var{aliases} @var{addrtype} @var{net}
+Build and return a new instance of @code{struct-netent}.
+@end defun
+
+
+@defun struct-netent-n_name @var{netent}
+@defunx struct-netent-n_aliases @var{netent}
+@defunx struct-netent-n_addrtype @var{netent}
+@defunx struct-netent-n_net @var{netent}
+Accessors for the fields of @code{struct-netent}.
+@end defun
+
+
+@defun struct-netent? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-netent}.
+@end defun
+
+
+@defun getnetbyname @var{name}
+Interface to the C function @cfunc{getnetbyname}, @glibcref{Networks
+Database, getnetbyname}.  Given the bytevector @var{name} holding the
+@ascii{} coding of a network name, query the networks database and build
+an instance of @code{struct-netent} mirroring the resulting @code{struct
+netent} entry.  If successful return the data structure, else raise an
+exception.
+
+@example
+(getnetbyname "loopback")
+@result{} #["struct-netent"
+        n_name="loopback"
+        n_aliases=()
+        n_addrtype=AF_INET
+        n_net=#vu8(127 0 0 0)]
+@end example
+@end defun
+
+
+@defun getnetbyaddr @var{net} @var{type}
+Interface to the C function @cfunc{getnetbyaddr}, @glibcref{Networks
+Database, getnetbyaddr}.  Given an exact integer or bytevector @var{net}
+representing a network number and the fixnum @var{type} representing a
+network type, query the networks database and build an instance of
+@code{struct-netent} mirroring the resulting @code{struct netent} entry.
+If successful return the data structure, else raise an exception.
+
+@example
+(getnetbyaddr '#vu8(127 0 0 0) AF_INET)
+@result{} #["struct-netent"
+        n_name="loopback"
+        n_aliases=()
+        n_addrtype=AF_INET
+        n_net=#vu8(127 0 0 0)]
+@end example
+@end defun
+
+
+@defun network-entries
+Interface to the C functions @cfunc{setnetent}, @cfunc{getnetent} and
+@cfunc{endnetent}, @glibcref{Networks Database, setnetent}.  Scan the
+networks database and build a list of @code{struct-netent} mirroring the
+resulting @code{struct netent} entries.  Return the list of structures.
+@end defun
+
+@c page
+@node posix socket socket
+@subsection Network sockets operations
+
+
+@defun socket @var{namespace} @var{style} @var{protocol}
+Interface to the C function @cfunc{socket}, @glibcref{Creating a Socket,
+socket}.  Create a new socket descriptor and return it as non--negative
+fixnum; if an error occurs raise an exception.  All the arguments must
+be fixnums.
+@end defun
+
+
+@defun shutdown @var{sock} @var{how}
+Interface to the C function @cfunc{shutdown}, @glibcref{Closing a
+Socket, shutdown}.  Close the socket @var{sock} according to @var{how},
+which can be one of the constants @code{SHUT_RD}, @code{SHUT_WR} or
+@code{SHUT_RDWR}.  If successful return unspecified values, else raise
+an exception.
+@end defun
+
+
+@defun socketpair @var{namespace} @var{style} @var{protocol}
+Interface to the C function @cfunc{socketpair}, @glibcref{Socket Pairs,
+socketpair}.  Create a pairs of connected sockets and return two values
+being the descriptors as non--negative fixnums; if an error occurs raise
+an exception.  All the arguments must be fixnums; @var{namespace} must
+be @code{AF_LOCAL}.
+
+@example
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let-values (((a b) (px.socketpair AF_LOCAL SOCK_DGRAM 0)))
+  (px.posix-write a '#vu8(1 2 3 4) 4)
+  (let ((buf (make-bytevector 4)))
+    (px.posix-read b buf 4)
+    (px.shutdown a SHUT_RDWR)
+    (px.shutdown b SHUT_RDWR)
+    buf))
+@result{} #vu8(1 2 3 4)
+@end example
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun connect @var{sock} @var{addr}
+Interface to the C function @cfunc{connect}, @glibcref{Connecting,
+connect}.  Connect the socket @var{sock} to the address specified by the
+bytevector @var{addr} which must hold a concrete instance of
+@code{struct sockaddr}.  If successful return unspecified values, else
+raise an exception.
+@end defun
+
+
+@defun listen @var{sock} @var{pending_conns}
+Interface to the C function @cfunc{listen}, @glibcref{Listening,
+listen}.  Enable the socket @var{sock} to accept connections; the fixnum
+@var{pending_conns} specifies the maximum length of the pending
+connection requests queue.  If successful return unspecified values,
+else raise an exception.
+@end defun
+
+
+@defun accept @var{sock}
+Interface to the C function @cfunc{accept}, @glibcref{Accepting
+Connections, accept}.  Accept an incoming connection to the server
+socket @var{sock}.
+
+If successful and a connection is accepted return two values: a
+non--negative fixnum representing the socket, a bytevector representing
+the client address as @code{struct sockaddr}.
+
+If successful and no connection is accepted return two values both being
+false; this is the case of @cfunc{accept} returning @code{EWOULDBLOCK}
+which means that @var{sock} is in non--blocking mode and no pending
+connections exist.
+
+If an error occurs raise an exception.
+@end defun
+
+
+@defun bind @var{sock} @var{sockaddr}
+Interface to the C function @cfunc{bind}, @glibcref{Setting Address,
+bind}.  Bind the socket descriptor @var{sock} to the address specified
+by the @code{struct sockaddr} in the bytevector @var{sockaddr}.  If
+successful return unspecified values, else raise an exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun getpeername @var{sock}
+Interface to the C function @cfunc{getpeername}, @glibcref{Who is
+Connected, getpeername}.  Retrieve informations about the address of the
+socket to which the @var{sock} socket is connected to.  If successful
+return a bytevector holding a @code{struct sockaddr}, else raise an
+exception.
+@end defun
+
+
+@defun getsockname @var{sock}
+Interface to the C function @cfunc{getsockanme}, @glibcref{Setting
+Address, getsockname}.  Retrieve informations about the address bound to
+the socket descriptor @var{sock}.  If successful return a bytevector
+holding the @code{struct sockaddr}, else raise an exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun send @var{sock} @var{buffer} @var{size} @var{flags}
+Interface to the C function @cfunc{send}, @glibcref{Sending Data, send}.
+Like @cfunc{write} but with the additional argument @var{flags} which
+must be a fixnum: write data from the bytevector @var{buffer} to the
+socket @var{sock}; if @var{size} is a fixnum, write @var{size} bytes; if
+@var{size} is false, write a number of bytes equal to the length of
+@var{buffer}.  If successful return a non--negative fixnum representing
+the number of bytes actually sent, else raise an exception.
+@end defun
+
+
+@defun recv @var{sock} @var{buffer} @var{size} @var{flags}
+Interface to the C function @cfunc{recv}, @glibcref{Receiving Data,
+recv}.  Like @cfunc{read} but with the additional argument @var{flags}
+which must be a fixnum: read data from @var{sock} and store it in the
+bytevector @var{buffer}; if @var{size} is a fixnum, read @var{size}
+bytes; if @var{size} is false, read a number of bytes equal to the
+length of @var{buffer}.  If successful return a non--negative fixnum
+representing the number of bytes actually received, else raise an
+exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun sendto @var{sock} @var{buffer} @var{size} @var{flags} @var{addr}
+Interface to the C function @cfunc{sendto}, @glibcref{Sending Datagrams,
+sendto}.  Like @cfunc{send} but with the additional argument @var{addr}
+which must be a bytevector holding a @code{struct sockaddr}: write data
+from the bytevector @var{buffer} to the socket @var{sock} to the
+destination specified by @var{addr}.
+
+If @var{size} is a fixnum, write @var{size} bytes; if @var{size} is
+false, write a number of bytes equal to the length of @var{buffer}.
+
+If successful return a non--negative fixnum representing the number of
+bytes actually sent, else raise an exception.
+@end defun
+
+
+@defun recvfrom @var{sock} @var{buffer} @var{size} @var{flags}
+Interface to the C function @cfunc{recvfrom}, @glibcref{Receiving
+Datagrams, recvfrom}.  Like @cfunc{recv} but additionally retrieve
+informations about the address of the sender: read data from @var{sock}
+and store it in the bytevector @var{buffer}.
+
+If @var{size} is a fixnum, read @var{size} bytes; if @var{size} is
+false, read a number of bytes equal to the length of @var{buffer}.
+
+If successful return two values: a non--negative fixnum representing the
+number of bytes actually received, a bytevector holding a @code{struct
+sockaddr} representing the address of the sender; else raise an
+exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun getsockopt @var{sock} @var{level} @var{option} @var{optval}
+Interface to the C function @cfunc{getsockopt}, @glibcref{Socket Option
+Function, getsockopt}.  Retrieve the value of @var{option} of socket
+@var{sock} at @var{level} and store it in the bytevector @var{optval}.
+@var{option} and @var{level} must be fixnums.  If successful return
+unspecified values, else raise an exception.
+@end defun
+
+
+@defun setsockopt @var{sock} @var{level} @var{option} @var{optval}
+Interface to the C function @cfunc{setsockopt}, @glibcref{Socket Option
+Function, setsockopt}.  Set a new value for @var{option} of socket
+@var{sock} at @var{level} reading it from the bytevector @var{optval}.
+@var{option} and @var{level} must be fixnums.  If successful return
+unspecified values, else raise an exception.
+@end defun
+
+@c page
+@node posix socket misc
+@subsection Error and miscellaneous functions
+
+
+@defun h_errno->string @var{h_errno-code}
+Convert an encoded @code{h_errno} value to the corresponding symbolic
+string.
+@end defun
+
+
+@defun h_strerror @var{h_errno-code}
+Convert an encoded @code{h_errno} value to the corresponding descriptive
+error message string.
+@end defun
+
+
+@defun gai-strerror @var{error-code}
+Interface to the C function @cfunc{gai_strerror}, see the manual page
+@code{gai_strerror(3)}.  Convert an @code{EAI_} error code into the
+corresponding error message, return a string holding such message.
+@end defun
+
+@c page
+@node posix socket examples
+@subsection Examples of clients and servers
+
+
+Basically a @tcp{}/@ip{} server should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let ((sockaddr    (make-sockaddr_in '#vu8(127 0 0 1) 8080))
+      (server-sock (px.socket PF_INET SOCK_STREAM 0)))
+  (px.bind   server-sock sockaddr)
+  (px.listen server-sock 2)
+  (let-values (((sock client-address)
+                (px.accept server-sock)))
+    ;; ... talk with the client through SOCK ...
+    (px.close sock))
+  (px.close server-sock))
+@end example
+
+@noindent
+while a @tcp{}/@ip{} client should to:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let ((sockaddr (make-sockaddr_in '#vu8(127 0 0 1) 8080))
+      (sock     (px.socket PF_INET SOCK_STREAM 0)))
+  (px.connect sock sockaddr)
+  ;; ... talk to the server through SOCK ...
+  (px.close sock))
+@end example
+
+A @udp{}/@ip{} ``server'' should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let ((sockaddr   (make-sockaddr_in '#vu8(127 0 0 1) 8080))
+      (sock       (px.socket PF_INET SOCK_DGRAM 0))
+      (in-buffer  (make-bytevector 1024))
+      (out-buffer (make-bytevector 1024)))
+  (px.bind sock sockaddr)
+  (let-values (((len sockaddr)
+                (px.recvfrom sock in-buffer #f 0)))
+    ;; ... process the received packet ...
+    ;; ... prepare the answer ...
+    (px.sendto sock out-buffer #f 0 sockaddr))
+  (px.close sock))
+@end example
+
+@noindent
+while a @udp{}/@ip{} ``client'' should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let ((sockaddr   (make-sockaddr_in '#vu8(127 0 0 1) 8081))
+      (sock       (px.socket PF_INET SOCK_DGRAM 0))
+      (out-buffer (make-bytevector 1024))
+      (in-buffer  (make-bytevector 1024)))
+  (px.bind sock sockaddr)
+  ;; ... prepare the request ...
+  (px.sendto sock out-buffer #f 0 sockaddr)
+  (let-values (((len sockaddr)
+                (px.recvfrom sock in-buffer #f 0)))
+    ;; ... process the received packet ...
+    )
+  (px.close sock))
+@end example
+
+A Unix--domain socket server should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let* ((tmpdir       (px.getenv "TMPDIR"))
+       (pathname     (string-append tmpdir "/use-me"))
+       (sockaddr     (make-sockaddr_un pathname))
+       (server-sock  (px.socket PF_LOCAL SOCK_STREAM 0)))
+  (px.bind   server-sock sockaddr)
+  (px.listen server-sock 2)
+  (let-values (((sock client-address)
+                (px.accept server-sock)))
+    ;; ... talk to the client through SOCK ...
+    (px.close sock))
+  (px.close server-sock))
+@end example
+
+@noindent
+while a Unix--domain socket client should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let* ((tmpdir    (px.getenv "TMPDIR"))
+       (pathname  (string-append tmpdir "/use-me"))
+       (sockaddr  (make-sockaddr_un pathname))
+       (sock      (px.socket PF_LOCAL SOCK_STREAM 0)))
+  (px.connect sock sockaddr)
+  ;; ... talk to the server through SOCK ...
+  (px.close sock))
+@end example
+
+To receive incoming data and Out Of Band data, a @tcp{}/@ip{} server
+should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let ((sockaddr    (make-sockaddr_in '#vu8(127 0 0 1) 8080))
+      (server-sock (px.socket PF_INET SOCK_STREAM 0)))
+  (px.bind   server-sock sockaddr)
+  (px.listen server-sock 2)
+  (let*-values
+      (((sock client-address) (px.accept server-sock))
+       ((bv)                  (make-bytevector 10)))
+    (let loop ()
+      (let-values (((rd wr ex) (select-fd sock 2 0)))
+        (cond (ex
+               (let ((len (px.recv sock bv #f MSG_OOB)))
+                 ;; process data in BV between 0 and LEN,
+                 ;; which should be 1
+                 (loop)))
+              (rd
+               (let ((len (px.recv sock bv #f 0)))
+                 (when (positive? len)
+                   ;; process data in BV between 0
+                   ;; and LEN
+                   (loop))))
+              (else (loop)))))
+    (px.close sock))
+  (px.close server-sock))
+@end example
+
+@noindent
+to send outgoing data and Out Of Band data, a @tcp{}/@ip{} client should
+do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(let ((sockaddr  (make-sockaddr_in '#vu8(127 0 0 1) 8080))
+      (sock      (px.socket PF_INET SOCK_STREAM 0)))
+  (px.connect sock sockaddr)
+  (px.send sock '#vu8(1 2 3) #f 0)
+  ;; only the single byte 6 (the last) is sent as
+  ;; OOB data, 4 and 5 are sent as ordinary data
+  (px.send sock '#vu8(4 5 6) #f MSG_OOB)
+  (px.send sock '#vu8(7 8 9) #f 0)
+  (px.close sock))
+@end example
 
 @c page
 @node posix time
@@ -6982,16 +8127,36 @@ of @code{FD_SETSIZE}.
 @chapter The @gnu{} C Library interface
 
 
+The functions described in this chapter are exported by the library
+@library{vicare glibc}.  The @api{} attempts to create a one--to--one
+Scheme functions mapping towards @gnu{} C Library functions, keeping the
+same semantics as much as possible; the platform's own documentation is
+relevant at the Scheme level.
+
+All the constants needed to use the interface are available as
+identifier syntaxes exported by the @library{vicare platform-constants}
+library; if a constant value is not exported file a feature request for
+the project.  If a constant is not defined on a platform: its value is
+set to @false{}.
+
+On non--@gnu{} C Library platforms we must avoid calling these
+functions, else the behaviour is undefined.
+
 @menu
 * glibc env::                   Operating system environment variables.
 * glibc dir::                   File system directories.
 * glibc temp::                  Temporary files and directories.
 * glibc sync::                  File system synchronisation.
+* glibc socket::                Network sockets.
 @end menu
 
 @c page
 @node glibc env
 @section Operating system environment variables
+
+
+The following bindings are exported by the @library{vicare glibc}
+library.
 
 
 @defun clearenv
@@ -7005,6 +8170,10 @@ unspecified values.
 @section File system directories
 
 
+The following bindings are exported by the @library{vicare glibc}
+library.
+
+
 @defun dirfd @var{stream}
 Interface to the C function @cfunc{dirfd}, @glibcref{Opening a
 Directory, dirfd}.  Acquire a file descriptor associated to
@@ -7016,6 +8185,10 @@ the file descriptor, else raise an exception.
 @c page
 @node glibc temp
 @section Temporary files and directories
+
+
+The following bindings are exported by the @library{vicare glibc}
+library.
 
 
 @defun mkstemp @var{template}
@@ -7039,6 +8212,10 @@ on entering and the actual pathname on returning.  If successful return
 @c page
 @node glibc sync
 @section File system synchronisation
+
+
+The following bindings are exported by the @library{vicare glibc}
+library.
 
 
 @defun sync
@@ -7065,15 +8242,80 @@ raise an exception.
 @end defun
 
 @c page
+@node glibc socket
+@section Network sockets
+
+
+The following bindings are exported by the @library{vicare glibc}
+library.
+
+
+@defun if-nametoindex @var{name}
+Interface to the C function @cfunc{if_nametoindex}, @glibcref{Interface
+Naming, if_nametoindex}.  Convert the string @var{name} representing a
+network interface to the corresponding internal index.  Return a fixnum
+representing the index or false if @var{name} is invalid.
+
+@example
+(import (vicare))
+
+(if-indextoname 0)      @result{} #f
+(if-indextoname 1)      @result{} "lo"
+(if-indextoname 2)      @result{} "eth0"
+@end example
+@end defun
+
+
+@defun ikptr if-indextoname @var{index}
+Interface to the C function @cfunc{if_indextoname}, @glibcref{Interface
+Naming, if_indextoname}.  Convert the fixnum @var{index} associated to
+an interface to the corresponding string name.  Return a string holding
+the name or false if @var{index} is invalid.
+
+@example
+(import (vicare))
+
+(if-nametoindex "lo")   @result{} 1
+(if-nametoindex "eth0") @result{} 2
+@end example
+@end defun
+
+
+@defun if-nameindex
+Interface to the C function @cfunc{if_nameindex}, @glibcref{Interface
+Naming, if_nameindex}.  Build and return an association list having
+fixnums as keys and strings as values; the fixnums are the interface
+indexes, the strings are the corresponding interface names.
+
+@example
+(import (vicare))
+
+(if-nameindex)
+@result{} ((4 . "wlan0")
+    (2 . "eth0")
+    (1 . "lo"))
+@end example
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun gethostbyname2 @var{hostname} @var{addrtype}
+Interface to the C function @cfunc{gethostbyname2}, @glibcref{Host Names,
+gethostbyname2}.  Like @func{gethostbyname} but allows the selection of
+the address type with the parameter @var{addrtype} which must be
+@code{AF_INET} or @code{AF_INET6}.
+@end defun
+
+@c page
 @node linux
 @chapter The @gnu{}+Linux interface
 
 
-The functions described in this chapter are exported by the libraries
-@library{ikarus} and @library{vicare}.  The @api{} attempts to create a
-one--to--one Scheme functions mapping towards Linux functions, keeping
-the same semantics as much as possible; the platform's own documentation
-is relevant at the Scheme level.
+The functions described in this chapter are exported by the library
+@library{vicare linux}.  The @api{} attempts to create a one--to--one
+Scheme functions mapping towards Linux functions, keeping the same
+semantics as much as possible; the platform's own documentation is
+relevant at the Scheme level.
 
 All the constants needed to use the interface are available as
 identifier syntaxes exported by the @library{vicare platform-constants}
@@ -7081,7 +8323,7 @@ library; if a constant value is not exported file a feature request for
 the project.  If a constant is not defined on a platform: its value is
 set to @false{}.
 
-On non-Linux platform we must avoid calling these functions, else the
+On non--Linux platforms we must avoid calling these functions, else the
 behaviour is undefined.
 
 @menu
@@ -7094,6 +8336,10 @@ behaviour is undefined.
 @section Operating system environment variables
 
 
+The following bindings are exported by the @library{vicare linux}
+library.
+
+
 @defun clearenv
 Interface to the C function @cfunc{clearenv}, @glibcref{Environment
 Access, clearenv}.  Remove all the entries from the environment.  Return
@@ -7103,6 +8349,10 @@ unspecified values.
 @c page
 @node linux status
 @section Process termination status
+
+
+The following bindings are exported by the @library{vicare linux}
+library.
 
 
 @defun waitid @var{idtype} @var{id} @var{options}
@@ -9153,9 +10403,10 @@ encoded @code{errno} value.
 
 @deftypefun ikptr ikrt_posix_read (ikptr @var{fd}, ikptr @var{buffer}, ikptr @var{size})
 Interface to the C function @cfunc{read}, @glibcref{I/O Primitives,
-read}.  Read at most @var{size} bytes from the file descriptor @var{fd}
-and store them in the bytevector @var{buffer}; @var{fd} and @var{size}
-must be fixnums.  If successful return a non--negative fixnum
+read}.  Read bytes from the file descriptor @var{fd} and store them in
+the bytevector @var{buffer}; if @var{size} is a fixnum, read @var{size}
+bytes; if @var{size} is false, read a number of bytes equal to the
+length of @var{buffer}.  If successful return a non--negative fixnum
 representing the number of bytes read, else return an encoded
 @code{errno} value.
 @end deftypefun
@@ -9171,10 +10422,11 @@ exact integer.
 
 @deftypefun ikptr ikrt_posix_write (ikptr @var{fd}, ikptr @var{buffer}, ikptr @var{size})
 Interface to the C function @cfunc{write}, @glibcref{I/O Primitives,
-write}.  Write at most @var{size} bytes to the file descriptor @var{fd}
-from the bytevector @var{buffer}; @var{fd} and @var{size} must be
-fixnums.  If successful return a non--negative fixnum representing the
-number of written bytes, else return an encoded @code{errno} value.
+write}.  Write bytes to the file descriptor @var{fd} from the bytevector
+@var{buffer}; if @var{size} is a fixnum, write @var{size} bytes; if
+@var{size} is false, write a number of bytes equal to the length of
+@var{buffer}.  If successful return a non--negative fixnum representing
+the number of written bytes, else return an encoded @code{errno} value.
 @end deftypefun
 
 
@@ -9255,10 +10507,10 @@ exceptional condition.  If an error occurs: return an encoded
 Interface to the C function @cfunc{fcntl}, @glibcref{Control Operations,
 fcntl}.  Perform the operation specified by @var{command} on the file
 descriptor @var{fd} using @var{arg}; @var{fd} and @var{command} must be
-fixnums; @var{arg} must be the false object a fixnum or a pointer, if it
-is @false{} no argument is handed to @cfunc{fcntl}.  If successful
-return a fixnum representing the return value of @cfunc{fcntl}, else
-return an encoded @code{errno} value.
+fixnums; @var{arg} must be the false object, a fixnum, a bytevector or a
+pointer, if it is @false{} no argument is handed to @cfunc{fcntl}.  If
+successful return a fixnum representing the return value of
+@cfunc{fcntl}, else return an encoded @code{errno} value.
 @end deftypefun
 
 
@@ -9266,10 +10518,10 @@ return an encoded @code{errno} value.
 Interface to the C function @cfunc{ioctl}, @glibcref{IOCTLs, ioctl}.
 Perform the operation specified by @var{command} on the file descriptor
 @var{fd} using @var{arg}; @var{fd} and @var{command} must be fixnums;
-@var{arg} must be the false object a fixnum or a pointer, if it is
-@false{} no argument is handed to @cfunc{ioctl}.  If successful return a
-fixnum representing the return value of @cfunc{ioctl}, else return an
-encoded @code{errno} value.
+@var{arg} must be the false object, a fixnum, a bytevector or a pointer,
+if it is @false{} no argument is handed to @cfunc{ioctl}.  If successful
+return a fixnum representing the return value of @cfunc{ioctl}, else
+return an encoded @code{errno} value.
 @end deftypefun
 
 @c ------------------------------------------------------------
@@ -9311,6 +10563,436 @@ If successful return the fixnum zero, else return an encoded
 @node capi posix socket
 @subsection Network sockets
 
+
+@subsubheading Address structures
+
+@deftypefun ikptr ikrt_posix_make_sockaddr_un (ikptr @var{pathname}, ikpcb * @var{pcb})
+Given a bytevector @var{pathname} representing the pathname of a local
+socket, build and return a bytevector holding the @code{struct
+sockaddr_un} representing it.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_sockaddr_un_pathname (ikptr @var{socket_address}, ikpcb * @var{pcb})
+Given a bytevector @var{socket_address}, which must be the return value
+of a previous call to @cfunc{ikrt_posix_make_sockaddr_un}, holding a
+@code{struct sockaddr_un} build and return a bytevector holding the
+corresponding socket pathname.  If the data in @var{socket_address} is
+invalid: return false.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_make_sockaddr_in (ikptr @var{host_address}, ikptr @var{port}, ikpcb * @var{pcb})
+Given a bytevector @var{host_address} holding a @code{struct in_addr}
+and a fixnum @var{port} representing a network port number, build and
+return a bytevector holding a @code{struct sockaddr_in} initialised with
+this data.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_sockaddr_in_in_addr (ikptr @var{socket_address}, ikpcb * @var{pcb})
+@deftypefunx ikptr ikrt_posix_sockaddr_in_in_port (ikptr @var{socket_address})
+Given a bytevector @var{socket_address} holding a @code{struct
+sockaddr_in}, extract the @code{in_addr} and @code{in_port} fields and
+return them as bytevector holding the corresponding @code{struct
+in_addr} and as fixnum.  If the data in @var{socket_address} is invalid:
+return false.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_make_sockaddr_in6 (ikptr @var{host_address}, ikptr @var{port}, ikpcb * @var{pcb})
+Given a bytevector @var{host_address} holding a @code{struct in6_addr}
+and a fixnum @var{port} representing a network port number, build and
+return a bytevector holding a @code{struct sockaddr_in6} initialised
+with this data.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_sockaddr_in6_in6_addr (ikptr @var{socket_address}, ikpcb * @var{pcb})
+@deftypefunx ikptr ikrt_posix_sockaddr_in6_in6_port (ikptr @var{socket_address})
+Given a bytevector @var{socket_address} holding a @code{struct
+sockaddr_in6}, extract the @code{in6_addr} and @code{in6_port} fields
+and return them as bytevector holding the corresponding @code{struct
+in6_addr} and as fixnum.  If the data in @var{socket_address} is
+invalid: return false.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_in6addr_loopback (ikpcb * @var{pcb})
+@deftypefunx ikptr ikrt_posix_in6addr_any (ikpcb * @var{pcb})
+Build and return a bytevector holding the constant structures of type
+@code{struct in6_addr} defined by @code{in6addr_loopback} and
+@code{in6addr_any}.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_inet_aton (ikptr @var{dotted_quad}, ikpcb * @var{pcb})
+Given the bytevector @var{dotted_quad} holding the @ascii{} dotted quad
+representation of a host address, build and return a bytevector holding
+the corresponding @code{struct in_addr}.  If @var{dotted_quad} is
+invalid: return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_inet_ntoa (ikptr @var{host_address}, ikpcb * @var{pcb})
+Given the bytevector @var{host_address} holding a @code{struct in_addr},
+build and return a bytevector holding the corresponding @ascii{} dotted
+quad representation.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_inet_pton (ikptr @var{af}, ikptr @var{presentation}, ikpcb * @var{pcb})
+Given the fixnum @var{af}, being @code{AF_INET} or @code{AF_INET6}, and
+the bytevector @var{presentation} holding the @ascii{} presentation of
+an Internet address, build and return a bytevector holding the
+corresponding @code{struct in_addr} or @code{struct in6_addr}.  If
+either @var{af} or @var{presentation} is invalid: return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_inet_ntop (ikptr @var{af}, ikptr @var{host_address}, ikpcb * @var{pcb})
+Given the fixnum @var{af}, being @code{AF_INET} or @code{AF_INET6}, and
+the bytevector @var{host_address} holding a @code{struct in_addr} or
+@code{struct in6_addr}, build and return a bytevector holding the
+corresponding @ascii{} presentation of the Internet address .  If the
+arguments are invalid: return false.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Host address resolution
+
+
+@deftypefun ikptr ikrt_posix_gethostbyname (ikptr @var{rtd}, ikptr @var{hostname}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{gethostbyname}, @glibcref{Host Names,
+gethostbyname}.  Given the bytevector @var{hostname} holding the
+@ascii{} representation of a host name, build and return an instance of
+@code{struct-hostent} using @var{rtd} as its type descriptor.  If an
+error occurs, return an encoded @code{h_errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_gethostbyaddr (ikptr @var{rtd}, ikptr @var{addr}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{gethostbyaddr}, @glibcref{Host Names,
+gethostbyaddr}.  Given the bytevector @var{addr} holding a @code{struct
+in_addr} or a @code{struct in6_addr}, build and return an instance of
+@code{struct-hostent} using @var{rtd} as its type descriptor; the type
+of address is automatically inferred from the length of the bytevector.
+If an error occurs, return an encoded @code{h_errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_host_entries (ikptr @var{rtd}, ikpcb * pcb)
+Interface to the C functions @cfunc{sethostent}, @cfunc{gethostent} and
+@cfunc{endhostent}, @glibcref{Host Names, gethostbyaddr}.  Build and
+return a list of @code{struct-hostent} representing the entries in the
+hosts database, using @var{rtd} as type descriptor.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getaddrinfo (ikptr @var{rtd}, ikptr @var{node}, ikptr @var{service}, ikptr @var{hints}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getaddrinfo}, see the manual page
+@code{getaddrinfo(3)}.  Given the bytevectors @var{node} and
+@var{service} identifying an Internet host and a service, build a list
+of @code{struct-addrinfo} instances representing addresses to which
+sockets can be bound or connected.
+
+Both @var{node} and @var{service} can be false, in which case the
+corresponding arguments handed to the C function are @code{NULL}.
+
+@var{hints} must be an instance of @code{struct-addrinfo} used to select
+matching hosts.  @var{rtd} must be the type descriptor of
+@code{struct-addrinfo}.
+
+If successful: return the list of data structures, else return a fixnum
+representing an @code{EAI_} error code.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_gai_strerror (ikptr @var{error_code}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{gai_strerror}, see the manual page
+@code{gai_strerror(3)}.  Convert a @code{EAI_} error code into the
+corresponding error message, return a bytevector holding such message in
+@ascii{} coding.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Network protocols
+
+
+@deftypefun ikptr ikrt_posix_getprotobyname (ikptr @var{rtd}, ikptr @var{name}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getprotobyname}, @glibcref{Protocols
+Database, getprotobyname}.  Given a bytevector @var{name} holding the
+@ascii{} coding of a network protocol name, query the network protocols
+database and build an instance of @code{struct-protoent} mirroring the
+resulting @code{struct protoent} entry; @var{rtd} must be the type
+descriptor of @code{struct-protoent}.  If successful return the data
+structure, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getprotobynumber (ikptr @var{rtd}, ikptr @var{proto_num}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getprotobynumber},
+@glibcref{Protocols Database, getprotobynumber}.  Given a fixnum
+@var{proto_num} being the number of a network protocol, query the
+network protocols database and build an instance of
+@code{struct-protoent} mirroring the resulting @code{struct protoent}
+entry; @var{rtd} must be the type descriptor of @code{struct-protoent}.
+If successful return the data structure, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_protocol_entries (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C functions @cfunc{setprotoent}, @cfunc{getprotoent}
+and @cfunc{endprotoent}, @glibcref{Protocols Database, setprotoent}.
+Scan the network protocol database and build a list of
+@code{struct-protoent} mirroring the resulting @code{struct protoent}
+entries; @var{rtd} must be the type descriptor of
+@code{struct-protoent}.  Return the list of structures.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Network services
+
+
+@deftypefun ikptr ikrt_posix_getservbyname (ikptr @var{rtd}, ikptr @var{name}, ikptr @var{protocol}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getservbyname}, @glibcref{Services
+Database, getservbyname}.  Given the bytevectors @var{name} and
+@var{protocol} holding the @ascii{} coding of a network service name and
+protocol, query the network services database and build an instance of
+@code{struct-servent} mirroring the resulting @code{struct servent}
+entry.  @var{rtd} must be the type descriptor of @code{struct-servent}.
+If successful return the data structure, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getservbynumber (ikptr @var{rtd}, ikptr @var{port}, ikptr @var{protocol}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getservbynumber}, @glibcref{Services
+Database, getservbynumber}.  Given a fixnum @var{port} and a string or
+bytevector @var{protocol} being the port number and protocol name of a
+network service, query the network services database and build an
+instance of @code{struct-servent} mirroring the resulting @code{struct
+servent} entry.  @var{rtd} must be the type descriptor of
+@code{struct-servent}.  If successful return the data structure, else
+return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_service_entries (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C functions @cfunc{setservent}, @cfunc{getservent} and
+@cfunc{endservent}, @glibcref{Services Database, setservent}.  Scan the
+network service database and build a list of @code{struct-servent}
+mirroring the resulting @code{struct servent} entries.  @var{rtd} must
+be the type descriptor of @code{struct-servent}.  Return the list of
+structures.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Networks database
+
+
+@deftypefun ikptr ikrt_posix_getnetbyname (ikptr @var{rtd}, ikptr @var{name}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getnetbyname}, @glibcref{Networks
+Database, getnetbyname}.  Given the bytevector @var{name} holding the
+@ascii{} coding of a network name, query the networks database and build
+an instance of @code{struct-netent} mirroring the resulting @code{struct
+netent} entry.  @var{rtd} must be the type descriptor of
+@code{struct-netent}.  If successful return the data structure, else
+return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getnetbyaddr (ikptr @var{rtd}, ikptr @var{net}, ikptr @var{type}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getnetbyaddr}, @glibcref{Networks
+Database, getnetbyaddr}.  Given an exact integer @var{net} representing
+a network number and the fixnum @var{type} representing a network type,
+query the networks database and build an instance of
+@code{struct-netent} mirroring the resulting @code{struct netent} entry.
+@var{rtd} must be the type descriptor of @code{struct-netent}.  If
+successful return the data structure, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_network_entries (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C functions @cfunc{setnetent}, @cfunc{getnetent} and
+@cfunc{endnetent}, @glibcref{Networks Database, setnetent}.  Scan the
+networks database and build a list of @code{struct-netent} mirroring the
+resulting @code{struct netent} entries.  @var{rtd} must be the type
+descriptor of @code{struct-netent}.  Return the list of structures.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Sockets creation and shutdown
+
+
+@deftypefun ikptr ikrt_posix_socket (ikptr @var{namespace}, ikptr @var{style}, ikptr @var{protocol})
+Interface to the C function @cfunc{socket}, @glibcref{Creating a Socket,
+socket}.  Create a new socket descriptor and return it as non--negative
+fixnum; if an error occurs return an encoded @code{errno} value.  All
+the arguments must be fixnums.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_shutdown (ikptr @var{sock}, ikptr @var{how})
+Interface to the C function @cfunc{shutdown}, @glibcref{Closing a
+Socket, shutdown}.  Close the socket @var{sock} according to @var{how}.
+If successful return the fixnum zero, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_socketpair (ikptr @var{namespace}, ikptr @var{style}, ikptr @var{protocol}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{socketpair}, @glibcref{Socket Pairs,
+socketpair}.  Create a pairs of connected sockets and return a pair
+holding the descriptors as non--negative fixnums; if an error occurs
+return an encoded @code{errno} value.  All the arguments must be
+fixnums, but @var{pcb}.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Socket operations
+
+
+@deftypefun ikptr ikrt_posix_connect (ikptr @var{sock}, ikptr @var{addr})
+Interface to the C function @cfunc{connect}, @glibcref{Connecting,
+connect}.  Connect the socket @var{sock} to the address specified by the
+bytevector @var{addr} which must hold a concrete instance of
+@code{struct sockaddr}.  If successful return the fixnum zero, else
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_listen (ikptr @var{sock}, ikptr @var{pending_conns})
+Interface to the C function @cfunc{listen}, @glibcref{Listening,
+listen}.  Enable the socket @var{sock} to accept connections; the fixnum
+@var{pending_conns} specifies the maximum length of the pending
+connection requests queue.  If successful return the fixnum zero, else
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_accept (ikptr @var{sock}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{accept}, @glibcref{Accepting
+Connections, accept}.  Accept an incoming connection to the server
+socket @var{sock}.  If successful return a pair whose car is a
+non--negative fixnum representing the socket and whose cdr is a
+bytevector representing the client address as @code{struct sockaddr};
+else return an encoded @code{errno} value, including @code{EWOULDBLOCK}
+which means that @var{sock} is in non--blocking mode and no pending
+connections exist.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_bind (ikptr @var{sock}, ikptr @var{sockaddr})
+Interface to the C function @cfunc{bind}, @glibcref{Setting Address,
+bind}.  Bind the socket descriptor @var{sock} to the address specified
+by the @code{struct sockaddr} in the bytevector @var{sockaddr}.  If
+successful return the fixnum zero, else return an encoded @code{errno}
+value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getpeername (ikptr @var{sock}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getpeername}, @glibcref{Who is
+Connected, getpeername}.  Retrieve informations about the address of the
+socket to which the @var{sock} socket is connected to.  If successful
+return a bytevector holding a @code{struct sockaddr}, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getsockname (ikptr @var{sock}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getsockanme}, @glibcref{Setting
+Address, getsockname}.  Retrieve informations about the address bound to
+the socket descriptor @var{sock}.  If successful return a bytevector
+holding the @code{struct sockaddr}, else return an encoded @code{errno}
+value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_send (ikptr @var{sock}, ikptr @var{buffer}, ikptr @var{size}, ikptr @var{flags})
+Interface to the C function @cfunc{send}, @glibcref{Sending Data, send}.
+Like @cfunc{write} but with the additional argument @var{flags} which
+must be a fixnum: write data from the bytevector @var{buffer} to the
+socket @var{sock}; if @var{size} is a fixnum, write @var{size} bytes; if
+@var{size} is false, write a number of bytes equal to the length of
+@var{buffer}.  If successful return a non--negative fixnum representing
+the number of bytes actually sent, else return an encoded @code{errno}
+value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_recv (ikptr @var{sock}, ikptr @var{buffer}, ikptr @var{size}, ikptr @var{flags})
+Interface to the C function @cfunc{recv}, @glibcref{Receiving Data,
+recv}.  Like @cfunc{read} but with the additional argument @var{flags}
+which must be a fixnum: read data from @var{sock} and store it in the
+bytevector @var{buffer}; if @var{size} is a fixnum, read @var{size}
+bytes; if @var{size} is false, read a number of bytes equal to the
+length of @var{buffer}.  If successful return a non--negative fixnum
+representing the number of bytes actually received, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_sendto (ikptr @var{sock}, ikptr @var{buffer}, ikptr @var{size}, ikptr @var{flags}, ikptr @var{addr})
+Interface to the C function @cfunc{sendto}, @glibcref{Sending Datagrams,
+sendto}.  Like @cfunc{send} but with the additional argument @var{addr}
+which must be a bytevector holding a @code{struct sockaddr}: write data
+from the bytevector @var{buffer} to the socket @var{sock} to the
+destination specified by @var{addr}.
+
+If @var{size} is a fixnum, write @var{size} bytes; if @var{size} is
+false, write a number of bytes equal to the length of @var{buffer}.
+
+If successful return a non--negative fixnum representing the number of
+bytes actually sent, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_recvfrom (ikptr @var{sock}, ikptr @var{buffer}, ikptr @var{size}, ikptr @var{flags}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{recvfrom}, @glibcref{Receiving
+Datagrams, recvfrom}.  Like @cfunc{recv} but additionally retrieve
+informations about the address of the sender: read data from @var{sock}
+and store it in the bytevector @var{buffer}.
+
+If @var{size} is a fixnum, read @var{size} bytes; if @var{size} is
+false, read a number of bytes equal to the length of @var{buffer}.
+
+If successful return a pair whose car is a non--negative fixnum
+representing the number of bytes actually received and whose cdr is a
+bytevector holding a @code{struct sockaddr} representing the address of
+the sender; else return an encoded @code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_getsockopt (ikptr @var{sock}, ikptr @var{level}, ikptr @var{option}, ikptr @var{optval}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getsockopt}, @glibcref{Socket Option
+Function, getsockopt}.  Retrieve the value of @var{option} of socket
+@var{sock} at @var{level} and store it in the bytevector @var{optval}.
+@var{option} and @var{level} must be fixnums.  If successful return the
+fixnum zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_setsockopt (ikptr @var{sock}, ikptr @var{level}, ikptr @var{option}, ikptr @var{optval}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{setsockopt}, @glibcref{Socket Option
+Function, setsockopt}.  Set a new value for @var{option} of socket
+@var{sock} at @var{level} reading it from the bytevector @var{optval}.
+@var{option} and @var{level} must be fixnums.  If successful return the
+fixnum zero, else return an encoded @code{errno} value.
+@end deftypefun
 
 @c page
 @node capi posix time
@@ -9386,6 +11068,7 @@ true if the process was resumed by delivery of @code{SIGCONT}.
 * capi glibc dir::              File system directories.
 * capi glibc temp::             Temporary files and directories.
 * capi glibc sync::             File system synchronisation.
+* capi glibc socket::           Network sockets.
 @end menu
 
 @c page
@@ -9461,6 +11144,45 @@ Interface to the C function @cfunc{fdatasync}, @glibcref{Synchronizing
 I/O}.  Flush kernel buffer data to the file system device for the file
 descriptor @var{fd}.  If successful return the fixnum zero, else return
 an encoded @code{errno} value.
+@end deftypefun
+
+@c page
+@node capi glibc socket
+@subsection Network sockets
+
+
+@deftypefun ikptr ikrt_glibc_if_nametoindex (ikptr @var{name})
+Interface to the C function @cfunc{if_nametoindex}, @glibcref{Interface
+Naming, if_nametoindex}.  Convert a string representing a network
+interface to the corresponding internal index.  @var{name} must be a
+bytevector holding the @utf{}-8 representation of the string.  Return a
+fixnum representing the index or false if @var{name} is invalid.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_glibc_if_indextoname (ikptr @var{index}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{if_indextoname}, @glibcref{Interface
+Naming, if_indextoname}.  Convert the index associated to an interface
+to the corresponding string name.  @var{index} must be a fixnum
+representing the index.  Return a bytevector holding the name or false
+if @var{index} is invalid.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_glibc_if_nameindex (ikpcb * @var{pcb})
+Interface to the C function @cfunc{if_nameindex}, @glibcref{Interface
+Naming, if_nameindex}.  Build and return an association list having
+fixnums as keys and bytevectors as values; the fixnums are the interface
+indexes, the bytevectors are the corresponding interface names.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_glibc_gethostbyname2 (ikptr @var{rtd}, ikptr @var{hostname}, ikptr @var{addrtype}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{gethostbyname2}, @glibcref{Host
+Names, gethostbyname2}.  Like @cfunc{ikrt_posix_gethostbyname} but
+allows the selection of the address type with @var{addrtype} which must
+be @code{AF_INET} or @code{AF_INET6}.
 @end deftypefun
 
 @c page

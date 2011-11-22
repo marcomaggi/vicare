@@ -31,6 +31,7 @@
 #include "ikarus.h"
 #include <dirent.h>
 #include <unistd.h>
+#include <net/if.h>
 #include <sys/types.h>
 
 static VICARE_UNUSED void
@@ -167,6 +168,75 @@ ikrt_glibc_fdatasync (ikptr fd)
   feature_failure(__func__);
 #endif
 }
+
+
+/** --------------------------------------------------------------------
+ ** Sockets.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_glibc_if_nametoindex (ikptr name_bv)
+{
+  char *        name;
+  unsigned int  rv;
+  name  = VICARE_BYTEVECTOR_DATA_CHARP(name_bv);
+  rv    = if_nametoindex(name);
+  if (0 == rv)
+    return false_object;
+  else
+    return fix((long)rv);
+}
+ikptr
+ikrt_glibc_if_indextoname (ikptr index, ikpcb * pcb)
+{
+  char          buffer[1+IFNAMSIZ];
+  unsigned      i = (unsigned)unfix(index);
+  char *        rv;
+  rv = if_indextoname(i, buffer);
+  if (NULL == rv) {
+    return false_object;
+  } else {
+    long        len  = strlen(buffer);
+    ikptr       bv   = ik_bytevector_alloc(pcb, len);
+    char *      data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+    memcpy(data, buffer, len+1);
+    return bv;
+  }
+}
+ikptr
+ikrt_glibc_if_nameindex (ikpcb * pcb) {
+  struct if_nameindex * arry;           /* the list of interfaces */
+  ikptr         alist = null_object;    /* the result alist */
+  ikptr         spine;                  /* the next pair to prepend to the alist */
+  ikptr         entry;                  /* the next alist entry */
+  long          len;                    /* the length of interface name */
+  ikptr         bv;                     /* bytevector holding the interface name */
+  char *        data;                   /* data area in the bytevector */
+  int           i;
+  pcb->root0 = &alist;
+  arry = if_nameindex();
+  for (i=0; 0 != arry[i].if_index; ++i) {
+    /* Add a pair to the alist spine. */
+    spine = ik_pair_alloc(pcb);
+    ref(spine, off_cdr) = alist;
+    alist               = spine;
+    /* Add an entry to the alist. */
+    entry = ik_pair_alloc(pcb);
+    ref(spine, off_car) = entry;
+    /* Fill the entry. */
+    len  = strlen(arry[i].if_name);
+    bv   = ik_bytevector_alloc(pcb, len);
+    data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+    memcpy(data, arry[i].if_name, len);
+    ref(entry, off_car) = fix(arry[i].if_index);
+    ref(entry, off_cdr) = bv;
+  }
+  if_freenameindex(arry);
+  pcb->root0 = NULL;
+  return alist;
+}
+
+/* ------------------------------------------------------------------ */
 
 
 /** --------------------------------------------------------------------
