@@ -8067,6 +8067,7 @@ should do:
     (let loop ()
       (let-values (((rd wr ex) (select-fd sock 2 0)))
         (cond (ex ;process exceptional conditions first!!!
+               ;; block until OOB data arrives
                (let ((len (px.recv sock bv #f MSG_OOB)))
                  ;; process data in BV between 0 and LEN,
                  ;; which should be 1
@@ -8161,7 +8162,8 @@ byte.
 The receiving @os{} orders and enqueues data from received packets in a
 @fifo{} buffer; when it detects a tagged packet announcing the @oob{}
 byte: it optionally informs the receiving application of its future
-arrival.
+arrival, signaling an exceptional condition on the socket descriptor, if
+requested.
 
 @item
 The sending @os{} proceeds in sending ordinary data from its @fifo{}
@@ -8171,8 +8173,7 @@ specially tagged packet.
 @item
 The receiving @os{} orders and enqueues data from received packets in a
 @fifo{} buffer; when it detects a tagged packet holding the @oob{} byte:
-it makes it available to the receiving application, signaling an
-exceptional condition on the socket descriptor, if requested.
+it makes it available to the receiving application.
 
 @item
 The receving application calls the function @func{recv} specifying the
@@ -8205,6 +8206,11 @@ notified @strong{only once} and not persist in further calls to
 @func{select}; for this reason the exceptional condition must be
 recognised and registered by the application as soon as it is notified
 by @func{select}.
+
+The socket option @code{SO_OOBINLINE} allows the @oob{} byte to be
+places in the ordinary data @fifo{} buffer, so that it can be
+transparently consumed by a call to @func{read} or @func{recv} without
+the @code{MSG_OOB} flag.
 
 Notice that the single @oob{} byte, although limited, can represent
 @math{256} symbols in an appropriate alphabet of commands.
