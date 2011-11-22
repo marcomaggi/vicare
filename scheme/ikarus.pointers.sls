@@ -1,32 +1,31 @@
-;;; Ikarus Scheme -- A compiler for R6RS Scheme.
-;;; Copyright (C) 2008,2009  Abdulaziz Ghuloum
-;;; 
-;;; This program is free software: you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License version 3 as
-;;; published by the Free Software Foundation.
-;;; 
-;;; This program is distributed in the hope that it will be useful, but
-;;; WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; General Public License for more details.
-;;; 
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
+;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;Copyright (C) 2008,2009  Abdulaziz Ghuloum
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under  the terms of  the GNU General  Public License version  3 as
+;;;published by the Free Software Foundation.
+;;;
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
+;;;
+;;;You should  have received  a copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (library (ikarus.pointers)
-  (export pointer? integer->pointer pointer->integer 
+  (export pointer? integer->pointer pointer->integer
           dlopen dlerror dlclose dlsym malloc free memcpy
           errno
-          pointer-ref-c-signed-char 
+          pointer-ref-c-signed-char
           pointer-ref-c-signed-short
-          pointer-ref-c-signed-int 
+          pointer-ref-c-signed-int
           pointer-ref-c-signed-long
           pointer-ref-c-signed-long-long
           pointer-ref-c-unsigned-char
-          pointer-ref-c-unsigned-short 
-          pointer-ref-c-unsigned-int 
+          pointer-ref-c-unsigned-short
+          pointer-ref-c-unsigned-int
           pointer-ref-c-unsigned-long
           pointer-ref-c-unsigned-long-long
           pointer-ref-c-float
@@ -39,48 +38,48 @@
           pointer-set-c-long-long!
           pointer-set-c-pointer!
           pointer-set-c-float!
-          pointer-set-c-double! 
+          pointer-set-c-double!
           make-c-callout make-c-callback)
-  (import 
-    (except (ikarus) 
-      pointer? 
+  (import
+    (except (ikarus)
+      pointer?
       integer->pointer pointer->integer
       dlopen dlerror dlclose dlsym malloc free memcpy))
 
-  ;;; pointer manipulation procedures 
+  ;;; pointer manipulation procedures
 
   (define (pointer? x)
-    (foreign-call "ikrt_isapointer" x))
+    (foreign-call "ikrt_is_pointer" x))
 
   (define (integer->pointer x)
     (cond
-      [(fixnum? x) 
+      [(fixnum? x)
        (foreign-call "ikrt_fx_to_pointer" x)]
       [(bignum? x)
        (foreign-call "ikrt_bn_to_pointer" x)]
-      [else 
+      [else
        (die 'integer->pointer "not an integer" x)]))
 
   (define (pointer->integer x)
     (cond
-      [(pointer? x) 
+      [(pointer? x)
        (foreign-call "ikrt_pointer_to_int" x)]
-      [else 
+      [else
        (die 'pointer->integer "not a pointer" x)]))
 
-  ;;; dynamic loading procedures 
+  ;;; dynamic loading procedures
 
-  (define dlerror 
+  (define dlerror
     (lambda ()
       (let ([p (foreign-call "ikrt_dlerror")])
         (and p (utf8->string p)))))
 
-  (define dlopen 
+  (define dlopen
     (let ()
       (define (open x lazy? global?)
         (foreign-call "ikrt_dlopen" x lazy? global?))
-      (case-lambda 
-        [()  
+      (case-lambda
+        [()
          (open #f #f #f)]
         [(x)
          (dlopen x #f #f)]
@@ -99,14 +98,14 @@
     (lambda (handle name)
       (define who 'dlsym)
       (if (pointer? handle)
-          (if (string? name) 
+          (if (string? name)
               (foreign-call "ikrt_dlsym" handle (string->utf8 name))
               (die who "invalid symbol name" name))
           (die who "handle is not a pointer" handle))))
 
   ;;; explicit memory management
 
-  (define (malloc len) 
+  (define (malloc len)
     (if (and (fixnum? len) (fx>? len 0))
         (foreign-call "ikrt_malloc" len)
         (die 'malloc "not a positive fixnum" len)))
@@ -119,7 +118,7 @@
   (define (pointer+ ptr off)
     (integer->pointer (+ (pointer->integer ptr) off)))
 
-  
+
   (define (memcpy dst dst-offset src src-offset count)
     (define who 'memcpy)
     (unless (and (fixnum? dst-offset) (fx>=? dst-offset 0))
@@ -148,7 +147,7 @@
 
   (define-syntax define-getter
     (syntax-rules ()
-      [(_ name foreign-name) 
+      [(_ name foreign-name)
        (define name
          (lambda (p i)
            (if (pointer? p)
@@ -159,14 +158,14 @@
 
   (define-syntax define-setter
     (syntax-rules ()
-      [(_ name pred? foreign-name) 
+      [(_ name pred? foreign-name)
        (define name
          (lambda (p i v)
            (if (pointer? p)
                (if (fixnum? i)
                    (if (pred? v)
                        (foreign-call foreign-name p i v)
-                       (die 'name 
+                       (die 'name
                           (format "value must satisfy the predicate ~a" 'pred?)
                           v))
                    (die 'name "index is not a fixnum" i))
@@ -229,7 +228,7 @@
            [(pointer)            pointer?]
            [else (die who "invalid type" t)])]))
     checker)
- 
+
 
 
   (define (ffi-prep-cif who rtype argtypes)
@@ -237,7 +236,7 @@
       (cond
         [(vector? x) (vector-map convert x)]
         [else
-         (case x 
+         (case x
            [(void)                1]
            [(unsigned-char)       2]
            [(signed-char)         3]
@@ -280,15 +279,15 @@
             (die who "not a pointer" cfun))
           (lambda args
             (let ([argsvec (list->vector args)])
-              (unless (= (vector-length argsvec) 
+              (unless (= (vector-length argsvec)
                          (vector-length argtypes-vec))
-                (error 'callout-procedure "arg length mismatch" 
+                (error 'callout-procedure "arg length mismatch"
                        (vector->list argtypes-vec)
                        args))
               (vector-for-each
                 (lambda (p? t x)
                   (unless (p? x)
-                    (die 'callout-procedure 
+                    (die 'callout-procedure
                          (format "argument does not match type ~a" t)
                          x)))
                 checkers argtypes-vec argsvec)
@@ -301,12 +300,12 @@
       (lambda (proc)
         (unless (procedure? proc)
           (die who "not a procedure"))
-        (let ([proc 
+        (let ([proc
                (cond
                  [(eq? rtype 'void) proc]
                  [else
                   (let ([p? ((checker who) rtype)])
-                    (lambda args 
+                    (lambda args
                       (let ([v (apply proc args)])
                         (unless (p? v)
                           (die 'callback
@@ -317,8 +316,8 @@
           (let ([data (vector cif proc argtypes-n rtype-n)])
             (or (foreign-call "ikrt_prepare_callback" data)
                 (die who "cannot prepare foreign callback")))))))
-  
-  (define (ffi-enabled?) 
+
+  (define (ffi-enabled?)
     (foreign-call "ikrt_has_ffi"))
 
   (define (errno)
@@ -327,4 +326,4 @@
   )
 
 
- 
+

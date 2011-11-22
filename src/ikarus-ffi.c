@@ -167,7 +167,7 @@ ffi_to_scheme_value_cast(int n, void* p, ikpcb* pcb) {
     case 11: return sll_to_number(*((signed long long*)p), pcb);
     case 12: return d_to_number(*((float*)p), pcb);
     case 13: return d_to_number(*((double*)p), pcb);
-    case 14: return make_pointer((long)*((void**)p), pcb);
+    case 14: return ikrt_pointer_alloc((long)*((void**)p), pcb);
     default:
       fprintf(stderr, "INVALID ARG %d", n);
       exit(EXIT_FAILURE);

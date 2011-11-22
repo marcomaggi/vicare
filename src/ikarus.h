@@ -499,12 +499,17 @@ ikptr   normalize_bignum        (long limbs, int sign, ikptr r);
 #define pointer_size          (2 * wordsize)
 #define off_pointer_data      (disp_pointer_data - vector_tag)
 
-ikptr   make_pointer    (long x, ikpcb* pcb);
-
-#define IS_POINTER(X)   (pointer_tag == (((long)(X)) & pointer_tag))
+ikptr   ikrt_pointer_alloc      (long memory, ikpcb* pcb);
+ikptr   ikrt_is_pointer         (ikptr x);
 
 #define VICARE_POINTER_DATA_VOIDP(X)  \
   ((void *)ref((X), off_pointer_data))
+
+#define VICARE_POINTER_DATA_CHARP(X)  \
+  ((char *)ref((X), off_pointer_data))
+
+#define VICARE_POINTER_DATA_LONG(X)  \
+  ((long)ref((X), off_pointer_data))
 
 
 /** --------------------------------------------------------------------

@@ -1039,7 +1039,7 @@ ikrt_posix_opendir (ikptr pathname_bv, ikpcb * pcb)
   if (NULL == stream) {
     return ik_errno_to_code();
   } else {
-    ikptr       pointer = make_pointer((long)stream, pcb);
+    ikptr       pointer = ikrt_pointer_alloc((long)stream, pcb);
     return pointer;
   }
 }
@@ -1052,7 +1052,7 @@ ikrt_posix_fdopendir (ikptr fd, ikpcb * pcb)
   if (NULL == stream) {
     return ik_errno_to_code();
   } else {
-    ikptr       pointer = make_pointer((long)stream, pcb);
+    ikptr       pointer = ikrt_pointer_alloc((long)stream, pcb);
     return pointer;
   }
 }
@@ -1430,7 +1430,7 @@ ikrt_posix_fcntl (ikptr fd, ikptr command, ikptr arg)
   } else if (IS_BYTEVECTOR(arg)) {
     void *      val = VICARE_BYTEVECTOR_DATA_VOIDP(arg);
     rv = fcntl(unfix(fd), unfix(command), val);
-  } else if (IS_POINTER(arg)) {
+  } else if (ikrt_is_pointer(arg)) {
     void *      val = VICARE_POINTER_DATA_VOIDP(arg);
     rv = fcntl(unfix(fd), unfix(command), val);
   } else {
@@ -1456,7 +1456,7 @@ ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
   } else if (IS_BYTEVECTOR(arg)) {
     void *      val = VICARE_BYTEVECTOR_DATA_VOIDP(arg);
     rv = ioctl(unfix(fd), unfix(command), val);
-  } else if (IS_POINTER(arg)) {
+  } else if (ikrt_is_pointer(arg)) {
     void *      val = VICARE_POINTER_DATA_VOIDP(arg);
     rv = ioctl(unfix(fd), unfix(command), val);
   } else {
