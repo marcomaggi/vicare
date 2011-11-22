@@ -517,9 +517,9 @@ Revised^6 Report on the algorithmic language Scheme
 @noindent
 This document describes version @version{} of @value{PACKAGE}, an
 @rnrs{6} compliant native compiler for the Scheme language producing
-single threaded programs running on Intel x86 32-bit processors; Vicare
-is officially not ready for 64-bit machines.  @emph{Vicare} is
-pronounced the etruscan way.
+single threaded programs running on Intel x86 32-bit processors, with
+experimental support for 64-bit machines.  @emph{Vicare} is pronounced
+the etruscan way.
 
 The Vicarus Scheme package is distributed under the terms of the @gnu{}
 General Public License (@gpl{}) and can be downloaded from:
@@ -661,7 +661,7 @@ Scheme programming language; it is the creation of Abdulaziz Ghuloum.
 
 Vicare Scheme is an @rnrs{6} compliant fork of Ikarus Scheme, aiming at
 becoming a native compiler producing single threaded programs running on
-Intel x86 32-bit processors; Vicare is officially not ready for 64-bit
+Intel x86 32-bit processors, with experimental support for 64-bit
 machines.  @emph{Vicare} is pronounced the etruscan way.
 
 @menu
