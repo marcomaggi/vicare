@@ -124,6 +124,9 @@ selected command line arguments doing:
 where the contents  of the "user_flags" variable are  placed directly on
 the command line.
 
+  Some  test  files need  a  usable  directory  pathname in  the  TMPDIR
+environment variable.
+
   The  file "test-vicare-posix.sps" contains  tests for  network sockets
 which are  normally disabled because  the firewall rules on  the hosting
 machine must  allo connections on 127.0.0.1:8080  and 127.0.0.1:8081; to
