@@ -138,12 +138,24 @@ Revised^6 Report on the algorithmic language Scheme
 @acronym{EOF}
 @end macro
 
+@macro fifo{}
+@acronym{FIFO}
+@end macro
+
 @macro ieee{}
 @acronym{IEEE}
 @end macro
 
 @macro iso{}
 @acronym{ISO}
+@end macro
+
+@macro oob{}
+@acronym{OOB}
+@end macro
+
+@macro os{}
+@acronym{OS}
 @end macro
 
 @macro posix{}
@@ -7022,6 +7034,7 @@ we mishandle the values.
 * posix socket socket::         Network sockets operations.
 * posix socket misc::           Error and miscellaneous functions.
 * posix socket examples::       Examples of clients and servers.
+* posix socket oob::            Notes on transmission of @oob{} data.
 @end menu
 
 @c page
@@ -8053,7 +8066,7 @@ should do:
        ((bv)                  (make-bytevector 10)))
     (let loop ()
       (let-values (((rd wr ex) (select-fd sock 2 0)))
-        (cond (ex
+        (cond (ex ;process exceptional conditions first!!!
                (let ((len (px.recv sock bv #f MSG_OOB)))
                  ;; process data in BV between 0 and LEN,
                  ;; which should be 1
@@ -8089,6 +8102,112 @@ do:
   (px.send sock '#vu8(7 8 9) #f 0)
   (px.close sock))
 @end example
+
+@c page
+@node posix socket oob
+@subsection Notes on transmission of @oob{} data
+
+
+In a @tcp{}/@ip{} stream--oriented client/server architecture, the
+scenario is the following:
+
+@example
+ --------------------        ------------
+| sending appication |----->| sending OS |
+ --------------------        ------------
+                                  |
+                                  v
+ -----------------------     -------------
+| receiving application |<--| receving OS |
+ -----------------------     -------------
+@end example
+
+@noindent
+sending ordinary data works as follows:
+
+@enumerate
+@item
+The sending application calls (for example) the @func{send} function
+asking the sending @os{} to send data to the remote host.
+
+@item
+The sending @os{} enqueues the data in a @fifo{} buffer, which it
+progressively fragments in packets for delivery.
+
+@item
+The receiving @os{} orders and enqueues data from received packets in a
+@fifo{} buffer.
+
+@item
+The receiving application calls (for example) the @cfunc{recv} function
+to consume chunks of the input data.
+@end enumerate
+
+@noindent
+sending a single byte of @oob{} data works as follows:
+
+@enumerate
+@item
+The sending application calls the function @func{send} specifying the
+@code{MSG_OOB} flag, asking the sending @os{} to deliver a single byte
+of @oob{} data.
+
+@item
+The sending @os{} enqueues the single byte in its @fifo{} buffer and
+tags the next outgoing packet to announce future delivery of the @oob{}
+byte.
+
+@item
+The receiving @os{} orders and enqueues data from received packets in a
+@fifo{} buffer; when it detects a tagged packet announcing the @oob{}
+byte: it optionally informs the receiving application of its future
+arrival.
+
+@item
+The sending @os{} proceeds in sending ordinary data from its @fifo{}
+buffer and whenever it reaches the @oob{} byte: it sends it in a
+specially tagged packet.
+
+@item
+The receiving @os{} orders and enqueues data from received packets in a
+@fifo{} buffer; when it detects a tagged packet holding the @oob{} byte:
+it makes it available to the receiving application, signaling an
+exceptional condition on the socket descriptor, if requested.
+
+@item
+The receving application calls the function @func{recv} specifying the
+@code{MSG_OOB} flag and retrieves the single @oob{} byte.
+@end enumerate
+
+If we send the @oob{} byte with the form:
+
+@example
+(posix.send sock '#vu8(8) #f MSG_OOB)
+@end example
+
+@noindent
+the byte @code{8} will be the @oob{} byte; if we send the @oob{} byte
+with the form:
+
+@example
+(posix.send sock '#vu8(1 2 3) #f MSG_OOB)
+@end example
+
+@noindent
+the byte @code{3}, the last in the memory block, will be the @oob{} byte
+and the bytes @code{1} and @code{2} will be sent as ordinary data; the
+receiving application must @strong{not} assume that bytes @code{1} and
+@code{2} will be made available before the @oob{} byte @code{3}.
+
+When using @func{select} to be notified of incoming @oob{} data: the
+receiving application must assume that the exceptional condition is
+notified @strong{only once} and not persist in further calls to
+@func{select}; for this reason the exceptional condition must be
+recognised and registered by the application as soon as it is notified
+by @func{select}.
+
+Notice that the single @oob{} byte, although limited, can represent
+@math{256} symbols in an appropriate alphabet of commands.
 
 @c page
 @node posix time
