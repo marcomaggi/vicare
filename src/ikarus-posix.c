@@ -37,6 +37,7 @@
 #include "ikarus.h"
 #include <dirent.h>
 #include <fcntl.h>
+#include <pwd.h>
 #include <signal.h>
 #include <stdint.h>
 #include <time.h>
@@ -2420,6 +2421,70 @@ ikrt_posix_setregid (ikptr real_gid, ikptr effective_gid)
   errno = 0;
   rv    = setregid(unfix(real_gid), unfix(effective_gid));
   return (0 == rv)? fix(0) : ik_errno_to_code();
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_getlogin (ikpcb * pcb)
+{
+  char *        username;
+  username = getlogin();
+  return (username)? ik_bytevector_from_cstring(pcb, username) : false_object;
+}
+
+/* ------------------------------------------------------------------ */
+
+static ikptr
+passwd_to_struct (ikptr rtd, struct passwd * src, ikpcb * pcb)
+/* Convert  a   C  language  "strut  passwd"  into   a  Scheme  language
+   "struct-passwd".    Makes   use  of   "pcb->root1"   only,  so   that
+   "pcb->root0" is available to the caller. */
+{
+  ikptr dst = ik_struct_alloc(pcb, rtd, 7);
+  pcb->root1 = &dst;
+  VICARE_STRUCT_SET(dst, 0, ik_bytevector_from_cstring(pcb, src->pw_name));
+  VICARE_STRUCT_SET(dst, 1, ik_bytevector_from_cstring(pcb, src->pw_passwd));
+  VICARE_STRUCT_SET(dst, 2, fix(src->pw_uid));
+  VICARE_STRUCT_SET(dst, 3, fix(src->pw_gid));
+  VICARE_STRUCT_SET(dst, 4, ik_bytevector_from_cstring(pcb, src->pw_gecos));
+  VICARE_STRUCT_SET(dst, 5, ik_bytevector_from_cstring(pcb, src->pw_dir));
+  VICARE_STRUCT_SET(dst, 6, ik_bytevector_from_cstring(pcb, src->pw_shell));
+  pcb->root1 = NULL;
+  return dst;
+}
+ikptr
+ikrt_posix_getpwuid (ikptr rtd, ikptr uid, ikpcb * pcb)
+{
+  struct passwd *       entry;
+  entry = getpwuid(unfix(uid));
+  return (entry)? passwd_to_struct(rtd, entry, pcb) : false_object;
+}
+ikptr
+ikrt_posix_getpwnam (ikptr rtd, ikptr name_bv, ikpcb * pcb)
+{
+  char *                name;
+  struct passwd *       entry;
+  name  = VICARE_BYTEVECTOR_DATA_CHARP(name_bv);
+  entry = getpwnam(name);
+  return (entry)? passwd_to_struct(rtd, entry, pcb) : false_object;
+}
+ikptr
+ikrt_posix_user_entries (ikptr rtd, ikpcb * pcb)
+{
+  ikptr                 list_of_entries = null_object;
+  struct passwd *       entry;
+  pcb->root0 = &list_of_entries;
+  setpwent();
+  for (entry=getpwent(); entry; entry=getpwent()) {
+    ikptr  pair        = ik_pair_alloc(pcb);
+    VICARE_SET_CDR(pair, list_of_entries);
+    list_of_entries = pair;
+    VICARE_SET_CAR(pair, passwd_to_struct(rtd, entry, pcb));
+  }
+  endpwent();
+  pcb->root0 = NULL;
+  return list_of_entries;
 }
 
 

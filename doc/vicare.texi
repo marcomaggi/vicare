@@ -8304,6 +8304,94 @@ group ID to @var{effective_gid}, both the arguments must be fixnums.  If
 successful return unspecified values, else raise an exception.
 @end defun
 
+@c ------------------------------------------------------------
+
+@defun getlogin
+@defunx getlogin/string
+Interface to the C function @cfunc{getlogin}, @glibcref{Who Logged In,
+getlogin}.  @func{getlogin} returns a bytevector holding the @ascii{}
+coding of the name of the user logged in on the controlling terminal of
+the process; @func{getlogin/string} returns a string; if the name cannot
+be determined: return false.
+@end defun
+
+@c ------------------------------------------------------------
+
+@deftp {Structure Type} struct-passwd
+Scheme level representation of @code{struct passwd}.  It has the
+following fields:
+
+@table @code
+@item pw_name
+Bytevector, user login name.
+
+@item pw_passwd
+Bytevector, encrypted password.
+
+@item pw_uid
+Fixnum, user ID.
+
+@item pw_gid
+Fixnum, group ID.
+
+@item pw_gecos
+Bytevector, user data.
+
+@item pw_dir
+Bytevector, user's home directory.
+
+@item pw_shell
+Bytevector, user's default shell.
+@end table
+@end deftp
+
+
+@defun make-struct-passwd @var{name} @var{passwd} @var{uid} @var{gid} @var{gecos} @var{dir} @var{shell}
+Build and return a new instance of @code{struct-passwd}.
+@end defun
+
+
+@defun struct-passwd? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-passwd}.
+@end defun
+
+
+@defun struct-passwd-pw_name @var{passwd}
+@defunx struct-passwd-pw_passwd @var{passwd}
+@defunx struct-passwd-pw_uid @var{passwd}
+@defunx struct-passwd-pw_gid @var{passwd}
+@defunx struct-passwd-pw_gecos @var{passwd}
+@defunx struct-passwd-pw_dir @var{passwd}
+@defunx struct-passwd-pw_shell @var{passwd}
+Accessors for the fields of @code{struct-passwd}.
+@end defun
+
+
+@defun getpwuid @var{uid}
+Interface to the C function @cfunc{getpwuid}, @glibcref{Lookup User,
+getpwuid}.  Retrieve informations on the user with identifier @var{uid},
+which must be a fixnum.  If successful return an instance of
+@code{struct-passwd}; if a user with such an ID does not exists: return
+false.
+@end defun
+
+
+@defun getpwnam @var{name}
+Interface to the C function @cfunc{getpwnam}, @glibcref{Lookup User,
+getpwnam}.  Retrieve informations on the user with name represented in
+@ascii{} coding in the string or bytevector @var{name}.  If successful
+return an instance of @code{struct-passwd}; if a user with such an ID
+does not exists: return false.
+@end defun
+
+
+@defun user-entries
+Interface to the C functions @cfunc{setpwent}, @cfunc{getpwent} and
+@cfunc{endpwent}, @glibcref{Scanning All Users, setpwent}.  Iterate the
+database of users and return a list of @code{struct-passwd} representing
+the entries.
+@end defun
+
 
 @c page
 @node posix time
@@ -11300,6 +11388,43 @@ successful return the fixnum zero, else return an encoded @code{errno}
 value.
 @end deftypefun
 
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_getlogin (ikpcb * @var{pcb})
+Interface to the C function @cfunc{getlogin}, @glibcref{Who Logged In,
+getlogin}.  Return a bytevector holding the @ascii{} coding of the name
+of the user logged in on the controlling terminal of the process; if the
+name cannot be determined: return false.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_getpwuid (ikptr @var{rtd}, ikptr @var{uid}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getpwuid}, @glibcref{Lookup User,
+getpwuid}.  Retrieve informations on the user with identifier @var{uid},
+which must be a fixnum.  If successful return an instance of
+@code{struct-passwd} initialised with @var{rtd}, which must be its type
+descriptor; if a user with such an ID does not exists: return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getpwnam (ikptr @var{rtd}, ikptr @var{name}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getpwnam}, @glibcref{Lookup User,
+getpwnam}.  Retrieve informations on the user with name represented in
+@ascii{} coding in the bytevector @var{name}.  If successful return an
+instance of @code{struct-passwd} initialised with @var{rtd}, which must
+be its type descriptor; if a user with such an ID does not exists:
+return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_user_entries (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C functions @cfunc{setpwent}, @cfunc{getpwent} and
+@cfunc{endpwent}, @glibcref{Scanning All Users, setpwent}.  Iterate the
+database of users and return a list of @code{struct-passwd} representing
+the entries; the structures are initialised with @var{rtd} which must be
+the type descriptor of @code{struct-passwd}.
+@end deftypefun
 
 @c page
 @node capi posix time

@@ -1847,6 +1847,11 @@
     (setegid					i v posix)
     (setgid					i v posix)
     (setregid					i v posix)
+    (getlogin					i v posix)
+    (getlogin/string				i v posix)
+    (getpwuid					i v posix)
+    (getpwnam					i v posix)
+    (user-entries				i v posix)
 ;;;
     (make-struct-stat				i v posix)
     (struct-stat?				i v posix)
@@ -1947,6 +1952,16 @@
     (struct-netent-n_aliases			i v posix)
     (struct-netent-n_addrtype			i v posix)
     (struct-netent-n_net			i v posix)
+;;;
+    (make-struct-passwd				i v posix)
+    (struct-passwd?				i v posix)
+    (struct-passwd-pw_name			i v posix)
+    (struct-passwd-pw_passwd			i v posix)
+    (struct-passwd-pw_uid			i v posix)
+    (struct-passwd-pw_gid			i v posix)
+    (struct-passwd-pw_gecos			i v posix)
+    (struct-passwd-pw_dir			i v posix)
+    (struct-passwd-pw_shell			i v posix)
 
 ;;; GNU C Library functions
     (clearenv					glibc)

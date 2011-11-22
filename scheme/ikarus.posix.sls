@@ -181,6 +181,15 @@
     seteuid				setuid
     setegid				setgid
     setreuid				setregid
+    getlogin				getlogin/string
+    getpwuid				getpwnam
+    user-entries
+
+    make-struct-passwd			struct-passwd?
+    struct-passwd-pw_name		struct-passwd-pw_passwd
+    struct-passwd-pw_uid		struct-passwd-pw_gid
+    struct-passwd-pw_gecos		struct-passwd-pw_dir
+    struct-passwd-pw_shell
 
     ;; time functions
     nanosleep
@@ -351,6 +360,15 @@
 		  seteuid			setuid
 		  setegid			setgid
 		  setreuid			setregid
+		  getlogin			getlogin/string
+		  getpwuid			getpwnam
+		  user-entries
+
+		  make-struct-passwd		struct-passwd?
+		  struct-passwd-pw_name		struct-passwd-pw_passwd
+		  struct-passwd-pw_uid		struct-passwd-pw_gid
+		  struct-passwd-pw_gecos	struct-passwd-pw_dir
+		  struct-passwd-pw_shell
 
 		  ;; time functions
 		  nanosleep
@@ -2675,6 +2693,59 @@
       (unless (unsafe.fxzero? rv)
 	(raise-errno-error who rv real-gid effective-gid)))))
 
+;;; --------------------------------------------------------------------
+
+(define (getlogin)
+  (capi.posix-getlogin))
+
+(define (getlogin/string)
+  (let ((rv (capi.posix-getlogin)))
+    (and rv (latin1->string rv))))
+
+;;; --------------------------------------------------------------------
+
+(define-struct struct-passwd
+  (pw_name	;0, bytevector, user login name
+   pw_passwd	;1, bytevector, encrypted password
+   pw_uid	;2, fixnum, user ID
+   pw_gid	;3, fixnum, group ID
+   pw_gecos	;4, bytevector, user data
+   pw_dir	;5, bytevector, user's home directory
+   pw_shell	;6, bytevector, user's default shell
+   ))
+
+(define (%struct-passwd-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-passwd\"")
+  (%display " pw_name=\"")	(%display (latin1->string (struct-passwd-pw_name S)))  (%display "\"")
+  (%display " pw_passwd=\"")	(%display (latin1->string (struct-passwd-pw_passwd S))) (%display "\"")
+  (%display " pw_uid=")		(%display (struct-passwd-pw_uid S))
+  (%display " pw_gid=")		(%display (struct-passwd-pw_gid S))
+  (%display " pw_gecos=\"")	(%display (latin1->string (struct-passwd-pw_gecos S))) (%display "\"")
+  (%display " pw_dir=\"")	(%display (latin1->string (struct-passwd-pw_dir S)))   (%display "\"")
+  (%display " pw_shell=\"")	(%display (latin1->string (struct-passwd-pw_shell S))) (%display "\"")
+  (%display "]"))
+
+(define passwd-rtd
+  (type-descriptor struct-passwd))
+
+(define (getpwuid uid)
+  (define who 'getpwuid)
+  (with-arguments-validation (who)
+      ((fixnum	uid))
+    (capi.posix-getpwuid passwd-rtd uid)))
+
+(define (getpwnam name)
+  (define who 'getpwname)
+  (with-arguments-validation (who)
+      ((string/bytevector  name))
+    (with-bytevectors ((name.bv name))
+      (capi.posix-getpwnam passwd-rtd name.bv))))
+
+(define (user-entries)
+  (capi.posix-user-entries passwd-rtd))
+
 
 ;;;; time functions
 
@@ -2712,6 +2783,7 @@
 (set-rtd-printer! (type-descriptor struct-protoent)	%struct-protoent-printer)
 (set-rtd-printer! (type-descriptor struct-servent)	%struct-servent-printer)
 (set-rtd-printer! (type-descriptor struct-netent)	%struct-netent-printer)
+(set-rtd-printer! (type-descriptor struct-passwd)	%struct-passwd-printer)
 
 )
 

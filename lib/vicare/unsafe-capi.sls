@@ -155,6 +155,9 @@
     posix-seteuid			posix-setuid
     posix-setegid			posix-setgid
     posix-setreuid			posix-setregid
+    posix-getlogin
+    posix-getpwuid			posix-getpwnam
+    posix-user-entries
     )
   (import (except (ikarus)
 		  posix-remove
@@ -813,6 +816,22 @@
 
 (define-inline (posix-setregid real-gid effective-gid)
   (foreign-call "ikrt_posix_setregid" real-gid effective-gid))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-getlogin)
+  (foreign-call "ikrt_posix_getlogin"))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-getpwuid rtd uid)
+  (foreign-call "ikrt_posix_getpwuid" rtd uid))
+
+(define-inline (posix-getpwnam rtd name)
+  (foreign-call "ikrt_posix_getpwnam" rtd name))
+
+(define-inline (posix-user-entries rtd)
+  (foreign-call "ikrt_posix_user_entries" rtd))
 
 
 ;;;; done
