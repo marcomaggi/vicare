@@ -174,6 +174,11 @@
     struct-netent-n_name		struct-netent-n_aliases
     struct-netent-n_addrtype		struct-netent-n_net
 
+    ;; users and groups
+    getuid				getgid
+    geteuid				getegid
+    getgroups
+
     ;; time functions
     nanosleep
 
@@ -335,6 +340,11 @@
 		  make-struct-netent		struct-netent?
 		  struct-netent-n_name		struct-netent-n_aliases
 		  struct-netent-n_addrtype	struct-netent-n_net
+
+		  ;; users and groups
+		  getuid			getgid
+		  geteuid			getegid
+		  getgroups
 
 		  ;; time functions
 		  nanosleep
@@ -2583,6 +2593,27 @@
       (if (pair? rv)
 	  (values (unsafe.car rv) (unsafe.cdr rv))
 	(raise-errno-error who rv sock)))))
+
+
+;;;; users and groups
+
+(define (getuid)
+  (capi.posix-getuid))
+
+(define (getgid)
+  (capi.posix-getgid))
+
+(define (geteuid)
+  (capi.posix-geteuid))
+
+(define (getegid)
+  (capi.posix-getegid))
+
+(define (getgroups)
+  (let ((rv (capi.posix-getgroups)))
+    (if (pair? rv)
+	rv
+      (raise-errno-error 'getgroups rv))))
 
 
 ;;;; time functions

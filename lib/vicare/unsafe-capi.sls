@@ -146,7 +146,14 @@
     platform-open-input-fd		platform-open-output-fd
     platform-open-input/output-fd	platform-close-fd
     platform-read-fd			platform-write-fd
-    platform-set-position)
+    platform-set-position
+
+    ;; users and groups
+    posix-getuid			posix-getgid
+    posix-geteuid			posix-getegid
+    posix-getgroups
+
+    )
   (import (except (ikarus)
 		  posix-remove
 		  posix-read		posix-write)
@@ -764,6 +771,25 @@
   ;;or a fixnum representing an ERRNO code.
   ;;
   (foreign-call "ikrt_close_fd" fd))
+
+
+;;;; users and groups
+
+(define-inline (posix-getuid)
+  (foreign-call "ikrt_posix_getuid"))
+
+(define-inline (posix-getgid)
+  (foreign-call "ikrt_posix_getgid"))
+
+(define-inline (posix-geteuid)
+  (foreign-call "ikrt_posix_geteuid"))
+
+(define-inline (posix-getegid)
+  (foreign-call "ikrt_posix_getegid"))
+
+(define-inline (posix-getgroups)
+  (foreign-call "ikrt_posix_getgroups"))
+
 
 
 ;;;; done

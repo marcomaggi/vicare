@@ -2318,6 +2318,58 @@ ikrt_posix_getsockopt_linger (ikptr sock, ikpcb * pcb)
 
 
 /** --------------------------------------------------------------------
+ ** Users and groups.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_getuid (void)
+{
+  return fix(getuid());
+}
+ikptr
+ikrt_posix_getgid (void)
+{
+  return fix(getgid());
+}
+ikptr
+ikrt_posix_geteuid (void)
+{
+  return fix(geteuid());
+}
+ikptr
+ikrt_posix_getegid (void)
+{
+  return fix(getegid());
+}
+ikptr
+ikrt_posix_getgroups (ikpcb * pcb)
+{
+  int           count;
+  errno = 0;
+  count = getgroups(0, NULL);
+  if (errno)
+    return ik_errno_to_code();
+  else {
+    gid_t       gids[count];
+    errno = 0;
+    count = getgroups(count, gids);
+    if (-1 != count) {
+      int       i;
+      ikptr     list_of_gids = null_object;
+      pcb->root0 = &list_of_gids;
+      for (i=0; i<count; ++i) {
+        VICARE_DECLARE_ALLOC_AND_CONS(pair, list_of_gids, pcb);
+        VICARE_SET_CAR(pair, fix(gids[i]));
+      }
+      pcb->root0 = NULL;
+      return list_of_gids;
+    } else
+      return ik_errno_to_code();
+  }
+}
+
+
+/** --------------------------------------------------------------------
  ** Time related functions.
  ** ----------------------------------------------------------------- */
 

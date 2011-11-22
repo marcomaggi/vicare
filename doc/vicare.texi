@@ -5916,6 +5916,7 @@ set to @false{}.
 * posix dir::                   File system directories.
 * posix fd::                    File descriptors.
 * posix socket::                Network sockets.
+* posix users::                 Users and groups.
 * posix time::                  Time related functions.
 * posix misc::                  Miscellaneous functions.
 @end menu
@@ -8216,6 +8217,46 @@ Notice that the single @oob{} byte, although limited, can represent
 @math{256} symbols in an appropriate alphabet of commands.
 
 @c page
+@node posix users
+@section Users and groups
+
+
+@defun getuid
+Interface to the C function @cfunc{getuid}, @glibcref{Reading Persona,
+getuid}.  Return a fixnum representing the real user ID of the process.
+@end defun
+
+
+@defun getgid
+Interface to the C function @cfunc{getgid}, @glibcref{Reading Persona,
+getgid}.  Return a fixnum representing the real group ID of the process.
+@end defun
+
+
+@defun geteuid
+Interface to the C function @cfunc{geteuid}, @glibcref{Reading Persona,
+geteuid}.  Return a fixnum representing the effective user ID of the
+process.
+@end defun
+
+
+@defun getegid
+Interface to the C function @cfunc{getegid}, @glibcref{Reading Persona,
+getegid}.  Return a fixnum representing the effective group ID of the
+process.
+@end defun
+
+
+@defun getgroups
+Interface to the C function @cfunc{getgroups}, @glibcref{Reading
+Persona, getgroups}.  Return a list of fixnums representing the
+supplementary group IDs of the process; if an error occurs an exception
+is raised.
+@end defun
+
+
+
+@c page
 @node posix time
 @section Time related functions
 
@@ -9616,6 +9657,7 @@ adaptation.
 * capi posix dir::              File system directories.
 * capi posix fd::               File descriptors at low level.
 * capi posix socket::           Network sockets.
+* capi posix users::            Users and groups.
 * capi posix time::             Time and date.
 @end menu
 
@@ -11117,6 +11159,44 @@ Function, setsockopt}.  Set a new value for @var{option} of socket
 @var{sock} at @var{level} reading it from the bytevector @var{optval}.
 @var{option} and @var{level} must be fixnums.  If successful return the
 fixnum zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+@c page
+@node capi posix users
+@subsection Users and groups
+
+
+@deftypefun ikptr ikrt_posix_getuid (void)
+Interface to the C function @cfunc{getuid}, @glibcref{Reading Persona,
+getuid}.  Return a fixnum representing the real user ID of the process.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getgid (void)
+Interface to the C function @cfunc{getgid}, @glibcref{Reading Persona,
+getgid}.  Return a fixnum representing the real group ID of the process.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_geteuid (void)
+Interface to the C function @cfunc{geteuid}, @glibcref{Reading Persona,
+geteuid}.  Return a fixnum representing the effective user ID of the
+process.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getegid (void)
+Interface to the C function @cfunc{getegid}, @glibcref{Reading Persona,
+getegid}.  Return a fixnum representing the effective group ID of the
+process.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getgroups (ikpcb * @var{pcb})
+Interface to the C function @cfunc{getgroups}, @glibcref{Reading
+Persona, getgroups}.  Return a list of fixnums representing the
+supplementary group IDs of the process; if an error occurs return an
+encoded @code{errno} value.
 @end deftypefun
 
 @c page

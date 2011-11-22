@@ -1836,6 +1836,11 @@
     (wait					i v posix)
     (waitpid					i v posix)
     (writev					i v posix)
+    (getuid					i v posix)
+    (getgid					i v posix)
+    (geteuid					i v posix)
+    (getegid					i v posix)
+    (getgroups					i v posix)
 
     (make-struct-stat				i v posix)
     (struct-stat?				i v posix)
