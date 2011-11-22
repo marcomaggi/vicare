@@ -2368,6 +2368,60 @@ ikrt_posix_getgroups (ikpcb * pcb)
   }
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_seteuid (ikptr new_uid)
+{
+  int   rv;
+  errno = 0;
+  rv    = seteuid(unfix(new_uid));
+  return (0 == rv)? fix(0) : ik_errno_to_code();
+}
+ikptr
+ikrt_posix_setuid (ikptr new_uid)
+{
+  int   rv;
+  errno = 0;
+  rv    = setuid(unfix(new_uid));
+  return (0 == rv)? fix(0) : ik_errno_to_code();
+}
+ikptr
+ikrt_posix_setreuid (ikptr real_uid, ikptr effective_uid)
+{
+  int   rv;
+  errno = 0;
+  rv    = setreuid(unfix(real_uid), unfix(effective_uid));
+  return (0 == rv)? fix(0) : ik_errno_to_code();
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_setegid (ikptr new_gid)
+{
+  int   rv;
+  errno = 0;
+  rv    = setegid(unfix(new_gid));
+  return (0 == rv)? fix(0) : ik_errno_to_code();
+}
+ikptr
+ikrt_posix_setgid (ikptr new_gid)
+{
+  int   rv;
+  errno = 0;
+  rv    = setgid(unfix(new_gid));
+  return (0 == rv)? fix(0) : ik_errno_to_code();
+}
+ikptr
+ikrt_posix_setregid (ikptr real_gid, ikptr effective_gid)
+{
+  int   rv;
+  errno = 0;
+  rv    = setregid(unfix(real_gid), unfix(effective_gid));
+  return (0 == rv)? fix(0) : ik_errno_to_code();
+}
+
 
 /** --------------------------------------------------------------------
  ** Time related functions.

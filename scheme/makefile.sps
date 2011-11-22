@@ -1841,7 +1841,13 @@
     (geteuid					i v posix)
     (getegid					i v posix)
     (getgroups					i v posix)
-
+    (seteuid					i v posix)
+    (setuid					i v posix)
+    (setreuid					i v posix)
+    (setegid					i v posix)
+    (setgid					i v posix)
+    (setregid					i v posix)
+;;;
     (make-struct-stat				i v posix)
     (struct-stat?				i v posix)
     (struct-stat-st_mode			i v posix)
@@ -1859,7 +1865,7 @@
     (struct-stat-st_ctime_usec			i v posix)
     (struct-stat-st_blocks			i v posix)
     (struct-stat-st_blksize			i v posix)
-
+;;;
     (file-is-directory?				i v posix)
     (file-is-char-device?			i v posix)
     (file-is-block-device?			i v posix)
@@ -1870,7 +1876,7 @@
     (file-is-message-queue?			i v posix)
     (file-is-semaphore?				i v posix)
     (file-is-shared-memory?			i v posix)
-
+;;;
     (file-readable?				i v posix)
     (file-writable?				i v posix)
     (file-executable?				i v posix)
@@ -1878,31 +1884,31 @@
     (file-ctime					i v posix)
     (file-mtime					i v posix)
     (file-size					i v posix)
-
+;;;
     (make-directory-stream			i v posix)
     (directory-stream?				i v posix)
     (directory-stream-pathname			i v posix)
     (directory-stream-pointer			i v posix)
     (directory-stream-fd			i v posix)
     (directory-stream-closed?			i v posix)
-
+;;;
     (split-file-name				i v posix)
-
+;;;
     (make-sockaddr_un				i v posix)
     (sockaddr_un.pathname			i v posix)
     (sockaddr_un.pathname/string		i v posix)
-
+;;;
     (make-sockaddr_in				i v posix)
     (sockaddr_in.in_addr			i v posix)
     (sockaddr_in.in_port			i v posix)
-
+;;;
     (make-sockaddr_in6				i v posix)
     (sockaddr_in6.in6_addr			i v posix)
     (sockaddr_in6.in6_port			i v posix)
-
+;;;
     (in6addr_loopback				i v posix)
     (in6addr_any				i v posix)
-
+;;;
     (make-struct-hostent			i v posix)
     (struct-hostent?				i v posix)
     (struct-hostent-h_name			i v posix)
@@ -1911,7 +1917,7 @@
     (struct-hostent-h_length			i v posix)
     (struct-hostent-h_addr_list			i v posix)
     (struct-hostent-h_addr			i v posix)
-
+;;;
     (make-struct-addrinfo			i v posix)
     (struct-addrinfo?				i v posix)
     (struct-addrinfo-ai_flags			i v posix)
@@ -1921,20 +1927,20 @@
     (struct-addrinfo-ai_addrlen			i v posix)
     (struct-addrinfo-ai_addr			i v posix)
     (struct-addrinfo-ai_canonname		i v posix)
-
+;;;
     (make-struct-protoent			i v posix)
     (struct-protoent?				i v posix)
     (struct-protoent-p_name			i v posix)
     (struct-protoent-p_aliases			i v posix)
     (struct-protoent-p_proto			i v posix)
-
+;;;
     (make-struct-servent			i v posix)
     (struct-servent?				i v posix)
     (struct-servent-s_name			i v posix)
     (struct-servent-s_aliases			i v posix)
     (struct-servent-s_port			i v posix)
     (struct-servent-s_proto			i v posix)
-
+;;;
     (make-struct-netent				i v posix)
     (struct-netent?				i v posix)
     (struct-netent-n_name			i v posix)

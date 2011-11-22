@@ -8254,6 +8254,55 @@ supplementary group IDs of the process; if an error occurs an exception
 is raised.
 @end defun
 
+@c ------------------------------------------------------------
+
+@defun seteuid @var{new-uid}
+Interface to the C function @cfunc{seteuid}, @glibcref{Setting User ID,
+seteuid}.  Set the effective user ID to @var{new-uid}, which must be a
+fixnum.  If successful return unspecified values, else raise an
+exception.
+@end defun
+
+
+@defun setuid @var{new-uid}
+Interface to the C function @cfunc{setuid}, @glibcref{Setting User ID,
+setuid}.  Set both the real and effective user IDs to @var{new-uid},
+which must be a fixnum.  If successful return unspecified values, else
+raise an exception.
+@end defun
+
+
+@defun setreuid @var{real-uid} @var{effective-uid}
+Interface to the C function @cfunc{setreuid}, @glibcref{Setting User ID,
+setreuid}.  Set the real user ID to @var{real_uid} and the effective
+user ID to @var{effective_uid}, both the arguments must be fixnums.  If
+successful return unspecified values, else raise an exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun setegid @var{new-gid}
+Interface to the C function @cfunc{setegid}, @glibcref{Setting Group,
+setegid}.  Set the effective group ID to @var{new-gid}, which must be a
+fixnum.  If successful return unspecified values, else raise an
+exception.
+@end defun
+
+
+@defun setgid @var{new-gid}
+Interface to the C function @cfunc{setgid}, @glibcref{Setting Groups,
+setgid}.  Set both the real and effective group IDs to @var{new-gid},
+which must be a fixnum.  If successful return unspecified values, else
+raise an exception.
+@end defun
+
+
+@defun setregid @var{real-gid} @var{effective-gid}
+Interface to the C function @cfunc{setregid}, @glibcref{Setting Group,
+setregid}.  Set the real group ID to @var{real_gid} and the effective
+group ID to @var{effective_gid}, both the arguments must be fixnums.  If
+successful return unspecified values, else raise an exception.
+@end defun
 
 
 @c page
@@ -11198,6 +11247,59 @@ Persona, getgroups}.  Return a list of fixnums representing the
 supplementary group IDs of the process; if an error occurs return an
 encoded @code{errno} value.
 @end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_seteuid (ikptr @var{new_uid})
+Interface to the C function @cfunc{seteuid}, @glibcref{Setting User ID,
+seteuid}.  Set the effective user ID to @var{new_uid}, which must be a
+fixnum.  If successful return the fixnum zero, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_setuid (ikptr @var{new_uid})
+Interface to the C function @cfunc{setuid}, @glibcref{Setting User ID,
+setuid}.  Set both the real and effective user IDs to @var{new_uid},
+which must be a fixnum.  If successful return the fixnum zero, else
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_setreuid (ikptr @var{real_uid}, ikptr @var{effective_uid})
+Interface to the C function @cfunc{setreuid}, @glibcref{Setting User ID,
+setreuid}.  Set the real user ID to @var{real_uid} and the effective
+user ID to @var{effective_uid}, both the arguments must be fixnums.  If
+successful return the fixnum zero, else return an encoded @code{errno}
+value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_setegid (ikptr @var{new_gid})
+Interface to the C function @cfunc{setegid}, @glibcref{Setting Groups,
+setegid}.  Set the effective group ID to @var{new_gid}, which must be a
+fixnum.  If successful return the fixnum zero, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_setgid (ikptr @var{new_gid})
+Interface to the C function @cfunc{setgid}, @glibcref{Setting Groups,
+setgid}.  Set both the real and effective group IDs to @var{new_gid},
+which must be a fixnum.  If successful return the fixnum zero, else
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_setregid (ikptr @var{real_gid}, ikptr @var{effective_gid})
+Interface to the C function @cfunc{setregid}, @glibcref{Setting Groups,
+setregid}.  Set the real group ID to @var{real_gid} and the effective
+group ID to @var{effective_gid}, both the arguments must be fixnums.  If
+successful return the fixnum zero, else return an encoded @code{errno}
+value.
+@end deftypefun
+
 
 @c page
 @node capi posix time

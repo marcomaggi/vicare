@@ -152,7 +152,9 @@
     posix-getuid			posix-getgid
     posix-geteuid			posix-getegid
     posix-getgroups
-
+    posix-seteuid			posix-setuid
+    posix-setegid			posix-setgid
+    posix-setreuid			posix-setregid
     )
   (import (except (ikarus)
 		  posix-remove
@@ -790,6 +792,27 @@
 (define-inline (posix-getgroups)
   (foreign-call "ikrt_posix_getgroups"))
 
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-seteuid uid)
+  (foreign-call "ikrt_posix_seteuid" uid))
+
+(define-inline (posix-setuid uid)
+  (foreign-call "ikrt_posix_setuid" uid))
+
+(define-inline (posix-setreuid real-uid effective-uid)
+  (foreign-call "ikrt_posix_setreuid" real-uid effective-uid))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-setegid gid)
+  (foreign-call "ikrt_posix_setegid" gid))
+
+(define-inline (posix-setgid gid)
+  (foreign-call "ikrt_posix_setgid" gid))
+
+(define-inline (posix-setregid real-gid effective-gid)
+  (foreign-call "ikrt_posix_setregid" real-gid effective-gid))
 
 
 ;;;; done

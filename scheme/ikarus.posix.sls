@@ -178,6 +178,9 @@
     getuid				getgid
     geteuid				getegid
     getgroups
+    seteuid				setuid
+    setegid				setgid
+    setreuid				setregid
 
     ;; time functions
     nanosleep
@@ -345,6 +348,9 @@
 		  getuid			getgid
 		  geteuid			getegid
 		  getgroups
+		  seteuid			setuid
+		  setegid			setgid
+		  setreuid			setregid
 
 		  ;; time functions
 		  nanosleep
@@ -2614,6 +2620,60 @@
     (if (pair? rv)
 	rv
       (raise-errno-error 'getgroups rv))))
+
+;;; --------------------------------------------------------------------
+
+(define (seteuid uid)
+  (define who 'seteuid)
+  (with-arguments-validation (who)
+      ((fixnum	uid))
+    (let ((rv (capi.posix-seteuid uid)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv uid)))))
+
+(define (setuid uid)
+  (define who 'setuid)
+  (with-arguments-validation (who)
+      ((fixnum	uid))
+    (let ((rv (capi.posix-setuid uid)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv uid)))))
+
+(define (setreuid real-uid effective-uid)
+  (define who 'setreuid)
+  (with-arguments-validation (who)
+      ((fixnum	real-uid)
+       (fixnum	effective-uid))
+    (let ((rv (capi.posix-setreuid real-uid effective-uid)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv real-uid effective-uid)))))
+
+;;; --------------------------------------------------------------------
+
+(define (setegid gid)
+  (define who 'setegid)
+  (with-arguments-validation (who)
+      ((fixnum	gid))
+    (let ((rv (capi.posix-setegid gid)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv gid)))))
+
+(define (setgid gid)
+  (define who 'setgid)
+  (with-arguments-validation (who)
+      ((fixnum	gid))
+    (let ((rv (capi.posix-setgid gid)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv gid)))))
+
+(define (setregid real-gid effective-gid)
+  (define who 'setregid)
+  (with-arguments-validation (who)
+      ((fixnum	real-gid)
+       (fixnum	effective-gid))
+    (let ((rv (capi.posix-setregid real-gid effective-gid)))
+      (unless (unsafe.fxzero? rv)
+	(raise-errno-error who rv real-gid effective-gid)))))
 
 
 ;;;; time functions
