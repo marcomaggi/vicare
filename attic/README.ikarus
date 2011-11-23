@@ -6,7 +6,7 @@ script syntax, syntax-case, unicode strings, bytevectors,
 user-defined record types, exception handling, conditions, and
 enumerations.  Over 80% of the R6RS procedures and keywords are
 currently implemented and subsequent releases will proceed towards
-brining Ikarus to full R6RS conformance.
+bringing Ikarus to full R6RS conformance.
 
 The main purpose behind releasing Ikarus early is to give Scheme
 programmers the opportunity to experiment with the various new
