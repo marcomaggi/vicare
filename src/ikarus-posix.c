@@ -2672,6 +2672,24 @@ ikrt_posix_times (ikptr rtd, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
+ikrt_posix_gettimeofday (ikptr rtd, ikpcb * pcb)
+{
+  struct timeval        T;
+  int                   rv;
+  errno = 0;
+  rv    = gettimeofday(&T, NULL);
+  if (0 == rv) {
+    ikptr       S = ik_struct_alloc(pcb, rtd, 2);
+    VICARE_STRUCT_SET(S, 0, s_to_number(T.tv_sec,  pcb));
+    VICARE_STRUCT_SET(S, 1, s_to_number(T.tv_usec, pcb));
+    return S;
+  } else
+    return ik_errno_to_code();
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
 ikrt_posix_nanosleep (ikptr secs, ikptr nsecs, ikpcb * pcb)
 {
   struct timespec       requested;

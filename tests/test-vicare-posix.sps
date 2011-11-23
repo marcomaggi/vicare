@@ -1595,6 +1595,7 @@
 
   (check-pretty-print (list 'clock (px.clock)))
   (check-pretty-print (list 'time  (px.posix-time)))
+  (check-pretty-print (list 'timeofday  (px.gettimeofday)))
 
 ;;; --------------------------------------------------------------------
 

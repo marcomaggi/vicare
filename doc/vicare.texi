@@ -8549,6 +8549,68 @@ exception.
 @section Date and time
 
 
+@deftp {Structure Type} struct-timeval
+Scheme level representation of @code{struct timeval}, @glibcref{Elapsed
+Time, struct timeval}.  It has the
+following fields:
+
+@table @code
+@item tv_sec
+Exact integer, represents a count of seconds.
+
+@item tv_usec
+Exact integer, represents a count of microseconds.
+@end table
+@end deftp
+
+
+@defun make-struct-timeval @var{sec} @var{usec}
+Build and return a new instance of @code{struct-timeval}.
+@end defun
+
+
+@defun struct-timeval? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-timeval}.
+@end defun
+
+
+@defun struct-timeval-tv_sec @var{timeval}
+@defunx struct-timeval-tv_usec @var{timeval}
+Accessors for the fields of @code{struct-timeval}.
+@end defun
+
+
+@deftp {Structure Type} struct-timespec
+Scheme level representation of @code{struct timespec}, @glibcref{Elapsed
+Time, struct timeval}.  It has the following fields:
+
+@table @code
+@item tv_sec
+Exact integer, represents a count of seconds.
+
+@item tv_nsec
+Exact integer, represents a count of nanoseconds.
+@end table
+@end deftp
+
+
+@defun make-struct-timespec @var{sec} @var{usec}
+Build and return a new instance of @code{struct-timespec}.
+@end defun
+
+
+@defun struct-timespec? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-timespec}.
+@end defun
+
+
+@defun struct-timespec-tv_sec @var{timespec}
+@defunx struct-timespec-tv_usec @var{timespec}
+Accessors for the fields of @code{struct-timespec}.
+@end defun
+
+@c ------------------------------------------------------------
+
 @defun clock
 Interface to the C function @cfunc{clock}, @glibcref{CPU Time, clock}.
 If successful return an exact integer representing the CPU time for the
@@ -8608,6 +8670,14 @@ representing the current processor time, else return false.
 Interface to the C function @cfunc{time}, @glibcref{Simple Calendar
 Time, time}.  If successful return the calendar time as an exact
 integer, else return false.
+@end defun
+
+
+@defun gettimeofday
+Interface to the C function @cfunc{gettimeofday},
+@glibcref{High-Resolution Calendar, gettimeofday}.  Acquire the current
+time.  If successful return an instance of @code{struct-timeval}, else
+raise an exception.
 @end defun
 
 
@@ -11780,6 +11850,14 @@ Time, time}.  If successful return the calendar time as an
 @strong{inexact} integer, else return false.
 @end deftypefun
 
+
+@deftypefun ikptr ikrt_posix_gettimeofday (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{gettimeofday},
+@glibcref{High-Resolution Calendar, gettimeofday}.  Acquire the current
+time.  If successful return an instance of @code{struct-timeval}, else
+return an encoded @code{errno} value.  @var{rtd} must be the type
+descriptor of @code{struct-timeval}.
+@end deftypefun
 
 @c ------------------------------------------------------------
 

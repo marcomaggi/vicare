@@ -205,8 +205,14 @@
 
     ;; date and time functions
     clock				times
-    posix-time
+    posix-time				gettimeofday
     nanosleep
+
+    make-struct-timeval			struct-timeval?
+    struct-timeval-tv_sec		struct-timeval-tv_usec
+
+    make-struct-timespec		struct-timespec?
+    struct-timespec-tv_sec		struct-timespec-tv_nsec
 
     make-struct-tms			struct-tms?
     struct-tms-tms_utime		struct-tms-tms_stime
@@ -402,8 +408,14 @@
 
 		  ;; date and time functions
 		  clock				times
-		  posix-time
+		  posix-time			gettimeofday
 		  nanosleep
+
+		  make-struct-timeval		struct-timeval?
+		  struct-timeval-tv_sec		struct-timeval-tv_usec
+
+		  make-struct-timespec		struct-timespec?
+		  struct-timespec-tv_sec	struct-timespec-tv_nsec
 
 		  make-struct-tms		struct-tms?
 		  struct-tms-tms_utime		struct-tms-tms_stime
@@ -2908,6 +2920,30 @@
 
 ;;;; time functions
 
+(define-struct struct-timeval
+  (tv_sec tv_usec))
+
+(define-struct struct-timespec
+  (tv_sec tv_nsec))
+
+(define (%struct-timeval-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-timeval\"")
+  (%display " tv_sec=")		(%display (struct-timeval-tv_sec  S))
+  (%display " tv_usec=")	(%display (struct-timeval-tv_usec S))
+  (%display "]"))
+
+(define (%struct-timespec-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-timespec\"")
+  (%display " tv_sec=")		(%display (struct-timespec-tv_sec  S))
+  (%display " tv_nsec=")	(%display (struct-timespec-tv_nsec S))
+  (%display "]"))
+
+;;; --------------------------------------------------------------------
+
 (define (clock)
   (exact (capi.posix-clock)))
 
@@ -2944,6 +2980,13 @@
 (define (posix-time)
   (exact (capi.posix-time)))
 
+(define (gettimeofday)
+  (define who 'gettimeofday)
+  (let ((rv (capi.posix-gettimeofday (type-descriptor struct-timeval))))
+    (if (struct-timeval? rv)
+	rv
+      (raise-errno-error who rv))))
+
 ;;; --------------------------------------------------------------------
 
 (define (nanosleep secs nsecs)
@@ -2974,6 +3017,8 @@
 (set-rtd-printer! (type-descriptor struct-netent)	%struct-netent-printer)
 (set-rtd-printer! (type-descriptor struct-passwd)	%struct-passwd-printer)
 (set-rtd-printer! (type-descriptor struct-group)	%struct-group-printer)
+(set-rtd-printer! (type-descriptor struct-timeval)	%struct-timeval-printer)
+(set-rtd-printer! (type-descriptor struct-timespec)	%struct-timespec-printer)
 (set-rtd-printer! (type-descriptor struct-tms)		%struct-tms-printer)
 
 )

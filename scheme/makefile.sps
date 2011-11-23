@@ -1866,6 +1866,7 @@
     (wait					i v posix)
     (waitpid					i v posix)
     (writev					i v posix)
+    (gettimeofday				i v posix)
     (clock					i v posix)
     (times					i v posix)
     (posix-time					i v posix)
@@ -1985,6 +1986,16 @@
     (struct-group-gr_name			i v posix)
     (struct-group-gr_gid			i v posix)
     (struct-group-gr_mem			i v posix)
+;;;
+    (make-struct-timeval			i v posix)
+    (struct-timeval?				i v posix)
+    (struct-timeval-tv_sec			i v posix)
+    (struct-timeval-tv_usec			i v posix)
+;;;
+    (make-struct-timespec			i v posix)
+    (struct-timespec?				i v posix)
+    (struct-timespec-tv_sec			i v posix)
+    (struct-timespec-tv_nsec			i v posix)
 ;;;
     (make-struct-tms				i v posix)
     (struct-tms?				i v posix)
