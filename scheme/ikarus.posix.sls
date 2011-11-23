@@ -200,7 +200,8 @@
     ctermid				ctermid/string
     setsid				getsid
     getpgrp				setpgid
-
+    tcgetpgrp				tcsetpgrp
+    tcgetsid
 
     ;; time functions
     nanosleep
@@ -390,6 +391,8 @@
 		  ctermid			ctermid/string
 		  setsid			getsid
 		  getpgrp			setpgid
+		  tcgetpgrp			tcsetpgrp
+		  tcgetsid
 
 		  ;; time functions
 		  nanosleep
@@ -2849,6 +2852,33 @@
 	(raise-errno-error who rv pid pgid)))))
 
 ;;; --------------------------------------------------------------------
+
+(define (tcgetpgrp fd)
+  (define who 'tcgetpgrp)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd))
+    (let ((rv (capi.posix-tcgetpgrp fd)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv fd)))))
+
+(define (tcsetpgrp fd pgid)
+  (define who 'tcsetpgrp)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd)
+       (fixnum		pgid))
+    (let ((rv (capi.posix-tcsetpgrp fd pgid)))
+      (unless (unsafe.fx<= 0 rv)
+	(raise-errno-error who rv fd pgid)))))
+
+(define (tcgetsid fd)
+  (define who 'tcgetsid)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd))
+    (let ((rv (capi.posix-tcgetsid fd)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv fd)))))
 
 
 ;;;; time functions

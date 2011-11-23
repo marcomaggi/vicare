@@ -41,6 +41,7 @@
 #include <pwd.h>
 #include <signal.h>
 #include <stdint.h>
+#include <termios.h>
 #include <time.h>
 #include <utime.h>
 #include <unistd.h>
@@ -2596,6 +2597,32 @@ ikrt_posix_setpgid (ikptr pid, ikptr pgid)
 }
 
 /* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_tcgetpgrp (ikptr fd)
+{
+  int   rv;
+  errno = 0;
+  rv    = tcgetpgrp(unfix(fd));
+  return (-1 != rv)? fix(rv) : ik_errno_to_code();
+}
+ikptr
+ikrt_posix_tcsetpgrp (ikptr fd, ikptr pgid)
+{
+  int   rv;
+  errno = 0;
+  rv    = tcsetpgrp(unfix(fd), unfix(pgid));
+  return (0 == rv)? fix(0) : ik_errno_to_code();
+}
+ikptr
+ikrt_posix_tcgetsid (ikptr fd)
+{
+  int   rv;
+  errno = 0;
+  rv    = tcgetsid(unfix(fd));
+  return (-1 != rv)? fix(rv) : ik_errno_to_code();
+}
+
 
 
 /** --------------------------------------------------------------------

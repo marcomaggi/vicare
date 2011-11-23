@@ -8494,6 +8494,34 @@ Functions, setpgid}.  Put the process @var{pid} in the process group
 unspecified values, else raise an exception.
 @end defun
 
+@c ------------------------------------------------------------
+
+@defun tcgetpgrp @var{fd}
+Interface to the C function @cfunc{tcgetpgrp}, @glibcref{Terminal Access
+Functions, tcgetpgrp}.  If successful return a fixnum representing the
+process group ID of the foreground process group associated with the
+terminal open on descriptor @var{fd}, which must be a fixnum; else raise
+an exception.
+@end defun
+
+
+@defun tcsetpgrp @var{fd} @var{pgid}
+Interface to the C function @cfunc{tcsetpgrp}, @glibcref{Terminal Access
+Functions, tcsetpgrp}.  Set to process group ID @var{pgid} the
+foreground process group for the terminal open on descriptor @var{fd};
+both the arguments must be fixnums.  If successful return the fixnum
+zero, else raise an exception.
+@end defun
+
+
+@defun tcgetsid @var{fd}
+Interface to the C function @cfunc{tcgetsid}, @glibcref{Terminal Access
+Functions, tcgetsid}.  If successful return a fixnum representing the
+process group ID of the session for which the terminal open on
+descriptor @var{fd} is the controlling terminal; else raise an
+exception.
+@end defun
+
 
 @c page
 @node posix time
@@ -11601,6 +11629,34 @@ Interface to the C function @cfunc{setpgid}, @glibcref{Process Group
 Functions, setpgid}.  Put the process @var{pid} in the process group
 @var{pgid}.  If successful return the fixnum zero, else return an
 encoded @code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_tcgetpgrp (ikptr @var{fd})
+Interface to the C function @cfunc{tcgetpgrp}, @glibcref{Terminal Access
+Functions, tcgetpgrp}.  If successful return a fixnum representing the
+process group ID of the foreground process group associated with the
+terminal open on descriptor @var{fd}, which must be a fixnum; else
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_tcsetpgrp (ikptr @var{fd}, ikptr @var{pgid})
+Interface to the C function @cfunc{tcsetpgrp}, @glibcref{Terminal Access
+Functions, tcsetpgrp}.  Set to process group ID @var{pgid} the
+foreground process group for the terminal open on descriptor @var{fd};
+both the arguments must be fixnums.  If successful return the fixnum
+zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_tcgetsid (ikptr @var{fd})
+Interface to the C function @cfunc{tcgetsid}, @glibcref{Terminal Access
+Functions, tcgetsid}.  If successful return a fixnum representing the
+process group ID of the session for which the terminal open on
+descriptor @var{fd} is the controlling terminal; else return an encoded
+@code{errno} value.
 @end deftypefun
 
 @c page

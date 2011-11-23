@@ -164,6 +164,8 @@
     posix-ctermid
     posix-setsid			posix-getsid
     posix-getpgrp			posix-setpgid
+    posix-tcgetpgrp			posix-tcsetpgrp
+    posix-tcgetsid
     )
   (import (except (ikarus)
 		  posix-remove
@@ -870,7 +872,16 @@
 (define-inline (posix-setpgid pid pgid)
   (foreign-call "ikrt_posix_setpgid" pid pgid))
 
+;;; --------------------------------------------------------------------
 
+(define-inline (posix-tcgetpgrp fd)
+  (foreign-call "ikrt_posix_tcgetpgrp" fd))
+
+(define-inline (posix-tcsetpgrp fd pgid)
+  (foreign-call "ikrt_posix_tcsetpgrp" fd pgid))
+
+(define-inline (posix-tcgetsid fd)
+  (foreign-call "ikrt_posix_tcgetsid" fd))
 
 
 ;;;; done
