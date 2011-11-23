@@ -1,9 +1,9 @@
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.59)
-AC_INIT(vicare, 0.2d4, marco.maggi-ipsu@poste.it)
-AC_CANONICAL_SYSTEM
-AM_INIT_AUTOMAKE(vicare, 0.2d4, gnu)
+AC_PREREQ(2.68)
+AC_INIT([vicare],[0.2d4],[marco.maggi-ipsu@poste.it])
+AC_CANONICAL_TARGET
+AM_INIT_AUTOMAKE([vicare],[0.2d4],[gnu])
 AC_CONFIG_SRCDIR([src/])
 
 AC_LANG([C])
@@ -181,15 +181,15 @@ ERROR: Cannot find libgmp.
 ERROR: You might want to supply CFLAGS=-I</path/to/include> (containing
 ERROR: the gmp.h header file), and LDFLAGS=-L</path/to/lib> (containing
 ERROR: libgmp.so) if libgmp is installed in a non-standard location.
-ERROR: libgmp can be obtained from <http://gmplib.org>. ])])
+ERROR: libgmp can be obtained from <http://gmplib.org>.])])
 
 # check that gmp is present
-AC_HAVE_LIBRARY([gmp],,[AC_MSG_ERROR([
+AC_CHECK_LIB([gmp],[__gmpn_add],[],[AC_MSG_ERROR([
 ERROR: Cannot find libgmp.
 ERROR: You might want to supply CFLAGS=-I</path/to/include> (containing
 ERROR: the gmp.h header file), and LDFLAGS=-L</path/to/lib> (containing
 ERROR: libgmp.so) if libgmp is installed in a non-standard location.
-ERROR: libgmp can be obtained from <http://gmplib.org>. ])])
+ERROR: libgmp can be obtained from <http://gmplib.org>.])])
 
 AC_ARG_ENABLE(libffi,
   AS_HELP_STRING([--enable-libffi], [enable support for libffi (default is check)]),
