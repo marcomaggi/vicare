@@ -2686,6 +2686,11 @@ ikrt_posix_gettimeofday (ikptr rtd, ikpcb * pcb)
   } else
     return ik_errno_to_code();
 }
+ikptr
+ikrt_posix_localtime (ikptr rtd, ikpcb * pcb)
+{
+  return false_object;
+}
 
 /* ------------------------------------------------------------------ */
 
