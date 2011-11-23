@@ -4,9 +4,11 @@
 
 set -xe
 
-aclocal
-autoheader
-automake --foreign --add-missing
-autoconf
+autoreconf --install --verbose
+
+# aclocal
+# autoheader
+# automake --foreign --add-missing
+# autoconf
 
 ### end of file
