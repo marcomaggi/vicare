@@ -8549,6 +8549,8 @@ exception.
 @section Date and time
 
 
+@subsubheading Data structure @code{struct-timeval}
+
 @deftp {Structure Type} struct-timeval
 Scheme level representation of @code{struct timeval}, @glibcref{Elapsed
 Time, struct timeval}.  It has the
@@ -8579,6 +8581,9 @@ Return @true{} if @var{obj} is an instance of @code{struct-timeval}.
 Accessors for the fields of @code{struct-timeval}.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading Data structure @code{struct-timespec}
 
 @deftp {Structure Type} struct-timespec
 Scheme level representation of @code{struct timespec}, @glibcref{Elapsed
@@ -8611,14 +8616,7 @@ Accessors for the fields of @code{struct-timespec}.
 
 @c ------------------------------------------------------------
 
-@defun clock
-Interface to the C function @cfunc{clock}, @glibcref{CPU Time, clock}.
-If successful return an exact integer representing the CPU time for the
-calling process expressed in clock ticks; if the clock time is not
-available return false.
-@end defun
-
-@c ------------------------------------------------------------
+@subsubheading Data structure @code{struct-tms}
 
 @deftp {Structure Type} struct-tms
 Scheme level representation of @code{struct tms}, @glibcref{Processor
@@ -8657,6 +8655,88 @@ Return @true{} if @var{obj} is an instance of @code{struct-tms}.
 Accessors for the fields of @code{struct-tms}.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading Data structure @code{struct-tm}
+
+
+@deftp {Structure Type} struct-tm
+Scheme level representation of @code{struct tm}, @glibcref{Broken-down
+Time, struct tm}.  It has the following fields:
+
+@table @code
+@item tm_sec
+Exact integer.
+
+@item tm_min
+Exact integer.
+
+@item tm_hour
+Exact integer.
+
+@item tm_mday
+Exact integer.
+
+@item tm_mon
+Exact integer.
+
+@item tm_year
+Exact integer.
+
+@item tm_wday
+Exact integer.
+
+@item tm_yday
+Exact integer.
+
+@item tm_isdst
+Boolean.
+
+@item tm_gmtoff
+Exact integer.
+
+@item tm_zone
+Bytevector.
+@end table
+@end deftp
+
+
+@defun make-struct-tm @var{tm_sec} @var{tm_min} @var{tm_hour} @var{tm_mday} @var{tm_mon} @var{tm_year} @var{tm_wday} @var{tm_yday} @var{tm_isdst} @var{tm_gmtoff} @var{tm_zone}
+Build and return a new instance of @code{struct-tm}.
+@end defun
+
+
+@defun struct-tm? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-tm}.
+@end defun
+
+
+@defun struct-tm-tm_sec @var{tm}
+@defunx struct-tm-tm_min @var{tm}
+@defunx struct-tm-tm_hour @var{tm}
+@defunx struct-tm-tm_mday @var{tm}
+@defunx struct-tm-tm_mon @var{tm}
+@defunx struct-tm-tm_year @var{tm}
+@defunx struct-tm-tm_wday @var{tm}
+@defunx struct-tm-tm_yday @var{tm}
+@defunx struct-tm-tm_isdst @var{tm}
+@defunx struct-tm-tm_gmtoff @var{tm}
+@defunx struct-tm-tm_zone @var{tm}
+Accessors for instances of @var{struct-tm}
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Functions
+
+@defun clock
+Interface to the C function @cfunc{clock}, @glibcref{CPU Time, clock}.
+If successful return an exact integer representing the CPU time for the
+calling process expressed in clock ticks; if the clock time is not
+available return false.
+@end defun
+
+@c ------------------------------------------------------------
 
 @defun times
 Interface to the C function @cfunc{times}, @glibcref{Processor Time,

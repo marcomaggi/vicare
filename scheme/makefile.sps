@@ -2003,6 +2003,20 @@
     (struct-tms-tms_stime			i v posix)
     (struct-tms-tms_cutime			i v posix)
     (struct-tms-tms_cstime			i v posix)
+;;;
+    (make-struct-tm				i v posix)
+    (struct-tm?					i v posix)
+    (struct-tm-tm_sec				i v posix)
+    (struct-tm-tm_min				i v posix)
+    (struct-tm-tm_hour				i v posix)
+    (struct-tm-tm_mday				i v posix)
+    (struct-tm-tm_mon				i v posix)
+    (struct-tm-tm_year				i v posix)
+    (struct-tm-tm_wday				i v posix)
+    (struct-tm-tm_yday				i v posix)
+    (struct-tm-tm_isdst				i v posix)
+    (struct-tm-tm_gmtoff			i v posix)
+    (struct-tm-tm_zone				i v posix)
 
 ;;; GNU C Library functions
     (clearenv					glibc)

@@ -218,6 +218,14 @@
     struct-tms-tms_utime		struct-tms-tms_stime
     struct-tms-tms_cutime		struct-tms-tms_cstime
 
+    make-struct-tm			struct-tm?
+    struct-tm-tm_sec			struct-tm-tm_min
+    struct-tm-tm_hour			struct-tm-tm_mday
+    struct-tm-tm_mon			struct-tm-tm_year
+    struct-tm-tm_wday			struct-tm-tm_yday
+    struct-tm-tm_isdst			struct-tm-tm_gmtoff
+    struct-tm-tm_zone
+
     ;; miscellaneous functions
     file-descriptor?)
   (import (except (ikarus)
@@ -420,6 +428,14 @@
 		  make-struct-tms		struct-tms?
 		  struct-tms-tms_utime		struct-tms-tms_stime
 		  struct-tms-tms_cutime		struct-tms-tms_cstime
+
+		  make-struct-tm		struct-tm?
+		  struct-tm-tm_sec		struct-tm-tm_min
+		  struct-tm-tm_hour		struct-tm-tm_mday
+		  struct-tm-tm_mon		struct-tm-tm_year
+		  struct-tm-tm_wday		struct-tm-tm_yday
+		  struct-tm-tm_isdst		struct-tm-tm_gmtoff
+		  struct-tm-tm_zone
 
 		  ;; miscellaneous functions
 		  file-descriptor?)
@@ -2923,9 +2939,6 @@
 (define-struct struct-timeval
   (tv_sec tv_usec))
 
-(define-struct struct-timespec
-  (tv_sec tv_nsec))
-
 (define (%struct-timeval-printer S port sub-printer)
   (define-inline (%display thing)
     (display thing port))
@@ -2933,6 +2946,11 @@
   (%display " tv_sec=")		(%display (struct-timeval-tv_sec  S))
   (%display " tv_usec=")	(%display (struct-timeval-tv_usec S))
   (%display "]"))
+
+;;; --------------------------------------------------------------------
+
+(define-struct struct-timespec
+  (tv_sec tv_nsec))
 
 (define (%struct-timespec-printer S port sub-printer)
   (define-inline (%display thing)
@@ -2943,9 +2961,6 @@
   (%display "]"))
 
 ;;; --------------------------------------------------------------------
-
-(define (clock)
-  (exact (capi.posix-clock)))
 
 (define-struct struct-tms
   (tms_utime	;0, exact integer
@@ -2966,6 +2981,44 @@
   (%display " tms_cutime=")	(%display (struct-tms-tms_cutime S))
   (%display " tms_cstime=")	(%display (struct-tms-tms_cstime S))
   (%display "]"))
+
+;;; --------------------------------------------------------------------
+
+(define-struct struct-tm
+  (tm_sec	;0, exact integer
+   tm_min	;1, exact integer
+   tm_hour	;2, exact integer
+   tm_mday	;3, exact integer
+   tm_mon	;4, exact integer
+   tm_year	;5, exact integer
+   tm_wday	;6, exact integer
+   tm_yday	;7, exact integer
+   tm_isdst	;8, boolean
+   tm_gmtoff	;9, exact integer
+   tm_zone	;10, bytevector
+   ))
+
+(define (%struct-tm-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-tm\"")
+  (%display " tm_sec=")		(%display (struct-tm-tm_sec    S))
+  (%display " tm_min=")		(%display (struct-tm-tm_min    S))
+  (%display " tm_hour=")	(%display (struct-tm-tm_hour   S))
+  (%display " tm_mday=")	(%display (struct-tm-tm_mday   S))
+  (%display " tm_mon=")		(%display (struct-tm-tm_mon    S))
+  (%display " tm_year=")	(%display (struct-tm-tm_year   S))
+  (%display " tm_wday=")	(%display (struct-tm-tm_wday   S))
+  (%display " tm_yday=")	(%display (struct-tm-tm_yday   S))
+  (%display " tm_isdst=")	(%display (struct-tm-tm_isdst  S))
+  (%display " tm_gmtoff=")	(%display (struct-tm-tm_gmtoff S))
+  (%display " tm_zone=")	(latin1->string (%display (struct-tm-tm_zone  S)))
+  (%display "]"))
+
+;;; --------------------------------------------------------------------
+
+(define (clock)
+  (exact (capi.posix-clock)))
 
 (define (times)
   (let ((S (capi.posix-times tms-rtd)))
@@ -3020,6 +3073,7 @@
 (set-rtd-printer! (type-descriptor struct-timeval)	%struct-timeval-printer)
 (set-rtd-printer! (type-descriptor struct-timespec)	%struct-timespec-printer)
 (set-rtd-printer! (type-descriptor struct-tms)		%struct-tms-printer)
+(set-rtd-printer! (type-descriptor struct-tm)		%struct-tm-printer)
 
 )
 
