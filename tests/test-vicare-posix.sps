@@ -1591,6 +1591,26 @@
   #t)
 
 
+(parametrise ((check-test-name	'time))
+
+  (check-pretty-print (list 'clock (px.clock)))
+  (check-pretty-print (list 'time  (px.posix-time)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (struct-tms? (px.times))
+    => #t)
+
+  (check-pretty-print (px.times))
+
+;;; --------------------------------------------------------------------
+
+
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

@@ -51,6 +51,7 @@
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <sys/times.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <sys/un.h>
@@ -1551,18 +1552,12 @@ ikrt_posix_inet_ntop (ikptr af, ikptr host_address_bv, ikpcb * pcb)
 
 static ikptr
 hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
-/* Convert  a  C  language   "strut  hostent"  into  a  Scheme  language
+/* Convert  a  C  language  "struct  hostent"  into  a  Scheme  language
    "struct-hostent".    Makes  use   of  "pcb->root1"   only,   so  that
    "pcb->root0" is available to the caller. */
 {
   ikptr dst = ik_struct_alloc(pcb, rtd, 6);
   pcb->root1 = &dst;
-#if 0
-  ref(dst, off_record_data+0*wordsize) = false_object;
-  ref(dst, off_record_data+1*wordsize) = false_object;
-  ref(dst, off_record_data+2*wordsize) = false_object;
-  ref(dst, off_record_data+3*wordsize) = false_object;
-#else
   { /* store the official host name */
     long        name_len = strlen(src->h_name);
     ikptr       name_bv  = ik_bytevector_alloc(pcb, name_len);
@@ -1595,12 +1590,12 @@ hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
     int         i;
     VICARE_STRUCT_SET(dst, 4, list_of_addrs);
     for (i=0; NULL!=src->h_addr_list[i]; ++i) {
-      ikptr     pair     = ik_pair_alloc(pcb);
+      ikptr     pair;
+      ikptr     addr_bv;
+      pair    = ik_pair_alloc(pcb);
       VICARE_SET_CDR(pair, list_of_addrs);
+      addr_bv = ik_bytevector_from_memory_block(pcb, src->h_addr_list[i], src->h_length);
       VICARE_STRUCT_SET2(dst, 4, list_of_addrs, pair);
-      ikptr     addr_bv  = ik_bytevector_alloc(pcb, src->h_length);
-      char *    addr     = VICARE_BYTEVECTOR_DATA_CHARP(addr_bv);
-      memcpy(addr, src->h_addr_list[i], src->h_length);
       VICARE_SET_CAR(pair, addr_bv);
       if (0 == i)
         first_addr = addr_bv;
@@ -1608,7 +1603,6 @@ hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
   }
   /* store the first in the list of addresses */
   VICARE_STRUCT_SET(dst, 5, first_addr);
-#endif
   pcb->root1 = NULL;
   return dst;
 }
@@ -1842,8 +1836,8 @@ ikrt_posix_protocol_entries (ikptr rtd, ikpcb * pcb)
 
 static ikptr
 servent_to_struct (ikpcb * pcb, ikptr rtd, struct servent * src)
-/* Convert  a  C  language  "struct  servent" into  a  Scheme  language
-   "struct-servent".    Make  use   of  "pcb->root1"   only,   so  that
+/* Convert  a  C  language  "struct  servent"  into  a  Scheme  language
+   "struct-servent".    Make   use  of   "pcb->root1"   only,  so   that
    "pcb->root0" is available to the caller. */
 {
   ikptr         dst;
@@ -2439,7 +2433,7 @@ ikrt_posix_getlogin (ikpcb * pcb)
 
 static ikptr
 passwd_to_struct (ikptr rtd, struct passwd * src, ikpcb * pcb)
-/* Convert  a   C  language  "strut  passwd"  into   a  Scheme  language
+/* Convert  a  C  language   "struct  passwd"  into  a  Scheme  language
    "struct-passwd".    Makes   use  of   "pcb->root1"   only,  so   that
    "pcb->root0" is available to the caller. */
 {
@@ -2493,7 +2487,7 @@ ikrt_posix_user_entries (ikptr rtd, ikpcb * pcb)
 
 static ikptr
 group_to_struct (ikptr rtd, struct group * src, ikpcb * pcb)
-/* Convert  a   C  language  "strut   group"  into  a   Scheme  language
+/* Convert  a   C  language  "struct  group"  into   a  Scheme  language
    "struct-group".  Makes use of "pcb->root1" only, so that "pcb->root0"
    is available to the caller. */
 {
@@ -2626,8 +2620,84 @@ ikrt_posix_tcgetsid (ikptr fd)
 
 
 /** --------------------------------------------------------------------
- ** Time related functions.
+ ** Date and time related functions.
  ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_clock (ikpcb * pcb)
+{
+  clock_t       T;
+  T = clock();
+  return (((clock_t)-1) != T)? d_to_number((double)T,  pcb) : false_object;
+}
+ikptr
+ikrt_posix_time (ikpcb * pcb)
+{
+  time_t        T;
+  T = time(NULL);
+  return (((time_t)-1) != T)? d_to_number((double)T,  pcb) : false_object;
+}
+
+/* ------------------------------------------------------------------ */
+
+static ikptr
+tms_to_struct (ikptr rtd, struct tms * src, ikpcb * pcb)
+/* Convert   a  C  language   "struct  tms"   into  a   Scheme  language
+   "struct-tms".  Makes  use of "pcb->root1" only,  so that "pcb->root0"
+   is available to the caller. */
+{
+  ikptr dst = ik_struct_alloc(pcb, rtd, 4);
+  pcb->root1 = &dst;
+#if 0
+  fprintf(stderr, "struct tms = %f, %f, %f, %f\n",
+          (double)(src->tms_utime),  (double)(src->tms_stime),
+          (double)(src->tms_cutime), (double)(src->tms_cstime));
+#endif
+  VICARE_STRUCT_SET(dst, 0, d_to_number((double)(src->tms_utime),  pcb));
+  VICARE_STRUCT_SET(dst, 1, d_to_number((double)(src->tms_stime),  pcb));
+  VICARE_STRUCT_SET(dst, 2, d_to_number((double)(src->tms_cutime), pcb));
+  VICARE_STRUCT_SET(dst, 3, d_to_number((double)(src->tms_cstime), pcb));
+  pcb->root1 = NULL;
+  return dst;
+}
+ikptr
+ikrt_posix_times (ikptr rtd, ikpcb * pcb)
+{
+  struct tms    T = { 0, 0, 0, 0 };
+  clock_t       rv;
+  rv = times(&T);
+  return (((clock_t)-1) == rv)? false_object : tms_to_struct(rtd, &T, pcb);
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_nanosleep (ikptr secs, ikptr nsecs, ikpcb * pcb)
+{
+  struct timespec       requested;
+  struct timespec       remaining = { 0, 0 }; /* required!!! */
+  int                   rv;
+  requested.tv_sec  = is_fixnum(secs)?  (unsigned long) unfix(secs)  : ref(secs,  off_bignum_data);
+  requested.tv_nsec = is_fixnum(nsecs)? (unsigned long) unfix(nsecs) : ref(nsecs, off_bignum_data);
+  errno = 0;
+  rv    = nanosleep(&requested, &remaining);
+  if (0 == rv) {
+    ikptr       pair = ik_pair_alloc(pcb);
+    VICARE_SET_CAR(pair, remaining.tv_sec?  s_to_number(remaining.tv_sec,  pcb) : false_object);
+    VICARE_SET_CDR(pair, remaining.tv_nsec? s_to_number(remaining.tv_nsec, pcb) : false_object);
+    return pair;
+  } else
+    return ik_errno_to_code();
+}
+ikptr
+ikrt_nanosleep (ikptr secs, ikptr nsecs, ikpcb * pcb)
+/* FIXME  STALE To be  removed at  the next  boot image  rotation (Marco
+   Maggi; Nov 23, 2011). */
+{
+  return ikrt_posix_nanosleep(secs, nsecs, pcb);
+}
+
+/* ------------------------------------------------------------------ */
 
 ikptr
 ikrt_current_time(ikptr t){
@@ -2653,19 +2723,6 @@ ikrt_gmt_offset(ikptr t){
   ikptr r = fix(m->tm_gmtoff);
   return r;
   */
-}
-ikptr
-ikrt_nanosleep(ikptr secs, ikptr nsecs /*, ikpcb* pcb */){
-  struct timespec t;
-  t.tv_sec =
-    is_fixnum(secs)
-      ? (unsigned long) unfix(secs)
-      : ref(secs, off_bignum_data);
-  t.tv_nsec =
-    is_fixnum(nsecs)
-      ? (unsigned long) unfix(nsecs)
-      : ref(nsecs, off_bignum_data);
-  return fix(nanosleep(&t, NULL));
 }
 
 

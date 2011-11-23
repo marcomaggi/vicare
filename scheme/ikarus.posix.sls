@@ -203,8 +203,14 @@
     tcgetpgrp				tcsetpgrp
     tcgetsid
 
-    ;; time functions
+    ;; date and time functions
+    clock				times
+    posix-time
     nanosleep
+
+    make-struct-tms			struct-tms?
+    struct-tms-tms_utime		struct-tms-tms_stime
+    struct-tms-tms_cutime		struct-tms-tms_cstime
 
     ;; miscellaneous functions
     file-descriptor?)
@@ -394,8 +400,14 @@
 		  tcgetpgrp			tcsetpgrp
 		  tcgetsid
 
-		  ;; time functions
+		  ;; date and time functions
+		  clock				times
+		  posix-time
 		  nanosleep
+
+		  make-struct-tms		struct-tms?
+		  struct-tms-tms_utime		struct-tms-tms_stime
+		  struct-tms-tms_cutime		struct-tms-tms_cstime
 
 		  ;; miscellaneous functions
 		  file-descriptor?)
@@ -406,7 +418,8 @@
     (prefix (vicare unsafe-capi)
 	    capi.)
     (prefix (vicare unsafe-operations)
-	    unsafe.))
+	    unsafe.)
+    (vicare words))
 
 
 ;;;; helpers
@@ -537,6 +550,18 @@
 (define-argument-validation (struct-stat who obj)
   (struct-stat? obj)
   (assertion-violation who "expected struct stat instance as argument" obj))
+
+(define-argument-validation (secs who obj)
+  (word-u32? obj)
+  (assertion-violation who
+    "expected exact integer in the range [0, 2^32-1] as seconds count argument" obj))
+
+(define-argument-validation (nsecs who obj)
+  (and (word-u32? obj)
+       (<= 0 obj 999999999))
+;;;              987654321
+  (assertion-violation who
+    "expected exact integer in the range [0, 999999999] as nanoseconds count argument" obj))
 
 (define-argument-validation (secfx who obj)
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
@@ -2883,23 +2908,53 @@
 
 ;;;; time functions
 
-(define (nanosleep secs nsecs)
-  (import (ikarus system $fx))
-  (unless (cond
-	   ((fixnum? secs) (unsafe.fx>= secs 0))
-	   ((bignum? secs) (<= 0 secs (- (expt 2 32) 1)))
-	   (else (die 'nanosleep "not an exact integer" secs)))
-    (die 'nanosleep "seconds must be a nonnegative integer <=" secs))
-  (unless (cond
-	   ((fixnum? nsecs) (unsafe.fx>= nsecs 0))
-	   ((bignum? nsecs) (<= 0 nsecs 999999999))
-	   (else (die 'nanosleep "not an exact integer" nsecs)))
-    (die 'nanosleep "nanoseconds must be an integer \
-                       in the range 0..999999999" nsecs))
-  (let ((rv (foreign-call "ikrt_nanosleep" secs nsecs)))
-    (unless (eq? rv 0)
-      (error 'nanosleep "failed"))))
+(define (clock)
+  (exact (capi.posix-clock)))
 
+(define-struct struct-tms
+  (tms_utime	;0, exact integer
+   tms_stime	;1, exact integer
+   tms_cutime	;2, exact integer
+   tms_cstime	;3, exact integer
+   ))
+
+(define tms-rtd
+  (type-descriptor struct-tms))
+
+(define (%struct-tms-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-tms\"")
+  (%display " tms_utime=")	(%display (struct-tms-tms_utime  S))
+  (%display " tms_stime=")	(%display (struct-tms-tms_stime  S))
+  (%display " tms_cutime=")	(%display (struct-tms-tms_cutime S))
+  (%display " tms_cstime=")	(%display (struct-tms-tms_cstime S))
+  (%display "]"))
+
+(define (times)
+  (let ((S (capi.posix-times tms-rtd)))
+    (set-struct-tms-tms_utime!  S (exact (struct-tms-tms_utime  S)))
+    (set-struct-tms-tms_stime!  S (exact (struct-tms-tms_stime  S)))
+    (set-struct-tms-tms_cutime! S (exact (struct-tms-tms_cutime S)))
+    (set-struct-tms-tms_cstime! S (exact (struct-tms-tms_cstime S)))
+    S))
+
+;;; --------------------------------------------------------------------
+
+(define (posix-time)
+  (exact (capi.posix-time)))
+
+;;; --------------------------------------------------------------------
+
+(define (nanosleep secs nsecs)
+  (define who 'nanosleep)
+  (with-arguments-validation (who)
+      ((secs	secs)
+       (nsecs	nsecs))
+    (let ((rv (capi.posix-nanosleep secs nsecs)))
+      (if (pair? rv)
+	  (values (car rv) (cdr rv))
+	(raise-errno-error who rv secs nsecs)))))
 
 
 ;;;; miscellaneous functions
@@ -2919,6 +2974,7 @@
 (set-rtd-printer! (type-descriptor struct-netent)	%struct-netent-printer)
 (set-rtd-printer! (type-descriptor struct-passwd)	%struct-passwd-printer)
 (set-rtd-printer! (type-descriptor struct-group)	%struct-group-printer)
+(set-rtd-printer! (type-descriptor struct-tms)		%struct-tms-printer)
 
 )
 

@@ -166,6 +166,11 @@
     posix-getpgrp			posix-setpgid
     posix-tcgetpgrp			posix-tcsetpgrp
     posix-tcgetsid
+
+    ;; date and time
+    posix-clock				posix-times
+    posix-time
+    posix-nanosleep
     )
   (import (except (ikarus)
 		  posix-remove
@@ -882,6 +887,25 @@
 
 (define-inline (posix-tcgetsid fd)
   (foreign-call "ikrt_posix_tcgetsid" fd))
+
+
+;;;; date and time
+
+(define-inline (posix-nanosleep secs nsecs)
+  (foreign-call "ikrt_posix_nanosleep" secs nsecs))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-clock)
+  (foreign-call "ikrt_posix_clock"))
+
+(define-inline (posix-times rtd)
+  (foreign-call "ikrt_posix_times" rtd))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-time)
+  (foreign-call "ikrt_posix_time"))
 
 
 ;;;; done

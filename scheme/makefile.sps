@@ -1864,6 +1864,9 @@
     (wait					i v posix)
     (waitpid					i v posix)
     (writev					i v posix)
+    (clock					i v posix)
+    (times					i v posix)
+    (posix-time					i v posix)
 ;;;
     (make-struct-stat				i v posix)
     (struct-stat?				i v posix)
@@ -1980,6 +1983,13 @@
     (struct-group-gr_name			i v posix)
     (struct-group-gr_gid			i v posix)
     (struct-group-gr_mem			i v posix)
+;;;
+    (make-struct-tms				i v posix)
+    (struct-tms?				i v posix)
+    (struct-tms-tms_utime			i v posix)
+    (struct-tms-tms_stime			i v posix)
+    (struct-tms-tms_cutime			i v posix)
+    (struct-tms-tms_cstime			i v posix)
 
 ;;; GNU C Library functions
     (clearenv					glibc)

@@ -8525,15 +8525,87 @@ exception.
 
 @c page
 @node posix time
-@section Time related functions
+@section Date and time
 
 
-@defun nanosleep @var{seconds} @var{nanoseconds}
-Suspend the process for the selected time; it makes use of the system
-@cfunc{nanosleep} function.  @var{seconds} and @var{nanoseconds} must be
-positive exact integers.  If an error occurs an exception is raised.
+@defun clock
+Interface to the C function @cfunc{clock}, @glibcref{CPU Time, clock}.
+If successful return an exact integer representing the CPU time for the
+calling process expressed in clock ticks; if the clock time is not
+available return false.
+@end defun
 
-@glibcref{Sleeping, Sleeping}
+@c ------------------------------------------------------------
+
+@deftp {Structure Type} struct-tms
+Scheme level representation of @code{struct tms}, @glibcref{Processor
+Time, struct tms}.  It has the following fields:
+
+@table @code
+@item tms_utime
+Exact integer.
+
+@item tms_stime
+Exact integer.
+
+@item tms_cutime
+Exact integer.
+
+@item tms_cstime
+Exact integer.
+@end table
+@end deftp
+
+
+@defun make-struct-tms @var{utime} @var{stime} @var{cutime} @var{cstime}
+Build and return a new instance of @code{struct-tms}.
+@end defun
+
+
+@defun struct-tms? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-tms}.
+@end defun
+
+
+@defun struct-tms-tms_utime @var{tms}
+@defunx struct-tms-tms_stime @var{tms}
+@defunx struct-tms-tms_cutime @var{tms}
+@defunx struct-tms-tms_cstime @var{tms}
+Accessors for the fields of @code{struct-tms}.
+@end defun
+
+
+@defun times
+Interface to the C function @cfunc{times}, @glibcref{Processor Time,
+times}.  If successful return an instance of @code{struct-tms}
+representing the current processor time, else return false.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun posix-time
+Interface to the C function @cfunc{time}, @glibcref{Simple Calendar
+Time, time}.  If successful return the calendar time as an exact
+integer, else return false.
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@defun nanosleep @var{secs} @var{nsecs}
+Interface to the C function @cfunc{nanosleep}, @glibcref{Sleeping,
+nanosleep}.  Halt the current process for the specified amount of time.
+
+The count of seconds @var{secs} must be an exact integer in the range
+@math{[0, 2^32)}; the count of nanoseconds @var{nsecs} must be an exact
+integer in the range @math{[0, 999999999]}.
+
+If successful and the requested time is elapsed: return a pair whose car
+is false and whose cdr is false.  If successful and the sleeping was
+interrupted by an interprocess signal: return a pair whose car is an
+exact integer representing the count of remaining seconds and whose cdr
+is an exact integer representing the count of remaining nanoseconds.  If
+an error occurs an exception is raised.
 @end defun
 
 @c page
@@ -11661,8 +11733,52 @@ descriptor @var{fd} is the controlling terminal; else return an encoded
 
 @c page
 @node capi posix time
-@subsection Time and date
+@subsection Date and time
 
+
+@deftypefun ikptr ikrt_posix_clock (ikpcb * @var{pcb})
+Interface to the C function @cfunc{clock}, @glibcref{CPU Time, clock}.
+If successful return an @strong{inexact} integer representing the CPU
+time for the calling process expressed in clock ticks; if the clock time
+is not available return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_times (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{times}, @glibcref{Processor Time,
+times}.  If successful return an instance of @code{struct-tms}
+representing the current processor time with all the fields set to
+inexact integers, else return false; @var{rtd} must be the type
+descriptor of @code{struct-tms}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_time (ikpcb * @var{pcb})
+Interface to the C function @cfunc{time}, @glibcref{Simple Calendar
+Time, time}.  If successful return the calendar time as an
+@strong{inexact} integer, else return false.
+@end deftypefun
+
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_nanosleep (ikptr @var{secs}, ikptr @var{nsecs})
+Interface to the C function @cfunc{nanosleep}, @glibcref{Sleeping,
+nanosleep}.  Halt the current process for the specified amount of time.
+
+The count of seconds @var{secs} must be an exact integer in the range
+@math{[0, 2^32)}; the count of nanoseconds @var{nsecs} must be an exact
+integer in the range @math{[0, 999999999]}.
+
+If successful and the requested time is elapsed: return a pair whose car
+is false and whose cdr is false.  If successful and the sleeping was
+interrupted by an interprocess signal: return a pair whose car is an
+exact integer representing the count of remaining seconds and whose cdr
+is an exact integer representing the count of remaining nanoseconds.  If
+an error occurs return an encoded @code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
 
 @deftypefun ikptr ikrt_current_time (ikptr @var{time})
 Interface to the @cfunc{gettimeofday} C function.
@@ -11680,13 +11796,6 @@ structure, already filled with megaseconds, seconds and microseconds.
 Return a fixnum representing the offset.
 @end deftypefun
 
-
-@deftypefun ikptr ikrt_nanosleep (ikptr @var{secs}, ikptr @var{nsecs})
-Interface to the @cfunc{nanosleep} C function.  @glibcref{Sleeping,
-nanosleep}.  Halt the current process.  @var{secs} and @var{nsecs} must
-be fixnums or exact integers whose value is stored in a single limb (see
-the @code{mpn_} @api{} in @gmp{}).
-@end deftypefun
 
 @c page
 @node capi linux
