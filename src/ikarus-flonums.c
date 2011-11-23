@@ -69,6 +69,12 @@ ikrt_fl_exp (ikptr x, ikptr y)
   return y;
 }
 ikptr
+ikrt_fl_expm1 (ikptr x, ikptr y)
+{
+  flonum_data(y) = expm1(flonum_data(x));
+  return y;
+}
+ikptr
 ikrt_flfl_expt (ikptr a, ikptr b, ikptr z)
 {
   flonum_data(z) = exp(flonum_data(b) * log(flonum_data(a)));
@@ -179,6 +185,13 @@ ikrt_fl_log (ikptr x, ikpcb* pcb)
 {
   DEFINE_AND_ALLOC_FLONUM(r);
   flonum_data(r) = log(flonum_data(x));
+  return r;
+}
+ikptr
+ikrt_fl_log1p (ikptr x, ikpcb* pcb)
+{
+  DEFINE_AND_ALLOC_FLONUM(r);
+  flonum_data(r) = log1p(flonum_data(x));
   return r;
 }
 ikptr

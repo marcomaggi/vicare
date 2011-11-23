@@ -2936,6 +2936,7 @@ creation order.
 
 @menu
 * iklib numerics preds::        Additional numeric predicates.
+* iklib numerics flonums::      Additional flonum functions.
 @end menu
 
 @c page
@@ -2943,7 +2944,8 @@ creation order.
 @subsection Additional numeric predicates
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the @library{ikarus} and
+@library{vicare} libraries.
 
 
 @defun bignum? @var{obj}
@@ -2968,6 +2970,25 @@ Return true if @var{obj} is a complex number having any possible
 combination of number representations as real and imaginary parts, but
 not both flonums.
 @end defun
+
+@c page
+@node iklib numerics flonums
+@subsection Additional flonum functions
+
+
+The following bindings are exported by the @library{ikarus} and
+@library{vicare} libraries.
+
+
+@defun fllog1p @var{fl}
+Return a flonum equivalent to @math{log(1 + @var{fl})}.
+@end defun
+
+
+@defun flexpm1 @var{fl}
+Return a flonum equivalent to @math{exp(@var{fl}) - 1}.
+@end defun
+
 
 @c page
 @node iklib load

@@ -65,7 +65,8 @@
           flsin flcos fltan flasin flacos flatan fleven? flodd?
           flfloor flceiling flnumerator fldenominator flexp fllog
           flinteger? flonum-bytes flnan? flfinite? flinfinite?
-          flexpt $flround flround)
+          flexpt $flround flround
+	  fllog1p flexpm1)
   (import
     (ikarus system $bytevectors)
     (ikarus system $fx)
@@ -77,7 +78,8 @@
             flsin flcos fltan flasin flacos flatan fleven? flodd?
             flfloor flceiling flnumerator fldenominator flexp fllog
             flexpt flinteger? flonum-parts flonum-bytes flnan? flfinite?
-            flinfinite? flround))
+            flinfinite? flround
+	    fllog1p flexpm1))
 
 
 ;;;; flonums
@@ -410,6 +412,11 @@
       (foreign-call "ikrt_fl_exp" x ($make-flonum))
     (die 'flexp "not a flonum" x)))
 
+(define (flexpm1 x)
+  (if (flonum? x)
+      (foreign-call "ikrt_fl_expm1" x ($make-flonum))
+    (die 'flexpm1 "not a flonum" x)))
+
 (define fllog
   (case-lambda
    ((x)
@@ -423,6 +430,11 @@
 		 (foreign-call "ikrt_fl_log" y))
 	  (die 'fllog "not a flonum" y))
       (die 'fllog "not a flonum" x)))))
+
+(define (fllog1p x)
+  (if (flonum? x)
+      (foreign-call "ikrt_fl_log1p" x)
+    (die 'fllog1p "not a flonum" x)))
 
 (define (flexpt x y)
   (if (flonum? x)
