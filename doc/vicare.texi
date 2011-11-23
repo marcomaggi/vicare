@@ -5917,6 +5917,7 @@ set to @false{}.
 * posix fd::                    File descriptors.
 * posix socket::                Network sockets.
 * posix users::                 Users and groups.
+* posix job::                   Job control.
 * posix time::                  Time related functions.
 * posix misc::                  Miscellaneous functions.
 @end menu
@@ -8449,6 +8450,52 @@ the entries.
 @end defun
 
 @c page
+@node posix job
+@section Job control
+
+
+@defun ctermid
+@defunx ctermid/string
+Interface to the C function @cfunc{ctermid}, @glibcref{Identifying the
+Terminal, ctermid}.  Return a bytevector or string holding the @ascii{}
+coded pathname of the controlling terminal of the current process; the
+returned value may be the empty bytevector or string.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun setsid
+Interface to the C function @cfunc{setsid}, @glibcref{Process Group
+Functions, setsid}.  Create a new session, making the current process
+the group leader with no controlling terminal.  If successful return a
+fixnum representing the new process groups ID, else raise an exception.
+@end defun
+
+
+@defun getsid @var{pid}
+Interface to the C function @cfunc{getsid}, @glibcref{Process Group
+Functions, getsid}.  If successful return a fixnum representing the
+session ID of the process with process ID @var{pid}, which must be a
+fixnum; else raise an exception.
+@end defun
+
+
+@defun getpgrp
+Interface to the C function @cfunc{getpgrp}, @glibcref{Process Group
+Functions, getpgrp}.  Return a fixnum representing the process group ID
+of the calling process.
+@end defun
+
+
+@defun setpgid @var{pid} @var{pgid}
+Interface to the C function @cfunc{setpgid}, @glibcref{Process Group
+Functions, setpgid}.  Put the process @var{pid} in the process group
+@var{pgid}; both the arguments must be fixnums.  If successful return
+unspecified values, else raise an exception.
+@end defun
+
+
+@c page
 @node posix time
 @section Time related functions
 
@@ -9850,6 +9897,7 @@ adaptation.
 * capi posix fd::               File descriptors at low level.
 * capi posix socket::           Network sockets.
 * capi posix users::            Users and groups.
+* capi posix job::              Job control.
 * capi posix time::             Time and date.
 @end menu
 
@@ -11508,6 +11556,51 @@ Interface to the C functions @cfunc{setgrent}, @cfunc{getgrent} and
 database of groups and return a list of @code{struct-group} representing
 the entries; the structures are initialised with @var{rtd} which must be
 the type descriptor of @code{struct-group}.
+@end deftypefun
+
+@c page
+@node capi posix job
+@subsection Job control
+
+
+@deftypefun ikptr ikrt_posix_ctermid (ikpcb * @var{pcb})
+Interface to the C function @cfunc{ctermid}, @glibcref{Identifying the
+Terminal, ctermid}.  Return a bytevector holding the @ascii{} coded
+pathname of the controlling terminal of the current process; the
+returned value may be the empty bytevector.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_setsid (void)
+Interface to the C function @cfunc{setsid}, @glibcref{Process Group
+Functions, setsid}.  Create a new session, making the current process
+the group leader with no controlling terminal.  If successful return a
+fixnum representing the new process groups ID, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getsid (ikptr @var{pid})
+Interface to the C function @cfunc{getsid}, @glibcref{Process Group
+Functions, getsid}.  If successful return a fixnum representing the
+session ID of the process with process ID @var{pid}, which must be a
+fixnum; else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getpgrp (void)
+Interface to the C function @cfunc{getpgrp}, @glibcref{Process Group
+Functions, getpgrp}.  Return a fixnum representing the process group ID
+of the calling process.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_setpgid (ikptr @var{pid}, ikptr @var{pgid})
+Interface to the C function @cfunc{setpgid}, @glibcref{Process Group
+Functions, setpgid}.  Put the process @var{pid} in the process group
+@var{pgid}.  If successful return the fixnum zero, else return an
+encoded @code{errno} value.
 @end deftypefun
 
 @c page

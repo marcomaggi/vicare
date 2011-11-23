@@ -196,6 +196,12 @@
     struct-group-gr_name		struct-group-gr_gid
     struct-group-gr_mem
 
+    ;; job control
+    ctermid				ctermid/string
+    setsid				getsid
+    getpgrp				setpgid
+
+
     ;; time functions
     nanosleep
 
@@ -379,6 +385,11 @@
 		  make-struct-group		struct-group?
 		  struct-group-gr_name		struct-group-gr_gid
 		  struct-group-gr_mem
+
+		  ;; job control
+		  ctermid			ctermid/string
+		  setsid			getsid
+		  getpgrp			setpgid
 
 		  ;; time functions
 		  nanosleep
@@ -2792,6 +2803,52 @@
 
 (define (group-entries)
   (capi.posix-group-entries group-rtd))
+
+
+;;;; job control
+
+(define (ctermid)
+  (capi.posix-ctermid))
+
+(define (ctermid/string)
+  (latin1->string (capi.posix-ctermid)))
+
+;;; --------------------------------------------------------------------
+
+(define (setsid)
+  (define who 'setsid)
+  (let ((rv (capi.posix-setsid)))
+    (if (unsafe.fx<= 0 rv)
+	rv
+      (raise-errno-error who rv))))
+
+(define (getsid pid)
+  (define who 'getsid)
+  (with-arguments-validation (who)
+      ((fixnum  pid))
+    (let ((rv (capi.posix-getsid pid)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv pid)))))
+
+(define (getpgrp)
+  (define who 'getpgrp)
+  (let ((rv (capi.posix-getpgrp)))
+    (if (unsafe.fx<= 0 rv)
+	rv
+      (raise-errno-error who rv))))
+
+(define (setpgid pid pgid)
+  (define who 'setpgid)
+  (with-arguments-validation (who)
+      ((fixnum  pid)
+       (fixnum  pgid))
+    (let ((rv (capi.posix-setpgid pid pgid)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(raise-errno-error who rv pid pgid)))))
+
+;;; --------------------------------------------------------------------
 
 
 ;;;; time functions

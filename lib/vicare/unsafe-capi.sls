@@ -159,6 +159,11 @@
     posix-getpwuid			posix-getpwnam
     posix-getgrgid			posix-getgrnam
     posix-user-entries			posix-group-entries
+
+    ;; job control
+    posix-ctermid
+    posix-setsid			posix-getsid
+    posix-getpgrp			posix-setpgid
     )
   (import (except (ikarus)
 		  posix-remove
@@ -844,6 +849,28 @@
 
 (define-inline (posix-group-entries rtd)
   (foreign-call "ikrt_posix_group_entries" rtd))
+
+
+;;;; job control
+
+(define-inline (posix-ctermid)
+  (foreign-call "ikrt_posix_ctermid"))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-setsid)
+  (foreign-call "ikrt_posix_setsid"))
+
+(define-inline (posix-getsid pid)
+  (foreign-call "ikrt_posix_getsid" pid))
+
+(define-inline (posix-getpgrp)
+  (foreign-call "ikrt_posix_getpgrp"))
+
+(define-inline (posix-setpgid pid pgid)
+  (foreign-call "ikrt_posix_setpgid" pid pgid))
+
+
 
 
 ;;;; done

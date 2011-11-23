@@ -2550,6 +2550,55 @@ ikrt_posix_group_entries (ikptr rtd, ikpcb * pcb)
 
 
 /** --------------------------------------------------------------------
+ ** Job control.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_ctermid (ikpcb * pcb)
+{
+  char          id[L_ctermid];
+  ctermid(id);
+  return ik_bytevector_from_cstring(pcb, id);
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_setsid (void)
+{
+  int   rv;
+  errno = 0;
+  rv    = setsid();
+  return (-1 != rv)? fix(rv) : ik_errno_to_code();
+}
+ikptr
+ikrt_posix_getsid (ikptr pid)
+{
+  int   rv;
+  errno = 0;
+  rv    = getsid(unfix(pid));
+  return (-1 != rv)? fix(rv) : ik_errno_to_code();
+}
+ikptr
+ikrt_posix_getpgrp (void)
+/* About  this   function:  notice  that  we   define  "_GNU_SOURCE"  in
+   "configure.ac".  See the GNU C Library documentation for details. */
+{
+  return fix(getpgrp());
+}
+ikptr
+ikrt_posix_setpgid (ikptr pid, ikptr pgid)
+{
+  int   rv;
+  errno = 0;
+  rv    = setpgid(unfix(pid), unfix(pgid));
+  return (-1 != rv)? fix(0) : ik_errno_to_code();
+}
+
+/* ------------------------------------------------------------------ */
+
+
+/** --------------------------------------------------------------------
  ** Time related functions.
  ** ----------------------------------------------------------------- */
 
