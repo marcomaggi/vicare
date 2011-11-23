@@ -42,6 +42,9 @@ Notes for revision 0.2d5
 
 * Added users and groups, process control functions to the POSIX API.
 
+* Better  use of  GNU  Autotools and  better  tracking of  files in  the
+  repository, thanks to Barak A. Pearlmutter.
+
 
 Notes for revision 0.2d4
 ------------------------
