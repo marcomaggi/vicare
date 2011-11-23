@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.2d4
+Subject: [announce] Vicare Scheme revision 0.2d5
 
                              Vicare Scheme
                              =============
@@ -35,6 +35,12 @@ this project has a mailing list:
 collection of R6 Scheme libraries:
 
 	      <http://marcomaggi.github.com/nausicaa.html>
+
+
+Notes for revision 0.2d5
+------------------------
+
+* Added users and groups, process control functions to the POSIX API.
 
 
 Notes for revision 0.2d4
