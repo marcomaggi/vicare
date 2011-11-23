@@ -23,7 +23,7 @@ all: $(nodist_pkglib_DATA)
 
 ikarus.config.ss: Makefile last-revision ../config.h
 	echo '(define vicare-version "$(PACKAGE_VERSION)")' >$@
-	echo '(define vicare-revision "$(shell cat $(srcdir)/last-revision)")' >>$@
+	echo "(define vicare-revision \"$$(cat $(srcdir)/last-revision)\")" >>$@
 	echo '(define vicare-lib-dir "$(pkglibdir)")' >>$@
 	echo '(define (host-info) "$(target)")' >>$@
 	echo '(define wordsize $(VICARE_SIZE_OF_VOIDP))' >>$@
@@ -58,7 +58,7 @@ $(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
 
 boot-image-64-bit:
 	echo '(define vicare-version "$(PACKAGE_VERSION)")' >ikarus.config.ss
-	echo '(define vicare-revision "$(shell cat $(srcdir)/last-revision)")' >>ikarus.config.ss
+	echo "(define vicare-revision \"$$(cat $(srcdir)/last-revision)\")" >>ikarus.config.ss
 	echo '(define vicare-lib-dir "$(pkglibdir)")' >>ikarus.config.ss
 	echo '(define (host-info) "$(target)")' >>ikarus.config.ss
 	echo '(define wordsize 8)' >>ikarus.config.ss

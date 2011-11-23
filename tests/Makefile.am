@@ -1,8 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 
 testdir				= $(srcdir)
-VICARE_SELECTED_TESTS		= $(wildcard $(testdir)/test-*$(file)*.sps)
-VICARE_SELECTED_LONG_TESTS	= $(wildcard $(testdir)/long-test-*$(file)*.sps)
+VICARE_SELECTED_TESTS		= $(testdir)/test-*$(file)*.sps
+VICARE_SELECTED_LONG_TESTS	= $(testdir)/long-test-*$(file)*.sps
 
 VICARE_TEST_SEARCH_PATH	= $(srcdir):$(srcdir)/../lib:$(builddir)/../lib:$(srcdir)/../scheme
 
@@ -20,12 +20,12 @@ VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
 
 test tests:
 	@echo
-	@$(foreach f,$(VICARE_SELECTED_TESTS),$(VICARE_RUN) $(f);)
+	@for f in $(VICARE_SELECTED_TESTS); do $(VICARE_RUN) $$f; done
 	@echo
 
 long-test long-tests:
 	@echo
-	@$(foreach f,$(VICARE_SELECTED_LONG_TESTS),$(VICARE_RUN) $(f);)
+	@for f in $(VICARE_SELECTED_LONG_TESTS); do $(VICARE_RUN) $$f; done
 	@echo
 
 #page
