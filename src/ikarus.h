@@ -460,9 +460,6 @@ ikptr   ik_cstring_to_symbol    (char*, ikpcb*);
 #define disp_flonum_data        8 /* not f(wordsize) */
 #define off_flonum_data         (disp_flonum_data - vector_tag)
 
-#define flonum_data(X)  \
-  (*((double*)(((char*)(long)(X)) + off_flonum_data)))
-
 #define compnum_tag             ((ikptr) 0x37)
 #define disp_compnum_real       (1 * wordsize)
 #define disp_compnum_imag       (2 * wordsize)
@@ -474,6 +471,10 @@ ikptr   ik_cstring_to_symbol    (char*, ikpcb*);
 #define disp_cflonum_imag       (2 * wordsize)
 #define disp_cflonum_unused     (3 * wordsize)
 #define cflonum_size            (4 * wordsize)
+
+ikptr   ik_flonum_alloc         (ikpcb * pcb);
+#define flonum_data(X)  \
+  (*((double*)(((char*)(long)(X)) + off_flonum_data)))
 
 ikptr   u_to_number             (unsigned long, ikpcb*);
 ikptr   ull_to_number           (unsigned long long, ikpcb*);
