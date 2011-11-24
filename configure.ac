@@ -612,14 +612,14 @@ AC_DEFINE_UNQUOTED([UNSETENV_HAS_RETURN_VALUE],
 AC_CACHE_CHECK([the size of 'size_t'],
   [vicare_cv_sizeof_size_t],
   [AC_COMPUTE_INT([vicare_cv_sizeof_size_t],
-    [sizeof(size_t)],,[vicare_cv_sizeof_size_t="#f"])])
+    [sizeof(size_t)],[AC_INCLUDES_DEFAULT],[vicare_cv_sizeof_size_t="#f"])])
 SIZEOF_SIZE_T="$vicare_cv_sizeof_size_t"
 AC_SUBST([SIZEOF_SIZE_T])
 
 AC_CACHE_CHECK([the size of 'ssize_t'],
   [vicare_cv_sizeof_ssize_t],
   [AC_COMPUTE_INT([vicare_cv_sizeof_ssize_t],
-    [sizeof(ssize_t)],,[vicare_cv_sizeof_ssize_t="#f"])])
+    [sizeof(ssize_t)],[AC_INCLUDES_DEFAULT],[vicare_cv_sizeof_ssize_t="#f"])])
 SIZEOF_SSIZE_T="$vicare_cv_sizeof_ssize_t"
 AC_SUBST([SIZEOF_SSIZE_T])
 
