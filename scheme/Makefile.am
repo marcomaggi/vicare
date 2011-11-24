@@ -21,6 +21,9 @@ all: $(nodist_pkglib_DATA)
 
 ## --------------------------------------------------------------------
 
+last-revision:
+	echo 'no-branch/no-commit' >$@
+
 ikarus.config.ss: Makefile last-revision ../config.h
 	echo '(define vicare-version "$(PACKAGE_VERSION)")' >$@
 	echo "(define vicare-revision \"$$(cat $(srcdir)/last-revision)\")" >>$@
@@ -36,7 +39,7 @@ ikarus.config.ss: Makefile last-revision ../config.h
 # environment variable names are  hardcoded in the prebuilt boot image
 # and are the Ikarus' ones.
 #
-$(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
+$(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss last-revision
 	VICARE_SRC_DIR=$(srcdir)			\
   VICARE_BUILD_DIR=$(builddir)				\
   VICARE_FASL_DIRECTORY=''				\
@@ -44,7 +47,7 @@ $(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
   $(NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT)		\
   --r6rs-script $(srcdir)/makefile.sps
 
-#$(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
+#$(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss last-revision
 # 	VICARE_SRC_DIR=$(srcdir)			\
 #   VICARE_BUILD_DIR=$(builddir)			\
 #   VICARE_FASL_DIRECTORY=''				\
@@ -56,7 +59,7 @@ $(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
 
 .PHONY: boot-image-64-bit
 
-boot-image-64-bit:
+boot-image-64-bit: last-revision
 	echo '(define vicare-version "$(PACKAGE_VERSION)")' >ikarus.config.ss
 	echo "(define vicare-revision \"$$(cat $(srcdir)/last-revision)\")" >>ikarus.config.ss
 	echo '(define vicare-lib-dir "$(pkglibdir)")' >>ikarus.config.ss
@@ -90,7 +93,7 @@ boot-image-64-bit:
 #
 # but keep backups of the original one!!!
 #
-try-vicare-boot: $(EXTRA_DIST) ikarus.config.ss
+try-vicare-boot: $(EXTRA_DIST) ikarus.config.ss last-revision
 	VICARE_SRC_DIR=$(srcdir)			\
    VICARE_BUILD_DIR=$(builddir)				\
    VICARE_FASL_DIRECTORY=''				\
