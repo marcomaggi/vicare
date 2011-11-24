@@ -8810,6 +8810,17 @@ returned by @cfunc{time}.  If successful return an exact integer
 representing the time value, else raise an exception.
 @end defun
 
+
+@defun strftime @var{template} @var{tm}
+@defunx strftime/string @var{template} @var{tm}
+Interface to the C function @cfunc{strftime}, @glibcref{Formatting
+Calendar Time, strftime}.  Given a bytevector @var{template} holding an
+@ascii{} coded format string and a @code{struct-tm} instance @var{tm}:
+build a formatted time string.  If successful @func{strftime} returns a
+bytevector holding the time string in @ascii{} coding and
+@func{strftime/string} returns a Scheme string, else raise an exception.
+@end defun
+
 @c ------------------------------------------------------------
 
 @defun nanosleep @var{secs} @var{nsecs}
@@ -12024,6 +12035,15 @@ timegm}.  Given a reference to a @code{struct-rm}, @var{tm},
 representing a @utc{} broken time, convert it into a time value as
 returned by @cfunc{time}.  If successful return an @strong{inexact}
 integer representing the time value, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_strftime (ikptr @var{template}, ikptr @var{tm}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{strftime}, @glibcref{Formatting
+Calendar Time, strftime}.  Given a bytevector @var{template} holding an
+@ascii{} coded format string and a @code{struct-tm} instance @var{tm}:
+build a formatted time string.  If successful return a bytevector
+holding the time string in @ascii{} coding, else return false.
 @end deftypefun
 
 @c ------------------------------------------------------------

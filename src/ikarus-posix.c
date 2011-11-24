@@ -2770,6 +2770,22 @@ ikrt_posix_timegm (ikptr tm_struct, ikpcb * pcb)
   rv = timegm(&T);
   return (((time_t)-1) != rv)? d_to_number((double)rv,  pcb) : false_object;
 }
+ikptr
+ikrt_posix_strftime (ikptr template_bv, ikptr tm_struct, ikpcb *pcb)
+{
+  struct tm     T;
+  const char *  template;
+#undef SIZE
+#define SIZE    4096
+  size_t        size=SIZE;
+  char          output[SIZE+1];
+  template = VICARE_BYTEVECTOR_DATA_CHARP(template_bv);
+  struct_to_tm(tm_struct, &T);
+  output[0] = '\1';
+  size = strftime(output, size, template, &T);
+  return (0 == size && '\0' != output[0])?
+    false_object : ik_bytevector_from_cstring_len(pcb, output, size);
+}
 
 /* ------------------------------------------------------------------ */
 

@@ -172,6 +172,7 @@
     posix-time				posix-gettimeofday
     posix-localtime			posix-gmtime
     posix-timelocal			posix-timegm
+    posix-strftime
     posix-nanosleep
     )
   (import (except (ikarus)
@@ -925,6 +926,9 @@
 
 (define-inline (posix-timegm tm)
   (foreign-call "ikrt_posix_timegm" tm))
+
+(define-inline (posix-strftime template tm)
+  (foreign-call "ikrt_posix_strftime" template tm))
 
 
 ;;;; done

@@ -1620,6 +1620,9 @@
 	(equal? T (px.timegm (px.gmtime T))))
     => #t)
 
+  (check-pretty-print
+   (list 'strftime (px.strftime/string "%a %h %d %H:%M:%S %Y" (px.localtime (px.posix-time)))))
+
   #t)
 
 

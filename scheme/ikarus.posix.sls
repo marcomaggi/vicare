@@ -208,6 +208,7 @@
     posix-time				gettimeofday
     localtime				gmtime
     timelocal				timegm
+    strftime				strftime/string
     nanosleep
 
     make-struct-timeval			struct-timeval?
@@ -421,6 +422,7 @@
 		  posix-time			gettimeofday
 		  localtime			gmtime
 		  timelocal			timegm
+		  strftime			strftime/string
 		  nanosleep
 
 		  make-struct-timeval		struct-timeval?
@@ -3092,6 +3094,20 @@
       (if rv
 	  (exact rv)
 	(raise-posix-error who "invalid broken time specification" tm)))))
+
+(define (strftime template tm)
+  (define who 'strftime)
+  (with-arguments-validation (who)
+      ((string/bytevector  template)
+       (struct-tm          tm))
+    (with-bytevectors ((template.bv template))
+      (let ((rv (capi.posix-strftime template.bv tm)))
+	(or rv
+	    (raise-posix-error who "invalid time conversion request" template tm))))))
+
+(define (strftime/string template tm)
+  (let ((rv (strftime template tm)))
+    (and rv (latin1->string rv))))
 
 ;;; --------------------------------------------------------------------
 
