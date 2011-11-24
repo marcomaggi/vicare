@@ -1221,7 +1221,7 @@
 	       (px.close server-sock)
 	       (px.waitpid pid 0))))
 	 (define (child)
-	   (nanosleep 0 1000000) ;give parent the time to listen
+	   (nanosleep 1 0) ;give parent the time to listen
 	   (let ((sock (px.socket PF_LOCAL SOCK_STREAM 0)))
 	     (px.setsockopt/linger sock #t 1)
 	     (unwind-protect
@@ -1262,7 +1262,7 @@
 	       (px.close server-sock)
 	       (px.waitpid pid 0))))
 	 (define (child)
-	   (nanosleep 0 1000000) ;give parent the time to listen
+	   (nanosleep 1 0) ;give parent the time to listen
 	   (let* ((sock (px.socket PF_LOCAL SOCK_STREAM 0))
 		  (port (make-binary-socket-input/output-port sock "*child-sock*")))
 	     (px.setsockopt/linger sock #t 1)
@@ -1305,7 +1305,7 @@
 	       (px.close server-sock)
 	       (px.waitpid pid 0))))
 	 (define (child)
-	   (nanosleep 0 1000000) ;give parent the time to listen
+	   (nanosleep 1 0) ;give parent the time to listen
 	   (let* ((sock (px.socket PF_LOCAL SOCK_STREAM 0))
 		  (port (make-textual-socket-input/output-port sock "*child-sock*"
 							       (native-transcoder))))
@@ -1343,7 +1343,7 @@
 	       (unwind-protect
 		   (let ((buffer (make-bytevector 3)))
 		     (px.bind sock sockaddr1)
-		     (nanosleep 0 1000000) ;give child some time
+		     (nanosleep 1 0) ;give child some time
 		     (px.sendto sock '#vu8(1 2 3) 3 0 sockaddr2)
 		     (let-values (((len sockaddr) (px.recvfrom sock buffer #f 0)))
 		       (add-result len)
@@ -1357,7 +1357,7 @@
 	       (unwind-protect
 		   (let ((buffer (make-bytevector 3)))
 		     (px.bind sock sockaddr2)
-		     (nanosleep 0 1000000) ;give parent some time
+		     (nanosleep 1 0) ;give parent some time
 		     (let-values (((len sockaddr) (px.recvfrom sock buffer #f 0)))
 		       (assert (equal? 3 len))
 		       (assert (equal? pathname1 (sockaddr_un.pathname/string sockaddr)))
