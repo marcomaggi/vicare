@@ -8816,7 +8816,8 @@ representing the time value, else raise an exception.
 Interface to the C function @cfunc{strftime}, @glibcref{Formatting
 Calendar Time, strftime}.  Given a bytevector @var{template} holding an
 @ascii{} coded format string and a @code{struct-tm} instance @var{tm}:
-build a formatted time string.  If successful @func{strftime} returns a
+build a formatted time string; the resulting time string can be at most
+@math{4096} bytes wide.  If successful @func{strftime} returns a
 bytevector holding the time string in @ascii{} coding and
 @func{strftime/string} returns a Scheme string, else raise an exception.
 @end defun
@@ -12042,8 +12043,9 @@ integer representing the time value, else return false.
 Interface to the C function @cfunc{strftime}, @glibcref{Formatting
 Calendar Time, strftime}.  Given a bytevector @var{template} holding an
 @ascii{} coded format string and a @code{struct-tm} instance @var{tm}:
-build a formatted time string.  If successful return a bytevector
-holding the time string in @ascii{} coding, else return false.
+build a formatted time string; the resulting time string can be at most
+@math{4096} bytes wide.  If successful return a bytevector holding the
+time string in @ascii{} coding, else return false.
 @end deftypefun
 
 @c ------------------------------------------------------------
