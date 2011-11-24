@@ -2818,29 +2818,26 @@ ikrt_nanosleep (ikptr secs, ikptr nsecs, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_current_time(ikptr t){
+ikrt_current_time (ikptr t)
+{
   struct timeval s;
   gettimeofday(&s, 0);
   /* this will break in 8,727,224 years if we stay in 32-bit ptrs */
-  ref(t, off_record_data + 0*wordsize) = fix(s.tv_sec / 1000000);
-  ref(t, off_record_data + 1*wordsize) = fix(s.tv_sec % 1000000);
-  ref(t, off_record_data + 2*wordsize) = fix(s.tv_usec);
+  VICARE_STRUCT_SET(t, 0, fix(s.tv_sec / 1000000));
+  VICARE_STRUCT_SET(t, 1, fix(s.tv_sec % 1000000));
+  VICARE_STRUCT_SET(t, 2, fix(s.tv_usec));
   return t;
 }
-
 ikptr
-ikrt_gmt_offset(ikptr t){
-  time_t clock =
-    unfix(ref(t, off_record_data + 0*wordsize)) * 1000000
-    + unfix(ref(t, off_record_data + 1*wordsize));
-  struct tm* m = gmtime(&clock);
-  time_t gmtclock = mktime(m);
+ikrt_gmt_offset (ikptr t)
+{
+  time_t        clock;
+  struct tm *   m;
+  time_t        gmtclock;
+  clock    = unfix(VICARE_STRUCT_REF(t, 0)) * 1000000 + unfix(VICARE_STRUCT_REF(t, 1));
+  m        = gmtime(&clock);
+  gmtclock = mktime(m);
   return fix(clock - gmtclock);
-  /*
-  struct tm* m = localtime(&clock);
-  ikptr r = fix(m->tm_gmtoff);
-  return r;
-  */
 }
 
 
