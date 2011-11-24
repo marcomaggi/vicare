@@ -8792,6 +8792,24 @@ instance of @code{struct-tm} representing the same time in human
 readable form; if an error occurs raise an exception.
 @end defun
 
+
+@defun timelocal @var{tm}
+Interface to the C function @cfunc{timelocal}, @glibcref{Broken-down
+Time, timelocal}.  Given a reference to a @code{struct-rm}, @var{tm},
+representing a local broken time, convert it into a time value as
+returned by @cfunc{time}.  If successful return an exact integer
+representing the time value, else raise an exception.
+@end defun
+
+
+@defun timegm @var{tm}
+Interface to the C function @cfunc{timegm}, @glibcref{Broken-down Time,
+timegm}.  Given a reference to a @code{struct-rm}, @var{tm},
+representing a @utc{} broken time, convert it into a time value as
+returned by @cfunc{time}.  If successful return an exact integer
+representing the time value, else raise an exception.
+@end defun
+
 @c ------------------------------------------------------------
 
 @defun nanosleep @var{secs} @var{nsecs}
@@ -11988,6 +12006,24 @@ as returned by the @func{posix-time} function: build and return an
 instance of @code{struct-tm} representing the same time in human
 readable form; if an error occurs return false.  @var{rtd} must be the
 type descriptor of @code{struct-tm}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_timelocal (ikptr @var{tm}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{timelocal}, @glibcref{Broken-down
+Time, timelocal}.  Given a reference to a @code{struct-rm}, @var{tm},
+representing a local broken time, convert it into a time value as
+returned by @cfunc{time}.  If successful return an @strong{inexact}
+integer representing the time value, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_timegm (ikptr @var{tm}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{timegm}, @glibcref{Broken-down Time,
+timegm}.  Given a reference to a @code{struct-rm}, @var{tm},
+representing a @utc{} broken time, convert it into a time value as
+returned by @cfunc{time}.  If successful return an @strong{inexact}
+integer representing the time value, else return false.
 @end deftypefun
 
 @c ------------------------------------------------------------

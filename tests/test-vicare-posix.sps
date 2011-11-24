@@ -1610,6 +1610,15 @@
   (check-pretty-print (px.localtime (px.posix-time)))
   (check-pretty-print (px.gmtime    (px.posix-time)))
 
+  (check
+      (let ((T (px.posix-time)))
+	(equal? T (px.timelocal (px.localtime T))))
+    => #t)
+
+  (check
+      (let ((T (px.posix-time)))
+	(equal? T (px.timegm (px.gmtime T))))
+    => #t)
 
   #t)
 

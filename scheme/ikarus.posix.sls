@@ -207,6 +207,7 @@
     clock				times
     posix-time				gettimeofday
     localtime				gmtime
+    timelocal				timegm
     nanosleep
 
     make-struct-timeval			struct-timeval?
@@ -419,6 +420,7 @@
 		  clock				times
 		  posix-time			gettimeofday
 		  localtime			gmtime
+		  timelocal			timegm
 		  nanosleep
 
 		  make-struct-timeval		struct-timeval?
@@ -660,6 +662,10 @@
   (%platform-size_t? obj)
   (assertion-violation who
     "expected exact integer in platform's \"size_t\" range as argument" obj))
+
+(define-argument-validation (struct-tm who obj)
+  (struct-tm? obj)
+  (assertion-violation who "expected instance of struct-tm as argument" obj))
 
 
 ;;;; errors handling
@@ -3068,6 +3074,24 @@
     (let ((rv (capi.posix-gmtime (type-descriptor struct-tm) time)))
       (or rv
 	  (raise-posix-error who "invalid time specification" time)))))
+
+(define (timelocal tm)
+  (define who 'timelocal)
+  (with-arguments-validation (who)
+      ((struct-tm  tm))
+    (let ((rv (capi.posix-timelocal tm)))
+      (if rv
+	  (exact rv)
+	(raise-posix-error who "invalid broken time specification" tm)))))
+
+(define (timegm tm)
+  (define who 'timegm)
+  (with-arguments-validation (who)
+      ((struct-tm  tm))
+    (let ((rv (capi.posix-timegm tm)))
+      (if rv
+	  (exact rv)
+	(raise-posix-error who "invalid broken time specification" tm)))))
 
 ;;; --------------------------------------------------------------------
 

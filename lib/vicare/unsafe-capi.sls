@@ -171,6 +171,7 @@
     posix-clock				posix-times
     posix-time				posix-gettimeofday
     posix-localtime			posix-gmtime
+    posix-timelocal			posix-timegm
     posix-nanosleep
     )
   (import (except (ikarus)
@@ -918,6 +919,12 @@
 
 (define-inline (posix-gmtime rtd time)
   (foreign-call "ikrt_posix_gmtime" rtd time))
+
+(define-inline (posix-timelocal tm)
+  (foreign-call "ikrt_posix_timelocal" tm))
+
+(define-inline (posix-timegm tm)
+  (foreign-call "ikrt_posix_timegm" tm))
 
 
 ;;;; done

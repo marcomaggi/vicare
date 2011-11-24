@@ -2735,6 +2735,44 @@ ikrt_posix_gmtime (ikptr rtd, ikptr time_num, ikpcb * pcb)
 
 /* ------------------------------------------------------------------ */
 
+static void
+struct_to_tm (ikptr src, struct tm * dst)
+/* Convert  a Scheme  language  "struct-tm" into  a  C language  "struct
+   tm". */
+{
+  dst->tm_sec   = extract_num(VICARE_STRUCT_REF(src, 0));
+  dst->tm_min   = extract_num(VICARE_STRUCT_REF(src, 1));
+  dst->tm_hour  = extract_num(VICARE_STRUCT_REF(src, 2));
+  dst->tm_mday  = extract_num(VICARE_STRUCT_REF(src, 3));
+  dst->tm_mon   = extract_num(VICARE_STRUCT_REF(src, 4));
+  dst->tm_year  = extract_num(VICARE_STRUCT_REF(src, 5));
+  dst->tm_wday  = extract_num(VICARE_STRUCT_REF(src, 6));
+  dst->tm_yday  = extract_num(VICARE_STRUCT_REF(src, 7));
+  dst->tm_isdst = (true_object == VICARE_STRUCT_REF(src, 8))? 1 : 0;
+  dst->tm_yday  = extract_num(VICARE_STRUCT_REF(src, 9));
+  dst->tm_zone  = VICARE_BYTEVECTOR_DATA_CHARP(VICARE_STRUCT_REF(src, 10));
+}
+ikptr
+ikrt_posix_timelocal (ikptr tm_struct, ikpcb * pcb)
+{
+  struct tm     T;
+  time_t        rv;
+  struct_to_tm(tm_struct, &T);
+  rv = timelocal(&T);
+  return (((time_t)-1) != rv)? d_to_number((double)rv,  pcb) : false_object;
+}
+ikptr
+ikrt_posix_timegm (ikptr tm_struct, ikpcb * pcb)
+{
+  struct tm     T;
+  time_t        rv;
+  struct_to_tm(tm_struct, &T);
+  rv = timegm(&T);
+  return (((time_t)-1) != rv)? d_to_number((double)rv,  pcb) : false_object;
+}
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikrt_posix_nanosleep (ikptr secs, ikptr nsecs, ikpcb * pcb)
 {
