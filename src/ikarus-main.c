@@ -31,15 +31,6 @@ void register_alt_stack();
 
 ikpcb* the_pcb;
 
-/*
-int
-file_exists (char* filename) {
-  struct stat sb;
-  int s = stat(filename, &sb);
-  return (s == 0);
-}
-*/
-
 extern int cpu_has_sse2();
 
 int

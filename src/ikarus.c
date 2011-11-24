@@ -23,6 +23,7 @@
 
 #include "ikarus.h"
 #include "bootfileloc.h"
+#include <locale.h>
 
 
 int
@@ -53,6 +54,7 @@ main (int argc, char** argv)
       ++j;
     }
   }
+  setlocale(LC_ALL, "");
   if (NULL == boot_file)
     boot_file = BOOTFILE;
   return ikarus_main(j, argv, boot_file);
