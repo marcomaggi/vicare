@@ -170,6 +170,7 @@
     ;; date and time
     posix-clock				posix-times
     posix-time				posix-gettimeofday
+    posix-localtime			posix-gmtime
     posix-nanosleep
     )
   (import (except (ikarus)
@@ -909,6 +910,14 @@
 
 (define-inline (posix-gettimeofday rtd)
   (foreign-call "ikrt_posix_gettimeofday" rtd))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-localtime rtd time)
+  (foreign-call "ikrt_posix_localtime" rtd time))
+
+(define-inline (posix-gmtime rtd time)
+  (foreign-call "ikrt_posix_gmtime" rtd time))
 
 
 ;;;; done

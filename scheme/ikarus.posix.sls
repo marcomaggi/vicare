@@ -206,6 +206,7 @@
     ;; date and time functions
     clock				times
     posix-time				gettimeofday
+    localtime				gmtime
     nanosleep
 
     make-struct-timeval			struct-timeval?
@@ -417,6 +418,7 @@
 		  ;; date and time functions
 		  clock				times
 		  posix-time			gettimeofday
+		  localtime			gmtime
 		  nanosleep
 
 		  make-struct-timeval		struct-timeval?
@@ -694,6 +696,13 @@
 	  (make-h_errno-condition h_errno)
 	  (make-who-condition who)
 	  (make-message-condition (h_strerror h_errno))
+	  (make-irritants-condition irritants))))
+
+(define (raise-posix-error who message . irritants)
+  (raise (condition
+	  (make-error)
+	  (make-who-condition who)
+	  (make-message-condition message)
 	  (make-irritants-condition irritants))))
 
 
@@ -3007,12 +3016,14 @@
   (%display " tm_hour=")	(%display (struct-tm-tm_hour   S))
   (%display " tm_mday=")	(%display (struct-tm-tm_mday   S))
   (%display " tm_mon=")		(%display (struct-tm-tm_mon    S))
+  (%display " (normalised=")	(%display (+ 1 (struct-tm-tm_mon    S))) (%display ")")
   (%display " tm_year=")	(%display (struct-tm-tm_year   S))
+  (%display " (normalised=")	(%display (+ 1900 (struct-tm-tm_year S))) (%display ")")
   (%display " tm_wday=")	(%display (struct-tm-tm_wday   S))
   (%display " tm_yday=")	(%display (struct-tm-tm_yday   S))
   (%display " tm_isdst=")	(%display (struct-tm-tm_isdst  S))
   (%display " tm_gmtoff=")	(%display (struct-tm-tm_gmtoff S))
-  (%display " tm_zone=")	(latin1->string (%display (struct-tm-tm_zone  S)))
+  (%display " tm_zone=")	(%display (latin1->string (struct-tm-tm_zone S)))
   (%display "]"))
 
 ;;; --------------------------------------------------------------------
@@ -3039,6 +3050,24 @@
     (if (struct-timeval? rv)
 	rv
       (raise-errno-error who rv))))
+
+;;; --------------------------------------------------------------------
+
+(define (localtime time)
+  (define who 'localtime)
+  (with-arguments-validation (who)
+      ((exact-integer	time))
+    (let ((rv (capi.posix-localtime (type-descriptor struct-tm) time)))
+      (or rv
+	  (raise-posix-error who "invalid time specification" time)))))
+
+(define (gmtime time)
+  (define who 'gmtime)
+  (with-arguments-validation (who)
+      ((exact-integer	time))
+    (let ((rv (capi.posix-gmtime (type-descriptor struct-tm) time)))
+      (or rv
+	  (raise-posix-error who "invalid time specification" time)))))
 
 ;;; --------------------------------------------------------------------
 

@@ -1870,6 +1870,8 @@
     (clock					i v posix)
     (times					i v posix)
     (posix-time					i v posix)
+    (localtime					i v posix)
+    (gmtime					i v posix)
 ;;;
     (make-struct-stat				i v posix)
     (struct-stat?				i v posix)

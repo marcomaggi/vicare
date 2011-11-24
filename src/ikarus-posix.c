@@ -2686,10 +2686,51 @@ ikrt_posix_gettimeofday (ikptr rtd, ikpcb * pcb)
   } else
     return ik_errno_to_code();
 }
-ikptr
-ikrt_posix_localtime (ikptr rtd, ikpcb * pcb)
+
+/* ------------------------------------------------------------------ */
+
+static ikptr
+tm_to_struct (ikptr rtd, struct tm * src, ikpcb * pcb)
+/* Convert   a  C  language   "struct  tm"   into  a   Scheme  language
+   "struct-tm".  Makes  use of "pcb->root1" only,  so that "pcb->root0"
+   is available to the caller. */
 {
-  return false_object;
+  ikptr dst = ik_struct_alloc(pcb, rtd, 11);
+  pcb->root1 = &dst;
+  {
+    VICARE_STRUCT_SET(dst, 0, s_to_number((long)(src->tm_sec),  pcb));
+    VICARE_STRUCT_SET(dst, 1, s_to_number((long)(src->tm_min),  pcb));
+    VICARE_STRUCT_SET(dst, 2, s_to_number((long)(src->tm_hour), pcb));
+    VICARE_STRUCT_SET(dst, 3, s_to_number((long)(src->tm_mday), pcb));
+    VICARE_STRUCT_SET(dst, 4, s_to_number((long)(src->tm_mon),  pcb));
+    VICARE_STRUCT_SET(dst, 5, s_to_number((long)(src->tm_year), pcb));
+    VICARE_STRUCT_SET(dst, 6, s_to_number((long)(src->tm_wday), pcb));
+    VICARE_STRUCT_SET(dst, 7, s_to_number((long)(src->tm_yday), pcb));
+    VICARE_STRUCT_SET(dst, 8, (src->tm_isdst)? true_object : false_object);
+    VICARE_STRUCT_SET(dst, 9, s_to_number(src->tm_gmtoff, pcb));
+    VICARE_STRUCT_SET(dst,10, ik_bytevector_from_cstring(pcb, src->tm_zone));
+  }
+  pcb->root1 = NULL;
+  return dst;
+}
+ikptr
+ikrt_posix_localtime (ikptr rtd, ikptr time_num, ikpcb * pcb)
+{
+  time_t        time = (time_t)extract_unum(time_num);
+  struct tm     T;
+  struct tm *   rv;
+  rv    = localtime_r(&time, &T);
+  return (rv)? tm_to_struct(rtd, &T, pcb) : false_object;
+}
+ikptr
+ikrt_posix_gmtime (ikptr rtd, ikptr time_num, ikpcb * pcb)
+{
+  time_t        time = (time_t)extract_unum(time_num);
+  struct tm     T;
+  struct tm *   rv;
+  errno = 0;
+  rv    = gmtime_r(&time, &T);
+  return (rv)? tm_to_struct(rtd, &T, pcb) : false_object;
 }
 
 /* ------------------------------------------------------------------ */

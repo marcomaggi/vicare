@@ -1607,6 +1607,8 @@
 
 ;;; --------------------------------------------------------------------
 
+  (check-pretty-print (px.localtime (px.posix-time)))
+  (check-pretty-print (px.gmtime    (px.posix-time)))
 
 
   #t)

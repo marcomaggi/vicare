@@ -100,7 +100,7 @@ ik_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes)
   return bv;
 }
 ikptr
-ik_bytevector_from_cstring (ikpcb * pcb, char * cstr)
+ik_bytevector_from_cstring (ikpcb * pcb, const char * cstr)
 {
   size_t    len  = strlen(cstr);
   ikptr     bv   = ik_bytevector_alloc(pcb, len);
@@ -109,7 +109,7 @@ ik_bytevector_from_cstring (ikpcb * pcb, char * cstr)
   return bv;
 }
 ikptr
-ik_bytevector_from_cstring_len (ikpcb * pcb, char * cstr, size_t len)
+ik_bytevector_from_cstring_len (ikpcb * pcb, const char * cstr, size_t len)
 {
   ikptr     bv   = ik_bytevector_alloc(pcb, len);
   char *    data = VICARE_BYTEVECTOR_DATA_CHARP(bv);

@@ -8549,7 +8549,18 @@ exception.
 @section Date and time
 
 
-@subsubheading Data structure @code{struct-timeval}
+@menu
+* posix time timeval::          Data structure @code{struct-timeval}.
+* posix time timespec::         Data structure @code{struct-timespec}.
+* posix time tms::              Data structure @code{struct-tms}.
+* posix time tm::               Data structure @code{struct-tm}.
+* posix time functions::        Date and time functions.
+@end menu
+
+@c page
+@node posix time timeval
+@subsection Data structure @code{struct-timeval}
+
 
 @deftp {Structure Type} struct-timeval
 Scheme level representation of @code{struct timeval}, @glibcref{Elapsed
@@ -8581,9 +8592,10 @@ Return @true{} if @var{obj} is an instance of @code{struct-timeval}.
 Accessors for the fields of @code{struct-timeval}.
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node posix time timespec
+@subsection Data structure @code{struct-timespec}
 
-@subsubheading Data structure @code{struct-timespec}
 
 @deftp {Structure Type} struct-timespec
 Scheme level representation of @code{struct timespec}, @glibcref{Elapsed
@@ -8614,9 +8626,10 @@ Return @true{} if @var{obj} is an instance of @code{struct-timespec}.
 Accessors for the fields of @code{struct-timespec}.
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node posix time tms
+@subsection Data structure @code{struct-tms}
 
-@subsubheading Data structure @code{struct-tms}
 
 @deftp {Structure Type} struct-tms
 Scheme level representation of @code{struct tms}, @glibcref{Processor
@@ -8655,9 +8668,9 @@ Return @true{} if @var{obj} is an instance of @code{struct-tms}.
 Accessors for the fields of @code{struct-tms}.
 @end defun
 
-@c ------------------------------------------------------------
-
-@subsubheading Data structure @code{struct-tm}
+@c page
+@node posix time tm
+@subsection Data structure @code{struct-tm}
 
 
 @deftp {Structure Type} struct-tm
@@ -8725,9 +8738,10 @@ Return @true{} if @var{obj} is an instance of @code{struct-tm}.
 Accessors for instances of @var{struct-tm}
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node posix time functions
+@subsection Date and time functions
 
-@subsubheading Functions
 
 @defun clock
 Interface to the C function @cfunc{clock}, @glibcref{CPU Time, clock}.
@@ -8760,6 +8774,23 @@ time.  If successful return an instance of @code{struct-timeval}, else
 raise an exception.
 @end defun
 
+
+@defun localtime @var{time}
+Interface to the C function @cfunc{localtime}, @glibcref{Broken-down
+Time, localtime}.  Given an exact integer @var{time} representing the
+local time as returned by the @func{posix-time} function: build and
+return an instance of @code{struct-tm} representing the same time in
+human readable form; if an error occurs raise an exception.
+@end defun
+
+
+@defun gmtime @var{time}
+Interface to the C function @cfunc{gmtime}, @glibcref{Broken-down Time,
+gmtime}.  Given an exact integer @var{time} representing the @utc{} time
+as returned by the @func{posix-time} function: build and return an
+instance of @code{struct-tm} representing the same time in human
+readable form; if an error occurs raise an exception.
+@end defun
 
 @c ------------------------------------------------------------
 
@@ -11937,6 +11968,26 @@ Interface to the C function @cfunc{gettimeofday},
 time.  If successful return an instance of @code{struct-timeval}, else
 return an encoded @code{errno} value.  @var{rtd} must be the type
 descriptor of @code{struct-timeval}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_localtime (ikptr @var{rtd}, ikptr @var{time}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{localtime}, @glibcref{Broken-down
+Time, localtime}.  Given an exact integer @var{time} representing the
+local time as returned by the @func{posix-time} function: build and
+return an instance of @code{struct-tm} representing the same time in
+human readable form; if an error occurs return false.  @var{rtd} must be
+the type descriptor of @code{struct-tm}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_gmtime (ikptr @var{rtd}, ikptr @var{time}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{gmtime}, @glibcref{Broken-down Time,
+gmtime}.  Given an exact integer @var{time} representing the @utc{} time
+as returned by the @func{posix-time} function: build and return an
+instance of @code{struct-tm} representing the same time in human
+readable form; if an error occurs return false.  @var{rtd} must be the
+type descriptor of @code{struct-tm}.
 @end deftypefun
 
 @c ------------------------------------------------------------

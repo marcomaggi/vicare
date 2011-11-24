@@ -554,8 +554,8 @@ ikptr   ik_vector_alloc         (ikpcb * pcb, long int requested_number_of_items
   ((((long)(X)) & bytevector_mask) == bytevector_tag)
 
 extern ikptr   ik_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes);
-extern ikptr   ik_bytevector_from_cstring       (ikpcb * pcb, char * cstr);
-extern ikptr   ik_bytevector_from_cstring_len   (ikpcb * pcb, char * cstr, size_t len);
+extern ikptr   ik_bytevector_from_cstring       (ikpcb * pcb, const char * cstr);
+extern ikptr   ik_bytevector_from_cstring_len   (ikpcb * pcb, const char * cstr, size_t len);
 extern ikptr   ik_bytevector_from_memory_block  (ikpcb * pcb, void * memory, size_t length);
 
 #define VICARE_BYTEVECTOR_LENGTH_FX(BV)                 \
