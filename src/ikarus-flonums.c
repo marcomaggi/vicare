@@ -55,6 +55,7 @@ ikrt_fl_round (ikptr x, ikptr y)
 
      The last of these seems most portable. (Barak A. Pearlmutter) */
 #if 1
+  /* flonum_data(y) = rint(flonum_data(x)); */
   flonum_data(y) = round(flonum_data(x));
 #else
   double xx = flonum_data(x);
