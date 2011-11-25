@@ -8845,10 +8845,12 @@ an error occurs an exception is raised.
 @section Miscellaneous functions
 
 
-@defun strerror @var{error-code}
-Return a string describing the @code{errno} code @var{error-code}.
-Makes use of the system function @cfunc{strerror}.  If @var{error-code}
-is not a valid @code{errno} value: return a string telling it.
+@defun strerror @var{errno}
+Return a string describing the @code{errno} code @var{errno}.  Makes use
+of the system function @cfunc{strerror}.  If @var{errno} is not a valid
+@code{errno} value: return a string telling it.  As special cases
+@var{errno} can be also @true{}, meaning ``unknown error'', and
+@false{}, meaning ``no error''.
 
 @glibcref{Error Messages, Error Messages}
 @end defun
