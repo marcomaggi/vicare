@@ -217,6 +217,11 @@ ffi_to_scheme_value_cast (int n, void* p, ikpcb* pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
+ikrt_has_ffi (void)
+{
+  return true_object;
+}
+ikptr
 ikrt_ffi_prep_cif (ikptr rtptr, ikptr argstptr, ikpcb* pcb)
 {
   ffi_cif* cif = alloc(sizeof(ffi_cif), 1);
@@ -259,25 +264,25 @@ ikptr
 ikrt_seal_scheme_stack(ikpcb* pcb)
 /* FIXME: handle stack overflow */
 {
-#if 0
-  |              |
-  |              |
-  |              |
-  |              |
-  +--------------+
-  |   underflow  |  <--------- new frame pointer
-  +--------------+
-  | return point |  <--------- old frame pointer, new frame base
-  +--------------+
-  |      .       |
-  |      .       |
-  |      .       |
-  |              |
-  +--------------+
-  |   underflow  |  <--------- old frame base
-  +--------------+
-#endif
-    ikptr frame_base = pcb->frame_base;
+  /*
+    |              |
+    |              |
+    |              |
+    |              |
+    +--------------+
+    |   underflow  |  <--------- new frame pointer
+    +--------------+
+    | return point |  <--------- old frame pointer, new frame base
+    +--------------+
+    |      .       |
+    |      .       |
+    |      .       |
+    |              |
+    +--------------+
+    |   underflow  |  <--------- old frame base
+    +--------------+
+  */
+  ikptr frame_base    = pcb->frame_base;
   ikptr frame_pointer = pcb->frame_pointer;
 #ifdef DEBUG_FFI
   dump_stack(pcb, "BEFORE SEALING");
@@ -298,8 +303,8 @@ ikrt_seal_scheme_stack(ikpcb* pcb)
 #ifdef DEBUG_FFI
     fprintf(stderr, "frame size=%ld\n", nk->size);
 #endif
-    pcb->next_k = vector_tag + (ikptr)nk;
-    pcb->frame_base = frame_pointer;
+    pcb->next_k        = vector_tag + (ikptr)nk;
+    pcb->frame_base    = frame_pointer;
     pcb->frame_pointer = pcb->frame_base - wordsize;
 #ifdef DEBUG_FFI
     fprintf(stderr, "new base=0x%016lx  fp=0x%016lx\n", pcb->frame_base,
@@ -317,47 +322,10 @@ ikrt_seal_scheme_stack(ikpcb* pcb)
 #endif
   return void_object;
 }
-ikptr
-ikrt_call_back(ikptr proc, ikpcb* pcb)
-{
-  ikrt_seal_scheme_stack(pcb);
-
-  ikptr sk = ik_unsafe_alloc(pcb, system_continuation_size);
-  ref(sk, 0) = system_continuation_tag;
-  ref(sk, disp_system_continuation_top) = pcb->system_stack;
-  ref(sk, disp_system_continuation_next) = pcb->next_k;
-  pcb->next_k = sk + vector_tag;
-  ikptr entry_point = ref(proc, off_closure_code);
-#ifdef DEBUG_FFI
-  fprintf(stderr, "system_stack = 0x%016lx\n", pcb->system_stack);
-#endif
-  ikptr code_ptr = entry_point - off_code_data;
-  pcb->frame_pointer = pcb->frame_base;
-  ikptr rv = ik_exec_code(pcb, code_ptr, 0, proc);
-#ifdef DEBUG_FFI
-  fprintf(stderr, "system_stack = 0x%016lx\n", pcb->system_stack);
-#endif
-#ifdef DEBUG_FFI
-  fprintf(stderr, "rv=0x%016lx\n", rv);
-#endif
-  sk = pcb->next_k - vector_tag;
-  if (ref(sk, 0) != system_continuation_tag) {
-    fprintf(stderr, "vicare internal error: invalid system cont\n");
-    exit(EXIT_FAILURE);
-  }
-  pcb->next_k = ref(sk, disp_system_continuation_next);
-  ref(sk, disp_system_continuation_next) = pcb->next_k;
-  pcb->system_stack = ref(sk, disp_system_continuation_top);
-  pcb->frame_pointer = pcb->frame_base - wordsize;
-#ifdef DEBUG_FFI
-  fprintf(stderr, "rp=0x%016lx\n", ref(pcb->frame_pointer, 0));
-#endif
-  return rv;
-}
 
 
 /** --------------------------------------------------------------------
- ** More stuff.
+ ** Callout: call a C function from Scheme code.
  ** ----------------------------------------------------------------- */
 
 ikptr
@@ -414,38 +382,14 @@ ikrt_ffi_call(ikptr data, ikptr argsvec, ikpcb* pcb)
 
   return val;
 }
-ikptr ikrt_has_ffi(/*ikpcb* pcb*/){
-  return true_object;
-}
-
-/*
-
-ffi_status ffi_prep_cif (
-  ffi_cif *cif,
-  ffi_abi abi,
-  unsigned int nargs,
-  ffi_type *rtype,
-  ffi_type **argtypes)
-
-void *ffi_closure_alloc (size_t size, void **code)
-
-void ffi_closure_free (void *writable)
-
-ffi_status ffi_prep_closure_loc (
-  ffi_closure *closure,
-  ffi_cif *cif,
-  void (*fun) (ffi_cif *cif, void *ret, void **args, void *user_data),
-  void *user_data,
-  void *codeloc)
-
-*/
 
 
 /** --------------------------------------------------------------------
- ** Callbacks.
+ ** Callback: call a Scheme closure from C code.
  ** ----------------------------------------------------------------- */
 
 extern ikpcb* the_pcb;
+
 static void
 generic_callback (ffi_cif *cif, void *ret, void **args, void *user_data)
 {
@@ -527,6 +471,43 @@ ikrt_prepare_callback(ikptr data, ikpcb* pcb)
 #else /* if FFI_CLOSURES */
   return false_object;
 #endif /* if FFI_CLOSURES */
+}
+ikptr
+ikrt_call_back(ikptr proc, ikpcb* pcb)
+{
+  ikrt_seal_scheme_stack(pcb);
+
+  ikptr sk = ik_unsafe_alloc(pcb, system_continuation_size);
+  ref(sk, 0) = system_continuation_tag;
+  ref(sk, disp_system_continuation_top) = pcb->system_stack;
+  ref(sk, disp_system_continuation_next) = pcb->next_k;
+  pcb->next_k = sk + vector_tag;
+  ikptr entry_point = ref(proc, off_closure_code);
+#ifdef DEBUG_FFI
+  fprintf(stderr, "system_stack = 0x%016lx\n", pcb->system_stack);
+#endif
+  ikptr code_ptr = entry_point - off_code_data;
+  pcb->frame_pointer = pcb->frame_base;
+  ikptr rv = ik_exec_code(pcb, code_ptr, 0, proc);
+#ifdef DEBUG_FFI
+  fprintf(stderr, "system_stack = 0x%016lx\n", pcb->system_stack);
+#endif
+#ifdef DEBUG_FFI
+  fprintf(stderr, "rv=0x%016lx\n", rv);
+#endif
+  sk = pcb->next_k - vector_tag;
+  if (ref(sk, 0) != system_continuation_tag) {
+    fprintf(stderr, "vicare internal error: invalid system cont\n");
+    exit(EXIT_FAILURE);
+  }
+  pcb->next_k = ref(sk, disp_system_continuation_next);
+  ref(sk, disp_system_continuation_next) = pcb->next_k;
+  pcb->system_stack = ref(sk, disp_system_continuation_top);
+  pcb->frame_pointer = pcb->frame_base - wordsize;
+#ifdef DEBUG_FFI
+  fprintf(stderr, "rp=0x%016lx\n", ref(pcb->frame_pointer, 0));
+#endif
+  return rv;
 }
 
 
