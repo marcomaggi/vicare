@@ -335,6 +335,9 @@ ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
 #define fx_shift        wordshift
 #define fx_mask         (wordsize - 1)
 
+#define most_positive_fixnum    (((unsigned long int)-1) >> (fx_shift+1))
+#define most_negative_fixnum    (most_positive_fixnum+1)
+
 #define unfix(X)        \
   (((long)(X)) >> fx_shift)
 
@@ -449,6 +452,11 @@ ikptr   ik_cstring_to_symbol    (char*, ikpcb*);
 #define disp_bignum_data        wordsize
 #define off_bignum_data         (disp_bignum_data - vector_tag)
 
+#define bnfst_limb_count(X)     (((unsigned long)(X)) >> bignum_length_shift)
+#define bnfst_negative(X)       (((unsigned long)(X)) & bignum_sign_mask)
+
+#define max_digits_per_limb ((wordsize==4)?10:20)
+
 #define ratnum_tag              ((ikptr) 0x27)
 #define disp_ratnum_num         (1 * wordsize)
 #define disp_ratnum_den         (2 * wordsize)
@@ -476,17 +484,15 @@ ikptr   ik_flonum_alloc         (ikpcb * pcb);
 #define flonum_data(X)  \
   (*((double*)(((char*)(long)(X)) + off_flonum_data)))
 
-ikptr   u_to_number             (unsigned long, ikpcb*);
-ikptr   ull_to_number           (unsigned long long, ikpcb*);
+ikptr   ik_integer_from_long               (signed long x, ikpcb* pcb);
+ikptr   ik_integer_from_long_long          (signed long long n, ikpcb* pcb);
+ikptr   ik_integer_from_unsigned_long      (unsigned long, ikpcb*);
+ikptr   ik_integer_from_unsigned_long_long (unsigned long long, ikpcb*);
+ikptr   ik_flonum_from_double              (double x, ikpcb* pcb);
 
-ikptr   s_to_number             (signed long x, ikpcb* pcb);
-ikptr   sll_to_number           (signed long long n, ikpcb* pcb);
-
-ikptr   d_to_number             (double x, ikpcb* pcb);
-
-long            extract_num             (ikptr x);
-unsigned long   extract_unum            (ikptr x);
-long long       extract_num_longlong    (ikptr x);
+long            ik_integer_to_long          (ikptr x);
+unsigned long   ik_integer_to_unsigned_long (ikptr x);
+long long       ik_integer_to_long_long     (ikptr x);
 
 ikptr   normalize_bignum        (long limbs, int sign, ikptr r);
 

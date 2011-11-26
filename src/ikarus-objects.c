@@ -29,6 +29,7 @@
  ** ----------------------------------------------------------------- */
 
 #include "ikarus.h"
+#include <gmp.h>
 
 
 /** --------------------------------------------------------------------
@@ -153,6 +154,136 @@ ik_struct_alloc (ikpcb * pcb, ikptr rtd, long int number_of_fields)
   ikptr data         = ik_safe_alloc(pcb, aligned_size) + vector_tag;
   ref(data, off_record_rtd) = rtd;
   return data;
+}
+
+
+/** --------------------------------------------------------------------
+ ** Scheme objects from C numbers.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ik_integer_from_long(signed long n, ikpcb* pcb)
+{
+  ikptr fx = fix(n);
+  if (unfix(fx) == n) {
+    return fx;
+  }
+  ikptr bn = ik_safe_alloc(pcb, align(wordsize+disp_bignum_data));
+  if (n > 0){
+    ref(bn, 0) = (ikptr)(bignum_tag | (1 << bignum_length_shift));
+    ref(bn, disp_bignum_data) = (ikptr)n;
+  } else {
+    ref(bn, 0) =
+      (ikptr)(bignum_tag |
+            (1 << bignum_length_shift) |
+            (1 << bignum_sign_shift));
+    ref(bn, disp_bignum_data) = (ikptr)-n;
+  }
+  return bn+vector_tag;
+}
+ikptr
+ik_integer_from_long_long(signed long long n, ikpcb* pcb)
+{
+  if (((signed long long)(signed long) n) == n) {
+    return ik_integer_from_long(n, pcb);
+  }
+  int len = sizeof(long long) / sizeof(mp_limb_t);
+  ikptr bn = ik_safe_alloc(pcb, align(sizeof(long long)+disp_bignum_data));
+  if (n > 0){
+    ref(bn, 0) = (ikptr)(bignum_tag | (len << bignum_length_shift));
+    *((long long*)(bn+disp_bignum_data)) = n;
+  } else {
+    ref(bn, 0) =
+      (ikptr)(bignum_tag |
+            (len << bignum_length_shift) |
+            (1 << bignum_sign_shift));
+    *((long long*)(bn+disp_bignum_data)) = -n;
+  }
+  return bn+vector_tag;
+}
+ikptr
+ik_integer_from_unsigned_long(unsigned long n, ikpcb* pcb)
+{
+  unsigned long mxn = ((unsigned long)-1)>>(fx_shift+1);
+  if (n <= mxn) {
+    return fix(n);
+  }
+  ikptr bn = ik_safe_alloc(pcb, align(wordsize+disp_bignum_data));
+  ref(bn, 0) = (ikptr)(bignum_tag | (1 << bignum_length_shift));
+  ref(bn, disp_bignum_data) = (ikptr)n;
+  return bn+vector_tag;
+}
+ikptr
+ik_integer_from_unsigned_long_long(unsigned long long n, ikpcb* pcb)
+{
+  if (((unsigned long long)(unsigned long) n) == n) {
+    return ik_integer_from_unsigned_long(n, pcb);
+  }
+  ikptr bn = ik_safe_alloc(pcb, align(disp_bignum_data+sizeof(long long)));
+  bcopy((char*)(&n), (char*)(bn+disp_bignum_data), sizeof(long long));
+  return normalize_bignum(sizeof(long long)/sizeof(mp_limb_t), 0, bn);
+}
+ikptr
+ik_flonum_from_double (double n, ikpcb* pcb)
+{
+  ikptr x = ik_safe_alloc(pcb, flonum_size) + vector_tag;
+  ref(x, -vector_tag) = flonum_tag;
+  flonum_data(x) = n;
+  return x;
+}
+
+
+/** --------------------------------------------------------------------
+ ** Scheme objects to C numbers.
+ ** ----------------------------------------------------------------- */
+
+long
+ik_integer_to_long (ikptr x)
+{
+  if (is_fixnum(x))
+    return unfix(x);
+  else if (x == void_object)
+    return 0;
+  else {
+    if (bnfst_negative(ref(x, -vector_tag)))
+      return (long)(-ref(x, off_bignum_data));
+    else
+      return (long)(ref(x, off_bignum_data));
+  }
+}
+unsigned long
+ik_integer_to_unsigned_long (ikptr x)
+{
+  if (is_fixnum(x))
+    return unfix(x);
+  else if (x == void_object)
+    return 0;
+  else {
+    assert(! bnfst_negative(ref(x, -vector_tag)));
+    return (unsigned long)(ref(x, off_bignum_data));
+  }
+}
+long long
+ik_integer_to_long_long (ikptr x)
+{
+  if (is_fixnum(x))
+    return unfix(x);
+  else if (x == void_object)
+    return 0;
+  else {
+    ikptr fst              = ref(x, -vector_tag);
+    ikptr pos_one_limb_tag = (ikptr)(bignum_tag       | (1 << bignum_length_shift));
+    ikptr neg_one_limb_tag = (ikptr)(pos_one_limb_tag | (1 << bignum_sign_shift));
+    if (fst == pos_one_limb_tag)
+      return (unsigned long)ref(x, off_bignum_data);
+    else if (fst == neg_one_limb_tag)
+      return -(signed long)ref(x, off_bignum_data);
+    else if (bnfst_negative(fst))
+      return -(*((long long*)(x+off_bignum_data)));
+    else
+      return *((long long*)(x+off_bignum_data));
+
+  }
 }
 
 /* end of file */

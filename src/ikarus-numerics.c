@@ -15,22 +15,13 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+/** --------------------------------------------------------------------
+ ** Headers.
+ ** ----------------------------------------------------------------- */
+
 #include "ikarus.h"
 #include <gmp.h>
-
-#define bnfst_limb_count(x) \
-  (((unsigned long int)(x)) >> bignum_length_shift)
-#define bnfst_negative(x) \
-  (((unsigned long int)(x)) & bignum_sign_mask)
-
-
-#define most_positive_fixnum  \
-  (((unsigned long int)-1) >> (fx_shift+1))
-#define most_negative_fixnum  (most_positive_fixnum+1)
-// #define most_positive_fixnum 0x1FFFFFFF
-// #define most_negative_fixnum 0x20000000
-
-#define max_digits_per_limb ((wordsize==4)?10:20)
 
 #ifdef NDEBUG
 #define verify_bignum(x,caller) (x)
@@ -2138,5 +2129,4 @@ ikrt_bignum_hash(ikptr bn /*, ikpcb* pcb */) {
   return fix(h);
 }
 
-
-
+/* end of file */

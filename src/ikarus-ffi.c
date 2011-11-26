@@ -86,19 +86,19 @@ scheme_to_ffi_value_cast (ffi_type* t, ikptr nptr, ikptr p, void* r)
     case  1: {  return; }
     case  2: // ffi_type_uint8;
     case  3:
-      { *((char*)r) = extract_num(p); return; }
+      { *((char*)r) = ik_integer_to_long(p); return; }
     case  4: // ffi_type_uint16;
     case  5:
-      { *((short*)r) = extract_num(p); return; }
+      { *((short*)r) = ik_integer_to_long(p); return; }
     case  6: //  ffi_type_uint32;
     case  7:
-      { *((int*)r) = extract_num(p); return; }
+      { *((int*)r) = ik_integer_to_long(p); return; }
     case  8: // ffi_type_uint64;
     case  9:
-      { *((long*)r) = extract_num(p); return; }
+      { *((long*)r) = ik_integer_to_long(p); return; }
     case 10:
     case 11:
-      { *((long long*)r) = extract_num_longlong(p); return; }
+      { *((long long*)r) = ik_integer_to_long_long(p); return; }
     case 12: //return &ffi_type_float;
       { *((float*)r) = flonum_data(p); return; }
     case 13: //return &ffi_type_double;
@@ -192,18 +192,18 @@ ffi_to_scheme_value_cast (int n, void* p, ikpcb* pcb)
 {
   switch (n & 0xF) {
   case  1: return void_object;
-  case  2: return u_to_number(*((unsigned char*)p), pcb);
-  case  3: return s_to_number(*((signed char*)p), pcb);
-  case  4: return u_to_number(*((unsigned short*)p), pcb);
-  case  5: return s_to_number(*((signed short*)p), pcb);
-  case  6: return u_to_number(*((unsigned int*)p), pcb);
-  case  7: return s_to_number(*((signed int*)p), pcb);
-  case  8: return u_to_number(*((unsigned long*)p), pcb);
-  case  9: return s_to_number(*((signed long*)p), pcb);
-  case 10: return ull_to_number(*((unsigned long long*)p), pcb);
-  case 11: return sll_to_number(*((signed long long*)p), pcb);
-  case 12: return d_to_number(*((float*)p), pcb);
-  case 13: return d_to_number(*((double*)p), pcb);
+  case  2: return ik_integer_from_unsigned_long(*((unsigned char*)p), pcb);
+  case  3: return ik_integer_from_long(*((signed char*)p), pcb);
+  case  4: return ik_integer_from_unsigned_long(*((unsigned short*)p), pcb);
+  case  5: return ik_integer_from_long(*((signed short*)p), pcb);
+  case  6: return ik_integer_from_unsigned_long(*((unsigned int*)p), pcb);
+  case  7: return ik_integer_from_long(*((signed int*)p), pcb);
+  case  8: return ik_integer_from_unsigned_long(*((unsigned long*)p), pcb);
+  case  9: return ik_integer_from_long(*((signed long*)p), pcb);
+  case 10: return ik_integer_from_unsigned_long_long(*((unsigned long long*)p), pcb);
+  case 11: return ik_integer_from_long_long(*((signed long long*)p), pcb);
+  case 12: return ik_flonum_from_double(*((float*)p), pcb);
+  case 13: return ik_flonum_from_double(*((double*)p), pcb);
   case 14: return ikrt_pointer_alloc((long)*((void**)p), pcb);
   default:
     fprintf(stderr, "*** Vicare error: %s: invalid arg %d", __func__, n);

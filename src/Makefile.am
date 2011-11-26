@@ -17,7 +17,7 @@ SRCS	= \
 	ikarus-linux.c			\
 	ikarus-main.c			\
 	ikarus-numerics.c		\
-	ikarus-object-utilities.c	\
+	ikarus-objects.c		\
 	ikarus-pointers.c		\
 	ikarus-posix.c			\
 	ikarus-print.c			\

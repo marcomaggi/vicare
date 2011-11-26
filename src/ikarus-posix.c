@@ -305,72 +305,72 @@ fill_stat_struct (struct stat * S, ikptr D, ikpcb* pcb)
 {
 #if (4 == VICARE_SIZE_OF_VOIDP)
   /* 32-bit platforms */
-  ref(D, off_record_data+0*wordsize) = u_to_number((unsigned long)S->st_mode, pcb);
-  ref(D, off_record_data+1*wordsize) = u_to_number((unsigned long)S->st_ino, pcb);
-  ref(D, off_record_data+2*wordsize) = s_to_number((long)S->st_dev, pcb);
-  ref(D, off_record_data+3*wordsize) = u_to_number((long)S->st_nlink, pcb);
+  ref(D, off_record_data+0*wordsize) = ik_integer_from_unsigned_long((unsigned long)S->st_mode, pcb);
+  ref(D, off_record_data+1*wordsize) = ik_integer_from_unsigned_long((unsigned long)S->st_ino, pcb);
+  ref(D, off_record_data+2*wordsize) = ik_integer_from_long((long)S->st_dev, pcb);
+  ref(D, off_record_data+3*wordsize) = ik_integer_from_unsigned_long((long)S->st_nlink, pcb);
 
-  ref(D, off_record_data+4*wordsize) = u_to_number((unsigned long)S->st_uid, pcb);
-  ref(D, off_record_data+5*wordsize) = u_to_number((unsigned long)S->st_gid, pcb);
-  ref(D, off_record_data+6*wordsize) = ull_to_number((unsigned long long)S->st_size, pcb);
+  ref(D, off_record_data+4*wordsize) = ik_integer_from_unsigned_long((unsigned long)S->st_uid, pcb);
+  ref(D, off_record_data+5*wordsize) = ik_integer_from_unsigned_long((unsigned long)S->st_gid, pcb);
+  ref(D, off_record_data+6*wordsize) = ik_integer_from_unsigned_long_long((unsigned long long)S->st_size, pcb);
 
-  ref(D, off_record_data+7*wordsize) = s_to_number((long)S->st_atime, pcb);
+  ref(D, off_record_data+7*wordsize) = ik_integer_from_long((long)S->st_atime, pcb);
 #ifdef HAVE_STAT_ST_ATIME_USEC
-  ref(D, off_record_data+8*wordsize) = u_to_number((unsigned long)S->st_atime_usec, pcb);
+  ref(D, off_record_data+8*wordsize) = ik_integer_from_unsigned_long((unsigned long)S->st_atime_usec, pcb);
 #else
   ref(D, off_record_data+8*wordsize) = false_object;
 #endif
 
-  ref(D, off_record_data+9*wordsize)  = s_to_number((long)S->st_mtime, pcb);
+  ref(D, off_record_data+9*wordsize)  = ik_integer_from_long((long)S->st_mtime, pcb);
 #ifdef HAVE_STAT_ST_MTIME_USEC
-  ref(D, off_record_data+10*wordsize) = u_to_number((unsigned long)S->st_mtime_usec, pcb);
+  ref(D, off_record_data+10*wordsize) = ik_integer_from_unsigned_long((unsigned long)S->st_mtime_usec, pcb);
 #else
   ref(D, off_record_data+10*wordsize) = false_object;
 #endif
 
-  ref(D, off_record_data+11*wordsize) = s_to_number((long)S->st_ctime, pcb);
+  ref(D, off_record_data+11*wordsize) = ik_integer_from_long((long)S->st_ctime, pcb);
 #ifdef HAVE_STAT_ST_CTIME_USEC
-  ref(D, off_record_data+12*wordsize) = u_to_number((unsigned long)S->st_ctime_usec, pcb);
+  ref(D, off_record_data+12*wordsize) = ik_integer_from_unsigned_long((unsigned long)S->st_ctime_usec, pcb);
 #else
   ref(D, off_record_data+12*wordsize) = false_object;
 #endif
 
-  ref(D, off_record_data+13*wordsize) = ull_to_number((unsigned long long)S->st_blocks, pcb);
-  ref(D, off_record_data+14*wordsize) = ull_to_number((unsigned long long)S->st_blksize, pcb);
+  ref(D, off_record_data+13*wordsize) = ik_integer_from_unsigned_long_long((unsigned long long)S->st_blocks, pcb);
+  ref(D, off_record_data+14*wordsize) = ik_integer_from_unsigned_long_long((unsigned long long)S->st_blksize, pcb);
 #else
   /* 64-bit platforms */
-  ref(D, off_record_data+0*wordsize) = ull_to_number((unsigned long long)S->st_mode, pcb);
-  ref(D, off_record_data+1*wordsize) = ull_to_number((unsigned long long)S->st_ino, pcb);
-  ref(D, off_record_data+2*wordsize) = sll_to_number((long)S->st_dev, pcb);
-  ref(D, off_record_data+3*wordsize) = ull_to_number((long)S->st_nlink, pcb);
+  ref(D, off_record_data+0*wordsize) = ik_integer_from_unsigned_long_long((unsigned long long)S->st_mode, pcb);
+  ref(D, off_record_data+1*wordsize) = ik_integer_from_unsigned_long_long((unsigned long long)S->st_ino, pcb);
+  ref(D, off_record_data+2*wordsize) = ik_integer_from_long_long((long)S->st_dev, pcb);
+  ref(D, off_record_data+3*wordsize) = ik_integer_from_unsigned_long_long((long)S->st_nlink, pcb);
 
-  ref(D, off_record_data+4*wordsize) = ull_to_number((unsigned long long)S->st_uid, pcb);
-  ref(D, off_record_data+5*wordsize) = ull_to_number((unsigned long long)S->st_gid, pcb);
-  ref(D, off_record_data+6*wordsize) = ull_to_number((unsigned long long)S->st_size, pcb);
+  ref(D, off_record_data+4*wordsize) = ik_integer_from_unsigned_long_long((unsigned long long)S->st_uid, pcb);
+  ref(D, off_record_data+5*wordsize) = ik_integer_from_unsigned_long_long((unsigned long long)S->st_gid, pcb);
+  ref(D, off_record_data+6*wordsize) = ik_integer_from_unsigned_long_long((unsigned long long)S->st_size, pcb);
 
-  ref(D, off_record_data+7*wordsize) = sll_to_number((long)S->st_atime, pcb);
+  ref(D, off_record_data+7*wordsize) = ik_integer_from_long_long((long)S->st_atime, pcb);
 #ifdef HAVE_STAT_ST_ATIME_USEC
-  ref(D, off_record_data+8*wordsize) = ull_to_number((unsigned long long)S->st_atime_usec, pcb);
+  ref(D, off_record_data+8*wordsize) = ik_integer_from_unsigned_long_long((unsigned long long)S->st_atime_usec, pcb);
 #else
   ref(D, off_record_data+8*wordsize) = false_object;
 #endif
 
-  ref(D, off_record_data+9*wordsize)  = sll_to_number((long)S->st_mtime, pcb);
+  ref(D, off_record_data+9*wordsize)  = ik_integer_from_long_long((long)S->st_mtime, pcb);
 #ifdef HAVE_STAT_ST_MTIME_USEC
-  ref(D, off_record_data+10*wordsize) = ull_to_number((unsigned long long)S->st_mtime_usec, pcb);
+  ref(D, off_record_data+10*wordsize) = ik_integer_from_unsigned_long_long((unsigned long long)S->st_mtime_usec, pcb);
 #else
   ref(D, off_record_data+10*wordsize) = false_object;
 #endif
 
-  ref(D, off_record_data+11*wordsize) = sll_to_number((long)S->st_ctime, pcb);
+  ref(D, off_record_data+11*wordsize) = ik_integer_from_long_long((long)S->st_ctime, pcb);
 #ifdef HAVE_STAT_ST_CTIME_USEC
-  ref(D, off_record_data+12*wordsize) = ull_to_number((unsigned long long)S->st_ctime_usec, pcb);
+  ref(D, off_record_data+12*wordsize) = ik_integer_from_unsigned_long_long((unsigned long long)S->st_ctime_usec, pcb);
 #else
   ref(D, off_record_data+12*wordsize) = false_object;
 #endif
 
-  ref(D, off_record_data+13*wordsize) = ull_to_number((unsigned long long)S->st_blocks, pcb);
-  ref(D, off_record_data+14*wordsize) = ull_to_number((unsigned long long)S->st_blksize, pcb);
+  ref(D, off_record_data+13*wordsize) = ik_integer_from_unsigned_long_long((unsigned long long)S->st_blocks, pcb);
+  ref(D, off_record_data+14*wordsize) = ik_integer_from_unsigned_long_long((unsigned long long)S->st_blksize, pcb);
 #endif
   return 0;
 }
@@ -418,9 +418,9 @@ ikrt_posix_file_size(ikptr filename_bv, ikpcb* pcb)
   rv       = stat(filename, &S);
   if (0 == rv) {
     if (sizeof(off_t) == sizeof(long)) {
-      return u_to_number(S.st_size, pcb);
+      return ik_integer_from_unsigned_long(S.st_size, pcb);
     } else if (sizeof(off_t) == sizeof(long long)) {
-      return ull_to_number(S.st_size, pcb);
+      return ik_integer_from_unsigned_long_long(S.st_size, pcb);
     } else {
       fprintf(stderr, "Vicare internal error: invalid off_t size\n");
       exit(EXIT_FAILURE);
@@ -533,8 +533,8 @@ ikrt_posix_file_exists (ikptr pathname_bv)
 static ikptr
 timespec_vector (struct timespec * T, ikptr vector, ikpcb* pcb)
 {
-  VICARE_VECTOR_SET(vector, 0, s_to_number((long)(T->tv_sec),  pcb));
-  VICARE_VECTOR_SET(vector, 1, s_to_number((long)(T->tv_nsec), pcb));
+  VICARE_VECTOR_SET(vector, 0, ik_integer_from_long((long)(T->tv_sec),  pcb));
+  VICARE_VECTOR_SET(vector, 1, ik_integer_from_long((long)(T->tv_nsec), pcb));
   return fix(0);
 }
 ikptr
@@ -936,13 +936,13 @@ ikrt_posix_telldir (ikptr pointer, ikpcb * pcb)
   DIR *  stream = (DIR *) VICARE_POINTER_DATA_VOIDP(pointer);
   long   pos;
   pos = telldir(stream);
-  return s_to_number(pos, pcb);
+  return ik_integer_from_long(pos, pcb);
 }
 ikptr
 ikrt_posix_seekdir (ikptr pointer, ikptr pos_num)
 {
   DIR *  stream = (DIR *) VICARE_POINTER_DATA_VOIDP(pointer);
-  long   pos    = extract_num(pos_num);
+  long   pos    = ik_integer_to_long(pos_num);
   seekdir(stream, pos);
   return void_object;
 }
@@ -993,7 +993,7 @@ ikrt_posix_pread (ikptr fd, ikptr buffer_bv, ikptr size_fx, ikptr off_num)
   buffer   = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv);
   size     = (size_t)((false_object!=size_fx)?
                       unfix(size_fx) : unfix(VICARE_BYTEVECTOR_LENGTH_FX(buffer_bv)));
-  off      = (off_t) extract_num_longlong(off_num);
+  off      = (off_t) ik_integer_to_long_long(off_num);
   errno    = 0;
   rv       = pread(unfix(fd), buffer, size, off);
   return (0 <= rv)? fix(rv) : ik_errno_to_code();
@@ -1021,7 +1021,7 @@ ikrt_posix_pwrite (ikptr fd, ikptr buffer_bv, ikptr size_fx, ikptr off_num)
   buffer   = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv);
   size     = (size_t)((false_object!=size_fx)?
                       unfix(size_fx) : unfix(VICARE_BYTEVECTOR_LENGTH_FX(buffer_bv)));
-  off      = (off_t) extract_num_longlong(off_num);
+  off      = (off_t) ik_integer_to_long_long(off_num);
   errno    = 0;
   rv       = pwrite(unfix(fd), buffer, size, off);
   return (0 <= rv)? fix(rv) : ik_errno_to_code();
@@ -1031,10 +1031,10 @@ ikrt_posix_lseek (ikptr fd, ikptr off_num, ikptr whence_fx, ikpcb * pcb)
 {
   off_t         off;
   off_t         rv;
-  off    = extract_num_longlong(off_num);
+  off    = ik_integer_to_long_long(off_num);
   errno  = 0;
   rv     = lseek(unfix(fd), off, unfix(whence_fx));
-  return (0 <= rv)? sll_to_number((long long)rv, pcb) : ik_errno_to_code();
+  return (0 <= rv)? ik_integer_from_long_long((long long)rv, pcb) : ik_errno_to_code();
 }
 
 /* ------------------------------------------------------------------ */
@@ -1054,7 +1054,7 @@ ikrt_posix_readv (ikptr fd, ikptr buffers, ikpcb * pcb)
   }
   errno    = 0;
   rv       = readv(unfix(fd), bufs, number_of_buffers);
-  return (0 <= rv)? sll_to_number((long long)rv, pcb) : ik_errno_to_code();
+  return (0 <= rv)? ik_integer_from_long_long((long long)rv, pcb) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_writev (ikptr fd, ikptr buffers, ikpcb * pcb)
@@ -1071,7 +1071,7 @@ ikrt_posix_writev (ikptr fd, ikptr buffers, ikpcb * pcb)
   }
   errno    = 0;
   rv       = writev(unfix(fd), bufs, number_of_buffers);
-  return (0 <= rv)? sll_to_number((long long)rv, pcb) : ik_errno_to_code();
+  return (0 <= rv)? ik_integer_from_long_long((long long)rv, pcb) : ik_errno_to_code();
 }
 
 /* ------------------------------------------------------------------ */
@@ -1937,7 +1937,7 @@ netent_to_struct (ikpcb * pcb, ikptr rtd, struct netent * src)
       VICARE_SET_CAR(pair, ik_bytevector_from_cstring(pcb, src->n_aliases[i]));
     }
     VICARE_STRUCT_SET(dst, 2, fix(src->n_addrtype));
-    VICARE_STRUCT_SET(dst, 3, ull_to_number((unsigned long long)src->n_net, pcb));
+    VICARE_STRUCT_SET(dst, 3, ik_integer_from_unsigned_long_long((unsigned long long)src->n_net, pcb));
   }
   pcb->root1 = NULL;
   return dst;
@@ -1956,7 +1956,7 @@ ikrt_posix_getnetbyaddr (ikptr rtd, ikptr net_num, ikptr type, ikpcb * pcb)
 {
   uint32_t              net;
   struct netent *       entry;
-  net = (uint32_t)extract_unum(net_num);
+  net = (uint32_t)ik_integer_to_unsigned_long(net_num);
   entry = getnetbyaddr(net, unfix(type));
   return (NULL != entry)? netent_to_struct(pcb, rtd, entry) : false_object;
 }
@@ -2228,7 +2228,7 @@ ikrt_posix_setsockopt_int (ikptr sock, ikptr level, ikptr optname, ikptr optval_
   else if (false_object == optval_num)
     optval = 0;
   else {
-    long        num = extract_num(optval_num);
+    long        num = ik_integer_to_long(optval_num);
     optval = (int)num;
   }
   errno = 0;
@@ -2245,7 +2245,7 @@ ikrt_posix_getsockopt_int (ikptr sock, ikptr level, ikptr optname, ikpcb * pcb)
   rv    = getsockopt(unfix(sock), unfix(level), unfix(optname), &optval, &optlen);
   if (0 == rv) {
     ikptr       pair = ik_pair_alloc(pcb);
-    VICARE_SET_CAR(pair, s_to_number((long)optval, pcb));
+    VICARE_SET_CAR(pair, ik_integer_from_long((long)optval, pcb));
     VICARE_SET_CDR(pair, true_object);
     return pair;
   } else {
@@ -2258,7 +2258,7 @@ ikrt_posix_getsockopt_int (ikptr sock, ikptr level, ikptr optname, ikpcb * pcb)
 ikptr
 ikrt_posix_setsockopt_size_t (ikptr sock, ikptr level, ikptr optname, ikptr optval_num)
 {
-  size_t        optval = (size_t)extract_num(optval_num);
+  size_t        optval = (size_t)ik_integer_to_long(optval_num);
   socklen_t     optlen = sizeof(size_t);
   int           rv;
   errno = 0;
@@ -2275,7 +2275,7 @@ ikrt_posix_getsockopt_size_t (ikptr sock, ikptr level, ikptr optname, ikpcb * pc
   rv    = getsockopt(unfix(sock), unfix(level), unfix(optname), &optval, &optlen);
   if (0 == rv) {
     ikptr       pair = ik_pair_alloc(pcb);
-    VICARE_SET_CAR(pair, s_to_number((long)optval, pcb));
+    VICARE_SET_CAR(pair, ik_integer_from_long((long)optval, pcb));
     VICARE_SET_CDR(pair, true_object);
     return pair;
   } else
@@ -2628,14 +2628,14 @@ ikrt_posix_clock (ikpcb * pcb)
 {
   clock_t       T;
   T = clock();
-  return (((clock_t)-1) != T)? d_to_number((double)T,  pcb) : false_object;
+  return (((clock_t)-1) != T)? ik_flonum_from_double((double)T,  pcb) : false_object;
 }
 ikptr
 ikrt_posix_time (ikpcb * pcb)
 {
   time_t        T;
   T = time(NULL);
-  return (((time_t)-1) != T)? d_to_number((double)T,  pcb) : false_object;
+  return (((time_t)-1) != T)? ik_flonum_from_double((double)T,  pcb) : false_object;
 }
 
 /* ------------------------------------------------------------------ */
@@ -2653,10 +2653,10 @@ tms_to_struct (ikptr rtd, struct tms * src, ikpcb * pcb)
           (double)(src->tms_utime),  (double)(src->tms_stime),
           (double)(src->tms_cutime), (double)(src->tms_cstime));
 #endif
-  VICARE_STRUCT_SET(dst, 0, d_to_number((double)(src->tms_utime),  pcb));
-  VICARE_STRUCT_SET(dst, 1, d_to_number((double)(src->tms_stime),  pcb));
-  VICARE_STRUCT_SET(dst, 2, d_to_number((double)(src->tms_cutime), pcb));
-  VICARE_STRUCT_SET(dst, 3, d_to_number((double)(src->tms_cstime), pcb));
+  VICARE_STRUCT_SET(dst, 0, ik_flonum_from_double((double)(src->tms_utime),  pcb));
+  VICARE_STRUCT_SET(dst, 1, ik_flonum_from_double((double)(src->tms_stime),  pcb));
+  VICARE_STRUCT_SET(dst, 2, ik_flonum_from_double((double)(src->tms_cutime), pcb));
+  VICARE_STRUCT_SET(dst, 3, ik_flonum_from_double((double)(src->tms_cstime), pcb));
   pcb->root1 = NULL;
   return dst;
 }
@@ -2680,8 +2680,8 @@ ikrt_posix_gettimeofday (ikptr rtd, ikpcb * pcb)
   rv    = gettimeofday(&T, NULL);
   if (0 == rv) {
     ikptr       S = ik_struct_alloc(pcb, rtd, 2);
-    VICARE_STRUCT_SET(S, 0, s_to_number(T.tv_sec,  pcb));
-    VICARE_STRUCT_SET(S, 1, s_to_number(T.tv_usec, pcb));
+    VICARE_STRUCT_SET(S, 0, ik_integer_from_long(T.tv_sec,  pcb));
+    VICARE_STRUCT_SET(S, 1, ik_integer_from_long(T.tv_usec, pcb));
     return S;
   } else
     return ik_errno_to_code();
@@ -2698,16 +2698,16 @@ tm_to_struct (ikptr rtd, struct tm * src, ikpcb * pcb)
   ikptr dst = ik_struct_alloc(pcb, rtd, 11);
   pcb->root1 = &dst;
   {
-    VICARE_STRUCT_SET(dst, 0, s_to_number((long)(src->tm_sec),  pcb));
-    VICARE_STRUCT_SET(dst, 1, s_to_number((long)(src->tm_min),  pcb));
-    VICARE_STRUCT_SET(dst, 2, s_to_number((long)(src->tm_hour), pcb));
-    VICARE_STRUCT_SET(dst, 3, s_to_number((long)(src->tm_mday), pcb));
-    VICARE_STRUCT_SET(dst, 4, s_to_number((long)(src->tm_mon),  pcb));
-    VICARE_STRUCT_SET(dst, 5, s_to_number((long)(src->tm_year), pcb));
-    VICARE_STRUCT_SET(dst, 6, s_to_number((long)(src->tm_wday), pcb));
-    VICARE_STRUCT_SET(dst, 7, s_to_number((long)(src->tm_yday), pcb));
+    VICARE_STRUCT_SET(dst, 0, ik_integer_from_long((long)(src->tm_sec),  pcb));
+    VICARE_STRUCT_SET(dst, 1, ik_integer_from_long((long)(src->tm_min),  pcb));
+    VICARE_STRUCT_SET(dst, 2, ik_integer_from_long((long)(src->tm_hour), pcb));
+    VICARE_STRUCT_SET(dst, 3, ik_integer_from_long((long)(src->tm_mday), pcb));
+    VICARE_STRUCT_SET(dst, 4, ik_integer_from_long((long)(src->tm_mon),  pcb));
+    VICARE_STRUCT_SET(dst, 5, ik_integer_from_long((long)(src->tm_year), pcb));
+    VICARE_STRUCT_SET(dst, 6, ik_integer_from_long((long)(src->tm_wday), pcb));
+    VICARE_STRUCT_SET(dst, 7, ik_integer_from_long((long)(src->tm_yday), pcb));
     VICARE_STRUCT_SET(dst, 8, (src->tm_isdst)? true_object : false_object);
-    VICARE_STRUCT_SET(dst, 9, s_to_number(src->tm_gmtoff, pcb));
+    VICARE_STRUCT_SET(dst, 9, ik_integer_from_long(src->tm_gmtoff, pcb));
     VICARE_STRUCT_SET(dst,10, ik_bytevector_from_cstring(pcb, src->tm_zone));
   }
   pcb->root1 = NULL;
@@ -2716,7 +2716,7 @@ tm_to_struct (ikptr rtd, struct tm * src, ikpcb * pcb)
 ikptr
 ikrt_posix_localtime (ikptr rtd, ikptr time_num, ikpcb * pcb)
 {
-  time_t        time = (time_t)extract_unum(time_num);
+  time_t        time = (time_t)ik_integer_to_unsigned_long(time_num);
   struct tm     T;
   struct tm *   rv;
   rv    = localtime_r(&time, &T);
@@ -2725,7 +2725,7 @@ ikrt_posix_localtime (ikptr rtd, ikptr time_num, ikpcb * pcb)
 ikptr
 ikrt_posix_gmtime (ikptr rtd, ikptr time_num, ikpcb * pcb)
 {
-  time_t        time = (time_t)extract_unum(time_num);
+  time_t        time = (time_t)ik_integer_to_unsigned_long(time_num);
   struct tm     T;
   struct tm *   rv;
   errno = 0;
@@ -2740,16 +2740,16 @@ struct_to_tm (ikptr src, struct tm * dst)
 /* Convert  a Scheme  language  "struct-tm" into  a  C language  "struct
    tm". */
 {
-  dst->tm_sec   = extract_num(VICARE_STRUCT_REF(src, 0));
-  dst->tm_min   = extract_num(VICARE_STRUCT_REF(src, 1));
-  dst->tm_hour  = extract_num(VICARE_STRUCT_REF(src, 2));
-  dst->tm_mday  = extract_num(VICARE_STRUCT_REF(src, 3));
-  dst->tm_mon   = extract_num(VICARE_STRUCT_REF(src, 4));
-  dst->tm_year  = extract_num(VICARE_STRUCT_REF(src, 5));
-  dst->tm_wday  = extract_num(VICARE_STRUCT_REF(src, 6));
-  dst->tm_yday  = extract_num(VICARE_STRUCT_REF(src, 7));
+  dst->tm_sec   = ik_integer_to_long(VICARE_STRUCT_REF(src, 0));
+  dst->tm_min   = ik_integer_to_long(VICARE_STRUCT_REF(src, 1));
+  dst->tm_hour  = ik_integer_to_long(VICARE_STRUCT_REF(src, 2));
+  dst->tm_mday  = ik_integer_to_long(VICARE_STRUCT_REF(src, 3));
+  dst->tm_mon   = ik_integer_to_long(VICARE_STRUCT_REF(src, 4));
+  dst->tm_year  = ik_integer_to_long(VICARE_STRUCT_REF(src, 5));
+  dst->tm_wday  = ik_integer_to_long(VICARE_STRUCT_REF(src, 6));
+  dst->tm_yday  = ik_integer_to_long(VICARE_STRUCT_REF(src, 7));
   dst->tm_isdst = (true_object == VICARE_STRUCT_REF(src, 8))? 1 : 0;
-  dst->tm_yday  = extract_num(VICARE_STRUCT_REF(src, 9));
+  dst->tm_yday  = ik_integer_to_long(VICARE_STRUCT_REF(src, 9));
   dst->tm_zone  = VICARE_BYTEVECTOR_DATA_CHARP(VICARE_STRUCT_REF(src, 10));
 }
 ikptr
@@ -2759,7 +2759,7 @@ ikrt_posix_timelocal (ikptr tm_struct, ikpcb * pcb)
   time_t        rv;
   struct_to_tm(tm_struct, &T);
   rv = timelocal(&T);
-  return (((time_t)-1) != rv)? d_to_number((double)rv,  pcb) : false_object;
+  return (((time_t)-1) != rv)? ik_flonum_from_double((double)rv,  pcb) : false_object;
 }
 ikptr
 ikrt_posix_timegm (ikptr tm_struct, ikpcb * pcb)
@@ -2768,7 +2768,7 @@ ikrt_posix_timegm (ikptr tm_struct, ikpcb * pcb)
   time_t        rv;
   struct_to_tm(tm_struct, &T);
   rv = timegm(&T);
-  return (((time_t)-1) != rv)? d_to_number((double)rv,  pcb) : false_object;
+  return (((time_t)-1) != rv)? ik_flonum_from_double((double)rv,  pcb) : false_object;
 }
 ikptr
 ikrt_posix_strftime (ikptr template_bv, ikptr tm_struct, ikpcb *pcb)
@@ -2801,8 +2801,8 @@ ikrt_posix_nanosleep (ikptr secs, ikptr nsecs, ikpcb * pcb)
   rv    = nanosleep(&requested, &remaining);
   if (0 == rv) {
     ikptr       pair = ik_pair_alloc(pcb);
-    VICARE_SET_CAR(pair, remaining.tv_sec?  s_to_number(remaining.tv_sec,  pcb) : false_object);
-    VICARE_SET_CDR(pair, remaining.tv_nsec? s_to_number(remaining.tv_nsec, pcb) : false_object);
+    VICARE_SET_CAR(pair, remaining.tv_sec?  ik_integer_from_long(remaining.tv_sec,  pcb) : false_object);
+    VICARE_SET_CDR(pair, remaining.tv_nsec? ik_integer_from_long(remaining.tv_nsec, pcb) : false_object);
     return pair;
   } else
     return ik_errno_to_code();
