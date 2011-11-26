@@ -500,7 +500,7 @@ ikptr   normalize_bignum        (long limbs, int sign, ikptr r);
 #define pointer_size          (2 * wordsize)
 #define off_pointer_data      (disp_pointer_data - vector_tag)
 
-ikptr   ikrt_pointer_alloc      (long memory, ikpcb* pcb);
+ikptr   ikrt_pointer_alloc      (unsigned long memory, ikpcb* pcb);
 ikptr   ikrt_is_pointer         (ikptr x);
 
 #define VICARE_POINTER_DATA_VOIDP(X)  \

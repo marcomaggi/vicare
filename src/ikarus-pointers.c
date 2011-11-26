@@ -6,7 +6,8 @@
   Abstract
 
         This  file is  without  license notice  in  the original  Ikarus
-        distribution for no reason I can know.
+        distribution  for no  reason I  can know  (Marco Maggi;  Nov 26,
+        2011).
 
   Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 
@@ -84,11 +85,11 @@ ikrt_dlsym (ikptr handle, ikptr sym, ikpcb* pcb)
 
 
 /** --------------------------------------------------------------------
- ** Basic pointer object operations.
+ ** Pointer objects.
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_pointer_alloc (long memory, ikpcb * pcb)
+ikrt_pointer_alloc (unsigned long memory, ikpcb * pcb)
 {
   ikptr r = ik_safe_alloc(pcb, pointer_size);
   ref(r, 0) = pointer_tag;
@@ -96,43 +97,48 @@ ikrt_pointer_alloc (long memory, ikpcb * pcb)
   return r+vector_tag;
 }
 ikptr
+ikrt_pointer_size (void)
+{
+  return fix(sizeof(void *));
+}
+ikptr
 ikrt_is_pointer (ikptr x)
 {
-  if ((tagof(x) == vector_tag) && (ref(x, -vector_tag) == pointer_tag)) {
-    return true_object;
-  } else {
-    return false_object;
-  }
+  return ((tagof(x) == vector_tag) && (ref(x, -vector_tag) == pointer_tag))? true_object : false_object;
+}
+ikptr
+ikrt_pointer_is_null (ikptr x /*, ikpcb* pcb*/)
+{
+  return ref(x, off_pointer_data)? true_object : false_object;
 }
 
-
-/** --------------------------------------------------------------------
- ** Other pointer operations.
- ** ----------------------------------------------------------------- */
+/* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_pointer_to_int(ikptr x, ikpcb* pcb) {
-  long int p = (long int) ref(x, wordsize-vector_tag);
-  ikptr pfx = fix(p);
-  if (unfix(pfx) == p) {
+ikrt_pointer_to_int (ikptr x, ikpcb* pcb)
+{
+  long      pointer;
+  ikptr         pfx;
+  pointer = (long) ref(x, off_bignum_data);
+  pfx     = fix(pointer);
+  if (unfix(pfx) == pointer) { /* if it fits in a fixnum ... */
     return pfx;
   } else {
     ikptr bn = ik_safe_alloc(pcb, align(wordsize+disp_bignum_data));
-    if (p > 0){
+    if (0 < pointer) {
       ref(bn, 0) = (ikptr)(bignum_tag | (1 << bignum_length_shift));
-      ref(bn, disp_bignum_data) = (ikptr)p;
+      ref(bn, disp_bignum_data) = (ikptr)pointer;
     } else {
-      ref(bn, 0) =
-        (ikptr)(bignum_tag |
-              (1 << bignum_length_shift) |
-              (1 << bignum_sign_shift));
-      ref(bn, disp_bignum_data) = (ikptr)-p;
+      ref(bn, 0) = (ikptr)(bignum_tag
+                           | (1 << bignum_length_shift)
+                           | (1 << bignum_sign_shift));
+      ref(bn, disp_bignum_data) = (ikptr)(-pointer);
     }
     return bn+vector_tag;
   }
 }
 
-#define bnfst_negative(x)       (((unsigned long int)(x)) & bignum_sign_mask)
+#define bnfst_negative(X)       (((unsigned long)(X)) & bignum_sign_mask)
 
 static long
 integer_to_long(ikptr x)
@@ -141,9 +147,9 @@ integer_to_long(ikptr x)
     return ((long)x) >> fx_shift;
   } else {
     if(bnfst_negative(ref(x, -vector_tag))){
-      return -(long)ref(x, wordsize-vector_tag);
+      return -(long)ref(x, off_bignum_data);
     } else {
-      return (long)ref(x, wordsize-vector_tag);
+      return (long)ref(x, off_bignum_data);
     }
   }
 }
@@ -156,19 +162,43 @@ ikptr
 ikrt_bn_to_pointer (ikptr x, ikpcb* pcb)
 {
   if(bnfst_negative(ref(x, -vector_tag))){
-    return ikrt_pointer_alloc(-ref(x, wordsize-vector_tag), pcb);
+    return ikrt_pointer_alloc(-ref(x, off_bignum_data), pcb);
   } else {
-    return ikrt_pointer_alloc(ref(x, wordsize-vector_tag), pcb);
+    return ikrt_pointer_alloc(+ref(x, off_bignum_data), pcb);
   }
 }
 
-#if 0
+/* ------------------------------------------------------------------ */
+
 ikptr
-ikrt_pointer_null(ikptr x /*, ikpcb* pcb*/)
+ikrt_pointer_diff (ikptr ptr1, ikptr ptr2, ikpcb * pcb)
 {
-  return ref(x, off_pointer_data) ? true_object : false_object;
+  /* We must  use "long long" because  if ptr1 is ULONG_MAX  and ptr2 is
+     zero the difference is ULONG_MAX and it does not correctly fit into
+     a "long". */
+  long long     memory1, memory2;
+  long long     diff;
+  memory1 = (long long)ref(ptr1, off_pointer_data);
+  memory2 = (long long)ref(ptr2, off_pointer_data);
+  diff    = memory1 - memory2;
+  return sll_to_number(diff, pcb);
 }
-#endif
+ikptr
+ikrt_pointer_add (ikptr ptr, ikptr delta, ikpcb * pcb)
+{
+  unsigned long memory;
+  long          ptrdiff;
+  memory  = (unsigned long)ref(ptr, off_pointer_data);
+  ptrdiff = extract_num(delta);
+  if (0 <= ptrdiff) {
+    if (LONG_MAX - ptrdiff > memory) /* => LONG_MAX > ptrdiff + memory */
+      return false_object;
+  } else {
+    if (-ptrdiff > memory) /* => 0 > ptrdiff + memory */
+      return false_object;
+  }
+  return ikrt_pointer_alloc (memory + ptrdiff, pcb);
+}
 
 
 /** --------------------------------------------------------------------
@@ -178,12 +208,8 @@ ikrt_pointer_null(ikptr x /*, ikpcb* pcb*/)
 ikptr
 ikrt_malloc (ikptr len, ikpcb* pcb)
 {
-  void* p = malloc(unfix(len));
-  if (p == NULL) {
-    return false_object;
-  } else {
-    return ikrt_pointer_alloc((long int) p, pcb);
-  }
+  void *        p = malloc(unfix(len));
+  return (p)? ikrt_pointer_alloc((long) p, pcb) : false_object;
 }
 ikptr
 ikrt_free(ikptr x)
@@ -302,9 +328,9 @@ extract_num (ikptr x)
     return 0;
   else {
     if (bnfst_negative(ref(x, -vector_tag)))
-      return (long)(-ref(x, wordsize-vector_tag));
+      return (long)(-ref(x, off_bignum_data));
     else
-      return (long)(ref(x, wordsize-vector_tag));
+      return (long)(ref(x, off_bignum_data));
   }
 }
 unsigned long
@@ -316,7 +342,7 @@ extract_unum (ikptr x)
     return 0;
   else {
     assert(! bnfst_negative(ref(x, -vector_tag)));
-    return (unsigned long)(ref(x, wordsize-vector_tag));
+    return (unsigned long)(ref(x, off_bignum_data));
   }
 }
 
@@ -333,13 +359,13 @@ extract_num_longlong(ikptr x) {
     ikptr neg_one_limb_tag =
         (ikptr)(pos_one_limb_tag | (1 << bignum_sign_shift));
     if (fst == pos_one_limb_tag) {
-      return (unsigned long)ref(x, wordsize-vector_tag);
+      return (unsigned long)ref(x, off_bignum_data);
     } else if (fst == neg_one_limb_tag) {
-      return -(signed long)ref(x, wordsize-vector_tag);
+      return -(signed long)ref(x, off_bignum_data);
     } else if (bnfst_negative(fst)) {
-      return -(*((long long*)(x+wordsize-vector_tag)));
+      return -(*((long long*)(x+off_bignum_data)));
     } else {
-      return *((long long*)(x+wordsize-vector_tag));
+      return *((long long*)(x+off_bignum_data));
     }
   }
 }

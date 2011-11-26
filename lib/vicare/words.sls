@@ -32,7 +32,7 @@
 (library (vicare words)
   (export
     ;; predicates
-    word?
+    word?		machine-word?
     word-u8?		word-s8?
     word-u16?		word-s16?
     word-u32?		word-s32?
@@ -47,6 +47,8 @@
     greatest-s32	least-s32
     greatest-u64	least-u64
     greatest-s64	least-s64
+    greatest-machine-word
+    least-machine-word
 
     ;; exclusive limits
     greatest-u8*	least-u8*
@@ -57,6 +59,8 @@
     greatest-s32*	least-s32*
     greatest-u64*	least-u64*
     greatest-s64*	least-s64*
+    greatest-machine-word*
+    least-machine-word*
 
     ;; fixnum alignment
     fixnum-aligned-to-2?
@@ -158,6 +162,16 @@
 (define-inline (least-u64)		U64MIN)
 (define-inline (least-s64)		S64MIN)
 
+(define-inline (greatest-machine-word)
+  (case-word-size
+   ((32)	(greatest-u32))
+   ((64)	(greatest-u64))))
+
+(define-inline (least-machine-word)
+  (case-word-size
+   ((32)	(least-u32))
+   ((64)	(least-u64))))
+
 ;;; --------------------------------------------------------------------
 
 (define-inline (greatest-u8*)		U8MAX*)
@@ -180,11 +194,26 @@
 (define-inline (least-u64*)		U64MIN*)
 (define-inline (least-s64*)		S64MIN*)
 
+(define-inline (greatest-machine-word*)
+  (case-word-size
+   ((32)	(greatest-u32*))
+   ((64)	(greatest-u64*))))
+
+(define-inline (least-machine-word*)
+  (case-word-size
+   ((32)	(least-u32*))
+   ((64)	(least-u64*))))
+
 
 ;;;; predicates
 
 (define-inline (word? N)
   (or (fixnum? N) (bignum? N)))
+
+(define-inline (machine-word? N)
+  (case-word-size
+   ((32) (word-u32? N))
+   ((64) (word-u64? N))))
 
 (define-inline (word-u8? N)
   (and (fixnum? N)
@@ -220,7 +249,6 @@
    ((64) (and (fixnum? N)
 	      ($fx>= N 0)
 	      ($fx<= N U32MAX)))))
-
 
 (define-inline (word-s32? N)
   (case-word-size

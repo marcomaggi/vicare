@@ -6649,7 +6649,12 @@
 		(make-who-condition who)
 		(make-message-condition (strerror errno))
 		(case-errno errno
-		  ((EACCES EFAULT) ;why is EFAULT included here?
+		  ((EACCES EFAULT)
+		   ;;Why   is  EFAULT   included  here?    Because  many
+		   ;;functions   may   return   EFAULT   even   if   the
+		   ;;documentation in the GNU C Library does not mention
+		   ;;it explicitly;  see the notes  in the documentation
+		   ;;of the "errno" variable.
 		   (make-i/o-file-protection-error port-identifier))
 		  ((EROFS)
 		   (make-i/o-file-is-read-only-error port-identifier))

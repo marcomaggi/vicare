@@ -31,6 +31,15 @@
 (library (vicare unsafe-capi)
   (export
 
+    ;; foreign functions interface
+    ffi-dlopen				ffi-dlclose
+    ffi-dlsym				ffi-dlerror
+
+    ffi-pointer?			ffi-pointer-null?
+    ffi-fixnum->pointer			ffi-bignum->pointer
+    ffi-pointer->integer
+    ffi-pointer-add			ffi-pointer-diff
+
     ;; error handling
     posix-strerror
 
@@ -176,10 +185,57 @@
     posix-nanosleep
     )
   (import (except (ikarus)
-		  posix-remove
-		  posix-read		posix-write)
-    (only (vicare syntactic-extensions)
-	  define-inline))
+		  posix-read	posix-write
+		  posix-time	posix-remove))
+
+
+;;;; helpers
+
+(define-syntax define-inline
+  (syntax-rules ()
+    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
+     (define-syntax ?name
+       (syntax-rules ()
+	 ((_ ?arg ... . ?rest)
+	  (begin ?form0 ?form ...)))))))
+
+
+;;;; foreign functions interface
+
+(define-inline (ffi-dlerror)
+  (foreign-call "ikrt_dlerror"))
+
+(define-inline (ffi-dlopen libname lazy? global?)
+  (foreign-call "ikrt_dlopen" libname lazy? global?))
+
+(define-inline (ffi-dlclose ptr)
+  (foreign-call "ikrt_dlclose" ptr))
+
+(define-inline (ffi-dlsym handle name)
+  (foreign-call "ikrt_dlsym" handle name))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (ffi-pointer? obj)
+  (foreign-call "ikrt_is_pointer" obj))
+
+(define-inline (ffi-pointer-null? obj)
+  (foreign-call "ikrt_pointer_is_null" obj))
+
+(define-inline (ffi-fixnum->pointer obj)
+  (foreign-call "ikrt_fx_to_pointer" obj))
+
+(define-inline (ffi-bignum->pointer obj)
+  (foreign-call "ikrt_bn_to_pointer" obj))
+
+(define-inline (ffi-pointer->integer obj)
+  (foreign-call "ikrt_pointer_to_int" obj))
+
+(define-inline (ffi-pointer-add ptr delta)
+  (foreign-call "ikrt_pointer_add" ptr delta))
+
+(define-inline (ffi-pointer-diff ptr1 ptr2)
+  (foreign-call "ikrt_pointer_diff" ptr1 ptr2))
 
 
 ;;;; error handling

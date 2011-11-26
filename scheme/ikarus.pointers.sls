@@ -17,9 +17,27 @@
 
 (library (ikarus.pointers)
   (export
-    pointer? integer->pointer pointer->integer
-    dlopen dlerror dlclose dlsym malloc free memcpy
+    ;; pointer objects
+    pointer?
+    null-pointer			pointer-null?
+    pointer->integer			integer->pointer
+    pointer-diff			pointer-add
+
+    ;; shared libraries inteface
+    dlopen				dlclose
+    dlsym				dlerror
+
+    ;; calling functions and callbacks
+    make-c-callout			make-c-callback
+
+    ;; raw memory allocation
+    malloc				free
+    memcpy
+
+    ;; errno interface
     errno
+
+    ;; memory accessors and mutators
     pointer-ref-c-signed-char
     pointer-ref-c-signed-short
     pointer-ref-c-signed-int
@@ -40,76 +58,121 @@
     pointer-set-c-long-long!
     pointer-set-c-pointer!
     pointer-set-c-float!
-    pointer-set-c-double!
-    make-c-callout make-c-callback)
+    pointer-set-c-double!)
   (import (except (ikarus)
 		  pointer?
 		  integer->pointer pointer->integer
 		  dlopen dlerror dlclose dlsym malloc free memcpy)
-    (vicare syntactic-extensions))
+    (vicare syntactic-extensions)
+    (prefix (vicare unsafe-capi)
+	    capi.)
+    (only (vicare words)
+	  machine-word?))
 
 
 ;;;; arguments validation
+
+(define-argument-validation (string who obj)
+  (string? obj)
+  (assertion-violation who "expected string as argument" obj))
+
+;;; --------------------------------------------------------------------
 
 (define-argument-validation (errno who obj)
   (or (boolean? obj) (and (fixnum? obj) (<= obj 0)))
   (assertion-violation who "expected boolean or negative fixnum as errno argument" obj))
 
-
-;;; pointer manipulation procedures
+(define-argument-validation (pointer who obj)
+  (pointer? obj)
+  (assertion-violation who "expected pointer as argument" obj))
 
-(define (pointer? x)
-  (foreign-call "ikrt_is_pointer" x))
-
-(define (integer->pointer x)
-  (cond
-   ((fixnum? x)
-    (foreign-call "ikrt_fx_to_pointer" x))
-   ((bignum? x)
-    (foreign-call "ikrt_bn_to_pointer" x))
-   (else
-    (die 'integer->pointer "not an integer" x))))
-
-(define (pointer->integer x)
-  (cond
-   ((pointer? x)
-    (foreign-call "ikrt_pointer_to_int" x))
-   (else
-    (die 'pointer->integer "not a pointer" x))))
+(define-argument-validation (ptrdiff who obj)
+  (machine-word? obj)
+  (assertion-violation who
+    "expected exact integer representing pointer difference as argument" obj))
 
 
-;;; dynamic loading procedures
+;;; shared libraries interface
 
 (define (dlerror)
-  (let ((p (foreign-call "ikrt_dlerror")))
+  (let ((p (capi.ffi-dlerror)))
     (and p (latin1->string p))))
 
 (define dlopen
-  (let ()
-    (define (open x lazy? global?)
-      (foreign-call "ikrt_dlopen" x lazy? global?))
-    (case-lambda
-     (()
-      (open #f #f #f))
-     ((x)
-      (dlopen x #f #f))
-     ((x lazy? global?)
-      (cond
-       ((string? x) (open (string->utf8 x) lazy? global?))
-       (else (die 'dlopen "library name must be a string" x)))))))
+  (case-lambda
+   (()
+    (capi.ffi-dlopen #f #f #f))
+   ((libname)
+    (dlopen libname #f #f))
+   ((libname lazy? global?)
+    (define who 'dlopen)
+    (with-arguments-validation (who)
+	((string  libname))
+      (capi.ffi-dlopen (string->latin1 libname) lazy? global?)))))
 
-(define (dlclose x)
-  (if (pointer? x)
-      (foreign-call "ikrt_dlclose" x)
-    (die 'dlclose "not a pointer" x)))
+(define (dlclose ptr)
+  (define who 'dlclose)
+  (with-arguments-validation (who)
+      ((pointer  ptr))
+    (capi.ffi-dlclose ptr)))
 
 (define (dlsym handle name)
   (define who 'dlsym)
-  (if (pointer? handle)
-      (if (string? name)
-	  (foreign-call "ikrt_dlsym" handle (string->utf8 name))
-	(die who "invalid symbol name" name))
-    (die who "handle is not a pointer" handle)))
+  (with-arguments-validation (who)
+      ((pointer  handle)
+       (string   name))
+    (capi.ffi-dlsym handle (string->latin1 name))))
+
+
+;;; pointer manipulation procedures
+
+(define NULL-POINTER
+  (capi.ffi-fixnum->pointer 0))
+
+(define (pointer? obj)
+  (capi.ffi-pointer? obj))
+
+(define (null-pointer)
+  NULL-POINTER)
+
+(define (pointer-null? obj)
+  (and (pointer? obj) (capi.ffi-pointer-null? obj)))
+
+;;; --------------------------------------------------------------------
+
+(define (integer->pointer x)
+  (define who 'integer->pointer)
+  (cond ((fixnum? x)
+	 (capi.ffi-fixnum->pointer x))
+	((bignum? x)
+	 (capi.ffi-bignum->pointer x))
+	(else
+	 (assertion-violation who "expected exact integer as argument" x))))
+
+(define (pointer->integer x)
+  (define who 'pointer->integer)
+  (with-arguments-validation (who)
+      ((pointer	x))
+    (capi.ffi-pointer->integer x)))
+
+;;; --------------------------------------------------------------------
+
+(define (pointer-add ptr delta)
+  (define who 'pointer-add)
+  (with-arguments-validation (who)
+      ((pointer  ptr)
+       (ptrdiff  delta))
+    (let ((rv (capi.ffi-pointer-add ptr delta)))
+      (or rv
+	  (assertion-violation who
+	    "requested pointer arithmetic operation would cause machine word overflow" ptr delta)))))
+
+(define (pointer-diff ptr1 ptr2)
+  (define who 'pointer-diff)
+  (with-arguments-validation (who)
+      ((pointer  ptr1)
+       (pointer  ptr2))
+    (capi.ffi-pointer-diff ptr1 ptr2)))
 
 
 ;;; explicit memory management

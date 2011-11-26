@@ -17,6 +17,12 @@
 
 (library (vicare foreign)
   (export
+    ;; pointer values
+    pointer?
+    null-pointer			pointer-null?
+    pointer->integer			integer->pointer
+    pointer-diff			pointer-add
+
     pointer-set-c-char!
     pointer-set-c-short!
     pointer-set-c-int!
@@ -39,7 +45,7 @@
     pointer-ref-c-float
     pointer-ref-c-double
     malloc free memcpy
-    pointer->integer integer->pointer pointer? dlopen dlsym
+    dlopen dlsym
     dlclose dlerror
     make-c-callout make-c-callback
     pointer-size
@@ -53,25 +59,6 @@
 
 
 ;;;; pointers
-
-(define (pointer-size)
-  (cond
-   ((<= (fixnum-width) 32) 4)
-   (else 8)))
-
-(define pointer-null
-  (integer->pointer 0))
-
-(define (pointer-null? pointer)
-  (zero? (pointer->integer pointer)))
-
-(define (pointer-diff pointer-1 pointer-2)
-  (- (pointer->integer pointer-1)
-     (pointer->integer pointer-2)))
-
-(define (pointer-add pointer offset)
-  (integer->pointer (+ (pointer->integer pointer)
-		       offset)))
 
 (let-syntax ((define-pointer-comparison (syntax-rules ()
 					  ((_ ?name ?func)

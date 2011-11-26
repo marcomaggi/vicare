@@ -1,9 +1,38 @@
+/*
+  Part of: Vicare
+  Contents: interface to POSIX functions
+  Date: Sun Nov  6, 2011
+
+  Abstract
+
+        This  file is  without  license notice  in  the original  Ikarus
+        distribution  for no  reason I  can know  (Marco Maggi;  Nov 26,
+        2011).
+
+  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+
+  This program is  free software: you can redistribute  it and/or modify
+  it under the  terms of the GNU General Public  License as published by
+  the Free Software Foundation, either  version 3 of the License, or (at
+  your option) any later version.
+
+  This program  is distributed in the  hope that it will  be useful, but
+  WITHOUT   ANY  WARRANTY;   without  even   the  implied   warranty  of
+  MERCHANTABILITY  or FITNESS  FOR A  PARTICULAR PURPOSE.   See  the GNU
+  General Public License for more details.
+
+  You  should have received  a copy  of the  GNU General  Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+
+/** --------------------------------------------------------------------
+ ** Headers.
+ ** ----------------------------------------------------------------- */
 
 #include "ikarus.h"
-#include "config.h"
-#include <sys/errno.h>
-
 #if ENABLE_LIBFFI
+
 #include <ffi.h>
 #include <stdlib.h>
 #include <strings.h>
@@ -11,17 +40,24 @@
 #undef DEBUG_FFI
 
 #ifdef HACK_FFI
-#include <sys/mman.h>
+#  include <sys/mman.h>
 #endif
 
+
+/** --------------------------------------------------------------------
+ ** Helpers.
+ ** ----------------------------------------------------------------- */
+
 static void*
-alloc(size_t n, int m) {
+alloc (size_t n, int m)
+{
   void* x = calloc(n, m);
-  if (x == NULL) {
-    fprintf(stderr, "ERROR (ikarus): calloc failed!\n");
+  if (x)
+    return x;
+  else {
+    fprintf(stderr, "*** Vicare error: failed memory allocation with calloc(%u, %d)\n", n, m);
     exit(EXIT_FAILURE);
   }
-  return x;
 }
 
 static ffi_type* scheme_to_ffi_type_cast(ikptr nptr);
@@ -577,16 +613,41 @@ void hello_world(int n) {
   }
 }
 
+
+/** --------------------------------------------------------------------
+ ** If libffi is not used.
+ ** ----------------------------------------------------------------- */
+
 #else
+
 ikptr ikrt_ffi_prep_cif()     { return false_object; }
 ikptr ikrt_ffi_call()         { return false_object; }
 ikptr ikrt_prepare_callback() { return false_object; }
-ikptr ikrt_has_ffi()         { return false_object; }
-
+ikptr ikrt_has_ffi()          { return false_object; }
 
 #endif
 
+
+/** --------------------------------------------------------------------
+ ** Interface to "errno".
+ ** ----------------------------------------------------------------- */
 
+ikptr
+ikrt_set_errno (ikptr code)
+{
+  if (false_object == code)
+    errno = 0;
+  else if (true_object == code)
+    errno = EFAULT;
+  else
+    errno = -(fix(code));
+  return void_object;
+}
+ikptr
+ikrt_last_errno(ikpcb* pcb)
+{
+  int   negated_errno_code = - pcb->last_errno;
+  return fix(negated_errno_code);
+}
 
-
-
+/* end of file */
