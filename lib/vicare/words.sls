@@ -32,11 +32,12 @@
 (library (vicare words)
   (export
     ;; predicates
-    word?		machine-word?
+    word?
     word-u8?		word-s8?
     word-u16?		word-s16?
     word-u32?		word-s32?
     word-u64?		word-s64?
+    machine-word?	ptrdiff?
 
     ;; inclusive limits
     greatest-u8		least-u8
@@ -214,6 +215,19 @@
   (case-word-size
    ((32) (word-u32? N))
    ((64) (word-u64? N))))
+
+(define-inline (ptrdiff? N)
+  (case-word-size
+   ((32) (or (fixnum? N)
+	     (and (bignum? N)
+		  ($bnbn>= N S32MIN)
+		  ($bnbn<= N U32MAX))))
+   ((64) (or (fixnum? N)
+	     (and (bignum? N)
+		  ($bnbn>= N S64MIN)
+		  ($bnbn<= N U64MAX))))))
+
+;;; --------------------------------------------------------------------
 
 (define-inline (word-u8? N)
   (and (fixnum? N)

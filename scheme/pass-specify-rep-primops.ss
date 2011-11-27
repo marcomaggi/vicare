@@ -2720,6 +2720,41 @@
  /section)
 
 
+;;;; pointers
+;;
+;;A pointer is  a fixed length memory block,  two words wide, referenced
+;;by  machine words  tagged as  vectors.  The  first machine  word  of a
+;;pointer block is tagged has  pointer in its least significant bits and
+;;it has the most significant bits set to zero.  The second machine word
+;;of a pointer block holds the actual pointer value.
+;;
+;;  |------------------------|-------------| reference to pointer
+;;        heap offset          vector tag
+;;
+;;  |------------------------|-------------| pointer first word
+;;     all set to zero         pointer tag
+;;
+;;  |--------------------------------------| pointer second word
+;;              pointer value
+;;
+(section
+
+ (define-primop pointer? safe
+   ((P x)
+    (sec-tag-test (T x) vector-mask vector-tag #f pointer-tag))
+   ((E x) (nop)))
+
+ (define-primop $pointer=? unsafe
+   ((V x y)
+    (make-forcall "ikrt_pointer_eq" (list (T x) (T y))))
+   ((P x y)
+    (make-forcall "ikrt_pointer_eq" (list (T x) (T y))))
+   ((E x y)
+    (nop)))
+
+ /section)
+
+
 (section ;;; interrupts-and-engines
 
  (define-primop $interrupted? unsafe

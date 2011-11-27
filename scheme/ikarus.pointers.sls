@@ -22,6 +22,9 @@
     null-pointer			pointer-null?
     pointer->integer			integer->pointer
     pointer-diff			pointer-add
+    pointer=?				pointer<>?
+    pointer<?				pointer>?
+    pointer<=?				pointer>=?
 
     ;; shared libraries inteface
     dlopen				dlclose
@@ -59,15 +62,17 @@
     pointer-set-c-pointer!
     pointer-set-c-float!
     pointer-set-c-double!)
-  (import (except (ikarus)
+  (import (ikarus) #;(except (ikarus)
 		  pointer?
 		  integer->pointer pointer->integer
 		  dlopen dlerror dlclose dlsym malloc free memcpy)
     (vicare syntactic-extensions)
+    (prefix (vicare unsafe-operations)
+	    unsafe.)
     (prefix (vicare unsafe-capi)
 	    capi.)
-    (only (vicare words)
-	  machine-word?))
+    (prefix (vicare words)
+	    words.))
 
 
 ;;;; arguments validation
@@ -75,6 +80,13 @@
 (define-argument-validation (string who obj)
   (string? obj)
   (assertion-violation who "expected string as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (non-negative-exact-integer who obj)
+  (or (and (fixnum? obj) (unsafe.fx<= 0 obj))
+      (and (bignum? obj) (<= 0 obj)))
+  (assertion-violation who "expected non-negative exact integer as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -86,8 +98,13 @@
   (pointer? obj)
   (assertion-violation who "expected pointer as argument" obj))
 
+(define-argument-validation (machine-word who obj)
+  (words.machine-word? obj)
+  (assertion-violation who
+    "expected non-negative exact integer in the range of a machine word as argument" obj))
+
 (define-argument-validation (ptrdiff who obj)
-  (machine-word? obj)
+  (words.ptrdiff? obj)
   (assertion-violation who
     "expected exact integer representing pointer difference as argument" obj))
 
@@ -142,12 +159,11 @@
 
 (define (integer->pointer x)
   (define who 'integer->pointer)
-  (cond ((fixnum? x)
-	 (capi.ffi-fixnum->pointer x))
-	((bignum? x)
-	 (capi.ffi-bignum->pointer x))
-	(else
-	 (assertion-violation who "expected exact integer as argument" x))))
+  (with-arguments-validation (who)
+      ((machine-word  x))
+    (if (fixnum? x)
+	(capi.ffi-fixnum->pointer x)
+      (capi.ffi-bignum->pointer x))))
 
 (define (pointer->integer x)
   (define who 'pointer->integer)
@@ -174,6 +190,28 @@
        (pointer  ptr2))
     (capi.ffi-pointer-diff ptr1 ptr2)))
 
+(define (pointer+ ptr off)
+  (integer->pointer (+ (pointer->integer ptr) off)))
+
+;;; --------------------------------------------------------------------
+
+(let-syntax ((define-pointer-comparison
+	       (syntax-rules ()
+		 ((_ ?who ?pred)
+		  (define (?who ptr1 ptr2)
+		    (define who '?who)
+		    (with-arguments-validation (who)
+			((pointer ptr1)
+			 (pointer ptr2))
+		      (?pred ptr1 ptr2)))))))
+
+  (define-pointer-comparison pointer=?		capi.ffi-pointer-eq)
+  (define-pointer-comparison pointer<>?		capi.ffi-pointer-neq)
+  (define-pointer-comparison pointer<?		capi.ffi-pointer-lt)
+  (define-pointer-comparison pointer>?		capi.ffi-pointer-gt)
+  (define-pointer-comparison pointer<=?		capi.ffi-pointer-le)
+  (define-pointer-comparison pointer>=?		capi.ffi-pointer-ge))
+
 
 ;;; explicit memory management
 
@@ -186,9 +224,6 @@
   (if (pointer? x)
       (foreign-call "ikrt_free" x)
     (die 'free "not a pointer" x)))
-
-(define (pointer+ ptr off)
-  (integer->pointer (+ (pointer->integer ptr) off)))
 
 (define (memcpy dst dst-offset src src-offset count)
   (define who 'memcpy)

@@ -385,6 +385,7 @@
     ($symbols		(ikarus system $symbols)		#f	#t)
     ($structs		(ikarus system $structs)		#f	#t)
 ;;;($ports		(ikarus system $ports)			#f	#t)
+;;;($pointers		(ikarus system $pointers)		#f	#t)
     ($codes		(ikarus system $codes)			#f	#t)
     ($tcbuckets		(ikarus system $tcbuckets)		#f	#t)
     ($arg-list		(ikarus system $arg-list)		#f	#t)
@@ -1698,6 +1699,7 @@
     (&source-rtd)
     (&source-rcd)
 
+;;; --------------------------------------------------------------------
 ;;; POSIX functions
     (S_ISBLK					i v posix)
     (S_ISCHR					i v posix)
@@ -2024,6 +2026,7 @@
     (struct-tm-tm_gmtoff			i v posix)
     (struct-tm-tm_zone				i v posix)
 
+;;; --------------------------------------------------------------------
 ;;; GNU C Library functions
     (clearenv					glibc)
     (dirfd					glibc)
@@ -2036,6 +2039,7 @@
     (if-indextoname				glibc)
     (if-nameindex				glibc)
 
+;;; --------------------------------------------------------------------
 ;;; Linux functions
     (WIFCONTINUED				linux)
     (waitid					linux)
@@ -2048,22 +2052,33 @@
     (struct-siginfo_t-si_status			linux)
     (struct-siginfo_t-si_code			linux)
 
+;;; --------------------------------------------------------------------
 ;;; (ikarus system $foreign)
     (errno					$for)
     (null-pointer				$for)
-    (pointer?					$for)
+    (pointer?					$for #;$pointers)
     (pointer->integer				$for)
     (integer->pointer				$for)
     (pointer-null?				$for)
     (pointer-diff				$for)
     (pointer-add				$for)
+    ($pointer=?					$for #;$pointers)
+    (pointer=?					$for)
+    (pointer<>?					$for)
+    (pointer<?					$for)
+    (pointer>?					$for)
+    (pointer<=?					$for)
+    (pointer>=?					$for)
+;;;
     (dlopen					$for)
     (dlerror					$for)
     (dlclose					$for)
     (dlsym					$for)
+;;;
     (malloc					$for)
     (free					$for)
     (memcpy					$for)
+;;;
     (pointer-ref-c-signed-char			$for)
     (pointer-ref-c-signed-short			$for)
     (pointer-ref-c-signed-int			$for)
@@ -2088,6 +2103,7 @@
     (make-c-callout				$for)
     (make-c-callback				$for)
 
+;;; --------------------------------------------------------------------
 ;;;
     (ellipsis-map)
     (optimize-cp				i v)

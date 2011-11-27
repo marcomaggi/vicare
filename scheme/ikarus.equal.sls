@@ -36,11 +36,17 @@
 
 (library (ikarus.equal)
   (export equal?)
-  (import (except (ikarus) equal?))
+  (import (except (ikarus)
+		  equal?))
 
   (module UNSAFE
-    (< <= > >= = + - vector-ref vector-length car cdr)
+    (< <= > >= = + - vector-ref vector-length car cdr pointer? pointer=?)
     (import
+;;;FIXME Uncomment at the next boot image rotation.
+;;;
+;;;	(ikarus system $pointers)
+	(prefix (vicare unsafe-capi)
+		capi.)
       (rename (ikarus system $vectors)
         ($vector-length vector-length)
         ($vector-ref    vector-ref))
@@ -54,7 +60,16 @@
         ($fx>      >)
         ($fx>=     >=)
         ($fx<=     <=)
-        ($fx=      =))))
+        ($fx=      =)))
+
+;;;FIXME Remove at the next boot image rotation.
+    (define (pointer? x)
+      (capi.ffi-pointer? x))
+
+;;;FIXME Remove at the next boot image rotation.
+    (define (pointer=? x y)
+      (capi.ffi-pointer-eq x y))
+    )
 
 
 (define (equal? x y)
@@ -116,6 +131,10 @@
 	 (and (bytevector? y)
 	      (bytevector=? x y)
 	      k))
+	((pointer? x)
+	 (and (pointer? y)
+	      (pointer=? x y)
+	      k))
 	(else	;chars, numbers, booleans, other non-compound value
 	 (and (eqv? x y) k))))
 
@@ -152,9 +171,20 @@
 				       (vector-ref y i)
 				       k)))
 			    (and k (f (+ i 1) k))))))))))
-       ((string? x) (and (string? y) (string=? x y) k))
-       ((bytevector? x) (and (bytevector? y) (bytevector=? x y) k))
-       (else (and (eqv? x y) k))))
+       ((string? x)
+	(and (string? y)
+	     (string=? x y)
+	     k))
+       ((bytevector? x)
+	(and (bytevector? y)
+	     (bytevector=? x y)
+	     k))
+       ((pointer? x)
+	(and (pointer? y)
+	     (pointer=? x y)
+	     k))
+       (else
+	(and (eqv? x y) k))))
     (define (fast? x y k)
       (let ((k (- k 1)))
 	(cond
@@ -174,9 +204,21 @@
 				       (vector-ref y i)
 				       k)))
 			    (and k (f (+ i 1) k)))))))))
-	 ((string? x) (and (string? y) (string=? x y) k))
-	 ((bytevector? x) (and (bytevector? y) (bytevector=? x y) k))
-	 (else (and (eqv? x y) k)))))
+	 ((string? x)
+	  (and (string? y)
+	       (string=? x y)
+	       k))
+	 ((bytevector? x)
+	  (and (bytevector? y)
+	       (bytevector=? x y)
+	       k))
+	 ((pointer? x)
+	  (and (pointer? y)
+	       (pointer=? x y)
+	       k))
+	 (else
+	  (and (eqv? x y)
+	       k)))))
     (and (e? x y k) #t)))
 
 

@@ -39,6 +39,9 @@
     ffi-fixnum->pointer			ffi-bignum->pointer
     ffi-pointer->integer
     ffi-pointer-add			ffi-pointer-diff
+    ffi-pointer-eq			ffi-pointer-neq
+    ffi-pointer-lt			ffi-pointer-gt
+    ffi-pointer-le			ffi-pointer-ge
 
     ;; error handling
     posix-strerror
@@ -236,6 +239,24 @@
 
 (define-inline (ffi-pointer-diff ptr1 ptr2)
   (foreign-call "ikrt_pointer_diff" ptr1 ptr2))
+
+(define-inline (ffi-pointer-eq ptr1 ptr2)
+  (foreign-call "ikrt_pointer_eq" ptr1 ptr2))
+
+(define-inline (ffi-pointer-neq ptr1 ptr2)
+  (foreign-call "ikrt_pointer_neq" ptr1 ptr2))
+
+(define-inline (ffi-pointer-lt ptr1 ptr2)
+  (foreign-call "ikrt_pointer_lt" ptr1 ptr2))
+
+(define-inline (ffi-pointer-gt ptr1 ptr2)
+  (foreign-call "ikrt_pointer_gt" ptr1 ptr2))
+
+(define-inline (ffi-pointer-le ptr1 ptr2)
+  (foreign-call "ikrt_pointer_le" ptr1 ptr2))
+
+(define-inline (ffi-pointer-ge ptr1 ptr2)
+  (foreign-call "ikrt_pointer_ge" ptr1 ptr2))
 
 
 ;;;; error handling

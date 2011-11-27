@@ -515,8 +515,11 @@ ikptr   ikrt_is_pointer         (ikptr x);
 #define VICARE_POINTER_DATA_CHARP(X)  \
   ((char *)ref((X), off_pointer_data))
 
-#define VICARE_POINTER_DATA_LONG(X)  \
-  ((long)ref((X), off_pointer_data))
+#define VICARE_POINTER_DATA_ULONG(X)  \
+  ((unsigned long)ref((X), off_pointer_data))
+
+#define VICARE_POINTER_DATA_ULLONG(X) \
+  ((unsigned long long)ref((X), off_pointer_data))
 
 
 /** --------------------------------------------------------------------
