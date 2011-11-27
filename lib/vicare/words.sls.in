@@ -39,6 +39,12 @@
     word-u64?		word-s64?
     machine-word?	ptrdiff?
 
+    unsigned-char?	signed-char?
+    unsigned-short?	signed-short?
+    unsigned-int?	signed-int?
+    unsigned-long?	signed-long?
+    unsigned-long-long?	signed-long-long?
+
     ;; inclusive limits
     greatest-u8		least-u8
     greatest-s8		least-s8
@@ -206,7 +212,7 @@
    ((64)	(least-u64*))))
 
 
-;;;; predicates
+;;;; bit-sized word predicates
 
 (define-inline (word? N)
   (or (fixnum? N) (bignum? N)))
@@ -290,6 +296,36 @@
 	   ($bnbn<= N S64MAX))))
 
 
+;;;; C language data predicates
+
+(let-syntax ((define-predicate (syntax-rules ()
+				 ((_ ?who ?data-size #t)
+				  (define-inline (?who N)
+				    (case-data-size ?data-size
+				      ((8)	(word-u8?  N))
+				      ((16)	(word-u16? N))
+				      ((32)	(word-u32? N))
+				      ((64)	(word-u64? N)))))
+				 ((_ ?who ?data-size #f)
+				  (define-inline (?who N)
+				    (case-data-size ?data-size
+				      ((8)	(word-s8?  N))
+				      ((16)	(word-s16? N))
+				      ((32)	(word-s32? N))
+				      ((64)	(word-s64? N))))))))
+
+  (define-predicate unsigned-char?		SIZEOF_CHAR)
+  (define-predicate unsigned-short?		SIZEOF_SHORT_INT)
+  (define-predicate unsigned-int?		SIZEOF_INT)
+  (define-predicate unsigned-long?		SIZEOF_LONG)
+  (define-predicate unsigned-long-long?		SIZEOF_LONG_LONG)
+  (define-predicate signed-char?		SIZEOF_CHAR)
+  (define-predicate signed-short?		SIZEOF_SHORT)
+  (define-predicate signed-int?			SIZEOF_INT)
+  (define-predicate signed-long?		SIZEOF_LONG)
+  (define-predicate signed-long-long?		SIZEOF_LONG_LONG))
+
+
 ;;;; vector index alignment
 ;;
 ;;* If an index  is a multiple of 2 its least  significant bit is set to
@@ -356,3 +392,6 @@
 )
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'case-data-size 'scheme-indent-function 1)
+;; End:

@@ -48,10 +48,28 @@
     ffi-pointer-c-ref-uint32		ffi-pointer-c-ref-sint32
     ffi-pointer-c-ref-uint64		ffi-pointer-c-ref-sint64
 
+    ffi-pointer-ref-c-float		ffi-pointer-ref-c-double
+    ffi-pointer-ref-c-pointer
+
+    ffi-pointer-ref-c-signed-char	ffi-pointer-ref-c-unsigned-char
+    ffi-pointer-ref-c-signed-short	ffi-pointer-ref-c-unsigned-short
+    ffi-pointer-ref-c-signed-int	ffi-pointer-ref-c-unsigned-int
+    ffi-pointer-ref-c-signed-long	ffi-pointer-ref-c-unsigned-long
+    ffi-pointer-ref-c-signed-long-long	ffi-pointer-ref-c-unsigned-long-long
+
     ffi-pointer-c-set-uint8!		ffi-pointer-c-set-sint8!
     ffi-pointer-c-set-uint16!		ffi-pointer-c-set-sint16!
     ffi-pointer-c-set-uint32!		ffi-pointer-c-set-sint32!
     ffi-pointer-c-set-uint64!		ffi-pointer-c-set-sint64!
+
+    ffi-pointer-set-c-float!		ffi-pointer-set-c-double!
+    ffi-pointer-set-c-pointer!
+
+    ffi-pointer-set-c-signed-char!	ffi-pointer-set-c-unsigned-char!
+    ffi-pointer-set-c-signed-short!	ffi-pointer-set-c-unsigned-short!
+    ffi-pointer-set-c-signed-int!	ffi-pointer-set-c-unsigned-int!
+    ffi-pointer-set-c-signed-long!	ffi-pointer-set-c-unsigned-long!
+    ffi-pointer-set-c-signed-long-long!	ffi-pointer-set-c-unsigned-long-long!
 
     ;; error handling
     posix-strerror
@@ -296,6 +314,51 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-inline (ffi-pointer-ref-c-float pointer offset)
+  (foreign-call "ikrt_ref_float" pointer offset))
+
+(define-inline (ffi-pointer-ref-c-double pointer offset)
+  (foreign-call "ikrt_ref_double" pointer offset))
+
+(define-inline (ffi-pointer-ref-c-pointer pointer offset)
+  (foreign-call "ikrt_ref_pointer" pointer offset))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (ffi-pointer-ref-c-signed-char pointer offset)
+  (foreign-call "ikrt_ref_char" pointer offset))
+
+(define-inline (ffi-pointer-ref-c-signed-short pointer offset)
+  (foreign-call "ikrt_ref_short" pointer offset))
+
+(define-inline (ffi-pointer-ref-c-signed-int pointer offset)
+  (foreign-call "ikrt_ref_int" pointer offset))
+
+(define-inline (ffi-pointer-ref-c-signed-long pointer offset)
+  (foreign-call "ikrt_ref_long" pointer offset))
+
+(define-inline (ffi-pointer-ref-c-signed-long-long pointer offset)
+  (foreign-call "ikrt_ref_longlong" pointer offset))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (ffi-pointer-ref-c-unsigned-char pointer offset)
+  (foreign-call "ikrt_ref_uchar" pointer offset))
+
+(define-inline (ffi-pointer-ref-c-unsigned-short pointer offset)
+  (foreign-call "ikrt_ref_ushort" pointer offset))
+
+(define-inline (ffi-pointer-ref-c-unsigned-int pointer offset)
+  (foreign-call "ikrt_ref_uint" pointer offset))
+
+(define-inline (ffi-pointer-ref-c-unsigned-long pointer offset)
+  (foreign-call "ikrt_ref_ulong" pointer offset))
+
+(define-inline (ffi-pointer-ref-c-unsigned-long-long pointer offset)
+  (foreign-call "ikrt_ref_ulonglong" pointer offset))
+
+;;; --------------------------------------------------------------------
+
 (define-inline (ffi-pointer-c-set-uint8! pointer offset value)
   (foreign-call "ikrt_ref_uint8" pointer offset value))
 
@@ -321,6 +384,49 @@
   (foreign-call "ikrt_ref_sint64" pointer offset value))
 
 ;;; --------------------------------------------------------------------
+
+(define-inline (ffi-pointer-set-c-float! pointer offset value)
+  (foreign-call "ikrt_set_float" pointer offset value))
+
+(define-inline (ffi-pointer-set-c-double! pointer offset value)
+  (foreign-call "ikrt_set_double" pointer offset value))
+
+(define-inline (ffi-pointer-set-c-pointer! pointer offset value)
+  (foreign-call "ikrt_set_pointer" pointer offset value))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (ffi-pointer-set-c-signed-char! pointer offset value)
+  (foreign-call "ikrt_set_char" pointer offset value))
+
+(define-inline (ffi-pointer-set-c-signed-short! pointer offset value)
+  (foreign-call "ikrt_set_short" pointer offset value))
+
+(define-inline (ffi-pointer-set-c-signed-int! pointer offset value)
+  (foreign-call "ikrt_set_int" pointer offset value))
+
+(define-inline (ffi-pointer-set-c-signed-long! pointer offset value)
+  (foreign-call "ikrt_set_long" pointer offset value))
+
+(define-inline (ffi-pointer-set-c-signed-long-long! pointer offset value)
+  (foreign-call "ikrt_set_longlong" pointer offset value))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (ffi-pointer-set-c-unsigned-char! pointer offset value)
+  (foreign-call "ikrt_set_uchar" pointer offset value))
+
+(define-inline (ffi-pointer-set-c-unsigned-short! pointer offset value)
+  (foreign-call "ikrt_set_ushort" pointer offset value))
+
+(define-inline (ffi-pointer-set-c-unsigned-int! pointer offset value)
+  (foreign-call "ikrt_set_uint" pointer offset value))
+
+(define-inline (ffi-pointer-set-c-unsigned-long! pointer offset value)
+  (foreign-call "ikrt_set_ulong" pointer offset value))
+
+(define-inline (ffi-pointer-set-c-unsigned-long-long! pointer offset value)
+  (foreign-call "ikrt_set_ulonglong" pointer offset value))
 
 
 ;;;; error handling

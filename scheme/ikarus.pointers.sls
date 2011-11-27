@@ -118,6 +118,8 @@
   (assertion-violation who
     "expected exact integer representing pointer difference as argument" obj))
 
+;;; --------------------------------------------------------------------
+
 (define-argument-validation (uint8 who obj)
   (words.word-u8? obj)
   (assertion-violation who
@@ -157,6 +159,58 @@
   (words.word-s64? obj)
   (assertion-violation who
     "expected exact integer representing an 64-bit unsigned integer as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (signed-char who obj)
+  (words.signed-char? obj)
+  (assertion-violation who
+    "expected exact integer representing a C language \"signed char\" as argument" obj))
+
+(define-argument-validation (unsigned-char who obj)
+  (words.unsigned-char? obj)
+  (assertion-violation who
+    "expected exact integer representing a C language \"unsigned char\" as argument" obj))
+
+(define-argument-validation (signed-short who obj)
+  (words.signed-short? obj)
+  (assertion-violation who
+    "expected exact integer representing a C language \"signed short\" as argument" obj))
+
+(define-argument-validation (unsigned-short who obj)
+  (words.unsigned-short? obj)
+  (assertion-violation who
+    "expected exact integer representing a C language \"unsigned short\" as argument" obj))
+
+(define-argument-validation (signed-int who obj)
+  (words.signed-int? obj)
+  (assertion-violation who
+    "expected exact integer representing a C language \"signed int\" as argument" obj))
+
+(define-argument-validation (unsigned-int who obj)
+  (words.unsigned-int? obj)
+  (assertion-violation who
+    "expected exact integer representing a C language \"unsigned int\" as argument" obj))
+
+(define-argument-validation (signed-long who obj)
+  (words.signed-long? obj)
+  (assertion-violation who
+    "expected exact integer representing a C language \"signed long\" as argument" obj))
+
+(define-argument-validation (unsigned-long who obj)
+  (words.unsigned-long? obj)
+  (assertion-violation who
+    "expected exact integer representing a C language \"unsigned long\" as argument" obj))
+
+(define-argument-validation (signed-long-long who obj)
+  (words.signed-long-long? obj)
+  (assertion-violation who
+    "expected exact integer representing a C language \"signed long long\" as argument" obj))
+
+(define-argument-validation (unsigned-long-long who obj)
+  (words.unsigned-long-long? obj)
+  (assertion-violation who
+    "expected exact integer representing a C language \"unsigned long long\" as argument" obj))
 
 
 ;;; shared libraries interface
@@ -264,7 +318,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(let-syntax ((define-pointer-accessor (syntax-rules ()
+(let-syntax ((define-accessor (syntax-rules ()
 					((_ ?who ?accessor)
 					 (define (?who pointer offset)
 					   (define who '?who)
@@ -272,18 +326,33 @@
 					       ((pointer  pointer)
 						(ptrdiff  offset))
 					     (?accessor pointer offset)))))))
-  (define-pointer-accessor pointer-c-ref-uint8	capi.ffi-pointer-c-ref-uint8)
-  (define-pointer-accessor pointer-c-ref-sint8	capi.ffi-pointer-c-ref-sint8)
-  (define-pointer-accessor pointer-c-ref-uint16	capi.ffi-pointer-c-ref-uint16)
-  (define-pointer-accessor pointer-c-ref-sint16	capi.ffi-pointer-c-ref-sint16)
-  (define-pointer-accessor pointer-c-ref-uint32	capi.ffi-pointer-c-ref-uint32)
-  (define-pointer-accessor pointer-c-ref-sint32	capi.ffi-pointer-c-ref-sint32)
-  (define-pointer-accessor pointer-c-ref-uint64	capi.ffi-pointer-c-ref-uint64)
-  (define-pointer-accessor pointer-c-ref-sint64	capi.ffi-pointer-c-ref-sint64))
+  (define-accessor pointer-c-ref-uint8		capi.ffi-pointer-c-ref-uint8)
+  (define-accessor pointer-c-ref-sint8		capi.ffi-pointer-c-ref-sint8)
+  (define-accessor pointer-c-ref-uint16		capi.ffi-pointer-c-ref-uint16)
+  (define-accessor pointer-c-ref-sint16		capi.ffi-pointer-c-ref-sint16)
+  (define-accessor pointer-c-ref-uint32		capi.ffi-pointer-c-ref-uint32)
+  (define-accessor pointer-c-ref-sint32		capi.ffi-pointer-c-ref-sint32)
+  (define-accessor pointer-c-ref-uint64		capi.ffi-pointer-c-ref-uint64)
+  (define-accessor pointer-c-ref-sint64		capi.ffi-pointer-c-ref-sint64)
+
+  (define-accessor pointer-ref-c-float		capi.ffi-pointer-ref-c-float)
+  (define-accessor pointer-ref-c-double		capi.ffi-pointer-ref-c-double)
+  (define-accessor pointer-ref-c-pointer	capi.ffi-pointer-ref-c-pointer)
+
+  (define-accessor pointer-ref-c-signed-char	capi.ffi-pointer-ref-c-signed-char)
+  (define-accessor pointer-ref-c-signed-short	capi.ffi-pointer-ref-c-signed-short)
+  (define-accessor pointer-ref-c-signed-int	capi.ffi-pointer-ref-c-signed-int)
+  (define-accessor pointer-ref-c-signed-long	capi.ffi-pointer-ref-c-signed-long)
+  (define-accessor pointer-ref-c-signed-long-long capi.ffi-pointer-ref-c-signed-long-long)
+  (define-accessor pointer-ref-c-unsigned-char	capi.ffi-pointer-ref-c-unsigned-char)
+  (define-accessor pointer-ref-c-unsigned-short	capi.ffi-pointer-ref-c-unsigned-short)
+  (define-accessor pointer-ref-c-unsigned-int	capi.ffi-pointer-ref-c-unsigned-int)
+  (define-accessor pointer-ref-c-unsigned-long	capi.ffi-pointer-ref-c-unsigned-long)
+  (define-accessor pointer-ref-c-unsigned-long-long capi.ffi-pointer-ref-c-unsigned-long-long))
 
 ;;; --------------------------------------------------------------------
 
-(let-syntax ((define-pointer-mutator (syntax-rules ()
+(let-syntax ((define-mutator (syntax-rules ()
 				       ((_ ?who ?mutator ?word-type)
 					(define (?who pointer offset value)
 					  (define who '?who)
@@ -292,14 +361,32 @@
 					       (ptrdiff     offset)
 					       (?word-type  value))
 					    (?mutator pointer offset value)))))))
-  (define-pointer-mutator pointer-c-set-uint8!	capi.ffi-pointer-c-set-uint8!  uint8)
-  (define-pointer-mutator pointer-c-set-sint8!	capi.ffi-pointer-c-set-sint8!  sint8)
-  (define-pointer-mutator pointer-c-set-uint16!	capi.ffi-pointer-c-set-uint16! uint16)
-  (define-pointer-mutator pointer-c-set-sint16!	capi.ffi-pointer-c-set-sint16! sint16)
-  (define-pointer-mutator pointer-c-set-uint32!	capi.ffi-pointer-c-set-uint32! uint32)
-  (define-pointer-mutator pointer-c-set-sint32!	capi.ffi-pointer-c-set-sint32! sint32)
-  (define-pointer-mutator pointer-c-set-uint64!	capi.ffi-pointer-c-set-uint64! uint64)
-  (define-pointer-mutator pointer-c-set-sint64!	capi.ffi-pointer-c-set-sint64! sint64))
+  (define-mutator pointer-c-set-uint8!		capi.ffi-pointer-c-set-uint8!	uint8)
+  (define-mutator pointer-c-set-sint8!		capi.ffi-pointer-c-set-sint8!	sint8)
+  (define-mutator pointer-c-set-uint16!		capi.ffi-pointer-c-set-uint16!	uint16)
+  (define-mutator pointer-c-set-sint16!		capi.ffi-pointer-c-set-sint16!	sint16)
+  (define-mutator pointer-c-set-uint32!		capi.ffi-pointer-c-set-uint32!	uint32)
+  (define-mutator pointer-c-set-sint32!		capi.ffi-pointer-c-set-sint32!	sint32)
+  (define-mutator pointer-c-set-uint64!		capi.ffi-pointer-c-set-uint64!	uint64)
+  (define-mutator pointer-c-set-sint64!		capi.ffi-pointer-c-set-sint64!	sint64)
+
+  (define-mutator pointer-set-c-float!		capi.ffi-pointer-set-c-float!	flonum)
+  (define-mutator pointer-set-c-double!		capi.ffi-pointer-set-c-double!	flonum)
+  (define-mutator pointer-set-c-pointer!	capi.ffi-pointer-set-c-pointer!	pointer)
+
+  (define-mutator pointer-set-c-signed-char!	capi.ffi-pointer-set-c-signed-char!	signed-char)
+  (define-mutator pointer-set-c-signed-short!	capi.ffi-pointer-set-c-signed-short!	signed-short)
+  (define-mutator pointer-set-c-signed-int!	capi.ffi-pointer-set-c-signed-int!	signed-int)
+  (define-mutator pointer-set-c-signed-long!	capi.ffi-pointer-set-c-signed-long!	signed-long)
+  (define-mutator pointer-set-c-signed-long-long!
+    capi.ffi-pointer-set-c-signed-long-long! signed-long-long)
+
+  (define-mutator pointer-set-c-unsigned-char!	capi.ffi-pointer-set-c-unsigned-char!	unsigned-char)
+  (define-mutator pointer-set-c-unsigned-short!	capi.ffi-pointer-set-c-unsigned-short!	unsigned-short)
+  (define-mutator pointer-set-c-unsigned-int!	capi.ffi-pointer-set-c-unsigned-int!	unsigned-int)
+  (define-mutator pointer-set-c-unsigned-long!	capi.ffi-pointer-set-c-unsigned-long!	unsigned-long)
+  (define-mutator pointer-set-c-unsigned-long-long!
+    capi.ffi-pointer-set-c-unsigned-long-long! unsigned-long-long))
 
 
 ;;; explicit memory management
@@ -339,61 +426,10 @@
 	      dst dst))))
 
 
-;;; getters and setters
-
-(define-syntax define-getter
-  (syntax-rules ()
-    ((_ name foreign-name)
-     (define name
-       (lambda (p i)
-	 (if (pointer? p)
-	     (if (fixnum? i)
-		 (foreign-call foreign-name p i)
-	       (die 'name "index is not a fixnum" i))
-	   (die 'name "not a pointer" p)))))))
-
-(define-syntax define-setter
-  (syntax-rules ()
-    ((_ name pred? foreign-name)
-     (define name
-       (lambda (p i v)
-	 (if (pointer? p)
-	     (if (fixnum? i)
-		 (if (pred? v)
-		     (foreign-call foreign-name p i v)
-		   (die 'name
-			(format "value must satisfy the predicate ~a" 'pred?)
-			v))
-	       (die 'name "index is not a fixnum" i))
-	   (die 'name "not a pointer" p)))))))
-
-(define (int? x) (or (fixnum? x) (bignum? x)))
-
-(define-getter pointer-ref-c-signed-char        "ikrt_ref_char")
-(define-getter pointer-ref-c-signed-short       "ikrt_ref_short")
-(define-getter pointer-ref-c-signed-int         "ikrt_ref_int")
-(define-getter pointer-ref-c-signed-long        "ikrt_ref_long")
-(define-getter pointer-ref-c-signed-long-long   "ikrt_ref_longlong")
-(define-getter pointer-ref-c-unsigned-char      "ikrt_ref_uchar")
-(define-getter pointer-ref-c-unsigned-short     "ikrt_ref_ushort")
-(define-getter pointer-ref-c-unsigned-int       "ikrt_ref_uint")
-(define-getter pointer-ref-c-unsigned-long      "ikrt_ref_ulong")
-(define-getter pointer-ref-c-unsigned-long-long "ikrt_ref_ulonglong")
-(define-getter pointer-ref-c-float              "ikrt_ref_float")
-(define-getter pointer-ref-c-double             "ikrt_ref_double")
-(define-getter pointer-ref-c-pointer            "ikrt_ref_pointer")
-
-(define-setter pointer-set-c-char!      int?     "ikrt_set_char")
-(define-setter pointer-set-c-short!     int?     "ikrt_set_short")
-(define-setter pointer-set-c-int!       int?     "ikrt_set_int")
-(define-setter pointer-set-c-long!      int?     "ikrt_set_long")
-(define-setter pointer-set-c-long-long! int?     "ikrt_set_longlong")
-(define-setter pointer-set-c-float!     flonum?  "ikrt_set_float")
-(define-setter pointer-set-c-double!    flonum?  "ikrt_set_double")
-(define-setter pointer-set-c-pointer!   pointer? "ikrt_set_pointer")
-
-
 ;;; libffi interface
+
+(define (int? x)
+  (or (fixnum? x) (bignum? x)))
 
 (define (checker who)
   (define (checker t)

@@ -3,6 +3,7 @@
 libvicaredir		= $(pkglibdir)/vicare
 
 EXTRA_DIST		= vicare/platform-constants.sls.in	\
+			  vicare/words.sls.in			\
 			  vicare/installation-configuration.sls.in
 
 dist_libvicare_DATA	= vicare/foreign.sls			\

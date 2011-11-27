@@ -28,6 +28,9 @@
 (library (vicare platform-constants)
   (export
 
+    SIZEOF_CHAR		SIZEOF_SHORT
+    SIZEOF_INT		SIZEOF_LONG
+    SIZEOF_LONG_LONG
     SIZEOF_SIZE_T	SIZEOF_SSIZE_T
     SIZE_T_MAX
     SSIZE_T_MAX		SSIZE_T_MIN
@@ -366,6 +369,11 @@
 
 ;;;; miscellaneous platform constants
 
+(define-inline-constant SIZEOF_CHAR		@SIZEOF_CHAR@)
+(define-inline-constant SIZEOF_SHORT		@SIZEOF_SHORT@)
+(define-inline-constant SIZEOF_INT		@SIZEOF_INT@)
+(define-inline-constant SIZEOF_LONG		@SIZEOF_LONG@)
+(define-inline-constant SIZEOF_LONG_LONG	@SIZEOF_LONG_LONG@)
 (define-inline-constant SIZEOF_SIZE_T		@SIZEOF_SIZE_T@)
 (define-inline-constant SIZEOF_SSIZE_T		@SIZEOF_SSIZE_T@)
 
