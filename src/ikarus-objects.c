@@ -286,4 +286,51 @@ ik_integer_to_long_long (ikptr x)
   }
 }
 
+/* ------------------------------------------------------------------ */
+
+uint32_t
+ik_integer_to_uint32 (ikptr x)
+{
+  if (is_fixnum(x)) {
+    long        X = unfix(x);
+    return ((0 <= X) && (X <= UINT32_MAX))? ((uint32_t)X) : false_object;
+  } else {
+    uint32_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
+    return (bnfst_negative(ref(x, -vector_tag)))? -(*memory) : (*memory);
+  }
+}
+int32_t
+ik_integer_to_sint32 (ikptr x)
+{
+  if (is_fixnum(x)) {
+    long        X = unfix(x);
+    return ((INT32_MIN <= X) && (X <= INT32_MAX))? ((int32_t)X) : false_object;
+  } else {
+    int32_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
+    return (bnfst_negative(ref(x, -vector_tag)))? -(*memory) : (*memory);
+  }
+}
+uint64_t
+ik_integer_to_uint64 (ikptr x)
+{
+  if (is_fixnum(x)) {
+    long        X = unfix(x);
+    return ((0 <= X) && (X <= UINT64_MAX))? ((uint64_t)X) : false_object;
+  } else {
+    uint64_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
+    return (bnfst_negative(ref(x, -vector_tag)))? -(*memory) : (*memory);
+  }
+}
+int64_t
+ik_integer_to_sint64 (ikptr x)
+{
+  if (is_fixnum(x)) {
+    long        X = unfix(x);
+    return ((INT64_MIN <= X) && (X <= INT64_MAX))? ((int64_t)X) : false_object;
+  } else {
+    int64_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
+    return (bnfst_negative(ref(x, -vector_tag)))? -(*memory) : (*memory);
+  }
+}
+
 /* end of file */

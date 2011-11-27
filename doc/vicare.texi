@@ -10222,11 +10222,134 @@ available; when on other systems: calling such functions will terminate
 the process.
 
 @menu
+* capi ffi::                    C language level @ffi{}.
 * capi posix::                  C language level @posix{} interface.
 * capi linux::                  C language level @gnu{}+Linux interface.
 * capi glibc::                  C language level @gnu{} C Library
                                 interface.
 @end menu
+
+@c page
+@node capi ffi
+@section C language level @ffi{}
+
+
+@menu
+* capi ffi accessors::          Raw memory accessors.
+* capi ffi mutators::           Raw memory mutators.
+@end menu
+
+@c page
+@node capi ffi accessors
+@subsection Raw memory accessors
+
+
+In all the following definitions: @var{pointer} must be a pointer
+object, @var{offset} must be an exact integer.
+
+
+@deftypefun ikptr ikrt_ref_uint8 (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the 8-bit unsigned integer at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_sint8 (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the 8-bit signed integer at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_uint16 (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the 16-bit unsigned integer at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_sint16 (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the 16-bit signed integer at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_uint32 (ikptr @var{pointer}, ikptr @var{offset}, ikpcb * @var{pcb})
+Extract and return the 32-bit unsigned integer at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_sint32 (ikptr @var{pointer}, ikptr @var{offset}, ikpcb * @var{pcb})
+Extract and return the 32-bit signed integer at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_uint64 (ikptr @var{pointer}, ikptr @var{offset}, ikpcb * @var{pcb})
+Extract and return the 64-bit unsigned integer at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_sint64 (ikptr @var{pointer}, ikptr @var{offset}, ikpcb * @var{pcb})
+Extract and return the 64-bit signed integer at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+@c page
+@node capi ffi mutators
+@subsection Raw memory mutators
+
+
+In all the following definitions: @var{pointer} must be a pointer
+object, @var{offset} and @var{value} must be an exact integers.
+
+
+@deftypefun ikptr ikrt_set_uint8 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the the 8-bit unsigned integer @var{value} at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_sint8 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the the 8-bit signed integer @var{value} at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_uint16 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the the 16-bit unsigned integer @var{value} at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_sint16 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the the 16-bit signed integer @var{value} at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_uint32 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the the 32-bit unsigned integer @var{value} at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_sint32 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the the 32-bit signed integer @var{value} at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_uint64 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the the 64-bit unsigned integer @var{value} at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_sint64 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the the 64-bit signed integer @var{value} at @var{offset} from
+@var{pointer}.
+@end deftypefun
 
 @c page
 @node capi posix

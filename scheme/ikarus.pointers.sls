@@ -41,6 +41,16 @@
     errno
 
     ;; memory accessors and mutators
+    pointer-c-ref-uint8			pointer-c-ref-sint8
+    pointer-c-ref-uint16		pointer-c-ref-sint16
+    pointer-c-ref-uint32		pointer-c-ref-sint32
+    pointer-c-ref-uint64		pointer-c-ref-sint64
+
+    pointer-c-set-uint8!		pointer-c-set-sint8!
+    pointer-c-set-uint16!		pointer-c-set-sint16!
+    pointer-c-set-uint32!		pointer-c-set-sint32!
+    pointer-c-set-uint64!		pointer-c-set-sint64!
+
     pointer-ref-c-signed-char
     pointer-ref-c-signed-short
     pointer-ref-c-signed-int
@@ -107,6 +117,46 @@
   (words.ptrdiff? obj)
   (assertion-violation who
     "expected exact integer representing pointer difference as argument" obj))
+
+(define-argument-validation (uint8 who obj)
+  (words.word-u8? obj)
+  (assertion-violation who
+    "expected exact integer representing an 8-bit signed integer as argument" obj))
+
+(define-argument-validation (sint8 who obj)
+  (words.word-s8? obj)
+  (assertion-violation who
+    "expected exact integer representing an 8-bit unsigned integer as argument" obj))
+
+(define-argument-validation (uint16 who obj)
+  (words.word-u16? obj)
+  (assertion-violation who
+    "expected exact integer representing an 16-bit signed integer as argument" obj))
+
+(define-argument-validation (sint16 who obj)
+  (words.word-s16? obj)
+  (assertion-violation who
+    "expected exact integer representing an 16-bit unsigned integer as argument" obj))
+
+(define-argument-validation (uint32 who obj)
+  (words.word-u32? obj)
+  (assertion-violation who
+    "expected exact integer representing an 32-bit signed integer as argument" obj))
+
+(define-argument-validation (sint32 who obj)
+  (words.word-s32? obj)
+  (assertion-violation who
+    "expected exact integer representing an 32-bit unsigned integer as argument" obj))
+
+(define-argument-validation (uint64 who obj)
+  (words.word-u64? obj)
+  (assertion-violation who
+    "expected exact integer representing an 64-bit signed integer as argument" obj))
+
+(define-argument-validation (sint64 who obj)
+  (words.word-s64? obj)
+  (assertion-violation who
+    "expected exact integer representing an 64-bit unsigned integer as argument" obj))
 
 
 ;;; shared libraries interface
@@ -211,6 +261,45 @@
   (define-pointer-comparison pointer>?		capi.ffi-pointer-gt)
   (define-pointer-comparison pointer<=?		capi.ffi-pointer-le)
   (define-pointer-comparison pointer>=?		capi.ffi-pointer-ge))
+
+;;; --------------------------------------------------------------------
+
+(let-syntax ((define-pointer-accessor (syntax-rules ()
+					((_ ?who ?accessor)
+					 (define (?who pointer offset)
+					   (define who '?who)
+					   (with-arguments-validation (who)
+					       ((pointer  pointer)
+						(ptrdiff  offset))
+					     (?accessor pointer offset)))))))
+  (define-pointer-accessor pointer-c-ref-uint8	capi.ffi-pointer-c-ref-uint8)
+  (define-pointer-accessor pointer-c-ref-sint8	capi.ffi-pointer-c-ref-sint8)
+  (define-pointer-accessor pointer-c-ref-uint16	capi.ffi-pointer-c-ref-uint16)
+  (define-pointer-accessor pointer-c-ref-sint16	capi.ffi-pointer-c-ref-sint16)
+  (define-pointer-accessor pointer-c-ref-uint32	capi.ffi-pointer-c-ref-uint32)
+  (define-pointer-accessor pointer-c-ref-sint32	capi.ffi-pointer-c-ref-sint32)
+  (define-pointer-accessor pointer-c-ref-uint64	capi.ffi-pointer-c-ref-uint64)
+  (define-pointer-accessor pointer-c-ref-sint64	capi.ffi-pointer-c-ref-sint64))
+
+;;; --------------------------------------------------------------------
+
+(let-syntax ((define-pointer-mutator (syntax-rules ()
+				       ((_ ?who ?mutator ?word-type)
+					(define (?who pointer offset value)
+					  (define who '?who)
+					  (with-arguments-validation (who)
+					      ((pointer     pointer)
+					       (ptrdiff     offset)
+					       (?word-type  value))
+					    (?mutator pointer offset value)))))))
+  (define-pointer-mutator pointer-c-set-uint8!	capi.ffi-pointer-c-set-uint8!  uint8)
+  (define-pointer-mutator pointer-c-set-sint8!	capi.ffi-pointer-c-set-sint8!  sint8)
+  (define-pointer-mutator pointer-c-set-uint16!	capi.ffi-pointer-c-set-uint16! uint16)
+  (define-pointer-mutator pointer-c-set-sint16!	capi.ffi-pointer-c-set-sint16! sint16)
+  (define-pointer-mutator pointer-c-set-uint32!	capi.ffi-pointer-c-set-uint32! uint32)
+  (define-pointer-mutator pointer-c-set-sint32!	capi.ffi-pointer-c-set-sint32! sint32)
+  (define-pointer-mutator pointer-c-set-uint64!	capi.ffi-pointer-c-set-uint64! uint64)
+  (define-pointer-mutator pointer-c-set-sint64!	capi.ffi-pointer-c-set-sint64! sint64))
 
 
 ;;; explicit memory management

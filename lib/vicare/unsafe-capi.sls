@@ -43,6 +43,16 @@
     ffi-pointer-lt			ffi-pointer-gt
     ffi-pointer-le			ffi-pointer-ge
 
+    ffi-pointer-c-ref-uint8		ffi-pointer-c-ref-sint8
+    ffi-pointer-c-ref-uint16		ffi-pointer-c-ref-sint16
+    ffi-pointer-c-ref-uint32		ffi-pointer-c-ref-sint32
+    ffi-pointer-c-ref-uint64		ffi-pointer-c-ref-sint64
+
+    ffi-pointer-c-set-uint8!		ffi-pointer-c-set-sint8!
+    ffi-pointer-c-set-uint16!		ffi-pointer-c-set-sint16!
+    ffi-pointer-c-set-uint32!		ffi-pointer-c-set-sint32!
+    ffi-pointer-c-set-uint64!		ffi-pointer-c-set-sint64!
+
     ;; error handling
     posix-strerror
 
@@ -257,6 +267,60 @@
 
 (define-inline (ffi-pointer-ge ptr1 ptr2)
   (foreign-call "ikrt_pointer_ge" ptr1 ptr2))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (ffi-pointer-c-ref-uint8 pointer offset)
+  (foreign-call "ikrt_ref_uint8" pointer offset))
+
+(define-inline (ffi-pointer-c-ref-sint8 pointer offset)
+  (foreign-call "ikrt_ref_sint8" pointer offset))
+
+(define-inline (ffi-pointer-c-ref-uint16 pointer offset)
+  (foreign-call "ikrt_ref_uint16" pointer offset))
+
+(define-inline (ffi-pointer-c-ref-sint16 pointer offset)
+  (foreign-call "ikrt_ref_sint16" pointer offset))
+
+(define-inline (ffi-pointer-c-ref-uint32 pointer offset)
+  (foreign-call "ikrt_ref_uint32" pointer offset))
+
+(define-inline (ffi-pointer-c-ref-sint32 pointer offset)
+  (foreign-call "ikrt_ref_sint32" pointer offset))
+
+(define-inline (ffi-pointer-c-ref-uint64 pointer offset)
+  (foreign-call "ikrt_ref_uint64" pointer offset))
+
+(define-inline (ffi-pointer-c-ref-sint64 pointer offset)
+  (foreign-call "ikrt_ref_sint64" pointer offset))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (ffi-pointer-c-set-uint8! pointer offset value)
+  (foreign-call "ikrt_ref_uint8" pointer offset value))
+
+(define-inline (ffi-pointer-c-set-sint8! pointer offset value)
+  (foreign-call "ikrt_ref_sint8" pointer offset value))
+
+(define-inline (ffi-pointer-c-set-uint16! pointer offset value)
+  (foreign-call "ikrt_ref_uint16" pointer offset value))
+
+(define-inline (ffi-pointer-c-set-sint16! pointer offset value)
+  (foreign-call "ikrt_ref_sint16" pointer offset value))
+
+(define-inline (ffi-pointer-c-set-uint32! pointer offset value)
+  (foreign-call "ikrt_ref_uint32" pointer offset value))
+
+(define-inline (ffi-pointer-c-set-sint32! pointer offset value)
+  (foreign-call "ikrt_ref_sint32" pointer offset value))
+
+(define-inline (ffi-pointer-c-set-uint64! pointer offset value)
+  (foreign-call "ikrt_ref_uint64" pointer offset value))
+
+(define-inline (ffi-pointer-c-set-sint64! pointer offset value)
+  (foreign-call "ikrt_ref_sint64" pointer offset value))
+
+;;; --------------------------------------------------------------------
 
 
 ;;;; error handling

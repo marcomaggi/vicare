@@ -490,6 +490,12 @@ ikptr   ik_integer_from_unsigned_long      (unsigned long, ikpcb*);
 ikptr   ik_integer_from_unsigned_long_long (unsigned long long, ikpcb*);
 ikptr   ik_flonum_from_double              (double x, ikpcb* pcb);
 
+uint32_t  ik_integer_to_uint32 (ikptr x);
+int32_t   ik_integer_to_sint32 (ikptr x);
+uint64_t  ik_integer_to_uint64 (ikptr x);
+int64_t   ik_integer_to_sint64 (ikptr x);
+
+
 long            ik_integer_to_long          (ikptr x);
 unsigned long   ik_integer_to_unsigned_long (ikptr x);
 long long       ik_integer_to_long_long     (ikptr x);
