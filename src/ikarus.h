@@ -496,9 +496,10 @@ uint64_t  ik_integer_to_uint64 (ikptr x);
 int64_t   ik_integer_to_sint64 (ikptr x);
 
 
-long            ik_integer_to_long          (ikptr x);
-unsigned long   ik_integer_to_unsigned_long (ikptr x);
-long long       ik_integer_to_long_long     (ikptr x);
+long                ik_integer_to_long                  (ikptr x);
+unsigned long       ik_integer_to_unsigned_long         (ikptr x);
+long long           ik_integer_to_long_long             (ikptr x);
+unsigned long long  ik_integer_to_unsigned_long_long    (ikptr x);
 
 ikptr   normalize_bignum        (long limbs, int sign, ikptr r);
 

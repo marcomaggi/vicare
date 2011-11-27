@@ -2075,6 +2075,9 @@
     (dlclose					$for)
     (dlsym					$for)
 ;;;
+    (make-c-callout				$for)
+    (make-c-callback				$for)
+;;;
     (malloc					$for)
     (free					$for)
     (memcpy					$for)
@@ -2088,15 +2091,6 @@
     (pointer-c-ref-uint64			$for)
     (pointer-c-ref-sint64			$for)
 ;;;
-    (pointer-c-set-uint8!			$for)
-    (pointer-c-set-sint8!			$for)
-    (pointer-c-set-uint16!			$for)
-    (pointer-c-set-sint16!			$for)
-    (pointer-c-set-uint32!			$for)
-    (pointer-c-set-sint32!			$for)
-    (pointer-c-set-uint64!			$for)
-    (pointer-c-set-sint64!			$for)
-;;;
     (pointer-ref-c-signed-char			$for)
     (pointer-ref-c-signed-short			$for)
     (pointer-ref-c-signed-int			$for)
@@ -2107,19 +2101,34 @@
     (pointer-ref-c-unsigned-int			$for)
     (pointer-ref-c-unsigned-long		$for)
     (pointer-ref-c-unsigned-long-long		$for)
+;;;
     (pointer-ref-c-float			$for)
     (pointer-ref-c-double			$for)
     (pointer-ref-c-pointer			$for)
-    (pointer-set-c-char!			$for)
-    (pointer-set-c-short!			$for)
-    (pointer-set-c-int!				$for)
-    (pointer-set-c-long!			$for)
-    (pointer-set-c-long-long!			$for)
-    (pointer-set-c-pointer!			$for)
+;;;
+    (pointer-c-set-uint8!			$for)
+    (pointer-c-set-sint8!			$for)
+    (pointer-c-set-uint16!			$for)
+    (pointer-c-set-sint16!			$for)
+    (pointer-c-set-uint32!			$for)
+    (pointer-c-set-sint32!			$for)
+    (pointer-c-set-uint64!			$for)
+    (pointer-c-set-sint64!			$for)
+;;;
+    (pointer-set-c-signed-char!			$for)
+    (pointer-set-c-signed-short!		$for)
+    (pointer-set-c-signed-int!			$for)
+    (pointer-set-c-signed-long!			$for)
+    (pointer-set-c-signed-long-long!		$for)
+    (pointer-set-c-unsigned-char!		$for)
+    (pointer-set-c-unsigned-short!		$for)
+    (pointer-set-c-unsigned-int!		$for)
+    (pointer-set-c-unsigned-long!		$for)
+    (pointer-set-c-unsigned-long-long!		$for)
+;;;
     (pointer-set-c-float!			$for)
     (pointer-set-c-double!			$for)
-    (make-c-callout				$for)
-    (make-c-callback				$for)
+    (pointer-set-c-pointer!			$for)
 
 ;;; --------------------------------------------------------------------
 ;;;

@@ -83,6 +83,36 @@
 	  case-word-size))
 
 
+;;;; helpers
+
+(define-syntax case-data-size
+  (syntax-rules ()
+    ((case-data-size 1
+       ((1)	. ?body-1)
+       ((2)	. ?body-2)
+       ((4)	. ?body-4)
+       ((8)	. ?body-8))
+     (begin . ?body-1))
+    ((case-data-size 2
+       ((1)	. ?body-1)
+       ((2)	. ?body-2)
+       ((4)	. ?body-4)
+       ((8)	. ?body-8))
+     (begin . ?body-2))
+    ((case-data-size 4
+       ((1)	. ?body-1)
+       ((2)	. ?body-2)
+       ((4)	. ?body-4)
+       ((8)	. ?body-8))
+     (begin . ?body-4))
+    ((case-data-size 8
+       ((1)	. ?body-1)
+       ((2)	. ?body-2)
+       ((4)	. ?body-4)
+       ((8)	. ?body-8))
+     (begin . ?body-8))))
+
+
 ;;;; constants
 
 (define-inline-constant U8MAX		255)
@@ -302,28 +332,28 @@
 				 ((_ ?who ?data-size #t)
 				  (define-inline (?who N)
 				    (case-data-size ?data-size
-				      ((8)	(word-u8?  N))
-				      ((16)	(word-u16? N))
-				      ((32)	(word-u32? N))
-				      ((64)	(word-u64? N)))))
+				      ((1)	(word-u8?  N))
+				      ((2)	(word-u16? N))
+				      ((4)	(word-u32? N))
+				      ((8)	(word-u64? N)))))
 				 ((_ ?who ?data-size #f)
 				  (define-inline (?who N)
 				    (case-data-size ?data-size
-				      ((8)	(word-s8?  N))
-				      ((16)	(word-s16? N))
-				      ((32)	(word-s32? N))
-				      ((64)	(word-s64? N))))))))
+				      ((1)	(word-s8?  N))
+				      ((2)	(word-s16? N))
+				      ((4)	(word-s32? N))
+				      ((8)	(word-s64? N))))))))
 
-  (define-predicate unsigned-char?		SIZEOF_CHAR)
-  (define-predicate unsigned-short?		SIZEOF_SHORT_INT)
-  (define-predicate unsigned-int?		SIZEOF_INT)
-  (define-predicate unsigned-long?		SIZEOF_LONG)
-  (define-predicate unsigned-long-long?		SIZEOF_LONG_LONG)
-  (define-predicate signed-char?		SIZEOF_CHAR)
-  (define-predicate signed-short?		SIZEOF_SHORT)
-  (define-predicate signed-int?			SIZEOF_INT)
-  (define-predicate signed-long?		SIZEOF_LONG)
-  (define-predicate signed-long-long?		SIZEOF_LONG_LONG))
+  (define-predicate unsigned-char?		@SIZEOF_CHAR@		#t)
+  (define-predicate unsigned-short?		@SIZEOF_SHORT@		#t)
+  (define-predicate unsigned-int?		@SIZEOF_INT@		#t)
+  (define-predicate unsigned-long?		@SIZEOF_LONG@		#t)
+  (define-predicate unsigned-long-long?		@SIZEOF_LONG_LONG@	#t)
+  (define-predicate signed-char?		@SIZEOF_CHAR@		#f)
+  (define-predicate signed-short?		@SIZEOF_SHORT@		#f)
+  (define-predicate signed-int?			@SIZEOF_INT@		#f)
+  (define-predicate signed-long?		@SIZEOF_LONG@		#f)
+  (define-predicate signed-long-long?		@SIZEOF_LONG_LONG@	#f))
 
 
 ;;;; vector index alignment

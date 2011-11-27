@@ -46,32 +46,28 @@
     pointer-c-ref-uint32		pointer-c-ref-sint32
     pointer-c-ref-uint64		pointer-c-ref-sint64
 
+    pointer-ref-c-signed-char		pointer-ref-c-unsigned-char
+    pointer-ref-c-signed-short		pointer-ref-c-unsigned-short
+    pointer-ref-c-signed-int		pointer-ref-c-unsigned-int
+    pointer-ref-c-signed-long		pointer-ref-c-unsigned-long
+    pointer-ref-c-signed-long-long	pointer-ref-c-unsigned-long-long
+
+    pointer-ref-c-float			pointer-ref-c-double
+    pointer-ref-c-pointer
+
     pointer-c-set-uint8!		pointer-c-set-sint8!
     pointer-c-set-uint16!		pointer-c-set-sint16!
     pointer-c-set-uint32!		pointer-c-set-sint32!
     pointer-c-set-uint64!		pointer-c-set-sint64!
 
-    pointer-ref-c-signed-char
-    pointer-ref-c-signed-short
-    pointer-ref-c-signed-int
-    pointer-ref-c-signed-long
-    pointer-ref-c-signed-long-long
-    pointer-ref-c-unsigned-char
-    pointer-ref-c-unsigned-short
-    pointer-ref-c-unsigned-int
-    pointer-ref-c-unsigned-long
-    pointer-ref-c-unsigned-long-long
-    pointer-ref-c-float
-    pointer-ref-c-double
-    pointer-ref-c-pointer
-    pointer-set-c-char!
-    pointer-set-c-short!
-    pointer-set-c-int!
-    pointer-set-c-long!
-    pointer-set-c-long-long!
-    pointer-set-c-pointer!
-    pointer-set-c-float!
-    pointer-set-c-double!)
+    pointer-set-c-signed-char!		pointer-set-c-unsigned-char!
+    pointer-set-c-signed-short!		pointer-set-c-unsigned-short!
+    pointer-set-c-signed-int!		pointer-set-c-unsigned-int!
+    pointer-set-c-signed-long!		pointer-set-c-unsigned-long!
+    pointer-set-c-signed-long-long!	pointer-set-c-unsigned-long-long!
+
+    pointer-set-c-float!		pointer-set-c-double!
+    pointer-set-c-pointer!)
   (import (ikarus) #;(except (ikarus)
 		  pointer?
 		  integer->pointer pointer->integer
@@ -91,6 +87,14 @@
   (string? obj)
   (assertion-violation who "expected string as argument" obj))
 
+(define-argument-validation (flonum who obj)
+  (flonum? obj)
+  (assertion-violation who "expected flonum as argument" obj))
+
+(define-argument-validation (pointer who obj)
+  (pointer? obj)
+  (assertion-violation who "expected pointer as argument" obj))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (non-negative-exact-integer who obj)
@@ -103,10 +107,6 @@
 (define-argument-validation (errno who obj)
   (or (boolean? obj) (and (fixnum? obj) (<= obj 0)))
   (assertion-violation who "expected boolean or negative fixnum as errno argument" obj))
-
-(define-argument-validation (pointer who obj)
-  (pointer? obj)
-  (assertion-violation who "expected pointer as argument" obj))
 
 (define-argument-validation (machine-word who obj)
   (words.machine-word? obj)

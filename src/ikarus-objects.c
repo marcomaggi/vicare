@@ -285,6 +285,19 @@ ik_integer_to_long_long (ikptr x)
 
   }
 }
+unsigned long long
+ik_integer_to_unsigned_long_long (ikptr x)
+{
+  if (is_fixnum(x))
+    return (unsigned long long)unfix(x);
+  else if (x == void_object)
+    return 0;
+  else {
+    unsigned long long *  memory = (unsigned long long *)(x + off_bignum_data);
+    assert(! bnfst_negative(ref(x, -vector_tag)));
+    return *memory;
+  }
+}
 
 /* ------------------------------------------------------------------ */
 
