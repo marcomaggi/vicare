@@ -97,7 +97,6 @@ TESTS			=	\
 	test-ikarus-lists.sps				\
 	test-ikarus-normalization.sps			\
 	test-ikarus-numerics.sps			\
-	test-ikarus-pointers.sps			\
 	test-ikarus-r6rs-records-procedural.sps		\
 	test-ikarus-reader.sps				\
 	test-ikarus-set-position.sps			\
@@ -112,6 +111,7 @@ TESTS			=	\
 	test-vicare-io.sps				\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
+	test-vicare-pointers.sps			\
 	test-vicare-posix.sps				\
 	test-vicare-promises.sps			\
 	test-vicare-reader.sps				\
@@ -235,7 +235,6 @@ EXTRA_DIST =	\
 	test-ikarus-lists.sps				\
 	test-ikarus-normalization.sps			\
 	test-ikarus-numerics.sps			\
-	test-ikarus-pointers.sps			\
 	test-ikarus-r6rs-records-procedural.sps		\
 	test-ikarus-reader.sps				\
 	test-ikarus-set-position.sps			\
@@ -250,6 +249,7 @@ EXTRA_DIST =	\
 	test-vicare-io.sps				\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
+	test-vicare-pointers.sps			\
 	test-vicare-posix.sps				\
 	test-vicare-promises.sps			\
 	test-vicare-reader.sps				\
