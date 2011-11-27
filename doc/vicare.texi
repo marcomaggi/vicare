@@ -10244,6 +10244,8 @@ the process.
 @subsection Raw memory accessors
 
 
+@subsubheading Bit--sized values
+
 In all the following definitions: @var{pointer} must be a pointer
 object, @var{offset} must be an exact integer.
 
@@ -10295,60 +10297,234 @@ Extract and return the 64-bit signed integer at @var{offset} from
 @var{pointer}.
 @end deftypefun
 
+@c ------------------------------------------------------------
+
+@subsubheading C language integer type--sized values
+
+In all the following definitions: @var{pointer} must be a pointer
+object, @var{offset} must be an exact integer.
+
+
+@deftypefun ikptr ikrt_ref_char (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the exact integer representation of the C language
+@code{signed char} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_uchar (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the exact integer representation of the C language
+@code{unsigned char} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_short (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the exact integer representation of the C language
+@code{signed short int} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_ushort (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the exact integer representation of the C language
+@code{unsigned short int} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_long (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the exact integer representation of the C language
+@code{signed long} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_ulong (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the exact integer representation of the C language
+@code{unsigned long} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_longlong (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the exact integer representation of the C language
+@code{signed long long} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_ulonglong (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the exact integer representation of the C language
+@code{unsigned long long} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Other C language type--sized values
+
+In all the following definitions: @var{pointer} must be a pointer
+object, @var{offset} must be an exact integer.
+
+
+@deftypefun ikptr ikrt_ref_float (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the flonum representation of the C language
+@code{float} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_double (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the flonum representation of the C language
+@code{double} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_pointer (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the pointer representation of the C language
+@code{void *} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
 @c page
 @node capi ffi mutators
 @subsection Raw memory mutators
 
+
+@subsubheading Bit--sized values
 
 In all the following definitions: @var{pointer} must be a pointer
 object, @var{offset} and @var{value} must be an exact integers.
 
 
 @deftypefun ikptr ikrt_set_uint8 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
-Store the the 8-bit unsigned integer @var{value} at @var{offset} from
+Store the 8-bit unsigned integer @var{value} at @var{offset} from
 @var{pointer}.
 @end deftypefun
 
 
 @deftypefun ikptr ikrt_set_sint8 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
-Store the the 8-bit signed integer @var{value} at @var{offset} from
+Store the 8-bit signed integer @var{value} at @var{offset} from
 @var{pointer}.
 @end deftypefun
 
 
 @deftypefun ikptr ikrt_set_uint16 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
-Store the the 16-bit unsigned integer @var{value} at @var{offset} from
+Store the 16-bit unsigned integer @var{value} at @var{offset} from
 @var{pointer}.
 @end deftypefun
 
 
 @deftypefun ikptr ikrt_set_sint16 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
-Store the the 16-bit signed integer @var{value} at @var{offset} from
+Store the 16-bit signed integer @var{value} at @var{offset} from
 @var{pointer}.
 @end deftypefun
 
 
 @deftypefun ikptr ikrt_set_uint32 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
-Store the the 32-bit unsigned integer @var{value} at @var{offset} from
+Store the 32-bit unsigned integer @var{value} at @var{offset} from
 @var{pointer}.
 @end deftypefun
 
 
 @deftypefun ikptr ikrt_set_sint32 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
-Store the the 32-bit signed integer @var{value} at @var{offset} from
+Store the 32-bit signed integer @var{value} at @var{offset} from
 @var{pointer}.
 @end deftypefun
 
 
 @deftypefun ikptr ikrt_set_uint64 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
-Store the the 64-bit unsigned integer @var{value} at @var{offset} from
+Store the 64-bit unsigned integer @var{value} at @var{offset} from
 @var{pointer}.
 @end deftypefun
 
 
 @deftypefun ikptr ikrt_set_sint64 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
-Store the the 64-bit signed integer @var{value} at @var{offset} from
+Store the 64-bit signed integer @var{value} at @var{offset} from
 @var{pointer}.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading C language integer type--sized values
+
+In all the following definitions: @var{pointer} must be a pointer
+object, @var{offset} and @var{value} must be an exact integers.
+
+
+@deftypefun ikptr ikrt_set_char (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{signed char} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_uchar (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{unsigned char} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_short (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{signed short int} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_ushort (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{unsigned short int} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_int (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{signed int} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_uint (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{unsigned int} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_long (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{signed long} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_ulong (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{unsigned long} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_longlong (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{signed long long} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_ulonglong (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{unsigned long long} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Other C language type--sized values
+
+In all the following definitions: @var{pointer} must be a pointer
+object, @var{offset} must be an exact integer.
+
+
+@deftypefun ikptr ikrt_set_float (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the flonum @var{value} representing a C language @code{float}
+value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_double (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the flonum @var{value} representing a C language @code{double}
+value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_pointer (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the pointer @var{value} representing a C language @code{void *}
+value at @var{offset} from @var{pointer}.
 @end deftypefun
 
 @c page
