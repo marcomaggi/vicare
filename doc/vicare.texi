@@ -5099,7 +5099,7 @@ vicare>
 
 This chapter describes the facilities through which @value{PRJNAME}
 interfaces with the host operating system and other external libraries.
-The facilities of the @library{vicare foreign} library give the Scheme
+The facilities of the @library{vicare ffi} library give the Scheme
 program unrestricted access to the computer memory, allowing one to
 allocate, access, modify, and free memory as needed.  The facilities
 also allow the Scheme program to @emph{call out} to system procedures as
@@ -5222,10 +5222,10 @@ on.  Objects, as found in object--oriented programming languages, are at
 an even higher level of abstraction since they are treated as opaque
 references that retain state and know how to respond to messages.
 
-The procedures in the @library{vicare foreign} library are meant to
-provide a way to interface with the low level memory operations such as
-setting and getting bytes from specific locations in memory.  Although
-they do not provide high--level operations, the basic procedures make
+The procedures in the @library{vicare ffi} library are meant to provide
+a way to interface with the low level memory operations such as setting
+and getting bytes from specific locations in memory.  Although they do
+not provide high--level operations, the basic procedures make
 implementing high--level operations (such as the Objective--C system)
 possible.  Programmers are encouraged to define their own abstractions
 that are most suitable for the specific target library rather than using

@@ -37,6 +37,9 @@ producing  single   threaded  programs  running  on   Intel  x86  32-bit
 processors, with experimental support  for 64-bit machines.  "Vicare" is
 pronounced the etruscan way.
 
+  Vicare implements  an optionally included  foreign-functions interface
+based on Libffi.
+
   Current official maintainers are:
 
 Marco Maggi <marco.maggi-ipsu@poste.it>
@@ -211,6 +214,10 @@ this project has a mailing list:
 collection of R6 Scheme libraries:
 
 	      <http://marcomaggi.github.com/nausicaa.html>
+
+  The library Libffi can be found at:
+
+		    <http://sourceware.org/libffi/>
 
   The home page of the R6RS standard is at:
 
