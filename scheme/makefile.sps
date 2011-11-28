@@ -262,6 +262,7 @@
     (define-record-type			(macro . define-record-type))
     (define-enumeration			(macro . define-enumeration))
     (define-condition-type		(macro . define-condition-type))
+;;;
     (&condition				($core-rtd . (&condition-rtd
 						      &condition-rcd)))
     (&message				($core-rtd . (&message-rtd
@@ -2056,13 +2057,13 @@
 ;;; (ikarus system $foreign)
     (errno					$for)
     (null-pointer				$for)
-    (pointer?					$for #;$pointers)
+    (pointer?					$for)
     (pointer->integer				$for)
     (integer->pointer				$for)
     (pointer-null?				$for)
     (pointer-diff				$for)
     (pointer-add				$for)
-    ($pointer=?					$for #;$pointers)
+    ($pointer=?					$for)
     (pointer=?					$for)
     (pointer<>?					$for)
     (pointer<?					$for)

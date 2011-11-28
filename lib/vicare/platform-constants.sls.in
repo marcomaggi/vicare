@@ -332,9 +332,6 @@
     EAI_SOCKTYPE	EAI_SYSTEM
 
 ;;; errno codes
-    errno-code		case-errno
-
-    ;; codes
     E2BIG		EACCES		EADDRINUSE
     EADDRNOTAVAIL	EADV		EAFNOSUPPORT
     EAGAIN		EALREADY	EBADE
@@ -1074,147 +1071,6 @@
 (define-inline-constant EAI_SERVICE		@VALUEOF_EAI_SERVICE@)
 (define-inline-constant EAI_SOCKTYPE		@VALUEOF_EAI_SOCKTYPE@)
 (define-inline-constant EAI_SYSTEM		@VALUEOF_EAI_SYSTEM@)
-
-
-;;;; errno friendly interface
-
-(define-syntax errno-code
-  (lambda (stx)
-    (syntax-case stx ()
-      ((_ ?code)
-       (identifier? #'?code)
-       (let ((sym (syntax->datum #'?code)))
-	 (define them
-	   '(E2BIG		EACCES		EADDRINUSE
-	     EADDRNOTAVAIL	EADV		EAFNOSUPPORT
-	     EAGAIN		EALREADY	EBADE
-	     EBADF		EBADFD		EBADMSG
-	     EBADR		EBADRQC		EBADSLT
-	     EBFONT		EBUSY		ECANCELED
-	     ECHILD		ECHRNG		ECOMM
-	     ECONNABORTED	ECONNREFUSED	ECONNRESET
-	     EDEADLK		EDEADLOCK	EDESTADDRREQ
-	     EDOM		EDOTDOT		EDQUOT
-	     EEXIST		EFAULT		EFBIG
-	     EHOSTDOWN		EHOSTUNREACH	EIDRM
-	     EILSEQ		EINPROGRESS	EINTR
-	     EINVAL		EIO		EISCONN
-	     EISDIR		EISNAM		EKEYEXPIRED
-	     EKEYREJECTED	EKEYREVOKED	EL2HLT
-	     EL2NSYNC		EL3HLT		EL3RST
-	     ELIBACC		ELIBBAD		ELIBEXEC
-	     ELIBMAX		ELIBSCN		ELNRNG
-	     ELOOP		EMEDIUMTYPE	EMFILE
-	     EMLINK		EMSGSIZE	EMULTIHOP
-	     ENAMETOOLONG	ENAVAIL		ENETDOWN
-	     ENETRESET		ENETUNREACH	ENFILE
-	     ENOANO		ENOBUFS		ENOCSI
-	     ENODATA		ENODEV		ENOENT
-	     ENOEXEC		ENOKEY		ENOLCK
-	     ENOLINK		ENOMEDIUM	ENOMEM
-	     ENOMSG		ENONET		ENOPKG
-	     ENOPROTOOPT	ENOSPC		ENOSR
-	     ENOSTR		ENOSYS		ENOTBLK
-	     ENOTCONN		ENOTDIR		ENOTEMPTY
-	     ENOTNAM		ENOTRECOVERABLE	ENOTSOCK
-	     ENOTTY		ENOTUNIQ	ENXIO
-	     EOPNOTSUPP		EOVERFLOW	EOWNERDEAD
-	     EPERM		EPFNOSUPPORT	EPIPE
-	     EPROTO		EPROTONOSUPPORT	EPROTOTYPE
-	     ERANGE		EREMCHG		EREMOTE
-	     EREMOTEIO		ERESTART	EROFS
-	     ESHUTDOWN		ESOCKTNOSUPPORT	ESPIPE
-	     ESRCH		ESRMNT		ESTALE
-	     ESTRPIPE		ETIME		ETIMEDOUT
-	     ETOOMANYREFS	ETXTBSY		EUCLEAN
-	     EUNATCH		EUSERS		EWOULDBLOCK
-	     EXDEV		EXFULL))
-	 (if (memq sym them)
-	     #'?code
-	   (syntax-violation 'errno-code "invalid symbol as errno code" (syntax->datum stx) sym)))))))
-
-(define-syntax case-errno
-  (lambda (stx)
-    (define who 'case-errno)
-    (define them
-      ;;I know that it is really  ugly to duplicate this list, but it is
-      ;;also  much simpler  than  creating an  external  library for  it
-      ;;(Marco Maggi; Nov 28, 2011).
-      '( ;;
-	E2BIG		EACCES		EADDRINUSE
-	EADDRNOTAVAIL	EADV		EAFNOSUPPORT
-	EAGAIN		EALREADY	EBADE
-	EBADF		EBADFD		EBADMSG
-	EBADR		EBADRQC		EBADSLT
-	EBFONT		EBUSY		ECANCELED
-	ECHILD		ECHRNG		ECOMM
-	ECONNABORTED	ECONNREFUSED	ECONNRESET
-	EDEADLK		EDEADLOCK	EDESTADDRREQ
-	EDOM		EDOTDOT		EDQUOT
-	EEXIST		EFAULT		EFBIG
-	EHOSTDOWN	EHOSTUNREACH	EIDRM
-	EILSEQ		EINPROGRESS	EINTR
-	EINVAL		EIO		EISCONN
-	EISDIR		EISNAM		EKEYEXPIRED
-	EKEYREJECTED	EKEYREVOKED	EL2HLT
-	EL2NSYNC	EL3HLT		EL3RST
-	ELIBACC		ELIBBAD		ELIBEXEC
-	ELIBMAX		ELIBSCN		ELNRNG
-	ELOOP		EMEDIUMTYPE	EMFILE
-	EMLINK		EMSGSIZE	EMULTIHOP
-	ENAMETOOLONG	ENAVAIL		ENETDOWN
-	ENETRESET	ENETUNREACH	ENFILE
-	ENOANO		ENOBUFS		ENOCSI
-	ENODATA		ENODEV		ENOENT
-	ENOEXEC		ENOKEY		ENOLCK
-	ENOLINK		ENOMEDIUM	ENOMEM
-	ENOMSG		ENONET		ENOPKG
-	ENOPROTOOPT	ENOSPC		ENOSR
-	ENOSTR		ENOSYS		ENOTBLK
-	ENOTCONN	ENOTDIR		ENOTEMPTY
-	ENOTNAM		ENOTRECOVERABLE	ENOTSOCK
-	ENOTTY		ENOTUNIQ	ENXIO
-	EOPNOTSUPP	EOVERFLOW	EOWNERDEAD
-	EPERM		EPFNOSUPPORT	EPIPE
-	EPROTO		EPROTONOSUPPORT	EPROTOTYPE
-	ERANGE		EREMCHG		EREMOTE
-	EREMOTEIO	ERESTART	EROFS
-	ESHUTDOWN	ESOCKTNOSUPPORT	ESPIPE
-	ESRCH		ESRMNT		ESTALE
-	ESTRPIPE	ETIME		ETIMEDOUT
-	ETOOMANYREFS	ETXTBSY		EUCLEAN
-	EUNATCH		EUSERS		EWOULDBLOCK
-	EXDEV		EXFULL))
-    (define (%codes->bindings x)
-      (let ((context #'EPERM))
-	(map (lambda (list-of-symbols)
-	       (map (lambda (symbol)
-		      (if (memq symbol them)
-			  (datum->syntax context symbol)
-			(syntax-violation who "unknown symbolic errno code" symbol)))
-		 list-of-symbols))
-	  (syntax->datum x))))
-    (syntax-case stx (else)
-      ((_ ?errno ((?code0 ?code ...) . ?body) ... (else . ?else-body))
-       (with-syntax ((((CODE0 CODE ...) ...) (%codes->bindings #'((?code0 ?code ...) ...))))
-	 #'(let ((errno ?errno))
-	     (cond ((or (and (fixnum? CODE0) (unsafe.fx= errno CODE0))
-			(and (fixnum? CODE)  (unsafe.fx= errno CODE))
-			...)
-		    . ?body)
-		   ...
-		   (else . ?else-body)))))
-      ((_ ?errno ((?code0 ?code ...) . ?body) ...)
-       (with-syntax ((((CODE0 CODE ...) ...) (%codes->bindings #'((?code0 ?code ...) ...))))
-	 #'(let ((errno ?errno))
-	     (cond ((or (and (fixnum? CODE0) (unsafe.fx= errno CODE0))
-			(and (fixnum? CODE)  (unsafe.fx= errno CODE))
-			...)
-		    . ?body)
-		   ...
-		   (else
-		    (assertion-violation #f "unknown errno code" errno))))))
-      )))
 
 
 ;;;; errno codes

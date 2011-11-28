@@ -6,7 +6,7 @@ EXTRA_DIST		= vicare/platform-constants.sls.in	\
 			  vicare/words.sls.in			\
 			  vicare/installation-configuration.sls.in
 
-dist_libvicare_DATA	= vicare/foreign.sls			\
+dist_libvicare_DATA	= vicare/ffi.sls			\
 			  vicare/platform-constants.sls		\
 			  vicare/ipc.sls			\
 			  vicare/include.sls			\

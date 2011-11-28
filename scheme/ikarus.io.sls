@@ -1549,6 +1549,27 @@
   if-successful-refill:
   room-is-needed-for:)
 
+(define-syntax case-errno
+  (syntax-rules (else)
+    ((_ ?errno ((?code0 ?code ...) . ?body) ... (else . ?else-body))
+     (let ((errno ?errno))
+       (cond ((or (and (fixnum? ?code0) (unsafe.fx= errno ?code0))
+		  (and (fixnum? ?code)  (unsafe.fx= errno ?code))
+		  ...)
+	      . ?body)
+	     ...
+	     (else . ?else-body))))
+    ((_ ?errno ((?code0 ?code ...) . ?body) ...)
+     (let ((errno ?errno))
+       (cond ((or (and (fixnum? ?code0) (unsafe.fx= errno ?code0))
+		  (and (fixnum? ?code)  (unsafe.fx= errno ?code))
+		  ...)
+	      . ?body)
+	     ...
+	     (else
+	      (assertion-violation #f "unknown errno code" errno)))))
+    ))
+
 
 ;;;; Byte Order Mark (BOM) parsing
 

@@ -68,10 +68,7 @@
 
     pointer-set-c-float!		pointer-set-c-double!
     pointer-set-c-pointer!)
-  (import (ikarus) #;(except (ikarus)
-		  pointer?
-		  integer->pointer pointer->integer
-		  dlopen dlerror dlclose dlsym malloc free memcpy)
+  (import (ikarus)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
@@ -554,6 +551,9 @@
 
 (define (ffi-enabled?)
   (foreign-call "ikrt_has_ffi"))
+
+
+;;;; errno interface
 
 (define errno
   (case-lambda
