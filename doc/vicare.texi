@@ -5102,8 +5102,8 @@ interfaces with the host operating system and other external libraries.
 The facilities of the @library{vicare ffi} library give the Scheme
 program unrestricted access to the computer memory, allowing one to
 allocate, access, modify, and free memory as needed.  The facilities
-also allow the Scheme program to @emph{call out} to system procedures as
-well as allow the native procedures to @emph{call back} into Scheme.
+also allow the Scheme program to @dfn{call out} to system procedures as
+well as allow the native procedures to @dfn{call back} into Scheme.
 
 @quotation
 @strong{Caveat emptor:} Preparing each call out and call back procedure
@@ -5146,10 +5146,9 @@ encountered when interfacing to external libraries.
 
 @subsubheading Libffi
 
-
-Currently (Sat May 1, 2010) @value{PRJNAME} implements the foreign
-functions interface (@ffi{}) using an extenal library: Libffi,
-originally by Anthony Green.  Libffi can be found at:
+Currently @value{PRJNAME} implements the foreign functions interface
+(@ffi{}) using an extenal library: Libffi, originally by Anthony Green.
+Libffi can be found at:
 
 @center @url{http://sourceware.org/libffi/}
 
@@ -5900,7 +5899,9 @@ Values for the C language variable @code{errno} are encoded as negated
 fixnum values; for example: if @code{EPERM} is defined to @code{1} at
 the C language level, @value{PRJNAME} defines it as the fixnum
 @code{-1}.  One syntax identifier binding for each known @code{errno}
-value is exported by the library @library{vicare platform-constants}.
+value is exported by the library @library{vicare platform-constants}; if
+some error codes are not defined on a platform: the corresponding
+binding evaluates to @true{}.
 
 The Scheme code accessing @code{errno} values should be agnostic with
 respect to the actual error codes; for this to happen we should use the

@@ -430,7 +430,7 @@
        (let ((N (syntax->datum #'?code)))
 	 (if (number? N)
 	     (- N)
-	   #f))))))
+	   #t))))))
 
 
 ;;;; miscellaneous platform constants
