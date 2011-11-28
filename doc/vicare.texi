@@ -606,6 +606,7 @@ Trademarks used herein are the property of their respective owners.
 * overview::                    Overview of Vicare Scheme.
 * using::                       Using the program.
 * iklib::                       Extensions library.
+* ffi::                         Foreign functions interface.
 * posix::                       The @posix{} interface.
 * glibc::                       The @gnu{} C Library interface.
 * linux::                       The @gnu{}+Linux interface.
@@ -1824,7 +1825,6 @@ of @rnrs{6}; @library{vicare} exports the same bindings of
 * iklib timing::                Timing.
 * iklib guardians::             Guardians and garbage collection.
 * iklib io::                    Input/output library.
-* iklib foreign::               Foreign interface library.
 * iklib misc::                  Miscellaneous functions.
 @end menu
 
@@ -4253,10 +4253,10 @@ registered, they are run.  This binding is exported by the
 
 
 Let's say that we use the @value{PRJNAME} @ffi{} to handle some memory
-block (@ref{iklib foreign} for details on the @ffi{}); memory blocks
-allocated with @func{malloc} are not released by the @value{PRJNAME}
-garbage collector: we have to explicitly apply @func{free} to the
-pointer value referencing them.
+block (@ref{ffi} for details on the @ffi{}); memory blocks allocated
+with @func{malloc} are not released by the @value{PRJNAME} garbage
+collector: we have to explicitly apply @func{free} to the pointer value
+referencing them.
 
 If we use the blocks synchronously with the evaluation of forms, we do
 (assuming we do not use continuations, so this use of
@@ -5043,8 +5043,58 @@ informations on the internals of @var{port}.
 @end defun
 
 @c page
-@node iklib foreign
-@section The @library{vicare foreign} library
+@node iklib misc
+@section Miscellaneous functions
+
+
+@defun void
+Return the void value.  It is the value returned by forms that do not
+return a meaningful value.
+@end defun
+
+
+@defun host-info
+Return a string being the value @gnu{} Autoconf assigned to the
+@code{target} variable.  Example: @code{i686-pc-linux-gnu}.
+@end defun
+
+
+@defun apropos @var{key}
+Given a string or symbol @var{key}, search among the internally
+installed libraries all the exported bindings having @var{key} as
+substring of their name and print a report to the standard output port.
+Useful when using the @repl{}.  Example:
+
+@example
+vicare> (apropos "-length")
+*** in library (ikarus):
+(bitwise-length bytevector-length string-length
+  struct-length vector-length)
+
+*** in library (rnrs):
+(bitwise-length bytevector-length string-length
+  vector-length)
+
+*** in library (rnrs arithmetic bitwise):
+(bitwise-length)
+
+*** in library (rnrs base):
+(string-length vector-length)
+
+*** in library (rnrs bytevectors):
+(bytevector-length)
+
+*** in library (vicare):
+(bitwise-length bytevector-length string-length
+  struct-length vector-length)
+
+vicare>
+@end example
+@end defun
+
+@c page
+@node ffi
+@chapter Foreign functions interface
 
 
 This chapter describes the facilities through which @value{PRJNAME}
@@ -5055,37 +5105,25 @@ allocate, access, modify, and free memory as needed.  The facilities
 also allow the Scheme program to @emph{call out} to system procedures as
 well as allow the native procedures to @emph{call back} into Scheme.
 
-@ignore
-An original paragraph giving an overview of this chapter contents was
-omitted because with the menu above it is useless, and because it looked
-outdated.
-@end ignore
-
 @quotation
-@emph{Note:} @value{PRJNAME} version @code{0.0.4} is the first version
-of @value{PRJNAME} to support the described foreign interfaces.
-@end quotation
-
-@quotation
-@emph{Caveat emptor:} Preparing each call out and call back procedure
+@strong{Caveat emptor:} Preparing each call out and call back procedure
 leaks a small amount of memory.  This is because the system cannot track
 such pointers that go into native code (which may retain such pointers
 indefinitely).  Use judiciously.
 @end quotation
 
 @menu
-* iklib foreign overview::  Overview of the foreign functions
-                                interface.
-* iklib foreign memory::    Memory management.
-* iklib foreign memops::    Memory operations.
-* iklib foreign dl::        Accessing foreign objects from Scheme.
-* iklib foreign call out::  Calling out to foreign procedures.
-* iklib foreign call back:: Calling back to Scheme.
+* ffi overview::                Overview of the @ffi{}.
+* ffi memory::                  Memory management.
+* ffi memops::                  Memory operations.
+* ffi dl::                      Accessing shared libraries.
+* ffi callout::                 Calling out to foreign procedures.
+* ffi callback::                Calling back to Scheme.
 @end menu
 
 @c page
-@node iklib foreign overview
-@subsection Overview of the foreign functions interface
+@node ffi overview
+@section Overview of the foreign functions interface
 
 
 In order to make full use of the computer, it is important for a
@@ -5147,8 +5185,8 @@ the Libffi headers are to be found; @ref{overview install} for details.
 @end quotation
 
 @c page
-@node iklib foreign memory
-@subsection Memory management
+@node ffi memory
+@section Memory management
 
 
 @value{PRJNAME} Scheme is a managed environment.  Like in many
@@ -5195,20 +5233,20 @@ and more easily maintainable libraries.  To put it more boldly:
 @strong{Do not sprinkle your code with low--level memory operations}.
 
 @c page
-@node iklib foreign memops
-@subsection Memory operations
+@node ffi memops
+@section Memory operations
 
 
 @menu
-* iklib foreign memops alloc::    Allocating and freeing memory.
-* iklib foreign memops pointer::  Handling pointer values.
-* iklib foreign memops poke::     Poking values.
-* iklib foreign memops peek::     Peeking values.
+* ffi memops alloc::    Allocating and freeing memory.
+* ffi memops pointer::  Handling pointer values.
+* ffi memops poke::     Poking values.
+* ffi memops peek::     Peeking values.
 @end menu
 
 @c page
-@node iklib foreign memops alloc
-@subsubsection Allocating and freeing memory
+@node ffi memops alloc
+@subsection Allocating and freeing memory
 
 
 @deffn Procedure malloc @var{number-of-bytes}
@@ -5238,8 +5276,8 @@ procedures that are external to @value{PRJNAME}.
 @end deffn
 
 @c page
-@node iklib foreign memops pointer
-@subsubsection Handling pointer values
+@node ffi memops pointer
+@subsection Handling pointer values
 
 
 The result of calling the procedures @func{eq?}, @func{eqv?} and
@@ -5272,8 +5310,8 @@ platform.
 @end deffn
 
 @c page
-@node iklib foreign memops poke
-@subsubsection Poking values
+@node ffi memops poke
+@subsection Poking values
 
 
 With all the following functions: the @var{pointer} argument must be a
@@ -5357,8 +5395,8 @@ to the 32-bit pointer @var{value}.
 @end deffn
 
 @c page
-@node iklib foreign memops peek
-@subsubsection Peeking values
+@node ffi memops peek
+@subsection Peeking values
 
 
 With all the following functions: the @var{pointer} argument must be a
@@ -5496,8 +5534,8 @@ systems.
 @end deffn
 
 @c page
-@node iklib foreign dl
-@subsection Accessing foreign objects from Scheme
+@node ffi dl
+@section Accessing foreign objects from Scheme
 
 
 @deffn Procedure dlopen
@@ -5587,8 +5625,8 @@ details.
 @end deffn
 
 @c page
-@node iklib foreign call out
-@subsection Calling out to foreign procedures
+@node ffi callout
+@section Calling out to foreign procedures
 
 
 @value{PRJNAME} provides the means to call out from Scheme to foreign
@@ -5597,14 +5635,14 @@ access system--specific facilities that are available on the host
 machine.
 
 @menu
-* iklib foreign call out api::      Interface to foreign functions.
-* iklib foreign call out types::    Type specifiers.
-* iklib foreign call out example::  C language call out example.
+* ffi callout api::      Interface to foreign functions.
+* ffi callout types::    Type specifiers.
+* ffi callout example::  C language call out example.
 @end menu
 
 @c page
-@node iklib foreign call out api
-@subsubsection Interface to foreign functions
+@node ffi callout api
+@subsection Interface to foreign functions
 
 
 In order to call out to a foreign procedure, one must provide two pieces
@@ -5630,7 +5668,7 @@ the parameter types:
 @itemize
 @item
 the return type is a symbol that can be any one of the type specifiers
-listed in @ref{iklib foreign call out types};
+listed in @ref{ffi callout types};
 
 @item
 the parameter types is a list of type specifier symbols; if the foreign
@@ -5662,8 +5700,8 @@ the procedure @func{p1} accepts a pointer to a foreign procedure
 the final procedure @func{p2} can be called with as many arguments as
 the ones specified in the @var{parameter-types}; the parameters supplied
 to @func{p2} must match the types supplied as the @var{parameter-types}
-according to the ``Valid Scheme types'' column in the table in
-@ref{iklib foreign call out types};
+according to the ``Valid Scheme types'' column in the table in @ref{ffi
+callout types};
 
 @item
 the procedure @func{p2} converts the parameters from Scheme types to
@@ -5680,12 +5718,12 @@ signature can be used multiple times.  Similarly, separating the foreign
 procedure preparation from parameter passing allows for preparing the
 foreign procedure once and calling it many times.
 
-The list of types in the table in @ref{iklib foreign call out types} is
-restricted to basics and provides no automatic conversion from composite
-Scheme data structures (such as strings, symbols, vectors, and lists) to
-native types.  The restriction is intentional in order for
-@value{PRJNAME} to avoid making invalid assumptions about the memory
-management of the target library.
+The list of types in the table in @ref{ffi callout types} is restricted
+to basics and provides no automatic conversion from composite Scheme
+data structures (such as strings, symbols, vectors, and lists) to native
+types.  The restriction is intentional in order for @value{PRJNAME} to
+avoid making invalid assumptions about the memory management of the
+target library.
 
 @quotation
 For example, while @value{PRJNAME} @emph{can} convert a Scheme string to a native
@@ -5708,8 +5746,8 @@ between exact and inexact numbers is performed.
 @end deffn
 
 @c page
-@node iklib foreign call out types
-@subsubsection Type specifiers
+@node ffi callout types
+@subsection Type specifiers
 
 
 The following table lists valid type specifiers that can be used in
@@ -5747,11 +5785,9 @@ a return value specifier to mean ``no useful value is returned''.
 @code{void} @tab --- @tab --- @tab @code{void}
 @end multitable
 
-
-
 @c page
-@node iklib foreign call out example
-@subsubsection C language call out example
+@node ffi callout example
+@subsection C language call out example
 
 
 The following example illustrates the use of the @func{make-c-callout}
@@ -5801,8 +5837,8 @@ Unhandled exception
 
 
 @c page
-@node iklib foreign call back
-@subsection Calling back to Scheme
+@node ffi callback
+@section Calling back to Scheme
 
 
 In order to provide full interoperability with native procedures,
@@ -5818,8 +5854,8 @@ type.  Therefore, a Scheme procedure used for a call back must be
 wrapped with a proper adapter that converts the incoming parameters from
 native format to Scheme values as well as convert the value that the
 Scheme procedure returns back to native format.  The signature format is
-similar to the one used for call outs (@ref{iklib foreign call out
-types} for details).
+similar to the one used for call outs (@ref{ffi callout types} for
+details).
 
 
 @deffn Procedure make-c-callback @var{return-type} @var{parameter-types}
@@ -5855,56 +5891,6 @@ integer.
 @end deffn
 
 
-
-@c page
-@node iklib misc
-@section Miscellaneous functions
-
-
-@defun void
-Return the void value.  It is the value returned by forms that do not
-return a meaningful value.
-@end defun
-
-
-@defun host-info
-Return a string being the value @gnu{} Autoconf assigned to the
-@code{target} variable.  Example: @code{i686-pc-linux-gnu}.
-@end defun
-
-
-@defun apropos @var{key}
-Given a string or symbol @var{key}, search among the internally
-installed libraries all the exported bindings having @var{key} as
-substring of their name and print a report to the standard output port.
-Useful when using the @repl{}.  Example:
-
-@example
-vicare> (apropos "-length")
-*** in library (ikarus):
-(bitwise-length bytevector-length string-length
-  struct-length vector-length)
-
-*** in library (rnrs):
-(bitwise-length bytevector-length string-length
-  vector-length)
-
-*** in library (rnrs arithmetic bitwise):
-(bitwise-length)
-
-*** in library (rnrs base):
-(string-length vector-length)
-
-*** in library (rnrs bytevectors):
-(bytevector-length)
-
-*** in library (vicare):
-(bitwise-length bytevector-length string-length
-  struct-length vector-length)
-
-vicare>
-@end example
-@end defun
 
 @c page
 @node posix
