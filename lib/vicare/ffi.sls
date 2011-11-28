@@ -42,6 +42,7 @@
     case-errno				errno-code
     &errno				make-errno-condition
     errno-condition?			condition-errno
+    strerror
 
     ;; memory accessors and mutators
     pointer-c-ref-uint8			pointer-c-ref-sint8

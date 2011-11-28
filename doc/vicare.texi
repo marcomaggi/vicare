@@ -5904,24 +5904,32 @@ value is exported by the library @library{vicare platform-constants}.
 
 The Scheme code accessing @code{errno} values should be agnostic with
 respect to the actual error codes; for this to happen we should use the
-following facilities exported by the library @library{vicare ffi}.
+following facilities exported by the library @library{vicare ffi}.  In
+addition, @library{vicare ffi} exports the following bindings also
+exported by @library{vicare posix}:
+
+@example
+&errno            make-errno-condition
+errno-condition?  condition-errno
+strerror
+@end example
 
 
 @defun errno
 @defunx errno @var{code}
 Interface to the C language level @code{errno} variable.  When called
 with no values return the value of the C variable @code{errno} right
-after the last call to a C function performed by the current process
-(and thread) through the implementation--specific @ffi{}.  When called
-with one argument: set the C variable @code{errno} of the current
-process (and thread) to @var{code}, appropriately handling the coding of
-the value.
+after the last call to a C function performed by the current process.
+When called with one argument: set the C variable @code{errno} of the
+current process to @var{code}, appropriately handling the coding of the
+value.
 
-As a special case: when the C variable @code{errno} is set to zero,
-@func{errno} must return @false{}; when @var{code} is @false{}, the C
-variable @code{errno} must be set to zero.
+As special cases: when the C variable @code{errno} is set to zero,
+@func{errno} returns @false{}; when @var{code} is @false{}, the C
+variable @code{errno} is set to zero; when @var{code} is @true{}, the C
+variable @code{errno} is set to @code{EFAULT}.
 
-The mechanism must be such that the following code:
+The mechanism is such that the following code:
 
 @example
 (begin
@@ -5931,7 +5939,7 @@ The mechanism must be such that the following code:
 @end example
 
 @noindent
-sets the C variable @code{errno} to zero, performs a foreign function
+sets the C variable @code{errno} to zero, performs a foreign--function
 call and finally evaluates to two values: the return value from the
 foreign function and the value of the C variable @code{errno} right
 after the foreign call.
@@ -5945,37 +5953,6 @@ if successful expand to an expression evaluating to the coded
 @end deffn
 
 
-@deftp {Condition Type} &errno
-Condition object type representing system errors described by an encoded
-@code{errno} value; it is derived from @condition{condition}.
-@end deftp
-
-
-@defun make-errno-condition @var{errno}
-Build and return a new @condition{errno} condition object holding the
-given @var{errno} value.
-@end defun
-
-
-@defun errno-condition? @var{obj}
-Return @true{} if @var{obj} is an instance of @condition{errno}, else
-return @false{}.
-@end defun
-
-
-@defun condition-errno @var{obj}
-Accessor for the encoded @code{errno} value in @var{obj}, which must be
-an instance of @condition{errno}.
-@end defun
-
-
-@defun strerror @var{errno}
-Return a string describing the @var{errno} code; make use of the system
-function @cfunc{strerror}.  If @var{errno} is not a valid @code{errno}
-value: return a string telling it.
-@end defun
-
-
 @deffn Syntax case-errno @meta{errno} ((@metao{code} @meta{code} ...) . @meta{cbody}) ...
 @deffnx Syntax case-errno @meta{errno} ((@metao{code} @meta{code} ...) . @meta{cbody}) ... (else . @meta{ebody})
 @deffnx {Auxiliary Syntax} else
@@ -5985,7 +5962,7 @@ the auxiliary keyword exported by @library{rnrs}.  Example:
 @example
 #!r6rs
 (import (rnrs)
-  (nausicaa ffi compat))
+  (vicare ffi))
 
 (define identifier "some-port")
 
@@ -6003,6 +5980,9 @@ the auxiliary keyword exported by @library{rnrs}.  Example:
   (else
    (make-irritants-condition (list identifier))))
 @end example
+
+The @meta{code} must be symbols representing @code{errno} codes, they
+are @strong{not} meant to be binding identifiers.
 @end deffn
 
 @c page
