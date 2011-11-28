@@ -32,7 +32,11 @@
   (prefix (vicare words)
 	  words.)
   (prefix (vicare foreign)
-	  ffi.))
+	  ffi.)
+  (only (vicare platform-constants)
+	case-errno)
+  (prefix (vicare platform-constants)
+	  plat.))
 
 (check-set-mode! 'report-failed)
 (display "*** testing Vicare FFI\n")
@@ -117,8 +121,86 @@
   #t)
 
 
+(parametrise ((check-test-name	'case-errno))
+
+  (check
+      (case-errno plat.EPERM
+	((EPERM)	1)
+	((ENOMEM)	2)
+	((EAGAIN)	3))
+    => 1)
+
+  (check
+      (case-errno plat.EPERM
+	((EPERM)	1)
+	((ENOMEM)	2)
+	((EAGAIN)	3)
+	(else		#f))
+    => 1)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (case-errno plat.EPERM
+	((ENOMEM EPERM)	1)
+	((EAGAIN)	3))
+    => 1)
+
+  (check
+      (case-errno plat.EPERM
+	((ENOMEM EPERM)	1)
+	((EAGAIN)	3)
+	(else		#f))
+    => 1)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (case-errno plat.EAGAIN
+	((ENOMEM EPERM)	1)
+	((EAGAIN)	3))
+    => 3)
+
+  (check
+      (case-errno plat.EAGAIN
+	((ENOMEM EPERM)	1)
+	((EAGAIN)	3)
+	(else		#f))
+    => 3)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (catch #f
+	(case-errno plat.EFAULT
+	  ((ENOMEM EPERM)	1)
+	  ((EAGAIN)		3)))
+    => (list plat.EFAULT))
+
+  (check
+      (case-errno plat.EFAULT
+	((ENOMEM EPERM)	1)
+	((EAGAIN)	3)
+	(else		#f))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+;;;Syntax error "unknown symbolic error code"
+;;;
+  #;(case-errno plat.EFAULT
+    ((ENOMEM EPERM)	1)
+    ((ciao)		2))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'case-errno	'scheme-indent-function 1)
+;; eval: (put 'catch		'scheme-indent-function 1)
+;; End:
