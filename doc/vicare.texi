@@ -5120,7 +5120,6 @@ indefinitely).  Use judiciously.
 * ffi callout::                 Calling out to foreign procedures.
 * ffi callback::                Calling back to Scheme.
 * ffi errno::                   Interface to @code{errno}.
-* ffi examples::                Batteries--included interfaces.
 @end menu
 
 @c page
@@ -5967,26 +5966,6 @@ the auxiliary keyword exported by @library{rnrs}.  Example:
 The @meta{code} must be symbols representing @code{errno} codes, they
 are @strong{not} meant to be binding identifiers.
 @end deffn
-
-@c page
-@node ffi examples
-@section Batteries--included interfaces
-
-
-@value{PRJNAME} installs a set of interfaces to foreign libraries; the
-availability of the foreign libraries on the hosting platform is
-@strong{not} tested at package configuration time, the interface
-libraries are installed in any case.
-
-The purpose of the interface libraries is @strong{not} to be a
-full--featured interface, rather they are meant to be solidly usable
-examples of @ffi{} usage also providing a playground for the
-@value{PRJNAME} test suite.
-
-A full--featured interface requires foreign--library features
-discovering, definition of Scheme data structures, a strategy for error
-reporting and the associated condition object types; these things are
-@strong{not} provided by the batteries included interfaces.
 
 @c page
 @node posix
