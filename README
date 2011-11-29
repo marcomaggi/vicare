@@ -38,7 +38,8 @@ processors, with experimental support  for 64-bit machines.  "Vicare" is
 pronounced the etruscan way.
 
   Vicare implements  an optionally included  foreign-functions interface
-based on Libffi.
+based on Libffi.   The last time the maintainer  updated this paragraph,
+it had tested Libffi version 3.0.10.
 
   Current official maintainers are:
 

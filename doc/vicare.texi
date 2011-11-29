@@ -5113,40 +5113,22 @@ indefinitely).  Use judiciously.
 @end quotation
 
 @menu
-* ffi overview::                Overview of the @ffi{}.
+* ffi libffi::                  Install and use Libffi.
 * ffi memory::                  Memory management.
 * ffi memops::                  Memory operations.
 * ffi dl::                      Accessing shared libraries.
 * ffi callout::                 Calling out to foreign procedures.
 * ffi callback::                Calling back to Scheme.
 * ffi errno::                   Interface to @code{errno}.
+* ffi examples::                Batteries--included interfaces.
 @end menu
 
 @c page
-@node ffi overview
-@section Overview of the foreign functions interface
+@node ffi libffi
+@section Install and use Libffi
 
 
-In order to make full use of the computer, it is important for a
-programming environment (e.g., @value{PRJNAME} Scheme) to facilitate
-access to the underlying architecture on which it runs.  The underlying
-architecture includes the @api{} provided by the host operating system
-kernel (e.g., Linux), the system libraries (e.g., @code{libc}), and
-other site--installed libraries (e.g., @code{sqlite3}).
-
-Providing direct access to such @api{} from within Scheme allows the
-programmer to write Scheme libraries that have few or no dependencies on
-external programs (such as @code{C} development toolchain).  When
-dealing with system libraries, the programmer must have a thorough
-understanding of many aspects of the targeted system.  This section
-attempts to provide answers to many questions that are frequently
-encountered when interfacing to external libraries.
-
-@c ------------------------------------------------------------
-
-@subsubheading Libffi
-
-Currently @value{PRJNAME} implements the foreign functions interface
+Currently @value{PRJNAME} implements the foreign--functions interface
 (@ffi{}) using an extenal library: Libffi, originally by Anthony Green.
 Libffi can be found at:
 
@@ -5171,10 +5153,10 @@ and the makefile supports the @env{DESTDIR} environment variable for
 installation under a different directory prefix.
 
 @quotation
-@emph{Note:} Libffi version 3.0.6 installs its header files under:
+@emph{Note:} Libffi version 3.0.10 installs its header files under:
 
 @example
-$@{prefix@}/lib/libffi-3.0.6/include
+$@{prefix@}/lib/libffi-3.0.10/include
 @end example
 
 @noindent
@@ -5985,6 +5967,26 @@ the auxiliary keyword exported by @library{rnrs}.  Example:
 The @meta{code} must be symbols representing @code{errno} codes, they
 are @strong{not} meant to be binding identifiers.
 @end deffn
+
+@c page
+@node ffi examples
+@section Batteries--included interfaces
+
+
+@value{PRJNAME} installs a set of interfaces to foreign libraries; the
+availability of the foreign libraries on the hosting platform is
+@strong{not} tested at package configuration time, the interface
+libraries are installed in any case.
+
+The purpose of the interface libraries is @strong{not} to be a
+full--featured interface, rather they are meant to be solidly usable
+examples of @ffi{} usage also providing a playground for the
+@value{PRJNAME} test suite.
+
+A full--featured interface requires foreign--library features
+discovering, definition of Scheme data structures, a strategy for error
+reporting and the associated condition object types; these things are
+@strong{not} provided by the batteries included interfaces.
 
 @c page
 @node posix
