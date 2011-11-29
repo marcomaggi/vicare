@@ -37,7 +37,7 @@
 	  plat.))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare FFI\n")
+(check-display "*** testing Vicare FFI\n")
 
 
 ;;;; helpers
