@@ -27,6 +27,7 @@ compile
 config.guess
 config.h.in
 config.sub
+config.cache
 configure
 depcomp
 doc/mdate-sh

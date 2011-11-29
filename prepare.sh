@@ -11,6 +11,7 @@ LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.10/include
 
 ../configure \
     --config-cache                              \
+    --cache-file=../config.cache                \
     --prefix="${prefix}"                        \
     --enable-libffi                             \
     CFLAGS='-O3 -march=i686 -mtune=i686'        \
