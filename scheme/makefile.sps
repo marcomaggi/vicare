@@ -28,6 +28,125 @@
 ;;;
 
 
+;;;; adding a primitive operation to an existing system library
+;;
+;;*NOTE* This  description is a work  in progress (Marco  Maggi; Nov 30,
+;;2011).
+;;
+;;Primitive operations are defined by the macro DEFINE-PRIMOPS; examples
+;;are: $CAR, $CDR, $FX+ and $VECTOR-LENGTH but also FIXNUM? and STRING?.
+;;
+;;Here we want to examine the process of adding a primitive operation to
+;;an  existing system library;  we will  not discuss  how to  define the
+;;operation using the macro DEFINE-PRIMOPS.
+;;
+;;What is a primitive operation?  We can think of it as a macro embedded
+;;in  the compiler,  which,  when used,  expands  inline the  elementary
+;;instructions  to be  converted  to machine  language.  The  elementary
+;;instructions are  expressed in Vicare's  high-level assembly language.
+;;When building a new boot image we can use in Vicare's source code only
+;;the primitive operations compiled in an existing boot image.
+;;
+;;Let's say  we want to generate  a new boot image  having the operation
+;;$SWIRL-PAIR embedded in it and exported by the system library:
+;;
+;;   (ikarus system $pairs)
+;;
+;;which  already exists,  and making  use of  the operation  in Vicare's
+;;source code; this is the scenario:
+;;
+;;1. The image BOOT-0 already exists.
+;;
+;;2. We  generate a  new temporary image,  BOOT-1, having  the operation
+;;$SWIRL-PAIR embedded in it, but not using it anywhere.
+;;
+;;3.  We  generate another new  image, BOOT-2, which  offers $SWIRL-PAIR
+;;and also uses it in the source code.
+;;
+;;Let's go.
+;;
+;;First  we define  the  $SWIRL-PAIR operation  adding  to the  compiler
+;;library (in the appropriate place) a form like:
+;;
+;;  (define-primop $swirl-pair unsafe ---)
+;;
+;;this form alone is enough to  make the compiler aware of the existence
+;;of the  operation.  Then,  in this  makefile, we add  an entry  to the
+;;table IDENTIFIER->LIBRARY-MAP as follows:
+;;
+;;   (define identifier->library-map
+;;     '(($swirl-pair		$pairs)
+;;       ---))
+;;
+;;the order in which the entries appear in this table is not important.
+;;
+;;With no other changes we use  the image BOOT-0 to build an image which
+;;will be BOOT-1.   Now we can use $SWIRL-PAIR  in Vicare's source code,
+;;then we use BOOT-1 to compile a new image which will be BOOT-2.
+;;
+
+
+;;;; adding a new system library
+;;
+;;*NOTE* This  description is a work  in progress (Marco  Maggi; Nov 30,
+;;2011).
+;;
+;;By convention system libraries have names like:
+;;
+;;   (ikarus system <ID>)
+;;
+;;where  <ID> is prefixed  with a  $ character;  for good  style, system
+;;libraries should export only primitive operations.
+;;
+;;Let's say we want to add to a boot image the library:
+;;
+;;  (ikarus system $spiffy)
+;;
+;;exporting the single primitive operation $SWIRL, this is the scenario:
+;;
+;;1. The image BOOT-0 already exists.
+;;
+;;2. We  generate a temporary new  image, BOOT-1, having  the new system
+;;library in it but not in a correctly usable state.
+;;
+;;3. We  generate the another new  image, BOOT-2, having  the new system
+;;library in a correct state.
+;;
+;;Let's go.
+;;
+;;First we  define the $SWIRL  operation adding to the  compiler library
+;;(in the appropriate place) a form like:
+;;
+;;  (define-primop $swirl unsafe ---)
+;;
+;;this form alone is enough to  make the compiler aware of the existence
+;;of the operation.  Then, in this  makefile, we add an entry at the end
+;;of the table LIBRARY-LEGEND as follows:
+;;
+;;   (define library-legend
+;;     '(---
+;;       ($spiffy  (ikarus system $spiffy)  #t	#f))
+;;
+;;marking the library as visible but not required.  Then we add an entry
+;;to the table IDENTIFIER->LIBRARY-MAP as follows:
+;;
+;;   (define identifier->library-map
+;;     '(($swirl $spiffy)
+;;       ---))
+;;
+;;the order in which the entries appear in this table is not important.
+;;
+;;Now we use the image BOOT-0  to build a new boot image, BOOT-1, having
+;;the new library in it.  Then  we change the library entry in the table
+;;LIBRARY-LEGEND as follows:
+;;
+;;       ($spiffy  (ikarus system $spiffy)  #t	#t)
+;;
+;;making it both visible and required.   Then we use the image BOOT-1 to
+;;generate a new boot image which will be BOOT-2.
+;;
+
+
 (import (only (ikarus) import))
 (import (except (ikarus)
 		current-letrec-pass
