@@ -18,7 +18,6 @@
 (library (ikarus.pointers)
   (export
     ;; pointer objects
-    pointer?
     null-pointer			pointer-null?
     pointer->integer			integer->pointer
     pointer-diff			pointer-add
@@ -69,6 +68,8 @@
     pointer-set-c-float!		pointer-set-c-double!
     pointer-set-c-pointer!)
   (import (ikarus)
+    (only (ikarus system $pointers)
+	  #;pointer? $pointer=)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
@@ -306,7 +307,8 @@
 			 (pointer ptr2))
 		      (?pred ptr1 ptr2)))))))
 
-  (define-pointer-comparison pointer=?		capi.ffi-pointer-eq)
+(define-pointer-comparison pointer=?		$pointer=)
+;;;  (define-pointer-comparison pointer=?		capi.ffi-pointer-eq)
   (define-pointer-comparison pointer<>?		capi.ffi-pointer-neq)
   (define-pointer-comparison pointer<?		capi.ffi-pointer-lt)
   (define-pointer-comparison pointer>?		capi.ffi-pointer-gt)

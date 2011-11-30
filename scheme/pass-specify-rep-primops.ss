@@ -2744,11 +2744,13 @@
     (sec-tag-test (T x) vector-mask vector-tag #f pointer-tag))
    ((E x) (nop)))
 
- (define-primop $pointer=? unsafe
+ (define-primop $pointer= unsafe
    ((V x y)
-    (make-forcall "ikrt_pointer_eq" (list (T x) (T y))))
-   ((P x y)
-    (make-forcall "ikrt_pointer_eq" (list (T x) (T y))))
+    ;;This is  a predicate but a  forcall is currently  not supported by
+    ;;the P function (Marco Maggi; Nov 30, 2011).
+    (with-tmp ((arg1 (T x)))
+      (with-tmp ((arg2 (T y)))
+	(make-forcall "ikrt_pointer_eq" (list arg1 arg2)))))
    ((E x y)
     (nop)))
 

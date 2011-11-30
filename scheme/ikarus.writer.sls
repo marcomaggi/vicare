@@ -31,7 +31,8 @@
     (ikarus system $symbols)
     (ikarus system $bytevectors)
     (ikarus system $transcoders)
-    (only (ikarus system $foreign) pointer? pointer->integer)
+    (only (ikarus system $pointers) pointer?)
+    (only (ikarus system $foreign) pointer->integer)
     (only (ikarus.pretty-formats) get-fmt)
     (except (ikarus)
       write display format printf fprintf print-error print-unicode print-graph
@@ -40,6 +41,9 @@
   (define print-unicode
     (make-parameter #f))
 
+;;;FIXME Remove at the next boot image rotation.
+  #;(define (pointer? x)
+    (foreign-call "ikrt_is_pointer" x))
 
 (module traversal-helpers
   (cyclic-set? shared-set? mark-set? set-mark! set-shared! shared?

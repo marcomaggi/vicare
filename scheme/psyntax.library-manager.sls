@@ -257,7 +257,7 @@
         (let ((file-name ((file-locator) x)))
           (cond
 	   ((not file-name)
-	    (assertion-violation #f "cannot find library" x))
+	    (assertion-violation 'default-library-loader "cannot find library" x))
 	   ((try-load-from-file file-name))
 	   (else
 	    ((current-library-expander)
@@ -278,8 +278,7 @@
     (lambda (f)
       (if (procedure? f)
 	  f
-	(assertion-violation 'library-locator
-	  "not a procedure" f)))))
+	(assertion-violation 'library-locator "not a procedure" f)))))
 
 (define current-library-expander
   (make-parameter
@@ -288,28 +287,27 @@
     (lambda (f)
       (if (procedure? f)
 	  f
-	(assertion-violation 'library-expander
-	  "not a procedure" f)))))
+	(assertion-violation 'library-expander "not a procedure" f)))))
 
+;;Used to detect circular dependencies between libraries.
+;;
 (define external-pending-libraries
   (make-parameter '()))
 
 (define (find-external-library name)
+  (define who 'find-external-library)
   (when (member name (external-pending-libraries))
-    (assertion-violation #f
-      "circular attempt to import library was detected" name))
-  (parameterize ((external-pending-libraries
-		  (cons name (external-pending-libraries))))
+    (assertion-violation who "circular attempt to import library was detected" name))
+  (parameterize ((external-pending-libraries (cons name (external-pending-libraries))))
     ((library-loader) name)
-    (or (find-library-by
-	 (lambda (x) (equal? (library-name x) name)))
-	(assertion-violation #f
-	  "handling external library did not yield the correct library"
-	  name))))
+    (or (find-library-by (lambda (x)
+			   (equal? (library-name x) name)))
+	(assertion-violation who
+	  "handling external library did not yield the correct library" name))))
 
 (define (find-library-by-name name)
-  (or (find-library-by
-       (lambda (x) (equal? (library-name x) name)))
+  (or (find-library-by (lambda (x)
+			 (equal? (library-name x) name)))
       (find-external-library name)))
 
 (define uninstall-library

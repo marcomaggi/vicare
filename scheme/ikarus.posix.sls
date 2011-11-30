@@ -445,7 +445,7 @@
 
 		  ;; miscellaneous functions
 		  file-descriptor?)
-    (only (ikarus.pointers)
+    (only (ikarus system $pointers)
 	  pointer?)
     (vicare syntactic-extensions)
     (vicare platform-constants)
@@ -454,6 +454,10 @@
     (prefix (vicare unsafe-operations)
 	    unsafe.)
     (vicare words))
+
+;;;FIXME Remove at the next boot image rotation.
+  #;(define (pointer? x)
+    (foreign-call "ikrt_is_pointer" x))
 
 
 ;;;; helpers

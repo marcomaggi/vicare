@@ -1,105 +1,100 @@
-;;; Ikarus Scheme -- A compiler for R6RS Scheme.
-;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;; This program is free software: you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License version 3 as
-;;; published by the Free Software Foundation.
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under  the terms of  the GNU General  Public License version  3 as
+;;;published by the Free Software Foundation.
 ;;;
-;;; This program is distributed in the hope that it will be useful, but
-;;; WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; General Public License for more details.
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
 ;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should  have received  a copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-;(module primops (primop? cogen-primop)
-;  (define (primop? x) #f)
-;  (define cogen-primop (lambda args (error 'cogen-primop "not yet"))))
-;
-;#!eof
-
-;(define-syntax export-all-module
-;  (syntax-rules (define)
-;    ((_ M (define name* v*) ...)
-;     (module M (name* ...)
-;       (define name* v*) ...))))
-;
-;(export-all-module object-representation
-;  (define fixnum-scale 4)
-;  (define fixnum-shift 2)
-;  (define fixnum-tag 0)
-;  (define fixnum-mask 3))
-
+
 (module primops (primop? get-primop set-primop!)
+  ;;This  module has  the  only  purpose of  making  the binding  COOKIE
+  ;;visible only to PRIMOP?, GET-PRIMOP and SET-PRIMOP!.
+  ;;
   (define cookie (gensym))
   (define (primop? x)
     (and (getprop x cookie) #t))
   (define (get-primop x)
     (or (getprop x cookie)
-        (error 'getprimop "not a primitive" x)))
+	(error 'getprimop "not a primitive" x)))
   (define (set-primop! x v)
     (putprop x cookie v))
-  )
 
+  #| end of module PRIMOPS |# )
+
+
 (module (specify-representation)
   (import primops)
+
   (define-struct PH
-    (interruptable? p-handler p-handled? v-handler v-handled? e-handler e-handled?))
+    ;;Primitive handler.  Collects  the definitions associated to unsafe
+    ;;primitive operations.   An instance  of this structure  is created
+    ;;for every use of the DEFINE-PRIMOP syntax.
+    ;;
+    (interruptable?
+     p-handler p-handled?
+     v-handler v-handled?
+     e-handler e-handled?))
+
   (define interrupt-handler
     (make-parameter (lambda () (error 'interrupt-handler "uninitialized"))))
   (define (interrupt)
     ((interrupt-handler))
     (prm 'interrupt))
-  (define (with-interrupt-handler p x ctxt args
-             make-interrupt-call make-no-interrupt-call
-             k)
-    (cond
-      ((not (PH-interruptable? p))
-       (parameterize ((interrupt-handler
-                       (lambda ()
-                         (error 'cogen "uninterruptable"
-                                x args ctxt))))
-          (k)))
-      (else
-       (let ((interrupted? #f))
-         (let ((body
-                (parameterize ((interrupt-handler
-                                (lambda () (set! interrupted? #t))))
-                   (k))))
-           (cond
-             ((not interrupted?) body)
-             ((eq? ctxt 'V)
-              (let ((h (make-interrupt-call x args)))
-                (if (struct-case body
-                      ((primcall op) (eq? op 'interrupt))
-                      (else #f))
-                     (make-no-interrupt-call x args)
-                     (make-shortcut body h))))
-             ((eq? ctxt 'E)
-              (let ((h (make-interrupt-call x args)))
-                (if (struct-case body
-                      ((primcall op) (eq? op 'interrupt))
-                      (else #f))
-                     (make-no-interrupt-call x args)
-                     (make-shortcut body h))))
-             ((eq? ctxt 'P)
-              (let ((h (prm '!= (make-interrupt-call x args) (K bool-f))))
-                (if (struct-case body
-                      ((primcall op) (eq? op 'interrupt))
-                      (else #f))
-                     (prm '!= (make-no-interrupt-call x args) (K bool-f))
-                     (make-shortcut body h))))
-             (else (error 'with-interrupt-handler "invalid context" ctxt))))))))
+
+  (define (with-interrupt-handler p x ctxt args make-interrupt-call make-no-interrupt-call k)
+    (define who 'with-interrupt-handler)
+    (if (not (PH-interruptable? p))
+	(parameterize ((interrupt-handler (lambda ()
+					    (error 'cogen "uninterruptable" x args ctxt))))
+	  (k))
+      (let ((interrupted? #f))
+	(let ((body (parameterize ((interrupt-handler (lambda () (set! interrupted? #t))))
+		      (k))))
+	  (cond
+	   ((not interrupted?) body)
+	   ((eq? ctxt 'V)
+	    (let ((h (make-interrupt-call x args)))
+	      (if (struct-case body
+		    ((primcall op) (eq? op 'interrupt))
+		    (else #f))
+		  (make-no-interrupt-call x args)
+		(make-shortcut body h))))
+	   ((eq? ctxt 'E)
+	    (let ((h (make-interrupt-call x args)))
+	      (if (struct-case body
+		    ((primcall op) (eq? op 'interrupt))
+		    (else #f))
+		  (make-no-interrupt-call x args)
+		(make-shortcut body h))))
+	   ((eq? ctxt 'P)
+	    (let ((h (prm '!= (make-interrupt-call x args) (K bool-f))))
+	      (if (struct-case body
+		    ((primcall op) (eq? op 'interrupt))
+		    (else #f))
+		  (prm '!= (make-no-interrupt-call x args) (K bool-f))
+		(make-shortcut body h))))
+	   (else
+	    (error who "invalid context" ctxt)))))))
+
   (define (copy-tag orig new)
     (struct-case orig
       ((known _ t) (make-known new t))
       (else new)))
+
   (define (remove-tag x)
     (struct-case x
       ((known expr t) expr)
       (else x)))
+
   (define-syntax with-tmp
     (lambda (x)
       (syntax-case x ()
@@ -126,35 +121,35 @@
   ;;;   if cogen-pred, then (if P (nop) (nop))
   (define (simplify* args k)
     (define (S* ls)
-      (cond
-        ((null? ls) (values '() '() '()))
-        (else
-         (let-values (((lhs* rhs* arg*) (S* (cdr ls))))
-           (let ((a (car ls)))
-             (struct-case a
-               ((known expr type)
-                (struct-case expr
-                  ((constant i)
-                   ;;; erase known tag
-                   (values lhs* rhs* (cons expr arg*)))
-                  (else
-                   ;(printf "known ~s ~s\n" type expr)
-                   (let ((tmp (unique-var 'tmp)))
-                     (values (cons tmp lhs*)
-                             (cons (V expr) rhs*)
-                             (cons (make-known tmp type) arg*))))))
-               ((constant i)
-                (values lhs* rhs* (cons a arg*)))
-               (else
-                (let ((t (unique-var 'tmp)))
-                  (values (cons t lhs*) (cons (V a) rhs*) (cons t arg*))))))))))
+      (if (null? ls)
+	  (values '() '() '())
+	(let-values (((lhs* rhs* arg*) (S* (cdr ls))))
+	  (let ((a (car ls)))
+	    (struct-case a
+	      ((known expr type)
+	       (struct-case expr
+		 ((constant i)
+		  ;; erase known tag
+		  (values lhs* rhs* (cons expr arg*)))
+		 (else
+		;(printf "known ~s ~s\n" type expr)
+		  (let ((tmp (unique-var 'tmp)))
+		    (values (cons tmp lhs*)
+			    (cons (V expr) rhs*)
+			    (cons (make-known tmp type) arg*))))))
+	      ((constant i)
+	       (values lhs* rhs* (cons a arg*)))
+	      (else
+	       (let ((t (unique-var 'tmp)))
+		 (values (cons t lhs*) (cons (V a) rhs*) (cons t arg*)))))))))
     (let-values (((lhs* rhs* args) (S* args)))
-      (cond
-        ((null? lhs*) (k args))
-        (else
-         (make-bind lhs* rhs* (k args))))))
-  ;;;
+      (if (null? lhs*)
+	  (k args)
+	(make-bind lhs* rhs* (k args)))))
+
   (define (make-cogen-handler make-interrupt-call make-no-interrupt-call)
+    ;;Build and return the COGEN-PRIMOP closure.
+    ;;
     (define (cogen-primop x ctxt args)
       (define (interrupt? x)
         (struct-case x
@@ -209,6 +204,7 @@
                    (else
                     (error 'cogen-primop "invalid context" ctxt)))))))))
     cogen-primop)
+
   (module (cogen-primop cogen-debug-primop)
     (define (primop-interrupt-handler x)
       (case x
@@ -235,8 +231,9 @@
         (make-funcall
           (V (make-primref 'debug-call))
           (cons* (V src/loc) (V (make-primref op)) args)))
-      ((make-cogen-handler make-call make-call)
-       op ctxt args)))
+      ((make-cogen-handler make-call make-call) op ctxt args))
+
+    #| end of module (COGEN-PRIMOP COGEN-DEBUG-PRIMOP) |# )
 
 
   (define-syntax define-primop
@@ -414,18 +411,23 @@
     (struct-case x
       ((known x t)
        (unknown-V x))
-      (else (unknown-V x))))
+      (else
+       (unknown-V x))))
 
   (define (unknown-V x)
     (struct-case x
-      ((constant) (constant-rep x))
-      ((var)      x)
+      ((constant)
+       (constant-rep x))
+      ((var)
+       x)
       ((primref name)
        (prm 'mref
              (K (make-object (primref->symbol name)))
              (K (- disp-symbol-record-value symbol-ptag))))
-      ((code-loc) (make-constant x))
-      ((closure)  (make-constant x))
+      ((code-loc)
+       (make-constant x))
+      ((closure)
+       (make-constant x))
       ((bind lhs* rhs* body)
        (make-bind lhs* (map V rhs*) (V body)))
       ((fix lhs* rhs* body)
@@ -480,10 +482,14 @@
          ((debug-call)
           (cogen-debug-call op 'P arg* P))
          (else (cogen-primop op 'P arg*))))
-      ((var)     (prm '!= (V x) (V (K #f))))
-      ((funcall) (prm '!= (V x) (V (K #f))))
-      ((jmpcall) (prm '!= (V x) (V (K #f))))
-      ((forcall) (prm '!= (V x) (V (K #f))))
+      ((var)
+       (prm '!= (V x) (V (K #f))))
+      ((funcall)
+       (prm '!= (V x) (V (K #f))))
+      ((jmpcall)
+       (prm '!= (V x) (V (K #f))))
+      ((forcall)
+       (prm '!= (V x) (V (K #f))))
       ((known expr type)
        ;;; FIXME: suboptimal
        (P expr))
@@ -518,7 +524,8 @@
       ((known expr type)
        ;;; FIXME: suboptimal
        (E expr))
-      (else (error 'cogen-E "invalid effect expr" x))))
+      (else
+       (error 'cogen-E "invalid effect expr" x))))
 
   (define (Function x)
     (define (Function x check?)
@@ -619,4 +626,11 @@
     (let ((x (Program x)))
       x))
 
-  (include "pass-specify-rep-primops.ss"))
+  (include "pass-specify-rep-primops.ss")
+
+  #| end of module SPECIFY-REPRESENTATION |# )
+
+;;; end of file
+;; Local Variables:
+;; eval: (put 'module 'scheme-indent-function 2)
+;; End:

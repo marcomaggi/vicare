@@ -1,6 +1,6 @@
 #!../src/vicare -b vicare.boot --r6rs-script
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2006,2007,2008,2011  Abdulaziz Ghuloum
+;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Abstract
@@ -10,9 +10,9 @@
 ;;;	system   environment:    it   rebuilds   Vicare's    boot   file
 ;;;	"vicare.boot".
 ;;;
-;;;	  This program works  hand-in-hand with the expander, especially
-;;;	  the   library   (psyntax    library-manager)   in   the   file
-;;;	  "psyntax.library-manager.sls".
+;;;	This  program works hand-in-hand  with the  expander, especially
+;;;	the    library   (psyntax    library-manager)   in    the   file
+;;;	"psyntax.library-manager.sls".
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under  the terms of  the GNU General  Public License version  3 as
@@ -98,6 +98,11 @@
 	(fprintf port ".")
 	(flush-output-port port))))))
 
+(define (pretty-print/stderr thing)
+  (let ((port (console-error-port)))
+    (pretty-print thing port)
+    (flush-output-port port)))
+
 
 (define scheme-library-files
   ;;Listed in the order in which they're loaded.
@@ -173,10 +178,6 @@
     "ikarus.promises.sls"
     "ikarus.enumerations.sls"
     "ikarus.command-line.sls"
-;;;Moved pointers up before the posix library.
-;;;
-;;; "ikarus.pointers.sls"
-
 ;;; "ikarus.trace.sls"
     "ikarus.debugger.sls"
     "ikarus.main.sls"
@@ -337,7 +338,14 @@
   ;;nickname  of  "(ikarus)".   Additionlly  tag  each  library  with  a
   ;;VISIBLE? and a REQUIRED? boolean.
   ;;
-  ;;The libraries marked as REQUIRED? are included in the boot image.
+  ;;For each library  marked as REQUIRED?: an associated  record of type
+  ;;LIBRARY   is  created   and  included   in  the   starting   set  of
+  ;;BOOTSTRAP-COLLECTION.
+  ;;
+  ;;The libraries marked as VISIBLE? are installed in the boot image.
+  ;;
+  ;;See BOOTSTRAP-COLLECTION for details on how to add a library to this
+  ;;list.
   ;;
   ;; abbr.              name			                visible? required?
   '((i			(ikarus)				#t	#t)
@@ -371,6 +379,7 @@
     (ri			(rnrs records inspection)		#t	#t)
     (rp			(rnrs records procedural)		#t	#t)
     (rs			(rnrs records syntactic)		#t	#t)
+;;;
     ($pairs		(ikarus system $pairs)			#f	#t)
     ($lists		(ikarus system $lists)			#f	#t)
     ($chars		(ikarus system $chars)			#f	#t)
@@ -385,8 +394,7 @@
     ($comp		(ikarus system $compnums)		#f	#t)
     ($symbols		(ikarus system $symbols)		#f	#t)
     ($structs		(ikarus system $structs)		#f	#t)
-;;;($ports		(ikarus system $ports)			#f	#t)
-;;;($pointers		(ikarus system $pointers)		#f	#t)
+    ($pointers		(ikarus system $pointers)		#t	#t)
     ($codes		(ikarus system $codes)			#f	#t)
     ($tcbuckets		(ikarus system $tcbuckets)		#f	#t)
     ($arg-list		(ikarus system $arg-list)		#f	#t)
@@ -396,8 +404,10 @@
     ($for		(ikarus system $foreign)		#f	#t)
     ($all		(psyntax system $all)			#f	#t)
     ($boot		(psyntax system $bootstrap)		#f	#t)
+;;;
     (ne			(psyntax null-environment-5)		#f	#f)
     (se			(psyntax scheme-report-environment-5)	#f	#f)
+;;;
     (posix		(vicare posix)				#t	#f)
     (glibc		(vicare glibc)				#t	#f)
     (linux		(vicare linux)				#t	#f)
@@ -479,11 +489,8 @@
     (port-mode					i v)
     (set-port-mode!				i v)
     (with-input-from-string			i v)
-    (open-output-bytevector			i v)
     (get-output-string				i v)
-    (get-output-bytevector			i v)
     (with-output-to-string			i v)
-;;; (with-output-to-bytevector			i v)
     (console-input-port				i v)
     (console-error-port				i v)
     (console-output-port			i v)
@@ -683,6 +690,12 @@
     ($make-struct				$structs)
     ($struct?					$structs)
     ($struct/rtd?				$structs)
+
+;;; --------------------------------------------------------------------
+;;; (ikarus system $pointers)
+    (pointer?					$pointers $for)
+    ($pointer=					$pointers)
+
 ;;;
     ($closure-code				$codes)
     ($code->closure				$codes)
@@ -716,6 +729,7 @@
     ($interrupted?				$interrupts)
     ($unset-interrupted!			$interrupts)
     ($swap-engine-counter!			$interrupts)
+;;;
     (interrupted-condition?			i v)
     (make-interrupted-condition			i v)
     (source-position-condition?			i v)
@@ -1587,7 +1601,6 @@
     (string-normalize-nfkd			i v r uc)
     (string-titlecase				i v r uc)
     (string-upcase				i v r uc)
-    (char-ready?)
     (load					i v)
     (load-r6rs-script				i v)
     (void					i v $boot)
@@ -2057,13 +2070,13 @@
 ;;; (ikarus system $foreign)
     (errno					$for)
     (null-pointer				$for)
-    (pointer?					$for)
+;    (pointer?					$for)
     (pointer->integer				$for)
     (integer->pointer				$for)
     (pointer-null?				$for)
     (pointer-diff				$for)
     (pointer-add				$for)
-    ($pointer=?					$for)
+;    ($pointer=					$for)
     (pointer=?					$for)
     (pointer<>?					$for)
     (pointer<?					$for)
@@ -2146,19 +2159,30 @@
 
 
 (define bootstrap-collection
-  ;;This function works somewhat like a parameter function; it returns a
-  ;;closure   with  the  same   interface  of   the  ones   returned  by
-  ;;MAKE-COLLECTION,  but  builds  an   initial  value  and  checks  for
-  ;;duplicates.
+  ;;A collection of LIBRARY  structures accessed through a closure.  The
+  ;;LIBRARY structure type is defined in the psyntax modules.
   ;;
-  ;;First a  list of LIBRARY records  is built as initial  value for the
-  ;;collection: it  holds all the libraries in  the LIBRARY-LEGEND which
-  ;;are marked as REQUIRED?.
+  ;;This  function works  somewhat like  a parameter  function; it  is a
+  ;;closure   with  the  same   interface  of   the  ones   returned  by
+  ;;MAKE-COLLECTION,  but it  has an  initial  value and  it checks  for
+  ;;duplicates to avoid them.
   ;;
   ;;If the  function is called with  no arguments: it  returns the whole
-  ;;collection.   If the  function  is called  with  one argument:  such
-  ;;argument must be a LIBRARY record  and it is added to the collection
-  ;;if not already there.
+  ;;collection, which is a list  of LIBRARY structures.  If the function
+  ;;is  called  with one  argument:  such  argument  must be  a  LIBRARY
+  ;;structure and it is added to the collection if not already there.
+  ;;
+  ;;The initial  value is a list  of LIBRARY structures  built by adding
+  ;;all the  libraries in LIBRARY-LEGEND which are  marked as REQUIRED?.
+  ;;Notice that such structures are built by FIND-LIBRARY-BY-NAME, which
+  ;;means  that  the  libraries  marked  as REQUIRED?  must  be  already
+  ;;installed in the boot image running this program.
+  ;;
+  ;;To add a REQUIRED? library to a  boot image: first we have to add an
+  ;;entry to  LIBRARY-LEGEND marked as  VISIBLE?  and build  a temporary
+  ;;boot image, then mark the entry as REQUIRED? and using the temporary
+  ;;boot image build another boot  image which will have the new library
+  ;;as REQUIRED?.
   ;;
   (let ((list-of-library-records
 	 (let next-library-entry ((entries library-legend))
@@ -2215,7 +2239,6 @@
 	      (label	(gensym)))
 	  (export-subst (cons name label))
 	  (export-env   (cons label binding)))))
-
     (each-for (map car identifier->library-map)
       (lambda (x)
 	(when (procedure-identifier? x)
@@ -2237,13 +2260,13 @@
 				   (export-env   (cons label (cons 'core-prim x)))
 				   (export-primlocs (cons x (cdr binding))))
 				  (else
-				   (error #f "invalid binding for identifier" p x))))))
+				   (error who "invalid binding for identifier" p x))))))
 			   (else
-			    (error #f "cannot find binding" x label))))))
+			    (error who "cannot find binding" x label))))))
 		(else
 		 ;;Core primitive with no backing definition, assumed to
 		 ;;be defined in other strata of the system
-		 ;; (fprintf (console-error-port) "undefined primitive ~s\n" x)
+;;;		 (fprintf (console-error-port) "undefined primitive ~s\n" x)
 		 (let ((label (gensym)))
 		   (export-subst (cons x label))
 		   (export-env (cons label (cons 'core-prim x)))))))))
@@ -2265,8 +2288,7 @@
 		     (for-each (lambda (x)
 				 (putprop (car x) g (cdr x)))
 		       ',primlocs)
-		     (let ((proc
-			    (lambda (x) (getprop x g))))
+		     (let ((proc (lambda (x) (getprop x g))))
 		       (current-primitive-locations proc)))
 		   ;;This evaluates to a spliced list of INSTALL-LIBRARY
 		   ;;forms.
@@ -2300,9 +2322,9 @@
 			',subst ',env void void '#f '#f '#f '() ',visible? '#f)))
 
   (define (get-export-subset nickname subst)
-    ;;Given the list of substitutions SUBST, build and return the subset
-    ;;of  substitutions  corresponding  to  identifiers in  the  library
-    ;;selected by NICKNAME.
+    ;;Given  the alist  of  substitutions SUBST,  build  and return  the
+    ;;subset  of  substitutions  corresponding  to  identifiers  in  the
+    ;;library selected by NICKNAME.
     ;;
     (let loop ((ls subst))
       (if (null? ls)
@@ -2411,6 +2433,8 @@
 	      (cdr x)))
   identifier->library-map)
 
+;;;(pretty-print/stderr (bootstrap-collection))
+
 ;;Perform the bootstrap process generating the boot image.
 ;;
 (time-it "the entire bootstrap process"
@@ -2421,10 +2445,10 @@
 		      (parameterize ((current-library-collection bootstrap-collection))
 			(expand-all scheme-library-files))))))
       (current-primitive-locations (lambda (x)
+;;;(pretty-print/stderr (list x (assq x locs)))
 				     (cond ((assq x locs) => cdr)
 					   (else
-					    (error 'bootstrap
-					      "no location for primitive" x)))))
+					    (error 'bootstrap "no location for primitive" x)))))
       (let ((port (open-file-output-port boot-file-name (file-options no-fail))))
 	(time-it "code generation and serialization"
 	  (lambda ()

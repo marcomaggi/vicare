@@ -154,6 +154,7 @@
       [(integer? _)                foldable effect-free            ]
       [(bignum? _)                 foldable effect-free            ]
       [(ratnum? _)                 foldable effect-free            ]
+      [(pointer? _)                foldable effect-free            ]
       [(void)                      foldable effect-free result-true]
       [(car _)                     foldable                        ]
       [(cdr _)                     foldable                        ]
