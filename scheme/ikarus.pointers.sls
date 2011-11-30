@@ -249,6 +249,10 @@
   (capi.ffi-fixnum->pointer 0))
 
 (define (pointer? obj)
+  ;;FIXME Why  in hell do I have  to keep this function  rather than use
+  ;;the   FIXNUM?  primitive  operation   exported  by   (ikarus  system
+  ;;$pointers)? (Marco Maggi; Nov 30, 2011)
+  ;;
   (capi.ffi-pointer? obj))
 
 (define (null-pointer)
@@ -307,8 +311,7 @@
 			 (pointer ptr2))
 		      (?pred ptr1 ptr2)))))))
 
-(define-pointer-comparison pointer=?		$pointer=)
-;;;  (define-pointer-comparison pointer=?		capi.ffi-pointer-eq)
+  (define-pointer-comparison pointer=?		$pointer=)
   (define-pointer-comparison pointer<>?		capi.ffi-pointer-neq)
   (define-pointer-comparison pointer<?		capi.ffi-pointer-lt)
   (define-pointer-comparison pointer>?		capi.ffi-pointer-gt)

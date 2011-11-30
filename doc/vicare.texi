@@ -10264,7 +10264,7 @@ else return @false{}.
 @end defun
 
 
-@deffn {Unsafe Operation} $pointer=? @vari{ptr} @varii{ptr}
+@deffn {Unsafe Operation} $pointer= @vari{ptr} @varii{ptr}
 Return @true{} if @vari{ptr} and @varii{ptr} are equal, else return
 @false{}.
 @end deffn

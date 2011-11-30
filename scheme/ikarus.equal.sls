@@ -38,8 +38,6 @@
   (export equal?)
   (import (except (ikarus)
 		  equal?)
-    (prefix (vicare unsafe-capi)
-	    capi.)
     (rename (ikarus system $pointers)
 	    (pointer?	pointer?)
 	    ($pointer=	pointer=?)))
@@ -60,16 +58,7 @@
         ($fx>      >)
         ($fx>=     >=)
         ($fx<=     <=)
-        ($fx=      =)))
-    )
-
-;;;FIXME Remove at the next boot image rotation.
-    #;(define (pointer? x)
-      (capi.ffi-pointer? x))
-
-;;;FIXME Remove at the next boot image rotation.
-    #;(define (pointer=? x y)
-      (capi.ffi-pointer-eq x y))
+        ($fx=      =))))
 
 
 (define (equal? x y)

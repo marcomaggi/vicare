@@ -41,10 +41,6 @@
   (define print-unicode
     (make-parameter #f))
 
-;;;FIXME Remove at the next boot image rotation.
-  #;(define (pointer? x)
-    (foreign-call "ikrt_is_pointer" x))
-
 (module traversal-helpers
   (cyclic-set? shared-set? mark-set? set-mark! set-shared! shared?
                shared-bit cyclic-bit marked-bit mark-shift

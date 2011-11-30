@@ -455,10 +455,6 @@
 	    unsafe.)
     (vicare words))
 
-;;;FIXME Remove at the next boot image rotation.
-  #;(define (pointer? x)
-    (foreign-call "ikrt_is_pointer" x))
-
 
 ;;;; helpers
 
