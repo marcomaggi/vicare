@@ -5622,6 +5622,40 @@ systems.
 @subsection Memory operations
 
 
+@defun memcpy @var{dst} @var{src} @var{count}
+Interface to the C function @cfunc{memcpy}, @glibcref{Copying and
+Concatenation, memcpy}.  Copy @var{count} bytes from the memory
+referenced by the pointer @var{src} to the memory referenced by the
+pointer @var{dst}; @var{count} must be a non--negative fixnum.  The two
+memory regions must not overlap.  Return unspecified values.
+@end defun
+
+
+@defun memmove @var{dst} @var{src} @var{count}
+Interface to the C function @cfunc{memmove}, @glibcref{Copying and
+Concatenation, memmove}.  Copy @var{count} bytes from the memory
+referenced by the pointer @var{src} to the memory referenced by the
+pointer @var{dst}; @var{count} must be a non--negative fixnum.  The two
+memory regions can be overlapping.  Return unspecified values.
+@end defun
+
+
+@defun memset @var{ptr} @var{value} @var{count}
+Set to @var{value} @var{count} bytes of the memory referenced by the
+pointer @var{ptr}.  @var{count} must be a non--negative fixnum,
+@var{value} must be an exact fixnum in the range @math{[-128, 255]}.
+Return unspecified values.
+@end defun
+
+
+@defun memory-copy dst dst.start src src.start count
+Copy @var{count} bytes from @var{src} starting at offset @var{src.start}
+to @var{dst} starting at offset @var{dst.start}.  @var{src} and
+@var{dst} can be pointers or bytevectors; @var{dst.start},
+@var{src.start} and @var{count} must be non--negative fixnums.  The two
+memory regions must not overlap.  Return unspecified values.
+@end defun
+
 @c page
 @node ffi dl
 @section Accessing foreign objects from Scheme

@@ -38,6 +38,9 @@
     ffi-malloc				ffi-free
     ffi-realloc				ffi-calloc
 
+    ffi-memcpy				ffi-memmove
+    ffi-memset
+
     ffi-pointer?			ffi-pointer-null?
     ffi-fixnum->pointer			ffi-bignum->pointer
     ffi-pointer->integer
@@ -303,6 +306,17 @@
 
 (define-inline (ffi-set-pointer-null! ptr)
   (foreign-call "ikrt_pointer_set_null" ptr))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (ffi-memcpy dst src size)
+  (foreign-call "ikrt_memcpy" dst src size))
+
+(define-inline (ffi-memmove dst src size)
+  (foreign-call "ikrt_memmove" dst src size))
+
+(define-inline (ffi-memset ptr byte size)
+  (foreign-call "ikrt_memset" ptr byte size))
 
 ;;; --------------------------------------------------------------------
 

@@ -2215,6 +2215,9 @@
     (calloc					$for)
     (free					$for)
     (memcpy					$for)
+    (memmove					$for)
+    (memset					$for)
+    (memory-copy				$for)
 ;;;
     (pointer-ref-c-uint8			$for)
     (pointer-ref-c-sint8			$for)

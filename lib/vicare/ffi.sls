@@ -39,7 +39,8 @@
     realloc				guarded-realloc
     calloc				guarded-calloc
     free
-    memcpy
+    memcpy				memmove
+    memset				memory-copy
 
     ;; errno interface
     errno

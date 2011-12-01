@@ -289,6 +289,22 @@
 (parametrise ((check-test-name	'memory))
 
   (check
+      (let* ((count	123)
+	     (P		(ffi.guarded-malloc count))
+	     (Q		(ffi.guarded-malloc count))
+	     (bv	(make-bytevector count)))
+	(ffi.memset P -9 count)
+	(ffi.memcpy Q P count)
+	(ffi.memory-copy bv 0 Q 0 count)
+	bv)
+    => (make-bytevector 123 -9))
+
+  #t)
+
+
+(parametrise ((check-test-name	'access))
+
+  (check
       (let ((P (ffi.guarded-malloc 32)))
 	(ffi.pointer-set-c-uint8! P 2 123)
 	(ffi.pointer-ref-c-uint8  P 2))

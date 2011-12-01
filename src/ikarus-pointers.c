@@ -220,7 +220,7 @@ ikrt_pointer_ge (ikptr ptr1, ikptr ptr2)
 
 
 /** --------------------------------------------------------------------
- ** C language level memory operations.
+ ** C language level memory allocation.
  ** ----------------------------------------------------------------- */
 
 ikptr
@@ -261,12 +261,41 @@ ikrt_free (ikptr pointer)
   return void_object;
 }
 
+
+/** --------------------------------------------------------------------
+ ** C language level memory operations.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_memcpy (ikptr dst, ikptr src, ikptr size)
+{
+  memcpy(VICARE_POINTER_DATA_VOIDP(dst),
+         VICARE_POINTER_DATA_VOIDP(src),
+         unfix(size));
+  return void_object;
+}
+ikptr
+ikrt_memmove (ikptr dst, ikptr src, ikptr size)
+{
+  memmove(VICARE_POINTER_DATA_VOIDP(dst),
+          VICARE_POINTER_DATA_VOIDP(src),
+          unfix(size));
+  return void_object;
+}
+ikptr
+ikrt_memset (ikptr ptr, ikptr byte, ikptr size)
+{
+  memset(VICARE_POINTER_DATA_VOIDP(ptr), unfix(byte), unfix(size));
+  return void_object;
+}
+
 /* ------------------------------------------------------------------ */
 
 ikptr
 ikrt_memcpy_to_bv(ikptr dst, ikptr dst_off, ikptr src, ikptr count /*, ikpcb* pcb */)
 {
-  void *src_ptr, *dst_ptr;
+  void *        src_ptr;
+  void *        dst_ptr;
   src_ptr = (void *)ref(src, off_pointer_data);
   dst_ptr = (void *)(dst + off_bytevector_data + unfix(dst_off));
   memcpy(dst_ptr, src_ptr, unfix(count));
@@ -275,7 +304,8 @@ ikrt_memcpy_to_bv(ikptr dst, ikptr dst_off, ikptr src, ikptr count /*, ikpcb* pc
 ikptr
 ikrt_memcpy_from_bv (ikptr dst, ikptr src, ikptr src_off, ikptr count /*, ikpcb* pcb */)
 {
-  void *src_ptr, *dst_ptr;
+  void *        src_ptr;
+  void *        dst_ptr;
   src_ptr = (void *)(src + off_bytevector_data + unfix(src_off));
   dst_ptr = (void *)ref(dst, off_pointer_data);
   memcpy(dst_ptr, src_ptr, unfix(count));

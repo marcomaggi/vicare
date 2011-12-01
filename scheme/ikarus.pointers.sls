@@ -36,7 +36,8 @@
     ;; raw memory allocation
     malloc				free
     realloc				calloc
-    memcpy
+    memcpy				memmove
+    memset				memory-copy
 
     ;; errno interface
     errno
@@ -125,6 +126,16 @@
 (define-argument-validation (number-of-elements who obj)
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as number of elements argument" obj))
+
+(define-argument-validation (byte who obj)
+  (or (words.word-u8? obj)
+      (words.word-s8? obj))
+  (assertion-violation who
+    "expected exact integer representing an 8-bit signed or unsigned integer as argument" obj))
+
+(define-argument-validation (pointer-offset who obj)
+  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (assertion-violation who "expected non-negative fixnum as pointer offset argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -446,29 +457,53 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (memcpy dst dst-offset src src-offset count)
+(define (memory-copy dst dst.start src src.start count)
+  (define who 'memory-copy)
+  (with-arguments-validation (who)
+      ((pointer-offset	dst.start)
+       (pointer-offset	src.start))
+    (cond ((pointer? dst)
+	   (cond ((pointer? src)
+		  (capi.ffi-memcpy dst src count))
+		 ((bytevector? src)
+		  (foreign-call "ikrt_memcpy_from_bv" (pointer-add dst dst.start) src src.start count))
+		 (else
+		  (assertion-violation who "expected pointer or bytevector as source argument" src))))
+	  ((bytevector? dst)
+	   (cond ((pointer? src)
+		  (foreign-call "ikrt_memcpy_to_bv" dst dst.start (pointer-add src src.start) count))
+		 ((bytevector? src)
+		  (unsafe.bytevector-copy!/count src src.start dst dst.start count))
+		 (else
+		  (assertion-violation who "expected pointer or bytevector as source argument" src))))
+	  (else
+	   (assertion-violation who "expected pointer or bytevector as destination argument" dst)))))
+
+;;; --------------------------------------------------------------------
+
+(define (memcpy dst src count)
   (define who 'memcpy)
-  (unless (and (fixnum? dst-offset) (fx>=? dst-offset 0))
-    (die who "not a positive fixnum" dst-offset))
-  (unless (and (fixnum? src-offset) (fx>=? src-offset 0))
-    (die who "not a positive fixnum" src-offset))
-  (unless (and (fixnum? count) (fx>=? count 0))
-    (die who "not a postive fixnum" count))
-  (cond ((and (pointer? dst) (bytevector? src))
-	 (unless (fx<=? (fx+ src-offset count) (bytevector-length src))
-	   (die who "source bytevector length exceeded"
-		(bytevector-length src) src-offset count))
-	 (foreign-call "ikrt_memcpy_from_bv"
-		       (pointer+ dst dst-offset) src src-offset count))
-	((and (bytevector? dst) (pointer? src))
-	 (unless (fx<=? (fx+ dst-offset count) (bytevector-length dst))
-	   (die who "destination bytevector length exceeded"
-		(bytevector-length dst) dst-offset count))
-	 (foreign-call "ikrt_memcpy_to_bv"
-		       dst dst-offset (pointer+ src src-offset) count))
-	(else
-	 (die who "destination and source not a bytevector/pointer pair"
-	      dst dst))))
+  (with-arguments-validation (who)
+      ((pointer		dst)
+       (pointer		src)
+       (number-of-bytes	count))
+    (capi.ffi-memcpy dst src count)))
+
+(define (memmove dst src count)
+  (define who 'memmove)
+  (with-arguments-validation (who)
+      ((pointer		dst)
+       (pointer		src)
+       (number-of-bytes	count))
+    (capi.ffi-memmove dst src count)))
+
+(define (memset ptr byte count)
+  (define who 'memset)
+  (with-arguments-validation (who)
+      ((pointer		ptr)
+       (byte		byte)
+       (number-of-bytes	count))
+    (capi.ffi-memset ptr byte count)))
 
 
 ;;; libffi interface
