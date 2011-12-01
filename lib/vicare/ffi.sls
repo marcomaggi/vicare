@@ -17,6 +17,7 @@
 
 (library (vicare ffi)
   (export
+
     ;; pointer values
     pointer?
     null-pointer			pointer-null?
@@ -34,7 +35,10 @@
     make-c-callout			make-c-callback
 
     ;; raw memory allocation
-    malloc				free
+    malloc				guarded-malloc
+    realloc				guarded-realloc
+    calloc				guarded-calloc
+    free
     memcpy
 
     ;; errno interface
@@ -74,9 +78,36 @@
     pointer-set-c-pointer!)
   (import (vicare)
     (ikarus system $foreign)
+    (vicare syntactic-extensions)
     (vicare platform-constants)
     (prefix (vicare unsafe-operations)
 	    unsafe.))
+
+
+;;;; raw memory allocation
+
+(define %memory-guardian
+  (make-guardian))
+
+(define (%free-allocated-memory)
+  (do ((pointer (%memory-guardian) (%memory-guardian)))
+      ((not pointer))
+    (unless (pointer-null? pointer)
+      (free pointer))))
+
+(define (guarded-malloc number-of-bytes)
+  (let ((rv (malloc number-of-bytes)))
+    (and rv (%memory-guardian rv))))
+
+(define (guarded-realloc pointer number-of-bytes)
+  (let ((rv (realloc pointer number-of-bytes)))
+    (and rv (begin
+	      (set-pointer-null! pointer)
+	      (%memory-guardian rv)))))
+
+(define (guarded-calloc number-of-elements element-size)
+  (let ((rv (calloc number-of-elements element-size)))
+    (and rv (%memory-guardian rv))))
 
 
 ;;;; errno interface
@@ -224,6 +255,8 @@
 
 
 ;;;; done
+
+(post-gc-hooks (cons %free-allocated-memory (post-gc-hooks)))
 
 )
 

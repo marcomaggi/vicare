@@ -4264,7 +4264,7 @@ If we use the blocks synchronously with the evaluation of forms, we do
 
 @example
 (import (ikarus)
-  (ikarus foreign))
+  (vicare ffi))
 
 (define (do-something-with . args)
   (display args)
@@ -4287,7 +4287,7 @@ and we can define a syntax for it:
 
 @example
 (import (ikarus)
-  (ikarus foreign))
+  (vicare ffi))
 
 (define (do-something-with . args)
   (display args)
@@ -4323,7 +4323,7 @@ that takes no arguments):
 
 @example
 (import (ikarus)
-  (ikarus foreign))
+  (vicare ffi))
 
 (define *event-source* '())
 
@@ -4369,7 +4369,7 @@ block:
 
 @example
 (import (ikarus)
-  (ikarus foreign))
+  (vicare ffi))
 
 (define g (make-guardian))
 
@@ -4394,7 +4394,7 @@ guardian:
 
 @example
 (import (ikarus)
-  (ikarus foreign))
+  (vicare ffi))
 
 ;; Event source handling.
 
@@ -4453,41 +4453,42 @@ guardian:
 @defun make-guardian
 Build and return a new guardian object: a closure that can be called
 with one or zero arguments, and that is interfaced with the garbage
-collector of the Scheme implementation (in a non--portable way).
+collector of @value{PRJNAME} in a non--portable way.
 
-The guardian works like this:
+The guardian work like this:
 
 @itemize
 @item
-when the closure is called with one argument: it adds the argument to an
+When the closure is called with one argument: it adds the argument to an
 internal set of ``guarded values'', accessible to the garbage collector;
+the return value if the argument itself.
 
 @item
-when the garbage collector detects no other references to a value in the
+When the garbage collector detects no other references to a value in the
 set of guarded values: the guardian removes it from the set and appends
-it to an internal queue (@acronym{FIFO});
+it to an internal queue (@acronym{FIFO}).
 
 @item
-when the closure is called with zero arguments: it removes the first
+When the closure is called with zero arguments: it removes the first
 value from the internal queue and returns it; if no values are in the
 queue it returns @false{}.
 @end itemize
 
 After an object has been returned by the guardian, it is no more
 ``guarded'' so it will be garbage collected when it will become
-inaccessible (unsless it is registered in a guardian).
+inaccessible (unless it is again registered in a guardian).
 
 @quotation
-@emph{Note:} it is possible to register an object in more than one
-guardian, when the object is found inaccessible all the guardian
+@strong{NOTE} It is possible to register an object in more than one
+guardian; when the object is found inaccessible all the guardian
 closures that have it will return it to the caller.  This may lead to
 invalid finalisation operations, it is the responsibility of the
 programmer to avoid this.
 @end quotation
 
 @quotation
-@emph{Note:} it is possible to register an object multiple times in the
-same guardian, when the object is found inaccessible the guardian
+@strong{NOTE} It is possible to register an object multiple times in the
+same guardian; when the object is found inaccessible the guardian
 closure that has it will return it to the caller multiple times.  This
 may lead to invalid finalisation operations, it is the responsibility of
 the programmer to avoid this.
@@ -5115,7 +5116,6 @@ indefinitely).  Use judiciously.
 @menu
 * ffi libffi::                  Install and use Libffi.
 * ffi memory::                  Memory management.
-* ffi memops::                  Memory operations.
 * ffi dl::                      Accessing shared libraries.
 * ffi callout::                 Calling out to foreign procedures.
 * ffi callback::                Calling back to Scheme.
@@ -5170,16 +5170,29 @@ the Libffi headers are to be found; @ref{overview install} for details.
 @section Memory management
 
 
-@value{PRJNAME} Scheme is a managed environment.  Like in many
-programming environments, @value{PRJNAME} manages its own memory.
-Scheme objects are allocated in a special memory region (the Scheme
-heap) and have type--specific object layouts; this allows the run time
-system to distinguish object types and the garbage collector to locate
-all potentially live objects, and reclaim the memory of dead objects.
+@menu
+* ffi memory intro::            Introduction to managing memory.
+* ffi memory alloc::            Allocating and freeing memory.
+* ffi memory pointer::          Handling pointer values.
+* ffi memory poke::             Poking values.
+* ffi memory peek::             Peeking values.
+@end menu
+
+@c page
+@node ffi memory intro
+@subsection Introduction to managing memory
+
+
+@value{PRJNAME} Scheme is a managed environment: Scheme objects are
+allocated in a special memory region (the Scheme heap) and have
+type--specific object layouts; this allows the run time system to
+distinguish object types and the garbage collector to locate all
+potentially live objects, and reclaim the memory of dead objects.
+
 Scheme objects are also @emph{opaque} in the sense that the data
-structures used to represent Scheme objects (e.g., pairs) are not
-exposed to the programmer, who can only interact with objects through an
-interface (e.g., @code{car}, @code{cdr}).
+structures used to represent Scheme objects are not exposed, at the
+Scheme level, to the programmer who can only interact with objects
+through an interface.
 
 Unmanaged environments, such as the operating system on which
 @value{PRJNAME} runs, require that the programmer manages the allocation
@@ -5189,75 +5202,79 @@ resources whose management must be coordinated among the different parts
 of the system, and this becomes the responsibility of the programmer who
 is wiring the different subsystems together.
 
-Memory, from a system's point of view, is @emph{transparent}.  A pointer
-is an integer denoting an address of memory.  This memory address may
-contain a value that requires interpretation.  At the lowest--level,
-each byte of memory contains eight bits, each of which may be toggled on
-or off.  A level higher, contiguous sequences of bytes are grouped
-together and are interpreted as integers, floating point numbers, or
-pointers to other memory addresses.  These are the basic data types that
-are often interpreted atomically.  Yet a level higher, groups of basic
-types form data structures such as arrays, linked lists, trees, and so
-on.  Objects, as found in object--oriented programming languages, are at
-an even higher level of abstraction since they are treated as opaque
-references that retain state and know how to respond to messages.
-
 The procedures in the @library{vicare ffi} library are meant to provide
 a way to interface with the low level memory operations such as setting
-and getting bytes from specific locations in memory.  Although they do
-not provide high--level operations, the basic procedures make
-implementing high--level operations (such as the Objective--C system)
-possible.  Programmers are encouraged to define their own abstractions
-that are most suitable for the specific target library rather than using
-the low--level operations directly.  This results in writing more robust
-and more easily maintainable libraries.  To put it more boldly:
-@strong{Do not sprinkle your code with low--level memory operations}.
+and getting bytes from specific locations in memory.
 
 @c page
-@node ffi memops
-@section Memory operations
-
-
-@menu
-* ffi memops alloc::    Allocating and freeing memory.
-* ffi memops pointer::  Handling pointer values.
-* ffi memops poke::     Poking values.
-* ffi memops peek::     Peeking values.
-@end menu
-
-@c page
-@node ffi memops alloc
+@node ffi memory alloc
 @subsection Allocating and freeing memory
 
 
-@deffn Procedure malloc @var{number-of-bytes}
-Allocate a block of memory and return a pointer to it.  The
-@func{malloc} Scheme procedure is implemented using the host--provided
-@cfunc{malloc} system procedure (often found in @code{libc}).  The
-number of bytes must be a positive exact integer.
+@defun malloc @var{number-of-bytes}
+@defunx guarded-malloc @var{number-of-bytes}
+Interface to the C function @cfunc{malloc}, @glibcref{Basic Allocation,
+malloc}.  Allocate a block of memory @var{number-of-bytes} wide;
+@var{number-of-bytes} must be a non--negative fixnum.  If successful
+return a pointer object, else return @false{}.
 
-@example
-> (malloc 10)
-#<pointer #x00300320>
-> (malloc 10000)
-#<pointer #x01800400>
-@end example
-
-In case of failure allocating memory: the return value is @false{}.
-@end deffn
+Memory allocated by @func{malloc} must be released by @func{free};
+memory allocated by @func{guarded-malloc} is automatically released
+whenever the returned pointer object is garbage collected.
+@end defun
 
 
-@deffn Procedure free @var{pointer-to-memory-block}
-Release the memory region at the given address.  The memory region must
-have been allocated with @cfunc{malloc}, @cfunc{calloc}, or a similar
-system procedure.  Once freed, memory operations on the given address
-are invalid and may cause the system to crash at unpredictable times.
-@value{PRJNAME} cannot check for such errors since the memory may be freed by
-procedures that are external to @value{PRJNAME}.
-@end deffn
+@defun realloc @var{pointer} @var{number-of-bytes}
+@defunx guarded-realloc @var{pointer} @var{number-of-bytes}
+Interface to the C function @cfunc{realloc}, @glibcref{Changing Block
+Size, realloc}.  Reallocate the block of memory referenced by
+@var{pointer} to the new size @var{number-of-bytes}, which must be a
+non--negative fixnum.
+
+If successful return a new pointer object and release the memory
+referenced by @var{pointer}; @var{pointer} itself is mutated to hold the
+@cnull{} pointer.  If an error occurs: return @false{} and leave
+untouched both @var{pointer} and its referenced memory.
+
+Memory allocated by @func{realloc} must be released by @func{free};
+memory allocated by @func{guarded-realloc} is automatically released
+whenever the returned pointer object is garbage collected.
+
+If memory allocated by a guarding function is reallocated with
+@func{guarded-realloc}: @value{PRJNAME} will @strong{not} try to
+automatically release the old memory.
+@end defun
+
+
+@defun calloc @var{number-of-elements} @var{element-size}
+@defunx guarded-calloc @var{number-of-elements} @var{element-size}
+Interface to the C function @cfunc{calloc}, @glibcref{Allocating Cleared
+Space, calloc}.  Allocate and clear to zero a block of memory capable of
+holding @var{number-of-elements} each @var{element-size} wide; both the
+arguments must be non--negative fixnums.  If successful return a pointer
+object, else return @false{}.
+
+Memory allocated by @func{calloc} must be released by @func{free};
+memory allocated by @func{guarded-calloc} is automatically released
+whenever the returned pointer object is garbage collected.
+@end defun
+
+
+@defun free @var{pointer}
+Release the memory referenced by @var{pointer}, which must be the return
+value of @cfunc{malloc}, @cfunc{realloc}, @cfunc{calloc} or a similar
+system procedure.  @var{pointer} is mutated to reference the @cnull{}
+pointer.
+
+If memory allocated by a guarding function is released by @func{free}:
+@value{PRJNAME} will @strong{not} try to automatically release the old
+memory again.
+
+If @var{pointer} is @cnull{} nothing happens.
+@end defun
 
 @c page
-@node ffi memops pointer
+@node ffi memory pointer
 @subsection Handling pointer values
 
 
@@ -5291,7 +5308,7 @@ platform.
 @end deffn
 
 @c page
-@node ffi memops poke
+@node ffi memory poke
 @subsection Poking values
 
 
@@ -5376,7 +5393,7 @@ to the 32-bit pointer @var{value}.
 @end deffn
 
 @c page
-@node ffi memops peek
+@node ffi memory peek
 @subsection Peeking values
 
 
@@ -5794,7 +5811,7 @@ Scheme flonum with value @code{0.7853981633974483}.
 @end enumerate
 
 @example
-> (import (ikarus foreign))
+> (import (vicare ffi))
 > (define libc (dlopen "libc.dylib"))
 > libc
 #<pointer #x00100770>

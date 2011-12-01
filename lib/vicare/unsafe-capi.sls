@@ -35,6 +35,9 @@
     ffi-dlopen				ffi-dlclose
     ffi-dlsym				ffi-dlerror
 
+    ffi-malloc				ffi-free
+    ffi-realloc				ffi-calloc
+
     ffi-pointer?			ffi-pointer-null?
     ffi-fixnum->pointer			ffi-bignum->pointer
     ffi-pointer->integer
@@ -42,6 +45,7 @@
     ffi-pointer-eq			ffi-pointer-neq
     ffi-pointer-lt			ffi-pointer-gt
     ffi-pointer-le			ffi-pointer-ge
+    ffi-set-pointer-null!
 
     ffi-pointer-c-ref-uint8		ffi-pointer-c-ref-sint8
     ffi-pointer-c-ref-uint16		ffi-pointer-c-ref-sint16
@@ -247,6 +251,20 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-inline (ffi-malloc number-of-bytes)
+  (foreign-call "ikrt_malloc" number-of-bytes))
+
+(define-inline (ffi-realloc pointer number-of-bytes)
+  (foreign-call "ikrt_realloc" pointer number-of-bytes))
+
+(define-inline (ffi-calloc number-of-elements element-size)
+  (foreign-call "ikrt_calloc" number-of-elements element-size))
+
+(define-inline (ffi-free pointer)
+  (foreign-call "ikrt_free" pointer))
+
+;;; --------------------------------------------------------------------
+
 (define-inline (ffi-pointer? obj)
   (foreign-call "ikrt_is_pointer" obj))
 
@@ -285,6 +303,9 @@
 
 (define-inline (ffi-pointer-ge ptr1 ptr2)
   (foreign-call "ikrt_pointer_ge" ptr1 ptr2))
+
+(define-inline (ffi-set-pointer-null! ptr)
+  (foreign-call "ikrt_pointer_set_null" ptr))
 
 ;;; --------------------------------------------------------------------
 

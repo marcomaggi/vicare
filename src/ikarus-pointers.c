@@ -9,6 +9,7 @@
         distribution  for no  reason I  can know  (Marco Maggi;  Nov 26,
         2011).
 
+  Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute  it and/or modify
@@ -91,8 +92,8 @@ ikptr
 ikrt_pointer_alloc (unsigned long memory, ikpcb * pcb)
 {
   ikptr r = ik_safe_alloc(pcb, pointer_size);
-  ref(r, 0) = pointer_tag;
-  ref(r, wordsize) = (ikptr)memory;
+  ref(r, 0)        = pointer_tag;
+  ref(r, wordsize) = (ikptr)memory; /* we have not yet added the tag! */
   return r+vector_tag;
 }
 ikptr
@@ -109,6 +110,12 @@ ikptr
 ikrt_pointer_is_null (ikptr x /*, ikpcb* pcb*/)
 {
   return ref(x, off_pointer_data)? true_object : false_object;
+}
+ikptr
+ikrt_pointer_set_null (ikptr pointer)
+{
+  ref(pointer, off_pointer_data) = (ikptr)NULL;
+  return void_object;
 }
 
 /* ------------------------------------------------------------------ */
@@ -230,17 +237,36 @@ ikrt_pointer_ge (ikptr ptr1, ikptr ptr2)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_malloc (ikptr len, ikpcb* pcb)
+ikrt_malloc (ikptr number_of_bytes, ikpcb* pcb)
 {
-  void *        p = malloc(unfix(len));
+  void *        p = malloc(unfix(number_of_bytes));
   return (p)? ikrt_pointer_alloc((long) p, pcb) : false_object;
 }
 ikptr
-ikrt_free(ikptr x)
+ikrt_realloc (ikptr pointer, ikptr number_of_bytes, ikpcb* pcb)
 {
-  free((void*) ref(x, off_pointer_data));
+  void *        p = realloc((void *)ref(pointer, off_pointer_data), unfix(number_of_bytes));
+  return (p)? ikrt_pointer_alloc((long) p, pcb) : false_object;
+}
+ikptr
+ikrt_calloc (ikptr number_of_elements, ikptr element_size, ikpcb* pcb)
+{
+  void *        p = calloc(unfix(number_of_elements), unfix(element_size));
+  return (p)? ikrt_pointer_alloc((long) p, pcb) : false_object;
+}
+ikptr
+ikrt_free (ikptr pointer)
+{
+  void *        memory = (void*)ref(pointer, off_pointer_data);
+  if (memory) {
+    free(memory);
+    ref(pointer, off_pointer_data) = (ikptr)NULL;
+  }
   return void_object;
 }
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikrt_memcpy_to_bv(ikptr dst, ikptr dst_off, ikptr src, ikptr count /*, ikpcb* pcb */)
 {

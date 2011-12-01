@@ -1,6 +1,6 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2008,2009  Abdulaziz Ghuloum
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under  the terms of  the GNU General  Public License version  3 as
@@ -24,6 +24,7 @@
     pointer=?				pointer<>?
     pointer<?				pointer>?
     pointer<=?				pointer>=?
+    set-pointer-null!
 
     ;; shared libraries inteface
     dlopen				dlclose
@@ -34,6 +35,7 @@
 
     ;; raw memory allocation
     malloc				free
+    realloc				calloc
     memcpy
 
     ;; errno interface
@@ -115,6 +117,14 @@
   (words.ptrdiff? obj)
   (assertion-violation who
     "expected exact integer representing pointer difference as argument" obj))
+
+(define-argument-validation (number-of-bytes who obj)
+  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (assertion-violation who "expected non-negative fixnum as number of bytes argument" obj))
+
+(define-argument-validation (number-of-elements who obj)
+  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (assertion-violation who "expected non-negative fixnum as number of elements argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -261,6 +271,12 @@
 (define (pointer-null? obj)
   (and (pointer? obj) (capi.ffi-pointer-null? obj)))
 
+(define (set-pointer-null! ptr)
+  (define who 'set-pointer-null!)
+  (with-arguments-validation (who)
+      ((pointer ptr))
+    (capi.ffi-set-pointer-null! ptr)))
+
 ;;; --------------------------------------------------------------------
 
 (define (integer->pointer x)
@@ -393,15 +409,34 @@
 
 ;;; explicit memory management
 
-(define (malloc len)
-  (if (and (fixnum? len) (fx>? len 0))
-      (foreign-call "ikrt_malloc" len)
-    (die 'malloc "not a positive fixnum" len)))
+(define (malloc number-of-bytes)
+  (define who 'malloc)
+  (with-arguments-validation (who)
+      ((number-of-bytes	 number-of-bytes))
+    (capi.ffi-malloc number-of-bytes)))
 
-(define (free x)
-  (if (pointer? x)
-      (foreign-call "ikrt_free" x)
-    (die 'free "not a pointer" x)))
+(define (realloc pointer number-of-bytes)
+  (define who 'realloc)
+  (with-arguments-validation (who)
+      ((number-of-bytes	 number-of-bytes))
+    (capi.ffi-realloc pointer number-of-bytes)))
+
+(define (calloc number-of-elements element-size)
+  (define who 'calloc)
+  (with-arguments-validation (who)
+      ((number-of-elements	number-of-elements)
+       (number-of-bytes		element-size))
+    (capi.ffi-calloc number-of-elements element-size)))
+
+(define (free ptr)
+  (define who 'free)
+  (with-arguments-validation (who)
+      ((pointer	ptr))
+    ;;Take care  at the  C level  not to "free()"  null pointers  and of
+    ;;mutating PTR to NULL.
+    (capi.ffi-free ptr)))
+
+;;; --------------------------------------------------------------------
 
 (define (memcpy dst dst-offset src src-offset count)
   (define who 'memcpy)
