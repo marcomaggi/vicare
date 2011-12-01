@@ -5176,6 +5176,7 @@ the Libffi headers are to be found; @ref{overview install} for details.
 * ffi memory alloc::            Allocating and freeing memory.
 * ffi memory poke::             Poking values.
 * ffi memory peek::             Peeking values.
+* ffi memory ops::              Memory operations.
 @end menu
 
 @c page
@@ -5373,49 +5374,93 @@ If @var{pointer} is @cnull{} nothing happens.
 
 
 With all the following functions: the @var{pointer} argument must be a
-valid pointer; the @var{offset} and @var{value} arguments must be exact
-integers.  When adding an offset to a pointer: all the following
-functions @strong{do not} scale the offset to the size of the poked
-value.  Pointer arithmetics is performed with byte offsets.
+valid pointer object; the @var{offset} argument must be a fixnum.  When
+adding an offset to a pointer: all the following functions @strong{do
+not} scale the offset to the size of the poked value; pointer
+arithmetics is performed with byte offsets.
 
 
-@macro poker{BYTENUM,BITNUM}
+@macro bitpoker{BYTENUM,BITNUM}
 Set to @var{value} the \BYTENUM\ of memory located at @var{offset} from
-@var{pointer}.  Only the \BITNUM\ lowermost bits of @var{value} are used
-in the operation and the remaining bits are ignored.
+@var{pointer}.  @var{VALUE} must be an exact integer in the range
+representable by \BITNUM\ bits.
 @end macro
 
+@macro cpoker{TYPE}
+Set to @var{value} a number of bytes corresponding to the @code{signed
+\TYPE\} or @code{unsigned \TYPE\} type located at @var{offset} from
+@var{pointer}.
+@end macro
 
 @c ------------------------------------------------------------
 
-@subsubheading Poking exact integers
+@subsubheading Poking bitwise sized exact integers
+
+The following functions store signed and unsigned exact integers in raw
+memory location selecting the size with the number of bits required to
+represent the value.
 
 
-@deffn Procedure pointer-set-c-char! @var{pointer} @var{offset} @var{value}
-@poker{single byte,8}
+@deffn Procedure pointer-set-c-sint8! @var{pointer} @var{offset} @var{value}
+@deffnx Procedure pointer-set-c-uint8! @var{pointer} @var{offset} @var{value}
+@bitpoker{single byte,8}
 @end deffn
 
 
-@deffn Procedure pointer-set-c-short! @var{pointer} @var{offset} @var{value}
-@poker{two bytes,16}
+@deffn Procedure pointer-set-c-sint16! @var{pointer} @var{offset} @var{value}
+@deffnx Procedure pointer-set-c-uint16! @var{pointer} @var{offset} @var{value}
+@bitpoker{two bytes,16}
 @end deffn
 
 
-@deffn Procedure pointer-set-c-int! @var{pointer} @var{offset} @var{value}
-@poker{four bytes,32}
+@deffn Procedure pointer-set-c-sint32! @var{pointer} @var{offset} @var{value}
+@deffnx Procedure pointer-set-c-uint32! @var{pointer} @var{offset} @var{value}
+@bitpoker{two bytes,32}
 @end deffn
 
 
-@deffn Procedure pointer-set-c-long! @var{pointer} @var{offset} @var{value}
-On 64-bit systems: @poker{eight bytes,64}
+@deffn Procedure pointer-set-c-sint64! @var{pointer} @var{offset} @var{value}
+@deffnx Procedure pointer-set-c-uint64! @var{pointer} @var{offset} @var{value}
+@bitpoker{two bytes,64}
+@end deffn
 
-On 32-bit systems: perform the same task as @func{pointer-set-c-int!}.
+@c ------------------------------------------------------------
+
+@subsubheading Poking C language exact integers
+
+The following functions store signed and unsigned exact integers in raw
+memory locations selecting the size according to the one used by the C
+language implementation.
+
+
+@deffn Procedure pointer-set-c-signed-char! @var{pointer} @var{offset} @var{value}
+@deffnx Procedure pointer-set-c-unsigned-char! @var{pointer} @var{offset} @var{value}
+@cpoker{char}
 @end deffn
 
 
-@deffn Procedure pointer-set-c-long-long! @var{pointer} @var{offset} @var{value}
-Set to @var{value} a number of bytes corresponding to the @code{long
-long} type located at @var{offset} from @var{pointer}.
+@deffn Procedure pointer-set-c-signed-short! @var{pointer} @var{offset} @var{value}
+@deffnx Procedure pointer-set-c-unsigned-short! @var{pointer} @var{offset} @var{value}
+@cpoker{short int}
+@end deffn
+
+
+@deffn Procedure pointer-set-c-signed-int! @var{pointer} @var{offset} @var{value}
+@deffnx Procedure pointer-set-c-unsigned-int! @var{pointer} @var{offset} @var{value}
+@cpoker{int}
+@end deffn
+
+
+
+@deffn Procedure pointer-set-c-signed-long! @var{pointer} @var{offset} @var{value}
+@deffnx Procedure pointer-set-c-unsigned-long! @var{pointer} @var{offset} @var{value}
+@cpoker{long}
+@end deffn
+
+
+@deffn Procedure pointer-set-c-signed-long-long! @var{pointer} @var{offset} @var{value}
+@deffnx Procedure pointer-set-c-unsigned-long-long! @var{pointer} @var{offset} @var{value}
+@cpoker{long long}
 @end deffn
 
 
@@ -5445,11 +5490,8 @@ Scheme @var{flonum} in the eight bytes at @var{offset} from
 
 
 @deffn Procedure pointer-set-c-pointer! @var{pointer} @var{offset} @var{value}
-On 64-bit systems: set the eight bytes at @var{offset} from
-@var{pointer} to the 64-bit pointer @var{value}.
-
-On 32-bit systems: set the four bytes at @var{offset} from @var{pointer}
-to the 32-bit pointer @var{value}.
+Store address of the raw memory location referenced by the pointer
+@var{value} at @var{offset} from @var{pointer}.
 @end deffn
 
 @c page
@@ -5458,106 +5500,90 @@ to the 32-bit pointer @var{value}.
 
 
 With all the following functions: the @var{pointer} argument must be a
-valid pointer; the @var{offset} argument must be an exact integer.  When
+valid pointer object; the @var{offset} argument must be a fixnum.  When
 adding an offset to a pointer: all the following functions @strong{do
-not} scale the offset to the size of the poked value.  Pointer
+not} scale the offset to the size of the poked value; pointer
 arithmetics is performed with byte offsets.
 
+@macro bitpeeker{BITNUM}
+Peek the \BITNUM\ bits located at @var{offset} from @var{pointer} and
+return them as signed or unsigned exact integer.
+@end macro
+
+@macro cpeeker{TYPE}
+Peek the @code{signed \TYPE\} or @code{unsigned \TYPE\} integer located
+at @var{offset} from @var{pointer} and return it as signed or unsigned
+exact integer.
+@end macro
 
 @c ------------------------------------------------------------
 
-@subsubheading Peeking exact integers
+@subsubheading Peeking bitwise sized exact integers
+
+The following functions retrieve signed and unsigned exact integers from
+raw memory location selecting the size with the number of bits required
+to represent the value.
+
+
+@defun pointer-ref-c-sint8 @var{pointer} @var{offset}
+@defunx pointer-ref-c-uint8 @var{pointer} @var{offset}
+@bitpeeker{8}
+@end defun
+
+
+@defun pointer-ref-c-sint16 @var{pointer} @var{offset}
+@defunx pointer-ref-c-uint16 @var{pointer} @var{offset}
+@bitpeeker{16}
+@end defun
+
+
+@defun pointer-ref-c-sint32 @var{pointer} @var{offset}
+@defunx pointer-ref-c-uint32 @var{pointer} @var{offset}
+@bitpeeker{32}
+@end defun
+
+
+@defun pointer-ref-c-sint64 @var{pointer} @var{offset}
+@defunx pointer-ref-c-uint64 @var{pointer} @var{offset}
+@bitpeeker{64}
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Peeking C language exact integers
+
+The following functions store signed and unsigned exact integers from
+raw memory locations selecting the size according to the one used by the
+C language implementation.
 
 
 @deffn Procedure pointer-ref-c-signed-char @var{pointer} @var{offset}
-Peek the single byte located at @var{offset} from @var{pointer} and
-return an exact integer representing the sign--extended integer value of
-that byte. The resulting value is in the inclusive range @code{[-128,
-127]}.
+@deffnx Procedure pointer-ref-c-signed-char @var{pointer} @var{offset}
+@cpeeker{char}
 @end deffn
-
-
-@deffn Procedure pointer-ref-c-unsigned-char @var{pointer} @var{offset}
-Peek the single byte located at @var{offset} from @var{pointer} and
-return an exact integer representing the unsigned integer value of that
-byte.  The resulting value is in the inclusive range @code{[0, 255]}.
-@end deffn
-
-
-The following example shows the difference between the two functions
-above:
-
-@example
-> (let ([p (malloc 3)])
-    (pointer-set-c-char! p 0 #b01111111)
-    (pointer-set-c-char! p 1 #b10000000)
-    (pointer-set-c-char! p 2 #b11111111)
-    (let ([result
-           (list (pointer-ref-c-signed-char p 0)
-                 (pointer-ref-c-signed-char p 1)
-                 (pointer-ref-c-signed-char p 2)
-                 (pointer-ref-c-unsigned-char p 0)
-                 (pointer-ref-c-unsigned-char p 1)
-                 (pointer-ref-c-unsigned-char p 2))])
-      (free p)
-      result))
-(127 -128 -1 127 128 255)
-@end example
 
 
 @deffn Procedure pointer-ref-c-signed-short @var{pointer} @var{offset}
-Peek two bytes at @var{offset} from @var{pointer} and return an exact
-integer representing the sign--extended integer value of the sequence.
-The resulting value is in the inclusive range @code{[-32768, 32767]}.
-@end deffn
-
-
-@deffn Procedure pointer-ref-c-unsigned-short @var{pointer} @var{offset}
-Peek two bytes at @var{offset} from @var{pointer} and return an exact
-integer representing the unsigned integer value of the sequence.  The
-resulting value is in the inclusive range @code{[0, 65535]}.
+@deffnx Procedure pointer-ref-c-unsigned-short @var{pointer} @var{offset}
+@cpeeker{short int}
 @end deffn
 
 
 @deffn Procedure pointer-ref-c-signed-int @var{pointer} @var{offset}
-Peek four bytes at @var{offset} from @var{pointer} and return an exact
-integer in the inclusive range @code{[-2^31, 2^31-1]}.
-@end deffn
-
-
-@deffn Procedure pointer-ref-c-unsigned-int @var{pointer} @var{offset}
-Peek four bytes at @var{offset} from @var{pointer} and return an exact
-integer in the inclusive range @code{[0, 2^32-1]}.
+@deffnx Procedure pointer-ref-c-unsigned-int @var{pointer} @var{offset}
+@cpeeker{int}
 @end deffn
 
 
 @deffn Procedure pointer-ref-c-signed-long @var{pointer} @var{offset}
-On 64-bit systems: peek eight bytes at @var{offset} from @var{pointer}
-and return an integer in the inclusive range @code{[-2^63, 2^63-1]}.
-
-On 32-bit systems, perform the same task as
-@func{pointer-ref-c-signed-int}.
-@end deffn
-
-
-@deffn Procedure pointer-ref-c-unsigned-long @var{pointer} @var{offset}
-On 64-bit systems: peek eight bytes at @var{offset} from @var{pointer}
-and return an integer in the inclusive range @code{[0, 2^64-1]}.
-
-On 32-bit systems: perform the same task as
-@func{pointer-ref-c-unsigned-int}.
+@deffnx Procedure pointer-ref-c-unsigned-long @var{pointer} @var{offset}
+@cpeeker{long}
 @end deffn
 
 
 @deffn Procedure pointer-ref-c-signed-long-long @var{pointer} @var{offset}
-Peek a number of bytes corresponding to the native @code{long long} type
-at @var{offset} from @var{pointer} and return an integer.
-@end deffn
-
-
-@deffn Procedure pointer-ref-c-unsigned-long-long @var{pointer} @var{offset}
-Peek a number of bytes corresponding to the native @code{unsigned long
-long} type at @var{offset} from @var{pointer} and return an integer.
+@deffnx Procedure pointer-ref-c-unsigned-long-long @var{pointer} @var{offset}
+@cpeeker{long long}
 @end deffn
 
 @c ------------------------------------------------------------
@@ -5590,6 +5616,11 @@ of the pointer (also the number of bytes loaded) depends on the
 architecture: it is 4 bytes on 32-bit systems and 8 bytes on 64-bit
 systems.
 @end deffn
+
+@c page
+@node ffi memory ops
+@subsection Memory operations
+
 
 @c page
 @node ffi dl

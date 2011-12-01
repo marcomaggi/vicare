@@ -286,6 +286,157 @@
   #t)
 
 
+(parametrise ((check-test-name	'memory))
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-uint8! P 2 123)
+	(ffi.pointer-ref-c-uint8  P 2))
+    => 123)
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-sint8! P 2 -123)
+	(ffi.pointer-ref-c-sint8  P 2))
+    => -123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-uint16! P 2 123)
+	(ffi.pointer-ref-c-uint16  P 2))
+    => 123)
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-sint16! P 2 -123)
+	(ffi.pointer-ref-c-sint16  P 2))
+    => -123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-uint32! P 2 123)
+	(ffi.pointer-ref-c-uint32  P 2))
+    => 123)
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-sint32! P 2 -123)
+	(ffi.pointer-ref-c-sint32  P 2))
+    => -123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-uint64! P 2 123)
+	(ffi.pointer-ref-c-uint64  P 2))
+    => 123)
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-sint64! P 2 -123)
+	(ffi.pointer-ref-c-sint64  P 2))
+    => -123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-float! P 2 1.23)
+	(fl>? 0.0001 (fl- 1.23 (ffi.pointer-ref-c-float  P 2))))
+    => #t)
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-double! P 2 -1.23)
+	(ffi.pointer-ref-c-double  P 2))
+    => -1.23)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-pointer! P 2 (ffi.integer->pointer 123))
+	(ffi.pointer-ref-c-pointer  P 2))
+    => (ffi.integer->pointer 123))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-signed-char! P 2 123)
+	(ffi.pointer-ref-c-signed-char  P 2))
+    => 123)
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-unsigned-char! P 2 123)
+	(ffi.pointer-ref-c-unsigned-char  P 2))
+    => 123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-signed-short! P 2 123)
+	(ffi.pointer-ref-c-signed-short  P 2))
+    => 123)
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-unsigned-short! P 2 123)
+	(ffi.pointer-ref-c-unsigned-short  P 2))
+    => 123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-signed-int! P 2 123)
+	(ffi.pointer-ref-c-signed-int  P 2))
+    => 123)
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-unsigned-int! P 2 123)
+	(ffi.pointer-ref-c-unsigned-int  P 2))
+    => 123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-signed-long! P 2 123)
+	(ffi.pointer-ref-c-signed-long  P 2))
+    => 123)
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-unsigned-long! P 2 123)
+	(ffi.pointer-ref-c-unsigned-long  P 2))
+    => 123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-signed-long-long! P 2 123)
+	(ffi.pointer-ref-c-signed-long-long  P 2))
+    => 123)
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-unsigned-long-long! P 2 123)
+	(ffi.pointer-ref-c-unsigned-long-long  P 2))
+    => 123)
+
+  #t)
+
+
 (parametrise ((check-test-name	'case-errno))
 
   (check

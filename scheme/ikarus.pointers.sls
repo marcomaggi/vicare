@@ -42,10 +42,10 @@
     errno
 
     ;; memory accessors and mutators
-    pointer-c-ref-uint8			pointer-c-ref-sint8
-    pointer-c-ref-uint16		pointer-c-ref-sint16
-    pointer-c-ref-uint32		pointer-c-ref-sint32
-    pointer-c-ref-uint64		pointer-c-ref-sint64
+    pointer-ref-c-uint8			pointer-ref-c-sint8
+    pointer-ref-c-uint16		pointer-ref-c-sint16
+    pointer-ref-c-uint32		pointer-ref-c-sint32
+    pointer-ref-c-uint64		pointer-ref-c-sint64
 
     pointer-ref-c-signed-char		pointer-ref-c-unsigned-char
     pointer-ref-c-signed-short		pointer-ref-c-unsigned-short
@@ -56,10 +56,10 @@
     pointer-ref-c-float			pointer-ref-c-double
     pointer-ref-c-pointer
 
-    pointer-c-set-uint8!		pointer-c-set-sint8!
-    pointer-c-set-uint16!		pointer-c-set-sint16!
-    pointer-c-set-uint32!		pointer-c-set-sint32!
-    pointer-c-set-uint64!		pointer-c-set-sint64!
+    pointer-set-c-uint8!		pointer-set-c-sint8!
+    pointer-set-c-uint16!		pointer-set-c-sint16!
+    pointer-set-c-uint32!		pointer-set-c-sint32!
+    pointer-set-c-uint64!		pointer-set-c-sint64!
 
     pointer-set-c-signed-char!		pointer-set-c-unsigned-char!
     pointer-set-c-signed-short!		pointer-set-c-unsigned-short!
@@ -350,14 +350,14 @@
 					       ((pointer  pointer)
 						(ptrdiff  offset))
 					     (?accessor pointer offset)))))))
-  (define-accessor pointer-c-ref-uint8		capi.ffi-pointer-c-ref-uint8)
-  (define-accessor pointer-c-ref-sint8		capi.ffi-pointer-c-ref-sint8)
-  (define-accessor pointer-c-ref-uint16		capi.ffi-pointer-c-ref-uint16)
-  (define-accessor pointer-c-ref-sint16		capi.ffi-pointer-c-ref-sint16)
-  (define-accessor pointer-c-ref-uint32		capi.ffi-pointer-c-ref-uint32)
-  (define-accessor pointer-c-ref-sint32		capi.ffi-pointer-c-ref-sint32)
-  (define-accessor pointer-c-ref-uint64		capi.ffi-pointer-c-ref-uint64)
-  (define-accessor pointer-c-ref-sint64		capi.ffi-pointer-c-ref-sint64)
+  (define-accessor pointer-ref-c-uint8		capi.ffi-pointer-ref-c-uint8)
+  (define-accessor pointer-ref-c-sint8		capi.ffi-pointer-ref-c-sint8)
+  (define-accessor pointer-ref-c-uint16		capi.ffi-pointer-ref-c-uint16)
+  (define-accessor pointer-ref-c-sint16		capi.ffi-pointer-ref-c-sint16)
+  (define-accessor pointer-ref-c-uint32		capi.ffi-pointer-ref-c-uint32)
+  (define-accessor pointer-ref-c-sint32		capi.ffi-pointer-ref-c-sint32)
+  (define-accessor pointer-ref-c-uint64		capi.ffi-pointer-ref-c-uint64)
+  (define-accessor pointer-ref-c-sint64		capi.ffi-pointer-ref-c-sint64)
 
   (define-accessor pointer-ref-c-float		capi.ffi-pointer-ref-c-float)
   (define-accessor pointer-ref-c-double		capi.ffi-pointer-ref-c-double)
@@ -385,14 +385,14 @@
 					       (ptrdiff     offset)
 					       (?word-type  value))
 					    (?mutator pointer offset value)))))))
-  (define-mutator pointer-c-set-uint8!		capi.ffi-pointer-c-set-uint8!	uint8)
-  (define-mutator pointer-c-set-sint8!		capi.ffi-pointer-c-set-sint8!	sint8)
-  (define-mutator pointer-c-set-uint16!		capi.ffi-pointer-c-set-uint16!	uint16)
-  (define-mutator pointer-c-set-sint16!		capi.ffi-pointer-c-set-sint16!	sint16)
-  (define-mutator pointer-c-set-uint32!		capi.ffi-pointer-c-set-uint32!	uint32)
-  (define-mutator pointer-c-set-sint32!		capi.ffi-pointer-c-set-sint32!	sint32)
-  (define-mutator pointer-c-set-uint64!		capi.ffi-pointer-c-set-uint64!	uint64)
-  (define-mutator pointer-c-set-sint64!		capi.ffi-pointer-c-set-sint64!	sint64)
+  (define-mutator pointer-set-c-uint8!		capi.ffi-pointer-set-c-uint8!	uint8)
+  (define-mutator pointer-set-c-sint8!		capi.ffi-pointer-set-c-sint8!	sint8)
+  (define-mutator pointer-set-c-uint16!		capi.ffi-pointer-set-c-uint16!	uint16)
+  (define-mutator pointer-set-c-sint16!		capi.ffi-pointer-set-c-sint16!	sint16)
+  (define-mutator pointer-set-c-uint32!		capi.ffi-pointer-set-c-uint32!	uint32)
+  (define-mutator pointer-set-c-sint32!		capi.ffi-pointer-set-c-sint32!	sint32)
+  (define-mutator pointer-set-c-uint64!		capi.ffi-pointer-set-c-uint64!	uint64)
+  (define-mutator pointer-set-c-sint64!		capi.ffi-pointer-set-c-sint64!	sint64)
 
   (define-mutator pointer-set-c-float!		capi.ffi-pointer-set-c-float!	flonum)
   (define-mutator pointer-set-c-double!		capi.ffi-pointer-set-c-double!	flonum)

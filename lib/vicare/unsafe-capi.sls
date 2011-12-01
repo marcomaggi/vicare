@@ -47,10 +47,10 @@
     ffi-pointer-le			ffi-pointer-ge
     ffi-set-pointer-null!
 
-    ffi-pointer-c-ref-uint8		ffi-pointer-c-ref-sint8
-    ffi-pointer-c-ref-uint16		ffi-pointer-c-ref-sint16
-    ffi-pointer-c-ref-uint32		ffi-pointer-c-ref-sint32
-    ffi-pointer-c-ref-uint64		ffi-pointer-c-ref-sint64
+    ffi-pointer-ref-c-uint8		ffi-pointer-ref-c-sint8
+    ffi-pointer-ref-c-uint16		ffi-pointer-ref-c-sint16
+    ffi-pointer-ref-c-uint32		ffi-pointer-ref-c-sint32
+    ffi-pointer-ref-c-uint64		ffi-pointer-ref-c-sint64
 
     ffi-pointer-ref-c-float		ffi-pointer-ref-c-double
     ffi-pointer-ref-c-pointer
@@ -61,10 +61,10 @@
     ffi-pointer-ref-c-signed-long	ffi-pointer-ref-c-unsigned-long
     ffi-pointer-ref-c-signed-long-long	ffi-pointer-ref-c-unsigned-long-long
 
-    ffi-pointer-c-set-uint8!		ffi-pointer-c-set-sint8!
-    ffi-pointer-c-set-uint16!		ffi-pointer-c-set-sint16!
-    ffi-pointer-c-set-uint32!		ffi-pointer-c-set-sint32!
-    ffi-pointer-c-set-uint64!		ffi-pointer-c-set-sint64!
+    ffi-pointer-set-c-uint8!		ffi-pointer-set-c-sint8!
+    ffi-pointer-set-c-uint16!		ffi-pointer-set-c-sint16!
+    ffi-pointer-set-c-uint32!		ffi-pointer-set-c-sint32!
+    ffi-pointer-set-c-uint64!		ffi-pointer-set-c-sint64!
 
     ffi-pointer-set-c-float!		ffi-pointer-set-c-double!
     ffi-pointer-set-c-pointer!
@@ -306,28 +306,28 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (ffi-pointer-c-ref-uint8 pointer offset)
+(define-inline (ffi-pointer-ref-c-uint8 pointer offset)
   (foreign-call "ikrt_ref_uint8" pointer offset))
 
-(define-inline (ffi-pointer-c-ref-sint8 pointer offset)
+(define-inline (ffi-pointer-ref-c-sint8 pointer offset)
   (foreign-call "ikrt_ref_sint8" pointer offset))
 
-(define-inline (ffi-pointer-c-ref-uint16 pointer offset)
+(define-inline (ffi-pointer-ref-c-uint16 pointer offset)
   (foreign-call "ikrt_ref_uint16" pointer offset))
 
-(define-inline (ffi-pointer-c-ref-sint16 pointer offset)
+(define-inline (ffi-pointer-ref-c-sint16 pointer offset)
   (foreign-call "ikrt_ref_sint16" pointer offset))
 
-(define-inline (ffi-pointer-c-ref-uint32 pointer offset)
+(define-inline (ffi-pointer-ref-c-uint32 pointer offset)
   (foreign-call "ikrt_ref_uint32" pointer offset))
 
-(define-inline (ffi-pointer-c-ref-sint32 pointer offset)
+(define-inline (ffi-pointer-ref-c-sint32 pointer offset)
   (foreign-call "ikrt_ref_sint32" pointer offset))
 
-(define-inline (ffi-pointer-c-ref-uint64 pointer offset)
+(define-inline (ffi-pointer-ref-c-uint64 pointer offset)
   (foreign-call "ikrt_ref_uint64" pointer offset))
 
-(define-inline (ffi-pointer-c-ref-sint64 pointer offset)
+(define-inline (ffi-pointer-ref-c-sint64 pointer offset)
   (foreign-call "ikrt_ref_sint64" pointer offset))
 
 ;;; --------------------------------------------------------------------
@@ -377,29 +377,29 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (ffi-pointer-c-set-uint8! pointer offset value)
-  (foreign-call "ikrt_ref_uint8" pointer offset value))
+(define-inline (ffi-pointer-set-c-uint8! pointer offset value)
+  (foreign-call "ikrt_set_uint8" pointer offset value))
 
-(define-inline (ffi-pointer-c-set-sint8! pointer offset value)
-  (foreign-call "ikrt_ref_sint8" pointer offset value))
+(define-inline (ffi-pointer-set-c-sint8! pointer offset value)
+  (foreign-call "ikrt_set_sint8" pointer offset value))
 
-(define-inline (ffi-pointer-c-set-uint16! pointer offset value)
-  (foreign-call "ikrt_ref_uint16" pointer offset value))
+(define-inline (ffi-pointer-set-c-uint16! pointer offset value)
+  (foreign-call "ikrt_set_uint16" pointer offset value))
 
-(define-inline (ffi-pointer-c-set-sint16! pointer offset value)
-  (foreign-call "ikrt_ref_sint16" pointer offset value))
+(define-inline (ffi-pointer-set-c-sint16! pointer offset value)
+  (foreign-call "ikrt_set_sint16" pointer offset value))
 
-(define-inline (ffi-pointer-c-set-uint32! pointer offset value)
-  (foreign-call "ikrt_ref_uint32" pointer offset value))
+(define-inline (ffi-pointer-set-c-uint32! pointer offset value)
+  (foreign-call "ikrt_set_uint32" pointer offset value))
 
-(define-inline (ffi-pointer-c-set-sint32! pointer offset value)
-  (foreign-call "ikrt_ref_sint32" pointer offset value))
+(define-inline (ffi-pointer-set-c-sint32! pointer offset value)
+  (foreign-call "ikrt_set_sint32" pointer offset value))
 
-(define-inline (ffi-pointer-c-set-uint64! pointer offset value)
-  (foreign-call "ikrt_ref_uint64" pointer offset value))
+(define-inline (ffi-pointer-set-c-uint64! pointer offset value)
+  (foreign-call "ikrt_set_uint64" pointer offset value))
 
-(define-inline (ffi-pointer-c-set-sint64! pointer offset value)
-  (foreign-call "ikrt_ref_sint64" pointer offset value))
+(define-inline (ffi-pointer-set-c-sint64! pointer offset value)
+  (foreign-call "ikrt_set_sint64" pointer offset value))
 
 ;;; --------------------------------------------------------------------
 
