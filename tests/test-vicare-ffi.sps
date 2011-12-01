@@ -181,6 +181,59 @@
 		  (ffi.pointer-add P D))))
     => #t)
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((one (ffi.integer->pointer 123))
+	    (two (ffi.integer->pointer 456)))
+	(eq? one two))
+    => #f)
+
+  (check
+      (let ((one (ffi.integer->pointer 123))
+	    (two (ffi.integer->pointer 456)))
+	(eqv? one two))
+    => #f)
+
+  (check
+      (let ((one (ffi.integer->pointer 123))
+	    (two (ffi.integer->pointer 456)))
+	(equal? one two))
+    => #f)
+
+  (check
+      (let ((one (ffi.integer->pointer 123)))
+	(eq? one one))
+    => #t)
+
+  (check
+      (let ((one (ffi.integer->pointer 123)))
+	(eqv? one one))
+    => #t)
+
+  (check
+      (let ((one (ffi.integer->pointer 123)))
+	(equal? one one))
+    => #t)
+
+  (check
+      (let ((one (ffi.integer->pointer 123))
+	    (two (ffi.integer->pointer 123)))
+	(eq? one two))
+    => #f)
+
+  (check
+      (let ((one (ffi.integer->pointer 123))
+	    (two (ffi.integer->pointer 123)))
+	(eqv? one two))
+    => #t)
+
+  (check
+      (let ((one (ffi.integer->pointer 123))
+	    (two (ffi.integer->pointer 123)))
+	(equal? one two))
+    => #t)
+
   #t)
 
 

@@ -5212,8 +5212,21 @@ and getting bytes from specific locations in memory.
 
 
 Pointer objects are a disjoint type identified by the @func{pointer?}
-predicate.  The result of calling the procedures @func{eq?}, @func{eqv?}
-and @func{equal?} on pointer values is unspecified.
+predicate.  When applied to pointer objects:
+
+@itemize
+@item
+The result of calling @func{eq?} is true only if the two arguments are
+both pointers and they refer to the same Scheme storage location.
+
+@item
+The result of calling @func{eqv?} and @func{equal?} is true only if the
+two arguments are both pointers and they reference the same raw memory
+location.
+@end itemize
+
+@noindent
+pointers also have @func{pointer=?} as specialised comparison predicate.
 
 
 @defun pointer? @var{obj}

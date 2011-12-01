@@ -188,6 +188,8 @@
      (else #f)))
 
  (define-primop eqv? safe
+   ;;Notice  that at  the Scheme  level the  EQV? predicate  is  the one
+   ;;exported by (ikarus predicates).
    ((P x y)
     (if (or (equable-constant? x)
 	    (equable-constant? y))

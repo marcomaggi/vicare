@@ -59,6 +59,7 @@
     (only (ikarus system $compnums)
 	  $cflonum-real
 	  $cflonum-imag)
+    (ikarus system $pointers)
     ;;These are the ones implemented as primitive operations.
     (rename (only (ikarus)
 		  fixnum? flonum? bignum? ratnum? compnum? cflonum?
@@ -268,6 +269,9 @@
 	 (and (cflonum? y)
 	      (= (real-part x) (real-part y))
 	      (= (imag-part x) (imag-part y))))
+
+	((pointer? x)
+	 (and (pointer? y) ($pointer= x y)))
 
 	(else #f)))
 
