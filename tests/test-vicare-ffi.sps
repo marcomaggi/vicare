@@ -299,6 +299,52 @@
 	bv)
     => (make-bytevector 123 -9))
 
+  (check
+      (let* ((count	123)
+	     (P		(ffi.guarded-malloc count))
+	     (Q		(ffi.guarded-malloc count))
+	     (bv	(make-bytevector count)))
+	(ffi.memset P -9 count)
+	(ffi.memmove Q P count)
+	(ffi.memory-copy bv 0 Q 0 count)
+	bv)
+    => (make-bytevector 123 -9))
+
+;;; --------------------------------------------------------------------
+;;; memory-copy
+
+  (check	;bytevector to bytevector
+      (let ((src '#vu8(1 2 3 4))
+	    (dst (make-bytevector 2)))
+	(ffi.memory-copy dst 0 src 2 2)
+	dst)
+    => '#vu8(3 4))
+
+  (check	;bytevector to memory
+      (let ((src (ffi.guarded-malloc 4))
+	    (dst (make-bytevector 2)))
+	(ffi.pointer-set-c-uint8! src 0 1)
+	(ffi.pointer-set-c-uint8! src 1 2)
+	(ffi.pointer-set-c-uint8! src 2 3)
+	(ffi.pointer-set-c-uint8! src 3 4)
+	(ffi.memory-copy dst 0 src 2 2)
+	dst)
+    => '#vu8(3 4))
+
+  (check	;memory to memory and memory to bytevector
+      (let ((src (ffi.guarded-malloc 4))
+	    (dst (ffi.guarded-malloc 2))
+	    (bv  (make-bytevector 2)))
+	(ffi.pointer-set-c-uint8! src 0 1)
+	(ffi.pointer-set-c-uint8! src 1 2)
+	(ffi.pointer-set-c-uint8! src 2 3)
+	(ffi.pointer-set-c-uint8! src 3 4)
+	(ffi.memory-copy dst 0 src 2 2)
+	(ffi.memory-copy bv  0 dst 0 2)
+	bv)
+    => '#vu8(3 4))
+
+
   #t)
 
 

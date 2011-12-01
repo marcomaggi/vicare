@@ -179,6 +179,45 @@
   (assertion-violation who
     "expected exact integer representing an 64-bit unsigned integer as argument" obj))
 
+(define-argument-validation (start-index-for-bytevector who idx bv)
+  ;;To be used after  START-INDEX validation.  Valid scenarios for start
+  ;;indexes:
+  ;;
+  ;;  |...|word
+  ;;  |---|---|---|---|---|---|---|---|---| bytevector
+  ;;                      ^start
+  ;;
+  ;;  |---|---|---|---|---|---|---|---|---| bytevector
+  ;;                                  ^start
+  ;;
+  ;;  |---|---|---|---|---|---|---|---|---| bytevector
+  ;;                                      ^start = bv.len
+  ;;
+  ;;  | empty bytevector
+  ;;  ^start = bv.len = 0
+  ;;
+  ;;the following is an invalid scenario:
+  ;;
+  ;;  |---|---|---|---|---|---|---|---|---| bytevector
+  ;;                                    ^start = bv.len
+  ;;
+  (let ((bv.len (unsafe.bytevector-length bv)))
+    (or (unsafe.fx=  idx bv.len)
+	(unsafe.fx<= idx bv.len)))
+  (assertion-violation who
+    (string-append "start index argument "		(number->string idx)
+		   " too big for bytevector length "	(number->string (unsafe.bytevector-length bv)))
+    idx))
+
+(define-argument-validation (count-for-bytevector who count bv bv.start)
+  (let ((end (unsafe.fx+ bv.start count)))
+    (unsafe.fx<= end (unsafe.bytevector-length bv)))
+  (assertion-violation who
+    (string-append "word count "			(number->string count)
+		   " too big for bytevector length "	(number->string (unsafe.bytevector-length bv))
+		   " start index "			(number->string bv.start))
+    count))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (signed-char who obj)
@@ -464,18 +503,29 @@
        (pointer-offset	src.start))
     (cond ((pointer? dst)
 	   (cond ((pointer? src)
-		  (capi.ffi-memcpy dst src count))
+		  (capi.ffi-memcpy (pointer-add dst dst.start)
+				   (pointer-add src src.start)
+				   count))
 		 ((bytevector? src)
-		  (foreign-call "ikrt_memcpy_from_bv" (pointer-add dst dst.start) src src.start count))
+		  (with-arguments-validation (who)
+		      ((start-index-for-bytevector	src.start src)
+		       (count-for-bytevector		count src src.start))
+		    (foreign-call "ikrt_memcpy_from_bv" (pointer-add dst dst.start) src src.start count)))
 		 (else
 		  (assertion-violation who "expected pointer or bytevector as source argument" src))))
 	  ((bytevector? dst)
-	   (cond ((pointer? src)
-		  (foreign-call "ikrt_memcpy_to_bv" dst dst.start (pointer-add src src.start) count))
-		 ((bytevector? src)
-		  (unsafe.bytevector-copy!/count src src.start dst dst.start count))
-		 (else
-		  (assertion-violation who "expected pointer or bytevector as source argument" src))))
+	   (with-arguments-validation (who)
+	       ((start-index-for-bytevector	dst.start dst)
+		(count-for-bytevector		count dst dst.start))
+	     (cond ((pointer? src)
+		    (foreign-call "ikrt_memcpy_to_bv" dst dst.start (pointer-add src src.start) count))
+		   ((bytevector? src)
+		    (with-arguments-validation (who)
+			((start-index-for-bytevector	src.start src)
+			 (count-for-bytevector		count src src.start))
+		      (unsafe.bytevector-copy!/count src src.start dst dst.start count)))
+		   (else
+		    (assertion-violation who "expected pointer or bytevector as source argument" src)))))
 	  (else
 	   (assertion-violation who "expected pointer or bytevector as destination argument" dst)))))
 
