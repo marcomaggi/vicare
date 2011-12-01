@@ -303,14 +303,20 @@
     (let ((rv (capi.ffi-pointer-add ptr delta)))
       (or rv
 	  (assertion-violation who
-	    "requested pointer arithmetic operation would cause machine word overflow" ptr delta)))))
+	    "requested pointer arithmetic operation would cause \
+             machine word overflow or underflow"
+	    ptr delta)))))
 
 (define (pointer-diff ptr1 ptr2)
   (define who 'pointer-diff)
   (with-arguments-validation (who)
       ((pointer  ptr1)
        (pointer  ptr2))
-    (capi.ffi-pointer-diff ptr1 ptr2)))
+    ;;Implemented  at the  Scheme level  because converting  pointers to
+    ;;Scheme exact  integer objects  is the simplest  and safest  way to
+    ;;correctly handle the full range of possible pointer values.
+    (- (capi.ffi-pointer->integer ptr1)
+       (capi.ffi-pointer->integer ptr2))))
 
 (define (pointer+ ptr off)
   (integer->pointer (+ (pointer->integer ptr) off)))

@@ -41,7 +41,7 @@
     ffi-pointer?			ffi-pointer-null?
     ffi-fixnum->pointer			ffi-bignum->pointer
     ffi-pointer->integer
-    ffi-pointer-add			ffi-pointer-diff
+    ffi-pointer-add
     ffi-pointer-eq			ffi-pointer-neq
     ffi-pointer-lt			ffi-pointer-gt
     ffi-pointer-le			ffi-pointer-ge
@@ -282,9 +282,6 @@
 
 (define-inline (ffi-pointer-add ptr delta)
   (foreign-call "ikrt_pointer_add" ptr delta))
-
-(define-inline (ffi-pointer-diff ptr1 ptr2)
-  (foreign-call "ikrt_pointer_diff" ptr1 ptr2))
 
 (define-inline (ffi-pointer-eq ptr1 ptr2)
   (foreign-call "ikrt_pointer_eq" ptr1 ptr2))

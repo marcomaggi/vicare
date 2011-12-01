@@ -121,27 +121,11 @@ ikrt_pointer_set_null (ikptr pointer)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_pointer_to_int (ikptr x, ikpcb* pcb)
+ikrt_pointer_to_int (ikptr pointer, ikpcb* pcb)
 {
-  long      pointer;
-  ikptr         pfx;
-  pointer = (long) ref(x, off_bignum_data);
-  pfx     = fix(pointer);
-  if (unfix(pfx) == pointer) { /* if it fits in a fixnum ... */
-    return pfx;
-  } else {
-    ikptr bn = ik_safe_alloc(pcb, align(wordsize+disp_bignum_data));
-    if (0 < pointer) {
-      ref(bn, 0) = (ikptr)(bignum_tag | (1 << bignum_length_shift));
-      ref(bn, disp_bignum_data) = (ikptr)pointer;
-    } else {
-      ref(bn, 0) = (ikptr)(bignum_tag
-                           | (1 << bignum_length_shift)
-                           | (1 << bignum_sign_shift));
-      ref(bn, disp_bignum_data) = (ikptr)(-pointer);
-    }
-    return bn+vector_tag;
-  }
+  void *        memory;
+  memory = VICARE_POINTER_DATA_VOIDP(pointer);
+  return ik_integer_from_unsigned_long((unsigned long)memory, pcb);
 }
 ikptr
 ikrt_fx_to_pointer(ikptr x, ikpcb* pcb)
@@ -160,14 +144,17 @@ ikrt_bn_to_pointer (ikptr x, ikpcb* pcb)
 
 /* ------------------------------------------------------------------ */
 
+/* NOTE The  Scheme function POINTER-DIFF  is implemented at  the Scheme
+   level because converting pointers  to Scheme exact integer objects is
+   the simplest  and safest  way to correctly  handle the full  range of
+   possible pointer values. */
+
+/* FIXME  STALE To be  removed at  the next  boot image  rotation (Marco
+   Maggi; Dec 1, 2011). */
 ikptr
 ikrt_pointer_diff (ikptr ptr1, ikptr ptr2, ikpcb * pcb)
 {
-  unsigned long     memory1, memory2, diff;
-  memory1 = VICARE_POINTER_DATA_ULONG(ptr1);
-  memory2 = VICARE_POINTER_DATA_ULONG(ptr2);
-  diff    = memory1 - memory2;
-  return ik_integer_from_unsigned_long(diff, pcb);
+  return false_object;
 }
 ikptr
 ikrt_pointer_add (ikptr ptr, ikptr delta, ikpcb * pcb)

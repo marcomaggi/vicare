@@ -33,6 +33,7 @@
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <strings.h>
 #include <arpa/inet.h>
@@ -527,6 +528,9 @@ ikptr   ikrt_is_pointer         (ikptr x);
 
 #define VICARE_POINTER_DATA_ULLONG(X) \
   ((unsigned long long)ref((X), off_pointer_data))
+
+#define VICARE_POINTER_DATA_LLONG(X) \
+  ((long long)ref((X), off_pointer_data))
 
 
 /** --------------------------------------------------------------------

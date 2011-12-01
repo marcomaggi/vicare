@@ -5172,8 +5172,8 @@ the Libffi headers are to be found; @ref{overview install} for details.
 
 @menu
 * ffi memory intro::            Introduction to managing memory.
-* ffi memory alloc::            Allocating and freeing memory.
 * ffi memory pointer::          Handling pointer values.
+* ffi memory alloc::            Allocating and freeing memory.
 * ffi memory poke::             Poking values.
 * ffi memory peek::             Peeking values.
 @end menu
@@ -5205,6 +5205,87 @@ is wiring the different subsystems together.
 The procedures in the @library{vicare ffi} library are meant to provide
 a way to interface with the low level memory operations such as setting
 and getting bytes from specific locations in memory.
+
+@c page
+@node ffi memory pointer
+@subsection Handling pointer values
+
+
+Pointer objects are a disjoint type identified by the @func{pointer?}
+predicate.  The result of calling the procedures @func{eq?}, @func{eqv?}
+and @func{equal?} on pointer values is unspecified.
+
+
+@defun pointer? @var{obj}
+Return @true{} if @var{obj} is a pointer object, return @false{}
+otherwise.
+@end defun
+
+
+@defun pointer->integer @var{pointer}
+Convert the value of @var{pointer} to an exact integer value.  The
+result may be a fixnum or a bignum depending on the pointer.
+@end defun
+
+
+@defun integer->pointer @var{exact-integer}
+Convert @var{exact-integer} to a pointer value.  The lower @math{32}
+bits (or @math{64} bits on 64-bit systems) of the argument are
+significant in computing the pointer value.  It is guaranteed that:
+
+@example
+(integer->pointer (pointer->integer p))
+@end example
+
+@noindent
+points to the same address as @var{p}.
+@end defun
+
+
+@defun null-pointer
+Return a pointer object representing @cnull{}.
+@end defun
+
+
+@defun pointer-null? @var{obj}
+Return true if @var{obj} is a pointer object and it represents @cnull{}.
+@end defun
+
+
+@defun pointer-diff @vari{ptr} @varii{ptr}
+Return an exact integer representing the difference between the two
+pointer objects @vari{ptr} and @varii{ptr}.  The returned value is such
+that:
+
+@example
+(define ptr1 ---)
+(define ptr2 ---)
+
+(pointer=? ptr1
+           (pointer-add ptr2
+                        (ffi.pointer-diff ptr1 ptr2)))
+@result{} #t
+@end example
+@end defun
+
+
+@defun pointer-add @var{ptr} @var{diff}
+Return a new pointer object holding the memory reference resulting from
+adding @var{diff}, which must be an exact integer, to @var{ptr}.  If the
+addition would cause an overflow or underflow in machine words: raise an
+assertion violation.
+@end defun
+
+
+@defun pointer=? @vari{ptr} @varii{ptr}
+@defunx pointer<>? @vari{ptr} @varii{ptr}
+@defunx pointer<? @vari{ptr} @varii{ptr}
+@defunx pointer>? @vari{ptr} @varii{ptr}
+@defunx pointer<=? @vari{ptr} @varii{ptr}
+@defunx pointer>=? @vari{ptr} @varii{ptr}
+Comparisong functions for pointers.  Return @true{} if the arguments
+satisfy the predicate, else return @false{}.
+@end defun
 
 @c page
 @node ffi memory alloc
@@ -5272,40 +5353,6 @@ memory again.
 
 If @var{pointer} is @cnull{} nothing happens.
 @end defun
-
-@c page
-@node ffi memory pointer
-@subsection Handling pointer values
-
-
-The result of calling the procedures @func{eq?}, @func{eqv?} and
-@func{equal?} on pointer values is unspecified.
-
-
-@deffn Procedure pointer->integer @var{pointer}
-Convert the value of @var{pointer} to an exact integer value.  The
-result may be a fixnum or a bignum depending on the pointer.
-@end deffn
-
-
-@deffn Procedure integer->pointer @var{exact-integer}
-Convert @var{exact-integer} to a pointer value.  The lower 32 bits (or
-64 bits on 64-bit systems) of the argument are significant in computing
-the pointer value.  It is guaranteed that @code{(integer->pointer
-(pointer->integer p))} points to the same address as @var{p}.
-@end deffn
-
-
-@deffn Procedure pointer? @var{x}
-Return @true{} if the value of @var{x} is a pointer, return @false{}
-otherwise.
-@end deffn
-
-
-@deffn Procedure pointer-size
-Return the number of bytes required to hold a pointer on the underlying
-platform.
-@end deffn
 
 @c page
 @node ffi memory poke

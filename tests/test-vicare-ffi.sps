@@ -63,16 +63,24 @@
       (ffi.pointer? '#(123))
     => #f)
 
-  (check
-      (catch #f
-	(ffi.integer->pointer (+ 10 (words.greatest-machine-word))))
-    => (list (+ 10 (words.greatest-machine-word))))
-
 ;;; --------------------------------------------------------------------
+
+  (check
+      (ffi.pointer->integer (ffi.integer->pointer 0))
+    => 0)
 
   (check
       (ffi.pointer->integer (ffi.integer->pointer 123))
     => 123)
+
+  (check
+      (ffi.pointer->integer (ffi.integer->pointer (words.greatest-machine-word)))
+    => (words.greatest-machine-word))
+
+  (check	;error, integer too big
+      (catch #f
+	(ffi.integer->pointer (+ 10 (words.greatest-machine-word))))
+    => (list (+ 10 (words.greatest-machine-word))))
 
 ;;; --------------------------------------------------------------------
 
@@ -97,9 +105,32 @@
     => 0)
 
   (check
-      (ffi.pointer-diff (ffi.integer->pointer (words.greatest-machine-word))
-			(ffi.integer->pointer 0))
+      (let ((one (ffi.integer->pointer (words.greatest-machine-word)))
+	    (two (ffi.integer->pointer 0)))
+	(ffi.pointer-diff one two))
     => (words.greatest-machine-word))
+
+  (check
+      (let ((one (ffi.integer->pointer (words.greatest-machine-word)))
+	    (two (ffi.integer->pointer 0)))
+	(ffi.pointer-diff two one))
+    => (- (words.greatest-machine-word)))
+
+  (check
+      (let* ((one (ffi.integer->pointer 123))
+	     (two (ffi.integer->pointer 456))
+	     (D   (ffi.pointer-diff one two)))
+;;;(check-pretty-print (list one two D))
+	(ffi.pointer=? one (ffi.pointer-add two D)))
+    => #t)
+
+  (check
+      (let* ((one (ffi.integer->pointer 456))
+	     (two (ffi.integer->pointer 123))
+	     (D   (ffi.pointer-diff one two)))
+;;;(check-pretty-print (list one two D))
+	(ffi.pointer=? one (ffi.pointer-add two D)))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 
@@ -115,6 +146,40 @@
       (ffi.pointer-add (ffi.integer->pointer 123) -100)
     => (ffi.integer->pointer 23))
 
+  (check
+      (let ((P (ffi.integer->pointer (words.greatest-machine-word)))
+	    (D 0))
+	(ffi.pointer=? P (ffi.pointer-add P D)))
+    => #t)
+
+  (check
+      (let ((P (ffi.null-pointer))
+	    (D 0))
+	(ffi.pointer=? P (ffi.pointer-add P D)))
+    => #t)
+
+  (check
+      (let ((P (ffi.null-pointer))
+	    (D (words.greatest-machine-word)))
+	(ffi.pointer=? (ffi.integer->pointer (words.greatest-machine-word))
+		       (ffi.pointer-add P D)))
+    => #t)
+
+  (check
+      (let ((P (ffi.integer->pointer (words.greatest-machine-word)))
+	    (D 1))
+	(equal? (list P D)
+		(catch #f
+		  (ffi.pointer-add P D))))
+    => #t)
+
+  (check
+      (let ((P (ffi.null-pointer))
+	    (D -1))
+	(equal? (list P D)
+		(catch #f
+		  (ffi.pointer-add P D))))
+    => #t)
 
   #t)
 
