@@ -232,8 +232,17 @@ ikrt_malloc (ikptr number_of_bytes, ikpcb* pcb)
 ikptr
 ikrt_realloc (ikptr pointer, ikptr number_of_bytes, ikpcb* pcb)
 {
-  void *        p = realloc((void *)ref(pointer, off_pointer_data), unfix(number_of_bytes));
-  return (p)? ikrt_pointer_alloc((long) p, pcb) : false_object;
+  void *        memory = VICARE_POINTER_DATA_VOIDP(pointer);
+  void *        new_memory;
+  if (memory) {
+    new_memory = realloc(memory, unfix(number_of_bytes));
+    if (new_memory) {
+      ref(pointer, off_pointer_data) = (ikptr)NULL;
+      return ikrt_pointer_alloc((long)new_memory, pcb);
+    } else
+      return false_object;
+  } else
+    return false_object;
 }
 ikptr
 ikrt_calloc (ikptr number_of_elements, ikptr element_size, ikpcb* pcb)

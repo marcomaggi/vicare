@@ -425,6 +425,8 @@
   (define who 'realloc)
   (with-arguments-validation (who)
       ((number-of-bytes	 number-of-bytes))
+    ;;Take  care at  the C  level not  to realloc  null pointers  and of
+    ;;mutating POINTER to NULL.
     (capi.ffi-realloc pointer number-of-bytes)))
 
 (define (calloc number-of-elements element-size)
