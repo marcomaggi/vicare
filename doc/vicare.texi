@@ -5656,6 +5656,27 @@ to @var{dst} starting at offset @var{dst.start}.  @var{src} and
 memory regions must not overlap.  Return unspecified values.
 @end defun
 
+
+@defun memory->bytevector @var{pointer} @var{number-of-bytes}
+Build and return a new bytevector object holding @var{number-of-bytes}
+from the memory region starting at @var{pointer}.  @var{number-of-bytes}
+must be a non--negative fixnum.
+@end defun
+
+
+@defun bytevector->memory @var{bv}
+@defunx bytevector->guarded-memory @var{bv}
+Allocate a new raw memory block and copy into it the contents of
+@var{bv}.  If successful return two values being the pointer object
+referencing the memory and a fixnum representing the length of the
+memory block; if allocating memory fails return @false{} and @false{}.
+
+Memory allocated by @func{bytevector->memory} must be released by
+@func{free}; memory allocated by @func{bytevector->guarded-malloc} is
+automatically released whenever the returned pointer object is garbage
+collected.
+@end defun
+
 @c page
 @node ffi dl
 @section Accessing foreign objects from Scheme

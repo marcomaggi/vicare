@@ -344,7 +344,6 @@
 	bv)
     => '#vu8(3 4))
 
-
   #t)
 
 
@@ -358,9 +357,33 @@
 
   (check
       (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-uint8! P 2 (words.greatest-u8))
+	(ffi.pointer-ref-c-uint8  P 2))
+    => (words.greatest-u8))
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-uint8! P 2 (words.least-u8))
+	(ffi.pointer-ref-c-uint8  P 2))
+    => (words.least-u8))
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
 	(ffi.pointer-set-c-sint8! P 2 -123)
 	(ffi.pointer-ref-c-sint8  P 2))
     => -123)
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-sint8! P 2 (words.greatest-s8))
+	(ffi.pointer-ref-c-sint8  P 2))
+    => (words.greatest-s8))
+
+  (check
+      (let ((P (ffi.guarded-malloc 32)))
+	(ffi.pointer-set-c-sint8! P 2 (words.least-s8))
+	(ffi.pointer-ref-c-sint8  P 2))
+    => (words.least-s8))
 
 ;;; --------------------------------------------------------------------
 
@@ -569,6 +592,38 @@
   #;(ffi.case-errno plat.EFAULT
   ((ENOMEM EPERM)	1)
   ((ciao)		2))
+
+  #t)
+
+
+(parametrise ((check-test-name	'zlib))
+
+  (define zlib
+    (ffi.dlopen "libz.so"))
+
+  (when zlib
+    (check
+	(let* ((maker		(ffi.make-c-callout 'signed-int '(pointer pointer pointer unsigned-long)))
+	       (compress*	(maker (ffi.dlsym zlib "compress")))
+	       (uncompress*	(maker (ffi.dlsym zlib "uncompress"))))
+	  (define (compress src.bv)
+	    (let-values (((src.ptr src.len) (ffi.bytevector->guarded-memory src.bv)))
+	      (let* ((&dst.len	(ffi.guarded-malloc 8))
+		     (dst.ptr	(ffi.guarded-malloc src.len)))
+		(compress* dst.ptr &dst.len src.ptr src.len)
+		(let ((dst.len (ffi.pointer-ref-c-unsigned-long &dst.len 0)))
+		  (ffi.memory->bytevector dst.ptr dst.len)))))
+	  (define (uncompress src.bv out-len)
+	    (let-values (((src.ptr src.len) (ffi.bytevector->guarded-memory src.bv)))
+	      (let* ((&dst.len	(ffi.guarded-malloc 8))
+		     (dst.ptr	(ffi.guarded-malloc out-len)))
+		(uncompress* dst.ptr &dst.len src.ptr src.len)
+		(let ((dst.len (ffi.pointer-ref-c-unsigned-long &dst.len 0)))
+		  (ffi.memory->bytevector dst.ptr dst.len)))))
+	  (let* ((src.len 4096)
+		 (src.bv  (make-bytevector src.len 99)))
+	    (bytevector=? src.bv (uncompress (compress src.bv) src.len))))
+      => #t))
 
   #t)
 

@@ -312,6 +312,31 @@ ikrt_memcpy_from_bv (ikptr dst, ikptr src, ikptr src_off, ikptr count /*, ikpcb*
   return void_object;
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_bytevector_from_memory (ikptr pointer, ikptr length, ikpcb * pcb)
+{
+  void *        memory = VICARE_POINTER_DATA_VOIDP(pointer);
+  size_t        size   = (size_t)unfix(length);
+  return ik_bytevector_from_memory_block(pcb, memory, size);
+}
+ikptr
+ikrt_bytevector_to_memory (ikptr bv, ikpcb * pcb)
+{
+  size_t        length;
+  void *        memory;
+  length = (size_t)unfix(VICARE_BYTEVECTOR_LENGTH_FX(bv));
+  memory = malloc(length);
+  if (memory) {
+    void *      data;
+    data = VICARE_BYTEVECTOR_DATA_VOIDP(bv);
+    memcpy(memory, data, length);
+    return ikrt_pointer_alloc((unsigned long)memory, pcb);
+  } else
+    return false_object;
+}
+
 
 /** --------------------------------------------------------------------
  ** Raw memory getters through pointers.

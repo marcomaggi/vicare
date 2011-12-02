@@ -41,6 +41,8 @@
     free
     memcpy				memmove
     memset				memory-copy
+    memory->bytevector			bytevector->memory
+    bytevector->guarded-memory
 
     ;; errno interface
     errno
@@ -109,6 +111,12 @@
 (define (guarded-calloc number-of-elements element-size)
   (let ((rv (calloc number-of-elements element-size)))
     (and rv (%memory-guardian rv))))
+
+(define (bytevector->guarded-memory bv)
+  (let-values (((ptr len) (bytevector->memory bv)))
+    (if ptr
+	(values (%memory-guardian ptr) len)
+      (values #f #f))))
 
 
 ;;;; errno interface

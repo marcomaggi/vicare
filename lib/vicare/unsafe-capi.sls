@@ -40,6 +40,7 @@
 
     ffi-memcpy				ffi-memmove
     ffi-memset
+    ffi-memory->bytevector		ffi-bytevector->memory
 
     ffi-pointer?			ffi-pointer-null?
     ffi-fixnum->pointer			ffi-bignum->pointer
@@ -317,6 +318,12 @@
 
 (define-inline (ffi-memset ptr byte size)
   (foreign-call "ikrt_memset" ptr byte size))
+
+(define-inline (ffi-memory->bytevector pointer length)
+  (foreign-call "ikrt_bytevector_from_memory" pointer length))
+
+(define-inline (ffi-bytevector->memory bv)
+  (foreign-call "ikrt_bytevector_to_memory" bv))
 
 ;;; --------------------------------------------------------------------
 

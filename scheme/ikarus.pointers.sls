@@ -38,6 +38,7 @@
     realloc				calloc
     memcpy				memmove
     memset				memory-copy
+    memory->bytevector			bytevector->memory
 
     ;; errno interface
     errno
@@ -87,6 +88,10 @@
 (define-argument-validation (string who obj)
   (string? obj)
   (assertion-violation who "expected string as argument" obj))
+
+(define-argument-validation (bytevector who obj)
+  (bytevector? obj)
+  (assertion-violation who "expected bytevector as argument" obj))
 
 (define-argument-validation (flonum who obj)
   (flonum? obj)
@@ -554,6 +559,24 @@
        (byte		byte)
        (number-of-bytes	count))
     (capi.ffi-memset ptr byte count)))
+
+;;; --------------------------------------------------------------------
+
+(define (memory->bytevector pointer length)
+  (define who 'memory->bytevector)
+  (with-arguments-validation (who)
+      ((pointer		pointer)
+       (number-of-bytes	length))
+    (capi.ffi-memory->bytevector pointer length)))
+
+(define (bytevector->memory bv)
+  (define who 'bytevector->memory)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    (let ((rv (capi.ffi-bytevector->memory bv)))
+      (if rv
+	  (values rv (unsafe.bytevector-length bv))
+	(values #f #f)))))
 
 
 ;;; libffi interface

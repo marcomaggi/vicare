@@ -2218,6 +2218,8 @@
     (memmove					$for)
     (memset					$for)
     (memory-copy				$for)
+    (memory->bytevector				$for)
+    (bytevector->memory				$for)
 ;;;
     (pointer-ref-c-uint8			$for)
     (pointer-ref-c-sint8			$for)

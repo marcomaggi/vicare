@@ -416,9 +416,7 @@
     (only (vicare syntactic-extensions)
 	  define-inline-constant)
     (prefix (vicare unsafe-operations)
-	    unsafe.)
-    (prefix (vicare words)
-	    words.))
+	    unsafe.))
 
 
 ;;;; helpers
@@ -443,20 +441,32 @@
 (define-inline-constant SIZEOF_SIZE_T		@SIZEOF_SIZE_T@)
 (define-inline-constant SIZEOF_SSIZE_T		@SIZEOF_SSIZE_T@)
 
+(define-inline-constant U32MAX		4294967295)	#;(- (expt 2 32) 1)
+(define-inline-constant U32MIN		0)
+(define-inline-constant S32MAX		+2147483647)	#;(- (expt 2 31) 1)
+(define-inline-constant S32MIN		-2147483648)	#;(- (expt 2 31))
+
+(define-inline-constant U64MAX		18446744073709551615)	#;(- (expt 2 64) 1)
+(define-inline-constant U64MIN		0)
+(define-inline-constant S64MAX		+9223372036854775807)	#;(- (expt 2 63) 1)
+(define-inline-constant S64MIN		-9223372036854775808)	#;(- (expt 2 63))
+
 (define-syntax SIZE_T_MAX
   (if (= 4 @SIZEOF_SIZE_T@)
-      (identifier-syntax (words.greatest-u32))
-    (identifier-syntax (words.greatest-u64))))
+      (identifier-syntax U32MAX)
+    (identifier-syntax U64MAX)))
+
+(define-inline-constant SIZE_T_MIN	0)
 
 (define-syntax SSIZE_T_MAX
   (if (= 4 @SIZEOF_SSIZE_T@)
-      (identifier-syntax (words.greatest-s32))
-    (identifier-syntax (words.greatest-s64))))
+      (identifier-syntax S32MAX)
+    (identifier-syntax S64MAX)))
 
 (define-syntax SSIZE_T_MIN
   (if (= 4 @SIZEOF_SSIZE_T@)
-      (identifier-syntax (words.least-s32))
-    (identifier-syntax (words.least-s64))))
+      (identifier-syntax S32MIN)
+    (identifier-syntax S64MIN)))
 
 (define-inline-constant CHAR_BIT		@VALUEOF_CHAR_BIT@)
 (define-inline-constant SCHAR_MIN		@VALUEOF_SCHAR_MIN@)
