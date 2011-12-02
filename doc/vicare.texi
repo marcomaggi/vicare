@@ -5099,12 +5099,13 @@ vicare>
 
 
 This chapter describes the facilities through which @value{PRJNAME}
-interfaces with the host operating system and other external libraries.
-The facilities of the @library{vicare ffi} library give the Scheme
-program unrestricted access to the computer memory, allowing one to
-allocate, access, modify, and free memory as needed.  The facilities
-also allow the Scheme program to @dfn{call out} to system procedures as
-well as allow the native procedures to @dfn{call back} into Scheme.
+interfaces with the host operating system and other external libraries
+exposing a C language interface.  The facilities of the @library{vicare
+ffi} library give the Scheme program unrestricted access to the computer
+memory, allowing one to allocate, access, modify, and free memory as
+needed.  The facilities also allow the Scheme program to @dfn{call out}
+to system procedures as well as allow the native procedures to @dfn{call
+back} into Scheme.
 
 @quotation
 @strong{Caveat emptor:} Preparing each call out and call back procedure
@@ -5119,6 +5120,7 @@ indefinitely).  Use judiciously.
 * ffi dl::                      Accessing shared libraries.
 * ffi callout::                 Calling out to foreign procedures.
 * ffi callback::                Calling back to Scheme.
+* ffi types::                   Specifying foreign types.
 * ffi errno::                   Interface to @code{errno}.
 @end menu
 
@@ -5682,16 +5684,36 @@ collected.
 @section Accessing foreign objects from Scheme
 
 
+Most system implementations of dynamic loading employ reference counting
+for @func{dlopen} and @func{dlclose} in that library resources are not
+freed until the number of calls to @func{dlclose} matches the number of
+calls to @func{dlopen}.
+
+
 @deffn Procedure dlopen
 @deffnx Procedure dlopen @var{library-name}
 @deffnx Procedure dlopen @var{library-name} @var{lazy?} @var{global?}
-Take the string @var{library-name} representing a system library and
-call the system procedure @cfunc{dlopen} which dynamically loads the
-given library into the running process.
+Interface to the C function @cfunc{dlopen}, see the manual page
+@code{dlopen(3)}.  Load a platform shared library and return a pointer
+object representing a handler for the library, which can be used as
+argument for @func{dlsym} and @func{dlclose}.  If the library cannot be
+loaded: return @false{} and the procedure @func{dlerror} can be used to
+obtain the cause of the failure.
 
-The name of the library is system--dependent and must include the
-appropriate suffix (e.g. @code{*.so} on Linux, @code{*.dylib} on Darwin
-and @code{*.dll} on Cygwin).  @var{library-name} may include a full path
+When no arguments are present: the returned pointer handler references
+the current process and it can be used to retrieve pointers to functions
+already loaded, for example the functions exported by the standard C
+library.  The @var{lazy?} and @var{global?} arguments are meaningless in
+this case.
+
+When given: @var{library-name} must be a string or a bytevector
+representing the name of the library; if it is a string: it is converted
+to bytevector using the function referenced by
+@func{filename->string-func}.
+
+Library names are system--dependent and must include the appropriate
+suffix (for exapmle @code{*.so} on Linux, @code{*.dylib} on Darwin and
+@code{*.dll} on Cygwin).  @var{library-name} may include a full path
 which identifies the location of the library, or it may just be the name
 of the library in which case the system will lookup the library name
 using the @env{LD_LIBRARY_PATH} environment variable.
@@ -5700,72 +5722,49 @@ The argument @var{lazy?} specifies how library dependencies are loaded.
 If true, @func{dlopen} delays the resolution and loading of dependent
 libraries until they are actually used.  If false, all library
 dependencies are loaded before the call to @func{dlopen} returns.
+@var{lazy?} defaults to @false{}.
 
-The argument @func{global?} specifies the scope of the symbols exported
+The argument @var{global?} specifies the scope of the symbols exported
 from the loaded library.  If true, all exported symbols become part of
 the running image, and subsequent @func{dlsym} calls may not need to
 specify the library from which the symbol is loaded.  If false, the
 exported symbols are not global and the library pointer needs to be
-specified for @func{dlsym}.
-
-Calling @code{(dlopen library-name)} is equivalent to @code{(dlopen
-library-name #f #f)}.  Calling @code{(dlopen)} without arguments returns
-a pointer to the current process.
-
-If succesful, @func{dlopen} returns a pointer to the external library
-which can be used subsequently by @func{dlsym} and @func{dlclose}.  If
-the library cannot be loaded, @func{dlopen} returns @false{} and the
-procedure @func{dlerror} can be used to obtain the cause of the failure.
-
-Consult the @code{dlopen(3)} page in your system manual for further
-details.
+specified for @func{dlsym}.  @var{global?} defaults to @false{}.
 @end deffn
 
 
-@deffn Procedure dlclose @var{library-pointer}
-A wrapper for the system procedure of the same name.  It receives a
-library pointer (e.g. one obtained from @func{dlopen}) and releases the
-resources loaded from that library.  Closing a library renders all
-symbols and static data structures that the library exports invalid and
-the program may crash or corrupt its memory if such symbols are used
-after a library is closed.
+@deffn Procedure dlclose @var{handle}
+Interface to the C function @cfunc{dlclose}, see the manual page
+@code{dlclose(3)}.  Release the resources loaded from the library
+referenced by the pointer handler @var{handle}.  If successful return
+@true{}, else return @false{} and @func{dlerror} can be used to obtain
+the cause of the error.
 
-Most system implementations of dynamic loading employ reference counting
-for @func{dlopen} and @func{dlclose} in that library resources are not
-freed until the number of calls to @func{dlclose} matches the number of
-calls to @func{dlopen}.
-
-The procedure @func{dlclose} returns a boolean value indicating whether
-the success status of the operation.  If @func{dlclose} returns
-@false{}, the procedure @func{dlerror} can be used to obtain the cause
-of the error.
-
-Consult the @code{dlclose(3)} page in your system manual for further
-details.
+Closing a library renders all symbols and static data structures that
+the library exports invalid and the program may crash or corrupt its
+memory if such symbols are used after a library is closed.
 @end deffn
 
 
-@deffn Procedure dlsym @var{library-pointer} @var{string}
-Take a library pointer (e.g. one obtained by a call to @func{dlopen})
-and a string representing the name of a symbol that the library exports
-and return a pointer to the location of that symbol in memory.  If
-@func{dlsym} fails, it returns @false{} and the cause of the error can
-be obtained using the procedure @code{dlerror}.
+@deffn Procedure dlsym @var{handle} @var{name}
+Interface to the C function @cfunc{dlsym}, see the manual page
+@code{dlsym(3)}.  Search the loaded library referenced by the pointer
+@var{handle} for an exported symbol whose name is represented by the
+string @var{name}.  If successful return a pointer object, else return
+@false{} and @code{dlerror} can be used to obtain the cause of the
+error.
 
-Consult the @code{dlsym(3)} page in your system manual for further
-details.
+If the returned value references a function: it can be used as argument
+to the callout generators built by @func{make-c-callout}.
 @end deffn
 
 
 @deffn Procedure dlerror
-If any of the dynamic loading operations (i.e., @func{dlopen},
-@func{dlclose}, @func{dlsym}) fails, the cause of the error can be
-obtained by calling @func{dlerror} which returns a string describing the
-error.  The procedure @func{dlerror} returns @false{} if there was no
+Interface to the C function @cfunc{dlerror}, see the manual page
+@code{dlerror(3)}.  If any of the dynamic loading operations fails, the
+cause of the error can be obtained by calling @func{dlerror} which
+returns a string describing the error; return @false{} if there was no
 dynamic loading error.
-
-Consult the @code{dlerror(3)} page in your system manual for further
-details.
 @end deffn
 
 @c page
@@ -5773,266 +5772,189 @@ details.
 @section Calling out to foreign procedures
 
 
-@value{PRJNAME} provides the means to call out from Scheme to foreign
-procedures.  This allows the programmers to extend @value{PRJNAME} to
-access system--specific facilities that are available on the host
-machine.
+In order to call out to a foreign procedure, we must provide two pieces
+of information: the signature of the foreign procedure and the address
+of the procedure in memory.  The signature must usually be hard--coded
+into the program; the address is obtained using @func{dlsym}.
 
-@menu
-* ffi callout api::      Interface to foreign functions.
-* ffi callout types::    Type specifiers.
-* ffi callout example::  C language call out example.
-@end menu
+Using the signature, the @ffi{} determines how Scheme values are
+converted to and from native values; a signature is composed of two
+parts: a Scheme symbol specifying the return type, a list of Scheme
+symbols specifying the argument types.
 
-@c page
-@node ffi callout api
-@subsection Interface to foreign functions
-
-
-In order to call out to a foreign procedure, one must provide two pieces
-of information: the signature of the foreign procedure (e.g. its type
-declaration if it is a C language procedure) and the address of the
-procedure in memory.  The address of the procedure can be easily
-obtained using @func{dlsym} if the name of the procedure and its
-exporting library are known.  The signature of the procedure cannot, in
-general, be obtained dynamically, and therefore must be hard coded into
-the program.
-
-The signature of the foreign procedure is required for proper linkage
-between the Scheme system and the foreign system.  Using the signature,
-@value{PRJNAME} determines how Scheme values are converted into native values,
-and where (e.g. in which registers and stack slots) to put these
-arguments.  The signature also determines where the returned values are
-placed and how they are converted from the system data types to the
-corresponding Scheme data types.
-
-A procedure's signature is composed of two parts: the return type and
-the parameter types:
-
-@itemize
-@item
-the return type is a symbol that can be any one of the type specifiers
-listed in @ref{ffi callout types};
-
-@item
-the parameter types is a list of type specifier symbols; if the foreign
-function takes no arguments: the parameter types must be the empty list;
-@end itemize
-
-@noindent
-the symbol @code{void} can appear as a return type but cannot appear as
-a parameter type.
-
-
-@deffn Procedure make-c-callout @var{return-type} @var{parameter-types}
-The procedure @func{make-c-callout} is the primary facility for making
-foreign procedures callable from Scheme.  It works as follows:
-
-@enumerate
-@item
-@func{make-c-callout} receives two arguments denoting the signature of
-the procedure to be called; it prepares a bridge that converts from
-Scheme's calling conventions and data structures to their foreign
-counterparts; it returns a procedure @func{p1};
-
-@item
-the procedure @func{p1} accepts a pointer to a foreign procedure
-(e.g. one obtained from @func{dlsym}) and returns a Scheme procedure
-@func{p2} that encapsulates the foreign procedure;
-
-@item
-the final procedure @func{p2} can be called with as many arguments as
-the ones specified in the @var{parameter-types}; the parameters supplied
-to @func{p2} must match the types supplied as the @var{parameter-types}
-according to the ``Valid Scheme types'' column in the table in @ref{ffi
-callout types};
-
-@item
-the procedure @func{p2} converts the parameters from Scheme types to
-native types, calls the foreign procedure, obtains the result, and
-converts it to the appropriate Scheme value (depending on the
-@var{return-type}).
-@end enumerate
-
-The interface of @func{make-c-callout} is broken down into three stages
-in order to accomodate common usage patterns.  Often a function
-signature can be used by many foreign procedures and therefore,
-@func{make-c-callout} can be called once per signature and each
-signature can be used multiple times.  Similarly, separating the foreign
-procedure preparation from parameter passing allows for preparing the
-foreign procedure once and calling it many times.
-
-The list of types in the table in @ref{ffi callout types} is restricted
-to basics and provides no automatic conversion from composite Scheme
-data structures (such as strings, symbols, vectors, and lists) to native
-types.  The restriction is intentional in order for @value{PRJNAME} to
-avoid making invalid assumptions about the memory management of the
-target library.
-
-@quotation
-For example, while @value{PRJNAME} @emph{can} convert a Scheme string to a native
-byte array (e.g. use @func{string->bytevector} to decode the string,
-then use @func{malloc} to allocate a temporary buffer, then copy the
-bytes from the bytevector to the allocated memory), it cannot decide
-when this allocated byte array is no longer needed and should be freed.
-This knowledge is library--dependent and is often procedure--dependent.
-Therefore, @value{PRJNAME} leaves it to the programmer to manage all memory
-related issues.
-@end quotation
-
-Outgoing parameters to foreign procedures are checked against the
-declared types.  For example, if a callback is prepared to expect a
-parameter of type @code{signed-int}, only exact integers are allowed to
-be passed out.  For integer types, only a fixed number of bits is used
-and the remaining bits are ignored.  For floating point types, the
-argument is checked to be a Scheme flonum.  No implicit conversion
-between exact and inexact numbers is performed.
-@end deffn
-
-@c page
-@node ffi callout types
-@subsection Type specifiers
-
-
-The following table lists valid type specifiers that can be used in
-callout and callback signatures.  Specifiers with ``4/8 bytes'' have
-size that depends on the system: it is 4 bytes on 32-bit systems and 8
-bytes on 64-bit systems.  The @code{void} specifier can only be used as
-a return value specifier to mean ``no useful value is returned''.
-
-
-@multitable {@code{unsigned-short}} {4/8 bytes} {Valid Scheme types} {Corresponding C types}
-@headitem Type specifier @tab Size @tab Valid Scheme types @tab Corresponding C types
-@item
-@code{signed-char} @tab 1 byte @tab exact integer @tab @code{char}
-@item
-@code{unsigned-char} @tab 1 byte @tab exact integer @tab @code{unsigned char}
-@item
-@code{signed-short} @tab 2 bytes @tab exact integer @tab @code{short}
-@item
-@code{unsigned-short} @tab 2 bytes @tab exact integer @tab @code{unsigned short}
-@item
-@code{signed-int} @tab 4 bytes @tab exact integer @tab @code{int}
-@item
-@code{unsigned-int} @tab 4 bytes @tab exact integer @tab @code{unsigned int}
-@item
-@code{signed-long} @tab 4/8 bytes @tab exact integer @tab @code{long}
-@item
-@code{unsigned-long} @tab 4/8 bytes @tab exact integer @tab @code{unsigned long}
-@item
-@code{float} @tab 4 bytes @tab flonum @tab @code{float}
-@item
-@code{double} @tab 8 bytes @tab flonum @tab @code{double}
-@item
-@code{pointer} @tab 4/8 bytes @tab pointer @tab @code{void*}, @code{char*}, @code{int*}, @code{int**}, etc
-@item
-@code{void} @tab --- @tab --- @tab @code{void}
-@end multitable
-
-@c page
-@node ffi callout example
-@subsection C language call out example
-
-
-The following example illustrates the use of the @func{make-c-callout}
-procedure in combination with @func{dlopen} and @func{dlsym}; the
-session was run on a 32-bit @value{PRJNAME} running under Mac OS X 10.4:
-
-@enumerate
-@item
-the @file{libc.dylib} foreign library is loaded and is bound to the
-variable @code{libc};
-
-@item
-we obtain a pointer to the @cfunc{atan} foreign procedure that is
-defined in @code{libc}; the native procedure @cfunc{atan} takes a
-@code{double} as an argument and returns a @code{double} and that's the
-signature that we use for @func{make-c-callout};
-
-@item
-we call the foreign procedure interface with one argument, @code{1.0},
-which is a flonum and thus matches the required parameter type; the
-native procedure returns a @code{double} value which is converted to the
-Scheme flonum with value @code{0.7853981633974483}.
-@end enumerate
+Here is a simple example, without error checking, showing how to
+interface to the C function @cfunc{sinh}:
 
 @example
-> (import (vicare ffi))
-> (define libc (dlopen "libc.dylib"))
-> libc
-#<pointer #x00100770>
-> (define libc-atan-ptr (dlsym libc "atan"))
-> libc-atan-ptr
-#<pointer #x9006CB1F>
-> (define libc-atan
-    ((make-c-callout 'double '(double)) libc-atan-ptr))
-> libc-atan
-#<procedure>
-> (libc-atan 1.0)
-0.7853981633974483
-> (libc-atan 1)
-Unhandled exception
- Condition components:
-    1. &assertion
-    2. &who: callout-procedure
-    3. &message: "argument does not match type double"
-    4. &irritants: (1)
+#!r6rs
+(import (vicare)
+  (prefix (vicare ffi) ffi.))
+
+(define libc
+  (ffi.dlopen))
+
+(define sinh-address
+  (ffi.dlsym libc "sinh"))
+
+(define callout-maker
+  (ffi.make-c-callout 'double '(double)))
+
+(define sinh
+  (callout-maker sinh-address))
+
+(sinh 1.2)      @result{} 1.5094613554121725
 @end example
 
+@noindent
+using the @ffi{} we build a callout function generator which can be used
+to create any number of callout functions having the same signature.
+
+
+@deffn Procedure make-c-callout @var{ret-type} @var{arg-types}
+Build and return a function to be used to generate callout Scheme
+functions wrapping foreign functions which follow the C language
+conventions for calling, arguments and return values.
+
+The returned generator function accepts as single argument a pointer
+object representing the address of a foreign function; the value
+returned by the generator function is a Scheme closure wrapping the
+foreign function.  The wrapper Scheme closure takes care of marshaling
+Scheme values as appropriate for the underlying platform.
+
+@var{ret-type} must be a Scheme symbol specifying the type of the
+returned value; if the foreign function returns no value: @var{ret-type}
+must be the symbol @code{void}.
+
+@var{arg-types} must be a list of Scheme symbols specifying the type of
+the arguments; if the foreign function accepts no arguments:
+@var{arg-types} must be nil or the list @code{(void)}.
+
+@ref{ffi types} for the specification of accepted type symbols.
+@end deffn
 
 @c page
 @node ffi callback
 @section Calling back to Scheme
 
 
-In order to provide full interoperability with native procedures,
-@value{PRJNAME} allows native procedures to call back into Scheme just
-as it allows Scheme to call out to native procedures.  This is important
-for many system libraries that provide graphical user interfaces with
-event handling (e.g. Cocoa, GTK+, GLUT, etc.), database engines
-(e.g. libsqlite, libmysql, etc.), among others.
+In order to arrange for a foreign library to callback to a Scheme
+function we need a suitable Scheme function and the signature of the
+procedure the foreign library expects.  The signature must usually be
+hard--coded in the program.
 
-The native calling site for the call back is compiled with a specific
-callback signature encoding the expected parameter types and return
-type.  Therefore, a Scheme procedure used for a call back must be
-wrapped with a proper adapter that converts the incoming parameters from
-native format to Scheme values as well as convert the value that the
-Scheme procedure returns back to native format.  The signature format is
-similar to the one used for call outs (@ref{ffi callout types} for
-details).
+Using the signature, the @ffi{} determines how native values are
+converted to and from Scheme values; a signature is composed of two
+parts: a Scheme symbol specifying the return type, a list of Scheme
+symbols specifying the argument types.  The signature format is the same
+as the one used for callouts; @ref{ffi callout} for details.
 
+Note that a callback function is indistinguishable from other native
+procedures whose address is obtained using @func{dlsym} or similar
+means.  In particular, such native pointers can be passed to callout
+generators resulting in a Scheme procedure that calls out to the native
+procedure that in turn calls back into Scheme.
 
-@deffn Procedure make-c-callback @var{return-type} @var{parameter-types}
-The procedure @func{make-c-callback} is similar to the procedure
-@func{make-c-callout} except that it provides a bridge from native
-procedures back into Scheme.  While the procedure @func{make-c-callout}
-takes a native pointer and returns a Scheme procedure,
-@func{make-c-callback} takes a Scheme procedure and returns a native
-pointer.  The native pointer can be called by foreign procedures.  The
-native parameters are converted to Scheme data (according to
-@var{parameter-types}), the Scheme procedure is called with these
-parameters, and the returned value is converted back into native format
-(according to @var{return-type}) before control returns to the native
-call site.
-
-Note that the native procedure pointer obtained from
-@func{make-c-callback} is indistinguishable from other native procedures
-that are obtained using @func{dlsym} or similar means.  In particular,
-such native pointers can be passed to @func{make-c-callout} resulting in
-a Scheme procedure that calls out to the native procedure that in turn
-calls back into Scheme.  The following segment illustrates a very
-inefficient way of extracting the lowermost 32 bits from an exact
-integer.
+The following example shows how to create an identity function for
+native integers composed by a Scheme function calling out to a foreign
+function, calling back to the Scheme function @func{values}:
 
 @example
-> (format "~x"
-    (((make-c-callout 'unsigned-int '(unsigned-int))
-      ((make-c-callback 'unsigned-int '(unsigned-int))
-       values))
-     #xfedcba09876543210fedcba09876543210))
-"76543210"
+#!r6rs
+(import (vicare)
+  (prefix (vicare ffi) ffi.))
+
+(define callout-maker
+  (make-c-callout  'unsigned-int '(unsigned-int)))
+
+(define callback-maker
+  (make-c-callback 'unsigned-int '(unsigned-int)))
+
+(define identity
+  (callout-maker (callback-maker values)))
+
+(identity 123)  @result{} 123
 @end example
+
+
+
+@deffn Procedure make-c-callback @var{ret-type} @var{arg-types}
+Build and return a function to be used to generate callback functions
+following the C language conventions for calling, arguments and return
+values and wrapping Scheme functions.
+
+The returned generator function accepts as single argument the Scheme
+function to be wrapped; the value returned by the generator function is
+a pointer object referencing a native function.  The wrapper native
+function takes care of marshaling Scheme values as appropriate for the
+underlying platform.
+
+@var{ret-type} must be a Scheme symbol specifying the type of the
+returned value; if the callback function must return no value:
+@var{ret-type} must be the symbol @code{void}.
+
+@var{arg-types} must be a list of Scheme symbols specifying the type of
+the arguments; if the callback function must accept no arguments:
+@var{arg-types} must be nil or the list @code{(void)}.
+
+@ref{ffi types} for the specification of accepted type symbols.
 @end deffn
+
+@c page
+@node ffi types
+@section Specifying foreign types
+
+
+The following is a list of Scheme symbols used to specify native types
+for both callouts and callbacks.
+
+@table @code
+@item signed-char
+@itemx unsigned-char
+Exact integer in the range for @code{char} and @code{unsigned char}.
+
+@item signed-short
+@itemx unsigned-short
+Exact integer in the range for @code{short int} and @code{unsigned short
+int}.
+
+@item signed-int
+@itemx unsigned-int
+Exact integer in the range for @code{int} and @code{unsigned int}.
+
+@item signed-long
+@itemx unsigned-long
+Exact integer in the range for @code{long} and @code{unsigned long}.
+
+@item signed-long-long
+@itemx unsigned-long-long
+Exact integer in the range for @code{long long} and @code{unsigned long
+long}.
+
+@item float
+@itemx double
+Flonum.
+
+@item pointer
+@itemx callback
+Pointer object.  The symbol @code{callback} can be used to specify a
+pointer to a callback, but it is a full synonym of @code{pointer}.
+
+@item int8_t
+@itemx uint8_t
+Exact integer in the range for @code{int8_t} and @code{uint8_t}.
+
+@item int16_t
+@itemx uint16_t
+Exact integer in the range for @code{int16_t} and @code{uint16_t}.
+
+@item int32_t
+@itemx uint32_t
+Exact integer in the range for @code{int32_t} and @code{uint32_t}.
+
+@item int64_t
+@itemx uint64_t
+Exact integer in the range for @code{int64_t} and @code{uint64_t}.
+@end table
 
 @c page
 @node ffi errno

@@ -110,6 +110,10 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-argument-validation (pathname who obj)
+  (or (bytevector? obj) (string? obj))
+  (assertion-violation who "expected string or bytevector as pathname argument" obj))
+
 (define-argument-validation (errno who obj)
   (or (boolean? obj) (and (fixnum? obj) (<= obj 0)))
   (assertion-violation who "expected boolean or negative fixnum as errno argument" obj))
@@ -141,6 +145,45 @@
 (define-argument-validation (pointer-offset who obj)
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as pointer offset argument" obj))
+
+(define-argument-validation (start-index-for-bytevector who idx bv)
+  ;;To be used after  START-INDEX validation.  Valid scenarios for start
+  ;;indexes:
+  ;;
+  ;;  |...|word
+  ;;  |---|---|---|---|---|---|---|---|---| bytevector
+  ;;                      ^start
+  ;;
+  ;;  |---|---|---|---|---|---|---|---|---| bytevector
+  ;;                                  ^start
+  ;;
+  ;;  |---|---|---|---|---|---|---|---|---| bytevector
+  ;;                                      ^start = bv.len
+  ;;
+  ;;  | empty bytevector
+  ;;  ^start = bv.len = 0
+  ;;
+  ;;the following is an invalid scenario:
+  ;;
+  ;;  |---|---|---|---|---|---|---|---|---| bytevector
+  ;;                                    ^start = bv.len
+  ;;
+  (let ((bv.len (unsafe.bytevector-length bv)))
+    (or (unsafe.fx=  idx bv.len)
+	(unsafe.fx<= idx bv.len)))
+  (assertion-violation who
+    (string-append "start index argument "		(number->string idx)
+		   " too big for bytevector length "	(number->string (unsafe.bytevector-length bv)))
+    idx))
+
+(define-argument-validation (count-for-bytevector who count bv bv.start)
+  (let ((end (unsafe.fx+ bv.start count)))
+    (unsafe.fx<= end (unsafe.bytevector-length bv)))
+  (assertion-violation who
+    (string-append "word count "			(number->string count)
+		   " too big for bytevector length "	(number->string (unsafe.bytevector-length bv))
+		   " start index "			(number->string bv.start))
+    count))
 
 ;;; --------------------------------------------------------------------
 
@@ -183,45 +226,6 @@
   (words.word-s64? obj)
   (assertion-violation who
     "expected exact integer representing an 64-bit unsigned integer as argument" obj))
-
-(define-argument-validation (start-index-for-bytevector who idx bv)
-  ;;To be used after  START-INDEX validation.  Valid scenarios for start
-  ;;indexes:
-  ;;
-  ;;  |...|word
-  ;;  |---|---|---|---|---|---|---|---|---| bytevector
-  ;;                      ^start
-  ;;
-  ;;  |---|---|---|---|---|---|---|---|---| bytevector
-  ;;                                  ^start
-  ;;
-  ;;  |---|---|---|---|---|---|---|---|---| bytevector
-  ;;                                      ^start = bv.len
-  ;;
-  ;;  | empty bytevector
-  ;;  ^start = bv.len = 0
-  ;;
-  ;;the following is an invalid scenario:
-  ;;
-  ;;  |---|---|---|---|---|---|---|---|---| bytevector
-  ;;                                    ^start = bv.len
-  ;;
-  (let ((bv.len (unsafe.bytevector-length bv)))
-    (or (unsafe.fx=  idx bv.len)
-	(unsafe.fx<= idx bv.len)))
-  (assertion-violation who
-    (string-append "start index argument "		(number->string idx)
-		   " too big for bytevector length "	(number->string (unsafe.bytevector-length bv)))
-    idx))
-
-(define-argument-validation (count-for-bytevector who count bv bv.start)
-  (let ((end (unsafe.fx+ bv.start count)))
-    (unsafe.fx<= end (unsafe.bytevector-length bv)))
-  (assertion-violation who
-    (string-append "word count "			(number->string count)
-		   " too big for bytevector length "	(number->string (unsafe.bytevector-length bv))
-		   " start index "			(number->string bv.start))
-    count))
 
 ;;; --------------------------------------------------------------------
 
@@ -291,8 +295,9 @@
    ((libname lazy? global?)
     (define who 'dlopen)
     (with-arguments-validation (who)
-	((string  libname))
-      (capi.ffi-dlopen (string->latin1 libname) lazy? global?)))))
+	((pathname  libname))
+      (with-pathnames ((libname.bv libname))
+	(capi.ffi-dlopen libname.bv lazy? global?))))))
 
 (define (dlclose ptr)
   (define who 'dlclose)
@@ -726,3 +731,6 @@
 )
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'with-pathnames 'scheme-indent-function 1)
+;; End:

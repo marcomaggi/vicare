@@ -596,6 +596,40 @@
   #t)
 
 
+(parametrise ((check-test-name	'calls))
+
+  (define callout-maker
+    (ffi.make-c-callout 'unsigned-int '(unsigned-int)))
+
+  (define callback-maker
+    (ffi.make-c-callback 'unsigned-int '(unsigned-int)))
+
+  (define identity
+    (callout-maker (callback-maker values)))
+
+  (check (identity 123) => 123)
+
+  #t)
+
+
+(parametrise ((check-test-name	'libc))
+
+  (define libc
+    (ffi.dlopen))
+
+  (when libc
+
+    (let* ((maker	(ffi.make-c-callout 'double '(double)))
+	   (sinh	(maker (ffi.dlsym libc "sinh"))))
+      (check
+	  (flonum? (sinh 1.2))
+	=> #t)
+
+      #f))
+
+  #t)
+
+
 (parametrise ((check-test-name	'zlib))
 
   (define zlib

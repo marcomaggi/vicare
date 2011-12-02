@@ -80,7 +80,7 @@ ikptr
 ikrt_dlsym (ikptr handle, ikptr sym, ikpcb* pcb)
 {
   void *  memory = dlsym(VICARE_POINTER_DATA_VOIDP(handle), VICARE_BYTEVECTOR_DATA_CHARP(sym));
-  return (NULL == memory)? false_object : ikrt_pointer_alloc((long)memory, pcb);
+  return (NULL == memory)? false_object : ikrt_pointer_alloc((unsigned long)memory, pcb);
 }
 
 
