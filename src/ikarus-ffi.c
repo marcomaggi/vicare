@@ -424,9 +424,8 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
   ref(sk, disp_system_continuation_next) = pcb->next_k;
   pcb->next_k = sk + vector_tag;
   {
-    ik_ffi_cif_t  cif            = VICARE_POINTER_DATA_VOIDP(VICARE_VECTOR_REF(s_data, 0));
-    address_t *   address        = VICARE_POINTER_DATA_VOIDP(VICARE_VECTOR_REF(s_data, 1));
-    /* int           arity          = VICARE_VECTOR_LENGTH(s_args); */
+    ik_ffi_cif_t  cif     = VICARE_POINTER_DATA_VOIDP(VICARE_VECTOR_REF(s_data, 0));
+    address_t *   address = VICARE_POINTER_DATA_VOIDP(VICARE_VECTOR_REF(s_data, 1));
     /* Prepare  memory   to  hold  native   values  representing  Scheme
        arguments and the return value */
     uint8_t     args_buffer[cif->args_bufsize];
@@ -562,7 +561,6 @@ ikptr
 ikrt_call_back(ikptr proc, ikpcb* pcb)
 {
   seal_scheme_stack(pcb);
-
   ikptr sk = ik_unsafe_alloc(pcb, system_continuation_size);
   ref(sk, 0) = system_continuation_tag;
   ref(sk, disp_system_continuation_top) = pcb->system_stack;
@@ -574,6 +572,7 @@ ikrt_call_back(ikptr proc, ikpcb* pcb)
 #endif
   ikptr code_ptr = entry_point - off_code_data;
   pcb->frame_pointer = pcb->frame_base;
+  /* Perform the call. */
   ikptr rv = ik_exec_code(pcb, code_ptr, 0, proc);
 #ifdef DEBUG_FFI
   fprintf(stderr, "system_stack = 0x%016lx\n", pcb->system_stack);
@@ -583,7 +582,7 @@ ikrt_call_back(ikptr proc, ikpcb* pcb)
 #endif
   sk = pcb->next_k - vector_tag;
   if (ref(sk, 0) != system_continuation_tag) {
-    fprintf(stderr, "vicare internal error: invalid system cont\n");
+    fprintf(stderr, "*** Vicare error: invalid system cont\n");
     exit(EXIT_FAILURE);
   }
   pcb->next_k = ref(sk, disp_system_continuation_next);
