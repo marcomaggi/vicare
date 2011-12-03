@@ -677,7 +677,7 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'zlib))
+(parametrise ((check-test-name	'zlib))
 
   (define zlib
     (ffi.dlopen "libz.so"))
@@ -687,30 +687,31 @@
 	(let* ((maker		(ffi.make-c-callout 'signed-int '(pointer pointer pointer unsigned-long)))
 	       (compress*	(maker (ffi.dlsym zlib "compress")))
 	       (uncompress*	(maker (ffi.dlsym zlib "uncompress"))))
+
 	  (define (compress src.bv)
 	    (let-values (((src.ptr src.len) (ffi.bytevector->guarded-memory src.bv)))
-	      (let* ((&dst.len	(ffi.guarded-malloc 8))
-		     (dst.ptr	(ffi.guarded-malloc src.len)))
+	      (let* ((dst.len	src.len)
+		     (&dst.len	(ffi.guarded-calloc 1 8))
+		     (dst.ptr	(ffi.guarded-malloc dst.len)))
+		(ffi.pointer-set-c-unsigned-long! &dst.len 0 dst.len)
 		(compress* dst.ptr &dst.len src.ptr src.len)
 		(let ((dst.len (ffi.pointer-ref-c-unsigned-long &dst.len 0)))
 		  (ffi.memory->bytevector dst.ptr dst.len)))))
+
 	  (define (uncompress src.bv out-len)
 	    (let-values (((src.ptr src.len) (ffi.bytevector->guarded-memory src.bv)))
-	      (let* ((&dst.len	(ffi.guarded-calloc 1 8))
-		     (dst.ptr	(ffi.guarded-malloc out-len)))
-		(ffi.pointer-set-c-unsigned-long! &dst.len 0 0)
+	      (let* ((dst.len	out-len)
+		     (&dst.len	(ffi.guarded-malloc 8))
+		     (dst.ptr	(ffi.guarded-malloc dst.len)))
+		(ffi.pointer-set-c-unsigned-long! &dst.len 0 dst.len)
 		(uncompress* dst.ptr &dst.len src.ptr src.len)
 		(let ((dst.len (ffi.pointer-ref-c-unsigned-long &dst.len 0)))
-(check-pretty-print (list 'dst.len dst.len src.len out-len))
 		  (ffi.memory->bytevector dst.ptr dst.len)))))
+
 	  (let* ((src.len 4096)
 		 (src.bv  (make-bytevector src.len 99))
-		 (dst.bv  (compress src.bv))
-		 (unc.bv  (uncompress dst.bv src.len)))
-;; (check-pretty-print src.bv)
-(check-pretty-print src.len)
-(check-pretty-print unc.bv)
-;; (check-pretty-print (bytevector=? src.bv unc.bv))
+                 (com.bv  (compress src.bv))
+		 (unc.bv  (uncompress com.bv src.len)))
 	    (bytevector=? src.bv unc.bv)))
       => #t))
 
