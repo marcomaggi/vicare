@@ -5830,20 +5830,6 @@ the arguments; if the foreign function accepts no arguments:
 @var{arg-types} must be nil or the list @code{(void)}.
 
 @ref{ffi types} for the specification of accepted type symbols.
-
-@quotation
-@strong{NOTE} When calling a wrapper Scheme closure: the amount of
-memory used to store the native values obtained by converting the Scheme
-arguments must not exceed a fixed maximum, else the process will be
-terminated.
-
-This upper limit is currently hard--coded to @math{1024}, which should
-be enough for all purposes (it can hold more than @math{250} 32-bit
-machine words).
-
-Hard--coded limits are ugly, but doing things this way speeds up the
-callout operations, which is also a good achievement.
-@end quotation
 @end deffn
 
 @c page

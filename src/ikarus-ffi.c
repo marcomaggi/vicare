@@ -49,10 +49,6 @@
  ** Constants and variables.
  ** ----------------------------------------------------------------- */
 
-/* Maximum size of memory allocated  to hold the native arguments values
-   for callouts.  When exceeded the process terminates. */
-#define ARGS_BUFFER_SIZE         1024
-
 extern ikpcb* the_pcb;
 
 /* These  constants must  be kept  in  sync with  the ones  in the  file
@@ -104,6 +100,29 @@ static ffi_type * the_ffi_types_array[TYPE_ID_NUMBER] = {
   &ffi_type_slong       /* 19 */
 };
 
+static size_t the_ffi_type_sizes[TYPE_ID_NUMBER] = {
+  0,                            /*  0 */
+  sizeof(uint8_t),              /*  1 */
+  sizeof(int8_t),               /*  2 */
+  sizeof(uint16_t),             /*  3 */
+  sizeof(int16_t),              /*  4 */
+  sizeof(uint32_t),             /*  5 */
+  sizeof(int32_t),              /*  6 */
+  sizeof(uint64_t),             /*  7 */
+  sizeof(int64_t),              /*  8 */
+  sizeof(float),                /*  9 */
+  sizeof(double),               /* 10 */
+  sizeof(void *),               /* 11 */
+  sizeof(unsigned char),        /* 12 */
+  sizeof(char),                 /* 13 */
+  sizeof(unsigned short),       /* 14 */
+  sizeof(short),                /* 15 */
+  sizeof(unsigned int),         /* 16 */
+  sizeof(int),                  /* 17 */
+  sizeof(unsigned long),        /* 18 */
+  sizeof(long)                  /* 19 */
+};
+
 
 /** --------------------------------------------------------------------
  ** Type definitions.
@@ -114,17 +133,29 @@ typedef void address_t ();
 /* This structure exists to make  it easier to allocate data required by
    Libffi's Call InterFace. */
 typedef struct ik_ffi_cif_stru_t {
-  ffi_cif       cif;
-  ffi_type *    arg_types[0];
+  ffi_cif       cif;            /* Libffi's CIF structure */
+  unsigned      arity;          /* number of arguments */
+  size_t        args_bufsize;   /* number of  bytes to allocate  to hold
+                                   the arguments as native values */
+  ffi_type *    retval_type;    /* Libffi's type structure for return value */
+  type_id_t     retval_type_id; /* type identifier for return value */
+  ffi_type **   arg_types;      /* Libffi's type structures for arguments */
+  type_id_t *   arg_type_ids;   /* type identifiers for arguments */
+  uint8_t       data[0];        /* appended data */
 } ik_ffi_cif_stru_t;
 
 typedef ik_ffi_cif_stru_t *      ik_ffi_cif_t;
 
-#define IK_SIZEOF_FFI_CIF(ARITY)        \
-  (sizeof(ik_ffi_cif_stru_t)+(1+(ARITY))*sizeof(ffi_type*))
+#define IK_FFI_CIF_SIZEOF(ARITY)                \
+  (sizeof(ik_ffi_cif_stru_t)+(1+(ARITY))*sizeof(ffi_type*)+(ARITY)*sizeof(type_id_t*))
 
+#define IK_FFI_CIF_ARG_TYPES_PTR(CIF,ARITY)     \
+  ((ffi_type**)(((uint8_t*)cif) + sizeof(ik_ffi_cif_stru_t)))
 
-static void     scheme_to_native_value_cast  (ikptr s_type_id, ikptr s_scheme_value, void * buffer);
+#define IK_FFI_CIF_ARG_TYPE_IDS_PTR(CIF,ARITY)  \
+  ((type_id_t*)(((uint8_t*)cif) + sizeof(ik_ffi_cif_stru_t) + (1+(ARITY))*sizeof(ffi_type*)))
+
+static void     scheme_to_native_value_cast  (type_id_t type_id, ikptr s_scheme_value, void * buffer);
 static ikptr    native_to_scheme_value_cast  (type_id_t type_id, void * buffer, ikpcb* pcb);
 static ikptr    seal_scheme_stack            (ikpcb* pcb);
 
@@ -172,7 +203,7 @@ dump_stack (ikpcb* pcb, char* msg)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_ffi_prep_cif (ikptr s_retval_type, ikptr s_args_types, ikpcb* pcb)
+ikrt_ffi_prep_cif (ikptr s_retval_type_id, ikptr s_arg_type_ids, ikpcb* pcb)
 /* Wrapper  for   Libffi's  "ffi_prep_cif()";  prepare   a  Libffi  call
    interface (CIF) building an  appropriate data structure, whose memory
    is obtained  by "calloc()".  Return a pointer  object referencing the
@@ -180,20 +211,29 @@ ikrt_ffi_prep_cif (ikptr s_retval_type, ikptr s_args_types, ikpcb* pcb)
 
    The generated CIR can be used for both callouts and callbacks.
 
-   S_RETVAL_TYPE must be  a fixnum in the set  "type_id_t" selecting the
-   type  of the  return  value.  S_ARGS_TYPES  must  reference a  vector
+   S_RETVAL_TYPE_ID must  be a fixnum  in the set  "type_id_t" selecting
+   the type of the return value.  S_ARG_TYPE_IDS must reference a vector
    holding fixnums in  the range "type_id_t" selecting the  types of the
    arguments. */
 {
-  ffi_type*     retval_type = the_ffi_types_array[unfix(s_retval_type)];
-  long          arity       = VICARE_VECTOR_LENGTH(s_args_types);
-  ik_ffi_cif_t  cif         = alloc(IK_SIZEOF_FFI_CIF(arity), 1);
+  unsigned      arity = (unsigned)VICARE_VECTOR_LENGTH(s_arg_type_ids);
+  ik_ffi_cif_t  cif   = alloc(IK_FFI_CIF_SIZEOF(arity), 1);
   ffi_status    rv;
   int           i;
-  for (i=0; i<arity; i++)
-    cif->arg_types[i] = the_ffi_types_array[unfix(VICARE_VECTOR_REF(s_args_types, i))];
+  cif->arg_types      = IK_FFI_CIF_ARG_TYPES_PTR(cif, arity);
+  cif->arg_type_ids   = IK_FFI_CIF_ARG_TYPE_IDS_PTR(cif, arity);
+  cif->arity          = arity;
+  cif->retval_type_id = unfix(s_retval_type_id);
+  cif->retval_type    = the_ffi_types_array[cif->retval_type_id];
+  cif->args_bufsize   = 0;
+  for (i=0; i<arity; i++) {
+    type_id_t   id       =  unfix(VICARE_VECTOR_REF(s_arg_type_ids, i));
+    cif->args_bufsize    += the_ffi_type_sizes[id];
+    cif->arg_type_ids[i] =  id;
+    cif->arg_types[i]    =  the_ffi_types_array[id];
+  }
   cif->arg_types[arity] = NULL;
-  rv = ffi_prep_cif((ffi_cif*)cif, FFI_DEFAULT_ABI, arity, retval_type, cif->arg_types);
+  rv = ffi_prep_cif(&(cif->cif), FFI_DEFAULT_ABI, arity, cif->retval_type, cif->arg_types);
   return (FFI_OK == rv)? ik_pointer_alloc((unsigned long)cif, pcb) : false_object;
 }
 
@@ -203,13 +243,12 @@ ikrt_ffi_prep_cif (ikptr s_retval_type, ikptr s_args_types, ikpcb* pcb)
  ** ----------------------------------------------------------------- */
 
 static void
-scheme_to_native_value_cast (ikptr s_type_id, ikptr s_scheme_value, void * buffer)
+scheme_to_native_value_cast (type_id_t type_id, ikptr s_scheme_value, void * buffer)
 /* Convert  the S_SCHEME_VALUE to  a native  value and  store it  in the
-   block of memory  referenced by BUFFER; the type is  selected by the 8
-   least significant bits of  the fixnum S_TYPE_ID.  S_SCHEME_VALUE must
-   have been already validated.  BUFFER must be wide enough. */
+   block of memory  referenced by BUFFER; the type  is selected TYPE_ID.
+   S_SCHEME_VALUE must have been already validated.  BUFFER must be wide
+   enough. */
 {
-  type_id_t  type_id = (type_id_t)unfix(s_type_id);
   switch (type_id) {
   case TYPE_ID_VOID: return;
 
@@ -362,7 +401,7 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
    function to call and its CIF:
 
       S_DATA[0]: pointer  object to a  malloc-ed data structure  of type
-      "ffi_cif" describing the callout interface.
+      "ik_ffi_cif_stru_t" describing the callout interface.
 
       S_DATA[1]: pointer object representing  the address of the foreign
       function to call.
@@ -377,6 +416,7 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
 {
   ikptr         return_value;
   ikptr         sk;
+  size_t        args_bufsize;
   seal_scheme_stack(pcb);
   sk = ik_unsafe_alloc(pcb, system_continuation_size);
   ref(sk, disp_system_continuation_tag)  = system_continuation_tag;
@@ -384,37 +424,35 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
   ref(sk, disp_system_continuation_next) = pcb->next_k;
   pcb->next_k = sk + vector_tag;
   {
-    ffi_cif *   cif            = VICARE_POINTER_DATA_VOIDP(VICARE_VECTOR_REF(s_data, 0));
-    address_t * address        = VICARE_POINTER_DATA_VOIDP(VICARE_VECTOR_REF(s_data, 1));
-    ikptr       s_arg_type_ids = VICARE_VECTOR_REF(s_data, 2);
-    type_id_t   retval_type_id = unfix(VICARE_VECTOR_REF(s_data, 3));
-    int         arity          = VICARE_VECTOR_LENGTH(s_args);
+    ik_ffi_cif_t  cif            = VICARE_POINTER_DATA_VOIDP(VICARE_VECTOR_REF(s_data, 0));
+    address_t *   address        = VICARE_POINTER_DATA_VOIDP(VICARE_VECTOR_REF(s_data, 1));
+    /* int           arity          = VICARE_VECTOR_LENGTH(s_args); */
     /* Prepare  memory   to  hold  native   values  representing  Scheme
        arguments and the return value */
-    uint8_t     args_buffer[ARGS_BUFFER_SIZE];
+    uint8_t     args_buffer[cif->args_bufsize];
     uint8_t *   arg_next = &(args_buffer[0]);
-    uint8_t *   arg_end  = arg_next + ARGS_BUFFER_SIZE;
-    void *      arg_value_ptrs[1+arity];
-    uint8_t     retval_buffer[cif->rtype->size];
+    uint8_t *   arg_end  = arg_next + cif->args_bufsize;
+    void *      arg_value_ptrs[1+cif->arity];
+    uint8_t     retval_buffer[cif->retval_type->size];
     /* Fill ARG_VALUE_PTRS  with pointers  to memory blocks  holding the
        native argument values. */
     int  i;
-    for (i=0; i<arity; i++) {
-      ffi_type *  type   = cif->arg_types[i];
-      ikptr       id     = VICARE_VECTOR_REF(s_arg_type_ids, i);
-      ikptr       value  = VICARE_VECTOR_REF(s_args,         i);
+    for (i=0; i<cif->arity; i++) {
+      ikptr  value = VICARE_VECTOR_REF(s_args, i);
       arg_value_ptrs[i] = arg_next;
-      scheme_to_native_value_cast(id, value, arg_next);
-      arg_next += type->size;
-      if (arg_end <= arg_next)
+      scheme_to_native_value_cast(cif->arg_type_ids[i], value, arg_next);
+      arg_next += cif->arg_types[i]->size;
+      if (arg_end < arg_next) {
+        args_bufsize = cif->args_bufsize;
         goto too_many_args_error;
+      }
     }
-    arg_value_ptrs[arity] = NULL;
+    arg_value_ptrs[cif->arity] = NULL;
     /* Perform the call. */
     errno = 0;
-    ffi_call(cif, address, (void *)retval_buffer, arg_value_ptrs);
+    ffi_call(&(cif->cif), address, (void *)retval_buffer, arg_value_ptrs);
     pcb->last_errno = errno;
-    return_value    = native_to_scheme_value_cast(retval_type_id, retval_buffer, pcb);
+    return_value    = native_to_scheme_value_cast(cif->retval_type_id, retval_buffer, pcb);
   }
   pcb->frame_pointer = pcb->frame_base - wordsize;
   sk = pcb->next_k - vector_tag;
@@ -429,7 +467,7 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
  too_many_args_error:
   fprintf(stderr, "*** Vicare error: exceeded maximum memory size (%d)\n\
 *** reserved for callout arguments, too many arguments to callout\n",
-          ARGS_BUFFER_SIZE);
+          args_bufsize);
   exit(EXIT_FAILURE);
 }
 
@@ -468,7 +506,7 @@ generic_callback (ffi_cif *cif, void *ret, void **args, void *user_data)
 #ifdef DEBUG_FFI
   fprintf(stderr, "and back with rv=0x%016lx!\n", rv);
 #endif
-  scheme_to_native_value_cast(rtype_conv, rv, ret);
+  scheme_to_native_value_cast(unfix(rtype_conv), rv, ret);
   return;
 }
 ikptr
