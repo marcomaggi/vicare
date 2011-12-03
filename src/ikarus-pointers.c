@@ -68,7 +68,7 @@ ikrt_dlopen (ikptr library_name_bv, ikptr load_lazy, ikptr load_global, ikpcb* p
     ((load_global == false_object) ? RTLD_LOCAL : RTLD_GLOBAL);
   name   = (false_object == library_name_bv)? NULL : VICARE_BYTEVECTOR_DATA_CHARP(library_name_bv);
   memory = dlopen(name, flags);
-  return (NULL == memory)? false_object : ikrt_pointer_alloc((long)memory, pcb);
+  return (NULL == memory)? false_object : ik_pointer_alloc((unsigned long)memory, pcb);
 }
 ikptr
 ikrt_dlclose (ikptr x /*, ikpcb* pcb*/)
@@ -80,7 +80,7 @@ ikptr
 ikrt_dlsym (ikptr handle, ikptr sym, ikpcb* pcb)
 {
   void *  memory = dlsym(VICARE_POINTER_DATA_VOIDP(handle), VICARE_BYTEVECTOR_DATA_CHARP(sym));
-  return (NULL == memory)? false_object : ikrt_pointer_alloc((unsigned long)memory, pcb);
+  return (NULL == memory)? false_object : ik_pointer_alloc((unsigned long)memory, pcb);
 }
 
 
@@ -89,7 +89,7 @@ ikrt_dlsym (ikptr handle, ikptr sym, ikpcb* pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_pointer_alloc (unsigned long memory, ikpcb * pcb)
+ik_pointer_alloc (unsigned long memory, ikpcb * pcb)
 {
   ikptr r = ik_safe_alloc(pcb, pointer_size);
   ref(r, 0)        = pointer_tag;
@@ -130,15 +130,15 @@ ikrt_pointer_to_int (ikptr pointer, ikpcb* pcb)
 ikptr
 ikrt_fx_to_pointer(ikptr x, ikpcb* pcb)
 {
-  return ikrt_pointer_alloc(unfix(x), pcb);
+  return ik_pointer_alloc(unfix(x), pcb);
 }
 ikptr
 ikrt_bn_to_pointer (ikptr x, ikpcb* pcb)
 {
   if(bnfst_negative(ref(x, -vector_tag))){
-    return ikrt_pointer_alloc(-ref(x, off_bignum_data), pcb);
+    return ik_pointer_alloc(-ref(x, off_bignum_data), pcb);
   } else {
-    return ikrt_pointer_alloc(+ref(x, off_bignum_data), pcb);
+    return ik_pointer_alloc(+ref(x, off_bignum_data), pcb);
   }
 }
 
@@ -170,7 +170,7 @@ ikrt_pointer_add (ikptr ptr, ikptr delta, ikpcb * pcb)
     if (-ptrdiff > memory) /* => 0 > ptrdiff + memory */
       return false_object;
   }
-  return ikrt_pointer_alloc ((unsigned long)(memory + ptrdiff), pcb);
+  return ik_pointer_alloc ((unsigned long)(memory + ptrdiff), pcb);
 }
 
 /* ------------------------------------------------------------------ */
@@ -227,7 +227,7 @@ ikptr
 ikrt_malloc (ikptr number_of_bytes, ikpcb* pcb)
 {
   void *        p = malloc(unfix(number_of_bytes));
-  return (p)? ikrt_pointer_alloc((long) p, pcb) : false_object;
+  return (p)? ik_pointer_alloc((unsigned long) p, pcb) : false_object;
 }
 ikptr
 ikrt_realloc (ikptr pointer, ikptr number_of_bytes, ikpcb* pcb)
@@ -238,7 +238,7 @@ ikrt_realloc (ikptr pointer, ikptr number_of_bytes, ikpcb* pcb)
     new_memory = realloc(memory, unfix(number_of_bytes));
     if (new_memory) {
       ref(pointer, off_pointer_data) = (ikptr)NULL;
-      return ikrt_pointer_alloc((long)new_memory, pcb);
+      return ik_pointer_alloc((unsigned long)new_memory, pcb);
     } else
       return false_object;
   } else
@@ -248,7 +248,7 @@ ikptr
 ikrt_calloc (ikptr number_of_elements, ikptr element_size, ikpcb* pcb)
 {
   void *        p = calloc(unfix(number_of_elements), unfix(element_size));
-  return (p)? ikrt_pointer_alloc((long) p, pcb) : false_object;
+  return (p)? ik_pointer_alloc((unsigned long) p, pcb) : false_object;
 }
 ikptr
 ikrt_free (ikptr pointer)
@@ -332,7 +332,7 @@ ikrt_bytevector_to_memory (ikptr bv, ikpcb * pcb)
     void *      data;
     data = VICARE_BYTEVECTOR_DATA_VOIDP(bv);
     memcpy(memory, data, length);
-    return ikrt_pointer_alloc((unsigned long)memory, pcb);
+    return ik_pointer_alloc((unsigned long)memory, pcb);
   } else
     return false_object;
 }
@@ -421,7 +421,7 @@ ikrt_ref_pointer (ikptr pointer, ikptr offset, ikpcb* pcb)
 {
   long          idx = ik_integer_to_long(offset);
   void *        ptr = (void*)ref(pointer, off_pointer_data);
-  return ikrt_pointer_alloc(ref(ptr, idx), pcb);
+  return ik_pointer_alloc(ref(ptr, idx), pcb);
 }
 
 /* ------------------------------------------------------------------ */

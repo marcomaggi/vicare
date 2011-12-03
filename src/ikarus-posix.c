@@ -884,7 +884,7 @@ ikrt_posix_opendir (ikptr pathname_bv, ikpcb * pcb)
   pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   stream   = opendir(pathname);
-  return (stream)? ikrt_pointer_alloc((long)stream, pcb) : ik_errno_to_code();
+  return (stream)? ik_pointer_alloc((unsigned long)stream, pcb) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_fdopendir (ikptr fd, ikpcb * pcb)
@@ -892,7 +892,7 @@ ikrt_posix_fdopendir (ikptr fd, ikpcb * pcb)
   DIR *         stream;
   errno    = 0;
   stream   = fdopendir(unfix(fd));
-  return (stream)? ikrt_pointer_alloc((long)stream, pcb) : ik_errno_to_code();
+  return (stream)? ik_pointer_alloc((unsigned long)stream, pcb) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_readdir (ikptr pointer, ikpcb * pcb)
