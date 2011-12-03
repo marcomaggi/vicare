@@ -552,6 +552,12 @@ ikptr   ikrt_is_pointer         (ikptr x);
 
 ikptr   ik_vector_alloc         (ikpcb * pcb, long int requested_number_of_items);
 
+#define VICARE_VECTOR_LENGTH_FX(vec)                    \
+  ref((vec),off_vector_length)
+
+#define VICARE_VECTOR_LENGTH(vec)                       \
+  unfix(ref((vec),off_vector_length))
+
 #define VICARE_VECTOR_REF(vec,idx)                      \
   ref((vec),off_vector_data+(idx)*wordsize)
 
@@ -580,6 +586,9 @@ extern ikptr   ik_bytevector_alloc (ikpcb * pcb, long int requested_number_of_by
 extern ikptr   ik_bytevector_from_cstring       (ikpcb * pcb, const char * cstr);
 extern ikptr   ik_bytevector_from_cstring_len   (ikpcb * pcb, const char * cstr, size_t len);
 extern ikptr   ik_bytevector_from_memory_block  (ikpcb * pcb, void * memory, size_t length);
+
+#define VICARE_BYTEVECTOR_LENGTH(BV)                    \
+  unfix(ref((BV), off_bytevector_length))
 
 #define VICARE_BYTEVECTOR_LENGTH_FX(BV)                 \
   ref((BV), off_bytevector_length)
@@ -667,10 +676,11 @@ ikptr   ik_struct_alloc         (ikpcb * pcb, ikptr rtd, long number_of_fields);
 #define continuation_size       (4 * wordsize)
 
 #define system_continuation_tag         ((ikptr) 0x11F)
-#define disp_system_continuation_top     (1 * wordsize)
-#define disp_system_continuation_next    (2 * wordsize)
-#define disp_system_continuation_unused  (3 * wordsize)
-#define system_continuation_size         (4 * wordsize)
+#define disp_system_continuation_tag    0
+#define disp_system_continuation_top    (1 * wordsize)
+#define disp_system_continuation_next   (2 * wordsize)
+#define disp_system_continuation_unused (3 * wordsize)
+#define system_continuation_size        (4 * wordsize)
 
 #define off_continuation_top   (disp_continuation_top  - vector_tag)
 #define off_continuation_size  (disp_continuation_size - vector_tag)

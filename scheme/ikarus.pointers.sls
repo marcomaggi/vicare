@@ -89,6 +89,10 @@
   (string? obj)
   (assertion-violation who "expected string as argument" obj))
 
+(define-argument-validation (list who obj)
+  (list? obj)
+  (assertion-violation who "expected list as argument" obj))
+
 (define-argument-validation (bytevector who obj)
   (bytevector? obj)
   (assertion-violation who "expected bytevector as argument" obj))
@@ -100,6 +104,10 @@
 (define-argument-validation (pointer who obj)
   (pointer? obj)
   (assertion-violation who "expected pointer as argument" obj))
+
+(define-argument-validation (procedure who obj)
+  (procedure? obj)
+  (assertion-violation who "expected procedure as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -278,6 +286,18 @@
   (words.unsigned-long-long? obj)
   (assertion-violation who
     "expected exact integer representing a C language \"unsigned long long\" as argument" obj))
+
+
+;;;; errno interface
+
+(define errno
+  (case-lambda
+   (()
+    (foreign-call "ikrt_last_errno"))
+   ((errno)
+    (with-arguments-validation (errno)
+	((errno  errno))
+      (foreign-call "ikrt_set_errno" errno)))))
 
 
 ;;; shared libraries interface
@@ -584,146 +604,191 @@
 	(values #f #f)))))
 
 
+;;;; callout and callback arguments predicates
+
+(define (%select-type-predicate who type)
+  (case type
+    ((unsigned-char)		%unsigned-char?)
+    ((unsigned-short)		%unsigned-short?)
+    ((unsigned-int)		%unsigned-int?)
+    ((unsigned-long)		%unsigned-long?)
+    ((unsigned-long-long)	%unsigned-long-long?)
+
+    ((signed-char)		%signed-char?)
+    ((signed-short)		%signed-short?)
+    ((signed-int)		%signed-int?)
+    ((signed-long)		%signed-long?)
+    ((signed-long-long)		%signed-long-long?)
+
+    ((float)			flonum?)
+    ((double)			flonum?)
+    ((pointer)			pointer?)
+    ((callback)			pointer?)
+
+    ((int8_t)			%sint8?)
+    ((uint8_t)			%uint8?)
+    ((int16_t)			%sint16?)
+    ((uint16_t)			%uint16?)
+    ((int32_t)			%sint32?)
+    ((uint32_t)			%uint32?)
+    ((int64_t)			%sint64?)
+    ((uint64_t)			%uint64?)
+
+    (else
+     (assertion-violation who "unknown FFI type specifier" type))))
+
+(let-syntax ((define-predicate (syntax-rules ()
+				 ((_ ?who ?pred)
+				  (define (?who obj) (?pred obj))))))
+  (define-predicate %unsigned-char?		words.unsigned-char?)
+  (define-predicate %unsigned-short?		words.unsigned-short?)
+  (define-predicate %unsigned-int?		words.unsigned-int?)
+  (define-predicate %unsigned-long?		words.unsigned-long?)
+  (define-predicate %unsigned-long-long?	words.unsigned-long-long?)
+
+  (define-predicate %signed-char?		words.signed-char?)
+  (define-predicate %signed-short?		words.signed-short?)
+  (define-predicate %signed-int?		words.signed-int?)
+  (define-predicate %signed-long?		words.signed-long?)
+  (define-predicate %signed-long-long?		words.signed-long-long?)
+
+  (define-predicate %sint8?			words.word-s8?)
+  (define-predicate %uint8?			words.word-u8?)
+  (define-predicate %sint16?			words.word-s16?)
+  (define-predicate %uint16?			words.word-u16?)
+  (define-predicate %sint32?			words.word-s32?)
+  (define-predicate %uint32?			words.word-u32?)
+  (define-predicate %sint64?			words.word-s64?)
+  (define-predicate %uint64?			words.word-u64?))
+
+
 ;;; libffi interface
 
-(define (int? x)
-  (or (fixnum? x) (bignum? x)))
-
-(define (checker who)
-  (define (checker t)
-    (cond
-     ((vector? t)
-      (let ((t* (vector-map checker t)))
-	(lambda (v)
-	  (and (vector? v)
-	       (let ((n (vector-length v)))
-		 (and (= n (vector-length t))
-		      (let f ((i 0))
-			(or (= i n)
-			    (and ((vector-ref t* i) (vector-ref v i))
-				 (f (+ i 1)))))))))))
-     (else
-      (case t
-	((unsigned-char)      int?)
-	((signed-char)        int?)
-	((unsigned-short)     int?)
-	((signed-short)       int?)
-	((unsigned-int)       int?)
-	((signed-int)         int?)
-	((unsigned-long)      int?)
-	((signed-long)        int?)
-	((unsigned-long-long) int?)
-	((signed-long-long)   int?)
-	((float)              flonum?)
-	((double)             flonum?)
-	((pointer)            pointer?)
-	(else (die who "invalid type" t))))))
-  checker)
+(define (ffi-enabled?)
+  (foreign-call "ikrt_has_ffi"))
 
 (define (ffi-prep-cif who rtype argtypes)
-  (define (convert x)
-    (cond
-     ((vector? x) (vector-map convert x))
-     (else
-      (case x
-	((void)                1)
-	((unsigned-char)       2)
-	((signed-char)         3)
-	((unsigned-short)      4)
-	((signed-short)        5)
-	((unsigned-int)        6)
-	((signed-int)          7)
-	((unsigned-long)       8)
-	((signed-long)         9)
-	((unsigned-long-long) 10)
-	((signed-long-long)   11)
-	((float)              12)
-	((double)             13)
-	((pointer)            14)
-	(else (die who "invalid type" x))))))
-  (unless (list? argtypes)
-    (die who "arg types is not a list" argtypes))
-  (let ((argtypes-n (vector-map convert (list->vector argtypes)))
-	(rtype-n (convert rtype)))
-    (values (or (foreign-call "ikrt_ffi_prep_cif" rtype-n argtypes-n)
-		(if (ffi-enabled?)
-		    (die who "failed to initialize" rtype argtypes)
-		  (die who "FFI support is not enabled.  \
-                                You need to recompile ikarus with \
-                                --enable-libffi option set in order \
-                                to make use of the (ikarus foreign) \
-                                library.")))
-	    argtypes-n
-	    rtype-n)))
+  (define who 'ffi-prep-cif)
+  (with-arguments-validation (who)
+      ((list	argtypes))
+    (let ((argtypes-id	(vector-map %type-symbol->type-id (list->vector argtypes)))
+	  (rtype-id	(%type-symbol->type-id rtype)))
+      (values (or (foreign-call "ikrt_ffi_prep_cif" rtype-id argtypes-id)
+		  (if (ffi-enabled?)
+		      (assertion-violation who
+			"failed to initialize C interface" rtype argtypes)
+		    (assertion-violation who
+		      "FFI support is not enabled")))
+	      argtypes-id
+	      rtype-id))))
+
+;;The  fixnums identifying  the  types must  be  kept in  sync with  the
+;;definition of "type_id_t" in the file "ikarus-ffi.c".
+;;
+(define-inline-constant TYPE_ID_VOID            0)
+(define-inline-constant TYPE_ID_UINT8           1)
+(define-inline-constant TYPE_ID_SINT8           2)
+(define-inline-constant TYPE_ID_UINT16          3)
+(define-inline-constant TYPE_ID_SINT16          4)
+(define-inline-constant TYPE_ID_UINT32          5)
+(define-inline-constant TYPE_ID_SINT32          6)
+(define-inline-constant TYPE_ID_UINT64          7)
+(define-inline-constant TYPE_ID_SINT64          8)
+(define-inline-constant TYPE_ID_FLOAT           9)
+(define-inline-constant TYPE_ID_DOUBLE         10)
+(define-inline-constant TYPE_ID_POINTER        11)
+(define-inline-constant TYPE_ID_UCHAR          12)
+(define-inline-constant TYPE_ID_SCHAR          13)
+(define-inline-constant TYPE_ID_USHORT         14)
+(define-inline-constant TYPE_ID_SSHORT         15)
+(define-inline-constant TYPE_ID_UINT           16)
+(define-inline-constant TYPE_ID_SINT           17)
+(define-inline-constant TYPE_ID_ULONG          18)
+(define-inline-constant TYPE_ID_SLONG          19)
+
+(define (%type-symbol->type-id type)
+  (case type
+    ((uint8_t)			TYPE_ID_UINT8)
+    ((int8_t)			TYPE_ID_SINT8)
+    ((uint16_t)			TYPE_ID_UINT16)
+    ((int16_t)			TYPE_ID_SINT16)
+    ((uint32_t)			TYPE_ID_UINT32)
+    ((int32_t)			TYPE_ID_SINT32)
+    ((uint64_t)			TYPE_ID_UINT64)
+    ((int64_t)			TYPE_ID_SINT64)
+
+    ((float)			TYPE_ID_FLOAT)
+    ((double)			TYPE_ID_DOUBLE)
+    ((pointer)			TYPE_ID_POINTER)
+    ((callback)			TYPE_ID_POINTER)
+
+    ((void)			TYPE_ID_VOID)
+    ((unsigned-char)		TYPE_ID_UCHAR)
+    ((signed-char)		TYPE_ID_SCHAR)
+    ((unsigned-short)		TYPE_ID_SSHORT)
+    ((signed-short)		TYPE_ID_USHORT)
+    ((unsigned-int)		TYPE_ID_UINT)
+    ((signed-int)		TYPE_ID_SINT)
+    ((unsigned-long)		TYPE_ID_ULONG)
+    ((signed-long)		TYPE_ID_SLONG)
+    ((unsigned-long-long)	TYPE_ID_UINT64)
+    ((signed-long-long)		TYPE_ID_SINT64)
+
+    (else
+     (assertion-violation #f "invalid FFI type specifier" type))))
 
 (define (make-c-callout rtype argtypes)
   (define who 'make-c-callout)
   (let ((argtypes (if (equal? '(void) argtypes)
 		      '()
 		    argtypes)))
-    (let-values (((cif argtypes-n rtype-n) (ffi-prep-cif who rtype argtypes)))
+    (let-values (((cif argtypes-id rtype-id) (ffi-prep-cif who rtype argtypes)))
       (let* ((argtypes-vec (list->vector argtypes))
-	     (checkers (vector-map (checker who) argtypes-vec)))
-	(lambda (cfun)
-	  (define data (vector cif cfun argtypes-n rtype-n))
-	  (unless (pointer? cfun)
-	    (die who "not a pointer" cfun))
-	  (lambda args
-	    (let ((argsvec (list->vector args)))
-	      (unless (= (vector-length argsvec)
-			 (vector-length argtypes-vec))
-		(error 'callout-procedure "arg length mismatch"
-		       (vector->list argtypes-vec)
-		       args))
-	      (vector-for-each
-		  (lambda (p? t x)
-		    (unless (p? x)
-		      (die 'callout-procedure
-			   (format "argument does not match type ~a" t)
-			   x)))
-		checkers argtypes-vec argsvec)
-	      (foreign-call "ikrt_ffi_call" data argsvec))))))))
+	     (checkers     (vector-map (lambda (type)
+					 (%select-type-predicate who type))
+			     argtypes-vec)))
+	(lambda (cfun) ;this is the generator function
+	  (define who 'callout-generator)
+	  (define data (vector cif cfun argtypes-id rtype-id))
+	  (with-arguments-validation (who)
+	      ((pointer  cfun))
+	    (lambda args ;this is the callout function
+	      (define who 'callout)
+	      (let ((argsvec (list->vector args)))
+		(unless (= (vector-length argsvec)
+			   (vector-length argtypes-vec))
+		  (assertion-violation who
+		    "wrong number of arguments" (vector->list argtypes-vec) args))
+		(vector-for-each (lambda (arg-pred type arg)
+				   (unless (arg-pred arg)
+				     (assertion-violation who
+				       "argument does not match specified type" type arg)))
+		  checkers argtypes-vec argsvec)
+		(foreign-call "ikrt_ffi_call" data argsvec)))))))))
 
 (define (make-c-callback rtype argtypes)
   (define who 'make-c-callback)
   (let ((argtypes (if (equal? '(void) argtypes)
 		      '()
 		    argtypes)))
-    (let-values (((cif argtypes-n rtype-n) (ffi-prep-cif who rtype argtypes)))
-      (lambda (proc)
-	(unless (procedure? proc)
-	  (die who "not a procedure"))
-	(let ((proc
-	       (cond
-		((eq? rtype 'void) proc)
-		(else
-		 (let ((p? ((checker who) rtype)))
-		   (lambda args
-		     (let ((v (apply proc args)))
-		       (unless (p? v)
-			 (die 'callback
-			      (format "returned value does not match type ~a"
-				rtype)
-			      v))
-		       v)))))))
-	  (let ((data (vector cif proc argtypes-n rtype-n)))
-	    (or (foreign-call "ikrt_prepare_callback" data)
-		(die who "cannot prepare foreign callback"))))))))
-
-(define (ffi-enabled?)
-  (foreign-call "ikrt_has_ffi"))
-
-
-;;;; errno interface
-
-(define errno
-  (case-lambda
-   (()
-    (foreign-call "ikrt_last_errno"))
-   ((errno)
-    (with-arguments-validation (errno)
-	((errno  errno))
-      (foreign-call "ikrt_set_errno" errno)))))
+    (let-values (((cif argtypes-id rtype-id) (ffi-prep-cif who rtype argtypes)))
+      (lambda (proc)	;this is the generator function
+	  (define who 'callback-generator)
+	(with-arguments-validation (who)
+	    ((procedure  proc))
+	  (let ((proc (if (eq? rtype 'void)
+			  proc ;no return value to be validated
+			(let ((arg-pred (%select-type-predicate who rtype)))
+			  ;;This is a wrapper for the Scheme function to
+			  ;;validate the return value.
+			  (lambda args
+			    (let ((v (apply proc args)))
+			      (if (arg-pred v)
+				  v
+				(assertion-violation 'callback
+				  "returned value does not match specified type" rtype v))))))))
+	    (or (foreign-call "ikrt_prepare_callback" (vector cif proc argtypes-id rtype-id))
+		(assertion-violation who "cannot prepare foreign callback"))))))))
 
 
 ;;;; done

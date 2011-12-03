@@ -598,16 +598,57 @@
 
 (parametrise ((check-test-name	'calls))
 
-  (define callout-maker
-    (ffi.make-c-callout 'unsigned-int '(unsigned-int)))
+  (check
+      (let* ((rv-t		'unsigned-int)
+	     (args-t		'(unsigned-int))
+	     (callout-maker	(ffi.make-c-callout  rv-t args-t))
+	     (callback-maker	(ffi.make-c-callback rv-t args-t))
+	     (identity		(callout-maker
+				 (callback-maker
+				  (lambda args
+;;;				    (check-pretty-print (list 'callback args))
+				    (apply values args))))))
+	(identity 123))
+    => 123)
 
-  (define callback-maker
-    (ffi.make-c-callback 'unsigned-int '(unsigned-int)))
+;;; --------------------------------------------------------------------
 
-  (define identity
-    (callout-maker (callback-maker values)))
+  (check
+      (let* ((rv-t		'signed-char)
+	     (args-t		'(signed-int double float))
+	     (callout-maker	(ffi.make-c-callout  rv-t args-t))
+	     (callback-maker	(ffi.make-c-callback rv-t args-t))
+	     (function		(callout-maker (callback-maker (lambda (a b c)
+								 (exact (floor (+ a b c))))))))
+	(function 10 1.4 3.7))
+    => 15)
 
-  (check (identity 123) => 123)
+  (check
+      (let* ((rv-t		'signed-char)
+	     (args-t		'(signed-long signed-long-long))
+	     (callout-maker	(ffi.make-c-callout  rv-t args-t))
+	     (callback-maker	(ffi.make-c-callback rv-t args-t))
+	     (function		(callout-maker (callback-maker (lambda (a b)
+								 (+ a b))))))
+	(function 10 12))
+    => 22)
+
+  (check
+      (let* ((rv-t		'int8_t)
+	     (args-t		'(int16_t int32_t int64_t))
+	     (callout-maker	(ffi.make-c-callout  rv-t args-t))
+	     (callback-maker	(ffi.make-c-callback rv-t args-t))
+	     (args		#f)
+	     (function		(callout-maker
+				 (callback-maker
+				  (lambda (a b c)
+				    (set! args (list a b c))
+				    (words.greatest-s8)))))
+	     (rv		(function (words.greatest-s16)
+					  (words.greatest-s32)
+					  (words.greatest-s64))))
+	(list rv args))
+    => `(,(words.greatest-s8) (,(words.greatest-s16) ,(words.greatest-s32) ,(words.greatest-s64))))
 
   #t)
 
@@ -623,14 +664,20 @@
 	   (sinh	(maker (ffi.dlsym libc "sinh"))))
       (check
 	  (flonum? (sinh 1.2))
-	=> #t)
+	=> #t))
 
-      #f))
+    (let* ((maker	(ffi.make-c-callout 'double '(double double)))
+	   (atan2	(maker (ffi.dlsym libc "atan2"))))
+      (check
+	  (flonum? (atan2 1.2 3.4))
+	=> #t))
+
+    #f)
 
   #t)
 
 
-(parametrise ((check-test-name	'zlib))
+#;(parametrise ((check-test-name	'zlib))
 
   (define zlib
     (ffi.dlopen "libz.so"))
@@ -649,14 +696,22 @@
 		  (ffi.memory->bytevector dst.ptr dst.len)))))
 	  (define (uncompress src.bv out-len)
 	    (let-values (((src.ptr src.len) (ffi.bytevector->guarded-memory src.bv)))
-	      (let* ((&dst.len	(ffi.guarded-malloc 8))
+	      (let* ((&dst.len	(ffi.guarded-calloc 1 8))
 		     (dst.ptr	(ffi.guarded-malloc out-len)))
+		(ffi.pointer-set-c-unsigned-long! &dst.len 0 0)
 		(uncompress* dst.ptr &dst.len src.ptr src.len)
 		(let ((dst.len (ffi.pointer-ref-c-unsigned-long &dst.len 0)))
+(check-pretty-print (list 'dst.len dst.len src.len out-len))
 		  (ffi.memory->bytevector dst.ptr dst.len)))))
 	  (let* ((src.len 4096)
-		 (src.bv  (make-bytevector src.len 99)))
-	    (bytevector=? src.bv (uncompress (compress src.bv) src.len))))
+		 (src.bv  (make-bytevector src.len 99))
+		 (dst.bv  (compress src.bv))
+		 (unc.bv  (uncompress dst.bv src.len)))
+;; (check-pretty-print src.bv)
+(check-pretty-print src.len)
+(check-pretty-print unc.bv)
+;; (check-pretty-print (bytevector=? src.bv unc.bv))
+	    (bytevector=? src.bv unc.bv)))
       => #t))
 
   #t)

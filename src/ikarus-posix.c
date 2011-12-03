@@ -977,8 +977,7 @@ ikrt_posix_read (ikptr fd, ikptr buffer_bv, ikptr size_fx)
   size_t        size;
   ssize_t       rv;
   buffer   = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv);
-  size     = (size_t)((false_object!=size_fx)?
-                      unfix(size_fx) : unfix(VICARE_BYTEVECTOR_LENGTH_FX(buffer_bv)));
+  size     = (size_t)((false_object!=size_fx)? unfix(size_fx) : VICARE_BYTEVECTOR_LENGTH(buffer_bv));
   errno    = 0;
   rv       = read(unfix(fd), buffer, size);
   return (0 <= rv)? fix(rv) : ik_errno_to_code();
@@ -992,7 +991,7 @@ ikrt_posix_pread (ikptr fd, ikptr buffer_bv, ikptr size_fx, ikptr off_num)
   ssize_t       rv;
   buffer   = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv);
   size     = (size_t)((false_object!=size_fx)?
-                      unfix(size_fx) : unfix(VICARE_BYTEVECTOR_LENGTH_FX(buffer_bv)));
+                      unfix(size_fx) : VICARE_BYTEVECTOR_LENGTH(buffer_bv));
   off      = (off_t) ik_integer_to_long_long(off_num);
   errno    = 0;
   rv       = pread(unfix(fd), buffer, size, off);
@@ -1006,7 +1005,7 @@ ikrt_posix_write (ikptr fd, ikptr buffer_bv, ikptr size_fx)
   ssize_t       rv;
   buffer   = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv);
   size     = (size_t)((false_object!=size_fx)?
-                      unfix(size_fx) : unfix(VICARE_BYTEVECTOR_LENGTH_FX(buffer_bv)));
+                      unfix(size_fx) : VICARE_BYTEVECTOR_LENGTH(buffer_bv));
   errno    = 0;
   rv       = write(unfix(fd), buffer, size);
   return (0 <= rv)? fix(rv) : ik_errno_to_code();
@@ -1020,7 +1019,7 @@ ikrt_posix_pwrite (ikptr fd, ikptr buffer_bv, ikptr size_fx, ikptr off_num)
   ssize_t       rv;
   buffer   = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv);
   size     = (size_t)((false_object!=size_fx)?
-                      unfix(size_fx) : unfix(VICARE_BYTEVECTOR_LENGTH_FX(buffer_bv)));
+                      unfix(size_fx) : VICARE_BYTEVECTOR_LENGTH(buffer_bv));
   off      = (off_t) ik_integer_to_long_long(off_num);
   errno    = 0;
   rv       = pwrite(unfix(fd), buffer, size, off);
@@ -1050,7 +1049,7 @@ ikrt_posix_readv (ikptr fd, ikptr buffers, ikpcb * pcb)
   for (i=0; pair_tag == tagof(buffers); buffers=ref(buffers, off_cdr), ++i) {
     bv      = ref(buffers, off_car);
     bufs[i].iov_base = VICARE_BYTEVECTOR_DATA_VOIDP(bv);
-    bufs[i].iov_len  = unfix(VICARE_BYTEVECTOR_LENGTH_FX(bv));
+    bufs[i].iov_len  = VICARE_BYTEVECTOR_LENGTH(bv);
   }
   errno    = 0;
   rv       = readv(unfix(fd), bufs, number_of_buffers);
@@ -1067,7 +1066,7 @@ ikrt_posix_writev (ikptr fd, ikptr buffers, ikpcb * pcb)
   for (i=0; pair_tag == tagof(buffers); buffers=ref(buffers, off_cdr), ++i) {
     bv      = ref(buffers, off_car);
     bufs[i].iov_base = VICARE_BYTEVECTOR_DATA_VOIDP(bv);
-    bufs[i].iov_len  = unfix(VICARE_BYTEVECTOR_LENGTH_FX(bv));
+    bufs[i].iov_len  = VICARE_BYTEVECTOR_LENGTH(bv);
   }
   errno    = 0;
   rv       = writev(unfix(fd), bufs, number_of_buffers);
@@ -1316,7 +1315,7 @@ ikrt_posix_make_sockaddr_un (ikptr pathname_bv, ikpcb * pcb)
   char *                pathname;
   long                  pathname_len;
   pathname     = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
-  pathname_len = unfix(VICARE_BYTEVECTOR_LENGTH_FX(pathname_bv));
+  pathname_len = VICARE_BYTEVECTOR_LENGTH(pathname_bv);
   {
 #undef SIZE
 #define SIZE    (sizeof(struct sockaddr_un)+pathname_len) /* better safe than sorry */
@@ -1637,7 +1636,7 @@ ikrt_posix_gethostbyaddr (ikptr rtd, ikptr host_address_bv, ikpcb * pcb)
   int                   format;
   struct hostent *      rv;
   host_address     = VICARE_BYTEVECTOR_DATA_VOIDP(host_address_bv);
-  host_address_len = (size_t)unfix(VICARE_BYTEVECTOR_LENGTH_FX(host_address_bv));
+  host_address_len = (size_t)VICARE_BYTEVECTOR_LENGTH(host_address_bv);
   format   = (sizeof(struct in_addr) == host_address_len)? AF_INET : AF_INET6;
   errno    = 0;
   h_errno  = 0;
@@ -2016,7 +2015,7 @@ ikrt_posix_connect (ikptr sock, ikptr addr_bv)
   socklen_t             addr_len;
   int                   rv;
   addr     = VICARE_BYTEVECTOR_DATA_VOIDP(addr_bv);
-  addr_len = (socklen_t)unfix(VICARE_BYTEVECTOR_LENGTH_FX(addr_bv));
+  addr_len = (socklen_t)VICARE_BYTEVECTOR_LENGTH(addr_bv);
   errno    = 0;
   rv       = connect(unfix(sock), addr, addr_len);
   return (0 == rv)? fix(0) : ik_errno_to_code();
@@ -2065,7 +2064,7 @@ ikrt_posix_bind (ikptr sock, ikptr sockaddr_bv)
   socklen_t             len;
   int                   rv;
   addr  = VICARE_BYTEVECTOR_DATA_VOIDP(sockaddr_bv);
-  len   = (socklen_t)unfix(VICARE_BYTEVECTOR_LENGTH_FX(sockaddr_bv));
+  len   = (socklen_t)VICARE_BYTEVECTOR_LENGTH(sockaddr_bv);
   errno = 0;
   rv    = bind(unfix(sock), addr, len);
   return (0 == rv)? fix(0) : ik_errno_to_code();
@@ -2119,7 +2118,7 @@ ikrt_posix_send (ikptr sock, ikptr buffer_bv, ikptr size_fx, ikptr flags)
   int           rv;
   buffer     = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv);
   size       = (size_t)((false_object != size_fx)?
-                        unfix(size_fx) : unfix(VICARE_BYTEVECTOR_LENGTH_FX(buffer_bv)));
+                        unfix(size_fx) : VICARE_BYTEVECTOR_LENGTH(buffer_bv));
   errno      = 0;
   rv         = send(unfix(sock), buffer, size, unfix(flags));
   return (0 <= rv)? fix(rv) : ik_errno_to_code();
@@ -2132,7 +2131,7 @@ ikrt_posix_recv (ikptr sock, ikptr buffer_bv, ikptr size_fx, ikptr flags)
   int           rv;
   buffer     = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv);
   size       = (size_t)((false_object != size_fx)?
-                        unfix(size_fx) : unfix(VICARE_BYTEVECTOR_LENGTH_FX(buffer_bv)));
+                        unfix(size_fx) : VICARE_BYTEVECTOR_LENGTH(buffer_bv));
   errno      = 0;
   rv         = recv(unfix(sock), buffer, size, unfix(flags));
   return (0 <= rv)? fix(rv) : ik_errno_to_code();
@@ -2150,9 +2149,9 @@ ikrt_posix_sendto (ikptr sock, ikptr buffer_bv, ikptr size_fx, ikptr flags, ikpt
   int                   rv;
   buffer   = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv);
   size     = (size_t)((false_object != size_fx)?
-                      unfix(size_fx) : unfix(VICARE_BYTEVECTOR_LENGTH_FX(buffer_bv)));
+                      unfix(size_fx) : VICARE_BYTEVECTOR_LENGTH(buffer_bv));
   addr     = VICARE_BYTEVECTOR_DATA_VOIDP(addr_bv);
-  addr_len = (socklen_t)unfix(VICARE_BYTEVECTOR_LENGTH_FX(addr_bv));
+  addr_len = (socklen_t)VICARE_BYTEVECTOR_LENGTH(addr_bv);
   errno    = 0;
   rv       = sendto(unfix(sock), buffer, size, unfix(flags), addr, addr_len);
   return (0 <= rv)? fix(rv) : ik_errno_to_code();
@@ -2170,7 +2169,7 @@ ikrt_posix_recvfrom (ikptr sock, ikptr buffer_bv, ikptr size_fx, ikptr flags, ik
   int                   rv;
   buffer     = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv);
   size       = (size_t)((false_object != size_fx)?
-                        unfix(size_fx) : unfix(VICARE_BYTEVECTOR_LENGTH_FX(buffer_bv)));
+                        unfix(size_fx) : VICARE_BYTEVECTOR_LENGTH(buffer_bv));
   errno      = 0;
   rv         = recvfrom(unfix(sock), buffer, size, unfix(flags), addr, &addr_len);
   if (0 <= rv) {
@@ -2198,7 +2197,7 @@ ikptr
 ikrt_posix_getsockopt (ikptr sock, ikptr level, ikptr optname, ikptr optval_bv)
 {
   void *        optval = VICARE_BYTEVECTOR_DATA_VOIDP(optval_bv);
-  socklen_t     optlen = (socklen_t)VICARE_BYTEVECTOR_LENGTH_FX(optval_bv);
+  socklen_t     optlen = (socklen_t)VICARE_BYTEVECTOR_LENGTH(optval_bv);
   int           rv;
   errno = 0;
   rv    = getsockopt(unfix(sock), unfix(level), unfix(optname), optval, &optlen);
@@ -2208,7 +2207,7 @@ ikptr
 ikrt_posix_setsockopt (ikptr sock, ikptr level, ikptr optname, ikptr optval_bv)
 {
   void *        optval = VICARE_BYTEVECTOR_DATA_VOIDP(optval_bv);
-  socklen_t     optlen = (socklen_t)VICARE_BYTEVECTOR_LENGTH_FX(optval_bv);
+  socklen_t     optlen = (socklen_t)VICARE_BYTEVECTOR_LENGTH(optval_bv);
   int           rv;
   errno = 0;
   rv    = setsockopt(unfix(sock), unfix(level), unfix(optname), optval, optlen);

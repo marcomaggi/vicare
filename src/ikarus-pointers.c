@@ -326,7 +326,7 @@ ikrt_bytevector_to_memory (ikptr bv, ikpcb * pcb)
 {
   size_t        length;
   void *        memory;
-  length = (size_t)unfix(VICARE_BYTEVECTOR_LENGTH_FX(bv));
+  length = (size_t)VICARE_BYTEVECTOR_LENGTH(bv);
   memory = malloc(length);
   if (memory) {
     void *      data;

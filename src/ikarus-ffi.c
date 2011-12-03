@@ -10,6 +10,7 @@
         2011).
 
   Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+  Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute  it and/or modify
   it under the  terms of the GNU General Public  License as published by
@@ -43,200 +44,303 @@
 #  include <sys/mman.h>
 #endif
 
-static ffi_type *  scheme_to_ffi_type_cast         (ikptr nptr);
-static void        scheme_to_ffi_value_cast        (ffi_type* t, ikptr nptr, ikptr p, void* r);
-static ffi_type *  scheme_to_ffi_record_type_cast  (ikptr vec);
-static void        scheme_to_ffi_record_value_cast (ffi_type* t, ikptr nptr, ikptr p, void* r);
+/* Maximum size of memory allocated  to hold the native arguments values
+   for callouts.  When exceeded the process terminates. */
+#define ARGS_BUFFER_SIZE         1024
+
+typedef void address_t ();
+
+static void     scheme_to_native_value_cast  (ffi_type* t, ikptr nptr, ikptr p, void* r);
+static ikptr    native_to_scheme_value_cast  (int n, void* p, ikpcb* pcb);
+static ikptr    seal_scheme_stack            (ikpcb* pcb);
+
+extern ikpcb* the_pcb;
+
+/* These  constants must  be kept  in  sync with  the ones  in the  file
+   "ikarus.pointers.sls". */
+typedef enum type_id_t {
+  TYPE_ID_VOID          =  0,   /* &ffi_type_void    */
+  TYPE_ID_UINT8         =  1,   /* &ffi_type_uint8   */
+  TYPE_ID_SINT8         =  2,   /* &ffi_type_sint8   */
+  TYPE_ID_UINT16        =  3,   /* &ffi_type_uint16  */
+  TYPE_ID_SINT16        =  4,   /* &ffi_type_sint16  */
+  TYPE_ID_UINT32        =  5,   /* &ffi_type_uint32  */
+  TYPE_ID_SINT32        =  6,   /* &ffi_type_sint32  */
+  TYPE_ID_UINT64        =  7,   /* &ffi_type_uint64  */
+  TYPE_ID_SINT64        =  8,   /* &ffi_type_sint64  */
+  TYPE_ID_FLOAT         =  9,   /* &ffi_type_float   */
+  TYPE_ID_DOUBLE        = 10,   /* &ffi_type_double  */
+  TYPE_ID_POINTER       = 11,   /* &ffi_type_pointer */
+  TYPE_ID_UCHAR         = 12,   /* &ffi_type_uchar   */
+  TYPE_ID_SCHAR         = 13,   /* &ffi_type_schar   */
+  TYPE_ID_USHORT        = 14,   /* &ffi_type_ushort  */
+  TYPE_ID_SSHORT        = 15,   /* &ffi_type_sshort  */
+  TYPE_ID_UINT          = 16,   /* &ffi_type_uint    */
+  TYPE_ID_SINT          = 17,   /* &ffi_type_sint    */
+  TYPE_ID_ULONG         = 18,   /* &ffi_type_ulong   */
+  TYPE_ID_SLONG         = 19,   /* &ffi_type_slong   */
+  TYPE_ID_NUMBER        = 20
+} type_id_t;
+
+static ffi_type * the_ffi_types_array[TYPE_ID_NUMBER] = {
+  &ffi_type_void,       /*  0 */
+  &ffi_type_uint8,      /*  1 */
+  &ffi_type_sint8,      /*  2 */
+  &ffi_type_uint16,     /*  3 */
+  &ffi_type_sint16,     /*  4 */
+  &ffi_type_uint32,     /*  5 */
+  &ffi_type_sint32,     /*  6 */
+  &ffi_type_uint64,     /*  7 */
+  &ffi_type_sint64,     /*  8 */
+  &ffi_type_float,      /*  9 */
+  &ffi_type_double,     /* 10 */
+  &ffi_type_pointer,    /* 11 */
+  &ffi_type_uchar,      /* 12 */
+  &ffi_type_schar,      /* 13 */
+  &ffi_type_ushort,     /* 14 */
+  &ffi_type_sshort,     /* 15 */
+  &ffi_type_uint,       /* 16 */
+  &ffi_type_sint,       /* 17 */
+  &ffi_type_ulong,      /* 18 */
+  &ffi_type_slong       /* 19 */
+};
 
 
 /** --------------------------------------------------------------------
- ** Helpers.
+ ** Helpers and miscellaneous small functions.
  ** ----------------------------------------------------------------- */
 
 static void*
-alloc (size_t n, int m)
+alloc (size_t n, long m)
 {
-  void* x = calloc(n, m);
-  if (x)
-    return x;
+  void  * ptr = calloc(n, m);
+  if (ptr)
+    return ptr;
   else {
-    fprintf(stderr, "*** Vicare error: failed memory allocation with calloc(%u, %d)\n", n, m);
+    fprintf(stderr, "*** Vicare error: failed memory allocation with calloc(%u, %ld)\n", n, m);
     exit(EXIT_FAILURE);
   }
 }
-static void *
-alloc_room_for_type (ffi_type* t)
-{
-  return alloc(t->size, 1);
-}
-
-
-/** --------------------------------------------------------------------
- ** Stuff.
- ** ----------------------------------------------------------------- */
-
-static void
-scheme_to_ffi_value_cast (ffi_type* t, ikptr nptr, ikptr p, void* r)
-{
-  if (tagof(nptr) == vector_tag) {
-    scheme_to_ffi_record_value_cast(t, nptr, p, r);
-  } else if (is_fixnum(nptr)) {
-    long n = unfix(nptr);
-    switch (n & 0xF) {
-    case  1: {  return; }
-    case  2: // ffi_type_uint8;
-    case  3:
-      { *((char*)r) = ik_integer_to_long(p); return; }
-    case  4: // ffi_type_uint16;
-    case  5:
-      { *((short*)r) = ik_integer_to_long(p); return; }
-    case  6: //  ffi_type_uint32;
-    case  7:
-      { *((int*)r) = ik_integer_to_long(p); return; }
-    case  8: // ffi_type_uint64;
-    case  9:
-      { *((long*)r) = ik_integer_to_long(p); return; }
-    case 10:
-    case 11:
-      { *((long long*)r) = ik_integer_to_long_long(p); return; }
-    case 12: //return &ffi_type_float;
-      { *((float*)r) = flonum_data(p); return; }
-    case 13: //return &ffi_type_double;
-      { *((double*)r) = flonum_data(p); return; }
-    case 14: //return &ffi_type_pointer;
-      { *((void**)r) = (void*)ref(p, off_pointer_data); return; }
-    default:
-      fprintf(stderr, "*** Vicare FFI error: %s: invalid arg %ld", __func__, n);
-      exit(EXIT_FAILURE);
-    }
-  } else {
-    fprintf(stderr, "*** Vicare FFI error: %s: invalid type 0x%016lx\n", __func__, nptr);
-    exit(EXIT_FAILURE);
-  }
-}
-static ffi_type *
-scheme_to_ffi_type_cast (ikptr nptr)
-{
-  if (tagof(nptr) == vector_tag) {
-    return scheme_to_ffi_record_type_cast(nptr);
-  } else if (is_fixnum(nptr)) {
-    long n = unfix(nptr);
-    switch (n & 0xF) {
-    case  1: return &ffi_type_void;
-    case  2: return &ffi_type_uint8;
-    case  3: return &ffi_type_sint8;
-    case  4: return &ffi_type_uint16;
-    case  5: return &ffi_type_sint16;
-    case  6: return &ffi_type_uint32;
-    case  7: return &ffi_type_sint32;
-    case  8: return (sizeof(long)==4)?&ffi_type_uint32:&ffi_type_uint64;
-    case  9: return (sizeof(long)==4)?&ffi_type_sint32:&ffi_type_sint64;
-    case 10: return &ffi_type_uint64;
-    case 11: return &ffi_type_sint64;
-    case 12: return &ffi_type_float;
-    case 13: return &ffi_type_double;
-    case 14: return &ffi_type_pointer;
-    default:
-      fprintf(stderr, "*** Vicare FFI error: %s: invalid arg %ld", __func__, n);
-      exit(EXIT_FAILURE);
-    }
-  } else {
-    fprintf(stderr, "*** Vicare FFI error: %s: invalid arg %ld", __func__, nptr);
-    exit(EXIT_FAILURE);
-  }
-}
-static ffi_type *
-scheme_to_ffi_record_type_cast (ikptr vec)
-{
-  ikptr lenptr = ref(vec, -vector_tag);
-  if (! is_fixnum(lenptr)) {
-    fprintf(stderr, "*** Vicare FFI error: %s: not a vector 0x%016lx\n", __func__, vec);
-    exit(EXIT_FAILURE);
-  }
-  long n = unfix(lenptr);
-  ffi_type* t = alloc(sizeof(ffi_type), 1);
-  ffi_type** ts = alloc(sizeof(ffi_type*), n+1);
-  t->size = 0;
-  t->alignment = 0;
-  t->type = FFI_TYPE_STRUCT;
-  t->elements = ts;
-  long i;
-  for(i=0; i<n; i++){
-    ts[i] = scheme_to_ffi_type_cast(ref(vec, off_vector_data + i*wordsize));
-  }
-  ts[n] = 0;
-  return t;
-}
-static void
-scheme_to_ffi_record_value_cast (ffi_type* t, ikptr nptr, ikptr p, void* r)
-{
-  if (t->type != FFI_TYPE_STRUCT) {
-    fprintf(stderr, "*** Vicare error: %s: not a struct type\n", __func__);
-    exit(EXIT_FAILURE);
-  }
-  ffi_type** ts = t->elements;
-  char* buf = r;
-  ikptr lenptr = ref(nptr, off_vector_length);
-  int n = unfix(lenptr);
-  int i;
-  for(i=0; i<n; i++) {
-    ffi_type* at = ts[i];
-    ikptr argt = ref(nptr, off_vector_data + i*wordsize);
-    ikptr arg = ref(p, off_vector_data + i*wordsize);
-    scheme_to_ffi_value_cast(at, argt, arg, buf);
-    buf += at->size;
-  }
-}
-static ikptr
-ffi_to_scheme_value_cast (int n, void* p, ikpcb* pcb)
-{
-  switch (n & 0xF) {
-  case  1: return void_object;
-  case  2: return ik_integer_from_unsigned_long(*((unsigned char*)p), pcb);
-  case  3: return ik_integer_from_long(*((signed char*)p), pcb);
-  case  4: return ik_integer_from_unsigned_long(*((unsigned short*)p), pcb);
-  case  5: return ik_integer_from_long(*((signed short*)p), pcb);
-  case  6: return ik_integer_from_unsigned_long(*((unsigned int*)p), pcb);
-  case  7: return ik_integer_from_long(*((signed int*)p), pcb);
-  case  8: return ik_integer_from_unsigned_long(*((unsigned long*)p), pcb);
-  case  9: return ik_integer_from_long(*((signed long*)p), pcb);
-  case 10: return ik_integer_from_unsigned_long_long(*((unsigned long long*)p), pcb);
-  case 11: return ik_integer_from_long_long(*((signed long long*)p), pcb);
-  case 12: return ik_flonum_from_double(*((float*)p), pcb);
-  case 13: return ik_flonum_from_double(*((double*)p), pcb);
-  case 14: return ikrt_pointer_alloc((long)*((void**)p), pcb);
-  default:
-    fprintf(stderr, "*** Vicare error: %s: invalid arg %d", __func__, n);
-    exit(EXIT_FAILURE);
-  }
-}
-
-
-/** --------------------------------------------------------------------
- ** Other stuff.
- ** ----------------------------------------------------------------- */
-
 ikptr
 ikrt_has_ffi (void)
 {
   return true_object;
 }
-ikptr
-ikrt_ffi_prep_cif (ikptr rtptr, ikptr argstptr, ikpcb* pcb)
+
+#ifdef DEBUG_FFI
+static void
+dump_stack(ikpcb* pcb, char* msg)
 {
-  ffi_cif* cif = alloc(sizeof(ffi_cif), 1);
-  ffi_abi abi = FFI_DEFAULT_ABI;
-  int nargs = unfix(ref(argstptr, off_vector_length));
-  ffi_type** argtypes = alloc(sizeof(ffi_type*), nargs+1);
-  int i;
-  for(i=0; i<nargs; i++){
-    ikptr argt = ref(argstptr, off_vector_data + i*wordsize);
-    argtypes[i] = scheme_to_ffi_type_cast(argt);
+  fprintf(stderr, "====================  %s\n", msg);
+  ikptr frame_base = pcb->frame_base;
+  ikptr frame_pointer = pcb->frame_pointer;
+  ikptr p = frame_pointer;
+  fprintf(stderr, "fp=0x%016lx   base=0x%016lx\n", frame_pointer, frame_base);
+  while (p < frame_base) {
+    fprintf(stderr, "*0x%016lx = 0x%016lx\n", p, ref(p, 0));
+    p += wordsize;
   }
-  argtypes[nargs] = NULL;
-  ffi_type* rtype = scheme_to_ffi_type_cast(rtptr);
-  ffi_status s = ffi_prep_cif(cif, abi, nargs, rtype, argtypes);
-  if (s == FFI_OK) {
+}
+#endif
+
+
+/** --------------------------------------------------------------------
+ ** Converting Scheme values to and from native values.
+ ** ----------------------------------------------------------------- */
+
+static void
+scheme_to_native_value_cast (ffi_type* t, ikptr s_type_id, ikptr s_scheme_value, void * buffer)
+/* Convert  the S_SCHEME_VALUE to  a native  value and  store it  in the
+   block of memory  referenced by BUFFER; the type is  selected by the 8
+   least significant bits of  the fixnum S_TYPE_ID.  S_SCHEME_VALUE must
+   have been already validated.  BUFFER must be wide enough. */
+{
+  long  type_id = unfix(s_type_id);
+  switch (type_id) {
+  case TYPE_ID_VOID:
+    return;
+
+  case TYPE_ID_UINT8:
+    *((uint8_t*)         buffer) = unfix(s_scheme_value);
+    return;
+  case TYPE_ID_SINT8:
+    *((int8_t*)          buffer) = unfix(s_scheme_value);
+    return;
+  case TYPE_ID_UINT16:
+    *((uint16_t*)        buffer) = unfix(s_scheme_value);
+    return;
+  case TYPE_ID_SINT16:
+    *((int16_t*)         buffer) = unfix(s_scheme_value);
+    return;
+  case TYPE_ID_UINT32:
+    *((uint32_t*)        buffer) = ik_integer_to_uint32(s_scheme_value);
+    return;
+  case TYPE_ID_SINT32:
+    *((int32_t*)         buffer) = ik_integer_to_sint32(s_scheme_value);
+    return;
+  case TYPE_ID_UINT64:
+    *((uint64_t*)        buffer) = ik_integer_to_uint64(s_scheme_value);
+    return;
+  case TYPE_ID_SINT64:
+    *((int64_t*)         buffer) = ik_integer_to_sint64(s_scheme_value);
+    return;
+
+  case TYPE_ID_FLOAT:
+    *((float*)          buffer) = flonum_data(s_scheme_value);
+    return;
+  case TYPE_ID_DOUBLE:
+    *((double*)         buffer) = flonum_data(s_scheme_value);
+    return;
+  case TYPE_ID_POINTER:
+    *((void**)          buffer) = VICARE_POINTER_DATA_VOIDP(s_scheme_value);
+    return;
+
+  case TYPE_ID_UCHAR:
+    *((unsigned char*)  buffer) = unfix(s_scheme_value);
+    return;
+  case TYPE_ID_SCHAR:
+    *((char*)           buffer) = unfix(s_scheme_value);
+    return;
+  case TYPE_ID_USHORT:
+    *((unsigned short*) buffer) = unfix(s_scheme_value);
+    return;
+  case TYPE_ID_SSHORT:
+    *((signed short*)   buffer) = unfix(s_scheme_value);
+    return;
+  case TYPE_ID_UINT:
+    *((unsigned int*)   buffer) = ik_integer_to_long(s_scheme_value);
+    return;
+  case TYPE_ID_SINT:
+    *((signed int*)     buffer) = ik_integer_to_long(s_scheme_value);
+    return;
+  case TYPE_ID_ULONG:
+    *((unsigned long*)  buffer) = ik_integer_to_long(s_scheme_value);
+    return;
+  case TYPE_ID_SLONG:
+    *((signed long*)    buffer) = ik_integer_to_long(s_scheme_value);
+    return;
+
+  default:
+    fprintf(stderr, "*** Vicare FFI error: %s: invalid argument type selector %ld", __func__, type_id);
+    exit(EXIT_FAILURE);
+  }
+}
+static ikptr
+native_to_scheme_value_cast (int type_id, void * buffer, ikpcb* pcb)
+/* Convert the native  value in BUFFER to a Scheme  value and return the
+   Scheme value; the type is selected by the 8 least significant bits of
+   TYPE_ID. */
+{
+  switch (type_id) {
+  case TYPE_ID_VOID:
+    return void_object;
+
+  case TYPE_ID_UINT8:
+    return fix(*((uint8_t*)buffer));
+  case TYPE_ID_SINT8:
+    return fix(*(( int8_t*)buffer));
+  case TYPE_ID_UINT16:
+    return fix(*((uint16_t*)buffer));
+  case TYPE_ID_SINT16:
+    return fix(*(( int16_t*)buffer));
+  case TYPE_ID_UINT32:
+    return ik_integer_from_unsigned_long        (*((uint32_t*)buffer), pcb);
+  case TYPE_ID_SINT32:
+    return ik_integer_from_long                 (*((signed long*)  buffer), pcb);
+  case TYPE_ID_UINT64:
+    return ik_integer_from_unsigned_long_long   (*((unsigned long long*)buffer), pcb);
+  case TYPE_ID_SINT64:
+    return ik_integer_from_long_long            (*((signed long long*)  buffer), pcb);
+
+  case TYPE_ID_FLOAT:
+    return ik_flonum_from_double                (*((float*)             buffer), pcb);
+  case TYPE_ID_DOUBLE:
+    return ik_flonum_from_double                (*((double*)            buffer), pcb);
+  case TYPE_ID_POINTER:
+    return ikrt_pointer_alloc                   ((long)*((void**)       buffer), pcb);
+
+  case TYPE_ID_UCHAR:
+    return ik_integer_from_unsigned_long        (*((unsigned char*)     buffer), pcb);
+  case TYPE_ID_SCHAR:
+    return ik_integer_from_long                 (*((signed char*)       buffer), pcb);
+  case TYPE_ID_USHORT:
+    return ik_integer_from_unsigned_long        (*((unsigned short*)    buffer), pcb);
+  case TYPE_ID_SSHORT:
+    return ik_integer_from_long                 (*((signed short*)      buffer), pcb);
+  case TYPE_ID_UINT:
+    return ik_integer_from_unsigned_long        (*((unsigned int*)      buffer), pcb);
+  case TYPE_ID_SINT:
+    return ik_integer_from_long                 (*((signed int*)        buffer), pcb);
+  case TYPE_ID_ULONG:
+    return ik_integer_from_unsigned_long        (*((unsigned long*)     buffer), pcb);
+  case TYPE_ID_SLONG:
+    return ik_integer_from_long                 (*((signed long*)       buffer), pcb);
+
+  default:
+    fprintf(stderr, "*** Vicare error: %s: invalid arg %d", __func__, type_id);
+    exit(EXIT_FAILURE);
+  }
+}
+
+#if 0 /* replaced by the use of the array "the_ffi_types_array" */
+static ffi_type *
+scheme_to_ffi_type_cast (ikptr s_type_id)
+{
+  long  type_id = unfix(s_type_id);
+  switch (type_id) {
+  case  1: return &ffi_type_void;
+  case  2: return &ffi_type_uint8;
+  case  3: return &ffi_type_sint8;
+  case  4: return &ffi_type_uint16;
+  case  5: return &ffi_type_sint16;
+  case  6: return &ffi_type_uint32;
+  case  7: return &ffi_type_sint32;
+  case  8: return (sizeof(long)==4)? &ffi_type_uint32 : &ffi_type_uint64;
+  case  9: return (sizeof(long)==4)? &ffi_type_sint32 : &ffi_type_sint64;
+  case 10: return &ffi_type_uint64;
+  case 11: return &ffi_type_sint64;
+  case 12: return &ffi_type_float;
+  case 13: return &ffi_type_double;
+  case 14: return &ffi_type_pointer;
+  case 15: return &ffi_type_uchar;
+  case 16: return &ffi_type_schar;
+  case 17: return &ffi_type_ushort;
+  case 18: return &ffi_type_sshort;
+  case 19: return &ffi_type_uint;
+  case 20: return &ffi_type_sint;
+  case 21: return &ffi_type_ulong;
+  case 22: return &ffi_type_slong;
+  default:
+    fprintf(stderr, "*** Vicare FFI error: %s: invalid arg %ld", __func__, type_id);
+    exit(EXIT_FAILURE);
+  }
+}
+#endif
+
+
+/** --------------------------------------------------------------------
+ ** Call InterFace (CIF) preparation.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_ffi_prep_cif (ikptr s_retval_type, ikptr s_args_types, ikpcb* pcb)
+/* S_RETVAL_TYPE  must be  a fixnum  selecting  the type  of the  return
+   value.   S_ARGS_TYPES   must  reference  a   vector  holding  fixnums
+   selecting the types of the arguments. */
+{
+  ffi_cif*      cif       = alloc(sizeof(ffi_cif), 1);
+  long          arity     = VICARE_VECTOR_LENGTH(s_args_types);
+  ffi_type**    arg_types = alloc(sizeof(ffi_type*), 1+arity);
+  int           i;
+  for (i=0; i<arity; i++) {
+    arg_types[i] = the_ffi_types_array[unfix(VICARE_VECTOR_REF(s_args_types, i))];
+    /* arg_types[i] = scheme_to_ffi_type_cast(argt); */
+  }
+  arg_types[arity] = NULL;
+  ffi_type* rtype = the_ffi_types_array[unfix(s_retval_type)];
+  /* ffi_type* rtype = scheme_to_ffi_type_cast(s_retval_type); */
+  ffi_status rv = ffi_prep_cif(cif, FFI_DEFAULT_ABI, arity, rtype, arg_types);
+  if (FFI_OK == rv) {
     ikptr r = ik_safe_alloc(pcb, pointer_size);
     ref(r, 0) = pointer_tag;
     ref(r, wordsize) = (ikptr)cif;
@@ -245,23 +349,10 @@ ikrt_ffi_prep_cif (ikptr rtptr, ikptr argstptr, ikpcb* pcb)
     return false_object;
   }
 }
-#ifdef DEBUG_FFI
-static void
-dump_stack(ikpcb* pcb, char* msg) {
-  fprintf(stderr, "====================  %s\n", msg);
-  ikptr frame_base = pcb->frame_base;
-  ikptr frame_pointer = pcb->frame_pointer;
-  ikptr p = frame_pointer;
-  fprintf(stderr, "fp=0x%016lx   base=0x%016lx\n", frame_pointer, frame_base);
-  while(p < frame_base) {
-    fprintf(stderr, "*0x%016lx = 0x%016lx\n", p, ref(p, 0));
-    p += wordsize;
-  }
-}
-#endif
 
-ikptr
-ikrt_seal_scheme_stack(ikpcb* pcb)
+
+static ikptr
+seal_scheme_stack(ikpcb* pcb)
 /* FIXME: handle stack overflow */
 {
   /*
@@ -329,66 +420,85 @@ ikrt_seal_scheme_stack(ikpcb* pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_ffi_call(ikptr data, ikptr argsvec, ikpcb* pcb)
+ikrt_ffi_call (ikptr data, ikptr args, ikpcb * pcb)
 {
-  ikrt_seal_scheme_stack(pcb);
+  ikptr         return_value;
+  seal_scheme_stack(pcb);
   ikptr sk = ik_unsafe_alloc(pcb, system_continuation_size);
-  ref(sk, 0) = system_continuation_tag;
-  ref(sk, disp_system_continuation_top) = pcb->system_stack;
+  ref(sk, disp_system_continuation_tag)  = system_continuation_tag;
+  ref(sk, disp_system_continuation_top)  = pcb->system_stack;
   ref(sk, disp_system_continuation_next) = pcb->next_k;
   pcb->next_k = sk + vector_tag;
+  {
+    /* Unpack data describing the foreign function.
 
+       CIFPTR:  pointer object  to a  malloc-ed data  structure  of type
+       "ffi_cif" describing the callout interface.
 
-  ikptr cifptr  = ref(data, off_vector_data + 0 * wordsize);
-  ikptr funptr  = ref(data, off_vector_data + 1 * wordsize);
-  ikptr typevec = ref(data, off_vector_data + 2 * wordsize);
-  ikptr rtype   = ref(data, off_vector_data + 3 * wordsize);
-  ffi_cif* cif = (ffi_cif*) ref(cifptr, off_pointer_data);
-  void(*fn)() = (void (*)()) ref(funptr, off_pointer_data);
-  int n = unfix(ref(argsvec, off_vector_length));
-  void** avalues = alloc(sizeof(void*), n+1);
-  int i;
-  for(i=0; i<n; i++){
-    ffi_type* t = cif->arg_types[i];
-    ikptr at = ref(typevec, off_vector_data + i * wordsize);
-    ikptr v = ref(argsvec, off_vector_data + i * wordsize);
-    void* p = alloc_room_for_type(t);
-    avalues[i] = p;
-    scheme_to_ffi_value_cast(t, at, v, p);
+       FUNPTR: pointer  object representing  the address of  the foreign
+       function to call.
+
+       ARG_IDS: Scheme vector  holding fixnum identifiers specifying the
+       type of the arguments.
+
+       RTYPE: fixnum identifier specifying the type of the return value.
+    */
+    ikptr       cifptr  = VICARE_VECTOR_REF(data, 0);
+    ikptr       funptr  = VICARE_VECTOR_REF(data, 1);
+    ikptr       arg_ids = VICARE_VECTOR_REF(data, 2);
+    ikptr       rtype   = VICARE_VECTOR_REF(data, 3);
+    /* Extract values describing the foreign function. */
+    ffi_cif *   cif     = VICARE_POINTER_DATA_VOIDP(cifptr);
+    address_t * address = VICARE_POINTER_DATA_VOIDP(funptr);
+    int         arity   = VICARE_VECTOR_LENGTH(args);
+    /* Prepare  memory   to  hold  native   values  representing  Scheme
+       arguments and the return value */
+    uint8_t     args_buffer[ARGS_BUFFER_SIZE];
+    uint8_t *   arg_next = &(args_buffer[0]);
+    uint8_t *   arg_end  = arg_next + ARGS_BUFFER_SIZE;
+    void *      arg_value_ptrs[1+arity];
+    uint8_t     retval_buffer[cif->rtype->size];
+    /* Fill ARG_VALUE_PTRS  with pointers  to memory blocks  holding the
+       native argument values. */
+    int  i;
+    for (i=0; i<arity; i++) {
+      ffi_type *  type   = cif->arg_types[i];
+      ikptr       id     = VICARE_VECTOR_REF(arg_ids, i);
+      ikptr       value  = VICARE_VECTOR_REF(args,    i);
+      arg_value_ptrs[i] = arg_next;
+      scheme_to_native_value_cast(type, id, value, arg_next);
+      arg_next += type->size;
+      if (arg_end <= arg_next)
+        goto too_many_args_error;
+    }
+    arg_value_ptrs[arity] = NULL;
+    /* Perform the call. */
+    errno = 0;
+    ffi_call(cif, address, (void *)retval_buffer, arg_value_ptrs);
+    pcb->last_errno = errno;
+    return_value    = native_to_scheme_value_cast(unfix(rtype), retval_buffer, pcb);
   }
-  avalues[n] = NULL;
-  void* rvalue = alloc_room_for_type(cif->rtype);
-  ffi_call(cif, fn, rvalue, avalues);
-  pcb->last_errno = errno;
-  ikptr val = ffi_to_scheme_value_cast(unfix(rtype), rvalue, pcb);
-  for(i=0; i<n; i++){
-    free(avalues[i]);
-  }
-#ifdef DEBUG_FFI
-  fprintf(stderr, "DONE WITH CALL, RV=0x%016lx\n", (long)val);
-#endif
-  free(avalues);
-  free(rvalue);
-
   pcb->frame_pointer = pcb->frame_base - wordsize;
-
   sk = pcb->next_k - vector_tag;
-  if (ref(sk, 0) != system_continuation_tag) {
+  if (system_continuation_tag != ref(sk, disp_system_continuation_tag)) {
     fprintf(stderr, "vicare internal error: invalid system cont\n");
     exit(EXIT_FAILURE);
   }
-  pcb->next_k = ref(sk, disp_system_continuation_next);
+  pcb->next_k       = ref(sk, disp_system_continuation_next);
   pcb->system_stack = ref(sk, disp_system_continuation_top);
+  return return_value;
 
-  return val;
+ too_many_args_error:
+  fprintf(stderr, "*** Vicare error: exceeded maximum memory size (%d)\n\
+*** reserved for callout arguments, too many arguments to callout\n",
+          ARGS_BUFFER_SIZE);
+  exit(EXIT_FAILURE);
 }
 
 
 /** --------------------------------------------------------------------
  ** Callback: call a Scheme closure from C code.
  ** ----------------------------------------------------------------- */
-
-extern ikpcb* the_pcb;
 
 static void
 generic_callback (ffi_cif *cif, void *ret, void **args, void *user_data)
@@ -414,13 +524,13 @@ generic_callback (ffi_cif *cif, void *ret, void **args, void *user_data)
     ikptr argt = ref(argtypes_conv, off_vector_data + i*wordsize);
     void* argp = args[i];
     ref(pcb->frame_pointer, -2*wordsize - i*wordsize) =
-      ffi_to_scheme_value_cast(unfix(argt), argp, pcb);
+      native_to_scheme_value_cast(unfix(argt), argp, pcb);
   }
   ikptr rv = ik_exec_code(pcb, code_ptr, fix(-n), proc);
 #ifdef DEBUG_FFI
   fprintf(stderr, "and back with rv=0x%016lx!\n", rv);
 #endif
-  scheme_to_ffi_value_cast(cif->rtype, rtype_conv, rv, ret);
+  scheme_to_native_value_cast(cif->rtype, rtype_conv, rv, ret);
   return;
 }
 ikptr
@@ -475,7 +585,7 @@ ikrt_prepare_callback(ikptr data, ikpcb* pcb)
 ikptr
 ikrt_call_back(ikptr proc, ikpcb* pcb)
 {
-  ikrt_seal_scheme_stack(pcb);
+  seal_scheme_stack(pcb);
 
   ikptr sk = ik_unsafe_alloc(pcb, system_continuation_size);
   ref(sk, 0) = system_continuation_tag;
@@ -509,88 +619,6 @@ ikrt_call_back(ikptr proc, ikpcb* pcb)
 #endif
   return rv;
 }
-
-
-/** --------------------------------------------------------------------
- ** Test functions.
- ** ----------------------------------------------------------------- */
-
-#if 0
-int ho (int(*f)(int), int n)
-{
-  /* fprintf(stderr, "HO HO 0x%016lx!\n", (long)f); */
-  int n0 = f(n);
-  /* fprintf(stderr, "GOT N0\n"); */
-  return n0 + f(n);
-}
-int ho2 (ikptr fptr, ikptr nptr)
-{
-  int (*f)(int) =  (int(*)(int)) ref(fptr, off_pointer_data);
-  int n = unfix(nptr);
-  /* fprintf(stderr, "HO2 HO2 0x%016lx!\n", (long)f); */
-  int n0 = f(n);
-  /* fprintf(stderr, "GOT N0\n"); */
-  return n0 + f(n);
-}
-int test_I_I (int(*f)(int), int n0) {
-  return f(n0);
-}
-int test_I_II (int(*f)(int,int), int n0, int n1) {
-  return f(n0,n1);
-}
-int test_I_III (int(*f)(int,int,int), int n0, int n1, int n2) {
-  return f(n0,n1,n2);
-}
-int add_I_I(int n0) {
-  return n0;
-}
-int add_I_II(int n0, int n1) {
-  return n0+n1;
-}
-int add_I_III(int n0, int n1, int n2) {
-  return n0+n1+n2;
-}
-struct Point{
-  float x;
-  float y;
-};
-struct Rect{
-  struct Point tl;
-  struct Point br;
-};
-float test_area_F_R(struct Rect r) {
-  float dx = r.br.x - r.tl.x;
-  float dy = r.br.y - r.tl.y;
-  return dx * dy;
-}
-double test_D_D (double(*f)(double), double n0) {
-  return f(n0);
-}
-double test_D_DD (double(*f)(double,double), double n0, double n1) {
-  return f(n0,n1);
-}
-double test_D_DDD (double(*f)(double,double,double), double n0, double n1, double n2) {
-  return f(n0,n1,n2);
-}
-double add_D_D(double n0) {
-  return n0;
-}
-double add_D_DD(double n0, double n1) {
-  return n0+n1;
-}
-double add_D_DDD(double n0, double n1, double n2) {
-  return n0+n1+n2;
-}
-int cadd1 (int n) {
-  return n+1;
-}
-void hello_world(int n) {
-  while(n > 0) {
-    fprintf(stderr, "Hello World\n");
-    n--;
-  }
-}
-#endif
 
 
 /** --------------------------------------------------------------------

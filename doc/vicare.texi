@@ -5905,29 +5905,31 @@ the arguments; if the callback function must accept no arguments:
 
 
 The following is a list of Scheme symbols used to specify native types
-for both callouts and callbacks.
+for both callouts and callbacks.  If a type is not available on a
+platform: the callout and callback generators will raise an error if the
+associated type specifier is used.
 
 @table @code
 @item signed-char
 @itemx unsigned-char
-Exact integer in the range for @code{char} and @code{unsigned char}.
+Exact integers in the range for @code{char} and @code{unsigned char}.
 
 @item signed-short
 @itemx unsigned-short
-Exact integer in the range for @code{short int} and @code{unsigned short
+Exact integers in the range for @code{short int} and @code{unsigned short
 int}.
 
 @item signed-int
 @itemx unsigned-int
-Exact integer in the range for @code{int} and @code{unsigned int}.
+Exact integers in the range for @code{int} and @code{unsigned int}.
 
 @item signed-long
 @itemx unsigned-long
-Exact integer in the range for @code{long} and @code{unsigned long}.
+Exact integers in the range for @code{long} and @code{unsigned long}.
 
 @item signed-long-long
 @itemx unsigned-long-long
-Exact integer in the range for @code{long long} and @code{unsigned long
+Exact integers in the range for @code{long long} and @code{unsigned long
 long}.
 
 @item float
@@ -5941,19 +5943,19 @@ pointer to a callback, but it is a full synonym of @code{pointer}.
 
 @item int8_t
 @itemx uint8_t
-Exact integer in the range for @code{int8_t} and @code{uint8_t}.
+Exact integers in the range for @code{int8_t} and @code{uint8_t}.
 
 @item int16_t
 @itemx uint16_t
-Exact integer in the range for @code{int16_t} and @code{uint16_t}.
+Exact integers in the range for @code{int16_t} and @code{uint16_t}.
 
 @item int32_t
 @itemx uint32_t
-Exact integer in the range for @code{int32_t} and @code{uint32_t}.
+Exact integers in the range for @code{int32_t} and @code{uint32_t}.
 
 @item int64_t
 @itemx uint64_t
-Exact integer in the range for @code{int64_t} and @code{uint64_t}.
+Exact integers in the range for @code{int64_t} and @code{uint64_t}.
 @end table
 
 @c page
@@ -5996,20 +5998,17 @@ As special cases: when the C variable @code{errno} is set to zero,
 variable @code{errno} is set to zero; when @var{code} is @true{}, the C
 variable @code{errno} is set to @code{EFAULT}.
 
-The mechanism is such that the following code:
+The mechanism is such that the following form:
 
 @example
-(begin
-  (errno #f)
-  (let ((rv (call-foreign-function)))
-    (values rv (errno))))
+(let ((rv (call-foreign-function)))
+  (values rv (errno)))
 @end example
 
 @noindent
-sets the C variable @code{errno} to zero, performs a foreign--function
-call and finally evaluates to two values: the return value from the
-foreign function and the value of the C variable @code{errno} right
-after the foreign call.
+performs a foreign--function call and evaluates to two values: the
+return value from the foreign function and the value of the C variable
+@code{errno} right after the foreign call.
 @end defun
 
 
