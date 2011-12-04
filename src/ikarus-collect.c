@@ -325,7 +325,7 @@ static ikptr add_object_proc(gc_t* gc, ikptr x);
 #endif
 
 static void collect_stack(gc_t*, ikptr top, ikptr base);
-static void collect_locatives(gc_t*, callback_locative*);
+static void collect_locatives(gc_t*, ik_callback_locative*);
 static void collect_loop(gc_t*);
 static void fix_weak_pointers(gc_t*);
 static void gc_add_tconcs(gc_t*);
@@ -800,7 +800,7 @@ add_code_entry(gc_t* gc, ikptr entry){
 }
 
 static void
-collect_locatives(gc_t* gc, callback_locative* loc) {
+collect_locatives(gc_t* gc, ik_callback_locative* loc) {
   while(loc) {
     loc->data = add_object(gc, loc->data, "locative");
     loc = loc->next;

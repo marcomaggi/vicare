@@ -37,10 +37,9 @@
 #if ENABLE_LIBFFI
 #include <ffi.h>
 
-#undef HACK_FFI
 #undef DEBUG_FFI
 
-#ifdef HACK_FFI
+#ifdef LIBFFI_ON_DARWIN
 #  include <sys/mman.h>         /* for "mprotect()" */
 #endif
 
@@ -131,7 +130,8 @@ static size_t the_ffi_type_sizes[TYPE_ID_NUMBER] = {
 typedef void address_t ();
 
 /* This structure exists to make  it easier to allocate data required by
-   Libffi's Call InterFace. */
+   Libffi's Call InterFace; it wraps a Libffi's "ffi_cif" type providing
+   a full description of the interface for callouts and callbacks. */
 typedef struct ik_ffi_cif_stru_t {
   ffi_cif       cif;            /* Libffi's CIF structure */
   unsigned      arity;          /* number of arguments */
@@ -146,18 +146,28 @@ typedef struct ik_ffi_cif_stru_t {
 
 typedef ik_ffi_cif_stru_t *      ik_ffi_cif_t;
 
+/* Compute the size  of memory block to hold  a full "ik_ffi_cif_stru_t"
+   with array data  appended.  ARITY is the number  of arguments for the
+   described call interface. */
 #define IK_FFI_CIF_SIZEOF(ARITY)                \
   (sizeof(ik_ffi_cif_stru_t)+(1+(ARITY))*sizeof(ffi_type*)+(ARITY)*sizeof(type_id_t*))
 
+/* Given a pointer  CIF of type "ik_ffi_cif_t", return  a pointer to the
+   array  of  "ffy_type" structures  describing  the  type  of the  call
+   arguments; such pointer must be stored the "arg_types" field. */
 #define IK_FFI_CIF_ARG_TYPES_PTR(CIF,ARITY)     \
   ((ffi_type**)(((uint8_t*)cif) + sizeof(ik_ffi_cif_stru_t)))
 
+/* Given a pointer  CIF of type "ik_ffi_cif_t", return  a pointer to the
+   array  of  "type_id_t"  integers  describing  the type  of  the  call
+   arguments; such pointer must be stored the "arg_type_ids" field. */
 #define IK_FFI_CIF_ARG_TYPE_IDS_PTR(CIF,ARITY)  \
   ((type_id_t*)(((uint8_t*)cif) + sizeof(ik_ffi_cif_stru_t) + (1+(ARITY))*sizeof(ffi_type*)))
 
 static void     scheme_to_native_value_cast  (type_id_t type_id, ikptr s_scheme_value, void * buffer);
 static ikptr    native_to_scheme_value_cast  (type_id_t type_id, void * buffer, ikpcb* pcb);
 static ikptr    seal_scheme_stack            (ikpcb* pcb);
+static void     generic_callback             (ffi_cif *cif, void *ret, void **args, void *user_data);
 
 
 /** --------------------------------------------------------------------
@@ -475,124 +485,99 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
  ** Callback: call a Scheme closure from C code.
  ** ----------------------------------------------------------------- */
 
-static void
-generic_callback (ffi_cif *cif, void *ret, void **args, void *user_data)
-{
-  /* convert args according to cif to scheme values */
-  /* call into scheme, get the return value */
-  /* convert the return value to C */
-  /* put the C return value in *ret */
-  /* done */
-  ikptr data = ((callback_locative*)user_data)->data;
-  ikptr proc   = ref(data, off_vector_data + 1 * wordsize);
-  ikptr argtypes_conv = ref(data, off_vector_data + 2 * wordsize);
-  ikptr rtype_conv = ref(data, off_vector_data + 3 * wordsize);
-  int n = unfix(ref(argtypes_conv, off_vector_length));
-
-  ikpcb* pcb = the_pcb;
-  ikptr code_entry = ref(proc, off_closure_code);
-  ikptr code_ptr = code_entry - off_code_data;
-
-  pcb->frame_pointer = pcb->frame_base;
-  int i;
-  for(i = 0; i < n; i++){
-    ikptr argt = ref(argtypes_conv, off_vector_data + i*wordsize);
-    void* argp = args[i];
-    ref(pcb->frame_pointer, -2*wordsize - i*wordsize) =
-      native_to_scheme_value_cast(unfix(argt), argp, pcb);
-  }
-  ikptr rv = ik_exec_code(pcb, code_ptr, fix(-n), proc);
-#ifdef DEBUG_FFI
-  fprintf(stderr, "and back with rv=0x%016lx!\n", rv);
-#endif
-  scheme_to_native_value_cast(unfix(rtype_conv), rv, ret);
-  return;
-}
 ikptr
-ikrt_prepare_callback(ikptr data, ikpcb* pcb)
+ikrt_prepare_callback (ikptr s_data, ikpcb* pcb)
+/* Prepare  a Libffi's  callback interface  associated  to a  CIF and  a
+   Scheme function.   If successful return a  pointer object referencing
+   the  callback, else  return false.   A failure  is probably  an error
+   allocating memory with the system functions.
+
+   S_DATA  must  be  a pair  whose  car  is  a  pointer object  of  type
+   "ik_ffi_cif_t" and whose cdr is the Scheme function to be used by the
+   callback. */
 {
 #if FFI_CLOSURES
-  ikptr cifptr = ref(data, off_vector_data + 0 * wordsize);
-  void* codeloc;
-  ffi_closure* closure = ffi_closure_alloc(sizeof(ffi_closure), &codeloc);
-
-#ifdef HACK_FFI
-  {
-    long code_start = align_to_prev_page(codeloc);
-    long code_end =
-      align_to_next_page(FFI_TRAMPOLINE_SIZE+(-1)+(long)codeloc);
-    int rv = mprotect((void*)code_start, code_end - code_start,
-                      PROT_READ|PROT_WRITE|PROT_EXEC);
-    if(rv) {
-      fprintf(stderr, "Error mprotecting code page!\n");
-    }
+  ffi_cif *                     cif;
+  void *                        callable_pointer;
+  ffi_closure *                 closure;
+  ik_callback_locative *        callback_user_data;
+  ffi_status                    st;
+  cif     = VICARE_POINTER_DATA_VOIDP(VICARE_CAR(s_data));
+  closure = ffi_closure_alloc(sizeof(ffi_closure), &callable_pointer);
+#ifdef LIBFFI_ON_DARWIN
+  { /* This is  needed on some flavors  of Darwin to  make the generated
+       callback code executable. */
+    long code_start = align_to_prev_page(callable_pointer);
+    long code_end   = align_to_next_page(FFI_TRAMPOLINE_SIZE+(-1)+(long)callable_pointer);
+    int rv = mprotect((void*)code_start, code_end - code_start, PROT_READ|PROT_WRITE|PROT_EXEC);
+    if (rv)
+      fprintf(stderr, "*** Vicare warning: error mprotecting callback code page\n");
   }
 #endif
-
-  ffi_cif* cif = (ffi_cif*) ref(cifptr, off_pointer_data);
-
-  callback_locative* loc = malloc(sizeof(callback_locative));
-  if(!loc) {
-    fprintf(stderr, "ERROR: ikarus malloc error\n");
-    exit(EXIT_FAILURE);
-  }
-
-  ffi_status st =
-    ffi_prep_closure_loc(closure, cif, generic_callback, loc, codeloc);
-
-  if (st != FFI_OK) {
-    free(loc);
+  callback_user_data = malloc(sizeof(ik_callback_locative));
+  if (NULL == callback_user_data)
+    return false_object;
+  st = ffi_prep_closure_loc(closure, cif, generic_callback, callback_user_data, callable_pointer);
+  if (FFI_OK != st) {
+    free(callback_user_data);
     return false_object;
   }
-
-  loc->data = data;
-  loc->next = pcb->callbacks;
-  pcb->callbacks = loc;
-
-  ikptr p = ik_safe_alloc(pcb, pointer_size);
-  ref(p, 0) = pointer_tag;
-  ref(p, wordsize) = (ikptr) codeloc;
-  return p+vector_tag;
+  /* Prepend this callback to the linked list of callbacks registered in
+     this process' PCB.  The garbage collector uses this information not
+     to collect data still needed by the callbacks.  */
+  callback_user_data->data = s_data;
+  callback_user_data->next = pcb->callbacks;
+  pcb->callbacks           = callback_user_data;
+  /* Return a pointer to callable code. */
+  return ik_pointer_alloc((unsigned long)callable_pointer, pcb);
 #else /* if FFI_CLOSURES */
   return false_object;
 #endif /* if FFI_CLOSURES */
 }
-ikptr
-ikrt_call_back(ikptr proc, ikpcb* pcb)
+
+static void
+generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * user_data)
+/* Implement the  callback function used by all  the callbacks, whatever
+   the CIF  and the Scheme function;  this function is  called by Libffi
+   whenever   a    call   to   the   callable    pointer   returned   by
+   "ikrt_prepare_callback()" is performed.
+
+   CIF_ is a pointer to  a Libffi's call interface, which, under Vicare,
+   is  also a pointer  of type  "ik_ffi_cif_t" referencing  the extended
+   CIF.
+
+   RETVAL_BUFFER is a pointer to  a memory block in which the callback's
+   native return value must be stored.
+
+   ARGS is a  pointer to an array of  pointers referencing memory blocks
+   holding the native input arguments.  The arity of the callback can be
+   retrieved from the CIF.
+
+   USER_DATA is a pointer  to a structure of type "ik_callback_locative"
+   whose  data  field   is  a  reference  to  the   S_DATA  argument  to
+   "ikrt_prepare_callback()".
+
+   Access the PCB through the global variable "the_pcb". */
 {
-  seal_scheme_stack(pcb);
-  ikptr sk = ik_unsafe_alloc(pcb, system_continuation_size);
-  ref(sk, 0) = system_continuation_tag;
-  ref(sk, disp_system_continuation_top) = pcb->system_stack;
-  ref(sk, disp_system_continuation_next) = pcb->next_k;
-  pcb->next_k = sk + vector_tag;
-  ikptr entry_point = ref(proc, off_closure_code);
-#ifdef DEBUG_FFI
-  fprintf(stderr, "system_stack = 0x%016lx\n", pcb->system_stack);
-#endif
-  ikptr code_ptr = entry_point - off_code_data;
+  ik_ffi_cif_t  cif           = (ik_ffi_cif_t)cif_;
+  ikptr         s_data        = ((ik_callback_locative*)user_data)->data;
+  ikptr         s_proc        = VICARE_CDR(s_data);
+  ikpcb *       pcb           = the_pcb;
+  ikptr         code_entry    = ref(s_proc, off_closure_code);
+  ikptr         code_ptr      = code_entry - off_code_data;
+  int           i;
+  ikptr         rv;
   pcb->frame_pointer = pcb->frame_base;
-  /* Perform the call. */
-  ikptr rv = ik_exec_code(pcb, code_ptr, 0, proc);
-#ifdef DEBUG_FFI
-  fprintf(stderr, "system_stack = 0x%016lx\n", pcb->system_stack);
-#endif
-#ifdef DEBUG_FFI
-  fprintf(stderr, "rv=0x%016lx\n", rv);
-#endif
-  sk = pcb->next_k - vector_tag;
-  if (ref(sk, 0) != system_continuation_tag) {
-    fprintf(stderr, "*** Vicare error: invalid system cont\n");
-    exit(EXIT_FAILURE);
+  /* Push arguments on the Scheme stack. */
+  for (i=0; i<cif->arity; ++i) {
+    ref(pcb->frame_pointer, -2*wordsize - i*wordsize) =
+      native_to_scheme_value_cast(cif->arg_type_ids[i], args[i], pcb);
   }
-  pcb->next_k = ref(sk, disp_system_continuation_next);
-  ref(sk, disp_system_continuation_next) = pcb->next_k;
-  pcb->system_stack = ref(sk, disp_system_continuation_top);
-  pcb->frame_pointer = pcb->frame_base - wordsize;
-#ifdef DEBUG_FFI
-  fprintf(stderr, "rp=0x%016lx\n", ref(pcb->frame_pointer, 0));
-#endif
-  return rv;
+  /* Perform the call. */
+  rv = ik_exec_code(pcb, code_ptr, fix(-cif->arity), s_proc);
+  /* Convert the Scheme return value to a native value. */
+  scheme_to_native_value_cast(cif->retval_type_id, rv, retval_buffer);
+  return;
 }
 
 
@@ -608,28 +593,5 @@ ikptr ikrt_prepare_callback() { return false_object; }
 ikptr ikrt_has_ffi()          { return false_object; }
 
 #endif
-
-
-/** --------------------------------------------------------------------
- ** Interface to "errno".
- ** ----------------------------------------------------------------- */
-
-ikptr
-ikrt_set_errno (ikptr code)
-{
-  if (false_object == code)
-    errno = 0;
-  else if (true_object == code)
-    errno = EFAULT;
-  else
-    errno = -(fix(code));
-  return void_object;
-}
-ikptr
-ikrt_last_errno(ikpcb* pcb)
-{
-  int   negated_errno_code = - pcb->last_errno;
-  return fix(negated_errno_code);
-}
 
 /* end of file */

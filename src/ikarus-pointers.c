@@ -40,6 +40,29 @@
 
 
 /** --------------------------------------------------------------------
+ ** Interface to "errno".
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_set_errno (ikptr code)
+{
+  if (false_object == code)
+    errno = 0;
+  else if (true_object == code)
+    errno = EFAULT;
+  else
+    errno = -(fix(code));
+  return void_object;
+}
+ikptr
+ikrt_last_errno(ikpcb* pcb)
+{
+  int   negated_errno_code = - pcb->last_errno;
+  return fix(negated_errno_code);
+}
+
+
+/** --------------------------------------------------------------------
  ** Shared libraries interface.
  ** ----------------------------------------------------------------- */
 

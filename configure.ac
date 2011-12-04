@@ -48,8 +48,8 @@ case "$target_os" in
     LDFLAGS="-Wl,-E -Wl,--export-all-symbols $LDFLAGS"
     ;;
   *darwin*)
-    AC_DEFINE(HACK_FFI, 1,
-              [Mark code returned by libffi executable because
+    AC_DEFINE([LIBFFI_ON_DARWIN],[1],
+              [Mark code returned by Libffi executable because
                libffi does not do that yet.  This so far is only
                important on Snow Leopard in 64-bit mode but we
                mark it on all darwins anyways.])

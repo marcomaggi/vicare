@@ -177,10 +177,10 @@ typedef struct ik_ptr_page{
   ikptr ptr[ik_ptr_page_size];
 } ik_ptr_page;
 
-typedef struct callback_locative{
-  ikptr data;
-  struct callback_locative* next;
-} callback_locative;
+typedef struct ik_callback_locative {
+  ikptr                         data;
+  struct ik_callback_locative * next;
+} ik_callback_locative;
 
 typedef struct ikpcb
 {
@@ -199,9 +199,16 @@ typedef struct ikpcb
   ikptr   interrupted;                  /* offset = 40 */
   ikptr   base_rtd;                     /* offset = 44 */
   ikptr   collect_key;                  /* offset = 48 */
-  /* the rest are not used by any scheme code        */
-  /* they only support the runtime system (gc, etc.) */
-  callback_locative* callbacks;
+
+/* ------------------------------------------------------------------ */
+  /* The  following fields are  not used  by any  scheme code  they only
+     support the runtime system (gc, etc.) */
+
+  /* Linked  list of  FFI callback  support data.   Used by  the garbage
+     collector  not  to collect  data  still  needed  by some  callbacks
+     registered in data structures handled by foreign libraries. */
+  ik_callback_locative * callbacks;
+
   ikptr* root0;
   ikptr* root1;
   unsigned int* segment_vector;

@@ -773,7 +773,7 @@
 		    argtypes)))
     (let-values (((cif argtypes-id rtype-id) (ffi-prep-cif who rtype argtypes)))
       (lambda (proc)	;this is the generator function
-	  (define who 'callback-generator)
+	(define who 'callback-generator)
 	(with-arguments-validation (who)
 	    ((procedure  proc))
 	  (let ((proc (if (eq? rtype 'void)
@@ -787,8 +787,10 @@
 				  v
 				(assertion-violation 'callback
 				  "returned value does not match specified type" rtype v))))))))
-	    (or (foreign-call "ikrt_prepare_callback" (vector cif proc argtypes-id rtype-id))
-		(assertion-violation who "cannot prepare foreign callback"))))))))
+	    (or (foreign-call "ikrt_prepare_callback" (cons cif proc)
+			      #;(vector cif proc argtypes-id rtype-id))
+		(assertion-violation who
+		  "internal error building FFI callback"))))))))
 
 
 ;;;; done
