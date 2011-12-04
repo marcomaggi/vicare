@@ -5821,6 +5821,9 @@ returned by the generator function is a Scheme closure wrapping the
 foreign function.  The wrapper Scheme closure takes care of marshaling
 Scheme values as appropriate for the underlying platform.
 
+Generator functions are cached internally, so only one generator
+function for each type signature is created in a running process.
+
 @var{ret-type} must be a Scheme symbol specifying the type of the
 returned value; if the foreign function returns no value: @var{ret-type}
 must be the symbol @code{void}.
@@ -5887,6 +5890,9 @@ function to be wrapped; the value returned by the generator function is
 a pointer object referencing a native function.  The wrapper native
 function takes care of marshaling Scheme values as appropriate for the
 underlying platform.
+
+Generator functions are cached internally, so only one generator
+function for each type signature is created in a running process.
 
 @var{ret-type} must be a Scheme symbol specifying the type of the
 returned value; if the callback function must return no value:
