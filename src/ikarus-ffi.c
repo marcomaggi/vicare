@@ -523,7 +523,11 @@ ikrt_prepare_callback (ikptr s_data, ikpcb* pcb)
   return false_object;
 #endif /* if FFI_CLOSURES */
 }
-
+ikptr
+ikrt_release_callback (ikptr s_callable_pointer, ikpcb * pcb)
+{
+  return void_object;
+}
 static void
 generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * user_data)
 /* Implement the  callback function used by all  the callbacks, whatever
