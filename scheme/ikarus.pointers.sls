@@ -80,7 +80,9 @@
     (prefix (vicare unsafe-capi)
 	    capi.)
     (prefix (vicare words)
-	    words.))
+	    words.)
+    (prefix (vicare installation-configuration)
+	    config.))
 
 
 ;;;; arguments validation
@@ -890,7 +892,8 @@
   (define who 'callback-generator)
   (with-arguments-validation (who)
       ((procedure  proc))
-    (let ((proc (if (eq? retval-type 'void)
+    (let ((proc (if (or (eq? retval-type 'void)
+			(not config.arguments-validation))
 		    proc ;no return value to be validated
 		  (lambda args	;This is a wrapper for a Scheme function
 				;that  needs  validation  of the  return
