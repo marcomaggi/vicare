@@ -733,9 +733,14 @@
 (define (ffi-enabled?)
   (foreign-call "ikrt_has_ffi"))
 
+;;Descriptor for callout and  callback generators associated to the same
+;;function signature.  Once allocated,  instances of this type are never
+;;released; rather they are cached in CIF-TABLE.
+;;
 (define-struct cif
   (cif			;Pointer   to  a   malloc-ed  C   language  data
-			;structure of type "ffi_cif".
+			;structure  of type  "ffi_cif".   Once allocated
+			;these structures are never released.
    callout-maker	;False   or  closure.   The   closure  generates
 			;callout functions of given signature.
    callback-maker	;False   or  Closure.   The   closure  generates
@@ -889,6 +894,15 @@
 	    maker)))))
 
 (define (%callback-maker cif retval-pred retval-type proc)
+  ;;Worker  function  for Scheme  callback  maker  functions.  Return  a
+  ;;pointer to callable machine code.
+  ;;
+  ;;CIF must  be a poiner  object referencing a Libffi's  call interface
+  ;;data  structure.   RETVAL-PRED  must  be  a  predicate  function  to
+  ;;validate   the  return   value.   RETVAL-TYPE   must  be   a  symbol
+  ;;representing the return value type, it is used to report descriptive
+  ;;error messages or to avoid checking if no value is returned.
+  ;;
   (define who 'callback-generator)
   (with-arguments-validation (who)
       ((procedure  proc))
