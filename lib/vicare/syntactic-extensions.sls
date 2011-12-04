@@ -42,6 +42,7 @@
     define-argument-validation
     with-arguments-validation
     with-dangerous-arguments-validation
+    arguments-validation-forms
 
     ;; miscellaneous dispatching
     case-word-size		case-endianness
@@ -210,6 +211,15 @@
     (main stx)))
 
 
+(define-syntax arguments-validation-forms
+  (if config.arguments-validation
+      (syntax-rules ()
+	((_ . ?body)
+	 (begin . ?body)))
+    (syntax-rules ()
+      ((_ . ?body)
+       (values)))))
+
 (define-syntax with-arguments-validation
   ;;Perform the validation only if enabled at configure time.
   ;;

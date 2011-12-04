@@ -732,12 +732,25 @@
   (foreign-call "ikrt_has_ffi"))
 
 (define-struct cif
-  (cif callout-maker callback-maker))
+  (cif			;Pointer   to  a   malloc-ed  C   language  data
+			;structure of type "ffi_cif".
+   callout-maker	;False   or  closure.   The   closure  generates
+			;callout functions of given signature.
+   callback-maker	;False   or  Closure.   The   closure  generates
+			;callback functions of given signature
+   ))
 
+;;Maximum for the hash value of  signature vectors.  It is used to avoid
+;;overflow of fixnums, allowing unsafe fx operations to be used.
+;;
 (define H_MAX
   (- (greatest-fixnum) TYPE_ID_MAX))
 
 (define (%signature-hash signature)
+  ;;Given a vector  of fixnums representing native types  for the return
+  ;;value and  the arguments of a  callout or callback,  return a fixnum
+  ;;hash value.
+  ;;
   (let loop ((signature signature)
 	     (len       (unsafe.vector-length signature))
 	     (H		0)
@@ -751,9 +764,20 @@
 		 (unsafe.fx+ H (unsafe.vector-ref signature i))
 		 (unsafe.fxadd1 i))))))
 
+;;Table of structures of type CIF, used to avoid generating duplicates.
+;;
 (define CIF-TABLE #f)
 
 (define (%ffi-prep-cif who retval-type arg-types)
+  ;;Return an instance of  CIF structure representing the call interface
+  ;;for  callouts  and callbacks  of  the  given  signature.  If  a  CIF
+  ;;structure for  such function  signature already exists:  retrieve it
+  ;;from the hash table; else build a new structure.
+  ;;
+  ;;RETVAL-TYPE must  be a  symbol representing the  type of  the return
+  ;;value.  ARG-TYPES must  be a list of symbols  representing the types
+  ;;of the arguments.
+  ;;
   (define who '%ffi-prep-cif)
   (with-arguments-validation (who)
       ((list	arg-types))
@@ -813,8 +837,9 @@
 	(%generic-callout-wrapper user-data checkers arg-types args)))))
 
 (define (%generic-callout-wrapper user-data checkers arg-types args)
-  ;;Worker  function for  the wrapper  of the  actual  foreign function.
-  ;;Call the foreign function and return its return value.
+  ;;Worker function for the wrapper of the actual foreign function: call
+  ;;the foreign  function and return  its return value.   This functions
+  ;;exists mostly to validate the input arguments.
   ;;
   ;;USER-DATA must be a pair whose car is a pointer object referencing a
   ;;Libffi's  CIF data  structure  and  whose cdr  is  a pointer  object
@@ -830,41 +855,53 @@
   ;;
   (define who '%generic-callout)
   (let ((args (list->vector args)))
-    (unless (unsafe.fx= (unsafe.vector-length args)
-			(unsafe.vector-length arg-types))
-      (assertion-violation who "wrong number of arguments" arg-types args))
-    (vector-for-each (lambda (arg-pred type arg)
-		       (unless (arg-pred arg)
-			 (assertion-violation who "argument does not match specified type" type arg)))
-      checkers arg-types args)
+    (arguments-validation-forms
+      (unless (unsafe.fx= (unsafe.vector-length args)
+			  (unsafe.vector-length arg-types))
+	(assertion-violation who "wrong number of arguments" arg-types args))
+      (vector-for-each (lambda (arg-pred type arg)
+			 (unless (arg-pred arg)
+			   (assertion-violation who "argument does not match specified type" type arg)))
+	checkers arg-types args))
     (foreign-call "ikrt_ffi_call" user-data args)))
 
 
 ;;;; Libffi: callbacks
 
 (define (make-c-callback retval-type arg-types)
+  ;;Given  the symbol RETVAL-TYPE  representing the  type of  the return
+  ;;value and a list of  symbols ARG-TYPES representing the types of the
+  ;;arguments: return a  closure to be used to  generate Scheme callback
+  ;;pointers from Scheme functions.
+  ;;
   (define who 'make-c-callback)
   (with-arguments-validation (who)
       ((symbol			retval-type)
        (null/list-of-symbols	arg-types))
-    (let ((cif		(cif-cif (%ffi-prep-cif who retval-type arg-types)))
-	  (retval-pred	(%select-type-predicate retval-type)))
-      (lambda (proc)	;this is the generator function
-	(define who 'callback-generator)
-	(with-arguments-validation (who)
-	    ((procedure  proc))
-	  (let ((proc (if (eq? retval-type 'void)
-			  proc ;no return value to be validated
-			;;This is  a wrapper for the  Scheme function to
-			;;validate the return value.
-			(lambda args
-			  (let ((v (apply proc args)))
-			    (if (retval-pred v)
-				v
-			      (assertion-violation 'callback
-				"returned value does not match specified type" retval-type v)))))))
-	    (or (foreign-call "ikrt_prepare_callback" (cons cif proc))
-		(assertion-violation who "internal error building FFI callback"))))))))
+    (let ((S (%ffi-prep-cif who retval-type arg-types)))
+      (or (cif-callback-maker S)
+	  (let* ((retval-pred	(%select-type-predicate retval-type))
+		 (maker		(lambda (proc)
+				  (%callback-maker (cif-cif S) retval-pred retval-type proc))))
+	    (set-cif-callback-maker! S maker)
+	    maker)))))
+
+(define (%callback-maker cif retval-pred retval-type proc)
+  (define who 'callback-generator)
+  (with-arguments-validation (who)
+      ((procedure  proc))
+    (let ((proc (if (eq? retval-type 'void)
+		    proc ;no return value to be validated
+		  (lambda args	;This is a wrapper for a Scheme function
+				;that  needs  validation  of the  return
+				;value.
+		    (let ((v (apply proc args)))
+		      (if (retval-pred v)
+			  v
+			(assertion-violation 'callback
+			  "returned value does not match specified type" retval-type v)))))))
+      (or (foreign-call "ikrt_prepare_callback" (cons cif proc))
+	  (assertion-violation who "internal error building FFI callback")))))
 
 
 ;;;; done
@@ -874,4 +911,5 @@
 ;;; end of file
 ;; Local Variables:
 ;; eval: (put 'with-pathnames 'scheme-indent-function 1)
+;; eval: (put 'arguments-validation-forms 'scheme-indent-function 0)
 ;; End:
