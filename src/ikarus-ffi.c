@@ -213,7 +213,7 @@ dump_stack (ikpcb* pcb, char* msg)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_ffi_prep_cif (ikptr s_retval_type_id, ikptr s_arg_type_ids, ikpcb* pcb)
+ikrt_ffi_prep_cif (ikptr s_type_ids, ikpcb* pcb)
 /* Wrapper  for   Libffi's  "ffi_prep_cif()";  prepare   a  Libffi  call
    interface (CIF) building an  appropriate data structure, whose memory
    is obtained  by "calloc()".  Return a pointer  object referencing the
@@ -221,23 +221,23 @@ ikrt_ffi_prep_cif (ikptr s_retval_type_id, ikptr s_arg_type_ids, ikpcb* pcb)
 
    The generated CIR can be used for both callouts and callbacks.
 
-   S_RETVAL_TYPE_ID must  be a fixnum  in the set  "type_id_t" selecting
-   the type of the return value.  S_ARG_TYPE_IDS must reference a vector
-   holding fixnums in  the range "type_id_t" selecting the  types of the
-   arguments. */
+   S_TYPE_IDS  must  be a  vector  of  fixnums  in the  set  "type_id_t"
+   selecting the type  of the arguments and return  value; the fixnum at
+   index 0  represents the type of  the return value,  the other fixnums
+   the type of the arguments. */
 {
-  unsigned      arity = (unsigned)VICARE_VECTOR_LENGTH(s_arg_type_ids);
+  unsigned      arity = ((unsigned)VICARE_VECTOR_LENGTH(s_type_ids))-1;
   ik_ffi_cif_t  cif   = alloc(IK_FFI_CIF_SIZEOF(arity), 1);
   ffi_status    rv;
   int           i;
   cif->arg_types      = IK_FFI_CIF_ARG_TYPES_PTR(cif, arity);
   cif->arg_type_ids   = IK_FFI_CIF_ARG_TYPE_IDS_PTR(cif, arity);
   cif->arity          = arity;
-  cif->retval_type_id = unfix(s_retval_type_id);
+  cif->retval_type_id = unfix(VICARE_VECTOR_REF(s_type_ids, 0));
   cif->retval_type    = the_ffi_types_array[cif->retval_type_id];
   cif->args_bufsize   = 0;
-  for (i=0; i<arity; i++) {
-    type_id_t   id       =  unfix(VICARE_VECTOR_REF(s_arg_type_ids, i));
+  for (i=0; i<arity; ++i) {
+    type_id_t   id       =  unfix(VICARE_VECTOR_REF(s_type_ids, 1+i));
     cif->args_bufsize    += the_ffi_type_sizes[id];
     cif->arg_type_ids[i] =  id;
     cif->arg_types[i]    =  the_ffi_types_array[id];
@@ -407,20 +407,9 @@ ikptr
 ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
 /* Perform a callout and return the return value of the callout.
 
-   S_DATA  must be  a vector  holding the  specification of  the foreign
-   function to call and its CIF:
-
-      S_DATA[0]: pointer  object to a  malloc-ed data structure  of type
-      "ik_ffi_cif_stru_t" describing the callout interface.
-
-      S_DATA[1]: pointer object representing  the address of the foreign
-      function to call.
-
-      S_DATA[2]:  Scheme  vector   holding  fixnum  identifiers  in  the
-      enumeration "type_id_t" specifying the type of the arguments.
-
-      S_DATA[3]:  fixnum  identifier   in  the  enumeration  "type_id_t"
-      specifying the type of the return value.
+   S_DATA  must  be  a pair  whose  car  is  a  pointer object  of  type
+   "ik_ffi_cif_t"  and whose cdr  is a  pointer object  representing the
+   address of the foreign function to call.
 
    S_ARGS must be a vector holding the call arguments.  */
 {
@@ -434,8 +423,8 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
   ref(sk, disp_system_continuation_next) = pcb->next_k;
   pcb->next_k = sk + vector_tag;
   {
-    ik_ffi_cif_t  cif     = VICARE_POINTER_DATA_VOIDP(VICARE_VECTOR_REF(s_data, 0));
-    address_t *   address = VICARE_POINTER_DATA_VOIDP(VICARE_VECTOR_REF(s_data, 1));
+    ik_ffi_cif_t  cif     = VICARE_POINTER_DATA_VOIDP(VICARE_CAR(s_data));
+    address_t *   address = VICARE_POINTER_DATA_VOIDP(VICARE_CDR(s_data));
     /* Prepare  memory   to  hold  native   values  representing  Scheme
        arguments and the return value */
     uint8_t     args_buffer[cif->args_bufsize];
