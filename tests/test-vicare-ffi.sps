@@ -612,6 +612,18 @@
 	result)
     => 123)
 
+  (check	;void arguments and return value
+      (let* ((callout-maker	(ffi.make-c-callout  'void '(void)))
+	     (callback-maker	(ffi.make-c-callback 'void '(void)))
+	     (result		#f)
+	     (callback		(callback-maker (lambda ()
+						  (set! result 123))))
+	     (callout		(callout-maker callback)))
+	(callout 123)
+	(ffi.free-c-callback callback)
+	result)
+    => 123)
+
 ;;; --------------------------------------------------------------------
 
   (check

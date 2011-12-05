@@ -764,6 +764,8 @@
 			;callout functions of given signature.
    callback-maker	;False   or  Closure.   The   closure  generates
 			;callback functions of given signature
+   arg-checkers		;vector of predicates used to validate arguments
+   retval-checker	;predicate used to validate return value
    ))
 
 ;;Maximum for the hash value of  signature vectors.  It is used to avoid
@@ -822,9 +824,15 @@
       (unless CIF-TABLE
 	(set! CIF-TABLE (make-hashtable %signature-hash %unsafe.signature=?)))
       (or (hashtable-ref CIF-TABLE type-ids #f)
-          (let ((cif (capi.ffi-prep-cif type-ids)))
+          (let ((cif		(capi.ffi-prep-cif type-ids))
+		(arg-checkers   (if (null? arg-types)
+				    #f
+				  (vector-map %select-type-predicate (list->vector arg-types))))
+		(retval-checker	(if (eq? 'void retval-type)
+				    #f
+				  (%select-type-predicate retval-type))))
 	    (and cif
-		 (let ((S (make-cif cif #f #f)))
+		 (let ((S (make-cif cif #f #f arg-checkers retval-checker)))
 		   (hashtable-set! CIF-TABLE type-ids S)
 		   S)))
 	  (if (ffi-enabled?)
@@ -847,7 +855,7 @@
     (let ((S (%ffi-prep-cif who retval-type arg-types)))
       (or (cif-callout-maker S)
 	  (let* ((arg-types  (list->vector arg-types))
-		 (checkers   (vector-map %select-type-predicate arg-types))
+		 (checkers   (cif-arg-checkers S))
 		 (maker      (lambda (c-function-pointer)
 			       (%callout-maker (cif-cif S) c-function-pointer checkers arg-types))))
 	    (set-cif-callout-maker! S maker)
@@ -859,10 +867,11 @@
   ;;
   ;;CIF must  be a poiner  object referencing a Libffi's  call interface
   ;;data  structure.   C-FUNCTION-POINTER   must  be  a  pointer  object
-  ;;referencing  the foreign  function.  CHECKERS  must be  a  vector of
-  ;;predicate functions used to  validate the arguments.  ARG-TYPES must
-  ;;be a vector  of symbols representing the argument  types, it is used
-  ;;to report descriptive error messages.
+  ;;referencing  the foreign  function.   CHECKERS must  be  false or  a
+  ;;vector of predicate functions  used to validate the arguments; false
+  ;;means that  the callout accepts  no arguments.  ARG-TYPES must  be a
+  ;;vector of  symbols representing  the argument types,  it is  used to
+  ;;report descriptive error messages.
   ;;
   (define who '%callout-maker)
   (with-arguments-validation (who)
@@ -880,8 +889,9 @@
   ;;Libffi's  CIF data  structure  and  whose cdr  is  a pointer  object
   ;;representing the address of  the foreign function to call.
   ;;
-  ;;CHECKERS must  be a vector  of predicate functions used  to validate
-  ;;the arguments.
+  ;;CHECKERS must  be false or a  vector of predicate  functions used to
+  ;;validate  the arguments;  false means  that the  callout  accepts no
+  ;;arguments.
   ;;
   ;;ARG-TYPES  must be  a vector  of symbols  representing  the argument
   ;;types, it is used to report descriptive error messages.
@@ -894,10 +904,11 @@
       (unless (unsafe.fx= (unsafe.vector-length args)
 			  (unsafe.vector-length arg-types))
 	(assertion-violation who "wrong number of arguments" arg-types args))
-      (vector-for-each (lambda (arg-pred type arg)
-			 (unless (arg-pred arg)
-			   (assertion-violation who "argument does not match specified type" type arg)))
-	checkers arg-types args))
+      (when checkers
+	(vector-for-each (lambda (arg-pred type arg)
+			   (unless (arg-pred arg)
+			     (assertion-violation who "argument does not match specified type" type arg)))
+	  checkers arg-types args)))
     (capi.ffi-callout user-data args)))
 
 
@@ -915,7 +926,7 @@
        (null/list-of-symbols	arg-types))
     (let ((S (%ffi-prep-cif who retval-type arg-types)))
       (or (cif-callback-maker S)
-	  (let* ((retval-pred	(%select-type-predicate retval-type))
+	  (let* ((retval-pred	(cif-retval-checker S))
 		 (maker		(lambda (proc)
 				  (%callback-maker (cif-cif S) retval-pred retval-type proc))))
 	    (set-cif-callback-maker! S maker)
@@ -926,8 +937,8 @@
   ;;pointer to callable machine code.
   ;;
   ;;CIF must  be a poiner  object referencing a Libffi's  call interface
-  ;;data  structure.   RETVAL-PRED  must  be  a  predicate  function  to
-  ;;validate   the  return   value.   RETVAL-TYPE   must  be   a  symbol
+  ;;data structure.   RETVAL-PRED must be false or  a predicate function
+  ;;to  validate  the  return  value.   RETVAL-TYPE  must  be  a  symbol
   ;;representing the return value type, it is used to report descriptive
   ;;error messages or to avoid checking if no value is returned.
   ;;
