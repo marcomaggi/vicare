@@ -126,6 +126,10 @@ Revised^6 Report on the algorithmic language Scheme
 @acronym{ASCII}
 @end macro
 
+@macro cif{}
+@acronym{CIF}
+@end macro
+
 @macro cpu{}
 @acronym{CPU}
 @end macro
@@ -5098,35 +5102,34 @@ vicare>
 @chapter Foreign functions interface
 
 
-This chapter describes the facilities through which @value{PRJNAME}
-interfaces with the host operating system and other external libraries
-exposing a C language interface.  The facilities of the @library{vicare
-ffi} library give the Scheme program unrestricted access to the computer
-memory, allowing one to allocate, access, modify, and free memory as
-needed.  The facilities also allow the Scheme program to @dfn{call out}
-to system procedures as well as allow the native procedures to @dfn{call
-back} into Scheme.
+The library @library{vicare ffi} interfaces with the host operating
+system and other external libraries exposing a C language interface; it
+is suggested to import the @ffi{} library with the prefix @code{ffi.},
+as in the following prelude:
 
-@quotation
-@strong{Caveat emptor:} Preparing each call out and call back procedure
-leaks a small amount of memory.  This is because the system cannot track
-such pointers that go into native code (which may retain such pointers
-indefinitely).  Use judiciously.
-@end quotation
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare ffi) ffi.))
+@end example
+
+The facilities of the @library{vicare ffi} give the Scheme program
+unrestricted access to the computer memory, allowing one to allocate,
+access, modify, and free memory as needed.  The facilities also allow
+the Scheme program to @dfn{call out} to system procedures as well as
+allow the native procedures to @dfn{call back} into Scheme.
 
 @menu
-* ffi libffi::                  Install and use Libffi.
+* ffi libffi::                  Installing and using Libffi.
 * ffi memory::                  Memory management.
 * ffi dl::                      Accessing shared libraries.
-* ffi callout::                 Calling out to foreign procedures.
-* ffi callback::                Calling back to Scheme.
-* ffi types::                   Specifying foreign types.
+* ffi call::                    Callouts and callbacks.
 * ffi errno::                   Interface to @code{errno}.
 @end menu
 
 @c page
 @node ffi libffi
-@section Install and use Libffi
+@section Installing and using Libffi
 
 
 Currently @value{PRJNAME} implements the foreign--functions interface
@@ -5768,8 +5771,139 @@ dynamic loading error.
 @end defun
 
 @c page
-@node ffi callout
-@section Calling out to foreign procedures
+@node ffi call
+@section Callouts and callbacks
+
+
+Callouts allow Scheme code to invoke C functions in a foreign library;
+callbacks allow foreign C code to call a Scheme function.  The following
+example shows how Scheme code can call a callout which in turns calls a
+callback:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare ffi) ffi.))
+
+(define callout-maker
+  (ffi.make-c-callout  'unsigned-int '(unsigned-int)))
+
+(define callback-maker
+  (ffi.make-c-callback 'unsigned-int '(unsigned-int)))
+
+(define callback
+  (callback-maker values))
+
+(define callout
+  (callout-maker callback))
+
+(callout 123)   @result{} 123
+
+(ffi.free-c-callback callback)
+@end example
+
+@menu
+* ffi call intro::              Overview of @ffi{} function calls.
+* ffi call out::                Calling out to foreign procedures.
+* ffi call back::               Calling back to Scheme.
+* ffi call types::              Specifying native types.
+@end menu
+
+@c page
+@node ffi call intro
+@subsection Overview of @ffi{} function calls
+
+
+Both callouts and callbacks are built on top of function signatures
+specifying the type of function arguments and returned value.  Libffi
+allows us to specify such signatures through a Call InterFace (@cif{})
+data structure; @value{PRJNAME} internally extends such a structure with
+additional data to speed up marshaling of values from Scheme to native
+representation and back.
+
+At present, @cif{} data structures are allocated with @cfunc{malloc} and
+never released.  Callouts and callbacks make use of @cif{} structures of
+the same format, so such structures are internally cached; a single
+@cif{} associated to a given function signature is used by all the
+callouts and callbacks having the same signature.
+
+@c ------------------------------------------------------------
+
+@subsubheading Calling out to foreign functions
+
+Callouts require only a @cif{} structure and the address of the foreign
+C function; no additional structure needs to be allocated and then
+released.
+
+@value{PRJNAME} organises the callout @api{} by creating a callout maker
+function, closed upon a @cif{} structure, which can build any number of
+callout functions associating a @cif{} to foreign function pointers.
+Maker functions are cached internally, so only one maker function for a
+given signature is created in a running process.
+
+@c ------------------------------------------------------------
+
+@subsubheading Calling back to Scheme functions
+
+Callbacks require an additional data structure, because they must
+generate at runtime callable machine code referenced by a pointer; such
+additional data structure cannot be automatically released by the
+garbage collector, but it can be explicitly freed by the program when
+the callback is no longer needed.
+
+We can think of the code handling a callback as organised like the
+following pseudo--code:
+
+@example
+cif_t  call_interface;
+
+int
+specific_callback (int a, long b, double c)
+@{
+  void *  args[3] = @{ &a, &b, &c @};
+  int     result;
+  libffi_generic_callback(&call_interface, &result, args);
+  return result;
+@}
+
+void
+generic_callback (cif_t * call_interface,
+                  void * result, void * args)
+@{
+  scheme_value  s_a, s_b, s_c;
+  scheme_value  s_result;
+  s_a = native_to_scheme(call_interface, args[0]);
+  s_b = native_to_scheme(call_interface, args[1]);
+  s_c = native_to_scheme(call_interface, args[2]);
+  s_result = scheme_callback(s_a, s_b, s_c);
+  scheme_to_native(call_interface, s_result, result);
+@}
+
+scheme_value
+scheme_callback (scheme_value s_a,
+                 scheme_value s_b,
+                 scheme_value s_c)
+@{
+  /* process arguments, return result */
+@}
+@end example
+
+@noindent
+where @code{specific_callback} is generated at runtime,
+@code{generic_callback} is defined internally by Libffi and @code{scheme
+callback} is implemented by the Scheme program.  A pointer to
+@code{specific_callback} is the one we need to create when creating a
+callback from Scheme.
+
+@value{PRJNAME} organises the callback @api{} by creating a callback
+maker function, closed upon a @cif{} structure, which can build any
+number of callback functions associating a @cif{} to Scheme functions.
+Maker functions are cached internally, so only one maker function for
+each given signature is created in a running process.
+
+@c page
+@node ffi call out
+@subsection Calling out to foreign procedures
 
 
 In order to call out to a foreign procedure, we must provide two pieces
@@ -5821,9 +5955,6 @@ returned by the generator function is a Scheme closure wrapping the
 foreign function.  The wrapper Scheme closure takes care of marshaling
 Scheme values as appropriate for the underlying platform.
 
-Generator functions are cached internally, so only one generator
-function for each type signature is created in a running process.
-
 @var{ret-type} must be a Scheme symbol specifying the type of the
 returned value; if the foreign function returns no value: @var{ret-type}
 must be the symbol @code{void}.
@@ -5832,12 +5963,12 @@ must be the symbol @code{void}.
 the arguments; if the foreign function accepts no arguments:
 @var{arg-types} must be nil or the list @code{(void)}.
 
-@ref{ffi types} for the specification of accepted type symbols.
+@ref{ffi call types} for the specification of accepted type symbols.
 @end defun
 
 @c page
-@node ffi callback
-@section Calling back to Scheme
+@node ffi call back
+@subsection Calling back to Scheme
 
 
 In order to arrange for a foreign library to callback to a Scheme
@@ -5849,7 +5980,7 @@ Using the signature, the @ffi{} determines how native values are
 converted to and from Scheme values; a signature is composed of two
 parts: a Scheme symbol specifying the return type, a list of Scheme
 symbols specifying the argument types.  The signature format is the same
-as the one used for callouts; @ref{ffi callout} for details.
+as the one used for callouts; @ref{ffi call out} for details.
 
 Note that a callback function is indistinguishable from other native
 procedures whose address is obtained using @func{dlsym} or similar
@@ -5891,9 +6022,6 @@ a pointer object referencing a native function.  The wrapper native
 function takes care of marshaling Scheme values as appropriate for the
 underlying platform.
 
-Generator functions are cached internally, so only one generator
-function for each type signature is created in a running process.
-
 @var{ret-type} must be a Scheme symbol specifying the type of the
 returned value; if the callback function must return no value:
 @var{ret-type} must be the symbol @code{void}.
@@ -5902,7 +6030,7 @@ returned value; if the callback function must return no value:
 the arguments; if the callback function must accept no arguments:
 @var{arg-types} must be nil or the list @code{(void)}.
 
-@ref{ffi types} for the specification of accepted type symbols.
+@ref{ffi call types} for the specification of accepted type symbols.
 @end defun
 
 
@@ -5913,8 +6041,8 @@ assertion violation.
 @end defun
 
 @c page
-@node ffi types
-@section Specifying foreign types
+@node ffi call types
+@subsection Specifying native types
 
 
 The following is a list of Scheme symbols used to specify native types
