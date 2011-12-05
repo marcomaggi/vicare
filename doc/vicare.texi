@@ -5403,28 +5403,28 @@ memory location selecting the size with the number of bits required to
 represent the value.
 
 
-@deffn Procedure pointer-set-c-sint8! @var{pointer} @var{offset} @var{value}
-@deffnx Procedure pointer-set-c-uint8! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-sint8! @var{pointer} @var{offset} @var{value}
+@defunx pointer-set-c-uint8! @var{pointer} @var{offset} @var{value}
 @bitpoker{single byte,8}
-@end deffn
+@end defun
 
 
-@deffn Procedure pointer-set-c-sint16! @var{pointer} @var{offset} @var{value}
-@deffnx Procedure pointer-set-c-uint16! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-sint16! @var{pointer} @var{offset} @var{value}
+@defunx pointer-set-c-uint16! @var{pointer} @var{offset} @var{value}
 @bitpoker{two bytes,16}
-@end deffn
+@end defun
 
 
-@deffn Procedure pointer-set-c-sint32! @var{pointer} @var{offset} @var{value}
-@deffnx Procedure pointer-set-c-uint32! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-sint32! @var{pointer} @var{offset} @var{value}
+@defunx pointer-set-c-uint32! @var{pointer} @var{offset} @var{value}
 @bitpoker{two bytes,32}
-@end deffn
+@end defun
 
 
-@deffn Procedure pointer-set-c-sint64! @var{pointer} @var{offset} @var{value}
-@deffnx Procedure pointer-set-c-uint64! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-sint64! @var{pointer} @var{offset} @var{value}
+@defunx pointer-set-c-uint64! @var{pointer} @var{offset} @var{value}
 @bitpoker{two bytes,64}
-@end deffn
+@end defun
 
 @c ------------------------------------------------------------
 
@@ -5435,35 +5435,35 @@ memory locations selecting the size according to the one used by the C
 language implementation.
 
 
-@deffn Procedure pointer-set-c-signed-char! @var{pointer} @var{offset} @var{value}
-@deffnx Procedure pointer-set-c-unsigned-char! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-signed-char! @var{pointer} @var{offset} @var{value}
+@defunx pointer-set-c-unsigned-char! @var{pointer} @var{offset} @var{value}
 @cpoker{char}
-@end deffn
+@end defun
 
 
-@deffn Procedure pointer-set-c-signed-short! @var{pointer} @var{offset} @var{value}
-@deffnx Procedure pointer-set-c-unsigned-short! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-signed-short! @var{pointer} @var{offset} @var{value}
+@defunx pointer-set-c-unsigned-short! @var{pointer} @var{offset} @var{value}
 @cpoker{short int}
-@end deffn
+@end defun
 
 
-@deffn Procedure pointer-set-c-signed-int! @var{pointer} @var{offset} @var{value}
-@deffnx Procedure pointer-set-c-unsigned-int! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-signed-int! @var{pointer} @var{offset} @var{value}
+@defunx pointer-set-c-unsigned-int! @var{pointer} @var{offset} @var{value}
 @cpoker{int}
-@end deffn
+@end defun
 
 
 
-@deffn Procedure pointer-set-c-signed-long! @var{pointer} @var{offset} @var{value}
-@deffnx Procedure pointer-set-c-unsigned-long! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-signed-long! @var{pointer} @var{offset} @var{value}
+@defunx pointer-set-c-unsigned-long! @var{pointer} @var{offset} @var{value}
 @cpoker{long}
-@end deffn
+@end defun
 
 
-@deffn Procedure pointer-set-c-signed-long-long! @var{pointer} @var{offset} @var{value}
-@deffnx Procedure pointer-set-c-unsigned-long-long! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-signed-long-long! @var{pointer} @var{offset} @var{value}
+@defunx pointer-set-c-unsigned-long-long! @var{pointer} @var{offset} @var{value}
 @cpoker{long long}
-@end deffn
+@end defun
 
 
 @c ------------------------------------------------------------
@@ -5471,19 +5471,19 @@ language implementation.
 @subsubheading Poking floating point numbers
 
 
-@deffn Procedure pointer-set-c-float! @var{pointer} @var{offset} @var{flonum}
+@defun pointer-set-c-float! @var{pointer} @var{offset} @var{flonum}
 Convert the Scheme floating point number @var{flonum} (represented in
 @value{PRJNAME} as an @ieee{} 754 double precision floating point number) to a
 float (an @ieee{} 754 single precision floating point number) and store
 the result in the four bytes at @var{offset} from @var{pointer}.
-@end deffn
+@end defun
 
 
-@deffn Procedure pointer-set-c-double! @var{pointer} @var{offset} @var{flonum}
+@defun pointer-set-c-double! @var{pointer} @var{offset} @var{flonum}
 Store the double precision @ieee{} 754 floating point value of the
 Scheme @var{flonum} in the eight bytes at @var{offset} from
 @var{pointer}.
-@end deffn
+@end defun
 
 
 @c ------------------------------------------------------------
@@ -5491,10 +5491,10 @@ Scheme @var{flonum} in the eight bytes at @var{offset} from
 @subsubheading Poking pointers
 
 
-@deffn Procedure pointer-set-c-pointer! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-pointer! @var{pointer} @var{offset} @var{value}
 Store address of the raw memory location referenced by the pointer
 @var{value} at @var{offset} from @var{pointer}.
-@end deffn
+@end defun
 
 @c page
 @node ffi memory peek
@@ -5559,65 +5559,65 @@ raw memory locations selecting the size according to the one used by the
 C language implementation.
 
 
-@deffn Procedure pointer-ref-c-signed-char @var{pointer} @var{offset}
-@deffnx Procedure pointer-ref-c-signed-char @var{pointer} @var{offset}
+@defun pointer-ref-c-signed-char @var{pointer} @var{offset}
+@defunx pointer-ref-c-signed-char @var{pointer} @var{offset}
 @cpeeker{char}
-@end deffn
+@end defun
 
 
-@deffn Procedure pointer-ref-c-signed-short @var{pointer} @var{offset}
-@deffnx Procedure pointer-ref-c-unsigned-short @var{pointer} @var{offset}
+@defun pointer-ref-c-signed-short @var{pointer} @var{offset}
+@defunx pointer-ref-c-unsigned-short @var{pointer} @var{offset}
 @cpeeker{short int}
-@end deffn
+@end defun
 
 
-@deffn Procedure pointer-ref-c-signed-int @var{pointer} @var{offset}
-@deffnx Procedure pointer-ref-c-unsigned-int @var{pointer} @var{offset}
+@defun pointer-ref-c-signed-int @var{pointer} @var{offset}
+@defunx pointer-ref-c-unsigned-int @var{pointer} @var{offset}
 @cpeeker{int}
-@end deffn
+@end defun
 
 
-@deffn Procedure pointer-ref-c-signed-long @var{pointer} @var{offset}
-@deffnx Procedure pointer-ref-c-unsigned-long @var{pointer} @var{offset}
+@defun pointer-ref-c-signed-long @var{pointer} @var{offset}
+@defunx pointer-ref-c-unsigned-long @var{pointer} @var{offset}
 @cpeeker{long}
-@end deffn
+@end defun
 
 
-@deffn Procedure pointer-ref-c-signed-long-long @var{pointer} @var{offset}
-@deffnx Procedure pointer-ref-c-unsigned-long-long @var{pointer} @var{offset}
+@defun pointer-ref-c-signed-long-long @var{pointer} @var{offset}
+@defunx pointer-ref-c-unsigned-long-long @var{pointer} @var{offset}
 @cpeeker{long long}
-@end deffn
+@end defun
 
 @c ------------------------------------------------------------
 
 @subsubheading Peeking floating point numbers
 
 
-@deffn Procedure pointer-ref-c-float @var{pointer} @var{offset}
+@defun pointer-ref-c-float @var{pointer} @var{offset}
 Return the four--byte float (represented as @ieee{} 754 single precision
 floating point number) stored at @var{offset} from @var{pointer}.  The
 value is extended to an @ieee{} 754 double precision floating point
 number that @value{PRJNAME} uses to represent inexact numbers.
-@end deffn
+@end defun
 
 
-@deffn Procedure pointer-ref-c-double @var{pointer} @var{offset}
+@defun pointer-ref-c-double @var{pointer} @var{offset}
 Return the eight--byte float (represented as @ieee{} 754 double
 precision floating point number) stored at @var{offset} from
 @var{pointer}.
-@end deffn
+@end defun
 
 @c ------------------------------------------------------------
 
 @subsubheading Peeking pointers
 
 
-@deffn Procedure pointer-ref-c-pointer @var{pointer} @var{offset}
+@defun pointer-ref-c-pointer @var{pointer} @var{offset}
 Return the pointer stored at @var{offset} from @var{pointer}.  The size
 of the pointer (also the number of bytes loaded) depends on the
 architecture: it is 4 bytes on 32-bit systems and 8 bytes on 64-bit
 systems.
-@end deffn
+@end defun
 
 @c page
 @node ffi memory ops
@@ -5690,9 +5690,9 @@ freed until the number of calls to @func{dlclose} matches the number of
 calls to @func{dlopen}.
 
 
-@deffn Procedure dlopen
-@deffnx Procedure dlopen @var{library-name}
-@deffnx Procedure dlopen @var{library-name} @var{lazy?} @var{global?}
+@defun dlopen
+@defunx dlopen @var{library-name}
+@defunx dlopen @var{library-name} @var{lazy?} @var{global?}
 Interface to the C function @cfunc{dlopen}, see the manual page
 @code{dlopen(3)}.  Load a platform shared library and return a pointer
 object representing a handler for the library, which can be used as
@@ -5730,10 +5730,10 @@ the running image, and subsequent @func{dlsym} calls may not need to
 specify the library from which the symbol is loaded.  If false, the
 exported symbols are not global and the library pointer needs to be
 specified for @func{dlsym}.  @var{global?} defaults to @false{}.
-@end deffn
+@end defun
 
 
-@deffn Procedure dlclose @var{handle}
+@defun dlclose @var{handle}
 Interface to the C function @cfunc{dlclose}, see the manual page
 @code{dlclose(3)}.  Release the resources loaded from the library
 referenced by the pointer handler @var{handle}.  If successful return
@@ -5743,10 +5743,10 @@ the cause of the error.
 Closing a library renders all symbols and static data structures that
 the library exports invalid and the program may crash or corrupt its
 memory if such symbols are used after a library is closed.
-@end deffn
+@end defun
 
 
-@deffn Procedure dlsym @var{handle} @var{name}
+@defun dlsym @var{handle} @var{name}
 Interface to the C function @cfunc{dlsym}, see the manual page
 @code{dlsym(3)}.  Search the loaded library referenced by the pointer
 @var{handle} for an exported symbol whose name is represented by the
@@ -5756,16 +5756,16 @@ error.
 
 If the returned value references a function: it can be used as argument
 to the callout generators built by @func{make-c-callout}.
-@end deffn
+@end defun
 
 
-@deffn Procedure dlerror
+@defun dlerror
 Interface to the C function @cfunc{dlerror}, see the manual page
 @code{dlerror(3)}.  If any of the dynamic loading operations fails, the
 cause of the error can be obtained by calling @func{dlerror} which
 returns a string describing the error; return @false{} if there was no
 dynamic loading error.
-@end deffn
+@end defun
 
 @c page
 @node ffi callout
@@ -5810,7 +5810,7 @@ using the @ffi{} we build a callout function generator which can be used
 to create any number of callout functions having the same signature.
 
 
-@deffn Procedure make-c-callout @var{ret-type} @var{arg-types}
+@defun make-c-callout @var{ret-type} @var{arg-types}
 Build and return a function to be used to generate callout Scheme
 functions wrapping foreign functions which follow the C language
 conventions for calling, arguments and return values.
@@ -5833,7 +5833,7 @@ the arguments; if the foreign function accepts no arguments:
 @var{arg-types} must be nil or the list @code{(void)}.
 
 @ref{ffi types} for the specification of accepted type symbols.
-@end deffn
+@end defun
 
 @c page
 @node ffi callback
@@ -5880,7 +5880,7 @@ function, calling back to the Scheme function @func{values}:
 
 
 
-@deffn Procedure make-c-callback @var{ret-type} @var{arg-types}
+@defun make-c-callback @var{ret-type} @var{arg-types}
 Build and return a function to be used to generate callback functions
 following the C language conventions for calling, arguments and return
 values and wrapping Scheme functions.
@@ -5903,7 +5903,14 @@ the arguments; if the callback function must accept no arguments:
 @var{arg-types} must be nil or the list @code{(void)}.
 
 @ref{ffi types} for the specification of accepted type symbols.
-@end deffn
+@end defun
+
+
+@defun free-c-callback @var{c-callback-pointer}
+Release the resources associated to the given C pointer referencing a
+callback function.  If the pointer is not a callback pointer: raise an
+assertion violation.
+@end defun
 
 @c page
 @node ffi types

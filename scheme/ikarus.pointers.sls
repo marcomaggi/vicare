@@ -32,6 +32,7 @@
 
     ;; calling functions and callbacks
     make-c-callout			make-c-callback
+    free-c-callback
 
     ;; raw memory allocation
     malloc				free
@@ -614,6 +615,24 @@
 	(values #f #f)))))
 
 
+;;;; Libffi: C API
+
+(define-inline (capi.ffi-enabled?)
+  (foreign-call "ikrt_has_ffi"))
+
+(define-inline (capi.ffi-prep-cif type-ids)
+  (foreign-call "ikrt_ffi_prep_cif" type-ids))
+
+(define-inline (capi.ffi-callout user-data args)
+  (foreign-call "ikrt_ffi_call" user-data args))
+
+(define-inline (capi.ffi-prepare-callback cif.proc)
+  (foreign-call "ikrt_ffi_prepare_callback" cif.proc))
+
+(define-inline (capi.ffi-free-c-callback c-callback-pointer)
+  (foreign-call "ikrt_ffi_release_callback" c-callback-pointer))
+
+
 ;;;; Libffi: native type identifiers
 
 ;;The  fixnums identifying  the  types must  be  kept in  sync with  the
@@ -731,7 +750,7 @@
 ;;; Libffi: call interfaces
 
 (define (ffi-enabled?)
-  (foreign-call "ikrt_has_ffi"))
+  (capi.ffi-enabled?))
 
 ;;Descriptor for callout and  callback generators associated to the same
 ;;function signature.  Once allocated,  instances of this type are never
@@ -771,6 +790,15 @@
 		 (unsafe.fx+ H (unsafe.vector-ref signature i))
 		 (unsafe.fxadd1 i))))))
 
+(define (%unsafe.signature=? vec1 vec2)
+  (let ((len1 (unsafe.vector-length vec1)))
+    (and (unsafe.fx= len1 (unsafe.vector-length vec2))
+	 (let loop ((i 0))
+	   (or (unsafe.fx= i len1)
+	       (and (unsafe.fx= (unsafe.vector-ref vec1 i)
+				(unsafe.vector-ref vec2 i))
+		    (loop (unsafe.fxadd1 i))))))))
+
 ;;Table of structures of type CIF, used to avoid generating duplicates.
 ;;
 (define CIF-TABLE #f)
@@ -792,9 +820,9 @@
 	   (type-ids	(vector-map %type-symbol->type-id
 			  (list->vector (cons retval-type arg-types)))))
       (unless CIF-TABLE
-	(set! CIF-TABLE (make-hashtable %signature-hash eq?)))
+	(set! CIF-TABLE (make-hashtable %signature-hash %unsafe.signature=?)))
       (or (hashtable-ref CIF-TABLE type-ids #f)
-          (let ((cif (foreign-call "ikrt_ffi_prep_cif" type-ids)))
+          (let ((cif (capi.ffi-prep-cif type-ids)))
 	    (and cif
 		 (let ((S (make-cif cif #f #f)))
 		   (hashtable-set! CIF-TABLE type-ids S)
@@ -870,7 +898,7 @@
 			 (unless (arg-pred arg)
 			   (assertion-violation who "argument does not match specified type" type arg)))
 	checkers arg-types args))
-    (foreign-call "ikrt_ffi_call" user-data args)))
+    (capi.ffi-callout user-data args)))
 
 
 ;;;; Libffi: callbacks
@@ -917,8 +945,16 @@
 			  v
 			(assertion-violation 'callback
 			  "returned value does not match specified type" retval-type v)))))))
-      (or (foreign-call "ikrt_prepare_callback" (cons cif proc))
+      (or (capi.ffi-prepare-callback (cons cif proc))
 	  (assertion-violation who "internal error building FFI callback")))))
+
+(define (free-c-callback c-callback-pointer)
+  (define who 'free-c-callback)
+  (with-arguments-validation (who)
+      ((pointer	c-callback-pointer))
+    (or (capi.ffi-free-c-callback c-callback-pointer)
+	(assertion-violation who
+	  "attempt to release unkwnown callback pointer" c-callback-pointer))))
 
 
 ;;;; done

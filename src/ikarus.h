@@ -178,6 +178,8 @@ typedef struct ik_ptr_page{
 } ik_ptr_page;
 
 typedef struct ik_callback_locative {
+  void *                        callable_pointer;
+  void *                        closure;
   ikptr                         data;
   struct ik_callback_locative * next;
 } ik_callback_locative;

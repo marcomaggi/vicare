@@ -2209,6 +2209,7 @@
 ;;;
     (make-c-callout				$for)
     (make-c-callback				$for)
+    (free-c-callback				$for)
 ;;;
     (malloc					$for)
     (realloc					$for)

@@ -475,7 +475,7 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_prepare_callback (ikptr s_data, ikpcb* pcb)
+ikrt_ffi_prepare_callback (ikptr s_data, ikpcb* pcb)
 /* Prepare  a Libffi's  callback interface  associated  to a  CIF and  a
    Scheme function.   If successful return a  pointer object referencing
    the  callback, else  return false.   A failure  is probably  an error
@@ -514,9 +514,11 @@ ikrt_prepare_callback (ikptr s_data, ikpcb* pcb)
   /* Prepend this callback to the linked list of callbacks registered in
      this process' PCB.  The garbage collector uses this information not
      to collect data still needed by the callbacks.  */
-  callback_user_data->data = s_data;
-  callback_user_data->next = pcb->callbacks;
-  pcb->callbacks           = callback_user_data;
+  callback_user_data->callable_pointer  = callable_pointer;
+  callback_user_data->closure           = closure;
+  callback_user_data->data              = s_data;
+  callback_user_data->next              = pcb->callbacks;
+  pcb->callbacks                        = callback_user_data;
   /* Return a pointer to callable code. */
   return ik_pointer_alloc((unsigned long)callable_pointer, pcb);
 #else /* if FFI_CLOSURES */
@@ -524,9 +526,41 @@ ikrt_prepare_callback (ikptr s_data, ikpcb* pcb)
 #endif /* if FFI_CLOSURES */
 }
 ikptr
-ikrt_release_callback (ikptr s_callable_pointer, ikpcb * pcb)
+ikrt_prepare_callback (ikptr s_data, ikpcb* pcb)
+/* FIXME  STALE To be  removed at  the next  boot image  rotation (Marco
+   Maggi; Mon Dec 5, 2011). */
 {
-  return void_object;
+  return ikrt_ffi_prepare_callback(s_data, pcb);
+}
+ikptr
+ikrt_ffi_release_callback (ikptr s_callable_pointer, ikpcb * pcb)
+{
+  ik_callback_locative *  root;
+  void *                  callable_pointer;
+  root             = pcb->callbacks;
+  callable_pointer = VICARE_POINTER_DATA_VOIDP(s_callable_pointer);
+  if (root) {
+    if (root->callable_pointer == callable_pointer) {
+      pcb->callbacks = root->next;
+      ffi_closure_free(root->closure);
+      free(root);
+      return true_object;
+    } else {
+      for (; root->next; root = root->next) {
+        if (root->next->callable_pointer != callable_pointer)
+          continue;
+        else {
+          ik_callback_locative *  this = root->next;
+          root->next = root->next->next;
+          ffi_closure_free(this->closure);
+          free(this);
+          return true_object;
+        }
+      }
+      return false_object;
+    }
+  } else
+    return true_object;
 }
 static void
 generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * user_data)
