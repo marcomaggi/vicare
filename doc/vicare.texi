@@ -5837,7 +5837,7 @@ released.
 
 @value{PRJNAME} organises the callout @api{} by creating a callout maker
 function, closed upon a @cif{} structure, which can build any number of
-callout functions associating a @cif{} to foreign function pointers.
+callout functions associating the @cif{} to foreign function pointers.
 Maker functions are cached internally, so only one maker function for a
 given signature is created in a running process.
 
@@ -5862,7 +5862,7 @@ specific_callback (int a, long b, double c)
 @{
   void *  args[3] = @{ &a, &b, &c @};
   int     result;
-  libffi_generic_callback(&call_interface, &result, args);
+  generic_callback(&call_interface, &result, args);
   return result;
 @}
 
@@ -5872,11 +5872,11 @@ generic_callback (cif_t * call_interface,
 @{
   scheme_value  s_a, s_b, s_c;
   scheme_value  s_result;
-  s_a = native_to_scheme(call_interface, args[0]);
-  s_b = native_to_scheme(call_interface, args[1]);
-  s_c = native_to_scheme(call_interface, args[2]);
+  s_a = native_to_scheme(call_interface, 0, args);
+  s_b = native_to_scheme(call_interface, 1, args);
+  s_c = native_to_scheme(call_interface, 2, args);
   s_result = scheme_callback(s_a, s_b, s_c);
-  scheme_to_native(call_interface, s_result, result);
+  scheme_to_native(call_interface, result, s_result);
 @}
 
 scheme_value
@@ -5889,15 +5889,16 @@ scheme_callback (scheme_value s_a,
 @end example
 
 @noindent
-where @code{specific_callback} is generated at runtime,
-@code{generic_callback} is defined internally by Libffi and @code{scheme
-callback} is implemented by the Scheme program.  A pointer to
-@code{specific_callback} is the one we need to create when creating a
-callback from Scheme.
+where: @code{specific_callback} is generated at runtime by Libffi;
+@code{generic_callback}, @code{scheme_to_native} and
+@code{native_to_scheme} are implemented by @value{PRJNAME}'s runtime
+(using generic operations); @code{scheme callback} is implemented by the
+Scheme program.  A pointer to @code{specific_callback} is the one we
+need to acquire when creating a callback from Scheme.
 
 @value{PRJNAME} organises the callback @api{} by creating a callback
 maker function, closed upon a @cif{} structure, which can build any
-number of callback functions associating a @cif{} to Scheme functions.
+number of callback functions associating the @cif{} to Scheme functions.
 Maker functions are cached internally, so only one maker function for
 each given signature is created in a running process.
 
