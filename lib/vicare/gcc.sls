@@ -58,7 +58,6 @@
 
 (define TMPDIR #f)	;it must have execute permissions
 (define GCC    #f)
-(define LGCC   #f)
 
 (define (initialise gcc-file temporary-directory)
   ;;Initialise the library.
@@ -79,9 +78,7 @@
   (if (and gcc-file
 	   (file-exists? gcc-file)
 	   (px.access gcc-file plat.X_OK))
-      (begin
-	(set! GCC  gcc-file)
-	(set! LGCC (list gcc-file)))
+      (set! GCC gcc-file)
     (error who
       "unable to retrieve pathname of executable GCC")))
 
@@ -119,20 +116,13 @@
 
 ;;;; compilation and linking commands
 
-(define ENV
-  (map (lambda (pair)
-	 (string-append (car pair) "=" (cdr pair)))
-    (px.environ)))
-
 (define (%compile-object-file source-filename object-filename)
-  (px.execve GCC
-	     (append LGCC (CFLAGS) (COMPILE-FLAGS) `("-o" ,object-filename ,source-filename))
-	     ENV))
+  (px.execv GCC (cons GCC (append (CFLAGS) (COMPILE-FLAGS)
+				  `("-o" ,object-filename ,source-filename)))))
 
 (define (%compile-library-file library-filename object-filename)
-  (px.execve GCC
-	     (append LGCC (LDFLAGS) (LINK-FLAGS) `("-o" ,library-filename ,object-filename))
-	     ENV))
+  (px.execv GCC (cons GCC (append (LDFLAGS) (LINK-FLAGS)
+				  `("-o" ,library-filename ,object-filename)))))
 
 
 ;;;; defining libraries
