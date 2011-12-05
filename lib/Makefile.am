@@ -17,6 +17,7 @@ dist_libvicare_DATA	= vicare/ffi.sls			\
 			  vicare/unsafe-unicode.sls		\
 			  vicare/unsafe-capi.sls		\
 			  vicare/words.sls			\
-			  vicare/installation-configuration.sls
+			  vicare/installation-configuration.sls	\
+			  vicare/gcc.sls
 
 ### end of file
