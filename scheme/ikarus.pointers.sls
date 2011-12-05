@@ -854,7 +854,10 @@
        (null/list-of-symbols	arg-types))
     (let ((S (%ffi-prep-cif who retval-type arg-types)))
       (or (cif-callout-maker S)
-	  (let* ((arg-types  (list->vector arg-types))
+	  (let* ((arg-types  (if (or (null? arg-types)
+				     (equal? arg-types '(void)))
+				 '#()
+			       (list->vector arg-types)))
 		 (checkers   (cif-arg-checkers S))
 		 (maker      (lambda (c-function-pointer)
 			       (%callout-maker (cif-cif S) c-function-pointer checkers arg-types))))
@@ -898,7 +901,7 @@
   ;;
   ;;ARGS is the list of arguments in the call.
   ;;
-  (define who '%generic-callout)
+  (define who '%generic-callout-wrapper)
   (let ((args (list->vector args)))
     (arguments-validation-forms
       (unless (unsafe.fx= (unsafe.vector-length args)
