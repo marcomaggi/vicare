@@ -42,6 +42,11 @@
     ffi-memset				ffi-memcmp
     ffi-memory->bytevector		ffi-bytevector->memory
 
+    ffi-strlen
+    ffi-strcmp				ffi-strncmp
+    ffi-strdup				ffi-strndup
+    ffi-bytevector->cstring		ffi-cstring->bytevector
+
     ffi-pointer?			ffi-pointer-null?
     ffi-fixnum->pointer			ffi-bignum->pointer
     ffi-pointer->integer
@@ -327,6 +332,29 @@
 
 (define-inline (ffi-bytevector->memory bv)
   (foreign-call "ikrt_bytevector_to_memory" bv))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (ffi-bytevector->cstring bv)
+  (foreign-call "ikrt_bytevector_to_cstring" bv))
+
+(define-inline (ffi-cstring->bytevector pointer count)
+  (foreign-call "ikrt_bytevector_from_cstring" pointer count))
+
+(define-inline (ffi-strlen pointer)
+  (foreign-call "ikrt_strlen" pointer))
+
+(define-inline (ffi-strcmp pointer1 pointer2)
+  (foreign-call "ikrt_strcmp" pointer1 pointer2))
+
+(define-inline (ffi-strncmp pointer1 pointer2 count)
+  (foreign-call "ikrt_strncmp" pointer1 pointer2 count))
+
+(define-inline (ffi-strdup pointer)
+  (foreign-call "ikrt_strdup" pointer))
+
+(define-inline (ffi-strndup pointer count)
+  (foreign-call "ikrt_strndup" pointer count))
 
 ;;; --------------------------------------------------------------------
 

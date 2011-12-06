@@ -39,7 +39,7 @@ ikptr ik_exec_code(ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp){
       framesize = ref(top, wordsize);
     }
     if(framesize <= 0){
-      fprintf(stderr, "invalid framesize %ld\n", framesize);
+      fprintf(stderr, "*** Vicare internal error: invalid framesize %ld\n", framesize);
       exit(-10);
     }
     if(framesize < k->size){
@@ -55,8 +55,8 @@ ikptr ik_exec_code(ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp){
       ((unsigned int*)(long)(pcb->dirty_vector))[idx] = -1;
     } else if (framesize > k->size) {
       fprintf(stderr,
-              "vicare internal error: invalid framesize %ld, expected %ld or less\n",
-          framesize, k->size);
+              "*** Vicare internal error: invalid framesize %ld, expected %ld or less\n",
+              framesize, k->size);
       long int offset = ref(rp, disp_frame_offset);
       fprintf(stderr, "rp = 0x%016lx\n", rp);
       fprintf(stderr, "rp offset = %ld\n", offset);

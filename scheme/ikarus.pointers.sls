@@ -42,6 +42,12 @@
     memcmp
     memory->bytevector			bytevector->memory
 
+    ;; C strings
+    bytevector->cstring			cstring->bytevector
+    strlen
+    strcmp				strncmp
+    strdup				strndup
+
     ;; errno interface
     errno
 
@@ -622,6 +628,62 @@
       (if rv
 	  (values rv (unsafe.bytevector-length bv))
 	(values #f #f)))))
+
+
+;;;; C strings
+
+(define (strlen pointer)
+  (define who 'strlen)
+  (with-arguments-validation (who)
+      ((pointer pointer))
+    (capi.ffi-strlen pointer)))
+
+(define (strcmp pointer1 pointer2)
+  (define who 'strcmp)
+  (with-arguments-validation (who)
+      ((pointer pointer1)
+       (pointer pointer2))
+    (capi.ffi-strcmp pointer1 pointer2)))
+
+(define (strncmp pointer1 pointer2 count)
+  (define who 'strncmp)
+  (with-arguments-validation (who)
+      ((pointer		pointer1)
+       (pointer		pointer2)
+       (number-of-bytes	count))
+    (capi.ffi-strncmp pointer1 pointer2 count)))
+
+(define (strdup pointer)
+  (define who 'strdup)
+  (with-arguments-validation (who)
+      ((pointer pointer))
+    (capi.ffi-strdup pointer)))
+
+(define (strndup pointer count)
+  (define who 'strndup)
+  (with-arguments-validation (who)
+      ((pointer		pointer)
+       (number-of-bytes	count))
+    (capi.ffi-strndup pointer count)))
+
+;;; --------------------------------------------------------------------
+
+(define (bytevector->cstring bv)
+  (define who 'bytevector->cstring)
+  (with-arguments-validation (who)
+      ((bytevector bv))
+    (capi.ffi-bytevector->cstring bv)))
+
+(define cstring->bytevector
+  (case-lambda
+   ((pointer)
+    (cstring->bytevector pointer (strlen pointer)))
+   ((pointer count)
+    (define who 'cstring->bytevector)
+    (with-arguments-validation (who)
+	((pointer		pointer)
+	 (number-of-bytes	count))
+      (capi.ffi-cstring->bytevector pointer count)))))
 
 
 ;;;; Libffi: C API

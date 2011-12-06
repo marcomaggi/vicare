@@ -321,7 +321,10 @@ ikrt_memcmp (ikptr pointer1, ikptr pointer2, ikptr count)
   return fix(rv);
 }
 
-/* ------------------------------------------------------------------ */
+
+/** --------------------------------------------------------------------
+ ** Raw memory and Scheme bytevector operations.
+ ** ----------------------------------------------------------------- */
 
 ikptr
 ikrt_memcpy_to_bv(ikptr dst, ikptr dst_off, ikptr src, ikptr count /*, ikpcb* pcb */)
@@ -367,6 +370,75 @@ ikrt_bytevector_to_memory (ikptr bv, ikpcb * pcb)
     return ik_pointer_alloc((unsigned long)memory, pcb);
   } else
     return false_object;
+}
+
+
+/** --------------------------------------------------------------------
+ ** C strings.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_bytevector_to_cstring (ikptr bv, ikpcb * pcb)
+{
+  char *        pointer = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+  size_t        length  = (size_t)VICARE_BYTEVECTOR_LENGTH(bv);
+  char *        cstr;
+  cstr = malloc(1+length);
+  if (cstr) {
+    strncpy(cstr, pointer, length);
+    cstr[length] = '\0';
+    return ik_pointer_alloc((unsigned long)cstr, pcb);
+  } else
+    return false_object;
+}
+ikptr
+ikrt_bytevector_from_cstring (ikptr s_pointer, ikptr s_count, ikpcb * pcb)
+{
+  char *        pointer = VICARE_POINTER_DATA_VOIDP(s_pointer);
+  long          count   = unfix(s_count);
+  ikptr         bv      = ik_bytevector_alloc(pcb, count);
+  char *        data    = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+  memcpy(data, pointer, count);
+  return bv;
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_strlen (ikptr s_pointer, ikpcb * pcb)
+{
+  return ik_integer_from_long(strlen(VICARE_POINTER_DATA_VOIDP(s_pointer)), pcb);
+}
+ikptr
+ikrt_strcmp (ikptr s_pointer1, ikptr s_pointer2)
+{
+  char *        ptr1 = VICARE_POINTER_DATA_VOIDP(s_pointer1);
+  char *        ptr2 = VICARE_POINTER_DATA_VOIDP(s_pointer2);
+  return fix(strcmp(ptr1, ptr2));
+}
+ikptr
+ikrt_strncmp (ikptr s_pointer1, ikptr s_pointer2, ikptr s_count)
+{
+  char *        ptr1 = VICARE_POINTER_DATA_VOIDP(s_pointer1);
+  char *        ptr2 = VICARE_POINTER_DATA_VOIDP(s_pointer2);
+  return fix(strncmp(ptr1, ptr2, unfix(s_count)));
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_strdup (ikptr s_pointer, ikpcb * pcb)
+{
+  char *        src = VICARE_POINTER_DATA_VOIDP(s_pointer);
+  char *        dst = strdup(src);
+  return (dst)? ik_pointer_alloc((unsigned long)dst, pcb) : false_object;
+}
+ikptr
+ikrt_strndup (ikptr s_pointer, ikptr s_count, ikpcb * pcb)
+{
+  char *        src = VICARE_POINTER_DATA_VOIDP(s_pointer);
+  char *        dst = strndup(src, unfix(s_count));
+  return (dst)? ik_pointer_alloc((unsigned long)dst, pcb) : false_object;
 }
 
 

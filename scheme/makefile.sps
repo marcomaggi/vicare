@@ -2223,6 +2223,14 @@
     (memory->bytevector				$for)
     (bytevector->memory				$for)
 ;;;
+    (bytevector->cstring			$for)
+    (cstring->bytevector			$for)
+    (strlen					$for)
+    (strcmp					$for)
+    (strncmp					$for)
+    (strdup					$for)
+    (strndup					$for)
+;;;
     (pointer-ref-c-uint8			$for)
     (pointer-ref-c-sint8			$for)
     (pointer-ref-c-uint16			$for)

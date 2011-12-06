@@ -371,6 +371,90 @@
   #t)
 
 
+(parametrise ((check-test-name	'cstrings))
+
+  (check
+      (let* ((cstr (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	     (bv   (ffi.cstring->bytevector cstr)))
+	bv)
+    => '#vu8(65 66 67 68))
+
+  #;(check
+      (let* ((cstr (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	     (bv   (ffi.cstring->bytevector cstr 2)))
+	bv)
+    => '#vu8(65 66))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((cstr (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68))))
+	(ffi.strlen cstr))
+    => 4)
+
+  (check
+      (let* ((cstr (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	     (cstr (ffi.strdup cstr)))
+	(ffi.strlen cstr))
+    => 4)
+
+  (check
+      (let* ((cstr (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	     (cstr (ffi.strndup cstr 4)))
+	(ffi.strlen cstr))
+    => 4)
+
+  (check
+      (let* ((cstr (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	     (cstr (ffi.strndup cstr 3)))
+	(ffi.strlen cstr))
+    => 3)
+
+;;; --------------------------------------------------------------------
+;;; strcmp
+
+  (check
+      (let ((cstr1 (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	    (cstr2 (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68))))
+	(ffi.strcmp cstr1 cstr2))
+    => 0)
+
+  (check
+      (let ((cstr1 (ffi.bytevector->guarded-cstring '#vu8(65 66 69 68)))
+	    (cstr2 (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68))))
+	(positive?(ffi.strcmp cstr1 cstr2)))
+    => #t)
+
+  (check
+      (let ((cstr1 (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	    (cstr2 (ffi.bytevector->guarded-cstring '#vu8(65 66 69 68))))
+	(negative? (ffi.strcmp cstr1 cstr2)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; strncmp
+
+  (check
+      (let ((cstr1 (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	    (cstr2 (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68))))
+	(ffi.strncmp cstr1 cstr2 4))
+    => 0)
+
+  (check
+      (let ((cstr1 (ffi.bytevector->guarded-cstring '#vu8(65 66 69 68)))
+	    (cstr2 (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68))))
+	(positive? (ffi.strncmp cstr1 cstr2 3)))
+    => #t)
+
+  (check
+      (let ((cstr1 (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	    (cstr2 (ffi.bytevector->guarded-cstring '#vu8(65 66 69 68))))
+	(negative? (ffi.strncmp cstr1 cstr2 3)))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'access))
 
   (check

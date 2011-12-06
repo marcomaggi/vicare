@@ -45,6 +45,14 @@
     memory->bytevector			bytevector->memory
     bytevector->guarded-memory
 
+    ;; C strings
+    strlen
+    strcmp				strncmp
+    strdup				strndup
+    guarded-strdup			guarded-strndup
+    cstring->bytevector
+    bytevector->cstring			bytevector->guarded-cstring
+
     ;; errno interface
     errno
     case-errno				errno-code
@@ -118,6 +126,21 @@
     (if ptr
 	(values (%memory-guardian ptr) len)
       (values #f #f))))
+
+
+;;;; C strings
+
+(define (guarded-strdup pointer)
+  (let ((rv (strdup pointer)))
+    (and rv (%memory-guardian rv))))
+
+(define (guarded-strndup pointer count)
+  (let ((rv (strndup pointer count)))
+    (and rv (%memory-guardian rv))))
+
+(define (bytevector->guarded-cstring bv)
+  (let ((rv (bytevector->cstring bv)))
+    (and rv (%memory-guardian rv))))
 
 
 ;;;; errno interface
