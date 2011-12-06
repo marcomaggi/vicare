@@ -12948,6 +12948,30 @@ arguments; @ref{ffi call types} for details.
 compiled.
 @end deffn
 
+
+@deffn Parameter COMPILE-FLAGS
+References a list of string.  Base options for the compiler, it is
+initialised to @code{("-c")}.
+@end deffn
+
+
+@deffn Parameter LINK-FLAGS
+References a list of string.  Base options for the linker, it is
+initialised to @code{("-pipe" "-shared" "-fPIC")}.
+@end deffn
+
+
+@deffn Parameter CFLAGS
+References a list of string.  Additional options for the compiler, it is
+initialised to @code{("-O2")}.
+@end deffn
+
+
+@deffn Parameter LDFLAGS
+References a list of string.  Additional options for the linker, it is
+initialised to nil.
+@end deffn
+
 @c page
 @node objects
 @chapter Built in objects
