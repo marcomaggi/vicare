@@ -5647,10 +5647,11 @@ memory regions can be overlapping.  Return unspecified values.
 
 
 @defun memset @var{ptr} @var{value} @var{count}
-Set to @var{value} @var{count} bytes of the memory referenced by the
-pointer @var{ptr}.  @var{count} must be a non--negative fixnum,
-@var{value} must be an exact fixnum in the range @math{[-128, 255]}.
-Return unspecified values.
+Interface to the C function @cfunc{memset}, @glibcref{Copying and
+Concatenation, memset}.Set to @var{value} @var{count} bytes of the
+memory referenced by the pointer @var{ptr}.  @var{count} must be a
+non--negative fixnum, @var{value} must be an exact fixnum in the range
+@math{[-128, 255]}.  Return unspecified values.
 @end defun
 
 
