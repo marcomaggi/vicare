@@ -5727,6 +5727,26 @@ in the bytevector.
 @end defun
 
 
+@defun string->cstring @var{bv}
+@defunx string->guarded-cstring @var{bv}
+Convert from a Scheme string to an @asciiz{} string.  If successful
+return a pointer object referencing the string, else return @false{}.
+
+Memory allocated by @func{string->cstring} must be explicitly
+released by @func{free}; memory allocated by
+@func{string->guarded-cstring} is automatically released by the
+garbage collector whenever the returned pointer is garbage collected.
+@end defun
+
+
+@defun cstring->string @var{pointer}
+@defunx cstring->string @var{pointer} @var{count}
+Convert between an @asciiz{} string and a Scheme string.  When used,
+@var{count} must be a fixnum representing the number of bytes to include
+in the string.
+@end defun
+
+
 @defun strlen @var{pointer}
 Interface to the C function @cfunc{strlen}, @glibcref{String Length,
 strlen}.  Return an exact integer representing the length of the

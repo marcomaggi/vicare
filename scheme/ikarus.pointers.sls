@@ -44,6 +44,7 @@
 
     ;; C strings
     bytevector->cstring			cstring->bytevector
+    string->cstring			cstring->string
     strlen
     strcmp				strncmp
     strdup				strndup
@@ -677,13 +678,38 @@
 (define cstring->bytevector
   (case-lambda
    ((pointer)
-    (cstring->bytevector pointer (strlen pointer)))
+    (define who 'cstring->bytevector)
+    (with-arguments-validation (who)
+	((pointer pointer))
+      (capi.ffi-cstring->bytevector pointer (capi.ffi-strlen pointer))))
    ((pointer count)
     (define who 'cstring->bytevector)
     (with-arguments-validation (who)
 	((pointer		pointer)
 	 (number-of-bytes	count))
       (capi.ffi-cstring->bytevector pointer count)))))
+
+;;; --------------------------------------------------------------------
+
+(define cstring->string
+  (case-lambda
+   ((pointer)
+    (define who 'cstring->string)
+    (with-arguments-validation (who)
+	((pointer pointer))
+      (latin1->string (capi.ffi-cstring->bytevector pointer (capi.ffi-strlen pointer)))))
+   ((pointer count)
+    (define who 'cstring->string)
+    (with-arguments-validation (who)
+	((pointer		pointer)
+	 (number-of-bytes	count))
+      (latin1->string (capi.ffi-cstring->bytevector pointer count))))))
+
+(define (string->cstring str)
+  (define who 'string->cstring)
+  (with-arguments-validation (who)
+      ((string	str))
+    (bytevector->cstring (string->latin1 str))))
 
 
 ;;;; Libffi: C API

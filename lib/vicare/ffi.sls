@@ -52,6 +52,8 @@
     guarded-strdup			guarded-strndup
     cstring->bytevector
     bytevector->cstring			bytevector->guarded-cstring
+    cstring->string
+    string->cstring			string->guarded-cstring
 
     ;; errno interface
     errno
@@ -99,6 +101,11 @@
 ;;;; raw memory allocation
 
 (define %memory-guardian
+  #;(case-lambda
+   ((obj)
+    obj)
+   (()
+    #f))
   (make-guardian))
 
 (define (%free-allocated-memory)
@@ -140,6 +147,10 @@
 
 (define (bytevector->guarded-cstring bv)
   (let ((rv (bytevector->cstring bv)))
+    (and rv (%memory-guardian rv))))
+
+(define (string->guarded-cstring str)
+  (let ((rv (bytevector->cstring (string->latin1 str))))
     (and rv (%memory-guardian rv))))
 
 

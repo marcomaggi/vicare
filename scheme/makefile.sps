@@ -2225,6 +2225,8 @@
 ;;;
     (bytevector->cstring			$for)
     (cstring->bytevector			$for)
+    (string->cstring				$for)
+    (cstring->string				$for)
     (strlen					$for)
     (strcmp					$for)
     (strncmp					$for)

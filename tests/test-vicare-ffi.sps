@@ -379,11 +379,25 @@
 	bv)
     => '#vu8(65 66 67 68))
 
-  #;(check
+  (check
       (let* ((cstr (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
 	     (bv   (ffi.cstring->bytevector cstr 2)))
 	bv)
     => '#vu8(65 66))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((cstr (ffi.string->guarded-cstring "ABCD"))
+	     (str  (ffi.cstring->string cstr)))
+	str)
+    => "ABCD")
+
+  (check
+      (let* ((cstr (ffi.string->guarded-cstring "ABCD"))
+	     (str  (ffi.cstring->string cstr 2)))
+	str)
+    => "AB")
 
 ;;; --------------------------------------------------------------------
 
