@@ -2216,6 +2216,7 @@
     (calloc					$for)
     (free					$for)
     (memcpy					$for)
+    (memcmp					$for)
     (memmove					$for)
     (memset					$for)
     (memory-copy				$for)

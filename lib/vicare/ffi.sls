@@ -39,7 +39,7 @@
     malloc				guarded-malloc
     realloc				guarded-realloc
     calloc				guarded-calloc
-    free
+    free				memcmp
     memcpy				memmove
     memset				memory-copy
     memory->bytevector			bytevector->memory

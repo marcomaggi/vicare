@@ -311,6 +311,15 @@ ikrt_memset (ikptr ptr, ikptr byte, ikptr size)
   memset(VICARE_POINTER_DATA_VOIDP(ptr), unfix(byte), unfix(size));
   return void_object;
 }
+ikptr
+ikrt_memcmp (ikptr pointer1, ikptr pointer2, ikptr count)
+{
+  int   rv;
+  rv = memcmp(VICARE_POINTER_DATA_VOIDP(pointer1),
+              VICARE_POINTER_DATA_VOIDP(pointer2),
+              unfix(count));
+  return fix(rv);
+}
 
 /* ------------------------------------------------------------------ */
 

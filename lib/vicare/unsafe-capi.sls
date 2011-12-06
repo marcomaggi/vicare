@@ -39,7 +39,7 @@
     ffi-realloc				ffi-calloc
 
     ffi-memcpy				ffi-memmove
-    ffi-memset
+    ffi-memset				ffi-memcmp
     ffi-memory->bytevector		ffi-bytevector->memory
 
     ffi-pointer?			ffi-pointer-null?
@@ -312,6 +312,9 @@
 
 (define-inline (ffi-memcpy dst src size)
   (foreign-call "ikrt_memcpy" dst src size))
+
+(define-inline (ffi-memcmp ptr1 ptr2 count)
+  (foreign-call "ikrt_memcmp" ptr1 ptr2 count))
 
 (define-inline (ffi-memmove dst src size)
   (foreign-call "ikrt_memmove" dst src size))

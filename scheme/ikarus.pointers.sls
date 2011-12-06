@@ -39,6 +39,7 @@
     realloc				calloc
     memcpy				memmove
     memset				memory-copy
+    memcmp
     memory->bytevector			bytevector->memory
 
     ;; errno interface
@@ -595,6 +596,14 @@
        (byte		byte)
        (number-of-bytes	count))
     (capi.ffi-memset ptr byte count)))
+
+(define (memcmp ptr1 ptr2 count)
+  (define who 'memcp)
+  (with-arguments-validation (who)
+      ((pointer		ptr1)
+       (pointer		ptr2)
+       (number-of-bytes	count))
+    (capi.ffi-memcmp ptr1 ptr2 count)))
 
 ;;; --------------------------------------------------------------------
 

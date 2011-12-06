@@ -311,6 +311,30 @@
     => (make-bytevector 123 -9))
 
 ;;; --------------------------------------------------------------------
+;;; memcmp
+
+  (check
+      (let*-values (((count)	4)
+		    ((P P.len)	(ffi.bytevector->guarded-memory '#vu8(1 2 3 4)))
+		    ((Q Q.len)	(ffi.bytevector->guarded-memory '#vu8(1 2 3 4))))
+	(ffi.memcmp P Q count))
+    => 0)
+
+  (check
+      (let*-values (((count)	4)
+		    ((P P.len)	(ffi.bytevector->guarded-memory '#vu8(1 2 3 4)))
+		    ((Q Q.len)	(ffi.bytevector->guarded-memory '#vu8(1 2 8 4))))
+	(negative? (ffi.memcmp P Q count)))
+    => #t)
+
+  (check
+      (let*-values (((count)	4)
+		    ((P P.len)	(ffi.bytevector->guarded-memory '#vu8(1 2 8 4)))
+		    ((Q Q.len)	(ffi.bytevector->guarded-memory '#vu8(1 2 3 4))))
+	(positive? (ffi.memcmp P Q count)))
+    => #t)
+
+;;; --------------------------------------------------------------------
 ;;; memory-copy
 
   (check	;bytevector to bytevector

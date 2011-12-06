@@ -5654,6 +5654,15 @@ Return unspecified values.
 @end defun
 
 
+@defun memcmp @vari{pointer} @varii{pointer} @var{count}
+Interface to the C function @cfunc{memcmp}, @glibcref{String/Array
+Comparison, memcmp}.  Compare @var{count} bytes in the memory blocks
+referenced by @vari{pointer} and @varii{pointer}, return a fixnum
+representing the classic comparison ternary result.  @var{count} must be
+a non--negative fixnum.
+@end defun
+
+
 @defun memory-copy dst dst.start src src.start count
 Copy @var{count} bytes from @var{src} starting at offset @var{src.start}
 to @var{dst} starting at offset @var{dst.start}.  @var{src} and
