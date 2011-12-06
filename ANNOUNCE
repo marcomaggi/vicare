@@ -51,6 +51,12 @@ Notes for revision 0.2d5
 
      setlocale(LC_ALL, "")
 
+* The FFI library  is now (vicare ffi).  FFI  code and documentation has
+  been reviewed.
+
+* A toy library to build and  load shared libraries at runtime using GCC
+  has been added, (vicare gcc).
+
 
 Notes for revision 0.2d4
 ------------------------
