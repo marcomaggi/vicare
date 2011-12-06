@@ -63,6 +63,21 @@ ik_list_to_argv (ikptr x, char **argv)
   }
   argv[i] = NULL;
 }
+void
+ik_list_to_argv_and_argc (ikptr x, char **argv, long *argc)
+/* Given a reference to a list of bytevectors: fill "argv" with pointers
+   to the data areas, setting the last element to NULL; fill "argc" with
+   the lengths of the bytevectors. */
+{
+  int    i;
+  ikptr  bv;
+  for (i=0; pair_tag == tagof(x); x=ref(x, off_cdr), ++i) {
+    bv      = ref(x, off_car);
+    argv[i] = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+    argc[i] = VICARE_BYTEVECTOR_LENGTH(bv);
+  }
+  argv[i] = NULL;
+}
 char**
 ik_list_to_vec (ikptr x)
 {

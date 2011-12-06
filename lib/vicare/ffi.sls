@@ -44,6 +44,10 @@
     memset				memory-copy
     memory->bytevector			bytevector->memory
     bytevector->guarded-memory
+    bytevectors->argv			argv->bytevectors
+    strings->argv			argv->strings
+    bytevectors->guarded-argv
+    strings->guarded-argv
 
     ;; C strings
     strlen
@@ -151,6 +155,14 @@
 
 (define (string->guarded-cstring str)
   (let ((rv (bytevector->cstring (string->latin1 str))))
+    (and rv (%memory-guardian rv))))
+
+(define (bytevectors->guarded-argv bvs)
+  (let ((rv (bytevectors->argv bvs)))
+    (and rv (%memory-guardian rv))))
+
+(define (strings->guarded-argv bvs)
+  (let ((rv (strings->argv bvs)))
     (and rv (%memory-guardian rv))))
 
 

@@ -46,6 +46,7 @@
     ffi-strcmp				ffi-strncmp
     ffi-strdup				ffi-strndup
     ffi-bytevector->cstring		ffi-cstring->bytevector
+    ffi-bytevectors->argv		ffi-argv->bytevectors
 
     ffi-pointer?			ffi-pointer-null?
     ffi-fixnum->pointer			ffi-bignum->pointer
@@ -355,6 +356,12 @@
 
 (define-inline (ffi-strndup pointer count)
   (foreign-call "ikrt_strndup" pointer count))
+
+(define-inline (ffi-bytevectors->argv bvs)
+  (foreign-call "ikrt_argv_from_bytevectors" bvs))
+
+(define-inline (ffi-argv->bytevectors pointer)
+  (foreign-call "ikrt_argv_to_bytevectors" pointer))
 
 ;;; --------------------------------------------------------------------
 

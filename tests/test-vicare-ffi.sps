@@ -466,6 +466,24 @@
 	(negative? (ffi.strncmp cstr1 cstr2 3)))
     => #t)
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((argv (ffi.bytevectors->guarded-argv '(#vu8(65 66 67 68)
+						    #vu8(75 77 77 78)
+						    #vu8(85 86 87 88))))
+	     (strs (ffi.argv->bytevectors argv)))
+	strs)
+    => '(#vu8(65 66 67 68)
+	     #vu8(75 77 77 78)
+	     #vu8(85 86 87 88)))
+
+  (check
+      (let* ((argv (ffi.strings->guarded-argv '("ciao" "hello" "salut")))
+	     (strs (ffi.argv->strings argv)))
+	strs)
+    => '("ciao" "hello" "salut"))
+
   #t)
 
 

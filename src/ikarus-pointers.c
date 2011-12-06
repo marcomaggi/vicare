@@ -441,6 +441,62 @@ ikrt_strndup (ikptr s_pointer, ikptr s_count, ikpcb * pcb)
   return (dst)? ik_pointer_alloc((unsigned long)dst, pcb) : false_object;
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_argv_from_bytevectors (ikptr bvs, ikpcb * pcb)
+/* Convert a list of bytevectors  into a NULL-terminated array of ASCIIZ
+   strings.   Return a pointer referencing the malloc-ed array. */
+{
+  int           argc = ik_list_length(bvs);
+  size_t        total_length;
+  char *        bv_data[argc];
+  long          bv_len[argc];
+  char **       argv;
+  int           len;
+  char *        str;
+  int           i;
+  ik_list_to_argv_and_argc(bvs, bv_data, bv_len);
+  for (i=0, total_length=0; i<argc; total_length += sizeof(char*)+1+bv_len[i++]);
+  total_length += sizeof(char*);
+  argv = malloc(total_length);
+  if (argv) {
+    str = (char*)(((uint8_t*)argv) + sizeof(char*) * (1+argc));
+    for (i=0; i<argc; ++i) {
+      argv[i] = str;
+      len     = bv_len[i];
+      strncpy(str, bv_data[i], len);
+      str[len] = '\0';
+      str += 1+len;
+    }
+    argv[argc] = NULL;
+    return ik_pointer_alloc((unsigned long)argv, pcb);
+  } else
+    return false_object;
+}
+ikptr
+ikrt_argv_to_bytevectors (ikptr s_pointer, ikpcb * pcb)
+{
+  char **       argv = VICARE_POINTER_DATA_VOIDP(s_pointer);
+  ikptr         s_list, s_pair, bv;
+  int           i;
+  s_list = s_pair = ik_pair_alloc(pcb);
+  pcb->root0 = &s_list;
+  {
+    for (i=0; argv[i];) {
+      bv = ik_bytevector_from_cstring(pcb, argv[i]);
+      VICARE_SET_CAR(s_pair, bv);
+      if (argv[++i]) {
+        VICARE_SET_CDR(s_pair, ik_pair_alloc(pcb));
+        s_pair = VICARE_CDR(s_pair);
+      } else
+        VICARE_SET_CDR(s_pair, null_object);
+    }
+  }
+  pcb->root0 = NULL;
+  return s_list;
+}
+
 
 /** --------------------------------------------------------------------
  ** Raw memory getters through pointers.

@@ -2232,6 +2232,10 @@
     (strncmp					$for)
     (strdup					$for)
     (strndup					$for)
+    (bytevectors->argv				$for)
+    (argv->bytevectors				$for)
+    (strings->argv				$for)
+    (argv->strings				$for)
 ;;;
     (pointer-ref-c-uint8			$for)
     (pointer-ref-c-sint8			$for)

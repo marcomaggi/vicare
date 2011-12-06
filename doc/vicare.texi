@@ -5799,6 +5799,47 @@ garbage collected.
 @end defun
 
 
+@defun bytevectors->argv @var{list-of-bytevectors}
+@defunx bytevectors->guarded-argv @var{list-of-bytevectors}
+Given a list of bytevectors: convert them into @asciiz{} strings and
+build a @cnull{} terminated array of C pointers referencing the strings.
+Return a pointer to the array.  The strings and the array are stored in
+a single memory block.
+
+Memory allocated by @func{bytevectors->argv} must be explicitly released
+by @func{free}; memory allocated by @func{bytevectors->guarded-argv} is
+automatically released by the garbage collector whenever the returned
+pointer is garbage collected.
+@end defun
+
+
+@defun argv->bytevectors @var{pointer}
+Given a pointer to a @cnull{} terminated array of C pointers referencing
+@asciiz{} strings: build and return a list of bytevectors holding the
+same bytes of the strings.
+@end defun
+
+
+@defun strings->argv @var{list-of-strings}
+@defunx strings->guarded-argv @var{list-of-strings}
+Given a list of Scheme strings: convert them into @asciiz{} strings and
+build a @cnull{} terminated array of C pointers referencing the strings.
+Return a pointer to the array.  The strings and the array are stored in
+a single memory block.
+
+Memory allocated by @func{strings->argv} must be explicitly released
+by @func{free}; memory allocated by @func{strings->guarded-argv} is
+automatically released by the garbage collector whenever the returned
+pointer is garbage collected.
+@end defun
+
+
+@defun argv->strings @var{pointer}
+Given a pointer to a @cnull{} terminated array of C pointers referencing
+@asciiz{} strings: build and return a list of strings holding the same
+bytes of the strings.
+@end defun
+
 @c page
 @node ffi dl
 @section Accessing foreign objects from Scheme

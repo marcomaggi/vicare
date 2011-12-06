@@ -48,6 +48,8 @@
     strlen
     strcmp				strncmp
     strdup				strndup
+    bytevectors->argv			argv->bytevectors
+    strings->argv			argv->strings
 
     ;; errno interface
     errno
@@ -134,6 +136,14 @@
 (define-argument-validation (null/list-of-symbols who obj)
   (or (null? obj) (and (list? obj) (for-all symbol? obj)))
   (assertion-violation who "expected list of symbols as argument" obj))
+
+(define-argument-validation (list-of-bytevectors who obj)
+  (and (list? obj) (for-all bytevector? obj))
+  (assertion-violation who "expected list of bytevectors as argument" obj))
+
+(define-argument-validation (list-of-strings who obj)
+  (and (list? obj) (for-all string? obj))
+  (assertion-violation who "expected list of strings as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -710,6 +720,32 @@
   (with-arguments-validation (who)
       ((string	str))
     (bytevector->cstring (string->latin1 str))))
+
+;;; --------------------------------------------------------------------
+
+(define (bytevectors->argv bvs)
+  (define who 'bytevectors->argv)
+  (with-arguments-validation (who)
+      ((list-of-bytevectors bvs))
+    (capi.ffi-bytevectors->argv bvs)))
+
+(define (argv->bytevectors pointer)
+  (define who 'argv->bytevectors)
+  (with-arguments-validation (who)
+      ((pointer pointer))
+    (capi.ffi-argv->bytevectors pointer)))
+
+(define (strings->argv strs)
+  (define who 'strings->argv)
+  (with-arguments-validation (who)
+      ((list-of-strings strs))
+    (capi.ffi-bytevectors->argv (map string->latin1 strs))))
+
+(define (argv->strings pointer)
+  (define who 'argv->strings)
+  (with-arguments-validation (who)
+      ((pointer pointer))
+    (map latin1->string (capi.ffi-argv->bytevectors pointer))))
 
 
 ;;;; Libffi: C API
