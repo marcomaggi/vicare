@@ -9,7 +9,8 @@ EXTRA_DIST		= README COPYING GPL-3		\
 dist_doc_DATA		= README COPYING GPL-3
 
 vicare_test_RULES	= test tests long-test long-tests \
-			  test-run test-vie test-exec-modes
+			  test-run test-vie test-exec-modes \
+			  proof proofs
 
 .PHONY: $(vicare_test_RULES) try-vicare-boot boot-image-64-bit
 

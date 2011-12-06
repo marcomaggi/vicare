@@ -31,7 +31,6 @@
 (library (vicare gcc)
   (export
     initialise			define-c-function
-    test
 
     COMPILE-FLAGS		LINK-FLAGS
     CFLAGS			LDFLAGS)
@@ -64,15 +63,17 @@
   ;;
   ;;GCC-FILE must be the filename of the GCC executable.
   ;;
-  ;;TEMPORARY-DIRECTORY must be the pathname of an existing directory on
-  ;;a  partition  with executable  permissions;  it  is  used to  create
-  ;;temporary files, including the shared libraries.
+  ;;TEMPORARY-DIRECTORY  must  be the  string  pathname  of an  existing
+  ;;directory on a partition with  executable permissions; it is used to
+  ;;create temporary files, including the shared libraries.
   ;;
   (define who 'initialise)
   (if (and temporary-directory
 	   (px.file-is-directory? temporary-directory #f)
 	   (px.access temporary-directory (fxior plat.R_OK plat.W_OK)))
-      (set! TMPDIR temporary-directory)
+      (let ((T (string->latin1 (string-append temporary-directory "/vicare-gcc-XXXXXX"))))
+	(glibc.mkdtemp T)
+	(set! TMPDIR (latin1->string T)))
     (error who
       "unable to retrieve pathname of readable and writable directory for temporary files"))
   (if (and gcc-file
@@ -116,11 +117,22 @@
 
 ;;;; compilation and linking commands
 
+#;(define ENV
+  (map (lambda (pair)
+	 (string-append (car pair) "=" (cdr pair)))
+    (px.environ)))
+
 (define (%compile-object-file source-filename object-filename)
+  #;(px.execve GCC (cons GCC (append (CFLAGS) (COMPILE-FLAGS)
+				   `("-o" ,object-filename ,source-filename)))
+	     ENV)
   (px.execv GCC (cons GCC (append (CFLAGS) (COMPILE-FLAGS)
 				  `("-o" ,object-filename ,source-filename)))))
 
 (define (%compile-library-file library-filename object-filename)
+  #;(px.execve GCC (cons GCC (append (LDFLAGS) (LINK-FLAGS)
+				   `("-o" ,library-filename ,object-filename)))
+	     ENV)
   (px.execv GCC (cons GCC (append (LDFLAGS) (LINK-FLAGS)
 				  `("-o" ,library-filename ,object-filename)))))
 
@@ -174,20 +186,6 @@
 	(let ((maker (ffi.make-c-callout retval-type arg-types)))
 	  (maker (ffi.dlsym lib identifier)))
       (error who (ffi.dlerror)))))
-
-
-;;;; test functions
-
-(define (test)
-  (initialise "/usr/local/bin/gcc" "/home/marco/var/tmp/")
-  (let ()
-    (define-c-function void ciao (void)
-  "#include <stdio.h>
-int ciao (int a) {
-  printf(\"ciao\\n\");
-  return 0;
-}")
-    (ciao)))
 
 
 ;;;; done

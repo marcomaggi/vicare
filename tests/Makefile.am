@@ -3,6 +3,7 @@
 testdir				= $(srcdir)
 VICARE_SELECTED_TESTS		= $(testdir)/test-*$(file)*.sps
 VICARE_SELECTED_LONG_TESTS	= $(testdir)/long-test-*$(file)*.sps
+VICARE_SELECTED_PROOFS		= $(testdir)/proof-*$(file)*.sps
 
 VICARE_TEST_SEARCH_PATH	= $(srcdir):$(srcdir)/../lib:$(builddir)/../lib:$(srcdir)/../scheme
 
@@ -16,7 +17,7 @@ VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH)	\
 		  VICARE_SRC_DIR=$(srcdir) VICARE_BUILDDIR=$(builddir)
 VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
 
-.PHONY: test tests test-r6rs
+.PHONY: test tests test-r6rs proof proofs
 
 test tests:
 	@echo
@@ -26,6 +27,11 @@ test tests:
 long-test long-tests:
 	@echo
 	@for f in $(VICARE_SELECTED_LONG_TESTS); do $(VICARE_RUN) $$f; done
+	@echo
+
+proof proofs:
+	@echo
+	@for f in $(VICARE_SELECTED_PROOFS); do $(VICARE_RUN) $$f; done
 	@echo
 
 #page
