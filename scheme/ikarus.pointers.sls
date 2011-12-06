@@ -766,6 +766,8 @@
 			;callback functions of given signature
    arg-checkers		;vector of predicates used to validate arguments
    retval-checker	;predicate used to validate return value
+   arg-types		;vector of symbols representing arg types
+   retval-type		;symbol representing return value type
    ))
 
 ;;Maximum for the hash value of  signature vectors.  It is used to avoid
@@ -819,21 +821,24 @@
   (with-arguments-validation (who)
       ((list	arg-types))
     (let* ((arg-types	(if (equal? '(void) arg-types) '() arg-types))
-	   (type-ids	(vector-map %type-symbol->type-id
+	   (signature	(vector-map %type-symbol->type-id
 			  (list->vector (cons retval-type arg-types)))))
       (unless CIF-TABLE
 	(set! CIF-TABLE (make-hashtable %signature-hash %unsafe.signature=?)))
-      (or (hashtable-ref CIF-TABLE type-ids #f)
-          (let ((cif		(capi.ffi-prep-cif type-ids))
-		(arg-checkers   (if (null? arg-types)
-				    #f
-				  (vector-map %select-type-predicate (list->vector arg-types))))
-		(retval-checker	(if (eq? 'void retval-type)
-				    #f
-				  (%select-type-predicate retval-type))))
+      (or (hashtable-ref CIF-TABLE signature #f)
+          (let* ((cif			(capi.ffi-prep-cif signature))
+		 (arg-types		(if (null? arg-types)
+					    '#()
+					  (list->vector arg-types)))
+		 (arg-checkers		(if (null? arg-types)
+					    #f
+					  (vector-map %select-type-predicate arg-types)))
+		 (retval-checker	(if (eq? 'void retval-type)
+					    #f
+					  (%select-type-predicate retval-type))))
 	    (and cif
-		 (let ((S (make-cif cif #f #f arg-checkers retval-checker)))
-		   (hashtable-set! CIF-TABLE type-ids S)
+		 (let ((S (make-cif cif #f #f arg-checkers retval-checker arg-types retval-type)))
+		   (hashtable-set! CIF-TABLE signature S)
 		   S)))
 	  (if (ffi-enabled?)
 	      (assertion-violation who "failed to initialize C interface" retval-type arg-types)
@@ -854,36 +859,26 @@
        (null/list-of-symbols	arg-types))
     (let ((S (%ffi-prep-cif who retval-type arg-types)))
       (or (cif-callout-maker S)
-	  (let* ((arg-types  (if (or (null? arg-types)
-				     (equal? arg-types '(void)))
-				 '#()
-			       (list->vector arg-types)))
-		 (checkers   (cif-arg-checkers S))
-		 (maker      (lambda (c-function-pointer)
-			       (%callout-maker (cif-cif S) c-function-pointer checkers arg-types))))
+	  (let ((maker (lambda (c-function-pointer)
+			 (%callout-maker S c-function-pointer))))
 	    (set-cif-callout-maker! S maker)
 	    maker)))))
 
-(define (%callout-maker cif c-function-pointer checkers arg-types)
+(define (%callout-maker S c-function-pointer)
   ;;Worker  function  for  Scheme  callout maker  functions.   Return  a
   ;;closure to be called to call a foreign function.
   ;;
-  ;;CIF must  be a poiner  object referencing a Libffi's  call interface
-  ;;data  structure.   C-FUNCTION-POINTER   must  be  a  pointer  object
-  ;;referencing  the foreign  function.   CHECKERS must  be  false or  a
-  ;;vector of predicate functions  used to validate the arguments; false
-  ;;means that  the callout accepts  no arguments.  ARG-TYPES must  be a
-  ;;vector of  symbols representing  the argument types,  it is  used to
-  ;;report descriptive error messages.
+  ;;S must be an instance of the CIF data structure.  C-FUNCTION-POINTER
+  ;;must be a pointer object referencing the foreign function.
   ;;
   (define who '%callout-maker)
   (with-arguments-validation (who)
       ((pointer  c-function-pointer))
-    (let ((user-data (cons cif c-function-pointer)))
+    (let ((user-data (cons (cif-cif S) c-function-pointer)))
       (lambda args	;this is the callout function
-	(%generic-callout-wrapper user-data checkers arg-types args)))))
+	(%generic-callout-wrapper user-data S args)))))
 
-(define (%generic-callout-wrapper user-data checkers arg-types args)
+(define (%generic-callout-wrapper user-data S args)
   ;;Worker function for the wrapper of the actual foreign function: call
   ;;the foreign  function and return  its return value.   This functions
   ;;exists mostly to validate the input arguments.
@@ -892,26 +887,24 @@
   ;;Libffi's  CIF data  structure  and  whose cdr  is  a pointer  object
   ;;representing the address of  the foreign function to call.
   ;;
-  ;;CHECKERS must  be false or a  vector of predicate  functions used to
-  ;;validate  the arguments;  false means  that the  callout  accepts no
-  ;;arguments.
-  ;;
-  ;;ARG-TYPES  must be  a vector  of symbols  representing  the argument
-  ;;types, it is used to report descriptive error messages.
+  ;;S must be an instance of the CIF data structure.
   ;;
   ;;ARGS is the list of arguments in the call.
   ;;
   (define who '%generic-callout-wrapper)
   (let ((args (list->vector args)))
     (arguments-validation-forms
-      (unless (unsafe.fx= (unsafe.vector-length args)
-			  (unsafe.vector-length arg-types))
-	(assertion-violation who "wrong number of arguments" arg-types args))
-      (when checkers
-	(vector-for-each (lambda (arg-pred type arg)
-			   (unless (arg-pred arg)
-			     (assertion-violation who "argument does not match specified type" type arg)))
-	  checkers arg-types args)))
+      (let ((types     (cif-arg-types    S))
+	    (checkers  (cif-arg-checkers S)))
+	(unless (unsafe.fx= (unsafe.vector-length args)
+			    (unsafe.vector-length types))
+	  (assertion-violation who "wrong number of arguments" types args))
+	(when checkers
+	  (vector-for-each (lambda (arg-pred type arg)
+			     (unless (arg-pred arg)
+			       (assertion-violation who
+				 "argument does not match specified type" type arg)))
+	    checkers types args))))
     (capi.ffi-callout user-data args)))
 
 
@@ -929,37 +922,35 @@
        (null/list-of-symbols	arg-types))
     (let ((S (%ffi-prep-cif who retval-type arg-types)))
       (or (cif-callback-maker S)
-	  (let* ((retval-pred	(cif-retval-checker S))
-		 (maker		(lambda (proc)
-				  (%callback-maker (cif-cif S) retval-pred retval-type proc))))
+	  (let ((maker (lambda (proc)
+			 (%callback-maker S proc))))
 	    (set-cif-callback-maker! S maker)
 	    maker)))))
 
-(define (%callback-maker cif retval-pred retval-type proc)
+(define (%callback-maker S proc)
   ;;Worker  function  for Scheme  callback  maker  functions.  Return  a
   ;;pointer to callable machine code.
   ;;
-  ;;CIF must  be a poiner  object referencing a Libffi's  call interface
-  ;;data structure.   RETVAL-PRED must be false or  a predicate function
-  ;;to  validate  the  return  value.   RETVAL-TYPE  must  be  a  symbol
-  ;;representing the return value type, it is used to report descriptive
-  ;;error messages or to avoid checking if no value is returned.
+  ;;S must be  an instance of the CIF data structure.   PROC must be the
+  ;;Scheme function to wrap.
   ;;
   (define who 'callback-generator)
   (with-arguments-validation (who)
       ((procedure  proc))
-    (let ((proc (if (or (eq? retval-type 'void)
-			(not config.arguments-validation))
-		    proc ;no return value to be validated
-		  (lambda args	;This is a wrapper for a Scheme function
-				;that  needs  validation  of the  return
-				;value.
-		    (let ((v (apply proc args)))
-		      (if (retval-pred v)
-			  v
-			(assertion-violation 'callback
-			  "returned value does not match specified type" retval-type v)))))))
-      (or (capi.ffi-prepare-callback (cons cif proc))
+    (let* ((retval-pred	(cif-retval-checker S))
+	   (retval-type (cif-retval-type    S))
+	   (proc	(if (or (eq? retval-type 'void)
+				(not config.arguments-validation))
+			    proc ;no return value to be validated
+			  ;;This is a wrapper for a Scheme function that
+			  ;;needs validation of the return value.
+			  (lambda args
+			    (let ((v (apply proc args)))
+			      (if (retval-pred v)
+				  v
+				(assertion-violation 'callback
+				  "returned value does not match specified type" retval-type v)))))))
+      (or (capi.ffi-prepare-callback (cons (cif-cif S) proc))
 	  (assertion-violation who "internal error building FFI callback")))))
 
 (define (free-c-callback c-callback-pointer)

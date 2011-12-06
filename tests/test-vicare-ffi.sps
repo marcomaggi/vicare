@@ -619,7 +619,7 @@
 	     (callback		(callback-maker (lambda ()
 						  (set! result 123))))
 	     (callout		(callout-maker callback)))
-	(callout 123)
+	(callout)
 	(ffi.free-c-callback callback)
 	result)
     => 123)
