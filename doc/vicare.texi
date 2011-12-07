@@ -5379,6 +5379,61 @@ memory again.
 If @var{pointer} is @cnull{} nothing happens.
 @end defun
 
+
+@defun with-local-storage @var{lengths} @var{proc}
+Call @var{proc} with arguments being pointers to memory blocks allocated
+just for the dynamic extent of @var{proc}.  The number and size of the
+memory blocks is determined by @var{lengths}, which must be a vector of
+non--negative fixnums.
+
+@ignore
+@c This is not clear, so far letting the flow go through with an
+@c exception seems to work (Marco Maggi; Dec  7, 2011)
+
+We must not let control flow go through a call to
+@func{with-local-storage} by raising an exception.  @var{proc}
+@strong{must} return to the caller.
+@end ignore
+
+@strong{NOTE} We must not let control flow go through a call to
+@func{with-local-storage} with an escaping continuation.
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare ffi) ffi.))
+
+;; no allocated memory
+(let ((a 1) (b 2))
+  (ffi.with-local-storage '#()
+    (lambda ()
+      (+ a b 4))))
+@result{} 7
+
+;; allocate a single block of 4 bytes
+(let ((a 1) (b 2))
+  (ffi.with-local-storage '#(4)
+    (lambda (&int32)
+      (ffi.pointer-set-c-sint32! &int32 0 4)
+      (+ a b (ffi.pointer-ref-c-sint32 &int32 0)))))
+@result{} 7
+
+;; allocate two blocks of 4 and 8 bytes
+(let ((a 1) (b 2))
+  (ffi.with-local-storage '#(4 8)
+    (lambda (&int32 &int64)
+      (ffi.pointer-set-c-sint32! &int32 0 4)
+      (ffi.pointer-set-c-sint64! &int64 0 8)
+      (+ a b
+         (ffi.pointer-ref-c-sint32 &int32 0)
+         (ffi.pointer-ref-c-sint64 &int64 0)))))
+@result{} 15
+@end example
+
+The memory blocks are actually allocated on the stack of
+@value{PRJNAME}'s runtime.
+@end defun
+
 @c page
 @node ffi memory poke
 @subsection Poking values

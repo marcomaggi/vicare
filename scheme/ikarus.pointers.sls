@@ -32,7 +32,7 @@
 
     ;; calling functions and callbacks
     make-c-callout			make-c-callback
-    free-c-callback
+    free-c-callback			with-local-storage
 
     ;; raw memory allocation
     malloc				free
@@ -145,6 +145,13 @@
   (and (list? obj) (for-all string? obj))
   (assertion-violation who "expected list of strings as argument" obj))
 
+(define-argument-validation (vector-of-lengths who obj)
+  (and (vector? obj)
+       (vector-for-each (lambda (obj)
+			  (assert (and (fixnum? obj) (unsafe.fx<= 0 obj))))
+	 obj))
+  (assertion-violation who "expected list of non-negative fixnums as argument" obj))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (pathname who obj)
@@ -152,7 +159,7 @@
   (assertion-violation who "expected string or bytevector as pathname argument" obj))
 
 (define-argument-validation (errno who obj)
-  (or (boolean? obj) (and (fixnum? obj) (<= obj 0)))
+  (or (boolean? obj) (and (fixnum? obj) (unsafe.fx<= obj 0)))
   (assertion-violation who "expected boolean or negative fixnum as errno argument" obj))
 
 (define-argument-validation (machine-word who obj)
@@ -746,6 +753,16 @@
   (with-arguments-validation (who)
       ((pointer pointer))
     (map latin1->string (capi.ffi-argv->bytevectors pointer))))
+
+
+;;;; local storage
+
+(define (with-local-storage lengths proc)
+  (define who 'with-local-storage)
+  (with-arguments-validation (who)
+      ((vector-of-lengths	lengths)
+       (procedure		proc))
+    (capi.ffi-with-local-storage lengths proc)))
 
 
 ;;;; Libffi: C API

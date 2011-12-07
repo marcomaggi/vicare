@@ -33,7 +33,7 @@
 
     ;; calling functions and callbacks
     make-c-callout			make-c-callback
-    free-c-callback
+    free-c-callback			with-local-storage
 
     ;; raw memory allocation
     malloc				guarded-malloc

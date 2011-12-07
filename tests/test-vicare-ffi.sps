@@ -908,6 +908,44 @@
   #t)
 
 
+(parametrise ((check-test-name	'local-storage))
+
+  (check
+      (let ((a 1) (b 2))
+	(ffi.with-local-storage '#()
+	  (lambda ()
+	    (+ a b 4))))
+    => 7)
+
+  (check
+      (let ((a 1) (b 2))
+	(ffi.with-local-storage '#(4)
+	  (lambda (&int32)
+	    (ffi.pointer-set-c-sint32! &int32 0 4)
+	    (+ a b (ffi.pointer-ref-c-sint32 &int32 0)))))
+    => 7)
+
+  (check
+      (let ((a 1) (b 2))
+	(ffi.with-local-storage '#(4 8)
+	  (lambda (&int32 &int64)
+	    (ffi.pointer-set-c-sint32! &int32 0 4)
+	    (ffi.pointer-set-c-sint64! &int64 0 8)
+	    (+ a b
+	       (ffi.pointer-ref-c-sint32 &int32 0)
+	       (ffi.pointer-ref-c-sint64 &int64 0)))))
+    => 15)
+
+  (check	;exception going through
+      (catch #f
+	(ffi.with-local-storage '#(4)
+	  (lambda (&int32)
+	    (assertion-violation #f "the error" 1 2 3))))
+    => '(1 2 3))
+
+  #t)
+
+
 (parametrise ((check-test-name	'libc))
 
   (define libc
@@ -981,4 +1019,5 @@
 ;; Local Variables:
 ;; eval: (put 'ffi.case-errno	'scheme-indent-function 1)
 ;; eval: (put 'catch		'scheme-indent-function 1)
+;; eval: (put 'ffi.with-local-storage		'scheme-indent-function 1)
 ;; End:

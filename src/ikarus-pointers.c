@@ -499,6 +499,36 @@ ikrt_argv_to_bytevectors (ikptr s_pointer, ikpcb * pcb)
 
 
 /** --------------------------------------------------------------------
+ ** Local storage.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_with_local_storage (ikptr s_lengths, ikptr s_thunk, ikpcb * pcb)
+{
+  ikptr         code_entry      = ref(s_thunk, off_closure_code);
+  ikptr         code_ptr        = code_entry - off_code_data;
+  int           arity           = VICARE_VECTOR_LENGTH(s_lengths);
+  long          total_length    = 0;
+  long          lengths[arity];
+  int           i;
+  for (i=0; i<arity; ++i)
+    total_length += lengths[i] = (long)unfix(VICARE_VECTOR_REF(s_lengths, i));
+  {
+    uint8_t     buffer[total_length];
+    long        offset;
+    /* Push the arguments on the Scheme stack. */
+    pcb->frame_pointer = pcb->frame_base;
+    for (i=0, offset=0; i<arity; offset+=lengths[i], ++i) {
+      ref(pcb->frame_pointer, -2*wordsize-i*wordsize) =
+        ik_pointer_alloc((unsigned long)&(buffer[offset]), pcb);
+    }
+    /* Call the Scheme procedure. */
+    return ik_exec_code(pcb, code_ptr, fix(-arity), s_thunk);
+  }
+}
+
+
+/** --------------------------------------------------------------------
  ** Raw memory getters through pointers.
  ** ----------------------------------------------------------------- */
 

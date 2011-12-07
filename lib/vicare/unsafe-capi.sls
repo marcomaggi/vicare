@@ -37,6 +37,7 @@
 
     ffi-malloc				ffi-free
     ffi-realloc				ffi-calloc
+    ffi-with-local-storage
 
     ffi-memcpy				ffi-memmove
     ffi-memset				ffi-memcmp
@@ -272,6 +273,9 @@
 
 (define-inline (ffi-free pointer)
   (foreign-call "ikrt_free" pointer))
+
+(define-inline (ffi-with-local-storage lengths thunk)
+  (foreign-call "ikrt_with_local_storage" lengths thunk))
 
 ;;; --------------------------------------------------------------------
 
