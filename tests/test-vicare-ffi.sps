@@ -92,6 +92,14 @@
       (ffi.pointer->integer (ffi.null-pointer))
     => 0)
 
+  (check
+      (ffi.pointer-null? (ffi.null-pointer))
+    => #t)
+
+  (check
+      (ffi.pointer-null? (ffi.integer->pointer 123))
+    => #f)
+
 ;;; --------------------------------------------------------------------
 
   (check

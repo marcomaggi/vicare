@@ -132,7 +132,7 @@ ikrt_is_pointer (ikptr x)
 ikptr
 ikrt_pointer_is_null (ikptr x /*, ikpcb* pcb*/)
 {
-  return ref(x, off_pointer_data)? true_object : false_object;
+  return ref(x, off_pointer_data)? false_object : true_object;
 }
 ikptr
 ikrt_pointer_set_null (ikptr pointer)
