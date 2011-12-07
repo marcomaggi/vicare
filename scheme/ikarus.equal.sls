@@ -38,8 +38,10 @@
   (export equal?)
   (import (except (ikarus)
 		  equal?)
+    (only (ikarus system $foreign)
+	  pointer?)
     (rename (ikarus system $pointers)
-	    ($pointer?	pointer?)
+	    #;($pointer?	pointer?)
 	    ($pointer=	pointer=?)))
 
   (module UNSAFE
