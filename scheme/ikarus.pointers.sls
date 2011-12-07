@@ -83,6 +83,10 @@
     pointer-set-c-float!		pointer-set-c-double!
     pointer-set-c-pointer!)
   (import (ikarus)
+    ;;FIXME STALE  This import form  is to be  removed at the  next boot
+    ;;image rotation (Marco Maggi; Dec  7, 2011).
+    (only (ikarus vectors)
+	  vector-for-all)
     (only (ikarus system $pointers)
 	  #;pointer? $pointer=)
     (vicare syntactic-extensions)
@@ -147,8 +151,8 @@
 
 (define-argument-validation (vector-of-lengths who obj)
   (and (vector? obj)
-       (vector-for-each (lambda (obj)
-			  (assert (and (fixnum? obj) (unsafe.fx<= 0 obj))))
+       (vector-for-all (lambda (obj)
+			 (and (fixnum? obj) (unsafe.fx<= 0 obj)))
 	 obj))
   (assertion-violation who "expected list of non-negative fixnums as argument" obj))
 
