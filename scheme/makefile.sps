@@ -1093,6 +1093,8 @@
     (vector-for-each				i v r ba)
     (vector-length				i v r ba se)
     (vector-map					i v r ba)
+    (vector-for-all				i v)
+    (vector-exists				i v)
     (vector-ref					i v r ba se)
     (vector-set!				i v r ba se)
     (subvector					i v)

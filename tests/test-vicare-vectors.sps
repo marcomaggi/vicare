@@ -813,6 +813,61 @@
   #t)
 
 
+(parametrise ((check-test-name	'for-all))
+
+  (check
+      (vector-for-all even? '#())
+    => #t)
+
+  (check
+      (vector-for-all even? '#(3 1 4 1 5 9))
+    => #f)
+
+  (check
+      (vector-for-all even? '#(2 4 14))
+    => #t)
+
+  (check
+      (vector-for-all (lambda (n) (and (even? n) n))
+		      '#(2 4 14))
+    => 14)
+
+  (check
+      (vector-for-all < '#(1 2 3) '#(2 3 4))
+    => #t)
+
+  (check
+      (vector-for-all < '#(1 2 4) '#(2 3 4))
+    => #f)
+
+  (check
+      (vector-exists even? '#(3 1 4 1 5 9))
+    => #t)
+
+  (check
+      (vector-exists even? '#(3 1 1 5 9))
+    => #f)
+
+  (check
+      (vector-exists even? '#())
+    => #f)
+
+  (check
+      (vector-exists (lambda (n) (and (even? n) n))
+		     '#(2 1 4 14))
+    => 2)
+
+  (check
+      (vector-exists < '#(1 2 4) '#(2 3 4))
+    => #t)
+
+  (check
+      (vector-exists > '#(1 2 3) '#(2 3 4))
+    => #f)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

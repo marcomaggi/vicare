@@ -2843,6 +2843,43 @@ Copy @var{count} items from @var{src.vec} starting at @var{src.start}
 unspecified values.
 @end defun
 
+
+@deffn Procedure vector-for-all @var{proc} @vari{vec} @varii{vec} @dots{} @varn{vec}
+@deffnx Procedure vector-exists @var{proc} @vari{vec} @varii{vec} @dots{} @varn{vec}
+The @var{vec}s should all have the same length, and @var{proc} should
+accept @math{N} arguments and return a single value.  @var{proc} should
+not mutate the @var{vec} arguments.
+
+For natural numbers @math{i = 0, 1, @dots{}}, the @func{vector-for-all}
+procedure successively applies @var{proc} to arguments @math{x_i^1
+@dots{} x_i^N}, where @math{x_i^j} is the @math{i}-th element of
+@var{vecj}, until @false{} is returned.
+
+If @var{proc} returns true values for all but the last element of
+@vari{vec}, @func{vector-for-all} performs a tail call of @var{proc} on
+the @math{k}-th elements, where @math{k} is the length of @vari{vec}.
+If @var{proc} returns @false{} on any set of elements,
+@func{vector-for-all} returns @false{} after the first such application
+of @var{proc}.  If the @var{vec}s are all empty, @func{vector-for-all}
+returns @true{}.
+
+For natural numbers @math{i = 0, 1, @dots{}}, the @func{vector-exists}
+procedure applies @var{proc} successively to arguments @math{x_i^1
+@dots{} x_i^n}, where @math{x_i^j} is the @math{i}-th element of
+@var{vecj}, until a true value is returned.
+
+If @var{proc} returns @false{} for all but the last elements of the
+@var{vec}s, @func{vector-exists} performs a tail call of @var{proc} on
+the @math{k}-th elements, where @math{k} is the length of @vari{vec}.
+If @var{proc} returns a true value on any set of elements,
+@func{vector-exists} returns that value after the first such application
+of @var{proc}.  If the @var{vec}s are all empty, @func{vector-exists}
+returns @false{}.
+
+@var{proc} is always called in the same dynamic environment as
+@func{vector-for-all} or, respectively, @func{vector-exists} itself.
+@end deffn
+
 @c page
 @node iklib symbols
 @section Additional symbol functions

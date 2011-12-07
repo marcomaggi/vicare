@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Copyright (C) 2006,2007,2008,2011  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -21,6 +21,7 @@
     vector-ref		vector-set!
     vector->list	list->vector
     vector-map		vector-for-each
+    vector-for-all	vector-exists
     vector-fill!	vector-append
     vector-copy		vector-copy!)
   (import (except (ikarus)
@@ -29,6 +30,7 @@
 		  vector-ref		vector-set!
 		  vector->list		list->vector
 		  vector-map		vector-for-each
+		  vector-for-all	vector-exists
 		  vector-fill!		vector-append
 		  vector-copy		vector-copy!)
     (vicare syntactic-extensions)
@@ -495,6 +497,54 @@
 				 (f i (unsafe.cdr v*))))))
 		(f p v0 v1 v* (unsafe.fxadd1 i) n))))))))
    ))
+
+
+(define-syntax define-vector-iterator
+  (syntax-rules ()
+    ((_ ?name ?combine)
+     (define (?name proc vec . vectors)
+       (define who '?name)
+       (define (iterator-1 proc vec)
+	 (unless (vector? vec)
+	   (assertion-violation who "not a vector" vec))
+	 (let ((len (vector-length vec)))
+	   (if (zero? len)
+	       (?combine) ;not PROC!!!
+	     (let ((len-1 (- len 1)))
+	       (let loop ((i 0))
+		 (if (= i len-1)
+		     (proc (vector-ref vec i)) ;tail call deciding the return value
+		   (?combine (proc (vector-ref vec i))
+			     (loop (+ 1 i)))))))))
+       (define (iterator-n proc vectors)
+	 ;;To be called with 2 or more vector arguments.
+	 ;;
+	 (let loop ((vectors vectors))
+	   (unless (null? vectors)
+	     (if (vector? (car vectors))
+		 (loop (cdr vectors))
+	       (assertion-violation who "not a vector" (car vectors)))))
+	 (let ((len (vector-length (car vectors))))
+	   (unless (for-all (lambda (vec)
+			      (= len (vector-length vec)))
+		     (cdr vectors))
+	     (assertion-violation who "length mismatch" vectors))
+	   (let ((len-1 (- len 1)))
+	     (let loop ((i 0))
+	       (if (= i len-1)
+		   (apply proc (map (lambda (vec)
+				      (vector-ref vec i))
+				 vectors)) ;tail call deciding the return value
+		 (?combine (apply proc (map (lambda (vec)
+					      (vector-ref vec i))
+					 vectors))
+			   (loop (+ 1 i))))))))
+       (if (null? vectors)
+	   (iterator-1 proc vec)
+	 (iterator-n proc (cons vec vectors)))))))
+
+(define-vector-iterator vector-for-all and)
+(define-vector-iterator vector-exists  or)
 
 
 (define vector-append
