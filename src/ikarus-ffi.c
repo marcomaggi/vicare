@@ -526,13 +526,6 @@ ikrt_ffi_prepare_callback (ikptr s_data, ikpcb* pcb)
 #endif /* if FFI_CLOSURES */
 }
 ikptr
-ikrt_prepare_callback (ikptr s_data, ikpcb* pcb)
-/* FIXME  STALE To be  removed at  the next  boot image  rotation (Marco
-   Maggi; Mon Dec 5, 2011). */
-{
-  return ikrt_ffi_prepare_callback(s_data, pcb);
-}
-ikptr
 ikrt_ffi_release_callback (ikptr s_callable_pointer, ikpcb * pcb)
 {
   ik_callback_locative *  root;

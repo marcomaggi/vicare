@@ -2806,13 +2806,6 @@ ikrt_posix_nanosleep (ikptr secs, ikptr nsecs, ikpcb * pcb)
   } else
     return ik_errno_to_code();
 }
-ikptr
-ikrt_nanosleep (ikptr secs, ikptr nsecs, ikpcb * pcb)
-/* FIXME  STALE To be  removed at  the next  boot image  rotation (Marco
-   Maggi; Nov 23, 2011). */
-{
-  return ikrt_posix_nanosleep(secs, nsecs, pcb);
-}
 
 /* ------------------------------------------------------------------ */
 

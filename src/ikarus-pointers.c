@@ -172,13 +172,6 @@ ikrt_bn_to_pointer (ikptr x, ikpcb* pcb)
    the simplest  and safest  way to correctly  handle the full  range of
    possible pointer values. */
 
-/* FIXME  STALE To be  removed at  the next  boot image  rotation (Marco
-   Maggi; Dec 1, 2011). */
-ikptr
-ikrt_pointer_diff (ikptr ptr1, ikptr ptr2, ikpcb * pcb)
-{
-  return false_object;
-}
 ikptr
 ikrt_pointer_add (ikptr ptr, ikptr delta, ikpcb * pcb)
 {
