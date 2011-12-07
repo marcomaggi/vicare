@@ -18,6 +18,7 @@
 (library (ikarus.pointers)
   (export
     ;; pointer objects
+    pointer?
     null-pointer			pointer-null?
     pointer->integer			integer->pointer
     pointer-diff			pointer-add
@@ -86,10 +87,10 @@
   (import (ikarus)
     ;;FIXME STALE  This import form  is to be  removed at the  next boot
     ;;image rotation (Marco Maggi; Dec  7, 2011).
-    (only (ikarus vectors)
+    #;(only (ikarus vectors)
 	  vector-for-all)
     (only (ikarus system $pointers)
-	  #;pointer? $pointer=)
+	  $pointer=)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
@@ -381,7 +382,7 @@
 
 (define (pointer? obj)
   ;;FIXME Why  in hell do I have  to keep this function  rather than use
-  ;;the   FIXNUM?  primitive  operation   exported  by   (ikarus  system
+  ;;the  $FIXNUM?   primitive   operation  exported  by  (ikarus  system
   ;;$pointers)? (Marco Maggi; Nov 30, 2011)
   ;;
   (capi.ffi-pointer? obj))

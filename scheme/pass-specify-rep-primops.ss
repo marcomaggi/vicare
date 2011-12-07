@@ -2741,7 +2741,7 @@
 ;;
 (section
 
- (define-primop pointer? safe
+ (define-primop $pointer? safe
    ((P x)
     (sec-tag-test (T x) vector-mask vector-tag #f pointer-tag))
    ((E x) (nop)))

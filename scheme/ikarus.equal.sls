@@ -39,7 +39,7 @@
   (import (except (ikarus)
 		  equal?)
     (rename (ikarus system $pointers)
-	    (pointer?	pointer?)
+	    ($pointer?	pointer?)
 	    ($pointer=	pointer=?)))
 
   (module UNSAFE

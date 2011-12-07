@@ -812,7 +812,7 @@
 
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $pointers)
-    (pointer?					$pointers $for)
+    ($pointer?					$pointers)
     ($pointer=					$pointers)
 
 ;;;
@@ -2190,6 +2190,7 @@
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $foreign)
     (errno					$for)
+    (pointer?					$for)
     (null-pointer				$for)
     (pointer->integer				$for)
     (integer->pointer				$for)

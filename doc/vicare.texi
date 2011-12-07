@@ -10740,7 +10740,7 @@ In the following definitions the @var{ptr} arguments must be pointer
 objects.
 
 
-@defun pointer? @var{obj}
+@deffn {Primitive Operation} $pointer? @var{obj}
 Return @true{} if @var{obj} is a reference to a pointer memory block,
 else return @false{}.
 @end defun
