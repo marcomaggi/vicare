@@ -10743,7 +10743,7 @@ objects.
 @deffn {Primitive Operation} $pointer? @var{obj}
 Return @true{} if @var{obj} is a reference to a pointer memory block,
 else return @false{}.
-@end defun
+@end deffn
 
 
 @deffn {Unsafe Operation} $pointer= @vari{ptr} @varii{ptr}
