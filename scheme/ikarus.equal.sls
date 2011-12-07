@@ -41,7 +41,6 @@
     (only (ikarus system $foreign)
 	  pointer?)
     (rename (ikarus system $pointers)
-	    #;($pointer?	pointer?)
 	    ($pointer=	pointer=?)))
 
   (module UNSAFE
