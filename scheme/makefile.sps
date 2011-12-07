@@ -2239,6 +2239,7 @@
     (argv->bytevectors				$for)
     (strings->argv				$for)
     (argv->strings				$for)
+    (argv-length				$for)
 ;;;
     (pointer-ref-c-uint8			$for)
     (pointer-ref-c-sint8			$for)

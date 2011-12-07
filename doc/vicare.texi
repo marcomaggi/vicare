@@ -5932,6 +5932,12 @@ Given a pointer to a @cnull{} terminated array of C pointers referencing
 bytes of the strings.
 @end defun
 
+
+@defun argv-length @var{argv}
+Return the number of strings in the @cnull{}--terminated array of
+strings referenced by the @var{argv} pointer.
+@end defun
+
 @c page
 @node ffi dl
 @section Accessing foreign objects from Scheme

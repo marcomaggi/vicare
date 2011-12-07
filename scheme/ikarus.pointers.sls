@@ -50,6 +50,7 @@
     strdup				strndup
     bytevectors->argv			argv->bytevectors
     strings->argv			argv->strings
+    argv-length
 
     ;; errno interface
     errno
@@ -757,6 +758,12 @@
   (with-arguments-validation (who)
       ((pointer pointer))
     (map latin1->string (capi.ffi-argv->bytevectors pointer))))
+
+(define (argv-length pointer)
+  (define who 'argv-length)
+  (with-arguments-validation (who)
+      ((pointer pointer))
+    (capi.ffi-argv-length pointer)))
 
 
 ;;;; local storage

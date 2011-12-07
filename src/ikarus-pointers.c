@@ -496,6 +496,14 @@ ikrt_argv_to_bytevectors (ikptr s_pointer, ikpcb * pcb)
   pcb->root0 = NULL;
   return s_list;
 }
+ikptr
+ikrt_argv_length (ikptr s_pointer)
+{
+  char **       argv = VICARE_POINTER_DATA_VOIDP(s_pointer);
+  long          length;
+  for (length=0; argv[length]; ++length);
+  return fix(length);
+}
 
 
 /** --------------------------------------------------------------------

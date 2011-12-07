@@ -484,6 +484,13 @@
 	strs)
     => '("ciao" "hello" "salut"))
 
+  (check
+      (let ((argv (ffi.bytevectors->guarded-argv '(#vu8(65 66 67 68)
+						       #vu8(75 77 77 78)
+						       #vu8(85 86 87 88)))))
+	(ffi.argv-length argv))
+    => 3)
+
   #t)
 
 

@@ -48,6 +48,7 @@
     strings->argv			argv->strings
     bytevectors->guarded-argv
     strings->guarded-argv
+    argv-length
 
     ;; C strings
     strlen

@@ -48,6 +48,7 @@
     ffi-strdup				ffi-strndup
     ffi-bytevector->cstring		ffi-cstring->bytevector
     ffi-bytevectors->argv		ffi-argv->bytevectors
+    ffi-argv-length
 
     ffi-pointer?			ffi-pointer-null?
     ffi-fixnum->pointer			ffi-bignum->pointer
@@ -366,6 +367,9 @@
 
 (define-inline (ffi-argv->bytevectors pointer)
   (foreign-call "ikrt_argv_to_bytevectors" pointer))
+
+(define-inline (ffi-argv-length pointer)
+  (foreign-call "ikrt_argv_length" pointer))
 
 ;;; --------------------------------------------------------------------
 
