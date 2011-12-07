@@ -85,10 +85,6 @@
     pointer-set-c-float!		pointer-set-c-double!
     pointer-set-c-pointer!)
   (import (ikarus)
-    ;;FIXME STALE  This import form  is to be  removed at the  next boot
-    ;;image rotation (Marco Maggi; Dec  7, 2011).
-    #;(only (ikarus vectors)
-	  vector-for-all)
     (only (ikarus system $pointers)
 	  $pointer=)
     (vicare syntactic-extensions)
