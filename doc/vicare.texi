@@ -5325,7 +5325,7 @@ that:
 
 (pointer=? ptr1
            (pointer-add ptr2
-                        (ffi.pointer-diff ptr1 ptr2)))
+                        (pointer-diff ptr1 ptr2)))
 @result{} #t
 @end example
 @end defun
