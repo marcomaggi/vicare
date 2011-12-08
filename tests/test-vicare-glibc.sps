@@ -163,6 +163,11 @@
 
 (parametrise ((check-test-name	'random))
 
+  (check
+      (begin
+	(glibc.srand 10)
+	(integer? (glibc.rand)))
+    => #t)
 
   #t)
 
