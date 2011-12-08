@@ -45,8 +45,14 @@
     if-nameindex
 
     ;; mathematics
-    csin	ccos		ctan
-    casin	cacos		catan
+    csin		ccos		ctan
+    casin		cacos		catan
+    cexp		clog		clog10
+    csqrt		cpow
+    glibc-sinh		glibc-cosh	glibc-tanh
+    glibc-asinh		glibc-acosh	glibc-atanh
+    csinh		ccosh		ctanh
+    casinh		cacosh		catanh
     )
   (import (ikarus)
     (prefix (only (ikarus.posix)
@@ -225,44 +231,73 @@
 
 ;;;; mathematics
 
-(define-for-glibc (csin X)
-  (define who 'csin)
-  (with-arguments-validation (who)
-      ((cflonum	X))
-    (capi.glibc-csin X)))
+(define-syntax define-one-operand/flonum
+  (syntax-rules ()
+    ((_ ?who ?func)
+     (define-for-glibc (?who X)
+       (define who '?who)
+       (with-arguments-validation (who)
+	   ((flonum	X))
+	 (?func X))))))
 
-(define-for-glibc (ccos X)
-  (define who 'ccos)
-  (with-arguments-validation (who)
-      ((cflonum	X))
-    (capi.glibc-ccos X)))
-
-(define-for-glibc (ctan X)
-  (define who 'ctan)
-  (with-arguments-validation (who)
-      ((cflonum	X))
-    (capi.glibc-ctan X)))
+(define-syntax define-two-operands/flonum
+  (syntax-rules ()
+    ((_ ?who ?func)
+     (define-for-glibc (?who X Y)
+       (define who '?who)
+       (with-arguments-validation (who)
+	   ((flonum	X)
+	    (flonum	Y))
+	 (?func X Y))))))
 
 ;;; --------------------------------------------------------------------
 
-(define-for-glibc (casin X)
-  (define who 'casin)
-  (with-arguments-validation (who)
-      ((cflonum	X))
-    (capi.glibc-casin X)))
+(define-syntax define-one-operand/cflonum
+  (syntax-rules ()
+    ((_ ?who ?func)
+     (define-for-glibc (?who X)
+       (define who '?who)
+       (with-arguments-validation (who)
+	   ((cflonum	X))
+	 (?func X))))))
 
-(define-for-glibc (cacos X)
-  (define who 'cacos)
-  (with-arguments-validation (who)
-      ((cflonum	X))
-    (capi.glibc-cacos X)))
+(define-syntax define-two-operands/cflonum
+  (syntax-rules ()
+    ((_ ?who ?func)
+     (define-for-glibc (?who X Y)
+       (define who '?who)
+       (with-arguments-validation (who)
+	   ((cflonum	X)
+	    (cflonum	Y))
+	 (?func X Y))))))
 
-(define-for-glibc (catan X)
-  (define who 'catan)
-  (with-arguments-validation (who)
-      ((cflonum	X))
-    (capi.glibc-catan X)))
+;;; --------------------------------------------------------------------
 
+(define-one-operand/cflonum csin	capi.glibc-csin)
+(define-one-operand/cflonum ccos	capi.glibc-ccos)
+(define-one-operand/cflonum ctan	capi.glibc-ctan)
+(define-one-operand/cflonum casin	capi.glibc-casin)
+(define-one-operand/cflonum cacos	capi.glibc-cacos)
+(define-one-operand/cflonum catan	capi.glibc-catan)
+
+(define-one-operand/cflonum cexp	capi.glibc-cexp)
+(define-one-operand/cflonum clog	capi.glibc-clog)
+(define-one-operand/cflonum clog10	capi.glibc-clog10)
+(define-one-operand/cflonum csqrt	capi.glibc-csqrt)
+(define-two-operands/cflonum cpow	capi.glibc-cpow)
+
+(define-one-operand/flonum glibc-sinh	capi.glibc-sinh)
+(define-one-operand/flonum glibc-cosh	capi.glibc-cosh)
+(define-one-operand/flonum glibc-tanh	capi.glibc-tanh)
+(define-one-operand/flonum glibc-asinh	capi.glibc-asinh)
+(define-one-operand/flonum glibc-acosh	capi.glibc-acosh)
+(define-one-operand/flonum glibc-atanh	capi.glibc-atanh)
+(define-one-operand/cflonum csinh	capi.glibc-csinh)
+(define-one-operand/cflonum ccosh	capi.glibc-ccosh)
+(define-one-operand/cflonum ctanh	capi.glibc-ctanh)
+(define-one-operand/cflonum casinh	capi.glibc-casinh)
+(define-one-operand/cflonum cacosh	capi.glibc-cacosh)
+(define-one-operand/cflonum catanh	capi.glibc-catanh)
 
 
 ;;;; done

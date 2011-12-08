@@ -641,6 +641,8 @@ AC_CACHE_SAVE
 AC_CHECK_FUNCS([clearenv dirfd mkstemp mkdtemp sync fsync fdatasync])
 AC_CHECK_FUNCS([creal cimag])
 AC_CHECK_FUNCS([csin ccos ctan casin cacos catan])
+AC_CHECK_FUNCS([cexp clog clog10 csqrt cpow])
+AC_CHECK_FUNCS([sinh cosh tanh csinh ccosh ctanh asinh acosh atanh casinh cacosh catanh])
 
 AC_CACHE_SAVE
 

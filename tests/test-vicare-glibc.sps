@@ -124,6 +124,25 @@
   (check (cflonum? (glibc.cacos 1.2+3.4i))	=> #t)
   (check (cflonum? (glibc.catan 1.2+3.4i))	=> #t)
 
+  (check (cflonum? (glibc.cexp 1.2+3.4i))	=> #t)
+  (check (cflonum? (glibc.clog 1.2+3.4i))	=> #t)
+  (check (cflonum? (glibc.clog10 1.2+3.4i))	=> #t)
+  (check (cflonum? (glibc.csqrt 1.2+3.4i))	=> #t)
+  (check (cflonum? (glibc.cpow 1.2+3.4i 5.6+7.8i))	=> #t)
+
+  (check (flonum? (glibc.glibc-sinh 1.2))	=> #t)
+  (check (flonum? (glibc.glibc-cosh 1.2))	=> #t)
+  (check (flonum? (glibc.glibc-tanh 1.2))	=> #t)
+  (check (flonum? (glibc.glibc-asinh 1.2))	=> #t)
+  (check (flonum? (glibc.glibc-acosh 1.2))	=> #t)
+  (check (flonum? (glibc.glibc-atanh 1.2))	=> #t)
+  (check (cflonum? (glibc.csinh 1.2+3.4i))	=> #t)
+  (check (cflonum? (glibc.ccosh 1.2+3.4i))	=> #t)
+  (check (cflonum? (glibc.ctanh 1.2+3.4i))	=> #t)
+  (check (cflonum? (glibc.casinh 1.2+3.4i))	=> #t)
+  (check (cflonum? (glibc.cacosh 1.2+3.4i))	=> #t)
+  (check (cflonum? (glibc.catanh 1.2+3.4i))	=> #t)
+
   #t)
 
 

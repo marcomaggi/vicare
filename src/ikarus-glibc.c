@@ -317,6 +317,200 @@ ikrt_glibc_catan (ikptr s_X, ikpcb * pcb)
 #endif
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_glibc_cexp (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_CEXP
+  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        Y   = cexp(X);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_clog (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_CLOG
+  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        Y   = clog(X);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_clog10 (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_CLOG10
+  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        Y   = clog10(X);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_csqrt (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_CSQRT
+  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        Y   = csqrt(X);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_cpow (ikptr s_base, ikptr s_power, ikpcb * pcb)
+{
+#ifdef HAVE_CPOW
+  complex double  base  = CFLONUM_DATA_REAL(s_base)  + CFLONUM_DATA_REAL(s_base)  * _Complex_I;
+  complex double  power = CFLONUM_DATA_REAL(s_power) + CFLONUM_DATA_REAL(s_power) * _Complex_I;
+  complex double  Y     = cpow(base, power);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_glibc_sinh (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_SINH
+  double        X   = FLONUM_DATA(s_X);
+  double        Y   = sinh(X);
+  return ik_flonum_alloc(pcb, Y);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_cosh (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_COSH
+  double        X   = FLONUM_DATA(s_X);
+  double        Y   = cosh(X);
+  return ik_flonum_alloc(pcb, Y);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_tanh (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_TANH
+  double        X   = FLONUM_DATA(s_X);
+  double        Y   = tanh(X);
+  return ik_flonum_alloc(pcb, Y);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_csinh (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_CSINH
+  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        Y   = csinh(X);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_ccosh (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_CCOSH
+  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        Y   = ccosh(X);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_ctanh (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_CTANH
+  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        Y   = ctanh(X);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_asinh (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_ASINH
+  double        X   = FLONUM_DATA(s_X);
+  double        Y   = asinh(X);
+  return ik_flonum_alloc(pcb, Y);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_acosh (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_ACOSH
+  double        X   = FLONUM_DATA(s_X);
+  double        Y   = acosh(X);
+  return ik_flonum_alloc(pcb, Y);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_atanh (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_ATANH
+  double        X   = FLONUM_DATA(s_X);
+  double        Y   = atanh(X);
+  return ik_flonum_alloc(pcb, Y);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_casinh (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_CASINH
+  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        Y   = casinh(X);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_cacosh (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_CACOSH
+  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        Y   = cacosh(X);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_catanh (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_CATANH
+  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        Y   = catanh(X);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
+
 
 /** --------------------------------------------------------------------
  ** Miscellaneous functions.

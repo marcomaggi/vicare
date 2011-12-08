@@ -3025,6 +3025,10 @@ not both flonums.
 The following bindings are exported by the @library{ikarus} and
 @library{vicare} libraries.
 
+@c ------------------------------------------------------------
+
+@subsubheading Exponents and logarithms
+
 
 @defun fllog1p @var{fl}
 Return a flonum equivalent to @math{log(1 + @var{fl})}.
@@ -3035,6 +3039,24 @@ Return a flonum equivalent to @math{log(1 + @var{fl})}.
 Return a flonum equivalent to @math{exp(@var{fl}) - 1}.
 @end defun
 
+
+@c ------------------------------------------------------------
+
+@subsubheading Hyperbolic functions
+
+
+@defun sinh @var{fl}
+@defunx cosh @var{fl}
+@defunx tanh @var{fl}
+Hyperbolic functions for flonums.
+@end defun
+
+
+@defun asinh @var{fl}
+@defunx acosh @var{fl}
+@defunx atanh @var{fl}
+Inverse hyperbolic functions for flonums.
+@end defun
 
 @c page
 @node iklib load
@@ -9632,6 +9654,10 @@ probably faster than the ones implemented by the @rnrs{6} libraries.
 All the arguments @var{fl} must be flonums, all the arguments @var{cfl}
 must be complex flonums.
 
+@c ------------------------------------------------------------
+
+@subsubheading Trigonometric functions
+
 
 @defun csin @var{cfl}
 @defunx ccos @var{cfl}
@@ -9645,6 +9671,69 @@ Trigonometric functions for complex flonums.
 @defunx catan @var{cfl}
 Inverse trigonometric functions for complex flonums.
 @end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Exponents and logarithms
+
+
+@defun cexp @var{cfl}
+Return the base of the natural logarithms raised to the power of the
+operand.
+@end defun
+
+
+@defun clog @var{cfl}
+Return the natural logarithm of the operand.
+@end defun
+
+
+@defun clog10 @var{cfl}
+Return the base @math{10} logarithm of the operand.
+@end defun
+
+
+@defun csqrt @var{cfl}
+Return the square root of the operand.
+@end defun
+
+
+@defun cpow @vari{cfl} @varii{cfl}
+Return @vari{cfl} raised to the power of @varii{cfl}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Hyperbolic functions
+
+
+@defun glibc-sinh @var{fl}
+@defunx glibc-cosh @var{fl}
+@defunx glibc-tanh @var{fl}
+Hyperbolic functions for flonums.
+@end defun
+
+
+@defun glibc-asinh @var{fl}
+@defunx glibc-acosh @var{fl}
+@defunx glibc-atanh @var{fl}
+Inverse hyperbolic functions for flonums.
+@end defun
+
+
+@defun csinh @var{cfl}
+@defunx ccosh @var{cfl}
+@defunx ctanh @var{cfl}
+Hyperbolic functions for complex flonums.
+@end defun
+
+
+@defun casinh @var{cfl}
+@defunx cacosh @var{cfl}
+@defunx catanh @var{cfl}
+Inverse hyperbolic functions for complex flonums.
+@end defun
+
 
 
 @c page

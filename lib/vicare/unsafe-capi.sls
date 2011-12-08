@@ -234,6 +234,12 @@
     ;; mathematics
     glibc-csin		glibc-ccos	glibc-ctan
     glibc-casin		glibc-cacos	glibc-catan
+    glibc-cexp		glibc-clog	glibc-clog10
+    glibc-csqrt		glibc-cpow
+    glibc-sinh		glibc-cosh	glibc-tanh
+    glibc-csinh		glibc-ccosh	glibc-ctanh
+    glibc-asinh		glibc-acosh	glibc-atanh
+    glibc-casinh	glibc-cacosh	glibc-catanh
     )
   (import (except (ikarus)
 		  posix-read	posix-write
@@ -1286,6 +1292,61 @@
 
 (define-inline (glibc-catan X)
   (foreign-call "ikrt_glibc_catan" X))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (glibc-cexp X)
+  (foreign-call "ikrt_glibc_cexp" X))
+
+(define-inline (glibc-clog X)
+  (foreign-call "ikrt_glibc_clog" X))
+
+(define-inline (glibc-clog10 X)
+  (foreign-call "ikrt_glibc_clog10" X))
+
+(define-inline (glibc-csqrt X)
+  (foreign-call "ikrt_glibc_csqrt" X))
+
+(define-inline (glibc-cpow X Y)
+  (foreign-call "ikrt_glibc_cpow" X Y))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (glibc-sinh X)
+  (foreign-call "ikrt_glibc_sinh" X))
+
+(define-inline (glibc-cosh X)
+  (foreign-call "ikrt_glibc_cosh" X))
+
+(define-inline (glibc-tanh X)
+  (foreign-call "ikrt_glibc_tanh" X))
+
+(define-inline (glibc-csinh X)
+  (foreign-call "ikrt_glibc_csinh" X))
+
+(define-inline (glibc-ccosh X)
+  (foreign-call "ikrt_glibc_ccosh" X))
+
+(define-inline (glibc-ctanh X)
+  (foreign-call "ikrt_glibc_ctanh" X))
+
+(define-inline (glibc-asinh X)
+  (foreign-call "ikrt_glibc_asinh" X))
+
+(define-inline (glibc-acosh X)
+  (foreign-call "ikrt_glibc_acosh" X))
+
+(define-inline (glibc-atanh X)
+  (foreign-call "ikrt_glibc_atanh" X))
+
+(define-inline (glibc-casinh X)
+  (foreign-call "ikrt_glibc_casinh" X))
+
+(define-inline (glibc-cacosh X)
+  (foreign-call "ikrt_glibc_cacosh" X))
+
+(define-inline (glibc-catanh X)
+  (foreign-call "ikrt_glibc_catanh" X))
 
 
 ;;;; done

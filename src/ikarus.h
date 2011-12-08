@@ -493,8 +493,9 @@ ikptr   ik_cstring_to_symbol    (char*, ikpcb*);
 #define off_cflonum_real        (disp_cflonum_real - vector_tag)
 #define off_cflonum_imag        (disp_cflonum_imag - vector_tag)
 
-ikptr   ik_flonum_alloc         (ikpcb * pcb);
-#define flonum_data(X)  \
+ikptr   ik_flonum_alloc         (ikpcb * pcb, double fl);
+
+#define FLONUM_DATA(X)  \
   (*((double*)(((char*)(long)(X)) + off_flonum_data)))
 
 ikptr   ik_cflonum_alloc        (ikpcb * pcb, double re, double im);

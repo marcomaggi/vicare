@@ -2180,6 +2180,25 @@
     (casin					glibc)
     (cacos					glibc)
     (catan					glibc)
+    ;; exponents and logarithms
+    (cexp					glibc)
+    (clog					glibc)
+    (clog10					glibc)
+    (csqrt					glibc)
+    (cpow					glibc)
+    ;; hyperbolic functions
+    (glibc-sinh					glibc)
+    (glibc-cosh					glibc)
+    (glibc-tanh					glibc)
+    (csinh					glibc)
+    (ccosh					glibc)
+    (ctanh					glibc)
+    (glibc-asinh				glibc)
+    (glibc-acosh				glibc)
+    (glibc-atanh				glibc)
+    (casinh					glibc)
+    (cacosh					glibc)
+    (catanh					glibc)
 
 ;;; --------------------------------------------------------------------
 ;;; Linux functions
