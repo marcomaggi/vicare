@@ -6261,10 +6261,10 @@ function, calling back to the Scheme function @func{values}:
   (prefix (vicare ffi) ffi.))
 
 (define callout-maker
-  (make-c-callout  'unsigned-int '(unsigned-int)))
+  (ffi.make-c-callout  'unsigned-int '(unsigned-int)))
 
 (define callback-maker
-  (make-c-callback 'unsigned-int '(unsigned-int)))
+  (ffi.make-c-callback 'unsigned-int '(unsigned-int)))
 
 (define identity
   (callout-maker (callback-maker values)))
