@@ -9485,6 +9485,7 @@ functions, else the behaviour is undefined.
 * glibc sync::                  File system synchronisation.
 * glibc socket::                Network sockets.
 * glibc math::                  Mathematics.
+* glibc random::                Pseudo--random numbers.
 @end menu
 
 @c page
@@ -9787,6 +9788,30 @@ first kind.  @var{fx} must be a fixnum.
 Interfaces to the C functions @cfunc{y0}, @cfunc{y1} and @cfunc{yn};
 @glibcref{Special Functions, y0}.  Compute the Bessel functions of the
 second kind.  @var{fx} must be a fixnum.
+@end defun
+
+@c page
+@node glibc random
+@section Pseudo--random numbers
+
+
+The following bindings are exported by the @library{vicare glibc}
+library.
+
+
+@defun rand
+Interface to the C function @cfunc{rand}, @glibcref{ISO Random, rand}.
+Return a non--negative exact integer representing the next
+pseudo--random number in the series.  The maximum returned value is
+@code{RAND_MAX}, which is a binding exported by @library{vicare
+platform-constants}.
+@end defun
+
+
+@defun srand @var{seed}
+Interface to the C function @cfunc{srand}, @glibcref{ISO Random, srand}.
+Set to the exact integer @var{seed} the seed of the pseudo--random
+numbers series.
 @end defun
 
 @c page

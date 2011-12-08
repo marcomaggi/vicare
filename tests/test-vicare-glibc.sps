@@ -161,6 +161,12 @@
   #t)
 
 
+(parametrise ((check-test-name	'random))
+
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

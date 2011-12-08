@@ -56,6 +56,9 @@
     erf			erfc		tgamma		lgamma
     j0			j1		y0
     y1			jn		yn
+
+    ;; random numbers
+    rand		srand
     )
   (import (ikarus)
     (prefix (only (ikarus.posix)
@@ -67,6 +70,8 @@
     (vicare platform-constants)
     (prefix (vicare unsafe-capi)
 	    capi.)
+    (prefix (vicare words)
+	    words.)
     (prefix (vicare unsafe-operations)
 	    unsafe.))
 
@@ -143,6 +148,13 @@
 (define-argument-validation (file-descriptor who obj)
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected fixnum file descriptor as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (unsigned-int who obj)
+  (words.unsigned-int? obj)
+  (assertion-violation who
+    "expected exact integer representing a C language \"unsigned int\" as argument" obj))
 
 
 ;;;; operating system environment variables
@@ -332,6 +344,17 @@
       ((flonum	X)
        (fixnum	N))
     (capi.glibc-yn N X)))
+
+
+;;;; random numbers
+
+(define (rand)
+  (capi.glibc-rand))
+
+(define (srand seed)
+  (with-arguments-validation (srand)
+      ((unsigned-int	seed))
+    (capi.glibc-srand seed)))
 
 
 ;;;; done

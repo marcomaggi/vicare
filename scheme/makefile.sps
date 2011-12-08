@@ -2210,6 +2210,9 @@
     (y0						glibc)
     (y1						glibc)
     (yn						glibc)
+    ;; random
+    (rand					glibc)
+    (srand					glibc)
 
 ;;; --------------------------------------------------------------------
 ;;; Linux functions

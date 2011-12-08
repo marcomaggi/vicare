@@ -631,6 +631,31 @@ ikrt_glibc_jn (ikptr s_N, ikptr s_X, ikpcb * pcb)
 
 
 /** --------------------------------------------------------------------
+ ** Random numbers.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_glibc_rand (ikpcb * pcb)
+{
+#ifdef HAVE_RAND
+  return ik_integer_from_long((long)rand(), pcb);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_srand (ikptr s_seed)
+{
+#ifdef HAVE_RAND
+  srand((unsigned int)ik_integer_to_unsigned_long(s_seed));
+  return void_object;
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
  ** Miscellaneous functions.
  ** ----------------------------------------------------------------- */
 

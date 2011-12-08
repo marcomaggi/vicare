@@ -45,7 +45,6 @@
     LONG_LONG_MIN	LONG_LONG_MAX	ULONG_LONG_MAX
     WCHAR_MAX
 
-
 ;;; miscellaneous platform constants
 
     ;; constants for waitpid and similar
@@ -99,7 +98,7 @@
 ;;; miscellaneous constants
     L_ctermid		L_tmpnam	L_cuserid
     EOF			MAXSYMLINKS	MAXPATHLEN
-    CLOCKS_PER_SEC
+    CLOCKS_PER_SEC	RAND_MAX
 
 ;;; mode bits
     S_IRUSR		S_IWUSR		S_IXUSR
@@ -1088,6 +1087,8 @@
 (define-inline-constant EAI_SERVICE		@VALUEOF_EAI_SERVICE@)
 (define-inline-constant EAI_SOCKTYPE		@VALUEOF_EAI_SOCKTYPE@)
 (define-inline-constant EAI_SYSTEM		@VALUEOF_EAI_SYSTEM@)
+
+(define-inline-constant RAND_MAX		@VALUEOF_RAND_MAX@)
 
 ;;; mathematics
 (define-inline-constant M_E			@VALUEOF_M_E@)

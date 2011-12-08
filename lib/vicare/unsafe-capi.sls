@@ -243,6 +243,9 @@
     glibc-erf		glibc-erfc	glibc-tgamma	glibc-lgamma
     glibc-j0		glibc-j1	glibc-y0
     glibc-y1		glibc-jn	glibc-yn
+
+    ;; random numbers
+    glibc-rand		glibc-srand
     )
   (import (except (ikarus)
 		  posix-read	posix-write
@@ -1382,6 +1385,15 @@
 
 (define-inline (glibc-yn N X)
   (foreign-call "ikrt_glibc_yn" N X))
+
+
+;;;; random numbers
+
+(define-inline (glibc-rand)
+  (foreign-call "ikrt_glibc_rand"))
+
+(define-inline (glibc-srand seed)
+  (foreign-call "ikrt_glibc_srand" seed))
 
 
 ;;;; done
