@@ -643,6 +643,7 @@ AC_CHECK_FUNCS([creal cimag])
 AC_CHECK_FUNCS([csin ccos ctan casin cacos catan])
 AC_CHECK_FUNCS([cexp clog clog10 csqrt cpow])
 AC_CHECK_FUNCS([sinh cosh tanh csinh ccosh ctanh asinh acosh atanh casinh cacosh catanh])
+AC_CHECK_FUNCS([erf erfc lgamma_r tgamma j0 j1 jn y0 y1 yn])
 
 AC_CACHE_SAVE
 

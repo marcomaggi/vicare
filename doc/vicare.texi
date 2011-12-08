@@ -9745,7 +9745,49 @@ Hyperbolic functions for complex flonums.
 Inverse hyperbolic functions for complex flonums.
 @end defun
 
+@c ------------------------------------------------------------
 
+@subsubheading Special functions
+
+
+@defun erf @var{fl}
+@defunx erfc @var{fl}
+Interfaces to the C functions @cfunc{erf} and @cfunc{erfc},
+@glibcref{Special Functions, erf}.  Compute the error function.
+@end defun
+
+
+@defun lgamma @var{fl}
+Interface to the C function @cfunc{lgamma}, @glibcref{Special Functions,
+lgamma}.  Compute the natural logarithm of the absolute value of the
+gamma function of the operand.  Return two values: a flonum being the
+result of the function and a fixnum representing the sign of the
+intermediate result.
+@end defun
+
+
+@defun tgamma @var{fl}
+Interface to the C function @cfunc{tgamma}, @glibcref{Special Functions,
+lgamma}.  Compute the gamma function of the operand.
+@end defun
+
+
+@defun j0 @var{fl}
+@defunx j1 @var{fl}
+@defunx jn @var{fx} @var{fl}
+Interfaces to the C functions @cfunc{j0}, @cfunc{j1} and @cfunc{jn};
+@glibcref{Special Functions, j0}.  Compute the Bessel functions of the
+first kind.  @var{fx} must be a fixnum.
+@end defun
+
+
+@defun y0 @var{fl}
+@defunx y1 @var{fl}
+@defunx yn @var{fx} @var{fl}
+Interfaces to the C functions @cfunc{y0}, @cfunc{y1} and @cfunc{yn};
+@glibcref{Special Functions, y0}.  Compute the Bessel functions of the
+second kind.  @var{fx} must be a fixnum.
+@end defun
 
 @c page
 @node linux

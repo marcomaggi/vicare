@@ -143,6 +143,21 @@
   (check (cflonum? (glibc.cacosh 1.2+3.4i))	=> #t)
   (check (cflonum? (glibc.catanh 1.2+3.4i))	=> #t)
 
+  (check (flonum? (glibc.erf 1.2))		=> #t)
+  (check (flonum? (glibc.erfc 1.2))		=> #t)
+  (check (flonum? (glibc.tgamma 1.2))		=> #t)
+  (check (flonum? (glibc.j0 1.2))		=> #t)
+  (check (flonum? (glibc.j1 1.2))		=> #t)
+  (check (flonum? (glibc.y0 1.2))		=> #t)
+  (check (flonum? (glibc.y1 1.2))		=> #t)
+  (check (flonum? (glibc.jn 1 1.2))		=> #t)
+  (check (flonum? (glibc.yn 1 1.2))		=> #t)
+
+  (check
+      (let-values (((y sgn) (glibc.lgamma 1.2)))
+	(cons (flonum? y) (fixnum? sgn)))
+    => '(#t . #t))
+
   #t)
 
 

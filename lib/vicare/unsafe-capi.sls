@@ -240,6 +240,9 @@
     glibc-csinh		glibc-ccosh	glibc-ctanh
     glibc-asinh		glibc-acosh	glibc-atanh
     glibc-casinh	glibc-cacosh	glibc-catanh
+    glibc-erf		glibc-erfc	glibc-tgamma	glibc-lgamma
+    glibc-j0		glibc-j1	glibc-y0
+    glibc-y1		glibc-jn	glibc-yn
     )
   (import (except (ikarus)
 		  posix-read	posix-write
@@ -1347,6 +1350,38 @@
 
 (define-inline (glibc-catanh X)
   (foreign-call "ikrt_glibc_catanh" X))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (glibc-erf X)
+  (foreign-call "ikrt_glibc_erf" X))
+
+(define-inline (glibc-erfc X)
+  (foreign-call "ikrt_glibc_erfc" X))
+
+(define-inline (glibc-tgamma X)
+  (foreign-call "ikrt_glibc_tgamma" X))
+
+(define-inline (glibc-lgamma X)
+  (foreign-call "ikrt_glibc_lgamma" X))
+
+(define-inline (glibc-j0 X)
+  (foreign-call "ikrt_glibc_j0" X))
+
+(define-inline (glibc-j1 X)
+  (foreign-call "ikrt_glibc_j1" X))
+
+(define-inline (glibc-jn N X)
+  (foreign-call "ikrt_glibc_jn" N X))
+
+(define-inline (glibc-y0 X)
+  (foreign-call "ikrt_glibc_y0" X))
+
+(define-inline (glibc-y1 X)
+  (foreign-call "ikrt_glibc_y1" X))
+
+(define-inline (glibc-yn N X)
+  (foreign-call "ikrt_glibc_yn" N X))
 
 
 ;;;; done

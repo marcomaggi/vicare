@@ -53,6 +53,9 @@
     glibc-asinh		glibc-acosh	glibc-atanh
     csinh		ccosh		ctanh
     casinh		cacosh		catanh
+    erf			erfc		tgamma		lgamma
+    j0			j1		y0
+    y1			jn		yn
     )
   (import (ikarus)
     (prefix (only (ikarus.posix)
@@ -298,6 +301,37 @@
 (define-one-operand/cflonum casinh	capi.glibc-casinh)
 (define-one-operand/cflonum cacosh	capi.glibc-cacosh)
 (define-one-operand/cflonum catanh	capi.glibc-catanh)
+
+;;; --------------------------------------------------------------------
+
+(define-one-operand/flonum erf		capi.glibc-erf)
+(define-one-operand/flonum erfc		capi.glibc-erfc)
+(define-one-operand/flonum tgamma	capi.glibc-tgamma)
+(define-one-operand/flonum j0		capi.glibc-j0)
+(define-one-operand/flonum j1		capi.glibc-j1)
+(define-one-operand/flonum y0		capi.glibc-y0)
+(define-one-operand/flonum y1		capi.glibc-y1)
+
+(define (lgamma X)
+  (define who 'lgamma)
+  (with-arguments-validation (who)
+      ((flonum	X))
+    (let ((rv (capi.glibc-lgamma X)))
+      (values (car rv) (cdr rv)))))
+
+(define (jn N X)
+  (define who 'jn)
+  (with-arguments-validation (who)
+      ((flonum	X)
+       (fixnum	N))
+    (capi.glibc-jn N X)))
+
+(define (yn N X)
+  (define who 'yn)
+  (with-arguments-validation (who)
+      ((flonum	X)
+       (fixnum	N))
+    (capi.glibc-yn N X)))
 
 
 ;;;; done

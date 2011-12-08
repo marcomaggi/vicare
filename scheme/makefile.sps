@@ -2199,6 +2199,17 @@
     (casinh					glibc)
     (cacosh					glibc)
     (catanh					glibc)
+    ;; special functions
+    (erf					glibc)
+    (erfc					glibc)
+    (lgamma					glibc)
+    (tgamma					glibc)
+    (j0						glibc)
+    (j1						glibc)
+    (jn						glibc)
+    (y0						glibc)
+    (y1						glibc)
+    (yn						glibc)
 
 ;;; --------------------------------------------------------------------
 ;;; Linux functions

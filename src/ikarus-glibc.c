@@ -511,6 +511,124 @@ ikrt_glibc_catanh (ikptr s_X, ikpcb * pcb)
 #endif
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_glibc_erf (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_ERF
+  double        X   = FLONUM_DATA(s_X);
+  double        Y   = erf(X);
+  return ik_flonum_alloc(pcb, Y);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_erfc (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_ERFC
+  double        X   = FLONUM_DATA(s_X);
+  double        Y   = erfc(X);
+  return ik_flonum_alloc(pcb, Y);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_lgamma (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_LGAMMA_R
+  double        X   = FLONUM_DATA(s_X);
+  int           sgn;
+  double        Y   = lgamma_r(X, &sgn);
+  ikptr         s_pair;
+  s_pair = ik_pair_alloc(pcb);
+  VICARE_SET_CAR(s_pair, ik_flonum_alloc(pcb, Y));
+  VICARE_SET_CDR(s_pair, fix(sgn));
+  return s_pair;
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_tgamma (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_TGAMMA
+  double        X   = FLONUM_DATA(s_X);
+  double        Y   = tgamma(X);
+  return ik_flonum_alloc(pcb, Y);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_y0 (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_Y0
+  double        X   = FLONUM_DATA(s_X);
+  double        Y   = y0(X);
+  return ik_flonum_alloc(pcb, Y);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_y1 (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_Y1
+  double        X   = FLONUM_DATA(s_X);
+  double        Y   = y1(X);
+  return ik_flonum_alloc(pcb, Y);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_j0 (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_J0
+  double        X   = FLONUM_DATA(s_X);
+  double        Y   = j0(X);
+  return ik_flonum_alloc(pcb, Y);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_j1 (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_J1
+  double        X   = FLONUM_DATA(s_X);
+  double        Y   = j1(X);
+  return ik_flonum_alloc(pcb, Y);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_yn (ikptr s_N, ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_YN
+  double        X   = FLONUM_DATA(s_X);
+  double        Y   = yn((int)unfix(s_N), X);
+  return ik_flonum_alloc(pcb, Y);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_jn (ikptr s_N, ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_JN
+  double        X   = FLONUM_DATA(s_X);
+  double        Y   = jn((int)unfix(s_N), X);
+  return ik_flonum_alloc(pcb, Y);
+#else
+  feature_failure(__func__);
+#endif
+}
+
 
 /** --------------------------------------------------------------------
  ** Miscellaneous functions.
