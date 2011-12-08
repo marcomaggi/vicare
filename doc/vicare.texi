@@ -2983,6 +2983,7 @@ creation order.
 @menu
 * iklib numerics preds::        Additional numeric predicates.
 * iklib numerics flonums::      Additional flonum functions.
+* iklib numerics math::         Additional math functions.
 @end menu
 
 @c page
@@ -3040,22 +3041,32 @@ Return a flonum equivalent to @math{exp(@var{fl}) - 1}.
 @end defun
 
 
+@c page
+@node iklib numerics math
+@subsection Additional math functions
+
+
+The following bindings are exported by the @library{ikarus} and
+@library{vicare} libraries.
+
 @c ------------------------------------------------------------
 
 @subsubheading Hyperbolic functions
 
+The @var{num} operand must be a real or complex number.
 
-@defun sinh @var{fl}
-@defunx cosh @var{fl}
-@defunx tanh @var{fl}
-Hyperbolic functions for flonums.
+
+@defun sinh @var{num}
+@defunx cosh @var{num}
+@defunx tanh @var{num}
+Hyperbolic functions.
 @end defun
 
 
-@defun asinh @var{fl}
-@defunx acosh @var{fl}
-@defunx atanh @var{fl}
-Inverse hyperbolic functions for flonums.
+@defun asinh @var{num}
+@defunx acosh @var{num}
+@defunx atanh @var{num}
+Inverse hyperbolic functions.
 @end defun
 
 @c page
