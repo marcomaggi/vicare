@@ -2210,8 +2210,9 @@
     (dlclose					$for)
     (dlsym					$for)
 ;;;
-    (make-c-callout				$for)
-    (make-c-callback				$for)
+    (make-c-callout-maker			$for)
+    (make-c-callout-maker/with-errno		$for)
+    (make-c-callback-maker			$for)
     (free-c-callback				$for)
     (with-local-storage				$for)
 ;;;

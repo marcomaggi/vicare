@@ -32,8 +32,9 @@
     dlsym				dlerror
 
     ;; calling functions and callbacks
-    make-c-callout			make-c-callback
-    free-c-callback			with-local-storage
+    make-c-callout-maker		make-c-callout-maker/with-errno
+    make-c-callback-maker		free-c-callback
+    with-local-storage
 
     ;; raw memory allocation
     malloc				free
@@ -920,6 +921,7 @@
 			;these structures are never released.
    callout-maker	;False   or  closure.   The   closure  generates
 			;callout functions of given signature.
+   callout-maker/with-errno
    callback-maker	;False   or  Closure.   The   closure  generates
 			;callback functions of given signature
    arg-checkers		;vector of predicates used to validate arguments
@@ -995,7 +997,7 @@
 					    #f
 					  (%select-type-predicate retval-type))))
 	    (and cif
-		 (let ((S (make-cif cif #f #f arg-checkers retval-checker arg-types retval-type)))
+		 (let ((S (make-cif cif #f #f #f arg-checkers retval-checker arg-types retval-type)))
 		   (hashtable-set! CIF-TABLE signature S)
 		   S)))
 	  (if (ffi-enabled?)
@@ -1005,13 +1007,13 @@
 
 ;;;; Libffi: callouts
 
-(define (make-c-callout retval-type arg-types)
+(define (make-c-callout-maker retval-type arg-types)
   ;;Given  the symbol RETVAL-TYPE  representing the  type of  the return
   ;;value and a list of  symbols ARG-TYPES representing the types of the
   ;;arguments: return  a closure to  be used to generate  Scheme callout
   ;;functions from pointers to C functions.
   ;;
-  (define who 'make-c-callout)
+  (define who 'make-c-callout-maker)
   (with-arguments-validation (who)
       ((symbol			retval-type)
        (null/list-of-symbols	arg-types))
@@ -1065,16 +1067,50 @@
 	    checkers types args))))
     (capi.ffi-callout user-data args)))
 
+;;; --------------------------------------------------------------------
+
+(define (make-c-callout-maker/with-errno retval-type arg-types)
+  ;;Given  the symbol RETVAL-TYPE  representing the  type of  the return
+  ;;value and a list of  symbols ARG-TYPES representing the types of the
+  ;;arguments: return  a closure to  be used to generate  Scheme callout
+  ;;functions from pointers to C functions.
+  ;;
+  (define who 'make-c-callout-maker/with-errno)
+  (with-arguments-validation (who)
+      ((symbol			retval-type)
+       (null/list-of-symbols	arg-types))
+    (let ((S (%ffi-prep-cif who retval-type arg-types)))
+      (or (cif-callout-maker/with-errno S)
+	  (let ((maker (lambda (c-function-pointer)
+			 (%callout-maker/with-errno S c-function-pointer))))
+	    (set-cif-callout-maker/with-errno! S maker)
+	    maker)))))
+
+(define (%callout-maker/with-errno S c-function-pointer)
+  ;;Worker  function  for  Scheme  callout maker  functions.   Return  a
+  ;;closure to be called to call a foreign function.
+  ;;
+  ;;S must be an instance of the CIF data structure.  C-FUNCTION-POINTER
+  ;;must be a pointer object referencing the foreign function.
+  ;;
+  (define who '%callout-maker/with-errno)
+  (with-arguments-validation (who)
+      ((pointer  c-function-pointer))
+    (let ((user-data (cons (cif-cif S) c-function-pointer)))
+      (lambda args	;this is the callout function
+	(let ((rv (%generic-callout-wrapper user-data S args)))
+	  (values rv (foreign-call "ikrt_last_errno")))))))
+
 
 ;;;; Libffi: callbacks
 
-(define (make-c-callback retval-type arg-types)
+(define (make-c-callback-maker retval-type arg-types)
   ;;Given  the symbol RETVAL-TYPE  representing the  type of  the return
   ;;value and a list of  symbols ARG-TYPES representing the types of the
   ;;arguments: return a  closure to be used to  generate Scheme callback
   ;;pointers from Scheme functions.
   ;;
-  (define who 'make-c-callback)
+  (define who 'make-c-callback-maker)
   (with-arguments-validation (who)
       ((symbol			retval-type)
        (null/list-of-symbols	arg-types))

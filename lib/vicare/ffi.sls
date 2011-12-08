@@ -32,8 +32,9 @@
     dlsym				dlerror
 
     ;; calling functions and callbacks
-    make-c-callout			make-c-callback
-    free-c-callback			with-local-storage
+    make-c-callout-maker		make-c-callout-maker/with-errno
+    make-c-callback-maker		free-c-callback
+    with-local-storage
 
     ;; raw memory allocation
     malloc				guarded-malloc
@@ -221,7 +222,7 @@
 	     EUNATCH		EUSERS		EWOULDBLOCK
 	     EXDEV		EXFULL))
 	 (if (memq sym them)
-	     #'?code
+	     (datum->syntax #'%memory-guardian sym)
 	   (syntax-violation 'errno-code "invalid symbol as errno code" (syntax->datum stx) sym)))))))
 
 (define-syntax case-errno

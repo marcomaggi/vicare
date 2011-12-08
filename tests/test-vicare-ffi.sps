@@ -756,8 +756,8 @@
   (check
       (let* ((rv-t		'unsigned-int)
 	     (args-t		'(unsigned-int))
-	     (callout-maker	(ffi.make-c-callout  rv-t args-t))
-	     (callback-maker	(ffi.make-c-callback rv-t args-t))
+	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
 	     (callback		(callback-maker
 				 (lambda args
 				   (apply values args))))
@@ -768,8 +768,8 @@
     => 123)
 
   (check	;void arguments and return value
-      (let* ((callout-maker	(ffi.make-c-callout  'void '(void)))
-	     (callback-maker	(ffi.make-c-callback 'void '(void)))
+      (let* ((callout-maker	(ffi.make-c-callout-maker  'void '(void)))
+	     (callback-maker	(ffi.make-c-callback-maker 'void '(void)))
 	     (result		#f)
 	     (callback		(callback-maker (lambda ()
 						  (set! result 123))))
@@ -784,8 +784,8 @@
   (check
       (let* ((rv-t		'signed-char)
 	     (args-t		'(signed-int double float))
-	     (callout-maker	(ffi.make-c-callout  rv-t args-t))
-	     (callback-maker	(ffi.make-c-callback rv-t args-t))
+	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
 	     (function		(callout-maker (callback-maker (lambda (a b c)
 								 (exact (floor (+ a b c))))))))
 	(function 10 1.4 3.7))
@@ -794,8 +794,8 @@
   (check
       (let* ((rv-t		'signed-char)
 	     (args-t		'(signed-long signed-long-long))
-	     (callout-maker	(ffi.make-c-callout  rv-t args-t))
-	     (callback-maker	(ffi.make-c-callback rv-t args-t))
+	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
 	     (function		(callout-maker (callback-maker (lambda (a b)
 								 (+ a b))))))
 	(function 10 12))
@@ -804,8 +804,8 @@
   (check
       (let* ((rv-t		'int8_t)
 	     (args-t		'(int16_t int32_t int64_t))
-	     (callout-maker	(ffi.make-c-callout  rv-t args-t))
-	     (callback-maker	(ffi.make-c-callback rv-t args-t))
+	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
 	     (args		#f)
 	     (function		(callout-maker
 				 (callback-maker
@@ -824,8 +824,8 @@
   (check	;try to free twice
       (let* ((rv-t		'signed-int)
 	     (args-t		'(signed-int))
-	     (callout-maker	(ffi.make-c-callout  rv-t args-t))
-	     (callback-maker	(ffi.make-c-callback rv-t args-t))
+	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
 	     (callback		(callback-maker (lambda args
 						  (apply values args))))
 	     (identity		(callout-maker callback))
@@ -837,8 +837,8 @@
     => #t)
 
   (check	;create and release in order many callbacks
-      (let* ((callout-maker	(ffi.make-c-callout  'signed-int '(signed-int)))
-	     (callback-maker	(ffi.make-c-callback 'signed-int '(signed-int)))
+      (let* ((callout-maker	(ffi.make-c-callout-maker  'signed-int '(signed-int)))
+	     (callback-maker	(ffi.make-c-callback-maker 'signed-int '(signed-int)))
 	     (callback1		(callback-maker values))
 	     (callback2		(callback-maker values))
 	     (callback3		(callback-maker values))
@@ -879,8 +879,8 @@
     => '(1 2 3 4 5 6 7 8 9))
 
   (check	;create and release in mixed order many callbacks
-      (let* ((callout-maker	(ffi.make-c-callout  'signed-int '(signed-int)))
-	     (callback-maker	(ffi.make-c-callback 'signed-int '(signed-int)))
+      (let* ((callout-maker	(ffi.make-c-callout-maker  'signed-int '(signed-int)))
+	     (callback-maker	(ffi.make-c-callback-maker 'signed-int '(signed-int)))
 	     (callback1		(callback-maker values))
 	     (callback2		(callback-maker values))
 	     (callback3		(callback-maker values))
@@ -919,6 +919,35 @@
 	(ffi.free-c-callback callback3)
 	result)
     => '(1 2 3 4 5 6 7 8 9))
+
+  #t)
+
+
+(parametrise ((check-test-name	'calls-with-errno))
+
+  (define libc
+    (ffi.dlopen))
+
+  (check
+      (let* ((rv-t		'unsigned-int)
+	     (args-t		'(unsigned-int))
+	     (callout-maker	(ffi.make-c-callout-maker/with-errno  rv-t args-t))
+	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
+	     (callback		(callback-maker
+				 (lambda args
+				   (apply values args))))
+	     (identity		(callout-maker callback)))
+	(let-values (((result errno) (identity 123)))
+	  (ffi.free-c-callback callback)
+	  (list result errno)))
+    => '(123 0))
+
+  (check
+      (let* ((callout-maker	(ffi.make-c-callout-maker/with-errno 'pointer '(pointer)))
+	     (callout		(callout-maker (ffi.dlsym libc "opendir"))))
+	(let-values (((rv errno) (callout (ffi.bytevector->guarded-cstring '#vu8(65)))))
+	  (list rv errno)))
+    => `(,(ffi.null-pointer) ,(ffi.errno-code ENOENT)))
 
   #t)
 
@@ -968,13 +997,13 @@
 
   (when libc
 
-    (let* ((maker	(ffi.make-c-callout 'double '(double)))
+    (let* ((maker	(ffi.make-c-callout-maker 'double '(double)))
 	   (sinh	(maker (ffi.dlsym libc "sinh"))))
       (check
 	  (flonum? (sinh 1.2))
 	=> #t))
 
-    (let* ((maker	(ffi.make-c-callout 'double '(double double)))
+    (let* ((maker	(ffi.make-c-callout-maker 'double '(double double)))
 	   (atan2	(maker (ffi.dlsym libc "atan2"))))
       (check
 	  (flonum? (atan2 1.2 3.4))
@@ -992,7 +1021,8 @@
 
   (when zlib
     (check
-	(let* ((maker		(ffi.make-c-callout 'signed-int '(pointer pointer pointer unsigned-long)))
+	(let* ((maker		(ffi.make-c-callout-maker
+				 'signed-int '(pointer pointer pointer unsigned-long)))
 	       (compress*	(maker (ffi.dlsym zlib "compress")))
 	       (uncompress*	(maker (ffi.dlsym zlib "uncompress"))))
 

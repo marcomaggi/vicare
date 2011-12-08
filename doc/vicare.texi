@@ -6020,7 +6020,7 @@ string @var{name}.  If successful return a pointer object, else return
 error.
 
 If the returned value references a function: it can be used as argument
-to the callout generators built by @func{make-c-callout}.
+to the callout generators built by @func{make-c-callout-maker}.
 @end defun
 
 
@@ -6048,10 +6048,10 @@ callback:
   (prefix (vicare ffi) ffi.))
 
 (define callout-maker
-  (ffi.make-c-callout  'unsigned-int '(unsigned-int)))
+  (ffi.make-c-callout-maker  'unsigned-int '(unsigned-int)))
 
 (define callback-maker
-  (ffi.make-c-callback 'unsigned-int '(unsigned-int)))
+  (ffi.make-c-callback-maker 'unsigned-int '(unsigned-int)))
 
 (define callback
   (callback-maker values))
@@ -6194,7 +6194,7 @@ interface to the C function @cfunc{sinh}:
   (ffi.dlsym libc "sinh"))
 
 (define callout-maker
-  (ffi.make-c-callout 'double '(double)))
+  (ffi.make-c-callout-maker 'double '(double)))
 
 (define sinh
   (callout-maker sinh-address))
@@ -6209,7 +6209,7 @@ Generated callout functions are garbage collected like any other Scheme
 values.
 
 
-@defun make-c-callout @var{ret-type} @var{arg-types}
+@defun make-c-callout-maker @var{ret-type} @var{arg-types}
 Build and return a function to be used to generate callout Scheme
 functions wrapping foreign functions which follow the C language
 conventions for calling, arguments and return values.
@@ -6229,6 +6229,14 @@ the arguments; if the foreign function accepts no arguments:
 @var{arg-types} must be nil or the list @code{(void)}.
 
 @ref{ffi call types} for the specification of accepted type symbols.
+@end defun
+
+
+@defun make-c-callout-maker/with-errno @var{ret-type} @var{arg-types}
+Like @func{make-c-callout-maker}, but the generated callout closures
+will return two values: the return value from the foreign function call
+and the value of the C language variable @code{errno} right after the
+foreign function call.
 @end defun
 
 @c page
@@ -6263,10 +6271,10 @@ function, calling back to the Scheme function @func{values}:
   (prefix (vicare ffi) ffi.))
 
 (define callout-maker
-  (ffi.make-c-callout  'unsigned-int '(unsigned-int)))
+  (ffi.make-c-callout-maker  'unsigned-int '(unsigned-int)))
 
 (define callback-maker
-  (ffi.make-c-callback 'unsigned-int '(unsigned-int)))
+  (ffi.make-c-callback-maker 'unsigned-int '(unsigned-int)))
 
 (define identity
   (callout-maker (callback-maker values)))
@@ -6281,7 +6289,7 @@ signature.  Generated callback functions are @strong{not} garbage
 collected like other Scheme values.
 
 
-@defun make-c-callback @var{ret-type} @var{arg-types}
+@defun make-c-callback-maker @var{ret-type} @var{arg-types}
 Build and return a function to be used to generate callback functions
 following the C language conventions for calling, arguments and return
 values and wrapping Scheme functions.
