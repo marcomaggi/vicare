@@ -183,7 +183,7 @@
   (define who '%compile-and-load)
   (let ((lib (ffi.dlopen library-filename)))
     (if lib
-	(let ((maker (ffi.make-c-callout retval-type arg-types)))
+	(let ((maker (ffi.make-c-callout-maker retval-type arg-types)))
 	  (maker (ffi.dlsym lib identifier)))
       (error who (ffi.dlerror)))))
 
