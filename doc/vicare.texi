@@ -6205,6 +6205,8 @@ interface to the C function @cfunc{sinh}:
 @noindent
 using the @ffi{} we build a callout function generator which can be used
 to create any number of callout functions having the same signature.
+Generated callout functions are garbage collected like any other Scheme
+values.
 
 
 @defun make-c-callout @var{ret-type} @var{arg-types}
@@ -6272,6 +6274,11 @@ function, calling back to the Scheme function @func{values}:
 (identity 123)  @result{} 123
 @end example
 
+@noindent
+using the @ffi{} we build a callback function generator which can be
+used to create any number of callback functions having the same
+signature.  Generated callback functions are @strong{not} garbage
+collected like other Scheme values.
 
 
 @defun make-c-callback @var{ret-type} @var{arg-types}
