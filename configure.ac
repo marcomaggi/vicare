@@ -85,7 +85,7 @@ AC_CHECK_HEADERS([assert.h dlfcn.h errno.h fcntl.h signal.h \
                   sys/time.h sys/types.h sys/wait.h time.h \
                   unistd.h])
 
-AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h ftw.h grp.h inttypes.h limits.h mntent.h net/if.h netinet/in.h netdb.h paths.h pwd.h signal.h termios.h sys/mman.h sys/mount.h sys/select.h sys/socket.h sys/times.h sys/timex.h sys/types.h sys/un.h sys/utsname.h sys/uio.h utime.h sys/ioctl.h math.h])
+AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h ftw.h grp.h inttypes.h limits.h mntent.h net/if.h netinet/in.h netdb.h paths.h pwd.h signal.h termios.h sys/mman.h sys/mount.h sys/select.h sys/socket.h sys/times.h sys/timex.h sys/types.h sys/un.h sys/utsname.h sys/uio.h utime.h sys/ioctl.h math.h complex.h])
 
 AC_C_CONST
 AC_C_INLINE
@@ -639,6 +639,10 @@ AC_CACHE_SAVE
 #### tests for GNU C Library specific features
 
 AC_CHECK_FUNCS([clearenv dirfd mkstemp mkdtemp sync fsync fdatasync])
+AC_CHECK_FUNCS([creal cimag])
+AC_CHECK_FUNCS([csin ccos ctan casin cacos catan])
+
+AC_CACHE_SAVE
 
 #page
 #### tests for GNU+Linux specific features

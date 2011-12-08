@@ -115,6 +115,18 @@
   #t)
 
 
+(parametrise ((check-test-name	'math))
+
+  (check (cflonum? (glibc.csin 1.2+3.4i))	=> #t)
+  (check (cflonum? (glibc.ccos 1.2+3.4i))	=> #t)
+  (check (cflonum? (glibc.ctan 1.2+3.4i))	=> #t)
+  (check (cflonum? (glibc.casin 1.2+3.4i))	=> #t)
+  (check (cflonum? (glibc.cacos 1.2+3.4i))	=> #t)
+  (check (cflonum? (glibc.catan 1.2+3.4i))	=> #t)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

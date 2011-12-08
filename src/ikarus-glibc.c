@@ -33,6 +33,12 @@
 #include <unistd.h>
 #include <net/if.h>
 #include <sys/types.h>
+#ifdef HAVE_MATH_H
+#  include <math.h>
+#endif
+#ifdef HAVE_COMPLEX_H
+#  include <complex.h>
+#endif
 
 static VICARE_UNUSED void
 feature_failure_ (const char * funcname)
@@ -236,7 +242,80 @@ ikrt_glibc_if_nameindex (ikpcb * pcb) {
   return alist;
 }
 
+
+/** --------------------------------------------------------------------
+ ** Mathematics.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_glibc_csin (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_CSIN
+  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        Y   = csin(X);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_ccos (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_CCOS
+  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        Y   = ccos(X);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_ctan (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_CTAN
+  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        Y   = ctan(X);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
+
 /* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_glibc_casin (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_CASIN
+  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        Y   = casin(X);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_cacos (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_CACOS
+  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        Y   = cacos(X);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_catan (ikptr s_X, ikpcb * pcb)
+{
+#ifdef HAVE_CATAN
+  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        Y   = catan(X);
+  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+#else
+  feature_failure(__func__);
+#endif
+}
 
 
 /** --------------------------------------------------------------------

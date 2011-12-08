@@ -43,25 +43,12 @@
     ;; sockets
     if-nametoindex		if-indextoname
     if-nameindex
+
+    ;; mathematics
+    csin	ccos		ctan
+    casin	cacos		catan
     )
-  (import (except (ikarus)
-		  ;; operating system environment variables
-		  clearenv
-
-		  ;; file system directories
-		  dirfd
-
-		  ;; temporary files and directories
-		  mkstemp			mkdtemp
-
-		  ;; file system synchronisation
-		  sync				fsync
-		  fdatasync
-
-		  ;; sockets
-		  if-nametoindex		if-indextoname
-		  if-nameindex
-		  )
+  (import (ikarus)
     (prefix (only (ikarus.posix)
 		  directory-stream?
 		  directory-stream-closed?
@@ -117,6 +104,14 @@
 (define-argument-validation (bytevector who obj)
   (bytevector? obj)
   (assertion-violation who "expected bytevector as argument" obj))
+
+(define-argument-validation (flonum who obj)
+  (flonum? obj)
+  (assertion-violation who "expected flonum as argument" obj))
+
+(define-argument-validation (cflonum who obj)
+  (cflonum? obj)
+  (assertion-violation who "expected complex flonum as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -227,7 +222,46 @@
 	   (cons (car entry) (utf8->string (cdr entry))))
       rv)))
 
+
+;;;; mathematics
+
+(define-for-glibc (csin X)
+  (define who 'csin)
+  (with-arguments-validation (who)
+      ((cflonum	X))
+    (capi.glibc-csin X)))
+
+(define-for-glibc (ccos X)
+  (define who 'ccos)
+  (with-arguments-validation (who)
+      ((cflonum	X))
+    (capi.glibc-ccos X)))
+
+(define-for-glibc (ctan X)
+  (define who 'ctan)
+  (with-arguments-validation (who)
+      ((cflonum	X))
+    (capi.glibc-ctan X)))
+
 ;;; --------------------------------------------------------------------
+
+(define-for-glibc (casin X)
+  (define who 'casin)
+  (with-arguments-validation (who)
+      ((cflonum	X))
+    (capi.glibc-casin X)))
+
+(define-for-glibc (cacos X)
+  (define who 'cacos)
+  (with-arguments-validation (who)
+      ((cflonum	X))
+    (capi.glibc-cacos X)))
+
+(define-for-glibc (catan X)
+  (define who 'catan)
+  (with-arguments-validation (who)
+      ((cflonum	X))
+    (capi.glibc-catan X)))
 
 
 

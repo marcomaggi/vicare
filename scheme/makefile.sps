@@ -2173,6 +2173,13 @@
     (if-nametoindex				glibc)
     (if-indextoname				glibc)
     (if-nameindex				glibc)
+    ;; trig functions
+    (csin					glibc)
+    (ccos					glibc)
+    (ctan					glibc)
+    (casin					glibc)
+    (cacos					glibc)
+    (catan					glibc)
 
 ;;; --------------------------------------------------------------------
 ;;; Linux functions

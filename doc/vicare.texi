@@ -9627,7 +9627,24 @@ M_SQRT1_2
 @end example
 
 The following bindings are exported by the @library{vicare glibc}
-library.
+library.  The functions are implemented by the @gnu{} C library and are
+probably faster than the ones implemented by the @rnrs{6} libraries.
+All the arguments @var{fl} must be flonums, all the arguments @var{cfl}
+must be complex flonums.
+
+
+@defun csin @var{cfl}
+@defunx ccos @var{cfl}
+@defunx ctan @var{cfl}
+Trigonometric functions for complex flonums.
+@end defun
+
+
+@defun casin @var{cfl}
+@defunx cacos @var{cfl}
+@defunx catan @var{cfl}
+Inverse trigonometric functions for complex flonums.
+@end defun
 
 
 @c page

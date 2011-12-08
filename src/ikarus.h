@@ -490,10 +490,21 @@ ikptr   ik_cstring_to_symbol    (char*, ikpcb*);
 #define disp_cflonum_imag       (2 * wordsize)
 #define disp_cflonum_unused     (3 * wordsize)
 #define cflonum_size            (4 * wordsize)
+#define off_cflonum_real        (disp_cflonum_real - vector_tag)
+#define off_cflonum_imag        (disp_cflonum_imag - vector_tag)
 
 ikptr   ik_flonum_alloc         (ikpcb * pcb);
 #define flonum_data(X)  \
   (*((double*)(((char*)(long)(X)) + off_flonum_data)))
+
+ikptr   ik_cflonum_alloc        (ikpcb * pcb, double re, double im);
+
+#define CFLONUM_DATA_REAL(X)    \
+  (*((double*)(((char*)(long)(X)) + off_cflonum_real)))
+
+#define CFLONUM_DATA_IMAG(X)    \
+  (*((double*)(((char*)(long)(X)) + off_cflonum_imag)))
+
 
 ikptr   ik_integer_from_long               (signed long x, ikpcb* pcb);
 ikptr   ik_integer_from_long_long          (signed long long n, ikpcb* pcb);

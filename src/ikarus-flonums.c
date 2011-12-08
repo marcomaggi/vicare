@@ -27,7 +27,7 @@
 
 
 /** --------------------------------------------------------------------
- ** Allocating flonums.
+ ** Allocating flonums and cflonums.
  ** ----------------------------------------------------------------- */
 
 #define DEFINE_AND_ALLOC_FLONUM(r)                              \
@@ -41,7 +41,26 @@ ik_flonum_alloc (ikpcb * pcb)
   return F;
 }
 
+/* ------------------------------------------------------------------ */
+
+#define DEFINE_AND_ALLOC_CFLONUM(r)                              \
+  ikptr r = ik_unsafe_alloc(pcb, cflonum_size) + vector_tag;     \
+  ref(r, -vector_tag) = (ikptr)cflonum_tag
+
+ikptr
+ik_cflonum_alloc (ikpcb * pcb, double re, double im)
+{
+  DEFINE_AND_ALLOC_CFLONUM(F);
+  CFLONUM_DATA_REAL(F) = re;
+  CFLONUM_DATA_IMAG(F) = im;
+  return F;
+}
+
 
+/** --------------------------------------------------------------------
+ ** Flonum functions.
+ ** ----------------------------------------------------------------- */
+
 ikptr
 ikrt_fl_round (ikptr x, ikptr y)
 {

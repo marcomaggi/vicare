@@ -230,6 +230,10 @@
     posix-timelocal			posix-timegm
     posix-strftime
     posix-nanosleep
+
+    ;; mathematics
+    glibc-csin		glibc-ccos	glibc-ctan
+    glibc-casin		glibc-cacos	glibc-catan
     )
   (import (except (ikarus)
 		  posix-read	posix-write
@@ -1261,6 +1265,27 @@
 
 (define-inline (posix-strftime template tm)
   (foreign-call "ikrt_posix_strftime" template tm))
+
+
+;;;; mathematics
+
+(define-inline (glibc-csin X)
+  (foreign-call "ikrt_glibc_csin" X))
+
+(define-inline (glibc-ccos X)
+  (foreign-call "ikrt_glibc_ccos" X))
+
+(define-inline (glibc-ctan X)
+  (foreign-call "ikrt_glibc_ctan" X))
+
+(define-inline (glibc-casin X)
+  (foreign-call "ikrt_glibc_casin" X))
+
+(define-inline (glibc-cacos X)
+  (foreign-call "ikrt_glibc_cacos" X))
+
+(define-inline (glibc-catan X)
+  (foreign-call "ikrt_glibc_catan" X))
 
 
 ;;;; done
