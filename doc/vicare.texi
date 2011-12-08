@@ -5819,10 +5819,13 @@ in the bytevector.
 @end defun
 
 
-@defun string->cstring @var{bv}
-@defunx string->guarded-cstring @var{bv}
+@defun string->cstring @var{str}
+@defunx string->guarded-cstring @var{str}
 Convert from a Scheme string to an @asciiz{} string.  If successful
 return a pointer object referencing the string, else return @false{}.
+
+The string argument must contain only characters with Unicode code
+points in the range @math{[0, 255]}.
 
 Memory allocated by @func{string->cstring} must be explicitly
 released by @func{free}; memory allocated by
@@ -5918,6 +5921,9 @@ Given a list of Scheme strings: convert them into @asciiz{} strings and
 build a @cnull{} terminated array of C pointers referencing the strings.
 Return a pointer to the array.  The strings and the array are stored in
 a single memory block.
+
+The string arguments must contain only characters with Unicode code
+points in the range @math{[0, 255]}.
 
 Memory allocated by @func{strings->argv} must be explicitly released
 by @func{free}; memory allocated by @func{strings->guarded-argv} is
