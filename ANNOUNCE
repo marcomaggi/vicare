@@ -44,6 +44,8 @@ Notes for revision 0.2d5
 * Added users and groups, process control, time related functions to the
   POSIX API.
 
+* Some functions where added to (vicare glibc).
+
 * Better  use of  GNU  Autotools and  better  tracking of  files in  the
   repository, thanks to Barak A. Pearlmutter.
 
@@ -52,7 +54,7 @@ Notes for revision 0.2d5
      setlocale(LC_ALL, "")
 
 * The FFI library  is now (vicare ffi).  FFI  code and documentation has
-  been reviewed.
+  been reviewed.  They need more testing.
 
 * A toy library to build and  load shared libraries at runtime using GCC
   has been added, (vicare gcc).
