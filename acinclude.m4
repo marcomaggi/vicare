@@ -14,6 +14,9 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_LIMITS_H
 #  include <limits.h>
 #endif
+#ifdef HAVE_MATH_H
+#  include <math.h>
+#endif
 #ifdef HAVE_SIGNAL_H
 #  include <signal.h>
 #endif
@@ -147,6 +150,23 @@ AC_DEFUN([VICARE_STRINGOF_TEST],
         [vicare_cv_stringof_$1=""])
       rm -f conftest.val])
    VALUEOF_$1="$vicare_cv_stringof_$1"
+   AC_SUBST([VALUEOF_$1])])
+
+AC_DEFUN([VICARE_DOUBLEOF_TEST],
+  [VALUEOF_$1=""
+   AC_CACHE_CHECK([the floating point value of '$1'],
+     [vicare_cv_doubleof_$1],
+     [AC_RUN_IFELSE([AC_LANG_SOURCE([VICARE_INCLUDES
+        int main (void)
+        {
+           FILE *f = fopen ("conftest.val", "w");
+           fprintf(f, "%f", $1);
+           return ferror (f) || fclose (f) != 0;
+        }])],
+        [vicare_cv_doubleof_$1=`cat conftest.val`],
+        [vicare_cv_doubleof_$1=""])
+      rm -f conftest.val])
+   VALUEOF_$1="$vicare_cv_doubleof_$1"
    AC_SUBST([VALUEOF_$1])])
 
 ### end of file

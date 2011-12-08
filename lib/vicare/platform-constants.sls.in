@@ -331,6 +331,13 @@
     EAI_NODATA		EAI_NONAME	EAI_SERVICE
     EAI_SOCKTYPE	EAI_SYSTEM
 
+;;; mathematics
+    M_E			M_LOG2E		M_LOG10E
+    M_LN2		M_LN10		M_PI
+    M_PI_2		M_PI_4		M_1_PI
+    M_2_PI		M_2_SQRTPI	M_SQRT2
+    M_SQRT1_2
+
 ;;; errno codes
     E2BIG		EACCES		EADDRINUSE
     EADDRNOTAVAIL	EADV		EAFNOSUPPORT
@@ -1081,6 +1088,21 @@
 (define-inline-constant EAI_SERVICE		@VALUEOF_EAI_SERVICE@)
 (define-inline-constant EAI_SOCKTYPE		@VALUEOF_EAI_SOCKTYPE@)
 (define-inline-constant EAI_SYSTEM		@VALUEOF_EAI_SYSTEM@)
+
+;;; mathematics
+(define-inline-constant M_E			@VALUEOF_M_E@)
+(define-inline-constant M_LOG2E			@VALUEOF_M_LOG2E@)
+(define-inline-constant M_LOG10E		@VALUEOF_M_LOG10E@)
+(define-inline-constant M_LN2			@VALUEOF_M_LN2@)
+(define-inline-constant M_LN10			@VALUEOF_M_LN10@)
+(define-inline-constant M_PI			@VALUEOF_M_PI@)
+(define-inline-constant M_PI_2			@VALUEOF_M_PI_2@)
+(define-inline-constant M_PI_4			@VALUEOF_M_PI_4@)
+(define-inline-constant M_1_PI			@VALUEOF_M_1_PI@)
+(define-inline-constant M_2_PI			@VALUEOF_M_2_PI@)
+(define-inline-constant M_2_SQRTPI		@VALUEOF_M_2_SQRTPI@)
+(define-inline-constant M_SQRT2			@VALUEOF_M_SQRT2@)
+(define-inline-constant M_SQRT1_2		@VALUEOF_M_SQRT1_2@)
 
 
 ;;;; errno codes

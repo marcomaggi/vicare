@@ -9451,6 +9451,7 @@ functions, else the behaviour is undefined.
 * glibc temp::                  Temporary files and directories.
 * glibc sync::                  File system synchronisation.
 * glibc socket::                Network sockets.
+* glibc math::                  Mathematics.
 @end menu
 
 @c page
@@ -9608,6 +9609,26 @@ gethostbyname2}.  Like @func{gethostbyname} but allows the selection of
 the address type with the parameter @var{addrtype} which must be
 @code{AF_INET} or @code{AF_INET6}.
 @end defun
+
+@c page
+@node glibc math
+@section Mathematics
+
+
+A binding for each of the following constants is exported by
+@library{vicare platform-constants}:
+
+@example
+M_E         M_LOG2E     M_LOG10E
+M_LN2       M_LN10      M_PI
+M_PI_2      M_PI_4      M_1_PI
+M_2_PI      M_2_SQRTPI  M_SQRT2
+M_SQRT1_2
+@end example
+
+The following bindings are exported by the @library{vicare glibc}
+library.
+
 
 @c page
 @node linux
