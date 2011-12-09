@@ -66,6 +66,11 @@
 
     ;; word expansion
     wordexp		wordexp/string
+
+    ;; system configuration
+    sysconf
+    pathconf		fpathconf
+    confstr		confstr/string
     )
   (import (ikarus)
     (prefix (only (ikarus.posix)
@@ -99,6 +104,7 @@
 (define (raise-errno-error who errno . irritants)
   (raise (condition
 	  (make-error)
+	  (make-errno-condition errno)
 	  (make-who-condition who)
 	  (make-message-condition (strerror errno))
 	  (make-irritants-condition irritants))))
@@ -172,6 +178,11 @@
   (words.unsigned-int? obj)
   (assertion-violation who
     "expected exact integer representing a C language \"unsigned int\" as argument" obj))
+
+(define-argument-validation (signed-int who obj)
+  (words.signed-int? obj)
+  (assertion-violation who
+    "expected exact integer representing a C language \"signed int\" as argument" obj))
 
 
 ;;;; operating system environment variables
@@ -456,6 +467,61 @@
     (if (vector? rv)
 	(vector-map latin1->string rv)
       rv)))
+
+
+;;;; system configuration
+
+(define-for-glibc (sysconf parameter)
+  (define who 'sysconf)
+  (with-arguments-validation (who)
+      ((signed-int	parameter))
+    (let ((rv (capi.glibc-sysconf parameter)))
+      (if rv
+	  (if (negative? rv)
+	      (raise-errno-error who rv parameter)
+	    rv)
+	rv))))
+
+;;; --------------------------------------------------------------------
+
+(define-for-glibc (pathconf pathname parameter)
+  (define who 'pathconf)
+  (with-arguments-validation (who)
+      ((string/bytevector	pathname)
+       (signed-int		parameter))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.glibc-pathconf pathname.bv parameter)))
+	(if rv
+	    (if (negative? rv)
+		(raise-errno-error who rv pathname parameter)
+	      rv)
+	  rv)))))
+
+(define-for-glibc (fpathconf fd parameter)
+  (define who 'fpathconf)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd)
+       (signed-int	parameter))
+    (let ((rv (capi.glibc-fpathconf fd parameter)))
+      (if rv
+	  (if (negative? rv)
+	      (raise-errno-error who rv fd parameter)
+	    rv)
+	rv))))
+
+;;; --------------------------------------------------------------------
+
+(define-for-glibc (confstr parameter)
+  (define who 'confstr)
+  (with-arguments-validation (who)
+      ((signed-int	parameter))
+    (let ((rv (capi.glibc-confstr parameter)))
+      (if (bytevector? rv)
+	  rv
+	(raise-errno-error who rv parameter)))))
+
+(define-for-glibc (confstr/string parameter)
+  (latin1->string (confstr parameter)))
 
 
 ;;;; done

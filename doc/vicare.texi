@@ -9489,6 +9489,7 @@ functions, else the behaviour is undefined.
 * glibc match::                 Pattern matching, globbing and
                                 regular expressions.
 * glibc word::                  Performing word expansion.
+* glibc config::                System configuration.
 @end menu
 
 @c page
@@ -10063,6 +10064,88 @@ bytevectors, @func{wordexp/string} returns a vector holding the
 resulting strings; else the return value is a fixnum among:
 @code{WRDE_BADCHAR}, @code{WRDE_BADVAL}, @code{WRDE_CMDSUB},
 @code{WRDE_NOSPACE}, @code{WRDE_SYNTAX}.
+@end defun
+
+@c page
+@node glibc config
+@section System configuration
+
+
+The following bindings are exported by the @library{vicare glibc}
+library.  If an error occurs: all the following functions raise an
+exception with condition components @condition{errno},
+@condition{error}, @condition{who}, @condition{message},
+@condition{irritants}.
+
+
+@defun sysconf @var{parameter}
+Interface to the C function @cfunc{sysconf}, @glibcref{Sysconf
+Definition, sysconf}.  Query the system for a configuration value
+selected by the exact integer @var{parameter} among the @code{_SC_}
+constants.  If successful and a value is available: return a positive
+exact integer; if successful but no value is available return false; if
+@var{parameter} is invalid raise an exception.
+
+@strong{NOTE} This function assumes that all the validly returnable
+values are non--negative.  If a value is negative, the behaviour is
+unspecified.
+@end defun
+
+
+@defun pathconf @var{pathname} @var{parameter}
+Interface to the C function @cfunc{pathconf}, @glibcref{Pathconf,
+pathconf}.  Query the system for a configuration value associated to the
+file @var{pathname} selected by the exact integer @var{parameter} among
+the @code{_PC_} constants.
+
+@var{pathname} must be a string or bytevector; if it is a string: it is
+converted to bytevector with the function referenced by
+@func{string->filename-func}.
+
+If successful and a value is available: return a positive exact integer;
+if successful but no value is available return false; if @var{parameter}
+is invalid raise an exception.
+
+@strong{NOTE} This function assumes that all the validly returnable
+values are non--negative.  If a value is negative, the behaviour is
+unspecified.
+@end defun
+
+
+@defun fpathconf @var{fd} @var{parameter}
+Interface to the C function @cfunc{fpathconf}, @glibcref{Pathconf,
+fpathconf}.  Query the system for a configuration value associated to
+the file descriptor @var{fd} selected by the exact integer
+@var{parameter} among the @code{_PC_} constants.
+
+If successful and a value is available: return a positive exact integer;
+if successful but no value is available return false; if @var{parameter}
+is invalid raise an exception.
+
+@strong{NOTE} This function assumes that all the validly returnable
+values are non--negative.  If a value is negative, the behaviour is
+unspecified.
+@end defun
+
+
+@defun confstr @var{parameter}
+@defunx confstr/string @var{parameter}
+Interface to the C function @cfunc{confstr}, @glibcref{String
+Parameters, confstr}.  Query the system for a configuration value
+selected by the exact integer @var{parameter} among the @code{_CS_}
+constants.  If successful @func{confstr} returns a bytevector
+representing the value, @func{confstr/string} returns a string
+representing the value; else an exception is raised.
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare glibc) glibc.)
+  (vicare platform-constants))
+
+(glibc.confstr/string _CS_PATH)
+@result{} "/bin:/usr/bin"
+@end example
 @end defun
 
 @c page

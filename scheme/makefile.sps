@@ -2223,6 +2223,12 @@
     ;; word expansion
     (wordexp					glibc)
     (wordexp/string				glibc)
+    ;; system configuration
+    (sysconf					glibc)
+    (pathconf					glibc)
+    (fpathconf					glibc)
+    (confstr					glibc)
+    (confstr/string				glibc)
 
 ;;; --------------------------------------------------------------------
 ;;; Linux functions

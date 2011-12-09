@@ -253,6 +253,10 @@
 
     ;; word expansion
     glibc-wordexp
+
+    ;; system configuration
+    glibc-sysconf	glibc-confstr
+    glibc-pathconf	glibc-fpathconf
     )
   (import (except (ikarus)
 		  posix-read	posix-write
@@ -1427,6 +1431,21 @@
 
 (define-inline (glibc-wordexp words flags)
   (foreign-call "ikrt_glibc_wordexp" words flags))
+
+
+;;;; system configuration
+
+(define-inline (glibc-sysconf parameter)
+  (foreign-call "ikrt_glibc_sysconf" parameter))
+
+(define-inline (glibc-pathconf pathname parameter)
+  (foreign-call "ikrt_glibc_pathconf" pathname parameter))
+
+(define-inline (glibc-fpathconf fd parameter)
+  (foreign-call "ikrt_glibc_fpathconf" fd parameter))
+
+(define-inline (glibc-confstr parameter)
+  (foreign-call "ikrt_glibc_confstr" parameter))
 
 
 ;;;; done
