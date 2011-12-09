@@ -212,6 +212,59 @@
       (check-pretty-print (glibc.glob/string "*" 0 #f))
       (px.chdir pwd)))
 
+;;; --------------------------------------------------------------------
+
+  (check	;full match
+      (let ((rex (glibc.regcomp "abc" 0)))
+	(glibc.regexec rex "abc" 0))
+    => '#((0 . 3)))
+
+  (check	;partial match
+      (let ((rex (glibc.regcomp "abc" 0)))
+	(glibc.regexec rex "abcdef" 0))
+    => '#((0 . 3)))
+
+  (check	;no match
+      (let ((rex (glibc.regcomp "ciao" 0)))
+	(glibc.regexec rex "abc" 0))
+    => #f)
+
+  (check	;full bytevector match
+      (let ((rex (glibc.regcomp '#vu8(65 66 67) 0)))
+	(glibc.regexec rex '#vu8(65 66 67) 0))
+    => '#((0 . 3)))
+
+  (check
+      (let ((rex (glibc.regcomp "\\(a\\)" 0)))
+	(glibc.regexec rex "abc" 0))
+    => '#((0 . 1)
+	  (0 . 1)))
+
+  (check
+      (let ((rex (glibc.regcomp "\\(a\\)\\(b\\)\\(c\\)" 0)))
+	(glibc.regexec rex "abc" 0))
+    => '#((0 . 3)
+	  (0 . 1)
+	  (1 . 2)
+	  (2 . 3)))
+
+  (check
+      (let ((rex (glibc.regcomp "\\(a\\(b\\(c\\)\\)\\)" 0)))
+	(glibc.regexec rex "abc" 0))
+    => '#((0 . 3)
+	  (0 . 3)
+	  (1 . 3)
+	  (2 . 3)))
+
+  (check	;releasing rex
+      (let* ((rex (glibc.regcomp "abc" 0))
+	     (rv  (glibc.regexec rex "abc" 0)))
+	(glibc.regfree rex)
+	(glibc.regfree rex) ;nothing happens
+	rv)
+    => '#((0 . 3)))
+
+
   #f)
 
 

@@ -23,6 +23,9 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_MATH_H
 #  include <math.h>
 #endif
+#ifdef HAVE_REGEX_H
+#  include <regex.h>
+#endif
 #ifdef HAVE_SIGNAL_H
 #  include <signal.h>
 #endif

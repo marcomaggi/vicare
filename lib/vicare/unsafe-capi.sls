@@ -249,6 +249,7 @@
 
     ;; pattern matching, globbing, regular expressions
     glibc-fnmatch	glibc-glob
+    glibc-regcomp	glibc-regexec	glibc-regfree
     )
   (import (except (ikarus)
 		  posix-read	posix-write
@@ -1406,6 +1407,17 @@
 
 (define-inline (glibc-glob pattern flags error-handler)
   (foreign-call "ikrt_glibc_glob" pattern flags error-handler))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (glibc-regcomp pattern flags)
+  (foreign-call "ikrt_glibc_regcomp" pattern flags))
+
+(define-inline (glibc-regexec regex string flags)
+  (foreign-call "ikrt_glibc_regexec" regex string flags))
+
+(define-inline (glibc-regfree regex)
+  (foreign-call "ikrt_glibc_regfree" regex))
 
 
 ;;;; done

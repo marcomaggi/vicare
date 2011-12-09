@@ -32,18 +32,6 @@
 #ifdef HAVE_DIRENT_H
 #  include <dirent.h>
 #endif
-#ifdef HAVE_UNISTD_H
-#  include <unistd.h>
-#endif
-#ifdef HAVE_NET_IF_H
-#  include <net/if.h>
-#endif
-#ifdef HAVE_SYS_TYPES_H
-#  include <sys/types.h>
-#endif
-#ifdef HAVE_MATH_H
-#  include <math.h>
-#endif
 #ifdef HAVE_COMPLEX_H
 #  include <complex.h>
 #endif
@@ -52,6 +40,21 @@
 #endif
 #ifdef HAVE_GLOB_H
 #  include <glob.h>
+#endif
+#ifdef HAVE_MATH_H
+#  include <math.h>
+#endif
+#ifdef HAVE_NET_IF_H
+#  include <net/if.h>
+#endif
+#ifdef HAVE_REGEX_H
+#  include <regex.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
 #endif
 
 static VICARE_UNUSED void
@@ -709,6 +712,122 @@ ikrt_glibc_glob (ikptr s_pattern, ikptr s_flags, ikptr s_error_handler, ikpcb * 
   } else {
     return fix(rv);
   }
+#else
+  feature_failure(__func__);
+#endif
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb *pcb)
+{
+#ifdef HAVE_REGCOMP
+  ikptr         s_compiled_regex = ik_bytevector_alloc(pcb, sizeof(regex_t));
+  regex_t *     compiled_regex   = VICARE_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+  char *        pattern          = VICARE_BYTEVECTOR_DATA_CHARP(s_pattern);
+  int           rv;
+  pcb->root0 = &s_compiled_regex;
+  rv = regcomp(compiled_regex, pattern, unfix(s_flags));
+  if (0 == rv) {
+    pcb->root0 = NULL;
+    return s_compiled_regex;
+  } else {
+    ikptr       s_pair = ik_pair_alloc(pcb);
+    char *      error_message;
+    size_t      error_message_len;
+    /* After allocating memory  we need to extract again  the pointer to
+       data,  because  the  bytevector  may have  been  moved  somewhere
+       else. */
+    compiled_regex    = VICARE_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+    error_message_len = regerror(rv, compiled_regex, NULL, 0);
+    VICARE_SET_CAR(s_pair, fix(rv));
+    VICARE_SET_CDR(s_pair, ik_bytevector_alloc(pcb, (long)error_message_len-1));
+    error_message     = VICARE_BYTEVECTOR_DATA_CHARP(VICARE_CDR(s_pair));
+    compiled_regex    = VICARE_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+    regerror(rv, compiled_regex, error_message, error_message_len);
+    pcb->root0 = NULL;
+    return s_pair;
+  }
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_regexec (ikptr s_compiled_regex, ikptr s_string, ikptr s_flags, ikpcb *pcb)
+{
+#ifdef HAVE_REGCOMP
+  regex_t *     compiled_regex = VICARE_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+  char *        string         = VICARE_BYTEVECTOR_DATA_CHARP(s_string);
+  size_t        nmatch         = compiled_regex->re_nsub;
+  regmatch_t    match[1+nmatch];
+  int           rv;
+  rv = regexec(compiled_regex, string, 1+nmatch, match, unfix(s_flags));
+  switch (rv) {
+  case 0:
+    {
+      size_t      i;
+      ikptr       s_match = ik_vector_alloc(pcb, 1+nmatch);
+      ikptr       s_pair;
+      pcb->root0 = &s_match;
+      {
+        for (i=0; i<1+nmatch; ++i) {
+          s_pair = ik_pair_alloc(pcb);
+          VICARE_VECTOR_SET(s_match, i, s_pair);
+          VICARE_SET_CAR(s_pair, fix(match[i].rm_so));
+          VICARE_SET_CDR(s_pair, fix(match[i].rm_eo));
+        }
+      }
+      pcb->root0 = NULL;
+      return s_match;
+    }
+  case REG_NOMATCH:
+    return false_object;
+  default:
+    {
+      ikptr       s_pair = ik_pair_alloc(pcb);
+      char *      error_message;
+      size_t      error_message_len;
+      /* After allocating memory  we need to extract again  the pointer to
+         data,  because  the  bytevector  may have  been  moved  somewhere
+         else. */
+      compiled_regex    = VICARE_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+      error_message_len = regerror(rv, compiled_regex, NULL, 0);
+      VICARE_SET_CAR(s_pair, fix(rv));
+      VICARE_SET_CDR(s_pair, ik_bytevector_alloc(pcb, (long)error_message_len-1));
+      error_message     = VICARE_BYTEVECTOR_DATA_CHARP(VICARE_CDR(s_pair));
+      compiled_regex    = VICARE_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+      regerror(rv, compiled_regex, error_message, error_message_len);
+      return s_pair;
+    }
+  }
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_regfree (ikptr s_compiled_regex)
+/* Free the compiled regex in the given bytevector, but only if at least
+   one byte in  the bytevector is non-zero, else it  means that the data
+   structure has already been freed. */
+{
+#ifdef HAVE_REGCOMP
+  uint8_t *     data = VICARE_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+  long          len  = VICARE_BYTEVECTOR_LENGTH(s_compiled_regex);
+  long          i;
+  int           clean = 0;
+  for (i=0; i<len; ++i) {
+    if (data[i]) {
+      clean=1;
+      break;
+    }
+  }
+  if (clean) {
+    regfree((regex_t*)data);
+    for (i=0; i<len; ++i)
+      data[i] = 0;
+  }
+  return void_object;
 #else
   feature_failure(__func__);
 #endif

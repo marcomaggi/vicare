@@ -62,6 +62,7 @@
 
     ;; pattern matching, globbing, regular expressions
     fnmatch		glob		glob/string
+    regcomp		regexec		regfree
     )
   (import (ikarus)
     (prefix (only (ikarus.posix)
@@ -396,6 +397,45 @@
     (if (fixnum? rv)
 	rv
       (map latin1->string rv))))
+
+;;; --------------------------------------------------------------------
+
+(define %regex-guardian
+  (make-guardian))
+
+(define (%free-allocated-regex)
+  (do ((bv (%regex-guardian) (%regex-guardian)))
+      ((not bv))
+    (capi.glibc-regfree bv)))
+
+(define-for-glibc (regcomp pattern flags)
+  (define who 'regcomp)
+  (with-arguments-validation (who)
+      ((string/bytevector	pattern)
+       (fixnum			flags))
+    (with-bytevectors ((pattern.bv pattern))
+      (let ((rv (capi.glibc-regcomp pattern.bv flags)))
+	(if (bytevector? rv)
+	    (%regex-guardian rv)
+	  (error who (latin1->string (cdr rv)) (car rv) pattern flags))))))
+
+(define-for-glibc (regexec regex string flags)
+  (define who 'regexec)
+  (with-arguments-validation (who)
+      ((bytevector		regex)
+       (string/bytevector	string)
+       (fixnum			flags))
+    (with-bytevectors ((string.bv string))
+      (let ((rv (capi.glibc-regexec regex string.bv flags)))
+	(if (or (not rv) (vector? rv))
+	    rv
+	  (error who (latin1->string (cdr rv)) (car rv) regex string flags))))))
+
+(define-for-glibc (regfree regex)
+  (define who 'regfree)
+  (with-arguments-validation (who)
+      ((bytevector  regex))
+    (capi.glibc-regfree regex)))
 
 
 ;;;; done

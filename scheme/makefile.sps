@@ -2217,6 +2217,9 @@
     (fnmatch					glibc)
     (glob					glibc)
     (glob/string				glibc)
+    (regcomp					glibc)
+    (regexec					glibc)
+    (regfree					glibc)
 
 ;;; --------------------------------------------------------------------
 ;;; Linux functions

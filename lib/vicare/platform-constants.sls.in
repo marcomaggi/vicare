@@ -349,6 +349,16 @@
     GLOB_TILDE		GLOB_TILDE_CHECK GLOB_ONLYDIR
     GLOB_ABORTED	GLOB_NOMATCH	GLOB_NOSPACE
 
+;;;; POSIX regexps
+    REG_BADBR		REG_BADPAT	REG_BADRPT
+    REG_ECOLLATE	REG_ECTYPE	REG_EESCAPE
+    REG_ESUBREG		REG_EBRACK	REG_EPAREN
+    REG_EBRACE		REG_ERANGE
+
+    REG_EXTENDED	REG_ICASE	REG_NOSUB
+    REG_NEWLINE		REG_NOTBOL	REG_NOTEOL
+    REG_NOMATCH		REG_ESPACE
+
 ;;; errno codes
     E2BIG		EACCES		EADDRINUSE
     EADDRNOTAVAIL	EADV		EAFNOSUPPORT
@@ -1143,6 +1153,28 @@
 (define-inline-constant GLOB_ABORTED		@VALUEOF_GLOB_ABORTED@)
 (define-inline-constant GLOB_NOMATCH		@VALUEOF_GLOB_NOMATCH@)
 (define-inline-constant GLOB_NOSPACE		@VALUEOF_GLOB_NOSPACE@)
+
+;;;; POSIX regexps
+(define-inline-constant REG_BADBR		@VALUEOF_REG_BADBR@)
+(define-inline-constant REG_BADPAT		@VALUEOF_REG_BADPAT@)
+(define-inline-constant REG_BADRPT		@VALUEOF_REG_BADRPT@)
+(define-inline-constant REG_ECOLLATE		@VALUEOF_REG_ECOLLATE@)
+(define-inline-constant REG_ECTYPE		@VALUEOF_REG_ECTYPE@)
+(define-inline-constant REG_EESCAPE		@VALUEOF_REG_EESCAPE@)
+(define-inline-constant REG_ESUBREG		@VALUEOF_REG_ESUBREG@)
+(define-inline-constant REG_EBRACK		@VALUEOF_REG_EBRACK@)
+(define-inline-constant REG_EPAREN		@VALUEOF_REG_EPAREN@)
+(define-inline-constant REG_EBRACE		@VALUEOF_REG_EBRACE@)
+(define-inline-constant REG_ERANGE		@VALUEOF_REG_ERANGE@)
+
+(define-inline-constant REG_EXTENDED		@VALUEOF_REG_EXTENDED@)
+(define-inline-constant REG_ICASE		@VALUEOF_REG_ICASE@)
+(define-inline-constant REG_NOSUB		@VALUEOF_REG_NOSUB@)
+(define-inline-constant REG_NEWLINE		@VALUEOF_REG_NEWLINE@)
+(define-inline-constant REG_NOTBOL		@VALUEOF_REG_NOTBOL@)
+(define-inline-constant REG_NOTEOL		@VALUEOF_REG_NOTEOL@)
+(define-inline-constant REG_NOMATCH		@VALUEOF_REG_NOMATCH@)
+(define-inline-constant REG_ESPACE		@VALUEOF_REG_ESPACE@)
 
 
 ;;;; errno codes

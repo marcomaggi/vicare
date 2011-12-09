@@ -9902,6 +9902,119 @@ documentation for @cfunc{glob} and the flag @code{GLOB_ERR} for details.
 @end example
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading @posix{} regular expressions
+
+The following are usage examples of @posix{} regular expressions
+matching:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare glibc) glibc.)
+  (vicare platform-constants))
+
+(let ((rex (glibc.regcomp "abc" 0)))
+  (glibc.regexec rex "abc" 0))
+@result{} #((0 . 3)))   ;the regex matched the whole string
+
+(let ((rex (glibc.regcomp "abc" 0)))
+  (glibc.regexec rex "abcdef" 0))
+@result{} #((0 . 3))    ;substring [0, 3) matched
+
+(let ((rex (glibc.regcomp "ciao" 0)))
+  (glibc.regexec rex "abc" 0))
+@result{} #f            ;no match
+
+(let ((rex (glibc.regcomp "\\(a\\)" 0)))
+  (glibc.regexec rex "abc" 0))
+@result{} #((0 . 1)     ;the regexp matched the whole string
+     (0 . 1))    ;substring [0, 1) matched the 1st paren
+
+(let ((rex (glibc.regcomp "\\(a\\)\\(b\\)\\(c\\)" 0)))
+  (glibc.regexec rex "abc" 0))
+@result{} #((0 . 3)     ;the regexp matched the whole string
+     (0 . 1)     ;substring [0, 1) matched the 1st paren
+     (1 . 2)     ;substring [1, 2) matched the 2nd paren
+     (2 . 3))    ;substring [2, 3) matched the 3rd paren
+
+(let ((rex (glibc.regcomp "\\(a\\(b\\(c\\)\\)\\)" 0)))
+  (glibc.regexec rex "abc" 0))
+@result{} #((0 . 3)     ;the regexp matched the whole string
+     (0 . 3)     ;substring [0, 3) matched the 1st paren
+     (1 . 3)     ;substring [1, 3) matched the 2nd paren
+     (2 . 3))    ;substring [2, 3) matched the 3rd paren
+@end example
+
+@noindent
+we have to remember that this @api{} can be used only with bytevectors
+representing @ascii{} coded strings and with Scheme strings containing
+only characters whose Unicode code points are in the range @math{[0,
+255]}.
+
+@posix{} regular expression patterns are described in the ``Base
+Definitions'' volume of @ieee{} Std 1003.1-2001, Chapter 9, Regular
+Expressions:
+
+@center @url{http://pubs.opengroup.org/onlinepubs/009695399/nframe.html}
+
+@noindent
+@aurl{} last verified Dec  9, 2011.
+
+
+@defun regcomp @var{pattern} @var{flags}
+Interface to the C function @cfunc{regcomp}, @glibcref{POSIX Regexp
+Compilation, regcomp}.  Compile the regular expression in @var{pattern}
+accoding to @var{flags}.  If successful return a bytevector referencing
+the compiled regexp, else raise an exception with condition components
+@condition{error}, @condition{who}, @condition{message},
+@condition{irritants}.
+
+@var{pattern} must be a string or bytevector representing the regular
+expression.  @var{flags} must be a fixnum resulting from the bitwise
+combination (@func{fxior}) of @code{REG_} constants.
+
+The bytevector returned in case of success contains a @code{regex_t}
+data structure whose fields must be released explicitly by
+@func{regfree}, or they are automatically released by the garbage
+collector whenever the bytevector itself is collected.
+@end defun
+
+
+@defun regexec @var{regex} @var{string} @var{flags}
+Interface to the C function @cfunc{regexec}, @glibcref{Matching POSIX
+Regexps, regexec}.  Attempt to match @var{string} against the
+precompiled regular expression @var{regex} according to @var{flags}.
+
+If one or more matches occur return a vector holding pairs describing
+the portions of @var{string} that did match; if no match occurs return
+@false{}; if an error occurs raise an exception with condition
+components: @condition{error}, @condition{who}, @condition{message},
+@condition{irritants}.
+
+The vector returned in case of success contains pairs: the car being a
+fixnum representing the starting offset of a match substring, the cdr
+being a fixnum representing the ending offset of a match substring.
+
+The vector element at index @math{0} represents the portion of
+@var{string} which matched the whole regular expression; the vector
+element at index @math{1} represents the portion of @var{string} which
+matched the first parenthetical subexpression, the vector element at
+index @math{2} represents the portion of @var{string} which matched the
+second parenthetical subexpression, and so on.  If @var{string} matches:
+the returned vector has at least one element.
+@end defun
+
+
+@defun regfree @var{regex}
+Interface to the C function @cfunc{regfree}, @glibcref{Regexp Cleanup,
+regfree}.  Release the resources associated to the compiled regular
+expression @var{regex}, which must be a bytevector, then clear the
+bytevector to zero.  Releasing occurs only if at least one byte of
+@var{regex} is non--zero.
+@end defun
+
 @c page
 @node linux
 @chapter The @gnu{}+Linux interface
