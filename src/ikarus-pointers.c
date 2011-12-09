@@ -470,24 +470,7 @@ ikrt_argv_from_bytevectors (ikptr bvs, ikpcb * pcb)
 ikptr
 ikrt_argv_to_bytevectors (ikptr s_pointer, ikpcb * pcb)
 {
-  char **       argv = VICARE_POINTER_DATA_VOIDP(s_pointer);
-  ikptr         s_list, s_pair, bv;
-  int           i;
-  s_list = s_pair = ik_pair_alloc(pcb);
-  pcb->root0 = &s_list;
-  {
-    for (i=0; argv[i];) {
-      bv = ik_bytevector_from_cstring(pcb, argv[i]);
-      VICARE_SET_CAR(s_pair, bv);
-      if (argv[++i]) {
-        VICARE_SET_CDR(s_pair, ik_pair_alloc(pcb));
-        s_pair = VICARE_CDR(s_pair);
-      } else
-        VICARE_SET_CDR(s_pair, null_object);
-    }
-  }
-  pcb->root0 = NULL;
-  return s_list;
+  return ik_list_from_argv(VICARE_POINTER_DATA_VOIDP(s_pointer), pcb);
 }
 ikptr
 ikrt_argv_length (ikptr s_pointer)
