@@ -47,13 +47,13 @@ Notes for revision 0.2d5
 * Some functions where added to (vicare glibc).
 
 * Better  use of  GNU  Autotools and  better  tracking of  files in  the
-  repository, thanks to Barak A. Pearlmutter.
+  repository.
 
 * The "main()" function now calls:
 
      setlocale(LC_ALL, "")
 
-* The FFI library  is now (vicare ffi).  FFI  code and documentation has
+* The FFI library is now  (vicare ffi).  FFI code and documentation have
   been reviewed.  They need more testing.
 
 * A toy library to build and  load shared libraries at runtime using GCC
