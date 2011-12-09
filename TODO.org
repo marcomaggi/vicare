@@ -111,6 +111,12 @@
   The flonum getters  and setters in the bytevector  library should have
   tests in "test-vicare-bytevectors.sps".
 
+* GNU C Library
+
+  System Management
+
+  Resource Usage and Limitation
+
 * Stuff to think about for the future
 
 ** Introduce immutable datums
