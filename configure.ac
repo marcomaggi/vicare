@@ -85,7 +85,7 @@ AC_CHECK_HEADERS([assert.h dlfcn.h errno.h fcntl.h signal.h \
                   sys/time.h sys/types.h sys/wait.h time.h \
                   unistd.h])
 
-AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h ftw.h grp.h inttypes.h limits.h mntent.h net/if.h netinet/in.h netdb.h paths.h pwd.h signal.h termios.h sys/mman.h sys/mount.h sys/select.h sys/socket.h sys/times.h sys/timex.h sys/types.h sys/un.h sys/utsname.h sys/uio.h utime.h sys/ioctl.h math.h complex.h])
+AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h ftw.h grp.h inttypes.h limits.h mntent.h net/if.h netinet/in.h netdb.h paths.h pwd.h signal.h termios.h sys/mman.h sys/mount.h sys/select.h sys/socket.h sys/times.h sys/timex.h sys/types.h sys/un.h sys/utsname.h sys/uio.h utime.h sys/ioctl.h math.h complex.h fnmatch.h glob.h])
 
 AC_C_CONST
 AC_C_INLINE
@@ -597,6 +597,12 @@ AC_CACHE_SAVE
 # mathematics
 VICARE_DOUBLEOF_TESTS([M_E M_LOG2E M_LOG10E M_LN2 M_LN10 M_PI M_PI_2 M_PI_4 M_1_PI M_2_PI M_2_SQRTPI M_SQRT2 M_SQRT1_2])
 
+# fnmatch()
+VICARE_CONSTANT_TESTS([FNM_NOMATCH FNM_FILE_NAME FNM_PATHNAME FNM_PERIOD FNM_NOESCAPE FNM_LEADING_DIR FNM_CASEFOLD FNM_EXTMATCH])
+
+# glob() flags
+VICARE_CONSTANT_TESTS([GLOB_ERR GLOB_MARK GLOB_NOCHECK GLOB_NOSORT GLOB_NOESCAPE GLOB_PERIOD GLOB_MAGCHAR GLOB_BRACE GLOB_NOMAGIC GLOB_TILDE GLOB_TILDE_CHECK GLOB_ONLYDIR GLOB_ABORTED GLOB_NOMATCH GLOB_NOSPACE])
+
 AC_CACHE_SAVE
 
 #page
@@ -645,6 +651,7 @@ AC_CHECK_FUNCS([cexp clog clog10 csqrt cpow])
 AC_CHECK_FUNCS([sinh cosh tanh csinh ccosh ctanh asinh acosh atanh casinh cacosh catanh])
 AC_CHECK_FUNCS([erf erfc lgamma_r tgamma j0 j1 jn y0 y1 yn])
 AC_CHECK_FUNCS([rand srand])
+AC_CHECK_FUNCS([fnmatch glob])
 
 AC_CACHE_SAVE
 

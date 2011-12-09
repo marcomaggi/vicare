@@ -9486,6 +9486,8 @@ functions, else the behaviour is undefined.
 * glibc socket::                Network sockets.
 * glibc math::                  Mathematics.
 * glibc random::                Pseudo--random numbers.
+* glibc match::                 Pattern matching, globbing and
+                                regular expressions.
 @end menu
 
 @c page
@@ -9812,6 +9814,92 @@ platform-constants}.
 Interface to the C function @cfunc{srand}, @glibcref{ISO Random, srand}.
 Set to the exact integer @var{seed} the seed of the pseudo--random
 numbers series.
+@end defun
+
+@c page
+@node glibc match
+@section Pattern matching, globbing and regular expressions
+
+
+The following bindings are exported by the @library{vicare glibc}
+library.
+
+
+@defun fnmatch @var{pattern} @var{string} @var{flags}
+Interface to the C function @cfunc{fnmatch}, @glibcref{Wildcard
+Matching, fnmatch}.  Tests whether @var{string} matches @var{pattern}
+according to @var{flags}; if it matches return @true{}, else return
+@false{}.
+
+@var{pattern} and @var{string} must be Scheme strings or bytevectors;
+@var{flags} must be a fixnum resulting from the bitwise combination
+(@func{fxior}) of the @code{FNM_} constants exported by @library{vicare
+platform-constants}.
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare glibc) glibc.)
+  (vicare platform-constants))
+
+(glibc.fnmatch "ciao" "ciao"  0)        @result{} #t
+(glibc.fnmatch "ciao" "salut" 0)        @result{} #f
+
+(glibc.fnmatch "ciao*" "ciao a tutti" 0)
+@result{} #t
+
+(glibc.fnmatch "*(Ciao)" "CiaoCiao" FNM_EXTMATCH)
+@result{} #t
+
+(glibc.fnmatch "?(Ciao|Hello)" "Hello" FNM_EXTMATCH)
+@result{} #t
+@end example
+@end defun
+
+
+@defun glob @var{pattern} @var{flags} @var{error-handler}
+@defunx glob/string @var{pattern} @var{flags} @var{error-handler}
+Interface to the C function @cfunc{glob}, @glibcref{Calling Glob, glob}.
+Perform file globbing @strong{in the current directory} using
+@var{pattern} to select entries according to @var{flags}.  If successful
+@func{glob} returns a list of bytevectors representing the result,
+@func{glob/string} returns a list of strings representing the result;
+else both return a fixnum representing one of the error codes:
+@code{GLOB_ABORTED}, @code{GLOB_NOMATCH}, @code{GLOB_NOSPACE}.
+
+@var{pattern} must be a string or bytevector.  @var{flags} must be a
+fixnum built as bitwise composition (@func{fxior}) of the flags:
+@code{GLOB_ERR}, @code{GLOB_MARK}, @code{GLOB_NOCHECK},
+@code{GLOB_NOSORT}, @code{GLOB_NOESCAPE}, @code{GLOB_PERIOD},
+@code{GLOB_BRACE}, @code{GLOB_NOMAGIC}, @code{GLOB_TILDE},
+@code{GLOB_TILDE_CHECK}, @code{GLOB_ONLYDIR}.
+
+@var{error-handler} must be @false{} or a callback pointer with the
+signature:
+
+@example
+int @var{error-handler} (const char * filename, int error-code)
+@end example
+
+@noindent
+called by @func{glob} whenever it cannot open a directory; see the
+documentation for @cfunc{glob} and the flag @code{GLOB_ERR} for details.
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare glibc) glibc.)
+  (vicare platform-constants))
+
+(glibc.glob/string "*" 0 #f)
+@result{} ("bin" "boot" "dev" "etc" "home" "lib"
+    "libexec" "lost+found" "media" "mnt" "opt"
+    "proc" "root" "sbin" "share" "srv" "sys"
+    "tmp" "usr" "var")
+
+(glibc.glob/string "~marco" GLOB_TILDE #f)
+@result{} ("/home/marco")
+@end example
 @end defun
 
 @c page

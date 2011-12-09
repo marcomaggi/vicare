@@ -8,6 +8,12 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_FCNTL_H
 #  include <fcntl.h>
 #endif
+#ifdef HAVE_FNMATCH_H
+#  include <fnmatch.h>
+#endif
+#ifdef HAVE_GLOB_H
+#  include <glob.h>
+#endif
 #ifdef HAVE_INTTYPES_H
 #  include <inttypes.h>
 #endif

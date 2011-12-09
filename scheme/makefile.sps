@@ -2213,6 +2213,10 @@
     ;; random
     (rand					glibc)
     (srand					glibc)
+    ;; pattern matching, globbing and regular expressions
+    (fnmatch					glibc)
+    (glob					glibc)
+    (glob/string				glibc)
 
 ;;; --------------------------------------------------------------------
 ;;; Linux functions

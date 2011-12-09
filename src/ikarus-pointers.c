@@ -443,7 +443,7 @@ ikrt_argv_from_bytevectors (ikptr bvs, ikpcb * pcb)
 {
   int           argc = ik_list_length(bvs);
   size_t        total_length;
-  char *        bv_data[argc];
+  char *        bv_data[1+argc];
   long          bv_len[argc];
   char **       argv;
   int           len;

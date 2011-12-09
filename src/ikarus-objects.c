@@ -37,47 +37,108 @@
  ** ----------------------------------------------------------------- */
 
 int
-ik_list_length (ikptr x)
+ik_list_length (ikptr s_list)
+/* Determine and return  the lenght of the list  S_LIST.  Do *not* check
+   for circular lists. */
 {
-  int   n;
-  for (n = 0; pair_tag == tagof(x); ++n) {
-    if (INT_MAX == n) {
+  int   length;
+  for (length = 0; pair_tag == tagof(s_list); ++length) {
+    if (INT_MAX == length) {
       fprintf(stderr, "Vicare error: size of list exceeds INT_MAX");
       exit(EXIT_FAILURE);
     } else {
-      x = ref(x, off_cdr);
+      s_list = ref(s_list, off_cdr);
     }
   }
-  return n;
+  return length;
 }
+
+/* ------------------------------------------------------------------ */
+
 void
-ik_list_to_argv (ikptr x, char **argv)
-/* Given a reference to a list of bytevectors, fill "argv" with pointers
-   to the data areas, setting the last element to NULL. */
+ik_list_to_argv (ikptr s_list, char **argv)
+/* Given a  reference S_LIST  to a list  of bytevectors, fill  ARGV with
+   pointers to the data areas, setting the last element of ARGV to NULL.
+   The array referenced by ARGV must be wide enough to hold all the data
+   from S_LIST plus the terminating NULL. */
 {
   int    i;
   ikptr  bv;
-  for (i=0; pair_tag == tagof(x); x=ref(x, off_cdr), ++i) {
-    bv      = ref(x, off_car);
-    argv[i] = (char*)(long)(bv + off_bytevector_data);
+  for (i=0; pair_tag == tagof(s_list); s_list=VICARE_CDR(s_list), ++i) {
+    bv      = VICARE_CAR(s_list);
+    argv[i] = VICARE_BYTEVECTOR_DATA_CHARP(bv);
   }
   argv[i] = NULL;
 }
 void
-ik_list_to_argv_and_argc (ikptr x, char **argv, long *argc)
-/* Given a reference to a list of bytevectors: fill "argv" with pointers
-   to the data areas, setting the last element to NULL; fill "argc" with
-   the lengths of the bytevectors. */
+ik_list_to_argv_and_argc (ikptr s_list, char **argv, long *argc)
+/* Given a  reference S_LIST  to a list  of bytevectors: fill  ARGV with
+   pointers to the data areas, setting the last element of ARGV to NULL;
+   fill ARGC  with the lengths ofthe bytevectors.   The array referenced
+   by ARGV must be wide enough to hold all the data from S_LIST plus the
+   terminating NULL; the array referenced by ARGC must be wide enough to
+   hold all the lengths. */
 {
   int    i;
   ikptr  bv;
-  for (i=0; pair_tag == tagof(x); x=ref(x, off_cdr), ++i) {
-    bv      = ref(x, off_car);
+  for (i=0; pair_tag == tagof(s_list); s_list=VICARE_CDR(s_list), ++i) {
+    bv      = VICARE_CAR(s_list);
     argv[i] = VICARE_BYTEVECTOR_DATA_CHARP(bv);
     argc[i] = VICARE_BYTEVECTOR_LENGTH(bv);
   }
   argv[i] = NULL;
 }
+ikptr
+ik_list_from_argv (char ** argv, ikpcb * pcb)
+/* Given a  pointer ARGV  to a NULL-terminated  array of  ASCIIZ strings
+   build and return  a list of bytevectors holding a  copy of the ASCIIZ
+   strings.  Make use of PCB->ROOT1.  */
+{
+  ikptr         s_list, s_pair, bv;
+  int           i;
+  s_list = s_pair = ik_pair_alloc(pcb);
+  pcb->root1 = &s_list;
+  {
+    for (i=0; argv[i];) {
+      bv = ik_bytevector_from_cstring(pcb, argv[i]);
+      VICARE_SET_CAR(s_pair, bv);
+      if (argv[++i]) {
+        VICARE_SET_CDR(s_pair, ik_pair_alloc(pcb));
+        s_pair = VICARE_CDR(s_pair);
+      } else
+        VICARE_SET_CDR(s_pair, null_object);
+    }
+  }
+  pcb->root1 = NULL;
+  return s_list;
+}
+ikptr
+ik_list_from_argv_and_argc (char ** argv, int argc, ikpcb * pcb)
+/* Given  a pointer  ARGV to  an array  of ASCIIZ  strings  holding ARGC
+   pointers: build  and return a list  of bytevectors holding  a copy of
+   the ASCIIZ strings.  Make use of PCB->ROOT1.  */
+{
+  ikptr         s_list, s_pair, bv;
+  int           i;
+  s_list = s_pair = ik_pair_alloc(pcb);
+  pcb->root1 = &s_list;
+  {
+    for (i=0; i<argc;) {
+      bv = ik_bytevector_from_cstring(pcb, argv[i]);
+      VICARE_SET_CAR(s_pair, bv);
+      if (++i < argc) {
+        VICARE_SET_CDR(s_pair, ik_pair_alloc(pcb));
+        s_pair = VICARE_CDR(s_pair);
+      } else
+        VICARE_SET_CDR(s_pair, null_object);
+    }
+  }
+  pcb->root1 = NULL;
+  return s_list;
+}
+
+/* ------------------------------------------------------------------ */
+
 char**
 ik_list_to_vec (ikptr x)
 {

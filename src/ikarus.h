@@ -376,6 +376,10 @@ ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
 int     ik_list_length          (ikptr x);
 void    ik_list_to_argv         (ikptr x, char **argv);
 void    ik_list_to_argv_and_argc (ikptr x, char **argv, long *argc);
+
+ikptr   ik_list_from_argv               (char ** argv, ikpcb * pcb);
+ikptr   ik_list_from_argv_and_argc      (char ** argv, int argc, ikpcb * pcb);
+
 char**  ik_list_to_vec          (ikptr x);
 
 #define ik_pair_alloc(PCB)      (ik_safe_alloc((PCB), align(pair_size)) + pair_tag)

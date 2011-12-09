@@ -246,6 +246,9 @@
 
     ;; random numbers
     glibc-rand		glibc-srand
+
+    ;; pattern matching, globbing, regular expressions
+    glibc-fnmatch	glibc-glob
     )
   (import (except (ikarus)
 		  posix-read	posix-write
@@ -1394,6 +1397,15 @@
 
 (define-inline (glibc-srand seed)
   (foreign-call "ikrt_glibc_srand" seed))
+
+
+;;;; pattern matching, globbing, regular expressions
+
+(define-inline (glibc-fnmatch pattern string flags)
+  (foreign-call "ikrt_glibc_fnmatch" pattern string flags))
+
+(define-inline (glibc-glob pattern flags error-handler)
+  (foreign-call "ikrt_glibc_glob" pattern flags error-handler))
 
 
 ;;;; done

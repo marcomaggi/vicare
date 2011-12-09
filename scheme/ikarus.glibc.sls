@@ -59,6 +59,9 @@
 
     ;; random numbers
     rand		srand
+
+    ;; pattern matching, globbing, regular expressions
+    fnmatch		glob		glob/string
     )
   (import (ikarus)
     (prefix (only (ikarus.posix)
@@ -126,6 +129,16 @@
 (define-argument-validation (cflonum who obj)
   (cflonum? obj)
   (assertion-violation who "expected complex flonum as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (string/bytevector who obj)
+  (or (string? obj) (bytevector? obj))
+  (assertion-violation who "expected string or bytevector as argument" obj))
+
+(define-argument-validation (false/procedure who obj)
+  (or (not obj) (procedure? obj))
+  (assertion-violation who "expected false or procedure as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -348,13 +361,41 @@
 
 ;;;; random numbers
 
-(define (rand)
+(define-for-glibc (rand)
   (capi.glibc-rand))
 
-(define (srand seed)
+(define-for-glibc (srand seed)
   (with-arguments-validation (srand)
       ((unsigned-int	seed))
     (capi.glibc-srand seed)))
+
+
+;;;; pattern matching, globbing, regular expressions
+
+(define-for-glibc (fnmatch pattern string flags)
+  (define who 'fnmatch)
+  (with-arguments-validation (who)
+      ((string/bytevector	pattern)
+       (string/bytevector	string)
+       (fixnum			flags))
+    (with-bytevectors ((pattern.bv	pattern)
+		       (string.bv	string))
+      (capi.glibc-fnmatch pattern.bv string.bv flags))))
+
+(define-for-glibc (glob pattern flags error-handler)
+  (define who 'glob)
+  (with-arguments-validation (who)
+      ((string/bytevector	pattern)
+       (fixnum			flags)
+       (false/procedure		error-handler))
+    (with-bytevectors ((pattern.bv	pattern))
+      (capi.glibc-glob pattern.bv flags error-handler))))
+
+(define-for-glibc (glob/string pattern flags error-handler)
+  (let ((rv (glob pattern flags error-handler)))
+    (if (fixnum? rv)
+	rv
+      (map latin1->string rv))))
 
 
 ;;;; done
@@ -364,4 +405,5 @@
 ;;; end of file
 ;; Local Variables:
 ;; eval: (put 'define-for-glibc 'scheme-indent-function 1)
+;; eval: (put 'with-bytevectors 'scheme-indent-function 1)
 ;; End:

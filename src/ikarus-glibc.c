@@ -29,15 +29,29 @@
  ** ----------------------------------------------------------------- */
 
 #include "ikarus.h"
-#include <dirent.h>
-#include <unistd.h>
-#include <net/if.h>
-#include <sys/types.h>
+#ifdef HAVE_DIRENT_H
+#  include <dirent.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
+#ifdef HAVE_NET_IF_H
+#  include <net/if.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+#endif
 #ifdef HAVE_MATH_H
 #  include <math.h>
 #endif
 #ifdef HAVE_COMPLEX_H
 #  include <complex.h>
+#endif
+#ifdef HAVE_FNMATCH_H
+#  include <fnmatch.h>
+#endif
+#ifdef HAVE_GLOB_H
+#  include <glob.h>
 #endif
 
 static VICARE_UNUSED void
@@ -649,6 +663,52 @@ ikrt_glibc_srand (ikptr s_seed)
 #ifdef HAVE_RAND
   srand((unsigned int)ik_integer_to_unsigned_long(s_seed));
   return void_object;
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
+ ** Pattern matching, globbing, regular expressions.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_glibc_fnmatch (ikptr s_pattern, ikptr s_string, ikptr s_flags)
+{
+#ifdef HAVE_FNMATCH
+  return fnmatch(VICARE_BYTEVECTOR_DATA_CHARP(s_pattern),
+                 VICARE_BYTEVECTOR_DATA_CHARP(s_string),
+                 unfix(s_flags))? false_object : true_object;
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_glob (ikptr s_pattern, ikptr s_flags, ikptr s_error_handler, ikpcb * pcb)
+{
+#ifdef HAVE_GLOB
+  typedef int handler_t (const char * filename, int error_code);
+  glob_t        G;
+  int           rv;
+  handler_t     * handler;
+  handler = (false_object == s_error_handler)? NULL : VICARE_POINTER_DATA_VOIDP(s_error_handler);
+  G.gl_pathc    = 0;
+  G.gl_pathv    = NULL;
+  G.gl_offs     = 0;
+  G.gl_opendir  = NULL;
+  G.gl_readdir  = NULL;
+  G.gl_closedir = NULL;
+  G.gl_stat     = NULL;
+  G.gl_lstat    = NULL;
+  rv = glob(VICARE_BYTEVECTOR_DATA_CHARP(s_pattern), unfix(s_flags), handler, &G);
+  if (0 == rv) {
+    ikptr       s_list = ik_list_from_argv_and_argc(G.gl_pathv, G.gl_pathc, pcb);
+    globfree(&G);
+    return s_list;
+  } else {
+    return fix(rv);
+  }
 #else
   feature_failure(__func__);
 #endif

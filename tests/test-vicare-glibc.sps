@@ -27,6 +27,8 @@
 
 (import (rename (vicare)
 		(parameterize	parametrise))
+  (prefix (vicare posix)
+	  px.)
   (prefix (vicare glibc)
 	  glibc.)
   (vicare platform-constants)
@@ -170,6 +172,47 @@
     => #t)
 
   #t)
+
+
+(parametrise ((check-test-name	'match))
+
+  (check
+      (glibc.fnmatch "ciao" "ciao" 0)
+    => #t)
+
+  (check
+      (glibc.fnmatch "ciao" "salut" 0)
+    => #f)
+
+  (check
+      (glibc.fnmatch "ciao*" "ciao a tutti" 0)
+    => #t)
+
+  (check
+      (glibc.fnmatch "*(Ciao)" "CiaoCiao" FNM_EXTMATCH)
+    => #t)
+
+  (check
+      (glibc.fnmatch "?(Ciao|Hello)" "Hello" FNM_EXTMATCH)
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (glibc.glob/string "*" 0 #f)
+    => '("Makefile"))
+
+  (when #f
+    (check
+	(glibc.glob/string "~marco" GLOB_TILDE #f)
+      => '("/home/marco"))
+
+    (let ((pwd (px.getcwd)))
+      (px.chdir "/")
+      (check-pretty-print (glibc.glob/string "*" 0 #f))
+      (px.chdir pwd)))
+
+  #f)
 
 
 ;;;; done

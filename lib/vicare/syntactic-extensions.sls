@@ -37,6 +37,7 @@
     debug-assert		unwind-protect
     begin0			begin0-let
     with-pathnames
+    with-bytevectors		with-bytevectors/or-false
 
     ;; arguments validation
     define-argument-validation
@@ -150,6 +151,38 @@
      (let ((?pathname-bv (if (bytevector? ?pathname)
 			     ?pathname
 			   ((string->filename-func) ?pathname)))
+	   ...)
+       . ?body))))
+
+(define-syntax with-bytevectors
+  ;;Used to  preprocess function arguments which must  be bytevectors or
+  ;;strings;  the  strings are  converted  to  bytevectors.  This  macro
+  ;;assumes that the arguments have already been validated.
+  ;;
+  ;;The ?VALUE.BV and ?VALUE input forms must be identifiers.
+  ;;
+  (syntax-rules ()
+    ((_ ((?value.bv ?value) ...) . ?body)
+     (let ((?value.bv (if (bytevector? ?value)
+			  ?value
+			(string->latin1 ?value)))
+	   ...)
+       . ?body))))
+
+(define-syntax with-bytevectors/or-false
+  ;;Used  to preprocess  function arguments  which must  be bytevectors,
+  ;;strings or  false; the strings  are converted to  bytevectors.  This
+  ;;macro assumes that the arguments have already been validated.
+  ;;
+  ;;The ?VALUE.BV and ?VALUE input forms must be identifiers.
+  ;;
+  (syntax-rules ()
+    ((_ ((?value.bv ?value) ...) . ?body)
+     (let ((?value.bv (cond ((bytevector? ?value)
+			     ?value)
+			    ((string? ?value)
+			     (string->latin1 ?value))
+			    (else ?value)))
 	   ...)
        . ?body))))
 
