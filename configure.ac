@@ -85,7 +85,7 @@ AC_CHECK_HEADERS([assert.h dlfcn.h errno.h fcntl.h signal.h \
                   sys/time.h sys/types.h sys/wait.h time.h \
                   unistd.h])
 
-AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h ftw.h grp.h inttypes.h limits.h mntent.h net/if.h netinet/in.h netdb.h paths.h pwd.h signal.h termios.h sys/mman.h sys/mount.h sys/select.h sys/socket.h sys/times.h sys/timex.h sys/types.h sys/un.h sys/utsname.h sys/uio.h utime.h sys/ioctl.h math.h complex.h fnmatch.h glob.h regex.h])
+AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h ftw.h grp.h inttypes.h limits.h mntent.h net/if.h netinet/in.h netdb.h paths.h pwd.h signal.h termios.h sys/mman.h sys/mount.h sys/select.h sys/socket.h sys/times.h sys/timex.h sys/types.h sys/un.h sys/utsname.h sys/uio.h utime.h sys/ioctl.h math.h complex.h fnmatch.h glob.h regex.h wordexp.h])
 
 AC_C_CONST
 AC_C_INLINE
@@ -607,6 +607,10 @@ VICARE_CONSTANT_TESTS([GLOB_ERR GLOB_MARK GLOB_NOCHECK GLOB_NOSORT GLOB_NOESCAPE
 VICARE_CONSTANT_TESTS([REG_BADBR REG_BADPAT REG_BADRPT REG_ECOLLATE REG_ECTYPE REG_EESCAPE REG_ESUBREG REG_EBRACK REG_EPAREN REG_EBRACE REG_ERANGE REG_ESPACE])
 VICARE_CONSTANT_TESTS([REG_EXTENDED REG_ICASE REG_NOSUB REG_NEWLINE REG_NOTBOL REG_NOTEOL REG_NOMATCH REG_ESPACE])
 
+# word expansion
+VICARE_CONSTANT_TESTS([WRDE_NOCMD WRDE_SHOWERR WRDE_UNDEF])
+VICARE_CONSTANT_TESTS([WRDE_BADCHAR WRDE_BADVAL WRDE_CMDSUB WRDE_NOSPACE WRDE_SYNTAX])
+
 AC_CACHE_SAVE
 
 #page
@@ -656,6 +660,7 @@ AC_CHECK_FUNCS([sinh cosh tanh csinh ccosh ctanh asinh acosh atanh casinh cacosh
 AC_CHECK_FUNCS([erf erfc lgamma_r tgamma j0 j1 jn y0 y1 yn])
 AC_CHECK_FUNCS([rand srand])
 AC_CHECK_FUNCS([fnmatch glob regcomp regexec regfree regerror])
+AC_CHECK_FUNCS([wordexp wordfree])
 
 AC_CACHE_SAVE
 

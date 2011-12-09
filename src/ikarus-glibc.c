@@ -56,6 +56,9 @@
 #ifdef HAVE_UNISTD_H
 #  include <unistd.h>
 #endif
+#ifdef HAVE_WORDEXP_H
+#  include <wordexp.h>
+#endif
 
 static VICARE_UNUSED void
 feature_failure_ (const char * funcname)
@@ -828,6 +831,37 @@ ikrt_glibc_regfree (ikptr s_compiled_regex)
       data[i] = 0;
   }
   return void_object;
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
+ ** Performing word expansion.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_glibc_wordexp (ikptr s_words, ikptr s_flags, ikpcb * pcb)
+{
+#ifdef HAVE_WORDEXP
+  char *        word = VICARE_BYTEVECTOR_DATA_VOIDP(s_words);
+  wordexp_t     W;
+  int           rv;
+  W.we_wordc    = 0;
+  W.we_wordv    = NULL;
+  W.we_offs     = 0;
+  rv = wordexp(word, &W, unfix(s_flags));
+  if (0 == rv) {
+    ikptr       s_words = ik_vector_alloc(pcb, (long)W.we_wordc);
+    int         i;
+    for (i=0; i<W.we_wordc; ++i) {
+      VICARE_VECTOR_SET(s_words, i, ik_bytevector_from_cstring(pcb, W.we_wordv[i]));
+    }
+    wordfree(&W);
+    return s_words;
+  } else
+    return fix(rv);
 #else
   feature_failure(__func__);
 #endif

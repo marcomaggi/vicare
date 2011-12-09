@@ -2220,6 +2220,9 @@
     (regcomp					glibc)
     (regexec					glibc)
     (regfree					glibc)
+    ;; word expansion
+    (wordexp					glibc)
+    (wordexp/string				glibc)
 
 ;;; --------------------------------------------------------------------
 ;;; Linux functions

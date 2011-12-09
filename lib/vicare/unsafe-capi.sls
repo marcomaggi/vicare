@@ -250,6 +250,9 @@
     ;; pattern matching, globbing, regular expressions
     glibc-fnmatch	glibc-glob
     glibc-regcomp	glibc-regexec	glibc-regfree
+
+    ;; word expansion
+    glibc-wordexp
     )
   (import (except (ikarus)
 		  posix-read	posix-write
@@ -1418,6 +1421,12 @@
 
 (define-inline (glibc-regfree regex)
   (foreign-call "ikrt_glibc_regfree" regex))
+
+
+;;;; word expansion
+
+(define-inline (glibc-wordexp words flags)
+  (foreign-call "ikrt_glibc_wordexp" words flags))
 
 
 ;;;; done

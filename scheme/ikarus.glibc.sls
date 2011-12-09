@@ -63,6 +63,9 @@
     ;; pattern matching, globbing, regular expressions
     fnmatch		glob		glob/string
     regcomp		regexec		regfree
+
+    ;; word expansion
+    wordexp		wordexp/string
     )
   (import (ikarus)
     (prefix (only (ikarus.posix)
@@ -436,6 +439,23 @@
   (with-arguments-validation (who)
       ((bytevector  regex))
     (capi.glibc-regfree regex)))
+
+
+;;;; word expansion
+
+(define-for-glibc (wordexp words flags)
+  (define who 'wordexp)
+  (with-arguments-validation (who)
+      ((string/bytevector	words)
+       (fixnum			flags))
+    (with-bytevectors ((words.bv words))
+      (capi.glibc-wordexp words.bv flags))))
+
+(define-for-glibc (wordexp/string words flags)
+  (let ((rv (wordexp words flags)))
+    (if (vector? rv)
+	(vector-map latin1->string rv)
+      rv)))
 
 
 ;;;; done

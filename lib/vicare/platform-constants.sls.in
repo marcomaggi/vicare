@@ -359,6 +359,12 @@
     REG_NEWLINE		REG_NOTBOL	REG_NOTEOL
     REG_NOMATCH		REG_ESPACE
 
+;;;; word expansion
+    WRDE_NOCMD		WRDE_SHOWERR	WRDE_UNDEF
+
+    WRDE_BADCHAR	WRDE_BADVAL	WRDE_CMDSUB
+    WRDE_NOSPACE	WRDE_SYNTAX
+
 ;;; errno codes
     E2BIG		EACCES		EADDRINUSE
     EADDRNOTAVAIL	EADV		EAFNOSUPPORT
@@ -1175,6 +1181,17 @@
 (define-inline-constant REG_NOTEOL		@VALUEOF_REG_NOTEOL@)
 (define-inline-constant REG_NOMATCH		@VALUEOF_REG_NOMATCH@)
 (define-inline-constant REG_ESPACE		@VALUEOF_REG_ESPACE@)
+
+;;;; word expansion
+(define-inline-constant WRDE_NOCMD		@VALUEOF_WRDE_NOCMD@)
+(define-inline-constant WRDE_SHOWERR		@VALUEOF_WRDE_SHOWERR@)
+(define-inline-constant WRDE_UNDEF		@VALUEOF_WRDE_UNDEF@)
+
+(define-inline-constant WRDE_BADCHAR		@VALUEOF_WRDE_BADCHAR@)
+(define-inline-constant WRDE_BADVAL		@VALUEOF_WRDE_BADVAL@)
+(define-inline-constant WRDE_CMDSUB		@VALUEOF_WRDE_CMDSUB@)
+(define-inline-constant WRDE_NOSPACE		@VALUEOF_WRDE_NOSPACE@)
+(define-inline-constant WRDE_SYNTAX		@VALUEOF_WRDE_SYNTAX@)
 
 
 ;;;; errno codes

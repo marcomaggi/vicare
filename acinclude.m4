@@ -131,6 +131,9 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_UNISTD_H
 #  include <unistd.h>
 #endif
+#ifdef HAVE_WORDEXP_H
+#  include <wordexp.h>
+#endif
 ])
 
 AC_DEFUN([VICARE_VALUEOF_TEST],[

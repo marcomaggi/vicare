@@ -9488,6 +9488,7 @@ functions, else the behaviour is undefined.
 * glibc random::                Pseudo--random numbers.
 * glibc match::                 Pattern matching, globbing and
                                 regular expressions.
+* glibc word::                  Performing word expansion.
 @end menu
 
 @c page
@@ -10013,6 +10014,55 @@ regfree}.  Release the resources associated to the compiled regular
 expression @var{regex}, which must be a bytevector, then clear the
 bytevector to zero.  Releasing occurs only if at least one byte of
 @var{regex} is non--zero.
+@end defun
+
+@c page
+@node glibc word
+@section Performing word expansion
+
+
+Word expansion is a set of operations acting on a given string and
+involving the current system environment variable; it is usually
+performed by Unix shell programs.  It works as follows:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (prefix (vicare glibc) glibc.)
+  (vicare platform-constants))
+
+(px.setenv "CIAO" "BLU")
+(glibc.wordexp/string "$CIAO" 0)        @result{} #("BLU")
+
+(px.setenv "CIAO" "BLUETTE")
+(glibc.wordexp/string "$@{CIAO##BLU@}" 0) @result{} #("ETTE")
+
+(glibc.wordexp/string "/bin/ch*" 0)
+@result{} #("/bin/chcon""/bin/chgrp"
+     "/bin/chmod" "/bin/chown" "/bin/chroot")
+
+@end example
+
+The following bindings are exported by the @library{vicare glibc}
+library.
+
+
+@defun wordexp @var{words} @var{flags}
+@defunx wordexp/string @var{words} @var{flags}
+Interface to the C function @cfunc{wordexp}, @glibcref{Calling Wordexp,
+wordexp}.  Perform word expansion on @var{words} according to
+@var{flags}.
+
+@var{words} must be a string or bytevector.  @var{flags} must be a
+fixnum resulting from the bitwise combination (@func{fxior}) of the
+flags: @code{WRDE_NOCMD}, @code{WRDE_SHOWERR}, @code{WRDE_UNDEF}.
+
+If successful @func{wordexp} returns a vector holding the resulting
+bytevectors, @func{wordexp/string} returns a vector holding the
+resulting strings; else the return value is a fixnum among:
+@code{WRDE_BADCHAR}, @code{WRDE_BADVAL}, @code{WRDE_CMDSUB},
+@code{WRDE_NOSPACE}, @code{WRDE_SYNTAX}.
 @end defun
 
 @c page

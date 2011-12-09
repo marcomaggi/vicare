@@ -268,6 +268,26 @@
   #f)
 
 
+(parametrise ((check-test-name	'word-expansion))
+
+  (check
+      (begin
+	(px.setenv "CIAO" "BLU")
+	(glibc.wordexp/string "$CIAO" 0))
+    => '#("BLU"))
+
+  (check
+      (begin
+	(px.setenv "CIAO" "BLUETTE")
+	(glibc.wordexp/string "${CIAO##BLU}" 0))
+    => '#("ETTE"))
+
+  (when #t
+    (check-pretty-print (glibc.wordexp/string "/bin/ch*" 0)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
