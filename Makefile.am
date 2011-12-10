@@ -12,7 +12,11 @@ vicare_test_RULES	= test tests long-test long-tests \
 			  test-run test-vie test-exec-modes \
 			  proof proofs
 
-.PHONY: $(vicare_test_RULES) try-vicare-boot boot-image-64-bit
+vicare_lib_RULES	= vfasl vfasl-installed
+
+.PHONY: $(vicare_test_RULES) $(vicare_lib_RULES) \
+	try-vicare-boot boot-image-64-bit
+
 
 $(vicare_test_RULES):
 	cd tests ; $(MAKE) $(@)
@@ -22,5 +26,8 @@ try-vicare-boot:
 
 boot-image-64-bit:
 	cd scheme; $(MAKE) $(@)
+
+$(vicare_lib_RULES):
+	cd lib; $(MAKE) $(@)
 
 ### end of file

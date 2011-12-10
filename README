@@ -94,6 +94,9 @@ the files under a temporary location; example:
 
     $ make install DESTDIR=/tmp/marco/vicare
 
+  After   installation,  the   makefile   rule  "vfasl-installed"   will
+precompile the libraries installed in the hierarchy (vicare ---).
+
 
 5. Testing
 ----------
@@ -104,6 +107,9 @@ families: the files whose name  start with "long-test" need some time to
 be executed  by a  powerless computer; the  files whose name  start with
 "test" can  be run in  reasonable time on  any system.  The  files whose
 name contains "r6rs" are R6RS compliance tests by Matthew Flatt.
+
+  The  "make  vfasl"  command  will  precompile  the  libraries  in  the
+hierarchy (vicare ---) to be used by the test suite.
 
   The "make check",  "make test" and "make tests"  commands run the same
 set of  "quick" tests; the "check"  makefile rule uses  the GNU Automake
