@@ -9,7 +9,6 @@ EXTRA_DIST		= compile-all.sps			\
 
 dist_libvicare_DATA	= vicare/ffi.sls			\
 			  vicare/platform-constants.sls		\
-			  vicare/ipc.sls			\
 			  vicare/include.sls			\
 			  vicare/syntactic-extensions.sls	\
 			  vicare/flonum-parser.sls		\
