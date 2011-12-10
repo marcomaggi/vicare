@@ -5324,9 +5324,9 @@ result may be a fixnum or a bignum depending on the pointer.
 
 
 @defun integer->pointer @var{exact-integer}
-Convert @var{exact-integer} to a pointer value.  The lower @math{32}
-bits (or @math{64} bits on 64-bit systems) of the argument are
-significant in computing the pointer value.  It is guaranteed that:
+Convert @var{exact-integer} to a pointer value.  The argument must be
+non--negative and in the appropriate range for 32-bit or 64-bit
+platforms.  It is guaranteed that:
 
 @example
 (integer->pointer (pointer->integer p))
@@ -5353,12 +5353,7 @@ pointer objects @vari{ptr} and @varii{ptr}.  The returned value is such
 that:
 
 @example
-(define ptr1 ---)
-(define ptr2 ---)
-
-(pointer=? ptr1
-           (pointer-add ptr2
-                        (pointer-diff ptr1 ptr2)))
+(pointer=? P (pointer-add Q (pointer-diff P Q)))
 @result{} #t
 @end example
 @end defun
@@ -5378,7 +5373,7 @@ assertion violation.
 @defunx pointer>? @vari{ptr} @varii{ptr}
 @defunx pointer<=? @vari{ptr} @varii{ptr}
 @defunx pointer>=? @vari{ptr} @varii{ptr}
-Comparisong functions for pointers.  Return @true{} if the arguments
+Comparison functions for pointers.  Return @true{} if the arguments
 satisfy the predicate, else return @false{}.
 @end defun
 
