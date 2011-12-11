@@ -10372,11 +10372,10 @@ vicare>
 @section Low level fixnum operations
 
 
-A fixnum is a machine word whose two least significant bits are set to
-zero.  @rnrs{6} states that a fixnum must have at least @math{24} bits
-in which to store the number; under @value{PRJNAME}, on a 32-bit
-platform, @math{29} bits are available to store the number and @math{1}
-bit to store the sign:
+A fixnum is a machine word whose least significant bits are set to zero.
+@rnrs{6} states that a fixnum must have at least @math{24} bits in which
+to store the number; under @value{PRJNAME}, on a 32-bit platform,
+@math{30} bits are available to store the number:
 
 @example
 (greatest-fixnum)       @result{} +536870911
@@ -10386,6 +10385,21 @@ bit to store the sign:
 (least-fixnum)          @result{} -536870912
 (- (expt 2 29))         @result{} -536870912
 @end example
+
+Let's say that machine words are 32-bit value, which means the word size
+is @math{4} bytes; then the representation of a fixnum is:
+
+@example
+   30 bits fixnum representation
+|.................................|00
+
+|--------|--------|--------|------+--|
+  byte3    byte2    byte1    byte0
+@end example
+
+@noindent
+the two least significant bits are set to zero: this ``tags'' the
+machine words which embed fixnums.
 
 The arguments to these operations must be fixnums.  The following
 bindings are exported by the @library{ikarus system $fx} library.
@@ -10811,7 +10825,21 @@ Return the reference to the imaginary part.
 
 
 A character is a machine word whose least significant bits are set to
-the character tag.
+the character tag.  Let's say that machine words are 32-bit values,
+which means the word size is @math{4} bytes; then the representation of
+a character is:
+
+@example
+      24 bits char rep
+|..........................|00001111
+
+|--------|--------|--------|--------|
+  byte3    byte2    byte1    byte0
+@end example
+
+@noindent
+the least significant byte is set to @code{#x0F}: this ``tags'' the
+machine words which embed fixnums.
 
 The arguments @var{ch} to these operations must be characters, the
 arguments @var{fx} must be fixnums in the range @code{[0, #x10FFFF]} but
@@ -13794,6 +13822,7 @@ the Scheme language compiler @file{ikarus.compiler.sls}.
 
 @menu
 * objects refs::                Builtin object references.
+* objects tags::                Table of object tags.
 * objects const::               Constant values.
 * objects alloc::               Allocating memory for builtin objects.
 * objects fixnum::              Fixnum objects.
@@ -13865,6 +13894,138 @@ q = ref(p, 3);          /* retrieve the third word in
                            the array */
 @end example
 @end defmac
+
+@c page
+@node objects tags
+@section Table of object tags
+
+
+The objects that fit in a single machine word, and so are the values we
+move around at the Scheme level, are: one--word constants, fixnums,
+characters and transcoders.  They are represented as @code{ikptr} data
+values and are called @dfn{immediate values}.
+
+The immediate value constants are: @code{true_object},
+@code{false_object}, @code{null_object}, @code{void_object},
+@code{bwp_object}, @code{unbound_object}.  All of them have the least
+significant byte set to @code{#b????1111 = #x?F}.
+
+The other values that fit in a single machine word are fixnums,
+characters and transcoders.  The last byte of these machine words is
+tagged as follows:
+
+@example
+   object   |  tag bits  | tag hex | mask bits
+------------+------------+---------+------------
+fixnums     | #b??????00 |   --    |     --
+characters  | #b00001111 |  #x0F   | #b11111111
+transcoders | #b01111111 |  #x7F   | #b11111111
+@end example
+
+To identify an immediate value we can do:
+
+@example
+ikptr   the_value;
+
+if (is_fixnum(X) || (immediate_tag == tagof(the_value)))
+  it_is_immediate();
+else
+  it_is_not();
+@end example
+
+@noindent
+where:
+
+@example
+immediate_tag = 7 = #b111
+@end example
+
+@noindent
+all the immediate values, but fixnums, have the @math{3} least
+significant bits set to @math{1}.
+
+The values that do not fit into a single machine word are composed of a
+reference machine word and a vector of machine words on the heap; they
+are: symbols, pairs, vectors, bytevectors, structures, ports, bignums,
+ratnums, flonums, compnums, cflonums, strings, closures, continuations,
+codes, pointers.
+
+The machine words used as references have the 3 least significant bits
+used as tag and the remaining most significant bits used to store a
+pointer in memory; the following tags are used:
+
+@example
+  object    |  tag bits  | tag hex | mask bits
+------------+------------+---------+------------
+pairs       | #b?????001 |    1    | #b00000111
+bytevectors | #b?????010 |    2    | #b00000111
+closure     | #b?????011 |    3    | #b00000111
+vectors     | #b?????101 |    5    | #b00000111
+strings     | #b?????110 |    6    | #b00000111
+@end example
+
+The vector tag is used to tag machine word references to multiple object
+types: vectors, bignums, structures, flonums, ratnums, compnums,
+cflonums, continuations, code, ports, symbols, pointers, system
+continuations.
+
+The vector tag in machine words acts as @dfn{primary tag}, a
+@dfn{secondary tag} is stored in the least significant bits of the
+referenced vector of words on the heap.  To recognise such machine words
+we should do:
+
+@example
+ikptr  the_value;
+
+if ((vector_tag    == (the_value & vector_tag)) &&
+    (secondary_tag == (secondary_mask
+                       & ref(the_value, -vector_tag))))
+it_is();
+@end example
+
+The secondary tags and the associated masks are:
+
+@example
+   object           |  tag bits   |  tag hex  | tag mask
+                    |    76543210 |           |    76543210
+--------------------+-------------+-----------+-------------
+vectors             |  #b??????00 |  fixnum   |  #b00000111
+bignums             |  #b????s011 |  #x03     |  #b00000111
+structures          |  #b?????101 |  #x05     |  #b00000111
+flonums             |  #b00010111 |  #x17     |  --
+ratnums             |  #b00100111 |  #x27     |  --
+compnums            |  #b00110111 |  #x37     |  --
+cflonums            |  #b01000111 |  #x47     |  --
+continuation        |  #b00011111 |  #x1F     |  --
+code                |  #b00101111 |  #x2F     |  --
+ports               |  #b??111111 |  #x3F     |  #b00111111
+symbols             |  #b01011111 |  #x5F     |  --
+pointers            | #b100000111 | #x107     |  --
+system continuation | #b100011111 | #x11F     |  --
+@end example
+
+@noindent
+the only tags having an associated  mask are the ones of objects storing
+additional informations in the first word of the heap vector:
+
+@table @strong
+@item Vectors
+The first word of a vector is a fixnum representing the number of
+elements.
+
+@item Bignums
+The tag is composed by the @math{3} least significant bits, with the
+@math{4}th bit representing the sign and the remaining bits representing
+the number of words in the bignum.
+
+@item Structures
+Tagged as vectors because the first word of structure is itself a
+structure, that is the type descriptor.
+
+@item Ports
+The most significant bits of the first word are used for port
+attributes.
+@end table
 
 @c page
 @node objects const
@@ -14035,13 +14196,8 @@ is terminated with exit status @code{-1}.
 
 Fixnums are ``small'' exact integers.  In Vicare's jargon, ``word size''
 is the number of bytes in an @code{ikptr}; if the word size is @math{4},
-@math{30} bits are used for fixnum representation, else the number of
-bits used is the number of bits in a word minus @math{3}:
-
-@example
-#define wordsize ((int)(sizeof(ikptr)))
-#define wordshift ((wordsize == 4)?2:3)
-@end example
+@math{30} bits are used for fixnum representation; else the word size is
+@math{8} and @math{61} bits are used for fixnum representation.
 
 Let's say @code{ikptr} is a @math{32} bits value, which means the word
 size is @math{4} bytes; then the representation of a fixnum is:

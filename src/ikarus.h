@@ -302,6 +302,7 @@ ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
 #define ref(X,N) \
   (((ikptr*)(((long)(X)) + ((long)(N))))[0])
 
+/* The least multiple of the wordsize which is greater than N. */
 #define align(N) \
   ((((N) + align_size - 1) >>  align_shift) << align_shift)
 
@@ -324,7 +325,11 @@ ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
  ** Code objects.
  ** ----------------------------------------------------------------- */
 
+/* This  is the  primary tag,  in the  machine word  referencing  a code
+   object. */
 #define code_pri_tag            vector_tag
+/* This is the  secondary tag, in the first word  of the referenced heap
+   vector. */
 #define code_tag                ((ikptr)0x2F)
 #define disp_code_code_size     (1 * wordsize)
 #define disp_code_reloc_vector  (2 * wordsize)
