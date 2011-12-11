@@ -46,17 +46,17 @@
  ** Helper macros.
  ** ----------------------------------------------------------------- */
 
-/* The macro VICARE_UNUSED indicates  that a function, function argument
-   or variable may potentially be unused.  Usage examples:
+/* The macro  IK_UNUSED indicates that a function,  function argument or
+   variable may potentially be unused.  Usage examples:
 
-   static int unused_function (char arg) VICARE_UNUSED;
-   int foo (char unused_argument VICARE_UNUSED);
-   int unused_variable VICARE_UNUSED;
+   static int unused_function (char arg) IK_UNUSED;
+   int foo (char unused_argument IK_UNUSED);
+   int unused_variable IK_UNUSED;
 */
 #ifdef __GNUC__
-#  define VICARE_UNUSED		__attribute__((unused))
+#  define IK_UNUSED		__attribute__((unused))
 #else
-#  define VICARE_UNUSED		/* empty */
+#  define IK_UNUSED		/* empty */
 #endif
 
 #ifndef __GNUC__
@@ -384,15 +384,15 @@ char**  ik_list_to_vec          (ikptr x);
 
 #define ik_pair_alloc(PCB)      (ik_safe_alloc((PCB), align(pair_size)) + pair_tag)
 
-#define VICARE_CAR(PAIR)                ref((PAIR), off_car)
-#define VICARE_CDR(PAIR)                ref((PAIR), off_cdr)
+#define IK_CAR(PAIR)                ref((PAIR), off_car)
+#define IK_CDR(PAIR)                ref((PAIR), off_cdr)
 
-#define VICARE_SET_CAR(PAIR,VALUE)      ref((PAIR), off_car) = (VALUE)
-#define VICARE_SET_CDR(PAIR,VALUE)      ref((PAIR), off_cdr) = (VALUE)
+#define IK_SET_CAR(PAIR,VALUE)      ref((PAIR), off_car) = (VALUE)
+#define IK_SET_CDR(PAIR,VALUE)      ref((PAIR), off_cdr) = (VALUE)
 
-#define VICARE_DECLARE_ALLOC_AND_CONS(PAIR,LIST,PCB)    \
+#define IK_DECLARE_ALLOC_AND_CONS(PAIR,LIST,PCB)    \
   ikptr PAIR = ik_pair_alloc(PCB);                      \
-  VICARE_SET_CDR(PAIR,LIST);                            \
+  IK_SET_CDR(PAIR,LIST);                            \
   LIST=PAIR;
 
 
@@ -543,22 +543,22 @@ ikptr   normalize_bignum        (long limbs, int sign, ikptr r);
 ikptr   ik_pointer_alloc        (unsigned long memory, ikpcb* pcb);
 ikptr   ikrt_is_pointer         (ikptr x);
 
-#define VICARE_POINTER_DATA_VOIDP(X)  \
+#define IK_POINTER_DATA_VOIDP(X)  \
   ((void *)ref((X), off_pointer_data))
 
-#define VICARE_POINTER_DATA_CHARP(X)  \
+#define IK_POINTER_DATA_CHARP(X)  \
   ((char *)ref((X), off_pointer_data))
 
-#define VICARE_POINTER_DATA_UINT8P(X)  \
+#define IK_POINTER_DATA_UINT8P(X)  \
   ((uint8_t *)ref((X), off_pointer_data))
 
-#define VICARE_POINTER_DATA_ULONG(X)  \
+#define IK_POINTER_DATA_ULONG(X)  \
   ((unsigned long)ref((X), off_pointer_data))
 
-#define VICARE_POINTER_DATA_ULLONG(X) \
+#define IK_POINTER_DATA_ULLONG(X) \
   ((unsigned long long)ref((X), off_pointer_data))
 
-#define VICARE_POINTER_DATA_LLONG(X) \
+#define IK_POINTER_DATA_LLONG(X) \
   ((long long)ref((X), off_pointer_data))
 
 
@@ -578,19 +578,19 @@ ikptr   ikrt_is_pointer         (ikptr x);
 
 ikptr   ik_vector_alloc         (ikpcb * pcb, long int requested_number_of_items);
 
-#define VICARE_VECTOR_LENGTH_FX(vec)                    \
+#define IK_VECTOR_LENGTH_FX(vec)                    \
   ref((vec),off_vector_length)
 
-#define VICARE_VECTOR_LENGTH(vec)                       \
+#define IK_VECTOR_LENGTH(vec)                       \
   unfix(ref((vec),off_vector_length))
 
-#define VICARE_VECTOR_REF(vec,idx)                      \
+#define IK_VECTOR_REF(vec,idx)                      \
   ref((vec),off_vector_data+(idx)*wordsize)
 
-#define VICARE_VECTOR_SET(vec,idx,value)                \
+#define IK_VECTOR_SET(vec,idx,value)                \
   ref((vec),off_vector_data+(idx)*wordsize) = (value)
 
-#define VICARE_VECTOR_SET2(vec,idx,value1,value2)       \
+#define IK_VECTOR_SET2(vec,idx,value1,value2)       \
   ref((vec),off_vector_data+(idx)*wordsize) = (value1) = (value2)
 
 
@@ -613,19 +613,19 @@ extern ikptr   ik_bytevector_from_cstring       (ikpcb * pcb, const char * cstr)
 extern ikptr   ik_bytevector_from_cstring_len   (ikpcb * pcb, const char * cstr, size_t len);
 extern ikptr   ik_bytevector_from_memory_block  (ikpcb * pcb, void * memory, size_t length);
 
-#define VICARE_BYTEVECTOR_LENGTH(BV)                    \
+#define IK_BYTEVECTOR_LENGTH(BV)                    \
   unfix(ref((BV), off_bytevector_length))
 
-#define VICARE_BYTEVECTOR_LENGTH_FX(BV)                 \
+#define IK_BYTEVECTOR_LENGTH_FX(BV)                 \
   ref((BV), off_bytevector_length)
 
-#define VICARE_BYTEVECTOR_DATA_CHARP(BV)                \
+#define IK_BYTEVECTOR_DATA_CHARP(BV)                \
   ((char*)(long)((BV) + off_bytevector_data))
 
-#define VICARE_BYTEVECTOR_DATA_UINT8P(BV)               \
+#define IK_BYTEVECTOR_DATA_UINT8P(BV)               \
   ((uint8_t*)(long)((BV) + off_bytevector_data))
 
-#define VICARE_BYTEVECTOR_DATA_VOIDP(BV)                \
+#define IK_BYTEVECTOR_DATA_VOIDP(BV)                \
   ((void*)(long)((BV) + off_bytevector_data))
 
 
@@ -657,13 +657,13 @@ extern ikptr   ik_bytevector_from_memory_block  (ikpcb * pcb, void * memory, siz
 
 ikptr   ik_struct_alloc         (ikpcb * pcb, ikptr rtd, long number_of_fields);
 
-#define VICARE_STRUCT_REF(STRUCT,FIELD)         \
+#define IK_STRUCT_REF(STRUCT,FIELD)         \
   ref((STRUCT), (off_record_data+(FIELD)*wordsize))
 
-#define VICARE_STRUCT_SET(STRUCT,FIELD,VALUE)   \
+#define IK_STRUCT_SET(STRUCT,FIELD,VALUE)   \
   ref((STRUCT), (off_record_data+(FIELD)*wordsize)) = (VALUE)
 
-#define VICARE_STRUCT_SET2(STRUCT,FIELD,VALUE1,VALUE2)          \
+#define IK_STRUCT_SET2(STRUCT,FIELD,VALUE1,VALUE2)          \
   ref((STRUCT), (off_record_data+(FIELD)*wordsize)) = (VALUE1) = (VALUE2)
 
 

@@ -226,18 +226,18 @@ ikrt_ffi_prep_cif (ikptr s_type_ids, ikpcb* pcb)
    index 0  represents the type of  the return value,  the other fixnums
    the type of the arguments. */
 {
-  unsigned      arity = ((unsigned)VICARE_VECTOR_LENGTH(s_type_ids))-1;
+  unsigned      arity = ((unsigned)IK_VECTOR_LENGTH(s_type_ids))-1;
   ik_ffi_cif_t  cif   = alloc(IK_FFI_CIF_SIZEOF(arity), 1);
   ffi_status    rv;
   int           i;
   cif->arg_types      = IK_FFI_CIF_ARG_TYPES_PTR(cif, arity);
   cif->arg_type_ids   = IK_FFI_CIF_ARG_TYPE_IDS_PTR(cif, arity);
   cif->arity          = arity;
-  cif->retval_type_id = unfix(VICARE_VECTOR_REF(s_type_ids, 0));
+  cif->retval_type_id = unfix(IK_VECTOR_REF(s_type_ids, 0));
   cif->retval_type    = the_ffi_types_array[cif->retval_type_id];
   cif->args_bufsize   = 0;
   for (i=0; i<arity; ++i) {
-    type_id_t   id       =  unfix(VICARE_VECTOR_REF(s_type_ids, 1+i));
+    type_id_t   id       =  unfix(IK_VECTOR_REF(s_type_ids, 1+i));
     cif->args_bufsize    += the_ffi_type_sizes[id];
     cif->arg_type_ids[i] =  id;
     cif->arg_types[i]    =  the_ffi_types_array[id];
@@ -273,7 +273,7 @@ scheme_to_native_value_cast (type_id_t type_id, ikptr s_scheme_value, void * buf
 
   case TYPE_ID_FLOAT:   *((float*)          buffer) = FLONUM_DATA(s_scheme_value); return;
   case TYPE_ID_DOUBLE:  *((double*)         buffer) = FLONUM_DATA(s_scheme_value); return;
-  case TYPE_ID_POINTER: *((void**)          buffer) = VICARE_POINTER_DATA_VOIDP(s_scheme_value); return;
+  case TYPE_ID_POINTER: *((void**)          buffer) = IK_POINTER_DATA_VOIDP(s_scheme_value); return;
 
   case TYPE_ID_UCHAR:   *((unsigned char*)  buffer) = unfix(s_scheme_value); return;
   case TYPE_ID_SCHAR:   *((char*)           buffer) = unfix(s_scheme_value); return;
@@ -423,8 +423,8 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
   ref(sk, disp_system_continuation_next) = pcb->next_k;
   pcb->next_k = sk + vector_tag;
   {
-    ik_ffi_cif_t  cif     = VICARE_POINTER_DATA_VOIDP(VICARE_CAR(s_data));
-    address_t *   address = VICARE_POINTER_DATA_VOIDP(VICARE_CDR(s_data));
+    ik_ffi_cif_t  cif     = IK_POINTER_DATA_VOIDP(IK_CAR(s_data));
+    address_t *   address = IK_POINTER_DATA_VOIDP(IK_CDR(s_data));
     /* Prepare  memory   to  hold  native   values  representing  Scheme
        arguments and the return value */
     uint8_t     args_buffer[cif->args_bufsize];
@@ -436,7 +436,7 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
        native argument values. */
     int  i;
     for (i=0; i<cif->arity; i++) {
-      ikptr  value = VICARE_VECTOR_REF(s_args, i);
+      ikptr  value = IK_VECTOR_REF(s_args, i);
       arg_value_ptrs[i] = arg_next;
       scheme_to_native_value_cast(cif->arg_type_ids[i], value, arg_next);
       arg_next += cif->arg_types[i]->size;
@@ -491,7 +491,7 @@ ikrt_ffi_prepare_callback (ikptr s_data, ikpcb* pcb)
   ffi_closure *                 closure;
   ik_callback_locative *        callback_user_data;
   ffi_status                    st;
-  cif     = VICARE_POINTER_DATA_VOIDP(VICARE_CAR(s_data));
+  cif     = IK_POINTER_DATA_VOIDP(IK_CAR(s_data));
   closure = ffi_closure_alloc(sizeof(ffi_closure), &callable_pointer);
 #ifdef LIBFFI_ON_DARWIN
   { /* This is  needed on some flavors  of Darwin to  make the generated
@@ -531,7 +531,7 @@ ikrt_ffi_release_callback (ikptr s_callable_pointer, ikpcb * pcb)
   ik_callback_locative *  root;
   void *                  callable_pointer;
   root             = pcb->callbacks;
-  callable_pointer = VICARE_POINTER_DATA_VOIDP(s_callable_pointer);
+  callable_pointer = IK_POINTER_DATA_VOIDP(s_callable_pointer);
   if (root) {
     if (root->callable_pointer == callable_pointer) {
       pcb->callbacks = root->next;
@@ -581,7 +581,7 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
 {
   ik_ffi_cif_t  cif           = (ik_ffi_cif_t)cif_;
   ikptr         s_data        = ((ik_callback_locative*)user_data)->data;
-  ikptr         s_proc        = VICARE_CDR(s_data);
+  ikptr         s_proc        = IK_CDR(s_data);
   ikpcb *       pcb           = the_pcb;
   ikptr         code_entry    = ref(s_proc, off_closure_code);
   ikptr         code_ptr      = code_entry - off_code_data;

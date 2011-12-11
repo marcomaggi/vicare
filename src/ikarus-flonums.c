@@ -104,7 +104,7 @@ ikrt_flfl_expt (ikptr a, ikptr b, ikptr z)
 ikptr
 ikrt_bytevector_to_flonum (ikptr x, ikpcb* pcb)
 {
-  char *        data = VICARE_BYTEVECTOR_DATA_CHARP(x);
+  char *        data = IK_BYTEVECTOR_DATA_CHARP(x);
   double        v    = strtod(data, NULL);
   DEFINE_AND_ALLOC_FLONUM(r);
   FLONUM_DATA(r) = v;

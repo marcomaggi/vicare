@@ -42,7 +42,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-static VICARE_UNUSED void
+static IK_UNUSED void
 feature_failure_ (const char * funcname)
 {
   fprintf(stderr, "Vicare error: called GNU+Linux specific function, %s\n", funcname);

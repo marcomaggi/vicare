@@ -58,13 +58,13 @@ ikptr
 ikrt_open_input_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
 {
   const char *  pathname;
-  VICARE_UNUSED int opts  = unfix(ikopts);
+  IK_UNUSED int opts  = unfix(ikopts);
   int           flags = O_RDONLY; /* no special flags supported at present */
   /* The "mode" value is used  only when creating the file, which should
      not happen here. */
   int           mode  = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
   int           fd;
-  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   fd       = open(pathname, flags, mode);
   return (0 <= fd)? fix(fd) : ik_errno_to_code();
@@ -126,7 +126,7 @@ ikrt_open_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
   case 7: flags = O_WRONLY                    ; /* (file-options no-create no-fail no-truncate) */
     break;
   }
-  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   fd       = open(pathname, flags, mode);
   return (0 <= fd)? fix(fd) : ik_errno_to_code();
@@ -159,7 +159,7 @@ ikrt_open_input_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
   case 7: flags = O_RDWR                    ; /* (file-options no-create no-fail no-truncate) */
     break;
   }
-  pathname = VICARE_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno = 0;
   fd    = open(pathname, flags, mode);
   return (0 <= fd)? fix(fd) : ik_errno_to_code();
@@ -169,7 +169,7 @@ ikrt_read_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_co
 {
   ssize_t       rv;
   uint8_t *     buffer;
-  buffer = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv) + unfix(buffer_offset);
+  buffer = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv) + unfix(buffer_offset);
   errno  = 0;
   rv     = read(unfix(fd), buffer, unfix(requested_count));
   return (0 <= rv)? fix(rv) : ik_errno_to_code();
@@ -179,7 +179,7 @@ ikrt_write_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_c
 {
   ssize_t       rv;
   uint8_t *     buffer;
-  buffer = VICARE_BYTEVECTOR_DATA_VOIDP(buffer_bv) + unfix(buffer_offset);
+  buffer = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv) + unfix(buffer_offset);
   errno  = 0;
   rv     = write(unfix(fd), buffer, unfix(requested_count));
   return (0 <= rv)? fix(rv) : ik_errno_to_code();

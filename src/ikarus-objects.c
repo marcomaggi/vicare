@@ -64,9 +64,9 @@ ik_list_to_argv (ikptr s_list, char **argv)
 {
   int    i;
   ikptr  bv;
-  for (i=0; pair_tag == tagof(s_list); s_list=VICARE_CDR(s_list), ++i) {
-    bv      = VICARE_CAR(s_list);
-    argv[i] = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+  for (i=0; pair_tag == tagof(s_list); s_list=IK_CDR(s_list), ++i) {
+    bv      = IK_CAR(s_list);
+    argv[i] = IK_BYTEVECTOR_DATA_CHARP(bv);
   }
   argv[i] = NULL;
 }
@@ -81,10 +81,10 @@ ik_list_to_argv_and_argc (ikptr s_list, char **argv, long *argc)
 {
   int    i;
   ikptr  bv;
-  for (i=0; pair_tag == tagof(s_list); s_list=VICARE_CDR(s_list), ++i) {
-    bv      = VICARE_CAR(s_list);
-    argv[i] = VICARE_BYTEVECTOR_DATA_CHARP(bv);
-    argc[i] = VICARE_BYTEVECTOR_LENGTH(bv);
+  for (i=0; pair_tag == tagof(s_list); s_list=IK_CDR(s_list), ++i) {
+    bv      = IK_CAR(s_list);
+    argv[i] = IK_BYTEVECTOR_DATA_CHARP(bv);
+    argc[i] = IK_BYTEVECTOR_LENGTH(bv);
   }
   argv[i] = NULL;
 }
@@ -101,12 +101,12 @@ ik_list_from_argv (char ** argv, ikpcb * pcb)
   {
     for (i=0; argv[i];) {
       bv = ik_bytevector_from_cstring(pcb, argv[i]);
-      VICARE_SET_CAR(s_pair, bv);
+      IK_SET_CAR(s_pair, bv);
       if (argv[++i]) {
-        VICARE_SET_CDR(s_pair, ik_pair_alloc(pcb));
-        s_pair = VICARE_CDR(s_pair);
+        IK_SET_CDR(s_pair, ik_pair_alloc(pcb));
+        s_pair = IK_CDR(s_pair);
       } else
-        VICARE_SET_CDR(s_pair, null_object);
+        IK_SET_CDR(s_pair, null_object);
     }
   }
   pcb->root1 = NULL;
@@ -125,12 +125,12 @@ ik_list_from_argv_and_argc (char ** argv, int argc, ikpcb * pcb)
   {
     for (i=0; i<argc;) {
       bv = ik_bytevector_from_cstring(pcb, argv[i]);
-      VICARE_SET_CAR(s_pair, bv);
+      IK_SET_CAR(s_pair, bv);
       if (++i < argc) {
-        VICARE_SET_CDR(s_pair, ik_pair_alloc(pcb));
-        s_pair = VICARE_CDR(s_pair);
+        IK_SET_CDR(s_pair, ik_pair_alloc(pcb));
+        s_pair = IK_CDR(s_pair);
       } else
-        VICARE_SET_CDR(s_pair, null_object);
+        IK_SET_CDR(s_pair, null_object);
     }
   }
   pcb->root1 = NULL;
@@ -181,7 +181,7 @@ ik_bytevector_from_cstring (ikpcb * pcb, const char * cstr)
 {
   size_t    len  = strlen(cstr);
   ikptr     bv   = ik_bytevector_alloc(pcb, len);
-  char *    data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+  char *    data = IK_BYTEVECTOR_DATA_CHARP(bv);
   memcpy(data, cstr, len);
   return bv;
 }
@@ -189,7 +189,7 @@ ikptr
 ik_bytevector_from_cstring_len (ikpcb * pcb, const char * cstr, size_t len)
 {
   ikptr     bv   = ik_bytevector_alloc(pcb, len);
-  char *    data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+  char *    data = IK_BYTEVECTOR_DATA_CHARP(bv);
   memcpy(data, cstr, len);
   return bv;
 }
@@ -197,7 +197,7 @@ ikptr
 ik_bytevector_from_memory_block (ikpcb * pcb, void * memory, size_t length)
 {
   ikptr     bv   = ik_bytevector_alloc(pcb, length);
-  void *    data = VICARE_BYTEVECTOR_DATA_VOIDP(bv);
+  void *    data = IK_BYTEVECTOR_DATA_VOIDP(bv);
   memcpy(data, memory, length);
   return bv;
 }

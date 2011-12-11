@@ -60,7 +60,7 @@
 #  include <wordexp.h>
 #endif
 
-static VICARE_UNUSED void
+static IK_UNUSED void
 feature_failure_ (const char * funcname)
 {
   fprintf(stderr, "Vicare error: called GNU C Library specific function, %s\n", funcname);
@@ -118,7 +118,7 @@ ikrt_glibc_mkstemp (ikptr template_bv, ikpcb * pcb)
 #ifdef HAVE_MKSTEMP
   char *        template;
   int           rv;
-  template = VICARE_BYTEVECTOR_DATA_CHARP(template_bv);
+  template = IK_BYTEVECTOR_DATA_CHARP(template_bv);
   errno    = 0;
   rv       = mkstemp(template);
   if (-1 == rv)
@@ -135,7 +135,7 @@ ikrt_glibc_mkdtemp (ikptr template_bv, ikpcb * pcb)
 #ifdef HAVE_MKDTEMP
   char *        template;
   char *        rv;
-  template = VICARE_BYTEVECTOR_DATA_CHARP(template_bv);
+  template = IK_BYTEVECTOR_DATA_CHARP(template_bv);
   errno    = 0;
   rv       = mkdtemp(template);
   if (NULL == rv)
@@ -205,7 +205,7 @@ ikrt_glibc_if_nametoindex (ikptr name_bv)
 {
   char *        name;
   unsigned int  rv;
-  name  = VICARE_BYTEVECTOR_DATA_CHARP(name_bv);
+  name  = IK_BYTEVECTOR_DATA_CHARP(name_bv);
   rv    = if_nametoindex(name);
   if (0 == rv)
     return false_object;
@@ -224,7 +224,7 @@ ikrt_glibc_if_indextoname (ikptr index, ikpcb * pcb)
   } else {
     long        len  = strlen(buffer);
     ikptr       bv   = ik_bytevector_alloc(pcb, len);
-    char *      data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+    char *      data = IK_BYTEVECTOR_DATA_CHARP(bv);
     memcpy(data, buffer, len+1);
     return bv;
   }
@@ -252,7 +252,7 @@ ikrt_glibc_if_nameindex (ikpcb * pcb) {
     /* Fill the entry. */
     len  = strlen(arry[i].if_name);
     bv   = ik_bytevector_alloc(pcb, len);
-    data = VICARE_BYTEVECTOR_DATA_CHARP(bv);
+    data = IK_BYTEVECTOR_DATA_CHARP(bv);
     memcpy(data, arry[i].if_name, len);
     ref(entry, off_car) = fix(arry[i].if_index);
     ref(entry, off_cdr) = bv;
@@ -564,8 +564,8 @@ ikrt_glibc_lgamma (ikptr s_X, ikpcb * pcb)
   double        Y   = lgamma_r(X, &sgn);
   ikptr         s_pair;
   s_pair = ik_pair_alloc(pcb);
-  VICARE_SET_CAR(s_pair, ik_flonum_alloc(pcb, Y));
-  VICARE_SET_CDR(s_pair, fix(sgn));
+  IK_SET_CAR(s_pair, ik_flonum_alloc(pcb, Y));
+  IK_SET_CDR(s_pair, fix(sgn));
   return s_pair;
 #else
   feature_failure(__func__);
@@ -683,8 +683,8 @@ ikptr
 ikrt_glibc_fnmatch (ikptr s_pattern, ikptr s_string, ikptr s_flags)
 {
 #ifdef HAVE_FNMATCH
-  return fnmatch(VICARE_BYTEVECTOR_DATA_CHARP(s_pattern),
-                 VICARE_BYTEVECTOR_DATA_CHARP(s_string),
+  return fnmatch(IK_BYTEVECTOR_DATA_CHARP(s_pattern),
+                 IK_BYTEVECTOR_DATA_CHARP(s_string),
                  unfix(s_flags))? false_object : true_object;
 #else
   feature_failure(__func__);
@@ -698,7 +698,7 @@ ikrt_glibc_glob (ikptr s_pattern, ikptr s_flags, ikptr s_error_handler, ikpcb * 
   glob_t        G;
   int           rv;
   handler_t     * handler;
-  handler = (false_object == s_error_handler)? NULL : VICARE_POINTER_DATA_VOIDP(s_error_handler);
+  handler = (false_object == s_error_handler)? NULL : IK_POINTER_DATA_VOIDP(s_error_handler);
   G.gl_pathc    = 0;
   G.gl_pathv    = NULL;
   G.gl_offs     = 0;
@@ -707,7 +707,7 @@ ikrt_glibc_glob (ikptr s_pattern, ikptr s_flags, ikptr s_error_handler, ikpcb * 
   G.gl_closedir = NULL;
   G.gl_stat     = NULL;
   G.gl_lstat    = NULL;
-  rv = glob(VICARE_BYTEVECTOR_DATA_CHARP(s_pattern), unfix(s_flags), handler, &G);
+  rv = glob(IK_BYTEVECTOR_DATA_CHARP(s_pattern), unfix(s_flags), handler, &G);
   if (0 == rv) {
     ikptr       s_list = ik_list_from_argv_and_argc(G.gl_pathv, G.gl_pathc, pcb);
     globfree(&G);
@@ -727,8 +727,8 @@ ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb *pcb)
 {
 #ifdef HAVE_REGCOMP
   ikptr         s_compiled_regex = ik_bytevector_alloc(pcb, sizeof(regex_t));
-  regex_t *     compiled_regex   = VICARE_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
-  char *        pattern          = VICARE_BYTEVECTOR_DATA_CHARP(s_pattern);
+  regex_t *     compiled_regex   = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+  char *        pattern          = IK_BYTEVECTOR_DATA_CHARP(s_pattern);
   int           rv;
   pcb->root0 = &s_compiled_regex;
   rv = regcomp(compiled_regex, pattern, unfix(s_flags));
@@ -742,12 +742,12 @@ ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb *pcb)
     /* After allocating memory  we need to extract again  the pointer to
        data,  because  the  bytevector  may have  been  moved  somewhere
        else. */
-    compiled_regex    = VICARE_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+    compiled_regex    = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
     error_message_len = regerror(rv, compiled_regex, NULL, 0);
-    VICARE_SET_CAR(s_pair, fix(rv));
-    VICARE_SET_CDR(s_pair, ik_bytevector_alloc(pcb, (long)error_message_len-1));
-    error_message     = VICARE_BYTEVECTOR_DATA_CHARP(VICARE_CDR(s_pair));
-    compiled_regex    = VICARE_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+    IK_SET_CAR(s_pair, fix(rv));
+    IK_SET_CDR(s_pair, ik_bytevector_alloc(pcb, (long)error_message_len-1));
+    error_message     = IK_BYTEVECTOR_DATA_CHARP(IK_CDR(s_pair));
+    compiled_regex    = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
     regerror(rv, compiled_regex, error_message, error_message_len);
     pcb->root0 = NULL;
     return s_pair;
@@ -760,8 +760,8 @@ ikptr
 ikrt_glibc_regexec (ikptr s_compiled_regex, ikptr s_string, ikptr s_flags, ikpcb *pcb)
 {
 #ifdef HAVE_REGCOMP
-  regex_t *     compiled_regex = VICARE_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
-  char *        string         = VICARE_BYTEVECTOR_DATA_CHARP(s_string);
+  regex_t *     compiled_regex = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+  char *        string         = IK_BYTEVECTOR_DATA_CHARP(s_string);
   size_t        nmatch         = compiled_regex->re_nsub;
   regmatch_t    match[1+nmatch];
   int           rv;
@@ -776,9 +776,9 @@ ikrt_glibc_regexec (ikptr s_compiled_regex, ikptr s_string, ikptr s_flags, ikpcb
       {
         for (i=0; i<1+nmatch; ++i) {
           s_pair = ik_pair_alloc(pcb);
-          VICARE_VECTOR_SET(s_match, i, s_pair);
-          VICARE_SET_CAR(s_pair, fix(match[i].rm_so));
-          VICARE_SET_CDR(s_pair, fix(match[i].rm_eo));
+          IK_VECTOR_SET(s_match, i, s_pair);
+          IK_SET_CAR(s_pair, fix(match[i].rm_so));
+          IK_SET_CDR(s_pair, fix(match[i].rm_eo));
         }
       }
       pcb->root0 = NULL;
@@ -794,12 +794,12 @@ ikrt_glibc_regexec (ikptr s_compiled_regex, ikptr s_string, ikptr s_flags, ikpcb
       /* After allocating memory  we need to extract again  the pointer to
          data,  because  the  bytevector  may have  been  moved  somewhere
          else. */
-      compiled_regex    = VICARE_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+      compiled_regex    = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
       error_message_len = regerror(rv, compiled_regex, NULL, 0);
-      VICARE_SET_CAR(s_pair, fix(rv));
-      VICARE_SET_CDR(s_pair, ik_bytevector_alloc(pcb, (long)error_message_len-1));
-      error_message     = VICARE_BYTEVECTOR_DATA_CHARP(VICARE_CDR(s_pair));
-      compiled_regex    = VICARE_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+      IK_SET_CAR(s_pair, fix(rv));
+      IK_SET_CDR(s_pair, ik_bytevector_alloc(pcb, (long)error_message_len-1));
+      error_message     = IK_BYTEVECTOR_DATA_CHARP(IK_CDR(s_pair));
+      compiled_regex    = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
       regerror(rv, compiled_regex, error_message, error_message_len);
       return s_pair;
     }
@@ -815,8 +815,8 @@ ikrt_glibc_regfree (ikptr s_compiled_regex)
    structure has already been freed. */
 {
 #ifdef HAVE_REGCOMP
-  uint8_t *     data = VICARE_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
-  long          len  = VICARE_BYTEVECTOR_LENGTH(s_compiled_regex);
+  uint8_t *     data = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+  long          len  = IK_BYTEVECTOR_LENGTH(s_compiled_regex);
   long          i;
   int           clean = 0;
   for (i=0; i<len; ++i) {
@@ -845,7 +845,7 @@ ikptr
 ikrt_glibc_wordexp (ikptr s_words, ikptr s_flags, ikpcb * pcb)
 {
 #ifdef HAVE_WORDEXP
-  char *        word = VICARE_BYTEVECTOR_DATA_VOIDP(s_words);
+  char *        word = IK_BYTEVECTOR_DATA_VOIDP(s_words);
   wordexp_t     W;
   int           rv;
   W.we_wordc    = 0;
@@ -856,7 +856,7 @@ ikrt_glibc_wordexp (ikptr s_words, ikptr s_flags, ikpcb * pcb)
     ikptr       s_words = ik_vector_alloc(pcb, (long)W.we_wordc);
     int         i;
     for (i=0; i<W.we_wordc; ++i) {
-      VICARE_VECTOR_SET(s_words, i, ik_bytevector_from_cstring(pcb, W.we_wordv[i]));
+      IK_VECTOR_SET(s_words, i, ik_bytevector_from_cstring(pcb, W.we_wordv[i]));
     }
     wordfree(&W);
     return s_words;
@@ -892,7 +892,7 @@ ikptr
 ikrt_glibc_pathconf (ikptr s_pathname, ikptr s_parameter, ikpcb * pcb)
 {
 #ifdef HAVE_PATHCONF
-  char *pathname  = VICARE_BYTEVECTOR_DATA_CHARP(s_pathname);
+  char *pathname  = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   long  parameter = ik_integer_to_long(s_parameter);
   long  value;
   errno = 0;
@@ -931,7 +931,7 @@ ikrt_glibc_confstr (ikptr s_parameter, ikpcb * pcb)
   length_including_zero = confstr((int)parameter, NULL, 0);
   if (length_including_zero) {
     ikptr       s_result = ik_bytevector_alloc(pcb, (long)length_including_zero-1);
-    char *      result   = VICARE_BYTEVECTOR_DATA_CHARP(s_result);
+    char *      result   = IK_BYTEVECTOR_DATA_CHARP(s_result);
     confstr((int)parameter, result, length_including_zero);
     return s_result;
   } else
