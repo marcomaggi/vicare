@@ -353,11 +353,11 @@ ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
 #define most_positive_fixnum    (((unsigned long int)-1) >> (fx_shift+1))
 #define most_negative_fixnum    (most_positive_fixnum+1)
 
-#define unfix(X)        \
-  (((long)(X)) >> fx_shift)
+#define IK_FIX(X)       ((ikptr)(((long)(X)) << fx_shift))
+#define fix(X)          IK_FIX(X)
 
-#define fix(X)          \
-  ((ikptr)(((long)(X)) << fx_shift))
+#define IK_UNFIX(X)     (((long)(X)) >> fx_shift)
+#define unfix(X)        IK_UNFIX(X)
 
 #define IK_IS_FIXNUM(X)    \
   ((((unsigned long)(X)) & fx_mask) == fx_tag)

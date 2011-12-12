@@ -10376,37 +10376,9 @@ vicare>
 @section Low level fixnum operations
 
 
-A fixnum is a machine word whose least significant bits are set to zero.
-@rnrs{6} states that a fixnum must have at least @math{24} bits in which
-to store the number; under @value{PRJNAME}, on a 32-bit platform,
-@math{30} bits are available to store the number:
-
-@example
-(greatest-fixnum)       @result{} +536870911
-(expt 2 29)             @result{} +536870912
-(- (expt 2 29) 1)       @result{} +536870911
-
-(least-fixnum)          @result{} -536870912
-(- (expt 2 29))         @result{} -536870912
-@end example
-
-Let's say that machine words are 32-bit value, which means the word size
-is @math{4} bytes; then the representation of a fixnum is:
-
-@example
-   30 bits fixnum representation
-|.................................|00
-
-|--------|--------|--------|------+--|
-  byte3    byte2    byte1    byte0
-@end example
-
-@noindent
-the two least significant bits are set to zero: this ``tags'' the
-machine words which embed fixnums.
-
-The arguments to these operations must be fixnums.  The following
-bindings are exported by the @library{ikarus system $fx} library.
+The following bindings are exported by the @library{ikarus system $fx}
+library.  The arguments to these operations must be fixnums.
+@ref{objects fixnums} for details on the representation of fixnums.
 
 
 @deffn {Unsafe Operation} $fxzero? @var{fx}
@@ -13828,7 +13800,7 @@ Scheme language compiler @file{ikarus.compiler.sls}.
 @menu
 * objects refs::                Builtin objects and tags.
 * objects alloc::               Allocating memory for builtin objects.
-* objects fixnum::              Fixnum objects.
+* objects fixnums::             Fixnum objects.
 * objects pair::                Pair objects.
 * objects bytevector::          Bytevector objects.
 * objects vector::              Vector objects.
@@ -14257,16 +14229,26 @@ is terminated with exit status @code{-1}.
 @end deftypefun
 
 @c page
-@node objects fixnum
+@node objects fixnums
 @section Fixnum objects
 
 
-Fixnums are ``small'' exact integers.  In Vicare's jargon, ``word size''
-is the number of bytes in an @ikptr{}; if the word size is @math{4},
-@math{30} bits are used for fixnum representation; else the word size is
-@math{8} and @math{61} bits are used for fixnum representation.
+Fixnums are ``small'' exact integers which fit in a single machine word:
+if the word size is @math{4}, @math{30} bits are used for fixnum
+representation; else the word size is @math{8} and @math{61} bits are
+used for fixnum representation.  On a 32-bit platform, @math{30} bits
+are available to store the number:
 
-Let's say @ikptr{} is a @math{32} bits value, which means the word
+@example
+(greatest-fixnum)       @result{} +536870911
+(expt 2 29)             @result{} +536870912
+(- (expt 2 29) 1)       @result{} +536870911
+
+(least-fixnum)          @result{} -536870912
+(- (expt 2 29))         @result{} -536870912
+@end example
+
+Let's say that machine words are 32-bit values, which means the word
 size is @math{4} bytes; then the representation of a fixnum is:
 
 @example
@@ -14279,33 +14261,35 @@ size is @math{4} bytes; then the representation of a fixnum is:
 
 @noindent
 the two least significant bits are set to zero: this ``tags'' the
-@ikptr{} which embed fixnums.
+machine words which embed fixnums.
 
 
-@defmac fix (@var{num})
+@deffn {Preprocessor Macro} ikptr IK_FIX (@var{num})
+@deffnx {Preprocessor Macro} ikptr fix (@var{num})
 Convert a small exact integer in the correct range for a fixnum, into a
-@ikptr{} value.
-@end defmac
+@ikptr{} value.  @var{num} is cast to @code{long}.
+@end deffn
 
 
-@defmac unfix (@var{ref})
+@deffn {Preprocessor Macro} long IK_UNFIX (ikptr @var{ref})
+@deffnx {Preprocessor Macro} long unfix (ikptr @var{ref})
 Convert an @ikptr{} value holding a fixnum into a fixnum of type
 @code{long int}.
-@end defmac
+@end deffn
 
 
-@defmac IK_IS_FIXNUM (@var{ref})
+@deffn {Preprocessor Macro} int IK_IS_FIXNUM (ikptr @var{ref})
 Expand to true if @var{ref} is an @ikptr{} embedding a fixnum.  It
 just tests if the least significant bits in the tag are set to zero.
-@end defmac
+@end deffn
 
 
 Examples:
 
 @example
-long int  n = 123L;
-ikptr     p = fix(n);
-long int  m = unfix(p);
+long int  N = 123L;
+ikptr     P = IK_FIX(N);
+long int  M = IK_UNFIX(P);
 @end example
 
 @c page
