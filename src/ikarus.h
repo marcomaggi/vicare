@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <netdb.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -253,6 +254,7 @@ typedef struct {
  ** Function prototypes.
  ** ----------------------------------------------------------------- */
 
+void    ik_abort                (const char * error_message, ...);
 void    ik_error                (ikptr args);
 
 ikpcb * ik_collect              (unsigned long, ikpcb*);
@@ -368,38 +370,31 @@ ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
  ** ----------------------------------------------------------------- */
 
 #define pair_size       (2 * wordsize)
-#define pair_mask       7 /* #b 0000 0111 */
+#define pair_mask       7 /* #b111 */
 #define pair_tag        1
 #define disp_car        0
 #define disp_cdr        wordsize
 #define off_car         (disp_car - pair_tag)
 #define off_cdr         (disp_cdr - pair_tag)
 
-#define is_pair(X)      \
-  ((((long)(X)) & pair_mask) == pair_tag)
-
-int     ik_list_length          (ikptr x);
-void    ik_list_to_argv         (ikptr x, char **argv);
-void    ik_list_to_argv_and_argc (ikptr x, char **argv, long *argc);
-
-ikptr   ik_list_from_argv               (char ** argv, ikpcb * pcb);
-ikptr   ik_list_from_argv_and_argc      (char ** argv, int argc, ikpcb * pcb);
-
-char**  ik_list_to_vec          (ikptr x);
-
-#define ik_pair_alloc(PCB)      (ik_safe_alloc((PCB), IK_ALIGN(pair_size)) + pair_tag)
+#define IK_IS_PAIR(X)   (pair_tag == (((long)(X)) & pair_mask))
 
 #define IK_CAR(PAIR)                ref((PAIR), off_car)
 #define IK_CDR(PAIR)                ref((PAIR), off_cdr)
 
-#define IK_SET_CAR(PAIR,VALUE)      ref((PAIR), off_car) = (VALUE)
-#define IK_SET_CDR(PAIR,VALUE)      ref((PAIR), off_cdr) = (VALUE)
-
 #define IK_DECLARE_ALLOC_AND_CONS(PAIR,LIST,PCB)    \
-  ikptr PAIR = ik_pair_alloc(PCB);                      \
-  IK_SET_CDR(PAIR,LIST);                            \
+  ikptr PAIR = IK_PAIR_ALLOC(PCB);                  \
+  IK_CDR(PAIR) = LIST;                              \
   LIST=PAIR;
 
+#define IK_PAIR_ALLOC(PCB)      (ik_safe_alloc((PCB), IK_ALIGN(pair_size)) + pair_tag)
+
+long    ik_list_length                  (ikptr x);
+void    ik_list_to_argv                 (ikptr x, char **argv);
+void    ik_list_to_argv_and_argc        (ikptr x, char **argv, long *argc);
+
+ikptr   ik_list_from_argv               (ikpcb * pcb, char ** argv);
+ikptr   ik_list_from_argv_and_argc      (ikpcb * pcb, char ** argv, long argc);
 
 
 /** --------------------------------------------------------------------

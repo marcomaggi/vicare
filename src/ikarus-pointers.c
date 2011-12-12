@@ -471,7 +471,7 @@ ikrt_argv_from_bytevectors (ikptr bvs, ikpcb * pcb)
 ikptr
 ikrt_argv_to_bytevectors (ikptr s_pointer, ikpcb * pcb)
 {
-  return ik_list_from_argv(IK_POINTER_DATA_VOIDP(s_pointer), pcb);
+  return ik_list_from_argv(pcb, IK_POINTER_DATA_VOIDP(s_pointer));
 }
 ikptr
 ikrt_argv_length (ikptr s_pointer)

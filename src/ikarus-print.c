@@ -113,13 +113,13 @@ print(FILE* fh, ikptr x){
   else if(is_closure(x)){
     fprintf(fh, "#<procedure>");
   }
-  else if(is_pair(x)){
+  else if(IK_IS_PAIR(x)){
     fprintf(fh, "(");
     print(fh, ref(x, off_car));
     ikptr d = ref(x, off_cdr);
     /* fprintf(stderr, "d=0x%016lx\n", (long int)d); */
     while(1){
-      if(is_pair(d)){
+      if(IK_IS_PAIR(d)){
         fprintf(fh, " ");
         print(fh, ref(d, off_car));
         d = ref(d, off_cdr);

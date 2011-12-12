@@ -10863,16 +10863,9 @@ Return a fixnum representing the code point of the operand.
 @section Low level pair operations
 
 
-A pair is a fixed--length block of memory composed of two machine words;
-the least significant bits of a reference to a pair are a pair tag.
-
-@example
-|------------------------|-------------| reference to pair
-      heap offset           pair tag
-@end example
-
 The arguments @var{P} to these operations must be pairs.  The following
 bindings are exported by the @library{ikarus system $pairs} library.
+@ref{objects pairs} for details of pair representation.
 
 
 @deffn {Unsafe Operation} $car @var{P}
@@ -13799,9 +13792,9 @@ Scheme language compiler @file{ikarus.compiler.sls}.
 
 @menu
 * objects refs::                Builtin objects and tags.
-* objects alloc::               Allocating memory for builtin objects.
+* objects memory::              Memory allocation and collection.
 * objects fixnums::             Fixnum objects.
-* objects pair::                Pair objects.
+* objects pairs::               Pair objects and lists.
 * objects bytevector::          Bytevector objects.
 * objects vector::              Vector objects.
 * objects struct::              Struct objects.
@@ -14105,8 +14098,8 @@ attributes.
 @end table
 
 @c page
-@node objects alloc
-@section Allocating memory for built in objects
+@node objects memory
+@section Memory allocation and collection
 
 
 In short, memory allocation is performed as follows:
@@ -14228,6 +14221,134 @@ triggered; then allocation is tried again: if it still fails the process
 is terminated with exit status @code{-1}.
 @end deftypefun
 
+@c ------------------------------------------------------------
+
+@subsubheading Writing correct C language code
+
+The garbage collector considers an object ``in use'' if at least one
+reference to it is on the heap or referenced by the fields @code{root0}
+and @code{root1} of the @code{ikpcb} structure; if an @ikptr{} reference
+is on the stack or in a @acronym{CPU} register, the garbage collector
+will not see it.  This allows to avoid scanning the process' stack for
+references to values, but imposes care when writing C language code.
+
+Whenever we call @cfunc{ik_safe_alloc} a garbage collection may be run;
+so, before the call, we must make sure that all the Scheme objects we
+are using are reachable; after the call we must reobtain all the
+pointers to the internals of the objects we are using.
+
+@strong{Correct code}: @code{s_one} is protected while allocating
+@code{s_two}:
+
+@example
+ikpcb * pcb = the_pcb;
+ikptr   s_one, s_two;
+
+s_one = ik_bytevector_alloc(pcb, 10);
+pcb->root0 = &s_one;
+@{
+  s_two = ik_bytevector_alloc(pcb, 10);
+@}
+pcb->root0 = NULL;
+@end example
+
+@noindent
+@strong{wrong code}: after the second call to
+@cfunc{ik_bytevector_alloc} the value in @code{s_two} may be invalid:
+
+@example
+ikpcb * pcb = the_pcb;
+ikptr   s_one, s_two;
+
+s_one = ik_bytevector_alloc(pcb, 10);
+s_two = ik_bytevector_alloc(pcb, 10);
+@end example
+
+@strong{Correct code}: @code{s_one} and @code{s_two} are protected while
+allocating @code{s_three}:
+
+@example
+ikpcb * pcb = the_pcb;
+ikptr   s_one, s_two, s_three;
+
+s_one = ik_bytevector_alloc(pcb, 10);
+pcb->root0 = &s_one;
+@{
+  s_two = ik_bytevector_alloc(pcb, 10);
+  pcb->root1 = &s_two;
+  @{
+    s_three = ik_bytevector_alloc(pcb, 10);
+  @}
+  pcb->root1 = NULL;
+@}
+pcb->root0 = NULL;
+@end example
+
+@strong{Correct code}: all the bytevectors are protected while the
+allocation proceeds:
+
+@example
+ikpcb * pcb = the_pcb;
+ikptr   s_tmp;
+ikptr   s_one, s_two, s_three, s_four, s_five;
+
+s_tmp = ik_vector_alloc(pcb, 5);
+pcb->root0 = &s_tmp;
+@{
+  s_one   = IK_VECTOR_SET(s_tmp, 0) \
+          = ik_bytevector_alloc(pcb, 10);
+  s_two   = IK_VECTOR_SET(s_tmp, 1) \
+          = ik_bytevector_alloc(pcb, 10);
+  s_three = IK_VECTOR_SET(s_tmp, 2) \
+          = ik_bytevector_alloc(pcb, 10);
+  s_four  = IK_VECTOR_SET(s_tmp, 3) \
+          = ik_bytevector_alloc(pcb, 10);
+  s_five  = IK_VECTOR_SET(s_tmp, 4) \
+          = ik_bytevector_alloc(pcb, 10);
+@}
+pcb->root0 = NULL;
+@end example
+
+@strong{Correct code}: after the second call to
+@cfunc{ik_bytevector_alloc} the pointer to the data area of @code{s_one}
+is retrieved again:
+
+@example
+ikpcb * pcb = the_pcb;
+ikptr   s_one, s_two;
+char *  one;
+
+s_one = ik_bytevector_alloc(pcb, 10);
+one   = IK_BYTEVECTOR_DATA_CHARP(s_one);
+pcb->root0 = &s_one;
+@{
+  s_two = ik_bytevector_alloc(pcb, strlen(one));
+  one   = IK_BYTEVECTOR_DATA_CHARP(s_one);
+@}
+pcb->root0 = NULL;
+@end example
+
+@noindent
+@strong{wrong code}: after the second call to
+@cfunc{ik_bytevector_alloc} the location referenced by @code{one} is
+unknown:
+
+@example
+ikpcb * pcb = the_pcb;
+ikptr   s_one, s_two;
+char *  one;
+
+s_one = ik_bytevector_alloc(pcb, 10);
+one   = IK_BYTEVECTOR_DATA_CHARP(s_one);
+pcb->root0 = &s_one;
+@{
+  s_two = ik_bytevector_alloc(pcb, strlen(one));
+@}
+pcb->root0 = NULL;
+@end example
+
+
+
 @c page
 @node objects fixnums
 @section Fixnum objects
@@ -14293,79 +14414,175 @@ long int  M = IK_UNFIX(P);
 @end example
 
 @c page
-@node objects pair
-@section Pair objects
+@node objects pairs
+@section Pair objects and lists
 
+
+A pair is a fixed--length block of memory composed of two machine words;
+the @math{3} least significant bits of an @ikptr{} reference to a pair
+are the pair tag.
+
+@example
+|-------------------------|-------------| reference to pair
+      heap offset            pair tag
+
+|-------------------|-------------------| pair memory block
+    word 0 = car        word 1 = cdr
+@end example
 
 Pairs are allocated as follows:
 
 @example
 ikpcb *  pcb = ...;
-ikptr    pair;
+ikptr    s_pair;
 
-pair = ik_safe_alloc(pcb, pair_size) + pair_tag;
+s_pair = ik_safe_alloc(pcb, pair_size) + pair_tag;
 @end example
 
 @noindent
 the car and cdr of a pair are extracted as follows:
 
 @example
-ikptr   pair, the_car, the_cdr;
+ikptr   s_pair, s_car, s_cdr;
 
-the_car = ref(pair, off_car);
-the_cdr = ref(pair, off_cdr);
+s_car = ref(s_pair, off_car);
+s_cdr = ref(s_pair, off_cdr);
 @end example
 
 @noindent
 the car and cdr of a pair are set as follows:
 
-ikptr   pair, the_car, the_cdr;
-
 @example
-ref(pair, off_car) = the_car;
-ref(pair, off_cdr) = the_car;
+ikptr   s_pair, s_car, s_cdr;
+
+ref(s_pair, off_car) = s_car;
+ref(s_pair, off_cdr) = s_car;
 @end example
 
+@noindent
+see below for less verbose preprocessor macros.
 
-@defmac is_pair (ikptr @var{X})
+
+@deffn {Preprocessor Symbol} pair_mask
+@deffnx {Preprocessor Symbol} pair_tag
+@deffnx {Preprocessor Symbol} pair_size
+@code{pair_mask} is the bit pattern used to isolate a pair tag from a
+reference @ikptr{}; @code{pair_tag} is the tag of @ikptr{} values
+referencing a pair; @code{pair_size} is the number of bytes in a pair
+memory block on the heap.
+@end deffn
+
+
+@deffn {Preprocessor Symbol} disp_car
+@deffnx {Preprocessor Symbol} disp_cdr
+@deffnx {Preprocessor Symbol} off_car
+@deffnx {Preprocessor Symbol} off_cdr
+@code{disp_car} and @code{disp_cdr} are the offsets in bytes of the car
+and cdr from the beginning of a pair memory block; @code{off_car} and
+@code{off_cdr} are integers to be added to a reference @ikptr{} tagged
+as pair to retrieve the car and the cdr from a pair memory block.
+@end deffn
+
+
+@deffn {Preprocessor Macro} int IK_IS_PAIR (ikptr @var{X})
 Evaluate to true if the machine word @var{X} is tagged as pair.
-@end defmac
+@end deffn
 
 
-@defmac pair_mask
-@defmacx pair_tag
-The constant @code{pair_mask} is the bit pattern used to isolate a pair
-tag from a machine word; the constant @code{pair_tag} is the bit pattern
-that identifies machine words as references to pairs.
+@deffn {Preprocessor Macro} ikptr IK_CAR (ikptr @var{pair})
+@deffnx {Preprocessor Macro} ikptr IK_CDR (ikptr @var{pair})
+Evaluate to the locations of the car and cdr of a pair; uses of these
+macros can appear both as operands and as left--side of assignments.
+@end deffn
+
+
+@deftypefun long ik_list_length (ikptr @var{list})
+Return the length of the proper list referenced by @var{list}.  Do not
+handle circular lists.  If the length exceeds @code{LONG_MAX}: terminate
+the process with @cfunc{ik_abort}.
+@end deftypefun
+
+
+@deftypefun void ik_list_to_argv (ikptr @var{list}, char ** @var{argv})
+Given a reference @var{list} to a list of bytevectors, fill @var{argv}
+with pointers to the data areas, setting the last element of @var{argv}
+to @cnull{}.  The array referenced by @var{argv} must be wide enough to
+hold all the pointers from @var{list} plus the terminating @cnull{}.
+@end deftypefun
+
+
+@deftypefun void ik_list_to_argv_and_argc (ikptr @var{list}, char ** @var{argv}, long * @var{argc})
+Given a reference @var{list} to a list of bytevectors: fill @var{argv}
+with pointers to the data areas, setting the last element of @var{argv}
+to @cnull{}; fill @var{argc} with the lengths of the bytevectors.  The
+array referenced by @var{argv} must be wide enough to hold all the
+pointers from @var{list} plus the terminating @cnull{}; the array
+referenced by @var{argc} must be wide enough to hold all the lengths.
+@end deftypefun
+
+
+@deftypefun ikptr ik_list_from_argv (ikpcb * @var{pcb}, char ** @var{argv})
+Given a pointer @var{argv} to a @cnull{}--terminated array of @asciiz{}
+strings build and return a list of bytevectors holding a copy of the
+@asciiz{} strings.  Make use of @code{pcb->root1}.
+@end deftypefun
+
+
+@deftypefun ikptr ik_list_from_argv_and_argc (ikpcb * @var{pcb}, char ** @var{argv}, int @var{argc})
+Given a pointer @var{argv} to an array of @asciiz{} strings holding
+@var{argc} pointers: build and return a list of bytevectors holding a
+copy of the @asciiz{} strings.  Make use of @code{pcb->root1}.
+@end deftypefun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Pairs and lists code examples
+
+The suggested way to allocate and initialise a pair is as follows:
 
 @example
-ikptr  word = ...;
-long   pattern;
-int    true_if_pair;
+ikpcb * pcb    = ...;
+ikptr   s_pair = IK_PAIR_ALLOC(pcb);
 
-pattern      = ((long)word) & pair_mask;
-true_if_pair = (pattern == pair_tag);
+pcb->root0 = &s_pair;
+@{
+  IK_CAR(s_pair) = allocate_and_build_the_car(pcb);
+  IK_CDR(s_pair) = allocate_and_build_the_cdr(pcb);
+@}
+pcb->root0 = NULL;
 @end example
-@end defmac
 
-@defmac pair_size
-The number of bytes in a pair memory block.
-@end defmac
+@noindent
+notice how we take care of registering the pair as garbage collection
+root before calling the constructors for the car and cdr.
 
+Let's say we need to build a list of bytevectors from @asciiz{} strings
+in the array @code{argv} and there are @code{argc} of them:
 
-@defmac disp_car
-@defmacx disp_cdr
-Integer constant values representing the offsets of the car and cdr from
-the beginning of a pair memory block.
-@end defmac
+@example
+ikpcb * pcb  = the_pcb;
+char ** argv = ...;
+long    argc = ...;
+ikptr   s_list, s_pair, s_new;
+long    i;
 
+s_list = s_pair = IK_PAIR_ALLOC(pcb);
+pcb->root1 = &s_list;
+@{
+  for (i=0; i<argc;) @{
+    IK_CAR(s_pair) = ik_bytevector_from_cstring(pcb, argv[i]);
+    if (++i < argc) @{
+      s_new  = IK_CDR(s_pair) = IK_PAIR_ALLOC(pcb);
+      s_pair = s_new;
+    @} else
+      IK_CDR(s_pair) = null_object;
+  @}
+@}
+pcb->root1 = NULL;
 
-@defmac off_car
-@defmacx off_cdr
-Integer constant values to be added to a pointer tagged as pair to
-retrieve the car and the cdr from a pair memory block.  To be used as
-second argument to @cfunc{ref}.
-@end defmac
+/* make use of S_LIST */
+@end example
 
 @c page
 @node objects bytevector

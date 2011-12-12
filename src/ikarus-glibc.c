@@ -243,11 +243,11 @@ ikrt_glibc_if_nameindex (ikpcb * pcb) {
   arry = if_nameindex();
   for (i=0; 0 != arry[i].if_index; ++i) {
     /* Add a pair to the alist spine. */
-    spine = ik_pair_alloc(pcb);
+    spine = IK_PAIR_ALLOC(pcb);
     ref(spine, off_cdr) = alist;
     alist               = spine;
     /* Add an entry to the alist. */
-    entry = ik_pair_alloc(pcb);
+    entry = IK_PAIR_ALLOC(pcb);
     ref(spine, off_car) = entry;
     /* Fill the entry. */
     len  = strlen(arry[i].if_name);
@@ -562,10 +562,13 @@ ikrt_glibc_lgamma (ikptr s_X, ikpcb * pcb)
   double        X   = FLONUM_DATA(s_X);
   int           sgn;
   double        Y   = lgamma_r(X, &sgn);
-  ikptr         s_pair;
-  s_pair = ik_pair_alloc(pcb);
-  IK_SET_CAR(s_pair, ik_flonum_alloc(pcb, Y));
-  IK_SET_CDR(s_pair, fix(sgn));
+  ikptr         s_pair = IK_PAIR_ALLOC(pcb);
+  pcb->root0 = &s_pair;
+  {
+    IK_CAR(s_pair) = ik_flonum_alloc(pcb, Y);
+    IK_CDR(s_pair) = IK_FIX(sgn);
+  }
+  pcb->root0 = NULL;
   return s_pair;
 #else
   feature_failure(__func__);
@@ -709,7 +712,7 @@ ikrt_glibc_glob (ikptr s_pattern, ikptr s_flags, ikptr s_error_handler, ikpcb * 
   G.gl_lstat    = NULL;
   rv = glob(IK_BYTEVECTOR_DATA_CHARP(s_pattern), unfix(s_flags), handler, &G);
   if (0 == rv) {
-    ikptr       s_list = ik_list_from_argv_and_argc(G.gl_pathv, G.gl_pathc, pcb);
+    ikptr       s_list = ik_list_from_argv_and_argc(pcb, G.gl_pathv, G.gl_pathc);
     globfree(&G);
     return s_list;
   } else {
@@ -736,19 +739,20 @@ ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb *pcb)
     pcb->root0 = NULL;
     return s_compiled_regex;
   } else {
-    ikptr       s_pair = ik_pair_alloc(pcb);
+    ikptr       s_pair = IK_PAIR_ALLOC(pcb);
     char *      error_message;
     size_t      error_message_len;
-    /* After allocating memory  we need to extract again  the pointer to
-       data,  because  the  bytevector  may have  been  moved  somewhere
-       else. */
-    compiled_regex    = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
-    error_message_len = regerror(rv, compiled_regex, NULL, 0);
-    IK_SET_CAR(s_pair, fix(rv));
-    IK_SET_CDR(s_pair, ik_bytevector_alloc(pcb, (long)error_message_len-1));
-    error_message     = IK_BYTEVECTOR_DATA_CHARP(IK_CDR(s_pair));
-    compiled_regex    = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
-    regerror(rv, compiled_regex, error_message, error_message_len);
+    pcb->root1 = &s_pair;
+    {
+      compiled_regex    = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+      error_message_len = regerror(rv, compiled_regex, NULL, 0);
+      IK_CAR(s_pair)    = IK_FIX(rv);
+      IK_CDR(s_pair)    = ik_bytevector_alloc(pcb, (long)error_message_len-1);
+      error_message     = IK_BYTEVECTOR_DATA_CHARP(IK_CDR(s_pair));
+      compiled_regex    = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+      regerror(rv, compiled_regex, error_message, error_message_len);
+    }
+    pcb->root1 = NULL;
     pcb->root0 = NULL;
     return s_pair;
   }
@@ -770,37 +774,37 @@ ikrt_glibc_regexec (ikptr s_compiled_regex, ikptr s_string, ikptr s_flags, ikpcb
   case 0:
     {
       size_t      i;
-      ikptr       s_match = ik_vector_alloc(pcb, 1+nmatch);
+      ikptr       s_match_vector = ik_vector_alloc(pcb, 1+nmatch);
       ikptr       s_pair;
-      pcb->root0 = &s_match;
+      pcb->root0 = &s_match_vector;
       {
         for (i=0; i<1+nmatch; ++i) {
-          s_pair = ik_pair_alloc(pcb);
-          IK_VECTOR_SET(s_match, i, s_pair);
-          IK_SET_CAR(s_pair, fix(match[i].rm_so));
-          IK_SET_CDR(s_pair, fix(match[i].rm_eo));
+          s_pair = IK_VECTOR_SET(s_match_vector, i, IK_PAIR_ALLOC(pcb));
+          IK_CAR(s_pair) = IK_FIX(match[i].rm_so);
+          IK_CDR(s_pair) = IK_FIX(match[i].rm_eo);
         }
       }
       pcb->root0 = NULL;
-      return s_match;
+      return s_match_vector;
     }
   case REG_NOMATCH:
     return false_object;
   default:
     {
-      ikptr       s_pair = ik_pair_alloc(pcb);
-      char *      error_message;
-      size_t      error_message_len;
-      /* After allocating memory  we need to extract again  the pointer to
-         data,  because  the  bytevector  may have  been  moved  somewhere
-         else. */
-      compiled_regex    = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
-      error_message_len = regerror(rv, compiled_regex, NULL, 0);
-      IK_SET_CAR(s_pair, fix(rv));
-      IK_SET_CDR(s_pair, ik_bytevector_alloc(pcb, (long)error_message_len-1));
-      error_message     = IK_BYTEVECTOR_DATA_CHARP(IK_CDR(s_pair));
-      compiled_regex    = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
-      regerror(rv, compiled_regex, error_message, error_message_len);
+      ikptr       s_pair = IK_PAIR_ALLOC(pcb);
+      pcb->root0 = &s_pair;
+      {
+        char *          errmsg;
+        size_t          errmsg_len_including_zero;
+        compiled_regex            = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+        errmsg_len_including_zero = regerror(rv, compiled_regex, NULL, 0);
+        IK_CAR(s_pair)            = IK_FIX(rv);
+        IK_CDR(s_pair)            = ik_bytevector_alloc(pcb, (long)errmsg_len_including_zero-1);
+        errmsg                    = IK_BYTEVECTOR_DATA_CHARP(IK_CDR(s_pair));
+        compiled_regex            = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
+        regerror(rv, compiled_regex, errmsg, errmsg_len_including_zero);
+      }
+      pcb->root0 = NULL;
       return s_pair;
     }
   }

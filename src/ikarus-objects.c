@@ -36,19 +36,17 @@
  ** Scheme pairs utilities.
  ** ----------------------------------------------------------------- */
 
-int
+long
 ik_list_length (ikptr s_list)
-/* Determine and return  the lenght of the list  S_LIST.  Do *not* check
-   for circular lists. */
+/* Return the  length of the list  S_LIST.  Do *not*  check for circular
+   lists. */
 {
-  int   length;
+  long   length;
   for (length = 0; pair_tag == IK_TAGOF(s_list); ++length) {
-    if (INT_MAX == length) {
-      fprintf(stderr, "Vicare error: size of list exceeds INT_MAX");
-      exit(EXIT_FAILURE);
-    } else {
+    if (LONG_MAX != length)
       s_list = ref(s_list, off_cdr);
-    }
+    else
+      ik_abort("size of list exceeds LONG_MAX");
   }
   return length;
 }
@@ -74,7 +72,7 @@ void
 ik_list_to_argv_and_argc (ikptr s_list, char **argv, long *argc)
 /* Given a  reference S_LIST  to a list  of bytevectors: fill  ARGV with
    pointers to the data areas, setting the last element of ARGV to NULL;
-   fill ARGC  with the lengths ofthe bytevectors.   The array referenced
+   fill ARGC with the lengths  of the bytevectors.  The array referenced
    by ARGV must be wide enough to hold all the data from S_LIST plus the
    terminating NULL; the array referenced by ARGC must be wide enough to
    hold all the lengths. */
@@ -89,70 +87,50 @@ ik_list_to_argv_and_argc (ikptr s_list, char **argv, long *argc)
   argv[i] = NULL;
 }
 ikptr
-ik_list_from_argv (char ** argv, ikpcb * pcb)
+ik_list_from_argv (ikpcb * pcb, char ** argv)
 /* Given a  pointer ARGV  to a NULL-terminated  array of  ASCIIZ strings
    build and return  a list of bytevectors holding a  copy of the ASCIIZ
    strings.  Make use of PCB->ROOT1.  */
 {
-  ikptr         s_list, s_pair, bv;
+  ikptr         s_list, s_pair, s_new;
   int           i;
-  s_list = s_pair = ik_pair_alloc(pcb);
+  s_list = s_pair = IK_PAIR_ALLOC(pcb);
   pcb->root1 = &s_list;
   {
     for (i=0; argv[i];) {
-      bv = ik_bytevector_from_cstring(pcb, argv[i]);
-      IK_SET_CAR(s_pair, bv);
+      IK_CAR(s_pair) = ik_bytevector_from_cstring(pcb, argv[i]);
       if (argv[++i]) {
-        IK_SET_CDR(s_pair, ik_pair_alloc(pcb));
-        s_pair = IK_CDR(s_pair);
+        s_new  = IK_CDR(s_pair) = IK_PAIR_ALLOC(pcb);
+        s_pair = s_new;
       } else
-        IK_SET_CDR(s_pair, null_object);
+        IK_CDR(s_pair) = null_object;
     }
   }
   pcb->root1 = NULL;
   return s_list;
 }
 ikptr
-ik_list_from_argv_and_argc (char ** argv, int argc, ikpcb * pcb)
+ik_list_from_argv_and_argc (ikpcb * pcb, char ** argv, long argc)
 /* Given  a pointer  ARGV to  an array  of ASCIIZ  strings  holding ARGC
    pointers: build  and return a list  of bytevectors holding  a copy of
    the ASCIIZ strings.  Make use of PCB->ROOT1.  */
 {
-  ikptr         s_list, s_pair, bv;
-  int           i;
-  s_list = s_pair = ik_pair_alloc(pcb);
+  ikptr         s_list, s_pair, s_new;
+  long          i;
+  s_list = s_pair = IK_PAIR_ALLOC(pcb);
   pcb->root1 = &s_list;
   {
     for (i=0; i<argc;) {
-      bv = ik_bytevector_from_cstring(pcb, argv[i]);
-      IK_SET_CAR(s_pair, bv);
+      IK_CAR(s_pair) = ik_bytevector_from_cstring(pcb, argv[i]);
       if (++i < argc) {
-        IK_SET_CDR(s_pair, ik_pair_alloc(pcb));
-        s_pair = IK_CDR(s_pair);
+        s_new  = IK_CDR(s_pair) = IK_PAIR_ALLOC(pcb);
+        s_pair = s_new;
       } else
-        IK_SET_CDR(s_pair, null_object);
+        IK_CDR(s_pair) = null_object;
     }
   }
   pcb->root1 = NULL;
   return s_list;
-}
-
-/* ------------------------------------------------------------------ */
-
-char**
-ik_list_to_vec (ikptr x)
-{
-  int n = ik_list_length(x);
-  char** vec = malloc((n+1) * sizeof(char*));
-  if (vec == NULL)
-    exit(EXIT_FAILURE);
-  int i;
-  for (i=0; i<n; i++) {
-    vec[i] = (char*)(long)ref(x, off_car) + off_bytevector_data;
-    x = ref(x, off_cdr);
-  }
-  vec[n] = 0;
-  return vec;
 }
 
 

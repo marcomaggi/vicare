@@ -474,15 +474,22 @@ ik_unsafe_alloc (ikpcb* pcb, unsigned long size)
 
 
 void
+ik_abort (const char * error_message, ...)
+{
+  va_list        ap;
+  va_start(ap, error_message);
+  vfprintf(stderr, "*** Vicare error: %s\n", ap);
+  va_end(ap);
+  exit(EXIT_FAILURE);
+}
+void
 ik_error (ikptr args)
 {
-  fprintf(stderr, "Vicare error: ");
+  fprintf(stderr, "*** Vicare error: ");
   ik_fprint(stderr, args);
   fprintf(stderr, "\n");
   exit(EXIT_FAILURE);
 }
-
-
 void ik_stack_overflow(ikpcb* pcb){
 #ifndef NDEBUG
   fprintf(stderr, "entered ik_stack_overflow pcb=0x%016lx\n", (long int)pcb);

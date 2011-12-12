@@ -120,7 +120,7 @@ ikrt_posix_environ (ikpcb* pcb)
   pcb->root0 = &list_of_entries;
   for (i=0; environ[i]; ++i) {
     IK_DECLARE_ALLOC_AND_CONS(pair, list_of_entries, pcb);
-    IK_SET_CAR(pair, ik_bytevector_from_cstring(pcb, environ[i]));
+    IK_CAR(pair) = ik_bytevector_from_cstring(pcb, environ[i]);
   }
   pcb->root0 = 0;
   return list_of_entries;
@@ -1143,9 +1143,9 @@ ikrt_posix_select (ikptr nfds_fx,
       for (L=read_fds_ell, R=null_object; pair_tag == IK_TAGOF(L); L=ref(L,off_cdr)) {
         ikptr fdx = ref(L, off_car);
         if (FD_ISSET(unfix(fdx), &read_fds)) {
-          ikptr P = ik_pair_alloc(pcb);
-          IK_SET_CAR(P, fdx);
-          IK_SET_CDR(P, R);
+          ikptr P = IK_PAIR_ALLOC(pcb);
+          IK_CAR(P) = fdx;
+          IK_CDR(P) = R;
           IK_VECTOR_SET(vec, 0, P);
           R = P;
         }
@@ -1154,9 +1154,9 @@ ikrt_posix_select (ikptr nfds_fx,
       for (L=write_fds_ell, W=null_object; pair_tag == IK_TAGOF(L); L = ref(L, off_cdr)) {
         ikptr fdx = ref(L, off_car);
         if (FD_ISSET(unfix(fdx), &write_fds)) {
-          ikptr P = ik_pair_alloc(pcb);
-          IK_SET_CAR(P, fdx);
-          IK_SET_CDR(P, W);
+          ikptr P = IK_PAIR_ALLOC(pcb);
+          IK_CAR(P) = fdx;
+          IK_CDR(P) = W;
           IK_VECTOR_SET2(vec, 1, W, P);
         }
       }
@@ -1164,9 +1164,9 @@ ikrt_posix_select (ikptr nfds_fx,
       for (L=except_fds_ell, E=null_object; pair_tag == IK_TAGOF(L); L = ref(L, off_cdr)) {
         ikptr fdx = ref(L, off_car);
         if (FD_ISSET(unfix(fdx), &except_fds)) {
-          ikptr P = ik_pair_alloc(pcb);
-          IK_SET_CAR(P, fdx);
-          IK_SET_CDR(P, E);
+          ikptr P = IK_PAIR_ALLOC(pcb);
+          IK_CAR(P) = fdx;
+          IK_CDR(P) = E;
           IK_VECTOR_SET2(vec, 2, E, P);
         }
       }
@@ -1287,9 +1287,9 @@ ikrt_posix_pipe (ikpcb * pcb)
   if (-1 == rv)
     return ik_errno_to_code();
   else {
-    ikptr pair = ik_pair_alloc(pcb);
-    IK_SET_CAR(pair, fix(fds[0]));
-    IK_SET_CDR(pair, fix(fds[1]));
+    ikptr  pair = IK_PAIR_ALLOC(pcb);
+    IK_CAR(pair) = IK_FIX(fds[0]);
+    IK_CDR(pair) = IK_FIX(fds[1]);
     return pair;
   }
 }
@@ -1569,14 +1569,14 @@ hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
     int         i;
     IK_STRUCT_SET(dst, 1, list_of_aliases);
     for (i=0; NULL!=src->h_aliases[i]; ++i) {
-      ikptr     pair      = ik_pair_alloc(pcb);
-      IK_SET_CDR(pair, list_of_aliases);
+      ikptr     pair      = IK_PAIR_ALLOC(pcb);
+      IK_CDR(pair) = list_of_aliases;
       IK_STRUCT_SET2(dst, 1, list_of_aliases, pair);
       long      alias_len = strlen(src->h_aliases[i]);
       ikptr     alias_bv  = ik_bytevector_alloc(pcb, alias_len);
       char *    alias     = IK_BYTEVECTOR_DATA_CHARP(alias_bv);
       memcpy(alias, src->h_aliases[i], alias_len);
-      IK_SET_CAR(pair, alias_bv);
+      IK_CAR(pair) = alias_bv;
     }
   }
   /* store the host address type */
@@ -1591,11 +1591,11 @@ hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
     for (i=0; NULL!=src->h_addr_list[i]; ++i) {
       ikptr     pair;
       ikptr     addr_bv;
-      pair    = ik_pair_alloc(pcb);
-      IK_SET_CDR(pair, list_of_addrs);
+      pair    = IK_PAIR_ALLOC(pcb);
+      IK_CDR(pair) = list_of_addrs;
       addr_bv = ik_bytevector_from_memory_block(pcb, src->h_addr_list[i], src->h_length);
       IK_STRUCT_SET2(dst, 4, list_of_addrs, pair);
-      IK_SET_CAR(pair, addr_bv);
+      IK_CAR(pair) = addr_bv;
       if (0 == i)
         first_addr = addr_bv;
     }
@@ -1651,10 +1651,10 @@ ikrt_posix_host_entries (ikptr rtd, ikpcb * pcb)
   pcb->root0 = &list_of_entries;
   sethostent(1);
   for (entry=gethostent(); entry; entry=gethostent()) {
-    ikptr  pair        = ik_pair_alloc(pcb);
-    IK_SET_CDR(pair, list_of_entries);
+    ikptr  pair = IK_PAIR_ALLOC(pcb);
+    IK_CDR(pair)    = list_of_entries;
     list_of_entries = pair;
-    IK_SET_CAR(pair, hostent_to_struct(rtd, entry, pcb));
+    IK_CAR(pair)    = hostent_to_struct(rtd, entry, pcb);
   }
   endhostent();
   pcb->root0 = NULL;
@@ -1730,10 +1730,10 @@ ikrt_posix_getaddrinfo (ikptr rtd, ikptr node_bv, ikptr service_bv, ikptr hints_
   if (0 == rv) {
     pcb->root0 = &list_of_addrinfo;
     for (iter = result; iter; iter = iter->ai_next) {
-      ikptr       pair = ik_pair_alloc(pcb);
-      IK_SET_CDR(pair, list_of_addrinfo);
+      ikptr       pair = IK_PAIR_ALLOC(pcb);
+      IK_CDR(pair)     = list_of_addrinfo;
       list_of_addrinfo = pair;
-      IK_SET_CAR(pair, addrinfo_to_struct(pcb, rtd, iter, with_canon_name));
+      IK_CAR(pair)     = addrinfo_to_struct(pcb, rtd, iter, with_canon_name);
     }
     pcb->root0 = NULL;
     freeaddrinfo(result);
@@ -1782,15 +1782,15 @@ protoent_to_struct (ikpcb * pcb, ikptr rtd, struct protoent * src)
     }
     IK_STRUCT_SET(dst, 1, list_of_aliases);
     for (i=0; src->p_aliases[i]; ++i) {
-      ikptr     pair = ik_pair_alloc(pcb);
-      IK_SET_CDR(pair, list_of_aliases);
+      ikptr     pair = IK_PAIR_ALLOC(pcb);
+      IK_CDR(pair) = list_of_aliases;
       list_of_aliases = pair;
       IK_STRUCT_SET(dst, 1, list_of_aliases);
       size_t    alias_len = strlen(src->p_aliases[i]);
       ikptr     alias_bv  = ik_bytevector_alloc(pcb, (long)alias_len);
       char *    alias     = IK_BYTEVECTOR_DATA_CHARP(alias_bv);
       memcpy(alias, src->p_aliases[i], alias_len);
-      IK_SET_CAR(pair, alias_bv);
+      IK_CAR(pair) = alias_bv;
     }
     IK_STRUCT_SET(dst, 2, fix(src->p_proto));
   }
@@ -1821,10 +1821,10 @@ ikrt_posix_protocol_entries (ikptr rtd, ikpcb * pcb)
   pcb->root0 = &list_of_entries;
   setprotoent(1);
   for (entry=getprotoent(); entry; entry=getprotoent()) {
-    ikptr  pair = ik_pair_alloc(pcb);
-    IK_SET_CDR(pair, list_of_entries);
+    ikptr  pair = IK_PAIR_ALLOC(pcb);
+    IK_CDR(pair)    = list_of_entries;
     list_of_entries = pair;
-    IK_SET_CAR(pair, protoent_to_struct(pcb, rtd, entry));
+    IK_CAR(pair)    = protoent_to_struct(pcb, rtd, entry);
   }
   endprotoent();
   pcb->root0 = NULL;
@@ -1854,15 +1854,15 @@ servent_to_struct (ikpcb * pcb, ikptr rtd, struct servent * src)
     }
     IK_STRUCT_SET(dst, 1, list_of_aliases);
     for (i=0; src->s_aliases[i]; ++i) {
-      ikptr     pair = ik_pair_alloc(pcb);
-      IK_SET_CDR(pair, list_of_aliases);
+      ikptr     pair = IK_PAIR_ALLOC(pcb);
+      IK_CDR(pair) = list_of_aliases;
       list_of_aliases = pair;
       IK_STRUCT_SET(dst, 1, list_of_aliases);
       size_t    alias_len = strlen(src->s_aliases[i]);
       ikptr     alias_bv  = ik_bytevector_alloc(pcb, (long)alias_len);
       char *    alias     = IK_BYTEVECTOR_DATA_CHARP(alias_bv);
       memcpy(alias, src->s_aliases[i], alias_len);
-      IK_SET_CAR(pair, alias_bv);
+      IK_CAR(pair) = alias_bv;
     }
     IK_STRUCT_SET(dst, 2, fix((long)ntohs((uint16_t)(src->s_port))));
     {
@@ -1904,10 +1904,10 @@ ikrt_posix_service_entries (ikptr rtd, ikpcb * pcb)
   pcb->root0 = &list_of_entries;
   setservent(1);
   for (entry=getservent(); entry; entry=getservent()) {
-    ikptr  pair = ik_pair_alloc(pcb);
-    IK_SET_CDR(pair, list_of_entries);
+    ikptr  pair = IK_PAIR_ALLOC(pcb);
+    IK_CDR(pair)    = list_of_entries;
     list_of_entries = pair;
-    IK_SET_CAR(pair, servent_to_struct(pcb, rtd, entry));
+    IK_CAR(pair)    = servent_to_struct(pcb, rtd, entry);
   }
   endservent();
   pcb->root0 = NULL;
@@ -1933,7 +1933,7 @@ netent_to_struct (ikpcb * pcb, ikptr rtd, struct netent * src)
     for (i=0; src->n_aliases[i]; ++i) {
       IK_DECLARE_ALLOC_AND_CONS(pair, list_of_aliases, pcb);
       IK_STRUCT_SET(dst, 1, list_of_aliases);
-      IK_SET_CAR(pair, ik_bytevector_from_cstring(pcb, src->n_aliases[i]));
+      IK_CAR(pair) = ik_bytevector_from_cstring(pcb, src->n_aliases[i]);
     }
     IK_STRUCT_SET(dst, 2, fix(src->n_addrtype));
     IK_STRUCT_SET(dst, 3, ik_integer_from_unsigned_long_long((unsigned long long)src->n_net, pcb));
@@ -1968,7 +1968,7 @@ ikrt_posix_network_entries (ikptr rtd, ikpcb * pcb)
   setnetent(1);
   for (entry=getnetent(); entry; entry=getnetent()) {
     IK_DECLARE_ALLOC_AND_CONS(pair, list_of_entries, pcb);
-    IK_SET_CAR(pair, netent_to_struct(pcb, rtd, entry));
+    IK_CAR(pair) = netent_to_struct(pcb, rtd, entry);
   }
   endnetent();
   pcb->root0 = NULL;
@@ -2001,9 +2001,9 @@ ikrt_posix_socketpair (ikptr namespace, ikptr style, ikptr protocol, ikpcb * pcb
   errno = 0;
   rv    = socketpair(unfix(namespace), unfix(style), unfix(protocol), fds);
   if (0 == rv) {
-    ikptr       pair = ik_pair_alloc(pcb);
-    IK_SET_CAR(pair, fix(fds[0]));
-    IK_SET_CDR(pair, fix(fds[1]));
+    ikptr       pair = IK_PAIR_ALLOC(pcb);
+    IK_CAR(pair) = fix(fds[0]);
+    IK_CDR(pair) = fix(fds[1]);
     return pair;
   } else
     return ik_errno_to_code();
@@ -2043,14 +2043,14 @@ ikrt_posix_accept (ikptr sock, ikpcb * pcb)
     ikptr       pair;
     ikptr       addr_bv;
     void *      addr_data;
-    pair       = ik_pair_alloc(pcb);
+    pair       = IK_PAIR_ALLOC(pcb);
     pcb->root0 = &pair;
     {
       addr_bv    = ik_bytevector_alloc(pcb, addr_len);
       addr_data  = IK_BYTEVECTOR_DATA_VOIDP(addr_bv);
       memcpy(addr_data, addr, addr_len);
-      IK_SET_CAR(pair, fix(rv));
-      IK_SET_CDR(pair, addr_bv);
+      IK_CAR(pair) = fix(rv);
+      IK_CDR(pair) = addr_bv;
     }
     pcb->root0 = NULL;
     return pair;
@@ -2176,14 +2176,14 @@ ikrt_posix_recvfrom (ikptr sock, ikptr buffer_bv, ikptr size_fx, ikptr flags, ik
     ikptr       pair;
     ikptr       addr_bv;
     void *      addr_data;
-    pair       = ik_pair_alloc(pcb);
+    pair       = IK_PAIR_ALLOC(pcb);
     pcb->root0 = &pair;
     {
       addr_bv   = ik_bytevector_alloc(pcb, addr_len);
       addr_data = IK_BYTEVECTOR_DATA_VOIDP(addr_bv);
       memcpy(addr_data, addr, addr_len);
-      IK_SET_CAR(pair, fix(rv));
-      IK_SET_CDR(pair, addr_bv);
+      IK_CAR(pair) = fix(rv);
+      IK_CDR(pair) = addr_bv;
     }
     pcb->root0 = NULL;
     return pair;
@@ -2243,9 +2243,9 @@ ikrt_posix_getsockopt_int (ikptr sock, ikptr level, ikptr optname, ikpcb * pcb)
   errno = 0;
   rv    = getsockopt(unfix(sock), unfix(level), unfix(optname), &optval, &optlen);
   if (0 == rv) {
-    ikptr       pair = ik_pair_alloc(pcb);
-    IK_SET_CAR(pair, ik_integer_from_long((long)optval, pcb));
-    IK_SET_CDR(pair, true_object);
+    ikptr       pair = IK_PAIR_ALLOC(pcb);
+    IK_CAR(pair) = ik_integer_from_long((long)optval, pcb);
+    IK_CDR(pair) = true_object;
     return pair;
   } else {
     return ik_errno_to_code();
@@ -2273,9 +2273,9 @@ ikrt_posix_getsockopt_size_t (ikptr sock, ikptr level, ikptr optname, ikpcb * pc
   errno = 0;
   rv    = getsockopt(unfix(sock), unfix(level), unfix(optname), &optval, &optlen);
   if (0 == rv) {
-    ikptr       pair = ik_pair_alloc(pcb);
-    IK_SET_CAR(pair, ik_integer_from_long((long)optval, pcb));
-    IK_SET_CDR(pair, true_object);
+    ikptr       pair = IK_PAIR_ALLOC(pcb);
+    IK_CAR(pair) = ik_integer_from_long((long)optval, pcb);
+    IK_CDR(pair) = true_object;
     return pair;
   } else
     return ik_errno_to_code();
@@ -2304,9 +2304,9 @@ ikrt_posix_getsockopt_linger (ikptr sock, ikpcb * pcb)
   errno = 0;
   rv    = getsockopt(unfix(sock), SOL_SOCKET, SO_LINGER, &optval, &optlen);
   if (0 == rv) {
-    ikptr       pair = ik_pair_alloc(pcb);
-    IK_SET_CAR(pair, optval.l_onoff? true_object : false_object);
-    IK_SET_CDR(pair, fix(optval.l_linger));
+    ikptr       pair = IK_PAIR_ALLOC(pcb);
+    IK_CAR(pair) = optval.l_onoff? true_object : false_object;
+    IK_CDR(pair) = fix(optval.l_linger);
     return pair;
   } else
     return ik_errno_to_code();
@@ -2355,7 +2355,7 @@ ikrt_posix_getgroups (ikpcb * pcb)
       pcb->root0 = &list_of_gids;
       for (i=0; i<count; ++i) {
         IK_DECLARE_ALLOC_AND_CONS(pair, list_of_gids, pcb);
-        IK_SET_CAR(pair, fix(gids[i]));
+        IK_CAR(pair) = fix(gids[i]);
       }
       pcb->root0 = NULL;
       return list_of_gids;
@@ -2472,10 +2472,10 @@ ikrt_posix_user_entries (ikptr rtd, ikpcb * pcb)
   pcb->root0 = &list_of_entries;
   setpwent();
   for (entry=getpwent(); entry; entry=getpwent()) {
-    ikptr  pair        = ik_pair_alloc(pcb);
-    IK_SET_CDR(pair, list_of_entries);
+    ikptr       pair = IK_PAIR_ALLOC(pcb);
+    IK_CDR(pair)    = list_of_entries;
     list_of_entries = pair;
-    IK_SET_CAR(pair, passwd_to_struct(rtd, entry, pcb));
+    IK_CAR(pair)    = passwd_to_struct(rtd, entry, pcb);
   }
   endpwent();
   pcb->root0 = NULL;
@@ -2499,10 +2499,10 @@ group_to_struct (ikptr rtd, struct group * src, ikpcb * pcb)
     int         i;
     IK_STRUCT_SET(dst, 2, list_of_users);
     for (i=0; src->gr_mem[i]; ++i) {
-      ikptr     pair      = ik_pair_alloc(pcb);
-      IK_SET_CDR(pair, list_of_users);
+      ikptr     pair      = IK_PAIR_ALLOC(pcb);
+      IK_CDR(pair) = list_of_users;
       IK_STRUCT_SET2(dst, 2, list_of_users, pair);
-      IK_SET_CAR(pair, ik_bytevector_from_cstring(pcb, src->gr_mem[i]));
+      IK_CAR(pair) = ik_bytevector_from_cstring(pcb, src->gr_mem[i]);
     }
   }
   pcb->root1 = NULL;
@@ -2532,10 +2532,10 @@ ikrt_posix_group_entries (ikptr rtd, ikpcb * pcb)
   pcb->root0 = &list_of_entries;
   setpwent();
   for (entry=getgrent(); entry; entry=getgrent()) {
-    ikptr  pair        = ik_pair_alloc(pcb);
-    IK_SET_CDR(pair, list_of_entries);
-    list_of_entries = pair;
-    IK_SET_CAR(pair, group_to_struct(rtd, entry, pcb));
+    ikptr       pair = IK_PAIR_ALLOC(pcb);
+    IK_CDR(pair)        = list_of_entries;
+    list_of_entries     = pair;
+    IK_CAR(pair)        = group_to_struct(rtd, entry, pcb);
   }
   endgrent();
   pcb->root0 = NULL;
@@ -2799,10 +2799,14 @@ ikrt_posix_nanosleep (ikptr secs, ikptr nsecs, ikpcb * pcb)
   errno = 0;
   rv    = nanosleep(&requested, &remaining);
   if (0 == rv) {
-    ikptr       pair = ik_pair_alloc(pcb);
-    IK_SET_CAR(pair, remaining.tv_sec?  ik_integer_from_long(remaining.tv_sec,  pcb) : false_object);
-    IK_SET_CDR(pair, remaining.tv_nsec? ik_integer_from_long(remaining.tv_nsec, pcb) : false_object);
-    return pair;
+    ikptr       s_pair = IK_PAIR_ALLOC(pcb);
+    pcb->root0 = &s_pair;
+    {
+      IK_CAR(s_pair) = remaining.tv_sec?  ik_integer_from_long(remaining.tv_sec,  pcb) : false_object;
+      IK_CDR(s_pair) = remaining.tv_nsec? ik_integer_from_long(remaining.tv_nsec, pcb) : false_object;
+    }
+    pcb->root0 = NULL;
+    return s_pair;
   } else
     return ik_errno_to_code();
 }
