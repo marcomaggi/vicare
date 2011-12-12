@@ -132,10 +132,10 @@ extern int hash_table_count;
 #define page_index(x)   \
   (((unsigned long)(x)) >> pageshift)
 
-#define align_to_next_page(x) \
+#define IK_ALIGN_TO_NEXT_PAGE(x) \
   (((pagesize - 1 + (unsigned long)(x)) >> pageshift) << pageshift)
 
-#define align_to_prev_page(x) \
+#define IK_ALIGN_TO_PREV_PAGE(x) \
   ((((unsigned long)(x)) >> pageshift) << pageshift)
 
 #define call_instruction_size \
@@ -261,8 +261,8 @@ void*   ik_malloc               (int);
 void    ik_free                 (void*, int);
 
 ikptr   ik_underflow_handler    (ikpcb*);
-ikptr   ik_unsafe_alloc         (ikpcb* pcb, int size);
-ikptr   ik_safe_alloc           (ikpcb* pcb, int size);
+ikptr   ik_unsafe_alloc         (ikpcb* pcb, unsigned long size);
+ikptr   ik_safe_alloc           (ikpcb* pcb, unsigned long size);
 
 ikptr   ik_mmap                 (unsigned long);
 ikptr   ik_mmap_typed           (unsigned long size, unsigned type, ikpcb*);

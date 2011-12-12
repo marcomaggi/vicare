@@ -62,7 +62,7 @@ verify_code(char* x, char* base, unsigned int* svec, unsigned int* dvec){
   if(rgen < cgen){
     unsigned int d = dvec[page_idx(x) - page_idx(base)];
     d = d & d;
-    //int off = (((int)x) - align_to_prev_page(x)) / card_size;
+    //int off = (((int)x) - IK_ALIGN_TO_PREV_PAGE(x)) / card_size;
     //int card_mark = (d >> off) & 0xF;
     assert(d != 0);
   }
@@ -110,7 +110,7 @@ verify_code_large(char* p, unsigned int s, unsigned int d,
   verify_code(p, base, svec, dvec);
   assert(IK_ALIGN(code_size+disp_code_data) >= pagesize);
   char* end = p + code_size + disp_code_data;
-  return((char*)align_to_next_page(end));
+  return((char*)IK_ALIGN_TO_NEXT_PAGE(end));
 }
 
 static char*

@@ -14146,9 +14146,9 @@ ikptr     p = ik_safe_alloc(pcb, IK_ALIGN(number_of_bytes));
 @end example
 
 @noindent
-where @code{pcb} is the pointer to a data structure describing the
-memory heap.  Memory blocks, subject to garbage collection, are
-allocated on the heap, a contiguous region of memory:
+where @code{pcb} is a pointer to the ``Process Control Block'' data
+structure.  Memory blocks subject to garbage collection are allocated on
+the heap, a contiguous region of memory:
 
 @example
     allocated  allocated      allocated
@@ -14170,21 +14170,21 @@ To make pointer indirection efficient on the underlying platform.
 
 @item
 To have pointer values with the @math{3} least significant bits set to
-zero.
+zero, so that such bits can be used to hold an object type tag.
 @end enumerate
 
 @noindent
-for this reason we must always filter the requested size (in bytes)
-through the @func{align} macro.  The @code{pcb} always references a
+for these reasons we must always filter the requested size (in bytes)
+through the @cfunc{IK_ALIGN} macro.  The @code{pcb} always references a
 ``pointer to the next free block'' with alignment constraints satisfied;
-if we filter the requested number of bytes through @func{align}, we
+if we filter the requested number of bytes through @cfunc{IK_ALIGN}, we
 obtain a number of bytes which, added to the pointer, gives a correctly
 aligned pointer:
 
 @example
 uint8_t * allocated_block = (uint8_t *)pcb->allocation_pointer;
 long int  requested_size  = ...;
-long int  aligned_size    = align(requested_size);
+long int  aligned_size    = IK_ALIGN(requested_size);
 uint8_t * next_free_block = allocated_block + aligned_size;
 pcb->allocation_pointer   = (ikptr)next_free_block;
 
@@ -14203,10 +14203,10 @@ pcb->allocation_pointer   = (ikptr)next_free_block;
 @end example
 
 
-@defmac align (@var{number_of_bytes})
-Convert @var{number_of_bytes}, which must be an integer of type
-@code{long int}, to the number of bytes requested to satisfy pointer
-alignment constraints.  We can simulate the computation with:
+@deffn {Preprocessor Macro} long IK_ALIGN (long @var{number_of_bytes})
+Convert @var{number_of_bytes} to the number of bytes requested to
+satisfy pointer alignment constraints.  We can simulate the computation
+with:
 
 @example
 (import (ikarus))
@@ -14242,19 +14242,19 @@ alignment constraints.  We can simulate the computation with:
   (print-align 17)
   (print-align 1234))
 @end example
-@end defmac
+@end deffn
 
 
-@deftypefun ikptr ik_safe_alloc (ikpcb * @var{pcb}, int @var{aligned_size})
+@deftypefun ikptr ik_safe_alloc (ikpcb * @var{pcb}, unsigned long @var{aligned_size})
 Allocate a memory block on the heap and return a reference to it as an
-untagged pointer.  @var{pcb} must reference the heap, @var{aligned_size}
-must be the requested number of bytes filtered through @func{align}.
+@strong{untagged} pointer.  @var{pcb} must reference the process control
+block, @var{aligned_size} must be the requested number of bytes filtered
+through @cfunc{IK_ALIGN}.
 
 If not enough memory is available on the heap, a garbage collection is
 triggered; then allocation is tried again: if it still fails the process
 is terminated with exit status @code{-1}.
 @end deftypefun
-
 
 @c page
 @node objects fixnum

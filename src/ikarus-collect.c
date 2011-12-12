@@ -111,7 +111,7 @@ next_gen_tag[generation_count] = {
 
 static ikptr
 meta_alloc_extending(long int size, gc_t* gc, int meta_id){
-  long int mapsize = align_to_next_page(size);
+  long int mapsize = IK_ALIGN_TO_NEXT_PAGE(size);
   if(mapsize < extension_amount[meta_id]){
     mapsize = extension_amount[meta_id];
   }
@@ -169,7 +169,7 @@ gc_alloc_new_ptr(int size, gc_t* gc){
 
 static inline ikptr
 gc_alloc_new_large_ptr(int size, gc_t* gc){
-  int memreq = align_to_next_page(size);
+  int memreq = IK_ALIGN_TO_NEXT_PAGE(size);
   ikptr mem =
       ik_mmap_typed(memreq,
         pointers_mt | large_object_tag | gc->collect_gen_tag,
@@ -253,7 +253,7 @@ gc_alloc_new_code(long int size, gc_t* gc){
   if(size < pagesize){
     return meta_alloc(size, gc, meta_code);
   } else {
-    long int memreq = align_to_next_page(size);
+    long int memreq = IK_ALIGN_TO_NEXT_PAGE(size);
     ikptr mem = ik_mmap_code(memreq, gc->collect_gen, gc->pcb);
     gc->segment_vector = gc->pcb->segment_vector;
     qupages_t* p = ik_malloc(sizeof(qupages_t));
@@ -511,7 +511,7 @@ ik_collect(unsigned long int mem_req, ikpcb* pcb){
     fprintf(stderr, "REQ=%ld, got %ld\n", mem_req, free_space);
 #endif
     long int memsize = (mem_req > IK_HEAPSIZE) ? mem_req : IK_HEAPSIZE;
-    memsize = align_to_next_page(memsize);
+    memsize = IK_ALIGN_TO_NEXT_PAGE(memsize);
     ik_munmap_from_segment(
         pcb->heap_base,
         pcb->heap_size,

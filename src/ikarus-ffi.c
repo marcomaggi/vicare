@@ -496,8 +496,8 @@ ikrt_ffi_prepare_callback (ikptr s_data, ikpcb* pcb)
 #ifdef LIBFFI_ON_DARWIN
   { /* This is  needed on some flavors  of Darwin to  make the generated
        callback code executable. */
-    long code_start = align_to_prev_page(callable_pointer);
-    long code_end   = align_to_next_page(FFI_TRAMPOLINE_SIZE+(-1)+(long)callable_pointer);
+    long code_start = IK_ALIGN_TO_PREV_PAGE(callable_pointer);
+    long code_end   = IK_ALIGN_TO_NEXT_PAGE(FFI_TRAMPOLINE_SIZE+(-1)+(long)callable_pointer);
     int rv = mprotect((void*)code_start, code_end - code_start, PROT_READ|PROT_WRITE|PROT_EXEC);
     if (rv)
       fprintf(stderr, "*** Vicare warning: error mprotecting callback code page\n");

@@ -139,7 +139,7 @@ alloc_code(long int size, ikpcb* pcb, fasl_port* p){
       return mem;
     }
   } else {
-    long int asize = align_to_next_page(size);
+    long int asize = IK_ALIGN_TO_NEXT_PAGE(size);
     ikptr mem = ik_mmap_code(asize, 0, pcb);
     return mem;
   }

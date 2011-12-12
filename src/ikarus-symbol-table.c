@@ -22,7 +22,7 @@
 static ikptr
 make_symbol_table(ikpcb* pcb){
   #define NUM_OF_BUCKETS 4096 /* power of 2 */
-  int size = align_to_next_page(disp_vector_data + NUM_OF_BUCKETS * wordsize);
+  int size = IK_ALIGN_TO_NEXT_PAGE(disp_vector_data + NUM_OF_BUCKETS * wordsize);
   ikptr st = ik_mmap_ptr(size, 0, pcb) + vector_tag;
   bzero((char*)(long)st-vector_tag, size);
   ref(st, off_vector_length) = fix(NUM_OF_BUCKETS);
