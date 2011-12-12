@@ -316,7 +316,7 @@ ik_flonum_from_double (double n, ikpcb* pcb)
 long
 ik_integer_to_long (ikptr x)
 {
-  if (is_fixnum(x))
+  if (IK_IS_FIXNUM(x))
     return unfix(x);
   else if (x == void_object)
     return 0;
@@ -330,7 +330,7 @@ ik_integer_to_long (ikptr x)
 unsigned long
 ik_integer_to_unsigned_long (ikptr x)
 {
-  if (is_fixnum(x))
+  if (IK_IS_FIXNUM(x))
     return unfix(x);
   else if (x == void_object)
     return 0;
@@ -342,7 +342,7 @@ ik_integer_to_unsigned_long (ikptr x)
 long long
 ik_integer_to_long_long (ikptr x)
 {
-  if (is_fixnum(x))
+  if (IK_IS_FIXNUM(x))
     return unfix(x);
   else if (x == void_object)
     return 0;
@@ -364,7 +364,7 @@ ik_integer_to_long_long (ikptr x)
 unsigned long long
 ik_integer_to_unsigned_long_long (ikptr x)
 {
-  if (is_fixnum(x))
+  if (IK_IS_FIXNUM(x))
     return (unsigned long long)unfix(x);
   else if (x == void_object)
     return 0;
@@ -380,7 +380,7 @@ ik_integer_to_unsigned_long_long (ikptr x)
 uint32_t
 ik_integer_to_uint32 (ikptr x)
 {
-  if (is_fixnum(x)) {
+  if (IK_IS_FIXNUM(x)) {
     long        X = unfix(x);
     return ((0 <= X) && (X <= UINT32_MAX))? ((uint32_t)X) : false_object;
   } else {
@@ -391,7 +391,7 @@ ik_integer_to_uint32 (ikptr x)
 int32_t
 ik_integer_to_sint32 (ikptr x)
 {
-  if (is_fixnum(x)) {
+  if (IK_IS_FIXNUM(x)) {
     long        X = unfix(x);
     return ((INT32_MIN <= X) && (X <= INT32_MAX))? ((int32_t)X) : false_object;
   } else {
@@ -402,7 +402,7 @@ ik_integer_to_sint32 (ikptr x)
 uint64_t
 ik_integer_to_uint64 (ikptr x)
 {
-  if (is_fixnum(x)) {
+  if (IK_IS_FIXNUM(x)) {
     long        X = unfix(x);
     return ((0 <= X) && (X <= UINT64_MAX))? ((uint64_t)X) : false_object;
   } else {
@@ -413,7 +413,7 @@ ik_integer_to_uint64 (ikptr x)
 int64_t
 ik_integer_to_sint64 (ikptr x)
 {
-  if (is_fixnum(x)) {
+  if (IK_IS_FIXNUM(x)) {
     long        X = unfix(x);
     return ((INT64_MIN <= X) && (X <= INT64_MAX))? ((int64_t)X) : false_object;
   } else {

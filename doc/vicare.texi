@@ -13936,12 +13936,13 @@ account a component used to remove the tag from the pointer in
 @subsubheading Immediate values
 
 All the immediate values but fixnums have the @math{3} least significant
-bits set to @math{1}; to identify an immediate value we can do:
+bits set to @math{1}; to distinguish between immediate values and
+references we can do:
 
 @example
 ikptr   X;
 
-if (is_fixnum(X) || (immediate_tag == IK_TAGOF(X)))
+if (IK_IS_FIXNUM(X) || (immediate_tag == IK_TAGOF(X)))
   it_is_immediate();
 else
   it_is_not();
@@ -14008,19 +14009,19 @@ the same for the other immediate variable values.
 @subsubheading Values allocated on the heap
 
 The values that do not fit into a single machine word are composed of a
-reference machine word and a vector of machine words on the heap; they
+reference machine word and an array of machine words on the heap; they
 are: symbols, pairs, vectors, bytevectors, structures, ports, bignums,
 ratnums, flonums, compnums, cflonums, strings, closures, continuations,
 codes, pointers.
 
-The machine words used as references have the 3 least significant bits
-used as tag and the remaining most significant bits used to store a
-pointer in memory; on 32-bit platforms the layout of such a machine
-words is:
+The machine words used as reference have the @math{3} least significant
+bits used as tag and the remaining most significant bits used to store a
+pointer in memory; on 32-bit platforms the layout of such machine words
+is:
 
 @example
- PPPPPPPP PPPPPPPP PPPPPPPP PPPPPTTT   P = bit in a pointer
-|--------|--------|--------|--------|  T = bit in a tag
+ PPPPPPPP PPPPPPPP PPPPPPPP PPPPPTTT   P = bit of pointer
+|--------|--------|--------|--------|  T = bit of tag
   byte 3   byte 2   byte 1   byte 0
 @end example
 
@@ -14028,13 +14029,13 @@ words is:
 the following tags are used:
 
 @example
-  object    |  tag bits  | tag hex | mask bits
-------------+------------+---------+------------
-pairs       | #b?????001 |    1    | #b00000111
-bytevectors | #b?????010 |    2    | #b00000111
-closure     | #b?????011 |    3    | #b00000111
-vectors     | #b?????101 |    5    | #b00000111
-strings     | #b?????110 |    6    | #b00000111
+  object    | tag bits | tag hex | mask bits
+------------+----------+---------+------------
+pairs       |   #b001  |   #x1   | #b00000111
+bytevectors |   #b010  |   #x2   | #b00000111
+closure     |   #b011  |   #x3   | #b00000111
+vectors     |   #b101  |   #x5   | #b00000111
+strings     |   #b110  |   #x6   | #b00000111
 @end example
 
 @noindent
@@ -14049,43 +14050,66 @@ types: vectors, bignums, structures, flonums, ratnums, compnums,
 cflonums, continuations, code, ports, symbols, pointers, system
 continuations.
 
-The vector tag in machine words acts as @dfn{primary tag}, a
-@dfn{secondary tag} is stored in the least significant bits of the
-referenced vector of words on the heap.  To recognise such machine words
-we should do:
+All the possible values for @math{3}-bit tags in reference values are
+already allocated; new object types can be added only as subtypes of
+values whose references are tagged as vector.
+
+While the @api{} defines predicates to recognise values, to identify a
+type--specific reference we can do:
 
 @example
-ikptr  the_value;
+ikptr   X;
 
-if ((vector_tag    == (the_value & vector_tag)) &&
-    (secondary_tag == (secondary_mask
-                       & ref(the_value, -vector_tag))))
-it_is();
-@end example
-
-The secondary tags and the associated masks are:
-
-@example
-   object           |  tag bits   |  tag hex  | tag mask
-                    |    76543210 |           |    76543210
---------------------+-------------+-----------+-------------
-vectors             |  #b??????00 |  fixnum   |  #b00000111
-bignums             |  #b????s011 |  #x03     |  #b00000111
-structures          |  #b?????101 |  #x05     |  #b00000111
-flonums             |  #b00010111 |  #x17     |  --
-ratnums             |  #b00100111 |  #x27     |  --
-compnums            |  #b00110111 |  #x37     |  --
-cflonums            |  #b01000111 |  #x47     |  --
-continuation        |  #b00011111 |  #x1F     |  --
-code                |  #b00101111 |  #x2F     |  --
-ports               |  #b??111111 |  #x3F     |  #b00111111
-symbols             |  #b01011111 |  #x5F     |  --
-pointers            | #b100000111 | #x107     |  --
-system continuation | #b100011111 | #x11F     |  --
+if (pair_tag == (X & pair_mask))
+  is_a_pair();
 @end example
 
 @noindent
-the only tags having an associated  mask are the ones of objects storing
+the same for the other types.  The vector tag acts as @dfn{primary tag};
+a @dfn{secondary tag} is stored in the least significant bits of the
+referenced vector of words on the heap; to recognise such values we can
+do:
+
+@example
+ikptr  X;
+
+if ((vector_tag    == (X & vector_tag)) &&
+    (secondary_tag == (secondary_mask
+                       & ref(X, -vector_tag))))
+  it_is();
+@end example
+
+@noindent
+where @code{secondary_tag} and @code{secondary_mask} are type--specific.
+The secondary tags and the associated masks are:
+
+@example
+   object           |  tag bits   | tag hex | tag mask
+                    |    76543210 |         |    76543210
+--------------------+-------------+---------+-------------
+vector              |  #b??????00 | fixnum  | #b00000111
+bignum              |  #b????s011 |   #x03  | #b00000111
+structure           |  #b?????101 |   #x05  | #b00000111
+flonum              |  #b00010111 |   #x17  |    --
+ratnum              |  #b00100111 |   #x27  |    --
+compnum             |  #b00110111 |   #x37  |    --
+cflonum             |  #b01000111 |   #x47  |    --
+continuation        |  #b00011111 |   #x1F  |    --
+code                |  #b00101111 |   #x2F  |    --
+port                |  #b??111111 |   #x3F  | #b00111111
+symbol              |  #b01011111 |   #x5F  |    --
+pointer             | #b100000111 |  #x107  |    --
+system continuation | #b100011111 |  #x11F  |    --
+@end example
+
+@noindent
+notice how the port secondary tag has all the @math{6} least significant
+bits set to @math{1}: no other tag must have all such bits set to
+@math{1}.  Secondary tags for new types can be allocated by selecting
+the least significant byte to @code{#x0F} and reserving a specific bit
+pattern in the most significant bytes.
+
+The only tags having an associated mask are the ones of objects storing
 additional informations in the first word of the heap vector:
 
 @table @strong
@@ -14094,13 +14118,13 @@ The first word of a vector is a fixnum representing the number of
 elements.
 
 @item Bignums
-The tag is composed by the @math{3} least significant bits, with the
+The first word uses the @math{3} least significant bits as tag, the
 @math{4}th bit representing the sign and the remaining bits representing
-the number of words in the bignum.
+the number of words in the bignum data area.
 
 @item Structures
-Tagged as vectors because the first word of structure is itself a
-structure, that is the type descriptor.
+The first word is tagged as vector, because the first word of a
+structure is itself a structure: the type descriptor.
 
 @item Ports
 The most significant bits of the first word are used for port
@@ -14269,7 +14293,7 @@ Convert an @ikptr{} value holding a fixnum into a fixnum of type
 @end defmac
 
 
-@defmac is_fixnum (@var{ref})
+@defmac IK_IS_FIXNUM (@var{ref})
 Expand to true if @var{ref} is an @ikptr{} embedding a fixnum.  It
 just tests if the least significant bits in the tag are set to zero.
 @end defmac

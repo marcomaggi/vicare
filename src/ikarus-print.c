@@ -52,7 +52,7 @@ char* char_string[128] = {
 
 static void
 print(FILE* fh, ikptr x){
-  if(is_fixnum(x)){
+  if(IK_IS_FIXNUM(x)){
     fprintf(fh, "%ld", unfix(x));
   }
   else if(x == false_object){
@@ -80,7 +80,7 @@ print(FILE* fh, ikptr x){
 #endif
   else if(IK_TAGOF(x) == vector_tag){
     ikptr fst = ref(x, off_vector_length);
-    if(is_fixnum(fst)){
+    if(IK_IS_FIXNUM(fst)){
       ikptr len = fst;
       if(len == 0){
         fprintf(fh, "#()");

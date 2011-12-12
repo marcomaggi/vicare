@@ -359,7 +359,7 @@ ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
 #define fix(X)          \
   ((ikptr)(((long)(X)) << fx_shift))
 
-#define is_fixnum(X)    \
+#define IK_IS_FIXNUM(X)    \
   ((((unsigned long)(X)) & fx_mask) == fx_tag)
 
 

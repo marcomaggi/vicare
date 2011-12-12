@@ -1216,7 +1216,7 @@ ikrt_posix_fcntl (ikptr fd, ikptr command, ikptr arg)
 {
   int           rv = -1;
   errno = 0;
-  if (is_fixnum(arg)) {
+  if (IK_IS_FIXNUM(arg)) {
     long        val = (long)unfix(arg);
     rv = fcntl(unfix(fd), unfix(command), val);
   } else if (false_object == arg) {
@@ -1238,7 +1238,7 @@ ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
 {
   int           rv = -1;
   errno = 0;
-  if (is_fixnum(arg)) {
+  if (IK_IS_FIXNUM(arg)) {
     long        val = (long)unfix(arg);
     rv = ioctl(unfix(fd), unfix(command), val);
   } else if (false_object == arg) {
@@ -2794,8 +2794,8 @@ ikrt_posix_nanosleep (ikptr secs, ikptr nsecs, ikpcb * pcb)
   struct timespec       requested;
   struct timespec       remaining = { 0, 0 }; /* required!!! */
   int                   rv;
-  requested.tv_sec  = is_fixnum(secs)?  (unsigned long) unfix(secs)  : ref(secs,  off_bignum_data);
-  requested.tv_nsec = is_fixnum(nsecs)? (unsigned long) unfix(nsecs) : ref(nsecs, off_bignum_data);
+  requested.tv_sec  = IK_IS_FIXNUM(secs)?  (unsigned long) unfix(secs)  : ref(secs,  off_bignum_data);
+  requested.tv_nsec = IK_IS_FIXNUM(nsecs)? (unsigned long) unfix(nsecs) : ref(nsecs, off_bignum_data);
   errno = 0;
   rv    = nanosleep(&requested, &remaining);
   if (0 == rv) {

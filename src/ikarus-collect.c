@@ -574,7 +574,7 @@ ik_collect(unsigned long int mem_req, ikpcb* pcb){
 
 static inline int
 is_live(ikptr x, gc_t* gc){
-  if(is_fixnum(x)){
+  if(IK_IS_FIXNUM(x)){
     return 1;
   }
   int tag = IK_TAGOF(x);
@@ -987,7 +987,7 @@ add_object_proc(gc_t* gc, ikptr x, char* caller) {
 #else
 add_object_proc(gc_t* gc, ikptr x) {
 #endif
-  if(is_fixnum(x)){
+  if(IK_IS_FIXNUM(x)){
     return x;
   }
   assert(x != forward_ptr);
@@ -1052,7 +1052,7 @@ add_object_proc(gc_t* gc, ikptr x) {
     return y;
   }
   else if(tag == vector_tag){
-    if(is_fixnum(fst)){
+    if(IK_IS_FIXNUM(fst)){
       /* real vector */
       //fprintf(stderr, "X=0x%08x, FST=0x%08x\n", (int)x, (int)fst);
       ikptr size = fst;
@@ -1194,7 +1194,7 @@ add_object_proc(gc_t* gc, ikptr x) {
       ref(y,off_tcbucket_key) = key;
       ref(y,off_tcbucket_val) = ref(x, off_tcbucket_val);
       ref(y,off_tcbucket_next) = ref(x, off_tcbucket_next);
-      if((! is_fixnum(key)) && (IK_TAGOF(key) != immediate_tag)){
+      if((! IK_IS_FIXNUM(key)) && (IK_TAGOF(key) != immediate_tag)){
         int gen = gc->segment_vector[page_index(key)] & gen_mask;
         if(gen <= gc->collect_gen){
           /* key will be moved */
@@ -1284,7 +1284,7 @@ add_object_proc(gc_t* gc, ikptr x) {
     }
   }
   else if(tag == string_tag){
-    if(is_fixnum(fst)){
+    if(IK_IS_FIXNUM(fst)){
       long int strlen = unfix(fst);
       long int memreq = IK_ALIGN(strlen*string_char_size + disp_string_data);
       ikptr new_str = gc_alloc_new_data(memreq, gc) + string_tag;
@@ -1611,7 +1611,7 @@ fix_weak_pointers(gc_t* gc){
         ikptr q = p + pagesize;
         while(p < q){
           ikptr x = ref(p, 0);
-          if(! is_fixnum(x)){
+          if(! IK_IS_FIXNUM(x)){
             int tag = IK_TAGOF(x);
             if(tag != immediate_tag){
               ikptr fst = ref(x, -tag);
@@ -1669,7 +1669,7 @@ scan_dirty_pointers_page(gc_t* gc, long int page_idx, int mask){
       unsigned int card_d = 0;
       while(p < q){
         ikptr x = ref(p, 0);
-        if(is_fixnum(x) || (IK_TAGOF(x) == immediate_tag)){
+        if(IK_IS_FIXNUM(x) || (IK_TAGOF(x) == immediate_tag)){
           /* do nothing */
         } else {
           ikptr y = add_object(gc, x, "nothing");
@@ -1718,7 +1718,7 @@ scan_dirty_code_page(gc_t* gc, long int page_idx){
       unsigned long int code_d = segment_vec[page_index(rvec)];
       for(i=0; i<len; i+=wordsize){
         ikptr r = ref(rvec, i+off_vector_data);
-        if(is_fixnum(r) || (IK_TAGOF(r) == immediate_tag)){
+        if(IK_IS_FIXNUM(r) || (IK_TAGOF(r) == immediate_tag)){
           /* do nothing */
         } else {
           r = add_object(gc, r, "nothing2");

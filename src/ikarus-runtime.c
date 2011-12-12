@@ -722,7 +722,7 @@ ikrt_stats_now(ikptr t, ikpcb* pcb){
 ikptr
 ikrt_make_vector1(ikptr len, ikpcb* pcb){
   int intlen = (int)len;
-  if(is_fixnum(len) && (intlen >= 0)){
+  if(IK_IS_FIXNUM(len) && (intlen >= 0)){
     ikptr s = ik_safe_alloc(pcb, IK_ALIGN(len + disp_vector_data));
     ref(s, 0) = len;
     memset((char*)(long)(s+disp_vector_data), 0, len);
@@ -735,7 +735,7 @@ ikrt_make_vector1(ikptr len, ikpcb* pcb){
 #if 0
 ikptr
 ikrt_make_vector2(ikptr len, ikptr obj, ikpcb* pcb){
-  if(is_fixnum(len) && ((len >> 31)!=0)){
+  if(IK_IS_FIXNUM(len) && ((len >> 31)!=0)){
     pcb->root0 = &obj;
     ikptr s = ik_safe_alloc(pcb, IK_ALIGN(((int)len) + disp_vector_data));
     pcb->root0 = 0;
@@ -770,7 +770,7 @@ ikrt_exit (ikptr status, ikpcb* pcb)
 {
   ik_delete_pcb(pcb);
   assert(total_allocated_pages == 0);
-  if(is_fixnum(status)){
+  if(IK_IS_FIXNUM(status)){
     exit(unfix(status));
   } else {
     exit(EXIT_FAILURE);

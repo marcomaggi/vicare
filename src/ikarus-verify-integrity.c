@@ -82,7 +82,7 @@ verify_code_small(char* p, int s, unsigned int d,
   while(p < q){
     ikptr fst = ref(p, 0);
     if(fst == code_tag){
-      assert(is_fixnum(ref(p, disp_code_code_size)));
+      assert(IK_IS_FIXNUM(ref(p, disp_code_code_size)));
       int code_size = unfix(ref(p, disp_code_code_size));
       assert(code_size >= 0);
       verify_code(p, base, svec, dvec);
