@@ -127,7 +127,8 @@ ikrt_pointer_size (void)
 ikptr
 ikrt_is_pointer (ikptr x)
 {
-  return ((tagof(x) == vector_tag) && (ref(x, -vector_tag) == pointer_tag))? true_object : false_object;
+  return ((IK_TAGOF(x) == vector_tag) &&
+          (ref(x, -vector_tag) == pointer_tag))? true_object : false_object;
 }
 ikptr
 ikrt_pointer_is_null (ikptr x /*, ikpcb* pcb*/)

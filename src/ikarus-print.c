@@ -73,12 +73,12 @@ print(FILE* fh, ikptr x){
     }
   }
 #if 0
-  else if(tagof(x) == symbol_tag){
+  else if(IK_TAGOF(x) == symbol_tag){
     ikptr str = ref(x, off_symbol_string);
     fprintf(fh, "%s", str+off_string_data);
   }
 #endif
-  else if(tagof(x) == vector_tag){
+  else if(IK_TAGOF(x) == vector_tag){
     ikptr fst = ref(x, off_vector_length);
     if(is_fixnum(fst)){
       ikptr len = fst;
@@ -136,7 +136,7 @@ print(FILE* fh, ikptr x){
       }
     }
   }
-  else if(tagof(x) == string_tag){
+  else if(IK_TAGOF(x) == string_tag){
     ikptr fxlen = ref(x, off_string_length);
     int len = unfix(fxlen);
     int * data = (int*)(x + off_string_data);
@@ -151,7 +151,7 @@ print(FILE* fh, ikptr x){
     }
     fprintf(fh, "\"");
   }
-  else if(tagof(x) == bytevector_tag){
+  else if(IK_TAGOF(x) == bytevector_tag){
     ikptr fxlen = ref(x, off_bytevector_length);
     int len = unfix(fxlen);
     unsigned char* data = (unsigned char*)(x + off_bytevector_data);

@@ -148,7 +148,7 @@ meta_alloc_extending(long int size, gc_t* gc, int meta_id){
 
 static inline ikptr
 meta_alloc(long int size, gc_t* gc, int meta_id){
-  assert(size == align(size));
+  assert(size == IK_ALIGN(size));
   meta_t* meta = &gc->meta[meta_id];
   ikptr ap = meta->ap;
   ikptr ep = meta->ep;
@@ -163,7 +163,7 @@ meta_alloc(long int size, gc_t* gc, int meta_id){
 
 static inline ikptr
 gc_alloc_new_ptr(int size, gc_t* gc){
-  assert(size == align(size));
+  assert(size == IK_ALIGN(size));
   return meta_alloc(size, gc, meta_ptrs);
 }
 
@@ -204,7 +204,7 @@ enqueue_large_ptr(ikptr mem, int size, gc_t* gc){
 
 static inline ikptr
 gc_alloc_new_symbol_record(gc_t* gc){
-  assert(symbol_record_size == align(symbol_record_size));
+  assert(symbol_record_size == IK_ALIGN(symbol_record_size));
   return meta_alloc(symbol_record_size, gc, meta_symbol);
 }
 
@@ -243,13 +243,13 @@ gc_alloc_new_weak_pair(gc_t* gc){
 
 static inline ikptr
 gc_alloc_new_data(int size, gc_t* gc){
-  assert(size == align(size));
+  assert(size == IK_ALIGN(size));
   return meta_alloc(size, gc, meta_data);
 }
 
 static inline ikptr
 gc_alloc_new_code(long int size, gc_t* gc){
-  assert(size == align(size));
+  assert(size == IK_ALIGN(size));
   if(size < pagesize){
     return meta_alloc(size, gc, meta_code);
   } else {
@@ -577,7 +577,7 @@ is_live(ikptr x, gc_t* gc){
   if(is_fixnum(x)){
     return 1;
   }
-  int tag = tagof(x);
+  int tag = IK_TAGOF(x);
   if(tag == immediate_tag){
     return 1;
   }
@@ -768,7 +768,7 @@ add_code_entry(gc_t* gc, ikptr entry){
   ikptr reloc_vec = ref(x, disp_code_reloc_vector);
   ikptr freevars = ref(x, disp_code_freevars);
   ikptr annotation = ref(x, disp_code_annotation);
-  long int required_mem = align(disp_code_data + code_size);
+  long int required_mem = IK_ALIGN(disp_code_data + code_size);
   if(required_mem >= pagesize){
     int new_tag = gc->collect_gen_tag;
     long int idx = page_index(x);
@@ -943,7 +943,7 @@ add_list(gc_t* gc, unsigned int t, ikptr x, ikptr* loc){
     ref(x,off_car) = forward_ptr;
     ref(x,off_cdr) = y;
     ref(y,off_car) = fst;
-    int stag = tagof(snd);
+    int stag = IK_TAGOF(snd);
     if(stag == pair_tag){
       if(ref(snd, -pair_tag) == forward_ptr){
         ref(y, off_cdr) = ref(snd, wordsize-pair_tag);
@@ -991,7 +991,7 @@ add_object_proc(gc_t* gc, ikptr x) {
     return x;
   }
   assert(x != forward_ptr);
-  int tag = tagof(x);
+  int tag = IK_TAGOF(x);
   if(tag == immediate_tag){
     return x;
   }
@@ -1012,7 +1012,7 @@ add_object_proc(gc_t* gc, ikptr x) {
   }
 #if 0
   else if(tag == symbol_tag){
-    //ikptr y = gc_alloc_new_ptr(align(symbol_size),gen, gc) + symbol_tag;
+    //ikptr y = gc_alloc_new_ptr(IK_ALIGN(symbol_size),gen, gc) + symbol_tag;
     ikptr y = gc_alloc_new_symbol(gen, gc) + symbol_tag;
     ref(y, off_symbol_string)       = ref(x, off_symbol_string);
     ref(y, off_symbol_ustring)      = ref(x, off_symbol_ustring);
@@ -1037,7 +1037,7 @@ add_object_proc(gc_t* gc, ikptr x) {
     if(size > 1024){
       fprintf(stderr, "large closure size=0x%016lx\n", (long)size);
     }
-    ikptr asize = align(size);
+    ikptr asize = IK_ALIGN(size);
     ikptr y = gc_alloc_new_ptr(asize, gc) + closure_tag;
     ref(y, asize-closure_tag-wordsize) = 0;
     memcpy((char*)(long)(y-closure_tag),
@@ -1057,7 +1057,7 @@ add_object_proc(gc_t* gc, ikptr x) {
       //fprintf(stderr, "X=0x%08x, FST=0x%08x\n", (int)x, (int)fst);
       ikptr size = fst;
       assert(((long)size) >= 0);
-      ikptr memreq = align(size + disp_vector_data);
+      ikptr memreq = IK_ALIGN(size + disp_vector_data);
       if(memreq >= pagesize){
         if((t & large_object_mask) == large_object_tag){
           enqueue_large_ptr(x-vector_tag, size+disp_vector_data, gc);
@@ -1101,7 +1101,7 @@ add_object_proc(gc_t* gc, ikptr x) {
       ref(x, wordsize-record_tag) = y;
       return y;
     }
-    else if(tagof(fst) == rtd_tag){
+    else if(IK_TAGOF(fst) == rtd_tag){
       /* struct / record */
       ikptr size = ref(fst, off_rtd_length);
       if(size & ((1<<align_shift)-1)) {
@@ -1160,7 +1160,7 @@ add_object_proc(gc_t* gc, ikptr x) {
       ikptr y = gc_alloc_new_ptr(continuation_size, gc) + vector_tag;
       ref(x, -vector_tag) = forward_ptr;
       ref(x, wordsize-vector_tag) = y;
-      ikptr new_top = gc_alloc_new_data(align(size), gc);
+      ikptr new_top = gc_alloc_new_data(IK_ALIGN(size), gc);
       memcpy((char*)(long)new_top,
              (char*)(long)top,
              size);
@@ -1186,7 +1186,7 @@ add_object_proc(gc_t* gc, ikptr x) {
         add_object(gc, next, "next_k");
       return y;
     }
-    else if(tagof(fst) == pair_tag){
+    else if(IK_TAGOF(fst) == pair_tag){
       /* tcbucket */
       ikptr y = gc_alloc_new_ptr(tcbucket_size, gc) + vector_tag;
       ref(y,off_tcbucket_tconc) = fst;
@@ -1194,7 +1194,7 @@ add_object_proc(gc_t* gc, ikptr x) {
       ref(y,off_tcbucket_key) = key;
       ref(y,off_tcbucket_val) = ref(x, off_tcbucket_val);
       ref(y,off_tcbucket_next) = ref(x, off_tcbucket_next);
-      if((! is_fixnum(key)) && (tagof(key) != immediate_tag)){
+      if((! is_fixnum(key)) && (IK_TAGOF(key) != immediate_tag)){
         int gen = gc->segment_vector[page_index(key)] & gen_mask;
         if(gen <= gc->collect_gen){
           /* key will be moved */
@@ -1226,7 +1226,7 @@ add_object_proc(gc_t* gc, ikptr x) {
     }
     else if((fst & bignum_mask) == bignum_tag){
       long int len = ((unsigned long int)fst) >> bignum_length_shift;
-      long int memreq = align(disp_bignum_data + len*wordsize);
+      long int memreq = IK_ALIGN(disp_bignum_data + len*wordsize);
       ikptr new = gc_alloc_new_data(memreq, gc) + vector_tag;
       memcpy((char*)(long)(new-vector_tag),
              (char*)(long)(x-vector_tag),
@@ -1286,7 +1286,7 @@ add_object_proc(gc_t* gc, ikptr x) {
   else if(tag == string_tag){
     if(is_fixnum(fst)){
       long int strlen = unfix(fst);
-      long int memreq = align(strlen*string_char_size + disp_string_data);
+      long int memreq = IK_ALIGN(strlen*string_char_size + disp_string_data);
       ikptr new_str = gc_alloc_new_data(memreq, gc) + string_tag;
       ref(new_str, off_string_length) = fst;
       memcpy((char*)(long)(new_str+off_string_data),
@@ -1307,7 +1307,7 @@ add_object_proc(gc_t* gc, ikptr x) {
   }
   else if(tag == bytevector_tag){
     long int len = unfix(fst);
-    long int memreq = align(len + disp_bytevector_data + 1);
+    long int memreq = IK_ALIGN(len + disp_bytevector_data + 1);
     ikptr new_bv = gc_alloc_new_data(memreq, gc) + bytevector_tag;
     ref(new_bv, off_bytevector_length) = fst;
     memcpy((char*)(long)(new_bv+off_bytevector_data),
@@ -1461,7 +1461,7 @@ collect_loop(gc_t* gc){
           while(p < q){
             relocate_new_code(p, gc);
             alloc_code_count--;
-            p += align(disp_code_data + unfix(ref(p, disp_code_code_size)));
+            p += IK_ALIGN(disp_code_data + unfix(ref(p, disp_code_code_size)));
           }
           qupages_t* next = codes->next;
           ik_free(codes, sizeof(qupages_t));
@@ -1532,7 +1532,7 @@ collect_loop(gc_t* gc){
             do{
               alloc_code_count--;
               relocate_new_code(p, gc);
-              p += align(disp_code_data + unfix(ref(p, disp_code_code_size)));
+              p += IK_ALIGN(disp_code_data + unfix(ref(p, disp_code_code_size)));
             } while (p < q);
             p = meta->aq;
             q = meta->ap;
@@ -1612,7 +1612,7 @@ fix_weak_pointers(gc_t* gc){
         while(p < q){
           ikptr x = ref(p, 0);
           if(! is_fixnum(x)){
-            int tag = tagof(x);
+            int tag = IK_TAGOF(x);
             if(tag != immediate_tag){
               ikptr fst = ref(x, -tag);
               if(fst == forward_ptr){
@@ -1669,7 +1669,7 @@ scan_dirty_pointers_page(gc_t* gc, long int page_idx, int mask){
       unsigned int card_d = 0;
       while(p < q){
         ikptr x = ref(p, 0);
-        if(is_fixnum(x) || (tagof(x) == immediate_tag)){
+        if(is_fixnum(x) || (IK_TAGOF(x) == immediate_tag)){
           /* do nothing */
         } else {
           ikptr y = add_object(gc, x, "nothing");
@@ -1718,7 +1718,7 @@ scan_dirty_code_page(gc_t* gc, long int page_idx){
       unsigned long int code_d = segment_vec[page_index(rvec)];
       for(i=0; i<len; i+=wordsize){
         ikptr r = ref(rvec, i+off_vector_data);
-        if(is_fixnum(r) || (tagof(r) == immediate_tag)){
+        if(is_fixnum(r) || (IK_TAGOF(r) == immediate_tag)){
           /* do nothing */
         } else {
           r = add_object(gc, r, "nothing2");
@@ -1727,7 +1727,7 @@ scan_dirty_code_page(gc_t* gc, long int page_idx){
         }
       }
       new_d = new_d | (code_d<<(j*meta_dirty_shift));
-      p += align(code_size + disp_code_data);
+      p += IK_ALIGN(code_size + disp_code_data);
     }
   }
   dirty_vec = (unsigned int*)(long)gc->pcb->dirty_vector;
@@ -1842,9 +1842,9 @@ static void
 add_one_tconc(ikpcb* pcb, ikptr p){
   ikptr tcbucket = ref(p,0);
   ikptr tc = ref(tcbucket, off_tcbucket_tconc);
-  assert(tagof(tc) == pair_tag);
+  assert(IK_TAGOF(tc) == pair_tag);
   ikptr d = ref(tc, off_cdr);
-  assert(tagof(d) == pair_tag);
+  assert(IK_TAGOF(d) == pair_tag);
   ikptr new_pair = p + pair_tag;
   ref(d, off_car) = tcbucket;
   ref(d, off_cdr) = new_pair;

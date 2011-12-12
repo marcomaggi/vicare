@@ -164,7 +164,7 @@ ikrt_unintern_gensym(ikptr sym, ikpcb* pcb){
     return false_object;
   }
   ikptr ustr = ref(sym, off_symbol_record_ustring);
-  if (tagof(ustr) != string_tag) {
+  if (IK_TAGOF(ustr) != string_tag) {
     return false_object;
   }
   int h = compute_hash(ustr);

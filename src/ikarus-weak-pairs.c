@@ -39,7 +39,7 @@ ikrt_weak_cons(ikptr a, ikptr d, ikpcb* pcb){
 
 ikptr
 ikrt_is_weak_pair(ikptr x, ikpcb* pcb){
-  if(tagof(x) != pair_tag){
+  if(IK_TAGOF(x) != pair_tag){
     return false_object;
   }
   unsigned int t = pcb->segment_vector[page_index(x)];

@@ -1046,7 +1046,7 @@ ikrt_posix_readv (ikptr fd, ikptr buffers, ikpcb * pcb)
   ikptr         bv;
   int           i;
   ssize_t       rv;
-  for (i=0; pair_tag == tagof(buffers); buffers=ref(buffers, off_cdr), ++i) {
+  for (i=0; pair_tag == IK_TAGOF(buffers); buffers=ref(buffers, off_cdr), ++i) {
     bv      = ref(buffers, off_car);
     bufs[i].iov_base = IK_BYTEVECTOR_DATA_VOIDP(bv);
     bufs[i].iov_len  = IK_BYTEVECTOR_LENGTH(bv);
@@ -1063,7 +1063,7 @@ ikrt_posix_writev (ikptr fd, ikptr buffers, ikpcb * pcb)
   ikptr         bv;
   int           i;
   ssize_t       rv;
-  for (i=0; pair_tag == tagof(buffers); buffers=ref(buffers, off_cdr), ++i) {
+  for (i=0; pair_tag == IK_TAGOF(buffers); buffers=ref(buffers, off_cdr), ++i) {
     bv      = ref(buffers, off_car);
     bufs[i].iov_base = IK_BYTEVECTOR_DATA_VOIDP(bv);
     bufs[i].iov_len  = IK_BYTEVECTOR_LENGTH(bv);
@@ -1094,7 +1094,7 @@ ikrt_posix_select (ikptr nfds_fx,
   int                   rv;
   /* Fill the fdset for read-ready descriptors. */
   FD_ZERO(&read_fds);
-  for (L=read_fds_ell; pair_tag == tagof(L); L = ref(L, off_cdr)) {
+  for (L=read_fds_ell; pair_tag == IK_TAGOF(L); L = ref(L, off_cdr)) {
     fd = unfix(ref(L, off_car));
     if (nfds < fd)
       nfds = fd;
@@ -1102,7 +1102,7 @@ ikrt_posix_select (ikptr nfds_fx,
   }
   /* Fill the fdset for write-ready descriptors. */
   FD_ZERO(&write_fds);
-  for (L=write_fds_ell; pair_tag == tagof(L); L = ref(L, off_cdr)) {
+  for (L=write_fds_ell; pair_tag == IK_TAGOF(L); L = ref(L, off_cdr)) {
     fd = unfix(ref(L, off_car));
     if (nfds < fd)
       nfds = fd;
@@ -1110,7 +1110,7 @@ ikrt_posix_select (ikptr nfds_fx,
   }
   /* Fill the fdset for except-ready descriptors. */
   FD_ZERO(&except_fds);
-  for (L=except_fds_ell; pair_tag == tagof(L); L = ref(L, off_cdr)) {
+  for (L=except_fds_ell; pair_tag == IK_TAGOF(L); L = ref(L, off_cdr)) {
     fd = unfix(ref(L, off_car));
     if (nfds < fd)
       nfds = fd;
@@ -1132,7 +1132,7 @@ ikrt_posix_select (ikptr nfds_fx,
   } else { /* success, let's harvest the fds */
     /* Build the vector  to be returned and prevent  it from being garbage
        collected while building other objects. */
-    vec = ik_safe_alloc(pcb, align(disp_vector_data+3*wordsize)) + vector_tag;
+    vec = ik_safe_alloc(pcb, IK_ALIGN(disp_vector_data+3*wordsize)) + vector_tag;
     ref(vec, off_vector_length) = fix(3);
     ref(vec, off_vector_data+0*wordsize) = null_object;
     ref(vec, off_vector_data+1*wordsize) = null_object;
@@ -1140,7 +1140,7 @@ ikrt_posix_select (ikptr nfds_fx,
     pcb->root0 = &vec;
     {
       /* Build a list of read-ready file descriptors. */
-      for (L=read_fds_ell, R=null_object; pair_tag == tagof(L); L=ref(L,off_cdr)) {
+      for (L=read_fds_ell, R=null_object; pair_tag == IK_TAGOF(L); L=ref(L,off_cdr)) {
         ikptr fdx = ref(L, off_car);
         if (FD_ISSET(unfix(fdx), &read_fds)) {
           ikptr P = ik_pair_alloc(pcb);
@@ -1151,7 +1151,7 @@ ikrt_posix_select (ikptr nfds_fx,
         }
       }
       /* Build a list of write-ready file descriptors. */
-      for (L=write_fds_ell, W=null_object; pair_tag == tagof(L); L = ref(L, off_cdr)) {
+      for (L=write_fds_ell, W=null_object; pair_tag == IK_TAGOF(L); L = ref(L, off_cdr)) {
         ikptr fdx = ref(L, off_car);
         if (FD_ISSET(unfix(fdx), &write_fds)) {
           ikptr P = ik_pair_alloc(pcb);
@@ -1161,7 +1161,7 @@ ikrt_posix_select (ikptr nfds_fx,
         }
       }
       /* Build a list of except-ready file descriptors. */
-      for (L=except_fds_ell, E=null_object; pair_tag == tagof(L); L = ref(L, off_cdr)) {
+      for (L=except_fds_ell, E=null_object; pair_tag == IK_TAGOF(L); L = ref(L, off_cdr)) {
         ikptr fdx = ref(L, off_car);
         if (FD_ISSET(unfix(fdx), &except_fds)) {
           ikptr P = ik_pair_alloc(pcb);

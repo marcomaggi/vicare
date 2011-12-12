@@ -42,7 +42,7 @@ ik_list_length (ikptr s_list)
    for circular lists. */
 {
   int   length;
-  for (length = 0; pair_tag == tagof(s_list); ++length) {
+  for (length = 0; pair_tag == IK_TAGOF(s_list); ++length) {
     if (INT_MAX == length) {
       fprintf(stderr, "Vicare error: size of list exceeds INT_MAX");
       exit(EXIT_FAILURE);
@@ -64,7 +64,7 @@ ik_list_to_argv (ikptr s_list, char **argv)
 {
   int    i;
   ikptr  bv;
-  for (i=0; pair_tag == tagof(s_list); s_list=IK_CDR(s_list), ++i) {
+  for (i=0; pair_tag == IK_TAGOF(s_list); s_list=IK_CDR(s_list), ++i) {
     bv      = IK_CAR(s_list);
     argv[i] = IK_BYTEVECTOR_DATA_CHARP(bv);
   }
@@ -81,7 +81,7 @@ ik_list_to_argv_and_argc (ikptr s_list, char **argv, long *argc)
 {
   int    i;
   ikptr  bv;
-  for (i=0; pair_tag == tagof(s_list); s_list=IK_CDR(s_list), ++i) {
+  for (i=0; pair_tag == IK_TAGOF(s_list); s_list=IK_CDR(s_list), ++i) {
     bv      = IK_CAR(s_list);
     argv[i] = IK_BYTEVECTOR_DATA_CHARP(bv);
     argc[i] = IK_BYTEVECTOR_LENGTH(bv);
@@ -166,7 +166,7 @@ ik_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes)
   long int  aligned_size;
   ikptr     bv;
   char *    data;
-  aligned_size = align(disp_bytevector_data
+  aligned_size = IK_ALIGN(disp_bytevector_data
                        + requested_number_of_bytes
                        + 1);
   bv           = ik_safe_alloc(pcb, aligned_size)
@@ -212,7 +212,7 @@ ik_vector_alloc (ikpcb * pcb, long int requested_number_of_items)
 {
   long int  aligned_size;
   ikptr     vec;
-  aligned_size = align(disp_vector_data + requested_number_of_items * wordsize);
+  aligned_size = IK_ALIGN(disp_vector_data + requested_number_of_items * wordsize);
   vec          = ik_safe_alloc(pcb, aligned_size) + vector_tag;
   ref(vec, off_vector_length) = fix(requested_number_of_items);
   return vec;
@@ -226,7 +226,7 @@ ik_vector_alloc (ikpcb * pcb, long int requested_number_of_items)
 ikptr
 ik_struct_alloc (ikpcb * pcb, ikptr rtd, long int number_of_fields)
 {
-  long  aligned_size = align(disp_record_data + number_of_fields * wordsize);
+  long  aligned_size = IK_ALIGN(disp_record_data + number_of_fields * wordsize);
   ikptr data         = ik_safe_alloc(pcb, aligned_size) + vector_tag;
   ref(data, off_record_rtd) = rtd;
   return data;
@@ -244,7 +244,7 @@ ik_integer_from_long(signed long n, ikpcb* pcb)
   if (unfix(fx) == n) {
     return fx;
   }
-  ikptr bn = ik_safe_alloc(pcb, align(wordsize+disp_bignum_data));
+  ikptr bn = ik_safe_alloc(pcb, IK_ALIGN(wordsize+disp_bignum_data));
   if (n > 0){
     ref(bn, 0) = (ikptr)(bignum_tag | (1 << bignum_length_shift));
     ref(bn, disp_bignum_data) = (ikptr)n;
@@ -264,7 +264,7 @@ ik_integer_from_long_long(signed long long n, ikpcb* pcb)
     return ik_integer_from_long(n, pcb);
   }
   int len = sizeof(long long) / sizeof(mp_limb_t);
-  ikptr bn = ik_safe_alloc(pcb, align(sizeof(long long)+disp_bignum_data));
+  ikptr bn = ik_safe_alloc(pcb, IK_ALIGN(sizeof(long long)+disp_bignum_data));
   if (n > 0){
     ref(bn, 0) = (ikptr)(bignum_tag | (len << bignum_length_shift));
     *((long long*)(bn+disp_bignum_data)) = n;
@@ -284,7 +284,7 @@ ik_integer_from_unsigned_long(unsigned long n, ikpcb* pcb)
   if (n <= mxn) {
     return fix(n);
   }
-  ikptr bn = ik_safe_alloc(pcb, align(wordsize+disp_bignum_data));
+  ikptr bn = ik_safe_alloc(pcb, IK_ALIGN(wordsize+disp_bignum_data));
   ref(bn, 0) = (ikptr)(bignum_tag | (1 << bignum_length_shift));
   ref(bn, disp_bignum_data) = (ikptr)n;
   return bn+vector_tag;
@@ -295,7 +295,7 @@ ik_integer_from_unsigned_long_long(unsigned long long n, ikpcb* pcb)
   if (((unsigned long long)(unsigned long) n) == n) {
     return ik_integer_from_unsigned_long(n, pcb);
   }
-  ikptr bn = ik_safe_alloc(pcb, align(disp_bignum_data+sizeof(long long)));
+  ikptr bn = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data+sizeof(long long)));
   bcopy((char*)(&n), (char*)(bn+disp_bignum_data), sizeof(long long));
   return normalize_bignum(sizeof(long long)/sizeof(mp_limb_t), 0, bn);
 }

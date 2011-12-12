@@ -345,7 +345,7 @@ ikpcb* ik_make_pcb(){
   }
   /* initialize base rtd */
   {
-    ikptr r = ik_unsafe_alloc(pcb, align(rtd_size)) + rtd_tag;
+    ikptr r = ik_unsafe_alloc(pcb, IK_ALIGN(rtd_size)) + rtd_tag;
     ref(r, off_rtd_rtd) = r;
     ref(r, off_rtd_length) = (ikptr) (rtd_size-wordsize);
     ref(r, off_rtd_name) = 0;
@@ -399,7 +399,7 @@ void ik_delete_pcb(ikpcb* pcb){
 ikptr
 ik_safe_alloc (ikpcb* pcb, int size)
 {
-  assert(size == align(size));
+  assert(size == IK_ALIGN(size));
   ikptr alloc_ptr       = pcb->allocation_pointer;
   ikptr end_ptr         = pcb->heap_base + pcb->heap_size;
   ikptr new_alloc_ptr   = alloc_ptr + size;
@@ -429,7 +429,7 @@ ik_safe_alloc (ikpcb* pcb, int size)
 ikptr
 ik_unsafe_alloc (ikpcb* pcb, int size)
 {
-  assert(size == align(size));
+  assert(size == IK_ALIGN(size));
   ikptr alloc_ptr       = pcb->allocation_pointer;
   ikptr end_ptr         = pcb->heap_base + pcb->heap_size;
   ikptr new_alloc_ptr   = alloc_ptr + size;
@@ -495,7 +495,7 @@ void ik_stack_overflow(ikpcb* pcb){
   fprintf(stderr, "underflow_handler = 0x%08x\n", (int)underflow_handler);
 #endif
   /* capture continuation and set it as next_k */
-  ikptr k = ik_unsafe_alloc(pcb, align(continuation_size)) + vector_tag;
+  ikptr k = ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size)) + vector_tag;
   ref(k, -vector_tag) = continuation_tag;
   ref(k, off_continuation_top) = pcb->frame_pointer;
   ref(k, off_continuation_size) =
@@ -723,7 +723,7 @@ ikptr
 ikrt_make_vector1(ikptr len, ikpcb* pcb){
   int intlen = (int)len;
   if(is_fixnum(len) && (intlen >= 0)){
-    ikptr s = ik_safe_alloc(pcb, align(len + disp_vector_data));
+    ikptr s = ik_safe_alloc(pcb, IK_ALIGN(len + disp_vector_data));
     ref(s, 0) = len;
     memset((char*)(long)(s+disp_vector_data), 0, len);
     return s+vector_tag;
@@ -737,7 +737,7 @@ ikptr
 ikrt_make_vector2(ikptr len, ikptr obj, ikpcb* pcb){
   if(is_fixnum(len) && ((len >> 31)!=0)){
     pcb->root0 = &obj;
-    ikptr s = ik_safe_alloc(pcb, align(((int)len) + disp_vector_data));
+    ikptr s = ik_safe_alloc(pcb, IK_ALIGN(((int)len) + disp_vector_data));
     pcb->root0 = 0;
     ref(s, 0) = len;
     memset(s+disp_vector_data, 0, (int)len);

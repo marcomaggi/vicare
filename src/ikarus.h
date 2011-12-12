@@ -297,13 +297,13 @@ ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
 #define align_size      (2 * wordsize)
 #define immediate_tag   7
 
-#define tagof(X)        (((int)(X)) & 7)
+#define IK_TAGOF(X)        (((int)(X)) & 7)
 
 #define ref(X,N) \
   (((ikptr*)(((long)(X)) + ((long)(N))))[0])
 
 /* The least multiple of the wordsize which is greater than N. */
-#define align(N) \
+#define IK_ALIGN(N) \
   ((((N) + align_size - 1) >>  align_shift) << align_shift)
 
 #define false_object            ((ikptr)0x2F)
@@ -387,7 +387,7 @@ ikptr   ik_list_from_argv_and_argc      (char ** argv, int argc, ikpcb * pcb);
 
 char**  ik_list_to_vec          (ikptr x);
 
-#define ik_pair_alloc(PCB)      (ik_safe_alloc((PCB), align(pair_size)) + pair_tag)
+#define ik_pair_alloc(PCB)      (ik_safe_alloc((PCB), IK_ALIGN(pair_size)) + pair_tag)
 
 #define IK_CAR(PAIR)                ref((PAIR), off_car)
 #define IK_CDR(PAIR)                ref((PAIR), off_cdr)
@@ -413,7 +413,7 @@ typedef int ikchar;
 #define char_shift      8
 
 #define is_char(X)              \
-  ((char_mask & (int)(X)) == char_tag)
+  (char_tag == (char_mask & (int)(X)))
 
 #define int_to_scheme_char(X)   \
   ((ikptr)((((unsigned long)(X)) << char_shift) | char_tag))

@@ -303,7 +303,7 @@ not used
 ikptr
 ikrt_getsockname(ikptr s, ikpcb* pcb){
   socklen_t size = sizeof(struct sockaddr);
-  ikptr bv = ik_safe_alloc(pcb, align(disp_bytevector_data+size))
+  ikptr bv = ik_safe_alloc(pcb, IK_ALIGN(disp_bytevector_data+size))
              + bytevector_tag;
   int r = getsockname(unfix(s),
                      (struct sockaddr*)(bv+off_bytevector_data),

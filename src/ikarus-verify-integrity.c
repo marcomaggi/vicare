@@ -33,7 +33,7 @@ static int isa_fixnum(ikptr x){
 }
 
 static int isa_vector(ikptr x){
-  return ( (tagof(x) == vector_tag) &&
+  return ( (IK_TAGOF(x) == vector_tag) &&
            isa_fixnum(ref(x, -vector_tag)));
 }
 #endif
@@ -86,7 +86,7 @@ verify_code_small(char* p, int s, unsigned int d,
       int code_size = unfix(ref(p, disp_code_code_size));
       assert(code_size >= 0);
       verify_code(p, base, svec, dvec);
-      p+=align(code_size + disp_code_data);
+      p+=IK_ALIGN(code_size + disp_code_data);
     } else {
       p = q;
     }
@@ -108,7 +108,7 @@ verify_code_large(char* p, unsigned int s, unsigned int d,
   int code_size = unfix(ref(p, disp_code_code_size));
   assert(code_size >= 0);
   verify_code(p, base, svec, dvec);
-  assert(align(code_size+disp_code_data) >= pagesize);
+  assert(IK_ALIGN(code_size+disp_code_data) >= pagesize);
   char* end = p + code_size + disp_code_data;
   return((char*)align_to_next_page(end));
 }
@@ -125,7 +125,7 @@ verify_code_page(char* p, unsigned int s, unsigned int d,
   }
   int code_size = unfix(ref(p, disp_code_code_size));
   assert(code_size >= 0);
-  int obj_size = align(code_size + disp_code_data);
+  int obj_size = IK_ALIGN(code_size + disp_code_data);
   char* result;
   if(obj_size <= pagesize){
     result = verify_code_small(p,s,d,base,svec,dvec);

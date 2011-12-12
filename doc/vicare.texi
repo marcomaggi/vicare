@@ -262,6 +262,10 @@ Revised^6 Report on the algorithmic language Scheme
 @code{NULL}
 @end macro
 
+@macro ikptr{}
+@code{ikptr}
+@end macro
+
 @c ------------------------------------------------------------
 @c Macros for references to external documents.
 @c ------------------------------------------------------------
@@ -624,7 +628,7 @@ Trademarks used herein are the property of their respective owners.
 
 Internals
 
-* objects::                     Built in objects.
+* objects::                     Built in Scheme objects.
 * debug int::                   Debug mode.
 * compiler::                    Wild notes on the compiler internals.
 
@@ -13812,18 +13816,17 @@ initialised to nil.
 
 @c page
 @node objects
-@chapter Built in objects
+@chapter Built in Scheme objects
 
 
-Built in objects are implemented in the C language portion of the source
-code; the overall definitions are in the C language file
-@file{ikarus-data.h} and the definition of many values is duplicated in
-the Scheme language compiler @file{ikarus.compiler.sls}.
+Built in Scheme objects are mostly implemented in the C language portion
+of the source code, but many core operations are also reimplemented at
+the Scheme level.  The overall definitions are in the C language file
+@file{ikarus.h} and the definition of many values is duplicated in the
+Scheme language compiler @file{ikarus.compiler.sls}.
 
 @menu
-* objects refs::                Builtin object references.
-* objects tags::                Table of object tags.
-* objects const::               Constant values.
+* objects refs::                Builtin objects and tags.
 * objects alloc::               Allocating memory for builtin objects.
 * objects fixnum::              Fixnum objects.
 * objects pair::                Pair objects.
@@ -13837,6 +13840,51 @@ the Scheme language compiler @file{ikarus.compiler.sls}.
 @section Built in object references
 
 
+Values of type @ikptr{} at the C language level are the ones we move
+around as arguments and return values at the Scheme level; they
+represent machine words.  @ikptr{} values have two major
+interpretations:
+
+@table @strong
+@item Immediate values
+Objects that fit in a single machine word: special constants, fixnums,
+characters and transcoders.
+
+@item Reference values
+Objects allocated on the heap and subject to garbage collection; they
+are represented by tagged pointers: symbols, pairs, vectors,
+bytevectors, structures, ports, bignums, ratnums, flonums, compnums,
+cflonums, strings, closures, continuations, codes, pointers.
+@end table
+
+@noindent
+immediate @ikptr{} values have two minor interpretations:
+
+@table @strong
+@item Immediate special constants
+These are @true{}, @false{}, nil, void, unbound, @acronym{BWP}.
+
+@item Immediate variable values
+These are fixnums, characters and transcoders.
+@end table
+
+@noindent
+reference @ikptr{} values have two minor interpretations:
+
+@table @strong
+@item Vector tagged references
+Pointer values whose @math{3} least significant bits are set to the
+vector tag.  They reference multiword objects allocated on the heap:
+vectors, bignums, structures, flonums, ratnums, compnums, cflonums,
+continuations, code, ports, symbols, pointers.
+
+@item Specially tagged references
+Pointer values whose @math{3} least significant bits are set to a
+type--specific tag.  They reference multiword objects allocated on the
+heap: pairs, bytevectors, closures, strings.
+@end table
+
+
 @deftp {Object Reference} ikptr
 An immediate built in object or a reference to a built in object;
 implemented as an @code{unsigned long int} it is meant to be the size of
@@ -13844,90 +13892,56 @@ a machine word.  The definition assumes that:
 
 @itemize
 @item
-On 32 bits platforms, @code{unsigned long int} is a 32 bits value.
+On 32-bit platforms, @code{unsigned long int} is a 32-bit value.
 
 @item
-On 64 bits platforms, @code{unsigned long int} is a 64 bits value.
+On 64-bit platforms, @code{unsigned long int} is a 64-bit value.
 
 @item
 The type @code{unsigned long int} is big enough to hold a pointer for
 the underlying platform.
 @end itemize
-
-If an @code{ikptr} value is neither a fixnum nor a constant value, the
-@math{3} least significant bits of an @code{ikptr} represent the ``tag''
-of the referenced object's type.
-
-Notice that the type definition of @code{ikptr} is @strong{not} a
-pointer; this means that when storing a pointer into an @code{ikptr} and
-then adding offsets to it, the offset is in bytes:
-
-@example
-uint8_t *p = ...;
-ikptr    q = (ikptr)p;
-
-void *   r = (void *)(p + 3);  /* pointer to the 4th byte */
-@end example
 @end deftp
 
 
-@defmac tagof (@var{ref})
-Extract the @math{3} least significant bits of an @code{ikptr} value.
-@end defmac
+@deffn {Preprocessor Macro} int IK_TAGOF (ikptr @var{ref})
+Return an integer representing the @math{3} least significant bits of an
+@ikptr{} value.
+@end deffn
 
 
-@defmac ref (@var{ptr}, @var{offset})
-Expand to the machine word at @var{offset} past @var{ptr}; it can be
-used either as operand or as left--side of an assignment.  The ``word''
-is the unsigned integer type used in the type definition of
-@code{ikptr}; @var{ptr} can be a pointer of any type: it is cast to a
-``pointer to words''.  Example:
-
-@example
-char *   p = ...;
-ikptr    q;
-
-ref(p, 1) = 123L;       /* store the value in the first
-                           word of the array */
-
-q = ref(p, 3);          /* retrieve the third word in
-                           the array */
-@end example
-@end defmac
-
-@c page
-@node objects tags
-@section Table of object tags
-
-
-The objects that fit in a single machine word, and so are the values we
-move around at the Scheme level, are: one--word constants, fixnums,
-characters and transcoders.  They are represented as @code{ikptr} data
-values and are called @dfn{immediate values}.
-
-The immediate value constants are: @code{true_object},
-@code{false_object}, @code{null_object}, @code{void_object},
-@code{bwp_object}, @code{unbound_object}.  All of them have the least
-significant byte set to @code{#b????1111 = #x?F}.
-
-The other values that fit in a single machine word are fixnums,
-characters and transcoders.  The last byte of these machine words is
-tagged as follows:
+@deffn {Preprocessor Macro} ikptr ref (ikptr @var{value_ref}, long @var{byte_offset})
+Getter and setter for machine words allocated on the heap.  Interpret
+@var{value_ref} as a pointer to an array of @ikptr{} and locate the
+value at @var{byte_offset}.  A use of this macro can appear both as
+operand and as left--side of an assignment.
 
 @example
-   object   |  tag bits  | tag hex | mask bits
-------------+------------+---------+------------
-fixnums     | #b??????00 |   --    |     --
-characters  | #b00001111 |  #x0F   | #b11111111
-transcoders | #b01111111 |  #x7F   | #b11111111
+ikptr   P, Q;
+
+Q = ref(P, 3);     /* retrieve the 3rd word */
+ref(P, 1) = 123L;  /* store a value in the 1st word */
 @end example
 
-To identify an immediate value we can do:
+Both @var{value_ref} and @var{byte_offset} are first cast to @code{long}
+values, then added and the sum is cast to @code{ikptr *}.
+
+Values for @var{byte_offset} are usually precomputed and take into
+account a component used to remove the tag from the pointer in
+@var{value_ref}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Immediate values
+
+All the immediate values but fixnums have the @math{3} least significant
+bits set to @math{1}; to identify an immediate value we can do:
 
 @example
-ikptr   the_value;
+ikptr   X;
 
-if (is_fixnum(X) || (immediate_tag == tagof(the_value)))
+if (is_fixnum(X) || (immediate_tag == IK_TAGOF(X)))
   it_is_immediate();
 else
   it_is_not();
@@ -13940,9 +13954,58 @@ where:
 immediate_tag = 7 = #b111
 @end example
 
+
+@defmac false_object 0x2F
+@defmacx true_object 0x3F
+@defmacx null_object 0x4F
+@defmacx void_object 0x7F
+Special machine words of type @ikptr{} representing, respectively:
+@false{}; @true{}; nil, the empty list; @void{}, the return value of
+functions returning no value.
+@end defmac
+
+
+@defmac unbound_object 0x6F
+Special machine word value stored in the @code{value} and @code{proc}
+fields of Scheme symbol memory blocks to signal that these fields are
+unset.
+@end defmac
+
+
+@defmac bwp_object 0x8F
+Special machine word value stored in locations that used to hold weak
+references to values which have been already garbage collected.
+@end defmac
+
+The variable values that fit in a single machine word are fixnums,
+characters and transcoders.  The last byte of these machine words is
+tagged as follows:
+
+@example
+   object      |  tag bits  | tag hex | mask bits
+---------------+------------+---------+------------
+fixnums 32-bit | #b??????00 |   --    | #b00000011
+fixnums 64-bit | #b?????000 |   --    | #b00000111
+characters     | #b00001111 |  #x0F   | #b11111111
+transcoders    | #b01111111 |  #x7F   | #b11111111
+@end example
+
 @noindent
-all the immediate values, but fixnums, have the @math{3} least
-significant bits set to @math{1}.
+to identify a fixnum we can do:
+
+@example
+ikptr   X;
+
+if (fx_tag == (X & fx_mask))
+  is_a_fixnum();
+@end example
+
+@noindent
+the same for the other immediate variable values.
+
+@c ------------------------------------------------------------
+
+@subsubheading Values allocated on the heap
 
 The values that do not fit into a single machine word are composed of a
 reference machine word and a vector of machine words on the heap; they
@@ -13952,7 +14015,17 @@ codes, pointers.
 
 The machine words used as references have the 3 least significant bits
 used as tag and the remaining most significant bits used to store a
-pointer in memory; the following tags are used:
+pointer in memory; on 32-bit platforms the layout of such a machine
+words is:
+
+@example
+ PPPPPPPP PPPPPPPP PPPPPPPP PPPPPTTT   P = bit in a pointer
+|--------|--------|--------|--------|  T = bit in a tag
+  byte 3   byte 2   byte 1   byte 0
+@end example
+
+@noindent
+the following tags are used:
 
 @example
   object    |  tag bits  | tag hex | mask bits
@@ -13963,6 +14036,13 @@ closure     | #b?????011 |    3    | #b00000111
 vectors     | #b?????101 |    5    | #b00000111
 strings     | #b?????110 |    6    | #b00000111
 @end example
+
+@noindent
+notice how @strong{none} of the tags for reference words is
+@code{#b111}, which is reserved for immediate values; also notice how
+@code{#b100} must @strong{not} be used as tag, because on 32-bit
+platforms it would match the fixnums with the least significant bit set
+to zero.
 
 The vector tag is used to tag machine word references to multiple object
 types: vectors, bignums, structures, flonums, ratnums, compnums,
@@ -14026,44 +14106,6 @@ structure, that is the type descriptor.
 The most significant bits of the first word are used for port
 attributes.
 @end table
-
-@c page
-@node objects const
-@section Constant values
-
-
-@defmac false_object 0x2F
-Special machine word value representing @false{}.
-@end defmac
-
-
-@defmac true_object 0x3F
-Special machine word value representing @true{}.
-@end defmac
-
-
-@defmac null_object 0x4F
-Special machine word value representing nil, the empty list.
-@end defmac
-
-
-@defmac void_object 0x7F
-Special machine word value representing @void{}, the return value of
-functions returning no value.
-@end defmac
-
-
-@defmac bwp_object 0x8F
-Special machine word value stored in locations that used to hold weak
-references to values which have been already garbage collected.
-@end defmac
-
-
-@defmac unbound_object 0x6F
-Special machine word value stored in the @code{value} and @code{proc}
-field of Scheme symbol memory blocks to signal that these fields are
-unset.
-@end defmac
 
 @c page
 @node objects alloc
@@ -14195,11 +14237,11 @@ is terminated with exit status @code{-1}.
 
 
 Fixnums are ``small'' exact integers.  In Vicare's jargon, ``word size''
-is the number of bytes in an @code{ikptr}; if the word size is @math{4},
+is the number of bytes in an @ikptr{}; if the word size is @math{4},
 @math{30} bits are used for fixnum representation; else the word size is
 @math{8} and @math{61} bits are used for fixnum representation.
 
-Let's say @code{ikptr} is a @math{32} bits value, which means the word
+Let's say @ikptr{} is a @math{32} bits value, which means the word
 size is @math{4} bytes; then the representation of a fixnum is:
 
 @example
@@ -14212,23 +14254,23 @@ size is @math{4} bytes; then the representation of a fixnum is:
 
 @noindent
 the two least significant bits are set to zero: this ``tags'' the
-@code{ikptr} which embed fixnums.
+@ikptr{} which embed fixnums.
 
 
 @defmac fix (@var{num})
 Convert a small exact integer in the correct range for a fixnum, into a
-@code{ikptr} value.
+@ikptr{} value.
 @end defmac
 
 
 @defmac unfix (@var{ref})
-Convert an @code{ikptr} value holding a fixnum into a fixnum of type
+Convert an @ikptr{} value holding a fixnum into a fixnum of type
 @code{long int}.
 @end defmac
 
 
 @defmac is_fixnum (@var{ref})
-Expand to true if @var{ref} is an @code{ikptr} embedding a fixnum.  It
+Expand to true if @var{ref} is an @ikptr{} embedding a fixnum.  It
 just tests if the least significant bits in the tag are set to zero.
 @end defmac
 
@@ -14343,7 +14385,7 @@ of a bytevector data area, they always set the byte after the last used
 one to zero, to allow for the bytevector to be used as C string.
 @ref{syslib bytevectors} for details on memory layout of bytevectors.
 
-@cfunc{ik_safe_alloc} returns an @code{ikptr} value representing the
+@cfunc{ik_safe_alloc} returns an @ikptr{} value representing the
 aligned pointer, having the @math{3} least significant bits set to zero;
 we add to it the bytevector tag (an integer value fitting in @math{3}
 bits) which allows to recognise bytevectors among all the other built in
@@ -14401,14 +14443,14 @@ area.
 
 
 @defmac off_bytevector_length
-An integer to add to a tagged bytevector reference (@code{ikptr}) to
+An integer to add to a tagged bytevector reference (@ikptr{}) to
 retrieve the pointer to the first byte of the bytevector length.  The
 bytevector length is a fixnum.
 @end defmac
 
 
 @defmac off_bytevector_data
-An integer to add to a tagged bytevector reference (@code{ikptr}) to
+An integer to add to a tagged bytevector reference (@ikptr{}) to
 retrieve the pointer to the first byte of the bytevector length.  The
 bytevector length is a fixnum.
 
@@ -14438,7 +14480,7 @@ ikptr     vec = ik_safe_alloc(pcb, aligned_size) + vector_tag;
 @end example
 
 @noindent
-@cfunc{ik_safe_alloc} returns an @code{ikptr} value representing the
+@cfunc{ik_safe_alloc} returns an @ikptr{} value representing the
 aligned pointer, having the @math{3} least significant bits set to zero;
 we add to it the vector tag (an integer value fitting in @math{3} bits)
 which allows to recognise vectors among all the other built in objects.
@@ -14490,14 +14532,14 @@ pointer to vector to get the pointer to the first byte in the data area.
 
 
 @defmac off_vector_length
-An integer to add to a tagged vector reference (@code{ikptr}) to
+An integer to add to a tagged vector reference (@ikptr{}) to
 retrieve the pointer to the first byte of the vector length.  The
 vector length is a fixnum.
 @end defmac
 
 
 @defmac off_vector_data
-An integer to add to a tagged vector reference (@code{ikptr}) to
+An integer to add to a tagged vector reference (@ikptr{}) to
 retrieve the pointer to the first byte of the vector length.  The
 vector length is a fixnum.
 
@@ -14534,13 +14576,13 @@ field in the data area.
 
 
 @defmac off_record_rtd
-An integer to add to a tagged structure reference (@code{ikptr}) to
+An integer to add to a tagged structure reference (@ikptr{}) to
 retrieve the pointer to the first byte of the @rtd{}.
 @end defmac
 
 
 @defmac off_record_data
-An integer to add to a tagged structure reference (@code{ikptr}) to
+An integer to add to a tagged structure reference (@ikptr{}) to
 retrieve the pointer to the first byte of the first field of the
 structure.
 
