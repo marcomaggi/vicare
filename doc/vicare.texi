@@ -13959,10 +13959,11 @@ immediate_tag = 7 = #b111
 @defmac false_object 0x2F
 @defmacx true_object 0x3F
 @defmacx null_object 0x4F
+@defmacx eof_object 0x5F
 @defmacx void_object 0x7F
 Special machine words of type @ikptr{} representing, respectively:
-@false{}; @true{}; nil, the empty list; @void{}, the return value of
-functions returning no value.
+@false{}; @true{}; nil, the empty list; @eof{}, the end of file;
+@void{}, the return value of functions returning no value.
 @end defmac
 
 
@@ -14141,7 +14142,7 @@ In short, memory allocation is performed as follows:
 @example
 ikpcb     pcb = ...;
 long int  number_of_bytes = ...;
-ikptr     p = ik_safe_alloc(pcb, align(number_of_bytes));
+ikptr     p = ik_safe_alloc(pcb, IK_ALIGN(number_of_bytes));
 @end example
 
 @noindent

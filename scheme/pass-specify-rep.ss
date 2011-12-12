@@ -423,7 +423,7 @@
       ((primref name)
        (prm 'mref
              (K (make-object (primref->symbol name)))
-             (K (- disp-symbol-record-value symbol-ptag))))
+             (K (- disp-symbol-record-value symbol-primary-tag))))
       ((code-loc)
        (make-constant x))
       ((closure)
@@ -558,7 +558,7 @@
              (lambda (sym)
                (reset-symbol-proc! sym)
                (prm 'mref (T (K sym))
-                    (K (- disp-symbol-record-proc symbol-ptag)))))
+                    (K (- disp-symbol-record-proc symbol-primary-tag)))))
             (else (nonproc x check?))))
          ((primref op) (V x))
          ((known x t)

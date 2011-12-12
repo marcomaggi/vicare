@@ -72,7 +72,7 @@ static int strings_eqp(ikptr str1, ikptr str2){
 static ikptr
 ik_make_symbol(ikptr str, ikptr ustr, ikpcb* pcb){
   ikptr sym = ik_unsafe_alloc(pcb, symbol_record_size) + record_tag;
-  ref(sym, -record_tag) = symbol_record_tag;
+  ref(sym, -record_tag) = symbol_tag;
   ref(sym, off_symbol_record_string)  = str;
   ref(sym, off_symbol_record_ustring) = ustr;
   ref(sym, off_symbol_record_value)   = unbound_object;

@@ -96,7 +96,7 @@ print(FILE* fh, ikptr x){
         }
         fprintf(fh, ")");
       }
-    } else if (fst == symbol_record_tag){
+    } else if (fst == symbol_tag){
       ikptr str = ref(x, off_symbol_record_string);
       ikptr fxlen = ref(str, off_string_length);
       int len = unfix(fxlen);

@@ -444,7 +444,7 @@ ikptr   ikrt_strings_to_gensym  (ikptr, ikptr,  ikpcb*);
  ** Symbol objects.
  ** ----------------------------------------------------------------- */
 
-#define symbol_record_tag               ((ikptr) 0x5F)
+#define symbol_tag                      ((ikptr) 0x5F)
 #define disp_symbol_record_string       (1 * wordsize)
 #define disp_symbol_record_ustring      (2 * wordsize)
 #define disp_symbol_record_value        (3 * wordsize)

@@ -1089,9 +1089,9 @@ add_object_proc(gc_t* gc, ikptr x) {
       vector_count++;
 #endif
     }
-    else if(fst == symbol_record_tag){
+    else if(fst == symbol_tag){
       ikptr y = gc_alloc_new_symbol_record(gc) + record_tag;
-      ref(y, -record_tag)               = symbol_record_tag;
+      ref(y, -record_tag)               = symbol_tag;
       ref(y, off_symbol_record_string)  = ref(x, off_symbol_record_string);
       ref(y, off_symbol_record_ustring) = ref(x, off_symbol_record_ustring);
       ref(y, off_symbol_record_value)   = ref(x, off_symbol_record_value);

@@ -754,13 +754,13 @@
 
  (define-primop symbol? safe
    ((P x)
-    (sec-tag-test (T x) vector-mask vector-tag #f symbol-record-tag))
+    (sec-tag-test (T x) vector-mask vector-tag #f symbol-tag))
    ((E x) (nop)))
 
  (define-primop $make-symbol unsafe
    ((V str)
     (with-tmp ((x (prm 'alloc (K (align symbol-record-size)) (K vector-tag))))
-      (prm 'mset x (K (- vector-tag)) (K symbol-record-tag))
+      (prm 'mset x (K (- vector-tag)) (K symbol-tag))
       (prm 'mset x (K (- disp-symbol-record-string  vector-tag)) (T str))
       (prm 'mset x (K (- disp-symbol-record-ustring vector-tag)) (K 0))
       (prm 'mset x (K (- disp-symbol-record-value   vector-tag)) (K unbound))
