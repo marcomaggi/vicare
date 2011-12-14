@@ -233,11 +233,11 @@ ikrt_ffi_prep_cif (ikptr s_type_ids, ikpcb* pcb)
   cif->arg_types      = IK_FFI_CIF_ARG_TYPES_PTR(cif, arity);
   cif->arg_type_ids   = IK_FFI_CIF_ARG_TYPE_IDS_PTR(cif, arity);
   cif->arity          = arity;
-  cif->retval_type_id = unfix(IK_VECTOR_REF(s_type_ids, 0));
+  cif->retval_type_id = IK_UNFIX(IK_ITEM(s_type_ids, 0));
   cif->retval_type    = the_ffi_types_array[cif->retval_type_id];
   cif->args_bufsize   = 0;
   for (i=0; i<arity; ++i) {
-    type_id_t   id       =  unfix(IK_VECTOR_REF(s_type_ids, 1+i));
+    type_id_t   id       =  IK_UNFIX(IK_ITEM(s_type_ids, 1+i));
     cif->args_bufsize    += the_ffi_type_sizes[id];
     cif->arg_type_ids[i] =  id;
     cif->arg_types[i]    =  the_ffi_types_array[id];
@@ -436,7 +436,7 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
        native argument values. */
     int  i;
     for (i=0; i<cif->arity; i++) {
-      ikptr  value = IK_VECTOR_REF(s_args, i);
+      ikptr  value = IK_ITEM(s_args, i);
       arg_value_ptrs[i] = arg_next;
       scheme_to_native_value_cast(cif->arg_type_ids[i], value, arg_next);
       arg_next += cif->arg_types[i]->size;

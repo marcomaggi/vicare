@@ -1104,7 +1104,7 @@ add_object_proc(gc_t* gc, ikptr x) {
     else if(IK_TAGOF(fst) == rtd_tag){
       /* struct / record */
       ikptr size = ref(fst, off_rtd_length);
-      if(size & ((1<<align_shift)-1)) {
+      if(size & ((1<<IK_ALIGN_SHIFT)-1)) {
         /* size = n * object_alignment + 4 =>
            memreq = n * object_alignment + 8
                   = (n+1) * object_alignment  => aligned */

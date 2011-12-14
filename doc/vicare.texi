@@ -484,6 +484,14 @@ Revised^6 Report on the algorithmic language Scheme
 @acronym{EOL}
 @end macro
 
+@c ------------------------------------------------------------
+@c Vicare specific macros.
+@c ------------------------------------------------------------
+
+@macro pcb{}
+@acronym{PCB}
+@end macro
+
 @c page
 @c ------------------------------------------------------------
 @c Values.
@@ -2373,7 +2381,7 @@ To exit from a cafe we can write the @eof{} object.
 
 
 A data structure is like a lightweight record as defined by @rnrs{6}.
-@ref{syslib structs} for more informations on the internals of data
+@ref{objects structs} for more informations on the internals of data
 structures.
 
 @menu
@@ -8255,7 +8263,7 @@ of structures.
 @subsection Networks database
 
 
-@deftp struct-netent
+@deftp {Structure Type} struct-netent
 Scheme level representation of @code{struct netent}.  It has the
 following fields:
 
@@ -10892,26 +10900,6 @@ Store @var{value} in the cdr location of @var{P}.
 @section Low level structure operations
 
 
-A data structure is a variable length block of memory allocated as a
-vector; a reference to a structure value is a machine word tagged as
-vector.  The first machine word of the structure is a reference to the
-type descriptor; a type descriptor is itself a data structure.  A block
-of memory is a data structure if and only if: a reference to it is
-tagged as vector and its first word is tagged as vector.
-
-@example
-|----------------|----------| reference to structure
-  heap offset     vector tag
-
-|----------------|----------| first word of structure
-  heap offset     vector tag    = reference to rtd
-                                = reference to structure
-@end example
-
-The type descriptor of the type descriptors is the return value of
-@func{base-rtd}.  @ref{iklib structs} for more informations on the
-public interface of data structures.
-
 The arguments @var{stru} to these operations must be references to data
 structures, the arguments @var{rtd} must be references to structure type
 descriptors, the arguments @var{fx} must be fixnums of appropriate
@@ -10967,21 +10955,6 @@ such values.  Return a reference to the structure.
 @section Low level vector operations
 
 
-Vectors are variable length blocks of memory referenced by machine words
-tagged as vectors.  The first machine word of a vector block contains a
-fixnum representing the vector length; a vector is capable of holding at
-most a number of values equal to the return value of
-@func{greatest-fixnum}.  This means that the first word of a vector is
-tagged as a fixnum.
-
-@example
-|------------------------|-------------| reference to vector
-      heap offset          vector tag
-
-|------------------------|-------------| vector first word
-     number of words       fixnum tag
-@end example
-
 The arguments @var{vec} to these operations must be fixnums, the
 arguments @var{fx} must be fixnums.  The following bindings are exported
 by the @library{ikarus system $vectors} library.
@@ -11010,35 +10983,6 @@ Store @var{value} at index @var{fx} in @var{vec}.
 @node syslib bytevectors
 @section Low level bytevector operations
 
-
-Bytevectors are blocks of memory referenced by machine words tagged as
-bytevectors.  The first word in the memory block is a fixnum
-representing the number of bytes in the data area; a bytevector is
-capable of holding at most a number of values equal to the return value
-of @func{greatest-fixnum}.
-
-When allocating a bytevector capable of holding @math{N} bytes, the
-actual size of the allocated data area is @math{N+1}; the additional
-last byte is not part of the data area and is perpetually set to zero.
-
-To allow for the same binary layout on both 32-bit and 64-bit platforms,
-the data area starts @math{8} bytes after the beginning; on a 32-bit
-platform the layout is:
-
-@example
-  1st word   2nd word                       last byte
-|----------|----------|-------------------|-----------|
-   length     unused        data area      set to zero
-@end example
-
-@noindent
-on a 64-bit platform the layout is:
-
-@example
-       1st word                             last byte
-|---------------------|-------------------|-----------|
-       length               data area      set to zero
-@end example
 
 The arguments @var{bv} to these operations must be references to
 bytevectors, the arguments @var{fx} must be fixnums in the appropriate
@@ -13795,9 +13739,9 @@ Scheme language compiler @file{ikarus.compiler.sls}.
 * objects memory::              Memory allocation and collection.
 * objects fixnums::             Fixnum objects.
 * objects pairs::               Pair objects and lists.
-* objects bytevector::          Bytevector objects.
-* objects vector::              Vector objects.
-* objects struct::              Struct objects.
+* objects bytevectors::         Bytevector objects.
+* objects vectors::             Vector objects.
+* objects structs::             Struct objects.
 @end menu
 
 @c page
@@ -14105,8 +14049,8 @@ attributes.
 In short, memory allocation is performed as follows:
 
 @example
-ikpcb     pcb = ...;
-long int  number_of_bytes = ...;
+ikpcb     pcb = the_pcb;
+long int  number_of_bytes = the_number_of_bytes;
 ikptr     p = ik_safe_alloc(pcb, IK_ALIGN(number_of_bytes));
 @end example
 
@@ -14168,7 +14112,14 @@ pcb->allocation_pointer   = (ikptr)next_free_block;
 @end example
 
 
-@deffn {Preprocessor Macro} long IK_ALIGN (long @var{number_of_bytes})
+@deftypevar {ikpcb *} the_pcb
+Global variable referencing the process control block.  It is rarely
+needed because when calling a C function from Scheme a pointer to the
+@pcb{} is always pushed on the stack as last argument.
+@end deftypevar
+
+
+@deftypefn {Preprocessor Macro} long IK_ALIGN (long @var{number_of_bytes})
 Convert @var{number_of_bytes} to the number of bytes requested to
 satisfy pointer alignment constraints.  We can simulate the computation
 with:
@@ -14207,7 +14158,7 @@ with:
   (print-align 17)
   (print-align 1234))
 @end example
-@end deffn
+@end deftypefn
 
 
 @deftypefun ikptr ik_safe_alloc (ikpcb * @var{pcb}, unsigned long @var{aligned_size})
@@ -14385,24 +14336,24 @@ the two least significant bits are set to zero: this ``tags'' the
 machine words which embed fixnums.
 
 
-@deffn {Preprocessor Macro} ikptr IK_FIX (@var{num})
-@deffnx {Preprocessor Macro} ikptr fix (@var{num})
+@deftypefn {Preprocessor Macro} ikptr IK_FIX (@var{num})
+@deftypefnx {Preprocessor Macro} ikptr fix (@var{num})
 Convert a small exact integer in the correct range for a fixnum, into a
 @ikptr{} value.  @var{num} is cast to @code{long}.
-@end deffn
+@end deftypefn
 
 
-@deffn {Preprocessor Macro} long IK_UNFIX (ikptr @var{ref})
-@deffnx {Preprocessor Macro} long unfix (ikptr @var{ref})
+@deftypefn {Preprocessor Macro} long IK_UNFIX (ikptr @var{ref})
+@deftypefnx {Preprocessor Macro} long unfix (ikptr @var{ref})
 Convert an @ikptr{} value holding a fixnum into a fixnum of type
 @code{long int}.
-@end deffn
+@end deftypefn
 
 
-@deffn {Preprocessor Macro} int IK_IS_FIXNUM (ikptr @var{ref})
+@deftypefn {Preprocessor Macro} int IK_IS_FIXNUM (ikptr @var{ref})
 Expand to true if @var{ref} is an @ikptr{} embedding a fixnum.  It
 just tests if the least significant bits in the tag are set to zero.
-@end deffn
+@end deftypefn
 
 
 Examples:
@@ -14429,6 +14380,10 @@ are the pair tag.
 |-------------------|-------------------| pair memory block
     word 0 = car        word 1 = cdr
 @end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
 
 Pairs are allocated as follows:
 
@@ -14483,17 +14438,25 @@ and cdr from the beginning of a pair memory block; @code{off_car} and
 as pair to retrieve the car and the cdr from a pair memory block.
 @end deffn
 
+@c ------------------------------------------------------------
 
-@deffn {Preprocessor Macro} int IK_IS_PAIR (ikptr @var{X})
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_PAIR (ikptr @var{X})
 Evaluate to true if the machine word @var{X} is tagged as pair.
-@end deffn
+@end deftypefn
 
 
-@deffn {Preprocessor Macro} ikptr IK_CAR (ikptr @var{pair})
-@deffnx {Preprocessor Macro} ikptr IK_CDR (ikptr @var{pair})
+@deftypefn {Preprocessor Macro} ikptr IK_CAR (ikptr @var{pair})
+@deftypefnx {Preprocessor Macro} ikptr IK_CDR (ikptr @var{pair})
 Evaluate to the locations of the car and cdr of a pair; uses of these
 macros can appear both as operands and as left--side of assignments.
-@end deffn
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on pairs and lists
 
 
 @deftypefun long ik_list_length (ikptr @var{list})
@@ -14585,31 +14548,59 @@ pcb->root1 = NULL;
 @end example
 
 @c page
-@node objects bytevector
+@node objects bytevectors
 @section Bytevector objects
 
 
-Bytevector objects are allocated on the heap using
-@cfunc{ik_safe_alloc}; to perform the allocation we compute the whole
-size of the bytevector data area, add to it room for meta data and
-finally compute the aligned block size:
+Bytevectors are blocks of memory referenced by machine words tagged as
+bytevectors.  The first word in the memory block is a fixnum
+representing the number of bytes in the data area; a bytevector is
+capable of holding at most a number of bytes equal to the return value
+of @func{greatest-fixnum}.
+
+When allocating a bytevector capable of holding @math{N} bytes, the
+actual size of the allocated data area is @math{N+1}; the additional
+last byte is not part of the data area and is perpetually set to zero.
+All @value{PRJNAME}'s functions operating on bytevectors set to zero the
+byte right after the last used one in the data area.  This last byte
+allows every bytevector to be used as @asciiz{} string at the C language
+level.
+
+To allow for the same binary layout on both 32-bit and 64-bit platforms,
+the data area starts @math{8} bytes after the beginning; on a 32-bit
+platform the layout is:
 
 @example
-ikpcb     pcb        = ...;
-long int  bv_len     = ...;
-long int  block_size = disp_bytevector_data + bv_len + 1;
-lont int  align_size = align(block_size);
-ikptr     bv = ik_safe_alloc(pcb, aligned_size)
-             + bytevector_tag;
+  1st word   2nd word                       last byte
+|----------|----------|-------------------|-----------|
+   length     unused        data area      set to zero
 @end example
 
 @noindent
-we have to remember that it is convention of the internal functions of
-@value{PRJNAME} to allocate one byte more than the requested size and to
-set that final byte to zero; whenever the functions modify the contents
-of a bytevector data area, they always set the byte after the last used
-one to zero, to allow for the bytevector to be used as C string.
-@ref{syslib bytevectors} for details on memory layout of bytevectors.
+on a 64-bit platform the layout is:
+
+@example
+       1st word                             last byte
+|---------------------|-------------------|-----------|
+       length               data area      set to zero
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+Bytevector objects are fully allocated on the heap and subject to
+garbage collection; to perform the allocation we compute the whole size
+of the bytevector data area, add to it room for meta data and finally
+compute the aligned block size:
+
+@example
+ikpcb * pcb        = the_pcb;
+long    bv_len     = the_number_of_bytes;
+long    block_size = disp_bytevector_data + bv_len + 1;
+lont    align_size = IK_ALIGN(block_size);
+ikptr   bv = ik_safe_alloc(pcb, align_size) + bytevector_tag;
+@end example
 
 @cfunc{ik_safe_alloc} returns an @ikptr{} value representing the
 aligned pointer, having the @math{3} least significant bits set to zero;
@@ -14623,15 +14614,15 @@ looks like this:
 
 @example
 ikptr
-ik_bytevector_alloc (ikpcb * pcb, long int bv_len)
+ik_bytevector_alloc (ikpcb * pcb, long bv_len)
 @{
-  long int  aligned_size;
-  ikptr     bv;
-  char *    data;
-  aligned_size = align(disp_bytevector_data + bv_len + 1);
-  bv           = ik_safe_alloc(pcb, aligned_size)
-                 + bytevector_tag;
-  ref(bv, off_bytevector_length) = fix(bv_len);
+  long   align_size;
+  ikptr  bv;
+  char * data;
+  align_size = IK_ALIGN(disp_bytevector_data + bv_len + 1);
+  bv         = ik_safe_alloc(pcb, align_size)
+               + bytevector_tag;
+  ref(bv, off_bytevector_length) = IK_FIX(bv_len);
   data = (char *)(long)(bv + off_bytevector_data);
   data[bv_len] = '\0';
   return bv;
@@ -14642,67 +14633,136 @@ ik_bytevector_alloc (ikpcb * pcb, long int bv_len)
 and to access the data area we do:
 
 @example
-ikptr      bv = ...;
+ikptr      bv = the_bytevector;
 uint8_t *  data_area;
 
 data_area = (uint8_t *)(long)(bv + off_bytevector_data);
 @end example
 
 
-@defmac bytevector_tag
-An integer used to tag pointers to bytevector memory blocks.
-@end defmac
+@deffn {Preprocessor Symbol} bytevector_tag
+An integer used to tag @ikptr{} references to bytevector memory blocks.
+@end deffn
 
 
-@defmac disp_bytevector_length
+@deffn {Preprocessor Symbol} disp_bytevector_length
 Displacement of length.  The number of bytes to add to an untagged
-pointer to bytevector to get the pointer to the first byte in the word
-holding the bytevector length as fixnum.
-@end defmac
+pointer to bytevector to get the pointer to the first byte in the
+machine word holding the bytevector length as fixnum.
+@end deffn
 
 
-@defmac disp_bytevector_data
+@deffn {Preprocessor Symbol} disp_bytevector_data
 Displacement of data area.  The number of bytes to add to an untagged
 pointer to bytevector to get the pointer to the first byte in the data
 area.
-@end defmac
+@end deffn
 
 
-@defmac off_bytevector_length
-An integer to add to a tagged bytevector reference (@ikptr{}) to
-retrieve the pointer to the first byte of the bytevector length.  The
-bytevector length is a fixnum.
-@end defmac
+@deffn {Preprocessor Symbol} off_bytevector_length
+An integer to add to a tagged @ikptr{} bytevector reference to retrieve
+the pointer to the first byte of the fixnum representing the bytevector
+length.
+@end deffn
 
 
-@defmac off_bytevector_data
-An integer to add to a tagged bytevector reference (@ikptr{}) to
-retrieve the pointer to the first byte of the bytevector length.  The
-bytevector length is a fixnum.
+@deffn {Preprocessor Symbol} off_bytevector_data
+An integer to add to a tagged @ikptr{} bytevector reference to retrieve
+the pointer to the first byte of the data area.
 
-Notice that on both @math{32} bits and @math{64} bits platforms: the
-first byte of the data area is at the same offset from the first byte of
-the bytevector memory block.
-@end defmac
+Notice that on both 32-bit and 64-bit platforms: the first byte of the
+data area is at the same byte offset from the first byte of the
+bytevector memory block.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} long IK_BYTEVECTOR_LENGTH (ikptr @var{bv})
+Return the number of bytes in the data area of @var{bv}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_BYTEVECTOR_LENGTH_FX (ikptr @var{bv})
+Return a fixnum representing the number of bytes in the data area of
+@var{bv}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_BYTEVECTOR_DATA_VOIDP (ikptr @var{bv})
+@deftypefnx {Preprocessor Macro} {char *} IK_BYTEVECTOR_DATA_CHARP (ikptr @var{bv})
+@deftypefnx {Preprocessor Macro} {uint8_t *} IK_BYTEVECTOR_DATA_UINT8P (ikptr @var{bv})
+Return a pointer referencing the first byte in the data area of
+@var{bv}.
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on bytevectors
+
+
+@deftypefun ikptr ik_bytevector_alloc (ikpcb * @var{pcb}, long @var{requested_number_of_bytes})
+Allocate, initialise and return a new bytevector capable of holding the
+specified number of bytes.  The contents of the data area are
+unspecified.
+@end deftypefun
+
+
+@deftypefun ikptr ik_bytevector_from_cstring (ikpcb * @var{pcb}, const char * @var{cstr})
+Allocate, initialise and return a new bytevector and copy the contents
+of the @asciiz{} string referenced by @var{cstr} in the data area.
+@end deftypefun
+
+
+@deftypefun ikptr ik_bytevector_from_cstring_len (ikpcb * @var{pcb}, const char * @var{cstr}, size_t @var{len})
+Allocate, initialise and return a new bytevector and copy the @var{len}
+bytes of the @ascii{} string referenced by @var{cstr} in the data area.
+@end deftypefun
+
+
+@deftypefun ikptr ik_bytevector_from_memory_block (ikpcb * @var{pcb}, void * @var{memory}, size_t @var{length})
+Allocate, initialise and return a new bytevector and copy in the data
+area @var{length} bytes from of the memory block referenced by
+@var{memory}.
+@end deftypefun
 
 @c page
-@node objects vector
+@node objects vectors
 @section Vector objects
 
 
-Vector objects are allocated on the heap; the function
-@cfunc{ikrt_make_vector1} can allocate a vector, but we can also call
-@cfunc{ik_safe_alloc} explicitly; to perform the allocation we compute
-the whole size of the vector data area, add to it room for meta data and
-finally compute the aligned block size:
+Vectors are variable length blocks of memory referenced by machine words
+tagged as vectors.  The first machine word of a vector block contains a
+fixnum representing the vector length; a vector is capable of holding at
+most a number of values equal to the return value of
+@func{greatest-fixnum}.  This means that the first word of a vector is
+tagged as a fixnum.
 
 @example
-ikpcb     pcb = ...;
-long int  number_of_elements = ...;
-long int  requested_size = wordsize * number_of_elements;
-long int  block_size     = disp_vector_data + requested_size;
-lont int  aligned_size   = align(block_size);
-ikptr     vec = ik_safe_alloc(pcb, aligned_size) + vector_tag;
+|------------------------|-------------| reference to vector
+      heap offset          vector tag
+
+|------------------------|-------------| vector first word
+     number of words       fixnum tag
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+Vector objects are allocated on the heap; to perform the allocation we
+compute the whole size of the data area, add to it room for meta data
+and finally compute the aligned block size:
+
+@example
+ikpcb * pcb            = the_pcb;
+long    length         = the_number_of_items;
+long    requested_size = wordsize * length;
+long    block_size     = disp_vector_data + requested_size;
+long    align_size     = IK_ALIGN(block_size);
+ikptr   vec = ik_safe_alloc(pcb, align_size) + vector_tag;
 @end example
 
 @noindent
@@ -14715,117 +14775,395 @@ We have to explicitly store the vector length in the memory block as a
 fixnum, so usually a full allocation looks like this:
 
 @example
-ikpcb     pcb;
-long int  len;
-ikptr     vec;
+ikptr
+ik_vector_alloc (ikpcb * pcb, long number_of_items)
+@{
+  long  aligned_size;
+  ikptr vec;
+  align_size = IK_ALIGN(disp_vector_data
+                        + number_of_items * wordsize);
+  vec        = ik_safe_alloc(pcb, align_size) + vector_tag;
+  ref(vec, off_vector_length) = IK_FIX(number_of_items);
+  return vec;
+@}
+@end example
 
-pcb  = ...;
-len  = ...;
-vec  = ik_safe_alloc(pcb, align(disp_vector_data+wordsize*len))
-       + vector_tag;
+To fill a vector of @math{3} items with fixnums we should do:
 
-ref(vec, off_vector_length) = fix(len);
+@example
+ikptr  s_vec = the_vector;
+ref(s_vec, off_vector_data + 0 * wordsize) = IK_FIX(10);
+ref(s_vec, off_vector_data + 1 * wordsize) = IK_FIX(20);
+ref(s_vec, off_vector_data + 2 * wordsize) = IK_FIX(30);
 @end example
 
 @noindent
-to fill a vector of 5 items with fixnums we should do:
+to retrieve the item at index @math{2} we do:
 
 @example
-ref(vec, off_vector_data+0*wordsize) = fix(10);
-ref(vec, off_vector_data+1*wordsize) = fix(20);
-ref(vec, off_vector_data+2*wordsize) = fix(30);
-ref(vec, off_vector_data+3*wordsize) = fix(40);
-ref(vec, off_vector_data+4*wordsize) = fix(50);
+long   index  = 2;
+ikptr  s_vec  = the_vector;
+ikptr  s_item = ref(s_vec, off_vector_data + index * wordsize);
+@end example
+
+@noindent
+and to retrieve the vector length:
+
+@example
+ikptr  s_vec    = the_vector;
+ikptr  s_length = ref(s_vec, off_vector_length);
+long   length   = IK_UNFIX(s_length);
 @end example
 
 
-@defmac vector_tag
-An integer used to tag pointers to vector memory blocks.
-@end defmac
+@deftypefn {Preprocessor Symbol} vector_tag
+An integer used to tag @ikptr{} references  to vector memory blocks.
+@end deftypefn
 
 
-@defmac disp_vector_length
+@deftypefn {Preprocessor Symbol} disp_vector_length
 Displacement of length.  The number of bytes to add to an untagged
 pointer to vector to get the pointer to the first byte in the word
 holding the vector length as fixnum.
-@end defmac
+@end deftypefn
 
 
-@defmac disp_vector_data
+@deftypefn {Preprocessor Symbol} disp_vector_data
 Displacement of data area.  The number of bytes to add to an untagged
 pointer to vector to get the pointer to the first byte in the data area.
-@end defmac
+@end deftypefn
 
 
-@defmac off_vector_length
-An integer to add to a tagged vector reference (@ikptr{}) to
-retrieve the pointer to the first byte of the vector length.  The
-vector length is a fixnum.
-@end defmac
+@deftypefn {Preprocessor Symbol} off_vector_length
+An integer to add to a tagged @ikptr{} reference to retrieve the pointer
+to the first byte of the vector length as fixnum.
+@end deftypefn
 
 
-@defmac off_vector_data
-An integer to add to a tagged vector reference (@ikptr{}) to
-retrieve the pointer to the first byte of the vector length.  The
-vector length is a fixnum.
+@deftypefn {Preprocessor Symbol} off_vector_data
+An integer to add to a tagged @ikptr{} vector reference to retrieve the
+pointer to the first byte of the vector length as fixnum.
+@end deftypefn
 
-Notice that on both @math{32} bits and @math{64} bits platforms: the
-first byte of the data area is at the same offset from the first byte of
-the vector memory block.
-@end defmac
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_VECTOR_LENGTH_FX (ikptr @var{vec})
+Return a fixnum representing the number of items in the vector
+@var{vec}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} long IK_VECTOR_LENGTH (ikptr @var{vec})
+Return an integer representing the number of items in the vector
+@var{vec}.
+@end deftypefn
+
+
+@deftypefn ikptr IK_ITEM (ikptr @var{vec}, long @var{idx})
+Evaluate to the item at index @var{idx} in the vector @var{vec}.  A use
+of this macro can appear both as operand and as left--side of an
+assignment; example:
+
+@example
+long    idx   = the_index;
+ikptr   s_vec = the_vector;
+ikptr   fx;
+
+IK_ITEM(s_vec, idx) = IK_FIX(10);
+fx = IK_ITEM(s_vec, idx);
+@end example
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on vectors
+
+
+@deftypefun ikptr ik_vector_alloc (ikpcb * @var{pcb}, long @var{number_of_items})
+Allocate, initialise and return a new vector object capable of holding
+the specified number of items.
+@end deftypefun
+
+
+@deftypefun int ik_is_vector (ikptr @var{vec})
+Return true if @var{vec} is a reference to a vector object.  This
+predicate tests that @var{vec} is tagged as vector reference and that
+the first machine word in the referenced memory block is a fixnum.
+@end deftypefun
 
 @c page
-@node objects struct
+@node objects structs
 @section Struct objects
 
 
-Data structure objects are allocated on the heap, @ref{syslib structs}
-for details on the binary layout; structures are best allocated at the
-Scheme level using the functions from the @library{vicare} library,
-@ref{iklib structs} for details.  It is sometimes convenient to access a
-structure at the C level, especially when interfacing with foreign
-libraries.
+A data structure is a variable--length block of memory referenced by
+machine words tagged as vectors; the first machine word of the structure
+is a reference to the type descriptor (@rtd{}), which is itself a data
+structure; the following words, if any, are the fields of the structure.
+A block of memory is a data structure if and only if: a reference to it
+is tagged as vector and its first word is tagged as vector.
+
+@example
+|----------------|----------| reference to structure
+  heap offset     vector tag
+
+|----------------|----------| first word of structure
+  heap offset     vector tag    = reference to rtd
+                                = reference to structure
+@end example
+
+The type descriptor of the type descriptors is the return value of
+@func{base-rtd} at the Scheme level and the structure referenced by the
+field @code{base_rtd} in the process control block.  Such base type
+descriptor is built at @value{PRJNAME}'s startup.  The graph of
+references for a structure and its type descriptor is as follows:
+
+@example
+      rtd ref
+     |-------|---------------| structure instance
+         |
+  -------
+ |
+ |     rtd ref
+  -->|-------|---------------| type descriptor
+         |
+  -------
+ |
+ |     rtd ref
+ +-->|-------|---------------| base type descriptor
+ |       |
+  -------
+@end example
+
+A type descriptor is a fixed--length block of memory composed of
+@math{6} machine words interpreted as follows:
+
+@enumerate
+@item
+A reference to the base @rtd{}.
+
+@item
+A fixnum representing the number of machine words in the structure minus
+@math{1}; this is the number of fields in the structure excluding the
+reference to the @rtd{}.  This value is @math{5} in the base @rtd{}.
+
+@item
+Scheme symbol representing the name of this structure type.
+
+@item
+Scheme list of symbols representing the names of fields in structures of
+this type.
+
+@item
+False or a reference to closure used to print to a Scheme port the
+structures of this type.  This is the printer function.
+
+@item
+Scheme symbol used as unique identifier for this type.
+@end enumerate
+
+Type descriptors are best defined at the Scheme level using the
+functions from the @library{vicare} library, @ref{iklib structs} for
+details.  To instantiate a structure at the C language level we should
+write a C function accepting the type descriptor as argument, and have
+the Scheme code hand the descriptor to it.  For example, at the Scheme
+level we do:
+
+@example
+(define-struct timeval
+  (tv_sec tv_usec))
+
+(define (gettimeofday)
+  (foreign-call "ikrt_posix_gettimeofday"
+                (type-descriptor timeval)))
+@end example
+
+@noindent
+and at the C level we do:
+
+@example
+ikptr
+ikrt_posix_gettimeofday (ikptr rtd, ikpcb * pcb)
+@{
+  /* build and return an instance of "timeval" */
+@}
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+Data structure objects are allocated on the heap; to perform the
+allocation we compute the whole size of the structure:
+
+@example
+ikpcb * pcb        = the_pcb;
+long    block_size = disp_record_data +
+                     wordsize * number_of_fields;
+long    align_size = IK_ALIGN(block_size);
+ikptr   stru = ik_safe_alloc(pcb, align_size) + record_tag;
+@end example
+
+@noindent
+@cfunc{ik_safe_alloc} returns an @ikptr{} value representing the aligned
+pointer, having the @math{3} least significant bits set to zero; we add
+to it the record tag (an integer value fitting in @math{3} bits) which
+allows to recognise records among all the other built in objects.
+
+We have to explicitly store a reference to the @rtd{} in the first
+machine word of the structure, so a full allocation looks like this:
+
+@example
+ikptr
+ik_struct_alloc (ikpcb * pcb, ikptr rtd, long number_of_fields)
+@{
+  long  align_size = IK_ALIGN(disp_record_data +
+                              number_of_fields * wordsize);
+  ikptr stru       = ik_safe_alloc(pcb, align_size)
+                     + record_tag;
+  ref(stru, off_record_rtd) = rtd;
+  return stru;
+@}
+@end example
+
+@noindent
+to recognise an @ikptr{} value as reference to a structure we do:
+
+@example
+ikptr   R = the_value;
+
+if ((record_tag == (record_mask & R)) &&
+    (record_tag == (record_mask & ref(R, off_record_rtd))))
+  it_is_a_structure();
+else
+  it_is_not();
+@end example
+
+@noindent
+structure fields are identifier at the C level by a zero--based index;
+to store a value in field @math{2} of a structure we do:
+
+@example
+ikptr  s_stru  = the_structure;
+ikptr  s_field = the_field;
+
+ref(s_stru, off_record_data + 2 * wordsize) = the_field;
+@end example
+
+@noindent
+and to retrieve a the value of field @math{2} we do:
+
+@example
+ikptr  s_stru  = the_structure;
+ikptr  s_field;
+
+s_field = ref(s_stru, off_record_data + 2 * wordsize);
+@end example
 
 
-@defmac disp_record_rtd
+@deffn {Preprocessor Symbol} record_mask
+@deffnx {Preprocessor Symbol} record_tag
+Integer values used to tag and recognise @ikptr{} references to
+structures.  @code{record_mask} isolates the tag bits from an @ikptr{}
+and @code{record_tag} represents the tag bits.  These values are the
+same used for vectors.
+@end deffn
+
+
+@deffn {Preprocessor Symbol} disp_record_rtd
 Displacement of the @rtd{} from the beginning of a structure block.  The
 number of bytes to add to an untagged pointer to structure to get the
 pointer to the first byte in the word holding the @rtd{}.
-@end defmac
+@end deffn
 
 
-@defmac disp_record_data
+@deffn {Preprocessor Symbol} disp_record_data
 Displacement of data area.  The number of bytes to add to an untagged
 pointer to structure to get the pointer to the first byte of the first
 field in the data area.
-@end defmac
+@end deffn
 
 
-@defmac off_record_rtd
-An integer to add to a tagged structure reference (@ikptr{}) to
-retrieve the pointer to the first byte of the @rtd{}.
-@end defmac
+@deffn {Preprocessor Symbol} off_record_rtd
+An integer to add to a tagged @ikptr{} structure reference to retrieve
+the pointer to the first byte of the @rtd{}.
+@end deffn
 
 
-@defmac off_record_data
-An integer to add to a tagged structure reference (@ikptr{}) to
-retrieve the pointer to the first byte of the first field of the
-structure.
+@deffn {Preprocessor Symbol} off_record_data
+An integer to add to a tagged @ikptr{} structure reference to retrieve
+the pointer to the first byte of the first field of the structure.
+@end deffn
 
-Example, to fill a structure of 5 fields with fixnums we should do:
+
+@deffn {Preprocessor Symbol} disp_rtd_rtd
+Displacement of the base @rtd{} from the beginning of an @rtd{} block.
+The number of bytes to add to an untagged pointer to @rtd{} to get the
+pointer to the first byte of the reference to @rtd{}.
+@end deffn
+
+
+@deffn {Preprocessor Symbol} disp_rtd_name
+@deffnx {Preprocessor Symbol} disp_rtd_length
+@deffnx {Preprocessor Symbol} disp_rtd_fields
+@deffnx {Preprocessor Symbol} disp_rtd_printer
+@deffnx {Preprocessor Symbol} disp_rtd_symbol
+Displacements of the fields of an @rtd{}.
+@end deffn
+
+
+@deffn {Preprocessor Symbol} rtd_size
+The total number of bytes in a memory block holding an @rtd{}.
+@end deffn
+
+
+@deffn {Preprocessor Symbol} off_rtd_rtd
+@deffnx {Preprocessor Symbol} off_rtd_name
+@deffnx {Preprocessor Symbol} off_rtd_length
+@deffnx {Preprocessor Symbol} off_rtd_fields
+@deffnx {Preprocessor Symbol} off_rtd_printer
+@deffnx {Preprocessor Symbol} off_rtd_symbol
+Integer to add to a tagged @ikptr{} @rtd{} reference to retrieve the
+pointer to the first byte of the fields.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_FIELD (ikptr @var{stru}, @var{idx})
+Evaluate to the location of the field at zero--based index @var{idx} for
+the structure @var{stru}.  A use of this macro can appear both as
+operand and as left--side of an assignment.
 
 @example
-void
-some_function (ikptr the_struct)
-@{
-  ref(the_struct, off_vector_data+0*wordsize) = fix(10);
-  ref(the_struct, off_vector_data+1*wordsize) = fix(20);
-  ref(the_struct, off_vector_data+2*wordsize) = fix(30);
-  ref(the_struct, off_vector_data+3*wordsize) = fix(40);
-  ref(the_struct, off_vector_data+4*wordsize) = fix(50);
-@}
+ikptr   s_stru = the_structure;
+ikptr   s_field;
+
+s_field = IK_FIELD(s_stru, 2);
+IK_FIELD(s_stru, 2) = s_field;
 @end example
-@end defmac
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on vectors
+
+
+@deftypefun int ik_is_struct (ikptr @var{R})
+Return true if @var{R} is a reference to a structure.
+@end deftypefun
+
+
+@deftypefun ikptr ik_struct_alloc (ikpcb * @var{pcb}, ikptr @var{rtd}, long @var{number_of_fields})
+Allocate, initialise and return a new structure instance of type
+@var{rtd} having @var{number_of_fields}.  The first word of the
+allocated block is initialised with @var{rtd}.
+@end deftypefun
 
 @c page
 @node debug int
@@ -15859,17 +16197,17 @@ pages 179-188.  ACM, New York, NY, USA, 2008.  ISBN
 @printindex cp
 
 @node function index
-@appendix An entry for each function.
+@appendix An entry for each function
 
 @printindex fn
 
 @node variable index
-@appendix An entry for each variable.
+@appendix An entry for each variable
 
 @printindex vr
 
 @node type index
-@appendix An entry for each type.
+@appendix An entry for each type
 
 @printindex tp
 

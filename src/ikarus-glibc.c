@@ -779,7 +779,7 @@ ikrt_glibc_regexec (ikptr s_compiled_regex, ikptr s_string, ikptr s_flags, ikpcb
       pcb->root0 = &s_match_vector;
       {
         for (i=0; i<1+nmatch; ++i) {
-          s_pair = IK_VECTOR_SET(s_match_vector, i, IK_PAIR_ALLOC(pcb));
+          s_pair = IK_ITEM(s_match_vector, i) = IK_PAIR_ALLOC(pcb);
           IK_CAR(s_pair) = IK_FIX(match[i].rm_so);
           IK_CDR(s_pair) = IK_FIX(match[i].rm_eo);
         }
@@ -858,10 +858,14 @@ ikrt_glibc_wordexp (ikptr s_words, ikptr s_flags, ikpcb * pcb)
   rv = wordexp(word, &W, unfix(s_flags));
   if (0 == rv) {
     ikptr       s_words = ik_vector_alloc(pcb, (long)W.we_wordc);
-    int         i;
-    for (i=0; i<W.we_wordc; ++i) {
-      IK_VECTOR_SET(s_words, i, ik_bytevector_from_cstring(pcb, W.we_wordv[i]));
+    pcb->root0 = &s_words;
+    {
+      int         i;
+      for (i=0; i<W.we_wordc; ++i) {
+        IK_ITEM(s_words, i) = ik_bytevector_from_cstring(pcb, W.we_wordv[i]);
+      }
     }
+    pcb->root0 = NULL;
     wordfree(&W);
     return s_words;
   } else

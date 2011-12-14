@@ -185,14 +185,19 @@ ik_bytevector_from_memory_block (ikpcb * pcb, void * memory, size_t length)
  ** Scheme vector utilities.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ik_vector_alloc (ikpcb * pcb, long int requested_number_of_items)
+int
+ik_is_vector (ikptr s_vec)
 {
-  long int  aligned_size;
-  ikptr     vec;
-  aligned_size = IK_ALIGN(disp_vector_data + requested_number_of_items * wordsize);
-  vec          = ik_safe_alloc(pcb, aligned_size) + vector_tag;
-  ref(vec, off_vector_length) = fix(requested_number_of_items);
+  return (vector_tag == (s_vec & vector_mask)) && IK_IS_FIXNUM(ref(s_vec, -vector_tag));
+}
+ikptr
+ik_vector_alloc (ikpcb * pcb, long number_of_items)
+{
+  long  align_size;
+  ikptr vec;
+  align_size = IK_ALIGN(disp_vector_data + number_of_items * wordsize);
+  vec        = ik_safe_alloc(pcb, align_size) + vector_tag;
+  ref(vec, off_vector_length) = IK_FIX(number_of_items);
   return vec;
 }
 
@@ -201,13 +206,20 @@ ik_vector_alloc (ikpcb * pcb, long int requested_number_of_items)
  ** Scheme struct utilities.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ik_struct_alloc (ikpcb * pcb, ikptr rtd, long int number_of_fields)
+int
+ik_is_struct (ikptr R)
 {
-  long  aligned_size = IK_ALIGN(disp_record_data + number_of_fields * wordsize);
-  ikptr data         = ik_safe_alloc(pcb, aligned_size) + vector_tag;
-  ref(data, off_record_rtd) = rtd;
-  return data;
+  return ((record_tag == (record_mask & R)) &&
+          (record_tag == (record_mask & ref(R, off_record_rtd))));
+}
+ikptr
+ik_struct_alloc (ikpcb * pcb, ikptr s_rtd)
+{
+  long  num_of_fields = IK_UNFIX(ref(s_rtd, off_rtd_length));
+  long  align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
+  ikptr s_stru        = ik_safe_alloc(pcb, align_size) + record_tag;
+  ref(s_stru, off_record_rtd) = s_rtd;
+  return s_stru;
 }
 
 

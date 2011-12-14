@@ -497,7 +497,7 @@ ikrt_with_local_storage (ikptr s_lengths, ikptr s_thunk, ikpcb * pcb)
   long          lengths[arity];
   int           i;
   for (i=0; i<arity; ++i)
-    total_length += lengths[i] = (long)unfix(IK_VECTOR_REF(s_lengths, i));
+    total_length += lengths[i] = IK_UNFIX(IK_ITEM(s_lengths, i));
   {
     uint8_t     buffer[total_length];
     long        offset;

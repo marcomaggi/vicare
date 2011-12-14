@@ -1942,12 +1942,12 @@
 
 ;;;; structs
 ;;
-;;A data structure  is a variable length block of  memory allocated as a
-;;vector; a reference  to a structure value is a  machine word tagged as
-;;vector.  The first machine word of the structure is a reference to the
-;;type  descriptor; a  type descriptor  is itself  a data  structure.  A
-;;block of memory is a data structure  if and only if: a reference to it
-;;is tagged as vector and its first word is tagged as vector.
+;;A data  structure is a variable  length block of  memory referenced by
+;;machine  words  tagged as  vectors;  the  first  machine word  of  the
+;;structure is  a reference  to the type  descriptor, which is  itself a
+;;data structure.  A block of memory is a data structure if and only if:
+;;a reference to it is tagged as  vector and its first word is tagged as
+;;vector.
 ;;
 ;; |----------------|----------| reference to structure
 ;;   heap offset     vector tag
