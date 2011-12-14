@@ -14834,7 +14834,7 @@ to the first byte of the vector length as fixnum.
 
 @defvr {Preprocessor Symbol} off_vector_data
 An integer to add to a tagged @ikptr{} vector reference to retrieve the
-pointer to the first byte of the vector length as fixnum.
+pointer to the first byte of the data area.
 @end defvr
 
 @c ------------------------------------------------------------
@@ -15162,12 +15162,17 @@ allocated block is initialised with @var{rtd}.
 @section Character objects
 
 
-A character is a 32-bit unsigned integer whose least significant bits
-are set to the character tag and whose most significant bits are set to
-the character's Unicode code point; @ref{unicode} for details on
-Unicode.  Let's say that machine words are 32-bit values, which means
-the word size is @math{4} bytes; then the representation of a character
-is:
+A Scheme character has two representations: when embedded in a Scheme
+object it is a 32-bit unsigned integer whose least significant bits are
+set to the character tag and whose most significant bits are set to the
+character's Unicode code point; when a standalone object, it is a
+machine word whose least significant bits are set to the character tag
+and whose most significant bits are set to the character's Unicode code
+point.  The least significant 32 bits of the two representations are
+equal.  @ref{unicode} for details on Unicode.
+
+Let's say that machine words are 32-bit values, which means the word
+size is @math{4} bytes; then the representation of a character is:
 
 @example
 |    Unicode code point    | char tag
@@ -15182,7 +15187,7 @@ machine words which embed characters.
 
 At the Scheme level: standalone characters are moved around as @ikptr{}
 values, but when characters are stored in a string the @ikptr{} value is
-converted to a 32-bit integer.
+converted to a 32-bit integer of type @code{ikchar}.
 
 @c ------------------------------------------------------------
 
@@ -15336,12 +15341,12 @@ ikptr
 ik_string_alloc (ikpcb * pcb, long number_of_chars)
 @{
   long  align_size;
-  ikptr vec;
+  ikptr str;
   align_size = IK_ALIGN(disp_string_data
                         + number_of_chars * sizeof(ikchar));
-  vec        = ik_safe_alloc(pcb, align_size) | string_tag;
-  ref(vec, off_string_length) = IK_FIX(number_of_chars);
-  return vec;
+  str        = ik_safe_alloc(pcb, align_size) | string_tag;
+  ref(str, off_string_length) = IK_FIX(number_of_chars);
+  return str;
 @}
 @end example
 
@@ -15349,11 +15354,11 @@ To fill a string of @math{3} chars with characters we should do:
 
 @example
 ikptr     s_str = the_string;
-ikchar *  ch    = s_str + off_string_data;
+ikchar *  ch    = (ikchar*)(s_str + off_string_data);
 
-ch[0] = IK_CHAR_FROM_INTEGER(10);
-ch[1] = IK_CHAR_FROM_INTEGER(20);
-ch[2] = IK_CHAR_FROM_INTEGER(30);
+ch[0] = IK_CHAR32_FROM_INTEGER(10);
+ch[1] = IK_CHAR32_FROM_INTEGER(20);
+ch[2] = IK_CHAR32_FROM_INTEGER(30);
 @end example
 
 @noindent
@@ -15362,7 +15367,7 @@ to retrieve the character at index @math{2} we do:
 @example
 long      index  = 2;
 ikptr     s_str  = the_string;
-ikchar *  ch     = s_str + off_string_data;
+ikchar *  ch     = (ikchar*)(s_str + off_string_data);
 ikptr     s_char = (ikptr)ch[index];
 @end example
 
@@ -15411,7 +15416,7 @@ to the first byte of the string length as fixnum.
 
 @defvr {Preprocessor Symbol} off_string_data
 An integer to add to a tagged @ikptr{} string reference to retrieve the
-pointer to the first byte of the string length as fixnum.
+pointer to the first byte of the data area.
 @end defvr
 
 @c ------------------------------------------------------------
@@ -15419,10 +15424,8 @@ pointer to the first byte of the string length as fixnum.
 @subsubheading Convenience preprocessor macros
 
 
-@deftypefn {Preprocessor Macro} int IK_IS_STRING (ikptr @var{str})
-Return true if @var{str} is a reference to a string object.  This
-predicate tests that @var{str} is tagged as string reference and that
-the first machine word in the referenced memory block is a fixnum.
+@deftypefn {Preprocessor Macro} int IK_IS_STRING (ikptr @var{obj})
+Return true if @var{obj} is a reference to a string object.
 @end deftypefn
 
 
@@ -15438,18 +15441,18 @@ Return an integer representing the number of characters in the string
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_CHAR (ikptr @var{str}, long @var{idx})
-Evaluate to the character at index @var{idx} in the string @var{str}.  A
-use of this macro can appear both as operand and as left--side of an
-assignment; example:
+@deftypefn {Preprocessor Macro} ikchar IK_CHAR32 (ikptr @var{str}, long @var{idx})
+Evaluate to the 32-bit character representation at index @var{idx} in
+the string @var{str}.  A use of this macro can appear both as operand
+and as left--side of an assignment; example:
 
 @example
 long    idx   = the_index;
 ikptr   s_str = the_string;
-ikptr   fx;
+ikchar  ch;
 
-IK_CHAR(s_str, idx) = IK_FIX(10);
-fx = IK_CHAR(s_str, idx);
+IK_CHAR32(s_str, idx) = IK_CHAR32_FROM_INTEGER(10);
+ch = IK_CHAR32(s_str, idx);
 @end example
 @end deftypefn
 

@@ -347,7 +347,7 @@ static ikptr do_read(ikpcb* pcb, fasl_port* p){
     for(i=0; i<len; i++){
       ikchar c;
       fasl_read_buf(p, &c, sizeof(ikchar));
-      IK_CHAR(str, i) = IK_CHAR32_FROM_INTEGER(c);
+      IK_CHAR32(str, i) = IK_CHAR32_FROM_INTEGER(c);
     }
     //str[off_string_data+len*string_char_size] = 0;
     if(put_mark_index){

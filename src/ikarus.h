@@ -447,7 +447,7 @@ typedef uint32_t        ikchar;
 #define IK_IS_STRING(X)                 (string_tag == (string_mask & (ikptr)(X)))
 #define IK_STRING_LENGTH_FX(STR)        IK_REF((STR), off_string_length)
 #define IK_STRING_LENGTH(STR)           IK_UNFIX(IK_REF((STR), off_string_length))
-#define IK_CHAR(STR,IDX)                (((ikchar*)(((long)(STR)) + off_string_data))[IDX])
+#define IK_CHAR32(STR,IDX)              (((ikchar*)(((long)(STR)) + off_string_data))[IDX])
 
 extern ikptr ik_string_alloc            (ikpcb * pcb, long number_of_chars);
 extern ikptr ikrt_string_to_symbol      (ikptr, ikpcb* pcb);
