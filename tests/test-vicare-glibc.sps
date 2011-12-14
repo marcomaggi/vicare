@@ -74,7 +74,7 @@
 ;;;	(check-pretty-print ((filename->string-func) template))
 	(unwind-protect
 	    (fixnum? fd)
-	  #f))
+	  (px.unlink template)))
     => #t)
 
   (check
@@ -84,7 +84,7 @@
 ;;;	(check-pretty-print ((filename->string-func) name))
 	(unwind-protect
 	    (bytevector? name)
-	  #f))
+	  (px.rmdir template)))
     => #t)
 
   #t)
