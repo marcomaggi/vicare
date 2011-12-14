@@ -400,7 +400,7 @@ ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
   IK_CDR(PAIR) = LIST;                              \
   LIST=PAIR;
 
-#define IK_PAIR_ALLOC(PCB)      (ik_safe_alloc((PCB), IK_ALIGN(pair_size)) + pair_tag)
+#define IK_PAIR_ALLOC(PCB)      (ik_safe_alloc((PCB), IK_ALIGN(pair_size)) | pair_tag)
 
 long    ik_list_length                  (ikptr x);
 void    ik_list_to_argv                 (ikptr x, char **argv);
@@ -414,20 +414,22 @@ ikptr   ik_list_from_argv_and_argc      (ikpcb * pcb, char ** argv, long argc);
  ** Character objects.
  ** ----------------------------------------------------------------- */
 
-typedef int ikchar;
+typedef uint32_t        ikchar;
 
 #define char_tag        0x0F
 #define char_mask       0xFF
 #define char_shift      8
 
-#define is_char(X)              \
-  (char_tag == (char_mask & (int)(X)))
+#define IK_IS_CHAR(X)           (char_tag == (char_mask & (ikptr)(X)))
 
-#define int_to_scheme_char(X)   \
+#define IK_CHAR_FROM_INTEGER(X) \
   ((ikptr)((((unsigned long)(X)) << char_shift) | char_tag))
 
-#define integer_to_char(X)      \
-  ((ikchar)((((int)(X)) << char_shift) + char_tag))
+#define IK_CHAR32_FROM_INTEGER(X) \
+  ((ikchar)((((unsigned long)(X)) << char_shift) | char_tag))
+
+#define IK_CHAR_TO_INTEGER(X) \
+  ((unsigned long)(((ikptr)(X)) >> char_shift))
 
 
 /** --------------------------------------------------------------------
@@ -435,17 +437,21 @@ typedef int ikchar;
  ** ----------------------------------------------------------------- */
 
 #define string_char_size        4
+#define string_mask             7
 #define string_tag              6
 #define disp_string_length      0
 #define disp_string_data        wordsize
 #define off_string_length       (disp_string_length - string_tag)
-#define off_string_data         (disp_string_data - string_tag)
+#define off_string_data         (disp_string_data   - string_tag)
 
-#define string_set(x,i,c) \
-  (((ikchar*)(((long)(x)) + off_string_data))[i] = ((ikchar)(c)))
+#define IK_IS_STRING(X)                 (string_tag == (string_mask & (ikptr)(X)))
+#define IK_STRING_LENGTH_FX(STR)        IK_REF((STR), off_string_length)
+#define IK_STRING_LENGTH(STR)           IK_UNFIX(IK_REF((STR), off_string_length))
+#define IK_CHAR(STR,IDX)                (((ikchar*)(((long)(STR)) + off_string_data))[IDX])
 
-ikptr   ikrt_string_to_symbol   (ikptr, ikpcb *);
-ikptr   ikrt_strings_to_gensym  (ikptr, ikptr,  ikpcb*);
+extern ikptr ik_string_alloc            (ikpcb * pcb, long number_of_chars);
+extern ikptr ikrt_string_to_symbol      (ikptr, ikpcb* pcb);
+extern ikptr ikrt_strings_to_gensym     (ikptr, ikptr,  ikpcb* pcb);
 
 
 /** --------------------------------------------------------------------

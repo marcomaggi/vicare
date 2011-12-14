@@ -31,7 +31,7 @@
  ** ----------------------------------------------------------------- */
 
 #define DEFINE_AND_ALLOC_FLONUM(r)                              \
-  ikptr r = ik_unsafe_alloc(pcb, flonum_size) + vector_tag;     \
+  ikptr r = ik_unsafe_alloc(pcb, flonum_size) | vector_tag;     \
   ref(r, -vector_tag) = (ikptr)flonum_tag
 
 ikptr
@@ -45,7 +45,7 @@ ik_flonum_alloc (ikpcb * pcb, double fl)
 /* ------------------------------------------------------------------ */
 
 #define DEFINE_AND_ALLOC_CFLONUM(r)                              \
-  ikptr r = ik_unsafe_alloc(pcb, cflonum_size) + vector_tag;     \
+  ikptr r = ik_unsafe_alloc(pcb, cflonum_size) | vector_tag;     \
   ref(r, -vector_tag) = (ikptr)cflonum_tag
 
 ikptr

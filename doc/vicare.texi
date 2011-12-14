@@ -645,6 +645,7 @@ Appendices
 * missing::                     Missing Features.
 * building::                    Building infrastructure.
 * credits::                     Credits for this document.
+* unicode::                     On Unicode and @utf{} encodings.
 * package license::             @gnu{} General Public License.
 * references::                  Bibliography and references.
 
@@ -10291,7 +10292,7 @@ bits set to zero.
 
 @example
 |------------------------|-------------| reference to symbol
-      heap offset          vector tag
+      heap pointer         vector tag
 
 |------------------------|-------------| symbol first word
    all set to zero         symbol tag
@@ -10507,7 +10508,7 @@ words in the memory block after the first one.
 
 @example
 |------------------------|-------------| reference to bignum
-      heap offset          vector tag
+      heap pointer         vector tag
 
                      sign bit
 |----------------------|-|-------------| bignum first word
@@ -10566,7 +10567,7 @@ bits set to zero.
 
 @example
 |------------------------|-------------| reference to flonum
-      heap offset          vector tag
+      heap pointer         vector tag
 
 |------------------------|-------------| flonum first word
    all set to zero         flonum tag
@@ -10657,7 +10658,7 @@ bits set to zero.
 
 @example
 |------------------------|-------------| reference to ratnum
-      heap offset          vector tag
+      heap pointer         vector tag
 
 |------------------------|-------------| ratnum first word
    all set to zero         ratnum tag
@@ -10712,7 +10713,7 @@ significant bits set to zero.
 
 @example
 |------------------------|-------------| reference to compnum
-      heap offset          vector tag
+      heap pointer         vector tag
 
 |------------------------|-------------| compnum first word
    all set to zero         compnum tag
@@ -10766,7 +10767,7 @@ significant bits set to zero.
 
 @example
 |------------------------|-------------| reference to cflonum
-      heap offset          vector tag
+      heap pointer         vector tag
 
 |------------------------|-------------| cflonum first word
    all set to zero         cflonum tag
@@ -10807,23 +10808,6 @@ Return the reference to the imaginary part.
 @node syslib chars
 @section Low level character operations
 
-
-A character is a machine word whose least significant bits are set to
-the character tag.  Let's say that machine words are 32-bit values,
-which means the word size is @math{4} bytes; then the representation of
-a character is:
-
-@example
-      24 bits char rep
-|..........................|00001111
-
-|--------|--------|--------|--------|
-  byte3    byte2    byte1    byte0
-@end example
-
-@noindent
-the least significant byte is set to @code{#x0F}: this ``tags'' the
-machine words which embed fixnums.
 
 The arguments @var{ch} to these operations must be characters, the
 arguments @var{fx} must be fixnums in the range @code{[0, #x10FFFF]} but
@@ -11069,12 +11053,6 @@ Store @var{fl} at index @var{fx} of @var{bv}.
 @section Low level string operations
 
 
-Strings are blocks of memory referenced by machine words tagged as
-strings.  The first word in the memory block is a fixnum representing
-the number of characters in the data area; a string is capable of
-holding at most a number of characters equal to the return value of
-@func{greatest-fixnum}.
-
 The arguments @var{str} to these operations must be references to
 strings, the arguments @var{fx} must be fixnums in the appropriate
 range, the arguments @var{ch} must be characters.  The following
@@ -11112,7 +11090,7 @@ is the bitwise OR between a port tag and a bitvector of port attributes.
 
 @example
 |----------------|----------| port value
-  heap offset     vector tag
+  heap pointer    vector tag
 
 |----------------|----------| 1st word of port's memory block
  port attributes   port tag
@@ -11223,7 +11201,7 @@ block holds the actual pointer value.
 
 @example
 |------------------------|-------------| reference to pointer
-      heap offset          vector tag
+      heap pointer         vector tag
 
 |------------------------|-------------| pointer first word
    all set to zero         pointer tag
@@ -13742,7 +13720,21 @@ Scheme language compiler @file{ikarus.compiler.sls}.
 * objects bytevectors::         Bytevector objects.
 * objects vectors::             Vector objects.
 * objects structs::             Struct objects.
+* objects chars::               Character objects.
+* objects strings::             String objects.
 @end menu
+
+@ignore
+* syslib symbols::              Low level symbol operations.
+* syslib bignums::              Low level bignum operations.
+* syslib flonums::              Low level flonum operations.
+* syslib ratnums::              Low level ratnum operations.
+* syslib compnums::             Low level compnum operations.
+* syslib cflonums::             Low level cflonum operations.
+* syslib ports::                Low level port structures.
+* syslib transcoders::          Low level transcoder operations.
+* syslib pointers::             Low level pointer operations.
+@end ignore
 
 @c page
 @node objects refs
@@ -14093,8 +14085,8 @@ aligned pointer:
 @example
 uint8_t * allocated_block = (uint8_t *)pcb->allocation_pointer;
 long int  requested_size  = ...;
-long int  aligned_size    = IK_ALIGN(requested_size);
-uint8_t * next_free_block = allocated_block + aligned_size;
+long int  align_size      = IK_ALIGN(requested_size);
+uint8_t * next_free_block = allocated_block + align_size;
 pcb->allocation_pointer   = (ikptr)next_free_block;
 
 /* use "allocated_block" */
@@ -14161,10 +14153,10 @@ with:
 @end deftypefn
 
 
-@deftypefun ikptr ik_safe_alloc (ikpcb * @var{pcb}, unsigned long @var{aligned_size})
+@deftypefun ikptr ik_safe_alloc (ikpcb * @var{pcb}, unsigned long @var{align_size})
 Allocate a memory block on the heap and return a reference to it as an
 @strong{untagged} pointer.  @var{pcb} must reference the process control
-block, @var{aligned_size} must be the requested number of bytes filtered
+block, @var{align_size} must be the requested number of bytes filtered
 through @cfunc{IK_ALIGN}.
 
 If not enough memory is available on the heap, a garbage collection is
@@ -14375,7 +14367,7 @@ are the pair tag.
 
 @example
 |-------------------------|-------------| reference to pair
-      heap offset            pair tag
+      heap pointer           pair tag
 
 |-------------------|-------------------| pair memory block
     word 0 = car        word 1 = cdr
@@ -14391,7 +14383,7 @@ Pairs are allocated as follows:
 ikpcb *  pcb = ...;
 ikptr    s_pair;
 
-s_pair = ik_safe_alloc(pcb, pair_size) + pair_tag;
+s_pair = ik_safe_alloc(pcb, pair_size) | pair_tag;
 @end example
 
 @noindent
@@ -14418,25 +14410,25 @@ ref(s_pair, off_cdr) = s_car;
 see below for less verbose preprocessor macros.
 
 
-@deffn {Preprocessor Symbol} pair_mask
-@deffnx {Preprocessor Symbol} pair_tag
-@deffnx {Preprocessor Symbol} pair_size
+@defvr {Preprocessor Symbol} pair_mask
+@defvrx {Preprocessor Symbol} pair_tag
+@defvrx {Preprocessor Symbol} pair_size
 @code{pair_mask} is the bit pattern used to isolate a pair tag from a
 reference @ikptr{}; @code{pair_tag} is the tag of @ikptr{} values
 referencing a pair; @code{pair_size} is the number of bytes in a pair
 memory block on the heap.
-@end deffn
+@end defvr
 
 
-@deffn {Preprocessor Symbol} disp_car
-@deffnx {Preprocessor Symbol} disp_cdr
-@deffnx {Preprocessor Symbol} off_car
-@deffnx {Preprocessor Symbol} off_cdr
+@defvr {Preprocessor Symbol} disp_car
+@defvrx {Preprocessor Symbol} disp_cdr
+@defvrx {Preprocessor Symbol} off_car
+@defvrx {Preprocessor Symbol} off_cdr
 @code{disp_car} and @code{disp_cdr} are the offsets in bytes of the car
 and cdr from the beginning of a pair memory block; @code{off_car} and
 @code{off_cdr} are integers to be added to a reference @ikptr{} tagged
 as pair to retrieve the car and the cdr from a pair memory block.
-@end deffn
+@end defvr
 
 @c ------------------------------------------------------------
 
@@ -14599,7 +14591,7 @@ ikpcb * pcb        = the_pcb;
 long    bv_len     = the_number_of_bytes;
 long    block_size = disp_bytevector_data + bv_len + 1;
 lont    align_size = IK_ALIGN(block_size);
-ikptr   bv = ik_safe_alloc(pcb, align_size) + bytevector_tag;
+ikptr   bv = ik_safe_alloc(pcb, align_size) | bytevector_tag;
 @end example
 
 @cfunc{ik_safe_alloc} returns an @ikptr{} value representing the
@@ -14621,7 +14613,7 @@ ik_bytevector_alloc (ikpcb * pcb, long bv_len)
   char * data;
   align_size = IK_ALIGN(disp_bytevector_data + bv_len + 1);
   bv         = ik_safe_alloc(pcb, align_size)
-               + bytevector_tag;
+               | bytevector_tag;
   ref(bv, off_bytevector_length) = IK_FIX(bv_len);
   data = (char *)(long)(bv + off_bytevector_data);
   data[bv_len] = '\0';
@@ -14640,40 +14632,40 @@ data_area = (uint8_t *)(long)(bv + off_bytevector_data);
 @end example
 
 
-@deffn {Preprocessor Symbol} bytevector_tag
+@defvr {Preprocessor Symbol} bytevector_tag
 An integer used to tag @ikptr{} references to bytevector memory blocks.
-@end deffn
+@end defvr
 
 
-@deffn {Preprocessor Symbol} disp_bytevector_length
+@defvr {Preprocessor Symbol} disp_bytevector_length
 Displacement of length.  The number of bytes to add to an untagged
 pointer to bytevector to get the pointer to the first byte in the
 machine word holding the bytevector length as fixnum.
-@end deffn
+@end defvr
 
 
-@deffn {Preprocessor Symbol} disp_bytevector_data
+@defvr {Preprocessor Symbol} disp_bytevector_data
 Displacement of data area.  The number of bytes to add to an untagged
 pointer to bytevector to get the pointer to the first byte in the data
 area.
-@end deffn
+@end defvr
 
 
-@deffn {Preprocessor Symbol} off_bytevector_length
+@defvr {Preprocessor Symbol} off_bytevector_length
 An integer to add to a tagged @ikptr{} bytevector reference to retrieve
 the pointer to the first byte of the fixnum representing the bytevector
 length.
-@end deffn
+@end defvr
 
 
-@deffn {Preprocessor Symbol} off_bytevector_data
+@defvr {Preprocessor Symbol} off_bytevector_data
 An integer to add to a tagged @ikptr{} bytevector reference to retrieve
 the pointer to the first byte of the data area.
 
 Notice that on both 32-bit and 64-bit platforms: the first byte of the
 data area is at the same byte offset from the first byte of the
 bytevector memory block.
-@end deffn
+@end defvr
 
 @c ------------------------------------------------------------
 
@@ -14742,7 +14734,7 @@ tagged as a fixnum.
 
 @example
 |------------------------|-------------| reference to vector
-      heap offset          vector tag
+      heap pointer         vector tag
 
 |------------------------|-------------| vector first word
      number of words       fixnum tag
@@ -14762,7 +14754,7 @@ long    length         = the_number_of_items;
 long    requested_size = wordsize * length;
 long    block_size     = disp_vector_data + requested_size;
 long    align_size     = IK_ALIGN(block_size);
-ikptr   vec = ik_safe_alloc(pcb, align_size) + vector_tag;
+ikptr   vec = ik_safe_alloc(pcb, align_size) | vector_tag;
 @end example
 
 @noindent
@@ -14778,11 +14770,11 @@ fixnum, so usually a full allocation looks like this:
 ikptr
 ik_vector_alloc (ikpcb * pcb, long number_of_items)
 @{
-  long  aligned_size;
+  long  align_size;
   ikptr vec;
   align_size = IK_ALIGN(disp_vector_data
                         + number_of_items * wordsize);
-  vec        = ik_safe_alloc(pcb, align_size) + vector_tag;
+  vec        = ik_safe_alloc(pcb, align_size) | vector_tag;
   ref(vec, off_vector_length) = IK_FIX(number_of_items);
   return vec;
 @}
@@ -14816,34 +14808,34 @@ long   length   = IK_UNFIX(s_length);
 @end example
 
 
-@deftypefn {Preprocessor Symbol} vector_tag
+@defvr {Preprocessor Symbol} vector_tag
 An integer used to tag @ikptr{} references  to vector memory blocks.
-@end deftypefn
+@end defvr
 
 
-@deftypefn {Preprocessor Symbol} disp_vector_length
+@defvr {Preprocessor Symbol} disp_vector_length
 Displacement of length.  The number of bytes to add to an untagged
 pointer to vector to get the pointer to the first byte in the word
 holding the vector length as fixnum.
-@end deftypefn
+@end defvr
 
 
-@deftypefn {Preprocessor Symbol} disp_vector_data
+@defvr {Preprocessor Symbol} disp_vector_data
 Displacement of data area.  The number of bytes to add to an untagged
 pointer to vector to get the pointer to the first byte in the data area.
-@end deftypefn
+@end defvr
 
 
-@deftypefn {Preprocessor Symbol} off_vector_length
+@defvr {Preprocessor Symbol} off_vector_length
 An integer to add to a tagged @ikptr{} reference to retrieve the pointer
 to the first byte of the vector length as fixnum.
-@end deftypefn
+@end defvr
 
 
-@deftypefn {Preprocessor Symbol} off_vector_data
+@defvr {Preprocessor Symbol} off_vector_data
 An integer to add to a tagged @ikptr{} vector reference to retrieve the
 pointer to the first byte of the vector length as fixnum.
-@end deftypefn
+@end defvr
 
 @c ------------------------------------------------------------
 
@@ -14862,7 +14854,7 @@ Return an integer representing the number of items in the vector
 @end deftypefn
 
 
-@deftypefn ikptr IK_ITEM (ikptr @var{vec}, long @var{idx})
+@deftypefn {Preprocessor Macro} ikptr IK_ITEM (ikptr @var{vec}, long @var{idx})
 Evaluate to the item at index @var{idx} in the vector @var{vec}.  A use
 of this macro can appear both as operand and as left--side of an
 assignment; example:
@@ -14908,10 +14900,10 @@ is tagged as vector and its first word is tagged as vector.
 
 @example
 |----------------|----------| reference to structure
-  heap offset     vector tag
+  heap pointer    vector tag
 
 |----------------|----------| first word of structure
-  heap offset     vector tag    = reference to rtd
+  heap pointer    vector tag    = reference to rtd
                                 = reference to structure
 @end example
 
@@ -15004,7 +14996,7 @@ ikpcb * pcb        = the_pcb;
 long    block_size = disp_record_data +
                      wordsize * number_of_fields;
 long    align_size = IK_ALIGN(block_size);
-ikptr   stru = ik_safe_alloc(pcb, align_size) + record_tag;
+ikptr   stru = ik_safe_alloc(pcb, align_size) | record_tag;
 @end example
 
 @noindent
@@ -15023,7 +15015,7 @@ ik_struct_alloc (ikpcb * pcb, ikptr rtd, long number_of_fields)
   long  align_size = IK_ALIGN(disp_record_data +
                               number_of_fields * wordsize);
   ikptr stru       = ik_safe_alloc(pcb, align_size)
-                     + record_tag;
+                     | record_tag;
   ref(stru, off_record_rtd) = rtd;
   return stru;
 @}
@@ -15064,71 +15056,71 @@ s_field = ref(s_stru, off_record_data + 2 * wordsize);
 @end example
 
 
-@deffn {Preprocessor Symbol} record_mask
-@deffnx {Preprocessor Symbol} record_tag
+@defvr {Preprocessor Symbol} record_mask
+@defvrx {Preprocessor Symbol} record_tag
 Integer values used to tag and recognise @ikptr{} references to
 structures.  @code{record_mask} isolates the tag bits from an @ikptr{}
 and @code{record_tag} represents the tag bits.  These values are the
 same used for vectors.
-@end deffn
+@end defvr
 
 
-@deffn {Preprocessor Symbol} disp_record_rtd
+@defvr {Preprocessor Symbol} disp_record_rtd
 Displacement of the @rtd{} from the beginning of a structure block.  The
 number of bytes to add to an untagged pointer to structure to get the
 pointer to the first byte in the word holding the @rtd{}.
-@end deffn
+@end defvr
 
 
-@deffn {Preprocessor Symbol} disp_record_data
+@defvr {Preprocessor Symbol} disp_record_data
 Displacement of data area.  The number of bytes to add to an untagged
 pointer to structure to get the pointer to the first byte of the first
 field in the data area.
-@end deffn
+@end defvr
 
 
-@deffn {Preprocessor Symbol} off_record_rtd
+@defvr {Preprocessor Symbol} off_record_rtd
 An integer to add to a tagged @ikptr{} structure reference to retrieve
 the pointer to the first byte of the @rtd{}.
-@end deffn
+@end defvr
 
 
-@deffn {Preprocessor Symbol} off_record_data
+@defvr {Preprocessor Symbol} off_record_data
 An integer to add to a tagged @ikptr{} structure reference to retrieve
 the pointer to the first byte of the first field of the structure.
-@end deffn
+@end defvr
 
 
-@deffn {Preprocessor Symbol} disp_rtd_rtd
+@defvr {Preprocessor Symbol} disp_rtd_rtd
 Displacement of the base @rtd{} from the beginning of an @rtd{} block.
 The number of bytes to add to an untagged pointer to @rtd{} to get the
 pointer to the first byte of the reference to @rtd{}.
-@end deffn
+@end defvr
 
 
-@deffn {Preprocessor Symbol} disp_rtd_name
-@deffnx {Preprocessor Symbol} disp_rtd_length
-@deffnx {Preprocessor Symbol} disp_rtd_fields
-@deffnx {Preprocessor Symbol} disp_rtd_printer
-@deffnx {Preprocessor Symbol} disp_rtd_symbol
+@defvr {Preprocessor Symbol} disp_rtd_name
+@defvrx {Preprocessor Symbol} disp_rtd_length
+@defvrx {Preprocessor Symbol} disp_rtd_fields
+@defvrx {Preprocessor Symbol} disp_rtd_printer
+@defvrx {Preprocessor Symbol} disp_rtd_symbol
 Displacements of the fields of an @rtd{}.
-@end deffn
+@end defvr
 
 
-@deffn {Preprocessor Symbol} rtd_size
+@defvr {Preprocessor Symbol} rtd_size
 The total number of bytes in a memory block holding an @rtd{}.
-@end deffn
+@end defvr
 
 
-@deffn {Preprocessor Symbol} off_rtd_rtd
-@deffnx {Preprocessor Symbol} off_rtd_name
-@deffnx {Preprocessor Symbol} off_rtd_length
-@deffnx {Preprocessor Symbol} off_rtd_fields
-@deffnx {Preprocessor Symbol} off_rtd_printer
-@deffnx {Preprocessor Symbol} off_rtd_symbol
+@defvr {Preprocessor Symbol} off_rtd_rtd
+@defvrx {Preprocessor Symbol} off_rtd_name
+@defvrx {Preprocessor Symbol} off_rtd_length
+@defvrx {Preprocessor Symbol} off_rtd_fields
+@defvrx {Preprocessor Symbol} off_rtd_printer
+@defvrx {Preprocessor Symbol} off_rtd_symbol
 Integer to add to a tagged @ikptr{} @rtd{} reference to retrieve the
 pointer to the first byte of the fields.
-@end deffn
+@end defvr
 
 @c ------------------------------------------------------------
 
@@ -15163,6 +15155,312 @@ Return true if @var{R} is a reference to a structure.
 Allocate, initialise and return a new structure instance of type
 @var{rtd} having @var{number_of_fields}.  The first word of the
 allocated block is initialised with @var{rtd}.
+@end deftypefun
+
+@c page
+@node objects chars
+@section Character objects
+
+
+A character is a 32-bit unsigned integer whose least significant bits
+are set to the character tag and whose most significant bits are set to
+the character's Unicode code point; @ref{unicode} for details on
+Unicode.  Let's say that machine words are 32-bit values, which means
+the word size is @math{4} bytes; then the representation of a character
+is:
+
+@example
+|    Unicode code point    | char tag
+
+|--------|--------|--------|--------|
+  byte3    byte2    byte1    byte0
+@end example
+
+@noindent
+the least significant byte is set to @code{#x0F}: this ``tags'' the
+machine words which embed characters.
+
+At the Scheme level: standalone characters are moved around as @ikptr{}
+values, but when characters are stored in a string the @ikptr{} value is
+converted to a 32-bit integer.
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+Standalone characters are encoded into @ikptr{} values as follows:
+
+@example
+unsigned long   unicode_code_point = the_code_point;
+ikptr           s_char;
+
+s_char = (unicode_code_point << char_shift) | char_tag;
+@end example
+
+@noindent
+decoded to @code{unsigned long} values as follows:
+
+@example
+ikptr           s_char = the_character;
+unsigned long   unicode_code_point;
+
+unicode_code_point = s_char >> char_shift;
+@end example
+
+@noindent
+and identified as follows:
+
+@example
+ikptr   X = the_value;
+
+if (char_tag == (char_mask & X))
+  it_is_a_character();
+else
+  it_is_not();
+@end example
+
+Characters from a Scheme string are decoded from @code{ikchar} to
+@code{unsigned long} as follows:
+
+@example
+ikchar          ch = the_32bit_character;
+unsigned long   unicode_code_point;
+
+unicode_code_point = s_char >> char_shift;
+@end example
+
+@noindent
+and encoded from @code{unsigned long} to @code{ikchar} as follows:
+
+@example
+unsigned long   unicode_code_point = the_code_point;
+ikchar          ch;
+
+ch = (ikchar)((unicode_code_point << char_shift) | char_tag);
+@end example
+
+
+@deftp {Type Definition} ikchar
+An alias for @code{uint32_t} used to store a Unicode code point tagged
+as character.
+@end deftp
+
+
+@defvr {Preprocessor Symbol} char_mask
+@defvrx {Preprocessor Symbol} char_tag
+Integer values used to tag and recognise @ikptr{} values representing
+characters.  @code{char_mask} isolates the tag bits from an @ikptr{} and
+@code{char_tag} represents the tag bits.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} char_shift
+Integer value representing the number of bits we must shift left to turn
+a C language @code{long} into a machine word ready to be tagged as
+Scheme character.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_CHAR (ikptr @var{X})
+Evaluate to true if @var{X} is a Scheme character.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_CHAR_FROM_INTEGER (unsigned long @var{X})
+@deftypefnx {Preprocessor Macro} {unsigned long} IK_CHAR_to_INTEGER (ikptr @var{X})
+Convert a Scheme character to and from an @code{unsigned long} value
+representing the Unicode code point.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikchar IK_CHAR32_FROM_INTEGER (unsigned long @var{X})
+Convert a @code{unsigned long} value representing the Unicode code
+point into a 32-bit integer representing a Scheme character to be stored
+into a string.
+@end deftypefn
+
+@c page
+@node objects strings
+@section String objects
+
+
+Strings are variable--length blocks of memory referenced by machine
+words tagged as strings.  The first word in the memory block is a fixnum
+representing the number of characters in the data area; a string is
+capable of holding at most a number of characters equal to the return
+value of @func{greatest-fixnum}.
+
+@example
+|------------------------|-------------| reference to string
+      heap pointer         string tag
+
+|------------------------|-------------| string first word
+     number of words       fixnum tag
+@end example
+
+All the remaining space in the memory block is filled with 32-bit
+unsigned integers representing Scheme characters.
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+String objects are allocated on the heap; to perform the allocation we
+compute the whole size of the data area, add to it room for meta data
+and finally compute the aligned block size:
+
+@example
+ikpcb * pcb            = the_pcb;
+long    length         = the_number_of_chars;
+long    requested_size = sizeof(ikchar) * length;
+long    block_size     = disp_string_data + requested_size;
+long    align_size     = IK_ALIGN(block_size);
+ikptr   str = ik_safe_alloc(pcb, align_size) | string_tag;
+@end example
+
+@noindent
+@cfunc{ik_safe_alloc} returns an @ikptr{} value representing the aligned
+pointer, having the @math{3} least significant bits set to zero; we add
+to it the string tag (an integer value fitting in @math{3} bits) which
+allows to recognise strings among all the other built in objects.
+
+We have to explicitly store the string length in the memory block as a
+fixnum, so usually a full allocation looks like this:
+
+@example
+ikptr
+ik_string_alloc (ikpcb * pcb, long number_of_chars)
+@{
+  long  align_size;
+  ikptr vec;
+  align_size = IK_ALIGN(disp_string_data
+                        + number_of_chars * sizeof(ikchar));
+  vec        = ik_safe_alloc(pcb, align_size) | string_tag;
+  ref(vec, off_string_length) = IK_FIX(number_of_chars);
+  return vec;
+@}
+@end example
+
+To fill a string of @math{3} chars with characters we should do:
+
+@example
+ikptr     s_str = the_string;
+ikchar *  ch    = s_str + off_string_data;
+
+ch[0] = IK_CHAR_FROM_INTEGER(10);
+ch[1] = IK_CHAR_FROM_INTEGER(20);
+ch[2] = IK_CHAR_FROM_INTEGER(30);
+@end example
+
+@noindent
+to retrieve the character at index @math{2} we do:
+
+@example
+long      index  = 2;
+ikptr     s_str  = the_string;
+ikchar *  ch     = s_str + off_string_data;
+ikptr     s_char = (ikptr)ch[index];
+@end example
+
+@noindent
+and to retrieve the string length:
+
+@example
+ikptr  s_str    = the_string;
+ikptr  s_length = ref(s_str, off_string_length);
+long   length   = IK_UNFIX(s_length);
+@end example
+
+
+@defvr {Preprocessor Symbol} string_char_size
+Integer value representing the number of bytes in a Scheme character
+stored in a Scheme string.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} string_mask
+@defvrx {Preprocessor Symbol} string_tag
+Integer values used to tag and recognise @ikptr{} values representing
+string references.  @code{string_mask} isolates the tag bits from an
+@ikptr{} and @code{string_tag} represents the tag bits.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_string_length
+Displacement of length.  The number of bytes to add to an untagged
+pointer to string to get the pointer to the first byte in the word
+holding the string length as fixnum.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_string_data
+Displacement of data area.  The number of bytes to add to an untagged
+pointer to string to get the pointer to the first byte in the data area.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_string_length
+An integer to add to a tagged @ikptr{} reference to retrieve the pointer
+to the first byte of the string length as fixnum.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_string_data
+An integer to add to a tagged @ikptr{} string reference to retrieve the
+pointer to the first byte of the string length as fixnum.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_STRING (ikptr @var{str})
+Return true if @var{str} is a reference to a string object.  This
+predicate tests that @var{str} is tagged as string reference and that
+the first machine word in the referenced memory block is a fixnum.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_STRING_LENGTH_FX (ikptr @var{str})
+Return a fixnum representing the number of characters in the string
+@var{str}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} long IK_STRING_LENGTH (ikptr @var{str})
+Return an integer representing the number of characters in the string
+@var{str}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_CHAR (ikptr @var{str}, long @var{idx})
+Evaluate to the character at index @var{idx} in the string @var{str}.  A
+use of this macro can appear both as operand and as left--side of an
+assignment; example:
+
+@example
+long    idx   = the_index;
+ikptr   s_str = the_string;
+ikptr   fx;
+
+IK_CHAR(s_str, idx) = IK_FIX(10);
+fx = IK_CHAR(s_str, idx);
+@end example
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on strings
+
+
+@deftypefun ikptr ik_string_alloc (ikpcb * @var{pcb}, long @var{number_of_chars})
+Allocate, initialise and return a new string object capable of holding
+the specified number of chars.
 @end deftypefun
 
 @c page
@@ -15368,6 +15666,180 @@ at the following @aurl{}s:
 
 @center @url{http://www.cs.indiana.edu/~aghuloum/ikarus/}
 @center @url{https://launchpad.net/ikarus}
+
+@c page
+@node unicode
+@appendix On Unicode and @utf{} encodings
+
+
+As required by @rnrs{6}, the Scheme implementations must support Unicode
+characters and input/output libraries must implement transcoders for
+textual ports supporting encoding and decoding between Scheme characters
+and @utf{}-8 and @utf{}-16.
+
+The mandatory starting points to learn about this stuff are the
+following (@aurl{}s last verified on Sep 9, 2011):
+
+@center @url{http://www.unicode.org/faq/utf_bom.html}
+@center @url{http://en.wikipedia.org/wiki/Universal_Character_Set}
+@center @url{http://en.wikipedia.org/wiki/Unicode}
+@center @url{http://en.wikipedia.org/wiki/Byte_order_mark}
+@center @url{http://en.wikipedia.org/wiki/UTF-8}
+@center @url{http://en.wikipedia.org/wiki/UTF-16}
+@center @url{http://en.wikipedia.org/wiki/UTF-32}
+
+@noindent
+here we give only a brief overview of the main definitions, drawing text
+from those pages.
+
+The @dfn{Universal Character Set} (@acronym{UCS}) is a standard set of
+characters upon which many character encodings are based; it contains
+abstract characters, each identified by an unambiguous name and an
+integer number called its ``code point''.
+
+@dfn{Unicode} is a computing industry standard for the consistent
+encoding, representation and handling of text expressed in most of the
+world's writing systems.
+
+@acronym{UCS} and Unicode have an identical repertoire and numbers: the
+same characters with the same numbers exist in both standards.
+@acronym{UCS} is a simple character map, Unicode adds rules for
+collation, normalization of forms, and the bidirectional algorithm for
+scripts.
+
+The Unicode Consortium, the nonprofit organization that coordinates
+Unicode's development, has the goal of eventually replacing existing
+character encoding schemes with Unicode and its standard ``Unicode
+Transformation Format'' alias ``@acronym{UCS} Transformation Format''
+(@utf{}) schemes.
+
+By convention a Unicode code point is referred to by writing @code{U+}
+followed by its hexadecimal number with at least @math{4} digits
+(@code{U+0044} is fine, @code{U+12} is not).
+
+In practice, Unicode code points are exact integers in the range
+@math{[0, #x10FFFF]}, but outside the range @math{[#xD800, #xDFFF]}
+which has special meaning in @utf{} schemes.  A code point can be stored
+in @math{21} bits:
+
+@example
+(string-length (number->string #x10FFFF 2)) @result{} 21
+@end example
+
+@noindent
+@rnrs{6} defines fixnums to have at least @math{24} bits, so a fixnum is
+wide enough to hold a code point:
+
+@example
+(fixnum? #x10FFFF) @result{} #t
+@end example
+
+@noindent
+and indeed Scheme characters are a disjoint type of value holding such
+fixnums:
+
+@example
+(integer->char #x10FFFF) @result{} #\x10FFFF
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading @utf{}-8 scheme
+
+@utf{}-8 is a multioctet character encoding for Unicode which can
+represent every character in the Unicode set, that is it can represent
+every code point in the ranges @math{[0, #xD800)} and @math{(#xDFFF,
+#x10FFFF]}.
+
+A stream of @utf{}-8 encoded characters is meant to be stored octet by
+octet in fixed order (and so without the need to specify the endianness
+of words).
+
+The encoding scheme uses sequences of @math{1}, @math{2}, @math{3} or
+@math{4} octets to encode a each code point as shown in the following
+table; the first octet in a sequence has a unique bit pattern in the
+most significant bits and so it allows the determination of the sequence
+length; every octet contains a number of payload bits which must be
+concatenated (bitwise inclusive OR) to reconstruct the integer
+representation of a code point:
+
+@example
+| # of octets | 1st octet | 2nd octet | 3rd octet | 4th octet |
+|-------------+-----------+-----------+-----------+-----------|
+|     1        #b0xxxxxxx
+|     2        #b110xxxxx  #b10xxxxxx
+|     3        #b1110xxxx  #b10xxxxxx  #b10xxxxxx
+|     4        #b11110xxx  #b10xxxxxx  #b10xxxxxx  #b10xxxxxx
+
+| # of octets | # of payload bits |       hex range     |
+|-------------+-------------------+---------------------|
+|     1                         7    [#x0000,   #x007F]
+|     2                5 + 6 = 11    [#x0080,   #x07FF]
+|     3            4 + 6 + 6 = 16    [#x0800,   #xFFFF]
+|     4        3 + 6 + 6 + 6 = 21  [#x010000, #x10FFFF]
+@end example
+
+Note that octets @code{#xFE} and @code{#xFF} cannot appear in a valid
+stream of @utf{}-8 encoded characters.  The sequence of @math{3} octets
+is the one that could encode (but must not) the forbidden range
+@math{[#xD800, #xDFFF]}.
+
+The first @math{128} characters of the Unicode character set correspond
+one--to--one with @ascii{} and are encoded using a single octet with the
+same binary value as the corresponding @ascii{} character, making valid
+@ascii{} text valid @utf{}-8 encoded Unicode text as well.  Such encoded
+octets have the Most Significant Bit (@acronym{MSB}) set to zero.
+
+Although the standard does not define it, many programs start a @utf{}-8
+stream with a Byte Order Mark (@acronym{BOM}) composed of the @math{3}
+octets: @code{#xEF}, @code{#xBB}, @code{#xBF}.
+
+@c ------------------------------------------------------------
+
+@subsubheading @utf{}-16 decoding
+
+Given a 16-bit word in a @utf{}-16 stream, represented in Scheme as a
+fixnum in the range @math{[#x0000, #xFFFF]}, we can classify it on the
+following axis:
+
+@example
+0000        D7FF D800    DBFF DC00      DFFF E000       FFFF
+ |-------------||-----------||-------------||------------|
+  single word    first in     second in      single word
+  character      pair         pair           character
+@end example
+
+@noindent
+or the following logic:
+
+@example
+word in [#x0000, #xD7FF] => single word character
+word in [#xD800, #xDBFF] => first in surrogate pair
+word in [#xDC00, #xDFFF] => second in surrogate pair
+word in [#xE000, #xFFFF] => single word character
+@end example
+
+@c ------------------------------------------------------------
+
+@iso{}/@acronym{IEC} 8859-1 also known as Latin-1
+
+Latin-1 uses @math{1} octet per character.  The first @math{256} Unicode
+code points are identical to the content of Latin-1, the first
+@math{127} Latin-1 code points are identical to @ascii{}.  For an
+itroduction see:
+
+@center @url{http://en.wikipedia.org/wiki/ISO/IEC_8859-1}
+
+Latin-1 code points are identical to their octet encoding.
+
+Latin-1 code points in the range @math{[0, 127]} are identical to the
+same code points encoded in both @ascii{} and in @utf{}-8.
+
+Latin-1 code points in the range @math{[128, 255]} are
+@strong{different} from the same code points encoded in @utf{}-8.
+
+Every octet (that is: every fixnum in the range @math{[0, 255]}) can be
+interpreted as a character in Latin-1 encoding.
 
 @c page
 @node package license

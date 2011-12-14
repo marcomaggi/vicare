@@ -1903,7 +1903,7 @@ ikrt_bignum_to_bytevector(ikptr x, ikpcb* pcb){
     dest[bytes] = 0;
   }
   free(mem);
-  return bv + bytevector_tag;
+  return bv | bytevector_tag;
 }
 
 
@@ -2079,17 +2079,17 @@ ikrt_exact_bignum_sqrt(ikptr bn, ikpcb* pcb){
   pcb->root0 = &bn;
   ikptr s = ik_safe_alloc(pcb,
             IK_ALIGN(disp_bignum_data+result_limb_count*wordsize))
-          + vector_tag;
+          | vector_tag;
   ref(s, -vector_tag) =
     (ikptr) (bignum_tag | (result_limb_count << bignum_length_shift));
   pcb->root1 = &s;
   ikptr r = ik_safe_alloc(pcb,
               IK_ALIGN(disp_bignum_data+limb_count*wordsize))
-          + vector_tag;
+          | vector_tag;
   ref(r, -vector_tag) =
     (ikptr) (bignum_tag | (limb_count << bignum_length_shift));
   pcb->root0 = &r;
-  ikptr pair = ik_safe_alloc(pcb, pair_size) + pair_tag;
+  ikptr pair = ik_safe_alloc(pcb, pair_size) | pair_tag;
   pcb->root0 = 0;
   pcb->root1 = 0;
   mp_size_t r_actual_limbs = mpn_sqrtrem(

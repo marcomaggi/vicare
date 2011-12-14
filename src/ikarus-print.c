@@ -64,7 +64,7 @@ print(FILE* fh, ikptr x){
   else if(x == null_object){
     fprintf(fh, "()");
   }
-  else if(is_char(x)){
+  else if(IK_IS_CHAR(x)){
     unsigned long int i = ((long int)x) >> char_shift;
     if(i < 128){
       fprintf(fh, "%s", char_string[i]);

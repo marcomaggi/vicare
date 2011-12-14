@@ -148,7 +148,7 @@ ik_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes)
                        + requested_number_of_bytes
                        + 1);
   bv           = ik_safe_alloc(pcb, aligned_size)
-                 + bytevector_tag;
+                 | bytevector_tag;
   ref(bv, off_bytevector_length) = fix(requested_number_of_bytes);
   data = (char *)(long)(bv + off_bytevector_data);
   data[requested_number_of_bytes] = '\0';
@@ -196,7 +196,7 @@ ik_vector_alloc (ikpcb * pcb, long number_of_items)
   long  align_size;
   ikptr vec;
   align_size = IK_ALIGN(disp_vector_data + number_of_items * wordsize);
-  vec        = ik_safe_alloc(pcb, align_size) + vector_tag;
+  vec        = ik_safe_alloc(pcb, align_size) | vector_tag;
   ref(vec, off_vector_length) = IK_FIX(number_of_items);
   return vec;
 }
@@ -217,9 +217,25 @@ ik_struct_alloc (ikpcb * pcb, ikptr s_rtd)
 {
   long  num_of_fields = IK_UNFIX(ref(s_rtd, off_rtd_length));
   long  align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
-  ikptr s_stru        = ik_safe_alloc(pcb, align_size) + record_tag;
+  ikptr s_stru        = ik_safe_alloc(pcb, align_size) | record_tag;
   ref(s_stru, off_record_rtd) = s_rtd;
   return s_stru;
+}
+
+
+/** --------------------------------------------------------------------
+ ** Scheme string utilities.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ik_string_alloc (ikpcb * pcb, long number_of_chars)
+{
+  long  align_size;
+  ikptr s_str;
+  align_size = IK_ALIGN(disp_string_data + number_of_chars * sizeof(ikchar));
+  s_str        = ik_safe_alloc(pcb, align_size) | string_tag;
+  ref(s_str, off_string_length) = IK_FIX(number_of_chars);
+  return s_str;
 }
 
 
@@ -292,7 +308,7 @@ ik_integer_from_unsigned_long_long(unsigned long long n, ikpcb* pcb)
 ikptr
 ik_flonum_from_double (double n, ikpcb* pcb)
 {
-  ikptr x = ik_safe_alloc(pcb, flonum_size) + vector_tag;
+  ikptr x = ik_safe_alloc(pcb, flonum_size) | vector_tag;
   ref(x, -vector_tag) = flonum_tag;
   FLONUM_DATA(x) = n;
   return x;

@@ -345,7 +345,7 @@ ikpcb* ik_make_pcb(){
   }
   /* initialize base rtd */
   {
-    ikptr r = ik_unsafe_alloc(pcb, IK_ALIGN(rtd_size)) + rtd_tag;
+    ikptr r = ik_unsafe_alloc(pcb, IK_ALIGN(rtd_size)) | rtd_tag;
     ref(r, off_rtd_rtd) = r;
     ref(r, off_rtd_length) = (ikptr) (rtd_size-wordsize);
     ref(r, off_rtd_name) = 0;
@@ -502,7 +502,7 @@ void ik_stack_overflow(ikpcb* pcb){
   fprintf(stderr, "underflow_handler = 0x%08x\n", (int)underflow_handler);
 #endif
   /* capture continuation and set it as next_k */
-  ikptr k = ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size)) + vector_tag;
+  ikptr k = ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size)) | vector_tag;
   ref(k, -vector_tag) = continuation_tag;
   ref(k, off_continuation_top) = pcb->frame_pointer;
   ref(k, off_continuation_size) =
@@ -685,7 +685,7 @@ ikrt_register_guardian_pair(ikptr p0, ikpcb* pcb){
 
 ikptr
 ikrt_register_guardian(ikptr tc, ikptr obj, ikpcb* pcb){
-  ikptr p0 = ik_unsafe_alloc(pcb, pair_size) + pair_tag;
+  ikptr p0 = ik_unsafe_alloc(pcb, pair_size) | pair_tag;
   ref(p0, off_car) = tc;
   ref(p0, off_cdr) = obj;
   return ikrt_register_guardian_pair(p0, pcb);

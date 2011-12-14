@@ -421,7 +421,7 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
   ref(sk, disp_system_continuation_tag)  = system_continuation_tag;
   ref(sk, disp_system_continuation_top)  = pcb->system_stack;
   ref(sk, disp_system_continuation_next) = pcb->next_k;
-  pcb->next_k = sk + vector_tag;
+  pcb->next_k = sk | vector_tag;
   {
     ik_ffi_cif_t  cif     = IK_POINTER_DATA_VOIDP(IK_CAR(s_data));
     address_t *   address = IK_POINTER_DATA_VOIDP(IK_CDR(s_data));

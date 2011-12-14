@@ -2037,7 +2037,8 @@
 ;;;; characters
 ;;
 ;;A character is a machine word  whose least significant bits are set to
-;;the character tag.
+;;the  character tag.   When stored  in a  string: the  machine  word is
+;;trimmed to its least significant 32 bits.
 ;;
 ;;The most  significant bits, interpreted  as integer, represent  a code
 ;;point  in  the range  [0,  #x10FFFF] but  not  in  the range  [#xD800,
@@ -2496,7 +2497,9 @@
       ((constant n)
        (unless (fx? n) (interrupt))
        (with-tmp ((s (prm 'alloc
-			  (K (align (+ (* n wordsize) disp-string-data)))
+;;; Characters are 32-bit unsigned integers, NOT machine words.
+			  (K (align (+ (* n 4) disp-string-data)))
+;;;			  (K (align (+ (* n wordsize) disp-string-data)))
 			  (K string-tag))))
 	 (prm 'mset s
 	      (K (- disp-string-length string-tag))

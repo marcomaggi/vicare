@@ -1132,7 +1132,7 @@ ikrt_posix_select (ikptr nfds_fx,
   } else { /* success, let's harvest the fds */
     /* Build the vector  to be returned and prevent  it from being garbage
        collected while building other objects. */
-    vec = ik_safe_alloc(pcb, IK_ALIGN(disp_vector_data+3*wordsize)) + vector_tag;
+    vec = ik_safe_alloc(pcb, IK_ALIGN(disp_vector_data+3*wordsize)) | vector_tag;
     ref(vec, off_vector_length) = fix(3);
     ref(vec, off_vector_data+0*wordsize) = null_object;
     ref(vec, off_vector_data+1*wordsize) = null_object;

@@ -23,7 +23,7 @@ static ikptr
 make_symbol_table(ikpcb* pcb){
   #define NUM_OF_BUCKETS 4096 /* power of 2 */
   int size = IK_ALIGN_TO_NEXT_PAGE(disp_vector_data + NUM_OF_BUCKETS * wordsize);
-  ikptr st = ik_mmap_ptr(size, 0, pcb) + vector_tag;
+  ikptr st = ik_mmap_ptr(size, 0, pcb) | vector_tag;
   bzero((char*)(long)st-vector_tag, size);
   ref(st, off_vector_length) = fix(NUM_OF_BUCKETS);
   return st;
@@ -71,7 +71,7 @@ static int strings_eqp(ikptr str1, ikptr str2){
 
 static ikptr
 ik_make_symbol(ikptr str, ikptr ustr, ikpcb* pcb){
-  ikptr sym = ik_unsafe_alloc(pcb, symbol_record_size) + record_tag;
+  ikptr sym = ik_unsafe_alloc(pcb, symbol_record_size) | record_tag;
   ref(sym, -record_tag) = symbol_tag;
   ref(sym, off_symbol_record_string)  = str;
   ref(sym, off_symbol_record_ustring) = ustr;
@@ -96,7 +96,7 @@ intern_string(ikptr str, ikptr st, ikpcb* pcb){
     b = ref(b, off_cdr);
   }
   ikptr sym = ik_make_symbol(str, false_object,  pcb);
-  b = ik_unsafe_alloc(pcb, pair_size) + pair_tag;
+  b = ik_unsafe_alloc(pcb, pair_size) | pair_tag;
   ref(b, off_car) = sym;
   ref(b, off_cdr) = bckt;
   ref(st, off_vector_data + idx*wordsize) = b;
@@ -119,7 +119,7 @@ intern_unique_string(ikptr str, ikptr ustr, ikptr st, ikpcb* pcb){
     b = ref(b, off_cdr);
   }
   ikptr sym = ik_make_symbol(str, ustr, pcb);
-  b = ik_unsafe_alloc(pcb, pair_size) + pair_tag;
+  b = ik_unsafe_alloc(pcb, pair_size) | pair_tag;
   ref(b, off_car) = sym;
   ref(b, off_cdr) = bckt;
   ref(st, off_vector_data + idx*wordsize) = b;
@@ -147,7 +147,7 @@ ikrt_intern_gensym(ikptr sym, ikpcb* pcb){
     }
     b = ref(b, off_cdr);
   }
-  b = ik_unsafe_alloc(pcb, pair_size) + pair_tag;
+  b = ik_unsafe_alloc(pcb, pair_size) | pair_tag;
   ref(b, off_car) = sym;
   ref(b, off_cdr) = bckt;
   ref(st, off_vector_data + idx*wordsize) = b;

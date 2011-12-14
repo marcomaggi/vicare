@@ -26,11 +26,11 @@ ikrt_weak_cons(ikptr a, ikptr d, ikpcb* pcb){
     ikptr mem = ik_mmap_typed(pagesize, weak_pairs_mt, pcb);
     pcb->weak_pairs_ap = mem + pair_size;
     pcb->weak_pairs_ep = mem + pagesize;
-    p = mem + pair_tag;
+    p = mem | pair_tag;
   }
   else {
     pcb->weak_pairs_ap = nap;
-    p = ap + pair_tag;
+    p = ap | pair_tag;
   }
   ref(p, off_car) = a;
   ref(p, off_cdr) = d;
