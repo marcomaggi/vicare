@@ -324,7 +324,7 @@ static ikptr do_read(ikpcb* pcb, fasl_port* p){
     fasl_read_buf(p, (char*)(long)str+off_string_data, len);
     {
       unsigned char* pi = (unsigned char*)(long)(str+off_string_data);
-      ikchar* pj = (ikptr*)(long)(str+off_string_data);
+      ikchar* pj = (ikchar*)(long)(str+off_string_data);
       long int i = len-1;
       for(i=len-1; i >= 0; i--){
         pj[i] = IK_CHAR32_FROM_INTEGER(pi[i]);
