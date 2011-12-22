@@ -518,14 +518,13 @@ ikptr   ik_cstring_to_symbol    (char*, ikpcb*);
 
 ikptr   ik_flonum_alloc         (ikpcb * pcb, double fl);
 
-#define FLONUM_DATA(X)  \
-  (*((double*)(((char*)(long)(X)) + off_flonum_data)))
+#define IK_FLONUM_DATA(X)       (*((double*)(((long)(X))+off_flonum_data)))
 
 /* Allocate a new cflonum making use of "pcb->root0". */
 ikptr   ik_cflonum_alloc        (ikpcb * pcb, double re, double im);
 
-#define CFLONUM_DATA_REAL(X)    ref((X), off_cflonum_real)
-#define CFLONUM_DATA_IMAG(X)    ref((X), off_cflonum_imag)
+#define IK_CFLONUM_REAL(X)      ref((X), off_cflonum_real)
+#define IK_CFLONUM_IMAG(X)      ref((X), off_cflonum_imag)
 
 ikptr   ik_integer_from_long               (signed long x, ikpcb* pcb);
 ikptr   ik_integer_from_long_long          (signed long long n, ikpcb* pcb);

@@ -271,8 +271,8 @@ scheme_to_native_value_cast (type_id_t type_id, ikptr s_scheme_value, void * buf
   case TYPE_ID_UINT64:  *((uint64_t*)        buffer) = ik_integer_to_uint64(s_scheme_value); return;
   case TYPE_ID_SINT64:  *((int64_t*)         buffer) = ik_integer_to_sint64(s_scheme_value); return;
 
-  case TYPE_ID_FLOAT:   *((float*)          buffer) = FLONUM_DATA(s_scheme_value); return;
-  case TYPE_ID_DOUBLE:  *((double*)         buffer) = FLONUM_DATA(s_scheme_value); return;
+  case TYPE_ID_FLOAT:   *((float*)          buffer) = IK_FLONUM_DATA(s_scheme_value); return;
+  case TYPE_ID_DOUBLE:  *((double*)         buffer) = IK_FLONUM_DATA(s_scheme_value); return;
   case TYPE_ID_POINTER: *((void**)          buffer) = IK_POINTER_DATA_VOIDP(s_scheme_value); return;
 
   case TYPE_ID_UCHAR:   *((unsigned char*)  buffer) = unfix(s_scheme_value); return;

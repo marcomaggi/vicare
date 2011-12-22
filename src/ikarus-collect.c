@@ -1219,7 +1219,7 @@ add_object_proc(gc_t* gc, ikptr x) {
     else if(fst == flonum_tag){
       ikptr new = gc_alloc_new_data(flonum_size, gc) | vector_tag;
       ref(new, -vector_tag) = flonum_tag;
-      FLONUM_DATA(new) = FLONUM_DATA(x);
+      IK_FLONUM_DATA(new) = IK_FLONUM_DATA(x);
       ref(x, -vector_tag) = forward_ptr;
       ref(x, wordsize-vector_tag) = new;
       return new;

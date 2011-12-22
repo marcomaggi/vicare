@@ -310,7 +310,7 @@ ik_flonum_from_double (double n, ikpcb* pcb)
 {
   ikptr x = ik_safe_alloc(pcb, flonum_size) | vector_tag;
   ref(x, -vector_tag) = flonum_tag;
-  FLONUM_DATA(x) = n;
+  IK_FLONUM_DATA(x) = n;
   return x;
 }
 

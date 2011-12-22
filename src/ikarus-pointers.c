@@ -742,14 +742,14 @@ ikptr
 ikrt_set_float (ikptr pointer, ikptr byte_offset, ikptr value /*, ikpcb* pcb*/)
 {
   unsigned long  memory = IK_POINTER_DATA_ULONG(pointer) + unfix(byte_offset);
-  *((float*)memory) = FLONUM_DATA(value);
+  *((float*)memory) = IK_FLONUM_DATA(value);
   return void_object;
 }
 ikptr
 ikrt_set_double (ikptr pointer, ikptr byte_offset, ikptr value /*, ikpcb* pcb*/)
 {
   unsigned long  memory = IK_POINTER_DATA_ULONG(pointer) + unfix(byte_offset);
-  *((double*)memory) = FLONUM_DATA(value);
+  *((double*)memory) = IK_FLONUM_DATA(value);
   return void_object;
 }
 ikptr

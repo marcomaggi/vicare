@@ -269,8 +269,8 @@ ikrt_glibc_if_nameindex (ikpcb * pcb) {
 
 #undef RE
 #undef IM
-#define RE(X)   FLONUM_DATA(CFLONUM_DATA_REAL(X))
-#define IM(X)   FLONUM_DATA(CFLONUM_DATA_IMAG(X))
+#define RE(X)   IK_FLONUM_DATA(IK_CFLONUM_REAL(X))
+#define IM(X)   IK_FLONUM_DATA(IK_CFLONUM_IMAG(X))
 
 ikptr
 ikrt_glibc_csin (ikptr s_X, ikpcb * pcb)
@@ -407,7 +407,7 @@ ikptr
 ikrt_glibc_sinh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_SINH
-  double        X   = FLONUM_DATA(s_X);
+  double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = sinh(X);
   return ik_flonum_alloc(pcb, Y);
 #else
@@ -418,7 +418,7 @@ ikptr
 ikrt_glibc_cosh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_COSH
-  double        X   = FLONUM_DATA(s_X);
+  double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = cosh(X);
   return ik_flonum_alloc(pcb, Y);
 #else
@@ -429,7 +429,7 @@ ikptr
 ikrt_glibc_tanh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_TANH
-  double        X   = FLONUM_DATA(s_X);
+  double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = tanh(X);
   return ik_flonum_alloc(pcb, Y);
 #else
@@ -473,7 +473,7 @@ ikptr
 ikrt_glibc_asinh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_ASINH
-  double        X   = FLONUM_DATA(s_X);
+  double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = asinh(X);
   return ik_flonum_alloc(pcb, Y);
 #else
@@ -484,7 +484,7 @@ ikptr
 ikrt_glibc_acosh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_ACOSH
-  double        X   = FLONUM_DATA(s_X);
+  double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = acosh(X);
   return ik_flonum_alloc(pcb, Y);
 #else
@@ -495,7 +495,7 @@ ikptr
 ikrt_glibc_atanh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_ATANH
-  double        X   = FLONUM_DATA(s_X);
+  double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = atanh(X);
   return ik_flonum_alloc(pcb, Y);
 #else
@@ -542,7 +542,7 @@ ikptr
 ikrt_glibc_erf (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_ERF
-  double        X   = FLONUM_DATA(s_X);
+  double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = erf(X);
   return ik_flonum_alloc(pcb, Y);
 #else
@@ -553,7 +553,7 @@ ikptr
 ikrt_glibc_erfc (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_ERFC
-  double        X   = FLONUM_DATA(s_X);
+  double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = erfc(X);
   return ik_flonum_alloc(pcb, Y);
 #else
@@ -564,7 +564,7 @@ ikptr
 ikrt_glibc_lgamma (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_LGAMMA_R
-  double        X   = FLONUM_DATA(s_X);
+  double        X   = IK_FLONUM_DATA(s_X);
   int           sgn;
   double        Y   = lgamma_r(X, &sgn);
   ikptr         s_pair = IK_PAIR_ALLOC(pcb);
@@ -583,7 +583,7 @@ ikptr
 ikrt_glibc_tgamma (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_TGAMMA
-  double        X   = FLONUM_DATA(s_X);
+  double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = tgamma(X);
   return ik_flonum_alloc(pcb, Y);
 #else
@@ -594,7 +594,7 @@ ikptr
 ikrt_glibc_y0 (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_Y0
-  double        X   = FLONUM_DATA(s_X);
+  double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = y0(X);
   return ik_flonum_alloc(pcb, Y);
 #else
@@ -605,7 +605,7 @@ ikptr
 ikrt_glibc_y1 (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_Y1
-  double        X   = FLONUM_DATA(s_X);
+  double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = y1(X);
   return ik_flonum_alloc(pcb, Y);
 #else
@@ -616,7 +616,7 @@ ikptr
 ikrt_glibc_j0 (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_J0
-  double        X   = FLONUM_DATA(s_X);
+  double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = j0(X);
   return ik_flonum_alloc(pcb, Y);
 #else
@@ -627,7 +627,7 @@ ikptr
 ikrt_glibc_j1 (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_J1
-  double        X   = FLONUM_DATA(s_X);
+  double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = j1(X);
   return ik_flonum_alloc(pcb, Y);
 #else
@@ -638,7 +638,7 @@ ikptr
 ikrt_glibc_yn (ikptr s_N, ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_YN
-  double        X   = FLONUM_DATA(s_X);
+  double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = yn((int)unfix(s_N), X);
   return ik_flonum_alloc(pcb, Y);
 #else
@@ -649,7 +649,7 @@ ikptr
 ikrt_glibc_jn (ikptr s_N, ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_JN
-  double        X   = FLONUM_DATA(s_X);
+  double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = jn((int)unfix(s_N), X);
   return ik_flonum_alloc(pcb, Y);
 #else

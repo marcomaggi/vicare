@@ -1990,9 +1990,9 @@ ikrt_bignum_to_flonum64(ikptr bn, ikptr more_bits, ikptr fl){
     }
   }
   if(bnfst_negative(fst)){
-    FLONUM_DATA(fl)  = - pos_result;
+    IK_FLONUM_DATA(fl)  = - pos_result;
   } else {
-    FLONUM_DATA(fl) = pos_result;
+    IK_FLONUM_DATA(fl) = pos_result;
   }
   return fl;
 }
@@ -2055,9 +2055,9 @@ ikrt_bignum_to_flonum(ikptr bn, ikptr more_bits, ikptr fl){
     }
   }
   if(bnfst_negative(fst)){
-    FLONUM_DATA(fl)  = - pos_result;
+    IK_FLONUM_DATA(fl)  = - pos_result;
   } else {
-    FLONUM_DATA(fl) = pos_result;
+    IK_FLONUM_DATA(fl) = pos_result;
   }
   return fl;
 }
