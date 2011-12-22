@@ -119,31 +119,92 @@
 
 (parametrise ((check-test-name	'math))
 
+  (define (almost= X Y)
+    (define EPSILON 1e-6)
+    (define (almost-re= x y)
+      (or (= x y)
+	  (fl<? (flabs (fl- x y)) EPSILON)))
+    (and (almost-re= (real-part X)
+		     (real-part Y))
+	 (almost-re= (imag-part X)
+		     (imag-part Y))))
+
+;;; trigonometric functions
+
   (check (cflonum? (glibc.csin 1.2+3.4i))	=> #t)
+  (check (glibc.csin 1.2+3.4i)	(=> almost=) (sin 1.2+3.4i))
+
   (check (cflonum? (glibc.ccos 1.2+3.4i))	=> #t)
+  (check (glibc.ccos 1.2+3.4i)	(=> almost=) 5.434909-13.948304i)
+
   (check (cflonum? (glibc.ctan 1.2+3.4i))	=> #t)
+  (check (glibc.ctan 1.2+3.4i)	(=> almost=) (tan 1.2+3.4i))
+
   (check (cflonum? (glibc.casin 1.2+3.4i))	=> #t)
+  (check (glibc.casin 1.2+3.4i)	(=> almost=) (asin 1.2+3.4i))
+
   (check (cflonum? (glibc.cacos 1.2+3.4i))	=> #t)
+  (check (glibc.cacos 1.2+3.4i)	(=> almost=) (acos 1.2+3.4i))
+
   (check (cflonum? (glibc.catan 1.2+3.4i))	=> #t)
+  (check (glibc.catan 1.2+3.4i)	(=> almost=) (atan 1.2+3.4i))
 
   (check (cflonum? (glibc.cexp 1.2+3.4i))	=> #t)
+  (check (glibc.cexp 1.2+3.4i)	(=> almost=) (exp 1.2+3.4i))
+
   (check (cflonum? (glibc.clog 1.2+3.4i))	=> #t)
+  (check (glibc.clog 1.2+3.4i)	(=> almost=) (log 1.2+3.4i))
+
   (check (cflonum? (glibc.clog10 1.2+3.4i))	=> #t)
+  (check (glibc.clog10 1.2+3.4i) (=> almost=) (log 1.2+3.4i 10.))
+
   (check (cflonum? (glibc.csqrt 1.2+3.4i))	=> #t)
+  (check (glibc.csqrt 1.2+3.4i)	(=> almost=) (sqrt 1.2+3.4i))
+
   (check (cflonum? (glibc.cpow 1.2+3.4i 5.6+7.8i))	=> #t)
+  (check (glibc.cpow 1.2+3.4i 5.6+7.8i)	(=> almost=) (expt 1.2+3.4i 5.6+7.8i))
+
+;;; --------------------------------------------------------------------
+;;; hyperbolic functions
 
   (check (flonum? (glibc.glibc-sinh 1.2))	=> #t)
+  (check (glibc.glibc-sinh 1.2)	(=> almost=) 1.509461)
+
   (check (flonum? (glibc.glibc-cosh 1.2))	=> #t)
+  (check (glibc.glibc-cosh 1.2)	(=> almost=) 1.810656)
+
   (check (flonum? (glibc.glibc-tanh 1.2))	=> #t)
+  (check (glibc.glibc-tanh 1.2)	(=> almost=) 0.833655)
+
   (check (flonum? (glibc.glibc-asinh 1.2))	=> #t)
+  (check (glibc.glibc-asinh 1.2) (=> almost=) 1.015973)
+
   (check (flonum? (glibc.glibc-acosh 1.2))	=> #t)
-  (check (flonum? (glibc.glibc-atanh 1.2))	=> #t)
+  (check (glibc.glibc-acosh 1.2) (=> almost=) 0.622363)
+
+  (check (flonum? (glibc.glibc-atanh .2))	=> #t)
+  (check (glibc.glibc-atanh 0.2) (=> almost=) 0.202733)
+
   (check (cflonum? (glibc.csinh 1.2+3.4i))	=> #t)
+  (check (glibc.csinh 1.2+3.4i)	(=> almost=) -1.459345-0.462697i)
+
   (check (cflonum? (glibc.ccosh 1.2+3.4i))	=> #t)
+  (check (glibc.ccosh 1.2+3.4i)	(=> almost=) -1.750539-0.385729i)
+
   (check (cflonum? (glibc.ctanh 1.2+3.4i))	=> #t)
+  (check (glibc.ctanh 1.2+3.4i) (=> almost=) 0.850597+0.076889i)
+
   (check (cflonum? (glibc.casinh 1.2+3.4i))	=> #t)
+  (check (glibc.casinh 1.2+3.4i) (=> almost=) 1.960546+1.218869i)
+
   (check (cflonum? (glibc.cacosh 1.2+3.4i))	=> #t)
+  (check (glibc.cacosh 1.2+3.4i) (=> almost=) 1.990465+1.243053i)
+
   (check (cflonum? (glibc.catanh 1.2+3.4i))	=> #t)
+  (check (glibc.catanh 1.2+3.4i) (=> almost=) 0.086569+1.313022i)
+
+;;; --------------------------------------------------------------------
+;;; special functions
 
   (check (flonum? (glibc.erf 1.2))		=> #t)
   (check (flonum? (glibc.erfc 1.2))		=> #t)

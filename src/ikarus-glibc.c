@@ -267,11 +267,16 @@ ikrt_glibc_if_nameindex (ikpcb * pcb) {
  ** Mathematics.
  ** ----------------------------------------------------------------- */
 
+#undef RE
+#undef IM
+#define RE(X)   FLONUM_DATA(CFLONUM_DATA_REAL(X))
+#define IM(X)   FLONUM_DATA(CFLONUM_DATA_IMAG(X))
+
 ikptr
 ikrt_glibc_csin (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CSIN
-  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
   complex double        Y   = csin(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -282,7 +287,7 @@ ikptr
 ikrt_glibc_ccos (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CCOS
-  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
   complex double        Y   = ccos(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -293,7 +298,7 @@ ikptr
 ikrt_glibc_ctan (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CTAN
-  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
   complex double        Y   = ctan(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -307,7 +312,7 @@ ikptr
 ikrt_glibc_casin (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CASIN
-  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
   complex double        Y   = casin(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -318,7 +323,7 @@ ikptr
 ikrt_glibc_cacos (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CACOS
-  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
   complex double        Y   = cacos(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -329,7 +334,7 @@ ikptr
 ikrt_glibc_catan (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CATAN
-  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
   complex double        Y   = catan(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -343,7 +348,7 @@ ikptr
 ikrt_glibc_cexp (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CEXP
-  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
   complex double        Y   = cexp(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -354,7 +359,7 @@ ikptr
 ikrt_glibc_clog (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CLOG
-  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
   complex double        Y   = clog(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -365,7 +370,7 @@ ikptr
 ikrt_glibc_clog10 (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CLOG10
-  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
   complex double        Y   = clog10(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -376,7 +381,7 @@ ikptr
 ikrt_glibc_csqrt (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CSQRT
-  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
   complex double        Y   = csqrt(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -387,8 +392,8 @@ ikptr
 ikrt_glibc_cpow (ikptr s_base, ikptr s_power, ikpcb * pcb)
 {
 #ifdef HAVE_CPOW
-  complex double  base  = CFLONUM_DATA_REAL(s_base)  + CFLONUM_DATA_REAL(s_base)  * _Complex_I;
-  complex double  power = CFLONUM_DATA_REAL(s_power) + CFLONUM_DATA_REAL(s_power) * _Complex_I;
+  complex double  base  = RE(s_base)  + IM(s_base)  * _Complex_I;
+  complex double  power = RE(s_power) + IM(s_power) * _Complex_I;
   complex double  Y     = cpow(base, power);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -435,7 +440,7 @@ ikptr
 ikrt_glibc_csinh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CSINH
-  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
   complex double        Y   = csinh(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -446,7 +451,7 @@ ikptr
 ikrt_glibc_ccosh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CCOSH
-  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
   complex double        Y   = ccosh(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -457,7 +462,7 @@ ikptr
 ikrt_glibc_ctanh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CTANH
-  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
   complex double        Y   = ctanh(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -501,7 +506,7 @@ ikptr
 ikrt_glibc_casinh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CASINH
-  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
   complex double        Y   = casinh(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -512,7 +517,7 @@ ikptr
 ikrt_glibc_cacosh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CACOSH
-  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
   complex double        Y   = cacosh(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -523,7 +528,7 @@ ikptr
 ikrt_glibc_catanh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CATANH
-  complex double        X   = CFLONUM_DATA_REAL(s_X) + CFLONUM_DATA_REAL(s_X) * _Complex_I;
+  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
   complex double        Y   = catanh(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else

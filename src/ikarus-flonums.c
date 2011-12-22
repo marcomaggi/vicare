@@ -52,8 +52,12 @@ ikptr
 ik_cflonum_alloc (ikpcb * pcb, double re, double im)
 {
   DEFINE_AND_ALLOC_CFLONUM(F);
-  CFLONUM_DATA_REAL(F) = re;
-  CFLONUM_DATA_IMAG(F) = im;
+  pcb->root0 = &F;
+  {
+    CFLONUM_DATA_REAL(F) = ik_flonum_alloc(pcb, re);
+    CFLONUM_DATA_IMAG(F) = ik_flonum_alloc(pcb, im);
+  }
+  pcb->root0 = NULL;
   return F;
 }
 
