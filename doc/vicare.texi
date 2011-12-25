@@ -2100,6 +2100,22 @@ Read a bytevector of double--precision flonums stored in little, big and
 native endianness.
 @end deffn
 
+
+@deffn {Reader Syntax} {#vc4l(@var{cflonum} ...)}
+@deffnx {Reader Syntax} {#vc4b(@var{cflonum} ...)}
+@deffnx {Reader Syntax} {#vc4n(@var{cflonum} ...)}
+Read a bytevector of single--precision cflonums stored in little, big
+and native endianness, real part first.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vc8l(@var{cflonum} ...)}
+@deffnx {Reader Syntax} {#vc8b(@var{cflonum} ...)}
+@deffnx {Reader Syntax} {#vc8n(@var{cflonum} ...)}
+Read a bytevector of double--precision cflonums stored in little, big
+and native endianness, real part first.
+@end deffn
+
 @c page
 @node iklib reader stx
 @subsection Miscellaneous additional syntaxes
@@ -2801,6 +2817,30 @@ which the flonums are stored in little, big or native endianness.
 @defunx bytevector->f8n-list @var{bytevector}
 Convert between a list of double--precision flonums and a bytevector in
 which the flonums are stored in little, big or native endianness.
+@end defun
+
+
+@defun c4l-list->bytevector @var{list}
+@defunx c4b-list->bytevector @var{list}
+@defunx c4n-list->bytevector @var{list}
+@defunx bytevector->c4l-list @var{bytevector}
+@defunx bytevector->c4b-list @var{bytevector}
+@defunx bytevector->c4n-list @var{bytevector}
+Convert between a list of single--precision cflonums and a bytevector in
+which the cflonums are stored in little, big or native endianness, real
+part first.
+@end defun
+
+
+@defun c8l-list->bytevector @var{list}
+@defunx c8b-list->bytevector @var{list}
+@defunx c8n-list->bytevector @var{list}
+@defunx bytevector->c8l-list @var{bytevector}
+@defunx bytevector->c8b-list @var{bytevector}
+@defunx bytevector->c8n-list @var{bytevector}
+Convert between a list of double--precision cflonums and a bytevector in
+which the flonums are stored in little, big or native endianness, real
+part first.
 @end defun
 
 @c page

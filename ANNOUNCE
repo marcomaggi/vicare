@@ -41,13 +41,14 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d6
 ------------------------
 
-* Added  reader syntaxes  to read  bytevector of  flonums in  single and
-  double precision:
+* Added reader  syntaxes to read  bytevector of flonums and  cflonums in
+  single and double precision:
 
-    #vf4l #vf4b #vf4n
-    #vf8l #vf8b #vf8n
+    #vf4l #vf4b #vf4n		#vf8l #vf8b #vf8n
+    #vc4l #vc4b #vc4n		#vc8l #vc8b #vc8n
 
-* Added conversion functions between lists of flonums and bytevectors:
+* Added conversion  functions between lists of flonums  and cflonums and
+  bytevectors:
 
     f4l-list->bytevector	bytevector->f4l-list
     f4b-list->bytevector	bytevector->f4b-list
@@ -55,6 +56,13 @@ Notes for revision 0.2d6
     f8l-list->bytevector	bytevector->f8l-list
     f8b-list->bytevector	bytevector->f8b-list
     f8n-list->bytevector	bytevector->f8n-list
+
+    c4l-list->bytevector	bytevector->c4l-list
+    c4b-list->bytevector	bytevector->c4b-list
+    c4n-list->bytevector	bytevector->c4n-list
+    c8l-list->bytevector	bytevector->c8l-list
+    c8b-list->bytevector	bytevector->c8b-list
+    c8n-list->bytevector	bytevector->c8n-list
 
 
 Notes for revision 0.2d5

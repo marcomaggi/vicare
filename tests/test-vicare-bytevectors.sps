@@ -3494,6 +3494,78 @@
     (doit '(1.2 -3.4 5.6))
     #f)
 
+;;; --------------------------------------------------------------------
+;;; single precision cflonums
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ ?ell)
+			(check
+			    (bytevector->c4l-list (c4l-list->bytevector ?ell))
+			  (=> flonums=?)
+			  ?ell)))))
+    (doit '())
+    (doit '(1.2+3.4i))
+    (doit '(1.2+3.4i 5.6+7.8i))
+    #f)
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ ?ell)
+			(check
+			    (bytevector->c4b-list (c4b-list->bytevector ?ell))
+			  (=> flonums=?)
+			  ?ell)))))
+    (doit '())
+    (doit '(1.2+3.4i))
+    (doit '(1.2+3.4i 5.6+7.8i))
+    #f)
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ ?ell)
+			(check
+			    (bytevector->c4n-list (c4n-list->bytevector ?ell))
+			  (=> flonums=?)
+			  ?ell)))))
+    (doit '())
+    (doit '(1.2+3.4i))
+    (doit '(1.2+3.4i 5.6+7.8i))
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; double precision cflonums
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ ?ell)
+			(check
+			    (bytevector->c8l-list (c8l-list->bytevector ?ell))
+			  (=> flonums=?)
+			  ?ell)))))
+    (doit '())
+    (doit '(1.2+3.4i))
+    (doit '(1.2+3.4i 5.6+7.8i))
+    #f)
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ ?ell)
+			(check
+			    (bytevector->c8b-list (c8b-list->bytevector ?ell))
+			  (=> flonums=?)
+			  ?ell)))))
+    (doit '())
+    (doit '(1.2+3.4i))
+    (doit '(1.2+3.4i 5.6+7.8i))
+    #f)
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ ?ell)
+			(check
+			    (bytevector->c8n-list (c8n-list->bytevector ?ell))
+			  (=> flonums=?)
+			  ?ell)))))
+    (doit '())
+    (doit '(1.2+3.4i))
+    (doit '(1.2+3.4i 5.6+7.8i))
+    #f)
+
   #t)
 
 

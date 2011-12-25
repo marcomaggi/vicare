@@ -114,6 +114,38 @@
 (define-inline (bytevector-flonum-double-ne-set! bv i x)
   (bytevector-ieee-double-native-set! bv i x))
 
+;;; --------------------------------------------------------------------
+
+(define-inline (bytevector-cflonum-single-le-set! bv i x)
+  (begin
+    (bytevector-ieee-single-set! bv i                (real-part x) (endianness little))
+    (bytevector-ieee-single-set! bv (unsafe.fx+ 4 i) (imag-part x) (endianness little))))
+
+(define-inline (bytevector-cflonum-single-be-set! bv i x)
+  (begin
+    (bytevector-ieee-single-set! bv i                (real-part x) (endianness big))
+    (bytevector-ieee-single-set! bv (unsafe.fx+ 4 i) (imag-part x) (endianness big))))
+
+(define-inline (bytevector-cflonum-single-ne-set! bv i x)
+  (begin
+    (bytevector-ieee-single-native-set! bv i                (real-part x))
+    (bytevector-ieee-single-native-set! bv (unsafe.fx+ 4 i) (imag-part x))))
+
+(define-inline (bytevector-cflonum-double-le-set! bv i x)
+  (begin
+    (bytevector-ieee-double-set! bv i                (real-part x) (endianness little))
+    (bytevector-ieee-double-set! bv (unsafe.fx+ 8 i) (imag-part x) (endianness little))))
+
+(define-inline (bytevector-cflonum-double-be-set! bv i x)
+  (begin
+    (bytevector-ieee-double-set! bv i                (real-part x) (endianness big))
+    (bytevector-ieee-double-set! bv (unsafe.fx+ 8 i) (imag-part x) (endianness big))))
+
+(define-inline (bytevector-cflonum-double-ne-set! bv i x)
+  (begin
+    (bytevector-ieee-double-native-set! bv i                (real-part x))
+    (bytevector-ieee-double-native-set! bv (unsafe.fx+ 8 i) (imag-part x))))
+
 
 ;;;; interface to low level functions
 
@@ -1064,6 +1096,14 @@
   ;;vf8b			The token is a f8b bytevector.
   ;;vf8n			The token is a f8n bytevector.
   ;;
+  ;;vc4l			The token is a f4l bytevector.
+  ;;vc4b			The token is a f4b bytevector.
+  ;;vc4n			The token is a f4n bytevector.
+  ;;
+  ;;vc8l			The token is a c8l bytevector.
+  ;;vc8b			The token is a c8b bytevector.
+  ;;vc8n			The token is a c8n bytevector.
+  ;;
   ;;Correct sequences of chars:
   ;;
   ;; ch  ch1  ch2  ch3  ch4  ch5  datum
@@ -1132,6 +1172,10 @@
        (when (port-in-r6rs-mode? port)
 	 (%error "invalid #vf syntax in #!r6rs mode" "#vf"))
        (%read-flonum))
+      ((unsafe.char= #\c ch1)
+       (when (port-in-r6rs-mode? port)
+	 (%error "invalid #vc syntax in #!r6rs mode" "#vc"))
+       (%read-cflonum))
       (else
        (%invalid-sequence-of-chars #\# #\v ch1))))
 
@@ -1314,6 +1358,41 @@
        (%read-open-paren 'vf8n #\# #\v #\f #\8 #\n))
       (else
        (%invalid-sequence-of-chars-1 #\# #\v #\f #\8 ch4))))
+
+;;; --------------------------------------------------------------------
+
+  (define-inline (%read-cflonum)
+    (%read-char-no-eof (port ch2)
+      ((unsafe.char= ch2 #\4)	;single precision flonums
+       (%read-cflonum-single-precision))
+
+      ((unsafe.char= ch2 #\8)	;double precision flonums
+       (%read-cflonum-double-precision))
+
+      (else
+       (%invalid-sequence-of-chars-1 #\# #\v #\c ch2))))
+
+  (define-inline (%read-cflonum-single-precision)
+    (%read-char-no-eof (port ch4)
+      ((unsafe.char= ch4 #\l)
+       (%read-open-paren 'vc4l #\# #\v #\c #\4 #\l))
+      ((unsafe.char= ch4 #\b)
+       (%read-open-paren 'vc4b #\# #\v #\c #\4 #\b))
+      ((unsafe.char= ch4 #\n)
+       (%read-open-paren 'vc4n #\# #\v #\c #\4 #\n))
+      (else
+       (%invalid-sequence-of-chars-1 #\# #\v #\c #\4 ch4))))
+
+  (define-inline (%read-cflonum-double-precision)
+    (%read-char-no-eof (port ch4)
+      ((unsafe.char= ch4 #\l)
+       (%read-open-paren 'vc8l #\# #\v #\c #\8 #\l))
+      ((unsafe.char= ch4 #\b)
+       (%read-open-paren 'vc8b #\# #\v #\c #\8 #\b))
+      ((unsafe.char= ch4 #\n)
+       (%read-open-paren 'vc8n #\# #\v #\c #\8 #\n))
+      (else
+       (%invalid-sequence-of-chars-1 #\# #\v #\c #\8 ch4))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1617,8 +1696,8 @@
 			 vu16l vu16b vu16n  vs16l vs16b vs16n
 			 vu32l vu32b vu32n  vs32l vs32b vs32n
 			 vu64l vu64b vu64n  vs64l vs64b vs64n
-			 vf4l  vf4b  vf4n
-			 vf8l  vf8b  vf8n))
+			 vf4l  vf4b  vf4n   vf8l  vf8b  vf8n
+			 vc4l  vc4b  vc4n   vc8l  vc8b  vc8n))
 	   (let-values
 	       (((bv bv/ann locations kont)
 		 (cond ((eq? token 'vu8)
@@ -1684,6 +1763,20 @@
 			(finish-tokenisation-of-bytevector-f8b port locations kont 0 '()))
 		       ((eq? token 'vf8n)
 			(finish-tokenisation-of-bytevector-f8n port locations kont 0 '()))
+
+		       ((eq? token 'vc4l)
+			(finish-tokenisation-of-bytevector-c4l port locations kont 0 '()))
+		       ((eq? token 'vc4b)
+			(finish-tokenisation-of-bytevector-c4b port locations kont 0 '()))
+		       ((eq? token 'vc4n)
+			(finish-tokenisation-of-bytevector-c4n port locations kont 0 '()))
+
+		       ((eq? token 'vc8l)
+			(finish-tokenisation-of-bytevector-c8l port locations kont 0 '()))
+		       ((eq? token 'vc8b)
+			(finish-tokenisation-of-bytevector-c8b port locations kont 0 '()))
+		       ((eq? token 'vc8n)
+			(finish-tokenisation-of-bytevector-c8n port locations kont 0 '()))
 		       )))
 	     (values bv (annotate bv bv/ann pos) locations kont)))
 
@@ -2686,6 +2779,46 @@
   flonum?			    ;to validate numbers
   8				    ;number of bytes in word
   bytevector-flonum-double-ne-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-c4l
+  'vc4l				     ;tag
+  cflonum?			     ;to validate numbers
+  8				     ;number of bytes in word
+  bytevector-cflonum-single-le-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-c4b
+  'vc4b				     ;tag
+  cflonum?			     ;to validate numbers
+  8				     ;number of bytes in word
+  bytevector-cflonum-single-be-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-c4n
+  'vc4n				     ;tag
+  cflonum?			     ;to validate numbers
+  8				     ;number of bytes in word
+  bytevector-cflonum-single-ne-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-c8l
+  'vc8l				     ;tag
+  cflonum?			     ;to validate numbers
+  16				     ;number of bytes in word
+  bytevector-cflonum-double-le-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-c8b
+  'vc8b				     ;tag
+  cflonum?			     ;to validate numbers
+  16				     ;number of bytes in word
+  bytevector-cflonum-double-be-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-c8n
+  'vc8n				     ;tag
+  cflonum?			     ;to validate numbers
+  16				     ;number of bytes in word
+  bytevector-cflonum-double-ne-set!) ;setter
 
 
 ;;;; done

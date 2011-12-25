@@ -82,6 +82,13 @@
     f8b-list->bytevector	bytevector->f8b-list
     f8n-list->bytevector	bytevector->f8n-list
 
+    c4l-list->bytevector	bytevector->c4l-list
+    c4b-list->bytevector	bytevector->c4b-list
+    c4n-list->bytevector	bytevector->c4n-list
+    c8l-list->bytevector	bytevector->c8l-list
+    c8b-list->bytevector	bytevector->c8b-list
+    c8n-list->bytevector	bytevector->c8n-list
+
     subbytevector-u8		subbytevector-u8/count
     subbytevector-s8		subbytevector-s8/count)
   (import (except (ikarus)
@@ -149,6 +156,13 @@
 		  f8b-list->bytevector	bytevector->f8b-list
 		  f8n-list->bytevector	bytevector->f8n-list
 
+		  c4l-list->bytevector	bytevector->c4l-list
+		  c4b-list->bytevector	bytevector->c4b-list
+		  c4n-list->bytevector	bytevector->c4n-list
+		  c8l-list->bytevector	bytevector->c8l-list
+		  c8b-list->bytevector	bytevector->c8b-list
+		  c8n-list->bytevector	bytevector->c8n-list
+
 		  subbytevector-u8	subbytevector-u8/count
 		  subbytevector-s8	subbytevector-s8/count)
     (ikarus system $pairs)
@@ -207,6 +221,70 @@
 
 (define-inline (bytevector-flonum-double-ne-ref bv i)
   (bytevector-ieee-double-native-ref bv i))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (bytevector-cflonum-single-le-set! bv i x)
+  (begin
+    (bytevector-ieee-single-set! bv i                (real-part x) (endianness little))
+    (bytevector-ieee-single-set! bv (unsafe.fx+ 4 i) (imag-part x) (endianness little))))
+
+(define-inline (bytevector-cflonum-single-be-set! bv i x)
+  (begin
+    (bytevector-ieee-single-set! bv i                (real-part x) (endianness big))
+    (bytevector-ieee-single-set! bv (unsafe.fx+ 4 i) (imag-part x) (endianness big))))
+
+(define-inline (bytevector-cflonum-single-ne-set! bv i x)
+  (begin
+    (bytevector-ieee-single-native-set! bv i                (real-part x))
+    (bytevector-ieee-single-native-set! bv (unsafe.fx+ 4 i) (imag-part x))))
+
+(define-inline (bytevector-cflonum-double-le-set! bv i x)
+  (begin
+    (bytevector-ieee-double-set! bv i                (real-part x) (endianness little))
+    (bytevector-ieee-double-set! bv (unsafe.fx+ 8 i) (imag-part x) (endianness little))))
+
+(define-inline (bytevector-cflonum-double-be-set! bv i x)
+  (begin
+    (bytevector-ieee-double-set! bv i                (real-part x) (endianness big))
+    (bytevector-ieee-double-set! bv (unsafe.fx+ 8 i) (imag-part x) (endianness big))))
+
+(define-inline (bytevector-cflonum-double-ne-set! bv i x)
+  (begin
+    (bytevector-ieee-double-native-set! bv i                (real-part x))
+    (bytevector-ieee-double-native-set! bv (unsafe.fx+ 8 i) (imag-part x))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (bytevector-cflonum-single-le-ref bv i)
+  (make-rectangular
+    (bytevector-ieee-single-ref bv i                (endianness little))
+    (bytevector-ieee-single-ref bv (unsafe.fx+ 4 i) (endianness little))))
+
+(define-inline (bytevector-cflonum-single-be-ref bv i)
+  (make-rectangular
+    (bytevector-ieee-single-ref bv i                (endianness big))
+    (bytevector-ieee-single-ref bv (unsafe.fx+ 4 i) (endianness big))))
+
+(define-inline (bytevector-cflonum-single-ne-ref bv i)
+  (make-rectangular
+    (bytevector-ieee-single-native-ref bv i                (real-part))
+    (bytevector-ieee-single-native-ref bv (unsafe.fx+ 4 i) (imag-part))))
+
+(define-inline (bytevector-cflonum-double-le-ref bv i)
+  (make-rectangular
+    (bytevector-ieee-double-ref bv i                (endianness little))
+    (bytevector-ieee-double-ref bv (unsafe.fx+ 8 i) (endianness little))))
+
+(define-inline (bytevector-cflonum-double-be-ref bv i)
+  (make-rectangular
+    (bytevector-ieee-double-ref bv i                (endianness big))
+    (bytevector-ieee-double-ref bv (unsafe.fx+ 8 i) (endianness big))))
+
+(define-inline (bytevector-cflonum-double-ne-ref bv i)
+  (make-rectangular
+    (bytevector-ieee-double-native-ref bv i)
+    (bytevector-ieee-double-native-ref bv (unsafe.fx+ 8 i))))
 
 
 ;;;; arguments validation
@@ -1547,6 +1625,13 @@
 (define-bytevector-to-word-list bytevector->f8b-list  vf8b  8 bytevector-flonum-double-be-ref)
 (define-bytevector-to-word-list bytevector->f8n-list  vf8n  8 bytevector-flonum-double-ne-ref)
 
+(define-bytevector-to-word-list bytevector->c4l-list  vc4l  8 bytevector-cflonum-single-le-ref)
+(define-bytevector-to-word-list bytevector->c4b-list  vc4b  8 bytevector-cflonum-single-be-ref)
+(define-bytevector-to-word-list bytevector->c4n-list  vc4n  8 bytevector-cflonum-single-ne-ref)
+(define-bytevector-to-word-list bytevector->c8l-list  vc8l 16 bytevector-cflonum-double-le-ref)
+(define-bytevector-to-word-list bytevector->c8b-list  vc8b 16 bytevector-cflonum-double-be-ref)
+(define-bytevector-to-word-list bytevector->c8n-list  vc8n 16 bytevector-cflonum-double-ne-ref)
+
 
 ;;;; fixed-length word list to bytevector conversion
 
@@ -1780,6 +1865,46 @@
   flonum?			    ;to validate numbers
   8				    ;number of bytes in word
   bytevector-flonum-double-ne-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-word-list-to-bytevector c4l-list->bytevector
+  'vc4l				     ;tag
+  cflonum?			     ;to validate numbers
+  8				     ;number of bytes in word
+  bytevector-cflonum-single-le-set!) ;setter
+
+(define-word-list-to-bytevector c4b-list->bytevector
+  'vc4b				     ;tag
+  cflonum?			     ;to validate numbers
+  8				     ;number of bytes in word
+  bytevector-cflonum-single-be-set!) ;setter
+
+(define-word-list-to-bytevector c4n-list->bytevector
+  'vc4n				     ;tag
+  cflonum?			     ;to validate numbers
+  8				     ;number of bytes in word
+  bytevector-cflonum-single-ne-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-word-list-to-bytevector c8l-list->bytevector
+  'vc8l				     ;tag
+  cflonum?			     ;to validate numbers
+  16				     ;number of bytes in word
+  bytevector-cflonum-double-le-set!) ;setter
+
+(define-word-list-to-bytevector c8b-list->bytevector
+  'vc8b				     ;tag
+  cflonum?			     ;to validate numbers
+  16				     ;number of bytes in word
+  bytevector-cflonum-double-be-set!) ;setter
+
+(define-word-list-to-bytevector c8n-list->bytevector
+  'vc8n				     ;tag
+  cflonum?			     ;to validate numbers
+  16				     ;number of bytes in word
+  bytevector-cflonum-double-ne-set!) ;setter
 
 
 ;;;; any integer list to bytevector functions

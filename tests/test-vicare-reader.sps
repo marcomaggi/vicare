@@ -813,7 +813,7 @@
   (read-bv-and-eof "#vs64n(-1 -2 -3)"	,(s64n-list->bytevector '(-1 -2 -3)))
 
 ;;; --------------------------------------------------------------------
-;;; single-precision flonum, little endian
+;;; single-precision flonum
 
   (read-bv-and-eof "#vf4l()"		,(f4l-list->bytevector '()))
   (read-bv-and-eof "#vf4l(1.2)"		,(f4l-list->bytevector '(1.2)))
@@ -831,22 +831,58 @@
   (read-bv-and-eof "#vf4n(-1.2 -3.4)"	,(f4n-list->bytevector '(-1.2 -3.4)))
 
 ;;; --------------------------------------------------------------------
-;;; double-precision flonum, little endian
+;;; double-precision flonum
 
   (read-bv-and-eof "#vf8l()"		,(f8l-list->bytevector '()))
   (read-bv-and-eof "#vf8l(1.2)"		,(f8l-list->bytevector '(1.2)))
-  ;; (read-bv-and-eof "#vf8l(1.2 3.4)"	,(f8l-list->bytevector '(1.2 3.4)))
-  ;; (read-bv-and-eof "#vf8l(-1.2 -3.4)"	,(f8l-list->bytevector '(-1.2 -3.4)))
+  (read-bv-and-eof "#vf8l(1.2 3.4)"	,(f8l-list->bytevector '(1.2 3.4)))
+  (read-bv-and-eof "#vf8l(-1.2 -3.4)"	,(f8l-list->bytevector '(-1.2 -3.4)))
 
-  ;;(read-bv-and-eof "#vf8b()"		,(f8b-list->bytevector '()))
+  (read-bv-and-eof "#vf8b()"		,(f8b-list->bytevector '()))
   (read-bv-and-eof "#vf8b(1.2)"		,(f8b-list->bytevector '(1.2)))
-  ;; (read-bv-and-eof "#vf8b(1.2 3.4)"	,(f8b-list->bytevector '(1.2 3.4)))
-  ;; (read-bv-and-eof "#vf8b(-1.2 -3.4)"	,(f8b-list->bytevector '(-1.2 -3.4)))
+  (read-bv-and-eof "#vf8b(1.2 3.4)"	,(f8b-list->bytevector '(1.2 3.4)))
+  (read-bv-and-eof "#vf8b(-1.2 -3.4)"	,(f8b-list->bytevector '(-1.2 -3.4)))
 
-  ;; (read-bv-and-eof "#vf8n()"		,(f8n-list->bytevector '()))
+  (read-bv-and-eof "#vf8n()"		,(f8n-list->bytevector '()))
   (read-bv-and-eof "#vf8n(1.2)"		,(f8n-list->bytevector '(1.2)))
-  ;; (read-bv-and-eof "#vf8n(1.2 3.4)"	,(f8n-list->bytevector '(1.2 3.4)))
-  ;; (read-bv-and-eof "#vf8n(-1.2 -3.4)"	,(f8n-list->bytevector '(-1.2 -3.4)))
+  (read-bv-and-eof "#vf8n(1.2 3.4)"	,(f8n-list->bytevector '(1.2 3.4)))
+  (read-bv-and-eof "#vf8n(-1.2 -3.4)"	,(f8n-list->bytevector '(-1.2 -3.4)))
+
+;;; --------------------------------------------------------------------
+;;; single-precision cflonum
+
+  (read-bv-and-eof "#vc4l()"			,(c4l-list->bytevector '()))
+  (read-bv-and-eof "#vc4l(1.2+3.4i)"		,(c4l-list->bytevector '(1.2+3.4i)))
+  (read-bv-and-eof "#vc4l(1.2+3.4i 5.6-7.8i)"	,(c4l-list->bytevector '(1.2+3.4i 5.6-7.8i)))
+  (read-bv-and-eof "#vc4l(-1.2+3.4i -5.6-7.8i)"	,(c4l-list->bytevector '(-1.2+3.4i -5.6-7.8i)))
+
+  (read-bv-and-eof "#vc4b()"			,(c4b-list->bytevector '()))
+  (read-bv-and-eof "#vc4b(1.2+3.4i)"		,(c4b-list->bytevector '(1.2+3.4i)))
+  (read-bv-and-eof "#vc4b(1.2+3.4i 5.6-7.8i)"	,(c4b-list->bytevector '(1.2+3.4i 5.6-7.8i)))
+  (read-bv-and-eof "#vc4b(-1.2+3.4i -5.6-7.8i)"	,(c4b-list->bytevector '(-1.2+3.4i -5.6-7.8i)))
+
+  (read-bv-and-eof "#vc4n()"			,(c4n-list->bytevector '()))
+  (read-bv-and-eof "#vc4n(1.2+3.4i)"		,(c4n-list->bytevector '(1.2+3.4i)))
+  (read-bv-and-eof "#vc4n(1.2+3.4i 5.6-7.8i)"	,(c4n-list->bytevector '(1.2+3.4i 5.6-7.8i)))
+  (read-bv-and-eof "#vc4n(-1.2+3.4i -5.6-7.8i)"	,(c4n-list->bytevector '(-1.2+3.4i -5.6-7.8i)))
+
+;;; --------------------------------------------------------------------
+;;; double-precision cflonum
+
+  (read-bv-and-eof "#vc8l()"			,(c8l-list->bytevector '()))
+  (read-bv-and-eof "#vc8l(1.2+3.4i)"		,(c8l-list->bytevector '(1.2+3.4i)))
+  (read-bv-and-eof "#vc8l(1.2+3.4i 5.6-7.8i)"	,(c8l-list->bytevector '(1.2+3.4i 5.6-7.8i)))
+  (read-bv-and-eof "#vc8l(-1.2+3.4i -5.6-7.8i)"	,(c8l-list->bytevector '(-1.2+3.4i -5.6-7.8i)))
+
+  (read-bv-and-eof "#vc8b()"			,(c8b-list->bytevector '()))
+  (read-bv-and-eof "#vc8b(1.2+3.4i)"		,(c8b-list->bytevector '(1.2+3.4i)))
+  (read-bv-and-eof "#vc8b(1.2+3.4i 5.6-7.8i)"	,(c8b-list->bytevector '(1.2+3.4i 5.6-7.8i)))
+  (read-bv-and-eof "#vc8b(-1.2+3.4i -5.6-7.8i)"	,(c8b-list->bytevector '(-1.2+3.4i -5.6-7.8i)))
+
+  (read-bv-and-eof "#vc8n()"			,(c8n-list->bytevector '()))
+  (read-bv-and-eof "#vc8n(1.2+3.4i)"		,(c8n-list->bytevector '(1.2+3.4i)))
+  (read-bv-and-eof "#vc8n(1.2+3.4i 5.6-7.8i)"	,(c8n-list->bytevector '(1.2+3.4i 5.6-7.8i)))
+  (read-bv-and-eof "#vc8n(-1.2+3.4i -5.6-7.8i)"	,(c8n-list->bytevector '(-1.2+3.4i -5.6-7.8i)))
 
   #t)
 
