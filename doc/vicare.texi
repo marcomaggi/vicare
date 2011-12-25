@@ -2084,6 +2084,22 @@ Read a bytevector of 64-bit signed words stored in little, big and
 native endianness.
 @end deffn
 
+
+@deffn {Reader Syntax} {#vf4l(@var{flonum} ...)}
+@deffnx {Reader Syntax} {#vf4b(@var{flonum} ...)}
+@deffnx {Reader Syntax} {#vf4n(@var{flonum} ...)}
+Read a bytevector of single--precision flonums stored in little, big and
+native endianness.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vf8l(@var{flonum} ...)}
+@deffnx {Reader Syntax} {#vf8b(@var{flonum} ...)}
+@deffnx {Reader Syntax} {#vf8n(@var{flonum} ...)}
+Read a bytevector of double--precision flonums stored in little, big and
+native endianness.
+@end deffn
+
 @c page
 @node iklib reader stx
 @subsection Miscellaneous additional syntaxes
@@ -2763,6 +2779,28 @@ endianness.
 Convert between a list of signed or unsigned 64-bit words and a
 bytevector in which the words are stored in little, big or native
 endianness.
+@end defun
+
+
+@defun f4l-list->bytevector @var{list}
+@defunx f4b-list->bytevector @var{list}
+@defunx f4n-list->bytevector @var{list}
+@defunx bytevector->f4l-list @var{bytevector}
+@defunx bytevector->f4b-list @var{bytevector}
+@defunx bytevector->f4n-list @var{bytevector}
+Convert between a list of single--precision flonums and a bytevector in
+which the flonums are stored in little, big or native endianness.
+@end defun
+
+
+@defun f8l-list->bytevector @var{list}
+@defunx f8b-list->bytevector @var{list}
+@defunx f8n-list->bytevector @var{list}
+@defunx bytevector->f8l-list @var{bytevector}
+@defunx bytevector->f8b-list @var{bytevector}
+@defunx bytevector->f8n-list @var{bytevector}
+Convert between a list of double--precision flonums and a bytevector in
+which the flonums are stored in little, big or native endianness.
 @end defun
 
 @c page

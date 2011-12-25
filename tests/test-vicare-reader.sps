@@ -26,7 +26,7 @@
 
 
 #!vicare
-(import (rename (vicare) #;(ikarus)
+(import (rename (vicare)
 		(parameterize	parametrise))
   (checks))
 
@@ -811,6 +811,42 @@
   (read-bv-and-eof "#vs64n(-1)"		,(s64n-list->bytevector '(-1)))
   (read-bv-and-eof "#vs64n(1 2 3)"	,(s64n-list->bytevector '(1 2 3)))
   (read-bv-and-eof "#vs64n(-1 -2 -3)"	,(s64n-list->bytevector '(-1 -2 -3)))
+
+;;; --------------------------------------------------------------------
+;;; single-precision flonum, little endian
+
+  (read-bv-and-eof "#vf4l()"		,(f4l-list->bytevector '()))
+  (read-bv-and-eof "#vf4l(1.2)"		,(f4l-list->bytevector '(1.2)))
+  (read-bv-and-eof "#vf4l(1.2 3.4)"	,(f4l-list->bytevector '(1.2 3.4)))
+  (read-bv-and-eof "#vf4l(-1.2 -3.4)"	,(f4l-list->bytevector '(-1.2 -3.4)))
+
+  (read-bv-and-eof "#vf4b()"		,(f4b-list->bytevector '()))
+  (read-bv-and-eof "#vf4b(1.2)"		,(f4b-list->bytevector '(1.2)))
+  (read-bv-and-eof "#vf4b(1.2 3.4)"	,(f4b-list->bytevector '(1.2 3.4)))
+  (read-bv-and-eof "#vf4b(-1.2 -3.4)"	,(f4b-list->bytevector '(-1.2 -3.4)))
+
+  (read-bv-and-eof "#vf4n()"		,(f4n-list->bytevector '()))
+  (read-bv-and-eof "#vf4n(1.2)"		,(f4n-list->bytevector '(1.2)))
+  (read-bv-and-eof "#vf4n(1.2 3.4)"	,(f4n-list->bytevector '(1.2 3.4)))
+  (read-bv-and-eof "#vf4n(-1.2 -3.4)"	,(f4n-list->bytevector '(-1.2 -3.4)))
+
+;;; --------------------------------------------------------------------
+;;; double-precision flonum, little endian
+
+  (read-bv-and-eof "#vf8l()"		,(f8l-list->bytevector '()))
+  (read-bv-and-eof "#vf8l(1.2)"		,(f8l-list->bytevector '(1.2)))
+  ;; (read-bv-and-eof "#vf8l(1.2 3.4)"	,(f8l-list->bytevector '(1.2 3.4)))
+  ;; (read-bv-and-eof "#vf8l(-1.2 -3.4)"	,(f8l-list->bytevector '(-1.2 -3.4)))
+
+  ;;(read-bv-and-eof "#vf8b()"		,(f8b-list->bytevector '()))
+  (read-bv-and-eof "#vf8b(1.2)"		,(f8b-list->bytevector '(1.2)))
+  ;; (read-bv-and-eof "#vf8b(1.2 3.4)"	,(f8b-list->bytevector '(1.2 3.4)))
+  ;; (read-bv-and-eof "#vf8b(-1.2 -3.4)"	,(f8b-list->bytevector '(-1.2 -3.4)))
+
+  ;; (read-bv-and-eof "#vf8n()"		,(f8n-list->bytevector '()))
+  (read-bv-and-eof "#vf8n(1.2)"		,(f8n-list->bytevector '(1.2)))
+  ;; (read-bv-and-eof "#vf8n(1.2 3.4)"	,(f8n-list->bytevector '(1.2 3.4)))
+  ;; (read-bv-and-eof "#vf8n(-1.2 -3.4)"	,(f8n-list->bytevector '(-1.2 -3.4)))
 
   #t)
 

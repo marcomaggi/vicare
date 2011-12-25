@@ -44,9 +44,7 @@
     (prefix (vicare unsafe-operations)
 	    unsafe.)
     (only (ikarus.string-to-number)
-	  define-string->number-parser)
-    (ikarus system $bytevectors)
-    )
+	  define-string->number-parser))
 
 
 ;;;; syntax helpers
@@ -95,6 +93,26 @@
 (define-inline (%assert-argument-is-procedure who x)
   (unless (procedure? x)
     (assertion-violation who "expected procedure as argument" x)))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (bytevector-flonum-single-le-set! bv i x)
+  (bytevector-ieee-single-set! bv i x (endianness little)))
+
+(define-inline (bytevector-flonum-single-be-set! bv i x)
+  (bytevector-ieee-single-set! bv i x (endianness big)))
+
+(define-inline (bytevector-flonum-single-ne-set! bv i x)
+  (bytevector-ieee-single-native-set! bv i x))
+
+(define-inline (bytevector-flonum-double-le-set! bv i x)
+  (bytevector-ieee-double-set! bv i x (endianness little)))
+
+(define-inline (bytevector-flonum-double-be-set! bv i x)
+  (bytevector-ieee-double-set! bv i x (endianness big)))
+
+(define-inline (bytevector-flonum-double-ne-set! bv i x)
+  (bytevector-ieee-double-native-set! bv i x))
 
 
 ;;;; interface to low level functions
@@ -1038,6 +1056,14 @@
   ;;vs64b			The token is a s64b bytevector.
   ;;vs64n			The token is a s64n bytevector.
   ;;
+  ;;vf4l			The token is a f4l bytevector.
+  ;;vf4b			The token is a f4b bytevector.
+  ;;vf4n			The token is a f4n bytevector.
+  ;;
+  ;;vf8l			The token is a f8l bytevector.
+  ;;vf8b			The token is a f8b bytevector.
+  ;;vf8n			The token is a f8n bytevector.
+  ;;
   ;;Correct sequences of chars:
   ;;
   ;; ch  ch1  ch2  ch3  ch4  ch5  datum
@@ -1069,6 +1095,14 @@
   ;; v   s    6    4    b    (    #vs64b
   ;; v   s    6    4    n    (    #vs64n
   ;;
+  ;; v   f    4    l    (         #vf4l
+  ;; v   f    4    b    (         #vf4b
+  ;; v   f    4    n    (         #vf4n
+  ;;
+  ;; v   f    8    l    (         #vf8l
+  ;; v   f    8    b    (         #vf8b
+  ;; v   f    8    n    (         #vf8n
+  ;;
   (define-inline (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define-inline (%error-1 msg . args)
@@ -1086,7 +1120,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define-inline (%read-sign-char)
+  (define-inline (%read-second-tag-char)
     (%read-char-no-eof (port ch1)
       ((unsafe.char= #\u ch1)
        (%read-unsigned))
@@ -1094,6 +1128,10 @@
        (when (port-in-r6rs-mode? port)
 	 (%error "invalid #vs syntax in #!r6rs mode" "#vs"))
        (%read-signed))
+      ((unsafe.char= #\f ch1)
+       (when (port-in-r6rs-mode? port)
+	 (%error "invalid #vf syntax in #!r6rs mode" "#vf"))
+       (%read-flonum))
       (else
        (%invalid-sequence-of-chars #\# #\v ch1))))
 
@@ -1242,7 +1280,44 @@
       (else
        (%invalid-sequence-of-chars-1 #\# #\v #\s #\6 #\4 ch4))))
 
-  (%read-sign-char))
+;;; --------------------------------------------------------------------
+
+  (define-inline (%read-flonum)
+    (%read-char-no-eof (port ch2)
+      ((unsafe.char= ch2 #\4)	;single precision flonums
+       (%read-flonum-single-precision))
+
+      ((unsafe.char= ch2 #\8)	;double precision flonums
+       (%read-flonum-double-precision))
+
+      (else
+       (%invalid-sequence-of-chars-1 #\# #\v #\f ch2))))
+
+  (define-inline (%read-flonum-single-precision)
+    (%read-char-no-eof (port ch4)
+      ((unsafe.char= ch4 #\l)
+       (%read-open-paren 'vf4l #\# #\v #\f #\4 #\l))
+      ((unsafe.char= ch4 #\b)
+       (%read-open-paren 'vf4b #\# #\v #\f #\4 #\b))
+      ((unsafe.char= ch4 #\n)
+       (%read-open-paren 'vf4n #\# #\v #\f #\4 #\n))
+      (else
+       (%invalid-sequence-of-chars-1 #\# #\v #\f #\4 ch4))))
+
+  (define-inline (%read-flonum-double-precision)
+    (%read-char-no-eof (port ch4)
+      ((unsafe.char= ch4 #\l)
+       (%read-open-paren 'vf8l #\# #\v #\f #\8 #\l))
+      ((unsafe.char= ch4 #\b)
+       (%read-open-paren 'vf8b #\# #\v #\f #\8 #\b))
+      ((unsafe.char= ch4 #\n)
+       (%read-open-paren 'vf8n #\# #\v #\f #\8 #\n))
+      (else
+       (%invalid-sequence-of-chars-1 #\# #\v #\f #\8 ch4))))
+
+;;; --------------------------------------------------------------------
+
+  (%read-second-tag-char))
 
 
 (define (finish-tokenisation-of-dot-datum port)
@@ -1538,10 +1613,12 @@
 
 	  ;;Read a bytevector.
 	  ((memq token '( ;;
-			 vu8 vs8
+			 vu8   vs8
 			 vu16l vu16b vu16n  vs16l vs16b vs16n
 			 vu32l vu32b vu32n  vs32l vs32b vs32n
-			 vu64l vu64b vu64n  vs64l vs64b vs64n))
+			 vu64l vu64b vu64n  vs64l vs64b vs64n
+			 vf4l  vf4b  vf4n
+			 vf8l  vf8b  vf8n))
 	   (let-values
 	       (((bv bv/ann locations kont)
 		 (cond ((eq? token 'vu8)
@@ -1592,7 +1669,22 @@
 		       ((eq? token 'vu64n)
 			(finish-tokenisation-of-bytevector-u64n port locations kont 0 '()))
 		       ((eq? token 'vs64n)
-			(finish-tokenisation-of-bytevector-s64n port locations kont 0 '())))))
+			(finish-tokenisation-of-bytevector-s64n port locations kont 0 '()))
+
+		       ((eq? token 'vf4l)
+			(finish-tokenisation-of-bytevector-f4l port locations kont 0 '()))
+		       ((eq? token 'vf4b)
+			(finish-tokenisation-of-bytevector-f4b port locations kont 0 '()))
+		       ((eq? token 'vf4n)
+			(finish-tokenisation-of-bytevector-f4n port locations kont 0 '()))
+
+		       ((eq? token 'vf8l)
+			(finish-tokenisation-of-bytevector-f8l port locations kont 0 '()))
+		       ((eq? token 'vf8b)
+			(finish-tokenisation-of-bytevector-f8b port locations kont 0 '()))
+		       ((eq? token 'vf8n)
+			(finish-tokenisation-of-bytevector-f8n port locations kont 0 '()))
+		       )))
 	     (values bv (annotate bv bv/ann pos) locations kont)))
 
 	  ((pair? token)
@@ -2393,7 +2485,7 @@
 	 (die/p-1 port 'vicare-reader msg . irritants))
 
        (define-inline (%make-bv the-count the-ls)
-	 (let ((bv ($make-bytevector (* ?bytes-in-word the-count))))
+	 (let ((bv (unsafe.make-bytevector (* ?bytes-in-word the-count))))
 	   (let loop ((i  (unsafe.fx- (unsafe.fx* count ?bytes-in-word) ?bytes-in-word))
 		      (ls the-ls))
 	     (if (null? ls)
@@ -2554,6 +2646,46 @@
   word-s64?		       ;to validate numbers
   8			       ;number of bytes in word
   unsafe.bytevector-s64n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-f4l
+  'vf4l				    ;tag
+  flonum?			    ;to validate numbers
+  4				    ;number of bytes in word
+  bytevector-flonum-single-le-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-f4b
+  'vf4b				    ;tag
+  flonum?			    ;to validate numbers
+  4				    ;number of bytes in word
+  bytevector-flonum-single-be-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-f4n
+  'vf4n				    ;tag
+  flonum?			    ;to validate numbers
+  4				    ;number of bytes in word
+  bytevector-flonum-single-ne-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-f8l
+  'vf8l				    ;tag
+  flonum?			    ;to validate numbers
+  8				    ;number of bytes in word
+  bytevector-flonum-double-le-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-f8b
+  'vf8b				    ;tag
+  flonum?			    ;to validate numbers
+  8				    ;number of bytes in word
+  bytevector-flonum-double-be-set!) ;setter
+
+(define-finish-bytevector finish-tokenisation-of-bytevector-f8n
+  'vf8n				    ;tag
+  flonum?			    ;to validate numbers
+  8				    ;number of bytes in word
+  bytevector-flonum-double-ne-set!) ;setter
 
 
 ;;;; done

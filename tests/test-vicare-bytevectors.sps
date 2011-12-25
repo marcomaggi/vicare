@@ -26,7 +26,7 @@
 
 
 #!vicare
-(import (rename (vicare) #;(ikarus)
+(import (rename (vicare)
 		(parameterize	parametrise))
   (vicare words)
   (checks))
@@ -52,6 +52,11 @@
 
 (define BIGNUM
   (+ 1 (greatest-fixnum)))
+
+(define (flonums=? a b)
+  (for-all (lambda (x y)
+	     (fl<? (flabs (fl- x y)) 1e-6))
+    a b))
 
 
 (parametrise ((check-test-name	'make-bytevector))
@@ -3404,6 +3409,90 @@
 				     #xFF #xFF #xFF #xFF  #xFF #xFF #xFF #xFF
 				     #xFF #xFF #xFF #xFF  #xFF #xFF #xFF #xFE
 				     #xFF #xFF #xFF #xFF  #xFF #xFF #xFF #xFD)))
+
+;;; --------------------------------------------------------------------
+;;; single precision flonums
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ ?ell)
+			(check
+			    (bytevector->f4l-list (f4l-list->bytevector ?ell))
+			  (=> flonums=?)
+			  ?ell)))))
+    (doit '())
+    (doit '(1.2))
+    (doit '(1.2 3.4))
+    (doit '(1.2 3.4 5.6))
+    (doit '(1.2 -3.4 5.6))
+    #f)
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ ?ell)
+			(check
+			    (bytevector->f4b-list (f4b-list->bytevector ?ell))
+			  (=> flonums=?)
+			  ?ell)))))
+    (doit '())
+    (doit '(1.2))
+    (doit '(1.2 3.4))
+    (doit '(1.2 3.4 5.6))
+    (doit '(1.2 -3.4 5.6))
+    #f)
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ ?ell)
+			(check
+			    (bytevector->f4n-list (f4n-list->bytevector ?ell))
+			  (=> flonums=?)
+			  ?ell)))))
+    (doit '())
+    (doit '(1.2))
+    (doit '(1.2 3.4))
+    (doit '(1.2 3.4 5.6))
+    (doit '(1.2 -3.4 5.6))
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; double precision flonums
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ ?ell)
+			(check
+			    (bytevector->f8l-list (f8l-list->bytevector ?ell))
+			  (=> flonums=?)
+			  ?ell)))))
+    (doit '())
+    (doit '(1.2))
+    (doit '(1.2 3.4))
+    (doit '(1.2 3.4 5.6))
+    (doit '(1.2 -3.4 5.6))
+    #f)
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ ?ell)
+			(check
+			    (bytevector->f8b-list (f8b-list->bytevector ?ell))
+			  (=> flonums=?)
+			  ?ell)))))
+    (doit '())
+    (doit '(1.2))
+    (doit '(1.2 3.4))
+    (doit '(1.2 3.4 5.6))
+    (doit '(1.2 -3.4 5.6))
+    #f)
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ ?ell)
+			(check
+			    (bytevector->f8n-list (f8n-list->bytevector ?ell))
+			  (=> flonums=?)
+			  ?ell)))))
+    (doit '())
+    (doit '(1.2))
+    (doit '(1.2 3.4))
+    (doit '(1.2 3.4 5.6))
+    (doit '(1.2 -3.4 5.6))
+    #f)
 
   #t)
 

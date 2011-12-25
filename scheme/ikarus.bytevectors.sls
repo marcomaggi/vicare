@@ -75,6 +75,13 @@
     s64b-list->bytevector	bytevector->s64b-list
     s64n-list->bytevector	bytevector->s64n-list
 
+    f4l-list->bytevector	bytevector->f4l-list
+    f4b-list->bytevector	bytevector->f4b-list
+    f4n-list->bytevector	bytevector->f4n-list
+    f8l-list->bytevector	bytevector->f8l-list
+    f8b-list->bytevector	bytevector->f8b-list
+    f8n-list->bytevector	bytevector->f8n-list
+
     subbytevector-u8		subbytevector-u8/count
     subbytevector-s8		subbytevector-s8/count)
   (import (except (ikarus)
@@ -135,6 +142,13 @@
 		  s64b-list->bytevector	bytevector->s64b-list
 		  s64n-list->bytevector	bytevector->s64n-list
 
+		  f4l-list->bytevector	bytevector->f4l-list
+		  f4b-list->bytevector	bytevector->f4b-list
+		  f4n-list->bytevector	bytevector->f4n-list
+		  f8l-list->bytevector	bytevector->f8l-list
+		  f8b-list->bytevector	bytevector->f8b-list
+		  f8n-list->bytevector	bytevector->f8n-list
+
 		  subbytevector-u8	subbytevector-u8/count
 		  subbytevector-s8	subbytevector-s8/count)
     (ikarus system $pairs)
@@ -153,6 +167,46 @@
 	  (make-who-condition who)
 	  (make-message-condition msg)
 	  (make-irritants-condition irritants))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (bytevector-flonum-single-le-set! bv i x)
+  (bytevector-ieee-single-set! bv i x (endianness little)))
+
+(define-inline (bytevector-flonum-single-be-set! bv i x)
+  (bytevector-ieee-single-set! bv i x (endianness big)))
+
+(define-inline (bytevector-flonum-single-ne-set! bv i x)
+  (bytevector-ieee-single-native-set! bv i x))
+
+(define-inline (bytevector-flonum-double-le-set! bv i x)
+  (bytevector-ieee-double-set! bv i x (endianness little)))
+
+(define-inline (bytevector-flonum-double-be-set! bv i x)
+  (bytevector-ieee-double-set! bv i x (endianness big)))
+
+(define-inline (bytevector-flonum-double-ne-set! bv i x)
+  (bytevector-ieee-double-native-set! bv i x))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (bytevector-flonum-single-le-ref bv i)
+  (bytevector-ieee-single-ref bv i (endianness little)))
+
+(define-inline (bytevector-flonum-single-be-ref bv i)
+  (bytevector-ieee-single-ref bv i (endianness big)))
+
+(define-inline (bytevector-flonum-single-ne-ref bv i)
+  (bytevector-ieee-single-native-ref bv i))
+
+(define-inline (bytevector-flonum-double-le-ref bv i)
+  (bytevector-ieee-double-ref bv i (endianness little)))
+
+(define-inline (bytevector-flonum-double-be-ref bv i)
+  (bytevector-ieee-double-ref bv i (endianness big)))
+
+(define-inline (bytevector-flonum-double-ne-ref bv i)
+  (bytevector-ieee-double-native-ref bv i))
 
 
 ;;;; arguments validation
@@ -1486,6 +1540,13 @@
 (define-bytevector-to-word-list bytevector->s64b-list vs64b 8 unsafe.bytevector-s64b-ref)
 (define-bytevector-to-word-list bytevector->s64n-list vs64n 8 unsafe.bytevector-s64n-ref)
 
+(define-bytevector-to-word-list bytevector->f4l-list  vf4l  4 bytevector-flonum-single-le-ref)
+(define-bytevector-to-word-list bytevector->f4b-list  vf4b  4 bytevector-flonum-single-be-ref)
+(define-bytevector-to-word-list bytevector->f4n-list  vf4n  4 bytevector-flonum-single-ne-ref)
+(define-bytevector-to-word-list bytevector->f8l-list  vf8l  8 bytevector-flonum-double-le-ref)
+(define-bytevector-to-word-list bytevector->f8b-list  vf8b  8 bytevector-flonum-double-be-ref)
+(define-bytevector-to-word-list bytevector->f8n-list  vf8n  8 bytevector-flonum-double-ne-ref)
+
 
 ;;;; fixed-length word list to bytevector conversion
 
@@ -1679,6 +1740,46 @@
   word-s64?		       ;to validate numbers
   8			       ;number of bytes in word
   unsafe.bytevector-s64n-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-word-list-to-bytevector f4l-list->bytevector
+  'vf4l				    ;tag
+  flonum?			    ;to validate numbers
+  4				    ;number of bytes in word
+  bytevector-flonum-single-le-set!) ;setter
+
+(define-word-list-to-bytevector f4b-list->bytevector
+  'vf4b				    ;tag
+  flonum?			    ;to validate numbers
+  4				    ;number of bytes in word
+  bytevector-flonum-single-be-set!) ;setter
+
+(define-word-list-to-bytevector f4n-list->bytevector
+  'vf4n				    ;tag
+  flonum?			    ;to validate numbers
+  4				    ;number of bytes in word
+  bytevector-flonum-single-ne-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define-word-list-to-bytevector f8l-list->bytevector
+  'vf8l				    ;tag
+  flonum?			    ;to validate numbers
+  8				    ;number of bytes in word
+  bytevector-flonum-double-le-set!) ;setter
+
+(define-word-list-to-bytevector f8b-list->bytevector
+  'vf8b				    ;tag
+  flonum?			    ;to validate numbers
+  8				    ;number of bytes in word
+  bytevector-flonum-double-be-set!) ;setter
+
+(define-word-list-to-bytevector f8n-list->bytevector
+  'vf8n				    ;tag
+  flonum?			    ;to validate numbers
+  8				    ;number of bytes in word
+  bytevector-flonum-double-ne-set!) ;setter
 
 
 ;;;; any integer list to bytevector functions
