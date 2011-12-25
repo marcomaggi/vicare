@@ -58,6 +58,12 @@
 	     (fl<? (flabs (fl- x y)) 1e-6))
     a b))
 
+(define (cflonums=? a b)
+  (for-all (lambda (x y)
+	     (and (fl<? (flabs (fl- (real-part x) (real-part y))) 1e-6)
+		  (fl<? (flabs (fl- (imag-part x) (imag-part y))) 1e-6)))
+    a b))
+
 
 (parametrise ((check-test-name	'make-bytevector))
 
@@ -3501,7 +3507,7 @@
 		       ((_ ?ell)
 			(check
 			    (bytevector->c4l-list (c4l-list->bytevector ?ell))
-			  (=> flonums=?)
+			  (=> cflonums=?)
 			  ?ell)))))
     (doit '())
     (doit '(1.2+3.4i))
@@ -3512,7 +3518,7 @@
 		       ((_ ?ell)
 			(check
 			    (bytevector->c4b-list (c4b-list->bytevector ?ell))
-			  (=> flonums=?)
+			  (=> cflonums=?)
 			  ?ell)))))
     (doit '())
     (doit '(1.2+3.4i))
@@ -3523,7 +3529,7 @@
 		       ((_ ?ell)
 			(check
 			    (bytevector->c4n-list (c4n-list->bytevector ?ell))
-			  (=> flonums=?)
+			  (=> cflonums=?)
 			  ?ell)))))
     (doit '())
     (doit '(1.2+3.4i))
@@ -3537,7 +3543,7 @@
 		       ((_ ?ell)
 			(check
 			    (bytevector->c8l-list (c8l-list->bytevector ?ell))
-			  (=> flonums=?)
+			  (=> cflonums=?)
 			  ?ell)))))
     (doit '())
     (doit '(1.2+3.4i))
@@ -3548,7 +3554,7 @@
 		       ((_ ?ell)
 			(check
 			    (bytevector->c8b-list (c8b-list->bytevector ?ell))
-			  (=> flonums=?)
+			  (=> cflonums=?)
 			  ?ell)))))
     (doit '())
     (doit '(1.2+3.4i))
@@ -3559,7 +3565,7 @@
 		       ((_ ?ell)
 			(check
 			    (bytevector->c8n-list (c8n-list->bytevector ?ell))
-			  (=> flonums=?)
+			  (=> cflonums=?)
 			  ?ell)))))
     (doit '())
     (doit '(1.2+3.4i))

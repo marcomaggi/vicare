@@ -268,8 +268,8 @@
 
 (define-inline (bytevector-cflonum-single-ne-ref bv i)
   (make-rectangular
-    (bytevector-ieee-single-native-ref bv i                (real-part))
-    (bytevector-ieee-single-native-ref bv (unsafe.fx+ 4 i) (imag-part))))
+    (bytevector-ieee-single-native-ref bv i)
+    (bytevector-ieee-single-native-ref bv (unsafe.fx+ 4 i))))
 
 (define-inline (bytevector-cflonum-double-le-ref bv i)
   (make-rectangular
