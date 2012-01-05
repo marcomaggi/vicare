@@ -9565,7 +9565,8 @@ On non--@gnu{} C Library platforms we must avoid calling these
 functions, else the behaviour is undefined.
 
 @menu
-* glibc env::                   Operating system environment variables.
+* glibc env::                   Operating system environment
+                                variables.
 * glibc dir::                   File system directories.
 * glibc temp::                  Temporary files and directories.
 * glibc sync::                  File system synchronisation.
@@ -9576,6 +9577,7 @@ functions, else the behaviour is undefined.
                                 regular expressions.
 * glibc word::                  Performing word expansion.
 * glibc config::                System configuration.
+* glibc iconv::                 Generic character set conversion.
 @end menu
 
 @c page
@@ -10233,6 +10235,227 @@ representing the value; else an exception is raised.
 @result{} "/bin:/usr/bin"
 @end example
 @end defun
+
+@c page
+@node glibc iconv
+@section Generic character set conversion
+
+
+The Iconv functions allow conversion among character set encodings,
+@glibcref{Generic Charset Conversion, Conversion}.  The following
+bindings are exported by the @library{vicare glibc} library.
+
+
+@deftp {Enumeration Type} enum-iconv-encoding
+Enumeration type for the symbols describing supported Iconv encodings.
+All the encoding symbols are included with the exception of @samp{850},
+@samp{862} and @samp{866} (because they are numbers) which are aliases
+for @samp{CP850}, @samp{CP862} and @samp{CP866}.
+
+Additionally @samp{TRANSLIT} and @samp{IGNORE} are included to allow the
+specification of the corresponding modes for @func{iconv!}.
+@end deftp
+
+
+@deffn Syntax iconv-encoding @ameta{symbol} ...
+Evaluate to an enumeration set holding symbols from the
+@code{iconv-encoding-symbol} enumeration.  It should be used to compose
+sets with a single encoding symbol and optionally none, one or both the
+symbols @samp{TRANSLIT} and @samp{IGNORE}.
+
+Examples:
+
+@example
+(iconv-encoding ISO8859-4)
+(iconv-encoding UTF-16BE IGNORE)
+(iconv-encoding UCS-4 TRANSLIT IGNORE)
+@end example
+@end deffn
+
+
+@defvr Constant iconv-encoding-universe
+Enumeration set holding all the symbols in the
+@code{iconv-encoding-symbol} enumeration.
+@end defvr
+
+
+@defun iconv-encoding-aliases? @vari{set} @varii{set}
+Return true if the encodings specified by the enumeration sets
+@vari{set} and @varii{set} are aliases for the same encoding.  This
+predicate does @strong{not} take into account the @samp{TRANSLIT} and
+@samp{IGNORE} symbols.
+@end defun
+
+
+@defun iconv-encoding=?
+Return true if the encodings specified by the enumeration sets
+@vari{set} and @varii{set} are aliases for the same encoding, taking
+into account the @samp{TRANSLIT} and @samp{IGNORE} symbols.
+@end defun
+
+@c ------------------------------------------------------------
+
+The following bindings are exported by the @library{foreign i18n iconv
+record-types} library.
+
+
+@deftp {Record Type Name} <iconv-context>
+@deftpx {Record Type Descriptor} <iconv-context-rtd>
+Record type representing an Iconv context.  It has the following fields,
+all immutable:
+
+@table @code
+@item pointer
+Pointer object to a foreign Iconv context structure.
+
+@item from
+Enumeration set of type @code{iconv-encoding-symbol} describing the
+input of the conversion context.
+
+@item to
+Enumeration set of type @code{iconv-encoding-symbol} describing the
+output of the conversion context.
+@end table
+@end deftp
+
+
+@defun make-<iconv-context> @var{pointer} @var{from} @var{to}
+@defunx <iconv-context>? @var{obj}
+Constructor and predicate for records of type @class{iconv-context}.
+@end defun
+
+
+@defun <iconv-context>-pointer @var{record}
+@defunx <iconv-context>-from @var{record}
+@defunx <iconv-context>-to @var{record}
+Accessors for records of type @class{iconv-context}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@chapter Conversion functions
+
+
+The following bindings are exported by the @library{foreign i18n iconv
+primitives} library and reexported by the compound library
+@library{foreign i18n iconv}.
+
+In case of error, all the following functions raise an exception with
+condition object of type @condition{errno}; when the @code{errno} code
+is @code{E2BIG}, it means that the output buffer was not big enough to
+hold the whole output.
+
+
+@defun iconv-open @var{to} @var{from}
+Build and return a new conversion context object for the specified
+encodings.  @var{from} and @var{to} must be enumeration sets of type
+@code{iconv-encoding-symbol}.
+
+@quotation
+@strong{NOTE} Beware of the order of the arguments!  An error may be
+difficult to detect.
+@end quotation
+@end defun
+
+
+@defun iconv-context? @var{obj}
+Return true if @var{obj} is an Iconv context object.  Context objects
+are disjoint from the other Scheme objects.
+@end defun
+
+
+@defun iconv-close @var{context}
+Close the conversion @var{context} releases all the associated
+resources.
+@end defun
+
+
+@defun iconv! @var{context} @var{to-block} @var{from-block}
+@defunx iconv! @var{context} @var{to-block}
+Convert text from @var{from-block} to text into @var{to-block} as
+specified by @var{context}, which must be an Iconv conversion context
+object.  Return the return code of the foreign function.
+
+@var{from-block} and @var{to-block} must be records of type
+@class{memblock}, from the @library{foreign memory memblocks} library.
+@nauref{memory blocks, Memory blocks}.
+
+When @var{from-block} is not given, the contents of the context are
+flushed to @var{to-block} and the context is restored to its initial
+state.
+
+The input and output blocks are mutated as described in the original
+documentation of @cfunc{iconv}; this happens in case or error, too.
+
+@quotation
+@strong{NOTE} Beware of the order of the arguments!  An error may be
+difficult to detect.
+@end quotation
+@end defun
+
+
+@defun iconv-membuffer! @var{ctx} @var{buffer}
+@defunx iconv-membuffer! @var{ctx} @var{buffer} @var{from-block}
+Like @func{iconv!} but push the processed output to the membuffer
+@var{buffer} object; we can access the output using
+@func{membuffer-pop-memblock!} on @var{buffer}.  @nauref{memory
+membuffer, Memory buffers}.
+
+When @var{from-block} is not given, the contents of the context are
+flushed to @var{buffer} and the context is restored to its initial
+state.
+@end defun
+
+
+Example using compensations:
+
+@example
+(import (rnrs)
+  (compensations)
+  (foreign memory)
+  (foreign i18n iconv)
+  (foreign i18n iconv compensated))
+
+(with-compensations
+  (let* ((ctx      (iconv-open/c (iconv-encoding UTF-16)
+                                 (iconv-encoding UTF-8)))
+         (in       (bytevector->memblock (string->utf8 "ciao")
+                                         malloc/c))
+         (ou       (malloc-memblock/c 256))
+         (in-tail  (memblock-shallow-clone in))
+         (ou-tail  (memblock-shallow-clone ou)))
+
+    (iconv! ctx ou-tail in-tail) ;begin conversion
+    (iconv! ctx ou-tail)         ;flush context
+
+    (let ((result (memblock&tail-head ou ou-tail)))
+      ---)))
+@end example
+
+@noindent
+example using memory buffers:
+
+@example
+(import (rnrs)
+  (compensations)
+  (foreign cstrings)
+  (foreign memory)
+  (foreign memory membuffers)
+  (foreign i18n iconv)
+  (foreign i18n iconv compensated))
+
+(let ((ctx        (iconv-open/c (iconv-encoding UTF-16)
+                                (iconv-encoding UTF-8)))
+      (buffer     (membuffer)))
+  (iconv-membuffer! ctx buffer (string->memblock/c "verde "))
+  (iconv-membuffer! ctx buffer (string->memblock/c "bianco "))
+  (iconv-membuffer! ctx buffer (string->memblock/c "rosso"))
+  (iconv-membuffer! ctx buffer)
+  (let* ((block   (malloc-memblock/c 256))
+         (len     (membuffer-pop-memblock! buffer block))
+         (bv      (memblock->bytevector block len)))
+    ---))
+@end example
 
 @c page
 @node linux

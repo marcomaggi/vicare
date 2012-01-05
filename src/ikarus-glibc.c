@@ -7,7 +7,7 @@
 
 
 
-  Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute  it and/or modify
   it under the  terms of the GNU General Public  License as published by
@@ -58,6 +58,11 @@
 #endif
 #ifdef HAVE_WORDEXP_H
 #  include <wordexp.h>
+#endif
+
+/* Iconv usage has its own configuration option. */
+#ifdef ENABLE_ICONV
+#  include <iconv.h>
 #endif
 
 static IK_UNUSED void
@@ -947,6 +952,95 @@ ikrt_glibc_confstr (ikptr s_parameter, ikpcb * pcb)
     char *      result   = IK_BYTEVECTOR_DATA_CHARP(s_result);
     confstr((int)parameter, result, length_including_zero);
     return s_result;
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
+ ** Generic character set conversion.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_glibc_iconv_open (ikptr s_to_code, ikptr s_from_code, ikpcb * pcb)
+/* Open  a  new  conversion  handle.   S_TO_CODE must  be  a  bytevector
+   representing the name of the  output encoding.  S_FROM_CODE must be a
+   bytevector  representing   the  name  of  the   input  encoding.   If
+   successful:  the return  value is  a pointer  object  referencing the
+   state structure; if  an error occurs: the return  value is an encoded
+   "errno" value. */
+{
+#if (ENABLE_ICONV && (defined (HAVE_ICONV_OPEN)))
+  char *	to_code   = IK_BYTEVECTOR_DATA_CHARP(s_to_code);
+  char *	from_code = IK_BYTEVECTOR_DATA_CHARP(s_from_code);
+  /* Glibc documentation  states that we must not  assume anything about
+     the "iconv_t" type, but we known  that it is a pointer.  It is very
+     unlikely that  its implementation is  changed, so we take  the risk
+     here. */
+  iconv_t	handle;
+  errno  = 0;
+  handle = iconv_open(to_code, from_code);
+  if (((iconv_t)-1) != handle)
+    return ik_pointer_alloc((unsigned long)handle, pcb);
+  else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_iconv_close (ikptr s_handle)
+/* Close a  conversion handle,  releasing all the  associated resources.
+   the handle is finalised only if S_HANDLE is a non-NULL pointer; if it
+   is  a   NULL  pointer  nothing  happens  and   the  function  returns
+   successfully.  If successful: the return value is the fixnum zero and
+   S_HANLE is mutated to hold the  NULL pointer; if an error occurs: the
+   return value is an encoded "errno" value. */
+{
+#if (ENABLE_ICONV && (defined (HAVE_ICONV_CLOSE)))
+  iconv_t	handle = (iconv_t)IK_POINTER_DATA_VOIDP(s_handle);
+  if (handle) {
+    int		retval;
+    errno  = 0;
+    retval = iconv_close(handle);
+    if (-1 == retval)
+      return ik_errno_to_code();
+    ref(s_handle, off_pointer_data) = 0;
+  }
+  return fix(0);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_iconv (ikptr s_handle,
+		  ikptr s_input_bv,  ikptr s_input_start,  ikptr s_input_past,
+		  ikptr s_output_bv, ikptr s_output_start, ikptr s_output_past,
+		  ikpcb * pcb)
+{
+#if (ENABLE_ICONV && (defined (HAVE_ICONV)))
+  iconv_t	handle = (iconv_t)IK_POINTER_DATA_VOIDP(s_handle);
+  size_t	istart = unfix(s_input_start);
+  size_t	ipast  = unfix(s_input_past);
+  size_t	ostart = unfix(s_output_start);
+  size_t	opast  = unfix(s_output_past);
+  char *	input  = istart + IK_BYTEVECTOR_DATA_CHARP(s_input_bv);
+  char *	output = ostart + IK_BYTEVECTOR_DATA_CHARP(s_output_bv);
+  size_t	isize  = ipast - istart;
+  size_t	osize  = opast - ostart;
+  size_t	retval;
+  errno  = 0;
+  retval = iconv(handle, &input, &isize, &output, &osize);
+  if (((size_t)-1) != retval) {
+    ikptr	s_pair = IK_PAIR_ALLOC(pcb);
+    istart = ipast - isize;
+    ostart = opast - osize;
+    IK_CAR(s_pair) = fix(istart);
+    IK_CDR(s_pair) = fix(ostart);
+    return s_pair;
   } else
     return ik_errno_to_code();
 #else

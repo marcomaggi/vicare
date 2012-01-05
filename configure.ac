@@ -225,6 +225,41 @@ fi # "$enable_ffi" != no
 
 AC_DEFINE_UNQUOTED(ENABLE_LIBFFI, [$libffi_val], [adds support for libffi])
 
+dnl --------------------------------------------------------------------
+
+# Check for iconv (optional)
+
+AC_ARG_WITH(iconv,
+  AS_HELP_STRING([--with-iconv],[enable support for iconv (default is check)]),
+  [true],[enable_iconv=check])
+
+iconv_val=0
+if test "$enable_iconv" != no; then
+  AC_CHECK_HEADER([iconv.h],[have_iconv_h=yes],[have_iconv_h=no])
+  AC_CHECK_LIB([iconv],[iconv_open],[have_iconv=yes],[have_iconv=no])
+  if test "$have_iconv" = yes && test "$have_iconv_h" = yes; then
+    iconv_val=1
+    LIBS="$LIBS -liconv"
+  elif test "$enable_iconv" = yes; then
+    if test "$have_iconv_h" = no; then
+      AC_MSG_ERROR([iconv.h cannot be found.
+Please specify the location of the header file using
+  ./configure CPPFLAGS=-I<path/to/iconv.h>   <other-options ...>
+])
+    fi
+    if test "$have_iconv" = no; then
+      AC_MSG_ERROR([iconv cannot be found.
+Please specify the location of the library file using
+  ./configure LDFLAGS=-L<path/to/iconv.ld|dylib|so|etc.>  <other-options ...>
+])
+    fi
+  else
+    AC_MSG_WARN([iconv not found -- ICONV disabled])
+  fi
+fi # "$enable_iconv" != no
+
+AC_DEFINE_UNQUOTED([ENABLE_ICONV],[$iconv_val],[adds support for iconv])
+
 AC_CACHE_SAVE
 
 #page
@@ -662,6 +697,7 @@ AC_CHECK_FUNCS([rand srand])
 AC_CHECK_FUNCS([fnmatch glob regcomp regexec regfree regerror])
 AC_CHECK_FUNCS([wordexp wordfree])
 AC_CHECK_FUNCS([sysconf pathconf fpathconf confstr])
+AC_CHECK_FUNCS([iconv_open iconv_close iconv])
 
 AC_CACHE_SAVE
 

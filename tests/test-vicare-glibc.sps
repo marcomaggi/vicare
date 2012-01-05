@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -31,6 +31,8 @@
 	  px.)
   (prefix (vicare glibc)
 	  glibc.)
+  (prefix (vicare ffi)
+	  ffi.)
   (vicare platform-constants)
   (vicare syntactic-extensions)
   (checks))
@@ -362,6 +364,67 @@
   (check
       (glibc.confstr/string _CS_PATH)
     => "/bin:/usr/bin")
+
+  #t)
+
+
+(parametrise ((check-test-name	'iconv))
+
+  (check
+      (ffi.pointer? (glibc.iconv-open (glibc.iconv-encoding UTF-16)
+				      (glibc.iconv-encoding UTF-8)))
+    => #t)
+
+  (check
+      (ffi.pointer? (glibc.iconv-open (glibc.iconv-encoding UTF-16 TRANSLIT IGNORE)
+				      (glibc.iconv-encoding UTF-8)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (glibc.iconv-encoding-aliases? (glibc.iconv-encoding IBM819)
+				     (glibc.iconv-encoding ISO-8859-1))
+    => #t)
+
+  (check
+      (glibc.iconv-encoding-aliases? (glibc.iconv-encoding IBM819)
+				     (glibc.iconv-encoding UTF-8))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (glibc.iconv-encoding=? (glibc.iconv-encoding IBM819)
+			      (glibc.iconv-encoding ISO-8859-1))
+    => #t)
+
+  (check
+      (glibc.iconv-encoding=? (glibc.iconv-encoding IBM819 TRANSLIT)
+			      (glibc.iconv-encoding ISO-8859-1))
+    => #f)
+
+  (check
+      (glibc.iconv-encoding=? (glibc.iconv-encoding IBM819 IGNORE)
+			      (glibc.iconv-encoding ISO-8859-1))
+    => #f)
+
+  (check
+      (glibc.iconv-encoding=? (glibc.iconv-encoding IBM819 TRANSLIT)
+			      (glibc.iconv-encoding ISO-8859-1 TRANSLIT))
+    => #t)
+
+  (check
+      (glibc.iconv-encoding=? (glibc.iconv-encoding IBM819 TRANSLIT)
+			      (glibc.iconv-encoding ISO-8859-1 TRANSLIT IGNORE))
+    => #f)
+
+  (check
+      (glibc.iconv-encoding=? (glibc.iconv-encoding IBM819)
+			      (glibc.iconv-encoding UTF-8))
+    => #f)
+
+
 
   #t)
 

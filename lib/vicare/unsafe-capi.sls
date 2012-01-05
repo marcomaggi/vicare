@@ -10,7 +10,7 @@
 ;;;	the Vicare  documentation.  This library  exports only syntaxes,
 ;;;	so it can be used in the source code of Vicare itself.
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -257,6 +257,10 @@
     ;; system configuration
     glibc-sysconf	glibc-confstr
     glibc-pathconf	glibc-fpathconf
+
+    ;; iconv
+    glibc-iconv-open	glibc-iconv-close
+    glibc-iconv
     )
   (import (except (ikarus)
 		  posix-read	posix-write
@@ -1446,6 +1450,22 @@
 
 (define-inline (glibc-confstr parameter)
   (foreign-call "ikrt_glibc_confstr" parameter))
+
+
+;;;; iconv
+
+(define-inline (glibc-iconv-open to-code from-code)
+  (foreign-call "ikrt_glibc_iconv_open" to-code from-code))
+
+(define-inline (glibc-iconv-close handle)
+  (foreign-call "ikrt_glibc_iconv_close" handle))
+
+(define-inline (glibc-iconv handle
+			    input  input.start  input.past
+			    output output.start output.past)
+  (foreign-call "ikrt_glibc_iconv" handle
+		input  input.start  input.past
+		output output.start output.past))
 
 
 ;;;; done

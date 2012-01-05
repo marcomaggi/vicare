@@ -118,7 +118,8 @@
   (do ((pointer (%memory-guardian) (%memory-guardian)))
       ((not pointer))
     (unless (pointer-null? pointer)
-      (free pointer))))
+      (free pointer)
+      (set-pointer-null! pointer))))
 
 (define (guarded-malloc number-of-bytes)
   (let ((rv (malloc number-of-bytes)))
