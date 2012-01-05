@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,7 +25,7 @@
 ;;;
 
 
-(library (ikarus.linux)
+(library (vicare linux)
   (export
     ;; process termination status
     waitid
@@ -35,16 +35,14 @@
     struct-siginfo_t-si_code
     WIFCONTINUED
     )
-  (import (except (ikarus)
+  (import (except (vicare)
 		  ;; process termination status
 		  waitid
 		  make-struct-siginfo_t		struct-siginfo_t?
 		  struct-siginfo_t-si_pid	struct-siginfo_t-si_uid
 		  struct-siginfo_t-si_signo	struct-siginfo_t-si_status
 		  struct-siginfo_t-si_code
-		  WIFCONTINUED
-
-		  )
+		  WIFCONTINUED)
     (vicare syntactic-extensions)
     (vicare platform-constants)
     (prefix (vicare unsafe-capi)

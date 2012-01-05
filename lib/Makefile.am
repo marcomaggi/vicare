@@ -19,6 +19,7 @@ dist_libvicare_DATA	= vicare/ffi.sls			\
 			  vicare/words.sls			\
 			  vicare/installation-configuration.sls	\
 			  vicare/glibc.sls			\
+			  vicare/linux.sls			\
 			  vicare/gcc.sls
 
 ## --------------------------------------------------------------------

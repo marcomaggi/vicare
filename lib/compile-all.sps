@@ -38,6 +38,7 @@
   (only (vicare words))
   (only (vicare installation-configuration))
   (only (vicare glibc))
+  (only (vicare linux))
   (only (vicare gcc)))
 
 ;;; end of file

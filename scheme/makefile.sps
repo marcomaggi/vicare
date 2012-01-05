@@ -269,7 +269,6 @@
     "ikarus.bytevectors.sls"
     "ikarus.pointers.sls"
     "ikarus.posix.sls"
-    "ikarus.linux.sls"
     "ikarus.io.sls"
     "ikarus.hash-tables.sls"
     "ikarus.pretty-formats.sls"
@@ -527,7 +526,6 @@
     (se			(psyntax scheme-report-environment-5)	#f	#f)
 ;;;
     (posix		(vicare posix)				#t	#f)
-    (linux		(vicare linux)				#t	#f)
     ))
 
 
@@ -2182,19 +2180,6 @@
     (struct-tm-tm_isdst				i v posix)
     (struct-tm-tm_gmtoff			i v posix)
     (struct-tm-tm_zone				i v posix)
-
-;;; --------------------------------------------------------------------
-;;; Linux functions
-    (WIFCONTINUED				linux)
-    (waitid					linux)
-
-    (make-struct-siginfo_t			linux)
-    (struct-siginfo_t?				linux)
-    (struct-siginfo_t-si_pid			linux)
-    (struct-siginfo_t-si_uid			linux)
-    (struct-siginfo_t-si_signo			linux)
-    (struct-siginfo_t-si_status			linux)
-    (struct-siginfo_t-si_code			linux)
 
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $foreign)
