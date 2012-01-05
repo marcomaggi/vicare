@@ -41,7 +41,10 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d6
 ------------------------
 
-* Added reader  syntaxes to read  bytevector of flonums and  cflonums in
+* The Scheme  code for the glibc  and linux functions has  been moved in
+  standalone libraries, out of the boot image.
+
+* Added reader syntaxes  to read bytevectors of flonums  and cflonums in
   single and double precision:
 
     #vf4l #vf4b #vf4n		#vf8l #vf8b #vf8n
