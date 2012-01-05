@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010, 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -656,7 +656,8 @@
 		(px.lseek fd 0 SEEK_SET)
 		(let ((buffer (make-bytevector 4)))
 		  (list (px.posix-read fd buffer 4) buffer)))
-	    (px.close fd))))
+	    (px.close fd)
+	    (px.system "rm -f tmp"))))
     => '(4 #vu8(1 2 3 4)))
 
   (check
@@ -671,7 +672,8 @@
 		(px.lseek fd 0 SEEK_SET)
 		(let ((buffer (make-bytevector 4)))
 		  (list (px.pread fd buffer 4 0) buffer)))
-	    (px.close fd))))
+	    (px.close fd)
+	    (px.system "rm -f tmp"))))
     => '(4 #vu8(1 2 3 4)))
 
 ;;; --------------------------------------------------------------------
@@ -691,7 +693,8 @@
 				    (make-bytevector 2))))
 		 (add-result (px.readv fd buffers))
 		 buffers))
-	   (px.close fd))))
+	   (px.close fd)
+	   (px.system "rm -f tmp"))))
     => '((#vu8(0 1 2 3) #vu8(4 5 6 7) #vu8(8 9)) (10 10)))
 
 ;;; --------------------------------------------------------------------
@@ -704,7 +707,8 @@
 			   (fxior S_IRUSR S_IWUSR))))
 	  (unwind-protect
 	      (fixnum? (px.fcntl fd F_GETFL #f))
-	    (px.close fd))))
+	    (px.close fd)
+	    (px.system "rm -f tmp"))))
     => #t)
 
 ;;; --------------------------------------------------------------------
