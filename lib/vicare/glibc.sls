@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,7 +25,7 @@
 ;;;
 
 
-(library (ikarus.glibc)
+(library (vicare glibc)
   (export
     ;; operating system environment variables
     clearenv
@@ -72,8 +72,8 @@
     pathconf		fpathconf
     confstr		confstr/string
     )
-  (import (ikarus)
-    (prefix (only (ikarus.posix)
+  (import (vicare)
+    (prefix (only (vicare posix)
 		  directory-stream?
 		  directory-stream-closed?
 		  directory-stream-pointer)

@@ -18,6 +18,7 @@ dist_libvicare_DATA	= vicare/ffi.sls			\
 			  vicare/unsafe-capi.sls		\
 			  vicare/words.sls			\
 			  vicare/installation-configuration.sls	\
+			  vicare/glibc.sls			\
 			  vicare/gcc.sls
 
 ## --------------------------------------------------------------------

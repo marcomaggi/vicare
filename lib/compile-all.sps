@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,17 +26,18 @@
 
 #!r6rs
 (import
-    (vicare ffi)
-  (vicare platform-constants)
-  (vicare include)
-  (vicare syntactic-extensions)
-  (vicare flonum-parser)
-  (vicare flonum-formatter)
-  (vicare unsafe-operations)
-  (vicare unsafe-unicode)
-  (vicare unsafe-capi)
-  (vicare words)
-  (vicare installation-configuration)
-  (vicare gcc))
+    (only (vicare ffi))
+  (only (vicare platform-constants))
+  (only (vicare include))
+  (only (vicare syntactic-extensions))
+  (only (vicare flonum-parser))
+  (only (vicare flonum-formatter))
+  (only (vicare unsafe-operations))
+  (only (vicare unsafe-unicode))
+  (only (vicare unsafe-capi))
+  (only (vicare words))
+  (only (vicare installation-configuration))
+  (only (vicare glibc))
+  (only (vicare gcc)))
 
 ;;; end of file
