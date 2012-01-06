@@ -42,7 +42,12 @@ Notes for revision 0.2d6
 ------------------------
 
 * The Scheme  code for the glibc  and linux functions has  been moved in
-  standalone libraries, out of the boot image.
+  standalone libraries, out of the  boot image.  The public interface to
+  these libraries is unchanged.
+
+* Optional  support for the  Iconv API  has been  added by  linking with
+  Libiconv.   To  enable  it:   give  the  --with-iconv  option  to  the
+  "configure" script.
 
 * Added reader syntaxes  to read bytevectors of flonums  and cflonums in
   single and double precision:

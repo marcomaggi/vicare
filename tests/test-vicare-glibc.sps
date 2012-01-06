@@ -370,14 +370,31 @@
 
 (parametrise ((check-test-name	'iconv))
 
+;;; handle allocation
+
   (check
-      (ffi.pointer? (glibc.iconv-open (glibc.iconv-encoding UTF-16)
+      (glibc.iconv? (glibc.iconv-open (glibc.iconv-encoding UTF-16)
 				      (glibc.iconv-encoding UTF-8)))
     => #t)
 
   (check
-      (ffi.pointer? (glibc.iconv-open (glibc.iconv-encoding UTF-16 TRANSLIT IGNORE)
+      (glibc.iconv? (glibc.iconv-open (glibc.iconv-encoding UTF-16 TRANSLIT IGNORE)
 				      (glibc.iconv-encoding UTF-8)))
+    => #t)
+
+  (check
+      (glibc.iconv-closed? (glibc.iconv-open (glibc.iconv-encoding UTF-16)
+					     (glibc.iconv-encoding UTF-8)))
+    => #f)
+
+  (check	;nothing happens if we close the handle multiple times
+      (let ((handle (glibc.iconv-open (glibc.iconv-encoding UTF-16)
+				      (glibc.iconv-encoding UTF-8))))
+;;;(check-pretty-print handle)
+	(glibc.iconv-close handle)
+	(glibc.iconv-close handle)
+	(glibc.iconv-close handle)
+	(glibc.iconv-closed? handle))
     => #t)
 
 ;;; --------------------------------------------------------------------
@@ -424,7 +441,34 @@
 			      (glibc.iconv-encoding UTF-8))
     => #f)
 
+;;; --------------------------------------------------------------------
 
+  (check
+      (let* ((H		(glibc.iconv-open (glibc.iconv-encoding UTF-16BE) ;from
+					  (glibc.iconv-encoding UTF-8))) ;to
+;;;                      0123456789012345
+;;;                          012345678901
+	     (in.str	"ciao hello salut")
+	     (in.bv	(string->utf16 in.str (endianness big)))
+	     (out.bv	(string->utf8 in.str))
+	     (out.bv1	(make-bytevector 4 0))
+	     (out.bv2	(make-bytevector (- (bytevector-length out.bv) 4) 0)))
+	(let-values (((in.start1 out.start1) (glibc.iconv! H in.bv 0 #f out.bv1 0 #f)))
+	  (let-values (((in.start2 out.start2) (glibc.iconv! H in.bv in.start1 #f out.bv2 0 #f)))
+	    (list out.start1 out.start2
+		  (= in.start2 (bytevector-length in.bv))
+		  (bytevector=? out.bv (bytevector-append out.bv1 out.bv2))))))
+    => '(4 12 #t #t))
+
+  (check	;example to be used in the documentation
+      (let* ((handle	(glibc.iconv-open (glibc.iconv-encoding UTF-16BE) ;from
+					  (glibc.iconv-encoding UTF-8))) ;to
+;;;                                     0123456789012345
+	     (in.bv	(string->utf16 "ciao hello salut" (endianness big)))
+	     (out.bv	(make-bytevector 16)))
+	(let-values (((in.start out.start) (glibc.iconv! handle in.bv 0 #f out.bv 0 #f)))
+	  (utf8->string out.bv)))
+    => "ciao hello salut")
 
   #t)
 

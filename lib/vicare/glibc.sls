@@ -73,8 +73,9 @@
     confstr		confstr/string
 
     ;; generic character set conversion
-    iconv-open			iconv-close
-    iconv
+    iconv-open		iconv?
+    iconv-close		iconv-closed?
+    iconv!
     enum-iconv-encoding		iconv-encoding
     iconv-encoding-universe
     iconv-encoding-aliases?	iconv-encoding=?
@@ -85,10 +86,10 @@
 		  directory-stream-closed?
 		  directory-stream-pointer)
 	    posix.)
-    (only (ikarus system $foreign)
-	  pointer?
-	  pointer-null?
-	  set-pointer-null!)
+    (prefix (only (ikarus system $foreign)
+		  pointer?
+		  pointer-null?)
+	    ffi.)
     (vicare syntactic-extensions)
     (vicare platform-constants)
     (prefix (vicare unsafe-capi)
@@ -145,7 +146,7 @@
   (assertion-violation who "expected complex flonum as argument" obj))
 
 (define-argument-validation (pointer who obj)
-  (pointer? obj)
+  (ffi.pointer? obj)
   (assertion-violation who "expected pointer as argument" obj))
 
 ;;; --------------------------------------------------------------------
@@ -161,6 +162,14 @@
 (define-argument-validation (index who obj)
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as argument" obj))
+
+(define-argument-validation (false/index who obj)
+  (or (not obj) (and (fixnum? obj) (unsafe.fx<= 0 obj)))
+  (assertion-violation who "expected false or non-negative fixnum as argument" obj))
+
+(define-argument-validation (iconv who obj)
+  (iconv? obj)
+  (assertion-violation who "expected iconv handle as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -183,6 +192,10 @@
 (define-argument-validation (file-descriptor who obj)
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected fixnum file descriptor as argument" obj))
+
+(define-argument-validation (iconv-set who obj)
+  (enum-set-subset? obj iconv-encoding-universe)
+  (assertion-violation who "expected enum set in iconv encoding universe" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -538,24 +551,9 @@
 
 ;;;; general character set conversion
 
-(define (%enum-set->string set procname)
-  (let ((ell	(enum-set->list set))
-	(spec	""))
-    (when (memq 'TRANSLIT ell)
-      (set! spec "//TRANSLIT")
-      (set! ell (remq 'TRANSLIT ell)))
-    (when (memq 'IGNORE ell)
-      (set! spec (string-append spec "//IGNORE"))
-      (set! ell (remq 'IGNORE ell)))
-    (if (= 1 (length ell))
-	(string-append (symbol->string (car ell)) spec)
-      (assertion-violation procname "invalid Iconv enumeration set" set))))
-
 (define-enumeration enum-iconv-encoding
   ( ;;
    TRANSLIT IGNORE
-
-;;; --------------------------------------------------------------------
 
    ANSI_X3.4-1968 ANSI_X3.4-1986 ASCII CP367 IBM367 ISO-IR-6 ISO646-US ISO_646.IRV:1991 US US-ASCII CSASCII
    UTF-8
@@ -913,14 +911,13 @@
 		      '(ISO-2022-KR CSISO2022KR))))
 		     #t #f)))
 
-(define-syntax both
-  (syntax-rules ()
-    ((_ ?expr1 ?expr2)
-     (let ((a ?expr1)
-	   (b ?expr2))
-       (or (and a b) (and (not a) (not b)))))))
-
 (define (iconv-encoding=? set1 set2)
+  (define-syntax both
+    (syntax-rules ()
+      ((_ ?expr1 ?expr2)
+       (let ((a ?expr1)
+	     (b ?expr2))
+	 (or (and a b) (and (not a) (not b)))))))
   (or (enum-set=? set1 set2)
       (and (both (enum-set-member? 'TRANSLIT set1)
 		 (enum-set-member? 'TRANSLIT set2))
@@ -930,47 +927,81 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-struct iconv
+  (pointer from to))
+
+(define (%struct-iconv-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[iconv")
+  (%display " pointer=")	(%display (iconv-pointer S))
+  (%display " from-encoding=")	(%display (enum-set->list (iconv-from S)))
+  (%display " to-encoding=")	(%display (enum-set->list (iconv-to   S)))
+  (%display "]"))
+
 (define %iconv-guardian
   (make-guardian))
 
 (define (%free-allocated-iconv)
   (do ((handle (%iconv-guardian) (%iconv-guardian)))
       ((not handle))
-    (unless (pointer-null? handle)
-      (capi.glibc-iconv-close handle))))
+    (let ((P (iconv-pointer handle)))
+      (unless (ffi.pointer-null? P)
+	(capi.glibc-iconv-close P)))))
 
-(define (iconv-open to-code from-code)
+(define (iconv-open from to)
   (define who 'iconv-open)
-  (with-arguments-validation (who)
-      ((symbol	to-code)
-       (symbol	from-code))
-    (let ((rv (capi.glibc-iconv-open (string->latin1 (symbol->string to-code))
-				     (string->latin1 (symbol->string from-code)))))
-      (if (pointer? rv)
-	  rv
-	(raise-errno-error who rv to-code from-code)))))
+  (define (main to from)
+    (with-arguments-validation (who)
+	((iconv-set	from)
+	 (iconv-set	to))
+      (let ((rv (capi.glibc-iconv-open (%enum-set->string from who)
+				       (%enum-set->string to   who))))
+	(if (ffi.pointer? rv)
+	    (%iconv-guardian (make-iconv rv from to))
+	  (raise-errno-error who rv to from)))))
+  (define (%enum-set->string set who)
+    (let ((ell	(enum-set->list set))
+	  (spec	""))
+      (when (memq 'TRANSLIT ell)
+	(set! spec "//TRANSLIT")
+	(set! ell (remq 'TRANSLIT ell)))
+      (when (memq 'IGNORE ell)
+	(set! spec (string-append spec "//IGNORE"))
+	(set! ell (remq 'IGNORE ell)))
+      (if (= 1 (length ell))
+	  (string->latin1 (string-append (symbol->string (car ell)) spec))
+	(assertion-violation who "invalid Iconv enumeration set" set))))
+  (main to from))
 
 (define (iconv-close handle)
   (define who 'iconv-close)
   (with-arguments-validation (who)
-      ((pointer	handle))
-    (let ((rv (capi.glibc-iconv-close handle)))
+      ((iconv	handle))
+    ;;Close the handle and mutate the pointer object to NULL.
+    (let ((rv (capi.glibc-iconv-close (iconv-pointer handle))))
       (unless (unsafe.fxzero? rv)
 	(raise-errno-error who rv handle)))))
 
-(define (iconv handle
-	       input  input.start  input.past
-	       output output.start output.past)
-  (define who 'iconv-open)
+(define (iconv-closed? handle)
+  (define who 'iconv-closed?)
   (with-arguments-validation (who)
-      ((pointer		handle)
+      ((iconv	handle))
+    (ffi.pointer-null? (iconv-pointer handle))))
+
+(define (iconv! handle
+		input  input.start  input.past
+		output output.start output.past)
+  (define who 'iconv!)
+  (with-arguments-validation (who)
+      ((iconv		handle)
        (bytevector	input)
        (bytevector	output)
        (index		input.start)
-       (index		input.past)
+       (false/index	input.past)
        (index		output.start)
-       (index		output.past))
-    (let ((rv (capi.glibc-iconv handle
+       (false/index	output.past))
+    (let ((rv (capi.glibc-iconv (iconv-pointer handle)
 				input  input.start  input.past
 				output output.start output.past)))
       (if (pair? rv)
@@ -985,6 +1016,8 @@
 (post-gc-hooks (cons* %free-allocated-regex
 		      %free-allocated-iconv
 		      (post-gc-hooks)))
+
+(set-rtd-printer! (type-descriptor iconv) %struct-iconv-printer)
 
 )
 
