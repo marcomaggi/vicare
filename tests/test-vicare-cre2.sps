@@ -31,20 +31,26 @@
   (prefix (vicare cre2) cre2.)
   (checks))
 
-(unless (cre2.cre2-enabled?)
+(unless (cre2.enabled?)
   (exit 0))
 
 (check-set-mode! 'report-failed)
 (display "*** testing Vicare CRE2 binding\n")
 
 
-(parametrise ((check-test-name	'base))
+(parametrise ((check-test-name	'version))
 
- #; (check
-      (let ()
-        )
-    => )
+  (check
+      (fixnum? (cre2.version-interface-current))
+    => #t)
 
+  (check
+      (fixnum? (cre2.version-interface-revision))
+    => #t)
+
+  (check
+      (fixnum? (cre2.version-interface-age))
+    => #t)
   #t)
 
 

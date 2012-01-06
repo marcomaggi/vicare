@@ -49,7 +49,7 @@ Marco Maggi <marco.maggi-ipsu@poste.it>
 2. License
 ----------
 
-Copyright (c) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+Copyright (c) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 Copyright (c) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
 Modified by the Vicare contributors.
 
@@ -69,6 +69,9 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 4. Install
 ----------
+
+4.1 Install Vicare
+------------------
 
 After checking out a revision from the repository, we will have to build
 the infrastructure running a script from the top source directory:
@@ -96,6 +99,25 @@ the files under a temporary location; example:
 
   After   installation,  the   makefile   rule  "vfasl-installed"   will
 precompile the libraries installed in the hierarchy (vicare ---).
+
+
+4.2 Install CRE2
+----------------
+
+The  CRE2  is  a C  language  wrapper  for  the  RE2 library,  which  is
+implemented in C++.  RE2 is a fast, safe, thread-friendly alternative to
+backtracking regular  expression engines from Google like  those used in
+PCRE, Perl, and Python.
+
+  Vicare  implements an  optional  built  in interface  to  CRE2; it  is
+disabled by default, to enable  it we must give the "--with-cre2" option
+to the "configure" script.
+
+  At present (Jan 6, 2012), to  install RE2 we must check out a revision
+from  the  repository  (see   Resources);  then  we  should  follow  the
+installation instructions in the README file.  To install CRE2: download
+the  latest  tarball, build  and  install it;  CRE2  relies  on the  GNU
+Autotools.
 
 
 5. Testing
@@ -225,6 +247,14 @@ collection of R6 Scheme libraries:
   The library Libffi can be found at:
 
 		    <http://sourceware.org/libffi/>
+
+  The library RE2 is available at:
+
+		    <http://code.google.com/p/re2/>
+
+the library CRE2 is available from:
+
+		  <http://github.com/marcomaggi/cre2/>
 
   The home page of the R6RS standard is at:
 

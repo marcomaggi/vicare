@@ -16159,7 +16159,51 @@ interpreted as a character in Latin-1 encoding.
 @value{PRJNAME} implements an optional built in binding to the @cretwo{}
 library: a C wrapper for the @retwo{} regular expressions library from
 Google.  The Scheme @api{} is exported by the library @library{vicare
-cre2}.
+cre2}; it is suggested to prefix the bindings at import time with
+@code{cre2}, as in the following example:
+
+@example
+(import (vicare)
+  (prefix (vicare cre2) cre2))
+@end example
+
+@noindent
+the bindings do @strong{not} have the @code{cre2} prefix.
+
+@menu
+* cre2 version::                Version functions.
+* cre2 regexps::                Precompiled regular expressions
+                                construction.
+@end menu
+
+@c page
+@node cre2 version
+@appendixsec Version functions
+
+
+The following bindings are exported by the @library{vicare cre2}
+library.
+
+
+@defun enabled?
+Return true if the binding to @cretwo{} was enabled in this
+@value{PRJNAME} process.
+@end defun
+
+
+@defun version-interface-current
+@defunx version-interface-revision
+@defunx version-interface-age
+Return a fixnum representing a component of interface version number for
+@cretwo{}.  For an explanation of interface numbers as managed by @gnu{}
+Libtool @xref{Libtool versioning, interface, Libtool's versioning
+system, libtool, Shared library support for @gnu{}}.
+@end defun
+
+@c page
+@node cre2 regexps
+@appendixsec Precompiled regular expressions construction
+
 
 @c page
 @node package license
