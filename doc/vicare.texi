@@ -198,6 +198,14 @@ Revised^6 Report on the algorithmic language Scheme
 @acronym{GCC}
 @end macro
 
+@macro cretwo{}
+@acronym{CRE2}
+@end macro
+
+@macro retwo{}
+@acronym{RE2}
+@end macro
+
 @c ------------------------------------------------------------
 @c Network related acronyms.
 @c ------------------------------------------------------------
@@ -646,6 +654,7 @@ Appendices
 * building::                    Building infrastructure.
 * credits::                     Credits for this document.
 * unicode::                     On Unicode and @utf{} encodings.
+* cre2::                        Binding to the library @cretwo{}.
 * package license::             @gnu{} General Public License.
 * references::                  Bibliography and references.
 
@@ -695,6 +704,8 @@ machines.  @emph{Vicare} is pronounced the etruscan way.
 * overview install::            Installation and uninstallation.
 * overview restrictions::       Implementation restrictions.
 * overview repl::               The read-eval-print loop.
+* overview foreign::            Built in interface to external
+                                libraries.
 @end menu
 
 @c page
@@ -1239,6 +1250,47 @@ This is a limitation caused by the particular design choices made in
 Accordingly, the interactive mode is intended for quick experimenting
 with the built in features.  It is intended neither for developing
 applications nor for writing any substantial piece of code.
+
+@c page
+@node overview foreign
+@section Built in interface to external libraries
+
+
+@value{PRJNAME} comes with some interface to external libraries built
+into the @value{EXECUTABLE} C language executable itself; this is done
+only for some particular libraries which especially benefit from a
+dedicated interface inconvenient to implement with the @ffi{}.  At the
+Scheme level the @api{} is exported by libraries @strong{not} included
+in @value{PRJNAME}'s boot image.
+
+Such interfaces are excluded by default, they must be explicitly
+requested at installation--time with command line options for the
+@command{configure} script.
+
+@menu
+* overview foreign cre2::       Interface to @cretwo{}.
+@end menu
+
+@c page
+@node overview foreign cre2
+@subsection Interface to @cretwo{}
+
+
+@cretwo{} is a C language wrapper for the @retwo{} library, which is
+implemented in C++.  @retwo{} is a fast, safe, thread--friendly
+alternative to backtracking regular expression engines like those used
+in PCRE, Perl, and Python; it is a Google project found at:
+
+@center @url{http://code.google.com/p/re2/}
+
+@noindent
+while @cretwo{} is available at:
+
+@center @url{http://github.com/marcomaggi/cre2/}
+
+@value{PRJNAME} interface to @cretwo{} can be included at package
+configuration time by giving the @option{--with-cre2} option to the
+@command{configure} script.  @ref{cre2} for the @api{} documentation.
 
 @c page
 @node using
@@ -16098,6 +16150,16 @@ Latin-1 code points in the range @math{[128, 255]} are
 
 Every octet (that is: every fixnum in the range @math{[0, 255]}) can be
 interpreted as a character in Latin-1 encoding.
+
+@c page
+@node cre2
+@appendix Binding to the library @cretwo{}
+
+
+@value{PRJNAME} implements an optional built in binding to the @cretwo{}
+library: a C wrapper for the @retwo{} regular expressions library from
+Google.  The Scheme @api{} is exported by the library @library{vicare
+cre2}.
 
 @c page
 @node package license

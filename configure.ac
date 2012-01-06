@@ -192,16 +192,17 @@ ERROR: the gmp.h header file), and LDFLAGS=-L</path/to/lib> (containing
 ERROR: libgmp.so) if libgmp is installed in a non-standard location.
 ERROR: libgmp can be obtained from <http://gmplib.org>.])])
 
-AC_ARG_ENABLE(libffi,
-  AS_HELP_STRING([--enable-libffi], [enable support for libffi (default is check)]),
-  [true], [enable_libffi=check])
+dnl --------------------------------------------------------------------
+dnl Optional binding to Libffi
 
-# Check for libffi (optional)
+AC_ARG_ENABLE([libffi],
+  AS_HELP_STRING([--enable-libffi],[enable support for libffi (default is check)]),
+  [true],[enable_libffi=check])
 
 libffi_val=0
 if test "$enable_libffi" != no; then
-  AC_CHECK_HEADER([ffi.h], [have_ffi_h=yes], [have_ffi_h=no])
-  AC_CHECK_LIB(ffi,ffi_call, [have_libffi=yes], [have_libffi=no])
+  AC_CHECK_HEADER([ffi.h],[have_ffi_h=yes],[have_ffi_h=no])
+  AC_CHECK_LIB([ffi],[ffi_call],[have_libffi=yes],[have_libffi=no])
   if test "$have_libffi" = yes && test "$have_ffi_h" = yes; then
     libffi_val=1
     LIBS="$LIBS -lffi"
@@ -223,15 +224,14 @@ Please specify the location of the library file using
   fi
 fi # "$enable_ffi" != no
 
-AC_DEFINE_UNQUOTED(ENABLE_LIBFFI, [$libffi_val], [adds support for libffi])
+AC_DEFINE_UNQUOTED([ENABLE_LIBFFI],[$libffi_val],[adds support for Libffi])
 
 dnl --------------------------------------------------------------------
+dnl Check for Libiconv (optional)
 
-# Check for iconv (optional)
-
-AC_ARG_WITH(iconv,
-  AS_HELP_STRING([--with-iconv],[enable support for iconv (default is check)]),
-  [true],[enable_iconv=check])
+AC_ARG_WITH([iconv],
+  AS_HELP_STRING([--with-iconv],[enable support for iconv (default is no)]),
+  [true],[enable_iconv=no])
 
 iconv_val=0
 if test "$enable_iconv" != no; then
@@ -259,6 +259,45 @@ Please specify the location of the library file using
 fi # "$enable_iconv" != no
 
 AC_DEFINE_UNQUOTED([ENABLE_ICONV],[$iconv_val],[adds support for iconv])
+
+dnl --------------------------------------------------------------------
+dnl Check for CRE2 (optional)
+
+AC_ARG_WITH([cre2],
+  AS_HELP_STRING([--with-cre2],[enable support for CRE2 (default is no)]),
+  [true],[enable_cre2=no])
+
+cre2_val=0
+if test "$enable_cre2" != no; then
+   dnl No need to check for "re2.h" header file.
+   AC_CHECK_LIB([re2],[main],,[AC_MSG_WARN([test for RE2 library failed])])
+   AC_CHECK_LIB([cre2],[cre2_version_string],[have_cre2=yes],[have_cre2=no])
+   AC_CHECK_HEADERS([cre2.h],[have_cre2_h=yes],[have_cre2_h=no])
+  if test "$have_cre2" = yes && test "$have_cre2_h" = yes; then
+    cre2_val=1
+    LIBS="$LIBS -lcre2 -lre2"
+    AC_MSG_NOTICE([CRE2 successfully enabled])
+  elif test "$enable_cre2" = yes; then
+    if test "$have_cre2_h" = no; then
+      AC_MSG_ERROR([cre2.h cannot be found.
+Please specify the location of the header file using
+  ./configure CPPFLAGS=-I<path/to/cre2.h>   <other-options ...>
+])
+    fi
+    if test "$have_cre2" = no; then
+      AC_MSG_ERROR([CRE2 cannot be found.
+Please specify the location of the library file using
+  ./configure LDFLAGS=-L<path/to/cre2.ld|dylib|so|etc.>  <other-options ...>
+])
+    fi
+  else
+    AC_MSG_WARN([cre2 not found -- CRE2 disabled])
+  fi
+else
+  AC_MSG_NOTICE([CRE2 was not requested])
+fi # "$enable_cre2" != no
+
+AC_DEFINE_UNQUOTED([ENABLE_CRE2],[$cre2_val],[adds support for CRE2])
 
 AC_CACHE_SAVE
 

@@ -6,6 +6,7 @@ bin_PROGRAMS = vicare
 SRCS	= \
 	cpu_has_sse2.S			\
 	ikarus-collect.c		\
+	ikarus-cre2.c			\
 	ikarus-enter.S			\
 	ikarus-exec.c			\
 	ikarus-fasl.c			\

@@ -1,14 +1,14 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare
-;;;Contents: compile script
-;;;Date: Sat Dec 10, 2011
+;;;Contents: built in binding to CRE2
+;;;Date: Fri Jan  6, 2012
 ;;;
 ;;;Abstract
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -24,23 +24,32 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
+
 #!r6rs
-(import
-    (only (vicare ffi))
-  (only (vicare platform-constants))
-  (only (vicare include))
-  (only (vicare syntactic-extensions))
-  (only (vicare flonum-parser))
-  (only (vicare flonum-formatter))
-  (only (vicare unsafe-operations))
-  (only (vicare unsafe-unicode))
-  (only (vicare unsafe-capi))
-  (only (vicare words))
-  (only (vicare installation-configuration))
-  (only (vicare glibc))
-  (only (vicare linux))
-  (only (vicare gcc))
-  (only (vicare cre2))
-  )
+(import (rename (vicare)
+		(parameterize	parametrise))
+  (prefix (vicare cre2) cre2.)
+  (checks))
+
+(unless (cre2.cre2-enabled?)
+  (exit 0))
+
+(check-set-mode! 'report-failed)
+(display "*** testing Vicare CRE2 binding\n")
+
+
+(parametrise ((check-test-name	'base))
+
+ #; (check
+      (let ()
+        )
+    => )
+
+  #t)
+
+
+;;;; done
+
+(check-report)
 
 ;;; end of file
