@@ -42,6 +42,16 @@
     (rename (%make-options	make-options))
     delete-options
     options?
+    set-posix-syntax!		posix-syntax?
+    set-longest-match!		longest-match?
+    set-log-errors!		log-errors?
+    set-literal!		literal?
+    set-never-nl!		never-nl?
+    set-case-sensitive!		case-sensitive?
+    set-perl-classes!		perl-classes?
+    set-word-boundary!		word-boundary?
+    set-one-line!		one-line?
+    set-max-mem!		max-mem
 
     )
   (import (vicare)
@@ -52,18 +62,29 @@
     (prefix (only (vicare ffi)
 		  pointer?
 		  pointer-null?)
-	    ffi.))
+	    ffi.)
+    (prefix (only (vicare words)
+		  signed-int?)
+	    words.))
 
 
 ;;;; arguments validation
+
+;; (define-argument-validation (boolean who obj)
+;;   (boolean? obj)
+;;   (assertion-violation who "expected boolean as argument" obj))
+
+;;; --------------------------------------------------------------------
 
 (define-argument-validation (string/bytevector who obj)
   (or (string? obj) (bytevector? obj))
   (assertion-violation who "expected string or bytevector as argument" obj))
 
-(define-argument-validation (false/options who obj)
-  (or (not obj) (options? obj))
-  (assertion-violation who "expected false or a RE2 options object as argument" obj))
+(define-argument-validation (positive-signed-int who obj)
+  (and (words.signed-int? obj) (positive? obj))
+  (assertion-violation who "expected a positive signed int as argument" obj))
+
+;;; --------------------------------------------------------------------
 
 (define-argument-validation (rex who obj)
   (regexp? obj)
@@ -72,6 +93,10 @@
 (define-argument-validation (options who obj)
   (options? obj)
   (assertion-violation who "expected a RE2 options object as argument" obj))
+
+(define-argument-validation (false/options who obj)
+  (or (not obj) (options? obj))
+  (assertion-violation who "expected false or a RE2 options object as argument" obj))
 
 
 ;;;; C API
@@ -103,6 +128,60 @@
 
 (define-inline (capi.cre2-opt-delete pointer)
   (foreign-call "ikrt_cre2_opt_delete" pointer))
+
+(define-inline (capi.cre2-opt-set-posix-syntax opt bool)
+  (foreign-call "ikrt_cre2_opt_set_posix_syntax" opt bool))
+(define-inline (capi.cre2-opt-posix-syntax opt)
+  (foreign-call "ikrt_cre2_opt_posix_syntax" opt))
+
+(define-inline (capi.cre2-opt-set-longest-match opt bool)
+  (foreign-call "ikrt_cre2_opt_set_longest_match" opt bool))
+(define-inline (capi.cre2-opt-longest-match opt)
+  (foreign-call "ikrt_cre2_opt_longest_match" opt))
+
+(define-inline (capi.cre2-opt-set-log-errors opt bool)
+  (foreign-call "ikrt_cre2_opt_set_log_errors" opt bool))
+(define-inline (capi.cre2-opt-log-errors opt)
+  (foreign-call "ikrt_cre2_opt_log_errors" opt))
+
+(define-inline (capi.cre2-opt-set-literal opt bool)
+  (foreign-call "ikrt_cre2_opt_set_literal" opt bool))
+(define-inline (capi.cre2-opt-literal opt)
+  (foreign-call "ikrt_cre2_opt_literal" opt))
+
+(define-inline (capi.cre2-opt-set-never-nl opt bool)
+  (foreign-call "ikrt_cre2_opt_set_never_nl" opt bool))
+(define-inline (capi.cre2-opt-never-nl opt)
+  (foreign-call "ikrt_cre2_opt_never_nl" opt))
+
+(define-inline (capi.cre2-opt-set-case-sensitive opt bool)
+  (foreign-call "ikrt_cre2_opt_set_case_sensitive" opt bool))
+(define-inline (capi.cre2-opt-case-sensitive opt)
+  (foreign-call "ikrt_cre2_opt_case_sensitive" opt))
+
+(define-inline (capi.cre2-opt-set-perl-classes opt bool)
+  (foreign-call "ikrt_cre2_opt_set_perl_classes" opt bool))
+(define-inline (capi.cre2-opt-perl-classes opt)
+  (foreign-call "ikrt_cre2_opt_perl_classes" opt))
+
+(define-inline (capi.cre2-opt-set-word-boundary opt bool)
+  (foreign-call "ikrt_cre2_opt_set_word_boundary" opt bool))
+(define-inline (capi.cre2-opt-word-boundary opt)
+  (foreign-call "ikrt_cre2_opt_word_boundary" opt))
+
+(define-inline (capi.cre2-opt-set-one-line opt bool)
+  (foreign-call "ikrt_cre2_opt_set_one_line" opt bool))
+(define-inline (capi.cre2-opt-one-line opt)
+  (foreign-call "ikrt_cre2_opt_one_line" opt))
+
+(define-inline (capi.cre2-opt-set-max-mem opt dim)
+  (foreign-call "ikrt_cre2_opt_set_max_mem" opt dim))
+(define-inline (capi.cre2-opt-max-mem opt)
+  (foreign-call "ikrt_cre2_opt_max_mem" opt))
+
+;;; --------------------------------------------------------------------
+
+
 
 
 ;;;; version functions
@@ -145,13 +224,10 @@
   (with-arguments-validation (who)
       ((string/bytevector	pattern)
        (false/options		opts))
-    (let* ((pattern.bv	(cond ((bytevector? pattern)
-			       pattern)
-			      ((options? opts)
-			       #f)
-			      (else
-			       (string->utf8 pattern))))
-	   (rv		(capi.cre2-new pattern.bv (options-pointer opts))))
+    (let ((rv (capi.cre2-new (if (bytevector? pattern)
+				 pattern
+			       (string->utf8 pattern))
+			     (options-pointer opts))))
       (cond ((ffi.pointer?)
 	     (regexp-guardian (make-regexp rv)))
 	    ((not rv)
@@ -203,6 +279,93 @@
   (with-arguments-validation (who)
       ((options	opts))
     (capi.cre2-opt-delete (options-pointer opts))))
+
+;;; --------------------------------------------------------------------
+
+(let-syntax ((define-option-setter (syntax-rules ()
+				     ((_ ?name ?who ?func)
+				      (define (?name opt bool)
+					(define who '?who)
+					(with-arguments-validation (who)
+					    ((options	opt))
+					  (?func opt bool)))))))
+  (define-option-setter set-posix-syntax!
+    cre2.set-posix-syntax!
+    capi.cre2-opt-set-posix-syntax)
+  (define-option-setter set-longest-match!
+    cre2.set-longest-match!
+    capi.cre2-opt-set-longest-match)
+  (define-option-setter set-log-errors!
+    cre2.set-log-errors!
+    capi.cre2-opt-set-log-errors)
+  (define-option-setter set-literal!
+    cre2.set-literal!
+    capi.cre2-opt-set-literal)
+  (define-option-setter set-never-nl!
+    cre2.set-never-nl!
+    capi.cre2-opt-set-never-nl)
+  (define-option-setter set-case-sensitive!
+    cre2.set-case-sensitive!
+    capi.cre2-opt-set-case-sensitive)
+  (define-option-setter set-perl-classes!
+    cre2.set-perl-classes!
+    capi.cre2-opt-set-perl-classes)
+  (define-option-setter set-word-boundary!
+    cre2.set-word-boundary!
+    capi.cre2-opt-set-word-boundary)
+  (define-option-setter set-one-line!
+    cre2.set-one-line!
+    capi.cre2-opt-set-one-line))
+
+(let-syntax ((define-option-getter (syntax-rules ()
+				     ((_ ?name ?who ?func)
+				      (define (?name opt)
+					(define who '?who)
+					(with-arguments-validation (who)
+					    ((options	opt))
+					  (?func opt)))))))
+  (define-option-getter posix-syntax?
+    cre2.posix-syntax?
+    capi.cre2-opt-posix-syntax)
+  (define-option-getter longest-match?
+    cre2.longest-match?
+    capi.cre2-opt-longest-match)
+  (define-option-getter log-errors?
+    cre2.log-errors?
+    capi.cre2-opt-log-errors)
+  (define-option-getter literal?
+    cre2.literal?
+    capi.cre2-opt-literal)
+  (define-option-getter never-nl?
+    cre2.never-nl?
+    capi.cre2-opt-never-nl)
+  (define-option-getter case-sensitive?
+    cre2.case-sensitive?
+    capi.cre2-opt-case-sensitive)
+  (define-option-getter perl-classes?
+    cre2.perl-classes?
+    capi.cre2-opt-perl-classes)
+  (define-option-getter word-boundary?
+    cre2.word-boundary?
+    capi.cre2-opt-word-boundary)
+  (define-option-getter one-line?
+    cre2.one-line?
+    capi.cre2-opt-one-line))
+
+;;; --------------------------------------------------------------------
+
+(define (set-max-mem! opt dim)
+  (define who 'cre2.set-max-mem!)
+  (with-arguments-validation (who)
+      ((options			opt)
+       (positive-signed-int	dim))
+    (capi.cre2-opt-set-max-mem opt dim)))
+
+(define (max-mem opt)
+  (define who 'cre2.max-mem)
+  (with-arguments-validation (who)
+      ((options	opt))
+    (capi.cre2-opt-max-mem opt)))
 
 
 ;;;; done

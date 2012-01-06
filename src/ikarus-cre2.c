@@ -63,7 +63,7 @@ ikptr
 ikrt_cre2_version_interface_current (void)
 {
 #if (1 == ENABLE_CRE2)
-  return fix(cre2_version_interface_current());
+  return IK_FIX(cre2_version_interface_current());
 #else
   feature_failure(__func__);
 #endif
@@ -72,7 +72,7 @@ ikptr
 ikrt_cre2_version_interface_revision (void)
 {
 #if (1 == ENABLE_CRE2)
-  return fix(cre2_version_interface_revision());
+  return IK_FIX(cre2_version_interface_revision());
 #else
   feature_failure(__func__);
 #endif
@@ -81,7 +81,7 @@ ikptr
 ikrt_cre2_version_interface_age (void)
 {
 #if (1 == ENABLE_CRE2)
-  return fix(cre2_version_interface_age());
+  return IK_FIX(cre2_version_interface_age());
 #else
   feature_failure(__func__);
 #endif
@@ -121,8 +121,12 @@ ikrt_cre2_new (ikptr s_pattern, ikptr s_options, ikpcb * pcb)
     int  errcode = cre2_error_code(rex);
     if (errcode) {
       ikptr	s_pair = IK_PAIR_ALLOC(pcb);
-      IK_CAR(s_pair) = fix(errcode);
-      IK_CDR(s_pair) = ik_bytevector_from_cstring(pcb, cre2_error_string(rex));
+      pcb->root0 = &s_pair;
+      {
+	IK_CAR(s_pair) = IK_FIX(errcode);
+	IK_CDR(s_pair) = ik_bytevector_from_cstring(pcb, cre2_error_string(rex));
+      }
+      pcb->root0 = NULL;
       cre2_delete(rex);
       return s_pair;
     } else
@@ -165,12 +169,13 @@ ikrt_cre2_opt_new (ikpcb * pcb)
    structure.  If an error occurs allocating memory: return false. */
 {
 #if (1 == ENABLE_CRE2)
-  cre2_options_t *	options;
-  options = cre2_opt_new();
-  if (NULL == options)
+  cre2_options_t *	opt;
+  opt = cre2_opt_new();
+  if (opt) {
+    cre2_opt_set_encoding(opt, CRE2_UTF8);
+    return ik_pointer_alloc((unsigned long)opt, pcb);
+  } else
     return false_object; /* error allocating memory */
-  else
-    return ik_pointer_alloc((unsigned long)options, pcb);
 #else
   return feature_failure(__func__);
 #endif
@@ -190,6 +195,115 @@ ikrt_cre2_opt_delete (ikptr s_opt)
     ref(s_opt, off_pointer_data) = 0;
   }
   return void_object;
+#else
+  return feature_failure(__func__);
+#endif
+}
+
+#define DEFINE_OPTION_SETTER_AND_GETTER(NAME)				\
+  ikptr									\
+  ikrt_cre2_opt_set_##NAME (ikptr s_opt, ikptr s_bool)			\
+  {									\
+    cre2_options_t *	opt;						\
+    opt = IK_POINTER_DATA_VOIDP(s_opt);					\
+    cre2_opt_set_##NAME(opt, (false_object == s_bool)? 0 : 1);		\
+    return void_object;							\
+  }									\
+  ikptr									\
+  ikrt_cre2_opt_##NAME (ikptr s_opt)					\
+  {									\
+    cre2_options_t *	opt;						\
+    opt = IK_POINTER_DATA_VOIDP(s_opt);					\
+    return (cre2_opt_##NAME(opt))? true_object : false_object;		\
+  }
+
+DEFINE_OPTION_SETTER_AND_GETTER(posix_syntax)
+DEFINE_OPTION_SETTER_AND_GETTER(longest_match)
+DEFINE_OPTION_SETTER_AND_GETTER(log_errors)
+DEFINE_OPTION_SETTER_AND_GETTER(literal)
+DEFINE_OPTION_SETTER_AND_GETTER(never_nl)
+DEFINE_OPTION_SETTER_AND_GETTER(case_sensitive)
+DEFINE_OPTION_SETTER_AND_GETTER(perl_classes)
+DEFINE_OPTION_SETTER_AND_GETTER(word_boundary)
+DEFINE_OPTION_SETTER_AND_GETTER(one_line)
+
+ikptr
+ikrt_cre2_opt_set_max_mem (ikptr s_opt, ikptr s_dim)
+{
+  cre2_options_t *	opt;
+  long			dim;
+  opt = IK_POINTER_DATA_VOIDP(s_opt);
+  dim = ik_integer_to_long(s_dim);
+  cre2_opt_set_max_mem(opt, (int)dim);
+  return void_object;
+}
+ikptr
+ikrt_cre2_opt_max_mem (ikptr s_opt, ikpcb * pcb)
+{
+  cre2_options_t *	opt;
+  long			dim;
+  opt = IK_POINTER_DATA_VOIDP(s_opt);
+  dim = (long)cre2_opt_max_mem(opt);
+  return ik_integer_from_long(dim, pcb);
+}
+
+
+/** --------------------------------------------------------------------
+ ** Matching.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_cre2_match (ikptr s_rex, ikptr s_text, ikptr s_start, ikptr s_end,
+		 ikptr s_anchor, ikptr s_nmatch, ikpcb * pcb)
+/*
+
+   If  successful:  return  a  pointer object  referencing  the  options
+   structure.  If an error occurs allocating memory: return false. */
+{
+#if (1 == ENABLE_CRE2)
+  cre2_regexp_t *	rex;
+  const char *		text_data;
+  int			text_len;
+  int			start, end, anchor;
+  int			nmatch, ngroups, nitems;
+  int			retval;
+  rex		= IK_POINTER_DATA_VOIDP(s_rex);
+  text_data	= IK_BYTEVECTOR_DATA_CHARP(s_text);
+  text_len	= IK_BYTEVECTOR_LENGTH(s_text);
+  start		= IK_UNFIX(s_start);
+  end		= IK_UNFIX(s_end);
+  anchor	= IK_UNFIX(s_anchor);
+  nmatch	= IK_UNFIX(s_nmatch);
+  ngroups	= 1 + cre2_num_capturing_groups(rex);
+  nitems	= (nmatch > ngroups)? ngroups : nmatch;
+  switch (anchor) {
+  case 0: anchor = CRE2_UNANCHORED;	break;
+  case 1: anchor = CRE2_ANCHOR_START;	break;
+  case 2: anchor = CRE2_ANCHOR_BOTH;	break;
+  default: /* should never happen */
+    anchor = CRE2_UNANCHORED;
+  }
+  cre2_string_t		strings[nitems];
+  memset(strings, '\0', nitems * sizeof(cre2_string_t));
+  retval = cre2_match(rex, text_data, text_len, start, end, anchor, strings, nitems);
+  if (retval) {
+    cre2_range_t	ranges[nitems];
+    ikptr		s_match;
+    int			i;
+    cre2_strings_to_ranges(text_data, ranges, strings, nitems);
+    s_match = ik_vector_alloc(pcb, nitems);
+    pcb->root0 = &s_match;
+    {
+      for (i=0; i<nitems; ++i) {
+	IK_ITEM(s_match, i) = IK_PAIR_ALLOC(pcb);
+	IK_CAR(IK_ITEM(s_match, i)) = IK_FIX(ranges[i].start);
+	IK_CDR(IK_ITEM(s_match, i)) = IK_FIX(ranges[i].past);
+      }
+    }
+    pcb->root0 = NULL;
+    return s_match;
+  } else
+    return false_object; /* no match */
 #else
   return feature_failure(__func__);
 #endif

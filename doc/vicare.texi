@@ -16164,7 +16164,7 @@ cre2}; it is suggested to prefix the bindings at import time with
 
 @example
 (import (vicare)
-  (prefix (vicare cre2) cre2))
+  (prefix (vicare cre2) cre2.))
 @end example
 
 @noindent
@@ -16174,6 +16174,7 @@ the bindings do @strong{not} have the @code{cre2} prefix.
 * cre2 version::                Version functions.
 * cre2 regexps::                Precompiled regular expressions
                                 construction.
+* cre2 options::                Matching configuration.
 @end menu
 
 @c page
@@ -16204,6 +16205,106 @@ system, libtool, Shared library support for @gnu{}}.
 @node cre2 regexps
 @appendixsec Precompiled regular expressions construction
 
+
+The following bindings are exported by the @library{vicare cre2}
+library.
+
+
+@defun make-regexp @var{pattern}
+@defunx make-regexp @var{pattern} @var{opt}
+Build and return a precompiled regular expression object.  The returned
+object must be finalised with @func{delete-regexp}; this operation is
+automatically performed when the object is garbage collected.
+
+@var{pattern} must be a string or @utf{}-8 bytevector holding the
+regular expression pattern.  When used, @var{opt} must be a
+configuration options object returned by @func{make-options}.
+@end defun
+
+
+@defun delete-regexp @var{rex}
+Finalise a precompiled regular expression object releasing all the
+associated resources.  This function can be safely applied multiple
+times to the same @var{rex} object: the first time the object is
+finalised, the subsequent times nothing happens.
+@end defun
+
+
+@defun regexp? @var{obj}
+Return @true{} if @var{obj} is a precompiled regular expression object,
+return @false{} otherwise.
+@end defun
+
+@c page
+@node cre2 options
+@appendixsec Matching configuration
+
+
+The following bindings are exported by the @library{vicare cre2}
+library.
+
+
+@defun make-options
+Build and return a configuration option object initialised with default
+values.  The returned object must be finalised with
+@func{delete-options}; this operation is automatically performed when
+the object is garbage collected.
+@end defun
+
+
+@defun delete-options @var{opt}
+Finalise a configuration option object releasing all the associated
+resources.  This function can be safely applied multiple times to the
+same @var{opt} object: the first time the object is finalised, the
+subsequent times nothing happens.
+@end defun
+
+
+@defun options? @var{obj}
+Return @true{} if @var{obj} is a configuration options object, return
+@false{} otherwise.
+@end defun
+
+
+All the following functions are setters and getters for matching
+options; see the original documentation for details.
+
+
+@defun set-posix-syntax! @var{opt} @var{bool}
+@defunx set-longest-match! @var{opt} @var{bool}
+@defunx set-log-errors! @var{opt} @var{bool}
+@defunx set-literal! @var{opt} @var{bool}
+@defunx set-never-nl! @var{opt} @var{bool}
+@defunx set-case-sensitive! @var{opt} @var{bool}
+@defunx set-perl-classes! @var{opt} @var{bool}
+@defunx set-word-boundary! @var{opt} @var{bool}
+@defunx set-one-line! @var{opt} @var{bool}
+Configuration option setters.  @var{opt} must be configuration options
+object.  @var{bool} must be true or false.
+@end defun
+
+
+@defun posix-syntax @var{opt}
+@defunx longest-match @var{opt}
+@defunx log-errors @var{opt}
+@defunx literal @var{opt}
+@defunx never-nl @var{opt}
+@defunx case-sensitive @var{opt}
+@defunx perl-classes @var{opt}
+@defunx word-boundary @var{opt}
+@defunx one-line @var{opt}
+Configuration option setters; return @true{} if the option is set,
+@false{} otherwise.  @var{opt} must be configuration options object.
+@end defun
+
+
+@defun set-max-mem! @var{opt} @var{dimension}
+@defunx max-mem @var{opt}
+Setter and getter for the maximum memory configuration option.
+@var{opt} must be a configuration options object.  @var{dimension} must
+be a positive exact integer fitting in a platform's @code{int} C
+language data type.
+@end defun
 
 @c page
 @node package license
