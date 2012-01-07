@@ -53,19 +53,36 @@
     set-one-line!		one-line?
     set-max-mem!		max-mem
 
+    ;; matching regular expressions
+    match
     )
   (import (vicare)
     (only (vicare syntactic-extensions)
 	  define-argument-validation
 	  with-arguments-validation
 	  define-inline)
+    (prefix (vicare unsafe-operations)
+	    unsafe.)
     (prefix (only (vicare ffi)
 		  pointer?
-		  pointer-null?)
+		  pointer-null?
+		  null-pointer)
 	    ffi.)
     (prefix (only (vicare words)
 		  signed-int?)
 	    words.))
+
+
+;;;; helpers
+
+(define-syntax with-bytevectors
+  (syntax-rules ()
+    ((_ ((?value.bv ?value) ...) . ?body)
+     (let ((?value.bv (if (bytevector? ?value)
+			  ?value
+			(string->utf8 ?value)))
+	   ...)
+       . ?body))))
 
 
 ;;;; arguments validation
@@ -73,6 +90,14 @@
 ;; (define-argument-validation (boolean who obj)
 ;;   (boolean? obj)
 ;;   (assertion-violation who "expected boolean as argument" obj))
+
+(define-argument-validation (symbol who obj)
+  (symbol? obj)
+  (assertion-violation who "expected symbol as argument" obj))
+
+(define-argument-validation (bytevector who obj)
+  (bytevector? obj)
+  (assertion-violation who "expected bytevector as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -83,6 +108,14 @@
 (define-argument-validation (positive-signed-int who obj)
   (and (words.signed-int? obj) (positive? obj))
   (assertion-violation who "expected a positive signed int as argument" obj))
+
+(define-argument-validation (index who obj)
+  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (assertion-violation who "expected non-negative fixnum as argument" obj))
+
+(define-argument-validation (false/index who obj)
+  (or (not obj) (and (fixnum? obj) (unsafe.fx<= 0 obj)))
+  (assertion-violation who "expected false or non-negative fixnum as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -181,7 +214,8 @@
 
 ;;; --------------------------------------------------------------------
 
-
+(define-inline (capi.cre2-match rex text start end anchor)
+  (foreign-call "ikrt_cre2_match" rex text start end anchor))
 
 
 ;;;; version functions
@@ -219,25 +253,29 @@
       ((not S))
     (capi.cre2-delete (regexp-pointer S))))
 
-(define (%make-regexp pattern opts)
-  (define who 'cre2.make-regexp)
-  (with-arguments-validation (who)
-      ((string/bytevector	pattern)
-       (false/options		opts))
-    (let ((rv (capi.cre2-new (if (bytevector? pattern)
-				 pattern
-			       (string->utf8 pattern))
-			     (options-pointer opts))))
-      (cond ((ffi.pointer?)
-	     (regexp-guardian (make-regexp rv)))
-	    ((not rv)
-	     (error who
-	       "memory allocation error while building RE2 regular expression"
-	       pattern opts))
-	    (else
-	     (error who
-	       (latin1->string (cdr rv))
-	       (car rv) pattern opts))))))
+(define %make-regexp
+  (case-lambda
+   ((pattern)
+    (%make-regexp pattern #f))
+   ((pattern opts)
+    (define who 'cre2.make-regexp)
+    (with-arguments-validation (who)
+	((string/bytevector	pattern)
+	 (false/options		opts))
+      (with-bytevectors ((pattern.bv pattern))
+	(let ((rv (capi.cre2-new pattern.bv (if opts
+						(options-pointer opts)
+					      (ffi.null-pointer)))))
+	  (cond ((ffi.pointer? rv)
+		 (regexp-guardian (make-regexp rv)))
+		((not rv)
+		 (error who
+		   "memory allocation error while building RE2 regular expression"
+		   pattern opts))
+		(else
+		 (error who
+		   (latin1->string (cdr rv))
+		   (car rv) pattern opts)))))))))
 
 (define (delete-regexp rex)
   (define who 'cre2.delete-regexp)
@@ -254,9 +292,20 @@
 (define (%struct-options-printer S port sub-printer)
   (define-inline (%display thing)
     (display thing port))
-  (%display "#[re2-options")
-  (%display " pointer=")	(%display (options-pointer S))
-  (%display "]"))
+  (let ((P (options-pointer S)))
+    (%display "#[re2-options")
+    (%display " pointer=")		(%display P)
+    (%display " posix-syntax?=")	(%display (capi.cre2-opt-posix-syntax P))
+    (%display " longest-match?=")	(%display (capi.cre2-opt-longest-match P))
+    (%display " log-errors?=")		(%display (capi.cre2-opt-log-errors P))
+    (%display " literal?=")		(%display (capi.cre2-opt-literal P))
+    (%display " never-nl?=")		(%display (capi.cre2-opt-never-nl P))
+    (%display " case-sensitive?=")	(%display (capi.cre2-opt-case-sensitive P))
+    (%display " perl-classes?=")	(%display (capi.cre2-opt-perl-classes P))
+    (%display " word-boundary?=")	(%display (capi.cre2-opt-word-boundary P))
+    (%display " one-line?=")		(%display (capi.cre2-opt-one-line P))
+    (%display " max-mem=")		(%display (capi.cre2-opt-max-mem P))
+    (%display "]")))
 
 (define options-guardian
   (make-guardian))
@@ -288,7 +337,7 @@
 					(define who '?who)
 					(with-arguments-validation (who)
 					    ((options	opt))
-					  (?func opt bool)))))))
+					  (?func (options-pointer opt) bool)))))))
   (define-option-setter set-posix-syntax!
     cre2.set-posix-syntax!
     capi.cre2-opt-set-posix-syntax)
@@ -323,7 +372,7 @@
 					(define who '?who)
 					(with-arguments-validation (who)
 					    ((options	opt))
-					  (?func opt)))))))
+					  (?func (options-pointer opt))))))))
   (define-option-getter posix-syntax?
     cre2.posix-syntax?
     capi.cre2-opt-posix-syntax)
@@ -359,13 +408,35 @@
   (with-arguments-validation (who)
       ((options			opt)
        (positive-signed-int	dim))
-    (capi.cre2-opt-set-max-mem opt dim)))
+    (capi.cre2-opt-set-max-mem (options-pointer opt) dim)))
 
 (define (max-mem opt)
   (define who 'cre2.max-mem)
   (with-arguments-validation (who)
       ((options	opt))
-    (capi.cre2-opt-max-mem opt)))
+    (capi.cre2-opt-max-mem (options-pointer opt))))
+
+
+;;;; matching regular expressions
+
+(define (match rex text start end anchor)
+  (define who 'cre2.match)
+  (with-arguments-validation (who)
+      ((rex			rex)
+       (string/bytevector	text)
+       (false/index		start)
+       (false/index		end)
+       (symbol			anchor))
+    (with-bytevectors ((text.bv text))
+      (let ((start	(or start 0))
+	    (end	(or end   (bytevector-length text.bv)))
+	    (anchor	(case anchor
+			  ((unanchored)	0)
+			  ((start)		1)
+			  ((both)		2)
+			  (else
+			   (assertion-violation who "invalid anchor argument" anchor)))))
+	(capi.cre2-match (regexp-pointer rex) text.bv start end anchor)))))
 
 
 ;;;; done
@@ -380,3 +451,6 @@
 )
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'with-bytevectors 'scheme-indent-function 1)
+;; End:

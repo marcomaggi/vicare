@@ -54,6 +54,223 @@
   #t)
 
 
+(parametrise ((check-test-name	'options))
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.options? opts))
+    => #t)
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.delete-options opts)
+	(cre2.delete-options opts)
+	(cre2.delete-options opts)
+	(cre2.options? opts))
+    => #t)
+
+  (when #f
+    (check-display (cre2.make-options))
+    (check-newline))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-posix-syntax! opts #t)
+	(cre2.posix-syntax? opts))
+    => #t)
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-posix-syntax! opts #f)
+	(cre2.posix-syntax? opts))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-longest-match! opts #t)
+	(cre2.longest-match? opts))
+    => #t)
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-longest-match! opts #f)
+	(cre2.longest-match? opts))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-log-errors! opts #t)
+	(cre2.log-errors? opts))
+    => #t)
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-log-errors! opts #f)
+	(cre2.log-errors? opts))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-literal! opts #t)
+	(cre2.literal? opts))
+    => #t)
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-literal! opts #f)
+	(cre2.literal? opts))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-never-nl! opts #t)
+	(cre2.never-nl? opts))
+    => #t)
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-never-nl! opts #f)
+	(cre2.never-nl? opts))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-case-sensitive! opts #t)
+	(cre2.case-sensitive? opts))
+    => #t)
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-case-sensitive! opts #f)
+	(cre2.case-sensitive? opts))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-perl-classes! opts #t)
+	(cre2.perl-classes? opts))
+    => #t)
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-perl-classes! opts #f)
+	(cre2.perl-classes? opts))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-word-boundary! opts #t)
+	(cre2.word-boundary? opts))
+    => #t)
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-word-boundary! opts #f)
+	(cre2.word-boundary? opts))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-one-line! opts #t)
+	(cre2.one-line? opts))
+    => #t)
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-one-line! opts #f)
+	(cre2.one-line? opts))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((opts (cre2.make-options)))
+	(cre2.set-max-mem! opts 1024)
+	(cre2.max-mem opts))
+    => 1024)
+
+  #t)
+
+
+(parametrise ((check-test-name	'regexps))
+
+  (check
+      (let ((rex (cre2.make-regexp "ciao|hello" (cre2.make-options))))
+	(cre2.regexp? rex))
+    => #t)
+
+  (check
+      (let ((rex (cre2.make-regexp "ciao|hello")))
+	(cre2.regexp? rex))
+    => #t)
+
+  (check
+      (let ((rex (cre2.make-regexp (string->utf8 "ciao|hello"))))
+	(cre2.regexp? rex))
+    => #t)
+
+  (check
+      (let ((rex (cre2.make-regexp "ciao|hello")))
+	(cre2.delete-regexp rex)
+	(cre2.delete-regexp rex)
+	(cre2.delete-regexp rex)
+	(cre2.regexp? rex))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'match))
+
+  (check
+      (let ((rex (cre2.make-regexp "ciao|hello")))
+	(cre2.match rex "ciao" #f #f 'unanchored))
+    => '#((0 . 4)))
+
+  (check
+      (let ((rex (cre2.make-regexp "ciao|hello")))
+	(cre2.match rex "ohayo" #f #f 'unanchored))
+    => #f)
+
+  (check
+      (let ((rex (cre2.make-regexp "ciao|hello")))
+	(cre2.match rex "hello" #f #f 'unanchored))
+    => '#((0 . 5)))
+
+  (check
+      (let ((rex (cre2.make-regexp "ci(ao)|hello")))
+	(cre2.match rex "ciao" #f #f 'unanchored))
+    => '#((0 . 4)
+	  (2 . 4)))
+
+  (check
+      (let ((rex (cre2.make-regexp "c(i(ao))|hello")))
+	(cre2.match rex "ciao" #f #f 'unanchored))
+    => '#((0 . 4)
+	  (1 . 4)
+	  (2 . 4)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

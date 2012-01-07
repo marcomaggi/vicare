@@ -16175,6 +16175,7 @@ the bindings do @strong{not} have the @code{cre2} prefix.
 * cre2 regexps::                Precompiled regular expressions
                                 construction.
 * cre2 options::                Matching configuration.
+* cre2 match::                  Matching regular expressions.
 @end menu
 
 @c page
@@ -16304,6 +16305,80 @@ Setter and getter for the maximum memory configuration option.
 @var{opt} must be a configuration options object.  @var{dimension} must
 be a positive exact integer fitting in a platform's @code{int} C
 language data type.
+@end defun
+
+@c page
+@node cre2 match
+@appendixsec Matching regular expressions
+
+
+Basic regular expressions matching goes as follows:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare cre2) cre2.))
+
+(let ((rex (cre2.make-regexp "ciao|hello")))
+  (cre2.match rex "ciao" #f #f 'unanchored))
+@result{} #((0 . 4))
+
+(let ((rex (cre2.make-regexp "ciao|hello")))
+  (cre2.match rex "hello" #f #f 'unanchored))
+@result{} #((0 . 5))
+
+(let ((rex (cre2.make-regexp "ci(ao)|hello")))
+  (cre2.match rex "ciao" #f #f 'unanchored))
+@result{} #((0 . 4)
+     (2 . 4))
+
+(let ((rex (cre2.make-regexp "c(i(ao))|hello")))
+  (cre2.match rex "ciao" #f #f 'unanchored))
+@result{} #((0 . 4)
+     (1 . 4)
+     (2 . 4))
+@end example
+
+The following bindings are exported by the @library{vicare cre2}
+library.
+
+
+@defun match @var{rex} @var{text} @var{start} @var{end} @var{anchor}
+Match a substring of @var{text} against the regular expression object
+@var{rex}.  Return false if there is no match, else return a vector
+representing the matching portions.
+
+@var{text} must be a @utf{}-8 bytevector or a Scheme string which is
+internally transformed to a @utf{}-8 bytevector.  All the indices in
+@var{text} used by this function are relative to the
+@strong{bytevector}, not the Scheme string.  Only when the string
+contains only characters in the @ascii{} range the indices for the
+@utf{}-8 bytevector equal the indices for the string.
+
+The zero--based indices @var{start} (inclusive) and @var{end}
+(exclusive) select the range of @var{text} to be examined.  As special
+case: if @var{start} is @false{}, the start index is set to zero; if
+@var{end} is @false{}, the end index is set to the length of the
+bytevector.
+
+@var{anchor} selects the anchor point for the matching operation, it
+must be one of the symbols: @code{unanchored}, @code{start},
+@code{both}.
+
+Data about the matching groups is returned in a vector of pairs, which
+will have a number of slots equal to the number of parenthetical
+subexpressions in @var{rex} plus one.  Each pair selects a range of
+bytes in @var{text}: the car is a non--negative fixnum representing the
+inclusive start index, the cdr is a non--negative fixnum representing
+the exclusive end index.
+
+The first element of the match vector (index @math{0}) references the
+full portion of the substring of @var{text} matching the pattern; the
+second element of the match vector (index @math{1}) references the
+portion of text matching the first parenthetical subexpression, the
+third element of the match vector (index @math{2}) references the
+portion of text matching the second parenthetical subexpression; and so
+on.
 @end defun
 
 @c page

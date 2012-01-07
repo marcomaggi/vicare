@@ -253,19 +253,39 @@ ikrt_cre2_opt_max_mem (ikptr s_opt, ikpcb * pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_cre2_match (ikptr s_rex, ikptr s_text, ikptr s_start, ikptr s_end,
-		 ikptr s_anchor, ikptr s_nmatch, ikpcb * pcb)
-/*
+ikrt_cre2_match (ikptr s_rex, ikptr s_text, ikptr s_start, ikptr s_end, ikptr s_anchor, ikpcb * pcb)
+/* Match  a substring of  S_TEXT against  the regular  expression object
+   S_REX.   Return false  if there  is no  match, else  return  a vector
+   representing the matching portions.
 
-   If  successful:  return  a  pointer object  referencing  the  options
-   structure.  If an error occurs allocating memory: return false. */
+   S_TEXT must be a UTF-8 bytevector.
+
+   The  zero--based indices  S_START (inclusive)  and  S_END (exclusive)
+   select the range of S_TEXT to be examined.
+
+   S_ANCHOR selects the anchor point for the matching operation, it must
+   be one of the fixnum: 0 for unanchored, 1 for start, 2 for both.
+
+   Data  about the matching  groups is  returned in  a vector  of pairs,
+   which  will  have   a  number  of  slots  equal   to  the  number  of
+   parenthetical subexpressions in S_REX  plus one.  Each pair selects a
+   range  of  bytes  in  S_TEXT:   the  car  is  a  non-negative  fixnum
+   representing  the inclusive start  index, the  cdr is  a non-negative
+   fixnum representing the exclusive end index.
+
+   The first element  of the match vector (index  0) references the full
+   portion of the  substring of S_TEXT matching the  pattern; the second
+   element of the match vector  (index 1) references the portion of text
+   matching the first parenthetical  subexpression, the third element of
+   the match  vector (index 2)  references the portion of  text matching
+   the second parenthetical subexpression; and so on.  */
 {
 #if (1 == ENABLE_CRE2)
   cre2_regexp_t *	rex;
   const char *		text_data;
   int			text_len;
   int			start, end, anchor;
-  int			nmatch, ngroups, nitems;
+  int			nmatch;
   int			retval;
   rex		= IK_POINTER_DATA_VOIDP(s_rex);
   text_data	= IK_BYTEVECTOR_DATA_CHARP(s_text);
@@ -273,9 +293,7 @@ ikrt_cre2_match (ikptr s_rex, ikptr s_text, ikptr s_start, ikptr s_end,
   start		= IK_UNFIX(s_start);
   end		= IK_UNFIX(s_end);
   anchor	= IK_UNFIX(s_anchor);
-  nmatch	= IK_UNFIX(s_nmatch);
-  ngroups	= 1 + cre2_num_capturing_groups(rex);
-  nitems	= (nmatch > ngroups)? ngroups : nmatch;
+  nmatch	= 1 + cre2_num_capturing_groups(rex);
   switch (anchor) {
   case 0: anchor = CRE2_UNANCHORED;	break;
   case 1: anchor = CRE2_ANCHOR_START;	break;
@@ -283,18 +301,17 @@ ikrt_cre2_match (ikptr s_rex, ikptr s_text, ikptr s_start, ikptr s_end,
   default: /* should never happen */
     anchor = CRE2_UNANCHORED;
   }
-  cre2_string_t		strings[nitems];
-  memset(strings, '\0', nitems * sizeof(cre2_string_t));
-  retval = cre2_match(rex, text_data, text_len, start, end, anchor, strings, nitems);
+  cre2_string_t		strings[nmatch];
+  retval = cre2_match(rex, text_data, text_len, start, end, anchor, strings, nmatch);
   if (retval) {
-    cre2_range_t	ranges[nitems];
+    cre2_range_t	ranges[nmatch];
     ikptr		s_match;
     int			i;
-    cre2_strings_to_ranges(text_data, ranges, strings, nitems);
-    s_match = ik_vector_alloc(pcb, nitems);
+    cre2_strings_to_ranges(text_data, ranges, strings, nmatch);
+    s_match = ik_vector_alloc(pcb, nmatch);
     pcb->root0 = &s_match;
     {
-      for (i=0; i<nitems; ++i) {
+      for (i=0; i<nmatch; ++i) {
 	IK_ITEM(s_match, i) = IK_PAIR_ALLOC(pcb);
 	IK_CAR(IK_ITEM(s_match, i)) = IK_FIX(ranges[i].start);
 	IK_CDR(IK_ITEM(s_match, i)) = IK_FIX(ranges[i].past);

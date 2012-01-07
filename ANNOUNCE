@@ -45,9 +45,9 @@ Notes for revision 0.2d6
   standalone libraries, out of the  boot image.  The public interface to
   these libraries is unchanged.
 
-* Optional  support for the  Iconv API  has been  added by  linking with
-  Libiconv.   To  enable  it:   give  the  --with-iconv  option  to  the
-  "configure" script.
+* Optional support for the Iconv API has been added to (vicare glibc) by
+  linking with Libiconv.  To enable  it: give the --with-iconv option to
+  the "configure" script.
 
 * Added reader syntaxes  to read bytevectors of flonums  and cflonums in
   single and double precision:
@@ -71,6 +71,9 @@ Notes for revision 0.2d6
     c8l-list->bytevector	bytevector->c8l-list
     c8b-list->bytevector	bytevector->c8b-list
     c8n-list->bytevector	bytevector->c8n-list
+
+* Optional  binding to  the CRE2  library  has been  added.  By  default
+  disabled, to enable it use the "--with-cre2" configuration option.
 
 
 Notes for revision 0.2d5
