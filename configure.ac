@@ -4,7 +4,15 @@ AC_PREREQ(2.68)
 AC_INIT([vicare],[0.2d6],[marco.maggi-ipsu@poste.it])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE
+LT_PREREQ([2.2])
+LT_INIT
 AC_CONFIG_SRCDIR([src/])
+AC_CONFIG_MACRO_DIR([m4])
+AM_INIT_AUTOMAKE([-Wall])
+
+AC_PROG_INSTALL
+AC_PROG_LN_S
+AC_PROG_MAKE_SET
 
 AC_LANG([C])
 AC_DEFINE([_GNU_SOURCE],[1],[enable everything GNU])
@@ -268,6 +276,7 @@ AC_ARG_WITH([cre2],
   [true],[enable_cre2=no])
 
 cre2_val=0
+CRE2_LIBS=
 if test "$enable_cre2" != no; then
    dnl No need to check for "re2.h" header file.
    AC_CHECK_LIB([re2],[main],,[AC_MSG_WARN([test for RE2 library failed])])
@@ -275,7 +284,7 @@ if test "$enable_cre2" != no; then
    AC_CHECK_HEADERS([cre2.h],[have_cre2_h=yes],[have_cre2_h=no])
   if test "$have_cre2" = yes && test "$have_cre2_h" = yes; then
     cre2_val=1
-    LIBS="$LIBS -lcre2 -lre2"
+    CRE2_LIBS="-lcre2 -lre2"
     AC_MSG_NOTICE([CRE2 successfully enabled])
   elif test "$enable_cre2" = yes; then
     if test "$have_cre2_h" = no; then
@@ -298,6 +307,8 @@ else
 fi # "$enable_cre2" != no
 
 AC_DEFINE_UNQUOTED([ENABLE_CRE2],[$cre2_val],[adds support for CRE2])
+AM_CONDITIONAL([WANT_CRE2],[test x$cre2_val = xtrue])
+AC_SUBST([CRE2_LIBS])
 
 AC_CACHE_SAVE
 

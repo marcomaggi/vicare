@@ -64,6 +64,7 @@
     (prefix (vicare unsafe-operations)
 	    unsafe.)
     (prefix (only (vicare ffi)
+		  dlopen
 		  pointer?
 		  pointer-null?
 		  null-pointer)
@@ -133,6 +134,9 @@
 
 
 ;;;; C API
+
+(define libvicarecre2
+  (ffi.dlopen "libvicarecre2.so" #t #t))
 
 (define-inline (capi.cre2-enabled?)
   (foreign-call "ikrt_cre2_enabled"))

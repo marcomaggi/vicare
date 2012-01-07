@@ -37,4 +37,6 @@ doc/version.texi
 install-sh
 missing
 mkinstalldirs
+ltmain.sh
 scheme/last-revision
+m4/
