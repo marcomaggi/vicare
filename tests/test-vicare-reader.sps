@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -550,6 +550,37 @@
   (doit-quoted "#!verde  123"		123)
   (doit-quoted "#!indaco 123"		123)
   (doit-quoted "#!rosso  123"		123)
+
+;;; --------------------------------------------------------------------
+;;; comment lists
+
+  (check
+      (let ((port (open-string-input-port "#!vicare #!()")))
+	(eof-object? (read port)))
+    => #t)
+
+  (check
+      (let ((port (open-string-input-port "#!vicare #!() 123")))
+	(read port))
+    => 123)
+
+  (check	;invalid in r6rs mode
+      (let ((port (open-string-input-port "#!r6rs #!()")))
+	(guard (E ((lexical-violation? E)
+		   (condition-irritants E))
+		  (else E))
+	  (read port)))
+    => "!#(")
+
+;;; --------------------------------------------------------------------
+
+  (check	;unexpected EOF
+      (let ((port (open-string-input-port "#!r6rs #!")))
+	(guard (E ((lexical-violation? E)
+		   (condition-message E))
+		  (else E))
+	  (read port)))
+    => "invalid EOF while reading hash datum")
 
   #t)
 

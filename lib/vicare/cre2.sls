@@ -26,7 +26,8 @@
 ;;;
 
 
-#!r6rs
+#!vicare
+#!(load-shared-library "libvicarecre2.so")
 (library (vicare cre2)
   (export
     ;; version functions
@@ -134,9 +135,6 @@
 
 
 ;;;; C API
-
-(define libvicarecre2
-  (ffi.dlopen "libvicarecre2.so" #t #t))
 
 (define-inline (capi.cre2-enabled?)
   (foreign-call "ikrt_cre2_enabled"))
