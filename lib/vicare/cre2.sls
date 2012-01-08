@@ -27,7 +27,7 @@
 
 
 #!vicare
-#!(load-shared-library "libvicarecre2.so")
+#!(load-shared-library "vicarecre2")
 (library (vicare cre2)
   (export
     ;; version functions

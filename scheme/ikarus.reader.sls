@@ -1,6 +1,6 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;Copyright (C) 2011, 2012  Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under  the terms of  the GNU General  Public License version  3 as
@@ -2847,6 +2847,12 @@
   ;;
   (define-inline (%error msg)
     (die/p port 'tokenize msg ls))
+  (define (%load-shared-library port libid)
+    (let* ((libname	(string-append "lib" libid ".so"))
+	   (rv		(ffi.dlopen libname #t #t)))
+      ;;The handle is lost: the library cannot be closed.
+      (unless rv
+	(%error (ffi.dlerror)))))
   (unless (null? ls)
     (case (car ls)
       ((load-shared-library)
@@ -2855,12 +2861,9 @@
 	     ((not (null? (cddr ls)))
 	      (%error "expected single argument to load-shared-library"))
 	     (else
-	      (let ((libname (cadr ls)))
-		(if (string? libname)
-		    (let ((rv (ffi.dlopen libname #t #t)))
-		      ;;The handle is lost: the library cannot be closed.
-		      (unless rv
-			(%error (ffi.dlerror))))
+	      (let ((libid (cadr ls)))
+		(if (string? libid)
+		    (%load-shared-library port libid)
 		  (%error "expected string argument to load-shared-library"))))))
       (else
        (%error "invalid comment list")))))
