@@ -16,13 +16,11 @@
 
 (library (ikarus load)
   (export
-    load
-    load-r6rs-script
-    fasl-directory)
+    load		load-r6rs-script
+    fasl-directory	fasl-path)
   (import (except (ikarus)
-		  load
-		  load-r6rs-script
-		  fasl-directory)
+		  load			load-r6rs-script
+		  fasl-directory	fasl-path)
     (prefix (only (ikarus.posix)
 		  mkdir/parents
 		  split-file-name

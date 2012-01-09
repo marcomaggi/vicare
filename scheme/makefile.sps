@@ -892,6 +892,7 @@
     (fasl-write					i v)
     (fasl-read					i v)
     (fasl-directory				i v)
+    (fasl-path					i v)
     (lambda						i v r ba se ne)
     (and					i v r ba se ne)
     (begin					i v r ba se ne)

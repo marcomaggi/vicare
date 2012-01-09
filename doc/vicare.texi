@@ -16178,6 +16178,7 @@ vicare>
 
 @menu
 * fasl format::                 Binary format of a @fasl{} file.
+* fasl api::                    @fasl{} files @api{}.
 @end menu
 
 @c page
@@ -16321,6 +16322,56 @@ Mark the next object with index @math{I}.
 @item "<" + int32(I)
 Dereference the object marked with index @math{I}.
 @end table
+
+@c page
+@node fasl api
+@appendixsec @fasl{} files @api{}
+
+
+The following bindings are exported by the libraries @library{ikarus}
+and @library{vicare}.
+
+
+@defun fasl-write @var{obj} @var{port}
+Serialise @var{obj} to the binary output port @var{port}.
+@end defun
+
+
+@defun fasl-read @var{port}
+Read and return a serialised object from the binary input @var{port}.
+@end defun
+
+
+@deffn Parameter fasl-directory
+Hold a string representing the top directory under which @fasl{} files
+are stored when libraries are compiled.  The default value is determined
+as follows:
+
+@enumerate
+@item
+Check the value of the system environment variable
+@env{VICARE_FASL_DIRECTORY}: if set the value is the directory pathname.
+
+@item
+Acquire the value of the system environment variable @env{HOME}: if set
+compose a directory pathname by appending to the value the string:
+
+@example
+/.vicare/precompiled
+@end example
+
+@item
+Set the parameter to the empty string.
+@end enumerate
+@end deffn
+
+
+@defun fasl-path @var{filename}
+Given a source file name return the associated full @fasl{} file name
+using the current value of @func{fasl-directory}.  Return false if
+@func{fasl-directory} is unset (which should never happen).  It is an
+error if the file @var{filename} does not exist.
+@end defun
 
 @c page
 @node cre2
