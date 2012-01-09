@@ -16341,7 +16341,11 @@ and @library{vicare}.
 
 
 @defun fasl-write @var{obj} @var{port}
-Serialise @var{obj} to the binary output port @var{port}.
+@defunx fasl-write @var{obj} @var{port} @var{libraries}
+Serialise @var{obj} to the binary output port @var{port}.  If
+@var{libraries} is present: it must be a list of strings representing
+foreign shared libraries to be loaded whenever the @fasl{} file is
+loaded, @ref{fasl foreign} for details.
 @end defun
 
 
@@ -16431,13 +16435,13 @@ it handles it as a special comment which causes no code to be expanded
 nor compiled.  Rather a foreign shared library whose identifier is
 @code{vicarecre2} is immediately loaded.
 
-If the file containing such special comment is compiled to a @fasl{}
-file, an object field with header @code{O} is written to the
+If the library file containing such special comment is compiled to a
+@fasl{} file, an object field with header @code{O} is written to the
 @strong{beginning} of the @fasl{} file: such object will cause the
 foreign library to be loaded whenever the @fasl{} file is loaded.
 
-On Unix--like systems it is prefixed with @code{lib} and suffixed with
-@code{.so} to compose a library file name.
+On Unix--like systems: the library identifier is prefixed with
+@code{lib} and suffixed with @code{.so} to compose a library file name.
 
 @c page
 @node cre2

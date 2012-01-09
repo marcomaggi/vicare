@@ -6,7 +6,10 @@
 ;;;
 ;;;Abstract
 ;;;
-;;;
+;;;	Support for foreign library  autoloading.  The functions in this
+;;;	library  are  used  to:  register associations  between  library
+;;;	source  files and  FASL files;  dynamically load  foreign shared
+;;;	library in the appropriate way.
 ;;;
 ;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
@@ -32,15 +35,24 @@
     retrieve-filename-foreign-libraries
     autoload-filename-foreign-library)
   (import (ikarus)
-    (prefix (ikarus system $foreign) ffi.))
+    (prefix (ikarus system $foreign) ffi.)
+    (only (vicare syntactic-extensions)
+	  define-inline))
 
 
 ;;;; foreign libraries table
 
+;;Table  associating  library source  file  names  to  lists of  strings
+;;representing foreign shared library identifiers.
+;;
 (define FOREIGN-LIBRARIES-TABLE
   (make-hashtable string-hash string=?))
 
 (define (register-filename-foreign-library filename foreign-library-id)
+  ;;Register the string FOREIGN-LIBRARY-ID as foreign library identifier
+  ;;associated  to  the  library  source  file name  whose  pathname  is
+  ;;FILENAME.
+  ;;
   (let ((ls (hashtable-ref FOREIGN-LIBRARIES-TABLE filename #f)))
     (hashtable-set! FOREIGN-LIBRARIES-TABLE filename
 		    (if ls
@@ -48,22 +60,33 @@
 		      (list foreign-library-id)))))
 
 (define (retrieve-filename-foreign-libraries filename)
+  ;;Return a  list of  strings representing foreign  library identifiers
+  ;;associated  to  the  library  source  file name  whose  pathname  is
+  ;;FILENAME.  If  the file has no associated  foreign libraries: return
+  ;;false.
+  ;;
   (hashtable-ref FOREIGN-LIBRARIES-TABLE filename #f))
 
 
 ;;;; foreign libraries loading
 
 (define (autoload-filename-foreign-library libid)
+  ;;Load  the foreign  shared  library whose  identifier  is the  string
+  ;;LIBID.   Make  all the  exported  symbols  immediately  part of  the
+  ;;process image, so that the macro FOREIGN-CALL can reference them.
+  ;;
   (define who 'autoload-filename-foreign-library)
-  (let* ((libname	(string-append "lib" libid ".so"))
+  (define-inline (%make-unix-libname id)
+    (string-append "lib" id ".so"))
+  (define-inline (%make-win-libname id)
+    (string-append id ".dll"))
+  (define-inline (%make-macos-libname id)
+    (string-append id ".dylib"))
+  (let* ((libname	(%make-unix-libname libid))
 	 (rv		(ffi.dlopen libname #t #t)))
-    ;;The handle is lost: the library cannot be closed.
+    ;;FIXME The handle is lost: the library cannot be closed.
     (unless rv
       (error who (ffi.dlerror)))))
-
-
-;;;; code
-
 
 
 ;;;; done
