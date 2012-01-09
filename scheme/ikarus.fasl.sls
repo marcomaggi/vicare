@@ -100,13 +100,11 @@
     ;;Read  and return the  next object.   Unless M  is false:  mark the
     ;;object with M.
     ;;
-    (define (nom)
-      (when m (assertion-violation who "unhandled mark")))
     (let ((ch (read-u8-as-char port)))
       (case ch
-	((#\I)
+	((#\I)	;fixnum in host byte order
 	 (read-fixnum port))
-	((#\P)
+	((#\P)	;pair
 	 (if m
 	     (let ((x (cons #f #f)))
 	       (put-mark m x)
@@ -120,149 +118,138 @@
 	((#\F) #f)
 	((#\E) (eof-object))
 	((#\U) (void))
-	((#\s) ;;; string
-	 (let ((n (read-int port)))
-	   (let ((str (make-string n)))
-	     (let f ((i 0))
-	       (unless (unsafe.fx= i n)
-		 (let ((c (read-u8-as-char port)))
-		   (string-set! str i c)
-		   (f (unsafe.fxadd1 i)))))
-	     (when m (put-mark m str))
-	     str)))
-	((#\S) ;;; unicode string
-	 (let ((n (read-int port)))
-	   (let ((str (make-string n)))
-	     (let f ((i 0))
-	       (unless (unsafe.fx= i n)
-		 (let ((c (integer->char (read-u32 port))))
-		   (string-set! str i c)
-		   (f (unsafe.fxadd1 i)))))
-	     (when m (put-mark m str))
-	     str)))
-	((#\M) ;;; symbol
-	 (let ((str (read)))
-	   (let ((sym (string->symbol str)))
-	     (when m (put-mark m sym))
-	     sym)))
-	((#\G)
+	((#\s)	;ASCII string
+	 (let* ((len (read-integer-word port))
+		(str (make-string len)))
+	   (let next-char ((i 0))
+	     (unless (unsafe.fx= i len)
+	       (string-set! str i (read-u8-as-char port))
+	       (next-char (unsafe.fxadd1 i))))
+	   (when m (put-mark m str))
+	   str))
+	((#\S)	;Unicode string
+	 (let* ((len (read-integer-word port))
+		(str (make-string len)))
+	   (let next-char ((i 0))
+	     (unless (unsafe.fx= i len)
+	       (string-set! str i (integer->char (read-u32 port)))
+	       (next-char (unsafe.fxadd1 i))))
+	   (when m (put-mark m str))
+	   str))
+	((#\M)	;symbol
+	 (let ((sym (string->symbol (read))))
+	   (when m (put-mark m sym))
+	   sym))
+	((#\G)	;generated symbol
 	 (let* ((pretty (read))
-		(unique (read)))
-	   (let ((g (foreign-call "ikrt_strings_to_gensym" pretty unique)))
-	     (when m (put-mark m g))
-	     g)))
-	((#\V) ;;; vector
-	 (let ((n (read-int port)))
-	   (let ((v (make-vector n)))
-	     (when m (put-mark m v))
-	     (let f ((i 0))
-	       (unless (unsafe.fx= i n)
-		 (vector-set! v i (read))
-		 (f (unsafe.fxadd1 i))))
-	     v)))
-	((#\v) ;;; bytevector
-	 (let ((n (read-int port)))
-	   (let ((v (make-bytevector n)))
-	     (when m (put-mark m v))
-	     (let f ((i 0))
-	       (unless (unsafe.fx= i n)
-		 (bytevector-u8-set! v i (read-u8 port))
-		 (f (unsafe.fxadd1 i))))
-	     v)))
-	((#\x) ;;; code
+		(unique (read))
+		(g      (foreign-call "ikrt_strings_to_gensym" pretty unique)))
+	   (when m (put-mark m g))
+	   g))
+	((#\V)	;vector
+	 (let* ((len (read-integer-word port))
+		(vec (make-vector len)))
+	   (when m (put-mark m vec))
+	   (let next-object ((i 0))
+	     (unless (unsafe.fx= i len)
+	       (vector-set! vec i (read))
+	       (next-object (unsafe.fxadd1 i))))
+	   vec))
+	((#\v)	;bytevector
+	 (let* ((len (read-integer-word port))
+		(bv  (make-bytevector len)))
+	   (when m (put-mark m bv))
+	   (let next-octet ((i 0))
+	     (unless (unsafe.fx= i len)
+	       (bytevector-u8-set! bv i (read-u8 port))
+	       (next-octet (unsafe.fxadd1 i))))
+	   bv))
+	((#\x)	;code
 	 (read-code m #f))
-	((#\Q) ;;; procedure
+	((#\Q)	;procedure
 	 (read-procedure m))
-	((#\R)
-	 (let* ((rtd-name (read))
-		(rtd-symbol (read))
-		(field-count (read-int port)))
-	   (let ((fields
-		  (let f ((i 0))
-		    (cond
-		     ((unsafe.fx= i field-count) '())
-		     (else
-		      (let ((a (read)))
-			(cons a (f (unsafe.fxadd1 i)))))))))
-	     (let ((rtd (make-struct-type
-			 rtd-name fields rtd-symbol)))
-	       (when m (put-mark m rtd))
-	       rtd))))
+	((#\R)	;struct type descriptor
+	 (let* ((rtd-name	(read))
+		(rtd-symbol	(read))
+		(field-count	(read-integer-word port))
+		(fields		(let f ((i 0))
+				  (if (unsafe.fx= i field-count)
+				      '()
+				    (let ((a (read)))
+				      (cons a (f (unsafe.fxadd1 i)))))))
+		(rtd		(make-struct-type rtd-name fields rtd-symbol)))
+	   (when m (put-mark m rtd))
+	   rtd))
 	((#\{)
-	 (let ((n (read-int port)))
-	   (let ((rtd (read)))
-	     (let ((x (make-struct rtd n)))
-	       (when m (put-mark m x))
-	       (let f ((i 0))
-		 (unless (unsafe.fx= i n)
-		   ($struct-set! x i (read))
-		   (f (unsafe.fxadd1 i))))
-	       x))))
-	((#\C) (integer->char (read-u32 port)))
-	((#\c) (read-u8-as-char port))
-	((#\>)
+	 (let* ((field-count	(read-integer-word port))
+		(rtd		(read))
+		(struct		(make-struct rtd field-count)))
+	   (when m (put-mark m struct))
+	   (let next-field ((i 0))
+	     (unless (unsafe.fx= i field-count)
+	       ($struct-set! struct i (read))
+	       (next-field (unsafe.fxadd1 i))))
+	   struct))
+	((#\C)	;Unicode char
+	 (integer->char (read-u32 port)))
+	((#\c)	;char in the ASCII range
+	 (read-u8-as-char port))
+	((#\>)	;mark for the next object
 	 (let ((m (read-u32 port)))
 	   (read/mark m)))
-	((#\<)
+	((#\<)	;reference to a previously read mark
 	 (let ((m (read-u32 port)))
-	   (unless (unsafe.fx< m MARKS.len)
-	     (assertion-violation who "invalid mark" m))
-	   (or (vector-ref MARKS m)
-	       (error who "uninitialized mark" m))))
-	((#\l) ;;; list of length <= 255
+	   (if (unsafe.fx< m MARKS.len)
+	       (or (vector-ref MARKS m)
+		   (error who "uninitialized mark" m))
+	     (assertion-violation who "invalid mark" m))))
+	((#\l)	;list of length <= 255
 	 (read-list (read-u8 port) m))
-	((#\L) ;;; list of length > 255
-	 (read-list (read-int port) m))
-	((#\W) ;;; r6rs record type descriptor
-	 (let* ((name    (read))
-		(parent  (read))
-		(uid     (read))
-		(sealed? (read))
-		(opaque? (read))
-		(n       (read))
-		(fields  (make-vector n)))
-	   (let f ((i 0))
-	     (cond
-	      ((= i n)
-	       (let ((rtd (make-record-type-descriptor
-			   name parent uid sealed? opaque?
-			   fields)))
-		 (when m (put-mark m rtd))
-		 rtd))
-	      (else
+	((#\L)	;list of length > 255
+	 (read-list (read-integer-word port) m))
+	((#\W)	;R6RS record type descriptor
+	 (let* ((name		(read))
+		(parent		(read))
+		(uid		(read))
+		(sealed?	(read))
+		(opaque?	(read))
+		(field-count	(read))
+		(fields		(make-vector field-count)))
+	   (let next-field ((i 0))
+	     (if (unsafe.fx= i field-count)
+		 (let ((rtd (make-record-type-descriptor name parent uid sealed? opaque? fields)))
+		   (when m (put-mark m rtd))
+		   rtd)
 	       (let* ((field-mutable? (read))
-		      (field-name (read)))
-		 (vector-set! fields i
-			      (list (if field-mutable? 'mutable 'immutable) field-name))
-		 (f (+ i 1))))))))
-	((#\b) ;;; bignum
-	 (let ((i (read-int port)))
-	   (let ((bytes (if (< i 0) (- i) i)))
-	     (let ((bv (get-bytevector-n port bytes)))
-	       (let ((n (bytevector-uint-ref bv 0 'little bytes)))
-		 (let ((n (if (< i 0) (- n) n)))
-		   (when m (put-mark m n))
-		   n))))))
-	((#\f) ;;; flonum
-	 (let ()
-	   (import (ikarus system $flonums))
-	   (let ((x ($make-flonum)))
-	     ($flonum-set! x 7 (get-u8 port))
-	     ($flonum-set! x 6 (get-u8 port))
-	     ($flonum-set! x 5 (get-u8 port))
-	     ($flonum-set! x 4 (get-u8 port))
-	     ($flonum-set! x 3 (get-u8 port))
-	     ($flonum-set! x 2 (get-u8 port))
-	     ($flonum-set! x 1 (get-u8 port))
-	     ($flonum-set! x 0 (get-u8 port))
-	     (when m (put-mark m x))
-	     x)))
-	((#\r) ;;; ratnum
+		      (field-name     (read)))
+		 (vector-set! fields i (list (if field-mutable? 'mutable 'immutable) field-name))
+		 (next-field (unsafe.fxadd1 i)))))))
+	((#\b)	;bignum
+	 (let* ((i	(read-integer-word port))
+		(len	(if (unsafe.fx< i 0) (unsafe.fx- 0 i) i))
+		(bv	(get-bytevector-n port len))
+		(bignum	(bytevector-uint-ref bv 0 'little len))
+		(bignum	(if (unsafe.fx< i 0) (- bignum) bignum)))
+	   (when m (put-mark m bignum))
+	   bignum))
+	((#\f)	;flonum
+	 (let ((fl (unsafe.make-flonum)))
+	   (unsafe.flonum-set! fl 7 (get-u8 port))
+	   (unsafe.flonum-set! fl 6 (get-u8 port))
+	   (unsafe.flonum-set! fl 5 (get-u8 port))
+	   (unsafe.flonum-set! fl 4 (get-u8 port))
+	   (unsafe.flonum-set! fl 3 (get-u8 port))
+	   (unsafe.flonum-set! fl 2 (get-u8 port))
+	   (unsafe.flonum-set! fl 1 (get-u8 port))
+	   (unsafe.flonum-set! fl 0 (get-u8 port))
+	   (when m (put-mark m fl))
+	   fl))
+	((#\r)	;ratnum
 	 (let* ((den (read))
-		(num (read)))
-	   (let ((x (/ num den)))
-	     (when m (put-mark m x))
-	     x)))
+		(num (read))
+		(x   (/ num den)))
+	   (when m (put-mark m x))
+	   x))
 	((#\i) ;;; compnum
 	 (let* ((real (read))
 		(imag (read)))
@@ -296,7 +283,7 @@
     ;; byte ...	: the actual code
     ;; vector	: code relocation vector
     ;;
-    (let* ((code-size (read-int    port))
+    (let* ((code-size (read-integer-word    port))
 	   (freevars  (read-fixnum port))
 	   (code      (make-code code-size freevars)))
       (when code-mark (put-mark code-mark code))
@@ -444,7 +431,7 @@
 	   (fx- -1
 		(fxlogor (fxsra u0 3) (fxsll u1 29)))))))))
 
-(define (read-int port)
+(define (read-integer-word port)
   ;;Read from the  input PORT an exact integer  represented as 32-bit or
   ;;64-bit value depending on the underlying platform's word size.
   ;;

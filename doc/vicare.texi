@@ -16185,9 +16185,9 @@ vicare>
 @appendixsec Binary format of a @fasl{} file
 
 
-A @fasl{} object is a header followed by one or more objects followed by
-an end--of--@fasl{} marker.  After the end--of--@fasl{} marker the file
-must be at its @eof{}.
+A @fasl{} object is a header followed by one or more object fields
+followed by an end--of--@fasl{} marker.  After the end--of--@fasl{}
+marker the file must be at its @eof{}.
 
 The header is the string @code{#@@IK0}, followed by @code{1} if fixnum
 width is @math{30} bits, else followed by @code{2}; the end of fasl
@@ -16198,65 +16198,116 @@ can be included only once and ``marked'' with a fixnum; such mark is
 later dereferenced to insert a reference to the object in the loaded
 code.
 
-An object is either:
+A data word is an exact signed integer of 32-bit or 64-bit depending on
+the word size of the underlying platform.
+
+An object field is a character in @ascii{} encoding, optionally followed
+by data representing the serialisation of a Scheme value:
 
 @table @asis
 @item "N"
-Denoting the empty list.
+Denotes the empty list.
 
 @item "T"
-Denoting @true{}.
+Denotes @true{}.
 
 @item "F"
-Denoting @false{}.
+Denotes @false{}.
 
 @item "E"
-Denoting the end of file object.
+Denotes the end of file object.
 
 @item "U"
-Denoting the unspecified value.
+Denotes the unspecified value (void).
 
-@item "I" + 4-bytes
-Denoting a fixnum (in host byte order).
+@item "I" + word
+A fixnum stored as a big endian word.
 
-@item "c" + 1-byte
-Denoting a small character (@math{<= 255}).
+@item "s" + word(N) + octet ...
+An @ascii{} string of @math{N} characters followed by @math{N} octets
+representing the characters in @ascii{} encoding.  The data word
+@math{N} must represent an exact integer in the range of fixnums.
 
-@item "C" + 4-byte
-Word: big char.
+@item "S" + word(N) + int32 ...
+A Unicode string of @math{N} characters followed by @math{N} 32-bit
+integers in native order representing the characters as Unicode code
+points.  The data word @math{N} must represent an exact integer in the
+range of fixnums.
+
+@item "M" + symbol-name
+A symbol.  @code{symbol-name} is a string field.
+
+@item "G" + pretty-name + unique-name
+A gensym.  Both @code{pretty-name} and @code{unique-name} are strings.
+
+@item "c" + octet
+A character in the @ascii{} range (@math{<= 255}).
+
+@item "C" + int32
+A character store as 32-bit integer representing a Unicode code point.
 
 @item "P" + object1 + object2
 A pair.
 
-@item "V" + 4-bytes(N) + object ...
-A vector of length @math{N} followed by @math{N} objects.
+@item "V" + word(N) + object ...
+A vector of length @math{N} followed by @math{N} object fields.  The
+data word @math{N} must represent an exact integer in the range of
+fixnums.
 
-@item "v" + 4-byte(N) + octet ...
-A bytevector of length @math{N} followed by @math{N} octets.
+@item "v" + word(N) + octet ...
+A bytevector of length @math{N} followed by @math{N} octets.  The data
+word @math{N} must represent an exact integer in the range of fixnums.
 
-@item "s" + 4-bytes(N) + octet ...
-An @ascii{} string.
+@item "R" + rtd-name + rtd-symbol + field-count + name ...
+A struct type descriptor.  @code{rtd-name} must be a symbol.
+@code{rtd-symbol} must be a symbol.  @code{field-count} must be a word
+in the fixnum range.  The @code{name} object fields must be symbols
+representing the field name and there must be @code{field-count} of
+them.
 
-@item "S" + 4-bytes(n) + int ...
-a unicode string
+@item "@{" + field-count + rtd + field ...
+A structure instance.  @code{field-count} must be a word in the fixnum
+range.  @code{rtd} must be a struct type descriptor.  The @code{field}
+object fields must be the fields of the structure instance and there
+must be @code{field-count} of them.
 
-@item "M" + symbol-name
-A symbol.
+@item "r" + numerator + denominator
+Ratnum.
 
-@item "G" + pretty-name + unique-name
-A gensym.
+@item "f" + 8-byte
+@ieee{} double precision flonum.  The bytes are stored: most significant
+first, least significant last.
 
-@item "R" + rtd-name + rtd-symbol + field-count + field-names
-A struct type descriptor.
+@item "b" + word(N) + octet ...
+Denotes a bignum.  @var{N} is a signed integer word whose sign is the
+sign of the bignum and whose modulo is the number of octets representing
+the bignum.
 
-@item "@{" + field-count + rtd + fields
-A struct instance.
+@item "i" + real-part + imag-part
+Complex numbers, both cflonum and compnum.
 
-@item ">" + 4-bytes(I)
-Mark the next object with index @math{I}.
+@item "l" + octet(N) + object ...
+A list of @math{N <= 255} elements followed by the elements.
 
-@item "<" + 4-bytes(I)
-Dereference the object marked with index @math{I}.
+@item "L" + word(N) + object ...
+A list of @math{N > 255} elements followed by the elements.
+
+@item "h" + vector + vector
+@func{eq?}  hashtable, first vector keys, second vector values.
+
+@item "H" + vector + vector
+@func{eqv?} hashtable, first vector keys, second vector values.
+
+@item "W" + name + parent + uid + sealed? + opaque? + count + (bool + field) ...
+An @rnrs{6} record type descriptor.  @code{name} must be the return
+value of @func{record-type-name}.  @code{parent} must be the return
+value of @func{record-type-parent}.  @code{uid} must be the return value
+of @func{record-type-uid}.  @code{sealed?} must be the return value of
+@func{record-type-sealed?}.  @code{opaque?} must be the return value of
+@func{record-type-opaque?}.  @code{count} must be a fixnum representing
+the number of fields.  Each @code{bool + field} sequence must be a
+boolean representing the mutability of the record field, followed by
+symbol representing the name of the record field.
 
 @item "x"
 Denotes code.
@@ -16264,20 +16315,11 @@ Denotes code.
 @item "Q"
 Procedure; followed by code.
 
-@item "r" + numerator + denominator
-Ratnum.
+@item ">" + int32(I)
+Mark the next object with index @math{I}.
 
-@item "f" + 8-byte
-@ieee{} flonum.
-
-@item "b" + 4-byte(N) + n-bytes
-Denotes a bignum (the sign of the bignum is the sign of @math{N}).
-
-@item "h" + vector + vector
-@func{eq?}  hashtable, first vector keys, second vector values.
-
-@item "H" + vector + vector
-@func{eqv?} hashtable, first vector keys, second vector values.
+@item "<" + int32(I)
+Dereference the object marked with index @math{I}.
 @end table
 
 @c page
