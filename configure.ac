@@ -279,8 +279,10 @@ cre2_val=0
 CRE2_LIBS=
 if test "$enable_cre2" != no; then
    dnl No need to check for "re2.h" header file.
-   AC_CHECK_LIB([re2],[main],,[AC_MSG_WARN([test for RE2 library failed])])
-   AC_CHECK_LIB([cre2],[cre2_version_string],[have_cre2=yes],[have_cre2=no])
+   AC_CHECK_LIB([re2],[main],
+     [have_re2=yes],
+     [AC_MSG_WARN([test for RE2 library failed])])
+   AC_CHECK_LIB([cre2],[cre2_version_string],[have_cre2=yes],[have_cre2=no],[-lre2])
    AC_CHECK_HEADERS([cre2.h],[have_cre2_h=yes],[have_cre2_h=no])
   if test "$have_cre2" = yes && test "$have_cre2_h" = yes; then
     cre2_val=1
