@@ -273,6 +273,7 @@
     "ikarus.hash-tables.sls"
     "ikarus.pretty-formats.sls"
     "ikarus.writer.sls"
+    "ikarus.foreign-libraries.sls"
     "ikarus.reader.sls"
     "ikarus.code-objects.sls"
     "ikarus.intel-assembler.sls"

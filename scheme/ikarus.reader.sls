@@ -39,7 +39,9 @@
 		  ;; internal functions only for Vicare
 		  read-source-file read-script-source-file
 		  read-library-source-file)
-    (prefix (ikarus system $foreign) ffi.)
+    (only (vicare.foreign-libraries)
+	  register-filename-foreign-library
+	  autoload-filename-foreign-library)
     (vicare syntactic-extensions)
     (vicare words)
     (prefix (vicare unsafe-operations)
@@ -70,6 +72,11 @@
 
 
 ;;;; miscellaneous helpers
+
+;;Used to make the reader functions aware of the library file name being
+;;read.
+(define current-library-file
+  (make-parameter #f))
 
 (define-inline (reverse-list->string ell)
   ;;There are more efficient ways to do this, but ELL is usually short.
@@ -544,9 +551,10 @@
   ;;and return the first datum; close the port.
   ;;
   (let ((port (open-input-file filename)))
-    (unwind-protect
-	(get-annotated-datum port)
-      (close-input-port port))))
+    (parameterize ((current-library-file filename))
+      (unwind-protect
+	  (get-annotated-datum port)
+	(close-input-port port)))))
 
 (define (read-source-file filename)
   ;;Open FILENAME for input only  using the native transcoder, then read
@@ -2847,12 +2855,6 @@
   ;;
   (define-inline (%error msg)
     (die/p port 'tokenize msg ls))
-  (define (%load-shared-library port libid)
-    (let* ((libname	(string-append "lib" libid ".so"))
-	   (rv		(ffi.dlopen libname #t #t)))
-      ;;The handle is lost: the library cannot be closed.
-      (unless rv
-	(%error (ffi.dlerror)))))
   (unless (null? ls)
     (case (car ls)
       ((load-shared-library)
@@ -2863,7 +2865,9 @@
 	     (else
 	      (let ((libid (cadr ls)))
 		(if (string? libid)
-		    (%load-shared-library port libid)
+		    (begin
+		      (register-filename-foreign-library (current-library-file) libid)
+		      (autoload-filename-foreign-library libid))
 		  (%error "expected string argument to load-shared-library"))))))
       (else
        (%error "invalid comment list")))))

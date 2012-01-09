@@ -28,6 +28,8 @@
 	    posix.)
     (only (ikarus.compiler)
 	  compile-core-expr)
+    (only (vicare.foreign-libraries)
+	  retrieve-filename-foreign-libraries)
     (only (psyntax library-manager)
 	  serialize-all
 	  current-precompiled-library-loader)
@@ -36,7 +38,8 @@
     (only (ikarus.reader)
 	  read-script-source-file)
     (only (vicare syntactic-extensions)
-	  unwind-protect))
+	  unwind-protect
+	  define-inline))
 
 
 ;;;; handling of FASL repository file names
@@ -111,14 +114,20 @@
   ;;
   (let ((ikfasl (fasl-path filename)))
     (when ikfasl
-      (fprintf (current-error-port) "Serializing ~s ...\n" ikfasl)
-      (let-values (((dir name) (posix.split-file-name ikfasl)))
-	(posix.mkdir/parents dir #o755))
-      (let ((port (open-file-output-port ikfasl (file-options no-fail))))
-	(unwind-protect
-	    (fasl-write (make-serialized-library contents) port)
-	  (close-output-port port)))
-      (fprintf (current-error-port) "Done.\n"))))
+      (let ((stderr (current-error-port)))
+	(define-inline (%display thing)
+	  (display thing stderr))
+	(%display "serialising ")
+	(%display ikfasl)
+	(%display " ... ")
+	(let-values (((dir name) (posix.split-file-name ikfasl)))
+	  (posix.mkdir/parents dir #o755))
+	(let ((port (open-file-output-port ikfasl (file-options no-fail))))
+	  (unwind-protect
+	      (fasl-write (make-serialized-library contents) port
+			  (retrieve-filename-foreign-libraries filename))
+	    (close-output-port port)))
+	(%display "done\n")))))
 
 
 (define (load-handler x)

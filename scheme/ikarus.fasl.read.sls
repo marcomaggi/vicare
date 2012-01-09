@@ -23,6 +23,8 @@
 	    procedure-annotation)
     (ikarus system $codes)
     (ikarus system $structs)
+    (only (vicare.foreign-libraries)
+	  autoload-filename-foreign-library)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
     (vicare syntactic-extensions))
@@ -266,6 +268,10 @@
                  (lambda (k v) (hashtable-set! x k v))
 	       keys vals))
 	   x))
+	((#\O)	;autoload foreign library
+	 (autoload-filename-foreign-library (read))
+	 ;;recurse to satisfy the request to return an object
+	 (read/mark m))
 	(else
 	 (assertion-violation who "unexpected char as fasl object header" ch port)))))
 

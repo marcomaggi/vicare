@@ -14,7 +14,8 @@ VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
 VICARE_FLAGS	= -b $(VICARE_BOOT) --debug $(user_flags) --r6rs-script
 VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH)	\
 		  CHECK_TEST_NAME=$(name)				\
-		  VICARE_SRC_DIR=$(srcdir) VICARE_BUILDDIR=$(builddir)
+		  VICARE_SRC_DIR=$(srcdir) VICARE_BUILDDIR=$(builddir)	\
+		  LD_LIBRARY_PATH=$(builddir)/../src/.libs
 VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
 
 .PHONY: test tests test-r6rs proof proofs

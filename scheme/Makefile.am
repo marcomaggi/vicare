@@ -153,6 +153,7 @@ EXTRA_DIST= last-revision				\
 	ikarus.pretty-formats.sls			\
 	ikarus.pretty-print.sls				\
 	ikarus.promises.sls				\
+	ikarus.foreign-libraries.sls			\
 	ikarus.reader.sls				\
 	ikarus.records.procedural.sls			\
 	ikarus.singular-objects.sls			\

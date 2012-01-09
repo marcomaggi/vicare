@@ -29,7 +29,8 @@ VICARE_FLAGS	= -b $(VICARE_BOOT) $(user_flags)
 
 VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
-VICARE_ENV	= VICARE_LIBRARY_PATH=$(builddir):$(srcdir)
+VICARE_ENV	= VICARE_LIBRARY_PATH=$(builddir):$(srcdir)	\
+		  LD_LIBRARY_PATH=$(builddir)/../src/.libs
 VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
 
 VICARE_INST	= $(bindir)/vicare
