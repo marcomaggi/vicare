@@ -16179,6 +16179,8 @@ vicare>
 @menu
 * fasl format::                 Binary format of a @fasl{} file.
 * fasl api::                    @fasl{} files @api{}.
+* fasl foreign::                Associating foreign libraries to
+                                @fasl{} files.
 @end menu
 
 @c page
@@ -16321,6 +16323,12 @@ Mark the next object with index @math{I}.
 
 @item "<" + int32(I)
 Dereference the object marked with index @math{I}.
+
+@item "O" + libid
+Foreign library identifier.  @code{libid} must be a string representing
+the foreign shared library identifier: on Unix--like systems it is
+prefixed with @code{lib} and suffixed with @code{.so} to compose a
+library file name.
 @end table
 
 @c page
@@ -16372,6 +16380,64 @@ using the current value of @func{fasl-directory}.  Return false if
 @func{fasl-directory} is unset (which should never happen).  It is an
 error if the file @var{filename} does not exist.
 @end defun
+
+@c page
+@node fasl foreign
+@appendixsec Associating foreign libraries to @fasl{} files
+
+
+@findex @func{foreign-call}
+
+
+The macro @func{foreign-call}, exported by the libraries
+@library{ikarus} and @library{vicare}, is expanded to compiled code
+which invokes a C function from the process image; the first argument to
+@func{foreign-call} is a string naming the C function.  Whenever the
+code is compiled, the C pointer to the named function is retrieved with
+a call to:
+
+@example
+dlsym(RTLD_DEFAULT, function_name);
+@end example
+
+@noindent
+so all the public functions from the running @command{vicare} executable
+are available and also all the functions from host's shared libraries
+loaded with @cfunc{dlopen} using the flags @code{RTLD_NOW |
+RTLD_GLOBAL}.
+
+It is possible to associate one or more host's shared libraries to a
+@fasl{} file, so that: whenever the @fasl{} file is loaded, the shared
+library is loaded too and the functions required by @func{foreign-call}
+are available.  This is especially useful to implement bindings to
+foreign libraries without relying on the @ffi{} and making full use of
+garbage collection facilities and access to Scheme values' memory
+representations.
+
+@quotation
+@strong{NOTE} The mechanism described below is a temporary
+implementation which may change in the future.
+@end quotation
+
+Whenever @value{PRJNAME}'s source code reader, in @code{#!vicare} mode,
+finds a form like:
+
+@example
+#!(load-shared-library "vicarecre2")
+@end example
+
+@noindent
+it handles it as a special comment which causes no code to be expanded
+nor compiled.  Rather a foreign shared library whose identifier is
+@code{vicarecre2} is immediately loaded.
+
+If the file containing such special comment is compiled to a @fasl{}
+file, an object field with header @code{O} is written to the
+@strong{beginning} of the @fasl{} file: such object will cause the
+foreign library to be loaded whenever the @fasl{} file is loaded.
+
+On Unix--like systems it is prefixed with @code{lib} and suffixed with
+@code{.so} to compose a library file name.
 
 @c page
 @node cre2
