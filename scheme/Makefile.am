@@ -133,7 +133,7 @@ EXTRA_DIST= last-revision				\
 	ikarus.enumerations.sls				\
 	ikarus.equal.sls				\
 	ikarus.exceptions.sls				\
-	ikarus.fasl.sls					\
+	ikarus.fasl.read.sls				\
 	ikarus.fasl.write.sls				\
 	ikarus.fixnums.sls				\
 	ikarus.guardians.sls				\

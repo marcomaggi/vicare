@@ -277,7 +277,7 @@
     "ikarus.code-objects.sls"
     "ikarus.intel-assembler.sls"
     "ikarus.fasl.write.sls"
-    "ikarus.fasl.sls"
+    "ikarus.fasl.read.sls"
     "ikarus.compiler.sls"
     "psyntax.compat.sls"
     "psyntax.library-manager.sls"
