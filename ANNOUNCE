@@ -46,7 +46,7 @@ Notes for revision 0.2d6
   these libraries is unchanged.
 
 * Added  support for  foreign  libraries associated  to  FASL files  for
-  autoloading.
+  autoloading.  The packaging infrastructure needs GNU Libtool now.
 
 * Optional support for the Iconv API has been added to (vicare glibc) by
   linking with  Libiconv.  By default  disabled, to enable it:  give the
