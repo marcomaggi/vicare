@@ -33,7 +33,8 @@ if WANT_CRE2
 lib_LTLIBRARIES			+= libvicarecre2.la
 libvicarecre2_la_LDFLAGS	= -version-info 0:0:0
 libvicarecre2_la_SOURCES	= ikarus-cre2.c
-libvicarecre2_la_LIBS		= @CRE2_LIBS@
+libvicarecre2_la_LIBADD		= @CRE2_LIBS@
+#libvicarecre2_la_LIBS		= @CRE2_LIBS@
 endif
 
 ## --------------------------------------------------------------------

@@ -309,7 +309,7 @@ else
 fi # "$enable_cre2" != no
 
 AC_DEFINE_UNQUOTED([ENABLE_CRE2],[$cre2_val],[adds support for CRE2])
-AM_CONDITIONAL([WANT_CRE2],[test x$cre2_val = xtrue])
+AM_CONDITIONAL([WANT_CRE2],[test x$cre2_val = x1])
 AC_SUBST([CRE2_LIBS])
 
 AC_CACHE_SAVE
