@@ -80,7 +80,7 @@
     ;;
     (if (unsafe.fx< m MARKS.len)
 	(if (vector-ref MARKS m)
-	    (assertion-violation who "mark set twice" m)
+	    (assertion-violation who "mark set twice" m port)
 	  (vector-set! MARKS m obj))
       (let* ((n MARKS.len)
 	     (v (make-vector (fxmax (unsafe.fx* n 2) (unsafe.fxadd1 m)) #f)))

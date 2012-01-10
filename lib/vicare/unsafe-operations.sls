@@ -32,7 +32,7 @@
 ;;;        decreasing order of significance.
 ;;;
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -55,6 +55,7 @@
     (rename ($fxzero?	fxzero?)
 	    ($fxadd1	fxadd1)		;increment
 	    ($fxsub1	fxsub1)		;decrement
+	    ($fxneg	fxneg)		;negation
 	    ($fxsra	fxsra)		;shift right
 	    ($fxsll	fxsll)		;shift left
 	    ($fxlogor	fxlogor)	;inclusive logic OR
@@ -255,6 +256,11 @@
 
 
 ;;;; fixnums
+
+(define-syntax $fxneg
+  (syntax-rules ()
+    ((_ ?op)
+     ($fx- 0 ?op))))
 
 (define-syntax $fxand
   (syntax-rules ()

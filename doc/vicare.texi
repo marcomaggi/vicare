@@ -16274,7 +16274,7 @@ range.  @code{rtd} must be a struct type descriptor.  The @code{field}
 object fields must be the fields of the structure instance and there
 must be @code{field-count} of them.
 
-@item "r" + numerator + denominator
+@item "r" + denominator + numerator
 Ratnum.
 
 @item "f" + 8-byte
@@ -16342,10 +16342,10 @@ and @library{vicare}.
 
 @defun fasl-write @var{obj} @var{port}
 @defunx fasl-write @var{obj} @var{port} @var{libraries}
-Serialise @var{obj} to the binary output port @var{port}.  If
-@var{libraries} is present: it must be a list of strings representing
-foreign shared libraries to be loaded whenever the @fasl{} file is
-loaded, @ref{fasl foreign} for details.
+Serialise @var{obj} to the binary output port @var{port} prefixing it
+with the @fasl{} file header.  If @var{libraries} is present: it must be
+a list of strings representing foreign shared libraries to be loaded
+whenever the @fasl{} file is loaded, @ref{fasl foreign} for details.
 @end defun
 
 
