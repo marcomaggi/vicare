@@ -20,8 +20,11 @@ dist_libvicare_DATA	= vicare/ffi.sls			\
 			  vicare/installation-configuration.sls	\
 			  vicare/glibc.sls			\
 			  vicare/linux.sls			\
-			  vicare/gcc.sls			\
-			  vicare/cre2.sls
+			  vicare/gcc.sls
+
+if WANT_CRE2
+dist_libvicare_DATA	+= vicare/cre2.sls
+endif
 
 ## --------------------------------------------------------------------
 
@@ -41,8 +44,14 @@ VICARE_INST_RUN	= $(VICARE_INST_ENV) $(VICARE_INST)
 
 vfasl:
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-all.sps
+if WANT_CRE2
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-cre2.sps
+endif
 
 vfasl-installed:
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-all.sps
+if WANT_CRE2
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-cre2.sps
+endif
 
 ### end of file
