@@ -532,7 +532,7 @@ Revised^6 Report on the algorithmic language Scheme
 
 @c To be used as @value{COPYRIGHT_YEARS} whenever we need to include the
 @c list of copyright years.
-@set COPYRIGHT_YEARS            2010-2011
+@set COPYRIGHT_YEARS            2010-2012
 
 
 @set TARBALLURL                 @url{http://github.com/marcomaggi/vicare/downloads}
