@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -88,12 +88,11 @@
    (round (string->number "8.5")))
   => '("8.0" 8.5 8.0))
 
-;; why the string rep of 10.0 is "1e1"?
 (check
     (list (number->string (round (string->number "9.5")))
    (string->number "9.5")
    (round (string->number "9.5")))
-  => '("10.0" 9.5 10.0))
+  => '("1e1" 9.5 10.0))
 
 
 ;;;; done
