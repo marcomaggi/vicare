@@ -163,10 +163,20 @@
 
 
 (define (make-graph x h)
-  ;;Fill the  EQ? hashtable H with pairs  object/fixnum or object/vector
-  ;;representing  the association between  serialised objects  and marks
-  ;;used to avoid duplicating objects in the FASL file.  The objects are
-  ;;the components of X.
+  ;;Visit object X counting how  many times its component objects appear
+  ;;in  it.  Fill  the  EQ?   hashtable H  with  pairs object/fixnum  or
+  ;;object/vector:
+  ;;
+  ;;*  For non-hashtable  objects:  the entries  are object/fixnum,  the
+  ;;fixnum being  the number of references  to the object.
+  ;;
+  ;;*   for  EQ?   and   EQV?   hashtable   objects:  the   entries  are
+  ;;object/vector, the vector having the format:
+  ;;
+  ;;	#(refcount keys vals)
+  ;;
+  ;;where <refcount> is the number of references to the table, <keys> is
+  ;;the vector of keys, <vals> is the vector of values.
   ;;
   ;;The  hashtable is  filled  only with  objects  NOT being  immediate,
   ;;strings, bytevectors, fixnums of bignums.
@@ -256,8 +266,12 @@
 
 
 (define (fasl-write-object x port refcount-table next-mark)
-  ;;Serialise any object X to PORT.   If X needs to be marked for future
-  ;;reference: use the fixnum NEXT-MARK to do it.
+  ;;Serialise any object X to PORT.
+  ;;
+  ;;If  X  needs to  be  marked for  future  reference:  use the  fixnum
+  ;;NEXT-MARK to  do it.   The REFCOUNT-TABLE hashtable  of type  EQ? is
+  ;;used  to  appropriately   insert  references  to  objects  appearing
+  ;;multiple times.
   ;;
   ;;Return a fixnum being the mark  to be used for the next object field
   ;;with multiple references.
