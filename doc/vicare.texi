@@ -14639,6 +14639,19 @@ size is @math{4} bytes; then the representation of a fixnum is:
 the two least significant bits are set to zero: this ``tags'' the
 machine words which embed fixnums.
 
+The fixnums tag is @code{00} on 32-bit platforms and @code{000} on
+64-bit platforms; the value is selected in such a way that:
+
+@example
+length_in_bytes = number_of_words *  fx_tag
+                = number_of_words << fx_tag
+@end example
+
+@noindent
+this allows us, for example, to take the fixnum representing the number
+of items in a vector and consider it directly as size of the vector's
+data area in bytes.
+
 
 @deftypefn {Preprocessor Macro} ikptr IK_FIX (@var{num})
 @deftypefnx {Preprocessor Macro} ikptr fix (@var{num})
@@ -14835,10 +14848,12 @@ ikptr    s_list, s_pair;
 long     i;
 
 s_list = s_pair = IK_PAIR_ALLOC(pcb);
-pcb->root1 = &s_list;
+pcb->root0 = &s_list;
+pcb->root1 = &s_pair;
 @{
   for (i=0; i<argc;) @{
-    IK_CAR(s_pair) = ik_bytevector_from_cstring(pcb, argv[i]);
+    ikptr  s_bv    = ik_bytevector_from_cstring(pcb, argv[i]);
+    IK_CAR(s_pair) = s_bv;
     if (++i < argc) @{
       IK_CDR(s_pair) = IK_PAIR_ALLOC(pcb);
       s_pair = IK_CDR(s_pair);
@@ -14847,6 +14862,7 @@ pcb->root1 = &s_list;
   @}
 @}
 pcb->root1 = NULL;
+pcb->root0 = NULL;
 
 /* make use of S_LIST */
 @end example

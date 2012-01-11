@@ -258,18 +258,18 @@ ik_munmap(ikptr mem, unsigned long int size){
 }
 
 
-void*
-ik_malloc(int size){
+void *
+ik_malloc (int size)
+{
   void* x = malloc(size);
-  if(x == NULL){
-    fprintf(stderr, "vicare error: malloc failed: %s\n", strerror(errno));
-    exit(EXIT_FAILURE);
-  }
+  if (NULL == x)
+    ik_abort("malloc failed: %s", strerror(errno));
   total_malloced += size;
   return x;
 }
-
-void ik_free(void* x, int size){
+void
+ik_free (void* x, int size)
+{
   total_malloced -= size;
   free(x);
 }
@@ -277,11 +277,13 @@ void ik_free(void* x, int size){
 
 #define CACHE_SIZE (pagesize * 1) /* must be multiple of pagesize*/
 
-ikpcb* ik_make_pcb(){
+ikpcb*
+ik_make_pcb (void)
+{
   ikpcb* pcb = ik_malloc(sizeof(ikpcb));
   bzero(pcb, sizeof(ikpcb));
   pcb->collect_key = false_object;
-  #define STAKSIZE (1024 * 4096)
+#define STAKSIZE (1024 * 4096)
   //#define STAKSIZE (256 * 4096)
   pcb->heap_base = ik_mmap(IK_HEAPSIZE);
   pcb->heap_size = IK_HEAPSIZE;
@@ -335,13 +337,13 @@ ikpcb* ik_make_pcb(){
     pcb->memory_base = (ikptr)(lo_seg * segment_size);
     pcb->memory_end = (ikptr)(hi_seg * segment_size);
     set_segment_type(pcb->heap_base,
-        pcb->heap_size,
-        mainheap_mt,
-        pcb);
+		     pcb->heap_size,
+		     mainheap_mt,
+		     pcb);
     set_segment_type(pcb->stack_base,
-        pcb->stack_size,
-        mainstack_mt,
-        pcb);
+		     pcb->stack_size,
+		     mainstack_mt,
+		     pcb);
   }
   /* initialize base rtd */
   {
@@ -473,14 +475,17 @@ ik_unsafe_alloc (ikpcb* pcb, unsigned long size)
 }
 
 
-void
+int
 ik_abort (const char * error_message, ...)
 {
   va_list        ap;
   va_start(ap, error_message);
-  vfprintf(stderr, "*** Vicare error: %s\n", ap);
+  fprintf(stderr, "*** Vicare error: ");
+  vfprintf(stderr, error_message, ap);
+  fprintf(stderr, "\n");
   va_end(ap);
   exit(EXIT_FAILURE);
+  return EXIT_FAILURE;
 }
 void
 ik_error (ikptr args)

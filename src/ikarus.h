@@ -117,8 +117,18 @@ extern int hash_table_count;
 #define weak_pairs_mt   (weak_pairs_type | scannable_tag   | dealloc_tag_un)
 
 
-#define pagesize 4096
-#define generation_count 5  /* generations 0 (nursery), 1, 2, 3, 4 */
+#define pagesize		4096
+
+/* How much  to right-shift a pointer  value to obtain the  index of the
+   page it is in.
+
+       4000 >> 12 = 0
+       8000 >> 12 = 1
+      10000 >> 12 = 2
+*/
+#define pageshift		12
+
+#define generation_count	5  /* generations 0 (nursery), 1, 2, 3, 4 */
 
 #define IK_HEAP_EXT_SIZE  (32 * 4096)
 #define IK_HEAPSIZE       (1024 * ((wordsize==4)?1:2) * 4096) /* 4/8 MB */
@@ -127,9 +137,8 @@ extern int hash_table_count;
   ((sizeof(ikptr) == 4) ? "#@IK01" : "#@IK02")
 #define IK_FASL_HEADER_LEN (strlen(IK_FASL_HEADER))
 
-#define pagesize   4096
-#define pageshift    12
-
+/* Given the  pointer X evaluate to the  index of the memory  page it is
+   in. */
 #define page_index(x)   \
   (((unsigned long)(x)) >> pageshift)
 
@@ -217,10 +226,17 @@ typedef struct ikpcb
   ik_callback_locative * callbacks;
 
   /* Additional roots for the garbage collector.  They are used to avoid
-     collecting objects still  in use while they are  being created by C
-     code. */
+     collecting objects still in use while they are in use by C code. */
   ikptr*                root0;
   ikptr*                root1;
+  ikptr*                root2;
+  ikptr*                root3;
+  ikptr*                root4;
+  ikptr*                root5;
+  ikptr*                root6;
+  ikptr*                root7;
+  ikptr*                root8;
+  ikptr*                root9;
 
   unsigned int*         segment_vector;
   ikptr                 weak_pairs_ap;
@@ -267,7 +283,7 @@ typedef struct {
  ** Function prototypes.
  ** ----------------------------------------------------------------- */
 
-void    ik_abort                (const char * error_message, ...);
+int     ik_abort                (const char * error_message, ...);
 void    ik_error                (ikptr args);
 
 ikpcb * ik_collect              (unsigned long, ikpcb*);
@@ -296,6 +312,7 @@ void    ik_relocate_code        (ikptr);
 
 ikptr   ik_exec_code            (ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp);
 void    ik_print                (ikptr x);
+void	ik_print_no_newline	(ikptr x);
 void    ik_fprint               (FILE*, ikptr x);
 
 ikptr   ik_asm_enter            (ikpcb*, ikptr code_object, ikptr arg, ikptr cp);
@@ -307,6 +324,14 @@ ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
  ** ----------------------------------------------------------------- */
 
 #define wordsize        ((int)(sizeof(ikptr)))
+/* The value of "wordshift" is selected in such a way that:
+
+     length_in_bytes = number_of_words * wordsize
+                     = number_of_words << wordshift
+
+   this  allows us,  for example,  to take  the fixnum  representing the
+   number of items  in a vector and consider it directly  as size of the
+   vector's data area in bytes. */
 #define wordshift       ((4 == wordsize)? 2 : 3)
 #define IK_ALIGN_SHIFT  (1 + wordshift)
 #define IK_ALIGN_SIZE   (2 * wordsize)
@@ -461,12 +486,15 @@ extern ikptr ikrt_strings_to_gensym     (ikptr, ikptr,  ikpcb* pcb);
  ** ----------------------------------------------------------------- */
 
 #define symbol_tag                      ((ikptr) 0x5F)
+#define disp_symbol_record_tag		0
 #define disp_symbol_record_string       (1 * wordsize)
 #define disp_symbol_record_ustring      (2 * wordsize)
 #define disp_symbol_record_value        (3 * wordsize)
 #define disp_symbol_record_proc         (4 * wordsize)
 #define disp_symbol_record_plist        (5 * wordsize)
 #define symbol_record_size              (6 * wordsize)
+
+#define off_symbol_record_tag		(disp_symbol_record_tag     - record_tag)
 #define off_symbol_record_string        (disp_symbol_record_string  - record_tag)
 #define off_symbol_record_ustring       (disp_symbol_record_ustring - record_tag)
 #define off_symbol_record_value         (disp_symbol_record_value   - record_tag)
@@ -677,9 +705,38 @@ extern int      ik_is_struct    (ikptr R);
  ** Port objects.
  ** ----------------------------------------------------------------- */
 
-#define port_tag        0x3F
-#define port_mask       0x3F
-#define port_size       (14 * wordsize)
+#define port_tag		0x3F
+#define port_mask		0x3F
+#define disp_port_attrs		0)
+#define disp_port_index		(1 * wordsize)
+#define disp_port_size		(2 * wordsize)
+#define disp_port_buffer	(3 * wordsize)
+#define disp_port_transcoder	(4 * wordsize)
+#define disp_port_id		(5 * wordsize)
+#define disp_port_read		(6 * wordsize)
+#define disp_port_write		(7 * wordsize)
+#define disp_port_get_position	(8 * wordsize)
+#define disp_port_set_position	(9 * wordsize)
+#define disp_port_close		(10 * wordsize)
+#define disp_port_cookie	(11 * wordsize)
+#define disp_port_unused1	(12 * wordsize)
+#define disp_port_unused2	(13 * wordsize)
+#define port_size		(14 * wordsize)
+
+#define off_port_attrs		(disp_port_attrs	- vector_tag)
+#define off_port_index		(disp_port_index	- vector_tag)
+#define off_port_size		(disp_port_size		- vector_tag)
+#define off_port_buffer		(disp_port_buffer	- vector_tag)
+#define off_port_transcoder	(disp_port_transcoder	- vector_tag)
+#define off_port_id		(disp_port_id		- vector_tag)
+#define off_port_read		(disp_port_read		- vector_tag)
+#define off_port_write		(disp_port_write	- vector_tag)
+#define off_port_get_position	(disp_port_get_position	- vector_tag)
+#define off_port_set_position	(disp_port_set_position	- vector_tag)
+#define off_port_close		(disp_port_close	- vector_tag)
+#define off_port_cookie		(disp_port_cookie	- vector_tag)
+#define off_port_unused1	(disp_port_unused1	- vector_tag)
+#define off_port_unused2	(disp_port_unused2	- vector_tag)
 
 
 /** --------------------------------------------------------------------
@@ -701,11 +758,17 @@ extern int      ik_is_struct    (ikptr R);
  ** Continuation objects.
  ** ----------------------------------------------------------------- */
 
-#define continuation_tag        ((ikptr)0x1F)
-#define disp_continuation_top   (1 * wordsize)
-#define disp_continuation_size  (2 * wordsize)
-#define disp_continuation_next  (3 * wordsize)
-#define continuation_size       (4 * wordsize)
+#define continuation_tag		((ikptr)0x1F)
+#define disp_continuation_tag		0
+#define disp_continuation_top		(1 * wordsize)
+#define disp_continuation_size		(2 * wordsize)
+#define disp_continuation_next		(3 * wordsize)
+#define continuation_size		(4 * wordsize)
+
+#define off_continuation_tag		(disp_continuation_tag  - vector_tag)
+#define off_continuation_top		(disp_continuation_top  - vector_tag)
+#define off_continuation_size		(disp_continuation_size - vector_tag)
+#define off_continuation_next		(disp_continuation_next - vector_tag)
 
 #define system_continuation_tag         ((ikptr) 0x11F)
 #define disp_system_continuation_tag    0
@@ -714,9 +777,10 @@ extern int      ik_is_struct    (ikptr R);
 #define disp_system_continuation_unused (3 * wordsize)
 #define system_continuation_size        (4 * wordsize)
 
-#define off_continuation_top   (disp_continuation_top  - vector_tag)
-#define off_continuation_size  (disp_continuation_size - vector_tag)
-#define off_continuation_next  (disp_continuation_next - vector_tag)
+#define off_system_continuation_tag	(disp_system_continuation_tag    - vector_tag)
+#define off_system_continuation_top	(disp_system_continuation_top    - vector_tag)
+#define off_system_continuation_next	(disp_system_continuation_next   - vector_tag)
+#define off_system_continuation_unused	(disp_system_continuation_unused - vector_tag)
 
 
 /** --------------------------------------------------------------------

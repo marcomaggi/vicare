@@ -84,6 +84,12 @@
    stringification of a fixnum.   What if generating many symbols causes
    the counter to overflow the fixnums?
 
+** ikarus-collect.c
+
+   The moving  operation for structs in  "add_object_proc()" is suspect:
+   what the hell is going  on there?  Understand, document and if needed
+   fix it.
+
 * List of functions to be documented
 
   Some of  these may  be internal functions  which must be  removed from

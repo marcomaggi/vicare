@@ -223,23 +223,27 @@ ikrt_glibc_if_nameindex (ikpcb * pcb)
   struct if_nameindex * arry;
   ikptr         s_alist;	/* the first pair in the alist's spine */
   ikptr         s_spine;        /* the current pair in the alist's spine */
-  ikptr         s_entry;        /* the current alist entry */
   int           i;
   arry = if_nameindex();
   {
     s_alist    = s_spine = IK_PAIR_ALLOC(pcb);
     pcb->root0 = &s_alist;
-    for (i=0; arry[i].if_index;) {
-      s_entry = IK_CAR(s_spine) = IK_PAIR_ALLOC(pcb);
-      IK_CAR(s_entry) = IK_FIX(arry[i].if_index);
-      IK_CDR(s_entry) = ik_bytevector_from_cstring(pcb, arry[i].if_name);
-      if (arry[++i].if_index) {
-	IK_CDR(s_spine) = IK_PAIR_ALLOC(pcb);
-	s_spine = IK_CDR(s_spine);
-      } else
-	IK_CDR(s_spine) = null_object;
+    pcb->root1 = &s_spine;
+    {
+      for (i=0; arry[i].if_index;) {
+	IK_CAR(s_spine)  = IK_PAIR_ALLOC(pcb);
+	IK_CAAR(s_spine) = IK_FIX(arry[i].if_index);
+	ikptr	s_bv     = ik_bytevector_from_cstring(pcb, arry[i].if_name);
+	IK_CDAR(s_spine) = s_bv;
+	if (arry[++i].if_index) {
+	  IK_CDR(s_spine) = IK_PAIR_ALLOC(pcb);
+	  s_spine = IK_CDR(s_spine);
+	} else
+	  IK_CDR(s_spine) = null_object;
+      }
     }
     pcb->root0 = NULL;
+    pcb->root1 = NULL;
   }
   if_freenameindex(arry);
   return s_alist;
