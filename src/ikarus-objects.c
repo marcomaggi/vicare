@@ -7,7 +7,7 @@
 
 
 
-  Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute  it and/or modify
   it under the  terms of the GNU General Public  License as published by
@@ -149,7 +149,7 @@ ik_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes)
                        + 1);
   bv           = ik_safe_alloc(pcb, aligned_size)
                  | bytevector_tag;
-  ref(bv, off_bytevector_length) = fix(requested_number_of_bytes);
+  ref(bv, off_bytevector_length) = IK_FIX(requested_number_of_bytes);
   data = (char *)(long)(bv + off_bytevector_data);
   data[requested_number_of_bytes] = '\0';
   return bv;
@@ -244,10 +244,15 @@ ik_string_alloc (ikpcb * pcb, long number_of_chars)
  ** ----------------------------------------------------------------- */
 
 ikptr
+ik_integer_from_int (signed int N, ikpcb* pcb)
+{
+  return ik_integer_from_long((signed long)N, pcb);
+}
+ikptr
 ik_integer_from_long(signed long n, ikpcb* pcb)
 {
-  ikptr fx = fix(n);
-  if (unfix(fx) == n) {
+  ikptr fx = IK_FIX(n);
+  if (IK_UNFIX(fx) == n) {
     return fx;
   }
   ikptr bn = ik_safe_alloc(pcb, IK_ALIGN(wordsize+disp_bignum_data));
@@ -284,11 +289,16 @@ ik_integer_from_long_long(signed long long n, ikpcb* pcb)
   return bn+vector_tag;
 }
 ikptr
+ik_integer_from_unsigned_int (unsigned int N, ikpcb* pcb)
+{
+  return ik_integer_from_unsigned_long((unsigned long)N, pcb);
+}
+ikptr
 ik_integer_from_unsigned_long(unsigned long n, ikpcb* pcb)
 {
   unsigned long mxn = ((unsigned long)-1)>>(fx_shift+1);
   if (n <= mxn) {
-    return fix(n);
+    return IK_FIX(n);
   }
   ikptr bn = ik_safe_alloc(pcb, IK_ALIGN(wordsize+disp_bignum_data));
   ref(bn, 0) = (ikptr)(bignum_tag | (1 << bignum_length_shift));
@@ -319,11 +329,25 @@ ik_flonum_from_double (double n, ikpcb* pcb)
  ** Scheme objects to C numbers.
  ** ----------------------------------------------------------------- */
 
+int
+ik_integer_to_int (ikptr x)
+{
+  if (IK_IS_FIXNUM(x))
+    return IK_UNFIX(x);
+  else if (x == void_object)
+    return 0;
+  else {
+    if (bnfst_negative(ref(x, -vector_tag)))
+      return (int)(-ref(x, off_bignum_data));
+    else
+      return (int)(ref(x, off_bignum_data));
+  }
+}
 long
 ik_integer_to_long (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
-    return unfix(x);
+    return IK_UNFIX(x);
   else if (x == void_object)
     return 0;
   else {
@@ -333,11 +357,23 @@ ik_integer_to_long (ikptr x)
       return (long)(ref(x, off_bignum_data));
   }
 }
+unsigned int
+ik_integer_to_unsigned_int (ikptr x)
+{
+  if (IK_IS_FIXNUM(x))
+    return IK_UNFIX(x);
+  else if (x == void_object)
+    return 0;
+  else {
+    assert(! bnfst_negative(ref(x, -vector_tag)));
+    return (unsigned int)(ref(x, off_bignum_data));
+  }
+}
 unsigned long
 ik_integer_to_unsigned_long (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
-    return unfix(x);
+    return IK_UNFIX(x);
   else if (x == void_object)
     return 0;
   else {
@@ -349,7 +385,7 @@ long long
 ik_integer_to_long_long (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
-    return unfix(x);
+    return IK_UNFIX(x);
   else if (x == void_object)
     return 0;
   else {
@@ -371,7 +407,7 @@ unsigned long long
 ik_integer_to_unsigned_long_long (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
-    return (unsigned long long)unfix(x);
+    return (unsigned long long)IK_UNFIX(x);
   else if (x == void_object)
     return 0;
   else {
@@ -387,7 +423,7 @@ uint32_t
 ik_integer_to_uint32 (ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
-    long        X = unfix(x);
+    long        X = IK_UNFIX(x);
     return ((0 <= X) && (X <= UINT32_MAX))? ((uint32_t)X) : false_object;
   } else {
     uint32_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
@@ -398,7 +434,7 @@ int32_t
 ik_integer_to_sint32 (ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
-    long        X = unfix(x);
+    long        X = IK_UNFIX(x);
     return ((INT32_MIN <= X) && (X <= INT32_MAX))? ((int32_t)X) : false_object;
   } else {
     int32_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
@@ -409,7 +445,7 @@ uint64_t
 ik_integer_to_uint64 (ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
-    long        X = unfix(x);
+    long        X = IK_UNFIX(x);
     return ((0 <= X) && (X <= UINT64_MAX))? ((uint64_t)X) : false_object;
   } else {
     uint64_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
@@ -420,7 +456,7 @@ int64_t
 ik_integer_to_sint64 (ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
-    long        X = unfix(x);
+    long        X = IK_UNFIX(x);
     return ((INT64_MIN <= X) && (X <= INT64_MAX))? ((int64_t)X) : false_object;
   } else {
     int64_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
