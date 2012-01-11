@@ -42,7 +42,7 @@ ikrt_is_weak_pair(ikptr x, ikpcb* pcb){
   if(IK_TAGOF(x) != pair_tag){
     return false_object;
   }
-  unsigned int t = pcb->segment_vector[page_index(x)];
+  unsigned int t = pcb->segment_vector[IK_PAGE_INDEX(x)];
   if((t & type_mask) == weak_pairs_type){
     return true_object;
   } else {

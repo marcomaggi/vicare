@@ -108,8 +108,8 @@ set_segment_type(ikptr base, unsigned long int size, unsigned int type, ikpcb* p
   assert(base >= pcb->memory_base);
   assert((base+size) <= pcb->memory_end);
   assert(size == IK_ALIGN_TO_NEXT_PAGE(size));
-  unsigned int* p = pcb->segment_vector + page_index(base);
-  unsigned int* q = p + page_index(size);
+  unsigned int* p = pcb->segment_vector + IK_PAGE_INDEX(base);
+  unsigned int* q = p + IK_PAGE_INDEX(size);
   while(p < q){
     *p = type;
     p++;
@@ -122,10 +122,10 @@ ik_munmap_from_segment(ikptr base, unsigned long int size, ikpcb* pcb){
   assert((base+size) <= pcb->memory_end);
   assert(size == IK_ALIGN_TO_NEXT_PAGE(size));
   unsigned int* p =
-    ((unsigned int*)(long)(pcb->segment_vector)) + page_index(base);
+    ((unsigned int*)(long)(pcb->segment_vector)) + IK_PAGE_INDEX(base);
   unsigned int* s =
-    ((unsigned int*)(long)(pcb->dirty_vector)) + page_index(base);
-  unsigned int* q = p + page_index(size);
+    ((unsigned int*)(long)(pcb->dirty_vector)) + IK_PAGE_INDEX(base);
+  unsigned int* q = p + IK_PAGE_INDEX(size);
   while(p < q){
     assert(*p != hole_mt);
     *p = hole_mt; /* holes */
@@ -382,8 +382,8 @@ void ik_delete_pcb(ikpcb* pcb){
   ikptr base = pcb->memory_base;
   ikptr end = pcb->memory_end;
   unsigned int* segment_vec = pcb->segment_vector;
-  long int i = page_index(base);
-  long int j = page_index(end);
+  long int i = IK_PAGE_INDEX(base);
+  long int j = IK_PAGE_INDEX(end);
   while(i < j){
     unsigned int t = segment_vec[i];
     if(t != hole_mt){
@@ -475,6 +475,16 @@ ik_unsafe_alloc (ikpcb* pcb, unsigned long size)
 }
 
 
+void
+ik_debug_message (const char * error_message, ...)
+{
+  va_list        ap;
+  va_start(ap, error_message);
+  fprintf(stderr, "*** Vicare debug message: ");
+  vfprintf(stderr, error_message, ap);
+  fprintf(stderr, "\n");
+  va_end(ap);
+}
 int
 ik_abort (const char * error_message, ...)
 {
@@ -640,14 +650,14 @@ ikptr
 ikrt_set_code_reloc_vector(ikptr code, ikptr vec, ikpcb* pcb){
   ref(code, off_code_reloc_vector) = vec;
   ik_relocate_code(code-vector_tag);
-  ((unsigned int*)(long)pcb->dirty_vector)[page_index(code)] = -1;
+  ((unsigned int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(code)] = -1;
   return void_object;
 }
 
 ikptr
 ikrt_set_code_annotation(ikptr code, ikptr annot, ikpcb* pcb){
   ref(code, off_code_annotation) = annot;
-  ((unsigned int*)(long)pcb->dirty_vector)[page_index(code)] = -1;
+  ((unsigned int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(code)] = -1;
   return void_object;
 }
 

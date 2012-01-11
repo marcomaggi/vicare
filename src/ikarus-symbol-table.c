@@ -100,7 +100,7 @@ intern_string(ikptr str, ikptr st, ikpcb* pcb){
   ref(b, off_car) = sym;
   ref(b, off_cdr) = bckt;
   ref(st, off_vector_data + idx*wordsize) = b;
-  ((int*)(long)pcb->dirty_vector)[page_index(st+off_vector_data+idx*wordsize)] = -1;
+  ((int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(st+off_vector_data+idx*wordsize)] = -1;
   return sym;
 }
 
@@ -123,7 +123,7 @@ intern_unique_string(ikptr str, ikptr ustr, ikptr st, ikpcb* pcb){
   ref(b, off_car) = sym;
   ref(b, off_cdr) = bckt;
   ref(st, off_vector_data + idx*wordsize) = b;
-  ((int*)(long)pcb->dirty_vector)[page_index(st+off_vector_data+idx*wordsize)] = -1;
+  ((int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(st+off_vector_data+idx*wordsize)] = -1;
   return sym;
 }
 
@@ -151,7 +151,7 @@ ikrt_intern_gensym(ikptr sym, ikpcb* pcb){
   ref(b, off_car) = sym;
   ref(b, off_cdr) = bckt;
   ref(st, off_vector_data + idx*wordsize) = b;
-  ((int*)(long)pcb->dirty_vector)[page_index(st+off_vector_data+idx*wordsize)] = -1;
+  ((int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(st+off_vector_data+idx*wordsize)] = -1;
   return true_object;
 }
 

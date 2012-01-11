@@ -78,34 +78,34 @@ extern int hash_table_count;
 
 #define most_bytes_in_minor 0x10000000
 
-#define old_gen_mask       0x00000007
-#define new_gen_mask       0x00000008
-#define gen_mask           0x0000000F
-#define new_gen_tag        0x00000008
-#define meta_dirty_mask    0x000000F0
-#define type_mask          0x00000F00
-#define scannable_mask     0x0000F000
-#define dealloc_mask       0x000F0000
-#define large_object_mask  0x00100000
-#define meta_dirty_shift 4
+#define old_gen_mask		0x00000007
+#define new_gen_mask		0x00000008
+#define gen_mask		0x0000000F
+#define new_gen_tag		0x00000008
+#define meta_dirty_mask		0x000000F0
+#define type_mask		0x00000F00
+#define scannable_mask		0x0000F000
+#define dealloc_mask		0x000F0000
+#define large_object_mask	0x00100000
+#define meta_dirty_shift	4
 
-#define hole_type       0x00000000
-#define mainheap_type   0x00000100
-#define mainstack_type  0x00000200
-#define pointers_type   0x00000300
-#define dat_type        0x00000400
-#define code_type       0x00000500
-#define weak_pairs_type 0x00000600
-#define symbols_type    0x00000700
+#define hole_type		0x00000000
+#define mainheap_type		0x00000100
+#define mainstack_type		0x00000200
+#define pointers_type		0x00000300
+#define dat_type		0x00000400
+#define code_type		0x00000500
+#define weak_pairs_type		0x00000600
+#define symbols_type		0x00000700
 
-#define scannable_tag   0x00001000
-#define unscannable_tag 0x00000000
+#define scannable_tag		0x00001000
+#define unscannable_tag		0x00000000
 
-#define dealloc_tag_un  0x00010000
-#define dealloc_tag_at  0x00020000
-#define retain_tag      0x00000000
+#define dealloc_tag_un		0x00010000
+#define dealloc_tag_at		0x00020000
+#define retain_tag		0x00000000
 
-#define large_object_tag   0x00100000
+#define large_object_tag	0x00100000
 
 #define hole_mt         (hole_type       | unscannable_tag | retain_tag)
 #define mainheap_mt     (mainheap_type   | unscannable_tag | retain_tag)
@@ -120,7 +120,7 @@ extern int hash_table_count;
 #define pagesize		4096
 
 /* How much  to right-shift a pointer  value to obtain the  index of the
-   page it is in.
+   page (of size PAGESIZE) it is in.
 
        4000 >> 12 = 0
        8000 >> 12 = 1
@@ -139,7 +139,7 @@ extern int hash_table_count;
 
 /* Given the  pointer X evaluate to the  index of the memory  page it is
    in. */
-#define page_index(x)   \
+#define IK_PAGE_INDEX(x)   \
   (((unsigned long)(x)) >> pageshift)
 
 #define IK_ALIGN_TO_NEXT_PAGE(x) \
@@ -257,7 +257,13 @@ typedef struct ikpcb
   unsigned int*         segment_vector_base;
   ikptr                 memory_base;
   ikptr                 memory_end;
+
+  /* Number of garbage collections performed so far.  It is used: at the
+     beginning  of a  GC ru,  to determine  which objects  generation to
+     inspect; when reporting GC statistics to the user, to show how many
+     GCs where performed between two timestamps. */
   int                   collection_id;
+
   int                   allocation_count_minor;
   int                   allocation_count_major;
 
@@ -283,6 +289,7 @@ typedef struct {
  ** Function prototypes.
  ** ----------------------------------------------------------------- */
 
+void	ik_debug_message	(const char * error_message, ...);
 int     ik_abort                (const char * error_message, ...);
 void    ik_error                (ikptr args);
 
