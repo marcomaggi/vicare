@@ -5,7 +5,7 @@
 
   Abstract
 
-
+	Interface to GNU C Library functions.
 
   Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 
@@ -103,10 +103,7 @@ ikrt_glibc_dirfd (ikptr pointer)
   int    rv;
   errno = 0;
   rv    = dirfd(stream);
-  if (-1 == rv)
-    return ik_errno_to_code();
-  else
-    return fix(rv);
+  return (-1 == rv)? ik_errno_to_code() : IK_FIX(rv);
 #else
   feature_failure(__func__);
 #endif
@@ -126,10 +123,7 @@ ikrt_glibc_mkstemp (ikptr template_bv, ikpcb * pcb)
   template = IK_BYTEVECTOR_DATA_CHARP(template_bv);
   errno    = 0;
   rv       = mkstemp(template);
-  if (-1 == rv)
-    return ik_errno_to_code();
-  else
-    return fix(rv);
+  return (-1 == rv)? ik_errno_to_code() : IK_FIX(rv);
 #else
   feature_failure(__func__);
 #endif
@@ -143,10 +137,7 @@ ikrt_glibc_mkdtemp (ikptr template_bv, ikpcb * pcb)
   template = IK_BYTEVECTOR_DATA_CHARP(template_bv);
   errno    = 0;
   rv       = mkdtemp(template);
-  if (NULL == rv)
-    return ik_errno_to_code();
-  else
-    return template_bv;
+  return (NULL == rv)? ik_errno_to_code() : template_bv;
 #else
   feature_failure(__func__);
 #endif
@@ -164,7 +155,7 @@ ikrt_glibc_sync (void)
   /* On Linux there  is no return value, despite what  the GNU C Library
      documentation states. */
   sync();
-  return fix(0);
+  return IK_FIX(0);
 #else
   feature_failure(__func__);
 #endif
@@ -175,11 +166,8 @@ ikrt_glibc_fsync (ikptr fd)
 #ifdef HAVE_FSYNC
   int   rv;
   errno = 0;
-  rv    = fsync(unfix(fd));
-  if (0 == rv)
-    return fix(0);
-  else
-    return ik_errno_to_code();
+  rv    = fsync(IK_UNFIX(fd));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -190,11 +178,8 @@ ikrt_glibc_fdatasync (ikptr fd)
 #ifdef HAVE_FDATASYNC
   int   rv;
   errno = 0;
-  rv    = fdatasync(unfix(fd));
-  if (0 == rv)
-    return fix(0);
-  else
-    return ik_errno_to_code();
+  rv    = fdatasync(IK_UNFIX(fd));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -208,63 +193,59 @@ ikrt_glibc_fdatasync (ikptr fd)
 ikptr
 ikrt_glibc_if_nametoindex (ikptr name_bv)
 {
+#ifdef HAVE_IF_NAMETOINDEX
   char *        name;
   unsigned int  rv;
   name  = IK_BYTEVECTOR_DATA_CHARP(name_bv);
   rv    = if_nametoindex(name);
-  if (0 == rv)
-    return false_object;
-  else
-    return fix((long)rv);
+  return (0 == rv)? false_object : IK_FIX((long)rv);
+#else
+  feature_failure(__func__);
+#endif
 }
 ikptr
 ikrt_glibc_if_indextoname (ikptr index, ikpcb * pcb)
 {
+#ifdef HAVE_IF_INDEXTONAME
   char          buffer[1+IFNAMSIZ];
-  unsigned      i = (unsigned)unfix(index);
+  unsigned      i = (unsigned)IK_UNFIX(index);
   char *        rv;
   rv = if_indextoname(i, buffer);
-  if (NULL == rv) {
-    return false_object;
-  } else {
-    long        len  = strlen(buffer);
-    ikptr       bv   = ik_bytevector_alloc(pcb, len);
-    char *      data = IK_BYTEVECTOR_DATA_CHARP(bv);
-    memcpy(data, buffer, len+1);
-    return bv;
-  }
+  return (rv)? ik_bytevector_from_cstring(pcb, buffer) : false_object;
+#else
+  feature_failure(__func__);
+#endif
 }
 ikptr
-ikrt_glibc_if_nameindex (ikpcb * pcb) {
-  struct if_nameindex * arry;           /* the list of interfaces */
-  ikptr         alist = null_object;    /* the result alist */
-  ikptr         spine;                  /* the next pair to prepend to the alist */
-  ikptr         entry;                  /* the next alist entry */
-  long          len;                    /* the length of interface name */
-  ikptr         bv;                     /* bytevector holding the interface name */
-  char *        data;                   /* data area in the bytevector */
+ikrt_glibc_if_nameindex (ikpcb * pcb)
+{
+#ifdef HAVE_IF_NAMEINDEX
+  struct if_nameindex * arry;
+  ikptr         s_alist;	/* the first pair in the alist's spine */
+  ikptr         s_spine;        /* the current pair in the alist's spine */
+  ikptr         s_entry;        /* the current alist entry */
   int           i;
-  pcb->root0 = &alist;
   arry = if_nameindex();
-  for (i=0; 0 != arry[i].if_index; ++i) {
-    /* Add a pair to the alist spine. */
-    spine = IK_PAIR_ALLOC(pcb);
-    ref(spine, off_cdr) = alist;
-    alist               = spine;
-    /* Add an entry to the alist. */
-    entry = IK_PAIR_ALLOC(pcb);
-    ref(spine, off_car) = entry;
-    /* Fill the entry. */
-    len  = strlen(arry[i].if_name);
-    bv   = ik_bytevector_alloc(pcb, len);
-    data = IK_BYTEVECTOR_DATA_CHARP(bv);
-    memcpy(data, arry[i].if_name, len);
-    ref(entry, off_car) = fix(arry[i].if_index);
-    ref(entry, off_cdr) = bv;
+  {
+    s_alist    = s_spine = IK_PAIR_ALLOC(pcb);
+    pcb->root0 = &s_alist;
+    for (i=0; arry[i].if_index;) {
+      s_entry = IK_CAR(s_spine) = IK_PAIR_ALLOC(pcb);
+      IK_CAR(s_entry) = IK_FIX(arry[i].if_index);
+      IK_CDR(s_entry) = ik_bytevector_from_cstring(pcb, arry[i].if_name);
+      if (arry[++i].if_index) {
+	IK_CDR(s_spine) = IK_PAIR_ALLOC(pcb);
+	s_spine = IK_CDR(s_spine);
+      } else
+	IK_CDR(s_spine) = null_object;
+    }
+    pcb->root0 = NULL;
   }
   if_freenameindex(arry);
-  pcb->root0 = NULL;
-  return alist;
+  return s_alist;
+#else
+  feature_failure(__func__);
+#endif
 }
 
 
@@ -274,14 +255,15 @@ ikrt_glibc_if_nameindex (ikpcb * pcb) {
 
 #undef RE
 #undef IM
-#define RE(X)   IK_FLONUM_DATA(IK_CFLONUM_REAL(X))
-#define IM(X)   IK_FLONUM_DATA(IK_CFLONUM_IMAG(X))
+#define RE(X)			IK_CFLONUM_REAL_DATA(X)
+#define IM(X)			IK_CFLONUM_IMAG_DATA(X)
+#define MAKE_CDOUBLE(CFLO)	(RE(CFLO) + IM(CFLO) * _Complex_I)
 
 ikptr
 ikrt_glibc_csin (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CSIN
-  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
+  complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = csin(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -292,7 +274,7 @@ ikptr
 ikrt_glibc_ccos (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CCOS
-  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
+  complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = ccos(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -303,7 +285,7 @@ ikptr
 ikrt_glibc_ctan (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CTAN
-  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
+  complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = ctan(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -317,7 +299,7 @@ ikptr
 ikrt_glibc_casin (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CASIN
-  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
+  complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = casin(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -328,7 +310,7 @@ ikptr
 ikrt_glibc_cacos (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CACOS
-  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
+  complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = cacos(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -339,7 +321,7 @@ ikptr
 ikrt_glibc_catan (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CATAN
-  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
+  complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = catan(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -353,7 +335,7 @@ ikptr
 ikrt_glibc_cexp (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CEXP
-  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
+  complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = cexp(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -364,7 +346,7 @@ ikptr
 ikrt_glibc_clog (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CLOG
-  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
+  complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = clog(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -375,7 +357,7 @@ ikptr
 ikrt_glibc_clog10 (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CLOG10
-  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
+  complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = clog10(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -386,7 +368,7 @@ ikptr
 ikrt_glibc_csqrt (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CSQRT
-  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
+  complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = csqrt(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -397,8 +379,8 @@ ikptr
 ikrt_glibc_cpow (ikptr s_base, ikptr s_power, ikpcb * pcb)
 {
 #ifdef HAVE_CPOW
-  complex double  base  = RE(s_base)  + IM(s_base)  * _Complex_I;
-  complex double  power = RE(s_power) + IM(s_power) * _Complex_I;
+  complex double  base  = MAKE_CDOUBLE(s_base);
+  complex double  power = MAKE_CDOUBLE(s_power);
   complex double  Y     = cpow(base, power);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -445,7 +427,7 @@ ikptr
 ikrt_glibc_csinh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CSINH
-  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
+  complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = csinh(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -456,7 +438,7 @@ ikptr
 ikrt_glibc_ccosh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CCOSH
-  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
+  complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = ccosh(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -467,7 +449,7 @@ ikptr
 ikrt_glibc_ctanh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CTANH
-  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
+  complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = ctanh(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -511,7 +493,7 @@ ikptr
 ikrt_glibc_casinh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CASINH
-  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
+  complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = casinh(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -522,7 +504,7 @@ ikptr
 ikrt_glibc_cacosh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CACOSH
-  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
+  complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = cacosh(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -533,7 +515,7 @@ ikptr
 ikrt_glibc_catanh (ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_CATANH
-  complex double        X   = RE(s_X) + IM(s_X) * _Complex_I;
+  complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = catanh(X);
   return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
@@ -644,7 +626,7 @@ ikrt_glibc_yn (ikptr s_N, ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_YN
   double        X   = IK_FLONUM_DATA(s_X);
-  double        Y   = yn((int)unfix(s_N), X);
+  double        Y   = yn((int)IK_UNFIX(s_N), X);
   return ik_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
@@ -655,7 +637,7 @@ ikrt_glibc_jn (ikptr s_N, ikptr s_X, ikpcb * pcb)
 {
 #ifdef HAVE_JN
   double        X   = IK_FLONUM_DATA(s_X);
-  double        Y   = jn((int)unfix(s_N), X);
+  double        Y   = jn((int)IK_UNFIX(s_N), X);
   return ik_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
@@ -680,7 +662,7 @@ ikptr
 ikrt_glibc_srand (ikptr s_seed)
 {
 #ifdef HAVE_RAND
-  srand((unsigned int)ik_integer_to_unsigned_long(s_seed));
+  srand(ik_integer_to_unsigned_int(s_seed));
   return void_object;
 #else
   feature_failure(__func__);
@@ -698,7 +680,7 @@ ikrt_glibc_fnmatch (ikptr s_pattern, ikptr s_string, ikptr s_flags)
 #ifdef HAVE_FNMATCH
   return fnmatch(IK_BYTEVECTOR_DATA_CHARP(s_pattern),
                  IK_BYTEVECTOR_DATA_CHARP(s_string),
-                 unfix(s_flags))? false_object : true_object;
+                 IK_UNFIX(s_flags))? false_object : true_object;
 #else
   feature_failure(__func__);
 #endif
@@ -720,14 +702,13 @@ ikrt_glibc_glob (ikptr s_pattern, ikptr s_flags, ikptr s_error_handler, ikpcb * 
   G.gl_closedir = NULL;
   G.gl_stat     = NULL;
   G.gl_lstat    = NULL;
-  rv = glob(IK_BYTEVECTOR_DATA_CHARP(s_pattern), unfix(s_flags), handler, &G);
+  rv = glob(IK_BYTEVECTOR_DATA_CHARP(s_pattern), IK_UNFIX(s_flags), handler, &G);
   if (0 == rv) {
     ikptr       s_list = ik_list_from_argv_and_argc(pcb, G.gl_pathv, G.gl_pathc);
     globfree(&G);
     return s_list;
-  } else {
-    return fix(rv);
-  }
+  } else
+    return IK_FIX(rv);
 #else
   feature_failure(__func__);
 #endif
@@ -744,7 +725,7 @@ ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb *pcb)
   char *        pattern          = IK_BYTEVECTOR_DATA_CHARP(s_pattern);
   int           rv;
   pcb->root0 = &s_compiled_regex;
-  rv = regcomp(compiled_regex, pattern, unfix(s_flags));
+  rv = regcomp(compiled_regex, pattern, IK_UNFIX(s_flags));
   if (0 == rv) {
     pcb->root0 = NULL;
     return s_compiled_regex;
@@ -779,7 +760,7 @@ ikrt_glibc_regexec (ikptr s_compiled_regex, ikptr s_string, ikptr s_flags, ikpcb
   size_t        nmatch         = compiled_regex->re_nsub;
   regmatch_t    match[1+nmatch];
   int           rv;
-  rv = regexec(compiled_regex, string, 1+nmatch, match, unfix(s_flags));
+  rv = regexec(compiled_regex, string, 1+nmatch, match, IK_UNFIX(s_flags));
   switch (rv) {
   case 0:
     {
@@ -865,7 +846,7 @@ ikrt_glibc_wordexp (ikptr s_words, ikptr s_flags, ikpcb * pcb)
   W.we_wordc    = 0;
   W.we_wordv    = NULL;
   W.we_offs     = 0;
-  rv = wordexp(word, &W, unfix(s_flags));
+  rv = wordexp(word, &W, IK_UNFIX(s_flags));
   if (0 == rv) {
     ikptr       s_words = ik_vector_alloc(pcb, (long)W.we_wordc);
     pcb->root0 = &s_words;
@@ -879,7 +860,7 @@ ikrt_glibc_wordexp (ikptr s_words, ikptr s_flags, ikpcb * pcb)
     wordfree(&W);
     return s_words;
   } else
-    return fix(rv);
+    return IK_FIX(rv);
 #else
   feature_failure(__func__);
 #endif
@@ -930,7 +911,7 @@ ikrt_glibc_fpathconf (ikptr s_fd, ikptr s_parameter, ikpcb * pcb)
   long  parameter = ik_integer_to_long(s_parameter);
   long  value;
   errno = 0;
-  value = fpathconf(unfix(s_fd), (int)parameter);
+  value = fpathconf(IK_UNFIX(s_fd), (int)parameter);
   if (-1 == value)
     return (errno)? ik_errno_to_code() : false_object;
   else
@@ -1012,7 +993,7 @@ ikrt_glibc_iconv_close (ikptr s_handle)
       return ik_errno_to_code();
     ref(s_handle, off_pointer_data) = 0;
   }
-  return fix(0);
+  return IK_FIX(0);
 #else
   feature_failure(__func__);
 #endif
@@ -1052,12 +1033,12 @@ ikrt_glibc_iconv (ikptr s_handle,
 {
 #if (ENABLE_ICONV && (defined (HAVE_ICONV)))
   iconv_t	handle = (iconv_t)IK_POINTER_DATA_VOIDP(s_handle);
-  size_t	istart = unfix(s_in_start);
+  size_t	istart = IK_UNFIX(s_in_start);
   size_t	ipast  = (false_object == s_in_past)? \
-    IK_BYTEVECTOR_LENGTH(s_in_bv) : unfix(s_in_past);
-  size_t	ostart = unfix(s_out_start);
+    IK_BYTEVECTOR_LENGTH(s_in_bv) : IK_UNFIX(s_in_past);
+  size_t	ostart = IK_UNFIX(s_out_start);
   size_t	opast  =  (false_object == s_out_past)? \
-    IK_BYTEVECTOR_LENGTH(s_out_bv) : unfix(s_out_past);
+    IK_BYTEVECTOR_LENGTH(s_out_bv) : IK_UNFIX(s_out_past);
   char *	input  = istart + IK_BYTEVECTOR_DATA_CHARP(s_in_bv);
   char *	output = ostart + IK_BYTEVECTOR_DATA_CHARP(s_out_bv);
   size_t	isize  = ipast - istart;
@@ -1071,8 +1052,8 @@ ikrt_glibc_iconv (ikptr s_handle,
     ikptr	s_pair = IK_PAIR_ALLOC(pcb);
     istart = ipast - isize;
     ostart = opast - osize;
-    IK_CAR(s_pair) = fix(istart);
-    IK_CDR(s_pair) = fix(ostart);
+    IK_CAR(s_pair) = IK_FIX(istart);
+    IK_CDR(s_pair) = IK_FIX(ostart);
     return s_pair;
   } else
     return ik_errno_to_code();

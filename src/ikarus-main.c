@@ -16,6 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+/** --------------------------------------------------------------------
+ ** Headers.
+ ** ----------------------------------------------------------------- */
+
 #include "bootfileloc.h"
 #include "ikarus.h"
 #include <fcntl.h>
@@ -25,18 +30,18 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-void register_handlers();
-void register_alt_stack();
-
+extern int cpu_has_sse2();
+static void register_handlers();
+static void register_alt_stack();
 
 ikpcb* the_pcb;
 
-extern int cpu_has_sse2();
-
+
 int
 ikarus_main (int argc, char** argv, char* boot_file)
 /* Setup  global variables  and handlers,  then load  the boot  file and
-   evaluate  it.
+   evaluate it.  This  function is meant to be  called from "main()" and
+   its return value becomes the return value of "main()".
 
    "argc" and "argv" must reference arguments on the command line of the
    "vicare" executable,  with the command  name and the  option "--boot"
@@ -45,32 +50,27 @@ ikarus_main (int argc, char** argv, char* boot_file)
    "boot_file" must  be a string  representing the filename of  the boot
    file to use. */
 {
-  if(! cpu_has_sse2()) {
+  if (! cpu_has_sse2()) {
     fprintf(stderr, "Vicare Scheme cannot run on your computer because\n");
     fprintf(stderr, "your CPU does not support the SSE2 instruction set.\n");
     fprintf(stderr, "Refer to the Vicare Scheme User's Guide for the\n");
     fprintf(stderr, "minimum hardware requirements.\n");
     exit(EXIT_FAILURE);
   }
-  if(sizeof(mp_limb_t) != sizeof(long int)) {
-    fprintf(stderr, "ERROR: limb size does not match\n");
-    exit(EXIT_FAILURE);
-  }
-  if(mp_bits_per_limb != (8*sizeof(long int))) {
-    fprintf(stderr, "ERROR: invalid bits_per_limb=%d\n", mp_bits_per_limb);
-    exit(EXIT_FAILURE);
-  }
+  if (sizeof(mp_limb_t) != sizeof(long int))
+    ik_abort("limb size does not match");
+  if (mp_bits_per_limb != (8*sizeof(long int)))
+    ik_abort("invalid bits_per_limb=%d\n", mp_bits_per_limb);
   ikpcb* pcb = ik_make_pcb();
   the_pcb = pcb;
   { /* Set up arg_list from the  last "argv" to the first; the resulting
        list will end in COMMAND-LINE. */
-    ikptr arg_list = null_object;
-    int i = argc-1;
+    ikptr	arg_list = null_object;
+    int		i	 = argc-1;
     while(i > 0) {
-      char* s = argv[i];
-      int n = strlen(s);
-      ikptr bv = ik_unsafe_alloc(pcb, IK_ALIGN(disp_bytevector_data+n+1))
-        | bytevector_tag;
+      char *	s = argv[i];
+      int	n = strlen(s);
+      ikptr	bv = ik_unsafe_alloc(pcb, IK_ALIGN(disp_bytevector_data+n+1)) | bytevector_tag;
       ref(bv, off_bytevector_length) = fix(n);
       /* copy the bytes and the terminating zero */
       memcpy((char*)(bv+off_bytevector_data), s, n+1);
@@ -97,8 +97,9 @@ ikarus_main (int argc, char** argv, char* boot_file)
   return 0;
 }
 
+
 #if 0
-Notice how the bsd manpages have incorrect type for the handler.
+/* Notice how the bsd manpages have incorrect type for the handler. */
 
      #include <signal.h>
 
@@ -119,15 +120,14 @@ Notice how the bsd manpages have incorrect type for the handler.
          struct sigaction * restrict oact);
 #endif
 
-void
+static void
 handler (int signo, siginfo_t* info, void* uap)
 {
   signo=signo; info=info; uap=uap; /* no warning */
   the_pcb->engine_counter = fix(-1);
   the_pcb->interrupted = 1;
 }
-
-void
+static void
 register_handlers (void)
 {
   struct sigaction sa;
@@ -173,17 +173,16 @@ SYNOPSIS
      sigaltstack(const struct sigaltstack *ss, struct sigaltstack *oss);
 #endif
 
-void
-register_alt_stack() {
+static void
+register_alt_stack (void)
+{
 #if HAVE_SIGALTSTACK
-  char* stk = mmap(0, SIGSTKSZ, PROT_READ|PROT_WRITE|PROT_EXEC,
-                   MAP_PRIVATE|MAP_ANON, -1, 0);
-//  char* stk = ik_mmap(SIGSTKSZ);
+  char* stk = mmap(0, SIGSTKSZ, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_PRIVATE|MAP_ANON, -1, 0);
+  //  char* stk = ik_mmap(SIGSTKSZ);
   if(stk == (char*)-1) {
     fprintf(stderr, "Cannot maloc an alt stack\n");
     exit(EXIT_FAILURE);
   }
-
   stack_t sa;
   sa.ss_sp = stk;
   sa.ss_size = SIGSTKSZ;

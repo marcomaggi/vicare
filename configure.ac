@@ -740,6 +740,7 @@ AC_CACHE_SAVE
 #### tests for GNU C Library specific features
 
 AC_CHECK_FUNCS([clearenv dirfd mkstemp mkdtemp sync fsync fdatasync])
+AC_CHECK_FUNCS([if_nametoindex if_indextoname if_nameindex])
 AC_CHECK_FUNCS([creal cimag])
 AC_CHECK_FUNCS([csin ccos ctan casin cacos catan])
 AC_CHECK_FUNCS([cexp clog clog10 csqrt cpow])

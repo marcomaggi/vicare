@@ -1,6 +1,6 @@
 /*
  * Ikarus Scheme -- A compiler for R6RS Scheme.
- * Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+ * Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
  * Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
  *
  * This program is free software:  you can redistribute it and/or modify
@@ -394,6 +394,8 @@ ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
 
 #define IK_CAR(PAIR)                ref((PAIR), off_car)
 #define IK_CDR(PAIR)                ref((PAIR), off_cdr)
+#define IK_CAAR(PAIR)               IK_CAR(IK_CAR(PAIR))
+#define IK_CDAR(PAIR)               IK_CDR(IK_CAR(PAIR))
 
 #define IK_DECLARE_ALLOC_AND_CONS(PAIR,LIST,PCB)    \
   ikptr PAIR = IK_PAIR_ALLOC(PCB);                  \
@@ -525,12 +527,16 @@ ikptr   ik_cflonum_alloc        (ikpcb * pcb, double re, double im);
 
 #define IK_CFLONUM_REAL(X)      ref((X), off_cflonum_real)
 #define IK_CFLONUM_IMAG(X)      ref((X), off_cflonum_imag)
+#define IK_CFLONUM_REAL_DATA(X)	IK_FLONUM_DATA(IK_CFLONUM_REAL(X))
+#define IK_CFLONUM_IMAG_DATA(X)	IK_FLONUM_DATA(IK_CFLONUM_IMAG(X))
 
-ikptr   ik_integer_from_long               (signed long x, ikpcb* pcb);
+ikptr   ik_integer_from_int		   (signed int N, ikpcb* pcb);
+ikptr   ik_integer_from_long               (signed long N, ikpcb* pcb);
 ikptr   ik_integer_from_long_long          (signed long long n, ikpcb* pcb);
-ikptr   ik_integer_from_unsigned_long      (unsigned long, ikpcb*);
-ikptr   ik_integer_from_unsigned_long_long (unsigned long long, ikpcb*);
-ikptr   ik_flonum_from_double              (double x, ikpcb* pcb);
+ikptr   ik_integer_from_unsigned_int	   (unsigned int N, ikpcb* pcb);
+ikptr   ik_integer_from_unsigned_long      (unsigned long N, ikpcb* pcb);
+ikptr   ik_integer_from_unsigned_long_long (unsigned long long N, ikpcb* pcb);
+ikptr   ik_flonum_from_double              (double N, ikpcb* pcb);
 
 uint32_t  ik_integer_to_uint32 (ikptr x);
 int32_t   ik_integer_to_sint32 (ikptr x);
@@ -538,6 +544,8 @@ uint64_t  ik_integer_to_uint64 (ikptr x);
 int64_t   ik_integer_to_sint64 (ikptr x);
 
 
+int                 ik_integer_to_int                   (ikptr x);
+unsigned int        ik_integer_to_unsigned_int          (ikptr x);
 long                ik_integer_to_long                  (ikptr x);
 unsigned long       ik_integer_to_unsigned_long         (ikptr x);
 long long           ik_integer_to_long_long             (ikptr x);
