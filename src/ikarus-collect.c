@@ -21,7 +21,7 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
-#include "ikarus.h"
+#include "internals.h"
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
@@ -31,7 +31,6 @@
 
 /* ------------------------------------------------------------------ */
 
-#define FORWARD_PTR ((ikptr)-1)
 #define minimum_heap_size (pagesize * 1024 * 4)
 #define maximum_heap_size (pagesize * 1024 * 8)
 #define minimum_stack_size (pagesize * 128)
@@ -574,27 +573,24 @@ collection_id_to_gen (int id)
 
 
 static inline int
-is_live(ikptr x, gc_t* gc) {
-  if (IK_IS_FIXNUM(x)) {
+is_live (ikptr x, gc_t* gc)
+{
+  if (IK_IS_FIXNUM(x))
     return 1;
-  }
   int tag = IK_TAGOF(x);
-  if (tag == immediate_tag) {
+  if (tag == immediate_tag)
     return 1;
-  }
-  if (ref(x, -tag) == FORWARD_PTR) {
+  if (ref(x, -tag) == IK_FORWARD_PTR)
     return 1;
-  }
-  unsigned int t = gc->segment_vector[IK_PAGE_INDEX(x)];
-  int gen = t & gen_mask;
-  if (gen > gc->collect_gen) {
+  unsigned int segment_bits = gc->segment_vector[IK_PAGE_INDEX(x)];
+  int gen = segment_bits & gen_mask;
+  if (gen > gc->collect_gen)
     return 1;
-  }
   return 0;
 }
-
 static inline int
-next_gen(int i) {
+next_gen (int i)
+{
   return ((i == (generation_count-1)) ? i : (i+1));
 }
 
@@ -627,7 +623,7 @@ handle_guardians(gc_t* gc) {
         ikptr p = prot_list->ptr[i];
         ikptr tc = ref(p, off_car);
         ikptr obj = ref(p, off_cdr);
-        if (tc == FORWARD_PTR) {
+        if (tc == IK_FORWARD_PTR) {
           ikptr np = ref(p, off_cdr);
           tc = ref(np, off_car);
           obj = ref(np, off_cdr);
@@ -658,7 +654,7 @@ handle_guardians(gc_t* gc) {
       for(i=0; i<ls->count; i++) {
         ikptr p = ls->ptr[i];
         ikptr tc = ref(p, off_car);
-        if (tc == FORWARD_PTR) {
+        if (tc == IK_FORWARD_PTR) {
           ikptr np = ref(p, off_cdr);
           tc = ref(np, off_car);
         }
@@ -706,7 +702,7 @@ handle_guardians(gc_t* gc) {
     for(i=0; i<pend_hold_list->count; i++) {
       ikptr p = pend_hold_list->ptr[i];
       ikptr tc = ref(p, off_car);
-      if (tc == FORWARD_PTR) {
+      if (tc == IK_FORWARD_PTR) {
         ikptr np = ref(p, off_cdr);
         tc = ref(np, off_car);
       }
@@ -756,7 +752,7 @@ static int alloc_code_count = 0;
 static ikptr
 add_code_entry(gc_t* gc, ikptr entry) {
   ikptr x = entry - disp_code_data;
-  if (ref(x,0) == FORWARD_PTR) {
+  if (ref(x,0) == IK_FORWARD_PTR) {
     return ref(x,wordsize) + off_code_data;
   }
   long idx = IK_PAGE_INDEX(x);
@@ -794,7 +790,7 @@ add_code_entry(gc_t* gc, ikptr entry) {
     memcpy((char*)(long)(y+disp_code_data),
            (char*)(long)(x+disp_code_data),
            code_size);
-    ref(x, 0) = FORWARD_PTR;
+    ref(x, 0) = IK_FORWARD_PTR;
     ref(x, wordsize) = y | vector_tag;
     return y+disp_code_data;
   }
@@ -947,13 +943,13 @@ add_list (gc_t* gc, unsigned int segment_bits, ikptr x, ikptr* loc)
     else
       y = gc_alloc_new_weak_pair(gc) | pair_tag;
     *loc = y;
-    ref(x,off_car) = FORWARD_PTR;
+    ref(x,off_car) = IK_FORWARD_PTR;
     ref(x,off_cdr) = y;
     ref(y,off_car) = first_word;
     int second_word_tag = IK_TAGOF(second_word);
     if (pair_tag == second_word_tag) {
       /* X is a list */
-      if (FORWARD_PTR == ref(second_word, -pair_tag)) { /* the cdr has been already collected */
+      if (IK_FORWARD_PTR == ref(second_word, -pair_tag)) { /* the cdr has been already collected */
         ref(y, off_cdr) = ref(second_word, wordsize-pair_tag);
         return;
       }
@@ -977,7 +973,7 @@ add_list (gc_t* gc, unsigned int segment_bits, ikptr x, ikptr* loc)
       ref(y,off_cdr) = second_word;
       return;
     }
-    else if (ref(second_word, -second_word_tag) == FORWARD_PTR) {
+    else if (ref(second_word, -second_word_tag) == IK_FORWARD_PTR) {
       /* the cdr X of X has already been collected */
       ref(y, off_cdr) = ref(second_word, wordsize-second_word_tag);
       return;
@@ -999,7 +995,7 @@ add_object_proc (gc_t* gc, ikptr x, char* caller)
    occurrence of X.
 
    The first  word in  the memory block  referenced by  X is set  to the
-   constant FORWARD_PTR: this allows future identification of references
+   constant IK_FORWARD_PTR: this allows future identification of references
    to already moved objects.
 
    The second  word in the  memory block referenced  by X is set  to the
@@ -1024,7 +1020,7 @@ add_object_proc (gc_t* gc, ikptr x)
        machine word X) do not need to be moved. */
     if (IK_IS_FIXNUM(x))
       return x;
-    assert(x != FORWARD_PTR);
+    assert(x != IK_FORWARD_PTR);
     tag = IK_TAGOF(x);
     if (tag == immediate_tag)
       return x;
@@ -1032,7 +1028,7 @@ add_object_proc (gc_t* gc, ikptr x)
   { /* If X  has already been moved  in a previous call:  return its new
        value. */
     first_word = ref(x, -tag);
-    if (FORWARD_PTR == first_word) /* already moved */
+    if (IK_FORWARD_PTR == first_word) /* already moved */
       return ref(x, wordsize-tag);
   }
   { /* If X  does not belong  to a generation  examined in this  GC run:
@@ -1063,7 +1059,7 @@ add_object_proc (gc_t* gc, ikptr x)
            (char*)(long)(x-closure_tag),
            size);
     ref(y,-closure_tag) = add_code_entry(gc, ref(y,-closure_tag));
-    ref(x,-closure_tag) = FORWARD_PTR;
+    ref(x,-closure_tag) = IK_FORWARD_PTR;
     ref(x,wordsize-closure_tag) = y;
 #if ACCOUNTING
     closure_count++;
@@ -1092,7 +1088,7 @@ add_object_proc (gc_t* gc, ikptr x)
           memcpy((char*)(long)(y+off_vector_data),
                  (char*)(long)(x+off_vector_data),
                  size);
-          ref(x,-vector_tag) = FORWARD_PTR;
+          ref(x,-vector_tag) = IK_FORWARD_PTR;
           ref(x,wordsize-vector_tag) = y;
           return y;
         }
@@ -1103,7 +1099,7 @@ add_object_proc (gc_t* gc, ikptr x)
         memcpy((char*)(long)(y+off_vector_data),
                (char*)(long)(x+off_vector_data),
                size);
-        ref(x,-vector_tag) = FORWARD_PTR;
+        ref(x,-vector_tag) = IK_FORWARD_PTR;
         ref(x,wordsize-vector_tag) = y;
         return y;
       }
@@ -1118,7 +1114,7 @@ add_object_proc (gc_t* gc, ikptr x)
       ikptr	s_value		= ref(x, off_symbol_record_value);
       ikptr	s_proc		= ref(x, off_symbol_record_proc);
       ikptr	s_plist		= ref(x, off_symbol_record_plist);
-      ref(x, -record_tag) = FORWARD_PTR;
+      ref(x, -record_tag) = IK_FORWARD_PTR;
       ref(x, wordsize-record_tag) = y;
       ref(y, off_symbol_record_tag)	= symbol_tag;
       ref(y, off_symbol_record_string)  = add_object(gc, s_string,	"symbol string");
@@ -1170,7 +1166,7 @@ add_object_proc (gc_t* gc, ikptr x)
         }
         ref(y, number_of_fields + off_record_data) = 0;
       }
-      ref(x, -vector_tag) = FORWARD_PTR;
+      ref(x, -vector_tag) = IK_FORWARD_PTR;
       ref(x, wordsize-vector_tag) = y;
       return y;
     }
@@ -1188,7 +1184,7 @@ add_object_proc (gc_t* gc, ikptr x)
 #endif
       ikptr	next = ref(x, off_continuation_next);
       ikptr	y    = gc_alloc_new_ptr(continuation_size, gc) | vector_tag;
-      ref(x, -vector_tag) = FORWARD_PTR;
+      ref(x, -vector_tag) = IK_FORWARD_PTR;
       ref(x, wordsize-vector_tag) = y;
       ikptr	new_top = gc_alloc_new_data(IK_ALIGN(size), gc);
       memcpy((char*)(long)new_top,
@@ -1208,7 +1204,7 @@ add_object_proc (gc_t* gc, ikptr x)
       ikptr	y    = gc_alloc_new_data(system_continuation_size, gc) | vector_tag;
       ikptr	top  = ref(x, off_system_continuation_top);
       ikptr	next = ref(x, off_system_continuation_next);
-      ref(x, -vector_tag) = FORWARD_PTR;
+      ref(x, -vector_tag) = IK_FORWARD_PTR;
       ref(x, wordsize-vector_tag) = y;
       ref(y, -vector_tag) = first_word;
       ref(y, off_system_continuation_top)  = top;
@@ -1230,7 +1226,7 @@ add_object_proc (gc_t* gc, ikptr x)
           gc_tconc_push(gc, y);
         }
       }
-      ref(x, -vector_tag) = FORWARD_PTR;
+      ref(x, -vector_tag) = IK_FORWARD_PTR;
       ref(x, wordsize-vector_tag) = y;
       return y;
     }
@@ -1249,7 +1245,7 @@ add_object_proc (gc_t* gc, ikptr x)
       for (i=wordsize; i<port_size; i+=wordsize) {
         ref(y, i-vector_tag) = ref(x, i-vector_tag);
       }
-      ref(x, -vector_tag) = FORWARD_PTR;
+      ref(x, -vector_tag) = IK_FORWARD_PTR;
       ref(x, wordsize-vector_tag) = y;
       /* These calls were not in  the original Ikarus code (Marco Maggi;
 	 Jan 11, 2012). */
@@ -1267,7 +1263,7 @@ add_object_proc (gc_t* gc, ikptr x)
       ikptr new = gc_alloc_new_data(flonum_size, gc) | vector_tag;
       ref(new, -vector_tag) = flonum_tag;
       IK_FLONUM_DATA(new) = IK_FLONUM_DATA(x);
-      ref(x, -vector_tag) = FORWARD_PTR;
+      ref(x, -vector_tag) = IK_FORWARD_PTR;
       ref(x, wordsize-vector_tag) = new;
       return new;
     }
@@ -1278,7 +1274,7 @@ add_object_proc (gc_t* gc, ikptr x)
       memcpy((char*)(long)(new-vector_tag),
              (char*)(long)(x-vector_tag),
              memreq);
-      ref(x, -vector_tag) = FORWARD_PTR;
+      ref(x, -vector_tag) = IK_FORWARD_PTR;
       ref(x, wordsize-vector_tag) = new;
       return new;
     }
@@ -1286,7 +1282,7 @@ add_object_proc (gc_t* gc, ikptr x)
       ikptr y   = gc_alloc_new_data(ratnum_size, gc) | vector_tag;
       ikptr num = ref(x, disp_ratnum_num-vector_tag);
       ikptr den = ref(x, disp_ratnum_den-vector_tag);
-      ref(x, -vector_tag) = FORWARD_PTR;
+      ref(x, -vector_tag) = IK_FORWARD_PTR;
       ref(x, wordsize-vector_tag) = y;
       ref(y, -vector_tag) = first_word;
       ref(y, disp_ratnum_num-vector_tag) = add_object(gc, num, "num");
@@ -1297,7 +1293,7 @@ add_object_proc (gc_t* gc, ikptr x)
       ikptr y  = gc_alloc_new_data(compnum_size, gc) | vector_tag;
       ikptr rl = ref(x, disp_compnum_real-vector_tag);
       ikptr im = ref(x, disp_compnum_imag-vector_tag);
-      ref(x, -vector_tag) = FORWARD_PTR;
+      ref(x, -vector_tag) = IK_FORWARD_PTR;
       ref(x, wordsize-vector_tag) = y;
       ref(y, -vector_tag) = first_word;
       ref(y, disp_compnum_real-vector_tag) = add_object(gc, rl, "real");
@@ -1308,7 +1304,7 @@ add_object_proc (gc_t* gc, ikptr x)
       ikptr y  = gc_alloc_new_data(cflonum_size, gc) | vector_tag;
       ikptr rl = ref(x, disp_cflonum_real-vector_tag);
       ikptr im = ref(x, disp_cflonum_imag-vector_tag);
-      ref(x, -vector_tag) = FORWARD_PTR;
+      ref(x, -vector_tag) = IK_FORWARD_PTR;
       ref(x, wordsize-vector_tag) = y;
       ref(y, -vector_tag) = first_word;
       ref(y, disp_cflonum_real-vector_tag) = add_object(gc, rl, "real");
@@ -1319,7 +1315,7 @@ add_object_proc (gc_t* gc, ikptr x)
       ikptr y = gc_alloc_new_data(pointer_size, gc) | vector_tag;
       ref(y, -vector_tag) = pointer_tag;
       ref(y, wordsize-vector_tag) = ref(x, wordsize-vector_tag);
-      ref(x, -vector_tag) = FORWARD_PTR;
+      ref(x, -vector_tag) = IK_FORWARD_PTR;
       ref(x, wordsize-vector_tag) = y;
       return y;
     } else
@@ -1334,7 +1330,7 @@ add_object_proc (gc_t* gc, ikptr x)
       memcpy((char*)(long)(new_str + off_string_data),
              (char*)(long)(x       + off_string_data),
              len * string_char_size);
-      ref(x, -string_tag)         = FORWARD_PTR;
+      ref(x, -string_tag)         = IK_FORWARD_PTR;
       ref(x, wordsize-string_tag) = new_str;
 #if ACCOUNTING
       string_count++;
@@ -1351,7 +1347,7 @@ add_object_proc (gc_t* gc, ikptr x)
     memcpy((char*)(long)(new_bv + off_bytevector_data),
            (char*)(long)(x      + off_bytevector_data),
            len + 1);
-    ref(x, -bytevector_tag)         = FORWARD_PTR;
+    ref(x, -bytevector_tag)         = IK_FORWARD_PTR;
     ref(x, wordsize-bytevector_tag) = new_bv;
     return new_bv;
   }
@@ -1653,7 +1649,7 @@ fix_weak_pointers(gc_t* gc) {
             int tag = IK_TAGOF(x);
             if (tag != immediate_tag) {
               ikptr fst = ref(x, -tag);
-              if (fst == FORWARD_PTR) {
+              if (fst == IK_FORWARD_PTR) {
                 ref(p, 0) = ref(x, wordsize-tag);
               } else {
                 int x_gen = segment_vec[IK_PAGE_INDEX(x)] & gen_mask;
