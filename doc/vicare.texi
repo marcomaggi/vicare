@@ -14809,7 +14809,7 @@ copy of the @asciiz{} strings.  Make use of @code{pcb->root1}.
 The suggested way to allocate and initialise a pair is as follows:
 
 @example
-ikpcb * pcb    = ...;
+ikpcb * pcb    = the_pcb;
 ikptr   s_pair = IK_PAIR_ALLOC(pcb);
 
 pcb->root0 = &s_pair;
@@ -14828,11 +14828,11 @@ Let's say we need to build a list of bytevectors from @asciiz{} strings
 in the array @code{argv} and there are @code{argc} of them:
 
 @example
-ikpcb * pcb  = the_pcb;
-char ** argv = ...;
-long    argc = ...;
-ikptr   s_list, s_pair, s_new;
-long    i;
+ikpcb *  pcb  = the_pcb;
+char **  argv = ...;
+long     argc = ...;
+ikptr    s_list, s_pair;
+long     i;
 
 s_list = s_pair = IK_PAIR_ALLOC(pcb);
 pcb->root1 = &s_list;
@@ -14840,8 +14840,8 @@ pcb->root1 = &s_list;
   for (i=0; i<argc;) @{
     IK_CAR(s_pair) = ik_bytevector_from_cstring(pcb, argv[i]);
     if (++i < argc) @{
-      s_new  = IK_CDR(s_pair) = IK_PAIR_ALLOC(pcb);
-      s_pair = s_new;
+      IK_CDR(s_pair) = IK_PAIR_ALLOC(pcb);
+      s_pair = IK_CDR(s_pair);
     @} else
       IK_CDR(s_pair) = null_object;
   @}
