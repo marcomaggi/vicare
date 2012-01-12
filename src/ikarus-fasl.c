@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ikarus.h"
+#include "internals.h"
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <unistd.h>

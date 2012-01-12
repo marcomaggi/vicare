@@ -28,7 +28,7 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
-#include "ikarus.h"
+#include "internals.h"
 #include <dirent.h>
 #include <fcntl.h>
 #include <signal.h>

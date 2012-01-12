@@ -16,9 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ikarus.h"
-
-extern ikpcb* the_pcb;
+#include "internals.h"
 
 static void print(FILE* fh, ikptr x);
 

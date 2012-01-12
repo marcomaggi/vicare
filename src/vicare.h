@@ -16,31 +16,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef IKARUS_H
-#  define IKARUS_H
+#ifndef VICARE_H
+#  define VICARE_H
 
 
 /** --------------------------------------------------------------------
  ** Headers.
  ** ----------------------------------------------------------------- */
 
-#ifdef HAVE_CONFIG_H
-#  include <config.h>
-#endif
-#include <assert.h>
-#include <errno.h>
-#include <limits.h>
-#include <netdb.h>
-#include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stddef.h>
-#include <string.h>
-#include <strings.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/resource.h>
+#include <sys/time.h>
 
 
 /** --------------------------------------------------------------------
@@ -293,37 +280,12 @@ void	ik_debug_message	(const char * error_message, ...);
 int     ik_abort                (const char * error_message, ...);
 void    ik_error                (ikptr args);
 
-ikpcb * ik_collect              (unsigned long, ikpcb*);
-
-void*   ik_malloc               (int);
-void    ik_free                 (void*, int);
-
-ikptr   ik_underflow_handler    (ikpcb*);
 ikptr   ik_unsafe_alloc         (ikpcb* pcb, unsigned long size);
 ikptr   ik_safe_alloc           (ikpcb* pcb, unsigned long size);
 
-ikptr   ik_mmap                 (unsigned long);
-ikptr   ik_mmap_typed           (unsigned long size, unsigned type, ikpcb*);
-ikptr   ik_mmap_ptr             (unsigned long size, int gen, ikpcb*);
-ikptr   ik_mmap_data            (unsigned long size, int gen, ikpcb*);
-ikptr   ik_mmap_code            (unsigned long size, int gen, ikpcb*);
-ikptr   ik_mmap_mixed           (unsigned long size, ikpcb*);
-void    ik_munmap               (ikptr, unsigned long);
-void    ik_munmap_from_segment  (ikptr, unsigned long, ikpcb*);
-ikpcb * ik_make_pcb             (void);
-void    ik_delete_pcb           (ikpcb*);
-void    ik_free_symbol_table    (ikpcb* pcb);
-
-void    ik_fasl_load            (ikpcb* pcb, char* filename);
-void    ik_relocate_code        (ikptr);
-
-ikptr   ik_exec_code            (ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp);
 void    ik_print                (ikptr x);
 void	ik_print_no_newline	(ikptr x);
 void    ik_fprint               (FILE*, ikptr x);
-
-ikptr   ik_asm_enter            (ikpcb*, ikptr code_object, ikptr arg, ikptr cp);
-ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
 
 
 /** --------------------------------------------------------------------
@@ -807,57 +769,9 @@ extern int      ik_is_struct    (ikptr R);
 
 
 /** --------------------------------------------------------------------
- ** Prototypes and external definitions.
- ** ----------------------------------------------------------------- */
-
-extern char **environ;
-
-#ifdef __CYGWIN__
-void    win_munmap(char* addr, size_t size);
-char*   win_mmap(size_t size);
-#endif
-
-int     ikarus_main (int argc, char** argv, char* boot_file);
-
-ikptr   ik_errno_to_code (void);
-
-
-/** --------------------------------------------------------------------
- ** Interface to "getaddrinfo()".
- ** ----------------------------------------------------------------- */
-
-#if (!HAVE_GETADDRINFO)
-#  include <sys/types.h>
-#  include <netdb.h>
-
-struct addrinfo {
-  int ai_family;
-  int ai_socktype;
-  int ai_protocol;
-  size_t ai_addrlen;
-  struct sockaddr *ai_addr;
-  struct addrinfo *ai_next;
-};
-
-extern int
-getaddrinfo(const char *hostname, const char* servname,
-  const struct addrinfo* hints, struct addrinfo** res);
-
-extern void
-freeaddrinfo(struct addrinfo *ai);
-
-
-#ifndef EAI_SYSTEM
-# define EAI_SYSTEM 11 /* same code as in glibc */
-#endif
-
-#endif /* if (!HAVE_GETADDRINFO) */
-
-
-/** --------------------------------------------------------------------
  ** Done.
  ** ----------------------------------------------------------------- */
 
-#endif /* ifndef IKARUS_H */
+#endif /* ifndef VICARE_H */
 
 /* end of file */

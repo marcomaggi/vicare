@@ -25,7 +25,7 @@ SRCS	= \
 	ikarus-winmmap.c		\
 	internals.h
 
-include_HEADERS		= ikarus.h
+include_HEADERS		= vicare.h
 
 bin_PROGRAMS		= vicare
 vicare_SOURCES		= $(SRCS) ikarus.c

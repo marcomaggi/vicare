@@ -21,7 +21,7 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
-#include "ikarus.h"
+#include "internals.h"
 #include "bootfileloc.h"
 #include <locale.h>
 

@@ -22,7 +22,7 @@
  ** ----------------------------------------------------------------- */
 
 #define _ISOC99_SOURCE
-#include "ikarus.h"
+#include "internals.h"
 #include <math.h>
 
 

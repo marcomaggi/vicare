@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ikarus.h"
+#include "internals.h"
 
 static long int
 page_idx(void* x){

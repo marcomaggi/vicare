@@ -31,7 +31,7 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
-#include "ikarus.h"
+#include "internals.h"
 #include <dlfcn.h>
 
 #ifndef RTLD_LOCAL

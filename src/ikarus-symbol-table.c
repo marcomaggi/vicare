@@ -17,7 +17,7 @@
 
 
 
-#include "ikarus.h"
+#include "internals.h"
 
 static ikptr
 make_symbol_table(ikpcb* pcb){

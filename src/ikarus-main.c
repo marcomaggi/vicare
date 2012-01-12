@@ -22,7 +22,7 @@
  ** ----------------------------------------------------------------- */
 
 #include "bootfileloc.h"
-#include "ikarus.h"
+#include "internals.h"
 #include <fcntl.h>
 #include <gmp.h>
 #include <signal.h>

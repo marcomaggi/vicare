@@ -34,7 +34,7 @@
 /* This causes inclusion of "pread".  (Marco Maggi; Nov 11, 2011) */
 #define _GNU_SOURCE     1
 
-#include "ikarus.h"
+#include "internals.h"
 #include <dirent.h>
 #include <fcntl.h>
 #include <grp.h>

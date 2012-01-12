@@ -28,7 +28,7 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
-#include "ikarus.h"
+#include "internals.h"
 #ifdef HAVE_DIRENT_H
 #  include <dirent.h>
 #endif

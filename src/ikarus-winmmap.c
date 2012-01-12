@@ -22,7 +22,7 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
-#include "ikarus.h"
+#include "internals.h"
 #include <sys/mman.h>
 
 

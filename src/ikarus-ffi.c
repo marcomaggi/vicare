@@ -33,7 +33,7 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
-#include "ikarus.h"
+#include "internals.h"
 #if ENABLE_LIBFFI
 #include <ffi.h>
 

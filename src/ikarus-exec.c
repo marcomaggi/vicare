@@ -16,7 +16,7 @@
  */
 
 
-#include "ikarus.h"
+#include "internals.h"
 
 #undef DEBUG_EXEC
 

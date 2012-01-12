@@ -21,7 +21,7 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
-#include "ikarus.h"
+#include "internals.h"
 #include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>

@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ikarus.h"
+#include "internals.h"
 
 ikptr
 ikrt_weak_cons(ikptr a, ikptr d, ikpcb* pcb){

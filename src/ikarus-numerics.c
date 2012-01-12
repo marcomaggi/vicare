@@ -20,7 +20,7 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
-#include "ikarus.h"
+#include "internals.h"
 #include <gmp.h>
 
 #ifdef NDEBUG
