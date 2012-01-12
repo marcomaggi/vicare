@@ -28,6 +28,7 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
+#define _GNU_SOURCE	1	/* to include "clog10()" */
 #include "internals.h"
 #ifdef HAVE_DIRENT_H
 #  include <dirent.h>
@@ -269,7 +270,7 @@ ikrt_glibc_csin (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_CSIN
   complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = csin(X);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -280,7 +281,7 @@ ikrt_glibc_ccos (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_CCOS
   complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = ccos(X);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -291,7 +292,7 @@ ikrt_glibc_ctan (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_CTAN
   complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = ctan(X);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -305,7 +306,7 @@ ikrt_glibc_casin (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_CASIN
   complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = casin(X);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -316,7 +317,7 @@ ikrt_glibc_cacos (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_CACOS
   complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = cacos(X);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -327,7 +328,7 @@ ikrt_glibc_catan (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_CATAN
   complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = catan(X);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -341,7 +342,7 @@ ikrt_glibc_cexp (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_CEXP
   complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = cexp(X);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -352,7 +353,7 @@ ikrt_glibc_clog (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_CLOG
   complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = clog(X);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -363,7 +364,7 @@ ikrt_glibc_clog10 (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_CLOG10
   complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = clog10(X);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -374,7 +375,7 @@ ikrt_glibc_csqrt (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_CSQRT
   complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = csqrt(X);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -386,7 +387,7 @@ ikrt_glibc_cpow (ikptr s_base, ikptr s_power, ikpcb * pcb)
   complex double  base  = MAKE_CDOUBLE(s_base);
   complex double  power = MAKE_CDOUBLE(s_power);
   complex double  Y     = cpow(base, power);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -400,7 +401,7 @@ ikrt_glibc_sinh (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_SINH
   double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = sinh(X);
-  return ik_flonum_alloc(pcb, Y);
+  return iku_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
 #endif
@@ -411,7 +412,7 @@ ikrt_glibc_cosh (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_COSH
   double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = cosh(X);
-  return ik_flonum_alloc(pcb, Y);
+  return iku_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
 #endif
@@ -422,7 +423,7 @@ ikrt_glibc_tanh (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_TANH
   double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = tanh(X);
-  return ik_flonum_alloc(pcb, Y);
+  return iku_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
 #endif
@@ -433,7 +434,7 @@ ikrt_glibc_csinh (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_CSINH
   complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = csinh(X);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -444,7 +445,7 @@ ikrt_glibc_ccosh (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_CCOSH
   complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = ccosh(X);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -455,7 +456,7 @@ ikrt_glibc_ctanh (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_CTANH
   complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = ctanh(X);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -466,7 +467,7 @@ ikrt_glibc_asinh (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_ASINH
   double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = asinh(X);
-  return ik_flonum_alloc(pcb, Y);
+  return iku_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
 #endif
@@ -477,7 +478,7 @@ ikrt_glibc_acosh (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_ACOSH
   double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = acosh(X);
-  return ik_flonum_alloc(pcb, Y);
+  return iku_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
 #endif
@@ -488,7 +489,7 @@ ikrt_glibc_atanh (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_ATANH
   double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = atanh(X);
-  return ik_flonum_alloc(pcb, Y);
+  return iku_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
 #endif
@@ -499,7 +500,7 @@ ikrt_glibc_casinh (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_CASINH
   complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = casinh(X);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -510,7 +511,7 @@ ikrt_glibc_cacosh (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_CACOSH
   complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = cacosh(X);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -521,7 +522,7 @@ ikrt_glibc_catanh (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_CATANH
   complex double        X   = MAKE_CDOUBLE(s_X);
   complex double        Y   = catanh(X);
-  return ik_cflonum_alloc(pcb, creal(Y), cimag(Y));
+  return iku_cflonum_alloc(pcb, creal(Y), cimag(Y));
 #else
   feature_failure(__func__);
 #endif
@@ -535,7 +536,7 @@ ikrt_glibc_erf (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_ERF
   double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = erf(X);
-  return ik_flonum_alloc(pcb, Y);
+  return iku_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
 #endif
@@ -546,7 +547,7 @@ ikrt_glibc_erfc (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_ERFC
   double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = erfc(X);
-  return ik_flonum_alloc(pcb, Y);
+  return iku_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
 #endif
@@ -561,7 +562,7 @@ ikrt_glibc_lgamma (ikptr s_X, ikpcb * pcb)
   ikptr         s_pair = IK_PAIR_ALLOC(pcb);
   pcb->root0 = &s_pair;
   {
-    IK_CAR(s_pair) = ik_flonum_alloc(pcb, Y);
+    IK_CAR(s_pair) = iku_flonum_alloc(pcb, Y);
     IK_CDR(s_pair) = IK_FIX(sgn);
   }
   pcb->root0 = NULL;
@@ -576,7 +577,7 @@ ikrt_glibc_tgamma (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_TGAMMA
   double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = tgamma(X);
-  return ik_flonum_alloc(pcb, Y);
+  return iku_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
 #endif
@@ -587,7 +588,7 @@ ikrt_glibc_y0 (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_Y0
   double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = y0(X);
-  return ik_flonum_alloc(pcb, Y);
+  return iku_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
 #endif
@@ -598,7 +599,7 @@ ikrt_glibc_y1 (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_Y1
   double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = y1(X);
-  return ik_flonum_alloc(pcb, Y);
+  return iku_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
 #endif
@@ -609,7 +610,7 @@ ikrt_glibc_j0 (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_J0
   double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = j0(X);
-  return ik_flonum_alloc(pcb, Y);
+  return iku_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
 #endif
@@ -620,7 +621,7 @@ ikrt_glibc_j1 (ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_J1
   double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = j1(X);
-  return ik_flonum_alloc(pcb, Y);
+  return iku_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
 #endif
@@ -631,7 +632,7 @@ ikrt_glibc_yn (ikptr s_N, ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_YN
   double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = yn((int)IK_UNFIX(s_N), X);
-  return ik_flonum_alloc(pcb, Y);
+  return iku_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
 #endif
@@ -642,7 +643,7 @@ ikrt_glibc_jn (ikptr s_N, ikptr s_X, ikpcb * pcb)
 #ifdef HAVE_JN
   double        X   = IK_FLONUM_DATA(s_X);
   double        Y   = jn((int)IK_UNFIX(s_N), X);
-  return ik_flonum_alloc(pcb, Y);
+  return iku_flonum_alloc(pcb, Y);
 #else
   feature_failure(__func__);
 #endif
@@ -724,7 +725,7 @@ ikptr
 ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb *pcb)
 {
 #ifdef HAVE_REGCOMP
-  ikptr         s_compiled_regex = ik_bytevector_alloc(pcb, sizeof(regex_t));
+  ikptr         s_compiled_regex = ika_bytevector_alloc(pcb, sizeof(regex_t));
   regex_t *     compiled_regex   = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
   char *        pattern          = IK_BYTEVECTOR_DATA_CHARP(s_pattern);
   int           rv;
@@ -742,7 +743,7 @@ ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb *pcb)
       compiled_regex    = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
       error_message_len = regerror(rv, compiled_regex, NULL, 0);
       IK_CAR(s_pair)    = IK_FIX(rv);
-      IK_CDR(s_pair)    = ik_bytevector_alloc(pcb, (long)error_message_len-1);
+      IK_CDR(s_pair)    = ika_bytevector_alloc(pcb, (long)error_message_len-1);
       error_message     = IK_BYTEVECTOR_DATA_CHARP(IK_CDR(s_pair));
       compiled_regex    = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
       regerror(rv, compiled_regex, error_message, error_message_len);
@@ -794,7 +795,7 @@ ikrt_glibc_regexec (ikptr s_compiled_regex, ikptr s_string, ikptr s_flags, ikpcb
         compiled_regex            = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
         errmsg_len_including_zero = regerror(rv, compiled_regex, NULL, 0);
         IK_CAR(s_pair)            = IK_FIX(rv);
-        IK_CDR(s_pair)            = ik_bytevector_alloc(pcb, (long)errmsg_len_including_zero-1);
+        IK_CDR(s_pair)            = ika_bytevector_alloc(pcb, (long)errmsg_len_including_zero-1);
         errmsg                    = IK_BYTEVECTOR_DATA_CHARP(IK_CDR(s_pair));
         compiled_regex            = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
         regerror(rv, compiled_regex, errmsg, errmsg_len_including_zero);
@@ -933,7 +934,7 @@ ikrt_glibc_confstr (ikptr s_parameter, ikpcb * pcb)
   errno = 0;
   length_including_zero = confstr((int)parameter, NULL, 0);
   if (length_including_zero) {
-    ikptr       s_result = ik_bytevector_alloc(pcb, (long)length_including_zero-1);
+    ikptr       s_result = ika_bytevector_alloc(pcb, (long)length_including_zero-1);
     char *      result   = IK_BYTEVECTOR_DATA_CHARP(s_result);
     confstr((int)parameter, result, length_including_zero);
     return s_result;

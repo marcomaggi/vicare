@@ -39,27 +39,24 @@
  ** Prototypes and internal definitions.
  ** ----------------------------------------------------------------- */
 
-int total_allocated_pages = 0;
-int total_malloced = 0;
+static int total_allocated_pages = 0;
+static int total_malloced = 0;
 
 #define segment_size  (pagesize*pagesize/4)
 #define segment_shift (pageshift+pageshift-2)
-#define segment_index(x) (((unsigned long int)(x)) >> segment_shift)
-
-ikptr ik_mmap(unsigned long int size);
-void ik_munmap(ikptr mem, unsigned long int size);
+#define segment_index(x) (((unsigned long)(x)) >> segment_shift)
 
 
 static void
-extend_table_maybe(ikptr p, unsigned long int size, ikpcb* pcb){
+extend_table_maybe(ikptr p, unsigned long size, ikpcb* pcb){
   assert(size == IK_ALIGN_TO_NEXT_PAGE(size));
   ikptr q = p + size;
   if(p < pcb->memory_base){
-    unsigned long int new_lo = segment_index(p);
-    unsigned long int old_lo = segment_index(pcb->memory_base);
-    unsigned long int hi = segment_index(pcb->memory_end);
-    unsigned long int new_vec_size = (hi - new_lo) * pagesize;
-    unsigned long int old_vec_size = (hi - old_lo) * pagesize;
+    unsigned long new_lo = segment_index(p);
+    unsigned long old_lo = segment_index(pcb->memory_base);
+    unsigned long hi = segment_index(pcb->memory_end);
+    unsigned long new_vec_size = (hi - new_lo) * pagesize;
+    unsigned long old_vec_size = (hi - old_lo) * pagesize;
     ikptr v = ik_mmap(new_vec_size);
     bzero((char*)(long)v, new_vec_size - old_vec_size);
     memcpy((char*)(long)(v+new_vec_size-old_vec_size),
@@ -79,11 +76,11 @@ extend_table_maybe(ikptr p, unsigned long int size, ikpcb* pcb){
     pcb->memory_base = (new_lo * segment_size);
   }
   else if (q >= pcb->memory_end){
-    unsigned long int lo = segment_index(pcb->memory_base);
-    unsigned long int old_hi = segment_index(pcb->memory_end);
-    unsigned long int new_hi = segment_index(q+segment_size-1);
-    unsigned long int new_vec_size = (new_hi - lo) * pagesize;
-    unsigned long int old_vec_size = (old_hi - lo) * pagesize;
+    unsigned long lo = segment_index(pcb->memory_base);
+    unsigned long old_hi = segment_index(pcb->memory_end);
+    unsigned long new_hi = segment_index(q+segment_size-1);
+    unsigned long new_vec_size = (new_hi - lo) * pagesize;
+    unsigned long old_vec_size = (old_hi - lo) * pagesize;
     ikptr v = ik_mmap(new_vec_size);
     memcpy((char*)(long)v,
            (char*)(long)pcb->dirty_vector_base,
@@ -104,7 +101,7 @@ extend_table_maybe(ikptr p, unsigned long int size, ikpcb* pcb){
 
 
 static void
-set_segment_type(ikptr base, unsigned long int size, unsigned int type, ikpcb* pcb){
+set_segment_type(ikptr base, unsigned long size, unsigned int type, ikpcb* pcb){
   assert(base >= pcb->memory_base);
   assert((base+size) <= pcb->memory_end);
   assert(size == IK_ALIGN_TO_NEXT_PAGE(size));
@@ -117,7 +114,7 @@ set_segment_type(ikptr base, unsigned long int size, unsigned int type, ikpcb* p
 }
 
 void
-ik_munmap_from_segment(ikptr base, unsigned long int size, ikpcb* pcb){
+ik_munmap_from_segment(ikptr base, unsigned long size, ikpcb* pcb){
   assert(base >= pcb->memory_base);
   assert((base+size) <= pcb->memory_end);
   assert(size == IK_ALIGN_TO_NEXT_PAGE(size));
@@ -152,109 +149,93 @@ ik_munmap_from_segment(ikptr base, unsigned long int size, ikpcb* pcb){
   }
 }
 
-
-
+
 ikptr
-ik_mmap_typed(unsigned long int size, unsigned int type, ikpcb* pcb){
-  ikptr p;
-  if(size == pagesize) {
-    ikpage* s = pcb->cached_pages;
-    if(s){
-      p = s->base;
-      pcb->cached_pages = s->next;
-      s->next = pcb->uncached_pages;
-      pcb->uncached_pages = s;
-    }
-    else {
-      p = ik_mmap(size);
-    }
-  }
-  else {
-    p = ik_mmap(size);
-  }
-  extend_table_maybe(p, size, pcb);
-  set_segment_type(p, size, type, pcb);
-  return p;
+ik_mmap_typed (unsigned long size, unsigned int type, ikpcb* pcb)
+{
+  ikptr		segment;
+  if (size == pagesize) {
+    /* If available, recycle a page from the cache. */
+    ikpage *	pages = pcb->cached_pages;
+    if (pages) {
+      /* Extract the first page from the linked list of cached pages. */
+      segment		  = pages->base;
+      pcb->cached_pages	  = pages->next;
+      /* Prepend  the extracted  page  to the  linked  list of  uncached
+	 pages. */
+      pages->next	  = pcb->uncached_pages;
+      pcb->uncached_pages = pages;
+    } else
+      segment = ik_mmap(size);
+  } else
+    segment = ik_mmap(size);
+  extend_table_maybe(segment, size, pcb);
+  set_segment_type(segment, size, type, pcb);
+  return segment;
 }
-
 ikptr
-ik_mmap_ptr(unsigned long int size, int gen, ikpcb* pcb){
-  return ik_mmap_typed(size, pointers_mt | gen, pcb);
+ik_mmap_ptr (unsigned long size, int gen, ikpcb* pcb)
+{
+  return ik_mmap_typed(size, pointers_mt|gen, pcb);
 }
-
 ikptr
-ik_mmap_data(unsigned long int size, int gen, ikpcb* pcb){
-  return ik_mmap_typed(size, data_mt | gen, pcb);
+ik_mmap_data (unsigned long size, int gen, ikpcb* pcb)
+{
+  return ik_mmap_typed(size, data_mt|gen, pcb);
 }
-
 ikptr
-ik_mmap_code(unsigned long int size, int gen, ikpcb* pcb){
-  ikptr p = ik_mmap_typed(size, code_mt | gen, pcb);
-  if(size > pagesize){
+ik_mmap_code (unsigned long size, int gen, ikpcb* pcb)
+{
+  ikptr p = ik_mmap_typed(size, code_mt|gen, pcb);
+  if (size > pagesize)
     set_segment_type(p+pagesize, size-pagesize, data_mt|gen, pcb);
-  }
   return p;
 }
-
-
 ikptr
-ik_mmap_mixed(unsigned long int size, ikpcb* pcb){
+ik_mmap_mixed (unsigned long size, ikpcb* pcb)
+/* Allocate a memory segment tagged as part of the Scheme heap. */
+{
   return ik_mmap_typed(size, mainheap_mt, pcb);
 }
 
-
-
-
+
 ikptr
-ik_mmap(unsigned long int size){
-  unsigned long int pages = (size + pagesize - 1) / pagesize;
+ik_mmap (unsigned long size)
+{
+  unsigned long pages = (size + pagesize - 1) / pagesize;
   total_allocated_pages += pages;
-  unsigned long int mapsize = pages * pagesize;
+  unsigned long mapsize = pages * pagesize;
   assert(size == mapsize);
 #ifndef __CYGWIN__
-  char* mem = mmap(
-      0,
-      mapsize,
-      PROT_READ | PROT_WRITE | PROT_EXEC,
-      MAP_PRIVATE | MAP_ANON,
-      -1,
-      0);
+  char* mem = mmap(0, mapsize, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_PRIVATE|MAP_ANON, -1, 0);
   /* FIXME: check if in range */
-  if(mem == MAP_FAILED){
-    fprintf(stderr, "Mapping (0x%lx bytes) failed: %s\n", size, strerror(errno));
-    exit(EXIT_FAILURE);
-  }
+  if (mem == MAP_FAILED)
+    ik_abort("mapping (0x%lx bytes) failed: %s", size, strerror(errno));
 #else
   char* mem = win_mmap(mapsize);
 #endif
   memset(mem, -1, mapsize);
-#ifndef NDEBUG
-  fprintf(stderr, "MMAP 0x%016lx .. 0x%016lx\n", (long int)mem,
-      ((long int)(mem))+mapsize-1);
-#endif
+  ik_debug_message("%s: 0x%016lx .. 0x%016lx\n", __func__,
+		   (long)mem, ((long)(mem))+mapsize-1);
   return (ikptr)(long)mem;
 }
-
 void
-ik_munmap(ikptr mem, unsigned long int size){
-  unsigned long int pages = (size + pagesize - 1) / pagesize;
-  unsigned long int mapsize = pages * pagesize;
+ik_munmap (ikptr mem, unsigned long size)
+{
+  unsigned long pages = (size + pagesize - 1) / pagesize;
+  unsigned long mapsize = pages * pagesize;
   assert(size == mapsize);
   assert(((-pagesize) & (int)mem) == (int)mem);
   total_allocated_pages -= pages;
 #ifndef __CYGWIN__
   int err = munmap((char*)mem, mapsize);
-  if(err != 0){
-    fprintf(stderr, "ik_munmap failed: %s\n", strerror(errno));
-    exit(EXIT_FAILURE);
-  }
+  if (err)
+    ik_abort("ik_munmap failed: %s", strerror(errno));
 #else
   win_munmap((char*)mem, mapsize);
 #endif
-#ifndef NDEBUG
-  fprintf(stderr, "UNMAP 0x%016lx .. 0x%016lx\n", (long int)mem,
-      ((long int)(mem))+mapsize-1);
-#endif
+  ik_debug_message("%s: 0x%016lx .. 0x%016lx\n", __func__,
+		   (long)mem, ((long)(mem))+mapsize-1);
 }
 
 
@@ -323,9 +304,9 @@ ik_make_pcb (void)
       hi_mem = pcb->heap_base + pcb->heap_size + pagesize;
     }
 
-    unsigned long int lo_seg = segment_index(lo_mem);
-    unsigned long int hi_seg = segment_index(hi_mem+segment_size-1);
-    unsigned long int vec_size = (hi_seg - lo_seg) * pagesize;
+    unsigned long lo_seg = segment_index(lo_mem);
+    unsigned long hi_seg = segment_index(hi_mem+segment_size-1);
+    unsigned long vec_size = (hi_seg - lo_seg) * pagesize;
     ikptr dvec = ik_mmap(vec_size);
     bzero((char*)(long)dvec, vec_size);
     pcb->dirty_vector_base = (unsigned int*)(long) dvec;
@@ -382,8 +363,8 @@ void ik_delete_pcb(ikpcb* pcb){
   ikptr base = pcb->memory_base;
   ikptr end = pcb->memory_end;
   unsigned int* segment_vec = pcb->segment_vector;
-  long int i = IK_PAGE_INDEX(base);
-  long int j = IK_PAGE_INDEX(end);
+  long i = IK_PAGE_INDEX(base);
+  long j = IK_PAGE_INDEX(end);
   while(i < j){
     unsigned int t = segment_vec[i];
     if(t != hole_mt){
@@ -391,7 +372,7 @@ void ik_delete_pcb(ikpcb* pcb){
     }
     i++;
   }
-  long int vecsize = (segment_index(end) - segment_index(base)) * pagesize;
+  long vecsize = (segment_index(end) - segment_index(base)) * pagesize;
   ik_munmap((ikptr)(long)pcb->dirty_vector_base, vecsize);
   ik_munmap((ikptr)(long)pcb->segment_vector_base, vecsize);
   ik_free(pcb, sizeof(ikpcb));
@@ -400,81 +381,108 @@ void ik_delete_pcb(ikpcb* pcb){
 
 ikptr
 ik_safe_alloc (ikpcb* pcb, unsigned long size)
+/* Allocate a memory block on the  Scheme heap and return a reference to
+   it as an *untagged* pointer.   PCB must reference the process control
+   block, SIZE  must be the  requested number of bytes  filtered through
+   "IK_ALIGN()".
+
+   If  not enough memory  is available  on the  current heap  segment, a
+   garbage collection  is triggered; then allocation is  tried again: if
+   it  still   fails  the  process   is  terminated  with   exit  status
+   EXIT_FAILURE.  */
 {
   assert(size == IK_ALIGN(size));
-  ikptr alloc_ptr       = pcb->allocation_pointer;
-  ikptr end_ptr         = pcb->heap_base + pcb->heap_size;
-  ikptr new_alloc_ptr   = alloc_ptr + size;
-  /* If there  is room  in the  current heap block:  update the  pcb and
-     return the offset. */
-  if (new_alloc_ptr < end_ptr) {
+  ikptr		alloc_ptr;
+  ikptr		end_ptr;
+  ikptr		new_alloc_ptr;
+  alloc_ptr	= pcb->allocation_pointer;
+  end_ptr	= pcb->heap_base + pcb->heap_size;
+  new_alloc_ptr	= alloc_ptr + size;
+  if (new_alloc_ptr < end_ptr)
+    /* There  is room  in the  current heap  block: update  the  pcb and
+       return the offset. */
     pcb->allocation_pointer = new_alloc_ptr;
-    return alloc_ptr;
-  }
-  /* No room in the current heap block: run GC. */
-  ik_collect(size, pcb);
-  {
-    ikptr alloc_ptr     = pcb->allocation_pointer;
-    ikptr end_ptr       = pcb->heap_base + pcb->heap_size;
-    ikptr new_alloc_ptr = alloc_ptr + size;
-    if (new_alloc_ptr < end_ptr) {
-      pcb->allocation_pointer = new_alloc_ptr;
-      return alloc_ptr;
-    } else {
-      fprintf(stderr, "*** Vicare: error: collector did not leave enough room for %lu\n", size);
-      exit(EXIT_FAILURE);
+  else {
+    /* No room in the current heap block: run GC. */
+    ik_collect(size, pcb);
+    {
+      alloc_ptr		= pcb->allocation_pointer;
+      end_ptr		= pcb->heap_base + pcb->heap_size;
+      new_alloc_ptr	= alloc_ptr + size;
+      if (new_alloc_ptr < end_ptr)
+	pcb->allocation_pointer = new_alloc_ptr;
+      else
+	ik_abort("collector did not leave enough room for %lu bytes", size);
     }
   }
+  return alloc_ptr;
 }
 
 
 ikptr
-ik_unsafe_alloc (ikpcb* pcb, unsigned long size)
+ik_unsafe_alloc (ikpcb* pcb, unsigned long requested_size)
+/* Allocate a memory block on the  Scheme heap and return a reference to
+   it as an *untagged* pointer.   PCB must reference the process control
+   block, REQUESTED_SIZE must be  the requested number of bytes filtered
+   through "IK_ALIGN()".
+
+   If not enough memory is available  on the current heap segment: a new
+   heap segment is  allocated; is such allocation fails:  the process is
+   terminated with exit status EXIT_FAILURE.
+
+   This  function  is  meant  to  be used  to  allocate  "small"  memory
+   blocks. */
 {
-  assert(size == IK_ALIGN(size));
+  assert(requested_size == IK_ALIGN(requested_size));
   ikptr alloc_ptr       = pcb->allocation_pointer;
   ikptr end_ptr         = pcb->heap_base + pcb->heap_size;
-  ikptr new_alloc_ptr   = alloc_ptr + size;
-  /* If there  is room  in the  current heap block:  update the  pcb and
+  ikptr new_alloc_ptr   = alloc_ptr + requested_size;
+  /* If there  is room in the  current heap segment: update  the PCB and
      return the offset. */
   if (new_alloc_ptr < end_ptr) {
     pcb->allocation_pointer = new_alloc_ptr;
     return alloc_ptr;
   }
-  /* No room in the current heap block: run GC. */
+  /* No room in the current heap block: enlarge the heap by allocating a
+     new segment. */
   if (alloc_ptr) {
-    ikpages* p = ik_malloc(sizeof(ikpages));
+    /* This is not  the first heap segment allocation,  so prepend a new
+       "ikpages"  node to  the  linked  list of  old  heap segments  and
+       initialise it with a reference to the current heap segment. */
+    ikpages *	p = ik_malloc(sizeof(ikpages));
     p->base = pcb->heap_base;
     p->size = pcb->heap_size;
     p->next = pcb->heap_pages;
     pcb->heap_pages = p;
   }
-
-  { /* ACCOUNTING */
-    long int bytes =
-      ((long int)pcb->allocation_pointer) -
-      ((long int)pcb->heap_base);
-    long int minor = bytes + pcb->allocation_count_minor;
-    while(minor >= most_bytes_in_minor){
-      minor -= most_bytes_in_minor;
+  { /* accounting */
+    long bytes = ((long)pcb->allocation_pointer) - ((long)pcb->heap_base);
+    long minor = bytes + pcb->allocation_count_minor;
+    while (minor >= IK_MOST_BYTES_IN_MINOR) {
+      minor -= IK_MOST_BYTES_IN_MINOR;
       pcb->allocation_count_major++;
     }
     pcb->allocation_count_minor = minor;
   }
-
-  unsigned long new_size = (size > IK_HEAP_EXT_SIZE) ? size : IK_HEAP_EXT_SIZE;
-  new_size += 2 * 4096;
-  new_size = IK_ALIGN_TO_NEXT_PAGE(new_size);
-  alloc_ptr = ik_mmap_mixed(new_size, pcb);
-  pcb->heap_base = alloc_ptr;
-  pcb->heap_size = new_size;
-  pcb->allocation_redline = alloc_ptr + new_size - 2 * 4096;
-  new_alloc_ptr = alloc_ptr + size;
-  pcb->allocation_pointer = new_alloc_ptr;
-  return alloc_ptr;
+  { /* Allocate a new heap segment and register it as current heap base.
+       While computing the segment size:  make sure that there is always
+       some room at the end of the new heap segment after allocating the
+       requested memory for the new object. */
+    unsigned long new_size = (requested_size > IK_HEAP_EXT_SIZE) ? requested_size : IK_HEAP_EXT_SIZE;
+    new_size       += 2 * 4096;
+    new_size       = IK_ALIGN_TO_NEXT_PAGE(new_size);
+    alloc_ptr      = ik_mmap_mixed(new_size, pcb);
+    pcb->heap_base = alloc_ptr;
+    pcb->heap_size = new_size;
+    pcb->allocation_redline = alloc_ptr + new_size - 2 * 4096;
+    new_alloc_ptr = alloc_ptr + requested_size;
+    pcb->allocation_pointer = new_alloc_ptr;
+    return alloc_ptr;
+  }
 }
 
 
+#ifndef NDEBUG
 void
 ik_debug_message (const char * error_message, ...)
 {
@@ -485,6 +493,7 @@ ik_debug_message (const char * error_message, ...)
   fprintf(stderr, "\n");
   va_end(ap);
 }
+#endif
 int
 ik_abort (const char * error_message, ...)
 {
@@ -507,7 +516,7 @@ ik_error (ikptr args)
 }
 void ik_stack_overflow(ikpcb* pcb){
 #ifndef NDEBUG
-  fprintf(stderr, "entered ik_stack_overflow pcb=0x%016lx\n", (long int)pcb);
+  fprintf(stderr, "entered ik_stack_overflow pcb=0x%016lx\n", (long)pcb);
 #endif
   set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
 
@@ -559,7 +568,7 @@ ikptr ik_uuid(ikptr bv){
     }
     uuid_strlen = strlen(uuid_chars);
   }
-  long int n = unfix(ref(bv, off_bytevector_length));
+  long n = unfix(ref(bv, off_bytevector_length));
   unsigned char* data = (unsigned char*)(long)(bv+off_bytevector_data);
   int r = read(fd, data, n);
   if(r < 0){
@@ -601,8 +610,8 @@ ik_dump_metatable(ikpcb* pcb){
       s++;
     }
     fprintf(stderr, "0x%016lx + %5ld pages = %s\n",
-        (long int) start,
-        ((long int)p-(long int)start)/pagesize,
+        (long) start,
+        ((long)p-(long)start)/pagesize,
         mtname(t));
   }
   return void_object;
@@ -623,8 +632,8 @@ ik_dump_dirty_vector(ikpcb* pcb){
       s++;
     }
     fprintf(stderr, "0x%016lx + %5ld pages = 0x%08x\n",
-        (long int) start,
-        ((long int)p-(long int)start)/pagesize,
+        (long) start,
+        ((long)p-(long)start)/pagesize,
         t);
   }
   return void_object;
@@ -633,8 +642,8 @@ ik_dump_dirty_vector(ikpcb* pcb){
 ikptr
 ikrt_make_code(ikptr codesizeptr, ikptr freevars, ikptr rvec, ikpcb* pcb){
   assert((fx_mask & (int)codesizeptr) == 0);
-  long int code_size = unfix(codesizeptr);
-  long int memreq = IK_ALIGN_TO_NEXT_PAGE(code_size + disp_code_data);
+  long code_size = unfix(codesizeptr);
+  long memreq = IK_ALIGN_TO_NEXT_PAGE(code_size + disp_code_data);
   ikptr mem = ik_mmap_code(memreq, 0, pcb);
   bzero((char*)(long)mem, memreq);
   ref(mem, 0) = code_tag;
@@ -731,9 +740,9 @@ ikrt_stats_now(ikptr t, ikpcb* pcb){
   ref(t, off_record_data + 12 * wordsize) = fix(pcb->collect_rtime.tv_usec);
   {
     /* minor bytes */
-    long int bytes_in_heap = ((long int) pcb->allocation_pointer) -
-                             ((long int) pcb->heap_base);
-    long int bytes = bytes_in_heap + pcb->allocation_count_minor;
+    long bytes_in_heap = ((long) pcb->allocation_pointer) -
+                             ((long) pcb->heap_base);
+    long bytes = bytes_in_heap + pcb->allocation_count_minor;
     ref(t, off_record_data + 13 * wordsize) = fix(bytes);
   }
   /* major bytes */
@@ -777,7 +786,7 @@ ikrt_make_vector2(ikptr len, ikptr obj, ikpcb* pcb){
 
 ikptr
 ikrt_debug(ikptr x){
-  fprintf(stderr, "DEBUG 0x%016lx\n", (long int)x);
+  fprintf(stderr, "DEBUG 0x%016lx\n", (long)x);
   return 0;
 }
 

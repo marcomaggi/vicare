@@ -11,8 +11,8 @@
         distribution  for no  reason I  can know  (Marco Maggi;  Nov 26,
         2011).
 
+  Copyright (C) 2011-2012 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-  Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute  it and/or modify
   it under the  terms of the GNU General Public  License as published by
@@ -47,8 +47,6 @@
 /** --------------------------------------------------------------------
  ** Constants and variables.
  ** ----------------------------------------------------------------- */
-
-extern ikpcb* the_pcb;
 
 /* These  constants must  be kept  in  sync with  the ones  in the  file
    "ikarus.pointers.sls". */

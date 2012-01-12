@@ -281,16 +281,13 @@ gc_alloc_new_code(long size, gc_t* gc) {
 
 static void
 add_to_collect_count(ikpcb* pcb, int bytes) {
-  int minor = bytes + pcb->allocation_count_minor;
-  while(minor >= most_bytes_in_minor) {
-    minor -= most_bytes_in_minor;
+  int	minor = bytes + pcb->allocation_count_minor;
+  while (minor >= IK_MOST_BYTES_IN_MINOR) {
+    minor -= IK_MOST_BYTES_IN_MINOR;
     pcb->allocation_count_major++;
   }
   pcb->allocation_count_minor = minor;
 }
-
-
-
 
 static void
 gc_tconc_push_extending(gc_t* gc, ikptr tcbucket) {

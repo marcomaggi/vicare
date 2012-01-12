@@ -9,7 +9,7 @@
         distribution  for no  reason I  can know  (Marco Maggi;  Nov 26,
         2011).
 
-  Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute  it and/or modify
@@ -74,7 +74,7 @@ ikrt_dlerror (ikpcb* pcb)
     return false_object;
   else {
     int         len  = strlen(str);
-    ikptr       bv   = ik_bytevector_alloc(pcb, len);
+    ikptr       bv   = ika_bytevector_alloc(pcb, len);
     void *      data = IK_BYTEVECTOR_DATA_VOIDP(bv);
     memcpy(data, str, len);
     return bv;
@@ -114,7 +114,7 @@ ikrt_dlsym (ikptr handle, ikptr sym, ikpcb* pcb)
 ikptr
 ik_pointer_alloc (unsigned long memory, ikpcb * pcb)
 {
-  ikptr r = ik_safe_alloc(pcb, pointer_size);
+  ikptr r = ik_unsafe_alloc(pcb, IK_ALIGN(pointer_size));
   ref(r, 0)        = pointer_tag;
   ref(r, wordsize) = (ikptr)memory; /* we have not yet added the tag! */
   return r+vector_tag;
@@ -390,7 +390,7 @@ ikrt_bytevector_from_cstring (ikptr s_pointer, ikptr s_count, ikpcb * pcb)
 {
   char *        pointer = IK_POINTER_DATA_VOIDP(s_pointer);
   long          count   = unfix(s_count);
-  ikptr         bv      = ik_bytevector_alloc(pcb, count);
+  ikptr         bv      = ika_bytevector_alloc(pcb, count);
   char *        data    = IK_BYTEVECTOR_DATA_CHARP(bv);
   memcpy(data, pointer, count);
   return bv;

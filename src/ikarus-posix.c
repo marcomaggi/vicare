@@ -9,7 +9,7 @@
         functions in this module,  see the official Vicare documentation
         in Texinfo format.
 
-  Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute  it and/or modify
@@ -1344,7 +1344,7 @@ ikrt_posix_make_sockaddr_in (ikptr host_address_bv, ikptr port, ikpcb * pcb)
   ikptr                 socket_address_bv;
 #undef BV_LEN
 #define BV_LEN  sizeof(struct sockaddr_in)
-  socket_address_bv          = ik_bytevector_alloc(pcb, BV_LEN);
+  socket_address_bv          = ika_bytevector_alloc(pcb, BV_LEN);
   socket_address             = IK_BYTEVECTOR_DATA_VOIDP(socket_address_bv);
   socket_address->sin_family = AF_INET;
   socket_address->sin_port   = (unsigned short int)unfix(port);
@@ -1360,7 +1360,7 @@ ikrt_posix_sockaddr_in_in_addr (ikptr socket_address_bv, ikpcb * pcb)
 #define BV_LEN  sizeof(struct in_addr)
     ikptr               host_address_bv;
     struct in_addr *    host_address;
-    host_address_bv = ik_bytevector_alloc(pcb, BV_LEN);
+    host_address_bv = ika_bytevector_alloc(pcb, BV_LEN);
     host_address    = IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
     memcpy(host_address, &(socket_address->sin_addr), BV_LEN);
     return host_address_bv;
@@ -1386,7 +1386,7 @@ ikrt_posix_make_sockaddr_in6 (ikptr host_address_bv, ikptr port, ikpcb * pcb)
   ikptr                 socket_address_bv;
 #undef BV_LEN
 #define BV_LEN  sizeof(struct sockaddr_in6)
-  socket_address_bv           = ik_bytevector_alloc(pcb, BV_LEN);
+  socket_address_bv           = ika_bytevector_alloc(pcb, BV_LEN);
   socket_address              = IK_BYTEVECTOR_DATA_VOIDP(socket_address_bv);
   socket_address->sin6_family = AF_INET6;
   socket_address->sin6_port   = (unsigned short int)unfix(port);
@@ -1402,7 +1402,7 @@ ikrt_posix_sockaddr_in6_in6_addr (ikptr socket_address_bv, ikpcb * pcb)
 #define BV_LEN  sizeof(struct in6_addr)
     ikptr               host_address_bv;
     struct in6_addr *   host_address;
-    host_address_bv = ik_bytevector_alloc(pcb, BV_LEN);
+    host_address_bv = ika_bytevector_alloc(pcb, BV_LEN);
     host_address    =  IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
     memcpy(host_address, &(socket_address->sin6_addr), BV_LEN);
     return host_address_bv;
@@ -1428,7 +1428,7 @@ ikrt_posix_in6addr_loopback (ikpcb * pcb)
   struct in6_addr *     host_address;
 #undef BV_LEN
 #define BV_LEN          sizeof(struct in6_addr)
-  host_address_bv = ik_bytevector_alloc(pcb, BV_LEN);
+  host_address_bv = ika_bytevector_alloc(pcb, BV_LEN);
   host_address    = IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
   memcpy(host_address, &constant_host_address, BV_LEN);
   return host_address_bv;
@@ -1441,7 +1441,7 @@ ikrt_posix_in6addr_any (ikpcb * pcb)
   struct in6_addr *     host_address;
 #undef BV_LEN
 #define BV_LEN          sizeof(struct in6_addr)
-  host_address_bv = ik_bytevector_alloc(pcb, BV_LEN);
+  host_address_bv = ika_bytevector_alloc(pcb, BV_LEN);
   host_address    = IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
   memcpy(host_address, &constant_host_address, BV_LEN);
   return host_address_bv;
@@ -1458,7 +1458,7 @@ ikrt_posix_inet_aton (ikptr dotted_quad_bv, ikpcb * pcb)
   int                   rv;
 #undef BV_LEN
 #define BV_LEN          sizeof(struct in_addr)
-  host_address_bv = ik_bytevector_alloc(pcb, BV_LEN);
+  host_address_bv = ika_bytevector_alloc(pcb, BV_LEN);
   host_address    = IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
   dotted_quad     = IK_BYTEVECTOR_DATA_VOIDP(dotted_quad_bv);
   rv = inet_aton(dotted_quad, host_address);
@@ -1475,7 +1475,7 @@ ikrt_posix_inet_ntoa (ikptr host_address_bv, ikpcb * pcb)
   host_address   = IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
   data           = inet_ntoa(*host_address);
   data_len       = strlen(data);
-  dotted_quad_bv = ik_bytevector_alloc(pcb, data_len);
+  dotted_quad_bv = ika_bytevector_alloc(pcb, data_len);
   dotted_quad    = IK_BYTEVECTOR_DATA_CHARP(dotted_quad_bv);
   memcpy(dotted_quad, data, data_len);
   return dotted_quad_bv;
@@ -1495,7 +1495,7 @@ ikrt_posix_inet_pton (ikptr af, ikptr presentation_bv, ikpcb * pcb)
 #undef BV_LEN
 #define BV_LEN          sizeof(struct in_addr)
       struct in_addr *      host_address;
-      host_address_bv = ik_bytevector_alloc(pcb, BV_LEN);
+      host_address_bv = ika_bytevector_alloc(pcb, BV_LEN);
       host_address    = IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
       presentation    = IK_BYTEVECTOR_DATA_VOIDP(presentation_bv);
       rv = inet_pton(unfix(af), presentation, host_address);
@@ -1506,7 +1506,7 @@ ikrt_posix_inet_pton (ikptr af, ikptr presentation_bv, ikpcb * pcb)
 #undef BV_LEN
 #define BV_LEN          sizeof(struct in6_addr)
       struct in6_addr *      host_address;
-      host_address_bv = ik_bytevector_alloc(pcb, BV_LEN);
+      host_address_bv = ika_bytevector_alloc(pcb, BV_LEN);
       host_address    = IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
       presentation    = IK_BYTEVECTOR_DATA_VOIDP(presentation_bv);
       rv = inet_pton(unfix(af), presentation, host_address);
@@ -1534,7 +1534,7 @@ ikrt_posix_inet_ntop (ikptr af, ikptr host_address_bv, ikpcb * pcb)
         char *    presentation;
         long      presentation_len;
         presentation_len = strlen(buffer);
-        presentation_bv  = ik_bytevector_alloc(pcb, presentation_len);
+        presentation_bv  = ika_bytevector_alloc(pcb, presentation_len);
         presentation     = IK_BYTEVECTOR_DATA_CHARP(presentation_bv);
         memcpy(presentation, buffer, presentation_len);
         return presentation_bv;
@@ -1559,7 +1559,7 @@ hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
   pcb->root1 = &dst;
   { /* store the official host name */
     long        name_len = strlen(src->h_name);
-    ikptr       name_bv  = ik_bytevector_alloc(pcb, name_len);
+    ikptr       name_bv  = ika_bytevector_alloc(pcb, name_len);
     char *      name     = IK_BYTEVECTOR_DATA_CHARP(name_bv);
     memcpy(name, src->h_name, name_len+1);
     IK_FIELD(dst, 0) = name_bv;
@@ -1573,7 +1573,7 @@ hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
       IK_CDR(pair) = list_of_aliases;
       IK_FIELD(dst, 1) = list_of_aliases = pair;
       long      alias_len = strlen(src->h_aliases[i]);
-      ikptr     alias_bv  = ik_bytevector_alloc(pcb, alias_len);
+      ikptr     alias_bv  = ika_bytevector_alloc(pcb, alias_len);
       char *    alias     = IK_BYTEVECTOR_DATA_CHARP(alias_bv);
       memcpy(alias, src->h_aliases[i], alias_len);
       IK_CAR(pair) = alias_bv;
@@ -1683,14 +1683,14 @@ addrinfo_to_struct (ikpcb * pcb, ikptr rtd, struct addrinfo * src, int with_cano
     IK_FIELD(dst, 3) = IK_FIX(src->ai_protocol);
     IK_FIELD(dst, 4) = IK_FIX(src->ai_addrlen);
     {
-      sockaddr_bv   = ik_bytevector_alloc(pcb, src->ai_addrlen);
+      sockaddr_bv   = ika_bytevector_alloc(pcb, src->ai_addrlen);
       sockaddr_data = IK_BYTEVECTOR_DATA_VOIDP(sockaddr_bv);
       memcpy(sockaddr_data, src->ai_addr, src->ai_addrlen);
       IK_FIELD(dst, 5) = sockaddr_bv;
     }
     if (with_canon_name && src->ai_canonname) {
       canon_name_len  = strlen(src->ai_canonname);
-      canon_name_bv   = ik_bytevector_alloc(pcb, (long)canon_name_len);
+      canon_name_bv   = ika_bytevector_alloc(pcb, (long)canon_name_len);
       canon_name_data = IK_BYTEVECTOR_DATA_VOIDP(canon_name_bv);
       memcpy(canon_name_data, src->ai_canonname, canon_name_len);
       IK_FIELD(dst, 6) = canon_name_bv;
@@ -1753,7 +1753,7 @@ ikrt_posix_gai_strerror (ikptr error_code, ikpcb * pcb)
   char *        message_data;
   message      = gai_strerror(unfix(error_code));
   message_len  = strlen(message);
-  message_bv   = ik_bytevector_alloc(pcb, (long)message_len);
+  message_bv   = ika_bytevector_alloc(pcb, (long)message_len);
   message_data = IK_BYTEVECTOR_DATA_CHARP(message_bv);
   memcpy(message_data, message, message_len);
   return message_bv;
@@ -1775,7 +1775,7 @@ protoent_to_struct (ikpcb * pcb, ikptr rtd, struct protoent * src)
   {
     {
       size_t    name_len = strlen(src->p_name);
-      ikptr     name_bv  = ik_bytevector_alloc(pcb, name_len);
+      ikptr     name_bv  = ika_bytevector_alloc(pcb, name_len);
       char *    name     = IK_BYTEVECTOR_DATA_CHARP(name_bv);
       memcpy(name, src->p_name, name_len);
       IK_FIELD(dst, 0) = name_bv;
@@ -1787,7 +1787,7 @@ protoent_to_struct (ikpcb * pcb, ikptr rtd, struct protoent * src)
       list_of_aliases = pair;
       IK_FIELD(dst, 1) = list_of_aliases;
       size_t    alias_len = strlen(src->p_aliases[i]);
-      ikptr     alias_bv  = ik_bytevector_alloc(pcb, (long)alias_len);
+      ikptr     alias_bv  = ika_bytevector_alloc(pcb, (long)alias_len);
       char *    alias     = IK_BYTEVECTOR_DATA_CHARP(alias_bv);
       memcpy(alias, src->p_aliases[i], alias_len);
       IK_CAR(pair) = alias_bv;
@@ -1847,7 +1847,7 @@ servent_to_struct (ikpcb * pcb, ikptr rtd, struct servent * src)
   {
     {
       size_t    name_len = strlen(src->s_name);
-      ikptr     name_bv  = ik_bytevector_alloc(pcb, name_len);
+      ikptr     name_bv  = ika_bytevector_alloc(pcb, name_len);
       char *    name     = IK_BYTEVECTOR_DATA_CHARP(name_bv);
       memcpy(name, src->s_name, name_len);
       IK_FIELD(dst, 0) = name_bv;
@@ -1859,7 +1859,7 @@ servent_to_struct (ikpcb * pcb, ikptr rtd, struct servent * src)
       list_of_aliases = pair;
       IK_FIELD(dst, 1) = list_of_aliases;
       size_t    alias_len = strlen(src->s_aliases[i]);
-      ikptr     alias_bv  = ik_bytevector_alloc(pcb, (long)alias_len);
+      ikptr     alias_bv  = ika_bytevector_alloc(pcb, (long)alias_len);
       char *    alias     = IK_BYTEVECTOR_DATA_CHARP(alias_bv);
       memcpy(alias, src->s_aliases[i], alias_len);
       IK_CAR(pair) = alias_bv;
@@ -1867,7 +1867,7 @@ servent_to_struct (ikpcb * pcb, ikptr rtd, struct servent * src)
     IK_FIELD(dst, 2) = IK_FIX(ntohs((uint16_t)(src->s_port)));
     {
       size_t    proto_len = strlen(src->s_proto);
-      ikptr     proto_bv  = ik_bytevector_alloc(pcb, proto_len);
+      ikptr     proto_bv  = ika_bytevector_alloc(pcb, proto_len);
       char *    proto     = IK_BYTEVECTOR_DATA_CHARP(proto_bv);
       memcpy(proto, src->s_proto, proto_len);
       IK_FIELD(dst, 3) = proto_bv;
@@ -2046,7 +2046,7 @@ ikrt_posix_accept (ikptr sock, ikpcb * pcb)
     pair       = IK_PAIR_ALLOC(pcb);
     pcb->root0 = &pair;
     {
-      addr_bv    = ik_bytevector_alloc(pcb, addr_len);
+      addr_bv    = ika_bytevector_alloc(pcb, addr_len);
       addr_data  = IK_BYTEVECTOR_DATA_VOIDP(addr_bv);
       memcpy(addr_data, addr, addr_len);
       IK_CAR(pair) = fix(rv);
@@ -2081,7 +2081,7 @@ ikrt_posix_getpeername (ikptr sock, ikpcb * pcb)
   errno    = 0;
   rv       = getpeername(unfix(sock), addr, &addr_len);
   if (0 == rv) {
-    ikptr       addr_bv   = ik_bytevector_alloc(pcb, addr_len);
+    ikptr       addr_bv   = ika_bytevector_alloc(pcb, addr_len);
     void *      addr_data = IK_BYTEVECTOR_DATA_VOIDP(addr_bv);
     memcpy(addr_data, addr, addr_len);
     return addr_bv;
@@ -2100,7 +2100,7 @@ ikrt_posix_getsockname (ikptr sock, ikpcb * pcb)
   errno = 0;
   rv    = getsockname(unfix(sock), addr, &addr_len);
   if (0 == rv) {
-    ikptr  addr_bv   = ik_bytevector_alloc(pcb, addr_len);
+    ikptr  addr_bv   = ika_bytevector_alloc(pcb, addr_len);
     void * addr_data = IK_BYTEVECTOR_DATA_VOIDP(addr_bv);
     memcpy(addr_data, addr, addr_len);
     return addr_bv;
@@ -2179,7 +2179,7 @@ ikrt_posix_recvfrom (ikptr sock, ikptr buffer_bv, ikptr size_fx, ikptr flags, ik
     pair       = IK_PAIR_ALLOC(pcb);
     pcb->root0 = &pair;
     {
-      addr_bv   = ik_bytevector_alloc(pcb, addr_len);
+      addr_bv   = ika_bytevector_alloc(pcb, addr_len);
       addr_data = IK_BYTEVECTOR_DATA_VOIDP(addr_bv);
       memcpy(addr_data, addr, addr_len);
       IK_CAR(pair) = fix(rv);

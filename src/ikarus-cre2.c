@@ -39,15 +39,12 @@
 #if (1 == ENABLE_CRE2)
 #  include <cre2.h>
 #else
-
 static IK_UNUSED void
 feature_failure_ (const char * funcname)
 {
-  fprintf(stderr, "Vicare error: called CRE2 specific function, %s\n", funcname);
-  exit(EXIT_FAILURE);
+  ik_abort("called CRE2 specific function, %s", funcname);
 }
 #define feature_failure(FN)     { feature_failure_(FN); return void_object; }
-
 #endif
 
 
@@ -129,7 +126,7 @@ ikrt_cre2_new (ikptr s_pattern, ikptr s_options, ikpcb * pcb)
       pcb->root0 = &s_pair;
       {
 	IK_CAR(s_pair) = IK_FIX(errcode);
-	IK_CDR(s_pair) = ik_bytevector_from_cstring(pcb, cre2_error_string(rex));
+	IK_ASS(IK_CDR(s_pair), ik_bytevector_from_cstring(pcb, cre2_error_string(rex)));
       }
       pcb->root0 = NULL;
       cre2_delete(rex);
@@ -153,7 +150,7 @@ ikrt_cre2_delete (ikptr s_rex)
   rex = IK_POINTER_DATA_VOIDP(s_rex);
   if (rex) {
     cre2_delete(rex);
-    ref(s_rex, off_pointer_data) = 0;
+    IK_POINTER_SET_NULL(s_rex);
   }
   return void_object;
 #else
@@ -177,6 +174,8 @@ ikrt_cre2_opt_new (ikpcb * pcb)
   cre2_options_t *	opt;
   opt = cre2_opt_new();
   if (opt) {
+    /* UTF8 is  the default in the  current release but I  set it anyway
+       (Marco Maggi; Jan 12, 2012). */
     cre2_opt_set_encoding(opt, CRE2_UTF8);
     return ik_pointer_alloc((unsigned long)opt, pcb);
   } else
@@ -197,7 +196,7 @@ ikrt_cre2_opt_delete (ikptr s_opt)
   opt = IK_POINTER_DATA_VOIDP(s_opt);
   if (opt) {
     cre2_opt_delete(opt);
-    ref(s_opt, off_pointer_data) = 0;
+    IK_POINTER_SET_NULL(s_opt);
   }
   return void_object;
 #else
@@ -317,7 +316,7 @@ ikrt_cre2_match (ikptr s_rex, ikptr s_text, ikptr s_start, ikptr s_end, ikptr s_
     pcb->root0 = &s_match;
     {
       for (i=0; i<nmatch; ++i) {
-	IK_ITEM(s_match, i) = IK_PAIR_ALLOC(pcb);
+	IK_ASS(IK_ITEM(s_match, i), IK_PAIR_ALLOC(pcb));
 	IK_CAR(IK_ITEM(s_match, i)) = IK_FIX(ranges[i].start);
 	IK_CDR(IK_ITEM(s_match, i)) = IK_FIX(ranges[i].past);
       }

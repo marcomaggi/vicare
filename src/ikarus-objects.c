@@ -139,7 +139,7 @@ ik_list_from_argv_and_argc (ikpcb * pcb, char ** argv, long argc)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ik_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes)
+ika_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes)
 {
   long int  aligned_size;
   ikptr     bv;
@@ -158,7 +158,7 @@ ikptr
 ik_bytevector_from_cstring (ikpcb * pcb, const char * cstr)
 {
   size_t    len  = strlen(cstr);
-  ikptr     bv   = ik_bytevector_alloc(pcb, len);
+  ikptr     bv   = ika_bytevector_alloc(pcb, len);
   char *    data = IK_BYTEVECTOR_DATA_CHARP(bv);
   memcpy(data, cstr, len);
   return bv;
@@ -166,7 +166,7 @@ ik_bytevector_from_cstring (ikpcb * pcb, const char * cstr)
 ikptr
 ik_bytevector_from_cstring_len (ikpcb * pcb, const char * cstr, size_t len)
 {
-  ikptr     bv   = ik_bytevector_alloc(pcb, len);
+  ikptr     bv   = ika_bytevector_alloc(pcb, len);
   char *    data = IK_BYTEVECTOR_DATA_CHARP(bv);
   memcpy(data, cstr, len);
   return bv;
@@ -174,7 +174,7 @@ ik_bytevector_from_cstring_len (ikpcb * pcb, const char * cstr, size_t len)
 ikptr
 ik_bytevector_from_memory_block (ikpcb * pcb, void * memory, size_t length)
 {
-  ikptr     bv   = ik_bytevector_alloc(pcb, length);
+  ikptr     bv   = ika_bytevector_alloc(pcb, length);
   void *    data = IK_BYTEVECTOR_DATA_VOIDP(bv);
   memcpy(data, memory, length);
   return bv;

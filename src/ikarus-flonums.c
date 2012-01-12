@@ -21,7 +21,6 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
-#define _ISOC99_SOURCE
 #include "internals.h"
 #include <math.h>
 
@@ -30,34 +29,19 @@
  ** Allocating flonums and cflonums.
  ** ----------------------------------------------------------------- */
 
-#define DEFINE_AND_ALLOC_FLONUM(r)                              \
-  ikptr r = ik_unsafe_alloc(pcb, flonum_size) | vector_tag;     \
-  ref(r, -vector_tag) = (ikptr)flonum_tag
-
 ikptr
-ik_flonum_alloc (ikpcb * pcb, double fl)
+iku_flonum_alloc (ikpcb * pcb, double fl)
 {
-  DEFINE_AND_ALLOC_FLONUM(F);
+  IKU_DEFINE_AND_ALLOC_FLONUM(F);
   IK_FLONUM_DATA(F) = fl;
   return F;
 }
-
-/* ------------------------------------------------------------------ */
-
-#define DEFINE_AND_ALLOC_CFLONUM(r)                              \
-  ikptr r = ik_unsafe_alloc(pcb, cflonum_size) | vector_tag;     \
-  ref(r, -vector_tag) = (ikptr)cflonum_tag
-
 ikptr
-ik_cflonum_alloc (ikpcb * pcb, double re, double im)
+iku_cflonum_alloc (ikpcb * pcb, double re, double im)
 {
-  DEFINE_AND_ALLOC_CFLONUM(F);
-  pcb->root0 = &F;
-  {
-    IK_CFLONUM_REAL(F) = ik_flonum_alloc(pcb, re);
-    IK_CFLONUM_IMAG(F) = ik_flonum_alloc(pcb, im);
-  }
-  pcb->root0 = NULL;
+  IKU_DEFINE_AND_ALLOC_CFLONUM(F);
+  IK_CFLONUM_REAL(F) = iku_flonum_alloc(pcb, re);
+  IK_CFLONUM_IMAG(F) = iku_flonum_alloc(pcb, im);
   return F;
 }
 
@@ -110,209 +94,209 @@ ikrt_bytevector_to_flonum (ikptr x, ikpcb* pcb)
 {
   char *        data = IK_BYTEVECTOR_DATA_CHARP(x);
   double        v    = strtod(data, NULL);
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = v;
   return r;
 }
 ikptr
-ikrt_fl_plus (ikptr x, ikptr y,ikpcb* pcb)
+ikrt_fl_plus (ikptr x, ikptr y, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = IK_FLONUM_DATA(x) + IK_FLONUM_DATA(y);
   return r;
 }
 ikptr
-ikrt_fl_minus (ikptr x, ikptr y,ikpcb* pcb)
+ikrt_fl_minus (ikptr x, ikptr y, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = IK_FLONUM_DATA(x) - IK_FLONUM_DATA(y);
   return r;
 }
 ikptr
-ikrt_fl_times (ikptr x, ikptr y,ikpcb* pcb)
+ikrt_fl_times (ikptr x, ikptr y, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = IK_FLONUM_DATA(x) * IK_FLONUM_DATA(y);
   return r;
 }
 ikptr
-ikrt_fl_div (ikptr x, ikptr y,ikpcb* pcb)
+ikrt_fl_div (ikptr x, ikptr y, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = IK_FLONUM_DATA(x) / IK_FLONUM_DATA(y);
   return r;
 }
 ikptr
 ikrt_fl_invert (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = 1.0 / IK_FLONUM_DATA(x);
   return r;
 }
 ikptr
 ikrt_fl_sin (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = sin(IK_FLONUM_DATA(x));
   return r;
 }
 ikptr
 ikrt_fl_cos (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = cos(IK_FLONUM_DATA(x));
   return r;
 }
 ikptr
 ikrt_fl_tan (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = tan(IK_FLONUM_DATA(x));
   return r;
 }
 ikptr
 ikrt_fl_asin (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = asin(IK_FLONUM_DATA(x));
   return r;
 }
 ikptr
 ikrt_fl_acos (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = acos(IK_FLONUM_DATA(x));
   return r;
 }
 ikptr
 ikrt_fl_atan (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = atan(IK_FLONUM_DATA(x));
   return r;
 }
 ikptr
 ikrt_atan2 (ikptr y, ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = atan2(IK_FLONUM_DATA(y), IK_FLONUM_DATA(x));
   return r;
 }
 ikptr
 ikrt_fl_sqrt (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = sqrt(IK_FLONUM_DATA(x));
   return r;
 }
 ikptr
 ikrt_fl_log (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = log(IK_FLONUM_DATA(x));
   return r;
 }
 ikptr
 ikrt_fl_log1p (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = log1p(IK_FLONUM_DATA(x));
   return r;
 }
 ikptr
 ikrt_fx_sin (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = sin(unfix(x));
   return r;
 }
 ikptr
 ikrt_fx_cos (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = cos(unfix(x));
   return r;
 }
 ikptr
 ikrt_fx_tan (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = tan(unfix(x));
   return r;
 }
 ikptr
 ikrt_fx_asin (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = asin(unfix(x));
   return r;
 }
 ikptr
 ikrt_fx_acos (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = acos(unfix(x));
   return r;
 }
 ikptr
 ikrt_fx_atan (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = atan(unfix(x));
   return r;
 }
 ikptr
 ikrt_fl_sinh (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = sinh(IK_FLONUM_DATA(x));
   return r;
 }
 ikptr
 ikrt_fl_cosh (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = cosh(IK_FLONUM_DATA(x));
   return r;
 }
 ikptr
 ikrt_fl_tanh (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = tanh(IK_FLONUM_DATA(x));
   return r;
 }
 ikptr
 ikrt_fl_asinh (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = asinh(IK_FLONUM_DATA(x));
   return r;
 }
 ikptr
 ikrt_fl_acosh (ikptr x, ikpcb* pcb) {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = acosh(IK_FLONUM_DATA(x));
   return r;
 }
 ikptr
 ikrt_fl_atanh (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = atanh(IK_FLONUM_DATA(x));
   return r;
 }
 ikptr
 ikrt_fx_sqrt (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = sqrt(unfix(x));
   return r;
 }
 ikptr
 ikrt_fx_log (ikptr x, ikpcb* pcb)
 {
-  DEFINE_AND_ALLOC_FLONUM(r);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
   IK_FLONUM_DATA(r) = log(unfix(x));
   return r;
 }
