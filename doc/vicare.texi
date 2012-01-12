@@ -14866,14 +14866,14 @@ referenced by @var{argc} must be wide enough to hold all the lengths.
 @end deftypefun
 
 
-@deftypefun ikptr ik_list_from_argv (ikpcb * @var{pcb}, char ** @var{argv})
+@deftypefun ikptr ika_list_from_argv (ikpcb * @var{pcb}, char ** @var{argv})
 Given a pointer @var{argv} to a @cnull{}--terminated array of @asciiz{}
 strings build and return a list of bytevectors holding a copy of the
 @asciiz{} strings.  Make use of @code{pcb->root1}.
 @end deftypefun
 
 
-@deftypefun ikptr ik_list_from_argv_and_argc (ikpcb * @var{pcb}, char ** @var{argv}, int @var{argc})
+@deftypefun ikptr ika_list_from_argv_and_argc (ikpcb * @var{pcb}, char ** @var{argv}, int @var{argc})
 Given a pointer @var{argv} to an array of @asciiz{} strings holding
 @var{argc} pointers: build and return a list of bytevectors holding a
 copy of the @asciiz{} strings.  Make use of @code{pcb->root1}.
@@ -14888,7 +14888,7 @@ The suggested way to allocate and initialise a pair is as follows:
 
 @example
 ikpcb * pcb    = the_pcb;
-ikptr   s_pair = IK_PAIR_ALLOC(pcb);
+ikptr   s_pair = IKA_PAIR_ALLOC(pcb);
 
 pcb->root0 = &s_pair;
 @{
@@ -14912,7 +14912,7 @@ long     argc = ...;
 ikptr    s_list, s_pair;
 long     i;
 
-s_list = s_pair = IK_PAIR_ALLOC(pcb);
+s_list = s_pair = IKA_PAIR_ALLOC(pcb);
 pcb->root0 = &s_list;
 pcb->root1 = &s_pair;
 @{
@@ -14920,7 +14920,7 @@ pcb->root1 = &s_pair;
     ikptr  s_bv    = ik_bytevector_from_cstring(pcb, argv[i]);
     IK_CAR(s_pair) = s_bv;
     if (++i < argc) @{
-      IK_CDR(s_pair) = IK_PAIR_ALLOC(pcb);
+      IK_CDR(s_pair) = IKA_PAIR_ALLOC(pcb);
       s_pair = IK_CDR(s_pair);
     @} else
       IK_CDR(s_pair) = null_object;

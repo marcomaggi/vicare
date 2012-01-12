@@ -116,7 +116,7 @@ static size_t the_ffi_type_sizes[TYPE_ID_NUMBER] = {
   sizeof(short),                /* 15 */
   sizeof(unsigned int),         /* 16 */
   sizeof(int),                  /* 17 */
-  sizeof(unsigned long),        /* 18 */
+  sizeof(ik_ulong),        /* 18 */
   sizeof(long)                  /* 19 */
 };
 
@@ -242,7 +242,7 @@ ikrt_ffi_prep_cif (ikptr s_type_ids, ikpcb* pcb)
   }
   cif->arg_types[arity] = NULL;
   rv = ffi_prep_cif(&(cif->cif), FFI_DEFAULT_ABI, arity, cif->retval_type, cif->arg_types);
-  return (FFI_OK == rv)? ik_pointer_alloc((unsigned long)cif, pcb) : false_object;
+  return (FFI_OK == rv)? ik_pointer_alloc((ik_ulong)cif, pcb) : false_object;
 }
 
 
@@ -279,8 +279,8 @@ scheme_to_native_value_cast (type_id_t type_id, ikptr s_scheme_value, void * buf
   case TYPE_ID_SSHORT:  *((signed short*)   buffer) = unfix(s_scheme_value); return;
   case TYPE_ID_UINT:    *((unsigned int*)   buffer) = ik_integer_to_long(s_scheme_value); return;
   case TYPE_ID_SINT:    *((signed int*)     buffer) = ik_integer_to_long(s_scheme_value); return;
-  case TYPE_ID_ULONG:   *((unsigned long*)  buffer) = ik_integer_to_long(s_scheme_value); return;
-  case TYPE_ID_SLONG:   *((signed long*)    buffer) = ik_integer_to_long(s_scheme_value); return;
+  case TYPE_ID_ULONG:   *((ik_ulong*)  buffer) = ik_integer_to_long(s_scheme_value); return;
+  case TYPE_ID_SLONG:   *((long*)    buffer) = ik_integer_to_long(s_scheme_value); return;
 
   default:
     fprintf(stderr, "*** Vicare FFI error: %s: invalid argument type selector %d",
@@ -301,23 +301,23 @@ native_to_scheme_value_cast (type_id_t type_id, void * buffer, ikpcb* pcb)
   case TYPE_ID_SINT8:   return fix(*(( int8_t*) buffer));
   case TYPE_ID_UINT16:  return fix(*((uint16_t*)buffer));
   case TYPE_ID_SINT16:  return fix(*(( int16_t*)buffer));
-  case TYPE_ID_UINT32:  return ik_integer_from_unsigned_long     (*((uint32_t*)          buffer), pcb);
-  case TYPE_ID_SINT32:  return ik_integer_from_long              (*((signed long*)       buffer), pcb);
-  case TYPE_ID_UINT64:  return ik_integer_from_unsigned_long_long(*((unsigned long long*)buffer), pcb);
-  case TYPE_ID_SINT64:  return ik_integer_from_long_long         (*((signed long long*)  buffer), pcb);
+  case TYPE_ID_UINT32:  return ika_integer_from_unsigned_long(pcb, *((uint32_t*) buffer));
+  case TYPE_ID_SINT32:  return ika_integer_from_long         (pcb, *((long*)     buffer));
+  case TYPE_ID_UINT64:  return ika_integer_from_unsigned_long_long(pcb, *((ik_ullong*)buffer));
+  case TYPE_ID_SINT64:  return ika_integer_from_long_long    (pcb, *((ik_llong*) buffer));
 
-  case TYPE_ID_FLOAT:   return ik_flonum_from_double             (*((float*)             buffer), pcb);
-  case TYPE_ID_DOUBLE:  return ik_flonum_from_double             (*((double*)            buffer), pcb);
-  case TYPE_ID_POINTER: return ik_pointer_alloc                  ((long)*((void**)       buffer), pcb);
+  case TYPE_ID_FLOAT:   return ik_flonum_from_double         (pcb, *((float*)      buffer));
+  case TYPE_ID_DOUBLE:  return ik_flonum_from_double         (pcb, *((double*)     buffer));
+  case TYPE_ID_POINTER: return ik_pointer_alloc              ((long)*((void**)buffer), pcb);
 
-  case TYPE_ID_UCHAR:   return ik_integer_from_unsigned_long     (*((unsigned char*)     buffer), pcb);
-  case TYPE_ID_SCHAR:   return ik_integer_from_long              (*((signed char*)       buffer), pcb);
-  case TYPE_ID_USHORT:  return ik_integer_from_unsigned_long     (*((unsigned short*)    buffer), pcb);
-  case TYPE_ID_SSHORT:  return ik_integer_from_long              (*((signed short*)      buffer), pcb);
-  case TYPE_ID_UINT:    return ik_integer_from_unsigned_long     (*((unsigned int*)      buffer), pcb);
-  case TYPE_ID_SINT:    return ik_integer_from_long              (*((signed int*)        buffer), pcb);
-  case TYPE_ID_ULONG:   return ik_integer_from_unsigned_long     (*((unsigned long*)     buffer), pcb);
-  case TYPE_ID_SLONG:   return ik_integer_from_long              (*((signed long*)       buffer), pcb);
+  case TYPE_ID_UCHAR:   return ika_integer_from_unsigned_long(pcb, *((unsigned char*) buffer));
+  case TYPE_ID_SCHAR:   return ika_integer_from_long         (pcb, *((signed char*)   buffer));
+  case TYPE_ID_USHORT:  return ika_integer_from_unsigned_long(pcb, *((unsigned short*)buffer));
+  case TYPE_ID_SSHORT:  return ika_integer_from_long         (pcb, *((signed short*)  buffer));
+  case TYPE_ID_UINT:    return ika_integer_from_unsigned_long(pcb, *((unsigned int*)  buffer));
+  case TYPE_ID_SINT:    return ika_integer_from_long         (pcb, *((signed int*)    buffer));
+  case TYPE_ID_ULONG:   return ika_integer_from_unsigned_long(pcb, *((ik_ulong*)      buffer));
+  case TYPE_ID_SLONG:   return ika_integer_from_long         (pcb, *((long*)          buffer));
 
   default:
     fprintf(stderr, "*** Vicare error: %s: invalid arg %d", __func__, (int)type_id);
@@ -518,7 +518,7 @@ ikrt_ffi_prepare_callback (ikptr s_data, ikpcb* pcb)
   callback_user_data->next              = pcb->callbacks;
   pcb->callbacks                        = callback_user_data;
   /* Return a pointer to callable code. */
-  return ik_pointer_alloc((unsigned long)callable_pointer, pcb);
+  return ik_pointer_alloc((ik_ulong)callable_pointer, pcb);
 #else /* if FFI_CLOSURES */
   return false_object;
 #endif /* if FFI_CLOSURES */

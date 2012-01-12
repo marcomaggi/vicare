@@ -85,13 +85,13 @@
 /* Given the  pointer X evaluate to the  index of the memory  page it is
    in. */
 #define IK_PAGE_INDEX(x)   \
-  (((unsigned long)(x)) >> pageshift)
+  (((ik_ulong)(x)) >> pageshift)
 
 #define IK_ALIGN_TO_NEXT_PAGE(x) \
-  (((pagesize - 1 + (unsigned long)(x)) >> pageshift) << pageshift)
+  (((pagesize - 1 + (ik_ulong)(x)) >> pageshift) << pageshift)
 
 #define IK_ALIGN_TO_PREV_PAGE(x) \
-  ((((unsigned long)(x)) >> pageshift) << pageshift)
+  ((((ik_ulong)(x)) >> pageshift) << pageshift)
 
 #define IK_ASS(LEFT,RIGHT)	\
   { ikptr s_tmp = (RIGHT); (LEFT) = s_tmp; }
@@ -101,8 +101,15 @@
  ** Global data types.
  ** ----------------------------------------------------------------- */
 
+typedef signed int		ik_int;
+typedef signed long		ik_long;
+typedef signed long long	ik_llong;
+typedef unsigned int		ik_uint;
+typedef unsigned long		ik_ulong;
+typedef unsigned long long	ik_ullong;
+
 /* FIXME Should this be a "uintptr_t"? (Marco Maggi; Nov  6, 2011). */
-typedef unsigned long       ikptr;
+typedef unsigned long		ikptr;
 
 typedef struct ikpage{
   ikptr base;
@@ -186,7 +193,7 @@ typedef struct ikpcb
      allocated here. */
   ikptr                 heap_base;
   /* Number of bytes in the current heap memory segment. */
-  unsigned long         heap_size;
+  ik_ulong         heap_size;
   /* Pointer to first node in  linked list of allocated memory segments.
      Initialised to  NULL when building  the PCB.  Whenever  the current
      heap is full: a new node is prepended to the list, initialised with
@@ -199,7 +206,7 @@ typedef struct ikpcb
   ikptr                 cached_pages_base;
   int                   cached_pages_size;
   ikptr                 stack_base;
-  unsigned long         stack_size;
+  ik_ulong         stack_size;
   ikptr                 symbol_table;
   ikptr                 gensym_table;
   ik_ptr_page*          protected_list[generation_count];
@@ -247,8 +254,8 @@ void	ik_debug_message	(const char * error_message, ...);
 #define ik_debug_message(MSG,...)	/* empty */
 #endif
 
-ikptr   ik_unsafe_alloc         (ikpcb* pcb, unsigned long size);
-ikptr   ik_safe_alloc           (ikpcb* pcb, unsigned long size);
+ikptr   ik_unsafe_alloc         (ikpcb* pcb, ik_ulong size);
+ikptr   ik_safe_alloc           (ikpcb* pcb, ik_ulong size);
 
 void    ik_print                (ikptr x);
 void	ik_print_no_newline	(ikptr x);
@@ -326,7 +333,7 @@ void    ik_fprint               (FILE*, ikptr x);
 #define fx_shift        wordshift
 #define fx_mask         (wordsize - 1)
 
-#define most_positive_fixnum    (((unsigned long int)-1) >> (fx_shift+1))
+#define most_positive_fixnum    (((ik_ulong)-1) >> (fx_shift+1))
 #define most_negative_fixnum    (most_positive_fixnum+1)
 
 #define IK_FIX(X)       ((ikptr)(((long)(X)) << fx_shift))
@@ -336,7 +343,7 @@ void    ik_fprint               (FILE*, ikptr x);
 #define unfix(X)        IK_UNFIX(X)
 
 #define IK_IS_FIXNUM(X)    \
-  ((((unsigned long)(X)) & fx_mask) == fx_tag)
+  ((((ik_ulong)(X)) & fx_mask) == fx_tag)
 
 
 /** --------------------------------------------------------------------
@@ -358,19 +365,19 @@ void    ik_fprint               (FILE*, ikptr x);
 #define IK_CAAR(PAIR)               IK_CAR(IK_CAR(PAIR))
 #define IK_CDAR(PAIR)               IK_CDR(IK_CAR(PAIR))
 
-#define IK_DECLARE_ALLOC_AND_CONS(PAIR,LIST,PCB)    \
-  ikptr PAIR = IK_PAIR_ALLOC(PCB);                  \
+#define IKA_DECLARE_ALLOC_AND_CONS(PAIR,LIST,PCB)    \
+  ikptr PAIR = IKA_PAIR_ALLOC(PCB);                  \
   IK_CDR(PAIR) = LIST;                              \
   LIST=PAIR;
 
-#define IK_PAIR_ALLOC(PCB)      (ik_safe_alloc((PCB), IK_ALIGN(pair_size)) | pair_tag)
+#define IKA_PAIR_ALLOC(PCB)	(ik_safe_alloc((PCB), IK_ALIGN(pair_size)) | pair_tag)
 
 long    ik_list_length                  (ikptr x);
 void    ik_list_to_argv                 (ikptr x, char **argv);
 void    ik_list_to_argv_and_argc        (ikptr x, char **argv, long *argc);
 
-ikptr   ik_list_from_argv               (ikpcb * pcb, char ** argv);
-ikptr   ik_list_from_argv_and_argc      (ikpcb * pcb, char ** argv, long argc);
+ikptr   ika_list_from_argv              (ikpcb * pcb, char ** argv);
+ikptr   ika_list_from_argv_and_argc     (ikpcb * pcb, char ** argv, long argc);
 
 
 /** --------------------------------------------------------------------
@@ -386,13 +393,13 @@ typedef uint32_t        ikchar;
 #define IK_IS_CHAR(X)           (char_tag == (char_mask & (ikptr)(X)))
 
 #define IK_CHAR_FROM_INTEGER(X) \
-  ((ikptr)((((unsigned long)(X)) << char_shift) | char_tag))
+  ((ikptr)((((ik_ulong)(X)) << char_shift) | char_tag))
 
 #define IK_CHAR32_FROM_INTEGER(X) \
-  ((ikchar)((((unsigned long)(X)) << char_shift) | char_tag))
+  ((ikchar)((((ik_ulong)(X)) << char_shift) | char_tag))
 
 #define IK_CHAR_TO_INTEGER(X) \
-  ((unsigned long)(((ikptr)(X)) >> char_shift))
+  ((ik_ulong)(((ikptr)(X)) >> char_shift))
 
 
 /** --------------------------------------------------------------------
@@ -412,7 +419,7 @@ typedef uint32_t        ikchar;
 #define IK_STRING_LENGTH(STR)           IK_UNFIX(IK_REF((STR), off_string_length))
 #define IK_CHAR32(STR,IDX)              (((ikchar*)(((long)(STR)) + off_string_data))[IDX])
 
-extern ikptr ik_string_alloc            (ikpcb * pcb, long number_of_chars);
+extern ikptr ika_string_alloc           (ikpcb * pcb, long number_of_chars);
 extern ikptr ikrt_string_to_symbol      (ikptr, ikpcb* pcb);
 extern ikptr ikrt_strings_to_gensym     (ikptr, ikptr,  ikpcb* pcb);
 
@@ -437,8 +444,6 @@ extern ikptr ikrt_strings_to_gensym     (ikptr, ikptr,  ikpcb* pcb);
 #define off_symbol_record_proc          (disp_symbol_record_proc    - record_tag)
 #define off_symbol_record_plist         (disp_symbol_record_plist   - record_tag)
 
-ikptr   ik_cstring_to_symbol    (char*, ikpcb*);
-
 
 /** --------------------------------------------------------------------
  ** Bignum objects.
@@ -452,32 +457,25 @@ ikptr   ik_cstring_to_symbol    (char*, ikpcb*);
 #define disp_bignum_data        wordsize
 #define off_bignum_data         (disp_bignum_data - vector_tag)
 
-#define bnfst_limb_count(X)     (((unsigned long)(X)) >> bignum_length_shift)
-#define bnfst_negative(X)       (((unsigned long)(X)) & bignum_sign_mask)
+vicare_decl ikptr   ika_integer_from_int		(ikpcb* pcb, int N);
+vicare_decl ikptr   ika_integer_from_long		(ikpcb* pcb, long N);
+vicare_decl ikptr   ika_integer_from_long_long		(ikpcb* pcb, ik_llong n);
+vicare_decl ikptr   ika_integer_from_unsigned_int	(ikpcb* pcb, unsigned N);
+vicare_decl ikptr   ika_integer_from_unsigned_long	(ikpcb* pcb, ik_ulong N);
+vicare_decl ikptr   ika_integer_from_unsigned_long_long	(ikpcb* pcb, ik_ullong N);
+vicare_decl ikptr   ik_flonum_from_double		(ikpcb* pcb, double N);
 
-#define max_digits_per_limb ((wordsize==4)?10:20)
+vicare_decl int32_t	ik_integer_to_sint32 (ikptr x);
+vicare_decl int64_t	ik_integer_to_sint64 (ikptr x);
+vicare_decl uint32_t	ik_integer_to_uint32 (ikptr x);
+vicare_decl uint64_t	ik_integer_to_uint64 (ikptr x);
 
-ikptr   ik_integer_from_int		   (signed int N, ikpcb* pcb);
-ikptr   ik_integer_from_long               (signed long N, ikpcb* pcb);
-ikptr   ik_integer_from_long_long          (signed long long n, ikpcb* pcb);
-ikptr   ik_integer_from_unsigned_int	   (unsigned int N, ikpcb* pcb);
-ikptr   ik_integer_from_unsigned_long      (unsigned long N, ikpcb* pcb);
-ikptr   ik_integer_from_unsigned_long_long (unsigned long long N, ikpcb* pcb);
-ikptr   ik_flonum_from_double              (double N, ikpcb* pcb);
-
-uint32_t  ik_integer_to_uint32 (ikptr x);
-int32_t   ik_integer_to_sint32 (ikptr x);
-uint64_t  ik_integer_to_uint64 (ikptr x);
-int64_t   ik_integer_to_sint64 (ikptr x);
-
-int                 ik_integer_to_int                   (ikptr x);
-unsigned int        ik_integer_to_unsigned_int          (ikptr x);
-long                ik_integer_to_long                  (ikptr x);
-unsigned long       ik_integer_to_unsigned_long         (ikptr x);
-long long           ik_integer_to_long_long             (ikptr x);
-unsigned long long  ik_integer_to_unsigned_long_long    (ikptr x);
-
-ikptr   normalize_bignum        (long limbs, int sign, ikptr r);
+vicare_decl int                 ik_integer_to_int                   (ikptr x);
+vicare_decl unsigned int        ik_integer_to_unsigned_int          (ikptr x);
+vicare_decl long                ik_integer_to_long                  (ikptr x);
+vicare_decl ik_ulong       ik_integer_to_unsigned_long         (ikptr x);
+vicare_decl ik_llong           ik_integer_to_long_long             (ikptr x);
+vicare_decl ik_ullong  ik_integer_to_unsigned_long_long    (ikptr x);
 
 
 /** --------------------------------------------------------------------
@@ -555,18 +553,18 @@ ikptr   iku_cflonum_alloc	(ikpcb * pcb, double re, double im);
 #define pointer_size          (2 * wordsize)
 #define off_pointer_data      (disp_pointer_data - vector_tag)
 
-ikptr   ik_pointer_alloc        (unsigned long memory, ikpcb* pcb);
+ikptr   ik_pointer_alloc        (ik_ulong memory, ikpcb* pcb);
 ikptr   ikrt_is_pointer         (ikptr x);
 
 #define IK_POINTER_DATA_VOIDP(X)  \
   ((void *)IK_REF((X), off_pointer_data))
 
-#define IK_POINTER_DATA_CHARP(X)	((char *)            IK_REF((X), off_pointer_data))
-#define IK_POINTER_DATA_UINT8P(X)	((uint8_t *)         IK_REF((X), off_pointer_data))
-#define IK_POINTER_DATA_LONG(X)		((long)              IK_REF((X), off_pointer_data))
-#define IK_POINTER_DATA_LLONG(X)	((long long)         IK_REF((X), off_pointer_data))
-#define IK_POINTER_DATA_ULONG(X)	((unsigned long)     IK_REF((X), off_pointer_data))
-#define IK_POINTER_DATA_ULLONG(X)	((unsigned long long)IK_REF((X), off_pointer_data))
+#define IK_POINTER_DATA_CHARP(X)	((char *)   IK_REF((X), off_pointer_data))
+#define IK_POINTER_DATA_UINT8P(X)	((uint8_t *)IK_REF((X), off_pointer_data))
+#define IK_POINTER_DATA_LONG(X)		((long)     IK_REF((X), off_pointer_data))
+#define IK_POINTER_DATA_LLONG(X)	((ik_llong) IK_REF((X), off_pointer_data))
+#define IK_POINTER_DATA_ULONG(X)	((ik_ulong) IK_REF((X), off_pointer_data))
+#define IK_POINTER_DATA_ULLONG(X)	((ik_ullong)IK_REF((X), off_pointer_data))
 
 #define IK_POINTER_SET_NULL(X)		(IK_REF((X), off_pointer_data) = 0)
 

@@ -227,17 +227,17 @@ ikrt_glibc_if_nameindex (ikpcb * pcb)
   int           i;
   arry = if_nameindex();
   {
-    s_alist    = s_spine = IK_PAIR_ALLOC(pcb);
+    s_alist    = s_spine = IKA_PAIR_ALLOC(pcb);
     pcb->root0 = &s_alist;
     pcb->root1 = &s_spine;
     {
       for (i=0; arry[i].if_index;) {
-	IK_CAR(s_spine)  = IK_PAIR_ALLOC(pcb);
+	IK_CAR(s_spine)  = IKA_PAIR_ALLOC(pcb);
 	IK_CAAR(s_spine) = IK_FIX(arry[i].if_index);
 	ikptr	s_bv     = ik_bytevector_from_cstring(pcb, arry[i].if_name);
 	IK_CDAR(s_spine) = s_bv;
 	if (arry[++i].if_index) {
-	  IK_CDR(s_spine) = IK_PAIR_ALLOC(pcb);
+	  IK_CDR(s_spine) = IKA_PAIR_ALLOC(pcb);
 	  s_spine = IK_CDR(s_spine);
 	} else
 	  IK_CDR(s_spine) = null_object;
@@ -559,7 +559,7 @@ ikrt_glibc_lgamma (ikptr s_X, ikpcb * pcb)
   double        X   = IK_FLONUM_DATA(s_X);
   int           sgn;
   double        Y   = lgamma_r(X, &sgn);
-  ikptr         s_pair = IK_PAIR_ALLOC(pcb);
+  ikptr         s_pair = IKA_PAIR_ALLOC(pcb);
   pcb->root0 = &s_pair;
   {
     IK_CAR(s_pair) = iku_flonum_alloc(pcb, Y);
@@ -658,7 +658,7 @@ ikptr
 ikrt_glibc_rand (ikpcb * pcb)
 {
 #ifdef HAVE_RAND
-  return ik_integer_from_long((long)rand(), pcb);
+  return ika_integer_from_long(pcb, (long)rand());
 #else
   feature_failure(__func__);
 #endif
@@ -709,7 +709,7 @@ ikrt_glibc_glob (ikptr s_pattern, ikptr s_flags, ikptr s_error_handler, ikpcb * 
   G.gl_lstat    = NULL;
   rv = glob(IK_BYTEVECTOR_DATA_CHARP(s_pattern), IK_UNFIX(s_flags), handler, &G);
   if (0 == rv) {
-    ikptr       s_list = ik_list_from_argv_and_argc(pcb, G.gl_pathv, G.gl_pathc);
+    ikptr       s_list = ika_list_from_argv_and_argc(pcb, G.gl_pathv, G.gl_pathc);
     globfree(&G);
     return s_list;
   } else
@@ -735,7 +735,7 @@ ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb *pcb)
     pcb->root0 = NULL;
     return s_compiled_regex;
   } else {
-    ikptr       s_pair = IK_PAIR_ALLOC(pcb);
+    ikptr       s_pair = IKA_PAIR_ALLOC(pcb);
     char *      error_message;
     size_t      error_message_len;
     pcb->root1 = &s_pair;
@@ -775,7 +775,7 @@ ikrt_glibc_regexec (ikptr s_compiled_regex, ikptr s_string, ikptr s_flags, ikpcb
       pcb->root0 = &s_match_vector;
       {
         for (i=0; i<1+nmatch; ++i) {
-          s_pair = IK_ITEM(s_match_vector, i) = IK_PAIR_ALLOC(pcb);
+          s_pair = IK_ITEM(s_match_vector, i) = IKA_PAIR_ALLOC(pcb);
           IK_CAR(s_pair) = IK_FIX(match[i].rm_so);
           IK_CDR(s_pair) = IK_FIX(match[i].rm_eo);
         }
@@ -787,7 +787,7 @@ ikrt_glibc_regexec (ikptr s_compiled_regex, ikptr s_string, ikptr s_flags, ikpcb
     return false_object;
   default:
     {
-      ikptr       s_pair = IK_PAIR_ALLOC(pcb);
+      ikptr       s_pair = IKA_PAIR_ALLOC(pcb);
       pcb->root0 = &s_pair;
       {
         char *          errmsg;
@@ -887,7 +887,7 @@ ikrt_glibc_sysconf (ikptr s_parameter, ikpcb * pcb)
   if (-1 == value)
     return (errno)? ik_errno_to_code() : false_object;
   else
-    return ik_integer_from_long(value, pcb);
+    return ika_integer_from_long(pcb, value);
 #else
   feature_failure(__func__);
 #endif
@@ -904,7 +904,7 @@ ikrt_glibc_pathconf (ikptr s_pathname, ikptr s_parameter, ikpcb * pcb)
   if (-1 == value)
     return (errno)? ik_errno_to_code() : false_object;
   else
-    return ik_integer_from_long(value, pcb);
+    return ika_integer_from_long(pcb, value);
 #else
   feature_failure(__func__);
 #endif
@@ -920,7 +920,7 @@ ikrt_glibc_fpathconf (ikptr s_fd, ikptr s_parameter, ikpcb * pcb)
   if (-1 == value)
     return (errno)? ik_errno_to_code() : false_object;
   else
-    return ik_integer_from_long(value, pcb);
+    return ika_integer_from_long(pcb, value);
 #else
   feature_failure(__func__);
 #endif
@@ -1054,7 +1054,7 @@ ikrt_glibc_iconv (ikptr s_handle,
 #undef ERR
 #define ERR	((size_t)-1)
   if ((0 == retval) || ((ERR == retval) && (E2BIG == errno))) {
-    ikptr	s_pair = IK_PAIR_ALLOC(pcb);
+    ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
     istart = ipast - isize;
     ostart = opast - osize;
     IK_CAR(s_pair) = IK_FIX(istart);

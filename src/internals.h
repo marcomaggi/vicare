@@ -142,7 +142,18 @@ ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
 
 
 /** --------------------------------------------------------------------
- ** Prototypes and external definitions.
+ ** Objects stuff.
+ ** ----------------------------------------------------------------- */
+
+ikptr   normalize_bignum        (long limbs, int sign, ikptr r);
+#define bnfst_limb_count(X)     (((unsigned long)(X)) >> bignum_length_shift)
+#define bnfst_negative(X)       (((unsigned long)(X)) & bignum_sign_mask)
+
+#define max_digits_per_limb	((wordsize==4)?10:20)
+
+
+/** --------------------------------------------------------------------
+ ** Other prototypes and external definitions.
  ** ----------------------------------------------------------------- */
 
 extern char **		environ;
