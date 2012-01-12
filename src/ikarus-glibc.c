@@ -667,7 +667,7 @@ ikptr
 ikrt_glibc_srand (ikptr s_seed)
 {
 #ifdef HAVE_RAND
-  srand(ik_integer_to_unsigned_int(s_seed));
+  srand(ik_integer_to_uint(s_seed));
   return void_object;
 #else
   feature_failure(__func__);

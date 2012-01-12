@@ -49,7 +49,7 @@ ikrt_set_position (ikptr fd, ikptr pos /*, ikpcb* pcb */)
 {
   off_t         offset;
   off_t         rv;
-  offset = ik_integer_to_long_long(pos);
+  offset = ik_integer_to_llong(pos);
   errno  = 0;
   rv     = lseek(unfix(fd), offset, SEEK_SET);
   return (-1 != rv)? false_object : ik_errno_to_code();

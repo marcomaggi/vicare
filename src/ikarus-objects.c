@@ -269,7 +269,7 @@ ika_integer_from_long (ikpcb * pcb, signed long n)
   return bn+vector_tag;
 }
 ikptr
-ika_integer_from_long_long (ikpcb * pcb, ik_llong n)
+ika_integer_from_llong (ikpcb * pcb, ik_llong n)
 {
   if (((ik_llong)(signed long) n) == n) {
     return ika_integer_from_long(pcb, n);
@@ -289,12 +289,12 @@ ika_integer_from_long_long (ikpcb * pcb, ik_llong n)
   return bn+vector_tag;
 }
 ikptr
-ika_integer_from_unsigned_int (ikpcb * pcb, unsigned int N)
+ika_integer_from_uint (ikpcb * pcb, ik_uint N)
 {
-  return ika_integer_from_unsigned_long(pcb, (ik_ulong)N);
+  return ika_integer_from_ulong(pcb, (ik_ulong)N);
 }
 ikptr
-ika_integer_from_unsigned_long (ikpcb * pcb, ik_ulong n)
+ika_integer_from_ulong (ikpcb * pcb, ik_ulong n)
 {
   ik_ulong mxn = ((ik_ulong)-1)>>(fx_shift+1);
   if (n <= mxn) {
@@ -306,10 +306,10 @@ ika_integer_from_unsigned_long (ikpcb * pcb, ik_ulong n)
   return bn+vector_tag;
 }
 ikptr
-ika_integer_from_unsigned_long_long (ikpcb * pcb, ik_ullong n)
+ika_integer_from_ullong (ikpcb * pcb, ik_ullong n)
 {
   if (((ik_ullong)(ik_ulong) n) == n) {
-    return ika_integer_from_unsigned_long(pcb, n);
+    return ika_integer_from_ulong(pcb, n);
   }
   ikptr bn = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data+sizeof(ik_llong)));
   bcopy((char*)(&n), (char*)(bn+disp_bignum_data), sizeof(ik_llong));
@@ -357,8 +357,8 @@ ik_integer_to_long (ikptr x)
       return (long)(ref(x, off_bignum_data));
   }
 }
-unsigned int
-ik_integer_to_unsigned_int (ikptr x)
+ik_uint
+ik_integer_to_uint (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
     return IK_UNFIX(x);
@@ -366,11 +366,11 @@ ik_integer_to_unsigned_int (ikptr x)
     return 0;
   else {
     assert(! bnfst_negative(ref(x, -vector_tag)));
-    return (unsigned int)(ref(x, off_bignum_data));
+    return (ik_uint)(ref(x, off_bignum_data));
   }
 }
 ik_ulong
-ik_integer_to_unsigned_long (ikptr x)
+ik_integer_to_ulong (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
     return IK_UNFIX(x);
@@ -382,7 +382,7 @@ ik_integer_to_unsigned_long (ikptr x)
   }
 }
 ik_llong
-ik_integer_to_long_long (ikptr x)
+ik_integer_to_llong (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
     return IK_UNFIX(x);
@@ -404,7 +404,7 @@ ik_integer_to_long_long (ikptr x)
   }
 }
 ik_ullong
-ik_integer_to_unsigned_long_long (ikptr x)
+ik_integer_to_ullong (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
     return (ik_ullong)IK_UNFIX(x);

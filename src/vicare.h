@@ -457,25 +457,25 @@ extern ikptr ikrt_strings_to_gensym     (ikptr, ikptr,  ikpcb* pcb);
 #define disp_bignum_data        wordsize
 #define off_bignum_data         (disp_bignum_data - vector_tag)
 
-vicare_decl ikptr   ika_integer_from_int		(ikpcb* pcb, int N);
-vicare_decl ikptr   ika_integer_from_long		(ikpcb* pcb, long N);
-vicare_decl ikptr   ika_integer_from_long_long		(ikpcb* pcb, ik_llong n);
-vicare_decl ikptr   ika_integer_from_unsigned_int	(ikpcb* pcb, unsigned N);
-vicare_decl ikptr   ika_integer_from_unsigned_long	(ikpcb* pcb, ik_ulong N);
-vicare_decl ikptr   ika_integer_from_unsigned_long_long	(ikpcb* pcb, ik_ullong N);
-vicare_decl ikptr   ik_flonum_from_double		(ikpcb* pcb, double N);
+vicare_decl ikptr	ika_integer_from_int	(ikpcb* pcb, int N);
+vicare_decl ikptr	ika_integer_from_long	(ikpcb* pcb, long N);
+vicare_decl ikptr	ika_integer_from_llong	(ikpcb* pcb, ik_llong N);
+vicare_decl ikptr	ika_integer_from_uint	(ikpcb* pcb, ik_uint N);
+vicare_decl ikptr	ika_integer_from_ulong	(ikpcb* pcb, ik_ulong N);
+vicare_decl ikptr	ika_integer_from_ullong	(ikpcb* pcb, ik_ullong N);
+vicare_decl ikptr	ik_flonum_from_double	(ikpcb* pcb, double N);
 
-vicare_decl int32_t	ik_integer_to_sint32 (ikptr x);
-vicare_decl int64_t	ik_integer_to_sint64 (ikptr x);
-vicare_decl uint32_t	ik_integer_to_uint32 (ikptr x);
-vicare_decl uint64_t	ik_integer_to_uint64 (ikptr x);
+vicare_decl int32_t	ik_integer_to_sint32	(ikptr x);
+vicare_decl int64_t	ik_integer_to_sint64	(ikptr x);
+vicare_decl uint32_t	ik_integer_to_uint32	(ikptr x);
+vicare_decl uint64_t	ik_integer_to_uint64	(ikptr x);
 
-vicare_decl int                 ik_integer_to_int                   (ikptr x);
-vicare_decl unsigned int        ik_integer_to_unsigned_int          (ikptr x);
-vicare_decl long                ik_integer_to_long                  (ikptr x);
-vicare_decl ik_ulong       ik_integer_to_unsigned_long         (ikptr x);
-vicare_decl ik_llong           ik_integer_to_long_long             (ikptr x);
-vicare_decl ik_ullong  ik_integer_to_unsigned_long_long    (ikptr x);
+vicare_decl int		ik_integer_to_int	(ikptr x);
+vicare_decl long	ik_integer_to_long	(ikptr x);
+vicare_decl ik_llong	ik_integer_to_llong	(ikptr x);
+vicare_decl ik_uint	ik_integer_to_uint	(ikptr x);
+vicare_decl ik_ulong	ik_integer_to_ulong	(ikptr x);
+vicare_decl ik_ullong	ik_integer_to_ullong    (ikptr x);
 
 
 /** --------------------------------------------------------------------

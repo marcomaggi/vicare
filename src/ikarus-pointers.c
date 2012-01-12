@@ -149,7 +149,7 @@ ikrt_pointer_to_int (ikptr pointer, ikpcb* pcb)
 {
   void *        memory;
   memory = IK_POINTER_DATA_VOIDP(pointer);
-  return ika_integer_from_unsigned_long(pcb, (unsigned long)memory);
+  return ika_integer_from_ulong(pcb, (unsigned long)memory);
 }
 ikptr
 ikrt_fx_to_pointer(ikptr x, ikpcb* pcb)
@@ -179,7 +179,7 @@ ikrt_pointer_add (ikptr ptr, ikptr delta, ikpcb * pcb)
   unsigned long long memory;
   long long          ptrdiff;
   memory  = IK_POINTER_DATA_ULLONG(ptr);
-  ptrdiff = ik_integer_to_long_long(delta);
+  ptrdiff = ik_integer_to_llong(delta);
   if (0 <= ptrdiff) {
     if (ULONG_MAX - ptrdiff < memory) /* => ULONG_MAX < ptrdiff + memory */
       return false_object;
@@ -549,7 +549,7 @@ ikrt_ref_uint32 (ikptr pointer, ikptr offset, ikpcb * pcb)
 {
   uint8_t *     memory = IK_POINTER_DATA_UINT8P(pointer);
   uint32_t *    data   = (uint32_t *)(memory + unfix(offset));
-  return ika_integer_from_unsigned_long(pcb, (unsigned long)(*data));
+  return ika_integer_from_ulong(pcb, (unsigned long)(*data));
 }
 ikptr
 ikrt_ref_sint32 (ikptr pointer, ikptr offset, ikpcb * pcb)
@@ -563,14 +563,14 @@ ikrt_ref_uint64 (ikptr pointer, ikptr offset, ikpcb * pcb)
 {
   uint8_t *     memory = IK_POINTER_DATA_UINT8P(pointer);
   uint64_t *    data   = (uint64_t *)(memory + unfix(offset));
-  return ika_integer_from_unsigned_long_long(pcb, (unsigned long long)(*data));
+  return ika_integer_from_ullong(pcb, (unsigned long long)(*data));
 }
 ikptr
 ikrt_ref_sint64 (ikptr pointer, ikptr offset, ikpcb * pcb)
 {
   uint8_t *     memory = IK_POINTER_DATA_UINT8P(pointer);
   int64_t *     data   = (int64_t *)(memory + unfix(offset));
-  return ika_integer_from_long_long(pcb, (long long)(*data));
+  return ika_integer_from_llong(pcb, (long long)(*data));
 }
 
 /* ------------------------------------------------------------------ */
@@ -635,7 +635,7 @@ ikptr
 ikrt_ref_uint(ikptr p, ikptr off , ikpcb* pcb)
 {
   unsigned int r = *((unsigned int*)(((long)ref(p, off_pointer_data)) + unfix(off)));
-  return (wordsize == 8)? fix(r) : ika_integer_from_unsigned_long(pcb, r);
+  return (wordsize == 8)? fix(r) : ika_integer_from_ulong(pcb, r);
 }
 ikptr
 ikrt_ref_long(ikptr p, ikptr off , ikpcb* pcb)
@@ -647,19 +647,19 @@ ikptr
 ikrt_ref_ulong(ikptr p, ikptr off , ikpcb* pcb)
 {
   unsigned long r = *((unsigned long*)(((long)ref(p, off_pointer_data)) + unfix(off)));
-  return ika_integer_from_unsigned_long(pcb, r);
+  return ika_integer_from_ulong(pcb, r);
 }
 ikptr
 ikrt_ref_longlong(ikptr p, ikptr off , ikpcb* pcb)
 {
   signed long long r = *((signed long long*)(((long)ref(p, off_pointer_data)) + unfix(off)));
-  return ika_integer_from_long_long(pcb, r);
+  return ika_integer_from_llong(pcb, r);
 }
 ikptr
 ikrt_ref_ulonglong(ikptr p, ikptr off , ikpcb* pcb)
 {
   unsigned long long r = *((unsigned long long*)(((long)ref(p, off_pointer_data)) + unfix(off)));
-  return ika_integer_from_unsigned_long_long(pcb, r);
+  return ika_integer_from_ullong(pcb, r);
 }
 
 
@@ -798,7 +798,7 @@ ikptr
 ikrt_set_uint (ikptr pointer, ikptr byte_offset, ikptr value /*, ikpcb* pcb*/)
 {
   unsigned long  memory = IK_POINTER_DATA_ULONG(pointer) + unfix(byte_offset);
-  *((unsigned int*)memory) = ik_integer_to_unsigned_long(value);
+  *((unsigned int*)memory) = ik_integer_to_ulong(value);
   return void_object;
 }
 
@@ -813,7 +813,7 @@ ikptr
 ikrt_set_ulong (ikptr pointer, ikptr byte_offset, ikptr value /*, ikpcb* pcb*/)
 {
   unsigned long  memory = IK_POINTER_DATA_ULONG(pointer) + unfix(byte_offset);
-  *((unsigned long*)memory) = ik_integer_to_unsigned_long(value);
+  *((unsigned long*)memory) = ik_integer_to_ulong(value);
   return void_object;
 }
 
@@ -821,14 +821,14 @@ ikptr
 ikrt_set_longlong (ikptr pointer, ikptr byte_offset, ikptr value /*, ikpcb* pcb*/)
 {
   unsigned long  memory = IK_POINTER_DATA_ULONG(pointer) + unfix(byte_offset);
-  *((long long*)memory) = ik_integer_to_long_long(value);
+  *((long long*)memory) = ik_integer_to_llong(value);
   return void_object;
 }
 ikptr
 ikrt_set_ulonglong (ikptr pointer, ikptr byte_offset, ikptr value /*, ikpcb* pcb*/)
 {
   unsigned long  memory = IK_POINTER_DATA_ULONG(pointer) + unfix(byte_offset);
-  *((unsigned long long*)memory) = ik_integer_to_unsigned_long_long(value);
+  *((unsigned long long*)memory) = ik_integer_to_ullong(value);
   return void_object;
 }
 

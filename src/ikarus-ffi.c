@@ -301,22 +301,22 @@ native_to_scheme_value_cast (type_id_t type_id, void * buffer, ikpcb* pcb)
   case TYPE_ID_SINT8:   return fix(*(( int8_t*) buffer));
   case TYPE_ID_UINT16:  return fix(*((uint16_t*)buffer));
   case TYPE_ID_SINT16:  return fix(*(( int16_t*)buffer));
-  case TYPE_ID_UINT32:  return ika_integer_from_unsigned_long(pcb, *((uint32_t*) buffer));
+  case TYPE_ID_UINT32:  return ika_integer_from_ulong(pcb, *((uint32_t*) buffer));
   case TYPE_ID_SINT32:  return ika_integer_from_long         (pcb, *((long*)     buffer));
-  case TYPE_ID_UINT64:  return ika_integer_from_unsigned_long_long(pcb, *((ik_ullong*)buffer));
-  case TYPE_ID_SINT64:  return ika_integer_from_long_long    (pcb, *((ik_llong*) buffer));
+  case TYPE_ID_UINT64:  return ika_integer_from_ullong(pcb, *((ik_ullong*)buffer));
+  case TYPE_ID_SINT64:  return ika_integer_from_llong    (pcb, *((ik_llong*) buffer));
 
   case TYPE_ID_FLOAT:   return ik_flonum_from_double         (pcb, *((float*)      buffer));
   case TYPE_ID_DOUBLE:  return ik_flonum_from_double         (pcb, *((double*)     buffer));
   case TYPE_ID_POINTER: return ik_pointer_alloc              ((long)*((void**)buffer), pcb);
 
-  case TYPE_ID_UCHAR:   return ika_integer_from_unsigned_long(pcb, *((unsigned char*) buffer));
+  case TYPE_ID_UCHAR:   return ika_integer_from_ulong(pcb, *((unsigned char*) buffer));
   case TYPE_ID_SCHAR:   return ika_integer_from_long         (pcb, *((signed char*)   buffer));
-  case TYPE_ID_USHORT:  return ika_integer_from_unsigned_long(pcb, *((unsigned short*)buffer));
+  case TYPE_ID_USHORT:  return ika_integer_from_ulong(pcb, *((unsigned short*)buffer));
   case TYPE_ID_SSHORT:  return ika_integer_from_long         (pcb, *((signed short*)  buffer));
-  case TYPE_ID_UINT:    return ika_integer_from_unsigned_long(pcb, *((unsigned int*)  buffer));
+  case TYPE_ID_UINT:    return ika_integer_from_ulong(pcb, *((unsigned int*)  buffer));
   case TYPE_ID_SINT:    return ika_integer_from_long         (pcb, *((signed int*)    buffer));
-  case TYPE_ID_ULONG:   return ika_integer_from_unsigned_long(pcb, *((ik_ulong*)      buffer));
+  case TYPE_ID_ULONG:   return ika_integer_from_ulong(pcb, *((ik_ulong*)      buffer));
   case TYPE_ID_SLONG:   return ika_integer_from_long         (pcb, *((long*)          buffer));
 
   default:

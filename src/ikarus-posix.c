@@ -305,72 +305,72 @@ fill_stat_struct (struct stat * S, ikptr D, ikpcb* pcb)
 {
 #if (4 == IK_SIZE_OF_VOIDP)
   /* 32-bit platforms */
-  ref(D, off_record_data+0*wordsize) = ika_integer_from_unsigned_long(pcb, (ik_ulong)S->st_mode);
-  ref(D, off_record_data+1*wordsize) = ika_integer_from_unsigned_long(pcb, (ik_ulong)S->st_ino);
+  ref(D, off_record_data+0*wordsize) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_mode);
+  ref(D, off_record_data+1*wordsize) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_ino);
   ref(D, off_record_data+2*wordsize) = ika_integer_from_long         (pcb, (long)S->st_dev);
-  ref(D, off_record_data+3*wordsize) = ika_integer_from_unsigned_long(pcb, (long)S->st_nlink);
+  ref(D, off_record_data+3*wordsize) = ika_integer_from_ulong(pcb, (long)S->st_nlink);
 
-  ref(D, off_record_data+4*wordsize) = ika_integer_from_unsigned_long(pcb, (ik_ulong)S->st_uid);
-  ref(D, off_record_data+5*wordsize) = ika_integer_from_unsigned_long(pcb, (ik_ulong)S->st_gid);
-  ref(D, off_record_data+6*wordsize) = ika_integer_from_unsigned_long_long(pcb, (ik_ullong)S->st_size);
+  ref(D, off_record_data+4*wordsize) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_uid);
+  ref(D, off_record_data+5*wordsize) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_gid);
+  ref(D, off_record_data+6*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_size);
 
   ref(D, off_record_data+7*wordsize) = ika_integer_from_long(pcb, (long)S->st_atime);
 #ifdef HAVE_STAT_ST_ATIME_USEC
-  ref(D, off_record_data+8*wordsize) = ika_integer_from_unsigned_long(pcb, (ik_ulong)S->st_atime_usec);
+  ref(D, off_record_data+8*wordsize) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_atime_usec);
 #else
   ref(D, off_record_data+8*wordsize) = false_object;
 #endif
 
   ref(D, off_record_data+9*wordsize)  = ika_integer_from_long(pcb, (long)S->st_mtime);
 #ifdef HAVE_STAT_ST_MTIME_USEC
-  ref(D, off_record_data+10*wordsize) = ika_integer_from_unsigned_long(pcb, (ik_ulong)S->st_mtime_usec);
+  ref(D, off_record_data+10*wordsize) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_mtime_usec);
 #else
   ref(D, off_record_data+10*wordsize) = false_object;
 #endif
 
   ref(D, off_record_data+11*wordsize) = ika_integer_from_long(pcb, (long)S->st_ctime);
 #ifdef HAVE_STAT_ST_CTIME_USEC
-  ref(D, off_record_data+12*wordsize) = ika_integer_from_unsigned_long(pcb, (ik_ulong)S->st_ctime_usec);
+  ref(D, off_record_data+12*wordsize) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_ctime_usec);
 #else
   ref(D, off_record_data+12*wordsize) = false_object;
 #endif
 
-  ref(D, off_record_data+13*wordsize) = ika_integer_from_unsigned_long_long(pcb, (ik_ullong)S->st_blocks);
-  ref(D, off_record_data+14*wordsize) = ika_integer_from_unsigned_long_long(pcb, (ik_ullong)S->st_blksize);
+  ref(D, off_record_data+13*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_blocks);
+  ref(D, off_record_data+14*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_blksize);
 #else
   /* 64-bit platforms */
-  ref(D, off_record_data+0*wordsize) = ika_integer_from_unsigned_long_long(pcb, (ik_ullong)S->st_mode);
-  ref(D, off_record_data+1*wordsize) = ika_integer_from_unsigned_long_long(pcb, (ik_ullong)S->st_ino);
-  ref(D, off_record_data+2*wordsize) = ika_integer_from_long_long(pcb, (long)S->st_dev);
-  ref(D, off_record_data+3*wordsize) = ika_integer_from_unsigned_long_long(pcb, (long)S->st_nlink);
+  ref(D, off_record_data+0*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_mode);
+  ref(D, off_record_data+1*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_ino);
+  ref(D, off_record_data+2*wordsize) = ika_integer_from_llong(pcb, (long)S->st_dev);
+  ref(D, off_record_data+3*wordsize) = ika_integer_from_ullong(pcb, (long)S->st_nlink);
 
-  ref(D, off_record_data+4*wordsize) = ika_integer_from_unsigned_long_long(pcb, (ik_ullong)S->st_uid);
-  ref(D, off_record_data+5*wordsize) = ika_integer_from_unsigned_long_long(pcb, (ik_ullong)S->st_gid);
-  ref(D, off_record_data+6*wordsize) = ika_integer_from_unsigned_long_long(pcb, (ik_ullong)S->st_size);
+  ref(D, off_record_data+4*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_uid);
+  ref(D, off_record_data+5*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_gid);
+  ref(D, off_record_data+6*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_size);
 
-  ref(D, off_record_data+7*wordsize) = ika_integer_from_long_long(pcb, (long)S->st_atime);
+  ref(D, off_record_data+7*wordsize) = ika_integer_from_llong(pcb, (long)S->st_atime);
 #ifdef HAVE_STAT_ST_ATIME_USEC
-  ref(D, off_record_data+8*wordsize) = ika_integer_from_unsigned_long_long(pcb, (ik_ullong)S->st_atime_usec);
+  ref(D, off_record_data+8*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_atime_usec);
 #else
   ref(D, off_record_data+8*wordsize) = false_object;
 #endif
 
-  ref(D, off_record_data+9*wordsize)  = ika_integer_from_long_long(pcb, (long)S->st_mtime);
+  ref(D, off_record_data+9*wordsize)  = ika_integer_from_llong(pcb, (long)S->st_mtime);
 #ifdef HAVE_STAT_ST_MTIME_USEC
-  ref(D, off_record_data+10*wordsize) = ika_integer_from_unsigned_long_long(pcb, (ik_ullong)S->st_mtime_usec);
+  ref(D, off_record_data+10*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_mtime_usec);
 #else
   ref(D, off_record_data+10*wordsize) = false_object;
 #endif
 
-  ref(D, off_record_data+11*wordsize) = ika_integer_from_long_long(pcb, (long)S->st_ctime);
+  ref(D, off_record_data+11*wordsize) = ika_integer_from_llong(pcb, (long)S->st_ctime);
 #ifdef HAVE_STAT_ST_CTIME_USEC
-  ref(D, off_record_data+12*wordsize) = ika_integer_from_unsigned_long_long(pcb, (ik_ullong)S->st_ctime_usec);
+  ref(D, off_record_data+12*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_ctime_usec);
 #else
   ref(D, off_record_data+12*wordsize) = false_object;
 #endif
 
-  ref(D, off_record_data+13*wordsize) = ika_integer_from_unsigned_long_long(pcb, (ik_ullong)S->st_blocks);
-  ref(D, off_record_data+14*wordsize) = ika_integer_from_unsigned_long_long(pcb, (ik_ullong)S->st_blksize);
+  ref(D, off_record_data+13*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_blocks);
+  ref(D, off_record_data+14*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_blksize);
 #endif
   return 0;
 }
@@ -418,9 +418,9 @@ ikrt_posix_file_size(ikptr filename_bv, ikpcb* pcb)
   rv       = stat(filename, &S);
   if (0 == rv) {
     if (sizeof(off_t) == sizeof(long)) {
-      return ika_integer_from_unsigned_long(pcb, S.st_size);
+      return ika_integer_from_ulong(pcb, S.st_size);
     } else if (sizeof(off_t) == sizeof(long long)) {
-      return ika_integer_from_unsigned_long_long(pcb, S.st_size);
+      return ika_integer_from_ullong(pcb, S.st_size);
     } else {
       fprintf(stderr, "Vicare internal error: invalid off_t size\n");
       exit(EXIT_FAILURE);
@@ -992,7 +992,7 @@ ikrt_posix_pread (ikptr fd, ikptr buffer_bv, ikptr size_fx, ikptr off_num)
   buffer   = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv);
   size     = (size_t)((false_object!=size_fx)?
                       unfix(size_fx) : IK_BYTEVECTOR_LENGTH(buffer_bv));
-  off      = (off_t) ik_integer_to_long_long(off_num);
+  off      = (off_t) ik_integer_to_llong(off_num);
   errno    = 0;
   rv       = pread(unfix(fd), buffer, size, off);
   return (0 <= rv)? fix(rv) : ik_errno_to_code();
@@ -1020,7 +1020,7 @@ ikrt_posix_pwrite (ikptr fd, ikptr buffer_bv, ikptr size_fx, ikptr off_num)
   buffer   = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv);
   size     = (size_t)((false_object!=size_fx)?
                       unfix(size_fx) : IK_BYTEVECTOR_LENGTH(buffer_bv));
-  off      = (off_t) ik_integer_to_long_long(off_num);
+  off      = (off_t) ik_integer_to_llong(off_num);
   errno    = 0;
   rv       = pwrite(unfix(fd), buffer, size, off);
   return (0 <= rv)? fix(rv) : ik_errno_to_code();
@@ -1030,10 +1030,10 @@ ikrt_posix_lseek (ikptr fd, ikptr off_num, ikptr whence_fx, ikpcb * pcb)
 {
   off_t         off;
   off_t         rv;
-  off    = ik_integer_to_long_long(off_num);
+  off    = ik_integer_to_llong(off_num);
   errno  = 0;
   rv     = lseek(unfix(fd), off, unfix(whence_fx));
-  return (0 <= rv)? ika_integer_from_long_long(pcb, (long long)rv) : ik_errno_to_code();
+  return (0 <= rv)? ika_integer_from_llong(pcb, (long long)rv) : ik_errno_to_code();
 }
 
 /* ------------------------------------------------------------------ */
@@ -1053,7 +1053,7 @@ ikrt_posix_readv (ikptr fd, ikptr buffers, ikpcb * pcb)
   }
   errno    = 0;
   rv       = readv(unfix(fd), bufs, number_of_buffers);
-  return (0 <= rv)? ika_integer_from_long_long(pcb, (long long)rv) : ik_errno_to_code();
+  return (0 <= rv)? ika_integer_from_llong(pcb, (long long)rv) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_writev (ikptr fd, ikptr buffers, ikpcb * pcb)
@@ -1070,7 +1070,7 @@ ikrt_posix_writev (ikptr fd, ikptr buffers, ikpcb * pcb)
   }
   errno    = 0;
   rv       = writev(unfix(fd), bufs, number_of_buffers);
-  return (0 <= rv)? ika_integer_from_long_long(pcb, (long long)rv) : ik_errno_to_code();
+  return (0 <= rv)? ika_integer_from_llong(pcb, (long long)rv) : ik_errno_to_code();
 }
 
 /* ------------------------------------------------------------------ */
@@ -1936,7 +1936,7 @@ netent_to_struct (ikpcb * pcb, ikptr rtd, struct netent * src)
       IK_CAR(pair) = ik_bytevector_from_cstring(pcb, src->n_aliases[i]);
     }
     IK_FIELD(dst, 2) = IK_FIX(src->n_addrtype);
-    IK_FIELD(dst, 3) = ika_integer_from_unsigned_long_long(pcb, (ik_ullong)src->n_net);
+    IK_FIELD(dst, 3) = ika_integer_from_ullong(pcb, (ik_ullong)src->n_net);
   }
   pcb->root1 = NULL;
   return dst;
@@ -1955,7 +1955,7 @@ ikrt_posix_getnetbyaddr (ikptr rtd, ikptr net_num, ikptr type, ikpcb * pcb)
 {
   uint32_t              net;
   struct netent *       entry;
-  net = (uint32_t)ik_integer_to_unsigned_long(net_num);
+  net = (uint32_t)ik_integer_to_ulong(net_num);
   entry = getnetbyaddr(net, unfix(type));
   return (NULL != entry)? netent_to_struct(pcb, rtd, entry) : false_object;
 }
@@ -2725,7 +2725,7 @@ tm_to_struct (ikptr rtd, struct tm * src, ikpcb * pcb)
 ikptr
 ikrt_posix_localtime (ikptr rtd, ikptr time_num, ikpcb * pcb)
 {
-  time_t        time = (time_t)ik_integer_to_unsigned_long(time_num);
+  time_t        time = (time_t)ik_integer_to_ulong(time_num);
   struct tm     T;
   struct tm *   rv;
   rv    = localtime_r(&time, &T);
@@ -2734,7 +2734,7 @@ ikrt_posix_localtime (ikptr rtd, ikptr time_num, ikpcb * pcb)
 ikptr
 ikrt_posix_gmtime (ikptr rtd, ikptr time_num, ikpcb * pcb)
 {
-  time_t        time = (time_t)ik_integer_to_unsigned_long(time_num);
+  time_t        time = (time_t)ik_integer_to_ulong(time_num);
   struct tm     T;
   struct tm *   rv;
   errno = 0;
