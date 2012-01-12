@@ -51,54 +51,14 @@
 #  define __attribute__(...)	/* empty */
 #endif
 
+#ifndef vicare_decl
+#  define vicare_decl		extern
+#endif
+
 
 /** --------------------------------------------------------------------
  ** Global constants.
  ** ----------------------------------------------------------------- */
-
-#define cardsize 512
-#define cards_per_page 8
-
-#define IK_MOST_BYTES_IN_MINOR	0x10000000
-
-#define old_gen_mask		0x00000007
-#define new_gen_mask		0x00000008
-#define gen_mask		0x0000000F
-#define new_gen_tag		0x00000008
-#define meta_dirty_mask		0x000000F0
-#define type_mask		0x00000F00
-#define scannable_mask		0x0000F000
-#define dealloc_mask		0x000F0000
-#define large_object_mask	0x00100000
-#define meta_dirty_shift	4
-
-#define hole_type		0x00000000
-#define mainheap_type		0x00000100
-#define mainstack_type		0x00000200
-#define pointers_type		0x00000300
-#define dat_type		0x00000400
-#define code_type		0x00000500
-#define weak_pairs_type		0x00000600
-#define symbols_type		0x00000700
-
-#define scannable_tag		0x00001000
-#define unscannable_tag		0x00000000
-
-#define dealloc_tag_un		0x00010000
-#define dealloc_tag_at		0x00020000
-#define retain_tag		0x00000000
-
-#define large_object_tag	0x00100000
-
-#define hole_mt         (hole_type       | unscannable_tag | retain_tag)
-#define mainheap_mt     (mainheap_type   | unscannable_tag | retain_tag)
-#define mainstack_mt    (mainstack_type  | unscannable_tag | retain_tag)
-#define pointers_mt     (pointers_type   | scannable_tag   | dealloc_tag_un)
-#define symbols_mt      (symbols_type    | scannable_tag   | dealloc_tag_un)
-#define data_mt         (dat_type        | unscannable_tag | dealloc_tag_un)
-#define code_mt         (code_type       | scannable_tag   | dealloc_tag_un)
-#define weak_pairs_mt   (weak_pairs_type | scannable_tag   | dealloc_tag_un)
-
 
 #define pagesize		4096
 
@@ -116,9 +76,11 @@
 #define IK_HEAP_EXT_SIZE  (32 * 4096)
 #define IK_HEAPSIZE       (1024 * ((wordsize==4)?1:2) * 4096) /* 4/8 MB */
 
-#define IK_FASL_HEADER \
-  ((sizeof(ikptr) == 4) ? "#@IK01" : "#@IK02")
-#define IK_FASL_HEADER_LEN (strlen(IK_FASL_HEADER))
+#define IK_FASL_HEADER		((sizeof(ikptr) == 4)? "#@IK01" : "#@IK02")
+#define IK_FASL_HEADER_LEN	(strlen(IK_FASL_HEADER))
+
+#define ik_ptr_page_size \
+  ((pagesize - sizeof(long) - sizeof(struct ik_ptr_page*))/sizeof(ikptr))
 
 /* Given the  pointer X evaluate to the  index of the memory  page it is
    in. */
@@ -131,11 +93,8 @@
 #define IK_ALIGN_TO_PREV_PAGE(x) \
   ((((unsigned long)(x)) >> pageshift) << pageshift)
 
-#define call_instruction_size \
-  ((wordsize == 4) ? 5 : 10)
-#define disp_frame_size   (- (call_instruction_size + 3 * wordsize))
-#define disp_frame_offset (- (call_instruction_size + 2 * wordsize))
-#define disp_multivale_rp (- (call_instruction_size + 1 * wordsize))
+#define IK_ASS(LEFT,RIGHT)	\
+  { ikptr s_tmp = (RIGHT); (LEFT) = s_tmp; }
 
 
 /** --------------------------------------------------------------------
@@ -162,14 +121,6 @@ typedef struct ikdl{ /* double-link */
   struct ikdl* next;
 } ikdl;
 
-#define ik_ptr_page_size \
-  ((pagesize - sizeof(long) - sizeof(struct ik_ptr_page*))/sizeof(ikptr))
-
-typedef struct ik_ptr_page{
-  long count;
-  struct ik_ptr_page* next;
-  ikptr ptr[ik_ptr_page_size];
-} ik_ptr_page;
 
 /* Node in  a linked list  referencing all the generated  FFI callbacks.
    It is used  to allow the garbage collector not  to collect data still
@@ -181,6 +132,12 @@ typedef struct ik_callback_locative {
   ikptr         data;                   /* Scheme value holding required data */
   struct ik_callback_locative * next;   /* pointer to next link */
 } ik_callback_locative;
+
+typedef struct ik_ptr_page {
+  long count;
+  struct ik_ptr_page* next;
+  ikptr ptr[ik_ptr_page_size];
+} ik_ptr_page;
 
 typedef struct ikpcb
 {
@@ -296,14 +253,6 @@ ikptr   ik_safe_alloc           (ikpcb* pcb, unsigned long size);
 void    ik_print                (ikptr x);
 void	ik_print_no_newline	(ikptr x);
 void    ik_fprint               (FILE*, ikptr x);
-
-
-/** --------------------------------------------------------------------
- ** Helper macros.
- ** ----------------------------------------------------------------- */
-
-#define IK_ASS(LEFT,RIGHT)	\
-  { ikptr s_tmp = (RIGHT); (LEFT) = s_tmp; }
 
 
 /** --------------------------------------------------------------------

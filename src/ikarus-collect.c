@@ -22,14 +22,19 @@
  ** ----------------------------------------------------------------- */
 
 #include "internals.h"
-#include <stdint.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/time.h>
 
-/* ------------------------------------------------------------------ */
+
+/** --------------------------------------------------------------------
+ ** Constants.
+ ** ----------------------------------------------------------------- */
+
+#define cardsize		512
+#define cards_per_page		8
 
 #define minimum_heap_size (pagesize * 1024 * 4)
 #define maximum_heap_size (pagesize * 1024 * 8)
