@@ -14025,7 +14025,7 @@ initialised to nil.
 Built in Scheme objects are mostly implemented in the C language portion
 of the source code, but many core operations are also reimplemented at
 the Scheme level.  The overall definitions are in the C language file
-@file{ikarus.h} and the definition of many values is duplicated in the
+@file{vicare.h} and the definition of many values is duplicated in the
 Scheme language compiler @file{ikarus.compiler.sls}.
 
 @menu
