@@ -10117,8 +10117,8 @@ Expressions:
 @defun regcomp @var{pattern} @var{flags}
 Interface to the C function @cfunc{regcomp}, @glibcref{POSIX Regexp
 Compilation, regcomp}.  Compile the regular expression in @var{pattern}
-accoding to @var{flags}.  If successful return a bytevector referencing
-the compiled regexp, else raise an exception with condition components
+accoding to @var{flags}.  If successful return a pointer referencing the
+compiled regexp, else raise an exception with condition components
 @condition{error}, @condition{who}, @condition{message},
 @condition{irritants}.
 
@@ -10126,10 +10126,10 @@ the compiled regexp, else raise an exception with condition components
 expression.  @var{flags} must be a fixnum resulting from the bitwise
 combination (@func{fxior}) of @code{REG_} constants.
 
-The bytevector returned in case of success contains a @code{regex_t}
-data structure whose fields must be released explicitly by
-@func{regfree}, or they are automatically released by the garbage
-collector whenever the bytevector itself is collected.
+The pointer returned in case of success references a @code{regex_t} data
+structure whose fields must be released explicitly by @func{regfree}, or
+they are automatically released by the garbage collector whenever the
+pointer itself is collected.
 @end defun
 
 
@@ -10137,6 +10137,11 @@ collector whenever the bytevector itself is collected.
 Interface to the C function @cfunc{regexec}, @glibcref{Matching POSIX
 Regexps, regexec}.  Attempt to match @var{string} against the
 precompiled regular expression @var{regex} according to @var{flags}.
+
+@var{regex} must be a pointer returned by a previous call to
+@func{regcomp}; @var{string} must be a string or bytevector in @ascii{}
+encoding; @var{flags} must be a fixnum representing matching flags, we
+can use zero for no flags.
 
 If one or more matches occur return a vector holding pairs describing
 the portions of @var{string} that did match; if no match occurs return
@@ -10161,9 +10166,12 @@ the returned vector has at least one element.
 @defun regfree @var{regex}
 Interface to the C function @cfunc{regfree}, @glibcref{Regexp Cleanup,
 regfree}.  Release the resources associated to the compiled regular
-expression @var{regex}, which must be a bytevector, then clear the
-bytevector to zero.  Releasing occurs only if at least one byte of
-@var{regex} is non--zero.
+expression @var{regex}, which must be a pointer.
+
+It is safe to apply this function multiple times to the same @var{regex}
+pointer object: releasing occurs only if the first time, subsequent
+applications do nothing.  After the resources have been released:
+@var{regex} is reset to @cnull{}.
 @end defun
 
 @c page

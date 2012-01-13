@@ -100,7 +100,7 @@ ikptr
 ikrt_glibc_dirfd (ikptr pointer)
 {
 #ifdef HAVE_DIRFD
-  DIR *  stream = (DIR *)ref(pointer, off_pointer_data);
+  DIR *  stream = (DIR *)IK_POINTER_DATA(pointer);
   int    rv;
   errno = 0;
   rv    = dirfd(stream);
@@ -232,19 +232,18 @@ ikrt_glibc_if_nameindex (ikpcb * pcb)
     pcb->root1 = &s_spine;
     {
       for (i=0; arry[i].if_index;) {
-	IK_CAR(s_spine)  = IKA_PAIR_ALLOC(pcb);
+	IK_ASS(IK_CAR(s_spine), IKA_PAIR_ALLOC(pcb));
 	IK_CAAR(s_spine) = IK_FIX(arry[i].if_index);
-	ikptr	s_bv     = ika_bytevector_from_cstring(pcb, arry[i].if_name);
-	IK_CDAR(s_spine) = s_bv;
+	IK_ASS(IK_CDAR(s_spine), ika_bytevector_from_cstring(pcb, arry[i].if_name));
 	if (arry[++i].if_index) {
-	  IK_CDR(s_spine) = IKA_PAIR_ALLOC(pcb);
+	  IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
 	  s_spine = IK_CDR(s_spine);
 	} else
 	  IK_CDR(s_spine) = null_object;
       }
     }
-    pcb->root0 = NULL;
     pcb->root1 = NULL;
+    pcb->root0 = NULL;
   }
   if_freenameindex(arry);
   return s_alist;
@@ -683,9 +682,10 @@ ikptr
 ikrt_glibc_fnmatch (ikptr s_pattern, ikptr s_string, ikptr s_flags)
 {
 #ifdef HAVE_FNMATCH
-  return fnmatch(IK_BYTEVECTOR_DATA_CHARP(s_pattern),
-                 IK_BYTEVECTOR_DATA_CHARP(s_string),
-                 IK_UNFIX(s_flags))? false_object : true_object;
+  int	rv = fnmatch(IK_BYTEVECTOR_DATA_CHARP(s_pattern),
+		     IK_BYTEVECTOR_DATA_CHARP(s_string),
+		     IK_UNFIX(s_flags));
+  return (rv)? false_object : true_object;
 #else
   feature_failure(__func__);
 #endif
@@ -723,63 +723,108 @@ ikrt_glibc_glob (ikptr s_pattern, ikptr s_flags, ikptr s_error_handler, ikpcb * 
 
 ikptr
 ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb *pcb)
+/* Interface  to  the  C  function  "regcomp()".   Compile  the  regular
+   expression in S_PATTERN accoding  to S_FLAGS.  If successful return a
+   pointer object  referencing the compiled regexp.  If  an error occurs
+   allocating memory:  return false.  If  an error occurs  compiling the
+   pattern: return  a pair whose car  is a fixnum  representing an error
+   code and whose  cdr is a bytevector representing  an error message in
+   ASCII encoding.
+
+   S_PATTERN must  be a bytevector representing  the regular expression.
+   S_FLAGS must  be a fixnum  resulting from the bitwise  combination of
+   REG_ constants.
+
+   The pointer returned  in case of success references  a "regex_t" data
+   structure whose  fields must be released explicitly  by "regfree", or
+   they are automatically released by the garbage collector whenever the
+   pointer itself is collected.  */
 {
 #ifdef HAVE_REGCOMP
-  ikptr         s_compiled_regex = ika_bytevector_alloc(pcb, sizeof(regex_t));
-  regex_t *     compiled_regex   = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
-  char *        pattern          = IK_BYTEVECTOR_DATA_CHARP(s_pattern);
+  ikptr		s_retval = void_object;
+  regex_t *     rex;
+  char *        pattern;
+  char *	error_message;
+  size_t	error_message_len;
   int           rv;
-  pcb->root0 = &s_compiled_regex;
-  rv = regcomp(compiled_regex, pattern, IK_UNFIX(s_flags));
-  if (0 == rv) {
-    pcb->root0 = NULL;
-    return s_compiled_regex;
-  } else {
-    ikptr       s_pair = IKA_PAIR_ALLOC(pcb);
-    char *      error_message;
-    size_t      error_message_len;
-    pcb->root1 = &s_pair;
-    {
-      compiled_regex    = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
-      error_message_len = regerror(rv, compiled_regex, NULL, 0);
-      IK_CAR(s_pair)    = IK_FIX(rv);
-      IK_CDR(s_pair)    = ika_bytevector_alloc(pcb, (long)error_message_len-1);
-      error_message     = IK_BYTEVECTOR_DATA_CHARP(IK_CDR(s_pair));
-      compiled_regex    = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
-      regerror(rv, compiled_regex, error_message, error_message_len);
-    }
-    pcb->root1 = NULL;
-    pcb->root0 = NULL;
-    return s_pair;
+  pcb->root0 = &s_pattern;
+  pcb->root1 = &s_retval;
+  {
+    rex = (regex_t *)malloc(sizeof(regex_t));
+    if (rex) {
+      pattern = IK_BYTEVECTOR_DATA_CHARP(s_pattern);
+      rv      = regcomp(rex, pattern, IK_UNFIX(s_flags));
+      if (0 == rv) {
+	s_retval = ika_pointer_alloc(pcb, (ik_ulong)rex);
+      } else {
+	s_retval	  = IKA_PAIR_ALLOC(pcb);
+	error_message_len = regerror(rv, rex, NULL, 0);
+	IK_CAR(s_retval)  = IK_FIX(rv);
+	IK_ASS(IK_CDR(s_retval), ika_bytevector_alloc(pcb, (long)error_message_len-1));
+	error_message     = IK_BYTEVECTOR_DATA_CHARP(IK_CDR(s_retval));
+	regerror(rv, rex, error_message, error_message_len);
+	regfree(rex);
+	free(rex);
+      }
+    } else
+      s_retval = false_object; /* error allocating memory */
   }
+  pcb->root1 = NULL;
+  pcb->root0 = NULL;
+  return s_retval;
 #else
   feature_failure(__func__);
 #endif
 }
 ikptr
-ikrt_glibc_regexec (ikptr s_compiled_regex, ikptr s_string, ikptr s_flags, ikpcb *pcb)
+ikrt_glibc_regexec (ikptr s_rex, ikptr s_string, ikptr s_flags, ikpcb *pcb)
+/* Interface to  the C function "regexec()".  Attempt  to match S_STRING
+   against  the  precompiled   regular  expression  S_REX  according  to
+   S_FLAGS.
+
+   If one or more matches occur return a vector holding pairs describing
+   the portions  of S_STRING that did  match; if no  match occurs return
+   false;  if an  error occurs:  return  a pair  whose car  is a  fixnum
+   representing an error code and whose cdr is a bytevector representing
+   an error message in ASCII encoding.
+
+   The vector returned in case  of success contains pairs: the car being
+   a fixnum representing  the starting offset of a  match substring, the
+   cdr  being  a  fixnum  representing  the ending  offset  of  a  match
+   substring.
+
+   The  vector element  at index  0 represents  the portion  of S_STRING
+   which  matched the whole  regular expression;  the vector  element at
+   index 1  represents the portion  of S_STRING which matched  the first
+   parenthetical subexpression, the vector element at index 2 represents
+   the  portion  of  S_STRING  which matched  the  second  parenthetical
+   subexpression, and  so on.  If S_STRING matches:  the returned vector
+   has at least one element. */
 {
 #ifdef HAVE_REGCOMP
-  regex_t *     compiled_regex = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
-  char *        string         = IK_BYTEVECTOR_DATA_CHARP(s_string);
-  size_t        nmatch         = compiled_regex->re_nsub;
+  regex_t *     rex	= IK_POINTER_DATA_VOIDP(s_rex);
+  char *        string	= IK_BYTEVECTOR_DATA_CHARP(s_string);
+  size_t        nmatch	= rex->re_nsub;
   regmatch_t    match[1+nmatch];
   int           rv;
-  rv = regexec(compiled_regex, string, 1+nmatch, match, IK_UNFIX(s_flags));
+  rv = regexec(rex, string, 1+nmatch, match, IK_UNFIX(s_flags));
   switch (rv) {
   case 0:
     {
       size_t      i;
       ikptr       s_match_vector = ika_vector_alloc(pcb, 1+nmatch);
-      ikptr       s_pair;
+      ikptr       s_pair = void_object;
       pcb->root0 = &s_match_vector;
+      pcb->root1 = &s_pair;
       {
         for (i=0; i<1+nmatch; ++i) {
-          s_pair = IK_ITEM(s_match_vector, i) = IKA_PAIR_ALLOC(pcb);
+	  s_pair         = IKA_PAIR_ALLOC(pcb);
           IK_CAR(s_pair) = IK_FIX(match[i].rm_so);
           IK_CDR(s_pair) = IK_FIX(match[i].rm_eo);
+          IK_ITEM(s_match_vector, i) = s_pair;
         }
       }
+      pcb->root1 = NULL;
       pcb->root0 = NULL;
       return s_match_vector;
     }
@@ -787,18 +832,19 @@ ikrt_glibc_regexec (ikptr s_compiled_regex, ikptr s_string, ikptr s_flags, ikpcb
     return false_object;
   default:
     {
-      ikptr       s_pair = IKA_PAIR_ALLOC(pcb);
-      pcb->root0 = &s_pair;
+      ikptr	s_pair, s_error_code, s_error_msg;
+      char *	errmsg;
+      size_t	errmsg_len_including_zero;
+      errmsg_len_including_zero = regerror(rv, rex, NULL, 0);
+      s_error_code = IK_FIX(rv);
+      s_error_msg  = ika_bytevector_alloc(pcb, (long)errmsg_len_including_zero-1);
+      errmsg       = IK_BYTEVECTOR_DATA_CHARP(s_error_msg);
+      regerror(rv, rex, errmsg, errmsg_len_including_zero);
+      pcb->root0 = &s_error_msg;
       {
-        char *          errmsg;
-        size_t          errmsg_len_including_zero;
-        compiled_regex            = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
-        errmsg_len_including_zero = regerror(rv, compiled_regex, NULL, 0);
-        IK_CAR(s_pair)            = IK_FIX(rv);
-        IK_CDR(s_pair)            = ika_bytevector_alloc(pcb, (long)errmsg_len_including_zero-1);
-        errmsg                    = IK_BYTEVECTOR_DATA_CHARP(IK_CDR(s_pair));
-        compiled_regex            = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
-        regerror(rv, compiled_regex, errmsg, errmsg_len_including_zero);
+	s_pair = IKA_PAIR_ALLOC(pcb);
+	IK_CAR(s_pair) = s_error_code;
+	IK_CDR(s_pair) = s_error_msg;
       }
       pcb->root0 = NULL;
       return s_pair;
@@ -809,26 +855,17 @@ ikrt_glibc_regexec (ikptr s_compiled_regex, ikptr s_string, ikptr s_flags, ikpcb
 #endif
 }
 ikptr
-ikrt_glibc_regfree (ikptr s_compiled_regex)
+ikrt_glibc_regfree (ikptr s_rex)
 /* Free the compiled regex in the given bytevector, but only if at least
    one byte in  the bytevector is non-zero, else it  means that the data
    structure has already been freed. */
 {
 #ifdef HAVE_REGCOMP
-  uint8_t *     data = IK_BYTEVECTOR_DATA_VOIDP(s_compiled_regex);
-  long          len  = IK_BYTEVECTOR_LENGTH(s_compiled_regex);
-  long          i;
-  int           clean = 0;
-  for (i=0; i<len; ++i) {
-    if (data[i]) {
-      clean=1;
-      break;
-    }
-  }
-  if (clean) {
-    regfree((regex_t*)data);
-    for (i=0; i<len; ++i)
-      data[i] = 0;
+  regex_t *	rex = IK_POINTER_DATA_VOIDP(s_rex);
+  if (rex) {
+    regfree(rex);
+    free(rex);
+    IK_POINTER_SET_NULL(s_rex);
   }
   return void_object;
 #else

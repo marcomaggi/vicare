@@ -443,9 +443,9 @@
   (make-guardian))
 
 (define (%free-allocated-regex)
-  (do ((bv (%regex-guardian) (%regex-guardian)))
-      ((not bv))
-    (capi.glibc-regfree bv)))
+  (do ((pointer (%regex-guardian) (%regex-guardian)))
+      ((not pointer))
+    (capi.glibc-regfree pointer)))
 
 (define (regcomp pattern flags)
   (define who 'regcomp)
@@ -454,14 +454,19 @@
        (fixnum			flags))
     (with-bytevectors ((pattern.bv pattern))
       (let ((rv (capi.glibc-regcomp pattern.bv flags)))
-	(if (bytevector? rv)
-	    (%regex-guardian rv)
-	  (error who (latin1->string (cdr rv)) (car rv) pattern flags))))))
+	(cond ((ffi.pointer? rv)
+	       (%regex-guardian rv))
+	      ((not rv)
+	       (error who
+		 "error allocating memory for precompiled regular expression"
+		 pattern flags))
+	      (else
+	       (error who (latin1->string (cdr rv)) (car rv) pattern flags)))))))
 
 (define (regexec regex string flags)
   (define who 'regexec)
   (with-arguments-validation (who)
-      ((bytevector		regex)
+      ((pointer			regex)
        (string/bytevector	string)
        (fixnum			flags))
     (with-bytevectors ((string.bv string))
@@ -473,7 +478,7 @@
 (define (regfree regex)
   (define who 'regfree)
   (with-arguments-validation (who)
-      ((bytevector  regex))
+      ((pointer  regex))
     (capi.glibc-regfree regex)))
 
 
