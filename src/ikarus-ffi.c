@@ -199,7 +199,7 @@ dump_stack (ikpcb* pcb, char* msg)
   ikptr p = frame_pointer;
   fprintf(stderr, "fp=0x%016lx   base=0x%016lx\n", frame_pointer, frame_base);
   while (p < frame_base) {
-    fprintf(stderr, "*0x%016lx = 0x%016lx\n", p, ref(p, 0));
+    fprintf(stderr, "*0x%016lx = 0x%016lx\n", p, IK_REF(p, 0));
     p += wordsize;
   }
 }
@@ -242,7 +242,7 @@ ikrt_ffi_prep_cif (ikptr s_type_ids, ikpcb* pcb)
   }
   cif->arg_types[arity] = NULL;
   rv = ffi_prep_cif(&(cif->cif), FFI_DEFAULT_ABI, arity, cif->retval_type, cif->arg_types);
-  return (FFI_OK == rv)? ik_pointer_alloc((ik_ulong)cif, pcb) : false_object;
+  return (FFI_OK == rv)? ika_pointer_alloc(pcb, (ik_ulong)cif) : false_object;
 }
 
 
@@ -301,23 +301,23 @@ native_to_scheme_value_cast (type_id_t type_id, void * buffer, ikpcb* pcb)
   case TYPE_ID_SINT8:   return fix(*(( int8_t*) buffer));
   case TYPE_ID_UINT16:  return fix(*((uint16_t*)buffer));
   case TYPE_ID_SINT16:  return fix(*(( int16_t*)buffer));
-  case TYPE_ID_UINT32:  return ika_integer_from_ulong(pcb, *((uint32_t*) buffer));
-  case TYPE_ID_SINT32:  return ika_integer_from_long         (pcb, *((long*)     buffer));
+  case TYPE_ID_UINT32:  return ika_integer_from_ulong (pcb, *((uint32_t*) buffer));
+  case TYPE_ID_SINT32:  return ika_integer_from_long  (pcb, *((long*)     buffer));
   case TYPE_ID_UINT64:  return ika_integer_from_ullong(pcb, *((ik_ullong*)buffer));
-  case TYPE_ID_SINT64:  return ika_integer_from_llong    (pcb, *((ik_llong*) buffer));
+  case TYPE_ID_SINT64:  return ika_integer_from_llong (pcb, *((ik_llong*) buffer));
 
-  case TYPE_ID_FLOAT:   return ik_flonum_from_double         (pcb, *((float*)      buffer));
-  case TYPE_ID_DOUBLE:  return ik_flonum_from_double         (pcb, *((double*)     buffer));
-  case TYPE_ID_POINTER: return ik_pointer_alloc              ((long)*((void**)buffer), pcb);
+  case TYPE_ID_FLOAT:   return ika_flonum_from_double	(pcb, *((float*)      buffer));
+  case TYPE_ID_DOUBLE:  return ika_flonum_from_double	(pcb, *((double*)     buffer));
+  case TYPE_ID_POINTER: return ika_pointer_alloc	(pcb, (long)*((void**)buffer));
 
   case TYPE_ID_UCHAR:   return ika_integer_from_ulong(pcb, *((unsigned char*) buffer));
-  case TYPE_ID_SCHAR:   return ika_integer_from_long         (pcb, *((signed char*)   buffer));
+  case TYPE_ID_SCHAR:   return ika_integer_from_long (pcb, *((signed char*)   buffer));
   case TYPE_ID_USHORT:  return ika_integer_from_ulong(pcb, *((unsigned short*)buffer));
-  case TYPE_ID_SSHORT:  return ika_integer_from_long         (pcb, *((signed short*)  buffer));
+  case TYPE_ID_SSHORT:  return ika_integer_from_long (pcb, *((signed short*)  buffer));
   case TYPE_ID_UINT:    return ika_integer_from_ulong(pcb, *((unsigned int*)  buffer));
-  case TYPE_ID_SINT:    return ika_integer_from_long         (pcb, *((signed int*)    buffer));
+  case TYPE_ID_SINT:    return ika_integer_from_long (pcb, *((signed int*)    buffer));
   case TYPE_ID_ULONG:   return ika_integer_from_ulong(pcb, *((ik_ulong*)      buffer));
-  case TYPE_ID_SLONG:   return ika_integer_from_long         (pcb, *((long*)          buffer));
+  case TYPE_ID_SLONG:   return ika_integer_from_long (pcb, *((long*)          buffer));
 
   default:
     fprintf(stderr, "*** Vicare error: %s: invalid arg %d", __func__, (int)type_id);
@@ -352,9 +352,9 @@ seal_scheme_stack(ikpcb* pcb)
   ikptr frame_base    = pcb->frame_base;
   ikptr frame_pointer = pcb->frame_pointer;
   if ((frame_base - wordsize) != frame_pointer) {
-    ikptr underflow_handler = ref(frame_base, -wordsize);
-    cont* k  = (cont*) pcb->next_k;
-    cont* nk = (cont*) ik_unsafe_alloc(pcb, sizeof(cont));
+    ikptr	underflow_handler = IK_REF(frame_base, -wordsize);
+    ikcont *	k  = (ikcont*) pcb->next_k;
+    ikcont *	nk = (ikcont*) ik_unsafe_alloc(pcb, sizeof(ikcont));
     nk->tag  = continuation_tag;
     nk->next = (ikptr) k;
     nk->top  = frame_pointer;
@@ -362,7 +362,7 @@ seal_scheme_stack(ikpcb* pcb)
     pcb->next_k        = vector_tag + (ikptr)nk;
     pcb->frame_base    = frame_pointer;
     pcb->frame_pointer = pcb->frame_base - wordsize;
-    ref(pcb->frame_pointer, 0) = underflow_handler;
+    IK_REF(pcb->frame_pointer, 0) = underflow_handler;
   }
   return void_object;
 }
@@ -373,13 +373,13 @@ seal_scheme_stack(ikpcb* pcb)
   dump_stack(pcb, "BEFORE SEALING");
   fprintf(stderr, "old base=0x%016lx  fp=0x%016lx\n", pcb->frame_base, pcb->frame_pointer);
   if ((frame_base - wordsize) != frame_pointer) {
-    ikptr underflow_handler = ref(frame_base, -wordsize);
-    cont* k = (cont*) pcb->next_k;
-    cont* nk = (cont*) ik_unsafe_alloc(pcb, sizeof(cont));
+    ikptr	underflow_handler = IK_REF(frame_base, -wordsize);
+    ikcont *	k  = (ikcont*) pcb->next_k;
+    ikcont *	nk = (ikcont*) ik_unsafe_alloc(pcb, sizeof(ikcont));
     nk->tag = continuation_tag;
     nk->next = (ikptr) k;
     nk->top = frame_pointer;
-    fprintf(stderr, "rp=0x%016lx\n", ref(frame_pointer, 0));
+    fprintf(stderr, "rp=0x%016lx\n", IK_REF(frame_pointer, 0));
     nk->size = frame_base - frame_pointer - wordsize;
     fprintf(stderr, "frame size=%ld\n", nk->size);
     pcb->next_k        = vector_tag + (ikptr)nk;
@@ -387,7 +387,7 @@ seal_scheme_stack(ikpcb* pcb)
     pcb->frame_pointer = pcb->frame_base - wordsize;
     fprintf(stderr, "new base=0x%016lx  fp=0x%016lx\n", pcb->frame_base, pcb->frame_pointer);
     fprintf(stderr, "uf=0x%016lx\n", underflow_handler);
-    ref(pcb->frame_pointer, 0) = underflow_handler;
+    IK_REF(pcb->frame_pointer, 0) = underflow_handler;
   } else {
     fprintf(stderr, "already sealed\n");
   }
@@ -416,9 +416,9 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
   size_t        args_bufsize;
   seal_scheme_stack(pcb);
   sk = ik_unsafe_alloc(pcb, system_continuation_size);
-  ref(sk, disp_system_continuation_tag)  = system_continuation_tag;
-  ref(sk, disp_system_continuation_top)  = pcb->system_stack;
-  ref(sk, disp_system_continuation_next) = pcb->next_k;
+  IK_REF(sk, disp_system_continuation_tag)  = system_continuation_tag;
+  IK_REF(sk, disp_system_continuation_top)  = pcb->system_stack;
+  IK_REF(sk, disp_system_continuation_next) = pcb->next_k;
   pcb->next_k = sk | vector_tag;
   {
     ik_ffi_cif_t  cif     = IK_POINTER_DATA_VOIDP(IK_CAR(s_data));
@@ -452,19 +452,16 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
   }
   pcb->frame_pointer = pcb->frame_base - wordsize;
   sk = pcb->next_k - vector_tag;
-  if (system_continuation_tag != ref(sk, disp_system_continuation_tag)) {
-    fprintf(stderr, "vicare internal error: invalid system cont\n");
-    exit(EXIT_FAILURE);
+  if (system_continuation_tag != IK_REF(sk, disp_system_continuation_tag)) {
+    ik_abort("invalid system cont");
   }
-  pcb->next_k       = ref(sk, disp_system_continuation_next);
-  pcb->system_stack = ref(sk, disp_system_continuation_top);
+  pcb->next_k       = IK_REF(sk, disp_system_continuation_next);
+  pcb->system_stack = IK_REF(sk, disp_system_continuation_top);
   return return_value;
 
  too_many_args_error:
-  fprintf(stderr, "*** Vicare error: exceeded maximum memory size (%d)\n\
-*** reserved for callout arguments, too many arguments to callout\n",
-          args_bufsize);
-  exit(EXIT_FAILURE);
+  ik_abort(stderr, "exceeded maximum memory size (%d) reserved for callout arguments, too many arguments to callout", args_bufsize);
+  return void_object;
 }
 
 
@@ -518,7 +515,7 @@ ikrt_ffi_prepare_callback (ikptr s_data, ikpcb* pcb)
   callback_user_data->next              = pcb->callbacks;
   pcb->callbacks                        = callback_user_data;
   /* Return a pointer to callable code. */
-  return ik_pointer_alloc((ik_ulong)callable_pointer, pcb);
+  return ika_pointer_alloc(pcb, (ik_ulong)callable_pointer);
 #else /* if FFI_CLOSURES */
   return false_object;
 #endif /* if FFI_CLOSURES */
@@ -581,14 +578,14 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
   ikptr         s_data        = ((ik_callback_locative*)user_data)->data;
   ikptr         s_proc        = IK_CDR(s_data);
   ikpcb *       pcb           = the_pcb;
-  ikptr         code_entry    = ref(s_proc, off_closure_code);
+  ikptr         code_entry    = IK_REF(s_proc, off_closure_code);
   ikptr         code_ptr      = code_entry - off_code_data;
   int           i;
   ikptr         rv;
   pcb->frame_pointer = pcb->frame_base;
   /* Push arguments on the Scheme stack. */
   for (i=0; i<cif->arity; ++i) {
-    ref(pcb->frame_pointer, -2*wordsize - i*wordsize) =
+    IK_REF(pcb->frame_pointer, -2*wordsize - i*wordsize) =
       native_to_scheme_value_cast(cif->arg_type_ids[i], args[i], pcb);
   }
   /* Perform the call. */
