@@ -212,7 +212,7 @@ ikrt_glibc_if_indextoname (ikptr index, ikpcb * pcb)
   unsigned      i = (unsigned)IK_UNFIX(index);
   char *        rv;
   rv = if_indextoname(i, buffer);
-  return (rv)? ik_bytevector_from_cstring(pcb, buffer) : false_object;
+  return (rv)? ika_bytevector_from_cstring(pcb, buffer) : false_object;
 #else
   feature_failure(__func__);
 #endif
@@ -234,7 +234,7 @@ ikrt_glibc_if_nameindex (ikpcb * pcb)
       for (i=0; arry[i].if_index;) {
 	IK_CAR(s_spine)  = IKA_PAIR_ALLOC(pcb);
 	IK_CAAR(s_spine) = IK_FIX(arry[i].if_index);
-	ikptr	s_bv     = ik_bytevector_from_cstring(pcb, arry[i].if_name);
+	ikptr	s_bv     = ika_bytevector_from_cstring(pcb, arry[i].if_name);
 	IK_CDAR(s_spine) = s_bv;
 	if (arry[++i].if_index) {
 	  IK_CDR(s_spine) = IKA_PAIR_ALLOC(pcb);
@@ -770,7 +770,7 @@ ikrt_glibc_regexec (ikptr s_compiled_regex, ikptr s_string, ikptr s_flags, ikpcb
   case 0:
     {
       size_t      i;
-      ikptr       s_match_vector = ik_vector_alloc(pcb, 1+nmatch);
+      ikptr       s_match_vector = ika_vector_alloc(pcb, 1+nmatch);
       ikptr       s_pair;
       pcb->root0 = &s_match_vector;
       {
@@ -853,12 +853,12 @@ ikrt_glibc_wordexp (ikptr s_words, ikptr s_flags, ikpcb * pcb)
   W.we_offs     = 0;
   rv = wordexp(word, &W, IK_UNFIX(s_flags));
   if (0 == rv) {
-    ikptr       s_words = ik_vector_alloc(pcb, (long)W.we_wordc);
+    ikptr       s_words = ika_vector_alloc(pcb, (long)W.we_wordc);
     pcb->root0 = &s_words;
     {
       int         i;
       for (i=0; i<W.we_wordc; ++i) {
-        IK_ITEM(s_words, i) = ik_bytevector_from_cstring(pcb, W.we_wordv[i]);
+        IK_ITEM(s_words, i) = ika_bytevector_from_cstring(pcb, W.we_wordv[i]);
       }
     }
     pcb->root0 = NULL;
@@ -972,7 +972,7 @@ ikrt_glibc_iconv_open (ikptr s_from_code, ikptr s_to_code, ikpcb * pcb)
      order than the Libiconv API. */
   handle = iconv_open(to_code, from_code);
   if (((iconv_t)-1) != handle)
-    return ik_pointer_alloc((unsigned long)handle, pcb);
+    return ika_pointer_alloc(pcb, (unsigned long)handle);
   else
     return ik_errno_to_code();
 #else
