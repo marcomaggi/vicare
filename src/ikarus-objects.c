@@ -279,24 +279,28 @@ ika_integer_from_long (ikpcb * pcb, long N)
   }
 }
 ikptr
-ika_integer_from_llong (ikpcb * pcb, ik_llong n)
+ika_integer_from_llong (ikpcb * pcb, ik_llong N)
 {
-  if (((ik_llong)(signed long) n) == n) {
-    return ika_integer_from_long(pcb, n);
+  /* If it  is in the range  of "long", use the  appropriate function to
+     allocate memory only for a "long" in the data area. */
+  if (((ik_llong)(long) N) == N)
+    return ika_integer_from_long(pcb, (long)N);
+  else {
+#undef NUMBER_OF_WORDS
+#define NUMBER_OF_WORDS		sizeof(ik_llong) / sizeof(mp_limb_t)
+    int   align_size = disp_bignum_data + sizeof(ik_llong);
+    ikptr s_bn       = ik_safe_alloc(pcb, align_size) | vector_tag;
+    if (N > 0){
+      ref(s_bn, off_bignum_tag) =
+	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_length_shift));
+      *((ik_llong*)(s_bn + off_bignum_data)) = +N;
+    } else {
+      ref(s_bn, off_bignum_tag) =
+	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_length_shift) | (1 << bignum_sign_shift));
+      *((ik_llong*)(s_bn + off_bignum_data)) = -N;
+    }
+    return s_bn;
   }
-  int len = sizeof(ik_llong) / sizeof(mp_limb_t);
-  ikptr bn = ik_safe_alloc(pcb, IK_ALIGN(sizeof(ik_llong)+disp_bignum_data));
-  if (n > 0){
-    ref(bn, 0) = (ikptr)(bignum_tag | (len << bignum_length_shift));
-    *((ik_llong*)(bn+disp_bignum_data)) = n;
-  } else {
-    ref(bn, 0) =
-      (ikptr)(bignum_tag |
-            (len << bignum_length_shift) |
-            (1 << bignum_sign_shift));
-    *((ik_llong*)(bn+disp_bignum_data)) = -n;
-  }
-  return bn+vector_tag;
 }
 ikptr
 ika_integer_from_uint (ikpcb * pcb, ik_uint N)
@@ -304,33 +308,43 @@ ika_integer_from_uint (ikpcb * pcb, ik_uint N)
   return ika_integer_from_ulong(pcb, (ik_ulong)N);
 }
 ikptr
-ika_integer_from_ulong (ikpcb * pcb, ik_ulong n)
+ika_integer_from_ulong (ikpcb * pcb, ik_ulong N)
 {
-  ik_ulong mxn = ((ik_ulong)-1)>>(fx_shift+1);
-  if (n <= mxn) {
-    return IK_FIX(n);
+  ik_ulong mxn = most_positive_fixnum;
+  if (N <= mxn) {
+    return IK_FIX(N);
+  } else {
+    /* wordsize == sizeof(unsigned long) */
+    ikptr	s_bn = ik_safe_alloc(pcb, disp_bignum_data + wordsize) | vector_tag;
+    ref(s_bn, off_bignum_tag)  = (ikptr)(bignum_tag | (1 << bignum_length_shift));
+    ref(s_bn, off_bignum_data) = (ikptr)N;
+    return s_bn;
   }
-  ikptr bn = ik_safe_alloc(pcb, IK_ALIGN(wordsize+disp_bignum_data));
-  ref(bn, 0) = (ikptr)(bignum_tag | (1 << bignum_length_shift));
-  ref(bn, disp_bignum_data) = (ikptr)n;
-  return bn+vector_tag;
 }
 ikptr
-ika_integer_from_ullong (ikpcb * pcb, ik_ullong n)
+ika_integer_from_ullong (ikpcb * pcb, ik_ullong N)
 {
-  if (((ik_ullong)(ik_ulong) n) == n) {
-    return ika_integer_from_ulong(pcb, n);
+  /* If  it is  in the  range of  "unsigned long",  use  the appropriate
+     function to allocate memory only for an "unsigned long" in the data
+     area. */
+  if (((ik_ullong)(ik_ulong) N) == N)
+    return ika_integer_from_ulong(pcb, N);
+  else {
+#undef NUMBER_OF_WORDS
+#define NUMBER_OF_WORDS		sizeof(ik_ullong) / sizeof(mp_limb_t)
+    int    align_size = IK_ALIGN(disp_bignum_data + sizeof(ik_ullong));
+    ikptr  bn         = ik_safe_alloc(pcb, align_size);
+    bcopy((char*)(&N), (char*)(bn+disp_bignum_data), sizeof(ik_ullong));
+    /* "normalize_bignum()" wants an *untagged* pointer as argument. */
+    return normalize_bignum(NUMBER_OF_WORDS, 0, bn);
   }
-  ikptr bn = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data+sizeof(ik_llong)));
-  bcopy((char*)(&n), (char*)(bn+disp_bignum_data), sizeof(ik_llong));
-  return normalize_bignum(sizeof(ik_llong)/sizeof(mp_limb_t), 0, bn);
 }
 ikptr
-ika_flonum_from_double (ikpcb* pcb, double n)
+ika_flonum_from_double (ikpcb* pcb, double N)
 {
   ikptr x = ik_safe_alloc(pcb, flonum_size) | vector_tag;
-  ref(x, -vector_tag) = flonum_tag;
-  IK_FLONUM_DATA(x) = n;
+  ref(x, off_flonum_tag) = flonum_tag;
+  IK_FLONUM_DATA(x) = N;
   return x;
 }
 
@@ -343,14 +357,14 @@ int
 ik_integer_to_int (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
-    return IK_UNFIX(x);
+    return (int)IK_UNFIX(x);
   else if (x == void_object)
     return 0;
   else {
     if (bnfst_negative(ref(x, -vector_tag)))
       return (int)(-ref(x, off_bignum_data));
     else
-      return (int)(ref(x, off_bignum_data));
+      return (int)(+ref(x, off_bignum_data));
   }
 }
 long
@@ -364,7 +378,7 @@ ik_integer_to_long (ikptr x)
     if (bnfst_negative(ref(x, -vector_tag)))
       return (long)(-ref(x, off_bignum_data));
     else
-      return (long)(ref(x, off_bignum_data));
+      return (long)(+ref(x, off_bignum_data));
   }
 }
 ik_uint
