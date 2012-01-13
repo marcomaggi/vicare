@@ -879,23 +879,24 @@ ikrt_glibc_regfree (ikptr s_rex)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_glibc_wordexp (ikptr s_words, ikptr s_flags, ikpcb * pcb)
+ikrt_glibc_wordexp (ikptr s_pattern, ikptr s_flags, ikpcb * pcb)
 {
 #ifdef HAVE_WORDEXP
-  char *        word = IK_BYTEVECTOR_DATA_VOIDP(s_words);
+  ikptr		s_words;
+  char *        pattern = IK_BYTEVECTOR_DATA_VOIDP(s_pattern);
   wordexp_t     W;
+  int		i;
   int           rv;
   W.we_wordc    = 0;
   W.we_wordv    = NULL;
   W.we_offs     = 0;
-  rv = wordexp(word, &W, IK_UNFIX(s_flags));
+  rv = wordexp(pattern, &W, IK_UNFIX(s_flags));
   if (0 == rv) {
-    ikptr       s_words = ika_vector_alloc(pcb, (long)W.we_wordc);
+    s_words    = ika_vector_alloc(pcb, (long)W.we_wordc);
     pcb->root0 = &s_words;
     {
-      int         i;
       for (i=0; i<W.we_wordc; ++i) {
-        IK_ITEM(s_words, i) = ika_bytevector_from_cstring(pcb, W.we_wordv[i]);
+        IK_ASS(IK_ITEM(s_words, i), ika_bytevector_from_cstring(pcb, W.we_wordv[i]));
       }
     }
     pcb->root0 = NULL;
@@ -1033,7 +1034,7 @@ ikrt_glibc_iconv_close (ikptr s_handle)
     retval = iconv_close(handle);
     if (-1 == retval)
       return ik_errno_to_code();
-    ref(s_handle, off_pointer_data) = 0;
+    IK_POINTER_SET_NULL(s_handle);
   }
   return IK_FIX(0);
 #else
