@@ -7,7 +7,7 @@
 
 
 
-  Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute  it and/or modify
   it under the  terms of the GNU General Public  License as published by
@@ -60,7 +60,7 @@ ikptr
 ikrt_linux_WIFCONTINUED (ikptr fx_status)
 {
 #ifdef HAVE_WIFCONTINUED
-  int   status = unfix(fx_status);
+  int   status = IK_UNFIX(fx_status);
   return (WIFCONTINUED(status))? true_object : false_object;
 #else
   feature_failure(__func__);
@@ -71,19 +71,19 @@ ikptr
 ikrt_linux_waitid (ikptr fx_idtype, ikptr fx_id, ikptr struct_info, ikptr fx_options)
 {
 #ifdef HAVE_WAITID
-  idtype_t  idtype  = unfix(fx_idtype);
-  id_t      id      = unfix(fx_id);
+  idtype_t  idtype  = IK_UNFIX(fx_idtype);
+  id_t      id      = IK_UNFIX(fx_id);
   siginfo_t info;
-  int       options = unfix(fx_options);
+  int       options = IK_UNFIX(fx_options);
   int       retval;
   errno  = 0;
   retval = waitid(idtype, id, &info, options);
   if (0 <= retval) {
-    ref(struct_info, off_record_data+0*wordsize) = fix(info.si_pid);
-    ref(struct_info, off_record_data+1*wordsize) = fix(info.si_uid);
-    ref(struct_info, off_record_data+2*wordsize) = fix(info.si_signo);
-    ref(struct_info, off_record_data+3*wordsize) = fix(info.si_status);
-    ref(struct_info, off_record_data+4*wordsize) = fix(info.si_code);
+    IK_FIELD(struct_info, 0) = IK_FIX(info.si_pid);
+    IK_FIELD(struct_info, 1) = IK_FIX(info.si_uid);
+    IK_FIELD(struct_info, 2) = IK_FIX(info.si_signo);
+    IK_FIELD(struct_info, 3) = IK_FIX(info.si_status);
+    IK_FIELD(struct_info, 4) = IK_FIX(info.si_code);
     return struct_info;
   } else {
     return ik_errno_to_code();
