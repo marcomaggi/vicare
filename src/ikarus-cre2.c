@@ -126,13 +126,13 @@ ikrt_cre2_new (ikptr s_pattern, ikptr s_options, ikpcb * pcb)
       pcb->root0 = &s_pair;
       {
 	IK_CAR(s_pair) = IK_FIX(errcode);
-	IK_ASS(IK_CDR(s_pair), ik_bytevector_from_cstring(pcb, cre2_error_string(rex)));
+	IK_ASS(IK_CDR(s_pair), ika_bytevector_from_cstring(pcb, cre2_error_string(rex)));
       }
       pcb->root0 = NULL;
       cre2_delete(rex);
       return s_pair;
     } else
-      return ik_pointer_alloc((unsigned long)rex, pcb);
+      return ika_pointer_alloc(pcb, (ik_ulong)rex);
   }
 #else
   return feature_failure(__func__);
@@ -177,7 +177,7 @@ ikrt_cre2_opt_new (ikpcb * pcb)
     /* UTF8 is  the default in the  current release but I  set it anyway
        (Marco Maggi; Jan 12, 2012). */
     cre2_opt_set_encoding(opt, CRE2_UTF8);
-    return ik_pointer_alloc((unsigned long)opt, pcb);
+    return ika_pointer_alloc(pcb, (ik_ulong)opt);
   } else
     return false_object; /* error allocating memory */
 #else
@@ -312,7 +312,7 @@ ikrt_cre2_match (ikptr s_rex, ikptr s_text, ikptr s_start, ikptr s_end, ikptr s_
     ikptr		s_match;
     int			i;
     cre2_strings_to_ranges(text_data, ranges, strings, nmatch);
-    s_match = ik_vector_alloc(pcb, nmatch);
+    s_match = ika_vector_alloc(pcb, nmatch);
     pcb->root0 = &s_match;
     {
       for (i=0; i<nmatch; ++i) {
