@@ -460,7 +460,7 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
   return return_value;
 
  too_many_args_error:
-  ik_abort(stderr, "exceeded maximum memory size (%d) reserved for callout arguments, too many arguments to callout", args_bufsize);
+  ik_abort("exceeded maximum memory size (%d) reserved for callout arguments, too many arguments to callout", args_bufsize);
   return void_object;
 }
 

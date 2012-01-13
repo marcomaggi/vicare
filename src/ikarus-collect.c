@@ -1166,7 +1166,7 @@ add_object_proc (gc_t* gc, ikptr x)
             ref(p, i+wordsize) = ref(q, i+wordsize);
           }
         }
-        ref(y, number_of_fields + off_record_data) = 0;
+        IK_REF(y, number_of_fields + off_record_data) = 0;
       }
       ref(x, -vector_tag) = IK_FORWARD_PTR;
       ref(x, wordsize-vector_tag) = y;
