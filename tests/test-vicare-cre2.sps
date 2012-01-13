@@ -35,7 +35,7 @@
   (exit 0))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare CRE2 binding\n")
+(check-display "*** testing Vicare CRE2 binding\n")
 
 
 (parametrise ((check-test-name	'version))
