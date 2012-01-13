@@ -98,7 +98,7 @@ ika_list_from_argv (ikpcb * pcb, char ** argv)
   pcb->root1 = &s_list;
   {
     for (i=0; argv[i];) {
-      IK_CAR(s_pair) = ik_bytevector_from_cstring(pcb, argv[i]);
+      IK_CAR(s_pair) = ika_bytevector_from_cstring(pcb, argv[i]);
       if (argv[++i]) {
         s_new  = IK_CDR(s_pair) = IKA_PAIR_ALLOC(pcb);
         s_pair = s_new;
@@ -121,7 +121,7 @@ ika_list_from_argv_and_argc (ikpcb * pcb, char ** argv, long argc)
   pcb->root1 = &s_list;
   {
     for (i=0; i<argc;) {
-      IK_CAR(s_pair) = ik_bytevector_from_cstring(pcb, argv[i]);
+      IK_CAR(s_pair) = ika_bytevector_from_cstring(pcb, argv[i]);
       if (++i < argc) {
         s_new  = IK_CDR(s_pair) = IKA_PAIR_ALLOC(pcb);
         s_pair = s_new;
@@ -155,7 +155,7 @@ ika_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes)
   return bv;
 }
 ikptr
-ik_bytevector_from_cstring (ikpcb * pcb, const char * cstr)
+ika_bytevector_from_cstring (ikpcb * pcb, const char * cstr)
 {
   size_t    len  = strlen(cstr);
   ikptr     bv   = ika_bytevector_alloc(pcb, len);
@@ -164,7 +164,7 @@ ik_bytevector_from_cstring (ikpcb * pcb, const char * cstr)
   return bv;
 }
 ikptr
-ik_bytevector_from_cstring_len (ikpcb * pcb, const char * cstr, size_t len)
+ika_bytevector_from_cstring_len (ikpcb * pcb, const char * cstr, size_t len)
 {
   ikptr     bv   = ika_bytevector_alloc(pcb, len);
   char *    data = IK_BYTEVECTOR_DATA_CHARP(bv);
@@ -172,7 +172,7 @@ ik_bytevector_from_cstring_len (ikpcb * pcb, const char * cstr, size_t len)
   return bv;
 }
 ikptr
-ik_bytevector_from_memory_block (ikpcb * pcb, void * memory, size_t length)
+ika_bytevector_from_memory_block (ikpcb * pcb, void * memory, size_t length)
 {
   ikptr     bv   = ika_bytevector_alloc(pcb, length);
   void *    data = IK_BYTEVECTOR_DATA_VOIDP(bv);
@@ -191,14 +191,12 @@ ik_is_vector (ikptr s_vec)
   return (vector_tag == (s_vec & vector_mask)) && IK_IS_FIXNUM(ref(s_vec, -vector_tag));
 }
 ikptr
-ik_vector_alloc (ikpcb * pcb, long number_of_items)
+ika_vector_alloc (ikpcb * pcb, long number_of_items)
 {
-  long  align_size;
-  ikptr vec;
-  align_size = IK_ALIGN(disp_vector_data + number_of_items * wordsize);
-  vec        = ik_safe_alloc(pcb, align_size) | vector_tag;
-  ref(vec, off_vector_length) = IK_FIX(number_of_items);
-  return vec;
+  long	align_size = disp_vector_data + number_of_items * wordsize;
+  ikptr	s_vec      = ik_safe_alloc(pcb, align_size) | vector_tag;
+  ref(s_vec, off_vector_length) = IK_FIX(number_of_items);
+  return s_vec;
 }
 
 
@@ -213,12 +211,17 @@ ik_is_struct (ikptr R)
           (record_tag == (record_mask & ref(R, off_record_rtd))));
 }
 ikptr
-ik_struct_alloc (ikpcb * pcb, ikptr s_rtd)
+ika_struct_alloc (ikpcb * pcb, ikptr s_rtd)
 {
   long  num_of_fields = IK_UNFIX(ref(s_rtd, off_rtd_length));
-  long  align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
-  ikptr s_stru        = ik_safe_alloc(pcb, align_size) | record_tag;
-  ref(s_stru, off_record_rtd) = s_rtd;
+  long  align_size    = disp_record_data + num_of_fields * wordsize;
+  ikptr s_stru;
+  pcb->root9 = &s_rtd;
+  {
+    s_stru = ik_safe_alloc(pcb, align_size) | record_tag;
+    ref(s_stru, off_record_rtd) = s_rtd;
+  }
+  pcb->root9 = NULL;
   return s_stru;
 }
 
@@ -316,7 +319,7 @@ ika_integer_from_ullong (ikpcb * pcb, ik_ullong n)
   return normalize_bignum(sizeof(ik_llong)/sizeof(mp_limb_t), 0, bn);
 }
 ikptr
-ik_flonum_from_double (ikpcb* pcb, double n)
+ika_flonum_from_double (ikpcb* pcb, double n)
 {
   ikptr x = ik_safe_alloc(pcb, flonum_size) | vector_tag;
   ref(x, -vector_tag) = flonum_tag;
