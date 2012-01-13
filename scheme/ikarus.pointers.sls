@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2008,2009  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -874,6 +874,9 @@
   (define-predicate %sint64?			words.word-s64?)
   (define-predicate %uint64?			words.word-u64?))
 
+(define (pointer/bytevector? obj)
+  (or (pointer? obj) (bytevector? obj)))
+
 (define (%select-type-predicate type)
   (case type
     ((unsigned-char)		%unsigned-char?)
@@ -890,7 +893,7 @@
 
     ((float)			flonum?)
     ((double)			flonum?)
-    ((pointer)			pointer?)
+    ((pointer)			pointer/bytevector?)
     ((callback)			pointer?)
 
     ((int8_t)			%sint8?)

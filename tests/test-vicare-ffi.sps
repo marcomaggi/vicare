@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -1008,6 +1008,15 @@
       (check
 	  (flonum? (atan2 1.2 3.4))
 	=> #t))
+
+    (check
+	(let* ((maker	(ffi.make-c-callout-maker 'void '(pointer pointer unsigned-long)))
+	       (memcpy	(maker (ffi.dlsym libc "memcpy")))
+	       (bv.src	'#vu8(0 1 2 3 4))
+	       (bv.dst	(make-bytevector 5)))
+	  (memcpy bv.dst bv.src 5)
+	  bv.dst)
+      => '#vu8(0 1 2 3 4))
 
     #f)
 
