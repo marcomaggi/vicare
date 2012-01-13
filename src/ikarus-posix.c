@@ -78,7 +78,7 @@ ikrt_posix_strerror (ikptr negated_errno_code, ikpcb* pcb)
   int    code = - unfix(negated_errno_code);
   errno = 0;
   char * error_message = strerror(code);
-  return errno? false_object : ik_bytevector_from_cstring(pcb, error_message);
+  return errno? false_object : ika_bytevector_from_cstring(pcb, error_message);
 }
 
 
@@ -90,7 +90,7 @@ ikptr
 ikrt_posix_getenv (ikptr bv, ikpcb* pcb)
 {
   char *  str = getenv(IK_BYTEVECTOR_DATA_CHARP(bv));
-  return (str)? ik_bytevector_from_cstring(pcb, str) : false_object;
+  return (str)? ika_bytevector_from_cstring(pcb, str) : false_object;
 }
 ikptr
 ikrt_posix_setenv (ikptr key, ikptr val, ikptr overwrite)
@@ -120,7 +120,7 @@ ikrt_posix_environ (ikpcb* pcb)
   pcb->root0 = &list_of_entries;
   for (i=0; environ[i]; ++i) {
     IKA_DECLARE_ALLOC_AND_CONS(pair, list_of_entries, pcb);
-    IK_CAR(pair) = ik_bytevector_from_cstring(pcb, environ[i]);
+    IK_CAR(pair) = ika_bytevector_from_cstring(pcb, environ[i]);
   }
   pcb->root0 = 0;
   return list_of_entries;
@@ -305,72 +305,72 @@ fill_stat_struct (struct stat * S, ikptr D, ikpcb* pcb)
 {
 #if (4 == IK_SIZE_OF_VOIDP)
   /* 32-bit platforms */
-  ref(D, off_record_data+0*wordsize) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_mode);
-  ref(D, off_record_data+1*wordsize) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_ino);
-  ref(D, off_record_data+2*wordsize) = ika_integer_from_long         (pcb, (long)S->st_dev);
-  ref(D, off_record_data+3*wordsize) = ika_integer_from_ulong(pcb, (long)S->st_nlink);
+  IK_FIELD(D, 0) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_mode);
+  IK_FIELD(D, 1) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_ino);
+  IK_FIELD(D, 2) = ika_integer_from_long         (pcb, (long)S->st_dev);
+  IK_FIELD(D, 3) = ika_integer_from_ulong(pcb, (long)S->st_nlink);
 
-  ref(D, off_record_data+4*wordsize) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_uid);
-  ref(D, off_record_data+5*wordsize) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_gid);
-  ref(D, off_record_data+6*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_size);
+  IK_FIELD(D, 4) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_uid);
+  IK_FIELD(D, 5) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_gid);
+  IK_FIELD(D, 6) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_size);
 
-  ref(D, off_record_data+7*wordsize) = ika_integer_from_long(pcb, (long)S->st_atime);
+  IK_FIELD(D, 7) = ika_integer_from_long(pcb, (long)S->st_atime);
 #ifdef HAVE_STAT_ST_ATIME_USEC
-  ref(D, off_record_data+8*wordsize) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_atime_usec);
+  IK_FIELD(D, 8) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_atime_usec);
 #else
-  ref(D, off_record_data+8*wordsize) = false_object;
+  IK_FIELD(D, 8) = false_object;
 #endif
 
-  ref(D, off_record_data+9*wordsize)  = ika_integer_from_long(pcb, (long)S->st_mtime);
+  IK_FIELD(D, 9)  = ika_integer_from_long(pcb, (long)S->st_mtime);
 #ifdef HAVE_STAT_ST_MTIME_USEC
-  ref(D, off_record_data+10*wordsize) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_mtime_usec);
+  IK_FIELD(D, 10) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_mtime_usec);
 #else
-  ref(D, off_record_data+10*wordsize) = false_object;
+  IK_FIELD(D, 10) = false_object;
 #endif
 
-  ref(D, off_record_data+11*wordsize) = ika_integer_from_long(pcb, (long)S->st_ctime);
+  IK_FIELD(D, 11) = ika_integer_from_long(pcb, (long)S->st_ctime);
 #ifdef HAVE_STAT_ST_CTIME_USEC
-  ref(D, off_record_data+12*wordsize) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_ctime_usec);
+  IK_FIELD(D, 12) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_ctime_usec);
 #else
-  ref(D, off_record_data+12*wordsize) = false_object;
+  IK_FIELD(D, 12) = false_object;
 #endif
 
-  ref(D, off_record_data+13*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_blocks);
-  ref(D, off_record_data+14*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_blksize);
+  IK_FIELD(D, 13) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_blocks);
+  IK_FIELD(D, 14) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_blksize);
 #else
   /* 64-bit platforms */
-  ref(D, off_record_data+0*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_mode);
-  ref(D, off_record_data+1*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_ino);
-  ref(D, off_record_data+2*wordsize) = ika_integer_from_llong(pcb, (long)S->st_dev);
-  ref(D, off_record_data+3*wordsize) = ika_integer_from_ullong(pcb, (long)S->st_nlink);
+  IK_FIELD(D, 0) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_mode);
+  IK_FIELD(D, 1) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_ino);
+  IK_FIELD(D, 2) = ika_integer_from_llong(pcb, (long)S->st_dev);
+  IK_FIELD(D, 3) = ika_integer_from_ullong(pcb, (long)S->st_nlink);
 
-  ref(D, off_record_data+4*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_uid);
-  ref(D, off_record_data+5*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_gid);
-  ref(D, off_record_data+6*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_size);
+  IK_FIELD(D, 4) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_uid);
+  IK_FIELD(D, 5) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_gid);
+  IK_FIELD(D, 6) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_size);
 
-  ref(D, off_record_data+7*wordsize) = ika_integer_from_llong(pcb, (long)S->st_atime);
+  IK_FIELD(D, 7) = ika_integer_from_llong(pcb, (long)S->st_atime);
 #ifdef HAVE_STAT_ST_ATIME_USEC
-  ref(D, off_record_data+8*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_atime_usec);
+  IK_FIELD(D, 8) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_atime_usec);
 #else
-  ref(D, off_record_data+8*wordsize) = false_object;
+  IK_FIELD(D, 8) = false_object;
 #endif
 
-  ref(D, off_record_data+9*wordsize)  = ika_integer_from_llong(pcb, (long)S->st_mtime);
+  IK_FIELD(D, 9)  = ika_integer_from_llong(pcb, (long)S->st_mtime);
 #ifdef HAVE_STAT_ST_MTIME_USEC
-  ref(D, off_record_data+10*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_mtime_usec);
+  IK_FIELD(D, 10) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_mtime_usec);
 #else
-  ref(D, off_record_data+10*wordsize) = false_object;
+  IK_FIELD(D, 10) = false_object;
 #endif
 
-  ref(D, off_record_data+11*wordsize) = ika_integer_from_llong(pcb, (long)S->st_ctime);
+  IK_FIELD(D, 11) = ika_integer_from_llong(pcb, (long)S->st_ctime);
 #ifdef HAVE_STAT_ST_CTIME_USEC
-  ref(D, off_record_data+12*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_ctime_usec);
+  IK_FIELD(D, 12) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_ctime_usec);
 #else
-  ref(D, off_record_data+12*wordsize) = false_object;
+  IK_FIELD(D, 12) = false_object;
 #endif
 
-  ref(D, off_record_data+13*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_blocks);
-  ref(D, off_record_data+14*wordsize) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_blksize);
+  IK_FIELD(D, 13) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_blocks);
+  IK_FIELD(D, 14) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_blksize);
 #endif
   return 0;
 }
@@ -772,7 +772,7 @@ ikrt_posix_readlink (ikptr link_pathname_bv, ikpcb * pcb)
     else if (rv == max_len)
       continue;
     else
-      return ik_bytevector_from_cstring_len(pcb, true_pathname, rv);
+      return ika_bytevector_from_cstring_len(pcb, true_pathname, rv);
   }
 }
 ikptr
@@ -784,7 +784,7 @@ ikrt_posix_realpath (ikptr link_pathname_bv, ikpcb* pcb)
   link_pathname = IK_BYTEVECTOR_DATA_CHARP(link_pathname_bv);
   errno         = 0;
   true_pathname = realpath(link_pathname, buff);
-  return (true_pathname)? ik_bytevector_from_cstring(pcb, true_pathname) : ik_errno_to_code();
+  return (true_pathname)? ika_bytevector_from_cstring(pcb, true_pathname) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_unlink (ikptr pathname_bv)
@@ -855,7 +855,7 @@ ikrt_posix_getcwd (ikpcb * pcb)
       else
         return ik_errno_to_code();
     } else
-      return ik_bytevector_from_cstring(pcb, pathname);
+      return ika_bytevector_from_cstring(pcb, pathname);
   }
 }
 ikptr
@@ -884,7 +884,7 @@ ikrt_posix_opendir (ikptr pathname_bv, ikpcb * pcb)
   pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   stream   = opendir(pathname);
-  return (stream)? ik_pointer_alloc((ik_ulong)stream, pcb) : ik_errno_to_code();
+  return (stream)? ika_pointer_alloc(pcb, (ik_ulong)stream) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_fdopendir (ikptr fd, ikpcb * pcb)
@@ -892,7 +892,7 @@ ikrt_posix_fdopendir (ikptr fd, ikpcb * pcb)
   DIR *         stream;
   errno    = 0;
   stream   = fdopendir(unfix(fd));
-  return (stream)? ik_pointer_alloc((ik_ulong)stream, pcb) : ik_errno_to_code();
+  return (stream)? ika_pointer_alloc(pcb, (ik_ulong)stream) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_readdir (ikptr pointer, ikpcb * pcb)
@@ -912,7 +912,7 @@ ikrt_posix_readdir (ikptr pointer, ikpcb * pcb)
        "d_name".   Notice that  the documentation  of glibc  describes a
        "d_namlen"  field  which  does   not  exist  on  Linux,  see  the
        "readdir(3)" manual page. */
-    return ik_bytevector_from_cstring(pcb, entry->d_name);
+    return ika_bytevector_from_cstring(pcb, entry->d_name);
 }
 ikptr
 ikrt_posix_closedir (ikptr pointer, ikpcb * pcb)
@@ -1201,7 +1201,7 @@ ikrt_posix_select_fd (ikptr fdx, ikptr sec, ikptr usec, ikpcb * pcb)
   } else if (-1 == rv) { /* an error occurred */
     return ik_errno_to_code();
   } else { /* success, let's harvest the events */
-    vec = ik_vector_alloc(pcb, 3);
+    vec = ika_vector_alloc(pcb, 3);
     IK_ITEM(vec, 0) = (FD_ISSET(fd, &read_fds))?   fdx : false_object;
     IK_ITEM(vec, 1) = (FD_ISSET(fd, &write_fds))?  fdx : false_object;
     IK_ITEM(vec, 2) = (FD_ISSET(fd, &except_fds))? fdx : false_object;
@@ -1323,7 +1323,7 @@ ikrt_posix_make_sockaddr_un (ikptr pathname_bv, ikpcb * pcb)
     struct sockaddr_un *  name = (void *)bytes;
     name->sun_family = AF_LOCAL;
     memcpy(name->sun_path, pathname, pathname_len+1);
-    return ik_bytevector_from_memory_block(pcb, name, SUN_LEN(name));
+    return ika_bytevector_from_memory_block(pcb, name, SUN_LEN(name));
   }
 }
 ikptr
@@ -1331,7 +1331,7 @@ ikrt_posix_sockaddr_un_pathname (ikptr addr_bv, ikpcb * pcb)
 {
   struct sockaddr_un *  addr = IK_BYTEVECTOR_DATA_VOIDP(addr_bv);
   return (AF_LOCAL == addr->sun_family)?
-    ik_bytevector_from_cstring(pcb, addr->sun_path) : false_object;
+    ika_bytevector_from_cstring(pcb, addr->sun_path) : false_object;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1555,7 +1555,7 @@ hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
    "struct-hostent".    Makes  use   of  "pcb->root1"   only,   so  that
    "pcb->root0" is available to the caller. */
 {
-  ikptr dst = ik_struct_alloc(pcb, rtd);
+  ikptr dst = ika_struct_alloc(pcb, rtd);
   pcb->root1 = &dst;
   { /* store the official host name */
     long        name_len = strlen(src->h_name);
@@ -1593,7 +1593,7 @@ hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
       ikptr     addr_bv;
       pair    = IKA_PAIR_ALLOC(pcb);
       IK_CDR(pair) = list_of_addrs;
-      addr_bv = ik_bytevector_from_memory_block(pcb, src->h_addr_list[i], src->h_length);
+      addr_bv = ika_bytevector_from_memory_block(pcb, src->h_addr_list[i], src->h_length);
       IK_FIELD(dst, 4) = list_of_addrs = pair;
       IK_CAR(pair) = addr_bv;
       if (0 == i)
@@ -1669,7 +1669,7 @@ addrinfo_to_struct (ikpcb * pcb, ikptr rtd, struct addrinfo * src, int with_cano
    "struct-addrinfo".    Make  use   of  "pcb->root1"   only,   so  that
    "pcb->root0" is available to the caller. */
 {
-  ikptr         dst = ik_struct_alloc(pcb, rtd);
+  ikptr         dst = ika_struct_alloc(pcb, rtd);
   ikptr         sockaddr_bv;
   void *        sockaddr_data;
   ikptr         canon_name_bv;
@@ -1770,7 +1770,7 @@ protoent_to_struct (ikpcb * pcb, ikptr rtd, struct protoent * src)
   ikptr         dst;
   ikptr         list_of_aliases = null_object;
   int           i;
-  dst = ik_struct_alloc(pcb, rtd);
+  dst = ika_struct_alloc(pcb, rtd);
   pcb->root1 = &dst;
   {
     {
@@ -1842,7 +1842,7 @@ servent_to_struct (ikpcb * pcb, ikptr rtd, struct servent * src)
   ikptr         dst;
   ikptr         list_of_aliases = null_object;
   int           i;
-  dst = ik_struct_alloc(pcb, rtd);
+  dst = ika_struct_alloc(pcb, rtd);
   pcb->root1 = &dst;
   {
     {
@@ -1925,15 +1925,15 @@ netent_to_struct (ikpcb * pcb, ikptr rtd, struct netent * src)
   ikptr         dst;
   ikptr         list_of_aliases = null_object;
   int           i;
-  dst = ik_struct_alloc(pcb, rtd);
+  dst = ika_struct_alloc(pcb, rtd);
   pcb->root1 = &dst;
   {
-    IK_FIELD(dst, 0) = ik_bytevector_from_cstring(pcb, src->n_name);
+    IK_FIELD(dst, 0) = ika_bytevector_from_cstring(pcb, src->n_name);
     IK_FIELD(dst, 1) = list_of_aliases;
     for (i=0; src->n_aliases[i]; ++i) {
       IKA_DECLARE_ALLOC_AND_CONS(pair, list_of_aliases, pcb);
       IK_FIELD(dst, 1) = list_of_aliases;
-      IK_CAR(pair) = ik_bytevector_from_cstring(pcb, src->n_aliases[i]);
+      IK_CAR(pair) = ika_bytevector_from_cstring(pcb, src->n_aliases[i]);
     }
     IK_FIELD(dst, 2) = IK_FIX(src->n_addrtype);
     IK_FIELD(dst, 3) = ika_integer_from_ullong(pcb, (ik_ullong)src->n_net);
@@ -2425,7 +2425,7 @@ ikrt_posix_getlogin (ikpcb * pcb)
 {
   char *        username;
   username = getlogin();
-  return (username)? ik_bytevector_from_cstring(pcb, username) : false_object;
+  return (username)? ika_bytevector_from_cstring(pcb, username) : false_object;
 }
 
 /* ------------------------------------------------------------------ */
@@ -2436,16 +2436,16 @@ passwd_to_struct (ikptr rtd, struct passwd * src, ikpcb * pcb)
    "struct-passwd".    Makes   use  of   "pcb->root1"   only,  so   that
    "pcb->root0" is available to the caller. */
 {
-  ikptr dst = ik_struct_alloc(pcb, rtd);
+  ikptr dst = ika_struct_alloc(pcb, rtd);
   pcb->root1 = &dst;
   {
-    IK_FIELD(dst, 0) = ik_bytevector_from_cstring(pcb, src->pw_name);
-    IK_FIELD(dst, 1) = ik_bytevector_from_cstring(pcb, src->pw_passwd);
+    IK_FIELD(dst, 0) = ika_bytevector_from_cstring(pcb, src->pw_name);
+    IK_FIELD(dst, 1) = ika_bytevector_from_cstring(pcb, src->pw_passwd);
     IK_FIELD(dst, 2) = IK_FIX(src->pw_uid);
     IK_FIELD(dst, 3) = IK_FIX(src->pw_gid);
-    IK_FIELD(dst, 4) = ik_bytevector_from_cstring(pcb, src->pw_gecos);
-    IK_FIELD(dst, 5) = ik_bytevector_from_cstring(pcb, src->pw_dir);
-    IK_FIELD(dst, 6) = ik_bytevector_from_cstring(pcb, src->pw_shell);
+    IK_FIELD(dst, 4) = ika_bytevector_from_cstring(pcb, src->pw_gecos);
+    IK_FIELD(dst, 5) = ika_bytevector_from_cstring(pcb, src->pw_dir);
+    IK_FIELD(dst, 6) = ika_bytevector_from_cstring(pcb, src->pw_shell);
   }
   pcb->root1 = NULL;
   return dst;
@@ -2492,10 +2492,10 @@ group_to_struct (ikptr rtd, struct group * src, ikpcb * pcb)
    "struct-group".  Makes use of "pcb->root1" only, so that "pcb->root0"
    is available to the caller. */
 {
-  ikptr dst = ik_struct_alloc(pcb, rtd);
+  ikptr dst = ika_struct_alloc(pcb, rtd);
   pcb->root1 = &dst;
   {
-    IK_FIELD(dst, 0) = ik_bytevector_from_cstring(pcb, src->gr_name);
+    IK_FIELD(dst, 0) = ika_bytevector_from_cstring(pcb, src->gr_name);
     IK_FIELD(dst, 1) = IK_FIX(src->gr_gid);
     {
       ikptr       list_of_users = null_object;
@@ -2505,7 +2505,7 @@ group_to_struct (ikptr rtd, struct group * src, ikpcb * pcb)
         ikptr     s_pair = IKA_PAIR_ALLOC(pcb);
         IK_CDR(s_pair)   = list_of_users;
         IK_FIELD(dst, 2) = list_of_users = s_pair;
-        IK_CAR(s_pair)   = ik_bytevector_from_cstring(pcb, src->gr_mem[i]);
+        IK_CAR(s_pair)   = ika_bytevector_from_cstring(pcb, src->gr_mem[i]);
       }
     }
   }
@@ -2556,7 +2556,7 @@ ikrt_posix_ctermid (ikpcb * pcb)
 {
   char          id[L_ctermid];
   ctermid(id);
-  return ik_bytevector_from_cstring(pcb, id);
+  return ika_bytevector_from_cstring(pcb, id);
 }
 
 /* ------------------------------------------------------------------ */
@@ -2631,14 +2631,14 @@ ikrt_posix_clock (ikpcb * pcb)
 {
   clock_t       T;
   T = clock();
-  return (((clock_t)-1) != T)? ik_flonum_from_double(pcb, (double)T) : false_object;
+  return (((clock_t)-1) != T)? ika_flonum_from_double(pcb, (double)T) : false_object;
 }
 ikptr
 ikrt_posix_time (ikpcb * pcb)
 {
   time_t        T;
   T = time(NULL);
-  return (((time_t)-1) != T)? ik_flonum_from_double(pcb, (double)T) : false_object;
+  return (((time_t)-1) != T)? ika_flonum_from_double(pcb, (double)T) : false_object;
 }
 
 /* ------------------------------------------------------------------ */
@@ -2649,7 +2649,7 @@ tms_to_struct (ikptr rtd, struct tms * src, ikpcb * pcb)
    "struct-tms".  Makes  use of "pcb->root1" only,  so that "pcb->root0"
    is available to the caller. */
 {
-  ikptr dst = ik_struct_alloc(pcb, rtd);
+  ikptr dst = ika_struct_alloc(pcb, rtd);
   pcb->root1 = &dst;
   {
 #if 0
@@ -2657,10 +2657,10 @@ tms_to_struct (ikptr rtd, struct tms * src, ikpcb * pcb)
             (double)(src->tms_utime),  (double)(src->tms_stime),
             (double)(src->tms_cutime), (double)(src->tms_cstime));
 #endif
-    IK_FIELD(dst, 0) = ik_flonum_from_double(pcb, (double)(src->tms_utime));
-    IK_FIELD(dst, 1) = ik_flonum_from_double(pcb, (double)(src->tms_stime));
-    IK_FIELD(dst, 2) = ik_flonum_from_double(pcb, (double)(src->tms_cutime));
-    IK_FIELD(dst, 3) = ik_flonum_from_double(pcb, (double)(src->tms_cstime));
+    IK_FIELD(dst, 0) = ika_flonum_from_double(pcb, (double)(src->tms_utime));
+    IK_FIELD(dst, 1) = ika_flonum_from_double(pcb, (double)(src->tms_stime));
+    IK_FIELD(dst, 2) = ika_flonum_from_double(pcb, (double)(src->tms_cutime));
+    IK_FIELD(dst, 3) = ika_flonum_from_double(pcb, (double)(src->tms_cstime));
   }
   pcb->root1 = NULL;
   return dst;
@@ -2684,7 +2684,7 @@ ikrt_posix_gettimeofday (ikptr rtd, ikpcb * pcb)
   errno = 0;
   rv    = gettimeofday(&T, NULL);
   if (0 == rv) {
-    ikptr       s_stru = ik_struct_alloc(pcb, rtd);
+    ikptr       s_stru = ika_struct_alloc(pcb, rtd);
     pcb->root0 = &s_stru;
     {
       IK_FIELD(s_stru, 0) = ika_integer_from_long(pcb, T.tv_sec);
@@ -2704,7 +2704,7 @@ tm_to_struct (ikptr rtd, struct tm * src, ikpcb * pcb)
    "struct-tm".  Makes  use of "pcb->root1" only,  so that "pcb->root0"
    is available to the caller. */
 {
-  ikptr dst = ik_struct_alloc(pcb, rtd);
+  ikptr dst = ika_struct_alloc(pcb, rtd);
   pcb->root1 = &dst;
   {
     IK_FIELD(dst, 0) = ika_integer_from_long(pcb, (long)(src->tm_sec));
@@ -2717,7 +2717,7 @@ tm_to_struct (ikptr rtd, struct tm * src, ikpcb * pcb)
     IK_FIELD(dst, 7) = ika_integer_from_long(pcb, (long)(src->tm_yday));
     IK_FIELD(dst, 8) = (src->tm_isdst)? true_object : false_object;
     IK_FIELD(dst, 9) = ika_integer_from_long(pcb, src->tm_gmtoff);
-    IK_FIELD(dst,10) = ik_bytevector_from_cstring(pcb, src->tm_zone);
+    IK_FIELD(dst,10) = ika_bytevector_from_cstring(pcb, src->tm_zone);
   }
   pcb->root1 = NULL;
   return dst;
@@ -2768,7 +2768,7 @@ ikrt_posix_timelocal (ikptr tm_struct, ikpcb * pcb)
   time_t        rv;
   struct_to_tm(tm_struct, &T);
   rv = timelocal(&T);
-  return (((time_t)-1) != rv)? ik_flonum_from_double(pcb, (double)rv) : false_object;
+  return (((time_t)-1) != rv)? ika_flonum_from_double(pcb, (double)rv) : false_object;
 }
 ikptr
 ikrt_posix_timegm (ikptr tm_struct, ikpcb * pcb)
@@ -2777,7 +2777,7 @@ ikrt_posix_timegm (ikptr tm_struct, ikpcb * pcb)
   time_t        rv;
   struct_to_tm(tm_struct, &T);
   rv = timegm(&T);
-  return (((time_t)-1) != rv)? ik_flonum_from_double(pcb, (double)rv) : false_object;
+  return (((time_t)-1) != rv)? ika_flonum_from_double(pcb, (double)rv) : false_object;
 }
 ikptr
 ikrt_posix_strftime (ikptr template_bv, ikptr tm_struct, ikpcb *pcb)
@@ -2793,7 +2793,7 @@ ikrt_posix_strftime (ikptr template_bv, ikptr tm_struct, ikpcb *pcb)
   output[0] = '\1';
   size = strftime(output, size, template, &T);
   return (0 == size && '\0' != output[0])?
-    false_object : ik_bytevector_from_cstring_len(pcb, output, size);
+    false_object : ika_bytevector_from_cstring_len(pcb, output, size);
 }
 
 /* ------------------------------------------------------------------ */
