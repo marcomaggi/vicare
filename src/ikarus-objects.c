@@ -195,7 +195,8 @@ ik_is_vector (ikptr s_vec)
 ikptr
 ika_vector_alloc (ikpcb * pcb, long number_of_items)
 {
-  long	align_size = disp_vector_data + number_of_items * wordsize;
+  /* Do not ask me why, but IK_ALIGN is needed here. */
+  long	align_size = IK_ALIGN(disp_vector_data + number_of_items * wordsize);
   ikptr	s_vec      = ik_safe_alloc(pcb, align_size) | vector_tag;
   ref(s_vec, off_vector_length) = IK_FIX(number_of_items);
   return s_vec;
@@ -218,7 +219,8 @@ ika_struct_alloc (ikpcb * pcb, ikptr s_rtd)
    descriptor.  Make use of "pcb->root9". */
 {
   long  num_of_fields = IK_UNFIX(ref(s_rtd, off_rtd_length));
-  long  align_size    = disp_record_data + num_of_fields * wordsize;
+  /* Do not ask me why, but IK_ALIGN is needed here. */
+  long  align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
   ikptr s_stru;
   pcb->root9 = &s_rtd;
   {
@@ -239,6 +241,7 @@ ika_string_alloc (ikpcb * pcb, long number_of_chars)
 {
   long  align_size;
   ikptr s_str;
+  /* Do not ask me why, but IK_ALIGN is needed here. */
   align_size = IK_ALIGN(disp_string_data + number_of_chars * sizeof(ikchar));
   s_str      = ik_safe_alloc(pcb, align_size) | string_tag;
   ref(s_str, off_string_length) = IK_FIX(number_of_chars);
@@ -265,7 +268,7 @@ ika_integer_from_long (ikpcb * pcb, long N)
 #undef NUMBER_OF_WORDS
 #define NUMBER_OF_WORDS		1
     /* wordsize == sizeof(long) */
-    ikptr s_bn = ik_safe_alloc(pcb, wordsize + disp_bignum_data) | vector_tag;
+    ikptr s_bn = ik_safe_alloc(pcb, IK_ALIGN(wordsize + disp_bignum_data)) | vector_tag;
     if (N > 0) { /* positive bignum */
       ref(s_bn, off_bignum_tag)  =
 	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_length_shift));
@@ -288,7 +291,7 @@ ika_integer_from_llong (ikpcb * pcb, ik_llong N)
   else {
 #undef NUMBER_OF_WORDS
 #define NUMBER_OF_WORDS		sizeof(ik_llong) / sizeof(mp_limb_t)
-    int   align_size = disp_bignum_data + sizeof(ik_llong);
+    int   align_size = IK_ALIGN(disp_bignum_data + sizeof(ik_llong));
     ikptr s_bn       = ik_safe_alloc(pcb, align_size) | vector_tag;
     if (N > 0){
       ref(s_bn, off_bignum_tag) =
@@ -315,7 +318,7 @@ ika_integer_from_ulong (ikpcb * pcb, ik_ulong N)
     return IK_FIX(N);
   } else {
     /* wordsize == sizeof(unsigned long) */
-    ikptr	s_bn = ik_safe_alloc(pcb, disp_bignum_data + wordsize) | vector_tag;
+    ikptr	s_bn = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + wordsize)) | vector_tag;
     ref(s_bn, off_bignum_tag)  = (ikptr)(bignum_tag | (1 << bignum_length_shift));
     ref(s_bn, off_bignum_data) = (ikptr)N;
     return s_bn;

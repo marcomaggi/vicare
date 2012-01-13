@@ -316,9 +316,10 @@ ikrt_cre2_match (ikptr s_rex, ikptr s_text, ikptr s_start, ikptr s_end, ikptr s_
     pcb->root0 = &s_match;
     {
       for (i=0; i<nmatch; ++i) {
-	IK_ASS(IK_ITEM(s_match, i), IKA_PAIR_ALLOC(pcb));
-	IK_CAR(IK_ITEM(s_match, i)) = IK_FIX(ranges[i].start);
-	IK_CDR(IK_ITEM(s_match, i)) = IK_FIX(ranges[i].past);
+	ikptr	s_pair = IKA_PAIR_ALLOC(pcb);	/* first alloc... */
+	IK_ITEM(s_match, i) = s_pair;		/* ...then store */
+	IK_CAR(s_pair)      = IK_FIX(ranges[i].start);
+	IK_CDR(s_pair)      = IK_FIX(ranges[i].past);
       }
     }
     pcb->root0 = NULL;

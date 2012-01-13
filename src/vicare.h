@@ -573,8 +573,8 @@ ik_decl ikptr ikrt_is_pointer	(ikptr x);
 #define vector_tag		5
 #define disp_vector_length	0
 #define disp_vector_data	wordsize
-#define off_vector_data		(disp_vector_data   - vector_tag)
 #define off_vector_length	(disp_vector_length - vector_tag)
+#define off_vector_data		(disp_vector_data   - vector_tag)
 
 ik_decl ikptr ika_vector_alloc	(ikpcb * pcb, long number_of_items);
 ik_decl int   ik_is_vector	(ikptr s_vec);
