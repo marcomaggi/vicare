@@ -444,7 +444,9 @@ ik_decl ikptr ikrt_strings_to_gensym	(ikptr, ikptr,	ikpcb* pcb);
 #define bignum_sign_mask	0x8
 #define bignum_sign_shift	3
 #define bignum_length_shift	4
+#define disp_bignum_tag		0
 #define disp_bignum_data	wordsize
+#define off_bignum_tag		(disp_bignum_tag  - vector_tag)
 #define off_bignum_data		(disp_bignum_data - vector_tag)
 
 ik_decl ikptr	ika_integer_from_int	(ikpcb* pcb, int N);
