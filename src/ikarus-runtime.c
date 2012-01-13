@@ -725,28 +725,27 @@ ikrt_stats_now(ikptr t, ikpcb* pcb){
   /* Do  not  change the  order  of the  fields!!!   It  must match  the
      implementation     of     the     record    type     "stats"     in
      "scheme/ikarus.timer.ss". */
-  ref(t, off_record_data)                = fix(r.ru_utime.tv_sec);
-  ref(t, off_record_data + wordsize)     = fix(r.ru_utime.tv_usec);
-  ref(t, off_record_data + 2 * wordsize) = fix(r.ru_stime.tv_sec);
-  ref(t, off_record_data + 3 * wordsize) = fix(r.ru_stime.tv_usec);
-  ref(t, off_record_data + 4 * wordsize) = fix(s.tv_sec);
-  ref(t, off_record_data + 5 * wordsize) = fix(s.tv_usec);
-  ref(t, off_record_data + 6 * wordsize) = fix(pcb->collection_id);
-  ref(t, off_record_data + 7 * wordsize) = fix(pcb->collect_utime.tv_sec);
-  ref(t, off_record_data + 8 * wordsize) = fix(pcb->collect_utime.tv_usec);
-  ref(t, off_record_data + 9 * wordsize) = fix(pcb->collect_stime.tv_sec);
-  ref(t, off_record_data + 10 * wordsize) = fix(pcb->collect_stime.tv_usec);
-  ref(t, off_record_data + 11 * wordsize) = fix(pcb->collect_rtime.tv_sec);
-  ref(t, off_record_data + 12 * wordsize) = fix(pcb->collect_rtime.tv_usec);
+  IK_FIELD(t,  0) = fix(r.ru_utime.tv_sec);
+  IK_FIELD(t,  1) = fix(r.ru_utime.tv_usec);
+  IK_FIELD(t,  2) = fix(r.ru_stime.tv_sec);
+  IK_FIELD(t,  3) = fix(r.ru_stime.tv_usec);
+  IK_FIELD(t,  4) = fix(s.tv_sec);
+  IK_FIELD(t,  5) = fix(s.tv_usec);
+  IK_FIELD(t,  6) = fix(pcb->collection_id);
+  IK_FIELD(t,  7) = fix(pcb->collect_utime.tv_sec);
+  IK_FIELD(t,  8) = fix(pcb->collect_utime.tv_usec);
+  IK_FIELD(t,  9) = fix(pcb->collect_stime.tv_sec);
+  IK_FIELD(t, 10) = fix(pcb->collect_stime.tv_usec);
+  IK_FIELD(t, 11) = fix(pcb->collect_rtime.tv_sec);
+  IK_FIELD(t, 12) = fix(pcb->collect_rtime.tv_usec);
   {
     /* minor bytes */
-    long bytes_in_heap = ((long) pcb->allocation_pointer) -
-                             ((long) pcb->heap_base);
-    long bytes = bytes_in_heap + pcb->allocation_count_minor;
-    ref(t, off_record_data + 13 * wordsize) = fix(bytes);
+    long bytes_in_heap	= ((long)pcb->allocation_pointer) - ((long)pcb->heap_base);
+    long bytes		= bytes_in_heap + pcb->allocation_count_minor;
+    IK_FIELD(t, 13)	= fix(bytes);
   }
   /* major bytes */
-  ref(t, off_record_data + 14 * wordsize) = fix(pcb->allocation_count_major);
+  IK_FIELD(t, 14) = fix(pcb->allocation_count_major);
   return void_object;
 }
 
