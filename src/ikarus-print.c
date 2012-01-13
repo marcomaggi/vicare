@@ -127,7 +127,7 @@ print (FILE* fh, ikptr x)
       fprintf(fh, "#<unknown first_word=%p>", (void*)first_word);
     }
   }
-  else if (is_closure(x)){
+  else if (IK_IS_CLOSURE(x)){
     fprintf(fh, "#<procedure>");
   }
   else if (IK_IS_PAIR(x)){
