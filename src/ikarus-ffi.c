@@ -415,11 +415,11 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
   ikptr         sk;
   size_t        args_bufsize;
   seal_scheme_stack(pcb);
-  sk = ik_unsafe_alloc(pcb, system_continuation_size);
-  IK_REF(sk, disp_system_continuation_tag)  = system_continuation_tag;
-  IK_REF(sk, disp_system_continuation_top)  = pcb->system_stack;
-  IK_REF(sk, disp_system_continuation_next) = pcb->next_k;
-  pcb->next_k = sk | vector_tag;
+  sk = ik_unsafe_alloc(pcb, system_continuation_size) | vector_tag;
+  IK_REF(sk, off_system_continuation_tag)  = system_continuation_tag;
+  IK_REF(sk, off_system_continuation_top)  = pcb->system_stack;
+  IK_REF(sk, off_system_continuation_next) = pcb->next_k;
+  pcb->next_k = sk;
   {
     ik_ffi_cif_t  cif     = IK_POINTER_DATA_VOIDP(IK_CAR(s_data));
     address_t *   address = IK_POINTER_DATA_VOIDP(IK_CDR(s_data));
