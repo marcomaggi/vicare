@@ -163,7 +163,7 @@ typedef ik_ffi_cif_stru_t *      ik_ffi_cif_t;
   ((type_id_t*)(((uint8_t*)cif) + sizeof(ik_ffi_cif_stru_t) + (1+(ARITY))*sizeof(ffi_type*)))
 
 static void     scheme_to_native_value_cast  (type_id_t type_id, ikptr s_scheme_value, void * buffer);
-static ikptr    native_to_scheme_value_cast  (type_id_t type_id, void * buffer, ikpcb* pcb);
+static ikptr    ika_native_to_scheme_value_cast  (type_id_t type_id, void * buffer, ikpcb* pcb);
 static ikptr    seal_scheme_stack            (ikpcb* pcb);
 static void     generic_callback             (ffi_cif *cif, void *ret, void **args, void *user_data);
 
@@ -270,6 +270,9 @@ scheme_to_native_value_cast (type_id_t type_id, ikptr s_scheme_value, void * buf
   case TYPE_ID_DOUBLE:  *((double*)         buffer) = IK_FLONUM_DATA(s_scheme_value); return;
 
   case TYPE_ID_POINTER:
+    /* This  supports  bytevector  arguments  to  foreign  functions  as
+       pointers.  Currently  undocumented because it  is unsafe.  (Marco
+       Maggi; Jan 13, 2012) */
     if (IK_IS_BYTEVECTOR(s_scheme_value))
       *((void**)buffer) = IK_BYTEVECTOR_DATA_VOIDP(s_scheme_value);
     else
@@ -290,7 +293,7 @@ scheme_to_native_value_cast (type_id_t type_id, ikptr s_scheme_value, void * buf
   }
 }
 static ikptr
-native_to_scheme_value_cast (type_id_t type_id, void * buffer, ikpcb* pcb)
+ika_native_to_scheme_value_cast (type_id_t type_id, void * buffer, ikpcb* pcb)
 /* Convert the native value stored  in the block of memory referenced by
    BUFFER to  a Scheme value  and return the  Scheme value; the  type is
    selected by TYPE_ID. */
@@ -449,12 +452,12 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
     errno = 0;
     ffi_call(&(cif->cif), address, (void *)retval_buffer, arg_value_ptrs);
     pcb->last_errno = errno;
-    return_value    = native_to_scheme_value_cast(cif->retval_type_id, retval_buffer, pcb);
+    return_value    = ika_native_to_scheme_value_cast(cif->retval_type_id, retval_buffer, pcb);
   }
   pcb->frame_pointer = pcb->frame_base - wordsize;
   sk = pcb->next_k - vector_tag;
   if (system_continuation_tag != IK_REF(sk, disp_system_continuation_tag)) {
-    ik_abort("invalid system cont");
+    ik_abort("%s: invalid system cont", __func__);
   }
   pcb->next_k       = IK_REF(sk, disp_system_continuation_next);
   pcb->system_stack = IK_REF(sk, disp_system_continuation_top);
@@ -579,21 +582,26 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
   ikptr         s_data        = ((ik_callback_locative*)user_data)->data;
   ikptr         s_proc        = IK_CDR(s_data);
   ikpcb *       pcb           = the_pcb;
-  ikptr         code_entry    = IK_REF(s_proc, off_closure_code);
-  ikptr         code_ptr      = code_entry - off_code_data;
   int           i;
   ikptr         rv;
   pcb->frame_pointer = pcb->frame_base;
-  /* Push arguments on the Scheme stack. */
-  for (i=0; i<cif->arity; ++i) {
-    IK_REF(pcb->frame_pointer, -2*wordsize - i*wordsize) =
-      native_to_scheme_value_cast(cif->arg_type_ids[i], args[i], pcb);
+  pcb->root0 = &s_proc;
+  { /* Push arguments on the Scheme stack. */
+    for (i=0; i<cif->arity; ++i) {
+      ikptr	s_value;
+      s_value = ika_native_to_scheme_value_cast(cif->arg_type_ids[i], args[i], pcb);
+      IK_REF(pcb->frame_pointer, -2*wordsize - i*wordsize) = s_value;
+    }
   }
+  pcb->root0 = NULL;
   /* Perform the call. */
-  rv = ik_exec_code(pcb, code_ptr, IK_FIX(-cif->arity), s_proc);
-  /* Convert the Scheme return value to a native value. */
-  scheme_to_native_value_cast(cif->retval_type_id, rv, retval_buffer);
-  return;
+  {
+    ikptr         code_entry    = IK_REF(s_proc, off_closure_code);
+    ikptr         code_ptr      = code_entry - off_code_data;
+    rv = ik_exec_code(pcb, code_ptr, IK_FIX(-cif->arity), s_proc);
+    /* Convert the Scheme return value to a native value. */
+    scheme_to_native_value_cast(cif->retval_type_id, rv, retval_buffer);
+  }
 }
 
 
