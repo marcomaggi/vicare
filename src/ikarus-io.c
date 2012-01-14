@@ -41,7 +41,7 @@ ikrt_close_fd (ikptr fd /*, ikpcb* pcb */)
 {
   int   rv;
   errno = 0;
-  rv    = close(unfix(fd));
+  rv    = close(IK_UNFIX(fd));
   return (-1 != rv)? false_object : ik_errno_to_code();
 }
 ikptr
@@ -51,14 +51,14 @@ ikrt_set_position (ikptr fd, ikptr pos /*, ikpcb* pcb */)
   off_t         rv;
   offset = ik_integer_to_llong(pos);
   errno  = 0;
-  rv     = lseek(unfix(fd), offset, SEEK_SET);
+  rv     = lseek(IK_UNFIX(fd), offset, SEEK_SET);
   return (-1 != rv)? false_object : ik_errno_to_code();
 }
 ikptr
 ikrt_open_input_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
 {
   const char *  pathname;
-  IK_UNUSED int opts  = unfix(ikopts);
+  IK_UNUSED int opts  = IK_UNFIX(ikopts);
   int           flags = O_RDONLY; /* no special flags supported at present */
   /* The "mode" value is used  only when creating the file, which should
      not happen here. */
@@ -67,13 +67,13 @@ ikrt_open_input_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
   pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   fd       = open(pathname, flags, mode);
-  return (0 <= fd)? fix(fd) : ik_errno_to_code();
+  return (0 <= fd)? IK_FIX(fd) : ik_errno_to_code();
 }
 ikptr
 ikrt_open_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
 {
   const char *  pathname;
-  int           opts  = unfix(ikopts);
+  int           opts  = IK_UNFIX(ikopts);
   int           mode  = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
   int           flags = 0;
   int           fd;
@@ -129,13 +129,13 @@ ikrt_open_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
   pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   fd       = open(pathname, flags, mode);
-  return (0 <= fd)? fix(fd) : ik_errno_to_code();
+  return (0 <= fd)? IK_FIX(fd) : ik_errno_to_code();
 }
 ikptr
 ikrt_open_input_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
 {
   const char *  pathname;
-  int           opts  = unfix(ikopts);
+  int           opts  = IK_UNFIX(ikopts);
   int           mode  = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
   int           flags = 0;
   int           fd;
@@ -162,16 +162,16 @@ ikrt_open_input_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
   pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno = 0;
   fd    = open(pathname, flags, mode);
-  return (0 <= fd)? fix(fd) : ik_errno_to_code();
+  return (0 <= fd)? IK_FIX(fd) : ik_errno_to_code();
 }
 ikptr
 ikrt_read_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_count /*, ikpcb* pcb */)
 {
   ssize_t       rv;
   uint8_t *     buffer;
-  buffer = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv) + unfix(buffer_offset);
+  buffer = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv) + IK_UNFIX(buffer_offset);
   errno  = 0;
-  rv     = read(unfix(fd), buffer, unfix(requested_count));
+  rv     = read(IK_UNFIX(fd), buffer, IK_UNFIX(requested_count));
   return (0 <= rv)? fix(rv) : ik_errno_to_code();
 }
 ikptr
@@ -179,171 +179,10 @@ ikrt_write_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_c
 {
   ssize_t       rv;
   uint8_t *     buffer;
-  buffer = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv) + unfix(buffer_offset);
+  buffer = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv) + IK_UNFIX(buffer_offset);
   errno  = 0;
-  rv     = write(unfix(fd), buffer, unfix(requested_count));
-  return (0 <= rv)? fix(rv) : ik_errno_to_code();
+  rv     = write(IK_UNFIX(fd), buffer, IK_UNFIX(requested_count));
+  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 }
-
-
-/** --------------------------------------------------------------------
- ** Original Ikarus net interface.
- ** ----------------------------------------------------------------- */
-
-#if 0
-static ikptr
-do_connect(ikptr host, ikptr srvc, int socket_type){
-  struct addrinfo* info;
-  int err = getaddrinfo((char*)(long)(host+off_bytevector_data),
-                        (char*)(long)(srvc+off_bytevector_data),
-                        0,
-                        &info);
-  if(err){
-    switch(err){
-      case EAI_SYSTEM: return ik_errno_to_code();
-      default: return false_object;
-    }
-  }
-  struct addrinfo* i = info;
-  ikptr sock = false_object;
-  while(i){
-    if(i->ai_socktype != socket_type){
-      i = i->ai_next;
-    } else {
-      int s = socket(i->ai_family, i->ai_socktype, i->ai_protocol);
-      if(s < 0){
-        sock = ik_errno_to_code();
-        i = i->ai_next;
-      } else {
-        int err = connect(s, i->ai_addr, i->ai_addrlen);
-        if(err < 0){
-          sock = ik_errno_to_code();
-          i = i->ai_next;
-        } else {
-          sock = fix(s);
-          i = 0;
-        }
-      }
-    }
-  }
-  freeaddrinfo(info);
-  return sock;
-}
-
-ikptr
-ikrt_tcp_connect(ikptr host, ikptr srvc /*, ikpcb* pcb */){
-  return do_connect(host, srvc, SOCK_STREAM);
-}
-
-ikptr
-ikrt_udp_connect(ikptr host, ikptr srvc /*, ikpcb* pcb */){
-  return do_connect(host, srvc, SOCK_DGRAM);
-}
-
-ikptr
-ikrt_make_fd_nonblocking(ikptr fdptr /*, ikpcb* pcb */){
-  int fd = unfix(fdptr);
-  int err = fcntl(fd, F_SETFL, O_NONBLOCK);
-  if(err == -1){
-    return ik_errno_to_code();
-  }
-  return 0;
-}
-
-ikptr
-ikrt_select(ikptr fds, ikptr rfds, ikptr wfds, ikptr xfds /*, ikpcb* pcb */){
-  int rv = select(unfix(fds),
-                  (fd_set*)(rfds + off_bytevector_data),
-                  (fd_set*)(wfds + off_bytevector_data),
-                  (fd_set*)(xfds + off_bytevector_data),
-                  NULL);
-  if(rv < 0){
-    return ik_errno_to_code();
-  }
-  return fix(rv);
-}
-
-ikptr
-ikrt_listen(ikptr port /*, ikpcb* pcb */){
-
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
-  if(sock < 0){
-    return ik_errno_to_code();
-  }
-
-  struct sockaddr_in servaddr;
-  memset(&servaddr, 0, sizeof(struct sockaddr_in));
-  servaddr.sin_family = AF_INET;
-  servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  servaddr.sin_port = htons(unfix(port));
-
-  int err;
-
-  int reuse = 1;
-  err = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
-  if(err < 0){
-    return ik_errno_to_code();
-  }
-
-
-  err = bind(sock, (struct sockaddr *)&servaddr, sizeof(servaddr));
-  if(err < 0){
-    return ik_errno_to_code();
-  }
-
-  err = listen(sock, 1024);
-  if(err < 0){
-    return ik_errno_to_code();
-  }
-  return fix(sock);
-}
-
-#if 0
-not used
-ikptr
-ikrt_getsockname(ikptr s, ikpcb* pcb){
-  socklen_t size = sizeof(struct sockaddr);
-  ikptr bv = ik_safe_alloc(pcb, IK_ALIGN(disp_bytevector_data+size))
-             | bytevector_tag;
-  int r = getsockname(unfix(s),
-                     (struct sockaddr*)(bv+off_bytevector_data),
-                     &size);
-  if(r == 0){
-    ref(bv, off_bytevector_length) = fix(size);
-    return bv;
-  } else {
-    return ik_errno_to_code();
-  }
-}
-#endif
-
-
-
-ikptr
-ikrt_accept(ikptr s, ikptr bv /*, ikpcb* pcb */){
-  socklen_t addrlen = unfix(ref(bv, off_bytevector_length));
-  int sock = accept(unfix(s),
-                    (struct sockaddr*) (bv+off_bytevector_data),
-                    &addrlen);
-  if(sock < 0){
-    return ik_errno_to_code();
-  }
-  ref(bv, off_bytevector_length) = fix(addrlen);
-  return fix(sock);
-}
-
-ikptr
-ikrt_shutdown(ikptr s /*, ikpcb* pcb*/){
-#ifdef __CYGWIN__
-  int err = close(unfix(s));
-#else
-  int err = shutdown(unfix(s), SHUT_RDWR);
-#endif
-  if(err < 0){
-    return ik_errno_to_code();
-  }
-  return 0;
-}
-#endif
 
 /* end of file */

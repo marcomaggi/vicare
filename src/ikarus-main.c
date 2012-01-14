@@ -71,7 +71,7 @@ ikarus_main (int argc, char** argv, char* boot_file)
       char *	s = argv[i];
       int	n = strlen(s);
       ikptr	bv = ik_unsafe_alloc(pcb, IK_ALIGN(disp_bytevector_data+n+1)) | bytevector_tag;
-      ref(bv, off_bytevector_length) = fix(n);
+      ref(bv, off_bytevector_length) = IK_FIX(n);
       /* copy the bytes and the terminating zero */
       memcpy((char*)(bv+off_bytevector_data), s, n+1);
       ikptr p = ik_unsafe_alloc(pcb, pair_size);
@@ -116,7 +116,7 @@ static void
 handler (int signo, siginfo_t* info, void* uap)
 {
   signo=signo; info=info; uap=uap; /* no warning */
-  the_pcb->engine_counter = fix(-1);
+  the_pcb->engine_counter = IK_FIX(-1);
   the_pcb->interrupted = 1;
 }
 static void
@@ -131,10 +131,8 @@ register_handlers (void)
 #endif
   sigemptyset(&sa.sa_mask);
   int err = sigaction(SIGINT, &sa, 0);
-  if (err) {
-    fprintf(stderr, "Vicare error: sigaction failed: %s\n", strerror(errno));
-    exit(EXIT_FAILURE);
-  }
+  if (err)
+    ik_abort("sigaction failed: %s", strerror(errno));
 
   /* ignore sigpipes */
   {
@@ -142,10 +140,8 @@ register_handlers (void)
     sigprocmask(0, 0, &set); /* get the set */
     sigaddset(&set, SIGPIPE);
     int err = sigprocmask(SIG_SETMASK, &set, &set);
-    if (err) {
-      fprintf(stderr, "Sigprocmask Failed: %s\n", strerror(errno));
-      exit(EXIT_FAILURE);
-    }
+    if (err)
+      ik_abort("sigprocmask failed: %s", strerror(errno));
   }
 }
 
@@ -171,19 +167,15 @@ register_alt_stack (void)
 #if HAVE_SIGALTSTACK
   char* stk = mmap(0, SIGSTKSZ, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_PRIVATE|MAP_ANON, -1, 0);
   //  char* stk = ik_mmap(SIGSTKSZ);
-  if(stk == (char*)-1) {
-    fprintf(stderr, "Cannot maloc an alt stack\n");
-    exit(EXIT_FAILURE);
-  }
+  if (stk == (char*)-1)
+    ik_abort("cannot allocate an alternate stack for interprocess signals");
   stack_t sa;
   sa.ss_sp = stk;
   sa.ss_size = SIGSTKSZ;
   sa.ss_flags = 0;
   int err = sigaltstack(&sa, 0);
-  if(err) {
-    fprintf(stderr, "Cannot set alt stack: %s\n", strerror(errno));
-    exit(EXIT_FAILURE);
-  }
+  if (err)
+    ik_abort("cannot set alternate stack for interprocess signals: %s\n", strerror(errno));
 #endif
 }
 

@@ -45,8 +45,7 @@
 static IK_UNUSED void
 feature_failure_ (const char * funcname)
 {
-  fprintf(stderr, "Vicare error: called GNU+Linux specific function, %s\n", funcname);
-  exit(EXIT_FAILURE);
+  ik_abort("called GNU+Linux specific function, %s", funcname);
 }
 
 #define feature_failure(FN)     { feature_failure_(FN); return void_object; }
