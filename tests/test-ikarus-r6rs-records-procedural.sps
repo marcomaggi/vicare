@@ -30,6 +30,10 @@
   (rnrs records inspection)
   (rnrs records procedural))
 
+(define (%printf . args)
+  (when #f
+    (apply fprintf (current-error-port) args)))
+
 (define rtd0
   (make-record-type-descriptor 'rtd0
     #f #f #f #f
@@ -44,7 +48,7 @@
 
 (define (test0)
   (let ([x (make-t0-default 5)])
-    (printf "x=~s\n" x)
+    (%printf "x=~s\n" x)
     (assert (not (record-field-mutable? rtd0 0)))
     (assert (record? x))
     (assert (t0? x))
@@ -152,9 +156,9 @@
     (make-record-constructor-descriptor :point #f
       (lambda (new)
         (lambda (x y)
-          (printf "point/abs constr ~s ~s\n" x y)
+          (%printf "point/abs constr ~s ~s\n" x y)
           (let ([r (new (abs x) (abs y))])
-            (printf "point/abs r=~s\n" r)
+            (%printf "point/abs r=~s\n" r)
             r)))))
 
   (define make-point/abs (record-constructor :point-cd/abs))
@@ -167,9 +171,9 @@
     (make-record-constructor-descriptor :cpoint :point-cd
       (lambda (p)
         (lambda (x y c)
-          (printf "cpoint constr ~s ~s ~s\n" x y c)
+          (%printf "cpoint constr ~s ~s ~s\n" x y c)
           (let ([r ((p x y) (color->rgb c))])
-            (printf "cpoint r=~s\n" r)
+            (%printf "cpoint r=~s\n" r)
             r)))))
 
   (define make-cpoint
@@ -183,15 +187,15 @@
     (make-record-constructor-descriptor :cpoint :point-cd/abs
       (lambda (p)
         (lambda (x y c)
-          (printf "cpoint/abs constr ~s ~s ~s\n" x y c)
+          (%printf "cpoint/abs constr ~s ~s ~s\n" x y c)
           (let ([r ((p x y) (color->rgb c))])
-            (printf "cpointabs r=~s\n" r)
+            (%printf "cpointabs r=~s\n" r)
             r)))))
 
   (define make-cpoint/abs
     (record-constructor cpoint/abs-cd))
 
-  (printf "cpoint/abs-cd=~s\n" cpoint/abs-cd)
+  (%printf "cpoint/abs-cd=~s\n" cpoint/abs-cd)
 
   (let ()
     (define p1 (make-point 1 2))
@@ -223,23 +227,22 @@
     )
   )
 
-(set-port-buffer-mode! (current-output-port) (buffer-mode line))
+(display "*** testing Ikarus R6RS records procedural\n\n" (current-error-port))
 (test0)
-(printf "test0 ok\n")
+(%printf "test0 ok\n")
 (test1)
-(printf "test1 ok\n")
+(%printf "test1 ok\n")
 (test2)
-(printf "test2 ok\n")
+(%printf "test2 ok\n")
 (test3)
-(printf "test3 ok\n")
+(%printf "test3 ok\n")
 (test4)
-(printf "test4 ok\n")
+(%printf "test4 ok\n")
 (test5)
-(printf "test5 ok\n")
-(printf "rtd0=~s\n" rtd0)
-(printf "rcd0=~s\n" rcd0-default)
-(printf "fields of ~s are ~s\n" rtd1 (record-type-field-names rtd1))
-(printf "happy happy joy joy\n")
-
+(%printf "test5 ok\n")
+(%printf "rtd0=~s\n" rtd0)
+(%printf "rcd0=~s\n" rcd0-default)
+(%printf "fields of ~s are ~s\n" rtd1 (record-type-field-names rtd1))
+(display "; *** done\n" (current-error-port))
 
 ;;; end of file
