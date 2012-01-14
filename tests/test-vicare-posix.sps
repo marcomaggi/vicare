@@ -133,8 +133,8 @@
 
 ;;; --------------------------------------------------------------------
 
-;;;  (pretty-print (environ))
-;;;  (pretty-print (hashtable-keys (px.environ-table)))(newline)
+;;;(check-pretty-print (environ))
+;;;(check-pretty-print (hashtable-keys (px.environ-table)))
 
   (check
       (let ((table (px.environ-table)))
@@ -940,15 +940,15 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((S (px.gethostbyname "localhost")))
-;;;(check-pretty-print S)
-	(list (px.struct-hostent? S)
-	      (utf8->string (px.struct-hostent-h_name S))
-	      (px.struct-hostent-h_aliases   S)
-	      (px.struct-hostent-h_addrtype  S)
-	      (px.struct-hostent-h_length    S)
-	      (px.struct-hostent-h_addr_list S)
-	      (px.struct-hostent-h_addr      S)))
+    (let ((S (px.gethostbyname "localhost")))
+;;;      (check-pretty-print S)
+      (list (px.struct-hostent? S)
+	    (utf8->string (px.struct-hostent-h_name S))
+	    (px.struct-hostent-h_aliases   S)
+	    (px.struct-hostent-h_addrtype  S)
+	    (px.struct-hostent-h_length    S)
+	    (px.struct-hostent-h_addr_list S)
+	    (px.struct-hostent-h_addr      S)))
     => `(#t "localhost" () ,AF_INET 4 (#vu8(127 0 0 1)) #vu8(127 0 0 1)))
 
   (check
@@ -979,7 +979,7 @@
       (for-all px.struct-hostent? (px.host-entries))
     => #t)
 
-;;;  (check-pretty-print (cons '/etc/hosts (px.host-entries)))
+;;;(check-pretty-print (cons '/etc/hosts (px.host-entries)))
 
 ;;; --------------------------------------------------------------------
 

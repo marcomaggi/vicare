@@ -60,6 +60,30 @@
 #define SIZEOF_STRUCT_IN_ADDR		sizeof(struct in_addr)
 #define SIZEOF_STRUCT_IN6_ADDR		sizeof(struct in6_addr)
 
+/* process identifiers */
+#define IK_PID_TO_NUM(pid)		IK_FIX(pid)
+#define IK_NUM_TO_PID(pid)		IK_UNFIX(pid)
+
+/* user identifiers */
+#define IK_UID_TO_NUM(uid)		IK_FIX(uid)
+#define IK_NUM_TO_UID(uid)		IK_UNFIX(uid)
+
+/* group identifiers */
+#define IK_GID_TO_NUM(gid)		IK_FIX(gid)
+#define IK_NUM_TO_GID(gid)		IK_UNFIX(gid)
+
+/* file descriptors */
+#define IK_FD_TO_NUM(fd)		IK_FIX(fd)
+#define IK_NUM_TO_FD(fd)		IK_UNFIX(fd)
+
+/* interprocess signal numbers */
+#define IK_SIGNUM_TO_NUM(signum)	IK_FIX(signum)
+#define IK_NUM_TO_SIGNUM(signum)	IK_UNFIX(signum)
+
+/* file access mode */
+#define IK_FILEMODE_TO_NUM(filemode)	IK_FIX(filemode)
+#define IK_NUM_TO_FILEMODE(filemode)	IK_UNFIX(filemode)
+
 
 /** --------------------------------------------------------------------
  ** Errno handling.
@@ -69,8 +93,8 @@ ikptr
 ik_errno_to_code (void)
 /* Negate the current errno value and convert it into a fixnum. */
 {
-  int en = - errno;
-  return fix(en);
+  int negated_errno_code = - errno;
+  return IK_FIX(negated_errno_code);
 }
 ikptr
 ikrt_posix_strerror (ikptr negated_errno_code, ikpcb* pcb)
@@ -115,14 +139,14 @@ ikrt_posix_unsetenv (ikptr key)
 ikptr
 ikrt_posix_environ (ikpcb* pcb)
 {
-  ikptr		s_list  = null_object;
+  ikptr		s_list	= null_object;
   ikptr		s_spine = null_object;
   int		i;
   s_list = s_spine = IKA_PAIR_ALLOC(pcb);
   pcb->root0 = &s_list;
   pcb->root1 = &s_spine;
   {
-    for (i=0; environ[i]; ++i) {
+    for (i=0; environ[i];) {
       IK_ASS(IK_CAR(s_spine), ika_bytevector_from_cstring(pcb, environ[i]));
       if (environ[++i]) {
 	IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
@@ -144,12 +168,12 @@ ikrt_posix_environ (ikpcb* pcb)
 ikptr
 ikrt_posix_getpid(void)
 {
-  return fix(getpid());
+  return IK_PID_TO_NUM(getpid());
 }
 ikptr
 ikrt_posix_getppid(void)
 {
-  return fix(getppid());
+  return IK_PID_TO_NUM(getppid());
 }
 
 
@@ -163,7 +187,7 @@ ikrt_posix_system (ikptr command)
   int		rv;
   errno = 0;
   rv	= system(IK_BYTEVECTOR_DATA_CHARP(command));
-  return (0 <= rv)? fix(rv) : ik_errno_to_code();
+  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_fork (void)
@@ -171,7 +195,7 @@ ikrt_posix_fork (void)
   int	pid;
   errno = 0;
   pid	= fork();
-  return (0 <= pid)? fix(pid) : ik_errno_to_code();
+  return (0 <= pid)? IK_PID_TO_NUM(pid) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_execv (ikptr filename_bv, ikptr argv_list)
@@ -219,64 +243,64 @@ ikrt_posix_execvp (ikptr filename_bv, ikptr argv_list)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_waitpid (ikptr pid, ikptr options)
+ikrt_posix_waitpid (ikptr s_pid, ikptr s_options, ikpcb * pcb)
 {
   int	status;
   pid_t rv;
   errno	 = 0;
-  rv	 = waitpid(IK_UNFIX(pid), &status, IK_UNFIX(options));
-  return (0 <= rv)? fix(status) : ik_errno_to_code();
+  rv	 = waitpid(IK_NUM_TO_PID(s_pid), &status, IK_UNFIX(s_options));
+  return (0 <= rv)? ika_integer_from_int(pcb, status) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_wait (void)
+ikrt_posix_wait (ikpcb * pcb)
 {
   int	status;
   pid_t rv;
   errno	 = 0;
   rv	 = wait(&status);
-  return (0 <= rv)? fix(status) : ik_errno_to_code();
+  return (0 <= rv)? ika_integer_from_int(pcb, status) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_WIFEXITED (ikptr fx_status)
+ikrt_posix_WIFEXITED (ikptr s_status)
 {
-  int	status = IK_UNFIX(fx_status);
+  int	status = ik_integer_to_int(s_status);
   return (WIFEXITED(status))? true_object : false_object;
 }
 ikptr
-ikrt_posix_WEXITSTATUS (ikptr fx_status)
+ikrt_posix_WEXITSTATUS (ikptr s_status, ikpcb * pcb)
 {
-  int	status = IK_UNFIX(fx_status);
-  return fix(WEXITSTATUS(status));
+  int	status = ik_integer_to_int(s_status);
+  return ika_integer_from_int(pcb, WEXITSTATUS(status));
 }
 ikptr
-ikrt_posix_WIFSIGNALED (ikptr fx_status)
+ikrt_posix_WIFSIGNALED (ikptr s_status)
 {
-  int	status = IK_UNFIX(fx_status);
+  int	status = ik_integer_to_int(s_status);
   return (WIFSIGNALED(status))? true_object : false_object;
 }
 ikptr
-ikrt_posix_WTERMSIG (ikptr fx_status)
+ikrt_posix_WTERMSIG (ikptr s_status, ikpcb * pcb)
 {
-  int	status = IK_UNFIX(fx_status);
-  return fix(WTERMSIG(status));
+  int	status = ik_integer_to_int(s_status);
+  return ika_integer_from_int(pcb, WTERMSIG(status));
 }
 ikptr
-ikrt_posix_WCOREDUMP (ikptr fx_status)
+ikrt_posix_WCOREDUMP (ikptr s_status)
 {
-  int	status = IK_UNFIX(fx_status);
+  int	status = ik_integer_to_int(s_status);
   return (WCOREDUMP(status))? true_object : false_object;
 }
 ikptr
-ikrt_posix_WIFSTOPPED (ikptr fx_status)
+ikrt_posix_WIFSTOPPED (ikptr s_status)
 {
-  int	status = IK_UNFIX(fx_status);
+  int	status = ik_integer_to_int(s_status);
   return (WIFSTOPPED(status))? true_object : false_object;
 }
 ikptr
-ikrt_posix_WSTOPSIG (ikptr fx_status)
+ikrt_posix_WSTOPSIG (ikptr s_status, ikpcb * pcb)
 {
-  int	status = IK_UNFIX(fx_status);
-  return fix(WSTOPSIG(status));
+  int	status = ik_integer_to_int(s_status);
+  return ika_integer_from_int(pcb, WSTOPSIG(status));
 }
 
 
@@ -285,18 +309,18 @@ ikrt_posix_WSTOPSIG (ikptr fx_status)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_raise (ikptr fx_signum)
+ikrt_posix_raise (ikptr s_signum)
 {
-  int r = raise(IK_UNFIX(fx_signum));
-  return (0 == r)? fix(0) : ik_errno_to_code();
+  int r = raise(IK_NUM_TO_SIGNUM(s_signum));
+  return (0 == r)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_kill (ikptr fx_pid, ikptr fx_signum)
+ikrt_posix_kill (ikptr s_pid, ikptr s_signum)
 {
-  pid_t pid    = IK_UNFIX(fx_pid);
-  int	signum = IK_UNFIX(fx_signum);
+  pid_t pid    = IK_NUM_TO_PID(s_pid);
+  int	signum = IK_NUM_TO_SIGNUM(s_signum);
   int	r = kill(pid, signum);
-  return (0 == r)? fix(0) : ik_errno_to_code();
+  return (0 == r)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_pause (void)
@@ -313,79 +337,83 @@ ikrt_posix_pause (void)
 static ikptr
 fill_stat_struct (struct stat * S, ikptr D, ikpcb* pcb)
 {
+  pcb->root9 = &D;
+  {
 #if (4 == IK_SIZE_OF_VOIDP)
-  /* 32-bit platforms */
-  IK_FIELD(D, 0) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_mode);
-  IK_FIELD(D, 1) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_ino);
-  IK_FIELD(D, 2) = ika_integer_from_long	 (pcb, (long)S->st_dev);
-  IK_FIELD(D, 3) = ika_integer_from_ulong(pcb, (long)S->st_nlink);
+    /* 32-bit platforms */
+    IK_ASS(IK_FIELD(D, 0), ika_integer_from_ulong(pcb, (ik_ulong)S->st_mode));
+    IK_ASS(IK_FIELD(D, 1), ika_integer_from_ulong(pcb, (ik_ulong)S->st_ino));
+    IK_ASS(IK_FIELD(D, 2), ika_integer_from_long (pcb, (long)S->st_dev));
+    IK_ASS(IK_FIELD(D, 3), ika_integer_from_ulong(pcb, (long)S->st_nlink));
 
-  IK_FIELD(D, 4) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_uid);
-  IK_FIELD(D, 5) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_gid);
-  IK_FIELD(D, 6) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_size);
+    IK_ASS(IK_FIELD(D, 4), ika_integer_from_ulong(pcb, (ik_ulong)S->st_uid));
+    IK_ASS(IK_FIELD(D, 5), ika_integer_from_ulong(pcb, (ik_ulong)S->st_gid));
+    IK_ASS(IK_FIELD(D, 6), ika_integer_from_ullong(pcb,(ik_ullong)S->st_size));
 
-  IK_FIELD(D, 7) = ika_integer_from_long(pcb, (long)S->st_atime);
+    IK_ASS(IK_FIELD(D, 7), ika_integer_from_long(pcb, (long)S->st_atime));
 #ifdef HAVE_STAT_ST_ATIME_USEC
-  IK_FIELD(D, 8) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_atime_usec);
+    IK_ASS(IK_FIELD(D, 8), ika_integer_from_ulong(pcb, (ik_ulong)S->st_atime_usec));
 #else
-  IK_FIELD(D, 8) = false_object;
+    IK_ASS(IK_FIELD(D, 8), false_object);
 #endif
 
-  IK_FIELD(D, 9)  = ika_integer_from_long(pcb, (long)S->st_mtime);
+    IK_ASS(IK_FIELD(D, 9) , ika_integer_from_long(pcb, (long)S->st_mtime));
 #ifdef HAVE_STAT_ST_MTIME_USEC
-  IK_FIELD(D, 10) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_mtime_usec);
+    IK_ASS(IK_FIELD(D, 10), ika_integer_from_ulong(pcb, (ik_ulong)S->st_mtime_usec));
 #else
-  IK_FIELD(D, 10) = false_object;
+    IK_ASS(IK_FIELD(D, 10), false_object);
 #endif
 
-  IK_FIELD(D, 11) = ika_integer_from_long(pcb, (long)S->st_ctime);
+    IK_ASS(IK_FIELD(D, 11), ika_integer_from_long(pcb, (long)S->st_ctime));
 #ifdef HAVE_STAT_ST_CTIME_USEC
-  IK_FIELD(D, 12) = ika_integer_from_ulong(pcb, (ik_ulong)S->st_ctime_usec);
+    IK_ASS(IK_FIELD(D, 12), ika_integer_from_ulong(pcb, (ik_ulong)S->st_ctime_usec));
 #else
-  IK_FIELD(D, 12) = false_object;
+    IK_ASS(IK_FIELD(D, 12), false_object);
 #endif
 
-  IK_FIELD(D, 13) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_blocks);
-  IK_FIELD(D, 14) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_blksize);
+    IK_ASS(IK_FIELD(D, 13), ika_integer_from_ullong(pcb, (ik_ullong)S->st_blocks));
+    IK_ASS(IK_FIELD(D, 14), ika_integer_from_ullong(pcb, (ik_ullong)S->st_blksize));
 #else
-  /* 64-bit platforms */
-  IK_FIELD(D, 0) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_mode);
-  IK_FIELD(D, 1) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_ino);
-  IK_FIELD(D, 2) = ika_integer_from_llong(pcb, (long)S->st_dev);
-  IK_FIELD(D, 3) = ika_integer_from_ullong(pcb, (long)S->st_nlink);
+    /* 64-bit platforms */
+    IK_ASS(IK_FIELD(D, 0), ika_integer_from_ullong(pcb, (ik_ullong)S->st_mode));
+    IK_ASS(IK_FIELD(D, 1), ika_integer_from_ullong(pcb, (ik_ullong)S->st_ino));
+    IK_ASS(IK_FIELD(D, 2), ika_integer_from_llong(pcb, (long)S->st_dev));
+    IK_ASS(IK_FIELD(D, 3), ika_integer_from_ullong(pcb, (long)S->st_nlink));
 
-  IK_FIELD(D, 4) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_uid);
-  IK_FIELD(D, 5) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_gid);
-  IK_FIELD(D, 6) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_size);
+    IK_ASS(IK_FIELD(D, 4), ika_integer_from_ullong(pcb, (ik_ullong)S->st_uid));
+    IK_ASS(IK_FIELD(D, 5), ika_integer_from_ullong(pcb, (ik_ullong)S->st_gid));
+    IK_ASS(IK_FIELD(D, 6), ika_integer_from_ullong(pcb, (ik_ullong)S->st_size));
 
-  IK_FIELD(D, 7) = ika_integer_from_llong(pcb, (long)S->st_atime);
+    IK_ASS(IK_FIELD(D, 7), ika_integer_from_llong(pcb, (long)S->st_atime));
 #ifdef HAVE_STAT_ST_ATIME_USEC
-  IK_FIELD(D, 8) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_atime_usec);
+    IK_ASS(IK_FIELD(D, 8), ika_integer_from_ullong(pcb, (ik_ullong)S->st_atime_usec));
 #else
-  IK_FIELD(D, 8) = false_object;
+    IK_ASS(IK_FIELD(D, 8), false_object);
 #endif
 
-  IK_FIELD(D, 9)  = ika_integer_from_llong(pcb, (long)S->st_mtime);
+    IK_ASS(IK_FIELD(D, 9) , ika_integer_from_llong(pcb, (long)S->st_mtime));
 #ifdef HAVE_STAT_ST_MTIME_USEC
-  IK_FIELD(D, 10) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_mtime_usec);
+    IK_ASS(IK_FIELD(D, 10), ika_integer_from_ullong(pcb, (ik_ullong)S->st_mtime_usec));
 #else
-  IK_FIELD(D, 10) = false_object;
+    IK_ASS(IK_FIELD(D, 10), false_object);
 #endif
 
-  IK_FIELD(D, 11) = ika_integer_from_llong(pcb, (long)S->st_ctime);
+    IK_ASS(IK_FIELD(D, 11), ika_integer_from_llong(pcb, (long)S->st_ctime));
 #ifdef HAVE_STAT_ST_CTIME_USEC
-  IK_FIELD(D, 12) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_ctime_usec);
+    IK_ASS(IK_FIELD(D, 12), ika_integer_from_ullong(pcb, (ik_ullong)S->st_ctime_usec));
 #else
-  IK_FIELD(D, 12) = false_object;
+    IK_ASS(IK_FIELD(D, 12), false_object);
 #endif
 
-  IK_FIELD(D, 13) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_blocks);
-  IK_FIELD(D, 14) = ika_integer_from_ullong(pcb, (ik_ullong)S->st_blksize);
+    IK_ASS(IK_FIELD(D, 13), ika_integer_from_ullong(pcb, (ik_ullong)S->st_blocks));
+    IK_ASS(IK_FIELD(D, 14), ika_integer_from_ullong(pcb, (ik_ullong)S->st_blksize));
 #endif
+  }
+  pcb->root9 = NULL;
   return 0;
 }
 static ikptr
-posix_stat (ikptr filename_bv, ikptr stat_struct, int follow_symlinks, ikpcb* pcb)
+posix_stat (ikptr filename_bv, ikptr s_stat_struct, int follow_symlinks, ikpcb* pcb)
 {
   char *	filename;
   struct stat	S;
@@ -393,51 +421,52 @@ posix_stat (ikptr filename_bv, ikptr stat_struct, int follow_symlinks, ikpcb* pc
   filename = IK_BYTEVECTOR_DATA_CHARP(filename_bv);
   errno	   = 0;
   rv = (follow_symlinks)? stat(filename, &S) : lstat(filename, &S);
-  return (0 == rv)? fill_stat_struct(&S, stat_struct, pcb) : ik_errno_to_code();
+  return (0 == rv)? fill_stat_struct(&S, s_stat_struct, pcb) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_stat (ikptr filename_bv, ikptr stat_struct, ikpcb* pcb)
+ikrt_posix_stat (ikptr filename_bv, ikptr s_stat_struct, ikpcb* pcb)
 {
-  return posix_stat(filename_bv, stat_struct, 1, pcb);
+  return posix_stat(filename_bv, s_stat_struct, 1, pcb);
 }
 ikptr
-ikrt_posix_lstat (ikptr filename_bv, ikptr stat_struct, ikpcb* pcb)
+ikrt_posix_lstat (ikptr filename_bv, ikptr s_stat_struct, ikpcb* pcb)
 {
-  return posix_stat(filename_bv, stat_struct, 0, pcb);
+  return posix_stat(filename_bv, s_stat_struct, 0, pcb);
 }
 ikptr
-ikrt_posix_fstat (ikptr fd_fx, ikptr stat_struct, ikpcb* pcb)
+ikrt_posix_fstat (ikptr s_fd, ikptr s_stat_struct, ikpcb* pcb)
 {
   struct stat	S;
   int		rv;
   errno = 0;
-  rv	= fstat(IK_UNFIX(fd_fx), &S);
-  return (0 == rv)? fill_stat_struct(&S, stat_struct, pcb) : ik_errno_to_code();
+  rv	= fstat(IK_NUM_TO_FD(s_fd), &S);
+  return (0 == rv)? fill_stat_struct(&S, s_stat_struct, pcb) : ik_errno_to_code();
 }
 
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_file_size(ikptr filename_bv, ikpcb* pcb)
+ikrt_posix_file_size(ikptr s_filename, ikpcb* pcb)
 {
   char *	filename;
   struct stat	S;
   int		rv;
-  filename = IK_BYTEVECTOR_DATA_CHARP(filename_bv);
+  filename = IK_BYTEVECTOR_DATA_CHARP(s_filename);
   errno	   = 0;
   rv	   = stat(filename, &S);
   if (0 == rv) {
-    if (sizeof(off_t) == sizeof(long)) {
+    if (sizeof(off_t) == sizeof(long))
       return ika_integer_from_ulong(pcb, S.st_size);
-    } else if (sizeof(off_t) == sizeof(long long)) {
+    else if (sizeof(off_t) == sizeof(long long))
       return ika_integer_from_ullong(pcb, S.st_size);
-    } else {
-      fprintf(stderr, "Vicare internal error: invalid off_t size\n");
-      exit(EXIT_FAILURE);
+    else if (sizeof(off_t) == sizeof(int))
+      return ika_integer_from_uint(pcb, S.st_size);
+    else {
+      ik_abort("unexpected off_t size %d", sizeof(off_t));
+      return void_object;
     }
-  } else {
+  } else
     return ik_errno_to_code();
-  }
 }
 
 
@@ -446,14 +475,14 @@ ikrt_posix_file_size(ikptr filename_bv, ikpcb* pcb)
  ** ----------------------------------------------------------------- */
 
 static ikptr
-file_is_p (ikptr pathname_bv, ikptr follow_symlinks, int flag)
+file_is_p (ikptr s_pathname, ikptr s_follow_symlinks, int flag)
 {
   char *	pathname;
   struct stat	S;
   int		rv;
-  pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   errno	   = 0;
-  rv	   = (false_object == follow_symlinks)? lstat(pathname, &S) : stat(pathname, &S);
+  rv	   = (false_object == s_follow_symlinks)? lstat(pathname, &S) : stat(pathname, &S);
   if (0 == rv)
     /* NOTE It is not enough to do "S.st_mode & flag", we really have to
        do "flag == (S.st_mode & flag)". */
@@ -463,8 +492,8 @@ file_is_p (ikptr pathname_bv, ikptr follow_symlinks, int flag)
 }
 
 #define FILE_IS_P(WHO,FLAG)					\
-  ikptr WHO (ikptr pathname_bv, ikptr follow_symlinks)		\
-  { return file_is_p(pathname_bv, follow_symlinks, FLAG); }
+  ikptr WHO (ikptr s_pathname, ikptr s_follow_symlinks)		\
+  { return file_is_p(s_pathname, s_follow_symlinks, FLAG); }
 
 FILE_IS_P(ikrt_file_is_directory,	S_IFDIR)
 FILE_IS_P(ikrt_file_is_char_device,	S_IFCHR)
@@ -476,14 +505,14 @@ FILE_IS_P(ikrt_file_is_fifo,		S_IFIFO)
 
 #define SPECIAL_FILE_IS_P(WHO,PRED)					\
    ikptr								\
-   WHO (ikptr pathname_bv, ikptr follow_symlinks)			\
+   WHO (ikptr s_pathname, ikptr s_follow_symlinks)			\
    {									\
      char *	   pathname;						\
      struct stat   S;							\
      int	   rv;							\
-     pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);		    \
+     pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);			\
      errno    = 0;							\
-     rv = (false_object == follow_symlinks)? lstat(pathname, &S) : stat(pathname, &S);	\
+     rv = (false_object == s_follow_symlinks)? lstat(pathname, &S) : stat(pathname, &S);	\
      if (0 == rv) {							\
        return (PRED(&S))? true_object : false_object;			\
      } else {								\
@@ -501,38 +530,36 @@ SPECIAL_FILE_IS_P(ikrt_file_is_shared_memory,S_TYPEISSHM)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_access (ikptr pathname_bv, ikptr how)
+ikrt_posix_access (ikptr s_pathname, ikptr how)
 {
-  char *	pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  char *	pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   int		rv;
   errno = 0;
   rv	= access(pathname, IK_UNFIX(how));
-  if (0 == rv) {
+  if (0 == rv)
     return true_object;
-  } else if ((errno == EACCES) ||
-	     (errno == EROFS)  ||
-	     (errno == ETXTBSY)) {
+  else if ((errno == EACCES) ||
+	   (errno == EROFS)  ||
+	   (errno == ETXTBSY))
     return false_object;
-  } else {
+  else
     return ik_errno_to_code();
-  }
 }
 ikptr
-ikrt_posix_file_exists (ikptr pathname_bv)
+ikrt_posix_file_exists (ikptr s_pathname)
 {
   char *	pathname;
   struct stat	S;
   int		rv;
-  pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   errno	   = 0;
-  rv = stat(pathname, &S);
-  if (0 == rv) {
+  rv	   = stat(pathname, &S);
+  if (0 == rv)
     return true_object;
-  } else if ((ENOENT == errno) || (ENOTDIR == errno)) {
+  else if ((ENOENT == errno) || (ENOTDIR == errno))
     return false_object;
-  } else {
+  else
     return ik_errno_to_code();
-  }
 }
 
 
@@ -541,83 +568,84 @@ ikrt_posix_file_exists (ikptr pathname_bv)
  ** ----------------------------------------------------------------- */
 
 static ikptr
-timespec_vector (struct timespec * T, ikptr vector, ikpcb* pcb)
+timespec_vector (struct timespec * T, ikptr s_vector, ikpcb* pcb)
 {
-  IK_ITEM(vector, 0) = ika_integer_from_long(pcb, (long)(T->tv_sec));
-  IK_ITEM(vector, 1) = ika_integer_from_long(pcb, (long)(T->tv_nsec));
-  return fix(0);
+  pcb->root9 = &s_vector;
+  {
+    IK_ASS(IK_ITEM(s_vector, 0), ika_integer_from_long(pcb, (long)(T->tv_sec )));
+    IK_ASS(IK_ITEM(s_vector, 1), ika_integer_from_long(pcb, (long)(T->tv_nsec)));
+  }
+  pcb->root9 = NULL;
+  return IK_FIX(0);
 }
 ikptr
-ikrt_posix_file_ctime (ikptr pathname_bv, ikptr vector, ikpcb* pcb)
+ikrt_posix_file_ctime (ikptr s_pathname, ikptr s_vector, ikpcb* pcb)
 {
   char*		pathname;
   struct stat	S;
   int		rv;
-  pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   errno	   = 0;
   rv	   = stat(pathname, &S);
   if (0 == rv) {
 #if HAVE_STAT_ST_CTIMESPEC
-    return timespec_vector(&S.st_ctimespec, vector, pcb);
+    return timespec_vector(&S.st_ctimespec, s_vector, pcb);
 #elif HAVE_STAT_ST_CTIM
-    return timespec_vector(&S.st_ctim, vector, pcb);
+    return timespec_vector(&S.st_ctim, s_vector, pcb);
 #else
     struct timespec ts;
     ts.tv_sec  = s.st_ctime;
     ts.tv_nsec = 0;
-    return timespec_vector(&ts, vector, pcb);
+    return timespec_vector(&ts, s_vector, pcb);
 #endif
-  } else {
+  } else
     return ik_errno_to_code();
-  }
 }
 ikptr
-ikrt_posix_file_mtime (ikptr pathname_bv, ikptr vector, ikpcb* pcb)
+ikrt_posix_file_mtime (ikptr s_pathname, ikptr s_vector, ikpcb* pcb)
 {
   char*		pathname;
   struct stat	S;
   int		rv;
-  pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   errno	   = 0;
   rv	   = stat(pathname, &S);
   if (0 == rv) {
 #if HAVE_STAT_ST_MTIMESPEC
-    return timespec_vector(&S.st_mtimespec, vector, pcb);
+    return timespec_vector(&S.st_mtimespec, s_vector, pcb);
 #elif HAVE_STAT_ST_MTIM
-    return timespec_vector(&S.st_mtim, vector, pcb);
+    return timespec_vector(&S.st_mtim, s_vector, pcb);
 #else
     struct timespec ts;
     ts.tv_sec  = s.st_mtime;
     ts.tv_nsec = 0;
-    return timespec_vector(&ts, vector, pcb);
+    return timespec_vector(&ts, s_vector, pcb);
 #endif
-  } else {
+  } else
     return ik_errno_to_code();
-  }
 }
 ikptr
-ikrt_posix_file_atime (ikptr pathname_bv, ikptr vector, ikpcb* pcb)
+ikrt_posix_file_atime (ikptr s_pathname, ikptr s_vector, ikpcb* pcb)
 {
   char*		pathname;
   struct stat	S;
   int		rv;
-  pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   errno	   = 0;
   rv	   = stat(pathname, &S);
   if (0 == rv) {
 #if HAVE_STAT_ST_ATIMESPEC
-    return timespec_vector(&S.st_atimespec, vector, pcb);
+    return timespec_vector(&S.st_atimespec, s_vector, pcb);
 #elif HAVE_STAT_ST_ATIM
-    return timespec_vector(&S.st_atim, vector, pcb);
+    return timespec_vector(&S.st_atim, s_vector, pcb);
 #else
     struct timespec ts;
     ts.tv_sec  = s.st_atime;
     ts.tv_nsec = 0;
-    return timespec_vector(&ts, vector, pcb);
+    return timespec_vector(&ts, s_vector, pcb);
 #endif
-  } else {
+  } else
     return ik_errno_to_code();
-  }
 }
 
 
@@ -626,120 +654,120 @@ ikrt_posix_file_atime (ikptr pathname_bv, ikptr vector, ikpcb* pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_chown (ikptr pathname_bv, ikptr owner_fx, ikptr group_fx)
+ikrt_posix_chown (ikptr s_pathname, ikptr s_owner, ikptr s_group)
 {
   char *  pathname;
   int	  rv;
-  pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   errno	   = 0;
-  rv	   = chown(pathname, IK_UNFIX(owner_fx), IK_UNFIX(group_fx));
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	   = chown(pathname, IK_NUM_TO_UID(s_owner), IK_NUM_TO_GID(s_group));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_fchown (ikptr fd, ikptr owner_fx, ikptr group_fx)
+ikrt_posix_fchown (ikptr s_fd, ikptr s_owner, ikptr s_group)
 {
   int	  rv;
   errno	   = 0;
-  rv	   = fchown(IK_UNFIX(fd), IK_UNFIX(owner_fx), IK_UNFIX(group_fx));
+  rv	   = fchown(IK_NUM_TO_FD(s_fd), IK_NUM_TO_UID(s_owner), IK_NUM_TO_GID(s_group));
   return (0 == rv)? fix(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_chmod (ikptr pathname_bv, ikptr mode_fx)
+ikrt_posix_chmod (ikptr s_pathname, ikptr s_mode)
 {
   char *	pathname;
   int		rv;
   mode_t	mode;
-  pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
-  mode	   = IK_UNFIX(mode_fx);
+  pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
+  mode	   = IK_NUM_TO_FILEMODE(s_mode);
   errno	   = 0;
   rv	   = chmod(pathname, mode);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_fchmod (ikptr fd, ikptr mode_fx)
+ikrt_posix_fchmod (ikptr s_fd, ikptr s_mode)
 {
   int		rv;
   mode_t	mode;
-  mode	   = IK_UNFIX(mode_fx);
+  mode	   = IK_NUM_TO_FILEMODE(s_mode);
   errno	   = 0;
-  rv	   = fchmod(IK_UNFIX(fd), mode);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	   = fchmod(IK_NUM_TO_FD(s_fd), mode);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_umask (ikptr mask_fx)
+ikrt_posix_umask (ikptr s_mask)
 {
-  mode_t  mask = IK_UNFIX(mask_fx);
+  mode_t  mask = IK_NUM_TO_FILEMODE(s_mask);
   mode_t  rv   = umask(mask);
-  return fix((long) rv);
+  return IK_FILEMODE_TO_NUM(rv);
 }
 ikptr
 ikrt_posix_getumask (void)
 {
   mode_t  mask = umask(0);
   umask(mask);
-  return fix((long) mask);
+  return IK_FILEMODE_TO_NUM(mask);
 }
 ikptr
-ikrt_posix_utime (ikptr pathname_bv, ikptr atime_sec_fx, ikptr mtime_sec_fx)
+ikrt_posix_utime (ikptr s_pathname, ikptr s_atime_sec, ikptr s_mtime_sec)
 {
   char *	  pathname;
   struct utimbuf  T;
   int		  rv;
-  pathname  = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
-  T.actime  = IK_UNFIX(atime_sec_fx);
-  T.modtime = IK_UNFIX(mtime_sec_fx);
+  pathname  = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
+  T.actime  = (time_t)ik_integer_to_long(s_atime_sec);
+  T.modtime = (time_t)ik_integer_to_long(s_mtime_sec);
   errno	    = 0;
   rv	    = utime(pathname, &T);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_utimes (ikptr pathname_bv,
-		   ikptr atime_sec_fx, ikptr atime_usec_fx,
-		   ikptr mtime_sec_fx, ikptr mtime_usec_fx)
+ikrt_posix_utimes (ikptr s_pathname,
+		   ikptr s_atime_sec, ikptr s_atime_usec,
+		   ikptr s_mtime_sec, ikptr s_mtime_usec)
 {
   char *	  pathname;
   struct timeval  T[2];
   int		  rv;
-  pathname     = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
-  T[0].tv_sec  = IK_UNFIX(atime_sec_fx);
-  T[0].tv_usec = IK_UNFIX(atime_usec_fx);
-  T[1].tv_sec  = IK_UNFIX(mtime_sec_fx);
-  T[1].tv_usec = IK_UNFIX(mtime_usec_fx);
+  pathname     = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
+  T[0].tv_sec  = (long)ik_integer_to_long(s_atime_sec);
+  T[0].tv_usec = (long)ik_integer_to_long(s_atime_usec);
+  T[1].tv_sec  = (long)ik_integer_to_long(s_mtime_sec);
+  T[1].tv_usec = (long)ik_integer_to_long(s_mtime_usec);
   errno	       = 0;
   rv	       = utimes(pathname, T);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_lutimes (ikptr pathname_bv,
-		    ikptr atime_sec_fx, ikptr atime_usec_fx,
-		    ikptr mtime_sec_fx, ikptr mtime_usec_fx)
+ikrt_posix_lutimes (ikptr s_pathname,
+		    ikptr s_atime_sec, ikptr s_atime_usec,
+		    ikptr s_mtime_sec, ikptr s_mtime_usec)
 {
   char *	  pathname;
   struct timeval  T[2];
   int		  rv;
-  pathname     = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
-  T[0].tv_sec  = IK_UNFIX(atime_sec_fx);
-  T[0].tv_usec = IK_UNFIX(atime_usec_fx);
-  T[1].tv_sec  = IK_UNFIX(mtime_sec_fx);
-  T[1].tv_usec = IK_UNFIX(mtime_usec_fx);
+  pathname     = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
+  T[0].tv_sec  = (long)ik_integer_to_long(s_atime_sec);
+  T[0].tv_usec = (long)ik_integer_to_long(s_atime_usec);
+  T[1].tv_sec  = (long)ik_integer_to_long(s_mtime_sec);
+  T[1].tv_usec = (long)ik_integer_to_long(s_mtime_usec);
   errno	       = 0;
   rv	       = lutimes(pathname, T);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_futimes (ikptr fd,
-		    ikptr atime_sec_fx, ikptr atime_usec_fx,
-		    ikptr mtime_sec_fx, ikptr mtime_usec_fx)
+ikrt_posix_futimes (ikptr s_fd,
+		    ikptr s_atime_sec, ikptr s_atime_usec,
+		    ikptr s_mtime_sec, ikptr s_mtime_usec)
 {
   struct timeval  T[2];
   int		  rv;
-  T[0].tv_sec  = IK_UNFIX(atime_sec_fx);
-  T[0].tv_usec = IK_UNFIX(atime_usec_fx);
-  T[1].tv_sec  = IK_UNFIX(mtime_sec_fx);
-  T[1].tv_usec = IK_UNFIX(mtime_usec_fx);
+  T[0].tv_sec  = (long)ik_integer_to_long(s_atime_sec);
+  T[0].tv_usec = (long)ik_integer_to_long(s_atime_usec);
+  T[1].tv_sec  = (long)ik_integer_to_long(s_mtime_sec);
+  T[1].tv_usec = (long)ik_integer_to_long(s_mtime_usec);
   errno	       = 0;
-  rv	       = futimes(IK_UNFIX(fd), T);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	       = futimes(IK_NUM_TO_FD(s_fd), T);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 
 
@@ -748,29 +776,29 @@ ikrt_posix_futimes (ikptr fd,
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_link (ikptr old_pathname_bv, ikptr new_pathname_bv)
+ikrt_posix_link (ikptr s_old_pathname, ikptr s_new_pathname)
 {
-  char *	old_pathname = IK_BYTEVECTOR_DATA_CHARP(old_pathname_bv);
-  char *	new_pathname = IK_BYTEVECTOR_DATA_CHARP(new_pathname_bv);
+  char *	old_pathname = IK_BYTEVECTOR_DATA_CHARP(s_old_pathname);
+  char *	new_pathname = IK_BYTEVECTOR_DATA_CHARP(s_new_pathname);
   int		rv;
   errno = 0;
   rv	= link(old_pathname, new_pathname);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_symlink (ikptr true_pathname_bv, ikptr link_pathname_bv)
+ikrt_posix_symlink (ikptr s_true_pathname, ikptr s_link_pathname)
 {
-  char *	true_pathname = IK_BYTEVECTOR_DATA_CHARP(true_pathname_bv);
-  char *	link_pathname = IK_BYTEVECTOR_DATA_CHARP(link_pathname_bv);
+  char *	true_pathname = IK_BYTEVECTOR_DATA_CHARP(s_true_pathname);
+  char *	link_pathname = IK_BYTEVECTOR_DATA_CHARP(s_link_pathname);
   int		rv;
   errno = 0;
   rv	= symlink(true_pathname, link_pathname);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_readlink (ikptr link_pathname_bv, ikpcb * pcb)
+ikrt_posix_readlink (ikptr s_link_pathname, ikpcb * pcb)
 {
-  char *	link_pathname = IK_BYTEVECTOR_DATA_CHARP(link_pathname_bv);
+  char *	link_pathname = IK_BYTEVECTOR_DATA_CHARP(s_link_pathname);
   size_t	max_len;
   int		rv;
   for (max_len=PATH_MAX;; max_len *= 2) {
@@ -786,43 +814,43 @@ ikrt_posix_readlink (ikptr link_pathname_bv, ikpcb * pcb)
   }
 }
 ikptr
-ikrt_posix_realpath (ikptr link_pathname_bv, ikpcb* pcb)
+ikrt_posix_realpath (ikptr s_link_pathname, ikpcb* pcb)
 {
   char *	link_pathname;
   char *	true_pathname;
   char		buff[PATH_MAX];
-  link_pathname = IK_BYTEVECTOR_DATA_CHARP(link_pathname_bv);
+  link_pathname = IK_BYTEVECTOR_DATA_CHARP(s_link_pathname);
   errno		= 0;
   true_pathname = realpath(link_pathname, buff);
   return (true_pathname)? ika_bytevector_from_cstring(pcb, true_pathname) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_unlink (ikptr pathname_bv)
+ikrt_posix_unlink (ikptr s_pathname)
 {
-  char * pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  char * pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   int	 rv;
   errno = 0;
   rv	= unlink(pathname);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_remove (ikptr pathname_bv)
+ikrt_posix_remove (ikptr s_pathname)
 {
-  char * pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  char * pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   int	 rv;
   errno = 0;
   rv	= remove(pathname);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_rename (ikptr old_pathname_bv, ikptr new_pathname_bv)
+ikrt_posix_rename (ikptr s_old_pathname, ikptr s_new_pathname)
 {
-  char *	old_pathname = IK_BYTEVECTOR_DATA_CHARP(old_pathname_bv);
-  char *	new_pathname = IK_BYTEVECTOR_DATA_CHARP(new_pathname_bv);
+  char *	old_pathname = IK_BYTEVECTOR_DATA_CHARP(s_old_pathname);
+  char *	new_pathname = IK_BYTEVECTOR_DATA_CHARP(s_new_pathname);
   int		rv;
   errno = 0;
   rv	= rename(old_pathname, new_pathname);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 
 
@@ -831,24 +859,24 @@ ikrt_posix_rename (ikptr old_pathname_bv, ikptr new_pathname_bv)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_mkdir (ikptr pathname_bv, ikptr mode)
+ikrt_posix_mkdir (ikptr s_pathname, ikptr s_mode)
 {
   char *	pathname;
   int		rv;
-  pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   errno	   = 0;
-  rv	   = mkdir(pathname, IK_UNFIX(mode));
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	   = mkdir(pathname, IK_NUM_TO_FILEMODE(s_mode));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_rmdir (ikptr pathname_bv)
+ikrt_posix_rmdir (ikptr s_pathname)
 {
   char *	pathname;
   int		rv;
-  pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   errno	   = 0;
   rv	   = rmdir(pathname);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_getcwd (ikpcb * pcb)
@@ -869,45 +897,45 @@ ikrt_posix_getcwd (ikpcb * pcb)
   }
 }
 ikptr
-ikrt_posix_chdir (ikptr pathname_bv)
+ikrt_posix_chdir (ikptr s_pathname)
 {
   char *	pathname;
   int		rv;
-  pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   errno	   = 0;
   rv	   = chdir(pathname);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_fchdir (ikptr fd)
+ikrt_posix_fchdir (ikptr s_fd)
 {
-  int		rv;
+  int	rv;
   errno	   = 0;
-  rv	   = fchdir(IK_UNFIX(fd));
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	   = fchdir(IK_NUM_TO_FD(s_fd));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_opendir (ikptr pathname_bv, ikpcb * pcb)
+ikrt_posix_opendir (ikptr s_pathname, ikpcb * pcb)
 {
   char *	pathname;
   DIR *		stream;
-  pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   errno	   = 0;
   stream   = opendir(pathname);
   return (stream)? ika_pointer_alloc(pcb, (ik_ulong)stream) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_fdopendir (ikptr fd, ikpcb * pcb)
+ikrt_posix_fdopendir (ikptr s_fd, ikpcb * pcb)
 {
   DIR *		stream;
   errno	   = 0;
-  stream   = fdopendir(IK_UNFIX(fd));
+  stream   = fdopendir(IK_NUM_TO_FD(s_fd));
   return (stream)? ika_pointer_alloc(pcb, (ik_ulong)stream) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_readdir (ikptr pointer, ikpcb * pcb)
+ikrt_posix_readdir (ikptr s_pointer, ikpcb * pcb)
 {
-  DIR *		  stream = (DIR *) IK_POINTER_DATA_VOIDP(pointer);
+  DIR *		  stream = (DIR *) IK_POINTER_DATA_VOIDP(s_pointer);
   struct dirent * entry;
   errno = 0;
   entry = readdir(stream);
@@ -931,28 +959,28 @@ ikrt_posix_closedir (ikptr pointer, ikpcb * pcb)
   int	 rv;
   errno = 0;
   rv	= closedir(stream);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_rewinddir (ikptr pointer)
+ikrt_posix_rewinddir (ikptr s_pointer)
 {
-  DIR *	 stream = (DIR *) IK_POINTER_DATA_VOIDP(pointer);
+  DIR *	 stream = (DIR *) IK_POINTER_DATA_VOIDP(s_pointer);
   rewinddir(stream);
   return void_object;
 }
 ikptr
-ikrt_posix_telldir (ikptr pointer, ikpcb * pcb)
+ikrt_posix_telldir (ikptr s_pointer, ikpcb * pcb)
 {
-  DIR *	 stream = (DIR *) IK_POINTER_DATA_VOIDP(pointer);
+  DIR *	 stream = (DIR *) IK_POINTER_DATA_VOIDP(s_pointer);
   long	 pos;
   pos = telldir(stream);
   return ika_integer_from_long(pcb, pos);
 }
 ikptr
-ikrt_posix_seekdir (ikptr pointer, ikptr pos_num)
+ikrt_posix_seekdir (ikptr s_pointer, ikptr s_pos)
 {
-  DIR *	 stream = (DIR *) IK_POINTER_DATA_VOIDP(pointer);
-  long	 pos	= ik_integer_to_long(pos_num);
+  DIR *	 stream = (DIR *) IK_POINTER_DATA_VOIDP(s_pointer);
+  long	 pos	= ik_integer_to_long(s_pos);
   seekdir(stream, pos);
   return void_object;
 }
@@ -963,123 +991,123 @@ ikrt_posix_seekdir (ikptr pointer, ikptr pos_num)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_open (ikptr pathname_bv, ikptr flags, ikptr mode)
+ikrt_posix_open (ikptr s_pathname, ikptr s_flags, ikptr s_mode)
 {
   char *	pathname;
   int		rv;
-  pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   errno	   = 0;
-  rv	   = open(pathname, IK_UNFIX(flags), IK_UNFIX(mode));
-  return (0 <= rv)? fix(rv) : ik_errno_to_code();
+  rv	   = open(pathname, IK_UNFIX(s_flags), IK_NUM_TO_FILEMODE(s_mode));
+  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_close (ikptr fd)
+ikrt_posix_close (ikptr s_fd)
 {
   int		rv;
   errno	   = 0;
-  rv	   = close(IK_UNFIX(fd));
-  return (0 <= rv)? fix(rv) : ik_errno_to_code();
+  rv	   = close(IK_NUM_TO_FD(s_fd));
+  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_read (ikptr fd, ikptr buffer_bv, ikptr size_fx)
+ikrt_posix_read (ikptr s_fd, ikptr s_buffer, ikptr s_size)
 {
   void *	buffer;
   size_t	size;
   ssize_t	rv;
-  buffer   = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv);
-  size	   = (size_t)((false_object!=size_fx)? IK_UNFIX(size_fx) : IK_BYTEVECTOR_LENGTH(buffer_bv));
+  buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
+  size	   = (size_t)((false_object!=s_size)? IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
   errno	   = 0;
-  rv	   = read(IK_UNFIX(fd), buffer, size);
-  return (0 <= rv)? fix(rv) : ik_errno_to_code();
+  rv	   = read(IK_NUM_TO_FD(s_fd), buffer, size);
+  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_pread (ikptr fd, ikptr buffer_bv, ikptr size_fx, ikptr off_num)
-{
-  void *	buffer;
-  size_t	size;
-  off_t		off;
-  ssize_t	rv;
-  buffer   = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv);
-  size	   = (size_t)((false_object!=size_fx)?
-		      IK_UNFIX(size_fx) : IK_BYTEVECTOR_LENGTH(buffer_bv));
-  off	   = (off_t) ik_integer_to_llong(off_num);
-  errno	   = 0;
-  rv	   = pread(IK_UNFIX(fd), buffer, size, off);
-  return (0 <= rv)? fix(rv) : ik_errno_to_code();
-}
-ikptr
-ikrt_posix_write (ikptr fd, ikptr buffer_bv, ikptr size_fx)
-{
-  void *	buffer;
-  size_t	size;
-  ssize_t	rv;
-  buffer   = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv);
-  size	   = (size_t)((false_object!=size_fx)?
-		      IK_UNFIX(size_fx) : IK_BYTEVECTOR_LENGTH(buffer_bv));
-  errno	   = 0;
-  rv	   = write(IK_UNFIX(fd), buffer, size);
-  return (0 <= rv)? fix(rv) : ik_errno_to_code();
-}
-ikptr
-ikrt_posix_pwrite (ikptr fd, ikptr buffer_bv, ikptr size_fx, ikptr off_num)
+ikrt_posix_pread (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_off)
 {
   void *	buffer;
   size_t	size;
   off_t		off;
   ssize_t	rv;
-  buffer   = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv);
-  size	   = (size_t)((false_object!=size_fx)?
-		      IK_UNFIX(size_fx) : IK_BYTEVECTOR_LENGTH(buffer_bv));
-  off	   = (off_t) ik_integer_to_llong(off_num);
+  buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
+  size	   = (size_t)((false_object!=s_size)?
+		      IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
+  off	   = (off_t) ik_integer_to_llong(s_off);
   errno	   = 0;
-  rv	   = pwrite(IK_UNFIX(fd), buffer, size, off);
-  return (0 <= rv)? fix(rv) : ik_errno_to_code();
+  rv	   = pread(IK_NUM_TO_FD(s_fd), buffer, size, off);
+  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_lseek (ikptr fd, ikptr off_num, ikptr whence_fx, ikpcb * pcb)
+ikrt_posix_write (ikptr s_fd, ikptr s_buffer, ikptr s_size)
+{
+  void *	buffer;
+  size_t	size;
+  ssize_t	rv;
+  buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
+  size	   = (size_t)((false_object!=s_size)?
+		      IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
+  errno	   = 0;
+  rv	   = write(IK_NUM_TO_FD(s_fd), buffer, size);
+  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
+}
+ikptr
+ikrt_posix_pwrite (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr off_num)
+{
+  void *	buffer;
+  size_t	size;
+  off_t		off;
+  ssize_t	rv;
+  buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
+  size	   = (size_t)((false_object!=s_size)?
+		      IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
+  off	   = (off_t) ik_integer_to_llong(off_num);
+  errno	   = 0;
+  rv	   = pwrite(IK_NUM_TO_FD(s_fd), buffer, size, off);
+  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
+}
+ikptr
+ikrt_posix_lseek (ikptr s_fd, ikptr s_off, ikptr s_whence, ikpcb * pcb)
 {
   off_t		off;
   off_t		rv;
-  off	 = ik_integer_to_llong(off_num);
+  off	 = ik_integer_to_llong(s_off);
   errno	 = 0;
-  rv	 = lseek(IK_UNFIX(fd), off, IK_UNFIX(whence_fx));
+  rv	 = lseek(IK_NUM_TO_FD(s_fd), off, IK_UNFIX(s_whence));
   return (0 <= rv)? ika_integer_from_llong(pcb, (long long)rv) : ik_errno_to_code();
 }
 
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_readv (ikptr fd, ikptr buffers, ikpcb * pcb)
+ikrt_posix_readv (ikptr s_fd, ikptr s_buffers, ikpcb * pcb)
 {
-  int		number_of_buffers = ik_list_length(buffers);
+  int		number_of_buffers = ik_list_length(s_buffers);
   struct iovec	bufs[number_of_buffers];
   ikptr		bv;
   int		i;
   ssize_t	rv;
-  for (i=0; pair_tag == IK_TAGOF(buffers); buffers=IK_REF(buffers, off_cdr), ++i) {
-    bv	    = IK_REF(buffers, off_car);
+  for (i=0; pair_tag == IK_TAGOF(s_buffers); s_buffers=IK_CDR(s_buffers), ++i) {
+    bv	    = IK_REF(s_buffers, off_car);
     bufs[i].iov_base = IK_BYTEVECTOR_DATA_VOIDP(bv);
     bufs[i].iov_len  = IK_BYTEVECTOR_LENGTH(bv);
   }
   errno	   = 0;
-  rv	   = readv(IK_UNFIX(fd), bufs, number_of_buffers);
+  rv	   = readv(IK_NUM_TO_FD(s_fd), bufs, number_of_buffers);
   return (0 <= rv)? ika_integer_from_llong(pcb, (long long)rv) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_writev (ikptr fd, ikptr buffers, ikpcb * pcb)
+ikrt_posix_writev (ikptr s_fd, ikptr s_buffers, ikpcb * pcb)
 {
-  int		number_of_buffers = ik_list_length(buffers);
+  int		number_of_buffers = ik_list_length(s_buffers);
   struct iovec	bufs[number_of_buffers];
   ikptr		bv;
   int		i;
   ssize_t	rv;
-  for (i=0; pair_tag == IK_TAGOF(buffers); buffers=IK_REF(buffers, off_cdr), ++i) {
-    bv	    = IK_REF(buffers, off_car);
+  for (i=0; pair_tag == IK_TAGOF(s_buffers); s_buffers=IK_CDR(s_buffers), ++i) {
+    bv	    = IK_REF(s_buffers, off_car);
     bufs[i].iov_base = IK_BYTEVECTOR_DATA_VOIDP(bv);
     bufs[i].iov_len  = IK_BYTEVECTOR_LENGTH(bv);
   }
   errno	   = 0;
-  rv	   = writev(IK_UNFIX(fd), bufs, number_of_buffers);
+  rv	   = writev(IK_NUM_TO_FD(s_fd), bufs, number_of_buffers);
   return (0 <= rv)? ika_integer_from_llong(pcb, (long long)rv) : ik_errno_to_code();
 }
 
@@ -1304,11 +1332,11 @@ ikrt_posix_pipe (ikpcb * pcb)
   }
 }
 ikptr
-ikrt_posix_mkfifo (ikptr pathname_bv, ikptr mode)
+ikrt_posix_mkfifo (ikptr s_pathname, ikptr mode)
 {
   char *	pathname;
   int		rv;
-  pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
+  pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   errno	   = 0;
   rv	   = mkfifo(pathname, IK_UNFIX(mode));
   return (0 <= rv)? fix(rv) : ik_errno_to_code();
@@ -1316,116 +1344,156 @@ ikrt_posix_mkfifo (ikptr pathname_bv, ikptr mode)
 
 
 /** --------------------------------------------------------------------
- ** Network sockets.
+ ** Network sockets: local namespace.
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_make_sockaddr_un (ikptr pathname_bv, ikpcb * pcb)
+ikrt_posix_make_sockaddr_un (ikptr s_pathname, ikpcb * pcb)
 {
-  char *		pathname;
-  long			pathname_len;
-  pathname     = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
-  pathname_len = IK_BYTEVECTOR_LENGTH(pathname_bv);
-  {
 #undef SIZE
 #define SIZE	(sizeof(struct sockaddr_un)+pathname_len) /* better safe than sorry */
-    uint8_t		  bytes[SIZE];
-    struct sockaddr_un *  name = (void *)bytes;
-    name->sun_family = AF_LOCAL;
-    memcpy(name->sun_path, pathname, pathname_len+1);
-    return ika_bytevector_from_memory_block(pcb, name, SUN_LEN(name));
-  }
+  char *	pathname     = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
+  long		pathname_len = IK_BYTEVECTOR_LENGTH(s_pathname);
+  uint8_t	bytes[SIZE];
+  struct sockaddr_un *	name = (void *)bytes;
+  name->sun_family = AF_LOCAL;
+  memcpy(name->sun_path, pathname, pathname_len+1);
+  return ika_bytevector_from_memory_block(pcb, name, SUN_LEN(name));
 }
 ikptr
-ikrt_posix_sockaddr_un_pathname (ikptr addr_bv, ikpcb * pcb)
+ikrt_posix_sockaddr_un_pathname (ikptr s_addr, ikpcb * pcb)
 {
-  struct sockaddr_un *	addr = IK_BYTEVECTOR_DATA_VOIDP(addr_bv);
-  return (AF_LOCAL == addr->sun_family)?
-    ika_bytevector_from_cstring(pcb, addr->sun_path) : false_object;
+  struct sockaddr_un *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr);
+  if (AF_LOCAL == addr->sun_family) {
+    ikptr	s_bv;
+    long	len = strlen(addr->sun_path);
+    void *	buf;
+    pcb->root0 = &s_addr;
+    {
+      /* WARNING  We  do  not use  "ika_bytevector_from_cstring()"  here
+	 because the C	string is embedded in the  bytevector S_ADDR and
+	 we cannot preserve it by calling that function. */
+      s_bv = ika_bytevector_alloc(pcb, len);
+      buf  = IK_BYTEVECTOR_DATA_VOIDP(s_bv);
+      addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr);
+      memcpy(buf, addr->sun_path, len);
+    }
+    pcb->root0 = NULL;
+    return s_bv;
+  } else
+    return false_object;
 }
 
-/* ------------------------------------------------------------------ */
+
+/** --------------------------------------------------------------------
+ ** Network sockets: IPv4 namespace.
+ ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_make_sockaddr_in (ikptr host_address_bv, ikptr port, ikpcb * pcb)
+ikrt_posix_make_sockaddr_in (ikptr s_host_address, ikptr s_port, ikpcb * pcb)
 {
-  struct in_addr *	host_address = (void *)IK_BYTEVECTOR_DATA_CHARP(host_address_bv);
-  struct sockaddr_in *	socket_address;
-  ikptr			socket_address_bv;
 #undef BV_LEN
 #define BV_LEN	sizeof(struct sockaddr_in)
-  socket_address_bv	     = ika_bytevector_alloc(pcb, BV_LEN);
-  socket_address	     = IK_BYTEVECTOR_DATA_VOIDP(socket_address_bv);
-  socket_address->sin_family = AF_INET;
-  socket_address->sin_port   = (unsigned short int)IK_UNFIX(port);
-  memcpy(&(socket_address->sin_addr), host_address, sizeof(struct in_addr));
-  return socket_address_bv;
+  ikptr			s_socket_address;
+  pcb->root0 = &s_host_address;
+  pcb->root1 = &s_port;
+  {
+    struct in_addr *		host_address;
+    struct sockaddr_in *	socket_address;
+    s_socket_address	       = ika_bytevector_alloc(pcb, BV_LEN);
+    socket_address	       = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
+    socket_address->sin_family = AF_INET;
+    socket_address->sin_port   = (unsigned short int)IK_UNFIX(s_port);
+    host_address	       = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
+    memcpy(&(socket_address->sin_addr), host_address, sizeof(struct in_addr));
+  }
+  pcb->root1 = NULL;
+  pcb->root0 = NULL;
+  return s_socket_address;
 }
 ikptr
-ikrt_posix_sockaddr_in_in_addr (ikptr socket_address_bv, ikpcb * pcb)
+ikrt_posix_sockaddr_in_in_addr (ikptr s_socket_address, ikpcb * pcb)
 {
-  struct sockaddr_in *	socket_address = IK_BYTEVECTOR_DATA_VOIDP(socket_address_bv);
+  struct sockaddr_in *	socket_address = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
   if (AF_INET == socket_address->sin_family) {
 #undef BV_LEN
 #define BV_LEN	sizeof(struct in_addr)
-    ikptr		host_address_bv;
-    struct in_addr *	host_address;
-    host_address_bv = ika_bytevector_alloc(pcb, BV_LEN);
-    host_address    = IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
-    memcpy(host_address, &(socket_address->sin_addr), BV_LEN);
-    return host_address_bv;
-  } else {
+    ikptr		s_host_address;
+    pcb->root0 = &s_socket_address;
+    {
+      struct in_addr *	host_address;
+      s_host_address = ika_bytevector_alloc(pcb, BV_LEN);
+      host_address   = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
+      socket_address = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
+      memcpy(host_address, &(socket_address->sin_addr), BV_LEN);
+    }
+    pcb->root0 = NULL;
+    return s_host_address;
+  } else
     return false_object;
-  }
 }
 ikptr
-ikrt_posix_sockaddr_in_in_port (ikptr socket_address_bv)
+ikrt_posix_sockaddr_in_in_port (ikptr s_socket_address)
 {
-  struct sockaddr_in *	socket_address = IK_BYTEVECTOR_DATA_VOIDP(socket_address_bv);
+  struct sockaddr_in *	socket_address = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
   return (AF_INET == socket_address->sin_family)?
-    fix((long)socket_address->sin_port) : false_object;
+    IK_FIX((long)socket_address->sin_port) : false_object;
 }
 
-/* ------------------------------------------------------------------ */
+
+/** --------------------------------------------------------------------
+ ** Network sockets: IPv6 namespace.
+ ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_make_sockaddr_in6 (ikptr host_address_bv, ikptr port, ikpcb * pcb)
+ikrt_posix_make_sockaddr_in6 (ikptr s_host_address, ikptr s_port, ikpcb * pcb)
 {
-  struct in6_addr *	host_address = (void *)IK_BYTEVECTOR_DATA_CHARP(host_address_bv);
-  struct sockaddr_in6 * socket_address;
-  ikptr			socket_address_bv;
 #undef BV_LEN
 #define BV_LEN	sizeof(struct sockaddr_in6)
-  socket_address_bv	      = ika_bytevector_alloc(pcb, BV_LEN);
-  socket_address	      = IK_BYTEVECTOR_DATA_VOIDP(socket_address_bv);
-  socket_address->sin6_family = AF_INET6;
-  socket_address->sin6_port   = (unsigned short int)IK_UNFIX(port);
-  memcpy(&(socket_address->sin6_addr), host_address, sizeof(struct in6_addr));
-  return socket_address_bv;
+  struct in6_addr *	host_address;
+  struct sockaddr_in6 * socket_address;
+  ikptr			s_socket_address;
+  pcb->root0 = &s_host_address;
+  pcb->root1 = &s_port;
+  {
+    s_socket_address	        = ika_bytevector_alloc(pcb, BV_LEN);
+    socket_address	        = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
+    socket_address->sin6_family = AF_INET6;
+    socket_address->sin6_port   = (unsigned short int)IK_UNFIX(s_port);
+    host_address                = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
+    memcpy(&(socket_address->sin6_addr), host_address, sizeof(struct in6_addr));
+  }
+  pcb->root1 = NULL;
+  pcb->root0 = NULL;
+  return s_socket_address;
 }
 ikptr
-ikrt_posix_sockaddr_in6_in6_addr (ikptr socket_address_bv, ikpcb * pcb)
+ikrt_posix_sockaddr_in6_in6_addr (ikptr s_socket_address, ikpcb * pcb)
 {
-  struct sockaddr_in6 *	 socket_address = IK_BYTEVECTOR_DATA_VOIDP(socket_address_bv);
+  struct sockaddr_in6 *	 socket_address = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
   if (AF_INET6 == socket_address->sin6_family) {
 #undef BV_LEN
 #define BV_LEN	sizeof(struct in6_addr)
-    ikptr		host_address_bv;
+    ikptr		s_host_address;
     struct in6_addr *	host_address;
-    host_address_bv = ika_bytevector_alloc(pcb, BV_LEN);
-    host_address    =  IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
-    memcpy(host_address, &(socket_address->sin6_addr), BV_LEN);
-    return host_address_bv;
-  } else {
+    pcb->root0 = &s_socket_address;
+    {
+      s_host_address = ika_bytevector_alloc(pcb, BV_LEN);
+      host_address   = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
+      socket_address = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
+      memcpy(host_address, &(socket_address->sin6_addr), BV_LEN);
+    }
+    pcb->root0 = NULL;
+    return s_host_address;
+  } else
     return false_object;
-  }
 }
 ikptr
-ikrt_posix_sockaddr_in6_in6_port (ikptr socket_address_bv)
+ikrt_posix_sockaddr_in6_in6_port (ikptr s_socket_address)
 {
-  struct sockaddr_in6 *	 socket_address = IK_BYTEVECTOR_DATA_VOIDP(socket_address_bv);
+  struct sockaddr_in6 *	 socket_address = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
   return (AF_INET6 == socket_address->sin6_family)?
-    fix((long)socket_address->sin6_port) : false_object;
+    IK_FIX((long)socket_address->sin6_port) : false_object;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1434,102 +1502,121 @@ ikptr
 ikrt_posix_in6addr_loopback (ikpcb * pcb)
 {
   static const struct in6_addr constant_host_address = IN6ADDR_LOOPBACK_INIT;
-  ikptr			host_address_bv;
+  ikptr			s_host_address;
   struct in6_addr *	host_address;
 #undef BV_LEN
 #define BV_LEN		sizeof(struct in6_addr)
-  host_address_bv = ika_bytevector_alloc(pcb, BV_LEN);
-  host_address	  = IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
+  s_host_address = ika_bytevector_alloc(pcb, BV_LEN);
+  host_address	 = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
   memcpy(host_address, &constant_host_address, BV_LEN);
-  return host_address_bv;
+  return s_host_address;
 }
 ikptr
 ikrt_posix_in6addr_any (ikpcb * pcb)
 {
   static const struct in6_addr constant_host_address = IN6ADDR_ANY_INIT;
-  ikptr			host_address_bv;
+  ikptr			s_host_address;
   struct in6_addr *	host_address;
 #undef BV_LEN
 #define BV_LEN		sizeof(struct in6_addr)
-  host_address_bv = ika_bytevector_alloc(pcb, BV_LEN);
-  host_address	  = IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
+  s_host_address = ika_bytevector_alloc(pcb, BV_LEN);
+  host_address	 = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
   memcpy(host_address, &constant_host_address, BV_LEN);
-  return host_address_bv;
+  return s_host_address;
 }
 
-/* ------------------------------------------------------------------ */
+
+/** --------------------------------------------------------------------
+ ** Network address conversion functions.
+ ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_inet_aton (ikptr dotted_quad_bv, ikpcb * pcb)
+ikrt_posix_inet_aton (ikptr s_dotted_quad, ikpcb * pcb)
 {
   void *		dotted_quad;
-  ikptr			host_address_bv;
+  ikptr			s_host_address;
   struct in_addr *	host_address;
   int			rv;
 #undef BV_LEN
 #define BV_LEN		sizeof(struct in_addr)
-  host_address_bv = ika_bytevector_alloc(pcb, BV_LEN);
-  host_address	  = IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
-  dotted_quad	  = IK_BYTEVECTOR_DATA_VOIDP(dotted_quad_bv);
-  rv = inet_aton(dotted_quad, host_address);
-  return (0 != rv)? host_address_bv : false_object;
+  pcb->root0 = &s_dotted_quad;
+  {
+    s_host_address = ika_bytevector_alloc(pcb, BV_LEN);
+    host_address   = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
+    dotted_quad    = IK_BYTEVECTOR_DATA_VOIDP(s_dotted_quad);
+    rv = inet_aton(dotted_quad, host_address);
+  }
+  pcb->root0 = NULL;
+  return (0 != rv)? s_host_address : false_object;
 }
 ikptr
-ikrt_posix_inet_ntoa (ikptr host_address_bv, ikpcb * pcb)
+ikrt_posix_inet_ntoa (ikptr s_host_address, ikpcb * pcb)
 {
   struct in_addr *	host_address;
-  ikptr			dotted_quad_bv;
+  ikptr			s_dotted_quad;
   char *		dotted_quad;
   char *		data;
   long			data_len;
-  host_address	 = IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
-  data		 = inet_ntoa(*host_address);
-  data_len	 = strlen(data);
-  dotted_quad_bv = ika_bytevector_alloc(pcb, data_len);
-  dotted_quad	 = IK_BYTEVECTOR_DATA_CHARP(dotted_quad_bv);
+  host_address  = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
+  data          = inet_ntoa(*host_address);
+  data_len      = strlen(data);
+  /* WARNING  The string referenced  by DATA  is a  statically allocated
+     buffer, so  we do  not need to  register S_HOST_ADDRESS  as garbage
+     collection root while doing the following allocation. */
+  s_dotted_quad = ika_bytevector_alloc(pcb, data_len);
+  dotted_quad   = IK_BYTEVECTOR_DATA_CHARP(s_dotted_quad);
   memcpy(dotted_quad, data, data_len);
-  return dotted_quad_bv;
+  pcb->root0 = NULL;
+  return s_dotted_quad;
 }
 
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_inet_pton (ikptr af, ikptr presentation_bv, ikpcb * pcb)
+ikrt_posix_inet_pton (ikptr s_af, ikptr s_presentation, ikpcb * pcb)
 {
   void *	presentation;
-  ikptr		host_address_bv;
+  ikptr		s_host_address;
   int		rv;
-  switch (IK_UNFIX(af)) {
+  switch (IK_UNFIX(s_af)) {
   case AF_INET:
     {
 #undef BV_LEN
 #define BV_LEN		sizeof(struct in_addr)
       struct in_addr *	    host_address;
-      host_address_bv = ika_bytevector_alloc(pcb, BV_LEN);
-      host_address    = IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
-      presentation    = IK_BYTEVECTOR_DATA_VOIDP(presentation_bv);
-      rv = inet_pton(IK_UNFIX(af), presentation, host_address);
-      return (0 < rv)? host_address_bv : false_object;
+      pcb->root0 = &s_presentation;
+      {
+	s_host_address = ika_bytevector_alloc(pcb, BV_LEN);
+	host_address   = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
+	presentation   = IK_BYTEVECTOR_DATA_VOIDP(s_presentation);
+	rv = inet_pton(IK_UNFIX(s_af), presentation, host_address);
+      }
+      pcb->root0 = NULL;
+      return (0 < rv)? s_host_address : false_object;
     }
   case AF_INET6:
     {
 #undef BV_LEN
 #define BV_LEN		sizeof(struct in6_addr)
       struct in6_addr *	     host_address;
-      host_address_bv = ika_bytevector_alloc(pcb, BV_LEN);
-      host_address    = IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
-      presentation    = IK_BYTEVECTOR_DATA_VOIDP(presentation_bv);
-      rv = inet_pton(IK_UNFIX(af), presentation, host_address);
-      return (0 < rv)? host_address_bv : false_object;
+      pcb->root0 = &s_presentation;
+      {
+	s_host_address = ika_bytevector_alloc(pcb, BV_LEN);
+	host_address   = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
+	presentation   = IK_BYTEVECTOR_DATA_VOIDP(s_presentation);
+	rv = inet_pton(IK_UNFIX(s_af), presentation, host_address);
+      }
+      pcb->root0 = NULL;
+      return (0 < rv)? s_host_address : false_object;
     }
   default:
     return false_object;
   }
 }
 ikptr
-ikrt_posix_inet_ntop (ikptr af, ikptr host_address_bv, ikpcb * pcb)
+ikrt_posix_inet_ntop (ikptr s_af, ikptr s_host_address, ikpcb * pcb)
 {
-  switch (IK_UNFIX(af)) {
+  switch (IK_UNFIX(s_af)) {
   case AF_INET:
   case AF_INET6:
     {
@@ -1537,141 +1624,175 @@ ikrt_posix_inet_ntop (ikptr af, ikptr host_address_bv, ikpcb * pcb)
       socklen_t		buflen = 256;
       char		buffer[buflen];
       const char *	rv;
-      host_address = IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
-      rv = inet_ntop(IK_UNFIX(af), host_address, buffer, buflen);
+      host_address = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
+      rv = inet_ntop(IK_UNFIX(s_af), host_address, buffer, buflen);
       if (NULL != rv) {
-	ikptr	  presentation_bv;
+	ikptr	  s_presentation;
 	char *	  presentation;
 	long	  presentation_len;
 	presentation_len = strlen(buffer);
-	presentation_bv	 = ika_bytevector_alloc(pcb, presentation_len);
-	presentation	 = IK_BYTEVECTOR_DATA_CHARP(presentation_bv);
+	s_presentation	 = ika_bytevector_alloc(pcb, presentation_len);
+	presentation	 = IK_BYTEVECTOR_DATA_CHARP(s_presentation);
 	memcpy(presentation, buffer, presentation_len);
-	return presentation_bv;
-      } else {
+	return s_presentation;
+      } else
 	return false_object;
-      }
     }
   default:
     return false_object;
   }
 }
 
-/* ------------------------------------------------------------------ */
+
+/** --------------------------------------------------------------------
+ ** Host names database.
+ ** ----------------------------------------------------------------- */
 
 static ikptr
-hostent_to_struct (ikptr rtd, struct hostent * src, ikpcb * pcb)
-/* Convert  a  C  language  "struct  hostent"  into  a	Scheme	language
-   "struct-hostent".	Makes  use   of	 "pcb->root1"	only,	so  that
-   "pcb->root0" is available to the caller. */
+hostent_to_struct (ikptr s_rtd, struct hostent * src, ikpcb * pcb)
+/* Convert  a  C  language  "struct  hostent"  into  a  Scheme  language
+   "struct-hostent".  Makes use of "pcb->root6,7,8". */
 {
-  ikptr dst = ika_struct_alloc(pcb, rtd);
-  pcb->root1 = &dst;
+  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "root9" */
+  pcb->root8 = &s_dst;
   { /* store the official host name */
-    long	name_len = strlen(src->h_name);
-    ikptr	name_bv	 = ika_bytevector_alloc(pcb, name_len);
-    char *	name	 = IK_BYTEVECTOR_DATA_CHARP(name_bv);
-    memcpy(name, src->h_name, name_len+1);
-    IK_FIELD(dst, 0) = name_bv;
+    IK_ASS(IK_FIELD(s_dst, 0), ika_bytevector_from_cstring(pcb, src->h_name));
   }
   { /* store the list of aliases */
-    ikptr	list_of_aliases = null_object;
-    int		i;
-    IK_FIELD(dst, 1) = list_of_aliases;
-    for (i=0; NULL!=src->h_aliases[i]; ++i) {
-      ikptr	pair	  = IKA_PAIR_ALLOC(pcb);
-      IK_CDR(pair) = list_of_aliases;
-      IK_FIELD(dst, 1) = list_of_aliases = pair;
-      long	alias_len = strlen(src->h_aliases[i]);
-      ikptr	alias_bv  = ika_bytevector_alloc(pcb, alias_len);
-      char *	alias	  = IK_BYTEVECTOR_DATA_CHARP(alias_bv);
-      memcpy(alias, src->h_aliases[i], alias_len);
-      IK_CAR(pair) = alias_bv;
-    }
+    if (src->h_aliases[0]) {
+      ikptr	s_list_of_aliases, s_spine;
+      s_list_of_aliases = s_spine = IKA_PAIR_ALLOC(pcb);
+      pcb->root6 = &s_list_of_aliases;
+      pcb->root7 = &s_spine;
+      {
+	int	i;
+	for (i=0; src->h_aliases[i];) {
+	  IK_ASS(IK_CAR(s_spine), ika_bytevector_from_cstring(pcb, src->h_aliases[i]));
+	  if (src->h_aliases[++i]) {
+	    IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	    s_spine = IK_CDR(s_spine);
+	  } else {
+	    IK_CDR(s_spine) = null_object;
+	    break;
+	  }
+	}
+      }
+      pcb->root7 = NULL;
+      pcb->root6 = NULL;
+      IK_FIELD(s_dst, 1) = s_list_of_aliases;
+    } else
+      IK_FIELD(s_dst, 1) = null_object;
   }
-  /* store the host address type */
-  IK_FIELD(dst, 2) = IK_FIX(src->h_addrtype);
-  /* store the host address structure length */
-  IK_FIELD(dst, 3) = IK_FIX(src->h_length);
-  ikptr first_addr = false_object;
+  { /* store the host address type */
+    IK_FIELD(s_dst, 2) = IK_FIX(src->h_addrtype);
+  }
+  { /* store the host address structure length */
+    IK_FIELD(s_dst, 3) = IK_FIX(src->h_length);
+  }
   { /* store the reversed list of addresses */
-    ikptr	list_of_addrs = null_object;
-    int		i;
-    IK_FIELD(dst, 4) = list_of_addrs;
-    for (i=0; src->h_addr_list[i]; ++i) {
-      ikptr	pair;
-      ikptr	addr_bv;
-      pair    = IKA_PAIR_ALLOC(pcb);
-      IK_CDR(pair) = list_of_addrs;
-      addr_bv = ika_bytevector_from_memory_block(pcb, src->h_addr_list[i], src->h_length);
-      IK_FIELD(dst, 4) = list_of_addrs = pair;
-      IK_CAR(pair) = addr_bv;
-      if (0 == i)
-	first_addr = addr_bv;
-    }
+    if (src->h_addr_list[0]) {
+      ikptr	s_list_of_addrs, s_spine;
+      s_list_of_addrs = s_spine = IKA_PAIR_ALLOC(pcb);
+      pcb->root6 = &s_list_of_addrs;
+      pcb->root7 = &s_spine;
+      {
+	int	i;
+	for (i=0; src->h_addr_list[i];) {
+	  IK_ASS(IK_CAR(s_spine),
+		 ika_bytevector_from_memory_block(pcb, src->h_addr_list[i], src->h_length));
+	  if (src->h_addr_list[++i]) {
+	    IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	    s_spine = IK_CDR(s_spine);
+	  } else {
+	    IK_CDR(s_spine) = null_object;
+	    break;
+	  }
+	}
+      }
+      pcb->root7 = NULL;
+      pcb->root6 = NULL;
+      IK_FIELD(s_dst, 4) = s_list_of_addrs;
+    } else
+      IK_FIELD(s_dst, 4) = null_object;
   }
-  /* store the first in the list of addresses */
-  IK_FIELD(dst, 5) = first_addr;
-  pcb->root1 = NULL;
-  return dst;
+  {/* store the first in the list of addresses */
+    IK_FIELD(s_dst, 5) = IK_CAR(IK_FIELD(s_dst, 4));
+  }
+  pcb->root8 = NULL;
+  return s_dst;
 }
-
 ikptr
-ikrt_posix_gethostbyname (ikptr rtd, ikptr hostname_bv, ikpcb * pcb)
+ikrt_posix_gethostbyname (ikptr s_rtd, ikptr s_hostname, ikpcb * pcb)
 {
   char *		hostname;
   struct hostent *	rv;
-  hostname = IK_BYTEVECTOR_DATA_CHARP(hostname_bv);
+  hostname = IK_BYTEVECTOR_DATA_CHARP(s_hostname);
   errno	   = 0;
   h_errno  = 0;
   rv	   = gethostbyname(hostname);
-  return (NULL != rv)? hostent_to_struct(rtd, rv, pcb) : fix(-h_errno);
+  return (NULL != rv)? hostent_to_struct(s_rtd, rv, pcb) : IK_FIX(-h_errno);
 }
 ikptr
-ikrt_posix_gethostbyname2 (ikptr rtd, ikptr hostname_bv, ikptr af, ikpcb * pcb)
+ikrt_posix_gethostbyname2 (ikptr s_rtd, ikptr s_hostname, ikptr s_af, ikpcb * pcb)
 {
   char *		hostname;
   struct hostent *	rv;
-  hostname = IK_BYTEVECTOR_DATA_CHARP(hostname_bv);
+  hostname = IK_BYTEVECTOR_DATA_CHARP(s_hostname);
   errno	   = 0;
   h_errno  = 0;
-  rv	   = gethostbyname2(hostname, IK_UNFIX(af));
-  return (NULL != rv)? hostent_to_struct(rtd, rv, pcb) : fix(-h_errno);
+  rv	   = gethostbyname2(hostname, IK_UNFIX(s_af));
+  return (NULL != rv)? hostent_to_struct(s_rtd, rv, pcb) : IK_FIX(-h_errno);
 }
 ikptr
-ikrt_posix_gethostbyaddr (ikptr rtd, ikptr host_address_bv, ikpcb * pcb)
+ikrt_posix_gethostbyaddr (ikptr s_rtd, ikptr s_host_address, ikpcb * pcb)
 {
   void *		host_address;
   size_t		host_address_len;
   int			format;
   struct hostent *	rv;
-  host_address	   = IK_BYTEVECTOR_DATA_VOIDP(host_address_bv);
-  host_address_len = (size_t)IK_BYTEVECTOR_LENGTH(host_address_bv);
+  host_address	   = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
+  host_address_len = (size_t)IK_BYTEVECTOR_LENGTH(s_host_address);
   format   = (sizeof(struct in_addr) == host_address_len)? AF_INET : AF_INET6;
   errno	   = 0;
   h_errno  = 0;
   rv	   = gethostbyaddr(host_address, host_address_len, format);
-  return (NULL != rv)? hostent_to_struct(rtd, rv, pcb) : fix(-h_errno);
+  return (NULL != rv)? hostent_to_struct(s_rtd, rv, pcb) : IK_FIX(-h_errno);
 }
 ikptr
-ikrt_posix_host_entries (ikptr rtd, ikpcb * pcb)
+ikrt_posix_host_entries (ikptr s_rtd, ikpcb * pcb)
 {
-  ikptr			list_of_entries = null_object;
   struct hostent *	entry;
-  pcb->root0 = &list_of_entries;
+  ikptr		s_list_of_entries;
   sethostent(1);
-  for (entry=gethostent(); entry; entry=gethostent()) {
-    ikptr  pair = IKA_PAIR_ALLOC(pcb);
-    IK_CDR(pair)    = list_of_entries;
-    list_of_entries = pair;
-    IK_CAR(pair)    = hostent_to_struct(rtd, entry, pcb);
+  {
+    entry = gethostent();
+    if (entry) {
+      ikptr	s_spine = s_list_of_entries = IKA_PAIR_ALLOC(pcb);
+      pcb->root0 = &s_list_of_entries;
+      pcb->root1 = &s_spine;
+      {
+	while (entry) {
+	  IK_ASS(IK_CAR(s_spine), hostent_to_struct(s_rtd, entry, pcb));
+	  entry = gethostent();
+	  if (entry) {
+	    IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	    s_spine = IK_CDR(s_spine);
+	  } else {
+	    IK_CDR(s_spine) = null_object;
+	    break;
+	  }
+	}
+      }
+      pcb->root1 = NULL;
+      pcb->root0 = NULL;
+    } else
+      s_list_of_entries = null_object;
   }
   endhostent();
-  pcb->root0 = NULL;
-  return list_of_entries;
+  return s_list_of_entries;
 }
 
-/* ------------------------------------------------------------------ */
+
 
 static ikptr
 addrinfo_to_struct (ikpcb * pcb, ikptr rtd, struct addrinfo * src, int with_canon_name)
