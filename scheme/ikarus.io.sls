@@ -21,7 +21,7 @@
 ;;;	allocated as a  vector whose first word is  tagged with the port
 ;;;	tag.
 ;;;
-;;;Copyright (c) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -6350,7 +6350,7 @@
 		   (buffer.past		(unsafe.fxadd1 buffer.offset)))
 	      (if (unsafe.fx<= buffer.past port.buffer.size)
 		  (begin
-		    (bytevector-u8-set! port.buffer buffer.offset code-point)
+		    (unsafe.bytevector-u8-set! port.buffer buffer.offset code-point)
 		    (set! port.buffer.index buffer.past)
 		    (when (unsafe.fx> buffer.past port.buffer.used-size)
 		      (set! port.buffer.used-size buffer.past)))
@@ -6512,7 +6512,7 @@
 	       (buffer.past	(unsafe.fxadd1 buffer.offset)))
 	  (if (unsafe.fx<= buffer.past port.buffer.size)
 	      (begin
-		(bytevector-u8-set! port.buffer buffer.offset code-point)
+		(unsafe.bytevector-u8-set! port.buffer buffer.offset code-point)
 		(set! port.buffer.index buffer.past)
 		(when (unsafe.fx> buffer.past port.buffer.used-size)
 		  (set! port.buffer.used-size buffer.past)))
