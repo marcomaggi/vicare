@@ -55,8 +55,8 @@
       (* n (fact (- n 1)))))
   (define (test ls)
     (let ([p* (permutations ls)])
-      (printf "Testing ~s permutations of ~s\n"
-	      (length p*) ls)
+      (when #f
+	(printf "Testing ~s permutations of ~s\n" (length p*) ls))
       (unless (= (length p*) (fact (length ls)))
 	(error 'test-permutations "incorrect number of permutations"))
       (let f ([p* p*])
@@ -79,8 +79,8 @@
   (define (test ls)
     (let ([v1 (list->vector ls)]
 	  [p* (map list->vector (permutations ls))])
-      (printf "Testing vector-sort for all ~s permutations of ~s\n"
-	      (length p*) v1)
+      (when #f
+	(printf "Testing vector-sort for all ~s permutations of ~s\n" (length p*) v1))
       (for-each
           (lambda (p)
             (let* ([copy (list->vector (vector->list p))]
@@ -103,8 +103,8 @@
 (define (test-list-sort)
   (define (test ls)
     (let ([p* (permutations ls)])
-      (printf "Testing list-sort for all ~s permutations of ~s\n"
-	      (length p*) ls)
+      (when #f
+	(printf "Testing list-sort for all ~s permutations of ~s\n" (length p*) ls))
       (for-each
           (lambda (p)
             (let* ([copy (map values p)]
@@ -130,7 +130,7 @@
   (test-list-sort))
 
 (set-port-buffer-mode! (current-output-port) (buffer-mode line))
-(display "*** testing sorting\n" (current-error-port))
+(display "*** testing Ikarus sorting\n\n" (current-error-port))
 (run-tests)
 (display "; *** done\n" (current-error-port))
 

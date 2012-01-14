@@ -40,7 +40,8 @@
 (define (test-div-and-mod)
   (define (test x1 x2)
     (let-values ([(d m) (div-and-mod x1 x2)])
-      (printf "(div-and-mod ~s ~s) = ~s ~s\n" x1 x2 d m)
+      (when #f	;this produces A LOT of output
+	(printf "(div-and-mod ~s ~s) = ~s ~s\n" x1 x2 d m))
       (assert (= d (div x1 x2)))
       (assert (= m (mod x1 x2)))
       (assert (<= 0 m))
@@ -86,7 +87,8 @@
 (define (test-div0-and-mod0)
   (define (test x1 x2)
     (let-values ([(d m) (div0-and-mod0 x1 x2)])
-      (printf "(div0-and-mod0 ~s ~s) = ~s ~s\n" x1 x2 d m)
+      (when #f	;this produces A LOT of output
+	(printf "(div0-and-mod0 ~s ~s) = ~s ~s\n" x1 x2 d m))
       (assert (= d (div0 x1 x2)))
       (assert (= m (mod0 x1 x2)))
       (assert (<= (- (abs (/ x2 2))) m))
@@ -146,7 +148,7 @@
   (test (greatest-fixnum) (greatest-fixnum)))
 
 (set-port-buffer-mode! (current-output-port) (buffer-mode none))
-(display "*** testing div and mod\n" (current-error-port))
+(display "*** testing div and mod\n\n" (current-error-port))
 (run-tests)
 (display "; *** done\n" (current-error-port))
 

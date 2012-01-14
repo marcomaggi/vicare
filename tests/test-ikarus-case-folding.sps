@@ -1041,7 +1041,8 @@
     (#\x10427 #\x1044F)))
 
 (define (test-strings fr to)
-  (printf "test case-fold ~s ~s\n" fr to)
+  (when #f	;this prints A LOT of output
+    (printf "test case-fold ~s ~s\n" fr to))
   (assert (string=? (string-foldcase fr) to))
   (assert (string-ci=? fr to))
   (assert (string=? (string-foldcase to) to)))
