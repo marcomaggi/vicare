@@ -550,6 +550,7 @@ ik_decl ikptr iku_cflonum_alloc	(ikpcb * pcb, double re, double im);
 #define off_pointer_data	(disp_pointer_data - vector_tag)
 
 ik_decl ikptr ika_pointer_alloc	(ikpcb* pcb, ik_ulong memory);
+ik_decl ikptr iku_pointer_alloc	(ikpcb* pcb, ik_ulong memory);
 ik_decl ikptr ikrt_is_pointer	(ikptr x);
 
 #define IK_POINTER_DATA(X)		IK_REF((X), off_pointer_data)

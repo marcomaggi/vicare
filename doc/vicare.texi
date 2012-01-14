@@ -5554,18 +5554,13 @@ Size, realloc}.  Reallocate the block of memory referenced by
 @var{pointer} to the new size @var{number-of-bytes}, which must be a
 non--negative fixnum.
 
-If successful return a new pointer object and release the memory
-referenced by @var{pointer}; @var{pointer} itself is mutated to hold the
-@cnull{} pointer.  If an error occurs: return @false{} and leave
-untouched both @var{pointer} and its referenced memory.
+If successful: mutate @var{pointer} to reference a the new memory block
+and return @var{pointer} itself.  If an error occurs: return @false{}
+and leave untouched both @var{pointer} and its referenced memory.
 
 Memory allocated by @func{realloc} must be released by @func{free};
 memory allocated by @func{guarded-realloc} is automatically released
 whenever the returned pointer object is garbage collected.
-
-If memory allocated by a guarding function is reallocated with
-@func{guarded-realloc}: @value{PRJNAME} will @strong{not} try to
-automatically release the old memory.
 @end defun
 
 
@@ -15709,7 +15704,7 @@ value of @func{greatest-fixnum}.
 @end example
 
 All the remaining space in the memory block is filled with 32-bit
-unsigned integers representing Scheme characters.
+unsigned integers representing Scheme characters as Unicode code points.
 
 @c ------------------------------------------------------------
 
