@@ -1702,6 +1702,19 @@
 
 ;;;; done
 
+(flush-output-port (current-output-port))
+(flush-output-port (current-error-port))
+
+(when #f
+  (fprintf (current-error-port) "running gc ")
+  (flush-output-port (current-error-port))
+  (do ((i 0 (+ 1 i)))
+      ((= i 1024))
+    (fprintf (current-error-port) "~a " i)
+    (flush-output-port (current-error-port))
+    (collect))
+  (check-newline))
+
 (check-report)
 
 ;;; end of file
