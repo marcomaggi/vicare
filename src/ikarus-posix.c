@@ -1762,7 +1762,7 @@ ikptr
 ikrt_posix_host_entries (ikptr s_rtd, ikpcb * pcb)
 {
   struct hostent *	entry;
-  ikptr		s_list_of_entries;
+  ikptr			s_list_of_entries;
   sethostent(1);
   {
     entry = gethostent();
@@ -1798,47 +1798,38 @@ ikrt_posix_host_entries (ikptr s_rtd, ikpcb * pcb)
 }
 
 
+/** --------------------------------------------------------------------
+ ** Network address informations.
+ ** ----------------------------------------------------------------- */
 
 static ikptr
-addrinfo_to_struct (ikpcb * pcb, ikptr rtd, struct addrinfo * src, int with_canon_name)
-/* Convert  a  C  language  "struct  addrinfo" into  a	Scheme	language
-   "struct-addrinfo".	 Make  use   of	 "pcb->root1"	only,	so  that
-   "pcb->root0" is available to the caller. */
+addrinfo_to_struct (ikpcb * pcb, ikptr s_rtd, struct addrinfo * src, int with_canon_name)
+/* Convert  a  C  language  "struct  addrinfo" into  a  Scheme  language
+   "struct-addrinfo".  Make use of "pcb->root9". */
 {
-  ikptr		dst = ika_struct_alloc(pcb, rtd);
-  ikptr		sockaddr_bv;
-  void *	sockaddr_data;
-  ikptr		canon_name_bv;
-  void *	canon_name_data;
-  size_t	canon_name_len;
-  pcb->root1 = &dst;
+  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  pcb->root9 = &s_dst;
   {
-    IK_FIELD(dst, 0) = IK_FIX(src->ai_flags);
-    IK_FIELD(dst, 1) = IK_FIX(src->ai_family);
-    IK_FIELD(dst, 2) = IK_FIX(src->ai_socktype);
-    IK_FIELD(dst, 3) = IK_FIX(src->ai_protocol);
-    IK_FIELD(dst, 4) = IK_FIX(src->ai_addrlen);
-    {
-      sockaddr_bv   = ika_bytevector_alloc(pcb, src->ai_addrlen);
-      sockaddr_data = IK_BYTEVECTOR_DATA_VOIDP(sockaddr_bv);
-      memcpy(sockaddr_data, src->ai_addr, src->ai_addrlen);
-      IK_FIELD(dst, 5) = sockaddr_bv;
-    }
+    IK_ASS(IK_FIELD(s_dst, 0), IK_FIX(src->ai_flags));
+    IK_ASS(IK_FIELD(s_dst, 1), IK_FIX(src->ai_family));
+    IK_ASS(IK_FIELD(s_dst, 2), IK_FIX(src->ai_socktype));
+    IK_ASS(IK_FIELD(s_dst, 3), IK_FIX(src->ai_protocol));
+    IK_ASS(IK_FIELD(s_dst, 4), IK_FIX(src->ai_addrlen));
+    /* fill the field "ai_addr" */
+    IK_ASS(IK_FIELD(s_dst, 5),
+	   ika_bytevector_from_memory_block(pcb, src->ai_addr, src->ai_addrlen));
+    /* fill the field "ai_canonname" */
     if (with_canon_name && src->ai_canonname) {
-      canon_name_len  = strlen(src->ai_canonname);
-      canon_name_bv   = ika_bytevector_alloc(pcb, (long)canon_name_len);
-      canon_name_data = IK_BYTEVECTOR_DATA_VOIDP(canon_name_bv);
-      memcpy(canon_name_data, src->ai_canonname, canon_name_len);
-      IK_FIELD(dst, 6) = canon_name_bv;
-    } else {
-      IK_FIELD(dst, 6) = false_object;
-    }
+      IK_ASS(IK_FIELD(s_dst, 6),
+	     ika_bytevector_from_cstring(pcb, src->ai_canonname));
+    } else
+      IK_FIELD(s_dst, 6) = false_object;
   }
-  pcb->root1 = NULL;
-  return dst;
+  pcb->root9 = NULL;
+  return s_dst;
 }
 ikptr
-ikrt_posix_getaddrinfo (ikptr rtd, ikptr node_bv, ikptr service_bv, ikptr hints_struct, ikpcb * pcb)
+ikrt_posix_getaddrinfo (ikptr s_rtd, ikptr s_node, ikptr s_service, ikptr s_hints_struct, ikpcb * pcb)
 {
   const char *		node;
   const char *		service;
@@ -1847,268 +1838,365 @@ ikrt_posix_getaddrinfo (ikptr rtd, ikptr node_bv, ikptr service_bv, ikptr hints_
   struct addrinfo *	result;
   struct addrinfo *	iter;
   int			rv, with_canon_name;
-  ikptr			list_of_addrinfo = null_object;
-  node	  = (false_object != node_bv)?	  IK_BYTEVECTOR_DATA_CHARP(node_bv)    : NULL;
-  service = (false_object != service_bv)? IK_BYTEVECTOR_DATA_CHARP(service_bv) : NULL;
+  node	  = (false_object != s_node)?    IK_BYTEVECTOR_DATA_CHARP(s_node)    : NULL;
+  service = (false_object != s_service)? IK_BYTEVECTOR_DATA_CHARP(s_service) : NULL;
   memset(&hints, '\0', sizeof(struct addrinfo));
-  if (false_object == hints_struct) {
-    hints_p	    = NULL;
-    with_canon_name = 0;
+  if (false_object == s_hints_struct) {
+    hints_p		= NULL;
+    with_canon_name	= 0;
   } else {
-    hints_p = &hints;
-    hints.ai_flags	  = IK_UNFIX(IK_FIELD(hints_struct, 0));
-    hints.ai_family	  = IK_UNFIX(IK_FIELD(hints_struct, 1));
-    hints.ai_socktype	  = IK_UNFIX(IK_FIELD(hints_struct, 2));
-    hints.ai_protocol	  = IK_UNFIX(IK_FIELD(hints_struct, 3));
-    with_canon_name	  = AI_CANONNAME & hints.ai_flags;
+    hints_p		= &hints;
+    hints.ai_flags	= IK_UNFIX(IK_FIELD(s_hints_struct, 0));
+    hints.ai_family	= IK_UNFIX(IK_FIELD(s_hints_struct, 1));
+    hints.ai_socktype	= IK_UNFIX(IK_FIELD(s_hints_struct, 2));
+    hints.ai_protocol	= IK_UNFIX(IK_FIELD(s_hints_struct, 3));
+    with_canon_name	= AI_CANONNAME & hints.ai_flags;
   }
   rv = getaddrinfo(node, service, hints_p, &result);
   if (0 == rv) {
-    pcb->root0 = &list_of_addrinfo;
-    for (iter = result; iter; iter = iter->ai_next) {
-      ikptr	  pair = IKA_PAIR_ALLOC(pcb);
-      IK_CDR(pair)     = list_of_addrinfo;
-      list_of_addrinfo = pair;
-      IK_CAR(pair)     = addrinfo_to_struct(pcb, rtd, iter, with_canon_name);
-    }
-    pcb->root0 = NULL;
-    freeaddrinfo(result);
-    return list_of_addrinfo;
+    ikptr	s_list_of_addrinfo;
+    if (result) {
+      pcb->root0 = &s_rtd;
+      {
+	ikptr	s_spine;
+	s_list_of_addrinfo = s_spine = IKA_PAIR_ALLOC(pcb);
+	pcb->root1 = &s_list_of_addrinfo;
+	pcb->root2 = &s_spine;
+	{
+	  for (iter = result; iter;) {
+	    IK_ASS(IK_CAR(s_spine), addrinfo_to_struct(pcb, s_rtd, iter, with_canon_name));
+	    iter = iter->ai_next;
+	    if (iter) {
+	      IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	      s_spine = IK_CDR(s_spine);
+	    } else {
+	      IK_CDR(s_spine) = null_object;
+	      break;
+	    }
+	  }
+	}
+	pcb->root2 = NULL;
+	pcb->root1 = NULL;
+      }
+      pcb->root0 = NULL;
+      freeaddrinfo(result);
+    } else
+      s_list_of_addrinfo = null_object;
+    return s_list_of_addrinfo;
   } else {
     /* The  GAI_  codes	 are  already  negative in  the	 GNU  C	 Library
        headers. */
-    return fix(rv);
+    return IK_FIX(rv);
   }
 }
 ikptr
-ikrt_posix_gai_strerror (ikptr error_code, ikpcb * pcb)
+ikrt_posix_gai_strerror (ikptr s_error_code, ikpcb * pcb)
 {
-  const char *	message;
-  ikptr		message_bv;
-  size_t	message_len;
-  char *	message_data;
-  message      = gai_strerror(IK_UNFIX(error_code));
-  message_len  = strlen(message);
-  message_bv   = ika_bytevector_alloc(pcb, (long)message_len);
-  message_data = IK_BYTEVECTOR_DATA_CHARP(message_bv);
-  memcpy(message_data, message, message_len);
-  return message_bv;
+  return ika_bytevector_from_cstring(pcb, gai_strerror(IK_UNFIX(s_error_code)));
 }
 
 
+/** --------------------------------------------------------------------
+ ** Netword protocols database.
+ ** ----------------------------------------------------------------- */
 
 static ikptr
-protoent_to_struct (ikpcb * pcb, ikptr rtd, struct protoent * src)
-/* Convert  a  C  language  "struct  protoent" into  a	Scheme	language
-   "struct-protoent".	 Make  use   of	 "pcb->root1"	only,	so  that
-   "pcb->root0" is available to the caller. */
+protoent_to_struct (ikpcb * pcb, ikptr s_rtd, struct protoent * src)
+/* Convert  a  C  language  "struct  protoent" into  a  Scheme  language
+   "struct-protoent".  Make use of "pcb->root7,8,9". */
 {
-  ikptr		dst;
-  ikptr		list_of_aliases = null_object;
-  int		i;
-  dst = ika_struct_alloc(pcb, rtd);
-  pcb->root1 = &dst;
+  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  pcb->root9 = &s_dst;
   {
-    {
-      size_t	name_len = strlen(src->p_name);
-      ikptr	name_bv	 = ika_bytevector_alloc(pcb, name_len);
-      char *	name	 = IK_BYTEVECTOR_DATA_CHARP(name_bv);
-      memcpy(name, src->p_name, name_len);
-      IK_FIELD(dst, 0) = name_bv;
-    }
-    IK_FIELD(dst, 1) = list_of_aliases;
-    for (i=0; src->p_aliases[i]; ++i) {
-      ikptr	pair = IKA_PAIR_ALLOC(pcb);
-      IK_CDR(pair) = list_of_aliases;
-      list_of_aliases = pair;
-      IK_FIELD(dst, 1) = list_of_aliases;
-      size_t	alias_len = strlen(src->p_aliases[i]);
-      ikptr	alias_bv  = ika_bytevector_alloc(pcb, (long)alias_len);
-      char *	alias	  = IK_BYTEVECTOR_DATA_CHARP(alias_bv);
-      memcpy(alias, src->p_aliases[i], alias_len);
-      IK_CAR(pair) = alias_bv;
-    }
-    IK_FIELD(dst, 2) = fix(src->p_proto);
+    /* fill the field "p_name" */
+    IK_ASS(IK_FIELD(s_dst, 0), ika_bytevector_from_cstring(pcb, src->p_name));
+    /* fill the field "p_aliases" */
+    if (src->p_aliases[0]) {
+      ikptr	s_list_of_aliases, s_spine;
+      int	i;
+      s_list_of_aliases = s_spine = IKA_PAIR_ALLOC(pcb);
+      pcb->root8 = &s_list_of_aliases;
+      pcb->root7 = &s_spine;
+      {
+	for (i=0; src->p_aliases[i];) {
+	  IK_ASS(IK_CAR(s_spine), ika_bytevector_from_cstring(pcb, src->p_aliases[i]));
+	  if (src->p_aliases[++i]) {
+	    IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	    s_spine = IK_CDR(s_spine);
+	  } else {
+	    IK_CDR(s_spine) = null_object;
+	    break;
+	  }
+	}
+      }
+      pcb->root7 = NULL;
+      pcb->root8 = NULL;
+      IK_FIELD(s_dst, 1) = s_list_of_aliases;
+    } else
+      IK_FIELD(s_dst, 1) = null_object;
+    /* fill the field "p_proto" */
+    IK_FIELD(s_dst, 2) = IK_FIX(src->p_proto);
   }
-  pcb->root1 = NULL;
-  return dst;
+  pcb->root9 = NULL;
+  return s_dst;
 }
 ikptr
-ikrt_posix_getprotobyname (ikptr rtd, ikptr name_bv, ikpcb * pcb)
+ikrt_posix_getprotobyname (ikptr s_rtd, ikptr s_name, ikpcb * pcb)
 {
   char *		name;
   struct protoent *	entry;
-  name	= IK_BYTEVECTOR_DATA_CHARP(name_bv);
+  name	= IK_BYTEVECTOR_DATA_CHARP(s_name);
   entry = getprotobyname(name);
-  return (NULL != entry)? protoent_to_struct(pcb, rtd, entry) : false_object;
+  return (entry)? protoent_to_struct(pcb, s_rtd, entry) : false_object;
 }
 ikptr
-ikrt_posix_getprotobynumber (ikptr rtd, ikptr proto_num, ikpcb * pcb)
+ikrt_posix_getprotobynumber (ikptr s_rtd, ikptr s_proto_num, ikpcb * pcb)
 {
   struct protoent *	entry;
-  entry = getprotobynumber(IK_UNFIX(proto_num));
-  return (NULL != entry)? protoent_to_struct(pcb, rtd, entry) : false_object;
+  entry = getprotobynumber(IK_UNFIX(s_proto_num));
+  return (entry)? protoent_to_struct(pcb, s_rtd, entry) : false_object;
 }
 ikptr
-ikrt_posix_protocol_entries (ikptr rtd, ikpcb * pcb)
+ikrt_posix_protocol_entries (ikptr s_rtd, ikpcb * pcb)
 {
-  ikptr			list_of_entries = null_object;
+  ikptr			s_list_of_entries;
   struct protoent *	entry;
-  pcb->root0 = &list_of_entries;
   setprotoent(1);
-  for (entry=getprotoent(); entry; entry=getprotoent()) {
-    ikptr  pair = IKA_PAIR_ALLOC(pcb);
-    IK_CDR(pair)    = list_of_entries;
-    list_of_entries = pair;
-    IK_CAR(pair)    = protoent_to_struct(pcb, rtd, entry);
+  {
+    pcb->root0 = &s_rtd;
+    {
+      entry = getprotoent();
+      if (entry) {
+	ikptr	s_spine;
+	s_list_of_entries = s_spine = IKA_PAIR_ALLOC(pcb);
+	pcb->root1 = &s_list_of_entries;
+	pcb->root2 = &s_spine;
+	{
+	  while (entry) {
+	    IK_ASS(IK_CAR(s_spine), protoent_to_struct(pcb, s_rtd, entry));
+	    entry = getprotoent();
+	    if (entry) {
+	      IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	      s_spine = IK_CDR(s_spine);
+	    } else {
+	      IK_CDR(s_spine) = null_object;
+	      break;
+	    }
+	  }
+	}
+	pcb->root2 = NULL;
+	pcb->root1 = NULL;
+      } else
+	s_list_of_entries = null_object;
+    }
+    pcb->root0 = NULL;
   }
   endprotoent();
-  pcb->root0 = NULL;
-  return list_of_entries;
+  return s_list_of_entries;
 }
 
 
+/** --------------------------------------------------------------------
+ ** Network services database.
+ ** ----------------------------------------------------------------- */
 
 static ikptr
-servent_to_struct (ikpcb * pcb, ikptr rtd, struct servent * src)
-/* Convert  a  C  language  "struct  servent"  into  a	Scheme	language
-   "struct-servent".	Make   use  of	 "pcb->root1"	only,  so   that
-   "pcb->root0" is available to the caller. */
+servent_to_struct (ikpcb * pcb, ikptr s_rtd, struct servent * src)
+/* Convert  a  C  language  "struct  servent"  into  a  Scheme  language
+   "struct-servent". Make use of "pcb->root7,8,9". */
 {
-  ikptr		dst;
-  ikptr		list_of_aliases = null_object;
-  int		i;
-  dst = ika_struct_alloc(pcb, rtd);
-  pcb->root1 = &dst;
+  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  pcb->root9 = &s_dst;
   {
-    {
-      size_t	name_len = strlen(src->s_name);
-      ikptr	name_bv	 = ika_bytevector_alloc(pcb, name_len);
-      char *	name	 = IK_BYTEVECTOR_DATA_CHARP(name_bv);
-      memcpy(name, src->s_name, name_len);
-      IK_FIELD(dst, 0) = name_bv;
-    }
-    IK_FIELD(dst, 1) = list_of_aliases;
-    for (i=0; src->s_aliases[i]; ++i) {
-      ikptr	pair = IKA_PAIR_ALLOC(pcb);
-      IK_CDR(pair) = list_of_aliases;
-      list_of_aliases = pair;
-      IK_FIELD(dst, 1) = list_of_aliases;
-      size_t	alias_len = strlen(src->s_aliases[i]);
-      ikptr	alias_bv  = ika_bytevector_alloc(pcb, (long)alias_len);
-      char *	alias	  = IK_BYTEVECTOR_DATA_CHARP(alias_bv);
-      memcpy(alias, src->s_aliases[i], alias_len);
-      IK_CAR(pair) = alias_bv;
-    }
-    IK_FIELD(dst, 2) = IK_FIX(ntohs((uint16_t)(src->s_port)));
-    {
-      size_t	proto_len = strlen(src->s_proto);
-      ikptr	proto_bv  = ika_bytevector_alloc(pcb, proto_len);
-      char *	proto	  = IK_BYTEVECTOR_DATA_CHARP(proto_bv);
-      memcpy(proto, src->s_proto, proto_len);
-      IK_FIELD(dst, 3) = proto_bv;
-    }
+    /* fill the field "s_name" */
+    IK_ASS(IK_FIELD(s_dst, 0), ika_bytevector_from_cstring(pcb, src->s_name));
+    /* fill the field "s_aliases" */
+    if (src->s_aliases[0]) {
+      ikptr	s_list_of_aliases, s_spine;
+      int	i;
+      s_list_of_aliases = s_spine = IKA_PAIR_ALLOC(pcb);
+      pcb->root8 = &s_list_of_aliases;
+      pcb->root7 = &s_spine;
+      {
+	for (i=0; src->s_aliases[i];) {
+	  IK_ASS(IK_CAR(s_spine), ika_bytevector_from_cstring(pcb, src->s_aliases[i]));
+	  if (src->s_aliases[++i]) {
+	    IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	    s_spine = IK_CDR(s_spine);
+	  } else {
+	    IK_CDR(s_spine) = null_object;
+	    break;
+	  }
+	}
+      }
+      pcb->root7 = NULL;
+      pcb->root8 = NULL;
+      IK_FIELD(s_dst, 1) = s_list_of_aliases;
+    } else
+      IK_FIELD(s_dst, 1) = null_object;
+    /* fill the field "s_port" */
+    IK_FIELD(s_dst, 2) = IK_FIX(ntohs((uint16_t)(src->s_port)));
+    /* fill the field "s_proto" */
+    IK_ASS(IK_FIELD(s_dst, 3), ika_bytevector_from_cstring(pcb, src->s_proto));
   }
-  pcb->root1 = NULL;
-  return dst;
+  pcb->root9 = NULL;
+  return s_dst;
 }
 ikptr
-ikrt_posix_getservbyname (ikptr rtd, ikptr name_bv, ikptr proto_bv, ikpcb * pcb)
+ikrt_posix_getservbyname (ikptr s_rtd, ikptr s_name, ikptr s_proto, ikpcb * pcb)
 {
   char *		name;
   char *		proto;
   struct servent *	entry;
-  name	= IK_BYTEVECTOR_DATA_CHARP(name_bv);
-  proto = IK_BYTEVECTOR_DATA_CHARP(proto_bv);
+  name	= IK_BYTEVECTOR_DATA_CHARP(s_name);
+  proto = IK_BYTEVECTOR_DATA_CHARP(s_proto);
   entry = getservbyname(name, proto);
-  return (NULL != entry)? servent_to_struct(pcb, rtd, entry) : false_object;
+  return (entry)? servent_to_struct(pcb, s_rtd, entry) : false_object;
 }
 ikptr
-ikrt_posix_getservbyport (ikptr rtd, ikptr port, ikptr proto_bv, ikpcb * pcb)
+ikrt_posix_getservbyport (ikptr s_rtd, ikptr s_port, ikptr s_proto, ikpcb * pcb)
 {
   char *		proto;
   struct servent *	entry;
-  proto = IK_BYTEVECTOR_DATA_CHARP(proto_bv);
-  entry = getservbyport((int)htons((uint16_t)IK_UNFIX(port)), proto);
-  return (NULL != entry)? servent_to_struct(pcb, rtd, entry) : false_object;
+  proto = IK_BYTEVECTOR_DATA_CHARP(s_proto);
+  entry = getservbyport((int)htons((uint16_t)IK_UNFIX(s_port)), proto);
+  return (entry)? servent_to_struct(pcb, s_rtd, entry) : false_object;
 }
 ikptr
-ikrt_posix_service_entries (ikptr rtd, ikpcb * pcb)
+ikrt_posix_service_entries (ikptr s_rtd, ikpcb * pcb)
 {
-  ikptr			list_of_entries = null_object;
+  ikptr			s_list_of_entries;
   struct servent *	entry;
-  pcb->root0 = &list_of_entries;
   setservent(1);
-  for (entry=getservent(); entry; entry=getservent()) {
-    ikptr  pair = IKA_PAIR_ALLOC(pcb);
-    IK_CDR(pair)    = list_of_entries;
-    list_of_entries = pair;
-    IK_CAR(pair)    = servent_to_struct(pcb, rtd, entry);
+  {
+    entry = getservent();
+    if (entry) {
+      pcb->root0 = &s_rtd;
+      {
+	ikptr	s_spine;
+	s_list_of_entries = s_spine = IKA_PAIR_ALLOC(pcb);
+	pcb->root1 = &s_list_of_entries;
+	pcb->root2 = &s_spine;
+	{
+	  while (entry) {
+	    IK_ASS(IK_CAR(s_spine), servent_to_struct(pcb, s_rtd, entry));
+	    entry = getservent();
+	    if (entry) {
+	      IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	      s_spine = IK_CDR(s_spine);
+	    } else {
+	      IK_CDR(s_spine) = null_object;
+	      break;
+	    }
+	  }
+	}
+	pcb->root2 = NULL;
+	pcb->root1 = NULL;
+      }
+      pcb->root0 = NULL;
+    } else
+      s_list_of_entries = null_object;
   }
   endservent();
-  pcb->root0 = NULL;
-  return list_of_entries;
+  return s_list_of_entries;
 }
 
 
+/** --------------------------------------------------------------------
+ ** Networks database.
+ ** ----------------------------------------------------------------- */
 
 static ikptr
-netent_to_struct (ikpcb * pcb, ikptr rtd, struct netent * src)
-/* Convert  a  C  language   "struct  netent"  into  a	Scheme	language
-   "struct-netent".  Make use of "pcb->root1" only, so that "pcb->root0"
-   is available to the caller. */
+netent_to_struct (ikpcb * pcb, ikptr s_rtd, struct netent * src)
+/* Convert  a  C  language   "struct  netent"  into  a  Scheme  language
+   "struct-netent".  Make use of "pcb->root7,8,9". */
 {
-  ikptr		dst;
-  ikptr		list_of_aliases = null_object;
-  int		i;
-  dst = ika_struct_alloc(pcb, rtd);
-  pcb->root1 = &dst;
+  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  pcb->root9 = &s_dst;
   {
-    IK_FIELD(dst, 0) = ika_bytevector_from_cstring(pcb, src->n_name);
-    IK_FIELD(dst, 1) = list_of_aliases;
-    for (i=0; src->n_aliases[i]; ++i) {
-      IKA_DECLARE_ALLOC_AND_CONS(pair, list_of_aliases, pcb);
-      IK_FIELD(dst, 1) = list_of_aliases;
-      IK_CAR(pair) = ika_bytevector_from_cstring(pcb, src->n_aliases[i]);
-    }
-    IK_FIELD(dst, 2) = IK_FIX(src->n_addrtype);
-    IK_FIELD(dst, 3) = ika_integer_from_ullong(pcb, (ik_ullong)src->n_net);
+    IK_ASS(IK_FIELD(s_dst, 0), ika_bytevector_from_cstring(pcb, src->n_name));
+    if (src->n_aliases[0]) {
+      ikptr	s_list_of_aliases, s_spine;
+      int	i;
+      s_list_of_aliases = s_spine = IKA_PAIR_ALLOC(pcb);
+      pcb->root8 = &s_list_of_aliases;
+      pcb->root7 = &s_spine;
+      {
+	for (i=0; src->n_aliases[i];) {
+	  IK_ASS(IK_CAR(s_spine), ika_bytevector_from_cstring(pcb, src->n_aliases[i]));
+	  if (src->n_aliases[++i]) {
+	    IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	    s_spine = IK_CDR(s_spine);
+	  } else {
+	    IK_CDR(s_spine) = null_object;
+	    break;
+	  }
+	}
+      }
+      pcb->root7 = NULL;
+      pcb->root8 = NULL;
+      IK_FIELD(s_dst, 1) = s_list_of_aliases;
+    } else
+      IK_FIELD(s_dst, 1) = null_object;
+    IK_FIELD(s_dst, 2) = IK_FIX(src->n_addrtype);
+    IK_ASS(IK_FIELD(s_dst, 3), ika_integer_from_ullong(pcb, (ik_ullong)src->n_net));
   }
-  pcb->root1 = NULL;
-  return dst;
+  pcb->root9 = NULL;
+  return s_dst;
 }
 ikptr
-ikrt_posix_getnetbyname (ikptr rtd, ikptr name_bv, ikpcb * pcb)
+ikrt_posix_getnetbyname (ikptr s_rtd, ikptr s_name, ikpcb * pcb)
 {
   char *		name;
   struct netent *	entry;
-  name	= IK_BYTEVECTOR_DATA_CHARP(name_bv);
+  name	= IK_BYTEVECTOR_DATA_CHARP(s_name);
   entry = getnetbyname(name);
-  return (NULL != entry)? netent_to_struct(pcb, rtd, entry) : false_object;
+  return (entry)? netent_to_struct(pcb, s_rtd, entry) : false_object;
 }
 ikptr
-ikrt_posix_getnetbyaddr (ikptr rtd, ikptr net_num, ikptr type, ikpcb * pcb)
+ikrt_posix_getnetbyaddr (ikptr s_rtd, ikptr s_net_num, ikptr s_type, ikpcb * pcb)
 {
   uint32_t		net;
   struct netent *	entry;
-  net = (uint32_t)ik_integer_to_ulong(net_num);
-  entry = getnetbyaddr(net, IK_UNFIX(type));
-  return (NULL != entry)? netent_to_struct(pcb, rtd, entry) : false_object;
+  net   = (uint32_t)ik_integer_to_ulong(s_net_num);
+  entry = getnetbyaddr(net, IK_UNFIX(s_type));
+  return (entry)? netent_to_struct(pcb, s_rtd, entry) : false_object;
 }
 ikptr
-ikrt_posix_network_entries (ikptr rtd, ikpcb * pcb)
+ikrt_posix_network_entries (ikptr s_rtd, ikpcb * pcb)
 {
-  ikptr			list_of_entries = null_object;
   struct netent *	entry;
-  pcb->root0 = &list_of_entries;
+  ikptr			s_list_of_entries;
   setnetent(1);
-  for (entry=getnetent(); entry; entry=getnetent()) {
-    IKA_DECLARE_ALLOC_AND_CONS(pair, list_of_entries, pcb);
-    IK_CAR(pair) = netent_to_struct(pcb, rtd, entry);
-  }
+  entry = getnetent();
+  if (entry) {
+    pcb->root0 = &s_rtd;
+    {
+      ikptr	s_spine;
+      s_list_of_entries = s_spine = IKA_PAIR_ALLOC(pcb);
+      pcb->root1 = &s_list_of_entries;
+      pcb->root2 = &s_spine;
+      {
+	while (entry) {
+	  IK_ASS(IK_CAR(s_spine), netent_to_struct(pcb, s_rtd, entry));
+	  entry = getnetent();
+	  if (entry) {
+	    IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	    s_spine = IK_CDR(s_spine);
+	  } else {
+	    IK_CDR(s_spine) = null_object;
+	    break;
+	  }
+	}
+      }
+      pcb->root2 = NULL;
+      pcb->root1 = NULL;
+    }
+    pcb->root0 = NULL;
+  } else
+    s_list_of_entries = null_object;
   endnetent();
-  pcb->root0 = NULL;
-  return list_of_entries;
+  return s_list_of_entries;
 }
 
 

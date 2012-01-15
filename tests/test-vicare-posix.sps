@@ -26,7 +26,7 @@
 
 
 #!vicare
-(import (rename (vicare) #;(ikarus)
+(import (rename (vicare)
 		(parameterize	parametrise))
   (prefix (vicare posix)
 	  px.)
@@ -1053,109 +1053,113 @@
   ;;Maggi; Thu Nov 17, 2011).
   (when #f
     (check
-	(let* ((hints	(make-struct-addrinfo AI_CANONNAME AF_INET SOCK_STREAM 0 #f #f #f))
+	(let* ((hints	(px.make-struct-addrinfo AI_CANONNAME AF_INET SOCK_STREAM 0 #f #f #f))
 	       (rv	(px.getaddrinfo "localhost" "smtp" hints)))
-	  (for-all struct-addrinfo? rv))
+	  (for-all px.struct-addrinfo? rv))
       => #t)
 
     (check
 	(let ((rv (px.getaddrinfo "localhost" "smtp" #f)))
-	  (for-all struct-addrinfo? rv))
+	  (for-all px.struct-addrinfo? rv))
       => #t)
 
     (check
 	(let ((rv (px.getaddrinfo "localhost" #f #f)))
-	  (for-all struct-addrinfo? rv))
+	  (for-all px.struct-addrinfo? rv))
       => #t)
 
     #f)
 
-;;; --------------------------------------------------------------------
-
   (check
-      (let ((rv (px.getprotobyname "icmp")))
-;;;	(check-pretty-print rv)
-	(px.struct-protoent? rv))
+      (string? (px.gai-strerror EAI_FAMILY))
     => #t)
-
-  (check
-      (let ((rv (px.getprotobyname "udp")))
-;;;	(check-pretty-print rv)
-	(px.struct-protoent? rv))
-    => #t)
-
-  (check
-      (let ((rv (px.getprotobyname "tcp")))
-;;;	(check-pretty-print rv)
-	(px.struct-protoent? rv))
-    => #t)
-
-  (check
-      (let ((rv (px.getprotobynumber 6)))
-;;;	(check-pretty-print rv)
-	(px.struct-protoent? rv))
-    => #t)
-
-;;;  (check-pretty-print (px.protocol-entries))
 
 ;;; --------------------------------------------------------------------
 
-  (check
-      (let ((rv (px.getservbyname "smtp" "tcp")))
+    (check
+	(let ((rv (px.getprotobyname "icmp")))
 ;;;	(check-pretty-print rv)
-	(px.struct-servent? rv))
-    => #t)
+	  (px.struct-protoent? rv))
+      => #t)
 
-  (check
-      (let ((rv (px.getservbyname "http" "tcp")))
+    (check
+	(let ((rv (px.getprotobyname "udp")))
 ;;;	(check-pretty-print rv)
-	(px.struct-servent? rv))
-    => #t)
+	  (px.struct-protoent? rv))
+      => #t)
 
-  (check
-      (let ((rv (px.getservbyname "ntp" "tcp")))
+    (check
+	(let ((rv (px.getprotobyname "tcp")))
 ;;;	(check-pretty-print rv)
-	(px.struct-servent? rv))
-    => #t)
+	  (px.struct-protoent? rv))
+      => #t)
 
-  (check
-      (let ((rv (px.getservbyport 25 "tcp")))
+    (check
+	(let ((rv (px.getprotobynumber 6)))
 ;;;	(check-pretty-print rv)
-	(px.struct-servent? rv))
-    => #t)
+	  (px.struct-protoent? rv))
+      => #t)
 
-  (check
-      (for-all px.struct-servent? (px.service-entries))
-    => #t)
+;;; (check-pretty-print (px.protocol-entries))
+
+;;; --------------------------------------------------------------------
+
+    (check
+	(let ((rv (px.getservbyname "smtp" "tcp")))
+;;;	(check-pretty-print rv)
+	  (px.struct-servent? rv))
+      => #t)
+
+    (check
+	(let ((rv (px.getservbyname "http" "tcp")))
+;;;	(check-pretty-print rv)
+	  (px.struct-servent? rv))
+      => #t)
+
+    (check
+	(let ((rv (px.getservbyname "ntp" "tcp")))
+;;;	(check-pretty-print rv)
+	  (px.struct-servent? rv))
+      => #t)
+
+    (check
+	(let ((rv (px.getservbyport 25 "tcp")))
+;;;	(check-pretty-print rv)
+	  (px.struct-servent? rv))
+      => #t)
+
+    (check
+	(for-all px.struct-servent? (px.service-entries))
+      => #t)
 
 ;;;  (check-pretty-print (px.service-entries))
 
 ;;; --------------------------------------------------------------------
 
-  (when #f
+    (when #f
 
-    (check
-	(let ((rv (px.getnetbyname "loopback")))
-	  (check-pretty-print rv)
-	  (px.struct-netent? rv))
-      => #t)
+      (check
+	  (let ((rv (px.getnetbyname "loopback")))
+	    (check-pretty-print rv)
+	    (px.struct-netent? rv))
+	=> #t)
 
-    (check
-	(let ((rv (px.getnetbyaddr (bytevector-u32-ref '#vu8(127 0 0 0) 0 (endianness big))
-				   AF_INET)))
-	  (check-pretty-print rv)
-	  (px.struct-netent? rv))
-      => #t)
+      (check
+	  (let ((rv (px.getnetbyaddr (bytevector-u32-ref '#vu8(127 0 0 0) 0 (endianness big))
+				     AF_INET)))
+	    (check-pretty-print rv)
+	    (px.struct-netent? rv))
+	=> #t)
 
-    (check
-	(for-all px.struct-netent? (px.network-entries))
-      => #t)
+      (check
+	  (for-all px.struct-netent? (px.network-entries))
+	=> #t)
 
-    (check-pretty-print (px.network-entries))
+      (check-pretty-print (px.network-entries))
 
-    #f)
+      #f)
 
-  #t)
+    #t)
 
 
 (parametrise ((check-test-name	'net))
