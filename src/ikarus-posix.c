@@ -2112,60 +2112,67 @@ ikrt_posix_network_entries (ikptr rtd, ikpcb * pcb)
 }
 
 
+/** --------------------------------------------------------------------
+ ** Network socket constructors.
+ ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_socket (ikptr namespace, ikptr style, ikptr protocol)
+ikrt_posix_socket (ikptr s_namespace, ikptr s_style, ikptr s_protocol)
 {
   int	rv;
   errno = 0;
-  rv	= socket(IK_UNFIX(namespace), IK_UNFIX(style), IK_UNFIX(protocol));
-  return (0 <= rv)? fix(rv) : ik_errno_to_code();
+  rv	= socket(IK_UNFIX(s_namespace), IK_UNFIX(s_style), IK_UNFIX(s_protocol));
+  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_shutdown (ikptr sock, ikptr how)
+ikrt_posix_shutdown (ikptr s_sock, ikptr s_how)
 {
   int	rv;
   errno = 0;
-  rv	= shutdown(IK_UNFIX(sock), IK_UNFIX(how));
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	= shutdown(IK_NUM_TO_FD(s_sock), IK_UNFIX(s_how));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_socketpair (ikptr namespace, ikptr style, ikptr protocol, ikpcb * pcb)
+ikrt_posix_socketpair (ikptr s_namespace, ikptr s_style, ikptr s_protocol, ikpcb * pcb)
 {
   int	rv;
   int	fds[2];
   errno = 0;
-  rv	= socketpair(IK_UNFIX(namespace), IK_UNFIX(style), IK_UNFIX(protocol), fds);
+  rv	= socketpair(IK_UNFIX(s_namespace), IK_UNFIX(s_style), IK_UNFIX(s_protocol), fds);
   if (0 == rv) {
-    ikptr	pair = IKA_PAIR_ALLOC(pcb);
-    IK_CAR(pair) = fix(fds[0]);
-    IK_CDR(pair) = fix(fds[1]);
-    return pair;
+    ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
+    pcb->root0 = &s_pair;
+    {
+      IK_CAR(s_pair) = IK_FD_TO_NUM(fds[0]);
+      IK_CDR(s_pair) = IK_FD_TO_NUM(fds[1]);
+    }
+    pcb->root0 = NULL;
+    return s_pair;
   } else
     return ik_errno_to_code();
 }
 ikptr
-ikrt_posix_connect (ikptr sock, ikptr addr_bv)
+ikrt_posix_connect (ikptr s_sock, ikptr s_addr)
 {
   struct sockaddr *	addr;
   socklen_t		addr_len;
   int			rv;
-  addr	   = IK_BYTEVECTOR_DATA_VOIDP(addr_bv);
-  addr_len = (socklen_t)IK_BYTEVECTOR_LENGTH(addr_bv);
+  addr	   = IK_BYTEVECTOR_DATA_VOIDP(s_addr);
+  addr_len = (socklen_t)IK_BYTEVECTOR_LENGTH(s_addr);
   errno	   = 0;
-  rv	   = connect(IK_UNFIX(sock), addr, addr_len);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	   = connect(IK_NUM_TO_FD(s_sock), addr, addr_len);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_listen (ikptr sock, ikptr number_of_pending_connections)
+ikrt_posix_listen (ikptr s_sock, ikptr s_number_of_pending_connections)
 {
   int	rv;
   errno	   = 0;
-  rv	   = listen(IK_UNFIX(sock), IK_UNFIX(number_of_pending_connections));
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	   = listen(IK_NUM_TO_FD(s_sock), IK_UNFIX(s_number_of_pending_connections));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_accept (ikptr sock, ikpcb * pcb)
+ikrt_posix_accept (ikptr s_sock, ikpcb * pcb)
 {
 #undef SIZE
 #define SIZE		512
@@ -2174,39 +2181,39 @@ ikrt_posix_accept (ikptr sock, ikpcb * pcb)
   socklen_t		addr_len = SIZE;
   int			rv;
   errno	   = 0;
-  rv	   = accept(IK_UNFIX(sock), addr, &addr_len);
+  rv	   = accept(IK_NUM_TO_FD(s_sock), addr, &addr_len);
   if (0 <= rv) {
-    ikptr	pair;
-    ikptr	addr_bv;
+    ikptr	s_pair;
+    ikptr	s_addr;
     void *	addr_data;
-    pair       = IKA_PAIR_ALLOC(pcb);
-    pcb->root0 = &pair;
+    s_pair     = IKA_PAIR_ALLOC(pcb);
+    pcb->root0 = &s_pair;
     {
-      addr_bv	 = ika_bytevector_alloc(pcb, addr_len);
-      addr_data	 = IK_BYTEVECTOR_DATA_VOIDP(addr_bv);
+      s_addr	 = ika_bytevector_alloc(pcb, addr_len);
+      addr_data	 = IK_BYTEVECTOR_DATA_VOIDP(s_addr);
       memcpy(addr_data, addr, addr_len);
-      IK_CAR(pair) = fix(rv);
-      IK_CDR(pair) = addr_bv;
+      IK_CAR(s_pair) = IK_FIX(rv);
+      IK_CDR(s_pair) = s_addr;
     }
     pcb->root0 = NULL;
-    return pair;
+    return s_pair;
   } else
     return ik_errno_to_code();
 }
 ikptr
-ikrt_posix_bind (ikptr sock, ikptr sockaddr_bv)
+ikrt_posix_bind (ikptr s_sock, ikptr s_socks_addr)
 {
   struct sockaddr *	addr;
   socklen_t		len;
   int			rv;
-  addr	= IK_BYTEVECTOR_DATA_VOIDP(sockaddr_bv);
-  len	= (socklen_t)IK_BYTEVECTOR_LENGTH(sockaddr_bv);
+  addr	= IK_BYTEVECTOR_DATA_VOIDP(s_socks_addr);
+  len	= (socklen_t)IK_BYTEVECTOR_LENGTH(s_socks_addr);
   errno = 0;
-  rv	= bind(IK_UNFIX(sock), addr, len);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	= bind(IK_NUM_TO_FD(s_sock), addr, len);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_getpeername (ikptr sock, ikpcb * pcb)
+ikrt_posix_getpeername (ikptr s_sock, ikpcb * pcb)
 {
 #undef SIZE
 #define SIZE		512
@@ -2215,17 +2222,14 @@ ikrt_posix_getpeername (ikptr sock, ikpcb * pcb)
   socklen_t		addr_len = SIZE;
   int			rv;
   errno	   = 0;
-  rv	   = getpeername(IK_UNFIX(sock), addr, &addr_len);
-  if (0 == rv) {
-    ikptr	addr_bv	  = ika_bytevector_alloc(pcb, addr_len);
-    void *	addr_data = IK_BYTEVECTOR_DATA_VOIDP(addr_bv);
-    memcpy(addr_data, addr, addr_len);
-    return addr_bv;
-  } else
+  rv	   = getpeername(IK_NUM_TO_FD(s_sock), addr, &addr_len);
+  if (0 == rv)
+    return ika_bytevector_from_memory_block(pcb, addr, addr_len);
+  else
     return ik_errno_to_code();
 }
 ikptr
-ikrt_posix_getsockname (ikptr sock, ikpcb * pcb)
+ikrt_posix_getsockname (ikptr s_sock, ikpcb * pcb)
 {
 #undef SIZE
 #define SIZE		512
@@ -2234,66 +2238,66 @@ ikrt_posix_getsockname (ikptr sock, ikpcb * pcb)
   socklen_t		addr_len = SIZE;
   int			rv;
   errno = 0;
-  rv	= getsockname(IK_UNFIX(sock), addr, &addr_len);
-  if (0 == rv) {
-    ikptr  addr_bv   = ika_bytevector_alloc(pcb, addr_len);
-    void * addr_data = IK_BYTEVECTOR_DATA_VOIDP(addr_bv);
-    memcpy(addr_data, addr, addr_len);
-    return addr_bv;
-  } else
+  rv	= getsockname(IK_NUM_TO_FD(s_sock), addr, &addr_len);
+  if (0 == rv)
+    return ika_bytevector_from_memory_block(pcb, addr, addr_len);
+  else
     return ik_errno_to_code();
 }
 
 
+/** --------------------------------------------------------------------
+ ** Network sockets: sending and receiving data.
+ ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_send (ikptr sock, ikptr buffer_bv, ikptr size_fx, ikptr flags)
+ikrt_posix_send (ikptr s_sock, ikptr s_buffer, ikptr s_size, ikptr s_flags)
 {
   void *	buffer;
   size_t	size;
   int		rv;
-  buffer     = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv);
-  size	     = (size_t)((false_object != size_fx)?
-			IK_UNFIX(size_fx) : IK_BYTEVECTOR_LENGTH(buffer_bv));
+  buffer     = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
+  size	     = (size_t)((false_object != s_size)?
+			IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
   errno	     = 0;
-  rv	     = send(IK_UNFIX(sock), buffer, size, IK_UNFIX(flags));
-  return (0 <= rv)? fix(rv) : ik_errno_to_code();
+  rv	     = send(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags));
+  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_recv (ikptr sock, ikptr buffer_bv, ikptr size_fx, ikptr flags)
+ikrt_posix_recv (ikptr s_sock, ikptr s_buffer, ikptr s_size, ikptr s_flags)
 {
   void *	buffer;
   size_t	size;
   int		rv;
-  buffer     = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv);
-  size	     = (size_t)((false_object != size_fx)?
-			IK_UNFIX(size_fx) : IK_BYTEVECTOR_LENGTH(buffer_bv));
+  buffer     = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
+  size	     = (size_t)((false_object != s_size)?
+			IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
   errno	     = 0;
-  rv	     = recv(IK_UNFIX(sock), buffer, size, IK_UNFIX(flags));
-  return (0 <= rv)? fix(rv) : ik_errno_to_code();
+  rv	     = recv(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags));
+  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 }
 
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_sendto (ikptr sock, ikptr buffer_bv, ikptr size_fx, ikptr flags, ikptr addr_bv)
+ikrt_posix_sendto (ikptr s_sock, ikptr s_buffer, ikptr s_size, ikptr s_flags, ikptr s_addr)
 {
   void *		buffer;
   struct sockaddr *	addr;
   socklen_t		addr_len;
   size_t		size;
   int			rv;
-  buffer   = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv);
-  size	   = (size_t)((false_object != size_fx)?
-		      IK_UNFIX(size_fx) : IK_BYTEVECTOR_LENGTH(buffer_bv));
-  addr	   = IK_BYTEVECTOR_DATA_VOIDP(addr_bv);
-  addr_len = (socklen_t)IK_BYTEVECTOR_LENGTH(addr_bv);
+  buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
+  size	   = (size_t)((false_object != s_size)?
+		      IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
+  addr	   = IK_BYTEVECTOR_DATA_VOIDP(s_addr);
+  addr_len = (socklen_t)IK_BYTEVECTOR_LENGTH(s_addr);
   errno	   = 0;
-  rv	   = sendto(IK_UNFIX(sock), buffer, size, IK_UNFIX(flags), addr, addr_len);
-  return (0 <= rv)? fix(rv) : ik_errno_to_code();
+  rv	   = sendto(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags), addr, addr_len);
+  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_recvfrom (ikptr sock, ikptr buffer_bv, ikptr size_fx, ikptr flags, ikpcb * pcb)
+ikrt_posix_recvfrom (ikptr s_sock, ikptr s_buffer, ikptr s_size, ikptr s_flags, ikpcb * pcb)
 {
 #undef SIZE
 #define SIZE		512
@@ -2303,116 +2307,129 @@ ikrt_posix_recvfrom (ikptr sock, ikptr buffer_bv, ikptr size_fx, ikptr flags, ik
   void *		buffer;
   size_t		size;
   int			rv;
-  buffer     = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv);
-  size	     = (size_t)((false_object != size_fx)?
-			IK_UNFIX(size_fx) : IK_BYTEVECTOR_LENGTH(buffer_bv));
+  buffer     = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
+  size	     = (size_t)((false_object != s_size)?
+			IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
   errno	     = 0;
-  rv	     = recvfrom(IK_UNFIX(sock), buffer, size, IK_UNFIX(flags), addr, &addr_len);
+  rv	     = recvfrom(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags), addr, &addr_len);
   if (0 <= rv) {
-    ikptr	pair;
-    ikptr	addr_bv;
+    ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
+    ikptr	s_addr;
     void *	addr_data;
-    pair       = IKA_PAIR_ALLOC(pcb);
-    pcb->root0 = &pair;
+    pcb->root0 = &s_pair;
     {
-      addr_bv	= ika_bytevector_alloc(pcb, addr_len);
-      addr_data = IK_BYTEVECTOR_DATA_VOIDP(addr_bv);
+      s_addr	= ika_bytevector_alloc(pcb, addr_len);
+      addr_data = IK_BYTEVECTOR_DATA_VOIDP(s_addr);
       memcpy(addr_data, addr, addr_len);
-      IK_CAR(pair) = fix(rv);
-      IK_CDR(pair) = addr_bv;
+      IK_CAR(s_pair) = IK_FIX(rv);
+      IK_CDR(s_pair) = s_addr;
     }
     pcb->root0 = NULL;
-    return pair;
+    return s_pair;
   } else
     return ik_errno_to_code();
 }
 
 
+/** --------------------------------------------------------------------
+ ** Network socket options.
+ ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_getsockopt (ikptr sock, ikptr level, ikptr optname, ikptr optval_bv)
+ikrt_posix_getsockopt (ikptr s_sock, ikptr s_level, ikptr s_optname, ikptr s_optval)
 {
-  void *	optval = IK_BYTEVECTOR_DATA_VOIDP(optval_bv);
-  socklen_t	optlen = (socklen_t)IK_BYTEVECTOR_LENGTH(optval_bv);
+  void *	optval = IK_BYTEVECTOR_DATA_VOIDP(s_optval);
+  socklen_t	optlen = (socklen_t)IK_BYTEVECTOR_LENGTH(s_optval);
   int		rv;
   errno = 0;
-  rv	= getsockopt(IK_UNFIX(sock), IK_UNFIX(level), IK_UNFIX(optname), optval, &optlen);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	= getsockopt(IK_NUM_TO_FD(s_sock), IK_UNFIX(s_level), IK_UNFIX(s_optname), optval, &optlen);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_setsockopt (ikptr sock, ikptr level, ikptr optname, ikptr optval_bv)
+ikrt_posix_setsockopt (ikptr s_sock, ikptr s_level, ikptr s_optname, ikptr s_optval)
 {
-  void *	optval = IK_BYTEVECTOR_DATA_VOIDP(optval_bv);
-  socklen_t	optlen = (socklen_t)IK_BYTEVECTOR_LENGTH(optval_bv);
+  void *	optval = IK_BYTEVECTOR_DATA_VOIDP(s_optval);
+  socklen_t	optlen = (socklen_t)IK_BYTEVECTOR_LENGTH(s_optval);
   int		rv;
   errno = 0;
-  rv	= setsockopt(IK_UNFIX(sock), IK_UNFIX(level), IK_UNFIX(optname), optval, optlen);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	= setsockopt(IK_NUM_TO_FD(s_sock), IK_UNFIX(s_level), IK_UNFIX(s_optname), optval, optlen);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_setsockopt_int (ikptr sock, ikptr level, ikptr optname, ikptr optval_num)
+ikrt_posix_setsockopt_int (ikptr s_sock, ikptr s_level, ikptr s_optname, ikptr s_optval_num)
 {
   int		optval;
   socklen_t	optlen = sizeof(int);
   int		rv;
-  if (true_object == optval_num)
+  if (true_object == s_optval_num)
     optval = 1;
-  else if (false_object == optval_num)
+  else if (false_object == s_optval_num)
     optval = 0;
   else {
-    long	num = ik_integer_to_long(optval_num);
+    long	num = ik_integer_to_long(s_optval_num);
     optval = (int)num;
   }
   errno = 0;
-  rv	= setsockopt(IK_UNFIX(sock), IK_UNFIX(level), IK_UNFIX(optname), &optval, optlen);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	= setsockopt(IK_NUM_TO_FD(s_sock), IK_UNFIX(s_level), IK_UNFIX(s_optname), &optval, optlen);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_getsockopt_int (ikptr sock, ikptr level, ikptr optname, ikpcb * pcb)
+ikrt_posix_getsockopt_int (ikptr s_sock, ikptr s_level, ikptr s_optname, ikpcb * pcb)
 {
   int		optval;
   socklen_t	optlen = sizeof(int);
   int		rv;
   errno = 0;
-  rv	= getsockopt(IK_UNFIX(sock), IK_UNFIX(level), IK_UNFIX(optname), &optval, &optlen);
+  rv	= getsockopt(IK_NUM_TO_FD(s_sock), IK_UNFIX(s_level), IK_UNFIX(s_optname), &optval, &optlen);
   if (0 == rv) {
-    ikptr	pair = IKA_PAIR_ALLOC(pcb);
-    IK_CAR(pair) = ika_integer_from_long(pcb, (long)optval);
-    IK_CDR(pair) = true_object;
-    return pair;
-  } else {
+    /* Return  a pair  to distinguish  the value  from an  encoded errno
+       value. */
+    ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
+    pcb->root0 = &s_pair;
+    {
+      IK_ASS(IK_CAR(s_pair), ika_integer_from_long(pcb, (long)optval));
+      IK_CDR(s_pair) = true_object;
+    }
+    pcb->root0 = NULL;
+    return s_pair;
+  } else
     return ik_errno_to_code();
-  }
 }
 
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_setsockopt_size_t (ikptr sock, ikptr level, ikptr optname, ikptr optval_num)
+ikrt_posix_setsockopt_size_t (ikptr s_sock, ikptr s_level, ikptr s_optname, ikptr s_optval_num)
 {
-  size_t	optval = (size_t)ik_integer_to_long(optval_num);
+  size_t	optval = (size_t)ik_integer_to_long(s_optval_num);
   socklen_t	optlen = sizeof(size_t);
   int		rv;
   errno = 0;
-  rv	= setsockopt(IK_UNFIX(sock), IK_UNFIX(level), IK_UNFIX(optname), &optval, optlen);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	= setsockopt(IK_NUM_TO_FD(s_sock), IK_UNFIX(s_level), IK_UNFIX(s_optname), &optval, optlen);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_getsockopt_size_t (ikptr sock, ikptr level, ikptr optname, ikpcb * pcb)
+ikrt_posix_getsockopt_size_t (ikptr s_sock, ikptr s_level, ikptr s_optname, ikpcb * pcb)
 {
   size_t	optval;
   socklen_t	optlen = sizeof(size_t);
   int		rv;
   errno = 0;
-  rv	= getsockopt(IK_UNFIX(sock), IK_UNFIX(level), IK_UNFIX(optname), &optval, &optlen);
+  rv	= getsockopt(IK_NUM_TO_FD(s_sock), IK_UNFIX(s_level), IK_UNFIX(s_optname), &optval, &optlen);
   if (0 == rv) {
-    ikptr	pair = IKA_PAIR_ALLOC(pcb);
-    IK_CAR(pair) = ika_integer_from_long(pcb, (long)optval);
-    IK_CDR(pair) = true_object;
-    return pair;
+    /* Return  a pair  to distinguish  the value  from an  encoded errno
+       value. */
+    ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
+    pcb->root0 = &s_pair;
+    {
+      IK_ASS(IK_CAR(s_pair), ika_integer_from_long(pcb, (long)optval));
+      IK_CDR(s_pair) = true_object;
+    }
+    pcb->root0 = NULL;
+    return s_pair;
   } else
     return ik_errno_to_code();
 }
@@ -2420,7 +2437,7 @@ ikrt_posix_getsockopt_size_t (ikptr sock, ikptr level, ikptr optname, ikpcb * pc
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_setsockopt_linger (ikptr sock, ikptr onoff, ikptr linger)
+ikrt_posix_setsockopt_linger (ikptr s_sock, ikptr onoff, ikptr linger)
 {
   struct linger optval;
   socklen_t	optlen = sizeof(struct linger);
@@ -2428,22 +2445,24 @@ ikrt_posix_setsockopt_linger (ikptr sock, ikptr onoff, ikptr linger)
   optval.l_onoff  = (true_object == onoff)? 1 : 0;
   optval.l_linger = IK_UNFIX(linger);
   errno = 0;
-  rv	= setsockopt(IK_UNFIX(sock), SOL_SOCKET, SO_LINGER, &optval, optlen);
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	= setsockopt(IK_NUM_TO_FD(s_sock), SOL_SOCKET, SO_LINGER, &optval, optlen);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_getsockopt_linger (ikptr sock, ikpcb * pcb)
+ikrt_posix_getsockopt_linger (ikptr s_sock, ikpcb * pcb)
 {
   struct linger optval;
   socklen_t	optlen = sizeof(struct linger);
   int		rv;
   errno = 0;
-  rv	= getsockopt(IK_UNFIX(sock), SOL_SOCKET, SO_LINGER, &optval, &optlen);
+  rv	= getsockopt(IK_NUM_TO_FD(s_sock), SOL_SOCKET, SO_LINGER, &optval, &optlen);
   if (0 == rv) {
-    ikptr	pair = IKA_PAIR_ALLOC(pcb);
-    IK_CAR(pair) = optval.l_onoff? true_object : false_object;
-    IK_CDR(pair) = fix(optval.l_linger);
-    return pair;
+    /* Return  a pair  to distinguish  the value  from an  encoded errno
+       value. */
+    ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
+    IK_CAR(s_pair) = optval.l_onoff? true_object : false_object;
+    IK_CDR(s_pair) = IK_FIX(optval.l_linger);
+    return s_pair;
   } else
     return ik_errno_to_code();
 }

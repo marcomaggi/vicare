@@ -8664,6 +8664,24 @@ Function, setsockopt}.  Set a new value for @var{option} of socket
 unspecified values, else raise an exception.
 @end defun
 
+
+@defun getsockopt/int @var{sock} @var{level} @var{option}
+@defunx setsockopt/int @var{sock} @var{level} @var{option} @var{optval}
+Like @func{getsockopt} and @func{setsockopt} but specially handle the
+case of an option with value represented by a C language @code{int}.
+@var{optval} must appropriately be a boolean or an exact integer
+representable as a platform's C language @code{int}.
+@end defun
+
+
+@defun getsockopt/size_t @var{sock} @var{level} @var{option}
+@defunx setsockopt/size_t @var{sock} @var{level} @var{option} @var{optval}
+Like @func{getsockopt} and @func{setsockopt} but specially handle the
+case of an option with value represented by a C language @code{size_t}.
+@var{optval} must be an exact integer representable as a platform's C
+language @code{size_t}.
+@end defun
+
 @c page
 @node posix socket misc
 @subsection Error and miscellaneous functions
