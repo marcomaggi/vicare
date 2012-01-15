@@ -1653,7 +1653,7 @@ hostent_to_struct (ikptr s_rtd, struct hostent * src, ikpcb * pcb)
 /* Convert  a  C  language  "struct  hostent"  into  a  Scheme  language
    "struct-hostent".  Makes use of "pcb->root6,7,8". */
 {
-  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "root9" */
+  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
   pcb->root8 = &s_dst;
   { /* store the official host name */
     IK_ASS(IK_FIELD(s_dst, 0), ika_bytevector_from_cstring(pcb, src->h_name));
@@ -1767,23 +1767,28 @@ ikrt_posix_host_entries (ikptr s_rtd, ikpcb * pcb)
   {
     entry = gethostent();
     if (entry) {
-      ikptr	s_spine = s_list_of_entries = IKA_PAIR_ALLOC(pcb);
-      pcb->root0 = &s_list_of_entries;
-      pcb->root1 = &s_spine;
+      ikptr	s_spine;
+      pcb->root0 = &s_rtd;
       {
-	while (entry) {
-	  IK_ASS(IK_CAR(s_spine), hostent_to_struct(s_rtd, entry, pcb));
-	  entry = gethostent();
-	  if (entry) {
-	    IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
-	    s_spine = IK_CDR(s_spine);
-	  } else {
-	    IK_CDR(s_spine) = null_object;
-	    break;
+	s_spine = s_list_of_entries = IKA_PAIR_ALLOC(pcb);
+	pcb->root1 = &s_list_of_entries;
+	pcb->root2 = &s_spine;
+	{
+	  while (entry) {
+	    IK_ASS(IK_CAR(s_spine), hostent_to_struct(s_rtd, entry, pcb));
+	    entry = gethostent();
+	    if (entry) {
+	      IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	      s_spine = IK_CDR(s_spine);
+	    } else {
+	      IK_CDR(s_spine) = null_object;
+	      break;
+	    }
 	  }
 	}
+	pcb->root2 = NULL;
+	pcb->root1 = NULL;
       }
-      pcb->root1 = NULL;
       pcb->root0 = NULL;
     } else
       s_list_of_entries = null_object;
@@ -1890,7 +1895,7 @@ ikrt_posix_gai_strerror (ikptr error_code, ikpcb * pcb)
   return message_bv;
 }
 
-/* ------------------------------------------------------------------ */
+
 
 static ikptr
 protoent_to_struct (ikpcb * pcb, ikptr rtd, struct protoent * src)
@@ -1962,7 +1967,7 @@ ikrt_posix_protocol_entries (ikptr rtd, ikpcb * pcb)
   return list_of_entries;
 }
 
-/* ------------------------------------------------------------------ */
+
 
 static ikptr
 servent_to_struct (ikpcb * pcb, ikptr rtd, struct servent * src)
@@ -2045,7 +2050,7 @@ ikrt_posix_service_entries (ikptr rtd, ikpcb * pcb)
   return list_of_entries;
 }
 
-/* ------------------------------------------------------------------ */
+
 
 static ikptr
 netent_to_struct (ikpcb * pcb, ikptr rtd, struct netent * src)
@@ -2106,7 +2111,7 @@ ikrt_posix_network_entries (ikptr rtd, ikpcb * pcb)
   return list_of_entries;
 }
 
-/* ------------------------------------------------------------------ */
+
 
 ikptr
 ikrt_posix_socket (ikptr namespace, ikptr style, ikptr protocol)
@@ -2239,7 +2244,7 @@ ikrt_posix_getsockname (ikptr sock, ikpcb * pcb)
     return ik_errno_to_code();
 }
 
-/* ------------------------------------------------------------------ */
+
 
 ikptr
 ikrt_posix_send (ikptr sock, ikptr buffer_bv, ikptr size_fx, ikptr flags)
@@ -2322,7 +2327,7 @@ ikrt_posix_recvfrom (ikptr sock, ikptr buffer_bv, ikptr size_fx, ikptr flags, ik
     return ik_errno_to_code();
 }
 
-/* ------------------------------------------------------------------ */
+
 
 ikptr
 ikrt_posix_getsockopt (ikptr sock, ikptr level, ikptr optname, ikptr optval_bv)
@@ -2451,27 +2456,27 @@ ikrt_posix_getsockopt_linger (ikptr sock, ikpcb * pcb)
 ikptr
 ikrt_posix_getuid (void)
 {
-  return fix(getuid());
+  return IK_UID_TO_NUM(getuid());
 }
 ikptr
 ikrt_posix_getgid (void)
 {
-  return fix(getgid());
+  return IK_GID_TO_NUM(getgid());
 }
 ikptr
 ikrt_posix_geteuid (void)
 {
-  return fix(geteuid());
+  return IK_UID_TO_NUM(geteuid());
 }
 ikptr
 ikrt_posix_getegid (void)
 {
-  return fix(getegid());
+  return IK_GID_TO_NUM(getegid());
 }
 ikptr
 ikrt_posix_getgroups (ikpcb * pcb)
 {
-  int		count;
+  int	count;
   errno = 0;
   count = getgroups(0, NULL);
   if (errno)
@@ -2480,73 +2485,87 @@ ikrt_posix_getgroups (ikpcb * pcb)
     gid_t	gids[count];
     errno = 0;
     count = getgroups(count, gids);
-    if (-1 != count) {
-      int	i;
-      ikptr	list_of_gids = null_object;
-      pcb->root0 = &list_of_gids;
-      for (i=0; i<count; ++i) {
-	IKA_DECLARE_ALLOC_AND_CONS(pair, list_of_gids, pcb);
-	IK_CAR(pair) = fix(gids[i]);
-      }
-      pcb->root0 = NULL;
-      return list_of_gids;
-    } else
+    if (-1 == count)
       return ik_errno_to_code();
+    else if (0 == count)
+      return null_object;
+    else {
+      ikptr	s_list_of_gids, s_spine;
+      int	i;
+      s_list_of_gids = s_spine = IKA_PAIR_ALLOC(pcb);
+      pcb->root0 = &s_list_of_gids;
+      pcb->root1 = &s_spine;
+      {
+	for (i=0; i<count;) {
+	  IK_CAR(s_spine) = IK_GID_TO_NUM(gids[i]);
+	  if (++i<count) {
+	    IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	    s_spine = IK_CDR(s_spine);
+	  } else {
+	    IK_CDR(s_spine) = null_object;
+	    break;
+	  }
+	}
+      }
+      pcb->root1 = NULL;
+      pcb->root0 = NULL;
+      return s_list_of_gids;
+    }
   }
 }
 
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_seteuid (ikptr new_uid)
+ikrt_posix_seteuid (ikptr s_new_uid)
 {
   int	rv;
   errno = 0;
-  rv	= seteuid(IK_UNFIX(new_uid));
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	= seteuid(IK_NUM_TO_UID(s_new_uid));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_setuid (ikptr new_uid)
+ikrt_posix_setuid (ikptr s_new_uid)
 {
   int	rv;
   errno = 0;
-  rv	= setuid(IK_UNFIX(new_uid));
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	= setuid(IK_NUM_TO_UID(s_new_uid));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_setreuid (ikptr real_uid, ikptr effective_uid)
+ikrt_posix_setreuid (ikptr s_real_uid, ikptr s_effective_uid)
 {
   int	rv;
   errno = 0;
-  rv	= setreuid(IK_UNFIX(real_uid), IK_UNFIX(effective_uid));
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	= setreuid(IK_NUM_TO_UID(s_real_uid), IK_NUM_TO_UID(s_effective_uid));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_setegid (ikptr new_gid)
+ikrt_posix_setegid (ikptr s_new_gid)
 {
   int	rv;
   errno = 0;
-  rv	= setegid(IK_UNFIX(new_gid));
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	= setegid(IK_NUM_TO_GID(s_new_gid));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_setgid (ikptr new_gid)
+ikrt_posix_setgid (ikptr s_new_gid)
 {
   int	rv;
   errno = 0;
-  rv	= setgid(IK_UNFIX(new_gid));
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	= setgid(IK_NUM_TO_GID(s_new_gid));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_setregid (ikptr real_gid, ikptr effective_gid)
+ikrt_posix_setregid (ikptr s_real_gid, ikptr s_effective_gid)
 {
   int	rv;
   errno = 0;
-  rv	= setregid(IK_UNFIX(real_gid), IK_UNFIX(effective_gid));
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	= setregid(IK_NUM_TO_GID(s_real_gid), IK_NUM_TO_GID(s_effective_gid));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 
 /* ------------------------------------------------------------------ */
@@ -2559,122 +2578,182 @@ ikrt_posix_getlogin (ikpcb * pcb)
   return (username)? ika_bytevector_from_cstring(pcb, username) : false_object;
 }
 
-/* ------------------------------------------------------------------ */
+
+/** --------------------------------------------------------------------
+ ** Passwords database.
+ ** ----------------------------------------------------------------- */
 
 static ikptr
-passwd_to_struct (ikptr rtd, struct passwd * src, ikpcb * pcb)
-/* Convert  a  C  language   "struct  passwd"  into  a	Scheme	language
-   "struct-passwd".    Makes   use  of	 "pcb->root1"	only,  so   that
-   "pcb->root0" is available to the caller. */
+passwd_to_struct (ikptr s_rtd, struct passwd * src, ikpcb * pcb)
+/* Convert  a  C  language   "struct  passwd"  into  a  Scheme  language
+   "struct-passwd".  Makes use of "pcb->root9". */
 {
-  ikptr dst = ika_struct_alloc(pcb, rtd);
-  pcb->root1 = &dst;
+  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  pcb->root9 = &s_dst;
   {
-    IK_FIELD(dst, 0) = ika_bytevector_from_cstring(pcb, src->pw_name);
-    IK_FIELD(dst, 1) = ika_bytevector_from_cstring(pcb, src->pw_passwd);
-    IK_FIELD(dst, 2) = IK_FIX(src->pw_uid);
-    IK_FIELD(dst, 3) = IK_FIX(src->pw_gid);
-    IK_FIELD(dst, 4) = ika_bytevector_from_cstring(pcb, src->pw_gecos);
-    IK_FIELD(dst, 5) = ika_bytevector_from_cstring(pcb, src->pw_dir);
-    IK_FIELD(dst, 6) = ika_bytevector_from_cstring(pcb, src->pw_shell);
+    IK_ASS(IK_FIELD(s_dst, 0), ika_bytevector_from_cstring(pcb, src->pw_name));
+    IK_ASS(IK_FIELD(s_dst, 1), ika_bytevector_from_cstring(pcb, src->pw_passwd));
+    IK_ASS(IK_FIELD(s_dst, 2), IK_FIX(src->pw_uid));
+    IK_ASS(IK_FIELD(s_dst, 3), IK_FIX(src->pw_gid));
+    IK_ASS(IK_FIELD(s_dst, 4), ika_bytevector_from_cstring(pcb, src->pw_gecos));
+    IK_ASS(IK_FIELD(s_dst, 5), ika_bytevector_from_cstring(pcb, src->pw_dir));
+    IK_ASS(IK_FIELD(s_dst, 6), ika_bytevector_from_cstring(pcb, src->pw_shell));
   }
-  pcb->root1 = NULL;
-  return dst;
+  pcb->root9 = NULL;
+  return s_dst;
 }
 ikptr
-ikrt_posix_getpwuid (ikptr rtd, ikptr uid, ikpcb * pcb)
+ikrt_posix_getpwuid (ikptr s_rtd, ikptr s_uid, ikpcb * pcb)
 {
   struct passwd *	entry;
-  entry = getpwuid(IK_UNFIX(uid));
-  return (entry)? passwd_to_struct(rtd, entry, pcb) : false_object;
+  entry = getpwuid(IK_NUM_TO_UID(s_uid));
+  return (entry)? passwd_to_struct(s_rtd, entry, pcb) : false_object;
 }
 ikptr
-ikrt_posix_getpwnam (ikptr rtd, ikptr name_bv, ikpcb * pcb)
+ikrt_posix_getpwnam (ikptr s_rtd, ikptr s_name, ikpcb * pcb)
 {
   char *		name;
   struct passwd *	entry;
-  name	= IK_BYTEVECTOR_DATA_CHARP(name_bv);
+  name	= IK_BYTEVECTOR_DATA_CHARP(s_name);
   entry = getpwnam(name);
-  return (entry)? passwd_to_struct(rtd, entry, pcb) : false_object;
+  return (entry)? passwd_to_struct(s_rtd, entry, pcb) : false_object;
 }
 ikptr
-ikrt_posix_user_entries (ikptr rtd, ikpcb * pcb)
+ikrt_posix_user_entries (ikptr s_rtd, ikpcb * pcb)
 {
-  ikptr			list_of_entries = null_object;
   struct passwd *	entry;
-  pcb->root0 = &list_of_entries;
+  ikptr			s_list_of_entries;
   setpwent();
-  for (entry=getpwent(); entry; entry=getpwent()) {
-    ikptr	pair = IKA_PAIR_ALLOC(pcb);
-    IK_CDR(pair)    = list_of_entries;
-    list_of_entries = pair;
-    IK_CAR(pair)    = passwd_to_struct(rtd, entry, pcb);
+  {
+    entry = getpwent();
+    if (entry) {
+      ikptr	s_spine;
+      pcb->root0 = &s_rtd;
+      {
+	s_list_of_entries = s_spine = IKA_PAIR_ALLOC(pcb);
+	pcb->root1 = &s_list_of_entries;
+	pcb->root2 = &s_spine;
+	{
+	  while (entry) {
+	    IK_ASS(IK_CAR(s_spine), passwd_to_struct(s_rtd, entry, pcb));
+	    entry = getpwent();
+	    if (entry) {
+	      IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	      s_spine = IK_CDR(s_spine);
+	    } else {
+	      IK_CDR(s_spine) = null_object;
+	      break;
+	    }
+	  }
+	}
+	pcb->root2 = NULL;
+	pcb->root1 = NULL;
+      }
+      pcb->root0 = NULL;
+    } else
+      s_list_of_entries = null_object;
   }
   endpwent();
-  pcb->root0 = NULL;
-  return list_of_entries;
+  return s_list_of_entries;
 }
 
-/* ------------------------------------------------------------------ */
+
+/** --------------------------------------------------------------------
+ ** Groups database.
+ ** ----------------------------------------------------------------- */
 
 static ikptr
-group_to_struct (ikptr rtd, struct group * src, ikpcb * pcb)
-/* Convert  a	C  language  "struct  group"  into   a	Scheme	language
-   "struct-group".  Makes use of "pcb->root1" only, so that "pcb->root0"
-   is available to the caller. */
+group_to_struct (ikptr s_rtd, struct group * src, ikpcb * pcb)
+/* Convert  a   C  language  "struct  group"  into   a  Scheme  language
+   "struct-group".  Makes use of "pcb->root7,8,9". */
 {
-  ikptr dst = ika_struct_alloc(pcb, rtd);
-  pcb->root1 = &dst;
+  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  pcb->root9 = &s_dst;
   {
-    IK_FIELD(dst, 0) = ika_bytevector_from_cstring(pcb, src->gr_name);
-    IK_FIELD(dst, 1) = IK_FIX(src->gr_gid);
+    IK_ASS(IK_FIELD(s_dst, 0), ika_bytevector_from_cstring(pcb, src->gr_name));
+    IK_FIELD(s_dst, 1) = IK_FIX(src->gr_gid);
     {
-      ikptr	  list_of_users = null_object;
-      int	  i;
-      IK_FIELD(dst, 2) = list_of_users;
-      for (i=0; src->gr_mem[i]; ++i) {
-	ikptr	  s_pair = IKA_PAIR_ALLOC(pcb);
-	IK_CDR(s_pair)	 = list_of_users;
-	IK_FIELD(dst, 2) = list_of_users = s_pair;
-	IK_CAR(s_pair)	 = ika_bytevector_from_cstring(pcb, src->gr_mem[i]);
-      }
+      ikptr	s_list_of_users;
+      if (src->gr_mem[0]) {
+	ikptr	s_spine;
+	int	i;
+	s_list_of_users = s_spine = IKA_PAIR_ALLOC(pcb);
+	pcb->root8 = &s_list_of_users;
+	pcb->root7 = &s_spine;
+	{
+	  for (i=0; src->gr_mem[i];) {
+	    IK_ASS(IK_CAR(s_spine), ika_bytevector_from_cstring(pcb, src->gr_mem[i]));
+	    if (src->gr_mem[++i]) {
+	      IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	      s_spine = IK_CDR(s_spine);
+	    } else {
+	      IK_CDR(s_spine) = null_object;
+	      break;
+	    }
+	  }
+	}
+	pcb->root7 = NULL;
+	pcb->root8 = NULL;
+      } else
+	s_list_of_users = null_object;
+      IK_FIELD(s_dst, 2) = s_list_of_users;
     }
   }
-  pcb->root1 = NULL;
-  return dst;
+  pcb->root9 = NULL;
+  return s_dst;
 }
 ikptr
-ikrt_posix_getgrgid (ikptr rtd, ikptr gid, ikpcb * pcb)
+ikrt_posix_getgrgid (ikptr s_rtd, ikptr s_gid, ikpcb * pcb)
 {
   struct group *       entry;
-  entry = getgrgid(IK_UNFIX(gid));
-  return (entry)? group_to_struct(rtd, entry, pcb) : false_object;
+  entry = getgrgid(IK_NUM_TO_GID(s_gid));
+  return (entry)? group_to_struct(s_rtd, entry, pcb) : false_object;
 }
 ikptr
-ikrt_posix_getgrnam (ikptr rtd, ikptr name_bv, ikpcb * pcb)
+ikrt_posix_getgrnam (ikptr s_rtd, ikptr s_name, ikpcb * pcb)
 {
   char *		name;
   struct group *       entry;
-  name	= IK_BYTEVECTOR_DATA_CHARP(name_bv);
+  name	= IK_BYTEVECTOR_DATA_CHARP(s_name);
   entry = getgrnam(name);
-  return (entry)? group_to_struct(rtd, entry, pcb) : false_object;
+  return (entry)? group_to_struct(s_rtd, entry, pcb) : false_object;
 }
 ikptr
-ikrt_posix_group_entries (ikptr rtd, ikpcb * pcb)
+ikrt_posix_group_entries (ikptr s_rtd, ikpcb * pcb)
 {
-  ikptr			list_of_entries = null_object;
   struct group *	entry;
-  pcb->root0 = &list_of_entries;
-  setpwent();
-  for (entry=getgrent(); entry; entry=getgrent()) {
-    ikptr	pair = IKA_PAIR_ALLOC(pcb);
-    IK_CDR(pair)	= list_of_entries;
-    list_of_entries	= pair;
-    IK_CAR(pair)	= group_to_struct(rtd, entry, pcb);
+  ikptr			s_list_of_entries;
+  setgrent();
+  {
+    entry = getgrent();
+    if (entry) {
+      pcb->root0 = &s_rtd;
+      {
+	ikptr	s_spine = s_list_of_entries = IKA_PAIR_ALLOC(pcb);
+	pcb->root1 = &s_list_of_entries;
+	pcb->root2 = &s_spine;
+	{
+	  while (entry) {
+	    IK_ASS(IK_CAR(s_spine), group_to_struct(s_rtd, entry, pcb));
+	    entry = getgrent();
+	    if (entry) {
+	      IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	      s_spine = IK_CDR(s_spine);
+	    } else {
+	      IK_CDR(s_spine) = null_object;
+	      break;
+	    }
+	  }
+	}
+	pcb->root2 = NULL;
+	pcb->root1 = NULL;
+      }
+      pcb->root0 = NULL;
+    } else
+      s_list_of_entries = null_object;
   }
   endgrent();
-  pcb->root0 = NULL;
-  return list_of_entries;
+  return s_list_of_entries;
 }
 
 
@@ -2698,59 +2777,58 @@ ikrt_posix_setsid (void)
   int	rv;
   errno = 0;
   rv	= setsid();
-  return (-1 != rv)? fix(rv) : ik_errno_to_code();
+  return (-1 != rv)? IK_PID_TO_NUM(rv) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_getsid (ikptr pid)
+ikrt_posix_getsid (ikptr s_pid)
 {
   int	rv;
   errno = 0;
-  rv	= getsid(IK_UNFIX(pid));
-  return (-1 != rv)? fix(rv) : ik_errno_to_code();
+  rv	= getsid(IK_NUM_TO_PID(s_pid));
+  return (-1 != rv)? IK_PID_TO_NUM(rv) : ik_errno_to_code();
 }
 ikptr
 ikrt_posix_getpgrp (void)
 /* About  this	 function:  notice  that  we   define  "_GNU_SOURCE"  in
    "configure.ac".  See the GNU C Library documentation for details. */
 {
-  return fix(getpgrp());
+  return IK_PID_TO_NUM(getpgrp());
 }
 ikptr
-ikrt_posix_setpgid (ikptr pid, ikptr pgid)
+ikrt_posix_setpgid (ikptr s_pid, ikptr s_pgid)
 {
   int	rv;
   errno = 0;
-  rv	= setpgid(IK_UNFIX(pid), IK_UNFIX(pgid));
-  return (-1 != rv)? fix(0) : ik_errno_to_code();
+  rv	= setpgid(IK_NUM_TO_PID(s_pid), IK_NUM_TO_PID(s_pgid));
+  return (-1 != rv)? IK_FIX(0) : ik_errno_to_code();
 }
 
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_tcgetpgrp (ikptr fd)
+ikrt_posix_tcgetpgrp (ikptr s_fd)
 {
-  int	rv;
+  pid_t	rv;
   errno = 0;
-  rv	= tcgetpgrp(IK_UNFIX(fd));
-  return (-1 != rv)? fix(rv) : ik_errno_to_code();
+  rv	= tcgetpgrp(IK_NUM_TO_FD(s_fd));
+  return (-1 != rv)? IK_PID_TO_NUM(rv) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_tcsetpgrp (ikptr fd, ikptr pgid)
+ikrt_posix_tcsetpgrp (ikptr s_fd, ikptr s_pgid)
 {
   int	rv;
   errno = 0;
-  rv	= tcsetpgrp(IK_UNFIX(fd), IK_UNFIX(pgid));
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  rv	= tcsetpgrp(IK_NUM_TO_PID(s_fd), IK_NUM_TO_PID(s_pgid));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 }
 ikptr
-ikrt_posix_tcgetsid (ikptr fd)
+ikrt_posix_tcgetsid (ikptr s_fd)
 {
-  int	rv;
+  pid_t	rv;
   errno = 0;
-  rv	= tcgetsid(IK_UNFIX(fd));
-  return (-1 != rv)? fix(rv) : ik_errno_to_code();
+  rv	= tcgetsid(IK_NUM_TO_FD(s_fd));
+  return (-1 != rv)? IK_PID_TO_NUM(rv) : ik_errno_to_code();
 }
-
 
 
 /** --------------------------------------------------------------------
@@ -2775,51 +2853,50 @@ ikrt_posix_time (ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 static ikptr
-tms_to_struct (ikptr rtd, struct tms * src, ikpcb * pcb)
-/* Convert   a	C  language   "struct  tms"   into  a	Scheme	language
-   "struct-tms".  Makes	 use of "pcb->root1" only,  so that "pcb->root0"
-   is available to the caller. */
+tms_to_struct (ikptr s_rtd, struct tms * src, ikpcb * pcb)
+/* Convert   a  C  language   "struct  tms"   into  a   Scheme  language
+   "struct-tms".  Makes use of "pcb->root9". */
 {
-  ikptr dst = ika_struct_alloc(pcb, rtd);
-  pcb->root1 = &dst;
+  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  pcb->root9 = &s_dst;
   {
 #if 0
     fprintf(stderr, "struct tms = %f, %f, %f, %f\n",
 	    (double)(src->tms_utime),  (double)(src->tms_stime),
 	    (double)(src->tms_cutime), (double)(src->tms_cstime));
 #endif
-    IK_FIELD(dst, 0) = ika_flonum_from_double(pcb, (double)(src->tms_utime));
-    IK_FIELD(dst, 1) = ika_flonum_from_double(pcb, (double)(src->tms_stime));
-    IK_FIELD(dst, 2) = ika_flonum_from_double(pcb, (double)(src->tms_cutime));
-    IK_FIELD(dst, 3) = ika_flonum_from_double(pcb, (double)(src->tms_cstime));
+    IK_ASS(IK_FIELD(s_dst, 0), ika_flonum_from_double(pcb, (double)(src->tms_utime)));
+    IK_ASS(IK_FIELD(s_dst, 1), ika_flonum_from_double(pcb, (double)(src->tms_stime)));
+    IK_ASS(IK_FIELD(s_dst, 2), ika_flonum_from_double(pcb, (double)(src->tms_cutime)));
+    IK_ASS(IK_FIELD(s_dst, 3), ika_flonum_from_double(pcb, (double)(src->tms_cstime)));
   }
-  pcb->root1 = NULL;
-  return dst;
+  pcb->root9 = NULL;
+  return s_dst;
 }
 ikptr
-ikrt_posix_times (ikptr rtd, ikpcb * pcb)
+ikrt_posix_times (ikptr s_rtd, ikpcb * pcb)
 {
   struct tms	T = { 0, 0, 0, 0 };
   clock_t	rv;
   rv = times(&T);
-  return (((clock_t)-1) == rv)? false_object : tms_to_struct(rtd, &T, pcb);
+  return (((clock_t)-1) == rv)? false_object : tms_to_struct(s_rtd, &T, pcb);
 }
 
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_gettimeofday (ikptr rtd, ikpcb * pcb)
+ikrt_posix_gettimeofday (ikptr s_rtd, ikpcb * pcb)
 {
   struct timeval	T;
   int			rv;
   errno = 0;
   rv	= gettimeofday(&T, NULL);
   if (0 == rv) {
-    ikptr	s_stru = ika_struct_alloc(pcb, rtd);
+    ikptr	s_stru = ika_struct_alloc(pcb, s_rtd);
     pcb->root0 = &s_stru;
     {
-      IK_FIELD(s_stru, 0) = ika_integer_from_long(pcb, T.tv_sec);
-      IK_FIELD(s_stru, 1) = ika_integer_from_long(pcb, T.tv_usec);
+      IK_ASS(IK_FIELD(s_stru, 0), ika_integer_from_long(pcb, T.tv_sec));
+      IK_ASS(IK_FIELD(s_stru, 1), ika_integer_from_long(pcb, T.tv_usec));
     }
     pcb->root0 = NULL;
     return s_stru;
@@ -2830,88 +2907,87 @@ ikrt_posix_gettimeofday (ikptr rtd, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 static ikptr
-tm_to_struct (ikptr rtd, struct tm * src, ikpcb * pcb)
-/* Convert   a	C  language   "struct  tm"   into  a   Scheme  language
-   "struct-tm".	 Makes	use of "pcb->root1" only,  so that "pcb->root0"
-   is available to the caller. */
+tm_to_struct (ikptr s_rtd, struct tm * src, ikpcb * pcb)
+/* Convert a C language "struct  tm" into a Scheme language "struct-tm".
+   Makes use of "pcb->root9" only. */
 {
-  ikptr dst = ika_struct_alloc(pcb, rtd);
-  pcb->root1 = &dst;
+  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  pcb->root9 = &s_dst;
   {
-    IK_FIELD(dst, 0) = ika_integer_from_long(pcb, (long)(src->tm_sec));
-    IK_FIELD(dst, 1) = ika_integer_from_long(pcb, (long)(src->tm_min));
-    IK_FIELD(dst, 2) = ika_integer_from_long(pcb, (long)(src->tm_hour));
-    IK_FIELD(dst, 3) = ika_integer_from_long(pcb, (long)(src->tm_mday));
-    IK_FIELD(dst, 4) = ika_integer_from_long(pcb, (long)(src->tm_mon));
-    IK_FIELD(dst, 5) = ika_integer_from_long(pcb, (long)(src->tm_year));
-    IK_FIELD(dst, 6) = ika_integer_from_long(pcb, (long)(src->tm_wday));
-    IK_FIELD(dst, 7) = ika_integer_from_long(pcb, (long)(src->tm_yday));
-    IK_FIELD(dst, 8) = (src->tm_isdst)? true_object : false_object;
-    IK_FIELD(dst, 9) = ika_integer_from_long(pcb, src->tm_gmtoff);
-    IK_FIELD(dst,10) = ika_bytevector_from_cstring(pcb, src->tm_zone);
+    IK_ASS(IK_FIELD(s_dst, 0), ika_integer_from_long(pcb, (long)(src->tm_sec)));
+    IK_ASS(IK_FIELD(s_dst, 1), ika_integer_from_long(pcb, (long)(src->tm_min)));
+    IK_ASS(IK_FIELD(s_dst, 2), ika_integer_from_long(pcb, (long)(src->tm_hour)));
+    IK_ASS(IK_FIELD(s_dst, 3), ika_integer_from_long(pcb, (long)(src->tm_mday)));
+    IK_ASS(IK_FIELD(s_dst, 4), ika_integer_from_long(pcb, (long)(src->tm_mon)));
+    IK_ASS(IK_FIELD(s_dst, 5), ika_integer_from_long(pcb, (long)(src->tm_year)));
+    IK_ASS(IK_FIELD(s_dst, 6), ika_integer_from_long(pcb, (long)(src->tm_wday)));
+    IK_ASS(IK_FIELD(s_dst, 7), ika_integer_from_long(pcb, (long)(src->tm_yday)));
+    IK_FIELD(s_dst, 8) = (src->tm_isdst)? true_object : false_object;
+    IK_ASS(IK_FIELD(s_dst, 9), ika_integer_from_long(pcb, src->tm_gmtoff));
+    IK_ASS(IK_FIELD(s_dst,10), ika_bytevector_from_cstring(pcb, src->tm_zone));
   }
-  pcb->root1 = NULL;
-  return dst;
+  pcb->root9 = NULL;
+  return s_dst;
 }
 ikptr
-ikrt_posix_localtime (ikptr rtd, ikptr time_num, ikpcb * pcb)
+ikrt_posix_localtime (ikptr s_rtd, ikptr s_time_num, ikpcb * pcb)
 {
-  time_t	time = (time_t)ik_integer_to_ulong(time_num);
+  time_t	time = (time_t)ik_integer_to_ulong(s_time_num);
   struct tm	T;
   struct tm *	rv;
   rv	= localtime_r(&time, &T);
-  return (rv)? tm_to_struct(rtd, &T, pcb) : false_object;
+  return (rv)? tm_to_struct(s_rtd, &T, pcb) : false_object;
 }
 ikptr
-ikrt_posix_gmtime (ikptr rtd, ikptr time_num, ikpcb * pcb)
+ikrt_posix_gmtime (ikptr s_rtd, ikptr s_time_num, ikpcb * pcb)
 {
-  time_t	time = (time_t)ik_integer_to_ulong(time_num);
+  time_t	time = (time_t)ik_integer_to_ulong(s_time_num);
   struct tm	T;
   struct tm *	rv;
   errno = 0;
   rv	= gmtime_r(&time, &T);
-  return (rv)? tm_to_struct(rtd, &T, pcb) : false_object;
+  return (rv)? tm_to_struct(s_rtd, &T, pcb) : false_object;
 }
 
 /* ------------------------------------------------------------------ */
 
 static void
-struct_to_tm (ikptr src, struct tm * dst)
+struct_to_tm (ikptr s_src, struct tm * dst)
 /* Convert  a Scheme  language	"struct-tm" into  a  C language	 "struct
    tm". */
 {
-  dst->tm_sec	= ik_integer_to_long(IK_FIELD(src, 0));
-  dst->tm_min	= ik_integer_to_long(IK_FIELD(src, 1));
-  dst->tm_hour	= ik_integer_to_long(IK_FIELD(src, 2));
-  dst->tm_mday	= ik_integer_to_long(IK_FIELD(src, 3));
-  dst->tm_mon	= ik_integer_to_long(IK_FIELD(src, 4));
-  dst->tm_year	= ik_integer_to_long(IK_FIELD(src, 5));
-  dst->tm_wday	= ik_integer_to_long(IK_FIELD(src, 6));
-  dst->tm_yday	= ik_integer_to_long(IK_FIELD(src, 7));
-  dst->tm_isdst = (true_object == IK_FIELD(src, 8))? 1 : 0;
-  dst->tm_yday	= ik_integer_to_long(IK_FIELD(src, 9));
-  dst->tm_zone	= IK_BYTEVECTOR_DATA_CHARP(IK_FIELD(src, 10));
+  dst->tm_sec	= ik_integer_to_long(IK_FIELD(s_src, 0));
+  dst->tm_min	= ik_integer_to_long(IK_FIELD(s_src, 1));
+  dst->tm_hour	= ik_integer_to_long(IK_FIELD(s_src, 2));
+  dst->tm_mday	= ik_integer_to_long(IK_FIELD(s_src, 3));
+  dst->tm_mon	= ik_integer_to_long(IK_FIELD(s_src, 4));
+  dst->tm_year	= ik_integer_to_long(IK_FIELD(s_src, 5));
+  dst->tm_wday	= ik_integer_to_long(IK_FIELD(s_src, 6));
+  dst->tm_yday	= ik_integer_to_long(IK_FIELD(s_src, 7));
+  dst->tm_isdst = (true_object == IK_FIELD(s_src, 8))? 1 : 0;
+  dst->tm_yday	= ik_integer_to_long(IK_FIELD(s_src, 9));
+  dst->tm_zone	= IK_BYTEVECTOR_DATA_CHARP(IK_FIELD(s_src, 10));
 }
 ikptr
-ikrt_posix_timelocal (ikptr tm_struct, ikpcb * pcb)
+ikrt_posix_timelocal (ikptr s_tm_struct, ikpcb * pcb)
 {
   struct tm	T;
   time_t	rv;
-  struct_to_tm(tm_struct, &T);
+  struct_to_tm(s_tm_struct, &T);
   rv = timelocal(&T);
   return (((time_t)-1) != rv)? ika_flonum_from_double(pcb, (double)rv) : false_object;
 }
 ikptr
-ikrt_posix_timegm (ikptr tm_struct, ikpcb * pcb)
+ikrt_posix_timegm (ikptr s_tm_struct, ikpcb * pcb)
 {
   struct tm	T;
   time_t	rv;
-  struct_to_tm(tm_struct, &T);
+  struct_to_tm(s_tm_struct, &T);
   rv = timegm(&T);
   return (((time_t)-1) != rv)? ika_flonum_from_double(pcb, (double)rv) : false_object;
 }
 ikptr
-ikrt_posix_strftime (ikptr template_bv, ikptr tm_struct, ikpcb *pcb)
+ikrt_posix_strftime (ikptr s_template, ikptr s_tm_struct, ikpcb *pcb)
 {
   struct tm	T;
   const char *	template;
@@ -2919,8 +2995,8 @@ ikrt_posix_strftime (ikptr template_bv, ikptr tm_struct, ikpcb *pcb)
 #define SIZE	4096
   size_t	size=SIZE;
   char		output[SIZE+1];
-  template = IK_BYTEVECTOR_DATA_CHARP(template_bv);
-  struct_to_tm(tm_struct, &T);
+  template = IK_BYTEVECTOR_DATA_CHARP(s_template);
+  struct_to_tm(s_tm_struct, &T);
   output[0] = '\1';
   size = strftime(output, size, template, &T);
   return (0 == size && '\0' != output[0])?
@@ -2930,21 +3006,23 @@ ikrt_posix_strftime (ikptr template_bv, ikptr tm_struct, ikpcb *pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_nanosleep (ikptr secs, ikptr nsecs, ikpcb * pcb)
+ikrt_posix_nanosleep (ikptr s_secs, ikptr s_nsecs, ikpcb * pcb)
 {
   struct timespec	requested;
   struct timespec	remaining = { 0, 0 }; /* required!!! */
   int			rv;
-  requested.tv_sec  = IK_IS_FIXNUM(secs)?  (ik_ulong) IK_UNFIX(secs)  : IK_REF(secs,  off_bignum_data);
-  requested.tv_nsec = IK_IS_FIXNUM(nsecs)? (ik_ulong) IK_UNFIX(nsecs) : IK_REF(nsecs, off_bignum_data);
+  requested.tv_sec  = IK_IS_FIXNUM(s_secs)?  (ik_ulong)IK_UNFIX(s_secs) :IK_REF(s_secs, off_bignum_data);
+  requested.tv_nsec = IK_IS_FIXNUM(s_nsecs)? (ik_ulong)IK_UNFIX(s_nsecs):IK_REF(s_nsecs,off_bignum_data);
   errno = 0;
   rv	= nanosleep(&requested, &remaining);
   if (0 == rv) {
     ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
     pcb->root0 = &s_pair;
     {
-      IK_CAR(s_pair) = remaining.tv_sec?  ika_integer_from_long(pcb, remaining.tv_sec)	: false_object;
-      IK_CDR(s_pair) = remaining.tv_nsec? ika_integer_from_long(pcb, remaining.tv_nsec) : false_object;
+      IK_ASS(IK_CAR(s_pair),
+	     remaining.tv_sec?  ika_integer_from_long(pcb, remaining.tv_sec)  : false_object);
+      IK_ASS(IK_CDR(s_pair),
+	     remaining.tv_nsec? ika_integer_from_long(pcb, remaining.tv_nsec) : false_object);
     }
     pcb->root0 = NULL;
     return s_pair;

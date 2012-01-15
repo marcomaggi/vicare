@@ -199,6 +199,72 @@
   #t)
 
 
+(parametrise ((check-test-name	'uids))
+
+  (when #f
+    (fprintf (current-error-port)
+	     "UID=~a, GID=~a, EUID=~a, EGID=~a, login=~a\n"
+	     (px.getuid) (px.getgid) (px.geteuid) (px.getegid)
+	     (px.getlogin/string))
+    (fprintf (current-error-port) "groups=~a\n" (px.getgroups))
+    (fprintf (current-error-port) "passwd=~a\n" (px.getpwuid (px.getuid)))
+    (fprintf (current-error-port) "passwd=~a\n" (px.getpwnam (px.getlogin/string)))
+    (fprintf (current-error-port) "group=~a\n" (px.getgrgid (px.getgid)))
+    (fprintf (current-error-port) "group=~a\n"
+	     (px.getgrnam (px.struct-group-gr_name (px.getgrgid (px.getgid)))))
+    (check-pretty-print (px.user-entries))
+    (check-pretty-print (px.group-entries))
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (fixnum? (px.getuid))
+    => #t)
+
+  (check
+      (fixnum? (px.getgid))
+    => #t)
+
+  (check
+      (fixnum? (px.geteuid))
+    => #t)
+
+  (check
+      (fixnum? (px.getegid))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (px.struct-passwd? (px.getpwuid (px.getuid)))
+    => #t)
+
+  (check
+      (px.struct-passwd? (px.getpwnam (px.getlogin/string)))
+    => #t)
+
+  (check
+      (for-all px.struct-passwd? (px.user-entries))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (px.struct-group? (px.getgrgid (px.getgid)))
+    => #t)
+
+  (check
+      (px.struct-group? (px.getgrnam (px.struct-group-gr_name (px.getgrgid (px.getgid)))))
+    => #t)
+
+  (check
+      (for-all px.struct-group? (px.group-entries))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'system))
 
   (check
