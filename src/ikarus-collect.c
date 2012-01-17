@@ -360,9 +360,9 @@ static void gc_add_tconcs(gc_t*);
  * 6. ik_collect should not move the stack.
  */
 
-
-
-ikpcb* ik_collect_vararg(int req, ikpcb* pcb) {
+ikpcb*
+ik_collect_vararg(int req, ikpcb* pcb)
+{
   return ik_collect(req, pcb);
 }
 
@@ -374,9 +374,10 @@ static void fix_new_pages(gc_t* gc);
 
 extern void verify_integrity(ikpcb* pcb, char*);
 
-ikptr ik_collect_check(unsigned long req, ikpcb* pcb) {
-  long bytes = ((long)pcb->allocation_redline) -
-                   ((long)pcb->allocation_pointer);
+ikptr
+ik_collect_check(unsigned long req, ikpcb* pcb)
+{
+  long bytes = ((long)pcb->allocation_redline) - ((long)pcb->allocation_pointer);
   if (bytes >= req) {
     return true_object;
   } else {
@@ -445,7 +446,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
   if (pcb->root4) *(pcb->root4) = add_object(&gc, *(pcb->root4), "root4");
   if (pcb->root5) *(pcb->root5) = add_object(&gc, *(pcb->root5), "root5");
   if (pcb->root6) *(pcb->root6) = add_object(&gc, *(pcb->root6), "root6");
-  if (pcb->root6) *(pcb->root7) = add_object(&gc, *(pcb->root7), "root7");
+  if (pcb->root7) *(pcb->root7) = add_object(&gc, *(pcb->root7), "root7");
   if (pcb->root8) *(pcb->root8) = add_object(&gc, *(pcb->root8), "root8");
   if (pcb->root9) *(pcb->root9) = add_object(&gc, *(pcb->root9), "root9");
   /* trace all live objects */
@@ -509,14 +510,15 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
 #ifndef NDEBUG
     fprintf(stderr, "REQ=%ld, got %ld\n", mem_req, free_space);
 #endif
-    long memsize = (mem_req > IK_HEAPSIZE) ? mem_req : IK_HEAPSIZE;
+    long memsize   = (mem_req > IK_HEAPSIZE) ? mem_req : IK_HEAPSIZE;
+    long new_heap_size = memsize + 2 * pagesize;
     memsize = IK_ALIGN_TO_NEXT_PAGE(memsize);
     ik_munmap_from_segment(pcb->heap_base, pcb->heap_size, pcb);
-    ikptr ptr = ik_mmap_mixed(memsize+2*pagesize, pcb);
+    ikptr ptr = ik_mmap_mixed(new_heap_size, pcb);
     pcb->allocation_pointer = ptr;
     pcb->allocation_redline = ptr+memsize;
     pcb->heap_base = ptr;
-    pcb->heap_size = memsize+2*pagesize;
+    pcb->heap_size = new_heap_size;
   }
 #ifndef NDEBUG
   { /* reset the free space to a magic number */
@@ -915,11 +917,8 @@ static void collect_stack(gc_t* gc, ikptr top, ikptr end) {
     }
     top += framesize;
   }
-  if (top != end) {
-    fprintf(stderr, "frames did not match up 0x%016lx .. 0x%016lx\n",
-        (long) top, (long) end);
-    exit(EXIT_FAILURE);
-  }
+  if (top != end)
+    ik_abort("frames did not match up 0x%016lx .. 0x%016lx", (long) top, (long) end);
   if (DEBUG_STACK) {
     fprintf(stderr, "done with stack!\n");
   }
@@ -936,7 +935,7 @@ add_list (gc_t* gc, unsigned int segment_bits, ikptr x, ikptr* loc)
    referenced by X is allocated. */
 {
   int collect_gen = gc->collect_gen;
-  while (1) {
+  for (;;) {
     ikptr first_word  = ref(x, off_car);
     ikptr second_word = ref(x, off_cdr);
     ikptr y;
@@ -1403,11 +1402,8 @@ relocate_new_code(ikptr x, gc_t* gc) {
       ikptr displaced_object = obj + obj_off;
       long next_word = code + code_off + 4;
       ikptr relative_distance = displaced_object - (long)next_word;
-      if (((long)relative_distance) != ((long)((int)relative_distance))) {
-        fprintf(stderr, "relocation error with relative=0x%016lx\n",
-            relative_distance);
-        exit(EXIT_FAILURE);
-      }
+      if (((long)relative_distance) != ((long)((int)relative_distance)))
+        ik_abort("relocation error with relative=0x%016lx", relative_distance);
       *((int*)(code+code_off)) = (int)relative_distance;
       p += (3*wordsize);
     }
@@ -1415,10 +1411,8 @@ relocate_new_code(ikptr x, gc_t* gc) {
       /* do nothing */
       p += (2 * wordsize);
     }
-    else {
-      fprintf(stderr, "invalid rtag %ld in 0x%016lx\n", tag, r);
-      exit(EXIT_FAILURE);
-    }
+    else
+      ik_abort("invalid rtag %ld in 0x%016lx", tag, r);
   }
 }
 
@@ -1812,21 +1806,17 @@ scan_dirty_pages(gc_t* gc) {
           dirty_vec = (unsigned int*)(long)pcb->dirty_vector;
           segment_vec = (unsigned int*)(long)pcb->segment_vector;
         }
-        else if (t & scannable_mask) {
-          fprintf(stderr, "BUG: unhandled scan of type 0x%08x\n", t);
-          exit(EXIT_FAILURE);
-        }
+        else if (t & scannable_mask)
+          ik_abort("unhandled scan of type 0x%08x", t);
       }
     }
     i++;
   }
 }
 
-
-
-
 static void
-deallocate_unused_pages(gc_t* gc) {
+deallocate_unused_pages(gc_t* gc)
+{
   ikpcb* pcb = gc->pcb;
   int collect_gen =  gc->collect_gen;
   unsigned int* segment_vec = pcb->segment_vector;

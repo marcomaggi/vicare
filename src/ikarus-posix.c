@@ -142,14 +142,14 @@ ikrt_posix_environ (ikpcb* pcb)
   ikptr		s_list	= null_object;
   ikptr		s_spine = null_object;
   int		i;
-  s_list = s_spine = IKA_PAIR_ALLOC(pcb);
+  s_list = s_spine = ika_pair_alloc(pcb);
   pcb->root0 = &s_list;
   pcb->root1 = &s_spine;
   {
     for (i=0; environ[i];) {
       IK_ASS(IK_CAR(s_spine), ika_bytevector_from_cstring(pcb, environ[i]));
       if (environ[++i]) {
-	IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	s_spine = IK_CDR(s_spine);
       } else
 	IK_CDR(s_spine) = null_object;
@@ -1181,7 +1181,7 @@ ikrt_posix_select (ikptr nfds_fx,
       for (L=read_fds_ell, R=null_object; pair_tag == IK_TAGOF(L); L=IK_REF(L,off_cdr)) {
 	ikptr fdx = IK_REF(L, off_car);
 	if (FD_ISSET(IK_UNFIX(fdx), &read_fds)) {
-	  ikptr P = IKA_PAIR_ALLOC(pcb);
+	  ikptr P = ika_pair_alloc(pcb);
 	  IK_CAR(P) = fdx;
 	  IK_CDR(P) = R;
 	  IK_ITEM(vec, 0) = P;
@@ -1192,7 +1192,7 @@ ikrt_posix_select (ikptr nfds_fx,
       for (L=write_fds_ell, W=null_object; pair_tag == IK_TAGOF(L); L = IK_REF(L, off_cdr)) {
 	ikptr fdx = IK_REF(L, off_car);
 	if (FD_ISSET(IK_UNFIX(fdx), &write_fds)) {
-	  ikptr P = IKA_PAIR_ALLOC(pcb);
+	  ikptr P = ika_pair_alloc(pcb);
 	  IK_CAR(P) = fdx;
 	  IK_CDR(P) = W;
 	  IK_ITEM(vec, 1) = W = P;
@@ -1202,7 +1202,7 @@ ikrt_posix_select (ikptr nfds_fx,
       for (L=except_fds_ell, E=null_object; pair_tag == IK_TAGOF(L); L = IK_REF(L, off_cdr)) {
 	ikptr fdx = IK_REF(L, off_car);
 	if (FD_ISSET(IK_UNFIX(fdx), &except_fds)) {
-	  ikptr P = IKA_PAIR_ALLOC(pcb);
+	  ikptr P = ika_pair_alloc(pcb);
 	  IK_CAR(P) = fdx;
 	  IK_CDR(P) = E;
 	  IK_ITEM(vec, 2) = E = P;
@@ -1239,7 +1239,7 @@ ikrt_posix_select_fd (ikptr fdx, ikptr sec, ikptr usec, ikpcb * pcb)
   } else if (-1 == rv) { /* an error occurred */
     return ik_errno_to_code();
   } else { /* success, let's harvest the events */
-    vec = ika_vector_alloc(pcb, 3);
+    vec = ika_vector_alloc_no_init(pcb, 3);
     IK_ITEM(vec, 0) = (FD_ISSET(fd, &read_fds))?   fdx : false_object;
     IK_ITEM(vec, 1) = (FD_ISSET(fd, &write_fds))?  fdx : false_object;
     IK_ITEM(vec, 2) = (FD_ISSET(fd, &except_fds))? fdx : false_object;
@@ -1265,10 +1265,8 @@ ikrt_posix_fcntl (ikptr fd, ikptr command, ikptr arg)
   } else if (ikrt_is_pointer(arg)) {
     void *	val = IK_POINTER_DATA_VOIDP(arg);
     rv = fcntl(IK_UNFIX(fd), IK_UNFIX(command), val);
-  } else {
-    fprintf(stderr, "*** Vicare error: invalid last argument to fcntl()");
-    exit(EXIT_FAILURE);
-  }
+  } else
+    ik_abort("invalid last argument to fcntl()");
   return (-1 != rv)? fix(rv) : ik_errno_to_code();
 }
 ikptr
@@ -1287,10 +1285,8 @@ ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
   } else if (ikrt_is_pointer(arg)) {
     void *	val = IK_POINTER_DATA_VOIDP(arg);
     rv = ioctl(IK_UNFIX(fd), IK_UNFIX(command), val);
-  } else {
-    fprintf(stderr, "*** Vicare error: invalid last argument to ioctl()");
-    exit(EXIT_FAILURE);
-  }
+  } else
+    ik_abort("invalid last argument to ioctl()");
   return (-1 != rv)? fix(rv) : ik_errno_to_code();
 }
 
@@ -1325,7 +1321,7 @@ ikrt_posix_pipe (ikpcb * pcb)
   if (-1 == rv)
     return ik_errno_to_code();
   else {
-    ikptr  pair = IKA_PAIR_ALLOC(pcb);
+    ikptr  pair = ika_pair_alloc(pcb);
     IK_CAR(pair) = IK_FIX(fds[0]);
     IK_CDR(pair) = IK_FIX(fds[1]);
     return pair;
@@ -1661,7 +1657,7 @@ hostent_to_struct (ikptr s_rtd, struct hostent * src, ikpcb * pcb)
   { /* store the list of aliases */
     if (src->h_aliases[0]) {
       ikptr	s_list_of_aliases, s_spine;
-      s_list_of_aliases = s_spine = IKA_PAIR_ALLOC(pcb);
+      s_list_of_aliases = s_spine = ika_pair_alloc(pcb);
       pcb->root6 = &s_list_of_aliases;
       pcb->root7 = &s_spine;
       {
@@ -1669,7 +1665,7 @@ hostent_to_struct (ikptr s_rtd, struct hostent * src, ikpcb * pcb)
 	for (i=0; src->h_aliases[i];) {
 	  IK_ASS(IK_CAR(s_spine), ika_bytevector_from_cstring(pcb, src->h_aliases[i]));
 	  if (src->h_aliases[++i]) {
-	    IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	    IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	    s_spine = IK_CDR(s_spine);
 	  } else {
 	    IK_CDR(s_spine) = null_object;
@@ -1692,7 +1688,7 @@ hostent_to_struct (ikptr s_rtd, struct hostent * src, ikpcb * pcb)
   { /* store the reversed list of addresses */
     if (src->h_addr_list[0]) {
       ikptr	s_list_of_addrs, s_spine;
-      s_list_of_addrs = s_spine = IKA_PAIR_ALLOC(pcb);
+      s_list_of_addrs = s_spine = ika_pair_alloc(pcb);
       pcb->root6 = &s_list_of_addrs;
       pcb->root7 = &s_spine;
       {
@@ -1701,7 +1697,7 @@ hostent_to_struct (ikptr s_rtd, struct hostent * src, ikpcb * pcb)
 	  IK_ASS(IK_CAR(s_spine),
 		 ika_bytevector_from_memory_block(pcb, src->h_addr_list[i], src->h_length));
 	  if (src->h_addr_list[++i]) {
-	    IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	    IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	    s_spine = IK_CDR(s_spine);
 	  } else {
 	    IK_CDR(s_spine) = null_object;
@@ -1770,7 +1766,7 @@ ikrt_posix_host_entries (ikptr s_rtd, ikpcb * pcb)
       ikptr	s_spine;
       pcb->root0 = &s_rtd;
       {
-	s_spine = s_list_of_entries = IKA_PAIR_ALLOC(pcb);
+	s_spine = s_list_of_entries = ika_pair_alloc(pcb);
 	pcb->root1 = &s_list_of_entries;
 	pcb->root2 = &s_spine;
 	{
@@ -1778,7 +1774,7 @@ ikrt_posix_host_entries (ikptr s_rtd, ikpcb * pcb)
 	    IK_ASS(IK_CAR(s_spine), hostent_to_struct(s_rtd, entry, pcb));
 	    entry = gethostent();
 	    if (entry) {
-	      IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	      IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	      s_spine = IK_CDR(s_spine);
 	    } else {
 	      IK_CDR(s_spine) = null_object;
@@ -1859,7 +1855,7 @@ ikrt_posix_getaddrinfo (ikptr s_rtd, ikptr s_node, ikptr s_service, ikptr s_hint
       pcb->root0 = &s_rtd;
       {
 	ikptr	s_spine;
-	s_list_of_addrinfo = s_spine = IKA_PAIR_ALLOC(pcb);
+	s_list_of_addrinfo = s_spine = ika_pair_alloc(pcb);
 	pcb->root1 = &s_list_of_addrinfo;
 	pcb->root2 = &s_spine;
 	{
@@ -1867,7 +1863,7 @@ ikrt_posix_getaddrinfo (ikptr s_rtd, ikptr s_node, ikptr s_service, ikptr s_hint
 	    IK_ASS(IK_CAR(s_spine), addrinfo_to_struct(pcb, s_rtd, iter, with_canon_name));
 	    iter = iter->ai_next;
 	    if (iter) {
-	      IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	      IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	      s_spine = IK_CDR(s_spine);
 	    } else {
 	      IK_CDR(s_spine) = null_object;
@@ -1914,14 +1910,14 @@ protoent_to_struct (ikpcb * pcb, ikptr s_rtd, struct protoent * src)
     if (src->p_aliases[0]) {
       ikptr	s_list_of_aliases, s_spine;
       int	i;
-      s_list_of_aliases = s_spine = IKA_PAIR_ALLOC(pcb);
+      s_list_of_aliases = s_spine = ika_pair_alloc(pcb);
       pcb->root8 = &s_list_of_aliases;
       pcb->root7 = &s_spine;
       {
 	for (i=0; src->p_aliases[i];) {
 	  IK_ASS(IK_CAR(s_spine), ika_bytevector_from_cstring(pcb, src->p_aliases[i]));
 	  if (src->p_aliases[++i]) {
-	    IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	    IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	    s_spine = IK_CDR(s_spine);
 	  } else {
 	    IK_CDR(s_spine) = null_object;
@@ -1968,7 +1964,7 @@ ikrt_posix_protocol_entries (ikptr s_rtd, ikpcb * pcb)
       entry = getprotoent();
       if (entry) {
 	ikptr	s_spine;
-	s_list_of_entries = s_spine = IKA_PAIR_ALLOC(pcb);
+	s_list_of_entries = s_spine = ika_pair_alloc(pcb);
 	pcb->root1 = &s_list_of_entries;
 	pcb->root2 = &s_spine;
 	{
@@ -1976,7 +1972,7 @@ ikrt_posix_protocol_entries (ikptr s_rtd, ikpcb * pcb)
 	    IK_ASS(IK_CAR(s_spine), protoent_to_struct(pcb, s_rtd, entry));
 	    entry = getprotoent();
 	    if (entry) {
-	      IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	      IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	      s_spine = IK_CDR(s_spine);
 	    } else {
 	      IK_CDR(s_spine) = null_object;
@@ -2014,14 +2010,14 @@ servent_to_struct (ikpcb * pcb, ikptr s_rtd, struct servent * src)
     if (src->s_aliases[0]) {
       ikptr	s_list_of_aliases, s_spine;
       int	i;
-      s_list_of_aliases = s_spine = IKA_PAIR_ALLOC(pcb);
+      s_list_of_aliases = s_spine = ika_pair_alloc(pcb);
       pcb->root8 = &s_list_of_aliases;
       pcb->root7 = &s_spine;
       {
 	for (i=0; src->s_aliases[i];) {
 	  IK_ASS(IK_CAR(s_spine), ika_bytevector_from_cstring(pcb, src->s_aliases[i]));
 	  if (src->s_aliases[++i]) {
-	    IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	    IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	    s_spine = IK_CDR(s_spine);
 	  } else {
 	    IK_CDR(s_spine) = null_object;
@@ -2074,7 +2070,7 @@ ikrt_posix_service_entries (ikptr s_rtd, ikpcb * pcb)
       pcb->root0 = &s_rtd;
       {
 	ikptr	s_spine;
-	s_list_of_entries = s_spine = IKA_PAIR_ALLOC(pcb);
+	s_list_of_entries = s_spine = ika_pair_alloc(pcb);
 	pcb->root1 = &s_list_of_entries;
 	pcb->root2 = &s_spine;
 	{
@@ -2082,7 +2078,7 @@ ikrt_posix_service_entries (ikptr s_rtd, ikpcb * pcb)
 	    IK_ASS(IK_CAR(s_spine), servent_to_struct(pcb, s_rtd, entry));
 	    entry = getservent();
 	    if (entry) {
-	      IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	      IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	      s_spine = IK_CDR(s_spine);
 	    } else {
 	      IK_CDR(s_spine) = null_object;
@@ -2118,14 +2114,14 @@ netent_to_struct (ikpcb * pcb, ikptr s_rtd, struct netent * src)
     if (src->n_aliases[0]) {
       ikptr	s_list_of_aliases, s_spine;
       int	i;
-      s_list_of_aliases = s_spine = IKA_PAIR_ALLOC(pcb);
+      s_list_of_aliases = s_spine = ika_pair_alloc(pcb);
       pcb->root8 = &s_list_of_aliases;
       pcb->root7 = &s_spine;
       {
 	for (i=0; src->n_aliases[i];) {
 	  IK_ASS(IK_CAR(s_spine), ika_bytevector_from_cstring(pcb, src->n_aliases[i]));
 	  if (src->n_aliases[++i]) {
-	    IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	    IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	    s_spine = IK_CDR(s_spine);
 	  } else {
 	    IK_CDR(s_spine) = null_object;
@@ -2173,7 +2169,7 @@ ikrt_posix_network_entries (ikptr s_rtd, ikpcb * pcb)
     pcb->root0 = &s_rtd;
     {
       ikptr	s_spine;
-      s_list_of_entries = s_spine = IKA_PAIR_ALLOC(pcb);
+      s_list_of_entries = s_spine = ika_pair_alloc(pcb);
       pcb->root1 = &s_list_of_entries;
       pcb->root2 = &s_spine;
       {
@@ -2181,7 +2177,7 @@ ikrt_posix_network_entries (ikptr s_rtd, ikpcb * pcb)
 	  IK_ASS(IK_CAR(s_spine), netent_to_struct(pcb, s_rtd, entry));
 	  entry = getnetent();
 	  if (entry) {
-	    IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	    IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	    s_spine = IK_CDR(s_spine);
 	  } else {
 	    IK_CDR(s_spine) = null_object;
@@ -2228,7 +2224,7 @@ ikrt_posix_socketpair (ikptr s_namespace, ikptr s_style, ikptr s_protocol, ikpcb
   errno = 0;
   rv	= socketpair(IK_UNFIX(s_namespace), IK_UNFIX(s_style), IK_UNFIX(s_protocol), fds);
   if (0 == rv) {
-    ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
+    ikptr	s_pair = ika_pair_alloc(pcb);
     pcb->root0 = &s_pair;
     {
       IK_CAR(s_pair) = IK_FD_TO_NUM(fds[0]);
@@ -2274,7 +2270,7 @@ ikrt_posix_accept (ikptr s_sock, ikpcb * pcb)
     ikptr	s_pair;
     ikptr	s_addr;
     void *	addr_data;
-    s_pair     = IKA_PAIR_ALLOC(pcb);
+    s_pair     = ika_pair_alloc(pcb);
     pcb->root0 = &s_pair;
     {
       s_addr	 = ika_bytevector_alloc(pcb, addr_len);
@@ -2401,7 +2397,7 @@ ikrt_posix_recvfrom (ikptr s_sock, ikptr s_buffer, ikptr s_size, ikptr s_flags, 
   errno	     = 0;
   rv	     = recvfrom(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags), addr, &addr_len);
   if (0 <= rv) {
-    ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
+    ikptr	s_pair = ika_pair_alloc(pcb);
     ikptr	s_addr;
     void *	addr_data;
     pcb->root0 = &s_pair;
@@ -2475,7 +2471,7 @@ ikrt_posix_getsockopt_int (ikptr s_sock, ikptr s_level, ikptr s_optname, ikpcb *
   if (0 == rv) {
     /* Return  a pair  to distinguish  the value  from an  encoded errno
        value. */
-    ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
+    ikptr	s_pair = ika_pair_alloc(pcb);
     pcb->root0 = &s_pair;
     {
       IK_ASS(IK_CAR(s_pair), ika_integer_from_long(pcb, (long)optval));
@@ -2510,7 +2506,7 @@ ikrt_posix_getsockopt_size_t (ikptr s_sock, ikptr s_level, ikptr s_optname, ikpc
   if (0 == rv) {
     /* Return  a pair  to distinguish  the value  from an  encoded errno
        value. */
-    ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
+    ikptr	s_pair = ika_pair_alloc(pcb);
     pcb->root0 = &s_pair;
     {
       IK_ASS(IK_CAR(s_pair), ika_integer_from_long(pcb, (long)optval));
@@ -2547,7 +2543,7 @@ ikrt_posix_getsockopt_linger (ikptr s_sock, ikpcb * pcb)
   if (0 == rv) {
     /* Return  a pair  to distinguish  the value  from an  encoded errno
        value. */
-    ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
+    ikptr	s_pair = ika_pair_alloc(pcb);
     IK_CAR(s_pair) = optval.l_onoff? true_object : false_object;
     IK_CDR(s_pair) = IK_FIX(optval.l_linger);
     return s_pair;
@@ -2599,14 +2595,14 @@ ikrt_posix_getgroups (ikpcb * pcb)
     else {
       ikptr	s_list_of_gids, s_spine;
       int	i;
-      s_list_of_gids = s_spine = IKA_PAIR_ALLOC(pcb);
+      s_list_of_gids = s_spine = ika_pair_alloc(pcb);
       pcb->root0 = &s_list_of_gids;
       pcb->root1 = &s_spine;
       {
 	for (i=0; i<count;) {
 	  IK_CAR(s_spine) = IK_GID_TO_NUM(gids[i]);
 	  if (++i<count) {
-	    IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	    IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	    s_spine = IK_CDR(s_spine);
 	  } else {
 	    IK_CDR(s_spine) = null_object;
@@ -2737,7 +2733,7 @@ ikrt_posix_user_entries (ikptr s_rtd, ikpcb * pcb)
       ikptr	s_spine;
       pcb->root0 = &s_rtd;
       {
-	s_list_of_entries = s_spine = IKA_PAIR_ALLOC(pcb);
+	s_list_of_entries = s_spine = ika_pair_alloc(pcb);
 	pcb->root1 = &s_list_of_entries;
 	pcb->root2 = &s_spine;
 	{
@@ -2745,7 +2741,7 @@ ikrt_posix_user_entries (ikptr s_rtd, ikpcb * pcb)
 	    IK_ASS(IK_CAR(s_spine), passwd_to_struct(s_rtd, entry, pcb));
 	    entry = getpwent();
 	    if (entry) {
-	      IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	      IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	      s_spine = IK_CDR(s_spine);
 	    } else {
 	      IK_CDR(s_spine) = null_object;
@@ -2784,14 +2780,14 @@ group_to_struct (ikptr s_rtd, struct group * src, ikpcb * pcb)
       if (src->gr_mem[0]) {
 	ikptr	s_spine;
 	int	i;
-	s_list_of_users = s_spine = IKA_PAIR_ALLOC(pcb);
+	s_list_of_users = s_spine = ika_pair_alloc(pcb);
 	pcb->root8 = &s_list_of_users;
 	pcb->root7 = &s_spine;
 	{
 	  for (i=0; src->gr_mem[i];) {
 	    IK_ASS(IK_CAR(s_spine), ika_bytevector_from_cstring(pcb, src->gr_mem[i]));
 	    if (src->gr_mem[++i]) {
-	      IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	      IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	      s_spine = IK_CDR(s_spine);
 	    } else {
 	      IK_CDR(s_spine) = null_object;
@@ -2836,7 +2832,7 @@ ikrt_posix_group_entries (ikptr s_rtd, ikpcb * pcb)
     if (entry) {
       pcb->root0 = &s_rtd;
       {
-	ikptr	s_spine = s_list_of_entries = IKA_PAIR_ALLOC(pcb);
+	ikptr	s_spine = s_list_of_entries = ika_pair_alloc(pcb);
 	pcb->root1 = &s_list_of_entries;
 	pcb->root2 = &s_spine;
 	{
@@ -2844,7 +2840,7 @@ ikrt_posix_group_entries (ikptr s_rtd, ikpcb * pcb)
 	    IK_ASS(IK_CAR(s_spine), group_to_struct(s_rtd, entry, pcb));
 	    entry = getgrent();
 	    if (entry) {
-	      IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	      IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	      s_spine = IK_CDR(s_spine);
 	    } else {
 	      IK_CDR(s_spine) = null_object;
@@ -3123,7 +3119,7 @@ ikrt_posix_nanosleep (ikptr s_secs, ikptr s_nsecs, ikpcb * pcb)
   errno = 0;
   rv	= nanosleep(&requested, &remaining);
   if (0 == rv) {
-    ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
+    ikptr	s_pair = ika_pair_alloc(pcb);
     pcb->root0 = &s_pair;
     {
       IK_ASS(IK_CAR(s_pair),

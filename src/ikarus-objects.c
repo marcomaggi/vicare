@@ -1,7 +1,7 @@
 /*
   Part of: Vicare
   Contents: utilities for built in object manipulation
-  Date: Tue Nov  8, 2011
+  Date: Tue Nov	 8, 2011
 
   Abstract
 
@@ -9,14 +9,14 @@
 
   Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 
-  This program is  free software: you can redistribute  it and/or modify
-  it under the  terms of the GNU General Public  License as published by
-  the Free Software Foundation, either  version 3 of the License, or (at
+  This program is  free software: you can redistribute	it and/or modify
+  it under the	terms of the GNU General Public	 License as published by
+  the Free Software Foundation, either	version 3 of the License, or (at
   your option) any later version.
 
-  This program  is distributed in the  hope that it will  be useful, but
-  WITHOUT   ANY  WARRANTY;   without  even   the  implied   warranty  of
-  MERCHANTABILITY  or FITNESS  FOR A  PARTICULAR PURPOSE.   See  the GNU
+  This program	is distributed in the  hope that it will  be useful, but
+  WITHOUT   ANY	 WARRANTY;   without  even   the  implied   warranty  of
+  MERCHANTABILITY  or FITNESS  FOR A  PARTICULAR PURPOSE.   See	 the GNU
   General Public License for more details.
 
   You  should have received  a copy  of the  GNU General  Public License
@@ -36,12 +36,20 @@
  ** Scheme pairs utilities.
  ** ----------------------------------------------------------------- */
 
+ikptr
+ika_pair_alloc (ikpcb * pcb)
+{
+  ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
+  IK_CAR(s_pair) = void_object;
+  IK_CDR(s_pair) = void_object;
+  return s_pair;
+}
 long
 ik_list_length (ikptr s_list)
 /* Return the  length of the list  S_LIST.  Do *not*  check for circular
    lists. */
 {
-  long   length;
+  long	 length;
   for (length = 0; pair_tag == IK_TAGOF(s_list); ++length) {
     if (LONG_MAX != length)
       s_list = ref(s_list, off_cdr);
@@ -55,32 +63,32 @@ ik_list_length (ikptr s_list)
 
 void
 ik_list_to_argv (ikptr s_list, char **argv)
-/* Given a  reference S_LIST  to a list  of bytevectors, fill  ARGV with
+/* Given a  reference S_LIST  to a list	 of bytevectors, fill  ARGV with
    pointers to the data areas, setting the last element of ARGV to NULL.
    The array referenced by ARGV must be wide enough to hold all the data
    from S_LIST plus the terminating NULL. */
 {
-  int    i;
-  ikptr  bv;
+  int	 i;
+  ikptr	 bv;
   for (i=0; pair_tag == IK_TAGOF(s_list); s_list=IK_CDR(s_list), ++i) {
-    bv      = IK_CAR(s_list);
+    bv	    = IK_CAR(s_list);
     argv[i] = IK_BYTEVECTOR_DATA_CHARP(bv);
   }
   argv[i] = NULL;
 }
 void
 ik_list_to_argv_and_argc (ikptr s_list, char **argv, long *argc)
-/* Given a  reference S_LIST  to a list  of bytevectors: fill  ARGV with
+/* Given a  reference S_LIST  to a list	 of bytevectors: fill  ARGV with
    pointers to the data areas, setting the last element of ARGV to NULL;
    fill ARGC with the lengths  of the bytevectors.  The array referenced
    by ARGV must be wide enough to hold all the data from S_LIST plus the
    terminating NULL; the array referenced by ARGC must be wide enough to
    hold all the lengths. */
 {
-  int    i;
-  ikptr  bv;
+  int	 i;
+  ikptr	 bv;
   for (i=0; pair_tag == IK_TAGOF(s_list); s_list=IK_CDR(s_list), ++i) {
-    bv      = IK_CAR(s_list);
+    bv	    = IK_CAR(s_list);
     argv[i] = IK_BYTEVECTOR_DATA_CHARP(bv);
     argc[i] = IK_BYTEVECTOR_LENGTH(bv);
   }
@@ -91,23 +99,25 @@ ik_list_to_argv_and_argc (ikptr s_list, char **argv, long *argc)
 
 ikptr
 ika_list_from_argv (ikpcb * pcb, char ** argv)
-/* Given a  pointer ARGV  to a NULL-terminated  array of  ASCIIZ strings
+/* Given a  pointer ARGV  to a NULL-terminated	array of  ASCIIZ strings
    build and return  a list of bytevectors holding a  copy of the ASCIIZ
    strings.  Make use of "pcb->root8,9".  */
 {
-  ikptr         s_list, s_pair;
-  int           i;
-  s_list = s_pair = IKA_PAIR_ALLOC(pcb);
+  ikptr		s_list, s_pair;
+  s_list = s_pair = ika_pair_alloc(pcb);
   pcb->root9 = &s_list;
   pcb->root8 = &s_pair;
   {
+    int		i;
     for (i=0; argv[i];) {
       IK_ASS(IK_CAR(s_pair), ika_bytevector_from_cstring(pcb, argv[i]));
       if (argv[++i]) {
-	IK_ASS(IK_CDR(s_pair), IKA_PAIR_ALLOC(pcb));
-        s_pair = IK_CDR(s_pair);
-      } else
-        IK_CDR(s_pair) = null_object;
+	IK_ASS(IK_CDR(s_pair), ika_pair_alloc(pcb));
+	s_pair = IK_CDR(s_pair);
+      } else {
+	IK_CDR(s_pair) = null_object;
+	break;
+      }
     }
   }
   pcb->root8 = NULL;
@@ -116,23 +126,25 @@ ika_list_from_argv (ikpcb * pcb, char ** argv)
 }
 ikptr
 ika_list_from_argv_and_argc (ikpcb * pcb, char ** argv, long argc)
-/* Given  a pointer  ARGV to  an array  of ASCIIZ  strings  holding ARGC
+/* Given  a pointer  ARGV to  an array	of ASCIIZ  strings  holding ARGC
    pointers: build  and return a list  of bytevectors holding  a copy of
-   the ASCIIZ strings.  Make use of "pcb->root8,9".  */
+   the ASCIIZ strings.	Make use of "pcb->root8,9".  */
 {
-  ikptr         s_list, s_pair;
-  long          i;
-  s_list = s_pair = IKA_PAIR_ALLOC(pcb);
+  ikptr		s_list, s_pair;
+  s_list = s_pair = ika_pair_alloc(pcb);
   pcb->root9 = &s_list;
   pcb->root8 = &s_pair;
   {
+    long	i;
     for (i=0; i<argc;) {
       IK_ASS(IK_CAR(s_pair), ika_bytevector_from_cstring(pcb, argv[i]));
       if (++i < argc) {
-        IK_ASS(IK_CDR(s_pair), IKA_PAIR_ALLOC(pcb));
-        s_pair = IK_CDR(s_pair);
-      } else
-        IK_CDR(s_pair) = null_object;
+	IK_ASS(IK_CDR(s_pair), ika_pair_alloc(pcb));
+	s_pair = IK_CDR(s_pair);
+      } else {
+	IK_CDR(s_pair) = null_object;
+	break;
+      }
     }
   }
   pcb->root8 = NULL;
@@ -149,9 +161,9 @@ ikptr
 ika_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes)
 {
   long int  aligned_size;
-  ikptr     s_bv;
+  ikptr	    s_bv;
   aligned_size = IK_ALIGN(disp_bytevector_data + requested_number_of_bytes + 1);
-  s_bv         = ik_safe_alloc(pcb, aligned_size) | bytevector_tag;
+  s_bv	       = ik_safe_alloc(pcb, aligned_size) | bytevector_tag;
   ref(s_bv, off_bytevector_length) = IK_FIX(requested_number_of_bytes);
   IK_BYTEVECTOR_DATA_CHARP(s_bv)[requested_number_of_bytes] = '\0';
   return s_bv;
@@ -159,8 +171,8 @@ ika_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes)
 ikptr
 ika_bytevector_from_cstring (ikpcb * pcb, const char * cstr)
 {
-  size_t    len  = strlen(cstr);
-  ikptr     s_bv = ika_bytevector_alloc(pcb, len);
+  size_t    len	 = strlen(cstr);
+  ikptr	    s_bv = ika_bytevector_alloc(pcb, len);
   char *    data = IK_BYTEVECTOR_DATA_CHARP(s_bv);
   memcpy(data, cstr, len);
   return s_bv;
@@ -168,7 +180,7 @@ ika_bytevector_from_cstring (ikpcb * pcb, const char * cstr)
 ikptr
 ika_bytevector_from_cstring_len (ikpcb * pcb, const char * cstr, size_t len)
 {
-  ikptr     s_bv = ika_bytevector_alloc(pcb, len);
+  ikptr	    s_bv = ika_bytevector_alloc(pcb, len);
   char *    data = IK_BYTEVECTOR_DATA_CHARP(s_bv);
   memcpy(data, cstr, len);
   return s_bv;
@@ -176,7 +188,7 @@ ika_bytevector_from_cstring_len (ikpcb * pcb, const char * cstr, size_t len)
 ikptr
 ika_bytevector_from_memory_block (ikpcb * pcb, void * memory, size_t length)
 {
-  ikptr     s_bv = ika_bytevector_alloc(pcb, length);
+  ikptr	    s_bv = ika_bytevector_alloc(pcb, length);
   void *    data = IK_BYTEVECTOR_DATA_VOIDP(s_bv);
   memcpy(data, memory, length);
   return s_bv;
@@ -193,12 +205,24 @@ ik_is_vector (ikptr s_vec)
   return (vector_tag == (s_vec & vector_mask)) && IK_IS_FIXNUM(ref(s_vec, -vector_tag));
 }
 ikptr
-ika_vector_alloc (ikpcb * pcb, long number_of_items)
+ika_vector_alloc_no_init (ikpcb * pcb, long number_of_items)
 {
   /* Do not ask me why, but IK_ALIGN is needed here. */
   long	align_size = IK_ALIGN(disp_vector_data + number_of_items * wordsize);
-  ikptr	s_vec      = ik_safe_alloc(pcb, align_size) | vector_tag;
+  ikptr	s_vec	   = ik_safe_alloc(pcb, align_size) | vector_tag;
   ref(s_vec, off_vector_length) = IK_FIX(number_of_items);
+  return s_vec;
+}
+ikptr
+ika_vector_alloc_and_init (ikpcb * pcb, long number_of_items)
+{
+  /* Do not ask me why, but IK_ALIGN is needed here. */
+  long	align_size = IK_ALIGN(disp_vector_data + number_of_items * wordsize);
+  ikptr	s_vec	   = ik_safe_alloc(pcb, align_size) | vector_tag;
+  long	i;
+  ref(s_vec, off_vector_length) = IK_FIX(number_of_items);
+  for (i=0; i<number_of_items; ++i)
+    IK_ITEM(s_vec, i) = void_object;
   return s_vec;
 }
 
@@ -211,23 +235,28 @@ int
 ik_is_struct (ikptr R)
 {
   return ((record_tag == (record_mask & R)) &&
-          (record_tag == (record_mask & ref(R, off_record_rtd))));
+	  (record_tag == (record_mask & ref(R, off_record_rtd))));
 }
 ikptr
 ika_struct_alloc (ikpcb * pcb, ikptr s_rtd)
-/* Allocate  and return  a new  structure instance  using S_RTD  as type
-   descriptor.  Make use of "pcb->root9". */
+/* Allocate  and return	 a new	structure instance  using S_RTD	 as type
+   descriptor.	All the fields are initialised to the void object.  Make
+   use of "pcb->root9". */
 {
-  long  num_of_fields = IK_UNFIX(ref(s_rtd, off_rtd_length));
+  long	num_of_fields = IK_UNFIX(ref(s_rtd, off_rtd_length));
   /* Do not ask me why, but IK_ALIGN is needed here. */
-  long  align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
+  long	align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
   ikptr s_stru;
+  long	i;
   pcb->root9 = &s_rtd;
   {
     s_stru = ik_safe_alloc(pcb, align_size) | record_tag;
     ref(s_stru, off_record_rtd) = s_rtd;
   }
   pcb->root9 = NULL;
+  for (i=0; i<num_of_fields; ++i) {
+    IK_ITEM(s_stru, i) = null_object;
+  }
   return s_stru;
 }
 
@@ -239,11 +268,11 @@ ika_struct_alloc (ikpcb * pcb, ikptr s_rtd)
 ikptr
 ika_string_alloc (ikpcb * pcb, long number_of_chars)
 {
-  long  align_size;
+  long	align_size;
   ikptr s_str;
   /* Do not ask me why, but IK_ALIGN is needed here. */
   align_size = IK_ALIGN(disp_string_data + number_of_chars * sizeof(ikchar));
-  s_str      = ik_safe_alloc(pcb, align_size) | string_tag;
+  s_str	     = ik_safe_alloc(pcb, align_size) | string_tag;
   ref(s_str, off_string_length) = IK_FIX(number_of_chars);
   return s_str;
 }
@@ -270,11 +299,11 @@ ika_integer_from_long (ikpcb * pcb, long N)
     /* wordsize == sizeof(long) */
     ikptr s_bn = ik_safe_alloc(pcb, IK_ALIGN(wordsize + disp_bignum_data)) | vector_tag;
     if (N > 0) { /* positive bignum */
-      ref(s_bn, off_bignum_tag)  =
+      ref(s_bn, off_bignum_tag)	 =
 	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_length_shift));
       ref(s_bn, off_bignum_data) = (ikptr)+N;
     } else { /* zero or negative bignum */
-      ref(s_bn, off_bignum_tag)  =
+      ref(s_bn, off_bignum_tag)	 =
 	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_length_shift) | (1 << bignum_sign_shift));
       ref(s_bn, off_bignum_data) = (ikptr)-N;
     }
@@ -284,15 +313,15 @@ ika_integer_from_long (ikpcb * pcb, long N)
 ikptr
 ika_integer_from_llong (ikpcb * pcb, ik_llong N)
 {
-  /* If it  is in the range  of "long", use the  appropriate function to
+  /* If it  is in the range  of "long", use the	 appropriate function to
      allocate memory only for a "long" in the data area. */
   if (((ik_llong)(long) N) == N)
     return ika_integer_from_long(pcb, (long)N);
   else {
 #undef NUMBER_OF_WORDS
 #define NUMBER_OF_WORDS		sizeof(ik_llong) / sizeof(mp_limb_t)
-    int   align_size = IK_ALIGN(disp_bignum_data + sizeof(ik_llong));
-    ikptr s_bn       = ik_safe_alloc(pcb, align_size) | vector_tag;
+    int	  align_size = IK_ALIGN(disp_bignum_data + sizeof(ik_llong));
+    ikptr s_bn	     = ik_safe_alloc(pcb, align_size) | vector_tag;
     if (N > 0){
       ref(s_bn, off_bignum_tag) =
 	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_length_shift));
@@ -327,7 +356,7 @@ ika_integer_from_ulong (ikpcb * pcb, ik_ulong N)
 ikptr
 ika_integer_from_ullong (ikpcb * pcb, ik_ullong N)
 {
-  /* If  it is  in the  range of  "unsigned long",  use  the appropriate
+  /* If	 it is	in the	range of  "unsigned long",  use	 the appropriate
      function to allocate memory only for an "unsigned long" in the data
      area. */
   if (((ik_ullong)(ik_ulong) N) == N)
@@ -335,8 +364,8 @@ ika_integer_from_ullong (ikpcb * pcb, ik_ullong N)
   else {
 #undef NUMBER_OF_WORDS
 #define NUMBER_OF_WORDS		sizeof(ik_ullong) / sizeof(mp_limb_t)
-    int    align_size = IK_ALIGN(disp_bignum_data + sizeof(ik_ullong));
-    ikptr  bn         = ik_safe_alloc(pcb, align_size);
+    int	   align_size = IK_ALIGN(disp_bignum_data + sizeof(ik_ullong));
+    ikptr  bn	      = ik_safe_alloc(pcb, align_size);
     bcopy((char*)(&N), (char*)(bn+disp_bignum_data), sizeof(ik_ullong));
     /* "normalize_bignum()" wants an *untagged* pointer as argument. */
     return normalize_bignum(NUMBER_OF_WORDS, 0, bn);
@@ -416,8 +445,8 @@ ik_integer_to_llong (ikptr x)
   else if (x == void_object)
     return 0;
   else {
-    ikptr fst              = ref(x, -vector_tag);
-    ikptr pos_one_limb_tag = (ikptr)(bignum_tag       | (1 << bignum_length_shift));
+    ikptr fst		   = ref(x, -vector_tag);
+    ikptr pos_one_limb_tag = (ikptr)(bignum_tag	      | (1 << bignum_length_shift));
     ikptr neg_one_limb_tag = (ikptr)(pos_one_limb_tag | (1 << bignum_sign_shift));
     if (fst == pos_one_limb_tag)
       return (ik_ulong)ref(x, off_bignum_data);
@@ -438,7 +467,7 @@ ik_integer_to_ullong (ikptr x)
   else if (x == void_object)
     return 0;
   else {
-    ik_ullong *  memory = (ik_ullong *)(x + off_bignum_data);
+    ik_ullong *	 memory = (ik_ullong *)(x + off_bignum_data);
     assert(! bnfst_negative(ref(x, -vector_tag)));
     return *memory;
   }
@@ -450,10 +479,10 @@ uint32_t
 ik_integer_to_uint32 (ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
-    long        X = IK_UNFIX(x);
+    long	X = IK_UNFIX(x);
     return ((0 <= X) && (X <= UINT32_MAX))? ((uint32_t)X) : false_object;
   } else {
-    uint32_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
+    uint32_t *	memory = (void *)(((uint8_t *)x) + off_bignum_data);
     return (bnfst_negative(ref(x, -vector_tag)))? -(*memory) : (*memory);
   }
 }
@@ -461,7 +490,7 @@ int32_t
 ik_integer_to_sint32 (ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
-    long        X = IK_UNFIX(x);
+    long	X = IK_UNFIX(x);
     return ((INT32_MIN <= X) && (X <= INT32_MAX))? ((int32_t)X) : false_object;
   } else {
     int32_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
@@ -472,10 +501,10 @@ uint64_t
 ik_integer_to_uint64 (ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
-    long        X = IK_UNFIX(x);
+    long	X = IK_UNFIX(x);
     return ((0 <= X) && (X <= UINT64_MAX))? ((uint64_t)X) : false_object;
   } else {
-    uint64_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
+    uint64_t *	memory = (void *)(((uint8_t *)x) + off_bignum_data);
     return (bnfst_negative(ref(x, -vector_tag)))? -(*memory) : (*memory);
   }
 }
@@ -483,7 +512,7 @@ int64_t
 ik_integer_to_sint64 (ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
-    long        X = IK_UNFIX(x);
+    long	X = IK_UNFIX(x);
     return ((INT64_MIN <= X) && (X <= INT64_MAX))? ((int64_t)X) : false_object;
   } else {
     int64_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);

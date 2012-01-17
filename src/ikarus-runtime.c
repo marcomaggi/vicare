@@ -398,11 +398,11 @@ ik_safe_alloc (ikpcb* pcb, unsigned long size)
   alloc_ptr	= pcb->allocation_pointer;
   end_ptr	= pcb->heap_base + pcb->heap_size;
   new_alloc_ptr	= alloc_ptr + size;
-  if (new_alloc_ptr < end_ptr)
+  if (new_alloc_ptr < end_ptr) {
     /* There  is room  in the  current heap  block: update  the  pcb and
        return the offset. */
     pcb->allocation_pointer = new_alloc_ptr;
-  else {
+  } else {
     /* No room in the current heap block: run GC. */
     ik_collect(size, pcb);
     {
@@ -442,42 +442,43 @@ ik_unsafe_alloc (ikpcb* pcb, unsigned long requested_size)
   if (new_alloc_ptr < end_ptr) {
     pcb->allocation_pointer = new_alloc_ptr;
     return alloc_ptr;
-  }
-  /* No room in the current heap block: enlarge the heap by allocating a
-     new segment. */
-  if (alloc_ptr) {
-    /* This is not  the first heap segment allocation,  so prepend a new
-       "ikpages"  node to  the  linked  list of  old  heap segments  and
-       initialise it with a reference to the current heap segment. */
-    ikpages *	p = ik_malloc(sizeof(ikpages));
-    p->base = pcb->heap_base;
-    p->size = pcb->heap_size;
-    p->next = pcb->heap_pages;
-    pcb->heap_pages = p;
-  }
-  { /* accounting */
-    long bytes = ((long)pcb->allocation_pointer) - ((long)pcb->heap_base);
-    long minor = bytes + pcb->allocation_count_minor;
-    while (minor >= IK_MOST_BYTES_IN_MINOR) {
-      minor -= IK_MOST_BYTES_IN_MINOR;
-      pcb->allocation_count_major++;
+  } else {
+    /* No room in the current heap block: enlarge the heap by allocating
+       a new segment. */
+    if (alloc_ptr) {
+      /* This is not the first heap segment allocation, so prepend a new
+	 "ikpages"  node to  the linked  list of  old heap  segments and
+	 initialise it with a reference to the current heap segment. */
+      ikpages *	p = ik_malloc(sizeof(ikpages));
+      p->base = pcb->heap_base;
+      p->size = pcb->heap_size;
+      p->next = pcb->heap_pages;
+      pcb->heap_pages = p;
     }
-    pcb->allocation_count_minor = minor;
-  }
-  { /* Allocate a new heap segment and register it as current heap base.
-       While computing the segment size:  make sure that there is always
-       some room at the end of the new heap segment after allocating the
-       requested memory for the new object. */
-    unsigned long new_size = (requested_size > IK_HEAP_EXT_SIZE) ? requested_size : IK_HEAP_EXT_SIZE;
-    new_size       += 2 * 4096;
-    new_size       = IK_ALIGN_TO_NEXT_PAGE(new_size);
-    alloc_ptr      = ik_mmap_mixed(new_size, pcb);
-    pcb->heap_base = alloc_ptr;
-    pcb->heap_size = new_size;
-    pcb->allocation_redline = alloc_ptr + new_size - 2 * 4096;
-    new_alloc_ptr = alloc_ptr + requested_size;
-    pcb->allocation_pointer = new_alloc_ptr;
-    return alloc_ptr;
+    { /* accounting */
+      long bytes = ((long)pcb->allocation_pointer) - ((long)pcb->heap_base);
+      long minor = bytes + pcb->allocation_count_minor;
+      while (minor >= IK_MOST_BYTES_IN_MINOR) {
+	minor -= IK_MOST_BYTES_IN_MINOR;
+	pcb->allocation_count_major++;
+      }
+      pcb->allocation_count_minor = minor;
+    }
+    { /* Allocate a  new heap  segment and register  it as  current heap
+	 base.  While  computing the segment size: make  sure that there
+	 is always  some room at the  end of the new  heap segment after
+	 allocating the requested memory for the new object. */
+      unsigned long new_size = (requested_size > IK_HEAP_EXT_SIZE) ? requested_size : IK_HEAP_EXT_SIZE;
+      new_size       += 2 * 4096;
+      new_size       = IK_ALIGN_TO_NEXT_PAGE(new_size);
+      alloc_ptr      = ik_mmap_mixed(new_size, pcb);
+      pcb->heap_base = alloc_ptr;
+      pcb->heap_size = new_size;
+      pcb->allocation_redline = alloc_ptr + new_size - 2 * 4096;
+      new_alloc_ptr = alloc_ptr + requested_size;
+      pcb->allocation_pointer = new_alloc_ptr;
+      return alloc_ptr;
+    }
   }
 }
 

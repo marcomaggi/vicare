@@ -355,13 +355,10 @@ ik_decl void	ik_fprint		(FILE*, ikptr x);
 #define IK_CAAR(PAIR)		    IK_CAR(IK_CAR(PAIR))
 #define IK_CDAR(PAIR)		    IK_CDR(IK_CAR(PAIR))
 
-#define IKA_DECLARE_ALLOC_AND_CONS(PAIR,LIST,PCB)    \
-  ikptr PAIR = IKA_PAIR_ALLOC(PCB);		     \
-  IK_CDR(PAIR) = LIST;				    \
-  LIST=PAIR;
+#define IKA_PAIR_ALLOC(PCB)	(ik_safe_alloc((PCB),  pair_size) | pair_tag)
+#define IKU_PAIR_ALLOC(PCB)	(ik_unsafe_alloc((PCB),pair_size) | pair_tag)
 
-#define IKA_PAIR_ALLOC(PCB)	(ik_safe_alloc((PCB), IK_ALIGN(pair_size)) | pair_tag)
-
+ik_decl ikptr ika_pair_alloc		(ikpcb * pcb);
 ik_decl long ik_list_length		(ikptr x);
 ik_decl void ik_list_to_argv		(ikptr x, char **argv);
 ik_decl void ik_list_to_argv_and_argc	(ikptr x, char **argv, long *argc);
@@ -577,7 +574,8 @@ ik_decl ikptr ikrt_is_pointer	(ikptr x);
 #define off_vector_length	(disp_vector_length - vector_tag)
 #define off_vector_data		(disp_vector_data   - vector_tag)
 
-ik_decl ikptr ika_vector_alloc	(ikpcb * pcb, long number_of_items);
+ik_decl ikptr ika_vector_alloc_no_init	(ikpcb * pcb, long number_of_items);
+ik_decl ikptr ika_vector_alloc_and_init	(ikpcb * pcb, long number_of_items);
 ik_decl int   ik_is_vector	(ikptr s_vec);
 
 #define IK_VECTOR_LENGTH_FX(VEC)	IK_REF((VEC), off_vector_length)

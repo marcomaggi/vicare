@@ -227,16 +227,16 @@ ikrt_glibc_if_nameindex (ikpcb * pcb)
   int           i;
   arry = if_nameindex();
   {
-    s_alist    = s_spine = IKA_PAIR_ALLOC(pcb);
+    s_alist    = s_spine = ika_pair_alloc(pcb);
     pcb->root0 = &s_alist;
     pcb->root1 = &s_spine;
     {
       for (i=0; arry[i].if_index;) {
-	IK_ASS(IK_CAR(s_spine), IKA_PAIR_ALLOC(pcb));
+	IK_ASS(IK_CAR(s_spine), ika_pair_alloc(pcb));
 	IK_CAAR(s_spine) = IK_FIX(arry[i].if_index);
 	IK_ASS(IK_CDAR(s_spine), ika_bytevector_from_cstring(pcb, arry[i].if_name));
 	if (arry[++i].if_index) {
-	  IK_ASS(IK_CDR(s_spine), IKA_PAIR_ALLOC(pcb));
+	  IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	  s_spine = IK_CDR(s_spine);
 	} else
 	  IK_CDR(s_spine) = null_object;
@@ -558,7 +558,7 @@ ikrt_glibc_lgamma (ikptr s_X, ikpcb * pcb)
   double        X   = IK_FLONUM_DATA(s_X);
   int           sgn;
   double        Y   = lgamma_r(X, &sgn);
-  ikptr         s_pair = IKA_PAIR_ALLOC(pcb);
+  ikptr         s_pair = ika_pair_alloc(pcb);
   pcb->root0 = &s_pair;
   {
     IK_CAR(s_pair) = iku_flonum_alloc(pcb, Y);
@@ -757,7 +757,7 @@ ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb *pcb)
       if (0 == rv) {
 	s_retval = ika_pointer_alloc(pcb, (ik_ulong)rex);
       } else {
-	s_retval	  = IKA_PAIR_ALLOC(pcb);
+	s_retval	  = ika_pair_alloc(pcb);
 	error_message_len = regerror(rv, rex, NULL, 0);
 	IK_CAR(s_retval)  = IK_FIX(rv);
 	IK_ASS(IK_CDR(s_retval), ika_bytevector_alloc(pcb, (long)error_message_len-1));
@@ -812,7 +812,7 @@ ikrt_glibc_regexec (ikptr s_rex, ikptr s_string, ikptr s_flags, ikpcb *pcb)
   case 0:
     {
       size_t      i;
-      ikptr       s_match_vector = ika_vector_alloc(pcb, 1+nmatch);
+      ikptr       s_match_vector = ika_vector_alloc_and_init(pcb, 1+nmatch);
       ikptr       s_pair = void_object;
       pcb->root0 = &s_match_vector;
       pcb->root1 = &s_pair;
@@ -892,7 +892,7 @@ ikrt_glibc_wordexp (ikptr s_pattern, ikptr s_flags, ikpcb * pcb)
   W.we_offs     = 0;
   rv = wordexp(pattern, &W, IK_UNFIX(s_flags));
   if (0 == rv) {
-    s_words    = ika_vector_alloc(pcb, (long)W.we_wordc);
+    s_words    = ika_vector_alloc_and_init(pcb, (long)W.we_wordc);
     pcb->root0 = &s_words;
     {
       for (i=0; i<W.we_wordc; ++i) {

@@ -16,7 +16,7 @@ VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH)	\
 		  CHECK_TEST_NAME=$(name)				\
 		  VICARE_SRC_DIR=$(srcdir) VICARE_BUILDDIR=$(builddir)	\
 		  LD_LIBRARY_PATH=$(builddir)/../src/.libs
-VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
+VICARE_RUN	= $(VICARE_ENV) $(GDB) $(VICARE) $(VICARE_FLAGS)
 
 .PHONY: test tests test-r6rs proof proofs
 
