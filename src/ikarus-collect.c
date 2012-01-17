@@ -926,7 +926,7 @@ static void collect_stack(gc_t* gc, ikptr top, ikptr end) {
 
 
 static void
-add_list (gc_t* gc, unsigned int segment_bits, ikptr x, ikptr* loc)
+add_list (gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc)
 /* Move the live list object X,  and all its component objects, to a new
    location and store in LOC a new machine word which must replace every
    occurrence of X.
@@ -936,33 +936,32 @@ add_list (gc_t* gc, unsigned int segment_bits, ikptr x, ikptr* loc)
 {
   int collect_gen = gc->collect_gen;
   for (;;) {
-    ikptr first_word  = ref(x, off_car);
-    ikptr second_word = ref(x, off_cdr);
-    ikptr y;
+    ikptr first_word      = IK_CAR(X);
+    ikptr second_word     = IK_CDR(X);
+    int   second_word_tag = IK_TAGOF(second_word);
+    ikptr Y;
     if ((segment_bits & type_mask) != weak_pairs_type)
-      y = gc_alloc_new_pair(gc)      | pair_tag;
+      Y = gc_alloc_new_pair(gc)      | pair_tag;
     else
-      y = gc_alloc_new_weak_pair(gc) | pair_tag;
-    *loc = y;
-    ref(x,off_car) = IK_FORWARD_PTR;
-    ref(x,off_cdr) = y;
-    ref(y,off_car) = first_word;
-    int second_word_tag = IK_TAGOF(second_word);
+      Y = gc_alloc_new_weak_pair(gc) | pair_tag;
+    *loc = Y;
+    IK_CAR(X) = IK_FORWARD_PTR;
+    IK_CDR(X) = Y;
+    IK_CAR(Y) = first_word;
     if (pair_tag == second_word_tag) {
       /* X is a list */
-      if (IK_FORWARD_PTR == ref(second_word, -pair_tag)) { /* the cdr has been already collected */
-        ref(y, off_cdr) = ref(second_word, wordsize-pair_tag);
+      if (IK_FORWARD_PTR == IK_REF(second_word, -pair_tag)) { /* the cdr has been already collected */
+        IK_CDR(Y) = IK_REF(second_word, wordsize - pair_tag);
         return;
-      }
-      else {
+      } else {
         segment_bits = gc->segment_vector[IK_PAGE_INDEX(second_word)];
         int gen = segment_bits & gen_mask;
         if (gen > collect_gen) {
-          ref(y, off_cdr) = second_word;
+          IK_REF(Y, off_cdr) = second_word;
           return;
         } else {
-          x   = second_word;
-          loc = (ikptr*)(long)(y + off_cdr);
+          X   = second_word;
+          loc = (ikptr*)(long)(Y + off_cdr);
           /* don't return */
         }
       }
@@ -971,17 +970,17 @@ add_list (gc_t* gc, unsigned int segment_bits, ikptr x, ikptr* loc)
 	     (second_word_tag == 0) ||
 	     (second_word_tag == (1<<fx_shift))) {
       /* X is a pair not starting a list */
-      ref(y,off_cdr) = second_word;
+      IK_CDR(Y) = second_word;
       return;
     }
-    else if (ref(second_word, -second_word_tag) == IK_FORWARD_PTR) {
+    else if (IK_REF(second_word, -second_word_tag) == IK_FORWARD_PTR) {
       /* the cdr X of X has already been collected */
-      ref(y, off_cdr) = ref(second_word, wordsize-second_word_tag);
+      IK_CDR(Y) = IK_REF(second_word, wordsize - second_word_tag);
       return;
     }
     else {
       /* X is a pair not starting a list */
-      ref(y, off_cdr) = add_object(gc, second_word, "add_list");
+      IK_CDR(Y) = add_object(gc, second_word, "add_list");
       return;
     }
   }

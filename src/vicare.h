@@ -82,8 +82,8 @@
 #define ik_ptr_page_size \
   ((pagesize - sizeof(long) - sizeof(struct ik_ptr_page*))/sizeof(ikptr))
 
-/* Given the  pointer X evaluate to the	 index of the memory  page it is
-   in. */
+/* Given the  pointer X evaluate to the  index of the memory  page it is
+   in.  Given a number of bytes X evaluate to an index offset. */
 #define IK_PAGE_INDEX(x)   \
   (((ik_ulong)(x)) >> pageshift)
 
