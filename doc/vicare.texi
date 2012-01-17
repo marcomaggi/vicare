@@ -14086,7 +14086,7 @@ interpretations:
 @table @strong
 @item Immediate values
 Objects that fit in a single machine word: special constants, fixnums,
-characters and transcoders.
+characters and input/output port transcoders.
 
 @item Reference values
 Objects allocated on the heap and subject to garbage collection; they
@@ -14111,8 +14111,8 @@ reference @ikptr{} values have two minor interpretations:
 
 @table @strong
 @item Vector tagged references
-Pointer values whose @math{3} least significant bits are set to the
-vector tag.  They reference multiword objects allocated on the heap:
+Memory pointer values whose @math{3} least significant bits are set to
+the vector tag.  They reference multiword objects allocated on the heap:
 vectors, bignums, structures, flonums, ratnums, compnums, cflonums,
 continuations, code, ports, symbols, pointers.
 
@@ -14152,14 +14152,14 @@ Return an integer representing the @math{3} least significant bits of an
 @deftypefnx {Preprocessor Macro} ikptr ref (ikptr @var{value_ref}, long @var{byte_offset})
 Getter and setter for machine words allocated on the heap.  Interpret
 @var{value_ref} as a pointer to an array of @ikptr{} and locate the
-value at @var{byte_offset}.  A use of this macro can appear both as
-operand and as left--side of an assignment.
+value at the zero--based @var{byte_offset}.  A use of this macro can
+appear both as operand and as left--side of an assignment.
 
 @example
 ikptr   P, Q;
 
-Q = IK_REF(P, 3);     /* retrieve the 3rd word */
-IK_REF(P, 1) = 123L;  /* store a value in the 1st word */
+Q = IK_REF(P, 2);     /* retrieve the 3rd word */
+IK_REF(P, 0) = 123L;  /* store a value in the 1st word */
 @end example
 
 Both @var{value_ref} and @var{byte_offset} are first cast to @code{long}
@@ -14168,6 +14168,11 @@ values, then added and the sum is cast to @code{ikptr *}.
 Values for @var{byte_offset} are usually precomputed and take into
 account a component used to remove the tag from the pointer in
 @var{value_ref}.
+
+@quotation
+@strong{NOTE} @cfunc{ref} is defined only in the internal header file
+and its use is deprecated.
+@end quotation
 @end deftypefn
 
 @c ------------------------------------------------------------
@@ -14219,8 +14224,8 @@ references to values which have been already garbage collected.
 @end defmac
 
 The variable values that fit in a single machine word are fixnums,
-characters and transcoders.  The last byte of these machine words is
-tagged as follows:
+characters and port transcoders.  The last byte of these machine words
+is tagged as follows:
 
 @example
    object      |  tag bits  | tag hex | mask bits
@@ -14238,11 +14243,30 @@ to identify a fixnum we can do:
 ikptr   X;
 
 if (fx_tag == (X & fx_mask))
-  is_a_fixnum();
+  it_is_a_fixnum();
+else
+  it_is_not();
 @end example
 
 @noindent
-the same for the other immediate variable values.
+or just use the macro @cfunc{IK_IS_FIXNUM}; similarly for for the other
+immediate variable values.
+
+Notice that a @cnull{} pointer stored in a @ikptr{} with zero bits as
+tag represents the fixnum zero; also, the zero tag bits for fixnums are
+in such a number that: a tagged @ikptr{} fixnum can be interpreted as
+the number of bytes needed to hold a number of machine words equal to
+the number represented by the fixnum itself, that is the following holds
+true:
+
+@example
+long    number_of_words = ...;
+
+number_of_words * wordsize == number_of_words << fx_shift;
+@end example
+
+@noindent
+where @code{fx_shift} is the number of bits in the fixnum's tag.
 
 @c ------------------------------------------------------------
 
@@ -14288,11 +14312,12 @@ to zero.
 The vector tag is used to tag machine word references to multiple object
 types: vectors, bignums, structures, flonums, ratnums, compnums,
 cflonums, continuations, code, ports, symbols, pointers, system
-continuations.
+continuations.  The first word in the memory block of these types has
+the least significant bits set to a secondary tag.
 
 All the possible values for @math{3}-bit tags in reference values are
-already allocated; new object types can be added only as subtypes of
-values whose references are tagged as vector.
+already allocated; new object types can be added only defining a new
+secondary tag with references tagged as vector.
 
 While the @api{} defines predicates to recognise values, to identify a
 type--specific reference we can do:
@@ -14301,14 +14326,16 @@ type--specific reference we can do:
 ikptr   X;
 
 if (pair_tag == (X & pair_mask))
-  is_a_pair();
+  it_is_a_pair();
+else
+  it_is_not();
 @end example
 
 @noindent
-the same for the other types.  The vector tag acts as @dfn{primary tag};
-a @dfn{secondary tag} is stored in the least significant bits of the
-referenced vector of words on the heap; to recognise such values we can
-do:
+similarly for the other types.  The vector tag acts as @dfn{primary
+tag}; a @dfn{secondary tag} is stored in the least significant bits of
+the referenced vector of words on the heap; to recognise such values we
+can do:
 
 @example
 ikptr  X;
@@ -14317,6 +14344,8 @@ if ((vector_tag    == (X & vector_tag)) &&
     (secondary_tag == (secondary_mask
                        & IK_REF(X, -vector_tag))))
   it_is();
+else
+  it_is_not();
 @end example
 
 @noindent
@@ -14359,12 +14388,13 @@ elements.
 
 @item Bignums
 The first word uses the @math{3} least significant bits as tag, the
-@math{4}th bit representing the sign and the remaining bits representing
-the number of words in the bignum data area.
+@math{4}th bit representing the sign (@math{0} for positive, @math{1}
+for negative) and the remaining bits representing the number of words in
+the bignum data area.
 
 @item Structures
 The first word is tagged as vector, because the first word of a
-structure is itself a structure: the type descriptor.
+structure is itself a reference to a structure: the type descriptor.
 
 @item Ports
 The most significant bits of the first word are used for port
@@ -14380,7 +14410,7 @@ In short, memory allocation which may trigger a garbage collection is
 performed as follows:
 
 @example
-ikpcb     pcb = the_pcb;
+ikpcb *   pcb = the_pcb;
 long int  number_of_bytes = the_number_of_bytes;
 ikptr     p = ik_safe_alloc(pcb, IK_ALIGN(number_of_bytes));
 @end example
@@ -14390,17 +14420,27 @@ while memory allocation without garbage collection is performed as
 follows:
 
 @example
-ikpcb     pcb = the_pcb;
+ikpcb *   pcb = the_pcb;
 long int  number_of_bytes = the_number_of_bytes;
 ikptr     p = ik_unsafe_alloc(pcb, IK_ALIGN(number_of_bytes));
 @end example
 
 @noindent
-where @code{pcb} is a pointer to the ``Process Control Block'' data
-structure.
+where @code{p} is an untagged memory pointer and @code{pcb} is a pointer
+to the ``Process Control Block'' data structure.
 
-Memory blocks subject to garbage collection are allocated in the current
-segment of the Scheme heap, a contiguous region of memory:
+To add a tag, for example the @code{vector_tag}, to an untagged memory
+pointer we can do:
+
+@example
+ikpcb * pcb = the_pcb;
+long    len = IK_ALIGN(the_number_of_bytes);
+ikptr   ref = ik_safe_alloc(pcb, len) | vector_tag;
+@end example
+
+Objects subject to garbage collection are allocated on the Scheme heap,
+which is an array of contiguous memory segments; the next object is
+allocated in the ``current segment'' of the heap:
 
 @example
     allocated  allocated      allocated
@@ -14418,7 +14458,7 @@ purposes:
 
 @enumerate
 @item
-To make pointer indirection efficient on the underlying platform.
+To make pointer indirection efficient for the underlying platform.
 
 @item
 To have pointer values with the @math{3} least significant bits set to
@@ -14458,11 +14498,11 @@ pcb->allocation_pointer   = (ikptr)next_free_block;
 @deftypevr {Global Variable} {ikpcb *} the_pcb
 Global variable referencing the process control block.  It is rarely
 needed because when calling a C function from Scheme a pointer to the
-@pcb{} is always pushed on the stack as last argument.
+@pcb{} is always pushed on the C stack as last argument.
 @end deftypevr
 
 
-@deftypefn {Preprocessor Macro} long IK_ALIGN (long @var{number_of_bytes})
+@deftypefn {Preprocessor Macro} {unsigned long} IK_ALIGN (unsigned long @var{number_of_bytes})
 Convert @var{number_of_bytes} to the number of bytes requested to
 satisfy pointer alignment constraints.  The aligned size is always an
 exact multiple of the underlying platform's word size (32-bit or
@@ -14528,7 +14568,7 @@ control block, @var{align_size} must be the requested number of bytes
 filtered through @cfunc{IK_ALIGN}.
 
 If not enough memory is available on the current heap segment: a new
-heap segment is allocated; is such allocation fails: the process is
+heap segment is allocated; if such allocation fails: the process is
 terminated with exit status @code{EXIT_FAILURE}.
 
 We notice explicitly that this function @strong{does not} trigger a
@@ -14569,7 +14609,7 @@ We must write C code with the following constraints:
 @item
 Before a call to @cfunc{ik_safe_alloc}: we must make sure that all the
 Scheme objects we are using in C code are reachable by the garbage
-collector.  This is made by registering an object as garbage collector
+collector.  This is done by registering an object as garbage collector
 root through the @code{root} fields of the @pcb{}.
 
 @item
@@ -14689,6 +14729,42 @@ IK_ASS(IK_CAR(s_pair), ika_bytevector_alloc(pcb, 8)); /* GOOD */
 
 @noindent
 yes, it is a hard life.
+
+Let's consider the following snippet, which is @strong{wrong}:
+
+@example
+ikpcb * pcb = the_pcb;
+ikptr   s_one, s_two;
+
+s_one = IKA_PAIR_ALLOC(pcb); /* WRONG */
+pcb->root0 = &s_one;
+@{
+  s_two = IKA_PAIR_ALLOC(pcb);
+@}
+pcb->root0 = NULL;
+@end example
+
+@noindent
+when the second pair is allocated, the first pair has car and cdr still
+uninitialised: the content of these words is undefined; this may cause
+undefined behaviour while the second allocation takes place and the
+garbage collection tries to scan the first pair.  The @strong{correct}
+code is:
+
+@example
+ikpcb * pcb = the_pcb;
+ikptr   s_one, s_two;
+
+s_one = ika_pair_alloc(pcb); /* GOOD */
+pcb->root0 = &s_one;
+@{
+  s_two = IKA_PAIR_ALLOC(pcb);
+@}
+pcb->root0 = NULL;
+@end example
+
+@noindent
+because @cfunc{ika_pair_alloc} initialises the car and the cdr.
 
 @c page
 @node objects fixnums
