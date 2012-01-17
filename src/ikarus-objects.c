@@ -261,17 +261,19 @@ ika_struct_alloc_and_init (ikpcb * pcb, ikptr s_rtd)
    use of "pcb->root9". */
 {
   ikptr	s_num_of_fields = IK_REF(s_rtd, off_rtd_length);
+  long	num_of_fields   = IK_UNFIX(s_num_of_fields);
   /* Do not ask me why, but IK_ALIGN is needed here. */
   long	align_size      = IK_ALIGN(disp_record_data + s_num_of_fields);
   ikptr s_stru;
+  long  i;
   pcb->root9 = &s_rtd;
   {
     s_stru = ik_safe_alloc(pcb, align_size) | record_tag;
     ref(s_stru, off_record_rtd) = s_rtd;
   }
   pcb->root9 = NULL;
-  /* set the data area to zero */
-  memset((void *)(s_stru - off_record_data), 0, s_num_of_fields);
+  for (i=0; i<num_of_fields; ++i)
+    IK_ITEM(s_stru, i) = void_object;
   return s_stru;
 }
 
