@@ -601,7 +601,7 @@ next_gen (int i)
 
 static ik_ptr_page*
 move_tconc(ikptr tc, ik_ptr_page* ls) {
-  if ((ls == NULL) || (ls->count == ik_ptr_page_size)) {
+  if ((ls == NULL) || (ls->count == IK_PTR_PAGE_SIZE)) {
     ik_ptr_page* page = (ik_ptr_page*)ik_mmap(pagesize);
     page->count = 0;
     page->next = ls;

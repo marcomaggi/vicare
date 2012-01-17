@@ -79,11 +79,13 @@
 #define IK_FASL_HEADER		((sizeof(ikptr) == 4)? "#@IK01" : "#@IK02")
 #define IK_FASL_HEADER_LEN	(strlen(IK_FASL_HEADER))
 
-#define ik_ptr_page_size \
+#define IK_PTR_PAGE_SIZE \
   ((pagesize - sizeof(long) - sizeof(struct ik_ptr_page*))/sizeof(ikptr))
 
-/* Given the  pointer X evaluate to the  index of the memory  page it is
-   in.  Given a number of bytes X evaluate to an index offset. */
+/* Given the pointer X or tagged pointer X: evaluate to the index of the
+   memory page  it is in; notice that  the tag bits of  a tagged pointer
+   are not  influent.  Given a  number of bytes  X evaluate to  an index
+   offset. */
 #define IK_PAGE_INDEX(x)   \
   (((ik_ulong)(x)) >> pageshift)
 
@@ -140,7 +142,7 @@ typedef struct ik_callback_locative {
 typedef struct ik_ptr_page {
   long		count;
   struct ik_ptr_page* next;
-  ikptr		ptr[ik_ptr_page_size];
+  ikptr		ptr[IK_PTR_PAGE_SIZE];
 } ik_ptr_page;
 
 typedef struct ikpcb {
@@ -204,6 +206,10 @@ typedef struct ikpcb {
   ik_ulong		stack_size;
   ikptr			symbol_table;
   ikptr			gensym_table;
+  /* Array of linked lists; one for each GC generation.  The linked list
+     holds  references  to  Scheme  values  that  must  not  be  garbage
+     collected  even   when  they   are  not  referenced,   for  example
+     guardians. */
   ik_ptr_page*		protected_list[generation_count];
   ik_uint *		dirty_vector_base;
   ik_uint *		segment_vector_base;
@@ -309,6 +315,7 @@ ik_decl void	ik_fprint		(FILE*, ikptr x);
 /* This is the	secondary tag, in the first word  of the referenced heap
    vector. */
 #define code_tag		((ikptr)0x2F)
+#define disp_code_code_tag	0
 #define disp_code_code_size	(1 * wordsize)
 #define disp_code_reloc_vector	(2 * wordsize)
 #define disp_code_freevars	(3 * wordsize)

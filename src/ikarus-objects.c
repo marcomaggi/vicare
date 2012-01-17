@@ -210,7 +210,7 @@ ika_vector_alloc_no_init (ikpcb * pcb, long number_of_items)
   /* Do not ask me why, but IK_ALIGN is needed here. */
   long	align_size = IK_ALIGN(disp_vector_data + number_of_items * wordsize);
   ikptr	s_vec	   = ik_safe_alloc(pcb, align_size) | vector_tag;
-  ref(s_vec, off_vector_length) = IK_FIX(number_of_items);
+  IK_REF(s_vec, off_vector_length) = IK_FIX(number_of_items);
   return s_vec;
 }
 ikptr
@@ -219,10 +219,10 @@ ika_vector_alloc_and_init (ikpcb * pcb, long number_of_items)
   /* Do not ask me why, but IK_ALIGN is needed here. */
   long	align_size = IK_ALIGN(disp_vector_data + number_of_items * wordsize);
   ikptr	s_vec	   = ik_safe_alloc(pcb, align_size) | vector_tag;
-  long	i;
-  ref(s_vec, off_vector_length) = IK_FIX(number_of_items);
-  for (i=0; i<number_of_items; ++i)
-    IK_ITEM(s_vec, i) = void_object;
+  ikptr s_len      = IK_FIX(number_of_items);
+  IK_REF(s_vec, off_vector_length) = s_len;
+  /* set the data area to zero */
+  memset((char*)(long)(s_vec + off_vector_data), 0, s_len);
   return s_vec;
 }
 
@@ -260,20 +260,18 @@ ika_struct_alloc_and_init (ikpcb * pcb, ikptr s_rtd)
    descriptor.	All the fields are initialised to the void object.  Make
    use of "pcb->root9". */
 {
-  long	num_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
+  ikptr	s_num_of_fields = IK_REF(s_rtd, off_rtd_length);
   /* Do not ask me why, but IK_ALIGN is needed here. */
-  long	align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
+  long	align_size      = IK_ALIGN(disp_record_data + s_num_of_fields);
   ikptr s_stru;
-  long	i;
   pcb->root9 = &s_rtd;
   {
     s_stru = ik_safe_alloc(pcb, align_size) | record_tag;
     ref(s_stru, off_record_rtd) = s_rtd;
   }
   pcb->root9 = NULL;
-  for (i=0; i<num_of_fields; ++i) {
-    IK_ITEM(s_stru, i) = null_object;
-  }
+  /* set the data area to zero */
+  memset((void *)(s_stru - off_record_data), 0, s_num_of_fields);
   return s_stru;
 }
 

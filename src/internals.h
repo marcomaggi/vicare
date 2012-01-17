@@ -56,6 +56,8 @@
  ** Constants.
  ** ----------------------------------------------------------------- */
 
+#define IK_GUARDIANS_GENERATION_NUMBER	0
+
 #define IK_FORWARD_PTR		((ikptr)-1)
 #define IK_MOST_BYTES_IN_MINOR	0x10000000
 
