@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -1393,7 +1393,9 @@
 			    (with-arguments-validation (who)
 				((pathname  pathname))
 			      (with-pathnames ((pathname.bv  pathname))
-				(let* ((timespec (unsafe.make-vector 2))
+				;;All the  elements of this  vector must
+				;;be initialised here!!!
+				(let* ((timespec (make-vector 2))
 				       (rv       (?func pathname.bv timespec)))
 				  (if (unsafe.fxzero? rv)
 				      (+ (* #e1e9 (unsafe.vector-ref timespec 0))
