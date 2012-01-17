@@ -18,36 +18,33 @@
 #include "internals.h"
 
 ikptr
-ikrt_weak_cons(ikptr a, ikptr d, ikpcb* pcb){
-  ikptr ap = pcb->weak_pairs_ap;
+ikrt_weak_cons (ikptr a, ikptr d, ikpcb* pcb)
+{
+  ikptr ap  = pcb->weak_pairs_ap;
   ikptr nap = ap + pair_size;
   ikptr p;
-  if(nap > pcb->weak_pairs_ep){
+  if (nap > pcb->weak_pairs_ep) {
     ikptr mem = ik_mmap_typed(pagesize, weak_pairs_mt, pcb);
     pcb->weak_pairs_ap = mem + pair_size;
     pcb->weak_pairs_ep = mem + pagesize;
     p = mem | pair_tag;
-  }
-  else {
+  } else {
     pcb->weak_pairs_ap = nap;
     p = ap | pair_tag;
   }
-  ref(p, off_car) = a;
-  ref(p, off_cdr) = d;
+  IK_CAR(p) = a;
+  IK_CDR(p) = d;
   return p;
 }
-
 ikptr
-ikrt_is_weak_pair(ikptr x, ikpcb* pcb){
-  if(IK_TAGOF(x) != pair_tag){
+ikrt_is_weak_pair (ikptr x, ikpcb* pcb)
+{
+  if (IK_TAGOF(x) != pair_tag)
     return false_object;
-  }
-  unsigned int t = pcb->segment_vector[IK_PAGE_INDEX(x)];
-  if((t & type_mask) == weak_pairs_type){
-    return true_object;
-  } else {
-    return false_object;
+  else {
+    unsigned t = pcb->segment_vector[IK_PAGE_INDEX(x)];
+    return ((t & type_mask) == weak_pairs_type)? true_object : false_object;
   }
 }
 
-
+/* end of file */
