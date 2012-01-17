@@ -288,7 +288,7 @@ do_read (ikpcb* pcb, fasl_port* p)
     /* ascii string */
     long len;
     fasl_read_buf(p, &len, sizeof(long));
-    long size = IK_ALIGN(len*string_char_size + disp_string_data);
+    long size = IK_ALIGN(len*IK_STRING_CHAR_SIZE + disp_string_data);
     ikptr str = ik_unsafe_alloc(pcb, size) | string_tag;
     IK_REF(str, off_string_length) = IK_FIX(len);
     fasl_read_buf(p, (char*)(long)str+off_string_data, len);
@@ -310,7 +310,7 @@ do_read (ikpcb* pcb, fasl_port* p)
     /* string */
     long len;
     fasl_read_buf(p, &len, sizeof(long));
-    long size = IK_ALIGN(len*string_char_size + disp_string_data);
+    long size = IK_ALIGN(len*IK_STRING_CHAR_SIZE + disp_string_data);
     ikptr str = ik_unsafe_alloc(pcb, size) | string_tag;
     IK_REF(str, off_string_length) = IK_FIX(len);
     long i;
@@ -319,7 +319,7 @@ do_read (ikpcb* pcb, fasl_port* p)
       fasl_read_buf(p, &c, sizeof(ikchar));
       IK_CHAR32(str, i) = IK_CHAR32_FROM_INTEGER(c);
     }
-    //str[off_string_data+len*string_char_size] = 0;
+    //str[off_string_data+len*IK_STRING_CHAR_SIZE] = 0;
     if (put_mark_index) {
       p->marks[put_mark_index] = str;
     }

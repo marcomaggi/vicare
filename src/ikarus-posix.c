@@ -1649,7 +1649,7 @@ hostent_to_struct (ikptr s_rtd, struct hostent * src, ikpcb * pcb)
 /* Convert  a  C  language  "struct  hostent"  into  a  Scheme  language
    "struct-hostent".  Makes use of "pcb->root6,7,8". */
 {
-  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  ikptr s_dst = ika_struct_alloc_and_init(pcb, s_rtd); /* this uses "pcb->root9" */
   pcb->root8 = &s_dst;
   { /* store the official host name */
     IK_ASS(IK_FIELD(s_dst, 0), ika_bytevector_from_cstring(pcb, src->h_name));
@@ -1803,7 +1803,7 @@ addrinfo_to_struct (ikpcb * pcb, ikptr s_rtd, struct addrinfo * src, int with_ca
 /* Convert  a  C  language  "struct  addrinfo" into  a  Scheme  language
    "struct-addrinfo".  Make use of "pcb->root9". */
 {
-  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  ikptr s_dst = ika_struct_alloc_and_init(pcb, s_rtd); /* this uses "pcb->root9" */
   pcb->root9 = &s_dst;
   {
     IK_ASS(IK_FIELD(s_dst, 0), IK_FIX(src->ai_flags));
@@ -1893,7 +1893,7 @@ ikrt_posix_gai_strerror (ikptr s_error_code, ikpcb * pcb)
 
 
 /** --------------------------------------------------------------------
- ** Netword protocols database.
+ ** Network protocols database.
  ** ----------------------------------------------------------------- */
 
 static ikptr
@@ -1901,7 +1901,7 @@ protoent_to_struct (ikpcb * pcb, ikptr s_rtd, struct protoent * src)
 /* Convert  a  C  language  "struct  protoent" into  a  Scheme  language
    "struct-protoent".  Make use of "pcb->root7,8,9". */
 {
-  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  ikptr s_dst = ika_struct_alloc_and_init(pcb, s_rtd); /* this uses "pcb->root9" */
   pcb->root9 = &s_dst;
   {
     /* fill the field "p_name" */
@@ -2001,7 +2001,7 @@ servent_to_struct (ikpcb * pcb, ikptr s_rtd, struct servent * src)
 /* Convert  a  C  language  "struct  servent"  into  a  Scheme  language
    "struct-servent". Make use of "pcb->root7,8,9". */
 {
-  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  ikptr s_dst = ika_struct_alloc_and_init(pcb, s_rtd); /* this uses "pcb->root9" */
   pcb->root9 = &s_dst;
   {
     /* fill the field "s_name" */
@@ -2107,7 +2107,7 @@ netent_to_struct (ikpcb * pcb, ikptr s_rtd, struct netent * src)
 /* Convert  a  C  language   "struct  netent"  into  a  Scheme  language
    "struct-netent".  Make use of "pcb->root7,8,9". */
 {
-  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  ikptr s_dst = ika_struct_alloc_and_init(pcb, s_rtd); /* this uses "pcb->root9" */
   pcb->root9 = &s_dst;
   {
     IK_ASS(IK_FIELD(s_dst, 0), ika_bytevector_from_cstring(pcb, src->n_name));
@@ -2691,7 +2691,7 @@ passwd_to_struct (ikptr s_rtd, struct passwd * src, ikpcb * pcb)
 /* Convert  a  C  language   "struct  passwd"  into  a  Scheme  language
    "struct-passwd".  Makes use of "pcb->root9". */
 {
-  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  ikptr s_dst = ika_struct_alloc_and_init(pcb, s_rtd); /* this uses "pcb->root9" */
   pcb->root9 = &s_dst;
   {
     IK_ASS(IK_FIELD(s_dst, 0), ika_bytevector_from_cstring(pcb, src->pw_name));
@@ -2770,7 +2770,7 @@ group_to_struct (ikptr s_rtd, struct group * src, ikpcb * pcb)
 /* Convert  a   C  language  "struct  group"  into   a  Scheme  language
    "struct-group".  Makes use of "pcb->root7,8,9". */
 {
-  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  ikptr s_dst = ika_struct_alloc_and_init(pcb, s_rtd); /* this uses "pcb->root9" */
   pcb->root9 = &s_dst;
   {
     IK_ASS(IK_FIELD(s_dst, 0), ika_bytevector_from_cstring(pcb, src->gr_name));
@@ -2960,7 +2960,7 @@ tms_to_struct (ikptr s_rtd, struct tms * src, ikpcb * pcb)
 /* Convert   a  C  language   "struct  tms"   into  a   Scheme  language
    "struct-tms".  Makes use of "pcb->root9". */
 {
-  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  ikptr s_dst = ika_struct_alloc_and_init(pcb, s_rtd); /* this uses "pcb->root9" */
   pcb->root9 = &s_dst;
   {
 #if 0
@@ -2995,7 +2995,7 @@ ikrt_posix_gettimeofday (ikptr s_rtd, ikpcb * pcb)
   errno = 0;
   rv	= gettimeofday(&T, NULL);
   if (0 == rv) {
-    ikptr	s_stru = ika_struct_alloc(pcb, s_rtd);
+    ikptr	s_stru = ika_struct_alloc_and_init(pcb, s_rtd);
     pcb->root0 = &s_stru;
     {
       IK_ASS(IK_FIELD(s_stru, 0), ika_integer_from_long(pcb, T.tv_sec));
@@ -3014,7 +3014,7 @@ tm_to_struct (ikptr s_rtd, struct tm * src, ikpcb * pcb)
 /* Convert a C language "struct  tm" into a Scheme language "struct-tm".
    Makes use of "pcb->root9" only. */
 {
-  ikptr s_dst = ika_struct_alloc(pcb, s_rtd); /* this uses "pcb->root9" */
+  ikptr s_dst = ika_struct_alloc_and_init(pcb, s_rtd); /* this uses "pcb->root9" */
   pcb->root9 = &s_dst;
   {
     IK_ASS(IK_FIELD(s_dst, 0), ika_integer_from_long(pcb, (long)(src->tm_sec)));

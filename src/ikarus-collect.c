@@ -990,14 +990,14 @@ add_list (gc_t* gc, unsigned int segment_bits, ikptr x, ikptr* loc)
 
 static ikptr
 #ifndef NDEBUG
-add_object_proc (gc_t* gc, ikptr x, char* caller)
+add_object_proc (gc_t* gc, ikptr X, char* caller)
 /* Move  the live  object X,  and all  its component  objects, to  a new
    location  and return  a new  machine  word which  must replace  every
    occurrence of X.
 
    The first  word in  the memory block  referenced by  X is set  to the
-   constant IK_FORWARD_PTR: this allows future identification of references
-   to already moved objects.
+   constant  IK_FORWARD_PTR:   this  allows  future   identification  of
+   references to already moved objects.
 
    The second  word in the  memory block referenced  by X is set  to the
    reference to the moved object,  that is the return value: this allows
@@ -1010,123 +1010,125 @@ add_object_proc (gc_t* gc, ikptr x, char* caller)
 {
   caller = caller;
 #else
-add_object_proc (gc_t* gc, ikptr x)
+add_object_proc (gc_t* gc, ikptr X)
 {
 #endif
   int		tag;		/* tag bits of X */
   ikptr		first_word;	/* first word in the block referenced by X */
-  unsigned int	segment_bits;	/* status bits for memory segment holding X */
+  unsigned	segment_bits;	/* status bits for memory segment holding X */
   int		generation;	/* generation index X is in */
   { /* Fixnums and other immediate objects (self contained in the single
        machine word X) do not need to be moved. */
-    if (IK_IS_FIXNUM(x))
-      return x;
-    assert(x != IK_FORWARD_PTR);
-    tag = IK_TAGOF(x);
-    if (tag == immediate_tag)
-      return x;
+    if (IK_IS_FIXNUM(X))
+      return X;
+    assert(IK_FORWARD_PTR != X);
+    tag = IK_TAGOF(X);
+    if (immediate_tag == tag)
+      return X;
   }
   { /* If X  has already been moved  in a previous call:  return its new
        value. */
-    first_word = ref(x, -tag);
+    first_word = IK_REF(X, -tag);
     if (IK_FORWARD_PTR == first_word) /* already moved */
-      return ref(x, wordsize-tag);
+      return IK_REF(X, wordsize-tag);
   }
   { /* If X  does not belong  to a generation  examined in this  GC run:
        leave it alone. */
-    segment_bits = gc->segment_vector[IK_PAGE_INDEX(x)];
+    segment_bits = gc->segment_vector[IK_PAGE_INDEX(X)];
     generation   = segment_bits & gen_mask;
     if (generation > gc->collect_gen)
-      return x;
+      return X;
   }
   /* If we are here  X must be moved to a new  location.  This is a type
      specific operation, so we branch by tag value. */
   if (pair_tag == tag) {
-    ikptr y;
-    add_list(gc, segment_bits, x, &y);
+    ikptr Y;
+    add_list(gc, segment_bits, X, &Y);
 #if ACCOUNTING
     pair_count++;
 #endif
-    return y;
+    return Y;
   }
   else if (closure_tag == tag) {
-    ikptr size  = disp_closure_data + ref(first_word, disp_code_freevars - disp_code_data);
+    ikptr size  = disp_closure_data + IK_REF(first_word, disp_code_freevars - disp_code_data);
     if (size > 1024)
-      fprintf(stderr, "large closure size=0x%016lx\n", (long)size);
+      ik_debug_message("large closure size=0x%016lx", (long)size);
     ikptr asize = IK_ALIGN(size);
-    ikptr y     = gc_alloc_new_ptr(asize, gc) | closure_tag;
-    ref(y, asize-closure_tag-wordsize) = 0;
-    memcpy((char*)(long)(y-closure_tag),
-           (char*)(long)(x-closure_tag),
+    ikptr Y     = gc_alloc_new_ptr(asize, gc) | closure_tag;
+    IK_REF(Y, asize - closure_tag - wordsize) = 0;
+    memcpy((char*)(long)(Y - closure_tag),
+           (char*)(long)(X - closure_tag),
            size);
-    ref(y,-closure_tag) = add_code_entry(gc, ref(y,-closure_tag));
-    ref(x,-closure_tag) = IK_FORWARD_PTR;
-    ref(x,wordsize-closure_tag) = y;
+    IK_REF(Y,          - closure_tag) = add_code_entry(gc, IK_REF(Y,-closure_tag));
+    IK_REF(X,          - closure_tag) = IK_FORWARD_PTR;
+    IK_REF(X, wordsize - closure_tag) = Y;
 #if ACCOUNTING
     closure_count++;
 #endif
-    return y;
+    return Y;
   }
   else if (tag == vector_tag) {
+    /* Move  a  vector.   Notice  that   we  do  *not*  move  its  items
+       recursively.  */
     if (IK_IS_FIXNUM(first_word)) { /* real vector */
       /* Notice that  FIRST_WORD is a fixnum  and we use  it directly as
 	 number of  bytes to allocate for  the data area  of the vector;
 	 this is  because the  fixnum tag is  composed of zero  bits and
-	 they are in such a  number that: multiplying the fixnum's value
-	 by the  wordsize and right-shifting  the fixnum's value  by the
-	 fixnum tag are equivalent operations. */
+	 they are in  such a number that multiplying  the fixnum's value
+	 by the  wordsize is  equivalent to right-shifting  the fixnum's
+	 value by the fixnum tag. */
       ikptr	size   = first_word;
       ikptr	nbytes = size + disp_vector_data; /* not aligned */
       ikptr	memreq = IK_ALIGN(nbytes);
       if (memreq >= pagesize) { /* big vector */
         if (large_object_tag == (segment_bits & large_object_mask)) {
-          enqueue_large_ptr(x-vector_tag, nbytes, gc);
-          return x;
+          enqueue_large_ptr(X - vector_tag, nbytes, gc);
+          return X;
         } else {
-          ikptr y = gc_alloc_new_large_ptr(nbytes, gc) | vector_tag;
-          ref(y, off_vector_length) = first_word;
-          ref(y, memreq-vector_tag-wordsize) = 0;
-          memcpy((char*)(long)(y+off_vector_data),
-                 (char*)(long)(x+off_vector_data),
+          ikptr Y = gc_alloc_new_large_ptr(nbytes, gc) | vector_tag;
+          IK_REF(Y, off_vector_length) = first_word;
+          IK_REF(Y, memreq - vector_tag - wordsize) = 0;
+          memcpy((char*)(long)(Y + off_vector_data),
+                 (char*)(long)(X + off_vector_data),
                  size);
-          ref(x,-vector_tag) = IK_FORWARD_PTR;
-          ref(x,wordsize-vector_tag) = y;
-          return y;
+          IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+          IK_REF(X, wordsize - vector_tag) = Y;
+          return Y;
         }
       } else { /* small vector */
-        ikptr y = gc_alloc_new_ptr(memreq, gc) | vector_tag;
-        ref(y, off_vector_length) = first_word;
-        ref(y, memreq-vector_tag-wordsize) = 0;
-        memcpy((char*)(long)(y+off_vector_data),
-               (char*)(long)(x+off_vector_data),
+        ikptr Y = gc_alloc_new_ptr(memreq, gc) | vector_tag;
+        IK_REF(Y, off_vector_length) = first_word;
+        IK_REF(Y, memreq - vector_tag - wordsize) = 0;
+        memcpy((char*)(long)(Y + off_vector_data),
+               (char*)(long)(X + off_vector_data),
                size);
-        ref(x,-vector_tag) = IK_FORWARD_PTR;
-        ref(x,wordsize-vector_tag) = y;
-        return y;
+        IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+        IK_REF(X, wordsize - vector_tag) = Y;
+        return Y;
       }
 #if ACCOUNTING
       vector_count++;
 #endif
     }
     else if (symbol_tag == first_word) {
-      ikptr	y		= gc_alloc_new_symbol_record(gc) | record_tag;
-      ikptr	s_string	= ref(x, off_symbol_record_string);
-      ikptr	s_ustring	= ref(x, off_symbol_record_ustring);
-      ikptr	s_value		= ref(x, off_symbol_record_value);
-      ikptr	s_proc		= ref(x, off_symbol_record_proc);
-      ikptr	s_plist		= ref(x, off_symbol_record_plist);
-      ref(x, -record_tag) = IK_FORWARD_PTR;
-      ref(x, wordsize-record_tag) = y;
-      ref(y, off_symbol_record_tag)	= symbol_tag;
-      ref(y, off_symbol_record_string)  = add_object(gc, s_string,	"symbol string");
-      ref(y, off_symbol_record_ustring) = add_object(gc, s_ustring,	"symbol ustring");
-      ref(y, off_symbol_record_value)   = add_object(gc, s_value,	"symbol value");
-      ref(y, off_symbol_record_proc)    = add_object(gc, s_proc,	"symbol proc");
-      ref(y, off_symbol_record_plist)   = add_object(gc, s_plist,	"symbol proc");
+      ikptr	Y		= gc_alloc_new_symbol_record(gc) | record_tag;
+      ikptr	s_string	= IK_REF(X, off_symbol_record_string);
+      ikptr	s_ustring	= IK_REF(X, off_symbol_record_ustring);
+      ikptr	s_value		= IK_REF(X, off_symbol_record_value);
+      ikptr	s_proc		= IK_REF(X, off_symbol_record_proc);
+      ikptr	s_plist		= IK_REF(X, off_symbol_record_plist);
+      IK_REF(X,          - record_tag)     = IK_FORWARD_PTR;
+      IK_REF(X, wordsize - record_tag)     = Y;
+      IK_REF(Y, off_symbol_record_tag)	   = symbol_tag;
+      IK_REF(Y, off_symbol_record_string)  = add_object(gc, s_string,	"symbol string");
+      IK_REF(Y, off_symbol_record_ustring) = add_object(gc, s_ustring,	"symbol ustring");
+      IK_REF(Y, off_symbol_record_value)   = add_object(gc, s_value,	"symbol value");
+      IK_REF(Y, off_symbol_record_proc)    = add_object(gc, s_proc,	"symbol proc");
+      IK_REF(Y, off_symbol_record_plist)   = add_object(gc, s_plist,	"symbol proc");
 #if ACCOUNTING
       symbol_count++;
 #endif
-      return y;
+      return Y;
     }
     else if (IK_TAGOF(first_word) == rtd_tag) {
       /* struct / record */
@@ -1134,223 +1136,223 @@ add_object_proc (gc_t* gc, ikptr x)
 	 It  does not  look like  a legal  move operation  for  RTDs and
 	 struct instances.  (Marco Maggi; Jan 11, 2012) */
       ikptr	number_of_fields = ref(first_word, off_rtd_length);
-      ikptr	y;
+      ikptr	Y;
       if (number_of_fields & ((1<<IK_ALIGN_SHIFT)-1)) {
         /* number_of_fields = n * object_alignment + 4
 	   => memreq = n * object_alignment + 8 = (n+1) * object_alignment
 	   => aligned */
-	y = gc_alloc_new_ptr(number_of_fields+wordsize, gc) | vector_tag;
-        ref(y, off_record_rtd) = first_word;
+	Y = gc_alloc_new_ptr(number_of_fields+wordsize, gc) | vector_tag;
+        IK_REF(Y, off_record_rtd) = first_word;
         {
           ikptr i;
-          ikptr p = y + off_record_data; /* P is untagged */
-          ikptr q = x + off_record_data; /* Q is untagged */
+          ikptr p = Y + off_record_data; /* P is untagged */
+          ikptr q = X + off_record_data; /* Q is untagged */
           ref (p, 0) = ref(q, 0);
           for(i=wordsize; i<number_of_fields; i+=(2*wordsize)) {
-            ref(p, i)          = ref(q, i);
-            ref(p, i+wordsize) = ref(q, i+wordsize);
+            IK_REF(p, i)          = IK_REF(q, i);
+            IK_REF(p, i+wordsize) = IK_REF(q, i+wordsize);
           }
         }
       } else {
         /* number_of_fields = n * object_alignment
 	   => memreq = n * object_alignment + 4 + 4 (pad) */
-	y = gc_alloc_new_ptr(number_of_fields+(2*wordsize), gc) | vector_tag;
-        ref(y, off_record_rtd) = first_word;
+	Y = gc_alloc_new_ptr(number_of_fields+(2*wordsize), gc) | vector_tag;
+        IK_REF(Y, off_record_rtd) = first_word;
         {
           ikptr i;
-          ikptr p = y + off_record_data; /* P is untagged */
-          ikptr q = x + off_record_data; /* Q is untagged */
+          ikptr p = Y + off_record_data; /* P is untagged */
+          ikptr q = X + off_record_data; /* Q is untagged */
           for (i=0; i<number_of_fields; i+=(2*wordsize)) {
-            ref(p, i)          = ref(q, i);
-            ref(p, i+wordsize) = ref(q, i+wordsize);
+            IK_REF(p, i)          = IK_REF(q, i);
+            IK_REF(p, i+wordsize) = IK_REF(q, i+wordsize);
           }
         }
-        IK_REF(y, number_of_fields + off_record_data) = 0;
+        IK_REF(Y, number_of_fields + off_record_data) = 0;
       }
-      ref(x, -vector_tag) = IK_FORWARD_PTR;
-      ref(x, wordsize-vector_tag) = y;
-      return y;
+      IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+      IK_REF(X, wordsize - vector_tag) = Y;
+      return Y;
     }
     else if (code_tag == first_word) {
-      ikptr	entry     = x + off_code_data;
+      ikptr	entry     = X + off_code_data;
       ikptr	new_entry = add_code_entry(gc, entry);
       return new_entry - off_code_data;
     }
     else if (continuation_tag == first_word) {
-      ikptr	top  = ref(x, off_continuation_top);
-      ikptr	size = ref(x, off_continuation_size);
+      ikptr	top  = IK_REF(X, off_continuation_top);
+      ikptr	size = IK_REF(X, off_continuation_size);
 #ifndef NDEBUG
       if (size > 4096)
-        fprintf(stderr, "large cont size=0x%016lx\n", size);
+        ik_debug_message("large cont size=0x%016lx", size);
 #endif
-      ikptr	next = ref(x, off_continuation_next);
-      ikptr	y    = gc_alloc_new_ptr(continuation_size, gc) | vector_tag;
-      ref(x, -vector_tag) = IK_FORWARD_PTR;
-      ref(x, wordsize-vector_tag) = y;
+      ikptr	next = IK_REF(X, off_continuation_next);
+      ikptr	Y    = gc_alloc_new_ptr(continuation_size, gc) | vector_tag;
+      IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+      IK_REF(X, wordsize - vector_tag) = Y;
       ikptr	new_top = gc_alloc_new_data(IK_ALIGN(size), gc);
       memcpy((char*)(long)new_top,
              (char*)(long)top,
              size);
       collect_stack(gc, new_top, new_top + size);
-      ref(y, off_continuation_tag)  = continuation_tag;
-      ref(y, off_continuation_top)  = new_top;
-      ref(y, off_continuation_size) = (ikptr) size;
-      ref(y, off_continuation_next) = next;
+      IK_REF(Y, off_continuation_tag)  = continuation_tag;
+      IK_REF(Y, off_continuation_top)  = new_top;
+      IK_REF(Y, off_continuation_size) = (ikptr) size;
+      IK_REF(Y, off_continuation_next) = next;
 #if ACCOUNTING
       continuation_count++;
 #endif
-      return y;
+      return Y;
     }
     else if (system_continuation_tag == first_word) {
-      ikptr	y    = gc_alloc_new_data(system_continuation_size, gc) | vector_tag;
-      ikptr	top  = ref(x, off_system_continuation_top);
-      ikptr	next = ref(x, off_system_continuation_next);
-      ref(x, -vector_tag) = IK_FORWARD_PTR;
-      ref(x, wordsize-vector_tag) = y;
-      ref(y, -vector_tag) = first_word;
-      ref(y, off_system_continuation_top)  = top;
-      ref(y, off_system_continuation_next) = add_object(gc, next, "next_k");
-      return y;
+      ikptr	Y    = gc_alloc_new_data(system_continuation_size, gc) | vector_tag;
+      ikptr	top  = IK_REF(X, off_system_continuation_top);
+      ikptr	next = IK_REF(X, off_system_continuation_next);
+      IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+      IK_REF(X, wordsize - vector_tag) = Y;
+      IK_REF(Y,          - vector_tag) = first_word;
+      IK_REF(Y, off_system_continuation_top)  = top;
+      IK_REF(Y, off_system_continuation_next) = add_object(gc, next, "next_k");
+      return Y;
     }
     else if (IK_TAGOF(first_word) == pair_tag) {
       /* tcbucket */
-      ikptr y = gc_alloc_new_ptr(tcbucket_size, gc) | vector_tag;
-      ref(y,off_tcbucket_tconc) = first_word;
-      ikptr key = ref(x, off_tcbucket_key);
-      ref(y,off_tcbucket_key) = key;
-      ref(y,off_tcbucket_val) = ref(x, off_tcbucket_val);
-      ref(y,off_tcbucket_next) = ref(x, off_tcbucket_next);
+      ikptr Y = gc_alloc_new_ptr(tcbucket_size, gc) | vector_tag;
+      IK_REF(Y, off_tcbucket_tconc) = first_word;
+      ikptr key = IK_REF(X, off_tcbucket_key);
+      IK_REF(Y, off_tcbucket_key)  = key;
+      IK_REF(Y, off_tcbucket_val)  = IK_REF(X, off_tcbucket_val);
+      IK_REF(Y, off_tcbucket_next) = IK_REF(X, off_tcbucket_next);
       if ((! IK_IS_FIXNUM(key)) && (IK_TAGOF(key) != immediate_tag)) {
         int gen = gc->segment_vector[IK_PAGE_INDEX(key)] & gen_mask;
         if (gen <= gc->collect_gen) {
           /* key will be moved */
-          gc_tconc_push(gc, y);
+          gc_tconc_push(gc, Y);
         }
       }
-      ref(x, -vector_tag) = IK_FORWARD_PTR;
-      ref(x, wordsize-vector_tag) = y;
-      return y;
+      IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+      IK_REF(X, wordsize - vector_tag) = Y;
+      return Y;
     }
     else if (port_tag == (((long)first_word) & port_mask)) {
-      ikptr	y		= gc_alloc_new_ptr(port_size, gc) | vector_tag;
-      ikptr	s_buffer	= ref(x, off_port_buffer);
-      ikptr	s_id		= ref(x, off_port_id);
-      ikptr	s_read		= ref(x, off_port_read);
-      ikptr	s_write		= ref(x, off_port_write);
-      ikptr	s_get_position	= ref(x, off_port_get_position);
-      ikptr	s_set_position	= ref(x, off_port_set_position);
-      ikptr	s_close		= ref(x, off_port_close);
-      ikptr	s_cookie	= ref(x, off_port_cookie);
+      ikptr	Y		= gc_alloc_new_ptr(port_size, gc) | vector_tag;
+      ikptr	s_buffer	= IK_REF(X, off_port_buffer);
+      ikptr	s_id		= IK_REF(X, off_port_id);
+      ikptr	s_read		= IK_REF(X, off_port_read);
+      ikptr	s_write		= IK_REF(X, off_port_write);
+      ikptr	s_get_position	= IK_REF(X, off_port_get_position);
+      ikptr	s_set_position	= IK_REF(X, off_port_set_position);
+      ikptr	s_close		= IK_REF(X, off_port_close);
+      ikptr	s_cookie	= IK_REF(X, off_port_cookie);
       long	i;
-      ref(y, -vector_tag) = first_word;
+      IK_REF(Y, -vector_tag) = first_word;
       for (i=wordsize; i<port_size; i+=wordsize) {
-        ref(y, i-vector_tag) = ref(x, i-vector_tag);
+        IK_REF(Y, i-vector_tag) = IK_REF(X, i-vector_tag);
       }
-      ref(x, -vector_tag) = IK_FORWARD_PTR;
-      ref(x, wordsize-vector_tag) = y;
+      IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+      IK_REF(X, wordsize - vector_tag) = Y;
       /* These calls were not in  the original Ikarus code (Marco Maggi;
 	 Jan 11, 2012). */
-      ref(y, off_port_buffer)		= add_object(gc, s_buffer,	 "port buffer");
-      ref(y, off_port_id)		= add_object(gc, s_id,		 "port id");
-      ref(y, off_port_read)		= add_object(gc, s_read,	 "port read");
-      ref(y, off_port_write)		= add_object(gc, s_write,	 "port write");
-      ref(y, off_port_get_position)	= add_object(gc, s_get_position, "port get_position");
-      ref(y, off_port_set_position)	= add_object(gc, s_set_position, "port set_position");
-      ref(y, off_port_close)		= add_object(gc, s_close,	 "port close");
-      ref(y, off_port_cookie)		= add_object(gc, s_cookie,	 "port cookie");
-      return y;
+      IK_REF(Y, off_port_buffer)	= add_object(gc, s_buffer,	 "port buffer");
+      IK_REF(Y, off_port_id)		= add_object(gc, s_id,		 "port id");
+      IK_REF(Y, off_port_read)		= add_object(gc, s_read,	 "port read");
+      IK_REF(Y, off_port_write)		= add_object(gc, s_write,	 "port write");
+      IK_REF(Y, off_port_get_position)	= add_object(gc, s_get_position, "port get_position");
+      IK_REF(Y, off_port_set_position)	= add_object(gc, s_set_position, "port set_position");
+      IK_REF(Y, off_port_close)		= add_object(gc, s_close,	 "port close");
+      IK_REF(Y, off_port_cookie)	= add_object(gc, s_cookie,	 "port cookie");
+      return Y;
     }
     else if (flonum_tag == first_word) {
       ikptr new = gc_alloc_new_data(flonum_size, gc) | vector_tag;
-      ref(new, -vector_tag) = flonum_tag;
-      IK_FLONUM_DATA(new) = IK_FLONUM_DATA(x);
-      ref(x, -vector_tag) = IK_FORWARD_PTR;
-      ref(x, wordsize-vector_tag) = new;
+      IK_REF(new,        - vector_tag) = flonum_tag;
+      IK_FLONUM_DATA(new)              = IK_FLONUM_DATA(X);
+      IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+      IK_REF(X, wordsize - vector_tag) = new;
       return new;
     }
     else if (bignum_tag == (first_word & bignum_mask)) {
       long	len    = ((unsigned long)first_word) >> bignum_length_shift;
       long	memreq = IK_ALIGN(disp_bignum_data + len*wordsize);
-      ikptr	new    = gc_alloc_new_data(memreq, gc) | vector_tag;
-      memcpy((char*)(long)(new-vector_tag),
-             (char*)(long)(x-vector_tag),
+      ikptr	Y      = gc_alloc_new_data(memreq, gc) | vector_tag;
+      memcpy((char*)(long)(Y - vector_tag),
+             (char*)(long)(X - vector_tag),
              memreq);
-      ref(x, -vector_tag) = IK_FORWARD_PTR;
-      ref(x, wordsize-vector_tag) = new;
-      return new;
+      ref(X,          - vector_tag) = IK_FORWARD_PTR;
+      ref(X, wordsize - vector_tag) = Y;
+      return Y;
     }
     else if (ratnum_tag == first_word) {
-      ikptr y   = gc_alloc_new_data(ratnum_size, gc) | vector_tag;
-      ikptr num = ref(x, disp_ratnum_num-vector_tag);
-      ikptr den = ref(x, disp_ratnum_den-vector_tag);
-      ref(x, -vector_tag) = IK_FORWARD_PTR;
-      ref(x, wordsize-vector_tag) = y;
-      ref(y, -vector_tag) = first_word;
-      ref(y, disp_ratnum_num-vector_tag) = add_object(gc, num, "num");
-      ref(y, disp_ratnum_den-vector_tag) = add_object(gc, den, "den");
-      return y;
+      ikptr Y   = gc_alloc_new_data(ratnum_size, gc) | vector_tag;
+      ikptr num = IK_REF(X, off_ratnum_num);
+      ikptr den = IK_REF(X, off_ratnum_den);
+      IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+      IK_REF(X, wordsize - vector_tag) = Y;
+      IK_REF(Y,          - vector_tag) = first_word;
+      IK_REF(Y, off_ratnum_num) = add_object(gc, num, "num");
+      IK_REF(Y, off_ratnum_den) = add_object(gc, den, "den");
+      return Y;
     }
     else if (compnum_tag == first_word) {
-      ikptr y  = gc_alloc_new_data(compnum_size, gc) | vector_tag;
-      ikptr rl = ref(x, disp_compnum_real-vector_tag);
-      ikptr im = ref(x, disp_compnum_imag-vector_tag);
-      ref(x, -vector_tag) = IK_FORWARD_PTR;
-      ref(x, wordsize-vector_tag) = y;
-      ref(y, -vector_tag) = first_word;
-      ref(y, disp_compnum_real-vector_tag) = add_object(gc, rl, "real");
-      ref(y, disp_compnum_imag-vector_tag) = add_object(gc, im, "imag");
-      return y;
+      ikptr Y  = gc_alloc_new_data(compnum_size, gc) | vector_tag;
+      ikptr rl = IK_REF(X, off_compnum_real);
+      ikptr im = IK_REF(X, off_compnum_imag);
+      IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+      IK_REF(X, wordsize - vector_tag) = Y;
+      IK_REF(Y,          - vector_tag) = first_word;
+      IK_REF(Y, off_compnum_real) = add_object(gc, rl, "real");
+      IK_REF(Y, off_compnum_imag) = add_object(gc, im, "imag");
+      return Y;
     }
     else if (cflonum_tag == first_word) {
-      ikptr y  = gc_alloc_new_data(cflonum_size, gc) | vector_tag;
-      ikptr rl = ref(x, disp_cflonum_real-vector_tag);
-      ikptr im = ref(x, disp_cflonum_imag-vector_tag);
-      ref(x, -vector_tag) = IK_FORWARD_PTR;
-      ref(x, wordsize-vector_tag) = y;
-      ref(y, -vector_tag) = first_word;
-      ref(y, disp_cflonum_real-vector_tag) = add_object(gc, rl, "real");
-      ref(y, disp_cflonum_imag-vector_tag) = add_object(gc, im, "imag");
-      return y;
+      ikptr Y  = gc_alloc_new_data(cflonum_size, gc) | vector_tag;
+      ikptr rl = IK_REF(X, off_cflonum_real);
+      ikptr im = IK_REF(X, off_cflonum_imag);
+      IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+      IK_REF(X, wordsize - vector_tag) = Y;
+      IK_REF(Y,          - vector_tag) = first_word;
+      IK_REF(Y, off_cflonum_real) = add_object(gc, rl, "real");
+      IK_REF(Y, off_cflonum_imag) = add_object(gc, im, "imag");
+      return Y;
     }
     else if (pointer_tag == first_word) {
-      ikptr y = gc_alloc_new_data(pointer_size, gc) | vector_tag;
-      ref(y, -vector_tag) = pointer_tag;
-      ref(y, wordsize-vector_tag) = ref(x, wordsize-vector_tag);
-      ref(x, -vector_tag) = IK_FORWARD_PTR;
-      ref(x, wordsize-vector_tag) = y;
-      return y;
+      ikptr Y = gc_alloc_new_data(pointer_size, gc) | vector_tag;
+      IK_REF(Y,          - vector_tag) = pointer_tag;
+      IK_REF(Y, wordsize - vector_tag) = IK_REF(X, wordsize - vector_tag);
+      IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+      IK_REF(X, wordsize - vector_tag) = Y;
+      return Y;
     } else
       ik_abort("unhandled vector with first_word=0x%016lx\n", (long)first_word);
   }
   else if (string_tag == tag) {
     if (IK_IS_FIXNUM(first_word)) {
-      long	len     = IK_UNFIX(first_word);
-      long	memreq  = IK_ALIGN(len * string_char_size + disp_string_data);
-      ikptr	new_str = gc_alloc_new_data(memreq, gc) | string_tag;
-      ref(new_str, off_string_length) = first_word;
-      memcpy((char*)(long)(new_str + off_string_data),
-             (char*)(long)(x       + off_string_data),
-             len * string_char_size);
-      ref(x, -string_tag)         = IK_FORWARD_PTR;
-      ref(x, wordsize-string_tag) = new_str;
+      long	len    = IK_UNFIX(first_word);
+      long	memreq = IK_ALIGN(len * IK_STRING_CHAR_SIZE + disp_string_data);
+      ikptr	Y      = gc_alloc_new_data(memreq, gc) | string_tag;
+      IK_REF(Y, off_string_length) = first_word;
+      memcpy((char*)(long)(Y + off_string_data),
+             (char*)(long)(X + off_string_data),
+             len * IK_STRING_CHAR_SIZE);
+      IK_REF(X,          - string_tag) = IK_FORWARD_PTR;
+      IK_REF(X, wordsize - string_tag) = Y;
 #if ACCOUNTING
       string_count++;
 #endif
-      return new_str;
+      return Y;
     } else
-      ik_abort("unhandled string 0x%016lx with first_word=0x%016lx\n", (long)x, (long)first_word);
+      ik_abort("unhandled string 0x%016lx with first_word=0x%016lx\n", (long)X, (long)first_word);
   }
   else if (bytevector_tag == tag) {
     long	len    = IK_UNFIX(first_word);
     long	memreq = IK_ALIGN(len + disp_bytevector_data + 1);
-    ikptr	new_bv = gc_alloc_new_data(memreq, gc) | bytevector_tag;
-    ref(new_bv, off_bytevector_length) = first_word;
-    memcpy((char*)(long)(new_bv + off_bytevector_data),
-           (char*)(long)(x      + off_bytevector_data),
+    ikptr	Y = gc_alloc_new_data(memreq, gc) | bytevector_tag;
+    IK_REF(Y, off_bytevector_length) = first_word;
+    memcpy((char*)(long)(Y + off_bytevector_data),
+           (char*)(long)(X + off_bytevector_data),
            len + 1);
-    ref(x, -bytevector_tag)         = IK_FORWARD_PTR;
-    ref(x, wordsize-bytevector_tag) = new_bv;
-    return new_bv;
+    IK_REF(X,          - bytevector_tag) = IK_FORWARD_PTR;
+    IK_REF(X, wordsize - bytevector_tag) = Y;
+    return Y;
   }
   return ik_abort("%s: unhandled tag: %d\n", __func__, tag);
 }

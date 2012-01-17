@@ -63,7 +63,7 @@ static int strings_eqp(ikptr str1, ikptr str2){
     return
       (memcmp((char*)(long)str1+off_string_data,
               (char*)(long)str2+off_string_data,
-              unfix(len) * string_char_size)
+              IK_UNFIX(len) * IK_STRING_CHAR_SIZE)
        == 0);
   }
   return 0;

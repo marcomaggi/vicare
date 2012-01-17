@@ -393,7 +393,7 @@ typedef uint32_t	ikchar;
  ** String objects.
  ** ----------------------------------------------------------------- */
 
-#define string_char_size	4
+#define IK_STRING_CHAR_SIZE	4
 #define string_mask		7
 #define string_tag		6
 #define disp_string_length	0
@@ -472,10 +472,16 @@ ik_decl ik_ullong ik_integer_to_ullong	(ikptr x);
  ** ----------------------------------------------------------------- */
 
 #define ratnum_tag		((ikptr) 0x27)
+#define disp_ratnum_tag		0
 #define disp_ratnum_num		(1 * wordsize)
 #define disp_ratnum_den		(2 * wordsize)
 #define disp_ratnum_unused	(3 * wordsize)
 #define ratnum_size		(4 * wordsize)
+
+#define off_ratnum_tag		-vector_tag
+#define off_ratnum_num		(disp_ratnum_num    - vector_tag)
+#define off_ratnum_den		(disp_ratnum_den    - vector_tag)
+#define off_ratnum_unused	(disp_ratnum_unused - vector_tag)
 
 
 /** --------------------------------------------------------------------
@@ -483,10 +489,16 @@ ik_decl ik_ullong ik_integer_to_ullong	(ikptr x);
  ** ----------------------------------------------------------------- */
 
 #define compnum_tag		((ikptr) 0x37)
+#define disp_compnum_tag	0
 #define disp_compnum_real	(1 * wordsize)
 #define disp_compnum_imag	(2 * wordsize)
 #define disp_compnum_unused	(3 * wordsize)
 #define compnum_size		(4 * wordsize)
+
+#define off_compnum_tag		-vector_tag
+#define off_compnum_real	(disp_compnum_real   - vector_tag)
+#define off_compnum_imag	(disp_compnum_imag   - vector_tag)
+#define off_compnum_unused	(disp_compnum_unused - vector_tag)
 
 
 /** --------------------------------------------------------------------
@@ -637,7 +649,8 @@ ik_decl ikptr ika_bytevector_from_memory_block	(ikpcb * pcb, void * memory, size
 #define off_rtd_printer		(disp_rtd_printer - rtd_tag)
 #define off_rtd_symbol		(disp_rtd_symbol  - rtd_tag)
 
-ik_decl ikptr ika_struct_alloc	(ikpcb * pcb, ikptr rtd);
+ik_decl ikptr ika_struct_alloc_and_init	(ikpcb * pcb, ikptr rtd);
+ik_decl ikptr ika_struct_alloc_no_init	(ikpcb * pcb, ikptr rtd);
 ik_decl int   ik_is_struct	(ikptr R);
 
 #define IK_FIELD(STRUCT,FIELD)	IK_REF((STRUCT), (off_record_data+(FIELD)*wordsize))

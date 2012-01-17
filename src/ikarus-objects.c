@@ -238,12 +238,29 @@ ik_is_struct (ikptr R)
 	  (record_tag == (record_mask & ref(R, off_record_rtd))));
 }
 ikptr
-ika_struct_alloc (ikpcb * pcb, ikptr s_rtd)
+ika_struct_alloc_no_init (ikpcb * pcb, ikptr s_rtd)
+/* Allocate  and return  a new  structure instance  using S_RTD  as type
+   descriptor.  All   the  fields  left  uninitialised.    Make  use  of
+   "pcb->root9". */
+{
+  long	num_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
+  /* Do not ask me why, but IK_ALIGN is needed here. */
+  long	align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
+  ikptr s_stru;
+  pcb->root9 = &s_rtd;
+  {
+    s_stru = ik_safe_alloc(pcb, align_size) | record_tag;
+    ref(s_stru, off_record_rtd) = s_rtd;
+  }
+  return s_stru;
+}
+ikptr
+ika_struct_alloc_and_init (ikpcb * pcb, ikptr s_rtd)
 /* Allocate  and return	 a new	structure instance  using S_RTD	 as type
    descriptor.	All the fields are initialised to the void object.  Make
    use of "pcb->root9". */
 {
-  long	num_of_fields = IK_UNFIX(ref(s_rtd, off_rtd_length));
+  long	num_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
   /* Do not ask me why, but IK_ALIGN is needed here. */
   long	align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
   ikptr s_stru;
