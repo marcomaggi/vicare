@@ -15914,14 +15914,23 @@ Return true if @var{R} is a reference to a structure.
 @section Character objects
 
 
-A Scheme character has two representations: when embedded in a Scheme
-object it is a 32-bit unsigned integer whose least significant bits are
-set to the character tag and whose most significant bits are set to the
-character's Unicode code point; when a standalone object, it is a
-machine word whose least significant bits are set to the character tag
-and whose most significant bits are set to the character's Unicode code
-point.  The least significant 32 bits of the two representations are
-equal.  @ref{unicode} for details on Unicode.
+A Scheme character has two representations:
+
+@itemize
+@item
+As a standalone Scheme object, it is a machine word whose least
+significant bits are set to the character tag and whose most significant
+bits are set to the character's Unicode code point.
+
+@item
+When embedded in a Scheme string, it is a 32-bit value whose least
+significant bits are set to the character tag and whose most significant
+bits are set to the character's Unicode code point.
+@end itemize
+
+@noindent
+the least significant 32 bits of the two representations are equal.
+@ref{unicode} for details on Unicode.
 
 Let's say that machine words are 32-bit values, which means the word
 size is @math{4} bytes; then the representation of a character is:
@@ -15935,7 +15944,16 @@ size is @math{4} bytes; then the representation of a character is:
 
 @noindent
 the least significant byte is set to @code{#x0F}: this ``tags'' the
-machine words which embed characters.
+machine words which embed characters.  On 64-bit machines, the layout
+is:
+
+@example
+        Unused              |Unicode code point  |char tag
+|...........................|....................|......|
+
+|------|------|------|------|------|------|------|------|
+ byte7  byte6  byte5  byte4  byte3  byte2  byte1  byte0
+@end example
 
 At the Scheme level: standalone characters are moved around as @ikptr{}
 values, but when characters are stored in a string the @ikptr{} value is
@@ -16028,7 +16046,7 @@ Evaluate to true if @var{X} is a Scheme character.
 
 
 @deftypefn {Preprocessor Macro} ikptr IK_CHAR_FROM_INTEGER (unsigned long @var{X})
-@deftypefnx {Preprocessor Macro} {unsigned long} IK_CHAR_to_INTEGER (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} {unsigned long} IK_CHAR_TO_INTEGER (ikptr @var{X})
 Convert a Scheme character to and from an @code{unsigned long} value
 representing the Unicode code point.
 @end deftypefn
@@ -16046,7 +16064,8 @@ into a string.
 
 
 Strings are variable--length blocks of memory referenced by machine
-words tagged as strings.  The first word in the memory block is a fixnum
+words tagged as strings; strings are @strong{not} stored in memory in
+@utf{}-32 format.  The first word in the memory block is a fixnum
 representing the number of characters in the data area; a string is
 capable of holding at most a number of characters equal to the return
 value of @func{greatest-fixnum}.
@@ -16060,7 +16079,9 @@ value of @func{greatest-fixnum}.
 @end example
 
 All the remaining space in the memory block is filled with 32-bit
-unsigned integers representing Scheme characters as Unicode code points.
+unsigned integers whose least significant bits are set to the character
+tag and whose most significant bits are set to the character's Unicode
+code point.
 
 @c ------------------------------------------------------------
 
@@ -16213,7 +16234,7 @@ ch = IK_CHAR32(s_str, idx);
 @subsubheading Operations on strings
 
 
-@deftypefun ikptr ik_string_alloc (ikpcb * @var{pcb}, long @var{number_of_chars})
+@deftypefun ikptr ika_string_alloc (ikpcb * @var{pcb}, long @var{number_of_chars})
 Allocate, initialise and return a new string object capable of holding
 the specified number of chars.
 @end deftypefun
