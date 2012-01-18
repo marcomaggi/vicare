@@ -602,6 +602,9 @@ ik_decl ikptr ika_vector_alloc_no_init	(ikpcb * pcb, long number_of_items);
 ik_decl ikptr ika_vector_alloc_and_init	(ikpcb * pcb, long number_of_items);
 ik_decl int   ik_is_vector		(ikptr s_vec);
 ik_decl ikptr ikrt_vector_clean		(ikptr s_vec);
+ik_decl ikptr ikrt_vector_copy		(ikptr s_dst, ikptr s_dst_start,
+					 ikptr s_src, ikptr s_src_start,
+					 ikptr s_count);
 
 #define IK_VECTOR_LENGTH_FX(VEC)	IK_REF((VEC), off_vector_length)
 #define IK_VECTOR_LENGTH(VEC)		IK_UNFIX(IK_VECTOR_LENGTH_FX(VEC))

@@ -15454,15 +15454,37 @@ fixnum, so usually a full allocation looks like this:
 
 @example
 ikptr
-ik_vector_alloc (ikpcb * pcb, long number_of_items)
+ika_vector_alloc (ikpcb * pcb, long number_of_items)
 @{
   long  align_size;
-  ikptr vec;
-  align_size = IK_ALIGN(disp_vector_data
-                        + number_of_items * wordsize);
-  vec        = ik_safe_alloc(pcb, align_size) | vector_tag;
-  IK_REF(vec, off_vector_length) = IK_FIX(number_of_items);
-  return vec;
+  ikptr s_len;
+  ikptr s_vec;
+  s_len      = IK_FIX(number_of_items);
+  align_size = IK_ALIGN(disp_vector_data + s_len);
+  s_vec      = ik_safe_alloc(pcb, align_size) | vector_tag;
+  IK_REF(s_vec, off_vector_length) = s_len;
+  return s_vec;
+@}
+@end example
+
+@noindent
+notice how we exploit the fact that the fixnum representing the number
+of elements equals the number of bytes in the data area needed to hold
+such elements.
+
+The allocation operations described above leaves the data area
+uninitialised: its content is undefined.  This is bad if the garbage
+collector moves the newly built vector before the elements are
+initialised to a correct Scheme value.  The following function resets
+the data area to a vector of zero fixnums:
+
+@example
+ikptr
+ikrt_vector_clean (ikptr s_vec)
+@{
+  ikptr	s_len = IK_VECTOR_LENGTH_FX(s_vec);
+  memset((char*)(long)(s_vec + off_vector_data), 0, s_len);
+  return s_vec;
 @}
 @end example
 
@@ -15479,18 +15501,17 @@ IK_REF(s_vec, off_vector_data + 2 * wordsize) = IK_FIX(30);
 to retrieve the item at index @math{2} we do:
 
 @example
-long   index  = 2;
 ikptr  s_vec  = the_vector;
-ikptr  s_item = IK_REF(s_vec, off_vector_data + index * wordsize);
+ikptr  s_item = IK_REF(s_vec, off_vector_data + 2 * wordsize);
 @end example
 
 @noindent
 and to retrieve the vector length:
 
 @example
-ikptr  s_vec    = the_vector;
-ikptr  s_length = IK_REF(s_vec, off_vector_length);
-long   length   = IK_UNFIX(s_length);
+ikptr  s_vec  = the_vector;
+ikptr  s_len  = IK_REF(s_vec, off_vector_length);
+long   length = IK_UNFIX(s_len);
 @end example
 
 
@@ -15560,9 +15581,16 @@ fx = IK_ITEM(s_vec, idx);
 @subsubheading Operations on vectors
 
 
-@deftypefun ikptr ik_vector_alloc (ikpcb * @var{pcb}, long @var{number_of_items})
+@deftypefun ikptr ika_vector_alloc_no_init (ikpcb * @var{pcb}, long @var{number_of_items})
 Allocate, initialise and return a new vector object capable of holding
-the specified number of items.
+the specified number of items.  Leave the data area uninitialised.
+@end deftypefun
+
+
+@deftypefun ikptr ika_vector_alloc_and_init (ikpcb * @var{pcb}, long @var{number_of_items})
+Allocate, initialise and return a new vector object capable of holding
+the specified number of items.  Initialise the data area so that all the
+items are set to the fixnum zero.
 @end deftypefun
 
 
@@ -15570,6 +15598,20 @@ the specified number of items.
 Return true if @var{vec} is a reference to a vector object.  This
 predicate tests that @var{vec} is tagged as vector reference and that
 the first machine word in the referenced memory block is a fixnum.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_vector_clean (ikptr @var{vec})
+Clean the data area so that all the items are set to the fixnum
+zero.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_vector_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
+Copy @var{count} items from vector @var{src} starting at offset
+@var{src_start}, to vector @var{dst} starting at offset @var{dst_start};
+@var{src_start}, @var{dst_start} and @var{count} must be non--negative
+fixnums.  Return unspecified values.
 @end deftypefun
 
 @c page
@@ -15580,9 +15622,10 @@ the first machine word in the referenced memory block is a fixnum.
 A data structure is a variable--length block of memory referenced by
 machine words tagged as vectors; the first machine word of the structure
 is a reference to the type descriptor (@rtd{}), which is itself a data
-structure; the following words, if any, are the fields of the structure.
-A block of memory is a data structure if and only if: a reference to it
-is tagged as vector and its first word is tagged as vector.
+structure; the subsequent words, if any, are the fields of the
+structure.  A block of memory is a data structure if and only if: a
+reference to it is tagged as vector and its first word is tagged as
+vector.
 
 @example
 |----------------|----------| reference to structure
@@ -15603,18 +15646,22 @@ references for a structure and its type descriptor is as follows:
       rtd ref
      |-------|---------------| structure instance
          |
-  -------
+  ---<---
  |
  |     rtd ref
   -->|-------|---------------| type descriptor
          |
-  -------
+  ---<---
  |
  |     rtd ref
  +-->|-------|---------------| base type descriptor
  |       |
-  -------
+  ---<---
 @end example
+
+@noindent
+the type descriptor of the base type descriptor is the base type
+descriptor itself.
 
 A type descriptor is a fixed--length block of memory composed of
 @math{6} machine words interpreted as follows:
@@ -15664,7 +15711,7 @@ and at the C level we do:
 
 @example
 ikptr
-ikrt_posix_gettimeofday (ikptr rtd, ikpcb * pcb)
+ikrt_posix_gettimeofday (ikptr s_rtd, ikpcb * pcb)
 @{
   /* build and return an instance of "timeval" */
 @}
@@ -15679,10 +15726,11 @@ allocation we compute the whole size of the structure:
 
 @example
 ikpcb * pcb        = the_pcb;
+long    num_of_fields = ...;
 long    block_size = disp_record_data +
-                     wordsize * number_of_fields;
+                     wordsize * num_of_fields;
 long    align_size = IK_ALIGN(block_size);
-ikptr   stru = ik_safe_alloc(pcb, align_size) | record_tag;
+ikptr   s_stru     = ik_safe_alloc(pcb, align_size) | record_tag;
 @end example
 
 @noindent
@@ -15696,19 +15744,30 @@ machine word of the structure, so a full allocation looks like this:
 
 @example
 ikptr
-ik_struct_alloc (ikpcb * pcb, ikptr rtd, long number_of_fields)
+ika_struct_alloc (ikpcb * pcb, ikptr s_rtd)
 @{
-  long  align_size = IK_ALIGN(disp_record_data +
-                              number_of_fields * wordsize);
-  ikptr stru       = ik_safe_alloc(pcb, align_size)
-                     | record_tag;
-  IK_REF(stru, off_record_rtd) = rtd;
-  return stru;
+  long	num_of_fields;
+  long  align_size;
+  ikptr s_stru;
+  num_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
+  align_size = IK_ALIGN(disp_record_data +
+                        num_of_fields * wordsize);
+  pcb->root9 = &s_rtd;
+  @{
+    s_ stru = ik_safe_alloc(pcb, align_size) | record_tag;
+  @}
+  pcb->root9 = NULL;
+  IK_REF(s_stru, off_record_rtd) = s_rtd;
+  return s_stru;
 @}
 @end example
 
-@noindent
-to recognise an @ikptr{} value as reference to a structure we do:
+The allocation operation described above leaves the data area
+uninitialised: its content is undefined.  This is bad if the garbage
+collector moves the newly built record before the elements are
+initialised to a correct Scheme value.
+
+To recognise an @ikptr{} value as reference to a structure we do:
 
 @example
 ikptr   R = the_value;
@@ -15721,7 +15780,7 @@ else
 @end example
 
 @noindent
-structure fields are identifier at the C level by a zero--based index;
+structure fields are identified at the C level by a zero--based index;
 to store a value in field @math{2} of a structure we do:
 
 @example
@@ -15832,15 +15891,22 @@ IK_FIELD(s_stru, 2) = s_field;
 @subsubheading Operations on vectors
 
 
-@deftypefun int ik_is_struct (ikptr @var{R})
-Return true if @var{R} is a reference to a structure.
+@deftypefun ikptr ika_struct_alloc_no_init (ikpcb * @var{pcb}, ikptr @var{rtd})
+Allocate, initialise and return a new structure instance of type
+@var{rtd}.  The first word of the allocated block is initialised with
+@var{rtd}, the other words are left uninitialised.
 @end deftypefun
 
 
-@deftypefun ikptr ik_struct_alloc (ikpcb * @var{pcb}, ikptr @var{rtd}, long @var{number_of_fields})
+@deftypefun ikptr ika_struct_alloc_and_init (ikpcb * @var{pcb}, ikptr @var{rtd})
 Allocate, initialise and return a new structure instance of type
-@var{rtd} having @var{number_of_fields}.  The first word of the
-allocated block is initialised with @var{rtd}.
+@var{rtd}.  The first word of the allocated block is initialised with
+@var{rtd}, the other words are initialised to the fixnum zero.
+@end deftypefun
+
+
+@deftypefun int ik_is_struct (ikptr @var{R})
+Return true if @var{R} is a reference to a structure.
 @end deftypefun
 
 @c page
