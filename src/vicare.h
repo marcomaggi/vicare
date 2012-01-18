@@ -361,11 +361,14 @@ ik_decl void	ik_fprint		(FILE*, ikptr x);
 #define IK_CDR(PAIR)		    IK_REF((PAIR), off_cdr)
 #define IK_CAAR(PAIR)		    IK_CAR(IK_CAR(PAIR))
 #define IK_CDAR(PAIR)		    IK_CDR(IK_CAR(PAIR))
+#define IK_CADR(PAIR)		    IK_CAR(IK_CDR(PAIR))
+#define IK_CDDR(PAIR)		    IK_CDR(IK_CDR(PAIR))
 
 #define IKA_PAIR_ALLOC(PCB)	(ik_safe_alloc((PCB),  pair_size) | pair_tag)
 #define IKU_PAIR_ALLOC(PCB)	(ik_unsafe_alloc((PCB),pair_size) | pair_tag)
 
 ik_decl ikptr ika_pair_alloc		(ikpcb * pcb);
+ik_decl ikptr iku_pair_alloc		(ikpcb * pcb);
 ik_decl long ik_list_length		(ikptr x);
 ik_decl void ik_list_to_argv		(ikptr x, char **argv);
 ik_decl void ik_list_to_argv_and_argc	(ikptr x, char **argv, long *argc);

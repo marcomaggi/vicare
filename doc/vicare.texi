@@ -14795,27 +14795,43 @@ are available to store the number:
 (- (expt 2 29))         @result{} -536870912
 @end example
 
-Let's say that machine words are 32-bit values, which means the word
-size is @math{4} bytes; then the representation of a fixnum is:
+With machine words 32-bit wide, which means the word size is @math{4}
+bytes, the representation of a fixnum is:
 
 @example
-   30 bits fixnum representation
-|.................................|00
+ 30 bits fixnum representation
+      |........................|00
 
-|--------|--------|--------|------+--|
-  byte3    byte2    byte1    byte0
+      |-----|-----|-----|------+--|
+       byte3 byte2 byte1   byte0
 @end example
 
 @noindent
 the two least significant bits are set to zero: this ``tags'' the
+machine words which embed fixnums.  With machine words 64-bit wide,
+which means the word size is @math{8} bytes, the representation of a
+fixnum is:
+
+@example
+         61 bits fixnum representation
+|...............................................|000
+
+|-----|-----|-----|-----|-----|-----|-----|-----+---|
+ byte7 byte6 byte5 byte4 byte3 byte2 byte1  byte0
+@end example
+
+@noindent
+the three least significant bits are set to zero: this ``tags'' the
 machine words which embed fixnums.
 
 The fixnums tag is @code{00} on 32-bit platforms and @code{000} on
-64-bit platforms; the value is selected in such a way that:
+64-bit platforms; given the symbol @code{fx_shift}, which is set to the
+number of bits in the tag, the value is selected in such a way that:
 
 @example
-length_in_bytes = number_of_words *  fx_tag
-                = number_of_words << fx_tag
+length_in_bytes = number_of_words *  fx_shift
+                = number_of_words *  wordsize
+                = number_of_words << fx_shift
 @end example
 
 @noindent
@@ -14823,25 +14839,61 @@ this allows us, for example, to take the fixnum representing the number
 of items in a vector and consider it directly as size of the vector's
 data area in bytes.
 
+@c ------------------------------------------------------------
 
-@deftypefn {Preprocessor Macro} ikptr IK_FIX (@var{num})
-@deftypefnx {Preprocessor Macro} ikptr fix (@var{num})
-Convert a small exact integer in the correct range for a fixnum, into a
-@ikptr{} value.  @var{num} is cast to @code{long}.
-@end deftypefn
+@subsubheading Basic operations
 
 
-@deftypefn {Preprocessor Macro} long IK_UNFIX (ikptr @var{ref})
-@deftypefnx {Preprocessor Macro} long unfix (ikptr @var{ref})
-Convert an @ikptr{} value holding a fixnum into a fixnum of type
-@code{long int}.
-@end deftypefn
+Given an exact integer stored in a @code{long} value with the right
+amount of bits, we encode a fixnum as follows:
+
+@example
+long    the_value  = ...;
+ikptr   the_fixnum = (ikptr)(the_value << fx_shift);
+@end example
+
+@noindent
+and we decode it as follows:
+
+@example
+ikptr   the_fixnum = ...;
+long    the_value  = (long)(the_fixnum >> fx_shift);
+@end example
+
+@noindent
+to verify if a @code{ikptr} is a fixnum we do:
+
+@example
+ikptr   the_fixnum = ...;
+
+if (fx_tag == ((long)the_fixnum & fx_mask))
+  it_is_a_fixnum();
+else
+  it_is_not();
+@end example
+
+@noindent
+it is better to use the convenience macros described below.
 
 
-@deftypefn {Preprocessor Macro} int IK_IS_FIXNUM (ikptr @var{ref})
-Expand to true if @var{ref} is an @ikptr{} embedding a fixnum.  It
-just tests if the least significant bits in the tag are set to zero.
-@end deftypefn
+@defmac fx_tag 0
+The fixnums tag.
+@end defmac
+
+
+@defmac fx_shift
+The number of bits in the fixnums tag.  It is the amount of bits we have
+to left--shift a machine word to encode its value as fixnum.
+@end defmac
+
+
+@defmac fx_mask
+Bit mask used to isolate the tag bits of a fixnum.
+@end defmac
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
 
 
 Examples:
@@ -14851,6 +14903,36 @@ long int  N = 123L;
 ikptr     P = IK_FIX(N);
 long int  M = IK_UNFIX(P);
 @end example
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_FIX (@var{num})
+@deftypefnx {Preprocessor Macro} ikptr fix (@var{num})
+Convert a small exact integer in the correct range for a fixnum, into a
+@ikptr{} value.  @var{num} is cast to @code{long int}.
+
+@quotation
+@strong{NOTE} The macro @func{fix} is defined only in the internal
+header file and its usage is deprecated.
+@end quotation
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} long IK_UNFIX (ikptr @var{ref})
+@deftypefnx {Preprocessor Macro} long unfix (ikptr @var{ref})
+Convert an @ikptr{} value holding a fixnum into a fixnum of type
+@code{long int}.
+
+@quotation
+@strong{NOTE} The macro @func{unfix} is defined only in the internal
+header file and its usage is deprecated.
+@end quotation
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_FIXNUM (ikptr @var{ref})
+Expand to true if @var{ref} is an @ikptr{} embedding a fixnum.  It
+just tests if the least significant bits in the tag are set to zero.
+@end deftypefn
 
 @c page
 @node objects pairs
@@ -14869,14 +14951,18 @@ are the pair tag.
     word 0 = car        word 1 = cdr
 @end example
 
+The empty list is not a pair: it is a special constant fitting in a
+single @ikptr{} machine word, and it is defined by the preprocessor
+symbol @code{null_object}.
+
 @c ------------------------------------------------------------
 
 @subsubheading Basic operations
 
-Pairs are allocated as follows:
+Pairs are allocated as follows, leaving the car and cdr uninitialised:
 
 @example
-ikpcb *  pcb = ...;
+ikpcb *  pcb = the_pcb;
 ikptr    s_pair;
 
 s_pair = ik_safe_alloc(pcb, pair_size) | pair_tag;
@@ -14886,24 +14972,47 @@ s_pair = ik_safe_alloc(pcb, pair_size) | pair_tag;
 the car and cdr of a pair are extracted as follows:
 
 @example
-ikptr   s_pair, s_car, s_cdr;
+ikptr   s_pair = ...;
+ikptr   s_car, s_cdr;
 
 s_car = IK_REF(s_pair, off_car);
 s_cdr = IK_REF(s_pair, off_cdr);
 @end example
 
 @noindent
+or as follows:
+
+@example
+ikptr   s_pair = ...;
+ikptr   s_car, s_cdr;
+
+s_car = IK_CAR(s_pair);
+s_cdr = IK_CDR(s_pair);
+@end example
+
+@noindent
 the car and cdr of a pair are set as follows:
 
 @example
-ikptr   s_pair, s_car, s_cdr;
+ikptr   s_pair = ...;
+ikptr   s_car  = ...;
+ikptr   s_cdr  = ...;
 
 IK_REF(s_pair, off_car) = s_car;
 IK_REF(s_pair, off_cdr) = s_car;
 @end example
 
 @noindent
-see below for less verbose preprocessor macros.
+or as follows:
+
+@example
+ikptr   s_pair = ...;
+ikptr   s_car  = ...;
+ikptr   s_cdr  = ...;
+
+IK_CAR(s_pair) = s_car;
+IK_CDR(s_pair) = s_car;
+@end example
 
 
 @defvr {Preprocessor Symbol} pair_mask
@@ -14938,13 +15047,13 @@ Evaluate to true if the machine word @var{X} is tagged as pair.
 
 @deftypefn {Preprocessor Macro} ikptr IKA_PAIR_ALLOC (ikpcb * @var{pcb})
 Allocate a new pair object using @cfunc{ik_safe_alloc} and return a
-tagged reference to it.  The pair is left @strong{uninitialised}.
+tagged reference to it.  The pair words are left @strong{uninitialised}.
 @end deftypefn
 
 
 @deftypefn {Preprocessor Macro} ikptr IKU_PAIR_ALLOC (ikpcb * @var{pcb})
 Allocate a new pair object using @cfunc{ik_unsafe_alloc} and return a
-tagged reference to it.  The pair is left @strong{uninitialised}.
+tagged reference to it.  The pair words are left @strong{uninitialised}.
 @end deftypefn
 
 
@@ -14954,15 +15063,26 @@ Evaluate to the locations of the car and cdr of a pair; uses of these
 macros can appear both as operands and as left--side of assignments.
 @end deftypefn
 
+
+@deftypefn {Preprocessor Macro} ikptr IK_CAAR (ikptr @var{pair})
+@deftypefnx {Preprocessor Macro} ikptr IK_CDAR (ikptr @var{pair})
+@deftypefnx {Preprocessor Macro} ikptr IK_CADR (ikptr @var{pair})
+@deftypefnx {Preprocessor Macro} ikptr IK_CDDR (ikptr @var{pair})
+Return, respectively: the car of the car, the cdr of the car, the car of
+the cdr, the cdr of the cdr.
+@end deftypefn
+
 @c ------------------------------------------------------------
 
 @subsubheading Operations on pairs and lists
 
 
 @deftypefun ikptr ika_pair_alloc (ikpcb * @var{pcb})
-Allocate and return a new pair object using @cfunc{ik_unsafe_alloc} and
-return a tagged reference to it.  Both the car and cdr are initialised
-to @code{void_object}.
+@deftypefunx ikptr iku_pair_alloc (ikpcb * @var{pcb})
+Allocate and return a new pair object using, respectively,
+@cfunc{ik_safe_alloc} and @cfunc{ik_unsafe_alloc} and return a tagged
+reference to it.  Both the car and cdr are initialised to
+@code{void_object}.
 @end deftypefun
 
 
@@ -14974,42 +15094,45 @@ the process with @cfunc{ik_abort}.
 
 
 @deftypefun void ik_list_to_argv (ikptr @var{list}, char ** @var{argv})
-Given a reference @var{list} to a list of bytevectors, fill @var{argv}
-with pointers to the data areas, setting the last element of @var{argv}
-to @cnull{}.  The array referenced by @var{argv} must be wide enough to
-hold all the pointers from @var{list} plus the terminating @cnull{}.
+Given a reference @var{list} to a proper list of bytevectors, fill
+@var{argv} with pointers to the data areas, setting the last element of
+@var{argv} to @cnull{}.  The array referenced by @var{argv} must be wide
+enough to hold all the pointers from @var{list} plus the terminating
+@cnull{}.
 @end deftypefun
 
 
 @deftypefun void ik_list_to_argv_and_argc (ikptr @var{list}, char ** @var{argv}, long * @var{argc})
-Given a reference @var{list} to a list of bytevectors: fill @var{argv}
-with pointers to the data areas, setting the last element of @var{argv}
-to @cnull{}; fill @var{argc} with the lengths of the bytevectors.  The
-array referenced by @var{argv} must be wide enough to hold all the
-pointers from @var{list} plus the terminating @cnull{}; the array
-referenced by @var{argc} must be wide enough to hold all the lengths.
+Given a reference @var{list} to a proper list of bytevectors: fill
+@var{argv} with pointers to the data areas, setting the last element of
+@var{argv} to @cnull{}; fill @var{argc} with the lengths of the
+bytevectors.  The array referenced by @var{argv} must be wide enough to
+hold all the pointers from @var{list} plus the terminating @cnull{}; the
+array referenced by @var{argc} must be wide enough to hold all the
+lengths.
 @end deftypefun
 
 
 @deftypefun ikptr ika_list_from_argv (ikpcb * @var{pcb}, char ** @var{argv})
 Given a pointer @var{argv} to a @cnull{}--terminated array of @asciiz{}
 strings build and return a list of bytevectors holding a copy of the
-@asciiz{} strings.  Make use of @code{pcb->root1}.
+@asciiz{} strings.  Make use of @code{pcb->root8} and @code{pcb->root9}.
 @end deftypefun
 
 
 @deftypefun ikptr ika_list_from_argv_and_argc (ikpcb * @var{pcb}, char ** @var{argv}, int @var{argc})
 Given a pointer @var{argv} to an array of @asciiz{} strings holding
 @var{argc} pointers: build and return a list of bytevectors holding a
-copy of the @asciiz{} strings.  Make use of @code{pcb->root1}.
+copy of the @asciiz{} strings.  Make use of @code{pcb->root8} and
+@code{pcb->root9}.
 @end deftypefun
-
 
 @c ------------------------------------------------------------
 
 @subsubheading Pairs and lists code examples
 
-The suggested way to allocate and initialise a pair is as follows:
+The suggested general way to allocate and initialise a pair is as
+follows:
 
 @example
 ikpcb * pcb    = the_pcb;
@@ -15024,8 +15147,21 @@ pcb->root0 = NULL;
 @end example
 
 @noindent
-notice how we take care of registering the pair as garbage collection
-root before calling the constructors for the car and cdr.
+notice how we take care of allocating the new pair with a function that
+initialises the component words and of registering the pair as garbage
+collection root before calling the constructors for the car and cdr.
+
+If the component words do not need memory allocation, for example
+because they are fixnums or already existing objects, we can use the
+faster code:
+
+@example
+ikpcb * pcb    = the_pcb;
+ikptr   s_pair = IKA_PAIR_ALLOC(pcb);
+
+IK_CAR(s_pair) = IK_FIX(123);
+IK_CDR(s_pair) = IK_FIX(456);
+@end example
 
 Let's say we need to build a list of bytevectors from @asciiz{} strings
 in the array @code{argv} and there are @code{argc} of them:
@@ -15034,18 +15170,19 @@ in the array @code{argv} and there are @code{argc} of them:
 ikpcb *  pcb  = the_pcb;
 char **  argv = ...;
 long     argc = ...;
-ikptr    s_list, s_pair;
+ikptr    s_list;
 
 if (argc) @{
-  ikptr    s_spine;
+  ikptr  s_spine;
+  long   i;
+
   s_list = s_spine = ika_pair_alloc(pcb);
   pcb->root0 = &s_list;
   pcb->root1 = &s_spine;
   @{
-    long   i;
     for (i=0; i<argc;) @{
       IK_ASS(IK_CAR(s_spine),
-             ik_bytevector_from_cstring(pcb, argv[i]));
+             ika_bytevector_from_cstring(pcb, argv[i]));
       if (++i < argc) @{
         IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
         s_spine = IK_CDR(s_spine);

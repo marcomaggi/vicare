@@ -44,6 +44,14 @@ ika_pair_alloc (ikpcb * pcb)
   IK_CDR(s_pair) = void_object;
   return s_pair;
 }
+ikptr
+iku_pair_alloc (ikpcb * pcb)
+{
+  ikptr	s_pair = IKU_PAIR_ALLOC(pcb);
+  IK_CAR(s_pair) = void_object;
+  IK_CDR(s_pair) = void_object;
+  return s_pair;
+}
 long
 ik_list_length (ikptr s_list)
 /* Return the  length of the list  S_LIST.  Do *not*  check for circular
