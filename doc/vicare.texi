@@ -10815,41 +10815,6 @@ Evaluate to a fixnum which can be used as hash value.
 @section Low level bignum operations
 
 
-Bignums are multi--precision exact integers bigger than fixnums; they
-are implemented using the @code{mpn} @api{} of @gnu{} @gmp{},
-@xref{Low-level Functions, mpn, Low-level Functions, gmp}.  @ref{iklib
-numerics} for more functions acting on bignums.
-
-A bignum is a variable length memory block referenced by machine words
-tagged as vectors.  The first machine word of a bignum block is tagged
-has bignum in its least significant bits; then comes a sign bit, zero if
-positive; the remaining most significant bits represent the number of
-words in the memory block after the first one.
-
-@example
-|------------------------|-------------| reference to bignum
-      heap pointer         vector tag
-
-                     sign bit
-|----------------------|-|-------------| bignum first word
-   number of words         bignum tag
-@end example
-
-A pointer to the second machine word in a bignum memory block is the
-pointer of type @code{mp_limb_t} accepted by the @code{mpn_} functions
-of @gmp{}; @dfn{limb}, in @gmp{} jargon, is a machine word holding a
-portion of multi--precision number.
-
-@value{PRJNAME} only uses a bignum to represent an exact integer when
-the value does not fit in a fixnum; it follows that the following ranges
-are enforced:
-
-@example
-negative bignums < (least-fixnum) <= all fixnums
-
-all fixnums <= (greatest-fixnum) < positive bignums
-@end example
-
 The arguments @var{bn} to these operations must be bignums.  The
 following bindings are exported by the @library{ikarus system $bignums}
 library.
@@ -14052,11 +14017,11 @@ Scheme language compiler @file{ikarus.compiler.sls}.
 * objects chars::               Character objects.
 * objects strings::             String objects.
 * objects symbols::             Symbol objects.
+* objects bignums::             Bignum objects.
 * objects misc::                Miscellaneous functions.
 @end menu
 
 @ignore
-* syslib bignums::              Low level bignum operations.
 * syslib flonums::              Low level flonum operations.
 * syslib ratnums::              Low level ratnum operations.
 * syslib compnums::             Low level compnum operations.
@@ -16295,6 +16260,114 @@ specified field.
 
 @deftypefun int ik_is_symbol (ikptr @var{obj})
 Return true if @var{obj} is a symbol.
+@end deftypefun
+
+@c page
+@node objects bignums
+@section Bignum objects
+
+
+Bignums are multi--precision exact integers bigger than fixnums; they
+are implemented using the @code{mpn} @api{} of @gnu{} @gmp{},
+@xref{Low-level Functions, mpn, Low-level Functions, gmp}.  @ref{iklib
+numerics} for more functions acting on bignums.
+
+A bignum is a variable length memory block referenced by machine words
+tagged as vectors.  The first machine word of a bignum block is tagged
+has bignum in its least significant bits; then comes a sign bit, zero if
+positive; the remaining most significant bits represent the number of
+words in the memory block after the first one.
+
+@example
+|------------------------|-------------| reference to bignum
+      heap pointer         vector tag
+
+                     sign bit
+|----------------------|-|-------------| bignum first word
+   number of words         bignum tag
+@end example
+
+A pointer to the second machine word in a bignum memory block is the
+pointer of type @code{mp_limb_t} accepted by the @code{mpn_} functions
+of @gmp{}; @dfn{limb}, in @gmp{} jargon, is a machine word holding a
+portion of multi--precision number.
+
+@value{PRJNAME} only uses a bignum to represent an exact integer when
+the value does not fit in a fixnum; it follows that the following ranges
+are enforced:
+
+@example
+negative bignums < (least-fixnum) <= all fixnums
+
+all fixnums <= (greatest-fixnum) < positive bignums
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+@defvr {Preprocessor Symbol} bignum_mask
+@defvrx {Preprocessor Symbol} bignum_tag
+@end defvr
+
+
+@defvr {Preprocessor Symbol} bignum_sign_mask
+@end defvr
+
+
+@defvr {Preprocessor Symbol} bignum_sign_shift
+@end defvr
+
+
+@defvr {Preprocessor Symbol} bignum_length_shift
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_bignum_tag
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_bignum_data
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_bignum_tag
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_bignum_data
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on exact integers
+
+
+@deftypefun ikptr ika_integer_from_int (ikpcb * @var{pcb}, int @var{N})
+@deftypefunx ikptr ika_integer_from_long (ikpcb * @var{pcb}, long @var{N})
+@deftypefunx ikptr ika_integer_from_llong (ikpcb * @var{pcb}, ik_llong @var{N})
+@deftypefunx ikptr ika_integer_from_uint (ikpcb * @var{pcb}, ik_uint @var{N})
+@deftypefunx ikptr ika_integer_from_ulong (ikpcb * @var{pcb}, ik_ulong @var{N})
+@deftypefunx ikptr ika_integer_from_ullong (ikpcb * @var{pcb}, ik_ullong @var{N})
+Build and return a new exact integer object from the given C language
+value.
+@end deftypefun
+
+
+@deftypefun int ik_integer_to_int (ikptr @var{X})
+@deftypefunx long ik_integer_to_long (ikptr @var{X})
+@deftypefunx ik_llong ik_integer_to_llong (ikptr @var{X})
+@deftypefunx ik_uint ik_integer_to_uint (ikptr @var{X})
+@deftypefunx ik_ulong ik_integer_to_ulong (ikptr @var{X})
+@deftypefunx ik_ullong ik_integer_to_ullong (ikptr @var{X})
+@deftypefunx int32_t ik_integer_to_sint32 (ikptr @var{X})
+@deftypefunx int64_t ik_integer_to_sint64 (ikptr @var{X})
+@deftypefunx uint32_t ik_integer_to_uint32 (ikptr @var{X})
+@deftypefunx uint64_t ik_integer_to_uint64 (ikptr @var{X})
+Return a C language number from a Scheme exact integer object.  The
+object @var{X} must be in the correct range for the requested
+conversion.
 @end deftypefun
 
 @c page

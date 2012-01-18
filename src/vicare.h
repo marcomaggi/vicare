@@ -467,7 +467,6 @@ ik_decl ikptr	ika_integer_from_llong	(ikpcb* pcb, ik_llong N);
 ik_decl ikptr	ika_integer_from_uint	(ikpcb* pcb, ik_uint N);
 ik_decl ikptr	ika_integer_from_ulong	(ikpcb* pcb, ik_ulong N);
 ik_decl ikptr	ika_integer_from_ullong	(ikpcb* pcb, ik_ullong N);
-ik_decl ikptr	ika_flonum_from_double	(ikpcb* pcb, double N);
 
 ik_decl int32_t	 ik_integer_to_sint32	(ikptr x);
 ik_decl int64_t	 ik_integer_to_sint64	(ikptr x);
@@ -531,7 +530,8 @@ ik_decl ik_ullong ik_integer_to_ullong	(ikptr x);
   ikptr VARNAME = ik_unsafe_alloc(pcb, flonum_size) | vector_tag;	\
   IK_REF(VARNAME, off_flonum_tag) = (ikptr)flonum_tag
 
-ik_decl ikptr iku_flonum_alloc	(ikpcb * pcb, double fl);
+ik_decl ikptr iku_flonum_alloc		(ikpcb * pcb, double fl);
+ik_decl ikptr ika_flonum_from_double	(ikpcb* pcb, double N);
 
 #define IK_FLONUM_DATA(X)	(*((double*)(((long)(X))+off_flonum_data)))
 
