@@ -11283,6 +11283,15 @@ by the @library{ikarus system $vectors} library.
 
 @deffn {Unsafe Operation} $make-vector @var{fx}
 Allocate and return a new vector value of @var{fx} elements.
+
+@quotation
+@strong{NOTE} This operation does not initialise the data area, leaving
+the items set to whatever is on the Scheme heap; this is bad for garbage
+collection if the newly built vector is moved before the items are
+initialised to correct Scheme values.  We should use the
+@func{$make-clean-vector} operations from @library{vicare
+unsafe-operations}.
+@end quotation
 @end deffn
 
 

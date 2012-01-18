@@ -578,28 +578,37 @@
    ((P x) (sec-tag-test (T x) vector-mask vector-tag fx-mask fx-tag))
    ((E x) (nop)))
 
- (define-primop $make-vector unsafe
-   ((V len)
-    (struct-case len
-      ((constant i)
-       (if (and (fx? i) #f)
-	   (interrupt)
-	 (with-tmp ((v (prm 'alloc
-			    (K (align (+ (* i wordsize) disp-vector-data)))
-			    (K vector-tag))))
-	   (prm 'mset v
-		(K (- disp-vector-length vector-tag))
-		(K (* i fx-scale)))
-	   v)))
-      ((known expr t)
-       (cogen-value-$make-vector expr))
-      (else
-       (with-tmp ((alen (align-code (T len) disp-vector-data)))
-	 (with-tmp ((v (prm 'alloc alen (K vector-tag))))
-	   (prm 'mset v (K (- disp-vector-length vector-tag)) (T len))
-	   v)))))
-   ((P len) (K #t))
-   ((E len) (nop)))
+(define-primop $make-vector unsafe
+  ;;Notice that  the code  below does not  initialise the  vector's data
+  ;;area leaving the items set to  whatever is there on the Scheme heap;
+  ;;this can be bad for garbage  collection if the newly built vector is
+  ;;moved before the items are  set to some correct Scheme object.  This
+  ;;is why  the unsafe  operations library defines  a $MAKE-CLEAN-VECTOR
+  ;;macro which builds a new vector  and clears the data area filling it
+  ;;with zero fixnums (which is  fast from C language using "memset()").
+  ;;(Marco Maggi; Jan 18, 2012)
+  ;;
+  ((V len)
+   (struct-case len
+     ((constant i)
+      (if (and (fx? i) #f)
+	  (interrupt)
+	(with-tmp ((v (prm 'alloc
+			   (K (align (+ (* i wordsize) disp-vector-data)))
+			   (K vector-tag))))
+	  (prm 'mset v
+	       (K (- disp-vector-length vector-tag))
+	       (K (* i fx-scale)))
+	  v)))
+     ((known expr t)
+      (cogen-value-$make-vector expr))
+     (else
+      (with-tmp ((alen (align-code (T len) disp-vector-data)))
+	(with-tmp ((v (prm 'alloc alen (K vector-tag))))
+	  (prm 'mset v (K (- disp-vector-length vector-tag)) (T len))
+	  v)))))
+  ((P len) (K #t))
+  ((E len) (nop)))
 
  (define-primop make-vector safe
    ((V len)

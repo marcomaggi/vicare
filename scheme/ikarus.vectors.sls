@@ -152,7 +152,7 @@
    ((len fill)
     (with-arguments-validation (make-vector)
 	((length len))
-      (let loop ((vec	(unsafe.make-vector len))
+      (let loop ((vec	(unsafe.make-clean-vector len))
 		 (i	0)
 		 (len	len)
 		 (fill	fill))
@@ -170,22 +170,22 @@
    (()
     '#())
    ((one)
-    (let ((vec (unsafe.make-vector 1)))
+    (let ((vec (unsafe.make-clean-vector 1)))
       (unsafe.vector-set! vec 0 one)
       vec))
    ((one two)
-    (let ((vec (unsafe.make-vector 2)))
+    (let ((vec (unsafe.make-clean-vector 2)))
       (unsafe.vector-set! vec 0 one)
       (unsafe.vector-set! vec 1 two)
       vec))
    ((one two three)
-    (let ((vec (unsafe.make-vector 3)))
+    (let ((vec (unsafe.make-clean-vector 3)))
       (unsafe.vector-set! vec 0 one)
       (unsafe.vector-set! vec 1 two)
       (unsafe.vector-set! vec 2 three)
       vec))
    ((one two three four)
-    (let ((vec (unsafe.make-vector 4)))
+    (let ((vec (unsafe.make-clean-vector 4)))
       (unsafe.vector-set! vec 0 one)
       (unsafe.vector-set! vec 1 two)
       (unsafe.vector-set! vec 2 three)
@@ -206,7 +206,7 @@
 	   (n  (length ls 0)))
       (with-arguments-validation (make-vector)
 	  ((length n))
-	(loop (unsafe.make-vector n) ls 0 n))))))
+	(loop (unsafe.make-clean-vector n) ls 0 n))))))
 
 (define (vector-fill! vec fill)
   ;;Defined by  R6RS.  Store  FILL in every  element of VEC  and returns
@@ -249,7 +249,7 @@
 
 (define (vector->list vec)
   ;;Defined  by R6RS.   Return a  newly  allocated list  of the  objects
-  ;;contained in the elements of V.
+  ;;contained in the elements of VEC.
   ;;
   (define (f vec idx ls)
     (if (unsafe.fx< idx 0)
@@ -294,7 +294,7 @@
   (let ((n (race ls ls ls 0)))
     (with-arguments-validation (who)
 	((length n))
-      (fill (unsafe.make-vector n) 0 ls))))
+      (fill (unsafe.make-clean-vector n) 0 ls))))
 
 
 (module (vector-map)
@@ -319,7 +319,7 @@
   (define who 'vector-map)
 
   (define (ls->vec ls n)
-    (let f ((v  (unsafe.make-vector n))
+    (let f ((v  (unsafe.make-clean-vector n))
 	    (n  n)
 	    (ls ls))
       (if (null? ls)
@@ -570,7 +570,7 @@
 	     (dst.len	(+ len1 len2)))
 	(with-arguments-validation (who)
 	    ((length dst.len))
-	  (let ((dst.vec (unsafe.make-vector dst.len)))
+	  (let ((dst.vec (unsafe.make-clean-vector dst.len)))
 	    (%unsafe.vector-copy! vec1 0 dst.vec 0    len1)
 	    (%unsafe.vector-copy! vec2 0 dst.vec len1 len2)
 	    dst.vec)))))
@@ -587,7 +587,7 @@
 	     (dst.len	(+ len1 len2 len3)))
 	(with-arguments-validation (who)
 	    ((length  dst.len))
-	  (let ((dst.vec (unsafe.make-vector dst.len)))
+	  (let ((dst.vec (unsafe.make-clean-vector dst.len)))
 	    (%unsafe.vector-copy! vec1 0 dst.vec 0    len1)
 	    (%unsafe.vector-copy! vec2 0 dst.vec len1 len2)
 	    (%unsafe.vector-copy! vec3 0 dst.vec (unsafe.fx+ len1 len2) len3)
@@ -607,7 +607,7 @@
 	     (dst.len	(+ len1 len2 len3 len4)))
 	(with-arguments-validation (who)
 	    ((length  dst.len))
-	  (let ((dst.vec (unsafe.make-vector dst.len)))
+	  (let ((dst.vec (unsafe.make-clean-vector dst.len)))
 	    (%unsafe.vector-copy! vec1 0 dst.vec 0    len1)
 	    (%unsafe.vector-copy! vec2 0 dst.vec len1 len2)
 	    (let ((dst.start (unsafe.fx+ len1 len2)))
@@ -639,7 +639,7 @@
            (dst.len (%length-and-validation vecs 0)))
       (with-arguments-validation (who)
 	  ((length dst.len))
-	(%fill-vectors (unsafe.make-vector dst.len) vecs 0))))))
+	(%fill-vectors (unsafe.make-clean-vector dst.len) vecs 0))))))
 
 
 (define (subvector vec start end)

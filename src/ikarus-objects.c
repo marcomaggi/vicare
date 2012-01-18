@@ -226,6 +226,13 @@ ika_vector_alloc_and_init (ikpcb * pcb, long number_of_items)
   memset((char*)(long)(s_vec + off_vector_data), 0, s_len);
   return s_vec;
 }
+ikptr
+ikrt_vector_clean (ikptr s_vec)
+{
+  ikptr	s_len = IK_VECTOR_LENGTH_FX(s_vec);
+  memset((char*)(long)(s_vec + off_vector_data), 0, s_len);
+  return s_vec;
+}
 
 
 /** --------------------------------------------------------------------

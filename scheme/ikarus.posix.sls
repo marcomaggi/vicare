@@ -1393,9 +1393,7 @@
 			    (with-arguments-validation (who)
 				((pathname  pathname))
 			      (with-pathnames ((pathname.bv  pathname))
-				;;All the  elements of this  vector must
-				;;be initialised here!!!
-				(let* ((timespec (make-vector 2))
+				(let* ((timespec (unsafe.make-clean-vector 2))
 				       (rv       (?func pathname.bv timespec)))
 				  (if (unsafe.fxzero? rv)
 				      (+ (* #e1e9 (unsafe.vector-ref timespec 0))

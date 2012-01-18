@@ -203,7 +203,9 @@
 	    ($vector-self-copy-forwards!	vector-self-copy-forwards!)
 	    ($vector-self-copy-backwards!	vector-self-copy-backwards!)
 	    ($vector-fill!			vector-fill!)
-	    ($subvector				subvector))
+	    ($subvector				subvector)
+	    ($vector-clean!			vector-clean!)
+	    ($make-clean-vector			make-clean-vector))
 
 ;;; --------------------------------------------------------------------
 
@@ -876,6 +878,14 @@
 
 
 ;;;; miscellaneous vector operations
+
+(define-inline ($make-clean-vector ?len)
+  (let* ((len ?len)
+	 (vec ($make-vector ?len)))
+    ($vector-clean! vec)))
+
+(define-inline ($vector-clean! ?vec)
+  (foreign-call "ikrt_vector_clean" ?vec))
 
 (define-inline ($vector-fill! ?vec ?index ?end ?fill)
   ;;Fill the positions  in ?VEC from ?INDEX inclusive  to ?END exclusive
