@@ -14068,6 +14068,7 @@ Scheme language compiler @file{ikarus.compiler.sls}.
 * objects structs::             Struct objects.
 * objects chars::               Character objects.
 * objects strings::             String objects.
+* objects misc::                Miscellaneous functions.
 @end menu
 
 @ignore
@@ -15270,26 +15271,36 @@ ikptr
 ika_bytevector_alloc (ikpcb * pcb, long bv_len)
 @{
   long   align_size;
-  ikptr  bv;
+  ikptr  s_bv;
   char * data;
   align_size = IK_ALIGN(disp_bytevector_data + bv_len + 1);
-  bv         = ik_safe_alloc(pcb, align_size)
+  s_bv       = ik_safe_alloc(pcb, align_size)
                | bytevector_tag;
-  IK_REF(bv, off_bytevector_length) = IK_FIX(bv_len);
-  data = (char *)(long)(bv + off_bytevector_data);
+  IK_REF(s_bv, off_bytevector_length) = IK_FIX(bv_len);
+  data = (char *)(long)(s_bv + off_bytevector_data);
   data[bv_len] = '\0';
-  return bv;
+  return s_bv;
 @}
+@end example
+
+@noindent
+to acquire the number of bytes we do:
+
+@example
+ikptr  s_bv = the_bytevector;
+long   bv_len;
+
+bv_len = IK_UNFIX(IK_REF(s_bv, off_bytevector_length));
 @end example
 
 @noindent
 and to access the data area we do:
 
 @example
-ikptr      bv = the_bytevector;
+ikptr      s_bv = the_bytevector;
 uint8_t *  data_area;
 
-data_area = (uint8_t *)(long)(bv + off_bytevector_data);
+data_area = (uint8_t *)(long)(s_bv + off_bytevector_data);
 @end example
 
 
@@ -15344,6 +15355,12 @@ Return a fixnum representing the number of bytes in the data area of
 @end deftypefn
 
 
+@deftypefn {Preprocessor Macro} long IK_BYTEVECTOR_DATA (ikptr @var{bv})
+Return a integer representing the memory address of the first byte in
+the data area of @var{bv}.
+@end deftypefn
+
+
 @deftypefn {Preprocessor Macro} {void *} IK_BYTEVECTOR_DATA_VOIDP (ikptr @var{bv})
 @deftypefnx {Preprocessor Macro} {char *} IK_BYTEVECTOR_DATA_CHARP (ikptr @var{bv})
 @deftypefnx {Preprocessor Macro} {uint8_t *} IK_BYTEVECTOR_DATA_UINT8P (ikptr @var{bv})
@@ -15379,6 +15396,14 @@ bytes of the @ascii{} string referenced by @var{cstr} in the data area.
 Allocate, initialise and return a new bytevector and copy in the data
 area @var{length} bytes from of the memory block referenced by
 @var{memory}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_bytevector_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
+Copy @var{count} bytes from bytevector @var{src} starting at offset
+@var{src_start}, to bytevector @var{dst} starting at offset
+@var{dst_start}; @var{src_start}, @var{dst_start} and @var{count} must
+be non--negative fixnums.  Return unspecified values.
 @end deftypefun
 
 @c page
@@ -16125,6 +16150,24 @@ ch = IK_CHAR32(s_str, idx);
 @deftypefun ikptr ik_string_alloc (ikpcb * @var{pcb}, long @var{number_of_chars})
 Allocate, initialise and return a new string object capable of holding
 the specified number of chars.
+@end deftypefun
+
+@c page
+@node objects misc
+@section Miscellaneous functions
+
+
+@deftypefun ikptr ikrt_general_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
+Copy @var{count} items from @var{src} starting at offset
+@var{src_start}, to @var{dst} starting at offset @var{dst_start};
+@var{src_start}, @var{dst_start} and @var{count} must be non--negative
+fixnums.  Return unspecified values.
+
+Both @var{dst} and @var{src} can be one among: a bytevector, a pointer,
+a string.  For bytevectors and pointers: bytes are moved and
+@var{src_start}, @var{dst_start} and @var{count} are in byte units.  For
+strings: 32-bit values representing Unicode code points are moved and
+@var{src_start}, @var{dst_start} and @var{count} are in character units.
 @end deftypefun
 
 @c page

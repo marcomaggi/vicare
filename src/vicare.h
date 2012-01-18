@@ -416,6 +416,8 @@ typedef uint32_t	ikchar;
 #define IK_STRING_LENGTH(STR)		IK_UNFIX(IK_REF((STR), off_string_length))
 #define IK_CHAR32(STR,IDX)		(((ikchar*)(((long)(STR)) + off_string_data))[IDX])
 
+#define IK_STRING_DATA_VOIDP(STR)	((void*)(((long)(STR)) + off_string_data))
+
 ik_decl ikptr ika_string_alloc		(ikpcb * pcb, long number_of_chars);
 ik_decl ikptr ikrt_string_to_symbol	(ikptr, ikpcb* pcb);
 ik_decl ikptr ikrt_strings_to_gensym	(ikptr, ikptr,	ikpcb* pcb);
@@ -623,6 +625,9 @@ ik_decl ikptr ika_bytevector_alloc		(ikpcb * pcb, long requested_number_of_bytes
 ik_decl ikptr ika_bytevector_from_cstring	(ikpcb * pcb, const char * cstr);
 ik_decl ikptr ika_bytevector_from_cstring_len	(ikpcb * pcb, const char * cstr, size_t len);
 ik_decl ikptr ika_bytevector_from_memory_block	(ikpcb * pcb, void * memory, size_t length);
+ik_decl ikptr ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
+				    ikptr s_src, ikptr s_src_start,
+				    ikptr s_count);
 
 #define IK_BYTEVECTOR_LENGTH_FX(BV)	IK_REF((BV), off_bytevector_length)
 #define IK_BYTEVECTOR_LENGTH(BV)	IK_UNFIX(IK_BYTEVECTOR_LENGTH_FX(BV))
@@ -762,6 +767,15 @@ ik_decl int   ik_is_struct	(ikptr R);
 #define off_tcbucket_key	(disp_tcbucket_key   - vector_tag)
 #define off_tcbucket_val	(disp_tcbucket_val   - vector_tag)
 #define off_tcbucket_next	(disp_tcbucket_next  - vector_tag)
+
+
+/** --------------------------------------------------------------------
+ ** Miscellanous functions.
+ ** ----------------------------------------------------------------- */
+
+ik_decl ikptr ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
+				 ikptr s_src, ikptr s_src_start,
+				 ikptr s_count);
 
 
 /** --------------------------------------------------------------------

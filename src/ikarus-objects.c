@@ -168,11 +168,11 @@ ika_list_from_argv_and_argc (ikpcb * pcb, char ** argv, long argc)
 ikptr
 ika_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes)
 {
-  long int  aligned_size;
-  ikptr	    s_bv;
+  long   aligned_size;
+  ikptr	 s_bv;
   aligned_size = IK_ALIGN(disp_bytevector_data + requested_number_of_bytes + 1);
   s_bv	       = ik_safe_alloc(pcb, aligned_size) | bytevector_tag;
-  ref(s_bv, off_bytevector_length) = IK_FIX(requested_number_of_bytes);
+  IK_REF(s_bv, off_bytevector_length) = IK_FIX(requested_number_of_bytes);
   IK_BYTEVECTOR_DATA_CHARP(s_bv)[requested_number_of_bytes] = '\0';
   return s_bv;
 }
@@ -200,6 +200,19 @@ ika_bytevector_from_memory_block (ikpcb * pcb, void * memory, size_t length)
   void *    data = IK_BYTEVECTOR_DATA_VOIDP(s_bv);
   memcpy(data, memory, length);
   return s_bv;
+}
+ikptr
+ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
+		      ikptr s_src, ikptr s_src_start,
+		      ikptr s_count)
+{
+  long		src_start = IK_UNFIX(s_src_start);
+  long		dst_start = IK_UNFIX(s_dst_start);
+  size_t	count     = (size_t)IK_UNFIX(s_count);
+  uint8_t *	dst = IK_BYTEVECTOR_DATA_UINT8P(s_dst) + dst_start;
+  uint8_t *	src = IK_BYTEVECTOR_DATA_UINT8P(s_src) + src_start;
+  memcpy(dst, src, count);
+  return void_object;
 }
 
 
@@ -550,6 +563,46 @@ ik_integer_to_sint64 (ikptr x)
     int64_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
     return (bnfst_negative(ref(x, -vector_tag)))? -(*memory) : (*memory);
   }
+}
+
+
+/** --------------------------------------------------------------------
+ ** Miscellanous functions.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
+		   ikptr s_src, ikptr s_src_start,
+		   ikptr s_count)
+{
+  long		src_start = IK_UNFIX(s_src_start);
+  long		dst_start = IK_UNFIX(s_dst_start);
+  size_t	count     = (size_t)IK_UNFIX(s_count);
+  uint8_t *	dst = NULL;
+  uint8_t *	src = NULL;
+
+  if (IK_IS_BYTEVECTOR(s_src)) {
+    src = IK_BYTEVECTOR_DATA_UINT8P(s_src) + src_start;
+  } else if (ikrt_is_pointer(s_src)) {
+    src = IK_POINTER_DATA_UINT8P(s_src) + src_start;
+  } else if (IK_IS_STRING(s_src)) {
+    src_start <<= 2; /* multiply by 4 */
+    src = IK_STRING_DATA_VOIDP(s_src);
+  } else
+    ik_abort("%s: invalid src value, %lu", __func__, (ik_ulong)s_src);
+
+  if (IK_IS_BYTEVECTOR(s_dst)) {
+    dst = IK_BYTEVECTOR_DATA_UINT8P(s_dst) + dst_start;
+  } else if (ikrt_is_pointer(s_dst)) {
+    dst = IK_POINTER_DATA_UINT8P(s_dst) + dst_start;
+  } else if (IK_IS_STRING(s_dst)) {
+    dst_start <<= 2; /* multiply by 4 */
+    dst = IK_STRING_DATA_VOIDP(s_dst);
+  } else
+    ik_abort("%s: invalid dst value, %lu", __func__, (ik_ulong)s_dst);
+
+  memcpy(dst, src, count);
+  return void_object;
 }
 
 /* end of file */
