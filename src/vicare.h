@@ -428,6 +428,7 @@ ik_decl ikptr ikrt_strings_to_gensym	(ikptr, ikptr,	ikpcb* pcb);
  ** ----------------------------------------------------------------- */
 
 #define symbol_tag			((ikptr) 0x5F)
+#define symbol_mask			((ikptr) 0xFF)
 #define disp_symbol_record_tag		0
 #define disp_symbol_record_string	(1 * wordsize)
 #define disp_symbol_record_ustring	(2 * wordsize)
@@ -442,6 +443,8 @@ ik_decl ikptr ikrt_strings_to_gensym	(ikptr, ikptr,	ikpcb* pcb);
 #define off_symbol_record_value		(disp_symbol_record_value   - record_tag)
 #define off_symbol_record_proc		(disp_symbol_record_proc    - record_tag)
 #define off_symbol_record_plist		(disp_symbol_record_plist   - record_tag)
+
+ik_decl int ik_is_symbol	(ikptr obj);
 
 
 /** --------------------------------------------------------------------

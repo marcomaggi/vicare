@@ -275,7 +275,7 @@ int
 ik_is_struct (ikptr R)
 {
   return ((record_tag == (record_mask & R)) &&
-	  (record_tag == (record_mask & ref(R, off_record_rtd))));
+	  (record_tag == (record_mask & IK_REF(R, off_record_rtd))));
 }
 ikptr
 ika_struct_alloc_no_init (ikpcb * pcb, ikptr s_rtd)
@@ -331,6 +331,18 @@ ika_string_alloc (ikpcb * pcb, long number_of_chars)
   s_str	     = ik_safe_alloc(pcb, align_size) | string_tag;
   ref(s_str, off_string_length) = IK_FIX(number_of_chars);
   return s_str;
+}
+
+
+/** --------------------------------------------------------------------
+ ** Symbols.
+ ** ----------------------------------------------------------------- */
+
+int
+ik_is_symbol (ikptr obj)
+{
+  return ((vector_tag == (vector_mask & obj)) &&
+	  (symbol_tag == (symbol_mask & IK_REF(R, off_symbol_record_tag))));
 }
 
 

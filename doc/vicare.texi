@@ -10622,23 +10622,6 @@ public interface exported by @library{ikarus} and @library{rnrs}.
 @section Low level symbol operations
 
 
-A symbol is a variable length memory block referenced by machine words
-tagged as vectors.  The first machine word of a symbol block is tagged
-has symbol in its least significant bits and it has the most significant
-bits set to zero.
-
-@example
-|------------------------|-------------| reference to symbol
-      heap pointer         vector tag
-
-|------------------------|-------------| symbol first word
-   all set to zero         symbol tag
-@end example
-
-A symbol memory block is @math{6} words wide and contains references to
-the following fields: @code{string}, @code{ustring}, @code{value},
-@code{proc}, @code{plist}.
-
 The arguments @var{sym} must be references to symbol blocks, the
 arguments @var{str} must be references to strings.  The following
 bindings are exported by the @library{ikarus system $symbols} library.
@@ -14068,11 +14051,11 @@ Scheme language compiler @file{ikarus.compiler.sls}.
 * objects structs::             Struct objects.
 * objects chars::               Character objects.
 * objects strings::             String objects.
+* objects symbols::             Symbol objects.
 * objects misc::                Miscellaneous functions.
 @end menu
 
 @ignore
-* syslib symbols::              Low level symbol operations.
 * syslib bignums::              Low level bignum operations.
 * syslib flonums::              Low level flonum operations.
 * syslib ratnums::              Low level ratnum operations.
@@ -16237,6 +16220,81 @@ ch = IK_CHAR32(s_str, idx);
 @deftypefun ikptr ika_string_alloc (ikpcb * @var{pcb}, long @var{number_of_chars})
 Allocate, initialise and return a new string object capable of holding
 the specified number of chars.
+@end deftypefun
+
+@c page
+@node objects symbols
+@section Symbol objects
+
+
+A symbol is a fixed length memory block referenced by machine words
+tagged as vectors.  The first machine word of a symbol block is tagged
+has symbol in its least significant bits and it has the most significant
+bits set to zero.
+
+@example
+|------------------------|-------------| reference to symbol
+      heap pointer         vector tag
+
+|------------------------|-------------| symbol first word
+   all set to zero         symbol tag
+@end example
+
+A symbol memory block is @math{6} words wide and contains references to
+the following fields: @code{string}, @code{ustring}, @code{value},
+@code{proc}, @code{plist}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+Symbol objects are allocated on the heap and must be interned, that is
+registered in a global symbol table.
+
+
+@defvr {Preprocessor Symbol} symbol_mask
+@defvrx {Preprocessor Symbol} symbol_tag
+Integer values used to tag and recognise the first word in symbol memory
+blocks.  @code{symbol_mask} isolates the tag bits from an @ikptr{} and
+@code{symbol_tag} represents the tag bits.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} symbol_record_size
+Number of bytes needed to hold a symbol memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_symbol_record_tag
+@defvrx {Preprocessor Symbol} disp_symbol_record_string
+@defvrx {Preprocessor Symbol} disp_symbol_record_ustring
+@defvrx {Preprocessor Symbol} disp_symbol_record_value
+@defvrx {Preprocessor Symbol} disp_symbol_record_proc
+@defvrx {Preprocessor Symbol} disp_symbol_record_plist
+Symbol field displacements.  The number of bytes to add to an untagged
+pointer to symbol to get the pointer to the first byte in the word
+holding the specified field.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_symbol_record_tag
+@defvrx {Preprocessor Symbol} off_symbol_record_string
+@defvrx {Preprocessor Symbol} off_symbol_record_ustring
+@defvrx {Preprocessor Symbol} off_symbol_record_value
+@defvrx {Preprocessor Symbol} off_symbol_record_proc
+@defvrx {Preprocessor Symbol} off_symbol_record_plist
+Symbol field offsets.  The number of bytes to add to an tagged pointer
+to symbol to get the pointer to the first byte in the word holding the
+specified field.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on symbols
+
+
+@deftypefun int ik_is_symbol (ikptr @var{obj})
+Return true if @var{obj} is a symbol.
 @end deftypefun
 
 @c page
