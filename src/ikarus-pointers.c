@@ -167,7 +167,7 @@ ikrt_fx_to_pointer(ikptr x, ikpcb* pcb)
 ikptr
 ikrt_bn_to_pointer (ikptr x, ikpcb* pcb)
 {
-  if (bnfst_negative(IK_REF(x, -vector_tag)))
+  if (IK_BNFST_NEGATIVE(IK_REF(x, -vector_tag)))
     return ika_pointer_alloc(pcb, -IK_REF(x, off_bignum_data));
   else
     return ika_pointer_alloc(pcb, +IK_REF(x, off_bignum_data));

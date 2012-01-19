@@ -16307,6 +16307,21 @@ all fixnums <= (greatest-fixnum) < positive bignums
 @subsubheading Basic operations
 
 
+To identify an object as bignum we do:
+
+@example
+ikptr   X;
+
+if ((vector_tag == IK_TAGOF(X)) &&
+    (bignum_tag == (bignum_mask & (int)IK_REF(X, -vector_tag))))
+  it_is_a_bignum();
+else
+  it_is_not();
+@end example
+
+
+
+
 @defvr {Preprocessor Symbol} bignum_mask
 @defvrx {Preprocessor Symbol} bignum_tag
 @end defvr
@@ -16342,6 +16357,11 @@ all fixnums <= (greatest-fixnum) < positive bignums
 @c ------------------------------------------------------------
 
 @subsubheading Operations on exact integers
+
+
+@deftypefun int ik_is_bignum (ikptr @var{obj})
+Return true if @var{obj} is a bignum.
+@end deftypefun
 
 
 @deftypefun ikptr ika_integer_from_int (ikpcb * @var{pcb}, int @var{N})

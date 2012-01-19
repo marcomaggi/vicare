@@ -127,7 +127,7 @@
   (test-exact-integer-sqrt)
   (test-eqv))
 
-(display "*** testing numerics\n" (current-error-port))
+(display "*** testing Ikarus numerics\n\n" (current-error-port))
 (run-tests)
 (display "; *** done\n" (current-error-port))
 

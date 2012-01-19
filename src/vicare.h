@@ -461,6 +461,41 @@ ik_decl int ik_is_symbol	(ikptr obj);
 #define off_bignum_tag		(disp_bignum_tag  - vector_tag)
 #define off_bignum_data		(disp_bignum_data - vector_tag)
 
+#define IK_BNFST_NEGATIVE(X)		(((ik_ulong)(X)) & bignum_sign_mask)
+#define IK_BNFST_POSITIVE(X)		(!IK_BNFST_NEGATIVE(X))
+#define IK_BNFST_LIMB_COUNT(X)		(((ik_ulong)(X)) >> bignum_length_shift)
+
+#define IK_BIGNUM_SIZE(NUMBER_OF_LIMBS)				\
+  IK_ALIGN(disp_bignum_data + (NUMBER_OF_LIMBS) * wordsize)
+
+#define IKA_BIGNUM_ALLOC(PCB,LIMB_COUNT)	\
+  (ik_safe_alloc((PCB), IK_BIGNUM_SIZE(LIMB_COUNT)) | vector_tag)
+
+#define IK_BIGNUM_FIRST_WORD(LIMB_COUNT,SIGN)			\
+  ((ikptr)(((LIMB_COUNT) << bignum_length_shift)		\
+	   | ((SIGN) << bignum_sign_shift)			\
+	   | bignum_tag))
+
+#define IK_POSITIVE_BIGNUM_FIRST_WORD(LIMB_COUNT)		\
+  IK_BIGNUM_FIRST_WORD(LIMB_COUNT,0)
+
+#define IK_NEGATIVE_BIGNUM_FIRST_WORD(LIMB_COUNT)		\
+  IK_BIGNUM_FIRST_WORD(LIMB_COUNT,1)
+
+#define IK_BIGNUM_DATA_LIMBP(X)					\
+  ((mp_limb_t*)(long)(X + off_bignum_data))
+
+#define IK_BIGNUM_FIRST_LIMB(X)					\
+  ((mp_limb_t)IK_REF((X), off_bignum_data))
+
+#define IK_BIGNUM_LAST_LIMB(X,LIMB_COUNT)			\
+  ((mp_limb_t)IK_REF((X), off_bignum_data+((LIMB_COUNT)-1)*wordsize))
+
+#define IK_BNFST(X)		IK_REF((X), off_bignum_tag)
+#define IK_LIMB(X,IDX)		IK_REF((X), off_bignum_data + (IDX)*wordsize)
+
+ik_decl int	ik_is_bignum		(ikptr x);
+
 ik_decl ikptr	ika_integer_from_int	(ikpcb* pcb, int N);
 ik_decl ikptr	ika_integer_from_long	(ikpcb* pcb, long N);
 ik_decl ikptr	ika_integer_from_llong	(ikpcb* pcb, ik_llong N);
@@ -479,6 +514,21 @@ ik_decl ik_llong ik_integer_to_llong	(ikptr x);
 ik_decl ik_uint	 ik_integer_to_uint	(ikptr x);
 ik_decl ik_ulong  ik_integer_to_ulong	(ikptr x);
 ik_decl ik_ullong ik_integer_to_ullong	(ikptr x);
+
+/* inspection */
+ik_decl ikptr	ikrt_positive_bn	(ikptr x);
+ik_decl ikptr	ikrt_even_bn		(ikptr x);
+
+/* arithmetics */
+ik_decl ikptr	ikrt_fxfxplus		(ikptr x, ikptr y, ikpcb* pcb);
+ik_decl ikptr	ikrt_fxbnplus		(ikptr x, ikptr y, ikpcb* pcb);
+ik_decl ikptr	ikrt_bnbnplus		(ikptr x, ikptr y, ikpcb* pcb);
+
+ik_decl ikptr	ikrt_fxfxminus		(ikptr x, ikptr y, ikpcb* pcb);
+ik_decl ikptr	ikrt_fxbnminus		(ikptr x, ikptr y, ikpcb* pcb);
+ik_decl ikptr	ikrt_bnfxminus		(ikptr x, ikptr y, ikpcb* pcb);
+ik_decl ikptr	ikrt_bnbnminus		(ikptr x, ikptr y, ikpcb* pcb);
+ik_decl ikptr	ikrt_bnnegate		(ikptr x, ikpcb* pcb);
 
 
 /** --------------------------------------------------------------------

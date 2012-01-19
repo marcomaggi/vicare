@@ -461,7 +461,7 @@ ik_integer_to_int (ikptr x)
   else if (x == void_object)
     return 0;
   else {
-    if (bnfst_negative(ref(x, -vector_tag)))
+    if (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))
       return (int)(-ref(x, off_bignum_data));
     else
       return (int)(+ref(x, off_bignum_data));
@@ -475,7 +475,7 @@ ik_integer_to_long (ikptr x)
   else if (x == void_object)
     return 0;
   else {
-    if (bnfst_negative(ref(x, -vector_tag)))
+    if (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))
       return (long)(-ref(x, off_bignum_data));
     else
       return (long)(+ref(x, off_bignum_data));
@@ -489,7 +489,7 @@ ik_integer_to_uint (ikptr x)
   else if (x == void_object)
     return 0;
   else {
-    assert(! bnfst_negative(ref(x, -vector_tag)));
+    assert(! IK_BNFST_NEGATIVE(ref(x, -vector_tag)));
     return (ik_uint)(ref(x, off_bignum_data));
   }
 }
@@ -501,7 +501,7 @@ ik_integer_to_ulong (ikptr x)
   else if (x == void_object)
     return 0;
   else {
-    assert(! bnfst_negative(ref(x, -vector_tag)));
+    assert(! IK_BNFST_NEGATIVE(ref(x, -vector_tag)));
     return (ik_ulong)(ref(x, off_bignum_data));
   }
 }
@@ -520,7 +520,7 @@ ik_integer_to_llong (ikptr x)
       return (ik_ulong)ref(x, off_bignum_data);
     else if (fst == neg_one_limb_tag)
       return -(signed long)ref(x, off_bignum_data);
-    else if (bnfst_negative(fst))
+    else if (IK_BNFST_NEGATIVE(fst))
       return -(*((ik_llong*)(x+off_bignum_data)));
     else
       return *((ik_llong*)(x+off_bignum_data));
@@ -536,7 +536,7 @@ ik_integer_to_ullong (ikptr x)
     return 0;
   else {
     ik_ullong *	 memory = (ik_ullong *)(x + off_bignum_data);
-    assert(! bnfst_negative(ref(x, -vector_tag)));
+    assert(! IK_BNFST_NEGATIVE(ref(x, -vector_tag)));
     return *memory;
   }
 }
@@ -551,7 +551,7 @@ ik_integer_to_uint32 (ikptr x)
     return ((0 <= X) && (X <= UINT32_MAX))? ((uint32_t)X) : false_object;
   } else {
     uint32_t *	memory = (void *)(((uint8_t *)x) + off_bignum_data);
-    return (bnfst_negative(ref(x, -vector_tag)))? -(*memory) : (*memory);
+    return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
   }
 }
 int32_t
@@ -562,7 +562,7 @@ ik_integer_to_sint32 (ikptr x)
     return ((INT32_MIN <= X) && (X <= INT32_MAX))? ((int32_t)X) : false_object;
   } else {
     int32_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
-    return (bnfst_negative(ref(x, -vector_tag)))? -(*memory) : (*memory);
+    return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
   }
 }
 uint64_t
@@ -573,7 +573,7 @@ ik_integer_to_uint64 (ikptr x)
     return ((0 <= X) && (X <= UINT64_MAX))? ((uint64_t)X) : false_object;
   } else {
     uint64_t *	memory = (void *)(((uint8_t *)x) + off_bignum_data);
-    return (bnfst_negative(ref(x, -vector_tag)))? -(*memory) : (*memory);
+    return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
   }
 }
 int64_t
@@ -584,7 +584,7 @@ ik_integer_to_sint64 (ikptr x)
     return ((INT64_MIN <= X) && (X <= INT64_MAX))? ((int64_t)X) : false_object;
   } else {
     int64_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
-    return (bnfst_negative(ref(x, -vector_tag)))? -(*memory) : (*memory);
+    return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
   }
 }
 
