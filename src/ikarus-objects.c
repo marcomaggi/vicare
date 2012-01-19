@@ -342,7 +342,7 @@ int
 ik_is_symbol (ikptr obj)
 {
   return ((vector_tag == (vector_mask & obj)) &&
-	  (symbol_tag == (symbol_mask & IK_REF(R, off_symbol_record_tag))));
+	  (symbol_tag == (symbol_mask & IK_REF(obj, off_symbol_record_tag))));
 }
 
 
