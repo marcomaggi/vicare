@@ -29,6 +29,10 @@
 (import (ikarus)
   (ikarus-test-framework))
 
+(define (%printf . args)
+  (when #f
+    (apply printf args)))
+
 (define (run-tests)
   (test-bignum-to-flonum)
   (test-bignum->flonum))
@@ -52,7 +56,7 @@
   (let ([fl (inexact x)])
     (let ([n (if (> x 0) x (- x))])
       (let ([bits (bitwise-length n)])
-	(printf "bits(~s) = ~s\n" n bits)
+	(%printf "bits(~s) = ~s\n" n bits)
 	(cond
 	 [(<= bits precision)
 	  (unless (= x (exact fl))
@@ -70,7 +74,7 @@
 		    [else
 		     (* (inexact (+ hi53 1)) (sll 1 (- bits precision)))])])
 	      (let ([fl2 (if (> x 0) fl2 (* fl2 -1))])
-		(printf "x=~s fl=~s\n" x fl)
+		(%printf "x=~s fl=~s\n" x fl)
 		(unless (fl=? fl fl2)
 		  (error #f "should be equal" x fl fl2)))))])))))
 
@@ -145,6 +149,9 @@
   (test-pos-neg
    1340780792994259858813973235560875797249452437522567973398106813134915148656547489875113635440585039972930371997426831929539813244507897782529778440889958413407807929942598588139732355608757972494524375225679733981068131349151486565474898751136354405850399729303719974268319295398132445078977825297784408899584))
 
+(set-port-buffer-mode! (current-output-port) (buffer-mode none))
+(display "*** testing Ikarus bignum to flonum\n" (current-error-port))
 (run-tests)
+(display "; *** done\n" (current-error-port))
 
 ;;; end of file
