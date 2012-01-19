@@ -110,6 +110,41 @@
       (- (+ greatest-positive-fx least-positive-bn) least-positive-bn)
     => greatest-positive-fx)
 
+  (check
+      (- (+ least-positive-bn least-positive-bn) least-positive-bn)
+    => least-positive-bn)
+
+;;; --------------------------------------------------------------------
+;;; bn + bn
+
+  (check
+      (- (+ least-positive-bn least-positive-bn) least-positive-bn)
+    => least-positive-bn)
+
+  (check
+      (+ least-positive-bn (- least-positive-bn))
+    => 0)
+
+  (check
+      (+ (- least-positive-bn) least-positive-bn)
+    => 0)
+
+  (check
+      (+ (+ 10 least-positive-bn) (- least-positive-bn))
+    => 10)
+
+  (check
+      (+ (- (+ 10 least-positive-bn)) least-positive-bn)
+    => -10)
+
+  (check
+      (- (+ least-positive-bn (+ 10 least-positive-bn)) least-positive-bn)
+    => (+ 10 least-positive-bn))
+
+  (check
+      (- (+ (+ 10 least-positive-bn) least-positive-bn) least-positive-bn)
+    => (+ 10 least-positive-bn))
+
   #t)
 
 

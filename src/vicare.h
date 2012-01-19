@@ -471,16 +471,14 @@ ik_decl int ik_is_symbol	(ikptr obj);
 #define IKA_BIGNUM_ALLOC(PCB,LIMB_COUNT)	\
   (ik_safe_alloc((PCB), IK_BIGNUM_SIZE(LIMB_COUNT)) | vector_tag)
 
-#define IK_BIGNUM_FIRST_WORD(LIMB_COUNT,SIGN)			\
-  ((ikptr)(((LIMB_COUNT) << bignum_length_shift)		\
-	   | ((SIGN) << bignum_sign_shift)			\
-	   | bignum_tag))
+#define IK_COMPOSE_BIGNUM_FIRST_WORD(LIMB_COUNT,SIGN)		\
+  ((ikptr)(((LIMB_COUNT) << bignum_length_shift) | (SIGN) | bignum_tag))
 
 #define IK_POSITIVE_BIGNUM_FIRST_WORD(LIMB_COUNT)		\
-  IK_BIGNUM_FIRST_WORD(LIMB_COUNT,0)
+  IK_COMPOSE_BIGNUM_FIRST_WORD((LIMB_COUNT),((0)<<bignum_sign_shift))
 
 #define IK_NEGATIVE_BIGNUM_FIRST_WORD(LIMB_COUNT)		\
-  IK_BIGNUM_FIRST_WORD(LIMB_COUNT,1)
+  IK_COMPOSE_BIGNUM_FIRST_WORD((LIMB_COUNT),((1)<<bignum_sign_shift))
 
 #define IK_BIGNUM_DATA_LIMBP(X)					\
   ((mp_limb_t*)(long)(X + off_bignum_data))

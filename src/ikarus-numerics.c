@@ -222,113 +222,127 @@ ikrt_fxbnplus (ikptr x, ikptr y, ikpcb* pcb)
 }
 ikptr
 ikrt_bnbnplus (ikptr x, ikptr y, ikpcb* pcb)
+/* Depending on the sign of the operands we do a different operation:
+
+   X>0 Y>0 => RES = X + Y
+   X<0 Y<0 => RES = -(|X| + |Y|)
+   X>0 Y<0 => RES = X - |Y|
+   X<0 Y>0 => RES = Y - |X|
+
+*/
 {
-  ik_ulong	xfst   = (ik_ulong)ref(x, -vector_tag);
-  ik_ulong	yfst   = (ik_ulong)ref(y, -vector_tag);
+  ik_ulong	xfst   = (ik_ulong)IK_BNFST(x);
+  ik_ulong	yfst   = (ik_ulong)IK_BNFST(y);
   long		xsign  = xfst & bignum_sign_mask;
   long		ysign  = yfst & bignum_sign_mask;
   long		xlimbs = xfst >> bignum_length_shift;
   long		ylimbs = yfst >> bignum_length_shift;
-  if (xsign == ysign) {
-    long	n1, n2;
-    ikptr	s1, s2, res;
+  if (xsign == ysign) { /* bignums of equal sign */
+    ikptr	res;	/* return value */
+    ikptr	bn1;	/* bignum with greater number of limbs */
+    ikptr	bn2;	/* bignum with lesser number of limbs */
+    long	nlimb1;	/* number of limbs in BN1 */
+    long	nlimb2;	/* number of limbs in BN2 */
     mp_limb_t	carry;
     if (xlimbs > ylimbs) {
-      n1 = xlimbs;
-      n2 = ylimbs;
-      s1 = x;
-      s2 = y;
+      nlimb1 = xlimbs;
+      nlimb2 = ylimbs;
+      bn1 = x;
+      bn2 = y;
     } else {
-      n1 = ylimbs;
-      n2 = xlimbs;
-      s1 = y;
-      s2 = x;
+      nlimb1 = ylimbs;
+      nlimb2 = xlimbs;
+      bn1 = y;
+      bn2 = x;
     }
-    pcb->root0 = &s1;
-    pcb->root1 = &s2;
+    pcb->root0 = &bn1;
+    pcb->root1 = &bn2;
     {
-      res = IKA_BIGNUM_ALLOC(pcb, 1 + n1);
+      res = IKA_BIGNUM_ALLOC(pcb, 1 + nlimb1);
     }
-    pcb->root0 = 0;
-    pcb->root1 = 0;
+    pcb->root1 = NULL;
+    pcb->root0 = NULL;
     carry = mpn_add(IK_BIGNUM_DATA_LIMBP(res),
-		    IK_BIGNUM_DATA_LIMBP(s1), n1,
-		    IK_BIGNUM_DATA_LIMBP(s2), n2);
+		    IK_BIGNUM_DATA_LIMBP(bn1), nlimb1,
+		    IK_BIGNUM_DATA_LIMBP(bn2), nlimb2);
     if (carry) {
-      ref(res, off_bignum_data + xlimbs*wordsize) = (ikptr)1;
-      IK_BNFST(res) = (ikptr)(((n1+1) << bignum_length_shift) | xsign | bignum_tag);
+      IK_LIMB(res, xlimbs) = (ikptr)1;
+      IK_BNFST(res) = IK_COMPOSE_BIGNUM_FIRST_WORD(1 + nlimb1, xsign);
       return DEBUG_VERIFY_BIGNUM(res, "bnbn+1");
     } else {
-      IK_BNFST(res) = (ikptr)((n1 << bignum_length_shift) | xsign | bignum_tag);
+      IK_BNFST(res) = IK_COMPOSE_BIGNUM_FIRST_WORD(nlimb1, xsign);
       return DEBUG_VERIFY_BIGNUM(res, "bnbn+2");
     }
-  }
-  else {
-    ikptr	res;
-    ikptr	s1=x, s2=y;
-    long	n1=xlimbs, n2=ylimbs;
-    long	result_sign = xsign;
+  } else { /* bignums of different sign */
+    ikptr	res;				/* the return value */
+    ikptr	bn1		= x;
+    ikptr	bn2		= y;
+    long	nlimb1		= xlimbs;
+    long	nlimb2		= ylimbs;
+    long	len;
+    long	result_sign	= xsign;
     mp_limb_t	burrow;
-    while((xlimbs == ylimbs) &&
-	  (ref(x, -vector_tag+disp_bignum_data+(xlimbs-1)*wordsize) ==
-	   ref(y, -vector_tag+disp_bignum_data+(xlimbs-1)*wordsize))) {
+    /* If the limbs are equal ther result is zero. */
+    while ((xlimbs == ylimbs) && (IK_LIMB(x, xlimbs - 1) == IK_LIMB(y, xlimbs - 1))) {
       xlimbs -= 1;
       ylimbs -= 1;
-      if (xlimbs == 0) { return 0; }
+      if (0 == xlimbs)
+	return 0; /* the fixnum zero */
     }
     /* |x| != |y| */
     if (xlimbs <= ylimbs) {
       if (xlimbs == ylimbs) {
-	if ((ref(y, -vector_tag+disp_bignum_data+(xlimbs-1)*wordsize) >
-	     ref(x, -vector_tag+disp_bignum_data+(xlimbs-1)*wordsize))) {
-	  s1 = y; n1 = ylimbs;
-	  s2 = x; n2 = xlimbs;
-	  result_sign = ysign;
+	if (IK_LIMB(y, xlimbs - 1) > IK_LIMB(x, xlimbs - 1)) {
+	  bn1		= y;
+	  nlimb1	= ylimbs;
+	  bn2		= x;
+	  nlimb2	= xlimbs;
+	  result_sign	= ysign;
 	}
       } else {
-	s1 = y; n1 = ylimbs;
-	s2 = x; n2 = xlimbs;
-	result_sign = ysign;
+	bn1		= y;
+	nlimb1		= ylimbs;
+	bn2		= x;
+	nlimb2		= xlimbs;
+	result_sign	= ysign;
       }
     }
-    /* |s1| > |s2| */
-    pcb->root0 = &s1;
-    pcb->root1 = &s2;
+    /* |bn1| > |bn2| */
+    pcb->root0 = &bn1;
+    pcb->root1 = &bn2;
     {
-      res = IKA_BIGNUM_ALLOC(pcb, n1);
+      res = IKA_BIGNUM_ALLOC(pcb, nlimb1);
     }
     pcb->root0 = 0;
     pcb->root1 = 0;
     burrow = mpn_sub(IK_BIGNUM_DATA_LIMBP(res),
-		     IK_BIGNUM_DATA_LIMBP(s1), n1,
-		     IK_BIGNUM_DATA_LIMBP(s2), n2);
+		     IK_BIGNUM_DATA_LIMBP(bn1), nlimb1,
+		     IK_BIGNUM_DATA_LIMBP(bn2), nlimb2);
     if (burrow)
       ik_abort("bug: burrow error in bnbn+");
-    long len = n1;
-    while (ref(res, off_bignum_data + (len-1)*wordsize) == 0) {
+    for (len = nlimb1; 0 == IK_LIMB(res, len - 1);) {
       --len;
-      if (0 == len) {
-	return 0;
-      }
+      if (0 == len)
+	return 0; /* the fixnum zero */
     }
-    if (result_sign == 0) {
+    if (0 == result_sign) {
       /* positive result */
-      if (len == 1) {
-	mp_limb_t fst_limb = (mp_limb_t) ref(res, off_bignum_data);
-	if (fst_limb <= most_positive_fixnum) {
-	  return IK_FIX((long)fst_limb);
+      if (1 == len) {
+	mp_limb_t first_limb = IK_BIGNUM_FIRST_LIMB(res);
+	if (first_limb <= most_positive_fixnum) {
+	  return IK_FIX((long)first_limb);
 	}
       }
-      ref(res, off_bignum_tag) = (ikptr)((len << bignum_length_shift) | result_sign | bignum_tag);
+      IK_BNFST(res) = IK_COMPOSE_BIGNUM_FIRST_WORD(len, result_sign);
       return DEBUG_VERIFY_BIGNUM(res, "bnbn+3");
     } else {
       /* negative result */
       if (len == 1) {
-	mp_limb_t fst_limb = (mp_limb_t) ref(res, off_bignum_data);
-	if (fst_limb <= most_negative_fixnum)
-	  return IK_FIX(-(long)fst_limb);
+	mp_limb_t first_limb = IK_BIGNUM_FIRST_LIMB(res);
+	if (first_limb <= most_negative_fixnum)
+	  return IK_FIX(-(long)first_limb);
       }
-      ref(res, off_bignum_tag) = (ikptr)((len << bignum_length_shift) | result_sign | bignum_tag);
+      IK_BNFST(res) = IK_COMPOSE_BIGNUM_FIRST_WORD(len, result_sign);
       return DEBUG_VERIFY_BIGNUM(res, "bnbn+4");
     }
   }
