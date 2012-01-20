@@ -11,7 +11,7 @@ dist_doc_DATA		= README COPYING GPL-3
 
 vicare_test_RULES	= test tests long-test long-tests \
 			  test-run test-vie test-exec-modes \
-			  proof proofs
+			  proof proofs foreign-test foreign-tests
 
 vicare_lib_RULES	= vfasl vfasl-installed
 
