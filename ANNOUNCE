@@ -41,12 +41,16 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d6
 ------------------------
 
+* Big C code review to fix  bad handling of allocated Scheme object with
+  respect to garbage collection.
+
 * The Scheme  code for the glibc  and linux functions has  been moved in
   standalone libraries, out of the  boot image.  The public interface to
   these libraries is unchanged.
 
-* Added  support for  foreign  libraries associated  to  FASL files  for
-  autoloading.  The packaging infrastructure needs GNU Libtool now.
+* Added  support   for  autoloading  foreign   libraries  associated  to
+  precompiled  library files.   The packaging  infrastructure  needs GNU
+  Libtool now.
 
 * Optional support for the Iconv API has been added to (vicare glibc) by
   linking with  Libiconv.  By default  disabled, to enable it:  give the
