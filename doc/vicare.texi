@@ -10817,7 +10817,7 @@ Evaluate to a fixnum which can be used as hash value.
 
 The arguments @var{bn} to these operations must be bignums.  The
 following bindings are exported by the @library{ikarus system $bignums}
-library.
+library.  @ref{iklib numerics} for more functions acting on bignums.
 
 
 @deffn {Unsafe Operation} $bignum-positive? @var{bn}
@@ -10841,45 +10841,10 @@ portion of a bignum memory block.
 @section Low level flonum operations
 
 
-Flonums are double--precision floating point numbers (@math{8} bytes
-wide) implemented as specified by @ieee{} 754 on the hosting platform.
-@ref{iklib numerics} for more functions acting on flonums.
-
-A flonum is a fixed length memory block referenced by machine words
-tagged as vectors.  The first machine word of a flonum block is tagged
-has flonum in its least significant bits and it has the most significant
-bits set to zero.
-
-@example
-|------------------------|-------------| reference to flonum
-      heap pointer         vector tag
-
-|------------------------|-------------| flonum first word
-   all set to zero         flonum tag
-@end example
-
-A flonum memory block is @math{16} bytes wide on both 32-bit and 64-bit
-platforms; to allow for the same binary layout on both platforms, on a
-32-bit platform the actual number is stored in the last two words:
-
-@example
-   1st word     2nd word     3rd word     4th word
-|------------|------------|------------|------------|
- tagged word     unused           data words
-@end example
-
-@noindent
-on a 64-bit platform the actual number is stored in the second word:
-
-@example
-          1st word                 2nd word
-|-------------------------|-------------------------|
-         tagged word               data word
-@end example
-
 The arguments @var{fl} to these operations must be flonums, the
 arguments @var{fx} must be fixnums.  The following bindings are exported
-by the @library{ikarus system $flonums} library.
+by the @library{ikarus system $flonums} library.  @ref{iklib numerics}
+for more functions acting on flonums.
 
 
 @deffn {Unsafe Operation} $make-flonum
@@ -10932,37 +10897,11 @@ format of @ieee{} double precision flonums.
 @section Low level ratnum operations
 
 
-Ratnums are exact rational numbers, having a fixnum or bignum as
-numerator and a fixnum or bignum as denominator.  @ref{iklib numerics}
-for more functions acting on ratnums.
-
-A ratnum is a fixed length memory block referenced by machine words
-tagged as vectors.  The first machine word of a ratnum block is tagged
-has ratnum in its least significant bits and it has the most significant
-bits set to zero.
-
-@example
-|------------------------|-------------| reference to ratnum
-      heap pointer         vector tag
-
-|------------------------|-------------| ratnum first word
-   all set to zero         ratnum tag
-@end example
-
-A ratnum memory block is @math{4} words wide; a reference to the
-numerator is stored in the second word and a reference to the
-denominator is stored in the third word
-
-@example
-   1st word     2nd word     3rd word     4th word
-|------------|------------|------------|------------|
- tagged word   numerator   denominator     unused
-@end example
-
 The arguments @var{rat} to these operations must be ratnums, the
 arguments @var{num} must be references to either fixnums or bignums.
 The following bindings are exported by the @library{ikarus system
-$ratnums} library.
+$ratnums} library.  @ref{iklib numerics} for more functions acting on
+ratnums.
 
 
 @deffn {Unsafe Operation} $make-ratnum @vari{num} @varii{num}
@@ -10986,38 +10925,11 @@ Return the reference to the denominator.
 @section Low level compnum operations
 
 
-Compnums are complex numbers having a fixnum, bignum or flonum as real
-part and a fixnum, bignum or flonum as imaginary part, but @strong{not}
-both flonums.  @ref{iklib numerics} for more functions acting on
-compnums.
-
-A compnum is a fixed length memory block referenced by machine words
-tagged as vectors.  The first machine word of a compnum block is tagged
-has compnum in its least significant bits and it has the most
-significant bits set to zero.
-
-@example
-|------------------------|-------------| reference to compnum
-      heap pointer         vector tag
-
-|------------------------|-------------| compnum first word
-   all set to zero         compnum tag
-@end example
-
-A compnum memory block is @math{4} words wide; a reference to the real
-part is stored in the second word and a reference to the imaginary part
-is stored in the third word
-
-@example
-   1st word     2nd word     3rd word     4th word
-|------------|------------|------------|------------|
- tagged word   real part    imag part     unused
-@end example
-
 The arguments @var{cmp} to these operations must be compnums, the
 arguments @var{num} must be references to either fixnums, bignums or
 flonums.  The following bindings are exported by the @library{ikarus
-system $compnums} library.
+system $compnums} library.  @ref{iklib numerics} for more functions
+acting on compnums.
 
 
 @deffn {Unsafe Operation} $make-compnum @vari{num} @varii{num}
@@ -14018,12 +13930,13 @@ Scheme language compiler @file{ikarus.compiler.sls}.
 * objects strings::             String objects.
 * objects symbols::             Symbol objects.
 * objects bignums::             Bignum objects.
+* objects ratnums::             Ratnum objects.
+* objects flonums::             Flonum objects.
+* objects compnums::            Compnum objects.
 * objects misc::                Miscellaneous functions.
 @end menu
 
 @ignore
-* syslib flonums::              Low level flonum operations.
-* syslib ratnums::              Low level ratnum operations.
 * syslib compnums::             Low level compnum operations.
 * syslib cflonums::             Low level cflonum operations.
 * syslib ports::                Low level port structures.
@@ -16269,8 +16182,7 @@ Return true if @var{obj} is a symbol.
 
 Bignums are multi--precision exact integers bigger than fixnums; they
 are implemented using the @code{mpn} @api{} of @gnu{} @gmp{},
-@xref{Low-level Functions, mpn, Low-level Functions, gmp}.  @ref{iklib
-numerics} for more functions acting on bignums.
+@xref{Low-level Functions, mpn, Low-level Functions, gmp}.
 
 @value{PRJNAME} only uses a bignum to represent an exact integer when
 the value does not fit in a fixnum; it follows that the following ranges
@@ -16363,7 +16275,7 @@ IK_REF(s_bn, off_bignum_tag) = s_fst;
 To identify an object as bignum we do:
 
 @example
-ikptr   X;
+ikptr  X = the_object;
 
 if ((vector_tag == IK_TAGOF(X)) &&
     (bignum_tag == (bignum_mask & IK_REF(X, -vector_tag))))
@@ -16579,6 +16491,510 @@ value.
 Return a C language number from a Scheme exact integer object.  The
 object @var{X} must be in the correct range for the requested
 conversion.
+@end deftypefun
+
+@c page
+@node objects ratnums
+@section Ratnum objects
+
+
+Ratnums are exact rational numbers, having a fixnum or bignum as
+numerator and a fixnum or bignum as denominator.  A ratnum is a fixed
+length memory block referenced by machine words tagged as vectors.  The
+first machine word of a ratnum block is tagged has ratnum in its least
+significant bits and it has the most significant bits set to zero.
+
+@example
+|------------------------|-------------| reference to ratnum
+      heap pointer         vector tag
+
+|------------------------|-------------| ratnum first word
+   all set to zero         ratnum tag
+@end example
+
+A ratnum memory block is @math{4} words wide; a reference to the
+numerator is stored in the second word and a reference to the
+denominator is stored in the third word
+
+@example
+   1st word     2nd word     3rd word     4th word
+|------------|------------|------------|------------|
+ tagged word   numerator   denominator     unused
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+Ratnums are allocated on the Scheme heap as follows:
+
+@example
+ikpcb * pcb   = the_pcb;
+ikptr   s_rn;
+
+s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
+IK_REF(s_rn, off_ratnum_tag) = ratnum_tag;
+@end example
+
+@noindent
+after allocation we must always initialise the numerator and denominator
+fields to some correct value before running the next garbage collection;
+a full allocation and initialisation is as follows:
+
+@example
+ikpcb * pcb   = the_pcb;
+ikptr   s_num = the_numerator;
+ikptr   s_den = the_denominator;
+ikptr   s_rn;
+
+pcb->root9 = &s_num;
+pcb->root8 = &s_den;
+@{
+  s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
+@}
+pcb->root8 = NULL;
+pcb->root9 = NULL;
+
+IK_REF(s_rn, off_ratnum_tag) = ratnum_tag;
+IK_REF(s_rn, off_ratnum_num) = s_num;
+IK_REF(s_rn, off_ratnum_den) = s_den;
+@end example
+
+To identify an object as ratnum we do:
+
+@example
+ikptr  X = the_object;
+
+if ((vector_tag == IK_TAGOF(X)) &&
+    (ratnum_tag == IK_REF(X, -vector_tag)))
+  it_is_a_ratnum();
+else
+  it_is_not();
+@end example
+
+@noindent
+to set or retrieve the numerator and denominator we do:
+
+@example
+ikptr  s_rn = the_ratnum;
+ikptr  s_num;
+ikptr  s_den;
+
+s_num = IK_REF(s_rn, off_ratnum_num);
+s_den = IK_REF(s_rn, off_ratnum_den);
+IK_REF(s_rn, off_ratnum_num) = s_num;
+IK_REF(s_rn, off_ratnum_den) = s_den;
+@end example
+
+
+@defvr {Preprocessor Symbol} ratnum_size
+The number of bytes to allocate to hold a ratnum memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} ratnum_tag
+The tag of @ikptr{} values used as first words in ratnum memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_ratnum_tag
+Displacement of secondary tag word.  The number of bytes to add to an
+untagged pointer to ratnum to get the pointer to the first byte in the
+word holding the ratnum tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_ratnum_num
+@defvrx {Preprocessor Symbol} disp_ratnum_den
+Displacements of numerator and denominator.  The number of bytes to add
+to an untagged pointer to ratnum to get the pointer to the first byte of
+the reference to the numerator or denominator.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_ratnum_tag
+An integer to add to add to a tagged @ikptr{} pointer to ratnum to get
+the pointer to the first byte in the word holding the ratnum tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_ratnum_num
+@defvrx {Preprocessor Symbol} off_ratnum_den
+An integer to add to a tagged @ikptr{} pointer to ratnum to get the
+pointer to the first byte of the words referencing the numerator or
+denominator.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_NUMERATOR (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} ikptr IK_DENOMINATOR (ikptr @var{X})
+Evaluate to the location of the numerator or denominator in the ratnum
+memory block.  A use of these macros can appear both as operand and as
+left--side of an assignment:
+
+@example
+ikptr  s_rn  = the_ratnum;
+ikptr  s_num;
+
+s_num = IK_NUMERATOR(s_rn);
+IK_NUMERATOR(s_rn) = s_num;
+@end example
+@end deftypefn
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on ratnums
+
+
+@deftypefun int ik_is_ratnum (ikptr @var{obj})
+Return true if @var{obj} is a ratnum object.
+@end deftypefun
+
+
+@deftypefun ikptr ika_ratnum_alloc_no_init (ikpcb * @var{pcb})
+Allocate a new ratnum object using @cfunc{ik_safe_alloc} and return a
+tagged reference to it.  The fields are left uninitialised.
+@end deftypefun
+
+
+@deftypefun ikptr ika_ratnum_alloc_and_init (ikpcb * @var{pcb})
+Allocate a new ratnum object using @cfunc{ik_safe_alloc} and return a
+tagged reference to it.  Both the fields are set to the fixnum zero.
+@end deftypefun
+
+@c page
+@node objects flonums
+@section Flonum objects
+
+
+Flonums are double--precision floating point numbers (@math{8} bytes
+wide) implemented as specified by @ieee{} 754 on the hosting platform.
+A flonum is a fixed length memory block referenced by machine words
+tagged as vectors.  The first machine word of a flonum block is tagged
+has flonum in its least significant bits and it has the most significant
+bits set to zero.
+
+@example
+|------------------------|-------------| reference to flonum
+      heap pointer         vector tag
+
+|------------------------|-------------| flonum first word
+   all set to zero         flonum tag
+@end example
+
+A flonum memory block is @math{16} bytes wide on both 32-bit and 64-bit
+platforms; to allow for the same binary layout on both platforms, on a
+32-bit platform the actual number is stored in the last two words:
+
+@example
+   1st word     2nd word     3rd word     4th word
+|------------|------------|------------|------------|
+ tagged word     unused           data words
+@end example
+
+@noindent
+on a 64-bit platform the actual number is stored in the second word:
+
+@example
+          1st word                 2nd word
+|-------------------------|-------------------------|
+         tagged word               data word
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+Flonums are allcated on the heap as follows:
+
+@example
+ikpcb * pcb  = the_pcb;
+ikptr   s_fl;
+
+s_fl = ik_safe_alloc(pcb, flonum_size) | vector_tag;
+IK_REF(s_fl, off_flonum_tag) = (ikptr)flonum_tag
+@end example
+
+@noindent
+to identify an object as flonum we do:
+
+@example
+ikptr  X = the_object;
+
+if ((vector_tag == IK_TAGOF(X)) &&
+    (flonum_tag == IK_REF(X, -vector_tag)))
+  it_is_a_flonum();
+else
+  it_is_not();
+@end example
+
+@noindent
+to obtain a pointer to the data area we do:
+
+@example
+ikptr     s_fl = the_flonum;
+double *  data;
+
+data = (double*)((long)(X) + off_flonum_data);
+@end example
+
+
+@defvr {Preprocessor Symbol} flonum_size
+The number of bytes to allocate to hold a flonum memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} flonum_tag
+The tag of @ikptr{} values used as first words in bignum memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_flonum_tag
+Displacement of secondary tag word.  The number of bytes to add to an
+untagged pointer to flonum to get the pointer to the first byte in the
+word holding the flonum tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_flonum_data
+Displacement of data area.  The number of bytes to add to an untagged
+pointer to flonum to get the pointer to the first byte in the data area
+holding the actual @code{double} value.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_flonum_tag
+An integer to add to add to a tagged @ikptr{} pointer to flonum to get
+the pointer to the first byte in the word holding the flonum tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_flonum_data
+An integer to add to a tagged @ikptr{} pointer to flonum to get the
+pointer to the first byte in the data area holding the actual
+@code{double} value.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} double IK_FLONUM_DATA (ikptr @var{fl})
+Set or retrieve the floating point number.  A use of this macro can
+appear both as operand or left--side of assignment:
+
+@example
+ikptr  s_fl = the_flonum;
+double num;
+
+IK_FLONUM_DATA(s_fl) = 1.2;
+num = IK_FLONUM_DATA(s_fl);
+@end example
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on flonums
+
+
+@deftypefun int ik_is_flonum (ikptr @var{obj})
+Return true if @var{obj} is a flonum object.
+@end deftypefun
+
+
+@deftypefun ikptr iku_flonum_alloc (ikpcb * @var{pcb}, double @var{N})
+Allocate and return a new flonum object, using @cfunc{ik_unsafe_alloc},
+intialised with @var{N}.
+@end deftypefun
+
+
+@deftypefun ikptr ika_flonum_from_double (ikpcb * @var{pcb}, double @var{N})
+Allocate and return a new flonum object, using @cfunc{ik_safe_alloc},
+intialised with @var{N}.
+@end deftypefun
+
+@c page
+@node objects compnums
+@section Compnum objects
+
+
+Compnums are complex numbers having a fixnum, bignum, ratnum or flonum
+as real part and a fixnum, bignum, ratnum or flonum as imaginary part,
+but @strong{not} both flonums.
+
+A compnum is a fixed length memory block referenced by machine words
+tagged as vectors.  The first machine word of a compnum block is tagged
+has compnum in its least significant bits and it has the most
+significant bits set to zero.
+
+@example
+|------------------------|-------------| reference to compnum
+      heap pointer         vector tag
+
+|------------------------|-------------| compnum first word
+   all set to zero         compnum tag
+@end example
+
+A compnum memory block is @math{4} words wide; a reference to the real
+part is stored in the second word and a reference to the imaginary part
+is stored in the third word
+
+@example
+   1st word     2nd word     3rd word     4th word
+|------------|------------|------------|------------|
+ tagged word   real part    imag part     unused
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+Compnums are allocated on the Scheme heap as follows:
+
+@example
+ikpcb * pcb   = the_pcb;
+ikptr   s_cn;
+
+s_cn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
+IK_REF(s_cn, off_compnum_tag) = compnum_tag;
+@end example
+
+@noindent
+after allocation we must always initialise the real and imaginary parts
+to some correct value before running the next garbage collection; a full
+allocation and initialisation is as follows:
+
+@example
+ikpcb * pcb  = the_pcb;
+ikptr   s_re = the_real;
+ikptr   s_im = the_imag;
+ikptr   s_cn;
+
+pcb->root9 = &s_re;
+pcb->root8 = &s_im;
+@{
+  s_rn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
+@}
+pcb->root8 = NULL;
+pcb->root9 = NULL;
+
+IK_REF(s_cn, off_compnum_tag)  = compnum_tag;
+IK_REF(s_cn, off_compnum_real) = s_re;
+IK_REF(s_cn, off_compnum_imag) = s_im;
+@end example
+
+To identify an object as compnum we do:
+
+@example
+ikptr  X = the_object;
+
+if ((vector_tag  == IK_TAGOF(X)) &&
+    (compnum_tag == IK_REF(X, -vector_tag)))
+  it_is_a_compnum();
+else
+  it_is_not();
+@end example
+
+@noindent
+to set or retrieve the real and imaginary parts we do:
+
+@example
+ikptr  s_cn = the_compnum;
+ikptr  s_re;
+ikptr  s_im;
+
+s_re = IK_REF(s_cn, off_compnum_real);
+s_im = IK_REF(s_cn, off_compnum_imag);
+IK_REF(s_cn, off_compnum_real) = s_re;
+IK_REF(s_cn, off_compnum_imag) = s_im;
+@end example
+
+
+@defvr {Preprocessor Symbol} compnum_size
+The number of bytes to allocate to hold a compnum memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} compnum_tag
+The tag of @ikptr{} values used as first words in compnum memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_compnum_tag
+Displacement of secondary tag word.  The number of bytes to add to an
+untagged pointer to compnum to get the pointer to the first byte in the
+word holding the compnum tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_compnum_real
+@defvrx {Preprocessor Symbol} disp_compnum_imag
+Displacements of real and imaginary parts.  The number of bytes to add
+to an untagged pointer to compnum to get the pointer to the first byte
+of the reference to the real or imaginary part.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_compnum_tag
+An integer to add to add to a tagged @ikptr{} pointer to compnum to get
+the pointer to the first byte in the word holding the compnum tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_compnum_real
+@defvrx {Preprocessor Symbol} off_compnum_imag
+An integer to add to a tagged @ikptr{} pointer to compnum to get the
+pointer to the first byte of the words referencing the real or
+imaginary part.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_COMPNUM_REAL (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} ikptr IK_COMPNUM_IMAG (ikptr @var{X})
+Evaluate to the location of the real and imaginary parts in the compnum
+memory block.  A use of these macros can appear both as operand and as
+left--side of an assignment:
+
+@example
+ikptr  s_cn = the_compnum;
+ikptr  s_re;
+
+s_re = IK_COMPNUM_REAL(s_cn);
+IK_COMPNUM_REAL(s_cn) = s_re;
+@end example
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on compnums
+
+
+@deftypefun int ik_is_compnum (ikptr @var{obj})
+Return true if @var{obj} is a compnum object.
+@end deftypefun
+
+
+@deftypefun ikptr ika_compnum_alloc_no_init (ikpcb * @var{pcb})
+Allocate a new compnum object using @cfunc{ik_safe_alloc} and return a
+tagged reference to it.  The fields are left uninitialised.
+@end deftypefun
+
+
+@deftypefun ikptr ika_compnum_alloc_and_init (ikpcb * @var{pcb})
+Allocate a new compnum object using @cfunc{ik_safe_alloc} and return a
+tagged reference to it.  Both the fields are set to the fixnum zero.
 @end deftypefun
 
 @c page

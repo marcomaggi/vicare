@@ -576,6 +576,13 @@ ik_decl ikptr	ikrt_bignum_hash	(ikptr bn /*, ikpcb* pcb */);
 #define off_ratnum_den		(disp_ratnum_den    - vector_tag)
 #define off_ratnum_unused	(disp_ratnum_unused - vector_tag)
 
+#define IK_NUMERATOR(X)		IK_REF((X), off_ratnum_num)
+#define IK_DENOMINATOR(X)	IK_REF((X), off_ratnum_den)
+
+ik_decl int	ik_is_ratnum	(ikptr X);
+ik_decl ikptr	ika_ratnum_alloc_no_init	(ikpcb * pcb);
+ik_decl ikptr	ika_ratnum_alloc_and_init	(ikpcb * pcb);
+
 
 /** --------------------------------------------------------------------
  ** Compnum objects.
@@ -592,6 +599,13 @@ ik_decl ikptr	ikrt_bignum_hash	(ikptr bn /*, ikpcb* pcb */);
 #define off_compnum_real	(disp_compnum_real   - vector_tag)
 #define off_compnum_imag	(disp_compnum_imag   - vector_tag)
 #define off_compnum_unused	(disp_compnum_unused - vector_tag)
+
+#define IK_COMPNUM_REAL(X)	IK_REF((X), off_compnum_real)
+#define IK_COMPNUM_IMAG(X)	IK_REF((X), off_compnum_imag)
+
+ik_decl int	ik_is_compnum	(ikptr X);
+ik_decl ikptr	ika_compnum_alloc_no_init	(ikpcb * pcb);
+ik_decl ikptr	ika_compnum_alloc_and_init	(ikpcb * pcb);
 
 
 /** --------------------------------------------------------------------
@@ -611,6 +625,7 @@ ik_decl ikptr	ikrt_bignum_hash	(ikptr bn /*, ikpcb* pcb */);
 
 #define IK_FLONUM_DATA(X)	(*((double*)(((long)(X))+off_flonum_data)))
 
+ik_decl int   ik_is_flonum		(ikptr obj);
 ik_decl ikptr iku_flonum_alloc		(ikpcb * pcb, double fl);
 ik_decl ikptr ika_flonum_from_double	(ikpcb* pcb, double N);
 ik_decl ikptr ikrt_flonum_hash		(ikptr x /*, ikpcb* pcb */);

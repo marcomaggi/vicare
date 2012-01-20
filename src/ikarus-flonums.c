@@ -45,6 +45,15 @@ iku_cflonum_alloc (ikpcb * pcb, double re, double im)
   return F;
 }
 
+/* ------------------------------------------------------------------ */
+
+int
+ik_is_flonum (ikptr obj)
+{
+  return ((vector_tag == IK_TAGOF(obj)) &&
+	  (flonum_tag == IK_REF(obj, -vector_tag)));
+}
+
 
 /** --------------------------------------------------------------------
  ** Flonum functions.

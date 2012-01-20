@@ -590,6 +590,60 @@ ik_integer_to_sint64 (ikptr x)
 
 
 /** --------------------------------------------------------------------
+ ** Ratnum objects.
+ ** ----------------------------------------------------------------- */
+
+int
+ik_is_ratnum (ikptr X)
+{
+  return ((vector_tag == IK_TAGOF(X)) &&
+	  (ratnum_tag == IK_REF(X, -vector_tag)));
+}
+ikptr
+ika_ratnum_alloc_no_init (ikpcb * pcb)
+{
+  ikptr	s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
+  IK_REF(s_rn, off_ratnum_tag) = ratnum_tag;
+  return s_rn;
+}
+ikptr
+ika_ratnum_alloc_and_init (ikpcb * pcb)
+{
+  ikptr	s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
+  IK_REF(s_rn, off_ratnum_tag) = ratnum_tag;
+  memset((void *)(((long)s_rn) + off_ratnum_num), 0, 3 * wordsize);
+  return s_rn;
+}
+
+
+/** --------------------------------------------------------------------
+ ** Compnum objects.
+ ** ----------------------------------------------------------------- */
+
+int
+ik_is_compnum (ikptr X)
+{
+  return ((vector_tag == IK_TAGOF(X)) &&
+	  (compnum_tag == IK_REF(X, -vector_tag)));
+}
+ikptr
+ika_compnum_alloc_no_init (ikpcb * pcb)
+{
+  ikptr	s_cn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
+  IK_REF(s_cn, off_compnum_tag) = compnum_tag;
+  return s_cn;
+}
+ikptr
+ika_compnum_alloc_and_init (ikpcb * pcb)
+{
+  ikptr	s_cn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
+  IK_REF(s_cn, off_compnum_tag) = compnum_tag;
+  memset((void *)(((long)s_cn) + off_compnum_real), 0, 3 * wordsize);
+  return s_cn;
+}
+
+
+/** --------------------------------------------------------------------
  ** Miscellanous functions.
  ** ----------------------------------------------------------------- */
 
