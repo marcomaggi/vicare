@@ -10,6 +10,7 @@ LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.10/include
     --config-cache                              \
     --cache-file=../config.cache                \
     --prefix="${prefix}"                        \
+    --enable-shared --disable-static            \
     --enable-libffi                             \
     --with-iconv                                \
     --with-cre2                                 \

@@ -104,14 +104,16 @@ precompile the libraries installed in the hierarchy (vicare ---).
 4.2 Install CRE2
 ----------------
 
-The  CRE2  is  a C  language  wrapper  for  the  RE2 library,  which  is
-implemented in C++.  RE2 is a fast, safe, thread-friendly alternative to
+CRE2 is a  C language wrapper for the RE2  library, which is implemented
+in  C++.    RE2  is  a   fast,  safe,  thread-friendly   alternative  to
 backtracking regular  expression engines from Google like  those used in
 PCRE, Perl, and Python.
 
   Vicare  implements an  optional  built  in interface  to  CRE2; it  is
 disabled by default, to enable  it we must give the "--with-cre2" option
-to the "configure" script.
+to the "configure" script.  When using  this option we must use also the
+--enable-shared  and  --disable-static  options  to avoid  installing  a
+useless static library.
 
   At present (Jan 6, 2012), to  install RE2 we must check out a revision
 from  the  repository  (see   Resources);  then  we  should  follow  the
