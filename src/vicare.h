@@ -649,7 +649,8 @@ ik_decl ikptr ikrt_flonum_hash		(ikptr x /*, ikpcb* pcb */);
   ikptr VARNAME = ik_unsafe_alloc(pcb, cflonum_size) | vector_tag;	\
   IK_REF(VARNAME, off_cflonum_tag) = (ikptr)cflonum_tag
 
-ik_decl ikptr iku_cflonum_alloc	(ikpcb * pcb, double re, double im);
+ik_decl int   ik_is_cflonum	(ikptr X);
+ik_decl ikptr iku_cflonum_alloc_and_init (ikpcb * pcb, double re, double im);
 
 #define IK_CFLONUM_REAL(X)	IK_REF((X), off_cflonum_real)
 #define IK_CFLONUM_IMAG(X)	IK_REF((X), off_cflonum_imag)
@@ -670,7 +671,8 @@ ik_decl ikptr iku_cflonum_alloc	(ikpcb * pcb, double re, double im);
 
 ik_decl ikptr ika_pointer_alloc	(ikpcb* pcb, ik_ulong memory);
 ik_decl ikptr iku_pointer_alloc	(ikpcb* pcb, ik_ulong memory);
-ik_decl ikptr ikrt_is_pointer	(ikptr x);
+ik_decl ikptr ikrt_is_pointer	(ikptr X);
+ik_decl int   ik_is_pointer	(ikptr X);
 
 #define IK_POINTER_DATA(X)		IK_REF((X), off_pointer_data)
 #define IK_POINTER_DATA_VOIDP(X)	((void *)   IK_REF((X), off_pointer_data))

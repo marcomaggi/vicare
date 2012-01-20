@@ -10953,36 +10953,10 @@ Return the reference to the imaginary part.
 @section Low level cflonum operations
 
 
-Cflonums are complex numbers having a flonum as real part and flonum as
-imaginary part.  @ref{iklib numerics} for more functions acting on
-cflonums.
-
-A cflonum is a fixed length memory block referenced by machine words
-tagged as vectors.  The first machine word of a cflonum block is tagged
-has cflonum in its least significant bits and it has the most
-significant bits set to zero.
-
-@example
-|------------------------|-------------| reference to cflonum
-      heap pointer         vector tag
-
-|------------------------|-------------| cflonum first word
-   all set to zero         cflonum tag
-@end example
-
-A cflonum memory block is @math{4} words wide; a reference to the real
-part is stored in the second word and a reference to the imaginary part
-is stored in the third word
-
-@example
-   1st word     2nd word     3rd word     4th word
-|------------|------------|------------|------------|
- tagged word   real part    imag part     unused
-@end example
-
 The arguments @var{cmp} to these operations must be cflonums, the
 arguments @var{fl} must be references to flonums.  The following
 bindings are exported by the @library{ikarus system $compnums} library.
+@ref{iklib numerics} for more functions acting on cflonums.
 
 
 @deffn {Unsafe Operation} $make-cflonum @vari{fl} @varii{fl}
@@ -11290,24 +11264,6 @@ Store @var{ch} at index @var{fx} of @var{str}.
 @section Low level port structures
 
 
-A port value is a block of memory allocated as a vector; a reference to
-a port value is a reference to a vector.  The first word of the vector
-is the bitwise OR between a port tag and a bitvector of port attributes.
-
-@example
-|----------------|----------| port value
-  heap pointer    vector tag
-
-|----------------|----------| 1st word of port's memory block
- port attributes   port tag
-@end example
-
-At present the port tag is @math{6} bits wide, so we have: on 32 bits
-platforms: 32 - 6 = 24 bits available for attributes; on 64 bits
-platforms: 64 - 6 = 58 bits available for attributes.
-
-See the source code for a more comprehensive documentation.
-
 The following bindings are exported by the @library{ikarus system $io}
 library.
 
@@ -11369,15 +11325,6 @@ Mutator for the port attributes.
 @section Low level transcoder operations
 
 
-A transcoder is a machine word tagged to make it of a disjoint type.
-The transcoder data (codec, @eol{} style, error handling) is encoded in
-the most significant bits of this word.
-
-@example
-|---------------------------|------------| transcoder
-       payload bits          transcoder-tag
-@end example
-
 The arguments @var{tran} to these operations must be transcoders, the
 arguments @var{fx} must be fixnums in the appropriate range.  The
 following bindings are exported by the @library{ikarus system
@@ -11398,23 +11345,6 @@ Extract the payload bits from a transcoder and return them as fixnum.
 @node syslib pointers
 @section Low level pointer operations
 
-
-A pointer is a fixed length memory block, two words wide, referenced by
-machine words tagged as vectors.  The first machine word of a pointer
-block is tagged has pointer in its least significant bits and it has the
-most significant bits set to zero.  The second machine word of a pointer
-block holds the actual pointer value.
-
-@example
-|------------------------|-------------| reference to pointer
-      heap pointer         vector tag
-
-|------------------------|-------------| pointer first word
-   all set to zero         pointer tag
-
-|--------------------------------------| pointer second word
-            pointer value
-@end example
 
 In the following definitions the @var{ptr} arguments must be pointer
 objects.
@@ -13933,16 +13863,12 @@ Scheme language compiler @file{ikarus.compiler.sls}.
 * objects ratnums::             Ratnum objects.
 * objects flonums::             Flonum objects.
 * objects compnums::            Compnum objects.
+* objects cflonums::            Cflonum objects.
+* objects ports::               Port objects.
+* objects transcoders::         Transcoder objects.
+* objects pointers::            Pointer objects.
 * objects misc::                Miscellaneous functions.
 @end menu
-
-@ignore
-* syslib compnums::             Low level compnum operations.
-* syslib cflonums::             Low level cflonum operations.
-* syslib ports::                Low level port structures.
-* syslib transcoders::          Low level transcoder operations.
-* syslib pointers::             Low level pointer operations.
-@end ignore
 
 @c page
 @node objects refs
@@ -16998,6 +16924,199 @@ tagged reference to it.  Both the fields are set to the fixnum zero.
 @end deftypefun
 
 @c page
+@node objects cflonums
+@section Cflonum objects
+
+
+Cflonums are complex numbers having a flonum as real part and flonum as
+imaginary part.  A cflonum is a fixed length memory block referenced by
+machine words tagged as vectors.  The first machine word of a cflonum
+block is tagged has cflonum in its least significant bits and it has the
+most significant bits set to zero.
+
+@example
+|------------------------|-------------| reference to cflonum
+      heap pointer         vector tag
+
+|------------------------|-------------| cflonum first word
+   all set to zero         cflonum tag
+@end example
+
+A cflonum memory block is @math{4} words wide; a reference to the real
+part is stored in the second word and a reference to the imaginary part
+is stored in the third word
+
+@example
+   1st word     2nd word     3rd word     4th word
+|------------|------------|------------|------------|
+ tagged word   real part    imag part     unused
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+Cflonums are allocated on the Scheme heap as follows:
+
+@example
+ikpcb * pcb   = the_pcb;
+ikptr   s_cn;
+
+s_cn = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
+IK_REF(s_cn, off_cflonum_tag) = cflonum_tag;
+@end example
+
+@noindent
+after allocation we must always initialise the real and imaginary parts
+to some correct value before running the next garbage collection; a full
+allocation and initialisation is as follows:
+
+@example
+ikpcb * pcb  = the_pcb;
+ikptr   s_re = the_real;
+ikptr   s_im = the_imag;
+ikptr   s_cn;
+
+pcb->root9 = &s_re;
+pcb->root8 = &s_im;
+@{
+  s_rn = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
+@}
+pcb->root8 = NULL;
+pcb->root9 = NULL;
+
+IK_REF(s_cn, off_cflonum_tag)  = cflonum_tag;
+IK_REF(s_cn, off_cflonum_real) = s_re;
+IK_REF(s_cn, off_cflonum_imag) = s_im;
+@end example
+
+To identify an object as cflonum we do:
+
+@example
+ikptr  X = the_object;
+
+if ((vector_tag  == IK_TAGOF(X)) &&
+    (cflonum_tag == IK_REF(X, -vector_tag)))
+  it_is_a_cflonum();
+else
+  it_is_not();
+@end example
+
+@noindent
+to set or retrieve the real and imaginary parts we do:
+
+@example
+ikptr  s_cn = the_cflonum;
+ikptr  s_re;
+ikptr  s_im;
+
+s_re = IK_REF(s_cn, off_cflonum_real);
+s_im = IK_REF(s_cn, off_cflonum_imag);
+IK_REF(s_cn, off_cflonum_real) = s_re;
+IK_REF(s_cn, off_cflonum_imag) = s_im;
+@end example
+
+
+@defvr {Preprocessor Symbol} cflonum_size
+The number of bytes to allocate to hold a cflonum memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} cflonum_tag
+The tag of @ikptr{} values used as first words in cflonum memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_cflonum_tag
+Displacement of secondary tag word.  The number of bytes to add to an
+untagged pointer to cflonum to get the pointer to the first byte in the
+word holding the cflonum tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_cflonum_real
+@defvrx {Preprocessor Symbol} disp_cflonum_imag
+Displacements of real and imaginary parts.  The number of bytes to add
+to an untagged pointer to cflonum to get the pointer to the first byte
+of the reference to the real or imaginary part.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_cflonum_tag
+An integer to add to add to a tagged @ikptr{} pointer to cflonum to get
+the pointer to the first byte in the word holding the cflonum tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_cflonum_real
+@defvrx {Preprocessor Symbol} off_cflonum_imag
+An integer to add to a tagged @ikptr{} pointer to cflonum to get the
+pointer to the first byte of the words referencing the real or
+imaginary part.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_CFLONUM_REAL (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} ikptr IK_CFLONUM_IMAG (ikptr @var{X})
+Evaluate to the location of the real and imaginary parts in the cflonum
+memory block.  A use of these macros can appear both as operand and as
+left--side of an assignment:
+
+@example
+ikptr  s_cn = the_cflonum;
+ikptr  s_re;
+
+s_re = IK_CFLONUM_REAL(s_cn);
+IK_CFLONUM_REAL(s_cn) = s_re;
+@end example
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on cflonums
+
+
+@deftypefun int ik_is_cflonum (ikptr @var{obj})
+Return true if @var{obj} is a cflonum object.
+@end deftypefun
+
+
+@deftypefun ikptr iku_cflonum_alloc_and_init (ikpcb * @var{pcb}, double @var{re}, double @var{im})
+Allocate a cflonum and its flonum components using
+@cfunc{ik_unsafe_alloc} and return a tagged reference to it.  No garbage
+collection is run while this function is evaluating.
+@end deftypefun
+
+@c page
+@node objects ports
+@section Port objects
+
+
+A port value is a block of memory allocated as a vector; a reference to
+a port value is a reference to a vector.  The first word of the vector
+is the bitwise OR between a port tag and a bitvector of port attributes.
+
+@example
+|----------------|----------| port value
+  heap pointer    vector tag
+
+|----------------|----------| 1st word of port's memory block
+ port attributes   port tag
+@end example
+
+At present the port tag is @math{6} bits wide, so we have: on 32-bit
+platforms: @math{32 - 6 = 24} bits available for attributes; on 64-bit
+platforms: @math{64 - 6 = 58} bits available for attributes.
+
+See the source code in @file{ikarus.io.sls} for a more comprehensive
+documentation.
+
+@c page
 @node objects misc
 @section Miscellaneous functions
 
@@ -17014,6 +17133,188 @@ a string.  For bytevectors and pointers: bytes are moved and
 strings: 32-bit values representing Unicode code points are moved and
 @var{src_start}, @var{dst_start} and @var{count} are in character units.
 @end deftypefun
+
+@c page
+@node objects pointers
+@section Pointer objects
+
+
+A pointer is a fixed length memory block, two words wide, referenced by
+machine words tagged as vectors.  The first machine word of a pointer
+block is tagged has pointer in its least significant bits and it has the
+most significant bits set to zero.  The second machine word of a pointer
+block holds the actual pointer value.
+
+@example
+|------------------------|-------------| reference to pointer
+      heap pointer         vector tag
+
+|------------------------|-------------| pointer first word
+   all set to zero         pointer tag
+
+|--------------------------------------| pointer second word
+            pointer value
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+Pointers are allocated on the Scheme heap as follows:
+
+@example
+ikpcb * pcb   = the_pcb;
+ikptr   s_ptr;
+
+s_ptr = ik_safe_alloc(pcb, pointer_size) | vector_tag;
+IK_REF(s_ptr, off_pointer_tag) = pointer_tag;
+@end example
+
+@noindent
+to identify an object as pointer we do:
+
+@example
+ikptr  X = the_object;
+
+if ((vector_tag  == IK_TAGOF(X)) &&
+    (pointer_tag == IK_REF(X, -vector_tag)))
+  it_is_a_pointer();
+else
+  it_is_not();
+@end example
+
+@noindent
+to set or retrieve the pointer value we do:
+
+@example
+ikptr  s_ptr = the_pointer;
+void * ptr;
+
+ptr = (void *)IK_REF((X), off_pointer_data);
+IK_REF((X), off_pointer_data) = (ikptr)ptr;
+@end example
+
+
+@defvr {Preprocessor Symbol} pointer_size
+The number of bytes to allocate to hold a pointer memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} pointer_tag
+The tag of @ikptr{} values used as first words in pointer memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_pointer_tag
+Displacement of secondary tag word.  The number of bytes to add to an
+untagged pointer to pointer object to get the pointer to the first byte
+in the word holding the pointer tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_pointer_data
+Displacement of data area.  The number of bytes to add to an untagged
+pointer to pointer object to get the pointer to the first byte of the
+data area.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_pointer_tag
+An integer to add to add to a tagged @ikptr{} pointer to pointer object
+to get the pointer to the first byte in the word holding the pointer
+tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_pointer_data
+An integer to add to a tagged @ikptr{} pointer to pointer object to get
+the pointer to the first byte of the word holding the pointer value.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_DATA (ikptr @var{X})
+Return the value of the pointer as @code{ikptr}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_DATA_VOIDP (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} {char *} IK_POINTER_DATA_CHARP (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} {uint8_t *} IK_POINTER_DATA_UINT8P (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} {long *} IK_POINTER_DATA_LONG (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} {ik_llong *} IK_POINTER_DATA_LLONG (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} {ik_ulong *} IK_POINTER_DATA_ULONG (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} {ik_ullong *} IK_POINTER_DATA_ULLONG (ikptr @var{X})
+Return the value of the pointer cast to a specific type.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_SET_NULL (ikptr @var{X})
+Reset to @cnull{} the value of the pointer.
+@end deftypefn
+
+@deftypefn {Preprocessor Macro} int IK_POINTER_IS_NULL (ikptr @var{X})
+Evaluate to true if the pointer value is @cnull{}.
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on pointers
+
+
+@deftypefun ikptr ika_pointer_alloc (ikpcb * @var{pcb}, ik_ulong @var{memory})
+Allocate a pointer object using @cfunc{ik_safe_alloc} and return a
+tagged reference to it.  The pointer is initialised to @var{memory}.
+@end deftypefun
+
+
+@deftypefun ikptr iku_pointer_alloc (ikpcb* pcb, ik_ulong @var{memory})
+Allocate a pointer object using @cfunc{ik_unsafe_alloc} and return a
+tagged reference to it.  The pointer is initialised to @var{memory}.
+@end deftypefun
+
+
+@deftypefun int ik_is_pointer (ikptr @var{X})
+Return true if @var{X} is a pointer object.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_is_pointer (ikptr @var{X})
+Return @code{true_object} if @var{X} is a pointer object, else return
+@code{false_object}.
+@end deftypefun
+
+@c page
+@node objects transcoders
+@section Transcoder objects
+
+
+A transcoder is a machine word tagged to make it of a disjoint type.
+The transcoder data (codec, @eol{} style, error handling) is encoded in
+the most significant bits of this word:
+
+@example
+|---------------------------|------------| transcoder
+       payload bits          transcoder-tag
+@end example
+
+@noindent
+the payload of this word is an 8-bit vector whose format is as follows:
+
+@example
+765 432 10
+ |   |   |
+ |   |    -- error handling mode
+ |    ------ end of line style
+  ---------- codec
+@end example
+
+See the source code in the file @file{ikarus.codecs.sls} for more
+details.
 
 @c page
 @node debug int
