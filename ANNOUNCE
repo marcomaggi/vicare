@@ -44,6 +44,10 @@ Notes for revision 0.2d6
 * Big C code review to fix  bad handling of allocated Scheme object with
   respect to garbage collection.
 
+* The documentation of the  C language internals for manipulating Scheme
+  objects  has  been reviewed  and  extended  (it  is still  incomplete,
+  though).
+
 * The Scheme  code for the glibc  and linux functions has  been moved in
   standalone libraries, out of the  boot image.  The public interface to
   these libraries is unchanged.
