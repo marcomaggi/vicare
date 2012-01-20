@@ -505,7 +505,7 @@ do_read (ikpcb* pcb, fasl_port* p)
     if (len & 3)
       ik_abort("error in fasl-read: invalid bignum length %ld", len);
     ik_ulong tag = bignum_tag | (sign << bignum_sign_shift) |
-      ((len >> 2) << bignum_length_shift);
+      ((len >> 2) << bignum_nlimbs_shift);
     ikptr x = ik_unsafe_alloc(pcb, IK_ALIGN(len + disp_bignum_data)) | vector_tag;
     IK_REF(x, -vector_tag) = (ikptr) tag;
     fasl_read_buf(p, (void*)(long)(x+off_bignum_data), len);

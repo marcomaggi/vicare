@@ -342,6 +342,8 @@ ik_decl void	ik_fprint		(FILE*, ikptr x);
 #define IK_UNFIX(X)	(((long)(X)) >> fx_shift)
 #define IK_IS_FIXNUM(X)	((((ik_ulong)(X)) & fx_mask) == fx_tag)
 
+ik_decl ikptr	ikrt_fxrandom		(ikptr x);
+
 
 /** --------------------------------------------------------------------
  ** Pair and list objects.
@@ -455,7 +457,7 @@ ik_decl int ik_is_symbol	(ikptr obj);
 #define bignum_tag		0x3
 #define bignum_sign_mask	0x8
 #define bignum_sign_shift	3
-#define bignum_length_shift	4
+#define bignum_nlimbs_shift	4
 #define disp_bignum_tag		0
 #define disp_bignum_data	wordsize
 #define off_bignum_tag		(disp_bignum_tag  - vector_tag)
@@ -463,16 +465,16 @@ ik_decl int ik_is_symbol	(ikptr obj);
 
 #define IK_BNFST_NEGATIVE(X)		(((ik_ulong)(X)) & bignum_sign_mask)
 #define IK_BNFST_POSITIVE(X)		(!IK_BNFST_NEGATIVE(X))
-#define IK_BNFST_LIMB_COUNT(X)		(((ik_ulong)(X)) >> bignum_length_shift)
+#define IK_BNFST_LIMB_COUNT(X)		(((ik_ulong)(X)) >> bignum_nlimbs_shift)
 
-#define IK_BIGNUM_SIZE(NUMBER_OF_LIMBS)				\
+#define IK_BIGNUM_ALLOC_SIZE(NUMBER_OF_LIMBS)			\
   IK_ALIGN(disp_bignum_data + (NUMBER_OF_LIMBS) * wordsize)
 
 #define IKA_BIGNUM_ALLOC(PCB,LIMB_COUNT)	\
-  (ik_safe_alloc((PCB), IK_BIGNUM_SIZE(LIMB_COUNT)) | vector_tag)
+  (ik_safe_alloc((PCB), IK_BIGNUM_ALLOC_SIZE(LIMB_COUNT)) | vector_tag)
 
 #define IK_COMPOSE_BIGNUM_FIRST_WORD(LIMB_COUNT,SIGN)		\
-  ((ikptr)(((LIMB_COUNT) << bignum_length_shift) | (SIGN) | bignum_tag))
+  ((ikptr)(((LIMB_COUNT) << bignum_nlimbs_shift) | (SIGN) | bignum_tag))
 
 #define IK_POSITIVE_BIGNUM_FIRST_WORD(LIMB_COUNT)		\
   IK_COMPOSE_BIGNUM_FIRST_WORD((LIMB_COUNT),((0)<<bignum_sign_shift))
@@ -489,7 +491,7 @@ ik_decl int ik_is_symbol	(ikptr obj);
 #define IK_BIGNUM_LAST_LIMB(X,LIMB_COUNT)			\
   ((mp_limb_t)IK_REF((X), off_bignum_data+((LIMB_COUNT)-1)*wordsize))
 
-#define IK_BNFST(X)		IK_REF((X), off_bignum_tag)
+#define IK_BIGNUM_FIRST(X)	IK_REF((X), off_bignum_tag)
 #define IK_LIMB(X,IDX)		IK_REF((X), off_bignum_data + (IDX)*wordsize)
 
 ik_decl int	ik_is_bignum		(ikptr x);
@@ -526,7 +528,36 @@ ik_decl ikptr	ikrt_fxfxminus		(ikptr x, ikptr y, ikpcb* pcb);
 ik_decl ikptr	ikrt_fxbnminus		(ikptr x, ikptr y, ikpcb* pcb);
 ik_decl ikptr	ikrt_bnfxminus		(ikptr x, ikptr y, ikpcb* pcb);
 ik_decl ikptr	ikrt_bnbnminus		(ikptr x, ikptr y, ikpcb* pcb);
+
 ik_decl ikptr	ikrt_bnnegate		(ikptr x, ikpcb* pcb);
+
+ik_decl ikptr	ikrt_fxfxmult		(ikptr x, ikptr y, ikpcb* pcb);
+ik_decl ikptr	ikrt_fxbnmult		(ikptr x, ikptr y, ikpcb* pcb);
+ik_decl ikptr	ikrt_bnbnmult		(ikptr x, ikptr y, ikpcb* pcb);
+
+ik_decl ikptr	ikrt_bnbncomp		(ikptr bn1, ikptr bn2);
+
+ik_decl ikptr	ikrt_bnlognot		(ikptr x, ikpcb* pcb);
+ik_decl ikptr	ikrt_fxbnlogand		(ikptr x, ikptr y, ikpcb* pcb);
+ik_decl ikptr	ikrt_bnbnlogand		(ikptr x, ikptr y, ikpcb* pcb);
+ik_decl ikptr	ikrt_fxbnlogor		(ikptr x, ikptr y, ikpcb* pcb);
+ik_decl ikptr	ikrt_bnbnlogor		(ikptr x, ikptr y, ikpcb* pcb);
+ik_decl ikptr	ikrt_bignum_shift_right	(ikptr x, ikptr y, ikpcb* pcb);
+ik_decl ikptr	ikrt_fixnum_shift_left	(ikptr x, ikptr y, ikpcb* pcb);
+ik_decl ikptr	ikrt_bignum_shift_left	(ikptr x, ikptr y, ikpcb* pcb);
+
+ik_decl ikptr	ikrt_bnbndivrem		(ikptr x, ikptr y, ikpcb* pcb);
+ik_decl ikptr	ikrt_bnfxdivrem		(ikptr x, ikptr y, ikpcb* pcb);
+ik_decl ikptr	ikrt_bnfx_modulo	(ikptr x, ikptr y /*, ikpcb* pcb */);
+ik_decl ikptr	ikrt_bignum_length	(ikptr x);
+
+ik_decl ikptr	ikrt_exact_fixnum_sqrt	(ikptr fx /*, ikpcb* pcb*/);
+ik_decl ikptr	ikrt_exact_bignum_sqrt	(ikptr bn, ikpcb* pcb);
+
+ik_decl ikptr	ikrt_bignum_to_bytevector (ikptr x, ikpcb* pcb);
+ik_decl ikptr	ikrt_bignum_to_flonum	(ikptr bn, ikptr more_bits, ikptr fl);
+
+ik_decl ikptr	ikrt_bignum_hash	(ikptr bn /*, ikpcb* pcb */);
 
 
 /** --------------------------------------------------------------------
@@ -578,10 +609,11 @@ ik_decl ikptr	ikrt_bnnegate		(ikptr x, ikpcb* pcb);
   ikptr VARNAME = ik_unsafe_alloc(pcb, flonum_size) | vector_tag;	\
   IK_REF(VARNAME, off_flonum_tag) = (ikptr)flonum_tag
 
+#define IK_FLONUM_DATA(X)	(*((double*)(((long)(X))+off_flonum_data)))
+
 ik_decl ikptr iku_flonum_alloc		(ikpcb * pcb, double fl);
 ik_decl ikptr ika_flonum_from_double	(ikpcb* pcb, double N);
-
-#define IK_FLONUM_DATA(X)	(*((double*)(((long)(X))+off_flonum_data)))
+ik_decl ikptr ikrt_flonum_hash		(ikptr x /*, ikpcb* pcb */);
 
 
 /** --------------------------------------------------------------------

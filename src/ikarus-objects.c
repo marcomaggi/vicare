@@ -368,11 +368,11 @@ ika_integer_from_long (ikpcb * pcb, long N)
     ikptr s_bn = ik_safe_alloc(pcb, IK_ALIGN(wordsize + disp_bignum_data)) | vector_tag;
     if (N > 0) { /* positive bignum */
       ref(s_bn, off_bignum_tag)	 =
-	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_length_shift));
+	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_nlimbs_shift));
       ref(s_bn, off_bignum_data) = (ikptr)+N;
     } else { /* zero or negative bignum */
       ref(s_bn, off_bignum_tag)	 =
-	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_length_shift) | (1 << bignum_sign_shift));
+	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_nlimbs_shift) | (1 << bignum_sign_shift));
       ref(s_bn, off_bignum_data) = (ikptr)-N;
     }
     return s_bn;
@@ -392,11 +392,11 @@ ika_integer_from_llong (ikpcb * pcb, ik_llong N)
     ikptr s_bn	     = ik_safe_alloc(pcb, align_size) | vector_tag;
     if (N > 0){
       ref(s_bn, off_bignum_tag) =
-	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_length_shift));
+	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_nlimbs_shift));
       *((ik_llong*)(s_bn + off_bignum_data)) = +N;
     } else {
       ref(s_bn, off_bignum_tag) =
-	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_length_shift) | (1 << bignum_sign_shift));
+	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_nlimbs_shift) | (1 << bignum_sign_shift));
       *((ik_llong*)(s_bn + off_bignum_data)) = -N;
     }
     return s_bn;
@@ -416,7 +416,7 @@ ika_integer_from_ulong (ikpcb * pcb, ik_ulong N)
   } else {
     /* wordsize == sizeof(unsigned long) */
     ikptr	s_bn = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + wordsize)) | vector_tag;
-    ref(s_bn, off_bignum_tag)  = (ikptr)(bignum_tag | (1 << bignum_length_shift));
+    ref(s_bn, off_bignum_tag)  = (ikptr)(bignum_tag | (1 << bignum_nlimbs_shift));
     ref(s_bn, off_bignum_data) = (ikptr)N;
     return s_bn;
   }
@@ -435,8 +435,8 @@ ika_integer_from_ullong (ikpcb * pcb, ik_ullong N)
     int	   align_size = IK_ALIGN(disp_bignum_data + sizeof(ik_ullong));
     ikptr  bn	      = ik_safe_alloc(pcb, align_size);
     bcopy((char*)(&N), (char*)(bn+disp_bignum_data), sizeof(ik_ullong));
-    /* "normalize_bignum()" wants an *untagged* pointer as argument. */
-    return normalize_bignum(NUMBER_OF_WORDS, 0, bn);
+    /* "ik_normalize_bignum()" wants an *untagged* pointer as argument. */
+    return ik_normalize_bignum(NUMBER_OF_WORDS, 0, bn);
   }
 }
 ikptr
@@ -514,7 +514,7 @@ ik_integer_to_llong (ikptr x)
     return 0;
   else {
     ikptr fst		   = ref(x, -vector_tag);
-    ikptr pos_one_limb_tag = (ikptr)(bignum_tag	      | (1 << bignum_length_shift));
+    ikptr pos_one_limb_tag = (ikptr)(bignum_tag	      | (1 << bignum_nlimbs_shift));
     ikptr neg_one_limb_tag = (ikptr)(pos_one_limb_tag | (1 << bignum_sign_shift));
     if (fst == pos_one_limb_tag)
       return (ik_ulong)ref(x, off_bignum_data);

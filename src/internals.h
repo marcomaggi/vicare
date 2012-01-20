@@ -10,14 +10,14 @@
   Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006-2008  Abdulaziz Ghuloum
 
-  This program is  free software: you can redistribute  it and/or modify
-  it under the  terms of the GNU General Public  License as published by
-  the Free Software Foundation, either  version 3 of the License, or (at
+  This program is  free software: you can redistribute	it and/or modify
+  it under the	terms of the GNU General Public	 License as published by
+  the Free Software Foundation, either	version 3 of the License, or (at
   your option) any later version.
 
-  This program  is distributed in the  hope that it will  be useful, but
-  WITHOUT   ANY  WARRANTY;   without  even   the  implied   warranty  of
-  MERCHANTABILITY  or FITNESS  FOR A  PARTICULAR PURPOSE.   See  the GNU
+  This program	is distributed in the  hope that it will  be useful, but
+  WITHOUT   ANY	 WARRANTY;   without  even   the  implied   warranty  of
+  MERCHANTABILITY  or FITNESS  FOR A  PARTICULAR PURPOSE.   See	 the GNU
   General Public License for more details.
 
   You  should have received  a copy  of the  GNU General  Public License
@@ -90,14 +90,14 @@
 
 #define large_object_tag	0x00100000
 
-#define hole_mt         (hole_type       | unscannable_tag | retain_tag)
-#define mainheap_mt     (mainheap_type   | unscannable_tag | retain_tag)
-#define mainstack_mt    (mainstack_type  | unscannable_tag | retain_tag)
-#define pointers_mt     (pointers_type   | scannable_tag   | dealloc_tag_un)
-#define symbols_mt      (symbols_type    | scannable_tag   | dealloc_tag_un)
-#define data_mt         (dat_type        | unscannable_tag | dealloc_tag_un)
-#define code_mt         (code_type       | scannable_tag   | dealloc_tag_un)
-#define weak_pairs_mt   (weak_pairs_type | scannable_tag   | dealloc_tag_un)
+#define hole_mt		(hole_type	 | unscannable_tag | retain_tag)
+#define mainheap_mt	(mainheap_type	 | unscannable_tag | retain_tag)
+#define mainstack_mt	(mainstack_type	 | unscannable_tag | retain_tag)
+#define pointers_mt	(pointers_type	 | scannable_tag   | dealloc_tag_un)
+#define symbols_mt	(symbols_type	 | scannable_tag   | dealloc_tag_un)
+#define data_mt		(dat_type	 | unscannable_tag | dealloc_tag_un)
+#define code_mt		(code_type	 | scannable_tag   | dealloc_tag_un)
+#define weak_pairs_mt	(weak_pairs_type | scannable_tag   | dealloc_tag_un)
 
 #define call_instruction_size	((wordsize == 4) ? 5 : 10)
 #define disp_frame_size		(- (call_instruction_size + 3 * wordsize))
@@ -115,49 +115,49 @@
  ** Helper and legacy macros.
  ** ----------------------------------------------------------------- */
 
-#define ref(X,N)        IK_REF((X),(N))
+#define ref(X,N)	IK_REF((X),(N))
 
-#define fix(X)          IK_FIX(X)
-#define unfix(X)        IK_UNFIX(X)
+#define fix(X)		IK_FIX(X)
+#define unfix(X)	IK_UNFIX(X)
 
 
 /** --------------------------------------------------------------------
  ** Function prototypes.
  ** ----------------------------------------------------------------- */
 
-ikpcb * ik_collect              (unsigned long, ikpcb*);
+ikpcb * ik_collect		(unsigned long, ikpcb*);
 
-void*   ik_malloc               (int);
-void    ik_free                 (void*, int);
+void*	ik_malloc		(int);
+void	ik_free			(void*, int);
 
-ikptr   ik_underflow_handler    (ikpcb*);
+ikptr	ik_underflow_handler	(ikpcb*);
 
-ikptr   ik_mmap                 (unsigned long);
-ikptr   ik_mmap_typed           (unsigned long size, unsigned type, ikpcb*);
-ikptr   ik_mmap_ptr             (unsigned long size, int gen, ikpcb*);
-ikptr   ik_mmap_data            (unsigned long size, int gen, ikpcb*);
-ikptr   ik_mmap_code            (unsigned long size, int gen, ikpcb*);
-ikptr   ik_mmap_mixed           (unsigned long size, ikpcb*);
-void    ik_munmap               (ikptr, unsigned long);
-void    ik_munmap_from_segment  (ikptr, unsigned long, ikpcb*);
-ikpcb * ik_make_pcb             (void);
-void    ik_delete_pcb           (ikpcb*);
-void    ik_free_symbol_table    (ikpcb* pcb);
+ikptr	ik_mmap			(unsigned long);
+ikptr	ik_mmap_typed		(unsigned long size, unsigned type, ikpcb*);
+ikptr	ik_mmap_ptr		(unsigned long size, int gen, ikpcb*);
+ikptr	ik_mmap_data		(unsigned long size, int gen, ikpcb*);
+ikptr	ik_mmap_code		(unsigned long size, int gen, ikpcb*);
+ikptr	ik_mmap_mixed		(unsigned long size, ikpcb*);
+void	ik_munmap		(ikptr, unsigned long);
+void	ik_munmap_from_segment	(ikptr, unsigned long, ikpcb*);
+ikpcb * ik_make_pcb		(void);
+void	ik_delete_pcb		(ikpcb*);
+void	ik_free_symbol_table	(ikpcb* pcb);
 
-void    ik_fasl_load            (ikpcb* pcb, char* filename);
-void    ik_relocate_code        (ikptr);
+void	ik_fasl_load		(ikpcb* pcb, char* filename);
+void	ik_relocate_code	(ikptr);
 
-ikptr   ik_exec_code            (ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp);
+ikptr	ik_exec_code		(ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp);
 
-ikptr   ik_asm_enter            (ikpcb*, ikptr code_object, ikptr arg, ikptr cp);
-ikptr   ik_asm_reenter          (ikpcb*, ikptr code_object, ikptr val);
+ikptr	ik_asm_enter		(ikpcb*, ikptr code_object, ikptr arg, ikptr cp);
+ikptr	ik_asm_reenter		(ikpcb*, ikptr code_object, ikptr val);
 
 
 /** --------------------------------------------------------------------
  ** Objects stuff.
  ** ----------------------------------------------------------------- */
 
-ikptr   normalize_bignum        (long limbs, int sign, ikptr r);
+ikptr	ik_normalize_bignum	(long limbs, int sign, ikptr r);
 
 #define max_digits_per_limb	((wordsize==4)?10:20)
 
@@ -170,13 +170,13 @@ extern char **		environ;
 extern ikpcb *		the_pcb;
 
 #ifdef __CYGWIN__
-void    win_munmap(char* addr, size_t size);
-char*   win_mmap(size_t size);
+void	win_munmap(char* addr, size_t size);
+char*	win_mmap(size_t size);
 #endif
 
-int     ikarus_main (int argc, char** argv, char* boot_file);
+int	ikarus_main (int argc, char** argv, char* boot_file);
 
-ikptr   ik_errno_to_code (void);
+ikptr	ik_errno_to_code (void);
 
 
 /** --------------------------------------------------------------------

@@ -16272,6 +16272,16 @@ are implemented using the @code{mpn} @api{} of @gnu{} @gmp{},
 @xref{Low-level Functions, mpn, Low-level Functions, gmp}.  @ref{iklib
 numerics} for more functions acting on bignums.
 
+@value{PRJNAME} only uses a bignum to represent an exact integer when
+the value does not fit in a fixnum; it follows that the following ranges
+are enforced:
+
+@example
+negative bignums < (least-fixnum) <= all fixnums
+
+all fixnums <= (greatest-fixnum) < positive bignums
+@end example
+
 A bignum is a variable length memory block referenced by machine words
 tagged as vectors.  The first machine word of a bignum block is tagged
 has bignum in its least significant bits; then comes a sign bit, zero if
@@ -16290,22 +16300,65 @@ words in the memory block after the first one.
 A pointer to the second machine word in a bignum memory block is the
 pointer of type @code{mp_limb_t} accepted by the @code{mpn_} functions
 of @gmp{}; @dfn{limb}, in @gmp{} jargon, is a machine word holding a
-portion of multi--precision number.
-
-@value{PRJNAME} only uses a bignum to represent an exact integer when
-the value does not fit in a fixnum; it follows that the following ranges
-are enforced:
+portion of multi--precision number.  The layout of a bignum memory block
+is as follows:
 
 @example
-negative bignums < (least-fixnum) <= all fixnums
-
-all fixnums <= (greatest-fixnum) < positive bignums
+|----|-----|-----|-----|-----| ...
+ fst  limb0 limb1 limb2 limb3
 @end example
+
+@noindent
+where the first word @code{fst} is header of meta informations encoded
+as explained above and each limb is a machine word stored in native
+endianness; the big number is the concatenation of limbs with
+@code{limb0} being the least significant one.  There is always at least
+one limb; when a bignum is composed of a single limb, its value is
+always non--zero and outside the range of fixnums.
 
 @c ------------------------------------------------------------
 
 @subsubheading Basic operations
 
+
+To allocate a bignum we must know the number of required limbs:
+
+@example
+ikpcb * pcb        = the_pcb;
+long    nlimbs     = the_number_of_limbs;
+long    block_size = disp_bignum_data + nlimbs * wordsize;
+long    align_size = IK_ALIGN(block_size);
+ikptr s_bn = ik_safe_alloc(pcb, align_size) | vector_tag;
+@end example
+
+@noindent
+we must explicitly build and encode the first word; the number of limbs
+is encoded as follows:
+
+@example
+long   nlimbs      = the_number_of_limbs;
+ikptr  meta_nlimbs = nlimbs << bignum_nlimbs_shift;
+@end example
+
+@noindent
+the sign bit is encoded as follows:
+
+@example
+long   sign      = zero_if_positive_one_if_negative;
+ikptr  meta_sign = sign << bignum_sign_shift;
+@end example
+
+@noindent
+and the full first word is composed and stored as follows:
+
+@example
+ikptr  s_bn        = the_bignum;
+ikptr  meta_nlimbs = ...;
+ikptr  meta_sign   = ...;
+ikptr  s_fst       = meta_nlimbs | meta_sign | bignum_tag;
+
+IK_REF(s_bn, off_bignum_tag) = s_fst;
+@end example
 
 To identify an object as bignum we do:
 
@@ -16313,46 +16366,184 @@ To identify an object as bignum we do:
 ikptr   X;
 
 if ((vector_tag == IK_TAGOF(X)) &&
-    (bignum_tag == (bignum_mask & (int)IK_REF(X, -vector_tag))))
+    (bignum_tag == (bignum_mask & IK_REF(X, -vector_tag))))
   it_is_a_bignum();
 else
   it_is_not();
 @end example
 
+@noindent
+to extract meta informations we must first extract the first word:
 
+@example
+ikptr   s_bn  = the_bignum;
+ikptr   s_fst = IK_REF(s_bn, off_bignum_tag);
+long    nlimbs;
+long    meta_sign;
+
+nlimbs    = ((ik_ulong)s_fst) >> bignum_nlimbs_shift;
+meta_sign = ((ik_ulong)s_fst) &  bignum_sign_mask;
+@end example
+
+@noindent
+if @code{meta_sign} is zero the bignum is positive, else it is negative.
+
+To acquire a pointer to the data area we do:
+
+@example
+ikptr        s_bn = the_bignum;
+mp_limb_t *  data;
+
+data = (mp_limb_t*)(long)(s_bn + off_bignum_data);
+@end example
+
+@noindent
+to extract the @math{N}-th limb we do:
+
+@example
+ikptr      s_bn = the_bignum;
+long       N    = the_index;
+mp_limb_t  limb;
+
+limb = (mp_limb_t)IK_REF(s_bn, off_bignum_data + N * wordsize);
+@end example
 
 
 @defvr {Preprocessor Symbol} bignum_mask
 @defvrx {Preprocessor Symbol} bignum_tag
+@code{bignum_mask} is the bit pattern used to isolate a bignum tag from
+an @ikptr{} value; @code{bignum_tag} is the tag of @ikptr{} values used
+as first words in bignum memory blocks.
 @end defvr
 
 
 @defvr {Preprocessor Symbol} bignum_sign_mask
+A bit pattern used to isolate the sign bit from the @code{ikptr} value
+used as first word in bignum memory blocks.
 @end defvr
 
 
 @defvr {Preprocessor Symbol} bignum_sign_shift
+The number representing the bit left--shift offset of the sign bit in
+the @code{ikptr} value used as first word in bignum memory blocks.
 @end defvr
 
 
-@defvr {Preprocessor Symbol} bignum_length_shift
+@defvr {Preprocessor Symbol} bignum_nlimbs_shift
+The number representing the bit left--shift offset of the number of
+limbs in the @code{ikptr} value used as first word in bignum memory
+blocks.
 @end defvr
 
 
 @defvr {Preprocessor Symbol} disp_bignum_tag
+Offset in bytes of the first word in a bignum memory block from the
+beginning of the block.  It is zero.
 @end defvr
 
 
 @defvr {Preprocessor Symbol} disp_bignum_data
+Offset in bytes of the first byte in the data area of a bignum memory
+block from the beginning of the block.
 @end defvr
 
 
 @defvr {Preprocessor Symbol} off_bignum_tag
+Number to add to a tagged @ikptr{} reference to bignum to obtain a
+pointer to the first word in a bignum memory block.
 @end defvr
 
 
 @defvr {Preprocessor Symbol} off_bignum_data
+Number to add to a tagged @ikptr{} reference to bignum to obtain a
+pointer to the first byte in the data area of bignum memory block.
 @end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} long IK_BIGNUM_ALLOC_SIZE (long @var{nlimbs})
+Given a number of limbs: evaluate to the aligned size of the memory
+block needed to hold the bignum.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IKA_BIGNUM_ALLOC (ikpcb * @var{pcb}, long @var{nlimb})
+Given a number of limbs: allocate, using @cfunc{ik_safe_alloc}, the
+memory block needed to hold the bignum and return an untagged pointer to
+it.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_COMPOSE_BIGNUM_FIRST_WORD (long @var{nlimb}, ikptr @var{meta_sign})
+Given a number of limbs and the encoded sign bit: evaluate to the first
+word of a bignum object.  It is equivalent to the following:
+
+@example
+ikptr  meta_nlimbs;
+ikptr  s_fst;
+
+meta_nlimbs = (@var{nlimbs} << bignum_nlimbs_shift)
+s_fst       = meta_nlimbs | @var{meta_sign} | bignum_tag;
+@end example
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POSITIVE_BIGNUM_FIRST_WORD (long @var{nlimb})
+@deftypefnx {Preprocessor Macro} ikptr IK_NEGATIVE_BIGNUM_FIRST_WORD (long @var{nlimb})
+Given a number of limbs evaluate to the corresponding first word of
+bignum representing a positive or negative number.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_BIGNUM_FIRST (ikptr @var{bn})
+Given a reference to bignum: evaluate to the location of the first word
+holding meta informations.  Can be used both as operand or left--side of
+assignment:
+
+@example
+ikptr  s_bn = the_bignum;
+ikptr  s_fst;
+
+s_fst = IK_BIGNUM_FIRST(s_bn);
+IK_BIGNUM_FIRST(s_bn) = s_fst;
+@end example
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_LIMB (ikptr @var{bn}, long @var{N})
+Given a reference to bignum: evaluate to the location of the @var{N}-th
+limb in the data area.  Can be used both as operand or left--side of
+assignment:
+
+@example
+ikptr      s_bn = the_bignum;
+mp_limb_t  limb;
+
+limb = (mp_limb_t)IK_LIMB(s_bn);
+IK_LIMB(s_bn) = (ikptr)limb;
+@end example
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {mp_limb_t *} IK_BIGNUM_DATA_LIMBP (ikptr @var{bn})
+Given a reference to bignum: evaluate to a pointer to the first byte in
+the data area, which is a pointer to the least significant limb.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} mp_limb_t IK_BIGNUM_FIRST_LIMB (ikptr @var{bn})
+Given a reference to bignum: evaluate to the least significant limb in
+the data area.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} mp_limb_t IK_BIGNUM_LAST_LIMB (ikptr @var{bn}, long @var{nlimbs})
+Given a reference to bignum and its number of limbs: evaluate to the
+most significant limb in the data area.
+@end deftypefn
 
 @c ------------------------------------------------------------
 

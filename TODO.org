@@ -15,7 +15,7 @@
    If SET-PORT-POSITION!  fails it is  possible for the field POS of the
    cookie to become invalid.  Should the port be marked as corrupted?
 
-** list of files still to review
+** list of Scheme files still to review
 
    scheme/ikarus.enumerations.ss
    scheme/ikarus.numerics.ss
@@ -61,9 +61,18 @@
    scheme/psyntax.internal.ss
    scheme/psyntax.library-manager.ss
 
-** list of files that maybe will be reviewed
+** list of Scheme files that maybe will be reviewed
 
    scheme/x86-64-repl.ss
+
+
+** list of C code that must be reviewed
+
+*** ikarus-numerics.c
+
+    Only partially  reviewed.  From "ikrt_bnbnplus()"  one the functions
+    must  be reviewed  using the  C  preprocessor macros  in the  header
+    file.  Tests for the functions must go in "test-vicare-bignums.sps".
 
 * Miscellaneous stuff to be fixed
 

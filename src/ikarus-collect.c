@@ -1270,7 +1270,7 @@ add_object_proc (gc_t* gc, ikptr X)
       return new;
     }
     else if (bignum_tag == (first_word & bignum_mask)) {
-      long	len    = ((unsigned long)first_word) >> bignum_length_shift;
+      long	len    = ((unsigned long)first_word) >> bignum_nlimbs_shift;
       long	memreq = IK_ALIGN(disp_bignum_data + len*wordsize);
       ikptr	Y      = gc_alloc_new_data(memreq, gc) | vector_tag;
       memcpy((char*)(long)(Y - vector_tag),
