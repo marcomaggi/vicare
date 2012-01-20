@@ -167,6 +167,11 @@ set to something:
 
    $ make test file=vicare-posix RUN_INET_TESTS=1
 
+  When included, it is possible to run tests for the bindings to foreign
+libraries (like CRE2) with:
+
+   $ make foreign-test
+
 
 A. Credits
 ----------
