@@ -112,13 +112,14 @@ TESTS			=	\
 	test-ikarus-symbol-table.sps			\
 	test-ikarus-unicode.sps				\
 	\
+	test-vicare-bignums.sps				\
 	test-vicare-bytevectors.sps			\
 	test-vicare-chars.sps				\
 	test-vicare-equality.sps			\
 	test-vicare-io.sps				\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
-	test-vicare-ffi.sps			\
+	test-vicare-ffi.sps				\
 	test-vicare-posix.sps				\
 	test-vicare-promises.sps			\
 	test-vicare-reader.sps				\
@@ -251,6 +252,7 @@ EXTRA_DIST =	\
 	test-ikarus-symbol-table.sps			\
 	test-ikarus-unicode.sps				\
 	\
+	test-vicare-bignums.sps				\
 	test-vicare-bytevectors.sps			\
 	test-vicare-chars.sps				\
 	test-vicare-equality.sps			\
