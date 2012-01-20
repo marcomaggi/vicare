@@ -3,6 +3,7 @@
 libvicaredir		= $(pkglibdir)/vicare
 
 EXTRA_DIST		= compile-all.sps			\
+			  compile-cre2.sps			\
 			  vicare/platform-constants.sls.in	\
 			  vicare/words.sls.in			\
 			  vicare/installation-configuration.sls.in
