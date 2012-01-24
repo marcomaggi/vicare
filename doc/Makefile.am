@@ -3,6 +3,6 @@
 MAKEINFOFLAGS	= --no-split
 
 info_TEXINFOS	= vicare.texi
-#EXTRA_DIST = vicare.texi
+#EXTRA_DIST	= macros.texi
 
 ### end of file
