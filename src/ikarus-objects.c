@@ -111,26 +111,30 @@ ika_list_from_argv (ikpcb * pcb, char ** argv)
    build and return  a list of bytevectors holding a  copy of the ASCIIZ
    strings.  Make use of "pcb->root8,9".  */
 {
-  ikptr		s_list, s_pair;
-  s_list = s_pair = ika_pair_alloc(pcb);
-  pcb->root9 = &s_list;
-  pcb->root8 = &s_pair;
-  {
-    int		i;
-    for (i=0; argv[i];) {
-      IK_ASS(IK_CAR(s_pair), ika_bytevector_from_cstring(pcb, argv[i]));
-      if (argv[++i]) {
-	IK_ASS(IK_CDR(s_pair), ika_pair_alloc(pcb));
-	s_pair = IK_CDR(s_pair);
-      } else {
-	IK_CDR(s_pair) = null_object;
-	break;
+  if (! argv[0])
+    return null_object;
+  else {
+    ikptr	s_list, s_pair;
+    s_list = s_pair = ika_pair_alloc(pcb);
+    pcb->root9 = &s_list;
+    pcb->root8 = &s_pair;
+    {
+      int		i;
+      for (i=0; argv[i];) {
+	IK_ASS(IK_CAR(s_pair), ika_bytevector_from_cstring(pcb, argv[i]));
+	if (argv[++i]) {
+	  IK_ASS(IK_CDR(s_pair), ika_pair_alloc(pcb));
+	  s_pair = IK_CDR(s_pair);
+	} else {
+	  IK_CDR(s_pair) = null_object;
+	  break;
+	}
       }
     }
+    pcb->root8 = NULL;
+    pcb->root9 = NULL;
+    return s_list;
   }
-  pcb->root8 = NULL;
-  pcb->root9 = NULL;
-  return s_list;
 }
 ikptr
 ika_list_from_argv_and_argc (ikpcb * pcb, char ** argv, long argc)
@@ -138,26 +142,30 @@ ika_list_from_argv_and_argc (ikpcb * pcb, char ** argv, long argc)
    pointers: build  and return a list  of bytevectors holding  a copy of
    the ASCIIZ strings.	Make use of "pcb->root8,9".  */
 {
-  ikptr		s_list, s_pair;
-  s_list = s_pair = ika_pair_alloc(pcb);
-  pcb->root9 = &s_list;
-  pcb->root8 = &s_pair;
-  {
-    long	i;
-    for (i=0; i<argc;) {
-      IK_ASS(IK_CAR(s_pair), ika_bytevector_from_cstring(pcb, argv[i]));
-      if (++i < argc) {
-	IK_ASS(IK_CDR(s_pair), ika_pair_alloc(pcb));
-	s_pair = IK_CDR(s_pair);
-      } else {
-	IK_CDR(s_pair) = null_object;
-	break;
+  if (! argc)
+    return null_object;
+  else {
+    ikptr	s_list, s_pair;
+    s_list = s_pair = ika_pair_alloc(pcb);
+    pcb->root9 = &s_list;
+    pcb->root8 = &s_pair;
+    {
+      long	i;
+      for (i=0; i<argc;) {
+	IK_ASS(IK_CAR(s_pair), ika_bytevector_from_cstring(pcb, argv[i]));
+	if (++i < argc) {
+	  IK_ASS(IK_CDR(s_pair), ika_pair_alloc(pcb));
+	  s_pair = IK_CDR(s_pair);
+	} else {
+	  IK_CDR(s_pair) = null_object;
+	  break;
+	}
       }
     }
+    pcb->root8 = NULL;
+    pcb->root9 = NULL;
+    return s_list;
   }
-  pcb->root8 = NULL;
-  pcb->root9 = NULL;
-  return s_list;
 }
 
 
