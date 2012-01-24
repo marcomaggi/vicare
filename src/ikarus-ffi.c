@@ -400,6 +400,30 @@ seal_scheme_stack(ikpcb* pcb)
 }
 #endif
 
+ikptr
+ik_enter_c_function (ikpcb* pcb)
+{
+  ikptr		sk;
+  seal_scheme_stack(pcb);
+  sk = ik_unsafe_alloc(pcb, system_continuation_size) | vector_tag;
+  IK_REF(sk, off_system_continuation_tag)  = system_continuation_tag;
+  IK_REF(sk, off_system_continuation_top)  = pcb->system_stack;
+  IK_REF(sk, off_system_continuation_next) = pcb->next_k;
+  pcb->next_k = sk;
+  return sk;
+}
+void
+ik_leave_c_function (ikpcb * pcb, ikptr sk)
+{
+  pcb->frame_pointer = pcb->frame_base - wordsize;
+  sk = pcb->next_k - vector_tag;
+  if (system_continuation_tag != IK_REF(sk, disp_system_continuation_tag)) {
+    ik_abort("%s: invalid system cont", __func__);
+  }
+  pcb->next_k       = IK_REF(sk, disp_system_continuation_next);
+  pcb->system_stack = IK_REF(sk, disp_system_continuation_top);
+}
+
 
 /** --------------------------------------------------------------------
  ** Callout: call a C function from Scheme code.
