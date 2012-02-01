@@ -26,8 +26,7 @@
 
 
 #!vicare
-(import (rename (vicare) #;(ikarus)
-		(parameterize	parametrise))
+(import (vicare)
   (ikarus system $fx)
   (ikarus system $flonums)
   (checks))

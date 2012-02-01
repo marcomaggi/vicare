@@ -26,8 +26,7 @@
 
 
 #!r6rs
-(import (rename (vicare)
-		(parameterize	parametrise))
+(import (vicare)
   (checks))
 
 (check-set-mode! 'report-failed)

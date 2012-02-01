@@ -26,8 +26,7 @@
 
 
 #!vicare
-(import (rename (vicare)
-		(parameterize	parametrise))
+(import (vicare)
   (checks))
 
 (print-unicode #f)

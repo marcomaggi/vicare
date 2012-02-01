@@ -25,8 +25,7 @@
 ;;;
 
 
-(import (rename (vicare)
-		(parameterize	parametrise))
+(import (vicare)
   (prefix (vicare posix)
 	  px.)
   (prefix (vicare glibc)

@@ -9,7 +9,7 @@
 ;;;	Some tests are  from the file "scheme/tests/bytevectors.ss" file
 ;;;	in the original Ikarus distribution.
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -28,8 +28,7 @@
 
 
 #!vicare
-(import (rename (ikarus)
-		(parameterize	parametrise))
+(import (ikarus)
   (checks))
 
 (check-set-mode! 'report-failed)

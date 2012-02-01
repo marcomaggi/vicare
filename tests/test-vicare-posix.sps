@@ -26,8 +26,7 @@
 
 
 #!vicare
-(import (rename (vicare)
-		(parameterize	parametrise))
+(import (vicare)
   (prefix (vicare posix)
 	  px.)
   (vicare platform-constants)

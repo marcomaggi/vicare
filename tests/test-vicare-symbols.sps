@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,8 +26,7 @@
 
 
 #!vicare
-(import (rename (vicare) #;(ikarus)
-		(parameterize	parametrise))
+(import (vicare)
   (checks))
 
 (print-unicode #f)

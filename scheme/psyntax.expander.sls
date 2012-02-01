@@ -2747,6 +2747,7 @@
            ((trace-letrec-syntax)   trace-letrec-syntax-macro)
            ((define-condition-type) define-condition-type-macro)
            ((parameterize)          parameterize-macro)
+           ((parametrise)           parameterize-macro)
            ((eol-style)
             (lambda (x)
               (symbol-macro x '(none lf cr crlf nel crnel ls))))

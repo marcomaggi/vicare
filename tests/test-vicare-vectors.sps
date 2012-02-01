@@ -26,8 +26,7 @@
 
 
 #!vicare
-(import (rename (ikarus)
-		(parameterize	parametrise))
+(import (ikarus)
   (checks))
 
 (check-set-mode! 'report-failed)
