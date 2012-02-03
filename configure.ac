@@ -42,8 +42,8 @@ AC_ARG_ENABLE([glibc],
      yes) vicare_glibc_bindings=true ;;
      no)  vicare_glibc_bindings=false ;;
      *) AC_MSG_ERROR([bad value ${enableval} for --enable-glibc]) ;;
-   esac],[vicare_glibc_bindings=false])
-AM_CONDITIONAL([WANT_GLIBC], [test x$vicare_glibc_bindings = xtrue])
+   esac],[vicare_glibc_bindings=true])
+AM_CONDITIONAL([WANT_GLIBC],[test x$vicare_glibc_bindings = xtrue])
 
 AC_ARG_ENABLE([linux],
   [AS_HELP_STRING([--disable-linux],
@@ -52,8 +52,8 @@ AC_ARG_ENABLE([linux],
      yes) vicare_linux_bindings=true ;;
      no)  vicare_linux_bindings=false ;;
      *) AC_MSG_ERROR([bad value ${enableval} for --enable-linux]) ;;
-   esac],[vicare_linux_bindings=false])
-AM_CONDITIONAL([WANT_LINUX], [test x$vicare_linux_bindings = xtrue])
+   esac],[vicare_linux_bindings=true])
+AM_CONDITIONAL([WANT_LINUX],[test x$vicare_linux_bindings = xtrue])
 
 
 #page
@@ -254,6 +254,7 @@ Please specify the location of the library file using
 fi # "$enable_ffi" != no
 
 AC_DEFINE_UNQUOTED([ENABLE_LIBFFI],[$libffi_val],[adds support for Libffi])
+AM_CONDITIONAL([WANT_LIBFFI],[test x$enable_libffi = xyes])
 
 dnl --------------------------------------------------------------------
 dnl Check for Libiconv (optional)

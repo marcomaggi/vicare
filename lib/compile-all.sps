@@ -26,7 +26,6 @@
 
 #!r6rs
 (import
-    (only (vicare ffi))
   (only (vicare platform-constants))
   (only (vicare include))
   (only (vicare syntactic-extensions))

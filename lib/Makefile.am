@@ -3,6 +3,7 @@
 libvicaredir		= $(pkglibdir)/vicare
 
 EXTRA_DIST		= compile-all.sps			\
+			  compile-ffi.sps			\
 			  compile-glibc.sps			\
 			  compile-linux.sps			\
 			  compile-cre2.sps			\
@@ -11,7 +12,6 @@ EXTRA_DIST		= compile-all.sps			\
 			  vicare/installation-configuration.sls.in
 
 dist_libvicare_DATA	= \
-	vicare/ffi.sls				\
 	vicare/platform-constants.sls		\
 	vicare/include.sls			\
 	vicare/syntactic-extensions.sls		\
@@ -23,6 +23,10 @@ dist_libvicare_DATA	= \
 	vicare/words.sls			\
 	vicare/installation-configuration.sls	\
 	vicare/gcc.sls
+
+if WANT_LIBFFI
+dist_libvicare_DATA	+= vicare/ffi.sls
+endif
 
 if WANT_GLIBC
 dist_libvicare_DATA	+= vicare/glibc.sls
@@ -54,6 +58,9 @@ VICARE_INST_RUN	= $(VICARE_INST_ENV) $(VICARE_INST)
 
 vfasl:
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-all.sps
+if WANT_LIBFFI
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-libffi.sps
+endif
 if WANT_GLIBC
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-glibc.sps
 endif
@@ -66,6 +73,9 @@ endif
 
 vfasl-installed:
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-all.sps
+if WANT_LIBFFI
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-libffi.sps
+endif
 if WANT_GLIBC
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-glibc.sps
 endif

@@ -123,7 +123,6 @@ TESTS			=	\
 	test-vicare-bytevectors.sps			\
 	test-vicare-chars.sps				\
 	test-vicare-equality.sps			\
-	test-vicare-ffi.sps				\
 	test-vicare-io.sps				\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
@@ -154,6 +153,10 @@ TESTS			=	\
 	test-issue-023.sps				\
 	test-issue-024.sps				\
 	test-issue-025-sign-in-exact-rationals.sps
+
+if WANT_LIBFFI
+TESTS	+= test-vicare-ffi.sps
+endif
 
 if WANT_GLIBC
 TESTS	+= test-vicare-glibc.sps

@@ -635,10 +635,11 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
 
 #else
 
-ikptr ikrt_ffi_prep_cif()     { return false_object; }
-ikptr ikrt_ffi_call()         { return false_object; }
-ikptr ikrt_prepare_callback() { return false_object; }
-ikptr ikrt_has_ffi()          { return false_object; }
+ikptr ikrt_ffi_prep_cif ()		{ return false_object; }
+ikptr ikrt_ffi_call()			{ return false_object; }
+ikptr ikrt_ffi_prepare_callback()	{ return false_object; }
+ikptr ikrt_ffi_release_callback ()	{ return false_object; }
+ikptr ikrt_has_ffi()			{ return false_object; }
 
 #endif
 

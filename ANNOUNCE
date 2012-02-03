@@ -68,6 +68,11 @@ Notes for revision 0.2d7
   "configure"  script to  disable inclusion  of GNU  C  Library specific
   bindings and Linux specific bindings.
 
+* Fixed bug causing build error when "--enable-libffi" is not used.
+
+* When  "--enable-libffi" is  not  used: the  library  not (vicare  ffi)
+  installed anymore.
+
 
 Notes for revision 0.2d6
 ------------------------
