@@ -9,9 +9,7 @@ SRCS	= \
 	ikarus-ffi.c			\
 	ikarus-flonums.c		\
 	ikarus-getaddrinfo.c		\
-	ikarus-glibc.c			\
 	ikarus-io.c			\
-	ikarus-linux.c			\
 	ikarus-main.c			\
 	ikarus-numerics.c		\
 	ikarus-objects.c		\
@@ -23,7 +21,10 @@ SRCS	= \
 	ikarus-verify-integrity.c	\
 	ikarus-weak-pairs.c		\
 	ikarus-winmmap.c		\
-	internals.h
+	ikarus-glibc.c			\
+	ikarus-linux.c			\
+	internals.h			\
+	$(GLIBC_SRCS) $(LINUX_SRCS)
 
 include_HEADERS		= vicare.h
 

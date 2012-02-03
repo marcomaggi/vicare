@@ -35,6 +35,27 @@ AC_ARG_ENABLE([arguments-validation],
 
 AC_SUBST([VICARE_ARGUMENTS_VALIDATION],[$vicare_ARGUMENTS_VALIDATION])
 
+AC_ARG_ENABLE([glibc],
+  [AS_HELP_STRING([--disable-glibc],
+     [disable bindings to GNU C Library (default is enable)])],
+  [case "${enableval}" in
+     yes) vicare_glibc_bindings=true ;;
+     no)  vicare_glibc_bindings=false ;;
+     *) AC_MSG_ERROR([bad value ${enableval} for --enable-glibc]) ;;
+   esac],[vicare_glibc_bindings=false])
+AM_CONDITIONAL([WANT_GLIBC], [test x$vicare_glibc_bindings = xtrue])
+
+AC_ARG_ENABLE([linux],
+  [AS_HELP_STRING([--disable-linux],
+     [disable bindings to GNU C Library (default is enable)])],
+  [case "${enableval}" in
+     yes) vicare_linux_bindings=true ;;
+     no)  vicare_linux_bindings=false ;;
+     *) AC_MSG_ERROR([bad value ${enableval} for --enable-linux]) ;;
+   esac],[vicare_linux_bindings=false])
+AM_CONDITIONAL([WANT_LINUX], [test x$vicare_linux_bindings = xtrue])
+
+
 #page
 #### basic system inspection
 
@@ -739,27 +760,29 @@ AC_CACHE_SAVE
 #page
 #### tests for GNU C Library specific features
 
-AC_CHECK_FUNCS([clearenv dirfd mkstemp mkdtemp sync fsync fdatasync])
-AC_CHECK_FUNCS([if_nametoindex if_indextoname if_nameindex])
-AC_CHECK_FUNCS([creal cimag])
-AC_CHECK_FUNCS([csin ccos ctan casin cacos catan])
-AC_CHECK_FUNCS([cexp clog clog10 csqrt cpow])
-AC_CHECK_FUNCS([sinh cosh tanh csinh ccosh ctanh asinh acosh atanh casinh cacosh catanh])
-AC_CHECK_FUNCS([erf erfc lgamma_r tgamma j0 j1 jn y0 y1 yn])
-AC_CHECK_FUNCS([rand srand])
-AC_CHECK_FUNCS([fnmatch glob regcomp regexec regfree regerror])
-AC_CHECK_FUNCS([wordexp wordfree])
-AC_CHECK_FUNCS([sysconf pathconf fpathconf confstr])
-AC_CHECK_FUNCS([iconv_open iconv_close iconv])
+AM_COND_IF([WANT_GLIBC],[
+  AC_CHECK_FUNCS([clearenv dirfd mkstemp mkdtemp sync fsync fdatasync])
+  AC_CHECK_FUNCS([if_nametoindex if_indextoname if_nameindex])
+  AC_CHECK_FUNCS([creal cimag])
+  AC_CHECK_FUNCS([csin ccos ctan casin cacos catan])
+  AC_CHECK_FUNCS([cexp clog clog10 csqrt cpow])
+  AC_CHECK_FUNCS([sinh cosh tanh csinh ccosh ctanh asinh acosh atanh casinh cacosh catanh])
+  AC_CHECK_FUNCS([erf erfc lgamma_r tgamma j0 j1 jn y0 y1 yn])
+  AC_CHECK_FUNCS([rand srand])
+  AC_CHECK_FUNCS([fnmatch glob regcomp regexec regfree regerror])
+  AC_CHECK_FUNCS([wordexp wordfree])
+  AC_CHECK_FUNCS([sysconf pathconf fpathconf confstr])
+  AC_CHECK_FUNCS([iconv_open iconv_close iconv])])
 
 AC_CACHE_SAVE
 
 #page
 #### tests for GNU+Linux specific features
 
-AC_CACHE_CHECK([availability of WIFCONTINUED],
-  [vicare_cv_HAVE_WIFCONTINUED],
-  [AC_COMPILE_IFELSE([AC_LANG_SOURCE([AC_INCLUDES_DEFAULT
+AM_COND_IF([WANT_LINUX],[
+  AC_CACHE_CHECK([availability of WIFCONTINUED],
+    [vicare_cv_HAVE_WIFCONTINUED],
+      [AC_COMPILE_IFELSE([AC_LANG_SOURCE([AC_INCLUDES_DEFAULT
 #ifdef HAVE_SYS_WAIT_H
 #  include <sys/wait.h>
 #endif
@@ -769,17 +792,17 @@ int main (void)
   int retval = WIFCONTINUED(status);
   return 0;
 }])],
-    [vicare_cv_HAVE_WIFCONTINUED=1],
-    [vicare_cv_HAVE_WIFCONTINUED=0])])
-AC_DEFINE_UNQUOTED([HAVE_WIFCONTINUED],
-  $vicare_cv_HAVE_WIFCONTINUED,
-  [whether the Linux specific WIFCONTINUED macro is available])
+      [vicare_cv_HAVE_WIFCONTINUED=1],
+      [vicare_cv_HAVE_WIFCONTINUED=0])])
+  AC_DEFINE_UNQUOTED([HAVE_WIFCONTINUED],
+    $vicare_cv_HAVE_WIFCONTINUED,
+    [whether the Linux specific WIFCONTINUED macro is available])
 
 dnl --------------------------------------------------------------------
 
-AC_CACHE_CHECK([availability of waitid],
-  [vicare_cv_HAVE_WAITID],
-  [AC_COMPILE_IFELSE([AC_LANG_SOURCE([AC_INCLUDES_DEFAULT
+  AC_CACHE_CHECK([availability of waitid],
+    [vicare_cv_HAVE_WAITID],
+    [AC_COMPILE_IFELSE([AC_LANG_SOURCE([AC_INCLUDES_DEFAULT
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
 #endif
@@ -795,11 +818,12 @@ int main (void)
   int retval = waitid(idtype, id, &info, options);
   return 0;
 }])],
-    [vicare_cv_HAVE_WAITID=1],
-    [vicare_cv_HAVE_WAITID=0])])
-AC_DEFINE_UNQUOTED([HAVE_WAITID],
-  $vicare_cv_HAVE_WAITID,
-  [whether the Linux specific waitid function is available])
+      [vicare_cv_HAVE_WAITID=1],
+      [vicare_cv_HAVE_WAITID=0])])
+  AC_DEFINE_UNQUOTED([HAVE_WAITID],
+    $vicare_cv_HAVE_WAITID,
+    [whether the Linux specific waitid function is available])
+])
 
 dnl --------------------------------------------------------------------
 

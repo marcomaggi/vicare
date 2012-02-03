@@ -9677,6 +9677,12 @@ Scheme functions mapping towards @gnu{} C Library functions, keeping the
 same semantics as much as possible; the platform's own documentation is
 relevant at the Scheme level.
 
+@quotation
+@strong{NOTE} These bindings are included and installed by default and
+they can be excluded at compile time by giving the option
+@option{--disable-glibc} to the @command{configure} stript.
+@end quotation
+
 All the constants needed to use the interface are available as
 identifier syntaxes exported by the @library{vicare platform-constants}
 library; if a constant value is not exported file a feature request for
@@ -10551,6 +10557,12 @@ The functions described in this chapter are exported by the library
 Scheme functions mapping towards Linux functions, keeping the same
 semantics as much as possible; the platform's own documentation is
 relevant at the Scheme level.
+
+@quotation
+@strong{NOTE} These bindings are included and installed by default and
+they can be excluded at compile time by giving the option
+@option{--disable-linux} to the @command{configure} stript.
+@end quotation
 
 All the constants needed to use the interface are available as
 identifier syntaxes exported by the @library{vicare platform-constants}

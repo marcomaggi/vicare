@@ -37,8 +37,6 @@
   (only (vicare unsafe-capi))
   (only (vicare words))
   (only (vicare installation-configuration))
-  (only (vicare glibc))
-  (only (vicare linux))
   (only (vicare gcc))
   )
 

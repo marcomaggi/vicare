@@ -64,6 +64,10 @@ Notes for revision 0.2d7
   parameter's guard  function when setting  a new value, but  does *not*
   apply it when restoring the original parameter's value.
 
+* Added   "--disable-glibc"  and   "--disable-linux"   options  to   the
+  "configure"  script to  disable inclusion  of GNU  C  Library specific
+  bindings and Linux specific bindings.
+
 
 Notes for revision 0.2d6
 ------------------------

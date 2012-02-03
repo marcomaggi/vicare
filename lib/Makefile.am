@@ -3,25 +3,34 @@
 libvicaredir		= $(pkglibdir)/vicare
 
 EXTRA_DIST		= compile-all.sps			\
+			  compile-glibc.sps			\
+			  compile-linux.sps			\
 			  compile-cre2.sps			\
 			  vicare/platform-constants.sls.in	\
 			  vicare/words.sls.in			\
 			  vicare/installation-configuration.sls.in
 
-dist_libvicare_DATA	= vicare/ffi.sls			\
-			  vicare/platform-constants.sls		\
-			  vicare/include.sls			\
-			  vicare/syntactic-extensions.sls	\
-			  vicare/flonum-parser.sls		\
-			  vicare/flonum-formatter.sls		\
-			  vicare/unsafe-operations.sls		\
-			  vicare/unsafe-unicode.sls		\
-			  vicare/unsafe-capi.sls		\
-			  vicare/words.sls			\
-			  vicare/installation-configuration.sls	\
-			  vicare/glibc.sls			\
-			  vicare/linux.sls			\
-			  vicare/gcc.sls
+dist_libvicare_DATA	= \
+	vicare/ffi.sls				\
+	vicare/platform-constants.sls		\
+	vicare/include.sls			\
+	vicare/syntactic-extensions.sls		\
+	vicare/flonum-parser.sls		\
+	vicare/flonum-formatter.sls		\
+	vicare/unsafe-operations.sls		\
+	vicare/unsafe-unicode.sls		\
+	vicare/unsafe-capi.sls			\
+	vicare/words.sls			\
+	vicare/installation-configuration.sls	\
+	vicare/gcc.sls
+
+if WANT_GLIBC
+dist_libvicare_DATA	+= vicare/glibc.sls
+endif
+
+if WANT_LINUX
+dist_libvicare_DATA	+= vicare/linux.sls
+endif
 
 if WANT_CRE2
 dist_libvicare_DATA	+= vicare/cre2.sls
@@ -45,12 +54,24 @@ VICARE_INST_RUN	= $(VICARE_INST_ENV) $(VICARE_INST)
 
 vfasl:
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-all.sps
+if WANT_GLIBC
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-glibc.sps
+endif
+if WANT_LINUX
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-linux.sps
+endif
 if WANT_CRE2
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-cre2.sps
 endif
 
 vfasl-installed:
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-all.sps
+if WANT_GLIBC
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-glibc.sps
+endif
+if WANT_LINUX
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-linux.sps
+endif
 if WANT_CRE2
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-cre2.sps
 endif

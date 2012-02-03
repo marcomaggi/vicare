@@ -123,10 +123,10 @@ TESTS			=	\
 	test-vicare-bytevectors.sps			\
 	test-vicare-chars.sps				\
 	test-vicare-equality.sps			\
+	test-vicare-ffi.sps				\
 	test-vicare-io.sps				\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
-	test-vicare-ffi.sps				\
 	test-vicare-parameters.sps			\
 	test-vicare-posix.sps				\
 	test-vicare-promises.sps			\
@@ -154,6 +154,18 @@ TESTS			=	\
 	test-issue-023.sps				\
 	test-issue-024.sps				\
 	test-issue-025-sign-in-exact-rationals.sps
+
+if WANT_GLIBC
+TESTS	+= test-vicare-glibc.sps
+endif
+
+if WANT_LINUX
+TESTS	+= test-vicare-linux.sps
+endif
+
+if WANT_CRE2
+TESTS	+= foreign-test-vicare-cre2.sps
+endif
 
 #page
 #### extra files to be distributed
@@ -264,10 +276,12 @@ EXTRA_DIST =	\
 	test-vicare-bytevectors.sps			\
 	test-vicare-chars.sps				\
 	test-vicare-equality.sps			\
+	test-vicare-ffi.sps				\
+	test-vicare-glibc.sps				\
 	test-vicare-io.sps				\
+	test-vicare-linux.sps				\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
-	test-vicare-ffi.sps				\
 	test-vicare-parameters.sps			\
 	test-vicare-posix.sps				\
 	test-vicare-promises.sps			\
