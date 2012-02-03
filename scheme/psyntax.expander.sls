@@ -2167,6 +2167,10 @@
     (lambda (e) (stx-error e "incorrect usage of auxiliary keyword")))
 
   (define parameterize-macro
+    ;;
+    ;;Notice that MAKE-PARAMETER is  a primitive function implemented in
+    ;;"ikarus.compiler.sls" by "E-make-parameter".
+    ;;
     (lambda (e)
       (syntax-match e ()
         ((_ () b b* ...)
@@ -2176,17 +2180,37 @@
                (rhs* (generate-temporaries orhs*)))
            (bless
              `((lambda ,(append lhs* rhs*)
-                 (let ((swap (lambda ()
-                               ,@(map (lambda (lhs rhs)
-                                        `(let ((t (,lhs)))
-                                           (,lhs ,rhs)
-                                           (set! ,rhs t)))
-                                      lhs* rhs*))))
+                 (let* ((guard? #t) ;apply the guard function only the first time
+			(swap   (lambda ()
+				  ,@(map (lambda (lhs rhs)
+					   `(let ((t (,lhs)))
+					      (,lhs ,rhs guard?)
+					      (set! ,rhs t)))
+				      lhs* rhs*)
+				  (set! guard? #f))))
                    (dynamic-wind
                      swap
                      (lambda () ,b . ,b*)
                      swap)))
-               ,@(append olhs* orhs*))))))))
+               ,@(append olhs* orhs*))))
+	 ;;Below is the original Ikarus code (Marco Maggi; Feb 3, 2012).
+	 ;;
+         ;; (let ((lhs* (generate-temporaries olhs*))
+         ;;       (rhs* (generate-temporaries orhs*)))
+         ;;   (bless
+         ;;     `((lambda ,(append lhs* rhs*)
+         ;;         (let ((swap (lambda ()
+         ;;                       ,@(map (lambda (lhs rhs)
+         ;;                                `(let ((t (,lhs)))
+         ;;                                   (,lhs ,rhs)
+         ;;                                   (set! ,rhs t)))
+         ;;                              lhs* rhs*))))
+         ;;           (dynamic-wind
+         ;;             swap
+         ;;             (lambda () ,b . ,b*)
+         ;;             swap)))
+         ;;       ,@(append olhs* orhs*))))
+	 ))))
 
 
   (define foreign-call-transformer

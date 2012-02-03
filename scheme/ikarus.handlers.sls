@@ -21,8 +21,8 @@
     (let ()
       (import (ikarus))
       (case-lambda
-        [(x guard) (make-parameter x guard)]
-        [(x) (make-parameter x)]))))
+        ((x guard) (make-parameter x guard))
+        ((x) (make-parameter x))))))
 
 (library (ikarus.pointer-value)
   (export pointer-value)

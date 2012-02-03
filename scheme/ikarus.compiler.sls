@@ -312,45 +312,64 @@
                     (list? fml*))
                   body))))))
            cls*))
+
   (define (E-make-parameter mk-call args ctxt)
     (case (length args)
-      [(1)
-       (let ([val-expr (car args)]
-             [t (gensym 't)]
-             [x (gensym 'x)])
+      ((1)
+       (let ((val-expr	(car args))
+             (t		(gensym 't))
+             (x		(gensym 'x))
+	     (bool	(gensym 'bool)))
          (E `((lambda (,t)
                 (case-lambda
-                  [() ,t]
-                  [(,x) (set! ,t ,x)]))
+		 (() ,t)
+		 ((,x) (set! ,t ,x))
+		 ((,x ,bool)
+		  (set! ,t ,x))))
               ,val-expr)
-            ctxt))]
-      [(2)
-       (let ([val-expr (car args)]
-             [guard-expr (cadr args)]
-             [f (gensym 'f)]
-             [t (gensym 't)]
-             [t0 (gensym 't)]
-             [x (gensym 'x)])
+            ctxt)))
+      ((2)
+       (let ((val-expr		(car args))
+             (guard-expr	(cadr args))
+             (f			(gensym 'f))
+             (t			(gensym 't))
+             (t0		(gensym 't))
+             (x			(gensym 'x))
+	     (bool		(gensym 'bool)))
          (E `((case-lambda
-                [(,t ,f)
-                 (if ((primitive procedure?) ,f)
-                     ((case-lambda
-                        [(,t0)
-                         (case-lambda
-                           [() ,t0]
-                           [(,x) (set! ,t0 (,f ,x))])])
-                      (,f ,t))
-                     ((primitive die)
-                        'make-parameter
-                        '"not a procedure"
-                        ,f))])
+	       ((,t ,f)
+		(if ((primitive procedure?) ,f)
+		    ((case-lambda
+		      ((,t0)
+		       (case-lambda
+			(() ,t0)
+			((,x) (set! ,t0 (,f ,x)))
+			((,x ,bool)
+			 (if ,bool
+			     (set! ,t0 (,f ,x))
+			   (set! ,t0 ,x))))))
+		     ,t)
+		  ;;The one below is the original Ikarus implementation;
+		  ;;it was  applying the  guard function every  time and
+		  ;;also applying  the guard function to  the init value
+		  ;;(Marco Maggi; Feb 3, 2012).
+		  ;;
+		  ;; ((case-lambda
+		  ;;   ((,t0)
+		  ;;    (case-lambda
+		  ;;     (() ,t0)
+		  ;;     ((,x) (set! ,t0 (,f ,x))))
+		  ;;    (,f ,t))))
+		  ;;
+		  ((primitive die) 'make-parameter '"not a procedure" ,f))))
               ,val-expr
               ,guard-expr)
-            ctxt))]
-      [else
+            ctxt)))
+      (else
        (mk-call
-         (make-primref 'make-parameter)
-         (map (lambda (x) (E x #f)) args))]))
+	(make-primref 'make-parameter)
+	(map (lambda (x) (E x #f)) args)))))
+
   (define (E-app mk-call rator args ctxt)
     (equal-case rator
       [((primitive make-parameter)) (E-make-parameter mk-call args ctxt)]

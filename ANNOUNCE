@@ -42,6 +42,27 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d7
 ------------------------
 
+* Parameter functions now accept 0, 1 or 2 values and work as follows:
+
+    (let ((the-value <init-value>)
+          (guard <guard-func>))
+      (case-lambda
+        (()
+         the-value)
+        ((new-value)
+         (set! the-value (guard new-value)))
+        ((new-value guard?)
+         (if guard?
+             (set! the-value (guard new-value))
+           (set! the-value new-value)))))
+
+* BACKWARDS INCOMPATIBILITY The  function MAKE-PARAMETER does *not* pass
+  the  parameter's  initialisation  value  through  the  guard  function
+  anymore.
+
+* POSSIBLE BACKWARDS INCOMPATIBILITY The PARAMETERIZE syntax applies the
+  parameter's guard  function when setting  a new value, but  does *not*
+  apply it when restoring the original parameter's value.
 
 
 Notes for revision 0.2d6

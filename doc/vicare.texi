@@ -3660,14 +3660,61 @@ from the module.
 @section Parameters
 
 
-Parameters in @value{PRJNAME}@footnote{Parameters are found in many Scheme
-implementations such as Chez Scheme and MzScheme.} are intended for
-customizing the behavior of a procedure during the dynamic execution of
-some piece of code.  Parameters are first class entities (represented as
-procedures) that hold the parameter value.  A parameter procedure
-accepts either zero or one argument.  If given no arguments, it returns
-the current value of the parameter.  If given a single argument, it must
-set the state to the value of the argument.
+Parameters in @value{PRJNAME} are intended for customizing the behavior
+of a procedure during the dynamic execution of some piece of code.
+Parameters are first class entities (represented as procedures) that
+hold the parameter value.  We can think of a parameter functions as:
+
+@example
+(let ((the-value @meta{init-value})
+      (guard     @meta{guard-func}))
+  (case-lambda
+    (()
+     the-value)
+    ((new-value)
+     (set! the-value (guard new-value)))
+    ((new-value guard?)
+     (if guard?
+         (set! the-value (guard new-value))
+       (set! the-value new-value)))))
+@end example
+
+@noindent
+where @meta{init-value} is the parameter's initialisation value and
+@meta{guard-func} is a function accepting one argument and returning one
+value.  The behaviour is as follows:
+
+@itemize
+@item
+When given no arguments: it returns the current value of the parameter.
+
+@item
+When given a single argument: it sets the current value of the parameter
+to the return value of the guard function applied to the argument.
+
+@item
+When given two arguments: it sets the current value of the parameter to
+either the return value of the guard function applied to the first
+argument or directly to the first argument.
+@end itemize
+
+As of @value{PRJNAME} version 0.2d7 the parameter's initialisation value
+is @strong{not} automatically passed through the guard function.  About
+guarding or not the initialisation value there are pros and cons for
+both the choices; @value{PRJNAME} does not guard the initialisation
+value because a parameter can be used to hold ``complex'' objects and it
+is not always desirable to create one of those at program start time.
+When needed it is possible to validate the value by explicitly writing
+the required predicate.
+
+@quotation
+As example, consider a parameter used to hold the ``current database
+connection''; we may not want to connect to a database right at program
+start time.  With a validating parameter: we should create a ``null''
+connection object for the only purpose of initialising the parameter and
+then test for it; with a non--validating parameter: we just initialise
+the parameter to @false{} and test for it.
+@end quotation
 
 Parameters replace the older concept of using starred @code{*global*}
 customization variables.  For example, instead of writing:
@@ -3685,32 +3732,21 @@ we could wrap the variable @code{*screen-width*} with a
 (define *screen-width* 72)
 (define screen-width
    (case-lambda
-     [()  *screen-width*]
-     [(x) (set! *screen-width* x)]))
+     (()  *screen-width*)
+     ((x) (set! *screen-width* x))))
 @end example
 
-The value of @code{screen-width} can now be passed as argument, returned
-as a value, and exported from libraries.
-
-
-@deffn Procedure make-parameter @var{x}
-@deffnx Procedure make-parameter @var{x} @var{f}
-As parameters are common in @value{PRJNAME}, the procedure @func{make-parameter}
-is defined to model the common usage pattern of parameter construction.
-
-@code{(make-parameter x)} constructs a parameter with @var{x} as the
-initial value.  For example, the code above could be written succinctly
-as:
+@noindent
+the value of @code{screen-width} can now be passed as argument, returned
+as a value, and exported from libraries.  With parameters we can write
+this code succinctly as:
 
 @example
 (define screen-width (make-parameter 72))
 @end example
 
-@code{(make-parameter x f)} constructs a parameter which filters the
-assigned values through the procedure @var{f}.  The initial value of the
-parameter is the result of calling @code{(f x)}.  Typical uses of the
-filter procedure include checking some constraints on the passed
-argument or converting it to a different data type.  The
+Typical uses of the guard function include checking some constraints on
+the passed argument or converting it to a different data type.  The
 @code{screen-width} parameter may be constructed more robustly as:
 
 @example
@@ -3721,14 +3757,21 @@ argument or converting it to a different data type.  The
       (max w 1))))
 @end example
 
-This definition ensures, through @func{assert}, that the argument passed
-is an exact integer.  It also ensures, through @func{max} that the
+@noindent
+this definition ensures, through @func{assert}, that the argument passed
+is an exact integer; it also ensures, through @func{max} that the
 assigned value is always positive.
+
+
+@deffn Procedure make-parameter @var{init}
+@deffnx Procedure make-parameter @var{init} @var{guard}
+Build and return a new parameter function using @var{init} as
+initialisation value and @var{guard} as guard function.
 @end deffn
 
 
-@deffn Syntax parameterize ([lhs* rhs*] ...) body body* ...
-@deffnx Syntax parametrise ([lhs* rhs*] ...) body body* ...
+@deffn Syntax parameterize ((lhs* rhs*) ...) body body* ...
+@deffnx Syntax parametrise ((lhs* rhs*) ...) body body* ...
 Parameters can be assigned to by simply calling the parameter procedure
 with a single argument.  The @func{parameterize} syntax is used to set
 the value of a parameter within the dynamic extent of the @code{body
@@ -3763,10 +3806,14 @@ normal when the body returns.
       x)))
 
 (display "Normal and ")
-(parameterize ([terminal-property "41;37"])
+(parameterize ((terminal-property "41;37"))
   (display "RED!"))
 (newline)
 @end example
+
+Notice that this syntax applies the parameters' guard functions when
+setting new values, but does @strong{not} apply them when restoring the
+original value.
 @end deffn
 
 @c page
