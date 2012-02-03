@@ -22,7 +22,8 @@ dist_libvicare_DATA	= \
 	vicare/unsafe-capi.sls			\
 	vicare/words.sls			\
 	vicare/installation-configuration.sls	\
-	vicare/gcc.sls
+	vicare/gcc.sls				\
+	vicare/weak-hashtables.sls
 
 if WANT_LIBFFI
 dist_libvicare_DATA	+= vicare/ffi.sls

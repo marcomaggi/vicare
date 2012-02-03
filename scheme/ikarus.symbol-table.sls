@@ -45,7 +45,7 @@
 ;;enlarged  doubling  the  number   of  buckets.   The  table  is  never
 ;;restricted by reducing the number of buckets.
 ;;
-;;Constructor: make-symbol-table LEN MASK VECTOR GUARDIAN
+;;Constructor: make-symbol-table SIZE MASK VECTOR GUARDIAN
 ;;
 ;;Predicate: symbol-table? OBJ
 ;;
@@ -169,7 +169,7 @@
       ((string  str))
     (let* ((idx (unsafe.fxand (string-hash str)
 			      (symbol-table-mask THE-SYMBOL-TABLE)))
-	   (list-of-interned-symbols (vector-ref (symbol-table-buckets THE-SYMBOL-TABLE) idx)))
+	   (list-of-interned-symbols (unsafe.vector-ref (symbol-table-buckets THE-SYMBOL-TABLE) idx)))
       (lookup str idx THE-SYMBOL-TABLE list-of-interned-symbols))))
 
 
@@ -184,8 +184,8 @@
     sym))
 
 (define (intern-symbol! sym idx table)
-  ;;Given a symbol SYM being to  be interned, store it in the TABLE; IDX
-  ;;must be the index in the TABLE's vector.  Return unspecified values.
+  ;;Given a symbol  SYM to be interned, store it in  the TABLE; IDX must
+  ;;be the index in the TABLE's vector.  Return unspecified values.
   ;;
   ;;The symbol is registered in the  TABLE's guardian, so that it can be
   ;;removed if garbage collected.
@@ -195,7 +195,7 @@
 	(assertion-violation 'intern-symbol!
 	  "reached maximum number of interned symbols" sym)
       (let ((vec (symbol-table-buckets table)))
-	(vector-set! vec idx (weak-cons sym (vector-ref vec idx)))
+	(unsafe.vector-set! vec idx (weak-cons sym (unsafe.vector-ref vec idx)))
 	((symbol-table-guardian table) sym)
 	(let ((n (unsafe.fxadd1 number-of-interned-symbols)))
 	  (set-symbol-table-size! table n)
@@ -224,7 +224,7 @@
   ;;Notice that this can happen:
   ;;
   ;;1. The symbol CIAO is interned.
-  ;,
+		;,
   ;;2.  CIAO  is garbage  collected.   It is  still  in  TABLE but  also
   ;;registered in the guardian for removal.
   ;;
@@ -255,9 +255,9 @@
   (set-symbol-table-size! table (unsafe.fxsub1 (symbol-table-size table)))
   (let ((idx (unsafe.fxand (symbol-hash sym) (symbol-table-mask table)))
 	(vec (symbol-table-buckets table)))
-    (let ((ls (vector-ref vec idx)))
+    (let ((ls (unsafe.vector-ref vec idx)))
       (if (eq? (unsafe.car ls) sym)
-	  (vector-set! vec idx (cdr ls))
+	  (unsafe.vector-set! vec idx (cdr ls))
 	(let loop ((prev ls)
 		   (ls   (unsafe.cdr ls)))
 	  (if (eq? (unsafe.car ls) sym)

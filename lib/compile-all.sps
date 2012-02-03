@@ -37,6 +37,7 @@
   (only (vicare words))
   (only (vicare installation-configuration))
   (only (vicare gcc))
+  (only (vicare weak-hashtables))
   )
 
 ;;; end of file

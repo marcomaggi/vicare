@@ -168,7 +168,9 @@ EXTRA_DIST= last-revision				\
 	ikarus.unicode-conversion.sls			\
 	ikarus.unicode.sls				\
 	ikarus.vectors.sls				\
-	ikarus.writer.sls makefile.sps			\
+	ikarus.writer.sls				\
+	\
+	makefile.sps					\
 	\
 	psyntax.builders.sls				\
 	psyntax.compat.sls				\
