@@ -32,7 +32,10 @@
   (export
     make-weak-hashtable		weak-hashtable?
     weak-hashtable-set!		weak-hashtable-ref
-    weak-hashtable-size		weak-hashtable-delete!)
+    weak-hashtable-size		weak-hashtable-delete!
+    weak-hashtable-contains?	weak-hashtable-clear!
+    weak-hashtable-keys		weak-hashtable-entries
+    weak-hashtable-update!)
   (import (vicare)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
@@ -49,10 +52,10 @@
   (procedure? obj)
   (assertion-violation who "expected procedure as argument" obj))
 
-;; (define-argument-validation (dimension who obj)
-;;   (and (fixnum? obj) (fx<= 0 obj))
-;;   (assertion-violation who
-;;     "expected non-negative fixnum as initial weak table size" obj))
+(define-argument-validation (dimension who obj)
+  (and (fixnum? obj) (fx<= 0 obj))
+  (assertion-violation who
+    "expected non-negative fixnum as initial weak table size" obj))
 
 
 ;;;; weak table data structure
@@ -89,17 +92,21 @@
 ;;Field name: mask
 ;;Accessor: weak-table-mask TABLE
 ;;Mutator: set-weak-table-mask! TABLE
-;;  A bitmask used to convert an object's hash number into an index into
-;;  the vector in the VEC field as follows:
+;;  A bitmask used to convert a keys' hash number into an index into the
+;;  vector of buckets as follows:
 ;;
 ;;    (define index ($fxlogand mask (hash-function object)))
+;;
+;;  The mask is always the number of buckets minus 1.
 ;;
 ;;Field name: buckets
 ;;Accessor: weak-table-buckets TABLE
 ;;Mutator: set-weak-table-buckets! TABLE
+;;
 ;;  The vector of buckets of the hash table.  Each element in the vector
-;;  is a list of weak pairs holding the entries as key/value pairs.  The
-;;  maximum number of buckets is half the greatest fixnum.
+;;  is a list of weak pairs holding the entries as key/value weak pairs.
+;;  The  maximum number  of buckets  is  half the  greatest fixnum;  the
+;;  number of buckets must be an exact power of 2.
 ;;
 ;;Field name: guardian
 ;;Accessor: weak-table-guardian TABLE
@@ -129,17 +136,38 @@
 (define MAX-NUMBER-OF-BUCKETS
   (fxdiv (greatest-fixnum) 2))
 
+(define-inline (%compute-bucket-index table key)
+  (unsafe.fxand ((weak-table-hash-function table) key) (weak-table-mask table)))
+
 (define (%intern! table bucket-index key value)
+  ;;If KEY is not already interned: insert a new entry holding KEY/VALUE
+  ;;in TABLE at BUCKET-INDEX.  If KEY is already interned: overwrite the
+  ;;old value with VALUE.
+  ;;
   (define who 'intern!)
   (let ((number-of-entries (weak-table-size table)))
     (if (unsafe.fx= number-of-entries (greatest-fixnum))
 	(assertion-violation who
 	  "reached maximum number of entries in weak table"
-	  table bucket-index key value)
-      (let ((buckets (weak-table-buckets table)))
-	(unsafe.vector-set! buckets bucket-index
-			    (weak-cons (weak-cons key value)
-				       (unsafe.vector-ref buckets bucket-index)))
+	  table key value)
+      (begin
+	(let* ((buckets (weak-table-buckets table))
+	       (entries (unsafe.vector-ref buckets bucket-index)))
+	  (if (null? entries)
+	      (unsafe.vector-set! buckets bucket-index
+				  (weak-cons (weak-cons key value) '()))
+	    ;;If  the key is  already interned:  overwrite the  old value;
+	    ;;else append a new weak pair to the chain of entries.
+	    (let loop ((equiv?	(weak-table-equiv-function table))
+		       (prev    entries)
+		       (entries (unsafe.cdr entries)))
+	      (if (null? entries) ;key not found
+		  (unsafe.set-cdr! prev (weak-cons (weak-cons key value) '()))
+		(let ((intern-key (unsafe.car (unsafe.car entries))))
+		  (if (or (eq?    key intern-key)
+			  (equiv? key intern-key))
+		      (unsafe.set-cdr! (unsafe.car entries) value)
+		    (loop equiv? entries (unsafe.cdr entries))))))))
 	((weak-table-guardian table) key)
 	(let ((N (unsafe.fxadd1 number-of-entries)))
 	  (set-weak-table-size! table N)
@@ -147,20 +175,39 @@
 	    (%extend-table! table)))))))
 
 (define (%unintern! table key bucket-index)
-  (set-weak-table-size! table (unsafe.fxsub1 (weak-table-size table)))
-  (let* ((buckets (weak-table-buckets table))
-	 (ls      (unsafe.vector-ref buckets bucket-index)))
-    (if (eq? (unsafe.car ls) key)
-	(unsafe.vector-set! buckets bucket-index (cdr ls))
-      (let loop ((prev ls)
-		 (ls   (unsafe.cdr ls)))
-	(if (eq? (unsafe.car ls) key)
-	    (unsafe.set-cdr! prev (unsafe.cdr ls))
-	  (loop ls (unsafe.cdr ls)))))))
+  ;;Remove  the entry  associated to  KEY from  TABLE in  the  bucket at
+  ;;BUCKET-INDEX.  If KEY is not found: just do nothing.
+  ;;
+  (let* ((buckets (weak-table-buckets        table))
+	 (equiv?  (weak-table-equiv-function table)))
+    (let ((entries (unsafe.vector-ref buckets bucket-index)))
+      (if (null? entries) ;empty bucket
+	  (values)	  ;key not found
+	;;Check separately the first entry  because if we have to remove
+	;;it we must also update the value in the bucket.
+	(let ((intern-key (unsafe.car (unsafe.car entries))))
+	  (if (or (eq?    key intern-key)
+		  (equiv? key intern-key))
+	      (begin
+		(set-weak-table-size! table (unsafe.fxsub1 (weak-table-size table)))
+		(unsafe.vector-set! buckets bucket-index (unsafe.cdr entries)))
+	    ;;Now check the tail of the chain.
+	    (let loop ((prev    entries)
+		       (entries (unsafe.cdr entries)))
+	      (if (null? entries)
+		  (values) ;key not found
+		(let ((intern-key (unsafe.car (unsafe.car entries))))
+		  (if (or (eq?    key intern-key)
+			  (equiv? key intern-key))
+		      (begin
+			(set-weak-table-size! table (unsafe.fxsub1 (weak-table-size table)))
+			(unsafe.set-cdr! prev (unsafe.cdr entries)))
+		    (loop entries (unsafe.cdr entries))))))))))))
 
 (define (%extend-table! table)
-  ;;Double the size of the vector in TABLE, which must be an instance of
-  ;;WEAK-TABLE structure.
+  ;;Unless the number  of buckets is already at  its maximum: double the
+  ;;size of the vector in TABLE, which must be an instance of WEAK-TABLE
+  ;;structure.
   ;;
   (let* ((vec1	(weak-table-buckets table))
 	 (len1	(unsafe.vector-length vec1))
@@ -176,11 +223,11 @@
 	     (vec2	(make-vector len2 '())))
 	(define (%insert p)
 	  (unless (null? p)
-	    (let ((a    (unsafe.car p))
-		  (rest (unsafe.cdr p)))
+	    (let ((entry (unsafe.car p))
+		  (rest  (unsafe.cdr p)))
 	      ;;Recycle this pair by setting its cdr to the value in the
 	      ;;vector.
-	      (let ((idx (unsafe.fxand (hash (unsafe.car a)) mask)))
+	      (let ((idx (unsafe.fxand (hash (unsafe.car entry)) mask)))
 		(unsafe.set-cdr! p (unsafe.vector-ref vec2 idx))
 		(unsafe.vector-set! vec2 idx p))
 	      (%insert rest))))
@@ -193,26 +240,30 @@
 
 ;;;; high-level operations
 
-(define (make-weak-hashtable hash-function equiv-function)
-  (define who 'make-weak-hashtable)
-  (with-arguments-validation (who)
-      ((procedure	hash-function)
-       (procedure	equiv-function))
-    (let* ((guardian	(make-guardian))
-	   (buckets	(make-vector 4096 '()))
-	   (table	(make-weak-table 0 4095 buckets guardian hash-function equiv-function)))
-      (define (cleanup)
-	(do ((obj (guardian) (guardian)))
-	    ((not obj))
-	  (%unintern! obj table)))
-      (post-gc-hooks (cons cleanup (post-gc-hooks)))
-      table)))
+(define make-weak-hashtable
+  (case-lambda
+   ((hash-function equiv-function)
+    (make-weak-hashtable hash-function equiv-function 16))
+   ((hash-function equiv-function init-dimension)
+    (define who 'make-weak-hashtable)
+    (with-arguments-validation (who)
+	((procedure	hash-function)
+	 (procedure	equiv-function)
+	 (dimension	init-dimension))
+      (let* ((guardian	(make-guardian))
+	     ;;Smallest power of 2 greater than INIT-DIMENSION.
+	     (dim	(fxlength init-dimension))
+	     (mask	(fxsub1 dim))
+	     (buckets	(make-vector dim '()))
+	     (table	(make-weak-table 0 mask buckets guardian hash-function equiv-function)))
+	(define (cleanup)
+	  (do ((key (guardian) (guardian)))
+	      ((not key))
+	    (%unintern! table key (%compute-bucket-index table key))))
+	(post-gc-hooks (cons cleanup (post-gc-hooks)))
+	table)))))
 
 (define weak-hashtable? weak-table?)
-
-(define-inline (%compute-bucket-index table key)
-  (let ((table table))
-    (unsafe.fxand ((weak-table-hash-function table) key) (weak-table-mask table))))
 
 (define (weak-hashtable-set! table key value)
   (define who 'weak-hashtable-set!)
@@ -225,18 +276,16 @@
   (with-arguments-validation (who)
       ((weak-table	table))
     (let* ((equiv?	(weak-table-equiv-function table))
-	   (buckets	(weak-table-buckets table))
-	   (ls		(unsafe.vector-ref buckets (%compute-bucket-index table key))))
-(pretty-print (list 'chain ls))
-      (let loop ((ls ls))
-	(if (null? ls)
+	   (buckets	(weak-table-buckets        table))
+	   (entries	(unsafe.vector-ref buckets (%compute-bucket-index table key))))
+      (let loop ((entries entries))
+	(if (null? entries)
 	    default
-	  (let ((intern-key (caar ls)))
-;(pretty-print (list 'testing intern-key key))
-	    (if (or (eq? key intern-key)
+	  (let ((intern-key (unsafe.car (unsafe.car entries))))
+	    (if (or (eq?    key intern-key)
 		    (equiv? key intern-key))
-		(unsafe.cdr (unsafe.car ls))
-	      (loop (unsafe.cdr ls)))))))))
+		(unsafe.cdr (unsafe.car entries))
+	      (loop (unsafe.cdr entries)))))))))
 
 (define (weak-hashtable-delete! table key)
   (define who 'weak-hashtable-ref)
@@ -244,7 +293,85 @@
       ((weak-table	table))
     (%unintern! table key (%compute-bucket-index table key))))
 
+(define (weak-hashtable-contains? table key)
+  (define who 'weak-hashtable-contains?)
+  (with-arguments-validation (who)
+      ((weak-table	table))
+    (let* ((equiv?	(weak-table-equiv-function table))
+	   (buckets	(weak-table-buckets        table))
+	   (entries	(unsafe.vector-ref buckets (%compute-bucket-index table key))))
+      (let loop ((entries entries))
+	(if (null? entries)
+	    #f
+	  (let ((intern-key (unsafe.car (unsafe.car entries))))
+	    (if (or (eq?    key intern-key)
+		    (equiv? key intern-key))
+		#t
+	      (loop (unsafe.cdr entries)))))))))
+
+(define (weak-hashtable-clear! table)
+  (let* ((dim		(fxlength 16))
+	 (mask		(fxsub1 dim))
+	 (buckets	(make-vector dim '())))
+    (set-weak-table-size!     table 0)
+    (set-weak-table-buckets!  table buckets)
+    (set-weak-table-mask!     table mask)
+    (set-weak-table-guardian! table (make-guardian))))
+
+(define (weak-hashtable-keys table)
+  (let* ((keys		(make-vector (weak-table-size table)))
+	 (buckets	(weak-table-buckets table))
+	 (dim		(unsafe.vector-length buckets))
+	 (count		0))
+    (do ((i 0 (unsafe.fxadd1 i)))
+	((unsafe.fx= i dim)
+	 keys)
+      (let loop ((entries (unsafe.vector-ref buckets i)))
+	(unless (null? entries)
+	  (unsafe.vector-set! keys count (unsafe.car (unsafe.car entries)))
+	  (set! count (unsafe.fxadd1 count))
+	  (loop (unsafe.cdr entries)))))))
+
+(define (weak-hashtable-entries table)
+  (let* ((size		(weak-table-size table))
+	 (keys		(make-vector size))
+	 (vals		(make-vector size))
+	 (buckets	(weak-table-buckets table))
+	 (dim		(unsafe.vector-length buckets))
+	 (count		0))
+    (do ((i 0 (unsafe.fxadd1 i)))
+	((unsafe.fx= i dim)
+	 (values keys vals))
+      (let loop ((entries (unsafe.vector-ref buckets i)))
+	(unless (null? entries)
+	  (let ((entry (unsafe.car entries)))
+	    (unsafe.vector-set! keys count (unsafe.car entry))
+	    (unsafe.vector-set! vals count (unsafe.cdr entry))
+	    (set! count (unsafe.fxadd1 count)))
+	  (loop (unsafe.cdr entries)))))))
+
 (define weak-hashtable-size weak-table-size)
+
+(define (weak-hashtable-update! table key proc default)
+  (define who 'weak-hashtable-update!)
+  (with-arguments-validation (who)
+      ((weak-table	table)
+       (procedure	proc))
+    (let* ((equiv?	(weak-table-equiv-function table))
+	   (buckets	(weak-table-buckets        table))
+	   (idx		(%compute-bucket-index table key))
+	   (the-entries	(unsafe.vector-ref buckets idx)))
+      (let loop ((entries the-entries))
+	(if (null? entries)
+	    ;;add a new entry
+	    (unsafe.vector-set! buckets idx (weak-cons (weak-cons key (proc default))
+						       the-entries))
+	  (let* ((entry      (unsafe.car entries))
+		 (intern-key (unsafe.car entry)))
+	    (if (or (eq?    key intern-key)
+		    (equiv? key intern-key))
+		(set-cdr! entry (proc (unsafe.cdr entry)))
+	      (loop (unsafe.cdr entries)))))))))
 
 
 ;;;; done
