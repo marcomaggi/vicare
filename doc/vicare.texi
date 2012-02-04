@@ -13931,8 +13931,7 @@ Weak hashtables are subjected to the following constraints:
 
 @itemize
 @item
-The maximum number of buckets is half the value of
-@code{(greatest-fixnum)}.
+The maximum number of buckets is the value of @code{(greatest-fixnum)}.
 
 @item
 The maximum number of entries is the value of @code{(greatest-fixnum)}.

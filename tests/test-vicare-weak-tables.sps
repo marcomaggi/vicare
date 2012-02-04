@@ -68,7 +68,7 @@
 	      K))
     => '(1 2 3 4 5 6 #("a" "b" "c" "d" "e" "f")))
 
-  (check
+  (check	'this
       (let ((K '#("a" "b" "c" "d" "e" "f")) ;attempt to prevent GC
 	    (T (make-weak-hashtable string-hash string=? 5)))
         (weak-hashtable-set! T (vector-ref K 0) 1)
@@ -224,7 +224,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'stress))
+#;(parametrise ((check-test-name	'stress))
 
   (check
       (let ((T (make-weak-hashtable values =))
@@ -237,9 +237,30 @@
 	  (assert (= i (weak-hashtable-ref T i #f))))
 	(do ((i 0 (+ 1 i)))
 	    ((= i N))
+	  (assert (weak-hashtable-contains? T i)))
+	(do ((i 0 (+ 1 i)))
+	    ((= i N))
 	  (weak-hashtable-delete! T i))
 	(weak-hashtable-size T))
     => 0)
+
+  #t)
+
+
+(parametrise ((check-test-name	'misc))
+
+  ;; printer
+  (when #t
+    (let ((K '#("a" "b" "c" "d" "e" "f")) ;attempt to prevent GC
+	  (T (make-weak-hashtable string-hash string=? 5)))
+      (weak-hashtable-set! T (vector-ref K 0) 1)
+      (weak-hashtable-set! T (vector-ref K 1) 2)
+      (weak-hashtable-set! T (vector-ref K 2) 3)
+      (weak-hashtable-set! T (vector-ref K 3) 4)
+      (weak-hashtable-set! T (vector-ref K 4) 5)
+      (weak-hashtable-set! T (vector-ref K 5) 6)
+      (check-pretty-print T)
+      K))
 
   #t)
 
