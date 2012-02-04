@@ -75,6 +75,9 @@ Notes for revision 0.2d7
 * When  "--enable-libffi" is  not  used: the  library  not (vicare  ffi)
   installed anymore.
 
+* Added library (vicare weak-hashtables) implementing hashtables holding
+  weak references to keys and strong references to values.
+
 
 Notes for revision 0.2d6
 ------------------------
