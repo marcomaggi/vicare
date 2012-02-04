@@ -1180,6 +1180,56 @@
   #t)
 
 
+(parametrise ((check-test-name	'ascii))
+
+  (define test-string
+    (let* ((str.len 128)
+	   (str     (make-string str.len)))
+      (do ((i 0 (+ 1 i)))
+	  ((= i str.len)
+	   str)
+	(string-set! str i (integer->char i)))))
+
+  (define test-bytevector
+    (let* ((bv.len 128)
+	   (bv     (make-bytevector bv.len)))
+      (do ((i 0 (+ 1 i)))
+	  ((= i bv.len)
+	   bv)
+	(bytevector-u8-set! bv i i))))
+
+;;; --------------------------------------------------------------------
+;;; argument check
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (check-pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(string->ascii 123))
+    => '(123))
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (check-pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(ascii->string 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string->ascii test-string)
+    => test-bytevector)
+
+  (check
+      (ascii->string test-bytevector)
+    => test-string)
+
+  #t)
+
+
 (parametrise ((check-test-name	'utf-16))
 
   (define test-string "ciao \x1000;")

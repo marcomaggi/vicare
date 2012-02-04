@@ -86,6 +86,11 @@
     pointer-set-c-float!		pointer-set-c-double!
     pointer-set-c-pointer!)
   (import (ikarus)
+    ;;To be removed after the next boot image rotation (Marco Maggi; Feb
+    ;;4, 2012).
+    (only (ikarus strings)
+	  ascii->string
+	  string->ascii)
     (only (ikarus system $pointers)
 	  $pointer=)
     (vicare syntactic-extensions)
@@ -343,7 +348,7 @@
 
 (define (dlerror)
   (let ((p (capi.ffi-dlerror)))
-    (and p (latin1->string p))))
+    (and p (ascii->string p))))
 
 (define dlopen
   (case-lambda
@@ -369,7 +374,7 @@
   (with-arguments-validation (who)
       ((pointer  handle)
        (string   name))
-    (capi.ffi-dlsym handle (string->latin1 name))))
+    (capi.ffi-dlsym handle (string->ascii name))))
 
 
 ;;; pointer manipulation procedures
@@ -717,19 +722,19 @@
     (define who 'cstring->string)
     (with-arguments-validation (who)
 	((pointer pointer))
-      (latin1->string (capi.ffi-cstring->bytevector pointer (capi.ffi-strlen pointer)))))
+      (ascii->string (capi.ffi-cstring->bytevector pointer (capi.ffi-strlen pointer)))))
    ((pointer count)
     (define who 'cstring->string)
     (with-arguments-validation (who)
 	((pointer		pointer)
 	 (number-of-bytes	count))
-      (latin1->string (capi.ffi-cstring->bytevector pointer count))))))
+      (ascii->string (capi.ffi-cstring->bytevector pointer count))))))
 
 (define (string->cstring str)
   (define who 'string->cstring)
   (with-arguments-validation (who)
       ((string	str))
-    (bytevector->cstring (string->latin1 str))))
+    (bytevector->cstring (string->ascii str))))
 
 ;;; --------------------------------------------------------------------
 
@@ -749,13 +754,13 @@
   (define who 'strings->argv)
   (with-arguments-validation (who)
       ((list-of-strings strs))
-    (capi.ffi-bytevectors->argv (map string->latin1 strs))))
+    (capi.ffi-bytevectors->argv (map string->ascii strs))))
 
 (define (argv->strings pointer)
   (define who 'argv->strings)
   (with-arguments-validation (who)
       ((pointer pointer))
-    (map latin1->string (capi.ffi-argv->bytevectors pointer))))
+    (map ascii->string (capi.ffi-argv->bytevectors pointer))))
 
 (define (argv-length pointer)
   (define who 'argv-length)

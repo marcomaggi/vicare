@@ -2939,6 +2939,13 @@ Latin-1 encoding of the characters.
 @end defun
 
 
+@defun string->ascii @var{string}
+@defunx ascii->string @var{bytevevctor}
+Convert to and from a Scheme string and a Scheme bytevector holding the
+@ascii{} encoding of the characters.
+@end defun
+
+
 @defun string->utf16le @var{string}
 @defunx string->utf16be @var{string}
 @defunx string->utf16n @var{string}

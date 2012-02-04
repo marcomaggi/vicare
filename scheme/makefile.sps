@@ -1081,6 +1081,8 @@
     (substring					i v r ba se)
     (string->latin1				i v)
     (latin1->string				i v)
+    (string->ascii				i v)
+    (ascii->string				i v)
     (symbol->string				i v symbols r ba se)
     (symbol=?					i v symbols r ba)
     (symbol?					i v symbols r ba se)

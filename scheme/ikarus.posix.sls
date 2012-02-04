@@ -445,6 +445,11 @@
 
 		  ;; miscellaneous functions
 		  file-descriptor?)
+    ;;To be removed after the next boot image rotation (Marco Maggi; Feb
+    ;;4, 2012).
+    (only (ikarus strings)
+	  ascii->string
+	  string->ascii)
     (rename (only (ikarus system $pointers)
 		  $pointer?)
 	    ($pointer? pointer?))
@@ -2274,7 +2279,7 @@
 				  (if name
 				      (begin
 					(%display "\"")
-					(%display (latin1->string name))
+					(%display (ascii->string name))
 					(%display "\""))
 				    (%display #f)))
   (%display "]"))
@@ -2300,7 +2305,7 @@
   (define who 'gai-strerror)
   (with-arguments-validation (who)
       ((fixnum   code))
-    (latin1->string (capi.posix-gai_strerror code))))
+    (ascii->string (capi.posix-gai_strerror code))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2312,10 +2317,10 @@
     (display thing port))
   (%display "#[\"struct-protoent\"")
   (%display " p_name=\"")
-  (%display (latin1->string (struct-protoent-p_name S)))
+  (%display (ascii->string (struct-protoent-p_name S)))
   (%display "\"")
   (%display " p_aliases=")
-  (%display (map latin1->string (struct-protoent-p_aliases S)))
+  (%display (map ascii->string (struct-protoent-p_aliases S)))
   (%display " p_proto=")
   (%display (struct-protoent-p_proto S))
   (%display "]"))
@@ -2352,14 +2357,14 @@
     (display thing port))
   (%display "#[\"struct-servent\"")
   (%display " s_name=\"")
-  (%display (latin1->string (struct-servent-s_name S)))
+  (%display (ascii->string (struct-servent-s_name S)))
   (%display "\"")
   (%display " s_aliases=")
-  (%display (map latin1->string (struct-servent-s_aliases S)))
+  (%display (map ascii->string (struct-servent-s_aliases S)))
   (%display " s_port=")
   (%display (struct-servent-s_port S))
   (%display " s_proto=")
-  (%display (latin1->string (struct-servent-s_proto S)))
+  (%display (ascii->string (struct-servent-s_proto S)))
   (%display "]"))
 
 (define servent-rtd
@@ -2401,10 +2406,10 @@
     (display thing port))
   (%display "#[\"struct-netent\"")
   (%display " n_name=\"")
-  (%display (latin1->string (struct-netent-n_name S)))
+  (%display (ascii->string (struct-netent-n_name S)))
   (%display "\"")
   (%display " n_aliases=")
-  (%display (map latin1->string (struct-netent-n_aliases S)))
+  (%display (map ascii->string (struct-netent-n_aliases S)))
   (%display " n_addrtype=")
   (%display (let ((type (struct-netent-n_addrtype S)))
 	      (cond ((unsafe.fx= type AF_INET)
@@ -2771,7 +2776,7 @@
 
 (define (getlogin/string)
   (let ((rv (capi.posix-getlogin)))
-    (and rv (latin1->string rv))))
+    (and rv (ascii->string rv))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2789,13 +2794,13 @@
   (define-inline (%display thing)
     (display thing port))
   (%display "#[\"struct-passwd\"")
-  (%display " pw_name=\"")	(%display (latin1->string (struct-passwd-pw_name S)))  (%display "\"")
-  (%display " pw_passwd=\"")	(%display (latin1->string (struct-passwd-pw_passwd S))) (%display "\"")
+  (%display " pw_name=\"")	(%display (ascii->string (struct-passwd-pw_name S)))  (%display "\"")
+  (%display " pw_passwd=\"")	(%display (ascii->string (struct-passwd-pw_passwd S))) (%display "\"")
   (%display " pw_uid=")		(%display (struct-passwd-pw_uid S))
   (%display " pw_gid=")		(%display (struct-passwd-pw_gid S))
-  (%display " pw_gecos=\"")	(%display (latin1->string (struct-passwd-pw_gecos S))) (%display "\"")
-  (%display " pw_dir=\"")	(%display (latin1->string (struct-passwd-pw_dir S)))   (%display "\"")
-  (%display " pw_shell=\"")	(%display (latin1->string (struct-passwd-pw_shell S))) (%display "\"")
+  (%display " pw_gecos=\"")	(%display (ascii->string (struct-passwd-pw_gecos S))) (%display "\"")
+  (%display " pw_dir=\"")	(%display (ascii->string (struct-passwd-pw_dir S)))   (%display "\"")
+  (%display " pw_shell=\"")	(%display (ascii->string (struct-passwd-pw_shell S))) (%display "\"")
   (%display "]"))
 
 (define passwd-rtd
@@ -2829,10 +2834,10 @@
   (define-inline (%display thing)
     (display thing port))
   (%display "#[\"struct-group\"")
-  (%display " gr_name=\"")	(%display (latin1->string (struct-group-gr_name S)))  (%display "\"")
+  (%display " gr_name=\"")	(%display (ascii->string (struct-group-gr_name S)))  (%display "\"")
   (%display " gr_gid=")		(%display (struct-group-gr_gid S))
   (%display " gr_mem=")
-  (%display (map latin1->string (struct-group-gr_mem S)))
+  (%display (map ascii->string (struct-group-gr_mem S)))
   (%display "]"))
 
 (define group-rtd
@@ -2861,7 +2866,7 @@
   (capi.posix-ctermid))
 
 (define (ctermid/string)
-  (latin1->string (capi.posix-ctermid)))
+  (ascii->string (capi.posix-ctermid)))
 
 ;;; --------------------------------------------------------------------
 
@@ -3008,7 +3013,7 @@
   (%display " tm_yday=")	(%display (struct-tm-tm_yday   S))
   (%display " tm_isdst=")	(%display (struct-tm-tm_isdst  S))
   (%display " tm_gmtoff=")	(%display (struct-tm-tm_gmtoff S))
-  (%display " tm_zone=")	(%display (latin1->string (struct-tm-tm_zone S)))
+  (%display " tm_zone=")	(%display (ascii->string (struct-tm-tm_zone S)))
   (%display "]"))
 
 ;;; --------------------------------------------------------------------
@@ -3084,7 +3089,7 @@
 
 (define (strftime/string template tm)
   (let ((rv (strftime template tm)))
-    (and rv (latin1->string rv))))
+    (and rv (ascii->string rv))))
 
 ;;; --------------------------------------------------------------------
 

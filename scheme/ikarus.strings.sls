@@ -30,7 +30,8 @@
     uuid
 
     ;; Vicare specific
-    string->latin1	latin1->string)
+    string->latin1	latin1->string
+    string->ascii	ascii->string)
   (import (except (ikarus)
 		  make-string		string
 		  substring		string-length
@@ -45,7 +46,8 @@
 		  uuid
 
 		  ;; Vicare specific
-		  string->latin1	latin1->string)
+		  string->latin1	latin1->string
+		  string->ascii		ascii->string)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
 	    unsafe.))
@@ -125,9 +127,17 @@
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (latin1 who code-point str)
-  (unsafe.fx< code-point 256)
+  (and (unsafe.fx>= code-point 0)
+       (unsafe.fx< code-point 256))
   (assertion-violation who
     "expected only Latin-1 characters in string argument"
+    (unsafe.fixnum->char code-point) str))
+
+(define-argument-validation (ascii who code-point str)
+  (and (unsafe.fx>= code-point 0)
+       (unsafe.fx<  code-point 128))
+  (assertion-violation who
+    "expected only ASCII characters in string argument"
     (unsafe.fixnum->char code-point) str))
 
 
@@ -807,6 +817,8 @@
       (error who "cannot obtain unique id"))))
 
 
+;;;; Latin-1 bytevectors to/from strings
+
 (define (string->latin1 str)
   ;;Defined by Vicare.  Convert the string STR into a bytevector holding
   ;;octects representing the character's Latin-1 code points.
@@ -838,7 +850,49 @@
       (do ((i 0 (unsafe.fxadd1 i)))
 	  ((unsafe.fx= i str.len)
 	   str)
-	(unsafe.string-set! str i (unsafe.fixnum->char (unsafe.bytevector-u8-ref bv i)))))))
+	(let ((code-point (unsafe.bytevector-u8-ref bv i)))
+	  (with-arguments-validation (who)
+	      ((latin1 code-point str))
+	    (unsafe.string-set! str i (unsafe.fixnum->char code-point))))))))
+
+
+;;;; ASCII bytevectors to/from strings
+
+(define (string->ascii str)
+  ;;Defined by Vicare.  Convert the string STR into a bytevector holding
+  ;;octects representing the character's ASCII code points.
+  ;;
+  (define who 'ascii->string)
+  (with-arguments-validation (who)
+      ((string	str))
+    ;;Both strings and bytevectors have length representable as fixnum.
+    (let* ((bv.len	(unsafe.string-length str))
+	   (bv		(unsafe.make-bytevector bv.len)))
+      (do ((i 0 (unsafe.fxadd1 i)))
+	  ((unsafe.fx= i bv.len)
+	   bv)
+	(let ((code-point (unsafe.char->fixnum (unsafe.string-ref str i))))
+	  (with-arguments-validation (who)
+	      ((ascii	code-point str))
+	    (unsafe.bytevector-u8-set! bv i code-point)))))))
+
+(define (ascii->string bv)
+  ;;Defined by Vicare.  Convert the  bytevector BV into a string holding
+  ;;characters representing bytes interpreted as ASCII code points.
+  ;;
+  (define who 'ascii->string)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    ;;Both strings and bytevectors have length representable as fixnum.
+    (let* ((str.len	(unsafe.bytevector-length bv))
+	   (str		(unsafe.make-string str.len)))
+      (do ((i 0 (unsafe.fxadd1 i)))
+	  ((unsafe.fx= i str.len)
+	   str)
+	(let ((code-point (unsafe.bytevector-u8-ref bv i)))
+	  (with-arguments-validation (who)
+	      ((ascii	code-point bv))
+	    (unsafe.string-set! str i (unsafe.fixnum->char code-point))))))))
 
 
 ;;;; done
