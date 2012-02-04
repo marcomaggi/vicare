@@ -13914,22 +13914,44 @@ initialised to nil.
 @section Weak hashtables
 
 
-@quotation
-@strong{The library @library{vicare weak-hashtables} is experimental.}
-@end quotation
-
-@noindent
 Weak hashtables are associative containers whose keys are held by weak
 references; registering a key into a weak hashtable does not prevent its
-garbage collection.  Whenever a key in a weak hashtable is garbage
-collected: the corresponding table entry is removed from the table.
-Notice that fixnums, characters and the other values that fit in a
-single machine word are never collected from the point of view of a weak
-hashtable.
+garbage collection.  A weak hashtable is a vector holding nulls or
+alists; each vector location is called @dfn{bucket}.  Alists have the
+spine composed of strong pairs, while the entries are weak pairs:
+
+@example
+|-----|-----|-----|-----|-----| vector of buckets
+         |
+         v
+      |-----|-----|strong pair
+         |      |
+         |       ------------> |-----|-----|strong pair
+         |                        |     |
+      |-----|-----|weak pair      |      -------> null
+        key  value                v
+                               |-----|-----| weak pair
+                                 key  value
+@end example
+
+Whenever a key in a weak hashtable is garbage collected: the
+corresponding location in the weak pair is set to the @acronym{BWP}
+object; whenever a bucket is accessed, it is first cleared of weak pairs
+holding @acronym{BWP} in key position.  Notice that fixnums, characters
+and the other values that fit in a single machine word are never
+collected from the point of view of a weak hashtable.
+
+When the number of collected objects equals the number of buckets
+(whatever the distribution of elements), the table is enlarged doubling
+the number of buckets; the table is @strong{never} restricted by
+reducing the number of buckets.
 
 Weak hashtables are subjected to the following constraints:
 
 @itemize
+@item
+The number of buckets is always an exact power of @math{2}.
+
 @item
 The maximum number of buckets is the value of @code{(greatest-fixnum)}.
 
@@ -13937,7 +13959,7 @@ The maximum number of buckets is the value of @code{(greatest-fixnum)}.
 The maximum number of entries is the value of @code{(greatest-fixnum)}.
 @end itemize
 
-The @api{} of weak hashtable is similar to the @api{} of @rnrs{6}
+The @api{} of weak hashtables is similar to the @api{} of @rnrs{6}
 hashtables.  The following bindings are exported by the @library{vicare
 weak-hashtables} library.
 
@@ -13945,11 +13967,9 @@ weak-hashtables} library.
 @defun make-weak-hashtable @var{hash-function} @var{equiv-function}
 @defunx make-weak-hashtable @var{hash-function} @var{equiv-function} @var{dimension}
 Build and return a new weak hashtable using @var{hash-function} as hash
-function for keys and @var{equiv-function} as comparison functions
+function for keys and @var{equiv-function} as comparison function
 between keys.  When @var{dimension} is used: it is approximately the
 initial number of buckets; when not used it defaults to @math{16}.
-
-The actual number of buckets is always an exact power of @math{2}.
 @end defun
 
 
@@ -13978,17 +13998,21 @@ return @false{}.
 
 
 @defun weak-hashtable-delete! @var{table} @var{key}
-If @var{key} is in @var{table}: remove it, else do nothing.
+If @var{key} is in @var{table}: remove it, else do nothing.  Return
+unspecified values.
 @end defun
 
 
 @defun weak-hashtable-size @var{table}
-Return the number of entries in @var{table}.
+Return the approximate number of entries in @var{table}.  The returned
+value can be incorrect if some keys have been garbage collected but the
+corresponding entries in the table are not yet removed.
 @end defun
 
 
 @defun weak-hashtable-clear! @var{table}
-Remove all the entries from @var{table}.
+Remove all the entries from @var{table}.  The number of buckets is reset
+to the its initial value.  Return unspecified values.
 @end defun
 
 

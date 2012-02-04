@@ -60,15 +60,15 @@
 
 ;;;; weak table data structure
 ;;
-;;A weak hashtable is a vector  holding nulls or alists composed of weak
-;;pairs:
+;;A weak hashtable is a vector  holding nulls or alists; alists have the
+;;spine composed of strong pairs, while the entries are weak pairs:
 ;;
 ;;   |-----|-----|-----|-----|-----| vector of buckets
 ;;            |
 ;;            v
-;;         |-----|-----| weak pair
+;;         |-----|-----| pair
 ;;            |      |
-;;            v      -------> |-----|-----| weak pair
+;;            v      -------> |-----|-----| pair
 ;;   |-----|-----|weak pair      |     |
 ;;     key  value                v      -> null
 ;;                          |-----|-----| weak pair
@@ -79,7 +79,7 @@
 ;;of buckets.  The  table is never restricted by  reducing the number of
 ;;buckets.
 ;;
-;;Constructor: make-weak-table SIZE MASK VECTOR HASH-FUNCTION EQUIV-FUNCTION
+;;Constructor: make-weak-table SIZE INIT-DIM MASK VECTOR HASH-FUNCTION EQUIV-FUNCTION
 ;;
 ;;Predicate: weak-table? OBJ
 ;;
@@ -88,6 +88,11 @@
 ;;Mutator: set-weak-table-size! TABLE
 ;;  The number of  entries in the table.  The  maximum number of entries
 ;;  is the greatest fixnum.
+;;
+;;Field name: init-dim
+;;Accessor: weak-table-init-dim TABLE
+;;Mutator: set-weak-table-init-dim! TABLE
+;;  The initial number of buckets.  It is used when clearing a table.
 ;;
 ;;Field name: mask
 ;;Accessor: weak-table-mask TABLE
@@ -120,7 +125,7 @@
 ;;  and return a single value, true if the keys are equal.
 ;;
 (define-struct weak-table
-  (size mask buckets hash-function equiv-function))
+  (size init-dim mask buckets hash-function equiv-function))
 
 (define (%struct-weak-table-printer S port sub-printer)
   (define-inline (%display thing)
@@ -129,6 +134,7 @@
     (newline port))
   (%display "#[weak-table")
   (%display " size=")		(%display (weak-table-size S))
+  (%display " init-dim=")	(%display (weak-table-init-dim S))
   (%display " mask=")		(%display (number->string (weak-table-mask S) 2))
   (let* ((buckets (weak-table-buckets S))
 	 (nbucks  (unsafe.vector-length buckets)))
@@ -152,13 +158,20 @@
   (unsafe.fxand ((weak-table-hash-function table) key) (weak-table-mask table)))
 
 (define (%clean-bucket-from-bwp-entries table bucket-index)
-  (let* ((buckets (weak-table-buckets table))
+  ;;Scan the selected bucket and remove all the weak pairs having BWP in
+  ;;key position.  Update the size of the table accordingly.
+  ;;
+  (define-inline (decr! var)
+    (set! var (unsafe.fxsub1 var)))
+  (let* ((size    (weak-table-size table))
+	 (buckets (weak-table-buckets table))
 	 (entries (unsafe.vector-ref buckets bucket-index))
 	 ;;Remove the leading entries with BWP key.
 	 (entries (let loop ((entries entries))
 		    (cond ((null? entries)
 			   entries)
 			  ((bwp-object? (unsafe.car (unsafe.car entries)))
+			   (decr! size)
 			   (loop (unsafe.cdr entries)))
 			  (else
 			   entries)))))
@@ -170,9 +183,11 @@
 	(unless (null? tail)
 	  (if (bwp-object? (unsafe.car (unsafe.car tail)))
 	      (let ((tail (unsafe.cdr tail)))
+		(decr! size)
 		(unsafe.set-cdr! head tail)
 		(loop head tail))
 	    (loop tail (unsafe.cdr tail))))))
+    (set-weak-table-size! table size)
     (unsafe.vector-set! buckets bucket-index entries)))
 
 (define (%intern! table bucket-index key value)
@@ -191,15 +206,16 @@
 	       (entries (unsafe.vector-ref buckets bucket-index)))
 	  (if (null? entries)
 	      (unsafe.vector-set! buckets bucket-index
-				  (weak-cons (weak-cons key value) '()))
+				  (cons (weak-cons key value) '()))
 	    ;;If  the key is  already interned:  overwrite the  old value;
 	    ;;else append a new weak pair to the chain of entries.
 	    (let loop ((equiv?	(weak-table-equiv-function table))
 		       (prev    entries)
 		       (entries (unsafe.cdr entries)))
 	      (if (null? entries) ;key not found
-		  (unsafe.set-cdr! prev (weak-cons (weak-cons key value) '()))
+		  (unsafe.set-cdr! prev (cons (weak-cons key value) '()))
 		(let ((intern-key (unsafe.car (unsafe.car entries))))
+		  ;;Here it does not matter if INTERN-KEY is BWP.
 		  (if (or (eq?    key intern-key)
 			  (equiv? key intern-key))
 		      (unsafe.set-cdr! (unsafe.car entries) value)
@@ -221,6 +237,7 @@
 	;;Check separately the first entry  because if we have to remove
 	;;it we must also update the value in the bucket.
 	(let ((intern-key (unsafe.car (unsafe.car entries))))
+	  ;;Here it does not matter if INTERN-KEY is BWP.
 	  (if (or (eq?    key intern-key)
 		  (equiv? key intern-key))
 	      (begin
@@ -232,6 +249,7 @@
 	      (if (null? entries)
 		  (values) ;key not found
 		(let ((intern-key (unsafe.car (unsafe.car entries))))
+		  ;;Here it does not matter if INTERN-KEY is BWP.
 		  (if (or (eq?    key intern-key)
 			  (equiv? key intern-key))
 		      (begin
@@ -293,7 +311,7 @@
       (let* ((dim	(fxarithmetic-shift-left 1 (fxlength init-dimension)))
 	     (mask	(unsafe.fxsub1 dim))
 	     (buckets	(make-vector dim '())))
-	(make-weak-table 0 mask buckets hash-function equiv-function))))))
+	(make-weak-table 0 dim mask buckets hash-function equiv-function))))))
 
 (define weak-hashtable? weak-table?)
 
@@ -317,6 +335,7 @@
 	(if (null? entries)
 	    default
 	  (let ((intern-key (unsafe.car (unsafe.car entries))))
+	    ;;Here it does not matter if INTERN-KEY is BWP.
 	    (if (or (eq?    key intern-key)
 		    (equiv? key intern-key))
 		(unsafe.cdr (unsafe.car entries))
@@ -334,20 +353,22 @@
   (define who 'weak-hashtable-contains?)
   (with-arguments-validation (who)
       ((weak-table	table))
-    (let* ((equiv?	(weak-table-equiv-function table))
-	   (buckets	(weak-table-buckets        table))
-	   (entries	(unsafe.vector-ref buckets (%compute-bucket-index table key))))
-      (let loop ((entries entries))
+    (let* ((equiv?		(weak-table-equiv-function table))
+	   (buckets		(weak-table-buckets        table))
+	   (bucket-index	(%compute-bucket-index table key)))
+      (%clean-bucket-from-bwp-entries table bucket-index)
+      (let loop ((entries (unsafe.vector-ref buckets bucket-index)))
 	(if (null? entries)
 	    #f
 	  (let ((intern-key (unsafe.car (unsafe.car entries))))
+	    ;;Here it does not matter if INTERN-KEY is BWP.
 	    (if (or (eq?    key intern-key)
 		    (equiv? key intern-key))
 		#t
 	      (loop (unsafe.cdr entries)))))))))
 
 (define (weak-hashtable-clear! table)
-  (let* ((dim		16)
+  (let* ((dim		(weak-table-init-dim table))
 	 (mask		(unsafe.fxsub1 dim))
 	 (buckets	(make-vector dim '())))
     (set-weak-table-size!     table 0)
@@ -362,6 +383,7 @@
     (do ((i 0 (unsafe.fxadd1 i)))
 	((unsafe.fx= i dim)
 	 keys)
+      (%clean-bucket-from-bwp-entries table i)
       (let loop ((entries (unsafe.vector-ref buckets i)))
 	(unless (null? entries)
 	  (unsafe.vector-set! keys count (unsafe.car (unsafe.car entries)))
@@ -378,6 +400,7 @@
     (do ((i 0 (unsafe.fxadd1 i)))
 	((unsafe.fx= i dim)
 	 (values keys vals))
+      (%clean-bucket-from-bwp-entries table i)
       (let loop ((entries (unsafe.vector-ref buckets i)))
 	(unless (null? entries)
 	  (let ((entry (unsafe.car entries)))
@@ -401,10 +424,11 @@
 	(let loop ((entries the-entries))
 	  (if (null? entries)
 	      ;;add a new entry
-	      (unsafe.vector-set! buckets bucket-index (weak-cons (weak-cons key (proc default))
-								  the-entries))
+	      (unsafe.vector-set! buckets bucket-index (cons (weak-cons key (proc default))
+							     the-entries))
 	    (let* ((entry      (unsafe.car entries))
 		   (intern-key (unsafe.car entry)))
+	      ;;Here it does not matter if INTERN-KEY is BWP.
 	      (if (or (eq?    key intern-key)
 		      (equiv? key intern-key))
 		  (set-cdr! entry (proc (unsafe.cdr entry)))

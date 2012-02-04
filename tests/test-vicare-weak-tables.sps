@@ -34,11 +34,19 @@
 (check-display "*** testing Vicare weak hashtables\n")
 
 
-(parametrise ((check-test-name	'pred))
+(parametrise ((check-test-name	'basic))
 
   (check
       (weak-hashtable? (make-weak-hashtable string-hash string=?))
     => #t)
+
+  (check
+      (weak-hashtable-size (make-weak-hashtable string-hash string=?))
+    => 0)
+
+  (check
+      (weak-hashtable-size (make-weak-hashtable values =))
+    => 0)
 
   #t)
 
@@ -68,7 +76,7 @@
 	      K))
     => '(1 2 3 4 5 6 #("a" "b" "c" "d" "e" "f")))
 
-  (check	'this
+  (check
       (let ((K '#("a" "b" "c" "d" "e" "f")) ;attempt to prevent GC
 	    (T (make-weak-hashtable string-hash string=? 5)))
         (weak-hashtable-set! T (vector-ref K 0) 1)
@@ -89,6 +97,11 @@
 
 ;;; --------------------------------------------------------------------
 ;;; contains
+
+  (check
+      (let ((T (make-weak-hashtable string-hash string=? 5)))
+	(weak-hashtable-contains? T "ciao"))
+    => #f)
 
   (check
       (let ((K '#("a" "b" "c" "d" "e" "f")) ;attempt to prevent GC
@@ -117,6 +130,13 @@
     => '(#f #("a" "b" "c" "d" "e" "f")))
 
 ;;; --------------------------------------------------------------------
+;;; delete
+
+  (check
+      (let ((T (make-weak-hashtable string-hash string=? 5)))
+        (weak-hashtable-delete! T "ciao")
+	(weak-hashtable-size T))
+    => 0)
 
   (check
       (let ((K '#("a" "b" "c" "d" "e" "f")) ;attempt to prevent GC
@@ -168,6 +188,12 @@
 ;;; --------------------------------------------------------------------
 
   (check	;clear
+      (let ((T (make-weak-hashtable string-hash string=? 5)))
+	(weak-hashtable-clear! T)
+	(weak-hashtable-size T))
+    => 0)
+
+  (check	;clear
       (let ((K '#("a" "b" "c" "d" "e" "f")) ;attempt to prevent GC
 	    (T (make-weak-hashtable string-hash string=? 5)))
         (weak-hashtable-set! T (vector-ref K 0) 1)
@@ -179,7 +205,6 @@
 	(weak-hashtable-clear! T)
 	(list (weak-hashtable-size T) K))
     => '(0 #("a" "b" "c" "d" "e" "f")))
-
 
   #t)
 
@@ -198,6 +223,11 @@
 	(list K (weak-hashtable-size T)))
     => '(#("a" "b" "c" "d" "e" "f") 6))
 
+  (check
+      (let ((T (make-weak-hashtable string-hash string=?)))
+	(weak-hashtable-keys T))
+    => '#())
+
   (when #t	;keys
     (let ((K '#("a" "b" "c" "d" "e" "f")) ;attempt to prevent GC
 	  (T (make-weak-hashtable string-hash string=?)))
@@ -208,6 +238,14 @@
         (weak-hashtable-set! T (vector-ref K 4) 5)
         (weak-hashtable-set! T (vector-ref K 5) 6)
 	(pretty-print (weak-hashtable-keys T) (current-error-port))))
+
+  (check
+      (let ((T (make-weak-hashtable string-hash string=?)))
+	(call-with-values
+	    (lambda ()
+	      (weak-hashtable-entries T))
+	  list))
+    => '(#() #()))
 
   (when #t	;entries
     (let ((K '#("a" "b" "c" "d" "e" "f")) ;attempt to prevent GC
@@ -224,7 +262,7 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'stress))
+(parametrise ((check-test-name	'stress))
 
   (check
       (let ((T (make-weak-hashtable values =))
@@ -238,6 +276,12 @@
 	(do ((i 0 (+ 1 i)))
 	    ((= i N))
 	  (assert (weak-hashtable-contains? T i)))
+	(do ((i 0 (+ 1 i)))
+	    ((= i N))
+	  (weak-hashtable-update! T i (lambda (x) (+ 1 i)) -100))
+	(do ((i 0 (+ 1 i)))
+	    ((= i N))
+	  (assert (= (+ 1 i) (weak-hashtable-ref T i #f))))
 	(do ((i 0 (+ 1 i)))
 	    ((= i N))
 	  (weak-hashtable-delete! T i))
