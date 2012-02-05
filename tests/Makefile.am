@@ -127,7 +127,6 @@ TESTS			=	\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
 	test-vicare-parameters.sps			\
-	test-vicare-posix.sps				\
 	test-vicare-promises.sps			\
 	test-vicare-reader.sps				\
 	test-vicare-round.sps				\
@@ -157,6 +156,10 @@ TESTS			=	\
 
 if WANT_LIBFFI
 TESTS	+= test-vicare-ffi.sps
+endif
+
+if WANT_POSIX
+TESTS	+= test-vicare-posix.sps
 endif
 
 if WANT_GLIBC
