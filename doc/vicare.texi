@@ -6740,6 +6740,15 @@ mapping towards @posix{} functions, keeping the same semantics as much
 as possible; the platform's own documentation is relevant at the Scheme
 level.
 
+To avoid name collisions with bindings exported by @library{ikarus} and
+@library{vicare}, when importing @library{vicare posix} it is mandatory
+to assign it a prefix as follows:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+@end example
+
 All the constants needed to use the interface are available as
 identifier syntaxes exported by the @library{vicare platform-constants}
 library; if a constant value is not exported file a feature request for
