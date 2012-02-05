@@ -114,6 +114,8 @@
     ;; delivering interprocess signals
     posix-raise				posix-kill
     posix-pause
+    posix-signal-bub-init		posix-signal-bub-final
+    posix-signal-bub-acquire		posix-signal-bub-delivered?
 
     ;; file system inspection
     posix-stat				posix-lstat
@@ -643,6 +645,20 @@
 
 (define-inline (posix-pause)
   (foreign-call "ikrt_posix_pause"))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-signal-bub-init)
+  (foreign-call "ikrt_posix_signal_bub_init"))
+
+(define-inline (posix-signal-bub-final)
+  (foreign-call "ikrt_posix_signal_bub_final"))
+
+(define-inline (posix-signal-bub-acquire)
+  (foreign-call "ikrt_posix_signal_bub_acquire"))
+
+(define-inline (posix-signal-bub-delivered? signum)
+  (foreign-call "ikrt_posix_signal_bub_delivered" signum))
 
 
 ;;;; file system inspection

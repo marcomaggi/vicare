@@ -419,6 +419,8 @@
     NO_ADDRESS
 
 ;;; interprocess signals
+    NSIG
+
     ;; program error
     SIGFPE		SIGILL		SIGSEGV
     SIGBUS		SIGABRT		SIGIOT
@@ -1371,6 +1373,8 @@
 
 
 ;;;; interprocess signals
+
+(define-inline-constant NSIG		@VALUEOF_NSIG@)
 
 ;;; program error
 (define-inline-constant SIGFPE		@VALUEOF_SIGFPE@)

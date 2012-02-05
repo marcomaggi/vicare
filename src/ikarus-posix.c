@@ -3160,6 +3160,74 @@ ikrt_gmt_offset (ikptr t)
 
 
 /** --------------------------------------------------------------------
+ ** Block/unblock interprocess signals.
+ ** ----------------------------------------------------------------- */
+
+ik_decl ikptr ikrt_posix_signal_bub_init	(void);
+ik_decl ikptr ikrt_posix_signal_bub_final	(void);
+ik_decl ikptr ikrt_posix_signal_bub_acquire	(void);
+ik_decl ikptr ikrt_posix_signal_bub_delivered	(ikptr s_signum);
+
+static int	arrived_signals[NSIG];
+static sigset_t	all_signals_set;
+
+static void
+signal_bub_handler (int signum)
+{
+  ++(arrived_signals[signum]);
+}
+ikptr
+ikrt_posix_signal_bub_init (void)
+{ /* Block all the signals and register our handler for each. */
+  struct sigaction	ac = {
+    .sa_handler	= signal_bub_handler,
+    .sa_flags	= SA_RESTART | SA_NOCLDSTOP
+  };
+  int	signum;
+  sigfillset(&all_signals_set);
+  sigprocmask(SIG_BLOCK, &all_signals_set, NULL);
+  for (signum=0; signum<NSIG; ++signum) {
+    arrived_signals[signum] = 0;
+    sigaction(signum, &ac, NULL);
+  }
+  return void_object;
+}
+ikptr
+ikrt_posix_signal_bub_final (void)
+{ /* Set all the handlers to SIG_IGN, then unblock the signals. */
+  struct sigaction	ac = {
+    .sa_handler	= SIG_IGN,
+    .sa_flags	= SA_RESTART
+  };
+  int	signum;
+  for (signum=0; signum<NSIG; ++signum) {
+    arrived_signals[signum] = 0;
+    sigaction(signum, &ac, NULL);
+  }
+  sigprocmask(SIG_UNBLOCK, &all_signals_set, NULL);
+  return void_object;
+}
+ikptr
+ikrt_posix_signal_bub_acquire (void)
+{ /* Unblock then block all the signals.  This causes blocked signals to
+     be delivered. */
+  sigprocmask(SIG_UNBLOCK, &all_signals_set, NULL);
+  sigprocmask(SIG_BLOCK,   &all_signals_set, NULL);
+  return void_object;
+}
+ikptr
+ikrt_posix_signal_bub_delivered (ikptr s_signum)
+{ /* Return true if  the signal SIGNUM has been  delivered at least once
+     since  the last  call to  "ikrt_posix_signal_bub_acquire()".  Clear
+     the signal flag. */
+  int	signum = IK_UNFIX(s_signum);
+  int	is_set = arrived_signals[signum];
+  arrived_signals[signum] = 0;
+  return is_set? true_object : false_object;
+}
+
+
+/** --------------------------------------------------------------------
  ** Miscellaneous functions.
  ** ----------------------------------------------------------------- */
 

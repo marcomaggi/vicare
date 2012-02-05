@@ -92,6 +92,8 @@ Notes for revision 0.2d7
      posix-remove	-> remove
      posix-time		-> time
 
+* Added simple block/unblock (BUB) interprocess signal API.
+
 
 Notes for revision 0.2d6
 ------------------------

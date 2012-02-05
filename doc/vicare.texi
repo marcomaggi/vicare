@@ -508,6 +508,10 @@ Revised^6 Report on the algorithmic language Scheme
 @acronym{FASL}
 @end macro
 
+@macro bub{}
+@acronym{BUB}
+@end macro
+
 @c page
 @c ------------------------------------------------------------
 @c Values.
@@ -7144,6 +7148,71 @@ successful return zero, else raise an exception.
 Interface to the C function @cfunc{pause}, @glibcref{Using Pause,
 pause}.  Suspend the process until a signal is received; return the void
 object.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Block/unblock signals handling
+
+
+The block/unblock (@bub{}) @api{} is a simplified interface to detect
+the arrival of interprocess signals; if it does not suit the
+application's model, we should just ignore it.  It is impossible to use
+the @bub{} @api{} along with other interprocess signal @api{}s.  Here is
+a meaningless usage example:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(px.signal-bub-init)
+
+(px.raise-signal SIGUSR1)
+(px.signal-bub-acquire)
+
+(px.signal-bub-delivered? SIGUSR1) @result{} #t
+(px.signal-bub-delivered? SIGUSR2) @result{} #f
+
+(signal-bub-final)
+@end example
+
+
+@defun signal-bub-init
+Block all the signals and initialise the @bub{} interface.
+@end defun
+
+
+@defun signal-bub-final
+Set all the signal handlers to @code{SIG_IGN}, then unblock all the
+signals and finalise the @bub{} interface.
+@end defun
+
+
+@defun signal-bub-acquire
+Unblock all the signals, then block them again.  This should allow all
+the pending signals to be delivered to the process.
+@end defun
+
+
+@defun signal-bub-delivered? @var{signum}
+Return @true{} if the signal @var{signum} has been delivered at least
+once @strong{before} the last call to @func{signal-bub-acquire}.
+Calling this function with @var{signum} clears the internal flag for
+this signal, so calling it again without acquiring new signals always
+returns @false{}.
+
+This function interferes with @func{signal-bub-all-delivered}.
+@end defun
+
+
+@defun signal-bub-all-delivered
+Return a list of fixnums representing the signals delivered before the
+last call to @func{signal-bub-acquire}.  Calling this function clears
+the internal flags for all the signals, so calling it again without
+acquiring new signals always returns the empty list.
+
+This function interferes with @func{signal-bub-delivered?}.
 @end defun
 
 @c page

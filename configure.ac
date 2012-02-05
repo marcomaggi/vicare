@@ -136,7 +136,9 @@ AC_STRUCT_TM
 AC_CACHE_SAVE
 
 #page
-#### other system inspection
+#### POSIX system inspection
+
+AC_CHECK_FUNCS([sigfillset sigprocmask sigaction])
 
 AC_CHECK_MEMBER([struct stat.st_atimespec],
    AC_DEFINE(HAVE_STAT_ST_ATIMESPEC, 1,

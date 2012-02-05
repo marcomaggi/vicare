@@ -52,6 +52,10 @@
     raise-signal			kill
     pause
 
+    signal-bub-init			signal-bub-final
+    signal-bub-acquire
+    signal-bub-delivered?		signal-bub-all-delivered
+
     ;; file system inspection
     stat				lstat
     fstat
@@ -840,6 +844,32 @@
 
 (define (pause)
   (capi.posix-pause))
+
+;;; --------------------------------------------------------------------
+
+(define (signal-bub-init)
+  (capi.posix-signal-bub-init))
+
+(define (signal-bub-final)
+  (capi.posix-signal-bub-final))
+
+(define (signal-bub-acquire)
+  (capi.posix-signal-bub-acquire))
+
+(define (signal-bub-delivered? signum)
+  (define who 'signal-bub-delivered?)
+  (with-arguments-validation (who)
+      ((signal	signum))
+    (capi.posix-signal-bub-delivered? signum)))
+
+(define (signal-bub-all-delivered)
+  (let recur ((i 0))
+    (cond ((= i NSIG)
+	   '())
+	  ((signal-bub-delivered? i)
+	   (cons i (recur (+ 1 i))))
+	  (else
+	   (recur (+ 1 i))))))
 
 
 ;;;; file system inspection

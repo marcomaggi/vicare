@@ -1699,6 +1699,140 @@
   #t)
 
 
+(parametrise ((check-test-name	'bub))
+
+;;; use raise-signal
+
+  (check
+      (unwind-protect
+	  (begin
+	    (px.signal-bub-init)
+	    (px.raise-signal SIGUSR1)
+	    (px.signal-bub-acquire)
+	    (list (px.signal-bub-delivered? SIGUSR1)
+		  (px.signal-bub-delivered? SIGUSR2)))
+	(px.signal-bub-final))
+    => '(#t #f))
+
+  (check
+      (unwind-protect
+	  (begin
+	    (px.signal-bub-init)
+	    (px.signal-bub-acquire)
+	    (list (px.signal-bub-delivered? SIGUSR1)
+		  (px.signal-bub-delivered? SIGUSR2)))
+	(px.signal-bub-final))
+    => '(#f #f))
+
+  (check
+      (unwind-protect
+	  (begin
+	    (px.signal-bub-init)
+	    (px.raise-signal SIGUSR2)
+	    (px.signal-bub-acquire)
+	    (list (px.signal-bub-delivered? SIGUSR1)
+		  (px.signal-bub-delivered? SIGUSR2)))
+	(px.signal-bub-final))
+    => '(#f #t))
+
+  (check
+      (unwind-protect
+	  (begin
+	    (px.signal-bub-init)
+	    (px.raise-signal SIGUSR1)
+	    (px.raise-signal SIGUSR2)
+	    (px.signal-bub-acquire)
+	    (list (px.signal-bub-delivered? SIGUSR1)
+		  (px.signal-bub-delivered? SIGUSR2)))
+	(px.signal-bub-final))
+    => '(#t #t))
+
+;;; --------------------------------------------------------------------
+;;; use kill
+
+  (check
+      (unwind-protect
+	  (begin
+	    (px.signal-bub-init)
+	    (px.kill (px.getpid) SIGUSR1)
+	    (px.signal-bub-acquire)
+	    (list (px.signal-bub-delivered? SIGUSR1)
+		  (px.signal-bub-delivered? SIGUSR2)))
+	(px.signal-bub-final))
+    => '(#t #f))
+
+  (check
+      (unwind-protect
+	  (begin
+	    (px.signal-bub-init)
+	    (px.signal-bub-acquire)
+	    (list (px.signal-bub-delivered? SIGUSR1)
+		  (px.signal-bub-delivered? SIGUSR2)))
+	(px.signal-bub-final))
+    => '(#f #f))
+
+  (check
+      (unwind-protect
+	(begin
+	    (px.signal-bub-init)
+	    (px.kill (px.getpid) SIGUSR2)
+	    (px.signal-bub-acquire)
+	    (list (px.signal-bub-delivered? SIGUSR1)
+		  (px.signal-bub-delivered? SIGUSR2)))
+	(px.signal-bub-final))
+    => '(#f #t))
+
+  (check
+      (unwind-protect
+	  (begin
+	    (px.signal-bub-init)
+	    (px.kill (px.getpid) SIGUSR1)
+	    (px.kill (px.getpid) SIGUSR2)
+	    (px.signal-bub-acquire)
+	    (list (px.signal-bub-delivered? SIGUSR1)
+		  (px.signal-bub-delivered? SIGUSR2)))
+	(px.signal-bub-final))
+    => '(#t #t))
+
+;;; --------------------------------------------------------------------
+
+  (check	;test clearing the flag
+      (unwind-protect
+	  (begin
+	    (px.signal-bub-init)
+	    (px.raise-signal SIGUSR1)
+	    (px.signal-bub-acquire)
+	    (let ((res (px.signal-bub-delivered? SIGUSR1)))
+	      (list res (px.signal-bub-delivered? SIGUSR2))))
+	(px.signal-bub-final))
+    => '(#t #f))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (unwind-protect
+	  (begin
+	    (px.signal-bub-init)
+	    (px.raise-signal SIGUSR1)
+	    (px.signal-bub-acquire)
+	    (px.signal-bub-all-delivered))
+	(px.signal-bub-final))
+    => `(,SIGUSR1))
+
+  (check
+      (unwind-protect
+	  (begin
+	    (px.signal-bub-init)
+	    (px.raise-signal SIGUSR1)
+	    (px.raise-signal SIGUSR2)
+	    (px.signal-bub-acquire)
+	    (px.signal-bub-all-delivered))
+	(px.signal-bub-final))
+    => `(,SIGUSR1 ,SIGUSR2))
+
+  #t)
+
+
 ;;;; done
 
 (flush-output-port (current-output-port))
