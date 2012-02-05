@@ -18,11 +18,9 @@
 (library (vicare include)
   (export include include/lexical-context)
   (import (ikarus)
-    (rename (only (ikarus)
-		  file-mtime
-		  realpath/string)
-	    (file-mtime		file-modification-time)
-	    (realpath/string	real-pathname)))
+    (only (vicare $posix)
+	  file-modification-time
+	  real-pathname))
 
 
 (define-syntax include/lexical-context/form

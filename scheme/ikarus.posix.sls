@@ -243,11 +243,6 @@
 
 		  ;; miscellaneous functions
 		  file-descriptor?)
-    ;;To be removed after the next boot image rotation (Marco Maggi; Feb
-    ;;4, 2012).
-    (only (ikarus strings)
-	  ascii->string
-	  string->ascii)
     (rename (only (ikarus system $pointers)
 		  $pointer?)
 	    ($pointer? pointer?))

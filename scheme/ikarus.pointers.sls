@@ -86,11 +86,6 @@
     pointer-set-c-float!		pointer-set-c-double!
     pointer-set-c-pointer!)
   (import (ikarus)
-    ;;To be removed after the next boot image rotation (Marco Maggi; Feb
-    ;;4, 2012).
-    (only (ikarus strings)
-	  ascii->string
-	  string->ascii)
     (only (ikarus system $pointers)
 	  $pointer=)
     (vicare syntactic-extensions)

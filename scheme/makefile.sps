@@ -529,7 +529,7 @@
     (ne			(psyntax null-environment-5)		#f	#f)
     (se			(psyntax scheme-report-environment-5)	#f	#f)
 ;;;
-    (posix		(vicare $posix)				#t	#f)
+    (posix		(vicare $posix)				#t	#t)
     ))
 
 
