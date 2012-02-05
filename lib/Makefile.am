@@ -4,6 +4,7 @@ libvicaredir		= $(pkglibdir)/vicare
 
 EXTRA_DIST		= compile-all.sps			\
 			  compile-ffi.sps			\
+			  compile-posix.sps			\
 			  compile-glibc.sps			\
 			  compile-linux.sps			\
 			  compile-cre2.sps			\
@@ -27,6 +28,10 @@ dist_libvicare_DATA	= \
 
 if WANT_LIBFFI
 dist_libvicare_DATA	+= vicare/ffi.sls
+endif
+
+if WANT_POSIX
+dist_libvicare_DATA	+= vicare/posix.sls
 endif
 
 if WANT_GLIBC
@@ -62,6 +67,9 @@ vfasl:
 if WANT_LIBFFI
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-libffi.sps
 endif
+if WANT_POSIX
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-posix.sps
+endif
 if WANT_GLIBC
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-glibc.sps
 endif
@@ -76,6 +84,9 @@ vfasl-installed:
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-all.sps
 if WANT_LIBFFI
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-libffi.sps
+endif
+if WANT_POSIX
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-posix.sps
 endif
 if WANT_GLIBC
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-glibc.sps

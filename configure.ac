@@ -35,6 +35,16 @@ AC_ARG_ENABLE([arguments-validation],
 
 AC_SUBST([VICARE_ARGUMENTS_VALIDATION],[$vicare_ARGUMENTS_VALIDATION])
 
+AC_ARG_ENABLE([posix],
+  [AS_HELP_STRING([--disable-posix],
+     [disable bindings to GNU C Library (default is enable)])],
+  [case "${enableval}" in
+     yes) vicare_posix_bindings=true ;;
+     no)  vicare_posix_bindings=false ;;
+     *) AC_MSG_ERROR([bad value ${enableval} for --enable-posix]) ;;
+   esac],[vicare_posix_bindings=true])
+AM_CONDITIONAL([WANT_POSIX],[test x$vicare_posix_bindings = xtrue])
+
 AC_ARG_ENABLE([glibc],
   [AS_HELP_STRING([--disable-glibc],
      [disable bindings to GNU C Library (default is enable)])],

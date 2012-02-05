@@ -22,9 +22,11 @@
 		  load			load-r6rs-script
 		  fasl-directory	fasl-path)
     (prefix (only (ikarus.posix)
+		  getenv
 		  mkdir/parents
 		  split-file-name
-		  realpath/string)
+		  real-pathname
+		  file-modification-time)
 	    posix.)
     (only (ikarus.compiler)
 	  compile-core-expr)
@@ -53,8 +55,8 @@
 ;;
 (define fasl-directory
   (make-parameter
-      (cond ((getenv "VICARE_FASL_DIRECTORY"))
-	    ((getenv "HOME")
+      (cond ((posix.getenv "VICARE_FASL_DIRECTORY"))
+	    ((posix.getenv "HOME")
 	     => (lambda (s)
 		  (string-append s "/.vicare/precompiled")))
 	    (else ""))
@@ -70,7 +72,7 @@
   ;;
   (let ((d (fasl-directory)))
     (and (not (string=? d ""))
-	 (string-append d (posix.realpath/string filename) FASL-EXTENSION))))
+	 (string-append d (posix.real-pathname filename) FASL-EXTENSION))))
 
 
 ;;;; loading and serialising libraries
@@ -90,7 +92,8 @@
     (cond ((or (not ikfasl)
 	       (not (file-exists? ikfasl)))
 	   #f)
-	  ((< (file-mtime ikfasl) (file-mtime filename))
+	  ((< (posix.file-modification-time ikfasl)
+	      (posix.file-modification-time filename))
 	   (fprintf (current-error-port)
 		    "WARNING: not using fasl file ~s because it is older \
                      than the source file ~s\n" ikfasl filename)

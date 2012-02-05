@@ -43,25 +43,25 @@
 (parametrise ((check-test-name	'directories))
 
   (check
-      (let* ((stream (opendir ".."))
+      (let* ((stream (px.opendir ".."))
 	     (fd     (glibc.dirfd stream)))
-	(closedir stream)
+	(px.closedir stream)
 	(fixnum? fd))
     => #t)
 
-  (let ((pwd (getcwd/string)))
+  (let ((pwd (px.getcwd/string)))
     (check
 	(begin
-	  (mkdir "one" S_IRWXU)
+	  (px.mkdir "one" S_IRWXU)
 	  (unwind-protect
-	      (let ((stream (opendir "one")))
+	      (let ((stream (px.opendir "one")))
 		(unwind-protect
 		    (let ((fd (glibc.dirfd stream)))
-		      (fchdir fd)
-		      (getcwd/string))
-		  (closedir stream)))
-	    (chdir pwd)
-	    (rmdir "one")))
+		      (px.fchdir fd)
+		      (px.getcwd/string))
+		  (px.closedir stream)))
+	    (px.chdir pwd)
+	    (px.rmdir "one")))
       => (string-append pwd "/one")))
 
   #t)

@@ -5379,6 +5379,35 @@ vicare>
 @end example
 @end defun
 
+
+@defun getenv @var{varname}
+Interface to the C function @cfunc{getenv}, @glibcref{Environment
+Access, getenv}.  Retrieve the value of environment variables.
+@var{variable} must reference a string object representing the name of
+the environment variable.  If the environment variable is set: return a
+string representing its value; else return false.
+
+@example
+(getenv "PATH")
+@result{} "/usr/local/bin:/usr/bin:/bin"
+@end example
+
+The Scheme level representation of environment variables names and
+values is a string, but internally it is a bytevector; strings are
+internally converted to bytevectors using @func{string->utf8}.
+@end defun
+
+
+@defun strerror @var{errno}
+Return a string describing the @code{errno} code @var{errno}.  Makes use
+of the system function @cfunc{strerror}.  If @var{errno} is not a valid
+@code{errno} value: return a string telling it.  As special cases
+@var{errno} can be also @true{}, meaning ``unknown error'', and
+@false{}, meaning ``no error''.
+
+@glibcref{Error Messages, Error Messages}
+@end defun
+
 @c page
 @node ffi
 @chapter Foreign functions interface
@@ -6705,11 +6734,11 @@ are @strong{not} meant to be binding identifiers.
 @chapter The @posix{} interface
 
 
-The @posix{} functions are exported by the @library{vicare posix},
-@library{ikarus} and @library{vicare} libraries.  The @api{} attempts to
-create a one--to--one Scheme functions mapping towards @posix{}
-functions, keeping the same semantics as much as possible; the
-platform's own documentation is relevant at the Scheme level.
+The @posix{} functions are exported by the library @library{vicare
+posix}.  The @api{} attempts to create a one--to--one Scheme functions
+mapping towards @posix{} functions, keeping the same semantics as much
+as possible; the platform's own documentation is relevant at the Scheme
+level.
 
 All the constants needed to use the interface are available as
 identifier syntaxes exported by the @library{vicare platform-constants}
@@ -7166,7 +7195,17 @@ fstat}.  Inspect the file system entry associated to the file descriptor
 @end defun
 
 
-@defun file-is-directory? @var{pathname} @var{follow-symlinks?}
+@defun file-is-directory? @var{pathname}
+@defunx file-is-char-device? @var{pathname}
+@defunx file-is-block-device? @var{pathname}
+@defunx file-is-regular-file? @var{pathname}
+@defunx file-is-symbolic-link? @var{pathname}
+@defunx file-is-socket? @var{pathname}
+@defunx file-is-fifo? @var{pathname}
+@defunx file-is-message-queue? @var{pathname}
+@defunx file-is-semaphore? @var{pathname}
+@defunx file-is-shared-memory? @var{pathname}
+@defunx file-is-directory? @var{pathname} @var{follow-symlinks?}
 @defunx file-is-char-device? @var{pathname} @var{follow-symlinks?}
 @defunx file-is-block-device? @var{pathname} @var{follow-symlinks?}
 @defunx file-is-regular-file? @var{pathname} @var{follow-symlinks?}
@@ -7180,6 +7219,7 @@ Return @true{} or @false{} if the file system entry selected by
 @var{pathname} is of the specified type; if an error occurs: an
 exception is raised.  When @var{follow-symlinks?} is true: @cfunc{stat}
 is used to inspect the entry, else @cfunc{lstat} is used.
+@var{follow-symlinks?} defaults to @false{}.
 @end defun
 
 

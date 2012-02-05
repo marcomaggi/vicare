@@ -28,6 +28,8 @@
 (import (vicare) #;(ikarus)
   (prefix (vicare linux)
 	  linux.)
+  (prefix (vicare posix)
+	  px.)
   (vicare platform-constants)
   (checks))
 
@@ -39,22 +41,22 @@
 
   (check
       (let* ((child_pid #f)
-	     (info      (fork (lambda (pid) ;parent
-				(set! child_pid pid)
-				(linux.waitid P_PID pid WEXITED))
-			      (lambda () ;child
-				(exit 10)))))
+	     (info      (px.fork (lambda (pid) ;parent
+				   (set! child_pid pid)
+				   (linux.waitid P_PID pid WEXITED))
+				 (lambda () ;child
+				   (exit 10)))))
 	(list (= child_pid (linux.struct-siginfo_t-si_pid info))
 	      (fixnum? (linux.struct-siginfo_t-si_uid info))
 	      (linux.struct-siginfo_t-si_status  info)
 	      (linux.struct-siginfo_t-si_signo   info)
 	      (linux.struct-siginfo_t-si_code    info)))
-	=> `(#t #t 10 ,SIGCLD ,CLD_EXITED))
+    => `(#t #t 10 ,SIGCLD ,CLD_EXITED))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((status (system "exit 0")))
+      (let ((status (px.system "exit 0")))
 	(linux.WIFCONTINUED status))
     => #f)
 
