@@ -235,15 +235,7 @@
     file-descriptor?)
   (import (except (vicare)
 		  strerror
-		  errno->string
-		  mkdir
-		  mkdir/parents
-		  getenv
-		  split-file-name
-		  realpath
-		  realpath/string
-		  file-modification-time
-		  file-mtime)
+		  getenv)
     (prefix (only (vicare $posix)
 		  errno->string)
 	    posix.)
@@ -262,7 +254,7 @@
 ;;;; helpers
 
 (define-inline (%file-descriptor? obj)
-  ;;Do  what  is  possible   to  recognised  fixnums  representing  file
+  ;;Do  what   is  possible  to  recognise   fixnums  representing  file
   ;;descriptors.
   ;;
   (and (fixnum? obj)

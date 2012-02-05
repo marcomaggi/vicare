@@ -7601,12 +7601,13 @@ Example:
 @example
 #!r6rs
 (import (vicare)
+  (prefix (vicare posix) px.)
   (vicare platform-constants))
 
 (define fd
-  (open "name.ext"
-        (fxior O_CREAT O_EXCL O_RDWR)
-        (fxior S_IRUSR S_IWUSR)))
+  (px.open "name.ext"
+           (fxior O_CREAT O_EXCL O_RDWR)
+           (fxior S_IRUSR S_IWUSR)))
 @end example
 @end defun
 
@@ -7772,12 +7773,13 @@ Simple example of process writing to itself through a pipe:
 
 @example
 #!r6rs
-(import (vicare))
+(import (vicare)
+  (prefix (vicare posix) px.))
 
-(let-values (((in ou) (pipe)))
-  (posix-write ou '#vu8(1 2 3 4) 4)
+(let-values (((in ou) (px.pipe)))
+  (px.posix-write ou '#vu8(1 2 3 4) 4)
   (let ((bv (make-bytevector 4)))
-    (posix-read in bv 4)
+    (px.posix-read in bv 4)
     bv))
 @result{} #vu8(1 2 3 4)
 @end example
@@ -7789,33 +7791,34 @@ parent:
 
 @example
 #!r6rs
-(import (vicare))
+(import (vicare)
+  (prefix (vicare posix) px.))
 
 (let-values
-    (((child-stdin       parent-to-child) (pipe))
-     ((parent-from-child child-stdout)    (pipe)))
+    (((child-stdin       parent-to-child) (px.pipe))
+     ((parent-from-child child-stdout)    (px.pipe)))
   (fork
 
     (lambda (pid) ;parent
       (let ((buf (make-bytevector 1)))
-        (posix-read  parent-from-child buf 1)
-        (posix-write parent-to-child '#vu8(2) 1)
+        (px.posix-read  parent-from-child buf 1)
+        (px.posix-write parent-to-child '#vu8(2) 1)
         buf))
 
     (lambda () ;child
       (begin ;setup stdin
         (close-input-port (current-input-port))
-        (dup2 child-stdin 0)
-        (close child-stdin))
+        (px.dup2 child-stdin 0)
+        (px.close child-stdin))
 
       (begin ;setup stdout
         (close-output-port (current-output-port))
-        (dup2 child-stdout 1)
-        (close child-stdout))
+        (px.dup2 child-stdout 1)
+        (px.close child-stdout))
 
       (let ((buf (make-bytevector 1)))
-        (posix-write 1 '#vu8(1) 1)
-        (posix-read  0 buf 1)
+        (px.posix-write 1 '#vu8(1) 1)
+        (px.posix-read  0 buf 1)
         (exit 0)))))
 @result{} #vu8(1)
 @end example
@@ -7827,10 +7830,11 @@ communicate with the parent:
 
 @example
 #!r6rs
-(import (vicare))
+(import (vicare)
+  (prefix (vicare posix) px.))
 
-(let-values (((child-stdin       parent-to-child) (pipe))
-             ((parent-from-child child-stdout)    (pipe)))
+(let-values (((child-stdin       parent-to-child) (px.pipe))
+             ((parent-from-child child-stdout)    (px.pipe)))
   (fork
    (lambda (pid)        ;parent
      (let* ((inp (make-textual-file-descriptor-input-port
@@ -7916,12 +7920,13 @@ Instances of @code{struct sockaddr_un} can be handled at the Scheme
 level as follows:
 
 @example
-(import (vicare))
+(import (vicare)
+  (prefix (vicare posix) px.))
 
 (define sockaddr
-  (make-sockaddr_un "/tmp/the-unix-socket"))
+  (px.make-sockaddr_un "/tmp/the-unix-socket"))
 
-(sockaddr_un.pathname/string sockaddr)
+(px.sockaddr_un.pathname/string sockaddr)
 @result{} "/tmp/the-unix-socket"
 @end example
 
@@ -7956,13 +7961,14 @@ Instances of @code{struct sockaddr_in} can be handled at the Scheme
 level as follows:
 
 @example
-(import (vicare))
+(import (vicare)
+  (prefix (vicare posix) px.))
 
 (define sockaddr
-  (make-sockaddr_in '#vu8(1 2 3 4) 88))
+  (px.make-sockaddr_in '#vu8(1 2 3 4) 88))
 
-(sockaddr_in.in_addr sockaddr)  @result{} #vu8(1 2 3 4)
-(sockaddr_in.in_port sockaddr)  @result{} 88
+(px.sockaddr_in.in_addr sockaddr)  @result{} #vu8(1 2 3 4)
+(px.sockaddr_in.in_port sockaddr)  @result{} 88
 @end example
 
 @noindent
@@ -7970,15 +7976,16 @@ and we can use constant values to initialise the fields:
 
 @example
 (import (vicare)
+  (prefix (vicare posix) px.)
   (vicare platform-constants))
 
 (define addr (make-bytevector 4))
 (bytevector-u32-set! bv 0 INADDR_LOOPBACK (endianness big))
 
-(define sockaddr (make-sockaddr_in addr 88))
+(define sockaddr (px.make-sockaddr_in addr 88))
 
-(sockaddr_in.in_addr sockaddr)  @result{} #vu8(127 0 0 1)
-(sockaddr_in.in_port sockaddr)  @result{} 88
+(px.sockaddr_in.in_addr sockaddr)  @result{} #vu8(127 0 0 1)
+(px.sockaddr_in.in_port sockaddr)  @result{} 88
 @end example
 
 @noindent
@@ -8012,13 +8019,14 @@ level as follows:
 
 @example
 #!vicare
-(import (vicare))
+(import (vicare)
+  (prefix (vicare posix) px.))
 
 (define sockaddr
-  (make-sockaddr_in6 '#vu16b(1 2 3 4  5 6 7 8) 88))
+  (px.make-sockaddr_in6 '#vu16b(1 2 3 4  5 6 7 8) 88))
 
-(sockaddr_in6.in6_addr sockaddr) @result{} #vu16b(1 2 3 4  5 6 7 8)
-(sockaddr_in6.in6_port sockaddr) @result{} 88
+(px.sockaddr_in6.in6_addr sockaddr) @result{} #vu16b(1 2 3 4  5 6 7 8)
+(px.sockaddr_in6.in6_port sockaddr) @result{} 88
 @end example
 
 @noindent
@@ -8059,12 +8067,13 @@ Build and return a bytevector holding the constant structures of type
 Dotted quad address representations can be handled as follows:
 
 @example
-(import (vicare))
+(import (vicare)
+  (prefix (vicare posix) px.))
 
-(inet-aton "127.0.0.1") @result{} #vu8(127 0 0 1)
-(inet-aton "ciao")      @error{} invalid argument
+(px.inet-aton "127.0.0.1") @result{} #vu8(127 0 0 1)
+(px.inet-aton "ciao")      @error{} invalid argument
 
-(inet-ntoa/string '#vu8(127 0 0 1))
+(px.inet-ntoa/string '#vu8(127 0 0 1))
 @result{} "127.0.0.1"
 @end example
 
@@ -8096,18 +8105,19 @@ Addresses in presentation format can be handled as follows:
 @example
 #!vicare
 (import (vicare)
+  (prefix (vicare posix) px.)
   (vicare platform-constants))
 
-(inet-pton AF_INET "127.0.0.1") @result{} #vu8(127 0 0 1)
-(inet-pton AF_INET "ciao")      @error{} invalid arguments
+(px.inet-pton AF_INET "127.0.0.1") @result{} #vu8(127 0 0 1)
+(px.inet-pton AF_INET "ciao")      @error{} invalid arguments
 
-(inet-pton AF_INET6 "1:2:3:4:5:6:7:8")
+(px.inet-pton AF_INET6 "1:2:3:4:5:6:7:8")
 @result{} #vu16b(1 2 3 4 5 6 7 8)
 
-(inet-ntop/string AF_INET '#vu8(127 0 0 1))
+(px.inet-ntop/string AF_INET '#vu8(127 0 0 1))
 @result{} "127.0.0.1"
 
-(inet-ntop/string AF_INET6 '#vu16b(1 2 3 4 5 6 7 8))
+(px.inet-ntop/string AF_INET6 '#vu16b(1 2 3 4 5 6 7 8))
 @result{} "1:2:3:4:5:6:7:8"
 @end example
 
@@ -8212,7 +8222,7 @@ If successful: return the list of data structures, else raise an
 exception.
 
 @example
-(getaddrinfo "github.com" "smtp" #f)
+(px.getaddrinfo "github.com" "smtp" #f)
 @result{} (#["struct-addrinfo"
         ai_flags=40             ai_family=AF_INET
         ai_socktype=SOCK_DGRAM  ai_protocol=17
@@ -8268,9 +8278,10 @@ of @code{struct-hostent}.  If an error occurs, return an encoded
 @code{h_errno} value.
 
 @example
-(import (vicare))
+(import (vicare)
+  (prefix (vicare posix) px.))
 
-(gethostbyname "github.com")
+(px.gethostbyname "github.com")
 @result{} #["struct-hostent"
        h_name="github.com"
        h_aliases=()
@@ -8279,7 +8290,7 @@ of @code{struct-hostent}.  If an error occurs, return an encoded
        h_addr_list=(#vu8(207 97 227 239))
        h_addr=#vu8(207 97 227 239)]
 
-(gethostbyname "google.com")
+(px.gethostbyname "google.com")
 @result{} #["struct-hostent"
        h_name="google.com"
        h_aliases=()
@@ -8358,7 +8369,7 @@ entry.  If successful return the data structure, else raise an
 exception.
 
 @example
-(getprotobyname "udp")
+(px.getprotobyname "udp")
 @result{} #["struct-protoent"
         p_name="udp"
         p_aliases=(UDP)
@@ -8377,7 +8388,7 @@ entry.  If successful return the data structure, else raise an
 exception.
 
 @example
-(getprotobynumber 17)
+(px.getprotobynumber 17)
 @result{} #["struct-protoent"
         p_name="udp"
         p_aliases=(UDP)
@@ -8443,14 +8454,14 @@ entry.  If successful return the data structure, else raise an
 exception.
 
 @example
-(getservbyname "smtp" "tcp")
+(px.getservbyname "smtp" "tcp")
 @result{} #["struct-servent"
         s_name="smtp"
         s_aliases=(mail)
         s_port=25
         s_proto=tcp]
 
-(getservbyname "ntp" "udp")
+(px.getservbyname "ntp" "udp")
 @result{} #["struct-servent"
         s_name="ntp"
         s_aliases=()
@@ -8470,7 +8481,7 @@ servent} entry.  If successful return the data structure, else raise an
 exception.
 
 @example
-(getservbyport 80 "tcp")
+(px.getservbyport 80 "tcp")
 @result{} #["struct-servent"
         s_name="http"
         s_aliases=(www-http www)
@@ -8540,7 +8551,7 @@ netent} entry.  If successful return the data structure, else raise an
 exception.
 
 @example
-(getnetbyname "loopback")
+(px.getnetbyname "loopback")
 @result{} #["struct-netent"
         n_name="loopback"
         n_aliases=()
@@ -8559,7 +8570,7 @@ network type, query the networks database and build an instance of
 If successful return the data structure, else raise an exception.
 
 @example
-(getnetbyaddr '#vu8(127 0 0 0) AF_INET)
+(px.getnetbyaddr '#vu8(127 0 0 0) AF_INET)
 @result{} #["struct-netent"
         n_name="loopback"
         n_aliases=()
@@ -8813,7 +8824,7 @@ Basically a @tcp{}/@ip{} server should do:
   (prefix (vicare posix) px.)
   (vicare platform-constants))
 
-(let ((sockaddr    (make-sockaddr_in '#vu8(127 0 0 1) 8080))
+(let ((sockaddr    (px.make-sockaddr_in '#vu8(127 0 0 1) 8080))
       (server-sock (px.socket PF_INET SOCK_STREAM 0)))
   (px.bind   server-sock sockaddr)
   (px.listen server-sock 2)
@@ -8833,7 +8844,7 @@ while a @tcp{}/@ip{} client should to:
   (prefix (vicare posix) px.)
   (vicare platform-constants))
 
-(let ((sockaddr (make-sockaddr_in '#vu8(127 0 0 1) 8080))
+(let ((sockaddr (px.make-sockaddr_in '#vu8(127 0 0 1) 8080))
       (sock     (px.socket PF_INET SOCK_STREAM 0)))
   (px.connect sock sockaddr)
   ;; ... talk to the server through SOCK ...
@@ -8848,7 +8859,7 @@ A @udp{}/@ip{} ``server'' should do:
   (prefix (vicare posix) px.)
   (vicare platform-constants))
 
-(let ((sockaddr   (make-sockaddr_in '#vu8(127 0 0 1) 8080))
+(let ((sockaddr   (px.make-sockaddr_in '#vu8(127 0 0 1) 8080))
       (sock       (px.socket PF_INET SOCK_DGRAM 0))
       (in-buffer  (make-bytevector 1024))
       (out-buffer (make-bytevector 1024)))
@@ -8870,7 +8881,7 @@ while a @udp{}/@ip{} ``client'' should do:
   (prefix (vicare posix) px.)
   (vicare platform-constants))
 
-(let ((sockaddr   (make-sockaddr_in '#vu8(127 0 0 1) 8081))
+(let ((sockaddr   (px.make-sockaddr_in '#vu8(127 0 0 1) 8081))
       (sock       (px.socket PF_INET SOCK_DGRAM 0))
       (out-buffer (make-bytevector 1024))
       (in-buffer  (make-bytevector 1024)))
@@ -8894,7 +8905,7 @@ A Unix--domain socket server should do:
 
 (let* ((tmpdir       (px.getenv "TMPDIR"))
        (pathname     (string-append tmpdir "/use-me"))
-       (sockaddr     (make-sockaddr_un pathname))
+       (sockaddr     (px.make-sockaddr_un pathname))
        (server-sock  (px.socket PF_LOCAL SOCK_STREAM 0)))
   (px.bind   server-sock sockaddr)
   (px.listen server-sock 2)
@@ -8916,7 +8927,7 @@ while a Unix--domain socket client should do:
 
 (let* ((tmpdir    (px.getenv "TMPDIR"))
        (pathname  (string-append tmpdir "/use-me"))
-       (sockaddr  (make-sockaddr_un pathname))
+       (sockaddr  (px.make-sockaddr_un pathname))
        (sock      (px.socket PF_LOCAL SOCK_STREAM 0)))
   (px.connect sock sockaddr)
   ;; ... talk to the server through SOCK ...
@@ -8932,7 +8943,7 @@ should do:
   (prefix (vicare posix) px.)
   (vicare platform-constants))
 
-(let ((sockaddr    (make-sockaddr_in '#vu8(127 0 0 1) 8080))
+(let ((sockaddr    (px.make-sockaddr_in '#vu8(127 0 0 1) 8080))
       (server-sock (px.socket PF_INET SOCK_STREAM 0)))
   (px.bind   server-sock sockaddr)
   (px.listen server-sock 2)
@@ -8940,7 +8951,7 @@ should do:
       (((sock client-address) (px.accept server-sock))
        ((bv)                  (make-bytevector 10)))
     (let loop ()
-      (let-values (((rd wr ex) (select-fd sock 2 0)))
+      (let-values (((rd wr ex) (px.select-fd sock 2 0)))
         (cond (ex ;process exceptional conditions first!!!
                ;; block until OOB data arrives
                (let ((len (px.recv sock bv #f MSG_OOB)))
@@ -8968,7 +8979,7 @@ do:
   (prefix (vicare posix) px.)
   (vicare platform-constants))
 
-(let ((sockaddr  (make-sockaddr_in '#vu8(127 0 0 1) 8080))
+(let ((sockaddr  (px.make-sockaddr_in '#vu8(127 0 0 1) 8080))
       (sock      (px.socket PF_INET SOCK_STREAM 0)))
   (px.connect sock sockaddr)
   (px.send sock '#vu8(1 2 3) #f 0)
@@ -9058,7 +9069,7 @@ The receving application calls the function @func{recv} specifying the
 If we send the @oob{} byte with the form:
 
 @example
-(posix.send sock '#vu8(8) #f MSG_OOB)
+(px.send sock '#vu8(8) #f MSG_OOB)
 @end example
 
 @noindent
@@ -9066,7 +9077,7 @@ the byte @code{8} will be the @oob{} byte; if we send the @oob{} byte
 with the form:
 
 @example
-(posix.send sock '#vu8(1 2 3) #f MSG_OOB)
+(px.send sock '#vu8(1 2 3) #f MSG_OOB)
 @end example
 
 @noindent
@@ -9862,11 +9873,12 @@ network interface to the corresponding internal index.  Return a fixnum
 representing the index or false if @var{name} is invalid.
 
 @example
-(import (vicare))
+(import (vicare)
+  (prefix (vicare glibc) glibc.))
 
-(if-indextoname 0)      @result{} #f
-(if-indextoname 1)      @result{} "lo"
-(if-indextoname 2)      @result{} "eth0"
+(glibc.if-indextoname 0)      @result{} #f
+(glibc.if-indextoname 1)      @result{} "lo"
+(glibc.if-indextoname 2)      @result{} "eth0"
 @end example
 @end defun
 
@@ -9878,10 +9890,11 @@ an interface to the corresponding string name.  Return a string holding
 the name or false if @var{index} is invalid.
 
 @example
-(import (vicare))
+(import (vicare)
+  (prefix (vicare glibc) glibc.))
 
-(if-nametoindex "lo")   @result{} 1
-(if-nametoindex "eth0") @result{} 2
+(glibc.if-nametoindex "lo")   @result{} 1
+(glibc.if-nametoindex "eth0") @result{} 2
 @end example
 @end defun
 
@@ -9893,9 +9906,10 @@ fixnums as keys and strings as values; the fixnums are the interface
 indexes, the strings are the corresponding interface names.
 
 @example
-(import (vicare))
+(import (vicare)
+  (prefix (vicare glibc) glibc.))
 
-(if-nameindex)
+(glibc.if-nameindex)
 @result{} ((4 . "wlan0")
     (2 . "eth0")
     (1 . "lo"))
