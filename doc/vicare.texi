@@ -1482,6 +1482,11 @@ Use @var{STRING} as prompt for the @repl{}.  Defaults to @samp{vicare},
 to which the character @samp{>} is appended for each nested @repl{}
 level.  @ref{iklib cafe} for more details.
 
+@item --repl-on-sigint
+When this option is used an interprocess signal handler is registered at
+program startup to enter a debugging @repl{} whenever a @code{SIGINT}
+signal is received.
+
 @item -d
 @itemx --debug
 Turn on debugging mode.  With this unhandled exceptions in the program

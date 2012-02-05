@@ -1,6 +1,6 @@
 /*
  * Ikarus Scheme -- A compiler for R6RS Scheme.
- * Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+ * Copyright (C) 2006,2007,2008,2012  Abdulaziz Ghuloum
  * Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
  *
  * This program is free software:  you can redistribute it and/or modify
@@ -50,6 +50,8 @@ ikarus_main (int argc, char** argv, char* boot_file)
    "boot_file" must  be a string  representing the filename of  the boot
    file to use. */
 {
+  ikpcb *	pcb;
+  int		repl_on_sigint	= 0;
   if (! cpu_has_sse2()) {
     fprintf(stderr, "Vicare Scheme cannot run on your computer because\n");
     fprintf(stderr, "your CPU does not support the SSE2 instruction set.\n");
@@ -61,28 +63,32 @@ ikarus_main (int argc, char** argv, char* boot_file)
     ik_abort("limb size does not match");
   if (mp_bits_per_limb != (8*sizeof(long int)))
     ik_abort("invalid bits_per_limb=%d\n", mp_bits_per_limb);
-  ikpcb* pcb = ik_make_pcb();
-  the_pcb = pcb;
+  the_pcb = pcb = ik_make_pcb();
   { /* Set up arg_list from the  last "argv" to the first; the resulting
        list will end in COMMAND-LINE. */
-    ikptr	arg_list = null_object;
-    int		i	 = argc-1;
-    while(i > 0) {
-      char *	s = argv[i];
-      int	n = strlen(s);
-      ikptr	bv = ik_unsafe_alloc(pcb, IK_ALIGN(disp_bytevector_data+n+1)) | bytevector_tag;
-      ref(bv, off_bytevector_length) = IK_FIX(n);
-      /* copy the bytes and the terminating zero */
-      memcpy((char*)(bv+off_bytevector_data), s, n+1);
-      ikptr p = ik_unsafe_alloc(pcb, pair_size);
-      ref(p, disp_car) = bv;
-      ref(p, disp_cdr) = arg_list;
-      arg_list = p+pair_tag;
-      i--;
+
+    ikptr	arg_list	= null_object;
+    int		i		= argc-1;
+    for (; i > 0; --i) {
+      if (0 == strcmp(argv[i], "--repl-on-sigint")) {
+	repl_on_sigint = 1;
+      } else {
+	char *	s = argv[i];
+	int	n = strlen(s);
+	ikptr	bv = ik_unsafe_alloc(pcb, IK_ALIGN(disp_bytevector_data+n+1)) | bytevector_tag;
+	ref(bv, off_bytevector_length) = IK_FIX(n);
+	/* copy the bytes and the terminating zero */
+	memcpy((char*)(bv+off_bytevector_data), s, n+1);
+	ikptr p = ik_unsafe_alloc(pcb, pair_size);
+	ref(p, disp_car) = bv;
+	ref(p, disp_cdr) = arg_list;
+	arg_list = p+pair_tag;
+      }
     }
     pcb->arg_list = arg_list;
   }
-  register_handlers();
+  if (repl_on_sigint)
+    register_handlers();
   register_alt_stack();
   ik_fasl_load(pcb, boot_file);
   ik_delete_pcb(pcb);

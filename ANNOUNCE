@@ -96,6 +96,10 @@ Notes for revision 0.2d7
 
 * Added simple block/unblock (BUB) interprocess signal API.
 
+* Added command line  option to "vicare" to enable  entering a debugging
+  REPL  whenever the  interprocess signal  SIGINT is  received.   It was
+  enabled by default, not it is disabled by default.
+
 
 Notes for revision 0.2d6
 ------------------------

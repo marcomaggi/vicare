@@ -649,6 +649,11 @@ Other options:
    --prompt STRING
         Use STRING as prompt for the REPL.  Defaults to \"vicare\".
 
+   --repl-on-sigint
+        When  this option  is  used an  interprocess  signal handler  is
+	registered at program startup to enter a debugging REPL whenever
+	a SIGINT signal is received.
+
    -d
    --debug
         Turn  on debugging  mode.  Unhandled  exceptions in  the program
