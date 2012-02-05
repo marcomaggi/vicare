@@ -643,7 +643,7 @@
       (with-temporary-file ("one")
   	(unwind-protect
   	    (begin
-  	      (px.posix-remove "one")
+  	      (px.remove "one")
   	      (file-exists? "one"))
   	  (px.system "rm -f one")))
     => #f)
@@ -717,10 +717,10 @@
 			   (fxior S_IRUSR S_IWUSR))))
 	  (unwind-protect
 	      (begin
-		(px.posix-write fd '#vu8(1 2 3 4) 4)
+		(px.write fd '#vu8(1 2 3 4) 4)
 		(px.lseek fd 0 SEEK_SET)
 		(let ((buffer (make-bytevector 4)))
-		  (list (px.posix-read fd buffer 4) buffer)))
+		  (list (px.read fd buffer 4) buffer)))
 	    (px.close fd)
 	    (px.system "rm -f tmp"))))
     => '(4 #vu8(1 2 3 4)))
@@ -781,9 +781,9 @@
 
   (check
       (let-values (((in ou) (px.pipe)))
-	(px.posix-write ou '#vu8(1 2 3 4) 4)
+	(px.write ou '#vu8(1 2 3 4) 4)
 	(let ((bv (make-bytevector 4)))
-	  (px.posix-read in bv 4)
+	  (px.read in bv 4)
 	  bv))
     => '#vu8(1 2 3 4))
 
@@ -792,8 +792,8 @@
 		   ((parent-from-child child-stdout)    (px.pipe)))
 	(px.fork (lambda (pid) ;parent
 		   (let ((buf (make-bytevector 1)))
-		     (px.posix-read  parent-from-child buf 1)
-		     (px.posix-write parent-to-child   '#vu8(2) 1)
+		     (px.read  parent-from-child buf 1)
+		     (px.write parent-to-child   '#vu8(2) 1)
 		     buf))
 		 (lambda () ;child
 		   (begin ;setup stdin
@@ -805,8 +805,8 @@
 		     (px.dup2 child-stdout 1)
 		     (px.close child-stdout))
 		   (let ((buf (make-bytevector 1)))
-		     (px.posix-write 1 '#vu8(1) 1)
-		     (px.posix-read  0 buf 1)
+		     (px.write 1 '#vu8(1) 1)
+		     (px.read  0 buf 1)
 ;;;		  (check-pretty-print buf)
 		     (assert (equal? buf '#vu8(2)))
 		     (exit 0)))))
@@ -863,7 +863,7 @@
     (unwind-protect
 	(check	;read ready
 	    (begin
-	      (px.posix-write ou '#vu8(1) 1)
+	      (px.write ou '#vu8(1) 1)
 	      (let-values (((r w e) (px.select #f `(,in) '() `(,in) 0 0)))
 		(list r w e)))
 	  => `((,in) () ()))
@@ -895,7 +895,7 @@
     (unwind-protect
 	(check	;read ready
 	    (begin
-	      (px.posix-write ou '#vu8(1) 1)
+	      (px.write ou '#vu8(1) 1)
 	      (let-values (((r w e) (px.select-fd in 0 0)))
 		(list r w e)))
 	  => `(,in #f #f))
@@ -1166,11 +1166,11 @@
   (define run-inet-tests? ;the firewall must allow it
     (or #f (px.getenv "RUN_INET_TESTS")))
 
-  (check	;socketpair, posix-read, posix-write
+  (check	;socketpair, read, write
       (let-values (((a b) (px.socketpair PF_LOCAL SOCK_DGRAM 0)))
-	(px.posix-write a '#vu8(1 2 3 4) 4)
+	(px.write a '#vu8(1 2 3 4) 4)
 	(let ((buf (make-bytevector 4)))
-	  (px.posix-read b buf 4)
+	  (px.read b buf 4)
 	  (px.shutdown a SHUT_RDWR)
 	  (px.shutdown b SHUT_RDWR)
 	  buf))
@@ -1287,8 +1287,8 @@
 		     (px.setsockopt/linger sock #t 1)
 		     (unwind-protect
 			 (let ((bv (make-bytevector 3)))
-			   (px.posix-write sock '#vu8(1 2 3))
-			   (px.posix-read  sock bv)
+			   (px.write sock '#vu8(1 2 3))
+			   (px.read  sock bv)
 			   (add-result bv))
 		       (px.close sock))))
 	       (px.close server-sock)
@@ -1300,9 +1300,9 @@
 	     (unwind-protect
 		 (let ((bv (make-bytevector 3)))
 		   (px.connect sock sockaddr)
-		   (px.posix-read sock bv)
+		   (px.read sock bv)
 		   (assert (equal? bv '#vu8(1 2 3)))
-		   (px.posix-write sock bv))
+		   (px.write sock bv))
 	       (px.close sock)))
 	   (exit 0))
 	 (when (file-exists? pathname) (px.unlink pathname))
@@ -1472,8 +1472,8 @@
 			       (add-result (px.sockaddr_in.in_addr sockaddr))
 			       ;;nobody knows the port number
 			       #;(add-result (px.sockaddr_in.in_port sockaddr)))
-			     (px.posix-write sock '#vu8(1 2 3))
-			     (px.posix-read  sock bv)
+			     (px.write sock '#vu8(1 2 3))
+			     (px.read  sock bv)
 			     (add-result bv))
 			 (px.close sock))))
 		 (px.close server-sock)
@@ -1491,9 +1491,9 @@
 		     (let ((sockaddr (px.getsockname sock)))
 		       (assert (equal? '#vu8(127 0 0 1) (px.sockaddr_in.in_addr sockaddr)))
 		       (assert (fixnum? (px.sockaddr_in.in_port sockaddr))))
-		     (px.posix-read sock bv)
+		     (px.read sock bv)
 		     (assert (equal? bv '#vu8(1 2 3)))
-		     (px.posix-write sock bv))
+		     (px.write sock bv))
 		 (px.close sock)))
 	     (exit 0))
 	   (px.fork parent child)
@@ -1565,8 +1565,8 @@
 		       (px.setsockopt/linger sock #t 1)
 		       (unwind-protect
 			   (let ((bv (make-bytevector 3)))
-			     (px.posix-write sock '#vu8(1 2 3))
-			     (px.posix-read  sock bv)
+			     (px.write sock '#vu8(1 2 3))
+			     (px.read  sock bv)
 			     (add-result bv))
 			 (px.close sock))))
 		 (px.close server-sock)
@@ -1578,9 +1578,9 @@
 	       (unwind-protect
 		   (let ((bv (make-bytevector 3)))
 		     (px.connect sock sockaddr)
-		     (px.posix-read sock bv)
+		     (px.read sock bv)
 		     (assert (equal? bv '#vu8(1 2 3)))
-		     (px.posix-write sock bv))
+		     (px.write sock bv))
 		 (px.close sock)))
 	     (exit 0))
 	   (px.fork parent child)
@@ -1667,7 +1667,7 @@
 (parametrise ((check-test-name	'time))
 
   (check-pretty-print (list 'clock (px.clock)))
-  (check-pretty-print (list 'time  (px.posix-time)))
+  (check-pretty-print (list 'time  (px.time)))
   (check-pretty-print (list 'timeofday  (px.gettimeofday)))
 
 ;;; --------------------------------------------------------------------
@@ -1680,21 +1680,21 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check-pretty-print (px.localtime (px.posix-time)))
-  (check-pretty-print (px.gmtime    (px.posix-time)))
+  (check-pretty-print (px.localtime (px.time)))
+  (check-pretty-print (px.gmtime    (px.time)))
 
   (check
-      (let ((T (px.posix-time)))
+      (let ((T (px.time)))
 	(equal? T (px.timelocal (px.localtime T))))
     => #t)
 
   (check
-      (let ((T (px.posix-time)))
+      (let ((T (px.time)))
 	(equal? T (px.timegm (px.gmtime T))))
     => #t)
 
   (check-pretty-print
-   (list 'strftime (px.strftime/string "%a %h %d %H:%M:%S %Y" (px.localtime (px.posix-time)))))
+   (list 'strftime (px.strftime/string "%a %h %d %H:%M:%S %Y" (px.localtime (px.time)))))
 
   #t)
 

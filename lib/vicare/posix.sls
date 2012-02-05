@@ -94,7 +94,7 @@
     readlink				readlink/string
     realpath				realpath/string
     unlink
-    posix-remove			rename
+    remove			rename
 
     ;; file system directories
     mkdir				mkdir/parents
@@ -114,8 +114,8 @@
 
     ;; file descriptors
     open				close
-    posix-read				pread
-    posix-write				pwrite
+    read				pread
+    write				pwrite
     lseek
     readv				writev
     select				select-fd
@@ -207,7 +207,7 @@
 
     ;; date and time functions
     clock				times
-    posix-time				gettimeofday
+    time				gettimeofday
     localtime				gmtime
     timelocal				timegm
     strftime				strftime/string
@@ -234,8 +234,9 @@
     ;; miscellaneous functions
     file-descriptor?)
   (import (except (vicare)
-		  strerror
-		  getenv)
+		  strerror		getenv
+		  remove		time
+		  read			write)
     (prefix (only (vicare $posix)
 		  errno->string)
 	    posix.)
@@ -1194,8 +1195,8 @@
 	(unless (unsafe.fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname))))))
 
-(define (posix-remove pathname)
-  (define who 'posix-remove)
+(define (remove pathname)
+  (define who 'remove)
   (with-arguments-validation (who)
       ((pathname pathname))
     (with-pathnames ((pathname.bv pathname))
@@ -1427,12 +1428,12 @@
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv fd)))))
 
-(define posix-read
+(define read
   (case-lambda
    ((fd buffer)
-    (posix-read fd buffer #f))
+    (read fd buffer #f))
    ((fd buffer size)
-    (define who 'posix-read)
+    (define who 'read)
     (with-arguments-validation (who)
 	((file-descriptor  fd)
 	 (bytevector	 buffer)
@@ -1454,12 +1455,12 @@
 	  rv
 	(%raise-errno-error who rv fd)))))
 
-(define posix-write
+(define write
   (case-lambda
    ((fd buffer)
-    (posix-write fd buffer #f))
+    (write fd buffer #f))
    ((fd buffer size)
-    (define who 'posix-write)
+    (define who 'write)
     (with-arguments-validation (who)
 	((file-descriptor  fd)
 	 (bytevector	 buffer)
@@ -2631,7 +2632,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (posix-time)
+(define (time)
   (exact (capi.posix-time)))
 
 (define (gettimeofday)

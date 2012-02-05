@@ -7405,7 +7405,7 @@ This function is the same of @func{delete-file} defined by @rnrs{6}.
 @end defun
 
 
-@defun posix-remove @var{pathname}
+@defun remove @var{pathname}
 Interface to the C function @cfunc{remove}, @glibcref{Deleting Files,
 remove}.  Delete the file system entry referenced by @var{pathname},
 which can reference a file or directory.  If successful return
@@ -7620,8 +7620,8 @@ an exception.
 @end defun
 
 
-@defun posix-read @var{fd} @var{buffer}
-@defunx posix-read @var{fd} @var{buffer} @var{size}
+@defun read @var{fd} @var{buffer}
+@defunx read @var{fd} @var{buffer} @var{size}
 Interface to the C function @cfunc{read}, @glibcref{I/O Primitives,
 read}.  Read bytes from the file descriptor @var{fd} and store them in
 the bytevector @var{buffer}; if @var{size} is a fixnum, read @var{size}
@@ -7633,14 +7633,13 @@ fixnum representing the number of bytes read, else raise an exception.
 
 @defun pread @var{fd} @var{buffer} @var{size} @var{off}
 Interface to the C function @cfunc{pread}, @glibcref{I/O Primitives,
-pread}.  Like @func{posix-read}, but start reading at offset @var{off}
-from the start of the file; @var{off} must be a non--negative exact
-integer.
+pread}.  Like @func{read}, but start reading at offset @var{off} from
+the start of the file; @var{off} must be a non--negative exact integer.
 @end defun
 
 
-@defun posix-write @var{fd} @var{buffer}
-@defunx posix-write @var{fd} @var{buffer} @var{size}
+@defun write @var{fd} @var{buffer}
+@defunx write @var{fd} @var{buffer} @var{size}
 Interface to the C function @cfunc{write}, @glibcref{I/O Primitives,
 write}.  Write bytes to the file descriptor @var{fd} from the bytevector
 @var{buffer}; if @var{size} is a fixnum, read @var{size} bytes; if
@@ -7652,9 +7651,8 @@ representing the number of written bytes, else raise an exception.
 
 @defun pwrite @var{fd} @var{buffer} @var{size} @var{off}
 Interface to the C function @cfunc{pwrite}, @glibcref{I/O Primitives,
-pwrite}.  Like @func{posix-write}, but start writing at offset @var{off}
-from the start of the file; @var{off} must be a non--negative exact
-integer.
+pwrite}.  Like @func{write}, but start writing at offset @var{off} from
+the start of the file; @var{off} must be a non--negative exact integer.
 @end defun
 
 
@@ -7777,9 +7775,9 @@ Simple example of process writing to itself through a pipe:
   (prefix (vicare posix) px.))
 
 (let-values (((in ou) (px.pipe)))
-  (px.posix-write ou '#vu8(1 2 3 4) 4)
+  (px.write ou '#vu8(1 2 3 4) 4)
   (let ((bv (make-bytevector 4)))
-    (px.posix-read in bv 4)
+    (px.read in bv 4)
     bv))
 @result{} #vu8(1 2 3 4)
 @end example
@@ -7801,8 +7799,8 @@ parent:
 
     (lambda (pid) ;parent
       (let ((buf (make-bytevector 1)))
-        (px.posix-read  parent-from-child buf 1)
-        (px.posix-write parent-to-child '#vu8(2) 1)
+        (px.read  parent-from-child buf 1)
+        (px.write parent-to-child '#vu8(2) 1)
         buf))
 
     (lambda () ;child
@@ -7817,8 +7815,8 @@ parent:
         (px.close child-stdout))
 
       (let ((buf (make-bytevector 1)))
-        (px.posix-write 1 '#vu8(1) 1)
-        (px.posix-read  0 buf 1)
+        (px.write 1 '#vu8(1) 1)
+        (px.read  0 buf 1)
         (exit 0)))))
 @result{} #vu8(1)
 @end example
@@ -8622,9 +8620,9 @@ be @code{AF_LOCAL}.
   (vicare platform-constants))
 
 (let-values (((a b) (px.socketpair AF_LOCAL SOCK_DGRAM 0)))
-  (px.posix-write a '#vu8(1 2 3 4) 4)
+  (px.write a '#vu8(1 2 3 4) 4)
   (let ((buf (make-bytevector 4)))
-    (px.posix-read b buf 4)
+    (px.read b buf 4)
     (px.shutdown a SHUT_RDWR)
     (px.shutdown b SHUT_RDWR)
     buf))
@@ -9623,7 +9621,7 @@ representing the current processor time, else return false.
 
 @c ------------------------------------------------------------
 
-@defun posix-time
+@defun time
 Interface to the C function @cfunc{time}, @glibcref{Simple Calendar
 Time, time}.  If successful return the calendar time as an exact
 integer, else return false.
@@ -9641,18 +9639,18 @@ raise an exception.
 @defun localtime @var{time}
 Interface to the C function @cfunc{localtime}, @glibcref{Broken-down
 Time, localtime}.  Given an exact integer @var{time} representing the
-local time as returned by the @func{posix-time} function: build and
-return an instance of @code{struct-tm} representing the same time in
-human readable form; if an error occurs raise an exception.
+local time as returned by the @func{time} function: build and return an
+instance of @code{struct-tm} representing the same time in human
+readable form; if an error occurs raise an exception.
 @end defun
 
 
 @defun gmtime @var{time}
 Interface to the C function @cfunc{gmtime}, @glibcref{Broken-down Time,
 gmtime}.  Given an exact integer @var{time} representing the @utc{} time
-as returned by the @func{posix-time} function: build and return an
-instance of @code{struct-tm} representing the same time in human
-readable form; if an error occurs raise an exception.
+as returned by the @func{time} function: build and return an instance of
+@code{struct-tm} representing the same time in human readable form; if
+an error occurs raise an exception.
 @end defun
 
 
@@ -13617,20 +13615,20 @@ descriptor of @code{struct-timeval}.
 @deftypefun ikptr ikrt_posix_localtime (ikptr @var{rtd}, ikptr @var{time}, ikpcb * @var{pcb})
 Interface to the C function @cfunc{localtime}, @glibcref{Broken-down
 Time, localtime}.  Given an exact integer @var{time} representing the
-local time as returned by the @func{posix-time} function: build and
-return an instance of @code{struct-tm} representing the same time in
-human readable form; if an error occurs return false.  @var{rtd} must be
-the type descriptor of @code{struct-tm}.
+local time as returned by the @func{time} function: build and return an
+instance of @code{struct-tm} representing the same time in human
+readable form; if an error occurs return false.  @var{rtd} must be the
+type descriptor of @code{struct-tm}.
 @end deftypefun
 
 
 @deftypefun ikptr ikrt_posix_gmtime (ikptr @var{rtd}, ikptr @var{time}, ikpcb * @var{pcb})
 Interface to the C function @cfunc{gmtime}, @glibcref{Broken-down Time,
 gmtime}.  Given an exact integer @var{time} representing the @utc{} time
-as returned by the @func{posix-time} function: build and return an
-instance of @code{struct-tm} representing the same time in human
-readable form; if an error occurs return false.  @var{rtd} must be the
-type descriptor of @code{struct-tm}.
+as returned by the @func{time} function: build and return an instance of
+@code{struct-tm} representing the same time in human readable form; if
+an error occurs return false.  @var{rtd} must be the type descriptor of
+@code{struct-tm}.
 @end deftypefun
 
 
