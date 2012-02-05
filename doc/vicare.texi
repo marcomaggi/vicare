@@ -7160,6 +7160,13 @@ object.
 @subsubheading Block/unblock signals handling
 
 
+@cindex @bub{} interprocess signals @api{}
+@cindex @bub{} signals @api{}
+@cindex Block/unblock interprocess signals @api{}
+@cindex Interprocess signals, block/unblock @api{}
+@cindex Signals, block/unblock @api{}
+
+
 The block/unblock (@bub{}) @api{} is a simplified interface to detect
 the arrival of interprocess signals; if it does not suit the
 application's model, we should just ignore it.  It is impossible to use
