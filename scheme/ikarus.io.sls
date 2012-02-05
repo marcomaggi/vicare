@@ -2272,11 +2272,18 @@
 ;;; (with-port (port)
 ;;;   (emergency-platform-write-fd (string-append "closing guarded port " port.ID)))
 
-;;;FIXME This CLOSE-PORT is the  whole purpose of having a guardian.  It
-;;;is commented  out to investigate if  it is causing  an "invalid frame
-;;;size" error with  some builds.  Once the problem  is fixed, it should
-;;;be reincluded.  (Marco Maggi; Nov  2, 2011)
-#;	  (close-port port)
+;;;FIXME This CLOSE-PORT is the  whole purpose of having a guardian.  If
+;;;it  is commented  out:  it is  to  investigate if  it  is causing  an
+;;;"invalid frame  size" error  with some builds.   Once the  problem is
+;;;fixed, it should be reincluded.  (Marco Maggi; Nov 2, 2011)
+	  #;(close-port port)
+;;;The code below differs from  CLOSE-PORT because it does not flush the
+;;;buffer.
+	  (with-port (port)
+	    (unless port.closed?
+	      (port.mark-as-closed!)
+	      (when (procedure? port.close)
+		(port.close))))
 	  (close-garbage-collected-ports))))
     (post-gc-hooks (cons close-garbage-collected-ports (post-gc-hooks)))
     G))
