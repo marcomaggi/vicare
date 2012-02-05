@@ -166,6 +166,11 @@
     posix-dup				posix-dup2
     posix-pipe				posix-mkfifo
 
+    ;; memory-mapped input/output
+    posix-mmap				posix-munmap
+    posix-msync				posix-mremap
+    posix-madvise
+
     ;; file system synchronisation
     glibc-sync				glibc-fsync
     glibc-fdatasync
@@ -907,6 +912,25 @@
 
 (define-inline (posix-mkfifo pathname-bv mode)
   (foreign-call "ikrt_posix_mkfifo" pathname-bv mode))
+
+
+;;;; memory-mapped input/output
+
+(define-inline (posix-mmap address length protect flags fd offset)
+  (foreign-call "ikrt_posix_mmap" address length protect flags fd offset))
+
+(define-inline (posix-munmap address length)
+  (foreign-call "ikrt_posix_munmap" address length))
+
+(define-inline (posix-msync address length flags)
+  (foreign-call "ikrt_posix_msync" address length flags))
+
+(define-inline (posix-mremap address length new-length flags)
+  (foreign-call "ikrt_posix_mremap"  address length new-length flags))
+
+(define-inline (posix-madvise address length advice)
+  (foreign-call "ikrt_posix_madvise" address length advice))
+
 
 
 ;;;; file system synchronisation

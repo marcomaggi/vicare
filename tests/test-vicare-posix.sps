@@ -29,6 +29,8 @@
 (import (vicare)
   (prefix (vicare posix)
 	  px.)
+  (prefix (vicare ffi)
+	  ffi.)
   (vicare platform-constants)
   (vicare syntactic-extensions)
   (checks))
@@ -910,6 +912,54 @@
 	  => `(#f ,ou #f))
       (px.close in)
       (px.close ou)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'mmap))
+
+  (check
+      (let* ((page-size	4096 #;(glibc.sysconf _SC_PAGESIZE))
+	     (ptr	(px.mmap #f page-size
+				 (fxior PROT_READ PROT_WRITE)
+				 (fxior MAP_PRIVATE MAP_ANONYMOUS)
+				 0 0)))
+	(px.munmap ptr page-size)
+	(ffi.pointer? ptr))
+    => #t)
+
+  (check	;msync
+      (let* ((page-size	4096 #;(glibc.sysconf _SC_PAGESIZE))
+	     (ptr	(px.mmap #f page-size
+				 (fxior PROT_READ PROT_WRITE)
+				 (fxior MAP_PRIVATE MAP_ANONYMOUS)
+				 0 0)))
+	(px.msync ptr page-size 0)
+	(px.munmap ptr page-size)
+	(ffi.pointer? ptr))
+    => #t)
+
+  (check	;mremap
+      (let* ((page-size	4096 #;(glibc.sysconf _SC_PAGESIZE))
+	     (ptr	(px.mmap #f page-size
+				 (fxior PROT_READ PROT_WRITE)
+				 (fxior MAP_PRIVATE MAP_ANONYMOUS)
+				 0 0))
+	     (ptr	(px.mremap ptr page-size (* 2 page-size) MREMAP_MAYMOVE)))
+	(px.munmap ptr page-size)
+	(ffi.pointer? ptr))
+    => #t)
+
+  (check	;madvise
+      (let* ((page-size	4096 #;(glibc.sysconf _SC_PAGESIZE))
+	     (ptr	(px.mmap #f page-size
+				 (fxior PROT_READ PROT_WRITE)
+				 (fxior MAP_PRIVATE MAP_ANONYMOUS)
+				 0 0)))
+	(px.madvise ptr page-size MADV_NORMAL)
+	(px.munmap ptr page-size)
+	(ffi.pointer? ptr))
+    => #t)
 
   #t)
 

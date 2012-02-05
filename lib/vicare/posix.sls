@@ -127,6 +127,11 @@
     dup					dup2
     pipe				mkfifo
 
+    ;; memory-mapped input/output
+    mmap				munmap
+    msync				mremap
+    madvise
+
     ;; sockets
     make-sockaddr_un
     sockaddr_un.pathname		sockaddr_un.pathname/string
@@ -274,6 +279,10 @@
   (and (or (fixnum? obj) (bignum? obj))
        (<= 0 obj SIZE_T_MAX)))
 
+(define-inline (%platform-off_t? obj)
+  (and (or (fixnum? obj) (bignum? obj))
+       (<= OFF_T_MIN obj OFF_T_MAX)))
+
 
 ;;;; arguments validation
 
@@ -306,6 +315,14 @@
 (define-argument-validation (boolean/fixnum who obj)
   (or (fixnum? obj) (boolean? obj))
   (assertion-violation who "expected boolean or fixnum as argument" obj))
+
+(define-argument-validation (pointer who obj)
+  (ffi.pointer? obj)
+  (assertion-violation who "expected pointer as argument" obj))
+
+(define-argument-validation (pointer/false who obj)
+  (or (not obj) (ffi.pointer? obj))
+  (assertion-violation who "expected false or pointer as argument" obj))
 
 (define-argument-validation (fixnum/pointer/false who obj)
   (or (not obj) (fixnum? obj) (ffi.pointer? obj))
@@ -394,10 +411,9 @@
     "expected non-negative exact integer as directory stream position argument" obj))
 
 (define-argument-validation (offset who obj)
-  (and (or (fixnum? obj) (bignum? obj))
-       (<= 0 obj))
+  (%platform-off_t? obj)
   (assertion-violation who
-    "expected non-negative exact integer as offset argument" obj))
+    "expected platform off_t exact integer as offset argument" obj))
 
 (define-argument-validation (false/fd who obj)
   (or (not obj) (%file-descriptor? obj))
@@ -1652,6 +1668,65 @@
       (let ((rv (capi.posix-mkfifo pathname.bv mode)))
 	(unless (unsafe.fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname mode))))))
+
+
+;;;; memory-mapped input/output
+
+(define (mmap address length protect flags fd offset)
+  (define who 'mmap)
+  (with-arguments-validation (who)
+      ((pointer/false	address)
+       (platform-size_t	length)
+       (fixnum		protect)
+       (fixnum		flags)
+       (file-descriptor	fd)
+       (offset		offset))
+    (let ((rv (capi.posix-mmap address length protect flags fd offset)))
+      (if (ffi.pointer? rv)
+	  rv
+	(%raise-errno-error who rv address length protect flags fd offset)))))
+
+(define (munmap address length)
+  (define who 'munmap)
+  (with-arguments-validation (who)
+      ((pointer		address)
+       (platform-size_t	length))
+    (let ((rv (capi.posix-munmap address length)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv address length)))))
+
+(define (msync address length flags)
+  (define who 'msync)
+  (with-arguments-validation (who)
+      ((pointer		address)
+       (platform-size_t	length)
+       (fixnum		flags))
+    (let ((rv (capi.posix-msync address length flags)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv address length flags)))))
+
+(define (mremap address length new-length flags)
+  (define who 'mremap)
+  (with-arguments-validation (who)
+      ((pointer		address)
+       (platform-size_t	length)
+       (platform-size_t	new-length)
+       (fixnum		flags))
+    (let ((rv (capi.posix-mremap address length new-length flags)))
+      (if (ffi.pointer? rv)
+	  rv
+	(%raise-errno-error who rv address length new-length flags)))))
+
+(define (madvise address length advice)
+  (define who 'madvise)
+  (with-arguments-validation (who)
+      ((pointer		address)
+       (platform-size_t	length)
+       (fixnum		advice))
+    (let ((rv (capi.posix-madvise address length advice)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv address length advice)))))
+
 
 
 ;;;; sockets

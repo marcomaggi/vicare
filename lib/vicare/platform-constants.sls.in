@@ -8,7 +8,7 @@
 ;;;	Export an  identifier syntax  for each platform  constant.  This
 ;;;	library can be used also by Vicare's source code.
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -36,6 +36,8 @@
     SIZEOF_SIZE_T	SIZEOF_SSIZE_T
     SIZE_T_MAX
     SSIZE_T_MAX		SSIZE_T_MIN
+    SIZEOF_OFF_T
+    OFF_T_MAX		OFF_T_MIN
 
     CHAR_BIT		SCHAR_MIN	SCHAR_MAX
     UCHAR_MAX		CHAR_MIN	CHAR_MAX
@@ -133,6 +135,12 @@
     PROT_READ		PROT_WRITE	PROT_EXEC
     PROT_NONE		MS_SYNC		MS_ASYNC
     MREMAP_MAYMOVE
+
+    MADV_NORMAL		MADV_RANDOM	MADV_SEQUENTIAL
+    MADV_WILLNEED	MADV_DONTNEED
+    POSIX_MADV_NORMAL		POSIX_MADV_RANDOM
+    POSIX_MADV_SEQUENTIAL	POSIX_MADV_WILLNEED
+    POSIX_MADV_DONTNEED
 
 ;;; select related symbols
     FD_SETSIZE
@@ -476,6 +484,7 @@
 (define-inline-constant SIZEOF_LONG_LONG	@SIZEOF_LONG_LONG@)
 (define-inline-constant SIZEOF_SIZE_T		@SIZEOF_SIZE_T@)
 (define-inline-constant SIZEOF_SSIZE_T		@SIZEOF_SSIZE_T@)
+(define-inline-constant SIZEOF_OFF_T		@SIZEOF_OFF_T@)
 
 (define-inline-constant U32MAX		4294967295)	#;(- (expt 2 32) 1)
 (define-inline-constant U32MIN		0)
@@ -501,6 +510,16 @@
 
 (define-syntax SSIZE_T_MIN
   (if (= 4 @SIZEOF_SSIZE_T@)
+      (identifier-syntax S32MIN)
+    (identifier-syntax S64MIN)))
+
+(define-syntax OFF_T_MAX
+  (if (= 4 @SIZEOF_OFF_T@)
+      (identifier-syntax S32MAX)
+    (identifier-syntax S64MAX)))
+
+(define-syntax OFF_T_MIN
+  (if (= 4 @SIZEOF_OFF_T@)
       (identifier-syntax S32MIN)
     (identifier-syntax S64MIN)))
 
@@ -695,6 +714,17 @@
 (define-inline-constant MS_SYNC			@VALUEOF_MS_SYNC@)
 (define-inline-constant MS_ASYNC		@VALUEOF_MS_ASYNC@)
 (define-inline-constant MREMAP_MAYMOVE		@VALUEOF_MREMAP_MAYMOVE@)
+
+(define-inline-constant MADV_NORMAL		@VALUEOF_MADV_NORMAL@)
+(define-inline-constant MADV_RANDOM		@VALUEOF_MADV_RANDOM@)
+(define-inline-constant MADV_SEQUENTIAL		@VALUEOF_MADV_SEQUENTIAL@)
+(define-inline-constant MADV_WILLNEED		@VALUEOF_MADV_WILLNEED@)
+(define-inline-constant MADV_DONTNEED		@VALUEOF_MADV_DONTNEED@)
+(define-inline-constant POSIX_MADV_NORMAL	@VALUEOF_POSIX_MADV_NORMAL@)
+(define-inline-constant POSIX_MADV_RANDOM	@VALUEOF_POSIX_MADV_RANDOM@)
+(define-inline-constant POSIX_MADV_SEQUENTIAL	@VALUEOF_POSIX_MADV_SEQUENTIAL@)
+(define-inline-constant POSIX_MADV_WILLNEED	@VALUEOF_POSIX_MADV_WILLNEED@)
+(define-inline-constant POSIX_MADV_DONTNEED	@VALUEOF_POSIX_MADV_DONTNEED@)
 
 (define-inline-constant FD_SETSIZE		@VALUEOF_FD_SETSIZE@)
 

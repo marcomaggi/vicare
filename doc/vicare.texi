@@ -6777,6 +6777,7 @@ set to @false{}.
 * posix link::                  Hard and symbolic links.
 * posix dir::                   File system directories.
 * posix fd::                    File descriptors.
+* posix mmap::                  Memory-mapped input/output.
 * posix socket::                Network sockets.
 * posix users::                 Users and groups.
 * posix job::                   Job control.
@@ -7962,6 +7963,67 @@ Interface to the C function @cfunc{mkfifo}, @glibcref{FIFO Special
 Files, mkfifo}.  Create a FIFO special file with name @var{pathname} and
 mode @var{mode}, which must be a fixnum.  If successful return
 unspecified values, else raise an exception.
+@end defun
+
+@c page
+@node posix mmap
+@section Memory--mapped input/output
+
+
+@defun mmap @var{address} @var{length} @var{protect} @var{flags} @var{offset}
+Interface to the C function @cfunc{mmap}, @glibcref{Memory-mapped I/O,
+mmap}.  Create a new mapping and return a pointer object referencing the
+region of memory.
+
+@var{address} can be @false{} or a pointer object; @false{} is
+interpreted as a @cnull{} pointer.  @var{length} must be an exact
+integer in the range of the C language type @code{size_t}.
+@var{protect} and @var{flags} must fixnums of flags.  @var{fd} must be a
+fixnum representing a file descriptor.  @var{offset} must be an exact
+integer in the range of the C language type @code{off_t}.
+@end defun
+
+
+@defun munmap @var{address} @var{length}
+Interface to the C function @cfunc{munmap}, @glibcref{Memory-mapped I/O,
+munmap}.  Remove memory mapping.  Return unspecified values.
+
+@var{address} is a pointer object referencing the mapping.  @var{length}
+must be an exact integer in the range of the C language type
+@code{size_t}.
+@end defun
+
+
+@defun msync @var{address} @var{length} @var{flags}
+Interface to the C function @cfunc{msync}, @glibcref{Memory-mapped I/O,
+msync}.  Synchronise the mapping with the underlying file.  Return
+unspecified values.
+
+@var{address} is a pointer object referencing the mapping.  @var{length}
+must be an exact integer in the range of the C language type
+@code{size_t}.  @var{flags} is a fixnum of flags.
+@end defun
+
+
+@defun mremap @var{address} @var{length} @var{new-length} @var{flags}
+Interface to the C function @cfunc{mremap}, @glibcref{Memory-mapped I/O,
+mremap}.  Change the size of an existing memory mapping; return a
+pointer object referencing the new mapping.
+
+@var{address} is a pointer object referencing the mapping.  @var{length}
+and @var{new-length} must be exact integers in the range of the C
+language type @code{size_t}.  @var{flags} is a fixnum of flags.
+@end defun
+
+
+@defun madvise @var{address} @var{length} @var{advice}
+Interface to the C function @cfunc{madvise}, @glibcref{Memory-mapped
+I/O, madvise}.  Synchronise the mapping with the underlying file.
+Return unspecified values.
+
+@var{address} is a pointer object referencing the mapping.  @var{length}
+must be an exact integer in the range of the C language type
+@code{size_t}.  @var{advice} is a fixnum of flags.
 @end defun
 
 @c page

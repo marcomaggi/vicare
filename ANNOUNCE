@@ -94,6 +94,12 @@ Notes for revision 0.2d7
 
   RAISE-SIGNAL has been renamed to raise.
 
+* Added POSIX functions for memory-mapped input/output:
+
+    mmap		munmap
+    msync		mremap
+    madvise
+
 * Added simple block/unblock (BUB) interprocess signal API.
 
 * Added command line  option to "vicare" to enable  entering a debugging

@@ -1340,6 +1340,72 @@ ikrt_posix_mkfifo (ikptr s_pathname, ikptr mode)
 
 
 /** --------------------------------------------------------------------
+ ** Memory-mapped input/output.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_mmap (ikptr s_address, ikptr s_length, ikptr s_protect,
+		 ikptr s_flags, ikptr s_fd, ikptr s_offset, ikpcb * pcb)
+{
+  void *	address = (false_object == s_address)? NULL : IK_POINTER_DATA_VOIDP(s_address);
+  size_t	length  = (size_t)ik_integer_to_llong(s_length);
+  off_t		offset  = (off_t)ik_integer_to_llong(s_length);
+  void *	rv;
+  errno = 0;
+  rv    = mmap(address, length, IK_UNFIX(s_protect), IK_UNFIX(s_flags), IK_NUM_TO_FD(s_fd), offset);
+  if (((void *)-1) != rv)
+    return ika_pointer_alloc(pcb, (ik_ulong)rv);
+  else
+    return ik_errno_to_code();
+}
+ikptr
+ikrt_posix_munmap (ikptr s_address, ikptr s_length)
+{
+  void *	address = IK_POINTER_DATA_VOIDP(s_address);
+  size_t	length  = (size_t)ik_integer_to_llong(s_length);
+  int		rv;
+  errno = 0;
+  rv    = munmap(address, length);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+}
+ikptr
+ikrt_posix_msync (ikptr s_address, ikptr s_length, ikptr s_flags)
+{
+  void *	address = IK_POINTER_DATA_VOIDP(s_address);
+  size_t	length  = (size_t)ik_integer_to_llong(s_length);
+  int		rv;
+  errno = 0;
+  rv    = msync(address, length, IK_UNFIX(s_flags));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+}
+ikptr
+ikrt_posix_mremap (ikptr s_address, ikptr s_length, ikptr s_new_length, ikptr s_flags, ikpcb * pcb)
+{
+  void *	address     = IK_POINTER_DATA_VOIDP(s_address);
+  size_t	length      = (size_t)ik_integer_to_llong(s_length);
+  size_t	new_length  = (size_t)ik_integer_to_llong(s_new_length);
+  void *	rv;
+  errno = 0;
+  rv    = mremap(address, length, new_length, IK_UNFIX(s_flags));
+  if (((void *)-1) != rv)
+    return ika_pointer_alloc(pcb, (ik_ulong)rv);
+  else
+    return ik_errno_to_code();
+}
+ikptr
+ikrt_posix_madvise (ikptr s_address, ikptr s_length, ikptr s_advice)
+{
+  void *	address = IK_POINTER_DATA_VOIDP(s_address);
+  size_t	length  = (size_t)ik_integer_to_llong(s_length);
+  int		rv;
+  errno = 0;
+  rv    = madvise(address, length, IK_UNFIX(s_advice));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+}
+
+
+
+/** --------------------------------------------------------------------
  ** Network sockets: local namespace.
  ** ----------------------------------------------------------------- */
 
