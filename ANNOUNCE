@@ -42,6 +42,8 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d7
 ------------------------
 
+* Boot images were regenerated.
+
 * Added PARAMETRISE as alias for PARAMETERIZE.
 
 * Parameter functions now accept 0, 1 or 2 values and work as follows:
@@ -80,6 +82,16 @@ Notes for revision 0.2d7
 
 * Added  functions  ASCII->STRING and  STRING->ASCII  to convert  Scheme
   strings to and from btevectors holding ASCII representations.
+
+* Scheme functions  and POSIX bindings have  been moved out  of the boot
+  image; they  are only exported  by the (vicare posix)  library.  POSIX
+  functions whose name was prefixed with "posix-" to avoid collision are
+  now unprefixed:
+
+     posix-read		-> read
+     posix-write	-> write
+     posix-remove	-> remove
+     posix-time		-> time
 
 
 Notes for revision 0.2d6
