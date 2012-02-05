@@ -49,8 +49,8 @@
     WSTOPSIG
 
     ;; interprocess signals
-    raise-signal			kill
-    pause
+    (rename (raise-signal	raise))
+    kill				pause
 
     signal-bub-init			signal-bub-final
     signal-bub-acquire

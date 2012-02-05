@@ -7130,7 +7130,7 @@ the process to stop.
 @section Delivering signals to processes
 
 
-@defun raise-signal @var{signum}
+@defun raise @var{signum}
 Interface to the C function @cfunc{raise}, @glibcref{Signaling Yourself,
 raise}.  Send the selected signal to the calling process.  If successful
 return zero, else raise an exception.
@@ -7168,7 +7168,7 @@ a meaningless usage example:
 
 (px.signal-bub-init)
 
-(px.raise-signal SIGUSR1)
+(px.raise SIGUSR1)
 (px.signal-bub-acquire)
 
 (px.signal-bub-delivered? SIGUSR1) @result{} #t

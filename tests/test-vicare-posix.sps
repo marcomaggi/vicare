@@ -1701,13 +1701,13 @@
 
 (parametrise ((check-test-name	'bub))
 
-;;; use raise-signal
+;;; use raise
 
   (check
       (unwind-protect
 	  (begin
 	    (px.signal-bub-init)
-	    (px.raise-signal SIGUSR1)
+	    (px.raise SIGUSR1)
 	    (px.signal-bub-acquire)
 	    (list (px.signal-bub-delivered? SIGUSR1)
 		  (px.signal-bub-delivered? SIGUSR2)))
@@ -1728,7 +1728,7 @@
       (unwind-protect
 	  (begin
 	    (px.signal-bub-init)
-	    (px.raise-signal SIGUSR2)
+	    (px.raise SIGUSR2)
 	    (px.signal-bub-acquire)
 	    (list (px.signal-bub-delivered? SIGUSR1)
 		  (px.signal-bub-delivered? SIGUSR2)))
@@ -1739,8 +1739,8 @@
       (unwind-protect
 	  (begin
 	    (px.signal-bub-init)
-	    (px.raise-signal SIGUSR1)
-	    (px.raise-signal SIGUSR2)
+	    (px.raise SIGUSR1)
+	    (px.raise SIGUSR2)
 	    (px.signal-bub-acquire)
 	    (list (px.signal-bub-delivered? SIGUSR1)
 		  (px.signal-bub-delivered? SIGUSR2)))
@@ -1800,7 +1800,7 @@
       (unwind-protect
 	  (begin
 	    (px.signal-bub-init)
-	    (px.raise-signal SIGUSR1)
+	    (px.raise SIGUSR1)
 	    (px.signal-bub-acquire)
 	    (let ((res (px.signal-bub-delivered? SIGUSR1)))
 	      (list res (px.signal-bub-delivered? SIGUSR2))))
@@ -1813,7 +1813,7 @@
       (unwind-protect
 	  (begin
 	    (px.signal-bub-init)
-	    (px.raise-signal SIGUSR1)
+	    (px.raise SIGUSR1)
 	    (px.signal-bub-acquire)
 	    (px.signal-bub-all-delivered))
 	(px.signal-bub-final))
@@ -1823,8 +1823,8 @@
       (unwind-protect
 	  (begin
 	    (px.signal-bub-init)
-	    (px.raise-signal SIGUSR1)
-	    (px.raise-signal SIGUSR2)
+	    (px.raise SIGUSR1)
+	    (px.raise SIGUSR2)
 	    (px.signal-bub-acquire)
 	    (px.signal-bub-all-delivered))
 	(px.signal-bub-final))
