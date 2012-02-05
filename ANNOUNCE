@@ -68,14 +68,13 @@ Notes for revision 0.2d7
   parameter's guard  function when setting  a new value, but  does *not*
   apply it when restoring the original parameter's value.
 
-* Added   "--disable-glibc"  and   "--disable-linux"   options  to   the
-  "configure"  script to  disable inclusion  of GNU  C  Library specific
-  bindings and Linux specific bindings.
-
-* Fixed bug causing build error when "--enable-libffi" is not used.
+* Added   "--disable-posix",  "--disable-glibc"   and  "--disable-linux"
+  options  to  the "configure"  script  to  disable  inclusion of  POSIX
+  bindings, GNU C Library specific bindings and Linux specific bindings.
 
 * When  "--enable-libffi" is  not  used: the  library  not (vicare  ffi)
-  installed anymore.
+  installed   anymore.     Fixed   bug   causing    build   error   when
+  "--enable-libffi" is not used.
 
 * Added library (vicare weak-hashtables) implementing hashtables holding
   weak references to keys and strong references to values.
@@ -83,10 +82,10 @@ Notes for revision 0.2d7
 * Added  functions  ASCII->STRING and  STRING->ASCII  to convert  Scheme
   strings to and from btevectors holding ASCII representations.
 
-* Scheme functions  and POSIX bindings have  been moved out  of the boot
-  image; they  are only exported  by the (vicare posix)  library.  POSIX
-  functions whose name was prefixed with "posix-" to avoid collision are
-  now unprefixed:
+* BACKWARDS  INCOMPATIBILITY Scheme  functions and  POSIX  bindings have
+  been  moved out  of the  boot  image; they  are only  exported by  the
+  (vicare posix) library.  POSIX  functions whose name was prefixed with
+  "posix-" to avoid collision are now unprefixed:
 
      posix-read		-> read
      posix-write	-> write
