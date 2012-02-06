@@ -440,6 +440,7 @@ ikrt_posix_pause (void)
  ** Miscellaneous stat functions.
  ** ----------------------------------------------------------------- */
 
+#ifdef HAVE_STAT
 static ikptr
 fill_stat_struct (struct stat * S, ikptr D, ikpcb* pcb)
 {
@@ -518,10 +519,11 @@ fill_stat_struct (struct stat * S, ikptr D, ikpcb* pcb)
   pcb->root9 = NULL;
   return 0;
 }
+#endif
+#ifdef HAVE_STAT
 static ikptr
 posix_stat (ikptr filename_bv, ikptr s_stat_struct, int follow_symlinks, ikpcb* pcb)
 {
-#ifdef HAVE_STAT
   char *	filename;
   struct stat	S;
   int		rv;
@@ -529,10 +531,8 @@ posix_stat (ikptr filename_bv, ikptr s_stat_struct, int follow_symlinks, ikpcb* 
   errno	   = 0;
   rv = (follow_symlinks)? stat(filename, &S) : lstat(filename, &S);
   return (0 == rv)? fill_stat_struct(&S, s_stat_struct, pcb) : ik_errno_to_code();
-#else
-  feature_failure(__func__);
-#endif
 }
+#endif
 ikptr
 ikrt_posix_stat (ikptr filename_bv, ikptr s_stat_struct, ikpcb* pcb)
 {
@@ -3075,8 +3075,8 @@ ikrt_posix_getsockopt (ikptr s_sock, ikptr s_level, ikptr s_optname, ikptr s_opt
 }
 ikptr
 ikrt_posix_setsockopt (ikptr s_sock, ikptr s_level, ikptr s_optname, ikptr s_optval)
-#ifdef HAVE_SETSOCKOPT
 {
+#ifdef HAVE_SETSOCKOPT
   void *	optval = IK_BYTEVECTOR_DATA_VOIDP(s_optval);
   socklen_t	optlen = (socklen_t)IK_BYTEVECTOR_LENGTH(s_optval);
   int		rv;
