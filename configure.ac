@@ -164,10 +164,11 @@ AC_FUNC_MMAP
 AC_FUNC_STRFTIME
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([bzero gettimeofday memmove memset mmap munmap sqrt strerror getaddrinfo])
-AC_CHECK_FUNCS([realpath unlink mkdir])
+AC_CHECK_FUNCS([stat lstat realpath unlink mkdir])
 AC_CHECK_TYPES([struct tm],,,[VICARE_INCLUDES])
 AC_CHECK_FUNCS([getenv])
 AC_CHECK_FUNCS([sigaltstack sigfillset sigprocmask sigaction])
+AC_CHECK_TYPES([struct timespec])
 
 AC_CACHE_SAVE
 
@@ -279,8 +280,7 @@ AM_COND_IF([WANT_POSIX],[
   AC_CHECK_FUNCS([waitpid wait])
   VICARE_CHECK_WMACROS([WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG WCOREDUMP WIFSTOPPED WSTOPSIG])
   AC_CHECK_FUNCS([raise kill pause])
-  AC_CHECK_FUNCS([stat lstat fstat access])
-  AC_CHECK_TYPES([struct timespec])
+  AC_CHECK_FUNCS([fstat access])
   AC_CHECK_FUNCS([chown fchown chmod fchmod umask utime utimes lutimes futimes])
   AC_CHECK_FUNCS([link symlink readlink remove rename])
   AC_CHECK_FUNCS([rmdir getcwd chdir fchdir opendir fdopendir readdir closedir rewinddir telldir seekdir])

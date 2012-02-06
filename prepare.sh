@@ -4,7 +4,7 @@
 
 set -xe
 
-(set -xe ;  cd .. && sh BUILD-THE-INFRASTRUCTURE.sh)
+(set -xe ;  cd .. && sh autogen.sh)
 
 prefix=/usr/local
 LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.10/include

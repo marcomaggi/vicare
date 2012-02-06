@@ -78,7 +78,7 @@ After checking out a revision from the repository, we will have to build
 the infrastructure running a script from the top source directory:
 
    $ cd /path/to/vicare
-   $ sh BUILD-THE-INFRASTRUCTURE.sh
+   $ sh autogen.sh
 
 after  that, or  if we  have downloaded  a proper  distribution tarball,
 basically we should do:
