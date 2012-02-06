@@ -136,6 +136,7 @@ AC_INCLUDES_DEFAULT
 #endif
 ])
 
+dnl page
 AC_DEFUN([VICARE_VALUEOF_TEST],[
   VALUEOF_$1="#f"
   AC_CACHE_CHECK([the value of '$2'],
@@ -147,6 +148,10 @@ AC_DEFUN([VICARE_VALUEOF_TEST],[
    VALUEOF_$1="$vicare_cv_valueof_$1"
    AC_SUBST([VALUEOF_$1])])
 
+AC_DEFUN([VICARE_CONSTANT_TEST],[VICARE_VALUEOF_TEST([$1],[$1])])
+AC_DEFUN([VICARE_CONSTANT_TESTS],[m4_map_args_w($1,[VICARE_CONSTANT_TEST(],[)])])
+
+dnl page
 AC_DEFUN([VICARE_STRINGOF_TEST],
   [VALUEOF_$1=""
    AC_CACHE_CHECK([the string value of '$1'],
@@ -164,6 +169,10 @@ AC_DEFUN([VICARE_STRINGOF_TEST],
    VALUEOF_$1="$vicare_cv_stringof_$1"
    AC_SUBST([VALUEOF_$1])])
 
+AC_DEFUN([VICARE_STRING_CONSTANT_TEST],[VICARE_STRINGOF_TEST([$1],[$1])])
+AC_DEFUN([VICARE_STRING_CONSTANT_TESTS],[m4_map_args_w($1,[VICARE_STRING_CONSTANT_TEST(],[)])])
+
+dnl page
 AC_DEFUN([VICARE_DOUBLEOF_TEST],
   [VALUEOF_$1=""
    AC_CACHE_CHECK([the floating point value of '$1'],
@@ -180,5 +189,30 @@ AC_DEFUN([VICARE_DOUBLEOF_TEST],
       rm -f conftest.val])
    VALUEOF_$1="$vicare_cv_doubleof_$1"
    AC_SUBST([VALUEOF_$1])])
+
+AC_DEFUN([VICARE_DOUBLEOF_TESTS],[m4_map_args_w($1,[VICARE_DOUBLEOF_TEST(],[)])])
+
+dnl page
+AC_DEFUN([VICARE_CHECK_WMACRO],
+  [AC_CACHE_CHECK([availability of $1],
+     [vicare_cv_HAVE_$1],
+     [AC_COMPILE_IFELSE([AC_LANG_SOURCE([AC_INCLUDES_DEFAULT
+#ifdef HAVE_SYS_WAIT_H
+#  include <sys/wait.h>
+#endif
+int main (void)
+{
+  int status = 0;
+  int retval = $1(status);
+  return 0;
+}])],
+     [vicare_cv_HAVE_$1=1],
+     [vicare_cv_HAVE_$1=0])])
+  AC_DEFINE_UNQUOTED([HAVE_$1],
+    $vicare_cv_HAVE_$1,
+    [whether the macro $1 is available])])
+
+AC_DEFUN([VICARE_CHECK_WMACROS],[m4_map_args_w($1,[VICARE_CHECK_WMACRO(],[)])])
+
 
 ### end of file
