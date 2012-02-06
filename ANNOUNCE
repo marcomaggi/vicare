@@ -72,7 +72,7 @@ Notes for revision 0.2d7
   options  to  the "configure"  script  to  disable  inclusion of  POSIX
   bindings, GNU C Library specific bindings and Linux specific bindings.
 
-* When  "--enable-libffi" is  not  used: the  library  not (vicare  ffi)
+* When "--enable-libffi"  is not used:  the library (vicare ffi)  is not
   installed   anymore.     Fixed   bug   causing    build   error   when
   "--enable-libffi" is not used.
 
@@ -80,19 +80,24 @@ Notes for revision 0.2d7
   weak references to keys and strong references to values.
 
 * Added  functions  ASCII->STRING and  STRING->ASCII  to convert  Scheme
-  strings to and from btevectors holding ASCII representations.
+  strings to and from bytevectors holding ASCII representations.
 
-* BACKWARDS  INCOMPATIBILITY Scheme  functions and  POSIX  bindings have
+* BACKWARDS  INCOMPATIBILITY Scheme  functions for  POSIX  bindings have
   been  moved out  of the  boot  image; they  are only  exported by  the
-  (vicare posix) library.  POSIX  functions whose name was prefixed with
-  "posix-" to avoid collision are now unprefixed:
+  (vicare  posix) library.   POSIX functions  whose names  were prefixed
+  with "posix-" to avoid collision are now unprefixed:
 
      posix-read		-> read
      posix-write	-> write
      posix-remove	-> remove
      posix-time		-> time
 
-  RAISE-SIGNAL has been renamed to raise.
+  RAISE-SIGNAL has been renamed  to RAISE.  Collision between names from
+  (vicare) and  names from  (vicare posix) can  be avoided  by prefixing
+  bindings from (vicare posix) in the import spec; example:
+
+     (import (vicare)
+       (prefix (vicare posix) px.))
 
 * Added POSIX functions for memory-mapped input/output:
 
@@ -100,11 +105,12 @@ Notes for revision 0.2d7
     msync		mremap
     madvise
 
-* Added simple block/unblock (BUB) interprocess signal API.
+* Added to (vicar posix) simple block/unblock (BUB) interprocess signals
+  API.
 
-* Added command line  option to "vicare" to enable  entering a debugging
-  REPL  whenever the  interprocess signal  SIGINT is  received.   It was
-  enabled by default, not it is disabled by default.
+* Added  command  line  option  to  the "vicare"  executable  to  enable
+  entering a  debugging REPL whenever the interprocess  signal SIGINT is
+  received.  It was enabled by default, now it is disabled by default.
 
 
 Notes for revision 0.2d6
