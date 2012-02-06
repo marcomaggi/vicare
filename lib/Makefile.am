@@ -65,7 +65,7 @@ VICARE_INST_RUN	= $(VICARE_INST_ENV) $(VICARE_INST)
 vfasl:
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-all.sps
 if WANT_LIBFFI
-	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-libffi.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-ffi.sps
 endif
 if WANT_POSIX
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-posix.sps
@@ -83,7 +83,7 @@ endif
 vfasl-installed:
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-all.sps
 if WANT_LIBFFI
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-libffi.sps
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-ffi.sps
 endif
 if WANT_POSIX
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-posix.sps
