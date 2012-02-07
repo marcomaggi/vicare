@@ -16871,16 +16871,48 @@ value.
 @end deftypefun
 
 
+@deftypefun ikptr ika_integer_from_sint32 (ikpcb * @var{pcb}, int32_t @var{N})
+@deftypefunx ikptr ika_integer_from_sint64 (ikpcb * @var{pcb}, int64_t @var{N})
+@deftypefunx ikptr ika_integer_from_uint32 (ikpcb * @var{pcb}, uint32_t @var{N})
+@deftypefunx ikptr ika_integer_from_uint64 (ikpcb * @var{pcb}, uint64_t @var{N})
+Build and return a new exact integer object from the given C language
+value.
+@end deftypefun
+
+
+@deftypefun ikptr ika_integer_from_off_t (ikpcb * @var{pcb}, off_t @var{N})
+@deftypefunx ikptr ika_integer_from_ssize_t (ikpcb * @var{pcb}, ssize_t @var{N})
+@deftypefunx ikptr ika_integer_from_size_t (ikpcb * @var{pcb}, size_t @var{N})
+Build and return a new exact integer object from the given C language
+value.
+@end deftypefun
+
+
 @deftypefun int ik_integer_to_int (ikptr @var{X})
 @deftypefunx long ik_integer_to_long (ikptr @var{X})
 @deftypefunx ik_llong ik_integer_to_llong (ikptr @var{X})
 @deftypefunx ik_uint ik_integer_to_uint (ikptr @var{X})
 @deftypefunx ik_ulong ik_integer_to_ulong (ikptr @var{X})
 @deftypefunx ik_ullong ik_integer_to_ullong (ikptr @var{X})
-@deftypefunx int32_t ik_integer_to_sint32 (ikptr @var{X})
+Return a C language number from a Scheme exact integer object.  The
+object @var{X} must be in the correct range for the requested
+conversion.
+@end deftypefun
+
+
+@deftypefun int32_t ik_integer_to_sint32 (ikptr @var{X})
 @deftypefunx int64_t ik_integer_to_sint64 (ikptr @var{X})
 @deftypefunx uint32_t ik_integer_to_uint32 (ikptr @var{X})
 @deftypefunx uint64_t ik_integer_to_uint64 (ikptr @var{X})
+Return a C language number from a Scheme exact integer object.  The
+object @var{X} must be in the correct range for the requested
+conversion.
+@end deftypefun
+
+
+@deftypefun off_t ik_integer_to_off_t (ikptr @var{x})
+@deftypefunx size_t ik_integer_to_size_t (ikptr @var{x})
+@deftypefunx ssize_t ik_integer_to_ssize_t (ikptr @var{x})
 Return a C language number from a Scheme exact integer object.  The
 object @var{X} must be in the correct range for the requested
 conversion.

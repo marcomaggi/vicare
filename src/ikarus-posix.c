@@ -578,6 +578,9 @@ ikrt_posix_file_size(ikptr s_filename, ikpcb* pcb)
   errno	   = 0;
   rv	   = stat(filename, &S);
   if (0 == rv) {
+#if 1
+    return ika_integer_from_off_t(pcb, S.st_size);
+#else
     if (sizeof(off_t) == sizeof(long))
       return ika_integer_from_ulong(pcb, S.st_size);
     else if (sizeof(off_t) == sizeof(long long))
@@ -588,6 +591,7 @@ ikrt_posix_file_size(ikptr s_filename, ikpcb* pcb)
       ik_abort("unexpected off_t size %d", sizeof(off_t));
       return void_object;
     }
+#endif
   } else
     return ik_errno_to_code();
 #else
@@ -1352,7 +1356,7 @@ ikrt_posix_pread (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_off)
   buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
   size	   = (size_t)((false_object!=s_size)?
 		      IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
-  off	   = (off_t) ik_integer_to_llong(s_off);
+  off	   = ik_integer_to_off_t(s_off);
   errno	   = 0;
   rv	   = pread(IK_NUM_TO_FD(s_fd), buffer, size, off);
   return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
@@ -1378,7 +1382,7 @@ ikrt_posix_write (ikptr s_fd, ikptr s_buffer, ikptr s_size)
 #endif
 }
 ikptr
-ikrt_posix_pwrite (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr off_num)
+ikrt_posix_pwrite (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_offset)
 {
 #ifdef HAVE_PWRITE
   void *	buffer;
@@ -1388,7 +1392,7 @@ ikrt_posix_pwrite (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr off_num)
   buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
   size	   = (size_t)((false_object!=s_size)?
 		      IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
-  off	   = (off_t) ik_integer_to_llong(off_num);
+  off	   = ik_integer_to_off_t(s_offset);
   errno	   = 0;
   rv	   = pwrite(IK_NUM_TO_FD(s_fd), buffer, size, off);
   return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
@@ -1402,10 +1406,10 @@ ikrt_posix_lseek (ikptr s_fd, ikptr s_off, ikptr s_whence, ikpcb * pcb)
 #ifdef HAVE_LSEEK
   off_t		off;
   off_t		rv;
-  off	 = ik_integer_to_llong(s_off);
+  off	 = ik_integer_to_off_t(s_off);
   errno	 = 0;
   rv	 = lseek(IK_NUM_TO_FD(s_fd), off, IK_UNFIX(s_whence));
-  return (0 <= rv)? ika_integer_from_llong(pcb, (long long)rv) : ik_errno_to_code();
+  return (0 <= rv)? ika_integer_from_off_t(pcb, rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -1429,7 +1433,7 @@ ikrt_posix_readv (ikptr s_fd, ikptr s_buffers, ikpcb * pcb)
   }
   errno	   = 0;
   rv	   = readv(IK_NUM_TO_FD(s_fd), bufs, number_of_buffers);
-  return (0 <= rv)? ika_integer_from_llong(pcb, (long long)rv) : ik_errno_to_code();
+  return (0 <= rv)? ika_integer_from_ssize_t(pcb, rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -1450,7 +1454,7 @@ ikrt_posix_writev (ikptr s_fd, ikptr s_buffers, ikpcb * pcb)
   }
   errno	   = 0;
   rv	   = writev(IK_NUM_TO_FD(s_fd), bufs, number_of_buffers);
-  return (0 <= rv)? ika_integer_from_llong(pcb, (long long)rv) : ik_errno_to_code();
+  return (0 <= rv)? ika_integer_from_ssize_t(pcb, rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -1726,8 +1730,8 @@ ikrt_posix_mmap (ikptr s_address, ikptr s_length, ikptr s_protect,
 {
 #ifdef HAVE_MMAP
   void *	address = (false_object == s_address)? NULL : IK_POINTER_DATA_VOIDP(s_address);
-  size_t	length  = (size_t)ik_integer_to_llong(s_length);
-  off_t		offset  = (off_t)ik_integer_to_llong(s_length);
+  size_t	length  = ik_integer_to_size_t(s_length);
+  off_t		offset  = ik_integer_to_off_t(s_length);
   void *	rv;
   errno = 0;
   rv    = mmap(address, length, IK_UNFIX(s_protect), IK_UNFIX(s_flags), IK_NUM_TO_FD(s_fd), offset);
@@ -1744,7 +1748,7 @@ ikrt_posix_munmap (ikptr s_address, ikptr s_length)
 {
 #ifdef HAVE_MUNMAP
   void *	address = IK_POINTER_DATA_VOIDP(s_address);
-  size_t	length  = (size_t)ik_integer_to_llong(s_length);
+  size_t	length  = ik_integer_to_size_t(s_length);
   int		rv;
   errno = 0;
   rv    = munmap(address, length);
@@ -1758,7 +1762,7 @@ ikrt_posix_msync (ikptr s_address, ikptr s_length, ikptr s_flags)
 {
 #ifdef HAVE_MSYNC
   void *	address = IK_POINTER_DATA_VOIDP(s_address);
-  size_t	length  = (size_t)ik_integer_to_llong(s_length);
+  size_t	length  = ik_integer_to_size_t(s_length);
   int		rv;
   errno = 0;
   rv    = msync(address, length, IK_UNFIX(s_flags));
@@ -1772,8 +1776,8 @@ ikrt_posix_mremap (ikptr s_address, ikptr s_length, ikptr s_new_length, ikptr s_
 {
 #ifdef HAVE_MREMAP
   void *	address     = IK_POINTER_DATA_VOIDP(s_address);
-  size_t	length      = (size_t)ik_integer_to_llong(s_length);
-  size_t	new_length  = (size_t)ik_integer_to_llong(s_new_length);
+  size_t	length      = ik_integer_to_size_t(s_length);
+  size_t	new_length  = ik_integer_to_size_t(s_new_length);
   void *	rv;
   errno = 0;
   rv    = mremap(address, length, new_length, IK_UNFIX(s_flags));
@@ -1790,7 +1794,7 @@ ikrt_posix_madvise (ikptr s_address, ikptr s_length, ikptr s_advice)
 {
 #ifdef HAVE_MADVISE
   void *	address = IK_POINTER_DATA_VOIDP(s_address);
-  size_t	length  = (size_t)ik_integer_to_llong(s_length);
+  size_t	length  = ik_integer_to_size_t(s_length);
   int		rv;
   errno = 0;
   rv    = madvise(address, length, IK_UNFIX(s_advice));
@@ -3145,7 +3149,7 @@ ikptr
 ikrt_posix_setsockopt_size_t (ikptr s_sock, ikptr s_level, ikptr s_optname, ikptr s_optval_num)
 {
 #ifdef HAVE_SETSOCKOPT
-  size_t	optval = (size_t)ik_integer_to_long(s_optval_num);
+  size_t	optval = ik_integer_to_size_t(s_optval_num);
   socklen_t	optlen = sizeof(size_t);
   int		rv;
   errno = 0;
@@ -3170,7 +3174,7 @@ ikrt_posix_getsockopt_size_t (ikptr s_sock, ikptr s_level, ikptr s_optname, ikpc
     ikptr	s_pair = ika_pair_alloc(pcb);
     pcb->root0 = &s_pair;
     {
-      IK_ASS(IK_CAR(s_pair), ika_integer_from_long(pcb, (long)optval));
+      IK_ASS(IK_CAR(s_pair), ika_integer_from_size_t(pcb, optval));
       IK_CDR(s_pair) = true_object;
     }
     pcb->root0 = NULL;

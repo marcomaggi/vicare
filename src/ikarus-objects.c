@@ -30,6 +30,7 @@
 
 #include "internals.h"
 #include <gmp.h>
+#include <unistd.h> /* for off_t */
 
 
 /** --------------------------------------------------------------------
@@ -447,6 +448,142 @@ ika_integer_from_ullong (ikpcb * pcb, ik_ullong N)
     return ik_normalize_bignum(NUMBER_OF_WORDS, 0, bn);
   }
 }
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ika_integer_from_sint32	(ikpcb* pcb, int32_t N)
+{
+  ikptr	s_fx = IK_FIX(N);
+  if (IK_UNFIX(s_fx) == N)
+    return s_fx;
+  else {
+    switch (sizeof(int32_t)) {
+    case sizeof(int):
+      return ika_integer_from_int   (pcb, (int)N);
+#if 0 /* duplicate case value */
+    case sizeof(long):
+      return ika_integer_from_long  (pcb, (long)N);
+#endif
+    case sizeof(ik_llong):
+      return ika_integer_from_llong (pcb, (ik_llong)N);
+    default:
+      ik_abort("unexpected integers size");
+      return void_object;
+    }
+  }
+}
+ikptr
+ika_integer_from_sint64	(ikpcb* pcb, int64_t N)
+{
+  ikptr	s_fx = IK_FIX(N);
+  if (IK_UNFIX(s_fx) == N)
+    return s_fx;
+  else {
+    switch (sizeof(int64_t)) {
+    case sizeof(int):
+      return ika_integer_from_int   (pcb, (int)N);
+#if 0 /* duplicate case value */
+    case sizeof(long):
+      return ika_integer_from_long  (pcb, (long)N);
+#endif
+    case sizeof(ik_llong):
+      return ika_integer_from_llong (pcb, (ik_llong)N);
+    default:
+      ik_abort("unexpected integers size");
+      return void_object;
+    }
+  }
+}
+ikptr
+ika_integer_from_uint32	(ikpcb* pcb, uint32_t N)
+{
+  uint32_t	mxn = most_positive_fixnum;
+  if (N <= mxn) {
+    return IK_FIX(N);
+  } else {
+    switch (sizeof(uint32_t)) {
+    case sizeof(ik_uint):
+      return ika_integer_from_uint   (pcb, (ik_uint)N);
+#if 0 /* duplicate case value */
+    case sizeof(ik_ulong):
+      return ika_integer_from_ulong  (pcb, (ik_ulong)N);
+#endif
+    case sizeof(ik_ullong):
+      return ika_integer_from_ullong (pcb, (ik_ullong)N);
+    default:
+      ik_abort("unexpected integers size");
+      return void_object;
+    }
+  }
+}
+ikptr
+ika_integer_from_uint64	(ikpcb* pcb, uint64_t N)
+{
+  uint64_t	mxn = most_positive_fixnum;
+  if (N <= mxn) {
+    return IK_FIX(N);
+  } else {
+    switch (sizeof(uint64_t)) {
+    case sizeof(ik_uint):
+      return ika_integer_from_uint   (pcb, (ik_uint)N);
+#if 0 /* duplicate case value */
+    case sizeof(ik_ulong):
+      return ika_integer_from_ulong  (pcb, (ik_ulong)N);
+#endif
+    case sizeof(ik_ullong):
+      return ika_integer_from_ullong (pcb, (ik_ullong)N);
+    default:
+      ik_abort("unexpected integers size");
+      return void_object;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ika_integer_from_off_t (ikpcb * pcb, off_t N)
+{
+  switch (sizeof(off_t)) {
+  case sizeof(int64_t):
+    return ika_integer_from_sint64(pcb, (int64_t)N);
+  case sizeof(int32_t):
+    return ika_integer_from_sint32(pcb, (int32_t)N);
+  default:
+    ik_abort("unexpected off_t size %d", sizeof(off_t));
+    return void_object;
+  }
+}
+ikptr
+ika_integer_from_ssize_t (ikpcb * pcb, ssize_t N)
+{
+  switch (sizeof(ssize_t)) {
+  case sizeof(int64_t):
+    return ika_integer_from_sint64(pcb, (int64_t)N);
+  case sizeof(int32_t):
+    return ika_integer_from_sint32(pcb, (int32_t)N);
+  default:
+    ik_abort("unexpected ssize_t size %d", sizeof(ssize_t));
+    return void_object;
+  }
+}
+ikptr
+ika_integer_from_size_t (ikpcb * pcb, size_t N)
+{
+  switch (sizeof(size_t)) {
+  case sizeof(uint64_t):
+    return ika_integer_from_uint64(pcb, (uint64_t)N);
+  case sizeof(int32_t):
+    return ika_integer_from_uint32(pcb, (uint32_t)N);
+  default:
+    ik_abort("unexpected size_t size %d", sizeof(size_t));
+    return void_object;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ika_flonum_from_double (ikpcb* pcb, double N)
 {
@@ -594,6 +731,33 @@ ik_integer_to_sint64 (ikptr x)
     int64_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
     return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
   }
+}
+
+/* ------------------------------------------------------------------ */
+
+off_t
+ik_integer_to_off_t (ikptr x)
+{
+  if (sizeof(off_t) == sizeof(int64_t))
+    return (off_t)ik_integer_to_sint64(x);
+  else
+    return (off_t)ik_integer_to_sint32(x);
+}
+size_t
+ik_integer_to_size_t (ikptr x)
+{
+  if (sizeof(size_t) == sizeof(uint32_t))
+    return (size_t)ik_integer_to_uint32(x);
+  else
+    return (size_t)ik_integer_to_uint64(x);
+}
+ssize_t
+ik_integer_to_ssize_t (ikptr x)
+{
+  if (sizeof(ssize_t) == sizeof(int32_t))
+    return (ssize_t)ik_integer_to_sint32(x);
+  else
+    return (ssize_t)ik_integer_to_sint64(x);
 }
 
 

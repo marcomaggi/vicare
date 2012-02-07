@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <unistd.h> /* for off_t */
 
 
 /** --------------------------------------------------------------------
@@ -503,6 +504,15 @@ ik_decl ikptr	ika_integer_from_uint	(ikpcb* pcb, ik_uint N);
 ik_decl ikptr	ika_integer_from_ulong	(ikpcb* pcb, ik_ulong N);
 ik_decl ikptr	ika_integer_from_ullong	(ikpcb* pcb, ik_ullong N);
 
+ik_decl ikptr	ika_integer_from_sint32	(ikpcb* pcb, int32_t N);
+ik_decl ikptr	ika_integer_from_sint64	(ikpcb* pcb, int64_t N);
+ik_decl ikptr	ika_integer_from_uint32	(ikpcb* pcb, uint32_t N);
+ik_decl ikptr	ika_integer_from_uint64	(ikpcb* pcb, uint64_t N);
+
+ik_decl ikptr	ika_integer_from_off_t	(ikpcb * pcb, off_t N);
+ik_decl ikptr	ika_integer_from_ssize_t(ikpcb * pcb, ssize_t N);
+ik_decl ikptr	ika_integer_from_size_t	(ikpcb * pcb, size_t N);
+
 ik_decl int32_t	 ik_integer_to_sint32	(ikptr x);
 ik_decl int64_t	 ik_integer_to_sint64	(ikptr x);
 ik_decl uint32_t ik_integer_to_uint32	(ikptr x);
@@ -514,6 +524,10 @@ ik_decl ik_llong ik_integer_to_llong	(ikptr x);
 ik_decl ik_uint	 ik_integer_to_uint	(ikptr x);
 ik_decl ik_ulong  ik_integer_to_ulong	(ikptr x);
 ik_decl ik_ullong ik_integer_to_ullong	(ikptr x);
+
+ik_decl off_t	ik_integer_to_off_t	(ikptr x);
+ik_decl size_t	ik_integer_to_size_t	(ikptr x);
+ik_decl ssize_t	ik_integer_to_ssize_t	(ikptr x);
 
 /* inspection */
 ik_decl ikptr	ikrt_positive_bn	(ikptr x);
