@@ -35,6 +35,8 @@ AC_ARG_ENABLE([arguments-validation],
 
 AC_SUBST([VICARE_ARGUMENTS_VALIDATION],[$vicare_ARGUMENTS_VALIDATION])
 
+dnl --------------------------------------------------------------------
+
 AC_ARG_ENABLE([posix],
   [AS_HELP_STRING([--disable-posix],
      [disable bindings to GNU C Library (default is enable)])],
@@ -44,6 +46,8 @@ AC_ARG_ENABLE([posix],
      *) AC_MSG_ERROR([bad value ${enableval} for --enable-posix]) ;;
    esac],[vicare_posix_bindings=true])
 AM_CONDITIONAL([WANT_POSIX],[test x$vicare_posix_bindings = xtrue])
+
+dnl --------------------------------------------------------------------
 
 AC_ARG_ENABLE([glibc],
   [AS_HELP_STRING([--disable-glibc],
@@ -55,6 +59,8 @@ AC_ARG_ENABLE([glibc],
    esac],[vicare_glibc_bindings=true])
 AM_CONDITIONAL([WANT_GLIBC],[test x$vicare_glibc_bindings = xtrue])
 
+dnl --------------------------------------------------------------------
+
 AC_ARG_ENABLE([linux],
   [AS_HELP_STRING([--disable-linux],
      [disable bindings to GNU C Library (default is enable)])],
@@ -64,7 +70,6 @@ AC_ARG_ENABLE([linux],
      *) AC_MSG_ERROR([bad value ${enableval} for --enable-linux]) ;;
    esac],[vicare_linux_bindings=true])
 AM_CONDITIONAL([WANT_LINUX],[test x$vicare_linux_bindings = xtrue])
-
 
 #page
 #### basic system inspection
@@ -759,18 +764,6 @@ AC_CACHE_SAVE
 
 dnl AC_CHECK_LIB(m,sin)
 
-AC_ARG_WITH([pthread],
-  AS_HELP_STRING([--with-pthread],[link executable with pthread (default is no)]),
-  [true],[with_pthread=no])
-vicare_with_pthread=no
-if test x$with_pthread != xno; then
-   vicare_with_pthread=yes
-   AC_CHECK_LIB([pthread],[main])
-fi
-AM_CONDITIONAL([WANT_PTHREAD],[test x$vicare_with_pthread = xyes])
-
-dnl --------------------------------------------------------------------
-
 AC_CHECK_HEADERS([gmp.h],,[AC_MSG_ERROR([
 ERROR: Cannot find libgmp.
 ERROR: You might want to supply CFLAGS=-I</path/to/include> (containing
@@ -785,6 +778,19 @@ ERROR: You might want to supply CFLAGS=-I</path/to/include> (containing
 ERROR: the gmp.h header file), and LDFLAGS=-L</path/to/lib> (containing
 ERROR: libgmp.so) if libgmp is installed in a non-standard location.
 ERROR: libgmp can be obtained from <http://gmplib.org>.])])
+
+dnl --------------------------------------------------------------------
+dnl Optional linking with pthreads
+
+AC_ARG_WITH([pthread],
+  AS_HELP_STRING([--with-pthread],[link executable with pthread (default is no)]),
+  [true],[with_pthread=no])
+vicare_with_pthread=no
+if test x$with_pthread != xno; then
+   vicare_with_pthread=yes
+   AC_CHECK_LIB([pthread],[main])
+fi
+AM_CONDITIONAL([WANT_PTHREAD],[test x$vicare_with_pthread = xyes])
 
 dnl --------------------------------------------------------------------
 dnl Optional binding to Libffi
@@ -826,16 +832,16 @@ dnl Check for Libiconv (optional)
 
 AC_ARG_WITH([iconv],
   AS_HELP_STRING([--with-iconv],[enable support for iconv (default is no)]),
-  [true],[enable_iconv=no])
+  [true],[with_iconv=no])
 
 iconv_val=0
-if test "$enable_iconv" != no; then
+if test "$with_iconv" != no; then
   AC_CHECK_HEADER([iconv.h],[have_iconv_h=yes],[have_iconv_h=no])
   AC_CHECK_LIB([iconv],[iconv_open],[have_iconv=yes],[have_iconv=no])
   if test "$have_iconv" = yes && test "$have_iconv_h" = yes; then
     iconv_val=1
     LIBS="$LIBS -liconv"
-  elif test "$enable_iconv" = yes; then
+  elif test "$with_iconv" = yes; then
     if test "$have_iconv_h" = no; then
       AC_MSG_ERROR([iconv.h cannot be found.
 Please specify the location of the header file using
@@ -851,9 +857,56 @@ Please specify the location of the library file using
   else
     AC_MSG_WARN([iconv not found -- ICONV disabled])
   fi
-fi # "$enable_iconv" != no
+fi # "$with_iconv" != no
 
 AC_DEFINE_UNQUOTED([ENABLE_ICONV],[$iconv_val],[adds support for iconv])
+
+dnl --------------------------------------------------------------------
+dnl Optional binding for GNU Readline
+
+AC_ARG_WITH([readline],
+  AS_HELP_STRING([--with-readline],[enable support for GNU Readline (default is check)]),
+  [true],[with_readline=check])
+
+vicare_with_readline_enabled=no
+vicare_readline_enabled=0
+if test x$with_readline = xyes || test x$with_readline = xcheck
+then
+  AC_CHECK_HEADER([readline.h],[vicare_have_readline_h=yes],[vicare_have_readline_h=no])
+  AC_CHECK_LIB([readline],[readline],[vicare_have_readline=yes],[vicare_have_readline=no])
+  if test x$vicare_have_readline = xyes && test x$vicare_have_readline_h" = xyes
+  then
+    # Both the library and the header were found: success!
+    vicare_with_readline=yes
+    vicare_readline_enabled=1
+    LIBS="$LIBS -lreadline"
+  elif test x$with_readline = xyes
+  then
+    # The user  requested GNU  Readline support or  die, but  either the
+    # header or the library or both were not found.
+    if test x$vicare_have_readline_h = xno
+    then
+      AC_MSG_ERROR([readline.h cannot be found.
+Please specify the location of the header file using
+  ./configure CPPFLAGS=-I<path/to/readline.h>   <other-options ...>
+])
+    fi
+    if test x$vicare_have_readline = xno; then
+      AC_MSG_ERROR([readline library cannot be found.
+Please specify the location of the library file using
+  ./configure LDFLAGS=-L<path/to/readline.ld|dylib|so|etc.>  <other-options ...>
+])
+    fi
+  else
+    # The user  requested GNU Readline support if  available; either the
+    # header or the library or both were not found.
+    AC_MSG_WARN([GNU Readline not found -- support disabled])
+  fi
+fi
+
+AC_DEFINE_UNQUOTED([ENABLE_READLINE],[$vicare_readline_enabled],
+  [enable support for GNU Readline])
+AM_CONDITIONAL([WANT_READLINE],[test x$vicare_with_readline = xyes])
 
 dnl --------------------------------------------------------------------
 dnl Check for CRE2 (optional)

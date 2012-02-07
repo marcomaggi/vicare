@@ -7,6 +7,7 @@ EXTRA_DIST		= compile-all.sps			\
 			  compile-posix.sps			\
 			  compile-glibc.sps			\
 			  compile-linux.sps			\
+			  compile-readline.sps			\
 			  compile-cre2.sps			\
 			  vicare/errno.sls.in			\
 			  vicare/platform-constants.sls.in	\
@@ -44,6 +45,10 @@ if WANT_LINUX
 dist_libvicare_DATA	+= vicare/linux.sls
 endif
 
+if WANT_READLINE
+dist_libvicare_DATA	+= vicare/readline.sls
+endif
+
 if WANT_CRE2
 dist_libvicare_DATA	+= vicare/cre2.sls
 endif
@@ -78,6 +83,9 @@ endif
 if WANT_LINUX
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-linux.sps
 endif
+if WANT_READLINE
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-readline.sps
+endif
 if WANT_CRE2
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-cre2.sps
 endif
@@ -95,6 +103,9 @@ if WANT_GLIBC
 endif
 if WANT_LINUX
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-linux.sps
+endif
+if WANT_READLINE
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-readline.sps
 endif
 if WANT_CRE2
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-cre2.sps

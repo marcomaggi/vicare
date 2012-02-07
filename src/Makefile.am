@@ -23,6 +23,7 @@ SRCS	= \
 	ikarus-winmmap.c		\
 	ikarus-glibc.c			\
 	ikarus-linux.c			\
+	ikarus-readline.c		\
 	internals.h
 
 include_HEADERS		= vicare.h

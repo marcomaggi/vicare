@@ -13,6 +13,7 @@ LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.10/include
     --enable-shared --disable-static            \
     --enable-libffi                             \
     --with-iconv                                \
+    --with-readline                             \
     --with-cre2                                 \
     CFLAGS='-O3 -march=i686 -mtune=i686'        \
     CPPFLAGS="-I${LIBFFI_INCLUDEDIR}"           \
