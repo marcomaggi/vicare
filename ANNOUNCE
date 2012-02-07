@@ -42,6 +42,10 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d8
 ------------------------
 
+* Added  configuration  option  "--with-pthread"  to link  the  "vicare"
+  executable with the pthread library.  The executable was always linked
+  with pthread before, now it is *not* by default.
+
 
 Notes for revision 0.2d7
 ------------------------

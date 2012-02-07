@@ -758,7 +758,18 @@ AC_CACHE_SAVE
 #### external libraries
 
 dnl AC_CHECK_LIB(m,sin)
-AC_CHECK_LIB(pthread, main)
+
+AC_ARG_WITH([pthread],
+  AS_HELP_STRING([--with-pthread],[link executable with pthread (default is no)]),
+  [true],[with_pthread=no])
+vicare_with_pthread=no
+if test x$with_pthread != xno; then
+   vicare_with_pthread=yes
+   AC_CHECK_LIB([pthread],[main])
+fi
+AM_CONDITIONAL([WANT_PTHREAD],[test x$vicare_with_pthread = xyes])
+
+dnl --------------------------------------------------------------------
 
 AC_CHECK_HEADERS([gmp.h],,[AC_MSG_ERROR([
 ERROR: Cannot find libgmp.
