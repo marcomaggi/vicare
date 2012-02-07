@@ -119,8 +119,8 @@ Notes for revision 0.2d7
 
 * Added POSIX function POLL.
 
-* Added to (vicar posix) simple block/unblock (BUB) interprocess signals
-  API.
+* Added  to  (vicare  posix)  simple  block/unblock  (BUB)  interprocess
+  signals API.
 
 * When "--enable-libffi"  is not used:  the library (vicare ffi)  is not
   installed   anymore.     Fixed   bug   causing    build   error   when
