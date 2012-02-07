@@ -913,6 +913,37 @@
       (px.close in)
       (px.close ou)))
 
+;;; --------------------------------------------------------------------
+;;; poll
+
+  (let-values (((in ou) (px.pipe)))
+    (unwind-protect
+	(check
+	    (let* ((vec (vector (vector in 0 0)
+				(vector ou 0 0)))
+		   (rv  (px.poll vec 10)))
+	      (list rv vec))
+	  => `(0 #(#(,in 0 0)
+		   #(,ou 0 0))))
+      (px.close in)
+      (px.close ou)))
+
+  (let-values (((in ou) (px.pipe)))
+    (unwind-protect
+	(check
+	    (begin
+	      (px.write ou '#vu8(1) 1)
+	      (let* ((vec (vector (vector in POLLIN 0)
+				  (vector ou POLLOUT 0)))
+		     (rv  (px.poll vec 10))
+		     (buf (make-bytevector 1)))
+		(px.read in buf 1)
+		(list rv buf vec)))
+	  => `(2 #vu8(1) #(#(,in ,POLLIN  ,POLLIN)
+			   #(,ou ,POLLOUT ,POLLOUT))))
+      (px.close in)
+      (px.close ou)))
+
   #t)
 
 

@@ -38,6 +38,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <grp.h>
+#include <poll.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdint.h>
@@ -1598,6 +1599,38 @@ ikrt_posix_select_fd (ikptr fdx, ikptr sec, ikptr usec, ikpcb * pcb)
     IK_ITEM(vec, 1) = (FD_ISSET(fd, &write_fds))?  fdx : false_object;
     IK_ITEM(vec, 2) = (FD_ISSET(fd, &except_fds))? fdx : false_object;
     return vec;
+  }
+#else
+  feature_failure(__func__);
+#endif
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_poll (ikptr s_fds, ikptr s_timeout)
+{
+#ifdef HAVE_POLL
+  long		nfds    = IK_VECTOR_LENGTH(s_fds);
+  int		timeout = ik_integer_to_int(s_timeout);
+  struct pollfd	fds[nfds];
+  int		rv, i;
+  for (i=0; i<nfds; ++i) {
+    ikptr	S = IK_ITEM(s_fds, i);
+    fds[i].fd      = IK_NUM_TO_FD(IK_ITEM(S, 0));
+    fds[i].events  = IK_UNFIX(IK_ITEM(S, 1));
+    fds[i].revents = 0;
+  }
+  errno = 0;
+  rv    = poll(fds, nfds, timeout);
+  if (-1 == rv)
+    return ik_errno_to_code();
+  else {
+    for (i=0; i<nfds; ++i) {
+      ikptr	S = IK_ITEM(s_fds, i);
+      IK_ITEM(S, 2) = IK_FIX(fds[i].revents);
+    }
+    return IK_FIX(rv);
   }
 #else
   feature_failure(__func__);

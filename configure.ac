@@ -124,7 +124,7 @@ AC_CHECK_HEADERS([assert.h dlfcn.h errno.h fcntl.h signal.h \
                   sys/time.h sys/types.h sys/wait.h time.h \
                   unistd.h])
 
-AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h ftw.h grp.h inttypes.h limits.h mntent.h net/if.h netinet/in.h netdb.h paths.h pwd.h signal.h termios.h sys/mman.h sys/mount.h sys/select.h sys/socket.h sys/times.h sys/timex.h sys/types.h sys/un.h sys/utsname.h sys/uio.h utime.h sys/ioctl.h math.h complex.h fnmatch.h glob.h regex.h wordexp.h])
+AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h ftw.h grp.h inttypes.h limits.h mntent.h net/if.h netinet/in.h netdb.h paths.h pwd.h signal.h termios.h sys/mman.h sys/mount.h poll.h sys/select.h sys/socket.h sys/times.h sys/timex.h sys/types.h sys/un.h sys/utsname.h sys/uio.h utime.h sys/ioctl.h math.h complex.h fnmatch.h glob.h regex.h wordexp.h])
 
 AC_HEADER_TIME
 
@@ -284,7 +284,7 @@ AM_COND_IF([WANT_POSIX],[
   AC_CHECK_FUNCS([chown fchown chmod fchmod umask utime utimes lutimes futimes])
   AC_CHECK_FUNCS([link symlink readlink remove rename])
   AC_CHECK_FUNCS([rmdir getcwd chdir fchdir opendir fdopendir readdir closedir rewinddir telldir seekdir])
-  AC_CHECK_FUNCS([open close read pread write pwrite lseek readv writev select fcntl ioctl dup dup2 pipe mkfifo])
+  AC_CHECK_FUNCS([open close read pread write pwrite lseek readv writev poll select fcntl ioctl dup dup2 pipe mkfifo])
   AC_CHECK_FUNCS([msync mremap madvise])
   AC_CHECK_TYPES([struct sockaddr_un],,,[VICARE_INCLUDES])
   AC_CHECK_TYPES([struct sockaddr_in],,,[VICARE_INCLUDES])
@@ -600,6 +600,9 @@ VICARE_CONSTANT_TESTS([EOF MAXSYMLINKS MAXPATHLEN])
 
 ## select related symbols
 VICARE_CONSTANT_TESTS([FD_SETSIZE])
+
+## poll related symbols
+VICARE_CONSTANT_TESTS([POLLIN POLLPRI POLLOUT POLLRDHUP POLLERR POLLHUP POLLNVAL])
 
 ## max size of string for cuserid()
 VICARE_CONSTANT_TESTS([L_cuserid])

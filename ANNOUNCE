@@ -117,6 +117,8 @@ Notes for revision 0.2d7
     msync		mremap
     madvise
 
+* Added POSIX function POLL.
+
 * Added to (vicar posix) simple block/unblock (BUB) interprocess signals
   API.
 

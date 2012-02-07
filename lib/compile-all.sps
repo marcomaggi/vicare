@@ -26,6 +26,7 @@
 
 #!r6rs
 (import
+  (only (vicare errno))
   (only (vicare platform-constants))
   (only (vicare include))
   (only (vicare syntactic-extensions))

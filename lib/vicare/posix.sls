@@ -123,6 +123,7 @@
     lseek
     readv				writev
     select				select-fd
+    poll
     fcntl				ioctl
     dup					dup2
     pipe				mkfifo
@@ -443,10 +444,15 @@
   (assertion-violation who
     "expected exact integer or 32-bit bytevector as network address argument" obj))
 
+(define-argument-validation (platform-int who obj)
+  (%platform-int? obj)
+  (assertion-violation who
+    "expected exact integer in platform's \"int\" range as argument" obj))
+
 (define-argument-validation (platform-int/boolean who obj)
   (or (boolean? obj) (%platform-int? obj))
   (assertion-violation who
-    "expected exact integer in platform's \"int\" range as argument" obj))
+    "expected boolean or exact integer in platform's \"int\" range as argument" obj))
 
 (define-argument-validation (platform-size_t who obj)
   (%platform-size_t? obj)
@@ -456,6 +462,15 @@
 (define-argument-validation (struct-tm who obj)
   (struct-tm? obj)
   (assertion-violation who "expected instance of struct-tm as argument" obj))
+
+(define-argument-validation (poll-fds who obj)
+  (and (vector? obj) (vector-for-all (lambda (vec)
+				       (and (unsafe.fx= 3 (unsafe.vector-length vec))
+					    (fixnum? (unsafe.vector-ref vec 0))
+					    (fixnum? (unsafe.vector-ref vec 1))
+					    (fixnum? (unsafe.vector-ref vec 2))))
+				     obj))
+  (assertion-violation who "expected vector of data for poll as argument" obj))
 
 
 ;;;; errors handling
@@ -1597,6 +1612,16 @@
 	(values (unsafe.vector-ref rv 0)
 		(unsafe.vector-ref rv 1)
 		(unsafe.vector-ref rv 2))))))
+
+(define (poll fds timeout)
+  (define who 'poll)
+  (with-arguments-validation (who)
+      ((poll-fds	fds)
+       (platform-int	timeout))
+    (let ((rv (capi.posix-poll fds timeout)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(%raise-errno-error who rv fds timeout)))))
 
 ;;; --------------------------------------------------------------------
 

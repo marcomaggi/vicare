@@ -7817,6 +7817,23 @@ reading, writing or an exceptional condition.
 
 @c ------------------------------------------------------------
 
+@defun poll @var{fds} @var{timeout}
+Interface to the C function @cfunc{poll}, see the manual page
+@code{poll(2)}.  Poll for events the file descriptors selected by
+@var{fds}; @var{timeout} must be an exact integer representing the
+timeout in milliseconds.  If successful: return the number of file
+descriptors ready for an event, else raise an exception.
+
+@var{fds} must be a vector of vectors each having @math{3} elements: a
+fixnum representing the file descriptor, a fixnum representing the
+@code{events} field of a @code{struct pollfd}, a fixnum representing the
+@code{revents} field of a @code{struct pollfd}.  On successful return:
+the third element of the subvectors is mutated to represent the events
+for which the file descriptor is ready.
+@end defun
+
+@c ------------------------------------------------------------
+
 @defun fcntl @var{fd} @var{command}
 @defunx fcntl @var{fd} @var{command} @var{arg}
 Interface to the C function @cfunc{fcntl}, @glibcref{Control Operations,

@@ -162,6 +162,7 @@
     posix-lseek
     posix-readv				posix-writev
     posix-select			posix-select-fd
+    posix-poll
     posix-fcntl				posix-ioctl
     posix-dup				posix-dup2
     posix-pipe				posix-mkfifo
@@ -888,6 +889,9 @@
 
 (define-inline (posix-select-fd fd sec usec)
   (foreign-call "ikrt_posix_select_fd" fd sec usec))
+
+(define-inline (posix-poll fds timeout)
+  (foreign-call "ikrt_posix_poll" fds timeout))
 
 ;;; --------------------------------------------------------------------
 

@@ -77,6 +77,9 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_PATHS_H
 #  include <paths.h>
 #endif
+#ifdef HAVE_POLL_H
+#  include <poll.h>
+#endif
 #ifdef HAVE_PWD_H
 #  include <pwd.h>
 #endif
