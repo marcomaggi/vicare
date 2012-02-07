@@ -34,24 +34,34 @@
     ;; calling functions and callbacks
     make-c-callout-maker		make-c-callout-maker/with-errno
     make-c-callback-maker		free-c-callback
-    with-local-storage
 
     ;; raw memory allocation
-    malloc				free
-    realloc				calloc
+    malloc				guarded-malloc
+    realloc				guarded-realloc
+    calloc				guarded-calloc
+    free				memcmp
     memcpy				memmove
     memset				memory-copy
-    memcmp
     memory->bytevector			bytevector->memory
+    bytevector->guarded-memory
+
+    with-local-storage
 
     ;; C strings
-    bytevector->cstring			cstring->bytevector
-    string->cstring			cstring->string
     strlen
     strcmp				strncmp
     strdup				strndup
+    guarded-strdup			guarded-strndup
+    bytevector->cstring			cstring->bytevector
+    bytevector->guarded-cstring
+    string->cstring			cstring->string
+    string->guarded-cstring
+
+    ;; C array of C strings
     bytevectors->argv			argv->bytevectors
+    bytevectors->guarded-argv
     strings->argv			argv->strings
+    strings->guarded-argv
     argv-length
 
     ;; errno interface
@@ -532,7 +542,7 @@
     capi.ffi-pointer-set-c-unsigned-long-long! unsigned-long-long))
 
 
-;;; explicit memory management
+;;; raw memory management
 
 (define (malloc number-of-bytes)
   (define who 'malloc)
@@ -650,6 +660,38 @@
 	  (values rv (unsafe.bytevector-length bv))
 	(values #f #f)))))
 
+;;; --------------------------------------------------------------------
+
+(define %memory-guardian
+  (make-guardian))
+
+(define (%free-allocated-memory)
+  (do ((pointer (%memory-guardian) (%memory-guardian)))
+      ((not pointer))
+    (unless (pointer-null? pointer)
+      (free pointer)
+      (set-pointer-null! pointer))))
+
+(define (guarded-malloc number-of-bytes)
+  (let ((rv (malloc number-of-bytes)))
+    (and rv (%memory-guardian rv))))
+
+(define (guarded-realloc pointer number-of-bytes)
+  (let ((rv (realloc pointer number-of-bytes)))
+    (and rv (begin
+	      (set-pointer-null! pointer)
+	      (%memory-guardian rv)))))
+
+(define (guarded-calloc number-of-elements element-size)
+  (let ((rv (calloc number-of-elements element-size)))
+    (and rv (%memory-guardian rv))))
+
+(define (bytevector->guarded-memory bv)
+  (let-values (((ptr len) (bytevector->memory bv)))
+    (if ptr
+	(values (%memory-guardian ptr) len)
+      (values #f #f))))
+
 
 ;;;; C strings
 
@@ -762,6 +804,32 @@
   (with-arguments-validation (who)
       ((pointer pointer))
     (capi.ffi-argv-length pointer)))
+
+;;; --------------------------------------------------------------------
+
+(define (guarded-strdup pointer)
+  (let ((rv (strdup pointer)))
+    (and rv (%memory-guardian rv))))
+
+(define (guarded-strndup pointer count)
+  (let ((rv (strndup pointer count)))
+    (and rv (%memory-guardian rv))))
+
+(define (bytevector->guarded-cstring bv)
+  (let ((rv (bytevector->cstring bv)))
+    (and rv (%memory-guardian rv))))
+
+(define (string->guarded-cstring str)
+  (let ((rv (bytevector->cstring (string->latin1 str))))
+    (and rv (%memory-guardian rv))))
+
+(define (bytevectors->guarded-argv bvs)
+  (let ((rv (bytevectors->argv bvs)))
+    (and rv (%memory-guardian rv))))
+
+(define (strings->guarded-argv bvs)
+  (let ((rv (strings->argv bvs)))
+    (and rv (%memory-guardian rv))))
 
 
 ;;;; local storage
@@ -1160,6 +1228,8 @@
 
 
 ;;;; done
+
+(post-gc-hooks (cons %free-allocated-memory (post-gc-hooks)))
 
 )
 

@@ -8,11 +8,13 @@ EXTRA_DIST		= compile-all.sps			\
 			  compile-glibc.sps			\
 			  compile-linux.sps			\
 			  compile-cre2.sps			\
+			  vicare/errno.sls.in			\
 			  vicare/platform-constants.sls.in	\
 			  vicare/words.sls.in			\
 			  vicare/installation-configuration.sls.in
 
 dist_libvicare_DATA	= \
+	vicare/errno.sls			\
 	vicare/platform-constants.sls		\
 	vicare/include.sls			\
 	vicare/syntactic-extensions.sls		\

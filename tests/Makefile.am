@@ -127,6 +127,7 @@ TESTS			=	\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
 	test-vicare-parameters.sps			\
+	test-vicare-pointers.sps			\
 	test-vicare-promises.sps			\
 	test-vicare-reader.sps				\
 	test-vicare-round.sps				\
@@ -290,6 +291,7 @@ EXTRA_DIST =	\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
 	test-vicare-parameters.sps			\
+	test-vicare-pointers.sps			\
 	test-vicare-posix.sps				\
 	test-vicare-promises.sps			\
 	test-vicare-reader.sps				\

@@ -1917,6 +1917,10 @@ of @rnrs{6}; @library{vicare} exports the same bindings of
 * iklib timing::                Timing.
 * iklib guardians::             Guardians and garbage collection.
 * iklib io::                    Input/output library.
+* iklib pointers::              Handling pointer objects.
+* iklib memory::                Memory management.
+* iklib cstrings::              Raw C strings.
+* iklib errno::                 Interface to @code{errno}.
 * iklib misc::                  Miscellaneous functions.
 @end menu
 
@@ -5339,202 +5343,19 @@ informations on the internals of @var{port}.
 @end defun
 
 @c page
-@node iklib misc
-@section Miscellaneous functions
-
-
-@defun void
-Return the void value.  It is the value returned by forms that do not
-return a meaningful value.
-@end defun
-
-
-@defun host-info
-Return a string being the value @gnu{} Autoconf assigned to the
-@code{target} variable.  Example: @code{i686-pc-linux-gnu}.
-@end defun
-
-
-@defun apropos @var{key}
-Given a string or symbol @var{key}, search among the internally
-installed libraries all the exported bindings having @var{key} as
-substring of their name and print a report to the standard output port.
-Useful when using the @repl{}.  Example:
-
-@example
-vicare> (apropos "-length")
-*** in library (ikarus):
-(bitwise-length bytevector-length string-length
-  struct-length vector-length)
-
-*** in library (rnrs):
-(bitwise-length bytevector-length string-length
-  vector-length)
-
-*** in library (rnrs arithmetic bitwise):
-(bitwise-length)
-
-*** in library (rnrs base):
-(string-length vector-length)
-
-*** in library (rnrs bytevectors):
-(bytevector-length)
-
-*** in library (vicare):
-(bitwise-length bytevector-length string-length
-  struct-length vector-length)
-
-vicare>
-@end example
-@end defun
-
-
-@defun getenv @var{varname}
-Interface to the C function @cfunc{getenv}, @glibcref{Environment
-Access, getenv}.  Retrieve the value of environment variables.
-@var{variable} must reference a string object representing the name of
-the environment variable.  If the environment variable is set: return a
-string representing its value; else return false.
-
-@example
-(getenv "PATH")
-@result{} "/usr/local/bin:/usr/bin:/bin"
-@end example
-
-The Scheme level representation of environment variables names and
-values is a string, but internally it is a bytevector; strings are
-internally converted to bytevectors using @func{string->utf8}.
-@end defun
-
-
-@defun strerror @var{errno}
-Return a string describing the @code{errno} code @var{errno}.  Makes use
-of the system function @cfunc{strerror}.  If @var{errno} is not a valid
-@code{errno} value: return a string telling it.  As special cases
-@var{errno} can be also @true{}, meaning ``unknown error'', and
-@false{}, meaning ``no error''.
-
-@glibcref{Error Messages, Error Messages}
-@end defun
-
-@c page
-@node ffi
-@chapter Foreign functions interface
-
-
-The library @library{vicare ffi} interfaces with the host operating
-system and other external libraries exposing a C language interface; it
-is suggested to import the @ffi{} library with the prefix @code{ffi.},
-as in the following prelude:
-
-@example
-#!r6rs
-(import (rnrs)
-  (prefix (vicare ffi) ffi.))
-@end example
-
-The facilities of the @library{vicare ffi} give the Scheme program
-unrestricted access to the computer memory, allowing one to allocate,
-access, modify, and free memory as needed.  The facilities also allow
-the Scheme program to @dfn{call out} to system procedures as well as
-allow the native procedures to @dfn{call back} into Scheme.
-
-@menu
-* ffi libffi::                  Installing and using Libffi.
-* ffi memory::                  Memory management.
-* ffi cstrings::                Raw C strings.
-* ffi dl::                      Accessing shared libraries.
-* ffi call::                    Callouts and callbacks.
-* ffi errno::                   Interface to @code{errno}.
-@end menu
-
-@c page
-@node ffi libffi
-@section Installing and using Libffi
-
-
-Currently @value{PRJNAME} implements the foreign--functions interface
-(@ffi{}) using an extenal library: Libffi, originally by Anthony Green.
-Libffi can be found at:
-
-@center @url{http://sourceware.org/libffi/}
-
-@noindent
-and it is distributed under a liberal license (look for it at the site,
-basically we can do everything but remove the original copyright
-notice).
-
-On Unix--like systems, we can install Libffi with the traditional
-sequence:
-
-@example
-$ ./configure [options]
-$ make
-$ make install
-@end example
-
-@noindent
-and the makefile supports the @env{DESTDIR} environment variable for
-installation under a different directory prefix.
-
-@quotation
-@emph{Note:} Libffi version 3.0.10 installs its header files under:
-
-@example
-$@{prefix@}/lib/libffi-3.0.10/include
-@end example
-
-@noindent
-and trying to use the @option{--includedir} option to
-@command{configure} will @strong{not} work in changing this.  It means
-that when configuring @value{PRJNAME} for installation we have to specify where
-the Libffi headers are to be found; @ref{overview install} for details.
-@end quotation
-
-@c page
-@node ffi memory
-@section Memory management
+@node iklib pointers
+@section Handling pointer objects
 
 
 @menu
-* ffi memory intro::            Introduction to managing memory.
-* ffi memory pointer::          Handling pointer values.
-* ffi memory alloc::            Allocating and freeing memory.
-* ffi memory poke::             Poking values.
-* ffi memory peek::             Peeking values.
-* ffi memory ops::              Memory operations.
+* iklib pointers objects::      Handling pointer values.
+* iklib pointers poke::         Poking values.
+* iklib pointers peek::         Peeking values.
 @end menu
 
-@c page
-@node ffi memory intro
-@subsection Introduction to managing memory
-
-
-@value{PRJNAME} Scheme is a managed environment: Scheme objects are
-allocated in a special memory region (the Scheme heap) and have
-type--specific object layouts; this allows the run time system to
-distinguish object types and the garbage collector to locate all
-potentially live objects, and reclaim the memory of dead objects.
-
-Scheme objects are also @emph{opaque} in the sense that the data
-structures used to represent Scheme objects are not exposed, at the
-Scheme level, to the programmer who can only interact with objects
-through an interface.
-
-Unmanaged environments, such as the operating system on which
-@value{PRJNAME} runs, require that the programmer manages the allocation
-and deallocation of system resources herself.  Memory regions, file
-handles, external devices, the screen, etc., are all examples of
-resources whose management must be coordinated among the different parts
-of the system, and this becomes the responsibility of the programmer who
-is wiring the different subsystems together.
-
-The procedures in the @library{vicare ffi} library are meant to provide
-a way to interface with the low level memory operations such as setting
-and getting bytes from specific locations in memory.
 
 @c page
-@node ffi memory pointer
+@node iklib pointers objects
 @subsection Handling pointer values
 
 
@@ -5554,6 +5375,10 @@ location.
 
 @noindent
 pointers also have @func{pointer=?} as specialised comparison predicate.
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
 
 
 @defun pointer? @var{obj}
@@ -5623,124 +5448,7 @@ satisfy the predicate, else return @false{}.
 @end defun
 
 @c page
-@node ffi memory alloc
-@subsection Allocating and freeing memory
-
-
-@defun malloc @var{number-of-bytes}
-@defunx guarded-malloc @var{number-of-bytes}
-Interface to the C function @cfunc{malloc}, @glibcref{Basic Allocation,
-malloc}.  Allocate a block of memory @var{number-of-bytes} wide;
-@var{number-of-bytes} must be a non--negative fixnum.  If successful
-return a pointer object, else return @false{}.
-
-Memory allocated by @func{malloc} must be released by @func{free};
-memory allocated by @func{guarded-malloc} is automatically released
-whenever the returned pointer object is garbage collected.
-@end defun
-
-
-@defun realloc @var{pointer} @var{number-of-bytes}
-@defunx guarded-realloc @var{pointer} @var{number-of-bytes}
-Interface to the C function @cfunc{realloc}, @glibcref{Changing Block
-Size, realloc}.  Reallocate the block of memory referenced by
-@var{pointer} to the new size @var{number-of-bytes}, which must be a
-non--negative fixnum.
-
-If successful: mutate @var{pointer} to reference a the new memory block
-and return @var{pointer} itself.  If an error occurs: return @false{}
-and leave untouched both @var{pointer} and its referenced memory.
-
-Memory allocated by @func{realloc} must be released by @func{free};
-memory allocated by @func{guarded-realloc} is automatically released
-whenever the returned pointer object is garbage collected.
-@end defun
-
-
-@defun calloc @var{number-of-elements} @var{element-size}
-@defunx guarded-calloc @var{number-of-elements} @var{element-size}
-Interface to the C function @cfunc{calloc}, @glibcref{Allocating Cleared
-Space, calloc}.  Allocate and clear to zero a block of memory capable of
-holding @var{number-of-elements} each @var{element-size} wide; both the
-arguments must be non--negative fixnums.  If successful return a pointer
-object, else return @false{}.
-
-Memory allocated by @func{calloc} must be released by @func{free};
-memory allocated by @func{guarded-calloc} is automatically released
-whenever the returned pointer object is garbage collected.
-@end defun
-
-
-@defun free @var{pointer}
-Release the memory referenced by @var{pointer}, which must be the return
-value of @cfunc{malloc}, @cfunc{realloc}, @cfunc{calloc} or a similar
-system procedure.  @var{pointer} is mutated to reference the @cnull{}
-pointer.
-
-If memory allocated by a guarding function is released by @func{free}:
-@value{PRJNAME} will @strong{not} try to automatically release the old
-memory again.
-
-If @var{pointer} is @cnull{} nothing happens.
-@end defun
-
-
-@defun with-local-storage @var{lengths} @var{proc}
-Call @var{proc} with arguments being pointers to memory blocks allocated
-just for the dynamic extent of @var{proc}.  The number and size of the
-memory blocks is determined by @var{lengths}, which must be a vector of
-non--negative fixnums.
-
-@ignore
-@c This is not clear, so far letting the flow go through with an
-@c exception seems to work (Marco Maggi; Dec  7, 2011)
-
-We must not let control flow go through a call to
-@func{with-local-storage} by raising an exception.  @var{proc}
-@strong{must} return to the caller.
-@end ignore
-
-@strong{NOTE} We must not let control flow go through a call to
-@func{with-local-storage} with an escaping continuation.
-
-@example
-#!r6rs
-(import (rnrs)
-  (prefix (vicare ffi) ffi.))
-
-;; no allocated memory
-(let ((a 1) (b 2))
-  (ffi.with-local-storage '#()
-    (lambda ()
-      (+ a b 4))))
-@result{} 7
-
-;; allocate a single block of 4 bytes
-(let ((a 1) (b 2))
-  (ffi.with-local-storage '#(4)
-    (lambda (&int32)
-      (ffi.pointer-set-c-sint32! &int32 0 4)
-      (+ a b (ffi.pointer-ref-c-sint32 &int32 0)))))
-@result{} 7
-
-;; allocate two blocks of 4 and 8 bytes
-(let ((a 1) (b 2))
-  (ffi.with-local-storage '#(4 8)
-    (lambda (&int32 &int64)
-      (ffi.pointer-set-c-sint32! &int32 0 4)
-      (ffi.pointer-set-c-sint64! &int64 0 8)
-      (+ a b
-         (ffi.pointer-ref-c-sint32 &int32 0)
-         (ffi.pointer-ref-c-sint64 &int64 0)))))
-@result{} 15
-@end example
-
-The memory blocks are actually allocated on the stack of
-@value{PRJNAME}'s runtime.
-@end defun
-
-@c page
-@node ffi memory poke
+@node iklib pointers poke
 @subsection Poking values
 
 
@@ -5750,6 +5458,9 @@ adding an offset to a pointer: all the following functions @strong{do
 not} scale the offset to the size of the poked value; pointer
 arithmetics is performed with byte offsets.
 
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
 
 @macro bitpoker{BYTENUM,BITNUM}
 Set to @var{value} the \BYTENUM\ of memory located at @var{offset} from
@@ -5866,7 +5577,7 @@ Store address of the raw memory location referenced by the pointer
 @end defun
 
 @c page
-@node ffi memory peek
+@node iklib pointers peek
 @subsection Peeking values
 
 
@@ -5875,6 +5586,10 @@ valid pointer object; the @var{offset} argument must be a fixnum.  When
 adding an offset to a pointer: all the following functions @strong{do
 not} scale the offset to the size of the poked value; pointer
 arithmetics is performed with byte offsets.
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
 
 @macro bitpeeker{BITNUM}
 Peek the \BITNUM\ bits located at @var{offset} from @var{pointer} and
@@ -5989,8 +5704,174 @@ systems.
 @end defun
 
 @c page
-@node ffi memory ops
+@node iklib memory
+@section Memory management
+
+
+@menu
+* iklib memory intro::          Introduction to managing memory.
+* iklib memory alloc::          Allocating and freeing memory.
+* iklib memory ops::            Memory operations.
+@end menu
+
+@c page
+@node iklib memory intro
+@subsection Introduction to managing memory
+
+
+@value{PRJNAME} Scheme is a managed environment: Scheme objects are
+allocated in a special memory region (the Scheme heap) and have
+type--specific object layouts; this allows the run time system to
+distinguish object types and the garbage collector to locate all
+potentially live objects, and reclaim the memory of dead objects.
+
+Scheme objects are also @emph{opaque} in the sense that the data
+structures used to represent Scheme objects are not exposed, at the
+Scheme level, to the programmer who can only interact with objects
+through an interface.
+
+Unmanaged environments, such as the operating system on which
+@value{PRJNAME} runs, require that the programmer manages the allocation
+and deallocation of system resources herself.  Memory regions, file
+handles, external devices, the screen, etc., are all examples of
+resources whose management must be coordinated among the different parts
+of the system, and this becomes the responsibility of the programmer who
+is wiring the different subsystems together.
+
+The procedures acting on pointer objects are meant to provide a way to
+interface with the low level memory operations such as setting and
+getting bytes from specific locations in memory.
+
+@c page
+@node iklib memory alloc
+@subsection Allocating and freeing memory
+
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
+
+
+@defun malloc @var{number-of-bytes}
+@defunx guarded-malloc @var{number-of-bytes}
+Interface to the C function @cfunc{malloc}, @glibcref{Basic Allocation,
+malloc}.  Allocate a block of memory @var{number-of-bytes} wide;
+@var{number-of-bytes} must be a non--negative fixnum.  If successful
+return a pointer object, else return @false{}.
+
+Memory allocated by @func{malloc} must be released by @func{free};
+memory allocated by @func{guarded-malloc} is automatically released
+whenever the returned pointer object is garbage collected.
+@end defun
+
+
+@defun realloc @var{pointer} @var{number-of-bytes}
+@defunx guarded-realloc @var{pointer} @var{number-of-bytes}
+Interface to the C function @cfunc{realloc}, @glibcref{Changing Block
+Size, realloc}.  Reallocate the block of memory referenced by
+@var{pointer} to the new size @var{number-of-bytes}, which must be a
+non--negative fixnum.
+
+If successful: mutate @var{pointer} to reference a the new memory block
+and return @var{pointer} itself.  If an error occurs: return @false{}
+and leave untouched both @var{pointer} and its referenced memory.
+
+Memory allocated by @func{realloc} must be released by @func{free};
+memory allocated by @func{guarded-realloc} is automatically released
+whenever the returned pointer object is garbage collected.
+@end defun
+
+
+@defun calloc @var{number-of-elements} @var{element-size}
+@defunx guarded-calloc @var{number-of-elements} @var{element-size}
+Interface to the C function @cfunc{calloc}, @glibcref{Allocating Cleared
+Space, calloc}.  Allocate and clear to zero a block of memory capable of
+holding @var{number-of-elements} each @var{element-size} wide; both the
+arguments must be non--negative fixnums.  If successful return a pointer
+object, else return @false{}.
+
+Memory allocated by @func{calloc} must be released by @func{free};
+memory allocated by @func{guarded-calloc} is automatically released
+whenever the returned pointer object is garbage collected.
+@end defun
+
+
+@defun free @var{pointer}
+Release the memory referenced by @var{pointer}, which must be the return
+value of @cfunc{malloc}, @cfunc{realloc}, @cfunc{calloc} or a similar
+system procedure.  @var{pointer} is mutated to reference the @cnull{}
+pointer.
+
+If memory allocated by a guarding function is released by @func{free}:
+@value{PRJNAME} will @strong{not} try to automatically release the old
+memory again.
+
+If @var{pointer} is @cnull{} nothing happens.
+@end defun
+
+
+@defun with-local-storage @var{lengths} @var{proc}
+Call @var{proc} with arguments being pointers to memory blocks allocated
+just for the dynamic extent of @var{proc}.  The number and size of the
+memory blocks is determined by @var{lengths}, which must be a vector of
+non--negative fixnums.
+
+@ignore
+@c This is not clear, so far letting the flow go through with an
+@c exception seems to work (Marco Maggi; Dec  7, 2011)
+
+We must not let control flow go through a call to
+@func{with-local-storage} by raising an exception.  @var{proc}
+@strong{must} return to the caller.
+@end ignore
+
+@strong{NOTE} We must not let control flow go through a call to
+@func{with-local-storage} with an escaping continuation.
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare ffi) ffi.))
+
+;; no allocated memory
+(let ((a 1) (b 2))
+  (ffi.with-local-storage '#()
+    (lambda ()
+      (+ a b 4))))
+@result{} 7
+
+;; allocate a single block of 4 bytes
+(let ((a 1) (b 2))
+  (ffi.with-local-storage '#(4)
+    (lambda (&int32)
+      (ffi.pointer-set-c-sint32! &int32 0 4)
+      (+ a b (ffi.pointer-ref-c-sint32 &int32 0)))))
+@result{} 7
+
+;; allocate two blocks of 4 and 8 bytes
+(let ((a 1) (b 2))
+  (ffi.with-local-storage '#(4 8)
+    (lambda (&int32 &int64)
+      (ffi.pointer-set-c-sint32! &int32 0 4)
+      (ffi.pointer-set-c-sint64! &int64 0 8)
+      (+ a b
+         (ffi.pointer-ref-c-sint32 &int32 0)
+         (ffi.pointer-ref-c-sint64 &int64 0)))))
+@result{} 15
+@end example
+
+The memory blocks are actually allocated on the stack of
+@value{PRJNAME}'s runtime.
+@end defun
+
+@c page
+@node iklib memory ops
 @subsection Memory operations
+
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
 
 
 @defun memcpy @var{dst} @var{src} @var{count}
@@ -6059,12 +5940,15 @@ collected.
 @end defun
 
 @c page
-@node ffi cstrings
+@node iklib cstrings
 @section Raw C strings
 
 
 The following functions perform operations on raw @ascii{} coded strings
-terminated by a zero byte, for short @asciiz{} strings.
+terminated by a zero byte, for short @asciiz{} strings.  The following
+bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
 
 
 @defun bytevector->cstring @var{bv}
@@ -6211,6 +6095,221 @@ bytes of the strings.
 Return the number of strings in the @cnull{}--terminated array of
 strings referenced by the @var{argv} pointer.
 @end defun
+
+@c page
+@node iklib errno
+@section Interface to @code{errno}
+
+
+Most C language system functions report errors by setting a the special
+variable @code{errno} to some predefined integer constant,
+@glibcref{Checking for Errors, errno}.  The Scheme code accessing
+@code{errno} values should be agnostic with respect to the actual error
+codes; for this to happen we should use the following facilities along
+with bindings from @library{vicare errno}, @ref{errno} for details.
+
+Values for the C language variable @code{errno} are encoded as negated
+fixnum values: if @code{EPERM} is defined to @code{1} at the C language
+level, @value{PRJNAME} defines it as the fixnum @code{-1}; at present
+all the known error codes fit into fixnums range.  One syntax identifier
+binding for each known @code{errno} value is exported by the library
+@library{vicare errno} and reexported by the library @library{vicare
+platform-constants}.
+
+If some error codes are not defined on a platform: the corresponding
+binding evaluates to @true{}.  Notice that if no error occurred
+@code{errno} is set to the fixnum zero.
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
+
+
+@defun errno
+@defunx errno @var{code}
+Interface to the C language level @code{errno} variable to be used with
+the foreign--functions interface (@ffi{}).
+
+When called with no values return the value of the C variable
+@code{errno} right after the last call to a C function performed by the
+current process through the @ffi{}.  When called with one argument: set
+the C variable @code{errno} of the current process to @var{code},
+appropriately handling the coding of the value.
+
+Notice that bindings exported by @library{vicare posix}, @library{vicare
+glibc} and @library{vicare linux} do @strong{not} use this mechanism;
+rather they raise an exception whenever an error happen.
+
+As special cases: when the C variable @code{errno} is set to zero,
+@func{errno} returns @false{}; when @var{code} is @false{}, the C
+variable @code{errno} is set to zero; when @var{code} is @true{}, the C
+variable @code{errno} is set to @code{EFAULT}.
+
+The mechanism is such that the following form:
+
+@example
+(let ((rv (call-foreign-function)))
+  (values rv (errno)))
+@end example
+
+@noindent
+performs a foreign--function call and evaluates to two values: the
+return value from the foreign function and the value of the C variable
+@code{errno} right after the foreign call.
+@end defun
+
+@c page
+@node iklib misc
+@section Miscellaneous functions
+
+
+@defun void
+Return the void value.  It is the value returned by forms that do not
+return a meaningful value.
+@end defun
+
+
+@defun host-info
+Return a string being the value @gnu{} Autoconf assigned to the
+@code{target} variable.  Example: @code{i686-pc-linux-gnu}.
+@end defun
+
+
+@defun apropos @var{key}
+Given a string or symbol @var{key}, search among the internally
+installed libraries all the exported bindings having @var{key} as
+substring of their name and print a report to the standard output port.
+Useful when using the @repl{}.  Example:
+
+@example
+vicare> (apropos "-length")
+*** in library (ikarus):
+(bitwise-length bytevector-length string-length
+  struct-length vector-length)
+
+*** in library (rnrs):
+(bitwise-length bytevector-length string-length
+  vector-length)
+
+*** in library (rnrs arithmetic bitwise):
+(bitwise-length)
+
+*** in library (rnrs base):
+(string-length vector-length)
+
+*** in library (rnrs bytevectors):
+(bytevector-length)
+
+*** in library (vicare):
+(bitwise-length bytevector-length string-length
+  struct-length vector-length)
+
+vicare>
+@end example
+@end defun
+
+
+@defun getenv @var{varname}
+Interface to the C function @cfunc{getenv}, @glibcref{Environment
+Access, getenv}.  Retrieve the value of environment variables.
+@var{variable} must reference a string object representing the name of
+the environment variable.  If the environment variable is set: return a
+string representing its value; else return false.
+
+@example
+(getenv "PATH")
+@result{} "/usr/local/bin:/usr/bin:/bin"
+@end example
+
+The Scheme level representation of environment variables names and
+values is a string, but internally it is a bytevector; strings are
+internally converted to bytevectors using @func{string->utf8}.
+@end defun
+
+
+@defun strerror @var{errno}
+Return a string describing the @code{errno} code @var{errno}.  Makes use
+of the system function @cfunc{strerror}.  If @var{errno} is not a valid
+@code{errno} value: return a string telling it.  As special cases
+@var{errno} can be also @true{}, meaning ``unknown error'', and
+@false{}, meaning ``no error''.
+
+@glibcref{Error Messages, Error Messages}
+@end defun
+
+@c page
+@node ffi
+@chapter Foreign functions interface
+
+
+The library @library{vicare ffi} interfaces with the host operating
+system and other external libraries exposing a C language interface; it
+is suggested to import the @ffi{} library with the prefix @code{ffi.},
+as in the following prelude:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare ffi) ffi.))
+@end example
+
+The facilities of the @library{vicare ffi} give the Scheme program
+unrestricted access to the computer memory, allowing one to allocate,
+access, modify, and free memory as needed.  The facilities also allow
+the Scheme program to @dfn{call out} to system procedures as well as
+allow the native procedures to @dfn{call back} into Scheme.
+
+Additionally, @library{vicare ffi} reexports all the bindings from the
+library @library{ikarus system $foreign}.
+
+@menu
+* ffi libffi::                  Installing and using Libffi.
+* ffi dl::                      Accessing shared libraries.
+* ffi call::                    Callouts and callbacks.
+@end menu
+
+@c page
+@node ffi libffi
+@section Installing and using Libffi
+
+
+Currently @value{PRJNAME} implements the foreign--functions interface
+(@ffi{}) using an extenal library: Libffi, originally by Anthony Green.
+Libffi can be found at:
+
+@center @url{http://sourceware.org/libffi/}
+
+@noindent
+and it is distributed under a liberal license (look for it at the site,
+basically we can do everything but remove the original copyright
+notice).
+
+On Unix--like systems, we can install Libffi with the traditional
+sequence:
+
+@example
+$ ./configure [options]
+$ make
+$ make install
+@end example
+
+@noindent
+and the makefile supports the @env{DESTDIR} environment variable for
+installation under a different directory prefix.
+
+@quotation
+@emph{Note:} Libffi version 3.0.10 installs its header files under:
+
+@example
+$@{prefix@}/lib/libffi-3.0.10/include
+@end example
+
+@noindent
+and trying to use the @option{--includedir} option to
+@command{configure} will @strong{not} work in changing this.  It means
+that when configuring @value{PRJNAME} for installation we have to specify where
+the Libffi headers are to be found; @ref{overview install} for details.
+@end quotation
 
 @c page
 @node ffi dl
@@ -6644,99 +6743,6 @@ Exact integers in the range for @code{int32_t} and @code{uint32_t}.
 @itemx uint64_t
 Exact integers in the range for @code{int64_t} and @code{uint64_t}.
 @end table
-
-@c page
-@node ffi errno
-@section Interface to @code{errno}
-
-
-Values for the C language variable @code{errno} are encoded as negated
-fixnum values; for example: if @code{EPERM} is defined to @code{1} at
-the C language level, @value{PRJNAME} defines it as the fixnum
-@code{-1}.  One syntax identifier binding for each known @code{errno}
-value is exported by the library @library{vicare platform-constants}; if
-some error codes are not defined on a platform: the corresponding
-binding evaluates to @true{}.
-
-The Scheme code accessing @code{errno} values should be agnostic with
-respect to the actual error codes; for this to happen we should use the
-following facilities exported by the library @library{vicare ffi}.  In
-addition, @library{vicare ffi} exports the following bindings also
-exported by @library{vicare posix}:
-
-@example
-&errno            make-errno-condition
-errno-condition?  condition-errno
-strerror
-@end example
-
-
-@defun errno
-@defunx errno @var{code}
-Interface to the C language level @code{errno} variable.  When called
-with no values return the value of the C variable @code{errno} right
-after the last call to a C function performed by the current process.
-When called with one argument: set the C variable @code{errno} of the
-current process to @var{code}, appropriately handling the coding of the
-value.
-
-As special cases: when the C variable @code{errno} is set to zero,
-@func{errno} returns @false{}; when @var{code} is @false{}, the C
-variable @code{errno} is set to zero; when @var{code} is @true{}, the C
-variable @code{errno} is set to @code{EFAULT}.
-
-The mechanism is such that the following form:
-
-@example
-(let ((rv (call-foreign-function)))
-  (values rv (errno)))
-@end example
-
-@noindent
-performs a foreign--function call and evaluates to two values: the
-return value from the foreign function and the value of the C variable
-@code{errno} right after the foreign call.
-@end defun
-
-
-@deffn Syntax errno-code @meta{symbol}
-Verify that @meta{symbol} is one of the symbolic names of @code{errno};
-if successful expand to an expression evaluating to the coded
-@code{errno} value, else raise a syntax violation.
-@end deffn
-
-
-@deffn Syntax case-errno @meta{errno} ((@metao{code} @meta{code} ...) . @meta{cbody}) ...
-@deffnx Syntax case-errno @meta{errno} ((@metao{code} @meta{code} ...) . @meta{cbody}) ... (else . @meta{ebody})
-@deffnx {Auxiliary Syntax} else
-Specialised @func{case} macro for @code{errno} values.  @func{else} is
-the auxiliary keyword exported by @library{rnrs}.  Example:
-
-@example
-#!r6rs
-(import (rnrs)
-  (vicare ffi))
-
-(define identifier "some-port")
-
-(case-errno (errno)
-  ((EACCES EFAULT)
-   (make-i/o-file-protection-error identifier))
-  ((EROFS)
-   (make-i/o-file-is-read-only-error identifier))
-  ((EEXIST)
-   (make-i/o-file-already-exists-error identifier))
-  ((EIO)
-   (make-i/o-error))
-  ((ENOENT)
-   (make-i/o-file-does-not-exist-error identifier))
-  (else
-   (make-irritants-condition (list identifier))))
-@end example
-
-The @meta{code} must be symbols representing @code{errno} codes, they
-are @strong{not} meant to be binding identifiers.
-@end deffn
 
 @c page
 @node posix
@@ -14018,9 +14024,60 @@ be @code{AF_INET} or @code{AF_INET6}.
 @value{PRJNAME} comes with a set of additional libraries.
 
 @menu
+* errno::                       More features for @code{errno}.
 * gcc::                         A toy library interface to @gcc{}.
 * wtables::                     Weak hashtables.
 @end menu
+
+@c page
+@node errno
+@section More features for @code{errno}
+
+
+One syntax identifier binding for each known @code{errno} value is
+exported by the library @library{vicare errno}; @ref{iklib errno} for
+details on @value{PRJNAME} internal encoding of @code{errno} codes.  The
+following bindings are exported by the library @library{vicare errno}.
+
+
+@deffn Syntax errno-code @meta{symbol}
+Verify that @meta{symbol} is one of the symbolic names of @code{errno};
+if successful expand to an expression evaluating to the coded
+@code{errno} value, else raise a syntax violation.
+@end deffn
+
+
+@deffn Syntax case-errno @meta{errno} ((@metao{code} @meta{code} ...) . @meta{cbody}) ...
+@deffnx Syntax case-errno @meta{errno} ((@metao{code} @meta{code} ...) . @meta{cbody}) ... (else . @meta{ebody})
+@deffnx {Auxiliary Syntax} else
+Specialised @func{case} macro for @code{errno} values.  @func{else} is
+the auxiliary keyword exported by @library{rnrs}.  Example:
+
+@example
+#!r6rs
+(import (rnrs)
+  (vicare ffi))
+
+(define identifier "some-port")
+
+(case-errno (errno)
+  ((EACCES EFAULT)
+   (make-i/o-file-protection-error identifier))
+  ((EROFS)
+   (make-i/o-file-is-read-only-error identifier))
+  ((EEXIST)
+   (make-i/o-file-already-exists-error identifier))
+  ((EIO)
+   (make-i/o-error))
+  ((ENOENT)
+   (make-i/o-file-does-not-exist-error identifier))
+  (else
+   (make-irritants-condition (list identifier))))
+@end example
+
+The @meta{code} must be symbols representing @code{errno} codes, they
+are @strong{not} meant to be binding identifiers.
+@end deffn
 
 @c page
 @node gcc

@@ -68,19 +68,31 @@ Notes for revision 0.2d7
   parameter's guard  function when setting  a new value, but  does *not*
   apply it when restoring the original parameter's value.
 
-* Added   "--disable-posix",  "--disable-glibc"   and  "--disable-linux"
-  options  to  the "configure"  script  to  disable  inclusion of  POSIX
-  bindings, GNU C Library specific bindings and Linux specific bindings.
+* Added  command  line  option  to  the "vicare"  executable  to  enable
+  entering a  debugging REPL whenever the interprocess  signal SIGINT is
+  received.  It was enabled by default, now it is disabled by default.
 
-* When "--enable-libffi"  is not used:  the library (vicare ffi)  is not
-  installed   anymore.     Fixed   bug   causing    build   error   when
-  "--enable-libffi" is not used.
+* Added  functions  ASCII->STRING and  STRING->ASCII  to convert  Scheme
+  strings to and from bytevectors holding ASCII representations.
+
+* Functions acting  on pointers, allocating  raw memory and acting  on C
+  strings, that  were exported by (vicare  ffi) but do  not need Libffi,
+  are  now exported  by (vicare)  and  (ikarus) and  also reexported  by
+  (vicare ffi).  This change should be backwards compatible.
+
+* Syntax  bindings associated  to  the "errno"  variable, including  the
+  error  code constants,  are now  exported by  the new  library (vicare
+  errno).     The   constants   are    also   reexported    by   (vicare
+  platform-constants).   The  CASE-ERRNO  and  ERRNO-CODE  syntaxes  are
+  reexported  by   (vicare  ffi).   This  change   should  be  backwards
+  compatible.
 
 * Added library (vicare weak-hashtables) implementing hashtables holding
   weak references to keys and strong references to values.
 
-* Added  functions  ASCII->STRING and  STRING->ASCII  to convert  Scheme
-  strings to and from bytevectors holding ASCII representations.
+* Added   "--disable-posix",  "--disable-glibc"   and  "--disable-linux"
+  options  to  the "configure"  script  to  disable  inclusion of  POSIX
+  bindings, GNU C Library specific bindings and Linux specific bindings.
 
 * BACKWARDS  INCOMPATIBILITY Scheme  functions for  POSIX  bindings have
   been  moved out  of the  boot  image; they  are only  exported by  the
@@ -108,9 +120,9 @@ Notes for revision 0.2d7
 * Added to (vicar posix) simple block/unblock (BUB) interprocess signals
   API.
 
-* Added  command  line  option  to  the "vicare"  executable  to  enable
-  entering a  debugging REPL whenever the interprocess  signal SIGINT is
-  received.  It was enabled by default, now it is disabled by default.
+* When "--enable-libffi"  is not used:  the library (vicare ffi)  is not
+  installed   anymore.     Fixed   bug   causing    build   error   when
+  "--enable-libffi" is not used.
 
 
 Notes for revision 0.2d6
