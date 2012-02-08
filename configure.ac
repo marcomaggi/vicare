@@ -862,44 +862,21 @@ fi # "$with_iconv" != no
 AC_DEFINE_UNQUOTED([ENABLE_ICONV],[$iconv_val],[adds support for iconv])
 
 dnl --------------------------------------------------------------------
-dnl Optional binding for GNU Readline
+dnl Optional binding for GNU Readline or compatible library
 
 AC_ARG_WITH([readline],
-  AS_HELP_STRING([--with-readline],[enable support for GNU Readline (default is check)]),
+  AS_HELP_STRING([--with-readline],[enable support for readline compatible (default is check)]),
   [true],[with_readline=check])
 
 vicare_with_readline_enabled=no
-vicare_readline_enabled=0
 if test x$with_readline = xyes || test x$with_readline = xcheck
 then
-  AC_CHECK_HEADER([readline/readline.h],[vicare_have_readline_h=yes],[vicare_have_readline_h=no])
-  AC_SEARCH_LIBS([tgetent],[curses ncurses ncursesw])
-  AC_CHECK_LIB([readline],[readline],[vicare_have_readline=yes],[vicare_have_readline=no])
-  if test x$vicare_have_readline = xyes && test x$vicare_have_readline_h = xyes
+  AX_LIB_READLINE
+  if test "$ax_cv_lib_readline" != "no"
   then
-    # Both the library and the header were found: success!
-    vicare_with_readline=yes
-    vicare_readline_enabled=1
-    LIBS="$LIBS -lreadline"
-  elif test x$with_readline = xyes
-  then
-    # The user  requested GNU  Readline support or  die, but  either the
-    # header or the library or both were not found.
-    if test x$vicare_have_readline_h = xno
-    then
-      AC_MSG_ERROR([readline.h cannot be found.])
-    fi
-    if test x$vicare_have_readline = xno; then
-      AC_MSG_ERROR([readline library cannot be found.])
-    fi
-  else
-    # The user  requested GNU Readline support if  available; either the
-    # header or the library or both were not found.
-    AC_MSG_WARN([GNU Readline not found -- support disabled])
+    vicare_with_readline_enabled=yes
   fi
 fi
-
-AC_DEFINE_UNQUOTED([ENABLE_READLINE],[$vicare_readline_enabled],[enable support for GNU Readline])
 AM_CONDITIONAL([WANT_READLINE],[test x$vicare_with_readline = xyes])
 
 dnl --------------------------------------------------------------------

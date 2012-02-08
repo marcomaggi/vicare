@@ -1291,7 +1291,25 @@ requested at installation--time with command line options for the
 
 
 @gnu{} Readline is a library implementing advanced command line editing
-features for programs providing a @repl{} interface.
+features for programs providing a @repl{} interface.  When given the
+@option{--with-readline} configuration option, the @command{configure}
+script will search for @gnu{} Readline or a compatible library and, if
+found, the interface will be enabled.  @ref{iklib readline} for the
+@api{} documentation.
+
+The home page of @gnu{} Readline is at:
+
+@center @url{http://www.gnu.org/software/readline/}
+
+@noindent
+a compatible alternative is Editline:
+
+@center @url{http://www.s11n.net/editline/}
+
+@noindent
+and another possible replacement is Libedit:
+
+@center @url{http://sourceforge.net/projects/libedit/}
 
 @c page
 @node overview foreign cre2
@@ -1930,6 +1948,7 @@ of @rnrs{6}; @library{vicare} exports the same bindings of
 * iklib memory::                Memory management.
 * iklib cstrings::              Raw C strings.
 * iklib errno::                 Interface to @code{errno}.
+* iklib readline::              Readline interface.
 * iklib misc::                  Miscellaneous functions.
 @end menu
 
@@ -6166,6 +6185,32 @@ performs a foreign--function call and evaluates to two values: the
 return value from the foreign function and the value of the C variable
 @code{errno} right after the foreign call.
 @end defun
+
+@c page
+@node iklib readline
+@section Readline interface
+
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus}.
+
+
+@defun readline-enabled?
+Return @true{} is support for readline is enabled, return @false{}
+otherwise.
+@end defun
+
+
+@defun readline
+@defunx readline @var{prompt}
+Read a single line and return it as a Scheme string @strong{not}
+terminated by a newline character.  @var{prompt} must be @false{}, a
+bytevector or a string to be used as input prompt; when @false{} or not
+present: no prompt will be displayed.
+@end defun
+
+
+    make-readline-input-port
 
 @c page
 @node iklib misc

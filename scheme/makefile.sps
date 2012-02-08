@@ -291,6 +291,7 @@
     "ikarus.apropos.sls"
     "ikarus.load.sls"
     "ikarus.pretty-print.sls"
+    "ikarus.readline.sls"
     "ikarus.cafe.sls"
     "ikarus.timer.sls"
     "ikarus.time-and-date.sls"
@@ -634,6 +635,9 @@
     (optimizer-output				i v)
     (new-cafe					i v)
     (waiter-prompt-string			i v)
+    (readline-enabled?				i v)
+    (readline					i v)
+    (make-readline-input-port			i v)
     (expand					i v)
     (core-expand				i v)
     (expand/optimize				i v)

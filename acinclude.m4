@@ -1,5 +1,9 @@
 ### custom macros
 
+m4_include([m4/ax_lib_readline.m4])
+
+dnl --------------------------------------------------------------------
+
 m4_define([VICARE_INCLUDES],[
 AC_INCLUDES_DEFAULT
 #ifdef HAVE_ERRNO_H

@@ -155,6 +155,7 @@ EXTRA_DIST= last-revision				\
 	ikarus.promises.sls				\
 	ikarus.foreign-libraries.sls			\
 	ikarus.reader.sls				\
+	ikarus.readline.sls				\
 	ikarus.records.procedural.sls			\
 	ikarus.singular-objects.sls			\
 	ikarus.sort.sls					\

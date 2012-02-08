@@ -37,6 +37,10 @@
 (parametrise ((check-test-name	'reading))
 
   (check
+      (rl.readline-enabled?)
+    => #t)
+
+  (check
       (let ((rv (rl.readline "prompt1> ")))
 	(check-pretty-print (list 'read rv))
 	(string? rv))
