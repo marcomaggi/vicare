@@ -71,6 +71,7 @@
     (readline #f))
    ((prompt)
     (define who 'readline)
+    (assert enabled?)
     (with-arguments-validation (who)
 	((prompt	prompt))
       (with-bytevectors/or-false ((prompt.bv prompt))
@@ -121,6 +122,7 @@
       ;;readline port: the READ function expects the port position to be
       ;;available for debugging purposes.
       device-position)
+    (assert enabled?)
     (with-arguments-validation (who)
 	((prompt-maker	make-prompt))
       (let ((port (make-custom-textual-input-port "readline input port"
@@ -130,6 +132,9 @@
 
 
 ;;;; done
+
+(define enabled?
+  (capi.readline-enabled?))
 
 )
 

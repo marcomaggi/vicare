@@ -48,7 +48,12 @@ Notes for revision 0.2d8
 
 * Added   configuration  option   "--with-readline"  enabling   a  basic
   interface to GNU Readline or compatible library.  By default it checks
-  if a compatible library is available.
+  if  a compatible  library is  available.  The  following  bindings are
+  exported by (vicare) and (icarus):
+
+     readline-enabled?
+     readline
+     make-readline-input-port
 
 * The C language functions allocating Scheme bytevectors by copying from
   raw memory blocks will *silently  truncate* the input if its length is

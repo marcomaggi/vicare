@@ -14179,7 +14179,17 @@ are @strong{not} meant to be binding identifiers.
 
 The library @library{vicare readline} extends the basic readline @api{}
 exported by @library{vicare} (@pxref{iklib readline}) with features
-specific to the @gnu{} Readline library.
+specific to the @gnu{} Readline library.  The following bindings:
+
+@example
+readline-enabled?
+readline
+make-readline-input-port
+@end example
+
+@noindent
+exported by @library{vicare} are reexported by @library{vicare
+readline}.
 
 
 @defun rl-version
