@@ -28,9 +28,16 @@
 #!r6rs
 (library (vicare readline)
   (export
+
+    ;; readline compatible API
     readline-enabled?
     readline
-    make-readline-input-port)
+    make-readline-input-port
+
+;;; --------------------------------------------------------------------
+;;; GNU Readline specific API
+
+    rl-version)
   (import (vicare)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
@@ -50,13 +57,14 @@
 
 ;;;; access to C API
 
-;; (define-inline (capi.readline-enabled?)
-;;   (foreign-call "ik_readline_enabled"))
+(define-inline (capi.rl-version)
+  (foreign-call "ik_readline_rl_version"))
 
 
 ;;;; high-level API
 
-
+(define (rl-version)
+  (capi.rl-version))
 
 
 ;;;; done

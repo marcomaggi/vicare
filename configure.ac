@@ -865,7 +865,8 @@ dnl --------------------------------------------------------------------
 dnl Optional binding for GNU Readline or compatible library
 
 AC_ARG_WITH([readline],
-  AS_HELP_STRING([--with-readline],[enable support for readline compatible (default is check)]),
+  AS_HELP_STRING([--with-readline],
+    [enable support for GNU readline or compatible (default is check)]),
   [true],[with_readline=check])
 
 vicare_with_readline=no
@@ -875,6 +876,16 @@ then
   if test "$ax_cv_lib_readline" != "no"
   then
     vicare_with_readline=yes
+  else
+    if test x$with_readline = xyes ; then
+      # The user requested support readline or die, but readline was not
+      # found.
+      AC_MSG_ERROR([GNU Readline or compatible not found])
+    else
+      # The user  requested optional support for  readline, and readline
+      # was not found.
+      AC_MSG_WARN([GNU Readline or compatible not found])
+    fi
   fi
 fi
 AM_CONDITIONAL([WANT_READLINE],[test x$vicare_with_readline = xyes])

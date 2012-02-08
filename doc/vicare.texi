@@ -6192,7 +6192,9 @@ return value from the foreign function and the value of the C variable
 
 
 The following bindings are exported by the libraries @library{vicare},
-@library{ikarus}.
+@library{ikarus}.  An extended @api{} for @gnu{} Readline is available
+through the @library{vicare readline} library; @ref{readline} for
+details.
 
 
 @defun readline-enabled?
@@ -14102,6 +14104,7 @@ be @code{AF_INET} or @code{AF_INET6}.
 
 @menu
 * errno::                       More features for @code{errno}.
+* readline::                    Extended interface to @gnu{} Readline.
 * gcc::                         A toy library interface to @gcc{}.
 * wtables::                     Weak hashtables.
 @end menu
@@ -14155,6 +14158,25 @@ the auxiliary keyword exported by @library{rnrs}.  Example:
 The @meta{code} must be symbols representing @code{errno} codes, they
 are @strong{not} meant to be binding identifiers.
 @end deffn
+
+@c page
+@node readline
+@section Extended interface to @gnu{} Readline
+
+
+The library @library{vicare readline} extends the basic readline @api{}
+exported by @library{vicare} (@pxref{iklib readline}) with features
+specific to the @gnu{} Readline library.
+
+
+@defun rl-version
+If support for readline is enabled and the linked library is @gnu{}
+Readline: return an exact integer representing the @gnu{} Readline
+version number as encoded in the C symbol @code{RL_READLINE_VERSION};
+else return @false{}.  When this function returns @false{}: no other
+@gnu{} Readline functions must be called, lest the process be aborted.
+@end defun
+
 
 @c page
 @node gcc

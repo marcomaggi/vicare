@@ -101,5 +101,20 @@ ik_readline_readline (ikptr s_prompt, ikpcb * pcb)
 #endif
 }
 
+
+/** --------------------------------------------------------------------
+ ** GNU Readline specific interface.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ik_readline_rl_version (ikpcb * pcb)
+{
+#if ((defined HAVE_LIBREADLINE) && (defined RL_READLINE_VERSION))
+  return ika_integer_from_int(pcb, (int)RL_READLINE_VERSION);
+#else
+  return false_object;
+#endif
+}
+
 
 /* end of file */

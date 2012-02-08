@@ -68,6 +68,14 @@
   #t)
 
 
+(parametrise ((check-test-name	'gnu-readline))
+
+  (when (rl.rl-version)
+    (check-pretty-print (list 'readline-version (rl.rl-version))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
