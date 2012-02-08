@@ -831,35 +831,38 @@ dnl --------------------------------------------------------------------
 dnl Check for Libiconv (optional)
 
 AC_ARG_WITH([iconv],
-  AS_HELP_STRING([--with-iconv],[enable support for iconv (default is no)]),
-  [true],[with_iconv=no])
+  AS_HELP_STRING([--with-iconv],[enable support for iconv (default is check)]),
+  [true],[with_iconv=check])
 
-iconv_val=0
-if test "$with_iconv" != no; then
-  AC_CHECK_HEADER([iconv.h],[have_iconv_h=yes],[have_iconv_h=no])
-  AC_CHECK_LIB([iconv],[iconv_open],[have_iconv=yes],[have_iconv=no])
-  if test "$have_iconv" = yes && test "$have_iconv_h" = yes; then
-    iconv_val=1
+vicare_with_iconv=no
+if test x$with_iconv = xyes || test x$with_iconv = xcheck
+then
+  # Check for iconv header and library.
+  AC_CHECK_HEADER([iconv.h],[vicare_have_iconv_h=yes],[vicare_have_iconv_h=no])
+  AC_CHECK_LIB([iconv],[iconv_open],[vicare_have_iconv=yes],[vicare_have_iconv=no])
+  if test "$vicare_have_iconv" = yes && test "$vicare_have_iconv_h" = yes
+  then
+    # Both the library and the header were found: success!
+    AC_MSG_WARN([iconv support enabled])
+    AC_DEFINE([HAVE_LIBICONV],[1],[define if you have an iconv library])
+    vicare_with_iconv=yes
     LIBS="$LIBS -liconv"
   elif test "$with_iconv" = yes; then
-    if test "$have_iconv_h" = no; then
-      AC_MSG_ERROR([iconv.h cannot be found.
-Please specify the location of the header file using
-  ./configure CPPFLAGS=-I<path/to/iconv.h>   <other-options ...>
-])
+    # The user requested iconv support  or die, but either the header or
+    # the library or both were not found.
+    if test "$vicare_have_iconv_h" = no; then
+      AC_MSG_ERROR([iconv.h cannot be found.])
     fi
-    if test "$have_iconv" = no; then
-      AC_MSG_ERROR([iconv cannot be found.
-Please specify the location of the library file using
-  ./configure LDFLAGS=-L<path/to/iconv.ld|dylib|so|etc.>  <other-options ...>
-])
+    if test "$vicare_have_iconv" = no; then
+      AC_MSG_ERROR([iconv library cannot be found.])
     fi
   else
-    AC_MSG_WARN([iconv not found -- ICONV disabled])
+    # The user requested a check  for optional iconv support, but either
+    # the header or the library or both were not found.
+    AC_MSG_WARN([iconv not found -- support disabled])
   fi
-fi # "$with_iconv" != no
-
-AC_DEFINE_UNQUOTED([ENABLE_ICONV],[$iconv_val],[adds support for iconv])
+fi
+AM_CONDITIONAL([WANT_LIBICONV],[test x$vicare_with_iconv = xyes])
 
 dnl --------------------------------------------------------------------
 dnl Optional binding for GNU Readline or compatible library

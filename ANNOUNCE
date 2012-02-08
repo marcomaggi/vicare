@@ -46,10 +46,17 @@ Notes for revision 0.2d8
   executable with the pthread library.  The executable was always linked
   with pthread before, now it is *not* by default.
 
+* Changed default  for configuration option "--with-iconv"  from "no" to
+  "check", when  the option is  not specified: the  configuration script
+  checks if  an iconv library is available,  but it does not  fail if it
+  does not find it.
+
 * Added   configuration  option   "--with-readline"  enabling   a  basic
-  interface to GNU Readline or compatible library.  By default it checks
-  if  a compatible  library is  available.  The  following  bindings are
-  exported by (vicare) and (icarus):
+  interface to GNU Readline or compatible library.  By default, when the
+  option  is  not  specified:  the  configuration  script  checks  if  a
+  compatible library is  available, but it does not fail  if it does not
+  find  it.   The  following  bindings  are  exported  by  (vicare)  and
+  (icarus):
 
      readline-enabled?
      readline
