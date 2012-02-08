@@ -41,16 +41,14 @@
     => #t)
 
   (check
-      (let ((rv (rl.readline "prompt1> ")))
-	(check-pretty-print (list 'read rv))
-	(string? rv))
-    => #t)
+      (let ((rv (rl.readline "prompt1: type ciao, hit return> ")))
+	(list (string? rv) rv))
+    => '(#t "ciao"))
 
   (check
-      (let ((rv (rl.readline (string->ascii "prompt2> "))))
-	(check-pretty-print (list 'read rv))
-	(string? rv))
-    => #t)
+      (let ((rv (rl.readline (string->ascii "prompt2: type ciao, hit return> "))))
+	(list (string? rv) rv))
+    => '(#t "ciao"))
 
   #t)
 
@@ -58,19 +56,20 @@
 (parametrise ((check-test-name	'port))
 
   (check
-      (let* ((port (rl.make-readline-input-port (lambda () "prompt3> ")))
-	     (rv   (get-line port)))
+      (let* ((port (rl.make-readline-input-port
+		    (lambda () "prompt3: type ciao, hit return> ")))
+	     (rv1  (get-line port))
+	     (rv2  (get-line port)))
 	(close-input-port port)
-	(check-pretty-print (list 'read rv))
-	(string? rv))
-    => #t)
+	(list rv1 rv2))
+    => '("ciao" "ciao"))
 
   #t)
 
 
 (parametrise ((check-test-name	'gnu-readline))
 
-  (when (rl.rl-version)
+  (when (and #f (rl.rl-version))
     (check-pretty-print (list 'readline-version (rl.rl-version))))
 
   #t)

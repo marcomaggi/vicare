@@ -79,17 +79,37 @@
 
 (define (make-readline-input-port make-prompt)
   (define who 'make-readline-input-port)
+  (define buffer (string))
   (define (read! str start count)
     (define who 'make-readline-input-port/read!)
-    (let ((rv (readline (make-prompt))))
-      (if rv
-	  (let ((rv.len (unsafe.string-length rv)))
-	    (if (bignum? (+ 1 rv.len))
-		(error who "input line from readline too long")
+    (let ((buffer.len (unsafe.string-length buffer)))
+      (if (unsafe.fx<= count buffer.len)
+	  ;;Enough data in the buffer to satisfy the request.
+	  (begin
+	    (unsafe.string-copy!/count buffer 0 str start count)
+	    (set! buffer (unsafe.substring buffer count buffer.len))
+	    count)
+	;;Read another line.
+	(let ((rv (readline (make-prompt))))
+	  (if rv
+	      (let ((rv.len (unsafe.string-length rv)))
+		(if (bignum? (+ 1 buffer.len rv.len))
+		    (error who "input line from readline too long")
+		  (begin
+		    (set! buffer (string-append buffer rv "\n"))
+		    (let* ((buffer.len	(unsafe.string-length buffer))
+			   (count	(fxmin count buffer.len)))
+		      (unsafe.string-copy!/count buffer 0 str start count)
+		      (set! buffer (unsafe.substring buffer count buffer.len))
+		      count))))
+	    ;;EOF was found: return the available data.
+	    (if (unsafe.fxzero? buffer.len)
+		0
+	      ;;Flush the buffer.
 	      (begin
-		(unsafe.string-copy!/count rv 0 str start rv.len)
-		rv.len)))
-	0)))
+		(unsafe.string-copy!/count buffer 0 str start buffer.len)
+		(set! buffer (string))
+		buffer.len)))))))
   (with-arguments-validation (who)
       ((prompt-maker	make-prompt))
     (let ((port (make-custom-textual-input-port "readline input port" read! #f #f #f)))
