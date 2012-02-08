@@ -872,9 +872,10 @@ vicare_with_readline_enabled=no
 vicare_readline_enabled=0
 if test x$with_readline = xyes || test x$with_readline = xcheck
 then
-  AC_CHECK_HEADER([readline.h],[vicare_have_readline_h=yes],[vicare_have_readline_h=no])
+  AC_CHECK_HEADER([readline/readline.h],[vicare_have_readline_h=yes],[vicare_have_readline_h=no])
+  AC_SEARCH_LIBS([tgetent],[curses ncurses ncursesw])
   AC_CHECK_LIB([readline],[readline],[vicare_have_readline=yes],[vicare_have_readline=no])
-  if test x$vicare_have_readline = xyes && test x$vicare_have_readline_h" = xyes
+  if test x$vicare_have_readline = xyes && test x$vicare_have_readline_h = xyes
   then
     # Both the library and the header were found: success!
     vicare_with_readline=yes
@@ -886,16 +887,10 @@ then
     # header or the library or both were not found.
     if test x$vicare_have_readline_h = xno
     then
-      AC_MSG_ERROR([readline.h cannot be found.
-Please specify the location of the header file using
-  ./configure CPPFLAGS=-I<path/to/readline.h>   <other-options ...>
-])
+      AC_MSG_ERROR([readline.h cannot be found.])
     fi
     if test x$vicare_have_readline = xno; then
-      AC_MSG_ERROR([readline library cannot be found.
-Please specify the location of the library file using
-  ./configure LDFLAGS=-L<path/to/readline.ld|dylib|so|etc.>  <other-options ...>
-])
+      AC_MSG_ERROR([readline library cannot be found.])
     fi
   else
     # The user  requested GNU Readline support if  available; either the
@@ -904,8 +899,7 @@ Please specify the location of the library file using
   fi
 fi
 
-AC_DEFINE_UNQUOTED([ENABLE_READLINE],[$vicare_readline_enabled],
-  [enable support for GNU Readline])
+AC_DEFINE_UNQUOTED([ENABLE_READLINE],[$vicare_readline_enabled],[enable support for GNU Readline])
 AM_CONDITIONAL([WANT_READLINE],[test x$vicare_with_readline = xyes])
 
 dnl --------------------------------------------------------------------

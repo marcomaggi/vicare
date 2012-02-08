@@ -1281,8 +1281,17 @@ requested at installation--time with command line options for the
 @command{configure} script.
 
 @menu
+* overview foreign readline::   Interface to @gnu{} Readline.
 * overview foreign cre2::       Interface to @cretwo{}.
 @end menu
+
+@c page
+@node overview foreign readline
+@subsection Interface to @gnu{} Readline
+
+
+@gnu{} Readline is a library implementing advanced command line editing
+features for programs providing a @repl{} interface.
 
 @c page
 @node overview foreign cre2

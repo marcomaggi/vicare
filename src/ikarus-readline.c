@@ -30,7 +30,8 @@
 
 #include "internals.h"
 #if (1 == ENABLE_READLINE)
-#  include <readline.h>
+#  include <readline/readline.h>
+#  include <readline/history.h>
 #endif
 
 static IK_UNUSED void
@@ -53,7 +54,7 @@ ik_readline_readline (ikptr s_prompt, ikpcb * pcb)
   char *	prompt = IK_BYTEVECTOR_DATA_CHARP(s_prompt);
   char *	line;
   line = readline(prompt);
-  return ika_bytevector_from_cstring(line);
+  return ika_bytevector_from_cstring(pcb, line);
 #else
   feature_failure(__func__);
 #endif

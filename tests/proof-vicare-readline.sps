@@ -1,8 +1,8 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: bindings for GNU Readline
-;;;Date: Tue Feb  7, 2012
+;;;Contents: test file for (vicare readline)
+;;;Date: Wed Feb  8, 2012
 ;;;
 ;;;Abstract
 ;;;
@@ -26,42 +26,33 @@
 
 
 #!r6rs
-(library (vicare readline)
-  (export
-    readline)
-  (import (vicare)
-    (vicare syntactic-extensions))
+(import (vicare)
+  (checks)
+  (prefix (vicare readline) rl.))
+
+(check-set-mode! 'report-failed)
+(check-display "*** testing Vicare GNU Readline library\n")
 
 
-;;;; arguments validation
+(parametrise ((check-test-name	'reading))
 
-(define-argument-validation (prompt who obj)
-  (or (bytevector? obj) (string? obj))
-  (assertion-violation who "expected bytevector or string as prompt argument" obj))
+  (check
+      (let ((rv (rl.readline "prompt> ")))
+	(check-pretty-print (list 'read rv))
+	(string? rv))
+    => #t)
 
-
-;;;; access to C API
+  (check
+      (let ((rv (rl.readline (string->ascii "prompt> "))))
+	(check-pretty-print (list 'read rv))
+	(string? rv))
+    => #t)
 
-(define-inline (capi.readline prompt)
-  (foreign-call "ik_readline_readline" prompt))
-
-
-;;;; high-level API
-
-(define (readline prompt)
-  (define who 'readline)
-  (with-arguments-validation (who)
-      ((prompt	prompt))
-    (with-bytevectors ((prompt.bv prompt))
-      (let ((rv (capi.readline prompt.bv)))
-	(ascii->string rv)))))
+  #t)
 
 
 ;;;; done
 
-)
+(check-report)
 
 ;;; end of file
-;; Local Variables:
-;; eval: (put 'with-bytevectors 'scheme-indent-function 1)
-;; End:
