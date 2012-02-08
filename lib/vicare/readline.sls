@@ -47,47 +47,16 @@
 ;;   (procedure? obj)
 ;;   (assertion-violation who "expected procedure as prompt maker argument" obj))
 
-;; 
-;; ;;;; access to C API
+
+;;;; access to C API
 
 ;; (define-inline (capi.readline-enabled?)
 ;;   (foreign-call "ik_readline_enabled"))
 
-;; (define-inline (capi.readline prompt)
-;;   (foreign-call "ik_readline_readline" prompt))
+
+;;;; high-level API
 
-;; 
-;; ;;;; high-level API
 
-;; (define (readline-enabled?)
-;;   (capi.readline-enabled?))
-
-;; (define (readline prompt)
-;;   (define who 'readline)
-;;   (with-arguments-validation (who)
-;;       ((prompt	prompt))
-;;     (with-bytevectors ((prompt.bv prompt))
-;;       (let ((rv (capi.readline prompt.bv)))
-;; 	(and rv (ascii->string rv))))))
-
-;; (define (make-readline-input-port make-prompt)
-;;   (define who 'make-readline-input-port)
-;;   (define (read! str start count)
-;;     (define who 'make-readline-input-port/read!)
-;;     (let ((rv (readline (make-prompt))))
-;;       (if rv
-;; 	  (let ((rv.len (unsafe.string-length rv)))
-;; 	    (if (bignum? (+ 1 rv.len))
-;; 		(error who "input line from readline too long")
-;; 	      (begin
-;; 		(unsafe.string-copy!/count rv 0 str start rv.len)
-;; 		rv.len)))
-;; 	0)))
-;;   (with-arguments-validation (who)
-;;       ((prompt-maker	make-prompt))
-;;     (let ((port (make-custom-textual-input-port "readline input port" read! #f #f #f)))
-;;       (set-port-buffer-mode! port (buffer-mode line))
-;;       port)))
 
 
 ;;;; done

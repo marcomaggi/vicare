@@ -6197,7 +6197,8 @@ The following bindings are exported by the libraries @library{vicare},
 
 @defun readline-enabled?
 Return @true{} is support for readline is enabled, return @false{}
-otherwise.
+otherwise.  When this function returns @false{}: no other readline
+functions must be called, lest the process be aborted.
 @end defun
 
 
@@ -6210,7 +6211,12 @@ present: no prompt will be displayed.
 @end defun
 
 
-    make-readline-input-port
+@defun make-readline-input-port @var{prompt-maker}
+Return a custom textual input port reading character through
+@func{readline}.  @var{prompt-maker} must be a thunk which, when
+evaluated, returns a string or bytevector representing the input prompt;
+if the return value is @false{}: no prompt will be displayed.
+@end defun
 
 @c page
 @node iklib misc

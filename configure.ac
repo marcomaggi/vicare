@@ -868,13 +868,13 @@ AC_ARG_WITH([readline],
   AS_HELP_STRING([--with-readline],[enable support for readline compatible (default is check)]),
   [true],[with_readline=check])
 
-vicare_with_readline_enabled=no
+vicare_with_readline=no
 if test x$with_readline = xyes || test x$with_readline = xcheck
 then
   AX_LIB_READLINE
   if test "$ax_cv_lib_readline" != "no"
   then
-    vicare_with_readline_enabled=yes
+    vicare_with_readline=yes
   fi
 fi
 AM_CONDITIONAL([WANT_READLINE],[test x$vicare_with_readline = xyes])
