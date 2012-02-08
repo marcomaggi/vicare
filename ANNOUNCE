@@ -51,6 +51,12 @@ Notes for revision 0.2d8
   checks if  an iconv library is available,  but it does not  fail if it
   does not find it.
 
+* CONFIGURATION  BACKWARDS   INCOMPATIBILITY  The  configuration  option
+  "--enable-libffi"  has been renamed  to "--with-libffi".   Its default
+  value  has  changed from  "no"  to "check",  when  the  option is  not
+  specified:  the configuration  script checks  if a  libffi  library is
+  available, but it does not fail if it does not find it.
+
 * Added   configuration  option   "--with-readline"  enabling   a  basic
   interface to GNU Readline or compatible library.  By default, when the
   option  is  not  specified:  the  configuration  script  checks  if  a
@@ -64,7 +70,7 @@ Notes for revision 0.2d8
 
 * The C language functions allocating Scheme bytevectors by copying from
   raw memory blocks will *silently  truncate* the input if its length is
-  greater than the most positive fixnum.
+  greater than the most positive fixnum.  (This is dirty, I know.)
 
 
 Notes for revision 0.2d7

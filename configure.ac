@@ -795,37 +795,45 @@ AM_CONDITIONAL([WANT_PTHREAD],[test x$vicare_with_pthread = xyes])
 dnl --------------------------------------------------------------------
 dnl Optional binding to Libffi
 
-AC_ARG_ENABLE([libffi],
-  AS_HELP_STRING([--enable-libffi],[enable support for libffi (default is check)]),
-  [true],[enable_libffi=check])
+AC_ARG_WITH([libffi],
+  AS_HELP_STRING([--with-libffi],[add support for libffi (default is check)]),
+  [true],[with_libffi=check])
 
-libffi_val=0
-if test "$enable_libffi" != no; then
-  AC_CHECK_HEADER([ffi.h],[have_ffi_h=yes],[have_ffi_h=no])
-  AC_CHECK_LIB([ffi],[ffi_call],[have_libffi=yes],[have_libffi=no])
-  if test "$have_libffi" = yes && test "$have_ffi_h" = yes; then
-    libffi_val=1
+vicare_with_libffi=no
+if test x$with_libffi = xyes || test x$with_libffi = xcheck
+then
+  # Check for libffi header and library.
+  AC_CHECK_HEADER([ffi.h],[vicare_have_libffi_h=yes],[vicare_have_libffi_h=no])
+  AC_CHECK_LIB([ffi],[ffi_call],[vicare_have_libffi=yes],[vicare_have_libffi=no])
+  if test "$vicare_have_libffi" = yes && test "$vicare_have_libffi_h" = yes
+  then
+    # Both the library and the header were found: success!
+    AC_MSG_NOTICE([libffi support enabled])
+    AC_DEFINE([HAVE_LIBFFI],[1],[define if you have a libffi library])
+    vicare_with_libffi=yes
     LIBS="$LIBS -lffi"
-  elif test "$enable_libffi" = yes; then
-    if test "$have_ffi_h" = no; then
+  elif test "$with_libffi" = yes; then
+    # The user requested libffi support or die, but either the header or
+    # the library or both were not found.
+    if test "$vicare_have_libffi_h" = no; then
       AC_MSG_ERROR([ffi.h cannot be found.
 Please specify the location of the header file using
   ./configure CPPFLAGS=-I<path/to/ffi.h>   <other-options ...>
 ])
     fi
-    if test "$have_libffi" = no; then
+    if test "$vicare_have_libffi" = no; then
       AC_MSG_ERROR([libffi cannot be found.
 Please specify the location of the library file using
   ./configure LDFLAGS=-L<path/to/libffi.ld|dylib|so|etc.>  <other-options ...>
 ])
     fi
   else
+    # The user requested a check for optional libffi support, but either
+    # the header or the library or both were not found.
     AC_MSG_WARN([libffi not found -- FFI disabled])
   fi
-fi # "$enable_ffi" != no
-
-AC_DEFINE_UNQUOTED([ENABLE_LIBFFI],[$libffi_val],[adds support for Libffi])
-AM_CONDITIONAL([WANT_LIBFFI],[test x$enable_libffi = xyes])
+fi
+AM_CONDITIONAL([WANT_LIBFFI],[test x$vicare_with_libffi = xyes])
 
 dnl --------------------------------------------------------------------
 dnl Check for Libiconv (optional)
@@ -843,7 +851,7 @@ then
   if test "$vicare_have_iconv" = yes && test "$vicare_have_iconv_h" = yes
   then
     # Both the library and the header were found: success!
-    AC_MSG_WARN([iconv support enabled])
+    AC_MSG_NOTICE([iconv support enabled])
     AC_DEFINE([HAVE_LIBICONV],[1],[define if you have an iconv library])
     vicare_with_iconv=yes
     LIBS="$LIBS -liconv"

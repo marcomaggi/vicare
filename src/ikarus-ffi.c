@@ -34,7 +34,7 @@
  ** ----------------------------------------------------------------- */
 
 #include "internals.h"
-#if ENABLE_LIBFFI
+#ifdef HAVE_LIBFFI
 #include <ffi.h>
 
 #undef DEBUG_FFI
