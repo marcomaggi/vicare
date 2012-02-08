@@ -28,16 +28,23 @@
 #!r6rs
 (library (vicare readline)
   (export
-    readline)
+    readline
+    make-readline-input-port)
   (import (vicare)
-    (vicare syntactic-extensions))
+    (vicare syntactic-extensions)
+    (prefix (vicare unsafe-operations)
+	    unsafe.))
 
 
 ;;;; arguments validation
 
 (define-argument-validation (prompt who obj)
-  (or (bytevector? obj) (string? obj))
-  (assertion-violation who "expected bytevector or string as prompt argument" obj))
+  (or (not obj) (bytevector? obj) (string? obj))
+  (assertion-violation who "expected false, bytevector or string as prompt argument" obj))
+
+(define-argument-validation (prompt-maker who obj)
+  (procedure? obj)
+  (assertion-violation who "expected procedure as prompt maker argument" obj))
 
 
 ;;;; access to C API
@@ -54,7 +61,26 @@
       ((prompt	prompt))
     (with-bytevectors ((prompt.bv prompt))
       (let ((rv (capi.readline prompt.bv)))
-	(ascii->string rv)))))
+	(and rv (ascii->string rv))))))
+
+(define (make-readline-input-port make-prompt)
+  (define who 'make-readline-input-port)
+  (define (read! str start count)
+    (define who 'make-readline-input-port/read!)
+    (let ((rv (readline (make-prompt))))
+      (if rv
+	  (let ((rv.len (unsafe.string-length rv)))
+	    (if (bignum? (+ 1 rv.len))
+		(error who "input line from readline too long")
+	      (begin
+		(unsafe.string-copy!/count rv 0 str start rv.len)
+		rv.len)))
+	0)))
+  (with-arguments-validation (who)
+      ((prompt-maker	make-prompt))
+    (let ((port (make-custom-textual-input-port "readline input port" read! #f #f #f)))
+      (set-port-buffer-mode! port (buffer-mode line))
+      port)))
 
 
 ;;;; done

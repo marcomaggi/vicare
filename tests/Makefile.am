@@ -321,6 +321,9 @@ EXTRA_DIST =	\
 	test-issue-025-sign-in-exact-rationals.sps	\
 	\
 	foreign-test-vicare-cre2.sps
+	\
+	proof-vicare-gcc.sps				\
+	proof-vicare-readline.sps
 
 
 ### end of file

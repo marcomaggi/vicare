@@ -51,10 +51,19 @@ ikptr
 ik_readline_readline (ikptr s_prompt, ikpcb * pcb)
 {
 #if (1 == ENABLE_READLINE)
-  char *	prompt = IK_BYTEVECTOR_DATA_CHARP(s_prompt);
+  char *	prompt = (false_object == s_prompt)? NULL : IK_BYTEVECTOR_DATA_CHARP(s_prompt);
   char *	line;
+  ikptr		rv;
   line = readline(prompt);
-  return ika_bytevector_from_cstring(pcb, line);
+  if (line) {
+    /* Lines are added to the history only if they are not empty. */
+    if (*line)
+      add_history(line);
+    rv = ika_bytevector_from_cstring(pcb, line);
+    free(line);
+    return rv;
+  } else
+    return false_object;
 #else
   feature_failure(__func__);
 #endif

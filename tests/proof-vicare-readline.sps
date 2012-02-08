@@ -37,13 +37,26 @@
 (parametrise ((check-test-name	'reading))
 
   (check
-      (let ((rv (rl.readline "prompt> ")))
+      (let ((rv (rl.readline "prompt1> ")))
 	(check-pretty-print (list 'read rv))
 	(string? rv))
     => #t)
 
   (check
-      (let ((rv (rl.readline (string->ascii "prompt> "))))
+      (let ((rv (rl.readline (string->ascii "prompt2> "))))
+	(check-pretty-print (list 'read rv))
+	(string? rv))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'port))
+
+  (check
+      (let* ((port (rl.make-readline-input-port (lambda () "prompt3> ")))
+	     (rv   (get-line port)))
+	(close-input-port port)
 	(check-pretty-print (list 'read rv))
 	(string? rv))
     => #t)
