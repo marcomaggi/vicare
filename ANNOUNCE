@@ -46,6 +46,10 @@ Notes for revision 0.2d8
   executable with the pthread library.  The executable was always linked
   with pthread before, now it is *not* by default.
 
+* Added   configuration  option   "--with-readline"  enabling   a  basic
+  interface to GNU Readline or compatible library.  By default it checks
+  if a compatible library is available.
+
 
 Notes for revision 0.2d7
 ------------------------
