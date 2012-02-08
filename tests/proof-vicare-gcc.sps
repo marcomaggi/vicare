@@ -31,7 +31,7 @@
   (prefix (vicare gcc) gcc.))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare GCC library\n")
+(check-display "*** testing Vicare GCC library\n")
 
 ;;(gcc.initialise "gcc" "/home/marco/var/tmp/")
 (gcc.initialise "/usr/local/bin/gcc" "/home/marco/var/tmp/")
