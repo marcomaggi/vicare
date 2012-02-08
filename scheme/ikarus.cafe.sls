@@ -14,12 +14,21 @@
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (library (ikarus cafe)
-  (export new-cafe waiter-prompt-string)
+  (export new-cafe waiter-prompt-string cafe-input-port)
   (import (only (rnrs)
 		with-exception-handler)
     (except (ikarus)
 	    new-cafe
-	    waiter-prompt-string))
+	    waiter-prompt-string
+	    cafe-input-port)
+    (vicare syntactic-extensions))
+
+
+;;;; arguments validation
+
+(define-argument-validation (textual-input-port who obj)
+  (and (textual-port? obj) (input-port? obj))
+  (assertion-violation who "expected textual input port as argument" obj))
 
 
 (define eval-depth 0)
@@ -30,6 +39,14 @@
       (if (string? x)
 	  x
 	(assertion-violation 'waiter-prompt-string "not a string" x)))))
+
+(define cafe-input-port
+  (make-parameter (console-input-port)
+    (lambda (x)
+      (define who 'cafe-input-port)
+      (with-arguments-validation (who)
+	  ((textual-input-port x))
+	x))))
 
 (define NESTED-PROMPT-CHAR #\>)
 
@@ -52,7 +69,7 @@
   (print-condition ex (console-error-port)))
 
 (define (reset k)
-  (reset-input-port! (console-input-port))
+  (reset-input-port! (cafe-input-port))
   (k))
 
 
@@ -128,7 +145,7 @@
 			(raise-continuable ex))))
 	     ;;Perform the READ.
 	     (lambda ()
-	       (read (console-input-port))))))
+	       (read (cafe-input-port))))))
     (if (eof-object? x)
 	;;Exit the REPL.
 	(begin

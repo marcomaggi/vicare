@@ -1514,6 +1514,10 @@ When this option is used an interprocess signal handler is registered at
 program startup to enter a debugging @repl{} whenever a @code{SIGINT}
 signal is received.
 
+@item --raw-repl
+Do not create a readline console input port even if the readline
+interface is available.
+
 @item -d
 @itemx --debug
 Turn on debugging mode.  With this unhandled exceptions in the program
@@ -2500,8 +2504,11 @@ Every time a new cafe is started, the prompt is changed to reflect the
 depth of the current cafe (i.e. how many eof objects is takes to exit
 the outermost cafe).
 
-Input and output performed by the cafe can be changed by the
-@func{console-input-port} and @func{console-output-port} parameters.
+When the readline interface is not used, input and output performed by
+the cafe can be changed by the @func{console-input-port} and
+@func{console-output-port} parameters; when readline support is
+available and used, the @repl{} input is performed through a readline
+input port.
 
 If an error occurs during reading, evaluating, or printing an
 expression, then the error message is printed to the error--port and the
@@ -4978,8 +4985,9 @@ values: the @eof{} object or a fixnum representing first octet, the
 
 
 @defun console-input-port
-Return the default value of the @func{current-input-port} parameter.  It
-is used by the @repl{} and the debugger.
+Return the default value of the @func{current-input-port} parameter.
+When the readline interface is not used, this port is used by the
+@repl{} and the debugger.
 @end defun
 
 
@@ -6213,11 +6221,16 @@ present: no prompt will be displayed.
 @end defun
 
 
-@defun make-readline-input-port @var{prompt-maker}
+@defun make-readline-input-port
+@defunx make-readline-input-port @var{prompt-maker}
 Return a custom textual input port reading character through
-@func{readline}.  @var{prompt-maker} must be a thunk which, when
-evaluated, returns a string or bytevector representing the input prompt;
-if the return value is @false{}: no prompt will be displayed.
+@func{readline}.
+
+@var{prompt-maker} must be a @false{} or a thunk, when not used it
+defaults to @false{}; the thunk, when evaluated, must return a string or
+bytevector representing the input prompt in @ascii{} characters; if the
+return value is @false{} or @var{prompt-maker} is not used: no prompt
+will be displayed.
 @end defun
 
 @c page

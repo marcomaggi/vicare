@@ -47,8 +47,8 @@
   (assertion-violation who "expected false, bytevector or string as prompt argument" obj))
 
 (define-argument-validation (prompt-maker who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as prompt maker argument" obj))
+  (or (not obj) (procedure? obj))
+  (assertion-violation who "expected false or procedure as prompt maker argument" obj))
 
 
 ;;;; access to C API
@@ -73,48 +73,60 @@
     (define who 'readline)
     (with-arguments-validation (who)
 	((prompt	prompt))
-      (with-bytevectors ((prompt.bv prompt))
+      (with-bytevectors/or-false ((prompt.bv prompt))
 	(let ((rv (capi.readline prompt.bv)))
 	  (and rv (ascii->string rv))))))))
 
-(define (make-readline-input-port make-prompt)
-  (define who 'make-readline-input-port)
-  (define buffer (string))
-  (define (read! str start count)
-    (define who 'make-readline-input-port/read!)
-    (let ((buffer.len (unsafe.string-length buffer)))
-      (if (unsafe.fx<= count buffer.len)
-	  ;;Enough data in the buffer to satisfy the request.
-	  (begin
-	    (unsafe.string-copy!/count buffer 0 str start count)
-	    (set! buffer (unsafe.substring buffer count buffer.len))
-	    count)
-	;;Read another line.
-	(let ((rv (readline (make-prompt))))
-	  (if rv
-	      (let ((rv.len (unsafe.string-length rv)))
-		(if (bignum? (+ 1 buffer.len rv.len))
-		    (error who "input line from readline too long")
-		  (begin
-		    (set! buffer (string-append buffer rv "\n"))
-		    (let* ((buffer.len	(unsafe.string-length buffer))
-			   (count	(fxmin count buffer.len)))
-		      (unsafe.string-copy!/count buffer 0 str start count)
-		      (set! buffer (unsafe.substring buffer count buffer.len))
-		      count))))
-	    ;;EOF was found: return the available data.
-	    (if (unsafe.fxzero? buffer.len)
-		0
-	      ;;Flush the buffer.
-	      (begin
-		(unsafe.string-copy!/count buffer 0 str start buffer.len)
-		(set! buffer (string))
-		buffer.len)))))))
-  (with-arguments-validation (who)
-      ((prompt-maker	make-prompt))
-    (let ((port (make-custom-textual-input-port "readline input port" read! #f #f #f)))
-      (set-port-buffer-mode! port (buffer-mode line))
-      port)))
+(define make-readline-input-port
+  (case-lambda
+   (()
+    (make-readline-input-port #f))
+   ((make-prompt)
+    (define who 'make-readline-input-port)
+    (define buffer (string))
+    (define device-position 0)
+    (define (read! str start count)
+      (define who 'make-readline-input-port/read!)
+      (let ((buffer.len (unsafe.string-length buffer)))
+	(if (unsafe.fx<= count buffer.len)
+	    ;;Enough data in the buffer to satisfy the request.
+	    (begin
+	      (unsafe.string-copy!/count buffer 0 str start count)
+	      (set! buffer (unsafe.substring buffer count buffer.len))
+	      count)
+	  ;;Read another line.
+	  (let ((rv (readline (and make-prompt (make-prompt)))))
+	    (if rv
+		(let ((rv.len (unsafe.string-length rv)))
+		  (set! device-position (+ rv.len device-position))
+		  (if (bignum? (+ 1 buffer.len rv.len))
+		      (error who "input line from readline too long")
+		    (begin
+		      (set! buffer (string-append buffer rv "\n"))
+		      (let* ((buffer.len	(unsafe.string-length buffer))
+			     (count		(fxmin count buffer.len)))
+			(unsafe.string-copy!/count buffer 0 str start count)
+			(set! buffer (unsafe.substring buffer count buffer.len))
+			count))))
+	      ;;EOF was found: return the available data.
+	      (if (unsafe.fxzero? buffer.len)
+		  0
+		;;Flush the buffer.
+		(begin
+		  (unsafe.string-copy!/count buffer 0 str start buffer.len)
+		  (set! buffer (string))
+		  buffer.len)))))))
+    (define (get-position)
+      ;;Dummy  function needed  when reading  Scheme code  input  with a
+      ;;readline port: the READ function expects the port position to be
+      ;;available for debugging purposes.
+      device-position)
+    (with-arguments-validation (who)
+	((prompt-maker	make-prompt))
+      (let ((port (make-custom-textual-input-port "readline input port"
+						  read! get-position #f #f)))
+	(set-port-buffer-mode! port (buffer-mode line))
+	port)))))
 
 
 ;;;; done
