@@ -15729,19 +15729,28 @@ Return a pointer referencing the first byte in the data area of
 @deftypefun ikptr ika_bytevector_alloc (ikpcb * @var{pcb}, long @var{requested_number_of_bytes})
 Allocate, initialise and return a new bytevector capable of holding the
 specified number of bytes.  The contents of the data area are
-unspecified.
+unspecified.  The requested bytevector length @strong{must} be in the
+range of fixnums.
 @end deftypefun
 
 
 @deftypefun ikptr ik_bytevector_from_cstring (ikpcb * @var{pcb}, const char * @var{cstr})
 Allocate, initialise and return a new bytevector and copy the contents
 of the @asciiz{} string referenced by @var{cstr} in the data area.
+
+@strong{NOTE} If the string length is greater than the maximum positive
+fixnum: the string is @strong{silently truncated} to a length equal to
+the maximum positive fixnum.
 @end deftypefun
 
 
 @deftypefun ikptr ik_bytevector_from_cstring_len (ikpcb * @var{pcb}, const char * @var{cstr}, size_t @var{len})
 Allocate, initialise and return a new bytevector and copy the @var{len}
 bytes of the @ascii{} string referenced by @var{cstr} in the data area.
+
+@strong{NOTE} If the string length is greater than the maximum positive
+fixnum: the string is @strong{silently truncated} to a length equal to
+the maximum positive fixnum.
 @end deftypefun
 
 
@@ -15749,6 +15758,10 @@ bytes of the @ascii{} string referenced by @var{cstr} in the data area.
 Allocate, initialise and return a new bytevector and copy in the data
 area @var{length} bytes from of the memory block referenced by
 @var{memory}.
+
+@strong{NOTE} If the memory block length is greater than the maximum
+positive fixnum: the block is @strong{silently truncated} to a length
+equal to the maximum positive fixnum.
 @end deftypefun
 
 

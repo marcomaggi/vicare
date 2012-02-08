@@ -179,6 +179,7 @@ ika_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes)
 {
   long   aligned_size;
   ikptr	 s_bv;
+  assert(requested_number_of_bytes <= most_positive_fixnum);
   aligned_size = IK_ALIGN(disp_bytevector_data + requested_number_of_bytes + 1);
   s_bv	       = ik_safe_alloc(pcb, aligned_size) | bytevector_tag;
   IK_REF(s_bv, off_bytevector_length) = IK_FIX(requested_number_of_bytes);
@@ -189,6 +190,8 @@ ikptr
 ika_bytevector_from_cstring (ikpcb * pcb, const char * cstr)
 {
   size_t    len	 = strlen(cstr);
+  if (len > most_positive_fixnum)
+    len = most_positive_fixnum;
   ikptr	    s_bv = ika_bytevector_alloc(pcb, len);
   char *    data = IK_BYTEVECTOR_DATA_CHARP(s_bv);
   memcpy(data, cstr, len);
@@ -197,17 +200,21 @@ ika_bytevector_from_cstring (ikpcb * pcb, const char * cstr)
 ikptr
 ika_bytevector_from_cstring_len (ikpcb * pcb, const char * cstr, size_t len)
 {
+  if (len > most_positive_fixnum)
+    len = most_positive_fixnum;
   ikptr	    s_bv = ika_bytevector_alloc(pcb, len);
   char *    data = IK_BYTEVECTOR_DATA_CHARP(s_bv);
   memcpy(data, cstr, len);
   return s_bv;
 }
 ikptr
-ika_bytevector_from_memory_block (ikpcb * pcb, void * memory, size_t length)
+ika_bytevector_from_memory_block (ikpcb * pcb, void * memory, size_t len)
 {
-  ikptr	    s_bv = ika_bytevector_alloc(pcb, length);
+  if (len > most_positive_fixnum)
+    len = most_positive_fixnum;
+  ikptr	    s_bv = ika_bytevector_alloc(pcb, len);
   void *    data = IK_BYTEVECTOR_DATA_VOIDP(s_bv);
-  memcpy(data, memory, length);
+  memcpy(data, memory, len);
   return s_bv;
 }
 ikptr

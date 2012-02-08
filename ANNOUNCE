@@ -50,6 +50,10 @@ Notes for revision 0.2d8
   interface to GNU Readline or compatible library.  By default it checks
   if a compatible library is available.
 
+* The C language functions allocating Scheme bytevectors by copying from
+  raw memory blocks will *silently  truncate* the input if its length is
+  greater than the most positive fixnum.
+
 
 Notes for revision 0.2d7
 ------------------------
