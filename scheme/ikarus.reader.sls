@@ -78,6 +78,12 @@
 (define current-library-file
   (make-parameter #f))
 
+;;Used to turn on or  off case sensitivity for identifiers.  The default
+;;for R6RS is case sensitive identifiers.  Sensitivity can be changed on
+;;the fly with the #ci<form> and #cs<form> syntaxes.
+(define case-insensitive?
+  (make-parameter #f))
+
 (define-inline (reverse-list->string ell)
   ;;There are more efficient ways to do this, but ELL is usually short.
   ;;
@@ -822,7 +828,7 @@
 
 	;;symbol
 	((initial? ch)
-	 (finish-tokenisation-of-identifier (cons ch '()) port))
+	 (finish-tokenisation-of-identifier (cons ch '()) port #t))
 
 	;;string
 	((unsafe.char= #\" ch)
@@ -853,7 +859,7 @@
 		 ;;peculiar identifier: -> <subsequent>*
 		 ((unsafe.char= ch1 #\>)
 		  (get-char-and-track-textual-position port)
-		  (finish-tokenisation-of-identifier '(#\> #\-) port))
+		  (finish-tokenisation-of-identifier '(#\> #\-) port #t))
 
 		 ;;number
 		 (else
@@ -868,11 +874,11 @@
 	((unsafe.char= #\| ch)
 	 (when (port-in-r6rs-mode? port)
 	   (%error "|symbol| syntax is invalid in #!r6rs mode"))
-	 (finish-tokenisation-of-identifier/bar '() port))
+	 (finish-tokenisation-of-identifier/bar '() port #t))
 
 	;;symbol whose first char is a backslash sequence, "\x41;-ciao"
 	((unsafe.char= #\\ ch)
-	 (finish-tokenisation-of-identifier/backslash '() port))
+	 (finish-tokenisation-of-identifier/backslash '() port #t))
 
 ;;;Unused for now.
 ;;;
@@ -903,6 +909,8 @@
   ;;(ref . <n>)			The token is a graph syntax reference: #<N>#
   ;;vparen			The token is a vector.
   ;;comment-paren		The token is a comment list.
+  ;;case-sensitive		The token is a case sensitive directive.
+  ;;case-insensitive		The token is a case insensitive directive.
   ;;
   ;;When the token is a bytevector: the return value is the return value
   ;;of ADVANCE-TOKENISATION-OF-BYTEVECTORS.
@@ -967,7 +975,7 @@
 		 (%error-1 "invalid syntax" "#!(")
 	       'comment-paren))
 	    (else
-	     (let* ((token (finish-tokenisation-of-identifier '() port))
+	     (let* ((token (finish-tokenisation-of-identifier '() port #t))
 		    (sym   (cdr token)))
 	       (case sym
 		 ((vicare ikarus)
@@ -1060,6 +1068,17 @@
 
    ((or (unsafe.char= ch #\d) (unsafe.char= ch #\D)) #;(memq ch '(#\d #\D))
     (cons 'datum (parse-string port (list ch #\#) 10 10 #f)))
+
+   ((unsafe.char= ch #\c)
+    (let ((ch1 (get-char-and-track-textual-position port)))
+      (cond ((eof-object? ch1)
+	     (%unexpected-eof-error))
+	    ((unsafe.char= ch1 #\i)
+	     'case-insensitive)
+	    ((unsafe.char= ch1 #\s)
+	     'case-sensitive)
+	    (else
+	     (%error-1 "invalid syntax" (string #\# #\c ch1))))))
 
 ;;;((unsafe.char= #\@ ch) DEAD: Unfixable due to port encoding
 ;;;                 that does not allow mixing binary and
@@ -1542,7 +1561,7 @@
 ;;  <digit>         -> 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 ;;
 
-(define (finish-tokenisation-of-identifier accumulated-chars port)
+(define (finish-tokenisation-of-identifier accumulated-chars port honour-sensitivity?)
   ;;To be called when one or more characters starting an identifier have
   ;;been read from PORT and  we must finish the identifier tokenisation.
   ;;Read the remaining characters and return:
@@ -1551,11 +1570,16 @@
   ;;
   ;;where <SYM> is the tokenised symbol.
   ;;
-  `(datum . ,(string->symbol
-	      (reverse-list->string
-	       (%accumulate-identifier-chars accumulated-chars port)))))
+  ;;If HONOUR-SENSITIVITY?  is true honour the  current case sensititivy
+  ;;setting.
+  ;;
+  (let* ((str (reverse-list->string (%accumulate-identifier-chars accumulated-chars port)))
+	 (sym (string->symbol (if (and honour-sensitivity? (case-insensitive?))
+				  (string-foldcase str)
+				str))))
+    `(datum . ,sym)))
 
-(define (finish-tokenisation-of-identifier/bar accumulated-chars port)
+(define (finish-tokenisation-of-identifier/bar accumulated-chars port honour-sensitivity?)
   ;;To be called  when one or more characters  starting an identifier in
   ;;bar  syntax  have  been  read  from  PORT and  we  must  finish  the
   ;;identifier tokenisation.  Read the remaining characters and return:
@@ -1564,11 +1588,13 @@
   ;;
   ;;where <SYM> is the tokenised symbol.
   ;;
-  `(datum . ,(string->symbol
-	      (reverse-list->string
-	       (%accumulate-identifier-chars/bar accumulated-chars port)))))
+  (let* ((str (reverse-list->string (%accumulate-identifier-chars/bar accumulated-chars port)))
+	 (sym (string->symbol (if (and honour-sensitivity? (case-insensitive?))
+				  (string-foldcase str)
+				str))))
+    `(datum . ,sym)))
 
-(define (finish-tokenisation-of-identifier/backslash accumulated-chars port)
+(define (finish-tokenisation-of-identifier/backslash accumulated-chars port honour-sensitivity?)
   ;;To be called  when a backslash character starting  an identifier has
   ;;been read from PORT and  we must finish the identifier tokenisation.
   ;;Read the remaining characters and return:
@@ -1577,9 +1603,11 @@
   ;;
   ;;where <SYM> is the tokenised symbol.
   ;;
-  (cons 'datum (string->symbol
-		(reverse-list->string
-		 (%accumulate-identifier-chars/backslash '() port #f)))))
+  (let* ((str (reverse-list->string (%accumulate-identifier-chars/backslash '() port #f)))
+	 (sym (string->symbol (if (and honour-sensitivity? (case-insensitive?))
+				  (string-foldcase str)
+				str))))
+    `(datum . ,sym)))
 
 ;;Three functions are involved in accumulating identifier's chars:
 ;;
@@ -1823,6 +1851,18 @@
 	     ;;Go on with the next token.
 	     (let-values (((token pos) (start-tokenising/pos port)))
 	       (finalise-tokenisation port locations kont token pos))))
+
+	  ((eq? token 'case-sensitive)
+	   (let-values (((expr expr/ann locations kont)
+			 (parametrise ((case-insensitive? #f))
+			   (read-expr port locations kont))))
+	     (values expr expr/ann locations kont)))
+
+	  ((eq? token 'case-insensitive)
+	   (let-values (((expr expr/ann locations kont)
+			 (parametrise ((case-insensitive? #t))
+			   (read-expr port locations kont))))
+	     (values expr expr/ann locations kont)))
 
 	  ((pair? token)
 	   (%process-pair-token token))
@@ -2356,12 +2396,12 @@
 
 (define-syntax read-char*
   (syntax-rules ()
-    ((_ port ls str who case-insensitive? delimited?)
-     (%read-char* port ls str who case-insensitive? delimited?))
+    ((_ port ls str who case-insensitive-char? delimited?)
+     (%read-char* port ls str who case-insensitive-char? delimited?))
     ((_ port ls str who)
      (%read-char* port ls str who #f #f))))
 
-(define (%read-char* port ls str who case-insensitive? delimited?)
+(define (%read-char* port ls str who case-insensitive-char? delimited?)
   ;;Read multiple characters from PORT expecting them to be the chars in
   ;;the string STR; this function is  used to read a chunk of token.  If
   ;;successful return  unspecified values; if  an error occurs  raise an
@@ -2372,8 +2412,8 @@
   ;;better error message.  WHO must  be a string describing the expected
   ;;token.
   ;;
-  ;;If CASE-INSENSITIVE? is true: the comparison between characters read
-  ;;from PORT and characters drawn from STR is case insensitive.
+  ;;If CASE-INSENSITIVE-CHAR? is true: the comparison between characters
+  ;;read from PORT and characters drawn from STR is case insensitive.
   ;;
   ;;If DELIMITED? is true: after the chars in STR have been successfully
   ;;read from PORT, a lookahead is performed on PORT and the result must
@@ -2400,9 +2440,9 @@
       (let ((ch (get-char-and-track-textual-position port)))
 	(cond ((eof-object? ch)
 	       (%error (format "invalid eof inside ~a" who)))
-	      ((or (and (not case-insensitive?)
+	      ((or (and (not case-insensitive-char?)
 			(unsafe.char= ch (string-ref str i)))
-		   (and case-insensitive?
+		   (and case-insensitive-char?
 			(unsafe.char= (char-downcase ch) (string-ref str i))))
 	       (loop (add1 i) (cons ch ls)))
 	      (else

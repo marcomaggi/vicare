@@ -85,6 +85,11 @@ Notes for revision 0.2d8
 
      #ve(ascii "hello\n") => #vu8(104 101 108 108 111 10)
 
+* Added  reader syntaxes "#ci<form>"  and "#cs<form>"  to read  the next
+  form with case insensitive or case sensitive identifiers.  When a case
+  insensitive  identifier is  read: its  string name  is  passed through
+  STRING-FOLDCASE.   (These  syntaxes should  be  like  the Chicken  and
+  Racket ones.)
 
 
 Notes for revision 0.2d7

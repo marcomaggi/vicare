@@ -2373,6 +2373,29 @@ $
 @end example
 @end deffn
 
+
+@deffn {Reader Syntax} #ci @var{form}
+@deffnx {Reader Syntax} #cs @var{form}
+Switch between case sensitive and case insensitive identifiers; the
+default for @rnrs{6} source code is case sensitive.  When @code{#ci} is
+read: the next form read has case insensitive identifiers.  When
+@code{#cs} is read: the next form read has case sensitive identifiers.
+
+@example
+#ci(1 2 3)              @result{} (1 2 3)
+#cs(1 2 3)              @result{} (1 2 3)
+
+#ci(1 A 3)              @result{} (1 a 3)
+#cs(1 A 3)              @result{} (1 A 3)
+
+#ci CIAO #cs CIAO       @result{} ciao CIAO
+#ci CIAO CIAO           @result{} ciao CIAO
+
+#ci(A #csB C)           @result{} (a B c)
+#ci(A #cs B C)          @result{} (a B c)
+@end example
+@end deffn
+
 @c page
 @node iklib reader fun
 @subsection Additional reader functions

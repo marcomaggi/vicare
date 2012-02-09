@@ -955,6 +955,43 @@
   #t)
 
 
+(parametrise ((check-test-name	'case-sensitive))
+
+  (define-syntax read-and-eof
+    (syntax-rules ()
+      ((_ ?input ?output)
+       (check
+	   (let* ((port (open-string-input-port ?input))
+		  (sexp (read port))
+		  (eof  (port-eof? port)))
+	     (list eof sexp))
+	 => '(#t ?output)))
+      ((_ ?input ?output1 ?output2)
+       (check
+	   (let* ((port (open-string-input-port ?input))
+		  (sex1 (read port))
+		  (sex2 (read port))
+		  (eof  (port-eof? port)))
+	     (list eof sex1 sex2))
+	 => '(#t ?output1 ?output2)))))
+
+;;; --------------------------------------------------------------------
+
+  (read-and-eof "#ci(1 2 3)"		(1 2 3))
+  (read-and-eof "#cs(1 2 3)"		(1 2 3))
+
+  (read-and-eof "#ci(1 A 3)"		(1 a 3))
+  (read-and-eof "#cs(1 A 3)"		(1 A 3))
+
+  (read-and-eof "#ci CIAO #cs CIAO"	ciao CIAO)
+  (read-and-eof "#ci CIAO CIAO"		ciao CIAO)
+
+  (read-and-eof "#ci(A #csB C)"		(a B c))
+  (read-and-eof "#ci(A #cs B C)"	(a B c))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
