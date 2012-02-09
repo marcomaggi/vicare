@@ -2077,6 +2077,7 @@ Return @true{} if @var{obj} is a condition object of type
 @menu
 * iklib reader mode::           Textual input port modes.
 * iklib reader bv::             Additional bytevector syntaxes.
+* iklib reader chars::          Custom named characters.
 * iklib reader stx::            Miscellaneous additional syntaxes.
 * iklib reader fun::            Additional reader functions.
 @end menu
@@ -2278,6 +2279,49 @@ Convert the Scheme string @var{data} to a bytevector using the function
 Convert the Scheme string @var{data} to a bytevector using the function
 @func{string->utf16n}.
 @end table
+@end deffn
+
+@c page
+@node iklib reader chars
+@subsection Custom named characters
+
+
+The following syntaxes are available only when the input port mode is
+set to @code{vicare}.
+
+
+@deffn {Reader Syntax} {#!(char-names (@meta{name} . @meta{char}) ...)}
+Add new custom named characters to the internal table for the current
+reading operation.  Each @meta{name} must be a Scheme identifier
+starting with a @meta{constituent} character as defined by @rnrs{6};
+each @meta{char} must be a Scheme character.
+
+@example
+#!(char-names
+    (lambda . #\x0E88))
+@end example
+@end deffn
+
+
+@deffn {Reader Syntax} {#\@{@meta{name}@}}
+Reader syntax for standalone custom named characters.  @meta{name} must
+be an identifier previously defined with the @code{char-names} comment
+list defined above.
+
+@example
+#\@{lambda@}            @result{} #\xE88
+@end example
+@end deffn
+
+
+@deffn {Reader Syntax} {\@{@meta{name}@}}
+Reader syntax for custom named characters embedded in strings.
+@meta{name} must be an identifier previously defined with the
+@code{char-names} comment list defined above.
+
+@example
+"\@{lambda@}"           @result{} "\xE88;"
+@end example
 @end deffn
 
 @c page

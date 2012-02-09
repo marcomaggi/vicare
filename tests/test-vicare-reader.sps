@@ -250,6 +250,15 @@
       	     (list (char? obj) obj eof))
       	 => (list #t ?result #t)))))
 
+  (define-syntax read-custom-named-char
+    (syntax-rules ()
+      ((_ ?input ?output)
+       (check
+      	   (let* ((str  ?input)
+      		  (port (open-string-input-port str)))
+      	     (read port))
+      	 => ?output))))
+
 ;;; --------------------------------------------------------------------
 
   (read-char-and-eof "#\\A"		(integer->char 65))
@@ -304,6 +313,11 @@
   (read-char-and-eof "#\\x123"		#\x123)
   (read-char-and-eof "#\\xFAF"		#\xFAF)
 
+;;; --------------------------------------------------------------------
+;;; custom named characters
+
+  (read-custom-named-char "#!(char-names (lambda . #\\x0E88)) #\\{lambda}" #\x0E88)
+
   #t)
 
 
@@ -320,6 +334,15 @@
       		  (port (open-string-input-port str)))
       	     (read port))
       	 => (string ?result-chars ...)))))
+
+  (define-syntax read-string-with-custom-named-char
+    (syntax-rules ()
+      ((_ ?input ?output)
+       (check
+      	   (let* ((str  ?input)
+      		  (port (open-string-input-port str)))
+      	     (read port))
+      	 => ?output))))
 
   (define lf	#\x000A)
   (define cr	#\x000D)
@@ -391,6 +414,11 @@
 
   (read-string (#\A       backslash space cr nel space space #\Z) (#\A #\Z))
   (read-string (#\A space backslash space cr nel space space #\Z) (#\A space #\Z))
+
+;;; --------------------------------------------------------------------
+;;; custom named characters
+
+  (read-string-with-custom-named-char "#!(char-names (lambda . #\\x0E88)) \"\\{lambda}\"" "\x0E88;")
 
   #t)
 

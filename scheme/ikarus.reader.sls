@@ -84,6 +84,11 @@
 (define case-insensitive?
   (make-parameter #f))
 
+;;Used to define  custom character names.  With the  syntax "\{name}" in
+;;strings.
+(define custom-named-chars
+  (make-parameter #f))
+
 (define-inline (reverse-list->string ell)
   ;;There are more efficient ways to do this, but ELL is usually short.
   ;;
@@ -470,6 +475,18 @@
 
 
 ;;;; public functions
+;;
+;;There are multiple entry points for the reader:
+;;
+;;  read
+;;  get-datum
+;;  get-annotated-datum
+;;
+;;but:   READ    is   a    wrapper   for   GET-DATUM;    GET-DATUM   and
+;;GET-ANNOTATED-DATUM call READ-EXPR.
+;;
+;;READ-EXPR can call itself recursively.
+;;
 
 (define read
   ;;Defined by  R6RS.  Read an external representation  from the textual
@@ -510,7 +527,8 @@
   (define who 'get-datum)
   (%assert-argument-is-source-code-port who port)
   (let-values (((expr expr/ann locations kont)
-		(read-expr port EMPTY-LOCATIONS-COLLECTION void)))
+		(parametrise ((custom-named-chars (make-eq-hashtable)))
+		  (read-expr port EMPTY-LOCATIONS-COLLECTION void))))
     (if (null? locations)
 	expr
       (begin
@@ -534,7 +552,8 @@
       x))
   (%assert-argument-is-source-code-port who port)
   (let-values (((expr expr/ann locations kont)
-		(read-expr port EMPTY-LOCATIONS-COLLECTION void)))
+		(parametrise ((custom-named-chars (make-eq-hashtable)))
+		  (read-expr port EMPTY-LOCATIONS-COLLECTION void))))
     (if (null? locations)
 	(%return-annotated expr/ann)
       (begin
@@ -546,10 +565,18 @@
 	  (%return-annotated expr/ann))))))
 
 
-;;;; Public functions used by Vicare itself
+;;;; public functions used by Vicare itself
 ;;
 ;;These  functions  are exported  by  this  library  but not  listed  in
 ;;"makefile.sps", so they are not visible to client code.
+;;
+;;The following functions are entry points to the reader:
+;;
+;;   read-source-file
+;;   read-script-source-file
+;;   read-library-source-file
+;;
+;;but all of them call GET-ANNOTATED-DATUM.
 ;;
 
 (define (read-library-source-file filename)
@@ -2044,6 +2071,12 @@
 	 (else
 	  (%error-1 "invalid character in inline hex escape while reading string" ch1))))
 
+      ;;inline named char "\{name}"
+      ((unsafe.char= #\{ ch)
+       (when (port-in-r6rs-mode? port)
+	 (%error "invalid custom named character syntax in R6RS mode"))
+       (recurse (cons (%parse-escape-named-char) ls)))
+
       ;;Consume the sequence:
       ;;
       ;;  \<intraline whitespace><line ending><intraline whitespace>
@@ -2097,7 +2130,7 @@
 
   (define-inline (%parse-escape-hex-sequence ch first-digit)
     ;;Read from  PORT characters composing  an escaped character  in hex
-    ;;format "\xHHHH;" and return the resulting character.
+    ;;format "\xHHHH;" and recurse using the resulting character.
     ;;
     ;;CH is the first character  in the hex sequence; FIRST-DIGIT is the
     ;;fixnum representing the first digit in the hex sequence, it is the
@@ -2115,6 +2148,19 @@
 	(else
 	 (%error-1 "invalid char in escape sequence while reading string"
 		   (reverse-list->string (cons chX accum)))))))
+
+  (define-inline (%parse-escape-named-char)
+    ;;Read  from PORT  characters  composing a  custom named  character:
+    ;;"\{name}" and return the resulting character
+    ;;
+    (let ((token (finish-tokenisation-of-identifier '() port #f)))
+      (%read-char-no-eof (port chX)
+	((unsafe.char= chX #\})
+	 (let* ((name (cdr token))
+		(ch   (hashtable-ref (custom-named-chars) name #f)))
+	   (or ch (%error "unknown named char in escape sequence while reading string" name))))
+	(else
+	 (%error-1 "invalid char in escape sequence while reading string")))))
 
   (define (%discard-trailing-intraline-whitespace ls port ch)
     ;;Analyse CH,  and then chars read from  PORT, discarding whitespace
@@ -2227,6 +2273,18 @@
 					(reverse-list->string (cons chX accumulated)))))))))
 	       (else
 		(%error "invalid character sequence" (string #\# #\\ ch1))))))
+
+      ((unsafe.char= #\{ ch)
+       (when (port-in-r6rs-mode? port)
+	 (%error "invalid custom named character syntax in R6RS mode"))
+       (let ((token (finish-tokenisation-of-identifier '() port #f)))
+	 (%read-char-no-eof (port chX)
+	   ((unsafe.char= chX #\})
+	    (let* ((name (cdr token))
+		   (ch   (hashtable-ref (custom-named-chars) name #f)))
+	      (cons 'datum (or ch (%error "unknown custom named character" name)))))
+	   (else
+	    (%error "invalid syntax in standalone custom named character")))))
 
       ;;It is a normal character.
       (else
@@ -2972,6 +3030,11 @@
   (unless (null? ls)
     (case (car ls)
       ((load-shared-library)
+       ;;Cause a foreign shared library to be loaded immediately or when
+       ;;the FASL file is loaded.  The format of the comment list is:
+       ;;
+       ;;  #!(load-shared-library "library-id")
+       ;;
        (cond ((null? (cdr ls))
 	      (%error "expected argument to load-shared-library"))
 	     ((not (null? (cddr ls)))
@@ -2983,6 +3046,21 @@
 		      (register-filename-foreign-library (current-library-file) libid)
 		      (autoload-filename-foreign-library libid))
 		  (%error "expected string argument to load-shared-library"))))))
+      ((char-names)
+       ;;Define a  set of named  characters.  The format of  the comment
+       ;;list is:
+       ;;
+       ;;   #!(char-names (<name> . <char>) ...)
+       ;;
+       (when (port-in-r6rs-mode? port)
+	 (%error "invalid custom named character definition in R6RS mode"))
+       (let ((table (custom-named-chars)))
+	 (for-each (lambda (entry)
+		     (if (and (symbol? (car entry))
+			      (char?   (cdr entry)))
+			 (hashtable-set! table (car entry) (cdr entry))
+		       (%error "invalid entry in custom character names definition")))
+	   (cdr ls))))
       (else
        (%error "invalid comment list")))))
 

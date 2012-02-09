@@ -91,6 +91,17 @@ Notes for revision 0.2d8
   STRING-FOLDCASE.   (These  syntaxes should  be  like  the Chicken  and
   Racket ones.)
 
+* Added reader syntaxes for custom named characters:
+
+    ;define "lambda" as synonym for #\x0E88
+    #!(char-names (lambda . #\x0E88))
+
+    ;standalone character
+    #\{lambda}		=> #\x0E88
+
+    ;character embedded in string
+    "\{lambda}"		=> "\x0E88;"
+
 
 Notes for revision 0.2d7
 ------------------------
