@@ -78,6 +78,11 @@ Notes for revision 0.2d8
   directories.     The   boot   image    is   still    installed   under
   "$(libdir)/vicare".
 
+* Added  reader syntax  "#ve(<encoding> <data>)"  to read  bytevector in
+  some  form of  encoding.   At present  it  supports converting  Scheme
+  strings to  bytevectors using the  conversion function: string->ascii,
+  string->latin1, string->utf8, etc.
+
 
 Notes for revision 0.2d7
 ------------------------

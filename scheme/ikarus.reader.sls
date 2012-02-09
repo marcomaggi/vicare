@@ -1123,6 +1123,8 @@
   ;;vc8b			The token is a c8b bytevector.
   ;;vc8n			The token is a c8n bytevector.
   ;;
+  ;;ve				The toekn is a ve bytevector.
+  ;;
   ;;Correct sequences of chars:
   ;;
   ;; ch  ch1  ch2  ch3  ch4  ch5  datum
@@ -1162,6 +1164,8 @@
   ;; v   f    8    b    (         #vf8b
   ;; v   f    8    n    (         #vf8n
   ;;
+  ;; v   e    (                   #ve
+  ;;
   (define-inline (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define-inline (%error-1 msg . args)
@@ -1195,6 +1199,10 @@
        (when (port-in-r6rs-mode? port)
 	 (%error "invalid #vc syntax in #!r6rs mode" "#vc"))
        (%read-cflonum))
+      ((unsafe.char= #\e ch1)
+       (when (port-in-r6rs-mode? port)
+	 (%error "invalid #ve syntax in #!r6rs mode" "#ve"))
+       (%read-encoded))
       (else
        (%invalid-sequence-of-chars #\# #\v ch1))))
 
@@ -1412,6 +1420,11 @@
        (%read-open-paren 'vc8n #\# #\v #\c #\8 #\n))
       (else
        (%invalid-sequence-of-chars-1 #\# #\v #\c #\8 ch4))))
+
+;;; --------------------------------------------------------------------
+
+  (define-inline (%read-encoded)
+    (%read-open-paren 've #\# #\v #\e))
 
 ;;; --------------------------------------------------------------------
 
@@ -1716,7 +1729,8 @@
 			 vu32l vu32b vu32n  vs32l vs32b vs32n
 			 vu64l vu64b vu64n  vs64l vs64b vs64n
 			 vf4l  vf4b  vf4n   vf8l  vf8b  vf8n
-			 vc4l  vc4b  vc4n   vc8l  vc8b  vc8n))
+			 vc4l  vc4b  vc4n   vc8l  vc8b  vc8n
+			 ve))
 	   (let-values
 	       (((bv bv/ann locations kont)
 		 (cond ((eq? token 'vu8)
@@ -1796,6 +1810,8 @@
 			(finish-tokenisation-of-bytevector-c8b port locations kont 0 '()))
 		       ((eq? token 'vc8n)
 			(finish-tokenisation-of-bytevector-c8n port locations kont 0 '()))
+		       ((eq? token 've)
+			(finish-tokenisation-of-bytevector-ve  port locations kont))
 		       )))
 	     (values bv (annotate bv bv/ann pos) locations kont)))
 
@@ -2622,7 +2638,7 @@
 		(let ((v (%make-bv count ls)))
 		  (values v v locs kont)))
 	       ((eq? token 'rbrack)
-		(%error-1 "unexpected ) while reading a bytevector"))
+		(%error-1 "unexpected ] while reading a bytevector"))
 	       ((eq? token 'dot)
 		(%error-1 "unexpected . while reading a bytevector"))
 	       (else
@@ -2847,6 +2863,64 @@
   cflonum?			     ;to validate numbers
   16				     ;number of bytes in word
   bytevector-cflonum-double-ne-set!) ;setter
+
+;;; --------------------------------------------------------------------
+
+(define (finish-tokenisation-of-bytevector-ve port locs kont)
+  (define-inline (%error msg . irritants)
+    (die/p port 'vicare-reader msg . irritants))
+  (define-inline (%error-1 msg . irritants)
+    (die/p-1 port 'vicare-reader msg . irritants))
+
+  (let-values (((token pos) (start-tokenising/pos port)))
+    (cond ((eof-object? token)
+	   (%error "unexpected EOF while reading a bytevector"))
+	  ((eq? token 'rparen)
+	   (%error-1 "unexpected ) while reading a bytevector"))
+	  ((eq? token 'rbrack)
+	   (%error-1 "unexpected ] while reading a bytevector"))
+	  ((eq? token 'dot)
+	   (%error-1 "unexpected . while reading a bytevector"))
+	  (else
+	   (let-values
+	       (((encoding encoding^ locs1 kont1)
+		 (finalise-tokenisation port locs kont token pos)))
+	     (unless (and (symbol? encoding)
+			  (memq encoding '(ascii latin1 utf8 utf16be utf16le utf16n)))
+	       (die/ann encoding^ 'vicare-reader
+			"expected encoding symbol for this bytevector type" encoding))
+	     (let-values (((token pos) (start-tokenising/pos port)))
+	       (cond ((eof-object? token)
+		      (%error "unexpected EOF while reading a bytevector"))
+		     ((eq? token 'rparen)
+		      (%error-1 "unexpected ) while reading a bytevector"))
+		     ((eq? token 'rbrack)
+		      (%error-1 "unexpected ] while reading a bytevector"))
+		     ((eq? token 'dot)
+		      (%error-1 "unexpected . while reading a bytevector"))
+		     (else
+		      (let-values
+			  (((string string^ locs1 kont1)
+			    (finalise-tokenisation port locs kont token pos)))
+			(unless (string? string)
+			  (die/ann string^ 'vicare-reader
+				   "expected data string for this bytevector type" string))
+			(let-values (((token pos) (start-tokenising/pos port)))
+			  (cond ((eof-object? token)
+				 (%error "unexpected EOF while reading a bytevector"))
+				((eq? token 'rparen)
+				 (let ((v (case encoding
+					    ((ascii)	(string->ascii		string))
+					    ((latin1)	(string->latin1		string))
+					    ((utf8)	(string->utf8		string))
+					    ((utf16be)	(string->utf16be	string))
+					    ((utf16le)	(string->utf16le	string))
+					    ((utf16n)	(string->utf16n		string))
+					    (else
+					     (%error "invalid bytevector encoding" encoding)))))
+				   (values v v locs kont)))
+				(else
+				 (%error-1 "unexpected token while reading a bytevector" token)))))))))))))
 
 
 (define (%process-comment-list port ls)

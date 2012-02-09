@@ -914,6 +914,16 @@
   (read-bv-and-eof "#vc8n(1.2+3.4i 5.6-7.8i)"	,(c8n-list->bytevector '(1.2+3.4i 5.6-7.8i)))
   (read-bv-and-eof "#vc8n(-1.2+3.4i -5.6-7.8i)"	,(c8n-list->bytevector '(-1.2+3.4i -5.6-7.8i)))
 
+;;; --------------------------------------------------------------------
+;;; encoded bytevectors
+
+  (read-bv-and-eof "#ve(ascii   \"ciao\")"	,(string->ascii   "ciao"))
+  (read-bv-and-eof "#ve(latin1  \"ciao\")"	,(string->latin1  "ciao"))
+  (read-bv-and-eof "#ve(utf8    \"ciao\")"	,(string->utf8    "ciao"))
+  (read-bv-and-eof "#ve(utf16le \"ciao\")"	,(string->utf16le "ciao"))
+  (read-bv-and-eof "#ve(utf16be \"ciao\")"	,(string->utf16be "ciao"))
+  (read-bv-and-eof "#ve(utf16n  \"ciao\")"	,(string->utf16n  "ciao"))
+
   #t)
 
 

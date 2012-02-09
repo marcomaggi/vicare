@@ -2246,6 +2246,40 @@ Read a bytevector of double--precision cflonums stored in little, big
 and native endianness, real part first.
 @end deffn
 
+
+@deffn {Reader Syntax} {#ve(@var{encoding} @var{data})}
+Read a bytevector in some encoding which is supposed to be easy to type
+for human beings.  @var{encoding} is a symbol representing the encoding
+format, @var{data} is a datum to convert to bytevector.  At present the
+following encodings are supported:
+
+@table @code
+@item ascii
+Convert the Scheme string @var{data} to a bytevector using the function
+@func{string->ascii}.
+
+@item latin1
+Convert the Scheme string @var{data} to a bytevector using the function
+@func{string->latin1}.
+
+@item utf8
+Convert the Scheme string @var{data} to a bytevector using the function
+@func{string->utf8}.
+
+@item utf16be
+Convert the Scheme string @var{data} to a bytevector using the function
+@func{string->utf16be}.
+
+@item utf16le
+Convert the Scheme string @var{data} to a bytevector using the function
+@func{string->utf16le}.
+
+@item utf16n
+Convert the Scheme string @var{data} to a bytevector using the function
+@func{string->utf16n}.
+@end table
+@end deffn
+
 @c page
 @node iklib reader stx
 @subsection Miscellaneous additional syntaxes
