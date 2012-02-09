@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-libvicaredir		= $(pkglibdir)/vicare
+libvicaredir		= $(libdir)/scheme
 
 EXTRA_DIST		= compile-all.sps			\
 			  compile-ffi.sps			\
@@ -14,7 +14,7 @@ EXTRA_DIST		= compile-all.sps			\
 			  vicare/words.sls.in			\
 			  vicare/installation-configuration.sls.in
 
-dist_libvicare_DATA	= \
+nobase_dist_libvicare_DATA	= \
 	vicare/errno.sls			\
 	vicare/platform-constants.sls		\
 	vicare/include.sls			\
@@ -30,27 +30,27 @@ dist_libvicare_DATA	= \
 	vicare/weak-hashtables.sls
 
 if WANT_LIBFFI
-dist_libvicare_DATA	+= vicare/ffi.sls
+nobase_dist_libvicare_DATA	+= vicare/ffi.sls
 endif
 
 if WANT_POSIX
-dist_libvicare_DATA	+= vicare/posix.sls
+nobase_dist_libvicare_DATA	+= vicare/posix.sls
 endif
 
 if WANT_GLIBC
-dist_libvicare_DATA	+= vicare/glibc.sls
+nobase_dist_libvicare_DATA	+= vicare/glibc.sls
 endif
 
 if WANT_LINUX
-dist_libvicare_DATA	+= vicare/linux.sls
+nobase_dist_libvicare_DATA	+= vicare/linux.sls
 endif
 
 if WANT_READLINE
-dist_libvicare_DATA	+= vicare/readline.sls
+nobase_dist_libvicare_DATA	+= vicare/readline.sls
 endif
 
 if WANT_CRE2
-dist_libvicare_DATA	+= vicare/cre2.sls
+nobase_dist_libvicare_DATA	+= vicare/cre2.sls
 endif
 
 ## --------------------------------------------------------------------

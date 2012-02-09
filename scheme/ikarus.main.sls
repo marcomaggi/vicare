@@ -20,6 +20,7 @@
 (library (ikarus startup)
   (export
     vicare-lib-dir
+    scheme-lib-dir
     vicare-version
     vicare-revision
     bootfile
@@ -739,7 +740,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 			  (cond ((posix.getenv "VICARE_LIBRARY_PATH")
 				 => split-path)
 				(else '(".")))
-			  (list config.vicare-lib-dir)))
+			  (list config.scheme-lib-dir
+				config.vicare-lib-dir)))
     (when cfg.more-file-extensions
       (library-extensions (%prefix "/main"
 				   (%prefix ".vicare" '(".sls" ".ss" ".scm")))))))

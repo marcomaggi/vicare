@@ -72,6 +72,12 @@ Notes for revision 0.2d8
   raw memory blocks will *silently  truncate* the input if its length is
   greater than the most positive fixnum.  (This is dirty, I know.)
 
+* BACKWARDS INCOMPATIBILITY Libraries in  the (vicare ---) hierarchy are
+  now   installed    under   "$(libdir)/scheme"   rather    than   under
+  "$(libdir)/vicare"; the LIBRARY-PATH parameter now includes both these
+  directories.     The   boot   image    is   still    installed   under
+  "$(libdir)/vicare".
+
 
 Notes for revision 0.2d7
 ------------------------

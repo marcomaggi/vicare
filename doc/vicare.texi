@@ -1721,6 +1721,9 @@ name is a common error.
 @subsection How @value{PRJNAME} finds libraries
 
 
+@findex library-path
+
+
 In @value{PRJNAME}, a library is a file with the same name as the last
 component of the library name.  For example, the library
 @library{sample} will correspond to a file named @file{sample.sls}
@@ -1731,12 +1734,12 @@ extensions @code{.ss} and @code{.scm} when the command line option
 rather than libraries.
 
 @value{PRJNAME} has a search algorithm for libraries that is similar to
-those used in other languages.  Its search path comprises a series of
-directories.  When we try to import a library whose name contains just
-one component, @value{PRJNAME} will examine each directory in the search
-path for a file with a matching name.  Importing a library whose name is
-a list of components causes @value{PRJNAME} to match to a series of
-subdirectories with matching names.
+those used in other languages.  @value{PRJNAME}'s search path comprises
+a series of directories; when we try to import a library whose name
+contains just one component, @value{PRJNAME} will examine each directory
+in the search path for a file with a matching name.  Importing a library
+whose name is a list of components causes @value{PRJNAME} to match to a
+series of subdirectories with matching names.
 
 Here is an example of each case:
 
@@ -1754,36 +1757,57 @@ sample}, not @library{sample}.
 @end itemize
 
 @cindex @env{VICARE_LIBRARY_PATH}
-@value{PRJNAME} always places its own libraries at the end of the search
-path.  Other library directories can be added to the search path in two
-ways: by modifying an environment variable, or by setting
-@value{PRJNAME}'s @func{library-path} parameter.  @value{PRJNAME}
-consults the environment variable @env{VICARE_LIBRARY_PATH} at the
-beginning of execution, and places each of the directories there into
-its search path.  The search path is then set to the value of the
-parameter @func{library-path}, which can be updated as necessary.
+@value{PRJNAME}'s own Scheme libraries are installed in the directory
+@code{$(libdir)/scheme}, for example on @gnu{}+Linux systems
+@file{/usr@//local@//lib@//scheme}, and are under the @code{(vicare
+---)} hierarchy.  Additional libraries, and the boot image, are
+installed in the directory @code{$(libdir)/vicare}.  User libraries that
+are meant to be usable by @value{PRJNAME} should be installed in the
+@code{$(libdir)/scheme} directory.
+
+@value{PRJNAME} always places its own library directories at the end of
+the search path, so, as example, the default value of the search path on
+@gnu{}+Linux systems has the following directories:
+
+@example
+/usr/local/lib/scheme
+/usr/local/lib/vicare
+@end example
+
+@noindent
+other library directories can be added to the search path in two ways:
+by modifying an environment variable, or by setting @value{PRJNAME}'s
+@func{library-path} parameter.  @value{PRJNAME} consults the environment
+variable @env{VICARE_LIBRARY_PATH} at the beginning of execution, and
+places each of the directories there into its search path.  The search
+path is then set to the value of the parameter @func{library-path},
+which can be updated as necessary.
+
+In the following example session: the user sets
+@env{VICARE_LIBRARY_PATH}; the settings are reflected in the value of
+@code{(library-path)}; a further directory is then set during the
+session:
 
 @example
 $ export VICARE_LIBRARY_PATH=$HOME/scheme:/tmp/library
 $ echo $VICARE_LIBRARY_PATH
-/home/someuser/scheme:/tmp/library
+/home/marco/scheme:/tmp/library
 $ @value{RAWEXECUTABLE}
 ...
 
 > (library-path)
-("/home/someuser/scheme" "/tmp/library"
-  "/home/someuser/local/lib/vicare")
+("/home/marco/scheme"
+ "/tmp/library"
+ "/usr/local/lib/scheme"
+ "/usr/local/lib/vicare")
 > (library-path (cons "/opt/sw/extra-libraries" (library-path)))
 > (library-path)
-("/opt/sw/extra-libraries" "/home/someuser/scheme"
-  "/tmp/library" "/home/someuser/local/lib/vicare")
+("/opt/sw/extra-libraries"
+ "/home/marco/scheme"
+ "/tmp/library"
+ "/usr/local/lib/scheme"
+ "/usr/local/lib/vicare")
 @end example
-
-@noindent
-In this example, the user sets @env{VICARE_LIBRARY_PATH} before the
-session; the settings are reflected in the value of
-@code{(library-path)}.  A further directory is then set during the
-session.
 
 In programs intended to be distributed, you should resist the urge to
 set @code{(library-path)}, as the user's file hierarchies might not
