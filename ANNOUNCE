@@ -81,7 +81,10 @@ Notes for revision 0.2d8
 * Added  reader syntax  "#ve(<encoding> <data>)"  to read  bytevector in
   some  form of  encoding.   At present  it  supports converting  Scheme
   strings to  bytevectors using the  conversion function: string->ascii,
-  string->latin1, string->utf8, etc.
+  string->latin1, string->utf8, etc.  Example:
+
+     #ve(ascii "hello\n") => #vu8(104 101 108 108 111 10)
+
 
 
 Notes for revision 0.2d7
