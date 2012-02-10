@@ -162,7 +162,9 @@ ikrt_linux_epoll_ctl (ikptr s_epfd, ikptr s_op, ikptr s_fd, ikptr s_event_struct
     NULL : IK_POINTER_DATA_VOIDP(s_event_struct);
   int	rv;
   errno = 0;
-  rv    = epoll_ctl(IK_NUM_TO_FD(s_epfd), IK_UNFIX(s_op), IK_NUM_TO_FD(s_fd), event);
+  rv    = epoll_ctl(IK_NUM_TO_FD(s_epfd),
+		    ik_integer_to_int(s_op),
+		    IK_NUM_TO_FD(s_fd), event);
   return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 #else
   feature_failure(__func__);

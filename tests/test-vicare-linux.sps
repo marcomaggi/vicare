@@ -25,12 +25,13 @@
 ;;;
 
 
-(import (vicare) #;(ikarus)
+(import (vicare)
   (prefix (vicare linux)
 	  linux.)
   (prefix (vicare posix)
 	  px.)
   (vicare platform-constants)
+  (vicare syntactic-extensions)
   (checks))
 
 (check-set-mode! 'report-failed)
@@ -63,8 +64,39 @@
   #t)
 
 
+(parametrise ((check-test-name	'epoll))
+
+  (check
+      (let-values (((in ou) (px.pipe)))
+	(unwind-protect
+	    (let ((epfd (linux.epoll-create)))
+	      (unwind-protect
+		  (let ((sizeof-struct (vector (linux.epoll-event-size))))
+		    (with-local-storage sizeof-struct
+		      (lambda (event)
+			(linux.epoll-event-set-events!  event 0 EPOLLIN)
+			(linux.epoll-event-set-data-fd! event 0 in)
+			(linux.epoll-ctl epfd EPOLL_CTL_ADD in event)))
+		    (px.write ou '#vu8(1))
+		    (with-local-storage sizeof-struct
+		      (lambda (events)
+			(linux.epoll-wait epfd events 1 -1)
+			(list (fx= in (linux.epoll-event-ref-data-fd events 0))
+			      (linux.epoll-event-ref-events events 0))
+			)))
+		(px.close epfd)))
+	  (px.close in)
+	  (px.close ou)))
+    => `(#t ,EPOLLIN))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'with-local-storage 'scheme-indent-function 1)
+;; End:

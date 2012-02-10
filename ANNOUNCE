@@ -102,6 +102,8 @@ Notes for revision 0.2d8
     ;character embedded in string
     "\{lambda}"		=> "\x0E88;"
 
+* Added support for epoll API to (vicare linux).
+
 
 Notes for revision 0.2d7
 ------------------------

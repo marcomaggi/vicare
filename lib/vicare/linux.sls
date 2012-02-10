@@ -173,7 +173,7 @@
 (define epoll-create
   (case-lambda
    (()
-    (epoll-create 0))
+    (epoll-create 16))
    ((size)
     (define who 'epoll-create)
     (with-arguments-validation (who)

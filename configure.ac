@@ -131,6 +131,7 @@ AC_CHECK_HEADERS([assert.h dlfcn.h errno.h fcntl.h signal.h     \
                   unistd.h])
 
 AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h ftw.h grp.h inttypes.h limits.h mntent.h net/if.h netinet/in.h netdb.h paths.h pwd.h signal.h termios.h sys/mman.h sys/mount.h poll.h sys/select.h sys/socket.h sys/times.h sys/timex.h sys/types.h sys/un.h sys/utsname.h sys/uio.h utime.h sys/ioctl.h math.h complex.h fnmatch.h glob.h regex.h wordexp.h])
+AC_CHECK_HEADERS([sys/epoll.h])
 
 AC_HEADER_TIME
 
@@ -756,7 +757,6 @@ int main (void)
     $vicare_cv_HAVE_WAITID,
     [whether the Linux specific waitid function is available])
 
-  AC_CHECK_HEADERS([sys/epoll.h])
   AC_CHECK_TYPES([struct epoll_event],,,[VICARE_INCLUDES])
   AC_CHECK_FUNCS([epoll_create epoll_create1 epoll_ctl epoll_wait])
 ])

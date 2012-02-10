@@ -11096,8 +11096,8 @@ For details on the @api{} we should refer to the following manual pages:
 @defunx epoll-create1 @var{flags}
 Interfaces to the C language functions @cfunc{epoll_create} and
 @cfunc{epoll_create1}.  Open an epoll descriptor and return it as
-fixnum.  When @var{size} is not used: it defaults to zero.  If an error
-occurs: raise an exception.
+fixnum.  When @var{size} is not used: it defaults to @math{16}.  If an
+error occurs: raise an exception.
 @end defun
 
 
@@ -11182,6 +11182,40 @@ epoll_event} entry at @var{index}.
 Mutator and accessor for the field @code{data.u4} of the @code{struct
 epoll_event} entry at @var{index}.
 @end defun
+
+
+Here is a meaningless example showing the mechanics of the epoll @api{}:
+
+@smallexample
+(import (vicare)
+  (prefix (vicare linux)
+          linux.)
+  (prefix (vicare posix)
+          px.)
+  (vicare platform-constants)
+  (vicare syntactic-extensions))
+
+(let-values (((in ou) (px.pipe)))
+  (unwind-protect
+      (let ((epfd (linux.epoll-create)))
+        (unwind-protect
+            (let ((sizeof-struct (vector (linux.epoll-event-size))))
+              (with-local-storage sizeof-struct
+                (lambda (event)
+                  (linux.epoll-event-set-events!  event 0 EPOLLIN)
+                  (linux.epoll-event-set-data-fd! event 0 in)
+                  (linux.epoll-ctl epfd EPOLL_CTL_ADD in event)))
+              (px.write ou '#vu8(1))
+              (with-local-storage sizeof-struct
+                (lambda (events)
+                  (linux.epoll-wait epfd events 1 -1)
+                  (linux.epoll-event-ref-data-fd events 0) @result{} in
+                  (linux.epoll-event-ref-events events 0)  @result{} EPOLLIN
+                  ))))
+          (px.close epfd)))
+    (px.close in)
+    (px.close ou))
+@end smallexample
 
 @c page
 @node syslib
