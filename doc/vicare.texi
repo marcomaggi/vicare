@@ -11000,7 +11000,7 @@ they can be excluded at compile time by giving the option
 
 All the constants needed to use the interface are available as
 identifier syntaxes exported by the @library{vicare platform-constants}
-library; if a constant value is not exported file a feature request for
+library; if a constant value is not exported, file a feature request for
 the project.  If a constant is not defined on a platform: its value is
 set to @false{}.
 
