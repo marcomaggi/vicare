@@ -11101,7 +11101,8 @@ error occurs: raise an exception.
 @end defun
 
 
-@defun epoll-ctl @var{epfd} @var{op} @var{fd} @var{event}
+@defun epoll-ctl @var{epfd} @var{op} @var{fd}
+@defunx epoll-ctl @var{epfd} @var{op} @var{fd} @var{event}
 Interface to the C language function @cfunc{epoll_ctl}.  Control
 interface for an epoll descriptor.  Return unspecified values.  If an
 error occurs: raise an exception.
@@ -11111,7 +11112,8 @@ error occurs: raise an exception.
 combination of flags: @code{EPOLL_CTL_ADD}, @code{EPOLL_CTL_MOD},
 @code{EPOLL_CTL_DEL}.  @var{fd} is a fixnum representing the file
 descriptor subject of the action.  @var{event} is a pointer object
-referencing a @code{struct epoll_event}.
+referencing a @code{struct epoll_event}; when @var{event} is @false{} or
+not used: it defaults to the @cnull{} pointer.
 @end defun
 
 

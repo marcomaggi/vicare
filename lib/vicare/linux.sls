@@ -100,6 +100,10 @@
   (pointer? obj)
   (assertion-violation who "expected pointer as argument" obj))
 
+(define-argument-validation (false/pointer who obj)
+  (or (not obj) (pointer? obj))
+  (assertion-violation who "expected false or pointer as argument" obj))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (signed-int who obj)
@@ -192,16 +196,20 @@
 	  rv
 	(%raise-errno-error who rv flags)))))
 
-(define (epoll-ctl epfd op fd event)
-  (define who 'epoll-ctl)
-  (with-arguments-validation (who)
-      ((file-descriptor		epfd)
-       (fixnum			op)
-       (file-descriptor		fd)
-       (pointer			event))
-    (let ((rv (capi.linux-epoll-ctl epfd op fd event)))
-      (unless (unsafe.fxzero? rv)
-	(%raise-errno-error who rv epfd op fd event)))))
+(define epoll-ctl
+  (case-lambda
+   ((epfd op fd)
+    (epoll-ctl epfd op fd #f))
+   ((epfd op fd event)
+    (define who 'epoll-ctl)
+    (with-arguments-validation (who)
+	((file-descriptor		epfd)
+	 (fixnum			op)
+	 (file-descriptor		fd)
+	 (false/pointer		event))
+      (let ((rv (capi.linux-epoll-ctl epfd op fd event)))
+	(unless (unsafe.fxzero? rv)
+	  (%raise-errno-error who rv epfd op fd event))))))
 
 (define (epoll-wait epfd event maxevents timeout-ms)
   (define who 'epoll-wait)
