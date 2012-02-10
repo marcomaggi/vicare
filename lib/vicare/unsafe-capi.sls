@@ -167,6 +167,15 @@
     posix-dup				posix-dup2
     posix-pipe				posix-mkfifo
 
+    linux-epoll-event-alloc		linux-epoll-event-size
+    linux-epoll-create			linux-epoll-create1
+    linux-epoll-ctl			linux-epoll-wait
+    linux-epoll-event-set-events!	linux-epoll-event-ref-events
+    linux-epoll-event-set-data-ptr!	linux-epoll-event-ref-data-ptr
+    linux-epoll-event-set-data-fd!	linux-epoll-event-ref-data-fd
+    linux-epoll-event-set-data-u32!	linux-epoll-event-ref-data-u32
+    linux-epoll-event-set-data-u64!	linux-epoll-event-ref-data-u64
+
     ;; memory-mapped input/output
     posix-mmap				posix-munmap
     posix-msync				posix-mremap
@@ -916,6 +925,51 @@
 
 (define-inline (posix-mkfifo pathname-bv mode)
   (foreign-call "ikrt_posix_mkfifo" pathname-bv mode))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (linux-epoll-create size)
+  (foreign-call "ikrt_linux_epoll_create" size))
+
+(define-inline (linux-epoll-create1 flags)
+  (foreign-call "ikrt_linux_epoll_create1" flags))
+
+(define-inline (linux-epoll-ctl epfd op fd event)
+  (foreign-call "ikrt_linux_epoll_ctl" epfd op fd event))
+
+(define-inline (linux-epoll-wait epfd event maxevents timeout-ms)
+  (foreign-call "ikrt_linux_epoll_wait" epfd event maxevents timeout-ms))
+
+(define-inline (linux-epoll-event-alloc number-of-entries)
+  (foreign-call "ikrt_linux_epoll_event_alloc" number-of-entries))
+
+(define-inline (linux-epoll-event-size)
+  (foreign-call "ikrt_linux_epoll_event_size"))
+
+(define-inline (linux-epoll-event-set-events! events-array index field-events)
+  (foreign-call "ikrt_linux_epoll_event_set_events" events-array index field-events))
+(define-inline (linux-epoll-event-ref-events  events-array index)
+  (foreign-call "ikrt_linux_epoll_event_ref_events" events-array index))
+
+(define-inline (linux-epoll-event-set-data-ptr! events-array index field-ptr)
+  (foreign-call "ikrt_linux_epoll_event_set_data_ptr" events-array index field-ptr))
+(define-inline (linux-epoll-event-ref-data-ptr  events-array index)
+  (foreign-call "ikrt_linux_epoll_event_ref_data_ptr" events-array index))
+
+(define-inline (linux-epoll-event-set-data-fd! events-array index field-fd)
+  (foreign-call "ikrt_linux_epoll_event_set_data_fd" events-array index field-fd))
+(define-inline (linux-epoll-event-ref-data-fd  events-array index)
+  (foreign-call "ikrt_linux_epoll_event_ref_data_fd" events-array index))
+
+(define-inline (linux-epoll-event-set-data-u32! events-array index field-u32)
+  (foreign-call "ikrt_linux_epoll_event_set_data_u32" events-array index field-u32))
+(define-inline (linux-epoll-event-ref-data-u32  events-array index)
+  (foreign-call "ikrt_linux_epoll_event_ref_data_u32" events-array index))
+
+(define-inline (linux-epoll-event-set-data-u64! events-array index field-u64)
+  (foreign-call "ikrt_linux_epoll_event_set_data_u64" events-array index field-u64))
+(define-inline (linux-epoll-event-ref-data-u64  events-array index)
+  (foreign-call "ikrt_linux_epoll_event_ref_data_u64" events-array index))
 
 
 ;;;; memory-mapped input/output

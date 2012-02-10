@@ -11091,6 +11091,98 @@ For details on the @api{} we should refer to the following manual pages:
 @library{vicare linux} library.
 
 
+@defun epoll-create
+@defunx epoll-create @var{size}
+@defunx epoll-create1 @var{flags}
+Interfaces to the C language functions @cfunc{epoll_create} and
+@cfunc{epoll_create1}.  Open an epoll descriptor and return it as
+fixnum.  When @var{size} is not used: it defaults to zero.  If an error
+occurs: raise an exception.
+@end defun
+
+
+@defun epoll-ctl @var{epfd} @var{op} @var{fd} @var{event}
+Interface to the C language function @cfunc{epoll_ctl}.  Control
+interface for an epoll descriptor.  Return unspecified values.  If an
+error occurs: raise an exception.
+
+@var{epfd} is the return value of a previous call to
+@func{epoll-create}.  @var{op} is a fixnum representing an OR
+combination of flags: @code{EPOLL_CTL_ADD}, @code{EPOLL_CTL_MOD},
+@code{EPOLL_CTL_DEL}.  @var{fd} is a fixnum representing the file
+descriptor subject of the action.  @var{event} is a pointer object
+referencing a @code{struct epoll_event}.
+@end defun
+
+
+@defun epoll-wait @var{epfd} @var{event} @var{maxevents} @var{timeout-ms}
+Interface to the C language function @cfunc{epoll_wait}.  Wait for an
+I/O event on an epoll descriptor.  Return a fixnum representing the
+number of file descriptors ready for the requested events; the return
+value is zero if no file descriptors are ready.  If an error occurs:
+raise an exception.
+
+@var{epfd} is the return value of a previous call to
+@func{epoll-create}.  @var{event} is a poiner object referencing an
+array of @code{struct epoll_event} holding @var{maxevents} entries;
+@var{maxevents} is a non--negative fixnum.  @var{timeout-ms} is an exact
+integer in the range of a C language @code{int}, it represents a timeout
+time in milliseconds; when set to @code{-1} causes the call to block
+until at least one file descriptor is ready.
+@end defun
+
+
+To allow for faster operations, the @code{struct epoll_event} instances
+handled by the epoll functions are meant to be allocated on raw memory.
+
+
+@defun epoll-event-alloc @var{number-of-entries}
+Allocate with @cfunc{malloc} an array of @code{struct epoll_event}
+capable of holding @var{number-of-entries} structures.  If successful
+return a pointer object, else raise an exception.
+@end defun
+
+
+@defun epoll-event-size
+Return the number of bytes needed to hold an instance of @code{struct
+epoll_event}.
+@end defun
+
+
+@defun epoll-event-set-events! @var{events-array} @var{index} @var{new-value}
+@defunx epoll-event-ref-events @var{events-array} @var{index}
+Mutator and accessor for the field @code{events} of the @code{struct
+epoll_event} entry at @var{index}.
+@end defun
+
+
+@defun epoll-event-set-data-ptr! @var{events-array} @var{index} @var{new-value}
+@defunx epoll-event-ref-data-ptr @var{events-array} @var{index}
+Mutator and accessor for the field @code{data.ptr} of the @code{struct
+epoll_event} entry at @var{index}.
+@end defun
+
+
+@defun epoll-event-set-data-fd! @var{events-array} @var{index} @var{new-value}
+@defunx epoll-event-ref-data-fd @var{events-array} @var{index}
+Mutator and accessor for the field @code{data.fd} of the @code{struct
+epoll_event} entry at @var{index}.
+@end defun
+
+
+@defun epoll-event-set-data-u32! @var{events-array} @var{index} @var{new-value}
+@defunx epoll-event-ref-data-u32 @var{events-array} @var{index}
+Mutator and accessor for the field @code{data.u32} of the @code{struct
+epoll_event} entry at @var{index}.
+@end defun
+
+
+@defun epoll-event-set-data-u64! @var{events-array} @var{index} @var{new-value}
+@defunx epoll-event-ref-data-u64 @var{events-array} @var{index}
+Mutator and accessor for the field @code{data.u4} of the @code{struct
+epoll_event} entry at @var{index}.
+@end defun
+
 @c page
 @node syslib
 @chapter Low level, fast, unsafe operations
