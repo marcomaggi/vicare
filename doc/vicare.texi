@@ -11010,6 +11010,7 @@ behaviour is undefined.
 @menu
 * linux env::                   Operating system environment variables.
 * linux status::                Process termination status.
+* linux epoll::                 Polling for events on file descriptors.
 @end menu
 
 @c page
@@ -11078,6 +11079,17 @@ process termination status, for example the return value of
 Interface to the Linux specific C macro @cfunc{WIFCONTINUED}.  Return
 true if the process was resumed by delivery of @code{SIGCONT}.
 @end defun
+
+@c page
+@node linux epoll
+@section Polling for events on file descriptors
+
+
+For details on the @api{} we should refer to the following manual pages:
+@code{epoll(7)}, @code{epoll_create(2)}, @code{epoll_ctl(2)},
+@code{epoll_wait(2)}.  The following bindings are exported by the
+@library{vicare linux} library.
+
 
 @c page
 @node syslib

@@ -123,10 +123,11 @@ AC_SEARCH_LIBS(socket, socket,, [AC_MSG_ERROR([Cannot find socket])])
 
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([assert.h dlfcn.h errno.h fcntl.h signal.h \
-                  stdint.h stdlib.h string.h strings.h \
-                  sys/mman.h sys/resource.h sys/stat.h \
-                  sys/time.h sys/types.h sys/wait.h time.h \
+AC_CHECK_HEADERS([assert.h dlfcn.h errno.h fcntl.h signal.h     \
+                  stdint.h stdlib.h string.h strings.h stdarg.h \
+                  errno.h stddef.h                              \
+                  sys/mman.h sys/resource.h sys/stat.h          \
+                  sys/time.h sys/types.h sys/wait.h time.h      \
                   unistd.h])
 
 AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h ftw.h grp.h inttypes.h limits.h mntent.h net/if.h netinet/in.h netdb.h paths.h pwd.h signal.h termios.h sys/mman.h sys/mount.h poll.h sys/select.h sys/socket.h sys/times.h sys/timex.h sys/types.h sys/un.h sys/utsname.h sys/uio.h utime.h sys/ioctl.h math.h complex.h fnmatch.h glob.h regex.h wordexp.h])
@@ -571,6 +572,7 @@ VICARE_CONSTANT_TEST([O_NOATIME])
 
 ## These are Linux specific.
 VICARE_CONSTANT_TESTS([O_CLOEXEC O_DIRECT O_DIRECTORY O_LARGEFILE O_NOFOLLOW FD_CLOEXEC])
+VICARE_CONSTANT_TESTS([EPOLL_CLOEXEC EPOLL_CTL_ADD EPOLL_CTL_MOD EPOLL_CTL_DEL EPOLLIN EPOLLOUT EPOLLRDHUP EPOLLPRI EPOLLERR EPOLLHUP EPOLLET EPOLLONESHOT])
 
 ## Memory-mapped input/output.
 VICARE_CONSTANT_TESTS([MAP_PRIVATE MAP_SHARED MAP_FIXED MAP_ANON MAP_ANONYMOUS MAP_32BITS MAP_DENYWRITE MAP_EXECUTABLE MAP_FILE MAP_GROWSDOWN MAP_LOCKED MAP_NONBLOCK MAP_NORESERVE MAP_POPULATE MAP_STACK MAP_AUTOGROW MAP_AUTORESRV MAP_COPY PROT_READ PROT_WRITE PROT_EXEC PROT_NONE MS_SYNC MS_ASYNC MREMAP_MAYMOVE])
@@ -753,6 +755,9 @@ int main (void)
   AC_DEFINE_UNQUOTED([HAVE_WAITID],
     $vicare_cv_HAVE_WAITID,
     [whether the Linux specific waitid function is available])
+
+  AC_CHECK_HEADERS([sys/epoll.h])
+  AC_CHECK_FUNCS([epoll_create epoll_create1 epoll_ctl epoll_wait])
 ])
 
 dnl --------------------------------------------------------------------

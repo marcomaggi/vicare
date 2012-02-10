@@ -86,6 +86,12 @@
     O_CLOEXEC		O_DIRECT	O_DIRECTORY
     O_LARGEFILE		O_NOFOLLOW	FD_CLOEXEC
 
+    EPOLL_CLOEXEC	EPOLL_CTL_ADD	EPOLL_CTL_MOD
+    EPOLL_CTL_DEL
+    EPOLLIN		EPOLLOUT	EPOLLRDHUP
+    EPOLLPRI		EPOLLERR	EPOLLHUP
+    EPOLLET		EPOLLONESHOT
+
 ;;; ioctl action selection
     F_DUPFD		F_GETFD		F_GETFL
     F_GETLK		F_GETOWN	F_SETFD
@@ -617,6 +623,19 @@
 (define-inline-constant O_LARGEFILE	@VALUEOF_O_LARGEFILE@)
 (define-inline-constant O_NOFOLLOW	@VALUEOF_O_NOFOLLOW@)
 (define-inline-constant FD_CLOEXEC	@VALUEOF_FD_CLOEXEC@)
+
+(define-inline-constant EPOLL_CLOEXEC	@VALUEOF_EPOLL_CLOEXEC@)
+(define-inline-constant EPOLL_CTL_ADD	@VALUEOF_EPOLL_CTL_ADD@)
+(define-inline-constant EPOLL_CTL_MOD	@VALUEOF_EPOLL_CTL_MOD@)
+(define-inline-constant EPOLL_CTL_DEL	@VALUEOF_EPOLL_CTL_DEL@)
+(define-inline-constant EPOLLIN		@VALUEOF_EPOLLIN@)
+(define-inline-constant EPOLLOUT	@VALUEOF_EPOLLOUT@)
+(define-inline-constant EPOLLRDHUP	@VALUEOF_EPOLLRDHUP@)
+(define-inline-constant EPOLLPRI	@VALUEOF_EPOLLPRI@)
+(define-inline-constant EPOLLERR	@VALUEOF_EPOLLERR@)
+(define-inline-constant EPOLLHUP	@VALUEOF_EPOLLHUP@)
+(define-inline-constant EPOLLET		@VALUEOF_EPOLLET@)
+(define-inline-constant EPOLLONESHOT	@VALUEOF_EPOLLONESHOT@)
 
 (define-inline-constant F_DUPFD		@VALUEOF_F_DUPFD@)
 (define-inline-constant F_GETFD		@VALUEOF_F_GETFD@)

@@ -96,6 +96,9 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_UTIME_H
 #  include <utime.h>
 #endif
+#ifdef HAVE_SYS_EPOLL_H
+#  include <sys/epoll.h>
+#endif
 #ifdef HAVE_SYS_MMAN_H
 #  include <sys/mman.h>
 #endif

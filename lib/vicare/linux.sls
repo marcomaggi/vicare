@@ -34,15 +34,11 @@
     struct-siginfo_t-si_signo		struct-siginfo_t-si_status
     struct-siginfo_t-si_code
     WIFCONTINUED
+
+    ;; epoll
+
     )
-  (import (except (vicare)
-		  ;; process termination status
-		  waitid
-		  make-struct-siginfo_t		struct-siginfo_t?
-		  struct-siginfo_t-si_pid	struct-siginfo_t-si_uid
-		  struct-siginfo_t-si_signo	struct-siginfo_t-si_status
-		  struct-siginfo_t-si_code
-		  WIFCONTINUED)
+  (import (vicare)
     (vicare syntactic-extensions)
     (vicare platform-constants)
     (prefix (vicare unsafe-capi)
@@ -112,6 +108,10 @@
   (with-arguments-validation (who)
       ((fixnum  status))
     (capi.linux-WIFCONTINUED status)))
+
+
+;;;; epoll
+
 
 
 ;;;; done

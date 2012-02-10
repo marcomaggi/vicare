@@ -29,18 +29,49 @@
  ** ----------------------------------------------------------------- */
 
 #include "internals.h"
-#include <dirent.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <time.h>
-#include <unistd.h>
-#include <sys/mman.h>
-#include <sys/param.h>
-#include <sys/resource.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/wait.h>
+#ifdef HAVE_DIRENT_H
+#  include <dirent.h>
+#endif
+#ifdef HAVE_FCNTL_H
+#  include <fcntl.h>
+#endif
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif
+#ifdef HAVE_TIME_H
+#  include <time.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
+#ifdef HAVE_SYS_EPOLL_H
+#  include <sys/epoll.h>
+#endif
+#ifdef HAVE_SYS_MMAN_H
+#  include <sys/mman.h>
+#endif
+#ifdef HAVE_SYS_PARAM_H
+#  include <sys/param.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+#  include <sys/stat.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_WAIT_H
+#  include <sys/wait.h>
+#endif
+
+/* file descriptors */
+#define IK_FD_TO_NUM(fd)		IK_FIX(fd)
+#define IK_NUM_TO_FD(fd)		IK_UNFIX(fd)
 
 static IK_UNUSED void
 feature_failure_ (const char * funcname)
@@ -91,5 +122,38 @@ ikrt_linux_waitid (ikptr fx_idtype, ikptr fx_id, ikptr struct_info, ikptr fx_opt
   feature_failure(__func__);
 #endif
 }
+
+
+/** --------------------------------------------------------------------
+ ** Epoll.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_linux_epoll_create (ikptr s_size)
+{
+#ifdef HAVE_EPOLL_CREATE
+  int   size = ik_integer_to_int(s_size);
+  int	rv;
+  errno = 0;
+  rv    = epoll_create(size);
+  return (-1 != rv)? IK_FD_TO_NUM(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_linux_epoll_create1 (ikptr s_flags)
+{
+#ifdef HAVE_EPOLL_CREATE1
+  int   flags = ik_integer_to_int(s_flags);
+  int	rv;
+  errno = 0;
+  rv    = epoll_create1(flags);
+  return (-1 != rv)? IK_FD_TO_NUM(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
 
 /* end of file */

@@ -35,28 +35,72 @@
 #define _GNU_SOURCE	1
 
 #include "internals.h"
-#include <dirent.h>
-#include <fcntl.h>
-#include <grp.h>
-#include <poll.h>
-#include <pwd.h>
-#include <signal.h>
-#include <stdint.h>
-#include <termios.h>
-#include <time.h>
-#include <utime.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
-#include <sys/mman.h>
-#include <sys/param.h>
-#include <sys/resource.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/times.h>
-#include <sys/types.h>
-#include <sys/uio.h>
-#include <sys/un.h>
-#include <sys/wait.h>
+#ifdef HAVE_DIRENT_H
+#  include <dirent.h>
+#endif
+#ifdef HAVE_FCNTL_H
+#  include <fcntl.h>
+#endif
+#ifdef HAVE_GRP_H
+#  include <grp.h>
+#endif
+#ifdef HAVE_POLL_H
+#  include <poll.h>
+#endif
+#ifdef HAVE_PWD_H
+#  include <pwd.h>
+#endif
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif
+#ifdef HAVE_STDINT_H
+#  include <stdint.h>
+#endif
+#ifdef HAVE_TERMIOS_H
+#  include <termios.h>
+#endif
+#ifdef HAVE_TIME_H
+#  include <time.h>
+#endif
+#ifdef HAVE_UTIME_H
+#  include <utime.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
+#ifdef HAVE_SYS_IOCTL_H
+#  include <sys/ioctl.h>
+#endif
+#ifdef HAVE_SYS_MMAN_H
+#  include <sys/mman.h>
+#endif
+#ifdef HAVE_SYS_PARAM_H
+#  include <sys/param.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+#  include <sys/stat.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_TIMES_H
+#  include <sys/times.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_UIO_H
+#  include <sys/uio.h>
+#endif
+#ifdef HAVE_SYS_UN_H
+#  include <sys/un.h>
+#endif
+#ifdef HAVE_SYS_WAIT_H
+#  include <sys/wait.h>
+#endif
 
 #define SIZEOF_STRUCT_IN_ADDR		sizeof(struct in_addr)
 #define SIZEOF_STRUCT_IN6_ADDR		sizeof(struct in6_addr)
