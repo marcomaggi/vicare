@@ -2274,17 +2274,23 @@
 	       (else
 		(%error "invalid character sequence" (string #\# #\\ ch1))))))
 
+      ;;Read the char "#\{" or a custom named character "#\{name}".
       ((unsafe.char= #\{ ch)
-       (when (port-in-r6rs-mode? port)
-	 (%error "invalid custom named character syntax in R6RS mode"))
-       (let ((token (finish-tokenisation-of-identifier '() port #f)))
-	 (%read-char-no-eof (port chX)
-	   ((unsafe.char= chX #\})
-	    (let* ((name (cdr token))
-		   (ch   (hashtable-ref (custom-named-chars) name #f)))
-	      (cons 'datum (or ch (%error "unknown custom named character" name)))))
-	   (else
-	    (%error "invalid syntax in standalone custom named character")))))
+       (let ((ch1 (peek-char port)))
+	 (cond ((or (eof-object? ch1)
+		    (delimiter? ch1))
+		'(datum . #\{))
+	       (else
+		(when (port-in-r6rs-mode? port)
+		  (%error "invalid custom named character syntax in R6RS mode"))
+		(let ((token (finish-tokenisation-of-identifier '() port #f)))
+		  (%read-char-no-eof (port chX)
+		    ((unsafe.char= chX #\})
+		     (let* ((name (cdr token))
+			    (ch   (hashtable-ref (custom-named-chars) name #f)))
+		       (cons 'datum (or ch (%error "unknown custom named character" name)))))
+		    (else
+		     (%error "invalid syntax in standalone custom named character"))))))))
 
       ;;It is a normal character.
       (else

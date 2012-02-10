@@ -250,6 +250,16 @@
       	     (list (char? obj) obj eof))
       	 => (list #t ?result #t)))))
 
+  (define-syntax read-char-not-eof
+    (syntax-rules ()
+      ((_ ?input ?result)
+       (check
+      	   (let* ((port (open-string-input-port ?input))
+		  (obj  (read port))
+		  (eof	(port-eof? port)))
+      	     (list (char? obj) obj eof))
+      	 => (list #t ?result #f)))))
+
   (define-syntax read-custom-named-char
     (syntax-rules ()
       ((_ ?input ?output)
@@ -315,6 +325,10 @@
 
 ;;; --------------------------------------------------------------------
 ;;; custom named characters
+
+  ;;These are still #\{ chars.
+  (read-char-and-eof "#\\{"		#\{)
+  (read-char-not-eof "#\\{ "		#\{)
 
   (read-custom-named-char "#!(char-names (lambda . #\\x0E88)) #\\{lambda}" #\x0E88)
 
