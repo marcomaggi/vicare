@@ -42,6 +42,12 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d9
 ------------------------
 
+* Added to (vicare ffi) more system-agnostic functions to load a foreign
+  shared library.
+
+* Added raw  memory allocation functions  raising exceptions in  case of
+  error.
+
 
 Notes for revision 0.2d8
 ------------------------
