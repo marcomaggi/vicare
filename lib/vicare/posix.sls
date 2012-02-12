@@ -250,9 +250,6 @@
     (prefix (only (vicare $posix)
 		  errno->string)
 	    posix.)
-    (prefix (only (vicare ffi)
-		  pointer?)
-	    ffi.)
     (vicare syntactic-extensions)
     (vicare platform-constants)
     (prefix (vicare unsafe-capi)
@@ -318,15 +315,15 @@
   (assertion-violation who "expected boolean or fixnum as argument" obj))
 
 (define-argument-validation (pointer who obj)
-  (ffi.pointer? obj)
+  (pointer? obj)
   (assertion-violation who "expected pointer as argument" obj))
 
 (define-argument-validation (pointer/false who obj)
-  (or (not obj) (ffi.pointer? obj))
+  (or (not obj) (pointer? obj))
   (assertion-violation who "expected false or pointer as argument" obj))
 
 (define-argument-validation (fixnum/pointer/false who obj)
-  (or (not obj) (fixnum? obj) (ffi.pointer? obj))
+  (or (not obj) (fixnum? obj) (pointer? obj))
   (assertion-violation who "expected false, fixnum or pointer as argument" obj))
 
 (define-argument-validation (exact-integer who obj)
@@ -1707,7 +1704,7 @@
        (file-descriptor	fd)
        (offset		offset))
     (let ((rv (capi.posix-mmap address length protect flags fd offset)))
-      (if (ffi.pointer? rv)
+      (if (pointer? rv)
 	  rv
 	(%raise-errno-error who rv address length protect flags fd offset)))))
 
@@ -1738,7 +1735,7 @@
        (platform-size_t	new-length)
        (fixnum		flags))
     (let ((rv (capi.posix-mremap address length new-length flags)))
-      (if (ffi.pointer? rv)
+      (if (pointer? rv)
 	  rv
 	(%raise-errno-error who rv address length new-length flags)))))
 

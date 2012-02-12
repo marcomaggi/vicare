@@ -86,10 +86,6 @@
 		  directory-stream-closed?
 		  directory-stream-pointer)
 	    posix.)
-    (prefix (only (ikarus system $foreign)
-		  pointer?
-		  pointer-null?)
-	    ffi.)
     (vicare syntactic-extensions)
     (vicare platform-constants)
     (prefix (vicare unsafe-capi)
@@ -146,7 +142,7 @@
   (assertion-violation who "expected complex flonum as argument" obj))
 
 (define-argument-validation (pointer who obj)
-  (ffi.pointer? obj)
+  (pointer? obj)
   (assertion-violation who "expected pointer as argument" obj))
 
 ;;; --------------------------------------------------------------------
@@ -454,7 +450,7 @@
        (fixnum			flags))
     (with-bytevectors ((pattern.bv pattern))
       (let ((rv (capi.glibc-regcomp pattern.bv flags)))
-	(cond ((ffi.pointer? rv)
+	(cond ((pointer? rv)
 	       (%regex-guardian rv))
 	      ((not rv)
 	       (error who
@@ -951,7 +947,7 @@
   (do ((handle (%iconv-guardian) (%iconv-guardian)))
       ((not handle))
     (let ((P (iconv-pointer handle)))
-      (unless (ffi.pointer-null? P)
+      (unless (pointer-null? P)
 	(capi.glibc-iconv-close P)))))
 
 (define (iconv-open from to)
@@ -962,7 +958,7 @@
 	 (iconv-set	to))
       (let ((rv (capi.glibc-iconv-open (%enum-set->string from who)
 				       (%enum-set->string to   who))))
-	(if (ffi.pointer? rv)
+	(if (pointer? rv)
 	    (%iconv-guardian (make-iconv rv from to))
 	  (raise-errno-error who rv to from)))))
   (define (%enum-set->string set who)
@@ -992,7 +988,7 @@
   (define who 'iconv-closed?)
   (with-arguments-validation (who)
       ((iconv	handle))
-    (ffi.pointer-null? (iconv-pointer handle))))
+    (pointer-null? (iconv-pointer handle))))
 
 (define (iconv! handle
 		input  input.start  input.past
