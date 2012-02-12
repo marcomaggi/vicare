@@ -5873,6 +5873,7 @@ systems.
 * iklib memory intro::          Introduction to managing memory.
 * iklib memory alloc::          Allocating and freeing memory.
 * iklib memory ops::            Memory operations.
+* iklib memory condition::      Memory allocation condition objects.
 @end menu
 
 @c page
@@ -6130,6 +6131,29 @@ collected.
 Like @func{bytevector->memory*} and @func{bytevector->guarded-memory*},
 but if allocation fails raise a non--continuable exception with
 components: @condition{who}, @condition{message},
+@condition{out-of-memory-error}.
+@end defun
+
+@c page
+@node iklib memory condition
+@subsection Memory allocation condition objects
+
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
+
+
+@deftp {Condition Type} &out-of-memory-error
+Condition object type used to tag conditions representing memory
+allocation errors; it is derived from @condition{error}.  It has no
+fields.
+@end deftp
+
+
+@defun make-out-of-memory-error
+@defunx out-of-memory-error? @var{obj}
+Maker and predicate for condition objects of type
 @condition{out-of-memory-error}.
 @end defun
 
