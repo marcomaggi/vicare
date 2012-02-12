@@ -1,0 +1,43 @@
+Subject: [announce] Vicare/Template revision 0.1d0
+
+			    Vicare/Template
+			    ===============
+
+
+This  package is a  distribution of  C and  Scheme libraries  for Vicare
+Scheme, an R6RS compliant Scheme  implementation in the form of a native
+compiler for x86 architectures, officially supporting GNU+Linux systems;
+it provides bindings for the Template C language library.
+
+  This package makes use of the GNU Autotools.
+
+  The latest version of this package can be downloaded from Github:
+
+	<http://github.com/marcomaggi/vicare-template>
+
+the home page of the Vicare project is at:
+
+               <http://marcomaggi.github.com/vicare.html>
+
+development takes place at:
+
+	    <http://github.com/marcomaggi/vicare-template/>
+
+  The last  time the  author bothered to  update this paragraph,  he had
+tested Template version 1.2.3; the Template library is available at:
+
+		   <http://template.sourceforge.net/>
+
+
+Notes for revision 0.1d0
+------------------------
+
+* This is a template package.
+
+
+### end of file
+# Local Variables:
+# mode: text
+# fill-column: 72
+# paragraph-start: "*"
+# End:
