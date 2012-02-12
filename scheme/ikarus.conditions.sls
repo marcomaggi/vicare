@@ -81,8 +81,10 @@
 	  &i/o-eagain make-i/o-eagain i/o-eagain-error?
 	  &i/o-eagain-rtd &i/o-eagain-rcd
 
-	  &errno make-errno-condition errno-condition? condition-errno
-	  &h_errno make-h_errno-condition h_errno-condition? condition-h_errno
+	  &errno &errno-rtd &errno-rcd
+	  make-errno-condition errno-condition? condition-errno
+	  &h_errno &h_errno-rtd &h_errno-rcd
+	  make-h_errno-condition h_errno-condition? condition-h_errno
 	  )
   (import (except (ikarus)
 		  define-condition-type condition? simple-conditions
@@ -133,10 +135,12 @@
 		  &i/o-eagain make-i/o-eagain i/o-eagain-error?
 		  &i/o-eagain-rtd &i/o-eagain-rcd
 
-		  &errno make-errno-condition errno-condition?
+		  &errno &errno-rtd &errno-rcd
+		  make-errno-condition errno-condition?
 		  condition-errno
 
-		  &h_errno make-h_errno-condition h_errno-condition?
+		  &h_errno &h_errno-rtd &h_errno-rcd
+		  make-h_errno-condition h_errno-condition?
 		  condition-h_errno
 
 		  interrupted-condition? make-interrupted-condition
