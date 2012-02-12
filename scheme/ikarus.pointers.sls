@@ -39,6 +39,9 @@
     malloc				guarded-malloc
     realloc				guarded-realloc
     calloc				guarded-calloc
+    malloc*				guarded-malloc*
+    realloc*				guarded-realloc*
+    calloc*				guarded-calloc*
     free				memcmp
     memcpy				memmove
     memset				memory-copy
@@ -46,6 +49,13 @@
     bytevector->guarded-memory
 
     with-local-storage
+
+    &out-of-memory-error
+    &out-of-memory-error-rtd		&out-of-memory-error-rcd
+    make-out-of-memory-error		out-of-memory-error?
+    out-of-memory-error.old-pointer
+    out-of-memory-error.number-of-bytes
+    out-of-memory-error.clean?
 
     ;; C strings
     strlen
@@ -95,7 +105,95 @@
 
     pointer-set-c-float!		pointer-set-c-double!
     pointer-set-c-pointer!)
-  (import (ikarus)
+  (import (except (ikarus)
+		  ;; pointer objects
+		  pointer?
+		  null-pointer				pointer-null?
+		  pointer->integer			integer->pointer
+		  pointer-diff				pointer-add
+		  pointer=?				pointer<>?
+		  pointer<?				pointer>?
+		  pointer<=?				pointer>=?
+		  set-pointer-null!
+
+		  ;; shared libraries inteface
+		  dlopen				dlclose
+		  dlsym					dlerror
+
+		  ;; calling functions and callbacks
+		  make-c-callout-maker			make-c-callout-maker/with-errno
+		  make-c-callback-maker			free-c-callback
+
+		  ;; raw memory allocation
+		  malloc				guarded-malloc
+		  realloc				guarded-realloc
+		  calloc				guarded-calloc
+		  malloc*				guarded-malloc*
+		  realloc*				guarded-realloc*
+		  calloc*				guarded-calloc*
+		  free					memcmp
+		  memcpy				memmove
+		  memset				memory-copy
+		  memory->bytevector			bytevector->memory
+		  bytevector->guarded-memory
+
+		  with-local-storage
+
+		  &out-of-memory-error
+		  &out-of-memory-error-rtd		&out-of-memory-error-rcd
+		  make-out-of-memory-error		out-of-memory-error?
+		  out-of-memory-error.old-pointer
+		  out-of-memory-error.number-of-bytes
+		  out-of-memory-error.clean?
+
+		  ;; C strings
+		  strlen
+		  strcmp				strncmp
+		  strdup				strndup
+		  guarded-strdup			guarded-strndup
+		  bytevector->cstring			cstring->bytevector
+		  bytevector->guarded-cstring
+		  string->cstring			cstring->string
+		  string->guarded-cstring
+
+		  ;; C array of C strings
+		  bytevectors->argv			argv->bytevectors
+		  bytevectors->guarded-argv
+		  strings->argv				argv->strings
+		  strings->guarded-argv
+		  argv-length
+
+		  ;; errno interface
+		  errno
+
+		  ;; memory accessors and mutators
+		  pointer-ref-c-uint8			pointer-ref-c-sint8
+		  pointer-ref-c-uint16			pointer-ref-c-sint16
+		  pointer-ref-c-uint32			pointer-ref-c-sint32
+		  pointer-ref-c-uint64			pointer-ref-c-sint64
+
+		  pointer-ref-c-signed-char		pointer-ref-c-unsigned-char
+		  pointer-ref-c-signed-short		pointer-ref-c-unsigned-short
+		  pointer-ref-c-signed-int		pointer-ref-c-unsigned-int
+		  pointer-ref-c-signed-long		pointer-ref-c-unsigned-long
+		  pointer-ref-c-signed-long-long	pointer-ref-c-unsigned-long-long
+
+		  pointer-ref-c-float			pointer-ref-c-double
+		  pointer-ref-c-pointer
+
+		  pointer-set-c-uint8!			pointer-set-c-sint8!
+		  pointer-set-c-uint16!			pointer-set-c-sint16!
+		  pointer-set-c-uint32!			pointer-set-c-sint32!
+		  pointer-set-c-uint64!			pointer-set-c-sint64!
+
+		  pointer-set-c-signed-char!		pointer-set-c-unsigned-char!
+		  pointer-set-c-signed-short!		pointer-set-c-unsigned-short!
+		  pointer-set-c-signed-int!		pointer-set-c-unsigned-int!
+		  pointer-set-c-signed-long!		pointer-set-c-unsigned-long!
+		  pointer-set-c-signed-long-long!	pointer-set-c-unsigned-long-long!
+
+		  pointer-set-c-float!			pointer-set-c-double!
+		  pointer-set-c-pointer!)
     (only (ikarus system $pointers)
 	  $pointer=)
     (vicare syntactic-extensions)
@@ -544,11 +642,33 @@
 
 ;;; raw memory management
 
+(define-condition-type &out-of-memory-error &error
+  make-out-of-memory-error out-of-memory-error?
+  (old-pointer		out-of-memory-error.old-pointer)
+  (number-of-bytes	out-of-memory-error.number-of-bytes)
+  (clean?		out-of-memory-error.clean?))
+
+(define &out-of-memory-error-rtd
+  (record-type-descriptor &out-of-memory-error))
+
+(define &out-of-memory-error-rcd
+  (record-constructor-descriptor &out-of-memory-error))
+
+(define (%raise-out-of-memory who old-pointer number-of-bytes clean?)
+  (raise-continuable
+   (condition (make-who-condition who)
+	      (make-message-condition "failed raw memory allocation")
+	      (make-out-of-memory-error old-pointer number-of-bytes clean?))))
+
 (define (malloc number-of-bytes)
   (define who 'malloc)
   (with-arguments-validation (who)
       ((number-of-bytes	 number-of-bytes))
     (capi.ffi-malloc number-of-bytes)))
+
+(define (malloc* number-of-bytes)
+  (or (malloc number-of-bytes)
+      (%raise-out-of-memory 'malloc* #f number-of-bytes #f)))
 
 (define (realloc pointer number-of-bytes)
   (define who 'realloc)
@@ -558,12 +678,20 @@
     ;;mutating POINTER to NULL.
     (capi.ffi-realloc pointer number-of-bytes)))
 
+(define (realloc* pointer number-of-bytes)
+  (or (realloc pointer number-of-bytes)
+      (%raise-out-of-memory 'realloc* pointer number-of-bytes #f)))
+
 (define (calloc number-of-elements element-size)
   (define who 'calloc)
   (with-arguments-validation (who)
       ((number-of-elements	number-of-elements)
        (number-of-bytes		element-size))
     (capi.ffi-calloc number-of-elements element-size)))
+
+(define (calloc* number-of-elements element-size)
+  (or (calloc number-of-elements element-size)
+      (%raise-out-of-memory 'calloc* #f (* number-of-elements element-size) #t)))
 
 (define (free ptr)
   (define who 'free)
@@ -676,15 +804,29 @@
   (let ((rv (malloc number-of-bytes)))
     (and rv (%memory-guardian rv))))
 
+(define (guarded-malloc* number-of-bytes)
+  (or (guarded-malloc number-of-bytes)
+      (%memory-guardian (%raise-out-of-memory 'guarded-malloc* #f number-of-bytes #f))))
+
 (define (guarded-realloc pointer number-of-bytes)
   (let ((rv (realloc pointer number-of-bytes)))
     (and rv (begin
 	      (set-pointer-null! pointer)
 	      (%memory-guardian rv)))))
 
+(define (guarded-realloc* pointer number-of-bytes)
+  (or (guarded-realloc pointer number-of-bytes)
+      (let ((rv (%raise-out-of-memory 'guarded-realloc* pointer number-of-bytes #f)))
+	(set-pointer-null! pointer)
+	(%memory-guardian rv))))
+
 (define (guarded-calloc number-of-elements element-size)
   (let ((rv (calloc number-of-elements element-size)))
     (and rv (%memory-guardian rv))))
+
+(define (guarded-calloc* number-of-elements element-size)
+  (or (guarded-calloc number-of-elements element-size)
+      (%memory-guardian (%raise-out-of-memory 'calloc* #f (* number-of-elements element-size) #t))))
 
 (define (bytevector->guarded-memory bv)
   (let-values (((ptr len) (bytevector->memory bv)))

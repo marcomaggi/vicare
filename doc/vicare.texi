@@ -5926,6 +5926,16 @@ whenever the returned pointer object is garbage collected.
 @end defun
 
 
+@defun malloc* @var{number-of-bytes}
+@defunx guarded-malloc* @var{number-of-bytes}
+Like @func{malloc} and @func{guarded-malloc}, but if allocation fails
+raise a continuable exception with components: @condition{who},
+@condition{message}, @condition{out-of-memory-error}; the invoked
+exception handler must return to the continuation only by returning a
+valid (non--guarded) pointer, else it must not return.
+@end defun
+
+
 @defun realloc @var{pointer} @var{number-of-bytes}
 @defunx guarded-realloc @var{pointer} @var{number-of-bytes}
 Interface to the C function @cfunc{realloc}, @glibcref{Changing Block
@@ -5943,6 +5953,16 @@ whenever the returned pointer object is garbage collected.
 @end defun
 
 
+@defun realloc* @var{pointer} @var{number-of-bytes}
+@defunx guarded-realloc* @var{pointer} @var{number-of-bytes}
+Like @func{realloc} and @func{guarded-realloc}, but if allocation fails
+raise a continuable exception with components: @condition{who},
+@condition{message}, @condition{out-of-memory-error}; the invoked
+exception handler must return to the continuation only by returning a
+valid (non--guarded) pointer, else it must not return.
+@end defun
+
+
 @defun calloc @var{number-of-elements} @var{element-size}
 @defunx guarded-calloc @var{number-of-elements} @var{element-size}
 Interface to the C function @cfunc{calloc}, @glibcref{Allocating Cleared
@@ -5954,6 +5974,16 @@ object, else return @false{}.
 Memory allocated by @func{calloc} must be released by @func{free};
 memory allocated by @func{guarded-calloc} is automatically released
 whenever the returned pointer object is garbage collected.
+@end defun
+
+
+@defun calloc @var{number-of-elements} @var{element-size}
+@defunx guarded-calloc @var{number-of-elements} @var{element-size}
+Like @func{calloc} and @func{guarded-calloc}, but if allocation fails
+raise a continuable exception with components: @condition{who},
+@condition{message}, @condition{out-of-memory-error}; the invoked
+exception handler must return to the continuation only by returning a
+valid (non--guarded) pointer, else it must not return.
 @end defun
 
 

@@ -442,6 +442,8 @@
     						      &i/o-eagain-rcd)))
     (&errno				($core-rtd . (&errno-rtd
     						      &errno-rcd)))
+    (&out-of-memory-error		($core-rtd . (&out-of-memory-error-rtd
+    						      &out-of-memory-error-rcd)))
     (&h_errno				($core-rtd . (&h_errno-rtd
     						      &h_errno-rcd)))
     (&no-infinities			($core-rtd . (&no-infinities-rtd
@@ -1895,12 +1897,23 @@
     (pointer>=?					$for i v)
     (set-pointer-null!				$for i v)
 ;;;
+    (make-out-of-memory-error			$for i v)
+    (out-of-memory-error?			$for i v)
+    (out-of-memory-error.old-pointer		$for i v)
+    (out-of-memory-error.number-of-bytes	$for i v)
+    (out-of-memory-error.clean?			$for i v)
     (malloc					$for i v)
     (realloc					$for i v)
     (calloc					$for i v)
     (guarded-malloc				$for i v)
     (guarded-realloc				$for i v)
     (guarded-calloc				$for i v)
+    (malloc*					$for i v)
+    (realloc*					$for i v)
+    (calloc*					$for i v)
+    (guarded-malloc*				$for i v)
+    (guarded-realloc*				$for i v)
+    (guarded-calloc*				$for i v)
     (free					$for i v)
     (memcpy					$for i v)
     (memcmp					$for i v)
