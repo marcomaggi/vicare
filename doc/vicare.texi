@@ -5929,10 +5929,8 @@ whenever the returned pointer object is garbage collected.
 @defun malloc* @var{number-of-bytes}
 @defunx guarded-malloc* @var{number-of-bytes}
 Like @func{malloc} and @func{guarded-malloc}, but if allocation fails
-raise a continuable exception with components: @condition{who},
-@condition{message}, @condition{out-of-memory-error}; the invoked
-exception handler must return to the continuation only by returning a
-valid (non--guarded) pointer, else it must not return.
+raise a non--continuable exception with components: @condition{who},
+@condition{message}, @condition{out-of-memory-error}.
 @end defun
 
 
@@ -5956,10 +5954,8 @@ whenever the returned pointer object is garbage collected.
 @defun realloc* @var{pointer} @var{number-of-bytes}
 @defunx guarded-realloc* @var{pointer} @var{number-of-bytes}
 Like @func{realloc} and @func{guarded-realloc}, but if allocation fails
-raise a continuable exception with components: @condition{who},
-@condition{message}, @condition{out-of-memory-error}; the invoked
-exception handler must return to the continuation only by returning a
-valid (non--guarded) pointer, else it must not return.
+raise a non--continuable exception with components: @condition{who},
+@condition{message}, @condition{out-of-memory-error}.
 @end defun
 
 
@@ -5980,10 +5976,8 @@ whenever the returned pointer object is garbage collected.
 @defun calloc @var{number-of-elements} @var{element-size}
 @defunx guarded-calloc @var{number-of-elements} @var{element-size}
 Like @func{calloc} and @func{guarded-calloc}, but if allocation fails
-raise a continuable exception with components: @condition{who},
-@condition{message}, @condition{out-of-memory-error}; the invoked
-exception handler must return to the continuation only by returning a
-valid (non--guarded) pointer, else it must not return.
+raise a non--continuable exception with components: @condition{who},
+@condition{message}, @condition{out-of-memory-error}.
 @end defun
 
 
@@ -6130,6 +6124,15 @@ automatically released whenever the returned pointer object is garbage
 collected.
 @end defun
 
+
+@defun bytevector->memory* @var{bv}
+@defunx bytevector->guarded-memory* @var{bv}
+Like @func{bytevector->memory*} and @func{bytevector->guarded-memory*},
+but if allocation fails raise a non--continuable exception with
+components: @condition{who}, @condition{message},
+@condition{out-of-memory-error}.
+@end defun
+
 @c page
 @node iklib cstrings
 @section Raw C strings
@@ -6154,6 +6157,15 @@ garbage collector whenever the returned pointer is garbage collected.
 @end defun
 
 
+@defun bytevector->cstring* @var{bv}
+@defunx bytevector->guarded-cstring* @var{bv}
+Like @func{bytevector->cstring*} and @func{bytevector->guarded-cstring},
+but if allocation fails raise a non--continuable exception with
+components: @condition{who}, @condition{message},
+@condition{out-of-memory-error}.
+@end defun
+
+
 @defun cstring->bytevector @var{pointer}
 @defunx cstring->bytevector @var{pointer} @var{count}
 Convert between an @asciiz{} string and a Scheme bytevector.  When used,
@@ -6174,6 +6186,14 @@ Memory allocated by @func{string->cstring} must be explicitly
 released by @func{free}; memory allocated by
 @func{string->guarded-cstring} is automatically released by the
 garbage collector whenever the returned pointer is garbage collected.
+@end defun
+
+
+@defun string->cstring* @var{str}
+@defunx string->guarded-cstring* @var{str}
+Like @func{string->cstring} and @func{string->guarded-cstring}, but if
+allocation fails raise a non--continuable exception with components:
+@condition{who}, @condition{message}, @condition{out-of-memory-error}.
 @end defun
 
 
@@ -6223,6 +6243,14 @@ garbage collected.
 @end defun
 
 
+@defun strdup* @var{pointer}
+@defunx guarded-strdup* @var{pointer}
+Like @func{strdup} and @func{guarded-strdup}, but if allocation fails
+raise a non--continuable exception with components: @condition{who},
+@condition{message}, @condition{out-of-memory-error}.
+@end defun
+
+
 @defun strndup @var{pointer} @var{count}
 @defunx guarded-strndup @var{pointer} @var{count}
 Interface to the C function @cfunc{strndup}, @glibcref{Copying and
@@ -6237,6 +6265,14 @@ garbage collected.
 @end defun
 
 
+@defun strndup* @var{pointer}
+@defunx guarded-strndup* @var{pointer}
+Like @func{strndup} and @func{guarded-strndup}, but if allocation fails
+raise a non--continuable exception with components: @condition{who},
+@condition{message}, @condition{out-of-memory-error}.
+@end defun
+
+
 @defun bytevectors->argv @var{list-of-bytevectors}
 @defunx bytevectors->guarded-argv @var{list-of-bytevectors}
 Given a list of bytevectors: convert them into @asciiz{} strings and
@@ -6248,6 +6284,15 @@ Memory allocated by @func{bytevectors->argv} must be explicitly released
 by @func{free}; memory allocated by @func{bytevectors->guarded-argv} is
 automatically released by the garbage collector whenever the returned
 pointer is garbage collected.
+@end defun
+
+
+@defun bytevectors->argv* @var{list-of-bytevectors}
+@defunx bytevectors->guarded-argv* @var{list-of-bytevectors}
+Like @func{bytevectors->argv*} and @func{bytevectors->guarded-argv*},
+but if allocation fails raise a non--continuable exception with
+components: @condition{who}, @condition{message},
+@condition{out-of-memory-error}.
 @end defun
 
 
@@ -6274,6 +6319,13 @@ automatically released by the garbage collector whenever the returned
 pointer is garbage collected.
 @end defun
 
+
+@defun strings->argv* @var{list-of-strings}
+@defunx strings->guarded-argv* @var{list-of-strings}
+Like @func{strings->argv} and @func{strings->guarded-argv}, but if
+allocation fails raise a non--continuable exception with components:
+@condition{who}, @condition{message}, @condition{out-of-memory-error}.
+@end defun
 
 @defun argv->strings @var{pointer}
 Given a pointer to a @cnull{} terminated array of C pointers referencing

@@ -259,6 +259,18 @@
 	(ffi.pointer->integer P))
     => 0)
 
+  (check
+      (let ((P (ffi.malloc* 10)))
+	(ffi.free P)
+	(ffi.pointer->integer P))
+    => 0)
+
+  (check
+      (let ((P (ffi.guarded-malloc* 10)))
+	(ffi.free P)
+	(ffi.pointer->integer P))
+    => 0)
+
 ;;; --------------------------------------------------------------------
 
   (check
@@ -277,6 +289,14 @@
 	      (ffi.pointer->integer Q)))
     => '(0 0))
 
+  (check
+      (let* ((P (ffi.malloc* 10))
+	     (Q (ffi.realloc* P 20)))
+	(ffi.free Q)
+	(list (ffi.pointer->integer P)
+	      (ffi.pointer->integer Q)))
+    => '(0 0))
+
 ;;; --------------------------------------------------------------------
 
   (check
@@ -287,6 +307,18 @@
 
   (check
       (let ((P (ffi.guarded-calloc 10 20)))
+	(ffi.free P)
+	(ffi.pointer->integer P))
+    => 0)
+
+  (check
+      (let ((P (ffi.calloc* 10 20)))
+	(ffi.free P)
+	(ffi.pointer->integer P))
+    => 0)
+
+  (check
+      (let ((P (ffi.guarded-calloc* 10 20)))
 	(ffi.free P)
 	(ffi.pointer->integer P))
     => 0)
@@ -342,6 +374,20 @@
 	(positive? (ffi.memcmp P Q count)))
     => #t)
 
+  (check
+      (let*-values (((count)	4)
+		    ((P P.len)	(ffi.bytevector->memory* '#vu8(1 2 8 4)))
+		    ((Q Q.len)	(ffi.bytevector->memory* '#vu8(1 2 3 4))))
+	(positive? (ffi.memcmp P Q count)))
+    => #t)
+
+  (check
+      (let*-values (((count)	4)
+		    ((P P.len)	(ffi.bytevector->guarded-memory* '#vu8(1 2 8 4)))
+		    ((Q Q.len)	(ffi.bytevector->guarded-memory* '#vu8(1 2 3 4))))
+	(positive? (ffi.memcmp P Q count)))
+    => #t)
+
 ;;; --------------------------------------------------------------------
 ;;; memory-copy
 
@@ -393,6 +439,18 @@
 	bv)
     => '#vu8(65 66))
 
+  (check
+      (let* ((cstr (ffi.bytevector->cstring* '#vu8(65 66 67 68)))
+	     (bv   (ffi.cstring->bytevector cstr)))
+	bv)
+    => '#vu8(65 66 67 68))
+
+  (check
+      (let* ((cstr (ffi.bytevector->guarded-cstring* '#vu8(65 66 67 68)))
+	     (bv   (ffi.cstring->bytevector cstr)))
+	bv)
+    => '#vu8(65 66 67 68))
+
 ;;; --------------------------------------------------------------------
 
   (check
@@ -403,6 +461,18 @@
 
   (check
       (let* ((cstr (ffi.string->guarded-cstring "ABCD"))
+	     (str  (ffi.cstring->string cstr 2)))
+	str)
+    => "AB")
+
+  (check
+      (let* ((cstr (ffi.string->guarded-cstring* "ABCD"))
+	     (str  (ffi.cstring->string cstr 2)))
+	str)
+    => "AB")
+
+  (check
+      (let* ((cstr (ffi.string->cstring* "ABCD"))
 	     (str  (ffi.cstring->string cstr 2)))
 	str)
     => "AB")
@@ -487,8 +557,42 @@
 	     #vu8(85 86 87 88)))
 
   (check
+      (let* ((argv (ffi.bytevectors->guarded-argv* '(#vu8(65 66 67 68)
+							 #vu8(75 77 77 78)
+							 #vu8(85 86 87 88))))
+	     (strs (ffi.argv->bytevectors argv)))
+	strs)
+    => '(#vu8(65 66 67 68)
+	     #vu8(75 77 77 78)
+	     #vu8(85 86 87 88)))
+
+  (check
+      (let* ((argv (ffi.bytevectors->argv* '(#vu8(65 66 67 68)
+						 #vu8(75 77 77 78)
+						 #vu8(85 86 87 88))))
+	     (strs (ffi.argv->bytevectors argv)))
+	(free argv)
+	strs)
+    => '(#vu8(65 66 67 68)
+	     #vu8(75 77 77 78)
+	     #vu8(85 86 87 88)))
+
+  (check
       (let* ((argv (ffi.strings->guarded-argv '("ciao" "hello" "salut")))
 	     (strs (ffi.argv->strings argv)))
+	strs)
+    => '("ciao" "hello" "salut"))
+
+  (check
+      (let* ((argv (ffi.strings->guarded-argv* '("ciao" "hello" "salut")))
+	     (strs (ffi.argv->strings argv)))
+	strs)
+    => '("ciao" "hello" "salut"))
+
+  (check
+      (let* ((argv (ffi.strings->argv* '("ciao" "hello" "salut")))
+	     (strs (ffi.argv->strings argv)))
+	(free argv)
 	strs)
     => '("ciao" "hello" "salut"))
 

@@ -50,17 +50,8 @@
     condition-shared-object-lookup-so-handle
     condition-shared-object-lookup-foreign-symbol
 
-    ;; &out-of-memory
-    ;; make-out-of-memory-condition
-    ;; out-of-memory-condition?
-    ;; condition-out-of-memory/number-of-bytes
-    ;; raise-out-of-memory
-
-    ;; &memory-request
-    ;; make-memory-request-condition
-    ;; memory-request-condition?
-    ;; (rename (condition-out-of-memory/number-of-bytes condition-memory-request/number-of-bytes))
-    ;; condition-memory-request/clean?
+    &out-of-memory-error
+    make-out-of-memory-error		out-of-memory-error?
 
 ;;; --------------------------------------------------------------------
 ;;; reexports from (vicare)
@@ -84,27 +75,32 @@
     free				memcmp
     memcpy				memmove
     memset				memory-copy
-    bytevector->memory			memory->bytevector
-    bytevector->guarded-memory
+    bytevector->memory			bytevector->memory*
+    bytevector->guarded-memory		bytevector->guarded-memory*
+    memory->bytevector
 
     with-local-storage
 
     ;; C arrays of C strings
-    bytevectors->argv			argv->bytevectors
-    strings->argv			argv->strings
-    bytevectors->guarded-argv
-    strings->guarded-argv
     argv-length
+    argv->bytevectors			argv->strings
+    bytevectors->argv			bytevectors->argv*
+    bytevectors->guarded-argv		bytevectors->guarded-argv*
+    strings->argv			strings->argv*
+    strings->guarded-argv		strings->guarded-argv*
 
     ;; C strings
     strlen
     strcmp				strncmp
-    strdup				strndup
-    guarded-strdup			guarded-strndup
-    cstring->bytevector
-    bytevector->cstring			bytevector->guarded-cstring
-    cstring->string
-    string->cstring			string->guarded-cstring
+    strdup				strdup*
+    strndup				strndup*
+    guarded-strdup			guarded-strdup*
+    guarded-strndup			guarded-strndup*
+    cstring->bytevector			cstring->string
+    bytevector->cstring			bytevector->cstring*
+    bytevector->guarded-cstring		bytevector->guarded-cstring*
+    string->cstring			string->cstring*
+    string->guarded-cstring		string->guarded-cstring*
 
     ;; errno interface
     errno
