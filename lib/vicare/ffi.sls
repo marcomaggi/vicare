@@ -26,7 +26,44 @@
     make-c-callout-maker		make-c-callout-maker/with-errno
     make-c-callback-maker		free-c-callback
 
+    ;; system agnostic shared libraries interface
+    open-shared-object			close-shared-object
+    lookup-shared-object
+
+    &shared-object-error
+    make-shared-object-error
+    shared-object-error?
+
+    &shared-object-opening-error
+    make-shared-object-opening-error
+    shared-object-opening-error?
+    condition-shared-object-opening-name
+
+    &shared-object-closing-error
+    make-shared-object-closing-error
+    shared-object-closing-error?
+    condition-shared-object-closing-so-handle
+
+    &shared-object-lookup-error
+    make-shared-object-lookup-error
+    shared-object-lookup-error?
+    condition-shared-object-lookup-so-handle
+    condition-shared-object-lookup-foreign-symbol
+
+    ;; &out-of-memory
+    ;; make-out-of-memory-condition
+    ;; out-of-memory-condition?
+    ;; condition-out-of-memory/number-of-bytes
+    ;; raise-out-of-memory
+
+    ;; &memory-request
+    ;; make-memory-request-condition
+    ;; memory-request-condition?
+    ;; (rename (condition-out-of-memory/number-of-bytes condition-memory-request/number-of-bytes))
+    ;; condition-memory-request/clean?
+
 ;;; --------------------------------------------------------------------
+;;; reexports from (vicare)
 
     ;; pointer values
     pointer?
@@ -103,6 +140,79 @@
     pointer-set-c-pointer!)
   (import (vicare)
     (ikarus system $foreign)
-    (vicare errno)))
+    (vicare errno))
+
+
+;;;; condition objects
+
+(define-condition-type &shared-object-error &error
+  make-shared-object-error shared-object-error?)
+
+(define-condition-type &shared-object-opening-error &shared-object-error
+  make-shared-object-opening-error shared-object-opening-error?
+  (name condition-shared-object-opening-name))
+
+(define-condition-type &shared-object-closing-error &shared-object-error
+  make-shared-object-closing-error shared-object-closing-error?
+  (so-handle		condition-shared-object-closing-so-handle))
+
+(define-condition-type &shared-object-lookup-error &shared-object-error
+  make-shared-object-lookup-error shared-object-lookup-error?
+  (so-handle		condition-shared-object-lookup-so-handle)
+  (foreign-symbol	condition-shared-object-lookup-foreign-symbol))
+
+
+;;;; system agnostic API to load libraries
+
+(define open-shared-object
+  ;;Open the shared library  identified by the string SHARED-OBJECT-NAME
+  ;;and return a library descriptor.
+  ;;
+  ;;DLOPEN returns a  pointer to the external library  descriptor, or #f
+  ;;if an error occurred.
+  ;;
+  (case-lambda
+   (()
+    ;;Self-opening the process should never fail.
+    (dlopen))
+   ((shared-object-name)
+    (define who 'open-shared-object)
+    (or (dlopen shared-object-name #f #f)
+	(raise
+	 (condition (make-shared-object-opening-error shared-object-name)
+		    (make-who-condition who)
+		    (make-message-condition (dlerror))))))))
+
+(define (close-shared-object so-handle)
+  ;;Close the shared object referenced by SO-HANDLE.
+  ;;
+  ;;DLCLOSE returns  a pointer  to the external  entity, or #f  when the
+  ;;symbol is not found.
+  ;;
+  (define who 'lookup-shared-object)
+  (or (dlclose so-handle)
+      (raise
+       (condition (make-shared-object-closing-error so-handle)
+		  (make-who-condition who)
+		  (make-message-condition (dlerror))))))
+
+(define (lookup-shared-object so-handle foreign-symbol)
+  ;;Look up the foreign symbol  selected by the string FOREIGN-SYMBOL in
+  ;;the shared library identified by SO-HANDLE.
+  ;;
+  ;;DLSYM  returns a  pointer to  the external  entity, or  #f  when the
+  ;;symbol is not found.
+  ;;
+  (define who 'lookup-shared-object)
+  (or (dlsym so-handle foreign-symbol)
+      (raise
+       (condition (make-shared-object-lookup-error so-handle foreign-symbol)
+		  (make-who-condition who)
+		  (make-message-condition (dlerror))))))
+
+
+;;;; done
+
+)
 
 ;;; end of file

@@ -28,6 +28,7 @@
 #!r6rs
 (import (vicare)
   (checks)
+  (vicare syntactic-extensions)
   (prefix (vicare words)
 	  words.)
   (prefix (vicare ffi)
@@ -1024,42 +1025,83 @@
 
 (parametrise ((check-test-name	'zlib))
 
-  (define zlib
-    (ffi.dlopen "libz.so"))
+  (guard (E (else #f)) ;catch exceptions in case zlib is not loadable
+    (define zlib
+      (ffi.dlopen "libz.so"))
 
-  (when zlib
-    (check
-	(let* ((maker		(ffi.make-c-callout-maker
+    (when zlib
+      (check
+	  (let* ((maker		(ffi.make-c-callout-maker
 				 'signed-int '(pointer pointer pointer unsigned-long)))
-	       (compress*	(maker (ffi.dlsym zlib "compress")))
-	       (uncompress*	(maker (ffi.dlsym zlib "uncompress"))))
+		 (compress*	(maker (ffi.dlsym zlib "compress")))
+		 (uncompress*	(maker (ffi.dlsym zlib "uncompress"))))
 
-	  (define (compress src.bv)
-	    (let-values (((src.ptr src.len) (ffi.bytevector->guarded-memory src.bv)))
-	      (let* ((dst.len	src.len)
-		     (&dst.len	(ffi.guarded-calloc 1 8))
-		     (dst.ptr	(ffi.guarded-malloc dst.len)))
-		(ffi.pointer-set-c-unsigned-long! &dst.len 0 dst.len)
-		(compress* dst.ptr &dst.len src.ptr src.len)
-		(let ((dst.len (ffi.pointer-ref-c-unsigned-long &dst.len 0)))
-		  (ffi.memory->bytevector dst.ptr dst.len)))))
+	    (define (compress src.bv)
+	      (let-values (((src.ptr src.len) (ffi.bytevector->guarded-memory src.bv)))
+		(let* ((dst.len	src.len)
+		       (&dst.len	(ffi.guarded-calloc 1 8))
+		       (dst.ptr	(ffi.guarded-malloc dst.len)))
+		  (ffi.pointer-set-c-unsigned-long! &dst.len 0 dst.len)
+		  (compress* dst.ptr &dst.len src.ptr src.len)
+		  (let ((dst.len (ffi.pointer-ref-c-unsigned-long &dst.len 0)))
+		    (ffi.memory->bytevector dst.ptr dst.len)))))
 
-	  (define (uncompress src.bv out-len)
-	    (let-values (((src.ptr src.len) (ffi.bytevector->guarded-memory src.bv)))
-	      (let* ((dst.len	out-len)
-		     (&dst.len	(ffi.guarded-malloc 8))
-		     (dst.ptr	(ffi.guarded-malloc dst.len)))
-		(ffi.pointer-set-c-unsigned-long! &dst.len 0 dst.len)
-		(uncompress* dst.ptr &dst.len src.ptr src.len)
-		(let ((dst.len (ffi.pointer-ref-c-unsigned-long &dst.len 0)))
-		  (ffi.memory->bytevector dst.ptr dst.len)))))
+	    (define (uncompress src.bv out-len)
+	      (let-values (((src.ptr src.len) (ffi.bytevector->guarded-memory src.bv)))
+		(let* ((dst.len	out-len)
+		       (&dst.len	(ffi.guarded-malloc 8))
+		       (dst.ptr	(ffi.guarded-malloc dst.len)))
+		  (ffi.pointer-set-c-unsigned-long! &dst.len 0 dst.len)
+		  (uncompress* dst.ptr &dst.len src.ptr src.len)
+		  (let ((dst.len (ffi.pointer-ref-c-unsigned-long &dst.len 0)))
+		    (ffi.memory->bytevector dst.ptr dst.len)))))
 
-	  (let* ((src.len 4096)
-		 (src.bv  (make-bytevector src.len 99))
-                 (com.bv  (compress src.bv))
-		 (unc.bv  (uncompress com.bv src.len)))
-	    (bytevector=? src.bv unc.bv)))
-      => #t))
+	    (let* ((src.len 4096)
+		   (src.bv  (make-bytevector src.len 99))
+		   (com.bv  (compress src.bv))
+		   (unc.bv  (uncompress com.bv src.len)))
+	      (bytevector=? src.bv unc.bv)))
+	=> #t))
+
+    #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'agnostic))
+
+  (check
+      (ffi.pointer? (ffi.open-shared-object))
+    => #t)
+
+  (check
+      (guard (E ((ffi.shared-object-opening-error? E)
+;;;		 (check-pretty-print E)
+		 (list (ffi.condition-shared-object-opening-name E)
+		       (condition-who E))))
+	(ffi.open-shared-object "ciao"))
+    => '("ciao" open-shared-object))
+
+  (guard (E (else #f)) ;catch exceptions in case zlib is not loadable
+    (let ((zlib (ffi.open-shared-object "libz.so")))
+      (unwind-protect
+	  (begin
+	    (check
+		(pointer? (ffi.lookup-shared-object zlib "compress"))
+	      => #t)
+
+	    (check
+		(guard (E ((ffi.shared-object-lookup-error? E)
+;;;			   (check-pretty-print E)
+			   (list (ffi.condition-shared-object-lookup-so-handle E)
+				 (ffi.condition-shared-object-lookup-foreign-symbol E)
+				 (condition-who E))))
+		  (ffi.lookup-shared-object zlib "ciao"))
+	      => `(,zlib "ciao" lookup-shared-object))
+
+	    #f)
+	(ffi.close-shared-object zlib)))
+    #f)
 
   #t)
 
@@ -1070,7 +1112,7 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'ffi.case-errno	'scheme-indent-function 1)
-;; eval: (put 'catch		'scheme-indent-function 1)
-;; eval: (put 'ffi.with-local-storage		'scheme-indent-function 1)
+;; eval: (put 'catch			'scheme-indent-function 1)
+;; eval: (put 'ffi.case-errno		'scheme-indent-function 1)
+;; eval: (put 'ffi.with-local-storage	'scheme-indent-function 1)
 ;; End:

@@ -193,6 +193,17 @@
     (when run?
       (thunk))))
 
+;; (define (compile-r6rs-library filename)
+;;   ((current-library-expander)
+;;    (read-library-source-file filename)
+;;    filename
+;;    (lambda (name) (void)))
+;;   (serialize-all
+;;    (lambda (file-name contents)
+;;      (do-serialize-library file-name contents))
+;;    (lambda (core-expr)
+;;      (compile-core-expr core-expr))))
+
 
 ;;;; done
 

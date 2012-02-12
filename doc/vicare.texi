@@ -6465,6 +6465,7 @@ library @library{ikarus system $foreign}.
 @menu
 * ffi libffi::                  Installing and using Libffi.
 * ffi dl::                      Accessing shared libraries.
+* ffi shared::                  System-agnostic shared libraries @api{}.
 * ffi call::                    Callouts and callbacks.
 @end menu
 
@@ -6498,7 +6499,7 @@ and the makefile supports the @env{DESTDIR} environment variable for
 installation under a different directory prefix.
 
 @quotation
-@emph{Note:} Libffi version 3.0.10 installs its header files under:
+@strong{NOTE} Libffi version 3.0.10 installs its header files under:
 
 @example
 $@{prefix@}/lib/libffi-3.0.10/include
@@ -6519,7 +6520,8 @@ the Libffi headers are to be found; @ref{overview install} for details.
 Most system implementations of dynamic loading employ reference counting
 for @func{dlopen} and @func{dlclose} in that library resources are not
 freed until the number of calls to @func{dlclose} matches the number of
-calls to @func{dlopen}.
+calls to @func{dlopen}.  The following bindings are exported by
+@library{vicare ffi}.
 
 
 @defun dlopen
@@ -6597,6 +6599,191 @@ Interface to the C function @cfunc{dlerror}, see the manual page
 cause of the error can be obtained by calling @func{dlerror} which
 returns a string describing the error; return @false{} if there was no
 dynamic loading error.
+@end defun
+
+@c page
+@node ffi shared
+@section System--agnostic shared libraries @api{}
+
+
+This @api{} to load shared libraries is more system--agnostic with
+respect to the functions described in @ref{ffi dl}.  The following
+bindings are exported by @library{vicare ffi}.
+
+
+@defun open-shared-object
+@defunx open-shared-object @var{so-name}
+Load a platform shared library and return a pointer object representing
+a handler for the library.  If the library cannot be loaded: raise a
+non--continuable exception with condition types @condition{who},
+@condition{message}, @condition{shared-object-opening-error}.
+
+When no arguments are present: the returned pointer handler references
+the current process and it can be used to retrieve pointers to functions
+already loaded, for example the functions exported by the standard C
+library.
+
+When given: @var{so-name} must be a string representing the name of the
+library; library names are system--dependent and must include the
+appropriate suffix (for exapmle @code{*.so} on Linux, @code{*.dylib} on
+Darwin and @code{*.dll} on Cygwin).  @var{so-name} may include a full
+path which identifies the location of the library, or it may just be the
+name of the library.
+
+@quotation
+@strong{For Unix} We can find documentation about the search path of
+shared objects in the manual page of @cfunc{dlopen}.  The system will
+lookup the library name using the @env{LD_LIBRARY_PATH} environment
+variable.
+@end quotation
+@end defun
+
+
+@defun close-shared-object @var{so-handle}
+Release the resources loaded from the library referenced by the
+@var{so-handle}.  If the library cannot be closed: raise a
+non--continuable exception with condition types @condition{who},
+@condition{message}, @condition{shared-object-closing-error}.
+
+Closing a library renders all symbols and static data structures that
+the library exports invalid and the program may crash or corrupt its
+memory if such symbols are used after a library is closed.
+@end defun
+
+
+@defun lookup-shared-object @var{so-handle} @var{name}
+Search the loaded library referenced by the @var{so-handle} for an
+exported symbol whose name is represented by the Scheme string
+@var{name}.  If successful return a pointer object, else raise a
+non--continuable exception with condition types @condition{who},
+@condition{message}, @condition{shared-object-lookup-error}.
+
+If the returned value references a function: it can be used as argument
+to the callout generators built by @func{make-c-callout-maker}.
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Shared object errors
+
+@deftp {Condition Type} &shared-object-error
+Base condition type for all the exceptions associated to a shared
+object; it is derived from @condition{error}.  It has no fields.
+@end deftp
+
+
+@defun make-shared-object-error
+Build and return a new instance of @condition{shared-object-error}.
+@end defun
+
+
+@defun shared-object-error? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{shared-object-error}, else return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Opening shared objects
+
+@deftp {Condition Type} &shared-object-opening-error
+Condition type tagging exceptions associated to opening a shared object;
+it is derived from @condition{shared-object-error}.  It has the
+following fields:
+
+@table @code
+@item name
+Scheme string representing the file name of the shared object.
+@end table
+@end deftp
+
+
+@defun make-shared-object-opening-error @var{so-name}
+Build and return a new instance of
+@condition{shared-object-opening-error}.
+@end defun
+
+
+@defun shared-object-opening-error? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{shared-object-opening-error}, else return @false{}.
+@end defun
+
+
+@defun condition-shared-object-opening-name @var{so-opening}
+Accessor for the field of @condition{shared-object-opening-error}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Closing shared objects
+
+@deftp {Condition Type} &shared-object-closing-error
+Condition type tagging exceptions associated to closing a shared object;
+it is derived from @condition{shared-object-error}.  It has the
+following fields:
+
+@table @code
+@item so-handle
+Pointer object referencing the shared object; it is the value returned
+by @func{open-shared-object}.
+@end table
+@end deftp
+
+
+@defun make-shared-object-closing-error @var{so-handle}
+Build and return a new instance of
+@condition{shared-object-closing-error}.
+@end defun
+
+
+@defun shared-object-closing-error? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{shared-object-closing-error}, else return @false{}.
+@end defun
+
+
+@defun condition-shared-object-closing-so-handle @var{so-closing}
+Accessor for the field of @condition{shared-object-closing-error}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Inspecting shared objects
+
+@deftp {Condition Type} &shared-object-lookup-error
+Condition type tagging exceptions associated to looking up a symbol in a
+shared object; it is derived from @condition{shared-object-error}.  It
+has the following fields:
+
+@table @code
+@item so-handle
+Pointer object referencing the shared object; it is the value returned
+by @func{open-shared-object}.
+
+@item foreign-symbol
+Scheme string representing the shared object exported symbol whose
+address was requested.
+@end table
+@end deftp
+
+
+@defun make-shared-object-lookup-error @var{so-handle} @var{symbol}
+Build and return a new instance of
+@condition{shared-object-lookup-error}.
+@end defun
+
+
+@defun shared-object-lookup-error? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{shared-object-lookup-error}, else return @false{}.
+@end defun
+
+
+@defun condition-shared-object-lookup-so-handle @var{so-lookup}
+@defunx condition-shared-object-lookup-foreign-symbol @var{so-lookup}
+Accessors for the fields of @condition{shared-object-lookup-error}.
 @end defun
 
 @c page
