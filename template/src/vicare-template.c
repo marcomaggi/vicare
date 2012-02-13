@@ -1,5 +1,5 @@
 /*
-  Part of: Vicare/Tamplate
+  Part of: Vicare/Template
   Contents: Template for Vicare
   Date: Sat Jan 21, 2012
 
