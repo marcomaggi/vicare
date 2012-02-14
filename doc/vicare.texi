@@ -14675,6 +14675,7 @@ be @code{AF_INET} or @code{AF_INET6}.
 
 @menu
 * errno::                       More features for @code{errno}.
+* words::                       Exact integer predicates and constants.
 * readline::                    Extended interface to @gnu{} Readline.
 * gcc::                         A toy library interface to @gcc{}.
 * wtables::                     Weak hashtables.
@@ -14728,6 +14729,326 @@ the auxiliary keyword exported by @library{rnrs}.  Example:
 
 The @meta{code} must be symbols representing @code{errno} codes, they
 are @strong{not} meant to be binding identifiers.
+@end deffn
+
+@c page
+@node words
+@section Exact integer predicates and constants
+
+
+It is often needed to validate exact integers agains fixed range bounds,
+for example for 32-bit and 64-bit representations or some platform
+specific C language type.  The library @library{vicare words} implements
+such predicates and minimum/maximum range constants.
+
+@menu
+* words predicates::            Verifying the range of integers.
+* words limits::                Exact integer range limits.
+@end menu
+
+@c page
+@node words predicates
+@subsection Verifying the range of integers
+
+
+The following bindings are exported by the @library{vicare words}
+library.
+
+
+@deffn Syntax word? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum, that is an exact
+integer; else return @false{}.
+@end deffn
+
+
+@deffn Syntax machine-word? @var{obj}
+On 32-bit platforms: return @true{} if @var{obj} is a fixnum or bignum
+in the 32-bit range; on 64-bit platforms: return @true{} if @var{obj} is
+a fixnum or bignum in the 64-bit range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u8? @var{obj}
+@deffnx Syntax word-s8? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum in the 8-bit
+range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u16? @var{obj}
+@deffnx Syntax word-s16? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum in the 16-bit
+range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u32? @var{obj}
+@deffnx Syntax word-s32? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum or bignum in
+the 32-bit range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u64? @var{obj}
+@deffnx Syntax word-s64? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum or bignum in
+the 64-bit range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u128? @var{obj}
+@deffnx Syntax word-s128? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum or bignum in
+the 128-bit range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u256? @var{obj}
+@deffnx Syntax word-s256? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum or bignum in
+the 256-bit range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax ptrdiff? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum which can be
+interpreted as difference between memory pointer values; else return
+@false{}.
+
+On 32-bit platforms this means @var{obj} is between the minimum for
+signed 32-bit integers and the maximum for unsigned 32-bit integers.
+
+On 64-bit platforms this means @var{obj} is between the minimum for
+signed 64-bit integers and the maximum for unsigned 64-bit integers.
+@example
+@end example
+@end deffn
+
+
+@deffn Syntax unsigned-char? @var{obj}
+@deffnx Syntax signed-char? @var{obj}
+Return @true{} if @var{obj} is a fixnum in the range representable with
+a platform C language type @code{signed char} or @code{unsigned char}.
+@end deffn
+
+
+@deffn Syntax unsigned-short? @var{obj}
+@deffnx Syntax signed-short? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{signed short int} or
+@code{unsigned short int}.
+@end deffn
+
+
+@deffn Syntax unsigned-int? @var{obj}
+@deffnx Syntax signed-int? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{signed int} or
+@code{unsigned int}.
+@end deffn
+
+
+@deffn Syntax unsigned-long? @var{obj}
+@deffnx Syntax signed-long? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{signed long int} or
+@code{unsigned long int}.
+@end deffn
+
+
+@deffn Syntax unsigned-long-long? @var{obj}
+@deffnx Syntax signed-long-long? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{signed long long
+int} or @code{unsigned long long int}.
+@end deffn
+
+
+@deffn Syntax size_t? @var{obj}
+@deffnx Syntax ssize_t? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{size_t} or
+@code{ssize_t} as defined by @file{stddef.h}.
+@end deffn
+
+
+@deffn Syntax off_t? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{off_t} as defined by
+@file{stdio.h}.
+@end deffn
+
+
+The following predicates are meant to be used to validate indices in
+bytevectors.
+
+
+@deffn Syntax fixnum-aligned-to-2? @var{N}
+@strong{Unsafe syntax: @var{N} must be a fixnum.}  Evaluate to @true{}
+if @var{N} is a fixnum multiple of @math{2}; else evaluate to @false{}.
+@end deffn
+
+
+@deffn Syntax fixnum-aligned-to-4? @var{N}
+@strong{Unsafe syntax: @var{N} must be a fixnum.}  Evaluate to @true{}
+if @var{N} is a fixnum multiple of @math{4}; else evaluate to @false{}.
+@end deffn
+
+
+@deffn Syntax fixnum-aligned-to-8? @var{N}
+@strong{Unsafe syntax: @var{N} must be a fixnum.}  Evaluate to @true{}
+if @var{N} is a fixnum multiple of @math{8}; else evaluate to @false{}.
+@end deffn
+
+
+@deffn Syntax fixnum-aligned-to? @var{N} @var{alignment}
+@strong{Unsafe syntax: @var{N} and @var{alignment} must be fixnums.}
+Evaluate to @true{} if @var{N} is a fixnum multiple of @math{alignment};
+else evaluate to @false{}.
+@end deffn
+
+@c page
+@node words limits
+@subsection Exact integer range limits
+
+
+The following bindings are exported by the @library{vicare words}
+library.
+
+@c ------------------------------------------------------------
+
+@subsubheading Inclusive limits
+
+
+@deffn Syntax greatest-u8
+@deffnx Syntax greatest-s8
+@deffnx Syntax least-u8
+@deffnx Syntax least-s8
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 8-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u16
+@deffnx Syntax greatest-s16
+@deffnx Syntax least-u16
+@deffnx Syntax least-s16
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 16-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u32
+@deffnx Syntax greatest-s32
+@deffnx Syntax least-u32
+@deffnx Syntax least-s32
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 32-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u64
+@deffnx Syntax greatest-s64
+@deffnx Syntax least-u64
+@deffnx Syntax least-s64
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 64-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-s128
+@deffnx Syntax greatest-u128
+@deffnx Syntax least-u128
+@deffnx Syntax least-s128
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 128-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-s256
+@deffnx Syntax greatest-u256
+@deffnx Syntax least-u256
+@deffnx Syntax least-s256
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 256-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-machine-word
+@deffnx Syntax least-machine-word
+On 32-bit platforms: evaluate to the greatest or least unsigned exact
+integer in the 32-bit range.
+
+On 64-bit platforms: evaluate to the greatest or least unsigned exact
+integer in the 64-bit range.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Exclusive limits
+
+
+@deffn Syntax greatest-u8*
+@deffnx Syntax greatest-s8*
+@deffnx Syntax least-u8*
+@deffnx Syntax least-s8*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 8-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u16*
+@deffnx Syntax greatest-s16*
+@deffnx Syntax least-u16*
+@deffnx Syntax least-s16*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 16-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u32*
+@deffnx Syntax greatest-s32*
+@deffnx Syntax least-u32*
+@deffnx Syntax least-s32*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 32-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u64*
+@deffnx Syntax greatest-s64*
+@deffnx Syntax least-u64*
+@deffnx Syntax least-s64*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 64-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-s128*
+@deffnx Syntax greatest-u128*
+@deffnx Syntax least-u128*
+@deffnx Syntax least-s128*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 128-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-s256*
+@deffnx Syntax greatest-u256*
+@deffnx Syntax least-u256*
+@deffnx Syntax least-s256*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 256-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-machine-word*
+@deffnx Syntax least-machine-word*
+On 32-bit platforms: evaluate to the greatest--plus--1 or
+least--minus--1 unsigned exact integer in the 32-bit range.
+
+On 64-bit platforms: evaluate to the greatest--plus--1 or
+least--minus--1 unsigned exact integer in the 64-bit range.
 @end deffn
 
 @c page

@@ -11,7 +11,7 @@
 ;;;	imported  by Vicare itself,  syntaxes whose  expansion reference
 ;;;	only bindings imported by Vicare itself.
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -37,6 +37,8 @@
     word-u16?		word-s16?
     word-u32?		word-s32?
     word-u64?		word-s64?
+    word-u128?		word-s128?
+    word-u256?		word-s256?
     machine-word?	ptrdiff?
 
     unsigned-char?	signed-char?
@@ -44,6 +46,9 @@
     unsigned-int?	signed-int?
     unsigned-long?	signed-long?
     unsigned-long-long?	signed-long-long?
+
+    size_t?		ssize_t?
+    off_t?
 
     ;; inclusive limits
     greatest-u8		least-u8
@@ -54,6 +59,10 @@
     greatest-s32	least-s32
     greatest-u64	least-u64
     greatest-s64	least-s64
+    greatest-u128	least-u128
+    greatest-s128	least-s128
+    greatest-u256	least-u256
+    greatest-s256	least-s256
     greatest-machine-word
     least-machine-word
 
@@ -66,6 +75,10 @@
     greatest-s32*	least-s32*
     greatest-u64*	least-u64*
     greatest-s64*	least-s64*
+    greatest-u128*	least-u128*
+    greatest-s128*	least-s128*
+    greatest-u256*	least-u256*
+    greatest-s256*	least-s256*
     greatest-machine-word*
     least-machine-word*
 
@@ -135,6 +148,16 @@
 (define-inline-constant S64MAX		+9223372036854775807)	#;(- (expt 2 63) 1)
 (define-inline-constant S64MIN		-9223372036854775808)	#;(- (expt 2 63))
 
+(define-inline-constant U128MAX		340282366920938463463374607431768211455) #;(- (expt 2 128) 1)
+(define-inline-constant U128MIN		0)
+(define-inline-constant S128MAX		170141183460469231731687303715884105727) #;(- (expt 2 127) 1)
+(define-inline-constant S128MIN		-170141183460469231731687303715884105728) #;(- (expt 2 127))
+
+(define-inline-constant U256MAX		115792089237316195423570985008687907853269984665640564039457584007913129639935) #;(- (expt 2 256) 1)
+(define-inline-constant U256MIN		0)
+(define-inline-constant S256MAX		57896044618658097711785492504343953926634992332820282019728792003956564819967) #;(- (expt 2 255) 1)
+(define-inline-constant S256MIN		-57896044618658097711785492504343953926634992332820282019728792003956564819968) #;(- (expt 2 255))
+
 ;;; --------------------------------------------------------------------
 
 (define-inline-constant U8MAX*		256)
@@ -156,6 +179,54 @@
 (define-inline-constant U64MIN*		-1)
 (define-inline-constant S64MAX*		+9223372036854775808)
 (define-inline-constant S64MIN*		-9223372036854775809)
+
+(define-inline-constant U128MAX*	340282366920938463463374607431768211456)
+(define-inline-constant U128MIN*	-1)
+(define-inline-constant S128MAX*	170141183460469231731687303715884105728)
+(define-inline-constant S128MIN*	-170141183460469231731687303715884105729)
+
+(define-inline-constant U256MAX*	115792089237316195423570985008687907853269984665640564039457584007913129639936)
+(define-inline-constant U256MIN*	-1)
+(define-inline-constant S256MAX*	57896044618658097711785492504343953926634992332820282019728792003956564819968)
+(define-inline-constant S256MIN*	-57896044618658097711785492504343953926634992332820282019728792003956564819969)
+
+;;; --------------------------------------------------------------------
+
+(define-inline-constant SIZEOF_CHAR		@SIZEOF_CHAR@)
+(define-inline-constant SIZEOF_SHORT		@SIZEOF_SHORT@)
+(define-inline-constant SIZEOF_INT		@SIZEOF_INT@)
+(define-inline-constant SIZEOF_LONG		@SIZEOF_LONG@)
+(define-inline-constant SIZEOF_LONG_LONG	@SIZEOF_LONG_LONG@)
+(define-inline-constant SIZEOF_SIZE_T		@SIZEOF_SIZE_T@)
+(define-inline-constant SIZEOF_SSIZE_T		@SIZEOF_SSIZE_T@)
+(define-inline-constant SIZEOF_OFF_T		@SIZEOF_OFF_T@)
+
+(define-syntax SIZE_T_MAX
+  (if (= 4 @SIZEOF_SIZE_T@)
+      (identifier-syntax U32MAX)
+    (identifier-syntax U64MAX)))
+
+(define-inline-constant SIZE_T_MIN	0)
+
+(define-syntax SSIZE_T_MAX
+  (if (= 4 @SIZEOF_SSIZE_T@)
+      (identifier-syntax S32MAX)
+    (identifier-syntax S64MAX)))
+
+(define-syntax SSIZE_T_MIN
+  (if (= 4 @SIZEOF_SSIZE_T@)
+      (identifier-syntax S32MIN)
+    (identifier-syntax S64MIN)))
+
+(define-syntax OFF_T_MAX
+  (if (= 4 @SIZEOF_OFF_T@)
+      (identifier-syntax S32MAX)
+    (identifier-syntax S64MAX)))
+
+(define-syntax OFF_T_MIN
+  (if (= 4 @SIZEOF_OFF_T@)
+      (identifier-syntax S32MIN)
+    (identifier-syntax S64MIN)))
 
 
 (define-inline (%bnbncmp X Y fxcmp)
@@ -199,6 +270,16 @@
 (define-inline (least-u64)		U64MIN)
 (define-inline (least-s64)		S64MIN)
 
+(define-inline (greatest-u128)		U128MAX)
+(define-inline (greatest-s128)		S128MAX)
+(define-inline (least-u128)		U128MIN)
+(define-inline (least-s128)		S128MIN)
+
+(define-inline (greatest-u256)		U256MAX)
+(define-inline (greatest-s256)		S256MAX)
+(define-inline (least-u256)		U256MIN)
+(define-inline (least-s256)		S256MIN)
+
 (define-inline (greatest-machine-word)
   (case-word-size
    ((32)	(greatest-u32))
@@ -230,6 +311,16 @@
 (define-inline (greatest-s64*)		S64MAX*)
 (define-inline (least-u64*)		U64MIN*)
 (define-inline (least-s64*)		S64MIN*)
+
+(define-inline (greatest-u128*)		U128MAX*)
+(define-inline (greatest-s128*)		S128MAX*)
+(define-inline (least-u128*)		U128MIN*)
+(define-inline (least-s128*)		S128MIN*)
+
+(define-inline (greatest-u256*)		U256MAX*)
+(define-inline (greatest-s256*)		S256MAX*)
+(define-inline (least-u256*)		U256MIN*)
+(define-inline (least-s256*)		S256MIN*)
 
 (define-inline (greatest-machine-word*)
   (case-word-size
@@ -325,6 +416,36 @@
 	   ($bnbn>= N S64MIN)
 	   ($bnbn<= N S64MAX))))
 
+;;; --------------------------------------------------------------------
+
+(define-inline (word-u128? N)
+  (if (fixnum? N)
+      ($fx<= 0 N)
+    (and (bignum? N)
+	 ($bignum-positive? N)
+	 ($bnbn<= N U128MAX))))
+
+(define-inline (word-s128? N)
+  (or (fixnum? N)
+      (and (bignum? N)
+	   ($bnbn>= N S128MIN)
+	   ($bnbn<= N S128MAX))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (word-u256? N)
+  (if (fixnum? N)
+      ($fx<= 0 N)
+    (and (bignum? N)
+	 ($bignum-positive? N)
+	 ($bnbn<= N U256MAX))))
+
+(define-inline (word-s256? N)
+  (or (fixnum? N)
+      (and (bignum? N)
+	   ($bnbn>= N S256MIN)
+	   ($bnbn<= N S256MAX))))
+
 
 ;;;; C language data predicates
 
@@ -353,7 +474,12 @@
   (define-predicate signed-short?		@SIZEOF_SHORT@		#f)
   (define-predicate signed-int?			@SIZEOF_INT@		#f)
   (define-predicate signed-long?		@SIZEOF_LONG@		#f)
-  (define-predicate signed-long-long?		@SIZEOF_LONG_LONG@	#f))
+  (define-predicate signed-long-long?		@SIZEOF_LONG_LONG@	#f)
+
+  (define-predicate size_t?			@SIZEOF_SIZE_T@		#f)
+  (define-predicate ssize_t?			@SIZEOF_SSIZE_T@	#f)
+  (define-predicate off_t?			@SIZEOF_OFF_T@		#f)
+  )
 
 
 ;;;; vector index alignment
