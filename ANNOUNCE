@@ -42,6 +42,9 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d9
 ------------------------
 
+* The package  name, selected in  "configure.ac", has been  changed from
+  "vicare" to "vicare-scheme".
+
 * Added to (vicare ffi) more system-agnostic functions to load a foreign
   shared library.
 
