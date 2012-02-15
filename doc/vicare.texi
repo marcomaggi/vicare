@@ -1,7 +1,7 @@
 \input texinfo.tex
 @c %**start of header
 @setfilename vicare.info
-@settitle Vicare Scheme User's Guide
+@settitle Vicare Scheme
 @c %**end of header
 
 @include version.texi
@@ -519,7 +519,7 @@ Revised^6 Report on the algorithmic language Scheme
 
 @set PRJNAME                    Vicare
 
-@set TITLE                      Vicare Scheme User's Guide
+@set TITLE                      Vicare Scheme
 
 @c To be used as @value{PACKAGE} whenever we need to include the full
 @c name of this package.
