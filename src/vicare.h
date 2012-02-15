@@ -118,6 +118,8 @@ typedef struct ikpcb_t {
 
 typedef struct ikpcb	ikpcb;
 
+ik_decl ikpcb *	ik_the_pcb (void);
+
 
 /** --------------------------------------------------------------------
  ** Function prototypes.

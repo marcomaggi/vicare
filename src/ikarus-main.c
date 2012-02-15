@@ -36,6 +36,12 @@ static void register_alt_stack();
 
 ikpcb* the_pcb;
 
+ikpcb *
+ik_the_pcb (void)
+{
+  return the_pcb;
+}
+
 
 int
 ikarus_main (int argc, char** argv, char* boot_file)
@@ -121,9 +127,10 @@ ikarus_main (int argc, char** argv, char* boot_file)
 static void
 handler (int signo, siginfo_t* info, void* uap)
 {
+  ikpcb *	pcb = ik_the_pcb();
   signo=signo; info=info; uap=uap; /* no warning */
-  the_pcb->engine_counter = IK_FIX(-1);
-  the_pcb->interrupted = 1;
+  pcb->engine_counter = IK_FIX(-1);
+  pcb->interrupted = 1;
 }
 static void
 register_handlers (void)

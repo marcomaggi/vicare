@@ -600,12 +600,12 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
    whose  data  field   is  a  reference  to  the   S_DATA  argument  to
    "ikrt_prepare_callback()".
 
-   Access the PCB through the global variable "the_pcb". */
+   Access the PCB through "ik_the_pcb()". */
 {
   ik_ffi_cif_t  cif           = (ik_ffi_cif_t)cif_;
   ikptr         s_data        = ((ik_callback_locative*)user_data)->data;
   ikptr         s_proc        = IK_CDR(s_data);
-  ikpcb *       pcb           = the_pcb;
+  ikpcb *       pcb           = ik_the_pcb();
   int           i;
   ikptr         rv;
   pcb->frame_pointer = pcb->frame_base;
