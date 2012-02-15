@@ -11377,6 +11377,9 @@ library; if a constant value is not exported, file a feature request for
 the project.  If a constant is not defined on a platform: its value is
 set to @false{}.
 
+For a list of Linux--specific system calls, see the @code{syscalls(2)}
+manual page.
+
 On non--Linux platforms we must avoid calling these functions, else the
 behaviour is undefined.
 
