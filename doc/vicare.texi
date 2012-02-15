@@ -1349,6 +1349,7 @@ script.
 * using invoking::              Command line arguments.
 * using script::                Using @command{scheme-script}.
 * using libraries::             @rnrs{6} libraries.
+* using rlwrap::                Using @command{rlwrap}.
 @end menu
 
 @c page
@@ -1935,6 +1936,81 @@ implementations.
 
 ;;; end of file
 @end example
+
+@c page
+@node using rlwrap
+@section Using @command{rlwrap}
+
+
+@cindex @command{rlwrap}
+
+
+While @value{PRJNAME} comes with an interface to @gnu{} Readline or
+compatible library, the @repl{} interaction, as of version 0.2d9, offers
+only very basic editing capabilities.  For this reason it is suggested
+to use @command{rlwrap}:
+
+@center @url{http://utopia.knoware.nl/~hlub/rlwrap/}
+
+@noindent
+to run @value{PRJNAME}'s @repl{} through this shell script:
+
+@smallexample
+#!/bin/sh
+#
+# Vicare Scheme GNU Readline wrapper using Rlwrap.
+
+## Configuration variables.
+
+vicare_PROGRAM=$(type -p vicare)
+rlwrap_PROGRAM=$(type -p rlwrap)
+
+COMPLETIONS_FILE=/home/marco/.vicare_completions
+COMPLETIONS_OPTION=--file=$@{COMPLETIONS_FILE@}
+
+## Data variables.
+
+# Do NOT include '\!' and '?' in this string.
+BREAK_CHARS="\"#'(),;\`\\|[]@{@}"
+
+## Check programs and data files existence.
+
+function error () @{
+    local MESSAGE=$@{1:?@}
+    printf 'vie error: %s\n' "$@{MESSAGE@}" >&2
+    exit 2
+@}
+function warning () @{
+    local MESSAGE=$@{1:?@}
+    printf 'vie warning: %s\n' "$@{MESSAGE@}" >&2
+@}
+
+test -x "$@{rlwrap_PROGRAM@}" || \
+  error "cannot find program 'rlwrap'"
+test -x "$@{vicare_PROGRAM@}" || \
+  error "cannot find program 'vicare'"
+
+if ! test -f "$@{COMPLETIONS_FILE@}" ; then
+    warning "cannot find completions file '$@{COMPLETIONS_FILE@}'"
+    COMPLETIONS_OPTION=
+fi
+
+## Run.
+
+exec "$@{rlwrap_PROGRAM@}"                    \
+    --ansi-colour-aware                     \
+    --break-chars=$@{BREAK_CHARS@}            \
+    --complete-filenames                    \
+    --history-no-dupes=2                    \
+    --multi-line                            \
+    --prompt-colour='1;31'                  \
+    --quote-characters='"'                  \
+    --remember                              \
+    $@{COMPLETIONS_OPTION@}                   \
+    "$@{vicare_PROGRAM@}" --raw-repl "$@@"
+
+### end of file
+@end smallexample
 
 @c page
 @node iklib
