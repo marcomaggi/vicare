@@ -222,6 +222,7 @@
     timelocal				timegm
     strftime				strftime/string
     setitimer				getitimer
+    alarm
     nanosleep
 
     make-struct-timeval			struct-timeval?
@@ -2888,6 +2889,12 @@
       (if (unsafe.fxzero? rv)
 	  old
 	(%raise-errno-error who rv which old)))))
+
+(define (alarm seconds)
+  (define who 'alarm)
+  (with-arguments-validation (who)
+      ((unsigned-int	seconds))
+    (capi.posix-alarm seconds)))
 
 
 ;;;; system configuration

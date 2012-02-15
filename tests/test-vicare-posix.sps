@@ -1801,6 +1801,17 @@
 	      (px.struct-timeval-tv_usec (px.struct-itimerval-it_value rv))))
     => '(0 0 0 0))
 
+  (check
+      (unwind-protect
+	  (begin
+	    (px.signal-bub-init)
+	    (px.alarm 1)
+	    (px.nanosleep 1 5)
+	    (px.signal-bub-acquire)
+	    (px.signal-bub-delivered? SIGALRM))
+	(px.signal-bub-final))
+    => #t)
+
   #t)
 
 

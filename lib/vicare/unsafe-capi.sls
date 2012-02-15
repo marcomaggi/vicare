@@ -245,9 +245,9 @@
     posix-time				posix-gettimeofday
     posix-localtime			posix-gmtime
     posix-timelocal			posix-timegm
-    posix-strftime
+    posix-strftime			posix-nanosleep
     posix-setitimer			posix-getitimer
-    posix-nanosleep
+    posix-alarm
 
     ;; mathematics
     glibc-csin		glibc-ccos	glibc-ctan
@@ -1399,6 +1399,9 @@
 
 (define-inline (posix-getitimer which old)
   (foreign-call "ikrt_posix_getitimer" which old))
+
+(define-inline (posix-alarm seconds)
+  (foreign-call "ikrt_posix_alarm" seconds))
 
 
 ;;;; mathematics

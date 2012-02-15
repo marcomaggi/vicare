@@ -10509,6 +10509,14 @@ Alarm, getitimer}.  Build and return a new @code{struct-itimerval}
 representing the current timer.
 @end defun
 
+
+@defun alarm @var{seconds}
+Interface to the C function @cfunc{alarm}, @glibcref{Setting an Alarm,
+alarm}.  Set the real--time timer to expire in @var{seconds}.  Return an
+exact integer representing how many seconds remain before the previous
+alarm would have been sent.
+@end defun
+
 @c page
 @node posix config
 @section System configuration

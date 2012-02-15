@@ -320,7 +320,7 @@ AM_COND_IF([WANT_POSIX],[
   AC_CHECK_FUNCS([ctermid setsid getsid getpgrp setpgid tcgetpgrp tcsetpgrp tcgetsid])
   AC_CHECK_TYPES([struct tms],,,[VICARE_INCLUDES])
   AC_CHECK_FUNCS([clock time times localtime_r gmtime_r timelocal timegm strftime nanosleep mktime])
-  AC_CHECK_FUNCS([setitimer getitimer])
+  AC_CHECK_FUNCS([setitimer getitimer alarm])
   ])
 
 AC_CACHE_SAVE

@@ -4118,6 +4118,17 @@ ikrt_posix_getitimer (ikptr s_which, ikptr s_old, ikpcb * pcb)
   feature_failure(__func__);
 #endif
 }
+ikptr
+ikrt_posix_alarm (ikptr s_seconds, ikpcb * pcb)
+{
+#ifdef HAVE_ALARM
+  unsigned	rv;
+  rv    = alarm(ik_integer_to_uint(s_seconds));
+  return ika_integer_from_uint(pcb, rv);
+#else
+  feature_failure(__func__);
+#endif
+}
 
 
 /** --------------------------------------------------------------------
