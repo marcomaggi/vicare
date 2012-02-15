@@ -137,6 +137,7 @@ TESTS			=	\
 	test-vicare-system.sps				\
 	test-vicare-vectors.sps				\
 	test-vicare-weak-tables.sps			\
+	test-vicare-words.sps				\
 	\
 	test-issue-001-equal-hash.sps			\
 	test-issue-006-fxreverse-bit-field.sps		\
@@ -302,6 +303,7 @@ EXTRA_DIST =	\
 	test-vicare-system.sps				\
 	test-vicare-vectors.sps				\
 	test-vicare-weak-tables.sps			\
+	test-vicare-words.sps				\
 	\
 	test-issue-001-equal-hash.sps			\
 	test-issue-006-fxreverse-bit-field.sps		\

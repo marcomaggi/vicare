@@ -449,15 +449,17 @@
 
 ;;;; C language data predicates
 
-(let-syntax ((define-predicate (syntax-rules ()
-				 ((_ ?who ?data-size #t)
+(define-syntax signed (syntax-rules ()))
+(define-syntax unsigned (syntax-rules ()))
+(let-syntax ((define-predicate (syntax-rules (signed unsigned)
+				 ((_ ?who ?data-size unsigned)
 				  (define-inline (?who N)
 				    (case-data-size ?data-size
 				      ((1)	(word-u8?  N))
 				      ((2)	(word-u16? N))
 				      ((4)	(word-u32? N))
 				      ((8)	(word-u64? N)))))
-				 ((_ ?who ?data-size #f)
+				 ((_ ?who ?data-size signed)
 				  (define-inline (?who N)
 				    (case-data-size ?data-size
 				      ((1)	(word-s8?  N))
@@ -465,20 +467,20 @@
 				      ((4)	(word-s32? N))
 				      ((8)	(word-s64? N))))))))
 
-  (define-predicate unsigned-char?		@SIZEOF_CHAR@		#t)
-  (define-predicate unsigned-short?		@SIZEOF_SHORT@		#t)
-  (define-predicate unsigned-int?		@SIZEOF_INT@		#t)
-  (define-predicate unsigned-long?		@SIZEOF_LONG@		#t)
-  (define-predicate unsigned-long-long?		@SIZEOF_LONG_LONG@	#t)
-  (define-predicate signed-char?		@SIZEOF_CHAR@		#f)
-  (define-predicate signed-short?		@SIZEOF_SHORT@		#f)
-  (define-predicate signed-int?			@SIZEOF_INT@		#f)
-  (define-predicate signed-long?		@SIZEOF_LONG@		#f)
-  (define-predicate signed-long-long?		@SIZEOF_LONG_LONG@	#f)
+  (define-predicate unsigned-char?		@SIZEOF_CHAR@		unsigned)
+  (define-predicate unsigned-short?		@SIZEOF_SHORT@		unsigned)
+  (define-predicate unsigned-int?		@SIZEOF_INT@		unsigned)
+  (define-predicate unsigned-long?		@SIZEOF_LONG@		unsigned)
+  (define-predicate unsigned-long-long?		@SIZEOF_LONG_LONG@	unsigned)
+  (define-predicate signed-char?		@SIZEOF_CHAR@		signed)
+  (define-predicate signed-short?		@SIZEOF_SHORT@		signed)
+  (define-predicate signed-int?			@SIZEOF_INT@		signed)
+  (define-predicate signed-long?		@SIZEOF_LONG@		signed)
+  (define-predicate signed-long-long?		@SIZEOF_LONG_LONG@	signed)
 
-  (define-predicate size_t?			@SIZEOF_SIZE_T@		#f)
-  (define-predicate ssize_t?			@SIZEOF_SSIZE_T@	#f)
-  (define-predicate off_t?			@SIZEOF_OFF_T@		#f)
+  (define-predicate size_t?			@SIZEOF_SIZE_T@		unsigned)
+  (define-predicate ssize_t?			@SIZEOF_SSIZE_T@	signed)
+  (define-predicate off_t?			@SIZEOF_OFF_T@		signed)
   )
 
 

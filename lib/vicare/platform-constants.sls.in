@@ -550,9 +550,17 @@
 (define-inline-constant LONG_MIN		@VALUEOF_LONG_MIN@)
 (define-inline-constant LONG_MAX		@VALUEOF_LONG_MAX@)
 (define-inline-constant ULONG_MAX		@VALUEOF_ULONG_MAX@)
-(define-inline-constant LONG_LONG_MIN		@VALUEOF_LONG_LONG_MIN@)
-(define-inline-constant LONG_LONG_MAX		@VALUEOF_LONG_LONG_MAX@)
-(define-inline-constant ULONG_LONG_MAX		@VALUEOF_ULONG_LONG_MAX@)
+;; If the "long  long" constants are undefined, assume  that "long long"
+;; is a 64-bit integer.
+(define-inline-constant LONG_LONG_MIN		(or @VALUEOF_LONG_LONG_MIN@
+						    ;; (- (expt 2 63))
+						    -9223372036854775808))
+(define-inline-constant LONG_LONG_MAX		(or @VALUEOF_LONG_LONG_MAX@
+						    ;; (- (expt 2 63) 1)
+						    +9223372036854775807))
+(define-inline-constant ULONG_LONG_MAX		(or @VALUEOF_ULONG_LONG_MAX@
+						    ;; (- (expt 2 64) 1)
+						    18446744073709551615))
 (define-inline-constant WCHAR_MAX		@VALUEOF_WCHAR_MAX@)
 
 ;; constants for waitpid
