@@ -16102,7 +16102,7 @@ Example of @strong{correct} code: @code{s_one} is protected while
 allocating @code{s_two}:
 
 @example
-ikpcb * pcb = the_pcb;
+ikpcb * pcb = ik_the_pcb();
 ikptr   s_one, s_two;
 
 s_one = ika_bytevector_alloc(pcb, 10);
@@ -16118,7 +16118,7 @@ example of @strong{wrong} code: after the second call to the allocation
 function the value in @code{s_one} may be invalid:
 
 @example
-ikpcb * pcb = the_pcb;
+ikpcb * pcb = ik_the_pcb();
 ikptr   s_one, s_two;
 
 s_one = ika_bytevector_alloc(pcb, 10);
@@ -16131,7 +16131,7 @@ allocating @code{s_two} and after the second allocation the pointer to
 the data area of @code{s_one} is retrieved again:
 
 @example
-ikpcb * pcb = the_pcb;
+ikpcb * pcb = ik_the_pcb();
 ikptr   s_one;
 ikptr   s_two;
 char *  one;
@@ -16155,7 +16155,7 @@ example of @strong{wrong} code: after the second call to the allocation
 function the pointer to the data area of @code{s_one} may be invalid:
 
 @example
-ikpcb * pcb = the_pcb;
+ikpcb * pcb = ik_the_pcb();
 ikptr   s_one;
 ikptr   s_two;
 char *  one;
@@ -16209,7 +16209,7 @@ yes, it is a hard life.
 Let's consider the following snippet, which is @strong{wrong}:
 
 @example
-ikpcb * pcb = the_pcb;
+ikpcb * pcb = ik_the_pcb();
 ikptr   s_one, s_two;
 
 s_one = IKA_PAIR_ALLOC(pcb); /* WRONG */
@@ -16228,7 +16228,7 @@ garbage collection tries to scan the first pair.  The @strong{correct}
 code is:
 
 @example
-ikpcb * pcb = the_pcb;
+ikpcb * pcb = ik_the_pcb();
 ikptr   s_one, s_two;
 
 s_one = ika_pair_alloc(pcb); /* GOOD */
@@ -16429,7 +16429,7 @@ symbol @code{null_object}.
 Pairs are allocated as follows, leaving the car and cdr uninitialised:
 
 @example
-ikpcb *  pcb = the_pcb;
+ikpcb *  pcb = ik_the_pcb();
 ikptr    s_pair;
 
 s_pair = ik_safe_alloc(pcb, pair_size) | pair_tag;
@@ -16602,7 +16602,7 @@ The suggested general way to allocate and initialise a pair is as
 follows:
 
 @example
-ikpcb * pcb    = the_pcb;
+ikpcb * pcb    = ik_the_pcb();
 ikptr   s_pair = ika_pair_alloc(pcb);
 
 pcb->root0 = &s_pair;
@@ -16623,7 +16623,7 @@ because they are fixnums or already existing objects, we can use the
 faster code:
 
 @example
-ikpcb * pcb    = the_pcb;
+ikpcb * pcb    = ik_the_pcb();
 ikptr   s_pair = IKA_PAIR_ALLOC(pcb);
 
 IK_CAR(s_pair) = IK_FIX(123);
@@ -16634,7 +16634,7 @@ Let's say we need to build a list of bytevectors from @asciiz{} strings
 in the array @code{argv} and there are @code{argc} of them:
 
 @example
-ikpcb *  pcb  = the_pcb;
+ikpcb *  pcb  = ik_the_pcb();
 char **  argv = ...;
 long     argc = ...;
 ikptr    s_list;
@@ -16715,7 +16715,7 @@ of the bytevector data area, add to it room for meta data and finally
 compute the aligned block size:
 
 @example
-ikpcb * pcb        = the_pcb;
+ikpcb * pcb        = ik_the_pcb();
 long    bv_len     = the_number_of_bytes;
 long    block_size = disp_bytevector_data + bv_len + 1;
 lont    align_size = IK_ALIGN(block_size);
@@ -16914,7 +16914,7 @@ compute the whole size of the data area, add to it room for meta data
 and finally compute the aligned block size:
 
 @example
-ikpcb * pcb            = the_pcb;
+ikpcb * pcb            = ik_the_pcb();
 long    length         = the_number_of_items;
 long    requested_size = wordsize * length;
 long    block_size     = disp_vector_data + requested_size;
@@ -17204,7 +17204,7 @@ Data structure objects are allocated on the heap; to perform the
 allocation we compute the whole size of the structure:
 
 @example
-ikpcb * pcb        = the_pcb;
+ikpcb * pcb        = ik_the_pcb();
 long    num_of_fields = ...;
 long    block_size = disp_record_data +
                      wordsize * num_of_fields;
@@ -17571,7 +17571,7 @@ compute the whole size of the data area, add to it room for meta data
 and finally compute the aligned block size:
 
 @example
-ikpcb * pcb            = the_pcb;
+ikpcb * pcb            = ik_the_pcb();
 long    length         = the_number_of_chars;
 long    requested_size = sizeof(ikchar) * length;
 long    block_size     = disp_string_data + requested_size;
@@ -17854,7 +17854,7 @@ always non--zero and outside the range of fixnums.
 To allocate a bignum we must know the number of required limbs:
 
 @example
-ikpcb * pcb        = the_pcb;
+ikpcb * pcb        = ik_the_pcb();
 long    nlimbs     = the_number_of_limbs;
 long    block_size = disp_bignum_data + nlimbs * wordsize;
 long    align_size = IK_ALIGN(block_size);
@@ -18180,7 +18180,7 @@ denominator is stored in the third word
 Ratnums are allocated on the Scheme heap as follows:
 
 @example
-ikpcb * pcb   = the_pcb;
+ikpcb * pcb   = ik_the_pcb();
 ikptr   s_rn;
 
 s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
@@ -18193,7 +18193,7 @@ fields to some correct value before running the next garbage collection;
 a full allocation and initialisation is as follows:
 
 @example
-ikpcb * pcb   = the_pcb;
+ikpcb * pcb   = ik_the_pcb();
 ikptr   s_num = the_numerator;
 ikptr   s_den = the_denominator;
 ikptr   s_rn;
@@ -18364,7 +18364,7 @@ on a 64-bit platform the actual number is stored in the second word:
 Flonums are allcated on the heap as follows:
 
 @example
-ikpcb * pcb  = the_pcb;
+ikpcb * pcb  = ik_the_pcb();
 ikptr   s_fl;
 
 s_fl = ik_safe_alloc(pcb, flonum_size) | vector_tag;
@@ -18510,7 +18510,7 @@ is stored in the third word
 Compnums are allocated on the Scheme heap as follows:
 
 @example
-ikpcb * pcb   = the_pcb;
+ikpcb * pcb   = ik_the_pcb();
 ikptr   s_cn;
 
 s_cn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
@@ -18523,7 +18523,7 @@ to some correct value before running the next garbage collection; a full
 allocation and initialisation is as follows:
 
 @example
-ikpcb * pcb  = the_pcb;
+ikpcb * pcb  = ik_the_pcb();
 ikptr   s_re = the_real;
 ikptr   s_im = the_imag;
 ikptr   s_cn;
@@ -18684,7 +18684,7 @@ is stored in the third word
 Cflonums are allocated on the Scheme heap as follows:
 
 @example
-ikpcb * pcb   = the_pcb;
+ikpcb * pcb   = ik_the_pcb();
 ikptr   s_cn;
 
 s_cn = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
@@ -18697,7 +18697,7 @@ to some correct value before running the next garbage collection; a full
 allocation and initialisation is as follows:
 
 @example
-ikpcb * pcb  = the_pcb;
+ikpcb * pcb  = ik_the_pcb();
 ikptr   s_re = the_real;
 ikptr   s_im = the_imag;
 ikptr   s_cn;
@@ -18888,7 +18888,7 @@ block holds the actual pointer value.
 Pointers are allocated on the Scheme heap as follows:
 
 @example
-ikpcb * pcb   = the_pcb;
+ikpcb * pcb   = ik_the_pcb();
 ikptr   s_ptr;
 
 s_ptr = ik_safe_alloc(pcb, pointer_size) | vector_tag;
