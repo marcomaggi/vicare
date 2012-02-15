@@ -31,7 +31,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing library (vicare flonum-formatter)\n")
+(check-display "*** testing library (vicare flonum-formatter)\n")
 
 
 (parametrise ((check-test-name	'positive))

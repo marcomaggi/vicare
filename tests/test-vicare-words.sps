@@ -32,7 +32,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing (vicare words) library\n")
+(check-display "*** testing (vicare words) library\n")
 
 
 (parametrise ((check-test-name	'clang))
