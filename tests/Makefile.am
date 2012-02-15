@@ -163,7 +163,8 @@ TESTS	+= test-vicare-ffi.sps
 endif
 
 if WANT_POSIX
-TESTS	+= test-vicare-posix.sps
+TESTS	+= test-vicare-posix.sps	\
+	   test-vicare-shared-memory.sps
 endif
 
 if WANT_GLIBC
@@ -301,6 +302,7 @@ EXTRA_DIST =	\
 	test-vicare-promises.sps			\
 	test-vicare-reader.sps				\
 	test-vicare-round.sps				\
+	test-vicare-shared-memory.sps			\
 	test-vicare-strings.sps				\
 	test-vicare-structs.sps				\
 	test-vicare-symbols.sps				\
