@@ -14674,12 +14674,36 @@ be @code{AF_INET} or @code{AF_INET6}.
 @value{PRJNAME} comes with a set of additional libraries.
 
 @menu
+* include::                     Including source files at expand time.
 * errno::                       More features for @code{errno}.
 * words::                       Exact integer predicates and constants.
 * readline::                    Extended interface to @gnu{} Readline.
 * gcc::                         A toy library interface to @gcc{}.
 * wtables::                     Weak hashtables.
 @end menu
+
+@c page
+@node include
+@section Including source files at expand time
+
+
+The following bindings are exported by the library @library{vicare
+include}.
+
+
+@deffn Syntax include @var{filename}
+Include in the current source file the contents of the file selected by
+the pathname @var{filename}, which must be a string.  Everything happens
+as if the code was present in place of the @func{include} form.
+@end deffn
+
+
+@deffn Syntax include/lexical-context @var{filename} @var{identifier}
+Include in the current source file the contents of the file selected by
+the pathname @var{filename}, which must be a string.  @var{identifier}
+must be a Scheme identifier and it is used to assign a lexical context
+to the sourced code.
+@end deffn
 
 @c page
 @node errno
