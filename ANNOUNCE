@@ -54,6 +54,9 @@ Notes for revision 0.2d9
 * Documentation was written for  some of the libraries distributed under
   the hierarchy (vicare ---).
 
+* Added documentation  appendix showing how  to exchange raw  and Scheme
+  data among Vicare processes using mmapped interprocess shared memory.
+
 
 Notes for revision 0.2d8
 ------------------------
