@@ -15886,7 +15886,7 @@ In short, memory allocation which may trigger a garbage collection is
 performed as follows:
 
 @example
-ikpcb *   pcb = the_pcb;
+ikpcb *   pcb = ik_the_pcb();
 long int  number_of_bytes = the_number_of_bytes;
 ikptr     p = ik_safe_alloc(pcb, IK_ALIGN(number_of_bytes));
 @end example
@@ -15896,7 +15896,7 @@ while memory allocation without garbage collection is performed as
 follows:
 
 @example
-ikpcb *   pcb = the_pcb;
+ikpcb *   pcb = ik_the_pcb();
 long int  number_of_bytes = the_number_of_bytes;
 ikptr     p = ik_unsafe_alloc(pcb, IK_ALIGN(number_of_bytes));
 @end example
@@ -15909,7 +15909,7 @@ To add a tag, for example the @code{vector_tag}, to an untagged memory
 pointer we can do:
 
 @example
-ikpcb * pcb = the_pcb;
+ikpcb * pcb = ik_the_pcb();
 long    len = IK_ALIGN(the_number_of_bytes);
 ikptr   ref = ik_safe_alloc(pcb, len) | vector_tag;
 @end example
@@ -15971,11 +15971,11 @@ pcb->allocation_pointer   = (ikptr)next_free_block;
 @end example
 
 
-@deftypevr {Global Variable} {ikpcb *} the_pcb
-Global variable referencing the process control block.  It is rarely
+@deftypefun {ikpcb *} ik_the_pcb (void)
+Return a pointer to the current process control block.  It is rarely
 needed because when calling a C function from Scheme a pointer to the
 @pcb{} is always pushed on the C stack as last argument.
-@end deftypevr
+@end deftypefun
 
 
 @deftypefn {Preprocessor Macro} {unsigned long} IK_ALIGN (unsigned long @var{number_of_bytes})
