@@ -39,48 +39,48 @@
 
 (parametrise ((check-test-name	'raw))
 
-  (check	;exchanging integer
-      (let* ((page-size	4096 #;(glibc.sysconf _SC_PAGESIZE))
-	     (ptr	(px.mmap #f page-size
+  (check		     ;exchanging integer
+      (let* ((shmem.len	4096 #;(glibc.sysconf _SC_PAGESIZE))
+	     (shmem.ptr	(px.mmap #f shmem.len
 				 (fxior PROT_READ PROT_WRITE)
 				 (fxior MAP_SHARED MAP_ANONYMOUS)
 				 0 0)))
 	(unwind-protect
 	    (px.fork (lambda (child-pid) ;parent
-		       (pointer-set-c-signed-int! ptr 0 234)
+		       (pointer-set-c-signed-int! shmem.ptr 0 234)
 		       (px.waitpid child-pid 0)
-		       (pointer-ref-c-signed-int ptr 0))
+		       (pointer-ref-c-signed-int shmem.ptr 0))
 		     (lambda () ;child
 		       (px.nanosleep 1 0)
-		       (pointer-set-c-signed-int! ptr 0
-						  (+ 1000 (pointer-ref-c-signed-int ptr 0)))
+		       (pointer-set-c-signed-int! shmem.ptr 0
+						  (+ 1000 (pointer-ref-c-signed-int shmem.ptr 0)))
 		       (exit)))
-	  (px.munmap ptr page-size)))
+	  (px.munmap shmem.ptr shmem.len)))
     => 1234)
 
-  (check	;exchanging bytevector
-      (let* ((page-size	4096 #;(glibc.sysconf _SC_PAGESIZE))
-	     (ptr	(px.mmap #f page-size
+  (check		     ;exchanging bytevector
+      (let* ((shmem.len	4096 #;(glibc.sysconf _SC_PAGESIZE))
+	     (shmem.ptr	(px.mmap #f shmem.len
 				 (fxior PROT_READ PROT_WRITE)
 				 (fxior MAP_SHARED MAP_ANONYMOUS)
 				 0 0)))
 	(unwind-protect
 	    (px.fork (lambda (child-pid) ;parent
-		       (memory-copy ptr 0 '#vu8(0 1 2 3 4 5 6 7 8 9) 0 10)
+		       (memory-copy shmem.ptr 0 '#vu8(0 1 2 3 4 5 6 7 8 9) 0 10)
 		       (px.waitpid child-pid 0)
 		       (let ((bv (make-bytevector 10)))
-			 (memory-copy bv 0 ptr 0 10)
+			 (memory-copy bv 0 shmem.ptr 0 10)
 			 bv))
 		     (lambda () ;child
 		       (px.nanosleep 1 0)
 		       (let ((bv (make-bytevector 10)))
-			 (memory-copy bv 0 ptr 0 10)
+			 (memory-copy bv 0 shmem.ptr 0 10)
 			 (do ((i 0 (+ 1 i)))
 			     ((= i 10)
-			      (memory-copy ptr 0 bv 0 10)
+			      (memory-copy shmem.ptr 0 bv 0 10)
 			      (exit))
 			   (bytevector-u8-set! bv i (+ 100 (bytevector-u8-ref bv i)))))))
-	  (px.munmap ptr page-size)))
+	  (px.munmap shmem.ptr shmem.len)))
     => '#vu8(100 101 102 103 104 105 106 107 108 109))
 
   #t)
@@ -90,11 +90,11 @@
 
   (let ((data '(1 2 #(3 4) ciao "hello" #vu8(99 98 97))))
     (check	;exchanging bytevector
-	(let* ((shmem.size	(* 16 4096 #;(glibc.sysconf _SC_PAGESIZE)))
-	       (shmem.ptr	(px.mmap #f shmem.size
-					 (fxior PROT_READ PROT_WRITE)
-					 (fxior MAP_SHARED MAP_ANONYMOUS)
-					 0 0)))
+	(let* ((shmem.len (* 16 4096 #;(glibc.sysconf _SC_PAGESIZE)))
+	       (shmem.ptr (px.mmap #f shmem.len
+				   (fxior PROT_READ PROT_WRITE)
+				   (fxior MAP_SHARED MAP_ANONYMOUS)
+				   0 0)))
 	  (unwind-protect
 	      (px.fork (lambda (child-pid) ;parent
 			 (px.waitpid child-pid 0)
@@ -111,7 +111,7 @@
 			     (pointer-set-c-signed-int! shmem.ptr 0 bv.len)
 			     (memory-copy shmem.ptr SIZEOF_INT bv 0 bv.len)
 			     (exit)))))
-	    (px.munmap shmem.ptr shmem.size)))
+	    (px.munmap shmem.ptr shmem.len)))
       => data))
 
   #t)
