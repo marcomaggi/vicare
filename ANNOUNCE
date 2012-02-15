@@ -48,6 +48,9 @@ Notes for revision 0.2d9
 * Added raw  memory allocation functions  raising exceptions in  case of
   error.
 
+* Documentation was written for  some of the libraries distributed under
+  the hierarchy (vicare ---).
+
 
 Notes for revision 0.2d8
 ------------------------
