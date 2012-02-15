@@ -376,7 +376,7 @@ ik_delete_pcb (ikpcb* pcb)
 
 
 ikptr
-ik_safe_alloc (ikpcb* pcb, ik_ulong size)
+ik_safe_alloc (ikpcb * pcb, ik_ulong size)
 /* Allocate a memory block on the  Scheme heap and return a reference to
    it as an *untagged* pointer.   PCB must reference the process control
    block, SIZE  must be the  requested number of bytes  filtered through
@@ -416,7 +416,7 @@ ik_safe_alloc (ikpcb* pcb, ik_ulong size)
 
 
 ikptr
-ik_unsafe_alloc (ikpcb* pcb, ik_ulong requested_size)
+ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
 /* Allocate a memory block on the  Scheme heap and return a reference to
    it as an *untagged* pointer.   PCB must reference the process control
    block, REQUESTED_SIZE must be  the requested number of bytes filtered

@@ -29,7 +29,7 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
-#include "vicare.h"
+#include "internals.h"
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef HAVE_CONFIG_H
