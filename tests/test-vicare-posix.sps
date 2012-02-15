@@ -1777,6 +1777,30 @@
   (check-pretty-print
    (list 'strftime (px.strftime/string "%a %h %d %H:%M:%S %Y" (px.localtime (px.time)))))
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (unwind-protect
+	  (begin
+	    (px.signal-bub-init)
+	    (let ((new (px.make-struct-itimerval
+			(px.make-struct-timeval 0 0)
+			(px.make-struct-timeval 0 1000))))
+	      (px.setitimer ITIMER_REAL new))
+	    (px.nanosleep 1 500)
+	    (px.signal-bub-acquire)
+	    (px.signal-bub-delivered? SIGALRM))
+	(px.signal-bub-final))
+    => #t)
+
+  (check
+      (let ((rv (px.getitimer ITIMER_REAL)))
+	(list (px.struct-timeval-tv_sec (px.struct-itimerval-it_interval rv))
+	      (px.struct-timeval-tv_usec (px.struct-itimerval-it_interval rv))
+	      (px.struct-timeval-tv_sec (px.struct-itimerval-it_value rv))
+	      (px.struct-timeval-tv_usec (px.struct-itimerval-it_value rv))))
+    => '(0 0 0 0))
+
   #t)
 
 

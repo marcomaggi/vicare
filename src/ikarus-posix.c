@@ -4073,6 +4073,52 @@ ikrt_gmt_offset (ikptr t)
 #endif
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_setitimer (ikptr s_which, ikptr s_new)
+{
+#ifdef HAVE_SETITIMER
+  ikptr			s_it_interval = IK_FIELD(s_new, 0);
+  ikptr			s_it_value    = IK_FIELD(s_new, 1);
+  struct itimerval	new;
+  int			rv;
+  new.it_interval.tv_sec  = ik_integer_to_long(IK_FIELD(s_it_interval, 0));
+  new.it_interval.tv_usec = ik_integer_to_long(IK_FIELD(s_it_interval, 1));
+  new.it_value.tv_sec     = ik_integer_to_long(IK_FIELD(s_it_value,    0));
+  new.it_value.tv_usec    = ik_integer_to_long(IK_FIELD(s_it_value,    1));
+  errno = 0;
+  rv    = setitimer(IK_UNFIX(s_which), &new, NULL);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_getitimer (ikptr s_which, ikptr s_old, ikpcb * pcb)
+{
+#ifdef HAVE_GETITIMER
+  struct itimerval	old;
+  int			rv;
+  errno = 0;
+  rv    = getitimer(IK_UNFIX(s_which), &old);
+  if (0 == rv) {
+    pcb->root0 = &s_old;
+    {
+      IK_ASS(IK_FIELD(IK_FIELD(s_old, 0), 0), ika_integer_from_long(pcb, old.it_interval.tv_sec));
+      IK_ASS(IK_FIELD(IK_FIELD(s_old, 0), 1), ika_integer_from_long(pcb, old.it_interval.tv_usec));
+      IK_ASS(IK_FIELD(IK_FIELD(s_old, 1), 0), ika_integer_from_long(pcb, old.it_value.tv_sec));
+      IK_ASS(IK_FIELD(IK_FIELD(s_old, 1), 1), ika_integer_from_long(pcb, old.it_value.tv_usec));
+    }
+    pcb->root0 = NULL;
+    return IK_FIX(0);
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
 
 /** --------------------------------------------------------------------
  ** Block/unblock interprocess signals.

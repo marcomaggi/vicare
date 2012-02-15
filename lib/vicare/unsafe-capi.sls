@@ -246,6 +246,7 @@
     posix-localtime			posix-gmtime
     posix-timelocal			posix-timegm
     posix-strftime
+    posix-setitimer			posix-getitimer
     posix-nanosleep
 
     ;; mathematics
@@ -1390,6 +1391,14 @@
 
 (define-inline (posix-strftime template tm)
   (foreign-call "ikrt_posix_strftime" template tm))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-setitimer which new)
+  (foreign-call "ikrt_posix_setitimer" which new))
+
+(define-inline (posix-getitimer which old)
+  (foreign-call "ikrt_posix_getitimer" which old))
 
 
 ;;;; mathematics

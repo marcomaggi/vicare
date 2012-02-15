@@ -221,6 +221,7 @@
     localtime				gmtime
     timelocal				timegm
     strftime				strftime/string
+    setitimer				getitimer
     nanosleep
 
     make-struct-timeval			struct-timeval?
@@ -240,6 +241,9 @@
     struct-tm-tm_wday			struct-tm-tm_yday
     struct-tm-tm_isdst			struct-tm-tm_gmtoff
     struct-tm-tm_zone
+
+    make-struct-itimerval		struct-itimerval?
+    struct-itimerval-it_interval	struct-itimerval-it_value
 
     ;; system configuration
     sysconf
@@ -462,6 +466,18 @@
 					    (fixnum? (unsafe.vector-ref vec 2))))
 				     obj))
   (assertion-violation who "expected vector of data for poll as argument" obj))
+
+(define-argument-validation (itimerval who obj)
+  (and (struct-itimerval? obj)
+       (let ((T (struct-itimerval-it_interval obj)))
+	 (and (struct-timeval? T)
+	      (words.signed-long? (struct-timeval-tv_sec  T))
+	      (words.signed-long? (struct-timeval-tv_usec T))))
+       (let ((T (struct-itimerval-it_value obj)))
+	 (and (struct-timeval? T)
+	      (words.signed-long? (struct-timeval-tv_sec  T))
+	      (words.signed-long? (struct-timeval-tv_usec T)))))
+  (assertion-violation who "expected struct-itimerval as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -2752,6 +2768,19 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-struct struct-itimerval
+  (it_interval it_value))
+
+(define (%struct-itimerval-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-itimerval\"")
+  (%display " it_interval=")		(%display (struct-itimerval-it_interval S))
+  (%display " it_value=")		(%display (struct-itimerval-it_value    S))
+  (%display "]"))
+
+;;; --------------------------------------------------------------------
+
 (define (clock)
   (exact (capi.posix-clock)))
 
@@ -2837,6 +2866,29 @@
 	  (values (car rv) (cdr rv))
 	(%raise-errno-error who rv secs nsecs)))))
 
+;;; --------------------------------------------------------------------
+
+(define (setitimer which new)
+  (define who 'setitimer)
+  (with-arguments-validation (who)
+      ((fixnum		which)
+       (itimerval	new))
+    (let ((rv (capi.posix-setitimer which new)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv which new)))))
+
+(define (getitimer which)
+  (define who 'getitimer)
+  (with-arguments-validation (who)
+      ((fixnum		which))
+    (let* ((old (make-struct-itimerval
+		 (make-struct-timeval 0 0)
+		 (make-struct-timeval 0 0)))
+	   (rv  (capi.posix-getitimer which old)))
+      (if (unsafe.fxzero? rv)
+	  old
+	(%raise-errno-error who rv which old)))))
+
 
 ;;;; system configuration
 
@@ -2914,6 +2966,7 @@
 (set-rtd-printer! (type-descriptor struct-timespec)	%struct-timespec-printer)
 (set-rtd-printer! (type-descriptor struct-tms)		%struct-tms-printer)
 (set-rtd-printer! (type-descriptor struct-tm)		%struct-tm-printer)
+(set-rtd-printer! (type-descriptor struct-itimerval)	%struct-itimerval-printer)
 
 )
 

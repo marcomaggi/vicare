@@ -10164,6 +10164,7 @@ exception.
 * posix time timespec::         Data structure @code{struct-timespec}.
 * posix time tms::              Data structure @code{struct-tms}.
 * posix time tm::               Data structure @code{struct-tm}.
+* posix time itimerval::        Data structure @code{struct-itimerval}.
 * posix time functions::        Date and time functions.
 @end menu
 
@@ -10349,6 +10350,43 @@ Accessors for instances of @var{struct-tm}
 @end defun
 
 @c page
+@node posix time itimerval
+@subsection Data structure @code{struct-itimerval}
+
+
+@deftp {Structure Type} struct-itimerval
+Scheme level representation of @code{struct itimerval},
+@glibcref{Setting an Alarm, struct itimerval}.  It has the following
+fields:
+
+@table @code
+@item it_interval
+An instance of @code{struct-timeval} representing the period between
+successive timer interrupts.
+
+@item it_value
+An instance of @code{struct-timeval} representing the time interval
+between now and the first timer interrupt.
+@end table
+@end deftp
+
+
+@defun make-struct-itimerval @var{interval} @var{value}
+Build and return a new instance of @code{struct-itimerval}.
+@end defun
+
+
+@defun struct-itimerval? @var{obj}
+Return true if @var{obj} is an instance of @code{struct-itimerval}.
+@end defun
+
+
+@defun struct-itimerval-it_interval @var{itimerval}
+@defunx struct-itimerval-it_value @var{itimerval}
+Accessors for the fields of @code{struct-itimerval}.
+@end defun
+
+@c page
 @node posix time functions
 @subsection Date and time functions
 
@@ -10448,6 +10486,27 @@ interrupted by an interprocess signal: return a pair whose car is an
 exact integer representing the count of remaining seconds and whose cdr
 is an exact integer representing the count of remaining nanoseconds.  If
 an error occurs an exception is raised.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun setitimer @var{which} @var{itimerval}
+Interface to the C function @cfunc{setitimer}, @glibcref{Setting an
+Alarm, setitimer}.  Set the timer specified by @var{which} according to
+@var{itimerval}.  If successful return unspecified values, else raise an
+exception.
+
+@var{which} must be a fixnum representing one of the constants:
+@code{ITIMER_REAL}, @code{ITIMER_VIRTUAL}, @code{ITIMER_PROF}.
+
+@var{itimerval} must be an instance of @code{struct-itimerval}.
+@end defun
+
+
+@defun getitimer @var{which}
+Interface to the C function @cfunc{getitimer}, @glibcref{Setting an
+Alarm, getitimer}.  Build and return a new @code{struct-itimerval}
+representing the current timer.
 @end defun
 
 @c page

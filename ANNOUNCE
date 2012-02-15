@@ -61,6 +61,8 @@ Notes for revision 0.2d9
   and CONFSTR  have been  moved from the  library (vicare glibc)  to the
   library (vicare posix).
 
+* Added to (vicare posix) functions: SETITIMER, GETITIMER.
+
 
 Notes for revision 0.2d8
 ------------------------
