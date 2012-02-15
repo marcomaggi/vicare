@@ -8563,6 +8563,9 @@ unspecified values, else raise an exception.
 @section Memory--mapped input/output
 
 
+@ref{shmem mmap} for a description of shared memory through @func{mmap}.
+
+
 @defun mmap @var{address} @var{length} @var{protect} @var{flags} @var{offset}
 Interface to the C function @cfunc{mmap}, @glibcref{Memory-mapped I/O,
 mmap}.  Create a new mapping and return a pointer object referencing the
@@ -19711,8 +19714,17 @@ On Unix--like systems: the library identifier is prefixed with
 @appendix Interprocess shared memory
 
 
-This appendix shows some sample code describing how to exchange binary
-and Scheme data among multiple @value{PRJNAME} processes through shared
+@menu
+* shmem mmap::                  Shared memory through @func{mmap}.
+@end menu
+
+@c page
+@node shmem mmap
+@appendixsec Shared memory through @func{mmap}
+
+
+This appendix some sample code describing how to exchange binary and
+Scheme data among multiple @value{PRJNAME} processes through shared
 memory.
 
 It is assumed that @value{PRJNAME} is installed with both the @posix{}
