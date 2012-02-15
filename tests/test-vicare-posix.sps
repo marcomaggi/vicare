@@ -1914,6 +1914,23 @@
   #t)
 
 
+(parametrise ((check-test-name	'config))
+
+  (check
+      (px.sysconf _SC_JOB_CONTROL)
+    => _POSIX_JOB_CONTROL)
+
+  (check
+      (px.pathconf "Makefile" _PC_NAME_MAX)
+    => NAME_MAX)
+
+  (check
+      (px.confstr/string _CS_PATH)
+    => "/bin:/usr/bin")
+
+  #t)
+
+
 ;;;; done
 
 (flush-output-port (current-output-port))

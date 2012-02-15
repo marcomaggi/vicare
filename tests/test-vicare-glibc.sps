@@ -350,23 +350,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'config))
-
-  (check
-      (glibc.sysconf _SC_JOB_CONTROL)
-    => _POSIX_JOB_CONTROL)
-
-  (check
-      (glibc.pathconf "Makefile" _PC_NAME_MAX)
-    => NAME_MAX)
-
-  (check
-      (glibc.confstr/string _CS_PATH)
-    => "/bin:/usr/bin")
-
-  #t)
-
-
 (parametrise ((check-test-name	'iconv))
 
 ;;; handle allocation

@@ -28,7 +28,6 @@
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.)
-;;;(prefix (vicare glibc) glibc.)
   (vicare platform-constants)
   (vicare syntactic-extensions)
   (checks))
@@ -40,7 +39,7 @@
 (parametrise ((check-test-name	'raw))
 
   (check		     ;exchanging integer
-      (let* ((shmem.len	4096 #;(glibc.sysconf _SC_PAGESIZE))
+      (let* ((shmem.len	(px.sysconf _SC_PAGESIZE))
 	     (shmem.ptr	(px.mmap #f shmem.len
 				 (fxior PROT_READ PROT_WRITE)
 				 (fxior MAP_SHARED MAP_ANONYMOUS)
@@ -59,7 +58,7 @@
     => 1234)
 
   (check		     ;exchanging bytevector
-      (let* ((shmem.len	4096 #;(glibc.sysconf _SC_PAGESIZE))
+      (let* ((shmem.len	(px.sysconf _SC_PAGESIZE))
 	     (shmem.ptr	(px.mmap #f shmem.len
 				 (fxior PROT_READ PROT_WRITE)
 				 (fxior MAP_SHARED MAP_ANONYMOUS)
@@ -90,7 +89,7 @@
 
   (let ((data '(1 2 #(3 4) ciao "hello" #vu8(99 98 97))))
     (check	;exchanging bytevector
-	(let* ((shmem.len (* 16 4096 #;(glibc.sysconf _SC_PAGESIZE)))
+	(let* ((shmem.len (* 16 (glibc.sysconf _SC_PAGESIZE)))
 	       (shmem.ptr (px.mmap #f shmem.len
 				   (fxior PROT_READ PROT_WRITE)
 				   (fxior MAP_SHARED MAP_ANONYMOUS)

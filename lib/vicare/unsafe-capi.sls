@@ -272,8 +272,8 @@
     glibc-wordexp
 
     ;; system configuration
-    glibc-sysconf	glibc-confstr
-    glibc-pathconf	glibc-fpathconf
+    posix-sysconf	posix-confstr
+    posix-pathconf	posix-fpathconf
 
     ;; iconv
     glibc-iconv-open	glibc-iconv-close
@@ -1537,17 +1537,17 @@
 
 ;;;; system configuration
 
-(define-inline (glibc-sysconf parameter)
-  (foreign-call "ikrt_glibc_sysconf" parameter))
+(define-inline (posix-sysconf parameter)
+  (foreign-call "ikrt_posix_sysconf" parameter))
 
-(define-inline (glibc-pathconf pathname parameter)
-  (foreign-call "ikrt_glibc_pathconf" pathname parameter))
+(define-inline (posix-pathconf pathname parameter)
+  (foreign-call "ikrt_posix_pathconf" pathname parameter))
 
-(define-inline (glibc-fpathconf fd parameter)
-  (foreign-call "ikrt_glibc_fpathconf" fd parameter))
+(define-inline (posix-fpathconf fd parameter)
+  (foreign-call "ikrt_posix_fpathconf" fd parameter))
 
-(define-inline (glibc-confstr parameter)
-  (foreign-call "ikrt_glibc_confstr" parameter))
+(define-inline (posix-confstr parameter)
+  (foreign-call "ikrt_posix_confstr" parameter))
 
 
 ;;;; iconv

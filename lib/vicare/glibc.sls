@@ -67,11 +67,6 @@
     ;; word expansion
     wordexp		wordexp/string
 
-    ;; system configuration
-    sysconf
-    pathconf		fpathconf
-    confstr		confstr/string
-
     ;; generic character set conversion
     iconv-open		iconv?
     iconv-close		iconv-closed?
@@ -493,61 +488,6 @@
     (if (vector? rv)
 	(vector-map latin1->string rv)
       rv)))
-
-
-;;;; system configuration
-
-(define (sysconf parameter)
-  (define who 'sysconf)
-  (with-arguments-validation (who)
-      ((signed-int	parameter))
-    (let ((rv (capi.glibc-sysconf parameter)))
-      (if rv
-	  (if (negative? rv)
-	      (raise-errno-error who rv parameter)
-	    rv)
-	rv))))
-
-;;; --------------------------------------------------------------------
-
-(define (pathconf pathname parameter)
-  (define who 'pathconf)
-  (with-arguments-validation (who)
-      ((string/bytevector	pathname)
-       (signed-int		parameter))
-    (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.glibc-pathconf pathname.bv parameter)))
-	(if rv
-	    (if (negative? rv)
-		(raise-errno-error who rv pathname parameter)
-	      rv)
-	  rv)))))
-
-(define (fpathconf fd parameter)
-  (define who 'fpathconf)
-  (with-arguments-validation (who)
-      ((file-descriptor	fd)
-       (signed-int	parameter))
-    (let ((rv (capi.glibc-fpathconf fd parameter)))
-      (if rv
-	  (if (negative? rv)
-	      (raise-errno-error who rv fd parameter)
-	    rv)
-	rv))))
-
-;;; --------------------------------------------------------------------
-
-(define (confstr parameter)
-  (define who 'confstr)
-  (with-arguments-validation (who)
-      ((signed-int	parameter))
-    (let ((rv (capi.glibc-confstr parameter)))
-      (if (bytevector? rv)
-	  rv
-	(raise-errno-error who rv parameter)))))
-
-(define (confstr/string parameter)
-  (latin1->string (confstr parameter)))
 
 
 ;;;; general character set conversion

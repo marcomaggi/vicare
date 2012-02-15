@@ -57,6 +57,10 @@ Notes for revision 0.2d9
 * Added documentation  appendix showing how  to exchange raw  and Scheme
   data among Vicare processes using mmapped interprocess shared memory.
 
+* BACKWARDS INCOMPATIBILITY  The functions SYSCONF,  PATHCONF, FPATHCONF
+  and CONFSTR  have been  moved from the  library (vicare glibc)  to the
+  library (vicare posix).
+
 
 Notes for revision 0.2d8
 ------------------------

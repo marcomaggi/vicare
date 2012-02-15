@@ -4160,6 +4160,81 @@ ikrt_posix_signal_bub_delivered (ikptr s_signum)
 
 
 /** --------------------------------------------------------------------
+ ** System configuration.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_sysconf (ikptr s_parameter, ikpcb * pcb)
+{
+#ifdef HAVE_SYSCONF
+  long  parameter = ik_integer_to_long(s_parameter);
+  long  value;
+  errno = 0;
+  value = sysconf((int)parameter);
+  if (-1 == value)
+    return (errno)? ik_errno_to_code() : false_object;
+  else
+    return ika_integer_from_long(pcb, value);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_pathconf (ikptr s_pathname, ikptr s_parameter, ikpcb * pcb)
+{
+#ifdef HAVE_PATHCONF
+  char *pathname  = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
+  long  parameter = ik_integer_to_long(s_parameter);
+  long  value;
+  errno = 0;
+  value = pathconf(pathname, (int)parameter);
+  if (-1 == value)
+    return (errno)? ik_errno_to_code() : false_object;
+  else
+    return ika_integer_from_long(pcb, value);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_fpathconf (ikptr s_fd, ikptr s_parameter, ikpcb * pcb)
+{
+#ifdef HAVE_FPATHCONF
+  long  parameter = ik_integer_to_long(s_parameter);
+  long  value;
+  errno = 0;
+  value = fpathconf(IK_UNFIX(s_fd), (int)parameter);
+  if (-1 == value)
+    return (errno)? ik_errno_to_code() : false_object;
+  else
+    return ika_integer_from_long(pcb, value);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_confstr (ikptr s_parameter, ikpcb * pcb)
+{
+#ifdef HAVE_CONFSTR
+  long          parameter = ik_integer_to_long(s_parameter);
+  size_t        length_including_zero;
+  errno = 0;
+  length_including_zero = confstr((int)parameter, NULL, 0);
+  if (length_including_zero) {
+    ikptr       s_result = ika_bytevector_alloc(pcb, (long)length_including_zero-1);
+    char *      result   = IK_BYTEVECTOR_DATA_CHARP(s_result);
+    confstr((int)parameter, result, length_including_zero);
+    return s_result;
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+
+/** --------------------------------------------------------------------
  ** Miscellaneous functions.
  ** ----------------------------------------------------------------- */
 
