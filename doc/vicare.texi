@@ -14680,6 +14680,7 @@ be @code{AF_INET} or @code{AF_INET6}.
 * readline::                    Extended interface to @gnu{} Readline.
 * gcc::                         A toy library interface to @gcc{}.
 * wtables::                     Weak hashtables.
+* flonum format::               Formatting flonums.
 @end menu
 
 @c page
@@ -15328,6 +15329,55 @@ associating @var{key} to the result of applying @var{proc} to
 If an entry exists for @var{key} in @var{table}: replace the its value
 with the result of applying @var{proc} to the old value.
 @end defun
+
+@c page
+@node flonum format
+@section Formatting flonums
+
+
+The following bindings are exported by the library @library{vicare
+flonum-formatter}.
+
+
+@defun format-flonum @var{positive?} @var{digits} @var{exponent}
+Given a list of characters @var{digits} and a fixnum @var{exponent}
+compose a string representing the corresponding flonum.  @var{positive?}
+determines the sign.
+
+@example
+(import (vicare)
+  (vicare flonum-formatter))
+
+(define digits
+  '(#\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
+
+(format-flonum #t digits 0)     @result{} "0.123456789"
+(format-flonum #t digits 1)     @result{} "1.23456789"
+(format-flonum #t digits 2)     @result{} "12.3456789"
+(format-flonum #t digits 3)     @result{} "123.456789"
+(format-flonum #t digits 8)     @result{} "12345678.9"
+(format-flonum #t digits 9)     @result{} "123456789.0"
+(format-flonum #t digits 10)    @result{} "1.23456789e9"
+
+(format-flonum #t digits -1)    @result{} "0.0123456789"
+(format-flonum #t digits -2)    @result{} "0.00123456789"
+(format-flonum #t digits -3)    @result{} "0.000123456789"
+(format-flonum #t digits -4)    @result{} "1.23456789e-5"
+
+(format-flonum #f digits 1)     @result{} "-1.23456789"
+(format-flonum #f digits 2)     @result{} "-12.3456789"
+(format-flonum #f digits 3)     @result{} "-123.456789"
+(format-flonum #f digits 8)     @result{} "-12345678.9"
+(format-flonum #f digits 9)     @result{} "-123456789.0"
+(format-flonum #f digits 10)    @result{} "-1.23456789e9"
+
+(format-flonum #f digits -1)    @result{} "-0.0123456789"
+(format-flonum #f digits -2)    @result{} "-0.00123456789"
+(format-flonum #f digits -3)    @result{} "-0.000123456789"
+(format-flonum #f digits -4)    @result{} "-1.23456789e-5"
+@end example
+@end defun
+
 
 @c page
 @node objects

@@ -318,7 +318,7 @@
     (define (%build-output-form who validators list-of-args body)
       (syntax-case validators ()
 	(()
-	 body)
+	 #`(let () #,body))
 	;;Accept #t as special validator meaning "always valid"; this is
 	;;sometimes useful when composing syntax output forms.
 	((#t . ?other-validators)
