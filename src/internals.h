@@ -337,7 +337,6 @@ ikptr	ik_mmap_data		(unsigned long size, int gen, ikpcb*);
 ikptr	ik_mmap_code		(unsigned long size, int gen, ikpcb*);
 ikptr	ik_mmap_mixed		(unsigned long size, ikpcb*);
 void	ik_munmap		(ikptr, unsigned long);
-void	ik_munmap_from_segment	(ikptr, unsigned long, ikpcb*);
 ikpcb * ik_make_pcb		(void);
 void	ik_delete_pcb		(ikpcb*);
 void	ik_free_symbol_table	(ikpcb* pcb);

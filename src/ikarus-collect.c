@@ -127,6 +127,52 @@ next_gen_tag[generation_count] = {
 };
 
 
+/** --------------------------------------------------------------------
+ ** Helpers.
+ ** ----------------------------------------------------------------- */
+
+static void
+ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb)
+/* Given  a  block of  memory  starting at  BASE  and  SIZE bytes  wide:
+   unregister    it   from    "pcb->segment_vector";    reset   it    in
+   "pcb->dirty_vector"; finally either register it in the uncached pages
+   or unmap it. */
+{
+  assert(base >= pcb->memory_base);
+  assert((base+size) <= pcb->memory_end);
+  assert(size == IK_ALIGN_TO_NEXT_PAGE(size));
+  unsigned* p = ((unsigned*)(long)(pcb->segment_vector)) + IK_PAGE_INDEX(base);
+  unsigned* s = ((unsigned*)(long)(pcb->dirty_vector))   + IK_PAGE_INDEX(base);
+  unsigned* q = p + IK_PAGE_INDEX(size);
+  while (p < q) {
+    assert(*p != hole_mt);
+    *p = hole_mt; /* holes */
+    *s = 0;
+    p++; s++;
+  }
+  ikpage* r = pcb->uncached_pages;
+  if (r) {
+    ikpage* cache = pcb->cached_pages;
+    ikpage* next;
+    do {
+      r->base = base;
+      next    = r->next;
+      r->next = cache;
+      cache   = r;
+      r       = next;
+      base   += pagesize;
+      size   -= pagesize;
+    } while (r && size);
+    pcb->cached_pages = cache;
+    pcb->uncached_pages = r;
+  }
+  if (size) {
+    ik_munmap(base, size);
+  }
+}
+
+
+
 static ikptr
 meta_alloc_extending(long size, gc_t* gc, int meta_id) {
   long mapsize = IK_ALIGN_TO_NEXT_PAGE(size);
