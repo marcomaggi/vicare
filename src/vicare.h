@@ -1,20 +1,31 @@
 /*
- * Ikarus Scheme -- A compiler for R6RS Scheme.
- * Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
- * Copyright (C) 2006,2007,2008	 Abdulaziz Ghuloum
- *
- * This program is free software:  you can redistribute it and/or modify
- * it under  the terms of  the GNU General  Public License version  3 as
- * published by the Free Software Foundation.
- *
- * This program is  distributed in the hope that it  will be useful, but
- * WITHOUT  ANY	  WARRANTY;  without   even  the  implied   warranty  of
- * MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See	 the GNU
- * General Public License for more details.
- *
- * You should  have received  a copy of	 the GNU General  Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+  Part of: Vicare Scheme
+  Contents: external header file
+  Date: Wed Jan 11, 2012
+
+  Abstract
+
+	This  file contains  external  definitions for  the public  API.
+	Many  of  the  definitions  in  this file  are  duplicated  from
+	"internals.h", which defines  the internal API; some definitions
+	are modified to keep them opaque to external code.
+
+  Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2006-2008  Abdulaziz Ghuloum
+
+  This program is  free software: you can redistribute	it and/or modify
+  it under the	terms of the GNU General Public	 License as published by
+  the Free Software Foundation, either	version 3 of the License, or (at
+  your option) any later version.
+
+  This program	is distributed in the  hope that it will  be useful, but
+  WITHOUT   ANY	 WARRANTY;   without  even   the  implied   warranty  of
+  MERCHANTABILITY  or FITNESS  FOR A  PARTICULAR PURPOSE.   See	 the GNU
+  General Public License for more details.
+
+  You  should have received  a copy  of the  GNU General  Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #ifndef VICARE_H
 #  define VICARE_H
@@ -81,9 +92,7 @@ typedef unsigned long long	ik_ullong;
 /* FIXME Should this be a "uintptr_t"? (Marco Maggi; Nov  6, 2011). */
 typedef ik_ulong		ikptr;
 
-/* This  type  is  an  opaque   mirror  of  "struct  ikpcb"  defined  in
-   "internals.h". */
-typedef struct ikpcb_t {
+typedef struct ikpcb {
   ikptr		dummy0;
   ikptr		dummy1;
   ikptr		dummy2;
@@ -114,16 +123,14 @@ typedef struct ikpcb_t {
   ikptr*		root9;
 
   /* Other fields not useful in the public API. */
-} ikpcb_t;
-
-typedef struct ikpcb	ikpcb;
-
-ik_decl ikpcb *	ik_the_pcb (void);
+} ikpcb;
 
 
 /** --------------------------------------------------------------------
  ** Function prototypes.
  ** ----------------------------------------------------------------- */
+
+ik_decl ikpcb *	ik_the_pcb (void);
 
 ik_decl int	ik_abort		(const char * error_message, ...);
 ik_decl void	ik_error		(ikptr args);
