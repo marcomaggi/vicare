@@ -111,7 +111,7 @@ print (FILE* fh, ikptr x)
       ikptr	s_rtd		 = IK_REF(x, off_record_rtd);;
       ikptr	number_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
       int	i;
-      if (s_rtd == the_pcb->base_rtd) {
+      if (s_rtd == ik_the_pcb()->base_rtd) {
 	fprintf(fh, "#[rtd: ");
       } else {
 	fprintf(fh, "#[struct nfields=%ld rtd=", number_of_fields);

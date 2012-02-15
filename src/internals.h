@@ -364,7 +364,6 @@ ikptr	ik_normalize_bignum	(long limbs, int sign, ikptr r);
  ** ----------------------------------------------------------------- */
 
 extern char **		environ;
-extern ikpcb *		the_pcb;
 
 #ifdef __CYGWIN__
 void	win_munmap(char* addr, size_t size);
