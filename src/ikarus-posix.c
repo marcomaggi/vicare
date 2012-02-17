@@ -1880,6 +1880,58 @@ ikrt_posix_madvise (ikptr s_address, ikptr s_length, ikptr s_advice)
   feature_failure(__func__);
 #endif
 }
+ikptr
+ikrt_posix_mlock (ikptr s_address, ikptr s_length)
+{
+#ifdef HAVE_MLOCK
+  void *	address = IK_POINTER_DATA_VOIDP(s_address);
+  size_t	length  = ik_integer_to_size_t(s_length);
+  int		rv;
+  errno = 0;
+  rv    = mlock(address, length);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_munlock (ikptr s_address, ikptr s_length)
+{
+#ifdef HAVE_MUNLOCK
+  void *	address = IK_POINTER_DATA_VOIDP(s_address);
+  size_t	length  = ik_integer_to_size_t(s_length);
+  int		rv;
+  errno = 0;
+  rv    = munlock(address, length);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_mlockall (ikptr s_flags)
+{
+#ifdef HAVE_MLOCKALL
+  int		rv;
+  errno = 0;
+  rv    = mlockall(IK_UNFIX(s_flags));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_munlockall (void)
+{
+#ifdef HAVE_MUNLOCKALL
+  int		rv;
+  errno = 0;
+  rv    = munlockall();
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
 
 
 /** --------------------------------------------------------------------

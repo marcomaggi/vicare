@@ -8623,6 +8623,25 @@ must be an exact integer in the range of the C language type
 @code{size_t}.  @var{advice} is a fixnum of flags.
 @end defun
 
+
+@defun mlock @var{address} @var{length}
+@defunx munlock @var{address} @var{length}
+Interface to the C functions @cfunc{mlock} and @cfunc{munlock}, see the
+manual page @code{mlock(2)}.  Lock or unlock a segment of virtual
+address space, preventing the memory from begin paged to the swap area.
+If successful return unspecified values, else raise an exception.
+@end defun
+
+
+@defun mlockall @var{flags}
+@defunx munlockall
+Interface to the C functions @cfunc{mlockall} and @cfunc{munlockall},
+see the manual page @code{mlock(2)}.  Lock or unlock all pages.  If
+successful return unspecified values, else raise an exception.
+@var{flags} must be a fixnum being an OR combination of the constants:
+@code{MCL_CURRENT}, @code{MCL_FUTURE}.
+@end defun
+
 @c page
 @node posix socket
 @section Network sockets

@@ -950,46 +950,65 @@
 (parametrise ((check-test-name	'mmap))
 
   (check
-      (let* ((page-size	4096 #;(glibc.sysconf _SC_PAGESIZE))
+      (let* ((page-size	(px.sysconf _SC_PAGESIZE))
 	     (ptr	(px.mmap #f page-size
 				 (fxior PROT_READ PROT_WRITE)
 				 (fxior MAP_PRIVATE MAP_ANONYMOUS)
 				 0 0)))
 	(px.munmap ptr page-size)
-	(ffi.pointer? ptr))
+	(pointer? ptr))
     => #t)
 
   (check	;msync
-      (let* ((page-size	4096 #;(glibc.sysconf _SC_PAGESIZE))
+      (let* ((page-size	(px.sysconf _SC_PAGESIZE))
 	     (ptr	(px.mmap #f page-size
 				 (fxior PROT_READ PROT_WRITE)
 				 (fxior MAP_PRIVATE MAP_ANONYMOUS)
 				 0 0)))
 	(px.msync ptr page-size 0)
 	(px.munmap ptr page-size)
-	(ffi.pointer? ptr))
+	(pointer? ptr))
     => #t)
 
   (check	;mremap
-      (let* ((page-size	4096 #;(glibc.sysconf _SC_PAGESIZE))
+      (let* ((page-size	(px.sysconf _SC_PAGESIZE))
 	     (ptr	(px.mmap #f page-size
 				 (fxior PROT_READ PROT_WRITE)
 				 (fxior MAP_PRIVATE MAP_ANONYMOUS)
 				 0 0))
 	     (ptr	(px.mremap ptr page-size (* 2 page-size) MREMAP_MAYMOVE)))
 	(px.munmap ptr page-size)
-	(ffi.pointer? ptr))
+	(pointer? ptr))
     => #t)
 
   (check	;madvise
-      (let* ((page-size	4096 #;(glibc.sysconf _SC_PAGESIZE))
+      (let* ((page-size	(px.sysconf _SC_PAGESIZE))
 	     (ptr	(px.mmap #f page-size
 				 (fxior PROT_READ PROT_WRITE)
 				 (fxior MAP_PRIVATE MAP_ANONYMOUS)
 				 0 0)))
 	(px.madvise ptr page-size MADV_NORMAL)
 	(px.munmap ptr page-size)
-	(ffi.pointer? ptr))
+	(pointer? ptr))
+    => #t)
+
+  (check	;mlock, mulock
+      (let* ((page-size	(px.sysconf _SC_PAGESIZE))
+	     (ptr	(px.mmap #f page-size
+				 (fxior PROT_READ PROT_WRITE)
+				 (fxior MAP_PRIVATE MAP_ANONYMOUS)
+				 0 0)))
+	(px.mlock ptr page-size)
+	(px.munlock ptr page-size)
+	(px.munmap ptr page-size)
+	(pointer? ptr))
+    => #t)
+
+  (check	;mlockall, mulockall
+      (begin
+	(px.mlockall MCL_FUTURE)
+	(px.munlockall)
+	#t)
     => #t)
 
   #t)

@@ -180,6 +180,8 @@
     posix-mmap				posix-munmap
     posix-msync				posix-mremap
     posix-madvise
+    posix-mlock				posix-munlock
+    posix-mlockall			posix-munlockall
 
     ;; file system synchronisation
     glibc-sync				glibc-fsync
@@ -990,6 +992,17 @@
 (define-inline (posix-madvise address length advice)
   (foreign-call "ikrt_posix_madvise" address length advice))
 
+(define-inline (posix-mlock address length)
+  (foreign-call "ikrt_posix_mlock" address length))
+
+(define-inline (posix-munlock address length)
+  (foreign-call "ikrt_posix_munlock" address length))
+
+(define-inline (posix-mlockall flags)
+  (foreign-call "ikrt_posix_mlockall" flags))
+
+(define-inline (posix-munlockall)
+  (foreign-call "ikrt_posix_munlockall"))
 
 
 ;;;; file system synchronisation

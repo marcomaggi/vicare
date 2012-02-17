@@ -132,6 +132,8 @@
     mmap				munmap
     msync				mremap
     madvise
+    mlock				munlock
+    mlockall				munlockall
 
     ;; sockets
     make-sockaddr_un
@@ -1772,6 +1774,37 @@
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv address length advice)))))
 
+(define (mlock address length)
+  (define who 'mlock)
+  (with-arguments-validation (who)
+      ((pointer		address)
+       (platform-size_t	length))
+    (let ((rv (capi.posix-mlock address length)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv address length)))))
+
+(define (munlock address length)
+  (define who 'munlock)
+  (with-arguments-validation (who)
+      ((pointer		address)
+       (platform-size_t	length))
+    (let ((rv (capi.posix-munlock address length)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv address length)))))
+
+(define (mlockall flags)
+  (define who 'mlock)
+  (with-arguments-validation (who)
+      ((fixnum		flags))
+    (let ((rv (capi.posix-mlockall flags)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv flags)))))
+
+(define (munlockall)
+  (define who 'mlock)
+  (let ((rv (capi.posix-munlockall)))
+    (unless (unsafe.fxzero? rv)
+      (%raise-errno-error who rv))))
 
 
 ;;;; sockets
