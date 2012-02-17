@@ -27,7 +27,7 @@
 
 (import (vicare)
   (prefix (vicare linux)
-	  linux.)
+	  lx.)
   (prefix (vicare posix)
 	  px.)
   (vicare platform-constants)
@@ -44,21 +44,21 @@
       (let* ((child_pid #f)
 	     (info      (px.fork (lambda (pid) ;parent
 				   (set! child_pid pid)
-				   (linux.waitid P_PID pid WEXITED))
+				   (lx.waitid P_PID pid WEXITED))
 				 (lambda () ;child
 				   (exit 10)))))
-	(list (= child_pid (linux.struct-siginfo_t-si_pid info))
-	      (fixnum? (linux.struct-siginfo_t-si_uid info))
-	      (linux.struct-siginfo_t-si_status  info)
-	      (linux.struct-siginfo_t-si_signo   info)
-	      (linux.struct-siginfo_t-si_code    info)))
+	(list (= child_pid (lx.struct-siginfo_t-si_pid info))
+	      (fixnum? (lx.struct-siginfo_t-si_uid info))
+	      (lx.struct-siginfo_t-si_status  info)
+	      (lx.struct-siginfo_t-si_signo   info)
+	      (lx.struct-siginfo_t-si_code    info)))
     => `(#t #t 10 ,SIGCLD ,CLD_EXITED))
 
 ;;; --------------------------------------------------------------------
 
   (check
       (let ((status (px.system "exit 0")))
-	(linux.WIFCONTINUED status))
+	(lx.WIFCONTINUED status))
     => #f)
 
   #t)
@@ -69,25 +69,81 @@
   (check
       (let-values (((in ou) (px.pipe)))
 	(unwind-protect
-	    (let ((epfd (linux.epoll-create)))
+	    (let ((epfd (lx.epoll-create)))
 	      (unwind-protect
-		  (let ((sizeof-struct (vector (linux.epoll-event-size))))
+		  (let ((sizeof-struct (vector (lx.epoll-event-size))))
 		    (with-local-storage sizeof-struct
 		      (lambda (event)
-			(linux.epoll-event-set-events!  event 0 EPOLLIN)
-			(linux.epoll-event-set-data-fd! event 0 in)
-			(linux.epoll-ctl epfd EPOLL_CTL_ADD in event)))
+			(lx.epoll-event-set-events!  event 0 EPOLLIN)
+			(lx.epoll-event-set-data-fd! event 0 in)
+			(lx.epoll-ctl epfd EPOLL_CTL_ADD in event)))
 		    (px.write ou '#vu8(1))
 		    (with-local-storage sizeof-struct
 		      (lambda (events)
-			(linux.epoll-wait epfd events 1 -1)
-			(list (fx= in (linux.epoll-event-ref-data-fd events 0))
-			      (linux.epoll-event-ref-events events 0))
+			(lx.epoll-wait epfd events 1 -1)
+			(list (fx= in (lx.epoll-event-ref-data-fd events 0))
+			      (lx.epoll-event-ref-events events 0))
 			)))
 		(px.close epfd)))
 	  (px.close in)
 	  (px.close ou)))
     => `(#t ,EPOLLIN))
+
+  #t)
+
+
+(parametrise ((check-test-name	'signalfd))
+
+  (check	;no signal pending
+      (unwind-protect
+	  (begin
+	    (px.signal-bub-init)
+	    (let* ((mask (vector SIGUSR1 SIGUSR2))
+		   (fd   (lx.signalfd -1 mask (fxior SFD_CLOEXEC SFD_NONBLOCK))))
+	      (unwind-protect
+		  (lx.read-signalfd-siginfo fd)
+		(px.close fd))))
+	(px.signal-bub-final))
+    => #f)
+
+  (check	;one signal pending
+      (unwind-protect
+	  (begin
+	    (px.signal-bub-init)
+	    (let* ((mask (vector SIGUSR1 SIGUSR2))
+		   (fd   (lx.signalfd -1 mask (fxior SFD_CLOEXEC SFD_NONBLOCK))))
+	      (unwind-protect
+		  (begin
+		    (px.raise SIGUSR1)
+		    (let ((info (lx.read-signalfd-siginfo fd))
+			  (done (lx.read-signalfd-siginfo fd)))
+;;;		      (check-pretty-print info)
+		      (list (lx.struct-signalfd-siginfo? info)
+			    (lx.struct-signalfd-siginfo-ssi_signo info)
+			    done)))
+		(px.close fd))))
+	(px.signal-bub-final))
+    => `(#t ,SIGUSR1 #f))
+
+  (check	;two signals pending
+      (unwind-protect
+	  (begin
+	    (px.signal-bub-init)
+	    (let* ((mask (vector SIGUSR1 SIGUSR2))
+		   (fd   (lx.signalfd -1 mask (fxior SFD_CLOEXEC SFD_NONBLOCK))))
+	      (unwind-protect
+		  (begin
+		    (px.raise SIGUSR1)
+		    (px.raise SIGUSR2)
+		    (let* ((info1 (lx.read-signalfd-siginfo fd))
+			   (info2 (lx.read-signalfd-siginfo fd))
+			   (info3 (lx.read-signalfd-siginfo fd)))
+		      (list (lx.struct-signalfd-siginfo-ssi_signo info1)
+			    (lx.struct-signalfd-siginfo-ssi_signo info2)
+			    info3)))
+		(px.close fd))))
+	(px.signal-bub-final))
+    => `(,SIGUSR1 ,SIGUSR2 #f))
 
   #t)
 

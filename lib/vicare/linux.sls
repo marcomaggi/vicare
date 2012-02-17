@@ -29,21 +29,34 @@
   (export
     ;; process termination status
     waitid
-    make-struct-siginfo_t	struct-siginfo_t?
-    struct-siginfo_t-si_pid	struct-siginfo_t-si_uid
-    struct-siginfo_t-si_signo	struct-siginfo_t-si_status
+    make-struct-siginfo_t		struct-siginfo_t?
+    struct-siginfo_t-si_pid		struct-siginfo_t-si_uid
+    struct-siginfo_t-si_signo		struct-siginfo_t-si_status
     struct-siginfo_t-si_code
     WIFCONTINUED
 
     ;; epoll
-    epoll-create		epoll-create1
-    epoll-ctl			epoll-wait
-    epoll-event-alloc		epoll-event-size
-    epoll-event-set-events!	epoll-event-ref-events
-    epoll-event-set-data-ptr!	epoll-event-ref-data-ptr
-    epoll-event-set-data-fd!	epoll-event-ref-data-fd
-    epoll-event-set-data-u32!	epoll-event-ref-data-u32
-    epoll-event-set-data-u64!	epoll-event-ref-data-u64
+    epoll-create			epoll-create1
+    epoll-ctl				epoll-wait
+    epoll-event-alloc			epoll-event-size
+    epoll-event-set-events!		epoll-event-ref-events
+    epoll-event-set-data-ptr!		epoll-event-ref-data-ptr
+    epoll-event-set-data-fd!		epoll-event-ref-data-fd
+    epoll-event-set-data-u32!		epoll-event-ref-data-u32
+    epoll-event-set-data-u64!		epoll-event-ref-data-u64
+
+    ;; interprocess signals
+    signalfd				read-signalfd-siginfo
+
+    make-struct-signalfd-siginfo	struct-signalfd-siginfo?
+    struct-signalfd-siginfo-ssi_signo	struct-signalfd-siginfo-ssi_errno
+    struct-signalfd-siginfo-ssi_code	struct-signalfd-siginfo-ssi_pid
+    struct-signalfd-siginfo-ssi_uid	struct-signalfd-siginfo-ssi_fd
+    struct-signalfd-siginfo-ssi_tid	struct-signalfd-siginfo-ssi_band
+    struct-signalfd-siginfo-ssi_overrun	struct-signalfd-siginfo-ssi_trapno
+    struct-signalfd-siginfo-ssi_status	struct-signalfd-siginfo-ssi_int
+    struct-signalfd-siginfo-ssi_ptr	struct-signalfd-siginfo-ssi_utime
+    struct-signalfd-siginfo-ssi_stime	struct-signalfd-siginfo-ssi_addr
     )
   (import (vicare)
     (vicare syntactic-extensions)
@@ -54,20 +67,6 @@
 	    capi.)
     (prefix (vicare unsafe-operations)
 	    unsafe.))
-
-
-;;;; helpers
-
-(define-syntax define-for-linux
-  (if #t
-      (syntax-rules ()
-	((_ (?who . ?args) . ?body)
-	 (define (?who . ?args) . ?body)))
-    (syntax-rules ()
-      ((_ (?who . ?args) . ?body)
-       (define (?who . ?args)
-	 (assertion-violation '?who
-	   "attempt to call unimplemented GNU+Linux function"))))))
 
 
 ;;;; arguments validation
@@ -132,6 +131,17 @@
   (%file-descriptor? obj)
   (assertion-violation who "expected fixnum file descriptor as argument" obj))
 
+(define-argument-validation (file-descriptor/-1 who obj)
+  (and (fixnum? obj)
+       (or (unsafe.fx=  obj -1)
+	   (and (unsafe.fx>= obj 0)
+		(unsafe.fx<  obj FD_SETSIZE))))
+  (assertion-violation who "expected -1 or fixnum file descriptor as argument" obj))
+
+(define-argument-validation (vector-of-signums who obj)
+  (and (vector? obj) (vector-for-all fixnum? obj))
+  (assertion-violation who "expected vector of signums as arguments" obj))
+
 
 ;;;; helpers
 
@@ -157,7 +167,7 @@
 (define-struct struct-siginfo_t
   (si_pid si_uid si_signo si_status si_code))
 
-(define-for-linux (waitid idtype id options)
+(define (waitid idtype id options)
   (define who 'waitid)
   (with-arguments-validation (who)
       ((fixnum  idtype)
@@ -165,7 +175,7 @@
        (fixnum	options))
     (capi.linux-waitid idtype id (make-struct-siginfo_t #f #f #f #f #f) options)))
 
-(define-for-linux (WIFCONTINUED status)
+(define (WIFCONTINUED status)
   (define who 'WIFCONTINUED)
   (with-arguments-validation (who)
       ((fixnum  status))
@@ -293,11 +303,77 @@
   )
 
 
+;;;; interprocess signals
+
+(define-struct struct-signalfd-siginfo
+  (ssi_signo	; 0
+   ssi_errno	; 1
+   ssi_code	; 2
+   ssi_pid	; 3
+   ssi_uid	; 4
+   ssi_fd	; 5
+   ssi_tid	; 6
+   ssi_band	; 7
+   ssi_overrun	; 8
+   ssi_trapno	; 9
+   ssi_status	; 10
+   ssi_int	; 11
+   ssi_ptr	; 12
+   ssi_utime	; 13
+   ssi_stime	; 14
+   ssi_addr))	; 15
+
+(define (%struct-signalfd-siginfo-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[struct-signalfd-siginfo")
+  (%display " ssi_signo=")	(%display (struct-signalfd-siginfo-ssi_signo S))
+  (%display " ssi_errno=")	(%display (struct-signalfd-siginfo-ssi_errno S))
+  (%display " ssi_code=")	(%display (struct-signalfd-siginfo-ssi_code S))
+  (%display " ssi_pid=")	(%display (struct-signalfd-siginfo-ssi_pid S))
+  (%display " ssi_uid=")	(%display (struct-signalfd-siginfo-ssi_uid S))
+  (%display " ssi_fd=")		(%display (struct-signalfd-siginfo-ssi_fd S))
+  (%display " ssi_tid=")	(%display (struct-signalfd-siginfo-ssi_tid S))
+  (%display " ssi_band=")	(%display (struct-signalfd-siginfo-ssi_band S))
+  (%display " ssi_overrun=")	(%display (struct-signalfd-siginfo-ssi_overrun S))
+  (%display " ssi_trapno=")	(%display (struct-signalfd-siginfo-ssi_trapno S))
+  (%display " ssi_status=")	(%display (struct-signalfd-siginfo-ssi_status S))
+  (%display " ssi_int=")	(%display (struct-signalfd-siginfo-ssi_int S))
+  (%display " ssi_ptr=")	(%display (struct-signalfd-siginfo-ssi_ptr S))
+  (%display " ssi_utime=")	(%display (struct-signalfd-siginfo-ssi_utime S))
+  (%display " ssi_stime=")	(%display (struct-signalfd-siginfo-ssi_stime S))
+  (%display " ssi_addr=")	(%display (struct-signalfd-siginfo-ssi_addr S))
+  (%display "]"))
+
+(define (signalfd fd mask flags)
+  (define who 'signalfd)
+  (with-arguments-validation (who)
+      ((file-descriptor/-1	fd)
+       (vector-of-signums	mask)
+       (fixnum			flags))
+    (let ((rv (capi.linux-signalfd fd mask flags)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(%raise-errno-error who rv fd mask flags)))))
+
+(define (read-signalfd-siginfo fd)
+  (define who 'read-signalfd-siginfo)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd))
+    (let* ((info (make-struct-signalfd-siginfo #f #f #f #f #f #f #f #f #f #f #f #f #f #f #f #f))
+	   (rv   (capi.linux-read-signalfd-siginfo fd info)))
+      (cond ((unsafe.fxzero? rv)
+	     info)
+	    ((unsafe.fx= rv EAGAIN)
+	     #f)
+	    (else
+	     (%raise-errno-error who rv fd))))))
+
+
 ;;;; done
+
+(set-rtd-printer! (type-descriptor struct-signalfd-siginfo)	%struct-signalfd-siginfo-printer)
 
 )
 
 ;;; end of file
-;; Local Variables:
-;; eval: (put 'define-for-linux 'scheme-indent-function 1)
-;; End:

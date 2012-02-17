@@ -39,6 +39,9 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_UNISTD_H
 #  include <unistd.h>
 #endif
+#ifdef HAVE_SYS_SIGNALFD_H
+#  include <sys/signalfd.h>
+#endif
 #ifdef HAVE_SYS_WAIT_H
 #  include <sys/wait.h>
 #endif

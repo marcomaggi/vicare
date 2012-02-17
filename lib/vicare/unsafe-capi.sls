@@ -116,6 +116,7 @@
     posix-pause
     posix-signal-bub-init		posix-signal-bub-final
     posix-signal-bub-acquire		posix-signal-bub-delivered?
+    linux-signalfd			linux-read-signalfd-siginfo
 
     ;; file system inspection
     posix-stat				posix-lstat
@@ -677,6 +678,14 @@
 
 (define-inline (posix-signal-bub-delivered? signum)
   (foreign-call "ikrt_posix_signal_bub_delivered" signum))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (linux-signalfd fd mask flags)
+  (foreign-call "ikrt_linux_signalfd" fd mask flags))
+
+(define-inline (linux-read-signalfd-siginfo fd info)
+  (foreign-call "ikrt_linux_read_signalfd_siginfo" fd info))
 
 
 ;;;; file system inspection

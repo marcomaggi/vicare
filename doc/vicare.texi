@@ -11473,6 +11473,8 @@ behaviour is undefined.
 * linux env::                   Operating system environment variables.
 * linux status::                Process termination status.
 * linux epoll::                 Polling for events on file descriptors.
+* linux signalfd::              Accepting signals through
+                                file descriptors.
 @end menu
 
 @c page
@@ -11680,6 +11682,162 @@ Here is a meaningless example showing the mechanics of the epoll @api{}:
     (px.close in)
     (px.close ou))
 @end smallexample
+
+@c page
+@node linux signalfd
+@section Accepting signals through file descriptors
+
+
+For details on the @cfunc{signalfd} @api{} see the @code{signalfd(2)}
+manual page.  The following bindings are exported by the @library{vicare
+linux} library.
+
+
+@defun signalfd @var{fd} @var{mask} @var{flags}
+Interface to the C function @cfunc{signalfd}.  Create a file descriptor
+that can be used to accept interprocess signals.  If successful return a
+fixnum representing the file descriptor, else raise an exception.
+
+@var{fd} can be either a fixnum representing the file descriptor or
+@code{-1} to request a new, unspecified, file descriptor; if @var{fd} is
+the return value of a previous call to @func{signalfd}: this call
+replaces the signal set previously specified.
+
+@var{mask} must be a Scheme vector of fixnums representing the signal
+numbers to be accepted.  Notice that these signals should have been
+blocked.
+
+@var{flags} can be the fixnum zero or an OR combination (@func{fxior})
+of the constants: @code{SFD_CLOEXEC}, @code{SFD_NONBLOCK}.
+@end defun
+
+
+@defun read-signalfd-siginfo @var{fd}
+Attempt to read from the file descriptor @var{fd} a single instance of
+@code{struct signalfd_siginfo}: if successful return the result as an
+instance of @code{struct-signalfd-siginfo}; if no signal is pending, and
+@var{fd} is non--blocking, return @false{}; if an error occurs raise an
+exception.
+@end defun
+
+
+@deftp {Struct Type} struct-signalfd-siginfo
+Structure type mirroring the C language @code{struct signalfd_siginfo}.
+It has the following fields:
+
+@example
+ssi_signo       ssi_errno       ssi_code
+ssi_pid         ssi_uid         ssi_fd
+ssi_tid         ssi_band        ssi_overrun
+ssi_trapno      ssi_status      ssi_int
+ssi_ptr         ssi_utime       ssi_stime
+ssi_addr
+@end example
+@end deftp
+
+
+@deftp make-struct-signalfd-siginfo @var{signo} @var{errno} @var{code} @var{pid} @var{uid} @var{fd} @var{tid} @var{band} @var{overrun} @var{trapno} @var{status} @var{int} @var{ptr} @var{utime} @var{stime} @var{addr}
+Build and return a new instance of @code{struct-signalfd-siginfo}.
+@end deftp
+
+
+@defun struct-signalfd-siginfo? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@code{struct-signalfd-siginfo}, else return @false{}.
+@end defun
+
+
+@defun struct-signalfd-siginfo-ssi_signo @var{info}
+@defunx struct-signalfd-siginfo-ssi_errno @var{info}
+@defunx struct-signalfd-siginfo-ssi_code @var{info}
+@defunx struct-signalfd-siginfo-ssi_pid @var{info}
+@defunx struct-signalfd-siginfo-ssi_uid @var{info}
+@defunx struct-signalfd-siginfo-ssi_fd @var{info}
+@defunx struct-signalfd-siginfo-ssi_tid @var{info}
+@defunx struct-signalfd-siginfo-ssi_band @var{info}
+@defunx struct-signalfd-siginfo-ssi_overrun @var{info}
+@defunx struct-signalfd-siginfo-ssi_trapno @var{info}
+@defunx struct-signalfd-siginfo-ssi_status @var{info}
+@defunx struct-signalfd-siginfo-ssi_int @var{info}
+@defunx struct-signalfd-siginfo-ssi_ptr @var{info}
+@defunx struct-signalfd-siginfo-ssi_utime @var{info}
+@defunx struct-signalfd-siginfo-ssi_stime @var{info}
+@defunx struct-signalfd-siginfo-ssi_addr @var{info}
+Accessors for the fields of a @code{struct-signalfd-siginfo}.
+@end defun
+
+In the following examples we use @func{signal-bub-init}, from
+@library{vicare posix}, to block all the signals.  Let's say no signal
+is pending:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare linux) lx.)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(px.signal-bub-init)
+(let* ((mask  (vector SIGUSR1 SIGUSR2)
+       (flags (fxior SFD_CLOEXEC SFD_NONBLOCK)))
+       (fd    (lx.signalfd -1 mask flags)))
+  (lx.read-signalfd-siginfo fd))
+@result{} #f
+@end example
+
+@noindent
+now we raise a single signal:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare linux) lx.)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(px.signal-bub-init)
+(let* ((mask  (vector SIGUSR1 SIGUSR2)
+       (flags (fxior SFD_CLOEXEC SFD_NONBLOCK)))
+       (fd    (lx.signalfd -1 mask flags)))
+  (px.raise SIGUSR1)
+  (let ((info (lx.read-signalfd-siginfo fd))
+        (done (lx.read-signalfd-siginfo fd)))
+
+    (lx.struct-signalfd-siginfo-ssi_signo info)
+    @result{} SIGUSR1
+
+    done))
+@result{} @false{}
+@end example
+
+@noindent
+now we raise two signals:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare linux) lx.)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(px.signal-bub-init)
+(let* ((mask  (vector SIGUSR1 SIGUSR2)
+       (flags (fxior SFD_CLOEXEC SFD_NONBLOCK)))
+       (fd    (lx.signalfd -1 mask flags)))
+  (px.raise SIGUSR1)
+  (px.raise SIGUSR2)
+  (let ((info1 (lx.read-signalfd-siginfo fd))
+        (info2 (lx.read-signalfd-siginfo fd))
+        (done  (lx.read-signalfd-siginfo fd)))
+    (lx.struct-signalfd-siginfo-ssi_signo info1)
+    @result{} SIGUSR1
+
+    (lx.struct-signalfd-siginfo-ssi_signo info2)
+    @result{} SIGUSR2
+
+    done))
+@result{} #f
+@end example
 
 @c page
 @node syslib

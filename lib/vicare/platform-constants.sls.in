@@ -385,6 +385,9 @@
     WRDE_BADCHAR	WRDE_BADVAL	WRDE_CMDSUB
     WRDE_NOSPACE	WRDE_SYNTAX
 
+;;;; signalfd
+    SFD_CLOEXEC		SFD_NONBLOCK
+
 ;;; errno codes, reexported from (vicare errno)
     E2BIG		EACCES		EADDRINUSE
     EADDRNOTAVAIL	EADV		EAFNOSUPPORT
@@ -1268,6 +1271,11 @@
 (define-inline-constant WRDE_CMDSUB		@VALUEOF_WRDE_CMDSUB@)
 (define-inline-constant WRDE_NOSPACE		@VALUEOF_WRDE_NOSPACE@)
 (define-inline-constant WRDE_SYNTAX		@VALUEOF_WRDE_SYNTAX@)
+
+;;; signalfd
+
+(define-inline-constant SFD_CLOEXEC		@VALUEOF_SFD_CLOEXEC@)
+(define-inline-constant SFD_NONBLOCK		@VALUEOF_SFD_NONBLOCK@)
 
 
 ;;;; h_errno friendly interface

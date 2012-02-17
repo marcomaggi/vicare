@@ -56,6 +56,9 @@
 #ifdef HAVE_SYS_RESOURCE_H
 #  include <sys/resource.h>
 #endif
+#ifdef HAVE_SYS_SIGNALFD_H
+#  include <sys/signalfd.h>
+#endif
 #ifdef HAVE_SYS_STAT_H
 #  include <sys/stat.h>
 #endif
@@ -324,6 +327,71 @@ ikrt_linux_epoll_event_ref_data_u64 (ikptr s_events_array, ikptr s_index, ikpcb 
 #ifdef HAVE_STRUCT_EPOLL_EVENT
   struct epoll_event *	event = IK_POINTER_DATA_VOIDP(s_events_array);
   return ika_integer_from_uint64(pcb, event[IK_UNFIX(s_index)].data.u64);
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
+ ** Signal file descriptors.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_linux_signalfd (ikptr s_fd, ikptr s_mask, ikptr s_flags)
+{
+#ifdef HAVE_SIGNALFD
+  int		fd = IK_NUM_TO_FD(s_fd);
+  sigset_t	mask;
+  int		i, mask_len;
+  int		rv;
+  sigemptyset(&mask);
+  mask_len = IK_VECTOR_LENGTH(s_mask);
+  for (i=0; i<mask_len; ++i) {
+    errno = 0;
+    rv = sigaddset(&mask, IK_UNFIX(IK_ITEM(s_mask, i)));
+    if (-1 == rv)
+      return ik_errno_to_code();
+  }
+  errno = 0;
+  rv    = signalfd(fd, &mask, IK_UNFIX(s_flags));
+  return (-1 != rv)? IK_FD_TO_NUM(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_linux_read_signalfd_siginfo (ikptr s_fd, ikptr s_info, ikpcb * pcb)
+{
+#ifdef HAVE_SIGNALFD
+  struct signalfd_siginfo	info;
+  ssize_t			rv;
+  errno = 0;
+  rv    = read(IK_NUM_TO_FD(s_fd), &info, sizeof(struct signalfd_siginfo));
+  if (-1 != rv) {
+    pcb->root0 = &s_info;
+    {
+      IK_ASS(IK_FIELD(s_info,  0), ika_integer_from_uint32(pcb, info.ssi_signo));
+      IK_ASS(IK_FIELD(s_info,  1), ika_integer_from_sint32(pcb, info.ssi_errno));
+      IK_ASS(IK_FIELD(s_info,  2), ika_integer_from_sint32(pcb, info.ssi_code));
+      IK_ASS(IK_FIELD(s_info,  3), ika_integer_from_uint32(pcb, info.ssi_pid));
+      IK_ASS(IK_FIELD(s_info,  4), ika_integer_from_uint32(pcb, info.ssi_uid));
+      IK_ASS(IK_FIELD(s_info,  5), ika_integer_from_sint32(pcb, info.ssi_fd));
+      IK_ASS(IK_FIELD(s_info,  6), ika_integer_from_uint32(pcb, info.ssi_tid));
+      IK_ASS(IK_FIELD(s_info,  7), ika_integer_from_uint32(pcb, info.ssi_band));
+      IK_ASS(IK_FIELD(s_info,  8), ika_integer_from_uint32(pcb, info.ssi_overrun));
+      IK_ASS(IK_FIELD(s_info,  9), ika_integer_from_uint32(pcb, info.ssi_trapno));
+      IK_ASS(IK_FIELD(s_info, 10), ika_integer_from_sint32(pcb, info.ssi_status));
+      IK_ASS(IK_FIELD(s_info, 11), ika_integer_from_sint32(pcb, info.ssi_int));
+      IK_ASS(IK_FIELD(s_info, 12), ika_integer_from_uint64(pcb, info.ssi_ptr));
+      IK_ASS(IK_FIELD(s_info, 13), ika_integer_from_uint64(pcb, info.ssi_utime));
+      IK_ASS(IK_FIELD(s_info, 14), ika_integer_from_uint64(pcb, info.ssi_stime));
+      IK_ASS(IK_FIELD(s_info, 15), ika_integer_from_uint64(pcb, info.ssi_addr));
+    }
+    pcb->root0 = NULL;
+    return IK_FIX(0);
+  } else
+    return ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif

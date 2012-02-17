@@ -64,6 +64,8 @@ Notes for revision 0.2d9
 * Added to (vicare posix) functions: SETITIMER, GETITIMER, ALARM, MLOCK,
   MUNLOCK, MLOCKALL, MUNLOCKALL.
 
+* Added to (vicare linux) functions: SIGNALFD.
+
 
 Notes for revision 0.2d8
 ------------------------
