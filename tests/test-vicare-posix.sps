@@ -1011,6 +1011,17 @@
 	#t)
     => #t)
 
+  (check	;mprotect
+      (let* ((page-size	(px.sysconf _SC_PAGESIZE))
+	     (ptr	(px.mmap #f page-size
+				 (fxior PROT_READ PROT_WRITE)
+				 (fxior MAP_PRIVATE MAP_ANONYMOUS)
+				 0 0)))
+	(px.mprotect ptr page-size PROT_READ)
+	(px.munmap ptr page-size)
+	(pointer? ptr))
+    => #t)
+
   #t)
 
 

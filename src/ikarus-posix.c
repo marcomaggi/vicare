@@ -1932,6 +1932,20 @@ ikrt_posix_munlockall (void)
   feature_failure(__func__);
 #endif
 }
+ikptr
+ikrt_posix_mprotect (ikptr s_address, ikptr s_length, ikptr s_prot)
+{
+#ifdef HAVE_MPROTECT
+  void *	address = IK_POINTER_DATA_VOIDP(s_address);
+  size_t	length  = ik_integer_to_size_t(s_length);
+  int		rv;
+  errno = 0;
+  rv    = mprotect(address, length, IK_UNFIX(s_prot));
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
 
 
 /** --------------------------------------------------------------------

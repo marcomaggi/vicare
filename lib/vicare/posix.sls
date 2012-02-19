@@ -131,7 +131,7 @@
     ;; memory-mapped input/output
     mmap				munmap
     msync				mremap
-    madvise
+    madvise				mprotect
     mlock				munlock
     mlockall				munlockall
 
@@ -1773,6 +1773,16 @@
     (let ((rv (capi.posix-madvise address length advice)))
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv address length advice)))))
+
+(define (mprotect address length prot)
+  (define who 'mprotect)
+  (with-arguments-validation (who)
+      ((pointer		address)
+       (platform-size_t	length)
+       (fixnum		prot))
+    (let ((rv (capi.posix-mprotect address length prot)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv address length)))))
 
 (define (mlock address length)
   (define who 'mlock)

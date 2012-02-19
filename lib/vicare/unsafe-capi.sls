@@ -180,7 +180,7 @@
     ;; memory-mapped input/output
     posix-mmap				posix-munmap
     posix-msync				posix-mremap
-    posix-madvise
+    posix-madvise			posix-mprotect
     posix-mlock				posix-munlock
     posix-mlockall			posix-munlockall
 
@@ -1012,6 +1012,9 @@
 
 (define-inline (posix-munlockall)
   (foreign-call "ikrt_posix_munlockall"))
+
+(define-inline (posix-mprotect address length prot)
+  (foreign-call "ikrt_posix_mprotect" address length prot))
 
 
 ;;;; file system synchronisation

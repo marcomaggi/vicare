@@ -62,7 +62,7 @@ Notes for revision 0.2d9
   library (vicare posix).
 
 * Added to (vicare posix) functions: SETITIMER, GETITIMER, ALARM, MLOCK,
-  MUNLOCK, MLOCKALL, MUNLOCKALL.
+  MUNLOCK, MLOCKALL, MUNLOCKALL, MPROTECT.
 
 * Added to (vicare linux) functions: SIGNALFD.
 
