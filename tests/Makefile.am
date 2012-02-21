@@ -70,6 +70,9 @@ test-exec-modes:
 #page
 #### interface to "make check"
 
+VICARE_INST_ENV	= VICARE_LIBRARY_PATH=$$VICARE_LIBRARY_PATH:$(srcdir):$(srcdir)/../scheme
+VICARE_INST_RUN	= $(VICARE_INST_ENV) vicare
+
 # TESTS and TESTS_ENVIRONMENT are Automake variables.
 TESTS_ENVIRONMENT	= $(VICARE_RUN)
 TESTS			=	\
@@ -179,6 +182,9 @@ endif
 if WANT_CRE2
 TESTS	+= foreign-test-vicare-cre2.sps
 endif
+
+installcheck-local:
+	@for f in $(TESTS); do $(VICARE_INST_RUN) $(srcdir)/$$f; done
 
 #page
 #### extra files to be distributed

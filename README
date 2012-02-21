@@ -138,7 +138,8 @@ hierarchy (vicare ---) to be used by the test suite.
 
   The "make check",  "make test" and "make tests"  commands run the same
 set of  "quick" tests; the "check"  makefile rule uses  the GNU Automake
-infrastructure.
+infrastructure.  After  the installation: we  can run these  tests using
+the "make installcheck" rule.
 
   The "make long-test"  and "make long-tests" commands run  the same set
 of time-consuming tests.
