@@ -25,19 +25,6 @@
 ;;;
 
 #!r6rs
-(import
-  (only (vicare installation-configuration))
-  (only (vicare platform-constants))
-  (only (vicare errno))
-  (only (vicare include))
-  (only (vicare syntactic-extensions))
-  (only (vicare unsafe-operations))
-  (only (vicare unsafe-unicode))
-  (only (vicare unsafe-capi))
-  (only (vicare words))
-  (only (vicare flonum-parser))
-  (only (vicare flonum-formatter))
-  (only (vicare weak-hashtables))
-  )
+(import (only (vicare gcc)))
 
 ;;; end of file

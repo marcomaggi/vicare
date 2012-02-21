@@ -9,6 +9,7 @@ EXTRA_DIST		= compile-all.sps			\
 			  compile-linux.sps			\
 			  compile-readline.sps			\
 			  compile-cre2.sps			\
+			  compile-gcc.sps			\
 			  vicare/errno.sls.in			\
 			  vicare/platform-constants.sls.in	\
 			  vicare/words.sls.in			\
@@ -26,7 +27,6 @@ nobase_dist_libvicare_DATA	= \
 	vicare/unsafe-capi.sls			\
 	vicare/words.sls			\
 	vicare/installation-configuration.sls	\
-	vicare/gcc.sls				\
 	vicare/weak-hashtables.sls
 
 if WANT_LIBFFI
@@ -39,6 +39,14 @@ endif
 
 if WANT_GLIBC
 nobase_dist_libvicare_DATA	+= vicare/glibc.sls
+endif
+
+if WANT_LIBFFI
+if WANT_POSIX
+if WANT_GLIBC
+nobase_dist_libvicare_DATA	+= vicare/gcc.sls
+endif
+endif
 endif
 
 if WANT_LINUX
@@ -80,6 +88,13 @@ endif
 if WANT_GLIBC
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-glibc.sps
 endif
+if WANT_LIBFFI
+if WANT_POSIX
+if WANT_GLIBC
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-gcc.sps
+endif
+endif
+endif
 if WANT_LINUX
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-linux.sps
 endif
@@ -100,6 +115,13 @@ if WANT_POSIX
 endif
 if WANT_GLIBC
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-glibc.sps
+endif
+if WANT_LIBFFI
+if WANT_POSIX
+if WANT_GLIBC
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-gcc.sps
+endif
+endif
 endif
 if WANT_LINUX
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-linux.sps

@@ -15447,7 +15447,9 @@ shared library from possibly dynamically constructed C code; then load
 the library and access a C function as @ffi{} callout.
 
 @library{vicare gcc} must be considered as a toy to demonstrate the
-features of @value{PRJNAME}.
+features of @value{PRJNAME}; it is installed only if the @posix{},
+@gnu{} C library and Libffi @api{}s are enabled at package configuration
+time.
 
 The following is an example of function to increment an integer:
 
