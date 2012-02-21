@@ -34,7 +34,8 @@ nobase_dist_libvicare_DATA	+= vicare/ffi.sls
 endif
 
 if WANT_POSIX
-nobase_dist_libvicare_DATA	+= vicare/posix.sls
+nobase_dist_libvicare_DATA	+= vicare/posix.sls	\
+				   vicare/simple-event-loop.sls
 endif
 
 if WANT_GLIBC
