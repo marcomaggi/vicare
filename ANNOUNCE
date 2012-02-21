@@ -45,6 +45,9 @@ Notes for revision 0.2d9
 * The package  name, selected in  "configure.ac", has been  changed from
   "vicare" to "vicare-scheme".
 
+* Added built in library  (vicare language-extensions) exporting all the
+  bindings exported by (vicare) not exported by (rnrs (6)).
+
 * Added to (vicare ffi) more system-agnostic functions to load a foreign
   shared library.
 

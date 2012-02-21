@@ -2023,7 +2023,9 @@ In addition to the libraries listed in the @rnrs{6} standard,
 libraries which provide additional features; @library{ikarus} is a
 composite library, it exports a superset of all the supported bindings
 of @rnrs{6}; @library{vicare} exports the same bindings of
-@library{ikarus}.
+@library{ikarus}.  The library @library{vicare language-extensions}
+exports all the bindings exported by @library{vicare} that are
+@strong{not} exported by @library{rnrs (6)}
 
 @menu
 * iklib conditions::            Additional condition types.
