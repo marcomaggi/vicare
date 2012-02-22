@@ -1612,7 +1612,7 @@ ikrt_posix_select (ikptr nfds_fx,
 #endif
 }
 ikptr
-ikrt_posix_select_fd (ikptr fdx, ikptr sec, ikptr usec, ikpcb * pcb)
+ikrt_posix_select_fd (ikptr s_fd, ikptr sec, ikptr usec, ikpcb * pcb)
 {
 #ifdef HAVE_SELECT
   ikptr			vec;	/* the vector to be returned to the caller */
@@ -1625,7 +1625,7 @@ ikrt_posix_select_fd (ikptr fdx, ikptr sec, ikptr usec, ikpcb * pcb)
   FD_ZERO(&read_fds);
   FD_ZERO(&write_fds);
   FD_ZERO(&except_fds);
-  fd = IK_UNFIX(fdx);
+  fd = IK_NUM_TO_FD(s_fd);
   FD_SET(fd, &read_fds);
   FD_SET(fd, &write_fds);
   FD_SET(fd, &except_fds);
@@ -1639,9 +1639,9 @@ ikrt_posix_select_fd (ikptr fdx, ikptr sec, ikptr usec, ikpcb * pcb)
     return ik_errno_to_code();
   } else { /* success, let's harvest the events */
     vec = ika_vector_alloc_no_init(pcb, 3);
-    IK_ITEM(vec, 0) = (FD_ISSET(fd, &read_fds))?   fdx : false_object;
-    IK_ITEM(vec, 1) = (FD_ISSET(fd, &write_fds))?  fdx : false_object;
-    IK_ITEM(vec, 2) = (FD_ISSET(fd, &except_fds))? fdx : false_object;
+    IK_ITEM(vec, 0) = (FD_ISSET(fd, &read_fds))?   s_fd : false_object;
+    IK_ITEM(vec, 1) = (FD_ISSET(fd, &write_fds))?  s_fd : false_object;
+    IK_ITEM(vec, 2) = (FD_ISSET(fd, &except_fds))? s_fd : false_object;
     return vec;
   }
 #else
