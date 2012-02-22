@@ -44,6 +44,9 @@
     readable
     writable
     exception
+
+    ;; fragmented tasks
+    task-fragment
     )
   (import (vicare)
     (prefix (vicare posix) px.)
@@ -112,11 +115,18 @@
 		;level: the loop avoids servicing fd events and tries to
 		;serve an event from another source.
    fds-rev-head
-		;Reverse  list of  fd  entries already  queries for  the
+		;Reverse  list of  fd  entries already  queried for  the
 		;current run over fd event sources.
    fds-tail
 		;List of  fd entries still  to query in the  current run
 		;over fd event sources.
+
+   tasks-rev-head
+		;Reverse list  of task  entries already queried  for the
+		;current run over task event sources.
+   tasks-tail
+		;List of task entries still  to query in the current run
+		;over task event sources.
    ))
 
 (define SOURCES
@@ -139,7 +149,9 @@
 	      (SRC.FDS.COUNT		(%dot-id ".fds.count"))
 	      (SRC.FDS.WATERMARK	(%dot-id ".fds.watermark"))
 	      (SRC.FDS.REV-HEAD		(%dot-id ".fds.rev-head"))
-	      (SRC.FDS.TAIL		(%dot-id ".fds.tail")))
+	      (SRC.FDS.TAIL		(%dot-id ".fds.tail"))
+	      (SRC.TASKS.REV-HEAD	(%dot-id ".tasks.rev-head"))
+	      (SRC.TASKS.TAIL		(%dot-id ".tasks.tail")))
 	   #'(let-syntax
 		 ((SRC.BREAK?
 		   (identifier-syntax
@@ -176,7 +188,19 @@
 		    (_
 		     (event-sources-fds-tail ?src))
 		    ((set! _ ?val)
-		     (set-event-sources-fds-tail! ?src ?val)))))
+		     (set-event-sources-fds-tail! ?src ?val))))
+		  (SRC.TASKS.REV-HEAD
+		   (identifier-syntax
+		    (_
+		     (event-sources-tasks-rev-head ?src))
+		    ((set! _ ?val)
+		     (set-event-sources-tasks-rev-head! ?src ?val))))
+		  (SRC.TASKS.TAIL
+		   (identifier-syntax
+		    (_
+		     (event-sources-tasks-tail ?src))
+		    ((set! _ ?val)
+		     (set-event-sources-tasks-tail! ?src ?val)))))
 	       . ?body)))))))
 
 
@@ -191,6 +215,8 @@
 	 MAX-CONSECUTIVE-FD-EVENTS ;fds.watermark
 	 '()			   ;fds.rev-head
 	 '()			   ;fds.tail
+	 '()			   ;tasks.rev-head
+	 '()			   ;tasks.tail
 	 ))
   (px.signal-bub-init))
 
@@ -200,13 +226,16 @@
 
 (define (do-one-event)
   (%serve-interprocess-signals)
-  (or (do-one-fds-event)))
+  (or (do-one-fd-event)
+      (do-one-task-event)))
 
 (define (busy?)
   ;;Return true if there is at least one registered event source.
   ;;
   (with-event-sources (SOURCES)
     (or (not (null? SOURCES.fds.rev-head))
+	(not (null? SOURCES.fds.tail))
+	(not (null? SOURCES.fds.rev-head))
 	(not (null? SOURCES.fds.tail)))))
 
 (define (enter)
@@ -261,12 +290,18 @@
 ;;5b. No more entries in tail: return #f.
 ;;
 ;;Event handling for fds takes precedence over other event sources; with
-;;the purpose of not  starving other sources: every FDS.WATERMARK events
-;;served  DO-ONE-FDS-EVENT artificially returns  #f as  if no  event was
-;;served, this should let other sources be queried.
+;;the purpose of not  starving other sources:
+;;
+;;*  Every  FDS.WATERMARK  events served  DO-ONE-FD-EVENT  artificially
+;;returns #f as if no event was served, this should let other sources be
+;;queried.
+;;
+;;* The list of registered fd event sources is traversed in "runs", when
+;;a run reaches  the end of the list  DO-ONE-FD-EVENT returns #f rather
+;;than immediately restart a fresh run.
 ;;
 
-(define (do-one-fds-event)
+(define (do-one-fd-event)
   ;;Consume one event, if any, and  return.  Return a boolean, #t if one
   ;;event was served.
   ;;
@@ -290,8 +325,11 @@
 		  #t)
 	      (begin
 		(set! SOURCES.fds.rev-head (cons P SOURCES.fds.rev-head))
-		(unless (null? SOURCES.fds.tail)
-		  (do-one-fds-event)))))
+		(if (null? SOURCES.fds.tail)
+		    (begin
+		      (set! SOURCES.fds.count 0)
+		      #f)
+		  (do-one-fd-event)))))
 	(begin
 	  (set! SOURCES.fds.count 0)
 	  #f)))))
@@ -329,6 +367,42 @@
     (%enqueue-fd-event-source (lambda ()
 				(px.select-fd-exceptional? fd 0 0))
 			      handler-thunk)))
+
+
+;;;; task fragments handling
+;;
+;;A "fragmented task" is a thunk  performing a portion of a job.  If the
+;;thunk  returns  #f: the  job  is finished.   If  the  thunk returns  a
+;;procedure: a portion of job was finished and the returned procedure is
+;;a thunk to call to execute the next portion.
+;;
+
+(define (task-fragment handler-thunk)
+  ;;Enqueue a new entry for a fragmented task.
+  ;;
+  (with-event-sources (SOURCES)
+    (set! SOURCES.tasks.rev-head (cons handler-thunk SOURCES.tasks.rev-head))))
+
+(define (do-one-task-event)
+  ;;Consume one event, if any, and  return.  Return a boolean, #t if one
+  ;;event was served.
+  ;;
+  ;;Exceptions  raised while serving  an event  handler are  catched and
+  ;;ignored.
+  ;;
+  (with-event-sources (SOURCES)
+    (when (and (null? SOURCES.tasks.tail)
+	       (not (null? SOURCES.tasks.rev-head)))
+      (set! SOURCES.tasks.tail     (reverse SOURCES.tasks.rev-head))
+      (set! SOURCES.tasks.rev-head '()))
+    (if (null? SOURCES.tasks.tail)
+	#f
+      (let ((thunk (unsafe.car SOURCES.tasks.tail)))
+	(set! SOURCES.tasks.tail (unsafe.cdr SOURCES.tasks.tail))
+	(let ((rv (thunk)))
+	  (when rv
+	    (set! SOURCES.tasks.rev-head (cons rv SOURCES.tasks.rev-head)))
+	  #t)))))
 
 
 ;;;; done

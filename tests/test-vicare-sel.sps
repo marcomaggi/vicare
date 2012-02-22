@@ -123,6 +123,43 @@
   #t)
 
 
+(parametrise ((check-test-name	'tasks))
+
+  (check
+      (with-result
+       (let-values (((master slave) (px.socketpair PF_LOCAL SOCK_DGRAM 0)))
+	 (unwind-protect
+	     (begin
+	       (sel.initialise)
+	       (sel.task-fragment (lambda ()
+				    (add-result '(task-1 1))
+				    (lambda ()
+				      (add-result '(task-1 2))
+				      (lambda ()
+					(add-result '(task-1 3))
+					#f))))
+	       (sel.task-fragment (lambda ()
+				    (add-result '(task-2 1))
+				    (lambda ()
+				      (add-result '(task-2 2))
+				      (lambda ()
+					(add-result '(task-2 3))
+					(sel.leave-asap)
+					#f))))
+	       (sel.enter)
+	       #t)
+	   (sel.finalise))))
+    => '(#t
+	 ((task-1 1)
+	  (task-2 1)
+	  (task-1 2)
+	  (task-2 2)
+	  (task-1 3)
+	  (task-2 3))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
