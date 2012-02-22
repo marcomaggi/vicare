@@ -2203,15 +2203,19 @@
   ;;Defined by R6RS.  Return #t if X is a binary port.
   (define-predicate binary-port? BINARY-PORT-TAG)
 
-  ;;Defined  by R6RS.   Return #t  if X  is an  output port  or a
-  ;;combined input and output port.
-  (define-predicate output-port? OUTPUT-PORT-TAG)
-
   ;;Defined  by R6RS.   Return #t  if  X is  an input  port or  a
   ;;combined input and output port.
   (define-predicate input-port? INPUT-PORT-TAG)
 
   (define-predicate input/output-port? INPUT/OUTPUT-PORT-TAG))
+
+(define (output-port? x)
+  ;;Defined by  R6RS.  Return #t  if X is  an output port or  a combined
+  ;;input and output port.
+  (and (port? x)
+       (let ((flags ($port-tag x)))
+	 (or (unsafe.fx= (unsafe.fxand flags OUTPUT-PORT-TAG) OUTPUT-PORT-TAG)
+	     (unsafe.fx= (unsafe.fxand flags INPUT/OUTPUT-PORT-TAG) INPUT/OUTPUT-PORT-TAG)))))
 
 ;;The following predicates have to be used after the argument has
 ;;been validated as  port value.  They are *not*  affected by the
@@ -2225,7 +2229,6 @@
   (define-unsafe-predicate %unsafe.binary-port?		BINARY-PORT-TAG)
   (define-unsafe-predicate %unsafe.textual-port?	TEXTUAL-PORT-TAG)
   (define-unsafe-predicate %unsafe.input-port?		INPUT-PORT-TAG)
-  (define-unsafe-predicate %unsafe.output-port?		OUTPUT-PORT-TAG)
   (define-unsafe-predicate %unsafe.input-and-output-port? INPUT/OUTPUT-PORT-TAG)
 
   (define-unsafe-predicate %unsafe.binary-input-port?	BINARY-INPUT-PORT-BITS)
@@ -2240,6 +2243,11 @@
   (define-unsafe-predicate %unsafe.port-with-extraction?	PORT-WITH-EXTRACTION-TAG)
   (define-unsafe-predicate %unsafe.port-with-fd-device?		PORT-WITH-FD-DEVICE)
   )
+
+(define-inline (%unsafe.output-port? port)
+  (let ((flags ($port-attrs port)))
+    (or (unsafe.fx= (unsafe.fxand flags OUTPUT-PORT-TAG) OUTPUT-PORT-TAG)
+	(unsafe.fx= (unsafe.fxand flags INPUT/OUTPUT-PORT-TAG) INPUT/OUTPUT-PORT-TAG))))
 
 (define (%unsafe.last-port-operation-was-output? port)
   (with-port (port)
