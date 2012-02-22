@@ -53,6 +53,7 @@
        (let-values (((master slave) (px.socketpair PF_LOCAL SOCK_DGRAM 0)))
 	 (unwind-protect
 	     (begin
+	       (sel.initialise)
 	       (sel.writable master
 		 (lambda ()
 		   (%send 'master master "helo slave\n")
@@ -81,7 +82,8 @@
 	       (sel.enter)
 	       #t)
 	   (px.shutdown master SHUT_RDWR)
-	   (px.shutdown slave  SHUT_RDWR))))
+	   (px.shutdown slave  SHUT_RDWR)
+	   (sel.finalise))))
     => '(#t
 	 ((master send "helo slave\n")
 	  (slave  recv "helo slave\n")
@@ -95,6 +97,32 @@
   #t)
 
 
+(parametrise ((check-test-name	'signals))
+
+  (check
+      (with-result
+       (let-values (((master slave) (px.socketpair PF_LOCAL SOCK_DGRAM 0)))
+	 (unwind-protect
+	     (begin
+	       (sel.initialise)
+	       (sel.receive-signal SIGUSR1
+		 (lambda ()
+		   (add-result '(signal SIGUSR1))
+		   (sel.leave-asap)))
+	       (sel.receive-signal SIGUSR2
+		 (lambda ()
+		   (add-result '(signal SIGUSR2))
+		   (sel.leave-asap)))
+	       (px.raise SIGUSR1)
+	       (sel.enter)
+	       #t)
+	   (sel.finalise))))
+    => '(#t
+	 ((signal SIGUSR1))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
@@ -103,4 +131,5 @@
 ;; Local Variables:
 ;; eval: (put 'sel.readable 'scheme-indent-function 1)
 ;; eval: (put 'sel.writable 'scheme-indent-function 1)
+;; eval: (put 'sel.receive-signal 'scheme-indent-function 1)
 ;; End:

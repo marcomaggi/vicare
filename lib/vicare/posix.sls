@@ -364,7 +364,9 @@
   (assertion-violation who "expected fixnum file descriptor as argument" obj))
 
 (define-argument-validation (signal who obj)
-  (fixnum? obj)
+  (and (fixnum? obj)
+       (unsafe.fx>= obj 0)
+       (unsafe.fx<= obj NSIG))
   (assertion-violation who "expected fixnum signal code as argument" obj))
 
 (define-argument-validation (pathname who obj)

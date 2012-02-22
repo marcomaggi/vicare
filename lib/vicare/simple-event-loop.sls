@@ -31,10 +31,14 @@
   (export
 
     ;; event loop control
+    initialise			finalise
     busy?
     do-one-event
     enter
     leave-asap
+
+    ;; interprocess signals
+    receive-signal
 
     ;; file descriptor events
     readable
@@ -58,6 +62,12 @@
   (%file-descriptor? obj)
   (assertion-violation who "expected fixnum file descriptor as argument" obj))
 
+(define-argument-validation (signum who obj)
+  (and (fixnum? obj)
+       (unsafe.fx>= obj 0)
+       (unsafe.fx<= obj NSIG))
+  (assertion-violation who "expected fixnum signal code as argument" obj))
+
 
 ;;;; helpers
 
@@ -75,11 +85,42 @@
      (guard (E (else #f))
        . ?body))))
 
+(define-inline (%fxincr! ?fxvar)
+  (set! ?fxvar (unsafe.fxadd1 ?fxvar)))
+
 
 ;;;; data structures
 
+(define MAX-CONSECUTIVE-FD-EVENTS 5)
+
 (define-struct event-sources
-  (break? fds-rev-head fds-tail))
+  (break?
+		;Boolean.  True if  a request to leave the  loop as soon
+		;as possible was posted.
+
+   signal-handlers
+		;Vector   of  null   or  lists.    Each   list  contains
+		;interprocess signal  handlers in the form  of thunks to
+		;be run once.
+
+   fds-count
+		;Non-negative  fixnum.  Count  of consecutive  fd events
+		;served.
+   fds-watermark
+		;Non-negative fixnum.  Maximum  number of consecutive fd
+		;events to serve.  When  the count reaches the watermark
+		;level: the loop avoids servicing fd events and tries to
+		;serve an event from another source.
+   fds-rev-head
+		;Reverse  list of  fd  entries already  queries for  the
+		;current run over fd event sources.
+   fds-tail
+		;List of  fd entries still  to query in the  current run
+		;over fd event sources.
+   ))
+
+(define SOURCES
+  #f)
 
 (define-syntax with-event-sources
   ;;Dot notation for instances of EVENT-SOURCES structures.
@@ -94,8 +135,11 @@
 	   (datum->syntax src-id (string->symbol (string-append src-str field-str))))
 	 (with-syntax
 	     ((SRC.BREAK?		(%dot-id ".break?"))
-	      (SRC.FDS-REV-HEAD		(%dot-id ".fds-rev-head"))
-	      (SRC.FDS-TAIL		(%dot-id ".fds-tail")))
+	      (SRC.SIGNAL-HANDLERS	(%dot-id ".signal-handlers"))
+	      (SRC.FDS.COUNT		(%dot-id ".fds.count"))
+	      (SRC.FDS.WATERMARK	(%dot-id ".fds.watermark"))
+	      (SRC.FDS.REV-HEAD		(%dot-id ".fds.rev-head"))
+	      (SRC.FDS.TAIL		(%dot-id ".fds.tail")))
 	   #'(let-syntax
 		 ((SRC.BREAK?
 		   (identifier-syntax
@@ -103,13 +147,31 @@
 		     (event-sources-break? ?src))
 		    ((set! _ ?val)
 		     (set-event-sources-break?! ?src ?val))))
-		  (SRC.FDS-REV-HEAD
+		  (SRC.SIGNAL-HANDLERS
+		   (identifier-syntax
+		    (_
+		     (event-sources-signal-handlers ?src))
+		    ((set! _ ?val)
+		     (set-event-sources-signal-handlers! ?src ?val))))
+		  (SRC.FDS.COUNT
+		   (identifier-syntax
+		    (_
+		     (event-sources-fds-count ?src))
+		    ((set! _ ?val)
+		     (set-event-sources-fds-count! ?src ?val))))
+		  (SRC.FDS.WATERMARK
+		   (identifier-syntax
+		    (_
+		     (event-sources-fds-watermark ?src))
+		    ((set! _ ?val)
+		     (set-event-sources-fds-watermark! ?src ?val))))
+		  (SRC.FDS.REV-HEAD
 		   (identifier-syntax
 		    (_
 		     (event-sources-fds-rev-head ?src))
 		    ((set! _ ?val)
 		     (set-event-sources-fds-rev-head! ?src ?val))))
-		  (SRC.FDS-TAIL
+		  (SRC.FDS.TAIL
 		   (identifier-syntax
 		    (_
 		     (event-sources-fds-tail ?src))
@@ -117,45 +179,35 @@
 		     (set-event-sources-fds-tail! ?src ?val)))))
 	       . ?body)))))))
 
-(define SOURCES
-  (make-event-sources #f '() '()))
-
 
 ;;;; event loop control
 
+(define (initialise)
+  (set! SOURCES
+	(make-event-sources
+	 #f			   ;break?
+	 (make-vector NSIG '())	   ;signal-handlers
+	 0			   ;fds.count
+	 MAX-CONSECUTIVE-FD-EVENTS ;fds.watermark
+	 '()			   ;fds.rev-head
+	 '()			   ;fds.tail
+	 ))
+  (px.signal-bub-init))
+
+(define (finalise)
+  (px.signal-bub-init)
+  (set! SOURCES #f))
+
 (define (do-one-event)
-  ;;Consume one event and return.
-  ;;
-  ;;Exceptions raised while querying an event source or serving an event
-  ;;handler are catched and ignored.
-  ;;
-  ;;Handling of fd events:
-  ;;
-  ;;1. If FDS-TAIL is null replace it with the reverse of FDS-REV-HEAD.
-  ;;2. Extract the next entry from FDS-TAIL.
-  ;;3. Query the fd for the event.
-  ;;4a. If event present: run the handler and discard the entry.
-  ;;4b. If no event: push the entry on FDS-REV-HEAD.
-  ;;
-  (with-event-sources (SOURCES)
-    (when (and (null? SOURCES.fds-tail)
-	       (not (null? SOURCES.fds-rev-head)))
-      (let ((tail (reverse SOURCES.fds-rev-head)))
-	(set! SOURCES.fds-tail     tail)
-	(set! SOURCES.fds-rev-head '())))
-    (unless (null? SOURCES.fds-tail)
-      (let ((P (unsafe.car SOURCES.fds-tail)))
-	(set! SOURCES.fds-tail (unsafe.cdr SOURCES.fds-tail))
-	(if (%catch ((unsafe.car P)))
-	    (%catch ((unsafe.cdr P)))
-	  (set! SOURCES.fds-rev-head (cons P SOURCES.fds-rev-head)))))))
+  (%serve-interprocess-signals)
+  (or (do-one-fds-event)))
 
 (define (busy?)
   ;;Return true if there is at least one registered event source.
   ;;
   (with-event-sources (SOURCES)
-    (or (not (null? SOURCES.fds-rev-head))
-	(not (null? SOURCES.fds-tail)))))
+    (or (not (null? SOURCES.fds.rev-head))
+	(not (null? SOURCES.fds.tail)))))
 
 (define (enter)
   ;;Enter the event loop and consume all the events.
@@ -174,12 +226,82 @@
     (set! SOURCES.break? #t)))
 
 
+;;;; interprocess signal handlers
+
+(define (%serve-interprocess-signals)
+  (px.signal-bub-acquire)
+  (for-each (lambda (signum)
+	      (with-event-sources (SOURCES)
+		(for-each (lambda (thunk)
+			    (%catch (thunk)))
+		  (unsafe.vector-ref SOURCES.signal-handlers signum))
+		(unsafe.vector-set! SOURCES.signal-handlers signum '())))
+    (px.signal-bub-all-delivered)))
+
+(define (receive-signal signum handler-thunk)
+  (define who 'receive-signal)
+  (with-arguments-validation (who)
+      ((signum		signum)
+       (procedure	handler-thunk))
+    (with-event-sources (SOURCES)
+      (unsafe.vector-set! SOURCES.signal-handlers signum
+			  (cons handler-thunk (unsafe.vector-ref SOURCES.signal-handlers signum))))))
+
+
 ;;;; file descriptor events
+;;
+;;Basic handling of fd events:
+;;
+;;1. If FDS-TAIL is null replace it with the reverse of FDS-REV-HEAD.
+;;2. Extract the next entry from FDS-TAIL.
+;;3. Query the fd for the event.
+;;4a. If event present: run the handler, discard the entry, return #t.
+;;4b. If no event: push the entry on FDS-REV-HEAD.
+;;5a. More entries in tail: loop to (1).
+;;5b. No more entries in tail: return #f.
+;;
+;;Event handling for fds takes precedence over other event sources; with
+;;the purpose of not  starving other sources: every FDS.WATERMARK events
+;;served  DO-ONE-FDS-EVENT artificially returns  #f as  if no  event was
+;;served, this should let other sources be queried.
+;;
+
+(define (do-one-fds-event)
+  ;;Consume one event, if any, and  return.  Return a boolean, #t if one
+  ;;event was served.
+  ;;
+  ;;Exceptions raised while querying an event source or serving an event
+  ;;handler are catched and ignored.
+  ;;
+  (with-event-sources (SOURCES)
+    (when (and (null? SOURCES.fds.tail)
+	       (not (null? SOURCES.fds.rev-head)))
+      (set! SOURCES.fds.tail     (reverse SOURCES.fds.rev-head))
+      (set! SOURCES.fds.rev-head '()))
+    (if (null? SOURCES.fds.tail)
+	#f
+      (if (unsafe.fx< SOURCES.fds.count SOURCES.fds.watermark)
+	  (let ((P (unsafe.car SOURCES.fds.tail)))
+	    (set! SOURCES.fds.tail (unsafe.cdr SOURCES.fds.tail))
+	    (if (%catch ((unsafe.car P)))
+		(guard (E (else #f))
+		  ((unsafe.cdr P))
+		  (%fxincr! SOURCES.fds.count)
+		  #t)
+	      (begin
+		(set! SOURCES.fds.rev-head (cons P SOURCES.fds.rev-head))
+		(unless (null? SOURCES.fds.tail)
+		  (do-one-fds-event)))))
+	(begin
+	  (set! SOURCES.fds.count 0)
+	  #f)))))
 
 (define (%enqueue-fd-event-source query-thunk handler-thunk)
+  ;;Enqueue a new entry for a file descriptor event.
+  ;;
   (with-event-sources (SOURCES)
-    (set! SOURCES.fds-rev-head (cons (cons query-thunk handler-thunk)
-				     SOURCES.fds-rev-head))))
+    (set! SOURCES.fds.rev-head (cons (cons query-thunk handler-thunk)
+				     SOURCES.fds.rev-head))))
 
 (define (readable fd handler-thunk)
   (define who 'readable)
