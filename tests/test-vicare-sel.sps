@@ -39,28 +39,58 @@
 
 (parametrise ((check-test-name	'fds))
 
+  (define (%send who fd data-string)
+    (add-result `(,who send ,data-string))
+    (px.write fd (string->ascii data-string)))
+
+  (define (%recv who fd)
+    (let* ((buf (make-bytevector 1024))
+	   (len (px.read fd buf 1024)))
+      (add-result `(,who recv ,(ascii->string (subbytevector-u8 buf 0 len))))))
+
   (check
       (with-result
        (let-values (((master slave) (px.socketpair PF_LOCAL SOCK_DGRAM 0)))
 	 (unwind-protect
 	     (begin
 	       (sel.writable master
+		 (lambda ()
+		   (%send 'master master "helo slave\n")
+		   (sel.readable master
+		     (lambda ()
+		       (%recv 'master master)
+		       (sel.writable master
+			 (lambda ()
+			   (%send 'master master "bye slave\n")
+			   (sel.readable master
 			     (lambda ()
-(check-pretty-print 'writable)
-			       (add-result '(master send "helo\n"))
-			       (px.write master (ascii->string "helo\n"))))
+			       (%recv 'master master)
+			       (sel.leave-asap)))))))))
 	       (sel.readable slave
+		 (lambda ()
+		   (%recv 'slave slave)
+		   (sel.writable slave
+		     (lambda ()
+		       (%send 'slave slave "helo master\n")
+		       (sel.readable slave
+			 (lambda ()
+			   (%recv 'slave slave)
+			   (sel.writable slave
 			     (lambda ()
-(check-pretty-print 'readable)
-			       (let ((buf (make-bytevector 5)))
-				 (px.read slave buf 5)
-				 (add-result `(slave recv ,(ascii->string buf)))
-				 (sel.leave-asap)
-				 )))
-	       (sel.enter))
+			       (%send 'slave slave "bye master\n")))))))))
+	       (sel.enter)
+	       #t)
 	   (px.shutdown master SHUT_RDWR)
 	   (px.shutdown slave  SHUT_RDWR))))
-    => #t)
+    => '(#t
+	 ((master send "helo slave\n")
+	  (slave  recv "helo slave\n")
+	  (slave  send "helo master\n")
+	  (master recv "helo master\n")
+	  (master send "bye slave\n")
+	  (slave  recv "bye slave\n")
+	  (slave  send "bye master\n")
+	  (master recv "bye master\n"))))
 
   #t)
 
@@ -70,3 +100,7 @@
 (check-report)
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'sel.readable 'scheme-indent-function 1)
+;; eval: (put 'sel.writable 'scheme-indent-function 1)
+;; End:
