@@ -8388,6 +8388,42 @@ values being false or @var{fd}, respectively, if @var{fd} is ready for
 reading, writing or an exceptional condition.
 @end defun
 
+
+@defun select-fd-readable? @var{fd} @var{sec} @var{usec}
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for a readable event on the single file descriptor
+@var{fd}.  @var{sec} and @var{usec} must be fixnums representing timeout
+seconds and microseconds.
+
+If the timeout expires before any event arrives: return @false{}.  If an
+error occurs: raise an exception.  Else return @true{} if the file
+descriptor becomes readable.
+@end defun
+
+
+@defun select-fd-writable? @var{fd} @var{sec} @var{usec}
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for a writable event on the single file descriptor
+@var{fd}.  @var{sec} and @var{usec} must be fixnums representing timeout
+seconds and microseconds.
+
+If the timeout expires before any event arrives: return @false{}.  If an
+error occurs: raise an exception.  Else return @true{} if the file
+descriptor becomes writable.
+@end defun
+
+
+@defun select-fd-exceptional? @var{fd} @var{sec} @var{usec}
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for an exceptional event on the single file descriptor
+@var{fd}.  @var{sec} and @var{usec} must be fixnums representing timeout
+seconds and microseconds.
+
+If the timeout expires before any event arrives: return @false{}.  If an
+error occurs: raise an exception.  Else return @true{} if the file
+descriptor receives an exceptional notification.
+@end defun
+
 @c ------------------------------------------------------------
 
 @defun poll @var{fds} @var{timeout}

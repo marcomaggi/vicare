@@ -163,6 +163,8 @@
     posix-lseek
     posix-readv				posix-writev
     posix-select			posix-select-fd
+    posix-select-fd-readable?		posix-select-fd-writable?
+    posix-select-fd-exceptional?
     posix-poll
     posix-fcntl				posix-ioctl
     posix-dup				posix-dup2
@@ -910,6 +912,15 @@
 
 (define-inline (posix-select-fd fd sec usec)
   (foreign-call "ikrt_posix_select_fd" fd sec usec))
+
+(define-inline (posix-select-fd-readable? fd sec usec)
+  (foreign-call "ikrt_posix_select_is_readable" fd sec usec))
+
+(define-inline (posix-select-fd-writable? fd sec usec)
+  (foreign-call "ikrt_posix_select_is_writable" fd sec usec))
+
+(define-inline (posix-select-fd-exceptional? fd sec usec)
+  (foreign-call "ikrt_posix_select_is_exceptional" fd sec usec))
 
 (define-inline (posix-poll fds timeout)
   (foreign-call "ikrt_posix_poll" fds timeout))

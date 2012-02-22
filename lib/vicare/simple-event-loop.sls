@@ -187,9 +187,7 @@
       ((file-descriptor	fd)
        (procedure	handler-thunk))
     (%enqueue-fd-event-source (lambda ()
-				(let-values (((r w x)
-					      (px.select-fd fd 0 0)))
-				  r))
+				(px.select-fd-readable? fd 0 0))
 			      handler-thunk)))
 
 (define (writable fd handler-thunk)
@@ -198,9 +196,7 @@
       ((file-descriptor	fd)
        (procedure	handler-thunk))
     (%enqueue-fd-event-source (lambda ()
-				(let-values (((r w x)
-					      (px.select-fd fd 0 0)))
-				  w))
+				(px.select-fd-writable? fd 0 0))
 			      handler-thunk)))
 
 (define (exception fd handler-thunk)
@@ -209,9 +205,7 @@
       ((file-descriptor	fd)
        (procedure	handler-thunk))
     (%enqueue-fd-event-source (lambda ()
-				(let-values (((r w x)
-					      (px.select-fd fd 0 0)))
-				  x))
+				(px.select-fd-exceptional? fd 0 0))
 			      handler-thunk)))
 
 

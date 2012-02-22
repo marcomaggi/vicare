@@ -1650,6 +1650,118 @@ ikrt_posix_select_fd (ikptr s_fd, ikptr sec, ikptr usec, ikpcb * pcb)
   feature_failure(__func__);
 #endif
 }
+ikptr
+ikrt_posix_select_is_readable (ikptr s_fd, ikptr s_sec, ikptr s_usec, ikpcb * pcb)
+/* Interface to the C function  "select()" for a single file descriptor.
+   Wait for  a readable event with  timeout. The file  descriptor is the
+   fixnum S_FD.   S_SEC and S_USEC must be  fixnums representing timeout
+   seconds and microseconds.
+
+   Return false  if the timeout  expires before any event  arrives; else
+   return true  if the  file descriptor becomes  readable.  If  an error
+   occurs: return an encoded "errno" value.  */
+{
+#ifdef HAVE_SELECT
+  fd_set		read_fds;
+  fd_set		write_fds;
+  fd_set		except_fds;
+  struct timeval	timeout;
+  int			fd;
+  int			rv;
+  FD_ZERO(&read_fds);
+  FD_ZERO(&write_fds);
+  FD_ZERO(&except_fds);
+  fd = IK_NUM_TO_FD(s_fd);
+  FD_SET(fd, &read_fds);
+  timeout.tv_sec  = IK_UNFIX(s_sec);
+  timeout.tv_usec = IK_UNFIX(s_usec);
+  errno = 0;
+  rv	= select(1+fd, &read_fds, &write_fds, &except_fds, &timeout);
+  if (0 == rv) /* timeout has expired */
+    return false_object;
+  else if (-1 == rv) /* an error occurred */
+    return ik_errno_to_code();
+  else /* success, let's harvest the events */
+    return (FD_ISSET(fd, &read_fds))? true_object : false_object;
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_select_is_writable (ikptr s_fd, ikptr s_sec, ikptr s_usec, ikpcb * pcb)
+/* Interface to the C function  "select()" for a single file descriptor.
+   Wait for  a writable event with  timeout. The file  descriptor is the
+   fixnum S_FD.   S_SEC and S_USEC must be  fixnums representing timeout
+   seconds and microseconds.
+
+   Return false  if the timeout  expires before any event  arrives; else
+   return true  if the  file descriptor becomes  writable.  If  an error
+   occurs: return an encoded "errno" value.  */
+{
+#ifdef HAVE_SELECT
+  fd_set		read_fds;
+  fd_set		write_fds;
+  fd_set		except_fds;
+  struct timeval	timeout;
+  int			fd;
+  int			rv;
+  FD_ZERO(&read_fds);
+  FD_ZERO(&write_fds);
+  FD_ZERO(&except_fds);
+  fd = IK_NUM_TO_FD(s_fd);
+  FD_SET(fd, &write_fds);
+  timeout.tv_sec  = IK_UNFIX(s_sec);
+  timeout.tv_usec = IK_UNFIX(s_usec);
+  errno = 0;
+  rv	= select(1+fd, &read_fds, &write_fds, &except_fds, &timeout);
+  if (0 == rv) /* timeout has expired */
+    return false_object;
+  else if (-1 == rv) /* an error occurred */
+    return ik_errno_to_code();
+  else /* success, let's harvest the events */
+    return (FD_ISSET(fd, &write_fds))? true_object : false_object;
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_select_is_exceptional (ikptr s_fd, ikptr s_sec, ikptr s_usec, ikpcb * pcb)
+/* Interface to the C function  "select()" for a single file descriptor.
+   Wait for  an exceptional event  with timeout. The file  descriptor is
+   the  fixnum S_FD.   S_SEC  and S_USEC  must  be fixnums  representing
+   timeout seconds and microseconds.
+
+   Return false  if the timeout  expires before any event  arrives; else
+   return  true   if  the   file  descriptor  receives   an  exceptional
+   notification.   If  an  error   occurs:  return  an  encoded  "errno"
+   value.  */
+{
+#ifdef HAVE_SELECT
+  fd_set		read_fds;
+  fd_set		write_fds;
+  fd_set		except_fds;
+  struct timeval	timeout;
+  int			fd;
+  int			rv;
+  FD_ZERO(&read_fds);
+  FD_ZERO(&write_fds);
+  FD_ZERO(&except_fds);
+  fd = IK_NUM_TO_FD(s_fd);
+  FD_SET(fd, &except_fds);
+  timeout.tv_sec  = IK_UNFIX(s_sec);
+  timeout.tv_usec = IK_UNFIX(s_usec);
+  errno = 0;
+  rv	= select(1+fd, &read_fds, &write_fds, &except_fds, &timeout);
+  if (0 == rv) /* timeout has expired */
+    return false_object;
+  else if (-1 == rv) /* an error occurred */
+    return ik_errno_to_code();
+  else /* success, let's harvest the events */
+    return (FD_ISSET(fd, &except_fds))? true_object : false_object;
+#else
+  feature_failure(__func__);
+#endif
+}
 
 /* ------------------------------------------------------------------ */
 

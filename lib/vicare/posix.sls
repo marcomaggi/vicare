@@ -123,6 +123,8 @@
     lseek
     readv				writev
     select				select-fd
+    select-fd-readable?			select-fd-writable?
+    select-fd-exceptional?
     poll
     fcntl				ioctl
     dup					dup2
@@ -1634,6 +1636,39 @@
 		     (if (unsafe.fx= 4 (unsafe.fxlogand rv 4)) fd #f)))
 	    (else
 	     (%raise-errno-error who rv fd sec usec))))))
+
+(define (select-fd-readable? fd sec usec)
+  (define who 'select-fd-readable?)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd)
+       (secfx		sec)
+       (usecfx		usec))
+    (let ((rv (capi.posix-select-fd-readable? fd sec usec)))
+      (if (fixnum? rv)
+	  (%raise-errno-error who rv fd sec usec)
+	rv))))
+
+(define (select-fd-writable? fd sec usec)
+  (define who 'select-fd-writable?)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd)
+       (secfx		sec)
+       (usecfx		usec))
+    (let ((rv (capi.posix-select-fd-writable? fd sec usec)))
+      (if (fixnum? rv)
+	  (%raise-errno-error who rv fd sec usec)
+	rv))))
+
+(define (select-fd-exceptional? fd sec usec)
+  (define who 'select-fd-exceptional?)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd)
+       (secfx		sec)
+       (usecfx		usec))
+    (let ((rv (capi.posix-select-fd-exceptional? fd sec usec)))
+      (if (fixnum? rv)
+	  (%raise-errno-error who rv fd sec usec)
+	rv))))
 
 (define (poll fds timeout)
   (define who 'poll)
