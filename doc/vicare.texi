@@ -5563,6 +5563,11 @@ fcntl(fd, F_SETFL, O_NONBLOCK);
 The following bindings are exported by the @library{ikarus} library.
 
 
+@defun input/output-port? @var{port}
+Return a boolean, @true{} if @var{port} is an input and output port.
+@end defun
+
+
 @defun port-fd @var{port}
 If @var{port} is a port with a file descriptor as device: return a
 fixnum representing the device, else return @false{}.
@@ -15896,19 +15901,23 @@ unspecified values.
 @subsubheading File descriptor events
 
 
-@defun readable @var{fd} @var{handler}
-@defunx writable @var{fd} @var{handler}
-@defunx exception @var{fd} @var{handler}
-Register the thunk @var{handler} to be called whenever the file
-descriptor @var{fd} becomes readable, writable or receives an
+@sel{} can interface with both raw file descriptors and Scheme ports
+wrapping a file descriptor; other Scheme port types are not supported.
+
+
+@defun readable @var{port/fd} @var{handler}
+@defunx writable @var{port/fd} @var{handler}
+@defunx exception @var{port/fd} @var{handler}
+Register the thunk @var{handler} to be called whenever the port or file
+descriptor @var{port/fd} becomes readable, writable or receives an
 exceptional notification.  Every handler is called @strong{once} and
 removed from the loop.
 @end defun
 
 
-@defun forget-fd @var{fd}
-Remove all the registered handlers associated to the file descriptor
-@var{fd}.
+@defun forget-fd @var{port/fd}
+Remove all the registered handlers associated to the port or file
+descriptor @var{port/fd}.
 @end defun
 
 

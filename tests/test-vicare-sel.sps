@@ -39,14 +39,23 @@
 
 (parametrise ((check-test-name	'fds))
 
-  (define (%send who fd data-string)
+  (define (%send-fd who fd data-string)
     (add-result `(,who send ,data-string))
     (px.write fd (string->ascii data-string)))
 
-  (define (%recv who fd)
+  (define (%recv-fd who fd)
     (let* ((buf (make-bytevector 1024))
 	   (len (px.read fd buf 1024)))
       (add-result `(,who recv ,(ascii->string (subbytevector-u8 buf 0 len))))))
+
+  (define (%send-port who port data-string)
+    (add-result `(,who send ,data-string))
+    (display data-string port)
+    (flush-output-port port))
+
+  (define (%recv-port who port)
+    (let ((str (get-line port)))
+      (add-result `(,who recv ,str))))
 
   (check
       (with-result
@@ -56,29 +65,29 @@
 	       (sel.initialise)
 	       (sel.writable master
 		 (lambda ()
-		   (%send 'master master "helo slave\n")
+		   (%send-fd 'master master "helo slave\n")
 		   (sel.readable master
 		     (lambda ()
-		       (%recv 'master master)
+		       (%recv-fd 'master master)
 		       (sel.writable master
 			 (lambda ()
-			   (%send 'master master "bye slave\n")
+			   (%send-fd 'master master "bye slave\n")
 			   (sel.readable master
 			     (lambda ()
-			       (%recv 'master master)
+			       (%recv-fd 'master master)
 			       (sel.leave-asap)))))))))
 	       (sel.readable slave
 		 (lambda ()
-		   (%recv 'slave slave)
+		   (%recv-fd 'slave slave)
 		   (sel.writable slave
 		     (lambda ()
-		       (%send 'slave slave "helo master\n")
+		       (%send-fd 'slave slave "helo master\n")
 		       (sel.readable slave
 			 (lambda ()
-			   (%recv 'slave slave)
+			   (%recv-fd 'slave slave)
 			   (sel.writable slave
 			     (lambda ()
-			       (%send 'slave slave "bye master\n")))))))))
+			       (%send-fd 'slave slave "bye master\n")))))))))
 	       (sel.enter)
 	       #t)
 	   (px.shutdown master SHUT_RDWR)
@@ -93,6 +102,55 @@
 	  (slave  recv "bye slave\n")
 	  (slave  send "bye master\n")
 	  (master recv "bye master\n"))))
+
+  (check
+      (with-result
+       (let-values (((master-fd slave-fd) (px.socketpair PF_LOCAL SOCK_DGRAM 0)))
+	 (unwind-protect
+	     (let ((master (make-textual-socket-input/output-port* master-fd "master" (native-transcoder)))
+		   (slave  (make-textual-socket-input/output-port* slave-fd  "slave"  (native-transcoder))))
+	       (set-port-buffer-mode! master 'line)
+	       (set-port-buffer-mode! slave  'line)
+	       (sel.initialise)
+	       (sel.writable master
+		 (lambda ()
+		   (%send-port 'master master "helo slave\n")
+		   (sel.readable master
+		     (lambda ()
+		       (%recv-port 'master master)
+		       (sel.writable master
+			 (lambda ()
+			   (%send-port 'master master "bye slave\n")
+			   (sel.readable master
+			     (lambda ()
+			       (%recv-port 'master master)
+			       (sel.leave-asap)))))))))
+	       (sel.readable slave
+		 (lambda ()
+		   (%recv-port 'slave slave)
+		   (sel.writable slave
+		     (lambda ()
+		       (%send-port 'slave slave "helo master\n")
+		       (sel.readable slave
+			 (lambda ()
+			   (%recv-port 'slave slave)
+			   (sel.writable slave
+			     (lambda ()
+			       (%send-port 'slave slave "bye master\n")))))))))
+	       (sel.enter)
+	       #t)
+	   (px.shutdown master-fd SHUT_RDWR)
+	   (px.shutdown slave-fd  SHUT_RDWR)
+	   (sel.finalise))))
+    => '(#t
+	 ((master send "helo slave\n")
+	  (slave  recv "helo slave")
+	  (slave  send "helo master\n")
+	  (master recv "helo master")
+	  (master send "bye slave\n")
+	  (slave  recv "bye slave")
+	  (slave  send "bye master\n")
+	  (master recv "bye master"))))
 
   (check	;forgetting
       (unwind-protect
