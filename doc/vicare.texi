@@ -13982,9 +13982,9 @@ descriptor @var{fd}.  @var{sec} and @var{usec} must be fixnums
 representing timeout seconds and microseconds.
 
 Return the fixnum zero if the timeout expired before any event arrived;
-else return a vector of 3 elements being false or @var{fd},
-respectively, if @var{fd} is ready for reading, writing or an
-exceptional condition.  If an error occurs: return an encoded
+else return a fixnum being the OR combination of the flags: @code{1} if
+@var{fd} is readable, @code{2} if @var{fd} is writable, @code{4} if
+@var{fd} received an exception.  If an error occurs: return an encoded
 @code{errno} value.
 @end deftypefun
 

@@ -1626,14 +1626,14 @@
        (secfx		sec)
        (usecfx		usec))
     (let ((rv (capi.posix-select-fd fd sec usec)))
-      (if (fixnum? rv)
-	  (if (unsafe.fxzero? rv)
-	      (values #f #f #f) ;timeout expired
-	    (%raise-errno-error who rv fd sec usec))
-	;; success, extract the statuses
-	(values (unsafe.vector-ref rv 0)
-		(unsafe.vector-ref rv 1)
-		(unsafe.vector-ref rv 2))))))
+      (cond ((unsafe.fxzero? rv) ;timeout expired
+	     (values #f #f #f))
+	    ((unsafe.fx< 0 rv) ;success
+	     (values (if (unsafe.fx= 1 (unsafe.fxlogand rv 1)) fd #f)
+		     (if (unsafe.fx= 2 (unsafe.fxlogand rv 2)) fd #f)
+		     (if (unsafe.fx= 4 (unsafe.fxlogand rv 4)) fd #f)))
+	    (else
+	     (%raise-errno-error who rv fd sec usec))))))
 
 (define (poll fds timeout)
   (define who 'poll)

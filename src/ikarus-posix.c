@@ -1615,7 +1615,6 @@ ikptr
 ikrt_posix_select_fd (ikptr s_fd, ikptr sec, ikptr usec, ikpcb * pcb)
 {
 #ifdef HAVE_SELECT
-  ikptr			vec;	/* the vector to be returned to the caller */
   fd_set		read_fds;
   fd_set		write_fds;
   fd_set		except_fds;
@@ -1638,11 +1637,14 @@ ikrt_posix_select_fd (ikptr s_fd, ikptr sec, ikptr usec, ikpcb * pcb)
   } else if (-1 == rv) { /* an error occurred */
     return ik_errno_to_code();
   } else { /* success, let's harvest the events */
-    vec = ika_vector_alloc_no_init(pcb, 3);
-    IK_ITEM(vec, 0) = (FD_ISSET(fd, &read_fds))?   s_fd : false_object;
-    IK_ITEM(vec, 1) = (FD_ISSET(fd, &write_fds))?  s_fd : false_object;
-    IK_ITEM(vec, 2) = (FD_ISSET(fd, &except_fds))? s_fd : false_object;
-    return vec;
+    int		result = 0;
+    if (FD_ISSET(fd, &read_fds))
+      result |= 1;
+    if (FD_ISSET(fd, &write_fds))
+      result |= 2;
+    if (FD_ISSET(fd, &except_fds))
+      result |= 4;
+    return IK_FIX(result);
   }
 #else
   feature_failure(__func__);
