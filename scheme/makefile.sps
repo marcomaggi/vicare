@@ -1633,6 +1633,7 @@
     (utf-bom-codec				i v $language)
     (input-port?				i v r is ip se)
     (output-port?				i v r is ip se)
+    (input/output-port?				i v)
     (current-input-port				i v r ip is se)
     (current-output-port			i v r ip is se)
     (current-error-port				i v r ip is)

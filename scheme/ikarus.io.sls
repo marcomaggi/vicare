@@ -383,7 +383,8 @@
     input/output-file-buffer-size	input/output-socket-buffer-size
 
     ;; predicates
-    port? input-port? output-port? textual-port? binary-port?
+    port? input-port? output-port? input/output-port?
+    textual-port? binary-port?
     port-eof?
 
     ;; generic port functions
@@ -492,7 +493,8 @@
 		  input/output-file-buffer-size	input/output-socket-buffer-size
 
 		  ;; predicates
-		  port? input-port? output-port? textual-port? binary-port?
+		  port? input-port? output-port? input/output-port?
+		  textual-port? binary-port?
 		  port-eof?
 
 		  ;; generic port functions
@@ -2207,7 +2209,9 @@
 
   ;;Defined  by R6RS.   Return #t  if  X is  an input  port or  a
   ;;combined input and output port.
-  (define-predicate input-port? INPUT-PORT-TAG))
+  (define-predicate input-port? INPUT-PORT-TAG)
+
+  (define-predicate input/output-port? INPUT/OUTPUT-PORT-TAG))
 
 ;;The following predicates have to be used after the argument has
 ;;been validated as  port value.  They are *not*  affected by the
