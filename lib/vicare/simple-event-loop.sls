@@ -38,15 +38,17 @@
     leave-asap
 
     ;; interprocess signals
-    receive-signal
+    receive-signal		serve-interprocess-signals
 
     ;; file descriptor events
     readable
     writable
     exception
+    forget-fd
+    do-one-fd-event
 
     ;; fragmented tasks
-    task-fragment
+    task-fragment		do-one-task-event
     )
   (import (vicare)
     (prefix (vicare posix) px.)
@@ -225,7 +227,7 @@
   (set! SOURCES #f))
 
 (define (do-one-event)
-  (%serve-interprocess-signals)
+  (serve-interprocess-signals)
   (or (do-one-fd-event)
       (do-one-task-event)))
 
@@ -235,8 +237,8 @@
   (with-event-sources (SOURCES)
     (or (not (null? SOURCES.fds.rev-head))
 	(not (null? SOURCES.fds.tail))
-	(not (null? SOURCES.fds.rev-head))
-	(not (null? SOURCES.fds.tail)))))
+	(not (null? SOURCES.tasks.rev-head))
+	(not (null? SOURCES.tasks.tail)))))
 
 (define (enter)
   ;;Enter the event loop and consume all the events.
@@ -257,7 +259,7 @@
 
 ;;;; interprocess signal handlers
 
-(define (%serve-interprocess-signals)
+(define (serve-interprocess-signals)
   (px.signal-bub-acquire)
   (for-each (lambda (signum)
 	      (with-event-sources (SOURCES)
@@ -301,6 +303,9 @@
 ;;than immediately restart a fresh run.
 ;;
 
+(define-struct fd-entry
+  (fd query handler))
+
 (define (do-one-fd-event)
   ;;Consume one event, if any, and  return.  Return a boolean, #t if one
   ;;event was served.
@@ -316,15 +321,15 @@
     (if (null? SOURCES.fds.tail)
 	#f
       (if (unsafe.fx< SOURCES.fds.count SOURCES.fds.watermark)
-	  (let ((P (unsafe.car SOURCES.fds.tail)))
+	  (let ((E (unsafe.car SOURCES.fds.tail)))
 	    (set! SOURCES.fds.tail (unsafe.cdr SOURCES.fds.tail))
-	    (if (%catch ((unsafe.car P)))
+	    (if (%catch ((fd-entry-query E)))
 		(guard (E (else #f))
-		  ((unsafe.cdr P))
+		  ((fd-entry-handler E))
 		  (%fxincr! SOURCES.fds.count)
 		  #t)
 	      (begin
-		(set! SOURCES.fds.rev-head (cons P SOURCES.fds.rev-head))
+		(set! SOURCES.fds.rev-head (cons E SOURCES.fds.rev-head))
 		(if (null? SOURCES.fds.tail)
 		    (begin
 		      (set! SOURCES.fds.count 0)
@@ -334,11 +339,11 @@
 	  (set! SOURCES.fds.count 0)
 	  #f)))))
 
-(define (%enqueue-fd-event-source query-thunk handler-thunk)
+(define (%enqueue-fd-event-source fd query-thunk handler-thunk)
   ;;Enqueue a new entry for a file descriptor event.
   ;;
   (with-event-sources (SOURCES)
-    (set! SOURCES.fds.rev-head (cons (cons query-thunk handler-thunk)
+    (set! SOURCES.fds.rev-head (cons (make-fd-entry fd query-thunk handler-thunk)
 				     SOURCES.fds.rev-head))))
 
 (define (readable fd handler-thunk)
@@ -346,7 +351,8 @@
   (with-arguments-validation (who)
       ((file-descriptor	fd)
        (procedure	handler-thunk))
-    (%enqueue-fd-event-source (lambda ()
+    (%enqueue-fd-event-source fd
+			      (lambda ()
 				(px.select-fd-readable? fd 0 0))
 			      handler-thunk)))
 
@@ -355,8 +361,8 @@
   (with-arguments-validation (who)
       ((file-descriptor	fd)
        (procedure	handler-thunk))
-    (%enqueue-fd-event-source (lambda ()
-				(px.select-fd-writable? fd 0 0))
+    (%enqueue-fd-event-source fd (lambda ()
+				   (px.select-fd-writable? fd 0 0))
 			      handler-thunk)))
 
 (define (exception fd handler-thunk)
@@ -364,9 +370,21 @@
   (with-arguments-validation (who)
       ((file-descriptor	fd)
        (procedure	handler-thunk))
-    (%enqueue-fd-event-source (lambda ()
-				(px.select-fd-exceptional? fd 0 0))
+    (%enqueue-fd-event-source fd (lambda ()
+				   (px.select-fd-exceptional? fd 0 0))
 			      handler-thunk)))
+
+(define (forget-fd fd)
+  (define who 'exception)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd))
+    (with-event-sources (SOURCES)
+      (set! SOURCES.fds.tail (remp (lambda (E)
+				     (unsafe.fx= fd (fd-entry-fd E)))
+			       SOURCES.fds.tail))
+      (set! SOURCES.fds.rev-head (remp (lambda (E)
+					 (unsafe.fx= fd (fd-entry-fd E)))
+				   SOURCES.fds.rev-head)))))
 
 
 ;;;; task fragments handling

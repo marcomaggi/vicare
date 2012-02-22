@@ -94,6 +94,18 @@
 	  (slave  send "bye master\n")
 	  (master recv "bye master\n"))))
 
+  (check	;forgetting
+      (unwind-protect
+	  (begin
+	    (sel.initialise)
+	    (sel.readable 0 (lambda () #f))
+	    (sel.writable 1 (lambda () #f))
+	    (sel.forget-fd 0)
+	    (sel.forget-fd 1)
+	    (sel.busy?))
+	(sel.finalise))
+    => #f)
+
   #t)
 
 
@@ -101,22 +113,21 @@
 
   (check
       (with-result
-       (let-values (((master slave) (px.socketpair PF_LOCAL SOCK_DGRAM 0)))
-	 (unwind-protect
-	     (begin
-	       (sel.initialise)
-	       (sel.receive-signal SIGUSR1
-		 (lambda ()
-		   (add-result '(signal SIGUSR1))
-		   (sel.leave-asap)))
-	       (sel.receive-signal SIGUSR2
-		 (lambda ()
-		   (add-result '(signal SIGUSR2))
-		   (sel.leave-asap)))
-	       (px.raise SIGUSR1)
-	       (sel.enter)
-	       #t)
-	   (sel.finalise))))
+       (unwind-protect
+	   (begin
+	     (sel.initialise)
+	     (sel.receive-signal SIGUSR1
+	       (lambda ()
+		 (add-result '(signal SIGUSR1))
+		 (sel.leave-asap)))
+	     (sel.receive-signal SIGUSR2
+	       (lambda ()
+		 (add-result '(signal SIGUSR2))
+		 (sel.leave-asap)))
+	     (px.raise SIGUSR1)
+	     (sel.enter)
+	     #t)
+	 (sel.finalise)))
     => '(#t
 	 ((signal SIGUSR1))))
 
@@ -127,29 +138,28 @@
 
   (check
       (with-result
-       (let-values (((master slave) (px.socketpair PF_LOCAL SOCK_DGRAM 0)))
-	 (unwind-protect
-	     (begin
-	       (sel.initialise)
-	       (sel.task-fragment (lambda ()
-				    (add-result '(task-1 1))
+       (unwind-protect
+	   (begin
+	     (sel.initialise)
+	     (sel.task-fragment (lambda ()
+				  (add-result '(task-1 1))
+				  (lambda ()
+				    (add-result '(task-1 2))
 				    (lambda ()
-				      (add-result '(task-1 2))
-				      (lambda ()
-					(add-result '(task-1 3))
-					#f))))
-	       (sel.task-fragment (lambda ()
-				    (add-result '(task-2 1))
+				      (add-result '(task-1 3))
+				      #f))))
+	     (sel.task-fragment (lambda ()
+				  (add-result '(task-2 1))
+				  (lambda ()
+				    (add-result '(task-2 2))
 				    (lambda ()
-				      (add-result '(task-2 2))
-				      (lambda ()
-					(add-result '(task-2 3))
-					(sel.leave-asap)
-					#f))))
-	       (sel.enter)
-	       #t)
-	   (sel.finalise))))
-    => '(#t
+				      (add-result '(task-2 3))
+				      (sel.leave-asap)
+				      #f))))
+	     (sel.enter)
+	     (sel.busy?))
+	 (sel.finalise)))
+    => '(#f
 	 ((task-1 1)
 	  (task-2 1)
 	  (task-1 2)

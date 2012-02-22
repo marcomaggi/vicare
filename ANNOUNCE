@@ -70,6 +70,8 @@ Notes for revision 0.2d9
 
 * Added to (vicare linux) functions: SIGNALFD.
 
+* Added library (vicare simple-event-loop).
+
 
 Notes for revision 0.2d8
 ------------------------
