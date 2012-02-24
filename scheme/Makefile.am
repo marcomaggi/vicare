@@ -2,7 +2,13 @@
 
 NEW_BOOT_FILE		= vicare.boot
 NEW_EXECUTABLE		= ../src/vicare
-nodist_pkglib_DATA	= $(NEW_BOOT_FILE)
+
+# The  "exec" portion  of the  Makefile variable  names  will instruct
+# Automake to  generate installation rules  to install the  boot image
+# with the "make install-exec" rule.
+bootexecdir		= $(pkglibdir)
+bootexec_DATA		= $(NEW_BOOT_FILE)
+#nodist_pkglib_DATA	= $(NEW_BOOT_FILE)
 
 BOOT_IMAGE_SEARCH_PATH	= .:$(srcdir):$(srcdir)/../lib:$(builddir)/../lib
 
