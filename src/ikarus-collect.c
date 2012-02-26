@@ -467,6 +467,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
   struct rusage		t0, t1;		/* for GC statistics */
   struct timeval	rt0, rt1;	/* for GC statistics */
   gc_t			gc;
+  ikpages *		old_heap_pages;
   { /* initialise GC statistics */
     gettimeofday(&rt0, 0);
     getrusage(RUSAGE_SELF, &t0);
@@ -484,7 +485,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
 		   gc.collect_gen, pcb->collection_id-1);
 #endif
   /* cache heap-pages to delete later */
-  ikpages *	old_heap_pages = pcb->heap_pages;
+  old_heap_pages = pcb->heap_pages;
   pcb->heap_pages = 0;
   /* scan GC roots */
   scan_dirty_pages(&gc);
@@ -637,66 +638,69 @@ collection_id_to_gen (int id)
 static inline int
 is_live (ikptr x, gc_t* gc)
 {
+  int		tag;
+  int		gen;
   if (IK_IS_FIXNUM(x))
     return 1;
-  int tag = IK_TAGOF(x);
+  tag = IK_TAGOF(x);
   if (tag == immediate_tag)
     return 1;
-  if (ref(x, -tag) == IK_FORWARD_PTR)
+  if (IK_FORWARD_PTR == ref(x, -tag))
     return 1;
-  unsigned int segment_bits = gc->segment_vector[IK_PAGE_INDEX(x)];
-  int gen = segment_bits & gen_mask;
-  if (gen > gc->collect_gen)
-    return 1;
-  return 0;
+  gen = gc->segment_vector[IK_PAGE_INDEX(x)] & gen_mask;
+  return (gen > gc->collect_gen)? 1 : 0;
 }
 static inline int
 next_gen (int i)
 {
   return ((i == (generation_count-1)) ? i : (i+1));
 }
-
-
-static ik_ptr_page*
-move_tconc(ikptr tc, ik_ptr_page* ls) {
-  if ((ls == NULL) || (ls->count == IK_PTR_PAGE_SIZE)) {
+static ik_ptr_page *
+move_tconc (ikptr tc, ik_ptr_page* ls)
+/* Store TC in the  first node of the linked list LS.   If LS is NULL or
+   the first node of  LS is full: allocate a new node  and prepend it to
+   LS; then store TC in it.  Return the, possibly new, first node of the
+   linked list. */
+{
+  if ((NULL == ls) || (IK_PTR_PAGE_SIZE == ls->count)) {
     ik_ptr_page* page = (ik_ptr_page*)ik_mmap(pagesize);
     page->count = 0;
-    page->next = ls;
+    page->next  = ls;
     ls = page;
   }
   ls->ptr[ls->count++] = tc;
   return ls;
 }
 
+
 static void
-handle_guardians(gc_t* gc) {
-  ikpcb* pcb = gc->pcb;
-  ik_ptr_page* pend_hold_list = 0;
-  ik_ptr_page* pend_final_list = 0;
-  int gen;
+handle_guardians (gc_t* gc)
+{
+  ikpcb *	pcb = gc->pcb;
+  ik_ptr_page *	pend_hold_list = 0;
+  ik_ptr_page *	pend_final_list = 0;
+  int		gen;
   /* sort protected pairs into pend_hold and pend_final lists */
-  for(gen=0; gen<=gc->collect_gen; gen++) {
+  for (gen=0; gen<=gc->collect_gen; gen++) {
     ik_ptr_page* prot_list = pcb->protected_list[gen];
     pcb->protected_list[gen] = 0;
-    while(prot_list) {
-      int i;
+    while (prot_list) {
+      int	i;
       for(i=0; i<prot_list->count; i++) {
-        ikptr p = prot_list->ptr[i];
-        ikptr tc = ref(p, off_car);
-        ikptr obj = ref(p, off_cdr);
+        ikptr	p   = prot_list->ptr[i];
+        ikptr	tc  = IK_CAR(p);
+        ikptr	obj = IK_CDR(p);
         if (tc == IK_FORWARD_PTR) {
-          ikptr np = ref(p, off_cdr);
-          tc = ref(np, off_car);
-          obj = ref(np, off_cdr);
+          ikptr np = IK_CDR(p);
+          tc  = IK_CAR(np);
+          obj = IK_CDR(np);
         }
-        if (is_live(obj, gc)) {
-          pend_hold_list = move_tconc(p, pend_hold_list);
-        } else {
+        if (is_live(obj, gc))
+          pend_hold_list  = move_tconc(p, pend_hold_list);
+	else
           pend_final_list = move_tconc(p, pend_final_list);
-        }
       }
-      ik_ptr_page* next = prot_list->next;
+      ik_ptr_page * next = prot_list->next;
       ik_munmap((ikptr)prot_list, pagesize);
       prot_list = next;
     }
@@ -740,7 +744,7 @@ handle_guardians(gc_t* gc) {
           ikptr p = ls->ptr[i];
           gc->forward_list =
             move_tconc(add_object(gc, p, "guardian"),
-                gc->forward_list);
+		       gc->forward_list);
         }
         ik_ptr_page* next = ls->next;
         ik_munmap((ikptr)ls, pagesize);

@@ -271,6 +271,7 @@ typedef struct ik_callback_locative {
   struct ik_callback_locative * next;	/* pointer to next link */
 } ik_callback_locative;
 
+/* Node in a linked list. */
 typedef struct ik_ptr_page {
   long		count;
   struct ik_ptr_page* next;
