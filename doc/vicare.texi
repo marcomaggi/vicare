@@ -5218,6 +5218,8 @@ Build and return binary Scheme ports using the platform file descriptor
 @var{fd} as device.  @var{identifier} must be a string used for better
 error reporting.  Closing the Scheme ports will close the file
 descriptors too.
+
+File descriptor ports do support port position operations.
 @end defun
 
 
@@ -5228,6 +5230,8 @@ Build and return binary Scheme ports using the platform file descriptor
 @var{fd} as device.  @var{identifier} must be a string used for better
 error reporting.  Closing the Scheme ports will @strong{not} close the
 file descriptors.
+
+File descriptor ports do support port position operations.
 @end defun
 
 
@@ -5236,6 +5240,8 @@ Build and return a binary Scheme port using the platform socket
 descriptor @var{sock} as device.  @var{identifier} must be a string used
 for better error reporting.  Closing the Scheme port will close the
 socket descriptor too.
+
+Socket ports do @strong{not} support port position operations.
 @end defun
 
 
@@ -5244,6 +5250,8 @@ Build and return a binary Scheme port using the platform socket
 descriptor @var{sock} as device.  @var{identifier} must be a string used
 for better error reporting.  Closing the Scheme port will @strong{not}
 close the socket descriptor.
+
+Socket ports do @strong{not} support port position operations.
 @end defun
 
 @c page
@@ -5313,6 +5321,8 @@ Build and return textual Scheme ports using the platform file descriptor
 @var{fd} as device.  @var{identifier} must be a string used for better
 error reporting.  @var{transcoder} must be a transcoder object.  Closing
 the Scheme ports will close the file descriptors too.
+
+File descriptor ports do support port position operations.
 @end defun
 
 
@@ -5323,6 +5333,8 @@ Build and return textual Scheme ports using the platform file descriptor
 @var{fd} as device.  @var{identifier} must be a string used for better
 error reporting.  @var{transcoder} must be a transcoder object.  Closing
 the Scheme ports will @strong{not} close the file descriptors.
+
+File descriptor ports do support port position operations.
 @end defun
 
 
@@ -5331,6 +5343,8 @@ Build and return a textual Scheme port using the platform socket
 descriptor @var{sock} as device.  @var{identifier} must be a string used
 for better error reporting.  @var{transcoder} must be a transcoder
 object.  Closing the Scheme port will close the socket descriptor too.
+
+Socket ports do @strong{not} support port position operations.
 @end defun
 
 
@@ -5340,6 +5354,8 @@ descriptor @var{sock} as device.  @var{identifier} must be a string used
 for better error reporting.  @var{transcoder} must be a transcoder
 object.  Closing the Scheme port will @strong{not} close the socket
 descriptor.
+
+Socket ports do @strong{not} support port position operations.
 @end defun
 
 @c page
