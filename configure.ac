@@ -75,11 +75,10 @@ AM_CONDITIONAL([WANT_LINUX],[test x$vicare_linux_bindings = xtrue])
 #### basic system inspection
 
 AM_PROG_AS
-# Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
 
-CFLAGS="$CFLAGS -DNDEBUG -O3 -Wall"
+AM_CFLAGS="-Wall"
 
 case "$target_os" in
   *linux*)

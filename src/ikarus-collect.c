@@ -377,7 +377,7 @@ gc_tconc_push(gc_t* gc, ikptr tcbucket) {
 }
 
 
-#ifndef NDEBUG
+#ifdef VICARE_DEBUGGING
 static ikptr add_object_proc(gc_t* gc, ikptr x, char* caller);
 #define add_object(gc,x,caller) add_object_proc(gc,x,caller)
 #else
@@ -418,10 +418,8 @@ static void deallocate_unused_pages(gc_t*);
 
 static void fix_new_pages(gc_t* gc);
 
-extern void verify_integrity(ikpcb* pcb, char*);
-
 ikptr
-ik_collect_check(unsigned long req, ikpcb* pcb)
+ik_collect_check (unsigned long req, ikpcb* pcb)
 {
   long bytes = ((long)pcb->allocation_redline) - ((long)pcb->allocation_pointer);
   if (bytes >= req) {
@@ -447,8 +445,8 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
 
  */
 {
-#ifndef NDEBUG
-  verify_integrity(pcb, "entry");
+#ifdef VICARE_DEBUGGING
+  ik_verify_integrity(pcb, "entry");
 #endif
   { /* accounting */
     long bytes = ((long)pcb->allocation_pointer) - ((long)pcb->heap_base);
@@ -468,7 +466,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
   gc.collect_gen	= collection_id_to_gen(pcb->collection_id);
   gc.collect_gen_tag	= next_gen_tag[gc.collect_gen];
   pcb->collection_id++;
-#ifndef NDEBUG
+#ifdef VICARE_DEBUGGING
   ik_debug_message("ik_collect entry %ld free=%ld (collect gen=%d/id=%d)",
 		   mem_req, pcb->allocation_redline - pcb->allocation_pointer,
 		   gc.collect_gen, pcb->collection_id-1);
@@ -500,7 +498,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
   /* next   all   guardian/guarded  objects,   the   procedure  does   a
      "collect_loop()" at the end */
   handle_guardians(&gc);
-#ifndef NDEBUG
+#ifdef VICARE_DEBUGGING
   ik_debug_message("finished scan of GC roots");
 #endif
   collect_loop(&gc);
@@ -515,16 +513,18 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
   pcb->allocation_pointer = pcb->heap_base;
   /* does not allocate */
   gc_add_tconcs(&gc);
-#ifndef NDEBUG
+#ifdef VICARE_DEBUGGING
   ik_debug_message("done");
 #endif
   pcb->weak_pairs_ap = 0;
   pcb->weak_pairs_ep = 0;
 #if ACCOUNTING
+#ifdef VICARE_DEBUGGING
   ik_debug_message("[%d cons|%d sym|%d cls|%d vec|%d rec|%d cck|%d str|%d htb]\n",
 		   pair_count,		symbol_count,	closure_count,
 		   vector_count,	record_count,	continuation_count,
 		   string_count,	htable_count);
+#endif
   pair_count		= 0;
   symbol_count		= 0;
   closure_count		= 0;
@@ -535,7 +535,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
   htable_count		= 0;
 #endif
   //ik_dump_metatable(pcb);
-#ifndef NDEBUG
+#ifdef VICARE_DEBUGGING
   ik_debug_message("finished garbage collection");
 #endif
   /* delete all old heap pages */
@@ -553,7 +553,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
     ((unsigned long)pcb->allocation_redline) -
     ((unsigned long)pcb->allocation_pointer);
   if ((free_space <= mem_req) || (pcb->heap_size < IK_HEAPSIZE)) {
-#ifndef NDEBUG
+#ifdef VICARE_DEBUGGING
     fprintf(stderr, "REQ=%ld, got %ld\n", mem_req, free_space);
 #endif
     long memsize   = (mem_req > IK_HEAPSIZE) ? mem_req : IK_HEAPSIZE;
@@ -566,15 +566,15 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
     pcb->heap_base = ptr;
     pcb->heap_size = new_heap_size;
   }
-#ifndef NDEBUG
+#ifdef VICARE_DEBUGGING
   { /* reset the free space to a magic number */
     ikptr	x;
     for (x = pcb->allocation_pointer; x < pcb->allocation_redline; x += wordsize)
       ref(x, 0) = (ikptr)(0x1234FFFF);
   }
 #endif
-#ifndef NDEBUG
-  verify_integrity(pcb, "exit");
+#ifdef VICARE_DEBUGGING
+  ik_verify_integrity(pcb, "exit");
 #endif
   { /* for GC statistics */
     getrusage(RUSAGE_SELF, &t1);
@@ -872,8 +872,7 @@ static void collect_stack(gc_t* gc, ikptr top, ikptr end) {
       fprintf(stderr, "rp_offset=%ld\n", rp_offset);
     }
     if (rp_offset <= 0) {
-      fprintf(stderr, "invalid rp_offset %ld\n", rp_offset);
-      exit(EXIT_FAILURE);
+      ik_abort("invalid rp_offset %ld\n", rp_offset);
     }
     /* since the return point is alive, we need to find the code
      * object containing it and mark it live as well.  the rp is
@@ -924,14 +923,12 @@ static void collect_stack(gc_t* gc, ikptr top, ikptr end) {
       fprintf(stderr, "fs=%ld\n", (long)framesize);
     }
     if (framesize < 0) {
-      fprintf(stderr, "invalid frame size %ld\n", (long)framesize);
-      exit(EXIT_FAILURE);
+      ik_abort("invalid frame size %ld\n", (long)framesize);
     }
     else if (framesize == 0) {
       framesize = ref(top, wordsize);
       if (framesize <= 0) {
-        fprintf(stderr, "invalid redirected framesize=%ld\n", (long)framesize);
-        exit(EXIT_FAILURE);
+        ik_abort("invalid redirected framesize=%ld\n", (long)framesize);
       }
       ikptr base = top + framesize - wordsize;
       while(base > top) {
@@ -1034,7 +1031,7 @@ add_list (gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc)
 
 
 static ikptr
-#ifndef NDEBUG
+#ifdef VICARE_DEBUGGING
 add_object_proc (gc_t* gc, ikptr X, char* caller)
 /* Move  the live  object X,  and all  its component  objects, to  a new
    location  and return  a new  machine  word which  must replace  every
@@ -1096,8 +1093,11 @@ add_object_proc (gc_t* gc, ikptr X)
   }
   else if (closure_tag == tag) {
     ikptr size  = disp_closure_data + IK_REF(first_word, disp_code_freevars - disp_code_data);
-    if (size > 1024)
+#ifdef VICARE_DEBUGGING
+    if (size > 1024) {
       ik_debug_message("large closure size=0x%016lx", (long)size);
+    }
+#endif
     ikptr asize = IK_ALIGN(size);
     ikptr Y     = gc_alloc_new_ptr(asize, gc) | closure_tag;
     IK_REF(Y, asize - closure_tag - wordsize) = 0;
@@ -1226,7 +1226,7 @@ add_object_proc (gc_t* gc, ikptr X)
     else if (continuation_tag == first_word) {
       ikptr	top  = IK_REF(X, off_continuation_top);
       ikptr	size = IK_REF(X, off_continuation_size);
-#ifndef NDEBUG
+#ifdef VICARE_DEBUGGING
       if (size > 4096)
         ik_debug_message("large cont size=0x%016lx", size);
 #endif
@@ -1420,7 +1420,7 @@ relocate_new_code(ikptr x, gc_t* gc) {
     long code_off = r >> 2;
     if (tag == 0) {
       /* undisplaced pointer */
-#ifndef NDEBUG
+#ifdef VICARE_DEBUGGING
      // fprintf(stderr, "r=0x%08x code_off=%d reloc_size=0x%08x\n",
      //     r, code_off, relocsize);
 #endif
@@ -1441,7 +1441,7 @@ relocate_new_code(ikptr x, gc_t* gc) {
       /* displaced relative pointer */
       long obj_off = IK_UNFIX(ref(p, wordsize));
       ikptr obj = ref(p, 2*wordsize);
-#ifndef NDEBUG
+#ifdef VICARE_DEBUGGING
       //fprintf(stderr, "obj=0x%08x, obj_off=0x%08x\n", (int)obj,
       //    obj_off);
 #endif

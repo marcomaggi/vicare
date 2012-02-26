@@ -134,11 +134,7 @@ ik_decl ikpcb *	ik_the_pcb (void);
 
 ik_decl int	ik_abort		(const char * error_message, ...);
 ik_decl void	ik_error		(ikptr args);
-#ifndef NDEBUG
 ik_decl void	ik_debug_message	(const char * error_message, ...);
-#else
-#define ik_debug_message(MSG,...)	/* empty */
-#endif
 
 ik_decl ikptr	ik_unsafe_alloc		(ikpcb* pcb, ik_ulong size);
 ik_decl ikptr	ik_safe_alloc		(ikpcb* pcb, ik_ulong size);

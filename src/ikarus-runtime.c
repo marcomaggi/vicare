@@ -182,7 +182,9 @@ ik_mmap (ik_ulong size)
   char* mem = win_mmap(mapsize);
 #endif
   memset(mem, -1, mapsize);
+#ifdef VICARE_DEBUGGING
   ik_debug_message("%s: 0x%016lx .. 0x%016lx\n", __func__, (long)mem, ((long)(mem))+mapsize-1);
+#endif
   return (ikptr)(long)mem;
 }
 void
@@ -200,7 +202,9 @@ ik_munmap (ikptr mem, ik_ulong size)
 #else
   win_munmap((char*)mem, mapsize);
 #endif
+#ifdef VICARE_DEBUGGING
   ik_debug_message("%s: 0x%016lx .. 0x%016lx\n", __func__, (long)mem, ((long)(mem))+mapsize-1);
+#endif
 }
 
 
@@ -440,7 +444,6 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
 }
 
 
-#ifndef NDEBUG
 void
 ik_debug_message (const char * error_message, ...)
 {
@@ -451,7 +454,6 @@ ik_debug_message (const char * error_message, ...)
   fprintf(stderr, "\n");
   va_end(ap);
 }
-#endif
 int
 ik_abort (const char * error_message, ...)
 {
@@ -477,11 +479,15 @@ ik_error (ikptr args)
 void
 ik_stack_overflow (ikpcb* pcb)
 {
+#ifdef VICARE_DEBUGGING
   ik_debug_message("entered ik_stack_overflow pcb=0x%016lx", (long)pcb);
+#endif
   set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
   ikptr frame_base        = pcb->frame_base;
   ikptr underflow_handler = IK_REF(frame_base, -wordsize);
+#ifdef VICARE_DEBUGGING
   ik_debug_message("underflow_handler = 0x%08x", (int)underflow_handler);
+#endif
   /* capture continuation and set it as next_k */
   ikptr k = ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size)) | vector_tag;
   IK_REF(k, -vector_tag)           = continuation_tag;
@@ -640,15 +646,19 @@ ikrt_bvftime (ikptr outbv, ikptr fmtbv)
   t     = time(NULL);
   errno = 0;
   tmp   = localtime(&t);
+#ifdef VICARE_DEBUGGING
   if (tmp == NULL)
     ik_debug_message("error in time: %s\n", strerror(errno));
+#endif
   errno = 0;
   rv    = strftime((char*)(long)(outbv + off_bytevector_data),
 		   IK_UNFIX(IK_REF(outbv, off_bytevector_length)) + 1,
 		   (char*)(long)(fmtbv + off_bytevector_data),
 		   tmp);
+#ifdef VICARE_DEBUGGING
   if (rv == 0)
     ik_debug_message("error in strftime: %s\n", strerror(errno));
+#endif
   return IK_FIX(rv);
 }
 

@@ -51,8 +51,31 @@
 #  define __attribute__(...)	/* empty */
 #endif
 
-#ifndef ik_decl
-#  define ik_decl		extern
+/* I found  the following chunk on  the Net.  (Marco Maggi;  Sun Feb 26,
+   2012) */
+#if defined _WIN32 || defined __CYGWIN__
+#  ifdef BUILDING_DLL
+#    ifdef __GNUC__
+#      define ik_decl		__attribute__((dllexport))
+#    else
+#      define ik_decl		__declspec(dllexport)
+#    endif
+#  else
+#    ifdef __GNUC__
+#      define ik_decl		__attribute__((dllimport))
+#    else
+#      define ik_decl		__declspec(dllimport)
+#    endif
+#  endif
+#  define ik_private_decl	extern
+#else
+#  if __GNUC__ >= 4
+#    define ik_decl		__attribute__((visibility ("default")))
+#    define ik_private_decl	__attribute__((visibility ("hidden")))
+#  else
+#    define ik_decl		extern
+#    define ik_private_decl	extern
+#  endif
 #endif
 
 
@@ -368,31 +391,32 @@ typedef struct ikcont {
  ** Internal function prototypes.
  ** ----------------------------------------------------------------- */
 
-ikpcb * ik_collect		(unsigned long, ikpcb*);
+ik_decl ikpcb *		ik_collect		(unsigned long, ikpcb*);
+ik_private_decl void	ik_verify_integrity	(ikpcb* pcb, char*);
 
-void*	ik_malloc		(int);
-void	ik_free			(void*, int);
+ik_private_decl void*	ik_malloc		(int);
+ik_private_decl void	ik_free			(void*, int);
 
-ikptr	ik_underflow_handler	(ikpcb*);
+ik_private_decl ikptr	ik_underflow_handler	(ikpcb*);
 
-ikptr	ik_mmap			(unsigned long);
-ikptr	ik_mmap_typed		(unsigned long size, unsigned type, ikpcb*);
-ikptr	ik_mmap_ptr		(unsigned long size, int gen, ikpcb*);
-ikptr	ik_mmap_data		(unsigned long size, int gen, ikpcb*);
-ikptr	ik_mmap_code		(unsigned long size, int gen, ikpcb*);
-ikptr	ik_mmap_mixed		(unsigned long size, ikpcb*);
-void	ik_munmap		(ikptr, unsigned long);
-ikpcb * ik_make_pcb		(void);
-void	ik_delete_pcb		(ikpcb*);
-void	ik_free_symbol_table	(ikpcb* pcb);
+ik_private_decl ikptr	ik_mmap			(unsigned long);
+ik_private_decl ikptr	ik_mmap_typed		(unsigned long size, unsigned type, ikpcb*);
+ik_private_decl ikptr	ik_mmap_ptr		(unsigned long size, int gen, ikpcb*);
+ik_private_decl ikptr	ik_mmap_data		(unsigned long size, int gen, ikpcb*);
+ik_private_decl ikptr	ik_mmap_code		(unsigned long size, int gen, ikpcb*);
+ik_private_decl ikptr	ik_mmap_mixed		(unsigned long size, ikpcb*);
+ik_private_decl void	ik_munmap		(ikptr, unsigned long);
+ik_private_decl ikpcb * ik_make_pcb		(void);
+ik_private_decl void	ik_delete_pcb		(ikpcb*);
+ik_private_decl void	ik_free_symbol_table	(ikpcb* pcb);
 
-void	ik_fasl_load		(ikpcb* pcb, char* filename);
-void	ik_relocate_code	(ikptr);
+ik_private_decl void	ik_fasl_load		(ikpcb* pcb, char* filename);
+ik_private_decl void	ik_relocate_code	(ikptr);
 
-ikptr	ik_exec_code		(ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp);
+ik_private_decl ikptr	ik_exec_code		(ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp);
 
-ikptr	ik_asm_enter		(ikpcb*, ikptr code_object, ikptr arg, ikptr cp);
-ikptr	ik_asm_reenter		(ikpcb*, ikptr code_object, ikptr val);
+ik_private_decl ikptr	ik_asm_enter		(ikpcb*, ikptr code_object, ikptr arg, ikptr cp);
+ik_private_decl ikptr	ik_asm_reenter		(ikpcb*, ikptr code_object, ikptr val);
 
 
 /** --------------------------------------------------------------------
@@ -403,11 +427,7 @@ ik_decl ikpcb *	ik_the_pcb		(void);
 
 ik_decl int	ik_abort		(const char * error_message, ...);
 ik_decl void	ik_error		(ikptr args);
-#ifndef NDEBUG
 ik_decl void	ik_debug_message	(const char * error_message, ...);
-#else
-#define ik_debug_message(MSG,...)	/* empty */
-#endif
 
 ik_decl ikptr	ik_unsafe_alloc		(ikpcb* pcb, ik_ulong size);
 ik_decl ikptr	ik_safe_alloc		(ikpcb* pcb, ik_ulong size);
