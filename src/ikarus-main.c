@@ -93,8 +93,7 @@ ikarus_main (int argc, char** argv, char* boot_file)
     }
     pcb->arg_list = arg_list;
   }
-  if (repl_on_sigint)
-    register_handlers();
+  register_handlers(repl_on_sigint);
   register_alt_stack();
   ik_fasl_load(pcb, boot_file);
   ik_delete_pcb(pcb);
@@ -102,8 +101,7 @@ ikarus_main (int argc, char** argv, char* boot_file)
 }
 
 
-#if 0
-/* Notice how the bsd manpages have incorrect type for the handler. */
+/* Notice how the BSD manpages have incorrect type for the handler.
 
      #include <signal.h>
 
@@ -111,55 +109,67 @@ ikarus_main (int argc, char** argv, char* boot_file)
              union {
                      void    (*__sa_handler)(int);
                      void    (*__sa_sigaction)(int, struct __siginfo *, void *);
-             } __sigaction_u;                /* signal handler */
-             int     sa_flags;               /* see signal options below */
-             sigset_t sa_mask;               /* signal mask to apply */
+             } __sigaction_u;
+             int     sa_flags;
+             sigset_t sa_mask;
      };
-
      #define sa_handler      __sigaction_u.__sa_handler
      #define sa_sigaction    __sigaction_u.__sa_sigaction
-
      int
-     sigaction(int sig, const struct sigaction * restrict act,
-         struct sigaction * restrict oact);
-#endif
+     sigaction(int sig, const struct sigaction * restrict act, struct sigaction * restrict oact);
+*/
 
 static void
 handler (int signo, siginfo_t* info, void* uap)
 {
   ikpcb *	pcb = ik_the_pcb();
-  signo=signo; info=info; uap=uap; /* no warning */
+  /* avoid compiler warnings on unused arguments */
+  signo=signo; info=info; uap=uap;
   pcb->engine_counter = IK_FIX(-1);
-  pcb->interrupted = 1;
+  pcb->interrupted    = 1;
 }
 static void
-register_handlers (void)
+register_handlers (int repl_on_sigint)
 {
-  struct sigaction sa;
-  sa.sa_sigaction = handler;
+  if (repl_on_sigint) {
+    /* Enter REPL on SIGINT. */
+    struct sigaction	sa;
+    int			rv;
+    sa.sa_sigaction = handler;
 #ifdef __CYGWIN__
-  sa.sa_flags = SA_SIGINFO;
+    sa.sa_flags = SA_SIGINFO;
 #else
-  sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
+    sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
 #endif
-  sigemptyset(&sa.sa_mask);
-  int err = sigaction(SIGINT, &sa, 0);
-  if (err)
-    ik_abort("sigaction failed: %s", strerror(errno));
-
+    sigemptyset(&sa.sa_mask);
+    rv = sigaction(SIGINT, &sa, 0);
+    if (rv)
+      ik_abort("sigaction failed: %s", strerror(errno));
+  }
   /* ignore sigpipes */
   {
-    sigset_t set;
+#if 1
+    struct sigaction	sa;
+    int			rv;
+    sa.sa_handler = SIG_IGN;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    rv = sigaction(SIGPIPE, &sa, NULL);
+    if (rv)
+      ik_abort("sigaction failed while trying to ignore SIGPIPE: %s", strerror(errno));
+#else
+    sigset_t	set;
+    int		rv;
     sigprocmask(0, 0, &set); /* get the set */
     sigaddset(&set, SIGPIPE);
-    int err = sigprocmask(SIG_SETMASK, &set, &set);
-    if (err)
+    rv = sigprocmask(SIG_SETMASK, &set, NULL);
+    if (rv)
       ik_abort("sigprocmask failed: %s", strerror(errno));
+#endif
   }
 }
 
-
-#if 0
+/*
 SYNOPSIS
      #include <sys/types.h>
      #include <signal.h>
@@ -172,7 +182,7 @@ SYNOPSIS
 
      int
      sigaltstack(const struct sigaltstack *ss, struct sigaltstack *oss);
-#endif
+*/
 
 static void
 register_alt_stack (void)
