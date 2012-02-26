@@ -1863,10 +1863,12 @@
 		;true if the port is an output-only port
 	    (PORT.LAST-OPERATION-WAS-INPUT?	(%dot-id ".last-operation-was-input?"))
 		;true if the  port is input or the  port is input/output
-		;and the last operation was input
+		;and the  last operation was input; in  other words: the
+		;buffer may contain input bytes
 	    (PORT.LAST-OPERATION-WAS-OUTPUT?	(%dot-id ".last-operation-was-output?"))
 		;true if the port is  output or the port is input/output
-		;and the last operation was output
+		;and the last operation  was output; in other words: the
+		;buffer may contain output bytes
 	    (PORT.BUFFER-MODE-LINE?		(%dot-id ".buffer-mode-line?"))
 		;true if the port has LINE as buffer mode
 	    (PORT.BUFFER-MODE-NONE?		(%dot-id ".buffer-mode-none?"))
@@ -2289,13 +2291,14 @@
 
 (define-inline (%unsafe.last-port-operation-was-input? port)
   ;;True if PORT is input or PORT is input/output and the last operation
-  ;;was input.
+  ;;was input; in other words: the buffer may contain input bytes.
   ;;
   (unsafe.fx= (unsafe.fxand ($port-attrs port) INPUT-PORT-TAG) INPUT-PORT-TAG))
 
 (define-inline (%unsafe.last-port-operation-was-output? port)
   ;;True  if  PORT  is output  or  PORT  is  input/output and  the  last
-  ;;operation was output.
+  ;;operation was output;  in other words: the buffer  may contain output
+  ;;bytes.
   ;;
   (unsafe.fx= (unsafe.fxand ($port-attrs port) OUTPUT-PORT-TAG) OUTPUT-PORT-TAG))
 
