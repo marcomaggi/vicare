@@ -503,8 +503,11 @@ ikrt_with_local_storage (ikptr s_lengths, ikptr s_thunk, ikpcb * pcb)
   long		total_length	= 0;
   long		lengths[arity];
   int		i;
+  ikptr		sk;
+  ikptr		s_result;
   for (i=0; i<arity; ++i)
     total_length += lengths[i] = IK_UNFIX(IK_ITEM(s_lengths, i));
+  sk = ik_enter_c_function(pcb);
   {
     uint8_t	buffer[total_length];
     long	offset;
@@ -516,8 +519,10 @@ ikrt_with_local_storage (ikptr s_lengths, ikptr s_thunk, ikpcb * pcb)
 	iku_pointer_alloc(pcb, (ik_ulong)&(buffer[offset]));
     }
     /* Call the Scheme procedure. */
-    return ik_exec_code(pcb, code_ptr, IK_FIX(-arity), s_thunk);
+    s_result = ik_exec_code(pcb, code_ptr, IK_FIX(-arity), s_thunk);
   }
+  ik_leave_c_function(pcb, sk);
+  return s_result;
 }
 
 
