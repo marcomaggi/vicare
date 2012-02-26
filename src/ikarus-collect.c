@@ -680,17 +680,19 @@ handle_guardians (gc_t* gc)
   ik_ptr_page *	pend_hold_list = 0;
   ik_ptr_page *	pend_final_list = 0;
   int		gen;
-  /* sort protected pairs into pend_hold and pend_final lists */
+  /* Sort protected pairs into PEND_HOLD and PEND_FINAL lists. */
   for (gen=0; gen<=gc->collect_gen; gen++) {
-    ik_ptr_page* prot_list = pcb->protected_list[gen];
+    /* PROT_LIST references a NULL-terminated linked list of pages. */
+    ik_ptr_page *	prot_list = pcb->protected_list[gen];
     pcb->protected_list[gen] = 0;
     while (prot_list) {
       int	i;
+      /* Scan the words in this page. */
       for(i=0; i<prot_list->count; i++) {
         ikptr	p   = prot_list->ptr[i];
         ikptr	tc  = IK_CAR(p);
         ikptr	obj = IK_CDR(p);
-        if (tc == IK_FORWARD_PTR) {
+        if (IK_FORWARD_PTR == tc) {
           ikptr np = IK_CDR(p);
           tc  = IK_CAR(np);
           obj = IK_CDR(np);
@@ -700,62 +702,65 @@ handle_guardians (gc_t* gc)
 	else
           pend_final_list = move_tconc(p, pend_final_list);
       }
-      ik_ptr_page * next = prot_list->next;
-      ik_munmap((ikptr)prot_list, pagesize);
-      prot_list = next;
+      { /* Deallocate this node in the PROT_LIST linked list. */
+	ik_ptr_page *	next = prot_list->next;
+	ik_munmap((ikptr)prot_list, pagesize);
+	prot_list = next;
+      }
     }
   }
-  /* move live tc pend_final_list pairs into final_list,
-     the rest remain in pend_final_list,
-     final_list objects are made live and collected in
-     gc->forward_list */
-  gc->forward_list = 0;
-  int done = 0;
-  while(!done) {
-    ik_ptr_page* final_list = 0;
-    ik_ptr_page* ls = pend_final_list;
-    pend_final_list = 0;
-    while(ls) {
-      int i;
-      for(i=0; i<ls->count; i++) {
-        ikptr p = ls->ptr[i];
-        ikptr tc = ref(p, off_car);
-        if (tc == IK_FORWARD_PTR) {
-          ikptr np = ref(p, off_cdr);
-          tc = ref(np, off_car);
-        }
-        if (is_live(tc, gc)) {
-          final_list = move_tconc(p, final_list);
-        } else {
-          pend_final_list = move_tconc(p, pend_final_list);
-        }
+  /* Here we know that  the array PCB->PROTECTED_LIST[...] holds invalid
+     words. */
+
+  { /* Move  live tc  PEND_FINAL_LIST  pairs into  FINAL_LIST, the  rest
+       remain in  PEND_FINAL_LIST; FINAL_LIST objects are  made live and
+       collected in GC->FORWARD_LIST.  */
+    gc->forward_list = 0;
+    int done = 0;
+    while (!done) {
+      ik_ptr_page* final_list = 0;
+      ik_ptr_page* ls = pend_final_list;
+      pend_final_list = 0;
+      while (ls) {
+	int i;
+	for (i=0; i<ls->count; i++) {
+	  ikptr p = ls->ptr[i];
+	  ikptr tc = ref(p, off_car);
+	  if (tc == IK_FORWARD_PTR) {
+	    ikptr np = ref(p, off_cdr);
+	    tc = ref(np, off_car);
+	  }
+	  if (is_live(tc, gc)) {
+	    final_list = move_tconc(p, final_list);
+	  } else {
+	    pend_final_list = move_tconc(p, pend_final_list);
+	  }
+	}
+	ik_ptr_page* next = ls->next;
+	ik_munmap((ikptr)ls, pagesize);
+	ls = next;
       }
-      ik_ptr_page* next = ls->next;
-      ik_munmap((ikptr)ls, pagesize);
-      ls = next;
-    }
-    if (final_list == NULL) {
-      done = 1;
-    } else {
-      ls = final_list;
-      while(ls) {
-        int i;
-        for(i=0; i<ls->count; i++) {
-          ikptr p = ls->ptr[i];
-          gc->forward_list =
-            move_tconc(add_object(gc, p, "guardian"),
-		       gc->forward_list);
-        }
-        ik_ptr_page* next = ls->next;
-        ik_munmap((ikptr)ls, pagesize);
-        ls = next;
+      if (final_list == NULL) {
+	done = 1;
+      } else {
+	ls = final_list;
+	while (ls) {
+	  int i;
+	  for (i=0; i<ls->count; i++) {
+	    ikptr p = ls->ptr[i];
+	    gc->forward_list = move_tconc(add_object(gc, p, "guardian"), gc->forward_list);
+	  }
+	  ik_ptr_page* next = ls->next;
+	  ik_munmap((ikptr)ls, pagesize);
+	  ls = next;
+	}
+	collect_loop(gc);
       }
-      collect_loop(gc);
     }
   }
-  /* pend_final_list now contains things that are dead and
-     their tconcs are also dead, deallocate */
-  while(pend_final_list) {
+  /* PEND_FINAL_LIST now contains things  that are dead and their tconcs
+     are also dead, deallocate. */
+  while (pend_final_list) {
     ik_ptr_page* next = pend_final_list->next;
     ik_munmap((ikptr)pend_final_list, pagesize);
     pend_final_list = next;
@@ -785,7 +790,8 @@ handle_guardians (gc_t* gc)
 }
 
 static void
-gc_finalize_guardians(gc_t* gc) {
+gc_finalize_guardians (gc_t* gc)
+{
   ik_ptr_page* ls = gc->forward_list;
   int tconc_count = 0;
   unsigned int* dirty_vec = (unsigned int*)(long)gc->pcb->dirty_vector;
@@ -811,9 +817,8 @@ gc_finalize_guardians(gc_t* gc) {
   }
 }
 
-
+
 static int alloc_code_count = 0;
-
 
 static ikptr
 add_code_entry(gc_t* gc, ikptr entry) {
