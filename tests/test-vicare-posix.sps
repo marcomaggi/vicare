@@ -1441,28 +1441,33 @@
 			     (put-bytevector port '#vu8(1 2 3))
 			     (flush-output-port port)
 			     (get-bytevector-n! port bv 0 3)
+;;;			     (check-pretty-print (list 'parent-recv bv))
 			     (add-result bv))
 			 (close-port port)))))
 	       (px.close server-sock)
 	       (px.waitpid pid 0))))
 	 (define (child)
-	   (px.nanosleep 1 0) ;give parent the time to listen
-	   (let* ((sock (px.socket PF_LOCAL SOCK_STREAM 0))
-		  (port (make-binary-socket-input/output-port sock "*child-sock*")))
-	     (px.setsockopt/linger sock #t 1)
-	     (unwind-protect
-		 (begin
-		   (px.connect sock sockaddr)
-		   (assert (equal? '#vu8(1 2 3) (get-bytevector-n port 3)))
-		   (put-bytevector port '#vu8(1 2 3))
-		   (flush-output-port port))
-	       (close-port port)))
-	   (exit 0))
+	   (guard (E (else
+		      (check-pretty-print E)))
+	     (px.nanosleep 1 0) ;give parent the time to listen
+	     (let* ((sock (px.socket PF_LOCAL SOCK_STREAM 0))
+		    (port (make-binary-socket-input/output-port sock "*child-sock*")))
+	       (px.setsockopt/linger sock #t 1)
+	       (unwind-protect
+		   (begin
+		     (px.connect sock sockaddr)
+		     (let ((bv (get-bytevector-n port 3)))
+;;;		       (check-pretty-print (list 'child-recv bv))
+		       (assert (equal? '#vu8(1 2 3) bv)))
+		     (put-bytevector port '#vu8(4 5 6))
+		     (flush-output-port port))
+		 (close-port port)))
+	     (exit 0)))
 	 (when (file-exists? pathname) (px.unlink pathname))
 	 (px.fork parent child)
 	 (when (file-exists? pathname) (px.unlink pathname))
 	 #t))
-    => '(#t (#vu8(1 2 3))))
+    => '(#t (#vu8(4 5 6))))
 
   (check	;fork process, textual port input/output
       (with-result

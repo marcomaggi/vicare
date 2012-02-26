@@ -838,7 +838,7 @@
       (unsafe.fxior other-attributes FAST-GET-BYTE-TAG)
     (case (transcoder-codec maybe-transcoder)
       ((utf-8-codec)	(unsafe.fxior other-attributes FAST-GET-UTF8-TAG))
-      ((latin-1-codec)	(unsafe.fxior other-attributes	FAST-GET-LATIN-TAG))
+      ((latin-1-codec)	(unsafe.fxior other-attributes FAST-GET-LATIN-TAG))
       ((utf-16le-codec)	(unsafe.fxior other-attributes FAST-GET-UTF16LE-TAG))
       ((utf-16be-codec)	(unsafe.fxior other-attributes FAST-GET-UTF16BE-TAG))
       ;;The      selection     between      FAST-GET-UTF16LE-TAG     and
@@ -1854,9 +1854,19 @@
 	    (PORT.IS-INPUT-AND-OUTPUT?		(%dot-id ".is-input-and-output?"))
 		;true if the port is both input and output
 	    (PORT.IS-INPUT?			(%dot-id ".is-input?"))
-		;true if the port is an input port
+		;true if the port is an input or input/output port
 	    (PORT.IS-OUTPUT?			(%dot-id ".is-output?"))
-		;true if the port is an output port
+		;true if the port is an output or input/output port
+	    (PORT.IS-INPUT-ONLY?		(%dot-id ".is-input-only?"))
+		;true if the port is an input-only port
+	    (PORT.IS-OUTPUT-ONLY?		(%dot-id ".is-output-only?"))
+		;true if the port is an output-only port
+	    (PORT.LAST-OPERATION-WAS-INPUT?	(%dot-id ".last-operation-was-input?"))
+		;true if the  port is input or the  port is input/output
+		;and the last operation was input
+	    (PORT.LAST-OPERATION-WAS-OUTPUT?	(%dot-id ".last-operation-was-output?"))
+		;true if the port is  output or the port is input/output
+		;and the last operation was output
 	    (PORT.BUFFER-MODE-LINE?		(%dot-id ".buffer-mode-line?"))
 		;true if the port has LINE as buffer mode
 	    (PORT.BUFFER-MODE-NONE?		(%dot-id ".buffer-mode-none?"))
@@ -1904,6 +1914,12 @@
 		(PORT.IS-INPUT-AND-OUTPUT? (identifier-syntax (%unsafe.input-and-output-port? ?port)))
 		(PORT.IS-INPUT?		(identifier-syntax (%unsafe.input-port? ?port)))
 		(PORT.IS-OUTPUT?	(identifier-syntax (%unsafe.output-port? ?port)))
+		(PORT.IS-INPUT-ONLY?	(identifier-syntax (%unsafe.input-only-port? ?port)))
+		(PORT.IS-OUTPUT-ONLY?	(identifier-syntax (%unsafe.output-only-port? ?port)))
+		(PORT.LAST-OPERATION-WAS-INPUT?
+		 (identifier-syntax (%unsafe.last-port-operation-was-input? ?port)))
+		(PORT.LAST-OPERATION-WAS-OUTPUT?
+		 (identifier-syntax (%unsafe.last-port-operation-was-output? ?port)))
 		(PORT.BUFFER-MODE-LINE?	(identifier-syntax (%unsafe.port-buffer-mode-line? ?port)))
 		(PORT.BUFFER-MODE-NONE?	(identifier-syntax (%unsafe.port-buffer-mode-none? ?port)))
 		(PORT.ATTRIBUTES	(identifier-syntax
@@ -2228,7 +2244,6 @@
 
   (define-unsafe-predicate %unsafe.binary-port?		BINARY-PORT-TAG)
   (define-unsafe-predicate %unsafe.textual-port?	TEXTUAL-PORT-TAG)
-  (define-unsafe-predicate %unsafe.input-port?		INPUT-PORT-TAG)
   (define-unsafe-predicate %unsafe.input-and-output-port? INPUT/OUTPUT-PORT-TAG)
 
   (define-unsafe-predicate %unsafe.binary-input-port?	BINARY-INPUT-PORT-BITS)
@@ -2244,22 +2259,45 @@
   (define-unsafe-predicate %unsafe.port-with-fd-device?		PORT-WITH-FD-DEVICE)
   )
 
+(define-inline (%unsafe.input-only-port? port)
+  ;;True if PORT is input and not input/output.
+  ;;
+  (let ((flags ($port-attrs port)))
+    (and (unsafe.fx= (unsafe.fxand flags INPUT-PORT-TAG) INPUT-PORT-TAG)
+	 (unsafe.fxzero? (unsafe.fxand flags INPUT/OUTPUT-PORT-TAG)))))
+
+(define-inline (%unsafe.input-port? port)
+  ;;True if PORT is input or input/output.
+  ;;
+  (let ((flags ($port-attrs port)))
+    (or (unsafe.fx= (unsafe.fxand flags INPUT-PORT-TAG) INPUT-PORT-TAG)
+	(unsafe.fx= (unsafe.fxand flags INPUT/OUTPUT-PORT-TAG) INPUT/OUTPUT-PORT-TAG))))
+
+(define-inline (%unsafe.output-only-port? port)
+  ;;True if PORT is output and not input/output.
+  ;;
+  (let ((flags ($port-attrs port)))
+    (and (unsafe.fx= (unsafe.fxand flags OUTPUT-PORT-TAG) OUTPUT-PORT-TAG)
+	 (unsafe.fxzero? (unsafe.fxand flags INPUT/OUTPUT-PORT-TAG)))))
+
 (define-inline (%unsafe.output-port? port)
+  ;;True if PORT is output or input/output.
+  ;;
   (let ((flags ($port-attrs port)))
     (or (unsafe.fx= (unsafe.fxand flags OUTPUT-PORT-TAG) OUTPUT-PORT-TAG)
 	(unsafe.fx= (unsafe.fxand flags INPUT/OUTPUT-PORT-TAG) INPUT/OUTPUT-PORT-TAG))))
 
-(define (%unsafe.last-port-operation-was-output? port)
-  (with-port (port)
-;;;FIXME  It  would be  better  to use  a  CASE  syntax specialised  for
-;;;fixnums.
-    (let ((m port.fast-attributes))
-      (or (unsafe.fx= m FAST-PUT-BYTE-TAG)
-	  (unsafe.fx= m FAST-PUT-CHAR-TAG)
-	  (unsafe.fx= m FAST-PUT-UTF8-TAG)
-	  (unsafe.fx= m FAST-PUT-LATIN-TAG)
-	  (unsafe.fx= m FAST-PUT-UTF16BE-TAG)
-	  (unsafe.fx= m FAST-PUT-UTF16LE-TAG)))))
+(define-inline (%unsafe.last-port-operation-was-input? port)
+  ;;True if PORT is input or PORT is input/output and the last operation
+  ;;was input.
+  ;;
+  (unsafe.fx= (unsafe.fxand ($port-attrs port) INPUT-PORT-TAG) INPUT-PORT-TAG))
+
+(define-inline (%unsafe.last-port-operation-was-output? port)
+  ;;True  if  PORT  is output  or  PORT  is  input/output and  the  last
+  ;;operation was output.
+  ;;
+  (unsafe.fx= (unsafe.fxand ($port-attrs port) OUTPUT-PORT-TAG) OUTPUT-PORT-TAG))
 
 
 ;;;; guarded ports
@@ -2365,7 +2403,7 @@
       ;;DEVICE-POSITION is the position in the underlying device, but we
       ;;have to return the port  position taking into account the offset
       ;;in the input/output buffer.
-      (if (%unsafe.output-port? port)
+      (if port.last-operation-was-output?
 	  (+ device-position port.buffer.index)
 	(- device-position (- port.buffer.used-size port.buffer.index))))))
 
@@ -2395,7 +2433,7 @@
   ;;
   (with-port (port)
     (let ((device-position (%unsafe.device-position/tracked-position who port)))
-      (if (%unsafe.output-port? port)
+      (if port.last-operation-was-output?
 	  (+ device-position port.buffer.index)
 	(- device-position (- port.buffer.used-size port.buffer.index))))))
 
@@ -2479,7 +2517,7 @@
 	  ;;computed  when the  buffer is  empty; we  need to  take into
 	  ;;account the current buffer index.
 	  (let ((device.new-position
-		 (if (%unsafe.output-port? port)
+		 (if port.last-operation-was-output?
 		     ;;Output  port: flush  the buffer  and reset  it to
 		     ;;empty.  Before flushing:
 		     ;;
@@ -3781,10 +3819,10 @@
     (with-port-having-bytevector-buffer (port)
       (let ((transcoded-port ($make-port
 			      (unsafe.fxior
-			       (cond (port.is-input?
-				      (%select-input-fast-tag-from-transcoder who transcoder))
-				     (port.is-output?
+			       (cond (port.last-operation-was-output?
 				      (%select-output-fast-tag-from-transcoder who transcoder))
+				     (port.last-operation-was-input?
+				      (%select-input-fast-tag-from-transcoder who transcoder))
 				     (else
 				      (assertion-violation who "port is neither input nor output!" port)))
 			       (%unsafe.port-nullify-eol-style-bits port.other-attributes)
@@ -3871,9 +3909,7 @@
   ;;
   (with-port (port)
     (unless port.closed?
-      (when (or port.is-output?
-		(and port.is-input-and-output?
-		     (%unsafe.last-port-operation-was-output? port)))
+      (when port.last-operation-was-output?
 	(%unsafe.flush-output-port port who))
       (port.mark-as-closed!)
       (when (procedure? port.close)
@@ -6959,6 +6995,9 @@
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
   (define (write! src.bv src.start requested-count)
+    ;; (emergency-platform-write-fd (format "socket ~a writing ~a bytes: ~a"
+    ;; 				   sock requested-count
+    ;; 				   (subbytevector-u8 src.bv src.start (+ src.start requested-count))))
     (let ((rv (capi.platform-write-fd sock src.bv src.start requested-count)))
       (cond ((unsafe.fx>= rv 0)
 	     rv)
