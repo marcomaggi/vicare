@@ -663,22 +663,36 @@ ikrt_bvftime (ikptr outbv, ikptr fmtbv)
 }
 
 
+/** --------------------------------------------------------------------
+ ** Guardians handling.
+ ** ----------------------------------------------------------------- */
+
+/* Reference words to guardians  are stored in array "protected_list" of
+   the structure  "ik_ptr_page"; such structures  are nodes in  a linked
+   referenced  by  "pcb->protected_list[IK_GUARDIANS_GENERATION_NUMBER].
+   */
+
 ikptr
 ikrt_register_guardian_pair (ikptr p0, ikpcb* pcb)
 /* Register a guardian  pair in the protected list of  PCB.  If there is
    no more room in the current  protected list node: allocate a new node
    and prepend it to the linked list.  Return the void object. */
 {
-  ik_ptr_page* x = pcb->protected_list[IK_GUARDIANS_GENERATION_NUMBER];
-  if ((NULL == x) || (IK_PTR_PAGE_SIZE == x->count)) {
+  /* FIRST is  a pointer  to the first  node in  a linked list.   If the
+     linked list is empty or the first node is full: allocate a new node
+     and prepend it to the list. */
+  ik_ptr_page *	first;
+  first = pcb->protected_list[IK_GUARDIANS_GENERATION_NUMBER];
+  if ((NULL == first) || (IK_PTR_PAGE_SIZE == first->count)) {
     assert(sizeof(ik_ptr_page) == pagesize);
-    ik_ptr_page* y = (ik_ptr_page*)(long)ik_mmap(pagesize);
-    y->count = 0;
-    y->next  = x;
-    x        = y;
-    pcb->protected_list[0] = y;
+    ik_ptr_page *	new_node;
+    new_node        = (ik_ptr_page*)(long)ik_mmap(pagesize);
+    new_node->count = 0;
+    new_node->next  = first;
+    first           = new_node;
+    pcb->protected_list[IK_GUARDIANS_GENERATION_NUMBER] = new_node;
   }
-  x->ptr[x->count++] = p0; /* store the guardian pair */
+  first->ptr[first->count++] = p0; /* store the guardian pair */
   return void_object;
 }
 ikptr
