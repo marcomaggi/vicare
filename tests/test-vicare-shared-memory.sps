@@ -33,7 +33,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare mmapped shared memory\n")
+(check-display "*** testing Vicare mmapped shared memory\n")
 
 
 (parametrise ((check-test-name	'raw))
