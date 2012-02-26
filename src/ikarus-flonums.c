@@ -222,42 +222,42 @@ ikptr
 ikrt_fx_sin (ikptr x, ikpcb* pcb)
 {
   IKU_DEFINE_AND_ALLOC_FLONUM(r);
-  IK_FLONUM_DATA(r) = sin(unfix(x));
+  IK_FLONUM_DATA(r) = sin(IK_UNFIX(x));
   return r;
 }
 ikptr
 ikrt_fx_cos (ikptr x, ikpcb* pcb)
 {
   IKU_DEFINE_AND_ALLOC_FLONUM(r);
-  IK_FLONUM_DATA(r) = cos(unfix(x));
+  IK_FLONUM_DATA(r) = cos(IK_UNFIX(x));
   return r;
 }
 ikptr
 ikrt_fx_tan (ikptr x, ikpcb* pcb)
 {
   IKU_DEFINE_AND_ALLOC_FLONUM(r);
-  IK_FLONUM_DATA(r) = tan(unfix(x));
+  IK_FLONUM_DATA(r) = tan(IK_UNFIX(x));
   return r;
 }
 ikptr
 ikrt_fx_asin (ikptr x, ikpcb* pcb)
 {
   IKU_DEFINE_AND_ALLOC_FLONUM(r);
-  IK_FLONUM_DATA(r) = asin(unfix(x));
+  IK_FLONUM_DATA(r) = asin(IK_UNFIX(x));
   return r;
 }
 ikptr
 ikrt_fx_acos (ikptr x, ikpcb* pcb)
 {
   IKU_DEFINE_AND_ALLOC_FLONUM(r);
-  IK_FLONUM_DATA(r) = acos(unfix(x));
+  IK_FLONUM_DATA(r) = acos(IK_UNFIX(x));
   return r;
 }
 ikptr
 ikrt_fx_atan (ikptr x, ikpcb* pcb)
 {
   IKU_DEFINE_AND_ALLOC_FLONUM(r);
-  IK_FLONUM_DATA(r) = atan(unfix(x));
+  IK_FLONUM_DATA(r) = atan(IK_UNFIX(x));
   return r;
 }
 ikptr
@@ -305,20 +305,20 @@ ikptr
 ikrt_fx_sqrt (ikptr x, ikpcb* pcb)
 {
   IKU_DEFINE_AND_ALLOC_FLONUM(r);
-  IK_FLONUM_DATA(r) = sqrt(unfix(x));
+  IK_FLONUM_DATA(r) = sqrt(IK_UNFIX(x));
   return r;
 }
 ikptr
 ikrt_fx_log (ikptr x, ikpcb* pcb)
 {
   IKU_DEFINE_AND_ALLOC_FLONUM(r);
-  IK_FLONUM_DATA(r) = log(unfix(x));
+  IK_FLONUM_DATA(r) = log(IK_UNFIX(x));
   return r;
 }
 ikptr
 ikrt_fixnum_to_flonum (ikptr x, ikptr r)
 {
-  IK_FLONUM_DATA(r) = unfix(x);
+  IK_FLONUM_DATA(r) = IK_UNFIX(x);
   return r;
 }
 ikptr

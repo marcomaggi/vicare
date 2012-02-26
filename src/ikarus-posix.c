@@ -909,7 +909,7 @@ ikrt_posix_fchown (ikptr s_fd, ikptr s_owner, ikptr s_group)
   int	  rv;
   errno	   = 0;
   rv	   = fchown(IK_NUM_TO_FD(s_fd), IK_NUM_TO_UID(s_owner), IK_NUM_TO_GID(s_group));
-  return (0 == rv)? fix(0) : ik_errno_to_code();
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -1559,14 +1559,14 @@ ikrt_posix_select (ikptr nfds_fx,
   errno = 0;
   rv	= select(nfds, &read_fds, &write_fds, &except_fds, &timeout);
   if (0 == rv) { /* timeout has expired */
-    return fix(0);
+    return IK_FIX(0);
   } else if (-1 == rv) { /* an error occurred */
     return ik_errno_to_code();
   } else { /* success, let's harvest the fds */
     /* Build the vector	 to be returned and prevent  it from being garbage
        collected while building other objects. */
     vec = ik_safe_alloc(pcb, IK_ALIGN(disp_vector_data+3*wordsize)) | vector_tag;
-    IK_REF(vec, off_vector_length) = fix(3);
+    IK_REF(vec, off_vector_length) = IK_FIX(3);
     IK_REF(vec, off_vector_data+0*wordsize) = null_object;
     IK_REF(vec, off_vector_data+1*wordsize) = null_object;
     IK_REF(vec, off_vector_data+2*wordsize) = null_object;
@@ -1816,7 +1816,7 @@ ikrt_posix_fcntl (ikptr fd, ikptr command, ikptr arg)
     rv = fcntl(IK_UNFIX(fd), IK_UNFIX(command), val);
   } else
     ik_abort("invalid last argument to fcntl()");
-  return (-1 != rv)? fix(rv) : ik_errno_to_code();
+  return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -1840,7 +1840,7 @@ ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
     rv = ioctl(IK_UNFIX(fd), IK_UNFIX(command), val);
   } else
     ik_abort("invalid last argument to ioctl()");
-  return (-1 != rv)? fix(rv) : ik_errno_to_code();
+  return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -1855,7 +1855,7 @@ ikrt_posix_dup (ikptr fd)
   int	rv;
   errno = 0;
   rv	= dup(IK_UNFIX(fd));
-  return (-1 != rv)? fix(rv) : ik_errno_to_code();
+  return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -1867,7 +1867,7 @@ ikrt_posix_dup2 (ikptr old, ikptr new)
   int	rv;
   errno = 0;
   rv	= dup2(IK_UNFIX(old), IK_UNFIX(new));
-  return (-1 != rv)? fix(0) : ik_errno_to_code();
+  return (-1 != rv)? IK_FIX(0) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -1904,7 +1904,7 @@ ikrt_posix_mkfifo (ikptr s_pathname, ikptr mode)
   pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   errno	   = 0;
   rv	   = mkfifo(pathname, IK_UNFIX(mode));
-  return (0 <= rv)? fix(rv) : ik_errno_to_code();
+  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif

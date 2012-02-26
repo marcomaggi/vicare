@@ -44,12 +44,12 @@ verify_code (char* x, char* base, unsigned* svec, unsigned* dvec)
   assert(isa_vector(rvec));
   ikptr codesize = ref(x, disp_code_code_size);
   codesize += 0;
-  assert(unfix(codesize) >= 0);
+  assert(IK_UNFIX(codesize) >= 0);
   assert(isa_fixnum(codesize));
   ikptr freevars = ref(x, disp_code_freevars);
   freevars += 0;
   assert(isa_fixnum(freevars));
-  assert(unfix(freevars) >= 0);
+  assert(IK_UNFIX(freevars) >= 0);
 
   unsigned rs = svec[page_idx((void*)(long)rvec) - page_idx(base)];
   unsigned cs = svec[page_idx(x) - page_idx(base)];
@@ -78,7 +78,7 @@ verify_code_small (char* p, int s, unsigned d,
     ikptr fst = ref(p, 0);
     if(fst == code_tag){
       assert(IK_IS_FIXNUM(ref(p, disp_code_code_size)));
-      int code_size = unfix(ref(p, disp_code_code_size));
+      int code_size = IK_UNFIX(ref(p, disp_code_code_size));
       assert(code_size >= 0);
       verify_code(p, base, svec, dvec);
       p+=IK_ALIGN(code_size + disp_code_data);
@@ -99,7 +99,7 @@ verify_code_large (char* p, unsigned s, unsigned d,
   ikptr fst = ref(p, 0);
   fst += 0;
   assert(fst == code_tag);
-  int code_size = unfix(ref(p, disp_code_code_size));
+  int code_size = IK_UNFIX(ref(p, disp_code_code_size));
   assert(code_size >= 0);
   verify_code(p, base, svec, dvec);
   assert(IK_ALIGN(code_size+disp_code_data) >= pagesize);
@@ -115,7 +115,7 @@ verify_code_page (char* p, unsigned s, unsigned d,
   if (fst != code_tag) {
     ik_abort("non code object with tag %p found\n", (void*)(long)fst);
   }
-  int code_size = unfix(ref(p, disp_code_code_size));
+  int code_size = IK_UNFIX(ref(p, disp_code_code_size));
   assert(code_size >= 0);
   int obj_size = IK_ALIGN(code_size + disp_code_data);
   char* result;

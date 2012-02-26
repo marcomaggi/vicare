@@ -172,7 +172,7 @@ ikrt_read_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_co
   buffer = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv) + IK_UNFIX(buffer_offset);
   errno  = 0;
   rv     = read(IK_UNFIX(fd), buffer, IK_UNFIX(requested_count));
-  return (0 <= rv)? fix(rv) : ik_errno_to_code();
+  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 }
 ikptr
 ikrt_write_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_count /*, ikpcb* pcb */)

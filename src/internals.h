@@ -383,9 +383,6 @@ typedef struct ikcont {
 
 #define ref(X,N)	IK_REF((X),(N))
 
-#define fix(X)		IK_FIX(X)
-#define unfix(X)	IK_UNFIX(X)
-
 
 /** --------------------------------------------------------------------
  ** Internal function prototypes.
