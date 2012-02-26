@@ -57,7 +57,8 @@
 		  load-r6rs-script)
 	    loading.)
     (prefix (only (ikarus.posix)
-		  getenv)
+		  getenv
+		  real-pathname)
 	    posix.)
     (only (ikarus cafe)
 	  cafe-input-port)
@@ -739,30 +740,32 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     (library-path (append cfg.search-path
 			  (cond ((posix.getenv "VICARE_LIBRARY_PATH")
 				 => split-path)
-				(else '(".")))
+				(else '()))
 			  (list config.scheme-lib-dir
 				config.vicare-lib-dir)))
     (when cfg.more-file-extensions
       (library-extensions (%prefix "/main"
 				   (%prefix ".vicare" '(".sls" ".ss" ".scm")))))))
 
-(define (split-path s)
-  (define (nodata i s ls)
-    (cond ((= i (string-length s))
+(define (split-path input-string)
+  (define (nodata idx input-string ls)
+    (cond ((= idx (string-length input-string))
 	   ls)
-	  ((char=? #\: (string-ref s i))
-	   (nodata (+ i 1) s ls))
+	  ((char=? #\: (string-ref input-string idx))
+	   (nodata (+ idx 1) input-string ls))
 	  (else
-	   (data (+ i 1) s ls (list (string-ref s i))))))
-  (define (data i s ls ac)
-    (cond ((= i (string-length s))
-	   (cons (list->string (reverse ac)) ls))
-	  ((char=? (string-ref s i) #\:)
-	   (nodata (+ i 1) s
-		   (cons (list->string (reverse ac)) ls)))
+	   (data (+ idx 1) input-string ls (list (string-ref input-string idx))))))
+  (define (data idx input-string ls accum)
+    (cond ((= idx (string-length input-string))
+	   (cons (posix.real-pathname (list->string (reverse accum)))
+		 ls))
+	  ((char=? (string-ref input-string idx) #\:)
+	   (nodata (+ idx 1) input-string
+		   (cons (posix.real-pathname (list->string (reverse accum)))
+			 ls)))
 	  (else
-	   (data (+ i 1) s ls (cons (string-ref s i) ac)))))
-  (reverse (nodata 0 s '())))
+	   (data (+ idx 1) input-string ls (cons (string-ref input-string idx) accum)))))
+  (reverse (nodata 0 input-string '())))
 
 
 (define (load-rc-files-as-r6rs-scripts cfg)
