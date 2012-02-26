@@ -40,44 +40,78 @@
 #define maximum_heap_size (pagesize * 1024 * 8)
 #define minimum_stack_size (pagesize * 128)
 
-/* If accounting is defined  as true: "add_object_proc()" will increment
-   the  appropriate  counter whenever  it  moves  a  live object;  later
-   "ik_collect()"  will   print  a  report  to  stderr   and  reset  the
-   counters. */
-#define ACCOUNTING 0
-#if ACCOUNTING
-static int pair_count = 0;
-static int symbol_count = 0;
-static int closure_count = 0;
-static int vector_count = 0;
-static int record_count = 0;
-static int continuation_count = 0;
-static int string_count = 0;
-static int htable_count = 0;
-#endif
+#define meta_ptrs	0
+#define meta_code	1
+#define meta_data	2
+#define meta_weak	3
+#define meta_pair	4
+#define meta_symbol	5
+#define meta_count	6
 
-typedef struct qupages_t{
+
+/** --------------------------------------------------------------------
+ ** Type definitions.
+ ** ----------------------------------------------------------------- */
+
+typedef struct qupages_t {
   ikptr p;    /* pointer to the scan start */
   ikptr q;    /* pointer to the scan end */
   struct qupages_t* next;
 } qupages_t;
 
-
-typedef struct{
+typedef struct {
   ikptr ap;
   ikptr aq;
   ikptr ep;
   ikptr base;
 } meta_t;
 
+typedef struct gc_t {
+  meta_t	meta[meta_count];
+  qupages_t *	queues[meta_count];
+  ikpcb*	pcb;
+  unsigned *	segment_vector;
+  int		collect_gen;
+  int		collect_gen_tag;
+  ikptr		tconc_ap;
+  ikptr		tconc_ep;
+  ikptr		tconc_base;
+  ikpages *	tconc_queue;
+  ik_ptr_page *	forward_list;
+} gc_t;
 
-#define meta_ptrs 0
-#define meta_code 1
-#define meta_data 2
-#define meta_weak 3
-#define meta_pair 4
-#define meta_symbol 5
-#define meta_count 6
+
+/** --------------------------------------------------------------------
+ ** Function prototypes.
+ ** ----------------------------------------------------------------- */
+
+static void	handle_guardians	(gc_t* gc);
+static void	gc_finalize_guardians	(gc_t* gc);
+static ikptr	meta_alloc_extending	(long size, gc_t* gc, int meta_id);
+static int	collection_id_to_gen	(int id);
+
+static void ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb);
+
+
+/** --------------------------------------------------------------------
+ ** Global variables.
+ ** ----------------------------------------------------------------- */
+
+/* If accounting is defined  as true: "add_object_proc()" will increment
+   the  appropriate  counter whenever  it  moves  a  live object;  later
+   "ik_collect()"  will   print  a  report  to  stderr   and  reset  the
+   counters. */
+#define ACCOUNTING 0
+#if ACCOUNTING
+static int pair_count		= 0;
+static int symbol_count		= 0;
+static int closure_count	= 0;
+static int vector_count		= 0;
+static int record_count		= 0;
+static int continuation_count	= 0;
+static int string_count		= 0;
+static int htable_count		= 0;
+#endif
 
 static int extension_amount[meta_count] = {
   1 * pagesize,
@@ -96,26 +130,6 @@ static unsigned int meta_mt[meta_count] = {
   pointers_mt,
   symbols_mt
 };
-
-typedef struct gc_t {
-  meta_t	meta [meta_count];
-  qupages_t*	queues [meta_count];
-  ikpcb*	pcb;
-  unsigned int* segment_vector;
-  int		collect_gen;
-  int		collect_gen_tag;
-  ikptr		tconc_ap;
-  ikptr		tconc_ep;
-  ikptr		tconc_base;
-  ikpages*	tconc_queue;
-  ik_ptr_page*	forward_list;
-} gc_t;
-
-static void handle_guardians(gc_t* gc);
-static void gc_finalize_guardians(gc_t* gc);
-
-/* Subroutine for "ik_collect()". */
-static int collection_id_to_gen (int id);
 
 static unsigned int
 next_gen_tag[generation_count] = {
@@ -138,22 +152,26 @@ ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb)
    "pcb->dirty_vector"; finally either register it in the uncached pages
    or unmap it. */
 {
+  unsigned *	p;
+  unsigned *	s;
+  unsigned *	q;
+  ikpage *	r;
   assert(base >= pcb->memory_base);
   assert((base+size) <= pcb->memory_end);
   assert(size == IK_ALIGN_TO_NEXT_PAGE(size));
-  unsigned* p = ((unsigned*)(long)(pcb->segment_vector)) + IK_PAGE_INDEX(base);
-  unsigned* s = ((unsigned*)(long)(pcb->dirty_vector))   + IK_PAGE_INDEX(base);
-  unsigned* q = p + IK_PAGE_INDEX(size);
+  p = ((unsigned *)(long)(pcb->segment_vector)) + IK_PAGE_INDEX(base);
+  s = ((unsigned *)(long)(pcb->dirty_vector))   + IK_PAGE_INDEX(base);
+  q = p + IK_PAGE_INDEX(size);
   while (p < q) {
     assert(*p != hole_mt);
     *p = hole_mt; /* holes */
     *s = 0;
     p++; s++;
   }
-  ikpage* r = pcb->uncached_pages;
+  r = pcb->uncached_pages;
   if (r) {
-    ikpage* cache = pcb->cached_pages;
-    ikpage* next;
+    ikpage *	cache = pcb->cached_pages;
+    ikpage *	next;
     do {
       r->base = base;
       next    = r->next;
@@ -171,34 +189,35 @@ ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb)
   }
 }
 
-
 
 static ikptr
-meta_alloc_extending(long size, gc_t* gc, int meta_id) {
-  long mapsize = IK_ALIGN_TO_NEXT_PAGE(size);
+meta_alloc_extending (long size, gc_t* gc, int meta_id)
+{
+  long		mapsize;
+  meta_t *	meta;
+  ikptr		mem;
+  mapsize = IK_ALIGN_TO_NEXT_PAGE(size);
   if (mapsize < extension_amount[meta_id]) {
     mapsize = extension_amount[meta_id];
   }
-  meta_t* meta = &gc->meta[meta_id];
+  meta = &gc->meta[meta_id];
   if ((meta_id != meta_data) &&  meta->base) {
-    qupages_t* p = ik_malloc(sizeof(qupages_t));
-    ikptr aq = meta->aq;
-    ikptr ap = meta->ap;
-    ikptr ep = meta->ep;
+    qupages_t *	p  = ik_malloc(sizeof(qupages_t));
+    ikptr	aq = meta->aq;
+    ikptr	ap = meta->ap;
+    ikptr	ep = meta->ep;
+    ikptr	x;
     p->p = aq;
     p->q = ap;
     p->next = gc->queues[meta_id];
     gc->queues[meta_id] = p;
-    ikptr x = ap;
-    while(x < ep) {
+    x = ap;
+    while (x < ep) {
       ref(x, 0) = 0;
       x += wordsize;
     }
   }
-  ikptr mem = ik_mmap_typed(
-      mapsize,
-      meta_mt[meta_id] | gc->collect_gen_tag,
-      gc->pcb);
+  mem = ik_mmap_typed(mapsize, meta_mt[meta_id] | gc->collect_gen_tag, gc->pcb);
   gc->segment_vector = gc->pcb->segment_vector;
   meta->ap = mem + size;
   meta->aq = mem;
@@ -206,17 +225,14 @@ meta_alloc_extending(long size, gc_t* gc, int meta_id) {
   meta->base = mem;
   return mem;
 }
-
-
-
-
 static inline ikptr
-meta_alloc(long size, gc_t* gc, int meta_id) {
+meta_alloc (long size, gc_t* gc, int meta_id)
+{
   assert(size == IK_ALIGN(size));
-  meta_t* meta = &gc->meta[meta_id];
-  ikptr ap = meta->ap;
-  ikptr ep = meta->ep;
-  ikptr nap = ap + size;
+  meta_t *	meta = &gc->meta[meta_id];
+  ikptr		ap   = meta->ap;
+  ikptr		ep   = meta->ep;
+  ikptr		nap  = ap + size;
   if (nap > ep) {
     return meta_alloc_extending(size, gc, meta_id);
   } else {
@@ -224,22 +240,22 @@ meta_alloc(long size, gc_t* gc, int meta_id) {
     return ap;
   }
 }
-
 static inline ikptr
-gc_alloc_new_ptr(int size, gc_t* gc) {
+gc_alloc_new_ptr (int size, gc_t* gc)
+{
   assert(size == IK_ALIGN(size));
   return meta_alloc(size, gc, meta_ptrs);
 }
-
 static inline ikptr
-gc_alloc_new_large_ptr(int size, gc_t* gc) {
-  int memreq = IK_ALIGN_TO_NEXT_PAGE(size);
-  ikptr mem =
-      ik_mmap_typed(memreq,
-        pointers_mt | large_object_tag | gc->collect_gen_tag,
-        gc->pcb);
+gc_alloc_new_large_ptr (int size, gc_t* gc)
+{
+  int		memreq;
+  ikptr		mem;
+  qupages_t *	p;
+  memreq = IK_ALIGN_TO_NEXT_PAGE(size);
+  mem = ik_mmap_typed(memreq, pointers_mt | large_object_tag | gc->collect_gen_tag, gc->pcb);
   gc->segment_vector = gc->pcb->segment_vector;
-  qupages_t* p = ik_malloc(sizeof(qupages_t));
+  p    = ik_malloc(sizeof(qupages_t));
   p->p = mem;
   p->q = mem+size;
   bzero((char*)(long)(mem+size), memreq-size);
@@ -247,27 +263,23 @@ gc_alloc_new_large_ptr(int size, gc_t* gc) {
   gc->queues[meta_ptrs] = p;
   return mem;
 }
-
-
 static inline void
-enqueue_large_ptr(ikptr mem, int size, gc_t* gc) {
-  long i = IK_PAGE_INDEX(mem);
-  long j = IK_PAGE_INDEX(mem+size-1);
-  while(i<=j) {
-    gc->segment_vector[i] =
-      pointers_mt | large_object_tag | gc->collect_gen_tag;
-    i++;
-  }
-  qupages_t* p = ik_malloc(sizeof(qupages_t));
+enqueue_large_ptr (ikptr mem, int size, gc_t* gc)
+{
+  long		i;
+  long		j;
+  qupages_t *	p;
+  for (i = IK_PAGE_INDEX(mem), j = IK_PAGE_INDEX(mem+size-1); i<=j; ++i)
+    gc->segment_vector[i] = pointers_mt | large_object_tag | gc->collect_gen_tag;
+  p    = ik_malloc(sizeof(qupages_t));
   p->p = mem;
   p->q = mem+size;
   p->next = gc->queues[meta_ptrs];
   gc->queues[meta_ptrs] = p;
 }
-
-
 static inline ikptr
-gc_alloc_new_symbol_record(gc_t* gc) {
+gc_alloc_new_symbol_record (gc_t* gc)
+{
   assert(symbol_record_size == IK_ALIGN(symbol_record_size));
   return meta_alloc(symbol_record_size, gc, meta_symbol);
 }
@@ -445,7 +457,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
 
  */
 {
-#ifdef VICARE_DEBUGGING
+#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_verify_integrity(pcb, "entry");
 #endif
   { /* accounting */
@@ -466,7 +478,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
   gc.collect_gen	= collection_id_to_gen(pcb->collection_id);
   gc.collect_gen_tag	= next_gen_tag[gc.collect_gen];
   pcb->collection_id++;
-#ifdef VICARE_DEBUGGING
+#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_debug_message("ik_collect entry %ld free=%ld (collect gen=%d/id=%d)",
 		   mem_req, pcb->allocation_redline - pcb->allocation_pointer,
 		   gc.collect_gen, pcb->collection_id-1);
@@ -498,7 +510,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
   /* next   all   guardian/guarded  objects,   the   procedure  does   a
      "collect_loop()" at the end */
   handle_guardians(&gc);
-#ifdef VICARE_DEBUGGING
+#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_debug_message("finished scan of GC roots");
 #endif
   collect_loop(&gc);
@@ -513,13 +525,13 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
   pcb->allocation_pointer = pcb->heap_base;
   /* does not allocate */
   gc_add_tconcs(&gc);
-#ifdef VICARE_DEBUGGING
+#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_debug_message("done");
 #endif
   pcb->weak_pairs_ap = 0;
   pcb->weak_pairs_ep = 0;
 #if ACCOUNTING
-#ifdef VICARE_DEBUGGING
+#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_debug_message("[%d cons|%d sym|%d cls|%d vec|%d rec|%d cck|%d str|%d htb]\n",
 		   pair_count,		symbol_count,	closure_count,
 		   vector_count,	record_count,	continuation_count,
@@ -535,7 +547,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
   htable_count		= 0;
 #endif
   //ik_dump_metatable(pcb);
-#ifdef VICARE_DEBUGGING
+#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_debug_message("finished garbage collection");
 #endif
   /* delete all old heap pages */
@@ -553,7 +565,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
     ((unsigned long)pcb->allocation_redline) -
     ((unsigned long)pcb->allocation_pointer);
   if ((free_space <= mem_req) || (pcb->heap_size < IK_HEAPSIZE)) {
-#ifdef VICARE_DEBUGGING
+#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
     fprintf(stderr, "REQ=%ld, got %ld\n", mem_req, free_space);
 #endif
     long memsize   = (mem_req > IK_HEAPSIZE) ? mem_req : IK_HEAPSIZE;
@@ -566,14 +578,14 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
     pcb->heap_base = ptr;
     pcb->heap_size = new_heap_size;
   }
-#ifdef VICARE_DEBUGGING
+#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   { /* reset the free space to a magic number */
     ikptr	x;
     for (x = pcb->allocation_pointer; x < pcb->allocation_redline; x += wordsize)
       ref(x, 0) = (ikptr)(0x1234FFFF);
   }
 #endif
-#ifdef VICARE_DEBUGGING
+#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_verify_integrity(pcb, "exit");
 #endif
   { /* for GC statistics */
@@ -1031,7 +1043,7 @@ add_list (gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc)
 
 
 static ikptr
-#ifdef VICARE_DEBUGGING
+#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
 add_object_proc (gc_t* gc, ikptr X, char* caller)
 /* Move  the live  object X,  and all  its component  objects, to  a new
    location  and return  a new  machine  word which  must replace  every
@@ -1093,7 +1105,7 @@ add_object_proc (gc_t* gc, ikptr X)
   }
   else if (closure_tag == tag) {
     ikptr size  = disp_closure_data + IK_REF(first_word, disp_code_freevars - disp_code_data);
-#ifdef VICARE_DEBUGGING
+#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
     if (size > 1024) {
       ik_debug_message("large closure size=0x%016lx", (long)size);
     }
@@ -1226,7 +1238,7 @@ add_object_proc (gc_t* gc, ikptr X)
     else if (continuation_tag == first_word) {
       ikptr	top  = IK_REF(X, off_continuation_top);
       ikptr	size = IK_REF(X, off_continuation_size);
-#ifdef VICARE_DEBUGGING
+#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
       if (size > 4096)
         ik_debug_message("large cont size=0x%016lx", size);
 #endif
@@ -1420,7 +1432,7 @@ relocate_new_code(ikptr x, gc_t* gc) {
     long code_off = r >> 2;
     if (tag == 0) {
       /* undisplaced pointer */
-#ifdef VICARE_DEBUGGING
+#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
      // fprintf(stderr, "r=0x%08x code_off=%d reloc_size=0x%08x\n",
      //     r, code_off, relocsize);
 #endif
@@ -1441,7 +1453,7 @@ relocate_new_code(ikptr x, gc_t* gc) {
       /* displaced relative pointer */
       long obj_off = IK_UNFIX(ref(p, wordsize));
       ikptr obj = ref(p, 2*wordsize);
-#ifdef VICARE_DEBUGGING
+#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
       //fprintf(stderr, "obj=0x%08x, obj_off=0x%08x\n", (int)obj,
       //    obj_off);
 #endif
