@@ -227,5 +227,13 @@ int main (void)
 
 AC_DEFUN([VICARE_CHECK_WMACROS],[m4_map_args_w($1,[VICARE_CHECK_WMACRO(],[)])])
 
+dnl page
+AC_DEFUN([VICARE_CHECK_PAGESIZE],
+  [AC_CACHE_CHECK([page size],
+     [vicare_cv_pagesize],
+     [AC_COMPUTE_INT([vicare_cv_pagesize],[sysconf(_SC_PAGESIZE)],[
+       #include <unistd.h>
+     ],[vicare_cv_pagesize=4096])])
+   AC_DEFINE_UNQUOTED([IK_PAGESIZE],[$vicare_cv_pagesize],[platform page size])])
 
 ### end of file

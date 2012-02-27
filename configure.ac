@@ -154,6 +154,8 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 
+VICARE_CHECK_PAGESIZE
+
 dnl Declared obsolete by GNU Autoconf.
 dnl
 dnl AC_STRUCT_TM

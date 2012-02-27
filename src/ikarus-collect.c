@@ -36,9 +36,9 @@
 #define cardsize		512
 #define cards_per_page		8
 
-#define minimum_heap_size (pagesize * 1024 * 4)
-#define maximum_heap_size (pagesize * 1024 * 8)
-#define minimum_stack_size (pagesize * 128)
+#define minimum_heap_size (IK_PAGESIZE * 1024 * 4)
+#define maximum_heap_size (IK_PAGESIZE * 1024 * 8)
+#define minimum_stack_size (IK_PAGESIZE * 128)
 
 #define meta_ptrs	0
 #define meta_code	1
@@ -114,12 +114,12 @@ static int htable_count		= 0;
 #endif
 
 static int extension_amount[meta_count] = {
-  1 * pagesize,
-  1 * pagesize,
-  1 * pagesize,
-  1 * pagesize,
-  1 * pagesize,
-  1 * pagesize,
+  1 * IK_PAGESIZE,
+  1 * IK_PAGESIZE,
+  1 * IK_PAGESIZE,
+  1 * IK_PAGESIZE,
+  1 * IK_PAGESIZE,
+  1 * IK_PAGESIZE,
 };
 
 static unsigned int meta_mt[meta_count] = {
@@ -178,8 +178,8 @@ ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb)
       r->next = cache;
       cache   = r;
       r       = next;
-      base   += pagesize;
-      size   -= pagesize;
+      base   += IK_PAGESIZE;
+      size   -= IK_PAGESIZE;
     } while (r && size);
     pcb->cached_pages = cache;
     pcb->uncached_pages = r;
@@ -302,13 +302,13 @@ gc_alloc_new_weak_pair(gc_t* gc) {
   ikptr nap = ap + pair_size;
   if (nap > ep) {
       ikptr mem = ik_mmap_typed(
-                   pagesize,
+                   IK_PAGESIZE,
                    meta_mt[meta_weak] | gc->collect_gen_tag,
                    gc->pcb);
       gc->segment_vector = gc->pcb->segment_vector;
       meta->ap = mem + pair_size;
       meta->aq = mem;
-      meta->ep = mem + pagesize;
+      meta->ep = mem + IK_PAGESIZE;
       meta->base = mem;
       return mem;
   } else {
@@ -326,7 +326,7 @@ gc_alloc_new_data(int size, gc_t* gc) {
 static inline ikptr
 gc_alloc_new_code(long size, gc_t* gc) {
   assert(size == IK_ALIGN(size));
-  if (size < pagesize) {
+  if (size < IK_PAGESIZE) {
     return meta_alloc(size, gc, meta_code);
   } else {
     long memreq = IK_ALIGN_TO_NEXT_PAGE(size);
@@ -357,21 +357,21 @@ gc_tconc_push_extending(gc_t* gc, ikptr tcbucket) {
   if (gc->tconc_base) {
     ikpages* p = ik_malloc(sizeof(ikpages));
     p->base = gc->tconc_base;
-    p->size = pagesize;
+    p->size = IK_PAGESIZE;
     p->next = gc->tconc_queue;
     gc->tconc_queue = p;
   }
   ikptr ap =
-     ik_mmap_typed(pagesize,
+     ik_mmap_typed(IK_PAGESIZE,
         meta_mt[meta_ptrs] | gc->collect_gen_tag,
         gc->pcb);
-  add_to_collect_count(gc->pcb, pagesize);
+  add_to_collect_count(gc->pcb, IK_PAGESIZE);
   gc->segment_vector = gc->pcb->segment_vector;
-  bzero((char*)(long)ap, pagesize);
+  bzero((char*)(long)ap, IK_PAGESIZE);
   ikptr nap = ap + 2*wordsize;
   gc->tconc_base = ap;
   gc->tconc_ap = nap;
-  gc->tconc_ep = ap + pagesize;
+  gc->tconc_ep = ap + IK_PAGESIZE;
   ref(ap,0) = tcbucket;
 }
 
@@ -570,7 +570,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
     fprintf(stderr, "REQ=%ld, got %ld\n", mem_req, free_space);
 #endif
     long memsize   = (mem_req > IK_HEAPSIZE) ? mem_req : IK_HEAPSIZE;
-    long new_heap_size = memsize + 2 * pagesize;
+    long new_heap_size = memsize + 2 * IK_PAGESIZE;
     memsize = IK_ALIGN_TO_NEXT_PAGE(memsize);
     ik_munmap_from_segment(pcb->heap_base, pcb->heap_size, pcb);
     ikptr ptr = ik_mmap_mixed(new_heap_size, pcb);
@@ -663,7 +663,7 @@ move_tconc (ikptr tc, ik_ptr_page* ls)
    linked list. */
 {
   if ((NULL == ls) || (IK_PTR_PAGE_SIZE == ls->count)) {
-    ik_ptr_page* page = (ik_ptr_page*)ik_mmap(pagesize);
+    ik_ptr_page* page = (ik_ptr_page*)ik_mmap(IK_PAGESIZE);
     page->count = 0;
     page->next  = ls;
     ls = page;
@@ -704,7 +704,7 @@ handle_guardians (gc_t* gc)
       }
       { /* Deallocate this node in the PROT_LIST linked list. */
 	ik_ptr_page *	next = prot_list->next;
-	ik_munmap((ikptr)prot_list, pagesize);
+	ik_munmap((ikptr)prot_list, IK_PAGESIZE);
 	prot_list = next;
       }
     }
@@ -737,7 +737,7 @@ handle_guardians (gc_t* gc)
 	  }
 	}
 	ik_ptr_page* next = ls->next;
-	ik_munmap((ikptr)ls, pagesize);
+	ik_munmap((ikptr)ls, IK_PAGESIZE);
 	ls = next;
       }
       if (final_list == NULL) {
@@ -751,7 +751,7 @@ handle_guardians (gc_t* gc)
 	    gc->forward_list = move_tconc(add_object(gc, p, "guardian"), gc->forward_list);
 	  }
 	  ik_ptr_page* next = ls->next;
-	  ik_munmap((ikptr)ls, pagesize);
+	  ik_munmap((ikptr)ls, IK_PAGESIZE);
 	  ls = next;
 	}
 	collect_loop(gc);
@@ -762,7 +762,7 @@ handle_guardians (gc_t* gc)
      are also dead, deallocate. */
   while (pend_final_list) {
     ik_ptr_page* next = pend_final_list->next;
-    ik_munmap((ikptr)pend_final_list, pagesize);
+    ik_munmap((ikptr)pend_final_list, IK_PAGESIZE);
     pend_final_list = next;
   }
   /* pend_hold_list pairs with live tconcs are moved to
@@ -782,7 +782,7 @@ handle_guardians (gc_t* gc)
       }
     }
     ik_ptr_page* next = pend_hold_list->next;
-    ik_munmap((ikptr)pend_hold_list, pagesize);
+    ik_munmap((ikptr)pend_hold_list, IK_PAGESIZE);
     pend_hold_list = next;
   }
   collect_loop(gc);
@@ -812,7 +812,7 @@ gc_finalize_guardians (gc_t* gc)
       dirty_vec[IK_PAGE_INDEX(last_pair)] = -1;
     }
     ik_ptr_page* next = ls->next;
-    ik_munmap((ikptr)ls, pagesize);
+    ik_munmap((ikptr)ls, IK_PAGESIZE);
     ls = next;
   }
 }
@@ -837,12 +837,12 @@ add_code_entry(gc_t* gc, ikptr entry) {
   ikptr freevars = ref(x, disp_code_freevars);
   ikptr annotation = ref(x, disp_code_annotation);
   long required_mem = IK_ALIGN(disp_code_data + code_size);
-  if (required_mem >= pagesize) {
+  if (required_mem >= IK_PAGESIZE) {
     int new_tag = gc->collect_gen_tag;
     long idx = IK_PAGE_INDEX(x);
     gc->segment_vector[idx] = new_tag | code_mt;
     long i;
-    for(i=pagesize, idx++; i<required_mem; i+=pagesize, idx++) {
+    for(i=IK_PAGESIZE, idx++; i<required_mem; i+=IK_PAGESIZE, idx++) {
       gc->segment_vector[idx] = new_tag | data_mt;
     }
     qupages_t* p = ik_malloc(sizeof(qupages_t));
@@ -1146,7 +1146,7 @@ add_object_proc (gc_t* gc, ikptr X)
       ikptr	size   = first_word;
       ikptr	nbytes = size + disp_vector_data; /* not aligned */
       ikptr	memreq = IK_ALIGN(nbytes);
-      if (memreq >= pagesize) { /* big vector */
+      if (memreq >= IK_PAGESIZE) { /* big vector */
         if (large_object_tag == (segment_bits & large_object_mask)) {
           enqueue_large_ptr(X - vector_tag, nbytes, gc);
           return X;
@@ -1706,7 +1706,7 @@ fix_weak_pointers(gc_t* gc) {
       //int gen = t & gen_mask;
       if (1) { //(gen > collect_gen) {
         ikptr p = (ikptr)(i << pageshift);
-        ikptr q = p + pagesize;
+        ikptr q = p + IK_PAGESIZE;
         while(p < q) {
           ikptr x = ref(p, 0);
           if (! IK_IS_FIXNUM(x)) {
@@ -1793,7 +1793,7 @@ static void
 scan_dirty_code_page(gc_t* gc, long page_idx) {
   ikptr p = (ikptr)(page_idx << pageshift);
   ikptr start = p;
-  ikptr q = p + pagesize;
+  ikptr q = p + IK_PAGESIZE;
   unsigned int* segment_vec = (unsigned int*)(long)gc->segment_vector;
   unsigned int* dirty_vec = (unsigned int*)(long)gc->pcb->dirty_vector;
   //unsigned int d = dirty_vec[page_idx];
@@ -1902,7 +1902,7 @@ deallocate_unused_pages(gc_t* gc)
         if (t & new_gen_mask) {
           /* do nothing yet */
         } else {
-          ik_munmap_from_segment((ikptr)(i<<pageshift),pagesize,pcb);
+          ik_munmap_from_segment((ikptr)(i<<pageshift),IK_PAGESIZE,pcb);
         }
       }
     }

@@ -24,9 +24,9 @@ ikrt_weak_cons (ikptr a, ikptr d, ikpcb* pcb)
   ikptr nap = ap + pair_size;
   ikptr p;
   if (nap > pcb->weak_pairs_ep) {
-    ikptr mem = ik_mmap_typed(pagesize, weak_pairs_mt, pcb);
+    ikptr mem = ik_mmap_typed(IK_PAGESIZE, weak_pairs_mt, pcb);
     pcb->weak_pairs_ap = mem + pair_size;
-    pcb->weak_pairs_ep = mem + pagesize;
+    pcb->weak_pairs_ep = mem + IK_PAGESIZE;
     p = mem | pair_tag;
   } else {
     pcb->weak_pairs_ap = nap;

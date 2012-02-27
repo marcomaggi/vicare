@@ -72,7 +72,7 @@ static char*
 verify_code_small (char* p, int s, unsigned d,
 		   char* base, unsigned* svec, unsigned* dvec)
 {
-  char* q = p + pagesize;
+  char* q = p + IK_PAGESIZE;
   s=s; d=d; /* no warning */
   while (p < q) {
     ikptr fst = ref(p, 0);
@@ -102,7 +102,7 @@ verify_code_large (char* p, unsigned s, unsigned d,
   int code_size = IK_UNFIX(ref(p, disp_code_code_size));
   assert(code_size >= 0);
   verify_code(p, base, svec, dvec);
-  assert(IK_ALIGN(code_size+disp_code_data) >= pagesize);
+  assert(IK_ALIGN(code_size+disp_code_data) >= IK_PAGESIZE);
   char* end = p + code_size + disp_code_data;
   return((char*)IK_ALIGN_TO_NEXT_PAGE(end));
 }
@@ -119,7 +119,7 @@ verify_code_page (char* p, unsigned s, unsigned d,
   assert(code_size >= 0);
   int obj_size = IK_ALIGN(code_size + disp_code_data);
   char* result;
-  if (obj_size <= pagesize) {
+  if (obj_size <= IK_PAGESIZE) {
     result = verify_code_small(p,s,d,base,svec,dvec);
   } else {
     result = verify_code_large(p,s,d,base,svec,dvec);
@@ -134,13 +134,13 @@ verify_pointers_page (char* p, unsigned s, unsigned d,
   s=s; d=d; /* no warning */
   {
     int i = 0;
-    while(i < pagesize){
+    while(i < IK_PAGESIZE){
       verify_object(ref(p, i), base, svec, dvec);
       i += wordsize;
     }
   }
   //fprintf(stderr, "pointers verif incomplete\n");
-  return p+pagesize;
+  return p+IK_PAGESIZE;
 }
 static char *
 verify_page (char* p, char* base, unsigned* svec, unsigned* dvec)
@@ -149,11 +149,11 @@ verify_page (char* p, char* base, unsigned* svec, unsigned* dvec)
   unsigned s = svec[idx];
   unsigned d = dvec[idx];
   //  if(s & dealloc_mask){
-  //    return p+pagesize;
+  //    return p+IK_PAGESIZE;
   //  }
   int type = s & type_mask;
   if(type == hole_type){
-    return p+pagesize;
+    return p+IK_PAGESIZE;
   }
   assert((s & new_gen_mask) == 0);
   if(type == code_type){
@@ -170,15 +170,15 @@ verify_page (char* p, char* base, unsigned* svec, unsigned* dvec)
   }
   else if(type == dat_type){
     /* nothing to do for data */
-    return p+pagesize;
+    return p+IK_PAGESIZE;
   }
   else if(type == mainheap_type){
     /* nothing to do for main heap */
-    return p+pagesize;
+    return p+IK_PAGESIZE;
   }
   else if(type == mainstack_type){
     /* nothing to do for main stack */
-    return p+pagesize;
+    return p+IK_PAGESIZE;
   }
   ik_abort("type=0x%08x\n", type);
 }

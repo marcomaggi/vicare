@@ -70,7 +70,7 @@ ik_fasl_load (ikpcb* pcb, char* fasl_file)
       ik_abort("failed to stat \"%s\": %s", fasl_file, strerror(errno));
     filesize = buf.st_size;
   }
-  mapsize	= ((filesize + pagesize - 1) / pagesize) * pagesize;
+  mapsize	= ((filesize + IK_PAGESIZE - 1) / IK_PAGESIZE) * IK_PAGESIZE;
   mem		= mmap(0, mapsize, PROT_READ, MAP_PRIVATE, fd, 0);
   if (MAP_FAILED == mem)
     ik_abort("mapping failed for %s: %s", fasl_file, strerror(errno));
@@ -112,15 +112,15 @@ alloc_code (long int size, ikpcb* pcb, fasl_port* p)
   if (nap <= p->code_ep) {
     p->code_ap = nap;
     return ap;
-  } else if (asize < pagesize) {
-    ikptr	mem		= ik_mmap_code(pagesize, 0, pcb);
-    long	bytes_remaining = pagesize - asize;
+  } else if (asize < IK_PAGESIZE) {
+    ikptr	mem		= ik_mmap_code(IK_PAGESIZE, 0, pcb);
+    long	bytes_remaining = IK_PAGESIZE - asize;
     long	previous_bytes	= ((ik_ulong)p->code_ep) - ((ik_ulong)ap);
     if (bytes_remaining <= previous_bytes) {
       return mem;
     } else {
       p->code_ap = mem+asize;
-      p->code_ep = mem+pagesize;
+      p->code_ep = mem+IK_PAGESIZE;
       return mem;
     }
   } else {
@@ -242,9 +242,9 @@ do_read (ikpcb* pcb, fasl_port* p)
     }
     else {
       /* allocate marks */
-      p->marks = (ikptr*)(long)ik_mmap(2*pagesize*sizeof(ikptr*));
-      bzero(p->marks, 2*pagesize*sizeof(ikptr*));
-      p->marks_size = 2*pagesize;
+      p->marks = (ikptr*)(long)ik_mmap(2*IK_PAGESIZE*sizeof(ikptr*));
+      bzero(p->marks, 2*IK_PAGESIZE*sizeof(ikptr*));
+      p->marks_size = 2*IK_PAGESIZE;
     }
   }
   if (c == 'x') {

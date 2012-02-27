@@ -192,10 +192,8 @@
 
 /* ------------------------------------------------------------------ */
 
-#define pagesize		4096
-
 /* How much  to right-shift a pointer  value to obtain the  index of the
-   page (of size PAGESIZE) it is in.
+   page (of size IK_PAGESIZE) it is in.
 
        4000 >> 12 = 0
        8000 >> 12 = 1
@@ -212,7 +210,7 @@
 #define IK_FASL_HEADER_LEN	(strlen(IK_FASL_HEADER))
 
 #define IK_PTR_PAGE_SIZE \
-  ((pagesize - sizeof(long) - sizeof(struct ik_ptr_page*))/sizeof(ikptr))
+  ((IK_PAGESIZE - sizeof(long) - sizeof(struct ik_ptr_page*))/sizeof(ikptr))
 
 /* Given the pointer X or tagged pointer X: evaluate to the index of the
    memory page  it is in; notice that  the tag bits of  a tagged pointer
@@ -222,7 +220,7 @@
   (((ik_ulong)(x)) >> pageshift)
 
 #define IK_ALIGN_TO_NEXT_PAGE(x) \
-  (((pagesize - 1 + (ik_ulong)(x)) >> pageshift) << pageshift)
+  (((IK_PAGESIZE - 1 + (ik_ulong)(x)) >> pageshift) << pageshift)
 
 #define IK_ALIGN_TO_PREV_PAGE(x) \
   ((((ik_ulong)(x)) >> pageshift) << pageshift)

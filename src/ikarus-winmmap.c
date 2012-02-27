@@ -31,9 +31,8 @@
  ** Internal definitions.
  ** ----------------------------------------------------------------- */
 
-#define pagesize		4096
 #define pageshift		12
-#define segment_size		(16 * pagesize)
+#define segment_size		(16 * IK_PAGESIZE)
 #define segment_shift		(4  + pageshift)
 
 static unsigned short* table = 0;
@@ -61,8 +60,8 @@ static void
 init_table (void)
 {
   assert(sizeof(unsigned short) == 2);
-  table = do_mmap(32*pagesize);
-  bzero(table, 32*pagesize);
+  table = do_mmap(32*IK_PAGESIZE);
+  bzero(table, 32*IK_PAGESIZE);
 }
 void
 win_munmap (char* addr, size_t size)
@@ -77,8 +76,8 @@ win_munmap (char* addr, size_t size)
     table[segment_index] = new_bits;
     if (0 == new_bits)
       do_munmap((void*)(segment_index*segment_size), segment_size);
-    size -= pagesize;
-    addr += pagesize;
+    size -= IK_PAGESIZE;
+    addr += IK_PAGESIZE;
   }
 }
 char*
