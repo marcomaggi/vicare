@@ -155,6 +155,9 @@ AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 
 VICARE_CHECK_PAGESIZE
+AC_DEFINE_UNQUOTED([IK_PAGESIZE],[$vicare_cv_pagesize],[Platform page size.])
+VICARE_CHECK_PAGESHIFT($vicare_cv_pagesize)
+AC_DEFINE_UNQUOTED([IK_PAGESHIFT],[$vicare_cv_pageshift],[Page shift bit count.])
 
 dnl Declared obsolete by GNU Autoconf.
 dnl

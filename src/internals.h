@@ -192,19 +192,30 @@
 
 /* ------------------------------------------------------------------ */
 
-/* How much  to right-shift a pointer  value to obtain the  index of the
-   page (of size IK_PAGESIZE) it is in.
+/* The IK_PAGESIZE  is used  to determine the  size of memory  blocks to
+   allocate with "mmap()".
+
+   IK_PAGESHIFT is the number of  bits to right-shift a pointer value to
+   obtain the index of the page (of size IK_PAGESIZE) it is in.
 
        4000 >> 12 = 0
        8000 >> 12 = 1
       10000 >> 12 = 2
-*/
-#define pageshift		12
+
+   The value 12 for pageshift is correct for a pagesize of 4096.
+
+   #define IK_PAGESIZE		4096
+   #define IK_PAGESHIFT		12
+
+   These values  are determined by  the "configure" script,  because the
+   page size  is platform-dependent.  In  truth we should  determine the
+   page size at run time, but it would slow down computation of a lot of
+   constants and structure sizes. */
 
 #define generation_count	5  /* generations 0 (nursery), 1, 2, 3, 4 */
 
-#define IK_HEAP_EXT_SIZE  (32 * 4096)
-#define IK_HEAPSIZE	  (1024 * ((wordsize==4)?1:2) * 4096) /* 4/8 MB */
+#define IK_HEAP_EXT_SIZE	(32 * 4096)
+#define IK_HEAPSIZE		(1024 * 4096 * ((wordsize==4)?1:2)) /* 4/8 MB */
 
 #define IK_FASL_HEADER		((sizeof(ikptr) == 4)? "#@IK01" : "#@IK02")
 #define IK_FASL_HEADER_LEN	(strlen(IK_FASL_HEADER))
@@ -217,13 +228,13 @@
    are not  influent.  Given a  number of bytes  X evaluate to  an index
    offset. */
 #define IK_PAGE_INDEX(x)   \
-  (((ik_ulong)(x)) >> pageshift)
+  (((ik_ulong)(x)) >> IK_PAGESHIFT)
 
 #define IK_ALIGN_TO_NEXT_PAGE(x) \
-  (((IK_PAGESIZE - 1 + (ik_ulong)(x)) >> pageshift) << pageshift)
+  (((IK_PAGESIZE - 1 + (ik_ulong)(x)) >> IK_PAGESHIFT) << IK_PAGESHIFT)
 
 #define IK_ALIGN_TO_PREV_PAGE(x) \
-  ((((ik_ulong)(x)) >> pageshift) << pageshift)
+  ((((ik_ulong)(x)) >> IK_PAGESHIFT) << IK_PAGESHIFT)
 
 #define IK_ASS(LEFT,RIGHT)	\
   { ikptr s_tmp = (RIGHT); (LEFT) = s_tmp; }

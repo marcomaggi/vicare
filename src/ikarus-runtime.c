@@ -43,7 +43,7 @@ static int total_allocated_pages = 0;
 static int total_malloced = 0;
 
 #define SEGMENT_SIZE		(IK_PAGESIZE * IK_PAGESIZE / 4)
-#define SEGMENT_SHIFT		(pageshift + pageshift - 2)
+#define SEGMENT_SHIFT		(IK_PAGESHIFT + IK_PAGESHIFT - 2)
 #define SEGMENT_INDEX(x)	(((ik_ulong)(x)) >> SEGMENT_SHIFT)
 
 #define CACHE_SIZE		(IK_PAGESIZE * 1) /* must be multiple of IK_PAGESIZE */
@@ -330,7 +330,7 @@ ik_delete_pcb (ikpcb* pcb)
   for (; i < j; ++i) {
     unsigned t = segment_vec[i];
     if (t != hole_mt) {
-      ik_munmap((ikptr)(i<<pageshift), IK_PAGESIZE);
+      ik_munmap((ikptr)(i<<IK_PAGESHIFT), IK_PAGESIZE);
     }
   }
   long vecsize = (SEGMENT_INDEX(end) - SEGMENT_INDEX(base)) * IK_PAGESIZE;

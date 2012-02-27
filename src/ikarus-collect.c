@@ -1705,7 +1705,7 @@ fix_weak_pointers(gc_t* gc) {
         (weak_pairs_type|new_gen_tag)) {
       //int gen = t & gen_mask;
       if (1) { //(gen > collect_gen) {
-        ikptr p = (ikptr)(i << pageshift);
+        ikptr p = (ikptr)(i << IK_PAGESHIFT);
         ikptr q = p + IK_PAGESIZE;
         while(p < q) {
           ikptr x = ref(p, 0);
@@ -1757,7 +1757,7 @@ scan_dirty_pointers_page(gc_t* gc, long page_idx, int mask) {
   unsigned int t = segment_vec[page_idx];
   unsigned int d = dirty_vec[page_idx];
   unsigned int masked_d = d & mask;
-  ikptr p = (ikptr)(page_idx << pageshift);
+  ikptr p = (ikptr)(page_idx << IK_PAGESHIFT);
   int j;
   unsigned int new_d = 0;
   for(j=0; j<cards_per_page; j++) {
@@ -1791,7 +1791,7 @@ scan_dirty_pointers_page(gc_t* gc, long page_idx, int mask) {
 
 static void
 scan_dirty_code_page(gc_t* gc, long page_idx) {
-  ikptr p = (ikptr)(page_idx << pageshift);
+  ikptr p = (ikptr)(page_idx << IK_PAGESHIFT);
   ikptr start = p;
   ikptr q = p + IK_PAGESIZE;
   unsigned int* segment_vec = (unsigned int*)(long)gc->segment_vector;
@@ -1902,7 +1902,7 @@ deallocate_unused_pages(gc_t* gc)
         if (t & new_gen_mask) {
           /* do nothing yet */
         } else {
-          ik_munmap_from_segment((ikptr)(i<<pageshift),IK_PAGESIZE,pcb);
+          ik_munmap_from_segment((ikptr)(i<<IK_PAGESHIFT),IK_PAGESIZE,pcb);
         }
       }
     }

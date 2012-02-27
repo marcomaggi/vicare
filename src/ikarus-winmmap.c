@@ -31,9 +31,9 @@
  ** Internal definitions.
  ** ----------------------------------------------------------------- */
 
-#define pageshift		12
+#define IK_PAGESHIFT		12
 #define segment_size		(16 * IK_PAGESIZE)
-#define segment_shift		(4  + pageshift)
+#define segment_shift		(4  + IK_PAGESHIFT)
 
 static unsigned short* table = 0;
 static char*  ap = 0;
@@ -67,7 +67,7 @@ void
 win_munmap (char* addr, size_t size)
 {
   while (size) {
-    unsigned       page          = (((unsigned) addr) >> pageshift);
+    unsigned       page          = (((unsigned) addr) >> IK_PAGESHIFT);
     unsigned       segment_index = page / 16;
     unsigned       page_index    = page & 15;
     unsigned short alloc_bits    = table[segment_index];
@@ -95,7 +95,7 @@ win_mmap (size_t size)
   size_t   segments      = ((size+segment_size-1) >> segment_shift);
   size_t   aligned_size  = segments << segment_shift;
   char*    addr          = do_mmap(aligned_size);
-  unsigned page          = (((unsigned) addr) >> pageshift);
+  unsigned page          = (((unsigned) addr) >> IK_PAGESHIFT);
   unsigned segment_index = page / 16;
   int      i;
   for (i=0; i<segments; ++i) {

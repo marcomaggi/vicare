@@ -24,7 +24,7 @@ static long int
 page_idx (void* x)
 {
   ik_ulong	xi = (ik_ulong) x;
-  return xi >> pageshift;
+  return xi >> IK_PAGESHIFT;
 }
 static int
 isa_fixnum (ikptr x)

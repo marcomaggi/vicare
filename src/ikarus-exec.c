@@ -49,7 +49,7 @@ ik_exec_code (ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp)
       k->size	= framesize;
       k->next	= vector_tag + (ikptr)(long)nk;
       /* record side effect */
-      ik_ulong idx = ((ik_ulong)(&k->next)) >> pageshift;
+      ik_ulong idx = ((ik_ulong)(&k->next)) >> IK_PAGESHIFT;
       ((int*)(long)(pcb->dirty_vector))[idx] = -1;
     } else if (framesize > k->size) {
       ik_abort("invalid framesize %ld, expected %ld or less\n\trp = 0x%016lx\n\trp offset = %ld",
