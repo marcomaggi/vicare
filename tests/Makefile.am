@@ -338,7 +338,7 @@ EXTRA_DIST =	\
 	test-issue-024.sps				\
 	test-issue-025-sign-in-exact-rationals.sps	\
 	\
-	foreign-test-vicare-cre2.sps
+	foreign-test-vicare-cre2.sps			\
 	\
 	proof-vicare-gcc.sps				\
 	proof-vicare-readline.sps
