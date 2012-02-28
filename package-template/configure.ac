@@ -2,7 +2,8 @@ dnl @configure_input@
 dnl
 
 AC_PREREQ([2.68])
-AC_INIT([vicare-template],[0.1d0],[marco.maggi-ipsu@poste.it])
+AC_INIT([Vicare/Template],[0.1d0],[marco.maggi-ipsu@poste.it],
+  [vicare-template],[http://marcomaggi.github.com/vicare.html])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE
 LT_PREREQ([2.2])
