@@ -81,7 +81,8 @@ to install the files under a temporary location; example:
 
   After  installation, the  makefile  rule "vfasl-installed"
 will  precompile the  libraries installed  in  the hierarchy
-(vicare template ---).
+(vicare template ---); the makefile rule "installcheck" will
+run the test suite against the installed libraries.
 
 
 4. Usage

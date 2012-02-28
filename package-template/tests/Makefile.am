@@ -35,6 +35,9 @@ TESTS_ENVIRONMENT	= $(VICARE_RUN)
 TESTS			=	\
 	test-vicare-template.sps
 
+installcheck-local:
+	@for f in $(TESTS); do VICARE_LIBRARY_PATH=$(srcdir) $(VICARE) $(srcdir)/$$f; done
+
 EXTRA_DIST =	\
 	test-vicare-template.sps			\
 	\
