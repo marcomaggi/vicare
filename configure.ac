@@ -1,11 +1,12 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.68)
-AC_INIT([vicare-scheme],[0.2d9],[marco.maggi-ipsu@poste.it])
+AC_INIT([Vicare Scheme],[0.2d9],[marco.maggi-ipsu@poste.it],
+  [vicare-scheme],[http://marcomaggi.github.com/vicare.html])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE
 LT_PREREQ([2.2])
-LT_INIT
+LT_INIT([shared disable-static])
 AC_CONFIG_SRCDIR([src/])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([-Wall])

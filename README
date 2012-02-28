@@ -89,6 +89,11 @@ basically we should do:
    $ make
    $ make install
 
+notice  that  the  "configure"  script  is  prepared  to  enable  shared
+libraries  and  disable static  libraries:  this  must  not be  changed,
+because  the package  is  meant to  install  a C  shared  library to  be
+dynamically loaded.
+
   To test what a rule will do use the "-n" option; example:
 
     $ make install -n
