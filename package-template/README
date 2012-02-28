@@ -60,10 +60,15 @@ Vicare/Template do this:
    $ cd vicare-template-0.1.0
    $ mkdir "=build"
    $ cd "=build"
-   $ ../configure --enable-shared --disable-static
+   $ ../configure
    $ make
    $ make check
    $ make install
+
+notice  that the  "configure" script  is prepared  to enable
+shared libraries and disable static libraries: this must not
+be  changed, because  the package  is meant  to install  a C
+shared library to be dynamically loaded.
 
   To test what a rule will do use the "-n" option; example:
 

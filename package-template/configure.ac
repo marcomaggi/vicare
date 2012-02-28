@@ -6,7 +6,7 @@ AC_INIT([vicare-template],[0.1d0],[marco.maggi-ipsu@poste.it])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE
 LT_PREREQ([2.2])
-LT_INIT
+LT_INIT([shared disable-static])
 AC_CONFIG_SRCDIR([src/])
 AC_CONFIG_MACRO_DIR([m4])
 dnl AM_MAINTAINER_MODE
