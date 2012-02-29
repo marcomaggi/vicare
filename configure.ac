@@ -72,6 +72,20 @@ AC_ARG_ENABLE([linux],
    esac],[vicare_linux_bindings=true])
 AM_CONDITIONAL([WANT_LINUX],[test x$vicare_linux_bindings = xtrue])
 
+dnl --------------------------------------------------------------------
+
+AC_MSG_CHECKING([whether usage of the binfmt_misc Linux kernel module is enabled])
+AC_ARG_ENABLE([binfmt],
+  [AC_HELP_STRING([--enable-binfmt],
+     [enable usage of the binfmt_misc linux kernel module (default: no)])],
+  [if test "$enableval" = yes
+   then vicare_enable_binfmt=yes
+   else vicare_enable_binfmt=no
+   fi],
+  [vicare_enable_binfmt=no])
+AC_MSG_RESULT([$vicare_enable_binfmt])
+AM_CONDITIONAL([WANT_BINFMT],[test x$vicare_enable_binfmt = xtrue])
+
 #page
 #### basic system inspection
 
