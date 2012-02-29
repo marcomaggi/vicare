@@ -84,7 +84,7 @@ AC_ARG_ENABLE([binfmt],
    fi],
   [vicare_enable_binfmt=no])
 AC_MSG_RESULT([$vicare_enable_binfmt])
-AM_CONDITIONAL([WANT_BINFMT],[test x$vicare_enable_binfmt = xtrue])
+AM_CONDITIONAL([WANT_BINFMT],[test x$vicare_enable_binfmt = xyes])
 
 #page
 #### basic system inspection

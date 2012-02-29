@@ -20708,8 +20708,8 @@ number of times: at each run it resets and reinitialises the
 configuration for Scheme programs.
 
 @item
-The @command{vicare} executable must be in @file{/usr/local/bin}, else
-we must customise the @file{rc.vicare-scheme} script.
+The @command{vicare} executable must be in @code{$(bindir)}, else we
+must customise the @file{rc.vicare-scheme} script.
 @end enumerate
 
 @c page
