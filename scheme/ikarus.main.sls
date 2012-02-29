@@ -415,7 +415,7 @@
 	   (next-option (cdr args) (lambda () (k) (generate-debug-calls #f))))
 
 	  ((%option= "--no-greetings")
-	   (set-run-time-config-no-greetings! #t)
+	   (set-run-time-config-no-greetings! cfg #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--print-assembly")
