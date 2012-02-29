@@ -15,6 +15,11 @@ vicare_test_RULES	= test tests long-test long-tests \
 
 vicare_lib_RULES	= vfasl vfasl-installed
 
+if WANT_BINFMT
+binfmtdir		= $(sysconfdir)/rc.d
+dist_binfmt_BIN		= scripts/rc.vicare-scheme
+endif
+
 .PHONY: $(vicare_test_RULES) $(vicare_lib_RULES) \
 	try-vicare-boot boot-image-64-bit
 

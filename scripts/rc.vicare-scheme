@@ -1,0 +1,22 @@
+#!/bin/sh
+#
+# Setup the  Linux module  "binfmt_misc" to automatically  recognise and
+# run Vicare Scheme programs using the installed "vicare" executable.
+
+if test -f /proc/sys/fs/binfmt_misc/register
+then
+  if test -f /proc/sys/fs/binfmt_misc/VICARE
+  then echo -1 >/proc/sys/fs/binfmt_misc/VICARE
+  fi
+  echo -n enabling binfmt Vicare Scheme scripts execution...
+  # The magic ";;;!vicare" is displayed in hex format as:
+  #
+  #   3b 3b 3b 21 76 69 63 61 72 65
+  #    ;  ;  ;  !  v  i  c  a  r  e
+  echo \
+      ':VICARE:M:0:;;;!vicare::/usr/local/bin/vicare:' \
+      >/proc/sys/fs/binfmt_misc/register
+  echo done
+fi
+
+### end of file
