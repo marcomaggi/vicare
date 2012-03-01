@@ -1,5 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
+AM_CFLAGS = -Wall
+
 SRCS	= \
 	cpu_has_sse2.S			\
 	ikarus-collect.c		\

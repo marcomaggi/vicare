@@ -9,7 +9,7 @@ LT_PREREQ([2.2])
 LT_INIT([shared disable-static])
 AC_CONFIG_SRCDIR([src/])
 AC_CONFIG_MACRO_DIR([m4])
-AM_INIT_AUTOMAKE([-Wall])
+AM_INIT_AUTOMAKE
 
 AC_PROG_INSTALL
 AC_PROG_LN_S
@@ -92,8 +92,6 @@ AM_CONDITIONAL([WANT_BINFMT],[test x$vicare_enable_binfmt = xyes])
 AM_PROG_AS
 AC_PROG_CC
 AM_PROG_CC_C_O
-
-AM_CFLAGS="-Wall"
 
 case "$target_os" in
   *linux*)
