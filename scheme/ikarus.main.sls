@@ -748,6 +748,11 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 				   (%prefix ".vicare" '(".sls" ".ss" ".scm")))))))
 
 (define (split-path input-string)
+  ;;Convert  the  input  string  holding  a  search  pathname  as  colon
+  ;;separated  sequence into  a  list of  strings representing  absolute
+  ;;pathnames.  If  an input  pathname does not  exists: it  is silently
+  ;;discarded.
+  ;;
   (define (nodata idx input-string ls)
     (cond ((= idx (string-length input-string))
 	   ls)
@@ -757,12 +762,16 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	   (data (+ idx 1) input-string ls (list (string-ref input-string idx))))))
   (define (data idx input-string ls accum)
     (cond ((= idx (string-length input-string))
-	   (cons (posix.real-pathname (list->string (reverse accum)))
-		 ls))
+	   (let ((name (list->string (reverse accum))))
+	     (if (file-exists? name)
+		 (cons (posix.real-pathname name) ls)
+	       ls)))
 	  ((char=? (string-ref input-string idx) #\:)
 	   (nodata (+ idx 1) input-string
-		   (cons (posix.real-pathname (list->string (reverse accum)))
-			 ls)))
+		   (let ((name (list->string (reverse accum))))
+		     (if (file-exists? name)
+			 (cons (posix.real-pathname name) ls)
+		       ls))))
 	  (else
 	   (data (+ idx 1) input-string ls (cons (string-ref input-string idx) accum)))))
   (reverse (nodata 0 input-string '())))
