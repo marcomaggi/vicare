@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
 ACLOCAL_AMFLAGS		= -I m4
-AUTOMAKE_OPTIONS	= foreign
+AUTOMAKE_OPTIONS	= foreign dist-bzip2 no-dist-gzip
 SUBDIRS			= src scheme doc lib tests
 EXTRA_DIST		= README COPYING GPL-3		\
 			  configure.sh			\
