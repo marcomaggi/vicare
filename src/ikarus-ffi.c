@@ -34,6 +34,8 @@
  ** ----------------------------------------------------------------- */
 
 #include "internals.h"
+static ikptr    seal_scheme_stack            (ikpcb* pcb);
+
 #ifdef HAVE_LIBFFI
 #include <ffi.h>
 
@@ -164,7 +166,6 @@ typedef ik_ffi_cif_stru_t *      ik_ffi_cif_t;
 
 static void     scheme_to_native_value_cast  (type_id_t type_id, ikptr s_scheme_value, void * buffer);
 static ikptr    ika_native_to_scheme_value_cast  (type_id_t type_id, void * buffer, ikpcb* pcb);
-static ikptr    seal_scheme_stack            (ikpcb* pcb);
 static void     generic_callback             (ffi_cif *cif, void *ret, void **args, void *user_data);
 
 
@@ -327,101 +328,6 @@ ika_native_to_scheme_value_cast (type_id_t type_id, void * buffer, ikpcb* pcb)
     ik_abort("%s: invalid arg %d", __func__, (int)type_id);
     return void_object;
   }
-}
-
-
-static ikptr
-seal_scheme_stack(ikpcb* pcb)
-/* FIXME: handle stack overflow */
-#ifndef DEBUG_FFI
-{
-  /*
-    |              |
-    |              |
-    |              |
-    |              |
-    +--------------+
-    |   underflow  |  <--------- new frame pointer
-    +--------------+
-    | return point |  <--------- old frame pointer, new frame base
-    +--------------+
-    |      .       |
-    |      .       |
-    |      .       |
-    |              |
-    +--------------+
-    |   underflow  |  <--------- old frame base
-    +--------------+
-  */
-  ikptr frame_base    = pcb->frame_base;
-  ikptr frame_pointer = pcb->frame_pointer;
-  if ((frame_base - wordsize) != frame_pointer) {
-    ikptr	underflow_handler = IK_REF(frame_base, -wordsize);
-    ikcont *	k  = (ikcont*) pcb->next_k;
-    ikcont *	nk = (ikcont*) ik_unsafe_alloc(pcb, sizeof(ikcont));
-    nk->tag  = continuation_tag;
-    nk->next = (ikptr) k;
-    nk->top  = frame_pointer;
-    nk->size = frame_base - frame_pointer - wordsize;
-    pcb->next_k        = vector_tag + (ikptr)nk;
-    pcb->frame_base    = frame_pointer;
-    pcb->frame_pointer = pcb->frame_base - wordsize;
-    IK_REF(pcb->frame_pointer, 0) = underflow_handler;
-  }
-  return void_object;
-}
-#else
-{
-  ikptr frame_base    = pcb->frame_base;
-  ikptr frame_pointer = pcb->frame_pointer;
-  dump_stack(pcb, "BEFORE SEALING");
-  fprintf(stderr, "old base=0x%016lx  fp=0x%016lx\n", pcb->frame_base, pcb->frame_pointer);
-  if ((frame_base - wordsize) != frame_pointer) {
-    ikptr	underflow_handler = IK_REF(frame_base, -wordsize);
-    ikcont *	k  = (ikcont*) pcb->next_k;
-    ikcont *	nk = (ikcont*) ik_unsafe_alloc(pcb, sizeof(ikcont));
-    nk->tag = continuation_tag;
-    nk->next = (ikptr) k;
-    nk->top = frame_pointer;
-    fprintf(stderr, "rp=0x%016lx\n", IK_REF(frame_pointer, 0));
-    nk->size = frame_base - frame_pointer - wordsize;
-    fprintf(stderr, "frame size=%ld\n", nk->size);
-    pcb->next_k        = vector_tag + (ikptr)nk;
-    pcb->frame_base    = frame_pointer;
-    pcb->frame_pointer = pcb->frame_base - wordsize;
-    fprintf(stderr, "new base=0x%016lx  fp=0x%016lx\n", pcb->frame_base, pcb->frame_pointer);
-    fprintf(stderr, "uf=0x%016lx\n", underflow_handler);
-    IK_REF(pcb->frame_pointer, 0) = underflow_handler;
-  } else {
-    fprintf(stderr, "already sealed\n");
-  }
-  dump_stack(pcb, "AFTER SEALING");
-  return void_object;
-}
-#endif
-
-ikptr
-ik_enter_c_function (ikpcb* pcb)
-{
-  ikptr		sk;
-  seal_scheme_stack(pcb);
-  sk = ik_unsafe_alloc(pcb, system_continuation_size) | vector_tag;
-  IK_REF(sk, off_system_continuation_tag)  = system_continuation_tag;
-  IK_REF(sk, off_system_continuation_top)  = pcb->system_stack;
-  IK_REF(sk, off_system_continuation_next) = pcb->next_k;
-  pcb->next_k = sk;
-  return sk;
-}
-void
-ik_leave_c_function (ikpcb * pcb, ikptr sk)
-{
-  pcb->frame_pointer = pcb->frame_base - wordsize;
-  sk = pcb->next_k - vector_tag;
-  if (system_continuation_tag != IK_REF(sk, disp_system_continuation_tag)) {
-    ik_abort("%s: invalid system cont", __func__);
-  }
-  pcb->next_k       = IK_REF(sk, disp_system_continuation_next);
-  pcb->system_stack = IK_REF(sk, disp_system_continuation_top);
 }
 
 
@@ -641,6 +547,108 @@ ikptr ikrt_ffi_prepare_callback()	{ return false_object; }
 ikptr ikrt_ffi_release_callback ()	{ return false_object; }
 ikptr ikrt_has_ffi()			{ return false_object; }
 
+#endif
+
+
+/** --------------------------------------------------------------------
+ ** Stack handling.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ik_enter_c_function (ikpcb* pcb)
+/* Call this function  whenever we enter a C function  that may invoke a
+   Scheme callback. */
+{
+  ikptr		sk;
+  seal_scheme_stack(pcb);
+  sk = ik_unsafe_alloc(pcb, system_continuation_size) | vector_tag;
+  IK_REF(sk, off_system_continuation_tag)  = system_continuation_tag;
+  IK_REF(sk, off_system_continuation_top)  = pcb->system_stack;
+  IK_REF(sk, off_system_continuation_next) = pcb->next_k;
+  pcb->next_k = sk;
+  return sk;
+}
+void
+ik_leave_c_function (ikpcb * pcb, ikptr sk)
+/* Call this  function whenever we exit  a C function that  may invoke a
+   Scheme callback. */
+{
+  pcb->frame_pointer = pcb->frame_base - wordsize;
+  sk = pcb->next_k - vector_tag;
+  if (system_continuation_tag != IK_REF(sk, disp_system_continuation_tag)) {
+    ik_abort("%s: invalid system cont", __func__);
+  }
+  pcb->next_k       = IK_REF(sk, disp_system_continuation_next);
+  pcb->system_stack = IK_REF(sk, disp_system_continuation_top);
+}
+static ikptr
+seal_scheme_stack(ikpcb* pcb)
+/* FIXME: handle stack overflow */
+#ifndef DEBUG_FFI
+{
+  /*
+    |              |
+    |              |
+    |              |
+    |              |
+    +--------------+
+    |   underflow  |  <--------- new frame pointer
+    +--------------+
+    | return point |  <--------- old frame pointer, new frame base
+    +--------------+
+    |      .       |
+    |      .       |
+    |      .       |
+    |              |
+    +--------------+
+    |   underflow  |  <--------- old frame base
+    +--------------+
+  */
+  ikptr frame_base    = pcb->frame_base;
+  ikptr frame_pointer = pcb->frame_pointer;
+  if ((frame_base - wordsize) != frame_pointer) {
+    ikptr	underflow_handler = IK_REF(frame_base, -wordsize);
+    ikcont *	k  = (ikcont*) pcb->next_k;
+    ikcont *	nk = (ikcont*) ik_unsafe_alloc(pcb, sizeof(ikcont));
+    nk->tag  = continuation_tag;
+    nk->next = (ikptr) k;
+    nk->top  = frame_pointer;
+    nk->size = frame_base - frame_pointer - wordsize;
+    pcb->next_k        = vector_tag + (ikptr)nk;
+    pcb->frame_base    = frame_pointer;
+    pcb->frame_pointer = pcb->frame_base - wordsize;
+    IK_REF(pcb->frame_pointer, 0) = underflow_handler;
+  }
+  return void_object;
+}
+#else
+{
+  ikptr frame_base    = pcb->frame_base;
+  ikptr frame_pointer = pcb->frame_pointer;
+  dump_stack(pcb, "BEFORE SEALING");
+  fprintf(stderr, "old base=0x%016lx  fp=0x%016lx\n", pcb->frame_base, pcb->frame_pointer);
+  if ((frame_base - wordsize) != frame_pointer) {
+    ikptr	underflow_handler = IK_REF(frame_base, -wordsize);
+    ikcont *	k  = (ikcont*) pcb->next_k;
+    ikcont *	nk = (ikcont*) ik_unsafe_alloc(pcb, sizeof(ikcont));
+    nk->tag = continuation_tag;
+    nk->next = (ikptr) k;
+    nk->top = frame_pointer;
+    fprintf(stderr, "rp=0x%016lx\n", IK_REF(frame_pointer, 0));
+    nk->size = frame_base - frame_pointer - wordsize;
+    fprintf(stderr, "frame size=%ld\n", nk->size);
+    pcb->next_k        = vector_tag + (ikptr)nk;
+    pcb->frame_base    = frame_pointer;
+    pcb->frame_pointer = pcb->frame_base - wordsize;
+    fprintf(stderr, "new base=0x%016lx  fp=0x%016lx\n", pcb->frame_base, pcb->frame_pointer);
+    fprintf(stderr, "uf=0x%016lx\n", underflow_handler);
+    IK_REF(pcb->frame_pointer, 0) = underflow_handler;
+  } else {
+    fprintf(stderr, "already sealed\n");
+  }
+  dump_stack(pcb, "AFTER SEALING");
+  return void_object;
+}
 #endif
 
 /* end of file */
