@@ -1,6 +1,6 @@
 ;;;Lightweight testing (reference implementation)
 ;;;
-;;;Copyright (c) 2009, 2010, 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2010, 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2005-2006 Sebastian Egner <Sebastian.Egner@philips.com>
 ;;;Modified by Derick Eddington for R6RS Scheme.
 ;;;
@@ -58,33 +58,43 @@
 
 ;;; utilities
 
+(define quiet-tests?
+  (let ((S (getenv "VICARE_CHECK_QUIET")))
+    (and S (not (fxzero? S)) (string=? S "yes"))))
+
 (define (check-display thing)
-  (ikarus:display thing (current-error-port)))
+  (unless quiet-tests?
+    (ikarus:display thing (current-error-port))))
 
 (define (check-write thing)
-  (ikarus:write thing (current-error-port)))
+  (unless quiet-tests?
+    (ikarus:write thing (current-error-port))))
 
 (define (check-newline)
-  (ikarus:newline (current-error-port)))
+  (unless quiet-tests?
+    (ikarus:newline (current-error-port))))
 
 (define (check-pretty-print thing)
-  (ikarus:pretty-print thing (current-error-port)))
+  (unless quiet-tests?
+    (ikarus:pretty-print thing (current-error-port))))
 
 (define (flush-checks-port)
-  (flush-output-port (current-error-port)))
+  (unless quiet-tests?
+    (flush-output-port (current-error-port))))
 
 (define check-pretty-print/no-trailing-newline
   (case-lambda
    ((datum output-port)
-    (let* ((os	(call-with-string-output-port
-		    (lambda (sop) (check-pretty-print datum sop))))
-	   (len	(string-length os))
-	   (os	(if (and (positive? len)
-			 (char=? #\newline
-				 (string-ref os (- len 1))))
-		    (substring os 0 (- len 1))
-		  os)))
-      (check-display os output-port)))
+    (unless quiet-tests?
+      (let* ((os	(call-with-string-output-port
+			    (lambda (sop) (check-pretty-print datum sop))))
+	     (len	(string-length os))
+	     (os	(if (and (positive? len)
+				 (char=? #\newline
+					 (string-ref os (- len 1))))
+			    (substring os 0 (- len 1))
+			  os)))
+	(check-display os output-port))))
    ((datum)
     (check-pretty-print/no-trailing-newline datum (current-error-port)))))
 

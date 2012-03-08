@@ -74,7 +74,7 @@ VICARE_INST_ENV	= VICARE_LIBRARY_PATH=$$VICARE_LIBRARY_PATH:$(srcdir):$(srcdir)/
 VICARE_INST_RUN	= $(VICARE_INST_ENV) vicare
 
 # TESTS and TESTS_ENVIRONMENT are Automake variables.
-TESTS_ENVIRONMENT	= $(VICARE_RUN)
+TESTS_ENVIRONMENT	= VICARE_CHECK_QUIET=yes $(VICARE_RUN)
 TESTS			=	\
 	test-r6rs-arithmetic-bitwise.sps		\
 	test-r6rs-arithmetic-fixnums.sps		\
