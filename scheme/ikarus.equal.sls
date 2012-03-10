@@ -38,6 +38,9 @@
   (export equal?)
   (import (except (ikarus)
 		  equal?)
+    ;;To be removed  after the next boot image  rotation.  (Marco Maggi;
+    ;;Sat Mar 10, 2012)
+    (ikarus.keywords)
     (only (ikarus system $foreign)
 	  pointer?)
     (rename (ikarus system $pointers)
@@ -125,6 +128,10 @@
 	 (and (pointer? y)
 	      (pointer=? x y)
 	      k))
+	((keyword? x)
+	 (and (keyword? y)
+	      (keyword=? x y)
+	      k))
 	(else	;chars, numbers, booleans, other non-compound value
 	 (and (eqv? x y) k))))
 
@@ -173,6 +180,10 @@
 	(and (pointer? y)
 	     (pointer=? x y)
 	     k))
+       ((keyword? x)
+	(and (keyword? y)
+	     (keyword=? x y)
+	     k))
        (else
 	(and (eqv? x y) k))))
     (define (fast? x y k)
@@ -205,6 +216,10 @@
 	 ((pointer? x)
 	  (and (pointer? y)
 	       (pointer=? x y)
+	       k))
+	 ((keyword? x)
+	  (and (keyword? y)
+	       (keyword=? x y)
 	       k))
 	 (else
 	  (and (eqv? x y)

@@ -128,6 +128,7 @@ TESTS			=	\
 	test-vicare-equality.sps			\
 	test-vicare-flonum-formatter.sps		\
 	test-vicare-flonum-parser.sps			\
+	test-vicare-keywords.sps			\
 	test-vicare-io.sps				\
 	test-vicare-language-extensions.sps		\
 	test-vicare-lists.sps				\
@@ -300,6 +301,7 @@ EXTRA_DIST =	\
 	test-vicare-flonum-formatter.sps		\
 	test-vicare-flonum-parser.sps			\
 	test-vicare-glibc.sps				\
+	test-vicare-keywords.sps			\
 	test-vicare-io.sps				\
 	test-vicare-language-extensions.sps		\
 	test-vicare-linux.sps				\

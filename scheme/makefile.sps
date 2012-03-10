@@ -248,6 +248,7 @@
     "ikarus.exceptions.sls"
     "ikarus.collect.sls"
     "ikarus.apply.sls"
+    "ikarus.keywords.sls"
     "ikarus.predicates.sls"
     "ikarus.equal.sls"
     "ikarus.pairs.sls"
@@ -2036,7 +2037,15 @@
     (perform-tag-analysis			i v $language)
     (current-letrec-pass			i v $language)
     (host-info					i v $language)
-    (debug-call)))
+    (debug-call)
+
+;;; --------------------------------------------------------------------
+
+    (symbol->keyword				i v $language)
+    (keyword->symbol				i v $language)
+    (keyword?					i v $language)
+    (keyword=?					i v $language)
+    ))
 
 
 (define bootstrap-collection

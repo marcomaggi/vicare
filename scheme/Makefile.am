@@ -146,6 +146,7 @@ EXTRA_DIST= last-revision				\
 	ikarus.guardians.sls				\
 	ikarus.handlers.sls				\
 	ikarus.hash-tables.sls				\
+	ikarus.keywords.sls				\
 	ikarus.intel-assembler.sls			\
 	ikarus.io.sls					\
 	ikarus.lists.sls				\

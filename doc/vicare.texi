@@ -1621,6 +1621,7 @@ exports all the bindings exported by @library{vicare} that are
 * iklib environment::           Environments.
 * iklib cafe::                  Cafe.
 * iklib structs::               Structures and type descriptors.
+* iklib keywords::              Keyword objects.
 * iklib lists::                 Additional list functions.
 * iklib bytevectors::           Additional bytevector functions.
 * iklib strings::               Additional string functions.
@@ -1963,7 +1964,7 @@ each @meta{char} must be a Scheme character.
 
 @example
 #!(char-names
-    (lambda . #\x0E88))
+    (lambda . #\x0EBB))
 @end example
 @end deffn
 
@@ -1974,7 +1975,7 @@ be an identifier previously defined with the @code{char-names} comment
 list defined above.
 
 @example
-#\@{lambda@}            @result{} #\xE88
+#\@{lambda@}            @result{} #\xEBB
 @end example
 @end deffn
 
@@ -1985,7 +1986,7 @@ Reader syntax for custom named characters embedded in strings.
 @code{char-names} comment list defined above.
 
 @example
-"\@{lambda@}"           @result{} "\xE88;"
+"\@{lambda@}"           @result{} "\xEBB;"
 @end example
 @end deffn
 
@@ -2505,6 +2506,40 @@ Return the value of field at @var{index} in the data structure
 @defun struct-set! @var{stru} @var{index} @var{value}
 Store @var{value} in the field at @var{index} in the data structure
 @var{stru}.
+@end defun
+
+@c page
+@node iklib keywords
+@section Keyword objects
+
+
+Keyword objects are struct instances embedding a Scheme symbol; keyword
+objects are a disjoint type; keyword objects are @strong{not} interned.
+
+Keyword objects can be compared with @func{eq?}, @func{eqv?} and
+@func{equal?}; a keyword object is @func{eq?} only to itself.  Keyword
+objects can also be compared with the @func{keyword=?} predicate which
+is faster than @func{eqv?} and @func{equal?} and slower than @func{eq?}
+for symbols.
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun symbol->keyword @var{symbol}
+@defunx keyword->symbol @var{keyword}
+Convert between a symbol and a keyword.
+@end defun
+
+
+@defun keyword? @var{obj}
+Return @true{} if @var{obj} is a keyword object, else return @false{}.
+@end defun
+
+
+@defun keyword=? @vari{keyword} @varii{keyword}
+Return @true{} if both @vari{keyword} and @varii{keyword} are keyword
+objects and they are equal.  A keyword object is equal to itself; two
+distinct keyword objects are equal if they have the same symbol.
 @end defun
 
 @c page
