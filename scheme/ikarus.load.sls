@@ -55,15 +55,28 @@
 ;;
 (define fasl-directory
   (make-parameter
-      (cond ((posix.getenv "VICARE_FASL_DIRECTORY"))
-	    ((posix.getenv "HOME")
-	     => (lambda (s)
-		  (string-append s "/.vicare/precompiled")))
-	    (else ""))
-    (lambda (s)
-      (if (string? s)
-	  s
-	(assertion-violation 'fasl-directory "not a string" s)))))
+      (let ((P (posix.getenv "VICARE_FASL_DIRECTORY")))
+	(if (and P (file-exists? P))
+	    (posix.real-pathname P)
+	  (let ((P (posix.getenv "HOME")))
+	    (if (and P (file-exists? P))
+		(string-append (posix.real-pathname P) "/.vicare/precompiled")
+	      ""))))
+;;;The following code was the original in Ikarus.  (Marco Maggi; Sat Mar
+;;;10, 2012)
+;;;
+;;;      (cond ((posix.getenv "VICARE_FASL_DIRECTORY"))
+;;;	    ((posix.getenv "HOME")
+;;;	     => (lambda (s)
+;;;		  (string-append s "/.vicare/precompiled")))
+;;;	    (else ""))
+    (lambda (P)
+      (define who 'fasl-directory)
+      (if (string? P)
+	  (if (file-exists? P)
+	      P
+	    (error who "attempt to set non-existent directory pathname" P))
+	(error who "expected string as directory pathname" P)))))
 
 (define (fasl-path filename)
   ;;Given a source  file name return the associated  full FASL file name

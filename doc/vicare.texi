@@ -19655,11 +19655,13 @@ as follows:
 @enumerate
 @item
 Check the value of the system environment variable
-@env{VICARE_FASL_DIRECTORY}: if set the value is the directory pathname.
+@env{VICARE_FASL_DIRECTORY}: if set and its value exists as pathname,
+the value is selected.
 
 @item
 Acquire the value of the system environment variable @env{HOME}: if set
-compose a directory pathname by appending to the value the string:
+and its value exists as pathname, compose a directory pathname by
+appending to the value the string:
 
 @example
 /.vicare/precompiled
@@ -19668,6 +19670,10 @@ compose a directory pathname by appending to the value the string:
 @item
 Set the parameter to the empty string.
 @end enumerate
+
+New values for this parameter must be Scheme string representing
+existing pathnames.  The pathnames are normalised to their real
+pathname, removing symbolic links and useless @code{..} components.
 @end deffn
 
 
