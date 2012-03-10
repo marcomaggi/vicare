@@ -45,6 +45,8 @@ Notes for revision 0.2d10
 * Changed  FASL-DIRECTORY  pathname validator  to  accept only  existent
   string pathnames.
 
+* Added keyword objects.
+
 
 Notes for revision 0.2d9
 ------------------------
