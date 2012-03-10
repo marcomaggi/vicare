@@ -2045,6 +2045,7 @@
     (keyword->symbol				i v $language)
     (keyword?					i v $language)
     (keyword=?					i v $language)
+    (keyword-hash				i v $language)
     ))
 
 

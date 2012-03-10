@@ -33,134 +33,144 @@
 (check-display "*** testing Vicare keywords\n")
 
 
-(parametrise ((check-test-name	'api))
+(check
+    (keyword? 123)
+  => #f)
 
-  (check
-      (keyword? 123)
-    => #f)
+(check
+    (let ((K (symbol->keyword 'ciao)))
+      (keyword? K))
+  => #t)
 
-  (check
-      (let ((K (symbol->keyword 'ciao)))
-        (keyword? K))
-    => #t)
-
-  (check
-      (keyword->symbol (symbol->keyword 'ciao))
-    => 'ciao)
+(check
+    (keyword->symbol (symbol->keyword 'ciao))
+  => 'ciao)
 
 ;;; --------------------------------------------------------------------
 
-  (check
-      (keyword=? (symbol->keyword 'ciao)
-		 (symbol->keyword 'ciao))
-    => #t)
+(check
+    (keyword=? (symbol->keyword 'ciao)
+	       (symbol->keyword 'ciao))
+  => #t)
 
-  (check
-      (keyword=? (symbol->keyword 'ciao)
-		 (symbol->keyword 'hello))
-    => #f)
+(check
+    (keyword=? (symbol->keyword 'ciao)
+	       (symbol->keyword 'hello))
+  => #f)
 
-  (check
-      (let ((K (symbol->keyword 'ciao)))
-	(keyword=? K K))
-    => #t)
+(check
+    (let ((K (symbol->keyword 'ciao)))
+      (keyword=? K K))
+  => #t)
 
-  (check
-      (keyword=? (symbol->keyword 'ciao)
-		 'ciao)
-    => #f)
+(check
+    (keyword=? (symbol->keyword 'ciao)
+	       'ciao)
+  => #f)
 
-  (check
-      (keyword=? 'ciao
-		 (symbol->keyword 'ciao))
-    => #f)
+(check
+    (keyword=? 'ciao
+	       (symbol->keyword 'ciao))
+  => #f)
 
 ;;; --------------------------------------------------------------------
 ;;; EQ? comparison
 
-  (check
-      (eq? (symbol->keyword 'ciao)
-	   (symbol->keyword 'ciao))
-    => #f)
+(check
+    (eq? (symbol->keyword 'ciao)
+	 (symbol->keyword 'ciao))
+  => #f)
 
-  (check
-      (eq? (symbol->keyword 'ciao)
-	   (symbol->keyword 'hello))
-    => #f)
+(check
+    (eq? (symbol->keyword 'ciao)
+	 (symbol->keyword 'hello))
+  => #f)
 
-  (check
-      (let ((K (symbol->keyword 'ciao)))
-	(eq? K K))
-    => #t)
+(check
+    (let ((K (symbol->keyword 'ciao)))
+      (eq? K K))
+  => #t)
 
-  (check
-      (eq? (symbol->keyword 'ciao)
-	   'ciao)
-    => #f)
+(check
+    (eq? (symbol->keyword 'ciao)
+	 'ciao)
+  => #f)
 
-  (check
-      (eq? 'ciao
-	   (symbol->keyword 'ciao))
-    => #f)
+(check
+    (eq? 'ciao
+	 (symbol->keyword 'ciao))
+  => #f)
 
 ;;; --------------------------------------------------------------------
 ;;; EQV? comparison
 
-  (check
-      (eqv? (symbol->keyword 'ciao)
-	    (symbol->keyword 'ciao))
-    => #t)
+(check
+    (eqv? (symbol->keyword 'ciao)
+	  (symbol->keyword 'ciao))
+  => #t)
 
-  (check
-      (eqv? (symbol->keyword 'ciao)
-	    (symbol->keyword 'hello))
-    => #f)
+(check
+    (eqv? (symbol->keyword 'ciao)
+	  (symbol->keyword 'hello))
+  => #f)
 
-  (check
-      (let ((K (symbol->keyword 'ciao)))
-	(eqv? K K))
-    => #t)
+(check
+    (let ((K (symbol->keyword 'ciao)))
+      (eqv? K K))
+  => #t)
 
-  (check
-      (eqv? (symbol->keyword 'ciao)
-	    'ciao)
-    => #f)
+(check
+    (eqv? (symbol->keyword 'ciao)
+	  'ciao)
+  => #f)
 
-  (check
-      (eqv? 'ciao
-	    (symbol->keyword 'ciao))
-    => #f)
+(check
+    (eqv? 'ciao
+	  (symbol->keyword 'ciao))
+  => #f)
 
 ;;; --------------------------------------------------------------------
 ;;; EQUAL? comparison
 
-  (check
-      (equal? (symbol->keyword 'ciao)
-	      (symbol->keyword 'ciao))
-    => #t)
+(check
+    (equal? (symbol->keyword 'ciao)
+	    (symbol->keyword 'ciao))
+  => #t)
 
-  (check
-      (equal? (symbol->keyword 'ciao)
-	      (symbol->keyword 'hello))
-    => #f)
+(check
+    (equal? (symbol->keyword 'ciao)
+	    (symbol->keyword 'hello))
+  => #f)
 
-  (check
-      (let ((K (symbol->keyword 'ciao)))
-	(equal? K K))
-    => #t)
+(check
+    (let ((K (symbol->keyword 'ciao)))
+      (equal? K K))
+  => #t)
 
-  (check
-      (equal? (symbol->keyword 'ciao)
-	      'ciao)
-    => #f)
+(check
+    (equal? (symbol->keyword 'ciao)
+	    'ciao)
+  => #f)
 
-  (check
-      (equal? 'ciao
-	      (symbol->keyword 'ciao))
-    => #f)
+(check
+    (equal? 'ciao
+	    (symbol->keyword 'ciao))
+  => #f)
 
+;;; --------------------------------------------------------------------
 
-  #t)
+(check
+    (keyword-hash (symbol->keyword 'ciao))
+  => (symbol-hash 'ciao))
+
+;;; --------------------------------------------------------------------
+
+(check
+    (let-values (((port getter)
+		  (open-string-output-port)))
+      (display (symbol->keyword 'ciao) port)
+      (getter))
+  => "#[keyword ciao]")
 
 
 ;;;; done

@@ -31,17 +31,25 @@
     symbol->keyword
     keyword->symbol
     keyword?
-    keyword=?)
+    keyword=?
+    keyword-hash)
   (import (except (ikarus)
 		  symbol->keyword
 		  keyword->symbol
 		  keyword?
-		  keyword=?)
+		  keyword=?
+		  keyword-hash)
     (vicare syntactic-extensions))
 
 
 (define-struct keyword
   (symbol))
+
+;; (define (%keyword-printer S port sub-printer)
+;;   (define-inline (%display thing)
+;;     (display thing port))
+;;   (%display "#:")
+;;   (%display (keyword-symbol S)))
 
 (define-argument-validation (symbol who obj)
   (symbol? obj)
@@ -70,8 +78,16 @@
 	   (eq? (keyword-symbol K1)
 		(keyword-symbol K2)))))
 
+(define (keyword-hash K)
+  (define who 'keyword->symbol)
+  (with-arguments-validation (who)
+      ((keyword	K))
+    (symbol-hash (keyword-symbol K))))
+
 
 ;;;; done
+
+;;(set-rtd-printer! (type-descriptor keyword)	%keyword-printer)
 
 )
 

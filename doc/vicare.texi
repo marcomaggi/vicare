@@ -2542,6 +2542,12 @@ objects and they are equal.  A keyword object is equal to itself; two
 distinct keyword objects are equal if they have the same symbol.
 @end defun
 
+
+@defun keyword-hash @var{keyword}
+Return an exact integer suitable to be used as hash value for
+@var{keyword} used as key for hashtables.
+@end defun
+
 @c page
 @node iklib lists
 @section Additional list functions
