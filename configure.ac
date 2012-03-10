@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.68)
-AC_INIT([Vicare Scheme],[0.2d9],[marco.maggi-ipsu@poste.it],
+AC_INIT([Vicare Scheme],[0.2d10],[marco.maggi-ipsu@poste.it],
   [vicare-scheme],[http://marcomaggi.github.com/vicare.html])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE
