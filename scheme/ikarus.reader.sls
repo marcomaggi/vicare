@@ -168,8 +168,8 @@
 
 ;;;; interface to low level functions
 
-(define-inline (%seed-strings->gensym id0 id1)
-  (foreign-call "ikrt_strings_to_gensym" id0 id1))
+(define-inline (%seed-strings->gensym pretty-string unique-string)
+  (foreign-call "ikrt_strings_to_gensym" pretty-string unique-string))
 
 
 ;;;; annotated datums
@@ -1028,14 +1028,14 @@
    ((unsafe.char= #\: ch)
     (when (port-in-r6rs-mode? port)
       (%error-1 "gensym syntax is invalid in #!r6rs mode" (format "#~a" ch)))
-    (let* ((ch1 (read-char-skip-whitespace port "gensym"))
-	   (id0 (cond ((initial? ch1)
-		       (reverse-list->string (%accumulate-identifier-chars (cons ch1 '()) port)))
-		      ((unsafe.char= #\| ch1)
-		       (reverse-list->string (%accumulate-identifier-chars/bar '() port)))
-		      (else
-		       (%error-1 "invalid char inside gensym" ch1)))))
-      (cons 'datum (gensym id0))))
+    (let* ((ch1         (%read-char-skip-whitespace port "gensym"))
+	   (pretty-name (cond ((initial? ch1)
+			       (reverse-list->string (%accumulate-identifier-chars (cons ch1 '()) port)))
+			      ((unsafe.char= #\| ch1)
+			       (reverse-list->string (%accumulate-identifier-chars/bar '() port)))
+			      (else
+			       (%error-1 "invalid char inside gensym" ch1)))))
+      (cons 'datum (gensym pretty-name))))
 
    ;;Gensym with one of the following syntaxes:
    ;;
@@ -1054,8 +1054,8 @@
    ((unsafe.char= #\{ ch)
     (when (port-in-r6rs-mode? port)
       (%error-1 "gensym syntax is invalid in #!r6rs mode" "#{"))
-    (let ((ch1 (read-char-skip-whitespace port "gensym")))
-      (define-inline (%end-syntax? chX)
+    (let ((ch1 (%read-char-skip-whitespace port "gensym")))
+      (define-inline (%end-of-gensym? chX)
 	(unsafe.char= #\} chX))
       (define-inline (%read-identifier chX)
 	(cond ((initial? chX)
@@ -1065,12 +1065,14 @@
 	      (else
 	       (%error-1 "invalid char inside gensym syntax" chX))))
       (let ((id0 (%read-identifier ch1))
-	    (ch2 (read-char-skip-whitespace port "gensym")))
-	(if (%end-syntax? ch2)
+	    (ch2 (%read-char-skip-whitespace port "gensym")))
+	(if (%end-of-gensym? ch2)
+	    ;;ID0 is the unique string.
 	    `(datum . ,(%seed-strings->gensym #f id0))
 	  (let* ((id1 (%read-identifier ch2))
-		 (ch3 (read-char-skip-whitespace port "gensym")))
-	    (if (%end-syntax? ch3)
+		 (ch3 (%read-char-skip-whitespace port "gensym")))
+	    (if (%end-of-gensym? ch3)
+		;;ID0 is the pretty string, ID1 is the unique string.
 		`(datum . ,(%seed-strings->gensym id0 id1))
 	      (%error-1 "invalid char while looking for end of gensym syntax" ch3)))))))
 
@@ -2512,7 +2514,7 @@
 	      (else
 	       (%error-1 (format "invalid ~a: ~s" who (reverse-list->string (cons ch ls))))))))))
 
-(define (read-char-skip-whitespace port caller)
+(define (%read-char-skip-whitespace port caller)
   ;;Read and  discard characters from  PORT while they are  white spaces
   ;;according  to  CHAR-WHITESPACE?.  Return  the  first character  read
   ;;which is not a white space.
@@ -2523,10 +2525,10 @@
   (define-inline (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define-inline (recurse)
-    (read-char-skip-whitespace port caller))
+    (%read-char-skip-whitespace port caller))
   (let ((ch (get-char-and-track-textual-position port)))
     (cond ((eof-object? ch)
-	   (%error "invalid EOF inside" caller))
+	   (%error (string-append "invalid EOF while parsing " caller)))
 	  ((char-whitespace? ch)
 	   (recurse))
 	  (else ch))))
