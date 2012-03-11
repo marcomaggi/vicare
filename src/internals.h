@@ -350,7 +350,9 @@ typedef struct ikpcb {
   int			cached_pages_size;
   ikptr			stack_base;
   ik_ulong		stack_size;
+  /* The hash table holding interned symbols. */
   ikptr			symbol_table;
+  /* The hash table holding interned generated symbols. */
   ikptr			gensym_table;
   /* Array of linked lists; one for each GC generation.  The linked list
      holds  references  to  Scheme  values  that  must  not  be  garbage
