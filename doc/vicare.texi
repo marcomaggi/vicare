@@ -2043,6 +2043,55 @@ cause an error if read:
 @end deffn
 
 
+@deffn {Reader Syntax} {#@{unique-name@}}
+@deffnx {Reader Syntax} {#@{pretty-name unique-name@}}
+@deffnx {Reader Syntax} {#:pretty-name}
+@value{PRJNAME}'s @func{read} and @func{write} procedures extend the lexical
+syntax of Scheme by the ability to read and write gensyms using one of
+these three forms.
+
+@code{#@{unique-name@}} constructs, at read time, a gensym whose unique
+name is the one specified.  If a gensym with the same unique name
+already exists in the system's symbol table, that gensym is returned.
+
+@example
+> '#@{some-long-name@}
+#@{g0 |some-long-name|@}
+> (gensym? '#@{some-long-unique-name@})
+#t
+> (eq? '#@{another-unique-name@} '#@{another-unique-name@})
+#t
+@end example
+
+The two--part @code{#@{pretty-name unique-name@}} gensym syntax is
+similar to the syntax shown above with the exception that if a new
+gensym is constructed (that is, if the gensym did not already exist in
+the symbol table), the pretty name of the constructed gensym is set to
+@code{pretty-name}.
+
+@example
+> '#@{foo unique-identifier@}
+#@{foo |unique-identifier|@}
+> '#@{unique-identifier@}
+#@{foo |unique-identifier|@}
+> '#@{bar unique-identifier@}
+#@{foo |unique-identifier|@}
+@end example
+
+The @code{#:pretty-name} form constructs, at read time, a gensym whose
+pretty name is @code{pretty-name} and whose unique name is fresh.  This
+form guarantees that the resulting gensym is not @func{eq?} to any other
+symbol in the system.
+
+@example
+> '#:foo
+#@{foo |j=qTGlEwS/Zlp2Dj|@}
+> (eq? '#:foo '#:foo)
+#f
+@end example
+@end deffn
+
+
 @deffn {Reader Syntax} {#!eof}
 The end--of--file marker, @code{#!eof}, is an extension to the @rnrs{6}
 syntax.  The primary utility of the @code{#!eof} marker is to stop the
@@ -3727,6 +3776,9 @@ A gensym's name is composed of two parts: a @emph{pretty} string and a
 returns the pretty string of the gensym and not its unique string.
 Gensyms are printed by default as @code{#@{pretty-string unique-string@}}.
 
+The reader supports special syntaxes to generate symbols, @ref{iklib
+reader stx}.
+
 
 @deffn Procedure gensym
 @deffnx Procedure gensym @var{string}
@@ -3786,63 +3838,10 @@ Return the unique name associated with the gensym argument.
 @end example
 @end deffn
 
-
-@deffn {Reader Syntax} {#@{gensym@}}
-@deffnx {Reader Syntax} {#@{unique-name@}}
-@deffnx {Reader Syntax} {#@{pretty-name unique-name@}}
-@deffnx {Reader Syntax} {#:pretty-name}
-@value{PRJNAME}'s @func{read} and @func{write} procedures extend the lexical
-syntax of Scheme by the ability to read and write gensyms using one of
-these three forms.
-
-@code{#@{unique-name@}} constructs, at read time, a gensym whose unique
-name is the one specified.  If a gensym with the same unique name
-already exists in the system's symbol table, that gensym is returned.
-
-@example
-> '#@{some-long-name@}
-#@{g0 |some-long-name|@}
-> (gensym? '#@{some-long-unique-name@})
-#t
-> (eq? '#@{another-unique-name@} '#@{another-unique-name@})
-#t
-@end example
-
-The two--part @code{#@{pretty-name unique-name@}} gensym syntax is
-similar to the syntax shown above with the exception that if a new
-gensym is constructed (that is, if the gensym did not already exist in
-the symbol table), the pretty name of the constructed gensym is set to
-@code{pretty-name}.
-
-@example
-> '#@{foo unique-identifier@}
-#@{foo |unique-identifier|@}
-> '#@{unique-identifier@}
-#@{foo |unique-identifier|@}
-> '#@{bar unique-identifier@}
-#@{foo |unique-identifier|@}
-@end example
-
-The @code{#:pretty-name} form constructs, at read time, a gensym whose
-pretty name is @code{pretty-name} and whose unique name is fresh.  This
-form guarantees that the resulting gensym is not @func{eq?} to any other
-symbol in the system.
-
-@example
-> '#:foo
-#@{foo |j=qTGlEwS/Zlp2Dj|@}
-> (eq? '#:foo '#:foo)
-#f
-@end example
-@end deffn
-
-
 @c ------------------------------------------------------------
 
-@subsection An example
+@subsubheading An example
 
-
-@noindent
 The @library{rnrs syntax-case} library provides a
 @func{generate-temporaries} procedure, which takes a syntax object
 (representing a list of things) and returns a list of fresh identifiers.
