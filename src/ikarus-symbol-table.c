@@ -31,7 +31,8 @@ static ikptr
 make_symbol_table (ikpcb* pcb)
 /* Build and return a new hash table to be used as symbol table for both
    common  symbols and  gensyms.   "Symbol table"  here  means a  Scheme
-   vector of buckets, in which a bucket is a proper list of symbols.
+   vector of  buckets, in which  a bucket is  a proper list  of symbols;
+   empty bucket slots are initialised to the fixnum zero.
 
    The vector is allocated outside  of the memory scanned by the garbage
    collector.  Later  some pages in the  vector may be  registered to be
@@ -142,10 +143,16 @@ intern_string (ikptr s_unique_string, ikptr s_symbol_table, ikpcb* pcb)
 }
 static ikptr
 intern_unique_string (ikptr s_pretty_string, ikptr s_unique_string, ikptr s_symbol_table, ikpcb* pcb)
+/* Intern a  symbol object, having  S_PRETTY_STRING and S_UNIQUE_STRING,
+   in S_SYMBOL_TABLE which can be  either the common symbol table or the
+   gensyms table.
+
+   If a symbol object having S_UNIQUE_STRING is already interned: return
+   it.  Else: allocate a new symbol object, intern it, return it. */
 {
   int   hash_value    = compute_hash(s_unique_string);
   int   bucket_index  = hash_value & (IK_VECTOR_LENGTH(s_symbol_table) - 1);
-  ikptr s_bucket_list      = IK_ITEM(s_symbol_table, bucket_index);
+  ikptr s_bucket_list = IK_ITEM(s_symbol_table, bucket_index);
   { /* If a  symbol having  S_UNIQUE_STRING is already  interned, return
        it. */
     ikptr s_list_iterator = s_bucket_list;
@@ -287,11 +294,11 @@ ikrt_string_to_symbol (ikptr str, ikpcb* pcb)
 ikptr
 ikrt_strings_to_gensym (ikptr s_pretty_string, ikptr s_unique_string, ikpcb* pcb)
 {
-  ikptr s_symbol_table = pcb->gensym_table;
-  if (0 == s_symbol_table) {
-    pcb->gensym_table = s_symbol_table = make_symbol_table(pcb);
+  ikptr s_gensym_table = pcb->gensym_table;
+  if (0 == s_gensym_table) {
+    pcb->gensym_table = s_gensym_table = make_symbol_table(pcb);
   }
-  return intern_unique_string(s_pretty_string, s_unique_string, s_symbol_table, pcb);
+  return intern_unique_string(s_pretty_string, s_unique_string, s_gensym_table, pcb);
 }
 
 /* end of file */
