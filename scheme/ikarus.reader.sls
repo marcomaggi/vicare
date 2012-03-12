@@ -46,6 +46,8 @@
     (vicare words)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
+    (only (ikarus.keywords)
+	  symbol->keyword)
     (only (ikarus.string-to-number)
 	  define-string->number-parser))
 
@@ -926,6 +928,7 @@
   ;;(datum . #f)		The token is the value #f.
   ;;(datum . <char>)		The token is the character <char>.
   ;;(datum . <sym>)		The token is the symbol <sym>.
+  ;;(datum . <key>)		The token is the keyword object <key>.
   ;;(datum . <num>)		The token is the number <num>.
   ;;(datum . #!eof)		The token is the "#!eof" comment.
   ;;(macro . syntax)		The token is a syntax form: #'---.
@@ -1021,21 +1024,41 @@
 		  (start-tokenising port))))))))
 
    ((dec-digit? ch)
-    (when (port-in-r6rs-mode? port)
-      (%error-1 "graph notation marks syntax is invalid in #!r6rs mode" (string #\# ch)))
-    (finish-tokenisation-of-graph-location port (char->dec-digit ch)))
+    (if (port-in-r6rs-mode? port)
+	(%error-1 "graph notation marks syntax is invalid in #!r6rs mode" (string #\# ch))
+      (finish-tokenisation-of-graph-location port (char->dec-digit ch))))
 
    ((unsafe.char= #\: ch)
-    (when (port-in-r6rs-mode? port)
-      (%error-1 "gensym syntax is invalid in #!r6rs mode" (format "#~a" ch)))
-    (let* ((ch1         (%read-char-skip-whitespace port "gensym"))
-	   (pretty-name (cond ((initial? ch1)
-			       (reverse-list->string (%accumulate-identifier-chars (cons ch1 '()) port)))
-			      ((unsafe.char= #\| ch1)
-			       (reverse-list->string (%accumulate-identifier-chars/bar '() port)))
-			      (else
-			       (%error-1 "invalid char inside gensym" ch1)))))
-      (cons 'datum (gensym pretty-name))))
+    (if (port-in-r6rs-mode? port)
+	(%error-1 "keyword object syntax is invalid in #!r6rs mode" "#:")
+      (let* ((ch1 (%read-char-skip-whitespace port "keyword object"))
+	     (keyword-name
+	      (if (initial? ch1)
+		  (reverse-list->string (%accumulate-identifier-chars (cons ch1 '()) port))
+		(%error-1 "invalid char inside keyword object" ch1))))
+	(cons 'datum (symbol->keyword (string->symbol keyword-name))))))
+
+;;;The original Ikarus code used the syntax:
+;;;
+;;;  #:pretty
+;;;
+;;;to  read a  gensym  with PRETTY  as  pretty string.   Such syntax  is
+;;;currently used to read keyword objects.  It is currently not possible
+;;;to read a  gensym by pretty string (because I was  unable to invent a
+;;;cute syntax for them).  (Marco Maggi; Mon Mar 12, 2012)
+;;;
+;;;((unsafe.char= #\: ch)
+;;; (if (port-in-r6rs-mode? port)
+;;;     (%error-1 "gensym syntax is invalid in #!r6rs mode" (format "#~a" ch))
+;;;   (let* ((ch1 (%read-char-skip-whitespace port "gensym"))
+;;;          (pretty-name
+;;;           (cond ((initial? ch1)
+;;;                  (reverse-list->string (%accumulate-identifier-chars (cons ch1 '()) port)))
+;;;                 ((unsafe.char= #\| ch1)
+;;;                  (reverse-list->string (%accumulate-identifier-chars/bar '() port)))
+;;;                 (else
+;;;                  (%error-1 "invalid char inside gensym" ch1)))))
+;;;     (cons 'datum (gensym pretty-name)))))
 
    ;;Gensym with one of the following syntaxes:
    ;;

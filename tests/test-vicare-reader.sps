@@ -238,6 +238,16 @@
   #t)
 
 
+(parametrise ((check-test-name	'keywords))
+
+  (check
+      (let ((key (read (open-string-input-port "#:ciao"))))
+	(list (keyword? key) (symbol->string (keyword->symbol key))))
+    => '(#t "ciao"))
+
+  #t)
+
+
 (parametrise ((check-test-name	'chars))
 
   (define-syntax read-char-and-eof

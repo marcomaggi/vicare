@@ -47,6 +47,14 @@ Notes for revision 0.2d10
 
 * Added keyword objects.
 
+* BACKWARDS INCOMPATIBILITY The reader syntax:
+
+    #:symbol
+
+  is now used to read keyword objects wrapping the SYMBOL rather than to
+  build a  gensym using SYMBOL as  pretty name.  At present  there is no
+  more a syntax to read a gensym with a given pretty name.
+
 
 Notes for revision 0.2d9
 ------------------------

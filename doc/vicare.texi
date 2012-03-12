@@ -2045,7 +2045,7 @@ cause an error if read:
 
 @deffn {Reader Syntax} {#@{unique-name@}}
 @deffnx {Reader Syntax} {#@{pretty-name unique-name@}}
-@deffnx {Reader Syntax} {#:pretty-name}
+@c @deffnx {Reader Syntax} {#:pretty-name}
 @value{PRJNAME}'s @func{read} and @func{write} procedures extend the lexical
 syntax of Scheme by the ability to read and write gensyms using one of
 these three forms.
@@ -2078,6 +2078,7 @@ the symbol table), the pretty name of the constructed gensym is set to
 #@{foo |unique-identifier|@}
 @end example
 
+@ignore
 The @code{#:pretty-name} form constructs, at read time, a gensym whose
 pretty name is @code{pretty-name} and whose unique name is fresh.  This
 form guarantees that the resulting gensym is not @func{eq?} to any other
@@ -2089,6 +2090,14 @@ symbol in the system.
 > (eq? '#:foo '#:foo)
 #f
 @end example
+@end ignore
+@end deffn
+
+
+@deffn {Reader Syntax} {#:@var{symbol}}
+Read a keyword object using @var{symbol} as symbol.  @var{symbol} must
+be a symbol object as defined by @rnrs{6}.  @ref{iklib keywords, Keyword
+objects}.
 @end deffn
 
 
@@ -2570,6 +2579,9 @@ Keyword objects can be compared with @func{eq?}, @func{eqv?} and
 objects can also be compared with the @func{keyword=?} predicate which
 is faster than @func{eqv?} and @func{equal?} and slower than @func{eq?}
 for symbols.
+
+The reader supports a special syntax to read keyword objects, @ref{iklib
+reader stx, Miscellaneous additional syntaxes}.
 
 The following bindings are exported by the @library{ikarus} library.
 
