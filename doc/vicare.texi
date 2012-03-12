@@ -1634,7 +1634,7 @@ exports all the bindings exported by @library{vicare} that are
 * iklib parameters::            Parameters.
 * iklib gensym::                Gensyms.
 * iklib printing::              Printing.
-* iklib tracing::               Tracing.
+* iklib tracing::               Tracing for debugging.
 * iklib timing::                Timing.
 * iklib guardians::             Guardians and garbage collection.
 * iklib io::                    Input/output library.
@@ -4126,7 +4126,7 @@ gensyms were created.
 
 @c page
 @node iklib tracing
-@section Tracing
+@section Tracing for debugging
 
 
 @deffn Syntax trace-define (name . args) body body* ...
@@ -4230,6 +4230,37 @@ except that it traces its arguments and values.
 |(K 120)
 120
 @end example
+@end deffn
+
+
+@deffn Syntax trace-define-syntax @meta{keyword} @meta{expression}
+Like @func{define-syntax} but create a tracing transformer function.
+Whenever the macro is expanded the transformer function will print its
+argument (the input form) and its return value (the output form).
+Example:
+
+@example
+(trace-define-syntax ciao
+  (syntax-rules ()
+    ((_ ?a)
+     (list 1 ?a 3))))
+
+(ciao 2)
+@print{} |(ciao (ciao 2))
+@print{} |(list 1 2 3)
+@end example
+
+@noindent
+the first printed symbolic expression @code{(ciao (ciao 2))} shows the
+called tranformer function @code{(ciao ---)} and its argument being the
+input form @code{(ciao 2)}, filtered through @func{syntax->datum}.
+@end deffn
+
+
+@deffn Syntax trace-let-syntax @meta{bindings} @meta{form} ...
+@deffnx Syntax trace-letrec-syntax @meta{bindings} @meta{form} ...
+Like @func{let-syntax} and @func{letrec-syntax} but define tracing
+transformer functions.
 @end deffn
 
 @c page

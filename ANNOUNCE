@@ -55,6 +55,12 @@ Notes for revision 0.2d10
   build a  gensym using SYMBOL as  pretty name.  At present  there is no
   more a syntax to read a gensym with a given pretty name.
 
+* Added documentation for:
+
+    TRACE-DEFINE-SYNTAX
+    TRACE-LET-SYNTAX
+    TRACE-LETREC-SYNTAX
+
 
 Notes for revision 0.2d9
 ------------------------
