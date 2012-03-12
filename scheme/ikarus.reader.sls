@@ -384,9 +384,7 @@
       (unsafe.char= ch #\;)
       (unsafe.char= ch #\{)
       (unsafe.char= ch #\})
-      (unsafe.char= ch #\|))
-  #;(or (char-whitespace? ch)
-      (memq ch '(#\( #\) #\[ #\] #\" #\# #\; #\{ #\} #\|))))
+      (unsafe.char= ch #\|)))
 
 (define-inline (dec-digit? ch)
   (and (unsafe.char<= #\0 ch) (unsafe.char<= ch #\9)))
@@ -416,8 +414,7 @@
       (unsafe.char= ch #\?)
       (unsafe.char= ch #\^)
       (unsafe.char= ch #\_)
-      (unsafe.char= ch #\~))
-  #;(memq c '(#\! #\$ #\% #\& #\* #\/ #\: #\< #\= #\> #\? #\^ #\_ #\~)))
+      (unsafe.char= ch #\~)))
 
 (define (special-subsequent? ch)
   (or (unsafe.char= ch #\+)
@@ -1103,22 +1100,28 @@
    ((unsafe.char= #\v ch)
     (advance-tokenisation-of-bytevectors port))
 
-   ((or (unsafe.char= ch #\e) (unsafe.char= ch #\E)) #;(memq ch '(#\e #\E))
+   ;; #eNNNN -> exact integer number
+   ((or (unsafe.char= ch #\e) (unsafe.char= ch #\E))
     (cons 'datum (parse-string port (list ch #\#) 10 #f 'e)))
 
-   ((or (unsafe.char= ch #\i) (unsafe.char= ch #\I)) #;(memq ch '(#\i #\I))
+   ;; #iNNNN -> inexact integer number
+   ((or (unsafe.char= ch #\i) (unsafe.char= ch #\I))
     (cons 'datum (parse-string port (list ch #\#) 10 #f 'i)))
 
-   ((or (unsafe.char= ch #\b) (unsafe.char= ch #\B)) #;(memq ch '(#\b #\B))
+   ;; #bNNNN -> exact integer number in binary base
+   ((or (unsafe.char= ch #\b) (unsafe.char= ch #\B))
     (cons 'datum (parse-string port (list ch #\#) 2 2 #f)))
 
-   ((or (unsafe.char= ch #\x) (unsafe.char= ch #\X)) #;(memq ch '(#\x #\X))
+   ;; #xNNNN -> exact integer number in hex base
+   ((or (unsafe.char= ch #\x) (unsafe.char= ch #\X))
     (cons 'datum (parse-string port (list ch #\#) 16 16 #f)))
 
-   ((or (unsafe.char= ch #\o) (unsafe.char= ch #\O)) #;(memq ch '(#\o #\O))
+   ;; #oNNNN -> exact integer number in octal base
+   ((or (unsafe.char= ch #\o) (unsafe.char= ch #\O))
     (cons 'datum (parse-string port (list ch #\#) 8 8 #f)))
 
-   ((or (unsafe.char= ch #\d) (unsafe.char= ch #\D)) #;(memq ch '(#\d #\D))
+   ;; #dNNNN -> exact integer number in decimal base
+   ((or (unsafe.char= ch #\d) (unsafe.char= ch #\D))
     (cons 'datum (parse-string port (list ch #\#) 10 10 #f)))
 
    ((unsafe.char= ch #\c)
@@ -2377,36 +2380,37 @@
 ;;;; reading numbers
 
 (let-syntax ((num-error (syntax-rules ()
-			  ((_ p str ls)
-			   (die/p-1 p 'vicare-reader str (reverse-list->string ls))))))
+			  ((_ port str ls)
+			   (die/p-1 port 'vicare-reader str (reverse-list->string ls))))))
   (define-syntax port-config
     (syntax-rules (GEN-TEST GEN-ARGS FAIL EOF-ERROR GEN-DELIM-TEST)
-      ((_ GEN-ARGS k . rest) (k (p ac) . rest))
-      ((_ FAIL (p ac))
-       (num-error p "invalid numeric sequence" ac))
-      ((_ FAIL (p ac) c)
-       (num-error p "invalid numeric sequence" (cons c ac)))
-      ((_ EOF-ERROR (p ac))
-       (num-error p "invalid eof while reading number" ac))
+      ((_ GEN-ARGS k . rest)
+       (k (p accumulated-chars) . rest))
+      ((_ FAIL (port accumulated-chars))
+       (num-error port "invalid numeric sequence" accumulated-chars))
+      ((_ FAIL (port accumulated-chars) c)
+       (num-error port "invalid numeric sequence" (cons c accumulated-chars)))
+      ((_ EOF-ERROR (port accumulated-chars))
+       (num-error port "invalid eof while reading number" accumulated-chars))
       ((_ GEN-DELIM-TEST c sk fk)
        (if (delimiter? c) sk fk))
-      ((_ GEN-TEST var next fail (p ac) eof-case char-case)
-       (let ((c (peek-char p)))
+      ((_ GEN-TEST var next fail (port accumulated-chars) eof-case char-case)
+       (let ((c (peek-char port)))
 	 (if (eof-object? c)
 	     (let ()
 	       (define-syntax fail
 		 (syntax-rules ()
-		   ((_) (num-error p "invalid numeric sequence" ac))))
+		   ((_) (num-error port "invalid numeric sequence" accumulated-chars))))
 	       eof-case)
 	   (let ((var c))
 	     (define-syntax fail
 	       (syntax-rules ()
 		 ((_)
-		  (num-error p "invalid numeric sequence" (cons var ac)))))
+		  (num-error port "invalid numeric sequence" (cons var accumulated-chars)))))
 	     (define-syntax next
 	       (syntax-rules ()
 		 ((_ who args (... ...))
-		  (who p (cons (get-char p) ac) args (... ...)))))
+		  (who port (cons (get-char port) accumulated-chars) args (... ...)))))
 	     char-case)))))))
 
 (define-string->number-parser port-config

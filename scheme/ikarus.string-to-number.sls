@@ -164,24 +164,27 @@
 	(else			#f))
   #;(case c ((#\+) +1) ((#\-) -1) (else  #f)))
 
-(define (digit ch r)
-  ;;Given  a character CH  representing a  digit in  some base  R (which
+(define (digit ch base)
+  ;;Given a character  CH representing a digit in  some base BASE (which
   ;;should be  the fixnum 2, 8,  10 or 16) return  a fixnum representing
-  ;;the digit in base R.
+  ;;the digit in BASE.
   ;;
-  (let ((n (unsafe.fx- (unsafe.char->fixnum ch) CHAR-FIXNUM-0)))
-    (cond ((and (unsafe.fx>= n 0)
-		(unsafe.fx<  n r))
-	   n)
-	  ((eqv? r 16)
-	   (let ((n (fx- (unsafe.char->fixnum ch) CHAR-FIXNUM-a)))
-	     (if (and (unsafe.fx>= n 0)
-		      (unsafe.fx<  n 6))
-		 (unsafe.fx+ n 10)
-	       (let ((n (unsafe.fx- (unsafe.char->fixnum ch) CHAR-FIXNUM-A)))
-		 (if (and (unsafe.fx>= n 0)
-			  (unsafe.fx<  n 6))
-		     (unsafe.fx+ n 10)
+  ;;If the arguments are wrong: return false.
+  ;;
+  (let* ((F (unsafe.char->fixnum ch))
+	 (N (unsafe.fx- F CHAR-FIXNUM-0)))
+    (cond ((and (unsafe.fx>= N 0)
+		(unsafe.fx<  N base))
+	   N)
+	  ((unsafe.fx= base 16)
+	   (let ((N (unsafe.fx- F CHAR-FIXNUM-a)))
+	     (if (and (unsafe.fx>= N 0)
+		      (unsafe.fx<  N 6))
+		 (unsafe.fx+ N 10)
+	       (let ((N (unsafe.fx- F CHAR-FIXNUM-A)))
+		 (if (and (unsafe.fx>= N 0)
+			  (unsafe.fx<  N 6))
+		     (unsafe.fx+ N 10)
 		   #f)))))
 	  (else #f))))
 

@@ -553,8 +553,18 @@
   (read-number-and-eof "1.@2."		1.@2.)
 
 ;;; --------------------------------------------------------------------
-;;;
+;;; compnums
 
+  (read-number-and-eof "1+2i"		1+2i)
+  (read-number-and-eof "1/2+2i"		1/2+2i)
+  (read-number-and-eof "1+2/3i"		1+2/3i)
+
+  (read-number-and-eof "1@2"		1@2)
+  (read-number-and-eof "1.2@3"		1.2@3)
+  (read-number-and-eof "1@2.3"		1@2.3)
+  (read-number-and-eof "1/1@2"		1/2@2)
+  ;;(read-number-and-eof "1@2/2"		1@2/2)
+  ;; (read-number-and-eof "1/1@2/2"	1/1@2/2)
 
 ;;; --------------------------------------------------------------------
 ;;; distinguishing between numbers and symbols
@@ -565,6 +575,26 @@
   (read-number-and-eof "+inf.0"		+inf.0)
   (read-number-and-eof "-nan.0"		+nan.0)
   (read-number-and-eof "+nan.0"		+nan.0)
+
+;;; --------------------------------------------------------------------
+;;; base 2
+
+  (read-number-and-eof "#b1101"		#b1101)
+
+;;; --------------------------------------------------------------------
+;;; base 8
+
+  (read-number-and-eof "#o1234"		#o1234)
+
+;;; --------------------------------------------------------------------
+;;; base 10
+
+  (read-number-and-eof "#d9876"		#d9876)
+
+;;; --------------------------------------------------------------------
+;;; base 16
+
+  (read-number-and-eof "#x12AF"		#x12AF)
 
   #t)
 
