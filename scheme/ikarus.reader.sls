@@ -2382,19 +2382,28 @@
 (let-syntax ((num-error (syntax-rules ()
 			  ((_ port str ls)
 			   (die/p-1 port 'vicare-reader str (reverse-list->string ls))))))
-  (define-syntax port-config
-    (syntax-rules (GEN-TEST GEN-ARGS FAIL EOF-ERROR GEN-DELIM-TEST)
-      ((_ GEN-ARGS k . rest)
-       (k (p accumulated-chars) . rest))
-      ((_ FAIL (port accumulated-chars))
-       (num-error port "invalid numeric sequence" accumulated-chars))
+  (define-syntax port-logic
+    (syntax-rules (INTRODUCE-DEVICE-ARGUMENTS
+		   GENERATE-MORE-CHARS-TEST
+		   GENERATE-DELIMITER-TEST
+		   UNEXPECTED-EOF-ERROR
+		   FAIL)
+
+      ((_ INTRODUCE-DEVICE-ARGUMENTS ?kont . ?rest)
+       (?kont (port accumulated-chars) . ?rest))
+
       ((_ FAIL (port accumulated-chars) c)
        (num-error port "invalid numeric sequence" (cons c accumulated-chars)))
-      ((_ EOF-ERROR (port accumulated-chars))
+
+      ((_ UNEXPECTED-EOF-ERROR (port accumulated-chars))
        (num-error port "invalid eof while reading number" accumulated-chars))
-      ((_ GEN-DELIM-TEST c sk fk)
-       (if (delimiter? c) sk fk))
-      ((_ GEN-TEST var next fail (port accumulated-chars) eof-case char-case)
+
+      ((_ GENERATE-DELIMITER-TEST ?ch-var ?ch-is-delimiter-kont ?ch-is-not-delimiter-kont)
+       (if (delimiter? ?ch-var)
+	   ?ch-is-delimiter-kont
+	 ?ch-is-not-delimiter-kont))
+
+      ((_ GENERATE-MORE-CHARS-TEST var next fail (port accumulated-chars) eof-case char-case)
        (let ((c (peek-char port)))
 	 (if (eof-object? c)
 	     (let ()
@@ -2411,9 +2420,10 @@
 	       (syntax-rules ()
 		 ((_ who args (... ...))
 		  (who port (cons (get-char port) accumulated-chars) args (... ...)))))
-	     char-case)))))))
+	     char-case))))
+      )))
 
-(define-string->number-parser port-config
+(define-string->number-parser port-logic
   (parse-string u:digit+ u:sign u:dot))
 
 

@@ -138,6 +138,7 @@ TESTS			=	\
 	test-vicare-promises.sps			\
 	test-vicare-reader.sps				\
 	test-vicare-round.sps				\
+	test-vicare-string-to-number.sps		\
 	test-vicare-strings.sps				\
 	test-vicare-structs.sps				\
 	test-vicare-symbols.sps				\
@@ -315,6 +316,7 @@ EXTRA_DIST =	\
 	test-vicare-round.sps				\
 	test-vicare-sel.sps				\
 	test-vicare-shared-memory.sps			\
+	test-vicare-string-to-number.sps		\
 	test-vicare-strings.sps				\
 	test-vicare-structs.sps				\
 	test-vicare-symbols.sps				\

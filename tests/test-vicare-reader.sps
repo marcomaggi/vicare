@@ -542,13 +542,14 @@
 
   (read-number-and-eof "1.1+2.2i"	1.1+2.2i)
   (read-number-and-eof "1.+2.2i"	1.0+2.2i)
-  (read-number-and-eof "1.1+2.i"	1.0+2.i)
+  (read-number-and-eof "1.1+2.i"	1.1+2.i)
   (read-number-and-eof "1.+2.i"		1.+2.i)
   (read-number-and-eof "1.+2.i"		1.+2.i)
 
   (read-number-and-eof "1.1@2.2"	1.1@2.2)
   (read-number-and-eof "1.@2.2"		1.0@2.2)
-  (read-number-and-eof "1.1@2."		1.0@2.)
+  (read-number-and-eof "1.1@2."		1.1@2.)
+  (read-number-and-eof "1.@2."		1.0@2.0)
   (read-number-and-eof "1.@2."		1.@2.)
   (read-number-and-eof "1.@2."		1.@2.)
 
