@@ -563,9 +563,12 @@
   (read-number-and-eof "1@2"		1@2)
   (read-number-and-eof "1.2@3"		1.2@3)
   (read-number-and-eof "1@2.3"		1@2.3)
-  (read-number-and-eof "1/1@2"		1/2@2)
-  ;;(read-number-and-eof "1@2/2"		1@2/2)
-  ;; (read-number-and-eof "1/1@2/2"	1/1@2/2)
+  (read-number-and-eof "1/1@2"		1/1@2)
+  (read-number-and-eof "1/2@2"		1/2@2)
+  (read-number-and-eof "1@2/3"		1@2/3)
+  (read-number-and-eof "1/1@2/3"	1/1@2/3)
+  (read-number-and-eof "1/4@2/3"	1/4@2/3)
+  (read-number-and-eof "12/45@789/321"	12/45@789/321)
 
 ;;; --------------------------------------------------------------------
 ;;; distinguishing between numbers and symbols

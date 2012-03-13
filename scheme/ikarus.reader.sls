@@ -2403,23 +2403,22 @@
 	   ?ch-is-delimiter-kont
 	 ?ch-is-not-delimiter-kont))
 
-      ((_ GENERATE-EOF-THEN-CHARS-TESTS var next fail (port accumulated-chars) eof-case char-case)
-       (let ((c (peek-char port)))
-	 (if (eof-object? c)
-	     (let ()
-	       (define-syntax fail
-		 (syntax-rules ()
-		   ((_) (num-error port "invalid numeric sequence" accumulated-chars))))
+      ((_ GENERATE-EOF-THEN-CHARS-TESTS ?ch-var next fail (port accumulated-chars) eof-case char-case)
+       (let ((?ch-var (peek-char port)))
+	 (if (eof-object? ?ch-var)
+	     (let-syntax
+		 ((fail (syntax-rules ()
+			  ((_)
+			   (num-error port "invalid numeric sequence" accumulated-chars)))))
 	       eof-case)
-	   (let ((var c))
-	     (define-syntax fail
-	       (syntax-rules ()
-		 ((_)
-		  (num-error port "invalid numeric sequence" (cons var accumulated-chars)))))
-	     (define-syntax next
-	       (syntax-rules ()
-		 ((_ who args (... ...))
-		  (who port (cons (get-char port) accumulated-chars) args (... ...)))))
+	   (let-syntax
+	       ((fail (syntax-rules ()
+			((_)
+			 (num-error port "invalid numeric sequence"
+				    (cons ?ch-var accumulated-chars)))))
+		(next (syntax-rules ()
+			((_ who args (... ...))
+			 (who port (cons (get-char port) accumulated-chars) args (... ...))))))
 	     char-case))))
       )))
 
