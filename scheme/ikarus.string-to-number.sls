@@ -263,7 +263,7 @@
 (define-inline-constant CHAR-FIXNUM-a	97 #;(unsafe.char->fixnum #\a))
 (define-inline-constant CHAR-FIXNUM-A	65 #;(unsafe.char->fixnum #\A))
 
-(define-inline (compose-sign-and-number-with-exactness ?sign ?exactness ?number-expr)
+(define-inline (compose-sign-and-accum-with-exactness ?sign ?exactness ?number-expr)
   ;;Compose  the number  ?NUMBER-EXPR with  the  sign ?SIGN  (+1 or  -1)
   ;;according to the exactness ?EXACTNESS  (the symbol "i" or the symbol
   ;;"e").
@@ -432,7 +432,7 @@
        (define (?operator-name ?device-arg ... ?operator-arg ...)
 	 ;;Introduce the identifier "ch" used to bind the next char from
 	 ;;the input device.
-	 (?device-logic GENERATE-MORE-CHARS-TEST ch
+	 (?device-logic GENERATE-EOF-THEN-CHARS-TESTS ch
 			?next ?fail (?device-arg ...)
 			(%generate-end-of-input-form
 			 ?device-logic (?device-arg ...) ?operator-clause ...)
@@ -552,23 +552,23 @@
 	    ((eof)
 	     (if (or n0 (= ac 0))
 		 (fail)
-	       (compose-sign-and-number-with-exactness sn ex (/ num ac))))
+	       (compose-sign-and-accum-with-exactness sn ex (/ num ac))))
 	    ((digit r) => d
 	     (next u:ratio+ r n0 ex sn num (+ (* ac r) d)))
 	    ((sign) => sn2
 	     (if (or n0 (= ac 0))
 		 (fail)
-	       (let ((real (compose-sign-and-number-with-exactness sn ex (/ num ac))))
+	       (let ((real (compose-sign-and-accum-with-exactness sn ex (/ num ac))))
 		 (next u:sign r real ex sn2))))
 	    ((#\@)
 	     (if (or n0 (= ac 0))
 		 (fail)
-	       (let ((mag (compose-sign-and-number-with-exactness sn ex (/ num ac))))
+	       (let ((mag (compose-sign-and-accum-with-exactness sn ex (/ num ac))))
 		 (next u:polar r mag ex))))
 	    ((#\i)
 	     (if (= ac 0)
 		 (fail)
-	       (next u:done (mkrec0 n0 (compose-sign-and-number-with-exactness sn ex (/ num ac)))))))
+	       (next u:done (mkrec0 n0 (compose-sign-and-accum-with-exactness sn ex (/ num ac)))))))
 
   (u:ratio (r n0 ex sn num)
 	   ((digit r) => d
@@ -656,36 +656,59 @@
 	       )
 
 
-  (u:digit+ (r n0 ex sn ac)
+  ;;This operator  accumulates a number from  digit characters compliant
+  ;;with RADIX.   It is used to  accumulate a number  before the decimal
+  ;;dot.
+  ;;
+  ;;RADIX must be a fixnum among: 2, 8, 10, 16.
+  ;;
+  ;;N0 ???
+  ;;
+  ;;EXACTNESS must be false or the  symbol "e" (for exact) or the symbol
+  ;;"i" (for inexact).
+  ;;
+  ;;SN  must be  +1 or  -1 and  represents the  sign of  the accumulated
+  ;;number.
+  ;;
+  ;;ACCUM must  be real non-negative number; it  represents the absolute
+  ;;value  of  the number  accumulated  so  far  from previosuly  parsed
+  ;;digits.
+  ;;
+  (u:digit+ (radix n0 exactness sn accum)
 	    ((eof)
 	     (if (and n0 (not (pair? n0)))
 		 (fail)
-	       (mkrec1 n0 (compose-sign-and-number-with-exactness sn ex ac))))
-	    ((digit r) => d
-	     (next u:digit+ r n0 ex sn (+ (* ac r) d)))
+	       (mkrec1 n0 (compose-sign-and-accum-with-exactness sn exactness accum))))
+	    ((digit radix) => digit-fx
+	     (next u:digit+ radix n0 exactness sn (+ (* accum radix) digit-fx)))
 	    ((#\.)
-	     (if (fx=? r 10)
-		 (next u:digit+dot r n0 ex sn ac 0)
+	     (if (unsafe.fx= radix 10)
+		 (next u:digit+dot radix n0 exactness sn accum 0)
 	       (fail)))
-	    ((#\/) (next u:ratio r n0 ex sn ac))
+	    ((#\/) ;terminate the numerator of a rational
+	     (next u:ratio radix n0 exactness sn accum))
 	    ((sign) => sn2
+		;terminate  the real  part of  a complex  in rectangular
+		;notation and start the imaginary part
 	     (if n0
 		 (fail)
-	       (let ((real (compose-sign-and-number-with-exactness sn ex ac)))
-		 (next u:sign r real ex sn2))))
-	    ((#\i)
-	     (next u:done (mkrec0 n0 (compose-sign-and-number-with-exactness sn ex ac))))
+	       (let ((real (compose-sign-and-accum-with-exactness sn exactness accum)))
+		 (next u:sign radix real exactness sn2))))
+	    ((#\i) ;terminate the imaginary part of a complex
+	     (next u:done (mkrec0 n0 (compose-sign-and-accum-with-exactness sn exactness accum))))
 	    ((#\@)
+		;terminate the magnitude of  a complex in polar notation
+		;and start the angle part
 	     (if n0
 		 (fail)
-	       (let ((mag (compose-sign-and-number-with-exactness sn ex ac)))
-		 (next u:polar r mag ex))))
-	    ((#\e #\E #\s #\S #\f #\F #\d #\D #\l #\L)
-	     (if (fx=? r 10)
-		 (next u:exponent r n0 ex sn ac 0)
+	       (let ((mag (compose-sign-and-accum-with-exactness sn exactness accum)))
+		 (next u:polar radix mag exactness))))
+	    ((#\e #\E #\s #\S #\f #\F #\d #\D #\l #\L) ;exponent markers
+	     (if (unsafe.fx= radix 10)
+		 (next u:exponent radix n0 exactness sn accum 0)
 	       (fail)))
-	    ((#\|)
-	     (next u:mant r n0 (compose-sign-and-number-with-exactness sn 'i ac) ex)))
+	    ((#\|) ;start the mantissa width
+	     (next u:mant radix n0 (compose-sign-and-accum-with-exactness sn 'i accum) exactness)))
 
   (u:mant (r n0 n1 ex)
 	  ((digit r) => d_
@@ -710,7 +733,7 @@
 
   (u:sign-i (r n0 ex sn)
 	    ((eof)
-	     (mkrec0 n0 (compose-sign-and-number-with-exactness sn ex 1)))
+	     (mkrec0 n0 (compose-sign-and-accum-with-exactness sn ex 1)))
 	    ((#\n)
 	     (next u:sign-in r n0 (* sn +inf.0) ex)))
   (u:sign-in (r n0 n1 ex)
@@ -777,7 +800,15 @@
 		((#\i)
 		 (next u:done (mkrec0 n0 +nan.0))))
 
-  (parse-string-after-hash (default-radix override-radix exactness)
+  ;;Parse  an  input char  after  the  opening  #\# character  has  been
+  ;;consumed by PARSE-STRING.
+  ;;
+  ;;We  must  remember  that  the  prefixes  "#e"  and  "#i"  specifying
+  ;;exactness can be preceeded or followed by prefixes "#b", "#d", "#o",
+  ;;"#x"  overriding the  default  radix.   It is  an  error to  specify
+  ;;multiple exactness prefixes or multiple radix prefixes.
+  ;;
+  (parse-string-after-hash (radix override-radix exactness)
 			   ((#\x #\X)
 			    (if override-radix
 				(fail)
@@ -797,23 +828,42 @@
 			   ((#\e #\E)
 			    (if exactness
 				(fail)
-			      (next parse-string default-radix override-radix 'e)))
+			      (next parse-string radix override-radix 'e)))
 			   ((#\i #\I)
 			    (if exactness
 				(fail)
-			      (next parse-string default-radix override-radix 'i))))
+			      (next parse-string radix override-radix 'i))))
 
-  (parse-string (default-radix override-radix exactness)
+  ;;This  is the  entry point  to parse  any valid  numeric  sequence of
+  ;;characters  from  the input.   This  operator  may recursively  call
+  ;;itself.
+  ;;
+  ;;RADIX must be a fixnum among: 2, 8, 10, 16.
+  ;;
+  ;;OVERRIDE-RADIX must be false or a  fixnum among: 2, 8, 10, 16.  When
+  ;;set to  false it means that  none of the prefixes  "#b", "#d", "#o",
+  ;;"#x" were read from the input.  This argument is changed only if one
+  ;;of the prefixes "#b", "#d", "#o",  "#x" is found in the input.  This
+  ;;argument exists for the only purpose of checking that radix prefixes
+  ;;are not used multiple times.
+  ;;
+  ;;EXACTNESS must be false or the  symbol "e" (for exact) or the symbol
+  ;;"i" (for  inexact).  When set  to false it  meanst that none  of the
+  ;;prefixes  "#e", "#i"  were read  from the  input.  This  argument is
+  ;;changed  only if  one of  the prefixes  "#i", "#e"  is found  in the
+  ;;input.
+  ;;
+  (parse-string (radix override-radix exactness)
 		((#\#)
-		 (next parse-string-after-hash default-radix override-radix exactness))
+		 (next parse-string-after-hash radix override-radix exactness))
 		((sign) => sn2
-		 (next u:sign default-radix #f exactness sn2))
+		 (next u:sign radix #f exactness sn2))
 		((#\.)
-		 (if (unsafe.fx= default-radix 10)
-		     (next u:dot default-radix #f exactness +1)
+		 (if (unsafe.fx= radix 10)
+		     (next u:dot radix #f exactness +1)
 		   (fail)))
-		((digit default-radix) => d
-		 (next u:digit+ default-radix #f exactness +1 d)))
+		((digit radix) => start-number
+		 (next u:digit+ radix #f exactness +1 start-number)))
 
   #| end of DEFINE-PARSER |# )
 
@@ -822,7 +872,7 @@
 
 (define-syntax string->number-logic
   (syntax-rules (INTRODUCE-DEVICE-ARGUMENTS
-		 GENERATE-MORE-CHARS-TEST
+		 GENERATE-EOF-THEN-CHARS-TESTS
 		 GENERATE-DELIMITER-TEST
 		 UNEXPECTED-EOF-ERROR
 		 FAIL)
@@ -865,7 +915,7 @@
     ;;First  of all  the  end-of-input condition  is  checked; then  the
     ;;continuation form for more characters is expanded.
     ;;
-    ((_ GENERATE-MORE-CHARS-TEST ?ch-var ?next ?fail
+    ((_ GENERATE-EOF-THEN-CHARS-TESTS ?ch-var ?next ?fail
 	(?input.string ?input.length ?input.index)
 	?end-of-input-kont ?more-characters-kont)
      (let-syntax
@@ -902,12 +952,13 @@
       ;;are  the device-specific arguments  for the  operator functions:
       ;;INPUT.STRING, INPUT.LENGTH, INPUT.INDEX.
       ;;
-      ;;The argument 10 is the default radix, which can be overridden by
-      ;;the prefixes #o, #b, #x, #d in the string S itself.
+      ;;The argument 10  is the selected radix, which  can be overridden
+      ;;by the prefixes #o, #b, #x, #d in the string S itself.
       ;;
       ;;The first  #f argument  is the override  radix; if the  string S
-      ;;starts with a prefix among #o,  #b, #x, #d, the default radix is
-      ;;overridden.
+      ;;starts  with  a  prefix among  #o,  #b,  #x,  #d, the  radix  is
+      ;;overridden.   This  argument  exists  for the  only  purpose  of
+      ;;checking that radix prefixes are not used multiple times.
       ;;
       ;;The second #f argument is  the exactness specification and it is
       ;;selected by the  prefixes #i and #e.  This  value should be: #f,

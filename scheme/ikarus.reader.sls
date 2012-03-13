@@ -2384,7 +2384,7 @@
 			   (die/p-1 port 'vicare-reader str (reverse-list->string ls))))))
   (define-syntax port-logic
     (syntax-rules (INTRODUCE-DEVICE-ARGUMENTS
-		   GENERATE-MORE-CHARS-TEST
+		   GENERATE-EOF-THEN-CHARS-TESTS
 		   GENERATE-DELIMITER-TEST
 		   UNEXPECTED-EOF-ERROR
 		   FAIL)
@@ -2403,7 +2403,7 @@
 	   ?ch-is-delimiter-kont
 	 ?ch-is-not-delimiter-kont))
 
-      ((_ GENERATE-MORE-CHARS-TEST var next fail (port accumulated-chars) eof-case char-case)
+      ((_ GENERATE-EOF-THEN-CHARS-TESTS var next fail (port accumulated-chars) eof-case char-case)
        (let ((c (peek-char port)))
 	 (if (eof-object? c)
 	     (let ()
