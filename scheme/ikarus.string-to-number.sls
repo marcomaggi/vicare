@@ -647,6 +647,9 @@
 ;;
 ;;   ACCUM * 10^EXPONENT = 123456 * 10^-3 = 123.456
 ;;
+;;* N0 must  be false, a real number  or a pair whose car  is the symbol
+;;"polar" and whose cdr is a real number.
+;;
 
 (define-parser-logic define-string->number-parser next fail
 
@@ -986,63 +989,102 @@
      (next u:exponent+sign radix n0 exactness sn accum exponent1 sn2)))
 
   (u:exponent+sign (radix n0 exactness sn accum exponent1 exp-sign)
-    ((digit radix) => d
-     (next u:exponent+digit radix n0 exactness sn accum exponent1 d exp-sign)))
+    ;;Parse the first  character after an exponent marker  followed by a
+    ;;sign have been parsed; a digit is expected.
+    ;;
+    ((digit radix) => digit-fx
+     (let-inline ((exponent2 digit-fx))
+       (next u:exponent+digit radix n0 exactness sn accum exponent1 exponent2 exp-sign))))
 
-  (u:exponent+digit (radix n0 exactness sn accum exponent1 exp2 exp-sign)
+  (u:exponent+digit (radix n0 exactness sn accum exponent1 exponent2 exp-sign)
+    ;;Parse  a digit  character part  of the  exponential of  an inexact
+    ;;number  after   the  exponential  marker,  and   possibly  a  sign
+    ;;character, has been parsed.
+    ;;
     ((eof)
      ;;The number terminated without an  ending #\i, so this is either a
      ;;real number or a complex  number in polar notation; this means N0
      ;;must be either false or a pair containing the magnitude.
      (if (and n0 (not (pair? n0))) #;(number? n0)
 	 (fail)
-       (let*-inline ((accum (* accum (expt 10 (+ exponent1 (* exp2 exp-sign)))))
+       (let*-inline ((accum (* accum (expt 10 (+ exponent1 (* exponent2 exp-sign)))))
 		     (n1    (sign*accum-with-INexactness sn exactness accum)))
 	 (%make-number-non-rectangular n0 n1))))
-    ((digit radix) => d
-     (next u:exponent+digit radix n0 exactness sn accum exponent1 (+ (* exp2 radix) d) exp-sign))
+    ((digit radix) => digit-fx
+     (let-inline ((exponent2 (+ (* exponent2 radix) digit-fx)))
+       (next u:exponent+digit radix n0 exactness sn accum exponent1 exponent2 exp-sign)))
     ((sign) => sn2
+     ;;Terminate  an inexact  number being  the real  part of  a complex
+     ;;number in rectangular notation and start the imaginary part.
      (if n0
 	 (fail)
-       (let ((real (sign*accum-with-INexactness
-		    sn exactness (* accum (expt 10 (+ exponent1 (* exp2 exp-sign)))))))
-	 (next u:sign radix real exactness sn2))))
+       (let*-inline ((accum (* accum (expt 10 (+ exponent1 (* exponent2 exp-sign)))))
+		     (n1    (sign*accum-with-INexactness sn exactness accum)))
+	 (next u:sign radix n1 exactness sn2))))
     ((#\@)
+     ;;Terminate an inexact number being the magnitude part of a complex
+     ;;number in polar notation and start the angle part.
      (if n0
 	 (fail)
-       (let ((mag (sign*accum-with-INexactness
-		   sn exactness (* accum (expt 10 (+ exponent1 (* exp2 exp-sign)))))))
+       (let*-inline ((accum (* accum (expt 10 (+ exponent1 (* exponent2 exp-sign)))))
+		     (mag   (sign*accum-with-INexactness sn exactness accum)))
 	 (next u:polar radix mag exactness))))
     ((#\i)
-     (let ((n1 (sign*accum-with-INexactness
-		sn exactness (* accum (expt 10 (+ exponent1 (* exp2 exp-sign)))))))
+     ;;Terminate an inexact number being the imaginary part of a complex
+     ;;number in rectangular notation; this must also end the number.
+     (let*-inline ((accum (* accum (expt 10 (+ exponent1 (* exponent2 exp-sign)))))
+		   (n1    (sign*accum-with-INexactness sn exactness accum)))
        (next u:done (%make-number-after-ending-i fail n0 n1))))
     ((#\|)
-     (let ((n1 (sign*accum-with-INexactness sn exactness (* accum (expt 10 (+ exponent1 (* exp2 exp-sign)))))))
+     ;;Terminate an  inexact number with a mantissa  width attached; the
+     ;;next character will be part of the mantissa width.
+     (let*-inline ((accum (* accum (expt 10 (+ exponent1 (* exponent2 exp-sign)))))
+		   (n1    (sign*accum-with-INexactness sn exactness accum)))
        (next u:mant radix n0 n1 exactness))))
 
 ;;; --------------------------------------------------------------------
+;;; mantissa width of inexact numbers
 
-  (u:mant (r n0 n1 exactness)
-	  ((digit r) => d_
-	   (next u:mant+ r n0 n1 exactness)))
+  (u:mant (radix n0 n1 exactness)
+    ;;Parse  the first  character  of  a mantissa  width  after the  #\|
+    ;;character  has been  parsed; a  digit is  expected.  The  digit is
+    ;;discarded  because Vicare  does not  support inexact  numbers with
+    ;;mantissa width specification.
+    ;;
+    ((digit radix) => digit-fx
+     (next u:mant+ radix n0 n1 exactness)))
 
-  (u:mant+ (r n0 n1 exactness)
-	   ((eof) (%make-number-non-rectangular n0 n1))
-	   ((digit r) => d_
-	    (next u:mant+ r n0 n1 exactness))
-	   ((sign) => sn2
-	    (if n0
-		(fail)
-	      (next u:sign r n1 exactness sn2)))
-	   ((#\@)
-	    (if n0
-		(fail)
-	      (next u:polar r n1 exactness)))
-	   ((#\i)
-	    (if (pair? n0)
-		(fail)
-	      (next u:done (%make-number-after-ending-i fail n0 n1)))))
+  (u:mant+ (radix n0 n1 exactness)
+    ;;Parse  the  next character  of  a  mantissa  width after  the  #\|
+    ;;character  and at  least  one digit  character  have been  parsed.
+    ;;Digits  are  discarded because  Vicare  does  not support  inexact
+    ;;numbers with mantissa width specification.
+    ;;
+    ((eof)
+     (%make-number-non-rectangular n0 n1))
+    ((digit radix) => digit-fx
+     (next u:mant+ radix n0 n1 exactness))
+    ((sign) => sn2
+     ;;Terminate an inexact number,  with mantissa width, being the real
+     ;;part of  a complex number  in rectangular notation and  start the
+     ;;imaginary part.
+     (if n0
+	 (fail)
+       (next u:sign radix n1 exactness sn2)))
+    ((#\@)
+     ;;Terminate  an  inexact number,  with  mantissa  width, being  the
+     ;;magnitude part  of a complex  number in polar notation  and start
+     ;;the angle part.
+     (if n0
+	 (fail)
+       (next u:polar radix n1 exactness)))
+    ((#\i)
+     ;;Terminate  an  inexact number,  with  mantissa  width, being  the
+     ;;imaginary part of a  complex number in rectangular notation; this
+     ;;must also end the number.
+     (if (pair? n0)
+	 (fail)
+       (next u:done (%make-number-after-ending-i fail n0 n1)))))
 
 ;;; --------------------------------------------------------------------
 ;;; parsing after a sign character and the #\i character
@@ -1304,6 +1346,8 @@
 ;;eval: (put 'u:sign-nan	'scheme-indent-function 1)
 ;;eval: (put 'u:sign-nan.	'scheme-indent-function 1)
 ;;eval: (put 'u:sign-nan.0	'scheme-indent-function 1)
+;;eval: (put 'u:mant		'scheme-indent-function 1)
+;;eval: (put 'u:mant+		'scheme-indent-function 1)
 ;;eval: (put 'u:polar		'scheme-indent-function 1)
 ;;eval: (put 'u:digit		'scheme-indent-function 1)
 ;;eval: (put 'u:digit+		'scheme-indent-function 1)
@@ -1317,4 +1361,3 @@
 ;;eval: (put 'let-inline	'scheme-indent-function 1)
 ;;eval: (put 'let*-inline	'scheme-indent-function 1)
 ;;End:
-
