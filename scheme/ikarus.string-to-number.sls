@@ -764,7 +764,8 @@
 	 (next u:polar radix mag exactness))))
     ((#\e #\E #\s #\S #\f #\F #\d #\D #\l #\L) ;exponent markers
      ;;Terminate  the  significand  of   an  inexact  number;  the  next
-     ;;character will be part of the exponent.
+     ;;character will be  part of the exponent.  We  ignore the specific
+     ;;exponent because Vicare only has "double" flonums.
      (if (unsafe.fx= radix 10)
 	 (let-inline ((exponent 0))
 	   (next u:exponent radix n0 exactness sn accum exponent))
@@ -818,7 +819,8 @@
 	 (next u:polar radix mag exactness))))
     ((#\e #\E #\s #\S #\f #\F #\d #\D #\l #\L) ;exponent markers
      ;;Terminate  the  significand  of   an  inexact  number;  the  next
-     ;;character will be part of the exponent.
+     ;;character will be  part of the exponent.  We  ignore the specific
+     ;;exponent because Vicare only has "double" flonums.
      (if (unsafe.fx= radix 10)
 	 (next u:exponent radix n0 exactness sn accum exponent)
        (fail)))
@@ -828,6 +830,43 @@
      (let*-inline ((accum (* accum (expt 10 exponent)))
 		   (n1    (sign*accum-with-INexactness sn exactness accum)))
        (next u:mant radix n0 n1 exactness))))
+
+  (u:dot (radix n0 exactness sn)
+    ;;Start processing digits  after a decimal dot when  the decimal dot
+    ;;is NOT preceeded by digits itseld, for example "-.123".
+    ;;
+    ((digit radix) => digit-fx
+     (let-inline ((accum    digit-fx)
+		  (exponent -1))
+       (next u:digit+dot radix n0 exactness sn accum exponent))))
+
+;;; --------------------------------------------------------------------
+
+  (u:sign (radix n0 exactness sn)
+    ;;Parse the first character after a sign character, #\+ or #\-; used
+    ;;for: integers,  numerators of exact rationals,  real numbers, real
+    ;;and imaginary  parts of  complex numbers in  rectangular notation,
+    ;;magnitude and  angle parts of  complex numbers in  polar notation.
+    ;;Notice that denominators of exact rationals do not have a number.
+    ;;
+    ;;Such first character can be: a digit or a decimal dot if it starts
+    ;;a "common" number; #\i if the numeric string being parsed is "+i",
+    ;;"-i", "+inf.0" or "-inf.0"; #\n if the numeric string being parsed
+    ;;is "+nan.0" or "-nan.0".
+    ;;
+    ((digit radix) => digit-fx
+     (let-inline ((accum digit-fx))
+       (next u:digit+ radix n0 exactness sn accum)))
+    ((#\i)
+     (next u:sign-i radix n0 exactness sn))
+    ((#\n)
+     (next u:sign-n radix n0 exactness))
+    ((#\.)
+     (if (unsafe.fx= radix 10)
+	 (next u:dot radix n0 exactness sn)
+       (fail))))
+
+;;; --------------------------------------------------------------------
 
   (u:denominator (radix n0 exactness sn numerator)
     ;;Start processing the denominator  of an exact rational number.  At
@@ -876,6 +915,8 @@
        (let-inline ((n1 (sign*accum-with-exactness sn exactness (/ numerator accum))))
 	 (next u:done (%make-number-after-ending-i fail n0 n1))))))
 
+;;; --------------------------------------------------------------------
+
   (u:done (n)
     ;;Terminate parsing  when we know  that the last  consumed character
     ;;terminates the numeric string.  In practice this only happens when
@@ -896,9 +937,10 @@
     ;;complex number.
     ;;
     ((digit radix) => digit-fx
-     (let-inline ((n0 (cons 'polar mag))
-		  (sn +1))
-       (next u:digit+ radix n0 exactness sn digit-fx)))
+     (let-inline ((n0    (cons 'polar mag))
+		  (sn    +1)
+		  (accum digit-fx))
+       (next u:digit+ radix n0 exactness sn accum)))
     ((#\.)
      (if (unsafe.fx= radix 10)
 	 (let-inline ((n0 (cons 'polar mag))
@@ -912,157 +954,228 @@
 ;;; --------------------------------------------------------------------
 ;;; exponent of inexact numbers
 
-  (u:exponent (r n0 ex sn ac exp1)
-	      ((digit r) => d
-	       (next u:exponent+digit r n0 ex sn ac exp1 d +1))
-	      ((sign) => sn2
-	       (next u:exponent+sign r n0 ex sn ac exp1 sn2)))
+  (u:exponent (radix n0 exactness sn accum exponent1)
+    ;;Parse the first character after  an exponent marker has been read.
+    ;;ACCUM  and  EXPONENT1 are  the  results  of  parsing the  previous
+    ;;characters  representing  a  flonum.   For example,  when  parsing
+    ;;"123.456e+78":
+    ;;
+    ;;  SN        = +1
+    ;;  ACCUM     = 123456
+    ;;  EXPONENT1 = -3
+    ;;
+    ;;and  the  next  characters  from  the  input  will  be  "+78";  we
+    ;;accumulate new digits in EXP-SIGN and EXPONENT2:
+    ;;
+    ;;  EXP-SIGN  = +1
+    ;;  EXPONENT2 = 78
+    ;;
+    ;;and finally compose the number:
+    ;;
+    ;;  SN * ACCUM * 10^(EXPONENT1 + EXP-SIGN * EXPONENT2)
+    ;;
+    ;;It  looks easier  (and  probably faster)  to accumulate  EXPONENT2
+    ;;separately  rather than  to accumulate  new digits  into EXPONENT1
+    ;;keeping track of the sign.
+    ;;
+    ((digit radix) => digit-fx
+     (let-inline ((exponent2 digit-fx)
+		  (exp-sign  +1))
+       (next u:exponent+digit radix n0 exactness sn accum exponent1 exponent2 exp-sign)))
+    ((sign) => sn2
+     (next u:exponent+sign radix n0 exactness sn accum exponent1 sn2)))
 
-  (u:exponent+sign (r n0 ex sn ac exp1 exp-sign)
-		   ((digit r) => d
-		    (next u:exponent+digit r n0 ex sn ac exp1 d exp-sign)))
+  (u:exponent+sign (radix n0 exactness sn accum exponent1 exp-sign)
+    ((digit radix) => d
+     (next u:exponent+digit radix n0 exactness sn accum exponent1 d exp-sign)))
 
-  (u:exponent+digit (r n0 ex sn ac exp1 exp2 exp-sign)
+  (u:exponent+digit (radix n0 exactness sn accum exponent1 exp2 exp-sign)
     ((eof)
-     (if (number? n0)
+     ;;The number terminated without an  ending #\i, so this is either a
+     ;;real number or a complex  number in polar notation; this means N0
+     ;;must be either false or a pair containing the magnitude.
+     (if (and n0 (not (pair? n0))) #;(number? n0)
 	 (fail)
-       (%make-number-non-rectangular
-	n0 (sign*accum-with-INexactness
-	    sn ex (* ac (expt 10 (+ exp1 (* exp2 exp-sign))))))))
-    ((digit r) => d
-     (next u:exponent+digit r n0 ex sn ac exp1 (+ (* exp2 r) d) exp-sign))
+       (let*-inline ((accum (* accum (expt 10 (+ exponent1 (* exp2 exp-sign)))))
+		     (n1    (sign*accum-with-INexactness sn exactness accum)))
+	 (%make-number-non-rectangular n0 n1))))
+    ((digit radix) => d
+     (next u:exponent+digit radix n0 exactness sn accum exponent1 (+ (* exp2 radix) d) exp-sign))
     ((sign) => sn2
      (if n0
 	 (fail)
        (let ((real (sign*accum-with-INexactness
-		    sn ex (* ac (expt 10 (+ exp1 (* exp2 exp-sign)))))))
-	 (next u:sign r real ex sn2))))
+		    sn exactness (* accum (expt 10 (+ exponent1 (* exp2 exp-sign)))))))
+	 (next u:sign radix real exactness sn2))))
     ((#\@)
      (if n0
 	 (fail)
        (let ((mag (sign*accum-with-INexactness
-		   sn ex (* ac (expt 10 (+ exp1 (* exp2 exp-sign)))))))
-	 (next u:polar r mag ex))))
+		   sn exactness (* accum (expt 10 (+ exponent1 (* exp2 exp-sign)))))))
+	 (next u:polar radix mag exactness))))
     ((#\i)
      (let ((n1 (sign*accum-with-INexactness
-		sn ex (* ac (expt 10 (+ exp1 (* exp2 exp-sign)))))))
+		sn exactness (* accum (expt 10 (+ exponent1 (* exp2 exp-sign)))))))
        (next u:done (%make-number-after-ending-i fail n0 n1))))
     ((#\|)
-     (let ((n1 (sign*accum-with-INexactness sn ex (* ac (expt 10 (+ exp1 (* exp2 exp-sign)))))))
-       (next u:mant r n0 n1 ex))))
+     (let ((n1 (sign*accum-with-INexactness sn exactness (* accum (expt 10 (+ exponent1 (* exp2 exp-sign)))))))
+       (next u:mant radix n0 n1 exactness))))
 
 ;;; --------------------------------------------------------------------
 
-  (u:mant (r n0 n1 ex)
+  (u:mant (r n0 n1 exactness)
 	  ((digit r) => d_
-	   (next u:mant+ r n0 n1 ex)))
+	   (next u:mant+ r n0 n1 exactness)))
 
-  (u:mant+ (r n0 n1 ex)
+  (u:mant+ (r n0 n1 exactness)
 	   ((eof) (%make-number-non-rectangular n0 n1))
 	   ((digit r) => d_
-	    (next u:mant+ r n0 n1 ex))
+	    (next u:mant+ r n0 n1 exactness))
 	   ((sign) => sn2
 	    (if n0
 		(fail)
-	      (next u:sign r n1 ex sn2)))
+	      (next u:sign r n1 exactness sn2)))
 	   ((#\@)
 	    (if n0
 		(fail)
-	      (next u:polar r n1 ex)))
+	      (next u:polar r n1 exactness)))
 	   ((#\i)
 	    (if (pair? n0)
 		(fail)
 	      (next u:done (%make-number-after-ending-i fail n0 n1)))))
 
-  (u:sign-i (r n0 ex sn)
-	    ((eof)
-	     (%make-number-after-ending-i fail n0 (sign*accum-with-exactness sn ex 1)))
-	    ((#\n)
-	     (next u:sign-in r n0 (* sn +inf.0) ex)))
-  (u:sign-in (r n0 n1 ex)
-	     ((#\f) (next u:sign-inf r n0 n1 ex)))
-  (u:sign-inf (r n0 n1 ex)
-	      ((#\.)
-	       (next u:sign-inf. r n0 n1 ex)))
-  (u:sign-inf. (r n0 n1 ex)
-	       ((#\0)
-		(next u:sign-inf.0 r n0 n1 ex)))
-  (u:sign-inf.0 (r n0 n1 ex)
-		((eof)
-		 (%make-number-non-rectangular n0 n1))
-		((sign) => sn2
-		 (if n0
-		     (fail)
-		   (next u:sign r n1 ex sn2)))
-		((#\@)
-		 (if n0
-		     (fail)
-		   (next u:polar r n1 ex)))
-		((#\i)
-		 (next u:done (%make-number-after-ending-i fail n0 n1))))
+;;; --------------------------------------------------------------------
+;;; parsing after a sign character and the #\i character
 
-  (u:dot (r n0 ex sn)
-    ((digit r) => d
-     (next u:digit+dot r n0 ex sn d -1)))
+  (u:sign-i (radix n0 exactness sn)
+    ;;Parse the first character after the numeric sequence "+i" or "-i".
+    ;;This operator is a subroutine of U:SIGN.
+    ;;
+    ((eof)
+     (let-inline ((n1 (sign*accum-with-exactness sn exactness 1)))
+       (%make-number-after-ending-i fail n0 n1)))
+    ((#\n)
+     ;;After  parsing the  #\n we  already know  that the  only possible
+     ;;numbers  are  +inf.0 and  -inf.0,  and  since  we know  the  sign
+     ;;already, we can compute N1 right now.
+     ;;
+     (let-inline ((n1 (* sn +inf.0)))
+       (next u:sign-in radix n0 n1 exactness))))
 
-  (u:sign (radix n0 exactness sn)
-;;;Parse the  first character after a  sign character, #\+  or #\-; used
-;;;for: integers, numerators of  exact rationals, real numbers, real and
-;;;imaginary parts of complex numbers in rectangular notation, magnitude
-;;;and angle  parts of complex  numbers in polar notation.   Notice that
-;;;denominators of exact rationals do not have a number.
-;;;
-;;;Such first character can be: a digit or a decimal dot, if it starts a
-;;;"common"  number; #\i  if the  numeric string  being parsed  is "+i",
-;;;"-i", "+inf.0" or "-inf.0"; #\n if the numeric string being parsed is
-;;;"+nan.0" or "-nan.0".
-;;;
-;;;RADIX must be a fixnum among: 2, 8, 10, 16.
-;;;
-;;;N0 ???
-;;;
-;;;EXACTNESS must be  false or the symbol "e" (for  exact) or the symbol
-;;;"i" (for inexact).
-;;;
-;;;SN  must be +1  or -1  and represents  the sign  of the  number being
-;;;parsed.
-;;;
-	  ((digit radix) => digit-fx
-	   (next u:digit+ radix n0 exactness sn digit-fx))
-	  ((#\i)
-	   (next u:sign-i radix n0 exactness sn))
-	  ((#\n)
-	   (next u:sign-n radix n0 exactness))
-	  ((#\.)
-	   (if (unsafe.fx= radix 10)
-	       (next u:dot radix n0 exactness sn)
-	     (fail))))
+  (u:sign-in (radix n0 n1 exactness)
+    ;;Parse  the first  character after  the numeric  sequence  "+in" or
+    ;;"-in".   N1 is  the infinity  being  parsed.  This  operator is  a
+    ;;subroutine of U:SIGN-I.
+    ;;
+    ((#\f)
+     (next u:sign-inf radix n0 n1 exactness)))
 
-  (u:sign-n (r n0 ex)
-	    ((#\a)
-	     (next u:sign-na r n0 ex)))
-  (u:sign-na (r n0 ex)
-	     ((#\n)
-	      (next u:sign-nan r n0 ex)))
-  (u:sign-nan (r n0 ex)
-	      ((#\.)
-	       (next u:sign-nan. r n0 ex)))
-  (u:sign-nan. (r n0 ex)
-	       ((#\0)
-		(next u:sign-nan.0 r n0 ex)))
-  (u:sign-nan.0 (r n0 ex)
-		((eof)
-		 (%make-number-non-rectangular n0 +nan.0))
-		((sign) => sn2
-		 (if n0
-		     (fail)
-		   (next u:sign r +nan.0 ex sn2)))
-		((#\@)
-		 (if n0
-		     (fail)
-		   (next u:polar r +nan.0 ex)))
-		((#\i)
-		 (next u:done (%make-number-after-ending-i fail n0 +nan.0))))
+  (u:sign-inf (radix n0 n1 exactness)
+    ;;Parse  the first character  after the  numeric sequence  "+inf" or
+    ;;"-inf".   N1 is  the infinity  being parsed.   This operator  is a
+    ;;subroutine of U:SIGN-IN.
+    ;;
+    ((#\.)
+     (next u:sign-inf. radix n0 n1 exactness)))
+
+  (u:sign-inf. (radix n0 n1 exactness)
+    ;;Parse the  first character after  the numeric sequence  "+inf." or
+    ;;"-inf.".  N1  is the  infinity being parsed.   This operator  is a
+    ;;subroutine of U:SIGN-INF.
+    ;;
+    ((#\0)
+     (next u:sign-inf.0 radix n0 n1 exactness)))
+
+  (u:sign-inf.0 (radix n0 n1 exactness)
+    ;;Parse the  first character after the numeric  sequence "+inf.0" or
+    ;;"-inf.0".  N1  is the infinity  being parsed.  This operator  is a
+    ;;subroutine of "u:sign-inf.".
+    ;;
+    ;;N1 is the parse infinity number +inf.0 or -inf.0.
+    ;;
+    ((eof)
+     (%make-number-non-rectangular n0 n1))
+    ((sign) => sn2
+     ;;Terminate  the  real part  of  a  complex  number in  rectangular
+     ;;notation  (with  the real  part  being  infinity)  and start  the
+     ;;imaginary part.
+     ;;
+     (if n0
+	 (fail)
+       (next u:sign radix n1 exactness sn2)))
+    ((#\@)
+     ;;Terminate  the  magnitude  part  of  a complex  number  in  polar
+     ;;notation (with the magnitude  being infinity) and start the angle
+     ;;part.
+     ;;
+     (if n0
+	 (fail)
+       (next u:polar radix n1 exactness)))
+    ((#\i)
+     ;;Terminate the  imaginary part of a complex  number in rectangular
+     ;;notation (with the imaginary part being infinity); this also ends
+     ;;the number.
+     ;;
+     (next u:done (%make-number-after-ending-i fail n0 n1))))
+
+;;; --------------------------------------------------------------------
+
+  (u:sign-n (radix n0 exactness)
+    ;;Parse the first character after the numeric sequence "+n" or "-n".
+    ;;This operator is a subroutine of "u:sign".
+    ;;
+    ((#\a)
+     (next u:sign-na radix n0 exactness)))
+
+  (u:sign-na (radix n0 exactness)
+    ;;Parse  the first  character after  the numeric  sequence  "+na" or
+    ;;"-na".  This operator is a subroutine of "u:sign-n".
+    ;;
+    ((#\n)
+     (next u:sign-nan radix n0 exactness)))
+
+  (u:sign-nan (radix n0 exactness)
+    ;;Parse  the first character  after the  numeric sequence  "+nan" or
+    ;;"-nan".  This operator is a subroutine of "u:sign-na".
+    ;;
+    ((#\.)
+     (next u:sign-nan. radix n0 exactness)))
+
+  (u:sign-nan. (radix n0 exactness)
+    ;;Parse the  first character after  the numeric sequence  "+nan." or
+    ;;"-nan.".  This operator is a subroutine of "u:sign-nan".
+    ;;
+    ((#\0)
+     (next u:sign-nan.0 radix n0 exactness)))
+
+  (u:sign-nan.0 (radix n0 exactness)
+    ;;Parse the  first character after the numeric  sequence "+nan.0" or
+    ;;"-nan.0".  This operator is a subroutine of "u:sign-nan.".
+    ;;
+    ((eof)
+     (%make-number-non-rectangular n0 +nan.0))
+    ((sign) => sn2
+     ;;Terminate  the  real part  of  a  complex  number in  rectangular
+     ;;notation (with the  real part being NaN) and  start the imaginary
+     ;;part.
+     (if n0
+	 (fail)
+       (let-inline ((n1 +nan.0))
+	 (next u:sign radix n1 exactness sn2))))
+    ((#\@)
+     ;;Terminate  the  magnitude  part  of  a complex  number  in  polar
+     ;;notation (with the magnitude being NaN) and start the angle part.
+     (if n0
+	 (fail)
+       (let-inline ((n1 +nan.0))
+	 (next u:polar radix n1 exactness))))
+    ((#\i)
+     ;;Terminate the  imaginary part of a complex  number in rectangular
+     ;;notation (with the imaginary part  being NaN); this must also end
+     ;;the numeric string.
+     (next u:done
+	   (let-inline ((n1 +nan.0))
+	     (%make-number-after-ending-i fail n0 n1)))))
 
   #| end of DEFINE-PARSER |# )
 
@@ -1180,6 +1293,17 @@
 ;;eval: (put 'parse-string	'scheme-indent-function 1)
 ;;eval: (put 'parse-string-after-hash	'scheme-indent-function 1)
 ;;eval: (put 'u:done		'scheme-indent-function 1)
+;;eval: (put 'u:sign		'scheme-indent-function 1)
+;;eval: (put 'u:sign-i		'scheme-indent-function 1)
+;;eval: (put 'u:sign-in		'scheme-indent-function 1)
+;;eval: (put 'u:sign-inf	'scheme-indent-function 1)
+;;eval: (put 'u:sign-inf.	'scheme-indent-function 1)
+;;eval: (put 'u:sign-inf.0	'scheme-indent-function 1)
+;;eval: (put 'u:sign-n		'scheme-indent-function 1)
+;;eval: (put 'u:sign-na		'scheme-indent-function 1)
+;;eval: (put 'u:sign-nan	'scheme-indent-function 1)
+;;eval: (put 'u:sign-nan.	'scheme-indent-function 1)
+;;eval: (put 'u:sign-nan.0	'scheme-indent-function 1)
 ;;eval: (put 'u:polar		'scheme-indent-function 1)
 ;;eval: (put 'u:digit		'scheme-indent-function 1)
 ;;eval: (put 'u:digit+		'scheme-indent-function 1)
@@ -1187,7 +1311,10 @@
 ;;eval: (put 'u:dot		'scheme-indent-function 1)
 ;;eval: (put 'u:denominator	'scheme-indent-function 1)
 ;;eval: (put 'u:denominator+	'scheme-indent-function 1)
+;;eval: (put 'u:exponent	'scheme-indent-function 1)
+;;eval: (put 'u:exponent+sign	'scheme-indent-function 1)
 ;;eval: (put 'u:exponent+digit	'scheme-indent-function 1)
 ;;eval: (put 'let-inline	'scheme-indent-function 1)
 ;;eval: (put 'let*-inline	'scheme-indent-function 1)
 ;;End:
+
