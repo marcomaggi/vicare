@@ -181,6 +181,7 @@ verify_page (char* p, char* base, unsigned* svec, unsigned* dvec)
     return p+IK_PAGESIZE;
   }
   ik_abort("type=0x%08x\n", type);
+  return NULL;
 }
 void
 ik_verify_integrity (ikpcb* pcb, char* where)
