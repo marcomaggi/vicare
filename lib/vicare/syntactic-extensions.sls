@@ -34,6 +34,7 @@
     ;; miscellaneous extensions
     define-inline		define-inline-constant
     define-syntax*		define-auxiliary-syntaxes
+    let-inline			let*-inline
     debug-assert		unwind-protect
     begin0			begin0-let
     with-pathnames
@@ -92,6 +93,23 @@
 		;still expand to a definition
      (define-syntax dummy (syntax-rules ())))
     ))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax let-inline
+  (syntax-rules ()
+    ((_ ((?var ?expr) ...) ?body0 . ?body)
+     (let-syntax ((?var (identifier-syntax ?expr)) ...)
+       ?body0 . ?body))))
+
+(define-syntax let*-inline
+  (syntax-rules ()
+    ((_ () ?body0 . ?body)
+     (begin ?body0 . ?body))
+    ((_ ((?var0 ?expr0) (?var ?expr) ...) ?body0 . ?body)
+     (let-syntax ((?var0 (identifier-syntax ?expr0)))
+       (let*-inline ((?var ?expr) ...)
+	 ?body0 . ?body)))))
 
 
 ;;;; other syntaxes

@@ -1102,27 +1102,27 @@
 
    ;; #eNNNN -> exact integer number
    ((or (unsafe.char= ch #\e) (unsafe.char= ch #\E))
-    (cons 'datum (parse-string port (list ch #\#) 10 #f 'e)))
+    (cons 'datum (parse-numeric-string port (list ch #\#) 10 #f 'e)))
 
    ;; #iNNNN -> inexact integer number
    ((or (unsafe.char= ch #\i) (unsafe.char= ch #\I))
-    (cons 'datum (parse-string port (list ch #\#) 10 #f 'i)))
+    (cons 'datum (parse-numeric-string port (list ch #\#) 10 #f 'i)))
 
    ;; #bNNNN -> exact integer number in binary base
    ((or (unsafe.char= ch #\b) (unsafe.char= ch #\B))
-    (cons 'datum (parse-string port (list ch #\#) 2 2 #f)))
+    (cons 'datum (parse-numeric-string port (list ch #\#) 2 2 #f)))
 
    ;; #xNNNN -> exact integer number in hex base
    ((or (unsafe.char= ch #\x) (unsafe.char= ch #\X))
-    (cons 'datum (parse-string port (list ch #\#) 16 16 #f)))
+    (cons 'datum (parse-numeric-string port (list ch #\#) 16 16 #f)))
 
    ;; #oNNNN -> exact integer number in octal base
    ((or (unsafe.char= ch #\o) (unsafe.char= ch #\O))
-    (cons 'datum (parse-string port (list ch #\#) 8 8 #f)))
+    (cons 'datum (parse-numeric-string port (list ch #\#) 8 8 #f)))
 
    ;; #dNNNN -> exact integer number in decimal base
    ((or (unsafe.char= ch #\d) (unsafe.char= ch #\D))
-    (cons 'datum (parse-string port (list ch #\#) 10 10 #f)))
+    (cons 'datum (parse-numeric-string port (list ch #\#) 10 10 #f)))
 
    ((unsafe.char= ch #\c)
     (let ((ch1 (get-char-and-track-textual-position port)))
@@ -2423,7 +2423,7 @@
       )))
 
 (define-string->number-parser port-logic
-  (parse-string u:digit+ u:sign u:dot))
+  (parse-numeric-string u:digit+ u:sign u:dot))
 
 
 ;;;; reading comments

@@ -253,26 +253,15 @@
   (assertion-violation who "expected string as argument" obj))
 
 (define-argument-validation (radix who obj)
-  (memv obj '(10 16 2 8))
+  (and (fixnum? obj)
+       (or (unsafe.fx= obj 10)
+	   (unsafe.fx= obj 16)
+	   (unsafe.fx= obj 2)
+	   (unsafe.fx= obj 8)))
   (assertion-violation who "expected supported radix as argument" obj))
 
 
 ;;;; helpers
-
-(define-syntax let-inline
-  (syntax-rules ()
-    ((_ ((?var ?expr) ...) ?body0 . ?body)
-     (let-syntax ((?var (identifier-syntax ?expr)) ...)
-       ?body0 . ?body))))
-
-(define-syntax let*-inline
-  (syntax-rules ()
-    ((_ () ?body0 . ?body)
-     (begin ?body0 . ?body))
-    ((_ ((?var0 ?expr0) (?var ?expr) ...) ?body0 . ?body)
-     (let-syntax ((?var0 (identifier-syntax ?expr0)))
-       (let*-inline ((?var ?expr) ...)
-	 ?body0 . ?body)))))
 
 (define-inline-constant CHAR-FIXNUM-0	48 #;(char->integer #\0))
 (define-inline-constant CHAR-FIXNUM-a	97 #;(char->integer #\a))
@@ -295,19 +284,20 @@
 		      accum)))))))
 
 (define-syntax sign*accum-with-INexactness
-  ;;Compose the accumulated number  ?ACCUM with the sign ?SIGN according
-  ;;to the exactness ?EXACTNESS.
+  ;;Compose  the number  ?NUMBER-EXPR with  the  sign ?SIGN  (+1 or  -1)
+  ;;according to the exactness ?EXACTNESS  (false, the symbol "i" or the
+  ;;symbol "e").
   ;;
   ;;If  ?EXACTNESS  is  false  (neither  "#e"  nor  "#i"  prefixes  were
   ;;present): the exactness defaults to "inexact".
   ;;
   (lambda (stx)
     (syntax-case stx ()
-      ((_ ?sign ?exactness ?accum)
-       #'(let ((ac ?accum))
+      ((_ ?sign ?exactness ?number-expr)
+       #'(let ((accum ?number-expr))
 	   (* ?sign (if (eq? ?exactness 'e)
-			ac
-		      (inexact ac))))))))
+			accum
+		      (inexact accum))))))))
 
 (define-inline (sign ?ch)
   (let ((ch ?ch))
@@ -605,59 +595,110 @@
 
 ;;;; string to number parser logic
 ;;
+;;There are 4 suggested entry points to this parser for numeric strings:
+;;
+;;PARSE-NUMERIC-STRING
+;;  To be used when: (1) we  know that the next character from the input
+;;  starts a numeric string; (2) we have already parsed a numeric string
+;;  prefix (like #e, #i,  #x, etc) and we want to parse  the rest of the
+;;  string.  In the second case:  the arguments to the operator allow us
+;;  to inform the parser about the prefix we have already consumed.
+;;
+;;U:DIGIT+
+;;  To be  used when  we have  already parsed the  first character  of a
+;;  numeric string  and such character is  a digit in  the default radix
+;;  (which is 10).  The arguments to the operator allow us to inform the
+;;  parser about the digit we have already parsed.
+;;
+;;U:SIGN
+;;  To be  used when  we have  already parsed the  first character  of a
+;;  numeric string and such character is sign specification, #\+ or #\-.
+;;  The arguments  to the operator allow  us to inform  the parser about
+;;  the sign we have already parsed.
+;;
+;;U:DOT
+;;  To be  used when  we have  already parsed the  first character  of a
+;;  numeric  string and  such character  is  a decimal  dot starting  an
+;;  inexact number in radix 10.   The arguments to the operator allow us
+;;  to inform the parser about the nature of the expected number.
+;;
+;;in general, every operator function can  be used as entry point to the
+;;parser, provided we use appropriate arguments.
+;;
 ;;The operator functions use the following names for common arguments:
 ;;
 ;;* RADIX must be a fixnum among:  2, 8, 10, 16; it represents the radix
-;;in which the numeric sequence expresses the a number.  Notice that for
-;;radixes 2, 8,  10 a digit character has a code  point represented by a
-;;fixnum in the range: 0 <= digit < RADIX.
+;;  in which the numeric sequence expresses the number.  Notice that for
+;;  radixes 2, 8, 10 a digit  character is represented by a digit fixnum
+;;  in the range: 0 <= digit-fx < RADIX.
 ;;
 ;;* EXACTNESS must be false or  the symbol "e" (for exact) or the symbol
-;;"i"  (for inexact).   When set  to false  it meanst  that none  of the
-;;prefixes  "#e", "#i"  were  read  from the  input.   This argument  is
-;;changed only if one of the prefixes "#i", "#e" is found in the input.
+;;  "i" (for  inexact).  When set to  false: none of  the prefixes "#e",
+;;  "#i" were read from the input.  This argument is changed only if one
+;;  of the prefixes "#i", "#e" is found in the input.
 ;;
 ;;* SN  must be the fixnum  +1 or -1 and  it represents the  sign of the
-;;number  being  parsed.   Notice  that  for exact  rationals  only  the
-;;numerator has a sign, the denominator cannot have it.
+;;  number  being parsed.   Notice  that for  exact  rationals only  the
+;;  numerator has a sign, the denominator cannot have it.
 ;;
 ;;* ACCUM  must be an exact  non-negative integer and  it represents the
-;;absolute value of the number accumulated so far from previosuly parsed
-;;digits.  Notice that we parse  digits from left to right; when parsing
-;;the numeric string "1234", with  radix 10, we accumulate the number as
-;;follows:
+;;  absolute  value of  the number  accumulated so  far  from previosuly
+;;  parsed digits.  Notice that we parse digits from left to right; when
+;;  parsing the numeric string "1234",  with radix 10, we accumulate the
+;;  number as follows:
 ;;
-;;  ACCUM = 0
-;;  ACCUM = (ACCUM * RADIX) + 1 =   0 * 10 + 1 = 1
-;;  ACCUM = (ACCUM * RADIX) + 2 =   1 * 10 + 2 = 12
-;;  ACCUM = (ACCUM * RADIX) + 3 =  12 * 10 + 3 = 123
-;;  ACCUM = (ACCUM * RADIX) + 4 = 123 * 10 + 4 = 1234
+;;    ACCUM = 0
+;;    ACCUM = (ACCUM * RADIX) + 1 =   0 * 10 + 1 = 1
+;;    ACCUM = (ACCUM * RADIX) + 2 =   1 * 10 + 2 = 12
+;;    ACCUM = (ACCUM * RADIX) + 3 =  12 * 10 + 3 = 123
+;;    ACCUM = (ACCUM * RADIX) + 4 = 123 * 10 + 4 = 1234
 ;;
 ;;* EXPONENT must be an  exact integer representing the decimal exponent
-;;of a number.   Let's say we parse the  numeric string "123.456"; using
-;;PARSE-STRING and  U:DIGIT+ we accumulate  ACCUM=123 and are  left with
-;;".456"; now for each parsed character:
+;;  of a number.  Let's say we parse the numeric string "123.456"; using
+;;  PARSE-NUMERIC-STRING  and U:DIGIT+ we  accumulate ACCUM=123  and are
+;;  left with ".456"; now for each parsed character:
 ;;
-;;   #\. -> ACCUM=123      EXPONENT=0
-;;   #\4 -> ACCUM=1234     EXPONENT=-1
-;;   #\5 -> ACCUM=12345    EXPONENT=-2
-;;   #\6 -> ACCUM=123456   EXPONENT=-3
+;;    #\. -> ACCUM=123      EXPONENT=0
+;;    #\4 -> ACCUM=1234     EXPONENT=-1
+;;    #\5 -> ACCUM=12345    EXPONENT=-2
+;;    #\6 -> ACCUM=123456   EXPONENT=-3
 ;;
-;;and to compose ACCUM with EXPONENT we do:
+;;  and to compose ACCUM with EXPONENT we do:
 ;;
-;;   ACCUM * 10^EXPONENT = 123456 * 10^-3 = 123.456
+;;    ACCUM * 10^EXPONENT = 123456 * 10^-3 = 123.456
 ;;
 ;;* N0 must  be false, a real number  or a pair whose car  is the symbol
-;;"polar" and whose cdr is a real number.
+;;  "polar"  and whose  cdr is  a real  number.  All  the  operators but
+;;  PARSE-NUMERIC-STRING and its subroutine have a N0 argument.
+;;
+;;  Whenever  the parser  finishes parsing  the real  part of  a complex
+;;  number in rectangular notation,  the resulting number becomes the N0
+;;  argument to the next operator call.
+;;
+;;  Whenever  the parser  finishes parsing  the magnitude  of  a complex
+;;  number in polar notation, a pair whose car is the symbol "polar" and
+;;  whose cdr is the magnitude  number object becomes the N0 argument to
+;;  the next operator call.
+;;
+;;  While the  parser is  parsing a real  number or  the real part  of a
+;;  complex number in rectangular notation or the magnitude of a complex
+;;  number in polar notation: the N0 argument is false.
+;;
+;;  At the  end of  a complex  number parsing: the  argument N0  and the
+;;  second parsed number, representing  the imaginary part or the angle,
+;;  are composed to build the full complex number:
+;;
+;;    N0=#f                N1=456    -> 456
+;;    N0=123               N1=456    -> 123+456i
+;;    N0=(polar . 123)     N1=456    -> 123@456
 ;;
 
 (define-parser-logic define-string->number-parser next fail
 
-  (parse-string (radix override-radix exactness)
+  (parse-numeric-string (radix override-radix exactness)
     ;;This  operator is  the  entry  point to  parse  any valid  numeric
     ;;sequence of characters  from the input when we  know that the next
-    ;;character starts a numeric  sequence.  This operator may be called
-    ;;recursively.
+    ;;character starts a numeric sequence.
     ;;
     ;;OVERRIDE-RADIX  must be false  or a  fixnum among:  2, 8,  10, 16.
     ;;When set to  false it means that none of  the prefixes "#b", "#d",
@@ -667,7 +708,7 @@
     ;;radix prefixes are not used multiple times, for example "#b#x".
     ;;
     ((#\#)
-     (next parse-string-after-hash radix override-radix exactness))
+     (next parse-prefix-after-hash radix override-radix exactness))
     ((sign) => sn
      (let-inline ((n0 #f))
        (next u:sign radix n0 exactness sn)))
@@ -683,10 +724,10 @@
 		  (sn    +1))
        (next u:digit+ radix n0 exactness sn accum))))
 
-  (parse-string-after-hash (radix override-radix exactness)
+  (parse-prefix-after-hash (radix override-radix exactness)
     ;;Parse  an input  char after  the  opening #\#  character has  been
-    ;;consumed  by  PARSE-STRING;  this  operator  is  a  subroutine  of
-    ;;PARSE-STRING.
+    ;;consumed by PARSE-NUMERIC-STRING; this operator is a subroutine of
+    ;;PARSE-NUMERIC-STRING.
     ;;
     ;;We  must  remember that  the  prefixes  "#e"  and "#i"  specifying
     ;;exactness  can be preceeded  or followed  by prefixes  "#b", "#d",
@@ -696,27 +737,27 @@
     ((#\x #\X)
      (if override-radix
 	 (fail)
-       (next parse-string 16 16 exactness)))
+       (next parse-numeric-string 16 16 exactness)))
     ((#\o #\O)
      (if override-radix
 	 (fail)
-       (next parse-string 8 8 exactness)))
+       (next parse-numeric-string 8 8 exactness)))
     ((#\b #\B)
      (if override-radix
 	 (fail)
-       (next parse-string 2 2 exactness)))
+       (next parse-numeric-string 2 2 exactness)))
     ((#\d #\D)
      (if override-radix
 	 (fail)
-       (next parse-string 10 10 exactness)))
+       (next parse-numeric-string 10 10 exactness)))
     ((#\e #\E)
      (if exactness
 	 (fail)
-       (next parse-string radix override-radix 'e)))
+       (next parse-numeric-string radix override-radix 'e)))
     ((#\i #\I)
      (if exactness
 	 (fail)
-       (next parse-string radix override-radix 'i))))
+       (next parse-numeric-string radix override-radix 'i))))
 
   (u:digit+ (radix n0 exactness sn accum)
     ;;Accumulate  a number  from digit  characters compliant  with RADIX
@@ -1219,12 +1260,18 @@
 	   (let-inline ((n1 +nan.0))
 	     (%make-number-after-ending-i fail n0 n1)))))
 
-  #| end of DEFINE-PARSER |# )
+  #| end of DEFINE-PARSER-LOGIC |# )
 
 
 ;;;; device logic for STRING->NUMBER
 
 (define-syntax string->number-logic
+  ;;Define  the device logic  to parse  a numeric  string from  a Scheme
+  ;;string object.
+  ;;
+  ;;The literal identifiers  must be free identifiers, both  here and in
+  ;;the context where this macro is used.
+  ;;.
   (syntax-rules (INTRODUCE-DEVICE-ARGUMENTS
 		 GENERATE-EOF-THEN-CHARS-TESTS
 		 GENERATE-DELIMITER-TEST
@@ -1240,13 +1287,13 @@
 
     ;;Whenever  an  input  character  is  not accepted  by  an  operator
     ;;function  this   rule  is  used   to  decide  what  to   do.   For
-    ;;STRING->NUMBER the action to do is to return false.
+    ;;STRING->NUMBER the action is to return false.
     ((_ FAIL (?input.string ?input.length ?input.index) ?ch-var)
      #f)
 
     ;;Whenever the  end-of-input is found in  a position in  which it is
     ;;unexpected,  this  rule  is  used  to  decide  what  to  do.   For
-    ;;STRING->NUMBER the action to do is to return false.
+    ;;STRING->NUMBER the action is to return false.
     ;;
     ((_ UNEXPECTED-EOF-ERROR (?input.string ?input.length ?input.index))
      #f)
@@ -1255,7 +1302,7 @@
     ;;is embedded into a sequence of other characters, so there exists a
     ;;set  of characters  that  delimit the  end-of-number.  The  parser
     ;;delegates  to  the  device  the responsibility  of  knowing  which
-    ;;characters are delimiters.
+    ;;characters are delimiters, if any.
     ;;
     ;;When the input  device is a string containing  only the number, as
     ;;is  the case  for  STRING->NUMBER: there  are  no delimiters,  the
@@ -1288,7 +1335,8 @@
 
 ;;;; definition of STRING->NUMBER
 
-(define-string->number-parser string->number-logic (parse-string))
+(define-string->number-parser string->number-logic
+  (parse-numeric-string))
 
 (define string->number
   ;;Defined  by R6RS.   Convert a  string into  a number;  if successful
@@ -1309,21 +1357,23 @@
       ;;The argument 10  is the selected radix, which  can be overridden
       ;;by the prefixes #o, #b, #x, #d in the string S itself.
       ;;
-      ;;The first  #f argument  is the override  radix; if the  string S
-      ;;starts  with  a  prefix among  #o,  #b,  #x,  #d, the  radix  is
-      ;;overridden.   This  argument  exists  for the  only  purpose  of
-      ;;checking that radix prefixes are not used multiple times.
+      ;;The first #f argument is the override radix; if the string S has
+      ;;a prefix  among #o, #b, #x,  #d, the radix  is overridden.  This
+      ;;argument  exists for  the only  purpose of  checking  that radix
+      ;;prefixes are not used multiple times.
       ;;
       ;;The second #f argument is  the exactness specification and it is
       ;;selected by the  prefixes #i and #e.  This  value should be: #f,
       ;;the symbol "e" or the symbol "i".
       ;;
-      (parse-string S (unsafe.string-length S) 0 10 #f #f)))
+      (parse-numeric-string S (unsafe.string-length S) 0
+			    10 #f #f)))
    ((S radix)
     (with-arguments-validation (string->number)
 	((string S)
 	 (radix	 radix))
-      (parse-string S (unsafe.string-length S) 0 radix #f #f)))))
+      (parse-numeric-string S (unsafe.string-length S) 0
+			    radix #f #f)))))
 
 
 ;;;; done
@@ -1332,8 +1382,8 @@
 
 ;;; end of file
 ;;Local Variables:
-;;eval: (put 'parse-string	'scheme-indent-function 1)
-;;eval: (put 'parse-string-after-hash	'scheme-indent-function 1)
+;;eval: (put 'parse-numeric-string	'scheme-indent-function 1)
+;;eval: (put 'parse-prefix-after-hash	'scheme-indent-function 1)
 ;;eval: (put 'u:done		'scheme-indent-function 1)
 ;;eval: (put 'u:sign		'scheme-indent-function 1)
 ;;eval: (put 'u:sign-i		'scheme-indent-function 1)
