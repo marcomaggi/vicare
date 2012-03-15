@@ -19,8 +19,8 @@
 ;;
 ;;We  parse the  input  using a  set  of operator  functions which  draw
 ;;characters from  a configurable input device.   Each operator function
-;;can either:  terminate parsing successfully, raise or  return an error
-;;or tail-call another operator function.
+;;can either: terminate parsing  successfully, raise or return an error,
+;;tail-call another operator function.
 ;;
 ;;Operator  functions  are  generated  by  macros from  a  big  symbolic
 ;;expression  DEFINE-PARSER-LOGIC containing  a sub-expression  for each
@@ -32,14 +32,15 @@
 ;;device forms are hard coded into the parser functions.
 ;;
 ;;This  documentation makes use  of pseudo-code  to introduce  the basic
-;;organisation of the code; the structure of operator functions is shown
-;;in steps, adding new details at each iteration.
+;;organisation of the code.
 ;;
 ;;An operator function accepting characters X or Y looks like this:
 ;;
 ;;  (define (operator-function-1 device)
 ;;    (let ((ch (get-next-char-from device)))
-;;      (cond ((char=? X ch)
+;;      (cond ((end-of-input? ch)
+;;             (error-form))
+;;            ((char=? X ch)
 ;;             (a-clause-form))
 ;;            ((char=? Y ch)
 ;;             (another-clause-form))
@@ -54,12 +55,16 @@
 ;;    ((Y)
 ;;     (another-clause-form)))
 ;;
+;;notice how the end-of-input test is automatically generated.
+;;
 ;;An operator function  accepting characters X, Y or Z, with  Y and Z to
 ;;be processed in the same way, looks like this:
 ;;
 ;;  (define (operator-function-2 device)
 ;;    (let ((ch (get-next-char-from device)))
-;;      (cond ((char=? X ch)
+;;      (cond ((end-of-input? ch)
+;;             (error-form))
+;;            ((char=? X ch)
 ;;             (a-clause-form))
 ;;            ((or (char=? Y ch) (char=? Z ch))
 ;;             (another-clause-form))
@@ -133,6 +138,33 @@
 ;;end-of-number condition  is not  explicitly specified in  the symbolic
 ;;subexpression: its  generation is  completely delegated to  the device
 ;;logic.
+;;
+;;Sometimes it is  useful to apply a test function or  macro to an input
+;;character and collect  the result for further processing;  this can be
+;;done as follows:
+;;
+;;  (define (the-test ch arg1 arg2 arg3)
+;;    ---)
+;;
+;;  (define (operator-function-5 device)
+;;    (let ((ch (get-next-char-from device)))
+;;      (cond ((end-of-input? ch)
+;;             (error-form))
+;;            ((the-test ch 1 2 3)
+;;             => (lambda (result)
+;;                  (a-clause-form)))
+;;            ((char=? Y ch)
+;;             (another-clause-form))
+;;            (else
+;;             (error-form))))
+;;
+;;and is specified in the parser logic as the symbolic subexpression:
+;;
+;;  (operator-function-5
+;;    ((the-test 1 2 3) => result
+;;     (a-clause-form))
+;;    ((Y)
+;;     (another-clause-form)))
 ;;
 
 
@@ -388,7 +420,142 @@
 
 (module (define-parser-logic)
 
+  (define-syntax define-parser-logic
+    ;;Define the parser logic  through a list of symbolic subexpressions
+    ;;representing operator  function specifications.  The  parser logic
+    ;;is an "abstract  parser" which must be specialised  with the input
+    ;;device logic.
+    ;;
+    ;;?PARSER-DEFINER  must  be  the  identifier that  will  become  the
+    ;;keyword of the concrete parser-definition macro.
+    ;;
+    ;;?NEXT must be the identifier that will become the keyword bound to
+    ;;the macro used to call  the "next" operator function inserting the
+    ;;input   device  arguments.    ?NEXT  is   used  in   the  operator
+    ;;subexpressions.
+    ;;
+    ;;?FAIL must be the identifier that will become the keyword bound to
+    ;;the macro  used to return  an error to  the caller of  an operator
+    ;;function.  ?FAIL is used in the operator subexpressions.
+    ;;
+    ;;?OPERATOR-NAME  must  be  the  identifier  to  which  an  operator
+    ;;function will be bound.  This identifier is in the lexical context
+    ;;of the  DEFINE-PARSER-LOGIC use form, which is  different from the
+    ;;lexical context of a use of the ?PARSER-DEFINER macro.
+    ;;
+    ;;?OPERATOR-SPECIFIC-ARG must  be an  identifier that will  become a
+    ;;formal argument for an operator function.  These arguments are the
+    ;;operator-specific ones.
+    ;;
+    ;;?OPERATOR-CLAUSE  must  be   a  symbolic  expression  representing
+    ;;accepted input conditions for an operator function.
+    ;;
+    (lambda (x)
+      (syntax-case x ()
+	((_ ?parser-definer ?next ?fail
+	    (?operator-name (?operator-specific-arg ...) ?operator-clause ...)
+	    ...)
+	 (with-syntax
+	     ;;Insert:
+	     ;;
+	     ;;  #'(?operator-name ...)
+	     ;;
+	     ;;in  a syntax object  so that  it can  be embedded  in the
+	     ;;output form of this macro and later extracted intact from
+	     ;;the input form of DEFINE-PARSER.
+	     ((ORIGINAL-OPERATOR-NAMES (datum->syntax #'foo #'(?operator-name ...))))
+	   #'(define-syntax ?parser-definer
+	       (syntax-rules ()
+		 ((_ ??device-logic (??public-operator-name (... ...)))
+		  (define-parser (??public-operator-name (... ...))
+		    ??device-logic ?next ?fail
+		    ORIGINAL-OPERATOR-NAMES
+		    (?operator-name (?operator-specific-arg ...) ?operator-clause ...) ...))))
+	   ))
+	)))
+
+  (define-syntax define-parser
+    ;;This is the true parser logic generator.
+    ;;
+    (lambda (x)
+      (define (lookup original-operator-names actual-operator-names)
+	(lambda (public-operator-name)
+	  ;;Check that  a requested public  operator name is  indeed the
+	  ;;name of  an operator function in the  abstract parser logic.
+	  ;;If successful: return  an identifier representing the actual
+	  ;;parser operator name.
+	  ;;
+	  (let loop ((ls1 original-operator-names)
+		     (ls2 actual-operator-names))
+	    (cond ((null? ls1)
+		   (assertion-violation 'define-parser
+		     "unknown requested public parser operator name"
+		     public-operator-name))
+		  ((bound-identifier=? public-operator-name (unsafe.car ls1))
+		   (unsafe.car ls2))
+		  (else
+		   (loop (unsafe.cdr ls1) (unsafe.cdr ls2)))))))
+      (define (syntax->list stx)
+	;;Given a syntax object STX holding a list, unwrap it and return
+	;;a proper list holding the component syntax objects.
+	;;
+	(syntax-case stx ()
+	  ((?car . ?cdr)
+	   (cons #'?car (syntax->list #'?cdr)))
+	  (() '())))
+      (syntax-case x ()
+	((_ (?public-operator-name ...) ?device-logic ?next ?fail
+	    ?original-operator-names
+	    (?operator-name (?operator-arg ...) ?operator-clause ...) ...)
+	 (with-syntax (((OPERATOR-NAME ...)
+			(map (lookup (syntax->list (syntax->datum #'?original-operator-names))
+				     (syntax->list #'(?operator-name ...)))
+			  (syntax->list #'(?public-operator-name ...)))))
+	   #'(begin
+	       ;;This form  expands to an  operator function bound  to a
+	       ;;name  in the lexical  scope of  the DEFINE-PARSER-LOGIC
+	       ;;use.
+	       (?device-logic INTRODUCE-DEVICE-ARGUMENTS
+			      %generate-operator ?device-logic ?next ?fail ?operator-name
+			      (?operator-arg ...)
+			      (?operator-clause ...))
+	       ...
+
+	       ;;This form aliases an operator name in the lexical scope
+	       ;;of the  DEFINE-PARSER-LOGIC use to an  operator name in
+	       ;;the lexical scope of the concrete parser definition.
+	       (define ?public-operator-name OPERATOR-NAME)
+	       ...))))))
+
+  (define-syntax %generate-operator
+    ;;Define an operator function.
+    ;;
+    (syntax-rules ()
+      ((_ (?device-arg ...) ?device-logic ?next ?fail
+	  ?operator-name (?operator-arg ...) (?operator-clause ...))
+       (define (?operator-name ?device-arg ... ?operator-arg ...)
+	 ;;Introduce the identifier "ch" used to bind the next char from
+	 ;;the input device.
+	 (?device-logic GENERATE-EOF-THEN-CHARS-TESTS ch
+			?next ?fail (?device-arg ...)
+			(%generate-end-of-input-form
+			 ?device-logic (?device-arg ...)
+			 ?operator-clause ...)
+			(%generate-parse-more-chars-form
+			 ?device-logic (?device-arg ...)
+			 ch (%generate-delimiter-test
+			     ?device-logic (?device-arg ...)
+			     ch ?operator-clause ...)
+			 ?operator-clause ...)
+			)))))
+
+
   (define-syntax %generate-end-of-input-form
+    ;;Iterate through  the clauses  of an operator  looking for  the EOF
+    ;;one.
+    ;;
+    ;;The literal EOF must be a free identifier.
+    ;;
     (syntax-rules (eof)
       ;;End-of-input was  found from the  input device, but there  is no
       ;;EOF clause  specified for this parser  operator: end-of-input is
@@ -469,126 +636,6 @@
 	   ?then-form
 	 (%generate-parse-more-chars-form ?device-logic ?device-arg-list ?ch-var
 					  ?test-delimiter-form . ?other-operator-clauses)))))
-
-  (define-syntax %generate-operator
-    ;;Define  an  operator  function.   The  name  of  the  function  is
-    ;;automatically generated; it  is responsibility of DEFINE-PARSER to
-    ;;define "public" identifiers bound to the private name.
-    ;;
-    (syntax-rules ()
-      ((_ (?device-arg ...) ?device-logic ?next ?fail
-	  ?operator-name (?operator-arg ...) (?operator-clause ...))
-       (define (?operator-name ?device-arg ... ?operator-arg ...)
-	 ;;Introduce the identifier "ch" used to bind the next char from
-	 ;;the input device.
-	 (?device-logic GENERATE-EOF-THEN-CHARS-TESTS ch
-			?next ?fail (?device-arg ...)
-			(%generate-end-of-input-form
-			 ?device-logic (?device-arg ...) ?operator-clause ...)
-			(%generate-parse-more-chars-form
-			 ?device-logic (?device-arg ...) ch
-			 (%generate-delimiter-test ?device-logic (?device-arg ...) ch
-						   ?operator-clause ...)
-			 ?operator-clause ...)
-			)))))
-
-  (define-syntax define-parser
-    ;;This is the true parser logic generator.
-    ;;
-    (lambda (x)
-      (define (lookup original-operator-names actual-operator-names)
-	(lambda (public-operator-name)
-	  ;;Check that  a requested public  operator name is  indeed the
-	  ;;name of  an operator function in the  abstract parser logic.
-	  ;;If successful: return  an identifier representing the actual
-	  ;;parser operator name.
-	  ;;
-	  (let loop ((ls1 original-operator-names)
-		     (ls2 actual-operator-names))
-	    (cond ((null? ls1)
-		   (assertion-violation 'define-parser
-		     "unknown requested public parser operator name"
-		     public-operator-name))
-		  ((bound-identifier=? public-operator-name (unsafe.car ls1))
-		   (unsafe.car ls2))
-		  (else
-		   (loop (unsafe.cdr ls1) (unsafe.cdr ls2)))))))
-      (syntax-case x ()
-	((_ (?public-operator-name ...) ?device-logic ?next ?fail
-	    ?original-operator-names
-	    (?operator-name (?operator-arg ...) ?operator-clause ...) ...)
-	 (with-syntax (((OPERATOR-NAME ...)
-			(map (lookup (syntax->datum #'?original-operator-names)
-				     #'(?operator-name ...))
-			  #'(?public-operator-name ...))))
-	   #'(begin
-	       ;;This form  expands to an  operator function bound  to a
-	       ;;name  in the lexical  scope of  the DEFINE-PARSER-LOGIC
-	       ;;use.
-	       (?device-logic INTRODUCE-DEVICE-ARGUMENTS
-			      %generate-operator ?device-logic ?next ?fail ?operator-name
-			      (?operator-arg ...)
-			      (?operator-clause ...))
-	       ...
-
-	       ;;This form aliases an operator name in the lexical scope
-	       ;;of the  DEFINE-PARSER-LOGIC use to an  operator name in
-	       ;;the lexical scope of the concrete parser definition.
-	       (define ?public-operator-name OPERATOR-NAME)
-	       ...))))))
-
-  (define-syntax define-parser-logic
-    ;;Define the parser logic  through a list of symbolic subexpressions
-    ;;representing operator function  spefications.  The parser logic is
-    ;;an  "abstract parser"  which must  be specialised  with  the input
-    ;;device logic.
-    ;;
-    ;;?PARSER-DEFINER must be the  identifier that will become the macro
-    ;;keyword of the concrete parser-definition macro.
-    ;;
-    ;;?NEXT must  be the identifier  that will become the  macro keyword
-    ;;used to draw  the next character from the  input device.  ?NEXT is
-    ;;used in the operator subexpressions.
-    ;;
-    ;;?FAIL must  be the identifier  that will become the  macro keyword
-    ;;used to  return an  error to the  caller of an  operator function.
-    ;;?FAIL is used in the operator subexpressions.
-    ;;
-    ;;?OPERATOR-NAME  must  be  the  identifier  to  which  an  operator
-    ;;function will be bound.  This identifier is in the lexical context
-    ;;of  the  DEFINE-PARSER-LOGIC form,  which  is  different from  the
-    ;;lexical context of a use of the ?PARSER-DEFINER macro.
-    ;;
-    ;;?OPERATOR-SPECIFIC-ARG must  be an  identifier that will  become a
-    ;;formal argument for an operator function.  These arguments are the
-    ;;operator-specific ones.
-    ;;
-    ;;?OPERATOR-CLAUSE  must  be   a  symbolic  expression  representing
-    ;;accepted input conditions for an operator function.
-    ;;
-    (lambda (x)
-      (syntax-case x ()
-	((_ ?parser-definer ?next ?fail
-	    (?operator-name (?operator-specific-arg ...) ?operator-clause ...)
-	    ...)
-	 (with-syntax
-	     ;;Insert:
-	     ;;
-	     ;;  #'(?operator-name ...)
-	     ;;
-	     ;;in  a syntax object  so that  it can  be embedded  in the
-	     ;;output form of this macro and later extracted intact from
-	     ;;the input form of DEFINE-PARSER.
-	     ((ORIGINAL-OPERATOR-NAMES (datum->syntax #'foo #'(?operator-name ...))))
-	   #'(define-syntax ?parser-definer
-	       (syntax-rules ()
-		 ((_ ??device-logic (??public-operator-name (... ...)))
-		  (define-parser (??public-operator-name (... ...))
-		    ??device-logic ?next ?fail
-		    ORIGINAL-OPERATOR-NAMES
-		    (?operator-name (?operator-specific-arg ...) ?operator-clause ...) ...))))
-	   ))
-	)))
 
   #| end of module |#)
 
@@ -1271,7 +1318,7 @@
   ;;
   ;;The literal identifiers  must be free identifiers, both  here and in
   ;;the context where this macro is used.
-  ;;.
+  ;;
   (syntax-rules (INTRODUCE-DEVICE-ARGUMENTS
 		 GENERATE-EOF-THEN-CHARS-TESTS
 		 GENERATE-DELIMITER-TEST
@@ -1281,7 +1328,6 @@
     ;;Introduce a list of identifiers used as device-specific arguments;
     ;;they  will  be  the  first  arguments  for  each  parser  operator
     ;;function.
-    ;;
     ((_ INTRODUCE-DEVICE-ARGUMENTS ?kont . ?rest)
      (?kont (input.string input.length input.index) . ?rest))
 
@@ -1294,7 +1340,6 @@
     ;;Whenever the  end-of-input is found in  a position in  which it is
     ;;unexpected,  this  rule  is  used  to  decide  what  to  do.   For
     ;;STRING->NUMBER the action is to return false.
-    ;;
     ((_ UNEXPECTED-EOF-ERROR (?input.string ?input.length ?input.index))
      #f)
 
@@ -1308,14 +1353,12 @@
     ;;is  the case  for  STRING->NUMBER: there  are  no delimiters,  the
     ;;end-of-number  is the  end of  the  string.  We  avoid looking  at
     ;;?CH-VAR and just expand to the not-delimiter continuation form.
-    ;;
     ((_ GENERATE-DELIMITER-TEST ?ch-var ?ch-is-delimiter-kont ?ch-is-not-delimiter-kont)
      ?ch-is-not-delimiter-kont)
 
     ;;This rule is used to  generate the tests for an operator function.
     ;;First  of all  the  end-of-input condition  is  checked; then  the
     ;;continuation form for more characters is expanded.
-    ;;
     ((_ GENERATE-EOF-THEN-CHARS-TESTS ?ch-var ?next ?fail
 	(?input.string ?input.length ?input.index)
 	?end-of-input-kont ?more-characters-kont)
