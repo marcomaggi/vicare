@@ -747,7 +747,7 @@
 (define (start-tokenising port)
   ;;Recursive  function.  Start  tokenizing  the next  datum from  PORT,
   ;;discarding  comments  and  whitespaces; after  discarding  something
-  ;;recurse  calling itself;  if the  first  character is  a #  delegate
+  ;;recurse calling  itself; if  the first character  is a  #\# delegate
   ;;actual   parsing   to   ADVANCE-TOKENISATION-OF-HASH-DATUM/C;   else
   ;;delegate actual parsing to ADVANCE-TOKENISATION-OF-NON-HASH-DATUM/C.
   ;;
