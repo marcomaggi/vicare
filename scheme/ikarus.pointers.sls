@@ -446,7 +446,8 @@
    (()
     (foreign-call "ikrt_last_errno"))
    ((errno)
-    (with-arguments-validation (errno)
+    (define who 'errno)
+    (with-arguments-validation (who)
 	((errno  errno))
       (foreign-call "ikrt_set_errno" errno)))))
 

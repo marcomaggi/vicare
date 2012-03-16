@@ -397,7 +397,8 @@
   (syntax-rules ()
     ((_ ?procname ?accessor)
      (define (?procname rtd)
-       (with-arguments-validation (?procname)
+       (define who '?procname)
+       (with-arguments-validation (who)
 	   ((rtd	rtd))
 	 (?accessor rtd))))))
 
@@ -805,7 +806,8 @@
 (define (record-predicate rtd)
   ;;Return a function being the predicate for RTD.
   ;;
-  (with-arguments-validation ('record-predicate)
+  (define who 'record-predicate)
+  (with-arguments-validation (who)
       ((rtd	rtd))
     (lambda (x)
       ;;We must verify that X is  actually a record instance of RTD or a

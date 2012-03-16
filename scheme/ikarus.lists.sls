@@ -108,11 +108,13 @@
 (define make-list
   (case-lambda
    ((n)
-    (with-arguments-validation (make-list)
+    (define who 'make-list)
+    (with-arguments-validation (who)
 	((length n))
       (%unsafe.make-list n (void) '())))
    ((n fill)
-    (with-arguments-validation (make-list)
+    (define who 'make-list)
+    (with-arguments-validation (who)
 	((length n))
       (%unsafe.make-list n fill '())))))
 

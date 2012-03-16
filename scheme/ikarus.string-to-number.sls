@@ -1388,7 +1388,8 @@
   ;;
   (case-lambda
    ((S)
-    (with-arguments-validation (string->number)
+    (define who 'string->number)
+    (with-arguments-validation (who)
 	((string S))
       ;;The arguments:
       ;;
@@ -1412,7 +1413,8 @@
       (parse-numeric-string S (unsafe.string-length S) 0
 			    10 #f #f)))
    ((S radix)
-    (with-arguments-validation (string->number)
+    (define who 'string->number)
+    (with-arguments-validation (who)
 	((string S)
 	 (radix	 radix))
       (parse-numeric-string S (unsafe.string-length S) 0

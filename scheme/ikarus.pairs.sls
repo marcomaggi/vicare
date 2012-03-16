@@ -49,12 +49,14 @@
   (foreign-call "ikrt_weak_cons" a d))
 
 (define (set-car! x y)
-  (with-arguments-validation (set-car!)
+  (define who 'set-car!)
+  (with-arguments-validation (who)
       ((pair x))
     (unsafe.set-car! x y)))
 
 (define (set-cdr! x y)
-  (with-arguments-validation (set-cdr!)
+  (define who 'set-cdr!)
+  (with-arguments-validation (who)
       ((pair x))
     (unsafe.set-cdr! x y)))
 

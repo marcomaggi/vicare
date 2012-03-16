@@ -3865,7 +3865,8 @@
   ;;Defined  by Ikarus.   Return true  if PORT  has  already been
   ;;closed.
   ;;
-  (with-arguments-validation ('port-closed?)
+  (define who 'port-closed?)
+  (with-arguments-validation (who)
       ((port port))
     (%unsafe.port-closed? port)))
 

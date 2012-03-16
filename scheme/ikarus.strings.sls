@@ -239,14 +239,16 @@
   (case-lambda
    (() "")
    ((one)
-    (with-arguments-validation (string)
+    (define who 'string)
+    (with-arguments-validation (who)
 	((char one))
       (let ((str (unsafe.make-string 1)))
 	(unsafe.string-set! str 0 one)
 	str)))
 
    ((one two)
-    (with-arguments-validation (string)
+    (define who 'string)
+    (with-arguments-validation (who)
 	((char one)
 	 (char two))
       (let ((str (unsafe.make-string 2)))
@@ -255,7 +257,8 @@
 	str)))
 
    ((one two three)
-    (with-arguments-validation (string)
+    (define who 'string)
+    (with-arguments-validation (who)
 	((char one)
 	 (char two)
 	 (char three))
@@ -266,7 +269,8 @@
 	str)))
 
    ((one two three four)
-    (with-arguments-validation (string)
+    (define who 'string)
+    (with-arguments-validation (who)
 	((char one)
 	 (char two)
 	 (char three)
