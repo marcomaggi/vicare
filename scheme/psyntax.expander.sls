@@ -1917,8 +1917,8 @@
                                  (if ($struct/rtd? x ',rtd)
                                      ($struct-ref x ,i)
                                      (assertion-violation ',getter
-                                            "not a struct of required type"
-                                            x ',rtd)))))
+				       "not a struct of required type as getter argument"
+				       x ',rtd)))))
                          getters i*)
                   ,@(map (lambda (setter i)
                             `(define ,setter
@@ -1926,8 +1926,8 @@
                                  (if ($struct/rtd? x ',rtd)
                                      ($struct-set! x ,i v)
                                      (assertion-violation ',setter
-                                            "not a struct of required type"
-                                            x ',rtd)))))
+				       "not a struct of required type as setter argument"
+				       x ',rtd)))))
                          setters i*)))))))
       (lambda (stx)
         (stx-error stx "define-struct not supported"))))
