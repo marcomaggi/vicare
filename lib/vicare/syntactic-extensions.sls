@@ -33,6 +33,7 @@
   (export
     ;; miscellaneous extensions
     define-inline		define-inline-constant
+    define-constant
     define-syntax*		define-auxiliary-syntaxes
     let-inline			let*-inline
     debug-assert		unwind-protect
@@ -70,6 +71,14 @@
        (syntax-rules ()
 	 ((_ ?arg ... . ?rest)
 	  (begin ?form0 ?form ...)))))))
+
+(define-syntax define-constant
+  (syntax-rules ()
+    ((_ ?name ?expr)
+     (begin
+       (define ghost ?expr)
+       (define-syntax ?name
+	 (identifier-syntax ghost))))))
 
 (define-syntax define-inline-constant
   (syntax-rules ()
