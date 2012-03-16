@@ -31,12 +31,14 @@
     (ikarus system $symbols)
     (ikarus system $bytevectors)
     (ikarus system $transcoders)
-    (rename (only (ikarus system $pointers)
-		  $pointer?)
-	    ($pointer? pointer?))
+    (prefix (rename (only (ikarus system $pointers)
+			  $pointer?)
+		    ($pointer? pointer?))
+	    pointers.)
     (only (ikarus system $foreign) pointer->integer)
-    (only (ikarus.io)
-	  input/output-port?)
+    (prefix (only (ikarus.io)
+		  input/output-port?)
+	    io.)
     (only (ikarus.pretty-formats) get-fmt)
     (except (ikarus)
       write display format printf fprintf print-error print-unicode print-graph
@@ -592,7 +594,7 @@
     (write-char* ">" p))
   (define (write-port x p)
     (write-char* "#<" p)
-    (write-char* (cond ((input/output-port? x)
+    (write-char* (cond ((io.input/output-port? x)
 			"input/output")
 		       ((input-port? x)
 			"input")
@@ -654,7 +656,7 @@
       [(transcoder? x) (write-char* "#<transcoder>" p) i]
       [(struct? x) (write-shared x p m h i write-struct)]
       [(code? x) (write-char* "#<code>" p) i]
-      [(pointer? x)
+      [(pointers.pointer? x)
        (write-char* "#<pointer #x" p)
        (write-hex
          (pointer->integer x)

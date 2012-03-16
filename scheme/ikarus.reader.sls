@@ -46,8 +46,9 @@
     (vicare words)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
-    (only (ikarus.keywords)
-	  symbol->keyword)
+    (prefix (only (ikarus.keywords)
+		  symbol->keyword)
+	    keywords.)
     (only (ikarus.string-to-number)
 	  define-string->number-parser))
 
@@ -1033,7 +1034,7 @@
 	      (if (initial? ch1)
 		  (reverse-list->string (%accumulate-identifier-chars (cons ch1 '()) port))
 		(%error-1 "invalid char inside keyword object" ch1))))
-	(cons 'datum (symbol->keyword (string->symbol keyword-name))))))
+	(cons 'datum (keywords.symbol->keyword (string->symbol keyword-name))))))
 
 ;;;The original Ikarus code used the syntax:
 ;;;

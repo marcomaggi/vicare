@@ -32,9 +32,6 @@
 		  delete-file
 		  strerror
 		  getenv)
-    (rename (only (ikarus system $pointers)
-		  $pointer?)
-	    ($pointer? pointer?))
     (vicare syntactic-extensions)
     (vicare platform-constants)
     (prefix (vicare unsafe-capi)

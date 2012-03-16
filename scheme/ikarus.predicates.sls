@@ -64,7 +64,8 @@
     (ikarus system $foreign)
     ;;To be removed  after the next boot image  rotation.  (Marco Maggi;
     ;;Sat Mar 10, 2012)
-    (ikarus.keywords)
+    (prefix (ikarus.keywords)
+	    keywords.)
     ;;These are the ones implemented as primitive operations.
     (rename (only (ikarus)
 		  fixnum? flonum? bignum? ratnum? compnum? cflonum?
@@ -278,8 +279,8 @@
 	((pointer? x)
 	 (and (pointer? y) ($pointer= x y)))
 
-	((keyword? x)
-	 (and (keyword? y) (keyword=? x y)))
+	((keywords.keyword? x)
+	 (and (keywords.keyword? y) (keywords.keyword=? x y)))
 
 	(else #f)))
 

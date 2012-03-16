@@ -62,9 +62,10 @@
 	    posix.)
     (only (ikarus cafe)
 	  cafe-input-port)
-    (only (ikarus.readline)
-	  readline-enabled?
-	  make-readline-input-port)
+    (prefix (only (ikarus.readline)
+		  readline-enabled?
+		  make-readline-input-port)
+	    readline.)
     (only (vicare syntactic-extensions)
 	  define-inline))
 
@@ -910,8 +911,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	       (current-error-port)))
     (optimize-level 0)
 
-    (when (and (readline-enabled?) (not cfg.raw-repl))
-      (cafe-input-port (make-readline-input-port)))
+    (when (and (readline.readline-enabled?) (not cfg.raw-repl))
+      (cafe-input-port (readline.make-readline-input-port)))
 
     (cond ((eq? 'repl cfg.exec-mode)
 	   (command-line-arguments (cons "*interactive*" cfg.program-options)))
