@@ -80,30 +80,70 @@
     (ikarus system $structs)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
-	    unsafe.)
-    (prefix (vicare unsafe-capi)
-	    capi.)
-    )
-
-
-;;;; emergency debugging
-
-(define (emergency-platform-write-fd str)
-  ;;Interface to the system  "write()" function.  In case something goes
-  ;;wrong while modifying  the code in this library, it  may be that the
-  ;;compiled  image  fails  to  write  understandable  messages  to  the
-  ;;standard ports  using the R6RS functions.  This  macro allows direct
-  ;;interface to the platform's stderr.
-  ;;
-  (let ((bv (string->utf8 str)))
-    (capi.platform-write-fd 2 bv 0 (unsafe.bytevector-length bv))
-    ;;and a newline
-    (capi.platform-write-fd 2 '#vu8(10) 0 1)))
+	    unsafe.))
 
 
 ;;;; type definitions
+;;
+;;A Vicare's struct  is a variable-length block of  memory referenced by
+;;machine  words  tagged as  vectors;  the  first  machine word  of  the
+;;structure  is a  reference to  the  struct type  descriptor, which  is
+;;itself a  struct.  A block  of memory  is a struct  if and only  if: a
+;;reference to  it is tagged as vector  and its first word  is tagged as
+;;vector.
+;;
+;;   |----------------|----------| reference to struct
+;;     heap pointer    vector tag
+;;
+;;   |----------------|----------| first word of struct
+;;     heap pointer    vector tag    = reference to struct type desc
+;;                                   = reference to struct
+;;
+;;The  struct type  descriptor of  the  struct type  descriptors is  the
+;;return value  of BASE-RTD.  The graph  of references for  a struct and
+;;its type descriptor is as follows:
+;;
+;;       rtd ref
+;;      |-------|---------------| struct instance
+;;          |
+;;   ---<---
+;;  |
+;;  |     rtd ref
+;;   -->|-------|---------------| struct type descriptor
+;;          |
+;;   ---<---
+;;  |
+;;  |     rtd ref
+;;  +-->|-------|---------------| base struct type descriptor
+;;  |       |
+;;   ---<---
+;;
+;;An R6RS record  type descriptor is a struct instance  of type RTD.  An
+;;R6RS record instance is a  struct instance whose first word references
+;;its type descriptor, that is a struct instance of type RTD.
+;;
+;;       RTD ref
+;;      |-------|---------------| R6RS record instance
+;;          |
+;;   ---<---
+;;  |
+;;  |     std ref
+;;   -->|-------|---------------| R6RS record type descriptor
+;;          |                      = struct instance of type RTD
+;;   ---<---
+;;  |
+;;  |     std ref
+;;  +-->|-------|---------------| RTD type descriptor
+;;          |
+;;   ---<---
+;;  |
+;;  |     std ref
+;;  +-->|-------|---------------| base struct type descriptor
+;;  |       |
+;;   ---<---
+;;
 
-;;Record-type descriptor.
+;;R6RS record type descriptor.
 ;;
 (define-struct rtd
   ;;Record type name, for debugging purposes.
@@ -148,7 +188,7 @@
   (%display " fields=")		(%display (rtd-fields  S))
   (%display "]"))
 
-;;Record-constructor descriptor.
+;;R6RS record constructor descriptor.
 ;;
 (define-struct rcd
   ;;A struct of type RTD, the associated record-type descriptor.
@@ -363,25 +403,10 @@
 ;;record-type  descriptors.  This  is what  R6RS  as to  say about  this
 ;;function:
 ;;
-;;	Return the uid  of the record--type descriptor RTD,  or #f if it
-;;	has none.   (An implementation may  assign a generated uid  to a
+;;	Return the  uid of the record-type  descriptor RTD, or  #f if it
+;;	has none.   (An implementation may  assign a generated UID  to a
 ;;	record type even  if the type is generative, so  the return of a
-;;	uid does not necessarily imply that the type is nongenerative.)
-;;
-;;The original implementation in Ikarus Scheme was:
-;;
-;;  (define (record-type-uid rtd)
-;;    (if (rtd? rtd)
-;;        (or (rtd-uid rtd)
-;;            (let ((g (gensym)))
-;;              (rtd-uid-set! rtd g)
-;;              (%intern-nongenerative-rtd! g rtd)
-;;              g))
-;;      (error 'record-type-uid
-;;        "expected record-type descriptor as argument" rtd)))
-;;
-;;but we use the following  unless a real need to automatically generate
-;;the UID is discovered.
+;;	UID does not necessarily imply that the type is nongenerative.)
 ;;
 (define-rtd-inspector record-type-uid	rtd-uid)
 
@@ -394,32 +419,37 @@
   (with-arguments-validation (who)
       ((rtd	rtd))
     (let* ((fields-vector	(rtd-fields rtd))
-	   (number-of-fields	(vector-length fields-vector)))
-      (let next-field ((v (make-vector number-of-fields))
+	   (number-of-fields	(unsafe.vector-length fields-vector)))
+      (let next-field ((v (unsafe.make-vector number-of-fields))
 		       (i 0))
-	(if (fx=? i number-of-fields)
+	(if (unsafe.fx= i number-of-fields)
 	    v
 	  (begin
-	    (vector-set! v i (cdr (vector-ref fields-vector i)))
-	    (next-field v (fx+ 1 i))))))))
+	    (unsafe.vector-set! v i (unsafe.cdr (unsafe.vector-ref fields-vector i)))
+	    (next-field v (unsafe.fxadd1 i))))))))
 
-(define (record-field-mutable? rtd k)
-  ;;Return true if field K of RTD is mutable.
+(define (record-field-mutable? rtd field-index)
+  ;;Return true if field FIELD-INDEX of RTD is mutable.
   ;;
   (define who 'record-field-mutable?)
   (with-arguments-validation (who)
       ((rtd	rtd)
-       (index	k))
+       (index	field-index))
     (let* ((total-number-of-fields	(rtd-size   rtd))
 	   (prtd			(rtd-parent rtd))
 	   (absolute-field-index	(if prtd
-					    (fx+ k (rtd-size prtd))
-					  k)))
-      (unless (fx<? absolute-field-index total-number-of-fields)
-	(assertion-violation who "relative field index out of range for record type" k))
-      ;;We have  to remember that  the RTD structure holds  a normalised
-      ;;vector of field specifications.
-      (car (vector-ref (rtd-fields rtd) k)))))
+					    (+ field-index (rtd-size prtd))
+					  field-index)))
+      (cond ((not (fixnum? absolute-field-index))
+	     (assertion-violation who
+	       "field index out of range" field-index))
+	    ((fx<? absolute-field-index total-number-of-fields)
+	     ;;Remember that the RTD structure holds a normalised vector
+	     ;;of field specifications.
+	     (unsafe.car (unsafe.vector-ref (rtd-fields rtd) field-index)))
+	    (else
+	     (assertion-violation who
+	       "relative field index out of range for record type" field-index))))))
 
 
 (define (make-record-type-descriptor name parent uid sealed? opaque? fields)
@@ -430,7 +460,7 @@
   ;;
   (define who 'make-record-type-descriptor)
 
-  (define (main)
+  (define-inline (main)
     (with-arguments-validation (who)
 	((record-type-name		name)
 	 (false/non-sealed-parent-rtd	parent)
@@ -448,7 +478,7 @@
     ;;
     ;;Here we do not care if UID is a symbol or false.
     ;;
-    (define (%make-rtd ?opaque? ?parent-size)
+    (define-inline (%make-rtd ?opaque? ?parent-size)
       (make-rtd name (fx+ ?parent-size (vector-length normalised-fields))
 		parent sealed? ?opaque? uid normalised-fields))
     (if (not parent)
