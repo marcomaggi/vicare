@@ -15,31 +15,6 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-;;;; license for MAKE-DEFAULT-PROTOCOL original code
-
-;;;Copyright (C) Michael Sperber (2005).  All Rights Reserved.
-;;;
-;;;Permission is hereby granted, free of charge, to any person obtaining
-;;;a  copy of  this  software and  associated  documentation files  (the
-;;;"Software"), to  deal in the Software  without restriction, including
-;;;without limitation  the rights to use, copy,  modify, merge, publish,
-;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
-;;;permit persons to whom the Software is furnished to do so, subject to
-;;;the following conditions:
-;;;
-;;;The  above  copyright notice  and  this  permission  notice shall  be
-;;;included in all copies or substantial portions of the Software.
-;;;
-;;;THE  SOFTWARE IS  PROVIDED "AS  IS",  WITHOUT WARRANTY  OF ANY  KIND,
-;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
-;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
-;;;NONINFRINGEMENT. IN  NO EVENT SHALL THE AUTHORS  OR COPYRIGHT HOLDERS
-;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY,  WHETHER IN AN
-;;;ACTION OF  CONTRACT, TORT  OR OTHERWISE, ARISING  FROM, OUT OF  OR IN
-;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
-;;;SOFTWARE.
-
-
 (library (ikarus records procedural)
   (export
     ;; bindings for (rnrs records procedural (6))
@@ -58,7 +33,7 @@
     record-type-field-names
 
     ;; extension utility functions, non-R6RS
-    rtd-subtype?			make-default-protocol)
+    rtd-subtype?)
   (import (except (ikarus)
 		  ;; bindings for (rnrs records procedural (6))
 		  make-record-type-descriptor		make-record-constructor-descriptor
@@ -76,7 +51,7 @@
 		  record-type-field-names
 
 		  ;; extension utility functions, non-R6RS
-		  rtd-subtype?			make-default-protocol)
+		  rtd-subtype?)
     (ikarus system $structs)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
@@ -294,6 +269,12 @@
   (or (not obj) (rcd? obj))
   (assertion-violation who "expected false or record-constructor descriptor as argument" obj))
 
+(define-argument-validation (rtd&prcd who rtd prcd)
+  (eq? (rtd-parent rtd) (rcd-rtd prcd))
+  (assertion-violation who
+    "record-constructor descriptor is not associated to the parent of the record-type descriptor"
+    rtd prcd))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (record who obj)
@@ -303,6 +284,19 @@
 (define-argument-validation (non-opaque-record who obj)
   (record? obj)
   (assertion-violation who "expected non-opaque record as argument" obj))
+
+(define-argument-validation (record-instance-of-rtd who record rtd)
+  ;;To be called with RECORD being an R6RS record instance and RTD being
+  ;;an R6RS record-type descriptor.
+  ;;
+  (let ((rtd^ ($struct-rtd record)))
+    (or (eq? rtd rtd^)
+	(let upper-parent ((prtd^ (rtd-parent rtd^)))
+	  (and prtd^
+	       (or (eq? prtd^ rtd) ;RECORD is an instance of a subtype of RTD
+		   (upper-parent (rtd-parent prtd^)))))))
+  (assertion-violation who
+    "invalid record type as accessor or mutator argument" record rtd))
 
 ;;; --------------------------------------------------------------------
 
@@ -335,6 +329,24 @@
 (define-argument-validation (index who obj)
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as field index argument" obj))
+
+(define-argument-validation (absolute-field-index who abs-index max-index)
+  (and (fixnum? abs-index)
+       (unsafe.fx< abs-index max-index))
+  (assertion-violation who
+    (string-append "field index " (number->string abs-index)
+		   " out of range, expected maximum " (number->string max-index))))
+
+(define-argument-validation (relative-mutable-field-index who relative-field-index rtd)
+  ;;To be called with RELATIVE-FIELD-INDEX being a valid field index for
+  ;;RTD and RTD being an R6RS record-type descriptor.
+  ;;
+  ;;We have to remember that the RTD structure holds a normalised vector
+  ;;of field specifications.
+  ;;
+  (unsafe.car (unsafe.vector-ref (rtd-fields rtd) relative-field-index))
+  (assertion-violation who
+    "selected record field is not mutable" relative-field-index rtd))
 
 
 ;;;; table of defined non-generative RTDs
@@ -518,8 +530,8 @@
   ;;type   specified   by  RTD,   and   which   can   be  obtained   via
   ;;RECORD-CONSTRUCTOR.
   ;;
-  ;;PRCD must be a record-constructor  descriptor for the parent of RTD;
-  ;;PROTOCOL must be a function.
+  ;;PRCD must be false or a record-constructor descriptor for the parent
+  ;;of RTD; PROTOCOL must be a function.
   ;;
   (define who 'make-record-constructor-descriptor)
   (with-arguments-validation (who)
@@ -528,13 +540,8 @@
        (false/rcd	prcd))
     (if (not prcd)
 	(make-rcd rtd #f protocol)
-      (begin
-	(arguments-validation-forms
-	 (unless (eq? (rtd-parent rtd) (rcd-rtd prcd))
-	   (assertion-violation who
-	     "record-constructor descriptor is not associated \
-              to the parent of the record-type descriptor"
-	     prcd rtd)))
+      (with-arguments-validation (who)
+	  ((rtd&prcd rtd prcd))
 	(make-rcd rtd prcd protocol)))))
 
 
@@ -734,12 +741,12 @@
 ;;
 ;;the layout of a record of type <GAMMA> is something like:
 ;;
-;;  [some-tag, RTD-<gamma>, a, b, c, d, e, f, g, h, i]
+;;  [RTD-<gamma>, a, b, c, d, e, f, g, h, i]
 ;;
-;;                         |0, 1, 2|			relative offsets of <ALPHA>
-;;                                  |0, 1, 2|		relative offsets of <BETA>
-;;                                           |0, 1, 2|	relative offsets of <GAMMA>
-;;                         |0, 1, 2, 3, 4, 5, 6, 7, 8|	absolute offsets of <GAMMA>
+;;               |0, 1, 2|			relative offsets of <ALPHA>
+;;                        |0, 1, 2|		relative offsets of <BETA>
+;;                                 |0, 1, 2|	relative offsets of <GAMMA>
+;;               |0, 1, 2, 3, 4, 5, 6, 7, 8|	absolute offsets of <GAMMA>
 ;;
 
 (define (record-accessor rtd relative-field-index)
@@ -752,32 +759,20 @@
        (index	relative-field-index))
     (let* ((total-number-of-fields	(rtd-size rtd))
 	   (prtd			(rtd-parent rtd))
-	   (absolute-field-index	(if prtd
-					    (fx+ relative-field-index (rtd-size prtd))
+	   (abs-index			(if prtd
+					    (+ relative-field-index (rtd-size prtd))
 					  relative-field-index)))
-      (arguments-validation-forms
-       (unless (fx<? absolute-field-index total-number-of-fields)
-	 (error who "relative field index out of range for record type" relative-field-index)))
-      (lambda (x)
-	;;We must verify that X is  actually a record instance of RTD or
-	;;a record instance of a subtype of RTD.
-	;;
-	(define who 'a-record-accessor)
-	(with-arguments-validation (who)
-	    ((record x))
-	  (if (eq? rtd ($struct-rtd x))
-	      ($struct-ref x absolute-field-index)
-	    (let loop ((prtd (rtd-parent ($struct-rtd x))))
-	      (cond ((eq? prtd rtd) ;X is an instance of a subtype of RTD
-		     ($struct-ref x absolute-field-index))
-		    ((not prtd)
-		     ;;We do not wrap this in ARGUMENTS-VALIDATION-FORMS
-		     ;;because  it  happens  only  at  the  end  of  the
-		     ;;iteration.
-		     (assertion-violation  who
-		       "invalid record type as accessor argument" x rtd))
-		    (else
-		     (loop (rtd-parent prtd)))))))))))
+      (with-arguments-validation (who)
+      	  ((absolute-field-index abs-index total-number-of-fields))
+	(lambda (obj)
+	  ;;We  must  verify  that  OBJ  is actually  an  R6RS  record
+	  ;;instance of RTD or one of its subtypes.
+	  ;;
+	  (define who 'a-record-accessor)
+	  (with-arguments-validation (who)
+	      ((record			obj)
+	       (record-instance-of-rtd	obj rtd))
+	    ($struct-ref obj abs-index)))))))
 
 (define (record-mutator rtd relative-field-index)
   ;;Return a function being  the mutator for field RELATIVE-FIELD-INDEX
@@ -789,36 +784,22 @@
        (index	relative-field-index))
     (let* ((total-number-of-fields	(rtd-size rtd))
 	   (prtd			(rtd-parent rtd))
-	   (absolute-field-index	(if prtd
-					    (fx+ relative-field-index (rtd-size prtd))
+	   (abs-index			(if prtd
+					    (+ relative-field-index (rtd-size prtd))
 					  relative-field-index)))
-      (arguments-validation-forms
-       (unless (fx<? absolute-field-index total-number-of-fields)
-	 (error who "relative field index out of range for record type" relative-field-index))
-       ;;We have to  remember that the RTD structure  holds a normalised
-       ;;vector of field specifications.
-       (unless (car (vector-ref (rtd-fields rtd) relative-field-index))
-	 (error who "selected record field is not mutable" relative-field-index rtd)))
-      (lambda (x new-value)
-	;;We must verify that X is  actually a record instance of RTD or
-	;;a record instance of a subtype of RTD.
-	;;
-	(define who 'a-record-mutator)
-	(with-arguments-validation (who)
-	    ((record x))
-	  (if (eq? rtd ($struct-rtd x)) ;X is an instance of RTD
-	      ($struct-set! x absolute-field-index new-value)
-	    (let loop ((prtd (rtd-parent ($struct-rtd x))))
-	      (cond ((eq? prtd rtd) ;X is an instance of a subtype of RTD
-		     ($struct-set! x absolute-field-index new-value))
-		    ((not prtd)
-		     ;;We do not wrap this in ARGUMENTS-VALIDATION-FORMS
-		     ;;because  it  happens  only  at  the  end  of  the
-		     ;;iteration.
-		     (assertion-violation who
-		       "invalid record type as mutator argument" x rtd))
-		    (else
-		     (loop (rtd-parent prtd)))))))))))
+      (with-arguments-validation (who)
+	  ((absolute-field-index		abs-index total-number-of-fields)
+	   (relative-mutable-field-index	relative-field-index rtd))
+	(let ((who (string->symbol (string-append "a-record-mutator/"
+						  (symbol->string (rtd-name rtd))))))
+	  (lambda (obj new-value)
+	    ;;We  must  verify  that  OBJ  is actually  an  R6RS  record
+	    ;;instance of RTD or one of its subtypes.
+	    ;;
+	    (with-arguments-validation (who)
+		((record			obj)
+		 (record-instance-of-rtd	obj rtd))
+	      ($struct-set! obj abs-index new-value))))))))
 
 
 (define (record-predicate rtd)
@@ -830,14 +811,13 @@
       ;;We must verify that X is  actually a record instance of RTD or a
       ;;record instance of a subtype of RTD.
       (and ($struct? x)
-	   (let ((xrtd ($struct-rtd x)))
-	     (or (eq? rtd xrtd)
-		 (and (rtd? xrtd)
-		      (let loop ((prtd (rtd-parent xrtd)))
-			(cond ((eq? prtd rtd) #t)
-			      ((not prtd)     #f)
-			      (else
-			       (loop (rtd-parent prtd))))))))))))
+	   (let ((rtd^ ($struct-rtd x)))
+	     (or (eq? rtd rtd^)
+		 (and (rtd? rtd^)
+		      (let upper-parent ((prtd^ (rtd-parent rtd^)))
+			(and prtd^
+			     (or (eq? prtd^ rtd)
+				 (upper-parent (rtd-parent prtd^))))))))))))
 
 
 ;;;; non-R6RS extensions
@@ -850,40 +830,10 @@
       ((rtd	rtd)
        (rtd	prtd))
     (or (eq? rtd prtd)
-	(let loop ((p (rtd-parent rtd)))
-	  (cond ((eq? p prtd)	#t)
-		((not p)	#f)
-		(else
-		 (loop (rtd-parent p))))))))
-
-(define (make-default-protocol rtd)
-  ;;Given  a   record  type  descriptor  build  and   return  a  default
-  ;;constructor: a function accepting the raw field values and returning
-  ;;a record instance.
-  ;;
-  (define (split-at l n)
-    (if (zero? n)
-	(values '() l)
-      (let-values (((a b) (split-at (cdr l) (- n 1))))
-	(values (cons (car l) a) b))))
-  (define (field-count rtd count)
-    (if (not rtd)
-	count
-      (field-count (record-type-parent rtd)
-                   (+ count (vector-length (record-type-field-names rtd))))))
-  (let ((parent (record-type-parent rtd)))
-    (if (not parent)
-	(lambda (make-record)
-	  (lambda field-values
-	    (apply make-record field-values)))
-      (let ((parent-field-count (field-count parent 0)))
-	(lambda (make-parent)
-	  (lambda all-field-values
-	    (call-with-values
-		(lambda ()
-		  (split-at all-field-values parent-field-count))
-	      (lambda (parent-field-values this-field-values)
-		(apply (apply make-parent parent-field-values) this-field-values)))))))))
+	(let upper-parent ((prtd^ (rtd-parent rtd)))
+	  (and prtd^
+	       (or (eq? prtd^ prtd)
+		   (upper-parent (rtd-parent prtd^))))))))
 
 
 ;;;; old implementation
