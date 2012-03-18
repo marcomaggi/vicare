@@ -505,20 +505,27 @@
     ;;and return the interned RTD.
     ;;
     (let ((rtd (%lookup-nongenerative-rtd uid)))
+      (define (%error wrong-field)
+	(assertion-violation who
+	  (string-append
+	   "requested access to non-generative record-type descriptor \
+            with " wrong-field " not equivalent to that in the interned RTD")
+	  rtd `(,name ,parent ,uid ,sealed? ,opaque? ,fields)))
       (if rtd
+	  ;;Should this  validation be  omitted when we  compile without
+	  ;;arguments validation?  (Marco Maggi; Sun Mar 18, 2012)
+	  ;;
 	  ;;Notice that the requested NAME can be different from the one
 	  ;;in the interned RTD.
-	  (if (and (eq?		(rtd-parent  rtd) parent)
-		   (boolean=?	(rtd-sealed? rtd) sealed?)
-		   (boolean=?	(rtd-opaque? rtd) opaque?)
-		   (equal?	(rtd-fields  rtd) normalised-fields))
-	      rtd
-	    (assertion-violation who
-	      "requested access to non-generative record-type descriptor \
-               with arguments not equivalent to those in the interned RTD"
-	      `((,name ,uid ,parent ,sealed? ,opaque? ,fields)
-		(,(rtd-name rtd)    ,(rtd-uid uid)     ,(rtd-parent rtd)
-		 ,(rtd-sealed? rtd) ,(rtd-opaque? rtd) ,(rtd-fields rtd)))))
+	  (if (eq? (rtd-parent  rtd) parent)
+	      (if (boolean=? (rtd-sealed? rtd) sealed?)
+		  (if (boolean=? (rtd-opaque? rtd) opaque?)
+		      (if (equal? (rtd-fields  rtd) normalised-fields)
+			  rtd
+			(%error "fields"))
+		    (%error "opaque"))
+		(%error "sealed"))
+	    (%error "parent"))
 	(%intern-nongenerative-rtd!
 	 uid (%generate-rtd name parent uid sealed? opaque? normalised-fields)))))
 
