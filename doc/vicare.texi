@@ -17256,7 +17256,34 @@ references for a structure and its type descriptor is as follows:
 the type descriptor of the base type descriptor is the base type
 descriptor itself.
 
-A type descriptor is a fixed--length block of memory composed of
+An @rnrs{6} record--type descriptor is a struct instance of type @rtd{}.
+An @rnrs{6} record instance is a struct instance whose first word
+references its type descriptor, that is a struct instance of type
+@rtd{}.
+
+@example
+     RTD ref
+    |-------|---------------| R6RS record instance
+        |
+ ---<---
+|
+|     std ref
+ -->|-------|---------------| R6RS record type descriptor
+        |                      = struct instance of type RTD
+ ---<---
+|
+|     std ref
++-->|-------|---------------| RTD type descriptor
+        |
+ ---<---
+|
+|     std ref
++-->|-------|---------------| base struct type descriptor
+|       |
+ ---<---
+@end example
+
+A struct type descriptor is a fixed--length block of memory composed of
 @math{6} machine words interpreted as follows:
 
 @enumerate

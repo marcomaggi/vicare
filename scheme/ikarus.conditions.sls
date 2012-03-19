@@ -155,7 +155,6 @@
 	  record-constructor-descriptor
 	  record-predicate)
     (only (ikarus records procedural)
-	  rtd?
 	  rtd-subtype?)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
@@ -175,7 +174,7 @@
   (assertion-violation who EXPECTED_CONDITION_OBJECT_AS_ARGUMENT obj))
 
 (define-argument-validation (rtd who obj)
-  (rtd? obj)
+  (record-type-descriptor? obj)
   (assertion-violation who "expected record type descriptor as argument" obj))
 
 (define-argument-validation (rtd-subtype who obj)

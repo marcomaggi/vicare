@@ -19,12 +19,11 @@
   (export
     ;; bindings for (rnrs records procedural (6))
     make-record-type-descriptor		make-record-constructor-descriptor
-    record-type-descriptor?
+    (rename (<rtd>? record-type-descriptor?))
     record-constructor			record-predicate
     record-accessor			record-mutator
 
     ;; bindings for (rnrs records inspection (6))
-    rtd?
     record?				record-rtd
     record-type-name			record-type-parent
     record-type-uid			record-type-generative?
@@ -42,7 +41,6 @@
 		  record-accessor			record-mutator
 
 		  ;; bindings for (rnrs records inspection (6))
-		  rtd?
 		  record?				record-rtd
 		  record-type-name			record-type-parent
 		  record-type-uid			record-type-generative?
@@ -62,7 +60,7 @@
 ;;
 ;;A Vicare's struct  is a variable-length block of  memory referenced by
 ;;machine  words  tagged as  vectors;  the  first  machine word  of  the
-;;structure  is a  reference to  the  struct type  descriptor, which  is
+;;structure  is a  reference to  the  struct-type  descriptor, which  is
 ;;itself a  struct.  A block  of memory  is a struct  if and only  if: a
 ;;reference to  it is tagged as vector  and its first word  is tagged as
 ;;vector.
@@ -71,31 +69,31 @@
 ;;     heap pointer    vector tag
 ;;
 ;;   |----------------|----------| first word of struct
-;;     heap pointer    vector tag    = reference to struct type desc
+;;     heap pointer    vector tag    = reference to struct-type desc
 ;;                                   = reference to struct
 ;;
-;;The  struct type  descriptor of  the  struct type  descriptors is  the
+;;The  struct-type  descriptor of  the  struct-type  descriptors is  the
 ;;return value  of BASE-RTD.  The graph  of references for  a struct and
 ;;its type descriptor is as follows:
 ;;
-;;       rtd ref
+;;       std ref
 ;;      |-------|---------------| struct instance
 ;;          |
 ;;   ---<---
 ;;  |
-;;  |     rtd ref
-;;   -->|-------|---------------| struct type descriptor
+;;  |     std ref
+;;   -->|-------|---------------| struct-type descriptor
 ;;          |
 ;;   ---<---
 ;;  |
-;;  |     rtd ref
-;;  +-->|-------|---------------| base struct type descriptor
+;;  |     std ref
+;;  +-->|-------|---------------| base struct-type descriptor
 ;;  |       |
 ;;   ---<---
 ;;
-;;An R6RS record  type descriptor is a struct instance  of type RTD.  An
+;;An R6RS record-type descriptor is a struct instance of type <RTD>.  An
 ;;R6RS record instance is a  struct instance whose first word references
-;;its type descriptor, that is a struct instance of type RTD.
+;;its type descriptor, that is a struct instance of type <RTD>.
 ;;
 ;;       RTD ref
 ;;      |-------|---------------| R6RS record instance
@@ -103,84 +101,87 @@
 ;;   ---<---
 ;;  |
 ;;  |     std ref
-;;   -->|-------|---------------| R6RS record type descriptor
-;;          |                      = struct instance of type RTD
+;;   -->|-------|---------------| R6RS record-type descriptor
+;;          |                      = struct instance of type <RTD>
 ;;   ---<---
 ;;  |
 ;;  |     std ref
-;;  +-->|-------|---------------| RTD type descriptor
+;;  +-->|-------|---------------| <RTD> type descriptor
 ;;          |
 ;;   ---<---
 ;;  |
 ;;  |     std ref
-;;  +-->|-------|---------------| base struct type descriptor
+;;  +-->|-------|---------------| base struct-type descriptor
 ;;  |       |
 ;;   ---<---
 ;;
 
-;;R6RS record type descriptor.
-;;
-(define-struct rtd
-  ;;Record type name, for debugging purposes.
+(define-struct <rtd>
+  ;;R6RS record type descriptor.
   (name
-   ;;Total number of fields, including the fields of the parents.
+		;Record type name, for debugging purposes.
    size
-   ;;False or instance of RTD structure, it is the parent RTD.
+		;Total  number of  fields, including  the fields  of the
+		;parents.
    parent
-   ;;Boolean, true if this record type is sealed.
+		;False or  instance of RTD  structure, it is  the parent
+		;RTD.
    sealed?
-   ;;Boolean, true if this record type is opaque.
+		;Boolean, true if this record type is sealed.
    opaque?
-   ;;False or Scheme symbol, unique  record type identifier.  If it is a
-   ;;symbol: the RTD is nongenerative.
+		;Boolean, true if this record type is opaque.
    uid
-   ;;Scheme vector, normalised fields specification.
-   ;;
-   ;;It is  a vector with an  element for each field;  the elements have
-   ;;the     order     in     which     fields    where     given     to
-   ;;MAKE-RECORD-TYPE-DESCRIPTOR.  Each element is a pair whose car is a
-   ;;boolean, true  if the field is  mutable, and whose cdr  is a Scheme
-   ;;symbol representing the field name.
-   ;;
-   fields))
+		;False or Scheme  symbol, unique record type identifier.
+		;If it is a symbol: the RTD is nongenerative.
+   fields
+		;Scheme vector, normalised fields specification.
+		;
+		;It  is a  vector with  an element  for each  field; the
+		;elements have the order  in which fields where given to
+		;MAKE-RECORD-TYPE-DESCRIPTOR.   Each element  is  a pair
+		;whose car is  a boolean, true if the  field is mutable,
+		;and whose cdr is a Scheme symbol representing the field
+		;name.
+   ))
 
 (define (%rtd-printer S port sub-printer)
   (define-inline (%display thing)
     (display thing port))
   (%display "#[rtd")
-  (%display " name=")		(%display (rtd-name S))
-  (%display " size=")		(%display (rtd-size S))
-  (let ((prtd (rtd-parent S)))
-    (if (rtd? prtd)
+  (%display " name=")		(%display (<rtd>-name S))
+  (%display " size=")		(%display (<rtd>-size S))
+  (let ((prtd (<rtd>-parent S)))
+    (if (<rtd>? prtd)
 	(begin
 	  (%display " parent-name=")
-	  (%display (rtd-name prtd)))
+	  (%display (<rtd>-name prtd)))
       (begin
 	(%display " parent=")
 	(%display prtd))))
-  (%display " sealed?=")	(%display (rtd-sealed? S))
-  (%display " opaque?=")	(%display (rtd-opaque? S))
-  (%display " fields=")		(%display (rtd-fields  S))
+  (%display " sealed?=")	(%display (<rtd>-sealed? S))
+  (%display " opaque?=")	(%display (<rtd>-opaque? S))
+  (%display " fields=")		(%display (<rtd>-fields  S))
   (%display "]"))
 
-;;R6RS record constructor descriptor.
-;;
-(define-struct rcd
-  ;;A struct of type RTD, the associated record-type descriptor.
+(define-struct <rcd>
+  ;;R6RS record constructor descriptor.
   (rtd
-   ;;False  or  a struct  of  type  RCD,  the parent  record-constructor
-   ;;descriptor.
-   prcd
-   ;;A function, the protocol function for this RCD.
-   protocol))
+		;A  struct  of  type  RTD,  the  associated  record-type
+		;descriptor.
+   parent-rcd
+		;False   or   a  struct   of   type   RCD,  the   parent
+		;record-constructor descriptor.
+   protocol
+		;A function, the protocol function for this RCD.
+   ))
 
 (define (%rcd-printer S port sub-printer)
   (define-inline (%display thing)
     (display thing port))
   (%display "#[rcd")
-  (%display " rtd=")		(%display (rcd-rtd S))
-  (%display " prcd=")		(%display (rcd-prcd S))
-  (%display " protocol=")	(%display (rcd-protocol S))
+  (%display " rtd=")		(%display (<rcd>-rtd S))
+  (%display " prcd=")		(%display (<rcd>-parent-rcd S))
+  (%display " protocol=")	(%display (<rcd>-protocol S))
   (%display "]"))
 
 
@@ -250,27 +251,27 @@
 ;;;; arguments validation
 
 (define-argument-validation (rtd who obj)
-  (rtd? obj)
+  (<rtd>? obj)
   (assertion-violation who $error-message-expected-rtd obj))
 
 (define-argument-validation (false/non-sealed-parent-rtd who obj)
   (or (not obj)
-      (and (rtd? obj)
-	   (not (rtd-sealed? obj))))
+      (and (<rtd>? obj)
+	   (not (<rtd>-sealed? obj))))
   (assertion-violation who "expected false or non-sealed RTD as parent RTD argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (rcd who obj)
-  (rcd? obj)
+  (<rcd>? obj)
   (assertion-violation who "expected record-constructor descriptor as argument" obj))
 
 (define-argument-validation (false/rcd who obj)
-  (or (not obj) (rcd? obj))
+  (or (not obj) (<rcd>? obj))
   (assertion-violation who "expected false or record-constructor descriptor as argument" obj))
 
 (define-argument-validation (rtd&prcd who rtd prcd)
-  (eq? (rtd-parent rtd) (rcd-rtd prcd))
+  (eq? (<rtd>-parent rtd) (<rcd>-rtd prcd))
   (assertion-violation who
     "record-constructor descriptor is not associated to the parent of the record-type descriptor"
     rtd prcd))
@@ -285,16 +286,22 @@
   (record? obj)
   (assertion-violation who "expected non-opaque record as argument" obj))
 
+(define-argument-validation (built-record-and-rtd who record rtd)
+  (eq? rtd ($struct-rtd record))
+  (assertion-violation who
+    "constructor function returned record of invalid type, expected record of specific RTD"
+    record rtd))
+
 (define-argument-validation (record-instance-of-rtd who record rtd)
   ;;To be called with RECORD being an R6RS record instance and RTD being
   ;;an R6RS record-type descriptor.
   ;;
   (let ((rtd^ ($struct-rtd record)))
     (or (eq? rtd rtd^)
-	(let upper-parent ((prtd^ (rtd-parent rtd^)))
+	(let upper-parent ((prtd^ (<rtd>-parent rtd^)))
 	  (and prtd^
 	       (or (eq? prtd^ rtd) ;RECORD is an instance of a subtype of RTD
-		   (upper-parent (rtd-parent prtd^)))))))
+		   (upper-parent (<rtd>-parent prtd^)))))))
   (assertion-violation who
     "invalid record type as accessor or mutator argument" record rtd))
 
@@ -330,37 +337,38 @@
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as field index argument" obj))
 
-(define-argument-validation (absolute-field-index who abs-index max-index)
+(define-argument-validation (absolute-field-index who abs-index max-index rtd relative-field-index)
   (and (fixnum? abs-index)
        (unsafe.fx< abs-index max-index))
   (assertion-violation who
-    (string-append "field index " (number->string abs-index)
-		   " out of range, expected maximum " (number->string max-index))))
+    (string-append "absolute field index " (number->string abs-index)
+		   " out of range, expected less than " (number->string max-index))
+    rtd relative-field-index))
 
-(define-argument-validation (relative-mutable-field-index who relative-field-index rtd)
+(define-argument-validation (relative-index-of-mutable-field who relative-field-index rtd)
   ;;To be called with RELATIVE-FIELD-INDEX being a valid field index for
   ;;RTD and RTD being an R6RS record-type descriptor.
   ;;
   ;;We have to remember that the RTD structure holds a normalised vector
   ;;of field specifications.
   ;;
-  (unsafe.car (unsafe.vector-ref (rtd-fields rtd) relative-field-index))
+  (unsafe.car (unsafe.vector-ref (<rtd>-fields rtd) relative-field-index))
   (assertion-violation who
     "selected record field is not mutable" relative-field-index rtd))
 
 
 ;;;; table of defined non-generative RTDs
 
-(define-constant $rtd-table
+(define-constant RTD-TABLE
   (make-eq-hashtable))
 
 (define-inline (%intern-nongenerative-rtd! ?uid ?rtd)
   (let ((rtd ?rtd))
-    (hashtable-set! $rtd-table ?uid rtd)
+    (hashtable-set! RTD-TABLE ?uid rtd)
     rtd))
 
 (define-inline (%lookup-nongenerative-rtd ?uid)
-  (hashtable-ref $rtd-table ?uid #f))
+  (hashtable-ref RTD-TABLE ?uid #f))
 
 
 ;;;; record instance inspection
@@ -371,7 +379,7 @@
   ;;
   (let ((obj ?obj))
     (and ($struct? obj)
-	 (rtd? ($struct-rtd obj)))))
+	 (<rtd>? ($struct-rtd obj)))))
 
 (define (record? x)
   ;;Defined by R6RS.   Return #t if OBJ is a record  and its record type
@@ -379,8 +387,8 @@
   ;;
   (and ($struct? x)
        (let ((rtd ($struct-rtd x)))
-	 (and (rtd? rtd)
-	      (not (rtd-opaque? rtd))))))
+	 (and (<rtd>? rtd)
+	      (not (<rtd>-opaque? rtd))))))
 
 (define (record-rtd x)
   (define who 'record-rtd)
@@ -391,7 +399,7 @@
 
 ;;;; record-type descriptor inspection
 
-(define record-type-descriptor? rtd?)
+(define record-type-descriptor? <rtd>?)
 
 (define-syntax define-rtd-inspector
   (syntax-rules ()
@@ -402,14 +410,14 @@
 	   ((rtd	rtd))
 	 (?accessor rtd))))))
 
-(define-inline (not-rtd-uid rtd)
-  (not (rtd-uid rtd)))
+(define-inline (not-<rtd>-uid rtd)
+  (not (<rtd>-uid rtd)))
 
-(define-rtd-inspector record-type-name		rtd-name)
-(define-rtd-inspector record-type-parent	rtd-parent)
-(define-rtd-inspector record-type-sealed?	rtd-sealed?)
-(define-rtd-inspector record-type-opaque?	rtd-opaque?)
-(define-rtd-inspector record-type-generative?	not-rtd-uid)
+(define-rtd-inspector record-type-name		<rtd>-name)
+(define-rtd-inspector record-type-parent	<rtd>-parent)
+(define-rtd-inspector record-type-sealed?	<rtd>-sealed?)
+(define-rtd-inspector record-type-opaque?	<rtd>-opaque?)
+(define-rtd-inspector record-type-generative?	not-<rtd>-uid)
 
 ;;Return  false or the  UID of  RTD.  Notice  that this  library assumes
 ;;that:  there is  a  difference between  generative and  non-generative
@@ -421,7 +429,7 @@
 ;;	record type even  if the type is generative, so  the return of a
 ;;	UID does not necessarily imply that the type is nongenerative.)
 ;;
-(define-rtd-inspector record-type-uid	rtd-uid)
+(define-rtd-inspector record-type-uid	<rtd>-uid)
 
 (define (record-type-field-names rtd)
   ;;Return a vector holding one Scheme symbol for each field of RTD, not
@@ -431,7 +439,7 @@
   (define who 'record-type-field-names)
   (with-arguments-validation (who)
       ((rtd	rtd))
-    (let* ((fields-vector	(rtd-fields rtd))
+    (let* ((fields-vector	(<rtd>-fields rtd))
 	   (number-of-fields	(unsafe.vector-length fields-vector)))
       (let next-field ((v (unsafe.make-vector number-of-fields))
 		       (i 0))
@@ -448,10 +456,10 @@
   (with-arguments-validation (who)
       ((rtd	rtd)
        (index	field-index))
-    (let* ((total-number-of-fields	(rtd-size   rtd))
-	   (prtd			(rtd-parent rtd))
+    (let* ((total-number-of-fields	(<rtd>-size   rtd))
+	   (prtd			(<rtd>-parent rtd))
 	   (absolute-field-index	(if prtd
-					    (+ field-index (rtd-size prtd))
+					    (+ field-index (<rtd>-size prtd))
 					  field-index)))
       (cond ((not (fixnum? absolute-field-index))
 	     (assertion-violation who
@@ -459,7 +467,7 @@
 	    ((fx<? absolute-field-index total-number-of-fields)
 	     ;;Remember that the RTD structure holds a normalised vector
 	     ;;of field specifications.
-	     (unsafe.car (unsafe.vector-ref (rtd-fields rtd) field-index)))
+	     (unsafe.car (unsafe.vector-ref (<rtd>-fields rtd) field-index)))
 	    (else
 	     (assertion-violation who
 	       "relative field index out of range for record type" field-index))))))
@@ -492,11 +500,11 @@
     ;;Here we do not care if UID is a symbol or false.
     ;;
     (define-inline (%make-rtd ?opaque? ?parent-size)
-      (make-rtd name (fx+ ?parent-size (vector-length normalised-fields))
+      (make-<rtd> name (fx+ ?parent-size (vector-length normalised-fields))
 		parent sealed? ?opaque? uid normalised-fields))
     (if (not parent)
 	(%make-rtd opaque? 0)
-      (%make-rtd (or opaque? (rtd-opaque? parent)) (rtd-size parent))))
+      (%make-rtd (or opaque? (<rtd>-opaque? parent)) (<rtd>-size parent))))
 
   (define (%make-nongenerative-rtd name parent uid sealed? opaque? normalised-fields)
     ;;Build  and return  a  new instance  of  RTD or  return an  already
@@ -517,10 +525,10 @@
 	  ;;
 	  ;;Notice that the requested NAME can be different from the one
 	  ;;in the interned RTD.
-	  (if (eq? (rtd-parent  rtd) parent)
-	      (if (boolean=? (rtd-sealed? rtd) sealed?)
-		  (if (boolean=? (rtd-opaque? rtd) opaque?)
-		      (if (equal? (rtd-fields  rtd) normalised-fields)
+	  (if (eq? (<rtd>-parent  rtd) parent)
+	      (if (boolean=? (<rtd>-sealed? rtd) sealed?)
+		  (if (boolean=? (<rtd>-opaque? rtd) opaque?)
+		      (if (equal? (<rtd>-fields  rtd) normalised-fields)
 			  rtd
 			(%error "fields"))
 		    (%error "opaque"))
@@ -547,12 +555,25 @@
        (protocol	protocol)
        (false/rcd	prcd))
     (if (not prcd)
-	(make-rcd rtd #f protocol)
+	(make-<rcd> rtd #f protocol)
       (with-arguments-validation (who)
 	  ((rtd&prcd rtd prcd))
-	(make-rcd rtd prcd protocol)))))
+	(make-<rcd> rtd prcd protocol)))))
 
 
+;;Let's say we have the following definition:
+;;
+;; (define rtd (make-record-type-descriptor 'name #f #f #f #f '#()))
+;; (define num-of-fields (vector-length (record-type-field-names rtd)))
+;;
+;; (define protocol-wrapper
+;;   (lambda (list-of-field-values-lists)
+;;     (protocol (%make-allocator-function list-of-field-values-lists ?list-of-formals))))
+;; (lambda )
+;;   ($make-struct main-rtd (<rtd>-size main-rtd)))
+;;
+;;
+
 (define (record-constructor main-rcd)
   (define who 'record-constructor)
   (define main-rtd)
@@ -560,18 +581,21 @@
   (define-inline (main)
     (with-arguments-validation (who)
 	((rcd	main-rcd))
-      (set! main-rtd (rcd-rtd main-rcd))
-      ((%constructor-wrapper (rtd-size main-rtd) (rcd-prcd main-rcd) (rcd-protocol main-rcd)) '())))
+      (set! main-rtd (<rcd>-rtd main-rcd))
+      ;;The protocol wrapper is applied  to null and the return value is
+      ;;the constructor function.
+      ((%protocol-wrapper (<rtd>-size main-rtd) (<rcd>-parent-rcd main-rcd) (<rcd>-protocol main-rcd))
+       '())))
 
-  (define (%constructor-wrapper number-of-fields prcd protocol)
+  (define (%protocol-wrapper number-of-fields prcd protocol)
     (if prcd
-	(%make-wrapper-for-constructor-with-parent number-of-fields prcd protocol)
-      (%make-wrapper-for-constructor-without-parent number-of-fields protocol)))
+  	(%make-wrapper-for-protocol/with-parent number-of-fields prcd protocol)
+      (%make-wrapper-for-protocol/without-parent number-of-fields protocol)))
 
-  (define (%make-wrapper-for-constructor-without-parent number-of-fields protocol)
+  (define (%make-wrapper-for-protocol/without-parent number-of-fields protocol)
     ;;Return a constructor wrapper.
     ;;
-    (define (main)
+    (define (sub-main)
       ;;When  a record-type  descriptor is  defined with  the procedural
       ;;layer, the number of fields is known only at runtime; this makes
       ;;it   impossible  to  generate   allocator  functions   with  one
@@ -595,12 +619,18 @@
       (syntax-rules ()
 	((_ ?list-of-formals)
 	 (if protocol
-	     (lambda (list-of-field-values-lists) ;constructor wrapper
-	       (protocol (expand-constructor list-of-field-values-lists ?list-of-formals)))
-	   (lambda (list-of-field-values-lists) ;constructor wrapper
-	     (expand-constructor list-of-field-values-lists ?list-of-formals))))))
+	     (lambda (list-of-field-values-lists) ;protocol wrapper
+	       (protocol (%make-allocator-function list-of-field-values-lists ?list-of-formals)))
+	   (lambda (list-of-field-values-lists) ;protocol wrapper
+	     (%make-allocator-function list-of-field-values-lists ?list-of-formals))))))
 
-    (define-syntax expand-constructor
+    ;; (let ((record (constructor list-of-field-values-lists ?list-of-formals)))
+    ;;   (with-arguments-validation (who)
+    ;; 	  ((record			record)
+    ;; 	   (built-record-and-rtd	record main-rtd))
+    ;; 	record)))))))
+
+    (define-syntax %make-allocator-function
       ;;Expand into a LAMBDA form being the record allocator; the LAMBDA
       ;;accepts  a number  of arguments  equal  to the  total number  of
       ;;fields in the record.
@@ -639,8 +669,8 @@
 	   (let ((args.len (length (%unwrap #'(?arg ...)))))
 	     (with-syntax (((INDEX ...)	(%iota args.len))
 			   (NEXT-INDEX	args.len))
-	       #'(lambda (?arg ...) ;constructor
-		   (let ((the-record ($make-struct main-rtd (rtd-size main-rtd))))
+	       #'(lambda (?arg ...) ;allocator
+		   (let ((the-record ($make-struct main-rtd (<rtd>-size main-rtd))))
 		     ;;store the values of the base RTD fields
 		     ($struct-set! the-record INDEX ?arg) ...
 		     ;;if any, store the values of the sub-RTDs fields
@@ -653,30 +683,30 @@
 	  ;;The number of arguments/fields is more than 4.
 	  ((_ ?list-of-field-values-lists #f)
 	   (identifier? #'?list-of-field-values-lists)
-	   #'(lambda formals	;constructor
+	   #'(lambda formals	;allocator
 	       (arguments-validation-forms
 		(unless (fx=? (length formals) number-of-fields)
 		  (apply assertion-violation 'a-record-constructor
 			 (string-append "record allocator for \""
-					(symbol->string (rtd-name main-rtd))
+					(symbol->string (<rtd>-name main-rtd))
 					"\" expected "
 					(number->string number-of-fields)
 					" arguments, but got "
 					(number->string (length formals)))
 			 formals)))
-	       (let ((the-record ($make-struct main-rtd (rtd-size main-rtd))))
+	       (let ((the-record ($make-struct main-rtd (<rtd>-size main-rtd))))
 		 ;;Store the values of the  base RTD fields and, if any,
 		 ;;store the values of the sub-RTDs fields.
 		 (%fill the-record 0 formals ?list-of-field-values-lists))))
 	  )))
 
-    (main))
+    (sub-main))
 
-  (define (%make-wrapper-for-constructor-with-parent this-total-number-of-fields prcd protocol)
-    (let* ((pprcd			(rcd-prcd prcd))
-	   (parent-number-of-fields	(rtd-size (rcd-rtd prcd)))
-	   (parent-constructor-wrapper	(%constructor-wrapper parent-number-of-fields pprcd
-							      (rcd-protocol prcd)))
+  (define (%make-wrapper-for-protocol/with-parent this-total-number-of-fields prcd protocol)
+    (let* ((pprcd			(<rcd>-parent-rcd prcd))
+	   (parent-number-of-fields	(<rtd>-size (<rcd>-rtd prcd)))
+	   (parent-constructor-wrapper	(%protocol-wrapper parent-number-of-fields pprcd
+							   (<rcd>-protocol prcd)))
 	   (this-number-of-fields	(fx- this-total-number-of-fields parent-number-of-fields))
 	   (the-protocol
 	    (or protocol
@@ -765,13 +795,13 @@
   (with-arguments-validation (who)
       ((rtd	rtd)
        (index	relative-field-index))
-    (let* ((total-number-of-fields	(rtd-size rtd))
-	   (prtd			(rtd-parent rtd))
+    (let* ((total-number-of-fields	(<rtd>-size rtd))
+	   (prtd			(<rtd>-parent rtd))
 	   (abs-index			(if prtd
-					    (+ relative-field-index (rtd-size prtd))
+					    (+ relative-field-index (<rtd>-size prtd))
 					  relative-field-index)))
       (with-arguments-validation (who)
-      	  ((absolute-field-index abs-index total-number-of-fields))
+      	  ((absolute-field-index abs-index total-number-of-fields rtd relative-field-index))
 	(lambda (obj)
 	  ;;We  must  verify  that  OBJ  is actually  an  R6RS  record
 	  ;;instance of RTD or one of its subtypes.
@@ -790,16 +820,17 @@
   (with-arguments-validation (who)
       ((rtd	rtd)
        (index	relative-field-index))
-    (let* ((total-number-of-fields	(rtd-size rtd))
-	   (prtd			(rtd-parent rtd))
+    (let* ((total-number-of-fields	(<rtd>-size rtd))
+	   (prtd			(<rtd>-parent rtd))
 	   (abs-index			(if prtd
-					    (+ relative-field-index (rtd-size prtd))
+					    (+ relative-field-index (<rtd>-size prtd))
 					  relative-field-index)))
       (with-arguments-validation (who)
-	  ((absolute-field-index		abs-index total-number-of-fields)
-	   (relative-mutable-field-index	relative-field-index rtd))
+	  ((absolute-field-index		abs-index total-number-of-fields
+						rtd relative-field-index)
+	   (relative-index-of-mutable-field	relative-field-index rtd))
 	(let ((who (string->symbol (string-append "a-record-mutator/"
-						  (symbol->string (rtd-name rtd))))))
+						  (symbol->string (<rtd>-name rtd))))))
 	  (lambda (obj new-value)
 	    ;;We  must  verify  that  OBJ  is actually  an  R6RS  record
 	    ;;instance of RTD or one of its subtypes.
@@ -822,11 +853,11 @@
       (and ($struct? x)
 	   (let ((rtd^ ($struct-rtd x)))
 	     (or (eq? rtd rtd^)
-		 (and (rtd? rtd^)
-		      (let upper-parent ((prtd^ (rtd-parent rtd^)))
+		 (and (<rtd>? rtd^)
+		      (let upper-parent ((prtd^ (<rtd>-parent rtd^)))
 			(and prtd^
 			     (or (eq? prtd^ rtd)
-				 (upper-parent (rtd-parent prtd^))))))))))))
+				 (upper-parent (<rtd>-parent prtd^))))))))))))
 
 
 ;;;; non-R6RS extensions
@@ -839,443 +870,16 @@
       ((rtd	rtd)
        (rtd	prtd))
     (or (eq? rtd prtd)
-	(let upper-parent ((prtd^ (rtd-parent rtd)))
+	(let upper-parent ((prtd^ (<rtd>-parent rtd)))
 	  (and prtd^
 	       (or (eq? prtd^ prtd)
-		   (upper-parent (rtd-parent prtd^))))))))
-
-
-;;;; old implementation
-
-#|
-  (define-struct rtd
-    (name size old-fields printer-proc symbol parent sealed? opaque? uid fields))
-
-  (define rtd-alist '())
-  (define (%intern-nongenerative-rtd! uid rtd)
-    (set! rtd-alist (cons (cons uid rtd) rtd-alist)))
-  (define (%lookup-nongenerative-rtd uid)
-    (cond
-      [(assq uid rtd-alist) => cdr]
-      [else #f]))
-
-  (define (record-type-descriptor? x) (rtd? x))
-
-  (define (record? x)
-    (and ($struct? x)
-         (let ([rtd ($struct-rtd x)])
-           (and (rtd? rtd)
-                (not (rtd-opaque? rtd))))))
-
-  (define (record-rtd x)
-    (if ($struct? x)
-        (let ([rtd ($struct-rtd x)])
-          (if (rtd? rtd)
-              (if (not (rtd-opaque? rtd))
-                  rtd
-                  (die 'record-rtd "record is opaque"))
-              (die 'record-rtd "not a record" x)))
-        (die 'record-rtd "not a record" x)))
-
-  (define (record-type-name x)
-    (if (rtd? x)
-        (rtd-name x)
-        (die 'record-type-name "not an rtd" x)))
-
-  (define (record-type-parent x)
-    (if (rtd? x)
-        (rtd-parent x)
-        (die 'record-type-parent "not an rtd" x)))
-
-  (define (record-type-uid x)
-    (if (rtd? x)
-        (or (rtd-uid x)
-            (let ([g (gensym)])
-              (set-rtd-uid! x g)
-              (%intern-nongenerative-rtd! g x)
-              g))
-        (die 'record-type-uid "not an rtd" x)))
-
-  (define (record-type-sealed? x)
-    (if (rtd? x)
-        (rtd-sealed? x)
-        (die 'record-type-sealed? "not an rtd" x)))
-
-  (define (record-type-opaque? x)
-    (if (rtd? x)
-        (rtd-opaque? x)
-        (die 'record-type-opaque? "not an rtd" x)))
-
-  (define (record-type-generative? x)
-    (if (rtd? x)
-        (not (rtd-sealed? x)) ;;; FIXME: bogus?
-        (die 'record-type-generative? "not an rtd" x)))
-
-  (define (record-type-field-names x)
-    (if (rtd? x)
-        (let ([v (rtd-fields x)])
-          (let ([n (vector-length v)])
-            (let f ([x (make-vector n)] [v v] [n n] [i 0])
-              (if (= i n)
-                  x
-                  (begin
-                    (vector-set! x i (cdr (vector-ref v i)))
-                    (f x v n (fxadd1 i)))))))
-        (die 'record-type-field-names "not an rtd" x)))
-
-
-  (module (make-record-type-descriptor)
-    (define who 'make-record-type-descriptor)
-    (define (make-rtd-aux name parent uid sealed? opaque?
-                          parent-size fields)
-      (make-rtd name (+ parent-size (vector-length fields))
-          #f #f #f parent sealed? opaque? uid fields))
-    (define (convert-fields sv)
-      (unless (vector? sv)
-        (die who "invalid fields argument" sv))
-      (let ([n2 (vector-length sv)])
-        (let ([v (make-vector n2)])
-          (let f ([i 0])
-            (unless (= i n2)
-              (let ([x (vector-ref sv i)])
-                (if (pair? x)
-                    (let ([m/u (car x)] [x (cdr x)])
-                      (if (pair? x)
-                          (let ([name (car x)])
-                            (unless (and (null? (cdr x)) (symbol? name))
-                              (die who "invalid fields argument" sv))
-                            (vector-set! v i
-                              (cons (case m/u
-                                      [(mutable)   #t]
-                                      [(immutable) #f]
-                                      [else
-                                       (die who "invalid fields argument" sv)])
-                                    name)))
-                          (die who "invalid fields argument" sv)))
-                    (die who "invalid fields argument" sv)))
-              (f (add1 i))))
-          v)))
-    (define generate-rtd
-      (lambda (name parent uid sealed? opaque? fields)
-        (cond
-          [(rtd? parent)
-           (when (rtd-sealed? parent)
-             (die who "cannot extend sealed parent" parent))
-           (make-rtd-aux name parent uid sealed?
-             (or opaque? (rtd-opaque? parent))
-             (rtd-size parent)
-             (convert-fields fields))]
-          [(eqv? parent #f)
-           (make-rtd-aux name parent uid sealed? opaque? 0
-             (convert-fields fields))]
-          [else (die who "not a valid parent" parent)])))
-    (define (same-fields-as-rtd? fields rtd)
-      (let* ([fv (rtd-fields rtd)]
-             [n (vector-length fv)])
-        (and (vector? fields)
-             (= (vector-length fields) n)
-             (let f ([i 0])
-               (or (= i n)
-                   (let ([a (vector-ref fields i)]
-                         [b (vector-ref fv i)])
-                     (and
-                       (pair? a)
-                       (case (car a)
-                         [(mutable) (eqv? (car b) #t)]
-                         [(immutable) (eqv? (car b) #f)]
-                         [else #f])
-                       (let ([a (cdr a)])
-                         (and (pair? a)
-                              (null? (cdr a))
-                              (eq? (car a) (cdr b))))
-                       (f (+ i 1)))))))))
-    (define make-nongenerative-rtd
-      (lambda (name parent uid sealed? opaque? fields)
-        (cond
-          [(%lookup-nongenerative-rtd uid) =>
-           (lambda (rtd)
-             (unless
-               (and ; must not check name!
-                    ; (eqv? name (rtd-name rtd))
-                    (eqv? parent (rtd-parent rtd))
-                    (eqv? sealed? (rtd-sealed? rtd))
-                    (eqv? opaque? (rtd-opaque? rtd))
-                    (same-fields-as-rtd? fields rtd))
-               (die who "arguments not equivalent to those in an existing rtd"
-                    parent sealed? opaque? fields))
-             rtd)]
-          [else
-           (let ([rtd (generate-rtd name parent uid sealed? opaque? fields)])
-             (%intern-nongenerative-rtd! uid rtd)
-             rtd)])))
-    (define make-record-type-descriptor
-      (lambda (name parent uid sealed? opaque? fields)
-        (unless (symbol? name)
-          (die who "not a valid record type name" name))
-        (unless (boolean? sealed?)
-          (die who "not a valid sealed? argument" sealed?))
-        (unless (boolean? opaque?)
-          (die who "not a valid opaque? argument" opaque?))
-        (cond
-          [(symbol? uid)
-           (make-nongenerative-rtd name parent uid sealed? opaque? fields)]
-          [(eqv? uid #f)
-           (generate-rtd name parent uid sealed? opaque? fields)]
-          [else (die who "not a valid uid" uid)]))))
-
-  (define-struct rcd (rtd prcd proc))
-
-  (define (is-parent-of? prtd rtd)
-    (let ([p (rtd-parent rtd)])
-      (cond
-        [(eq? p prtd) #t]
-        [(not p) #f]
-        [else (is-parent-of? prtd p)])))
-
-  (define (rtd-subtype? rtd parent-rtd)
-    (unless (rtd? rtd)
-      (die 'rtd-subtype? "not an rtd" rtd))
-    (unless (rtd? parent-rtd)
-      (die 'rtd-substype? "not an rtd" parent-rtd))
-    (or (eq? rtd parent-rtd)
-        (is-parent-of? parent-rtd rtd)))
-
-  (define make-record-constructor-descriptor
-    (lambda (rtd prcd protocol)
-      (define who 'make-record-constructor-descriptor)
-      (unless (rtd? rtd)
-        (die who "not a record type descriptor" rtd))
-      (unless (or (not protocol) (procedure? protocol))
-        (die who "invalid protocol" protocol))
-      (let ([prtd (rtd-parent rtd)])
-        (cond
-          [(not prcd)
-           (make-rcd rtd #f protocol)]
-          [(rcd? prcd)
-           (unless (is-parent-of? (rcd-rtd prcd) rtd)
-             (die who "descriptor does not apply"
-                    prcd rtd))
-           (make-rcd rtd prcd protocol)]
-          [else
-           (die who "not a valid record constructor descriptor" prcd)]))))
-
-  (define (record-constructor rcd)
-    (define who 'record-constructor)
-
-    (define (split all-fields n)
-      (let f ([ls all-fields] [n n])
-        (if (zero? n)
-            (values '() ls)
-            (if (pair? ls)
-                (let-values ([(m p) (f (cdr ls) (- n 1))])
-                  (values (cons (car ls) m) p))
-                (die 'record-constructor "insufficient arguments"
-                       all-fields)))))
-
-    (define (constructor main-rtd size prcd proto)
-      (define (fill i r flds f*)
-        (cond
-          [(null? flds)
-           (if (null? f*)
-               r
-               (fill i r (car f*) (cdr f*)))]
-          [else
-           ($struct-set! r i (car flds))
-           (fill (add1 i) r (cdr flds) f*)]))
-      (if (not prcd) ;;; base
-          (let ([n (rtd-size main-rtd)])
-            (define-syntax expand-setters
-              (syntax-rules ()
-                [(_ r idx) #f]
-                [(_ r idx a0 a* ...)
-                 (begin
-                   ($struct-set! r idx a0)
-                   (expand-setters r (+ idx 1) a* ...))]))
-            (define-syntax expand-constructor
-              (syntax-rules (default)
-                [(_ f* default)
-                 (lambda flds
-                   (unless (= (length flds) size)
-                     (apply die
-                        'a-record-constructor
-                        (format
-                          "expected ~a args, got ~a instead"
-                          n (length flds))
-                        flds))
-                   (let ([r ($make-struct main-rtd n)])
-                     (fill 0 r flds f*)))]
-                [(_ f* (args ...))
-                 (lambda (args ...)
-                   (let ([r ($make-struct main-rtd n)])
-                     (expand-setters r 0 args ...)
-                     (if (null? f*)
-                         r
-                         (fill (length '(args ...)) r (car f*) (cdr f*)))))]))
-            (define-syntax expand-one-case
-              (syntax-rules ()
-                [(_ arg-case)
-                 (if proto
-                     (lambda (f*)
-                       (let ([a-record-constructor
-                               (expand-constructor f* arg-case)])
-                          (proto a-record-constructor)))
-                     (lambda (f*)
-                       (let ([a-record-constructor
-                               (expand-constructor f* arg-case)])
-                         a-record-constructor)))]))
-            (case size
-              [(0)  (expand-one-case ())]
-              [(1)  (expand-one-case (f0))]
-              [(2)  (expand-one-case (f0 f1))]
-              [(3)  (expand-one-case (f0 f1 f2))]
-              [(4)  (expand-one-case (f0 f1 f2 f3))]
-              [else (expand-one-case default)]))
-          (let ([pprcd (rcd-prcd prcd)]
-                [sz (rtd-size (rcd-rtd prcd))])
-            (let ([p (constructor main-rtd sz pprcd (rcd-proc prcd))]
-                  [n (- size sz)]
-                  [protocol
-                   (if proto
-                       proto
-                       (lambda (new)
-                         (let ([a-record-constructor
-                                (lambda all-fields
-                                  (let-values ([(parent-fields myfields)
-                                                (split all-fields
-                                                  (- (length all-fields)
-                                                     (- size sz)))])
-                                     (apply (apply new parent-fields)
-                                            myfields)))])
-                           a-record-constructor)))])
-              (lambda (f*)
-                (protocol
-                  (lambda fmls
-                    (lambda flds
-                      (unless (= (length flds) n)
-                        (apply die
-                           'a-record-constructor
-                           (format
-                             "expected ~a args, got ~a instead"
-                             n (length flds))
-                           flds))
-                      (apply (p (cons flds f*)) fmls)))))))))
-    (unless (rcd? rcd)
-      (die who "not a record constructor descriptor" rcd))
-    (let ([rtd (rcd-rtd rcd)]
-          [prcd (rcd-prcd rcd)]
-          [proto (rcd-proc rcd)])
-      ((constructor rtd (rtd-size rtd) prcd proto) '())))
-
-
-  (define (record-accessor rtd k)
-    (define who 'record-accessor)
-    (unless (rtd? rtd)
-      (die who "not an rtd" rtd))
-    (unless (and (fixnum? k) (fx>= k 0))
-      (die who "not a valid index" k))
-    (let ([sz (rtd-size rtd)]
-          [p (rtd-parent rtd)])
-      (let ([i (if p (+ k (rtd-size p)) k)])
-        (unless (fx< i sz)
-          (die who "not a valid index" k))
-        (let ([a-record-accessor
-               (lambda (x)
-                 (cond
-                   [($struct/rtd? x rtd) ($struct-ref x i)]
-                   [($struct? x)
-                    (let ([xrtd ($struct-rtd x)])
-                      (unless (rtd? xrtd)
-                        (die who "invalid type" x rtd))
-                      (let f ([prtd (rtd-parent xrtd)] [rtd rtd] [x x] [i i])
-                        (cond
-                          [(eq? prtd rtd) ($struct-ref x i)]
-                          [(not prtd)
-                           (die who "invalid type" x rtd)]
-                          [else (f (rtd-parent prtd) rtd x i)])))]
-                   [else (die who "invalid type" x rtd)]))])
-          a-record-accessor))))
-
-  (define (record-mutator rtd k)
-    (define who 'record-mutator)
-    (unless (rtd? rtd)
-      (die who "not an rtd" rtd))
-    (unless (and (fixnum? k) (fx>= k 0))
-      (die who "not a valid index" k))
-    (let ([sz (rtd-size rtd)]
-          [p (rtd-parent rtd)])
-      (let ([i (if p (+ k (rtd-size p)) k)])
-        (unless (fx< i sz)
-          (die who "not a valid index" k))
-        (unless (car (vector-ref (rtd-fields rtd) k))
-          (die who "field is not mutable" k rtd))
-        (let ([a-record-mutator
-               (lambda (x v)
-                 (cond
-                   [($struct/rtd? x rtd) ($struct-set! x i v)]
-                   [($struct? x)
-                    (let ([xrtd ($struct-rtd x)])
-                      (unless (rtd? xrtd)
-                        (die who "invalid type" x rtd))
-                      (let f ([prtd (rtd-parent xrtd)] [rtd rtd] [x x] [i i] [v v])
-                        (cond
-                          [(eq? prtd rtd) ($struct-set! x i v)]
-                          [(not prtd)
-                           (die who "invalid type" x rtd)]
-                          [else (f (rtd-parent prtd) rtd x i v)])))]
-                   [else (die who "invalid type" x rtd)]))])
-          a-record-mutator))))
-
-  (define (record-predicate rtd)
-    (define who 'record-predicate)
-    (unless (rtd? rtd)
-      (die who "not an rtd" rtd))
-    (let ([sz (rtd-size rtd)]
-          [p (rtd-parent rtd)])
-      (let ([a-record-predicate
-             (lambda (x)
-               (cond
-                 [($struct/rtd? x rtd) #t]
-                 [($struct? x)
-                  (let ([xrtd ($struct-rtd x)])
-                    (and (rtd? xrtd)
-                         (let f ([prtd (rtd-parent xrtd)] [rtd rtd])
-                           (cond
-                             [(eq? prtd rtd) #t]
-                             [(not prtd)     #f]
-                             [else (f (rtd-parent prtd) rtd)]))))]
-                 [else #f]))])
-        a-record-predicate)))
-
-
-  (define (record-field-mutable? rtd k)
-    (define who 'record-field-mutable?)
-    (unless (rtd? rtd)
-      (die who "not an rtd" rtd))
-    (unless (and (fixnum? k) (fx>= k 0))
-      (die who "not a valid index" k))
-    (let ([sz (rtd-size rtd)]
-          [p (rtd-parent rtd)])
-      (let ([i (if p (+ k (rtd-size p)) k)])
-        (unless (fx< i sz)
-          (die who "not a valid index" k))
-        (car (vector-ref (rtd-fields rtd) k)))))
-
-  (set-rtd-printer! (type-descriptor rtd)
-    (lambda (x p wr)
-      (display (format "#<record-type-descriptor ~s>" (rtd-name x)) p)))
-
-  (set-rtd-printer! (type-descriptor rcd)
-    (lambda (x p wr)
-      (display (format "#<record-constructor-descriptor ~s>"
-                       (rtd-name (rcd-rtd x))) p)))
-
-|#
+		   (upper-parent (<rtd>-parent prtd^))))))))
 
 
 ;;;; done
 
-(set-rtd-printer! (type-descriptor rtd)		%rtd-printer)
-(set-rtd-printer! (type-descriptor rcd)		%rcd-printer)
+(set-rtd-printer! (type-descriptor <rtd>) %rtd-printer)
+(set-rtd-printer! (type-descriptor <rcd>) %rcd-printer)
 
 )
 

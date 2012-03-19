@@ -27,7 +27,8 @@
 
 #!r6rs
 (import (rename (vicare)
-		(make-record-type-descriptor make-record-type-descriptor*))
+		(make-record-type-descriptor make-record-type-descriptor*)
+		(make-record-constructor-descriptor make-record-constructor-descriptor*))
   (vicare syntactic-extensions)
   (checks))
 
@@ -51,23 +52,30 @@
   name: parent: uid: sealed: opaque: fields:)
 
 (define-syntax make-record-type-descriptor
-  (syntax-rules (name parent uid sealed? opaque? fields)
+  (syntax-rules (name: parent: uid: sealed: opaque: fields:)
     ((_ (name: ?name) (parent: ?parent) (uid: ?uid)
 	(sealed: ?sealed) (opaque: ?opaque) (fields: ?fields))
      (make-record-type-descriptor* ?name ?parent ?uid ?sealed ?opaque ?fields))))
+
+(define-syntax make-record-constructor-descriptor
+  (syntax-rules (rtd: parent-rcd: protocol:)
+    ((_ (rtd: ?rtd) (parent-rcd: ?prcd) (protocol: ?protocol))
+     (make-record-constructor-descriptor* ?rtd ?prcd ?protocol))))
 
 
 (parametrise ((check-test-name	'make-rtd))
 
   (define parent-0
     (make-record-type-descriptor
-     (name: 'make-rtd-parent-0) (parent: #f) (uid: 'make-rtd-parent-0)
+     (name: 'rtd-parent-0) (parent: #f) (uid: 'rtd-parent-0)
      (sealed: #f) (opaque: #f) (fields: '#())))
 
   (define parent-1
     (make-record-type-descriptor
-     (name: 'make-rtd-parent-1) (parent: #f) (uid: 'make-rtd-parent-1)
+     (name: 'rtd-parent-1) (parent: #f) (uid: 'rtd-parent-1)
      (sealed: #f) (opaque: #f) (fields: '#())))
+
+;;; --------------------------------------------------------------------
 
   (check	;some correct configuration values
       (let ((rtd (make-record-type-descriptor (name:	'make-rtd)
@@ -189,84 +197,372 @@
 ;;; --------------------------------------------------------------------
 ;;; errors, wrong UID
 
-    (check
-	(catch #f
-	  (make-record-type-descriptor
-	   (name: 'a-name) (parent: #f) (uid: "ciao")
-	   (sealed: #f) (opaque: #f) (fields: '#())))
-      => '("ciao"))
+  (check
+      (catch #f
+	(make-record-type-descriptor
+	 (name: 'a-name) (parent: #f) (uid: "ciao")
+	 (sealed: #f) (opaque: #f) (fields: '#())))
+    => '("ciao"))
 
-    (check
-	(catch #f
-	  (make-record-type-descriptor
-	   (name: 'a-name) (parent: #f) (uid: #t)
-	   (sealed: #f) (opaque: #f) (fields: '#())))
-      => '(#t))
+  (check
+      (catch #f
+	(make-record-type-descriptor
+	 (name: 'a-name) (parent: #f) (uid: #t)
+	 (sealed: #f) (opaque: #f) (fields: '#())))
+    => '(#t))
 
 ;;; --------------------------------------------------------------------
 ;;; errors, wrong sealed
 
-    (check
-	(catch #f
-	  (make-record-type-descriptor
-	   (name: 'a-name) (parent: #f) (uid: #f)
-	   (sealed: "ciao") (opaque: #f) (fields: '#())))
-      => '("ciao"))
+  (check
+      (catch #f
+	(make-record-type-descriptor
+	 (name: 'a-name) (parent: #f) (uid: #f)
+	 (sealed: "ciao") (opaque: #f) (fields: '#())))
+    => '("ciao"))
 
 ;;; --------------------------------------------------------------------
 ;;; errors, wrong opaque
 
-    (check
-	(catch #f
-	  (make-record-type-descriptor
-	   (name: 'a-name) (parent: #f) (uid: #f)
-	   (sealed: #f) (opaque: "ciao") (fields: '#())))
-      => '("ciao"))
+  (check
+      (catch #f
+	(make-record-type-descriptor
+	 (name: 'a-name) (parent: #f) (uid: #f)
+	 (sealed: #f) (opaque: "ciao") (fields: '#())))
+    => '("ciao"))
 
 ;;; --------------------------------------------------------------------
 ;;; errors, wrong fields
 
-    (check
-	(catch #f
-	  (make-record-type-descriptor
-	   (name: 'a-name) (parent: #f) (uid: #f)
-	   (sealed: #f) (opaque: #f) (fields: '())))
-      => '(()))
+  (check
+      (catch #f
+	(make-record-type-descriptor
+	 (name: 'a-name) (parent: #f) (uid: #f)
+	 (sealed: #f) (opaque: #f) (fields: '())))
+    => '(()))
 
-    (check
-	(catch #f
-	  (make-record-type-descriptor
-	   (name: 'a-name) (parent: #f) (uid: #f)
-	   (sealed: #f) (opaque: #f) (fields: '#(a))))
-      => '(#(a)))
+  (check
+      (catch #f
+	(make-record-type-descriptor
+	 (name: 'a-name) (parent: #f) (uid: #f)
+	 (sealed: #f) (opaque: #f) (fields: '#(a))))
+    => '(#(a)))
 
-    (check
-	(catch #f
-	  (make-record-type-descriptor
-	   (name: 'a-name) (parent: #f) (uid: #f)
-	   (sealed: #f) (opaque: #f) (fields: '#((a b c)))))
-      => '(#((a b c))))
+  (check
+      (catch #f
+	(make-record-type-descriptor
+	 (name: 'a-name) (parent: #f) (uid: #f)
+	 (sealed: #f) (opaque: #f) (fields: '#((a b c)))))
+    => '(#((a b c))))
 
-    (check
-	(catch #f
-	  (make-record-type-descriptor
-	   (name: 'a-name) (parent: #f) (uid: #f)
-	   (sealed: #f) (opaque: #f) (fields: '#((mutable 123)))))
-      => '(#((mutable 123))))
+  (check
+      (catch #f
+	(make-record-type-descriptor
+	 (name: 'a-name) (parent: #f) (uid: #f)
+	 (sealed: #f) (opaque: #f) (fields: '#((mutable 123)))))
+    => '(#((mutable 123))))
 
-    (check
-	(catch #f
-	  (make-record-type-descriptor
-	   (name: 'a-name) (parent: #f) (uid: #f)
-	   (sealed: #f) (opaque: #f) (fields: '#((ciao ciao)))))
-      => '(#((ciao ciao))))
+  (check
+      (catch #f
+	(make-record-type-descriptor
+	 (name: 'a-name) (parent: #f) (uid: #f)
+	 (sealed: #f) (opaque: #f) (fields: '#((ciao ciao)))))
+    => '(#((ciao ciao))))
 
-    (check
+  (check
+      (catch #f
+	(make-record-type-descriptor
+	 (name: 'a-name) (parent: #f) (uid: #f)
+	 (sealed: #f) (opaque: #f) (fields: '#((mutable a) (immutable 1)))))
+    => '(#((mutable a) (immutable 1))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'make-rcd))
+
+;;; no parent
+
+  (check	;correct configuration values, no fields
+      (let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#())))
+	     (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: #f) (protocol: #f)))
+	     (maker	(record-constructor rcd))
+	     (pred	(record-predicate   rtd)))
+	(pred (maker)))
+    => #t)
+
+  (check	;correct configuration values, with fields
+      (let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f)
+			 (fields: '#((mutable a) (immutable b)))))
+	     (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: #f) (protocol: #f)))
+	     (maker	(record-constructor rcd))
+	     (pred	(record-predicate   rtd))
+	     (get-a	(record-accessor rtd 0))
+	     (get-b	(record-accessor rtd 1)))
+	(let ((R (maker 1 2)))
+	  (list (pred R)
+		(get-a R)
+		(get-b R))))
+    => '(#t 1 2))
+
+;;; --------------------------------------------------------------------
+;;; with parent
+
+  (check	;correct configuration values, no fields
+      (let* ((prtd	(make-record-type-descriptor
+			 (name: 'parent) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#())))
+	     (rtd	(make-record-type-descriptor
+			 (name: 'name) (parent: prtd) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#())))
+	     (prcd	(make-record-constructor-descriptor
+			 (rtd: prtd) (parent-rcd: #f) (protocol: #f)))
+	     (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: prcd) (protocol: #f)))
+	     (maker	(record-constructor rcd))
+	     (pred	(record-predicate   rtd)))
+	(pred (maker)))
+    => #t)
+
+  (check	;correct configuration values, with child fields
+      (let* ((prtd	(make-record-type-descriptor
+			 (name: 'parent) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#())))
+	     (rtd	(make-record-type-descriptor
+			 (name: 'name) (parent: prtd) (uid: #f)
+			 (sealed: #f) (opaque: #f)
+			 (fields: '#((mutable a) (immutable b)))))
+	     (prcd	(make-record-constructor-descriptor
+			 (rtd: prtd) (parent-rcd: #f) (protocol: #f)))
+	     (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: prcd) (protocol: #f)))
+	     (maker	(record-constructor rcd))
+	     (pred	(record-predicate   rtd))
+	     (get-a	(record-accessor    rtd 0))
+	     (get-b	(record-accessor    rtd 1)))
+	(let ((R (maker 1 2)))
+	  (list (pred R)
+		(get-a R)
+		(get-b R))))
+    => '(#t 1 2))
+
+  (check	;correct configuration values, with parent fields
+      (let* ((prtd	(make-record-type-descriptor
+			 (name: 'parent) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f)
+			 (fields: '#((mutable a) (immutable b)))))
+	     (rtd	(make-record-type-descriptor
+			 (name: 'name) (parent: prtd) (uid: #f)
+			 (sealed: #f) (opaque: #f)
+			 (fields: '#())))
+	     (prcd	(make-record-constructor-descriptor
+			 (rtd: prtd) (parent-rcd: #f) (protocol: #f)))
+	     (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: prcd) (protocol: #f)))
+	     (maker	(record-constructor rcd))
+	     (pred	(record-predicate   rtd))
+	     ;;parent accessors
+	     (get-a	(record-accessor    prtd 0))
+	     (get-b	(record-accessor    prtd 1)))
+	(let ((R (maker 1 2)))
+	  (list (pred R)
+		(get-a R)
+		(get-b R))))
+    => '(#t 1 2))
+
+  (check	;correct configuration values, with parent fields
+      (let* ((prtd	(make-record-type-descriptor
+			 (name: 'parent) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f)
+			 (fields: '#())))
+	     (rtd	(make-record-type-descriptor
+			 (name: 'name) (parent: prtd) (uid: #f)
+			 (sealed: #f) (opaque: #f)
+			 (fields: '#((mutable a) (immutable b)))))
+	     (prcd	(make-record-constructor-descriptor
+			 (rtd: prtd) (parent-rcd: #f) (protocol: #f)))
+	     (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: prcd) (protocol: #f)))
+	     (maker	(record-constructor rcd))
+	     (pred	(record-predicate   rtd))
+	     ;;child accessors
+	     (get-a	(record-accessor    rtd 0))
+	     (get-b	(record-accessor    rtd 1)))
+	(let ((R (maker 1 2)))
+	  (list (pred R)
+		(get-a R)
+		(get-b R))))
+    => '(#t 1 2))
+
+;;; --------------------------------------------------------------------
+;;; error, rtd argument
+
+  (check	;not an rtd
+      (catch #f
+	(let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#()))))
+	  (make-record-constructor-descriptor
+	   (rtd: 123) (parent-rcd: #f) (protocol: #f))))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; error, rcd argument
+
+  (check	;not an rcd
+      (catch #f
+	(let* ((prtd	(make-record-type-descriptor
+			 (name: 'parent) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#())))
+	       (rtd	(make-record-type-descriptor
+			 (name: 'name) (parent: prtd) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#()))))
+	  (make-record-constructor-descriptor
+	   (rtd: rtd) (parent-rcd: 123) (protocol: #f))))
+    => '(123))
+
+  (let* ((rtd-0	(make-record-type-descriptor
+		 (name: 'rtd-0) (parent: #f) (uid: #f)
+		 (sealed: #f) (opaque: #f) (fields: '#())))
+	 (rtd-1	(make-record-type-descriptor
+		 (name: 'rtd-1) (parent: #f) (uid: #f)
+		 (sealed: #f) (opaque: #f) (fields: '#())))
+	 (rcd-0	(make-record-constructor-descriptor
+		 (rtd: rtd-0) (parent-rcd: #f) (protocol: #f))))
+    (check	;parent RCD for RTD without parent
 	(catch #f
-	  (make-record-type-descriptor
-	   (name: 'a-name) (parent: #f) (uid: #f)
-	   (sealed: #f) (opaque: #f) (fields: '#((mutable a) (immutable 1)))))
-      => '(#((mutable a) (immutable 1))))
+	  (make-record-constructor-descriptor
+	   (rtd: rtd-1) (parent-rcd: rcd-0) (protocol: #f)))
+      => (list rtd-1 rcd-0)))
+
+  (let* ((rtd-0	(make-record-type-descriptor
+		 (name: 'rtd-0) (parent: #f) (uid: #f)
+		 (sealed: #f) (opaque: #f) (fields: '#())))
+	 (rtd-1	(make-record-type-descriptor
+		 (name: 'rtd-1) (parent: #f) (uid: #f)
+		 (sealed: #f) (opaque: #f) (fields: '#())))
+	 (rtd-2	(make-record-type-descriptor
+		 (name: 'rtd-1) (parent: rtd-1) (uid: #f)
+		 (sealed: #f) (opaque: #f) (fields: '#())))
+	 (rcd-0	(make-record-constructor-descriptor
+		 (rtd: rtd-0) (parent-rcd: #f) (protocol: #f))))
+    (check	;parent RCD for wrong RTD
+	(catch #f
+	  (make-record-constructor-descriptor
+	   (rtd: rtd-2) (parent-rcd: rcd-0) (protocol: #f)))
+      => (list rtd-2 rcd-0)))
+
+;;; --------------------------------------------------------------------
+;;; error, protocol argument
+
+  (check	;not a function
+      (catch #f
+	(let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#()))))
+	  (make-record-constructor-descriptor
+	   (rtd: rtd) (parent-rcd: #f) (protocol: 123))))
+    => '(123))
+
+  (let ((prot (lambda (a b)
+		(list a b))))
+    (check	;protocol accepting wrong num of args
+	(catch #f
+	  (let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#())))
+		 (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
+		 (maker	(record-constructor rcd)))
+	    (maker)))
+      => (list prot 1)))
+
+  (let* ((maker	(lambda (a b)
+		  (list a b)))
+	 (prot	(lambda (make-top)
+		  maker)))
+    (check	;maker accepting wrong num of args
+	(catch #f
+	  (let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#())))
+		 (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
+		 (maker	(record-constructor rcd)))
+	    (maker)))
+      => (list maker 0)))
+
+  (let ((prot (lambda (make-top)
+		(add-result 1)
+		(lambda ()
+		  (make-top)))))
+    (check	;protocol function called only once for every RECORD-CONSTRUCTOR
+	(with-result
+	 (let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#())))
+		(rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
+		(maker	(record-constructor rcd)))
+	   (maker)
+	   (maker)
+	   #t))
+      => '(#t (1))))
+
+  (let* ((flag 0)
+	 (prot (lambda (make-top)
+		 (add-result flag)
+		 (set! flag (fx+ 1 flag))
+		 (lambda ()
+		   (make-top)))))
+    (check	;protocol function called only once for every RECORD-CONSTRUCTOR
+	(with-result
+	 (let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#())))
+		(rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
+		(maker1	(record-constructor rcd))
+		(maker2	(record-constructor rcd)))
+	   #t))
+      => '(#t (0 1))))
+
+  #;(let* ((maker	(lambda ()
+		  (void)))
+	 (prot	(lambda (make-top)
+		  maker)))
+    (check	;maker returning void
+	(catch #t
+	  (let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#())))
+		 (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
+		 (maker	(record-constructor rcd)))
+	    (maker)))
+      => (list maker 0)))
+
+  #;(let* ((maker	(lambda ()
+		  123))
+	 (prot	(lambda (make-top)
+		  maker)))
+    (check	;maker returning non-record
+	(catch #t
+	  (let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#())))
+		 (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
+		 (maker	(record-constructor rcd)))
+	    (maker)))
+      => (list maker 0)))
+
 
   #t)
 
