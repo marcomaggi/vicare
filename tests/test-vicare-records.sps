@@ -60,14 +60,14 @@
 (parametrise ((check-test-name	'make-rtd))
 
   (define parent-0
-    (make-record-type-descriptor (name: 'make-rtd-parent-0) (parent: #f)
-				 (uid: 'make-rtd-parent-0) (opaque: #f)
-				 (sealed: #f) (fields: '#())))
+    (make-record-type-descriptor
+     (name: 'make-rtd-parent-0) (parent: #f) (uid: 'make-rtd-parent-0)
+     (sealed: #f) (opaque: #f) (fields: '#())))
 
   (define parent-1
-    (make-record-type-descriptor (name: 'make-rtd-parent-1) (parent: #f)
-				 (uid: 'make-rtd-parent-1) (opaque: #f)
-				 (sealed: #f) (fields: '#())))
+    (make-record-type-descriptor
+     (name: 'make-rtd-parent-1) (parent: #f) (uid: 'make-rtd-parent-1)
+     (sealed: #f) (opaque: #f) (fields: '#())))
 
   (check	;some correct configuration values
       (let ((rtd (make-record-type-descriptor (name:	'make-rtd)
@@ -166,25 +166,107 @@
       => (list rtd (list 'N #f 'make-rtd-6 #f #t '#()))))
 
   (let ((rtd (make-record-type-descriptor* 'N #f 'make-rtd-7 #f #f '#())))
-    (check	;different opaque
+    (check	;different fields
 	(catch #f
 ;;;                                             name parent uid sealed? opaque? fields
 	  (eq? rtd (make-record-type-descriptor* 'N #f 'make-rtd-7 #f #f '#((mutable a)))))
       => (list rtd (list 'N #f 'make-rtd-7 #f #f '#((mutable a))))))
 
   (let ((rtd (make-record-type-descriptor* 'N #f 'make-rtd-8 #f #f '#((mutable a)))))
-    (check	;different opaque
+    (check	;different fields
 	(catch #f
 ;;;                                             name parent uid sealed? opaque? fields
 	  (eq? rtd (make-record-type-descriptor* 'N #f 'make-rtd-8 #f #f '#((immutable a)))))
       => (list rtd (list 'N #f 'make-rtd-8 #f #f '#((immutable a))))))
 
   (let ((rtd (make-record-type-descriptor* 'N #f 'make-rtd-9 #f #f '#((immutable a)))))
-    (check	;different opaque
+    (check	;different fields
 	(catch #f
 ;;;                                             name parent uid sealed? opaque? fields
 	  (eq? rtd (make-record-type-descriptor* 'N #f 'make-rtd-9 #f #f '#((immutable b)))))
       => (list rtd (list 'N #f 'make-rtd-9 #f #f '#((immutable b))))))
+
+;;; --------------------------------------------------------------------
+;;; errors, wrong UID
+
+    (check
+	(catch #f
+	  (make-record-type-descriptor
+	   (name: 'a-name) (parent: #f) (uid: "ciao")
+	   (sealed: #f) (opaque: #f) (fields: '#())))
+      => '("ciao"))
+
+    (check
+	(catch #f
+	  (make-record-type-descriptor
+	   (name: 'a-name) (parent: #f) (uid: #t)
+	   (sealed: #f) (opaque: #f) (fields: '#())))
+      => '(#t))
+
+;;; --------------------------------------------------------------------
+;;; errors, wrong sealed
+
+    (check
+	(catch #f
+	  (make-record-type-descriptor
+	   (name: 'a-name) (parent: #f) (uid: #f)
+	   (sealed: "ciao") (opaque: #f) (fields: '#())))
+      => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; errors, wrong opaque
+
+    (check
+	(catch #f
+	  (make-record-type-descriptor
+	   (name: 'a-name) (parent: #f) (uid: #f)
+	   (sealed: #f) (opaque: "ciao") (fields: '#())))
+      => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; errors, wrong fields
+
+    (check
+	(catch #f
+	  (make-record-type-descriptor
+	   (name: 'a-name) (parent: #f) (uid: #f)
+	   (sealed: #f) (opaque: #f) (fields: '())))
+      => '(()))
+
+    (check
+	(catch #f
+	  (make-record-type-descriptor
+	   (name: 'a-name) (parent: #f) (uid: #f)
+	   (sealed: #f) (opaque: #f) (fields: '#(a))))
+      => '(#(a)))
+
+    (check
+	(catch #f
+	  (make-record-type-descriptor
+	   (name: 'a-name) (parent: #f) (uid: #f)
+	   (sealed: #f) (opaque: #f) (fields: '#((a b c)))))
+      => '(#((a b c))))
+
+    (check
+	(catch #f
+	  (make-record-type-descriptor
+	   (name: 'a-name) (parent: #f) (uid: #f)
+	   (sealed: #f) (opaque: #f) (fields: '#((mutable 123)))))
+      => '(#((mutable 123))))
+
+    (check
+	(catch #f
+	  (make-record-type-descriptor
+	   (name: 'a-name) (parent: #f) (uid: #f)
+	   (sealed: #f) (opaque: #f) (fields: '#((ciao ciao)))))
+      => '(#((ciao ciao))))
+
+    (check
+	(catch #f
+	  (make-record-type-descriptor
+	   (name: 'a-name) (parent: #f) (uid: #f)
+	   (sealed: #f) (opaque: #f) (fields: '#((mutable a) (immutable 1)))))
+      => '(#((mutable a) (immutable 1))))
 
   #t)
 
