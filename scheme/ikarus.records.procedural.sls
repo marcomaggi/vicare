@@ -587,12 +587,12 @@
       ((%protocol-wrapper (<rtd>-size main-rtd) (<rcd>-parent-rcd main-rcd) (<rcd>-protocol main-rcd))
        '())))
 
-  (define (%protocol-wrapper number-of-fields prcd protocol)
+  (define (%protocol-wrapper total-number-of-fields prcd protocol)
     (if prcd
-  	(%make-wrapper-for-protocol/with-parent number-of-fields prcd protocol)
-      (%make-wrapper-for-protocol/without-parent number-of-fields protocol)))
+  	(%make-wrapper-for-protocol/with-parent total-number-of-fields prcd protocol)
+      (%make-wrapper-for-protocol/without-parent total-number-of-fields protocol)))
 
-  (define (%make-wrapper-for-protocol/without-parent number-of-fields protocol)
+  (define (%make-wrapper-for-protocol/without-parent total-number-of-fields protocol)
     ;;Return a constructor wrapper.
     ;;
     (define (sub-main)
@@ -607,22 +607,22 @@
       ;;efficient than putting  the values in a list,  and act upon them
       ;;with loops.
       ;;
-      (case number-of-fields
-	((0)  (expand-one-case ()))
-	((1)  (expand-one-case (arg0)))
-	((2)  (expand-one-case (arg0 arg1)))
-	((3)  (expand-one-case (arg0 arg1 arg2)))
-	((4)  (expand-one-case (arg0 arg1 arg2 arg3)))
-	(else (expand-one-case #f)))) ;more than 4
+      (case total-number-of-fields
+	((0)  (expand-one-case 0 ()))
+	((1)  (expand-one-case 1 (arg0)))
+	((2)  (expand-one-case 2 (arg0 arg1)))
+	((3)  (expand-one-case 3 (arg0 arg1 arg2)))
+	((4)  (expand-one-case 4 (arg0 arg1 arg2 arg3)))
+	(else (expand-one-case #f #f)))) ;more than 4
 
     (define-syntax expand-one-case
       (syntax-rules ()
-	((_ ?list-of-formals)
+	((_ ?argnum ?list-of-formals)
 	 (if protocol
 	     (lambda (list-of-field-values-lists) ;protocol wrapper
-	       (protocol (%make-allocator-function list-of-field-values-lists ?list-of-formals)))
+	       (protocol (%make-allocator-function list-of-field-values-lists ?argnum ?list-of-formals)))
 	   (lambda (list-of-field-values-lists) ;protocol wrapper
-	     (%make-allocator-function list-of-field-values-lists ?list-of-formals))))))
+	     (%make-allocator-function list-of-field-values-lists ?argnum ?list-of-formals))))))
 
     ;; (let ((record (constructor list-of-field-values-lists ?list-of-formals)))
     ;;   (with-arguments-validation (who)
@@ -645,59 +645,45 @@
 	    (if (negative? count)
 		ret
 	      (loop (- count 1) (- val 1) (cons val ret)))))
-	(define (%unwrap stx)
-	  ;;Given  a  syntax object  STX  decompose  it  and return  the
-	  ;;corresponding  S-expression holding datums  and identifiers.
-	  ;;Take care  of returning  a proper list  when the input  is a
-	  ;;syntax object holding a proper list.
-	  ;;
-	  (syntax-case stx ()
-	    (() '())
-	    ((?car . ?cdr)
-	     (cons (%unwrap #'?car) (%unwrap #'?cdr)))
-	    (#(?item ...)
-	     (list->vector (%unwrap #'(?item ...))))
-	    (?atom
-	     (identifier? #'?atom)
-	     #'?atom)
-	    (?atom
-	     (syntax->datum #'?atom))))
 	(syntax-case stx ()
 	  ;;The number of arguments/fields is between 0 and 4.
-	  ((_ ?list-of-field-values-lists (?arg ...))
+	  ((_ ?list-of-field-values-lists ?argnum (?arg ...))
 	   (identifier? #'?list-of-field-values-lists)
-	   (let ((args.len (length (%unwrap #'(?arg ...)))))
+	   (let ((args.len (syntax->datum #'?argnum) #;(length (%unwrap #'(?arg ...)))))
 	     (with-syntax (((INDEX ...)	(%iota args.len))
 			   (NEXT-INDEX	args.len))
-	       #'(lambda (?arg ...) ;allocator
-		   (let ((the-record ($make-struct main-rtd (<rtd>-size main-rtd))))
-		     ;;store the values of the base RTD fields
-		     ($struct-set! the-record INDEX ?arg) ...
-		     ;;if any, store the values of the sub-RTDs fields
-		     (if (null? ?list-of-field-values-lists)
-			 the-record
-		       (%fill the-record NEXT-INDEX
-			      (car ?list-of-field-values-lists)
-			      (cdr ?list-of-field-values-lists))))))))
+	       #'(let ((total-number-of-fields (<rtd>-size main-rtd)))
+		   (lambda (?arg ...) ;allocator
+		     (let ((the-record ($make-struct main-rtd total-number-of-fields)))
+		       ;;store the values of the base RTD fields
+		       ($struct-set! the-record INDEX ?arg) ...
+		       ;;If  any,  store  the  values  of  the  sub-RTDs
+		       ;;fields.
+		       (if (null? ?list-of-field-values-lists)
+			   the-record
+			 (%fill the-record NEXT-INDEX
+				(car ?list-of-field-values-lists)
+				(cdr ?list-of-field-values-lists)))))))))
 
 	  ;;The number of arguments/fields is more than 4.
-	  ((_ ?list-of-field-values-lists #f)
+	  ((_ ?list-of-field-values-lists ?argnum #f)
 	   (identifier? #'?list-of-field-values-lists)
-	   #'(lambda formals	;allocator
-	       (arguments-validation-forms
-		(unless (fx=? (length formals) number-of-fields)
-		  (apply assertion-violation 'a-record-constructor
-			 (string-append "record allocator for \""
-					(symbol->string (<rtd>-name main-rtd))
-					"\" expected "
-					(number->string number-of-fields)
-					" arguments, but got "
-					(number->string (length formals)))
-			 formals)))
-	       (let ((the-record ($make-struct main-rtd (<rtd>-size main-rtd))))
-		 ;;Store the values of the  base RTD fields and, if any,
-		 ;;store the values of the sub-RTDs fields.
-		 (%fill the-record 0 formals ?list-of-field-values-lists))))
+	   #'(let ((total-number-of-fields (<rtd>-size main-rtd)))
+	       (lambda formals ;allocator
+		 (arguments-validation-forms
+		  (unless (fx=? (length formals) total-number-of-fields)
+		    (apply assertion-violation 'a-record-constructor
+			   (string-append "record allocator for \""
+					  (symbol->string (<rtd>-name main-rtd))
+					  "\" expected "
+					  (number->string total-number-of-fields)
+					  " arguments, but got "
+					  (number->string (length formals)))
+			   formals)))
+		 (let ((the-record ($make-struct main-rtd total-number-of-fields)))
+		   ;;Store  the values of  the base  RTD fields  and, if
+		   ;;any, store the values of the sub-RTDs fields.
+		   (%fill the-record 0 formals ?list-of-field-values-lists)))))
 	  )))
 
     (sub-main))
@@ -740,11 +726,12 @@
 	(if (null? list-of-field-values-lists)
 	    the-record
 	  (%fill the-record field-index
-		 (car list-of-field-values-lists)
-		 (cdr list-of-field-values-lists)))
+		 (unsafe.car list-of-field-values-lists)
+		 (unsafe.cdr list-of-field-values-lists)))
       (begin
-	($struct-set! the-record field-index (car field-values-list))
-	(%fill the-record (fx+ 1 field-index) (cdr field-values-list) list-of-field-values-lists))))
+	($struct-set! the-record field-index (unsafe.car field-values-list))
+	(%fill the-record (unsafe.fxadd1 field-index)
+	       (cdr field-values-list) list-of-field-values-lists))))
 
   (define (%split all-fields n)
     ;;Split the  list ALL-FIELDS and  return two values: a  list holding
