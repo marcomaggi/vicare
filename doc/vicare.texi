@@ -2545,7 +2545,6 @@ function works with both Vicare's structs and @rnrs{6} records.
 Return the number of fields in the data structure @var{stru}.  Notice
 that this function works with both Vicare's structs and @rnrs{6}
 records.
-
 @end defun
 
 
