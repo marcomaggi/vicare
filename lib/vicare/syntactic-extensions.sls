@@ -50,6 +50,7 @@
     ;; miscellaneous dispatching
     case-word-size		case-endianness
     case-one-operand		case-two-operands
+    case-fixnums
 
     ;; auxiliary syntaxes
     big			little
@@ -59,7 +60,9 @@
   (import (ikarus)
     (for (prefix (vicare installation-configuration)
 		 config.)
-	 expand))
+	 expand)
+    (only (ikarus system $fx)
+	  $fx=))
 
 
 ;;;; some defining syntaxes
@@ -406,6 +409,30 @@
 	   ((little)	. ?lit-body)
 	   (else
 	    (assertion-violation ?who "expected endianness symbol as argument" ?endianness)))))))
+
+(define-syntax case-fixnums
+  (syntax-rules (else)
+    ((_ ?expr
+	((?fixnum)
+	 ?fx-body0 ?fx-body ...)
+	...
+	(else
+	 ?else-body0 ?else-body ...))
+     (let ((fx ?expr))
+       (cond (($fx= ?fixnum fx)
+	      ?fx-body0 ?fx-body ...)
+	     ...
+	     (else
+	      ?else-body0 ?else-body ...))))
+    ((_ ?expr
+	((?fixnum)
+	 ?fx-body0 ?fx-body ...)
+	...)
+     (let ((fx ?expr))
+       (cond (($fx= ?fixnum fx)
+	      ?fx-body0 ?fx-body ...)
+	     ...)))
+    ))
 
 
 ;;;; math functions dispatching
