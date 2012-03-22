@@ -162,6 +162,14 @@
 		;Function used  to initialise  the fields of  an already
 		;allocated R6RS  record.  This function is  the same for
 		;every record-constructor descriptor.
+   default-protocol
+		;False  or function.  When  a function:  it must  be the
+		;default     protocol    function     used     when    a
+		;record-constructor descriptor does not have one.
+   default-rcd
+		;False or an instance of <RCD>.  When an RCD: it is used
+		;whenever  an  RCD  for   a  subtype  is  built  without
+		;specifying a specific RCD.
    ))
 
 (define (%rtd-printer S port sub-printer)
@@ -169,7 +177,8 @@
     (display thing port))
   (%display "#[rtd")
   (%display " name=")		(%display (<rtd>-name S))
-  (%display " size=")		(%display (<rtd>-total-fields-number S))
+  (%display " total-fields-number=")	(%display (<rtd>-total-fields-number S))
+  (%display " this-fields-number=")	(%display (<rtd>-fields-number S))
   (let ((prtd (<rtd>-parent S)))
     (if (<rtd>? prtd)
 	(begin
@@ -181,7 +190,8 @@
   (%display " sealed?=")	(%display (<rtd>-sealed? S))
   (%display " opaque?=")	(%display (<rtd>-opaque? S))
   (%display " fields=")		(%display (<rtd>-fields  S))
-  (%display " initialiser=")	(%display (<rtd>-initialiser  S))
+  ;;We avoid printing  the initialiser, default-protocol and default-rcd
+  ;;fields.
   (%display "]"))
 
 (define-struct <rcd>
@@ -239,6 +249,14 @@
   ;;
   (make-parameter #f))
 
+(define-inline (%record-being-built ?who)
+  (or (record-being-built)
+      ;;This assertion may happen if a protocol function calls its maker
+      ;;argument  directly, rather  than returning  a function  which in
+      ;;turn will call the maker.
+      (assertion-violation ?who
+	"called record initialiser or maker without going through a proper constructor")))
+
 (define (%make-record-initialiser rtd)
   ;;Return the initialiser function for an R6RS record.
   ;;
@@ -247,10 +265,11 @@
     (if parent-rtd
 	(let ((start-index (<rtd>-total-fields-number parent-rtd)))
 	  (lambda field-values
-	    (%fill-record-fields (record-being-built) rtd start-index fields-number
+	    (%fill-record-fields (%record-being-built 'initialiser-with-parent)
+				 rtd start-index fields-number
 				 field-values field-values)))
       (case (<rtd>-fields-number rtd)
-	((0)  record-being-built) ;just return the record itself
+	((0)  %initialiser-without-parent-0)
 	((1)  %initialiser-without-parent-1)
 	((2)  %initialiser-without-parent-2)
 	((3)  %initialiser-without-parent-3)
@@ -262,6 +281,11 @@
 	((9)  %initialiser-without-parent-9)
 	(else (lambda field-values
 		(%initialiser-without-parent+ rtd field-values)))))))
+
+(define (%initialiser-without-parent-0)
+  ;;Just return the record itself.
+  ;;
+  (%record-being-built '%initialiser-without-parent-0))
 
 (let-syntax
     ((define-initialiser-without-parent
@@ -280,7 +304,8 @@
 	      (with-syntax (((INDEX ...) indices)
 			    ((ARG   ...) (generate-temporaries indices)))
 		#'(define (?who ARG ...)
-		    (let ((the-record (record-being-built)))
+		    (let ((the-record (%record-being-built '?who)))
+		      (assert the-record)
 		      ($struct-set! the-record INDEX ARG)
 		      ...
 		      the-record)))))))))
@@ -295,8 +320,10 @@
   (define-initialiser-without-parent %initialiser-without-parent-9 9))
 
 (define (%initialiser-without-parent+ rtd field-values)
-  (%fill-record-fields (record-being-built) rtd 0 (<rtd>-fields-number rtd)
-		       field-values field-values))
+  (let ((the-record (%record-being-built '%initialiser-without-parent+)))
+    (assert the-record)
+    (%fill-record-fields the-record rtd 0 (<rtd>-fields-number rtd)
+			 field-values field-values)))
 
 (define (%fill-record-fields the-record rtd field-index fields-number
 			     all-field-values field-values)
@@ -622,10 +649,15 @@
     (let ((fields-number (unsafe.vector-length normalised-fields)))
       (if (not parent)
 	  (make-<rtd> name fields-number fields-number
-		      parent sealed? opaque? uid normalised-fields (void))
-	(make-<rtd> name (fx+ fields-number (<rtd>-total-fields-number parent))
-		    fields-number parent sealed? (or opaque? (<rtd>-opaque? parent))
-		    uid normalised-fields (void)))))
+		      parent sealed? opaque? uid normalised-fields
+		      (void) #;initialiser
+		      #f #;default-protocol
+		      #f #;default-rcd)
+	(make-<rtd> name (fx+ fields-number (<rtd>-total-fields-number parent)) fields-number
+		    parent sealed? (or opaque? (<rtd>-opaque? parent)) uid normalised-fields
+		    (void) #;initialiser
+		    #f #;default-protocol
+		    #f #;default-rcd))))
 
   (define (%make-nongenerative-rtd name parent uid sealed? opaque? normalised-fields fields)
     ;;Build  and return  a  new instance  of  RTD or  return an  already
@@ -670,7 +702,11 @@
     ;;RECORD-CONSTRUCTOR.
     ;;
     ;;PARENT-RCD must  be false  or a record-constructor  descriptor for
-    ;;the parent of RTD; PROTOCOL must be a function.
+    ;;the  parent  of  RTD;  when false:  a  default  record-constructor
+    ;;descriptor is built, used and cached in the RTD struct.
+    ;;
+    ;;PROTOCOL  must be  false  or  a function;  when  false: a  default
+    ;;protocol is built, used and cached in the RTD struct.
     ;;
     (define who 'make-record-constructor-descriptor)
     (with-arguments-validation (who)
@@ -678,14 +714,19 @@
 	 (protocol		protocol)
 	 (false/rcd		parent-rcd)
 	 (rtd&parent-rcd	rtd parent-rcd))
-      (let* ((protocol		(or protocol
-				    (%make-default-protocol parent-rcd (<rtd>-fields-number rtd))))
+      (let* ((parent-rtd	(<rtd>-parent rtd))
+	     ;;If there is a parent  RTD, but not a specific parent RCD:
+	     ;;make use of the default RCD for the parent RTD.
+	     (parent-rcd	(and parent-rtd
+				     (or parent-rcd
+					 (%make-default-constructor-descriptor parent-rtd))))
+	     (protocol		(or protocol (%make-default-protocol rtd)))
 	     (initialiser	(<rtd>-initialiser rtd))
 	     ;;Notice  that, with  this implementation,  the constructor
 	     ;;can call  the maker any  number of times and  nothing bad
 	     ;;happens on this  side.  If the client code  messes up its
 	     ;;state it is its own business.
-	     (maker		(if parent-rcd
+	     (maker		(if parent-rtd
 				    (let ((parent-constructor (<rcd>-constructor parent-rcd)))
 				      (lambda parent-constructor-args
 					(apply parent-constructor parent-constructor-args)
@@ -703,21 +744,58 @@
 			       the-record)))))
 	    (make-<rcd> rtd parent-rcd maker constructor builder))))))
 
-  (define (%make-default-protocol parent-rcd this-number-of-fields)
-    (if parent-rcd
+  (define (%make-default-constructor-descriptor rtd)
+    ;;Similar to MAKE-RECORD-CONSTRUCTOR-DESCRIPTOR but makes use of all
+    ;;the defaults.  If available: this function returns the default RCD
+    ;;stored in RTD, else a new RCD is built and cached in RTD.
+    ;;
+    (or (<rtd>-default-rcd rtd)
+	(let* ((parent-rtd	(<rtd>-parent rtd))
+	       (parent-rcd	(and parent-rtd
+				     (%make-default-constructor-descriptor rtd)))
+	       (protocol	(%make-default-protocol rtd))
+	       (initialiser	(<rtd>-initialiser rtd))
+	       (maker		(if parent-rtd
+				    (let ((parent-constructor (<rcd>-constructor parent-rcd)))
+				      (lambda parent-constructor-args
+					(apply parent-constructor parent-constructor-args)
+					initialiser))
+				  initialiser))
+	       (constructor	(protocol maker))
+	       (builder		(lambda constructor-args
+				  (let ((the-record (%alloc-clean-r6rs-record rtd)))
+				    (parametrise ((record-being-built the-record))
+				      (apply constructor constructor-args)
+				      the-record))))
+	       (default-rcd	(make-<rcd> rtd parent-rcd maker constructor builder)))
+	  (set-<rtd>-default-rcd! rtd default-rcd)
+	  default-rcd)))
+
+  (define (%make-default-protocol rtd)
+    ;;Build and return a default protocol function to be used whenever a
+    ;;arequest to  build an RCD  is issued without a  specific protocol.
+    ;;If available: this function returns the default protocol stored in
+    ;;RTD, else a new protocol function is built and cached in RTD.
+    ;;
+    (define-inline (%make-protocol/with-parent)
+      (let ((fields-number (<rtd>-fields-number rtd)))
 	(lambda (make-parent-record) ;default protocol function
 	  (lambda all-field-values
 	    (let ((who    'default-protocol-function)
 		  (argnum (length all-field-values)))
 	      (with-arguments-validation (who)
-		  ((default-constructor-argnum	argnum this-number-of-fields))
+		  ((default-constructor-argnum argnum fields-number))
 		(let-values (((parent-fields this-fields)
-			      (%split all-field-values (unsafe.fx- argnum this-number-of-fields))))
-		  (apply (apply make-parent-record parent-fields) this-fields))))))
-      (lambda (make-this-record) ;default protocol function
-	(lambda field-values
-	  (apply make-this-record field-values)))
-      ))
+			      (%split all-field-values
+				      (unsafe.fx- argnum fields-number))))
+		  (apply (apply make-parent-record parent-fields) this-fields))))))))
+    (or (<rtd>-default-protocol rtd)
+	(let ((proto (if (<rtd>-parent rtd)
+			 (%make-protocol/with-parent)
+		       (lambda (make-this-record)
+			 make-this-record))))
+	  (set-<rtd>-default-protocol! rtd proto)
+	  proto)))
 
   (define (%split all-field-values count)
     ;;Split  the list  ALL-FIELD-VALUES and  return two  values:  a list

@@ -108,20 +108,27 @@
     (assert (= (t1-y0 x) 2))
     (assert (= (t1-y1 x) 1))))
 
-(define rcd1-17-default
-  (make-record-constructor-descriptor rtd1 rcd0-17
-    (lambda (p) (p))))
 
-(define make-rcd1-17-default (record-constructor rcd1-17-default))
-
-(define (test4)
-  (let ([x (make-rcd1-17-default 1 2)])
-    (assert (record? x))
-    (assert (t1? x))
-    (assert (t0? x))
-    (assert (= (t0-x0 x) 17))
-    (assert (= (t1-y0 x) 1))
-    (assert (= (t1-y1 x) 2))))
+;;This was a  weird test in which the protocol  function calls its maker
+;;argument directly,  rather than returning  a function which  will call
+;;the maker.   It worked with  the original Ikarus'  implementation, but
+;;now  it  assertion fails  with  the  Vicare's implementation.   (Marco
+;;Maggi; Thu Mar 22, 2012)
+;;
+;; (define rcd1-17-default
+;;   (make-record-constructor-descriptor rtd1 rcd0-17
+;;     (lambda (p) (p))))
+;;
+;; (define make-rcd1-17-default (record-constructor rcd1-17-default))
+;;
+;; (define (test4)
+;;   (let ([x (make-rcd1-17-default 1 2)])
+;;     (assert (record? x))
+;;     (assert (t1? x))
+;;     (assert (t0? x))
+;;     (assert (= (t0-x0 x) 17))
+;;     (assert (= (t1-y0 x) 1))
+;;     (assert (= (t1-y1 x) 2))))
 
 (define (test5)
   (define :point
@@ -236,8 +243,8 @@
 (%printf "test2 ok\n")
 (test3)
 (%printf "test3 ok\n")
-(test4)
-(%printf "test4 ok\n")
+;;(test4)
+;;(%printf "test4 ok\n")
 (test5)
 (%printf "test5 ok\n")
 (%printf "rtd0=~s\n" rtd0)
