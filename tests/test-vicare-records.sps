@@ -376,7 +376,7 @@
 		(get-b R))))
     => '(#t 1 2))
 
-  (check	;correct configuration values, with parent and child fields
+  (check     ;correct configuration values, with parent and child fields
       (let* ((prtd	(make-record-type-descriptor
 			 (name: 'parent) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f)
@@ -405,7 +405,7 @@
 		(get-d R))))
     => '(#t 1 2 3 4))
 
-  (check	;correct configuration values, with "many" parent and child fields
+  (check ;correct configuration values, with "many" parent and child fields
       (let* ((prtd	(make-record-type-descriptor
 			 (name: 'parent) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f)
@@ -595,36 +595,33 @@
 	   #t))
       => '(#t (0))))
 
-  #;(let* ((builder	(lambda ()
-		  (void)))
-	 (prot	(lambda (make-top)
-		  builder)))
+  (let* ((builder	(lambda ()
+			  (void)))
+	 (prot		(lambda (make-top)
+			  builder)))
     (check	;builder returning void
-	(catch #t
-	  (let* ((rtd	(make-record-type-descriptor
+	(let* ((rtd	(make-record-type-descriptor
 			 (name: 'rtd-0) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f) (fields: '#())))
-		 (rcd	(make-record-constructor-descriptor
+	       (rcd	(make-record-constructor-descriptor
 			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
-		 (builder	(record-constructor rcd)))
-	    (builder)))
-      => (list builder 0)))
+	       (builder	(record-constructor rcd)))
+	  ((record-predicate rtd) (builder)))
+      => #t))
 
-  #;(let* ((builder	(lambda ()
-		  123))
-	 (prot	(lambda (make-top)
-		  builder)))
+  (let* ((builder	(lambda ()
+			  123))
+	 (prot		(lambda (make-top)
+			  builder)))
     (check	;builder returning non-record
-	(catch #t
-	  (let* ((rtd	(make-record-type-descriptor
+	(let* ((rtd	(make-record-type-descriptor
 			 (name: 'rtd-0) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f) (fields: '#())))
-		 (rcd	(make-record-constructor-descriptor
+	       (rcd	(make-record-constructor-descriptor
 			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
-		 (builder	(record-constructor rcd)))
-	    (builder)))
-      => (list builder 0)))
-
+	       (builder	(record-constructor rcd)))
+	  ((record-predicate rtd) (builder)))
+      => #t))
 
   #t)
 

@@ -399,10 +399,6 @@
   (<rcd>? obj)
   (assertion-violation who "expected record-constructor descriptor as argument" obj))
 
-(define-argument-validation (false/rcd who obj)
-  (or (not obj) (<rcd>? obj))
-  (assertion-violation who "expected false or record-constructor descriptor as argument" obj))
-
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (record who obj)
@@ -450,10 +446,6 @@
 (define-argument-validation (uid who obj)
   (or (not obj) (symbol? obj))
   (assertion-violation who "expected false or symbol as UID argument" obj))
-
-(define-argument-validation (protocol who obj)
-  (or (not obj) (procedure? obj))
-  (assertion-violation who "expected protocol function as argument" obj))
 
 (define-argument-validation (fields-specification-vector who obj)
   (%fields-specification-vector? obj)
@@ -689,17 +681,27 @@
       (let* ((protocol		(or protocol
 				    (%make-default-protocol parent-rcd (<rtd>-fields-number rtd))))
 	     (initialiser	(<rtd>-initialiser rtd))
+	     ;;Notice  that, with  this implementation,  the constructor
+	     ;;can call  the maker any  number of times and  nothing bad
+	     ;;happens on this  side.  If the client code  messes up its
+	     ;;state it is its own business.
 	     (maker		(if parent-rcd
 				    (let ((parent-constructor (<rcd>-constructor parent-rcd)))
 				      (lambda parent-constructor-args
 					(apply parent-constructor parent-constructor-args)
 					initialiser))
 				  initialiser))
-	     (constructor	(protocol maker))
-	     (builder		(lambda constructor-args
-				  (parametrise ((record-being-built (%alloc-clean-r6rs-record rtd)))
-				    (apply constructor constructor-args)))))
-	(make-<rcd> rtd parent-rcd maker constructor builder))))
+	     (constructor	(protocol maker)))
+	(with-arguments-validation (who)
+	    ((constructor	constructor))
+	  ;;We  ignore   the  actual   value  returned  by   the  client
+	  ;;constructor; we know we have to return the record.
+	  (let ((builder (lambda constructor-args
+			   (let ((the-record (%alloc-clean-r6rs-record rtd)))
+			     (parametrise ((record-being-built the-record))
+			       (apply constructor constructor-args)
+			       the-record)))))
+	    (make-<rcd> rtd parent-rcd maker constructor builder))))))
 
   (define (%make-default-protocol parent-rcd this-number-of-fields)
     (if parent-rcd
@@ -732,12 +734,27 @@
 	  (let-values (((tail rest) (next-value (unsafe.cdr field-values) (unsafe.fxsub1 count))))
 	    (values (cons (car field-values) tail) rest))))))
 
+;;; --------------------------------------------------------------------
+
+  (define-argument-validation (false/rcd who obj)
+    (or (not obj) (<rcd>? obj))
+    (assertion-violation who "expected false or record-constructor descriptor as argument" obj))
+
+  (define-argument-validation (protocol who obj)
+    (or (not obj) (procedure? obj))
+    (assertion-violation who "expected protocol function as argument" obj))
+
   (define-argument-validation (rtd&parent-rcd who rtd parent-rcd)
     (or (not parent-rcd) (eq? (<rtd>-parent rtd) (<rcd>-rtd parent-rcd)))
     (assertion-violation who
       "expected false or record-constructor descriptor associated to the \
        parent of the record-type descriptor"
       rtd parent-rcd))
+
+  (define-argument-validation (constructor who obj)
+    (procedure? obj)
+    (assertion-violation who
+      "expected procedure as constructor value returned by protocol function" obj))
 
   (define-argument-validation (default-constructor-argnum who argnum this-number-of-fields)
     (and (fixnum? argnum) (unsafe.fx<= this-number-of-fields argnum))
