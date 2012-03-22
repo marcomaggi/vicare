@@ -388,8 +388,8 @@ gc_tconc_push(gc_t* gc, ikptr tcbucket) {
   }
 }
 
-
-#ifdef VICARE_DEBUGGING
+/* #define DEBUG_ADD_OBJECT	1 */
+#if (((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC)) || (defined DEBUG_ADD_OBJECT))
 static ikptr add_object_proc(gc_t* gc, ikptr x, char* caller);
 #define add_object(gc,x,caller) add_object_proc(gc,x,caller)
 #else
@@ -1052,7 +1052,7 @@ add_list (gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc)
 
 
 static ikptr
-#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
+#if (((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC)) || (defined DEBUG_ADD_OBJECT))
 add_object_proc (gc_t* gc, ikptr X, char* caller)
 /* Move  the live  object X,  and all  its component  objects, to  a new
    location  and return  a new  machine  word which  must replace  every
@@ -1201,39 +1201,78 @@ add_object_proc (gc_t* gc, ikptr X)
       /* FIXME What the  hell is going on with  this moving operation?!?
 	 It  does not  look like  a legal  move operation  for  RTDs and
 	 struct instances.  (Marco Maggi; Jan 11, 2012) */
-      ikptr	number_of_fields = ref(first_word, off_rtd_length);
+      /* The  layout  of   Vicare's  struct-type  descriptors  and  R6RS
+	 record-type descriptors is as follows:
+
+	 Vicare's struct-type descriptor:
+
+	    RTD  name size  other fields
+	   |----|----|----|------------
+
+	 R6RS record-type descriptor:
+
+	    RTD  name size  other fields
+	   |----|----|----|------------
+
+	 The layout  of Vicare's struct instances  R6RS record instances
+	 is as follows:
+
+	 Vicare's struct instance
+
+	    RTD   fields
+	   |----|---------
+
+	 R6RS record instance:
+
+	    RTD   fields
+	   |----|---------
+
+	 Both  Vicare's  struct-type  descriptors and  R6RS  record-type
+	 descriptors have the total number of fields at the same offset.
+	 The value  in the number-of-fields word  represents: as fixnum,
+	 the number of  fields in an instance; as  C integer, the number
+	 of bytes needed to store the fields of an instance. */
+      ikptr	s_number_of_fields = IK_REF(first_word, off_rtd_length);
       ikptr	Y;
-      if (number_of_fields & ((1<<IK_ALIGN_SHIFT)-1)) {
-        /* number_of_fields = n * object_alignment + 4
+      if (s_number_of_fields & ((1<<IK_ALIGN_SHIFT)-1)) {
+	// fprintf(stderr, "%lx align size %ld\n", X, IK_UNFIX(s_number_of_fields));
+        /* The number of  fields is odd, which means  that the number of
+	   words needed to store this record is even.
+
+	   s_number_of_fields = n * object_alignment + 4
 	   => memreq = n * object_alignment + 8 = (n+1) * object_alignment
 	   => aligned */
-	Y = gc_alloc_new_ptr(number_of_fields+wordsize, gc) | vector_tag;
+	Y = gc_alloc_new_ptr(s_number_of_fields+wordsize, gc) | vector_tag;
         IK_REF(Y, off_record_rtd) = first_word;
         {
           ikptr i;
-          ikptr p = Y + off_record_data; /* P is untagged */
-          ikptr q = X + off_record_data; /* Q is untagged */
-          ref (p, 0) = ref(q, 0);
-          for(i=wordsize; i<number_of_fields; i+=(2*wordsize)) {
-            IK_REF(p, i)          = IK_REF(q, i);
-            IK_REF(p, i+wordsize) = IK_REF(q, i+wordsize);
+          ikptr dst = Y + off_record_data; /* DST is untagged */
+          ikptr src = X + off_record_data; /* SRC is untagged */
+          IK_REF(dst, 0) = IK_REF(src, 0);
+          for (i=wordsize; i<s_number_of_fields; i+=(2*wordsize)) {
+            IK_REF(dst, i)          = IK_REF(src, i);
+            IK_REF(dst, i+wordsize) = IK_REF(src, i+wordsize);
           }
         }
       } else {
-        /* number_of_fields = n * object_alignment
+	// fprintf(stderr, "%lx padded size %ld\n", X, IK_UNFIX(s_number_of_fields));
+        /* The number of fields is  even, which means that the number of
+	   words needed to store this record is odd.
+
+	   s_number_of_fields = n * object_alignment
 	   => memreq = n * object_alignment + 4 + 4 (pad) */
-	Y = gc_alloc_new_ptr(number_of_fields+(2*wordsize), gc) | vector_tag;
+	Y = gc_alloc_new_ptr(s_number_of_fields+(2*wordsize), gc) | vector_tag;
         IK_REF(Y, off_record_rtd) = first_word;
         {
           ikptr i;
-          ikptr p = Y + off_record_data; /* P is untagged */
-          ikptr q = X + off_record_data; /* Q is untagged */
-          for (i=0; i<number_of_fields; i+=(2*wordsize)) {
-            IK_REF(p, i)          = IK_REF(q, i);
-            IK_REF(p, i+wordsize) = IK_REF(q, i+wordsize);
+          ikptr dst = Y + off_record_data; /* DST is untagged */
+          ikptr src = X + off_record_data; /* SRC is untagged */
+          for (i=0; i<s_number_of_fields; i+=(2*wordsize)) {
+            IK_REF(dst, i)          = IK_REF(src, i);
+            IK_REF(dst, i+wordsize) = IK_REF(src, i+wordsize);
           }
         }
-        IK_REF(Y, number_of_fields + off_record_data) = 0;
+        IK_REF(Y, s_number_of_fields + off_record_data) = 0;
       }
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
