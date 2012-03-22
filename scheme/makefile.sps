@@ -241,7 +241,8 @@
   ;;does  not itself  cause an  error (which  may lead  to  the infamous
   ;;Error: Error: Error: Error: Error: Error: Error: Error: Error: ...).
   ;;
-  '("ikarus.singular-objects.sls"
+  '("ikarus.emergency.sls"
+    "ikarus.singular-objects.sls"
     "ikarus.handlers.sls"
     "ikarus.multiple-values.sls"
     "ikarus.control.sls"
