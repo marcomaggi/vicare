@@ -137,6 +137,7 @@ EXTRA_DIST= last-revision				\
 	ikarus.control.sls				\
 	ikarus.date-string.sls				\
 	ikarus.debugger.sls				\
+	ikarus.emergency.sls				\
 	ikarus.enumerations.sls				\
 	ikarus.equal.sls				\
 	ikarus.exceptions.sls				\
