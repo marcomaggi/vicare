@@ -75,7 +75,10 @@
 	  syntax-case
 	  syntax
 	  with-syntax)
-    (prefix (rnrs syntax-case) sys.))
+    (prefix (rnrs syntax-case) sys.)
+    (prefix (only (ikarus.keywords)
+		  keyword?)
+	    keywords.))
 
   (define (set-cons x ls)
     (cond
@@ -627,7 +630,7 @@
   (define self-evaluating?
     (lambda (x) ;;; am I missing something here?
       (or (number? x) (string? x) (char? x) (boolean? x)
-          (bytevector? x))))
+          (bytevector? x) (keywords.keyword? x))))
 
   ;;; strip is used to remove the wrap of a syntax object.
   ;;; It takes an stx's expr and marks.  If the marks contain
