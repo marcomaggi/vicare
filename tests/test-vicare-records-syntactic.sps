@@ -63,6 +63,21 @@
   #t)
 
 
+(parametrise ((check-test-name	'bugs))
+
+  (check
+      (catch #f
+	(let ()
+	  (define-record-type alpha
+	    (fields a)
+	    (protocol (lambda (maker)
+			(newline))))
+	  (make-alpha 1)))
+    => (list (void)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
