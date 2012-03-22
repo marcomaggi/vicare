@@ -20,8 +20,9 @@
   (export write display format printf fprintf print-error
           print-unicode print-graph put-datum traverse
           traversal-helpers)
-
-  (import
+  (import (except (ikarus)
+		  write display format printf fprintf print-error print-unicode print-graph
+		  put-datum)
     (rnrs hashtables)
     (ikarus system $chars)
     (ikarus system $strings)
@@ -40,9 +41,8 @@
 		  input/output-port?)
 	    io.)
     (only (ikarus.pretty-formats) get-fmt)
-    (except (ikarus)
-      write display format printf fprintf print-error print-unicode print-graph
-      put-datum))
+    (only (ikarus records procedural)
+	  print-r6rs-record-instance))
 
   (define print-unicode
     (make-parameter #f))
@@ -540,19 +540,22 @@
          (write-char* "#<unknown>" p)
          i]
         [else
-         (write-char #\# p)
-         (write-char #\[ p)
-         (let ([i (wr (struct-name x) p m h i)])
-           (let ([n (struct-length x)])
-             (let f ([idx 0] [i i])
-               (cond
-                 [(fx= idx n)
-                  (write-char #\] p)
-                  i]
-                 [else
-                  (write-char #\space p)
-                  (f (fxadd1 idx)
-                     (wr (struct-ref x idx) p m h i))]))))]))
+	 (if (record-type-descriptor? (struct-type-descriptor x))
+	     (print-r6rs-record-instance x p)
+	   (begin ;it is a Vicare's struct
+	     (write-char #\# p)
+	     (write-char #\[ p)
+	     (let ([i (wr (struct-name x) p m h i)])
+	       (let ([n (struct-length x)])
+		 (let f ([idx 0] [i i])
+		   (cond
+		    [(fx= idx n)
+		     (write-char #\] p)
+		     i]
+		    [else
+		     (write-char #\space p)
+		     (f (fxadd1 idx)
+			(wr (struct-ref x idx) p m h i))]))))))]))
     (define (write-custom-struct out p m h i)
       (let ([i
              (let f ([cache (cdr out)])

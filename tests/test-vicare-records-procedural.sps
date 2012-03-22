@@ -623,6 +623,34 @@
 	  ((record-predicate rtd) (builder)))
       => #t))
 
+  (check	;protocol function calling maker directly
+      (catch #f
+	(let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#()))))
+	  (make-record-constructor-descriptor
+	   (rtd: rtd) (parent-rcd: #f) (protocol: (lambda (maker) (maker))))))
+    => '())
+
+  #t)
+
+
+(parametrise ((check-test-name	'printer))
+
+  (check
+      (let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#((mutable a) (mutable b)))))
+	     (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: #f) (protocol: #f)))
+	     (builder	(record-constructor rcd)))
+	(call-with-string-output-port
+	    (lambda (port)
+	      (display (builder 1 2) port)
+	      )))
+    => "#[r6rs-record: rtd-0 a=1 b=2]\n")
+
+
   #t)
 
 
