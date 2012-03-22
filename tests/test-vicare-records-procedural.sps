@@ -1,7 +1,7 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: tests for r6rs records
+;;;Contents: tests for R6RS records, procedural layer
 ;;;Date: Fri Mar 16, 2012
 ;;;
 ;;;Abstract
@@ -33,7 +33,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare R6RS records\n")
+(check-display "*** testing Vicare R6RS records, procedural layer\n")
 
 
 ;;;; syntax helpers
@@ -622,22 +622,6 @@
 	       (builder	(record-constructor rcd)))
 	  ((record-predicate rtd) (builder)))
       => #t))
-
-  #t)
-
-
-#;(parametrise ((check-test-name	'misc))
-
-  (let ()
-    (define-record-type <alpha>
-      (nongenerative ciao-hello-ciao-1)
-      (fields a))
-
-    (check
-	(record-rtd (make-<alpha> 1))
-      => (record-type-descriptor <alpha>))
-
-    #f)
 
   #t)
 

@@ -137,7 +137,8 @@ TESTS			=	\
 	test-vicare-pointers.sps			\
 	test-vicare-promises.sps			\
 	test-vicare-reader.sps				\
-	test-vicare-records.sps				\
+	test-vicare-records-procedural.sps		\
+	test-vicare-records-syntactic.sps		\
 	test-vicare-round.sps				\
 	test-vicare-string-to-number.sps		\
 	test-vicare-strings.sps				\
@@ -314,7 +315,8 @@ EXTRA_DIST =	\
 	test-vicare-posix.sps				\
 	test-vicare-promises.sps			\
 	test-vicare-reader.sps				\
-	test-vicare-records.sps				\
+	test-vicare-records-procedural.sps		\
+	test-vicare-records-syntactic.sps		\
 	test-vicare-round.sps				\
 	test-vicare-sel.sps				\
 	test-vicare-shared-memory.sps			\
