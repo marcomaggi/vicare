@@ -2536,17 +2536,23 @@ structure and it is of type @var{rtd}.
 
 @defun struct-rtd @var{stru}
 @defunx struct-type-descriptor @var{stru}
-Return the @var{rtd} of the data structure @var{stru}.
+Return the @var{rtd} of the data structure @var{stru}.  Notice that this
+function works with both Vicare's structs and @rnrs{6} records.
 @end defun
 
 
 @defun struct-length @var{stru}
-Return the number of fields in the data structure @var{stru}.
+Return the number of fields in the data structure @var{stru}.  Notice
+that this function works with both Vicare's structs and @rnrs{6}
+records.
+
 @end defun
 
 
 @defun struct-name @var{stru}
 Return a string representing the name of the data structure @var{stru}.
+Notice that this function works with both Vicare's structs and @rnrs{6}
+records.
 @end defun
 
 

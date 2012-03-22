@@ -340,7 +340,8 @@
 	   (eq? rtd ($struct-rtd x))))))
 
 (define (struct-rtd x)
-  ;;Return the RTD of the data structure X.
+  ;;Return the RTD  of the data structure X.   Notice that this function
+  ;;works with both Vicare's structs and R6RS records.
   ;;
   (define who 'struct-rtd)
   (with-arguments-validation (who)
@@ -348,7 +349,8 @@
     ($struct-rtd x)))
 
 (define (struct-length x)
-  ;;Return the number of fields in the data structure X.
+  ;;Return the  number of fields in  the data structure  X.  Notice that
+  ;;this function works with both Vicare's structs and R6RS records.
   ;;
   (define who 'struct-length)
   (with-arguments-validation (who)
@@ -356,7 +358,9 @@
     (rtd-length ($struct-rtd x))))
 
 (define (struct-name x)
-  ;;Return a string representing the name of the data structure X.
+  ;;Return  a string  representing the  name  of the  data structure  X.
+  ;;Notice that this function works  with both Vicare's structs and R6RS
+  ;;records.
   ;;
   (define who 'struct-name)
   (with-arguments-validation (who)
