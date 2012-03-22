@@ -32,7 +32,7 @@
     record-type-field-names
 
     ;; extension utility functions, non-R6RS
-    rtd-subtype?)
+    rtd-subtype?			print-r6rs-record-instance)
   (import (except (ikarus)
 		  ;; bindings for (rnrs records procedural (6))
 		  make-record-type-descriptor		make-record-constructor-descriptor
@@ -49,7 +49,7 @@
 		  record-type-field-names
 
 		  ;; extension utility functions, non-R6RS
-		  rtd-subtype?)
+		  rtd-subtype?				print-r6rs-record-instance)
     (ikarus system $structs)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
@@ -117,12 +117,28 @@
 ;;
 
 (define-struct <rtd>
-  ;;R6RS record type descriptor.
+  ;;R6RS record type descriptor.  Notice  that the first two fields have
+  ;;the same meaning  of the firts two fields  of a Vicare's struct-type
+  ;;descriptor.
+  ;;
+  ;;Vicare's struct-type descriptor:
+  ;;
+  ;;   RTD  name size  other fields
+  ;;  |----|----|----|------------
+  ;;
+  ;;R6RS record-type descriptor:
+  ;;
+  ;;   RTD  name size  other fields
+  ;;  |----|----|----|------------
+  ;;
   (name
 		;Record type name, for debugging purposes.
-   size
+   total-fields-number
 		;Total  number of  fields, including  the fields  of the
 		;parents.
+   fields-number
+		;This subtype's  number of fields,  excluding the fields
+		;of the parents.
    parent
 		;False or  instance of RTD  structure, it is  the parent
 		;RTD.
@@ -142,6 +158,10 @@
 		;whose car is  a boolean, true if the  field is mutable,
 		;and whose cdr is a Scheme symbol representing the field
 		;name.
+   initialiser
+		;Function used  to initialise  the fields of  an already
+		;allocated R6RS  record.  This function is  the same for
+		;every record-constructor descriptor.
    ))
 
 (define (%rtd-printer S port sub-printer)
@@ -149,7 +169,7 @@
     (display thing port))
   (%display "#[rtd")
   (%display " name=")		(%display (<rtd>-name S))
-  (%display " size=")		(%display (<rtd>-size S))
+  (%display " size=")		(%display (<rtd>-total-fields-number S))
   (let ((prtd (<rtd>-parent S)))
     (if (<rtd>? prtd)
 	(begin
@@ -161,6 +181,7 @@
   (%display " sealed?=")	(%display (<rtd>-sealed? S))
   (%display " opaque?=")	(%display (<rtd>-opaque? S))
   (%display " fields=")		(%display (<rtd>-fields  S))
+  (%display " initialiser=")	(%display (<rtd>-initialiser  S))
   (%display "]"))
 
 (define-struct <rcd>
@@ -171,8 +192,19 @@
    parent-rcd
 		;False   or   a  struct   of   type   RCD,  the   parent
 		;record-constructor descriptor.
-   protocol
-		;A function, the protocol function for this RCD.
+   maker
+		;A function.   It is the function to  which the protocol
+		;function  is applied  to.  When  there are  no parents:
+		;this function  is just  the initialiser of  the record.
+		;When there  are parents: it  is a function  calling the
+		;parent's   constructor  and  returning   this  record's
+		;initialiser.
+   constructor
+		;A function.  It is  the result of applying the protocol
+		;function to the maker function.
+   builder
+		;A function.  It is the public constructor function, the
+		;one returned by RECORD-CONSTRUCTOR.
    ))
 
 (define (%rcd-printer S port sub-printer)
@@ -181,8 +213,109 @@
   (%display "#[rcd")
   (%display " rtd=")		(%display (<rcd>-rtd S))
   (%display " prcd=")		(%display (<rcd>-parent-rcd S))
-  (%display " protocol=")	(%display (<rcd>-protocol S))
+  (%display " maker=")		(%display (<rcd>-maker S))
+  (%display " constructor=")	(%display (<rcd>-constructor S))
+  (%display " builder=")	(%display (<rcd>-builder S))
   (%display "]"))
+
+
+;;;; record construction helpers
+
+(define (%alloc-clean-r6rs-record rtd)
+  ;;Allocate a new R6RS record structure and set all the fields to void.
+  ;;
+  (let* ((N (<rtd>-total-fields-number rtd))
+	 (S ($make-struct rtd N))
+	 (V (void)))
+    (let loop ((i 0))
+      (if (unsafe.fx= i N)
+	  S
+	(begin
+	  ($struct-set! S i V)
+	  (loop (unsafe.fxadd1 i)))))))
+
+(define record-being-built
+  ;;Hold the record structure while it is built.
+  ;;
+  (make-parameter #f))
+
+(define (%make-record-initialiser rtd)
+  ;;Return the initialiser function for an R6RS record.
+  ;;
+  (let ((fields-number	(<rtd>-fields-number rtd))
+	(parent-rtd	(<rtd>-parent rtd)))
+    (if parent-rtd
+	(let ((start-index (<rtd>-total-fields-number parent-rtd)))
+	  (lambda field-values
+	    (%fill-record-fields (record-being-built) rtd start-index fields-number
+				 field-values field-values)))
+      (case (<rtd>-fields-number rtd)
+	((0)  record-being-built) ;just return the record itself
+	((1)  %initialiser-without-parent-1)
+	((2)  %initialiser-without-parent-2)
+	((3)  %initialiser-without-parent-3)
+	((4)  %initialiser-without-parent-4)
+	((5)  %initialiser-without-parent-5)
+	((6)  %initialiser-without-parent-6)
+	((7)  %initialiser-without-parent-7)
+	((8)  %initialiser-without-parent-8)
+	((9)  %initialiser-without-parent-9)
+	(else (lambda field-values
+		(%initialiser-without-parent+ rtd field-values)))))))
+
+(let-syntax
+    ((define-initialiser-without-parent
+       (lambda (stx)
+	 (define (%iota count)
+	   ;;Return a  list of exact  integers from 0 included  to COUNT
+	   ;;excluded.
+	   (let loop ((count	(fx- count 1))
+		      (ret	'()))
+	     (if (negative? count)
+		 ret
+	       (loop (fx- count 1) (cons count ret)))))
+	 (syntax-case stx ()
+	   ((_ ?who ?argnum)
+	    (let ((indices (%iota (syntax->datum #'?argnum))))
+	      (with-syntax (((INDEX ...) indices)
+			    ((ARG   ...) (generate-temporaries indices)))
+		#'(define (?who ARG ...)
+		    (let ((the-record (record-being-built)))
+		      ($struct-set! the-record INDEX ARG)
+		      ...
+		      the-record)))))))))
+  (define-initialiser-without-parent %initialiser-without-parent-1 1)
+  (define-initialiser-without-parent %initialiser-without-parent-2 2)
+  (define-initialiser-without-parent %initialiser-without-parent-3 3)
+  (define-initialiser-without-parent %initialiser-without-parent-4 4)
+  (define-initialiser-without-parent %initialiser-without-parent-5 5)
+  (define-initialiser-without-parent %initialiser-without-parent-6 6)
+  (define-initialiser-without-parent %initialiser-without-parent-7 7)
+  (define-initialiser-without-parent %initialiser-without-parent-8 8)
+  (define-initialiser-without-parent %initialiser-without-parent-9 9))
+
+(define (%initialiser-without-parent+ rtd field-values)
+  (%fill-record-fields (record-being-built) rtd 0 (<rtd>-fields-number rtd)
+		       field-values field-values))
+
+(define (%fill-record-fields the-record rtd field-index fields-number
+			     all-field-values field-values)
+  (define (%wrong-num-args)
+    (assertion-violation (<rtd>-name rtd)
+      (string-append "wrong number of arguments to record initialiser, expected "
+		     (number->string (<rtd>-fields-number rtd))
+		     " given " (number->string (length all-field-values)))
+      rtd all-field-values))
+  (if (null? field-values)
+      (if (fx=? 0 fields-number)
+	  the-record
+	(%wrong-num-args))
+    (if (fx=? 0 fields-number)
+	(%wrong-num-args)
+      (begin
+	($struct-set! the-record field-index (car field-values))
+	(%fill-record-fields the-record rtd (fx+ 1 field-index) (fx- fields-number 1)
+			     all-field-values (cdr field-values))))))
 
 
 ;;;; helpers
@@ -270,12 +403,6 @@
   (or (not obj) (<rcd>? obj))
   (assertion-violation who "expected false or record-constructor descriptor as argument" obj))
 
-(define-argument-validation (rtd&prcd who rtd prcd)
-  (eq? (<rtd>-parent rtd) (<rcd>-rtd prcd))
-  (assertion-violation who
-    "record-constructor descriptor is not associated to the parent of the record-type descriptor"
-    rtd prcd))
-
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (record who obj)
@@ -298,10 +425,11 @@
   ;;
   (let ((rtd^ ($struct-rtd record)))
     (or (eq? rtd rtd^)
-	(let upper-parent ((prtd^ (<rtd>-parent rtd^)))
-	  (and prtd^
-	       (or (eq? prtd^ rtd) ;RECORD is an instance of a subtype of RTD
-		   (upper-parent (<rtd>-parent prtd^)))))))
+	(and (<rtd>? rtd^)
+	     (let upper-parent ((prtd^ (<rtd>-parent rtd^)))
+	       (and prtd^
+		    (or (eq? rtd prtd^) ;RECORD is an instance of a subtype of RTD
+			(upper-parent (<rtd>-parent prtd^))))))))
   (assertion-violation who
     "invalid record type as accessor or mutator argument" record rtd))
 
@@ -355,20 +483,6 @@
   (unsafe.car (unsafe.vector-ref (<rtd>-fields rtd) relative-field-index))
   (assertion-violation who
     "selected record field is not mutable" relative-field-index rtd))
-
-
-;;;; table of defined non-generative RTDs
-
-(define-constant RTD-TABLE
-  (make-eq-hashtable))
-
-(define-inline (%intern-nongenerative-rtd! ?uid ?rtd)
-  (let ((rtd ?rtd))
-    (hashtable-set! RTD-TABLE ?uid rtd)
-    rtd))
-
-(define-inline (%lookup-nongenerative-rtd ?uid)
-  (hashtable-ref RTD-TABLE ?uid #f))
 
 
 ;;;; record instance inspection
@@ -456,10 +570,10 @@
   (with-arguments-validation (who)
       ((rtd	rtd)
        (index	field-index))
-    (let* ((total-number-of-fields	(<rtd>-size   rtd))
+    (let* ((total-number-of-fields	(<rtd>-total-fields-number   rtd))
 	   (prtd			(<rtd>-parent rtd))
 	   (absolute-field-index	(if prtd
-					    (+ field-index (<rtd>-size prtd))
+					    (+ field-index (<rtd>-total-fields-number prtd))
 					  field-index)))
       (cond ((not (fixnum? absolute-field-index))
 	     (assertion-violation who
@@ -473,15 +587,27 @@
 	       "relative field index out of range for record type" field-index))))))
 
 
-(define (make-record-type-descriptor name parent uid sealed? opaque? fields)
-  ;;Return a record-type descriptor  representing a record type distinct
-  ;;from all built-in types and other record types.
-  ;;
-  ;;See the R6RS document for details on the arguments.
-  ;;
+(module (make-record-type-descriptor)
+
+  (define-constant RTD-TABLE
+    (make-eq-hashtable))
+
+  (define-inline (%intern-nongenerative-rtd! ?uid ?rtd)
+    (let ((rtd ?rtd))
+      (hashtable-set! RTD-TABLE ?uid rtd)
+      rtd))
+
+  (define-inline (%lookup-nongenerative-rtd ?uid)
+    (hashtable-ref RTD-TABLE ?uid #f))
+
   (define who 'make-record-type-descriptor)
 
-  (define-inline (main)
+  (define (make-record-type-descriptor name parent uid sealed? opaque? fields)
+    ;;Return  a  record-type   descriptor  representing  a  record  type
+    ;;distinct from all built-in types and other record types.
+    ;;
+    ;;See the R6RS document for details on the arguments.
+    ;;
     (with-arguments-validation (who)
 	((record-type-name		name)
 	 (false/non-sealed-parent-rtd	parent)
@@ -489,24 +615,27 @@
 	 (opaque			opaque?)
 	 (uid				uid)
 	 (fields-specification-vector	fields))
-      (let ((normalised-fields (%normalise-fields-vector fields)))
-	(if (symbol? uid)
-	    (%make-nongenerative-rtd name parent uid sealed? opaque? normalised-fields)
-	  (%generate-rtd name parent uid sealed? opaque? normalised-fields)))))
+      (let* ((normalised-fields (%normalise-fields-vector fields))
+	     (rtd (if (symbol? uid)
+		      (%make-nongenerative-rtd name parent uid sealed? opaque? normalised-fields fields)
+		    (%generate-rtd name parent uid sealed? opaque? normalised-fields))))
+	(set-<rtd>-initialiser! rtd (%make-record-initialiser rtd))
+	rtd)))
 
   (define (%generate-rtd name parent uid sealed? opaque? normalised-fields)
     ;;Build and return a new instance of RTD struct.
     ;;
     ;;Here we do not care if UID is a symbol or false.
     ;;
-    (define-inline (%make-rtd ?opaque? ?parent-size)
-      (make-<rtd> name (fx+ ?parent-size (vector-length normalised-fields))
-		parent sealed? ?opaque? uid normalised-fields))
-    (if (not parent)
-	(%make-rtd opaque? 0)
-      (%make-rtd (or opaque? (<rtd>-opaque? parent)) (<rtd>-size parent))))
+    (let ((fields-number (unsafe.vector-length normalised-fields)))
+      (if (not parent)
+	  (make-<rtd> name fields-number fields-number
+		      parent sealed? opaque? uid normalised-fields (void))
+	(make-<rtd> name (fx+ fields-number (<rtd>-total-fields-number parent))
+		    fields-number parent sealed? (or opaque? (<rtd>-opaque? parent))
+		    uid normalised-fields (void)))))
 
-  (define (%make-nongenerative-rtd name parent uid sealed? opaque? normalised-fields)
+  (define (%make-nongenerative-rtd name parent uid sealed? opaque? normalised-fields fields)
     ;;Build  and return  a  new instance  of  RTD or  return an  already
     ;;generated RTD.   If the  specified UID is  already present  in the
     ;;table of  interned RTDs: check  that the arguments  are compatible
@@ -537,216 +666,95 @@
 	(%intern-nongenerative-rtd!
 	 uid (%generate-rtd name parent uid sealed? opaque? normalised-fields)))))
 
-  (main))
+  #| end of module |# )
 
 
-(define (make-record-constructor-descriptor rtd prcd protocol)
-  ;;Return   a  record-constructor   descriptor   specifying  a   record
-  ;;constructor, which  can be  used to construct  record values  of the
-  ;;type   specified   by  RTD,   and   which   can   be  obtained   via
-  ;;RECORD-CONSTRUCTOR.
-  ;;
-  ;;PRCD must be false or a record-constructor descriptor for the parent
-  ;;of RTD; PROTOCOL must be a function.
-  ;;
-  (define who 'make-record-constructor-descriptor)
-  (with-arguments-validation (who)
-      ((rtd		rtd)
-       (protocol	protocol)
-       (false/rcd	prcd))
-    (if (not prcd)
-	(make-<rcd> rtd #f protocol)
-      (with-arguments-validation (who)
-	  ((rtd&prcd rtd prcd))
-	(make-<rcd> rtd prcd protocol)))))
+(module (make-record-constructor-descriptor)
 
-
-;;Let's say we have the following definition:
-;;
-;; (define rtd (make-record-type-descriptor 'name #f #f #f #f '#()))
-;; (define num-of-fields (vector-length (record-type-field-names rtd)))
-;;
-;; (define protocol-wrapper
-;;   (lambda (list-of-field-values-lists)
-;;     (protocol (%make-allocator-function list-of-field-values-lists ?list-of-formals))))
-;; (lambda )
-;;   ($make-struct main-rtd (<rtd>-size main-rtd)))
-;;
-;;
-
-(define (record-constructor main-rcd)
-  (define who 'record-constructor)
-  (define main-rtd)
-
-  (define-inline (main)
+  (define (make-record-constructor-descriptor rtd parent-rcd protocol)
+    ;;Return  a   record-constructor  descriptor  specifying   a  record
+    ;;constructor, which can  be used to construct record  values of the
+    ;;type   specified  by   RTD,  and   which  can   be   obtained  via
+    ;;RECORD-CONSTRUCTOR.
+    ;;
+    ;;PARENT-RCD must  be false  or a record-constructor  descriptor for
+    ;;the parent of RTD; PROTOCOL must be a function.
+    ;;
+    (define who 'make-record-constructor-descriptor)
     (with-arguments-validation (who)
-	((rcd	main-rcd))
-      (set! main-rtd (<rcd>-rtd main-rcd))
-      ;;The protocol wrapper is applied  to null and the return value is
-      ;;the constructor function.
-      ((%protocol-wrapper (<rtd>-size main-rtd) (<rcd>-parent-rcd main-rcd) (<rcd>-protocol main-rcd))
-       '())))
+	((rtd			rtd)
+	 (protocol		protocol)
+	 (false/rcd		parent-rcd)
+	 (rtd&parent-rcd	rtd parent-rcd))
+      (let* ((protocol		(or protocol
+				    (%make-default-protocol parent-rcd (<rtd>-fields-number rtd))))
+	     (initialiser	(<rtd>-initialiser rtd))
+	     (maker		(if parent-rcd
+				    (let ((parent-constructor (<rcd>-constructor parent-rcd)))
+				      (lambda parent-constructor-args
+					(apply parent-constructor parent-constructor-args)
+					initialiser))
+				  initialiser))
+	     (constructor	(protocol maker))
+	     (builder		(lambda constructor-args
+				  (parametrise ((record-being-built (%alloc-clean-r6rs-record rtd)))
+				    (apply constructor constructor-args)))))
+	(make-<rcd> rtd parent-rcd maker constructor builder))))
 
-  (define (%protocol-wrapper total-number-of-fields prcd protocol)
-    (if prcd
-  	(%make-wrapper-for-protocol/with-parent total-number-of-fields prcd protocol)
-      (%make-wrapper-for-protocol/without-parent total-number-of-fields protocol)))
+  (define (%make-default-protocol parent-rcd this-number-of-fields)
+    (if parent-rcd
+	(lambda (make-parent-record) ;default protocol function
+	  (lambda all-field-values
+	    (let ((who    'default-protocol-function)
+		  (argnum (length all-field-values)))
+	      (with-arguments-validation (who)
+		  ((default-constructor-argnum	argnum this-number-of-fields))
+		(let-values (((parent-fields this-fields)
+			      (%split all-field-values (unsafe.fx- argnum this-number-of-fields))))
+		  (apply (apply make-parent-record parent-fields) this-fields))))))
+      (lambda (make-this-record) ;default protocol function
+	(lambda field-values
+	  (apply make-this-record field-values)))
+      ))
 
-  (define (%make-wrapper-for-protocol/without-parent total-number-of-fields protocol)
-    ;;Return a constructor wrapper.
+  (define (%split all-field-values count)
+    ;;Split  the list  ALL-FIELD-VALUES and  return two  values:  a list
+    ;;holding  the  first COUNT  values  from  ALL-FIELD-VALUES, a  list
+    ;;holding the rest.
     ;;
-    (define (sub-main)
-      ;;When  a record-type  descriptor is  defined with  the procedural
-      ;;layer, the number of fields is known only at runtime; this makes
-      ;;it   impossible  to  generate   allocator  functions   with  one
-      ;;initialisation form for each field.
-      ;;
-      ;;We distinguish the  case of "few fields" from  the case of "many
-      ;;fields", because  of the  following hypothesis: when  few fields
-      ;;exist, evaluating one initialisation form for each field is more
-      ;;efficient than putting  the values in a list,  and act upon them
-      ;;with loops.
-      ;;
-      (case total-number-of-fields
-	((0)  (expand-one-case 0 ()))
-	((1)  (expand-one-case 1 (arg0)))
-	((2)  (expand-one-case 2 (arg0 arg1)))
-	((3)  (expand-one-case 3 (arg0 arg1 arg2)))
-	((4)  (expand-one-case 4 (arg0 arg1 arg2 arg3)))
-	(else (expand-one-case #f #f)))) ;more than 4
+    (define who 'default-protocol-function)
+    (let next-value ((field-values	all-field-values)
+		     (count		count))
+      (with-arguments-validation (who)
+	  ((enough-constructor-formals	count field-values))
+	(if (unsafe.fx= 0 count)
+	    (values '() field-values)
+	  (let-values (((tail rest) (next-value (unsafe.cdr field-values) (unsafe.fxsub1 count))))
+	    (values (cons (car field-values) tail) rest))))))
 
-    (define-syntax expand-one-case
-      (syntax-rules ()
-	((_ ?argnum ?list-of-formals)
-	 (if protocol
-	     (lambda (list-of-field-values-lists) ;protocol wrapper
-	       (protocol (%make-allocator-function list-of-field-values-lists ?argnum ?list-of-formals)))
-	   (lambda (list-of-field-values-lists) ;protocol wrapper
-	     (%make-allocator-function list-of-field-values-lists ?argnum ?list-of-formals))))))
+  (define-argument-validation (rtd&parent-rcd who rtd parent-rcd)
+    (or (not parent-rcd) (eq? (<rtd>-parent rtd) (<rcd>-rtd parent-rcd)))
+    (assertion-violation who
+      "expected false or record-constructor descriptor associated to the \
+       parent of the record-type descriptor"
+      rtd parent-rcd))
 
-    ;; (let ((record (constructor list-of-field-values-lists ?list-of-formals)))
-    ;;   (with-arguments-validation (who)
-    ;; 	  ((record			record)
-    ;; 	   (built-record-and-rtd	record main-rtd))
-    ;; 	record)))))))
+  (define-argument-validation (default-constructor-argnum who argnum this-number-of-fields)
+    (and (fixnum? argnum) (unsafe.fx<= this-number-of-fields argnum))
+    (assertion-violation who "not enough arguments to record constructor" argnum))
 
-    (define-syntax %make-allocator-function
-      ;;Expand into a LAMBDA form being the record allocator; the LAMBDA
-      ;;accepts  a number  of arguments  equal  to the  total number  of
-      ;;fields in the record.
-      ;;
-      (lambda (stx)
-	(define (%iota count)
-	  ;;Return a  list of  exact integers from  0 included  to COUNT
-	  ;;excluded.
-	  (let loop ((count	(- count 1))
-		     (val	(- count 1))
-		     (ret	'()))
-	    (if (negative? count)
-		ret
-	      (loop (- count 1) (- val 1) (cons val ret)))))
-	(syntax-case stx ()
-	  ;;The number of arguments/fields is between 0 and 4.
-	  ((_ ?list-of-field-values-lists ?argnum (?arg ...))
-	   (identifier? #'?list-of-field-values-lists)
-	   (let ((args.len (syntax->datum #'?argnum) #;(length (%unwrap #'(?arg ...)))))
-	     (with-syntax (((INDEX ...)	(%iota args.len))
-			   (NEXT-INDEX	args.len))
-	       #'(let ((total-number-of-fields (<rtd>-size main-rtd)))
-		   (lambda (?arg ...) ;allocator
-		     (let ((the-record ($make-struct main-rtd total-number-of-fields)))
-		       ;;store the values of the base RTD fields
-		       ($struct-set! the-record INDEX ?arg) ...
-		       ;;If  any,  store  the  values  of  the  sub-RTDs
-		       ;;fields.
-		       (if (null? ?list-of-field-values-lists)
-			   the-record
-			 (%fill the-record NEXT-INDEX
-				(car ?list-of-field-values-lists)
-				(cdr ?list-of-field-values-lists)))))))))
+  (define-argument-validation (enough-constructor-formals who count field-values)
+    (or (unsafe.fx= 0 count) (pair? field-values))
+    (assertion-violation who "insufficient arguments" field-values))
 
-	  ;;The number of arguments/fields is more than 4.
-	  ((_ ?list-of-field-values-lists ?argnum #f)
-	   (identifier? #'?list-of-field-values-lists)
-	   #'(let ((total-number-of-fields (<rtd>-size main-rtd)))
-	       (lambda formals ;allocator
-		 (arguments-validation-forms
-		  (unless (fx=? (length formals) total-number-of-fields)
-		    (apply assertion-violation 'a-record-constructor
-			   (string-append "record allocator for \""
-					  (symbol->string (<rtd>-name main-rtd))
-					  "\" expected "
-					  (number->string total-number-of-fields)
-					  " arguments, but got "
-					  (number->string (length formals)))
-			   formals)))
-		 (let ((the-record ($make-struct main-rtd total-number-of-fields)))
-		   ;;Store  the values of  the base  RTD fields  and, if
-		   ;;any, store the values of the sub-RTDs fields.
-		   (%fill the-record 0 formals ?list-of-field-values-lists)))))
-	  )))
+  #| end of module |# )
 
-    (sub-main))
-
-  (define (%make-wrapper-for-protocol/with-parent this-total-number-of-fields prcd protocol)
-    (let* ((pprcd			(<rcd>-parent-rcd prcd))
-	   (parent-number-of-fields	(<rtd>-size (<rcd>-rtd prcd)))
-	   (parent-constructor-wrapper	(%protocol-wrapper parent-number-of-fields pprcd
-							   (<rcd>-protocol prcd)))
-	   (this-number-of-fields	(fx- this-total-number-of-fields parent-number-of-fields))
-	   (the-protocol
-	    (or protocol
-		(lambda (make-parent-record) ;default protocol function
-		  (lambda all-fields
-		    (let-values (((parent-fields this-fields)
-				  (%split all-fields (fx- (length all-fields) this-number-of-fields))))
-		      (apply (apply make-parent-record parent-fields) this-fields)))))))
-      ;;This is the constructor wrapper.
-      (lambda (list-of-field-values-lists)
-	;;Evaluate  the  protocol function  and  return the  constructor
-	;;function.
-	(the-protocol
-	 (lambda parent-initialisator-formals
-	   (lambda field-values
-	     (arguments-validation-forms
-	      (unless (fx=? (length field-values) this-number-of-fields)
-		(apply error 'a-record-constructor
-		       (string-append "expected " (number->string this-number-of-fields)
-				      " arguments, got " (number->string (length field-values))
-				      " instead")
-		       field-values)))
-	     (apply (parent-constructor-wrapper (cons field-values list-of-field-values-lists))
-		    parent-initialisator-formals)))))))
-
-  (define (%fill the-record field-index field-values-list list-of-field-values-lists)
-    ;;Recursive function.   Fill THE-RECORD  with values from  the given
-    ;;lists.  Return THE-RECORD itself.
-    ;;
-    (if (null? field-values-list)
-	(if (null? list-of-field-values-lists)
-	    the-record
-	  (%fill the-record field-index
-		 (unsafe.car list-of-field-values-lists)
-		 (unsafe.cdr list-of-field-values-lists)))
-      (begin
-	($struct-set! the-record field-index (unsafe.car field-values-list))
-	(%fill the-record (unsafe.fxadd1 field-index)
-	       (cdr field-values-list) list-of-field-values-lists))))
-
-  (define (%split all-fields n)
-    ;;Split the  list ALL-FIELDS and  return two values: a  list holding
-    ;;the first N values from ALL-FIELDS, a list holding the rest.
-    ;;
-    (let loop ((ls all-fields) (n n))
-      (arguments-validation-forms
-       (unless (or (zero? n) (pair? ls))
-	 (assertion-violation who "insufficient arguments" all-fields)))
-      (if (zero? n)
-	  (values '() ls)
-	(let-values (((m p) (loop (cdr ls) (fx- n 1))))
-	  (values (cons (car ls) m) p)))))
-
-  (main))
+
+(define (record-constructor rcd)
+  (define who 'record-constructor)
+  (with-arguments-validation (who)
+      ((rcd	rcd))
+    (<rcd>-builder rcd)))
 
 
 ;;;; record accessors and mutators
@@ -782,10 +790,10 @@
   (with-arguments-validation (who)
       ((rtd	rtd)
        (index	relative-field-index))
-    (let* ((total-number-of-fields	(<rtd>-size rtd))
+    (let* ((total-number-of-fields	(<rtd>-total-fields-number rtd))
 	   (prtd			(<rtd>-parent rtd))
 	   (abs-index			(if prtd
-					    (+ relative-field-index (<rtd>-size prtd))
+					    (+ relative-field-index (<rtd>-total-fields-number prtd))
 					  relative-field-index)))
       (with-arguments-validation (who)
       	  ((absolute-field-index abs-index total-number-of-fields rtd relative-field-index))
@@ -807,10 +815,10 @@
   (with-arguments-validation (who)
       ((rtd	rtd)
        (index	relative-field-index))
-    (let* ((total-number-of-fields	(<rtd>-size rtd))
+    (let* ((total-number-of-fields	(<rtd>-total-fields-number rtd))
 	   (prtd			(<rtd>-parent rtd))
 	   (abs-index			(if prtd
-					    (+ relative-field-index (<rtd>-size prtd))
+					    (+ relative-field-index (<rtd>-total-fields-number prtd))
 					  relative-field-index)))
       (with-arguments-validation (who)
 	  ((absolute-field-index		abs-index total-number-of-fields
@@ -843,7 +851,7 @@
 		 (and (<rtd>? rtd^)
 		      (let upper-parent ((prtd^ (<rtd>-parent rtd^)))
 			(and prtd^
-			     (or (eq? prtd^ rtd)
+			     (or (eq? rtd prtd^)
 				 (upper-parent (<rtd>-parent prtd^))))))))))))
 
 
@@ -862,6 +870,38 @@
 	       (or (eq? prtd^ prtd)
 		   (upper-parent (<rtd>-parent prtd^))))))))
 
+(define print-r6rs-record-instance
+  (case-lambda
+   ((the-record)
+    (print-r6rs-record-instance the-record (current-error-port)))
+   ((the-record port)
+    (define who 'print-r6rs-record-instance)
+    (with-arguments-validation (who)
+	((record	the-record))
+      (let ((rtd ($struct-rtd the-record)))
+	(define (%print-fields rtd first)
+	  (let* ((fields.vec	(<rtd>-fields rtd))
+		 (fields.len	(vector-length fields.vec)))
+	    (do ((i 0     (fx+ 1 i))
+		 (j first (fx+ 1 j)))
+		((= i fields.len))
+	      (%display " ")
+	      (%display (cdr (vector-ref fields.vec i)))
+	      (%display "=")
+	      (%display ($struct-ref the-record j)))))
+	(define-inline (%display thing)
+	  (display thing port))
+	(%display "#[r6rs-record: ")
+	(%display (<rtd>-name rtd))
+	(%print-fields rtd (let upper-rtd ((rtd rtd))
+			     (let ((prtd (<rtd>-parent rtd)))
+			       (if prtd
+				   (begin
+				     (%print-fields prtd (upper-rtd prtd))
+				     (<rtd>-total-fields-number prtd))
+				 0))))
+	(%display "]\n"))))))
+
 
 ;;;; done
 
@@ -869,52 +909,5 @@
 (set-rtd-printer! (type-descriptor <rcd>) %rcd-printer)
 
 )
-
-#!eof
-
-rtd0  fields=4
-proto0 =
-  (lambda (n)
-    (lambda (p0-fmls ...)
-      (n f0 f1 f2 f3)))
-
-rtd1  fields=2
-proto1 =
-  (lambda (n)
-    (lambda (p1-fmls ...)
-      ((n p0-acts ...) f4 f5)))
-
-rtd2  fields=1
-proto2 =
-  (lambda (n)
-    (lambda (p2-fmls ...)
-      ((n p1-acts ...) f6)))
-
-
-(record-constructor rcd2)
-==
-(proto2 (lambda p1-fml*
-          (lambda (f6)
-            (apply (proto1 (lambda p0-fml*
-                             (lambda (f4 f5)
-                               (apply (proto0 (lambda (f0 f1 f2 f3)
-                                                ($record rtd2 f0 f1 f2 f3 f4 f5 f6)))
-                                      p0-fml*))))
-                   p1-fml*))))
-
-new0 = (lambda (f0 f1 f2 f3 f4 f5 f6)
-         ($record rtd2 f0 f1 f2 f3 f4 f5 f6))
-
-(record-constructor rcd2)
-==
-(proto2 (lambda p1-fml*
-          (lambda (f6)
-            (apply (proto1 (lambda p0-fml*
-                             (lambda (f4 f5)
-                               (apply (proto0 (lambda (f0 f1 f2 f3)
-                                                (new0 f0 f1 f2 f3 f4 f5 f6)))
-                                      p0-fml*))))
-                   p1-fml*))))
-
 
 ;;; end of file
