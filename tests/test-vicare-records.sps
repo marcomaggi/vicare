@@ -376,29 +376,91 @@
 		(get-b R))))
     => '(#t 1 2))
 
-  (check	;correct configuration values, with parent fields
+  (check	;correct configuration values, with parent and child fields
       (let* ((prtd	(make-record-type-descriptor
 			 (name: 'parent) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f)
-			 (fields: '#())))
+			 (fields: '#((mutable a) (immutable b)))))
 	     (rtd	(make-record-type-descriptor
 			 (name: 'name) (parent: prtd) (uid: #f)
 			 (sealed: #f) (opaque: #f)
-			 (fields: '#((mutable a) (immutable b)))))
+			 (fields: '#((mutable c) (immutable d)))))
 	     (prcd	(make-record-constructor-descriptor
 			 (rtd: prtd) (parent-rcd: #f) (protocol: #f)))
 	     (rcd	(make-record-constructor-descriptor
 			 (rtd: rtd) (parent-rcd: prcd) (protocol: #f)))
 	     (maker	(record-constructor rcd))
 	     (pred	(record-predicate   rtd))
+	     ;;parent accessors
+	     (get-a	(record-accessor    prtd 0))
+	     (get-b	(record-accessor    prtd 1))
 	     ;;child accessors
-	     (get-a	(record-accessor    rtd 0))
-	     (get-b	(record-accessor    rtd 1)))
-	(let ((R (maker 1 2)))
+	     (get-c	(record-accessor    rtd 0))
+	     (get-d	(record-accessor    rtd 1)))
+	(let ((R (maker 1 2 3 4)))
 	  (list (pred R)
 		(get-a R)
-		(get-b R))))
-    => '(#t 1 2))
+		(get-b R)
+		(get-c R)
+		(get-d R))))
+    => '(#t 1 2 3 4))
+
+  (check	;correct configuration values, with "many" parent and child fields
+      (let* ((prtd	(make-record-type-descriptor
+			 (name: 'parent) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f)
+			 (fields: '#((mutable a)
+				     (immutable b)
+				     (immutable c)
+				     (immutable d)
+				     (immutable e)
+				     (immutable f)
+				     (immutable g)))))
+	     (rtd	(make-record-type-descriptor
+			 (name: 'name) (parent: prtd) (uid: #f)
+			 (sealed: #f) (opaque: #f)
+			 (fields: '#((mutable h)
+				     (immutable i)
+				     (immutable l)
+				     (immutable m)
+				     (immutable n)
+				     (immutable o)
+				     (immutable p)
+				     (immutable q)
+				     (immutable r)))))
+	     (prcd	(make-record-constructor-descriptor
+			 (rtd: prtd) (parent-rcd: #f) (protocol: #f)))
+	     (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: prcd) (protocol: #f)))
+	     (maker	(record-constructor rcd))
+	     (pred	(record-predicate   rtd))
+	     ;;parent accessors
+	     (get-a	(record-accessor    prtd 0))
+	     (get-b	(record-accessor    prtd 1))
+	     (get-c	(record-accessor    prtd 2))
+	     (get-d	(record-accessor    prtd 3))
+	     (get-e	(record-accessor    prtd 4))
+	     (get-f	(record-accessor    prtd 5))
+	     (get-g	(record-accessor    prtd 6))
+	     ;;child accessors
+	     (get-h	(record-accessor    rtd 0))
+	     (get-i	(record-accessor    rtd 1))
+	     (get-l	(record-accessor    rtd 2))
+	     (get-m	(record-accessor    rtd 3))
+	     (get-n	(record-accessor    rtd 4))
+	     (get-o	(record-accessor    rtd 5))
+	     (get-p	(record-accessor    rtd 6))
+	     (get-q	(record-accessor    rtd 7))
+	     (get-r	(record-accessor    rtd 8)))
+	(let ((R (maker 1 2 3  4 5 6  7 8 9  10 11 12  13 14 15  16)))
+	  (list (pred R)
+		(get-a R)	(get-b R)	(get-c R)
+		(get-d R)	(get-e R)	(get-f R)
+		(get-g R)	(get-h R)	(get-i R)
+		(get-l R)	(get-m R)	(get-n R)
+		(get-o R)	(get-p R)	(get-q R)
+		(get-r R))))
+    => '(#t 1 2 3  4 5 6  7 8 9  10 11 12  13 14 15  16))
 
 ;;; --------------------------------------------------------------------
 ;;; error, rtd argument
@@ -483,35 +545,35 @@
 	    (maker)))
       => (list prot 1)))
 
-  (let* ((maker	(lambda (a b)
-		  (list a b)))
-	 (prot	(lambda (make-top)
-		  maker)))
-    (check	;maker accepting wrong num of args
+  (let* ((builder	(lambda (a b)
+			  (list a b)))
+	 (prot		(lambda (make-top)
+			  builder)))
+    (check	;builder accepting wrong num of args
 	(catch #f
 	  (let* ((rtd	(make-record-type-descriptor
 			 (name: 'rtd-0) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f) (fields: '#())))
 		 (rcd	(make-record-constructor-descriptor
 			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
-		 (maker	(record-constructor rcd)))
-	    (maker)))
-      => (list maker 0)))
+		 (builder	(record-constructor rcd)))
+	    (builder)))
+      => (list builder 0)))
 
   (let ((prot (lambda (make-top)
 		(add-result 1)
 		(lambda ()
 		  (make-top)))))
-    (check	;protocol function called only once for every RECORD-CONSTRUCTOR
+    (check	;protocol function called only once
 	(with-result
 	 (let* ((rtd	(make-record-type-descriptor
 			 (name: 'rtd-0) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f) (fields: '#())))
 		(rcd	(make-record-constructor-descriptor
 			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
-		(maker	(record-constructor rcd)))
-	   (maker)
-	   (maker)
+		(builder (record-constructor rcd)))
+	   (builder)
+	   (builder)
 	   #t))
       => '(#t (1))))
 
@@ -521,53 +583,53 @@
 		 (set! flag (fx+ 1 flag))
 		 (lambda ()
 		   (make-top)))))
-    (check	;protocol function called only once for every RECORD-CONSTRUCTOR
+    (check	;protocol function called only once
 	(with-result
 	 (let* ((rtd	(make-record-type-descriptor
 			 (name: 'rtd-0) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f) (fields: '#())))
 		(rcd	(make-record-constructor-descriptor
 			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
-		(maker1	(record-constructor rcd))
-		(maker2	(record-constructor rcd)))
+		(builder1 (record-constructor rcd))
+		(builder2 (record-constructor rcd)))
 	   #t))
-      => '(#t (0 1))))
+      => '(#t (0))))
 
-  #;(let* ((maker	(lambda ()
+  #;(let* ((builder	(lambda ()
 		  (void)))
 	 (prot	(lambda (make-top)
-		  maker)))
-    (check	;maker returning void
+		  builder)))
+    (check	;builder returning void
 	(catch #t
 	  (let* ((rtd	(make-record-type-descriptor
 			 (name: 'rtd-0) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f) (fields: '#())))
 		 (rcd	(make-record-constructor-descriptor
 			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
-		 (maker	(record-constructor rcd)))
-	    (maker)))
-      => (list maker 0)))
+		 (builder	(record-constructor rcd)))
+	    (builder)))
+      => (list builder 0)))
 
-  #;(let* ((maker	(lambda ()
+  #;(let* ((builder	(lambda ()
 		  123))
 	 (prot	(lambda (make-top)
-		  maker)))
-    (check	;maker returning non-record
+		  builder)))
+    (check	;builder returning non-record
 	(catch #t
 	  (let* ((rtd	(make-record-type-descriptor
 			 (name: 'rtd-0) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f) (fields: '#())))
 		 (rcd	(make-record-constructor-descriptor
 			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
-		 (maker	(record-constructor rcd)))
-	    (maker)))
-      => (list maker 0)))
+		 (builder	(record-constructor rcd)))
+	    (builder)))
+      => (list builder 0)))
 
 
   #t)
 
 
-(parametrise ((check-test-name	'misc))
+#;(parametrise ((check-test-name	'misc))
 
   (let ()
     (define-record-type <alpha>
