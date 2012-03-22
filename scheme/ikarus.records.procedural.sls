@@ -589,15 +589,14 @@
   (with-arguments-validation (who)
       ((rtd	rtd)
        (index	field-index))
-    (let* ((total-number-of-fields	(<rtd>-total-fields-number   rtd))
-	   (prtd			(<rtd>-parent rtd))
+    (let* ((prtd			(<rtd>-parent rtd))
 	   (absolute-field-index	(if prtd
 					    (+ field-index (<rtd>-total-fields-number prtd))
 					  field-index)))
       (cond ((not (fixnum? absolute-field-index))
 	     (assertion-violation who
 	       "field index out of range" field-index))
-	    ((fx<? absolute-field-index total-number-of-fields)
+	    ((fx<? absolute-field-index (<rtd>-total-fields-number rtd))
 	     ;;Remember that the RTD structure holds a normalised vector
 	     ;;of field specifications.
 	     (unsafe.car (unsafe.vector-ref (<rtd>-fields rtd) field-index)))

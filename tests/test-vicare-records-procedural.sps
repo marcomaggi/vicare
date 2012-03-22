@@ -635,6 +635,111 @@
   #t)
 
 
+(parametrise ((check-test-name	'record-accessor))
+
+  (check
+      (let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f)
+			 (fields: '#((mutable a) (mutable b)))))
+	     (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: #f) (protocol: #f)))
+	     (builder	(record-constructor rcd))
+	     (get-a	(record-accessor rtd 0)))
+	(get-a (builder 1 2)))
+    => 1)
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  (check	;negative field index
+      (catch #f
+	(let ((rtd (make-record-type-descriptor
+		    (name: 'rtd-0) (parent: #f) (uid: #f)
+		    (sealed: #f) (opaque: #f)
+		    (fields: '#((mutable a) (mutable b))))))
+	  (record-accessor rtd -1)))
+    => '(-1))
+
+  (let ((rtd (make-record-type-descriptor
+	      (name: 'rtd-0) (parent: #f) (uid: #f)
+	      (sealed: #f) (opaque: #f)
+	      (fields: '#((mutable a) (mutable b))))))
+    (check	;field index too big
+	(catch #f
+	  (record-accessor rtd 2))
+      => (list rtd 2)))
+
+  (let* ((rtd0 (make-record-type-descriptor
+		(name: 'rtd-0) (parent: #f) (uid: #f)
+		(sealed: #f) (opaque: #f)
+		(fields: '#((mutable a) (mutable b)))))
+	 (rtd1 (make-record-type-descriptor
+		(name: 'rtd-1) (parent: rtd0) (uid: #f)
+		(sealed: #f) (opaque: #f)
+		(fields: '#((mutable c) (mutable d))))))
+    (check	;field index too big
+	(catch #f
+	  (record-accessor rtd1 2))
+      => (list rtd1 2)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'record-mutator))
+
+  (check
+      (let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f)
+			 (fields: '#((mutable a) (mutable b)))))
+	     (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: #f) (protocol: #f)))
+	     (builder	(record-constructor rcd))
+	     (get-a	(record-accessor rtd 0))
+	     (set-a	(record-mutator rtd 0)))
+	(let ((o (builder 1 2)))
+	  (set-a o 9)
+	  (get-a o)))
+    => 9)
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  (check	;negative field index
+      (catch #f
+	(let ((rtd (make-record-type-descriptor
+		    (name: 'rtd-0) (parent: #f) (uid: #f)
+		    (sealed: #f) (opaque: #f)
+		    (fields: '#((mutable a) (mutable b))))))
+	  (record-mutator rtd -1)))
+    => '(-1))
+
+  (let ((rtd (make-record-type-descriptor
+	      (name: 'rtd-0) (parent: #f) (uid: #f)
+	      (sealed: #f) (opaque: #f)
+	      (fields: '#((mutable a) (mutable b))))))
+    (check	;field index too big
+	(catch #f
+	  (record-mutator rtd 2))
+      => (list rtd 2)))
+
+  (let* ((rtd0 (make-record-type-descriptor
+		(name: 'rtd-0) (parent: #f) (uid: #f)
+		(sealed: #f) (opaque: #f)
+		(fields: '#((mutable a) (mutable b)))))
+	 (rtd1 (make-record-type-descriptor
+		(name: 'rtd-1) (parent: rtd0) (uid: #f)
+		(sealed: #f) (opaque: #f)
+		(fields: '#((mutable c) (mutable d))))))
+    (check	;field index too big
+	(catch #f
+	  (record-mutator rtd1 2))
+      => (list rtd1 2)))
+
+  #t)
+
+
 (parametrise ((check-test-name	'printer))
 
   (check
@@ -649,7 +754,6 @@
 	      (display (builder 1 2) port)
 	      )))
     => "#[r6rs-record: rtd-0 a=1 b=2]\n")
-
 
   #t)
 
