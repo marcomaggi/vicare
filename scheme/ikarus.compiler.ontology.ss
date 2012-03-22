@@ -29,7 +29,9 @@
 	 (with-syntax ((((NAME PREDNAME VAL) ...)
 			(%generate-base-cases #'T #'?name0 #'((?name0 ?cls0) (?name ?cls) ...))))
 	   #'(begin
-	       (define-record-type (T make-T T?)
+	       (define-struct T
+		 (n))
+	       #;(define-record-type (T make-T T?)
 		 (sealed #t)
 		 (fields (immutable n T-n)))
 
