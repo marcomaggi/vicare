@@ -186,7 +186,7 @@
 		    (open-string-output-port)))
 	(display (symbol->keyword 'ciao) port)
 	(getter))
-    => "#[keyword ciao]")
+    => "#:ciao")
 
   #t)
 
