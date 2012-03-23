@@ -31,7 +31,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare language extensions library\n")
+(check-display "*** testing Vicare language extensions library\n")
 
 
 (parametrise ((check-test-name	'base))
