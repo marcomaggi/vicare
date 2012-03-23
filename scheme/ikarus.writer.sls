@@ -540,22 +540,28 @@
          (write-char* "#<unknown>" p)
          i]
         [else
-	 (if (record-type-descriptor? (struct-type-descriptor x))
-	     (print-r6rs-record-instance x p)
-	   (begin ;it is a Vicare's struct
-	     (write-char #\# p)
-	     (write-char #\[ p)
-	     (let ([i (wr (struct-name x) p m h i)])
-	       (let ([n (struct-length x)])
-		 (let f ([idx 0] [i i])
-		   (cond
-		    [(fx= idx n)
-		     (write-char #\] p)
-		     i]
-		    [else
-		     (write-char #\space p)
-		     (f (fxadd1 idx)
-			(wr (struct-ref x idx) p m h i))]))))))]))
+	 (cond ((record-type-descriptor? (struct-type-descriptor x))
+		(print-r6rs-record-instance x p)
+		i)
+	       ((keyword? x)
+		(write-char #\# p)
+		(write-char #\: p)
+		(wr (struct-ref x 0) p m h i))
+	       (else ;it is a Vicare's struct
+		(write-char #\# p)
+		(write-char #\[ p)
+		(let ([i (wr (struct-name x) p m h i)])
+		  (let ([n (struct-length x)])
+		    (let f ([idx 0] [i i])
+		      (cond
+		       [(fx= idx n)
+			(write-char #\] p)
+			i]
+		       [else
+			(write-char #\space p)
+			(f (fxadd1 idx)
+			   (wr (struct-ref x idx) p m h i))]))))))
+	 ]))
     (define (write-custom-struct out p m h i)
       (let ([i
              (let f ([cache (cdr out)])

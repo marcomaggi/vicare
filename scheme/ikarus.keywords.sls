@@ -45,12 +45,6 @@
 (define-struct keyword
   (symbol))
 
-;; (define (%keyword-printer S port sub-printer)
-;;   (define-inline (%display thing)
-;;     (display thing port))
-;;   (%display "#:")
-;;   (%display (keyword-symbol S)))
-
 (define-argument-validation (symbol who obj)
   (symbol? obj)
   (assertion-violation who "expected symbol as argument" obj))
@@ -86,8 +80,6 @@
 
 
 ;;;; done
-
-;;(set-rtd-printer! (type-descriptor keyword)	%keyword-printer)
 
 )
 
