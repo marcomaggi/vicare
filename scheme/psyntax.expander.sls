@@ -21,30 +21,41 @@
 ;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
 ;;;SOFTWARE.
 
+
 (library (psyntax expander)
-  (export identifier? syntax-dispatch
-          eval core-expand
-          generate-temporaries free-identifier=?
-          bound-identifier=? datum->syntax syntax-error
-          syntax-violation
-          syntax->datum
-          make-variable-transformer make-compile-time-value
-          variable-transformer?
-          variable-transformer-procedure
-          compile-r6rs-top-level boot-library-expand
-          null-environment scheme-report-environment
-          interaction-environment
-          ellipsis-map assertion-error
-          environment environment? environment-symbols
-          new-interaction-environment syntax-transpose
+  (export
+    eval
+    environment				environment?
+    null-environment			scheme-report-environment
+    interaction-environment		new-interaction-environment
+    environment-symbols
 
-	  top-level-expander)
+    core-expand				top-level-expander
+    compile-r6rs-top-level		boot-library-expand
+    make-compile-time-value
+
+    generate-temporaries		identifier?
+    free-identifier=?			bound-identifier=?
+    datum->syntax			syntax->datum
+
+    syntax-error			syntax-violation
+    assertion-error
+
+    make-variable-transformer		variable-transformer?
+    variable-transformer-procedure
+
+    syntax-dispatch			syntax-transpose
+    ellipsis-map)
   (import (except (rnrs)
-		  environment environment? identifier?
-		  eval generate-temporaries free-identifier=?
-		  bound-identifier=? datum->syntax syntax-error
-		  syntax-violation syntax->datum make-variable-transformer
-		  null-environment scheme-report-environment)
+		  eval
+		  environment		environment?
+		  null-environment	scheme-report-environment
+		  identifier?
+		  bound-identifier=?	free-identifier=?
+		  generate-temporaries
+		  datum->syntax		syntax->datum
+		  syntax-error		syntax-violation
+		  make-variable-transformer)
     ;;Notice  that it  is  known by  this  library that  source-position
     ;;objects are condition objects.  So  maybe it is better to keep the
     ;;"-condition" suffixes in  the names.  Also these should  go in the
@@ -52,33 +63,22 @@
     (rename (only (ikarus)
 		  make-source-position-condition
 		  source-position-condition?
-		  source-position-port-id)
+		  source-position-port-id
+		  source-position-byte
+		  source-position-character
+		  source-position-line
+		  source-position-column
+		  keyword?)
 	    (make-source-position-condition	make-source-position)
 	    (source-position-condition?		source-position?)
 	    (source-position-port-id		source-position-identifier))
-    (only (ikarus)
-	  source-position-byte
-	  source-position-character
-	  source-position-line
-	  source-position-column)
-    (rnrs base)
-    (rnrs lists)
-    (rnrs control)
-    (rnrs io simple)
     (rnrs mutable-pairs)
     (psyntax library-manager)
     (psyntax builders)
     (psyntax compat)
     (psyntax config)
     (psyntax internal)
-    (only (rnrs syntax-case)
-	  syntax-case
-	  syntax
-	  with-syntax)
-    (prefix (rnrs syntax-case) sys.)
-    (prefix (only (ikarus.keywords)
-		  keyword?)
-	    keywords.))
+    (prefix (rnrs syntax-case) sys.))
 
   (define (set-cons x ls)
     (cond
@@ -630,7 +630,7 @@
   (define self-evaluating?
     (lambda (x) ;;; am I missing something here?
       (or (number? x) (string? x) (char? x) (boolean? x)
-          (bytevector? x) (keywords.keyword? x))))
+          (bytevector? x) (keyword? x))))
 
   ;;; strip is used to remove the wrap of a syntax object.
   ;;; It takes an stx's expr and marks.  If the marks contain
