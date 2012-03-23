@@ -16,8 +16,8 @@
 
 (library (ikarus.fasl.write)
   (export fasl-write)
-  (import
-    (rnrs hashtables)
+  (import (except (ikarus)
+		  fasl-write)
     (ikarus system $codes)
     (ikarus system $pairs)
     (ikarus system $structs)
@@ -27,8 +27,8 @@
     (ikarus system $strings)
     (ikarus system $flonums)
     (ikarus system $bignums)
-    (except (ikarus.code-objects) procedure-annotation)
-    (except (ikarus) fasl-write write-byte)
+    (except (ikarus.code-objects)
+	    procedure-annotation)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
 	    unsafe.))

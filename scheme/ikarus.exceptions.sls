@@ -19,11 +19,7 @@
     error warning assertion-violation die)
   (import (except (ikarus)
 		  with-exception-handler raise raise-continuable
-		  error warning assertion-violation die)
-    #;(only (rnrs) condition make-non-continuable-violation
-          make-message-condition make-error make-who-condition
-          make-irritants-condition make-assertion-violation)
-    )
+		  error warning assertion-violation die))
 
   (define handlers
     (make-parameter
