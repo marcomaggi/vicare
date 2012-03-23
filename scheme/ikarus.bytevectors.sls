@@ -165,7 +165,6 @@
 
 		  subbytevector-u8	subbytevector-u8/count
 		  subbytevector-s8	subbytevector-s8/count)
-    (ikarus system $pairs)
     (vicare words)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations) unsafe.)
@@ -754,10 +753,10 @@
 	(with-dangerous-arguments-validation (who)
 	    ((total-length accumulated-length))
 	  accumulated-length)
-      (let ((bv ($car list-of-bvs)))
+      (let ((bv (unsafe.car list-of-bvs)))
 	(with-arguments-validation (who)
 	    ((bytevector bv))
-	  (%total-length ($cdr list-of-bvs) (+ accumulated-length (unsafe.bytevector-length bv)))))))
+	  (%total-length (unsafe.cdr list-of-bvs) (+ accumulated-length (unsafe.bytevector-length bv)))))))
 
   (define (%copy-bytevectors list-of-bvs dst.bv dst.start)
     ;;Copy  the bytes  from  the first  bytevector  in LIST-OF-BVS  into
@@ -766,10 +765,10 @@
     ;;
     (if (null? list-of-bvs)
 	dst.bv
-      (let* ((src.bv	($car list-of-bvs))
+      (let* ((src.bv	(unsafe.car list-of-bvs))
 	     (src.len	(unsafe.bytevector-length src.bv))
 	     (src.start	0))
-	(%copy-bytevectors ($cdr list-of-bvs) dst.bv
+	(%copy-bytevectors (unsafe.cdr list-of-bvs) dst.bv
 			   (%copy-bytes src.bv src.start
 					dst.bv dst.start
 					(unsafe.fx+ dst.start src.len))))))
@@ -1641,10 +1640,10 @@
      (define (?who ls)
        (define (race h t ls n)
 	 (if (pair? h)
-	     (let ((h ($cdr h)))
+	     (let ((h (unsafe.cdr h)))
 	       (if (pair? h)
 		   (if (not (eq? h t))
-		       (race ($cdr h) ($cdr t) ls (unsafe.fx+ n 2))
+		       (race (unsafe.cdr h) (unsafe.cdr t) ls (unsafe.fx+ n 2))
 		     (assertion-violation '?who "circular list" ls))
 		 (if (null? h)
 		     (unsafe.fx+ n 1)
@@ -1656,7 +1655,7 @@
        (define (fill s i ls)
 	 (if (null? ls)
 	     s
-	   (let ((c ($car ls)))
+	   (let ((c (unsafe.car ls)))
 	     (unless (?valid-number-pred c)
 	       (assertion-violation '?who "not an octet" c))
 	     (unsafe.bytevector-u8-set! s i c)
@@ -1677,10 +1676,10 @@
      (define (?who ls)
        (define (%race h t ls n)
 	 (cond ((pair? h)
-		(let ((h ($cdr h)))
+		(let ((h (unsafe.cdr h)))
 		  (if (pair? h)
 		      (if (not (eq? h t))
-			  (%race ($cdr h) ($cdr t) ls (+ n 2))
+			  (%race (unsafe.cdr h) (unsafe.cdr t) ls (+ n 2))
 			(assertion-violation ?who "circular list" ls))
 		    (if (null? h)
 			(+ n 1)
@@ -1693,7 +1692,7 @@
        (define (%fill s i ls)
 	 (if (null? ls)
 	     s
-	   (let ((c ($car ls)))
+	   (let ((c (unsafe.car ls)))
 	     (unless (?valid-number-pred c)
 	       (assertion-violation ?who "invalid element for requested bytevector type" '?tag c))
 	     (?bytevector-set! s i c)
@@ -1918,14 +1917,14 @@
 (define (%make-xint-list->bytevector who bv-set!)
   (define (race h t ls idx endianness size)
     (if (pair? h)
-	(let ((h ($cdr h)) (a ($car h)))
+	(let ((h (unsafe.cdr h)) (a (unsafe.car h)))
 	  (if (pair? h)
 	      (if (not (eq? h t))
-		  (let ((bv (race ($cdr h) ($cdr t) ls
+		  (let ((bv (race (unsafe.cdr h) (unsafe.cdr t) ls
 				  (unsafe.fx+ idx (unsafe.fx+ size size))
 				  endianness size)))
 		    (bv-set! bv idx a endianness size who)
-		    (bv-set! bv (unsafe.fx+ idx size) ($car h) endianness size who)
+		    (bv-set! bv (unsafe.fx+ idx size) (unsafe.car h) endianness size who)
 		    bv)
 		(die who "circular list" ls))
 	    (if (null? h)
