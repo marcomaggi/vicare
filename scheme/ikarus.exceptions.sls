@@ -1,40 +1,40 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 (library (ikarus exceptions)
-  (export with-exception-handler raise raise-continuable 
+  (export with-exception-handler raise raise-continuable
     error warning assertion-violation die)
-  (import 
-    (only (rnrs) condition make-non-continuable-violation
+  (import (except (ikarus)
+		  with-exception-handler raise raise-continuable
+		  error warning assertion-violation die)
+    #;(only (rnrs) condition make-non-continuable-violation
           make-message-condition make-error make-who-condition
           make-irritants-condition make-assertion-violation)
-    (except (ikarus)
-      with-exception-handler raise raise-continuable 
-      error warning assertion-violation die))
+    )
 
   (define handlers
     (make-parameter
-      (list 
-        (lambda (x) 
+      (list
+        (lambda (x)
           (display "Unhandled exception:\n" (console-error-port))
           (print-condition x (console-error-port))
           (when (serious-condition? x)
             (exit -1)))
         (lambda args (exit -1)))))
-  
+
   (define (with-exception-handler handler proc2)
     (unless (procedure? handler)
       (assertion-violation 'with-exception-handler
@@ -43,13 +43,13 @@
       (assertion-violation 'with-exception-handler "not a procedure" proc2))
     (parameterize ([handlers (cons handler (handlers))])
       (proc2)))
-  
+
   (define (raise-continuable x)
     (let ([h* (handlers)])
       (let ([h (car h*)] [h* (cdr h*)])
         (parameterize ([handlers h*])
           (h x)))))
-  
+
   (define (raise x)
     (let ([h* (handlers)])
       (let ([h (car h*)] [h* (cdr h*)])

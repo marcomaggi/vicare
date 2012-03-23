@@ -148,12 +148,6 @@
 		  source-position-port-id
 		  source-position-byte source-position-character
 		  source-position-line source-position-column)
-    (rnrs records inspection)
-    (rnrs records procedural)
-    (only (rnrs)
-	  record-type-descriptor
-	  record-constructor-descriptor
-	  record-predicate)
     (only (ikarus records procedural)
 	  rtd-subtype?)
     (vicare syntactic-extensions)

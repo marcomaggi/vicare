@@ -15,12 +15,10 @@
 
 (library (ikarus cafe)
   (export new-cafe waiter-prompt-string cafe-input-port)
-  (import (only (rnrs)
-		with-exception-handler)
-    (except (ikarus)
-	    new-cafe
-	    waiter-prompt-string
-	    cafe-input-port)
+  (import (except (ikarus)
+		  new-cafe
+		  waiter-prompt-string
+		  cafe-input-port)
     (vicare syntactic-extensions))
 
 
