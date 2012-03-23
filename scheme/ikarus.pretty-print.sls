@@ -16,11 +16,14 @@
 
 (library (ikarus pretty-print)
   (export pretty-print pretty-width)
-  (import
-    (rnrs hashtables)
-    (only (ikarus writer) traverse traversal-helpers)
-    (only (ikarus.pretty-formats) get-fmt)
-    (except (ikarus) pretty-print pretty-width))
+  (import (except (ikarus)
+		  pretty-print
+		  pretty-width)
+    (only (ikarus writer)
+	  traverse
+	  traversal-helpers)
+    (only (ikarus.pretty-formats)
+	  get-fmt))
   (define (map1ltr f ls)
     ;;; ltr so that gensym counts get assigned properly
     (cond

@@ -14,17 +14,14 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-
 (library (ikarus.intel-assembler)
   (export assemble-sources code-entry-adjustment)
-  (import
-    (ikarus)
-    (rnrs bytevectors)
-    (except (ikarus.code-objects) procedure-annotation)
+  (import (ikarus)
+    (except (ikarus.code-objects)
+	    procedure-annotation)
     (ikarus system $pairs))
 
-
+
 (module (wordsize)
   (import (vicare include))
   (include "ikarus.config.ss"))
@@ -1143,6 +1140,9 @@
                           code* code-name*)
                 code*)))))))
 
+
+;;;; done
 
 )
 
+;;; end of file
