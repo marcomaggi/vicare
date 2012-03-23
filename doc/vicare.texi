@@ -14745,6 +14745,7 @@ be @code{AF_INET} or @code{AF_INET6}.
 * include::                     Including source files at expand time.
 * errno::                       More features for @code{errno}.
 * words::                       Exact integer predicates and constants.
+* keywords::                    More facilities for keyword objects.
 * readline::                    Extended interface to @gnu{} Readline.
 * gcc::                         A toy library interface to @gcc{}.
 * wtables::                     Weak hashtables.
@@ -15145,6 +15146,202 @@ least--minus--1 unsigned exact integer in the 32-bit range.
 On 64-bit platforms: evaluate to the greatest--plus--1 or
 least--minus--1 unsigned exact integer in the 64-bit range.
 @end deffn
+
+@c page
+@node keywords
+@section More facilities for keyword objects
+
+
+Keywords are disjoint objects which can be read by @value{PRJNAME}'s
+reader in @code{#!vicare} mode, @ref{iklib reader stx}.  The core
+bindings and keyword objects handling is embedded in @value{PRJNAME}'s
+boot image, but additional facilities are required to make use of
+keywords.
+
+The following bindings are exported by the library @library{vicare
+keywords}.  Additionally the following bindings are reexported from
+@library{vicare}:
+
+@example
+symbol->keyword         keyword->symbol
+keyword?                keyword=?
+keyword-hash
+@end example
+
+
+@defun keyword->string @var{keyword}
+@defunx string->keyword @var{string}
+Convert a keyword object to and from a string object.  The string is the
+name of the symbol embedded in the keyword.
+@end defun
+
+
+@deffn Syntax let-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
+@deffnx Syntax let*-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
+@deffnx Syntax letrec-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
+@deffnx Syntax letrec*-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
+@deffnx {Auxiliary Syntax} with-argument @meta{name} @meta{default} @meta{keyword}
+@deffnx {Auxiliary Syntax} without-argument @meta{name} @meta{default} @meta{keyword} @meta{when-given}
+Expand into a @func{let} like form whose bindings are configured from a
+list of arguments and options.
+
+@func{let-keywords} expands into a @func{let} syntax,
+@func{let*-keywords} expands into a @func{let*} syntax,
+@func{letrec-keywords} expands into a @func{letrec} syntax,
+@func{let-keywords} expands into a @func{let} syntax.
+
+@meta{input} must be an expression evaluating to a list of values and
+keywords; keywords must be compliant to the specification in
+@meta{options-spec}.  The same keyword can be present multiple times in
+@meta{input}.
+
+@meta{args} must be an identifier which will be bound to a list of
+values from @meta{input} not matching any of the options specified in
+@meta{options-spec}.
+
+@meta{allow} must be an expression meant to evaluate to @false{} or
+true; when @false{}: keyword values in @meta{input} not matched by
+specifications in @meta{options-spec} will cause an assertion violation;
+when true: keyword values in @meta{input} not matched by specifications
+in @meta{options-spec} will be collected in @meta{args}.
+
+@meta{options-spec} must be null or a list of lists, each with the
+following formats:
+
+@example
+(with-argument @meta{name} @meta{default} @meta{keyword})
+(without-argument @meta{name} @meta{default} @meta{keyword} @meta{when-given})
+@end example
+
+@noindent
+such specifications are interpreted as follows:
+
+@itemize
+@item
+The @func{with-argument} specification describes an optional keyword
+argument with mandatory value, which must @strong{not} be a keyword
+itself.
+
+@item
+The @func{without-argument} specification describes an optional keyword
+argument with mandatory value, which must @strong{not} be a keyword
+itself.
+
+@item
+@meta{name} must be an identifier which will become the name of a
+binding in the output @func{let} like syntax.
+
+@item
+@meta{default} must be an expression which will become a the value of
+binding in the output @func{let} like syntax.
+
+@item
+@meta{keyword} must be a keyword object which can be present in
+@meta{input} to mutate the associated @meta{name} binding.
+
+@item
+For keywords with argument: when the @meta{keyword} is present in
+@meta{input}, it must be followed by a value which will become the new
+value of the corresponding @meta{name} binding.
+
+
+@item
+For keywords without argument: when the @meta{keyword} is present in
+@meta{input}, the value resulting from the evaluation of
+@meta{when-given} will become the new value of the corresponding
+@meta{name} binding.
+@end itemize
+
+We can imagine the following macro use:
+
+@example
+(let-keywords @meta{input} args #f
+    ((with-argument a 1 #:a)
+     (with-argument b 2 #:b))
+  (alpha)
+  (beta))
+@end example
+
+@noindent
+to expand to something like:
+
+@example
+(let ((a 1)
+      (b 2))
+  (let ((args @meta{options-parser}))
+    (alpha)
+    (beta)))
+@end example
+
+@noindent
+where @meta{options-parser} is a form which takes care of parsing the
+@meta{input}.
+@end deffn
+
+
+Examples:
+
+@example
+#!vicare
+(import (vicare)
+  (vicare keywords))
+
+;; options with arguments
+(let-keywords '(#:a 1 #:b 2 #:d 4) args #f
+    ((with-argument a #\a #:a)
+     (with-argument b #\b #:b)
+     (with-argument c #\c #:c)
+     (with-argument d #\d #:d))
+  (list a b c d args))
+@result{} (1 2 #\c 4 ())
+
+;; options without arguments
+(let-keywords '(#:a #:b #:d 4) args #f
+    ((without-argument a #\a #:a #\A)
+     (without-argument b #\b #:b #\B)
+     (without-argument c #\c #:c #\C)
+     (with-argument d #\d #:d))
+  (list a b c d args))
+@result{} (#\A #\B #\c 4 ())
+
+;; options with arguments, leftover arguments
+(let-keywords '(#:a 1 ciao #:b 2 hello #:d 4) args #f
+    ((with-argument a #\a #:a)
+     (with-argument b #\b #:b)
+     (with-argument c #\c #:c)
+     (with-argument d #\d #:d))
+  (list a b c d args))
+@result{} (1 2 #\c 4 (ciao hello))
+
+;; no options, allow unknown
+(let-keywords '(#:a 1 #:b 2 #:d 4) args #t
+    ()
+  args)
+@result{} (#:a 1 #:b 2 #:d 4)
+
+(let-keywords '(#:a) args #f
+    ()
+  args)
+@error{} unknown option #:a
+
+(let-keywords '(#:a #:b 123) args #t
+    ((with-argument a 1 #:a)
+     (with-argument b 2 #:b))
+  args)
+@error{} option value for #:a cannot be a keyword
+
+(let-keywords '(#:a) args #t
+    ((with-argument a 1 #:a)
+     (with-argument b 2 #:b))
+  args)
+@error{} option #:a requires argument
+
+;; keywords used multiple times
+(let-keywords '(#:verbose #:verbose #:verbose) args #f
+  ((without-argument verbosity 0 #:verbose (+ 1 verbosity)))
+  verbosity)
+@result{} 3
+@end example
 
 @c page
 @node readline

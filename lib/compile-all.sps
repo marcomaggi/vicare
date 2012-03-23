@@ -38,6 +38,7 @@
   (only (vicare flonum-parser))
   (only (vicare flonum-formatter))
   (only (vicare weak-hashtables))
+  (only (vicare keywords))
   )
 
 ;;; end of file

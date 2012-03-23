@@ -45,7 +45,8 @@ Notes for revision 0.2d10
 * Changed  FASL-DIRECTORY  pathname validator  to  accept only  existent
   string pathnames.
 
-* Added keyword objects.
+* Added  keyword objects  handling  to the  boot  image.  Added  library
+  (vicare keywords) with facilities for keyword objects.
 
 * BACKWARDS INCOMPATIBILITY The reader syntax:
 
