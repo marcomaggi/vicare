@@ -70,6 +70,7 @@ boot-image-64-bit: last-revision
 	echo '(define vicare-version "$(PACKAGE_VERSION)")' >ikarus.config.ss
 	echo "(define vicare-revision \"$$(cat $(srcdir)/last-revision)\")" >>ikarus.config.ss
 	echo '(define vicare-lib-dir "$(pkglibdir)")' >>ikarus.config.ss
+	echo '(define scheme-lib-dir "$(libdir)/scheme")' >>ikarus.config.ss
 	echo '(define (host-info) "$(target)")' >>ikarus.config.ss
 	echo '(define wordsize 8)' >>ikarus.config.ss
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>ikarus.config.ss
