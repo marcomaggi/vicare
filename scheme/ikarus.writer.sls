@@ -14,16 +14,14 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 (library (ikarus writer)
-
   (export write display format printf fprintf print-error
           print-unicode print-graph put-datum traverse
           traversal-helpers)
   (import (except (ikarus)
-		  write display format printf fprintf print-error print-unicode print-graph
+		  write display format printf fprintf
+		  print-error print-unicode print-graph
 		  put-datum)
-    (rnrs hashtables)
     (ikarus system $chars)
     (ikarus system $strings)
     (ikarus system $vectors)
