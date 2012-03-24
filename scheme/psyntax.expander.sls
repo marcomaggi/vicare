@@ -1469,66 +1469,137 @@
                            ,(gen-clauses raised-obj con outerk clause*)))
                        (lambda () ,b ,@b*))))))))))))
 
-  (define define-enumeration-macro
-    (lambda (stx)
-      (define (set? x)
-        (or (null? x)
-            (and (not (memq (car x) (cdr x)))
-                 (set? (cdr x)))))
-      (define (remove-dups ls)
-        (cond
-          ((null? ls) '())
-          (else
-           (cons (car ls)
-              (remove-dups (remq (car ls) (cdr ls)))))))
-      (syntax-match stx ()
-        ((_ name (id* ...) maker)
-         (and (id? name) (id? maker) (for-all id? id*))
-         (let ((name* (remove-dups (syntax->datum id*))) (mk (gensym)))
-           (bless
-             `(begin
-                ;;; can be constructed at compile time
-                ;;; but ....  it's not worth it.
-                ;;; also, generativity of defined enum types
-                ;;; is completely unspecified, making them just
-                ;;; more useless than they really are.
-                ;;; eventually, I'll make them all compile-time
-                ;;; generative just to piss some known people off.
-                (define ,mk
-                  (enum-set-constructor
-                    (make-enumeration ',name*)))
-                (define-syntax ,name
-                  (lambda (x)
-                    (syntax-case x ()
-                      ((_ n)
-                       (identifier? (syntax n))
-                       (if (memq (syntax->datum (syntax n)) ',name*)
-                           (syntax 'n)
-                           (syntax-violation ',name
-                              "not a member of set"
-                              x (syntax n)))))))
-                (define-syntax ,maker
-                  (lambda (x)
-                    (syntax-case x ()
-                      ((_ n* ...)
-                       (begin
-                         (for-each
-                           (lambda (n)
-                              (unless (identifier? n)
-                                (syntax-violation
-                                  ',maker
-                                  "non-identifier argument"
-                                  x
-                                  n))
-                              (unless (memq (syntax->datum n) ',name*)
-                                (syntax-violation
-                                  ',maker
-                                  "not a member of set"
-                                  x
-                                  n)))
-                           (syntax (n* ...)))
-                         (syntax (,mk '(n* ...)))))))))))))))
+
+(define (define-enumeration-macro stx)
+  (define who 'define-enumeration)
+  (define (set? x)
+    (or (null? x)
+	(and (not (memq (car x) (cdr x)))
+	     (set? (cdr x)))))
+  (define (remove-dups ls)
+    (if (null? ls)
+	'()
+      (cons (car ls)
+	    (remove-dups (remq (car ls) (cdr ls))))))
+  (syntax-match stx ()
+    ((_ name (id* ...) maker)
+     (begin
+       (unless (id? name)
+	 (syntax-violation who
+	   "expected identifier as enumeration type name" stx name))
+       (unless (for-all id? id*)
+	 (syntax-violation who
+	   "expected list of symbols as enumeration elements" stx id*))
+       (unless (id? maker)
+	 (syntax-violation who
+	   "expected identifier as enumeration constructor syntax name" stx maker))
+       (let ((name*		(remove-dups (syntax->datum id*)))
+	     (the-constructor	(gensym)))
+	 (bless
+	  `(begin
+	     (define ,the-constructor
+	       (enum-set-constructor (make-enumeration ',name*)))
 
+	     (define-syntax ,name
+	       ;;Check at macro-expansion time whether the symbol ?ARG
+	       ;;is in  the universe associated with NAME.   If it is,
+	       ;;the result  of the  expansion is equivalent  to ?ARG.
+	       ;;It is a syntax violation if it is not.
+	       ;;
+	       (lambda (x)
+		 (define universe-of-symbols ',name*)
+		 (define (%synner message subform)
+		   (syntax-violation ',name message
+				     (syntax->datum x) (syntax->datum subform)))
+		 (syntax-case x ()
+		   ((_ ?arg)
+		    (not (identifier? (syntax ?arg)))
+		    (%synner "expected symbol as argument to enumeration validator"
+			     (syntax ?arg)))
+
+		   ((_ ?arg)
+		    (not (memq (syntax->datum (syntax ?arg)) universe-of-symbols))
+		    (%synner "expected symbol in enumeration as argument to enumeration validator"
+			     (syntax ?arg)))
+
+		   ((_ ?arg)
+		    (syntax (quote ?arg)))
+
+		   (_
+		    (%synner "invalid enumeration validator form" #f)))))
+
+	     (define-syntax ,maker
+	       ;;Given  any  finite sequence  of  the  symbols in  the
+	       ;;universe, possibly  with duplicates, expands  into an
+	       ;;expression that  evaluates to the  enumeration set of
+	       ;;those symbols.
+	       ;;
+	       ;;Check  at macro-expansion  time  whether every  input
+	       ;;symbol is in the universe associated with NAME; it is
+	       ;;a syntax violation if one or more is not.
+	       ;;
+	       (lambda (x)
+		 (define universe-of-symbols ',name*)
+		 (define (%synner message subform-stx)
+		   (syntax-violation ',maker message
+				     (syntax->datum x) (syntax->datum subform-stx)))
+		 (syntax-case x ()
+		   ((_ . ?list-of-symbols)
+		    ;;Check the input  symbols one by one partitioning
+		    ;;the ones in the universe from the one not in the
+		    ;;universe.
+		    ;;
+		    ;;If  an input element  is not  a symbol:  raise a
+		    ;;syntax violation.
+		    ;;
+		    ;;After   all   the   input  symbols   have   been
+		    ;;partitioned,  if the  list of  collected INvalid
+		    ;;ones is not null:  raise a syntax violation with
+		    ;;that list as  subform, else return syntax object
+		    ;;expression   building  a  new   enumeration  set
+		    ;;holding the list of valid symbols.
+		    ;;
+		    (let loop ((valid-symbols-stx	'())
+			       (invalid-symbols-stx	'())
+			       (input-symbols-stx	(syntax ?list-of-symbols)))
+		      (syntax-case input-symbols-stx ()
+
+			;;No more symbols to collect and non-null list
+			;;of collected INvalid symbols.
+			(()
+			 (not (null? invalid-symbols-stx))
+			 (%synner "expected symbols in enumeration as arguments \
+                                     to enumeration constructor syntax"
+				  (reverse invalid-symbols-stx)))
+
+			;;No more symbols to  collect and null list of
+			;;collected INvalid symbols.
+			(()
+			 (quasisyntax (,the-constructor '(unsyntax (reverse valid-symbols-stx)))))
+
+			;;Error if element is not a symbol.
+			((?symbol0 . ?rest)
+			 (not (identifier? (syntax ?symbol0)))
+			 (%synner "expected symbols as arguments to enumeration constructor syntax"
+				  (syntax ?symbol0)))
+
+			;;Collect a symbol in the set.
+			((?symbol0 . ?rest)
+			 (memq (syntax->datum (syntax ?symbol0)) universe-of-symbols)
+			 (loop (cons (syntax ?symbol0) valid-symbols-stx)
+			       invalid-symbols-stx (syntax ?rest)))
+
+			;;Collect a symbol not in the set.
+			((?symbol0 . ?rest)
+			 (loop valid-symbols-stx
+			       (cons (syntax ?symbol0) invalid-symbols-stx)
+			       (syntax ?rest)))
+
+			))))))
+	     )))))
+    ))
+
+
   (define time-macro
     (lambda (stx)
       (syntax-match stx ()
@@ -4336,5 +4407,4 @@
   ;;; register the expander with the library manager
   (current-library-expander library-expander))
 
-
-
+;;; end of file

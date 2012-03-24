@@ -125,6 +125,7 @@ TESTS			=	\
 	test-vicare-bignums.sps				\
 	test-vicare-bytevectors.sps			\
 	test-vicare-chars.sps				\
+	test-vicare-enumerations.sps			\
 	test-vicare-equality.sps			\
 	test-vicare-flonum-formatter.sps		\
 	test-vicare-flonum-parser.sps			\
@@ -299,6 +300,7 @@ EXTRA_DIST =	\
 	test-vicare-bignums.sps				\
 	test-vicare-bytevectors.sps			\
 	test-vicare-chars.sps				\
+	test-vicare-enumerations.sps			\
 	test-vicare-equality.sps			\
 	test-vicare-ffi.sps				\
 	test-vicare-flonum-formatter.sps		\
