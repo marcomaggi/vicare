@@ -156,19 +156,6 @@
 		       dst.str dst.start
 		       src.end))
 
-(define (emergency-platform-write-fd str)
-  ;;Interface to the system  "write()" function.  In case something goes
-  ;;wrong while modifying  the code in this library, it  may be that the
-  ;;compiled  image  fails  to  write  understandable  messages  to  the
-  ;;standard ports  using the R6RS functions.  This  macro allows direct
-  ;;interface to the platform's stderr.
-  ;;
-  (let ((bv (string->utf8 str)))
-    (foreign-call "ikrt_write_fd" 2 bv 0 (unsafe.bytevector-length bv))
-    ;;and a newline
-    (foreign-call "ikrt_write_fd" 2 '#vu8(10) 0 1)))
-
-
 
 (define (string-length str)
   ;;Defined by R6RS.   Return the number of characters  in the given STR

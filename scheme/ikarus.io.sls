@@ -607,21 +607,6 @@
     (vicare platform-constants))
 
 
-;;;; emergency debugging
-
-(define (emergency-platform-write-fd str)
-  ;;Interface to the system  "write()" function.  In case something goes
-  ;;wrong while modifying  the code in this library, it  may be that the
-  ;;compiled  image  fails  to  write  understandable  messages  to  the
-  ;;standard ports  using the R6RS functions.  This  macro allows direct
-  ;;interface to the platform's stderr.
-  ;;
-  (let ((bv (string->utf8 str)))
-    (capi.platform-write-fd 2 bv 0 (unsafe.bytevector-length bv))
-    ;;and a newline
-    (capi.platform-write-fd 2 '#vu8(10) 0 1)))
-
-
 ;;;; port attributes
 ;;
 ;;Each  port has  a tag  retrievable with  the $PORT-TAG  or $PORT-ATTRS
@@ -2322,8 +2307,6 @@
 	(when port
 	  ;;Notice that, as defined  by R6RS, CLOSE-PORT does nothing if
 	  ;;PORT has already been closed.
-;;; (with-port (port)
-;;;   (emergency-platform-write-fd (string-append "closing guarded port " port.ID)))
 
 ;;;FIXME This CLOSE-PORT is the  whole purpose of having a guardian.  If
 ;;;it  is commented  out:  it is  to  investigate if  it  is causing  an
@@ -6999,9 +6982,6 @@
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
   (define (write! src.bv src.start requested-count)
-    ;; (emergency-platform-write-fd (format "socket ~a writing ~a bytes: ~a"
-    ;; 				   sock requested-count
-    ;; 				   (subbytevector-u8 src.bv src.start (+ src.start requested-count))))
     (let ((rv (capi.platform-write-fd sock src.bv src.start requested-count)))
       (cond ((unsafe.fx>= rv 0)
 	     rv)
