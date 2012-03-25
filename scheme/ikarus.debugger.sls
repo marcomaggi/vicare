@@ -134,7 +134,8 @@
 					     count)
 					   #f #f #f))
         (parameterize ((print-graph #f))
-          (%write x))
+	  (ikarus.write x p)
+	  (flush-output-port p))
         (substring str 0 n))))
 
 
