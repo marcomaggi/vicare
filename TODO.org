@@ -17,9 +17,7 @@
 
 ** list of Scheme files still to review
 
-   scheme/ikarus.enumerations.ss
    scheme/ikarus.numerics.ss
-   scheme/ikarus.records.procedural.ss
 
    scheme/ikarus.exceptions.ss
    scheme/ikarus.debugger.ss
@@ -130,10 +128,6 @@
 
    Equal strings read from different places in the source code should be
    stored only once in the FASL file.
-
-** Shared memory
-
-   Rely on OSSP mm to handle shared memory between forked processes?
 
 ** Inline assembly
 
