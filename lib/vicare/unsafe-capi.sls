@@ -285,9 +285,7 @@
     glibc-iconv-open	glibc-iconv-close
     glibc-iconv
     )
-  (import (except (ikarus)
-		  posix-read	posix-write
-		  posix-time	posix-remove))
+  (import (ikarus))
 
 
 ;;;; helpers
