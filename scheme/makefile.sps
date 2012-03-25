@@ -160,8 +160,6 @@
                 eval-core
                 current-primitive-locations
                 compile-core-expr-to-port))
-#;(import (only (ikarus.posix)
-	      getenv))
 (import (ikarus.compiler)) ; just for fun
 
 (optimize-level 2)
@@ -562,6 +560,8 @@
     (trace-define-syntax			i v $language)
     (trace-let-syntax				i v $language)
     (trace-letrec-syntax			i v $language)
+    (integer->machine-word			i v $language)
+    (machine-word->integer			i v $language)
     (make-list					i v $language)
     (last-pair					i v $language)
     (bwp-object?				i v $language)

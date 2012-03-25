@@ -18,21 +18,31 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
+
 (library (ikarus.debugger)
-  (export debug-call
-	  guarded-start
-          make-traced-procedure
-	  make-traced-macro)
+  (export
+    debug-call			guarded-start
+    make-traced-procedure	make-traced-macro
+
+    integer->machine-word	machine-word->integer)
   (import (except (ikarus)
 		  make-traced-procedure
 		  make-traced-macro
+
+		  integer->machine-word
+		  machine-word->integer
 
 		  display write newline printf pretty-print write-char
 		  print-condition)
     (prefix (only (ikarus)
 		  display write newline printf pretty-print write-char
 		  print-condition)
-	    ikarus.))
+	    ikarus.)
+    (vicare syntactic-extensions)
+    (prefix (vicare words)
+	    words.)
+    (prefix (vicare unsafe-capi)
+	    capi.))
 
 
 ;;;; data types
@@ -56,6 +66,13 @@
 (define (trace-expr x)
   (let ((x (trace-src/expr x)))
     (if (pair? x) (cdr x) #f)))
+
+
+;;;; arguments validation
+
+(define-argument-validation (ulong who obj)
+  (words.unsigned-long? obj)
+  (assertion-violation who "expected exact integer representing unsigned long as argument" obj))
 
 
 ;;;; helpers
@@ -119,6 +136,18 @@
         (parameterize ((print-graph #f))
           (%write x))
         (substring str 0 n))))
+
+
+;;;; utilities
+
+(define (integer->machine-word int)
+  (define who 'integer->machine-word)
+  (with-arguments-validation (who)
+      ((ulong int))
+    (foreign-call "ikrt_integer_to_machine_word" int)))
+
+(define (machine-word->integer w)
+  (foreign-call "ikrt_integer_from_machine_word" w))
 
 
 (define (stacked-call pre thunk post)
@@ -283,8 +312,8 @@
     (if (> (string-length x) 60)
 	(format "~a#..." (substring x 0 56))
       x))
-  (let ((n (car x)) (x (cdr x)))
-    ;;      (%printf " [~a] ~s\n" n (trace-expr x))
+  (let ((n (car x))
+	(x (cdr x)))
     (%printf " [~a] " n)
     (%pretty-print (trace-expr x))
     (let ((src (trace-src x)))

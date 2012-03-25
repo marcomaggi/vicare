@@ -1643,6 +1643,7 @@ exports all the bindings exported by @library{vicare} that are
 * iklib cstrings::              Raw C strings.
 * iklib errno::                 Interface to @code{errno}.
 * iklib readline::              Readline interface.
+* iklib debug::                 Debugging utilities.
 * iklib misc::                  Miscellaneous functions.
 @end menu
 
@@ -6237,6 +6238,33 @@ defaults to @false{}; the thunk, when evaluated, must return a string or
 bytevector representing the input prompt in @ascii{} characters; if the
 return value is @false{} or @var{prompt-maker} is not used: no prompt
 will be displayed.
+@end defun
+
+@c page
+@node iklib debug
+@section Debugging utilities
+
+
+@defun integer->machine-word @var{exact-integer}
+@defunx machine-word->integer @var{word}
+Convert between an exact integer and a machine word.  This operation
+shows at the Scheme level the internal representation of values.  Care
+must be taken when using these functions because it is very easy to
+cause undefined behaviour.
+
+@example
+;; on 32-bit platforms
+(integer->machine-word #b11100) @result{} #b111
+
+;; on 64-bit platforms
+(integer->machine-word #b111000) @result{} #b111
+
+(integer->machine-word #x3F)    @result{} #t
+(integer->machine-word #x2F)    @result{} #f
+
+(machine-word->integer #t)      @result{} #x3F
+(machine-word->integer #f)      @result{} #x2F
+@end example
 @end defun
 
 @c page

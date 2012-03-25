@@ -600,6 +600,14 @@ ika_flonum_from_double (ikpcb* pcb, double N)
   return x;
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_integer_from_machine_word (ikptr s_word, ikpcb * pcb)
+{
+  return ika_integer_from_ulong(pcb, (ik_ulong)s_word);
+}
+
 
 /** --------------------------------------------------------------------
  ** Scheme objects to C numbers.
@@ -765,6 +773,15 @@ ik_integer_to_ssize_t (ikptr x)
     return (ssize_t)ik_integer_to_sint32(x);
   else
     return (ssize_t)ik_integer_to_sint64(x);
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_integer_to_machine_word (ikptr s_int, ikpcb * pcb)
+{
+  ik_ulong	word = ik_integer_to_ulong(s_int);
+  return (ikptr)word;
 }
 
 
