@@ -721,26 +721,17 @@
 					 (%make-default-constructor-descriptor parent-rtd))))
 	     (protocol		(or protocol (%make-default-protocol rtd)))
 	     (initialiser	(<rtd>-initialiser rtd))
-	     ;;Notice  that, with  this implementation,  the constructor
-	     ;;can call  the maker any  number of times and  nothing bad
-	     ;;happens on this  side.  If the client code  messes up its
-	     ;;state it is its own business.
 	     (maker		(if parent-rtd
 				    (let ((parent-constructor (<rcd>-constructor parent-rcd)))
 				      (lambda parent-constructor-args
-					(apply parent-constructor parent-constructor-args)
-					initialiser))
+					(%the-maker initialiser parent-constructor
+						    parent-constructor-args)))
 				  initialiser))
 	     (constructor	(protocol maker)))
 	(with-arguments-validation (who)
 	    ((constructor	constructor))
-	  ;;We  ignore   the  actual   value  returned  by   the  client
-	  ;;constructor; we know we have to return the record.
 	  (let ((builder (lambda constructor-args
-			   (let ((the-record (%alloc-clean-r6rs-record rtd)))
-			     (parametrise ((record-being-built the-record))
-			       (apply constructor constructor-args)
-			       the-record)))))
+			   (%the-builder rtd constructor constructor-args))))
 	    (make-<rcd> rtd parent-rcd maker constructor builder))))))
 
   (define (%make-default-constructor-descriptor rtd)
@@ -757,18 +748,58 @@
 	       (maker		(if parent-rtd
 				    (let ((parent-constructor (<rcd>-constructor parent-rcd)))
 				      (lambda parent-constructor-args
-					(apply parent-constructor parent-constructor-args)
-					initialiser))
+					(%the-maker initialiser parent-constructor
+						    parent-constructor-args)))
 				  initialiser))
 	       (constructor	(protocol maker))
 	       (builder		(lambda constructor-args
-				  (let ((the-record (%alloc-clean-r6rs-record rtd)))
-				    (parametrise ((record-being-built the-record))
-				      (apply constructor constructor-args)
-				      the-record))))
+				  (%the-builder rtd constructor constructor-args)))
 	       (default-rcd	(make-<rcd> rtd parent-rcd maker constructor builder)))
 	  (set-<rtd>-default-rcd! rtd default-rcd)
 	  default-rcd)))
+
+  (define (%the-maker initialiser parent-constructor parent-constructor-args)
+    ;;The  maker function implementation.   Call the  parent constructor
+    ;;then return the initialiser for  this record type.  Check that the
+    ;;parent construtor returns either the record being built itself, or
+    ;;a record instance of the correct RTD.
+    ;;
+    ;;Notice that,  with this  implementation, the constructor  can call
+    ;;the  maker any number  of times  and nothing  bad happens  on this
+    ;;side.   If the  client code  messes  up its  state it  is its  own
+    ;;business.
+    ;;
+    (let ((client-record (apply parent-constructor parent-constructor-args))
+	  (the-record    (record-being-built)))
+      (unless (eq? client-record the-record)
+	(unless (and ($struct? client-record)
+		     (eq? ($struct-rtd client-record)
+			  ($struct-rtd the-record)))
+	  (assertion-violation 'a-record-maker
+	    "value returned by client record constructor is of invalid type"
+	    ($struct-rtd the-record) client-record))
+	;;Replace the  record being built with the  instance returned by
+	;;the parent constructor.
+	(record-being-built client-record))
+      initialiser))
+
+  (define (%the-builder rtd constructor constructor-args)
+    ;;The builder implementation.  Allocate a new builder implementation
+    ;;then apply  the client constructor to the  given arguments.  Check
+    ;;that the value returned by the constructor is of the correct type.
+    ;;
+    (let ((the-record (%alloc-clean-r6rs-record rtd)))
+      (parametrise ((record-being-built the-record))
+	(let ((client-record (apply constructor constructor-args))
+	      (the-record    (record-being-built)))
+	  (unless (eq? client-record the-record)
+	    (unless (and ($struct? client-record)
+			 (eq? ($struct-rtd client-record)
+			      ($struct-rtd the-record)))
+	      (assertion-violation 'a-record-builder
+		"value returned by client record constructor is of invalid type"
+		($struct-rtd the-record) client-record)))
+	  client-record))))
 
   (define (%make-default-protocol rtd)
     ;;Build and return a default protocol function to be used whenever a

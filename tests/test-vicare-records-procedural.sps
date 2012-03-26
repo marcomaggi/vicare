@@ -598,30 +598,32 @@
   (let* ((builder	(lambda ()
 			  (void)))
 	 (prot		(lambda (make-top)
-			  builder)))
-    (check	;builder returning void
-	(let* ((rtd	(make-record-type-descriptor
+			  builder))
+	 (rtd		(make-record-type-descriptor
 			 (name: 'rtd-0) (parent: #f) (uid: #f)
-			 (sealed: #f) (opaque: #f) (fields: '#())))
-	       (rcd	(make-record-constructor-descriptor
+			 (sealed: #f) (opaque: #f) (fields: '#()))))
+    (check	;builder returning void
+	(catch #f
+	  (let* ((rcd	(make-record-constructor-descriptor
 			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
-	       (builder	(record-constructor rcd)))
-	  ((record-predicate rtd) (builder)))
-      => #t))
+		 (builder	(record-constructor rcd)))
+	    (builder)))
+      => (list rtd (void))))
 
   (let* ((builder	(lambda ()
 			  123))
 	 (prot		(lambda (make-top)
-			  builder)))
-    (check	;builder returning non-record
-	(let* ((rtd	(make-record-type-descriptor
+			  builder))
+	 (rtd		(make-record-type-descriptor
 			 (name: 'rtd-0) (parent: #f) (uid: #f)
-			 (sealed: #f) (opaque: #f) (fields: '#())))
-	       (rcd	(make-record-constructor-descriptor
-			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
-	       (builder	(record-constructor rcd)))
-	  ((record-predicate rtd) (builder)))
-      => #t))
+			 (sealed: #f) (opaque: #f) (fields: '#()))))
+    (check	;builder returning non-record
+	(catch #f
+	  (let* ((rcd		(make-record-constructor-descriptor
+				 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
+		 (builder	(record-constructor rcd)))
+	    (builder)))
+      => (list rtd 123)))
 
   (check	;protocol function calling maker directly
       (catch #f
