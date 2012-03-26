@@ -23,7 +23,10 @@
 	  traverse
 	  traversal-helpers)
     (only (ikarus.pretty-formats)
-	  get-fmt))
+	  get-fmt)
+    (only (ikarus records procedural)
+	  print-r6rs-record-instance))
+
   (define (map1ltr f ls)
     ;;; ltr so that gensym counts get assigned properly
     (cond
@@ -256,10 +259,15 @@
     (define (boxify-struct x)
       (define (boxify-vanilla-struct x)
         (cond
-          [(let ([rtd (struct-type-descriptor x)])
+	  [(record-type-descriptor? (struct-type-descriptor x))
+	   (call-with-string-output-port
+	       (lambda (port)
+		 (print-r6rs-record-instance x port)))]
+	  ;;We do not handle opaque records specially.
+          #;((let ([rtd (struct-type-descriptor x)])
              (and (record-type-descriptor? rtd)
                   (record-type-opaque? rtd)))
-           "#<unknown>"]
+           "#<unknown>")
 	  [(keyword? x)
 	   (string-append "#:" (symbol->string (keyword->symbol x)))]
           [else
