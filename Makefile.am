@@ -40,7 +40,7 @@ rc.vicare-scheme: Makefile
 endif
 
 .PHONY: $(vicare_test_RULES) $(vicare_lib_RULES) \
-	try-vicare-boot boot-image-64-bit
+	try-vicare-boot boot-image-64-bit local-slackware
 
 
 $(vicare_test_RULES):
@@ -54,5 +54,8 @@ boot-image-64-bit:
 
 $(vicare_lib_RULES):
 	cd lib; $(MAKE) $(@)
+
+local-slackware:
+	NO_CONFIG=yes NO_MAKE=yes build-vicare-scheme.sh $(PACKAGE_VERSION) $${BUILD_VERSION:?}
 
 ### end of file
