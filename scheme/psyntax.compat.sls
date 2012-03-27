@@ -16,7 +16,9 @@
 
 
 (library (psyntax compat)
-  (export define-record make-parameter parameterize format gensym
+  (export define-record
+	  make-parameter parameterize parametrise
+	  format gensym
           eval-core symbol-value set-symbol-value!
           make-struct-type get-annotated-datum
 

@@ -46,143 +46,392 @@
     current-precompiled-library-loader)
   (import (rnrs)
     (psyntax compat)
-    (rnrs r5rs))
+    (vicare syntactic-extensions))
 
 
+;;;; arguments validation
+
+(define-argument-validation (procedure who obj)
+  (procedure? obj)
+  (assertion-violation who "expected procedure as argument" obj))
+
+(define-argument-validation (library who obj)
+  (library? obj)
+  (assertion-violation who "expected instance of library struct as argument" obj))
+
+(define-argument-validation (list-of-strings who obj)
+  (and (list? obj) (for-all string? obj))
+  (assertion-violation who "expected list of strings as argument" obj))
+
+
+;;;; type definitions
+
+(define-record library
+  (id
+   name
+   version
+   imp*
+   vis*
+   inv*
+   subst
+   env
+   visit-state
+   invoke-state
+   visit-code
+   invoke-code
+   guard-code
+   guard-req*
+   visible?
+   source-file-name)
+  (lambda (lib port sub-printer)
+    (display (format "#<library ~s>"
+			    (if (null? (library-version lib))
+				(library-name lib)
+			      (append (library-name lib) (list (library-version lib)))))
+	     port)))
+
+
+;;;; collection of already loaded libraries
+
 (define (make-collection)
+  ;;Build  and return  a  "collection":  a lambda  closed  upon a  list.
+  ;;Interface:
+  ;;
+  ;;* When called with no arguments: return the list.
+  ;;
+  ;;* When called with one argument:  add the argument to the list if it
+  ;;is  not  already there  according  to  EQ?.
+  ;;
+  ;;* When  called with two arguments:  if the second  argument is true,
+  ;;remove the first  argument from the list, if  present; if the second
+  ;;argument  is false,  add  the first  argument  to the  list, if  not
+  ;;already there according to EQ?.
+  ;;
+  (define-inline (set-cons x ls)
+    (if (memq x ls)
+	ls
+      (cons x ls)))
   (let ((set '()))
-    (define (set-cons x ls)
-      (cond
-       ((memq x ls) ls)
-       (else (cons x ls))))
     (case-lambda
      (() set)
-     ((x) (set! set (set-cons x set)))
+     ((x)
+      (set! set (set-cons x set)))
      ((x del?)
       (if del?
 	  (set! set (remq x set))
 	(set! set (set-cons x set)))))))
 
-;;This works  now because MAKE-COLLECTION  is a lambda binding  and this
-;;turns into a  complex binding as far as letrec  is concerned.  It will
-;;be more ok once we do LETREC*.
-;;
 (define current-library-collection
+  ;;Hold a collection of LIBRARY structs.
+  ;;
   (make-parameter (make-collection)
     (lambda (x)
-      (if (procedure? x)
-	  x
-	(assertion-violation 'current-library-collection
-	  "expected procedure as parameter value" x)))))
+      (define who 'current-library-collection)
+      (with-arguments-validation (who)
+	  ((procedure	x))
+	x))))
 
-(define-record library
-  (id name version imp* vis* inv* subst env visit-state
-      invoke-state visit-code invoke-code guard-code guard-req*
-      visible?  source-file-name)
-  (lambda (x p wr)
-    (unless (library? x)
-      (assertion-violation 'record-type-printer "not a library"))
-    (display
-     (format "#<library ~s>"
-       (if (null? (library-version x))
-	   (library-name x)
-	 (append (library-name x) (list (library-version x)))))
-     p)))
+
+;;;; finding source libraries on the file system
 
-(define (find-dependencies ls)
-  (if (null? ls)
-      '()
-    (assertion-violation 'find-dependencies "cannot handle deps yet")))
+(define library-path
+  ;;Hold a  list of strings  representing directory pathnames  being the
+  ;;search path.
+  ;;
+  (make-parameter
+      '(".")
+    (lambda (obj)
+      (define who 'library-path)
+      (with-arguments-validation (who)
+	  ((list-of-strings	obj))
+	obj))))
+
+(define library-extensions
+  ;;Hold a  list of strings  representing file name  extensions, leading
+  ;;dot included.
+  ;;
+  (make-parameter
+      '(".vicare.sls" ".sls")
+    (lambda (obj)
+      (define who 'library-extensions)
+      (with-arguments-validation (who)
+	  ((list-of-strings	obj))
+	obj))))
+
+(define (library-name->file-name ls)
+  ;;Convert a library name  into a string representing the corresponding
+  ;;relative file  pathname, without  extension but including  a leading
+  ;;#\/ character.  Examples:
+  ;;
+  ;;	(library-name->file-name '(alpha beta gamma))
+  ;;	=> "/alpha/beta/gamma"
+  ;;
+  ;;	(library-name->file-name '(alpha beta main))
+  ;;	=> "/alpha/beta/main_"
+  ;;
+  ;;notice how the component "main", when appearing last, is "quoted" by
+  ;;appending an underscore.
+  ;;
+  ;;For this function, a "library name" is a list of symbols without the
+  ;;version specification.
+  ;;
+  (let-values (((port extract) (open-string-output-port)))
+    (define (display-hex n)
+      (if (<= 0 n 9)
+	  (display n port)
+	(write-char (integer->char (+ (char->integer #\a) (- n 10))) port)))
+    (define (main*? component-name)
+      (and (>= (string-length component-name) 4)
+	   (string=? (substring component-name 0 4) "main")
+	   (for-all (lambda (ch)
+		      (char=? ch #\_))
+	     (string->list (substring component-name 4 (string-length component-name))))))
+    (let next-component ((component		(car ls))
+			 (ls			(cdr ls))
+			 (first-component?	#t))
+      (write-char #\/ port)
+      (let ((component-name (symbol->string component)))
+	(for-each (lambda (n)
+		    (let ((c (integer->char n)))
+		      (if (or (char<=? #\a c #\z)
+			      (char<=? #\A c #\Z)
+			      (char<=? #\0 c #\9)
+			      (memv c '(#\. #\- #\+ #\_)))
+			  (write-char c port)
+			(let-values (((D M) (div-and-mod n 16)))
+			  (write-char #\% port)
+			  (display-hex D)
+			  (display-hex M)))))
+	  (bytevector->u8-list (string->utf8 component-name)))
+	(if (null? ls)
+	    (when (and (not first-component?)
+		       (main*? component-name))
+	      (write-char #\_ port))
+	  (next-component (car ls) (cdr ls) #f))))
+    (extract)))
+
+(define (default-file-locator libname)
+  ;;Default value for the FILE-LOCATOR parameter.  Given a library name,
+  ;;scan the  library search path  for the corresponding file;  return a
+  ;;string  representing the  file  pathname having  the directory  part
+  ;;equal to one of the directory pathnames in LIBRARY-PATH.
+  ;;
+  ;;For this function, a "library name" is a list of symbols without the
+  ;;version specification.
+  ;;
+  ;;If a  matching file is not  found call FILE-LOCATOR-RESOLUTION-ERROR
+  ;;from the compat library.
+  ;;
+  (let ((str (library-name->file-name libname)))
+    (let loop ((search-path	(library-path))
+	       (file-extensions	(library-extensions))
+	       (failed-list	'()))
+      (cond ((null? search-path)
+	     (file-locator-resolution-error
+	      libname (reverse failed-list)
+	      (let ((ls (external-pending-libraries)))
+		(if (null? ls)
+		    (error 'library-manager "BUG")
+		  (cdr ls)))))
+	    ((null? file-extensions)
+	     (loop (cdr search-path) (library-extensions) failed-list))
+	    (else
+	     (let ((name (string-append (car search-path) str (car file-extensions))))
+	       (if (file-exists? name)
+		   name
+		 (loop search-path (cdr file-extensions) (cons name failed-list)))))))))
+
+(define file-locator
+  ;;Hold a  function used to  convert a library name  specification into
+  ;;the corresponding file pathname.
+  ;;
+  (make-parameter
+      default-file-locator
+    (lambda (obj)
+      (define who 'file-locator)
+      (with-arguments-validation (who)
+	  ((procedure	obj))
+	obj))))
+
+
+;;;; loading precompiled libraries from files
+
+(define current-precompiled-library-loader
+  ;;Hold a function  used to load a precompiled  library; this parameter
+  ;;is    initialised   in    "ikarus.load.sls"   with    the   function
+  ;;LOAD-SERIALIZED-LIBRARY.
+  ;;
+  (make-parameter
+      (lambda (file-name success-kont)
+	#f)
+    (lambda (obj)
+      (define who 'current-precompiled-library-loader)
+      (with-arguments-validation (who)
+	  ((procedure	obj))
+	obj))))
+
+(define (precompiled-file-success-continuation filename id name ver imp* vis* inv*
+					       exp-subst exp-env
+					       visit-proc invoke-proc guard-proc
+					       guard-req* visible?)
+  ;;Called whenever  the precompiled file  loader succeeds in  loading a
+  ;;precompiled library.
+  ;;
+  ;;Make sure  all dependencies  are met, then  install the  library and
+  ;;return true; otherwise return #f.
+  ;;
+  (let f ((deps (append imp* vis* inv* guard-req*)))
+    (cond ((null? deps)
+	   ;; CHECK
+	   (for-each (lambda (x)
+		       (let* ((label (car x))
+			      (dname (cadr x))
+			      (lib   (find-library-by-name dname)))
+			 (invoke-library lib)))
+	     guard-req*)
+	   (cond ((guard-proc) ;;; stale
+		  (library-stale-warning name filename)
+		  #f)
+		 (else
+		  (install-library id name ver imp* vis* inv*
+				   exp-subst exp-env visit-proc invoke-proc
+				   #f #f ''#f '() visible? #f)
+		  #t)))
+	  (else
+	   (let* ((d		(car deps))
+		  (label	(car d))
+		  (dname	(cadr d))
+		  (l		(find-library-by-name dname)))
+	     (if (and (library? l) (eq? label (library-id l)))
+		 (f (cdr deps))
+	       (begin
+		 (library-version-mismatch-warning name dname filename)
+		 #f)))))))
+
+
+;;;; loading libraries from files
+
+(define (default-library-loader libname)
+  ;;Default  value for  the parameter  LIBRARY-LOADER.  Given  a library
+  ;;name specification: search the  associated file pathname and attempt
+  ;;to load  the file.  Try  first to load  a precompiled file,  if any,
+  ;;then try to load the source file.
+  ;;
+  ;;For this function, a "library name" is a list of symbols without the
+  ;;version specification.
+  ;;
+  (let ((filename ((file-locator) libname)))
+    (cond ((not filename)
+	   (assertion-violation 'default-library-loader "cannot find library" libname))
+	  ;;If the precompiled library loader returns false: try to load
+	  ;;the source file.
+	  (((current-precompiled-library-loader) filename precompiled-file-success-continuation))
+	  (else
+	   ((current-library-expander) (read-library-source-file filename) filename
+	    (lambda (name)
+	      (unless (equal? name libname)
+		(assertion-violation 'import
+		  (let-values (((port extract) (open-string-output-port)))
+		    (display "expected to find library " port)
+		    (write libname port)
+		    (display " in file " port)
+		    (display filename port)
+		    (display ", found " port)
+		    (write name port)
+		    (display " instead" port)
+		    (extract))))))))))
+
+(define library-loader
+  ;;Hold a function  used to load a library,  either precompiled or from
+  ;;source.
+  ;;
+  (make-parameter
+      default-library-loader
+    (lambda (f)
+      (define who 'library-loader)
+      (with-arguments-validation (who)
+	  ((procedure	f))
+	f))))
+
+
+;;;; finding libraries, already loaded or not
+
+(define (find-library-by-name libname)
+  ;;Given  a  library  name  return the  corresponding  LIBRARY  record.
+  ;;Search for the library in  the internal collection or, if not found,
+  ;;in the external source (for example the file system).
+  ;;
+  ;;For this function, a "library name" is a list of symbols without the
+  ;;version specification.
+  ;;
+  (or (find-library-by (lambda (x)
+			 (equal? (library-name x) libname)))
+      (find-external-library libname)))
 
 (define (find-library-by pred)
   ;;Visit the current library collection  and return the first for which
   ;;PRED returns true.  If PRED returns false for all the entries in the
   ;;collection: return false.
   ;;
-  (let f ((ls ((current-library-collection))))
+  (let next-library-struct ((ls ((current-library-collection))))
     (cond ((null? ls)
 	   #f)
 	  ((pred (car ls))
 	   (car ls))
 	  (else
-	   (f (cdr ls))))))
+	   (next-library-struct (cdr ls))))))
 
-(define library-path
-  (make-parameter
-      '(".")
-    (lambda (x)
-      (if (and (list? x) (for-all string? x))
-	  (map (lambda (x) x) x)
-	(assertion-violation 'library-path "not a list of strings" x)))))
+(define external-pending-libraries
+  ;;Used to detect circular dependencies between libraries.
+  ;;
+  (make-parameter '()))
 
-(define library-extensions
-  (make-parameter
-      '(".vicare.sls" ".sls")
-    (lambda (x)
-      (if (and (list? x) (for-all string? x))
-	  (map (lambda (x) x) x)
-	(assertion-violation 'library-extensions
-	  "not a list of strings" x)))))
+(define (find-external-library libname)
+  ;;Given  a library  name  try to  load  it using  the current  library
+  ;;loader.
+  ;;
+  ;;For this function, a "library name" is a list of symbols without the
+  ;;version specification.
+  ;;
+  (define who 'find-external-library)
+  (when (member libname (external-pending-libraries))
+    (assertion-violation who "circular attempt to import library was detected" libname))
+  (parametrise ((external-pending-libraries (cons libname (external-pending-libraries))))
+    ((library-loader) libname)
+    (or (find-library-by (lambda (x)
+			   (equal? (library-name x) libname)))
+	(assertion-violation who
+	  "handling external library did not yield the correct library" libname))))
 
-(define (library-name->file-name ls)
-  (let-values (((p extract) (open-string-output-port)))
-    (define (display-hex n)
-      (if (<= 0 n 9)
-	  (display n p)
-	(write-char (integer->char (+ (char->integer #\a) (- n 10))) p)))
-    (define (main*? x)
-      (and (>= (string-length x) 4)
-	   (string=? (substring x 0 4) "main")
-	   (for-all (lambda (x) (char=? x #\_))
-	     (string->list (substring x 4 (string-length x))))))
-    (let f ((x (car ls)) (ls (cdr ls)) (fst #t))
-      (write-char #\/ p)
-      (let ([name (symbol->string x)])
-	(for-each
-            (lambda (n)
-              (let ([c (integer->char n)])
-                (cond
-		 ((or (char<=? #\a c #\z)
-		      (char<=? #\A c #\Z)
-		      (char<=? #\0 c #\9)
-		      (memv c '(#\. #\- #\+ #\_)))
-		  (write-char c p))
-		 (else
-		  (write-char #\% p)
-		  (display-hex (quotient n 16))
-		  (display-hex (remainder n 16))))))
-	  (bytevector->u8-list (string->utf8 name)))
-	(if (null? ls)
-	    (when (and (not fst) (main*? name)) (write-char #\_ p))
-	  (f (car ls) (cdr ls) #f))))
-    (extract)))
+(define (library-exists? libname)
+  ;;Given a library name search  the corresponding LIBRARY record in the
+  ;;collection of already loaded libraries: return true or false.
+  ;;
+  ;;For this function, a "library name" is a list of symbols without the
+  ;;version specification.
+  ;;
+  (and (find-library-by (lambda (x)
+			  (equal? (library-name x) libname)))
+       #t))
 
-(define file-locator
+(define (find-library-by-spec/die spec)
+;;;(write spec (current-error-port))
+;;;(newline (current-error-port))
+  (let ((id (car spec)))
+    (or (find-library-by (lambda (x)
+			   (eq? id (library-id x))))
+	(assertion-violation #f "cannot find library with required spec" spec))))
+
+
+(define current-library-expander
   (make-parameter
       (lambda (x)
-        (let ((str (library-name->file-name x)))
-          (let f ((ls (library-path))
-                  (exts (library-extensions))
-                  (failed-list '()))
-            (cond
-	     ((null? ls)
-	      (file-locator-resolution-error x
-					     (reverse failed-list)
-					     (let ([ls (external-pending-libraries)])
-					       (if (null? ls)
-						   (error 'library-manager "BUG")
-						 (cdr ls)))))
-	     ((null? exts)
-	      (f (cdr ls) (library-extensions) failed-list))
-	     (else
-	      (let ((name (string-append (car ls) str (car exts))))
-		(if (file-exists? name)
-		    name
-		  (f ls (cdr exts) (cons name failed-list)))))))))
-    (lambda (f)
-      (if (procedure? f)
-	  f
-	(assertion-violation 'file-locator "not a procedure" f)))))
+        (assertion-violation 'library-expander "not initialized"))
+    (lambda (obj)
+      (define who 'current-library-expander)
+      (with-arguments-validation (who)
+	  ((procedure	obj))
+	obj))))
 
 (define (serialize-all serialize compile)
   (define (library-desc x)
@@ -207,119 +456,16 @@
 		 (library-visible? x)))))
     ((current-library-collection))))
 
-(define current-precompiled-library-loader
-  (make-parameter (lambda (filename sk) #f)))
-
-(define (try-load-from-file filename)
-  ((current-precompiled-library-loader)
-   filename
-   (case-lambda
-    ((id name ver imp* vis* inv* exp-subst exp-env
-	 visit-proc invoke-proc guard-proc guard-req* visible?)
-         ;;; make sure all dependencies are met
-         ;;; if all is ok, install the library
-         ;;; otherwise, return #f so that the
-         ;;; library gets recompiled.
-     (let f ((deps (append imp* vis* inv* guard-req*)))
-       (cond
-	((null? deps)
-              ;;; CHECK
-	 (for-each
-	     (lambda (x)
-	       (let ([label (car x)] [dname (cadr x)])
-		 (let ([lib (find-library-by-name dname)])
-		   (invoke-library lib))))
-	   guard-req*)
-	 (cond
-	  [(guard-proc) ;;; stale
-	   (library-stale-warning name filename)
-	   #f]
-	  [else
-	   (install-library id name ver imp* vis* inv*
-			    exp-subst exp-env visit-proc invoke-proc
-			    #f #f ''#f '() visible? #f)
-	   #t]))
-	(else
-	 (let ((d (car deps)))
-	   (let ((label (car d)) (dname (cadr d)))
-	     (let ((l (find-library-by-name dname)))
-	       (cond
-		((and (library? l) (eq? label (library-id l)))
-		 (f (cdr deps)))
-		(else
-		 (library-version-mismatch-warning name dname filename)
-		 #f)))))))))
-    (others #f))))
-
-(define library-loader
-  (make-parameter
-      (lambda (x)
-        (let ((file-name ((file-locator) x)))
-          (cond
-	   ((not file-name)
-	    (assertion-violation 'default-library-loader "cannot find library" x))
-	   ((try-load-from-file file-name))
-	   (else
-	    ((current-library-expander)
-	     (read-library-source-file file-name)
-	     file-name
-	     (lambda (name)
-	       (unless (equal? name x)
-		 (assertion-violation 'import
-		   (let-values (((p e) (open-string-output-port)))
-		     (display "expected to find library " p)
-		     (write x p)
-		     (display " in file " p)
-		     (display file-name p)
-		     (display ", found " p)
-		     (write name p)
-		     (display " instead" p)
-		     (e))))))))))
-    (lambda (f)
-      (if (procedure? f)
-	  f
-	(assertion-violation 'library-locator "not a procedure" f)))))
-
-(define current-library-expander
-  (make-parameter
-      (lambda (x)
-        (assertion-violation 'library-expander "not initialized"))
-    (lambda (f)
-      (if (procedure? f)
-	  f
-	(assertion-violation 'library-expander "not a procedure" f)))))
-
-;;Used to detect circular dependencies between libraries.
-;;
-(define external-pending-libraries
-  (make-parameter '()))
-
-(define (find-external-library name)
-  (define who 'find-external-library)
-  (when (member name (external-pending-libraries))
-    (assertion-violation who "circular attempt to import library was detected" name))
-  (parameterize ((external-pending-libraries (cons name (external-pending-libraries))))
-    ((library-loader) name)
-    (or (find-library-by (lambda (x)
-			   (equal? (library-name x) name)))
-	(assertion-violation who
-	  "handling external library did not yield the correct library" name))))
-
-(define (find-library-by-name name)
-  (or (find-library-by (lambda (x)
-			 (equal? (library-name x) name)))
-      (find-external-library name)))
-
 (define uninstall-library
   (case-lambda
-   [(name err?)
+   ((name err?)
     (define who 'uninstall-library)
        ;;; FIXME: check that no other import is in progress
        ;;; FIXME: need to unintern labels and locations of
        ;;;        library bindings
-    (let ([lib
+    (let ((lib
 	   (find-library-by
-	    (lambda (x) (equal? (library-name x) name)))])
+	    (lambda (x) (equal? (library-name x) name)))))
       (when (and err? (not lib))
 	(assertion-violation who "library not installed" name))
       ((current-library-collection) lib #t)
@@ -330,21 +476,8 @@
 	      (when (memq (car binding)
 			  '(global global-macro global-macro! global-ctv))
 		(remove-location (cdr binding)))))
-	(library-env lib)))]
-   [(name) (uninstall-library name #t)]))
-
-(define (library-exists? name)
-  (and (find-library-by
-	(lambda (x) (equal? (library-name x) name)))
-       #t))
-
-(define (find-library-by-spec/die spec)
-  (let ((id (car spec)))
-    (or (find-library-by
-	 (lambda (x) (eq? id (library-id x))))
-	(assertion-violation #f
-	  "cannot find library with required spec" spec))))
-
+	(library-env lib))))
+   ((name) (uninstall-library name #t))))
 
 (define (install-library-record lib)
   (let ((exp-env (library-env lib)))
@@ -421,22 +554,31 @@
   (invoke-library (find-library-by-spec/die spec)))
 
 (define installed-libraries
+  ;;Return a list  of LIBRARY structs being already  installed.  If ALL?
+  ;;is true:  return all the  installed libraries, else return  only the
+  ;;visible ones.
+  ;;
   (case-lambda
    ((all?)
-    (let f ((ls ((current-library-collection))))
-      (cond
-       ((null? ls) '())
-       ((or all? (library-visible? (car ls)))
-	(cons (car ls) (f (cdr ls))))
-       (else (f (cdr ls))))))
-   (() (installed-libraries #f))))
+    (let next-library-struct ((ls ((current-library-collection))))
+      (cond ((null? ls)
+	     '())
+	    ((or all? (library-visible? (car ls)))
+	     (cons (car ls) (next-library-struct (cdr ls))))
+	    (else
+	     (next-library-struct (cdr ls))))))
+   (()
+    (installed-libraries #f))))
 
-(define library-spec
-  (lambda (x)
-    (unless (library? x)
-      (assertion-violation 'library-spec "not a library" x))
-    (list (library-id x) (library-name x) (library-version x))))
+(define (library-spec lib)
+  (define who 'library-spec)
+  (with-arguments-validation (who)
+      ((library		lib))
+    (list (library-id      lib)
+	  (library-name    lib)
+	  (library-version lib))))
 
+;;; end of file
 
 ;;;; done
 

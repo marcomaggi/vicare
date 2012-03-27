@@ -93,10 +93,11 @@
 (define-struct serialized-library
   (contents))
 
-(define (load-serialized-library filename sk)
-  ;;Given a source file name load  the associated FASL file and apply SK
-  ;;to the library contents, return  the result of such application.  If
-  ;;a FASL file is not available or invalid: return false.
+(define (load-serialized-library filename success-kont)
+  ;;Given a  source file  name load the  associated FASL file  and apply
+  ;;SUCCESS-KONT  to the  library contents,  return the  result  of such
+  ;;application.  If  a FASL  file is not  available or  invalid: return
+  ;;false.
   ;;
   ;;Print  to  the current  error  port  appropriate  warning about  the
   ;;availability of the FASL file.
@@ -117,7 +118,7 @@
 		      (close-input-port port)
 		      x)))
 	     (if (serialized-library? x)
-		 (apply sk (serialized-library-contents x))
+		 (apply success-kont filename (serialized-library-contents x))
 	       (begin
 		 (fprintf (current-error-port)
 			  "WARNING: not using fasl file ~s because it was \
