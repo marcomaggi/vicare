@@ -415,8 +415,10 @@
        #t))
 
 (define (find-library-by-spec/die spec)
-;;;(write spec (current-error-port))
-;;;(newline (current-error-port))
+  ;;Given a  library specification, being a  list whose car  is a unique
+  ;;symbol associated  to the library, return  the corresponding LIBRARY
+  ;;record or raise an assertion.
+  ;;
   (let ((id (car spec)))
     (or (find-library-by (lambda (x)
 			   (eq? id (library-id x))))
@@ -477,49 +479,42 @@
 			  '(global global-macro global-macro! global-ctv))
 		(remove-location (cdr binding)))))
 	(library-env lib))))
-   ((name) (uninstall-library name #t))))
+   ((name)
+    (uninstall-library name #t))))
 
 (define (install-library-record lib)
-  (let ((exp-env (library-env lib)))
-    (for-each
-        (lambda (x)
-          (let ((label (car x)) (binding (cdr x)))
-            (let ((binding
-                   (case (car binding)
-                     ((global)
-                      (cons 'global (cons lib (cdr binding))))
-                     ((global-macro)
-                      (cons 'global-macro (cons lib (cdr binding))))
-                     ((global-macro!)
-                      (cons 'global-macro! (cons lib (cdr binding))))
-                     ((global-ctv)
-                      (cons 'global-ctv (cons lib (cdr binding))))
-                     (else binding))))
-              (set-label-binding! label binding))))
-      exp-env))
+  (for-each (lambda (x)
+	      (let* ((label    (car x))
+		     (binding  (cdr x))
+		     (binding1 (case (car binding)
+				 ((global)        (cons 'global        (cons lib (cdr binding))))
+				 ((global-macro)  (cons 'global-macro  (cons lib (cdr binding))))
+				 ((global-macro!) (cons 'global-macro! (cons lib (cdr binding))))
+				 ((global-ctv)    (cons 'global-ctv    (cons lib (cdr binding))))
+				 (else binding))))
+		(set-label-binding! label binding1)))
+    (library-env lib))
   ((current-library-collection) lib))
 
-(define install-library
-  (case-lambda
-   ((id name ver imp* vis* inv* exp-subst exp-env
-        visit-proc invoke-proc visit-code invoke-code
-        guard-code guard-req*
-        visible? source-file-name)
-    (let ((imp-lib* (map find-library-by-spec/die imp*))
-	  (vis-lib* (map find-library-by-spec/die vis*))
-	  (inv-lib* (map find-library-by-spec/die inv*))
-	  (guard-lib* (map find-library-by-spec/die guard-req*)))
-      (unless (and (symbol? id) (list? name) (list? ver))
-	(assertion-violation 'install-library
-	  "invalid spec with id/name/ver" id name ver))
-      (when (library-exists? name)
-	(assertion-violation 'install-library
-	  "library is already installed" name))
-      (let ((lib (make-library id name ver imp-lib* vis-lib* inv-lib*
-			       exp-subst exp-env visit-proc invoke-proc
-			       visit-code invoke-code guard-code guard-lib*
-			       visible? source-file-name)))
-	(install-library-record lib))))))
+(define (install-library id libname ver imp* vis* inv* exp-subst exp-env
+			 visit-proc invoke-proc visit-code invoke-code
+			 guard-code guard-req*
+			 visible? source-file-name)
+  (let ((imp-lib* (map find-library-by-spec/die imp*))
+	(vis-lib* (map find-library-by-spec/die vis*))
+	(inv-lib* (map find-library-by-spec/die inv*))
+	(guard-lib* (map find-library-by-spec/die guard-req*)))
+    (unless (and (symbol? id) (list? libname) (list? ver))
+      (assertion-violation 'install-library
+	"invalid spec with id/name/ver" id libname ver))
+    (when (library-exists? libname)
+      (assertion-violation 'install-library
+	"library is already installed" libname))
+    (let ((lib (make-library id libname ver imp-lib* vis-lib* inv-lib*
+			     exp-subst exp-env visit-proc invoke-proc
+			     visit-code invoke-code guard-code guard-lib*
+			     visible? source-file-name)))
+      (install-library-record lib))))
 
 (define (imported-label->binding lab)
   (label-binding lab))
