@@ -1449,6 +1449,16 @@ matching file is found:
 
 If there is no match, then the import request is in error.
 
+Whenever the library name component @code{main} appears as last and not
+unique component: when building the file rootname such component is
+``quoted'' by appending an underscore character; examples:
+
+@example
+(alpha beta main)       @result{} "alpha/beta/main_"
+(main alpha)            @result{} "main/alpha"
+(main)                  @result{} "main"
+@end example
+
 @c page
 @node using libraries examples
 @subsection Examples of library usage
