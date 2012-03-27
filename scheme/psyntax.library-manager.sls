@@ -483,15 +483,17 @@
     (uninstall-library name #t))))
 
 (define (install-library-record lib)
+  ;;Subroutine of INSTALL-LIBRARY.
+  ;;
   (for-each (lambda (x)
 	      (let* ((label    (car x))
 		     (binding  (cdr x))
 		     (binding1 (case (car binding)
-				 ((global)        (cons 'global        (cons lib (cdr binding))))
-				 ((global-macro)  (cons 'global-macro  (cons lib (cdr binding))))
-				 ((global-macro!) (cons 'global-macro! (cons lib (cdr binding))))
-				 ((global-ctv)    (cons 'global-ctv    (cons lib (cdr binding))))
-				 (else binding))))
+				 ((global)        (cons* 'global        lib (cdr binding)))
+				 ((global-macro)  (cons* 'global-macro  lib (cdr binding)))
+				 ((global-macro!) (cons* 'global-macro! lib (cdr binding)))
+				 ((global-ctv)    (cons* 'global-ctv    lib (cdr binding)))
+				 (else            binding))))
 		(set-label-binding! label binding1)))
     (library-env lib))
   ((current-library-collection) lib))
@@ -500,10 +502,10 @@
 			 visit-proc invoke-proc visit-code invoke-code
 			 guard-code guard-req*
 			 visible? source-file-name)
-  (let ((imp-lib* (map find-library-by-spec/die imp*))
-	(vis-lib* (map find-library-by-spec/die vis*))
-	(inv-lib* (map find-library-by-spec/die inv*))
-	(guard-lib* (map find-library-by-spec/die guard-req*)))
+  (let ((imp-lib*	(map find-library-by-spec/die imp*))
+	(vis-lib*	(map find-library-by-spec/die vis*))
+	(inv-lib*	(map find-library-by-spec/die inv*))
+	(guard-lib*	(map find-library-by-spec/die guard-req*)))
     (unless (and (symbol? id) (list? libname) (list? ver))
       (assertion-violation 'install-library
 	"invalid spec with id/name/ver" id libname ver))
