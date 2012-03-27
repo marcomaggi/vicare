@@ -1322,9 +1322,9 @@ sample}, not @library{sample}.
 @code{$(libdir)/scheme}, for example on @gnu{}+Linux systems
 @file{/usr@//local@//lib@//scheme}, and are under the @code{(vicare
 ---)} hierarchy.  Additional libraries, and the boot image, are
-installed in the directory @code{$(libdir)/vicare}.  User libraries that
-are meant to be usable by @value{PRJNAME} should be installed in the
-@code{$(libdir)/scheme} directory.
+installed in the directory @code{$(libdir)/vicare-scheme}.  User
+libraries that are meant to be usable by @value{PRJNAME} should be
+installed in the @code{$(libdir)/scheme} directory.
 
 @value{PRJNAME} always places its own library directories at the end of
 the search path, so, as example, the default value of the search path on
@@ -1332,7 +1332,7 @@ the search path, so, as example, the default value of the search path on
 
 @example
 /usr/local/lib/scheme
-/usr/local/lib/vicare
+/usr/local/lib/vicare-scheme
 @end example
 
 @noindent
@@ -1360,14 +1360,14 @@ $ @value{RAWEXECUTABLE}
 ("/home/marco/scheme"
  "/tmp/library"
  "/usr/local/lib/scheme"
- "/usr/local/lib/vicare")
+ "/usr/local/lib/vicare-scheme")
 > (library-path (cons "/opt/sw/extra-libraries" (library-path)))
 > (library-path)
 ("/opt/sw/extra-libraries"
  "/home/marco/scheme"
  "/tmp/library"
  "/usr/local/lib/scheme"
- "/usr/local/lib/vicare")
+ "/usr/local/lib/vicare-scheme")
 @end example
 
 In programs intended to be distributed, you should resist the urge to
