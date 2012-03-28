@@ -171,6 +171,9 @@
     ((_ ae exp) `',exp)))
 
 (define (build-sequence ae exps)
+  ;;Given a list of expressions to be evaluated in sequence wrap it in a
+  ;;BEGIN syntax.  Discard useless void expressions.
+  ;;
   (let ((the-void (build-void)))
     (let loop ((exps exps))
       (cond ((null? (cdr exps))
@@ -180,37 +183,37 @@
 	    (else
 	     `(begin ,@exps))))))
 
-(define build-letrec
-  (lambda (ae vars val-exps body-exp)
-    (if (null? vars) body-exp `(letrec ,(map list vars val-exps) ,body-exp))))
+
+(define (build-letrec ae vars val-exps body-exp)
+  (if (null? vars)
+      body-exp
+    `(letrec ,(map list vars val-exps) ,body-exp)))
 
-(define build-letrec*
-  (lambda (ae vars val-exps body-exp)
-    (cond
-     ((null? vars) body-exp)
-     (else
-      (if-wants-letrec*
-       `(letrec* ,(map list vars val-exps) ,body-exp)
-       (build-let ae vars (map (lambda (x) (build-data ae #f)) vars)
-		  (build-sequence ae
-				  (append
-				   (map (lambda (lhs rhs)
-					  (build-lexical-assignment ae lhs rhs))
-				     vars val-exps)
-				   (list body-exp)))))))))
+(define (build-letrec* ae vars val-exps body-exp)
+  (if (null? vars)
+      body-exp
+    (if-wants-letrec*
+     `(letrec* ,(map list vars val-exps) ,body-exp)
+     (build-let ae vars (map (lambda (x)
+			       (build-data ae #f))
+			  vars)
+		(build-sequence ae
+				(append (map (lambda (lhs rhs)
+					       (build-lexical-assignment ae lhs rhs))
+					  vars val-exps)
+				 (list body-exp)))))))
 
-(define build-library-letrec*
-  (lambda (ae top? vars locs val-exps body-exp)
-    (if-wants-library-letrec*
-     `(library-letrec* ,(map list vars locs val-exps) ,body-exp)
-     (build-letrec* ae vars val-exps
-		    (if top?
-			body-exp
-		      (build-sequence ae
-				      (cons body-exp
-					    (map (lambda (var loc)
-						   (build-global-assignment ae loc var))
-					      vars locs))))))))
+(define (build-library-letrec* ae top? vars locs val-exps body-exp)
+  (if-wants-library-letrec*
+   `(library-letrec* ,(map list vars locs val-exps) ,body-exp)
+   (build-letrec* ae vars val-exps
+		  (if top?
+		      body-exp
+		    (build-sequence ae
+				    (cons body-exp
+					  (map (lambda (var loc)
+						 (build-global-assignment ae loc var))
+					    vars locs)))))))
 
 
 ;;;; done
