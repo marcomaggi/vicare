@@ -310,15 +310,7 @@
 	      (display " [line "  port) (display (source-position-line    pos) port)
 	      (display " column " port) (display (source-position-column  pos) port)
 	      (display " of " port)     (display (source-position-identifier pos) port)
-	      (display "]" port)))
-	  #;(let ((src (annotation-source expr)))
-	      (when (pair? src)
-		(display " [char " port)
-		(display (cdr src) port)
-		(display " of " port)
-		(display (car src) port)
-		(display "]" port)))
-	  ))
+	      (display "]" port)))))
       (display ">" port)))
 
   ;;; First, let's look at identifiers, since they're the real
@@ -3460,7 +3452,7 @@
   (define (expand-transformer expr r)
     (let ((rtc (make-collector)))
       (let ((expanded-rhs
-             (parameterize ((inv-collector rtc)
+             (parametrise ((inv-collector rtc)
                             (vis-collector (lambda (x) (values))))
                  (chi-expr expr r r))))
         (for-each
@@ -3814,7 +3806,7 @@
   (define library-body-expander
     (lambda (main-exp* imp* b* mix?)
       (define itc (make-collector))
-      (parameterize ((imp-collector itc)
+      (parametrise ((imp-collector itc)
                      (top-level-context #f))
         (let-values (((subst-names subst-labels)
                       (parse-import-spec* imp*)))
@@ -3823,7 +3815,7 @@
             (let ((b* (map wrap b*))
                   (rtc (make-collector))
                   (vtc (make-collector)))
-              (parameterize ((inv-collector rtc)
+              (parametrise ((inv-collector rtc)
                              (vis-collector vtc))
                 (let-values (((init* r mr lex* rhs* internal-exp*)
                               (chi-library-internal b* rib mix?)))
@@ -3892,7 +3884,7 @@
 
   (define (handle-stale-when guard-expr mr)
     (let ([stc (make-collector)])
-      (let ([core-expr (parameterize ([inv-collector stc])
+      (let ([core-expr (parametrise ([inv-collector stc])
                          (chi-expr guard-expr mr mr))])
         (cond
           [(stale-when-collector) =>
@@ -3907,7 +3899,7 @@
            (let ([c (make-stale-collector)])
              (let-values (((imp* invoke-req* visit-req* invoke-code
                             visit-code export-subst export-env)
-                           (parameterize ([stale-when-collector c])
+                           (parametrise ([stale-when-collector c])
                              (library-body-expander exp* imp* b* #f))))
                (let-values ([(guard-code guard-req*) (c)])
                   (values name ver imp* invoke-req* visit-req*
@@ -3955,7 +3947,7 @@
   (define environment
     (lambda imp*
       (let ((itc (make-collector)))
-        (parameterize ((imp-collector itc))
+        (parametrise ((imp-collector itc))
           (let-values (((subst-names subst-labels)
                         (parse-import-spec* imp*)))
             (make-env subst-names subst-labels itc))))))
@@ -3984,12 +3976,11 @@
                  (itc (env-itc env))
                  (rtc (make-collector))
                  (vtc (make-collector)))
-               (let ((x
-                      (parameterize ((top-level-context #f)
-                                     (inv-collector rtc)
-                                     (vis-collector vtc)
-                                     (imp-collector itc))
-                         (chi-expr x '() '()))))
+               (let ((x (parametrise ((top-level-context #f)
+				      (inv-collector rtc)
+				      (vis-collector vtc)
+				      (imp-collector itc))
+			  (chi-expr x '() '()))))
                  (seal-rib! rib)
                  (values x (rtc))))))
         ((interaction-env? env)
@@ -3998,10 +3989,10 @@
                (rtc (make-collector)))
            (let ((x (make-stx x top-mark* (list rib) '())))
              (let-values (((e r^)
-                           (parameterize ((top-level-context env)
-                                          (inv-collector rtc)
-                                          (vis-collector (make-collector))
-                                          (imp-collector (make-collector)))
+                           (parametrise ((top-level-context env)
+					 (inv-collector rtc)
+					 (vis-collector (make-collector))
+					 (imp-collector (make-collector)))
                              (chi-interaction-expr x rib r))))
                (set-interaction-env-r! env r^)
                (values e (rtc))))))
@@ -4208,7 +4199,7 @@
     (if (stx? x)
 	(let ((x (stx-expr x)))
 	  (if (annotation? x)
-	      (annotation-textual-position x) #;(annotation-source x)
+	      (annotation-textual-position x)
 	    (condition)))
       (condition)))
 
