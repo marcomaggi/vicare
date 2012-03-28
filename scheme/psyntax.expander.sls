@@ -67,6 +67,14 @@
 
 ;;; helpers
 
+(define-syntax define-inline
+  (syntax-rules ()
+    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
+     (define-syntax ?name
+       (syntax-rules ()
+	 ((_ ?arg ... . ?rest)
+	  (begin ?form0 ?form ...)))))))
+
 (define (set-cons x ls)
   (if (memq x ls)
       ls
@@ -114,6 +122,27 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-record stx
+  (expr
+   mark*
+   subst*
+   ae*)
+  (lambda (x port wr) ;record printer function
+    (define-inline (%display thing)
+      (display thing port))
+    (define-inline (%write thing)
+      (write thing port))
+    (%display "#<syntax ")
+    (%write (stx->datum x))
+    (let ((expr (stx-expr x)))
+      (when (annotation? expr)
+	(let ((pos (annotation-textual-position expr)))
+	  (when (source-position-condition? pos)
+	    (%display " (line ")  (%display (source-position-line    pos))
+	    (%display " column ") (%display (source-position-column  pos))
+	    (%display " of ")     (%display (source-position-port-id pos))
+	    (%display ")")))))
+    (%display ">")))
 
 
 
@@ -304,128 +333,116 @@
 					(vector-set! ?vec ?idx2 V))))))
 	  (%vector-swap sym*   idx i)
 	  (%vector-swap mark** idx i)
-	  (%vector-swap label* idx i))
-	;; (let ((sym (vector-ref sym* idx)))
-	;;   (vector-set! sym*   idx (vector-ref sym*   i))
-	;;   (vector-set! sym*   i   sym))
-	;; (let ((mark* (vector-ref mark** idx)))
-	;;   (vector-set! mark** idx (vector-ref mark** i))
-	;;   (vector-set! mark** i   mark*))
-	;; (let ((label (vector-ref label* idx)))
-	;;   (vector-set! label* idx (vector-ref label* i))
-	;;   (vector-set! label* i   label))
-	))))
+	  (%vector-swap label* idx i))))))
 
 
-  ;;; Now to syntax objects which are records defined like:
-(define-record stx (expr mark* subst* ae*)
-  (lambda (x port wr)
-    ;;Record printer function.
-    ;;
-    (display "#<syntax " port)
-    (write (stx->datum x) port)
-    (let ((expr (stx-expr x)))
-      (when (annotation? expr)
-	(let ((pos (annotation-textual-position expr)))
-	  (when (source-position-condition? pos)
-	    (display " (line "  port) (display (source-position-line    pos) port)
-	    (display " column " port) (display (source-position-column  pos) port)
-	    (display " of " port)     (display (source-position-port-id pos) port)
-	    (display ")" port)))))
-    (display ">" port)))
+;;;; syntax objects handling
+;;
+;;First, let's  look at identifiers,  since they're the real  reason why
+;;syntax objects are here to begin  with.  An identifier is an STX whose
+;;EXPR is a symbol; in addition to the symbol naming the identifier, the
+;;identifer has a  list of marks and a list  of substitutions.
+;;
+;;The idea  is that to get  the label of  an identifier, we look  up the
+;;identifier's substitutions for  a mapping with the same  name and same
+;;marks (see SAME-MARKS? below).
+;;
 
-  ;;; First, let's look at identifiers, since they're the real
-  ;;; reason why syntax objects are here to begin with.
-  ;;; An identifier is an stx whose expr is a symbol.
-  ;;; In addition to the symbol naming the identifier, the identifer
-  ;;; has a list of marks and a list of substitutions.
-  ;;; The idea is that to get the label of an identifier, we look up
-  ;;; the identifier's substitutions for a mapping with the same
-  ;;; name and same marks (see same-marks? below).
+(define (datum->stx id datum)
+  ;;Since all the identifier->label bindings are encapsulated within the
+  ;;identifier, converting a datum to a syntax object (non-hygienically)
+  ;;is  done simply  by creating  an  STX that  has the  same marks  and
+  ;;substitutions as the identifier.
+  ;;
+  (make-stx datum
+	    (stx-mark*  id)
+	    (stx-subst* id)
+	    (stx-ae*    id)))
 
-  ;;; Since all the identifier->label bindings are encapsulated
-  ;;; within the identifier, converting a datum to a syntax object
-  ;;; (non-hygienically) is done simply by creating an stx that has
-  ;;; the same marks and substitutions as the identifier.
-(define datum->stx
-  (lambda (id datum)
-    (make-stx datum (stx-mark* id) (stx-subst* id) (stx-ae* id))))
+;;A syntax  object may be wrapped  or unwrapped, so what  does that mean
+;;exactly?
+;;
+;;A wrapped  syntax object is just a  way of saying it's  an STX record.
+;;All identifiers are  STX records (with a symbol  in their EXPR field);
+;;other objects such  as pairs and vectors may  be wrapped or unwrapped.
+;;A wrapped pair is an STX whose EXPR is a pair.  An unwrapped pair is a
+;;pair whose car  and cdr fields are themselves  syntax objects (wrapped
+;;or unwrapped).
+;;
+;;We always  maintain the  invariant that we  do not double  wrap syntax
+;;objects.  The  only way  to get a  doubly-wrapped syntax object  is by
+;;doing DATUM->STX  (above) where the  datum is itself a  wrapped syntax
+;;object (R6RS  may not even  consider wrapped syntax objects  as datum,
+;;but let's not worry now).
+;;
+;;Syntax objects  have, in  addition to the  EXPR, a  substitution field
+;;SUBST*: it is a list where each  element is either a RIB or the symbol
+;;"shift".  Normally,  a new  RIB is  added to an  STX at  every lexical
+;;contour of the program in  order to capture the bindings introduced in
+;;that contour.
+;;
+;;The MARK* field of an STX is  a list of marks; each of these marks can
+;;be  either  a  generated mark  or  an  antimark.   Two marks  must  be
+;;EQ?-comparable, so we use a string of one char (we assume that strings
+;;are mutable in the underlying Scheme implementation).
 
-  ;;; A syntax object may be wrapped or unwrapped, so what does that
-  ;;; mean exactly?
-  ;;;
-  ;;; A wrapped syntax object is just a way of saying it's an stx
-  ;;; record.  All identifiers are stx records (with a symbol in
-  ;;; their expr field).  Other objects such as pairs and vectors
-  ;;; may be wrapped or unwrapped.  A wrapped pair is an stx whos
-  ;;; expr is a pair.  An unwrapped pair is a pair whos car and cdr
-  ;;; fields are themselves syntax objects (wrapped or unwrapped).
-  ;;;
-  ;;; We always maintain the invariant that we don't double wrap
-  ;;; syntax objects.  The only way to get a doubly-wrapped syntax
-  ;;; object is by doing datum->stx (above) where the datum is
-  ;;; itself a wrapped syntax object (r6rs may not even consider
-  ;;; wrapped syntax objects as datum, but let's not worry now).
-
-  ;;; Syntax objects have, in addition to the expr, a
-  ;;; substitution field (stx-subst*).  The subst* is a list
-  ;;; where each element is either a rib or the symbol "shift".
-  ;;; Normally, a new rib is added to an stx at evert lexical
-  ;;; contour of the program in order to capture the bindings
-  ;;; inctroduced in that contour.
-
-  ;;; The mark* field of an stx is, well, a list of marks.
-  ;;; Each of these marks can be either a generated mark
-  ;;; or an antimark.
-  ;;; (two marks must be eq?-comparable, so we use a string
-  ;;; of one char (this assumes that strings are mutable)).
-
-  ;;; gen-mark generates a new unique mark
-(define (gen-mark) ;;; faster
+(define (gen-mark)
+  ;;Generate a new unique mark.  We want a new string for every function
+  ;;call.
   (string #\m))
+;;;(define gen-mark ; useful for debugging
+;;;  (let ((i 0))
+;;;    (lambda ()
+;;;      (set! i (+ i 1))
+;;;      (string-append "m." (number->string i)))))
 
-		;(define gen-mark ;;; useful for debugging
-		;  (let ((i 0))
-		;    (lambda ()
-		;      (set! i (+ i 1))
-		;      (string-append "m." (number->string i)))))
-
-  ;;; We use #f as the anti-mark.
+;;We use #f as the anti-mark.
 (define anti-mark #f)
 (define anti-mark? not)
 
-  ;;; So, what's an anti-mark and why is it there.
-  ;;; The theory goes like this: when a macro call is encountered,
-  ;;; the input stx to the macro transformer gets an extra anti-mark,
-  ;;; and the output of the transformer gets a fresh mark.
-  ;;; When a mark collides with an anti-mark, they cancel one
-  ;;; another.  Therefore, any part of the input transformer that
-  ;;; gets copied to the output would have a mark followed
-  ;;; immediately by an anti-mark, resulting in the same syntax
-  ;;; object (no extra marks).  Parts of the output that were not
-  ;;; present in the input (e.g. inserted by the macro transformer)
-  ;;; would have no anti-mark and, therefore, the mark would stick
-  ;;; to them.
-  ;;;
-  ;;; Every time a mark is pushed to an stx-mark* list, a
-  ;;; corresponding 'shift is pushed to the stx-subst* list.
-  ;;; Every time a mark is cancelled by an anti-mark, the
-  ;;; corresponding shifts are also cancelled.
+;;So, what's an anti-mark and why is it there?
+;;
+;;The theory goes like this: when a macro call is encountered, the input
+;;stx to the  macro transformer gets an extra  anti-mark, and the output
+;;of the  transformer gets a fresh  mark.  When a mark  collides with an
+;;anti-mark, they cancel one another.   Therefore, any part of the input
+;;transformer that gets copied to  the output would have a mark followed
+;;immediately by an  anti-mark, resulting in the same  syntax object (no
+;;extra marks).  Parts of the output  that were not present in the input
+;;(e.g. inserted by the macro  transformer) would have no anti-mark and,
+;;therefore, the mark would stick to them.
+;;
+;;Every  time a mark  is pushed  to an  stx-mark* list,  a corresponding
+;;'shift  is  pushed to  the  stx-subst* list.   Every  time  a mark  is
+;;cancelled  by   an  anti-mark,  the  corresponding   shifts  are  also
+;;cancelled.
 
-  ;;; The procedure join-wraps, here, is used to compute the new
-  ;;; mark* and subst* that would result when the m1* and s1* are
-  ;;; added to an stx's mark* and subst*.
-  ;;; The only tricky part here is that e may have an anti-mark
-  ;;; that should cancel with the last mark in m1*.
-  ;;; So, if m1* is (mx* ... mx)
-  ;;;    and m2* is (#f my* ...)
-  ;;; then the resulting marks should be (mx* ... my* ...)
-  ;;; since mx would cancel with the anti-mark.
-  ;;; The substs would have to also cancel since
-  ;;;     s1* is (sx* ... sx)
-  ;;; and s2* is (sy sy* ...)
-  ;;; then the resulting substs should be (sx* ... sy* ...)
-  ;;; Notice that both sx and sy would be shift marks.
+;;The procedure join-wraps, here, is used to compute the new
+;;mark* and subst* that would result when the m1* and s1* are
+;;added to an stx's mark* and subst*.
+;;The only tricky part here is that e may have an anti-mark
+;;that should cancel with the last mark in m1*.
+;;So, if:
+;;
+;;  m1* = (mx* ... mx)
+;;  m2* = (#f my* ...)
+;;
+;;then the resulting marks should be:
+;;
+;;  (mx* ... my* ...)
+;;
+;;since mx  would cancel with the  anti-mark.  The substs  would have to
+;;also cancel since:
+;;
+;;    s1* = (sx* ... sx)
+;;    s2* = (sy sy* ...)
+;;
+;;then the resulting substs should be:
+;;
+;;    (sx* ... sy* ...)
+;;
+;;Notice that both SX and SY would be shift marks.
+;;
 (define join-wraps
   (lambda (m1* s1* ae1* e)
     (define merge-ae*
@@ -449,11 +466,11 @@
 	  (values (cancel m1* m2*) (cancel s1* s2*) (merge-ae* ae1* ae2*))
 	(values (append m1* m2*) (append s1* s2*) (merge-ae* ae1* ae2*))))))
 
-  ;;; The procedure mkstx is then the proper constructor for
-  ;;; wrapped syntax objects.  It takes a syntax object, a list
-  ;;; of marks, and a list of substs.  It joins the two wraps
-  ;;; making sure that marks and anti-marks and corresponding
-  ;;; shifts cancel properly.
+;;The procedure mkstx is then the proper constructor for
+;;wrapped syntax objects.  It takes a syntax object, a list
+;;of marks, and a list of substs.  It joins the two wraps
+;;making sure that marks and anti-marks and corresponding
+;;shifts cancel properly.
 (define mkstx
   (lambda (e m* s* ae*)
     (if (and (stx? e) (not (top-marked? m*)))
@@ -461,6 +478,7 @@
 	  (make-stx (stx-expr e) m* s* ae*))
       (make-stx e m* s* ae*))))
 
+
 (define add-subst
   (lambda (subst e)
     (mkstx e '() (list subst) '())))
@@ -512,6 +530,7 @@
        (else (make-stx e (list m) s1* ae*))))
     (mkstx (f expr mark '() '()) '() '() (list ae))))
 
+
   ;;; now are some deconstructors and predicates for syntax objects.
 (define syntax-kind?
   (lambda (x p?)
