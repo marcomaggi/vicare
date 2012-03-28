@@ -477,7 +477,7 @@
 	(assertion-violation who "library not installed" name))
       ;;Remove LIB from the current collection.
       ((current-library-collection) lib #t)
-      ;;Clear the VALUE fields of symbols.
+      ;;Remove label gensyms from the internal table.
       (for-each (lambda (x)
 		  (let ((label   (car x))
 			(binding (cdr x)))
