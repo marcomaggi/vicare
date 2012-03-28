@@ -2189,6 +2189,33 @@ hierarchy of @code{annotation} objects with the same hierarchy of the
 datum and embedding the datum itself.
 @end defun
 
+
+@defun annotation? @var{obj}
+Return @true{} if @var{obj} is an @code{annotation} object, else return
+@false{}.
+@end defun
+
+
+@defun annotation-expression @var{ann}
+Accessor for the @code{expression} field of an @code{annotation} object.
+Return a list, vector, identifier, what--have--you that may contain
+further annotations.
+@end defun
+
+
+@defun annotation-stripped @var{ann}
+Accessor for the @code{stripped} field of an @code{annotation} object.
+The same symbolic expression of the @code{expression} field with no
+annotations.
+@end defun
+
+
+@defun annotation-textual-position @var{ann}
+Accessor for the @code{textual-position} field of an @code{annotation}
+object.  A condition object of type @condition{source-position}
+representing the position of the expression in the source code.
+@end defun
+
 @c page
 @node iklib expander
 @section Interface to the expander

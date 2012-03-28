@@ -19,25 +19,29 @@
 (library (ikarus.reader)
   (export
     ;; public functions
-    read get-datum get-annotated-datum
+    read			get-datum
+    get-annotated-datum
 
     ;; annotated datum inspection
-    annotation? annotation-expression annotation-stripped
-    annotation-source annotation-textual-position
+    annotation?
+    annotation-expression	annotation-stripped
+    annotation-source		annotation-textual-position
 
     ;; internal functions only for Vicare
-    read-source-file read-script-source-file
+    read-source-file		read-script-source-file
     read-library-source-file)
   (import (except (ikarus)
 		  ;; public functions
-		  read get-datum get-annotated-datum
+		  read				get-datum
+		  get-annotated-datum
 
 		  ;; annotated datum inspection
-		  annotation? annotation-expression annotation-stripped
-		  annotation-source annotation-textual-position
+		  annotation?
+		  annotation-expression		annotation-stripped
+		  annotation-source		annotation-textual-position
 
 		  ;; internal functions only for Vicare
-		  read-source-file read-script-source-file
+		  read-source-file		read-script-source-file
 		  read-library-source-file)
     (only (vicare.foreign-libraries)
 	  register-filename-foreign-library
@@ -188,7 +192,7 @@
 ;;
 ;;Field name: textual-position
 ;;Field accessor: annotation-textual-position ANN
-;;  A  condtion  object  of  type  "&source-position"  representing  the
+;;  A  condition  object  of  type "&source-position"  representing  the
 ;;  position of  the expression in the  source code.  It is  used by the
 ;;  expander.
 ;;

@@ -1809,6 +1809,7 @@
     (annotation-expression			i v $language)
     (annotation-source				i v $language)
     (annotation-stripped			i v $language)
+    (annotation-textual-position		i v $language)
 ;;;
     (&condition-rtd)
     (&condition-rcd)
