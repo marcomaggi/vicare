@@ -65,50 +65,94 @@
     (psyntax internal))
 
 
+;;; helpers
 
 (define (set-cons x ls)
-  (cond
-   ((memq x ls) ls)
-   (else (cons x ls))))
+  (if (memq x ls)
+      ls
+    (cons x ls)))
 
 (define (set-union ls1 ls2)
-  (cond
-   ((null? ls1) ls2)
-   ((memq (car ls1) ls2) (set-union (cdr ls1) ls2))
-   (else (cons (car ls1) (set-union (cdr ls1) ls2)))))
+  (cond ((null? ls1)
+	 ls2)
+	((memq (car ls1) ls2)
+	 (set-union (cdr ls1) ls2))
+	(else
+	 (cons (car ls1)
+	       (set-union (cdr ls1) ls2)))))
 
 (define-syntax no-source
   (lambda (x) #f))
 
-  ;;; the body of a library, when it's first processed, gets this
-  ;;; set of marks.
+
+;;;; type definitions
+
+;;A RIB is a record constructed  at every lexical contour in the program
+;;to hold  informations about the variables introduced  in that contour;
+;;"lexical contours" are, for example, LET and similar syntaxes.
+;;
+;;Adding an  identifier->label mapping to an extensible  RIB is achieved
+;;by consing the  identifier's name to the list  of symbols, consing the
+;;identifier's list of marks to  the RIB's mark**, and consing the label
+;;to the RIB's labels.
+;;
+(define-record rib
+  (sym*
+   mark**
+   label*
+   sealed/freq))
+
+(define (make-empty-rib)
+  (make-rib '() '() '() #f))
+
+(define (make-full-rib id* label*)
+  ;;It may be a good idea to seal this RIB.
+  (make-rib (map id->sym   id*)
+	    (map stx-mark* id*)
+	    label*
+	    #f))
+
+;;; --------------------------------------------------------------------
+
+
+
+
+;;The body  of a library, when it  is first processed, gets  this set of
+;;marks...
 (define top-mark* '(top))
 
-  ;;; consequently, every syntax object that has a top in its marks
-  ;;; set was present in the program source.
-(define top-marked?
-  (lambda (m*) (memq 'top m*)))
+;;... consequently, every syntax object that  has a top in its marks set
+;;was present in the program source.
+(define (top-marked? m*)
+  (memq 'top m*))
 
-  ;;; This procedure generates a fresh lexical name for renaming.
-  ;;; It's also use it to generate temporaries.
-(define gen-lexical
-  (lambda (sym)
-    (cond
-     ((symbol? sym) (gensym sym))
-     ((stx? sym) (gen-lexical (id->sym sym)))
-     (else (assertion-violation 'gen-lexical "BUG: invalid arg" sym)))))
+(define (gen-lexical sym)
+  ;;Generate  a fresh  lexical name  for  renaming.  It's  also used  to
+  ;;generate temporaries.
+  ;;
+  (cond ((symbol? sym)
+	 (gensym sym))
+	((stx? sym)
+	 (gen-lexical (id->sym sym)))
+	(else
+	 (assertion-violation 'gen-lexical
+	   "*** Vicare bug: invalid arg" sym))))
 
-  ;;; gen-global is used to generate global names (e.g. locations
-  ;;; for library exports).  We use gen-lexical since it works just
-  ;;; fine.
-(define (gen-global x) (gen-lexical x))
+;;Used to  generate global names  (e.g. locations for  library exports).
+;;We use GEN-LEXICAL since it works just fine.
+;;
+(define gen-global gen-lexical)
 
-  ;;; every identifier in the program would have a label associated
-  ;;; with it in its substitution.  gen-label generates such labels.
-  ;;; the labels have to have read/write eq? invariance to support
-  ;;; separate compilation.
-(define gen-label
-  (lambda (_) (gensym)))
+(define (gen-label _)
+  ;;Every identifier in the program will have a label associated with it
+  ;;in its substitution; this function generates such labels.
+  ;;
+  ;;The  labels  have to  have  read/write  EQ?   invariance to  support
+  ;;separate compilation (when we write the expansed symbolic expression
+  ;;to a  file and  then read it  back, the  labels must not  change and
+  ;;still be globally unique).
+  ;;
+  (gensym))
 
 (define (gen-top-level-label id rib)
   (define (find sym mark* sym* mark** label*)
@@ -119,75 +163,62 @@
   (let ((sym (id->sym id))
 	(mark* (stx-mark* id)))
     (let ((sym* (rib-sym* rib)))
-      (cond
-       ((and (memq sym (rib-sym* rib))
-	     (find sym mark* sym* (rib-mark** rib) (rib-label* rib)))
-	=>
-	(lambda (label)
-	  (cond
-	   ((imported-label->binding label)
-                ;;; create new label to shadow imported binding
-	    (gensym))
-	   (else
-                ;;; recycle old label
-	    label))))
-       (else
-           ;;; create new label for new binding
-	(gensym))))))
+      (cond ((and (memq sym (rib-sym* rib))
+		  (find sym mark* sym* (rib-mark** rib) (rib-label* rib)))
+	     => (lambda (label)
+		  (cond ((imported-label->binding label)
+			 ;;Create new label to shadow imported binding.
+			 (gensym))
+			(else
+			 ;;Recycle old label.
+			 label))))
+	    (else
+	     ;;Create new label for new binding.
+	     (gensym))))))
 
 (define (gen-define-label+loc id rib sd?)
   (if sd?
       (values (gensym) (gen-lexical id))
-    (let ([env (top-level-context)])
+    (let ((env (top-level-context)))
       (let ((label (gen-top-level-label id rib))
 	    (locs (interaction-env-locs env)))
 	(values label
-		(cond
-		 ((assq label locs) => cdr)
-		 (else
-		  (let ((loc (gen-lexical id)))
-		    (set-interaction-env-locs! env
-					       (cons (cons label loc) locs))
-		    loc))))))))
+		(cond ((assq label locs) => cdr)
+		      (else
+		       (let ((loc (gen-lexical id)))
+			 (set-interaction-env-locs! env (cons (cons label loc) locs))
+			 loc))))))))
 
 (define (gen-define-label id rib sd?)
   (if sd?
       (gensym)
     (gen-top-level-label id rib)))
 
-
-  ;;; A rib is a record constructed at every lexical contour in the
-  ;;; program to hold information about the variables introduced in that
-  ;;; contour.  Adding an identifier->label mapping to an extensible rib
-  ;;; is achieved by consing the identifier's name to the list of
-  ;;; symbols, consing the identifier's list of marks to the rib's
-  ;;; mark**, and consing the label to the rib's labels.
-
-(define-record rib (sym* mark** label* sealed/freq))
-
-(define make-empty-rib
-  (lambda ()
-    (make-rib '() '() '() #f)))
-
 (define (top-marked-symbols rib)
-  (let-values ([(sym* mark**)
-		(let ([sym* (rib-sym* rib)] [mark** (rib-mark** rib)])
+  (let-values (((sym* mark**)
+		(let ((sym* (rib-sym* rib)) (mark** (rib-mark** rib)))
 		  (if (rib-sealed/freq rib)
 		      (values (vector->list sym*) (vector->list mark**))
-		    (values sym* mark**)))])
-    (let f ([sym* sym*] [mark** mark**])
-      (cond
-       [(null? sym*) '()]
-       [(equal? (car mark**) top-mark*)
-	(cons (car sym*) (f (cdr sym*) (cdr mark**)))]
-       [else (f (cdr sym*) (cdr mark**))]))))
+		    (values sym* mark**)))))
+    (let f ((sym* sym*) (mark** mark**))
+      (cond ((null? sym*)
+	     '())
+	    ((equal? (car mark**) top-mark*)
+	     (cons (car sym*) (f (cdr sym*) (cdr mark**))))
+	    (else
+	     (f (cdr sym*) (cdr mark**)))))))
 
-  ;;; For example, when processing a lambda's internal define, a new rib
-  ;;; is created and is added to the body of the lambda expression.
-  ;;; When an internal definition is encountered, a new entry for the
-  ;;; identifier is added (via side effect) to the rib.  A rib may be
-  ;;; extensible, or sealed.  An extensible rib looks like:
-  ;;;  #<rib list-of-symbols list-of-list-of-marks list-of-labels #f>
+
+;;;; extending RIBS
+;;
+;;For example, when processing a  lambda's internal define, a new rib is
+;;created and  is added to the  body of the lambda  expression.  When an
+;;internal definition is encountered, a  new entry for the identifier is
+;;added  (via side  effect) to  the rib.   A rib  may be  extensible, or
+;;sealed.  An extensible rib looks like:
+;;
+;;  #<rib list-of-symbols list-of-list-of-marks list-of-labels #f>
+;;
 
 (define (extend-rib! rib id label sd?)
   (define (find sym mark* sym* mark** label*)
@@ -196,7 +227,8 @@
 	     label*
 	   (find sym mark* (cdr sym*) (cdr mark**) (cdr label*)))))
   (when (rib-sealed/freq rib)
-    (assertion-violation 'extend-rib! "BUG: rib is sealed" rib))
+    (assertion-violation 'extend-rib!
+      "*** Vicare bug: attempt to extend sealed RIB" rib))
   (let ((sym (id->sym id))
 	(mark* (stx-mark* id)))
     (let ((sym* (rib-sym* rib)))
@@ -219,50 +251,46 @@
 	(set-rib-mark**! rib (cons mark* (rib-mark** rib)))
 	(set-rib-label*! rib (cons label (rib-label* rib))))))))
 
-
-  ;;; A rib can be sealed once all bindings are inserted.  To seal
-  ;;; a rib, we convert the lists sym*, mark**, and label* to vectors
-  ;;; and insert a frequency vector in the sealed/freq field.
-  ;;; The frequency vector is an optimization that allows the rib to
-  ;;; reorganize itself by bubbling frequently used mappings to the
-  ;;; top of the rib.  The vector is maintained in non-descending
-  ;;; order and an identifier's entry in the rib is incremented at
-  ;;; every access.  If an identifier's frequency exceeds the
-  ;;; preceeding one, the identifier's position is promoted to the
-  ;;; top of its class (or the bottom of the previous class).
+
+;;;; sealing ribs
+;;
+;;A RIB can be sealed once all bindings are inserted.  To seal a RIB, we
+;;convert  the lists SYM*,  MARK** and  LABEL* to  vectors and  insert a
+;;frequency vector in the sealed/freq field.
+;;
+;;The  frequency  vector is  an  optimization  that  allows the  rib  to
+;;reorganize itself by  bubbling frequently used mappings to  the top of
+;;the  rib.  The  vector is  maintained in  non-descending order  and an
+;;identifier's entry in  the RIB is incremented at  every access.  If an
+;;identifier's  frequency exceeds the  preceeding one,  the identifier's
+;;position is  promoted to the  top of its  class (or the bottom  of the
+;;previous class).
 
 (define (seal-rib! rib)
   (let ((sym* (rib-sym* rib)))
-    (unless (null? sym*)
-        ;;; only seal if rib is not empty.
+    (unless (null? sym*) ;only seal if RIB is not empty
       (let ((sym* (list->vector sym*)))
-	(set-rib-sym*! rib sym*)
-	(set-rib-mark**! rib
-			 (list->vector (rib-mark** rib)))
-	(set-rib-label*! rib
-			 (list->vector (rib-label* rib)))
-	(set-rib-sealed/freq! rib
-			      (make-vector (vector-length sym*) 0))))))
+	(set-rib-sym*!        rib sym*)
+	(set-rib-mark**!      rib (list->vector (rib-mark** rib)))
+	(set-rib-label*!      rib (list->vector (rib-label* rib)))
+	(set-rib-sealed/freq! rib (make-vector (vector-length sym*) 0))))))
 
 (define (unseal-rib! rib)
   (when (rib-sealed/freq rib)
     (set-rib-sealed/freq! rib #f)
-    (set-rib-sym*! rib (vector->list (rib-sym* rib)))
-    (set-rib-mark**! rib (vector->list (rib-mark** rib)))
-    (set-rib-label*! rib (vector->list (rib-label* rib)))))
+    (set-rib-sym*!        rib (vector->list (rib-sym*   rib)))
+    (set-rib-mark**!      rib (vector->list (rib-mark** rib)))
+    (set-rib-label*!      rib (vector->list (rib-label* rib)))))
 
 (define (increment-rib-frequency! rib idx)
   (let ((freq* (rib-sealed/freq rib)))
     (let ((freq (vector-ref freq* idx)))
-      (let ((i
-	     (let f ((i idx))
-	       (cond
-		((zero? i) 0)
-		(else
-		 (let ((j (- i 1)))
-		   (cond
-		    ((= freq (vector-ref freq* j)) (f j))
-		    (else i))))))))
+      (let ((i (let f ((i idx))
+		 (cond ((zero? i) 0)
+		       (else
+			(let ((j (- i 1)))
+			  (cond ((= freq (vector-ref freq* j)) (f j))
+				(else i))))))))
 	(vector-set! freq* i (+ freq 1))
 	(unless (= i idx)
 	  (let ((sym* (rib-sym* rib))
@@ -278,10 +306,7 @@
 	      (vector-set! label* idx (vector-ref label* i))
 	      (vector-set! label* i label))))))))
 
-(define make-full-rib ;;; it may be a good idea to seal this rib
-  (lambda (id* label*)
-    (make-rib (map id->sym id*) (map stx-mark* id*) label* #f)))
-
+
   ;;; Now to syntax objects which are records defined like:
 (define-record stx (expr mark* subst* ae*)
   (lambda (x port wr)
@@ -293,10 +318,10 @@
       (when (annotation? expr)
 	(let ((pos (annotation-textual-position expr)))
 	  (when (source-position-condition? pos)
-	    (display " [line "  port) (display (source-position-line    pos) port)
+	    (display " (line "  port) (display (source-position-line    pos) port)
 	    (display " column " port) (display (source-position-column  pos) port)
 	    (display " of " port)     (display (source-position-port-id pos) port)
-	    (display "]" port)))))
+	    (display ")" port)))))
     (display ">" port)))
 
   ;;; First, let's look at identifiers, since they're the real
@@ -445,36 +470,36 @@
 	    (cons x (f (car ls1) (cdr ls1)))))))
     (define (f e m s1* ae*)
       (cond
-       [(pair? e)
-	(let ([a (f (car e) m s1* ae*)]
-	      [d (f (cdr e) m s1* ae*)])
-	  (if (eq? a d) e (cons a d)))]
-       [(vector? e)
-	(let ([ls1 (vector->list e)])
-	  (let ([ls2 (map (lambda (x) (f x m s1* ae*)) ls1)])
-	    (if (for-all eq? ls1 ls2) e (list->vector ls2))))]
-       [(stx? e)
-	(let ([m* (stx-mark* e)] [s2* (stx-subst* e)])
+       ((pair? e)
+	(let ((a (f (car e) m s1* ae*))
+	      (d (f (cdr e) m s1* ae*)))
+	  (if (eq? a d) e (cons a d))))
+       ((vector? e)
+	(let ((ls1 (vector->list e)))
+	  (let ((ls2 (map (lambda (x) (f x m s1* ae*)) ls1)))
+	    (if (for-all eq? ls1 ls2) e (list->vector ls2)))))
+       ((stx? e)
+	(let ((m* (stx-mark* e)) (s2* (stx-subst* e)))
 	  (cond
-	   [(null? m*)
+	   ((null? m*)
 	    (f (stx-expr e) m
 	       (append s1* s2*)
-	       (merge-ae* ae* (stx-ae* e)))]
-	   [(eq? (car m*) anti-mark)
+	       (merge-ae* ae* (stx-ae* e))))
+	   ((eq? (car m*) anti-mark)
 	    (make-stx (stx-expr e) (cdr m*)
 		      (cdr (append s1* s2*))
-		      (merge-ae* ae* (stx-ae* e)))]
-	   [else
+		      (merge-ae* ae* (stx-ae* e))))
+	   (else
 	    (make-stx (stx-expr e)
 		      (cons m m*)
-		      (let ([s* (cons 'shift (append s1* s2*))])
+		      (let ((s* (cons 'shift (append s1* s2*))))
 			(if subst (cons subst s*) s*))
-		      (merge-ae* ae* (stx-ae* e)))]))]
-       [(symbol? e)
+		      (merge-ae* ae* (stx-ae* e)))))))
+       ((symbol? e)
 	(syntax-violation #f
 	  "raw symbol encountered in output of macro"
-	  expr e)]
-       [else (make-stx e (list m) s1* ae*)]))
+	  expr e))
+       (else (make-stx e (list m) s1* ae*))))
     (mkstx (f expr mark '() '()) '() '() (list ae))))
 
   ;;; now are some deconstructors and predicates for syntax objects.
@@ -740,14 +765,14 @@
 
 (define label->binding
   (lambda (x r)
-    (let ([b (label->binding-no-fluids x r)])
+    (let ((b (label->binding-no-fluids x r)))
       (if (and (pair? b) (eq? (car b) '$fluid))
             ;;; fluids require reversed logic.  We have to look them
             ;;; up in the local environment first before the global.
-	  (let ([x (cdr b)])
+	  (let ((x (cdr b)))
 	    (cond
-	     [(assq x r) => cdr]
-	     [else (label->binding-no-fluids x '())]))
+	     ((assq x r) => cdr)
+	     (else (label->binding-no-fluids x '()))))
 	b))))
 
 (define make-binding cons)
@@ -762,7 +787,7 @@
   (%syntax-violation #f "unbound identifier" id (make-undefined-violation)))
 #;
 (define (syntax-type e r)
-  (let-values ([(t0 t1 t2) (syntax-type^ e r)])
+  (let-values (((t0 t1 t2) (syntax-type^ e r)))
     (printf "T ~s ~s => ~s ~s ~s\n" e r t0 t1 t2)
     (values t0 t1 t2)))
 
@@ -1043,13 +1068,13 @@
 (define fluid-let-syntax-transformer
   (lambda (e r mr)
     (define (lookup x)
-      (let ([label
+      (let ((label
 	     (or (id->label x)
-		 (syntax-violation #f "unbound identifier" e x))])
-	(let ([b (label->binding-no-fluids label r)])
+		 (syntax-violation #f "unbound identifier" e x))))
+	(let ((b (label->binding-no-fluids label r)))
 	  (cond
-	   [(and (pair? b) (eq? (car b) '$fluid)) (cdr b)]
-	   [else (syntax-violation #f "not a fluid identifier" e x)]))))
+	   ((and (pair? b) (eq? (car b) '$fluid)) (cdr b))
+	   (else (syntax-violation #f "not a fluid identifier" e x))))))
     (syntax-match e ()
       ((_ ((lhs* rhs*) ...) b b* ...)
        (if (not (valid-bound-ids? lhs*))
@@ -2866,17 +2891,17 @@
 	 (x (lambda (id)
 	      (unless (id? id)
 		(assertion-violation 'rho "not an identifier" id))
-	      (let ([label (id->label id)])
-		(let ([binding (label->binding label r)])
+	      (let ((label (id->label id)))
+		(let ((binding (label->binding label r)))
 		  (case (car binding)
-		    [(local-ctv) (cadr binding)]
-		    [(global-ctv)
-		     (let ([lib (cadr binding)]
-			   [loc (cddr binding)])
+		    ((local-ctv) (cadr binding))
+		    ((global-ctv)
+		     (let ((lib (cadr binding))
+			   (loc (cddr binding)))
 		       (unless (eq? lib '*interaction*)
 			 (visit-library lib))
-		       (symbol-value loc))]
-		    [else #f]))))))
+		       (symbol-value loc)))
+		    (else #f)))))))
       (return x))))
 
   ;;; chi procedures
@@ -3027,7 +3052,7 @@
 	    (chi-expr (chi-local-macro value e r #f) r mr))
 	   ((mutable)
 	    (if (and (pair? value) (let ((lib (car value))) (eq? lib '*interaction*)))
-		(let ([loc (cdr value)])
+		(let ((loc (cdr value)))
 		  (build-global-assignment no-source loc
 					   (chi-expr v r mr)))
 	      (stx-error e "attempt to modify an unexportable variable")))
@@ -3085,10 +3110,10 @@
 
 (define (chi-defun x r mr)
   (syntax-match x ()
-    [(_ (ctxt . fmls) . body*)
+    ((_ (ctxt . fmls) . body*)
      (let-values (((fmls body)
 		   (chi-lambda-clause fmls fmls body* r mr)))
-       (build-lambda (syntax-annotation ctxt) fmls body))]))
+       (build-lambda (syntax-annotation ctxt) fmls body)))))
 
 (define chi-rhs
   (lambda (rhs r mr)
@@ -3207,24 +3232,24 @@
   (define (err msg . args) (apply assertion-violation who msg args))
   (define (split s*)
     (cond
-     [(eq? (car s*) 'shift)
-      (values (list 'shift) (cdr s*))]
-     [else
-      (let-values ([(s1* s2*) (split (cdr s*))])
-	(values (cons (car s*) s1*) s2*))]))
+     ((eq? (car s*) 'shift)
+      (values (list 'shift) (cdr s*)))
+     (else
+      (let-values (((s1* s2*) (split (cdr s*))))
+	(values (cons (car s*) s1*) s2*)))))
   (define (final s*)
     (cond
-     [(or (null? s*) (eq? (car s*) 'shift)) '()]
-     [else (cons (car s*) (final (cdr s*)))]))
+     ((or (null? s*) (eq? (car s*) 'shift)) '())
+     (else (cons (car s*) (final (cdr s*))))))
   (define (diff m m* s* ae*)
     (if (null? m*)
 	(err "unmatched identifiers" base-id new-id)
-      (let ([m1 (car m*)])
+      (let ((m1 (car m*)))
 	(if (eq? m m1)
 	    (values '() (final s*) '())
-	  (let-values ([(s1* s2*) (split s*)])
-	    (let-values ([(nm* ns* nae*)
-			  (diff m (cdr m*) s2* (cdr ae*))])
+	  (let-values (((s1* s2*) (split s*)))
+	    (let-values (((nm* ns* nae*)
+			  (diff m (cdr m*) s2* (cdr ae*))))
 	      (values (cons m1 nm*)
 		      (append s1* ns*)
 		      (cons (car ae*) nae*))))))))
@@ -3232,11 +3257,11 @@
   (unless (id? new-id) (err "not an identifier" new-id))
   (unless (free-identifier=? base-id new-id)
     (err "not the same identifier" base-id new-id))
-  (let-values ([(m* s* ae*)
+  (let-values (((m* s* ae*)
 		(diff (car (stx-mark* base-id))
 		      (stx-mark* new-id)
 		      (stx-subst* new-id)
-		      (stx-ae* new-id))])
+		      (stx-ae* new-id))))
     (if (and (null? m*) (null? s*))
 	object
       (mkstx object m* s* ae*))))
@@ -3316,8 +3341,8 @@
 			(expanded-rhs (expand-transformer rhs mr)))
 		   (extend-rib! rib id lab sd?)
 		   (let ((b (make-eval-transformer expanded-rhs)))
-		     (let ([t1 (cons lab (cons '$fluid flab))]
-			   [t2 (cons flab b)])
+		     (let ((t1 (cons lab (cons '$fluid flab)))
+			   (t2 (cons flab b)))
 		       (chi-body* (cdr e*)
 				  (cons* t1 t2 r) (cons* t1 t2 mr)
 				  lex* rhs* mod** kwd* exp* rib
@@ -3856,25 +3881,25 @@
 (define stale-when-collector (make-parameter #f))
 
 (define (make-stale-collector)
-  (let ([code (build-data no-source #f)]
-	[req* '()])
+  (let ((code (build-data no-source #f))
+	(req* '()))
     (case-lambda
-     [() (values code req*)]
-     [(c r*)
+     (() (values code req*))
+     ((c r*)
       (set! code
 	    (build-conditional no-source
 			       code
 			       (build-data no-source #t)
 			       c))
-      (set! req* (set-union r* req*))])))
+      (set! req* (set-union r* req*))))))
 
 (define (handle-stale-when guard-expr mr)
-  (let ([stc (make-collector)])
-    (let ([core-expr (parametrise ([inv-collector stc])
-		       (chi-expr guard-expr mr mr))])
+  (let ((stc (make-collector)))
+    (let ((core-expr (parametrise ((inv-collector stc))
+		       (chi-expr guard-expr mr mr))))
       (cond
-       [(stale-when-collector) =>
-	(lambda (c) (c core-expr (stc)))]))))
+       ((stale-when-collector) =>
+	(lambda (c) (c core-expr (stc))))))))
 
 (define core-library-expander
   (case-lambda
@@ -3882,12 +3907,12 @@
     (let-values (((name* exp* imp* b*) (parse-library e)))
       (let-values (((name ver) (parse-library-name name*)))
 	(verify-name name)
-	(let ([c (make-stale-collector)])
+	(let ((c (make-stale-collector)))
 	  (let-values (((imp* invoke-req* visit-req* invoke-code
 			      visit-code export-subst export-env)
-			(parametrise ([stale-when-collector c])
+			(parametrise ((stale-when-collector c))
 			  (library-body-expander exp* imp* b* #f))))
-	    (let-values ([(guard-code guard-req*) (c)])
+	    (let-values (((guard-code guard-req*) (c)))
 	      (values name ver imp* invoke-req* visit-req*
 		      invoke-code visit-code export-subst
 		      export-env guard-code guard-req*)))))))))
@@ -4183,7 +4208,7 @@
 
 		;  (define (syntax-annotation x)
 		;    (if (stx? x)
-		;        (let ([expr (stx-expr x)])
+		;        (let ((expr (stx-expr x)))
 		;          (if (annotation? x)
 		;              x
 		;              (stx->datum x)))
@@ -4335,14 +4360,14 @@
 	 (subst->rib export-subst)
 	 (map
 	     (lambda (x)
-	       (let ([label (car x)] [binding (cdr x)])
-		 (let ([type (car binding)] [val (cdr binding)])
+	       (let ((label (car x)) (binding (cdr x)))
+		 (let ((type (car binding)) (val (cdr binding)))
                    (cons* label type '*interaction* val))))
 	   export-env)
 	 '())))))
 
 (define (subst->rib subst)
-  (let ([rib (make-empty-rib)])
+  (let ((rib (make-empty-rib)))
     (set-rib-sym*! rib (map car subst))
     (set-rib-mark**! rib
 		     (map (lambda (x) top-mark*) subst))
@@ -4358,13 +4383,13 @@
 (define interaction-environment
   (let ((e #f))
     (case-lambda
-     [()
-      (or e (begin (set! e (new-interaction-environment)) e))]
-     [(x)
+     (()
+      (or e (begin (set! e (new-interaction-environment)) e)))
+     ((x)
       (unless (environment? x)
 	(assertion-violation 'interaction-environment
 	  "not an environment" x))
-      (set! e x)])))
+      (set! e x)))))
 
 (define top-level-context (make-parameter #f))
 
