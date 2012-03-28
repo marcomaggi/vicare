@@ -57,20 +57,6 @@
 		  syntax-error		syntax-violation
 		  make-variable-transformer)
     (prefix (rnrs syntax-case) sys.)
-    ;;Notice  that it  is  known by  this  library that  source-position
-    ;;objects are condition objects.  So  maybe it is better to keep the
-    ;;"-condition" suffixes in  the names.  Also these should  go in the
-    ;;compat library.
-    (rename (only (ikarus)
-		  make-source-position-condition
-		  source-position-condition?
-		  source-position-port-id
-		  source-position-byte
-		  source-position-character
-		  source-position-line
-		  source-position-column
-		  keyword?)
-	    (source-position-port-id		source-position-identifier))
     (rnrs mutable-pairs)
     (psyntax library-manager)
     (psyntax builders)
@@ -309,7 +295,7 @@
 	  (when (source-position-condition? pos)
 	    (display " [line "  port) (display (source-position-line    pos) port)
 	    (display " column " port) (display (source-position-column  pos) port)
-	    (display " of " port)     (display (source-position-identifier pos) port)
+	    (display " of " port)     (display (source-position-port-id pos) port)
 	    (display "]" port)))))
     (display ">" port)))
 
@@ -1628,7 +1614,7 @@
 	(if (source-position-condition? pos)
 	    `(or ,expr
 		 (assertion-error
-		  ',expr ,(source-position-identifier pos)
+		  ',expr ,(source-position-port-id pos)
 		  ,(source-position-byte pos) ,(source-position-character pos)
 		  ,(source-position-line pos) ,(source-position-column    pos)))
 	  `(or ,expr

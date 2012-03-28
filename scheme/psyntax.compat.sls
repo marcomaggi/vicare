@@ -22,13 +22,19 @@
     format				gensym
     eval-core
     symbol-value			set-symbol-value!
+    keyword?
 
     ;; reading source code and interpreting the resule
     get-annotated-datum			read-library-source-file
     annotation?				annotation-expression
     annotation-stripped			annotation-source
     annotation-textual-position
-    make-source-position-condition
+
+    ;; source position condition objects
+    make-source-position-condition	source-position-condition?
+    source-position-byte		source-position-character
+    source-position-line		source-position-column
+    source-position-port-id
 
     label-binding			set-label-binding!
     remove-location
@@ -37,13 +43,12 @@
     library-version-mismatch-warning
     library-stale-warning
     file-locator-resolution-error)
-  (import (ikarus) #;(except (ikarus)
-		  get-annotated-datum)
+  (import (except (ikarus)
+		  annotation-textual-position)
     (only (ikarus.compiler)
 	  eval-core)
     (only (ikarus.reader)
 	  read-library-source-file ;this is not in makefile.sps
-	  #;get-annotated-datum
 	  annotation-textual-position)
     (only (ikarus system $symbols)
 	  $unintern-gensym))
