@@ -459,28 +459,33 @@
     ((current-library-collection))))
 
 (define uninstall-library
+  ;;Uninstall  a  library.
+  ;;
+  ;;THE IMPLEMENTATION OF THIS FUNCTION IS INCOMPLETE.
+  ;;
   (case-lambda
+   ((name)
+    (uninstall-library name #t))
    ((name err?)
     (define who 'uninstall-library)
        ;;; FIXME: check that no other import is in progress
        ;;; FIXME: need to unintern labels and locations of
        ;;;        library bindings
-    (let ((lib
-	   (find-library-by
-	    (lambda (x) (equal? (library-name x) name)))))
+    (let ((lib (find-library-by (lambda (x)
+				  (equal? (library-name x) name)))))
       (when (and err? (not lib))
 	(assertion-violation who "library not installed" name))
+      ;;Remove LIB from the current collection.
       ((current-library-collection) lib #t)
-      (for-each
-	  (lambda (x)
-	    (let ((label (car x)) (binding (cdr x)))
-	      (remove-location label)
-	      (when (memq (car binding)
-			  '(global global-macro global-macro! global-ctv))
-		(remove-location (cdr binding)))))
-	(library-env lib))))
-   ((name)
-    (uninstall-library name #t))))
+      ;;Clear the VALUE fields of symbols.
+      (for-each (lambda (x)
+		  (let ((label   (car x))
+			(binding (cdr x)))
+		    (remove-location label)
+		    (when (memq (car binding) '(global global-macro global-macro! global-ctv))
+		      (remove-location (cdr binding)))))
+	(library-env lib)))
+    (values))))
 
 (define (install-library-record lib)
   ;;Subroutine of INSTALL-LIBRARY.
