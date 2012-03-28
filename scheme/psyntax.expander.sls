@@ -362,7 +362,7 @@
 ;;A syntax  object may be wrapped  or unwrapped, so what  does that mean
 ;;exactly?
 ;;
-;;A wrapped  syntax object is just a  way of saying it's  an STX record.
+;;A "wrapped syntax object" is just  a way of saying it's an STX record.
 ;;All identifiers are  STX records (with a symbol  in their EXPR field);
 ;;other objects such  as pairs and vectors may  be wrapped or unwrapped.
 ;;A wrapped pair is an STX whose EXPR is a pair.  An unwrapped pair is a
