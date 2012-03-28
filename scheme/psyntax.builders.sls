@@ -25,7 +25,9 @@
 ;;;; documentation
 ;;
 ;;The builders  are used  by the expander  to compose the  final, output
-;;symbolic expression after all the macros have been expanded.
+;;symbolic  expression after  all the  macros have  been  expanded.  The
+;;symbolic  expressions  returned  by  the  builder  functions  must  be
+;;understandable by the underlying compiler or interpreter.
 ;;
 ;;For  all   the  builders:  the  AE  argument   stands  for  "annotated
 ;;expression".
