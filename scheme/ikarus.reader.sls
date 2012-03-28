@@ -211,6 +211,22 @@
 			 (source-position-character textual-pos))
 		   textual-pos))
 
+(define (%annotation-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (define-inline (%write thing)
+    (write thing port))
+  (%display "#[annotation")
+;;;Writing the annotation expression makes the output really unreadable
+;;;
+  (%display " expression=#<omitted>")
+  (%display " stripped=")		(%write (annotation-stripped S))
+;;;Avoid  printing the SOURCE  field because  it may  be removed  in the
+;;;future  and all  its informations  are also  in  the TEXTUAL-POSITION
+;;;field.
+  (%display " textual-position=")	(%write (annotation-textual-position S))
+  (%display "]"))
+
 
 ;;;; graph notation location structures
 ;;
@@ -3138,6 +3154,8 @@
 
 
 ;;;; done
+
+(set-rtd-printer! (type-descriptor annotation) %annotation-printer)
 
 )
 
