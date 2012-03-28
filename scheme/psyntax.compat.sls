@@ -44,12 +44,15 @@
     library-stale-warning
     file-locator-resolution-error)
   (import (except (ikarus)
+		  ;;This binding is in  the makefile and this EXCEPT and
+		  ;;the  IMPORT below can  be removed  at the  next boot
+		  ;;image rotation (Marco Maggi; Wed Mar 28, 2012).
 		  annotation-textual-position)
-    (only (ikarus.compiler)
-	  eval-core)
     (only (ikarus.reader)
 	  read-library-source-file ;this is not in makefile.sps
 	  annotation-textual-position)
+    (only (ikarus.compiler)
+	  eval-core)
     (only (ikarus system $symbols)
 	  $unintern-gensym))
 
