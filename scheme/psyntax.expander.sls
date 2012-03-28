@@ -70,8 +70,6 @@
 		  source-position-line
 		  source-position-column
 		  keyword?)
-	    (make-source-position-condition	make-source-position)
-	    (source-position-condition?		source-position?)
 	    (source-position-port-id		source-position-identifier))
     (rnrs mutable-pairs)
     (psyntax library-manager)
@@ -308,7 +306,7 @@
     (let ((expr (stx-expr x)))
       (when (annotation? expr)
 	(let ((pos (annotation-textual-position expr)))
-	  (when (source-position? pos)
+	  (when (source-position-condition? pos)
 	    (display " [line "  port) (display (source-position-line    pos) port)
 	    (display " column " port) (display (source-position-column  pos) port)
 	    (display " of " port)     (display (source-position-identifier pos) port)
@@ -1627,7 +1625,7 @@
      (let ((pos (or (expression-position stx)
 		    (expression-position expr))))
        (bless
-	(if (source-position? pos)
+	(if (source-position-condition? pos)
 	    `(or ,expr
 		 (assertion-error
 		  ',expr ,(source-position-identifier pos)
@@ -4216,9 +4214,9 @@
 	      (make-who-condition 'assert)
 	      (make-message-condition "assertion failed")
 	      (make-irritants-condition (list expr))
-	      (make-source-position source-identifier
-				    byte-offset character-offset
-				    line-number column-number))))
+	      (make-source-position-condition source-identifier
+					      byte-offset character-offset
+					      line-number column-number))))
 
 (define syntax-error
   (lambda (x . args)
