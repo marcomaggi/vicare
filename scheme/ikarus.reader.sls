@@ -39,6 +39,8 @@
 		  ;; internal functions only for Vicare
 		  read-source-file read-script-source-file
 		  read-library-source-file)
+    (only (ikarus.string-to-number)
+	  define-string->number-parser)
     (only (vicare.foreign-libraries)
 	  register-filename-foreign-library
 	  autoload-filename-foreign-library)
@@ -46,8 +48,12 @@
     (vicare words)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
-    (only (ikarus.string-to-number)
-	  define-string->number-parser))
+    (only (vicare parser-logic)
+	  :introduce-device-arguments
+	  :generate-eof-then-chars-tests
+	  :generate-delimiter-test
+	  :unexpected-eof-error
+	  :fail))
 
 
 ;;;; syntax helpers
@@ -2386,29 +2392,29 @@
     ;;
     ;;The literal identifiers must be free identifiers, both here and in
     ;;the context where this macro is used.
-    (syntax-rules (INTRODUCE-DEVICE-ARGUMENTS
-		   GENERATE-EOF-THEN-CHARS-TESTS
-		   GENERATE-DELIMITER-TEST
-		   UNEXPECTED-EOF-ERROR
-		   FAIL)
+    (syntax-rules (:introduce-device-arguments
+		   :generate-eof-then-chars-tests
+		   :generate-delimiter-test
+		   :unexpected-eof-error
+		   :fail)
 
       ;;Introduce  a   list  of  identifiers   used  as  device-specific
       ;;arguments;  they will  be the  first arguments  for  each parser
       ;;operator function.
       ;;
-      ((_ INTRODUCE-DEVICE-ARGUMENTS ?kont . ?rest)
+      ((_ :introduce-device-arguments ?kont . ?rest)
        (?kont (port accumulated-chars) . ?rest))
 
       ;;Whenever  an input  character  is not  accepted  by an  operator
       ;;function  this rule is  used to  decide what  to do.   For input
       ;;ports the action is to raise an exception.
-      ((_ FAIL (port accumulated-chars) c)
+      ((_ :fail (port accumulated-chars) c)
        (num-error port "invalid numeric sequence" (cons c accumulated-chars)))
 
       ;;Whenever the end-of-input is found  in a position in which it is
       ;;unexpected, this rule  is used to decide what  to do.  For input
       ;;ports the action is to raise an exception.
-      ((_ UNEXPECTED-EOF-ERROR (port accumulated-chars))
+      ((_ :unexpected-eof-error (port accumulated-chars))
        (num-error port "invalid EOF while reading number" accumulated-chars))
 
       ;;This rule is used for input devices for which the numeric string
@@ -2419,7 +2425,7 @@
       ;;
       ;;When the input  device is an input port:  we test for delimiters
       ;;as specified by R6RS.
-      ((_ GENERATE-DELIMITER-TEST ?ch-var ?ch-is-delimiter-kont ?ch-is-not-delimiter-kont)
+      ((_ :generate-delimiter-test ?ch-var ?ch-is-delimiter-kont ?ch-is-not-delimiter-kont)
        (if (delimiter? ?ch-var)
 	   ?ch-is-delimiter-kont
 	 ?ch-is-not-delimiter-kont))
@@ -2427,7 +2433,7 @@
       ;;This  rule  is  used  to  generate the  tests  for  an  operator
       ;;function.  First  of all the end-of-input  condition is checked;
       ;;then the continuation form for more characters is expanded.
-      ((_ GENERATE-EOF-THEN-CHARS-TESTS ?ch-var next fail (port accumulated-chars) eof-case char-case)
+      ((_ :generate-eof-then-chars-tests ?ch-var next fail (port accumulated-chars) eof-case char-case)
        (let ((?ch-var (peek-char port)))
 	 (if (eof-object? ?ch-var)
 	     (let-syntax
