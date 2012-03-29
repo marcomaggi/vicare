@@ -1638,6 +1638,7 @@ exports all the bindings exported by @library{vicare} that are
 * iklib vectors::               Additional vector functions.
 * iklib symbols::               Additional symbol functions.
 * iklib numerics::              Additional functions on numbers.
+* iklib enumerations::          Additional functions on enumerations.
 * iklib load::                  Loading source files.
 * iklib import::                Local library imports.
 * iklib modules::               Local modules.
@@ -3183,6 +3184,20 @@ Hyperbolic functions.
 @defunx acosh @var{num}
 @defunx atanh @var{num}
 Inverse hyperbolic functions.
+@end defun
+
+@c page
+@node iklib enumerations
+@section Additional functions on enumerations
+
+
+The following bindings are exported by the @library{ikarus} and
+@library{vicare} libraries.
+
+
+@defun enum-set? @var{obj}
+Return @true{} if @var{obj} is an enumeration set object, else return
+@false{}.
 @end defun
 
 @c page
