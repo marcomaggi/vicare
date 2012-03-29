@@ -98,6 +98,43 @@
     ))
 
 
+(parametrise ((check-test-name	'abba))
+
+  (module (parse-abba)
+
+    (define (parse-abba input-string)
+      (assert (string? input-string))
+      (%parse-string input-string (string-length input-string) 0 '()))
+
+    ;;Parser logic  to convert a  string of #\a  and #\b into a  list of
+    ;;characters.
+    (define-parser-logic define-string->abba-parser next fail
+      (%parse-string (accumulator)
+		     ((eof)
+		      (reverse accumulator))
+		     ((#\a)
+		      (next %parse-string (cons #\a accumulator)))
+		     ((#\b)
+		      (next %parse-string (cons #\b accumulator)))))
+
+    ;;Actual parser drawing characters from an input string.
+    (define-string->abba-parser string->token/false
+      (%parse-string))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+  (check (parse-abba "")		=> '())
+  (check (parse-abba "a")		=> '(#\a))
+  (check (parse-abba "b")		=> '(#\b))
+  (check (parse-abba "1")		=> #f)
+  (check (parse-abba "ciao")		=> #f)
+  (check (parse-abba "abb")		=> '(#\a #\b #\b))
+
+  #t)
+
+
 (parametrise ((check-test-name	'integers))
 
   (define (parse-integer input-string)
