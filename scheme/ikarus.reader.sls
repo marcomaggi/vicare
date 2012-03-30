@@ -2387,8 +2387,8 @@
 	  define-string->number-parser))
 
   (define-syntax port-logic
-    ;;Define the  device logic to parse  a numeric string  from a Scheme
-    ;;textual input port.
+    ;;Define the device logic to  parse a numeric lexeme embedded in the
+    ;;input from a Scheme textual input port.
     ;;
     (syntax-rules (:introduce-device-arguments
 		   :generate-eof-then-chars-tests
