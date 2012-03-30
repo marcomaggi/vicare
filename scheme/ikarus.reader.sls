@@ -39,21 +39,13 @@
 		  ;; internal functions only for Vicare
 		  read-source-file read-script-source-file
 		  read-library-source-file)
-    (only (ikarus.string-to-number)
-	  define-string->number-parser)
     (only (vicare.foreign-libraries)
 	  register-filename-foreign-library
 	  autoload-filename-foreign-library)
     (vicare syntactic-extensions)
     (vicare words)
     (prefix (vicare unsafe-operations)
-	    unsafe.)
-    (only (vicare parser-logic)
-	  :introduce-device-arguments
-	  :generate-eof-then-chars-tests
-	  :generate-delimiter-test
-	  :unexpected-eof-error
-	  :fail))
+	    unsafe.))
 
 
 ;;;; syntax helpers
@@ -2383,15 +2375,21 @@
 
 ;;;; reading numbers
 
-(let-syntax ((num-error (syntax-rules ()
-			  ((_ port str ls)
-			   (die/p-1 port 'vicare-reader str (reverse-list->string ls))))))
+(module (parse-numeric-string u:digit+ u:sign u:dot)
+  (import
+      (only (vicare parser-logic)
+	    :introduce-device-arguments
+	    :generate-eof-then-chars-tests
+	    :generate-delimiter-test
+	    :unexpected-eof-error
+	    :fail)
+    (only (ikarus.string-to-number)
+	  define-string->number-parser))
+
   (define-syntax port-logic
     ;;Define the  device logic to parse  a numeric string  from a Scheme
     ;;textual input port.
     ;;
-    ;;The literal identifiers must be free identifiers, both here and in
-    ;;the context where this macro is used.
     (syntax-rules (:introduce-device-arguments
 		   :generate-eof-then-chars-tests
 		   :generate-delimiter-test
@@ -2408,14 +2406,14 @@
       ;;Whenever  an input  character  is not  accepted  by an  operator
       ;;function  this rule is  used to  decide what  to do.   For input
       ;;ports the action is to raise an exception.
-      ((_ :fail (port accumulated-chars) c)
-       (num-error port "invalid numeric sequence" (cons c accumulated-chars)))
+      ((_ :fail (?port ?accumulated-chars) ?ch)
+       (%error-invalid-sequence ?port (cons ?ch ?accumulated-chars)))
 
       ;;Whenever the end-of-input is found  in a position in which it is
       ;;unexpected, this rule  is used to decide what  to do.  For input
       ;;ports the action is to raise an exception.
-      ((_ :unexpected-eof-error (port accumulated-chars))
-       (num-error port "invalid EOF while reading number" accumulated-chars))
+      ((_ :unexpected-eof-error (?port ?accumulated-chars))
+       (%error-unexpected-eof ?port ?accumulated-chars))
 
       ;;This rule is used for input devices for which the numeric string
       ;;is embedded into a sequence of other characters, so there exists
@@ -2430,30 +2428,48 @@
 	   ?ch-is-delimiter-kont
 	 ?ch-is-not-delimiter-kont))
 
-      ;;This  rule  is  used  to  generate the  tests  for  an  operator
-      ;;function.  First  of all the end-of-input  condition is checked;
-      ;;then the continuation form for more characters is expanded.
-      ((_ :generate-eof-then-chars-tests ?ch-var next fail (port accumulated-chars) eof-case char-case)
-       (let ((?ch-var (peek-char port)))
+      ;;This rule is used to generate the "next input char" tests for an
+      ;;operator function.   First of all the  end-of-input condition is
+      ;;checked;  then  the continuation  form  for  more characters  is
+      ;;expanded.
+      ((_ :generate-eof-then-chars-tests ?ch-var ?next ?fail
+	  (?port ?accumulated-chars)
+	  ?end-of-input-kont ?parse-input-char-kont)
+       (let ((?ch-var (peek-char ?port)))
 	 (if (eof-object? ?ch-var)
 	     (let-syntax
-		 ((fail (syntax-rules ()
-			  ((_)
-			   (num-error port "invalid numeric sequence" accumulated-chars)))))
-	       eof-case)
+		 ((?fail (syntax-rules ()
+			   ((_)
+			    (%error-invalid-sequence ?port ?accumulated-chars)))))
+	       ?end-of-input-kont)
 	   (let-syntax
-	       ((fail (syntax-rules ()
-			((_)
-			 (num-error port "invalid numeric sequence"
-				    (cons ?ch-var accumulated-chars)))))
-		(next (syntax-rules ()
-			((_ who args (... ...))
-			 (who port (cons (get-char port) accumulated-chars) args (... ...))))))
-	     char-case))))
-      )))
+	       ((?fail (syntax-rules ()
+			 ((_)
+			  (%error-invalid-sequence ?port (cons ?ch-var ?accumulated-chars)))))
+		(?next (syntax-rules ()
+			 ((_ who args (... ...))
+			  (who ?port (cons (get-char ?port) ?accumulated-chars) args (... ...))))))
+	     ?parse-input-char-kont))))
+      ))
 
-(define-string->number-parser port-logic
-  (parse-numeric-string u:digit+ u:sign u:dot))
+  (define-syntax %error-invalid-sequence
+    (syntax-rules ()
+      ((_ ?port ?accumulated-characters)
+       (die/p-1 ?port 'vicare-reader
+		"invalid sequence of characters while parsing numeric lexeme"
+		(reverse-list->string ?accumulated-characters)))))
+
+  (define-syntax %error-unexpected-eof
+    (syntax-rules ()
+      ((_ ?port ?accumulated-characters)
+       (die/p-1 ?port 'vicare-reader
+		"unexpected end of input while parsing numeric lexeme"
+		(reverse-list->string ?accumulated-characters)))))
+
+  (define-string->number-parser port-logic
+    (parse-numeric-string u:digit+ u:sign u:dot))
+
+  #| end of module |# )
 
 
 ;;;; reading comments

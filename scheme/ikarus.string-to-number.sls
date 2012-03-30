@@ -949,9 +949,6 @@
   ;;Define  the device logic  to parse  a numeric  string from  a Scheme
   ;;string object.
   ;;
-  ;;The literal identifiers  must be free identifiers, both  here and in
-  ;;the context where this macro is used.
-  ;;
   (syntax-rules (:introduce-device-arguments
 		 :generate-eof-then-chars-tests
 		 :generate-delimiter-test
@@ -994,7 +991,7 @@
     ;;continuation form for more characters is expanded.
     ((_ :generate-eof-then-chars-tests ?ch-var ?next ?fail
 	(?input.string ?input.length ?input.index)
-	?end-of-input-kont ?more-characters-kont)
+	?end-of-input-kont ?parse-input-char-kont)
      (let-syntax
 	 ((?fail (syntax-rules ()
 		   ((_) #f)))
@@ -1005,7 +1002,7 @@
        (if (unsafe.fx= ?input.index ?input.length) ;end-of-input
 	   ?end-of-input-kont
 	 (let ((?ch-var (unsafe.string-ref ?input.string ?input.index)))
-	   ?more-characters-kont))))
+	   ?parse-input-char-kont))))
     ))
 
 
