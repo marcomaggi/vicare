@@ -951,9 +951,9 @@
   ;;
   (syntax-rules (:introduce-device-arguments
 		 :generate-eof-then-chars-tests
-		 :generate-delimiter-test
 		 :unexpected-eof-error
-		 :fail)
+		 :generate-delimiter-test
+		 :invalid-input-char)
 
     ;;Introduce a list of identifiers used as device-specific arguments;
     ;;they  will  be  the  first  arguments  for  each  parser  operator
@@ -964,7 +964,7 @@
     ;;Whenever  an  input  character  is  not accepted  by  an  operator
     ;;function  this   rule  is  used   to  decide  what  to   do.   For
     ;;STRING->NUMBER the action is to return false.
-    ((_ :fail (?input.string ?input.length ?input.index) ?ch-var)
+    ((_ :invalid-input-char (?input.string ?input.length ?input.index) ?ch-var)
      #f)
 
     ;;Whenever the  end-of-input is found in  a position in  which it is

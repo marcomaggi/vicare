@@ -2382,7 +2382,7 @@
 	    :generate-eof-then-chars-tests
 	    :generate-delimiter-test
 	    :unexpected-eof-error
-	    :fail)
+	    :invalid-input-char)
     (only (ikarus.string-to-number)
 	  define-string->number-parser))
 
@@ -2394,7 +2394,7 @@
 		   :generate-eof-then-chars-tests
 		   :generate-delimiter-test
 		   :unexpected-eof-error
-		   :fail)
+		   :invalid-input-char)
 
       ;;Introduce  a   list  of  identifiers   used  as  device-specific
       ;;arguments;  they will  be the  first arguments  for  each parser
@@ -2406,7 +2406,7 @@
       ;;Whenever  an input  character  is not  accepted  by an  operator
       ;;function  this rule is  used to  decide what  to do.   For input
       ;;ports the action is to raise an exception.
-      ((_ :fail (?port ?accumulated-chars) ?ch)
+      ((_ :invalid-input-char (?port ?accumulated-chars) ?ch)
        (%error-invalid-sequence ?port (cons ?ch ?accumulated-chars)))
 
       ;;Whenever the end-of-input is found  in a position in which it is

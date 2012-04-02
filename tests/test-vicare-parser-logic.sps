@@ -34,7 +34,7 @@
 (check-display "*** testing Vicare parser logic library\n")
 
 
-(define-syntax string->token/false
+(define-syntax string->token-or-false
   ;;Define  the device logic  to parse  a numeric  string from  a Scheme
   ;;string object.
   ;;
@@ -43,9 +43,9 @@
   ;;
   (syntax-rules (:introduce-device-arguments
 		 :generate-eof-then-chars-tests
-		 :generate-delimiter-test
 		 :unexpected-eof-error
-		 :fail)
+		 :generate-delimiter-test
+		 :invalid-input-char)
 
     ;;Introduce a list of identifiers used as device-specific arguments;
     ;;they  will  be  the  first  arguments  for  each  parser  operator
@@ -53,11 +53,23 @@
     ((_ :introduce-device-arguments ?kont . ?rest)
      (?kont (input.string input.length input.index) . ?rest))
 
-    ;;Whenever  an  input  character  is  not accepted  by  an  operator
-    ;;function  this   rule  is  used   to  decide  what  to   do.   For
-    ;;STRING->NUMBER the action is to return false.
-    ((_ :fail (?input.string ?input.length ?input.index) ?ch-var)
-     #f)
+    ;;This rule is used to  generate the tests for an operator function.
+    ;;First  of all  the  end-of-input condition  is  checked; then  the
+    ;;continuation form for more characters is expanded.
+    ((_ :generate-eof-then-chars-tests ?ch-var ?next ?fail
+	(?input.string ?input.length ?input.index)
+	?end-of-input-kont ?more-characters-kont)
+     (let-syntax
+	 ((?fail (syntax-rules ()
+		   ((_) #f)))
+	  (?next (syntax-rules ()
+		   ((_ ?operator-name ?operator-arg (... ...))
+		    (?operator-name ?input.string ?input.length (fxadd1 ?input.index)
+				    ?operator-arg (... ...))))))
+       (if (fx= ?input.index ?input.length) ;end-of-input
+	   ?end-of-input-kont
+	 (let ((?ch-var (string-ref ?input.string ?input.index)))
+	   ?more-characters-kont))))
 
     ;;Whenever the  end-of-input is found in  a position in  which it is
     ;;unexpected,  this  rule  is  used  to  decide  what  to  do.   For
@@ -78,23 +90,11 @@
     ((_ :generate-delimiter-test ?ch-var ?ch-is-delimiter-kont ?ch-is-not-delimiter-kont)
      ?ch-is-not-delimiter-kont)
 
-    ;;This rule is used to  generate the tests for an operator function.
-    ;;First  of all  the  end-of-input condition  is  checked; then  the
-    ;;continuation form for more characters is expanded.
-    ((_ :generate-eof-then-chars-tests ?ch-var ?next ?fail
-	(?input.string ?input.length ?input.index)
-	?end-of-input-kont ?more-characters-kont)
-     (let-syntax
-	 ((?fail (syntax-rules ()
-		   ((_) #f)))
-	  (?next (syntax-rules ()
-		   ((_ ?operator-name ?operator-arg (... ...))
-		    (?operator-name ?input.string ?input.length (fxadd1 ?input.index)
-				    ?operator-arg (... ...))))))
-       (if (fx= ?input.index ?input.length) ;end-of-input
-	   ?end-of-input-kont
-	 (let ((?ch-var (string-ref ?input.string ?input.index)))
-	   ?more-characters-kont))))
+    ;;Whenever  an  input  character  is  not accepted  by  an  operator
+    ;;function  this   rule  is  used   to  decide  what  to   do.   For
+    ;;STRING->NUMBER the action is to return false.
+    ((_ :invalid-input-char (?input.string ?input.length ?input.index) ?ch-var)
+     #f)
     ))
 
 
@@ -118,7 +118,7 @@
 		      (next %parse-string (cons #\b accumulator)))))
 
     ;;Actual parser drawing characters from an input string.
-    (define-string->abba-parser string->token/false
+    (define-string->abba-parser string->token-or-false
       (%parse-string))
 
     #| end of module |# )
@@ -157,7 +157,7 @@
 		     ((%digit) => D
 		      (next %parse-digit+ (+ D (* 10 accumulator))))))
     ;;Actual parser drawing characters from an input string.
-    (define-string->integer-parser string->token/false
+    (define-string->integer-parser string->token-or-false
       (%parse-integer))
     (assert (string? input-string))
     (%parse-integer input-string (string-length input-string) 0))

@@ -44,7 +44,7 @@
     :generate-eof-then-chars-tests
     :generate-delimiter-test
     :unexpected-eof-error
-    :fail)
+    :invalid-input-char)
   (import (rnrs)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
@@ -57,7 +57,7 @@
   :generate-eof-then-chars-tests
   :generate-delimiter-test
   :unexpected-eof-error
-  :fail)
+  :invalid-input-char)
 
 
 (define-syntax define-parser-logic
@@ -180,7 +180,7 @@
 		      (%generate-end-of-input-form
 		       ?device-logic (?device-arg ...)
 		       ?operator-clause ...)
-		      (%generate-parse-more-chars-form
+		      (%generate-parse-input-char-form
 		       ?device-logic (?device-arg ...)
 		       ch (%generate-delimiter-test
 			   ?device-logic (?device-arg ...)
@@ -221,20 +221,20 @@
     ;;function: expand to the error form.
     ((_ ?device-logic ?device-arg-list ?ch-var)
      (?device-logic :generate-delimiter-test ?ch-var
-		    (?device-logic :fail ?device-arg-list ?ch-var)
-		    (?device-logic :fail ?device-arg-list ?ch-var)))
+		    (?device-logic :invalid-input-char ?device-arg-list ?ch-var)
+		    (?device-logic :invalid-input-char ?device-arg-list ?ch-var)))
     ;;There  is  an  EOF  clause  specified  for  the  current  operator
     ;;function; such clause is used to process both the end-of-input and
     ;;end-of-number conditions.
     ((_ ?device-logic ?device-arg-list ?ch-var ((eof) ?then-clause) . ?other-clauses)
      (?device-logic :generate-delimiter-test ?ch-var
 		    ?then-clause
-		    (?device-logic :fail ?device-arg-list ?ch-var)))
+		    (?device-logic :invalid-input-char ?device-arg-list ?ch-var)))
     ;;Discard ?NOT-EOF-CLAUSE and recurse.
     ((_ ?device-logic ?device-arg-list ?ch-var ?not-eof-clause . ?other-clauses)
      (%generate-delimiter-test ?device-logic ?device-arg-list ?ch-var . ?other-clauses))))
 
-(define-syntax %generate-parse-more-chars-form
+(define-syntax %generate-parse-input-char-form
   ;;Recursively  iterate over the  clauses of  an operator  function and
   ;;expand  to code  that checks  them  against the  character bound  to
   ;;?CH-VAR.
@@ -252,7 +252,7 @@
     ;;syntax.
     ((_ ?device-logic ?device-arg-list ?ch-var ?test-delimiter-form
 	((eof) ?then-form) . ?other-operator-clauses)
-     (%generate-parse-more-chars-form ?device-logic ?device-arg-list ?ch-var
+     (%generate-parse-input-char-form ?device-logic ?device-arg-list ?ch-var
 				      ?test-delimiter-form . ?other-operator-clauses))
 
     ;;The  clause specifies  a test  function to  be applied  to ?CH-VAR
@@ -262,7 +262,7 @@
      (cond ((?test ?ch-var . ?test-args)
 	    => (lambda (?test-result) ?then-form))
 	   (else
-	    (%generate-parse-more-chars-form ?device-logic ?device-arg-list ?ch-var
+	    (%generate-parse-input-char-form ?device-logic ?device-arg-list ?ch-var
 					     ?test-delimiter-form . ?other-operator-clauses))))
 
     ;;The  operator  clause specifies  a  list  of  characters to  match
@@ -272,7 +272,7 @@
      (if (or (unsafe.char= ?char ?ch-var)
 	     ...)
 	 ?then-form
-       (%generate-parse-more-chars-form ?device-logic ?device-arg-list ?ch-var
+       (%generate-parse-input-char-form ?device-logic ?device-arg-list ?ch-var
 					?test-delimiter-form . ?other-operator-clauses)))))
 
 
