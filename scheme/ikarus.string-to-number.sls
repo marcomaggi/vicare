@@ -446,7 +446,7 @@
     ;;before  the  decimal  dot;   notice  that  denominators  of  exact
     ;;rationals are not accumulated by this operator.
     ;;
-    ((eof)
+    ((:end-of-input)
      ;;The number terminated without an  ending #\i, so this is either a
      ;;real number or a complex  number in polar notation; this means N0
      ;;must be either false or a pair containing the magnitude.
@@ -506,7 +506,7 @@
     ;;after  the dot: the  ACCUM is  accumulated as  in U:DIGIT  and the
     ;;exponent EXPONENT is decremented by 1.
     ;;
-    ((eof)
+    ((:end-of-input)
      ;;The number terminated without an  ending #\i, so this is either a
      ;;real number or a complex  number in polar notation; this means N0
      ;;must be either false or a pair containing the magnitude.
@@ -608,7 +608,7 @@
     ;;
     ;;NUMERATOR is a non-negative integer representing the numerator.
     ;;
-    ((eof)
+    ((:end-of-input)
      (if (zero? accum)
 	 (fail)
        (let-inline ((n1 (sign*accum-with-exactness sn exactness (/ numerator accum))))
@@ -651,7 +651,7 @@
     ;;N must  be the number object to  be returned to the  caller of the
     ;;parser.
     ;;
-    ((eof) n))
+    ((:end-of-input) n))
 
   (u:polar (radix mag exactness)
     ;;Start  parsing  the  angle  part  of a  complex  number  in  polar
@@ -722,7 +722,7 @@
     ;;number  after   the  exponential  marker,  and   possibly  a  sign
     ;;character, has been parsed.
     ;;
-    ((eof)
+    ((:end-of-input)
      ;;The number terminated without an  ending #\i, so this is either a
      ;;real number or a complex  number in polar notation; this means N0
      ;;must be either false or a pair containing the magnitude.
@@ -781,7 +781,7 @@
     ;;Digits  are  discarded because  Vicare  does  not support  inexact
     ;;numbers with mantissa width specification.
     ;;
-    ((eof)
+    ((:end-of-input)
      (%make-number-non-rectangular n0 n1))
     ((digit radix) => digit-fx
      (next u:mant+ radix n0 n1 exactness))
@@ -814,7 +814,7 @@
     ;;Parse the first character after the numeric sequence "+i" or "-i".
     ;;This operator is a subroutine of U:SIGN.
     ;;
-    ((eof)
+    ((:end-of-input)
      (let-inline ((n1 (sign*accum-with-exactness sn exactness 1)))
        (%make-number-after-ending-i fail n0 n1)))
     ((#\n)
@@ -856,7 +856,7 @@
     ;;
     ;;N1 is the parse infinity number +inf.0 or -inf.0.
     ;;
-    ((eof)
+    ((:end-of-input)
      (%make-number-non-rectangular n0 n1))
     ((sign) => sn2
      ;;Terminate  the  real part  of  a  complex  number in  rectangular
@@ -915,7 +915,7 @@
     ;;Parse the  first character after the numeric  sequence "+nan.0" or
     ;;"-nan.0".  This operator is a subroutine of "u:sign-nan.".
     ;;
-    ((eof)
+    ((:end-of-input)
      (%make-number-non-rectangular n0 +nan.0))
     ((sign) => sn2
      ;;Terminate  the  real part  of  a  complex  number in  rectangular
@@ -943,72 +943,9 @@
   #| end of DEFINE-PARSER-LOGIC |# )
 
 
-;;;; device logic for STRING->NUMBER
-
-(define-syntax string->number-logic
-  ;;Define  the device logic  to parse  a numeric  string from  a Scheme
-  ;;string object.
-  ;;
-  (syntax-rules (:introduce-device-arguments
-		 :generate-eof-then-chars-tests
-		 :unexpected-eof-error
-		 :generate-delimiter-test
-		 :invalid-input-char)
-
-    ;;Introduce a list of identifiers used as device-specific arguments;
-    ;;they  will  be  the  first  arguments  for  each  parser  operator
-    ;;function.
-    ((_ :introduce-device-arguments ?kont . ?rest)
-     (?kont (input.string input.length input.index) . ?rest))
-
-    ;;Whenever  an  input  character  is  not accepted  by  an  operator
-    ;;function  this   rule  is  used   to  decide  what  to   do.   For
-    ;;STRING->NUMBER the action is to return false.
-    ((_ :invalid-input-char (?input.string ?input.length ?input.index) ?ch-var)
-     #f)
-
-    ;;Whenever the  end-of-input is found in  a position in  which it is
-    ;;unexpected,  this  rule  is  used  to  decide  what  to  do.   For
-    ;;STRING->NUMBER the action is to return false.
-    ((_ :unexpected-eof-error (?input.string ?input.length ?input.index))
-     #f)
-
-    ;;This rule is  used for input devices for  which the numeric string
-    ;;is embedded into a sequence of other characters, so there exists a
-    ;;set  of characters  that  delimit the  end-of-number.  The  parser
-    ;;delegates  to  the  device  the responsibility  of  knowing  which
-    ;;characters are delimiters, if any.
-    ;;
-    ;;When the input  device is a string containing  only the number, as
-    ;;is  the case  for  STRING->NUMBER: there  are  no delimiters,  the
-    ;;end-of-number  is the  end of  the  string.  We  avoid looking  at
-    ;;?CH-VAR and just expand to the not-delimiter continuation form.
-    ((_ :generate-delimiter-test ?ch-var ?ch-is-delimiter-kont ?ch-is-not-delimiter-kont)
-     ?ch-is-not-delimiter-kont)
-
-    ;;This rule is used to  generate the tests for an operator function.
-    ;;First  of all  the  end-of-input condition  is  checked; then  the
-    ;;continuation form for more characters is expanded.
-    ((_ :generate-eof-then-chars-tests ?ch-var ?next ?fail
-	(?input.string ?input.length ?input.index)
-	?end-of-input-kont ?parse-input-char-kont)
-     (let-syntax
-	 ((?fail (syntax-rules ()
-		   ((_) #f)))
-	  (?next (syntax-rules ()
-		   ((_ ?operator-name ?operator-arg (... ...))
-		    (?operator-name ?input.string ?input.length (unsafe.fxadd1 ?input.index)
-				    ?operator-arg (... ...))))))
-       (if (unsafe.fx= ?input.index ?input.length) ;end-of-input
-	   ?end-of-input-kont
-	 (let ((?ch-var (unsafe.string-ref ?input.string ?input.index)))
-	   ?parse-input-char-kont))))
-    ))
-
-
 ;;;; definition of STRING->NUMBER
 
-(define-string->number-parser string->number-logic
+(define-string->number-parser string->token-or-false
   (parse-numeric-string))
 
 (define string->number

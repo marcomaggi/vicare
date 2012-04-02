@@ -2379,9 +2379,9 @@
   (import
       (only (vicare parser-logic)
 	    :introduce-device-arguments
-	    :generate-eof-then-chars-tests
+	    :generate-end-of-input-or-char-tests
 	    :generate-delimiter-test
-	    :unexpected-eof-error
+	    :unexpected-end-of-input
 	    :invalid-input-char)
     (only (ikarus.string-to-number)
 	  define-string->number-parser))
@@ -2391,9 +2391,9 @@
     ;;input from a Scheme textual input port.
     ;;
     (syntax-rules (:introduce-device-arguments
-		   :generate-eof-then-chars-tests
+		   :generate-end-of-input-or-char-tests
 		   :generate-delimiter-test
-		   :unexpected-eof-error
+		   :unexpected-end-of-input
 		   :invalid-input-char)
 
       ;;Introduce  a   list  of  identifiers   used  as  device-specific
@@ -2412,7 +2412,7 @@
       ;;Whenever the end-of-input is found  in a position in which it is
       ;;unexpected, this rule  is used to decide what  to do.  For input
       ;;ports the action is to raise an exception.
-      ((_ :unexpected-eof-error (?port ?accumulated-chars))
+      ((_ :unexpected-end-of-input (?port ?accumulated-chars))
        (%error-unexpected-eof ?port ?accumulated-chars))
 
       ;;This rule is used for input devices for which the numeric string
@@ -2432,7 +2432,7 @@
       ;;operator function.   First of all the  end-of-input condition is
       ;;checked;  then  the continuation  form  for  more characters  is
       ;;expanded.
-      ((_ :generate-eof-then-chars-tests ?ch-var ?next ?fail
+      ((_ :generate-end-of-input-or-char-tests ?ch-var ?next ?fail
 	  (?port ?accumulated-chars)
 	  ?end-of-input-kont ?parse-input-char-kont)
        (let ((?ch-var (peek-char ?port)))

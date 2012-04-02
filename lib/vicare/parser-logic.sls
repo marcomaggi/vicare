@@ -40,11 +40,13 @@
 (library (vicare parser-logic)
   (export
     define-parser-logic
+    string->token-or-false
     :introduce-device-arguments
-    :generate-eof-then-chars-tests
+    :generate-end-of-input-or-char-tests
     :generate-delimiter-test
-    :unexpected-eof-error
-    :invalid-input-char)
+    :unexpected-end-of-input
+    :invalid-input-char
+    :end-of-input)
   (import (rnrs)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
@@ -54,10 +56,11 @@
 
 (define-auxiliary-syntaxes
   :introduce-device-arguments
-  :generate-eof-then-chars-tests
+  :generate-end-of-input-or-char-tests
+  :unexpected-end-of-input
   :generate-delimiter-test
-  :unexpected-eof-error
-  :invalid-input-char)
+  :invalid-input-char
+  :end-of-input)
 
 
 (define-syntax define-parser-logic
@@ -175,7 +178,7 @@
      (define (?operator-name ?device-arg ... ?operator-arg ...)
        ;;Introduce the identifier  "ch" used to bind the  next char from
        ;;the input device.
-       (?device-logic :generate-eof-then-chars-tests ch
+       (?device-logic :generate-end-of-input-or-char-tests ch
 		      ?next ?fail (?device-arg ...)
 		      (%generate-end-of-input-form
 		       ?device-logic (?device-arg ...)
@@ -188,47 +191,51 @@
 		       ?operator-clause ...)
 		      )))))
 
-
 (define-syntax %generate-end-of-input-form
-  ;;Iterate through the clauses of an operator looking for the EOF one.
+  ;;Recursively iterate  through the clauses of an  operator looking for
+  ;;the end-of-input one.
   ;;
-  ;;The literal EOF must be a free identifier.
-  ;;
-  (syntax-rules (eof)
-    ;;End-of-input was found from the  input device, but there is no EOF
-    ;;clause  specified for  this  parser operator:  end-of-input is  an
-    ;;error here.
+  (syntax-rules (:end-of-input)
+    ;;No more  operator clauses.  End-of-input was found  from the input
+    ;;device,  but there is  no end-of-input  clause specified  for this
+    ;;parser operator: end-of-input is an error here.
     ((_ ?device-logic ?device-arg-list)
-     (?device-logic :unexpected-eof-error ?device-arg-list))
-    ;;End-of-input was found  from the input device and  there is an EOF
-    ;;clause specified  for this  parser operator: end-of-input  is fine
-    ;;here, so execute the clause.
-    ((_ ?device-logic ?device-arg-list ((eof) ?then-form) . ?other-clauses)
+     (?device-logic :unexpected-end-of-input ?device-arg-list))
+    ;;End-of-input  was found  from the  input  device and  there is  an
+    ;;end-of-input   clause   specified   for  this   parser   operator:
+    ;;end-of-input is fine here, so execute the clause.
+    ((_ ?device-logic ?device-arg-list ((:end-of-input) ?then-form) . ?other-clauses)
      ?then-form)
     ;;Discard ?NOT-EOF-CLAUSE and recurse.
     ((_ ?device-logic ?device-arg-list ?not-eof-clause . ?other-clauses)
      (%generate-end-of-input-form ?device-logic ?device-arg-list . ?other-clauses))))
 
 (define-syntax %generate-delimiter-test
-  ;;Expand to a single form testing if the character bound to ?CH-VAR is
-  ;;an end-of-number delimiter.  Both the test and the responsibility to
-  ;;perfom  an action  are delegated  to  the device  logic; the  parser
-  ;;merely   suggests   a   is-delimiter   continuation   form   and   a
-  ;;is-not-delimiter continuation form.
+  ;;Recursively iterate  through the clauses of an  operator looking for
+  ;;an  end-of-input  one.  Expand  to  a  single  form testing  if  the
+  ;;character bound to ?CH-VAR  is an end-of-lexeme delimiter.  Both the
+  ;;test and the responsibility to perfom an action are delegated to the
+  ;;device logic; the parser merely suggests a is-delimiter continuation
+  ;;form and a is-not-delimiter continuation form.
   ;;
-  (syntax-rules (eof)
-    ;;There  is  no  EOF  clause  specified  for  the  current  operator
-    ;;function: expand to the error form.
+  (syntax-rules (:end-of-input)
+    ;;No  more  operator  clauses.   There  is  no  end-of-input  clause
+    ;;specified for this operator function:  in both cases expand to the
+    ;;error form.
     ((_ ?device-logic ?device-arg-list ?ch-var)
      (?device-logic :generate-delimiter-test ?ch-var
+		    ;;Continuation when ?CH-VAR is a delimiter.
 		    (?device-logic :invalid-input-char ?device-arg-list ?ch-var)
+		    ;;Continuation when ?CH-VAR is not a delimiter.
 		    (?device-logic :invalid-input-char ?device-arg-list ?ch-var)))
-    ;;There  is  an  EOF  clause  specified  for  the  current  operator
+    ;;There  is  an  end-of-input  clause specified  for  this  operator
     ;;function; such clause is used to process both the end-of-input and
-    ;;end-of-number conditions.
-    ((_ ?device-logic ?device-arg-list ?ch-var ((eof) ?then-clause) . ?other-clauses)
+    ;;end-of-lexeme conditions.
+    ((_ ?device-logic ?device-arg-list ?ch-var ((:end-of-input) ?then-clause) . ?other-clauses)
      (?device-logic :generate-delimiter-test ?ch-var
+		    ;;Continuation when ?CH-VAR is a delimiter.
 		    ?then-clause
+		    ;;Continuation when ?CH-VAR is not a delimiter.
 		    (?device-logic :invalid-input-char ?device-arg-list ?ch-var)))
     ;;Discard ?NOT-EOF-CLAUSE and recurse.
     ((_ ?device-logic ?device-arg-list ?ch-var ?not-eof-clause . ?other-clauses)
@@ -239,19 +246,19 @@
   ;;expand  to code  that checks  them  against the  character bound  to
   ;;?CH-VAR.
   ;;
-  (syntax-rules (eof =>)
+  (syntax-rules (:end-of-input =>)
 
-    ;;No more  operator clauses.  Expand to  the end-of-number delimiter
+    ;;No more  operator clauses.  Expand to  the end-of-lexeme delimiter
     ;;characters test.
     ((_ ?device-logic ?device-arg-list ?ch-var ?test-delimiter-form)
      ?test-delimiter-form)
 
     ;;The operator clause specifies  that end-of-input is acceptable for
-    ;;this  operator function.   Skip  this clause  here because  (being
-    ;;checked  first among  all the  clauses) it  is handled  by another
-    ;;syntax.
+    ;;this  operator  function.   Skip  this clause  here  and  recurse,
+    ;;because (being checked first among  all the clauses) it is handled
+    ;;by another syntax.
     ((_ ?device-logic ?device-arg-list ?ch-var ?test-delimiter-form
-	((eof) ?then-form) . ?other-operator-clauses)
+	((:end-of-input) ?then-form) . ?other-operator-clauses)
      (%generate-parse-input-char-form ?device-logic ?device-arg-list ?ch-var
 				      ?test-delimiter-form . ?other-operator-clauses))
 
@@ -274,6 +281,69 @@
 	 ?then-form
        (%generate-parse-input-char-form ?device-logic ?device-arg-list ?ch-var
 					?test-delimiter-form . ?other-operator-clauses)))))
+
+
+;;;; device logic for full string input
+
+(define-syntax string->token-or-false
+  ;;Define the device logic to parse  a lexeme from a full Scheme string
+  ;;object.
+  ;;
+  (syntax-rules (:introduce-device-arguments
+		 :generate-end-of-input-or-char-tests
+		 :unexpected-end-of-input
+		 :generate-delimiter-test
+		 :invalid-input-char)
+
+    ;;Introduce a list of identifiers used as device-specific arguments;
+    ;;they  will  be  the  first  arguments  for  each  parser  operator
+    ;;function.
+    ((_ :introduce-device-arguments ?kont . ?rest)
+     (?kont (input.string input.length input.index) . ?rest))
+
+    ;;Whenever  an  input  character  is  not accepted  by  an  operator
+    ;;function  this   rule  is  used   to  decide  what  to   do.   For
+    ;;STRING->NUMBER the action is to return false.
+    ((_ :invalid-input-char (?input.string ?input.length ?input.index) ?ch-var)
+     #f)
+
+    ;;Whenever the  end-of-input is found in  a position in  which it is
+    ;;unexpected,  this  rule  is  used  to  decide  what  to  do.   For
+    ;;STRING->NUMBER the action is to return false.
+    ((_ :unexpected-end-of-input (?input.string ?input.length ?input.index))
+     #f)
+
+    ;;This rule is  used for input devices for  which the numeric string
+    ;;is embedded into a sequence of other characters, so there exists a
+    ;;set  of characters  that  delimit the  end-of-number.  The  parser
+    ;;delegates  to  the  device  the responsibility  of  knowing  which
+    ;;characters are delimiters, if any.
+    ;;
+    ;;When the input  device is a string containing  only the number, as
+    ;;is  the case  for  STRING->NUMBER: there  are  no delimiters,  the
+    ;;end-of-number  is the  end of  the  string.  We  avoid looking  at
+    ;;?CH-VAR and just expand to the not-delimiter continuation form.
+    ((_ :generate-delimiter-test ?ch-var ?ch-is-delimiter-kont ?ch-is-not-delimiter-kont)
+     ?ch-is-not-delimiter-kont)
+
+    ;;This rule is used to  generate the tests for an operator function.
+    ;;First  of all  the  end-of-input condition  is  checked; then  the
+    ;;continuation form for more characters is expanded.
+    ((_ :generate-end-of-input-or-char-tests ?ch-var ?next ?fail
+	(?input.string ?input.length ?input.index)
+	?end-of-input-kont ?parse-input-char-kont)
+     (let-syntax
+	 ((?fail (syntax-rules ()
+		   ((_) #f)))
+	  (?next (syntax-rules ()
+		   ((_ ?operator-name ?operator-arg (... ...))
+		    (?operator-name ?input.string ?input.length (unsafe.fxadd1 ?input.index)
+				    ?operator-arg (... ...))))))
+       (if (unsafe.fx= ?input.index ?input.length) ;end-of-input
+	   ?end-of-input-kont
+	 (let ((?ch-var (unsafe.string-ref ?input.string ?input.index)))
+	   ?parse-input-char-kont))))
+    ))
 
 
 ;;;; done

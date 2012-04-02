@@ -34,70 +34,6 @@
 (check-display "*** testing Vicare parser logic library\n")
 
 
-(define-syntax string->token-or-false
-  ;;Define  the device logic  to parse  a numeric  string from  a Scheme
-  ;;string object.
-  ;;
-  ;;The literal identifiers  must be free identifiers, both  here and in
-  ;;the context where this macro is used.
-  ;;
-  (syntax-rules (:introduce-device-arguments
-		 :generate-eof-then-chars-tests
-		 :unexpected-eof-error
-		 :generate-delimiter-test
-		 :invalid-input-char)
-
-    ;;Introduce a list of identifiers used as device-specific arguments;
-    ;;they  will  be  the  first  arguments  for  each  parser  operator
-    ;;function.
-    ((_ :introduce-device-arguments ?kont . ?rest)
-     (?kont (input.string input.length input.index) . ?rest))
-
-    ;;This rule is used to  generate the tests for an operator function.
-    ;;First  of all  the  end-of-input condition  is  checked; then  the
-    ;;continuation form for more characters is expanded.
-    ((_ :generate-eof-then-chars-tests ?ch-var ?next ?fail
-	(?input.string ?input.length ?input.index)
-	?end-of-input-kont ?more-characters-kont)
-     (let-syntax
-	 ((?fail (syntax-rules ()
-		   ((_) #f)))
-	  (?next (syntax-rules ()
-		   ((_ ?operator-name ?operator-arg (... ...))
-		    (?operator-name ?input.string ?input.length (fxadd1 ?input.index)
-				    ?operator-arg (... ...))))))
-       (if (fx= ?input.index ?input.length) ;end-of-input
-	   ?end-of-input-kont
-	 (let ((?ch-var (string-ref ?input.string ?input.index)))
-	   ?more-characters-kont))))
-
-    ;;Whenever the  end-of-input is found in  a position in  which it is
-    ;;unexpected,  this  rule  is  used  to  decide  what  to  do.   For
-    ;;STRING->NUMBER the action is to return false.
-    ((_ :unexpected-eof-error (?input.string ?input.length ?input.index))
-     #f)
-
-    ;;This rule is  used for input devices for  which the numeric string
-    ;;is embedded into a sequence of other characters, so there exists a
-    ;;set  of characters  that  delimit the  end-of-number.  The  parser
-    ;;delegates  to  the  device  the responsibility  of  knowing  which
-    ;;characters are delimiters, if any.
-    ;;
-    ;;When the input  device is a string containing  only the number, as
-    ;;is  the case  for  STRING->NUMBER: there  are  no delimiters,  the
-    ;;end-of-number  is the  end of  the  string.  We  avoid looking  at
-    ;;?CH-VAR and just expand to the not-delimiter continuation form.
-    ((_ :generate-delimiter-test ?ch-var ?ch-is-delimiter-kont ?ch-is-not-delimiter-kont)
-     ?ch-is-not-delimiter-kont)
-
-    ;;Whenever  an  input  character  is  not accepted  by  an  operator
-    ;;function  this   rule  is  used   to  decide  what  to   do.   For
-    ;;STRING->NUMBER the action is to return false.
-    ((_ :invalid-input-char (?input.string ?input.length ?input.index) ?ch-var)
-     #f)
-    ))
-
-
 (parametrise ((check-test-name	'abba))
 
   (module (parse-abba)
