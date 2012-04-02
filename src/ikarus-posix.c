@@ -1085,7 +1085,7 @@ ikrt_posix_readlink (ikptr s_link_pathname, ikpcb * pcb)
   char *	link_pathname = IK_BYTEVECTOR_DATA_CHARP(s_link_pathname);
   size_t	max_len;
   int		rv;
-  for (max_len=PATH_MAX;; max_len *= 2) {
+  for (max_len=1024;; max_len *= 2) {
     char	true_pathname[max_len];
     errno = 0;
     rv	  = readlink(link_pathname, true_pathname, max_len);
@@ -1106,11 +1106,15 @@ ikrt_posix_realpath (ikptr s_link_pathname, ikpcb* pcb)
 #ifdef HAVE_REALPATH
   char *	link_pathname;
   char *	true_pathname;
-  char		buff[PATH_MAX];
   link_pathname = IK_BYTEVECTOR_DATA_CHARP(s_link_pathname);
   errno		= 0;
-  true_pathname = realpath(link_pathname, buff);
-  return (true_pathname)? ika_bytevector_from_cstring(pcb, true_pathname) : ik_errno_to_code();
+  true_pathname = realpath(link_pathname, NULL);
+  if (true_pathname) {
+    ikptr	s_true_pathname = ika_bytevector_from_cstring(pcb, true_pathname);
+    free(true_pathname);
+    return s_true_pathname;
+  } else
+    return ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
