@@ -15477,6 +15477,157 @@ heavily relies on macros.
 @subsection Introductory examples
 
 
+@subsubheading Parsing a string of selected characters
+
+As first usage example, let's see a simple parser using a full Scheme
+string as argument and accepting lexemes being the empty string or
+strings of characters @samp{#\a} and @samp{\#b}; the result of a call to
+the parser is the list of characters or @false{} if the input is
+invalid:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare parser-logic))
+
+(module (parse-abba)
+
+  (define (parse-abba input-string)
+    (assert (string? input-string))
+    (%parse-string input-string
+                   (string-length input-string)
+                   0    ;start index
+                   '()  ;start value for ACCUMULATOR
+                   ))
+
+  (define-parser-logic define-string->abba-parser next fail
+    (%parse-string (accumulator)
+       ((:end-of-input)
+        (reverse accumulator))
+       ((#\a)
+        (next %parse-string (cons #\a accumulator)))
+       ((#\b)
+        (next %parse-string (cons #\b accumulator)))))
+
+  (define-string->abba-parser string->token-or-false
+    (%parse-string))
+
+   #| end of module |# )
+
+(parse-abba "")         @result{} ()
+(parse-abba "a")        @result{} (#\a)
+(parse-abba "b")        @result{} (#\b)
+(parse-abba "1")        @result{} #f)
+(parse-abba "ciao")     @result{} #f)
+(parse-abba "abb")      @result{} (#\a #\b #\b)
+@end example
+
+@noindent
+the macro @func{string->token-or-false} is exported by @library{vicare
+parser-logic} and implements the device logic for a full input Scheme
+string representing a lexeme to be used in a parser returning @false{}
+when the input is invalid.
+
+The macros in the module combine their output and expand to the
+definition of a function @func{%parse-string} equivalent to the
+following:
+
+@example
+(define (%parse-string input.string input.length input.index
+                       accumulator)
+  (if (fx=? input.index input.length)
+      (reverse accumulator)
+    (let ((ch (string-ref input.string input.index)))
+      (cond ((char=? #\a ch)
+             (%parse-string input.string input.length
+                            (fx+ 1 input.index)
+                            (cons #\a accumulator)))
+            ((char=? #\b ch)
+             (%parse-string input.string input.length
+                            (fx+ 1 input.index)
+                            (cons #\b accumulator))
+            (else #f))))))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Parsing exact integers in base @math{10}
+
+Let's see a parser using a full Scheme string as argument and accepting
+lexemes representing exact integers in base @math{10}; the result of a
+call to the parser is the exact integer object or @false{} if the input
+is invalid:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare parser-logic))
+
+(define (parse-integer input-string)
+
+  (define (%digit ch)
+    ;;Given a character argument: return the corresponding
+    ;;fixnum if the character is between #\0 and #\9, else
+    ;;return false.
+    ;;
+    (let ((N (fx- (char->integer ch) (char->integer #\0))))
+      (and (fx>= N 0)
+           (fx<  N 10)
+           N)))
+
+  ;;Parser logic to convert a string into an exact integer
+  ;;in base 10.
+  (define-parser-logic define-string->integer-parser next fail
+    (%parse-integer ()
+       ((%digit) => D
+        (next %parse-digit+ D)))
+    (%parse-digit+ (accumulator)
+       ((:end-of-input)
+        accumulator)
+       ((%digit) => D
+        (next %parse-digit+ (+ D (* 10 accumulator))))))
+
+  ;;Actual parser drawing characters from an input string.
+  (define-string->integer-parser string->token-or-false
+    (%parse-integer))
+
+  (assert (string? input-string))
+  (%parse-integer input-string (string-length input-string) 0))
+
+(parse-integer "")              @result{} #f
+(parse-integer "1")             @result{} 1
+(parse-integer "123")           @result{} 123
+(parse-integer "ciao")          @result{} #f
+(parse-integer "123ciao")       @result{} #f
+@end example
+
+The macros in the body of @func{parse-integer} combine their output and
+expand to the definition of two functions @func{%parse-integer} and
+@func{%parse-digit+} equivalent to the following:
+
+@example
+(define (%parse-integer input.string input.length input.index)
+  (if (fx=? input.index input.length)
+      #f
+    (let ((ch (string-ref input.string input.index)))
+      (cond ((%digit ch)
+             => (lambda (D)
+                  (%parse-digit+ input.string input.length
+                                 (fx+ 1 input.index) D)))
+            (else #f)))))
+
+(define (%parse-digit+ input.string input.length input.index
+                       accumulator)
+  (if (fx=? input.index input.length)
+      accumulator
+    (let ((ch (string-ref input.string input.index)))
+      (cond ((%digit ch)
+             => (lambda (D)
+                  (%parse-digit+ input.string input.length
+                                 (fx+ 1 input.index)
+                                 (+ D (* 10 accumulator)))))
+            (else #f)))))
+@end example
 
 
 
@@ -15541,133 +15692,141 @@ device forms are hard coded into the operator.  The list of
 @meta{operator-name} is a list of identifiers bound to the operators
 being entry points to the parser.
 
-To understand the semantics of operators, let's consider an operator
-function accepting characters @samp{#\X} or @samp{#\Y}:
+To understand the semantics of operators, let's consider one accepting
+only the characters @samp{#\X} or @samp{#\Y} and rejecting the
+end--of-input:
 
 @example
-(define (operator-1 input-device parser-status)
-  (let ((ch (get-next-char-from input-device)))
-    (cond ((end-of-input? ch)
-           (error-form ch input-device))
-          ((char=? X ch)
-           (a-clause-form ch parser-status))
-          ((char=? Y ch)
-           (another-clause-form ch parser-status))
-          (else
-           (error-form ch input-device)))))
-@end example
-
-@noindent
-and is specified in the parser logic as the symbolic subexpression:
-
-@example
-(operator-1
-  ((X)
-   (a-clause-form))
-  ((Y)
-   (another-clause-form)))
-@end example
-
-@noindent
-notice how the end--of--input test is automatically generated.
-
-An operator function accepting characters X, Y or Z, with Y and Z to be
-processed in the same way, looks like this:
-
-@example
-(define (operator-2 device)
-  (let ((ch (get-next-char-from device)))
+(define (operator-1 input-device parser-state)
+  (let ((ch (get-next-char)))
     (cond ((end-of-input? ch)
            (error-form))
           ((char=? X ch)
            (a-clause-form))
-          ((or (char=? Y ch) (char=? Z ch))
-           (another-clause-form))
-          (else
-           (error-form)))))
-@end example
-
-@noindent
-and is specified in the parser logic as the symbolic subexpression:
-
-@example
-(operator-2
-  ((X)
-   (a-clause-form))
-  ((Y Z)
-   (another-clause-form)))
-@end example
-
-An operator function accepting characters X or Y, but also the
-end--of--input from the device, looks like this:
-
-@example
-(define (operator-3 device)
-  (let ((ch (get-next-char-from device)))
-    (cond ((end-of-input? ch)
-           (end-of-input-form))
-          ((char=? X ch)
-           (a-clause-form))
           ((char=? Y ch)
            (another-clause-form))
-          (else
+          (else ;invalid input char
            (error-form)))))
 @end example
 
 @noindent
-and is specified in the parser logic as the symbolic subexpression:
+such operator would be specified by the following @meta{operator-spec}
+symbolic subexpression:
 
 @example
-(operator-3
-  ((eof)
-   (end-of-input-form))
-  ((X)
+(operator-1 (parser-state)
+  ((#\X)
    (a-clause-form))
-  ((Y)
+  ((#\Y)
    (another-clause-form)))
 @end example
 
 @noindent
-for historical reasons the end--of--input is called @acronym{EOF} and
-@code{eof} must be a free identifier.
+notice how the end--of--input test is automatically generated.  The
+operator has some arguments representing the input device state and
+other arguments representing the parser state; the list of input device
+arguments comes first and is specified by the device logic, discussed
+later; the list of parser state arguments comes last and is specified in
+the @meta{operator-spec} symbolic expression.
 
-An operator function accepting characters X or Y, the end-of-input from
-the device, and also a set of end-of-number delimiter characters, looks
-like this:
+An operator function accepting characters @samp{#\X}, @samp{#\Y} or
+@samp{#\Z}, with @samp{#\Y} and @samp{#\Z} to be processed in the same
+way, and rejecting the end--of-input looks like this:
 
 @example
-(define (operator-4 device)
-  (let ((ch (get-next-char-from device)))
+(define (operator-2 input-device parser-state)
+  (let ((ch (get-next-char)))
+    (cond ((end-of-input? ch)
+           (error-form))
+          ((char=? #\X ch)
+           (a-clause-form))
+          ((or (char=? #\Y ch)
+               (char=? #\Z ch))
+           (another-clause-form))
+          (else ;invalid input char
+           (error-form)))))
+@end example
+
+@noindent
+such operator would be specified by the following @meta{operator-spec}
+symbolic subexpression:
+
+@example
+(operator-2 (parser-state)
+  ((#\X)
+   (a-clause-form))
+  ((#\Y #\Z)
+   (another-clause-form)))
+@end example
+
+An operator function accepting characters @samp{#\X} or @samp{#\Y}, but
+also the end--of--input from the device, looks like this:
+
+@example
+(define (operator-3 input-device parser-state)
+  (let ((ch (get-next-char)))
     (cond ((end-of-input? ch)
            (end-of-input-form))
-          ((char=? X ch)
+          ((char=? #\X ch)
            (a-clause-form))
-          ((char=? Y ch)
+          ((char=? #\Y ch)
            (another-clause-form))
-          ((end-of-number-delimiter? ch)
-           (end-of-input-form))
-          (else
+          (else ;invalid input char
            (error-form)))))
 @end example
 
 @noindent
-and is specified in the parser logic as the symbolic subexpression:
+and is specified in the parser logic as the following
+@meta{operator-spec} symbolic subexpression:
 
 @example
-(operator-4
-  ((eof)
+(operator-3 (parser-state)
+  ((:end-of-input)
    (end-of-input-form))
-  ((X)
+  ((#\X)
    (a-clause-form))
-  ((Y)
+  ((#\Y)
    (another-clause-form)))
+@end example
+
+An operator function accepting characters @samp{#\X} or @samp{#\Y}, the
+end--of--input from the device, and also a set of end--of--lexeme
+delimiter characters, looks like this:
+
+@example
+(define (operator-4 input-device parser-state)
+  (let ((ch (get-next-char)))
+    (cond ((end-of-input? ch)
+           (end-of-input-form))
+          ((char=? #\X ch)
+           (a-clause-form))
+          ((char=? #\Y ch)
+           (another-clause-form))
+          ((end-of-lexeme-delimiter? ch)
+           (end-of-input-form))
+          (else ;invalid input char
+           (error-form)))))
 @end example
 
 @noindent
 notice how the @code{end-of-input-form} is used for both the proper
-end--of--input condition and the end--of--lexeme condition; also, the
-end--of--number condition is not explicitly specified in the symbolic
-subexpression: its generation is completely delegated to the device
+end--of--input state and the end--of--lexeme state; such operator is
+specified in the parser logic as the following @meta{operator-spec}
+symbolic subexpression:
+
+@example
+(operator-4 (parser-state)
+  ((:end-of-input)
+   (end-of-input-form))
+  ((X)
+   (a-clause-form))
+  ((Y)
+   (another-clause-form)))
+@end example
+
+@noindent
+notice that processing of the end--of--lexeme state is not specified in
+the parser logic: its generation is completely delegated to the device
 logic.
 
 Sometimes it is useful to apply a test function or macro to an input
@@ -15678,16 +15837,16 @@ done as follows:
 (define (the-test ch arg1 arg2 arg3)
   ---)
 
-(define (operator-5 device)
-  (let ((ch (get-next-char-from device)))
+(define (operator-5 input-device parser-state)
+  (let ((ch (get-next-char)))
     (cond ((end-of-input? ch)
            (error-form))
           ((the-test ch 1 2 3)
            => (lambda (result)
                 (a-clause-form)))
-          ((char=? Y ch)
+          ((char=? #\Y ch)
            (another-clause-form))
-          (else
+          (else ;invalid input char
            (error-form)))))
 @end example
 
@@ -15695,10 +15854,10 @@ done as follows:
 and is specified in the parser logic as the symbolic subexpression:
 
 @example
-(operator-5
+(operator-5 (parser-state)
   ((the-test 1 2 3) => result
    (a-clause-form))
-  ((Y)
+  ((#\Y)
    (another-clause-form)))
 @end example
 

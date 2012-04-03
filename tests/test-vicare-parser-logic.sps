@@ -46,7 +46,7 @@
     ;;characters.
     (define-parser-logic define-string->abba-parser next fail
       (%parse-string (accumulator)
-		     ((eof)
+		     ((:end-of-input)
 		      (reverse accumulator))
 		     ((#\a)
 		      (next %parse-string (cons #\a accumulator)))
@@ -88,7 +88,7 @@
 		      ((%digit) => D
 		       (next %parse-digit+  D)))
       (%parse-digit+ (accumulator)
-		     ((eof)
+		     ((:end-of-input)
 		      accumulator)
 		     ((%digit) => D
 		      (next %parse-digit+ (+ D (* 10 accumulator))))))
@@ -100,6 +100,7 @@
 
 ;;; --------------------------------------------------------------------
 
+  (check (parse-integer "")		=> #f)
   (check (parse-integer "1")		=> 1)
   (check (parse-integer "123")		=> 123)
   (check (parse-integer "ciao")		=> #f)
