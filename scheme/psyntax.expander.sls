@@ -115,6 +115,26 @@
 ;;
 ;;* consing the label to the <RIB>'s LABEL*.
 ;;
+;;For example, an empty extensible <RIB> has fields:
+;;
+;;  sym*   = ()
+;;  mark** = ()
+;;  label* = ()
+;;
+;;adding a binding to it with  name "ciao", marks ("m.0") and label "G0"
+;;means mutating the fields to:
+;;
+;;  sym*   = (ciao)
+;;  mark** = ("m.0")
+;;  label* = (G0)
+;;
+;;adding another binding with name  "hello", mark ("m.0") and label "G1"
+;;means mutating the fields to:
+;;
+;;  sym*   = (hello ciao)
+;;  mark** = (("m.0") ("m.0"))
+;;  label* = (G1 G0)
+;;
 (define-record <rib>
   (sym*
 		;List  of  symbols  representing  the  original  binding
@@ -139,7 +159,7 @@
   ;;
   ;;It may be a good idea to seal this <RIB>.
   ;;
-  (make-<rib> (map id->sym     id*)
+  (make-<rib> (map identifier->symbol id*)
 	      (map <stx>-mark* id*)
 	      label*
 	      #f))
@@ -174,9 +194,9 @@
 ;;marks...
 (define top-mark* '(top))
 
-;;... consequently, every syntax object that  has a top in its marks set
+;;... consequently, every syntax object that  has a TOP in its marks set
 ;;was present in the program source.
-(define (top-marked? m*)
+(define-inline (top-marked? m*)
   (memq 'top m*))
 
 (define (gen-lexical sym)
@@ -186,7 +206,7 @@
   (cond ((symbol? sym)
 	 (gensym sym))
 	((<stx>? sym)
-	 (gen-lexical (id->sym sym)))
+	 (gen-lexical (identifier->symbol sym)))
 	(else
 	 (assertion-violation 'gen-lexical
 	   "*** Vicare bug: invalid arg" sym))))
@@ -201,33 +221,45 @@
   ;;in its substitution; this function generates such labels.
   ;;
   ;;The  labels  have to  have  read/write  EQ?   invariance to  support
-  ;;separate compilation (when we write the expansed symbolic expression
+  ;;separate compilation (when we write the expanded symbolic expression
   ;;to a  file and  then read it  back, the  labels must not  change and
   ;;still be globally unique).
   ;;
   (gensym))
 
 (define (gen-top-level-label id rib)
-  (define (find sym mark* sym* mark** label*)
+  (define (%find sym mark* sym* mark** label*)
+    ;;We know  that the list  of symbols SYM*  has at least  one element
+    ;;equal to SYM; iterate through  SYM*, MARK** and LABEL* looking for
+    ;;a  tuple having  marks equal  to MARK*  and return  the associated
+    ;;label.  If such binding is not found return false.
+    ;;
     (and (pair? sym*)
-	 (if (and (eq? sym (car sym*)) (same-marks? mark* (car mark**)))
+	 (if (and (eq? sym (car sym*))
+		  (same-marks? mark* (car mark**)))
 	     (car label*)
-	   (find sym mark* (cdr sym*) (cdr mark**) (cdr label*)))))
-  (let ((sym (id->sym id))
-	(mark* (<stx>-mark* id)))
-    (let ((sym* (<rib>-sym* rib)))
-      (cond ((and (memq sym (<rib>-sym* rib))
-		  (find sym mark* sym* (<rib>-mark** rib) (<rib>-label* rib)))
-	     => (lambda (label)
-		  (cond ((imported-label->binding label)
-			 ;;Create new label to shadow imported binding.
-			 (gensym))
-			(else
-			 ;;Recycle old label.
-			 label))))
-	    (else
-	     ;;Create new label for new binding.
-	     (gensym))))))
+	   (%find sym mark* (cdr sym*) (cdr mark**) (cdr label*)))))
+  (let ((sym   (identifier->symbol id))
+	(mark* (<stx>-mark*        id))
+	(sym*  (<rib>-sym*         rib)))
+    (cond ((and (memq sym (<rib>-sym* rib))
+		(%find sym mark* sym* (<rib>-mark** rib) (<rib>-label* rib)))
+	   => (lambda (label)
+		;;If we are here RIB contains a binding for ID and LABEL
+		;;is its label.
+		;;
+		;;If  the  symbol LABEL  is  associated  to an  imported
+		;;binding:  the data  structure implementing  the symbol
+		;;object  holds  informations about  the  binding in  an
+		;;internal field; else such field is set to false.
+		(if (imported-label->binding label)
+		    ;;Create new label to shadow imported binding.
+		    (gensym)
+		  ;;Recycle old label.
+		  label)))
+	  (else
+	   ;;Create a new label for a new binding.
+	   (gensym)))))
 
 (define (gen-define-label+loc id rib sd?)
   (if sd?
@@ -282,7 +314,7 @@
   (when (<rib>-sealed/freq rib)
     (assertion-violation 'extend-rib!
       "*** Vicare bug: attempt to extend sealed RIB" rib))
-  (let ((sym (id->sym id))
+  (let ((sym (identifier->symbol id))
 	(mark* (<stx>-mark* id)))
     (let ((sym* (<rib>-sym* rib)))
       (cond
@@ -627,17 +659,19 @@
 			(annotation-stripped expr)
 		      expr))))))
 
-(define id->sym
-  (lambda (x)
-    (unless (<stx>? x)
-      (error 'id->sym "BUG in ikarus: not an id" x))
-    (let ((expr (<stx>-expr x)))
-      (let ((sym (if (annotation? expr)
-		     (annotation-stripped expr)
-		   expr)))
-	(if (symbol? sym)
-	    sym
-	  (error 'id->sym "BUG in ikarus: not an id" x))))))
+(define (identifier->symbol x)
+  (define who 'identifier->symbol)
+  (define (%error)
+    (assertion-violation who "Vicare bug: expected identifier as argument" x))
+  (unless (<stx>? x)
+    (%error))
+  (let* ((expr (<stx>-expr x))
+	 (sym  (if (annotation? expr)
+		   (annotation-stripped expr)
+		 expr)))
+    (if (symbol? sym)
+	sym
+      (%error))))
 
   ;;; Two lists of marks are considered the same if they have the
   ;;; same length and the corresponding marks on each are eq?.
@@ -652,7 +686,7 @@
   ;;; the same set of marks.
 (define bound-id=?
   (lambda (x y)
-    (and (eq? (id->sym x) (id->sym y))
+    (and (eq? (identifier->symbol x) (identifier->symbol y))
 	 (same-marks? (<stx>-mark* x) (<stx>-mark* y)))))
 
   ;;; Two identifiers are free-id=? if either both are bound to the
@@ -662,7 +696,7 @@
     (let ((t0 (id->label i)) (t1 (id->label j)))
       (if (or t0 t1)
 	  (eq? t0 t1)
-	(eq? (id->sym i) (id->sym j))))))
+	(eq? (identifier->symbol i) (identifier->symbol j))))))
 
   ;;; valid-bound-ids? takes checks if a list is made of identifers
   ;;; none of which is bound-id=? to another.
@@ -749,7 +783,7 @@
 
 (define id->label
   (lambda (id)
-    (let ((sym (id->sym id)))
+    (let ((sym (identifier->symbol id)))
       (let search ((subst* (<stx>-subst* id)) (mark* (<stx>-mark* id)))
 	(cond
 	 ((null? subst*) #f)
@@ -2017,8 +2051,8 @@
 	 (datum->stx id (string->symbol str))))
      (syntax-match e ()
        ((_ name (field* ...))
-	(let* ((namestr (symbol->string (id->sym name)))
-	       (fields (map id->sym field*))
+	(let* ((namestr (symbol->string (identifier->symbol name)))
+	       (fields (map identifier->symbol field*))
 	       (fieldstr* (map symbol->string fields))
 	       (rtd (datum->stx name (make-struct-type namestr fields)))
 	       (constr (mkid name (string-append "make-" namestr)))
@@ -2849,7 +2883,7 @@
 (define file-options-macro
   (lambda (x)
     (define (valid-option? x)
-      (and (id? x) (memq (id->sym x) '(no-fail no-create no-truncate))))
+      (and (id? x) (memq (identifier->symbol x) '(no-fail no-create no-truncate))))
     (syntax-match x ()
       ((_ opt* ...)
        (for-all valid-option? opt*)
@@ -2859,7 +2893,7 @@
   (lambda (x set)
     (syntax-match x ()
       ((_ name)
-       (and (id? name) (memq (id->sym name) set))
+       (and (id? name) (memq (identifier->symbol name) set))
        (bless `(quote ,name))))))
 
 (define macro-transformer
@@ -3329,7 +3363,7 @@
 		 (vector-map
 		     (lambda (x)
 		       (or (id->label
-			    (make-<stx> (id->sym x) (<stx>-mark* x)
+			    (make-<stx> (identifier->symbol x) (<stx>-mark* x)
 				      (list rib)
 				      '()))
 			   (stx-error x "cannot find module export")))
