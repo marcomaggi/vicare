@@ -106,35 +106,6 @@
 ;;contour; "lexical contours" are, for example, LET and similar syntaxes
 ;;that can introduce bindings.
 ;;
-;;Adding  an  identifier-to-label  mapping  to an  extensible  <RIB>  is
-;;achieved by performing all the following operations:
-;;
-;;* consing the identifier's name to the list of symbols SYM*;
-;;
-;;* consing  the identifier's list of  marks to the  <RIB>'s MARK**;
-;;
-;;* consing the label to the <RIB>'s LABEL*.
-;;
-;;For example, an empty extensible <RIB> has fields:
-;;
-;;  sym*   = ()
-;;  mark** = ()
-;;  label* = ()
-;;
-;;adding a binding to it with  name "ciao", marks ("m.0") and label "G0"
-;;means mutating the fields to:
-;;
-;;  sym*   = (ciao)
-;;  mark** = ("m.0")
-;;  label* = (G0)
-;;
-;;adding another binding with name  "hello", mark ("m.0") and label "G1"
-;;means mutating the fields to:
-;;
-;;  sym*   = (hello ciao)
-;;  mark** = (("m.0") ("m.0"))
-;;  label* = (G1 G0)
-;;
 (define-record <rib>
   (sym*
 		;List  of  symbols  representing  the  original  binding
@@ -280,6 +251,9 @@
     (gen-top-level-label id rib)))
 
 (define (top-marked-symbols rib)
+  ;;Scan the RIB and return a list of symbols representing binding names
+  ;;and having the top mark.
+  ;;
   (let-values (((sym* mark**)
 		(let ((sym*   (<rib>-sym*   rib))
 		      (mark** (<rib>-mark** rib)))
@@ -300,45 +274,77 @@
 
 ;;;; extending RIBS
 ;;
+;;A <RIB>  may be extensible, or sealed.   Adding an identifier-to-label
+;;mapping  to an  extensible <RIB>  is  achieved by  performing all  the
+;;following operations:
+;;
+;;* consing the identifier's name to the list of symbols SYM*;
+;;
+;;* consing  the identifier's list of  marks to the  <RIB>'s MARK**;
+;;
+;;* consing the label to the <RIB>'s LABEL*.
+;;
+;;For example, an empty extensible <RIB> has fields:
+;;
+;;  sym*   = ()
+;;  mark** = ()
+;;  label* = ()
+;;
+;;adding a binding to it with  name "ciao", marks ("m.0") and label "G0"
+;;means mutating the fields to:
+;;
+;;  sym*   = (ciao)
+;;  mark** = (("m.0"))
+;;  label* = (G0)
+;;
+;;adding another binding with name  "hello", mark ("m.0") and label "G1"
+;;means mutating the fields to:
+;;
+;;  sym*   = (hello ciao)
+;;  mark** = (("m.0") ("m.0"))
+;;  label* = (G1 G0)
+;;
 ;;For example, when  processing a LAMBDA's internal define,  a new <RIB>
 ;;is created and is added to the body of the LAMBDA expression.  When an
 ;;internal definition is encountered, a  new entry for the identifier is
-;;added (via side  effect) to the <RIB>.  A <RIB>  may be extensible, or
-;;sealed.  An extensible <RIB> looks like:
-;;
-;;  #<rib list-of-symbols list-of-list-of-marks list-of-labels #f>
+;;added (via side effect) to the <RIB>.
 ;;
 
 (define (extend-rib! rib id label sd?)
-  (define (find sym mark* sym* mark** label*)
+  ;;Extend RIB.
+  ;;
+  (define (%find sym mark* sym* mark** label*)
+    ;;We know  that the list  of symbols SYM*  has at least  one element
+    ;;equal to SYM; iterate through  SYM*, MARK** and LABEL* looking for
+    ;;a tuple having marks equal to  MARK* and return the tail of LABEL*
+    ;;having the associated label as  car.  If such binding is not found
+    ;;return false.
+    ;;
     (and (pair? sym*)
-	 (if (and (eq? sym (car sym*)) (same-marks? mark* (car mark**)))
+	 (if (and (eq? sym (car sym*))
+		  (same-marks? mark* (car mark**)))
 	     label*
-	   (find sym mark* (cdr sym*) (cdr mark**) (cdr label*)))))
+	   (%find sym mark* (cdr sym*) (cdr mark**) (cdr label*)))))
   (when (<rib>-sealed/freq rib)
     (assertion-violation 'extend-rib!
-      "*** Vicare bug: attempt to extend sealed RIB" rib))
-  (let ((sym (identifier->symbol id))
-	(mark* (<stx>-mark* id)))
-    (let ((sym* (<rib>-sym* rib)))
-      (cond
-       ((and (memq sym (<rib>-sym* rib))
-	     (find sym mark* sym* (<rib>-mark** rib) (<rib>-label* rib)))
-	=>
-	(lambda (p)
-	  (unless (eq? label (car p))
-	    (cond
-	     ((not sd?) ;(top-level-context)
-                  ;;; XXX override label
-	      (set-car! p label))
-	     (else
-                  ;;; signal an error if the identifier was already
-                  ;;; in the rib.
-	      (stx-error id "multiple definitions of identifier"))))))
-       (else
-	(set-<rib>-sym*! rib (cons sym sym*))
-	(set-<rib>-mark**! rib (cons mark* (<rib>-mark** rib)))
-	(set-<rib>-label*! rib (cons label (<rib>-label* rib))))))))
+      "Vicare bug: attempt to extend sealed RIB" rib))
+  (let ((sym   (identifier->symbol id))
+	(mark* (<stx>-mark* id))
+	(sym*  (<rib>-sym* rib)))
+    (cond ((and (memq sym (<rib>-sym* rib))
+		(%find sym mark* sym* (<rib>-mark** rib) (<rib>-label* rib)))
+	   => (lambda (label*-tail)
+		(unless (eq? label (car label*-tail))
+		  (if (not sd?) ;(top-level-context)
+		      ;;XXX override label
+		      (set-car! label*-tail label)
+		    ;;Signal an error if the identifier was already in
+		    ;;the rib.
+		    (stx-error id "multiple definitions of identifier")))))
+	  (else
+	   (set-<rib>-sym*!   rib (cons sym sym*))
+	   (set-<rib>-mark**! rib (cons mark* (<rib>-mark** rib)))
+	   (set-<rib>-label*! rib (cons label (<rib>-label* rib)))))))
 
 
 ;;;; sealing ribs
