@@ -22,6 +22,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/include.sls			\
 	vicare/installation-configuration.sls	\
 	vicare/keywords.sls			\
+	vicare/parser-logic.sls			\
 	vicare/platform-constants.sls		\
 	vicare/syntactic-extensions.sls		\
 	vicare/unsafe-capi.sls			\

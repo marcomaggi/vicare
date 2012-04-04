@@ -30,7 +30,7 @@
   (checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare debugging utilities\n")
+(check-display "*** testing Vicare debugging utilities\n")
 
 
 (parametrise ((check-test-name	'words))

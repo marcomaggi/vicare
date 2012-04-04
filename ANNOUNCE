@@ -67,6 +67,10 @@ Notes for revision 0.2d10
     INTEGER->MACHINE-WORD
     MACHINE-WORD->INTEGER
 
+* Added library  (vicare parser-logic) exposing the  parser builder used
+  internally for  both STRING->NUMBER  and the string-to-number  code in
+  the reader.
+
 
 Notes for revision 0.2d9
 ------------------------
