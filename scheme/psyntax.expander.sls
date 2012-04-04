@@ -264,15 +264,15 @@
 (define (gen-define-label+loc id rib sd?)
   (if sd?
       (values (gensym) (gen-lexical id))
-    (let ((env (top-level-context)))
-      (let ((label (gen-top-level-label id rib))
-	    (locs (interaction-env-locs env)))
-	(values label
-		(cond ((assq label locs) => cdr)
-		      (else
-		       (let ((loc (gen-lexical id)))
-			 (set-interaction-env-locs! env (cons (cons label loc) locs))
-			 loc))))))))
+    (let* ((env   (top-level-context))
+	   (label (gen-top-level-label id rib))
+	   (locs  (interaction-env-locs env)))
+      (values label
+	      (cond ((assq label locs) => cdr)
+		    (else
+		     (let ((loc (gen-lexical id)))
+		       (set-interaction-env-locs! env (cons (cons label loc) locs))
+		       loc)))))))
 
 (define (gen-define-label id rib sd?)
   (if sd?
@@ -281,17 +281,21 @@
 
 (define (top-marked-symbols rib)
   (let-values (((sym* mark**)
-		(let ((sym* (<rib>-sym* rib)) (mark** (<rib>-mark** rib)))
+		(let ((sym*   (<rib>-sym*   rib))
+		      (mark** (<rib>-mark** rib)))
 		  (if (<rib>-sealed/freq rib)
-		      (values (vector->list sym*) (vector->list mark**))
+		      (values (vector->list sym*)
+			      (vector->list mark**))
 		    (values sym* mark**)))))
-    (let f ((sym* sym*) (mark** mark**))
+    (let recur ((sym*   sym*)
+		(mark** mark**))
       (cond ((null? sym*)
 	     '())
 	    ((equal? (car mark**) top-mark*)
-	     (cons (car sym*) (f (cdr sym*) (cdr mark**))))
+	     (cons (car sym*)
+		   (recur (cdr sym*) (cdr mark**))))
 	    (else
-	     (f (cdr sym*) (cdr mark**)))))))
+	     (recur (cdr sym*) (cdr mark**)))))))
 
 
 ;;;; extending RIBS
