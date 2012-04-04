@@ -108,16 +108,23 @@
 ;;
 (define-record <rib>
   (sym*
-		;List  of  symbols  representing  the  original  binding
-		;names in the source code.
+		;List of symbols representing the original binding names
+		;in the source  code.  If the <RIB> is  sealed: the list
+		;is converted to a vector.
    mark**
-		;List of lists of marks.
+		;List of  lists of marks.   If the <RIB> is  sealed: the
+		;list is converted to a vector.
    label*
 		;List  of symbols  representing substitution  labels for
-		;bindings.
+		;bindings.   If  the  <RIB>   is  sealed:  the  list  is
+		;converted to a vector.
    sealed/freq
-		;False or vector.  When false: this <RIB> is extensible,
-		;that is new bindings can be added to it.
+		;False or  vector of  exact integers.  When  false: this
+		;<RIB> is extensible, that  is new bindings can be added
+		;to it.  When a vector: this <RIB> is selaed.
+		;
+		;See  below  the  code  section "sealing  ribs"  for  an
+		;explanation of the frequency vector.
    ))
 
 (define (make-empty-rib)
@@ -272,7 +279,7 @@
 	     (recur (cdr sym*) (cdr mark**)))))))
 
 
-;;;; extending RIBS
+;;;; extending ribs
 ;;
 ;;A <RIB>  may be extensible, or sealed.   Adding an identifier-to-label
 ;;mapping  to an  extensible <RIB>  is  achieved by  performing all  the
@@ -297,17 +304,35 @@
 ;;  mark** = (("m.0"))
 ;;  label* = (G0)
 ;;
-;;adding another binding with name  "hello", mark ("m.0") and label "G1"
+;;pushing the "binding tuple": ciao, ("m.0"), G0.
+;;
+;;Adding another binding with name  "hello", mark ("m.0") and label "G1"
 ;;means mutating the fields to:
 ;;
 ;;  sym*   = (hello ciao)
 ;;  mark** = (("m.0") ("m.0"))
 ;;  label* = (G1 G0)
 ;;
-;;For example, when  processing a LAMBDA's internal define,  a new <RIB>
-;;is created and is added to the body of the LAMBDA expression.  When an
-;;internal definition is encountered, a  new entry for the identifier is
-;;added (via side effect) to the <RIB>.
+;;As further example, let's consider the form:
+;;
+;;  (lambda ()
+;;    (define a 1)
+;;    (define b 2)
+;;    (list a b))
+;;
+;;when starting to process the LAMBDA syntax: a new <RIB> is created and
+;;is added to the metadata  of the LAMBDA expression; when each internal
+;;definition is  encountered, a  new entry for  the identifier  is added
+;;(via side effect) to the <RIB>:
+;;
+;;  sym*   = (b a)
+;;  mark** = (("m.0") ("m.0"))
+;;  label* = (G1 G0)
+;;
+;;Notice that the order in which  the binding tuples appear in the <RIB>
+;;does not matter: two tuples are different when both the symbol and the
+;;marks are  different and it is  an error to  add twice a tuple  to the
+;;same <RIB>.
 ;;
 
 (define (extend-rib! rib id label sd?)
@@ -349,17 +374,22 @@
 
 ;;;; sealing ribs
 ;;
-;;A RIB can be sealed once all bindings are inserted.  To seal a RIB, we
-;;convert  the lists SYM*,  MARK** and  LABEL* to  vectors and  insert a
-;;frequency vector in the sealed/freq field.
+;;A non-empty  <RIB> can be sealed  once all bindings  are inserted.  To
+;;seal a <RIB>, we convert the  lists SYM*, MARK** and LABEL* to vectors
+;;and insert a frequency vector in the SEALED/FREQ field.  The frequency
+;;vector is a Scheme vector of exact integers.
 ;;
-;;The  frequency  vector is  an  optimization  that  allows the  rib  to
+;;The  frequency vector  is an  optimization  that allows  the <RIB>  to
 ;;reorganize itself by  bubbling frequently used mappings to  the top of
-;;the  rib.  The  vector is  maintained in  non-descending order  and an
-;;identifier's entry in  the RIB is incremented at  every access.  If an
-;;identifier's  frequency exceeds the  preceeding one,  the identifier's
-;;position is  promoted to the  top of its  class (or the bottom  of the
-;;previous class).
+;;the <RIB>.   This is possible because  the order in  which the binding
+;;tuples appear in a <RIB> does not matter.
+;;
+;;The vector  is maintained in non-descending order  and an identifier's
+;;entry in the <RIB> is incremented at every access.  If an identifier's
+;;frequency  exceeds the  preceeding one,  the identifier's  position is
+;;promoted  to the  top of  its  class (or  the bottom  of the  previous
+;;class).
+;;
 
 (define (seal-rib! rib)
   (let ((sym* (<rib>-sym* rib)))
@@ -380,12 +410,12 @@
 (define (increment-rib-frequency! rib idx)
   (let* ((freq* (<rib>-sealed/freq rib))
 	 (freq  (vector-ref freq* idx))
-	 (i     (let f ((i idx))
+	 (i     (let loop ((i idx))
 		  (if (zero? i)
 		      0
 		    (let ((j (- i 1)))
 		      (if (= freq (vector-ref freq* j))
-			  (f j)
+			  (loop j)
 			i))))))
     (vector-set! freq* i (+ freq 1))
     (unless (= i idx)
