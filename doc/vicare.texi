@@ -15500,19 +15500,17 @@ invalid:
                    '()  ;start value for ACCUMULATOR
                    ))
 
-  (define-parser-logic define-string->abba-parser next fail
+  (define-parser-logic define-string->abba-parser ch next fail
     (%parse-string (accumulator)
        ((:end-of-input)
         (reverse accumulator))
-       ((#\a)
-        (next %parse-string (cons #\a accumulator)))
-       ((#\b)
-        (next %parse-string (cons #\b accumulator)))))
+       ((#\a #\b)
+        (next %parse-string (cons ch accumulator)))))
 
   (define-string->abba-parser string->token-or-false
     (%parse-string))
 
-   #| end of module |# )
+  #| end of module |# )
 
 (parse-abba "")         @result{} ()
 (parse-abba "a")        @result{} (#\a)
@@ -15523,10 +15521,13 @@ invalid:
 @end example
 
 @noindent
-the macro @func{string->token-or-false} is exported by @library{vicare
-parser-logic} and implements the device logic for a full input Scheme
-string representing a lexeme to be used in a parser returning @false{}
-when the input is invalid.
+notice the use of @func{next} to recursively tail--call
+@func{parse-string}.
+
+The macro @func{string->token-or-false} is exported by @library{vicare
+parser-logic}; it implements the device logic for a full input Scheme
+string representing a lexeme; it is to be used in a parser returning
+@false{} when the input is invalid.
 
 The macros in the module combine their output and expand to the
 definition of a function @func{%parse-string} equivalent to the
@@ -15538,15 +15539,105 @@ following:
   (if (fx=? input.index input.length)
       (reverse accumulator)
     (let ((ch (string-ref input.string input.index)))
-      (cond ((char=? #\a ch)
+      (cond ((or (char=? #\a ch)
+                 (char=? #\b ch))
              (%parse-string input.string input.length
                             (fx+ 1 input.index)
-                            (cons #\a accumulator)))
-            ((char=? #\b ch)
-             (%parse-string input.string input.length
-                            (fx+ 1 input.index)
-                            (cons #\b accumulator))
-            (else #f))))))
+                            (cons ch accumulator)))
+            (else #f)))))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Parsing a string of intermixed selected characters
+
+Let's see a parser using a full Scheme string as argument and accepting
+lexemes being the empty string or strings of characters @samp{#\a} and
+@samp{\#b}:
+
+@itemize
+@item
+@samp{#\a} can be followed only by @samp{#\b} or end--of--input.
+
+@item
+@samp{#\b} can be followed only by @samp{#\a} or end--of--input.
+@end itemize
+
+@noindent
+the result of a call to the parser is the list of characters or @false{}
+if the input is invalid:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare parser-logic))
+
+(module (parse-abab)
+
+  (define (parse-abab input-string)
+    (assert (string? input-string))
+    (%parse-string input-string
+                   (string-length input-string)
+                   0    ;start index
+                   '()  ;start value for ACCUMULATOR
+                   ))
+
+  ;;Parser logic to convert a string of intermixed
+  ;;#\a and #\b into a list of characters.
+  (define-parser-logic define-string->abab-parser ch next fail
+    (%parse-string (accumulator)
+       ((:end-of-input)
+        (reverse accumulator))
+       ((#\a #\b)
+        (if (or (null? accumulator)
+                (case ch
+                  ((#\a) (char=? #\b (car accumulator)))
+                  ((#\b) (char=? #\a (car accumulator)))))
+            (next %parse-string (cons ch accumulator))
+          (fail)))))
+
+  ;;Actual parser drawing characters from an input string.
+  (define-string->abab-parser string->token-or-false
+    (%parse-string))
+
+  #| end of module |# )
+
+(parse-abab "")         @result{} ()
+(parse-abab "a")        @result{} (#\a)
+(parse-abab "b")        @result{} (#\b)
+(parse-abab "1")        @result{} #f
+(parse-abab "ciao")     @result{} #f
+(parse-abab "abb")      @result{} #f
+(parse-abab "baa")      @result{} #f
+(parse-abab "abab")     @result{} (#\a #\b #\a #\b)
+(parse-abab "baba")     @result{} (#\b #\a #\b #\a)
+@end example
+
+@noindent
+notice the use of @func{fail} to signal an input error from inside an
+operator clause.
+
+The macros in the module combine their output and expand to the
+definition of a function @func{%parse-string} equivalent to the
+following:
+
+@example
+(define (%parse-string input.string input.length input.index
+                       accumulator)
+  (if (fx=? input.index input.length)
+      (reverse accumulator)
+    (let ((ch (string-ref input.string input.index)))
+      (cond ((or (char=? #\a ch)
+                 (char=? #\b ch))
+             (if (or (null? accumulator)
+                     (case ch
+                       ((#\a) (char=? #\b (car accumulator)))
+                       ((#\b) (char=? #\a (car accumulator)))))
+                 (%parse-string input.string input.length
+                                (fx+ 1 input.index)
+                                (cons ch accumulator))
+               #f))
+            (else #f)))))
 @end example
 
 @c ------------------------------------------------------------
@@ -15577,7 +15668,7 @@ is invalid:
 
   ;;Parser logic to convert a string into an exact integer
   ;;in base 10.
-  (define-parser-logic define-string->integer-parser next fail
+  (define-parser-logic define-string->integer-parser ch next fail
     (%parse-integer ()
        ((%digit) => D
         (next %parse-digit+ D)))
@@ -15656,7 +15747,7 @@ Operators are generated by macros from a symbolic expression specifying
 an abstract parser:
 
 @example
-(define-parser-logic define-parser next fail @meta{operator-spec} ...)
+(define-parser-logic define-parser ch next fail . @meta{operators})
 @end example
 
 @noindent
@@ -15710,7 +15801,7 @@ end--of-input:
 @end example
 
 @noindent
-such operator would be specified by the following @meta{operator-spec}
+such operator would be specified by the following @meta{operator}
 symbolic subexpression:
 
 @example
@@ -15727,7 +15818,7 @@ operator has some arguments representing the input device state and
 other arguments representing the parser state; the list of input device
 arguments comes first and is specified by the device logic, discussed
 later; the list of parser state arguments comes last and is specified in
-the @meta{operator-spec} symbolic expression.
+the @meta{operator} symbolic expression.
 
 An operator function accepting characters @samp{#\X}, @samp{#\Y} or
 @samp{#\Z}, with @samp{#\Y} and @samp{#\Z} to be processed in the same
@@ -15748,7 +15839,7 @@ way, and rejecting the end--of-input looks like this:
 @end example
 
 @noindent
-such operator would be specified by the following @meta{operator-spec}
+such operator would be specified by the following @meta{operator}
 symbolic subexpression:
 
 @example
@@ -15776,8 +15867,8 @@ also the end--of--input from the device, looks like this:
 @end example
 
 @noindent
-and is specified in the parser logic as the following
-@meta{operator-spec} symbolic subexpression:
+and is specified in the parser logic as the following @meta{operator}
+symbolic subexpression:
 
 @example
 (operator-3 (parser-state)
@@ -15811,8 +15902,8 @@ delimiter characters, looks like this:
 @noindent
 notice how the @code{end-of-input-form} is used for both the proper
 end--of--input state and the end--of--lexeme state; such operator is
-specified in the parser logic as the following @meta{operator-spec}
-symbolic subexpression:
+specified in the parser logic as the following @meta{operator} symbolic
+subexpression:
 
 @example
 (operator-4 (parser-state)
@@ -15873,17 +15964,355 @@ The following bindings are exported by the library @library{vicare
 parser-logic}.
 
 
-@deffn Syntax define-parser-logic @meta{definer} @meta{next} @meta{fail} (@meta{operator} (@meta{arg} ...) @meta{clause} ...) ...
+@deffn Syntax define-parser-logic @meta{definer} @meta{ch} @meta{next} @meta{fail} . @meta{operators}
 @deffnx {Auxiliary Syntax} :end-of-input
+Define an abstract parser specifying the rules for parsing the input
+characters through calls to a set of operator functions; the result of
+the expansion is a syntax definition which can be used to instantiate a
+concrete parser by combining the parser logic with the input device
+logic.
+
+The input arguments are:
+
+@table @meta
+@item definer
+It must be an identifier.  It is bound to the generated syntax
+definition; such syntax is used as follows:
+
+@example
+(@meta{definer} @meta{device-logic} (@meta{operator-name} @dots{}))
+@end example
+
+@noindent
+where: @meta{device-logic} is the identifier bound to the device logic
+syntax; the @meta{operator-name} are identifiers among the public
+operator function names.
+
+@item ch
+It must be an identifier.  When a character is successfully extracted
+from the input device, it is bound to this identifier and made available
+to the operator clauses.
+
+@item next
+It must be an identifier.  The device logic rule
+@code{:generate-end-of-input-or-char-tests} must bind it to a syntax;
+such syntax must expand to a tail--call to an operator processing the
+next input character.  @meta{next} is used as follows in the operator
+clauses:
+
+@example
+(next @meta{operator-name} @meta{operator-arg} @dots{})
+@end example
+
+@noindent
+and it should expand to something like:
+
+@example
+(@meta{operator-name} @meta{device-arg} @dots{} @meta{operator-arg} @dots{})
+@end example
+
+@noindent
+where: @meta{device-arg} are the arguments representing the input device
+state; @meta{operator-arg} are the arguments representing the parser
+state as specified in the @meta{operator-spec}.
+
+@item fail
+It must be an identifier.  The device logic rule
+@code{:generate-end-of-input-or-char-tests} must bind it to a syntax;
+such syntax is used to handle parsing errors detected by the operator
+clauses.  @meta{fail} is simply used as @code{(@meta{fail})}.
+@end table
+
+Each @meta{operator-spec} must have the form:
+
+@example
+(@meta{operator-name} (@meta{operator-arg} @dots{}) @meta{operator-clause} @dots{})
+@end example
+
+@noindent
+where:
+
+@table @meta
+@item operator-name
+Must be an identifier.  It is bound to a generated operator function.
+
+There is no difference in the way public operators and private ones are
+specified; the public operators names are listed in the concrete parser
+definition.  An operator can be public in a concrete parser and private
+in another concrete parser.
+
+@item operator-arg
+Must be identifiers bound to the formal arguments associated to the
+parser state.
+
+@item operator-clause
+Are symbolic expressions specifying the input accepted by the operator.
+@end table
+
+Each @meta{operator-clause} must have one of the formats:
+
+@table @code
+@item ((@metao{char} @meta{char} @dots{}) @metao{body} @meta{body} @dots{})
+Each @meta{char} must be an expression evaluating to a Scheme character
+object.  The @meta{body} forms are evaluated if the input character
+bound to @meta{ch} is equal, according to @func{char=?}, to one among
+the @meta{char} characters.
+
+@item ((@meta{func} @meta{expr} @dots{}) => @meta{ret} @metao{body} @meta{body} @dots{})
+@meta{func} must be an expression evaluating to a function; the
+@meta{expr} must be expressions; @meta{ret} must be an identifier.  The
+@meta{body} forms are evaluated if the form:
+
+@example
+(@meta{func} @meta{ch} @meta{expr} @dots{})
+@end example
+
+@noindent
+evaluates to a true value; such true value is bound to @meta{ret} prior
+to evaluating the @meta{body}.
+
+@item ((:end-of-input) @metao{body} @meta{body} @dots{})
+The @meta{body} forms are evaluated if no more characters are available
+from the input device.  This clause is to be used by operators accepting
+the end--of--input state as valid; if such rule is not present: the
+end--of--input will cause an error and the device logic is used to
+handle it.
+@end table
 @end deffn
 
+@c ------------------------------------------------------------
 
 @deffn {Auxiliary Syntax} :introduce-device-arguments
 @deffnx {Auxiliary Syntax} :generate-end-of-input-or-char-tests
 @deffnx {Auxiliary Syntax} :unexpected-end-of-input
 @deffnx {Auxiliary Syntax} :generate-delimiter-test
 @deffnx {Auxiliary Syntax} :invalid-input-char
-Identifiers used to specify device logic syntax rules.
+Identifiers used to specify device logic syntax rules; they must be used
+in a syntax definition like:
+
+@example
+(define-syntax device-logic
+  (syntax-rules (:introduce-device-arguments
+                 :generate-end-of-input-or-char-tests
+                 :unexpected-end-of-input
+                 :generate-delimiter-test
+                 :invalid-input-char)
+    ((_ :introduce-device-arguments          ---) ---)
+    ((_ :generate-end-of-input-or-char-tests ---) ---)
+    ((_ :unexpected-end-of-input             ---) ---)
+    ((_ :generate-delimiter-test             ---) ---)
+    ((_ :invalid-input-char                  ---) ---)))
+@end example
+
+@noindent
+the rules have the following syntax:
+
+@table @code
+@item :introduce-device-arguments
+The input form is:
+
+@example
+(_ :introduce-device-arguments @meta{kont} . @meta{rest})
+@end example
+
+@noindent
+this rule introduces a list of identifiers used as device--specific
+arguments; they will be the first arguments for each parser operator
+function.  The output form must be:
+
+@example
+(@meta{kont} (@meta{device-arg} @dots{}) . @meta{rest})
+@end example
+
+@noindent
+where the @meta{device-arg} are identifiers.
+
+@item :generate-end-of-input-or-char-tests
+The input form is:
+
+@example
+(_ :generate-end-of-input-or-char-tests
+   @meta{ch} @meta{next} @meta{fail}
+   (@meta{device-arg} @dots{})
+   @meta{end-of-input-kont} @meta{parse-input-char-kont})
+@end example
+
+@noindent
+this rule is used to generate the input device tests for an operator
+function.  The expanded code must first test for the end--of--input
+state and then proceed to evaluate code for the input character; in
+pseudocode the output form should be:
+
+@example
+(if (end-of-input? @meta{device-arg} ...)
+    @meta{end-of-input-kont}
+  (let ((@meta{ch} (get-next-char @meta{device-arg} ...)))
+    @meta{parse-input-char-kont}))
+@end example
+
+@meta{ch} is an identifier.  The input character must be bound to it
+before evaluating @meta{parse-input-char-kont}.
+
+@meta{next} is an identifier.  This rule must bind it to a syntax used
+to tail--call another operator using @meta{device-arg} as first
+arguments; for example:
+
+@example
+(define-syntax @meta{next}
+  (syntax-rules ()
+    ((_ ?operator-name ?operator-arg ...)
+     (?operator-name @meta{device-arg} ... ?operator-arg))))
+@end example
+
+@meta{fail} is an identifier.  This rule must bind it to a syntax used
+to signal an error detected by an operator clause; for example:
+
+@example
+(define-syntax @meta{fail}
+  (syntax-rules ()
+    ((_)
+     (error #f "invalid input character"
+       @meta{device-arg} ...))))
+@end example
+
+The @meta{device-arg} are the identifiers introduced by
+@code{:introduce-device-arguments}.
+
+@meta{end-of-input-kont} is a form to be evaluated whenever the
+end--of--input is detected.
+
+@meta{parse-input-char-kont} is a form to be evaluated whenever a
+character is extracted from the input device.
+
+@item :unexpected-end-of-input
+The input form is:
+
+@example
+(_ :unexpected-end-of-input (@meta{device-arg} @dots{}))
+@end example
+
+@noindent
+whenever the end--of--input is found by an operator that does not accept
+it as valid, this rule is used to decide what to do.
+
+The @meta{device-arg} are the identifiers introduced by
+@code{:introduce-device-arguments}.
+
+The output form can return a value or raise an exception; the returned
+value becomes the return value of the call to the parser.
+
+@item :generate-delimiter-test
+The input form is:
+
+@example
+(_ :generate-delimiter-test
+   @meta{ch}
+   @meta{ch-is-delimiter-kont}
+   @meta{ch-is-not-delimiter-kont})
+@end example
+
+@noindent
+this rule is used for input devices for which the lexeme string is
+embedded into a sequence of other characters, so there exists a set of
+characters that delimit the end--of--lexeme.  The parser delegates to
+the device the responsibility of knowing which characters are
+delimiters, if any.
+
+@meta{ch} is an identifier bound to the input character.
+@meta{ch-is-delimiter-kont} is a form to be evaluated whenever @meta{ch}
+is a delimiter character.  @meta{ch-is-not-delimiter-kont} is a form to
+be evaluated whenever @meta{ch} is not a delimiter character.
+
+For parsers accepting a full Scheme string as lexeme: there are no
+delimiters,3 the end--of--lexeme is the end--of--input; such parsers
+should just use @meta{ch-is-not-delimiter-kont} as output form.
+
+For parsers having delimiter characters, for example, recognised by a
+function like:
+
+@example
+(define (delimiter? ch)
+  (or (char=? ch #\space)
+      (char=? ch #\linefeed)))
+@end example
+
+@noindent
+the output form should be something like:
+
+@example
+(if (delimiter? @meta{ch})
+    @meta{ch-is-delimiter-kont}
+  @meta{ch-is-not-delimiter-kont})
+@end example
+
+@item :invalid-input-char
+The input form is:
+
+@example
+(_ :invalid-input-char (@meta{device-arg} @dots{}) @meta{ch})
+@end example
+
+@noindent
+whenever an input character is not accepted by an operator function this
+rule is used to decide what to do.
+
+The @meta{device-arg} are the identifiers introduced by
+@code{:introduce-device-arguments}; @meta{ch} is an identifier bound to
+the invalid input character.
+
+The output form can return a value or raise an exception; the returned
+value becomes the return value of the call to the parser.
+@end table
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Syntax string->token-or-false @meta{keyword} @meta{arg} ...
+Define the device logic to parse a lexeme from a full Scheme string
+object as in @func{string->number}.  It is implemented as follows:
+
+@example
+(define-syntax string->token-or-false
+  (syntax-rules (:introduce-device-arguments
+                 :generate-end-of-input-or-char-tests
+                 :unexpected-end-of-input
+                 :generate-delimiter-test
+                 :invalid-input-char)
+    ((_ :introduce-device-arguments
+        ?kont . ?rest)
+     (?kont (input.string input.length input.index) . ?rest))
+
+    ((_ :invalid-input-char
+        (?input.string ?input.length ?input.index)
+        ?ch)
+     #f)
+
+    ((_ :unexpected-end-of-input
+        (?input.string ?input.length ?input.index))
+     #f)
+
+    ((_ :generate-delimiter-test
+        ?ch ?ch-is-delimiter-kont ?ch-is-not-delimiter-kont)
+     ?ch-is-not-delimiter-kont)
+
+    ((_ :generate-end-of-input-or-char-tests
+        ?ch ?next ?fail
+        (?input.string ?input.length ?input.index)
+        ?end-of-input-kont ?parse-input-char-kont)
+     (let-syntax
+         ((?fail (syntax-rules ()
+                   ((_) #f)))
+          (?next (syntax-rules ()
+                   ((_ ?operator-name ?operator-arg (... ...))
+                    (?operator-name ?input.string ?input.length
+                                    (fx+ 1 ?input.index)
+                                    ?operator-arg (... ...))))))
+       (if (fx=? ?input.index ?input.length)
+           ?end-of-input-kont
+         (let ((?ch (string-ref ?input.string ?input.index)))
+           ?parse-input-char-kont))))
+    ))
+@end example
 @end deffn
 
 @c page

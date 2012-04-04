@@ -373,7 +373,7 @@
 ;;    N0=(polar . 123)     N1=456    -> 123@456
 ;;
 
-(define-parser-logic define-string->number-parser next fail
+(define-parser-logic define-string->number-parser ch next fail
 
   (parse-numeric-string (radix override-radix exactness)
     ;;This  operator is  the  entry  point to  parse  any valid  numeric

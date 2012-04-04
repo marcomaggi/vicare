@@ -44,7 +44,7 @@
 
     ;;Parser logic  to convert a  string of #\a  and #\b into a  list of
     ;;characters.
-    (define-parser-logic define-string->abba-parser next fail
+    (define-parser-logic define-string->abba-parser ch next fail
       (%parse-string (accumulator)
 		     ((:end-of-input)
 		      (reverse accumulator))
@@ -71,6 +71,49 @@
   #t)
 
 
+(parametrise ((check-test-name	'fail))
+
+  (module (parse-abab)
+
+    (define (parse-abab input-string)
+      (assert (string? input-string))
+      (%parse-string input-string (string-length input-string) 0 '()))
+
+    ;;Parser logic to convert a string  of intermixed #\a and #\b into a
+    ;;list of characters.
+    (define-parser-logic define-string->abab-parser ch next fail
+      (%parse-string (accumulator)
+		     ((:end-of-input)
+		      (reverse accumulator))
+		     ((#\a #\b)
+		      (if (or (null? accumulator)
+			      (case ch
+				((#\a) (char=? #\b (car accumulator)))
+				((#\b) (char=? #\a (car accumulator)))))
+			  (next %parse-string (cons ch accumulator))
+			(fail)))))
+
+    ;;Actual parser drawing characters from an input string.
+    (define-string->abab-parser string->token-or-false
+      (%parse-string))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+  (check (parse-abab "")		=> '())
+  (check (parse-abab "a")		=> '(#\a))
+  (check (parse-abab "b")		=> '(#\b))
+  (check (parse-abab "1")		=> #f)
+  (check (parse-abab "ciao")		=> #f)
+  (check (parse-abab "abb")		=> #f)
+  (check (parse-abab "baa")		=> #f)
+  (check (parse-abab "abab")		=> '(#\a #\b #\a #\b))
+  (check (parse-abab "baba")		=> '(#\b #\a #\b #\a))
+
+  #t)
+
+
 (parametrise ((check-test-name	'integers))
 
   (define (parse-integer input-string)
@@ -83,7 +126,7 @@
 	     (fx<  N 10)
 	     N)))
     ;;Parser logic to convert a string into an exact integer in base 10.
-    (define-parser-logic define-string->integer-parser next fail
+    (define-parser-logic define-string->integer-parser ch next fail
       (%parse-integer ()
 		      ((%digit) => D
 		       (next %parse-digit+  D)))

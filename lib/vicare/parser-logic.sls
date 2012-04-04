@@ -69,35 +69,26 @@
   ;;an "abstract parser" which must be specialised with the input device
   ;;logic.
   ;;
-  ;;?PARSER-DEFINER must be the  identifier that will become the keyword
-  ;;of the concrete parser-definition macro.
-  ;;
-  ;;?NEXT must be  the identifier that will become  the keyword bound to
-  ;;the macro  used to call  the "next" operator function  inserting the
-  ;;input   device   arguments.   ?NEXT   is   used   in  the   operator
-  ;;subexpressions.
-  ;;
-  ;;?FAIL must be  the identifier that will become  the keyword bound to
-  ;;the  macro used  to return  an error  to the  caller of  an operator
-  ;;function.  ?FAIL is used in the operator subexpressions.
-  ;;
-  ;;?OPERATOR-NAME must be the  identifier to which an operator function
-  ;;will be  bound.  This  identifier is in  the lexical context  of the
-  ;;DEFINE-PARSER-LOGIC use  form, which  is different from  the lexical
-  ;;context of a use of the ?PARSER-DEFINER macro.
-  ;;
-  ;;?OPERATOR-SPECIFIC-ARG  must be  an  identifier that  will become  a
-  ;;formal argument  for an operator function.  These  arguments are the
-  ;;operator-specific ones.
-  ;;
-  ;;?OPERATOR-CLAUSE must be a symbolic expression representing accepted
-  ;;input conditions for an operator function.
+  ;;See the documentation in Texinfo format.
   ;;
   (lambda (x)
+    (define (syntax->list stx)
+      ;;Given a syntax object STX holding a list, unwrap it and return a
+      ;;proper list holding the component syntax objects.
+      ;;
+      (syntax-case stx ()
+	((?car . ?cdr)
+	 (cons #'?car (syntax->list #'?cdr)))
+	(() '())))
     (syntax-case x ()
-      ((_ ?parser-definer ?next ?fail
+      ((_ ?parser-definer ?ch-var ?next ?fail
 	  (?operator-name (?operator-specific-arg ...) ?operator-clause ...)
 	  ...)
+       (and (identifier? #'?parser-definer)
+	    (identifier? #'?ch-var)
+	    (identifier? #'?next)
+	    (identifier? #'?fail)
+	    (for-all identifier? (syntax->list #'(?operator-name ...))))
        (with-syntax
 	   ;;Insert:
 	   ;;
@@ -111,7 +102,7 @@
 	     (syntax-rules ()
 	       ((_ ??device-logic (??public-operator-name (... ...)))
 		(define-parser (??public-operator-name (... ...))
-		  ??device-logic ?next ?fail
+		  ??device-logic ?ch-var ?next ?fail
 		  ORIGINAL-OPERATOR-NAMES
 		  (?operator-name (?operator-specific-arg ...) ?operator-clause ...) ...))))
 	 ))
@@ -147,7 +138,7 @@
 	 (cons #'?car (syntax->list #'?cdr)))
 	(() '())))
     (syntax-case x ()
-      ((_ (?public-operator-name ...) ?device-logic ?next ?fail
+      ((_ (?public-operator-name ...) ?device-logic ?ch-var ?next ?fail
 	  ?original-operator-names
 	  (?operator-name (?operator-arg ...) ?operator-clause ...) ...)
        (with-syntax (((OPERATOR-NAME ...)
@@ -158,7 +149,7 @@
 	     ;;This form expands to an operator function bound to a name
 	     ;;in the lexical scope of the DEFINE-PARSER-LOGIC use.
 	     (?device-logic :introduce-device-arguments
-			    %generate-operator ?device-logic ?next ?fail ?operator-name
+			    %generate-operator ?device-logic ?ch-var ?next ?fail ?operator-name
 			    (?operator-arg ...)
 			    (?operator-clause ...))
 	     ...
@@ -173,21 +164,21 @@
   ;;Define an operator function.
   ;;
   (syntax-rules ()
-    ((_ (?device-arg ...) ?device-logic ?next ?fail
+    ((_ (?device-arg ...) ?device-logic ?ch-var ?next ?fail
 	?operator-name (?operator-arg ...) (?operator-clause ...))
      (define (?operator-name ?device-arg ... ?operator-arg ...)
        ;;Introduce the identifier  "ch" used to bind the  next char from
        ;;the input device.
-       (?device-logic :generate-end-of-input-or-char-tests ch
-		      ?next ?fail (?device-arg ...)
+       (?device-logic :generate-end-of-input-or-char-tests
+		      ?ch-var ?next ?fail (?device-arg ...)
 		      (%generate-end-of-input-form
 		       ?device-logic (?device-arg ...)
 		       ?operator-clause ...)
 		      (%generate-parse-input-char-form
 		       ?device-logic (?device-arg ...)
-		       ch (%generate-delimiter-test
-			   ?device-logic (?device-arg ...)
-			   ch ?operator-clause ...)
+		       ?ch-var (%generate-delimiter-test
+				?device-logic (?device-arg ...)
+				?ch-var ?operator-clause ...)
 		       ?operator-clause ...)
 		      )))))
 
@@ -307,28 +298,29 @@
     ((_ :invalid-input-char (?input.string ?input.length ?input.index) ?ch-var)
      #f)
 
-    ;;Whenever the  end-of-input is found in  a position in  which it is
-    ;;unexpected,  this  rule  is  used  to  decide  what  to  do.   For
+    ;;Whenever the  end-of-input is found  by an operator that  does not
+    ;;accept it as  valid, this rule is used to decide  what to do.  For
     ;;STRING->NUMBER the action is to return false.
     ((_ :unexpected-end-of-input (?input.string ?input.length ?input.index))
      #f)
 
-    ;;This rule is  used for input devices for  which the numeric string
-    ;;is embedded into a sequence of other characters, so there exists a
-    ;;set  of characters  that  delimit the  end-of-number.  The  parser
+    ;;This rule is used for input devices for which the lexeme string is
+    ;;embedded into  a sequence of  other characters, so there  exists a
+    ;;set  of characters  that  delimit the  end-of-lexeme.  The  parser
     ;;delegates  to  the  device  the responsibility  of  knowing  which
     ;;characters are delimiters, if any.
     ;;
-    ;;When the input  device is a string containing  only the number, as
+    ;;When the input  device is a string containing  only the lexeme, as
     ;;is  the case  for  STRING->NUMBER: there  are  no delimiters,  the
-    ;;end-of-number  is the  end of  the  string.  We  avoid looking  at
+    ;;end-of-lexeme  is the  end of  the  string.  We  avoid looking  at
     ;;?CH-VAR and just expand to the not-delimiter continuation form.
     ((_ :generate-delimiter-test ?ch-var ?ch-is-delimiter-kont ?ch-is-not-delimiter-kont)
      ?ch-is-not-delimiter-kont)
 
-    ;;This rule is used to  generate the tests for an operator function.
-    ;;First  of all  the  end-of-input condition  is  checked; then  the
-    ;;continuation form for more characters is expanded.
+    ;;This  rule is  used  to generate  the  input device  tests for  an
+    ;;operator  function.  First  of all  the end-of-input  condition is
+    ;;checked; then the continuation form to parse an input character is
+    ;;expanded.
     ((_ :generate-end-of-input-or-char-tests ?ch-var ?next ?fail
 	(?input.string ?input.length ?input.index)
 	?end-of-input-kont ?parse-input-char-kont)
