@@ -99,7 +99,7 @@
   (lambda (x) #f))
 
 
-;;;; type definitions
+;;;; <RIB> type definition
 
 ;;A  <RIB> is  a  record constructed  at  every lexical  contour in  the
 ;;program to  hold informations about  the variables introduced  in that
@@ -127,7 +127,7 @@
 		;explanation of the frequency vector.
    ))
 
-(define (make-empty-rib)
+(define-inline (make-empty-rib)
   (make-<rib> '() '() '() #f))
 
 (define (make-full-rib id* label*)
@@ -142,141 +142,30 @@
 	      label*
 	      #f))
 
-;;; --------------------------------------------------------------------
-
-(define-record <stx>
-  (expr
-   mark*
-   subst*
-   ae*)
-  (lambda (S port subwriter) ;record printer function
-    (define-inline (%display thing)
-      (display thing port))
-    (define-inline (%write thing)
-      (write thing port))
-    (%display "#<syntax ")
-    (%write (syntax->datum S))
-    (let ((expr (<stx>-expr S)))
-      (when (annotation? expr)
-	(let ((pos (annotation-textual-position expr)))
-	  (when (source-position-condition? pos)
-	    (%display " (line ")  (%display (source-position-line    pos))
-	    (%display " column ") (%display (source-position-column  pos))
-	    (%display " of ")     (%display (source-position-port-id pos))
-	    (%display ")")))))
-    (%display ">")))
-
-
-
-;;The body  of a library, when it  is first processed, gets  this set of
-;;marks...
-(define top-mark* '(top))
-
-;;... consequently, every syntax object that  has a TOP in its marks set
-;;was present in the program source.
-(define-inline (top-marked? m*)
-  (memq 'top m*))
-
-(define (gen-lexical sym)
-  ;;Generate  a fresh  lexical name  for  renaming.  It's  also used  to
-  ;;generate temporaries.
+(define (make-top-rib name* label*)
+  ;;A top <RIB> is constructed as follows: given a subst:
   ;;
-  (cond ((symbol? sym)
-	 (gensym sym))
-	((<stx>? sym)
-	 (gen-lexical (identifier->symbol sym)))
-	(else
-	 (assertion-violation 'gen-lexical
-	   "*** Vicare bug: invalid arg" sym))))
-
-;;Used to  generate global names  (e.g. locations for  library exports).
-;;We use GEN-LEXICAL since it works just fine.
-;;
-(define gen-global gen-lexical)
-
-(define (gen-label _)
-  ;;Every identifier in the program will have a label associated with it
-  ;;in its substitution; this function generates such labels.
+  ;;   name* -> label*
   ;;
-  ;;The  labels  have to  have  read/write  EQ?   invariance to  support
-  ;;separate compilation (when we write the expanded symbolic expression
-  ;;to a  file and  then read it  back, the  labels must not  change and
-  ;;still be globally unique).
+  ;;generate a <RIB> containing:
   ;;
-  (gensym))
-
-(define (gen-top-level-label id rib)
-  (define (%find sym mark* sym* mark** label*)
-    ;;We know  that the list  of symbols SYM*  has at least  one element
-    ;;equal to SYM; iterate through  SYM*, MARK** and LABEL* looking for
-    ;;a  tuple having  marks equal  to MARK*  and return  the associated
-    ;;label.  If such binding is not found return false.
-    ;;
-    (and (pair? sym*)
-	 (if (and (eq? sym (car sym*))
-		  (same-marks? mark* (car mark**)))
-	     (car label*)
-	   (%find sym mark* (cdr sym*) (cdr mark**) (cdr label*)))))
-  (let ((sym   (identifier->symbol id))
-	(mark* (<stx>-mark*        id))
-	(sym*  (<rib>-sym*         rib)))
-    (cond ((and (memq sym (<rib>-sym* rib))
-		(%find sym mark* sym* (<rib>-mark** rib) (<rib>-label* rib)))
-	   => (lambda (label)
-		;;If we are here RIB contains a binding for ID and LABEL
-		;;is its label.
-		;;
-		;;If  the  symbol LABEL  is  associated  to an  imported
-		;;binding:  the data  structure implementing  the symbol
-		;;object  holds  informations about  the  binding in  an
-		;;internal field; else such field is set to false.
-		(if (imported-label->binding label)
-		    ;;Create new label to shadow imported binding.
-		    (gensym)
-		  ;;Recycle old label.
-		  label)))
-	  (else
-	   ;;Create a new label for a new binding.
-	   (gensym)))))
-
-(define (gen-define-label+loc id rib sd?)
-  (if sd?
-      (values (gensym) (gen-lexical id))
-    (let* ((env   (top-level-context))
-	   (label (gen-top-level-label id rib))
-	   (locs  (interaction-env-locs env)))
-      (values label
-	      (cond ((assq label locs) => cdr)
-		    (else
-		     (let ((loc (gen-lexical id)))
-		       (set-interaction-env-locs! env (cons (cons label loc) locs))
-		       loc)))))))
-
-(define (gen-define-label id rib sd?)
-  (if sd?
-      (gensym)
-    (gen-top-level-label id rib)))
-
-(define (top-marked-symbols rib)
-  ;;Scan the RIB and return a list of symbols representing binding names
-  ;;and having the top mark.
+  ;;* name* as the <RIB>-SYM*,
   ;;
-  (let-values (((sym* mark**)
-		(let ((sym*   (<rib>-sym*   rib))
-		      (mark** (<rib>-mark** rib)))
-		  (if (<rib>-sealed/freq rib)
-		      (values (vector->list sym*)
-			      (vector->list mark**))
-		    (values sym* mark**)))))
-    (let recur ((sym*   sym*)
-		(mark** mark**))
-      (cond ((null? sym*)
-	     '())
-	    ((equal? (car mark**) top-mark*)
-	     (cons (car sym*)
-		   (recur (cdr sym*) (cdr mark**))))
-	    (else
-	     (recur (cdr sym*) (cdr mark**)))))))
+  ;;* a list of TOP-MARK* as the <RIB>-MARK**,
+  ;;
+  ;;* label* as the <RIB>-LABEL*
+  ;;
+  ;;so, a name in  a top <RIB> maps to its label if  and only if its set
+  ;;of marks is TOP-MARK*.
+  ;;
+  (let ((rib (make-empty-rib)))
+    (vector-for-each
+        (lambda (name label)
+          (if (symbol? name)
+	      (extend-rib! rib (make-<stx> name top-mark* '() '()) label #t)
+            (assertion-violation 'make-top-rib "Vicare bug: expected symbol as binding name" name)))
+      name* label*)
+    rib))
 
 
 ;;;; extending ribs
@@ -321,7 +210,7 @@
 ;;    (list a b))
 ;;
 ;;when starting to process the LAMBDA syntax: a new <RIB> is created and
-;;is added to the metadata  of the LAMBDA expression; when each internal
+;;is  added to  the  metadata of  the  LAMBDA form;  when each  internal
 ;;definition is  encountered, a  new entry for  the identifier  is added
 ;;(via side effect) to the <RIB>:
 ;;
@@ -432,6 +321,172 @@
 	  (%vector-swap label* idx i))))))
 
 
+;;;; syntax object type definition
+
+(define-record <stx>
+  (expr
+   mark*
+   subst*
+   ae*)
+  (lambda (S port subwriter) ;record printer function
+    (define-inline (%display thing)
+      (display thing port))
+    (define-inline (%write thing)
+      (write thing port))
+    (%display "#<syntax ")
+    (%write (syntax->datum S))
+    (let ((expr (<stx>-expr S)))
+      (when (annotation? expr)
+	(let ((pos (annotation-textual-position expr)))
+	  (when (source-position-condition? pos)
+	    (%display " (line ")  (%display (source-position-line    pos))
+	    (%display " column ") (%display (source-position-column  pos))
+	    (%display " of ")     (%display (source-position-port-id pos))
+	    (%display ")")))))
+    (%display ">")))
+
+
+;;;; marks
+
+;;The body  of a library, when it  is first processed, gets  this set of
+;;marks...
+(define top-mark* '(top))
+
+;;... consequently, every syntax object that  has a TOP in its marks set
+;;was present in the program source.
+(define-inline (top-marked? m*)
+  (memq 'top m*))
+
+(define (top-marked-symbols rib)
+  ;;Scan the <RIB> RIB and return a list of symbols representing binding
+  ;;names and having the top mark.
+  ;;
+  (let-values (((sym* mark**)
+		;;If RIB  is sealed the  fields hold vectors,  else they
+		;;hold lists; we want lists here.
+		(let ((sym*   (<rib>-sym*   rib))
+		      (mark** (<rib>-mark** rib)))
+		  (if (<rib>-sealed/freq rib)
+		      (values (vector->list sym*)
+			      (vector->list mark**))
+		    (values sym* mark**)))))
+    (let recur ((sym*   sym*)
+		(mark** mark**))
+      (cond ((null? sym*)
+	     '())
+	    ((equal? (car mark**) top-mark*)
+	     (cons (car sym*)
+		   (recur (cdr sym*) (cdr mark**))))
+	    (else
+	     (recur (cdr sym*) (cdr mark**)))))))
+
+
+;;;; stuff about labels
+;;
+;;Labels are gensyms.  After the expansion every binding has a gensym as
+;;name, so that its name is unique in the whole program.  For example:
+;;
+;;  (let ((a 1))
+;;    (define-syntax b (identifier-syntax a))
+;;    (let ((a 2))
+;;      (list a b)))
+;;
+;;is converted to:
+;;
+;;  (let ((G1 1))
+;;    (let ((G2 2))
+;;      (G0 G1 G2)))
+;;
+;;with the following table of substitutions:
+;;
+;;    name  | label
+;;  --------+------
+;;  list    |  G0
+;;  outer a |  G1
+;;  inner a |  G2
+;;
+
+(define (gen-lexical sym)
+  ;;Generate  a fresh  lexical name  for  renaming.  It's  also used  to
+  ;;generate temporaries.
+  ;;
+  (cond ((symbol? sym)
+	 (gensym sym))
+	((<stx>? sym)
+	 (gen-lexical (identifier->symbol sym)))
+	(else
+	 (assertion-violation 'gen-lexical
+	   "*** Vicare bug: invalid arg" sym))))
+
+;;Used to  generate global names  (e.g. locations for  library exports).
+;;We use GEN-LEXICAL since it works just fine.
+;;
+(define gen-global gen-lexical)
+
+(define (gen-label _)
+  ;;Every identifier in the program will have a label associated with it
+  ;;in its substitution; this function generates such labels.
+  ;;
+  ;;The  labels  have to  have  read/write  EQ?   invariance to  support
+  ;;separate compilation (when we write the expanded symbolic expression
+  ;;to a  file and  then read it  back, the  labels must not  change and
+  ;;still be globally unique).
+  ;;
+  (gensym))
+
+(define (gen-top-level-label id rib)
+  (define (%find sym mark* sym* mark** label*)
+    ;;We know  that the list  of symbols SYM*  has at least  one element
+    ;;equal to SYM; iterate through  SYM*, MARK** and LABEL* looking for
+    ;;a  tuple having  marks equal  to MARK*  and return  the associated
+    ;;label.  If such binding is not found return false.
+    ;;
+    (and (pair? sym*)
+	 (if (and (eq? sym (car sym*))
+		  (same-marks? mark* (car mark**)))
+	     (car label*)
+	   (%find sym mark* (cdr sym*) (cdr mark**) (cdr label*)))))
+  (let ((sym   (identifier->symbol id))
+	(mark* (<stx>-mark*        id))
+	(sym*  (<rib>-sym*         rib)))
+    (cond ((and (memq sym (<rib>-sym* rib))
+		(%find sym mark* sym* (<rib>-mark** rib) (<rib>-label* rib)))
+	   => (lambda (label)
+		;;If we are here RIB contains a binding for ID and LABEL
+		;;is its label.
+		;;
+		;;If  the  symbol LABEL  is  associated  to an  imported
+		;;binding:  the data  structure implementing  the symbol
+		;;object  holds  informations about  the  binding in  an
+		;;internal field; else such field is set to false.
+		(if (imported-label->binding label)
+		    ;;Create new label to shadow imported binding.
+		    (gensym)
+		  ;;Recycle old label.
+		  label)))
+	  (else
+	   ;;Create a new label for a new binding.
+	   (gensym)))))
+
+(define (gen-define-label+loc id rib sd?)
+  (if sd?
+      (values (gensym) (gen-lexical id))
+    (let* ((env   (top-level-context))
+	   (label (gen-top-level-label id rib))
+	   (locs  (interaction-env-locs env)))
+      (values label
+	      (cond ((assq label locs) => cdr)
+		    (else
+		     (let ((loc (gen-lexical id)))
+		       (set-interaction-env-locs! env (cons (cons label loc) locs))
+		       loc)))))))
+
+(define (gen-define-label id rib sd?)
+  (if sd?
+      (gensym)
+    (gen-top-level-label id rib)))
+
+
 ;;;; syntax objects handling
 ;;
 ;;First, let's  look at identifiers,  since they're the real  reason why
@@ -451,9 +506,9 @@
   ;;substitutions as the identifier.
   ;;
   (make-<stx> datum
-	    (<stx>-mark*  id)
-	    (<stx>-subst* id)
-	    (<stx>-ae*    id)))
+	      (<stx>-mark*  id)
+	      (<stx>-subst* id)
+	      (<stx>-ae*    id)))
 
 ;;A syntax  object may be wrapped  or unwrapped, so what  does that mean
 ;;exactly?
@@ -3862,24 +3917,6 @@
      (else
       (add-imports! (car imp*) h)
       (f (cdr imp*) h)))))
-
-  ;;; a top rib is constructed as follows:
-  ;;; given a subst: name* -> label*,
-  ;;; generate a rib containing:
-  ;;;  - name* as the <rib>-sym*,
-  ;;;  - a list of top-mark* as the <rib>-mark**
-  ;;;  - label* as the <rib>-label*
-  ;;; so, a name in a top rib maps to its label if and only if
-  ;;; its set of marks is top-mark*.
-(define (make-top-rib names labels)
-  (let ((rib (make-empty-rib)))
-    (vector-for-each
-        (lambda (name label)
-          (unless (symbol? name)
-            (error 'make-top-rib "BUG: not a symbol" name))
-          (extend-rib! rib (make-<stx> name top-mark* '() '()) label #t))
-      names labels)
-    rib))
 
 (define (make-collector)
   (let ((ls '()))
