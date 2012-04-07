@@ -17982,7 +17982,7 @@ range of fixnums.
 @end deftypefun
 
 
-@deftypefun ikptr ik_bytevector_from_cstring (ikpcb * @var{pcb}, const char * @var{cstr})
+@deftypefun ikptr ika_bytevector_from_cstring (ikpcb * @var{pcb}, const char * @var{cstr})
 Allocate, initialise and return a new bytevector and copy the contents
 of the @asciiz{} string referenced by @var{cstr} in the data area.
 
@@ -17992,7 +17992,7 @@ the maximum positive fixnum.
 @end deftypefun
 
 
-@deftypefun ikptr ik_bytevector_from_cstring_len (ikpcb * @var{pcb}, const char * @var{cstr}, size_t @var{len})
+@deftypefun ikptr ika_bytevector_from_cstring_len (ikpcb * @var{pcb}, const char * @var{cstr}, size_t @var{len})
 Allocate, initialise and return a new bytevector and copy the @var{len}
 bytes of the @ascii{} string referenced by @var{cstr} in the data area.
 
@@ -18002,7 +18002,7 @@ the maximum positive fixnum.
 @end deftypefun
 
 
-@deftypefun ikptr ik_bytevector_from_memory_block (ikpcb * @var{pcb}, void * @var{memory}, size_t @var{length})
+@deftypefun ikptr ika_bytevector_from_memory_block (ikpcb * @var{pcb}, void * @var{memory}, size_t @var{length})
 Allocate, initialise and return a new bytevector and copy in the data
 area @var{length} bytes from of the memory block referenced by
 @var{memory}.
