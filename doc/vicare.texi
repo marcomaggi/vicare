@@ -1630,6 +1630,7 @@ exports all the bindings exported by @library{vicare} that are
 @strong{not} exported by @library{rnrs (6)}
 
 @menu
+* iklib progname::              Finding the @command{vicare} executable.
 * iklib conditions::            Additional condition types.
 * iklib reader::                Extensions to the reader.
 * iklib expander::              Interface to the expander.
@@ -1663,6 +1664,23 @@ exports all the bindings exported by @library{vicare} that are
 * iklib debug::                 Debugging utilities.
 * iklib misc::                  Miscellaneous functions.
 @end menu
+
+@c page
+@node iklib progname
+@section Finding the @command{vicare} executable
+
+
+@defun vicare-argv0
+Return a bytevector holding the C string in the @code{argv[0]} argument
+to the @cfunc{main} function of the current @value{PRJNAME} process.
+@end defun
+
+
+@defun vicare-argv0-string
+Return a Scheme string holding the C string in the @code{argv[0]}
+argument to the @cfunc{main} function of the current @value{PRJNAME}
+process.
+@end defun
 
 @c page
 @node iklib conditions

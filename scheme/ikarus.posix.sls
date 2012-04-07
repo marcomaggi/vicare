@@ -26,12 +26,16 @@
     getenv
     split-file-name
     real-pathname
-    file-modification-time)
+    file-modification-time
+    vicare-argv0
+    vicare-argv0-string)
   (import (except (ikarus)
 		  file-exists?
 		  delete-file
 		  strerror
-		  getenv)
+		  getenv
+		  vicare-argv0
+		  vicare-argv0-string)
     (vicare syntactic-extensions)
     (vicare platform-constants)
     (prefix (vicare unsafe-capi)
@@ -367,6 +371,15 @@
 	    (+ (* #e1e9 (unsafe.vector-ref timespec 0))
 	       (unsafe.vector-ref timespec 1))
 	  (%raise-errno-error/filename who rv pathname))))))
+
+
+;;;; program name
+
+(define (vicare-argv0)
+  (foreign-call "ikrt_get_argv0_string"))
+
+(define (vicare-argv0-string)
+  (ascii->string (foreign-call "ikrt_get_argv0_string")))
 
 
 ;;;; done

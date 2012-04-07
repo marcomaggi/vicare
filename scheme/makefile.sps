@@ -1882,6 +1882,8 @@
     (real-pathname				posix)
     (file-modification-time			posix)
     (split-file-name				posix)
+    (vicare-argv0				i v $language posix)
+    (vicare-argv0-string			i v $language posix)
 
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $foreign)

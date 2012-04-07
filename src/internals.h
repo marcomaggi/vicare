@@ -308,15 +308,6 @@ typedef struct ikpcb {
   /* The  following fields are	not used  by any  scheme code  they only
      support the runtime system (GC, etc.) */
 
-  /* Linked  list of  FFI callback  support data.   Used by  the garbage
-     collector	not  to collect	 data  still  needed  by some  callbacks
-     registered in data structures handled by foreign libraries. */
-  ik_callback_locative * callbacks;
-
-  /* Value of  "errno" right after the	last call to  a foreign function
-     callout. */
-  int			last_errno;
-
   /* Additional roots for the garbage collector.  They are used to avoid
      collecting objects still in use while they are in use by C code. */
   ikptr*		root0;
@@ -329,6 +320,18 @@ typedef struct ikpcb {
   ikptr*		root7;
   ikptr*		root8;
   ikptr*		root9;
+
+  /* The value of "argv[0]" as handed to the "main()" function. */
+  char *		argv0;
+
+  /* Linked  list of  FFI callback  support data.   Used by  the garbage
+     collector	not  to collect	 data  still  needed  by some  callbacks
+     registered in data structures handled by foreign libraries. */
+  ik_callback_locative * callbacks;
+
+  /* Value of  "errno" right after the	last call to  a foreign function
+     callout. */
+  int			last_errno;
 
   ik_uint *		segment_vector;
   ikptr			weak_pairs_ap;
