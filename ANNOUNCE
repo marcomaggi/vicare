@@ -71,6 +71,15 @@ Notes for revision 0.2d10
   internally for  both STRING->NUMBER  and the string-to-number  code in
   the reader.
 
+* Added functions to (vicare):
+
+    split-search-path
+    split-search-path-bytevector
+    split-search-path-string
+    split-pathname
+    split-pathname-bytevector
+    split-pathname-string
+
 
 Notes for revision 0.2d9
 ------------------------

@@ -137,6 +137,7 @@ TESTS			=	\
 	test-vicare-log.sps				\
 	test-vicare-parameters.sps			\
 	test-vicare-parser-logic.sps			\
+	test-vicare-pathnames.sps			\
 	test-vicare-pointers.sps			\
 	test-vicare-promises.sps			\
 	test-vicare-reader.sps				\
@@ -317,6 +318,7 @@ EXTRA_DIST =	\
 	test-vicare-log.sps				\
 	test-vicare-parameters.sps			\
 	test-vicare-parser-logic.sps			\
+	test-vicare-pathnames.sps			\
 	test-vicare-pointers.sps			\
 	test-vicare-posix.sps				\
 	test-vicare-promises.sps			\

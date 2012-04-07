@@ -4784,7 +4784,7 @@ example in the previous section):
 @value{PRJNAME} extends the input/output facilities defined by @rnrs{6}.
 
 @menu
-* iklib io filename::           File pathname handling.
+* iklib io pathnames::          Pathnames handling.
 * iklib io codecs::             Transcoders and additional codecs.
 * iklib io binary::             Additional binary port features.
 * iklib io textual::            Additional textual port features.
@@ -4793,8 +4793,8 @@ example in the previous section):
 @end menu
 
 @c page
-@node iklib io filename
-@subsection File pathname handling
+@node iklib io pathnames
+@subsection Pathnames handling
 
 
 All the file--related functions defined by @rnrs{6} accept a Scheme
@@ -4816,6 +4816,92 @@ In @value{PRJNAME} the filename--to--string conversion is performed by
 the function returned by @func{filename->string-func}, which defaults to
 @func{utf8->string}.
 @end deffn
+
+
+@defun split-search-path @var{path}
+@defunx split-search-path-bytevector @var{bytevector-path}
+@defunx split-search-path-string @var{string-path}
+Split a file search path into its components and return a list of
+pathnames.  A search path is meant to be a list of directory pathnames
+separated by a colon character; @var{bytevector-path} must be a
+bytevector, @var{string-path} must be a Scheme string, @var{path} must
+be a Scheme string or bytevector.  Empty pathnames are discarded.
+
+@example
+#!vicare
+(import (vicare))
+
+(split-search-path-bytevector '#vu8())
+@result{} ()
+
+(split-search-path-bytevector #ve(ascii "ciao:hello"))
+@result{} (#ve(ascii "ciao") #ve(ascii "hello"))
+
+(split-search-path-bytevector '#ve(ascii "::::"))
+@result{} ()
+
+(split-search-path-string "")
+@result{} ()
+
+(split-search-path-string "ciao:hello:salut")
+@result{} ("ciao" "hello" "salut")
+
+(split-search-path-string "::::")
+@result{} ()
+
+(split-search-path "ciao:hello:salut")
+@result{} ("ciao" "hello" "salut")
+
+(split-search-path '#ve(ascii "ciao:hello:salut"))
+@result{} (#ve(ascii "ciao") #ve(ascii "hello") #ve(ascii "salut"))
+@end example
+@end defun
+
+
+@defun split-pathname @var{pathname}
+@defunx split-pathname-bytevector @var{bytevector-pathname}
+@defunx split-pathname-string @var{string-pathname}
+Split a file pathname into its components and return two values: a
+boolean, true if the pathname starts with a slash characters; the list
+of components which can be empty.
+
+A pathname is meant to be a file or directory name with components
+separated by a slash character; @var{bytevector-pathname} must be a
+bytevector, @var{string-pathname} must be a Scheme string, @var{path}
+must be a Scheme string or bytevector.
+
+Empty components are discarded.
+
+@example
+#!vicare
+(import (vicare))
+
+(split-pathname-bytevector '#vu8())
+@result{} #f ()
+
+(split-pathname-bytevector '#ve(ascii "ciao/hello"))
+@result{} #f (#ve(ascii "ciao") #ve(ascii "hello"))
+
+(split-pathname-bytevector '#ve(ascii "////"))
+@result{} #t ()
+
+(split-pathname-string "")
+@result{} #f ()
+
+(split-pathname-string "ciao/hello/salut")
+@result{} #f ("ciao" "hello" "salut")
+
+(split-pathname-string "////")
+@result{} #t ()
+
+(split-pathname "ciao/hello/salut")
+@result{} #f ("ciao" "hello" "salut")
+
+(split-pathname '#ve(ascii "/ciao/hello/salut"))
+@result{} #t (#ve(ascii "ciao") #ve(ascii "hello") #ve(ascii "salut"))
+@end example
+@end defun
+
 
 @c page
 @node iklib io codecs
