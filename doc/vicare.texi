@@ -4763,6 +4763,8 @@ example in the previous section):
 @section Input/output library
 
 
+@value{PRJNAME} extends the input/output facilities defined by @rnrs{6}.
+
 @menu
 * iklib io filename::           File pathname handling.
 * iklib io codecs::             Transcoders and additional codecs.
