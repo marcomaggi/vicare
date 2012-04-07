@@ -4769,7 +4769,6 @@ example in the previous section):
 * iklib io binary::             Additional binary port features.
 * iklib io textual::            Additional textual port features.
 * iklib io buffer::             Buffer size customisation.
-* iklib io non-block::          Non--blocking mode for ports.
 * iklib io misc::               Miscellaneous port functions.
 @end menu
 
@@ -5120,21 +5119,6 @@ by @func{open-file-input/output-prot}.  It is initialised to
 Hold the buffer size for socket ports.  It is initialised to
 @math{16384}.
 @end deffn
-
-@c page
-@node iklib io non-block
-@subsection Non--blocking mode for ports
-
-
-@forunix{} Non--blocking mode is setup with a call like:
-
-@example
-fcntl(fd, F_SETFL, O_NONBLOCK);
-@end example
-
-@noindent
-@glibcref{Control Operations, Control Operations}@*
-@glibcref{Open-time Flags, Open-time Flags}
 
 @c page
 @node iklib io misc
