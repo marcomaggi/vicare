@@ -4790,14 +4790,14 @@ example in the previous section):
 @section Input/output library
 
 
+@value{PRJNAME} extends the input/output facilities defined by @rnrs{6}.
+
 @menu
 * iklib io filename::           File pathname handling.
 * iklib io codecs::             Transcoders and additional codecs.
 * iklib io binary::             Additional binary port features.
 * iklib io textual::            Additional textual port features.
 * iklib io buffer::             Buffer size customisation.
-* iklib io socket::             Using network sockets.
-* iklib io non-block::          Non--blocking mode for ports.
 * iklib io misc::               Miscellaneous port functions.
 @end menu
 
@@ -5088,6 +5088,17 @@ descriptor.
 Socket ports do @strong{not} support port position operations.
 @end defun
 
+
+@defun read-line
+@defunx read-line @var{port}
+Read from the textual input @var{port} up to and including the linefeed
+character or end of file, decoding characters in the same manner as
+@func{get-string-n} and @func{get-string-n!}.  This function is exactly
+like @func{get-line}, defined by @rsixlibrary{io ports}, but it uses the
+return value of @func{current-input-port} if no @var{port} argument is
+used.
+@end defun
+
 @c page
 @node iklib io buffer
 @subsection Buffer size customisation
@@ -5137,169 +5148,6 @@ by @func{open-file-input/output-prot}.  It is initialised to
 Hold the buffer size for socket ports.  It is initialised to
 @math{16384}.
 @end deffn
-
-@c page
-@node iklib io socket
-@subsection Using network sockets
-
-
-@menu
-* iklib io socket client::      Establishing client network
-                                connections.
-* iklib io socket server::      Opening server network services.
-@end menu
-
-@c page
-@node iklib io socket client
-@subsubsection Establishing client network connections
-
-
-The following bindings are exported by the @library{ikarus} library.
-
-
-@defun tcp-connect @var{hostname} @var{service}
-@defunx udp-connect @var{hostname} @var{service}
-@defunx tcp-connect-nonblocking @var{hostname} @var{service}
-@defunx udp-connect-nonblocking @var{hostname} @var{service}
-Establish a network connection using the @tcp{} or @udp{} protocol, to
-the host selected by the string @var{hostname}, port/service selected by
-the string @var{service}.  The @code{-nonblocking} version sets the
-underlying socket descriptor to non--blocking mode (@ref{iklib io
-non-block}).  Upon success, return a port; if an error occurs an
-exception is raised.
-
-@var{hostname} can be a dotted decimal address for IPv4, or a
-hexadecimal string for IPv6, or a network address.
-
-@var{service} can be a numerical string representing the port, or the
-``official'' name of a service, like @code{smtp} or @code{pop3}.
-
-@quotation
-@forunix{} These functions use of the @cfunc{socket}, @cfunc{connect}
-and @cfunc{get@-addr@-info} system functions.
-
-@glibcref{Creating a Socket, Creating a Socket}@*
-@glibcref{Connecting, Making a Connection}@*
-See the @cfunc{getaddrinfo} manual page.@*
-See the @file{/etc/services} configuration file.
-@end quotation
-@end defun
-
-@c page
-@node iklib io socket server
-@subsubsection Opening server network services
-
-
-The following bindings are exported by the @library{ikarus} library.
-
-
-@defun tcp-server-socket @var{server-port-number}
-@defunx tcp-server-socket-nonblocking @var{server-port-number}
-Build a new @tcp{} server object for the selected port number (which
-must be an exact integer).  The @code{-nonblocking} versions set the
-underlying socket descriptor to non--blocking mode (@ref{iklib io
-non-block}).  Upon success, return a server--object; if an error occurs
-an exception is raised.
-
-@quotation
-@forunix{} These functions make use of the @cfunc{socket},
-@cfunc{setsockopt}, @cfunc{bind} and @cfunc{listen} system functions.
-The socket is configured with the @code{AF_INET}, @code{INADDR_ANY},
-@code{SO_REUSEADDR} values and options (@value{PRJNAME} version 0.0.3+, checkout
-1468).
-
-@glibcref{Creating a Socket, Creating a Socket}@*
-@glibcref{Socket Option Functions, Socket Option Functions}@*
-@glibcref{Setting Address, Setting the Address of a Socket}@*
-@glibcref{Listening, Listening for Connections}
-@end quotation
-@end defun
-
-
-@defun accept-connection @var{server-object}
-@defunx accept-connection-nonblocking @var{server-object}
-Accept the next incoming connection to the selected server.  If success
-return two values:
-
-@enumerate
-@item
-an output port to be used to send data;
-
-@item
-an input port to be used to receive data;
-@end enumerate
-
-@noindent
-if an error occurs: an exception is raised.  The @code{-nonblocking}
-versions set the underlying socket descriptor to non--blocking mode
-(@ref{iklib io non-block}).
-
-If the server socket was configured as blocking: this function suspends
-the process waiting for an incoming connection.
-
-@quotation
-@fixme{What happens when the server socket is configured as
-non--blocking?}
-@end quotation
-
-@quotation
-@forunix{} These functions make use of the @cfunc{accept} system call.
-
-@glibcref{Accepting Connections, Accepting Connections}
-@end quotation
-@end defun
-
-
-@defun close-tcp-server-socket @var{server-object}
-Close a server socket causing it to stop listening.
-
-@quotation
-@forunix{} this function makes use of the @cfunc{shutdown} system
-function.
-
-@glibcref{Closing a Socket, Closing a Socket}
-See also the @cfunc{shutdown} manual page.
-@end quotation
-@end defun
-
-
-@defun register-callback @var{server-object} @var{proc}
-Register a callback function to be invoked whenever a new incoming
-connection request happens on @var{server-object}.  The callback will be
-invoked by the @value{PRJNAME} event loop.
-
-@quotation
-@fixme{What are the parameters that get passed to @var{proc}?  Look for
-@func{make-t} and @func{t-proc} in @file{ikarus.io.sls}.}
-@end quotation
-@end defun
-
-
-@deffn Parameter input-socket-buffer-size
-Select the size in bytes of the input buffer for server sockets.  The
-value must be a fixnum greater or equal to 128.
-@end deffn
-
-
-@deffn Parameter output-socket-buffer-size
-Select the size in bytes of the output buffer for server sockets.  The
-value must be a fixnum greater than zero.
-@end deffn
-
-@c page
-@node iklib io non-block
-@subsection Non--blocking mode for ports
-
-
-@forunix{} Non--blocking mode is setup with a call like:
-
-@example
-fcntl(fd, F_SETFL, O_NONBLOCK);
-@end example
-
-@noindent
-@glibcref{Control Operations, Control Operations}@*
-@glibcref{Open-time Flags, Open-time Flags}
 
 @c page
 @node iklib io misc
