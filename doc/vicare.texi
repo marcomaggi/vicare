@@ -5061,6 +5061,17 @@ descriptor.
 Socket ports do @strong{not} support port position operations.
 @end defun
 
+
+@defun read-line
+@defunx read-line @var{port}
+Read from the textual input @var{port} up to and including the linefeed
+character or end of file, decoding characters in the same manner as
+@func{get-string-n} and @func{get-string-n!}.  This function is exactly
+like @func{get-line}, defined by @rsixlibrary{io ports}, but it uses the
+return value of @func{current-input-port} if no @var{port} argument is
+used.
+@end defun
+
 @c page
 @node iklib io buffer
 @subsection Buffer size customisation
