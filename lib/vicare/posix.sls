@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#!r6rs
+#!vicare
 (library (vicare posix)
   (export
     ;; errno and h_errno codes handling
@@ -254,6 +254,9 @@
     sysconf
     pathconf		fpathconf
     confstr		confstr/string
+
+    ;; executable pathname
+    vicare-executable			vicare-executable-string
 
     ;; miscellaneous functions
     file-descriptor?)
@@ -3030,6 +3033,79 @@
 
 (define (confstr/string parameter)
   (latin1->string (confstr parameter)))
+
+
+;;;; executable pathname
+
+(module (vicare-executable vicare-executable-string)
+
+  (define vicare-executable-string
+    (case-lambda
+     (()
+      (let ((pathname (vicare-executable)))
+	(and pathname (ascii->string pathname))))
+     ((argv0)
+      (define who 'vicare-executable-string)
+      (with-arguments-validation (who)
+	  ((string	argv0))
+	(let ((pathname (vicare-executable (string->ascii argv0))))
+	  (and pathname (ascii->string pathname)))))))
+
+  (define vicare-executable
+    (case-lambda
+     (()
+      (vicare-executable (vicare-argv0)))
+     ((argv0.bv)
+      (define who 'vicare-executable)
+      (with-arguments-validation (who)
+	  ((bytevector	argv0.bv))
+	(let ((argv0.len (unsafe.bytevector-length argv0.bv)))
+	  (if (%unsafe.first-char-is-slash? argv0.bv)
+	      argv0.bv
+	    (let* ((name (%unsafe.name-if-slash-char-found argv0.bv 0 argv0.len))
+		   (name (or name (%unsafe.path-search argv0.bv))))
+	      name)))))))
+
+  (define-inline (%unsafe.first-char-is-slash? bv)
+    (unsafe.fx= ASCII-SLASH-FX (unsafe.bytevector-u8-ref bv 0)))
+
+  (define (%unsafe.name-if-slash-char-found bv bv.index bv.past)
+    ;;Scan the bytes in BV from BV.INDEX included to BV.PAST excluded in
+    ;;search of  one representing a  slash character in  ASCII encoding.
+    ;;When found return BV itself; else return false.
+    ;;
+    (and (unsafe.fx< bv.index bv.past)
+	 (if (unsafe.fx= ASCII-SLASH-FX
+			 (unsafe.bytevector-u8-ref bv bv.index))
+	     bv
+	   (%unsafe.name-if-slash-char-found bv (unsafe.fxadd1 bv.index) bv.past))))
+
+  (define (%unsafe.path-search bv)
+    ;;
+    ;;An unset PATH is equivalent to the search path "/bin:/usr/bin"; an
+    ;;empty PATH is equivalent to the search path "."
+    ;;
+    (let* ((PATH	(capi.posix-getenv #ve(ascii "PATH")))
+	   (PATH-LIST	(if PATH
+			    (if (unsafe.fxzero? (unsafe.bytevector-length PATH))
+				'(#ve(ascii "."))
+			      (split-search-path-bytevector PATH))
+			  DEFAULT-PATH-LIST)))
+      (let next-directory ((PATH-LIST PATH-LIST))
+	(if (null? PATH-LIST)
+	    #f
+	  (let ((pathname (bytevector-append (car PATH-LIST) bv)))
+	    (if (file-exists? pathname)
+		pathname
+	      (next-directory (cdr PATH-LIST))))))))
+
+  (define-inline-constant DEFAULT-PATH-LIST
+    '(#ve(ascii "/bin") #ve(ascii "/usr/bin")))
+
+  (define-inline-constant ASCII-SLASH-FX
+    47 #;(char->integer #\/))
+
+  #| end of module |# )
 
 
 ;;;; miscellaneous functions

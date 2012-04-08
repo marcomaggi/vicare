@@ -27,21 +27,10 @@
 
 #!vicare
 (import (vicare)
-  (checks)
-  (prefix (vicare unsafe-operations)
-	  unsafe.)
-  (vicare syntactic-extensions))
+  (checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare pathname and search path functions \n")
-
-(define-argument-validation (bytevector who obj)
-  (bytevector? obj)
-  (assertion-violation who "expected bytevector as argument" obj))
-
-(define-argument-validation (string who obj)
-  (string? obj)
-  (assertion-violation who "expected string as argument" obj))
 
 
 (parametrise ((check-test-name	'split-search-path))

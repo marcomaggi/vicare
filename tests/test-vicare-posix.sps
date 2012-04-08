@@ -2001,6 +2001,18 @@
   #t)
 
 
+(parametrise ((check-test-name	'executable))
+
+  (check	;first char is slash
+      (px.vicare-executable-string "/usr/local/bin/vicare")
+    => "/usr/local/bin/vicare")
+
+  (check-pretty-print (px.vicare-executable-string "vicare"))
+
+
+  #t)
+
+
 ;;;; done
 
 (flush-output-port (current-output-port))

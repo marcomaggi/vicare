@@ -399,74 +399,6 @@
 	  (%raise-errno-error/filename who rv pathname))))))
 
 
-;;;; splitting search paths
-
-#;(module (split-search-path split-search-path-bytevector split-search-path-string)
-
-  (define (split-search-path path)
-    (define who 'split-search-path)
-    (with-arguments-validation (who)
-	((string-or-bytevector	path))
-      (if (string? path)
-	  (map ascii->string (split-search-path-bytevector (string->ascii path)))
-	(split-search-path-bytevector path))))
-
-  (define (split-search-path-string path)
-    (define who 'split-search-path-string)
-    (with-arguments-validation (who)
-	((string	path))
-      (map ascii->string (split-search-path-bytevector (string->ascii path)))))
-
-  (define (split-search-path-bytevector path)
-    (define who 'split-search-path-bytevector)
-    (with-arguments-validation (who)
-	((bytevector	path))
-      (let ((path.len (unsafe.bytevector-length path)))
-	(if (unsafe.fxzero? path.len)
-	    '()
-	  (let next-pathname ((path.index	0)
-			      (pathnames	'()))
-	    (if (unsafe.fx= path.index path.len)
-		(reverse pathnames)
-	      (let ((separator-index (%find-next-separator path path.index path.len)))
-		(if separator-index
-		    (next-pathname (unsafe.fxadd1 separator-index)
-				   (if (unsafe.fx= path.index separator-index)
-				       pathnames
-				     (cons (%unsafe.subbytevector path path.index separator-index)
-					   pathnames)))
-		  (reverse (cons (%unsafe.subbytevector path path.index path.len)
-				 pathnames))))))))))
-
-  (define (%find-next-separator bv bv.start bv.len)
-    ;;Scan BV, from BV.START included  to BV.LEN excluded, looking for a
-    ;;byte representing a slash in  ASCII encoding.  When found return a
-    ;;fixnum being the index of the slash, else return false.
-    ;;
-    (let next-byte ((bv.index bv.start))
-      (if (unsafe.fx= bv.index bv.len)
-	  #f
-	(if (unsafe.fx= ASCII-COLON-FX (unsafe.bytevector-u8-ref bv bv.index))
-	    bv.index
-	  (next-byte (unsafe.fxadd1 bv.index))))))
-
-  (define-inline (%unsafe.subbytevector src.bv src.start src.end)
-    (%unsafe.subbytevector-u8/count src.bv src.start (unsafe.fx- src.end src.start)))
-
-  (define (%unsafe.subbytevector-u8/count src.bv src.start dst.len)
-    (let ((dst.bv (unsafe.make-bytevector dst.len)))
-      (do ((dst.index 0         (unsafe.fx+ 1 dst.index))
-	   (src.index src.start (unsafe.fx+ 1 src.index)))
-	  ((unsafe.fx= dst.index dst.len)
-	   dst.bv)
-	(unsafe.bytevector-u8-set! dst.bv dst.index (unsafe.bytevector-u8-ref src.bv src.index)))))
-
-  (define-inline-constant ASCII-COLON-FX
-    58 #;(char->integer #\:))
-
-  #| end of module |# )
-
-
 ;;;; splitting pathnames and search paths
 
 (module (split-search-path
@@ -603,49 +535,6 @@
 
 (define (vicare-argv0-string)
   (ascii->string (vicare-argv0)))
-
-#;(module (vicare-executable)
-
-  (define (vicare-executable)
-    (let* ((argv0.bv	(vicare-argv0))
-	   (argv0.len	(unsafe.bytevector-length argv0.bv))
-	   (name	(%unsafe.find-slash-char argv0.bv argv0.len))
-	   (name	(or name (%unsafe.path-search argv0.bv argv0.len)))
-	   )
-      ))
-
-  (define (%unsafe.find-slash-char bv bv.len)
-    ;;Scan the first BV.LEN bytes of  BV in search of one representing a
-    ;;slash character  in ASCII encoding.  When found  return BV itself;
-    ;;else return false.
-    ;;
-    (let next-byte ((i 0))
-      (and (unsafe.fx< i argv0.len)
-	   (if (unsafe.fx= ASCII-SLASH-FX
-			   (unsafe.bytevector-u8-ref argv0.bv i))
-	       bv
-	     (next-byte (unsafe.fxadd1 i))))))
-
-  (define (%unsafe.path-search bv bv.len)
-    ;;
-    ;;An unset PATH is equivalent to the search path "/bin:/usr/bin"; an
-    ;;empty PATH is equivalent to the search path "."
-    ;;
-    (let ((PATH.bv	(capi.posix-getenv #ve(ascii "PATH")))
-	  (PATH-LIST	(if PATH.bv
-			    (if (unsafe.fxzero? (unsafe.bytevector-length ))
-				'(#ve(ascii "."))
-			      )
-			  DEFAULT-PATH-LIST)))
-      ))
-
-  (define-inline-constant DEFAULT-PATH-LIST
-    '(#ve(ascii "/bin") #ve(ascii "/usr/bin")))
-
-  (define-inline-constant ASCII-SLASH-FX
-    47 #;(char->integer #\/))
-
-  #| end of module |# )
 
 
 ;;;; done
