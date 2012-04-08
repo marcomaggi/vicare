@@ -7267,6 +7267,8 @@ details; if an error occurs: an exception is raised.
 
 @defun fork
 @defunx fork @var{parent-proc} @var{child-thunk}
+@cindex Forking processes
+@cindex Processes, forking
 Interface to the C function @cfunc{fork}, @glibcref{Creating a Process,
 fork}.
 
@@ -7295,6 +7297,8 @@ raised.
 
 
 @defun execv @var{filename} @var{argv}
+@cindex Executing processes
+@cindex Processes, executing
 Interface to the C function @cfunc{execv}, @glibcref{Executing a File,
 execv}.  @var{filename} must be the pathname of an executable file;
 @var{argv} must be a list of strings representing command line
@@ -7305,7 +7309,7 @@ occurred, an exception is raised.
 
 @defun execve @var{filename} @var{argv} @var{env}
 Interface to the C function @cfunc{execve}, @glibcref{Executing a File,
-execve}.  @var{filename} must the pathname of an executable file;
+execve}.  @var{filename} must be the pathname of an executable file;
 @var{argv} must be a list of strings representing command line
 arguments; @var{env} must be a list of strings representing environment
 variables assignments.  Execute the command; if the function returns: an
