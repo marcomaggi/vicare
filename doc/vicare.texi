@@ -7803,6 +7803,10 @@ return an encoded @code{errno} value.
 
 
 @defun mkdir @var{pathname} @var{mode}
+@cindex Creating directories
+@cindex Making directories
+@cindex Directories, creating
+@cindex Directories, making
 Interface to the C function @cfunc{mkdir}, @glibcref{Creating
 Directories, mkdir}.  Create a new directory file system entry with name
 @var{pathname}; @var{mode} must be a fixnum specifying access
@@ -7820,6 +7824,8 @@ return unspecified values, else raise an exception.
 
 
 @defun rmdir @var{pathname}
+@cindex Removing directories
+@cindex Directories, removing
 Interface to the C function @cfunc{rmdir}, @glibcref{Creating
 Directories, rmdir}.  Remove the directory file system entry selected by
 @var{pathname}.  If successful return unspecified values, else raise an
@@ -7829,6 +7835,9 @@ exception.
 
 @defun getcwd
 @defunx getcwd/string
+@cindex Current working directory
+@cindex Process working directory
+@cindex Directories, current working
 Interface to the C function @cfunc{getcwd}, @glibcref{Working Directory,
 getcwd}.  Acquire the pathname of the current working directory.  If
 successful @func{getcwd} returns a bytevector holding the pathname,
@@ -7838,6 +7847,8 @@ exception is raised.
 
 
 @defun chdir @var{pathname}
+@cindex Changing current directory
+@cindex Directories, changing current
 Interface to the C function @cfunc{chdir}, @glibcref{Working Directory,
 chdir}.  Change the current working directory to the file system entry
 selected by @var{pathname}.  If successful return unspecified values,
@@ -7896,6 +7907,8 @@ Accessors for the fields of @code{directory-stream}.
 
 
 @defun opendir @var{pathname}
+@cindex Opening a directory stream
+@cindex Directories, opening a stream
 Interface to the C function @cfunc{opendir}, @glibcref{Opening a
 Directory, opendir}.  Open a directory stream for the inspection of the
 file system entry @var{pathname}.  If successful return an instance of
@@ -7914,6 +7927,8 @@ representing a file descriptor.  If successful return an instance of
 
 @defun readdir @var{stream}
 @defunx readdir/string @var{stream}
+@cindex Reading a directory stream
+@cindex Directories, reading a stream
 Interface to the C function @cfunc{readdir}, @glibcref{Reading/Closing
 Directory, readdir}.  Acquire the next entry from a directory stream
 referenced by @var{stream}, which must be an instance of
@@ -7928,6 +7943,8 @@ stream is closed.
 
 
 @defun closedir @var{stream}
+@cindex Closing a directory stream
+@cindex Directories, closing a stream
 Interface to the C function @cfunc{closedir}, @glibcref{Reading/Closing
 Directory, closedir}.  Close the directory stream referenced by
 @var{stream}, which must be an instance of @code{directory-stream}.  If
@@ -7938,6 +7955,8 @@ This function has no effect if @var{stream} has been already closed.
 
 
 @defun rewinddir @var{stream}
+@cindex Rewinding a directory stream
+@cindex Directories, rewinding a stream
 Interface to the C function @cfunc{rewinddir}, @glibcref{Random Access
 Directory, rewinddir}.  Rewind to the beginning the directory stream
 referenced by @var{stream}, which must be an instance of
@@ -7946,6 +7965,8 @@ referenced by @var{stream}, which must be an instance of
 
 
 @defun telldir @var{stream}
+@cindex Inspecting a directory stream
+@cindex Directories, inspecting a stream
 Interface to the C function @cfunc{telldir}, @glibcref{Random Access
 Directory, telldir}.  Return an exact integer representing the current
 position in the directory stream referenced by @var{stream}, which must
@@ -7954,6 +7975,8 @@ be an instance of @code{directory-stream}.
 
 
 @defun seekdir @var{pointer} @var{pos}
+@cindex Seeking a directory stream
+@cindex Directories, seeking a stream
 Interface to the C function @cfunc{seekdir}, @glibcref{Random Access
 Directory, seekdir}.  Set to @var{pos} the position of the directory
 stream referenced by @var{stream}, which must be an instance of
