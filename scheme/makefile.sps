@@ -1883,6 +1883,14 @@
     (real-pathname				posix)
     (file-modification-time			posix)
     (split-file-name				posix)
+    (vicare-argv0				i v $language posix)
+    (vicare-argv0-string			i v $language posix)
+    (split-search-path				i v $language)
+    (split-search-path-bytevector		i v $language)
+    (split-search-path-string			i v $language)
+    (split-pathname				i v $language)
+    (split-pathname-bytevector			i v $language)
+    (split-pathname-string			i v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $foreign)

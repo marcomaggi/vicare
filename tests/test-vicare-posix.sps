@@ -1257,7 +1257,7 @@
       (check
 	  (let ((rv (px.getnetbyaddr (bytevector-u32-ref '#vu8(127 0 0 0) 0 (endianness big))
 				     AF_INET)))
-	    (check-pretty-print rv)
+;;;	    (check-pretty-print rv)
 	    (px.struct-netent? rv))
 	=> #t)
 
@@ -1265,7 +1265,7 @@
 	  (for-all px.struct-netent? (px.network-entries))
 	=> #t)
 
-      (check-pretty-print (px.network-entries))
+;;;   (check-pretty-print (px.network-entries))
 
       #f)
 
@@ -1782,9 +1782,10 @@
 
 (parametrise ((check-test-name	'time))
 
-  (check-pretty-print (list 'clock (px.clock)))
-  (check-pretty-print (list 'time  (px.time)))
-  (check-pretty-print (list 'timeofday  (px.gettimeofday)))
+  (when #f
+    (check-pretty-print (list 'clock (px.clock)))
+    (check-pretty-print (list 'time  (px.time)))
+    (check-pretty-print (list 'timeofday  (px.gettimeofday))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1792,12 +1793,14 @@
       (px.struct-tms? (px.times))
     => #t)
 
-  (check-pretty-print (px.times))
+  (when #f
+    (check-pretty-print (px.times)))
 
 ;;; --------------------------------------------------------------------
 
-  (check-pretty-print (px.localtime (px.time)))
-  (check-pretty-print (px.gmtime    (px.time)))
+  (when #f
+    (check-pretty-print (px.localtime (px.time)))
+    (check-pretty-print (px.gmtime    (px.time))))
 
   (check
       (let ((T (px.time)))
@@ -1809,8 +1812,9 @@
 	(equal? T (px.timegm (px.gmtime T))))
     => #t)
 
-  (check-pretty-print
-   (list 'strftime (px.strftime/string "%a %h %d %H:%M:%S %Y" (px.localtime (px.time)))))
+  (when #f
+    (check-pretty-print
+     (list 'strftime (px.strftime/string "%a %h %d %H:%M:%S %Y" (px.localtime (px.time))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1997,6 +2001,33 @@
   (check
       (px.confstr/string _CS_PATH)
     => "/bin:/usr/bin")
+
+  #t)
+
+
+(parametrise ((check-test-name	'find-executable))
+
+  (check	;first char is slash
+      (px.find-executable-as-string "/usr/local/bin/vicare")
+    => "/usr/local/bin/vicare")
+
+  (check
+      (px.find-executable-as-string "vicare")
+    => "/usr/local/bin/vicare")
+
+  (check
+      (px.find-executable-as-string "this-cannot-exist")
+    => #f)
+
+  (check
+      (px.find-executable-as-string "ls")
+    => "/usr/bin/ls")
+
+  (when #f
+    (fprintf (current-error-port)
+	     "vicare executable ~a\n" (px.find-executable-as-string "vicare"))
+    (fprintf (current-error-port)
+	     "vicare-executable-string => ~a\n" (px.vicare-executable-as-string)))
 
   #t)
 

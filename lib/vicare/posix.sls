@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#!r6rs
+#!vicare
 (library (vicare posix)
   (export
     ;; errno and h_errno codes handling
@@ -254,6 +254,10 @@
     sysconf
     pathconf		fpathconf
     confstr		confstr/string
+
+    ;; executable pathname
+    find-executable-as-bytevector	find-executable-as-string
+    vicare-executable-as-bytevector	vicare-executable-as-string
 
     ;; miscellaneous functions
     file-descriptor?)
@@ -3032,6 +3036,101 @@
   (latin1->string (confstr parameter)))
 
 
+;;;; executable pathname
+
+(module (vicare-executable-as-bytevector
+	 vicare-executable-as-string)
+
+  (define EXECUTABLE-BYTEVECTOR #f)
+  (define EXECUTABLE-STRING	#f)
+
+  (define (vicare-executable-as-string)
+    (or EXECUTABLE-STRING
+	(begin
+	  (set! EXECUTABLE-STRING (let ((pathname (vicare-executable-as-bytevector)))
+				    (and pathname (ascii->string pathname))))
+	  EXECUTABLE-STRING)))
+
+  (define (vicare-executable-as-bytevector)
+    (or EXECUTABLE-BYTEVECTOR
+	(begin
+	  (set! EXECUTABLE-BYTEVECTOR (find-executable-as-bytevector (vicare-argv0)))
+	  EXECUTABLE-BYTEVECTOR)))
+
+  #| end of module |# )
+
+(module (find-executable-as-bytevector
+	 find-executable-as-string)
+
+  (define (find-executable-as-string pathname.str)
+    (define who 'find-executable-as-string)
+    (with-arguments-validation (who)
+	((string	pathname.str))
+      (let ((pathname.bv (find-executable-as-bytevector (string->ascii pathname.str))))
+	(and pathname.bv (ascii->string pathname.bv)))))
+
+  (define (find-executable-as-bytevector pathname.bv)
+    (define who 'find-executable-as-bytevector)
+    (with-arguments-validation (who)
+	((bytevector	pathname.bv))
+      (let* ((pathname.len (unsafe.bytevector-length pathname.bv))
+	     (pathname.bv  (if (%unsafe.first-char-is-slash? pathname.bv)
+			       pathname.bv
+			     (let ((name (%unsafe.name-if-slash-char-found pathname.bv 1 pathname.len)))
+			       (if name
+				   (bytevector-append (getcwd) SLASH-BV name)
+				 (%unsafe.path-search pathname.bv))))))
+	(and pathname.bv
+	     (file-exists? pathname.bv)
+	     (access pathname.bv X_OK)
+	     (file-is-regular-file? pathname.bv)
+	     pathname.bv))))
+
+  (define-inline (%unsafe.first-char-is-slash? bv)
+    (unsafe.fx= ASCII-SLASH-FX (unsafe.bytevector-u8-ref bv 0)))
+
+  (define (%unsafe.name-if-slash-char-found bv bv.index bv.past)
+    ;;Scan the bytes in BV from BV.INDEX included to BV.PAST excluded in
+    ;;search of  one representing a  slash character in  ASCII encoding.
+    ;;When found return BV itself; else return false.
+    ;;
+    (and (unsafe.fx< bv.index bv.past)
+	 (if (unsafe.fx= ASCII-SLASH-FX
+			 (unsafe.bytevector-u8-ref bv bv.index))
+	     bv
+	   (%unsafe.name-if-slash-char-found bv (unsafe.fxadd1 bv.index) bv.past))))
+
+  (define (%unsafe.path-search bv)
+    ;;
+    ;;An unset PATH is equivalent to the search path "/bin:/usr/bin"; an
+    ;;empty PATH is equivalent to the search path "."
+    ;;
+    (let* ((PATH	(capi.posix-getenv #ve(ascii "PATH")))
+	   (PATH-LIST	(if PATH
+			    (if (unsafe.fxzero? (unsafe.bytevector-length PATH))
+				'(#ve(ascii "."))
+			      (split-search-path-bytevector PATH))
+			  DEFAULT-PATH-LIST)))
+      (let next-directory ((PATH-LIST PATH-LIST))
+	(if (null? PATH-LIST)
+	    #f
+	  (let ((pathname (bytevector-append (car PATH-LIST) SLASH-BV bv)))
+	    (if (file-exists? pathname)
+		pathname
+	      (next-directory (cdr PATH-LIST))))))))
+
+  (define-inline-constant DEFAULT-PATH-LIST
+    '(#ve(ascii "/bin") #ve(ascii "/usr/bin")))
+
+  (define-inline-constant ASCII-SLASH-FX
+    47 #;(char->integer #\/))
+
+  (define-inline-constant SLASH-BV
+    '#vu8(47))
+
+  #| end of module |# )
+
+
 ;;;; miscellaneous functions
 
 (define (file-descriptor? obj)
@@ -3054,6 +3153,8 @@
 (set-rtd-printer! (type-descriptor struct-tms)		%struct-tms-printer)
 (set-rtd-printer! (type-descriptor struct-tm)		%struct-tm-printer)
 (set-rtd-printer! (type-descriptor struct-itimerval)	%struct-itimerval-printer)
+
+(vicare-executable-as-string)
 
 )
 

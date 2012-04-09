@@ -91,6 +91,7 @@ ikarus_main (int argc, char** argv, char* boot_file)
 	arg_list = p+pair_tag;
       }
     }
+    pcb->argv0    = argv[0];
     pcb->arg_list = arg_list;
   }
   register_handlers(repl_on_sigint);
@@ -98,6 +99,13 @@ ikarus_main (int argc, char** argv, char* boot_file)
   ik_fasl_load(pcb, boot_file);
   ik_delete_pcb(pcb);
   return 0;
+}
+
+
+ikptr
+ikrt_get_argv0_string (ikpcb * pcb)
+{
+  return ika_bytevector_from_cstring(pcb, pcb->argv0);
 }
 
 

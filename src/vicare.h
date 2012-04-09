@@ -93,21 +93,19 @@ typedef unsigned long long	ik_ullong;
 typedef ik_ulong		ikptr;
 
 typedef struct ikpcb {
-  ikptr		dummy0;
-  ikptr		dummy1;
-  ikptr		dummy2;
-  ikptr		dummy3;
-  ikptr		dummy4;
-  ikptr		dummy5;
-  ikptr		dummy6;
-  ikptr		dummy7;
-  ikptr		dummy8;
-  ikptr		dummy9;
-  ikptr		dummy10;
-  ikptr		dummy11;
-  ikptr		dummy12;
-  void *	dummy13;
-  int		dummy16;
+  ikptr		dummy0;		/* ikptr allocation_pointer; */
+  ikptr		dummy1;		/* ikptr allocation_redline; */
+  ikptr		dummy2;		/* ikptr frame_pointer; */
+  ikptr		dummy3;		/* ikptr frame_base; */
+  ikptr		dummy4;		/* ikptr frame_redline; */
+  ikptr		dummy5;		/* ikptr next_k; */
+  ikptr		dummy6;		/* ikptr system_stack; */
+  ikptr		dummy7;		/* ikptr dirty_vector; */
+  ikptr		dummy8;		/* ikptr arg_list; */
+  ikptr		dummy9;		/* ikptr engine_counter; */
+  ikptr		dummy10;	/* ikptr interrupted; */
+  ikptr		dummy11;	/* ikptr base_rtd; */
+  ikptr		dummy12;	/* ikptr collect_key; */
 
   /* Additional roots for the garbage collector.  They are used to avoid
      collecting objects still in use while they are in use by C code. */
