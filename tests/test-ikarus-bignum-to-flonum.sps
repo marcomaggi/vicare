@@ -152,6 +152,6 @@
 (set-port-buffer-mode! (current-output-port) (buffer-mode none))
 (display "*** testing Ikarus bignum to flonum\n" (current-error-port))
 (run-tests)
-(display "; *** done\n" (current-error-port))
+(display "; *** done\n\n" (current-error-port))
 
 ;;; end of file
