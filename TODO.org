@@ -17,6 +17,7 @@
 
 ** list of Scheme files still to review
 
+   scheme/ikarus.fixnums.ss
    scheme/ikarus.numerics.ss
 
    scheme/ikarus.exceptions.ss
@@ -28,7 +29,6 @@
    scheme/ikarus.date-string.ss
    scheme/ikarus.fasl.ss
    scheme/ikarus.fasl.write.ss
-   scheme/ikarus.fixnums.ss
    scheme/ikarus.hash-tables.ss
    scheme/ikarus.multiple-values.ss
    scheme/ikarus.pretty-formats.ss
