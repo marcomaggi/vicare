@@ -80,6 +80,13 @@ Notes for revision 0.2d10
     split-pathname-bytevector
     split-pathname-string
 
+* Added functions to (vicare posix):
+
+    find-executable-as-bytevector
+    find-executable-as-string
+    vicare-executable-as-bytevector
+    vicare-executable-as-string
+
 
 Notes for revision 0.2d9
 ------------------------

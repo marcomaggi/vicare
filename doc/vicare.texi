@@ -7340,6 +7340,66 @@ Like @func{execve} but allows the environment to be given expliticly.
 Like @func{execvp} but allows the arguments to be given expliticly.
 @end defun
 
+
+@defun find-executable-as-bytevector @var{bv-pathname}
+@defunx find-executable-as-string @var{str-pathname}
+Given an absolute or relative file pathname or just the name of a file,
+search the file system for a matching executable file; when found return
+its absolute pathname as bytevector or Scheme string, else return
+@false{}.  If an error occurs while inspecting the file system: raise an
+exception.
+
+@var{bv-pathname} must be a bytevector, @var{str-pathname} must be a
+string.
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.find-executable-as-string "/usr/local/bin/vicare")
+@result{} "/usr/local/bin/vicare"
+
+(px.find-executable-as-string "vicare")
+@result{} "/usr/local/bin/vicare"
+
+(px.find-executable-as-string "this-cannot-exist")
+@result{} #f
+
+(px.find-executable-as-string "ls")
+@result{} "/usr/bin/ls"
+@end example
+@end defun
+
+
+@defun vicare-executable-as-bytevector
+@defunx vicare-executable-as-string
+Acquire the return value of @func{vicare-argv0} and search the file
+system for a matching executable file; when found return its absolute
+pathname as bytevector or Scheme string, else return @false{}.  If an
+error occurs while inspecting the file system: raise an exception.
+
+Upon starting a @value{PRJNAME} process:
+
+@itemize
+@item
+If the executable @command{vicare} is specified as pathname relative to
+the current working directory: these functions will return the wrong
+absolute path when the current working directory is changed before a
+call to them.
+
+@item
+If the executable @command{vicare} is specified as file name with no
+directory part: these functions may return the wrong absolute path when
+the environment variable @env{PATH} is changed before a call to them.
+@end itemize
+
+For these reasons: these functions are both invoked upon loading the
+library @library{vicare posix} and they cache the result internally.
+Beware of neither change the current working directory nor change the
+@env{PATH} before loading @library{vicare posix}.
+@end defun
+
 @c page
 @node posix status
 @section Process termination status.

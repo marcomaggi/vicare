@@ -256,7 +256,8 @@
     confstr		confstr/string
 
     ;; executable pathname
-    vicare-executable			vicare-executable-string
+    find-executable-as-bytevector	find-executable-as-string
+    vicare-executable-as-bytevector	vicare-executable-as-string
 
     ;; miscellaneous functions
     file-descriptor?)
@@ -3037,34 +3038,53 @@
 
 ;;;; executable pathname
 
-(module (vicare-executable vicare-executable-string)
+(module (vicare-executable-as-bytevector
+	 vicare-executable-as-string)
 
-  (define vicare-executable-string
-    (case-lambda
-     (()
-      (let ((pathname (vicare-executable)))
-	(and pathname (ascii->string pathname))))
-     ((argv0)
-      (define who 'vicare-executable-string)
-      (with-arguments-validation (who)
-	  ((string	argv0))
-	(let ((pathname (vicare-executable (string->ascii argv0))))
-	  (and pathname (ascii->string pathname)))))))
+  (define EXECUTABLE-BYTEVECTOR #f)
+  (define EXECUTABLE-STRING	#f)
 
-  (define vicare-executable
-    (case-lambda
-     (()
-      (vicare-executable (vicare-argv0)))
-     ((argv0.bv)
-      (define who 'vicare-executable)
-      (with-arguments-validation (who)
-	  ((bytevector	argv0.bv))
-	(let ((argv0.len (unsafe.bytevector-length argv0.bv)))
-	  (if (%unsafe.first-char-is-slash? argv0.bv)
-	      argv0.bv
-	    (let* ((name (%unsafe.name-if-slash-char-found argv0.bv 0 argv0.len))
-		   (name (or name (%unsafe.path-search argv0.bv))))
-	      name)))))))
+  (define (vicare-executable-as-string)
+    (or EXECUTABLE-STRING
+	(begin
+	  (set! EXECUTABLE-STRING (let ((pathname (vicare-executable-as-bytevector)))
+				    (and pathname (ascii->string pathname))))
+	  EXECUTABLE-STRING)))
+
+  (define (vicare-executable-as-bytevector)
+    (or EXECUTABLE-BYTEVECTOR
+	(begin
+	  (set! EXECUTABLE-BYTEVECTOR (find-executable-as-bytevector (vicare-argv0)))
+	  EXECUTABLE-BYTEVECTOR)))
+
+  #| end of module |# )
+
+(module (find-executable-as-bytevector
+	 find-executable-as-string)
+
+  (define (find-executable-as-string pathname.str)
+    (define who 'find-executable-as-string)
+    (with-arguments-validation (who)
+	((string	pathname.str))
+      (let ((pathname.bv (find-executable-as-bytevector (string->ascii pathname.str))))
+	(and pathname.bv (ascii->string pathname.bv)))))
+
+  (define (find-executable-as-bytevector pathname.bv)
+    (define who 'find-executable-as-bytevector)
+    (with-arguments-validation (who)
+	((bytevector	pathname.bv))
+      (let* ((pathname.len (unsafe.bytevector-length pathname.bv))
+	     (pathname.bv  (if (%unsafe.first-char-is-slash? pathname.bv)
+			       pathname.bv
+			     (let ((name (%unsafe.name-if-slash-char-found pathname.bv 1 pathname.len)))
+			       (if name
+				   (bytevector-append (getcwd) SLASH-BV name)
+				 (%unsafe.path-search pathname.bv))))))
+	(and pathname.bv
+	     (file-exists? pathname.bv)
+	     (access pathname.bv X_OK)
+	     (file-is-regular-file? pathname.bv)
+	     pathname.bv))))
 
   (define-inline (%unsafe.first-char-is-slash? bv)
     (unsafe.fx= ASCII-SLASH-FX (unsafe.bytevector-u8-ref bv 0)))
@@ -3094,7 +3114,7 @@
       (let next-directory ((PATH-LIST PATH-LIST))
 	(if (null? PATH-LIST)
 	    #f
-	  (let ((pathname (bytevector-append (car PATH-LIST) bv)))
+	  (let ((pathname (bytevector-append (car PATH-LIST) SLASH-BV bv)))
 	    (if (file-exists? pathname)
 		pathname
 	      (next-directory (cdr PATH-LIST))))))))
@@ -3104,6 +3124,9 @@
 
   (define-inline-constant ASCII-SLASH-FX
     47 #;(char->integer #\/))
+
+  (define-inline-constant SLASH-BV
+    '#vu8(47))
 
   #| end of module |# )
 
@@ -3130,6 +3153,8 @@
 (set-rtd-printer! (type-descriptor struct-tms)		%struct-tms-printer)
 (set-rtd-printer! (type-descriptor struct-tm)		%struct-tm-printer)
 (set-rtd-printer! (type-descriptor struct-itimerval)	%struct-itimerval-printer)
+
+(vicare-executable-as-string)
 
 )
 
