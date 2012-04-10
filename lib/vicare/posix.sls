@@ -115,6 +115,9 @@
     directory-stream-fd			directory-stream-closed?
 
     split-file-name
+    split-search-path			split-pathname
+    split-search-path-bytevector	split-pathname-bytevector
+    split-search-path-string		split-pathname-string
 
     ;; file descriptors
     open				close
@@ -310,6 +313,10 @@
 (define-argument-validation (bytevector who obj)
   (bytevector? obj)
   (assertion-violation who "expected bytevector as argument" obj))
+
+(define-argument-validation (string-or-bytevector who obj)
+  (or (bytevector? obj) (string? obj))
+  (assertion-violation who "expected string or bytevector as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -3034,6 +3041,135 @@
 
 (define (confstr/string parameter)
   (latin1->string (confstr parameter)))
+
+
+;;;; splitting pathnames and search paths
+
+(module (split-search-path
+	 split-search-path-bytevector
+	 split-search-path-string
+	 split-pathname
+	 split-pathname-bytevector
+	 split-pathname-string)
+
+  (define (split-search-path path)
+    (define who 'split-search-path)
+    (with-arguments-validation (who)
+	((string-or-bytevector	path))
+      (if (string? path)
+	  (map ascii->string (split-search-path-bytevector (string->ascii path)))
+	(split-search-path-bytevector path))))
+
+  (define (split-search-path-string path)
+    (define who 'split-search-path-string)
+    (with-arguments-validation (who)
+	((string	path))
+      (map ascii->string (split-search-path-bytevector (string->ascii path)))))
+
+  (define (split-search-path-bytevector path)
+    (define who 'split-search-path-bytevector)
+    (with-arguments-validation (who)
+	((bytevector	path))
+      (let ((path.len (unsafe.bytevector-length path)))
+	(if (unsafe.fxzero? path.len)
+	    '()
+	  (let next-pathname ((path.index	0)
+			      (pathnames	'()))
+	    (if (unsafe.fx= path.index path.len)
+		(reverse pathnames)
+	      (let ((separator-index (%find-next-separator ASCII-COLON-FX
+							   path path.index path.len)))
+		(if separator-index
+		    (next-pathname (unsafe.fxadd1 separator-index)
+				   (if (unsafe.fx= path.index separator-index)
+				       pathnames
+				     (cons (%unsafe.subbytevector path path.index separator-index)
+					   pathnames)))
+		  (reverse (cons (%unsafe.subbytevector path path.index path.len)
+				 pathnames))))))))))
+
+  (define (split-pathname pathname)
+    (define who 'split-pathname)
+    (with-arguments-validation (who)
+	((string-or-bytevector	pathname))
+      (if (string? pathname)
+	  (split-pathname-string pathname)
+	(split-pathname-bytevector pathname))))
+
+  (define (split-pathname-string pathname)
+    (define who 'split-pathname-string)
+    (with-arguments-validation (who)
+	((string	pathname))
+      (let-values (((absolute? components)
+		    (split-pathname-bytevector (string->ascii pathname))))
+	(values absolute? (map ascii->string components)))))
+
+  (define (split-pathname-bytevector pathname)
+    (define who 'split-pathname-bytevector)
+    (with-arguments-validation (who)
+	((bytevector	pathname))
+      (let* ((pathname.len	(unsafe.bytevector-length pathname))
+	     (components	(if (unsafe.fxzero? pathname.len)
+				    '()
+				  (%unsafe.bytevector-pathname-components pathname pathname.len))))
+	(cond ((null? components)
+	       (cond ((unsafe.fxzero? pathname.len)
+		      (values #f '()))
+		     ((unsafe.fx= ASCII-SLASH-FX (unsafe.bytevector-u8-ref pathname 0))
+		      (values #t '()))
+		     (else
+		      (values #f '()))))
+	      ((unsafe.fx= ASCII-SLASH-FX (unsafe.bytevector-u8-ref pathname 0))
+	       (values #t components))
+	      (else
+	       (values #f components))))))
+
+  (define (%unsafe.bytevector-pathname-components pathname.bv pathname.len)
+    (let next-component ((pathname.index	0)
+			 (components		'()))
+      (if (unsafe.fx= pathname.index pathname.len)
+	  (reverse components)
+	(let ((separator-index (%find-next-separator ASCII-SLASH-FX
+						     pathname.bv pathname.index pathname.len)))
+	  (if separator-index
+	      (next-component (unsafe.fxadd1 separator-index)
+			      (if (unsafe.fx= pathname.index separator-index)
+				  components
+				(cons (%unsafe.subbytevector pathname.bv pathname.index separator-index)
+				      components)))
+	    (reverse (cons (%unsafe.subbytevector pathname.bv pathname.index pathname.len)
+			   components)))))))
+
+  (define (%find-next-separator separator bv bv.start bv.len)
+    ;;Scan BV, from BV.START included  to BV.LEN excluded, looking for a
+    ;;byte representing a slash in  ASCII encoding.  When found return a
+    ;;fixnum being the index of the slash, else return false.
+    ;;
+    (let next-byte ((bv.index bv.start))
+      (if (unsafe.fx= bv.index bv.len)
+	  #f
+	(if (unsafe.fx= separator (unsafe.bytevector-u8-ref bv bv.index))
+	    bv.index
+	  (next-byte (unsafe.fxadd1 bv.index))))))
+
+  (define-inline (%unsafe.subbytevector src.bv src.start src.end)
+    (%unsafe.subbytevector-u8/count src.bv src.start (unsafe.fx- src.end src.start)))
+
+  (define (%unsafe.subbytevector-u8/count src.bv src.start dst.len)
+    (let ((dst.bv (unsafe.make-bytevector dst.len)))
+      (do ((dst.index 0         (unsafe.fx+ 1 dst.index))
+	   (src.index src.start (unsafe.fx+ 1 src.index)))
+	  ((unsafe.fx= dst.index dst.len)
+	   dst.bv)
+	(unsafe.bytevector-u8-set! dst.bv dst.index (unsafe.bytevector-u8-ref src.bv src.index)))))
+
+  (define-inline-constant ASCII-COLON-FX
+    58 #;(char->integer #\:))
+
+  (define-inline-constant ASCII-SLASH-FX
+    47 #;(char->integer #\/))
+
+  #| end of module |# )
 
 
 ;;;; executable pathname
