@@ -2005,6 +2005,192 @@
   #t)
 
 
+(parametrise ((check-test-name	'split-search-path))
+
+  (check
+      (px.split-search-path-bytevector '#vu8())
+    => '())
+
+  (check
+      (px.split-search-path-bytevector '#ve(ascii "ciao"))
+    => '(#ve(ascii "ciao")))
+
+  (check
+      (px.split-search-path-bytevector '#ve(ascii "ciao:"))
+    => '(#ve(ascii "ciao")))
+
+  (check
+      (px.split-search-path-bytevector '#ve(ascii ":ciao"))
+    => '(#ve(ascii "ciao")))
+
+  (check
+      (px.split-search-path-bytevector '#ve(ascii ":"))
+    => '())
+
+  (check
+      (px.split-search-path-bytevector '#ve(ascii "::::"))
+    => '())
+
+  (check
+      (px.split-search-path-bytevector '#ve(ascii "ciao:hello"))
+    => '(#ve(ascii "ciao") #ve(ascii "hello")))
+
+  (check
+      (px.split-search-path-bytevector '#ve(ascii "ciao:hello:salut"))
+    => '(#ve(ascii "ciao") #ve(ascii "hello") #ve(ascii "salut")))
+
+  (check
+      (px.split-search-path-bytevector '#ve(ascii "ciao:::hello"))
+    => '(#ve(ascii "ciao") #ve(ascii "hello")))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (px.split-search-path-string "")
+    => '())
+
+  (check
+      (px.split-search-path-string "ciao")
+    => '("ciao"))
+
+  (check
+      (px.split-search-path-string "ciao:")
+    => '("ciao"))
+
+  (check
+      (px.split-search-path-string ":ciao")
+    => '("ciao"))
+
+  (check
+      (px.split-search-path-string ":")
+    => '())
+
+  (check
+      (px.split-search-path-string "::::")
+    => '())
+
+  (check
+      (px.split-search-path-string "ciao:hello")
+    => '("ciao" "hello"))
+
+  (check
+      (px.split-search-path-string "ciao:hello:salut")
+    => '("ciao" "hello" "salut"))
+
+  (check
+      (px.split-search-path-string "ciao:::hello")
+    => '("ciao" "hello"))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (px.split-search-path "")
+    => '())
+
+  (check
+      (px.split-search-path '#vu8())
+    => '())
+
+  (check
+      (px.split-search-path "ciao:hello:salut")
+    => '("ciao" "hello" "salut"))
+
+  (check
+      (px.split-search-path '#ve(ascii "ciao:hello:salut"))
+    => '(#ve(ascii "ciao") #ve(ascii "hello") #ve(ascii "salut")))
+
+  #t)
+
+
+(parametrise ((check-test-name	'split-pathname))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?form => ?abs-result ?comp-result)
+       (check
+	   (call-with-values
+	       (lambda () ?form)
+	     list)
+	 => '(?abs-result ?comp-result)))))
+
+  (doit (px.split-pathname-bytevector '#vu8())
+	=> #f ())
+
+  (doit (px.split-pathname-bytevector '#ve(ascii "ciao"))
+	=> #f (#ve(ascii "ciao")))
+
+  (doit (px.split-pathname-bytevector '#ve(ascii "ciao/"))
+	=> #f (#ve(ascii "ciao")))
+
+  (doit (px.split-pathname-bytevector '#ve(ascii "/ciao"))
+	=> #t (#ve(ascii "ciao")))
+
+  (doit (px.split-pathname-bytevector '#ve(ascii "/"))
+	=> #t ())
+
+  (doit (px.split-pathname-bytevector '#ve(ascii "////"))
+	=> #t ())
+
+  (doit (px.split-pathname-bytevector '#ve(ascii "ciao/hello"))
+	=> #f (#ve(ascii "ciao") #ve(ascii "hello")))
+
+  (doit (px.split-pathname-bytevector '#ve(ascii "ciao/hello/salut"))
+	=> #f (#ve(ascii "ciao") #ve(ascii "hello") #ve(ascii "salut")))
+
+  (doit (px.split-pathname-bytevector '#ve(ascii "/ciao/hello/salut"))
+	=> #t (#ve(ascii "ciao") #ve(ascii "hello") #ve(ascii "salut")))
+
+  (doit (px.split-pathname-bytevector '#ve(ascii "ciao///hello"))
+	=> #f (#ve(ascii "ciao") #ve(ascii "hello")))
+
+;;; --------------------------------------------------------------------
+
+  (doit (px.split-pathname-string "")
+	=> #f ())
+
+  (doit (px.split-pathname-string "ciao")
+	=> #f ("ciao"))
+
+  (doit (px.split-pathname-string "ciao/")
+	=> #f ("ciao"))
+
+  (doit (px.split-pathname-string "/ciao")
+	=> #t ("ciao"))
+
+  (doit (px.split-pathname-string "/")
+	=> #t ())
+
+  (doit (px.split-pathname-string "////")
+	=> #t ())
+
+  (doit (px.split-pathname-string "ciao/hello")
+	=> #f ("ciao" "hello"))
+
+  (doit (px.split-pathname-string "ciao/hello/salut")
+	=> #f ("ciao" "hello" "salut"))
+
+  (doit (px.split-pathname-string "ciao///hello")
+	=> #f ("ciao" "hello"))
+
+;;; --------------------------------------------------------------------
+
+  (doit (px.split-pathname "")
+	=> #f ())
+
+  (doit (px.split-pathname '#vu8())
+	=> #f ())
+
+  (doit (px.split-pathname "ciao/hello/salut")
+	=> #f ("ciao" "hello" "salut"))
+
+  (doit (px.split-pathname "/ciao/hello/salut")
+	=> #t ("ciao" "hello" "salut"))
+
+  (doit (px.split-pathname '#ve(ascii "ciao/hello/salut"))
+	=> #f (#ve(ascii "ciao") #ve(ascii "hello") #ve(ascii "salut")))
+
+  #t)
+
 (parametrise ((check-test-name	'find-executable))
 
   (check	;first char is slash
