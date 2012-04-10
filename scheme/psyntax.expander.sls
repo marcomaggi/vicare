@@ -45,7 +45,14 @@
     variable-transformer-procedure
 
     syntax-dispatch			syntax-transpose
-    ellipsis-map)
+    ellipsis-map
+
+    ;;The following are inspection functions for debugging purposes.
+    (rename (<stx>?		syntax-object?)
+	    (<stx>-expr		syntax-object-expression)
+	    (<stx>-mark*	syntax-object-marks)
+	    (<stx>-subst*	syntax-object-substs)
+	    (<stx>-ae*		syntax-object-source-objects)))
   (import (except (rnrs)
 		  eval
 		  environment		environment?

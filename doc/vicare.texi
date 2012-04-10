@@ -2246,6 +2246,67 @@ representing the position of the expression in the source code.
 @section Interface to the expander
 
 
+@menu
+* iklib expander syntax::       Inspecting syntax objects.
+* iklib expander transformers:: Syntax transformers facilities.
+* iklib expander expand::       Expander facilities.
+@end menu
+
+@c page
+@node iklib expander syntax
+@subsection Inspecting syntax objects
+
+
+Under @value{PRJNAME}, a syntax object is the instance of a data
+structure.  The following bindings are exported by the @library{ikarus}
+library.
+
+
+@defun syntax-object? @var{stx}
+Return @true{} if @var{stx} is a syntax object, else return @false{}.
+@end defun
+
+
+@defun syntax-object-expression @var{stx}
+@defunx syntax-object-marks @var{stx}
+@defunx syntax-object-substs @var{stx}
+@defunx syntax-object-source-objects @var{stx}
+Field accessors for the syntax object structure type, to be used for
+debugging purposes.
+@end defun
+
+@c page
+@node iklib expander transformers
+@subsection Syntax transformers facilities
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun variable-transformer?
+Undocumented.
+@end defun
+
+
+@defun variable-transformer-procedure
+Undocumented.
+@end defun
+
+
+@defun make-compile-time-value
+Undocumented.
+@end defun
+
+
+@defun syntax-transpose
+Undocumented.
+@end defun
+
+@c page
+@node iklib expander expand
+@subsection Expander facilities
+
+
 The following bindings are exported by the @library{ikarus} library.
 
 
