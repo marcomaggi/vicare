@@ -601,6 +601,10 @@
 ;;
 ;;Notice that both SX and SY would be shift marks.
 ;;
+;;All   this  work   is  performed   by  the   functions   ADD-MARK  and
+;;DO-MACRO-CALL.
+;;
+
 (define join-wraps
   (lambda (m1* s1* ae1* e)
     (define merge-ae*
@@ -641,52 +645,85 @@
   (lambda (subst e)
     (mkstx e '() (list subst) '())))
 
-(define add-mark
-  (lambda (mark subst expr ae)
-    (define merge-ae*
-      (lambda (ls1 ls2)
-	(if (and (pair? ls1) (pair? ls2) (not (car ls2)))
-	    (cancel ls1 ls2)
-	  (append ls1 ls2))))
-    (define cancel
-      (lambda (ls1 ls2)
-	(let f ((x (car ls1)) (ls1 (cdr ls1)))
-	  (if (null? ls1)
-	      (cdr ls2)
-	    (cons x (f (car ls1) (cdr ls1)))))))
-    (define (f e m s1* ae*)
-      (cond
-       ((pair? e)
-	(let ((a (f (car e) m s1* ae*))
-	      (d (f (cdr e) m s1* ae*)))
-	  (if (eq? a d) e (cons a d))))
-       ((vector? e)
-	(let ((ls1 (vector->list e)))
-	  (let ((ls2 (map (lambda (x) (f x m s1* ae*)) ls1)))
-	    (if (for-all eq? ls1 ls2) e (list->vector ls2)))))
-       ((<stx>? e)
-	(let ((m* (<stx>-mark* e)) (s2* (<stx>-subst* e)))
-	  (cond
-	   ((null? m*)
-	    (f (<stx>-expr e) m
-	       (append s1* s2*)
-	       (merge-ae* ae* (<stx>-ae* e))))
-	   ((eq? (car m*) anti-mark)
-	    (make-<stx> (<stx>-expr e) (cdr m*)
-		      (cdr (append s1* s2*))
-		      (merge-ae* ae* (<stx>-ae* e))))
-	   (else
-	    (make-<stx> (<stx>-expr e)
-		      (cons m m*)
-		      (let ((s* (cons 'shift (append s1* s2*))))
-			(if subst (cons subst s*) s*))
-		      (merge-ae* ae* (<stx>-ae* e)))))))
-       ((symbol? e)
-	(syntax-violation #f
-	  "raw symbol encountered in output of macro"
-	  expr e))
-       (else (make-<stx> e (list m) s1* ae*))))
-    (mkstx (f expr mark '() '()) '() '() (list ae))))
+(define (add-mark mark subst expr ae)
+  ;;Build and return  a new syntax object wrapping  EXPR and having MARK
+  ;;pushed on its list of marks.
+  ;;
+  ;;SUBST can be #f or a list of substitutions.
+  ;;
+  (define (merge-ae* ls1 ls2)
+    ;;Append LS1 and LS2 and return the result; if the car or LS2 is #f:
+    ;;append LS1 and (cdr LS2).
+    ;;
+    ;;   (merge-ae* '(a b c) '(d  e f))   => (a b c d e f)
+    ;;   (merge-ae* '(a b c) '(#f e f))   => (a b c e f)
+    ;;
+    (if (and (pair? ls1)
+	     (pair? ls2)
+	     (not (car ls2)))
+	(cancel ls1 ls2)
+      (append ls1 ls2)))
+  (define (cancel ls1 ls2)
+    ;;Expect LS1 to be a proper list  of one or more elements and LS2 to
+    ;;be a proper  list of one or more elements.  Append  the cdr of LS2
+    ;;to LS1 and return the result:
+    ;;
+    ;;   (cancel '(a b c) '(d e f))
+    ;;   => (a b c e f)
+    ;;
+    ;;This function is like:
+    ;;
+    ;;   (append ls1 (cdr ls2))
+    ;;
+    ;;we just hope to be a bit more efficient.
+    ;;
+    (let recur ((A (car ls1))
+		(D (cdr ls1)))
+      (if (null? D)
+	  (cdr ls2)
+	(cons A (recur (car D) (cdr D))))))
+  (define (f sub-expr mark subst1* ae*)
+    (cond ((pair? sub-expr)
+	   (let ((a (f (car sub-expr) mark subst1* ae*))
+		 (d (f (cdr sub-expr) mark subst1* ae*)))
+	     (if (eq? a d)
+		 sub-expr
+	       (cons a d))))
+	  ((vector? sub-expr)
+	   (let* ((ls1 (vector->list sub-expr))
+		  (ls2 (map (lambda (x)
+			      (f x mark subst1* ae*))
+			 ls1)))
+	     (if (for-all eq? ls1 ls2)
+		 sub-expr
+	       (list->vector ls2))))
+	  ((<stx>? sub-expr)
+	   (let ((mark*   (<stx>-mark*  sub-expr))
+		 (subst2* (<stx>-subst* sub-expr)))
+	     (cond ((null? mark*)
+		    (f (<stx>-expr sub-expr)
+		       mark
+		       (append subst1* subst2*)
+		       (merge-ae* ae* (<stx>-ae* sub-expr))))
+		   ((eq? (car mark*) anti-mark)
+		    (make-<stx> (<stx>-expr sub-expr) (cdr mark*)
+				(cdr (append subst1* subst2*))
+				(merge-ae* ae* (<stx>-ae* sub-expr))))
+		   (else
+		    (make-<stx> (<stx>-expr sub-expr)
+				(cons mark mark*)
+				(let ((s* (cons 'shift (append subst1* subst2*))))
+				  (if subst
+				      (cons subst s*)
+				    s*))
+				(merge-ae* ae* (<stx>-ae* sub-expr)))))))
+	  ((symbol? sub-expr)
+	   (syntax-violation #f
+	     "raw symbol encountered in output of macro"
+	     expr sub-expr))
+	  (else
+	   (make-<stx> sub-expr (list mark) subst1* ae*))))
+  (mkstx (f expr mark '() '()) '() '() (list ae)))
 
 
   ;;; now are some deconstructors and predicates for syntax objects.
