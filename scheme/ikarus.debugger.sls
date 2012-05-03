@@ -370,7 +370,7 @@
 		  (lambda (x)
 		    (case x
 		      ((R r) (k (lambda () (raise-continuable con))))
-		      ((Q q) (exit 0))
+		      ((Q q) (exit 99))
 		      ((T t) (print-all-traces))
 		      ((C c) (k void))
 		      ((?)   (help))
