@@ -41,6 +41,30 @@
 (define environment-for-assertion-errors
   environment-for-syntax-errors)
 
+(define (syntax=? stx1 stx2)
+  ;;Visit the syntax objects STX1 and STX2 and compare them: return true
+  ;;if they are equal.
+  ;;
+  (syntax-case stx1 ()
+    (_
+     (and (identifier? stx1)
+	  (identifier? stx2))
+     (free-identifier=? stx1 stx2))
+    ((?car1 . ?cdr1)
+     (syntax-case stx2 ()
+       ((?car2 . ?cdr2)
+	(and (syntax=? #'?car1 #'?car2)
+	     (syntax=? #'?cdr1 #'?cdr2)))
+       (_ #f)))
+    (#(?item1 ...)
+     (syntax-case stx2 ()
+       (#(?item2 ...)
+	(syntax=? #'(?item1 ...) #'(?item2 ...)))
+       (_ #f)))
+    (_
+     (equal? (syntax->datum stx1)
+	     (syntax->datum stx2)))))
+
 (define-syntax check-syntax-violation
   (syntax-rules (=>)
     ((_ ?body => ?result)
@@ -51,7 +75,7 @@
 			  (syntax-violation-subform E)))
 		   (else E))
 	   (eval (quote ?body) environment-for-syntax-errors))
-       => ?result))))
+       (=> syntax=?) ?result))))
 
 (define-syntax check-assertion-violation
   (syntax-rules (=>)

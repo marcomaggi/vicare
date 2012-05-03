@@ -42,6 +42,16 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d11
 -------------------------
 
+* The function GET-CHAR-AND-TRACK-TEXTUAL-POSITION increments the column
+  number by 8 when a tab character is read, rather than by 1.
+
+* When exiting a runnin Vicare  process from debugger by typing "q": the
+  exit status is now 99 rather than 0.
+
+* The function  SYNTAX-VIOLATION no more  flattens the form  and subform
+  arguments from syntax objects  to symbolic expressions, syntax objects
+  are kept.
+
 
 Notes for revision 0.2d10
 -------------------------

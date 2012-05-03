@@ -4506,8 +4506,7 @@
     (syntax-violation who msg form #f))
    ((who msg form subform)
     (%syntax-violation who msg form
-		       (make-syntax-violation (syntax->datum form)
-					      (syntax->datum subform))))))
+		       (make-syntax-violation form subform)))))
 
 (define (%syntax-violation who msg form condition-object)
   (unless (string? msg)

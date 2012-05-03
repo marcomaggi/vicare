@@ -2074,6 +2074,10 @@
 	   (set-cookie-row-number!       cookie (+ 1 (cookie-row-number       cookie)))
 	   (set-cookie-column-number!    cookie 1)
 	   ch)
+	  ((unsafe.char= ch #\tab)
+	   (set-cookie-character-offset! cookie (+ 1 (cookie-character-offset cookie)))
+	   (set-cookie-column-number!    cookie (+ 8 (cookie-column-number    cookie)))
+	   ch)
 	  (else
 	   (set-cookie-character-offset! cookie (+ 1 (cookie-character-offset cookie)))
 	   (set-cookie-column-number!    cookie (+ 1 (cookie-column-number    cookie)))
