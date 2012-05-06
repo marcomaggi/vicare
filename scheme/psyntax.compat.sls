@@ -22,7 +22,7 @@
     format				gensym
     eval-core
     symbol-value			set-symbol-value!
-    keyword?
+    keyword?				pretty-print
 
     ;; reading source code and interpreting the resule
     get-annotated-datum			read-library-source-file
