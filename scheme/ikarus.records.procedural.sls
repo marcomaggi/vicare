@@ -814,7 +814,7 @@
 	    (let ((who    'default-protocol-function)
 		  (argnum (length all-field-values)))
 	      (with-arguments-validation (who)
-		  ((default-constructor-argnum argnum fields-number))
+		  ((default-constructor-argnum argnum fields-number all-field-values))
 		(let-values (((parent-fields this-fields)
 			      (%split all-field-values
 				      (unsafe.fx- argnum fields-number))))
@@ -864,9 +864,14 @@
     (assertion-violation who
       "expected procedure as constructor value returned by protocol function" obj))
 
-  (define-argument-validation (default-constructor-argnum who argnum this-number-of-fields)
+  (define-argument-validation (default-constructor-argnum who argnum this-number-of-fields field-values)
     (and (fixnum? argnum) (unsafe.fx<= this-number-of-fields argnum))
-    (assertion-violation who "not enough arguments to record constructor" argnum))
+    (assertion-violation who
+      (string-append "not enough arguments to record constructor, expected "
+		     (number->string this-number-of-fields)
+		     " got "
+		     (number->string argnum))
+      field-values))
 
   (define-argument-validation (enough-constructor-formals who count field-values)
     (or (unsafe.fx= 0 count) (pair? field-values))
