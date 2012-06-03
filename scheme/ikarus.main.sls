@@ -512,7 +512,7 @@
 (define (print-greetings-screen)
   ;;Print text to give informations at the start of the REPL.
   ;;
-  (define port (current-error-port))
+  (define port (current-output-port))
   (define-inline (%display thing)
     (display thing port))
   (define-inline (%newline)
@@ -543,10 +543,10 @@ Copyright (c) 2011, 2012 Marco Maggi\n\n"))
   (display "\
 This is free software; see the  source or use the '--license' option for
 copying conditions.  There is NO warranty; not  even for MERCHANTABILITY
-or FITNESS FOR A PARTICULAR PURPOSE.\n\n" (current-error-port)))
+or FITNESS FOR A PARTICULAR PURPOSE.\n\n" (current-output-port)))
 
 (define (print-license-screen)
-  (define port (current-error-port))
+  (define port (current-output-port))
   (print-greetings-screen)
   (display "\
 This file  is free software you  can redistribute it  and/or modify it
@@ -566,7 +566,7 @@ Software Foundation,  Inc., 59  Temple Place -  Suite 330,  Boston, MA
   (flush-output-port port))
 
 (define (print-version-only)
-  (define port (current-error-port))
+  (define port (current-output-port))
   (display config.vicare-version port)
   (newline port)
   (flush-output-port port))
@@ -728,7 +728,7 @@ is  used  searching  for  it  in  the directory  selected  by  the  HOME
 environment variable.
 
 Consult Vicare Scheme User's Guide for more details.\n\n")
-	   (current-error-port)))
+	   (current-output-port)))
 
 
 (define (init-library-path cfg)
@@ -874,7 +874,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     (doit
      (let-values (((lib* invoke-code macro* export-subst export-env)
 		   (top-level-expander (read-script-source-file cfg.script))))
-       (define port (current-error-port))
+       (define port (current-output-port))
        (pretty-print invoke-code port)
        ;; (newline port)
        ;; (pretty-print lib* port)
