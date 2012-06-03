@@ -6,7 +6,7 @@ EXTRA_DIST		= \
 			  vicare/words.sls.in			\
 			  vicare/installation-configuration.sls.in
 
-dist_pkglibexec_BIN	= compile-all.sps
+dist_pkglibexec_SCRIPTS	= compile-all.sps
 
 libvicaredir		= $(libdir)/scheme
 
@@ -28,42 +28,42 @@ nobase_dist_libvicare_DATA	= \
 
 if WANT_LIBFFI
 nobase_dist_libvicare_DATA	+= vicare/ffi.sls
-dist_pkglibexec_BIN		+= compile-ffi.sps
+dist_pkglibexec_SCRIPTS		+= compile-ffi.sps
 endif
 
 if WANT_POSIX
 nobase_dist_libvicare_DATA	+= vicare/posix.sls	\
 				   vicare/simple-event-loop.sls
-dist_pkglibexec_BIN		+= compile-posix.sps
+dist_pkglibexec_SCRIPTS		+= compile-posix.sps
 endif
 
 if WANT_GLIBC
 nobase_dist_libvicare_DATA	+= vicare/glibc.sls
-dist_pkglibexec_BIN		+= compile-glibc.sps
+dist_pkglibexec_SCRIPTS		+= compile-glibc.sps
 endif
 
 if WANT_LIBFFI
 if WANT_POSIX
 if WANT_GLIBC
 nobase_dist_libvicare_DATA	+= vicare/gcc.sls
-dist_pkglibexec_BIN		+= compile-gcc.sps
+dist_pkglibexec_SCRIPTS		+= compile-gcc.sps
 endif
 endif
 endif
 
 if WANT_LINUX
 nobase_dist_libvicare_DATA	+= vicare/linux.sls
-dist_pkglibexec_BIN		+= compile-linux.sps
+dist_pkglibexec_SCRIPTS		+= compile-linux.sps
 endif
 
 if WANT_READLINE
 nobase_dist_libvicare_DATA	+= vicare/readline.sls
-dist_pkglibexec_BIN		+= compile-readline.sps
+dist_pkglibexec_SCRIPTS		+= compile-readline.sps
 endif
 
 if WANT_CRE2
 nobase_dist_libvicare_DATA	+= vicare/cre2.sls
-dist_pkglibexec_BIN		+= compile-cre2.sps
+dist_pkglibexec_SCRIPTS		+= compile-cre2.sps
 endif
 
 ## --------------------------------------------------------------------

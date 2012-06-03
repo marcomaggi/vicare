@@ -19,7 +19,12 @@ for item in \
     compile-cre2.sps
 do
     item="$pkglibexecdir"/"$item"
-    test -f "$item" && $COMPILE "$item"
+    if test -f "$item"
+    then
+        echo "*** compiling: $item"
+        $COMPILE "$item"
+    else echo "*** skipping: $item"
+    fi
 done
 
 exit 0
