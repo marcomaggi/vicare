@@ -27,6 +27,5 @@ do
     fi
 done
 
-exit 0
 
 ### end of file
