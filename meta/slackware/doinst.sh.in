@@ -1,0 +1,27 @@
+#!/bin/sh
+#
+# Post-installation script for Slackware.
+
+exec_prefix=@prefix@
+libexecdir=@libexecdir@
+pkglibexecdir="$libexecdir/@PACKAGE@"
+
+COMPILE='vicare --compile-dependencies'
+
+for item in \
+    compile-all.sps             \
+    compile-ffi.sps             \
+    compile-glibc.sps           \
+    compile-linux.sps           \
+    compile-posix.sps           \
+    compile-gcc.sps             \
+    compile-readline.sps        \
+    compile-cre2.sps
+do
+    item="$pkglibexecdir"/"$item"
+    test -f "$item" && $COMPILE "$item"
+done
+
+exit 0
+
+### end of file

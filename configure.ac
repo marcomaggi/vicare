@@ -979,7 +979,13 @@ AC_CACHE_SAVE
 #### finish
 
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES(Makefile src/Makefile scheme/Makefile doc/Makefile lib/Makefile tests/Makefile lib/vicare/installation-configuration.sls lib/vicare/errno.sls lib/vicare/platform-constants.sls lib/vicare/words.sls)
+AC_CONFIG_FILES(Makefile
+                src/Makefile scheme/Makefile doc/Makefile lib/Makefile tests/Makefile
+                lib/vicare/installation-configuration.sls
+                lib/vicare/errno.sls
+                lib/vicare/platform-constants.sls
+                lib/vicare/words.sls
+                meta/slackware/doinst.sh)
 AC_OUTPUT #(Makefile src/Makefile scheme/Makefile doc/Makefile)
 
 ### end of file

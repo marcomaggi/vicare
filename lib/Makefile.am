@@ -1,19 +1,14 @@
 ## Process this file with automake to produce Makefile.in
 
-libvicaredir		= $(libdir)/scheme
-
-EXTRA_DIST		= compile-all.sps			\
-			  compile-ffi.sps			\
-			  compile-posix.sps			\
-			  compile-glibc.sps			\
-			  compile-linux.sps			\
-			  compile-readline.sps			\
-			  compile-cre2.sps			\
-			  compile-gcc.sps			\
+EXTRA_DIST		= \
 			  vicare/errno.sls.in			\
 			  vicare/platform-constants.sls.in	\
 			  vicare/words.sls.in			\
 			  vicare/installation-configuration.sls.in
+
+dist_pkglibexec_BIN	= compile-all.sps
+
+libvicaredir		= $(libdir)/scheme
 
 nobase_dist_libvicare_DATA	= \
 	vicare/errno.sls			\
@@ -33,35 +28,42 @@ nobase_dist_libvicare_DATA	= \
 
 if WANT_LIBFFI
 nobase_dist_libvicare_DATA	+= vicare/ffi.sls
+dist_pkglibexec_BIN		+= compile-ffi.sps
 endif
 
 if WANT_POSIX
 nobase_dist_libvicare_DATA	+= vicare/posix.sls	\
 				   vicare/simple-event-loop.sls
+dist_pkglibexec_BIN		+= compile-posix.sps
 endif
 
 if WANT_GLIBC
 nobase_dist_libvicare_DATA	+= vicare/glibc.sls
+dist_pkglibexec_BIN		+= compile-glibc.sps
 endif
 
 if WANT_LIBFFI
 if WANT_POSIX
 if WANT_GLIBC
 nobase_dist_libvicare_DATA	+= vicare/gcc.sls
+dist_pkglibexec_BIN		+= compile-gcc.sps
 endif
 endif
 endif
 
 if WANT_LINUX
 nobase_dist_libvicare_DATA	+= vicare/linux.sls
+dist_pkglibexec_BIN		+= compile-linux.sps
 endif
 
 if WANT_READLINE
 nobase_dist_libvicare_DATA	+= vicare/readline.sls
+dist_pkglibexec_BIN		+= compile-readline.sps
 endif
 
 if WANT_CRE2
 nobase_dist_libvicare_DATA	+= vicare/cre2.sls
+dist_pkglibexec_BIN		+= compile-cre2.sps
 endif
 
 ## --------------------------------------------------------------------
