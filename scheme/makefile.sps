@@ -1774,6 +1774,7 @@
     (eval-core					$boot)
     (current-core-eval				i v $language) ;;; temp
     (pretty-print				i v $language $boot)
+    (pretty-print*				i v $language)
     (pretty-format				i v $language)
     (pretty-width				i v $language)
     (module					i v $language cm)

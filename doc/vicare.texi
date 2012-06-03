@@ -4069,6 +4069,14 @@ brackets properly.
 @end deffn
 
 
+@defun pretty-print* @var{datum} @var{output-port} @var{start-column} @var{ending-newline?}
+Like @func{pretty-print} but accepts the additional arguments
+@var{start-column} being the column offset for the displayed datum and
+@var{ending-newline?} which causes an ending newline to be printed when
+true.
+@end defun
+
+
 @deffn Parameter pretty-width
 @deffnx Parameter pretty-width @var{n}
 The parameter @func{pretty-width} controls the number of characters
