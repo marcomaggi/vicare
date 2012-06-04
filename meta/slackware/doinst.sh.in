@@ -5,8 +5,11 @@
 exec_prefix=@prefix@
 libexecdir=@libexecdir@
 pkglibexecdir="$libexecdir/@PACKAGE@"
+fasldir=/var/vicare-scheme
 
-COMPILE='vicare --compile-dependencies'
+install -m 0775 -d $fasldir
+
+COMPILE="vicare --fasl-directory $fasldir --compile-dependencies"
 
 for item in \
     compile-all.sps             \
@@ -26,6 +29,5 @@ do
     else echo "*** skipping: $item"
     fi
 done
-
 
 ### end of file

@@ -52,6 +52,18 @@ Notes for revision 0.2d11
   arguments from syntax objects  to symbolic expressions, syntax objects
   are kept.
 
+* Added PRETTY-PRINT*, like  PRETTY-PRINT but accepts some configuration
+  arguments.
+
+* Multiple FASL  directories are now supported.  Files  are now searched
+  in a path to allow  both system precompiled files and user precompiled
+  files.   The  environment   variable  VICARE_FASL_PATH  allows  adding
+  directories to the search path.
+
+* Added command line options:  --fasl-directory, to override the default
+  value of the parameter FASL-DIRECTORY; --fasl-path, to add directories
+  to the default value of the parameter FASL-SEARCH-PATH.
+
 
 Notes for revision 0.2d10
 -------------------------

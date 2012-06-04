@@ -54,7 +54,9 @@
 	  $initialize-symbol-table!)
     (prefix (only (ikarus load)
 		  load
-		  load-r6rs-script)
+		  load-r6rs-script
+		  fasl-directory
+		  fasl-search-path)
 	    loading.)
     (prefix (only (ikarus.posix)
 		  getenv
@@ -154,6 +156,14 @@
 		;Null or a list of strings representing directory names:
 		;additional locations in which to search for libraries.
 
+   fasl-search-path
+		;Null or a list of strings representing directory names:
+		;additional locations in which to search for FASL files.
+
+   fasl-directory
+		;False of  a string  representing the initial  value for
+		;the parameter FASL-DIRECTORY.
+
    more-file-extensions
 		;Turn  on search  for more  library file  extension than
 		;".vicare.sls" and ".sls".
@@ -171,6 +181,9 @@
 
 (define-inline (run-time-config-search-path-register! cfg pathname)
   (set-run-time-config-search-path! cfg (cons pathname (run-time-config-search-path cfg))))
+
+(define-inline (run-time-config-fasl-search-path-register! cfg pathname)
+  (set-run-time-config-fasl-search-path! cfg (cons pathname (run-time-config-fasl-search-path cfg))))
 
 (define (run-time-config-rcfiles-register! cfg new-rcfile)
   (let ((rcfiles (run-time-config-rcfiles cfg)))
@@ -205,6 +218,8 @@
 	      (CFG.PROGRAM-OPTIONS	(%dot-id ".program-options"))
 	      (CFG.NO-GREETINGS		(%dot-id ".no-greetings"))
 	      (CFG.SEARCH-PATH		(%dot-id ".search-path"))
+	      (CFG.FASL-SEARCH-PATH	(%dot-id ".fasl-search-path"))
+	      (CFG.FASL-DIRECTORY	(%dot-id ".fasl-directory"))
 	      (CFG.MORE-FILE-EXTENSIONS	(%dot-id ".more-file-extensions"))
 	      (CFG.RAW-REPL		(%dot-id ".raw-repl")))
 	   #'(let-syntax
@@ -264,6 +279,20 @@
 		    ((set! _ ?val)
 		     (set-run-time-config-search-path! ?cfg ?val))))
 
+		  (CFG.FASL-SEARCH-PATH
+		   (identifier-syntax
+		    (_
+		     (run-time-config-fasl-search-path ?cfg))
+		    ((set! _ ?val)
+		     (set-run-time-config-fasl-search-path! ?cfg ?val))))
+
+		  (CFG.FASL-DIRECTORY
+		   (identifier-syntax
+		    (_
+		     (run-time-config-fasl-directory ?cfg))
+		    ((set! _ ?val)
+		     (set-run-time-config-fasl-directory! ?cfg ?val))))
+
 		  (CFG.MORE-FILE-EXTENSIONS
 		   (identifier-syntax
 		    (_
@@ -310,6 +339,8 @@
 			  '()		;program-options
 			  #f		;no-greetings
 			  '()		;search-path
+			  '()		;fasl-search-path
+			  #f		;fasl-directory
 			  #f		;more-file-extensions
 			  #f		;raw-repl
 			  ))
@@ -482,6 +513,20 @@
 	       (%error-and-exit "-L or --search-path requires a directory name")
 	     (begin
 	       (run-time-config-search-path-register! cfg (cadr args))
+	       (next-option (cddr args) k))))
+
+	  ((%option= "--fasl-path")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--fasl-path requires a directory name")
+	     (begin
+	       (run-time-config-fasl-search-path-register! cfg (cadr args))
+	       (next-option (cddr args) k))))
+
+	  ((%option= "--fasl-directory")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--fasl-directory requires a directory name")
+	     (begin
+	       (set-run-time-config-fasl-directory! cfg (cadr args))
 	       (next-option (cddr args) k))))
 
 	  ((%option= "--prompt")
@@ -663,6 +708,15 @@ Other options:
         Add DIRECTORY  to the library  search path.  This option  can be
         used multiple times.
 
+   --fasl-path DIRECTORY
+        Add DIRECTORY to the FASL search path.  This option can  be used
+        multiple times.
+
+   --fasl-directory DIRECTORY
+        Select DIRECTORY  as top  pathname  under  which FASL  files are
+        stored when libraries  are compiled.  When used  multiple times:
+        the last one wins.
+
    --more-file-extensions
         Rather   than    searching   only   libraries   with   extension
         \".vicare.sls\"  and \".sls\",  search also  for \".vicare.ss\",
@@ -738,7 +792,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	      ls)
 	    ls))
   (with-run-time-config (cfg)
-    (library-path (append cfg.search-path
+    (library-path (append (reverse cfg.search-path)
 			  (cond ((posix.getenv "VICARE_LIBRARY_PATH")
 				 => split-path)
 				(else '()))
@@ -747,6 +801,23 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     (when cfg.more-file-extensions
       (library-extensions (%prefix "/main"
 				   (%prefix ".vicare" '(".sls" ".ss" ".scm")))))))
+
+(define (init-fasl-search-path cfg)
+  (with-run-time-config (cfg)
+    (when cfg.fasl-directory
+      (if (file-exists? cfg.fasl-directory)
+	  (loading.fasl-directory cfg.fasl-directory)
+	(error 'init-fasl-search-path
+	  "invalid fasl directory pathname" cfg.fasl-directory)))
+    (loading.fasl-search-path (append
+			       (if cfg.fasl-directory
+				   (list cfg.fasl-directory)
+				 '())
+			       (reverse cfg.fasl-search-path)
+			       (cond ((posix.getenv "VICARE_FASL_PATH")
+				      => split-path)
+				     (else '()))
+			       (loading.fasl-search-path)))))
 
 (define (split-path input-string)
   ;;Convert  the  input  string  holding  a  search  pathname  as  colon
@@ -900,6 +971,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	(print-greetings-screen)))
 
     (init-library-path cfg)
+    (init-fasl-search-path cfg)
     (load-rc-files-as-r6rs-scripts cfg)
 
     (execution-state-initialisation-according-to-command-line-options)

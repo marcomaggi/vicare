@@ -906,6 +906,7 @@
     (fasl-read					i v $language)
     (fasl-directory				i v $language)
     (fasl-path					i v $language)
+    (fasl-search-path				i v $language)
     (lambda						i v r ba se ne)
     (and					i v r ba se ne)
     (begin					i v r ba se ne)

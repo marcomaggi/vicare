@@ -1056,8 +1056,18 @@ multiple times.
 
 @item -L @var{DIRECTORY}
 @itemx --search-path @var{DIRECTORY}
-Add @var{directory} to the library search path.  This option can be used
+Add @var{DIRECTORY} to the library search path.  This option can be used
 multiple times.
+
+@item --fasl-path @var{DIRECTORY}
+Add @var{DIRECTORY} to the @fasl{} search path.  This option can be used
+multiple times.
+
+@item --fasl-directory @var{DIRECTORY}
+Select @var{DIRECTORY} as top pathname under which @fasl{} files are
+stored when libraries are compiled; @var{DIRECTORY} must exist.  When
+used multiple times: the last one wins.  The selected directory is
+always prepended to the @fasl{} search path.
 
 @item --more-file-extensions
 Rather than searching only libraries with extension @samp{.vicare.sls}
@@ -21105,7 +21115,7 @@ Read and return a serialised object from the binary input @var{port}.
 
 
 @deffn Parameter fasl-directory
-Hold a string representing the top directory under which @fasl{} files
+Holds a string representing the top directory under which @fasl{} files
 are stored when libraries are compiled.  The default value is determined
 as follows:
 
@@ -21113,7 +21123,7 @@ as follows:
 @item
 Check the value of the system environment variable
 @env{VICARE_FASL_DIRECTORY}: if set and its value exists as pathname,
-the value is selected.
+the value is selected.  Else move to the next step.
 
 @item
 Acquire the value of the system environment variable @env{HOME}: if set
@@ -21124,13 +21134,21 @@ appending to the value the string:
 /.vicare/precompiled
 @end example
 
+Else move to the next step.
+
 @item
-Set the parameter to the empty string.
+Set the parameter to the empty string.  This means that a library with
+pathname: @file{/@/usr/@/local/@/scheme/@/vicare/@/posix.sls}
+will be compiled to
+@file{/@/usr/@/local/@/scheme/@/vicare/@/posix.sls.vicare-32bit-fasl}
 @end enumerate
 
-New values for this parameter must be Scheme string representing
+New values for this parameter must be Scheme strings representing
 existing pathnames.  The pathnames are normalised to their real
 pathname, removing symbolic links and useless @code{..} components.
+
+The default value of this parameter can be overridden by the command
+line option @option{--fasl-directory}.
 @end deffn
 
 
@@ -21140,6 +21158,39 @@ using the current value of @func{fasl-directory}.  Return false if
 @func{fasl-directory} is unset (which should never happen).  It is an
 error if the file @var{filename} does not exist.
 @end defun
+
+
+@deffn Parameter fasl-search-path
+@cindex @env{VICARE_FASL_PATH}, environment variable
+@cindex Environment variable @env{VICARE_FASL_PATH}
+Holds a list of strings representing directory pathnames.  This search
+path is used to locate @fasl{} files when loading precompiled libraries.
+The default value is determined as follows:
+
+@enumerate
+@item
+Check the value of the system environment variable
+@env{VICARE_FASL_PATH}: if set the value is selected.  Else move to the
+next step.
+
+@item
+Acquire the value of the system environment variable @env{HOME}: if set
+and its value exists as pathname, compose a directory pathname by
+appending to the value the string:
+
+@example
+/.vicare/precompiled
+@end example
+
+@noindent
+the result is put into a list and becomes the default value.
+@end enumerate
+
+Additional directories can be prepended to the search path with the
+command line option @option{--fasl-path}.  If a @fasl{} target directory
+is selected with the option @option{--fasl-directory}: the selected
+directory is always prepended to the @fasl{} search path.
+@end deffn
 
 @c page
 @node fasl foreign
