@@ -132,7 +132,7 @@
   ;;availability of the FASL file.
   ;;
   (define (%print-loaded-library name)
-    (when config.print-loaded-libraries
+    (when (config.print-loaded-libraries)
       (display (string-append "vicare loading: " name "\n")
 	       (console-error-port))))
   (let ((ikfasl (let next-prefix ((search-path (fasl-search-path)))

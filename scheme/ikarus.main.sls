@@ -497,6 +497,10 @@
 	   (set-run-time-config-print-libraries! cfg #t)
 	   (next-option (cdr args) k))
 
+	  ((%option= "--no-print-loaded-libraries")
+	   (set-run-time-config-print-libraries! cfg #f)
+	   (next-option (cdr args) k))
+
 ;;; --------------------------------------------------------------------
 ;;; Vicare options with argument
 
@@ -768,6 +772,9 @@ Other options:
         Whenever a library file is loaded print a message on the console
         error port.  This is for debugging purposes.
 
+   --no-print-loaded-libraries
+        Disables the effect of --print-loaded-libraries.
+
    -O0
    -O1
    -O2
@@ -997,7 +1004,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     (init-library-path cfg)
     (init-fasl-search-path cfg)
     (load-rc-files-as-r6rs-scripts cfg)
-
     (config.print-loaded-libraries cfg.print-libraries)
 
     (execution-state-initialisation-according-to-command-line-options)
