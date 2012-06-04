@@ -64,6 +64,9 @@ Notes for revision 0.2d11
   value of the parameter FASL-DIRECTORY; --fasl-path, to add directories
   to the default value of the parameter FASL-SEARCH-PATH.
 
+* Added command line option --print-loaded-libraries, to print pathnames
+  of loaded libraries.
+
 
 Notes for revision 0.2d10
 -------------------------
