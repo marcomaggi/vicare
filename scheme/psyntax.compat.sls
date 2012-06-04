@@ -23,6 +23,7 @@
     eval-core
     symbol-value			set-symbol-value!
     keyword?				pretty-print
+    #;pretty-print*
 
     ;; reading source code and interpreting the resule
     get-annotated-datum			read-library-source-file
@@ -53,6 +54,10 @@
 	  annotation-textual-position)
     (only (ikarus.compiler)
 	  eval-core)
+    ;;To be  removed at the next  boot image rotation  (Marco Maggi; Mon
+    ;;Jun 4, 2012).
+    #;(only (ikarus pretty-print)
+	  pretty-print*)
     (only (ikarus system $symbols)
 	  $unintern-gensym))
 
