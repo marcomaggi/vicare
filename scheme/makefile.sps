@@ -240,6 +240,7 @@
   ;;Error: Error: Error: Error: Error: Error: Error: Error: Error: ...).
   ;;
   '("ikarus.emergency.sls"
+    "ikarus.options.sls"
     "ikarus.singular-objects.sls"
     "ikarus.handlers.sls"
     "ikarus.multiple-values.sls"

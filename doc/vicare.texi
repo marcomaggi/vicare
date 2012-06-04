@@ -1099,6 +1099,10 @@ inspection.
 @itemx --no-debug
 Turn off debugging mode.
 
+@item --print-loaded-libraries
+Whenever a library file is loaded print a message on the console error
+port.  This is for debugging purposes.
+
 @item -O0
 @itemx -O1
 @itemx -O2

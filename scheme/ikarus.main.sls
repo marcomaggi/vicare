@@ -39,6 +39,9 @@
 		  host-info)
     (prefix (ikarus startup)
 	    config.)
+    (prefix (only (vicare options)
+		  print-loaded-libraries)
+	    config.)
     (only (ikarus.compiler)
 	  generate-debug-calls)
     (only (ikarus.debugger)
@@ -127,6 +130,10 @@
 		;interaction environment, after  the RC files and before
 		;the load scripts.
 
+   print-libraries
+		;For debugging  purposes: when  true print a  message to
+		;stderr showing which library file is loaded.
+
    eval-codes
 		;Null or  an alist with entries:
 		;
@@ -214,6 +221,7 @@
 	      (CFG.SCRIPT		(%dot-id ".script"))
 	      (CFG.RCFILES		(%dot-id ".rcfiles"))
 	      (CFG.LOAD-LIBRARIES	(%dot-id ".load-libraries"))
+	      (CFG.PRINT-LIBRARIES	(%dot-id ".print-libraries"))
 	      (CFG.EVAL-CODES		(%dot-id ".eval-codes"))
 	      (CFG.PROGRAM-OPTIONS	(%dot-id ".program-options"))
 	      (CFG.NO-GREETINGS		(%dot-id ".no-greetings"))
@@ -250,6 +258,13 @@
 		     (run-time-config-load-libraries ?cfg))
 		    ((set! _ ?val)
 		     (set-run-time-config-load-libraries! ?cfg ?val))))
+
+		  (CFG.PRINT-LIBRARIES
+		   (identifier-syntax
+		    (_
+		     (run-time-config-print-libraries ?cfg))
+		    ((set! _ ?val)
+		     (set-run-time-config-print-libraries! ?cfg ?val))))
 
 		  (CFG.EVAL-CODES
 		   (identifier-syntax
@@ -335,6 +350,7 @@
 			  #f		;script
 			  #f		;rcfiles
 			  '()		;load-libraries
+			  #f		;print-libraries
 			  '()		;eval-codes
 			  '()		;program-options
 			  #f		;no-greetings
@@ -475,6 +491,10 @@
 
 	  ((%option= "--raw-repl")
 	   (set-run-time-config-raw-repl! cfg #t)
+	   (next-option (cdr args) k))
+
+	  ((%option= "--print-loaded-libraries")
+	   (set-run-time-config-print-libraries! cfg #t)
 	   (next-option (cdr args) k))
 
 ;;; --------------------------------------------------------------------
@@ -744,6 +764,10 @@ Other options:
    --no-debug
         Turn off debugging mode.
 
+   --print-loaded-libraries
+        Whenever a library file is loaded print a message on the console
+        error port.  This is for debugging purposes.
+
    -O0
    -O1
    -O2
@@ -973,6 +997,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     (init-library-path cfg)
     (init-fasl-search-path cfg)
     (load-rc-files-as-r6rs-scripts cfg)
+
+    (config.print-loaded-libraries cfg.print-libraries)
 
     (execution-state-initialisation-according-to-command-line-options)
     ;;Added to fix Vicare issue #3.  The optimisation code is unfinished

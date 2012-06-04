@@ -156,6 +156,7 @@ EXTRA_DIST= last-revision				\
 	ikarus.main.sls					\
 	ikarus.multiple-values.sls			\
 	ikarus.numerics.sls				\
+	ikarus.options.sls				\
 	ikarus.pairs.sls				\
 	ikarus.pointers.sls				\
 	ikarus.posix.sls				\

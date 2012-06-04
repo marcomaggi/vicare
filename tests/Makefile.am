@@ -70,8 +70,9 @@ test-exec-modes:
 #page
 #### interface to "make check"
 
-VICARE_INST_ENV	= VICARE_LIBRARY_PATH=$$VICARE_LIBRARY_PATH:$(srcdir):$(srcdir)/../scheme
-VICARE_INST_RUN	= $(VICARE_INST_ENV) vicare
+VICARE_INST_ENV		= VICARE_LIBRARY_PATH=$$VICARE_LIBRARY_PATH:$(srcdir):$(srcdir)/../scheme
+VICARE_INST_FLAGS	= $(user_flags)
+VICARE_INST_RUN		= $(VICARE_INST_ENV) vicare $(VICARE_INST_FLAGS)
 
 # TESTS and TESTS_ENVIRONMENT are Automake variables.
 TESTS_ENVIRONMENT	= VICARE_CHECK_QUIET=yes $(VICARE_RUN)

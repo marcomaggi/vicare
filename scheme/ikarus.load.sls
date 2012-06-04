@@ -40,6 +40,9 @@
 	  compile-r6rs-top-level)
     (only (ikarus.reader)
 	  read-script-source-file)
+    (prefix (only (vicare options)
+		  print-loaded-libraries)
+	    config.)
     (only (vicare syntactic-extensions)
 	  unwind-protect
 	  define-inline
@@ -128,6 +131,10 @@
   ;;Print  to  the current  error  port  appropriate  warning about  the
   ;;availability of the FASL file.
   ;;
+  (define (%print-loaded-library name)
+    (when config.print-loaded-libraries
+      (display (string-append "vicare loading: " name "\n")
+	       (console-error-port))))
   (let ((ikfasl (let next-prefix ((search-path (fasl-search-path)))
 		  (if (null? search-path)
 		      #f
@@ -138,14 +145,18 @@
 		#;(fasl-path filename)))
     (cond ((or (not ikfasl)
 	       (not (file-exists? ikfasl)))
+
+	   (%print-loaded-library filename)
 	   #f)
 	  ((< (posix.file-modification-time ikfasl)
 	      (posix.file-modification-time filename))
-	   (fprintf (current-error-port)
+	   (%print-loaded-library filename)
+	   (fprintf (console-error-port)
 		    "WARNING: not using fasl file ~s because it is older \
                      than the source file ~s\n" ikfasl filename)
 	   #f)
 	  (else
+	   (%print-loaded-library ikfasl)
 	   (let ((x (let* ((port (open-file-input-port ikfasl))
 			   (x    (fasl-read port)))
 		      (close-input-port port)
@@ -153,7 +164,7 @@
 	     (if (serialized-library? x)
 		 (apply success-kont filename (serialized-library-contents x))
 	       (begin
-		 (fprintf (current-error-port)
+		 (fprintf (console-error-port)
 			  "WARNING: not using fasl file ~s because it was \
                            compiled with a different instance of Vicare.\n" ikfasl)
 		 #f)))))))
