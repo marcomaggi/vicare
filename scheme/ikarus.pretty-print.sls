@@ -624,9 +624,6 @@
 	  (else
 	   (assertion-violation 'pretty-print-output "invalid" x))))
 
-  (do ((i 0 (fxadd1 i)))
-      ((fx=? i start-column))
-    (put-char port #\space))
   (main x port start-column)
   (when ending-newline?
     (newline port)))

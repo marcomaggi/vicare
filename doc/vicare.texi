@@ -4062,7 +4062,7 @@ The second argument to @func{pretty-print}, if supplied, must be an
 output port.  If not supplied, the @func{current-output-port} is used.
 
 @quotation
-@emph{Limitations:} As shown in the output above, the current
+@strong{LIMITATIONS} As shown in the output above, the current
 implementation of @func{pretty-print} does not handle printing of square
 brackets properly.
 @end quotation
@@ -4070,10 +4070,49 @@ brackets properly.
 
 
 @defun pretty-print* @var{datum} @var{output-port} @var{start-column} @var{ending-newline?}
-Like @func{pretty-print} but accepts the additional arguments
-@var{start-column} being the column offset for the displayed datum and
-@var{ending-newline?} which causes an ending newline to be printed when
-true.
+Like @func{pretty-print} but accepts the additional arguments:
+
+@table @var
+@item start-column
+A non--negative fixnum.  The zero--based column offset at which the
+first line is displayed.  When printing a multiline symbolic expression,
+the column offset of the first line depends upon what has been already
+printed on such line; this argument allows us to correctly align the
+second and subsequent lines.  For example the following program:
+
+@example
+#!r6rs
+(import (vicare))
+
+(pretty-width 10)
+(set-port-buffer-mode! (current-output-port)
+                       (buffer-mode none))
+
+(display "01234")
+(pretty-print  '("56789" "8 7 6 5"))
+
+(newline)
+
+(display "01234")
+(pretty-print* '("56789" "8 7 6 5")
+               (current-output-port) 5 #t)
+@end example
+
+@noindent
+prints:
+
+@example
+01234("56789"
+  "8 7 6 5")
+
+01234("56789"
+       "8 7 6 5")
+@end example
+
+@item ending-newline?
+Interpreted as boolean value.  If true: a newline character is output
+after the symbolic expression.
+@end table
 @end defun
 
 
