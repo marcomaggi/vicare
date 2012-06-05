@@ -202,7 +202,22 @@
 	(check:report-failed expected-result)
 	(check-newline)
 	(check-newline)))
-    (flush-output-port (current-error-port))))
+    (flush-output-port (current-error-port)))
+  (cond ((null? check:failed)
+	 ;;Success for GNU Automake.
+	 (exit 0))
+	((null? check:failed)
+	 ;;Success for GNU Automake.
+	 (exit 0))
+	((not (null? check:failed))
+	 ;;Test failure for GNU Automake.
+	 (exit 1))
+;;;	((something)
+;;;	 ;;Skipped test for GNU Automake.
+;;;	 (exit 77))
+	(else
+	 ;;Hard error for GNU Automake.
+	 (exit 99))))
 
 (define (check-passed? expected-total-count)
   (and (= (length check:failed) 0)
