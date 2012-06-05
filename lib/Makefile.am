@@ -24,7 +24,8 @@ nobase_dist_libvicare_DATA	= \
 	vicare/unsafe-operations.sls		\
 	vicare/unsafe-unicode.sls		\
 	vicare/weak-hashtables.sls		\
-	vicare/words.sls
+	vicare/words.sls			\
+	vicare/checks.sls
 
 if WANT_LIBFFI
 nobase_dist_libvicare_DATA	+= vicare/ffi.sls
