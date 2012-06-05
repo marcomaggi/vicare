@@ -61,9 +61,9 @@
 (define quiet-tests?
   (let ((S (getenv "VICARE_CHECK_QUIET")))
     (and S
-	 (and (fixnum? S)
-	      (not (fxzero? S)))
-	 (string=? S "yes"))))
+	 (or (and (fixnum? S)
+		  (not (fxzero? S)))
+	     (string=? S "yes")))))
 
 (define (check-display thing)
   (unless quiet-tests?
