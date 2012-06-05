@@ -9,6 +9,7 @@ AC_CONFIG_SRCDIR([src/])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE
 
+AM_PROG_AR
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
@@ -77,7 +78,7 @@ dnl --------------------------------------------------------------------
 
 AC_MSG_CHECKING([whether usage of the binfmt_misc Linux kernel module is enabled])
 AC_ARG_ENABLE([binfmt],
-  [AC_HELP_STRING([--enable-binfmt],
+  [AS_HELP_STRING([--enable-binfmt],
      [enable usage of the binfmt_misc linux kernel module (default: no)])],
   [if test "$enableval" = yes
    then vicare_enable_binfmt=yes

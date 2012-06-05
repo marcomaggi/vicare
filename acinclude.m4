@@ -177,7 +177,8 @@ AC_DEFUN([VICARE_STRINGOF_TEST],
            return ferror (f) || fclose (f) != 0;
         }])],
         [vicare_cv_stringof_$1=`cat conftest.val`],
-        [vicare_cv_stringof_$1=""])
+        [vicare_cv_stringof_$1=""],
+	[vicare_cv_stringof_$1=""])
       rm -f conftest.val])
    VALUEOF_$1="$vicare_cv_stringof_$1"
    AC_SUBST([VALUEOF_$1])])
@@ -198,7 +199,8 @@ AC_DEFUN([VICARE_DOUBLEOF_TEST],
            return ferror (f) || fclose (f) != 0;
         }])],
         [vicare_cv_doubleof_$1=`cat conftest.val`],
-        [vicare_cv_doubleof_$1=""])
+        [vicare_cv_doubleof_$1=""],
+	[vicare_cv_doubleof_$1="0.0"])
       rm -f conftest.val])
    VALUEOF_$1="$vicare_cv_doubleof_$1"
    AC_SUBST([VALUEOF_$1])])
@@ -260,7 +262,8 @@ AC_DEFUN([VICARE_CHECK_PAGESHIFT],
            return ferror (f) || fclose (f) != 0;
         }])],
         [vicare_cv_pageshift=`cat conftest.val`],
-        [vicare_cv_pageshift=12])
+        [vicare_cv_pageshift=12],
+	[vicare_cv_pageshift=12])
       rm -f conftest.val])])])
 
 ### end of file
