@@ -28,7 +28,7 @@
 #!vicare
 (import (vicare)
   (except (vicare checks) with-result add-result)
-  (prefix (only (checks)
+  (prefix (only (vicare checks)
 		with-result add-result)
 	  check.))
 
