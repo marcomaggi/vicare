@@ -20800,9 +20800,9 @@ followed by its hexadecimal number with at least @math{4} digits
 (@code{U+0044} is fine, @code{U+12} is not).
 
 In practice, Unicode code points are exact integers in the range
-@math{[0, #x10FFFF]}, but outside the range @math{[#xD800, #xDFFF]}
-which has special meaning in @utf{} schemes.  A code point can be stored
-in @math{21} bits:
+@math{[0, @pounds{}x10FFFF]}, but outside the range
+@math{[@pounds{}xD800, @pounds{}xDFFF]} which has special meaning in
+@utf{} schemes.  A code point can be stored in @math{21} bits:
 
 @example
 (string-length (number->string #x10FFFF 2)) @result{} 21
@@ -20830,7 +20830,7 @@ fixnums:
 
 @utf{}-8 is a multioctet character encoding for Unicode which can
 represent every character in the Unicode set, that is it can represent
-every code point in the ranges @math{[0, #xD800)} and @math{(#xDFFF,
+every code point in the ranges @code{[0, #xD800)} and @code{(#xDFFF,
 #x10FFFF]}.
 
 A stream of @utf{}-8 encoded characters is meant to be stored octet by
@@ -20864,7 +20864,7 @@ representation of a code point:
 Note that octets @code{#xFE} and @code{#xFF} cannot appear in a valid
 stream of @utf{}-8 encoded characters.  The sequence of @math{3} octets
 is the one that could encode (but must not) the forbidden range
-@math{[#xD800, #xDFFF]}.
+@code{[#xD800, #xDFFF]}.
 
 The first @math{128} characters of the Unicode character set correspond
 one--to--one with @ascii{} and are encoded using a single octet with the
@@ -20881,7 +20881,7 @@ octets: @code{#xEF}, @code{#xBB}, @code{#xBF}.
 @subsubheading @utf{}-16 decoding
 
 Given a 16-bit word in a @utf{}-16 stream, represented in Scheme as a
-fixnum in the range @math{[#x0000, #xFFFF]}, we can classify it on the
+fixnum in the range @code{[#x0000, #xFFFF]}, we can classify it on the
 following axis:
 
 @example
