@@ -5,7 +5,7 @@
 exec_prefix=@prefix@
 libexecdir=@libexecdir@
 pkglibexecdir="$libexecdir/@PACKAGE@"
-fasldir=/var/vicare-scheme
+fasldir=/var/cache/vicare-scheme
 
 install -m 0775 -d $fasldir
 

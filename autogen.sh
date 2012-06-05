@@ -4,7 +4,7 @@
 
 set -xe
 
-autoreconf --install --verbose
+autoreconf --warnings=all --install --verbose
 
 # aclocal
 # autoheader

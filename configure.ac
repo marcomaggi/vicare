@@ -5,8 +5,6 @@ AC_INIT([Vicare Scheme],[0.2d11],[marco.maggi-ipsu@poste.it],
   [vicare-scheme],[http://marcomaggi.github.com/vicare.html])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE
-LT_PREREQ([2.2])
-LT_INIT([shared disable-static])
 AC_CONFIG_SRCDIR([src/])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE
@@ -14,6 +12,9 @@ AM_INIT_AUTOMAKE
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
+
+LT_PREREQ([2.2])
+LT_INIT([shared disable-static])
 
 AC_LANG([C])
 AC_DEFINE([_GNU_SOURCE],[1],[enable everything GNU])
