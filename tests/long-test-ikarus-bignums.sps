@@ -29,7 +29,7 @@
 
 #!r6rs
 (import (ikarus)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Ikarus bignum functions\n")

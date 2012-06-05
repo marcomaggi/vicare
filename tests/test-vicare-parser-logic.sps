@@ -28,7 +28,7 @@
 #!r6rs
 (import (vicare)
   (vicare parser-logic)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare parser logic library\n")

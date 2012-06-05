@@ -57,7 +57,7 @@
 ;;;             (- (log (- 1 (* +1i x)))
 ;;;                (log (+ 1 (* +1i x))))))
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -76,7 +76,7 @@
 
 #!r6rs
 (import (rnrs)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing issue 24, wrong unary minus sign handling for complex numbers\n")

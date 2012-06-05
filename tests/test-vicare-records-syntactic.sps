@@ -28,7 +28,7 @@
 #!r6rs
 (import (vicare)
   (vicare syntactic-extensions)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare R6RS records, syntactic layer\n")

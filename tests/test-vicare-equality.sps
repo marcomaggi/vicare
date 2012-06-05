@@ -27,7 +27,7 @@
 
 #!vicare
 (import (vicare)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare equality functions\n")

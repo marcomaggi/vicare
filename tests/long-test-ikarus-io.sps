@@ -29,7 +29,7 @@
 
 #!r6rs
 (import (ikarus)
-  (checks))
+  (vicare checks))
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)

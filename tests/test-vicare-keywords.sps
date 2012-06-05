@@ -28,7 +28,7 @@
 #!vicare
 (import (vicare)
   (vicare keywords)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare keywords\n")

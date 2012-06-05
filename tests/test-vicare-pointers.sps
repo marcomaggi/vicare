@@ -28,7 +28,7 @@
 #!r6rs
 (import (vicare)
   (vicare errno)
-  (checks)
+  (vicare checks)
   (prefix (vicare words)
 	  words.)
   (prefix (vicare platform-constants)

@@ -29,7 +29,7 @@
 (import (vicare)
   (prefix (vicare words) words.)
   (vicare platform-constants)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing (vicare words) library\n")

@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (checks)
+  (vicare checks)
   (vicare syntactic-extensions)
   (prefix (vicare words)
 	  words.)

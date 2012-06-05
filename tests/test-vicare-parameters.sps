@@ -26,7 +26,7 @@
 
 #!r6rs
 (import (vicare)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare parameters\n")

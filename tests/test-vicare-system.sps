@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -29,7 +29,7 @@
 (import (vicare)
   (ikarus system $fx)
   (ikarus system $flonums)
-  (checks))
+  (vicare checks))
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)

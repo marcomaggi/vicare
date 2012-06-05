@@ -33,7 +33,7 @@
 	  ffi.)
   (vicare platform-constants)
   (vicare syntactic-extensions)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare POSIX functions\n")

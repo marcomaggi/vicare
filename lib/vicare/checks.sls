@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (checks)
+(library (vicare checks)
   (export
     ;; bindings from the SRFI
     check

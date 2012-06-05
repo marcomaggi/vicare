@@ -27,7 +27,7 @@
 
 #!vicare
 (import (vicare)
-  (checks))
+  (vicare checks))
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)

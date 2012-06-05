@@ -8,7 +8,7 @@
 ;;;
 ;;;	This test file was originally in Nausicaa.
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -62,7 +62,7 @@
 	     expand run)
   (lists)
   (prefix (vicare) six.)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare lists functions\n")

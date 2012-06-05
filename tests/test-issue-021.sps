@@ -18,7 +18,7 @@
 ;;;	  It  happens only  when  the #\delete  character  appears in  a
 ;;;	string.
 ;;;
-;;;Copyright (c) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -36,7 +36,7 @@
 
 
 (import (rnrs)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing issue 21, delete character is printed unescaped\n")
