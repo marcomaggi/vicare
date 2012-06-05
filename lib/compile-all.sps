@@ -39,6 +39,7 @@
   (only (vicare flonum-formatter))
   (only (vicare weak-hashtables))
   (only (vicare keywords))
+  (only (vicare checks))
   )
 
 ;;; end of file
