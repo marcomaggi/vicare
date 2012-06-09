@@ -1,6 +1,6 @@
 \input texinfo.tex
 @c %**start of header
-@setfilename vicare.info
+@setfilename vicare-scheme.info
 @settitle Vicare Scheme
 @c %**end of header
 
@@ -227,7 +227,7 @@ Appendices
 * shmem::                       Interprocess shared memory.
 * binfmt::                      Launching programs directly.
 * cre2::                        Binding to the library @cretwo{}.
-* package license::             @gnu{} General Public License.
+* Package License::             @gnu{} General Public License.
 * references::                  Bibliography and references.
 
 Indexes
