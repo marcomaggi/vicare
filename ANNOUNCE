@@ -67,6 +67,8 @@ Notes for revision 0.2d11
 * Added command line option --print-loaded-libraries, to print pathnames
   of loaded libraries.
 
+* The documentation file has been renamed to "vicare-scheme.texi".
+
 
 Notes for revision 0.2d10
 -------------------------
