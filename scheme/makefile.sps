@@ -2301,9 +2301,9 @@
   ;;For each library: accumulate all the code in the CODE* variable, all
   ;;the substitutions in SUBST, the whole environment in ENV.
   (let-values (((name* code* subst env) (make-init-code)))
-    (debug-printf "Expanding ")
+    (debug-printf "Expanding:\n")
     (for-each (lambda (file)
-		(debug-printf " ~s" file)
+		(debug-printf " ~s\n" file)
 		;;For each  library in the  file apply the  function for
 		;;its side effects.
 		(load (string-append src-dir "/" file)
@@ -2315,7 +2315,7 @@
 			  (set! subst (append export-subst subst))
 			  (set! env   (append export-env   env))))))
       files)
-    (debug-printf "\n")
+    ;;;(debug-printf "\n")
     (let-values (((export-subst export-env export-locs)
                   (make-system-data (prune-subst subst env) env)))
       (let-values (((name code) (build-system-library export-subst export-env export-locs)))
