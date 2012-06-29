@@ -64,19 +64,19 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-argument-validation (start-for who idx len)
+(define-argument-validation (start-index-and-length who idx len)
   ;;To be used after INDEX validation.
   ;;
   (unsafe.fx<= idx len)
   (assertion-violation who "start index argument out of range for vector" idx len))
 
-(define-argument-validation (end-for who idx len)
+(define-argument-validation (end-index-and-length who idx len)
   ;;To be used after INDEX validation.
   ;;
   (unsafe.fx<= idx len)
   (assertion-violation who "end index argument out of range for vector" idx len))
 
-(define-argument-validation (start-end who start end)
+(define-argument-validation (start-and-end-indices who start end)
   ;;To be used after INDEX validation.
   ;;
   (unsafe.fx<= start end)
@@ -88,7 +88,7 @@
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as items count argument" obj))
 
-(define-argument-validation (count-for who count start len)
+(define-argument-validation (start-index-and-count-and-length who start count len)
   (unsafe.fx<= (unsafe.fx+ start count) len)
   (assertion-violation who
     (vector-append "count argument out of range for vector of length " (number->string len)
@@ -666,9 +666,9 @@
        (index	end))
     (let ((len (unsafe.vector-length vec)))
       (with-arguments-validation (who)
-	  ((start-for	start len)
-	   (end-for	end   len)
-	   (start-end	start end))
+	  ((start-index-and-length	start len)
+	   (end-index-and-length	end   len)
+	   (start-and-end-indices	start end))
 	(unsafe.subvector vec start end)))))
 
 (define (vector-copy vec)
@@ -690,15 +690,15 @@
       ((vector		src.vec)
        (vector		dst.vec)
        (index		src.start)
-       (start-for	src.start src.vec)
        (index		dst.start)
-       (start-for	dst.start dst.vec)
        (count		count))
     (let ((src.len (unsafe.vector-length src.vec))
 	  (dst.len (unsafe.vector-length dst.vec)))
       (with-arguments-validation (who)
-	  ((count-for	count src.start src.len)
-	   (count-for	count dst.start dst.len))
+	  ((start-index-and-length		src.start src.len)
+	   (start-index-and-length		dst.start dst.len)
+	   (start-index-and-count-and-length	src.start count src.len)
+	   (start-index-and-count-and-length	dst.start count dst.len))
 	(cond ((unsafe.fxzero? count)
 	       (void))
 	      ((eq? src.vec dst.vec)
