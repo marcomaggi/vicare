@@ -6,9 +6,4 @@ set -xe
 
 autoreconf --warnings=all --install --verbose
 
-# aclocal
-# autoheader
-# automake --foreign --add-missing
-# autoconf
-
 ### end of file

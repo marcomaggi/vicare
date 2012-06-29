@@ -6,7 +6,7 @@ AC_INIT([Vicare Scheme],[0.2d11],[marco.maggi-ipsu@poste.it],
 AC_CANONICAL_TARGET
 AC_CONFIG_SRCDIR([src/])
 AC_CONFIG_MACRO_DIR([m4])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([foreign dist-bzip2 no-dist-gzip])
 
 AM_PROG_AR
 AC_PROG_INSTALL
