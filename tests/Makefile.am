@@ -70,12 +70,15 @@ test-exec-modes:
 #page
 #### interface to "make check"
 
-VICARE_INST_ENV		= VICARE_LIBRARY_PATH=$$VICARE_LIBRARY_PATH:$(srcdir):$(srcdir)/../scheme
-VICARE_INST_FLAGS	= $(user_flags)
-VICARE_INST_RUN		= $(VICARE_INST_ENV) vicare $(VICARE_INST_FLAGS)
+VICARE_CHECK_FLAGS	= -b $(VICARE_BOOT) $(user_flags)
+VICARE_CHECK_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_CHECK_FLAGS)
+
+VICARE_INSTCHECK_ENV	= VICARE_LIBRARY_PATH=$$VICARE_LIBRARY_PATH:$(srcdir):$(srcdir)/../scheme
+VICARE_INSTCHECK_FLAGS	= $(user_flags)
+VICARE_INSTCHECK_RUN	= $(VICARE_INST_ENV) vicare $(VICARE_INST_FLAGS)
 
 # TESTS and TESTS_ENVIRONMENT are Automake variables.
-TESTS_ENVIRONMENT	= VICARE_CHECK_QUIET=yes $(VICARE_RUN)
+TESTS_ENVIRONMENT	= VICARE_CHECK_QUIET=yes $(VICARE_CHECK_RUN)
 TESTS			=	\
 	test-r6rs-arithmetic-bitwise.sps		\
 	test-r6rs-arithmetic-fixnums.sps		\
@@ -193,7 +196,7 @@ TESTS	+= foreign-test-vicare-cre2.sps
 endif
 
 installcheck-local:
-	@for f in $(TESTS); do $(VICARE_INST_RUN) $(srcdir)/$$f; done
+	@for f in $(TESTS); do $(VICARE_INSTCHECK_RUN) $(srcdir)/$$f; done
 
 #page
 #### extra files to be distributed
@@ -360,6 +363,3 @@ EXTRA_DIST =	\
 
 
 ### end of file
-# Local Variables:
-# mode: makefile-gmake
-# End:

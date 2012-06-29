@@ -87,25 +87,25 @@
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as string index argument" obj))
 
-(define-argument-validation (index-for who idx str)
+(define-argument-validation (index-for-string who idx str)
   ;;To be used after INDEX validation.
   ;;
   (unsafe.fx< idx (unsafe.string-length str))
   (assertion-violation who "index is out of range for string" idx str))
 
-(define-argument-validation (start-for who idx len)
+(define-argument-validation (start-index-and-length who start len)
   ;;To be used after INDEX validation.
   ;;
-  (unsafe.fx<= idx len)
-  (assertion-violation who "start index argument out of range for string" idx len))
+  (unsafe.fx<= start len)
+  (assertion-violation who "start index argument out of range for string" start len))
 
-(define-argument-validation (end-for who idx len)
+(define-argument-validation (end-index-and-length who end len)
   ;;To be used after INDEX validation.
   ;;
-  (unsafe.fx<= idx len)
-  (assertion-violation who "end index argument out of range for string" idx len))
+  (unsafe.fx<= end len)
+  (assertion-violation who "end index argument out of range for string" end len))
 
-(define-argument-validation (start-end who start end)
+(define-argument-validation (start-and-end-indices who start end)
   ;;To be used after INDEX validation.
   ;;
   (unsafe.fx<= start end)
@@ -117,7 +117,7 @@
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as characters count argument" obj))
 
-(define-argument-validation (count-for who count start len)
+(define-argument-validation (start-index-and-count-and-length who start count len)
   (unsafe.fx<= (unsafe.fx+ start count) len)
   (assertion-violation who
     (string-append "count argument out of range for string of length " (number->string len)
@@ -174,9 +174,9 @@
   ;;
   (define who 'string-ref)
   (with-arguments-validation (who)
-      ((string     str)
-       (index      idx)
-       (index-for  idx str))
+      ((string			str)
+       (index			idx)
+       (index-for-string	idx str))
     (unsafe.string-ref str idx)))
 
 (define (string-set! str idx ch)
@@ -190,10 +190,10 @@
   ;;
   (define who 'string-set!)
   (with-arguments-validation (who)
-      ((string		str)
-       (index		idx)
-       (index-for	idx str)
-       (char		ch))
+      ((string			str)
+       (index			idx)
+       (index-for-string	idx str)
+       (char			ch))
     (unsafe.string-set! str idx ch)))
 
 
@@ -309,9 +309,9 @@
        (index	end))
     (let ((len (unsafe.string-length str)))
       (with-arguments-validation (who)
-	  ((start-for	start len)
-	   (end-for	end   len)
-	   (start-end	start end))
+	  ((start-index-and-length	start len)
+	   (end-index-and-length	end   len)
+	   (start-and-end-indices	start end))
 	(unsafe.substring str start end)))))
 
 (define (string-copy str)
@@ -775,15 +775,15 @@
       ((string		src.str)
        (string		dst.str)
        (index		src.start)
-       (start-for	src.start src.str)
        (index		dst.start)
-       (start-for	dst.start dst.str)
        (count		count))
     (let ((src.len (unsafe.string-length src.str))
 	  (dst.len (unsafe.string-length dst.str)))
       (with-arguments-validation (who)
-	  ((count-for	count src.start src.len)
-	   (count-for	count dst.start dst.len))
+	  ((start-index-and-length		src.start src.len)
+	   (start-index-and-length		dst.start dst.len)
+	   (start-index-and-count-and-length	src.start count src.len)
+	   (start-index-and-count-and-length	dst.start count dst.len))
 	(cond ((unsafe.fxzero? count)
 	       (void))
 	      ((eq? src.str dst.str)
