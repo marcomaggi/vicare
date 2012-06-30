@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.2d11
+Subject: [announce] Vicare Scheme revision 0.2d12
 
                              Vicare Scheme
                              =============
@@ -38,6 +38,11 @@ collection of R6 Scheme libraries:
 
 	      <http://marcomaggi.github.com/nausicaa.html>
 
+
+Notes for revision 0.2d12
+-------------------------
+
+*
 
 Notes for revision 0.2d11
 -------------------------
