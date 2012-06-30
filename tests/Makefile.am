@@ -203,7 +203,6 @@ installcheck-local:
 
 EXTRA_DIST =	\
 	ikarus-test-framework.sls			\
-	checks.sls					\
 	lists.sls					\
 	lists/low.sls					\
 	lists/stx.sls					\
