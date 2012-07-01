@@ -57,12 +57,24 @@
     struct-signalfd-siginfo-ssi_status	struct-signalfd-siginfo-ssi_int
     struct-signalfd-siginfo-ssi_ptr	struct-signalfd-siginfo-ssi_utime
     struct-signalfd-siginfo-ssi_stime	struct-signalfd-siginfo-ssi_addr
+
+    ;; timer event through file descriptors
+    timerfd-create
+    timerfd-settime			timerfd-gettime
+    make-struct-itimerspec		struct-itimerspec?
+    struct-itimerspec-it_interval	struct-itimerspec-it_value
+    (rename (px.make-struct-timespec	make-struct-timespec)
+	    (px.struct-timespec?	struct-timespec?)
+	    (px.struct-timespec-tv_sec	struct-timespec-tv_sec)
+	    (px.struct-timespec-tv_nsec	struct-timespec-tv_nsec))
     )
   (import (vicare)
     (vicare syntactic-extensions)
     (vicare platform-constants)
     (prefix (vicare words)
 	    words.)
+    (prefix (vicare posix)
+	    px.)
     (prefix (vicare unsafe-capi)
 	    capi.)
     (prefix (vicare unsafe-operations)
@@ -141,6 +153,45 @@
 (define-argument-validation (vector-of-signums who obj)
   (and (vector? obj) (vector-for-all fixnum? obj))
   (assertion-violation who "expected vector of signums as arguments" obj))
+
+(define-argument-validation (clockid who obj)
+  (and (fixnum? obj)
+       (or (unsafe.fx= obj CLOCK_REALTIME)
+	   (unsafe.fx= obj CLOCK_MONOTONIC)))
+  (assertion-violation who
+    (string-append "expected fixnum " (number->string CLOCK_REALTIME)
+		   " or " (number->string CLOCK_MONOTONIC)
+		   " as clockid argument")
+    obj))
+
+(define-argument-validation (timerfd-settime-flags who obj)
+  (and (fixnum? obj)
+       (or (unsafe.fxzero? obj)
+	   (unsafe.fx= obj TFD_TIMER_ABSTIME)))
+  (assertion-violation who
+    "expected the fixnum zero or TFD_TIMER_ABSTIME as flags argument"
+    obj))
+
+;;; --------------------------------------------------------------------
+
+(define (%valid-itimerspec? obj)
+  (and (struct-itimerspec? obj)
+       (let ((T (struct-itimerspec-it_interval obj)))
+	 (and (px.struct-timespec? T)
+	      (words.signed-long? (px.struct-timespec-tv_sec  T))
+	      (words.signed-long? (px.struct-timespec-tv_nsec T))))
+       (let ((T (struct-itimerspec-it_value obj)))
+	 (and (px.struct-timespec? T)
+	      (words.signed-long? (px.struct-timespec-tv_sec  T))
+	      (words.signed-long? (px.struct-timespec-tv_nsec T))))))
+
+(define-argument-validation (itimerspec who obj)
+  (%valid-itimerspec? obj)
+  (assertion-violation who "expected struct-itimerspec as argument" obj))
+
+(define-argument-validation (itimerspec/false who obj)
+  (or (not obj) (%valid-itimerspec? obj))
+  (assertion-violation who "expected false or struct-itimerspec as argument" obj))
 
 
 ;;;; helpers
@@ -370,9 +421,67 @@
 	     (%raise-errno-error who rv fd))))))
 
 
+;;;; timer event through file descriptors
+
+(define-struct struct-itimerspec
+  (it_interval it_value))
+
+(define (%struct-itimerspec-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-itimerspec\"")
+  (%display " it_interval=")		(%display (struct-itimerspec-it_interval S))
+  (%display " it_value=")		(%display (struct-itimerspec-it_value    S))
+  (%display "]"))
+
+;;; --------------------------------------------------------------------
+
+(define (timerfd-create clockid flags)
+  (define who 'timerfd-create)
+  (with-arguments-validation (who)
+      ((clockid		clockid)
+       (fixnum		flags))
+    (let ((rv (capi.linux-timerfd-create clockid flags)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(%raise-errno-error who rv clockid flags)))))
+
+(define timerfd-settime
+  (case-lambda
+   ((fd flags new)
+    (timerfd-settime fd flags new #f))
+   ((fd flags new old)
+    (define who 'timerfd-settime)
+    (with-arguments-validation (who)
+	((file-descriptor	fd)
+	 (timerfd-settime-flags	flags)
+	 (itimerspec		new)
+	 (itimerspec/false	old))
+      (let ((rv (capi.linux-timerfd-settime fd flags new old)))
+	(if (unsafe.fxzero? rv)
+	    old
+	  (%raise-errno-error who rv fd flags new old)))))))
+
+(define timerfd-gettime
+  (case-lambda
+   ((fd)
+    (timerfd-gettime fd (make-struct-itimerspec (px.make-struct-timespec 0 0)
+						(px.make-struct-timespec 0 0))))
+   ((fd curr)
+    (define who 'timerfd-gettime)
+    (with-arguments-validation (who)
+	((file-descriptor	fd)
+	 (itimerspec		curr))
+      (let ((rv (capi.linux-timerfd-gettime fd curr)))
+	(if (unsafe.fxzero? rv)
+	    curr
+	  (%raise-errno-error who rv fd curr)))))))
+
+
 ;;;; done
 
 (set-rtd-printer! (type-descriptor struct-signalfd-siginfo)	%struct-signalfd-siginfo-printer)
+(set-rtd-printer! (type-descriptor struct-itimerspec)		%struct-itimerspec-printer)
 
 )
 

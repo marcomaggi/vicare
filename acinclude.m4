@@ -42,6 +42,9 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_SYS_SIGNALFD_H
 #  include <sys/signalfd.h>
 #endif
+#ifdef HAVE_SYS_TIMERFD_H
+#  include <sys/timerfd.h>
+#endif
 #ifdef HAVE_SYS_WAIT_H
 #  include <sys/wait.h>
 #endif

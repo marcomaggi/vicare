@@ -144,7 +144,9 @@ AC_CHECK_HEADERS([assert.h dlfcn.h errno.h fcntl.h signal.h     \
                   unistd.h])
 
 AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h ftw.h grp.h inttypes.h limits.h mntent.h net/if.h netinet/in.h netdb.h paths.h pwd.h signal.h termios.h sys/mman.h sys/mount.h poll.h sys/select.h sys/socket.h sys/times.h sys/timex.h sys/types.h sys/un.h sys/utsname.h sys/uio.h utime.h sys/ioctl.h math.h complex.h fnmatch.h glob.h regex.h wordexp.h])
-AC_CHECK_HEADERS([sys/epoll.h sys/signalfd.h])
+
+AM_COND_IF([WANT_LINUX],
+  [AC_CHECK_HEADERS([sys/epoll.h sys/signalfd.h sys/timerfd.h])])
 
 AC_HEADER_TIME
 
@@ -726,7 +728,12 @@ VICARE_CONSTANT_TESTS([WRDE_NOCMD WRDE_SHOWERR WRDE_UNDEF])
 VICARE_CONSTANT_TESTS([WRDE_BADCHAR WRDE_BADVAL WRDE_CMDSUB WRDE_NOSPACE WRDE_SYNTAX])
 
 # signalfd
-VICARE_CONSTANT_TESTS([SFD_CLOEXEC SFD_NONBLOCK])
+AM_COND_IF([WANT_LINUX],
+  [VICARE_CONSTANT_TESTS([SFD_CLOEXEC SFD_NONBLOCK])])
+
+# timerfd
+AM_COND_IF([WANT_LINUX],
+  [VICARE_CONSTANT_TESTS([CLOCK_REALTIME CLOCK_MONOTONIC TFD_CLOEXEC TFD_NONBLOCK TFD_TIMER_ABSTIME])])
 
 AC_CACHE_SAVE
 
@@ -782,6 +789,7 @@ int main (void)
   AC_CHECK_TYPES([struct epoll_event],,,[VICARE_INCLUDES])
   AC_CHECK_FUNCS([epoll_create epoll_create1 epoll_ctl epoll_wait])
   AC_CHECK_FUNCS([signalfd])
+  AC_CHECK_FUNCS([timerfd_create timerfd_settime timerfd_gettime])
 ])
 
 dnl --------------------------------------------------------------------

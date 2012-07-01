@@ -388,6 +388,11 @@
 ;;;; signalfd
     SFD_CLOEXEC		SFD_NONBLOCK
 
+;;;; timerfd
+    CLOCK_REALTIME	CLOCK_MONOTONIC
+    TFD_CLOEXEC		TFD_NONBLOCK
+    TFD_TIMER_ABSTIME
+
 ;;; errno codes, reexported from (vicare errno)
     E2BIG		EACCES		EADDRINUSE
     EADDRNOTAVAIL	EADV		EAFNOSUPPORT
@@ -1276,6 +1281,14 @@
 
 (define-inline-constant SFD_CLOEXEC		@VALUEOF_SFD_CLOEXEC@)
 (define-inline-constant SFD_NONBLOCK		@VALUEOF_SFD_NONBLOCK@)
+
+;;; timerfd
+
+(define-inline-constant CLOCK_REALTIME		@VALUEOF_CLOCK_REALTIME@)
+(define-inline-constant CLOCK_MONOTONIC		@VALUEOF_CLOCK_MONOTONIC@)
+(define-inline-constant TFD_CLOEXEC		@VALUEOF_TFD_CLOEXEC@)
+(define-inline-constant TFD_NONBLOCK		@VALUEOF_TFD_NONBLOCK@)
+(define-inline-constant TFD_TIMER_ABSTIME	@VALUEOF_TFD_TIMER_ABSTIME@)
 
 
 ;;;; h_errno friendly interface

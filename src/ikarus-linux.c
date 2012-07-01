@@ -59,6 +59,9 @@
 #ifdef HAVE_SYS_SIGNALFD_H
 #  include <sys/signalfd.h>
 #endif
+#ifdef HAVE_SYS_TIMERFD_H
+#  include <sys/timerfd.h>
+#endif
 #ifdef HAVE_SYS_STAT_H
 #  include <sys/stat.h>
 #endif
@@ -397,5 +400,95 @@ ikrt_linux_read_signalfd_siginfo (ikptr s_fd, ikptr s_info, ikpcb * pcb)
 #endif
 }
 
+
+/** --------------------------------------------------------------------
+ ** Timer file descriptors.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_linux_timerfd_create (ikptr s_clockid, ikptr s_flags)
+/* Interface to the  C function "timerfd_create()".  Create  a new timer
+   object and a file descriptor that refers to that timer; if successful
+   return  a fixnum  representing the  file descriptor,  else return  an
+   encoded errno value.
+
+   S_CLOCKID  must   be  one  among:   CLOCK_REALTIME,  CLOCK_MONOTONIC.
+   S_FLAGS  can be  zero or  a bitwise  OR combination  of: TFD_CLOEXEC,
+   TFD_NONBLOCK. */
+{
+#ifdef HAVE_TIMERFD_CREATE
+  int		rv;
+  errno = 0;
+  rv    = timerfd_create(IK_UNFIX(s_clockid), IK_UNFIX(s_flags));
+  return (-1 != rv)? IK_FD_TO_NUM(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_linux_timerfd_settime (ikptr s_fd, ikptr s_flags, ikptr s_new, ikptr s_old, ikpcb * pcb)
+{
+#ifdef HAVE_TIMERFD_SETTIME
+  ikptr			s_it_interval = IK_FIELD(s_new, 0);
+  ikptr			s_it_value    = IK_FIELD(s_new, 1);
+  struct itimerspec	new;
+  struct itimerspec	old = { { 0, 0 }, { 0, 0 } };
+  int			rv;
+  new.it_interval.tv_sec  = (time_t)ik_integer_to_long(IK_FIELD(s_it_interval, 0));
+  new.it_interval.tv_nsec = ik_integer_to_long(IK_FIELD(s_it_interval, 1));
+  new.it_value.tv_sec     = ik_integer_to_long(IK_FIELD(s_it_value,    0));
+  new.it_value.tv_nsec    = ik_integer_to_long(IK_FIELD(s_it_value,    1));
+  errno = 0;
+  rv    = timerfd_settime(IK_NUM_TO_FD(s_fd), IK_UNFIX(s_flags), &new, &old);
+  if (0 == rv) {
+    if (false_object != s_old) {
+      pcb->root0 = &s_old;
+      {
+	IK_ASS(IK_FIELD(IK_FIELD(s_old, 0), 0),
+	       ika_integer_from_long(pcb, (long)old.it_interval.tv_sec));
+	IK_ASS(IK_FIELD(IK_FIELD(s_old, 0), 1),
+	       ika_integer_from_long(pcb, old.it_interval.tv_nsec));
+	IK_ASS(IK_FIELD(IK_FIELD(s_old, 1), 0),
+	       ika_integer_from_long(pcb, old.it_value.tv_sec));
+	IK_ASS(IK_FIELD(IK_FIELD(s_old, 1), 1),
+	       ika_integer_from_long(pcb, old.it_value.tv_nsec));
+      }
+      pcb->root0 = NULL;
+    }
+    return IK_FD_TO_NUM(rv);
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_linux_timerfd_gettime (ikptr s_fd, ikptr s_curr, ikpcb * pcb)
+{
+#ifdef HAVE_TIMERFD_GETTIME
+  struct itimerspec	curr;
+  int			rv;
+  errno = 0;
+  rv    = timerfd_gettime(IK_NUM_TO_FD(s_fd), &curr);
+  if (0 == rv) {
+    pcb->root0 = &s_curr;
+    {
+      IK_ASS(IK_FIELD(IK_FIELD(s_curr, 0), 0),
+	     ika_integer_from_long(pcb, (long)curr.it_interval.tv_sec));
+      IK_ASS(IK_FIELD(IK_FIELD(s_curr, 0), 1),
+	     ika_integer_from_long(pcb, curr.it_interval.tv_nsec));
+      IK_ASS(IK_FIELD(IK_FIELD(s_curr, 1), 0),
+	     ika_integer_from_long(pcb, curr.it_value.tv_sec));
+      IK_ASS(IK_FIELD(IK_FIELD(s_curr, 1), 1),
+	     ika_integer_from_long(pcb, curr.it_value.tv_nsec));
+    }
+    pcb->root0 = NULL;
+    return IK_FIX(0);
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
 
 /* end of file */

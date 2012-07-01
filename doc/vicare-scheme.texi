@@ -11474,6 +11474,8 @@ behaviour is undefined.
 * linux epoll::                 Polling for events on file descriptors.
 * linux signalfd::              Accepting signals through
                                 file descriptors.
+* linux timerfd::               Timer expiration handling through
+                                file descriptors.
 @end menu
 
 @c page
@@ -11837,6 +11839,103 @@ now we raise two signals:
     done))
 @result{} #f
 @end example
+
+@c page
+@node linux timerfd
+@section Timer expiration handling through file descriptors
+
+
+The @code{timerfd} @api{} allows timer events notification through
+events associated to an appropriately created file descriptor; this way
+we can code event loops using @func{select} or @func{epoll-wait}.  For
+details on the @api{} we should refer to the following manual pages:
+@code{timerfd_create(2)}, @code{timerfd_settime(2)},
+@code{timerfd_gettime(2)}.
+
+The following bindings are exported by @library{vicare posix} and
+reexported by @library{vicare linux}:
+
+@example
+make-struct-timespec    struct-timespec?
+struct-timespec-tv_sec  struct-timespec-tv_nsec
+@end example
+
+The following bindings are exported by the @library{vicare linux}
+library.
+
+
+@deftp {Structure Type} struct-itimerspec
+Scheme level representation of @code{struct itimerspec}, see the manual
+page @code{timerfd_create(2)}.  It has the following fields:
+
+@table @code
+@item it_interval
+An instance of @code{struct-timespec} representing the period between
+successive timer interrupts, in seconds and nanoseconds.  @ref{posix
+time timespec} for details on @code{struct-timespec}.
+
+@item it_value
+An instance of @code{struct-timespec} representing the time interval
+between now and the first timer interrupt, in seconds and nanoseconds.
+@ref{posix time timespec} for details on @code{struct-timespec}.
+@end table
+@end deftp
+
+
+@defun make-struct-itimerspec @var{interval} @var{value}
+Build and return a new instance of @code{struct-itimerspec}.
+@end defun
+
+
+@defun struct-itimerspec? @var{obj}
+Return true if @var{obj} is an instance of @code{struct-itimerspec}.
+@end defun
+
+
+@defun struct-itimerspec-it_interval @var{itimerspec}
+@defunx struct-itimerspec-it_value @var{itimerspec}
+Accessors for the fields of @code{struct-itimerspec}.
+@end defun
+
+
+@defun timerfd-create @var{clockid} @var{flags}
+Interface to the C function @cfunc{timerfd_create}.  Create a new timer
+object and a file descriptor that refers to that timer; if successful
+return a fixnum representing the file descriptor, else raise an
+exception.
+
+@var{clockid} must be one among: @code{CLOCK_REALTIME},
+@code{CLOCK_MONOTONIC}.  @var{flags} can be zero or a bitwise OR
+combination of: @code{TFD_CLOEXEC}, @code{TFD_NONBLOCK}.
+@end defun
+
+
+@defun timerfd-settime @var{fd} @var{flags} @var{new}
+@defunx timerfd-settime @var{fd} @var{flags} @var{new} @var{old}
+Interface to the C function @cfunc{timerfd_settime}.  Start or stop the
+timer referred to by the file descriptor @var{fd}.  If successful return
+@var{old} or @false{} when @var{old} is not given; if an error occurs
+raise an exception.
+
+@var{flags} can be either the fixnum zero or @code{TFD_TIMER_ABSTIME}.
+@var{new} must be a valid instance of @code{struct-itimerspec}, which is
+used to set the timer.  The optional @var{old} can be @false{} or a
+valid instance of @code{struct-itimerspec}; when given: it is filled
+with the old timer specification.
+@end defun
+
+
+@defun timerfd-gettime @var{fd}
+@defunx timerfd-gettime @var{fd} @var{curr}
+Interface to the C function @cfunc{timerfd_gettime}.  Retrieve the
+current timer specification associated to @var{fd}.  If successful
+return @var{curr} or a newly built instance of @code{struct-itimerspec};
+if an error occurs: raise an exception.
+
+The optional @var{old} must be a valid instance of
+@code{struct-itimerspec}; when given: it is filled with the current
+timer specification.
+@end defun
 
 @c page
 @node syslib
