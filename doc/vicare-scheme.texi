@@ -11905,8 +11905,8 @@ return a fixnum representing the file descriptor, else raise an
 exception.
 
 @var{clockid} must be one among: @code{CLOCK_REALTIME},
-@code{CLOCK_MONOTONIC}.  @var{flags} can be zero or a bitwise OR
-combination of: @code{TFD_CLOEXEC}, @code{TFD_NONBLOCK}.
+@code{CLOCK_MONOTONIC}.  @var{flags} can be either the fixnum zero or a
+bitwise OR combination of: @code{TFD_CLOEXEC}, @code{TFD_NONBLOCK}.
 @end defun
 
 
@@ -11928,13 +11928,14 @@ with the old timer specification.
 @defun timerfd-gettime @var{fd}
 @defunx timerfd-gettime @var{fd} @var{curr}
 Interface to the C function @cfunc{timerfd_gettime}.  Retrieve the
-current timer specification associated to @var{fd}.  If successful
-return @var{curr} or a newly built instance of @code{struct-itimerspec};
-if an error occurs: raise an exception.
+current timer specification associated to the file descriptor @var{fd}.
+If successful return @var{curr} or a newly built instance of
+@code{struct-itimerspec}; if an error occurs: raise an exception.
 
-The optional @var{old} must be a valid instance of
-@code{struct-itimerspec}; when given: it is filled with the current
-timer specification.
+The optional @var{curr} must be a valid instance of
+@code{struct-itimerspec}, when not given a new instance of this
+structure type is internally built: it is filled with the current timer
+specification.
 @end defun
 
 @c page

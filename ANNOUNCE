@@ -42,7 +42,7 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d12
 -------------------------
 
-*
+* Added the timerfd API to (vicare linux).
 
 Notes for revision 0.2d11
 -------------------------

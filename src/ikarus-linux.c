@@ -413,8 +413,8 @@ ikrt_linux_timerfd_create (ikptr s_clockid, ikptr s_flags)
    encoded errno value.
 
    S_CLOCKID  must   be  one  among:   CLOCK_REALTIME,  CLOCK_MONOTONIC.
-   S_FLAGS  can be  zero or  a bitwise  OR combination  of: TFD_CLOEXEC,
-   TFD_NONBLOCK. */
+   S_FLAGS  can be  the  fixnum zero  or a  bitwise  OR combination  of:
+   TFD_CLOEXEC, TFD_NONBLOCK. */
 {
 #ifdef HAVE_TIMERFD_CREATE
   int		rv;
@@ -427,6 +427,15 @@ ikrt_linux_timerfd_create (ikptr s_clockid, ikptr s_flags)
 }
 ikptr
 ikrt_linux_timerfd_settime (ikptr s_fd, ikptr s_flags, ikptr s_new, ikptr s_old, ikpcb * pcb)
+/* Interface to the  C function "timerfd_settime()".  Start  or stop the
+   timer referred to by the  file descriptor S_FD.  If successful return
+   the fixnum zero; if an error occurs return an encoded "errno" value.
+
+   S_FLAGS can  be either the  fixnum zero or  TFD_TIMER_ABSTIME.  S_NEW
+   must be a valid instance of  STRUCT-ITIMERSPEC, and it is used to set
+   the timer specification.   S_OLD can be false or a  valid instance of
+   STRUCT-ITIMERSPEC;  when  given: it  is  filled  with the  old  timer
+   specification. */
 {
 #ifdef HAVE_TIMERFD_SETTIME
   ikptr			s_it_interval = IK_FIELD(s_new, 0);
@@ -455,7 +464,7 @@ ikrt_linux_timerfd_settime (ikptr s_fd, ikptr s_flags, ikptr s_new, ikptr s_old,
       }
       pcb->root0 = NULL;
     }
-    return IK_FD_TO_NUM(rv);
+    return IK_FIX(0);
   } else
     return ik_errno_to_code();
 #else
@@ -464,6 +473,13 @@ ikrt_linux_timerfd_settime (ikptr s_fd, ikptr s_flags, ikptr s_new, ikptr s_old,
 }
 ikptr
 ikrt_linux_timerfd_gettime (ikptr s_fd, ikptr s_curr, ikpcb * pcb)
+/* Interface  to  the  C  function  "timerfd_gettime()".   Retrieve  the
+   current timer  specification associated to the  file descriptor S_FD.
+   If successful  return S_CURR; if  an error occurs: return  an encoded
+   "errno" value.
+
+   S_CURR must  be a valid  instance of STRUCT-ITIMERSPEC: it  is filled
+   with the current timer specification. */
 {
 #ifdef HAVE_TIMERFD_GETTIME
   struct itimerspec	curr;
