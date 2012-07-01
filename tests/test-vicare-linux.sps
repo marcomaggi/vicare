@@ -166,7 +166,7 @@
 					   (bitwise-ior TFD_CLOEXEC TFD_NONBLOCK)))
 	     (new	(lx.make-struct-itimerspec
 			 (lx.make-struct-timespec 1 2)
-			 (lx.make-struct-timespec 3 4)))
+			 (lx.make-struct-timespec 0 0)))
 	     (old	(lx.make-struct-itimerspec
 			 (lx.make-struct-timespec 0 0)
 			 (lx.make-struct-timespec 0 0)))
@@ -176,20 +176,20 @@
 	(and (eq? old result)
 	     (list (log new) (log old))))
     ;;Notice that the old configuration is empty!!!
-    => '((1 2 3 4) (0 0 0 0)))
+    => '((1 2 0 0) (0 0 0 0)))
 
   (check	;settime twice with OLD argument
       (let* ((fd	(lx.timerfd-create CLOCK_REALTIME
 					   (bitwise-ior TFD_CLOEXEC TFD_NONBLOCK)))
 	     (new	(lx.make-struct-itimerspec
 	     		 (lx.make-struct-timespec 1 2)
-	     		 (lx.make-struct-timespec 3 4)))
+	     		 (lx.make-struct-timespec 0 0)))
 	     (older	(lx.make-struct-itimerspec
 	     		 (lx.make-struct-timespec 0 0)
 	     		 (lx.make-struct-timespec 0 0)))
 	     (newer	(lx.make-struct-itimerspec
 	     		 (lx.make-struct-timespec 5 6)
-	     		 (lx.make-struct-timespec 7 8)))
+	     		 (lx.make-struct-timespec 0 0)))
 	     (old	(lx.make-struct-itimerspec
 	     		 (lx.make-struct-timespec 0 0)
 	     		 (lx.make-struct-timespec 0 0)))
@@ -201,8 +201,8 @@
 	     (eq? old   result2)
 	     (list (log new) (log older)
 		   (log newer) (log old))))
-    => '((1 2 3 4) (0 0 0 0)
-	 (5 6 7 8) (1 2 0 0)))
+    => '((1 2 0 0) (0 0 0 0)
+	 (5 6 0 0) (1 2 0 0)))
 
   (check	;settime without OLD argument
       (let ((fd  (lx.timerfd-create CLOCK_REALTIME (bitwise-ior TFD_CLOEXEC TFD_NONBLOCK)))
@@ -221,7 +221,7 @@
       (let ((fd   (lx.timerfd-create CLOCK_REALTIME (bitwise-ior TFD_CLOEXEC TFD_NONBLOCK)))
 	    (new  (lx.make-struct-itimerspec
 		   (lx.make-struct-timespec 1 2)
-		   (lx.make-struct-timespec 3 4)))
+		   (lx.make-struct-timespec 0 0)))
 	    (curr (lx.make-struct-itimerspec
 		   (lx.make-struct-timespec 0 0)
 		   (lx.make-struct-timespec 0 0))))
@@ -231,7 +231,20 @@
 	      (lx.timerfd-gettime fd curr))
 	  (px.close fd))
 	(log curr))
-    => '(1 2 3 4))
+    => '(1 2 0 0))
+
+  (check	;settime then gettime without CURR argument
+      (let* ((fd   (lx.timerfd-create CLOCK_REALTIME (bitwise-ior TFD_CLOEXEC TFD_NONBLOCK)))
+	     (new  (lx.make-struct-itimerspec
+		    (lx.make-struct-timespec 1 2)
+		    (lx.make-struct-timespec 0 0)))
+	     (curr (unwind-protect
+		       (begin
+			 (lx.timerfd-settime fd 0 new)
+			 (lx.timerfd-gettime fd))
+		     (px.close fd))))
+	(log curr))
+    => '(1 2 0 0))
 
   #t)
 
