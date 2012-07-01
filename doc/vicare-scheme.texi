@@ -116,13 +116,18 @@
 @copying
 @noindent
 This document describes version @value{VERSION} of @value{PACKAGE}, an
-@rnrs{6} compliant native compiler for the Scheme language producing
+@rnrs{6} compliant native compiler for the Scheme language, producing
 single threaded programs running on Intel x86 32-bit processors, with
 experimental support for 64-bit machines.  @emph{Vicare} is pronounced
 the etruscan way.
 
-The Vicarus Scheme package is distributed under the terms of the @gnu{}
-General Public License (@gpl{}) and can be downloaded from:
+The package is distributed under the terms of the @gnu{} General Public
+License (@gpl{}) and can be downloaded from:
+
+@center @url{http://code.google.com/p/vicare-scheme/}
+
+@noindent
+or:
 
 @center @url{http://github.com/marcomaggi/vicare/downloads}
 
@@ -135,6 +140,16 @@ the home page of the project is at:
 development takes place at:
 
 @center @url{http://github.com/marcomaggi/vicare/}
+
+@noindent
+and, as a backup, at:
+
+@center @url{http://gitorious.org/vicare}
+
+@noindent
+this project has a mailing list:
+
+@center @url{http://groups.google.com/group/vicare-users}
 
 @noindent
 Copyright @copyright{} @value{COPYRIGHT_YEARS} by Marco Maggi.@*
@@ -22107,7 +22122,3 @@ pages 179-188.  ACM, New York, NY, USA, 2008.  ISBN
 @bye
 
 @c end of file
-@c Local Variables:
-@c mode: texinfo
-@c TeX-master: t
-@c End:
