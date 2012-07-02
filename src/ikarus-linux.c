@@ -506,5 +506,24 @@ ikrt_linux_timerfd_gettime (ikptr s_fd, ikptr s_curr, ikpcb * pcb)
   feature_failure(__func__);
 #endif
 }
+ikptr
+ikrt_linux_timerfd_read (ikptr s_fd, ikpcb * pcb)
+/* Perform a "read()" operation on S_FD, which must be a file descriptor
+   associated to  a timer.  If  the operation is successful:  return the
+   number of timer  expirations occurred since the timer was  set or the
+   last successful  "read()"; if  the operation fails  with EWOULDBLOCK:
+   the return value is zero; else return an encoded "errno" value. */
+{
+  uint64_t	times = 0;
+  int		rv;
+  errno = 0;
+  rv = read(IK_NUM_TO_FD(s_fd), &times, sizeof(times));
+  if (-1 != rv) {
+    return ika_integer_from_uint64(pcb, times);
+  } else if (EWOULDBLOCK == errno) {
+    return IK_FIX(0);
+  } else
+    return ik_errno_to_code();
+}
 
 /* end of file */

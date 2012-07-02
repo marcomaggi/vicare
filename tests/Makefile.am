@@ -358,7 +358,7 @@ EXTRA_DIST =	\
 	foreign-test-vicare-cre2.sps			\
 	\
 	proof-vicare-gcc.sps				\
-	proof-vicare-readline.sps
-
+	proof-vicare-readline.sps			\
+	proof-vicare-timerfd.sps
 
 ### end of file

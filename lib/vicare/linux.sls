@@ -59,7 +59,7 @@
     struct-signalfd-siginfo-ssi_stime	struct-signalfd-siginfo-ssi_addr
 
     ;; timer event through file descriptors
-    timerfd-create
+    timerfd-create			timerfd-read
     timerfd-settime			timerfd-gettime
     make-struct-itimerspec		struct-itimerspec?
     struct-itimerspec-it_interval	struct-itimerspec-it_value
@@ -436,15 +436,19 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (timerfd-create clockid flags)
-  (define who 'timerfd-create)
-  (with-arguments-validation (who)
-      ((clockid		clockid)
-       (fixnum		flags))
-    (let ((rv (capi.linux-timerfd-create clockid flags)))
-      (if (unsafe.fx<= 0 rv)
-	  rv
-	(%raise-errno-error who rv clockid flags)))))
+(define timerfd-create
+  (case-lambda
+   ((clockid)
+    (timerfd-create clockid 0))
+   ((clockid flags)
+    (define who 'timerfd-create)
+    (with-arguments-validation (who)
+	((clockid		clockid)
+	 (fixnum		flags))
+      (let ((rv (capi.linux-timerfd-create clockid flags)))
+	(if (unsafe.fx<= 0 rv)
+	    rv
+	  (%raise-errno-error who rv clockid flags)))))))
 
 (define timerfd-settime
   (case-lambda
@@ -476,6 +480,15 @@
 	(if (unsafe.fxzero? rv)
 	    curr
 	  (%raise-errno-error who rv fd curr)))))))
+
+(define (timerfd-read fd)
+  (define who 'timerfd-read)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd))
+    (let ((rv (capi.linux-timerfd-read fd)))
+      (if (<= 0 rv)
+	  rv
+	(%raise-errno-error who rv fd)))))
 
 
 ;;;; done

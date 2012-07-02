@@ -117,7 +117,7 @@
     posix-signal-bub-init		posix-signal-bub-final
     posix-signal-bub-acquire		posix-signal-bub-delivered?
     linux-signalfd			linux-read-signalfd-siginfo
-    linux-timerfd-create
+    linux-timerfd-create		linux-timerfd-read
     linux-timerfd-settime		linux-timerfd-gettime
 
     ;; file system inspection
@@ -699,6 +699,9 @@
 
 (define-inline (linux-timerfd-gettime fd curr)
   (foreign-call "ikrt_linux_timerfd_gettime" fd curr))
+
+(define-inline (linux-timerfd-read fd)
+  (foreign-call "ikrt_linux_timerfd_read" fd))
 
 
 ;;;; file system inspection

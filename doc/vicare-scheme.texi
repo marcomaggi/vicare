@@ -10251,7 +10251,7 @@ Return @true{} if @var{obj} is an instance of @code{struct-timespec}.
 
 
 @defun struct-timespec-tv_sec @var{timespec}
-@defunx struct-timespec-tv_usec @var{timespec}
+@defunx struct-timespec-tv_nsec @var{timespec}
 Accessors for the fields of @code{struct-timespec}.
 @end defun
 
@@ -11689,9 +11689,12 @@ Here is a meaningless example showing the mechanics of the epoll @api{}:
 @section Accepting signals through file descriptors
 
 
-For details on the @cfunc{signalfd} @api{} see the @code{signalfd(2)}
-manual page.  The following bindings are exported by the @library{vicare
-linux} library.
+The @code{signalfd} @api{} transforms interprocess signals into file
+descriptor events, this way we can code event loops using @func{select}
+or @func{epoll} and a uniform interface for signal and input/output
+events.  For the full documentation see the @code{signalfd(2)} manual
+page.  The following bindings are exported by the @library{vicare linux}
+library.
 
 
 @defun signalfd @var{fd} @var{mask} @var{flags}
@@ -11845,12 +11848,52 @@ now we raise two signals:
 @section Timer expiration handling through file descriptors
 
 
-The @code{timerfd} @api{} allows timer events notification through
-events associated to an appropriately created file descriptor; this way
-we can code event loops using @func{select} or @func{epoll-wait}.  For
-details on the @api{} we should refer to the following manual pages:
+The @code{timerfd} @api{} transforms timer expiration events into file
+descriptor events, this way we can code event loops using @func{select}
+or @func{epoll} and a uniform interface for timer and input/output
+events.  For the full documentation see the following manual pages:
 @code{timerfd_create(2)}, @code{timerfd_settime(2)},
 @code{timerfd_gettime(2)}.
+
+@menu
+* linux timerfd intro::         Introduction to the @code{timerfd} @api{}.
+* linux timerfd itimerspec::    Data structure @code{struct-itimerspec}.
+* linux timerfd api::           The @code{timerfd} @api{}.
+* linux timerfd examples::      Usage examples of the @code{timerfd} @api{}.
+@end menu
+
+@c page
+@node linux timerfd intro
+@subsection Introduction to the @code{timerfd} @api{}
+
+
+The @code{timerfd} @api{} allows the definition of time--periodic events
+by specification of two time intervals:
+
+@enumerate
+@item
+Initial expiration: how much time before the first event.
+
+@item
+Period: how much time between two time--adjacent events.
+@end enumerate
+
+@example
+    time before the
+    first event       period      period      period
+   |               |           |           |           |
+---+---------------+-----------+-----------+-----------+----
+   ^               ^           ^           ^           ^
+  now          1st event   2nd event   3rd event   4th event
+@end example
+
+Each timer can be started, stopped, reconfigured and queried for how
+much time until the next event.
+
+@c page
+@node linux timerfd itimerspec
+@subsection Data structure @code{struct-itimerspec}
+
 
 The following bindings are exported by @library{vicare posix} and
 reexported by @library{vicare linux}:
@@ -11897,8 +11940,17 @@ Return true if @var{obj} is an instance of @code{struct-itimerspec}.
 Accessors for the fields of @code{struct-itimerspec}.
 @end defun
 
+@c page
+@node linux timerfd api
+@subsection The @code{timerfd} @api{}
 
-@defun timerfd-create @var{clockid} @var{flags}
+
+The following bindings are exported by the @library{vicare linux}
+library.
+
+
+@defun timerfd-create @var{clockid}
+@defunx timerfd-create @var{clockid} @var{flags}
 Interface to the C function @cfunc{timerfd_create}.  Create a new timer
 object and a file descriptor that refers to that timer; if successful
 return a fixnum representing the file descriptor, else raise an
@@ -11906,7 +11958,8 @@ exception.
 
 @var{clockid} must be one among: @code{CLOCK_REALTIME},
 @code{CLOCK_MONOTONIC}.  @var{flags} can be either the fixnum zero or a
-bitwise OR combination of: @code{TFD_CLOEXEC}, @code{TFD_NONBLOCK}.
+bitwise OR combination of: @code{TFD_CLOEXEC}, @code{TFD_NONBLOCK}; when
+not given: it defaults to the fixnum zero.
 @end defun
 
 
@@ -11937,6 +11990,78 @@ The optional @var{curr} must be a valid instance of
 structure type is internally built: it is filled with the current timer
 specification.
 @end defun
+
+@defun timerfd-read @var{fd}
+Perform a @cfunc{read} operation on @var{fd}, which must be a file
+descriptor associated to a timer.  The function behaves as follows:
+
+@itemize
+@item
+If the operation is successful: return the number of timer expirations
+occurred since the timer was set or the last successful @cfunc{read}.
+
+@item
+if the operation fails with code @code{EWOULDBLOCK}: the return value is
+zero.
+
+@item
+Else an exception is raised.
+@end itemize
+@end defun
+
+@c page
+@node linux timerfd examples
+@subsection Usage examples of the @code{timerfd} @api{}
+
+
+The following program watches a timer as time goes by:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare platform-constants)
+  (only (vicare syntactic-extensions)
+        unwind-protect)
+  (prefix (vicare posix) px.)
+  (prefix (vicare linux) lx.))
+
+(set-port-buffer-mode! (current-output-port)
+                       (buffer-mode none))
+
+(define (%print-remaining-time fd)
+  (pretty-print (lx.struct-itimerspec-it_value
+                 (lx.timerfd-gettime fd))))
+
+(define (%sleep-one-second)
+  (px.nanosleep 1 0))
+
+(let ((fd (lx.timerfd-create CLOCK_REALTIME)))
+  (unwind-protect
+      (let ( ;; one event every 3 seconds
+            (period (lx.make-struct-timespec 3 0))
+            ;; the first event after 1 nanosecond
+            (offset (lx.make-struct-timespec 0 1)))
+        (lx.timerfd-settime fd 0
+           (lx.make-struct-itimerspec period offset))
+        (do ((i 0 (fx+ 1 i)))
+            ((fx= i 6))
+          (%print-remaining-time fd)
+          (%sleep-one-second))
+        #f)
+    (px.close fd)))
+@end example
+
+@noindent
+the output is:
+
+@example
+#["struct-timespec" tv_sec=2 tv_nsec=999911022]
+#["struct-timespec" tv_sec=1 tv_nsec=999307638]
+#["struct-timespec" tv_sec=0 tv_nsec=998303788]
+#["struct-timespec" tv_sec=2 tv_nsec=997338092]
+#["struct-timespec" tv_sec=1 tv_nsec=996393490]
+#["struct-timespec" tv_sec=0 tv_nsec=995418649]
+@end example
 
 @c page
 @node syslib

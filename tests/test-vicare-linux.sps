@@ -224,7 +224,7 @@
 		   (lx.make-struct-timespec 0 0)))
 	    (curr (lx.make-struct-itimerspec
 		   (lx.make-struct-timespec 0 0)
-		   (lx.make-struct-timespec 0 0))))
+ 		   (lx.make-struct-timespec 0 0))))
 	(unwind-protect
 	    (begin
 	      (lx.timerfd-settime fd 0 new)
@@ -245,6 +245,10 @@
 		     (px.close fd))))
 	(log curr))
     => '(1 2 0 0))
+
+;;; --------------------------------------------------------------------
+
+
 
   #t)
 
