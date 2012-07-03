@@ -7199,7 +7199,8 @@ The @posix{} functions are exported by the library @library{vicare
 posix}.  The @api{} attempts to create a one--to--one Scheme functions
 mapping towards @posix{} functions, keeping the same semantics as much
 as possible; the platform's own documentation is relevant at the Scheme
-level.
+level.  @ref{posix not} for a list of @posix{} functions not interfaced
+in this library, and reasons for not doing it.
 
 To avoid name collisions with bindings exported by @library{ikarus} and
 @library{vicare}, when importing @library{vicare posix} it is mandatory
@@ -7236,6 +7237,7 @@ set to @false{}.
 * posix time::                  Time related functions.
 * posix config::                System configuration.
 * posix misc::                  Miscellaneous functions.
+* posix not::                   @posix{} functions not interfaced.
 @end menu
 
 @c page
@@ -10637,6 +10639,38 @@ of the system function @cfunc{strerror}.  If @var{errno} is not a valid
 Return true if @var{obj} is a non--negative fixnum less than the value
 of @code{FD_SETSIZE}.
 @end defun
+
+@c page
+@node posix not
+@section @posix{} functions not interfaced
+
+
+Not all the functions defined by @posix{} are exposed by @library{vicare
+posix}; this section lists some of them along with reasons for not
+interface them.  This is not the last word: if good reasons arise to
+interface some of the functions, they will.
+
+@table @cfunc
+@item popen
+@itemx pclose
+@findex popen
+@findex pclose
+There seems to be no real advantage (in a Scheme @api{}) to use these
+rather than explicitly call @func{pipe}, @func{fork} and @func{exec}.
+@ref{posix fd, pipe} for details.
+
+@item timer_create
+@itemx timer_settime
+@itemx timer_gettime
+@itemx timer_getoverrun
+@findex timer_create
+@findex timer_settime
+@findex timer_gettime
+@findex timer_getoverrun
+These functions require the additional platform shared library @code{rt}
+to be linked in (at least on @gnu{}+Linux).  This @api{} is fine, but on
+Linux the @code{timerfd} @api{} is better.
+@end table
 
 @c page
 @node glibc
