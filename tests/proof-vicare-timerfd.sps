@@ -52,7 +52,8 @@
 	    (period (lx.make-struct-timespec 3 0))
 	    ;; the first event after 1 nanosecond
 	    (offset (lx.make-struct-timespec 0 1)))
-	(lx.timerfd-settime fd 0 (lx.make-struct-itimerspec period offset))
+	(lx.timerfd-settime fd 0
+	  (lx.make-struct-itimerspec period offset))
 	(do ((i 0 (fx+ 1 i)))
 	    ((fx= i 6))
 	  (printf "fd readable: ~a\n" (px.select-fd-readable? fd 0 0))
@@ -63,6 +64,34 @@
     (px.close fd)))
 
 
+;;;; count expirations
+
+(begin
+  (define fd
+    (lx.timerfd-create CLOCK_REALTIME TFD_NONBLOCK))
+  (unwind-protect
+      (begin
+	;; 0.3 seconds = 300 ms = 300,000 us = 300,000,000 ns
+	(define nsecs  300000000)
+;;;                   9876543210
+	(lx.timerfd-settime fd 0
+	  (lx.make-struct-itimerspec
+	   ;; one event every 0.3 seconds
+	   (lx.make-struct-timespec 0 nsecs)
+	   ;; the first event after 1 nanosecond
+	   (lx.make-struct-timespec 0 1)))
+	(printf "right after starting timer: ~a\n" (lx.timerfd-read fd))
+	(px.nanosleep 1 0)
+	(printf "after 1 second: ~a\n" (lx.timerfd-read fd))
+	(px.nanosleep 0 nsecs)
+	(printf "after 0.3 seconds: ~a\n" (lx.timerfd-read fd))
+	#f)
+    (px.close fd)))
+
+
 ;;;; done
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'lx.timerfd-settime 'scheme-indent-function 2)
+;; End:

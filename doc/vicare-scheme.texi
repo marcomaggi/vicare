@@ -12063,6 +12063,57 @@ the output is:
 #["struct-timespec" tv_sec=0 tv_nsec=995418649]
 @end example
 
+The following example prints the number of timer expirations:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare platform-constants)
+  (only (vicare syntactic-extensions)
+        unwind-protect)
+  (prefix (vicare posix) px.)
+  (prefix (vicare linux) lx.))
+
+(set-port-buffer-mode! (current-output-port)
+                       (buffer-mode none))
+(define fd
+  (lx.timerfd-create CLOCK_REALTIME TFD_NONBLOCK))
+(unwind-protect
+    (begin
+      ;; 0.3 seconds = 300 ms = 300,000 us = 300,000,000 ns
+      (define nsecs  300000000)
+;;;                 9876543210
+      (lx.timerfd-settime fd 0
+        (lx.make-struct-itimerspec
+         ;; one event every 0.3 seconds
+         (lx.make-struct-timespec 0 nsecs)
+         ;; the first event after 1 nanosecond
+         (lx.make-struct-timespec 0 1)))
+      (printf "right after starting timer: ~a\n"
+        (lx.timerfd-read fd))
+      (px.nanosleep 1 0)
+      (printf "after 1 second: ~a\n"
+        (lx.timerfd-read fd))
+      (px.nanosleep 0 nsecs)
+      (printf "after 0.3 seconds: ~a\n"
+        (lx.timerfd-read fd)))
+  (px.close fd))
+@end example
+
+@noindent
+the output is:
+
+@example
+right after starting timer: 1
+after 1 second: 3
+after 0.3 seconds: 1
+@end example
+
+@noindent
+we notice that right after starting the timer: the number of expirations
+is @math{1} because the timer starts @math{1} nanosecond after the call
+to @func{timerfd-settime}, which is almost immediately.
+
 @c page
 @node syslib
 @chapter Low level, fast, unsafe operations
