@@ -1929,13 +1929,22 @@
 	      rv
 	    (%raise-errno-error who rv name oflag mode attr))))))))
 
-(define (mq-close)
+(define (mq-close mq)
   (define who 'mq-close)
-  #f)
+  (with-arguments-validation (who)
+      ((fixnum	mq))
+    (let ((rv (capi.posix-mq-close mq)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv mq)))))
 
-(define (mq-unlink)
+(define (mq-unlink name)
   (define who 'mq-unlink)
-  #f)
+  (with-arguments-validation (who)
+      ((pathname name))
+    (with-pathnames ((name.bv name))
+      (let ((rv (capi.posix-mq-unlink name.bv)))
+	(unless (unsafe.fxzero? rv)
+	  (%raise-errno-error who rv name))))))
 
 (define (mq-send)
   (define who 'mq-send)

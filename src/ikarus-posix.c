@@ -4509,37 +4509,44 @@ ikrt_posix_mq_open (ikptr s_name, ikptr s_oflag, ikptr s_mode, ikptr s_attr,
   feature_failure(__func__);
 #endif
 }
-#if 0
 ikptr
-ikrt_posix_mq_close (ikptr s_parameter, ikpcb * pcb)
+ikrt_posix_mq_close (ikptr s_mqd)
+/* Interface to  the C function  "mq_close()".  Close the  message queue
+   referenced by  the descriptor  S_MQD; notice  that the  message queue
+   will  still  exist  until  it  is  deleted  with  "mq_unlink()".   If
+   successful return  the fixnum  zero, else  return an  encoded "errno"
+   value. */
 {
 #ifdef HAVE_MQ_CLOSE
   int	rv;
   errno = 0;
-  rv = mq_close();
-  if (-1 == rv)
-    return IK_FIX(rv);
-  else
-    return ik_errno_to_code();
+  rv = mq_close(IK_UNFIX(s_mqd));
+  return (0 == rv)? IK_FIX(rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
 }
 ikptr
-ikrt_posix_mq_unlink (ikptr s_parameter, ikpcb * pcb)
+ikrt_posix_mq_unlink (ikptr s_name, ikpcb * pcb)
+/* Interface to the C function  "mq_unlink()".  Remove the message queue
+   whose  name is  S_NAME, which  must  be a  bytevector representing  a
+   pathname  in  ASCII  encoding;  the message  queue  name  is  removed
+   immediately,  while  the  message  queue  is  removed  when  all  the
+   processes  referencing it  close  their  descriptors.  If  successful
+   return the fixnum zero, else return an encoded "errno" value. */
 {
 #ifdef HAVE_MQ_UNLINK
-  int	rv;
+  const char *	name;
+  int		rv;
+  name = IK_BYTEVECTOR_DATA_CHARP(s_name);
   errno = 0;
-  rv = mq_unlink();
-  if (-1 == rv)
-    return IK_FIX(rv);
-  else
-    return ik_errno_to_code();
+  rv = mq_unlink(name);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
 }
+#if 0
 ikptr
 ikrt_posix_mq_send (ikptr s_parameter, ikpcb * pcb)
 {

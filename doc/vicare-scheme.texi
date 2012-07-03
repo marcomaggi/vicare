@@ -10713,13 +10713,21 @@ Interface to the C function @cfunc{mq_open}.
 @end defun
 
 
-@defun mq-close
-Interface to the C function @cfunc{mq_close}.
+@defun mq-close @var{mq}
+Interface to the C function @cfunc{mq_close}.  Close the message queue
+referenced by the descriptor @var{mq}; notice that the message queue
+will still exist until it is deleted with @cfunc{mq_unlink}.  If
+successful return unspecified values, else raise an exception.
 @end defun
 
 
-@defun mq-unlink
-Interface to the C function @cfunc{mq_unlink}.
+@defun mq-unlink @var{name}
+Interface to the C function @cfunc{mq_unlink}.  Remove the message queue
+whose name is @var{name}, which must be a Scheme string or bytevector
+representing a pathname in ASCII encoding; the message queue name is
+removed immediately, while the message queue is removed when all the
+processes referencing it close their descriptors.  If successful return
+unspecified values, else raise an exception.
 @end defun
 
 

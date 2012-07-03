@@ -1055,11 +1055,11 @@
 (define-inline (posix-mq-open name oflag mode attr)
   (foreign-call "ikrt_posix_mq_open" name oflag mode attr))
 
-(define-inline (posix-mq-close)
-  (foreign-call "ikrt_posix_mq_close"))
+(define-inline (posix-mq-close mqd)
+  (foreign-call "ikrt_posix_mq_close" mqd))
 
-(define-inline (posix-mq-unlink)
-  (foreign-call "ikrt_posix_mq_unlink"))
+(define-inline (posix-mq-unlink name)
+  (foreign-call "ikrt_posix_mq_unlink" name))
 
 (define-inline (posix-mq-receive)
   (foreign-call "ikrt_posix_mq_receive"))
