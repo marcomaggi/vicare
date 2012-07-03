@@ -143,7 +143,11 @@ AC_CHECK_HEADERS([assert.h dlfcn.h errno.h fcntl.h signal.h     \
                   sys/time.h sys/types.h sys/wait.h time.h      \
                   unistd.h])
 
-AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h ftw.h grp.h inttypes.h limits.h mntent.h net/if.h netinet/in.h netdb.h paths.h pwd.h signal.h termios.h sys/mman.h sys/mount.h poll.h sys/select.h sys/socket.h sys/times.h sys/timex.h sys/types.h sys/un.h sys/utsname.h sys/uio.h utime.h sys/ioctl.h math.h complex.h fnmatch.h glob.h regex.h wordexp.h])
+AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h inttypes.h limits.h mntent.h net/if.h netinet/in.h pwd.h signal.h termios.h sys/mman.h sys/select.h sys/socket.h sys/times.h sys/timex.h sys/types.h math.h complex.h])
+
+AM_COND_IF([WANT_POSIX],
+  [AC_CHECK_LIB([rt],[mq_open])
+   AC_CHECK_HEADERS([fnmatch.h ftw.h glob.h grp.h mqueue.h netdb.h paths.h poll.h utime.h regex.h wordexp.h sys/ioctl.h sys/mount.h sys/un.h sys/utsname.h sys/uio.h])])
 
 AM_COND_IF([WANT_LINUX],
   [AC_CHECK_HEADERS([sys/epoll.h sys/signalfd.h sys/timerfd.h])])
@@ -341,6 +345,7 @@ AM_COND_IF([WANT_POSIX],[
   AC_CHECK_TYPES([struct tms],,,[VICARE_INCLUDES])
   AC_CHECK_FUNCS([clock time times localtime_r gmtime_r timelocal timegm strftime nanosleep mktime])
   AC_CHECK_FUNCS([setitimer getitimer alarm])
+  AC_CHECK_FUNCS([mq_open mq_close mq_unlink mq_send mq_receive mq_setattr mq_getattr mq_timedsend mq_timedreceive])
   ])
 
 AC_CACHE_SAVE

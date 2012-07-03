@@ -44,6 +44,9 @@
 #ifdef HAVE_GRP_H
 #  include <grp.h>
 #endif
+#ifdef HAVE_MQUEUE_H
+#  include <mqueue.h>
+#endif
 #ifdef HAVE_POLL_H
 #  include <poll.h>
 #endif
@@ -4473,6 +4476,196 @@ ikrt_posix_confstr (ikptr s_parameter, ikpcb * pcb)
 #endif
 }
 
+
+/** --------------------------------------------------------------------
+ ** POSIX message queues.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_mq_open (ikptr s_name, ikptr s_oflag, ikptr s_mode, ikptr s_attr,
+		    ikpcb * pcb)
+{
+#ifdef HAVE_MQ_OPEN
+  const char *		name;
+  struct mq_attr	attr;
+  struct mq_attr *	attrp;
+  mqd_t			rv;
+  name = IK_BYTEVECTOR_DATA_CHARP(s_name);
+  if (false_object != s_attr) {
+    attr.mq_flags	= ik_integer_to_long(IK_FIELD(s_attr, 0));
+    attr.mq_maxmsg	= ik_integer_to_long(IK_FIELD(s_attr, 1));
+    attr.mq_msgsize	= ik_integer_to_long(IK_FIELD(s_attr, 2));
+    attr.mq_curmsgs	= ik_integer_to_long(IK_FIELD(s_attr, 3));
+    attrp = &attr;
+  } else
+    attrp = NULL;
+  errno = 0;
+  rv    = mq_open(name, IK_UNFIX(s_oflag), IK_UNFIX(s_mode), attrp);
+  if (((mqd_t)-1) != rv)
+    return IK_FIX(rv);
+  else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+#if 0
+ikptr
+ikrt_posix_mq_close (ikptr s_parameter, ikpcb * pcb)
+{
+#ifdef HAVE_MQ_CLOSE
+  int	rv;
+  errno = 0;
+  rv = mq_close();
+  if (-1 == rv)
+    return IK_FIX(rv);
+  else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_mq_unlink (ikptr s_parameter, ikpcb * pcb)
+{
+#ifdef HAVE_MQ_UNLINK
+  int	rv;
+  errno = 0;
+  rv = mq_unlink();
+  if (-1 == rv)
+    return IK_FIX(rv);
+  else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_mq_send (ikptr s_parameter, ikpcb * pcb)
+{
+#ifdef HAVE_MQ_SEND
+  int	rv;
+  errno = 0;
+  rv = mq_send();
+  if (-1 == rv)
+    return IK_FIX(rv);
+  else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_mq_receive (ikptr s_parameter, ikpcb * pcb)
+{
+#ifdef HAVE_MQ_RECEIVE
+  int	rv;
+  errno = 0;
+  rv = mq_receive();
+  if (-1 == rv)
+    return IK_FIX(rv);
+  else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+#endif
+ikptr
+ikrt_posix_mq_setattr (ikptr s_mqd, ikptr s_new_attr, ikptr s_old_attr, ikpcb * pcb)
+/* Interface to the C function "mq_setattr()".  Modify the attributes of
+   the message queue referenced by S_MQD.   The new values are read from
+   S_NEW_ATTR, which must  be an instance of  "struct-mq-attr".  The old
+   values  are  stored in  S_OLD_ATTR,  which  must  be an  instance  of
+   "struct-mq-attr".  If successful return  the fixnum zero, else return
+   an encoded "errno" value. */
+{
+#ifdef HAVE_MQ_SETATTR
+  struct mq_attr	new_attr = { 0L, 0L, 0L, 0L };
+  struct mq_attr	old_attr = { 0L, 0L, 0L, 0L };
+  int			rv;
+  new_attr.mq_flags	= ik_integer_to_long(IK_FIELD(s_new_attr, 0));
+  new_attr.mq_maxmsg	= ik_integer_to_long(IK_FIELD(s_new_attr, 1));
+  new_attr.mq_msgsize	= ik_integer_to_long(IK_FIELD(s_new_attr, 2));
+  new_attr.mq_curmsgs	= ik_integer_to_long(IK_FIELD(s_new_attr, 3));
+  errno = 0;
+  rv = mq_setattr(IK_UNFIX(s_mqd), &new_attr, &old_attr);
+  if (-1 != rv) {
+    pcb->root0 = &s_old_attr;
+    {
+      IK_ASS(IK_FIELD(s_old_attr, 0), ika_integer_from_long(pcb, old_attr.mq_flags));
+      IK_ASS(IK_FIELD(s_old_attr, 1), ika_integer_from_long(pcb, old_attr.mq_maxmsg));
+      IK_ASS(IK_FIELD(s_old_attr, 2), ika_integer_from_long(pcb, old_attr.mq_msgsize));
+      IK_ASS(IK_FIELD(s_old_attr, 3), ika_integer_from_long(pcb, old_attr.mq_curmsgs));
+    }
+    pcb->root0 = NULL;
+    return IK_FIX(rv);
+  }
+  else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_mq_getattr (ikptr s_mqd, ikptr s_attr, ikpcb * pcb)
+/* Interface to the C  function "mq_getattr()".  Retrieve the attributes
+   of the message  queue referenced by S_MQD.  The values  are stored in
+   S_ATTR, which must be an instance of "struct-mq-attr".  If successful
+   return the fixnum zero, else return an encoded "errno" value. */
+{
+#ifdef HAVE_MQ_GETATTR
+  struct mq_attr	attr = { 0L, 0L, 0L, 0L };
+  int			rv;
+  errno = 0;
+  rv = mq_getattr(IK_UNFIX(s_mqd), &attr);
+  if (-1 != rv) {
+    pcb->root0 = &s_attr;
+    {
+      IK_ASS(IK_FIELD(s_attr, 0), ika_integer_from_long(pcb, attr.mq_flags));
+      IK_ASS(IK_FIELD(s_attr, 1), ika_integer_from_long(pcb, attr.mq_maxmsg));
+      IK_ASS(IK_FIELD(s_attr, 2), ika_integer_from_long(pcb, attr.mq_msgsize));
+      IK_ASS(IK_FIELD(s_attr, 3), ika_integer_from_long(pcb, attr.mq_curmsgs));
+    }
+    return IK_FIX(rv);
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+#if 0
+ikptr
+ikrt_posix_mq_timedsend (ikptr s_parameter, ikpcb * pcb)
+{
+#ifdef HAVE_MQ_TIMEDSEND
+  int	rv;
+  errno = 0;
+  rv = mq_timedsend();
+  if (-1 == rv)
+    return IK_FIX(rv);
+  else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_mq_timedreceive (ikptr s_parameter, ikpcb * pcb)
+{
+#ifdef HAVE_MQ_TIMEDRECEIVE
+  int	rv;
+  errno = 0;
+  rv = mq_timedreceive();
+  if (-1 == rv)
+    return IK_FIX(rv);
+  else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+#endif
 
 
 /** --------------------------------------------------------------------

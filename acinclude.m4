@@ -75,6 +75,9 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_MNTENT_H
 #  include <mntent.h>
 #endif
+#ifdef HAVE_MQUEUE_H
+#  include <mqueue.h>
+#endif
 #ifdef HAVE_NETDB_H
 #  include <netdb.h>
 #endif

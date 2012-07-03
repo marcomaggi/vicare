@@ -7236,6 +7236,7 @@ set to @false{}.
 * posix job::                   Job control.
 * posix time::                  Time related functions.
 * posix config::                System configuration.
+* posix mq::                    Message queues.
 * posix misc::                  Miscellaneous functions.
 * posix not::                   @posix{} functions not interfaced.
 @end menu
@@ -10617,6 +10618,166 @@ representing the value; else an exception is raised.
 (px.confstr/string _CS_PATH)
 @result{} "/bin:/usr/bin"
 @end example
+@end defun
+
+@c page
+@node posix mq
+@section Message queues
+
+
+@posix{} message queues allow processes to exchange messages composed of
+arrays of bytes.  On @gnu{}+Linux systems, for an introduction to the
+@api{} we must refer to the manual page @code{mq_overview(7)}.
+
+@menu
+* posix mq attr::               Structure type @code{struct-mq-attr}.
+* posix mq api::                Message queues @api{}.
+@end menu
+
+@c page
+@node posix mq attr
+@subsection Structure type @code{struct-mq-attr}
+
+
+The following bindings are exported by the @library{vicare posix}
+library.
+
+
+@deftp {Struct Type} struct-mq-attr
+Data structure type used to represent at the Scheme level @code{struct
+mq_attr} values.  It has the following fields:
+
+@table @code
+@item mq_flags
+The fixnum zero or the constant @code{O_NONBLOCK}.
+
+@item mq_maxmsg
+Maximum number of messages on the queue.
+
+@item mq_msgsize
+Maximum message size in bytes.
+
+@item mq_curmsgs
+Number of messages currently on the queue.
+@end table
+@end deftp
+
+
+@defun make-struct-mq-attr @var{flags} @var{maxmsg} @var{msgsize} @var{curmsgs}
+Build and return a new instance of @code{struct-mq-attr}.
+@end defun
+
+
+@defun struct-mq-attr? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-mq-attr} and
+its field values are valid, return @false{} otherwise.
+@end defun
+
+
+@defun struct-mq-attr-mq_flags @var{attr}
+@defunx struct-mq-attr-mq_maxmsg @var{attr}
+@defunx struct-mq-attr-mq_msgsize @var{attr}
+@defunx struct-mq-attr-mq_curmsgs @var{attr}
+Accessors for the fields of @code{struct-mq-attr}.
+@end defun
+
+
+@defun set-struct-mq-attr-mq_flags! @var{attr} @var{value}
+@defunx set-struct-mq-attr-mq_maxmsg! @var{attr} @var{value}
+@defunx set-struct-mq-attr-mq_msgsize! @var{attr} @var{value}
+@defunx set-struct-mq-attr-mq_curmsgs! @var{attr} @var{value}
+Mutators for the fields of @code{struct-mq-attr}.
+@end defun
+
+@c page
+@node posix mq api
+@subsection Message queues @api{}.
+
+
+The following bindings are exported by the @library{vicare posix}
+library.  For the full documentation of the @api{} we must refer to the
+following manual pages: @code{mq_close(3)}, @code{mq_getattr(3)},
+@code{mq_notify(3)}, @code{mq_open(3)}, @code{mq_receive(3)},
+@code{mq_send(3)}, @code{mq_setattr(3)}, @code{mq_timedreceive(3)},
+@code{mq_timedsend(3)}, @code{mq_unlink(3)}.
+
+@quotation
+@strong{NOTE} The code implementing the interface to @posix{} message
+queues assumes that the descriptor @code{mqd_t} is an exact integer.  On
+@gnu{}+Linux systems this value is known to be a file descriptor.
+@end quotation
+
+
+@defun mq-open
+Interface to the C function @cfunc{mq_open}.
+@end defun
+
+
+@defun mq-close
+Interface to the C function @cfunc{mq_close}.
+@end defun
+
+
+@defun mq-unlink
+Interface to the C function @cfunc{mq_unlink}.
+@end defun
+
+
+@defun mq-send
+Interface to the C function @cfunc{mq_send}.
+@end defun
+
+
+@defun mq-receive
+Interface to the C function @cfunc{mq_receive}.
+@end defun
+
+
+@defun mq-timedsend
+Interface to the C function @cfunc{mq_timedsend}.
+@end defun
+
+
+@defun mq-timedreceive
+Interface to the C function @cfunc{mq_timedreceive}.
+@end defun
+
+
+@defun mq-setattr @var{mqd} @var{new-attr}
+@defunx mq-setattr @var{mqd} @var{new-attr} @var{old-attr}
+Interface to the C function @cfunc{mq_setattr}.  Modify the attributes
+of the message queue referenced by @var{mqd}, which must be a message
+queue descriptor returned by a previous call to @func{mq-open}.  If
+successful return an instance of @code{struct-mq-attr} representing the
+old attributes, else raise an exception.
+
+The new values are read from @var{new-attr}, which must be an instance
+of @code{struct-mq-attr}.
+
+The old values are stored in @var{old-attr}, which must be an instance
+of @code{struct-mq-attr}; when @var{old-attr} is not given: a new
+instance of @code{struct-mq-attr} is internally created.  @var{old-attr}
+or the new instance are the return value of this function.
+@end defun
+
+
+@defun mq-getattr @var{mqd}
+@defunx mq-getattr @var{mqd} @var{attr}
+Interface to the C function @cfunc{mq_getattr}.  Retrieve the attributes
+of the message queue referenced by @var{mqd}, which must be a message
+queue descriptor returned by a previous call to @func{mq-open}.  If
+successful return an instance of @code{struct-mq-attr} representing the
+old attributes, else raise an exception.
+
+The values are stored in @var{attr}, which must be an instance of
+@code{struct-mq-attr}; when @var{attr} is not given: a new instance of
+@code{struct-mq-attr} is internally created.  @var{attr} or the new
+instance are the return value of this function.
+@end defun
+
+
+@defun mq-notify
+Interface to the C function @cfunc{mq_notify}.
 @end defun
 
 @c page

@@ -188,6 +188,14 @@
     posix-mlock				posix-munlock
     posix-mlockall			posix-munlockall
 
+    ;; message queues
+    posix-mq-open			posix-mq-close
+    posix-mq-unlink
+    posix-mq-send			posix-mq-receive
+    posix-mq-timedsend			posix-mq-timedreceive
+    posix-mq-setattr			posix-mq-getattr
+    posix-mq-notify
+
     ;; file system synchronisation
     glibc-sync				glibc-fsync
     glibc-fdatasync
@@ -1040,6 +1048,39 @@
 
 (define-inline (posix-mprotect address length prot)
   (foreign-call "ikrt_posix_mprotect" address length prot))
+
+
+;;;; message queues
+
+(define-inline (posix-mq-open name oflag mode attr)
+  (foreign-call "ikrt_posix_mq_open" name oflag mode attr))
+
+(define-inline (posix-mq-close)
+  (foreign-call "ikrt_posix_mq_close"))
+
+(define-inline (posix-mq-unlink)
+  (foreign-call "ikrt_posix_mq_unlink"))
+
+(define-inline (posix-mq-receive)
+  (foreign-call "ikrt_posix_mq_receive"))
+
+(define-inline (posix-mq-send)
+  (foreign-call "ikrt_posix_mq_send"))
+
+(define-inline (posix-mq-timedsend)
+  (foreign-call "ikrt_posix_mq_timedsend"))
+
+(define-inline (posix-mq-timedreceive)
+  (foreign-call "ikrt_posix_mq_timedreceive"))
+
+(define-inline (posix-mq-setattr mqd new-attr old-attr)
+  (foreign-call "ikrt_posix_mq_setattr" mqd new-attr old-attr))
+
+(define-inline (posix-mq-getattr mqd attr)
+  (foreign-call "ikrt_posix_mq_getattr" mqd attr))
+
+(define-inline (posix-mq-notify)
+  (foreign-call "ikrt_posix_mq_notify"))
 
 
 ;;;; file system synchronisation

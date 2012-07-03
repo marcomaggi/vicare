@@ -140,6 +140,21 @@
     mlock				munlock
     mlockall				munlockall
 
+    ;; message queues
+    mq-open				mq-close
+    mq-unlink
+    mq-send				mq-receive
+    mq-timedsend			mq-timedreceive
+    mq-setattr				mq-getattr
+    mq-notify
+
+    make-struct-mq-attr
+    (rename (%valid-struct-mq-attr?	struct-mq-attr?))
+    struct-mq-attr-mq_flags		set-struct-mq-attr-mq_flags!
+    struct-mq-attr-mq_maxmsg		set-struct-mq-attr-mq_maxmsg!
+    struct-mq-attr-mq_msgsize		set-struct-mq-attr-mq_msgsize!
+    struct-mq-attr-mq_curmsgs		set-struct-mq-attr-mq_curmsgs!
+
     ;; sockets
     make-sockaddr_un
     sockaddr_un.pathname		sockaddr_un.pathname/string
@@ -496,6 +511,14 @@
 	      (words.signed-long? (struct-timeval-tv_sec  T))
 	      (words.signed-long? (struct-timeval-tv_usec T)))))
   (assertion-violation who "expected struct-itimerval as argument" obj))
+
+(define-argument-validation (mq-attr who obj)
+  (%valid-struct-mq-attr? obj)
+  (assertion-violation who "expected instance of struct-mq-attr as argument" obj))
+
+(define-argument-validation (mq-attr/false who obj)
+  (or (not obj) (%valid-struct-mq-attr? obj))
+  (assertion-violation who "expected false or instance of struct-mq-attr as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -1863,6 +1886,105 @@
   (let ((rv (capi.posix-munlockall)))
     (unless (unsafe.fxzero? rv)
       (%raise-errno-error who rv))))
+
+
+;;;; message queues
+
+(define-struct struct-mq-attr
+  (mq_flags mq_maxmsg mq_msgsize mq_curmsgs))
+
+(define (%struct-mq-attr-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[struct-mq-attr")
+  (%display " mq_flags=")	(%display (struct-mq-attr-mq_flags   S))
+  (%display " mq_maxmsg=")	(%display (struct-mq-attr-mq_maxmsg  S))
+  (%display " mq_msgsize=")	(%display (struct-mq-attr-mq_msgsize S))
+  (%display " mq_curmsgs=")	(%display (struct-mq-attr-mq_curmsgs S))
+  (%display "]"))
+
+(define (%valid-struct-mq-attr? obj)
+  (and (struct-mq-attr? obj)
+       (fixnum? (struct-mq-attr-mq_flags   obj))
+       (fixnum? (struct-mq-attr-mq_maxmsg  obj))
+       (fixnum? (struct-mq-attr-mq_msgsize obj))
+       (fixnum? (struct-mq-attr-mq_curmsgs obj))))
+
+;;; --------------------------------------------------------------------
+
+(define mq-open
+  (case-lambda
+   ((name oflag mode)
+    (mq-open name oflag mode #f))
+   ((name oflag mode attr)
+    (define who 'mq-open)
+    (with-arguments-validation (who)
+	((pathname	name)
+	 (fixnum	oflag)
+	 (fixnum	mode)
+	 (mq-attr/false	attr))
+      (with-pathnames ((name.bv name))
+	(let ((rv (capi.posix-mq-open name.bv oflag mode attr)))
+	  (if (unsafe.fx<= 0 rv)
+	      rv
+	    (%raise-errno-error who rv name oflag mode attr))))))))
+
+(define (mq-close)
+  (define who 'mq-close)
+  #f)
+
+(define (mq-unlink)
+  (define who 'mq-unlink)
+  #f)
+
+(define (mq-send)
+  (define who 'mq-send)
+  #f)
+
+(define (mq-receive)
+  (define who 'mq-receive)
+  #f)
+
+(define (mq-timedsend)
+  (define who 'mq-timedsend)
+  #f)
+
+(define (mq-timedreceive)
+  (define who 'mq-timedreceive)
+  #f)
+
+(define mq-setattr
+  (case-lambda
+   ((mqd new-attr)
+    (mq-setattr mqd new-attr (make-struct-mq-attr 0 0 0 0)))
+   ((mqd new-attr old-attr)
+    (define who 'mq-setattr)
+    (with-arguments-validation (who)
+	((fixnum	mqd)
+	 (mq-attr	new-attr)
+	 (mq-attr	old-attr))
+      (let ((rv (capi.posix-mq-setattr mqd new-attr old-attr)))
+	(if (unsafe.fxzero? rv)
+	    old-attr
+	  (%raise-errno-error who rv new-attr old-attr)))))))
+
+(define (mq-getattr)
+  (case-lambda
+   ((mqd)
+    (mq-getattr mqd (make-struct-mq-attr 0 0 0 0)))
+   ((mqd attr)
+    (define who 'mq-getattr)
+    (with-arguments-validation (who)
+	((fixnum	mqd)
+	 (mq-attr	attr))
+      (let ((rv (capi.posix-mq-getattr mqd attr)))
+	(if (unsafe.fxzero? rv)
+	    attr
+	  (%raise-errno-error who rv attr)))))))
+
+(define (mq-notify)
+  (define who 'mq-notify)
+  #f)
 
 
 ;;;; sockets
@@ -3289,6 +3411,7 @@
 (set-rtd-printer! (type-descriptor struct-tms)		%struct-tms-printer)
 (set-rtd-printer! (type-descriptor struct-tm)		%struct-tm-printer)
 (set-rtd-printer! (type-descriptor struct-itimerval)	%struct-itimerval-printer)
+(set-rtd-printer! (type-descriptor struct-mq-attr)	%struct-mq-attr-printer)
 
 (vicare-executable-as-string)
 
