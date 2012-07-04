@@ -146,7 +146,7 @@
     mq-send				mq-receive
     mq-timedsend			mq-timedreceive
     mq-setattr				mq-getattr
-    mq-notify
+    #;mq-notify
 
     make-struct-mq-attr
     (rename (%valid-struct-mq-attr?	struct-mq-attr?))
@@ -306,6 +306,32 @@
        (unsafe.fx>= obj 0)
        (unsafe.fx<  obj FD_SETSIZE)))
 
+(define-inline (%signal-fixnum? ?obj)
+  (let ((obj ?obj))
+    (and (fixnum? obj)
+	 (unsafe.fx>= obj 0)
+	 (unsafe.fx<= obj NSIG))))
+
+(define (%struct-timespec? obj)
+  (and (struct-timespec? obj)
+       (let ((sec (struct-timespec-tv_sec obj)))
+	 (and (words.signed-long? sec)
+	      (<= 0 sec)))
+       (let ((nsec (struct-timespec-tv_nsec obj)))
+	 (and (words.signed-long? nsec)
+	      (<= 0 nsec 999999999)))))
+;;;                      876543210
+
+(define (%struct-timeval? obj)
+  (and (struct-timeval? obj)
+       (words.signed-long? (struct-timeval-tv_sec  obj))
+       (words.signed-long? (struct-timeval-tv_usec obj))))
+
+(define (%struct-itimerval? obj)
+  (and (struct-itimerval? obj)
+       (%struct-timeval? (struct-itimerval-it_interval obj))
+       (%struct-timeval? (struct-itimerval-it_value    obj))))
+
 
 ;;;; arguments validation
 
@@ -390,9 +416,7 @@
   (assertion-violation who "expected fixnum file descriptor as argument" obj))
 
 (define-argument-validation (signal who obj)
-  (and (fixnum? obj)
-       (unsafe.fx>= obj 0)
-       (unsafe.fx<= obj NSIG))
+  (%signal-fixnum? obj)
   (assertion-violation who "expected fixnum signal code as argument" obj))
 
 (define-argument-validation (pathname who obj)
@@ -501,16 +525,12 @@
   (assertion-violation who "expected vector of data for poll as argument" obj))
 
 (define-argument-validation (itimerval who obj)
-  (and (struct-itimerval? obj)
-       (let ((T (struct-itimerval-it_interval obj)))
-	 (and (struct-timeval? T)
-	      (words.signed-long? (struct-timeval-tv_sec  T))
-	      (words.signed-long? (struct-timeval-tv_usec T))))
-       (let ((T (struct-itimerval-it_value obj)))
-	 (and (struct-timeval? T)
-	      (words.signed-long? (struct-timeval-tv_sec  T))
-	      (words.signed-long? (struct-timeval-tv_usec T)))))
+  (%struct-itimerval? obj)
   (assertion-violation who "expected struct-itimerval as argument" obj))
+
+(define-argument-validation (timespec who obj)
+  (%struct-timespec? obj)
+  (assertion-violation who "expected struct-timespec as argument" obj))
 
 (define-argument-validation (mq-attr who obj)
   (%valid-struct-mq-attr? obj)
@@ -1946,21 +1966,47 @@
 	(unless (unsafe.fxzero? rv)
 	  (%raise-errno-error who rv name))))))
 
-(define (mq-send)
+(define (mq-send mqd message priority)
   (define who 'mq-send)
-  #f)
+  (with-arguments-validation (who)
+      ((fixnum		mqd)
+       (bytevector	message)
+       (unsigned-int	priority))
+    (let ((rv (capi.posix-mq-send mqd message priority)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv mqd message priority)))))
 
-(define (mq-receive)
-  (define who 'mq-receive)
-  #f)
-
-(define (mq-timedsend)
+(define (mq-timedsend mqd message priority epoch-timeout)
   (define who 'mq-timedsend)
-  #f)
+  (with-arguments-validation (who)
+      ((fixnum		mqd)
+       (bytevector	message)
+       (unsigned-int	priority)
+       (timespec	epoch-timeout))
+    (let ((rv (capi.posix-mq-timedsend mqd message priority epoch-timeout)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv mqd message priority epoch-timeout)))))
 
-(define (mq-timedreceive)
+(define (mq-receive mqd message)
+  (define who 'mq-receive)
+  (with-arguments-validation (who)
+      ((fixnum		mqd)
+       (bytevector	message))
+    (let ((rv (capi.posix-mq-receive mqd message)))
+      (if (<= 0 rv)
+	  rv
+	(%raise-errno-error who rv mqd message)))))
+
+(define (mq-timedreceive mqd message epoch-timeout)
   (define who 'mq-timedreceive)
-  #f)
+  (with-arguments-validation (who)
+      ((fixnum		mqd)
+       (bytevector	message)
+       (timespec	epoch-timeout))
+    (let ((rv (capi.posix-mq-timedreceive mqd message epoch-timeout)))
+      (if (<= 0 rv)
+	  rv
+	(%raise-errno-error who rv mqd message epoch-timeout)))))
 
 (define mq-setattr
   (case-lambda
@@ -1991,9 +2037,11 @@
 	    attr
 	  (%raise-errno-error who rv attr)))))))
 
-(define (mq-notify)
-  (define who 'mq-notify)
-  #f)
+;;At present this is not interfaced.
+;;
+;; (define (mq-notify)
+;;   (define who 'mq-notify)
+;;   #f)
 
 
 ;;;; sockets

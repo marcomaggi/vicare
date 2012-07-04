@@ -4484,6 +4484,23 @@ ikrt_posix_confstr (ikptr s_parameter, ikpcb * pcb)
 ikptr
 ikrt_posix_mq_open (ikptr s_name, ikptr s_oflag, ikptr s_mode, ikptr s_attr,
 		    ikpcb * pcb)
+/* Interface to the C function  "mq_open()".  Create a new message queue
+   or  open an  existing  one.   If successful  return  a message  queue
+   descriptor, else return an encoded "errno" value.
+
+   S_NAME must be a bytevector holding a pathname in ASCII encoding.
+
+   S_OFLAG must be  a fixnum being the inclusive OR  composition of some
+   of  the  following  flags: O_RDONLY,  O_WRONLY,  O_RDWR,  O_NONBLOCK,
+   O_CREAT, O_EXCL.
+
+   S_MODE  must be  a  fixnum representing  access  permissions for  the
+   message queue pathname;  it should be an inclusive  OR composition of
+   some  of  the flags:  S_IRUSR,  S_IWUSR,  S_IXUSR, S_IRGRP,  S_IWGRP,
+   S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH.
+
+   S_ATTR must be false or  an instance of "struct-mq-attr"; when false:
+   the queue is created with platform-dependent default attributes.  */
 {
 #ifdef HAVE_MQ_OPEN
   const char *		name;
@@ -4546,38 +4563,137 @@ ikrt_posix_mq_unlink (ikptr s_name, ikpcb * pcb)
   feature_failure(__func__);
 #endif
 }
-#if 0
+
+/* ------------------------------------------------------------------ */
+
 ikptr
-ikrt_posix_mq_send (ikptr s_parameter, ikpcb * pcb)
+ikrt_posix_mq_send (ikptr s_mqd, ikptr s_message, ikptr s_priority)
+/* Interface to the C function "mq_send()".   Add a message to the queue
+   referenced by the descriptor S_MQD.   If successful return the fixnum
+   zero, else return an encoded "errno" value.
+
+   S_MESSAGE must be a Scheme  bytevector representing the message data.
+   S_PRIORITY must be an exact integer,  in the range of "unsigned int",
+   representing the priority of the message. */
 {
 #ifdef HAVE_MQ_SEND
-  int	rv;
+  const char *	msg_ptr;
+  size_t	msg_len;
+  unsigned	priority;
+  int		rv;
+  msg_ptr	= IK_BYTEVECTOR_DATA_CHARP(s_message);
+  msg_len	= IK_BYTEVECTOR_LENGTH(s_message);
+  priority	= ik_integer_to_uint(s_priority);
   errno = 0;
-  rv = mq_send();
-  if (-1 == rv)
-    return IK_FIX(rv);
-  else
-    return ik_errno_to_code();
+  rv = mq_send(IK_UNFIX(s_mqd), msg_ptr, msg_len, priority);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
 }
 ikptr
-ikrt_posix_mq_receive (ikptr s_parameter, ikpcb * pcb)
+ikrt_posix_mq_timedsend (ikptr s_mqd, ikptr s_message, ikptr s_priority,
+			 ikptr s_epoch_timeout)
+/* Interface to the  C function "mq_timedsend()".  Add a  message to the
+   queue referenced by  the descriptor S_MQD.  If  successful return the
+   fixnum zero, else return an encoded "errno" value.
+
+   S_MESSAGE must be a Scheme bytevector representing the message data.
+
+   S_PRIORITY must be an exact integer,  in the range of "unsigned int",
+   representing the priority of the message.
+
+   S_EPOCH_TIMEOUT must be an instance of "struct-timespec" representing
+   an absolute time since the Epoch: if the queue is in blocking mode, a
+   call to this function will block until the timeout expires waiting to
+   deliver the message. */
 {
-#ifdef HAVE_MQ_RECEIVE
-  int	rv;
-  errno = 0;
-  rv = mq_receive();
-  if (-1 == rv)
-    return IK_FIX(rv);
-  else
-    return ik_errno_to_code();
+#ifdef HAVE_MQ_TIMEDSEND
+  const char *		msg_ptr;
+  size_t		msg_len;
+  unsigned		priority;
+  struct timespec	timeout;
+  int			rv;
+  msg_ptr		= IK_BYTEVECTOR_DATA_CHARP(s_message);
+  msg_len		= IK_BYTEVECTOR_LENGTH(s_message);
+  priority		= ik_integer_to_uint(s_priority);
+  timeout.tv_sec	= ik_integer_to_long(IK_FIELD(s_epoch_timeout, 0));
+  timeout.tv_nsec	= ik_integer_to_long(IK_FIELD(s_epoch_timeout, 1));
+  errno			= 0;
+  rv = mq_timedsend(IK_UNFIX(s_mqd), msg_ptr, msg_len, priority, &timeout);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
 }
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_mq_receive (ikptr s_mqd, ikptr s_message, ikpcb * pcb)
+/* Interface  to  the  C  function "mq_receive()".   Remove  the  oldest
+   message with the  highest priority from the  message queue referenced
+   by  S_MQD.   If  successful   return  a  non-negative  exact  integer
+   representing  the priority  of the  message, else  return an  encoded
+   "errno" value.
+
+   S_MESSAGE must be  a Scheme bytevector providing the  buffer in which
+   the  function will  write the  received message;  its length  must be
+   greater  than  the maximum  message  length  specified in  the  queue
+   attributes. */
+{
+#ifdef HAVE_MQ_RECEIVE
+  char *	msg_ptr;
+  size_t	msg_len;
+  unsigned	priority;
+  int		rv;
+  msg_ptr	= IK_BYTEVECTOR_DATA_CHARP(s_message);
+  msg_len	= IK_BYTEVECTOR_LENGTH(s_message);
+  errno = 0;
+  rv = mq_receive(IK_UNFIX(s_mqd), msg_ptr, msg_len, &priority);
+  return (0 == rv)? ika_integer_from_uint(pcb, priority) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
 #endif
+}
+ikptr
+ikrt_posix_mq_timedreceive (ikptr s_mqd, ikptr s_message, ikptr s_epoch_timeout, ikpcb * pcb)
+/* Interface to  the C function "mq_timedreceive()".   Remove the oldest
+   message with the  highest priority from the  message queue referenced
+   by  S_MQD.   If  successful   return  a  non-negative  exact  integer
+   representing  the priority  of the  message, else  return an  encoded
+   "errno" value.
+
+   S_MESSAGE must be  a Scheme bytevector providing the  buffer in which
+   the  function will  write the  received message;  its length  must be
+   greater  than  the maximum  message  length  specified in  the  queue
+   attrbutes.
+
+   S_EPOCH_TIMEOUT must be an instance of "struct-timespec" representing
+   an absolute time since the Epoch: if the queue is in blocking mode, a
+   call to this function will block until the timeout expires waiting to
+   receive the message. */
+{
+#ifdef HAVE_MQ_TIMEDRECEIVE
+  char *		msg_ptr;
+  size_t		msg_len;
+  unsigned		priority;
+  struct timespec	timeout;
+  int			rv;
+  msg_ptr		= IK_BYTEVECTOR_DATA_CHARP(s_message);
+  msg_len		= IK_BYTEVECTOR_LENGTH(s_message);
+  timeout.tv_sec	= ik_integer_to_long(IK_FIELD(s_epoch_timeout, 0));
+  timeout.tv_nsec	= ik_integer_to_long(IK_FIELD(s_epoch_timeout, 1));
+  errno			= 0;
+  rv = mq_timedreceive(IK_UNFIX(s_mqd), msg_ptr, msg_len, &priority, &timeout);
+  return (0 == rv)? ika_integer_from_uint(pcb, priority) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikrt_posix_mq_setattr (ikptr s_mqd, ikptr s_new_attr, ikptr s_old_attr, ikpcb * pcb)
 /* Interface to the C function "mq_setattr()".  Modify the attributes of
@@ -4641,38 +4757,6 @@ ikrt_posix_mq_getattr (ikptr s_mqd, ikptr s_attr, ikpcb * pcb)
   feature_failure(__func__);
 #endif
 }
-#if 0
-ikptr
-ikrt_posix_mq_timedsend (ikptr s_parameter, ikpcb * pcb)
-{
-#ifdef HAVE_MQ_TIMEDSEND
-  int	rv;
-  errno = 0;
-  rv = mq_timedsend();
-  if (-1 == rv)
-    return IK_FIX(rv);
-  else
-    return ik_errno_to_code();
-#else
-  feature_failure(__func__);
-#endif
-}
-ikptr
-ikrt_posix_mq_timedreceive (ikptr s_parameter, ikpcb * pcb)
-{
-#ifdef HAVE_MQ_TIMEDRECEIVE
-  int	rv;
-  errno = 0;
-  rv = mq_timedreceive();
-  if (-1 == rv)
-    return IK_FIX(rv);
-  else
-    return ik_errno_to_code();
-#else
-  feature_failure(__func__);
-#endif
-}
-#endif
 
 
 /** --------------------------------------------------------------------

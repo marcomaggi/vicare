@@ -194,7 +194,7 @@
     posix-mq-send			posix-mq-receive
     posix-mq-timedsend			posix-mq-timedreceive
     posix-mq-setattr			posix-mq-getattr
-    posix-mq-notify
+    #;posix-mq-notify
 
     ;; file system synchronisation
     glibc-sync				glibc-fsync
@@ -1061,17 +1061,17 @@
 (define-inline (posix-mq-unlink name)
   (foreign-call "ikrt_posix_mq_unlink" name))
 
-(define-inline (posix-mq-receive)
-  (foreign-call "ikrt_posix_mq_receive"))
+(define-inline (posix-mq-send mqd message priority)
+  (foreign-call "ikrt_posix_mq_send" mqd message priority))
 
-(define-inline (posix-mq-send)
-  (foreign-call "ikrt_posix_mq_send"))
+(define-inline (posix-mq-timedsend mqd message priority epoch-timeout)
+  (foreign-call "ikrt_posix_mq_timedsend" mqd message priority epoch-timeout))
 
-(define-inline (posix-mq-timedsend)
-  (foreign-call "ikrt_posix_mq_timedsend"))
+(define-inline (posix-mq-receive mqd message)
+  (foreign-call "ikrt_posix_mq_receive" mqd message))
 
-(define-inline (posix-mq-timedreceive)
-  (foreign-call "ikrt_posix_mq_timedreceive"))
+(define-inline (posix-mq-timedreceive mqd message epoch-timeout)
+  (foreign-call "ikrt_posix_mq_timedreceive" mqd message epoch-timeout))
 
 (define-inline (posix-mq-setattr mqd new-attr old-attr)
   (foreign-call "ikrt_posix_mq_setattr" mqd new-attr old-attr))
@@ -1079,8 +1079,10 @@
 (define-inline (posix-mq-getattr mqd attr)
   (foreign-call "ikrt_posix_mq_getattr" mqd attr))
 
-(define-inline (posix-mq-notify)
-  (foreign-call "ikrt_posix_mq_notify"))
+;;At present this is not interface.
+;;
+;; (define-inline (posix-mq-notify)
+;;   (foreign-call "ikrt_posix_mq_notify"))
 
 
 ;;;; file system synchronisation
