@@ -140,6 +140,9 @@
     mlock				munlock
     mlockall				munlockall
 
+    ;; shared memory
+    shm-open				shm-unlink
+
     ;; message queues
     mq-open				mq-close
     mq-unlink
@@ -1935,6 +1938,30 @@
   (let ((rv (capi.posix-munlockall)))
     (unless (unsafe.fxzero? rv)
       (%raise-errno-error who rv))))
+
+
+;;;; shared memory
+
+(define (shm-open name oflag mode)
+  (define who 'shm-open)
+  (with-arguments-validation (who)
+      ((pathname	name)
+       (fixnum		oflag)
+       (fixnum		mode))
+    (with-pathnames ((name.bv name))
+      (let ((rv (capi.posix-shm-open name.bv oflag mode)))
+	(if (unsafe.fx<= 0 rv)
+	    rv
+	  (%raise-errno-error who rv name oflag mode))))))
+
+(define (shm-unlink name)
+  (define who 'shm-unlink)
+  (with-arguments-validation (who)
+      ((pathname	name))
+    (with-pathnames ((name.bv name))
+      (let ((rv (capi.posix-shm-unlink name.bv)))
+	(unless (unsafe.fxzero? rv)
+	  (%raise-errno-error who rv name))))))
 
 
 ;;;; message queues

@@ -7243,6 +7243,7 @@ set to @false{}.
 * posix time::                  Time related functions.
 * posix config::                System configuration.
 * posix mq::                    Message queues.
+* posix shm::                   Shared memory.
 * posix misc::                  Miscellaneous functions.
 * posix not::                   @posix{} functions not interfaced.
 @end menu
@@ -8575,7 +8576,7 @@ unspecified values, else raise an exception.
 @ref{shmem mmap} for a description of shared memory through @func{mmap}.
 
 
-@defun mmap @var{address} @var{length} @var{protect} @var{flags} @var{offset}
+@defun mmap @var{address} @var{length} @var{protect} @var{flags} @var{fd} @var{offset}
 Interface to the C function @cfunc{mmap}, @glibcref{Memory-mapped I/O,
 mmap}.  Create a new mapping and return a pointer object referencing the
 region of memory.
@@ -11034,6 +11035,32 @@ how to send and receive a message with timeout:
 
 (px.fork parent child)
 @end example
+
+@c page
+@node posix shm
+@section Shared memory
+
+
+@posix{} shared memory allow processes to communicate informations by
+sharing a region of memory.
+
+@quotation
+@strong{NOTE} On @gnu{}+Linux systems, for an introduction to the @api{}
+we must refer to the manual page @code{shm_overview(7)}.
+@end quotation
+
+
+@defun shm-open
+Interface to the C function @cfunc{shm_open}, see the manual page
+@code{shm_open(3)}.
+@end defun
+
+
+@defun shm-unlink
+Interface to the C function @cfunc{shm_unlink}, see the manual page
+@code{shm_unlink(3)}.
+@end defun
+
 
 @c page
 @node posix misc

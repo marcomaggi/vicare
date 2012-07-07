@@ -4851,6 +4851,39 @@ ikrt_posix_clock_settime (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb * pcb
 
 
 /** --------------------------------------------------------------------
+ ** Shared memory.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_shm_open (ikptr s_name, ikptr s_oflag, ikptr s_mode)
+{
+#ifdef HAVE_SHM_OPEN
+  const char *	name = IK_BYTEVECTOR_DATA_CHARP(s_name);
+  int		rv;
+  errno = 0;
+  rv = shm_open(name, IK_UNFIX(s_oflag), IK_UNFIX(s_mode));
+  return (-1 == rv)? IK_FD_TO_NUM(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_shm_unlink (ikptr s_name)
+{
+#ifdef HAVE_SHM_UNLINK
+  const char *	name = IK_BYTEVECTOR_DATA_CHARP(s_name);
+  int		rv;
+  errno = 0;
+  rv = shm_unlink(name);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+
+/** --------------------------------------------------------------------
  ** Miscellaneous functions.
  ** ----------------------------------------------------------------- */
 

@@ -2345,6 +2345,32 @@
   #t)
 
 
+(parametrise ((check-test-name	'shared-memory))
+
+  (check
+      (let ()
+	(define pathname "/vicare-posix-shm.test")
+	(guard (E (else #f))
+	  (px.shm-unlink pathname))
+	(let ((fd	(px.shm-open pathname
+				     (bitwise-ior O_CREAT O_EXCL O_RDWR)
+				     (bitwise-ior S_IRUSR S_IWUSR))))
+	  (unwind-protect
+	      (let* ((page-size	(px.sysconf _SC_PAGESIZE))
+		     (ptr	(px.mmap #f page-size
+					 (fxior PROT_READ PROT_WRITE)
+					 (fxior MAP_PRIVATE MAP_ANONYMOUS)
+					 fd 0)))
+		(unwind-protect
+		    #f
+		  (px.munmap ptr page-size)))
+	    (px.close fd)
+	    (px.shm-unlink pathname))))
+    => #f)
+
+  #f)
+
+
 ;;;; done
 
 (flush-output-port (current-output-port))

@@ -348,9 +348,10 @@ AM_COND_IF([WANT_POSIX],[
 
   dnl These require linking with -lrt.
   AC_CHECK_FUNCS([mq_open mq_close mq_unlink mq_send mq_receive mq_setattr mq_getattr mq_timedsend mq_timedreceive])
-
   dnl These require linking with -lrt.
   AC_CHECK_FUNCS([clock_getres clock_gettime clock_settime])
+  dnl These require linking with -lrt.
+  AC_CHECK_FUNCS([shm_open shm_unlink])
   ])
 
 AC_CACHE_SAVE

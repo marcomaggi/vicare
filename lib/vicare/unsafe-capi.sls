@@ -196,6 +196,9 @@
     posix-mq-setattr			posix-mq-getattr
     #;posix-mq-notify
 
+    ;; shared memory
+    posix-shm-open			posix-shm-unlink
+
     ;; clock functions
     posix-clock-getres
     posix-clock-gettime			posix-clock-settime
@@ -1087,6 +1090,15 @@
 ;;
 ;; (define-inline (posix-mq-notify)
 ;;   (foreign-call "ikrt_posix_mq_notify"))
+
+
+;;;; shared memory
+
+(define-inline (posix-shm-open name oflag mode)
+  (foreign-call "ikrt_posix_shm_open" name oflag mode))
+
+(define-inline (posix-shm-unlink name)
+  (foreign-call "ikrt_posix_shm_unlink" name))
 
 
 ;;;; clock functions
