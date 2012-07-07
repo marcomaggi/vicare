@@ -2273,7 +2273,8 @@
 	    (unwind-protect
 		(let-values (((len priority)
 			      (px.mq-receive mqd buf)))
-		  (px.waitpid child-pid 0)
+		  (guard (E (else #f))
+		    (px.waitpid child-pid 0))
 		  (list (subbytevector-u8 buf 0 len)
 			priority))
 	      (px.mq-close mqd)
@@ -2308,7 +2309,8 @@
 	    (unwind-protect
 		(let-values (((len priority)
 			      (px.mq-timedreceive mqd buf timeout)))
-		  (px.waitpid child-pid 0)
+		  (guard (E (else #f))
+		    (px.waitpid child-pid 0))
 		  (list (subbytevector-u8 buf 0 len)
 			priority))
 	      (px.mq-close mqd)
