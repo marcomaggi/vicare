@@ -44,6 +44,9 @@ Notes for revision 0.2d12
 
 * Added the timerfd API to (vicare linux).
 
+* Added the function STRUCT=? to (vicare).
+
+
 Notes for revision 0.2d11
 -------------------------
 
