@@ -692,6 +692,7 @@
     (struct-name				i v $language)
     (struct-type-descriptor			i v $language)
     (struct-rtd					i v $language)
+    (struct=?					i v $language)
     (code?					i v $language)
     (immediate?					i v $language)
     (pointer-value				i v $language)

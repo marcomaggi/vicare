@@ -29,6 +29,7 @@
     ;; struct constructor and predicate
     struct?
     struct-constructor		struct-predicate
+    struct=?
 
     ;; struct accessors and mutators
     struct-ref			struct-set!
@@ -393,6 +394,21 @@
       ((struct	x)
        (index	i x))
     ($struct-set! x i v)))
+
+(define (struct=? obj1 obj2)
+  ;;Return true if OBJ1 and OBJ2  are two structures having the same RTD
+  ;;and equal field values according to EQV?.
+  ;;
+  (and (struct? obj1)
+       (struct? obj2)
+       (eq? (struct-rtd obj1)
+	    (struct-rtd obj2))
+       (let ((len (struct-length obj1)))
+	 (let loop ((i 0))
+	   (or (= i len)
+	       (and (eqv? (struct-ref obj1 i)
+			  (struct-ref obj2 i))
+		    (loop (+ 1 i))))))))
 
 
 ;;;; done
