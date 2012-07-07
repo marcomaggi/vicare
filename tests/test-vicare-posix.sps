@@ -2325,6 +2325,21 @@
   #t)
 
 
+(parametrise ((check-test-name	'realtime-clock))
+
+  (check
+      (px.struct-timespec?
+       (px.clock-getres CLOCK_MONOTONIC (px.make-struct-timespec 0 0)))
+    => #t)
+
+  (check
+      (px.struct-timespec?
+       (px.clock-gettime CLOCK_MONOTONIC (px.make-struct-timespec 0 0)))
+    => #t)
+
+  #t)
+
+
 ;;;; done
 
 (flush-output-port (current-output-port))

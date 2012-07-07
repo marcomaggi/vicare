@@ -4614,7 +4614,7 @@ ikrt_posix_mq_timedsend (ikptr s_mqd, ikptr s_message, ikptr s_priority,
   msg_ptr		= IK_BYTEVECTOR_DATA_CHARP(s_message);
   msg_len		= IK_BYTEVECTOR_LENGTH(s_message);
   priority		= ik_integer_to_uint(s_priority);
-  timeout.tv_sec	= ik_integer_to_long(IK_FIELD(s_epoch_timeout, 0));
+  timeout.tv_sec	= (time_t)ik_integer_to_long(IK_FIELD(s_epoch_timeout, 0));
   timeout.tv_nsec	= ik_integer_to_long(IK_FIELD(s_epoch_timeout, 1));
   errno			= 0;
   rv = mq_timedsend(IK_UNFIX(s_mqd), msg_ptr, msg_len, priority, &timeout);
@@ -4691,7 +4691,7 @@ ikrt_posix_mq_timedreceive (ikptr s_mqd, ikptr s_message, ikptr s_epoch_timeout,
   ssize_t		rv;
   msg_ptr		= IK_BYTEVECTOR_DATA_CHARP(s_message);
   msg_len		= IK_BYTEVECTOR_LENGTH(s_message);
-  timeout.tv_sec	= ik_integer_to_long(IK_FIELD(s_epoch_timeout, 0));
+  timeout.tv_sec	= (time_t)ik_integer_to_long(IK_FIELD(s_epoch_timeout, 0));
   timeout.tv_nsec	= ik_integer_to_long(IK_FIELD(s_epoch_timeout, 1));
   errno			= 0;
   rv = mq_timedreceive(IK_UNFIX(s_mqd), msg_ptr, msg_len, &priority, &timeout);
@@ -4769,6 +4769,78 @@ ikrt_posix_mq_getattr (ikptr s_mqd, ikptr s_attr, ikpcb * pcb)
       IK_ASS(IK_FIELD(s_attr, 2), ika_integer_from_long(pcb, attr.mq_msgsize));
       IK_ASS(IK_FIELD(s_attr, 3), ika_integer_from_long(pcb, attr.mq_curmsgs));
     }
+    return IK_FIX(0);
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
+ ** Clock functions.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_clock_getres (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb * pcb)
+{
+#ifdef HAVE_CLOCK_GETRES
+  struct timespec	T;
+  int			rv;
+  errno = 0;
+  rv = clock_getres(IK_UNFIX(s_clock_id), &T);
+  if (0 == rv) {
+    pcb->root0 = &s_struct_timespec;
+    {
+      IK_ASS(IK_FIELD(s_struct_timespec, 0), ika_integer_from_long(pcb, (long)T.tv_sec));
+      IK_ASS(IK_FIELD(s_struct_timespec, 1), ika_integer_from_long(pcb, T.tv_nsec));
+    }
+    pcb->root0 = NULL;
+    return IK_FIX(0);
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_clock_gettime (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb * pcb)
+{
+#ifdef HAVE_CLOCK_GETTIME
+  struct timespec	T;
+  int			rv;
+  errno = 0;
+  rv = clock_gettime(IK_UNFIX(s_clock_id), &T);
+  if (0 == rv) {
+    pcb->root0 = &s_struct_timespec;
+    {
+      IK_ASS(IK_FIELD(s_struct_timespec, 0), ika_integer_from_long(pcb, (long)T.tv_sec));
+      IK_ASS(IK_FIELD(s_struct_timespec, 1), ika_integer_from_long(pcb, T.tv_nsec));
+    }
+    pcb->root0 = NULL;
+    return IK_FIX(0);
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_clock_settime (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb * pcb)
+{
+#ifdef HAVE_CLOCK_SETTIME
+  struct timespec	T;
+  int			rv;
+  errno = 0;
+  rv = clock_settime(IK_UNFIX(s_clock_id), &T);
+  if (0 == rv) {
+    pcb->root0 = &s_struct_timespec;
+    {
+      IK_ASS(IK_FIELD(s_struct_timespec, 0), ika_integer_from_long(pcb, (long)T.tv_sec));
+      IK_ASS(IK_FIELD(s_struct_timespec, 1), ika_integer_from_long(pcb, T.tv_nsec));
+    }
+    pcb->root0 = NULL;
     return IK_FIX(0);
   } else
     return ik_errno_to_code();

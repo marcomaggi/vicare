@@ -155,6 +155,10 @@
     struct-mq-attr-mq_msgsize		set-struct-mq-attr-mq_msgsize!
     struct-mq-attr-mq_curmsgs		set-struct-mq-attr-mq_curmsgs!
 
+    ;; clock functions
+    clock-getres
+    clock-gettime			clock-settime
+
     ;; sockets
     make-sockaddr_un
     sockaddr_un.pathname		sockaddr_un.pathname/string
@@ -2049,6 +2053,39 @@
 ;; (define (mq-notify)
 ;;   (define who 'mq-notify)
 ;;   #f)
+
+
+;;;; clock functions
+
+(define (clock-getres clock-id T)
+  (define who 'clock-getres)
+  (with-arguments-validation (who)
+      ((fixnum		clock-id)
+       (timespec	T))
+    (let ((rv (capi.posix-clock-getres clock-id T)))
+      (if (unsafe.fxzero? rv)
+	  T
+	(%raise-errno-error who rv clock-id T)))))
+
+(define (clock-gettime clock-id T)
+  (define who 'clock-gettime)
+  (with-arguments-validation (who)
+      ((fixnum		clock-id)
+       (timespec	T))
+    (let ((rv (capi.posix-clock-gettime clock-id T)))
+      (if (unsafe.fxzero? rv)
+	  T
+	(%raise-errno-error who rv clock-id T)))))
+
+(define (clock-settime clock-id T)
+  (define who 'clock-settime)
+  (with-arguments-validation (who)
+      ((fixnum		clock-id)
+       (timespec	T))
+    (let ((rv (capi.posix-clock-settime clock-id T)))
+      (if (unsafe.fxzero? rv)
+	  T
+	(%raise-errno-error who rv clock-id T)))))
 
 
 ;;;; sockets

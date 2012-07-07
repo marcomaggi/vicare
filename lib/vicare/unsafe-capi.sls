@@ -196,6 +196,10 @@
     posix-mq-setattr			posix-mq-getattr
     #;posix-mq-notify
 
+    ;; clock functions
+    posix-clock-getres
+    posix-clock-gettime			posix-clock-settime
+
     ;; file system synchronisation
     glibc-sync				glibc-fsync
     glibc-fdatasync
@@ -1083,6 +1087,18 @@
 ;;
 ;; (define-inline (posix-mq-notify)
 ;;   (foreign-call "ikrt_posix_mq_notify"))
+
+
+;;;; clock functions
+
+(define-inline (posix-clock-getres clock-id struct-timespec)
+  (foreign-call "ikrt_posix_clock_getres" clock-id struct-timespec))
+
+(define-inline (posix-clock-gettime clock-id struct-timespec)
+  (foreign-call "ikrt_posix_clock_gettime" clock-id struct-timespec))
+
+(define-inline (posix-clock-settime clock-id struct-timespec)
+  (foreign-call "ikrt_posix_clock_settime" clock-id struct-timespec))
 
 
 ;;;; file system synchronisation

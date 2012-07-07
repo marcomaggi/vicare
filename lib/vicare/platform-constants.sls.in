@@ -393,6 +393,10 @@
     TFD_CLOEXEC		TFD_NONBLOCK
     TFD_TIMER_ABSTIME
 
+;;;; clock
+    CLOCK_MONOTONIC_RAW CLOCK_PROCESS_CPUTIME_ID
+    CLOCK_THREAD_CPUTIME_ID
+
 ;;; errno codes, reexported from (vicare errno)
     E2BIG		EACCES		EADDRINUSE
     EADDRNOTAVAIL	EADV		EAFNOSUPPORT
@@ -1289,6 +1293,11 @@
 (define-inline-constant TFD_CLOEXEC		@VALUEOF_TFD_CLOEXEC@)
 (define-inline-constant TFD_NONBLOCK		@VALUEOF_TFD_NONBLOCK@)
 (define-inline-constant TFD_TIMER_ABSTIME	@VALUEOF_TFD_TIMER_ABSTIME@)
+
+;;; clock
+(define-inline-constant CLOCK_MONOTONIC_RAW	@VALUEOF_CLOCK_MONOTONIC_RAW@)
+(define-inline-constant CLOCK_PROCESS_CPUTIME_ID @VALUEOF_CLOCK_PROCESS_CPUTIME_ID@)
+(define-inline-constant CLOCK_THREAD_CPUTIME_ID	@VALUEOF_CLOCK_THREAD_CPUTIME_ID@)
 
 
 ;;;; h_errno friendly interface

@@ -10544,6 +10544,49 @@ exact integer representing how many seconds remain before the previous
 alarm would have been sent.
 @end defun
 
+@c ------------------------------------------------------------
+
+The following are the real--time clock functions.  They are available
+when @value{PRJNAME} is linked with the @code{rt} library.
+
+@quotation
+@strong{NOTE} On @gnu{}+Linux systems the argument @var{clock-id} to the
+@code{clock-*} functions can be one among:
+
+@example
+CLOCK_REALTIME
+CLOCK_MONOTONIC                 CLOCK_MONOTONIC_RAW
+CLOCK_PROCESS_CPUTIME_ID        CLOCK_THREAD_CPUTIME_ID
+@end example
+@end quotation
+
+
+@defun clock-getres @var{clock-id} @var{time}
+Interface to the C function @cfunc{clock-getres}, see the manual page
+@code{clock-getres(2)}.  Find the resolution of the clock selected by
+the fixnum @var{clock-id} and store it in @var{time}, which must be an
+instance of @code{struct-timespec}.  If successful return @var{time}
+itself, else raise an exception.
+@end defun
+
+
+@defun clock-gettime @var{clock-id} @var{time}
+Interface to the C function @cfunc{clock-gettime}, see the manual page
+@code{clock-gettime(2)}.  Retrieve the time of the clock selected by the
+fixnum @var{clock-id} and store it in @var{time}, which must be an
+instance of @code{struct-timespec}.  If successful return @var{time}
+itself, else raise an exception.
+@end defun
+
+
+@defun clock-settime @var{clock-id} @var{time}
+Interface to the C function @cfunc{clock-settime}, see the manual page
+@code{clock-settime(2)}.  Set the time of the clock selected by the
+fixnum @var{clock-id} acquiring it from @var{time}, which must be an
+instance of @code{struct-timespec}.  If successful return @var{time}
+itself, else raise an exception.
+@end defun
+
 @c page
 @node posix config
 @section System configuration
