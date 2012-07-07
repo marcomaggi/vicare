@@ -10685,6 +10685,7 @@ we must refer to the manual page @code{mq_overview(7)}.
 @menu
 * posix mq attr::               Structure type @code{struct-mq-attr}.
 * posix mq api::                Message queues @api{}.
+* posix mq examples::           Simple examples of message queues usage.
 @end menu
 
 @c page
@@ -10928,6 +10929,111 @@ instance are the return value of this function.
 Interface to the C function @cfunc{mq_notify}.
 @end defun
 @end ignore
+
+@c page
+@node posix mq examples
+@subsection Simple examples of message queues usage
+
+
+The following example shows how to create and close a message queue and
+how to send and receive a message:
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants)
+  (vicare syntactic-extensions))
+
+(define name "/vicare-test")
+
+(define (parent child-pid)
+  ;; Create a message queue and block until a message
+  ;; is received from the child.
+  ;;
+  (let ((mqd (px.mq-open name
+                         (bitwise-ior O_CREAT O_EXCL O_RDWR)
+                         (bitwise-ior S_IRUSR S_IWUSR)
+                         (px.make-struct-mq-attr 0 3 16 0)))
+        (buf (make-bytevector 16)))
+    (unwind-protect
+        (let-values (((len priority)
+                      (px.mq-receive mqd buf)))
+          (px.waitpid child-pid 0)
+          (list (subbytevector-u8 buf 0 len)
+                priority))
+      (px.mq-close mqd)
+      (px.mq-unlink name))))
+
+(define (child)
+  ;; Wait for the parent to create the queue, then
+  ;; send a message and exit.
+  ;;
+  (px.nanosleep 0 900000)
+  (let ((mqd (px.mq-open name O_RDWR
+                         (bitwise-ior S_IRUSR S_IWUSR)
+                         (px.make-struct-mq-attr 0 3 16 0))))
+    (unwind-protect
+        (px.mq-send mqd '#ve(ascii "ciao") 1)
+      (px.mq-close mqd)))
+  (exit 0))
+
+(px.fork parent child)
+@end example
+
+The following example shows how to create and close a message queue and
+how to send and receive a message with timeout:
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants)
+  (vicare syntactic-extensions))
+
+(define name "/vicare-test")
+
+(define timeout
+  (let ((T (px.clock-gettime CLOCK_REALTIME
+              (px.make-struct-timespec 0 0))))
+    (px.set-struct-timespec-tv_sec! T
+       (+ 5 (px.struct-timespec-tv_sec T)))
+    T))
+
+(define (parent child-pid)
+  ;; Create a message queue and block with timeout
+  ;; until a message is received from the child.
+  ;;
+  (let ((mqd (px.mq-open name
+                         (bitwise-ior O_CREAT O_EXCL O_RDWR)
+                         (bitwise-ior S_IRUSR S_IWUSR)
+                         (px.make-struct-mq-attr 0 3 16 0)))
+        (buf (make-bytevector 16)))
+    (unwind-protect
+        (let-values (((len priority)
+                      (px.mq-timedreceive mqd buf timeout)))
+          (px.waitpid child-pid 0)
+          (list (subbytevector-u8 buf 0 len)
+                priority))
+      (px.mq-close mqd)
+      (px.mq-unlink name))))
+
+(define (child)
+  ;; Wait for the parent to create the queue, then
+  ;; send a message with timeout and exit.
+  ;;
+  (px.nanosleep 0 900000)
+  (let ((mqd (px.mq-open name
+                         O_RDWR
+                         (bitwise-ior S_IRUSR S_IWUSR)
+                         (px.make-struct-mq-attr 0 3 16 0))))
+    (unwind-protect
+        (px.mq-timedsend mqd '#ve(ascii "ciao") 1 timeout)
+      (px.mq-close mqd)))
+  (exit 0))
+
+(px.fork parent child)
+@end example
 
 @c page
 @node posix misc
