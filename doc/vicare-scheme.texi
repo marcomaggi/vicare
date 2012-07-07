@@ -10626,8 +10626,12 @@ representing the value; else an exception is raised.
 
 
 @posix{} message queues allow processes to exchange messages composed of
-arrays of bytes.  On @gnu{}+Linux systems, for an introduction to the
-@api{} we must refer to the manual page @code{mq_overview(7)}.
+arrays of bytes.
+
+@quotation
+@strong{NOTE} On @gnu{}+Linux systems, for an introduction to the @api{}
+we must refer to the manual page @code{mq_overview(7)}.
+@end quotation
 
 @menu
 * posix mq attr::               Structure type @code{struct-mq-attr}.
@@ -10645,7 +10649,8 @@ library.
 
 @deftp {Struct Type} struct-mq-attr
 Data structure type used to represent at the Scheme level @code{struct
-mq_attr} values.  It has the following fields:
+mq_attr} values, see the manual page @code{mq_getattr(3)}.  It has the
+following fields:
 
 @table @code
 @item mq_flags
@@ -10702,7 +10707,7 @@ Notice that @code{mq_notify(3)} at present is not interfaced.
 
 @quotation
 @strong{NOTE} The code implementing the interface to @posix{} message
-queues assumes that the descriptor @code{mqd_t} is an exact integer.  On
+queues assumes that the descriptor @code{mqd_t} is a fixnum.  On
 @gnu{}+Linux systems this value is known to be a file descriptor.
 @end quotation
 
@@ -10714,11 +10719,11 @@ Interface to the C function @cfunc{mq_open}, see the manual page
 If successful return a message queue descriptor, else raise an
 exception.
 
-@var{name} must be a Scheem string or bytevector holding a pathname in
+@var{name} must be a Scheme string or bytevector holding a pathname in
 @ascii{} encoding.
 
-@var{oflag} must be a fixnum being the inclusive OR composition of some
-of the following flags:
+@var{oflag} must be a fixnum representing the inclusive OR composition
+of some of the following flags:
 
 @example
 O_RDONLY    O_WRONLY  O_RDWR
@@ -10741,10 +10746,11 @@ with platform--dependent default attributes.
 @end defun
 
 
-@defun mq-close @var{mq}
+@defun mq-close @var{mqd}
 Interface to the C function @cfunc{mq_close}, see the manual page
 @code{mq_close(3)}.  Close the message queue referenced by the
-descriptor @var{mq}; notice that the message queue will still exist
+descriptor @var{mqd}, which must be a descriptor returned by a previous
+call to @func{mq-open}; notice that the message queue will still exist
 until it is deleted with @cfunc{mq_unlink}.  If successful return
 unspecified values, else raise an exception.
 @end defun
@@ -10764,40 +10770,44 @@ an exception.
 @defun mq-send @var{mqd} @var{message} @var{priority}
 Interface to the C function @cfunc{mq_send}, see the manual page
 @code{mq_send(3)}.  Add a message to the queue referenced by the
-descriptor @var{mqd}.  If successful return the fixnum zero, else raise
-an exception.
+descriptor @var{mqd}, which must be a descriptor returned by a previous
+call to @func{mq-open}.  If successful return unspecified values, else
+raise an exception.
 
 @var{message} must be a Scheme bytevector representing the message data.
-@var{priority} must be an exact integer, in the range of @code{unsigned
-int}, representing the priority of the message.
+@var{priority} must be an exact integer, in the range of the C language
+type @code{unsigned int}, representing the priority of the message.
 @end defun
 
 
 @defun mq-timedsend @var{mqd} @var{message} @var{priority} @var{epoch-timeout}
 Interface to the C function @cfunc{mq_timedsend}, see the manual page
 @code{mq_timedsend(3)}.  Add a message to the queue referenced by the
-descriptor @var{mqd}.  If successful return the fixnum zero, else raise
-an exception.
+descriptor @var{mqd}, which must be a descriptor returned by a previous
+call to @func{mq-open}.  If successful return unspecified values, else
+raise an exception.
 
 @var{message} must be a Scheme bytevector representing the message data.
 
-@var{priority} must be an exact integer, in the range of @code{unsigned
-int}, representing the priority of the message.
+@var{priority} must be an exact integer, in the range of the C language
+type @code{unsigned int}, representing the priority of the message.
 
 @var{epoch-timeout} must be an instance of @code{struct-timespec}
 representing an absolute time since the Epoch: if the queue is in
 blocking mode, a call to this function will block until the timeout
 expires waiting to deliver the message.  @ref{posix time timespec,
-struct-timespec} for details on the structure.
+struct-timespec}
 @end defun
 
 
 @defun mq-receive @var{mqd} @var{message}
 Interface to the C function @cfunc{mq_receive}, see the manual page
 @code{mq_receive(3)}.  Remove the oldest message with the highest
-priority from the message queue referenced by @var{mqd}.  If successful
-return a non--negative exact integer representing the priority of the
-message, else raise an exception.
+priority from the message queue referenced by @var{mqd}, which must be a
+descriptor returned by a previous call to @func{mq-open}.  If successful
+return two values: an exact integer representing the number of bytes in
+the message, a non--negative exact integer representing the priority of
+the message; else raise an exception.
 
 @var{message} must be a Scheme bytevector providing the buffer in which
 the function will write the received message; its length must be greater
@@ -10808,9 +10818,11 @@ than the maximum message length specified in the queue attributes.
 @defun mq-timedreceive @var{mqd} @var{message} @var{epoch-timeout}
 Interface to the C function @cfunc{mq_timedreceive}, see the manual page
 @code{mq_timedreceive(3)}.  Remove the oldest message with the highest
-priority from the message queue referenced by @var{mqd}.  If successful
-return a non--negative exact integer representing the priority of the
-message, else raise an exception.
+priority from the message queue referenced by @var{mqd}, which must be a
+descriptor returned by a previous call to @func{mq-open}.  If successful
+return two values: an exact integer representing the number of bytes in
+the message, a non--negative exact integer representing the priority of
+the message; else raise an exception.
 
 @var{message} must be a Scheme bytevector providing the buffer in which
 the function will write the received message; its length must be greater
@@ -10819,7 +10831,8 @@ than the maximum message length specified in the queue attributes.
 @var{epoch-timeout} must be an instance of @code{struct-timespec}
 representing an absolute time since the Epoch: if the queue is in
 blocking mode, a call to this function will block until the timeout
-expires waiting to receive the message.
+expires waiting to receive the message.  @ref{posix time timespec,
+struct-timespec}
 @end defun
 
 
@@ -10827,10 +10840,10 @@ expires waiting to receive the message.
 @defunx mq-setattr @var{mqd} @var{new-attr} @var{old-attr}
 Interface to the C function @cfunc{mq_setattr}, see the manual page
 @code{mq_setattr(3)}.  Modify the attributes of the message queue
-referenced by @var{mqd}, which must be a message queue descriptor
-returned by a previous call to @func{mq-open}.  If successful return an
-instance of @code{struct-mq-attr} representing the old attributes, else
-raise an exception.
+referenced by @var{mqd}, which must be a descriptor returned by a
+previous call to @func{mq-open}.  If successful return an instance of
+@code{struct-mq-attr} representing the old attributes, else raise an
+exception.
 
 The new values are read from @var{new-attr}, which must be an instance
 of @code{struct-mq-attr}.
@@ -10846,10 +10859,10 @@ or the new instance are the return value of this function.
 @defunx mq-getattr @var{mqd} @var{attr}
 Interface to the C function @cfunc{mq_getattr}, see the manual page
 @code{mq_getattr(3)}.  Retrieve the attributes of the message queue
-referenced by @var{mqd}, which must be a message queue descriptor
-returned by a previous call to @func{mq-open}.  If successful return an
-instance of @code{struct-mq-attr} representing the old attributes, else
-raise an exception.
+referenced by @var{mqd}, which must be a descriptor returned by a
+previous call to @func{mq-open}.  If successful return an instance of
+@code{struct-mq-attr} representing the old attributes, else raise an
+exception.
 
 The values are stored in @var{attr}, which must be an instance of
 @code{struct-mq-attr}; when @var{attr} is not given: a new instance of

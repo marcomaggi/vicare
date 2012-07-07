@@ -306,6 +306,9 @@
        (unsafe.fx>= obj 0)
        (unsafe.fx<  obj FD_SETSIZE)))
 
+(define-inline (%message-queue-descriptor? obj)
+  (%file-descriptor? obj))
+
 (define-inline (%signal-fixnum? ?obj)
   (let ((obj ?obj))
     (and (fixnum? obj)
@@ -331,6 +334,13 @@
   (and (struct-itimerval? obj)
        (%struct-timeval? (struct-itimerval-it_interval obj))
        (%struct-timeval? (struct-itimerval-it_value    obj))))
+
+(define (%valid-struct-mq-attr? obj)
+  (and (struct-mq-attr? obj)
+       (words.signed-long? (struct-mq-attr-mq_flags   obj))
+       (words.signed-long? (struct-mq-attr-mq_maxmsg  obj))
+       (words.signed-long? (struct-mq-attr-mq_msgsize obj))
+       (words.signed-long? (struct-mq-attr-mq_curmsgs obj))))
 
 
 ;;;; arguments validation
@@ -414,6 +424,10 @@
 (define-argument-validation (file-descriptor who obj)
   (%file-descriptor? obj)
   (assertion-violation who "expected fixnum file descriptor as argument" obj))
+
+(define-argument-validation (message-queue-descriptor who obj)
+  (%message-queue-descriptor? obj)
+  (assertion-violation who "expected message queue descriptor as argument" obj))
 
 (define-argument-validation (signal who obj)
   (%signal-fixnum? obj)
@@ -1923,13 +1937,6 @@
   (%display " mq_curmsgs=")	(%display (struct-mq-attr-mq_curmsgs S))
   (%display "]"))
 
-(define (%valid-struct-mq-attr? obj)
-  (and (struct-mq-attr? obj)
-       (fixnum? (struct-mq-attr-mq_flags   obj))
-       (fixnum? (struct-mq-attr-mq_maxmsg  obj))
-       (fixnum? (struct-mq-attr-mq_msgsize obj))
-       (fixnum? (struct-mq-attr-mq_curmsgs obj))))
-
 ;;; --------------------------------------------------------------------
 
 (define mq-open
@@ -1952,7 +1959,7 @@
 (define (mq-close mq)
   (define who 'mq-close)
   (with-arguments-validation (who)
-      ((fixnum	mq))
+      ((message-queue-descriptor	mq))
     (let ((rv (capi.posix-mq-close mq)))
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv mq)))))
@@ -1969,9 +1976,9 @@
 (define (mq-send mqd message priority)
   (define who 'mq-send)
   (with-arguments-validation (who)
-      ((fixnum		mqd)
-       (bytevector	message)
-       (unsigned-int	priority))
+      ((message-queue-descriptor	mqd)
+       (bytevector			message)
+       (unsigned-int			priority))
     (let ((rv (capi.posix-mq-send mqd message priority)))
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv mqd message priority)))))
@@ -1979,10 +1986,10 @@
 (define (mq-timedsend mqd message priority epoch-timeout)
   (define who 'mq-timedsend)
   (with-arguments-validation (who)
-      ((fixnum		mqd)
-       (bytevector	message)
-       (unsigned-int	priority)
-       (timespec	epoch-timeout))
+      ((message-queue-descriptor	mqd)
+       (bytevector			message)
+       (unsigned-int			priority)
+       (timespec			epoch-timeout))
     (let ((rv (capi.posix-mq-timedsend mqd message priority epoch-timeout)))
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv mqd message priority epoch-timeout)))))
@@ -1990,22 +1997,22 @@
 (define (mq-receive mqd message)
   (define who 'mq-receive)
   (with-arguments-validation (who)
-      ((fixnum		mqd)
-       (bytevector	message))
+      ((message-queue-descriptor	mqd)
+       (bytevector			message))
     (let ((rv (capi.posix-mq-receive mqd message)))
-      (if (<= 0 rv)
-	  rv
+      (if (pair? rv)
+	  (values (car rv) (cdr rv))
 	(%raise-errno-error who rv mqd message)))))
 
 (define (mq-timedreceive mqd message epoch-timeout)
   (define who 'mq-timedreceive)
   (with-arguments-validation (who)
-      ((fixnum		mqd)
-       (bytevector	message)
-       (timespec	epoch-timeout))
+      ((message-queue-descriptor	mqd)
+       (bytevector			message)
+       (timespec			epoch-timeout))
     (let ((rv (capi.posix-mq-timedreceive mqd message epoch-timeout)))
-      (if (<= 0 rv)
-	  rv
+      (if (pair? rv)
+	  (values (car rv) (cdr rv))
 	(%raise-errno-error who rv mqd message epoch-timeout)))))
 
 (define mq-setattr
@@ -2015,9 +2022,9 @@
    ((mqd new-attr old-attr)
     (define who 'mq-setattr)
     (with-arguments-validation (who)
-	((fixnum	mqd)
-	 (mq-attr	new-attr)
-	 (mq-attr	old-attr))
+	((message-queue-descriptor	mqd)
+	 (mq-attr			new-attr)
+	 (mq-attr			old-attr))
       (let ((rv (capi.posix-mq-setattr mqd new-attr old-attr)))
 	(if (unsafe.fxzero? rv)
 	    old-attr
@@ -2030,8 +2037,8 @@
    ((mqd attr)
     (define who 'mq-getattr)
     (with-arguments-validation (who)
-	((fixnum	mqd)
-	 (mq-attr	attr))
+	((message-queue-descriptor	mqd)
+	 (mq-attr			attr))
       (let ((rv (capi.posix-mq-getattr mqd attr)))
 	(if (unsafe.fxzero? rv)
 	    attr

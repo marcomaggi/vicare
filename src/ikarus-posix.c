@@ -4490,8 +4490,8 @@ ikrt_posix_mq_open (ikptr s_name, ikptr s_oflag, ikptr s_mode, ikptr s_attr,
 
    S_NAME must be a bytevector holding a pathname in ASCII encoding.
 
-   S_OFLAG must be  a fixnum being the inclusive OR  composition of some
-   of  the  following  flags: O_RDONLY,  O_WRONLY,  O_RDWR,  O_NONBLOCK,
+   S_OFLAG must be a fixnum representing the inclusive OR composition of
+   some of the following  flags: O_RDONLY, O_WRONLY, O_RDWR, O_NONBLOCK,
    O_CREAT, O_EXCL.
 
    S_MODE  must be  a  fixnum representing  access  permissions for  the
@@ -4633,9 +4633,10 @@ ikptr
 ikrt_posix_mq_receive (ikptr s_mqd, ikptr s_message, ikpcb * pcb)
 /* Interface  to  the  C  function "mq_receive()".   Remove  the  oldest
    message with the  highest priority from the  message queue referenced
-   by  S_MQD.   If  successful   return  a  non-negative  exact  integer
-   representing  the priority  of the  message, else  return an  encoded
-   "errno" value.
+   by S_MQD.  If successful return a  pair whose car is an exact integer
+   representing the  number of bytes in  the message and whose  cdr is a
+   non-negative exact integer representing  the priority of the message,
+   else return an encoded "errno" value.
 
    S_MESSAGE must be  a Scheme bytevector providing the  buffer in which
    the  function will  write the  received message;  its length  must be
@@ -4646,12 +4647,22 @@ ikrt_posix_mq_receive (ikptr s_mqd, ikptr s_message, ikpcb * pcb)
   char *	msg_ptr;
   size_t	msg_len;
   unsigned	priority;
-  int		rv;
+  ssize_t	rv;
   msg_ptr	= IK_BYTEVECTOR_DATA_CHARP(s_message);
   msg_len	= IK_BYTEVECTOR_LENGTH(s_message);
   errno = 0;
   rv = mq_receive(IK_UNFIX(s_mqd), msg_ptr, msg_len, &priority);
-  return (0 == rv)? ika_integer_from_uint(pcb, priority) : ik_errno_to_code();
+  if (-1 != rv) {
+    ikptr	s_pair = ika_pair_alloc(pcb);
+    pcb->root0 = &s_pair;
+    {
+      IK_CAR(s_pair) = ika_integer_from_ssize_t(pcb, rv);
+      IK_CDR(s_pair) = ika_integer_from_uint(pcb, priority);
+    }
+    pcb->root0 = NULL;
+    return s_pair;
+  } else
+    return ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -4660,9 +4671,10 @@ ikptr
 ikrt_posix_mq_timedreceive (ikptr s_mqd, ikptr s_message, ikptr s_epoch_timeout, ikpcb * pcb)
 /* Interface to  the C function "mq_timedreceive()".   Remove the oldest
    message with the  highest priority from the  message queue referenced
-   by  S_MQD.   If  successful   return  a  non-negative  exact  integer
-   representing  the priority  of the  message, else  return an  encoded
-   "errno" value.
+   by S_MQD.  If successful return a  pair whose car is an exact integer
+   representing the  number of bytes in  the message and whose  cdr is a
+   non-negative exact integer representing  the priority of the message,
+   else return an encoded "errno" value.
 
    S_MESSAGE must be  a Scheme bytevector providing the  buffer in which
    the  function will  write the  received message;  its length  must be
@@ -4679,14 +4691,24 @@ ikrt_posix_mq_timedreceive (ikptr s_mqd, ikptr s_message, ikptr s_epoch_timeout,
   size_t		msg_len;
   unsigned		priority;
   struct timespec	timeout;
-  int			rv;
+  ssize_t		rv;
   msg_ptr		= IK_BYTEVECTOR_DATA_CHARP(s_message);
   msg_len		= IK_BYTEVECTOR_LENGTH(s_message);
   timeout.tv_sec	= ik_integer_to_long(IK_FIELD(s_epoch_timeout, 0));
   timeout.tv_nsec	= ik_integer_to_long(IK_FIELD(s_epoch_timeout, 1));
   errno			= 0;
   rv = mq_timedreceive(IK_UNFIX(s_mqd), msg_ptr, msg_len, &priority, &timeout);
-  return (0 == rv)? ika_integer_from_uint(pcb, priority) : ik_errno_to_code();
+  if (-1 != rv) {
+    ikptr	s_pair = ika_pair_alloc(pcb);
+    pcb->root0 = &s_pair;
+    {
+      IK_CAR(s_pair) = ika_integer_from_ssize_t(pcb, rv);
+      IK_CDR(s_pair) = ika_integer_from_uint(pcb, priority);
+    }
+    pcb->root0 = NULL;
+    return s_pair;
+  } else
+    return ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -4713,7 +4735,7 @@ ikrt_posix_mq_setattr (ikptr s_mqd, ikptr s_new_attr, ikptr s_old_attr, ikpcb * 
   new_attr.mq_curmsgs	= ik_integer_to_long(IK_FIELD(s_new_attr, 3));
   errno = 0;
   rv = mq_setattr(IK_UNFIX(s_mqd), &new_attr, &old_attr);
-  if (-1 != rv) {
+  if (0 == rv) {
     pcb->root0 = &s_old_attr;
     {
       IK_ASS(IK_FIELD(s_old_attr, 0), ika_integer_from_long(pcb, old_attr.mq_flags));
@@ -4722,7 +4744,7 @@ ikrt_posix_mq_setattr (ikptr s_mqd, ikptr s_new_attr, ikptr s_old_attr, ikpcb * 
       IK_ASS(IK_FIELD(s_old_attr, 3), ika_integer_from_long(pcb, old_attr.mq_curmsgs));
     }
     pcb->root0 = NULL;
-    return IK_FIX(rv);
+    return IK_FIX(0);
   }
   else
     return ik_errno_to_code();
@@ -4742,7 +4764,7 @@ ikrt_posix_mq_getattr (ikptr s_mqd, ikptr s_attr, ikpcb * pcb)
   int			rv;
   errno = 0;
   rv = mq_getattr(IK_UNFIX(s_mqd), &attr);
-  if (-1 != rv) {
+  if (0 == rv) {
     pcb->root0 = &s_attr;
     {
       IK_ASS(IK_FIELD(s_attr, 0), ika_integer_from_long(pcb, attr.mq_flags));
@@ -4750,7 +4772,7 @@ ikrt_posix_mq_getattr (ikptr s_mqd, ikptr s_attr, ikpcb * pcb)
       IK_ASS(IK_FIELD(s_attr, 2), ika_integer_from_long(pcb, attr.mq_msgsize));
       IK_ASS(IK_FIELD(s_attr, 3), ika_integer_from_long(pcb, attr.mq_curmsgs));
     }
-    return IK_FIX(rv);
+    return IK_FIX(0);
   } else
     return ik_errno_to_code();
 #else
