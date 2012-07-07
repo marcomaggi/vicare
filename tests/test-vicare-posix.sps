@@ -2293,17 +2293,21 @@
 ;;; --------------------------------------------------------------------
 ;;; timed send and receive
 
-  #;(check
+  (check
       (let ()
 	(define name "/vicare-test-02")
+	(define timeout
+	  (let ((T (px.clock-gettime CLOCK_REALTIME
+				     (px.make-struct-timespec 0 0))))
+	    (px.set-struct-timespec-tv_sec! T (+ 5 (px.struct-timespec-tv_sec T)))
+	    T))
 	(define (parent child-pid)
-	  (let ((mqd (px.mq-open name (bitwise-ior O_CREAT O_EXCL O_RDWR)
-				 MQ_MODE_1 MQ_ATTR_1))
-		(buf (make-bytevector 16)))
+	  (let ((mqd		(px.mq-open name (bitwise-ior O_CREAT O_EXCL O_RDWR)
+					    MQ_MODE_1 MQ_ATTR_1))
+		(buf		(make-bytevector 16)))
 	    (unwind-protect
 		(let-values (((len priority)
-			      (px.mq-timedreceive mqd buf
-						  (px.make-struct-timespec))))
+			      (px.mq-timedreceive mqd buf timeout)))
 		  (px.waitpid child-pid 0)
 		  (list (subbytevector-u8 buf 0 len)
 			priority))
@@ -2313,8 +2317,7 @@
 	  (px.nanosleep 0 900000)
 	  (let ((mqd (px.mq-open name O_RDWR MQ_MODE_1 MQ_ATTR_1)))
 	    (unwind-protect
-		(px.mq-send mqd '#ve(ascii "ciao") 1
-			    (px.make-struct-timespec))
+		(px.mq-timedsend mqd '#ve(ascii "ciao") 1 timeout)
 	      (px.mq-close mqd)))
 	  (exit 0))
 	(guard (E (else #f))

@@ -253,13 +253,17 @@
 
     make-struct-timeval			struct-timeval?
     struct-timeval-tv_sec		struct-timeval-tv_usec
+    set-struct-timeval-tv_sec!		set-struct-timeval-tv_usec!
 
     make-struct-timespec		struct-timespec?
     struct-timespec-tv_sec		struct-timespec-tv_nsec
+    set-struct-timespec-tv_sec!		set-struct-timespec-tv_nsec!
 
     make-struct-tms			struct-tms?
     struct-tms-tms_utime		struct-tms-tms_stime
     struct-tms-tms_cutime		struct-tms-tms_cstime
+    set-struct-tms-tms_utime!		set-struct-tms-tms_stime!
+    set-struct-tms-tms_cutime!		set-struct-tms-tms_cstime!
 
     make-struct-tm			struct-tm?
     struct-tm-tm_sec			struct-tm-tm_min
@@ -268,9 +272,16 @@
     struct-tm-tm_wday			struct-tm-tm_yday
     struct-tm-tm_isdst			struct-tm-tm_gmtoff
     struct-tm-tm_zone
+    set-struct-tm-tm_sec!		set-struct-tm-tm_min!
+    set-struct-tm-tm_hour!		set-struct-tm-tm_mday!
+    set-struct-tm-tm_mon!		set-struct-tm-tm_year!
+    set-struct-tm-tm_wday!		set-struct-tm-tm_yday!
+    set-struct-tm-tm_isdst!		set-struct-tm-tm_gmtoff!
+    set-struct-tm-tm_zone!
 
     make-struct-itimerval		struct-itimerval?
     struct-itimerval-it_interval	struct-itimerval-it_value
+    set-struct-itimerval-it_interval!	set-struct-itimerval-it_value!
 
     ;; system configuration
     sysconf
