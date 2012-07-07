@@ -2030,7 +2030,7 @@
 	    old-attr
 	  (%raise-errno-error who rv new-attr old-attr)))))))
 
-(define (mq-getattr)
+(define mq-getattr
   (case-lambda
    ((mqd)
     (mq-getattr mqd (make-struct-mq-attr 0 0 0 0)))

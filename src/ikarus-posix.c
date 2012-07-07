@@ -4518,10 +4518,7 @@ ikrt_posix_mq_open (ikptr s_name, ikptr s_oflag, ikptr s_mode, ikptr s_attr,
     attrp = NULL;
   errno = 0;
   rv    = mq_open(name, IK_UNFIX(s_oflag), IK_UNFIX(s_mode), attrp);
-  if (((mqd_t)-1) != rv)
-    return IK_FIX(rv);
-  else
-    return ik_errno_to_code();
+  return (((mqd_t)-1) != rv)? IK_FIX(rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif

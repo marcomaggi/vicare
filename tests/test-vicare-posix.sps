@@ -2218,6 +2218,69 @@
   #t)
 
 
+(parametrise ((check-test-name	'message-queue))
+
+  (define MQ_OFLAG_1	(bitwise-ior O_CREAT O_EXCL O_RDWR O_NONBLOCK))
+  (define MQ_MODE_1	(bitwise-ior S_IRUSR S_IWUSR))
+  (define MQ_ATTR_1	(px.make-struct-mq-attr 0 3 4096 0))
+
+;;; --------------------------------------------------------------------
+;;; mq-setattr, mq-getattr
+
+  (check	;mq-getattr
+      (let ((name "/vicare-test-01"))
+	(unwind-protect
+	    (let ((mqd (px.mq-open name MQ_OFLAG_1 MQ_MODE_1 MQ_ATTR_1)))
+	      (unwind-protect
+		  (px.mq-getattr mqd)
+		(px.mq-close mqd)))
+	  (px.mq-unlink name)))
+    (=> struct=?) (px.make-struct-mq-attr O_NONBLOCK 3 4096 0))
+
+  (check	;mq-setattr and check the old attributes
+      (let ((name "/vicare-test-01"))
+	(unwind-protect
+	    (let ((mqd (px.mq-open name MQ_OFLAG_1 MQ_MODE_1 MQ_ATTR_1)))
+	      (unwind-protect
+		  (px.mq-setattr mqd (px.make-struct-mq-attr 0 10 8000 0))
+		(px.mq-close mqd)))
+	  (px.mq-unlink name)))
+    (=> struct=?) (px.make-struct-mq-attr O_NONBLOCK 3 4096 0))
+
+  (check	;mq-setattr and check the new attributes
+      (let ((name "/vicare-test-01"))
+	(unwind-protect
+	    (let ((mqd (px.mq-open name MQ_OFLAG_1 MQ_MODE_1 MQ_ATTR_1)))
+	      (unwind-protect
+		  (begin
+		    (px.mq-setattr mqd (px.make-struct-mq-attr 0 10 8000 0))
+		    (px.mq-getattr mqd))
+		(px.mq-close mqd)))
+	  (px.mq-unlink name)))
+    (=> struct=?) (px.make-struct-mq-attr 0 3 4096 0))
+
+;;; --------------------------------------------------------------------
+
+  #;(check
+      (let ((name	(px.mkstemp "/vicare-test-XXXXXX")))
+	(px.fork
+	 (lambda (pid) ;parent
+	   (let ((mqd (px.mq-open name
+				  (bitwise-ior O_CREAT O_EXCL O_RDWR)
+				  (bitwise-ior S_IRUSR S_IWUSR)
+				  (px.make-struct-mq-attr O_NONBLOCK 3 4096 0))))
+	     (unwind-protect
+		 ()
+	       (px.mq-close mqd)
+	       (px.mq-unlink name))))
+	 (lambda () ;child
+	   (px.nanosleep 0 900000)
+	   )))
+    => #f)
+
+  #t)
+
+
 ;;;; done
 
 (flush-output-port (current-output-port))

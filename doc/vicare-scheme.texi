@@ -2728,6 +2728,12 @@ Store @var{value} in the field at @var{index} in the data structure
 @var{stru}.
 @end defun
 
+
+@defun struct=? @vari{obj} @varii{obj}
+Return true if @vari{obj} and @varii{obj} are two structures having the
+same @rtd{} and equal field values according to @func{eqv?}.
+@end defun
+
 @c page
 @node iklib keywords
 @section Keyword objects
@@ -10742,7 +10748,8 @@ S_IROTH   S_IWOTH   S_IXOTH
 
 The optional @var{attr} must be false or an instance of
 @code{struct-mq-attr}; when false or not given: the queue is created
-with platform--dependent default attributes.
+with platform--dependent default attributes.  The fields @code{mq_flags}
+and @code{mq_curmsgs} are ignored in call to this function.
 @end defun
 
 
@@ -10846,7 +10853,9 @@ previous call to @func{mq-open}.  If successful return an instance of
 exception.
 
 The new values are read from @var{new-attr}, which must be an instance
-of @code{struct-mq-attr}.
+of @code{struct-mq-attr}.  On @gnu{}+Linux: the only attribute that can
+be modified is @code{mq_flags}, all the other values are ignored (last
+verified on Jul 7, 2012).
 
 The old values are stored in @var{old-attr}, which must be an instance
 of @code{struct-mq-attr}; when @var{old-attr} is not given: a new
