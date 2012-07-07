@@ -2221,8 +2221,9 @@
 (parametrise ((check-test-name	'message-queue))
 
   (define MQ_OFLAG_1	(bitwise-ior O_CREAT O_EXCL O_RDWR O_NONBLOCK))
+  (define MQ_OFLAG_2	(bitwise-ior                O_RDWR O_NONBLOCK))
   (define MQ_MODE_1	(bitwise-ior S_IRUSR S_IWUSR))
-  (define MQ_ATTR_1	(px.make-struct-mq-attr 0 3 4096 0))
+  (define MQ_ATTR_1	(px.make-struct-mq-attr 0 3 16 0))
 
 ;;; --------------------------------------------------------------------
 ;;; mq-setattr, mq-getattr
@@ -2235,7 +2236,7 @@
 		  (px.mq-getattr mqd)
 		(px.mq-close mqd)))
 	  (px.mq-unlink name)))
-    (=> struct=?) (px.make-struct-mq-attr O_NONBLOCK 3 4096 0))
+    (=> struct=?) (px.make-struct-mq-attr O_NONBLOCK 3 16 0))
 
   (check	;mq-setattr and check the old attributes
       (let ((name "/vicare-test-01"))
@@ -2245,7 +2246,7 @@
 		  (px.mq-setattr mqd (px.make-struct-mq-attr 0 10 8000 0))
 		(px.mq-close mqd)))
 	  (px.mq-unlink name)))
-    (=> struct=?) (px.make-struct-mq-attr O_NONBLOCK 3 4096 0))
+    (=> struct=?) (px.make-struct-mq-attr O_NONBLOCK 3 16 0))
 
   (check	;mq-setattr and check the new attributes
       (let ((name "/vicare-test-01"))
@@ -2257,26 +2258,69 @@
 		    (px.mq-getattr mqd))
 		(px.mq-close mqd)))
 	  (px.mq-unlink name)))
-    (=> struct=?) (px.make-struct-mq-attr 0 3 4096 0))
+    (=> struct=?) (px.make-struct-mq-attr 0 3 16 0))
 
 ;;; --------------------------------------------------------------------
+;;; send and receive
+
+  (check
+      (let ()
+	(define name "/vicare-test-02")
+	(define (parent child-pid)
+	  (let ((mqd (px.mq-open name (bitwise-ior O_CREAT O_EXCL O_RDWR)
+				 MQ_MODE_1 MQ_ATTR_1))
+		(buf (make-bytevector 16)))
+	    (unwind-protect
+		(let-values (((len priority)
+			      (px.mq-receive mqd buf)))
+		  (px.waitpid child-pid 0)
+		  (list (subbytevector-u8 buf 0 len)
+			priority))
+	      (px.mq-close mqd)
+	      (px.mq-unlink name))))
+	(define (child)
+	  (px.nanosleep 0 900000)
+	  (let ((mqd (px.mq-open name O_RDWR MQ_MODE_1 MQ_ATTR_1)))
+	    (unwind-protect
+		(px.mq-send mqd '#ve(ascii "ciao") 1)
+	      (px.mq-close mqd)))
+	  (exit 0))
+	(guard (E (else #f))
+	  (px.mq-unlink name))
+	(px.fork parent child))
+    => '(#ve(ascii "ciao") 1))
+
+;;; --------------------------------------------------------------------
+;;; timed send and receive
 
   #;(check
-      (let ((name	(px.mkstemp "/vicare-test-XXXXXX")))
-	(px.fork
-	 (lambda (pid) ;parent
-	   (let ((mqd (px.mq-open name
-				  (bitwise-ior O_CREAT O_EXCL O_RDWR)
-				  (bitwise-ior S_IRUSR S_IWUSR)
-				  (px.make-struct-mq-attr O_NONBLOCK 3 4096 0))))
-	     (unwind-protect
-		 ()
-	       (px.mq-close mqd)
-	       (px.mq-unlink name))))
-	 (lambda () ;child
-	   (px.nanosleep 0 900000)
-	   )))
-    => #f)
+      (let ()
+	(define name "/vicare-test-02")
+	(define (parent child-pid)
+	  (let ((mqd (px.mq-open name (bitwise-ior O_CREAT O_EXCL O_RDWR)
+				 MQ_MODE_1 MQ_ATTR_1))
+		(buf (make-bytevector 16)))
+	    (unwind-protect
+		(let-values (((len priority)
+			      (px.mq-timedreceive mqd buf
+						  (px.make-struct-timespec))))
+		  (px.waitpid child-pid 0)
+		  (list (subbytevector-u8 buf 0 len)
+			priority))
+	      (px.mq-close mqd)
+	      (px.mq-unlink name))))
+	(define (child)
+	  (px.nanosleep 0 900000)
+	  (let ((mqd (px.mq-open name O_RDWR MQ_MODE_1 MQ_ATTR_1)))
+	    (unwind-protect
+		(px.mq-send mqd '#ve(ascii "ciao") 1
+			    (px.make-struct-timespec))
+	      (px.mq-close mqd)))
+	  (exit 0))
+	(guard (E (else #f))
+	  (px.mq-unlink name))
+	(px.fork parent child))
+    => '(#ve(ascii "ciao") 1))
 
   #t)
 
