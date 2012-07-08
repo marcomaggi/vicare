@@ -1147,6 +1147,7 @@ a newline, then exit.
 Display the license message then exit.
 
 @item -h
+@itemx --help
 Display the help message then exit.
 
 @item --
@@ -8566,6 +8567,29 @@ Interface to the C function @cfunc{mkfifo}, @glibcref{FIFO Special
 Files, mkfifo}.  Create a FIFO special file with name @var{pathname} and
 mode @var{mode}, which must be a fixnum.  If successful return
 unspecified values, else raise an exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun truncate @var{pathname} @var{length}
+Interface to the C function @cfunc{truncate}, @glibcref{File Size,
+truncate}.  Change the size of the file selected by @var{pathname} to
+@var{length}; if successful return unspecified values, else raise an
+exception.
+
+@var{length} must be non--negative exact integer in the range of the C
+language type @code{off_t}.
+@end defun
+
+
+@defun ftruncate @var{fd} @var{length}
+Interface to the C function @cfunc{ftruncate}, @glibcref{File Size,
+ftruncate}.  Changes the size of the file selected by the file
+descriptor @var{fd} to @var{length}; if successful return unspecified
+values, else raise an exception.
+
+@var{length} must be non--negative exact integer in the range of the C
+language type @code{off_t}.
 @end defun
 
 @c page

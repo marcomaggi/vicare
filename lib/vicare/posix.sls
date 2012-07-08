@@ -300,7 +300,8 @@
   (import (except (vicare)
 		  strerror		getenv
 		  remove		time
-		  read			write)
+		  read			write
+		  truncate)
     (prefix (only (vicare $posix)
 		  errno->string)
 	    posix.)
@@ -495,7 +496,7 @@
   (assertion-violation who
     "expected non-negative exact integer as directory stream position argument" obj))
 
-(define-argument-validation (offset who obj)
+(define-argument-validation (off_t who obj)
   (words.off_t? obj)
   (assertion-violation who
     "expected platform off_t exact integer as offset argument" obj))
@@ -1622,7 +1623,7 @@
       ((file-descriptor  fd)
        (bytevector	 buffer)
        (fixnum/false	 size)
-       (offset		 off))
+       (off_t		 off))
     (let ((rv (capi.posix-pread fd buffer size off)))
       (if (unsafe.fx<= 0 rv)
 	  rv
@@ -1649,7 +1650,7 @@
       ((file-descriptor  fd)
        (bytevector	 buffer)
        (fixnum/false	 size)
-       (offset		 off))
+       (off_t		 off))
     (let ((rv (capi.posix-pwrite fd buffer size off)))
       (if (unsafe.fx<= 0 rv)
 	  rv
@@ -1659,7 +1660,7 @@
   (define who 'lseek)
   (with-arguments-validation (who)
       ((file-descriptor  fd)
-       (offset		 off)
+       (off_t		 off)
        (fixnum		 whence))
     (let ((rv (capi.posix-lseek fd off whence)))
       (if (negative? rv)
@@ -1830,7 +1831,7 @@
       (%raise-errno-error who rv))))
 
 (define (mkfifo pathname mode)
-  (define who 'pipe)
+  (define who 'mkfifo)
   (with-arguments-validation (who)
       ((pathname  pathname)
        (fixnum    mode))
@@ -1838,6 +1839,27 @@
       (let ((rv (capi.posix-mkfifo pathname.bv mode)))
 	(unless (unsafe.fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname mode))))))
+
+;;; --------------------------------------------------------------------
+
+(define (truncate pathname length)
+  (define who 'truncate)
+  (with-arguments-validation (who)
+      ((pathname	pathname)
+       (off_t		length))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-truncate pathname.bv length)))
+	(unless (unsafe.fxzero? rv)
+	  (%raise-errno-error who rv pathname length))))))
+
+(define (ftruncate fd length)
+  (define who 'ftruncate)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd)
+       (off_t		length))
+    (let ((rv (capi.posix-ftruncate fd length)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv fd length)))))
 
 
 ;;;; memory-mapped input/output
@@ -1850,7 +1872,7 @@
        (fixnum		protect)
        (fixnum		flags)
        (file-descriptor	fd)
-       (offset		offset))
+       (off_t		offset))
     (let ((rv (capi.posix-mmap address length protect flags fd offset)))
       (if (pointer? rv)
 	  rv

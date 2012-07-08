@@ -1917,6 +1917,36 @@ ikrt_posix_mkfifo (ikptr s_pathname, ikptr mode)
 #endif
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_truncate (ikptr s_name, ikptr s_length)
+{
+#ifdef HAVE_TRUNCATE
+  const char *	name = IK_BYTEVECTOR_DATA_CHARP(s_name);
+  off_t		len  = ik_integer_to_off_t(s_length);
+  int		rv;
+  errno = 0;
+  rv	= truncate(name, len);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_ftruncate (ikptr s_fd, ikptr s_length)
+{
+#ifdef HAVE_FTRUNCATE
+  off_t	len  = ik_integer_to_off_t(s_length);
+  int	rv;
+  errno = 0;
+  rv	= ftruncate(IK_NUM_TO_FD(s_fd), len);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
 
 /** --------------------------------------------------------------------
  ** Memory-mapped input/output.
@@ -4880,7 +4910,6 @@ ikrt_posix_shm_unlink (ikptr s_name)
   feature_failure(__func__);
 #endif
 }
-
 
 
 /** --------------------------------------------------------------------

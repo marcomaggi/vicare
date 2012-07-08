@@ -42,6 +42,8 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d12
 -------------------------
 
+* Added miscellaneous functions to (vicare posix): TRUNCATE, FTRUNCATE.
+
 * Added  realtime  clock  functions  to  (vicare  posix):  CLOCK-GETRES,
   CLOCK-GETTIME, CLOCK-SETTIME.
 
