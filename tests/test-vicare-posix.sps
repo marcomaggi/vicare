@@ -852,85 +852,92 @@
 ;;; --------------------------------------------------------------------
 ;;; select
 
-  (let-values (((in ou) (px.pipe)))
-    (unwind-protect
-	(check	;timeout
+  (check	;timeout
+      (let-values (((in ou) (px.pipe)))
+	(unwind-protect
 	    (let-values (((r w e) (px.select #f `(,in) '() `(,in ,ou) 0 0)))
-	      (list r w e))
-	  => '(() () ()))
-      (px.close in)
-      (px.close ou)))
+	      (equal? (list r w e)
+		      '(() () ())))
+	  (px.close in)
+	  (px.close ou)))
+    => #t)
 
-  (let-values (((in ou) (px.pipe)))
-    (unwind-protect
-	(check	;read ready
+  (check	;read ready
+      (let-values (((in ou) (px.pipe)))
+	(unwind-protect
 	    (begin
 	      (px.write ou '#vu8(1) 1)
 	      (let-values (((r w e) (px.select #f `(,in) '() `(,in) 0 0)))
-		(list r w e)))
-	  => `((,in) () ()))
-      (px.close in)
-      (px.close ou)))
+		(equal? (list r w e)
+			`((,in) () ()))))
+	  (px.close in)
+	  (px.close ou)))
+    => #t)
 
-  (let-values (((in ou) (px.pipe)))
-    (unwind-protect
-	(check	;write ready
+  (check	;write ready
+      (let-values (((in ou) (px.pipe)))
+	(unwind-protect
 	    (let-values (((r w e) (px.select #f '() `(,ou) `(,ou) 0 0)))
-	      (list r w e))
-	  => `(() (,ou) ()))
-      (px.close in)
-      (px.close ou)))
+	      (equal? (list r w e)
+		      `(() (,ou) ())))
+	  (px.close in)
+	  (px.close ou)))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; select-fd
 
-  (let-values (((in ou) (px.pipe)))
-    (unwind-protect
-	(check	;timeout
+  (check	;timeout
+      (let-values (((in ou) (px.pipe)))
+	(unwind-protect
 	    (let-values (((r w e) (px.select-fd in 0 0)))
-	      (list r w e))
-	  => '(#f #f #f))
-      (px.close in)
-      (px.close ou)))
+	      (equal? (list r w e)
+		      '(#f #f #f)))
+	  (px.close in)
+	  (px.close ou)))
+    => #t)
 
-  (let-values (((in ou) (px.pipe)))
-    (unwind-protect
-	(check	;read ready
+  (check	;read ready
+      (let-values (((in ou) (px.pipe)))
+	(unwind-protect
 	    (begin
 	      (px.write ou '#vu8(1) 1)
 	      (let-values (((r w e) (px.select-fd in 0 0)))
-		(list r w e)))
-	  => `(,in #f #f))
-      (px.close in)
-      (px.close ou)))
+		(equal? (list r w e)
+			`(,in #f #f))))
+	(px.close in)
+	(px.close ou)))
+    => #t)
 
-  (let-values (((in ou) (px.pipe)))
-    (unwind-protect
-	(check	;write ready
+  (check	;write ready
+      (let-values (((in ou) (px.pipe)))
+	(unwind-protect
 	    (let-values (((r w e) (px.select-fd ou 0 0)))
-	      (list r w e))
-	  => `(#f ,ou #f))
-      (px.close in)
-      (px.close ou)))
+	      (equal? (list r w e)
+		      `(#f ,ou #f)))
+	  (px.close in)
+	  (px.close ou)))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; poll
 
-  (let-values (((in ou) (px.pipe)))
-    (unwind-protect
-	(check
+  (check
+      (let-values (((in ou) (px.pipe)))
+	(unwind-protect
 	    (let* ((vec (vector (vector in 0 0)
 				(vector ou 0 0)))
 		   (rv  (px.poll vec 10)))
-	      (list rv vec))
-	  => `(0 #(#(,in 0 0)
-		   #(,ou 0 0))))
-      (px.close in)
-      (px.close ou)))
+	      (equal? (list rv vec)
+		      `(0 #(#(,in 0 0)
+			    #(,ou 0 0)))))
+	  (px.close in)
+	  (px.close ou)))
+    => #t)
 
-  (let-values (((in ou) (px.pipe)))
-    (unwind-protect
-	(check
+  (check
+      (let-values (((in ou) (px.pipe)))
+	(unwind-protect
 	    (begin
 	      (px.write ou '#vu8(1) 1)
 	      (let* ((vec (vector (vector in POLLIN 0)
@@ -938,11 +945,46 @@
 		     (rv  (px.poll vec 10))
 		     (buf (make-bytevector 1)))
 		(px.read in buf 1)
-		(list rv buf vec)))
-	  => `(2 #vu8(1) #(#(,in ,POLLIN  ,POLLIN)
-			   #(,ou ,POLLOUT ,POLLOUT))))
-      (px.close in)
-      (px.close ou)))
+		(equal? (list rv buf vec)
+			`(2 #vu8(1) #(#(,in ,POLLIN  ,POLLIN)
+				      #(,ou ,POLLOUT ,POLLOUT))))))
+	  (px.close in)
+	  (px.close ou)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; truncate and ftruncate
+
+  (check
+      (let ((name "vicare.test"))
+	(when (file-exists? name)
+	  (delete-file name))
+	(unwind-protect
+	    (begin
+	      (with-output-to-file name
+		(lambda ()
+		  (display "01234567890123")))
+	      (px.truncate name 10)
+	      (px.file-size name))
+	  (delete-file name)))
+    => 10)
+
+  (check
+      (let ((name "vicare.test"))
+	(when (file-exists? name)
+	  (delete-file name))
+	(unwind-protect
+	    (begin
+	      (with-output-to-file name
+		(lambda ()
+		  (display "01234567890123")))
+	      (let ((fd (px.open name O_RDWR 0)))
+		(unwind-protect
+		    (px.ftruncate fd 10)
+		  (px.close fd)))
+	      (px.file-size name))
+	  (delete-file name)))
+    => 10)
 
   #t)
 
@@ -2345,16 +2387,16 @@
   #t)
 
 
-(parametrise ((check-test-name	'shared-memory))
+#;(parametrise ((check-test-name	'shared-memory))
 
-  (check
+  (check	;open and close
       (let ()
 	(define pathname "/vicare-posix-shm.test")
 	(guard (E (else #f))
 	  (px.shm-unlink pathname))
-	(let ((fd	(px.shm-open pathname
-				     (bitwise-ior O_CREAT O_EXCL O_RDWR)
-				     (bitwise-ior S_IRUSR S_IWUSR))))
+	(let ((fd (px.shm-open pathname
+			       (bitwise-ior O_CREAT O_EXCL O_RDWR)
+			       (bitwise-ior S_IRUSR S_IWUSR))))
 	  (unwind-protect
 	      (let* ((page-size	(px.sysconf _SC_PAGESIZE))
 		     (ptr	(px.mmap #f page-size
@@ -2366,6 +2408,39 @@
 		  (px.munmap ptr page-size)))
 	    (px.close fd)
 	    (px.shm-unlink pathname))))
+    => #f)
+
+  (check	;exchange data between processes
+      (let ()
+	(define pathname "/vicare-posix-shm.test")
+	(define poflags (bitwise-ior O_CREAT O_EXCL O_RDWR))
+	(define coflags O_RDWR)
+	(define mode (bitwise-ior S_IRUSR S_IWUSR))
+	(define prot (fxior PROT_READ PROT_WRITE))
+	(define flags MAP_SHARED)
+	(define ps (px.sysconf _SC_PAGESIZE))
+	(define (parent child-pid)
+	  (let ((fd (px.shm-open pathname poflags mode)))
+	    (unwind-protect
+		(let ((ptr (px.mmap #f ps prot flags fd 0)))
+		  (unwind-protect
+		      #f
+		    (px.munmap ptr ps)))
+	      (px.close fd)
+	      (px.shm-unlink pathname))))
+	(define (child)
+	  (px.nanosleep 0 900000)
+	  (let ((fd (px.shm-open pathname coflags mode)))
+	    (unwind-protect
+		(let ((ptr (px.mmap #f ps prot flags fd 0)))
+		  (unwind-protect
+		      #f
+		    (px.munmap ptr ps)))
+	      (px.close fd)))
+	  (exit 0))
+	(guard (E (else #f))
+	  (px.shm-unlink pathname))
+	(px.fork parent child))
     => #f)
 
   #f)

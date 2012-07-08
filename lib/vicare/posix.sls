@@ -132,6 +132,7 @@
     fcntl				ioctl
     dup					dup2
     pipe				mkfifo
+    truncate				ftruncate
 
     ;; memory-mapped input/output
     mmap				munmap
