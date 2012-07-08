@@ -612,7 +612,8 @@ Copyright (c) 2011, 2012 Marco Maggi\n\n"))
   (display "\
 This is free software; see the  source or use the '--license' option for
 copying conditions.  There is NO warranty; not  even for MERCHANTABILITY
-or FITNESS FOR A PARTICULAR PURPOSE.\n\n" (current-output-port)))
+or FITNESS FOR A PARTICULAR PURPOSE.\n\n" (current-output-port))
+  (flush-output-port (current-output-port)))
 
 (define (print-license-screen)
   (define port (current-output-port))
@@ -813,7 +814,8 @@ is  used  searching  for  it  in  the directory  selected  by  the  HOME
 environment variable.
 
 Consult Vicare Scheme User's Guide for more details.\n\n")
-	   (current-output-port)))
+	   (current-output-port))
+  (flush-output-port (current-output-port)))
 
 
 (define (init-library-path cfg)
