@@ -4892,7 +4892,7 @@ ikrt_posix_shm_open (ikptr s_name, ikptr s_oflag, ikptr s_mode)
   int		rv;
   errno = 0;
   rv = shm_open(name, IK_UNFIX(s_oflag), IK_UNFIX(s_mode));
-  return (-1 == rv)? IK_FD_TO_NUM(rv) : ik_errno_to_code();
+  return (-1 != rv)? IK_FD_TO_NUM(rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif

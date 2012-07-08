@@ -2262,9 +2262,9 @@
 
 (parametrise ((check-test-name	'message-queue))
 
-  (define MQ_OFLAG_1	(bitwise-ior O_CREAT O_EXCL O_RDWR O_NONBLOCK))
-  (define MQ_OFLAG_2	(bitwise-ior                O_RDWR O_NONBLOCK))
-  (define MQ_MODE_1	(bitwise-ior S_IRUSR S_IWUSR))
+  (define MQ_OFLAG_1	(fxior O_CREAT O_EXCL O_RDWR O_NONBLOCK))
+  (define MQ_OFLAG_2	(fxior                O_RDWR O_NONBLOCK))
+  (define MQ_MODE_1	(fxior S_IRUSR S_IWUSR))
   (define MQ_ATTR_1	(px.make-struct-mq-attr 0 3 16 0))
 
 ;;; --------------------------------------------------------------------
@@ -2309,7 +2309,7 @@
       (let ()
 	(define name "/vicare-test-02")
 	(define (parent child-pid)
-	  (let ((mqd (px.mq-open name (bitwise-ior O_CREAT O_EXCL O_RDWR)
+	  (let ((mqd (px.mq-open name (fxior O_CREAT O_EXCL O_RDWR)
 				 MQ_MODE_1 MQ_ATTR_1))
 		(buf (make-bytevector 16)))
 	    (unwind-protect
@@ -2345,7 +2345,7 @@
 	    (px.set-struct-timespec-tv_sec! T (+ 5 (px.struct-timespec-tv_sec T)))
 	    T))
 	(define (parent child-pid)
-	  (let ((mqd		(px.mq-open name (bitwise-ior O_CREAT O_EXCL O_RDWR)
+	  (let ((mqd		(px.mq-open name (fxior O_CREAT O_EXCL O_RDWR)
 					    MQ_MODE_1 MQ_ATTR_1))
 		(buf		(make-bytevector 16)))
 	    (unwind-protect
@@ -2387,7 +2387,7 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'shared-memory))
+(parametrise ((check-test-name	'shared-memory))
 
   (check	;open and close
       (let ()
@@ -2395,8 +2395,8 @@
 	(guard (E (else #f))
 	  (px.shm-unlink pathname))
 	(let ((fd (px.shm-open pathname
-			       (bitwise-ior O_CREAT O_EXCL O_RDWR)
-			       (bitwise-ior S_IRUSR S_IWUSR))))
+			       (fxior O_CREAT O_EXCL O_RDWR)
+			       (fxior S_IRUSR S_IWUSR))))
 	  (unwind-protect
 	      (let* ((page-size	(px.sysconf _SC_PAGESIZE))
 		     (ptr	(px.mmap #f page-size
@@ -2413,35 +2413,43 @@
   (check	;exchange data between processes
       (let ()
 	(define pathname "/vicare-posix-shm.test")
-	(define poflags (bitwise-ior O_CREAT O_EXCL O_RDWR))
-	(define coflags O_RDWR)
-	(define mode (bitwise-ior S_IRUSR S_IWUSR))
-	(define prot (fxior PROT_READ PROT_WRITE))
-	(define flags MAP_SHARED)
-	(define ps (px.sysconf _SC_PAGESIZE))
 	(define (parent child-pid)
-	  (let ((fd (px.shm-open pathname poflags mode)))
+	  (let* ((oflags	(fxior O_CREAT O_RDWR))
+		 (mode		(fxior S_IRUSR S_IWUSR))
+		 (fd		(px.shm-open pathname oflags mode))
+		 (ps		(px.sysconf _SC_PAGESIZE)))
+	    (px.ftruncate fd (* 2 ps))
 	    (unwind-protect
-		(let ((ptr (px.mmap #f ps prot flags fd 0)))
+		(let* ((prot	(fxior PROT_READ PROT_WRITE))
+		       (flags	MAP_SHARED)
+		       (ptr	(px.mmap #f ps prot flags fd 0)))
 		  (unwind-protect
-		      #f
+		      (begin
+			(guard (E (else #f))
+			  (px.waitpid child-pid 0))
+			(pointer-ref-c-signed-int ptr 0))
 		    (px.munmap ptr ps)))
 	      (px.close fd)
 	      (px.shm-unlink pathname))))
 	(define (child)
 	  (px.nanosleep 0 900000)
-	  (let ((fd (px.shm-open pathname coflags mode)))
+	  (let* ((oflags	(fxior O_CREAT O_RDWR))
+		 (mode		(fxior S_IRUSR S_IWUSR))
+		 (fd		(px.shm-open pathname oflags mode))
+		 (ps		(px.sysconf _SC_PAGESIZE)))
 	    (unwind-protect
-		(let ((ptr (px.mmap #f ps prot flags fd 0)))
+		(let* ((prot	(fxior PROT_READ PROT_WRITE))
+		       (flags	MAP_SHARED)
+		       (ptr	(px.mmap #f ps prot flags fd 0)))
 		  (unwind-protect
-		      #f
+		      (pointer-set-c-signed-int! ptr 0 123)
 		    (px.munmap ptr ps)))
 	      (px.close fd)))
 	  (exit 0))
 	(guard (E (else #f))
 	  (px.shm-unlink pathname))
 	(px.fork parent child))
-    => #f)
+    => 123)
 
   #f)
 

@@ -11065,8 +11065,8 @@ how to send and receive a message with timeout:
 @section Shared memory
 
 
-@posix{} shared memory allow processes to communicate informations by
-sharing a region of memory.
+The @posix{} shared memory @api{} allow processes to communicate
+informations by sharing a region of memory.
 
 @quotation
 @strong{NOTE} On @gnu{}+Linux systems, for an introduction to the @api{}
@@ -11074,17 +11074,95 @@ we must refer to the manual page @code{shm_overview(7)}.
 @end quotation
 
 
-@defun shm-open
+@defun shm-open @var{name} @var{oflag} @var{mode}
 Interface to the C function @cfunc{shm_open}, see the manual page
-@code{shm_open(3)}.
+@code{shm_open(3)}.  Open, and optionally create, a shared memory object
+and return a file descriptor referencing it.  If successful return a
+fixnum representing the file descriptor, else raise an exception.
+
+@var{name} must be the pathname representing the shared memory object.
+@var{oflag} must be the bitwise inclusive OR combination of some of the
+following values:
+
+@example
+O_RDONLY                O_RDWR
+O_CREAT                 O_EXCL
+O_TRUNC
+@end example
+
+@noindent
+@var{mode} must be the bitwise inclusive OR combination of some of the
+following values:
+
+@example
+S_IRUSR   S_IWUSR   S_IXUSR
+S_IRGRP   S_IWGRP   S_IXGRP
+S_IROTH   S_IWOTH   S_IXOTH
+@end example
 @end defun
 
 
-@defun shm-unlink
+@defun shm-unlink @var{name}
 Interface to the C function @cfunc{shm_unlink}, see the manual page
-@code{shm_unlink(3)}.
+@code{shm_unlink(3)}.  Remove the shared memory object selected by the
+pathname @var{name}.  If successful return unspecified values, else
+raise an exception.
 @end defun
 
+
+The following example shows how two processes can exchange a signed
+integer; notice how the only information shared at the beginning is the
+pathname of the shared memory object.  Also notice that the correct way
+of synchronising two processes for shared memory access is with @posix{}
+semaphores.
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants)
+  (vicare syntactic-extensions))
+
+(define pathname "/vicare-posix-shm.test")
+
+(define (parent child-pid)
+  (let* ((oflags (fxior O_CREAT O_RDWR))
+         (mode   (fxior S_IRUSR S_IWUSR))
+         (fd     (px.shm-open pathname oflags mode))
+         (ps     (px.sysconf _SC_PAGESIZE)))
+    ;; For some reason we must allocate at least
+    ;; 2 pages.
+    (px.ftruncate fd (* 2 ps))
+    (unwind-protect
+        (let* ((prot  (fxior PROT_READ PROT_WRITE))
+               (flags MAP_SHARED)
+               (ptr   (px.mmap #f ps prot flags fd 0)))
+          (unwind-protect
+              (begin
+                (px.waitpid child-pid 0)
+                (pointer-ref-c-signed-int ptr 0))
+            (px.munmap ptr ps)))
+      (px.close fd)
+      (px.shm-unlink pathname))))
+
+(define (child)
+  (px.nanosleep 0 900000)
+  (let* ((oflags (fxior O_CREAT O_RDWR))
+         (mode   (fxior S_IRUSR S_IWUSR))
+         (fd     (px.shm-open pathname oflags mode))
+         (ps     (px.sysconf _SC_PAGESIZE)))
+    (unwind-protect
+        (let* ((prot  (fxior PROT_READ PROT_WRITE))
+               (flags MAP_SHARED)
+               (ptr   (px.mmap #f ps prot flags fd 0)))
+          (unwind-protect
+              (pointer-set-c-signed-int! ptr 0 123)
+            (px.munmap ptr ps)))
+      (px.close fd)))
+  (exit 0))
+
+(px.fork parent child)
+@end example
 
 @c page
 @node posix misc

@@ -49,6 +49,8 @@ Notes for revision 0.2d12
 
 * Added POSIX message queue API to (vicare posix).
 
+* Added POSIX shared memory API to (vicare posix).
+
 * Added the timerfd API to (vicare linux).
 
 * Added the function STRUCT=? to (vicare).
