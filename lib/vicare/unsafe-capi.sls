@@ -171,6 +171,7 @@
     posix-fcntl				posix-ioctl
     posix-dup				posix-dup2
     posix-pipe				posix-mkfifo
+    posix-truncate			posix-ftruncate
 
     linux-epoll-event-alloc		linux-epoll-event-size
     linux-epoll-create			linux-epoll-create1
@@ -977,6 +978,14 @@
 
 (define-inline (posix-mkfifo pathname-bv mode)
   (foreign-call "ikrt_posix_mkfifo" pathname-bv mode))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-truncate name length)
+  (foreign-call "ikrt_posix_truncate" name length))
+
+(define-inline (posix-ftruncate fd length)
+  (foreign-call "ikrt_posix_ftruncate" fd length))
 
 ;;; --------------------------------------------------------------------
 

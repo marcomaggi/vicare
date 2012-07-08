@@ -315,7 +315,7 @@ AM_COND_IF([WANT_POSIX],[
   AC_CHECK_FUNCS([chown fchown chmod fchmod umask utime utimes lutimes futimes])
   AC_CHECK_FUNCS([link symlink readlink remove rename])
   AC_CHECK_FUNCS([rmdir getcwd chdir fchdir opendir fdopendir readdir closedir rewinddir telldir seekdir])
-  AC_CHECK_FUNCS([open close read pread write pwrite lseek readv writev poll select fcntl ioctl dup dup2 pipe mkfifo])
+  AC_CHECK_FUNCS([open close read pread write pwrite lseek readv writev poll select fcntl ioctl dup dup2 pipe mkfifo truncate ftruncate])
   AC_CHECK_FUNCS([msync mremap madvise mlock munlock mlockall munlockall mprotect])
   AC_CHECK_TYPES([struct sockaddr_un],,,[VICARE_INCLUDES])
   AC_CHECK_TYPES([struct sockaddr_in],,,[VICARE_INCLUDES])
