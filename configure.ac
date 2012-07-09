@@ -147,7 +147,7 @@ AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h inttypes.h limits.h mntent.h net/
 
 AM_COND_IF([WANT_POSIX],
   [AC_CHECK_LIB([rt],[mq_open])
-   AC_CHECK_HEADERS([fnmatch.h ftw.h glob.h grp.h mqueue.h netdb.h paths.h poll.h utime.h regex.h wordexp.h sys/ioctl.h sys/mount.h sys/un.h sys/utsname.h sys/uio.h])])
+   AC_CHECK_HEADERS([fnmatch.h ftw.h glob.h grp.h mqueue.h netdb.h paths.h poll.h utime.h regex.h wordexp.h sys/ioctl.h sys/mount.h sys/un.h sys/utsname.h sys/uio.h semaphore.h])])
 
 AM_COND_IF([WANT_LINUX],
   [AC_CHECK_HEADERS([sys/epoll.h sys/signalfd.h sys/timerfd.h])])
@@ -352,6 +352,8 @@ AM_COND_IF([WANT_POSIX],[
   AC_CHECK_FUNCS([clock_getres clock_gettime clock_settime])
   dnl These require linking with -lrt.
   AC_CHECK_FUNCS([shm_open shm_unlink])
+  dnl These require linking with -lrt.
+  AC_CHECK_FUNCS([sem_init sem_destroy sem_open sem_close sem_unlink sem_post sem_wait sem_trywait sem_timedwait sem_getvalue])
   ])
 
 AC_CACHE_SAVE

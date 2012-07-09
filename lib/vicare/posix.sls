@@ -141,10 +141,17 @@
     mlock				munlock
     mlockall				munlockall
 
-    ;; shared memory
+    ;; POSIX shared memory
     shm-open				shm-unlink
 
-    ;; message queues
+    ;; POSIX semaphores
+    sem-open				sem-close
+    sem-unlink				sem-init
+    sem-destroy				sem-post
+    sem-wait				sem-trywait
+    sem-timedwait			sem-getvalue
+
+    ;; POSIX message queues
     mq-open				mq-close
     mq-unlink
     mq-send				mq-receive
@@ -159,7 +166,7 @@
     struct-mq-attr-mq_msgsize		set-struct-mq-attr-mq_msgsize!
     struct-mq-attr-mq_curmsgs		set-struct-mq-attr-mq_curmsgs!
 
-    ;; clock functions
+    ;; realtime clock functions
     clock-getres
     clock-gettime			clock-settime
 
@@ -573,6 +580,10 @@
 (define-argument-validation (mq-attr/false who obj)
   (or (not obj) (%valid-struct-mq-attr? obj))
   (assertion-violation who "expected false or instance of struct-mq-attr as argument" obj))
+
+(define-argument-validation (semaphore who obj)
+  (pointer? obj)
+  (assertion-violation who "expected pointer as semaphore argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -1963,7 +1974,7 @@
       (%raise-errno-error who rv))))
 
 
-;;;; shared memory
+;;;; POSIX shared memory
 
 (define (shm-open name oflag mode)
   (define who 'shm-open)
@@ -1985,6 +1996,53 @@
       (let ((rv (capi.posix-shm-unlink name.bv)))
 	(unless (unsafe.fxzero? rv)
 	  (%raise-errno-error who rv name))))))
+
+
+;;;; POSIX semaphores
+
+(define (sem-open name oflag mode value)
+  (define who 'sem-open)
+  #f)
+
+(define (sem-close sem)
+  (define who 'sem-close)
+  #f)
+
+(define (sem-unlink name)
+  (define who 'sem-unlink)
+  #f)
+
+;;; --------------------------------------------------------------------
+
+(define (sem-init sem pshared value)
+  (define who 'sem-init)
+  #f)
+
+(define (sem-destroy sem)
+  (define who 'sem-destroy)
+  #f)
+
+;;; --------------------------------------------------------------------
+
+(define (sem-post sem)
+  (define who 'sem-post)
+  #f)
+
+(define (sem-wait sem)
+  (define who 'sem-wait)
+  #f)
+
+(define (sem-trywait sem)
+  (define who 'sem-trywait)
+  #f)
+
+(define (sem-timedwait sem abs-timeout)
+  (define who 'sem-timedwait)
+  #f)
+
+(define (sem-getvalue sem)
+  (define who 'sem-getvalue)
+  #f)
 
 
 ;;;; message queues

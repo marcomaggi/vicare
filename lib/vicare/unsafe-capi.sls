@@ -189,7 +189,7 @@
     posix-mlock				posix-munlock
     posix-mlockall			posix-munlockall
 
-    ;; message queues
+    ;; POSIX message queues
     posix-mq-open			posix-mq-close
     posix-mq-unlink
     posix-mq-send			posix-mq-receive
@@ -197,8 +197,15 @@
     posix-mq-setattr			posix-mq-getattr
     #;posix-mq-notify
 
-    ;; shared memory
+    ;; POSIX shared memory
     posix-shm-open			posix-shm-unlink
+
+    ;; POSIX semahpores
+    posix-sem-open			posix-sem-close
+    posix-sem-unlink			posix-sem-init
+    posix-sem-destroy			posix-sem-post
+    posix-sem-wait			posix-sem-trywait
+    posix-sem-timedwait			posix-sem-getvalue
 
     ;; clock functions
     posix-clock-getres
@@ -1066,7 +1073,7 @@
   (foreign-call "ikrt_posix_mprotect" address length prot))
 
 
-;;;; message queues
+;;;; POSIX message queues
 
 (define-inline (posix-mq-open name oflag mode attr)
   (foreign-call "ikrt_posix_mq_open" name oflag mode attr))
@@ -1101,7 +1108,7 @@
 ;;   (foreign-call "ikrt_posix_mq_notify"))
 
 
-;;;; shared memory
+;;;; POSIX shared memory
 
 (define-inline (posix-shm-open name oflag mode)
   (foreign-call "ikrt_posix_shm_open" name oflag mode))
@@ -1110,7 +1117,44 @@
   (foreign-call "ikrt_posix_shm_unlink" name))
 
 
-;;;; clock functions
+;;;; POSIX semaphores
+
+(define-inline (posix-sem-open name oflag mode value)
+  (foreign-call "ikrt_posix_sem_open" name oflag mode value))
+
+(define-inline (posix-sem-close sem)
+  (foreign-call "ikrt_posix_sem_close" sem))
+
+(define-inline (posix-sem-unlink name)
+  (foreign-call "ikrt_posix_sem_unlink" name))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-sem-init sem pshared value)
+  (foreign-call "ikrt_posix_sem_init" sem pshared value))
+
+(define-inline (posix-sem-destroy sem)
+  (foreign-call "ikrt_posix_sem_destroy" sem))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-sem-post sem)
+  (foreign-call "ikrt_posix_sem_post" sem))
+
+(define-inline (posix-sem-wait sem)
+  (foreign-call "ikrt_posix_sem_wait" sem))
+
+(define-inline (posix-sem-trywait sem)
+  (foreign-call "ikrt_posix_sem_trywait" sem))
+
+(define-inline (posix-sem-timedwait sem abs-timeout)
+  (foreign-call "ikrt_posix_sem_timedwait" sem abs-timeout))
+
+(define-inline (posix-sem-getvalue sem)
+  (foreign-call "ikrt_posix_sem_getvalue" sem))
+
+
+;;;; realtime clock functions
 
 (define-inline (posix-clock-getres clock-id struct-timespec)
   (foreign-call "ikrt_posix_clock_getres" clock-id struct-timespec))

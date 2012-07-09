@@ -7245,6 +7245,7 @@ set to @false{}.
 * posix config::                System configuration.
 * posix mq::                    Message queues.
 * posix shm::                   Shared memory.
+* posix sem::                   Semaphores.
 * posix misc::                  Miscellaneous functions.
 * posix not::                   @posix{} functions not interfaced.
 @end menu
@@ -11163,6 +11164,143 @@ semaphores.
 
 (px.fork parent child)
 @end example
+
+@c page
+@node posix sem
+@section Semaphores
+
+
+The @posix{} semaphores @api{} allow processes to synchronise their
+actions.
+
+@quotation
+@strong{NOTE} On @gnu{}+Linux systems, for an introduction to the @api{}
+we must refer to the manual page @code{sem_overview(7)}.
+@end quotation
+
+
+@defun sem-open @var{name} @var{oflag} @var{mode} @var{value}
+Interface to the C function @cfunc{sem_open}, see the manual page
+@code{sem_open(3)}.  Initialise and open a named semaphore using the
+pathname @var{name}.  If successful return a pointer object referencing
+the semaphore, else raise an exception.
+
+@var{oflag} must be a fixnum representing a bitwise inclusive OR
+combination of some of the following values: @code{O_CREAT},
+@code{O_EXCL}, @code{O_RDWR}.
+
+@var{mode} must be a fixnum representing a bitwise inclusive OR
+combination of some of the following values:
+
+@example
+S_IRUSR   S_IWUSR   S_IXUSR
+S_IRGRP   S_IWGRP   S_IXGRP
+S_IROTH   S_IWOTH   S_IXOTH
+@end example
+
+@var{value} must be a exact integer in the range of the C language type
+@code{unsigned int}.
+
+Named semaphores must be closed with @func{sem-close} and removed with
+@func{sem-unlink}.
+@end defun
+
+
+@defun sem-close @var{sem}
+Interface to the C function @cfunc{sem_close}, see the manual page
+@code{sem_close(3)}.  Close the named semaphore referenced by @var{sem},
+which must be a pointer object; note that the semaphore will continue to
+exist until @func{sem-unlink} is called.  If successful return
+unspecified values, else raise an exception.
+@end defun
+
+
+@defun sem-unlink @var{name}
+Interface to the C function @cfunc{sem_unlink}, see the manual page
+@code{sem_unlink(3)}.  Remove the named semaphore referenced by the
+pathname @var{name}; note that the semaphore name is removed
+immediately, but the semaphore itself will continue to exist until all
+the processes referencing it will call @func{sem-close}.  If successful
+return unspecified values, else raise an exception.
+@end defun
+
+
+@defun sem-init @var{sem} @var{pshared} @var{value}
+Interface to the C function @cfunc{sem_init}, see the manual page
+@code{sem_init(3)}.  Initialise an unnamed semaphore; if successful
+return unspecified values, else raise an exception.
+
+@var{sem} must be a pointer object referencing a memory region big
+enough to hold a C language @code{sem_t} data structure; such memory
+region must be allocated in such a way that it can be shared among the
+entities interested in accessing the semaphore.
+
+@var{pshared} is interpreted as a boolean value: when false, the
+semaphore is meant to be shared among multiple threads in this process;
+when true, the semaphore is meant to be shared among multiple processes
+resulting from forking the current process.
+
+@var{value} must be an exact integer in the range of the C language type
+@code{unsigned int}: it represents the initial value of the semaphore.
+
+Unnamed semaphores must be finalised with @func{sem-destroy}.
+@end defun
+
+
+@defun sem-destroy @var{sem}
+Interface to the C function @cfunc{sem_destroy}, see the manual page
+@code{sem_destroy(3)}.  Finalise the unnamed semaphore referenced by
+@var{sem}, which must be a pointer object; if successful return
+unspecified values, else raise an exception.
+@end defun
+
+
+@defun sem-post @var{sem}
+Interface to the C function @cfunc{sem_post}, see the manual page
+@code{sem_post(3)}.  Increment (unlock) the unnamed semaphore referenced
+by @var{sem}, which must be a pointer object; if successful return
+unspecified values, else raise an exception.
+@end defun
+
+
+@defun sem-wait @var{sem}
+Interface to the C function @cfunc{sem_wait}, see the manual page
+@code{sem_wait(3)}.  Decrement (lock) the unnamed semaphore referenced
+by @var{sem}, which must be a pointer object, until the semaphore is
+unlocked; if successful return unspecified values, else raise an
+exception.
+@end defun
+
+
+@defun sem-trywait @var{sem}
+Interface to the C function @cfunc{sem_trywait}, see the manual page
+@code{sem_trywait(3)}.  Decrement (lock) the unnamed semaphore
+referenced by @var{sem}, which must be a pointer object; if successful
+in locking return the boolean @true{}, if the semaphore is already
+locked return the boolean @false{}, else raise an exception.
+@end defun
+
+
+@defun sem-timedwait @var{sem} @var{abs-timeout}
+Interface to the C function @cfunc{sem_timedwait}, see the manual page
+@code{sem_timedwait(3)}.  Attempt to decrement (lock) the unnamed
+semaphore referenced by @var{sem}, which must be a pointer object, with
+a timeout.  If successful in locking return the boolean @true{}; if the
+semaphore is already locked and it is not unlocked before the timeout
+expiration: return the boolean @false{}; else raise an exception.
+
+@var{abs-timeout} must be an instance of @code{struct-timespec}
+representing the absolute timeout since the Epoch.  @ref{posix time
+timespec, struct-timespec}
+@end defun
+
+
+@defun sem-getvalue @var{sem}
+Interface to the C function @cfunc{sem_getvalue}, see the manual page
+@code{sem_getvalue(3)}.  Retrieve the current value of the semaphore
+referenced by @var{sem}, which must be a pointer object; if successful
+return an exact integer representing the value, else raise an exception.
+@end defun
 
 @c page
 @node posix misc
@@ -18955,8 +19093,8 @@ ikptr   s_pair = ika_pair_alloc(pcb);
 
 pcb->root0 = &s_pair;
 @{
-  IK_CAR(s_pair) = allocate_and_build_the_car(pcb);
-  IK_CDR(s_pair) = allocate_and_build_the_cdr(pcb);
+  IK_ASS(IK_CAR(s_pair), allocate_and_build_the_car(pcb));
+  IK_ASS(IK_CDR(s_pair), allocate_and_build_the_cdr(pcb));
 @}
 pcb->root0 = NULL;
 @end example

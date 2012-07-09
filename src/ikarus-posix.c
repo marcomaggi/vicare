@@ -53,6 +53,9 @@
 #ifdef HAVE_PWD_H
 #  include <pwd.h>
 #endif
+#ifdef HAVE_SEMAPHORE_H
+#  include <semaphore.h>
+#endif
 #ifdef HAVE_SIGNAL_H
 #  include <signal.h>
 #endif
@@ -4683,8 +4686,8 @@ ikrt_posix_mq_receive (ikptr s_mqd, ikptr s_message, ikpcb * pcb)
     ikptr	s_pair = ika_pair_alloc(pcb);
     pcb->root0 = &s_pair;
     {
-      IK_CAR(s_pair) = ika_integer_from_ssize_t(pcb, rv);
-      IK_CDR(s_pair) = ika_integer_from_uint(pcb, priority);
+      IK_ASS(IK_CAR(s_pair), ika_integer_from_ssize_t(pcb, rv));
+      IK_ASS(IK_CDR(s_pair), ika_integer_from_uint(pcb, priority));
     }
     pcb->root0 = NULL;
     return s_pair;
@@ -4729,8 +4732,8 @@ ikrt_posix_mq_timedreceive (ikptr s_mqd, ikptr s_message, ikptr s_epoch_timeout,
     ikptr	s_pair = ika_pair_alloc(pcb);
     pcb->root0 = &s_pair;
     {
-      IK_CAR(s_pair) = ika_integer_from_ssize_t(pcb, rv);
-      IK_CDR(s_pair) = ika_integer_from_uint(pcb, priority);
+      IK_ASS(IK_CAR(s_pair), ika_integer_from_ssize_t(pcb, rv));
+      IK_ASS(IK_CDR(s_pair), ika_integer_from_uint(pcb, priority));
     }
     pcb->root0 = NULL;
     return s_pair;
@@ -4809,7 +4812,7 @@ ikrt_posix_mq_getattr (ikptr s_mqd, ikptr s_attr, ikpcb * pcb)
 
 
 /** --------------------------------------------------------------------
- ** Clock functions.
+ ** Realtime clock functions.
  ** ----------------------------------------------------------------- */
 
 ikptr
@@ -4881,7 +4884,7 @@ ikrt_posix_clock_settime (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb * pcb
 
 
 /** --------------------------------------------------------------------
- ** Shared memory.
+ ** POSIX shared memory.
  ** ----------------------------------------------------------------- */
 
 ikptr
@@ -4906,6 +4909,262 @@ ikrt_posix_shm_unlink (ikptr s_name)
   errno = 0;
   rv = shm_unlink(name);
   return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
+ ** POSIX semaphores.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_sem_open (ikptr s_name, ikptr s_oflag, ikptr s_mode, ikptr s_value, ikpcb * pcb)
+/* Interface  to the  C function  "sem_open()".  Initialise  and open  a
+   named semaphore using the pathname S_NAME, which must be a bytevector
+   holding an  ASCII encoded pathname.   If successful return  a pointer
+   object  referencing the  semaphore,  else return  an encoded  "errno"
+   value.
+
+   S_OFLAG  must  be  a  fixnum  representing  a  bitwise  inclusive  OR
+   combination of some of the following values: O_CREAT, O_EXCL, O_RDWR.
+
+   S_MODE  must  be  a  fixnum   representing  a  bitwise  inclusive  OR
+   combination  of  some  of  the following  values:  S_IRUSR,  S_IWUSR,
+   S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH.
+
+   S_VALUE must be a  exact integer in the range of  the C language type
+   "unsigned int".
+
+   Named semaphores must  be closed with "sem_close()"  and removed with
+   "sem_unlink()". */
+{
+#ifdef HAVE_SEM_OPEN
+  const char *	name	= IK_BYTEVECTOR_DATA_CHARP(s_name);
+  int		oflag	= IK_UNFIX(s_oflag);
+  int		mode	= IK_UNFIX(s_mode);
+  ik_uint	value	= ik_integer_to_uint(s_value);
+  sem_t *	rv;
+  errno = 0;
+  rv    = sem_open(name, oflag, mode, value);
+  if (SEM_FAILED != rv) {
+    return ika_pointer_alloc(pcb, (ik_ulong)rv);
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_sem_close (ikptr s_sem)
+/* Interface to the C function "sem_close()".  Close the named semaphore
+   referenced by  S_SEM, which must be  a pointer object; note  that the
+   semaphore will continue to exist  until "sem_unlink()" is called.  If
+   successful return  the fixnum  zero, else  return an  encoded "errno"
+   value. */
+{
+#ifdef HAVE_SEM_CLOSE
+  sem_t *	sem = IK_POINTER_DATA_VOIDP(s_sem);
+  int		rv;
+  errno = 0;
+  rv    = sem_close(sem);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_sem_unlink (ikptr s_name)
+/* Interface  to  the  C  function  "sem_unlink()".   Remove  the  named
+   semaphore  referenced   by  S_NAME,   which  must  be   a  bytevector
+   representing a  pathname in ASCII  encoding; note that  the semaphore
+   name is removed  immediately, but the semaphore  itself will continue
+   to  exist   until  all  the   processes  referencing  it   will  call
+   "sem_close()".  If successful return the  fixnum zero, else return an
+   encoded "errno" value. */
+{
+#ifdef HAVE_SEM_UNLINK
+  const char *	name = IK_BYTEVECTOR_DATA_CHARP(s_name);
+  int		rv;
+  errno = 0;
+  rv    = sem_unlink(name);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_sem_init (ikptr s_sem, ikptr s_pshared, ikptr s_value)
+/* Interface  to the  C  function "sem_init()".   Initialise an  unnamed
+   semaphore;  if successful  return  the fixnum  zero,  else return  an
+   encoded "errno" value.
+
+   S_SEM must be a pointer object referencing a memory region big enough
+   to hold a C language "sem_t"  data structure; such memory region must
+   be allocated in such  a way that it can be  shared among the entities
+   interested in accessing the semaphore.
+
+   S_PSHARED  is  interpreted  as  a  boolean  value:  when  false,  the
+   semaphore  is meant  to  be  shared among  multiple  threads in  this
+   process;  when  true, the  semaphore  is  meant  to be  shared  among
+   multiple processes resulting from forking the current process.
+
+   S_VALUE must be an exact integer in  the range of the C language type
+   "unsigned int": it represents the initial value of the semaphore.
+
+   Unnamed semaphores must be finalised with "sem_destroy()". */
+{
+#ifdef HAVE_SEM_INIT
+  sem_t *	sem	= IK_POINTER_DATA_VOIDP(s_sem);
+  int		pshared = (false_object != s_pshared);
+  unsigned int	value	= ik_integer_to_uint(s_value);
+  int		rv;
+  errno = 0;
+  rv    = sem_init(sem, pshared, value);
+  if (0 == rv)
+    return ika_pointer_alloc(pcb, (ik_ulong)sem);
+  else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_sem_destroy (ikptr s_sem)
+/* Interface to  the C  function "sem_destroy()".  Finalise  the unnamed
+   semaphore referenced  by S_SEM,  which must be  a pointer  object; if
+   successful return  the fixnum  zero, else  return an  encoded "errno"
+   value. */
+{
+#ifdef HAVE_SEM_DESTROY
+  sem_t *	sem = IK_POINTER_DATA_VOIDP(s_sem);
+  int		rv;
+  errno = 0;
+  rv    = sem_destroy(sem);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_sem_post (ikptr s_sem)
+/* Interface  to the  C function  "sem_post()".  Increment  (unlock) the
+   unnamed  semaphore  referenced by  S_SEM,  which  must be  a  pointer
+   object; if successful return the  fixnum zero, else return an encoded
+   "errno" value. */
+{
+#ifdef HAVE_SEM_POST
+  sem_t *	sem = IK_POINTER_DATA_VOIDP(s_sem);
+  int		rv;
+  errno = 0;
+  rv    = sem_post(sem);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_sem_wait (ikptr s_sem)
+/* Interface  to  the C  function  "sem_wait()".   Decrement (lock)  the
+   unnamed  semaphore  referenced by  S_SEM,  which  must be  a  pointer
+   object, until  the semaphore  is unlocked;  if successful  return the
+   fixnum zero, else return an encoded "errno" value. */
+{
+#ifdef HAVE_SEM_WAIT
+  sem_t *	sem = IK_POINTER_DATA_VOIDP(s_sem);
+  int		rv;
+  errno = 0;
+  rv    = sem_wait(sem);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_sem_trywait (ikptr s_sem)
+/* Interface to  the C  function "sem_trywait()".  Decrement  (lock) the
+   unnamed  semaphore  referenced by  S_SEM,  which  must be  a  pointer
+   object;  if successful  in locking  return the  boolean true,  if the
+   semaphore is already locked return  the boolean false, else return an
+   encoded "errno" value. */
+{
+#ifdef HAVE_SEM_TRYWAIT
+  sem_t *	sem = IK_POINTER_DATA_VOIDP(s_sem);
+  int		rv;
+  errno = 0;
+  rv    = sem_trywait(sem);
+  if (0 == rv)?
+    return true_object;
+  else if (EAGAIN == errno)
+    return false_object;
+  else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_sem_timedwait (ikptr s_sem, ikptr s_abs_timeout)
+/* Interface to the C  function "sem_timedwait()".  Attempt to decrement
+   (lock) the  unnamed semaphore  referenced by S_SEM,  which must  be a
+   pointer object, with a timeout.   If successful in locking return the
+   boolean  true; if  the  semaphore is  already locked  and  it is  not
+   unlocked  before the  timeout expiration:  return the  boolean false;
+   else return an encoded "errno" value.
+
+   S_ABS_TIMEOUT must  be an instance of  "struct-timespec" representing
+   the absolute timeout since the Epoch. */
+{
+#ifdef HAVE_SEM_TIMEDWAIT
+  sem_t *		sem = IK_POINTER_DATA_VOIDP(s_sem);
+  struct timespec	abs_timeout;
+  int			rv;
+  abs_timeout.tv_sec	= (time_t)ik_integer_to_long(IK_FIELD(s_abs_timeout, 0));
+  abs_timeout.tv_nsec	=         ik_integer_to_long(IK_FIELD(s_abs_timeout, 1));
+  errno = 0;
+  rv    = sem_timedwait(sem, &abs_timeout);
+  if (0 == rv)?
+    return true_object;
+  else if (ETIMEDOUT == errno)
+    return false_object;
+  else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_sem_getvalue (ikptr s_sem, ikpcb * pcb)
+/* Interface to  the C function "sem_getvalue()".   Retrieve the current
+   value of the  semaphore referenced by S_SEM, which must  be a pointer
+   object; if  successful return a  pair whose  car is an  exact integer
+   representing the value and whose cdr  is set to false, else return an
+   encoded "errno" value. */
+{
+#ifdef HAVE_SEM_GETVALUE
+  sem_t *	sem = IK_POINTER_DATA_VOIDP(s_sem);
+  int		value;
+  int		rv;
+  errno = 0;
+  rv    = sem_getvalue(sem, &value);
+  if (0 == rv) {
+    ikptr	s_pair = ika_pair_alloc(pcb);
+    pcb->root0 = &s_pair;
+    {
+      IK_ASS(IK_CAR(s_pair), ika_integer_from_int(pcb, value));
+      IK_ASS(IK_CDR(s_pair), false_object);
+    }
+    pcb->root0 = NULL;
+    return s_pair;
+  } else
+    return ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
