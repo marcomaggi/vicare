@@ -2416,10 +2416,9 @@
 	(define shm.pathname "/vicare-posix-shm.test")
 	(define shm.dim (px.sysconf _SC_PAGESIZE))
 	(define (parent child-pid)
-	  (let* ((shm.fd (callet px.shm-open
-				 (pathname shm.pathname)
-				 (oflags (fxior O_CREAT O_RDWR))
-				 (mode	(fxior S_IRUSR S_IWUSR)))))
+	  (let ((shm.fd (callet px.shm-open shm.pathname
+				(oflags (fxior O_CREAT O_RDWR))
+				(mode	(fxior S_IRUSR S_IWUSR)))))
 	    (px.ftruncate shm.fd shm.dim)
 	    (unwind-protect
 		(unwind-protect
@@ -2440,10 +2439,9 @@
 	      (px.shm-unlink shm.pathname))))
 	(define (child)
 	  (px.nanosleep 0 900000)
-	  (let ((shm.fd (callet px.shm-open
-				(pathname	shm.pathname)
-				(oflags		(fxior O_CREAT O_RDWR))
-				(mode		(fxior S_IRUSR S_IWUSR)))))
+	  (let ((shm.fd (callet px.shm-open shm.pathname
+				(oflags (fxior O_CREAT O_RDWR))
+				(mode   (fxior S_IRUSR S_IWUSR)))))
 	    (unwind-protect
 		(let ((shm.base (callet px.mmap
 					(address	#f)
@@ -2475,8 +2473,7 @@
 	  (px.sem-unlink sem.pathname))
 	(let ((sem_t (callet px.sem-open sem.pathname
 			     (oflags	(fxior O_CREAT O_EXCL O_RDWR))
-			     (mode	(fxior S_IRUSR S_IWUSR))
-			     (value	0))))
+			     (mode	(fxior S_IRUSR S_IWUSR)))))
 	  (unwind-protect
 	      (unwind-protect
 		  (pointer? sem_t)
@@ -2490,8 +2487,7 @@
   (check	;alloc and release in normal memory
       (let* ((sem_t (malloc (px.sizeof-sem_t)))
 	     (sem_t (callet px.sem-init	sem_t
-			    (pshared?	#f)
-			    (value	0))))
+			    (pshared?	#f))))
 	(unwind-protect
 	    (pointer? sem_t)
 	  (px.sem-destroy sem_t)))

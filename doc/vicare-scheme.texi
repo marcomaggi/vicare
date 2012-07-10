@@ -11113,56 +11113,72 @@ raise an exception.
 
 The following example shows how two processes can exchange a signed
 integer; notice how the only information shared at the beginning is the
-pathname of the shared memory object.  Also notice that the correct way
-of synchronising two processes for shared memory access is with @posix{}
-semaphores.
+pathname of the shared memory object and the dimension of the mapped
+memory.  Also notice that the correct way of synchronising two processes
+for shared memory access is with @posix{} semaphores, @ref{posix sem}
+for details.
 
 @example
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.)
   (vicare platform-constants)
-  (vicare syntactic-extensions))
+  (only (vicare syntactic-extensions)
+        unwind-protect
+        callet)
 
-(define pathname "/vicare-posix-shm.test")
+(define shm.pathname
+  "/vicare-posix-shm.test")
+(define shm.dim
+  (px.sysconf _SC_PAGESIZE))
 
 (define (parent child-pid)
-  (let* ((oflags (fxior O_CREAT O_RDWR))
-         (mode   (fxior S_IRUSR S_IWUSR))
-         (fd     (px.shm-open pathname oflags mode))
-         (ps     (px.sysconf _SC_PAGESIZE)))
-    ;; For some reason we must allocate at least
-    ;; 2 pages.
-    (px.ftruncate fd (* 2 ps))
+  (let ((shm.fd (callet px.shm-open shm.pathname
+                        (oflags (fxior O_CREAT O_RDWR))
+                        (mode   (fxior S_IRUSR S_IWUSR)))))
+    (px.ftruncate shm.fd shm.dim)
     (unwind-protect
-        (let* ((prot  (fxior PROT_READ PROT_WRITE))
-               (flags MAP_SHARED)
-               (ptr   (px.mmap #f ps prot flags fd 0)))
-          (unwind-protect
-              (begin
-                (px.waitpid child-pid 0)
-                (pointer-ref-c-signed-int ptr 0))
-            (px.munmap ptr ps)))
-      (px.close fd)
-      (px.shm-unlink pathname))))
+        (unwind-protect
+            (let ((shm.base (callet px.mmap
+                              (address #f)
+                              (size    shm.dim)
+                              (prot    (fxior PROT_READ
+                                              PROT_WRITE))
+                              (flags   MAP_SHARED)
+                              (fd      shm.fd)
+                              (offset  0))))
+              (unwind-protect
+                  (begin
+                    (px.waitpid child-pid 0)
+                    (pointer-ref-c-signed-int shm.base 0))
+                (px.munmap shm.base shm.dim)))
+          (px.close shm.fd))
+      (px.shm-unlink shm.pathname))))
 
 (define (child)
-  (px.nanosleep 0 900000)
-  (let* ((oflags (fxior O_CREAT O_RDWR))
-         (mode   (fxior S_IRUSR S_IWUSR))
-         (fd     (px.shm-open pathname oflags mode))
-         (ps     (px.sysconf _SC_PAGESIZE)))
+  ;; Give the parent some time to create and open the
+  ;; shared memory object.
+  (px.nanosleep 1 0)
+  (let ((shm.fd (callet px.shm-open shm.pathname
+                        (oflags (fxior O_CREAT O_RDWR))
+                        (mode   (fxior S_IRUSR S_IWUSR)))))
     (unwind-protect
-        (let* ((prot  (fxior PROT_READ PROT_WRITE))
-               (flags MAP_SHARED)
-               (ptr   (px.mmap #f ps prot flags fd 0)))
+        (let ((shm.base (callet px.mmap
+                          (address #f)
+                          (size    shm.dim)
+                          (prot    (fxior PROT_READ
+                                          PROT_WRITE))
+                          (flags   MAP_SHARED)
+                          (fd      shm.fd)
+                          (offset  0))))
           (unwind-protect
-              (pointer-set-c-signed-int! ptr 0 123)
-            (px.munmap ptr ps)))
-      (px.close fd)))
+              (pointer-set-c-signed-int! shm.base 0 123)
+            (px.munmap shm.base shm.dim)))
+      (px.close shm.fd)))
   (exit 0))
 
 (px.fork parent child)
+@result{} 123
 @end example
 
 @c page
