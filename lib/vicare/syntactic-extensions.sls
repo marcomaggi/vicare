@@ -40,6 +40,7 @@
     begin0			begin0-let
     with-pathnames
     with-bytevectors		with-bytevectors/or-false
+    callet			callet*
 
     ;; arguments validation
     define-argument-validation
@@ -122,6 +123,75 @@
      (let-syntax ((?var0 (identifier-syntax ?expr0)))
        (let*-inline ((?var ?expr) ...)
 	 ?body0 . ?body)))))
+
+(define-syntax callet
+  ;;Transforms:
+  ;;
+  ;;   (callet printf (string "ciao ~a") (arg 123))
+  ;;
+  ;;into:
+  ;;
+  ;;   (printf "ciao ~a" 123)
+  ;;
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?func ?arg ...)
+       (let loop ((args		#'(?arg ...))
+		  (keys		'())
+		  (exprs	'()))
+	 (syntax-case args ()
+	   (()
+	    #`(?func . #,(reverse exprs)))
+	   (((?key ?expr) . ?args)
+	    (identifier? #'?key)
+	    (loop #'?args
+		  (cons #'?key  keys)
+		  (cons #'?expr exprs)))
+	   (((?key ?expr) . ?args)
+	    (syntax-violation 'callet
+	      "expected identifier as argument key" stx #'(?key ?expr)))
+	   ((?arg . ?args)
+	    (loop #'?args
+		  (cons (generate-temporaries '(#f)) keys)
+		  (cons #'?arg exprs)))
+	   ))))))
+
+(define-syntax callet*
+  ;;Transforms:
+  ;;
+  ;;   (callet printf (string "ciao ~a") (arg 123))
+  ;;
+  ;;into:
+  ;;
+  ;;   (let* ((string "ciao ~a")
+  ;;          (arg    123))
+  ;;     (printf string arg))
+  ;;
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?func ?arg ...)
+       (let loop ((args		#'(?arg ...))
+		  (keys		'())
+		  (exprs	'()))
+	 (syntax-case args ()
+	   (()
+	    (with-syntax (((KEY  ...) (reverse keys))
+			  ((EXPR ...) (reverse exprs)))
+	      #`(let* ((KEY EXPR) ...)
+		  (?func KEY ...))))
+	   (((?key ?expr) . ?args)
+	    (identifier? #'?key)
+	    (loop #'?args
+		  (cons #'?key  keys)
+		  (cons #'?expr exprs)))
+	   (((?key ?expr) . ?args)
+	    (syntax-violation 'callet
+	      "expected identifier as argument key" stx #'(?key ?expr)))
+	   ((?arg . ?args)
+	    (loop #'?args
+		  (cons (generate-temporaries '(#f)) keys)
+		  (cons #'?arg exprs)))
+	   ))))))
 
 
 ;;;; other syntaxes

@@ -1962,11 +1962,14 @@ ikrt_posix_mmap (ikptr s_address, ikptr s_length, ikptr s_protect,
 #ifdef HAVE_MMAP
   void *	address = (false_object == s_address)? NULL : IK_POINTER_DATA_VOIDP(s_address);
   size_t	length  = ik_integer_to_size_t(s_length);
-  off_t		offset  = ik_integer_to_off_t(s_length);
+  off_t		offset  = ik_integer_to_off_t(s_offset);
   void *	rv;
   errno = 0;
-  rv    = mmap(address, length, IK_UNFIX(s_protect), IK_UNFIX(s_flags), IK_NUM_TO_FD(s_fd), offset);
-  if (((void *)-1) != rv)
+  rv    = mmap(address, length,
+	       IK_UNFIX(s_protect), IK_UNFIX(s_flags),
+	       IK_NUM_TO_FD(s_fd), offset);
+  /* if (((void *)-1) != rv) */
+  if (MAP_FAILED != rv)
     return ika_pointer_alloc(pcb, (ik_ulong)rv);
   else
     return ik_errno_to_code();
@@ -4920,6 +4923,19 @@ ikrt_posix_shm_unlink (ikptr s_name)
  ** ----------------------------------------------------------------- */
 
 ikptr
+ikrt_posix_sizeof_sem_t (ikpcb * pcb)
+{
+  /* It is "sizeof(sem_t)  == 16" on my  i686-pc-linux-gnu (Marco Maggi;
+    Jul 10, 2012).
+
+    fprintf(stderr, "sem_t = %d\n", sizeof(sem_t));
+  */
+  return ika_integer_from_int(pcb, sizeof(sem_t));
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
 ikrt_posix_sem_open (ikptr s_name, ikptr s_oflag, ikptr s_mode, ikptr s_value, ikpcb * pcb)
 /* Interface  to the  C function  "sem_open()".  Initialise  and open  a
    named semaphore using the pathname S_NAME, which must be a bytevector
@@ -4998,10 +5014,10 @@ ikrt_posix_sem_unlink (ikptr s_name)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_sem_init (ikptr s_sem, ikptr s_pshared, ikptr s_value)
+ikrt_posix_sem_init (ikptr s_sem, ikptr s_pshared, ikptr s_value, ikpcb * pcb)
 /* Interface  to the  C  function "sem_init()".   Initialise an  unnamed
-   semaphore;  if successful  return  the fixnum  zero,  else return  an
-   encoded "errno" value.
+   semaphore; if successful return S_SEM  itself, else return an encoded
+   "errno" value.
 
    S_SEM must be a pointer object referencing a memory region big enough
    to hold a C language "sem_t"  data structure; such memory region must
@@ -5025,10 +5041,7 @@ ikrt_posix_sem_init (ikptr s_sem, ikptr s_pshared, ikptr s_value)
   int		rv;
   errno = 0;
   rv    = sem_init(sem, pshared, value);
-  if (0 == rv)
-    return ika_pointer_alloc(pcb, (ik_ulong)sem);
-  else
-    return ik_errno_to_code();
+  return (0 == rv)? s_sem : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -5100,7 +5113,7 @@ ikrt_posix_sem_trywait (ikptr s_sem)
   int		rv;
   errno = 0;
   rv    = sem_trywait(sem);
-  if (0 == rv)?
+  if (0 == rv)
     return true_object;
   else if (EAGAIN == errno)
     return false_object;
@@ -5130,7 +5143,7 @@ ikrt_posix_sem_timedwait (ikptr s_sem, ikptr s_abs_timeout)
   abs_timeout.tv_nsec	=         ik_integer_to_long(IK_FIELD(s_abs_timeout, 1));
   errno = 0;
   rv    = sem_timedwait(sem, &abs_timeout);
-  if (0 == rv)?
+  if (0 == rv)
     return true_object;
   else if (ETIMEDOUT == errno)
     return false_object;

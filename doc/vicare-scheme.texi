@@ -11179,7 +11179,8 @@ we must refer to the manual page @code{sem_overview(7)}.
 @end quotation
 
 
-@defun sem-open @var{name} @var{oflag} @var{mode} @var{value}
+@defun sem-open @var{name} @var{oflag} @var{mode}
+@defunx sem-open @var{name} @var{oflag} @var{mode} @var{value}
 Interface to the C function @cfunc{sem_open}, see the manual page
 @code{sem_open(3)}.  Initialise and open a named semaphore using the
 pathname @var{name}.  If successful return a pointer object referencing
@@ -11198,8 +11199,8 @@ S_IRGRP   S_IWGRP   S_IXGRP
 S_IROTH   S_IWOTH   S_IXOTH
 @end example
 
-@var{value} must be a exact integer in the range of the C language type
-@code{unsigned int}.
+The optional @var{value} must be a exact integer in the range of the C
+language type @code{unsigned int}; when not given it defaults to zero.
 
 Named semaphores must be closed with @func{sem-close} and removed with
 @func{sem-unlink}.
@@ -11225,10 +11226,18 @@ return unspecified values, else raise an exception.
 @end defun
 
 
-@defun sem-init @var{sem} @var{pshared} @var{value}
+@defun sizeof-sem_t
+Return an exact integer representing the value of the C language
+expression @code{sizeof(sem_t)}.  This value is needed to allocate
+enough memory for @func{sem-init} to initialise a semaphore structure.
+@end defun
+
+
+@defun sem-init @var{sem} @var{pshared}
+@defunx sem-init @var{sem} @var{pshared} @var{value}
 Interface to the C function @cfunc{sem_init}, see the manual page
 @code{sem_init(3)}.  Initialise an unnamed semaphore; if successful
-return unspecified values, else raise an exception.
+return @var{sem} itself, else raise an exception.
 
 @var{sem} must be a pointer object referencing a memory region big
 enough to hold a C language @code{sem_t} data structure; such memory
@@ -11240,8 +11249,9 @@ semaphore is meant to be shared among multiple threads in this process;
 when true, the semaphore is meant to be shared among multiple processes
 resulting from forking the current process.
 
-@var{value} must be an exact integer in the range of the C language type
-@code{unsigned int}: it represents the initial value of the semaphore.
+The optional @var{value} must be an exact integer in the range of the C
+language type @code{unsigned int}: it represents the initial value of
+the semaphore; when not given: it defaults to zero.
 
 Unnamed semaphores must be finalised with @func{sem-destroy}.
 @end defun

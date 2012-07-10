@@ -206,6 +206,7 @@
     posix-sem-destroy			posix-sem-post
     posix-sem-wait			posix-sem-trywait
     posix-sem-timedwait			posix-sem-getvalue
+    posix-sizeof-sem_t
 
     ;; clock functions
     posix-clock-getres
@@ -1152,6 +1153,11 @@
 
 (define-inline (posix-sem-getvalue sem)
   (foreign-call "ikrt_posix_sem_getvalue" sem))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-sizeof-sem_t)
+  (foreign-call "ikrt_posix_sizeof_sem_t"))
 
 
 ;;;; realtime clock functions

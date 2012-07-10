@@ -2391,67 +2391,144 @@
 
   (check	;open and close
       (let ()
-	(define pathname "/vicare-posix-shm.test")
+	(define shm.pathname "/vicare-posix-shm.test")
+	(define shm.dim (px.sysconf _SC_PAGESIZE))
 	(guard (E (else #f))
-	  (px.shm-unlink pathname))
-	(let ((fd (px.shm-open pathname
-			       (fxior O_CREAT O_EXCL O_RDWR)
-			       (fxior S_IRUSR S_IWUSR))))
+	  (px.shm-unlink shm.pathname))
+	(let ((shm.fd (px.shm-open shm.pathname
+				   (fxior O_CREAT O_EXCL O_RDWR)
+				   (fxior S_IRUSR S_IWUSR))))
 	  (unwind-protect
-	      (let* ((page-size	(px.sysconf _SC_PAGESIZE))
-		     (ptr	(px.mmap #f page-size
-					 (fxior PROT_READ PROT_WRITE)
-					 (fxior MAP_PRIVATE MAP_ANONYMOUS)
-					 fd 0)))
-		(unwind-protect
-		    #f
-		  (px.munmap ptr page-size)))
-	    (px.close fd)
-	    (px.shm-unlink pathname))))
-    => #f)
+	      (unwind-protect
+		  (let ((shm.base (px.mmap #f shm.dim
+					   (fxior PROT_READ PROT_WRITE)
+					   (fxior MAP_PRIVATE MAP_ANONYMOUS)
+					   shm.fd 0)))
+		    (unwind-protect
+			(pointer? shm.base)
+		      (px.munmap shm.base shm.dim)))
+		(px.close shm.fd))
+	    (px.shm-unlink shm.pathname))))
+    => #t)
 
   (check	;exchange data between processes
       (let ()
-	(define pathname "/vicare-posix-shm.test")
+	(define shm.pathname "/vicare-posix-shm.test")
+	(define shm.dim (px.sysconf _SC_PAGESIZE))
 	(define (parent child-pid)
-	  (let* ((oflags	(fxior O_CREAT O_RDWR))
-		 (mode		(fxior S_IRUSR S_IWUSR))
-		 (fd		(px.shm-open pathname oflags mode))
-		 (ps		(px.sysconf _SC_PAGESIZE)))
-	    (px.ftruncate fd (* 2 ps))
+	  (let* ((shm.fd (callet px.shm-open
+				 (pathname shm.pathname)
+				 (oflags (fxior O_CREAT O_RDWR))
+				 (mode	(fxior S_IRUSR S_IWUSR)))))
+	    (px.ftruncate shm.fd shm.dim)
 	    (unwind-protect
-		(let* ((prot	(fxior PROT_READ PROT_WRITE))
-		       (flags	MAP_SHARED)
-		       (ptr	(px.mmap #f ps prot flags fd 0)))
-		  (unwind-protect
-		      (begin
-			(guard (E (else #f))
-			  (px.waitpid child-pid 0))
-			(pointer-ref-c-signed-int ptr 0))
-		    (px.munmap ptr ps)))
-	      (px.close fd)
-	      (px.shm-unlink pathname))))
+		(unwind-protect
+		    (let ((shm.base (callet px.mmap
+					    (address	#f)
+					    (size	shm.dim)
+					    (prot	(fxior PROT_READ PROT_WRITE))
+					    (flags	MAP_SHARED)
+					    (fd		shm.fd)
+					    (offset	0))))
+		      (unwind-protect
+			  (begin
+			    (guard (E (else #f))
+			      (px.waitpid child-pid 0))
+			    (pointer-ref-c-signed-int shm.base 0))
+			(px.munmap shm.base shm.dim)))
+		  (px.close shm.fd))
+	      (px.shm-unlink shm.pathname))))
 	(define (child)
 	  (px.nanosleep 0 900000)
-	  (let* ((oflags	(fxior O_CREAT O_RDWR))
-		 (mode		(fxior S_IRUSR S_IWUSR))
-		 (fd		(px.shm-open pathname oflags mode))
-		 (ps		(px.sysconf _SC_PAGESIZE)))
+	  (let ((shm.fd (callet px.shm-open
+				(pathname	shm.pathname)
+				(oflags		(fxior O_CREAT O_RDWR))
+				(mode		(fxior S_IRUSR S_IWUSR)))))
 	    (unwind-protect
-		(let* ((prot	(fxior PROT_READ PROT_WRITE))
-		       (flags	MAP_SHARED)
-		       (ptr	(px.mmap #f ps prot flags fd 0)))
+		(let ((shm.base (callet px.mmap
+					(address	#f)
+					(size		shm.dim)
+					(prot		(fxior PROT_READ PROT_WRITE))
+					(flags		MAP_SHARED)
+					(fd		shm.fd)
+					(offset		0))))
 		  (unwind-protect
-		      (pointer-set-c-signed-int! ptr 0 123)
-		    (px.munmap ptr ps)))
-	      (px.close fd)))
+		      (pointer-set-c-signed-int! shm.base 0 123)
+		    (px.munmap shm.base shm.dim)))
+	      (px.close shm.fd)))
 	  (exit 0))
 	(guard (E (else #f))
-	  (px.shm-unlink pathname))
+	  (px.shm-unlink shm.pathname))
 	(px.fork parent child))
     => 123)
 
   #f)
+
+
+(parametrise ((check-test-name	'semaphores))
+
+;;; named semaphores
+
+  (check	;open and close
+      (let ((sem.pathname "/vicare-posix-sem.test"))
+	(guard (E (else #f))
+	  (px.sem-unlink sem.pathname))
+	(let ((sem_t (callet px.sem-open sem.pathname
+			     (oflags	(fxior O_CREAT O_EXCL O_RDWR))
+			     (mode	(fxior S_IRUSR S_IWUSR))
+			     (value	0))))
+	  (unwind-protect
+	      (unwind-protect
+		  (pointer? sem_t)
+		(px.sem-close sem_t))
+	    (px.sem-unlink sem.pathname))))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; unnamed semaphores
+
+  (check	;alloc and release in normal memory
+      (let* ((sem_t (malloc (px.sizeof-sem_t)))
+	     (sem_t (callet px.sem-init	sem_t
+			    (pshared?	#f)
+			    (value	0))))
+	(unwind-protect
+	    (pointer? sem_t)
+	  (px.sem-destroy sem_t)))
+    => #t)
+
+  (check	;alloc and release in POSIX shared memory
+      (let ((shm.pathname "/vicare-posix-sem-shm.test")
+	    (shm.dim      (px.sysconf _SC_PAGESIZE)))
+	(guard (E (else #f))
+	  (px.shm-unlink shm.pathname))
+	(let ((shm.fd (callet px.shm-open shm.pathname
+			      (oflags   (fxior O_CREAT O_EXCL O_RDWR))
+			      (mode     (fxior S_IRUSR S_IWUSR)))))
+	  (px.ftruncate shm.fd shm.dim)
+	  (unwind-protect
+	      (let ((shm.base (callet px.mmap
+				      (address #f)
+				      (size    shm.dim)
+				      (prot    (fxior PROT_READ PROT_WRITE))
+				      (flags   MAP_SHARED)
+				      (fd      shm.fd)
+				      (offset  0))))
+		(unwind-protect
+		    (let* ((sem_t	shm.base)
+			   (shm.start	(pointer-add shm.base (px.sizeof-sem_t)))
+			   (sem_t	(callet px.sem-init sem_t
+						(pshared? #t)
+						(value    0))))
+		      (unwind-protect
+			  (pointer? sem_t)
+			(px.sem-destroy sem_t)))
+		  (px.munmap shm.base shm.dim)))
+	    (px.close shm.fd)
+	    (px.shm-unlink shm.pathname))))
+    => #t)
+
+  #t)
 
 
 ;;;; done

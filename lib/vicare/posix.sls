@@ -150,6 +150,7 @@
     sem-destroy				sem-post
     sem-wait				sem-trywait
     sem-timedwait			sem-getvalue
+    sizeof-sem_t
 
     ;; POSIX message queues
     mq-open				mq-close
@@ -2000,49 +2001,114 @@
 
 ;;;; POSIX semaphores
 
-(define (sem-open name oflag mode value)
-  (define who 'sem-open)
-  #f)
-
-(define (sem-close sem)
-  (define who 'sem-close)
-  #f)
-
-(define (sem-unlink name)
-  (define who 'sem-unlink)
-  #f)
+(define (sizeof-sem_t)
+  (capi.posix-sizeof-sem_t))
 
 ;;; --------------------------------------------------------------------
 
-(define (sem-init sem pshared value)
-  (define who 'sem-init)
-  #f)
+(define sem-open
+  (case-lambda
+   ((name oflag mode)
+    (sem-open name oflag mode 0))
+   ((name oflag mode value)
+    (define who 'sem-open)
+    (with-arguments-validation (who)
+	((pathname	name)
+	 (fixnum		oflag)
+	 (fixnum		mode)
+	 (unsigned-int	value))
+      (with-pathnames ((name.bv name))
+	(let ((rv (capi.posix-sem-open name.bv oflag mode value)))
+	  (if (pointer? rv)
+	      rv
+	    (%raise-errno-error who rv name oflag mode value))))))))
+
+(define (sem-close sem)
+  (define who 'sem-close)
+  (with-arguments-validation (who)
+      ((semaphore	sem))
+    (let ((rv (capi.posix-sem-close sem)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv sem)))))
+
+(define (sem-unlink name)
+  (define who 'sem-unlink)
+  (with-arguments-validation (who)
+      ((pathname	name))
+    (with-pathnames ((name.bv name))
+      (let ((rv (capi.posix-sem-unlink name.bv)))
+	(unless (unsafe.fxzero? rv)
+	  (%raise-errno-error who rv name.bv))))))
+
+;;; --------------------------------------------------------------------
+
+(define sem-init
+  (case-lambda
+   ((sem pshared)
+    (sem-init sem pshared 0))
+   ((sem pshared value)
+    (define who 'sem-init)
+    (with-arguments-validation (who)
+	((semaphore	sem)
+	 (unsigned-int	value))
+      (let ((rv (capi.posix-sem-init sem pshared value)))
+	(if (pointer? rv)
+	    rv
+	  (%raise-errno-error who rv sem pshared value)))))))
 
 (define (sem-destroy sem)
   (define who 'sem-destroy)
-  #f)
+  (with-arguments-validation (who)
+      ((semaphore	sem))
+    (let ((rv (capi.posix-sem-destroy sem)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv sem)))))
 
 ;;; --------------------------------------------------------------------
 
 (define (sem-post sem)
   (define who 'sem-post)
-  #f)
+  (with-arguments-validation (who)
+      ((semaphore	sem))
+    (let ((rv (capi.posix-sem-post sem)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv sem)))))
 
 (define (sem-wait sem)
   (define who 'sem-wait)
-  #f)
+  (with-arguments-validation (who)
+      ((semaphore	sem))
+    (let ((rv (capi.posix-sem-wait sem)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv sem)))))
 
 (define (sem-trywait sem)
   (define who 'sem-trywait)
-  #f)
+  (with-arguments-validation (who)
+      ((semaphore	sem))
+    (let ((rv (capi.posix-sem-close sem)))
+      (if (boolean? rv)
+	  rv
+	(%raise-errno-error who rv sem)))))
 
 (define (sem-timedwait sem abs-timeout)
   (define who 'sem-timedwait)
-  #f)
+  (with-arguments-validation (who)
+      ((semaphore	sem)
+       (timespec	abs-timeout))
+    (let ((rv (capi.posix-sem-timedwait sem abs-timeout)))
+      (if (boolean? rv)
+	  rv
+	(%raise-errno-error who rv sem abs-timeout)))))
 
 (define (sem-getvalue sem)
   (define who 'sem-getvalue)
-  #f)
+  (with-arguments-validation (who)
+      ((semaphore	sem))
+    (let ((rv (capi.posix-sem-getvalue sem)))
+      (if (pair? rv)
+	  (car rv)
+	(%raise-errno-error who rv sem)))))
 
 
 ;;;; message queues
