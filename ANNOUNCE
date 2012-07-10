@@ -55,7 +55,7 @@ Notes for revision 0.2d12
 
 * Added the function STRUCT=? to (vicare).
 
-* Miscellaneous bug fixes.
+* Miscellaneous bug fixes (a killer one in MMAP).
 
 
 Notes for revision 0.2d11
