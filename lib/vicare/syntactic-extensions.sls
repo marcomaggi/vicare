@@ -152,7 +152,7 @@
 	      "expected identifier as argument key" stx #'(?key ?expr)))
 	   ((?arg . ?args)
 	    (loop #'?args
-		  (cons (generate-temporaries '(#f)) keys)
+		  (cons (car (generate-temporaries '(#f))) keys)
 		  (cons #'?arg exprs)))
 	   ))))))
 
@@ -189,7 +189,7 @@
 	      "expected identifier as argument key" stx #'(?key ?expr)))
 	   ((?arg . ?args)
 	    (loop #'?args
-		  (cons (generate-temporaries '(#f)) keys)
+		  (cons (car (generate-temporaries '(#f))) keys)
 		  (cons #'?arg exprs)))
 	   ))))))
 
