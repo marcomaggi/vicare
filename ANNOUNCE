@@ -42,6 +42,8 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d12
 -------------------------
 
+* The runtime program "vicare" is now linked with -lrt.
+
 * Added miscellaneous functions to (vicare posix): TRUNCATE, FTRUNCATE.
 
 * Added  realtime  clock  functions  to  (vicare  posix):  CLOCK-GETRES,
