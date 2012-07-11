@@ -11183,7 +11183,7 @@ for details.
 
 @c page
 @node posix sem
-@section Semaphores
+@section @posix{} semaphores
 
 
 The @posix{} semaphores @api{} allow processes to synchronise their
@@ -11193,6 +11193,15 @@ actions.
 @strong{NOTE} On @gnu{}+Linux systems, for an introduction to the @api{}
 we must refer to the manual page @code{sem_overview(7)}.
 @end quotation
+
+@menu
+* posix sem api::               Semaphores interface.
+* posix sem examples::          Usage examples of semaphores.
+@end menu
+
+@c page
+@node posix sem api
+@subsection Semaphores interface
 
 
 @defun sem-open @var{name} @var{oflag} @var{mode}
@@ -11327,6 +11336,213 @@ Interface to the C function @cfunc{sem_getvalue}, see the manual page
 referenced by @var{sem}, which must be a pointer object; if successful
 return an exact integer representing the value, else raise an exception.
 @end defun
+
+@c page
+@node posix sem examples
+@subsection Usage examples of semaphores
+
+
+The following example shows how two processes can synchronise themselves
+to exchange a signed integer using a @posix{} shared memory object and
+an unnamed @posix{} semaphore allocated in such an object; the parent
+process sets up the shared memory and initialises the semaphore, then it
+waits for the semaphore and reads the integer; the child process writes
+an integer in the shared memory, then it posts the semaphore.
+
+Notice that the informations the two processes share are:
+
+@enumerate
+@item
+The pathname of the shared memory object.
+
+@item
+The dimension of the allocated shared memory.
+
+@item
+The fact that the semaphore is allocated at the beginning of the shared
+memory.
+
+@item
+The fact that the signed integer exchange area is right after the
+semaphore structure in the shared memory.
+@end enumerate
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants)
+  (only (vicare syntactic-extensions)
+        unwind-protect
+        callet))
+
+(define shm.pathname
+  "/vicare.test")
+(define shm.dim
+  (px.sysconf _SC_PAGESIZE))
+
+(define (parent child-pid)
+  (let ((shm.fd (callet px.shm-open shm.pathname
+                  (oflags   (fxior O_CREAT O_EXCL O_RDWR))
+                  (mode     (fxior S_IRUSR S_IWUSR)))))
+    (px.ftruncate shm.fd shm.dim)
+    (unwind-protect
+        (let ((shm.base (callet px.mmap
+                          (address #f)
+                          (size    shm.dim)
+                          (prot    (fxior PROT_READ
+                                          PROT_WRITE))
+                          (flags   MAP_SHARED)
+                          (fd      shm.fd)
+                          (offset  0))))
+          (unwind-protect
+              (let* ((sem_t     shm.base)
+                     (shm.start (pointer-add shm.base
+                                  (px.sizeof-sem_t)))
+                     (sem_t     (callet px.sem-init sem_t
+                                  (pshared? #t)
+                                  (value    0))))
+                (define timeout
+                  (let ((T (px.clock-gettime CLOCK_REALTIME
+                             (px.make-struct-timespec 0 0))))
+                    (px.set-struct-timespec-tv_sec! T
+                      (+ 2 (px.struct-timespec-tv_sec T)))
+                    T))
+                (unwind-protect
+                    (begin
+                      (px.sem-timedwait sem_t timeout)
+                      (pointer-ref-c-signed-int shm.start 0))
+                  (px.sem-destroy sem_t)))
+            (px.munmap shm.base shm.dim)))
+      (px.close shm.fd)
+      (px.shm-unlink shm.pathname))))
+
+(define (child)
+  ;; Give the parent some time to open the
+  ;; shared memory object.
+  (px.nanosleep 1 0)
+  (let ((shm.fd (callet px.shm-open shm.pathname
+                  (oflags   (fxior O_CREAT O_RDWR))
+                  (mode     (fxior S_IRUSR S_IWUSR)))))
+    (unwind-protect
+        (let ((shm.base (callet px.mmap
+                          (address #f)
+                          (size    shm.dim)
+                          (prot    (fxior PROT_READ
+                                          PROT_WRITE))
+                          (flags   MAP_SHARED)
+                          (fd      shm.fd)
+                          (offset  0))))
+          (unwind-protect
+              (let* ((sem_t     shm.base)
+                     (shm.start (pointer-add shm.base
+                                  (px.sizeof-sem_t))))
+                (pointer-set-c-signed-int! shm.start 0 123)
+                (px.sem-post sem_t))
+            (px.munmap shm.base shm.dim)))
+      (px.close shm.fd)))
+  (exit 0))
+
+(px.fork parent child)  @result{} 123
+@end example
+
+The following example shows how two processes can synchronise themselves
+to exchange a signed integer using a @posix{} shared memory object and a
+named @posix{} semaphore; the parent process sets up the shared memory
+and the semaphore, then it waits for the semaphore and reads the
+integer; the child process writes an integer in the shared memory, then
+it posts the semaphore.
+
+Notice that the informations the two processes share are:
+
+@enumerate
+@item
+The pathname of the shared memory object.
+
+@item
+The pathname of the semaphore object.
+
+@item
+The dimension of the allocated shared memory.
+
+@item
+The fact that the signed integer exchange area is at the beginning of
+the shared memory.
+@end enumerate
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants)
+  (only (vicare syntactic-extensions)
+        unwind-protect
+        callet))
+
+(define sem.pathname
+  "/vicare-posix-sem.test")
+(define shm.pathname
+  "/vicare-posix-shm.test")
+(define shm.dim
+  (px.sysconf _SC_PAGESIZE))
+
+(define (parent child-pid)
+  (let ((sem_t  (callet px.sem-open sem.pathname
+                  (oflags (fxior O_CREAT O_EXCL O_RDWR))
+                  (mode   (fxior S_IRUSR S_IWUSR))))
+        (shm.fd (callet px.shm-open shm.pathname
+                  (oflags   (fxior O_CREAT O_EXCL O_RDWR))
+                  (mode     (fxior S_IRUSR S_IWUSR)))))
+    (px.ftruncate shm.fd shm.dim)
+    (unwind-protect
+        (let ((shm.base (callet px.mmap
+                          (address #f)
+                          (size    shm.dim)
+                          (prot    (fxior PROT_READ
+                                          PROT_WRITE))
+                          (flags   MAP_SHARED)
+                          (fd      shm.fd)
+                          (offset  0))))
+          (unwind-protect
+              (begin
+                (px.sem-wait sem_t)
+                (pointer-ref-c-signed-int shm.base 0))
+            (px.munmap shm.base shm.dim)))
+      (px.close shm.fd)
+      (px.shm-unlink shm.pathname)
+      (px.sem-close sem_t)
+      (px.sem-unlink sem.pathname))))
+
+(define (child)
+  ;; Give the parent some time to open the
+  ;; shared memory object.
+  (px.nanosleep 1 0)
+  (let ((sem_t  (callet px.sem-open sem.pathname
+                  (oflags (fxior O_CREAT O_RDWR))
+                  (mode   (fxior S_IRUSR S_IWUSR))))
+        (shm.fd (callet px.shm-open shm.pathname
+                  (oflags (fxior O_CREAT O_RDWR))
+                  (mode   (fxior S_IRUSR S_IWUSR)))))
+    (unwind-protect
+        (let ((shm.base (callet px.mmap
+                          (address #f)
+                          (size    shm.dim)
+                          (prot    (fxior PROT_READ
+                                          PROT_WRITE))
+                          (flags   MAP_SHARED)
+                          (fd      shm.fd)
+                          (offset  0))))
+          (unwind-protect
+              (begin
+                (pointer-set-c-signed-int! shm.base 0 123)
+                (px.sem-post sem_t))
+            (px.munmap shm.base shm.dim)))
+      (px.close shm.fd)
+      (px.sem-close sem_t)))
+  (exit 0))
+
+(px.fork parent child) @result{} 123
+@end example
 
 @c page
 @node posix misc
