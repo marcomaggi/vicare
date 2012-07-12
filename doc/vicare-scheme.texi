@@ -11636,18 +11636,6 @@ interface some of the functions, they will.
 There seems to be no real advantage (in a Scheme @api{}) to use these
 rather than explicitly call @func{pipe}, @func{fork} and @func{exec}.
 @ref{posix fd, pipe} for details.
-
-@item timer_create
-@itemx timer_settime
-@itemx timer_gettime
-@itemx timer_getoverrun
-@findex timer_create
-@findex timer_settime
-@findex timer_gettime
-@findex timer_getoverrun
-These functions require the additional platform shared library @code{rt}
-to be linked in (at least on @gnu{}+Linux).  This @api{} is fine, but on
-Linux the @code{timerfd} @api{} is better.
 @end table
 
 @c page
