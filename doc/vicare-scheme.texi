@@ -7242,6 +7242,7 @@ set to @false{}.
 * posix users::                 Users and groups.
 * posix job::                   Job control.
 * posix time::                  Time related functions.
+* posix timers::                @posix{} per--process timers.
 * posix config::                System configuration.
 * posix mq::                    Message queues.
 * posix shm::                   Shared memory.
@@ -10584,6 +10585,11 @@ CLOCK_REALTIME
 CLOCK_MONOTONIC                 CLOCK_MONOTONIC_RAW
 CLOCK_PROCESS_CPUTIME_ID        CLOCK_THREAD_CPUTIME_ID
 @end example
+
+@noindent
+or a value returned by @func{clock-getcpuclockid}.  The code assumes
+that clock identifiers of type @code{clockid_t} can be safely converted
+to C language @code{long} values.
 @end quotation
 
 
@@ -10611,6 +10617,53 @@ Interface to the C function @cfunc{clock-settime}, see the manual page
 fixnum @var{clock-id} acquiring it from @var{time}, which must be an
 instance of @code{struct-timespec}.  If successful return @var{time}
 itself, else raise an exception.
+@end defun
+
+
+@defun clock-getcpuclockid @var{pid}
+Interface to the C function @cfunc{clock_getcpuclockid}, see the manual
+page @code{clock_getcpuclockid(3)}.  Obtain the identifier of a process'
+@acronym{CPU}--time clock; if successful return an exact integer
+representing the clock identifier, else raise an exception.  @var{pid}
+must be a fixnum representing the process identifier (@acronym{PID}).
+@end defun
+
+@c page
+@node posix timers
+@section @posix{} per--process timers
+
+
+@cindex @posix{} timers
+@cindex @posix{} per--process timers
+@cindex Timer, @posix{} per--process timers
+@cindex Per--process timers
+
+
+The @posix{} timer @api{} allows the creation of per--process timers.
+
+
+@defun timer_create @var{clock-id} @var{event}
+
+@end defun
+
+
+@defun timer_delete
+
+@end defun
+
+
+@defun timer_settime
+
+@end defun
+
+
+@defun timer_gettime
+
+@end defun
+
+
+@defun timer_getoverrun
+
 @end defun
 
 @c page

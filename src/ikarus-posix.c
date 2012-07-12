@@ -4815,17 +4815,20 @@ ikrt_posix_mq_getattr (ikptr s_mqd, ikptr s_attr, ikpcb * pcb)
 
 
 /** --------------------------------------------------------------------
- ** Realtime clock functions.
+ ** POSIX realtime clock functions.
  ** ----------------------------------------------------------------- */
+
+/* We assume that "clockid_t" can be safely converted to a "long". */
 
 ikptr
 ikrt_posix_clock_getres (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb * pcb)
 {
 #ifdef HAVE_CLOCK_GETRES
+  clockid_t		clock_id = (clockid_t)ik_integer_to_long(s_clock_id);
   struct timespec	T;
   int			rv;
   errno = 0;
-  rv = clock_getres(IK_UNFIX(s_clock_id), &T);
+  rv = clock_getres(clock_id, &T);
   if (0 == rv) {
     pcb->root0 = &s_struct_timespec;
     {
@@ -4844,10 +4847,11 @@ ikptr
 ikrt_posix_clock_gettime (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb * pcb)
 {
 #ifdef HAVE_CLOCK_GETTIME
+  clockid_t		clock_id = (clockid_t)ik_integer_to_long(s_clock_id);
   struct timespec	T;
   int			rv;
   errno = 0;
-  rv = clock_gettime(IK_UNFIX(s_clock_id), &T);
+  rv = clock_gettime(clock_id, &T);
   if (0 == rv) {
     pcb->root0 = &s_struct_timespec;
     {
@@ -4866,10 +4870,11 @@ ikptr
 ikrt_posix_clock_settime (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb * pcb)
 {
 #ifdef HAVE_CLOCK_SETTIME
+  clockid_t		clock_id = (clockid_t)ik_integer_to_long(s_clock_id);
   struct timespec	T;
   int			rv;
   errno = 0;
-  rv = clock_settime(IK_UNFIX(s_clock_id), &T);
+  rv = clock_settime(clock_id, &T);
   if (0 == rv) {
     pcb->root0 = &s_struct_timespec;
     {
@@ -4878,6 +4883,35 @@ ikrt_posix_clock_settime (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb * pcb
     }
     pcb->root0 = NULL;
     return IK_FIX(0);
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_clock_getcpuclockid (ikptr s_pid, ikpcb * pcb)
+/* Interface  to the  C  function  "clock_getcpuclockid()".  Obtain  the
+   identifier of a process' CPU-time  clock; if successful return a pair
+   whose car  is an exact  integer representing  the id, else  return an
+   encoded  "errno" value.   S_PID  must be  a  fixnum representing  the
+   process identifier. */
+{
+#ifdef HAVE_CLOCK_GETCPUCLOCKID
+  pid_t		pid = IK_NUM_TO_PID(s_pid);
+  clockid_t	clock_id;
+  int		rv;
+  errno = 0;
+  rv = clock_getcpuclockid(pid, &clock_id);
+  if (0 == rv) {
+    ikptr	s_pair = ika_pair_alloc(pcb);
+    pcb->root0 = &s_pair;
+    {
+      IK_ASS(IK_CAR(s_pair), ika_integer_from_long(pcb, (long)clock_id));
+      IK_ASS(IK_CDR(s_pair), false_object);
+    }
+    pcb->root0 = NULL;
+    return s_pair;
   } else
     return ik_errno_to_code();
 #else
@@ -4925,12 +4959,16 @@ ikrt_posix_shm_unlink (ikptr s_name)
 ikptr
 ikrt_posix_sizeof_sem_t (ikpcb * pcb)
 {
+#ifdef HAVE_SEM_OPEN
   /* It is "sizeof(sem_t)  == 16" on my  i686-pc-linux-gnu (Marco Maggi;
     Jul 10, 2012).
 
     fprintf(stderr, "sem_t = %d\n", sizeof(sem_t));
   */
   return ika_integer_from_int(pcb, sizeof(sem_t));
+#else
+  feature_failure(__func__);
+#endif
 }
 
 /* ------------------------------------------------------------------ */
@@ -5176,6 +5214,144 @@ ikrt_posix_sem_getvalue (ikptr s_sem, ikpcb * pcb)
     }
     pcb->root0 = NULL;
     return s_pair;
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
+ ** POSIX per-process timers.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_timer_create (ikptr s_clock_id, ikptr s_sigevent, ikpcb * pcb)
+{
+#ifdef HAVE_TIMER_CREATE
+  clockid_t		clock_id = (clockid_t)ik_integer_to_long(s_clock_id);
+  struct sigevent	sev;
+  timer_t		timer_id;
+  int			rv;
+  sev.sigev_notify		= ik_integer_to_int(IK_FIELD(s_sigevent, 0));
+  sev.sigev_signo		= ik_integer_to_int(IK_FIELD(s_sigevent, 1));
+  sev.sigev_value.sival_ptr	= NULL;
+  sev.sigev_notify_attributes	= NULL;
+#if 0 /* On  GNU+Linux "sigev_notify_function"  shares the  storage with
+	 "sigev_notify_attributes". */
+  sev.sigev_notify_function	= NULL;
+#endif
+#if 0 /* On GNU+Linux "sigev_notify_thread_id" is not present. */
+  sev.sigev_notify_thread_id	= (pid_t)0;
+#endif
+  errno = 0;
+  rv = timer_create(clock_id, &sev, &timer_id);
+  if (0 == rv) {
+    ikptr	s_pair = ika_pair_alloc(pcb);
+    pcb->root0 = &s_pair;
+    {
+      IK_ASS(IK_CAR(s_pair), ika_integer_from_long(pcb, (long)timer_id));
+      IK_ASS(IK_CDR(s_pair), false_object);
+    }
+    pcb->root0 = NULL;
+    return s_pair;
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_timer_delete (ikptr s_timer_id)
+{
+#ifdef HAVE_TIMER_DELETE
+  timer_t	timer_id = (timer_t)ik_integer_to_long(s_timer_id);
+  int		rv;
+  errno = 0;
+  rv = timer_delete(timer_id);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_timer_settime (ikptr s_timer_id, ikptr s_flags,
+			  ikptr s_new_timer_spec, ikptr s_old_timer_spec,
+			  ikpcb * pcb)
+{
+#ifdef HAVE_TIMER_SETTIME
+  timer_t		timer_id      = (timer_t)ik_integer_to_long(s_timer_id);
+  ikptr			s_it_interval = IK_FIELD(s_new_timer_spec, 0);
+  ikptr			s_it_value    = IK_FIELD(s_new_timer_spec, 1);
+  struct itimerspec	new_spec;
+  struct itimerspec	old_spec;
+  int			rv;
+  new_spec.it_interval.tv_sec	= (time_t)ik_integer_to_long(IK_FIELD(s_it_interval, 0));
+  new_spec.it_interval.tv_nsec	=         ik_integer_to_long(IK_FIELD(s_it_interval, 1));
+  new_spec.it_value.tv_sec	= (time_t)ik_integer_to_long(IK_FIELD(s_it_value,    0));
+  new_spec.it_value.tv_nsec	=         ik_integer_to_long(IK_FIELD(s_it_value,    1));
+  errno = 0;
+  rv    = timer_settime(timer_id, IK_UNFIX(s_flags), &new_spec, &old_spec);
+  if (0 == rv) {
+    pcb->root0 = &s_old_timer_spec;
+    {
+      IK_ASS(IK_FIELD(IK_FIELD(s_old_timer_spec, 0), 0), \
+	     ika_integer_from_long(pcb, (long)old_spec.it_interval.tv_sec));
+      IK_ASS(IK_FIELD(IK_FIELD(s_old_timer_spec, 0), 1), \
+	     ika_integer_from_long(pcb,       old_spec.it_interval.tv_nsec));
+      IK_ASS(IK_FIELD(IK_FIELD(s_old_timer_spec, 1), 0), \
+	     ika_integer_from_long(pcb, (long)old_spec.it_interval.tv_sec));
+      IK_ASS(IK_FIELD(IK_FIELD(s_old_timer_spec, 1), 1), \
+	     ika_integer_from_long(pcb,       old_spec.it_interval.tv_nsec));
+    }
+    pcb->root0 = NULL;
+    return IK_FIX(0);
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_timer_gettime (ikptr s_timer_id, ikptr s_curr_timer_spec, ikpcb * pcb)
+{
+#ifdef HAVE_TIMER_GETTIME
+  timer_t		timer_id      = (timer_t)ik_integer_to_long(s_timer_id);
+  struct itimerspec	curr_spec;
+  int			rv;
+  errno = 0;
+  rv    = timer_gettime(timer_id, &curr_spec);
+  if (0 == rv) {
+    pcb->root0 = &s_curr_timer_spec;
+    {
+      IK_ASS(IK_FIELD(IK_FIELD(s_curr_timer_spec, 0), 0), \
+	     ika_integer_from_long(pcb, (long)curr_spec.it_interval.tv_sec));
+      IK_ASS(IK_FIELD(IK_FIELD(s_curr_timer_spec, 0), 1), \
+	     ika_integer_from_long(pcb,       curr_spec.it_interval.tv_nsec));
+      IK_ASS(IK_FIELD(IK_FIELD(s_curr_timer_spec, 1), 0), \
+	     ika_integer_from_long(pcb, (long)curr_spec.it_interval.tv_sec));
+      IK_ASS(IK_FIELD(IK_FIELD(s_curr_timer_spec, 1), 1), \
+	     ika_integer_from_long(pcb,       curr_spec.it_interval.tv_nsec));
+    }
+    pcb->root0 = NULL;
+    return IK_FIX(0);
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_timer_getoverrun (ikptr s_timer_id, ikpcb * pcb)
+{
+#ifdef HAVE_TIMER_GETOVERRUN
+  timer_t	timer_id      = (timer_t)ik_integer_to_long(s_timer_id);
+  int		rv;
+  errno = 0;
+  rv    = timer_getoverrun(timer_id);
+  if (-1 != rv) {
+    return ika_integer_from_int(pcb, rv);
   } else
     return ik_errno_to_code();
 #else

@@ -2384,6 +2384,17 @@
        (px.clock-gettime CLOCK_MONOTONIC (px.make-struct-timespec 0 0)))
     => #t)
 
+  (check
+      (let ((cid (px.clock-getcpuclockid 0)))
+;;;	(check-pretty-print (list 'process-clock-id cid))
+	(integer? cid))
+    => #t)
+
+  (check
+      (px.struct-timespec?
+       (px.clock-gettime (px.clock-getcpuclockid 0)
+	 (px.make-struct-timespec 0 0)))
+    => #t)
   #t)
 
 

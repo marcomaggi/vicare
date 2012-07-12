@@ -167,8 +167,13 @@
     struct-mq-attr-mq_msgsize		set-struct-mq-attr-mq_msgsize!
     struct-mq-attr-mq_curmsgs		set-struct-mq-attr-mq_curmsgs!
 
-    ;; realtime clock functions
-    clock-getres
+    ;; POSIX per-process timers
+    timer-create			timer-delete
+    timer-settime			timer-gettime
+    timer-getoverrun
+
+    ;; POSIX realtime clock functions
+    clock-getres			clock-getcpuclockid
     clock-gettime			clock-settime
 
     ;; sockets
@@ -585,6 +590,20 @@
 (define-argument-validation (semaphore who obj)
   (pointer? obj)
   (assertion-violation who "expected pointer as semaphore argument" obj))
+
+(define-argument-validation (clockid_t who obj)
+  (words.signed-long? obj)
+  (assertion-violation who
+    "expected exact integer representing clockid_t as argument" obj))
+
+(define-argument-validation (timer_t who obj)
+  (words.signed-long? obj)
+  (assertion-violation who
+    "expected exact integer representing timer_t as argument" obj))
+
+(define-argument-validation (sigevent who obj)
+  (struct-sigevent? obj)
+  (assertion-violation who "expected struct-sigevent as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -2240,12 +2259,89 @@
 ;;   #f)
 
 
+;;;; POSIX timers
+
+(define-struct struct-sigevent
+  (sigev_notify sigev_signo))
+
+(define (%struct-sigevent-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[struct-sigevent")
+  (%display " sigev_notify=")	(%display (struct-sigevent-sigev_notify S))
+  (%display " sigev_signo=")	(%display (struct-sigevent-sigev_signo  S))
+  (%display "]"))
+
+;;; --------------------------------------------------------------------
+
+(define (timer-create clock-id sev)
+  (define who 'timer-create)
+  (with-arguments-validation (who)
+      ((clockid_t	clock-id)
+       (sigevent	sev))
+    (let ((rv (capi.posix-timer-create clock-id sev)))
+      (if (pair? rv)
+	  (unsafe.car rv)
+	(%raise-errno-error who rv clock-id sev)))))
+
+(define (timer-delete timer-id)
+  (define who 'timer-delete)
+  (with-arguments-validation (who)
+      ((timer_t	timer-id))
+    (let ((rv (capi.posix-timer-delete timer-id)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv timer-id)))))
+
+(define timer-settime
+  (case-lambda
+   ((timer-id flags new-timer-spec)
+    (timer-settime timer-id flags new-timer-spec (make-struct-itimerspec
+						  (make-struct-timespec 0 0)
+						  (make-struct-timespec 0 0))))
+   ((timer-id flags new-timer-spec old-timer-spec)
+    (define who 'timer-settime)
+    (with-arguments-validation (who)
+	((timer_t	timer-id)
+	 (fixnum	flags)
+	 (itimerspec	new-timer-spec)
+	 (itimerspec	old-timer-spec))
+      (let ((rv (capi.posix-timer-settime timer-id flags new-timer-spec old-timer-spec)))
+	(if (unsafe.fxzero? rv)
+	    old-timer-spec
+	  (%raise-errno-error who rv timer-id flags new-timer-spec old-timer-spec)))))))
+
+(define timer-gettime
+  (case-lambda
+   ((timer-id)
+    (timer-gettime timer-id (make-struct-itimerspec
+			     (make-struct-timespec 0 0)
+			     (make-struct-timespec 0 0))))
+   ((timer-id curr-timer-spec)
+    (define who 'timer-gettime)
+    (with-arguments-validation (who)
+	((timer_t	timer-id)
+	 (itimerspec	curr-timer-spec))
+      (let ((rv (capi.posix-timer-gettime timer-id curr-timer-spec)))
+	(if (unsafe.fxzero? rv)
+	    curr-timer-spec
+	  (%raise-errno-error who rv timer-id curr-timer-spec)))))))
+
+(define (timer-getoverrun timer-id)
+  (define who 'timer-getoverrun)
+  (with-arguments-validation (who)
+      ((timer_t		timer-id))
+    (let ((rv (capi.posix-timer-getoverrun timer-id)))
+      (if (<= 0 rv)
+	  rv
+	(%raise-errno-error who rv timer-id)))))
+
+
 ;;;; clock functions
 
 (define (clock-getres clock-id T)
   (define who 'clock-getres)
   (with-arguments-validation (who)
-      ((fixnum		clock-id)
+      ((clockid_t	clock-id)
        (timespec	T))
     (let ((rv (capi.posix-clock-getres clock-id T)))
       (if (unsafe.fxzero? rv)
@@ -2255,7 +2351,7 @@
 (define (clock-gettime clock-id T)
   (define who 'clock-gettime)
   (with-arguments-validation (who)
-      ((fixnum		clock-id)
+      ((clockid_t	clock-id)
        (timespec	T))
     (let ((rv (capi.posix-clock-gettime clock-id T)))
       (if (unsafe.fxzero? rv)
@@ -2265,12 +2361,21 @@
 (define (clock-settime clock-id T)
   (define who 'clock-settime)
   (with-arguments-validation (who)
-      ((fixnum		clock-id)
+      ((clockid_t	clock-id)
        (timespec	T))
     (let ((rv (capi.posix-clock-settime clock-id T)))
       (if (unsafe.fxzero? rv)
 	  T
 	(%raise-errno-error who rv clock-id T)))))
+
+(define (clock-getcpuclockid pid)
+  (define who 'clock-getcpuclockid)
+  (with-arguments-validation (who)
+      ((pid	pid))
+    (let ((rv (capi.posix-clock-getcpuclockid pid)))
+      (if (pair? rv)
+	  (car rv)
+	(%raise-errno-error who rv pid)))))
 
 
 ;;;; sockets
@@ -3698,6 +3803,7 @@
 (set-rtd-printer! (type-descriptor struct-tm)		%struct-tm-printer)
 (set-rtd-printer! (type-descriptor struct-itimerval)	%struct-itimerval-printer)
 (set-rtd-printer! (type-descriptor struct-mq-attr)	%struct-mq-attr-printer)
+(set-rtd-printer! (type-descriptor struct-sigevent)	%struct-sigevent-printer)
 
 (vicare-executable-as-string)
 

@@ -208,8 +208,13 @@
     posix-sem-timedwait			posix-sem-getvalue
     posix-sizeof-sem_t
 
-    ;; clock functions
-    posix-clock-getres
+    ;; POSIX per-process timers
+    posix-timer-create			posix-timer-delete
+    posix-timer-settime			posix-timer-gettime
+    posix-timer-getoverrun
+
+    ;; POSIX realtime clock functions
+    posix-clock-getres			posix-clock-getcpuclockid
     posix-clock-gettime			posix-clock-settime
 
     ;; file system synchronisation
@@ -1160,7 +1165,25 @@
   (foreign-call "ikrt_posix_sizeof_sem_t"))
 
 
-;;;; realtime clock functions
+;;;; POSIX timers
+
+(define-inline (posix-timer-create clock-id sigevent)
+  (foreign-call "ikrt_posix_timer_create" clock-id sigevent))
+
+(define-inline (posix-timer-delete timer-id)
+  (foreign-call "ikrt_posix_timer_delete" timer-id))
+
+(define-inline (posix-timer-settime timer-id flags new-timer-spec old-timer-spec)
+  (foreign-call "ikrt_posix_timer_settime" timer-id flags new-timer-spec old-timer-spec))
+
+(define-inline (posix-timer-gettime timer-id curr-timer-spec)
+  (foreign-call "ikrt_posix_timer_gettime" timer-id curr-timer-spec))
+
+(define-inline (posix-timer-getoverrun timer-id)
+  (foreign-call "ikrt_posix_timer_getoverrun" timer-id))
+
+
+;;;; POSIX realtime clock functions
 
 (define-inline (posix-clock-getres clock-id struct-timespec)
   (foreign-call "ikrt_posix_clock_getres" clock-id struct-timespec))
@@ -1170,6 +1193,9 @@
 
 (define-inline (posix-clock-settime clock-id struct-timespec)
   (foreign-call "ikrt_posix_clock_settime" clock-id struct-timespec))
+
+(define-inline (posix-clock-getcpuclockid pid)
+  (foreign-call "ikrt_posix_clock_getcpuclockid" pid))
 
 
 ;;;; file system synchronisation

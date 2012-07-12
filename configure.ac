@@ -349,11 +349,13 @@ AM_COND_IF([WANT_POSIX],[
   dnl These require linking with -lrt.
   AC_CHECK_FUNCS([mq_open mq_close mq_unlink mq_send mq_receive mq_setattr mq_getattr mq_timedsend mq_timedreceive])
   dnl These require linking with -lrt.
-  AC_CHECK_FUNCS([clock_getres clock_gettime clock_settime])
+  AC_CHECK_FUNCS([clock_getres clock_gettime clock_settime clock_getcpuclockid])
   dnl These require linking with -lrt.
   AC_CHECK_FUNCS([shm_open shm_unlink])
   dnl These require linking with -lrt.
   AC_CHECK_FUNCS([sem_init sem_destroy sem_open sem_close sem_unlink sem_post sem_wait sem_trywait sem_timedwait sem_getvalue])
+  dnl These require linking with -lrt.
+  AC_CHECK_FUNCS([timer_create timer_delete timer_settime timer_gettime timer_getoverrun])
   ])
 
 AC_CACHE_SAVE
@@ -750,7 +752,7 @@ VICARE_CONSTANT_TESTS([CLOCK_REALTIME CLOCK_MONOTONIC TFD_CLOEXEC TFD_NONBLOCK T
 
 # clock
 dnl AM_COND_IF([WANT_POSIX],[])
-VICARE_CONSTANT_TESTS([CLOCK_REALTIME CLOCK_MONOTONIC CLOCK_MONOTONIC_RAW CLOCK_PROCESS_CPUTIME_ID CLOCK_THREAD_CPUTIME_ID])
+VICARE_CONSTANT_TESTS([CLOCK_REALTIME CLOCK_MONOTONIC CLOCK_MONOTONIC_RAW CLOCK_PROCESS_CPUTIME_ID CLOCK_THREAD_CPUTIME_ID TIMER_ABSTIME])
 
 AC_CACHE_SAVE
 

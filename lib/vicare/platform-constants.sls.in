@@ -396,6 +396,7 @@
 ;;;; clock
     CLOCK_MONOTONIC_RAW CLOCK_PROCESS_CPUTIME_ID
     CLOCK_THREAD_CPUTIME_ID
+    TIMER_ABSTIME
 
 ;;; errno codes, reexported from (vicare errno)
     E2BIG		EACCES		EADDRINUSE
@@ -1298,6 +1299,8 @@
 (define-inline-constant CLOCK_MONOTONIC_RAW	@VALUEOF_CLOCK_MONOTONIC_RAW@)
 (define-inline-constant CLOCK_PROCESS_CPUTIME_ID @VALUEOF_CLOCK_PROCESS_CPUTIME_ID@)
 (define-inline-constant CLOCK_THREAD_CPUTIME_ID	@VALUEOF_CLOCK_THREAD_CPUTIME_ID@)
+
+(define-inline-constant TIMER_ABSTIME		@VALUEOF_TIMER_ABSTIME@)
 
 
 ;;;; h_errno friendly interface

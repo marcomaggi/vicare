@@ -42,7 +42,7 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d13
 -------------------------
 
-*
+* Added CLOCK-GETCPUCLOCKID to (vicare posix).
 
 
 Notes for revision 0.2d12
