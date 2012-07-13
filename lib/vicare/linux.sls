@@ -61,12 +61,19 @@
     ;; timer event through file descriptors
     timerfd-create			timerfd-read
     timerfd-settime			timerfd-gettime
-    make-struct-itimerspec		struct-itimerspec?
-    struct-itimerspec-it_interval	struct-itimerspec-it_value
-    (rename (px.make-struct-timespec	make-struct-timespec)
-	    (px.struct-timespec?	struct-timespec?)
-	    (px.struct-timespec-tv_sec	struct-timespec-tv_sec)
-	    (px.struct-timespec-tv_nsec	struct-timespec-tv_nsec))
+    (rename (px.make-struct-timespec		make-struct-timespec)
+	    (px.struct-timespec?		struct-timespec?)
+	    (px.struct-timespec-tv_sec		struct-timespec-tv_sec)
+	    (px.struct-timespec-tv_nsec		struct-timespec-tv_nsec)
+	    (px.set-struct-timespec-tv_sec!	set-struct-timespec-tv_sec!)
+	    (px.set-struct-timespec-tv_nsec!	set-struct-timespec-tv_nsec!)
+
+	    (px.make-struct-itimerspec			make-struct-itimerspec)
+	    (px.struct-itimerspec?			struct-itimerspec?)
+	    (px.struct-itimerspec-it_interval		struct-itimerspec-it_interval)
+	    (px.struct-itimerspec-it_value		struct-itimerspec-it_value)
+	    (px.set-struct-itimerspec-it_interval!	set-struct-itimerspec-it_interval!)
+	    (px.set-struct-itimerspec-it_value!		set-struct-itimerspec-it_value!))
     )
   (import (vicare)
     (vicare syntactic-extensions)
@@ -175,12 +182,12 @@
 ;;; --------------------------------------------------------------------
 
 (define (%valid-itimerspec? obj)
-  (and (struct-itimerspec? obj)
-       (let ((T (struct-itimerspec-it_interval obj)))
+  (and (px.struct-itimerspec? obj)
+       (let ((T (px.struct-itimerspec-it_interval obj)))
 	 (and (px.struct-timespec? T)
 	      (words.signed-long? (px.struct-timespec-tv_sec  T))
 	      (words.signed-long? (px.struct-timespec-tv_nsec T))))
-       (let ((T (struct-itimerspec-it_value obj)))
+       (let ((T (px.struct-itimerspec-it_value obj)))
 	 (and (px.struct-timespec? T)
 	      (words.signed-long? (px.struct-timespec-tv_sec  T))
 	      (words.signed-long? (px.struct-timespec-tv_nsec T))))))
@@ -423,19 +430,6 @@
 
 ;;;; timer event through file descriptors
 
-(define-struct struct-itimerspec
-  (it_interval it_value))
-
-(define (%struct-itimerspec-printer S port sub-printer)
-  (define-inline (%display thing)
-    (display thing port))
-  (%display "#[\"struct-itimerspec\"")
-  (%display " it_interval=")		(%display (struct-itimerspec-it_interval S))
-  (%display " it_value=")		(%display (struct-itimerspec-it_value    S))
-  (%display "]"))
-
-;;; --------------------------------------------------------------------
-
 (define timerfd-create
   (case-lambda
    ((clockid)
@@ -469,8 +463,9 @@
 (define timerfd-gettime
   (case-lambda
    ((fd)
-    (timerfd-gettime fd (make-struct-itimerspec (px.make-struct-timespec 0 0)
-						(px.make-struct-timespec 0 0))))
+    (timerfd-gettime fd (px.make-struct-itimerspec
+			 (px.make-struct-timespec 0 0)
+			 (px.make-struct-timespec 0 0))))
    ((fd curr)
     (define who 'timerfd-gettime)
     (with-arguments-validation (who)
@@ -494,7 +489,6 @@
 ;;;; done
 
 (set-rtd-printer! (type-descriptor struct-signalfd-siginfo)	%struct-signalfd-siginfo-printer)
-(set-rtd-printer! (type-descriptor struct-itimerspec)		%struct-itimerspec-printer)
 
 )
 

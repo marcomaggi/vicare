@@ -5228,25 +5228,53 @@ ikrt_posix_sem_getvalue (ikptr s_sem, ikpcb * pcb)
 
 ikptr
 ikrt_posix_timer_create (ikptr s_clock_id, ikptr s_sigevent, ikpcb * pcb)
+/* Interface  to   the  C  function  "timer_create()".    Create  a  new
+   per-process interval timer, initially  disarmed; if successful return
+   a  pair  whose  car  is  an  exact  integer  representing  the  timer
+   identifier and  whose cdr  is false; else  return an  encoded "errno"
+   value.
+
+   S_CLOCK_ID must be an exact  integer representing the identifier of a
+   clock to  be used to  measure time; it can  be one of  the constants:
+   CLOCK_REALTIME,       CLOCK_MONOTONIC,      CLOCK_PROCESS_CPUTIME_ID,
+   CLOCK_THREAD_CPUTIME_ID or the return value of CLOCK-GETCPUCLOCKID.
+
+   S_SIGEVENT  can   be  false  or  an   instance  of  "struct-sigevent"
+   specifying how the process is  notified of timer events.
+
+   * When false: the call sets up  the notification as with a C language
+     "struct  sigevent"  having:  "sigev_notify"  set  to  SIGEV_SIGNAL,
+     "sigev_signo" set  to SIGALRM,  "sigev.sival_int" set to  the timer
+     identifier.
+
+   * When a  "struct-sigevent" instance: at present,  the only supported
+     method is with "sigev_notify" set to SIGEV_SIGNAL and "sigev_signo"
+     set to the signal number, all the other fields being zero. */
 {
 #ifdef HAVE_TIMER_CREATE
   clockid_t		clock_id = (clockid_t)ik_integer_to_long(s_clock_id);
   struct sigevent	sev;
+  struct sigevent *	sevp;
   timer_t		timer_id;
   int			rv;
-  sev.sigev_notify		= ik_integer_to_int(IK_FIELD(s_sigevent, 0));
-  sev.sigev_signo		= ik_integer_to_int(IK_FIELD(s_sigevent, 1));
-  sev.sigev_value.sival_ptr	= NULL;
-  sev.sigev_notify_attributes	= NULL;
+  if (false_object == s_sigevent) {
+    sevp = NULL;
+  } else {
+    sev.sigev_notify		= ik_integer_to_int(IK_FIELD(s_sigevent, 0));
+    sev.sigev_signo		= ik_integer_to_int(IK_FIELD(s_sigevent, 1));
+    sev.sigev_value.sival_int	= 0;
+    sev.sigev_notify_attributes	= NULL;
 #if 0 /* On  GNU+Linux "sigev_notify_function"  shares the  storage with
 	 "sigev_notify_attributes". */
-  sev.sigev_notify_function	= NULL;
+    sev.sigev_notify_function	= NULL;
 #endif
 #if 0 /* On GNU+Linux "sigev_notify_thread_id" is not present. */
-  sev.sigev_notify_thread_id	= (pid_t)0;
+    sev.sigev_notify_thread_id	= (pid_t)0;
 #endif
+    sevp = &sev;
+  }
   errno = 0;
-  rv = timer_create(clock_id, &sev, &timer_id);
+  rv = timer_create(clock_id, sevp, &timer_id);
   if (0 == rv) {
     ikptr	s_pair = ika_pair_alloc(pcb);
     pcb->root0 = &s_pair;
@@ -5264,6 +5292,9 @@ ikrt_posix_timer_create (ikptr s_clock_id, ikptr s_sigevent, ikpcb * pcb)
 }
 ikptr
 ikrt_posix_timer_delete (ikptr s_timer_id)
+/* Interface  to  the C  function  "timer_delete()".   Delete the  timer
+   referenced by S_TIMER_ID; if successful  return the fixnum zero, else
+   return an encoded "errno" value. */
 {
 #ifdef HAVE_TIMER_DELETE
   timer_t	timer_id = (timer_t)ik_integer_to_long(s_timer_id);

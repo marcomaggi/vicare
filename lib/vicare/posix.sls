@@ -172,6 +172,10 @@
     timer-settime			timer-gettime
     timer-getoverrun
 
+    make-struct-itimerspec		struct-itimerspec?
+    struct-itimerspec-it_interval	struct-itimerspec-it_value
+    set-struct-itimerspec-it_interval!	set-struct-itimerspec-it_value!
+
     ;; POSIX realtime clock functions
     clock-getres			clock-getcpuclockid
     clock-gettime			clock-settime
@@ -367,6 +371,17 @@
   (and (struct-itimerval? obj)
        (%struct-timeval? (struct-itimerval-it_interval obj))
        (%struct-timeval? (struct-itimerval-it_value    obj))))
+
+(define (%valid-itimerspec? obj)
+  (and (struct-itimerspec? obj)
+       (let ((T (struct-itimerspec-it_interval obj)))
+	 (and (struct-timespec? T)
+	      (words.signed-long? (struct-timespec-tv_sec  T))
+	      (words.signed-long? (struct-timespec-tv_nsec T))))
+       (let ((T (struct-itimerspec-it_value obj)))
+	 (and (struct-timespec? T)
+	      (words.signed-long? (struct-timespec-tv_sec  T))
+	      (words.signed-long? (struct-timespec-tv_nsec T))))))
 
 (define (%valid-struct-mq-attr? obj)
   (and (struct-mq-attr? obj)
@@ -578,6 +593,14 @@
 (define-argument-validation (timespec who obj)
   (%struct-timespec? obj)
   (assertion-violation who "expected struct-timespec as argument" obj))
+
+(define-argument-validation (itimerspec who obj)
+  (%valid-itimerspec? obj)
+  (assertion-violation who "expected struct-itimerspec as argument" obj))
+
+(define-argument-validation (itimerspec/false who obj)
+  (or (not obj) (%valid-itimerspec? obj))
+  (assertion-violation who "expected false or struct-itimerspec as argument" obj))
 
 (define-argument-validation (mq-attr who obj)
   (%valid-struct-mq-attr? obj)
@@ -2274,12 +2297,29 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (timer-create clock-id sev)
+(define-struct struct-itimerspec
+  (it_interval it_value))
+
+(define (%struct-itimerspec-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-itimerspec\"")
+  (%display " it_interval=")		(%display (struct-itimerspec-it_interval S))
+  (%display " it_value=")		(%display (struct-itimerspec-it_value    S))
+  (%display "]"))
+
+;;; --------------------------------------------------------------------
+
+(define (timer-create clock-id #;sev)
+  ;;At present  we only support setting  the SEV argument to  false.  In
+  ;;future we may support the full "struct-sigevent" structure.
+  ;;
   (define who 'timer-create)
   (with-arguments-validation (who)
-      ((clockid_t	clock-id)
-       (sigevent	sev))
-    (let ((rv (capi.posix-timer-create clock-id sev)))
+      ((clockid_t		clock-id)
+       #;(sigevent/false	sev))
+    (let* ((sev #f)
+	   (rv  (capi.posix-timer-create clock-id sev)))
       (if (pair? rv)
 	  (unsafe.car rv)
 	(%raise-errno-error who rv clock-id sev)))))
@@ -3804,6 +3844,7 @@
 (set-rtd-printer! (type-descriptor struct-itimerval)	%struct-itimerval-printer)
 (set-rtd-printer! (type-descriptor struct-mq-attr)	%struct-mq-attr-printer)
 (set-rtd-printer! (type-descriptor struct-sigevent)	%struct-sigevent-printer)
+(set-rtd-printer! (type-descriptor struct-itimerspec)	%struct-itimerspec-printer)
 
 (vicare-executable-as-string)
 

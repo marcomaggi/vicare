@@ -10219,6 +10219,7 @@ exception.
 * posix time tms::              Data structure @code{struct-tms}.
 * posix time tm::               Data structure @code{struct-tm}.
 * posix time itimerval::        Data structure @code{struct-itimerval}.
+* posix time itimerspec::       Data structure @code{struct-itimerspec}.
 * posix time functions::        Date and time functions.
 @end menu
 
@@ -10441,6 +10442,44 @@ Accessors for the fields of @code{struct-itimerval}.
 @end defun
 
 @c page
+@node posix time itimerspec
+@subsection Data structure @code{struct-itimerspec}
+
+
+@deftp {Structure Type} struct-itimerspec
+Scheme level representation of @code{struct itimerspec}, see the manual
+page @code{timerfd_create(2)}.  It has the following fields:
+
+@table @code
+@item it_interval
+An instance of @code{struct-timespec} representing the period between
+successive timer interrupts, in seconds and nanoseconds.  @ref{posix
+time timespec} for details on @code{struct-timespec}.
+
+@item it_value
+An instance of @code{struct-timespec} representing the time interval
+between now and the first timer interrupt, in seconds and nanoseconds.
+@ref{posix time timespec} for details on @code{struct-timespec}.
+@end table
+@end deftp
+
+
+@defun make-struct-itimerspec @var{interval} @var{value}
+Build and return a new instance of @code{struct-itimerspec}.
+@end defun
+
+
+@defun struct-itimerspec? @var{obj}
+Return true if @var{obj} is an instance of @code{struct-itimerspec}.
+@end defun
+
+
+@defun struct-itimerspec-it_interval @var{itimerspec}
+@defunx struct-itimerspec-it_value @var{itimerspec}
+Accessors for the fields of @code{struct-itimerspec}.
+@end defun
+
+@c page
 @node posix time functions
 @subsection Date and time functions
 
@@ -10642,27 +10681,53 @@ must be a fixnum representing the process identifier (@acronym{PID}).
 The @posix{} timer @api{} allows the creation of per--process timers.
 
 
-@defun timer_create @var{clock-id} @var{event}
+@defun timer-create @var{clock-id}
+Interface to the C function @cfunc{timer_create}, see the manual page
+@code{timer_create(2)}.  Create a new per--process interval timer,
+initially disarmed; if successful return an exact integer representing
+the timer identifier, else raise an exception.
+
+@var{clock-id} must be an exact integer representing the identifier of a
+clock to be used to measure time; it can be one of the constants:
+
+@example
+CLOCK_REALTIME                  CLOCK_MONOTONIC
+CLOCK_PROCESS_CPUTIME_ID        CLOCK_THREAD_CPUTIME_ID
+@end example
+
+@noindent
+or the return value of @func{clock-getcpuclockid}.
+
+The call sets up the notification as with a C language @code{struct
+sigevent} having: @code{sigev_notify} set to @code{SIGEV_SIGNAL},
+@code{sigev_signo} set to @code{SIGALRM}, @code{sigev.sival_int} set to
+the timer identifier.
+
+@quotation
+@strong{NOTE} On @gnu{}+Linux systems: for details on @code{struct
+sigevent} see the manual page @code{sigevent(7)}.
+@end quotation
+@end defun
+
+
+@defun timer-delete @var{timer-id}
+Interface to the C function @cfunc{timer_delete}, see the manual page
+@code{timer_delete(2)}.  Delete the timer referenced by @var{timer-id};
+if successful return unspecified values, else raise an exception.
+@end defun
+
+
+@defun timer-settime
 
 @end defun
 
 
-@defun timer_delete
+@defun timer-gettime
 
 @end defun
 
 
-@defun timer_settime
-
-@end defun
-
-
-@defun timer_gettime
-
-@end defun
-
-
-@defun timer_getoverrun
+@defun timer-getoverrun
 
 @end defun
 
@@ -12857,7 +12922,6 @@ events.  For the full documentation see the following manual pages:
 
 @menu
 * linux timerfd intro::         Introduction to the @code{timerfd} @api{}.
-* linux timerfd itimerspec::    Data structure @code{struct-itimerspec}.
 * linux timerfd api::           The @code{timerfd} @api{}.
 * linux timerfd examples::      Usage examples of the @code{timerfd} @api{}.
 @end menu
@@ -12891,59 +12955,23 @@ Each timer can be started, stopped, reconfigured and queried for how
 much time until the next event.
 
 @c page
-@node linux timerfd itimerspec
-@subsection Data structure @code{struct-itimerspec}
+@node linux timerfd api
+@subsection The @code{timerfd} @api{}
 
 
 The following bindings are exported by @library{vicare posix} and
 reexported by @library{vicare linux}:
 
 @example
-make-struct-timespec    struct-timespec?
-struct-timespec-tv_sec  struct-timespec-tv_nsec
+make-struct-timespec           struct-timespec?
+struct-timespec-tv_sec         struct-timespec-tv_nsec
+set-struct-timespec-tv_sec!    set-struct-timespec-tv_nsec!
+
+make-struct-itimerspec         struct-itimerspec?
+struct-itimerspec-it_interval  struct-itimerspec-it_value
+set-struct-itimerspec-it_interval!
+set-struct-itimerspec-it_value!
 @end example
-
-The following bindings are exported by the @library{vicare linux}
-library.
-
-
-@deftp {Structure Type} struct-itimerspec
-Scheme level representation of @code{struct itimerspec}, see the manual
-page @code{timerfd_create(2)}.  It has the following fields:
-
-@table @code
-@item it_interval
-An instance of @code{struct-timespec} representing the period between
-successive timer interrupts, in seconds and nanoseconds.  @ref{posix
-time timespec} for details on @code{struct-timespec}.
-
-@item it_value
-An instance of @code{struct-timespec} representing the time interval
-between now and the first timer interrupt, in seconds and nanoseconds.
-@ref{posix time timespec} for details on @code{struct-timespec}.
-@end table
-@end deftp
-
-
-@defun make-struct-itimerspec @var{interval} @var{value}
-Build and return a new instance of @code{struct-itimerspec}.
-@end defun
-
-
-@defun struct-itimerspec? @var{obj}
-Return true if @var{obj} is an instance of @code{struct-itimerspec}.
-@end defun
-
-
-@defun struct-itimerspec-it_interval @var{itimerspec}
-@defunx struct-itimerspec-it_value @var{itimerspec}
-Accessors for the fields of @code{struct-itimerspec}.
-@end defun
-
-@c page
-@node linux timerfd api
-@subsection The @code{timerfd} @api{}
-
 
 The following bindings are exported by the @library{vicare linux}
 library.
