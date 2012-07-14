@@ -178,9 +178,12 @@ TESTS	+= test-vicare-ffi.sps
 endif
 
 if WANT_POSIX
-TESTS	+= test-vicare-posix.sps			\
-	   test-vicare-shared-memory.sps		\
-	   test-vicare-sel.sps
+TESTS	+= \
+	test-vicare-posix-basic.sps		\
+	test-vicare-posix-timers.sps		\
+	\
+	test-vicare-shared-memory.sps		\
+	test-vicare-sel.sps
 endif
 
 if WANT_GLIBC
@@ -321,7 +324,10 @@ EXTRA_DIST =	\
 	test-vicare-parameters.sps			\
 	test-vicare-parser-logic.sps			\
 	test-vicare-pointers.sps			\
-	test-vicare-posix.sps				\
+	\
+	test-vicare-posix-basic.sps			\
+	test-vicare-posix-timers.sps			\
+	\
 	test-vicare-promises.sps			\
 	test-vicare-reader.sps				\
 	test-vicare-records-procedural.sps		\
