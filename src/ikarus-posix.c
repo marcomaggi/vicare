@@ -5310,6 +5310,19 @@ ikptr
 ikrt_posix_timer_settime (ikptr s_timer_id, ikptr s_flags,
 			  ikptr s_new_timer_spec, ikptr s_old_timer_spec,
 			  ikpcb * pcb)
+/* Interface to  the C  function "timer_settime()".   Arms or  disarms a
+   timer; if successful  return the fixnum zero, else  return an encoded
+   "errno" value.
+
+   S_TIMER_ID must be an exact  integer representing a timer identifier.
+   S_FLAGS must be the fixnum zero or the value of TIMER_ABSTIME.
+
+   S_NEW_TIMER_SPEC must be an instance of "struct-itimerspec" and it is
+   used to arm or disarm the timer.
+
+   S_OLD_TIMER_SPEC must be false or an instance of "struct-itimerspec";
+   in the  latter case:  the instance  is mutated  to represent  the old
+   timer specification. */
 {
 #ifdef HAVE_TIMER_SETTIME
   timer_t		timer_id      = (timer_t)ik_integer_to_long(s_timer_id);
@@ -5325,18 +5338,20 @@ ikrt_posix_timer_settime (ikptr s_timer_id, ikptr s_flags,
   errno = 0;
   rv    = timer_settime(timer_id, IK_UNFIX(s_flags), &new_spec, &old_spec);
   if (0 == rv) {
-    pcb->root0 = &s_old_timer_spec;
-    {
-      IK_ASS(IK_FIELD(IK_FIELD(s_old_timer_spec, 0), 0), \
-	     ika_integer_from_long(pcb, (long)old_spec.it_interval.tv_sec));
-      IK_ASS(IK_FIELD(IK_FIELD(s_old_timer_spec, 0), 1), \
-	     ika_integer_from_long(pcb,       old_spec.it_interval.tv_nsec));
-      IK_ASS(IK_FIELD(IK_FIELD(s_old_timer_spec, 1), 0), \
-	     ika_integer_from_long(pcb, (long)old_spec.it_interval.tv_sec));
-      IK_ASS(IK_FIELD(IK_FIELD(s_old_timer_spec, 1), 1), \
-	     ika_integer_from_long(pcb,       old_spec.it_interval.tv_nsec));
+    if (false_object != s_old_timer_spec) {
+      pcb->root0 = &s_old_timer_spec;
+      {
+	IK_ASS(IK_FIELD(IK_FIELD(s_old_timer_spec, 0), 0), \
+	       ika_integer_from_long(pcb, (long)old_spec.it_interval.tv_sec));
+	IK_ASS(IK_FIELD(IK_FIELD(s_old_timer_spec, 0), 1), \
+	       ika_integer_from_long(pcb,       old_spec.it_interval.tv_nsec));
+	IK_ASS(IK_FIELD(IK_FIELD(s_old_timer_spec, 1), 0), \
+	       ika_integer_from_long(pcb, (long)old_spec.it_interval.tv_sec));
+	IK_ASS(IK_FIELD(IK_FIELD(s_old_timer_spec, 1), 1), \
+	       ika_integer_from_long(pcb,       old_spec.it_interval.tv_nsec));
+      }
+      pcb->root0 = NULL;
     }
-    pcb->root0 = NULL;
     return IK_FIX(0);
   } else
     return ik_errno_to_code();
@@ -5346,6 +5361,13 @@ ikrt_posix_timer_settime (ikptr s_timer_id, ikptr s_flags,
 }
 ikptr
 ikrt_posix_timer_gettime (ikptr s_timer_id, ikptr s_curr_timer_spec, ikpcb * pcb)
+/* Interface to the C  function "timer_gettime()".  Retrieve the current
+   timer  specification associated  to  the  identifier S_TIMER_ID.   If
+   successful return  the fixnum  zero, else  return an  encoded "errno"
+   value.
+
+   S_CURR_TIMER_SPEC must  be an instance of  "struct-itimerspec", which
+   is filled with the current timer specification.  */
 {
 #ifdef HAVE_TIMER_GETTIME
   timer_t		timer_id      = (timer_t)ik_integer_to_long(s_timer_id);
@@ -5375,6 +5397,10 @@ ikrt_posix_timer_gettime (ikptr s_timer_id, ikptr s_curr_timer_spec, ikpcb * pcb
 }
 ikptr
 ikrt_posix_timer_getoverrun (ikptr s_timer_id, ikpcb * pcb)
+/* Interface to the C  function "timer_getoverrun()".  Get overrun count
+   for  the  timer referenced  by  S_TIMER_ID;  if successful  return  a
+   non-negative  exact integer  representing  the overrun  count of  the
+   specified timer, else return an encoded "errno" value. */
 {
 #ifdef HAVE_TIMER_GETOVERRUN
   timer_t	timer_id      = (timer_t)ik_integer_to_long(s_timer_id);

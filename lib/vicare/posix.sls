@@ -2335,16 +2335,14 @@
 (define timer-settime
   (case-lambda
    ((timer-id flags new-timer-spec)
-    (timer-settime timer-id flags new-timer-spec (make-struct-itimerspec
-						  (make-struct-timespec 0 0)
-						  (make-struct-timespec 0 0))))
+    (timer-settime timer-id flags new-timer-spec #f))
    ((timer-id flags new-timer-spec old-timer-spec)
     (define who 'timer-settime)
     (with-arguments-validation (who)
-	((timer_t	timer-id)
-	 (fixnum	flags)
-	 (itimerspec	new-timer-spec)
-	 (itimerspec	old-timer-spec))
+	((timer_t		timer-id)
+	 (fixnum		flags)
+	 (itimerspec		new-timer-spec)
+	 (itimerspec/false	old-timer-spec))
       (let ((rv (capi.posix-timer-settime timer-id flags new-timer-spec old-timer-spec)))
 	(if (unsafe.fxzero? rv)
 	    old-timer-spec

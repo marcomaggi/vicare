@@ -10409,6 +10409,9 @@ Accessors for instances of @var{struct-tm}
 @subsection Data structure @code{struct-itimerval}
 
 
+Structure representing interval timer values (ITimerVal).
+
+
 @deftp {Structure Type} struct-itimerval
 Scheme level representation of @code{struct itimerval},
 @glibcref{Setting an Alarm, struct itimerval}.  It has the following
@@ -10446,9 +10449,13 @@ Accessors for the fields of @code{struct-itimerval}.
 @subsection Data structure @code{struct-itimerspec}
 
 
+Structure representing interval timer specifications (ITimerSpec).
+
+
 @deftp {Structure Type} struct-itimerspec
 Scheme level representation of @code{struct itimerspec}, see the manual
-page @code{timerfd_create(2)}.  It has the following fields:
+pages @code{timer_create(2)} and @code{timerfd_create(2)}.  It has the
+following fields:
 
 @table @code
 @item it_interval
@@ -10678,7 +10685,29 @@ must be a fixnum representing the process identifier (@acronym{PID}).
 @cindex Per--process timers
 
 
-The @posix{} timer @api{} allows the creation of per--process timers.
+The @posix{} timer @api{} allows the creation of per--process timers
+triggering time--periodic events by specification of two time intervals:
+
+@enumerate
+@item
+Initial expiration: how much time before the first event.
+
+@item
+Period: how much time between two time--adjacent events.
+@end enumerate
+
+@example
+    time before the
+    first event       period      period      period
+   |               |           |           |           |
+---+---------------+-----------+-----------+-----------+----
+   ^               ^           ^           ^           ^
+  now          1st event   2nd event   3rd event   4th event
+@end example
+
+Each timer can be started, stopped, reconfigured and queried for how
+much time until the next event.
+
 
 
 @defun timer-create @var{clock-id}
@@ -10717,18 +10746,42 @@ if successful return unspecified values, else raise an exception.
 @end defun
 
 
-@defun timer-settime
+@defun timer-settime @var{timer-id} @var{flags} @var{new}
+@defunx timer-settime @var{timer-id} @var{flags} @var{new} @var{old}
+Interface to the C function @cfunc{timer_settime}, see the manual page
+@code{timer_settime(2)}.  Arm or disarm the timer referenced by
+@var{timer-id}.  If successful return @var{old} or @false{} when
+@var{old} is not given; if an error occurs raise an exception.
 
+@var{flags} can be either the fixnum zero or @code{TIMER_ABSTIME}.
+@var{new} must be a valid instance of @code{struct-itimerspec}, which is
+used to set the timer.  The optional @var{old} can be @false{} or a
+valid instance of @code{struct-itimerspec}; when given: it is filled
+with the old timer specification.
 @end defun
 
 
-@defun timer-gettime
+@defun timer-gettime @var{timer-id}
+@defunx timer-gettime @var{timer-id} @var{curr}
+Interface to the C function @cfunc{timer_gettime}, see the manual page
+@code{timer_gettime(2)}.  Retrieve the current timer specification
+associated to the timer identifier @var{timer-id}.  If successful return
+@var{curr} or a newly built instance of @code{struct-itimerspec}; if an
+error occurs: raise an exception.
 
+The optional @var{curr} must be a valid instance of
+@code{struct-itimerspec}, when not given a new instance of this
+structure type is internally built: it is filled with the current timer
+specification.
 @end defun
 
 
-@defun timer-getoverrun
-
+@defun timer-getoverrun @var{timer-id}
+Interface to the C function @cfunc{timer_getoverrun}, see the manual
+page @code{timer_getoverrun(2)}.  Get overrun count for the timer
+referenced by @var{timer-id}; if successful return a non--negative exact
+integer representing the overrun count of the specified timer, else
+raise an exception.
 @end defun
 
 @c page
@@ -13018,6 +13071,7 @@ The optional @var{curr} must be a valid instance of
 structure type is internally built: it is filled with the current timer
 specification.
 @end defun
+
 
 @defun timerfd-read @var{fd}
 Perform a @cfunc{read} operation on @var{fd}, which must be a file
