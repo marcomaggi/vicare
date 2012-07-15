@@ -5346,9 +5346,9 @@ ikrt_posix_timer_settime (ikptr s_timer_id, ikptr s_flags,
 	IK_ASS(IK_FIELD(IK_FIELD(s_old_timer_spec, 0), 1), \
 	       ika_integer_from_long(pcb,       old_spec.it_interval.tv_nsec));
 	IK_ASS(IK_FIELD(IK_FIELD(s_old_timer_spec, 1), 0), \
-	       ika_integer_from_long(pcb, (long)old_spec.it_interval.tv_sec));
+	       ika_integer_from_long(pcb, (long)old_spec.it_value.tv_sec));
 	IK_ASS(IK_FIELD(IK_FIELD(s_old_timer_spec, 1), 1), \
-	       ika_integer_from_long(pcb,       old_spec.it_interval.tv_nsec));
+	       ika_integer_from_long(pcb,       old_spec.it_value.tv_nsec));
       }
       pcb->root0 = NULL;
     }
@@ -5383,9 +5383,9 @@ ikrt_posix_timer_gettime (ikptr s_timer_id, ikptr s_curr_timer_spec, ikpcb * pcb
       IK_ASS(IK_FIELD(IK_FIELD(s_curr_timer_spec, 0), 1), \
 	     ika_integer_from_long(pcb,       curr_spec.it_interval.tv_nsec));
       IK_ASS(IK_FIELD(IK_FIELD(s_curr_timer_spec, 1), 0), \
-	     ika_integer_from_long(pcb, (long)curr_spec.it_interval.tv_sec));
+	     ika_integer_from_long(pcb, (long)curr_spec.it_value.tv_sec));
       IK_ASS(IK_FIELD(IK_FIELD(s_curr_timer_spec, 1), 1), \
-	     ika_integer_from_long(pcb,       curr_spec.it_interval.tv_nsec));
+	     ika_integer_from_long(pcb,       curr_spec.it_value.tv_nsec));
     }
     pcb->root0 = NULL;
     return IK_FIX(0);

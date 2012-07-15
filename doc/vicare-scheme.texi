@@ -10429,8 +10429,11 @@ between now and the first timer interrupt.
 @end deftp
 
 
-@defun make-struct-itimerval @var{interval} @var{value}
-Build and return a new instance of @code{struct-itimerval}.
+@defun make-struct-itimerval
+@defunx make-struct-itimerval @var{interval} @var{value}
+Build and return a new instance of @code{struct-itimerval}.  When called
+with no arguments: two new instances of @code{struct-timeval} are
+allocated and initialised to zero values, then used as field values.
 @end defun
 
 
@@ -10471,8 +10474,11 @@ between now and the first timer interrupt, in seconds and nanoseconds.
 @end deftp
 
 
-@defun make-struct-itimerspec @var{interval} @var{value}
-Build and return a new instance of @code{struct-itimerspec}.
+@defun make-struct-itimerspec
+@defunx make-struct-itimerspec @var{interval} @var{value}
+Build and return a new instance of @code{struct-itimerspec}.  When
+called with no arguments: two new instances of @code{struct-timespec}
+are allocated and initialised to zero values, then used as field values.
 @end defun
 
 

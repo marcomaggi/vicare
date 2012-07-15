@@ -172,7 +172,8 @@
     timer-settime			timer-gettime
     timer-getoverrun
 
-    make-struct-itimerspec		struct-itimerspec?
+    (rename (%make-struct-itimerspec make-struct-itimerspec))
+    struct-itimerspec?
     struct-itimerspec-it_interval	struct-itimerspec-it_value
     set-struct-itimerspec-it_interval!	set-struct-itimerspec-it_value!
 
@@ -300,7 +301,8 @@
     set-struct-tm-tm_isdst!		set-struct-tm-tm_gmtoff!
     set-struct-tm-tm_zone!
 
-    make-struct-itimerval		struct-itimerval?
+    (rename (%make-struct-itimerval make-struct-itimerval))
+    struct-itimerval?
     struct-itimerval-it_interval	struct-itimerval-it_value
     set-struct-itimerval-it_interval!	set-struct-itimerval-it_value!
 
@@ -2308,6 +2310,14 @@
   (%display " it_value=")		(%display (struct-itimerspec-it_value    S))
   (%display "]"))
 
+(define %make-struct-itimerspec
+  (case-lambda
+   (()
+    (make-struct-itimerspec (make-struct-timespec 0 0)
+			    (make-struct-timespec 0 0)))
+   ((it-interval it-value)
+    (make-struct-itimerspec it-interval it-value))))
+
 ;;; --------------------------------------------------------------------
 
 (define (timer-create clock-id #;sev)
@@ -2351,9 +2361,7 @@
 (define timer-gettime
   (case-lambda
    ((timer-id)
-    (timer-gettime timer-id (make-struct-itimerspec
-			     (make-struct-timespec 0 0)
-			     (make-struct-timespec 0 0))))
+    (timer-gettime timer-id (%make-struct-itimerspec)))
    ((timer-id curr-timer-spec)
     (define who 'timer-gettime)
     (with-arguments-validation (who)
@@ -3421,6 +3429,14 @@
   (%display " it_interval=")		(%display (struct-itimerval-it_interval S))
   (%display " it_value=")		(%display (struct-itimerval-it_value    S))
   (%display "]"))
+
+(define %make-struct-itimerval
+  (case-lambda
+   (()
+    (make-struct-itimerval (make-struct-timeval 0 0)
+			   (make-struct-timeval 0 0)))
+   ((interval value)
+    (make-struct-itimerval interval value))))
 
 ;;; --------------------------------------------------------------------
 
