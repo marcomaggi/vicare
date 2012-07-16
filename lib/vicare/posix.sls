@@ -51,10 +51,33 @@
     ;; interprocess signals
     (rename (raise-signal	raise))
     kill				pause
+    sigwaitinfo				sigtimedwait
 
     signal-bub-init			signal-bub-final
     signal-bub-acquire
     signal-bub-delivered?		signal-bub-all-delivered
+
+    (rename (%make-struct-siginfo_t make-struct-siginfo_t))
+    struct-siginfo_t?
+    struct-siginfo_t-si_signo		set-struct-siginfo_t-si_signo!
+    struct-siginfo_t-si_errno		set-struct-siginfo_t-si_errno!
+    struct-siginfo_t-si_code		set-struct-siginfo_t-si_code!
+    struct-siginfo_t-si_trapno		set-struct-siginfo_t-si_trapno!
+    struct-siginfo_t-si_pid		set-struct-siginfo_t-si_pid!
+    struct-siginfo_t-si_uid		set-struct-siginfo_t-si_uid!
+    struct-siginfo_t-si_status		set-struct-siginfo_t-si_status!
+    struct-siginfo_t-si_utime		set-struct-siginfo_t-si_utime!
+    struct-siginfo_t-si_stime		set-struct-siginfo_t-si_stime!
+    struct-siginfo_t-si_value.sival_int	set-struct-siginfo_t-si_value.sival_int!
+    struct-siginfo_t-si_value.sival_ptr	set-struct-siginfo_t-si_value.sival_ptr!
+    struct-siginfo_t-si_int		set-struct-siginfo_t-si_int!
+    struct-siginfo_t-si_ptr		set-struct-siginfo_t-si_ptr!
+    struct-siginfo_t-si_overrun		set-struct-siginfo_t-si_overrun!
+    struct-siginfo_t-si_timerid		set-struct-siginfo_t-si_timerid!
+    struct-siginfo_t-si_addr		set-struct-siginfo_t-si_addr!
+    struct-siginfo_t-si_band		set-struct-siginfo_t-si_band!
+    struct-siginfo_t-si_fd		set-struct-siginfo_t-si_fd!
+    struct-siginfo_t-si_addr_lsb	set-struct-siginfo_t-si_addr_lsb!
 
     ;; file system inspection
     stat				lstat
@@ -630,6 +653,10 @@
   (struct-sigevent? obj)
   (assertion-violation who "expected struct-sigevent as argument" obj))
 
+(define-argument-validation (siginfo_t who obj)
+  (struct-siginfo_t? obj)
+  (assertion-violation who "expected struct-siginfo_t as argument" obj))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (unsigned-int who obj)
@@ -1045,6 +1072,96 @@
 
 (define (pause)
   (capi.posix-pause))
+
+;;; --------------------------------------------------------------------
+
+(define-struct struct-siginfo_t
+  (si_signo	      ;0
+   si_errno	      ;1
+   si_code	      ;2
+   si_trapno	      ;3
+   si_pid	      ;4
+   si_uid	      ;5
+   si_status	      ;6
+   si_utime	      ;7
+   si_stime	      ;8
+   si_value.sival_int ;9
+   si_value.sival_ptr ;10
+   si_int	      ;11
+   si_ptr	      ;12
+   si_overrun	      ;13
+   si_timerid	      ;14
+   si_addr	      ;15
+   si_band	      ;16
+   si_fd	      ;17
+   si_addr_lsb))      ;18
+
+(define (%struct-siginfo_t-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[struct-siginfo_t")
+  (%display " st_signo=")	(%display (struct-siginfo_t-si_signo S))
+  (%display " si_si_errno=")	(%display (struct-siginfo_t-si_errno S))
+  (%display " si_si_code=")	(%display (struct-siginfo_t-si_code S))
+  (%display " si_si_trapno=")	(%display (struct-siginfo_t-si_trapno S))
+  (%display " si_si_pid=")	(%display (struct-siginfo_t-si_pid S))
+  (%display " si_si_uid=")	(%display (struct-siginfo_t-si_uid S))
+  (%display " si_si_status=")	(%display (struct-siginfo_t-si_status S))
+  (%display " si_si_utime=")	(%display (struct-siginfo_t-si_utime S))
+  (%display " si_si_stime=")	(%display (struct-siginfo_t-si_stime S))
+  (%display " si_si_value.sival_int=")	(%display (struct-siginfo_t-si_value.sival_int S))
+  (%display " si_si_value.sival_ptr=")	(%display (struct-siginfo_t-si_value.sival_ptr S))
+  (%display " si_si_int=")	(%display (struct-siginfo_t-si_int S))
+  (%display " si_si_ptr=")	(%display (struct-siginfo_t-si_ptr S))
+  (%display " si_si_overrun=")	(%display (struct-siginfo_t-si_overrun S))
+  (%display " si_si_timerid=")	(%display (struct-siginfo_t-si_timerid S))
+  (%display " si_si_addr=")	(%display (struct-siginfo_t-si_addr S))
+  (%display " si_si_band=")	(%display (struct-siginfo_t-si_band S))
+  (%display " si_si_fd=")	(%display (struct-siginfo_t-si_fd S))
+  (%display " si_si_addr_lsb=")	(%display (struct-siginfo_t-si_addr_lsb S))
+  (%display "]"))
+
+(define %make-struct-siginfo_t
+  (case-lambda
+   (()
+    (make-struct-siginfo_t #f #f #f #f #f #f #f #f
+			   #f #f #f #f #f #f #f #f #f #f #f))
+   ((signo errno code trapno pid uid status
+	   utime stime value.int value.ptr int ptr overrun timerid addr band fd addr_lsb)
+    (make-struct-siginfo_t signo errno code trapno pid uid status
+			   utime stime value.int value.ptr int ptr overrun timerid
+			   addr band fd addr_lsb))))
+
+;;; --------------------------------------------------------------------
+
+(define sigwaitinfo
+  (case-lambda
+   ((signo)
+    (sigwaitinfo signo (%make-struct-siginfo_t)))
+   ((signo siginfo)
+    (define who 'sigwaitinfo)
+    (with-arguments-validation (who)
+	((fixnum	signo)
+	 (siginfo_t	siginfo))
+      (let ((rv (capi.posix-sigwaitinfo signo siginfo)))
+	(if (unsafe.fxzero? rv)
+	    siginfo
+	  (%raise-errno-error who rv signo siginfo)))))))
+
+(define sigtimedwait
+  (case-lambda
+   ((signo timeout)
+    (sigtimedwait signo (%make-struct-siginfo_t) timeout))
+   ((signo siginfo timeout)
+    (define who 'sigtimedwait)
+    (with-arguments-validation (who)
+	((fixnum	signo)
+	 (siginfo_t	siginfo)
+	 (timespec	timeout))
+      (let ((rv (capi.posix-sigtimedwait signo siginfo timeout)))
+	(if (unsafe.fxzero? rv)
+	    siginfo
+	  (%raise-errno-error who rv signo siginfo timeout)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3859,6 +3976,7 @@
 (set-rtd-printer! (type-descriptor struct-mq-attr)	%struct-mq-attr-printer)
 (set-rtd-printer! (type-descriptor struct-sigevent)	%struct-sigevent-printer)
 (set-rtd-printer! (type-descriptor struct-itimerspec)	%struct-itimerspec-printer)
+(set-rtd-printer! (type-descriptor struct-siginfo_t)	%struct-siginfo_t-printer)
 
 (vicare-executable-as-string)
 

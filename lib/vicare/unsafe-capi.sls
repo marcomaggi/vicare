@@ -114,6 +114,7 @@
     ;; delivering interprocess signals
     posix-raise				posix-kill
     posix-pause
+    posix-sigwaitinfo			posix-sigtimedwait
     posix-signal-bub-init		posix-signal-bub-final
     posix-signal-bub-acquire		posix-signal-bub-delivered?
     linux-signalfd			linux-read-signalfd-siginfo
@@ -695,6 +696,14 @@
 
 (define-inline (posix-pause)
   (foreign-call "ikrt_posix_pause"))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-sigwaitinfo signo siginfo)
+  (foreign-call "ikrt_posix_sigwaitinfo" signo siginfo))
+
+(define-inline (posix-sigtimedwait signo siginfo timeout)
+  (foreign-call "ikrt_posix_sigtimedwait" signo siginfo timeout))
 
 ;;; --------------------------------------------------------------------
 

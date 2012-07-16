@@ -7686,6 +7686,167 @@ pause}.  Suspend the process until a signal is received; return the void
 object.
 @end defun
 
+
+@deftp {Struct Type} struct-siginfo_t
+Scheme representation of the C language type @code{struct siginfo_t}.
+It has the following fields (some of them are not present on all the
+architectures):
+
+@table @code
+@item si_signo
+Signal number.
+
+@item si_errno
+An @code{errno} value.
+
+@item si_code
+Signal code.
+
+@item si_trapno
+Trap number that caused hardware--generated signal (unused on most
+architectures).
+
+@item si_pid
+Sending process ID.
+
+@item si_uid
+Real user ID of sending process.
+
+@item si_status
+Exit value or signal.
+
+@item si_utime
+User time consumed.
+
+@item si_stime
+System time consumed.
+
+@item si_value.sival_int
+@itemx si_value.sival_ptr
+Signal value.  The C language type @code{sigval_t} is a union with
+fields @code{int sival_int} and @code{void *sival_ptr}.
+
+@item si_int
+POSIX.1b signal.
+
+@item si_ptr
+POSIX.1b signal.
+
+@item si_overrun
+Timer overrun count; POSIX.1b timers.
+
+@item si_timerid
+Timer ID; POSIX.1b timers.
+
+@item si_addr
+Memory location which caused fault.
+
+@item si_band
+Band event.
+
+@item si_fd
+File descriptor.
+
+@item si_addr_lsb
+Least significant bit of address.
+@end table
+
+@quotation
+@strong{NOTE} On @gnu{}+Linux: for details on the @code{struct
+siginfo_t} type see the manual page @code{sigaction(2)}.
+@end quotation
+@end deftp
+
+
+@defun make-struct-siginfo_t
+@defunx make-struct-siginfo_t @var{signo} @var{errno} @var{code} @var{trapno} @var{pid} @var{uid} @var{status} @var{utime} @var{stime} @var{value-int} @var{value-ptr} @var{int} @var{ptr} @var{overrun} @var{timerid} @var{addr} @var{band} @var{fd} @var{addr_lsb}
+Build and return a new instance of @code{struct-siginfo_t}.  If no
+arguments are given: all the fields are initialised to @false{}.
+@end defun
+
+
+@defun struct-siginfo_t? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-siginfo_t}.
+@end defun
+
+
+@defun struct-siginfo_t-si_signo @var{info}
+@defunx struct-siginfo_t-si_errno @var{info}
+@defunx struct-siginfo_t-si_code @var{info}
+@defunx struct-siginfo_t-si_trapno @var{info}
+@defunx struct-siginfo_t-si_pid @var{info}
+@defunx struct-siginfo_t-si_uid @var{info}
+@defunx struct-siginfo_t-si_status @var{info}
+@defunx struct-siginfo_t-si_utime @var{info}
+@defunx struct-siginfo_t-si_stime @var{info}
+@defunx struct-siginfo_t-si_value.sival_int @var{info}
+@defunx struct-siginfo_t-si_value.sival_ptr @var{info}
+@defunx struct-siginfo_t-si_int @var{info}
+@defunx struct-siginfo_t-si_ptr @var{info}
+@defunx struct-siginfo_t-si_overrun @var{info}
+@defunx struct-siginfo_t-si_timerid @var{info}
+@defunx struct-siginfo_t-si_addr @var{info}
+@defunx struct-siginfo_t-si_band @var{info}
+@defunx struct-siginfo_t-si_fd @var{info}
+@defunx struct-siginfo_t-si_addr_lsb @var{info}
+Accessors for the fields of @code{struct-siginfo_t}.
+@end defun
+
+
+@defun set-struct-siginfo_t-si_signo! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_errno! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_code! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_trapno! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_pid! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_uid! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_status! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_utime! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_stime! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_value.sival_int! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_value.sival_ptr! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_int! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_ptr! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_overrun! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_timerid! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_addr! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_band! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_fd! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_addr_lsb! @var{info} @var{value}
+Mutators for the fields of @code{struct-siginfo_t}.
+@end defun
+
+
+@defun sigwaitinfo
+@defunx sigwaitinfo @var{signo} @var{siginfo}
+Interface to the C function @cfunc{sigwaitinfo}, see the manual page
+@code{sigwaitinfo(2)}.  Synchronously wait for a queued signal; if
+successful return @var{siginfo}, else raise an exception.
+
+@var{signo} must be a fixnum representing an interprocess signal code.
+
+The optional @var{siginfo} must be an instance of
+@code{struct-siginfo_t}, which is filled with the informations attached
+to the signal; when not given a new instance is allocated internally.
+@end defun
+
+
+@defun sigtimedwait @var{signo} @var{timeout}
+@defunx sigtimedwait @var{signo} @var{siginfo} @var{timeout}
+Interface to the C function @cfunc{sigtimedwait}, see the manual page
+@code{sigtimedwait(2)}.  Synchronously wait for a queued signal, with a
+timeout; if successful return @var{siginfo}, else raise an exception.
+
+@var{signo} must be a fixnum representing an interprocess signal code.
+
+@var{siginfo} must be an instance of @code{struct-siginfo_t}, which is
+filled with the informations attached to the signal; when not given a
+new instance is allocated internally.
+
+@var{timeout} must be an instance of @code{struct-timespec}: it
+represents the maximum interval of time to wait for the signal;
+@ref{posix time timespec} for details.
+@end defun
+
 @c ------------------------------------------------------------
 
 @subsubheading Block/unblock signals handling

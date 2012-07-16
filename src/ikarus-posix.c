@@ -4440,6 +4440,142 @@ ikrt_posix_signal_bub_delivered (ikptr s_signum)
 
 
 /** --------------------------------------------------------------------
+ ** Waiting for signals.
+ ** ----------------------------------------------------------------- */
+
+static void
+posix_siginfo_to_struct (siginfo_t * info, ikptr s_struct, ikpcb * pcb)
+{
+  pcb->root9 = &s_struct;
+  {
+#ifdef HAVE_SIGINFO_SI_SIGNO
+    IK_ASS(IK_FIELD(s_struct, 0), ika_integer_from_int(pcb, info->si_signo));
+#endif
+#ifdef HAVE_SIGINFO_SI_ERRNO
+    IK_ASS(IK_FIELD(s_struct, 1), ika_integer_from_int(pcb, info->si_errno));
+#endif
+#ifdef HAVE_SIGINFO_SI_CODE
+    IK_ASS(IK_FIELD(s_struct, 2), ika_integer_from_int(pcb, info->si_code));
+#endif
+#ifdef HAVE_SIGINFO_SI_TRAPNO
+    IK_ASS(IK_FIELD(s_struct, 3), ika_integer_from_int(pcb, info->si_trapno));
+#endif
+#ifdef HAVE_SIGINFO_SI_PID
+    IK_ASS(IK_FIELD(s_struct, 4), ika_integer_from_int(pcb, info->si_pid));
+#endif
+#ifdef HAVE_SIGINFO_SI_UID
+    IK_ASS(IK_FIELD(s_struct, 5), ika_integer_from_int(pcb, info->si_uid));
+#endif
+#ifdef HAVE_SIGINFO_SI_STATUS
+    IK_ASS(IK_FIELD(s_struct, 6), ika_integer_from_int(pcb, info->si_status));
+#endif
+#ifdef HAVE_SIGINFO_SI_UTIME
+    IK_ASS(IK_FIELD(s_struct, 7), ika_integer_from_llong(pcb, (long long)(info->si_utime)));
+#endif
+#ifdef HAVE_SIGINFO_SI_STIME
+    IK_ASS(IK_FIELD(s_struct, 8), ika_integer_from_llong(pcb, (long long)(info->si_stime)));
+#endif
+#ifdef HAVE_SIGINFO_SI_VALUE
+    IK_ASS(IK_FIELD(s_struct, 9),  ika_integer_from_int(pcb, (info->si_value.sival_int)));
+    IK_ASS(IK_FIELD(s_struct, 10), ika_pointer_alloc   (pcb, (info->si_value.sival_ptr)));
+#endif
+#ifdef HAVE_SIGINFO_SI_INT
+    IK_ASS(IK_FIELD(s_struct, 11), ika_integer_from_int(pcb, info->si_int));
+#endif
+#ifdef HAVE_SIGINFO_SI_PTR
+    IK_ASS(IK_FIELD(s_struct, 12), ika_pointer_alloc(pcb, (ik_ulong)(info->si_ptr)));
+#endif
+#ifdef HAVE_SIGINFO_SI_OVERRUN
+    IK_ASS(IK_FIELD(s_struct, 13), ika_integer_from_int(pcb, info->si_overrun));
+#endif
+#ifdef HAVE_SIGINFO_SI_TIMERID
+    IK_ASS(IK_FIELD(s_struct, 14), ika_integer_from_int(pcb, info->si_timerid));
+#endif
+#ifdef HAVE_SIGINFO_SI_ADDR
+    IK_ASS(IK_FIELD(s_struct, 15), ika_pointer_alloc(pcb, (ik_ulong)(info->si_addr)));
+#endif
+#ifdef HAVE_SIGINFO_SI_BAND
+    IK_ASS(IK_FIELD(s_struct, 16), ika_integer_from_long(pcb, info->si_band));
+#endif
+#ifdef HAVE_SIGINFO_SI_FD
+    IK_ASS(IK_FIELD(s_struct, 17), ika_integer_from_int(pcb, info->si_fd));
+#endif
+#ifdef HAVE_SIGINFO_SI_ADDR_LSB
+    IK_ASS(IK_FIELD(s_struct, 18), ika_integer_from_int(pcb, (int)info->si_addr_lsb));
+#endif
+  }
+  pcb->root9 = NULL;
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_sigwaitinfo (ikptr s_signo, ikptr s_siginfo, ikpcb * pcb)
+/* Interface to the C  function "sigwaitinfo()".  Synchronously wait for
+   a queued signal; if successful return the fixnum zero, else return an
+   encoded "errno" value.
+
+   S_SIGNO must be a fixnum representing an interprocess signal code.
+
+   S_SIGINFO must be an instance  of "struct-siginfo_t", which is filled
+   with the informations attached to the signal. */
+{
+#if ((defined HAVE_SIGFILLSET) && (defined HAVE_SIGWAITINFO))
+  sigset_t	set;
+  siginfo_t	info;
+  int		rv;
+  sigemptyset(&set);
+  rv = sigaddset(&set, IK_UNFIX(s_signo));
+  if (-1 == rv)
+    return ik_errno_to_code();
+  rv = sigwaitinfo(&set, &info);
+  if (0 < rv) {
+    posix_siginfo_to_struct(&info, s_siginfo, pcb);
+    return IK_FIX(rv);
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_sigtimedwait (ikptr s_signo, ikptr s_siginfo, ikptr s_timeout, ikpcb * pcb)
+/* Interface to the C function "sigtimedwait()".  Synchronously wait for
+   a  queued signal,  with a  timeout; if  successful return  the fixnum
+   zero, else return an encoded "errno" value.
+
+   S_SIGNO must be a fixnum representing an interprocess signal code.
+
+   S_SIGINFO must be an instance  of "struct-siginfo_t", which is filled
+   with the informations attached to the signal.
+
+   S_TIMEOUT must be an instance of "struct-timespec": it represents the
+   maximum interval of time to wait for the signal. */
+{
+#if ((defined HAVE_SIGFILLSET) && (defined HAVE_SIGTIMEDWAIT))
+  sigset_t		set;
+  siginfo_t		info;
+  struct timespec	timeout;
+  int			rv;
+  sigemptyset(&set);
+  rv = sigaddset(&set, IK_UNFIX(s_signo));
+  if (-1 == rv)
+    return ik_errno_to_code();
+  timeout.tv_sec  = ik_integer_to_long(IK_FIELD(s_timeout, 0));
+  timeout.tv_nsec = ik_integer_to_long(IK_FIELD(s_timeout, 1));
+  rv = sigtimedwait(&set, &info, &timeout);
+  if (0 < rv) {
+    posix_siginfo_to_struct(&info, s_siginfo, pcb);
+    return IK_FIX(rv);
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
  ** System configuration.
  ** ----------------------------------------------------------------- */
 
