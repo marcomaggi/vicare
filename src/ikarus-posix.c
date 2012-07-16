@@ -2638,7 +2638,7 @@ ikrt_posix_host_entries (ikptr s_rtd, ikpcb * pcb)
  ** Network address informations.
  ** ----------------------------------------------------------------- */
 
-#if ((defined HAVE_STRUCT_ADDRINFO) || (defined HAVE_GETADDRINFO))
+#if ((defined HAVE_STRUCT_ADDRINFO) && (defined HAVE_GETADDRINFO))
 static ikptr
 addrinfo_to_struct (ikpcb * pcb, ikptr s_rtd, struct addrinfo * src, int with_canon_name)
 /* Convert  a  C  language  "struct  addrinfo" into  a  Scheme  language
@@ -2669,7 +2669,7 @@ addrinfo_to_struct (ikpcb * pcb, ikptr s_rtd, struct addrinfo * src, int with_ca
 ikptr
 ikrt_posix_getaddrinfo (ikptr s_rtd, ikptr s_node, ikptr s_service, ikptr s_hints_struct, ikpcb * pcb)
 {
-#ifdef HAVE_GETADDRINFO
+#if ((defined HAVE_STRUCT_ADDRINFO) && (defined HAVE_GETADDRINFO))
   const char *		node;
   const char *		service;
   struct addrinfo	hints;
