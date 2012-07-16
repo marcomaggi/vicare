@@ -4448,61 +4448,139 @@ posix_siginfo_to_struct (siginfo_t * info, ikptr s_struct, ikpcb * pcb)
 {
   pcb->root9 = &s_struct;
   {
+    IK_ASS(IK_FIELD(s_struct, 0),
 #ifdef HAVE_SIGINFO_SI_SIGNO
-    IK_ASS(IK_FIELD(s_struct, 0), ika_integer_from_int(pcb, info->si_signo));
+	   ika_integer_from_int(pcb, info->si_signo)
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 1),
 #ifdef HAVE_SIGINFO_SI_ERRNO
-    IK_ASS(IK_FIELD(s_struct, 1), ika_integer_from_int(pcb, info->si_errno));
+	   ika_integer_from_int(pcb, info->si_errno)
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 2),
 #ifdef HAVE_SIGINFO_SI_CODE
-    IK_ASS(IK_FIELD(s_struct, 2), ika_integer_from_int(pcb, info->si_code));
+	   ika_integer_from_int(pcb, info->si_code)
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 3),
 #ifdef HAVE_SIGINFO_SI_TRAPNO
-    IK_ASS(IK_FIELD(s_struct, 3), ika_integer_from_int(pcb, info->si_trapno));
+	   ika_integer_from_int(pcb, info->si_trapno),
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 4),
 #ifdef HAVE_SIGINFO_SI_PID
-    IK_ASS(IK_FIELD(s_struct, 4), ika_integer_from_int(pcb, info->si_pid));
+	   ika_integer_from_int(pcb, info->si_pid)
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 5),
 #ifdef HAVE_SIGINFO_SI_UID
-    IK_ASS(IK_FIELD(s_struct, 5), ika_integer_from_int(pcb, info->si_uid));
+	   ika_integer_from_int(pcb, info->si_uid)
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 6),
 #ifdef HAVE_SIGINFO_SI_STATUS
-    IK_ASS(IK_FIELD(s_struct, 6), ika_integer_from_int(pcb, info->si_status));
+	   ika_integer_from_int(pcb, info->si_status)
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 7),
 #ifdef HAVE_SIGINFO_SI_UTIME
-    IK_ASS(IK_FIELD(s_struct, 7), ika_integer_from_llong(pcb, (long long)(info->si_utime)));
+	   ika_integer_from_llong(pcb, (ik_llong)(info->si_utime))
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 8),
 #ifdef HAVE_SIGINFO_SI_STIME
-    IK_ASS(IK_FIELD(s_struct, 8), ika_integer_from_llong(pcb, (long long)(info->si_stime)));
+	   ika_integer_from_llong(pcb, (long long)(info->si_stime))
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 9),
 #ifdef HAVE_SIGINFO_SI_VALUE
-    IK_ASS(IK_FIELD(s_struct, 9),  ika_integer_from_int(pcb, (info->si_value.sival_int)));
-    IK_ASS(IK_FIELD(s_struct, 10), ika_pointer_alloc   (pcb, (info->si_value.sival_ptr)));
+	   ika_integer_from_int(pcb, info->si_value.sival_int)
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 10),
+#ifdef HAVE_SIGINFO_SI_VALUE
+	   ika_pointer_alloc(pcb, (ik_ulong)(info->si_value.sival_ptr))
+#else
+	   false_object
+#endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 11),
 #ifdef HAVE_SIGINFO_SI_INT
-    IK_ASS(IK_FIELD(s_struct, 11), ika_integer_from_int(pcb, info->si_int));
+	   ika_integer_from_int(pcb, info->si_int)
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 12),
 #ifdef HAVE_SIGINFO_SI_PTR
-    IK_ASS(IK_FIELD(s_struct, 12), ika_pointer_alloc(pcb, (ik_ulong)(info->si_ptr)));
+	   ika_pointer_alloc(pcb, (ik_ulong)(info->si_ptr))
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 13),
 #ifdef HAVE_SIGINFO_SI_OVERRUN
-    IK_ASS(IK_FIELD(s_struct, 13), ika_integer_from_int(pcb, info->si_overrun));
+	   ika_integer_from_int(pcb, info->si_overrun)
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 14),
 #ifdef HAVE_SIGINFO_SI_TIMERID
-    IK_ASS(IK_FIELD(s_struct, 14), ika_integer_from_int(pcb, info->si_timerid));
+	   ika_integer_from_int(pcb, info->si_timerid)
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 15),
 #ifdef HAVE_SIGINFO_SI_ADDR
-    IK_ASS(IK_FIELD(s_struct, 15), ika_pointer_alloc(pcb, (ik_ulong)(info->si_addr)));
+	   ika_pointer_alloc(pcb, (ik_ulong)(info->si_addr))
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 16),
 #ifdef HAVE_SIGINFO_SI_BAND
-    IK_ASS(IK_FIELD(s_struct, 16), ika_integer_from_long(pcb, info->si_band));
+	   ika_integer_from_long(pcb, info->si_band)
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 17),
 #ifdef HAVE_SIGINFO_SI_FD
-    IK_ASS(IK_FIELD(s_struct, 17), ika_integer_from_int(pcb, info->si_fd));
+	   ika_integer_from_int(pcb, info->si_fd)
+#else
+	   false_object
 #endif
+	   );
+    IK_ASS(IK_FIELD(s_struct, 18),
 #ifdef HAVE_SIGINFO_SI_ADDR_LSB
-    IK_ASS(IK_FIELD(s_struct, 18), ika_integer_from_int(pcb, (int)info->si_addr_lsb));
+	   ika_integer_from_int(pcb, (int)info->si_addr_lsb)
+#else
+	   false_object
 #endif
+	   );
   }
   pcb->root9 = NULL;
 }

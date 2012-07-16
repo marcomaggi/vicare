@@ -359,75 +359,75 @@ AM_COND_IF([WANT_POSIX],[
 
   AC_CHECK_FUNCS([sigwaitinfo sigtimedwait])
 
-  AC_CHECK_MEMBER([struct siginfo_t.si_signo],
+  AC_CHECK_MEMBER([siginfo_t.si_signo],
      [AC_DEFINE([HAVE_SIGINFO_SI_SIGNO],[1],[siginfo_t struct has si_signo field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_errno],
+  AC_CHECK_MEMBER([siginfo_t.si_errno],
      [AC_DEFINE([HAVE_SIGINFO_SI_ERRNO],[1],[siginfo_t struct has si_errno field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_code],
+  AC_CHECK_MEMBER([siginfo_t.si_code],
      [AC_DEFINE([HAVE_SIGINFO_SI_CODE],[1],[siginfo_t struct has si_code field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_trapno],
+  AC_CHECK_MEMBER([siginfo_t.si_trapno],
      [AC_DEFINE([HAVE_SIGINFO_SI_TRAPNO],[1],[siginfo_t struct has si_trapno field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_pid],
+  AC_CHECK_MEMBER([siginfo_t.si_pid],
      [AC_DEFINE([HAVE_SIGINFO_SI_PID],[1],[siginfo_t struct has si_pid field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_uid],
+  AC_CHECK_MEMBER([siginfo_t.si_uid],
      [AC_DEFINE([HAVE_SIGINFO_SI_UID],[1],[siginfo_t struct has si_uid field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_status],
+  AC_CHECK_MEMBER([siginfo_t.si_status],
      [AC_DEFINE([HAVE_SIGINFO_SI_STATUS],[1],[siginfo_t struct has si_status field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_utime],
+  AC_CHECK_MEMBER([siginfo_t.si_utime],
      [AC_DEFINE([HAVE_SIGINFO_SI_UTIME],[1],[siginfo_t struct has si_utime field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_stime],
+  AC_CHECK_MEMBER([siginfo_t.si_stime],
      [AC_DEFINE([HAVE_SIGINFO_SI_STIME],[1],[siginfo_t struct has si_stime field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_value],
+  AC_CHECK_MEMBER([siginfo_t.si_value],
      [AC_DEFINE([HAVE_SIGINFO_SI_VALUE],[1],[siginfo_t struct has si_value field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_int],
+  AC_CHECK_MEMBER([siginfo_t.si_int],
      [AC_DEFINE([HAVE_SIGINFO_SI_INT],[1],[siginfo_t struct has si_int field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_ptr],
+  AC_CHECK_MEMBER([siginfo_t.si_ptr],
      [AC_DEFINE([HAVE_SIGINFO_SI_PTR],[1],[siginfo_t struct has si_ptr field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_overrun],
+  AC_CHECK_MEMBER([siginfo_t.si_overrun],
      [AC_DEFINE([HAVE_SIGINFO_SI_OVERRUN],[1],[siginfo_t struct has si_overrun field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_timerid],
+  AC_CHECK_MEMBER([siginfo_t.si_timerid],
      [AC_DEFINE([HAVE_SIGINFO_SI_TIMERID],[1],[siginfo_t struct has si_timerid field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_addr],
+  AC_CHECK_MEMBER([siginfo_t.si_addr],
      [AC_DEFINE([HAVE_SIGINFO_SI_ADDR],[1],[siginfo_t struct has si_addr field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_band],
+  AC_CHECK_MEMBER([siginfo_t.si_band],
      [AC_DEFINE([HAVE_SIGINFO_SI_BAND],[1],[siginfo_t struct has si_band field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_fd],
+  AC_CHECK_MEMBER([siginfo_t.si_fd],
      [AC_DEFINE([HAVE_SIGINFO_SI_FD],[1],[siginfo_t struct has si_fd field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
-  AC_CHECK_MEMBER([struct siginfo_t.si_addr_lsb],
+  AC_CHECK_MEMBER([siginfo_t.si_addr_lsb],
      [AC_DEFINE([HAVE_SIGINFO_SI_ADDR_LSB],[1],[siginfo_t struct has si_addr_lsb field])],
      [],[[#define _POSIX_C_SOURCE 199309L
 #include <signal.h>]])
