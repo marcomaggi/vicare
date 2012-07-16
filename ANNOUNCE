@@ -42,6 +42,11 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d13
 -------------------------
 
+* More platform  constants in  (vicare platform-constants),  which means
+  that running "configure" takes longer (sorry).  But, when POSIX, Glibc
+  and  Linux are  disabled: the  associated platform  constants are  not
+  checked anymore, making running "configure" much faster.
+
 * Added CLOCK-GETCPUCLOCKID to (vicare posix).
 
 
