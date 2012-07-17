@@ -185,6 +185,9 @@ TESTS	+= \
 	test-vicare-posix-bub.sps		\
 	test-vicare-posix-time.sps		\
 	test-vicare-posix-timers.sps		\
+	test-vicare-posix-message-queue.sps	\
+	test-vicare-posix-shared-memory.sps	\
+	test-vicare-posix-semaphores.sps	\
 	test-vicare-posix-sigwait.sps		\
 	\
 	test-vicare-shared-memory.sps		\
@@ -340,6 +343,9 @@ EXTRA_DIST =	\
 	test-vicare-posix-bub.sps			\
 	test-vicare-posix-time.sps			\
 	test-vicare-posix-timers.sps			\
+	test-vicare-posix-message-queue.sps		\
+	test-vicare-posix-shared-memory.sps		\
+	test-vicare-posix-semaphores.sps		\
 	test-vicare-posix-sigwait.sps			\
 	\
 	test-vicare-promises.sps			\
