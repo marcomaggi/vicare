@@ -10916,7 +10916,6 @@ Each timer can be started, stopped, reconfigured and queried for how
 much time until the next event.
 
 
-
 @defun timer-create @var{clock-id}
 Interface to the C function @cfunc{timer_create}, see the manual page
 @code{timer_create(2)}.  Create a new per--process interval timer,
