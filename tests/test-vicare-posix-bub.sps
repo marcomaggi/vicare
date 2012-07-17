@@ -33,7 +33,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing POSIX library, interprocess signals BUB API\n")
+(check-display "*** testing POSIX library, interprocess signals BUB API\n")
 
 
 (parametrise ((check-test-name	'bub))

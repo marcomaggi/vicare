@@ -1822,80 +1822,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'time))
-
-  (when #f
-    (check-pretty-print (list 'clock (px.clock)))
-    (check-pretty-print (list 'time  (px.time)))
-    (check-pretty-print (list 'timeofday  (px.gettimeofday))))
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (px.struct-tms? (px.times))
-    => #t)
-
-  (when #f
-    (check-pretty-print (px.times)))
-
-;;; --------------------------------------------------------------------
-
-  (when #f
-    (check-pretty-print (px.localtime (px.time)))
-    (check-pretty-print (px.gmtime    (px.time))))
-
-  (check
-      (let ((T (px.time)))
-	(equal? T (px.timelocal (px.localtime T))))
-    => #t)
-
-  (check
-      (let ((T (px.time)))
-	(equal? T (px.timegm (px.gmtime T))))
-    => #t)
-
-  (when #f
-    (check-pretty-print
-     (list 'strftime (px.strftime/string "%a %h %d %H:%M:%S %Y" (px.localtime (px.time))))))
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (unwind-protect
-	  (begin
-	    (px.signal-bub-init)
-	    (let ((new (px.make-struct-itimerval
-			(px.make-struct-timeval 0 0)
-			(px.make-struct-timeval 0 1000))))
-	      (px.setitimer ITIMER_REAL new))
-	    (px.nanosleep 1 500)
-	    (px.signal-bub-acquire)
-	    (px.signal-bub-delivered? SIGALRM))
-	(px.signal-bub-final))
-    => #t)
-
-  (check
-      (let ((rv (px.getitimer ITIMER_REAL)))
-	(list (px.struct-timeval-tv_sec (px.struct-itimerval-it_interval rv))
-	      (px.struct-timeval-tv_usec (px.struct-itimerval-it_interval rv))
-	      (px.struct-timeval-tv_sec (px.struct-itimerval-it_value rv))
-	      (px.struct-timeval-tv_usec (px.struct-itimerval-it_value rv))))
-    => '(0 0 0 0))
-
-  (check
-      (unwind-protect
-	  (begin
-	    (px.signal-bub-init)
-	    (px.alarm 1)
-	    (px.nanosleep 1 5)
-	    (px.signal-bub-acquire)
-	    (px.signal-bub-delivered? SIGALRM))
-	(px.signal-bub-final))
-    => #t)
-
-  #t)
-
-
 (parametrise ((check-test-name	'config))
 
   (check
