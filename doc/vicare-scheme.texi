@@ -10900,7 +10900,8 @@ triggering time--periodic events by specification of two time intervals:
 Initial expiration: how much time before the first event.
 
 @item
-Period: how much time between two time--adjacent events.
+Period: how much time between two time--adjacent events.  When the
+period is zero: only one event notification is delivered.
 @end enumerate
 
 @example
@@ -10936,7 +10937,8 @@ or the return value of @func{clock-getcpuclockid}.
 The call sets up the notification as with a C language @code{struct
 sigevent} having: @code{sigev_notify} set to @code{SIGEV_SIGNAL},
 @code{sigev_signo} set to @code{SIGALRM}, @code{sigev.sival_int} set to
-the timer identifier.
+the timer identifier.  This means the timer expirations are notified to
+the process by delivering @code{SIGALRM} signals.
 
 @quotation
 @strong{NOTE} On @gnu{}+Linux systems: for details on @code{struct
@@ -10989,6 +10991,66 @@ referenced by @var{timer-id}; if successful return a non--negative exact
 integer representing the overrun count of the specified timer, else
 raise an exception.
 @end defun
+
+
+In the following example program:
+
+@enumerate
+@item
+We use the @bub{} @api{} to block all the signals, so including
+@code{SIGALRM}.
+
+@item
+Then we create a @posix{} timer whose expirations are notified by
+delivering @code{SIGALRM} signals.
+
+@item
+Then we use @func{sigtimedwait} to count the expirations.
+@end enumerate
+
+Note very well that to recognise that a @code{SIGALRM} signal is
+delivered by the expiration of the timer, we have to check the
+@code{si_value.sival_int} field of the @code{struct-siginfo_t},
+@strong{not} the @code{si_timerid} field.
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants)
+  (vicare syntactic-extensions))
+
+(px.signal-bub-init)
+
+(define timer-id
+  (px.timer-create CLOCK_REALTIME))
+(px.timer-settime timer-id 0
+      (px.make-struct-itimerspec
+         ;;one event every 1 seconds
+         (px.make-struct-timespec 1 0)
+         ;;the first event after 1 nanosecond
+         (px.make-struct-timespec 0 1)))
+
+(unwind-protect
+    (let next ((count 0))
+      (if (fx= count 3)
+          count
+        (let-values
+            (((signo info)
+              (px.sigtimedwait SIGALRM
+                 (px.make-struct-timespec 2 0))))
+          (define was-sigalrm?
+            (= signo SIGALRM))
+          (define right-timer?
+            (= timer-id
+               (px.struct-siginfo_t-si_value.sival_int info)))
+          (next (if (and was-sigalrm? right-timer?)
+                    (+ 1 count)
+                  count)))))
+  (px.timer-delete timer-id)
+  (px.signal-bub-final))
+@result{} 3
+@end example
 
 @c page
 @node posix config

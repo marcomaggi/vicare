@@ -43,7 +43,8 @@
 
 (define (verbose-printf . args)
   (when verbose-checks?
-    (apply printf args)))
+    (apply printf args)
+    (flush-output-port (current-output-port))))
 
 (define-syntax catch
   (syntax-rules ()
@@ -171,7 +172,7 @@
   (define (%sleep-one-second)
     (px.nanosleep 1 0))
 
-  (check	;follow time going by
+  (check	;follow time going by, BUB acquisition
       (let ((timer-id (px.timer-create CLOCK_REALTIME)))
 	(px.signal-bub-init)
 	(unwind-protect
@@ -196,6 +197,36 @@
 	  (px.timer-delete timer-id)
 	  (px.signal-bub-final)))
     => 2)
+
+  (check	;follow time going by, sigwaitinfo acquisition
+      (let ((timer-id (px.timer-create CLOCK_REALTIME)))
+	(px.signal-bub-init)
+	(px.timer-settime timer-id 0
+			  (px.make-struct-itimerspec
+			   ;;one event every 1 seconds
+			   (px.make-struct-timespec 1 0)
+			   ;;the first event after 1 nanosecond
+			   (px.make-struct-timespec 0 1)))
+	(unwind-protect
+	      (let next ((count 0))
+		(if (fx= count 3)
+		    count
+		  (let-values (((signo info)
+				(px.sigtimedwait SIGALRM (px.make-struct-timespec 2 0))))
+		    (define was-sigalrm?
+		      (= signo SIGALRM))
+		    (define right-timer?
+		      (= timer-id (px.struct-siginfo_t-si_value.sival_int info)))
+		    (verbose-printf "received SIGALRM? ~a\n" was-sigalrm?)
+		    (verbose-printf "from right timer? ~a\n" right-timer?)
+		    (verbose-printf "number of expirations: ~a\n" (px.timer-getoverrun timer-id))
+		    (%print-remaining-time timer-id)
+		    (next (if (and was-sigalrm? right-timer?)
+			      (+ 1 count)
+			    count)))))
+	  (px.timer-delete timer-id)
+	  (px.signal-bub-final)))
+    => 3)
 
   (check	;count expirations
       (with-result

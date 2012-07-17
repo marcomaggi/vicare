@@ -47,6 +47,8 @@ Notes for revision 0.2d13
   and  Linux are  disabled: the  associated platform  constants are  not
   checked anymore, making running "configure" much faster.
 
+* Added POSIX timers API to (vicare posix).
+
 * Added functions  to (vicare posix):  CLOCK-GETCPUCLOCKID, SIGWAITINFO,
   SIGTIMEDWAIT.
 
