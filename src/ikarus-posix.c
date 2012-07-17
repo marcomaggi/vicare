@@ -4590,20 +4590,20 @@ posix_siginfo_to_struct (siginfo_t * info, ikptr s_struct, ikpcb * pcb)
 ikptr
 ikrt_posix_sigwaitinfo (ikptr s_signo, ikptr s_siginfo, ikpcb * pcb)
 /* Interface to the C  function "sigwaitinfo()".  Synchronously wait for
-   a queued signal; if successful return the fixnum zero, else return an
-   encoded "errno" value.
+   a queued signal; if successful  return a fixnum representing a signal
+   number, else return an encoded "errno" value.
 
    S_SIGNO must be a fixnum representing an interprocess signal code.
 
    S_SIGINFO must be an instance  of "struct-siginfo_t", which is filled
    with the informations attached to the signal. */
 {
-#if ((defined HAVE_SIGFILLSET) && (defined HAVE_SIGWAITINFO))
+#if ((defined HAVE_SIGEMPTYSET) && (defined HAVE_SIGADDSET) && (defined HAVE_SIGWAITINFO))
   sigset_t	set;
   siginfo_t	info;
   int		rv;
   sigemptyset(&set);
-  rv = sigaddset(&set, IK_UNFIX(s_signo));
+  rv = sigaddset(&set, IK_NUM_TO_SIGNUM(s_signo));
   if (-1 == rv)
     return ik_errno_to_code();
   rv = sigwaitinfo(&set, &info);
@@ -4619,8 +4619,8 @@ ikrt_posix_sigwaitinfo (ikptr s_signo, ikptr s_siginfo, ikpcb * pcb)
 ikptr
 ikrt_posix_sigtimedwait (ikptr s_signo, ikptr s_siginfo, ikptr s_timeout, ikpcb * pcb)
 /* Interface to the C function "sigtimedwait()".  Synchronously wait for
-   a  queued signal,  with a  timeout; if  successful return  the fixnum
-   zero, else return an encoded "errno" value.
+   a  queued signal,  with  a  timeout; if  successful  return a  fixnum
+   representing a signal number, else return an encoded "errno" value.
 
    S_SIGNO must be a fixnum representing an interprocess signal code.
 
@@ -4630,13 +4630,13 @@ ikrt_posix_sigtimedwait (ikptr s_signo, ikptr s_siginfo, ikptr s_timeout, ikpcb 
    S_TIMEOUT must be an instance of "struct-timespec": it represents the
    maximum interval of time to wait for the signal. */
 {
-#if ((defined HAVE_SIGFILLSET) && (defined HAVE_SIGTIMEDWAIT))
+#if ((defined HAVE_SIGEMPTYSET) && (defined HAVE_SIGADDSET) && (defined HAVE_SIGTIMEDWAIT))
   sigset_t		set;
   siginfo_t		info;
   struct timespec	timeout;
   int			rv;
   sigemptyset(&set);
-  rv = sigaddset(&set, IK_UNFIX(s_signo));
+  rv = sigaddset(&set, IK_NUM_TO_SIGNUM(s_signo));
   if (-1 == rv)
     return ik_errno_to_code();
   timeout.tv_sec  = ik_integer_to_long(IK_FIELD(s_timeout, 0));

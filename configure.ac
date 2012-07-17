@@ -198,7 +198,7 @@ AC_CHECK_FUNCS([bzero gettimeofday memmove memset mmap munmap sqrt strerror geta
 AC_CHECK_FUNCS([stat lstat realpath unlink mkdir])
 AC_CHECK_TYPES([struct tm],,,[VICARE_INCLUDES])
 AC_CHECK_FUNCS([getenv])
-AC_CHECK_FUNCS([sigaltstack sigfillset sigprocmask sigaction])
+AC_CHECK_FUNCS([sigaltstack sigemptyset sigaddset sigfillset sigprocmask sigaction])
 AC_CHECK_TYPES([struct timespec])
 
 AC_CACHE_SAVE

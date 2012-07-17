@@ -181,6 +181,7 @@ if WANT_POSIX
 TESTS	+= \
 	test-vicare-posix-basic.sps		\
 	test-vicare-posix-timers.sps		\
+	test-vicare-posix-sigwait.sps		\
 	\
 	test-vicare-shared-memory.sps		\
 	test-vicare-sel.sps
@@ -249,6 +250,10 @@ EXTRA_DIST =	\
 	exec-modes-helpers/r6rs-forms			\
 	exec-modes-helpers/r6rs-program.sps		\
 	test-exec-modes.sh				\
+	\
+	proof-vicare-gcc.sps				\
+	proof-vicare-readline.sps			\
+	proof-vicare-timerfd.sps
 	\
 	long-test-r6rs-run.sps				\
 	long-test-r6rs-run-via-eval.sps			\
@@ -327,6 +332,7 @@ EXTRA_DIST =	\
 	\
 	test-vicare-posix-basic.sps			\
 	test-vicare-posix-timers.sps			\
+	test-vicare-posix-sigwait.sps			\
 	\
 	test-vicare-promises.sps			\
 	test-vicare-reader.sps				\
@@ -361,10 +367,6 @@ EXTRA_DIST =	\
 	test-issue-024.sps				\
 	test-issue-025-sign-in-exact-rationals.sps	\
 	\
-	foreign-test-vicare-cre2.sps			\
-	\
-	proof-vicare-gcc.sps				\
-	proof-vicare-readline.sps			\
-	proof-vicare-timerfd.sps
+	foreign-test-vicare-cre2.sps
 
 ### end of file
