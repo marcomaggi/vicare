@@ -7764,9 +7764,9 @@ This function interferes with @func{signal-bub-delivered?}.
 
 
 @deftp {Struct Type} struct-siginfo_t
-Scheme representation of the C language type @code{struct siginfo_t}.
-It has the following fields (some of them are not present on all the
-architectures):
+Scheme representation of the C language type @code{siginfo_t} which is a
+structure typedef.  It has the following fields (some of them are not
+present on all the architectures):
 
 @table @code
 @item si_signo
