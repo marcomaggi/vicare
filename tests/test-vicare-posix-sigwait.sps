@@ -34,7 +34,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare POSIX sigwait functions\n")
+(check-display "*** testing POSIX library, sigwait functions\n")
 
 
 (parametrise ((check-test-name	'sigwait))

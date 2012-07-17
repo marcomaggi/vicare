@@ -34,7 +34,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare POSIX per-process timers\n")
+(check-display "*** testing POSIX library, per-process timers\n")
 
 
 ;;;; helpers
