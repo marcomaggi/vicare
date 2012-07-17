@@ -180,6 +180,7 @@ endif
 if WANT_POSIX
 TESTS	+= \
 	test-vicare-posix-basic.sps		\
+	test-vicare-posix-bub.sps		\
 	test-vicare-posix-timers.sps		\
 	test-vicare-posix-sigwait.sps		\
 	\
@@ -331,6 +332,7 @@ EXTRA_DIST =	\
 	test-vicare-pointers.sps			\
 	\
 	test-vicare-posix-basic.sps			\
+	test-vicare-posix-bub.sps			\
 	test-vicare-posix-timers.sps			\
 	test-vicare-posix-sigwait.sps			\
 	\
