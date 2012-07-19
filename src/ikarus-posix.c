@@ -5632,6 +5632,69 @@ ikrt_posix_timer_getoverrun (ikptr s_timer_id, ikpcb * pcb)
 
 
 /** --------------------------------------------------------------------
+ ** Resource usage.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_setrlimit (ikptr s_resource, ikptr s_rlim)
+{
+#ifdef HAVE_SETRLIMIT
+  int		resource = ik_integer_to_int(s_resource);
+  struct rlimit	rlim;
+  int		rv;
+  switch (sizeof(rlim_t)) {
+  case 4:
+    rlim.rlim_cur	= ik_integer_to_uint32(IK_FIELD(s_rlim, 0));
+    rlim.rlim_max	= ik_integer_to_uint32(IK_FIELD(s_rlim, 1));
+    break;
+  case 8:
+    rlim.rlim_cur	= ik_integer_to_uint64(IK_FIELD(s_rlim, 0));
+    rlim.rlim_max	= ik_integer_to_uint64(IK_FIELD(s_rlim, 1));
+    break;
+  default:
+    errno = EINVAL;
+    return ik_errno_to_code();
+  }
+  errno = 0;
+  rv    = setrlimit(resource, &rlim);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_getrlimit (ikptr s_resource, ikptr s_rlim, ikpcb * pcb)
+{
+#ifdef HAVE_GETRLIMIT
+  int		resource = ik_integer_to_int(s_resource);
+  struct rlimit	rlim;
+  int		rv;
+  errno = 0;
+  rv    = getrlimit(resource, &rlim);
+  if (0 == rv) {
+    switch (sizeof(rlim_t)) {
+    case 4:
+      IK_ASS(IK_FIELD(s_rlim, 0), ika_integer_from_uint32(pcb, rlim.rlim_cur));
+      IK_ASS(IK_FIELD(s_rlim, 1), ika_integer_from_uint32(pcb, rlim.rlim_max));
+      break;
+    case 8:
+      IK_ASS(IK_FIELD(s_rlim, 0), ika_integer_from_uint64(pcb, rlim.rlim_cur));
+      IK_ASS(IK_FIELD(s_rlim, 1), ika_integer_from_uint64(pcb, rlim.rlim_max));
+      break;
+    default:
+      errno = EINVAL;
+      return ik_errno_to_code();
+    }
+    return IK_FIX(0);
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
  ** Miscellaneous functions.
  ** ----------------------------------------------------------------- */
 

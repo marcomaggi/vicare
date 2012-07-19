@@ -437,6 +437,14 @@
     SIGEV_SIGNAL	SIGEV_NONE		SIGEV_THREAD
     SIGEV_THREAD_ID
 
+;;; For "setrlimit()" and similar.
+    RLIM_INFINITY	RLIMIT_AS		RLIMIT_CORE
+    RLIMIT_CPU		RLIMIT_DATA		RLIMIT_FSIZE
+    RLIMIT_LOCKS	RLIMIT_MEMLOCK		RLIMIT_MSGQUEUE
+    RLIMIT_NICE		RLIMIT_NOFILE		RLIMIT_NPROC
+    RLIMIT_RSS		RLIMIT_RTPRIO		RLIMIT_RTTIME
+    RLIMIT_SIGPENDING	RLIMIT_STACK
+
 ;;; --------------------------------------------------------------------
 
 ;;; errno codes, reexported from (vicare errno)
@@ -1413,6 +1421,29 @@
 (define-inline-constant SIGEV_NONE		@VALUEOF_SIGEV_NONE@)
 (define-inline-constant SIGEV_THREAD		@VALUEOF_SIGEV_THREAD@)
 (define-inline-constant SIGEV_THREAD_ID		@VALUEOF_SIGEV_THREAD_ID@)
+
+;;; For "setrlimit()" and similar.
+(define-inline-constant RLIMIT_AS		@VALUEOF_RLIMIT_AS@)
+(define-inline-constant RLIMIT_CORE		@VALUEOF_RLIMIT_CORE@)
+(define-inline-constant RLIMIT_CPU		@VALUEOF_RLIMIT_CPU@)
+(define-inline-constant RLIMIT_DATA		@VALUEOF_RLIMIT_DATA@)
+(define-inline-constant RLIMIT_FSIZE		@VALUEOF_RLIMIT_FSIZE@)
+(define-inline-constant RLIMIT_LOCKS		@VALUEOF_RLIMIT_LOCKS@)
+(define-inline-constant RLIMIT_MEMLOCK		@VALUEOF_RLIMIT_MEMLOCK@)
+(define-inline-constant RLIMIT_MSGQUEUE		@VALUEOF_RLIMIT_MSGQUEUE@)
+(define-inline-constant RLIMIT_NICE		@VALUEOF_RLIMIT_NICE@)
+(define-inline-constant RLIMIT_NOFILE		@VALUEOF_RLIMIT_NOFILE@)
+(define-inline-constant RLIMIT_NPROC		@VALUEOF_RLIMIT_NPROC@)
+(define-inline-constant RLIMIT_RSS		@VALUEOF_RLIMIT_RSS@)
+(define-inline-constant RLIMIT_RTPRIO		@VALUEOF_RLIMIT_RTPRIO@)
+(define-inline-constant RLIMIT_RTTIME		@VALUEOF_RLIMIT_RTTIME@)
+(define-inline-constant RLIMIT_SIGPENDING	@VALUEOF_RLIMIT_SIGPENDING@)
+(define-inline-constant RLIMIT_STACK		@VALUEOF_RLIMIT_STACK@)
+;;This  is defined  as "unsigned  long long"  on GNU+Linux,  so the  GNU
+;;Autoconf infrastructure cannot determine its value.
+;;
+;;(define-inline-constant RLIM_INFINITY		@VALUEOF_RLIM_INFINITY@)
+(define-inline-constant RLIM_INFINITY		#f)
 
 
 ;;;; h_errno friendly interface

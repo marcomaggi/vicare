@@ -1245,6 +1245,18 @@
   #t)
 
 
+(parametrise ((check-test-name	'resources))
+
+  (check
+      (let ((rlim (px.getrlimit RLIMIT_STACK)))
+	(check-pretty-print rlim)
+	(px.setrlimit RLIMIT_STACK rlim)
+	#t)
+    => #t)
+
+  #t)
+
+
 ;;;; done
 
 (flush-output-port (current-output-port))

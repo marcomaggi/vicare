@@ -329,6 +329,14 @@
     struct-itimerval-it_interval	struct-itimerval-it_value
     set-struct-itimerval-it_interval!	set-struct-itimerval-it_value!
 
+    ;; resources limits
+    getrlimit				setrlimit
+
+    (rename (%make-struct-rlimit make-struct-rlimit))
+    struct-rlimit?
+    struct-rlimit-rlim_cur		set-struct-rlimit-rlim_cur!
+    struct-rlimit-rlim_max		set-struct-rlimit-rlim_max!
+
     ;; system configuration
     sysconf
     pathconf		fpathconf
@@ -414,6 +422,11 @@
        (words.signed-long? (struct-mq-attr-mq_maxmsg  obj))
        (words.signed-long? (struct-mq-attr-mq_msgsize obj))
        (words.signed-long? (struct-mq-attr-mq_curmsgs obj))))
+
+(define (%valid-struct-rlimit? obj)
+  (and (struct-rlimit? obj)
+       (words.word-s64? (struct-rlimit-rlim_cur obj))
+       (words.word-s64? (struct-rlimit-rlim_max obj))))
 
 
 ;;;; arguments validation
@@ -656,6 +669,10 @@
 (define-argument-validation (siginfo_t who obj)
   (struct-siginfo_t? obj)
   (assertion-violation who "expected struct-siginfo_t as argument" obj))
+
+(define-argument-validation (rlimit who obj)
+  (%valid-struct-rlimit? obj)
+  (assertion-violation who "expected struct-rlimit as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -3727,6 +3744,55 @@
   (latin1->string (confstr parameter)))
 
 
+;;;; resources limits
+
+(define-struct struct-rlimit
+  (rlim_cur rlim_max))
+
+(define (%struct-rlimit-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-rlimit\"")
+  (%display " rlim_cur=")	(%display (struct-rlimit-rlim_cur  S))
+  (let ((max (struct-rlimit-rlim_max S)))
+    (%display " rlim_max=")	(%display max)
+    (when (and RLIM_INFINITY (= max RLIM_INFINITY))
+      (%display " (RLIM_INFINITY)")))
+  (%display "]"))
+
+(define %make-struct-rlimit
+  (case-lambda
+   (()
+    (make-struct-rlimit 0 0))
+   ((cur max)
+    (make-struct-rlimit cur max))))
+
+;;; --------------------------------------------------------------------
+
+(define getrlimit
+  (case-lambda
+   ((resource)
+    (getrlimit resource (%make-struct-rlimit)))
+   ((resource rlimit)
+    (define who 'getrlimit)
+    (with-arguments-validation (who)
+	((signed-int	resource)
+	 (rlimit	rlimit))
+      (let ((rv (capi.posix-getrlimit resource rlimit)))
+	(if (unsafe.fxzero? rv)
+	    rlimit
+	  (%raise-errno-error who rv resource rlimit)))))))
+
+(define (setrlimit resource rlimit)
+  (define who 'setrlimit)
+  (with-arguments-validation (who)
+      ((signed-int	resource)
+       (rlimit		rlimit))
+    (let ((rv (capi.posix-setrlimit resource rlimit)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv resource rlimit)))))
+
+
 ;;;; splitting pathnames and search paths
 
 (module (split-search-path
@@ -3977,6 +4043,7 @@
 (set-rtd-printer! (type-descriptor struct-sigevent)	%struct-sigevent-printer)
 (set-rtd-printer! (type-descriptor struct-itimerspec)	%struct-itimerspec-printer)
 (set-rtd-printer! (type-descriptor struct-siginfo_t)	%struct-siginfo_t-printer)
+(set-rtd-printer! (type-descriptor struct-rlimit)	%struct-rlimit-printer)
 
 (vicare-executable-as-string)
 

@@ -7244,6 +7244,7 @@ set to @false{}.
 * posix time::                  Time related functions.
 * posix timers::                @posix{} per--process timers.
 * posix config::                System configuration.
+* posix resources::             Resources usage.
 * posix mq::                    Message queues.
 * posix shm::                   Shared memory.
 * posix sem::                   Semaphores.
@@ -11132,6 +11133,87 @@ representing the value; else an exception is raised.
 (px.confstr/string _CS_PATH)
 @result{} "/bin:/usr/bin"
 @end example
+@end defun
+
+@c page
+@node posix resources
+@section Resources usage
+
+
+@deftp {Struct Type} struct-rlimit
+Scheme level representation of the C language type @code{struct rlimit},
+@glibcref{Limits on Resources, struct rlimit}.  Hold the soft and hard
+limits of a resource.
+
+@table @code
+@item rlim_cur
+An exact integer representing the soft limit.
+
+@item rlim_max
+An exact integer representing the hard limit.
+@end table
+@end deftp
+
+
+@defun make-struct-rlimit
+@defunx make-struct-rlimit @var{cur} @var{max}
+Build and return a new instance of @code{struct-rlimit}.  When no
+arguments are given: the fields are initialised with the fixnum zero.
+@end defun
+
+
+@defun struct-rlimit? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-rlimit}.
+@end defun
+
+
+@defun struct-rlimit-rlim_cur @var{rlim}
+@defunx struct-rlimit-rlim_max @var{rlim}
+Accessors for the fields of @code{struct-rlimit}.
+@end defun
+
+
+@defun set-struct-rlimit-rlim_cur! @var{rlim} @var{value}
+@defunx set-struct-rlimit-rlim_max! @var{rlim} @var{value}
+Mutators for the fields of @code{struct-rlimit}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun getrlimit @var{resource}
+@defunx getrlimit @var{resource} @var{rlimit}
+Interface to the C function @cfunc{getrlimit}, @glibcref{Limits on
+Resources, getrlimit}.  Retrieve the soft and hard limits of a system
+resource; if successful return @var{rlimit}, else raise an exception.
+
+@var{resource} must be an exact integer representing the value of a
+@code{RLIMIT_} constant.
+
+The optional @var{rlimit} must be an instance of @code{struct-rlimit}:
+it is filled with the requested values and returned; when not given: a
+new instance is allocated, filled and returned.
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants))
+
+(px.getrlimit RLIMIT_STACK)
+@result{} #["struct-rlimit" rlim_cur=8388608 rlim_max=4294967295]
+@end example
+@end defun
+
+
+@defun setrlimit @var{resource} @var{rlimit}
+Interface to the C function @cfunc{setrlimit}, @glibcref{Limits on
+Resources, setrlimit}.  Set the soft and hard limits of a system
+resource; if successful return unspecified values, else raise an
+exception.
+
+@var{resource} must be an exact integer representing the value of a
+@code{RLIMIT_} constant.  @var{rlimit} must be an instance of
+@code{struct-rlimit} filled with the selected values.
 @end defun
 
 @c page

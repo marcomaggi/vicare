@@ -286,6 +286,10 @@
     posix-setitimer			posix-getitimer
     posix-alarm
 
+    ;; resource limits
+    posix-getrlimit			posix-setrlimit
+    linux-prlimit
+
     ;; mathematics
     glibc-csin		glibc-ccos	glibc-ctan
     glibc-casin		glibc-cacos	glibc-catan
@@ -1617,6 +1621,18 @@
 
 (define-inline (posix-alarm seconds)
   (foreign-call "ikrt_posix_alarm" seconds))
+
+
+;;;; resource limits
+
+(define-inline (posix-getrlimit resource rlimit)
+  (foreign-call "ikrt_posix_getrlimit" resource rlimit))
+
+(define-inline (posix-setrlimit resource rlimit)
+  (foreign-call "ikrt_posix_setrlimit" resource rlimit))
+
+(define-inline (linux-prlimit pid resource new-limit old-limit)
+  (foreign-call "ikrt_linux_prlimit" pid resource new-limit old-limit))
 
 
 ;;;; mathematics

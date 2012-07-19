@@ -345,6 +345,7 @@ AM_COND_IF([WANT_POSIX],[
   AC_CHECK_TYPES([struct tms],,,[VICARE_INCLUDES])
   AC_CHECK_FUNCS([clock time times localtime_r gmtime_r timelocal timegm strftime nanosleep mktime])
   AC_CHECK_FUNCS([setitimer getitimer alarm])
+  AC_CHECK_FUNCS([getrlimit setrlimit])
 
   dnl These require linking with -lrt.
   AC_CHECK_FUNCS([mq_open mq_close mq_unlink mq_send mq_receive mq_setattr mq_getattr mq_timedsend mq_timedreceive])
@@ -1096,6 +1097,17 @@ AM_COND_IF([WANT_POSIX],
   [VICARE_CONSTANT_TESTS([SIGEV_SIGNAL SIGEV_NONE SIGEV_THREAD SIGEV_THREAD_ID])],
   [VICARE_CONSTANT_FALSES([SIGEV_SIGNAL SIGEV_NONE SIGEV_THREAD SIGEV_THREAD_ID])])
 
+# For "setrlimit()" and similar.
+AM_COND_IF([WANT_POSIX],
+  [VICARE_CONSTANT_TESTS([RLIM_INFINITY
+     RLIMIT_AS RLIMIT_CORE RLIMIT_CPU RLIMIT_DATA RLIMIT_FSIZE RLIMIT_LOCKS
+     RLIMIT_MEMLOCK RLIMIT_MSGQUEUE RLIMIT_NICE RLIMIT_NOFILE RLIMIT_NPROC
+     RLIMIT_RSS RLIMIT_RTPRIO RLIMIT_RTTIME RLIMIT_SIGPENDING RLIMIT_STACK])],
+  [VICARE_CONSTANT_FALSES([RLIM_INFINITY
+     RLIMIT_AS RLIMIT_CORE RLIMIT_CPU RLIMIT_DATA RLIMIT_FSIZE RLIMIT_LOCKS
+     RLIMIT_MEMLOCK RLIMIT_MSGQUEUE RLIMIT_NICE RLIMIT_NOFILE RLIMIT_NPROC
+     RLIMIT_RSS RLIMIT_RTPRIO RLIMIT_RTTIME RLIMIT_SIGPENDING RLIMIT_STACK])])
+
 AC_CACHE_SAVE
 
 #page
@@ -1151,6 +1163,7 @@ int main (void)
   AC_CHECK_FUNCS([epoll_create epoll_create1 epoll_ctl epoll_wait])
   AC_CHECK_FUNCS([signalfd])
   AC_CHECK_FUNCS([timerfd_create timerfd_settime timerfd_gettime])
+  AC_CHECK_FUNCS([prlimit])
 ])
 
 dnl --------------------------------------------------------------------
