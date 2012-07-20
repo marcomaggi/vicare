@@ -1249,9 +1249,21 @@
 
   (check
       (let ((rlim (px.getrlimit RLIMIT_STACK)))
-	(check-pretty-print rlim)
+;;;	(check-pretty-print rlim)
+	(px.struct-rlimit? rlim))
+    => #t)
+
+  (check
+      (let ((rlim (px.getrlimit RLIMIT_STACK)))
+;;;	(check-pretty-print rlim)
 	(px.setrlimit RLIMIT_STACK rlim)
 	#t)
+    => #t)
+
+  (check
+      (let ((rusa (px.getrusage RUSAGE_SELF)))
+;;;	(check-pretty-print rusa)
+	(px.struct-rusage? rusa))
     => #t)
 
   #t)

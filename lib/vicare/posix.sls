@@ -417,8 +417,13 @@
 
 (define (%struct-timeval? obj)
   (and (struct-timeval? obj)
-       (words.signed-long? (struct-timeval-tv_sec  obj))
-       (words.signed-long? (struct-timeval-tv_usec obj))))
+       (let ((sec (struct-timeval-tv_sec obj)))
+	 (and (words.signed-long? sec)
+	      (<= 0 sec)))
+       (let ((usec (struct-timeval-tv_usec obj)))
+	 (and (words.signed-long? usec)
+	      (<= 0 usec 999999)))))
+;;;                   876543210
 
 (define (%struct-itimerval? obj)
   (and (struct-itimerval? obj)
@@ -449,23 +454,26 @@
        (words.word-s64? (struct-rlimit-rlim_max obj))))
 
 (define (%valid-struct-rusage? obj)
+  (define-inline (field? ?val)
+    (let ((val ?val))
+      (or (not val) (words.signed-long? val))))
   (and (struct-rusage? obj)
-       (words.signed-long? (struct-rusage-ru_utime obj))
-       (words.signed-long? (struct-rusage-ru_stime obj))
-       (words.signed-long? (struct-rusage-ru_maxrss obj))
-       (words.signed-long? (struct-rusage-ru_ixrss obj))
-       (words.signed-long? (struct-rusage-ru_idrss obj))
-       (words.signed-long? (struct-rusage-ru_isrss obj))
-       (words.signed-long? (struct-rusage-ru_minflt obj))
-       (words.signed-long? (struct-rusage-ru_majflt obj))
-       (words.signed-long? (struct-rusage-ru_nswap obj))
-       (words.signed-long? (struct-rusage-ru_inblock obj))
-       (words.signed-long? (struct-rusage-ru_oublock obj))
-       (words.signed-long? (struct-rusage-ru_msgsnd obj))
-       (words.signed-long? (struct-rusage-ru_msgrcv obj))
-       (words.signed-long? (struct-rusage-ru_nsignals obj))
-       (words.signed-long? (struct-rusage-ru_nvcsw obj))
-       (words.signed-long? (struct-rusage-ru_nivcsw obj))))
+       (%struct-timeval? (struct-rusage-ru_utime obj))
+       (%struct-timeval? (struct-rusage-ru_stime obj))
+       (field? (struct-rusage-ru_maxrss obj))
+       (field? (struct-rusage-ru_ixrss obj))
+       (field? (struct-rusage-ru_idrss obj))
+       (field? (struct-rusage-ru_isrss obj))
+       (field? (struct-rusage-ru_minflt obj))
+       (field? (struct-rusage-ru_majflt obj))
+       (field? (struct-rusage-ru_nswap obj))
+       (field? (struct-rusage-ru_inblock obj))
+       (field? (struct-rusage-ru_oublock obj))
+       (field? (struct-rusage-ru_msgsnd obj))
+       (field? (struct-rusage-ru_msgrcv obj))
+       (field? (struct-rusage-ru_nsignals obj))
+       (field? (struct-rusage-ru_nvcsw obj))
+       (field? (struct-rusage-ru_nivcsw obj))))
 
 
 ;;;; arguments validation
@@ -3858,20 +3866,20 @@
    (()
     (make-struct-rusage (make-struct-timeval 0 0) ;; ru_utime, 0
 			(make-struct-timeval 0 0) ;; ru_stime, 1
-			0			  ;; ru_maxrss, 2
-			0			  ;; ru_ixrss, 3
-			0			  ;; ru_idrss, 4
-			0			  ;; ru_isrss, 5
-			0			  ;; ru_minflt, 6
-			0			  ;; ru_majflt, 7
-			0			  ;; ru_nswap, 8
-			0			  ;; ru_inblock, 9
-			0			  ;; ru_oublock, 10
-			0			  ;; ru_msgsnd, 11
-			0			  ;; ru_msgrcv, 12
-			0			  ;; ru_nsignals, 13
-			0			  ;; ru_nvcsw, 14
-			0			  ;; ru_nivcsw, 15
+			#f			  ;; ru_maxrss, 2
+			#f			  ;; ru_ixrss, 3
+			#f			  ;; ru_idrss, 4
+			#f			  ;; ru_isrss, 5
+			#f			  ;; ru_minflt, 6
+			#f			  ;; ru_majflt, 7
+			#f			  ;; ru_nswap, 8
+			#f			  ;; ru_inblock, 9
+			#f			  ;; ru_oublock, 10
+			#f			  ;; ru_msgsnd, 11
+			#f			  ;; ru_msgrcv, 12
+			#f			  ;; ru_nsignals, 13
+			#f			  ;; ru_nvcsw, 14
+			#f			  ;; ru_nivcsw, 15
 			))
    ((ru_utime			      ;0
      ru_stime			      ;1

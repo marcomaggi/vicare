@@ -11247,13 +11247,18 @@ An exact integer in the range of the C language type @code{long int}.
 @item ru_nivcsw
 An exact integer in the range of the C language type @code{long int}.
 @end table
+
+Notice some of the fields may be meaningless on some platforms, in which
+case they are set to @false{}.
 @end deftp
 
 
 @defun make-struct-rusage
 @defunx make-struct-rusage
 Build and return a new instance of @code{struct-rusage}.  When no
-arguments are given: all the fields are properly set to zero.
+arguments are given: the fields @code{ru_utime} and @code{ru_stime} are
+set to instance of @code{struct-timeval} with fields set to zero, all
+the other fields are set to @false{}.
 @end defun
 
 
