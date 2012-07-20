@@ -49,6 +49,11 @@ Notes for revision 0.2d13
 
 * Added POSIX timers API to (vicare posix).
 
+
+* Added resource usage and limits API to (vicare posix).
+
+* Added PRLIMIT to (vicare linux).
+
 * Added functions  to (vicare posix):  CLOCK-GETCPUCLOCKID, SIGWAITINFO,
   SIGTIMEDWAIT.
 

@@ -35,6 +35,16 @@
     struct-siginfo_t-si_code
     WIFCONTINUED
 
+    ;; platform resources usage and limits
+    prlimit
+
+    (rename (px.make-struct-rlimit		make-struct-rlimit)
+	    (px.struct-rlimit?			struct-rlimit?)
+	    (px.struct-rlimit-rlim_cur		struct-rlimit-rlim_cur)
+	    (px.struct-rlimit-rlim_max		struct-rlimit-rlim_max)
+	    (px.set-struct-rlimit-rlim_cur!	set-struct-rlimit-rlim_cur!)
+	    (px.set-struct-rlimit-rlim_max!	set-struct-rlimit-rlim_max!))
+
     ;; epoll
     epoll-create			epoll-create1
     epoll-ctl				epoll-wait
@@ -200,6 +210,15 @@
   (or (not obj) (%valid-itimerspec? obj))
   (assertion-violation who "expected false or struct-itimerspec as argument" obj))
 
+(define-argument-validation (rlimit who obj)
+  (%valid-struct-rlimit? obj)
+  (assertion-violation who "expected struct-rlimit as argument" obj))
+
+(define-argument-validation (rlimit/false who obj)
+  (or (not obj)
+      (%valid-struct-rlimit? obj))
+  (assertion-violation who "expected false or struct-rlimit as argument" obj))
+
 
 ;;;; helpers
 
@@ -218,6 +237,11 @@
   (and (fixnum? obj)
        (unsafe.fx>= obj 0)
        (unsafe.fx<  obj FD_SETSIZE)))
+
+(define (%valid-struct-rlimit? obj)
+  (and (px.struct-rlimit? obj)
+       (words.word-s64? (px.struct-rlimit-rlim_cur obj))
+       (words.word-s64? (px.struct-rlimit-rlim_max obj))))
 
 
 ;;;; process termination status
@@ -238,6 +262,27 @@
   (with-arguments-validation (who)
       ((fixnum  status))
     (capi.linux-WIFCONTINUED status)))
+
+
+;;;; platform resources usage and limits
+
+(define prlimit
+  (case-lambda
+   ((pid resource)
+    (prlimit pid resource #f (px.make-struct-rlimit)))
+   ((pid resource new-rlimit)
+    (prlimit pid resource new-rlimit (px.make-struct-rlimit)))
+   ((pid resource new-rlimit old-rlimit)
+    (define who 'prlimit)
+    (with-arguments-validation (who)
+	((pid		pid)
+	 (signed-int	resource)
+	 (rlimit/false	new-rlimit)
+	 (rlimit	old-rlimit))
+      (let ((rv (capi.linux-prlimit pid resource new-rlimit old-rlimit)))
+	(if (unsafe.fxzero? rv)
+	    old-rlimit
+	  (%raise-errno-error who rv pid resource new-rlimit old-rlimit)))))))
 
 
 ;;;; epoll

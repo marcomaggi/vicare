@@ -28,6 +28,8 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
+#define _GNU_SOURCE	1
+
 #include "internals.h"
 #ifdef HAVE_DIRENT_H
 #  include <dirent.h>
@@ -75,9 +77,30 @@
 #  include <sys/wait.h>
 #endif
 
+/* process identifiers */
+#define IK_PID_TO_NUM(pid)		IK_FIX(pid)
+#define IK_NUM_TO_PID(pid)		IK_UNFIX(pid)
+
+/* user identifiers */
+#define IK_UID_TO_NUM(uid)		IK_FIX(uid)
+#define IK_NUM_TO_UID(uid)		IK_UNFIX(uid)
+
+/* group identifiers */
+#define IK_GID_TO_NUM(gid)		IK_FIX(gid)
+#define IK_NUM_TO_GID(gid)		IK_UNFIX(gid)
+
 /* file descriptors */
 #define IK_FD_TO_NUM(fd)		IK_FIX(fd)
 #define IK_NUM_TO_FD(fd)		IK_UNFIX(fd)
+
+/* interprocess signal numbers */
+#define IK_SIGNUM_TO_NUM(signum)	IK_FIX(signum)
+#define IK_NUM_TO_SIGNUM(signum)	IK_UNFIX(signum)
+
+/* file access mode */
+#define IK_FILEMODE_TO_NUM(filemode)	IK_FIX(filemode)
+#define IK_NUM_TO_FILEMODE(filemode)	IK_UNFIX(filemode)
+
 
 static IK_UNUSED void
 feature_failure_ (const char * funcname)
@@ -525,5 +548,73 @@ ikrt_linux_timerfd_read (ikptr s_fd, ikpcb * pcb)
   } else
     return ik_errno_to_code();
 }
+
+
+/** --------------------------------------------------------------------
+ ** Platform resources usage and limits.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_linux_prlimit (ikptr s_pid, ikptr s_resource,
+		    ikptr s_new_rlim, ikptr s_old_rlim,
+		    ikpcb * pcb)
+/* Interface to the  C function "prlimit()". */
+{
+#ifdef HAVE_PRLIMIT
+  pid_t			pid	 = IK_NUM_TO_PID(s_pid);
+  int			resource = ik_integer_to_int(s_resource);
+  struct rlimit		new_rlim;
+  struct rlimit	*	new_rlim_p;
+  struct rlimit		old_rlim;
+  int			rv;
+  if (false_object != s_new_rlim) {
+    switch (sizeof(rlim_t)) {
+    case 4:
+      new_rlim.rlim_cur	= ik_integer_to_uint32(IK_FIELD(s_new_rlim, 0));
+      new_rlim.rlim_max	= ik_integer_to_uint32(IK_FIELD(s_new_rlim, 1));
+      break;
+    case 8:
+      new_rlim.rlim_cur	= ik_integer_to_uint64(IK_FIELD(s_new_rlim, 0));
+      new_rlim.rlim_max	= ik_integer_to_uint64(IK_FIELD(s_new_rlim, 1));
+      break;
+    default:
+      errno = EINVAL;
+      return ik_errno_to_code();
+    }
+    new_rlim_p = &new_rlim;
+  } else
+    new_rlim_p = NULL;
+  errno = 0;
+  rv    = prlimit(pid, resource, new_rlim_p, &old_rlim);
+  if (0 == rv) {
+    switch (sizeof(rlim_t)) {
+    case 4:
+      pcb->root0 = &s_old_rlim;
+      {
+	IK_ASS(IK_FIELD(s_old_rlim,0),ika_integer_from_uint32(pcb,old_rlim.rlim_cur));
+	IK_ASS(IK_FIELD(s_old_rlim,1),ika_integer_from_uint32(pcb,old_rlim.rlim_max));
+      }
+      pcb->root0 = NULL;
+      break;
+    case 8:
+      pcb->root0 = &s_old_rlim;
+      {
+	IK_ASS(IK_FIELD(s_old_rlim,0),ika_integer_from_uint64(pcb,old_rlim.rlim_cur));
+	IK_ASS(IK_FIELD(s_old_rlim,1),ika_integer_from_uint64(pcb,old_rlim.rlim_max));
+      }
+      pcb->root0 = NULL;
+      break;
+    default:
+      errno = EINVAL;
+      return ik_errno_to_code();
+    }
+    return IK_FIX(0);
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
 
 /* end of file */

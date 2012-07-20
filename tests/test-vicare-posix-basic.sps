@@ -1248,15 +1248,15 @@
 (parametrise ((check-test-name	'resources))
 
   (check
-      (let ((rlim (px.getrlimit RLIMIT_STACK)))
+      (let ((rlim (px.getrlimit RLIMIT_SIGPENDING)))
 ;;;	(check-pretty-print rlim)
 	(px.struct-rlimit? rlim))
     => #t)
 
   (check
-      (let ((rlim (px.getrlimit RLIMIT_STACK)))
+      (let ((rlim (px.getrlimit RLIMIT_SIGPENDING)))
 ;;;	(check-pretty-print rlim)
-	(px.setrlimit RLIMIT_STACK rlim)
+	(px.setrlimit RLIMIT_SIGPENDING rlim)
 	#t)
     => #t)
 

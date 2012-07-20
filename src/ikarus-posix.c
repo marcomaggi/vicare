@@ -5682,12 +5682,20 @@ ikrt_posix_getrlimit (ikptr s_resource, ikptr s_rlim, ikpcb * pcb)
   if (0 == rv) {
     switch (sizeof(rlim_t)) {
     case 4:
-      IK_ASS(IK_FIELD(s_rlim, 0), ika_integer_from_uint32(pcb, rlim.rlim_cur));
-      IK_ASS(IK_FIELD(s_rlim, 1), ika_integer_from_uint32(pcb, rlim.rlim_max));
+      pcb->root0 = &s_rlim;
+      {
+	IK_ASS(IK_FIELD(s_rlim, 0), ika_integer_from_uint32(pcb, rlim.rlim_cur));
+	IK_ASS(IK_FIELD(s_rlim, 1), ika_integer_from_uint32(pcb, rlim.rlim_max));
+      }
+      pcb->root0 = NULL;
       break;
     case 8:
-      IK_ASS(IK_FIELD(s_rlim, 0), ika_integer_from_uint64(pcb, rlim.rlim_cur));
-      IK_ASS(IK_FIELD(s_rlim, 1), ika_integer_from_uint64(pcb, rlim.rlim_max));
+      pcb->root0 = &s_rlim;
+      {
+	IK_ASS(IK_FIELD(s_rlim, 0), ika_integer_from_uint64(pcb, rlim.rlim_cur));
+	IK_ASS(IK_FIELD(s_rlim, 1), ika_integer_from_uint64(pcb, rlim.rlim_max));
+      }
+      pcb->root0 = NULL;
       break;
     default:
       errno = EINVAL;
