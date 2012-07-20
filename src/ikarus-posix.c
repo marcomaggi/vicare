@@ -5644,6 +5644,16 @@ ikrt_posix_timer_getoverrun (ikptr s_timer_id, ikpcb * pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
+ikrt_posix_RLIM_INFINITY (ikpcb * pcb)
+{
+#ifdef RLIM_INFINITY
+  return ika_integer_from_uint64(pcb, RLIM_INFINITY);
+#else
+  return false_object;
+#endif
+}
+
+ikptr
 ikrt_posix_setrlimit (ikptr s_resource, ikptr s_rlim)
 {
 #ifdef HAVE_SETRLIMIT

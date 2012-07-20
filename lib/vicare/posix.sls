@@ -331,7 +331,7 @@
 
     ;; resources limits
     getrlimit				setrlimit
-    getrusage
+    getrusage				RLIM_INFINITY
 
     (rename (%make-struct-rlimit make-struct-rlimit))
     struct-rlimit?
@@ -3916,6 +3916,9 @@
 			))))
 
 ;;; --------------------------------------------------------------------
+
+(define-inline-constant RLIM_INFINITY
+  (capi.posix-RLIM_INFINITY))
 
 (define getrlimit
   (case-lambda

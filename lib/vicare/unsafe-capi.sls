@@ -288,7 +288,7 @@
 
     ;; resource limits
     posix-getrlimit			posix-setrlimit
-    posix-getrusage
+    posix-getrusage			posix-RLIM_INFINITY
     linux-prlimit
 
     ;; mathematics
@@ -1625,6 +1625,9 @@
 
 
 ;;;; resource limits
+
+(define-inline (posix-RLIM_INFINITY)
+  (foreign-call "ikrt_posix_RLIM_INFINITY"))
 
 (define-inline (posix-getrlimit resource rlimit)
   (foreign-call "ikrt_posix_getrlimit" resource rlimit))

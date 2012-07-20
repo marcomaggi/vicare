@@ -43,7 +43,8 @@
 	    (px.struct-rlimit-rlim_cur		struct-rlimit-rlim_cur)
 	    (px.struct-rlimit-rlim_max		struct-rlimit-rlim_max)
 	    (px.set-struct-rlimit-rlim_cur!	set-struct-rlimit-rlim_cur!)
-	    (px.set-struct-rlimit-rlim_max!	set-struct-rlimit-rlim_max!))
+	    (px.set-struct-rlimit-rlim_max!	set-struct-rlimit-rlim_max!)
+	    (px.RLIM_INFINITY			RLIM_INFINITY))
 
     ;; epoll
     epoll-create			epoll-create1

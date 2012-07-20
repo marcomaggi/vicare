@@ -438,7 +438,7 @@
     SIGEV_THREAD_ID
 
 ;;; For "setrlimit()" and similar.
-    RLIM_INFINITY	RLIMIT_AS		RLIMIT_CORE
+    RLIMIT_AS		RLIMIT_CORE
     RLIMIT_CPU		RLIMIT_DATA		RLIMIT_FSIZE
     RLIMIT_LOCKS	RLIMIT_MEMLOCK		RLIMIT_MSGQUEUE
     RLIMIT_NICE		RLIMIT_NOFILE		RLIMIT_NPROC
@@ -1442,11 +1442,6 @@
 (define-inline-constant RLIMIT_RTTIME		@VALUEOF_RLIMIT_RTTIME@)
 (define-inline-constant RLIMIT_SIGPENDING	@VALUEOF_RLIMIT_SIGPENDING@)
 (define-inline-constant RLIMIT_STACK		@VALUEOF_RLIMIT_STACK@)
-;;This  is defined  as "unsigned  long long"  on GNU+Linux,  so the  GNU
-;;Autoconf infrastructure cannot determine its value.
-;;
-;;(define-inline-constant RLIM_INFINITY		@VALUEOF_RLIM_INFINITY@)
-(define-inline-constant RLIM_INFINITY		#f)
 
 ;;; For "getrusage()".
 (define-inline-constant RUSAGE_SELF		@VALUEOF_RUSAGE_SELF@)

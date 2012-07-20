@@ -11311,6 +11311,13 @@ Mutators for the fields of @code{struct-rusage}.
 @subsection System resources functions
 
 
+@deffn {Identifier Syntax} RLIM_INFINITY
+The value of the corresponding @posix{} constant.  If the constant is
+defined: this identifier expands to an unsigned integer, else it expands
+to @false{}.
+@end deffn
+
+
 @defun getrlimit @var{resource}
 @defunx getrlimit @var{resource} @var{rlimit}
 Interface to the C function @cfunc{getrlimit}, @glibcref{Limits on
@@ -13174,6 +13181,7 @@ reexported by @library{vicare linux}.
 make-struct-rlimit      struct-rlimit?
 struct-rlimit-rlim_cur  set-struct-rlimit-rlim_cur!
 struct-rlimit-rlim_max  set-struct-rlimit-rlim_max!
+RLIM_INFINITY
 @end example
 
 
