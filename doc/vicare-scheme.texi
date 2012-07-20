@@ -11140,6 +11140,17 @@ representing the value; else an exception is raised.
 @section Resources usage
 
 
+@menu
+* posix resources rlimit::      Data structure @code{struct-rlimit}.
+* posix resources rusage::      Data structure @code{struct-rusage}.
+* posix resources funcs::       System resources functions.
+@end menu
+
+@c page
+@node posix resources rlimit
+@subsection Data structure @code{struct-rlimit}
+
+
 @deftp {Struct Type} struct-rlimit
 Scheme level representation of the C language type @code{struct rlimit},
 @glibcref{Limits on Resources, struct rlimit}.  Hold the soft and hard
@@ -11178,7 +11189,122 @@ Accessors for the fields of @code{struct-rlimit}.
 Mutators for the fields of @code{struct-rlimit}.
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node posix resources rusage
+@subsection Data structure @code{struct-rusage}
+
+
+@deftp {Struct Type} struct-rusage
+Scheme level representation of the C language type @code{struct rusage},
+@glibcref{Resource Usage, struct rusage}.  It has the following fields:
+
+@table @code
+@item ru_utime
+An instance of @code{struct-timeval}.
+
+@item ru_stime
+An instance of @code{struct-timeval}.
+
+@item ru_maxrss
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_ixrss
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_idrss
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_isrss
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_minflt
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_majflt
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_nswap
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_inblock
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_oublock
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_msgsnd
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_msgrcv
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_nsignals
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_nvcsw
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_nivcsw
+An exact integer in the range of the C language type @code{long int}.
+@end table
+@end deftp
+
+
+@defun make-struct-rusage
+@defunx make-struct-rusage
+Build and return a new instance of @code{struct-rusage}.  When no
+arguments are given: all the fields are properly set to zero.
+@end defun
+
+
+@defun struct-rusage? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-rusage}.
+@end defun
+
+
+@defun struct-rusage-ru_utime @var{rusage}
+@defunx struct-rusage-ru_stime @var{rusage}
+@defunx struct-rusage-ru_maxrss @var{rusage}
+@defunx struct-rusage-ru_ixrss @var{rusage}
+@defunx struct-rusage-ru_idrss @var{rusage}
+@defunx struct-rusage-ru_isrss @var{rusage}
+@defunx struct-rusage-ru_minflt @var{rusage}
+@defunx struct-rusage-ru_majflt @var{rusage}
+@defunx struct-rusage-ru_nswap @var{rusage}
+@defunx struct-rusage-ru_inblock @var{rusage}
+@defunx struct-rusage-ru_oublock @var{rusage}
+@defunx struct-rusage-ru_msgsnd @var{rusage}
+@defunx struct-rusage-ru_msgrcv @var{rusage}
+@defunx struct-rusage-ru_nsignals @var{rusage}
+@defunx struct-rusage-ru_nvcsw @var{rusage}
+@defunx struct-rusage-ru_nivcsw @var{rusage}
+Accessors for the fields of @code{struct-rusage}.
+@end defun
+
+
+@defun set-struct-rusage-ru_utime! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_stime! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_maxrss! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_ixrss! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_idrss! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_isrss! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_minflt! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_majflt! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_nswap! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_inblock! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_oublock! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_msgsnd! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_msgrcv! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_nsignals! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_nvcsw! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_nivcsw! @var{rusage} @var{value}
+Mutators for the fields of @code{struct-rusage}.
+@end defun
+
+@c page
+@node posix resources funcs
+@subsection System resources functions
+
 
 @defun getrlimit @var{resource}
 @defunx getrlimit @var{resource} @var{rlimit}
@@ -11214,6 +11340,23 @@ exception.
 @var{resource} must be an exact integer representing the value of a
 @code{RLIMIT_} constant.  @var{rlimit} must be an instance of
 @code{struct-rlimit} filled with the selected values.
+@end defun
+
+
+@defun getrusage @var{processes}
+@defunx getrusage @var{processes} @var{rusage}
+Interface to the C function @cfunc{getrusage}, @glibcref{Resource Usage,
+getrusage}.  Reports resource usage totals for processes specified by
+@var{processes}; if successful return @var{rusage}, else raise an
+exception.
+
+@var{processes} must be an exact integer in the range of the C language
+type @code{int}; it should be one of the @code{RUSAGE_} platform
+constants.
+
+The optional @var{rusage} must be an instance of @code{struct-rusage}
+and it is filled with the usage values; when not given: a new instance
+of @code{struct-rusage} is internally allocated, filled and returned.
 @end defun
 
 @c page

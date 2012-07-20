@@ -345,7 +345,7 @@ AM_COND_IF([WANT_POSIX],[
   AC_CHECK_TYPES([struct tms],,,[VICARE_INCLUDES])
   AC_CHECK_FUNCS([clock time times localtime_r gmtime_r timelocal timegm strftime nanosleep mktime])
   AC_CHECK_FUNCS([setitimer getitimer alarm])
-  AC_CHECK_FUNCS([getrlimit setrlimit])
+  AC_CHECK_FUNCS([getrusage getrlimit setrlimit])
 
   dnl These require linking with -lrt.
   AC_CHECK_FUNCS([mq_open mq_close mq_unlink mq_send mq_receive mq_setattr mq_getattr mq_timedsend mq_timedreceive])
@@ -362,76 +362,261 @@ AM_COND_IF([WANT_POSIX],[
 
   AC_CHECK_MEMBER([siginfo_t.si_signo],
      [AC_DEFINE([HAVE_SIGINFO_SI_SIGNO],[1],[siginfo_t struct has si_signo field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_errno],
      [AC_DEFINE([HAVE_SIGINFO_SI_ERRNO],[1],[siginfo_t struct has si_errno field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_code],
      [AC_DEFINE([HAVE_SIGINFO_SI_CODE],[1],[siginfo_t struct has si_code field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_trapno],
      [AC_DEFINE([HAVE_SIGINFO_SI_TRAPNO],[1],[siginfo_t struct has si_trapno field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_pid],
      [AC_DEFINE([HAVE_SIGINFO_SI_PID],[1],[siginfo_t struct has si_pid field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_uid],
      [AC_DEFINE([HAVE_SIGINFO_SI_UID],[1],[siginfo_t struct has si_uid field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_status],
      [AC_DEFINE([HAVE_SIGINFO_SI_STATUS],[1],[siginfo_t struct has si_status field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_utime],
      [AC_DEFINE([HAVE_SIGINFO_SI_UTIME],[1],[siginfo_t struct has si_utime field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_stime],
      [AC_DEFINE([HAVE_SIGINFO_SI_STIME],[1],[siginfo_t struct has si_stime field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_value],
      [AC_DEFINE([HAVE_SIGINFO_SI_VALUE],[1],[siginfo_t struct has si_value field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_int],
      [AC_DEFINE([HAVE_SIGINFO_SI_INT],[1],[siginfo_t struct has si_int field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_ptr],
      [AC_DEFINE([HAVE_SIGINFO_SI_PTR],[1],[siginfo_t struct has si_ptr field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_overrun],
      [AC_DEFINE([HAVE_SIGINFO_SI_OVERRUN],[1],[siginfo_t struct has si_overrun field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_timerid],
      [AC_DEFINE([HAVE_SIGINFO_SI_TIMERID],[1],[siginfo_t struct has si_timerid field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_addr],
      [AC_DEFINE([HAVE_SIGINFO_SI_ADDR],[1],[siginfo_t struct has si_addr field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_band],
      [AC_DEFINE([HAVE_SIGINFO_SI_BAND],[1],[siginfo_t struct has si_band field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_fd],
      [AC_DEFINE([HAVE_SIGINFO_SI_FD],[1],[siginfo_t struct has si_fd field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
   AC_CHECK_MEMBER([siginfo_t.si_addr_lsb],
      [AC_DEFINE([HAVE_SIGINFO_SI_ADDR_LSB],[1],[siginfo_t struct has si_addr_lsb field])],
-     [],[[#define _POSIX_C_SOURCE 199309L
-#include <signal.h>]])
+     [],[[#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif]])
+
+dnl --------------------------------------------------------------------
+
+  AC_CHECK_MEMBER([struct rusage.ru_utime],
+     [AC_DEFINE([HAVE_RUSAGE_RU_UTIME],[1],[struct rusage has ru_utime field])],
+     [],[[#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif]])
+  AC_CHECK_MEMBER([struct rusage.ru_stime],
+     [AC_DEFINE([HAVE_RUSAGE_RU_STIME],[1],[struct rusage has ru_stime field])],
+     [],[[#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif]])
+  AC_CHECK_MEMBER([struct rusage.ru_maxrss],
+     [AC_DEFINE([HAVE_RUSAGE_RU_MAXRSS],[1],[struct rusage has ru_maxrss field])],
+     [],[[#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif]])
+  AC_CHECK_MEMBER([struct rusage.ru_ixrss],
+     [AC_DEFINE([HAVE_RUSAGE_RU_IXRSS],[1],[struct rusage has ru_ixrss field])],
+     [],[[#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif]])
+  AC_CHECK_MEMBER([struct rusage.ru_idrss],
+     [AC_DEFINE([HAVE_RUSAGE_RU_IDRSS],[1],[struct rusage has ru_idrss field])],
+     [],[[#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif]])
+  AC_CHECK_MEMBER([struct rusage.ru_isrss],
+     [AC_DEFINE([HAVE_RUSAGE_RU_ISRSS],[1],[struct rusage has ru_isrss field])],
+     [],[[#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif]])
+  AC_CHECK_MEMBER([struct rusage.ru_minflt],
+     [AC_DEFINE([HAVE_RUSAGE_RU_MINFLT],[1],[struct rusage has ru_minflt field])],
+     [],[[#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif]])
+  AC_CHECK_MEMBER([struct rusage.ru_majflt],
+     [AC_DEFINE([HAVE_RUSAGE_RU_MAJFLT],[1],[struct rusage has ru_majflt field])],
+     [],[[#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif]])
+  AC_CHECK_MEMBER([struct rusage.ru_nswap],
+     [AC_DEFINE([HAVE_RUSAGE_RU_NSWAP],[1],[struct rusage has ru_nswap field])],
+     [],[[#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif]])
+  AC_CHECK_MEMBER([struct rusage.ru_inblock],
+     [AC_DEFINE([HAVE_RUSAGE_RU_INBLOCK],[1],[struct rusage has ru_inblock field])],
+     [],[[#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif]])
+  AC_CHECK_MEMBER([struct rusage.ru_oublock],
+     [AC_DEFINE([HAVE_RUSAGE_RU_OUBLOCK],[1],[struct rusage has ru_oublock field])],
+     [],[[#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif]])
+  AC_CHECK_MEMBER([struct rusage.ru_msgsnd],
+     [AC_DEFINE([HAVE_RUSAGE_RU_MSGSND],[1],[struct rusage has ru_msgsnd field])],
+     [],[[#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif]])
+  AC_CHECK_MEMBER([struct rusage.ru_msgrcv],
+     [AC_DEFINE([HAVE_RUSAGE_RU_MSGRCV],[1],[struct rusage has ru_msgrcv field])],
+     [],[[#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif]])
+  AC_CHECK_MEMBER([struct rusage.ru_nsignals],
+     [AC_DEFINE([HAVE_RUSAGE_RU_NSIGNALS],[1],[struct rusage has ru_nsignals field])],
+     [],[[#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif]])
+  AC_CHECK_MEMBER([struct rusage.ru_nvcsw],
+     [AC_DEFINE([HAVE_RUSAGE_RU_NVCSW],[1],[struct rusage has ru_nvcsw field])],
+     [],[[#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif]])
+  AC_CHECK_MEMBER([struct rusage.ru_nivcsw],
+     [AC_DEFINE([HAVE_RUSAGE_RU_NIVCSW],[1],[struct rusage has ru_nivcsw field])],
+     [],[[#ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif]])
 
   ])
 
@@ -1107,6 +1292,11 @@ AM_COND_IF([WANT_POSIX],
      RLIMIT_AS RLIMIT_CORE RLIMIT_CPU RLIMIT_DATA RLIMIT_FSIZE RLIMIT_LOCKS
      RLIMIT_MEMLOCK RLIMIT_MSGQUEUE RLIMIT_NICE RLIMIT_NOFILE RLIMIT_NPROC
      RLIMIT_RSS RLIMIT_RTPRIO RLIMIT_RTTIME RLIMIT_SIGPENDING RLIMIT_STACK])])
+
+# For "getrusage()".
+AM_COND_IF([WANT_POSIX],
+  [VICARE_CONSTANT_TESTS([RUSAGE_SELF RUSAGE_CHILDREN RUSAGE_THREAD])],
+  [VICARE_CONSTANT_FALSES([RUSAGE_SELF RUSAGE_CHILDREN RUSAGE_THREAD])])
 
 AC_CACHE_SAVE
 

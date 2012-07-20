@@ -331,11 +331,31 @@
 
     ;; resources limits
     getrlimit				setrlimit
+    getrusage
 
     (rename (%make-struct-rlimit make-struct-rlimit))
     struct-rlimit?
     struct-rlimit-rlim_cur		set-struct-rlimit-rlim_cur!
     struct-rlimit-rlim_max		set-struct-rlimit-rlim_max!
+
+    (rename (%make-struct-rusage make-struct-rusage))
+    struct-rusage?
+    struct-rusage-ru_utime		set-struct-rusage-ru_utime!
+    struct-rusage-ru_stime		set-struct-rusage-ru_stime!
+    struct-rusage-ru_maxrss		set-struct-rusage-ru_maxrss!
+    struct-rusage-ru_ixrss		set-struct-rusage-ru_ixrss!
+    struct-rusage-ru_idrss		set-struct-rusage-ru_idrss!
+    struct-rusage-ru_isrss		set-struct-rusage-ru_isrss!
+    struct-rusage-ru_minflt		set-struct-rusage-ru_minflt!
+    struct-rusage-ru_majflt		set-struct-rusage-ru_majflt!
+    struct-rusage-ru_nswap		set-struct-rusage-ru_nswap!
+    struct-rusage-ru_inblock		set-struct-rusage-ru_inblock!
+    struct-rusage-ru_oublock		set-struct-rusage-ru_oublock!
+    struct-rusage-ru_msgsnd		set-struct-rusage-ru_msgsnd!
+    struct-rusage-ru_msgrcv		set-struct-rusage-ru_msgrcv!
+    struct-rusage-ru_nsignals		set-struct-rusage-ru_nsignals!
+    struct-rusage-ru_nvcsw		set-struct-rusage-ru_nvcsw!
+    struct-rusage-ru_nivcsw		set-struct-rusage-ru_nivcsw!
 
     ;; system configuration
     sysconf
@@ -427,6 +447,25 @@
   (and (struct-rlimit? obj)
        (words.word-s64? (struct-rlimit-rlim_cur obj))
        (words.word-s64? (struct-rlimit-rlim_max obj))))
+
+(define (%valid-struct-rusage? obj)
+  (and (struct-rusage? obj)
+       (words.signed-long? (struct-rusage-ru_utime obj))
+       (words.signed-long? (struct-rusage-ru_stime obj))
+       (words.signed-long? (struct-rusage-ru_maxrss obj))
+       (words.signed-long? (struct-rusage-ru_ixrss obj))
+       (words.signed-long? (struct-rusage-ru_idrss obj))
+       (words.signed-long? (struct-rusage-ru_isrss obj))
+       (words.signed-long? (struct-rusage-ru_minflt obj))
+       (words.signed-long? (struct-rusage-ru_majflt obj))
+       (words.signed-long? (struct-rusage-ru_nswap obj))
+       (words.signed-long? (struct-rusage-ru_inblock obj))
+       (words.signed-long? (struct-rusage-ru_oublock obj))
+       (words.signed-long? (struct-rusage-ru_msgsnd obj))
+       (words.signed-long? (struct-rusage-ru_msgrcv obj))
+       (words.signed-long? (struct-rusage-ru_nsignals obj))
+       (words.signed-long? (struct-rusage-ru_nvcsw obj))
+       (words.signed-long? (struct-rusage-ru_nivcsw obj))))
 
 
 ;;;; arguments validation
@@ -673,6 +712,10 @@
 (define-argument-validation (rlimit who obj)
   (%valid-struct-rlimit? obj)
   (assertion-violation who "expected struct-rlimit as argument" obj))
+
+(define-argument-validation (rusage who obj)
+  (%valid-struct-rusage? obj)
+  (assertion-violation who "expected struct-rusage as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -3769,6 +3812,103 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-struct struct-rusage
+  (ru_utime	;0
+   ru_stime	;1
+   ru_maxrss	;2
+   ru_ixrss	;3
+   ru_idrss	;4
+   ru_isrss	;5
+   ru_minflt	;6
+   ru_majflt	;7
+   ru_nswap	;8
+   ru_inblock	;9
+   ru_oublock	;10
+   ru_msgsnd	;11
+   ru_msgrcv	;12
+   ru_nsignals	;13
+   ru_nvcsw	;14
+   ru_nivcsw	;15
+   ))
+
+(define (%struct-rusage-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-rusage\"")
+  (%display " ru_utime=")	(%display (struct-rusage-ru_utime	S)) ;0
+  (%display " ru_stime=")	(%display (struct-rusage-ru_stime	S)) ;1
+  (%display " ru_maxrss=")	(%display (struct-rusage-ru_maxrss	S)) ;2
+  (%display " ru_ixrss=")	(%display (struct-rusage-ru_ixrss	S)) ;3
+  (%display " ru_idrss=")	(%display (struct-rusage-ru_idrss	S)) ;4
+  (%display " ru_isrss=")	(%display (struct-rusage-ru_isrss	S)) ;5
+  (%display " ru_minflt=")	(%display (struct-rusage-ru_minflt	S)) ;6
+  (%display " ru_majflt=")	(%display (struct-rusage-ru_majflt	S)) ;7
+  (%display " ru_nswap=")	(%display (struct-rusage-ru_nswap	S)) ;8
+  (%display " ru_inblock=")	(%display (struct-rusage-ru_inblock	S)) ;9
+  (%display " ru_oublock=")	(%display (struct-rusage-ru_oublock	S)) ;10
+  (%display " ru_msgsnd=")	(%display (struct-rusage-ru_msgsnd	S)) ;11
+  (%display " ru_msgrcv=")	(%display (struct-rusage-ru_msgrcv	S)) ;12
+  (%display " ru_nsignals=")	(%display (struct-rusage-ru_nsignals	S)) ;13
+  (%display " ru_nvcsw=")	(%display (struct-rusage-ru_nvcsw	S)) ;14
+  (%display " ru_nivcsw=")	(%display (struct-rusage-ru_nivcsw	S)) ;15
+  (%display "]"))
+
+(define %make-struct-rusage
+  (case-lambda
+   (()
+    (make-struct-rusage (make-struct-timeval 0 0) ;; ru_utime, 0
+			(make-struct-timeval 0 0) ;; ru_stime, 1
+			0			  ;; ru_maxrss, 2
+			0			  ;; ru_ixrss, 3
+			0			  ;; ru_idrss, 4
+			0			  ;; ru_isrss, 5
+			0			  ;; ru_minflt, 6
+			0			  ;; ru_majflt, 7
+			0			  ;; ru_nswap, 8
+			0			  ;; ru_inblock, 9
+			0			  ;; ru_oublock, 10
+			0			  ;; ru_msgsnd, 11
+			0			  ;; ru_msgrcv, 12
+			0			  ;; ru_nsignals, 13
+			0			  ;; ru_nvcsw, 14
+			0			  ;; ru_nivcsw, 15
+			))
+   ((ru_utime			      ;0
+     ru_stime			      ;1
+     ru_maxrss			      ;2
+     ru_ixrss			      ;3
+     ru_idrss			      ;4
+     ru_isrss			      ;5
+     ru_minflt			      ;6
+     ru_majflt			      ;7
+     ru_nswap			      ;8
+     ru_inblock			      ;9
+     ru_oublock			      ;10
+     ru_msgsnd			      ;11
+     ru_msgrcv			      ;12
+     ru_nsignals		      ;13
+     ru_nvcsw			      ;14
+     ru_nivcsw)			      ;15
+    (make-struct-rusage ru_utime      ;0
+			ru_stime      ;1
+			ru_maxrss     ;2
+			ru_ixrss      ;3
+			ru_idrss      ;4
+			ru_isrss      ;5
+			ru_minflt     ;6
+			ru_majflt     ;7
+			ru_nswap      ;8
+			ru_inblock    ;9
+			ru_oublock    ;10
+			ru_msgsnd     ;11
+			ru_msgrcv     ;12
+			ru_nsignals   ;13
+			ru_nvcsw      ;14
+			ru_nivcsw     ;15
+			))))
+
+;;; --------------------------------------------------------------------
+
 (define getrlimit
   (case-lambda
    ((resource)
@@ -3791,6 +3931,22 @@
     (let ((rv (capi.posix-setrlimit resource rlimit)))
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv resource rlimit)))))
+
+;;; --------------------------------------------------------------------
+
+(define getrusage
+  (case-lambda
+   ((processes)
+    (getrusage processes (%make-struct-rusage)))
+   ((processes rusage)
+    (define who 'getrusage)
+    (with-arguments-validation (who)
+	((signed-int	processes)
+	 (rusage	rusage))
+      (let ((rv (capi.posix-getrusage processes rusage)))
+	(if (unsafe.fxzero? rv)
+	    rusage
+	  (%raise-errno-error who rv processes rusage)))))))
 
 
 ;;;; splitting pathnames and search paths
@@ -4044,6 +4200,7 @@
 (set-rtd-printer! (type-descriptor struct-itimerspec)	%struct-itimerspec-printer)
 (set-rtd-printer! (type-descriptor struct-siginfo_t)	%struct-siginfo_t-printer)
 (set-rtd-printer! (type-descriptor struct-rlimit)	%struct-rlimit-printer)
+(set-rtd-printer! (type-descriptor struct-rusage)	%struct-rusage-printer)
 
 (vicare-executable-as-string)
 

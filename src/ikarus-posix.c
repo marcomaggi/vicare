@@ -147,6 +147,14 @@ feature_failure_ (const char * funcname)
 
 
 /** --------------------------------------------------------------------
+ ** Access to Scheme data structures.
+ ** ----------------------------------------------------------------- */
+
+#define VICARE_POSIX_STRUCT_TIMEVAL_TV_SEC	0
+#define VICARE_POSIX_STRUCT_TIMEVAL_TV_USEC	1
+
+
+/** --------------------------------------------------------------------
  ** Errno handling.
  ** ----------------------------------------------------------------- */
 
@@ -5685,6 +5693,107 @@ ikrt_posix_getrlimit (ikptr s_resource, ikptr s_rlim, ikpcb * pcb)
       errno = EINVAL;
       return ik_errno_to_code();
     }
+    return IK_FIX(0);
+  } else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_getrusage (ikptr s_processes, ikptr s_rusage, ikpcb * pcb)
+#define VICARE_POSIX_STRUCT_RUSAGE_RU_UTIME	0
+#define VICARE_POSIX_STRUCT_RUSAGE_RU_STIME	1
+#define VICARE_POSIX_STRUCT_RUSAGE_RU_MAXRSS	2
+#define VICARE_POSIX_STRUCT_RUSAGE_RU_IXRSS	3
+#define VICARE_POSIX_STRUCT_RUSAGE_RU_IDRSS	4
+#define VICARE_POSIX_STRUCT_RUSAGE_RU_ISRSS	5
+#define VICARE_POSIX_STRUCT_RUSAGE_RU_MINFLT	6
+#define VICARE_POSIX_STRUCT_RUSAGE_RU_MAJFLT	7
+#define VICARE_POSIX_STRUCT_RUSAGE_RU_NSWAP	8
+#define VICARE_POSIX_STRUCT_RUSAGE_RU_INBLOCK	9
+#define VICARE_POSIX_STRUCT_RUSAGE_RU_OUBLOCK	10
+#define VICARE_POSIX_STRUCT_RUSAGE_RU_MSGSND	11
+#define VICARE_POSIX_STRUCT_RUSAGE_RU_MSGRCV	12
+#define VICARE_POSIX_STRUCT_RUSAGE_RU_NSIGNALS	13
+#define VICARE_POSIX_STRUCT_RUSAGE_RU_NVCSW	14
+#define VICARE_POSIX_STRUCT_RUSAGE_RU_NIVCSW	15
+{
+#ifdef HAVE_GETRUSAGE
+  int		processes = ik_integer_to_int(s_processes);
+  struct rusage	usage;
+  int		rv;
+  errno = 0;
+  rv    = getrusage(processes, &usage);
+  if (0 == rv) {
+#ifdef HAVE_RUSAGE_RU_UTIME
+    IK_ASS(IK_FIELD(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_UTIME),0),
+	   ika_integer_from_long(pcb,usage.ru_utime.tv_sec));
+    IK_ASS(IK_FIELD(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_UTIME),1),
+	   ika_integer_from_long(pcb,usage.ru_utime.tv_sec));
+#endif
+#ifdef HAVE_RUSAGE_RU_STIME
+    IK_ASS(IK_FIELD(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_STIME),0),
+	   ika_integer_from_long(pcb,usage.ru_stime.tv_sec));
+    IK_ASS(IK_FIELD(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_STIME),1),
+	   ika_integer_from_long(pcb,usage.ru_stime.tv_sec));
+#endif
+#ifdef HAVE_RUSAGE_RU_MAXRSS
+    IK_ASS(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_MAXRSS),
+	   ika_integer_from_long(pcb, usage.ru_maxrss));
+#endif
+#ifdef HAVE_RUSAGE_RU_IXRSS
+    IK_ASS(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_IXRSS),
+	   ika_integer_from_long(pcb, usage.ru_ixrss));
+#endif
+#ifdef HAVE_RUSAGE_RU_IDRSS
+    IK_ASS(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_IDRSS),
+	   ika_integer_from_long(pcb, usage.ru_idrss));
+#endif
+#ifdef HAVE_RUSAGE_RU_ISRSS
+    IK_ASS(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_ISRSS),
+	   ika_integer_from_long(pcb, usage.ru_isrss));
+#endif
+#ifdef HAVE_RUSAGE_RU_MINFLT
+    IK_ASS(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_MINFLT),
+	   ika_integer_from_long(pcb, usage.ru_minflt));
+#endif
+#ifdef HAVE_RUSAGE_RU_MAJFLT
+    IK_ASS(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_MAJFLT),
+	   ika_integer_from_long(pcb, usage.ru_majflt));
+#endif
+#ifdef HAVE_RUSAGE_RU_NSWAP
+    IK_ASS(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_NSWAP),
+	   ika_integer_from_long(pcb, usage.ru_nswap));
+#endif
+#ifdef HAVE_RUSAGE_RU_INBLOCK
+    IK_ASS(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_INBLOCK),
+	   ika_integer_from_long(pcb, usage.ru_inblock));
+#endif
+#ifdef HAVE_RUSAGE_RU_OUBLOCK
+    IK_ASS(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_OUBLOCK),
+	   ika_integer_from_long(pcb, usage.ru_oublock));
+#endif
+#ifdef HAVE_RUSAGE_RU_MSGSND
+    IK_ASS(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_MSGSND),
+	   ika_integer_from_long(pcb, usage.ru_msgsnd));
+#endif
+#ifdef HAVE_RUSAGE_RU_MSGRCV
+    IK_ASS(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_MSGRCV),
+	   ika_integer_from_long(pcb, usage.ru_msgrcv));
+#endif
+#ifdef HAVE_RUSAGE_RU_NSIGNALS
+    IK_ASS(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_NSIGNALS),
+	   ika_integer_from_long(pcb, usage.ru_nsignals));
+#endif
+#ifdef HAVE_RUSAGE_RU_NVCSW
+    IK_ASS(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_NVCSW),
+	   ika_integer_from_long(pcb, usage.ru_nvcsw));
+#endif
+#ifdef HAVE_RUSAGE_RU_NIVCSW
+    IK_ASS(IK_FIELD(s_rusage,VICARE_POSIX_STRUCT_RUSAGE_RU_NIVCSW),
+	   ika_integer_from_long(pcb, usage.ru_nivcsw));
+#endif
     return IK_FIX(0);
   } else
     return ik_errno_to_code();

@@ -288,6 +288,7 @@
 
     ;; resource limits
     posix-getrlimit			posix-setrlimit
+    posix-getrusage
     linux-prlimit
 
     ;; mathematics
@@ -1630,6 +1631,9 @@
 
 (define-inline (posix-setrlimit resource rlimit)
   (foreign-call "ikrt_posix_setrlimit" resource rlimit))
+
+(define-inline (posix-getrusage processes rusage)
+  (foreign-call "ikrt_posix_getrusage" processes rusage))
 
 (define-inline (linux-prlimit pid resource new-limit old-limit)
   (foreign-call "ikrt_linux_prlimit" pid resource new-limit old-limit))

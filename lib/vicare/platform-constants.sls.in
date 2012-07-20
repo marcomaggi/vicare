@@ -445,6 +445,9 @@
     RLIMIT_RSS		RLIMIT_RTPRIO		RLIMIT_RTTIME
     RLIMIT_SIGPENDING	RLIMIT_STACK
 
+;;;; For "getrusage()".
+    RUSAGE_SELF		RUSAGE_CHILDREN		RUSAGE_THREAD
+
 ;;; --------------------------------------------------------------------
 
 ;;; errno codes, reexported from (vicare errno)
@@ -1444,6 +1447,11 @@
 ;;
 ;;(define-inline-constant RLIM_INFINITY		@VALUEOF_RLIM_INFINITY@)
 (define-inline-constant RLIM_INFINITY		#f)
+
+;;; For "getrusage()".
+(define-inline-constant RUSAGE_SELF		@VALUEOF_RUSAGE_SELF@)
+(define-inline-constant RUSAGE_CHILDREN		@VALUEOF_RUSAGE_CHILDREN@)
+(define-inline-constant RUSAGE_THREAD		@VALUEOF_RUSAGE_THREAD@)
 
 
 ;;;; h_errno friendly interface
