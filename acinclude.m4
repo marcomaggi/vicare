@@ -18,6 +18,9 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_GLOB_H
 #  include <glob.h>
 #endif
+#ifdef HAVE_SYS_INOTIFY_H
+#  include <sys/inotify.h>
+#endif
 #ifdef HAVE_INTTYPES_H
 #  include <inttypes.h>
 #endif

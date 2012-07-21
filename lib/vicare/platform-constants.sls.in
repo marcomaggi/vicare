@@ -393,6 +393,19 @@
     TFD_CLOEXEC		TFD_NONBLOCK
     TFD_TIMER_ABSTIME
 
+;;;; inotify
+    IN_NONBLOCK		IN_CLOEXEC
+
+    IN_ACCESS		IN_ATTRIB	IN_CLOSE_WRITE
+    IN_CLOSE_NOWRITE	IN_CREATE	IN_DELETE
+    IN_DELETE_SELF	IN_MODIFY	IN_MOVE_SELF
+    IN_MOVED_FROM	IN_MOVED_TO	IN_OPEN
+    IN_ALL_EVENTS	IN_MOVE		IN_CLOSE
+
+    IN_DONT_FOLLOW	IN_EXCL_UNLINK	IN_MASK_ADD
+    IN_ONESHOT		IN_ONLYDIR	IN_IGNORED
+    IN_ISDIR		IN_Q_OVERFLOW	IN_UNMOUNT
+
 ;;;; clock
     CLOCK_MONOTONIC_RAW CLOCK_PROCESS_CPUTIME_ID
     CLOCK_THREAD_CPUTIME_ID
@@ -1346,6 +1359,36 @@
 (define-inline-constant TFD_CLOEXEC		@VALUEOF_TFD_CLOEXEC@)
 (define-inline-constant TFD_NONBLOCK		@VALUEOF_TFD_NONBLOCK@)
 (define-inline-constant TFD_TIMER_ABSTIME	@VALUEOF_TFD_TIMER_ABSTIME@)
+
+;;; inotify
+(define-inline-constant IN_NONBLOCK		@VALUEOF_IN_NONBLOCK@)
+(define-inline-constant IN_CLOEXEC		@VALUEOF_IN_CLOEXEC@)
+
+(define-inline-constant IN_ACCESS		@VALUEOF_IN_ACCESS@)
+(define-inline-constant IN_ATTRIB		@VALUEOF_IN_ATTRIB@)
+(define-inline-constant IN_CLOSE_WRITE		@VALUEOF_IN_CLOSE_WRITE@)
+(define-inline-constant IN_CLOSE_NOWRITE	@VALUEOF_IN_CLOSE_NOWRITE@)
+(define-inline-constant IN_CREATE		@VALUEOF_IN_CREATE@)
+(define-inline-constant IN_DELETE		@VALUEOF_IN_DELETE@)
+(define-inline-constant IN_DELETE_SELF		@VALUEOF_IN_DELETE_SELF@)
+(define-inline-constant IN_MODIFY		@VALUEOF_IN_MODIFY@)
+(define-inline-constant IN_MOVE_SELF		@VALUEOF_IN_MOVE_SELF@)
+(define-inline-constant IN_MOVED_FROM		@VALUEOF_IN_MOVED_FROM@)
+(define-inline-constant IN_MOVED_TO		@VALUEOF_IN_MOVED_TO@)
+(define-inline-constant IN_OPEN			@VALUEOF_IN_OPEN@)
+(define-inline-constant IN_ALL_EVENTS		@VALUEOF_IN_ALL_EVENTS@)
+(define-inline-constant IN_MOVE			@VALUEOF_IN_MOVE@)
+(define-inline-constant IN_CLOSE		@VALUEOF_IN_CLOSE@)
+
+(define-inline-constant IN_DONT_FOLLOW		@VALUEOF_IN_DONT_FOLLOW@)
+(define-inline-constant IN_EXCL_UNLINK		@VALUEOF_IN_EXCL_UNLINK@)
+(define-inline-constant IN_MASK_ADD		@VALUEOF_IN_MASK_ADD@)
+(define-inline-constant IN_ONESHOT		@VALUEOF_IN_ONESHOT@)
+(define-inline-constant IN_ONLYDIR		@VALUEOF_IN_ONLYDIR@)
+(define-inline-constant IN_IGNORED		@VALUEOF_IN_IGNORED@)
+(define-inline-constant IN_ISDIR		@VALUEOF_IN_ISDIR@)
+(define-inline-constant IN_Q_OVERFLOW		@VALUEOF_IN_Q_OVERFLOW@)
+(define-inline-constant IN_UNMOUNT		@VALUEOF_IN_UNMOUNT@)
 
 ;;; clock
 (define-inline-constant CLOCK_MONOTONIC_RAW	@VALUEOF_CLOCK_MONOTONIC_RAW@)

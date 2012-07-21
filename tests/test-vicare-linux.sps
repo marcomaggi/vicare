@@ -25,6 +25,7 @@
 ;;;
 
 
+#!r6rs
 (import (vicare)
   (prefix (vicare linux)
 	  lx.)
@@ -36,6 +37,21 @@
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare GNU+Linux functions\n")
+
+
+;;;; helpers
+
+(define-syntax with-temporary-file
+  (syntax-rules ()
+    ((_ (?pathname ?fd) . ?body)
+     (let ((ptn ?pathname))
+       (when (file-exists? ptn)
+	 (delete-file ptn))
+       (let ((?fd (px.open ptn (fxior O_CREAT O_EXCL O_RDWR) (fxior S_IRUSR S_IWUSR))))
+	 (unwind-protect
+	     (begin . ?body)
+	   (px.close ?fd)
+	   (delete-file ptn)))))))
 
 
 (parametrise ((check-test-name	'termination-status))
@@ -266,9 +282,59 @@
 	(log curr))
     => '(1 2 0 0))
 
+  #t)
+
+
+(parametrise ((check-test-name	'inotify))
+
+;;; initialise and close
+
+  (check
+      (let ((fd (lx.inotify-init)))
+	(unwind-protect
+	    (fixnum? fd)
+	  (px.close fd)))
+    => #t)
+
+  (check
+      (let ((fd (lx.inotify-init1 IN_NONBLOCK)))
+	(unwind-protect
+	    (fixnum? fd)
+	  (px.close fd)))
+    => #t)
+
 ;;; --------------------------------------------------------------------
+;;; watcher creation and removal
 
+  (check
+      (let ((fd		(lx.inotify-init))
+	    (ptn	"inotify.test"))
+	(with-temporary-file (ptn fd1)
+	  (let ((wd (lx.inotify-add-watch fd ptn IN_MODIFY)))
+	    (unwind-protect
+		(integer? wd)
+	      (lx.inotify-rm-watch fd wd)))))
+    => #t)
 
+;;; --------------------------------------------------------------------
+;;; watcher event reading
+
+  (check
+      (let ((infd	(lx.inotify-init))
+	    (ptn	"inotify.test"))
+	(with-temporary-file (ptn fd)
+	  (let ((wd (lx.inotify-add-watch infd ptn IN_MODIFY)))
+	    (unwind-protect
+		(begin
+		  (px.write fd #vu8(1 2 3))
+		  (let-values (((r w x) (px.select-fd infd 1 0)))
+		    (let ((ev (lx.inotify-read infd)))
+		      (and (lx.struct-inotify-event? ev)
+			   (= wd (lx.struct-inotify-event-wd ev))
+			   (zero? (lx.struct-inotify-event-len ev))
+			   (not (lx.struct-inotify-event-name ev))))))
+	      (lx.inotify-rm-watch infd wd)))))
+    => #t)
 
   #t)
 

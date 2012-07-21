@@ -13100,6 +13100,7 @@ behaviour is undefined.
                                 file descriptors.
 * linux timerfd::               Timer expiration handling through
                                 file descriptors.
+* linux inotify::               Monitoring file system events.
 @end menu
 
 @c page
@@ -13739,6 +13740,159 @@ after 0.3 seconds: 1
 we notice that right after starting the timer: the number of expirations
 is @math{1} because the timer starts @math{1} nanosecond after the call
 to @func{timerfd-settime}, which is almost immediately.
+
+@c page
+@node linux inotify
+@section Monitoring file system events
+
+
+The @code{inotify} @api{} allows us to monitor file system events; for
+an overview of the @api{} we must refer to the @code{inotify(7)} manual
+page.
+
+
+@deftp {Struct Type} struct-inotify-event
+Scheme level representation of the C language type @code{struct
+inotify-event}, see the @code{inotify(7)} manual page.  It has the
+following fields:
+
+@table @code
+@item wd
+An exact integer in the range of the C language type @code{int}.
+
+@item mask
+An exact integer in the range of the C language type @code{uint32_t}.
+
+@item cookie
+An exact integer in the range of the C language type @code{uint32_t}.
+
+@item len
+An exact integer in the range of the C language type @code{uint32_t}.
+Zero or the number of bytes in the pathname represented by the
+@code{name} field.
+
+@item name
+A bytevector representing a file system pathname or @false{}.
+@end table
+@end deftp
+
+
+@defun make-struct-inotify-event
+@defunx make-struct-inotify-event @var{wd} @var{mask} @var{cookie} @var{len} @var{name}
+Build and return a new instance of @code{struct-inotify-event}.  When no
+arguments are given: all the fields are set to the fixnum zero, but the
+field @var{name} which is set to @false{}.
+@end defun
+
+
+@defun struct-inotify-event? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@code{struct-inotify-event}.
+@end defun
+
+
+@defun struct-inotify-event-wd @var{iev}
+@defunx struct-inotify-event-mask @var{iev}
+@defunx struct-inotify-event-cookie @var{iev}
+@defunx struct-inotify-event-len @var{iev}
+@defunx struct-inotify-event-name @var{iev}
+Accessors for the fields of @code{struct-inotify-event}.
+@end defun
+
+
+@defun set-struct-inotify-event-wd! @var{iev} @var{value}
+@defunx set-struct-inotify-event-mask! @var{iev} @var{value}
+@defunx set-struct-inotify-event-cookie! @var{iev} @var{value}
+@defunx set-struct-inotify-event-len! @var{iev} @var{value}
+@defunx set-struct-inotify-event-name! @var{iev} @var{value}
+Mutators for the fields of @code{struct-inotify-event}.
+@end defun
+
+
+@defun inotify-init
+Interface to the C function @cfunc{inotify_init}, see the manual page
+@code{inotify_init(2)}.  Initialise a new @code{inotify} instance; if
+successful return a file descriptor associated to a new event queue,
+else raise an exception.
+@end defun
+
+
+@defun inotify-init1 @var{flags}
+Interface to the C function @cfunc{inotify_init1}, see the manual page
+@code{inotify_init1(2)}.  Initialise a new @code{inotify} instance; if
+successful return a file descriptor associated to a new event queue,
+else raise an exception.
+
+@var{flags} must be a fixnum representing the bitwise inclusive OR
+combination of @code{IN_NONBLOCK} and @code{IN_CLOEXEC}.
+@end defun
+
+
+@defun inotify-add-watch @var{fd} @var{pathname} @var{mask}
+Interface to the C function @cfunc{inotify_add_watch}, see the manual
+page @code{inotify_add_watch(2)}.  Add a watch to an initialised
+@code{inotify} instance; if successful return an exact integer
+representing watch descriptor, else raise an exception.
+
+@var{fd} must be a finxum representing the file descriptor associated to
+the @code{inotify} instance.  @var{pathname} must be a Scheme string or
+bytevector representing the pathname to watch.  @var{mask} must be an
+exact integer in the range of the C language type @code{uint32_t}
+representing the watch mask.
+@end defun
+
+
+@defun inotify-rm-watch @var{fd} @var{wd}
+Interface to the C function @cfunc{inotify_rm_watch}, see the manual
+page @code{inotify_rm_watch(2)}.  Remove an existing watch from an
+@code{inotify} instance; if successful return unspecified values, else
+raise an exception.
+
+@var{fd} must be a fixnum representing the file descriptor associated to
+the @code{inotify} instance.  @var{wd} must be an exact integer in the
+range of the C language type @code{int} representing the watch
+descriptor.
+@end defun
+
+
+The following meaningless example shows how to watch for a modification
+event on a file:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare linux) lx.)
+  (prefix (vicare posix) px.)
+  (vicare platform-constants)
+  (vicare syntactic-extensions))
+
+(let* ((infd     (lx.inotify-init))
+       (pathname "inotify.test")
+       (fd       (px.open pathname
+                          (fxior O_CREAT O_EXCL O_RDWR)
+                          (fxior S_IRUSR S_IWUSR))))
+  (unwind-protect
+       (let ((wd (lx.inotify-add-watch infd pathname
+                                       IN_MODIFY)))
+         (unwind-protect
+              (begin
+                (px.write fd #vu8(1 2 3))
+                ;; let the event happen
+                (px.select-fd infd 1 0)
+                (let ((ev (lx.inotify-read infd)))
+                  (lx.struct-inotify-event? ev)
+                  @result{} #t
+                  (= wd (lx.struct-inotify-event-wd ev))
+                  @result{} #t
+                  (lx.struct-inotify-event-len ev)
+                  @result{} 0
+                  (lx.struct-inotify-event-name ev)
+                  @result{} #f
+                  ))
+              (lx.inotify-rm-watch infd wd)))
+     (px.close fd)
+     (delete-file pathname)))
+@end example
 
 @c page
 @node syslib

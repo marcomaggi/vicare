@@ -121,6 +121,11 @@
     linux-timerfd-create		linux-timerfd-read
     linux-timerfd-settime		linux-timerfd-gettime
 
+    ;; inotify
+    linux-inotify-init			linux-inotify-init1
+    linux-inotify-add-watch		linux-inotify-rm-watch
+    linux-inotify-read
+
     ;; file system inspection
     posix-stat				posix-lstat
     posix-fstat
@@ -732,7 +737,8 @@
 (define-inline (linux-read-signalfd-siginfo fd info)
   (foreign-call "ikrt_linux_read_signalfd_siginfo" fd info))
 
-;;; --------------------------------------------------------------------
+
+;;;; timer file descriptors
 
 (define-inline (linux-timerfd-create clockid flags)
   (foreign-call "ikrt_linux_timerfd_create" clockid flags))
@@ -745,6 +751,24 @@
 
 (define-inline (linux-timerfd-read fd)
   (foreign-call "ikrt_linux_timerfd_read" fd))
+
+
+;;;; inotify, monitoring file system events
+
+(define-inline (linux-inotify-init)
+  (foreign-call "ikrt_linux_inotify_init"))
+
+(define-inline (linux-inotify-init1 flags)
+  (foreign-call "ikrt_linux_inotify_init1" flags))
+
+(define-inline (linux-inotify-add-watch fd pathname mask)
+  (foreign-call "ikrt_linux_inotify_add_watch" fd pathname mask))
+
+(define-inline (linux-inotify-rm-watch fd wd)
+  (foreign-call "ikrt_linux_inotify_rm_watch" fd wd))
+
+(define-inline (linux-inotify-read fd event)
+  (foreign-call "ikrt_linux_inotify_read" fd event))
 
 
 ;;;; file system inspection

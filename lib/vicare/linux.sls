@@ -60,14 +60,22 @@
     signalfd				read-signalfd-siginfo
 
     make-struct-signalfd-siginfo	struct-signalfd-siginfo?
-    struct-signalfd-siginfo-ssi_signo	struct-signalfd-siginfo-ssi_errno
-    struct-signalfd-siginfo-ssi_code	struct-signalfd-siginfo-ssi_pid
-    struct-signalfd-siginfo-ssi_uid	struct-signalfd-siginfo-ssi_fd
-    struct-signalfd-siginfo-ssi_tid	struct-signalfd-siginfo-ssi_band
-    struct-signalfd-siginfo-ssi_overrun	struct-signalfd-siginfo-ssi_trapno
-    struct-signalfd-siginfo-ssi_status	struct-signalfd-siginfo-ssi_int
-    struct-signalfd-siginfo-ssi_ptr	struct-signalfd-siginfo-ssi_utime
-    struct-signalfd-siginfo-ssi_stime	struct-signalfd-siginfo-ssi_addr
+    struct-signalfd-siginfo-ssi_signo	set-struct-signalfd-siginfo-ssi_signo!
+    struct-signalfd-siginfo-ssi_errno	set-struct-signalfd-siginfo-ssi_errno!
+    struct-signalfd-siginfo-ssi_code	set-struct-signalfd-siginfo-ssi_code!
+    struct-signalfd-siginfo-ssi_pid	set-struct-signalfd-siginfo-ssi_pid!
+    struct-signalfd-siginfo-ssi_uid	set-struct-signalfd-siginfo-ssi_uid!
+    struct-signalfd-siginfo-ssi_fd	set-struct-signalfd-siginfo-ssi_fd!
+    struct-signalfd-siginfo-ssi_tid	set-struct-signalfd-siginfo-ssi_tid!
+    struct-signalfd-siginfo-ssi_band	set-struct-signalfd-siginfo-ssi_band!
+    struct-signalfd-siginfo-ssi_overrun	set-struct-signalfd-siginfo-ssi_overrun!
+    struct-signalfd-siginfo-ssi_trapno	set-struct-signalfd-siginfo-ssi_trapno!
+    struct-signalfd-siginfo-ssi_status	set-struct-signalfd-siginfo-ssi_status!
+    struct-signalfd-siginfo-ssi_int	set-struct-signalfd-siginfo-ssi_int!
+    struct-signalfd-siginfo-ssi_ptr	set-struct-signalfd-siginfo-ssi_ptr!
+    struct-signalfd-siginfo-ssi_utime	set-struct-signalfd-siginfo-ssi_utime!
+    struct-signalfd-siginfo-ssi_stime	set-struct-signalfd-siginfo-ssi_stime!
+    struct-signalfd-siginfo-ssi_addr	set-struct-signalfd-siginfo-ssi_addr!
 
     ;; timer event through file descriptors
     timerfd-create			timerfd-read
@@ -85,6 +93,19 @@
 	    (px.struct-itimerspec-it_value		struct-itimerspec-it_value)
 	    (px.set-struct-itimerspec-it_interval!	set-struct-itimerspec-it_interval!)
 	    (px.set-struct-itimerspec-it_value!		set-struct-itimerspec-it_value!))
+
+    ;; inotify, monitoring file system events
+    inotify-init			inotify-init1
+    inotify-add-watch			inotify-rm-watch
+    inotify-read
+
+    (rename (%make-struct-inotify-event		make-struct-inotify-event))
+    struct-inotify-event?
+    struct-inotify-event-wd		set-struct-inotify-event-wd!
+    struct-inotify-event-mask		set-struct-inotify-event-mask!
+    struct-inotify-event-cookie		set-struct-inotify-event-cookie!
+    struct-inotify-event-len		set-struct-inotify-event-len!
+    struct-inotify-event-name		set-struct-inotify-event-name!
     )
   (import (vicare)
     (vicare syntactic-extensions)
@@ -124,6 +145,10 @@
 (define-argument-validation (string who obj)
   (string? obj)
   (assertion-violation who "expected string as argument" obj))
+
+(define-argument-validation (pathname who obj)
+  (or (bytevector? obj) (string? obj))
+  (assertion-violation who "expected string or bytevector as pathname argument" obj))
 
 (define-argument-validation (pointer who obj)
   (pointer? obj)
@@ -220,6 +245,16 @@
       (%valid-struct-rlimit? obj))
   (assertion-violation who "expected false or struct-rlimit as argument" obj))
 
+(define-argument-validation (inotify-event who obj)
+  (%valid-struct-inotify-event? obj)
+  (assertion-violation who "expected struct-inotify-event as argument" obj))
+
+(define-argument-validation (inotify-watch-descriptor who obj)
+  (words.signed-int? obj)
+  (assertion-violation who
+    "expected C language \"int\" exact integer as inotify watch descriptor argument"
+    obj))
+
 
 ;;;; helpers
 
@@ -243,6 +278,15 @@
   (and (px.struct-rlimit? obj)
        (words.word-s64? (px.struct-rlimit-rlim_cur obj))
        (words.word-s64? (px.struct-rlimit-rlim_max obj))))
+
+(define (%valid-struct-inotify-event? obj)
+  (and (struct-inotify-event? obj)
+       (words.signed-int? (struct-inotify-event-wd obj))
+       (words.word-u32? (struct-inotify-event-mask obj))
+       (words.word-u32? (struct-inotify-event-cookie obj))
+       (words.word-u32? (struct-inotify-event-len obj))
+       (let ((name (struct-inotify-event-name obj)))
+	 (or (not name) (bytevector? name)))))
 
 
 ;;;; process termination status
@@ -532,9 +576,90 @@
 	(%raise-errno-error who rv fd)))))
 
 
+;;;; inotify, monitoring file system events
+
+(define-struct struct-inotify-event
+  (wd mask cookie len name))
+
+(define (%struct-inotify-event-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-inotify-event\"")
+  (%display " wd=")	(%display (struct-inotify-event-wd	S))
+  (%display " mask=")	(%display (struct-inotify-event-mask	S))
+  (%display " cookie=")	(%display (struct-inotify-event-cookie	S))
+  (%display " len=")	(%display (struct-inotify-event-len	S))
+  (%display " name=")	(%display (struct-inotify-event-name	S))
+  (%display "]"))
+
+(define %make-struct-inotify-event
+  (case-lambda
+   (()
+    (make-struct-inotify-event 0 0 0 0 #f))
+   ((wd mask cookie len name)
+    (make-struct-inotify-event wd mask cookie len name))))
+
+;;; --------------------------------------------------------------------
+
+(define (inotify-init)
+  (define who 'inotify-init)
+  (let ((rv (capi.linux-inotify-init)))
+    (if (unsafe.fx< 0 rv)
+	rv
+      (%raise-errno-error who rv))))
+
+(define (inotify-init1 flags)
+  (define who 'inotify-init1)
+  (with-arguments-validation (who)
+      ((fixnum	flags))
+    (let ((rv (capi.linux-inotify-init1 flags)))
+      (if (unsafe.fx< 0 rv)
+	  rv
+	(%raise-errno-error who rv flags)))))
+
+(define (inotify-add-watch fd pathname mask)
+  (define who 'inotify-add-watch)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd)
+       (pathname	pathname)
+       (uint32		mask))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.linux-inotify-add-watch fd pathname.bv mask)))
+	(if (not (negative? rv))
+	    rv
+	  (%raise-errno-error who rv fd pathname mask))))))
+
+(define (inotify-rm-watch fd wd)
+  (define who 'inotify-rm-watch)
+  (with-arguments-validation (who)
+      ((file-descriptor			fd)
+       (inotify-watch-descriptor	wd))
+    (let ((rv (capi.linux-inotify-rm-watch fd wd)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv fd wd)))))
+
+(define inotify-read
+  (case-lambda
+   ((fd)
+    (inotify-read fd (%make-struct-inotify-event)))
+   ((fd event)
+    (define who 'inotify-read)
+    (with-arguments-validation (who)
+	((file-descriptor	fd)
+	 (inotify-event		event))
+      (let ((rv (capi.linux-inotify-read fd event)))
+	(cond ((struct-inotify-event? rv)
+	       event)
+	      ((unsafe.fxzero? rv)
+	       rv)
+	      (else
+	       (%raise-errno-error who rv fd event))))))))
+
+
 ;;;; done
 
 (set-rtd-printer! (type-descriptor struct-signalfd-siginfo)	%struct-signalfd-siginfo-printer)
+(set-rtd-printer! (type-descriptor struct-inotify-event)	%struct-inotify-event-printer)
 
 )
 

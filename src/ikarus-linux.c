@@ -49,6 +49,9 @@
 #ifdef HAVE_SYS_EPOLL_H
 #  include <sys/epoll.h>
 #endif
+#ifdef HAVE_SYS_INOTIFY_H
+#  include <sys/inotify.h>
+#endif
 #ifdef HAVE_SYS_MMAN_H
 #  include <sys/mman.h>
 #endif
@@ -616,5 +619,121 @@ ikrt_linux_prlimit (ikptr s_pid, ikptr s_resource,
 #endif
 }
 
+
+/** --------------------------------------------------------------------
+ ** Inotify API, monitoring file system events.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_linux_inotify_init (void)
+/* Interface  to  the C  function  "inotify_init()".   Initialise a  new
+   inotify instance;  if successful return a  file descriptor associated
+   to a new event queue, else return an encoded "errno" value. */
+{
+#ifdef HAVE_INOTIFY_INIT
+  int		rv;
+  errno = 0;
+  rv    = inotify_init();
+  return (-1 != rv)? IK_FD_TO_NUM(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_linux_inotify_init1 (ikptr s_flags)
+/* Interface  to the  C  function "inotify_init1()".   Initialise a  new
+   inotify instance;  if successful return a  file descriptor associated
+   to a new event queue, else return an encoded "errno" value.
+
+   S_FLAGS  must  be a  fixnum  representing  the bitwise  inclusive  OR
+   combination of IN_NONBLOCK and IN_CLOEXEC. */
+{
+#ifdef HAVE_INOTIFY_INIT1
+  int		rv;
+  errno = 0;
+  rv    = inotify_init1(IK_UNFIX(s_flags));
+  return (-1 != rv)? IK_FD_TO_NUM(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_linux_inotify_add_watch (ikptr s_fd, ikptr s_pathname, ikptr s_mask, ikpcb * pcb)
+/* Interface to the C function "inotify_add_watch()".  Add a watch to an
+   initialised   inotify  instance;   if  successful   return  a   watch
+   descriptor, else return an encoded "errno" value.
+
+   S_FD must be a finxum  representing the file descriptor associated to
+   the inotify  instance.  S_PATHNAME must be  a bytevector representing
+   the pathname to watch.  S_MASK must  be an exact integer in the range
+   of the C language type "uint32_t" representing the watch mask. */
+{
+#ifdef HAVE_INOTIFY_ADD_WATCH
+  const char *	pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
+  uint32_t	mask     = ik_integer_to_uint32(s_mask);
+  int		rv;
+  errno = 0;
+  rv    = inotify_add_watch(IK_NUM_TO_FD(s_fd), pathname, mask);
+  return (0 < rv)? ika_integer_from_int(pcb, rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_linux_inotify_rm_watch (ikptr s_fd, ikptr s_wd)
+/* Interface to the C function "inotify_rm_watch()".  Remove an existing
+   watch from an inotify instance; if successful return the fixnum zero,
+   else return an encoded "errno" value.
+
+   S_FD must be a fixnum  representing the file descriptor associated to
+   the inotify instance.  S_WD must be  an exact integer in the range of
+   the C language type "int" representing the watch descriptor. */
+{
+#ifdef HAVE_INOTIFY_RM_WATCH
+  int		wd = ik_integer_to_int(s_wd);
+  int		rv;
+  errno = 0;
+  rv    = inotify_rm_watch(IK_NUM_TO_FD(s_fd), wd);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_linux_inotify_read (ikptr s_fd, ikptr s_event, ikpcb * pcb)
+/* Perform a "read()" operation on S_FD, which must be a file descriptor
+   associated to an  inotify instance.  If the  operation is successful:
+   fill  S_EVENT with  the  result  and return  S_EVENT  itself; if  the
+   operation  fails with  EWOULDBLOCK: the  return value  is zero;  else
+   return an encoded "errno" value. */
+{
+#undef IK_INOTIFY_EVENT_BUFFER_SIZE
+#define IK_INOTIFY_EVENT_BUFFER_SIZE	4096
+  uint8_t	buffer[IK_INOTIFY_EVENT_BUFFER_SIZE];
+  int		rv;
+  errno = 0;
+  rv    = read(IK_NUM_TO_FD(s_fd), buffer, IK_INOTIFY_EVENT_BUFFER_SIZE);
+  if (0 < rv) {
+    struct inotify_event *ev = (void*)buffer;
+    pcb->root0 = &s_event;
+    {
+      IK_ASS(IK_FIELD(s_event,0), ika_integer_from_int(pcb, ev->wd));
+      IK_ASS(IK_FIELD(s_event,1), ika_integer_from_uint32(pcb, ev->mask));
+      IK_ASS(IK_FIELD(s_event,2), ika_integer_from_uint32(pcb, ev->cookie));
+      IK_ASS(IK_FIELD(s_event,3), ika_integer_from_uint32(pcb, ev->len));
+      if (ev->len) {
+	IK_ASS(IK_FIELD(s_event,4),
+	       ika_bytevector_from_cstring_len(pcb, ev->name, (size_t)ev->len));
+      } else {
+	IK_ASS(IK_FIELD(s_event,4), false_object);
+      }
+    }
+    pcb->root0 = NULL;
+    return s_event;
+  } else if (EWOULDBLOCK == errno) {
+    return IK_FIX(0);
+  } else
+    return ik_errno_to_code();
+}
 
 /* end of file */

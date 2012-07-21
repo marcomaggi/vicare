@@ -150,7 +150,7 @@ AM_COND_IF([WANT_POSIX],
    AC_CHECK_HEADERS([fnmatch.h ftw.h glob.h grp.h mqueue.h netdb.h paths.h poll.h utime.h regex.h wordexp.h sys/ioctl.h sys/mount.h sys/un.h sys/utsname.h sys/uio.h semaphore.h])])
 
 AM_COND_IF([WANT_LINUX],
-  [AC_CHECK_HEADERS([sys/epoll.h sys/signalfd.h sys/timerfd.h])])
+  [AC_CHECK_HEADERS([sys/epoll.h sys/signalfd.h sys/timerfd.h sys/inotify.h])])
 
 AC_HEADER_TIME
 
@@ -1227,6 +1227,20 @@ AM_COND_IF([WANT_LINUX],
   [VICARE_CONSTANT_TESTS([TFD_CLOEXEC TFD_NONBLOCK TFD_TIMER_ABSTIME])],
   [VICARE_CONSTANT_FALSES([TFD_CLOEXEC TFD_NONBLOCK TFD_TIMER_ABSTIME])])
 
+# inotify
+AM_COND_IF([WANT_LINUX],
+  [VICARE_CONSTANT_TESTS([IN_ACCESS IN_ATTRIB IN_CLOSE_WRITE IN_CLOSE_NOWRITE
+     IN_CREATE IN_DELETE IN_DELETE_SELF IN_MODIFY IN_MOVE_SELF IN_MOVED_FROM
+     IN_MOVED_TO IN_OPEN IN_NONBLOCK IN_CLOEXEC IN_ALL_EVENTS IN_MOVE IN_CLOSE])],
+  [VICARE_CONSTANT_FALSES([IN_ACCESS IN_ATTRIB IN_CLOSE_WRITE IN_CLOSE_NOWRITE
+     IN_CREATE IN_DELETE IN_DELETE_SELF IN_MODIFY IN_MOVE_SELF IN_MOVED_FROM
+     IN_MOVED_TO IN_OPEN IN_NONBLOCK IN_CLOEXEC IN_ALL_EVENTS IN_MOVE IN_CLOSE])])
+AM_COND_IF([WANT_LINUX],
+  [VICARE_CONSTANT_TESTS([IN_DONT_FOLLOW IN_EXCL_UNLINK IN_MASK_ADD IN_ONESHOT
+     IN_ONLYDIR IN_IGNORED IN_ISDIR IN_Q_OVERFLOW IN_UNMOUNT])],
+  [VICARE_CONSTANT_FALSES([IN_DONT_FOLLOW IN_EXCL_UNLINK IN_MASK_ADD IN_ONESHOT
+     IN_ONLYDIR IN_IGNORED IN_ISDIR IN_Q_OVERFLOW IN_UNMOUNT])])
+
 dnl --------------------------------------------------------------------
 
 # Struct "siginfo_t", values for field `si_code'.
@@ -1354,6 +1368,7 @@ int main (void)
   AC_CHECK_FUNCS([signalfd])
   AC_CHECK_FUNCS([timerfd_create timerfd_settime timerfd_gettime])
   AC_CHECK_FUNCS([prlimit])
+  AC_CHECK_FUNCS([inotify_init inotify_init1 inotify_add_watch inotify_rm_watch])
 ])
 
 dnl --------------------------------------------------------------------
