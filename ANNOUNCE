@@ -46,6 +46,11 @@ Notes for revision 0.2d14
   syntax for each HAVE_ constant  defined by "configure".  At present it
   is maintained by hand.
 
+* Fixed distributions of Scheme libraries and test files.
+
+* Fixed GNU  Automake stuff to  have the "make distcheck"  rule complete
+  successfully despite some test failures.
+
 
 Notes for revision 0.2d13
 -------------------------

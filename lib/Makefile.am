@@ -1,10 +1,10 @@
 ## Process this file with automake to produce Makefile.in
 
-EXTRA_DIST		= \
-			  vicare/errno.sls.in			\
-			  vicare/platform-constants.sls.in	\
-			  vicare/words.sls.in			\
-			  vicare/installation-configuration.sls.in
+EXTRA_DIST = \
+	vicare/errno.sls.in			\
+	vicare/platform-constants.sls.in	\
+	vicare/words.sls.in			\
+	vicare/installation-configuration.sls.in
 
 #vicare/platform/features.sls.in
 
@@ -151,5 +151,7 @@ features_SOURCES	= features.c
 
 vicare/platform/features.sls : features
 	$(MKDIR_P) vicare/platform && ./features >$@
+
+CLEANFILES	= vicare/platform/features.sls
 
 ### end of file

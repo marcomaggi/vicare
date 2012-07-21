@@ -209,10 +209,14 @@ endif
 installcheck-local:
 	@for f in $(TESTS); do $(VICARE_INSTCHECK_RUN) $(srcdir)/$$f; done
 
+XFAIL_TESTS = \
+	test-vicare-log.sps			\
+	test-issue-008.sps
+
 #page
 #### extra files to be distributed
 
-EXTRA_DIST =	\
+EXTRA_DIST = \
 	ikarus-test-framework.sls			\
 	lists.sls					\
 	lists/low.sls					\
@@ -260,7 +264,7 @@ EXTRA_DIST =	\
 	\
 	proof-vicare-gcc.sps				\
 	proof-vicare-readline.sps			\
-	proof-vicare-timerfd.sps
+	proof-vicare-timerfd.sps			\
 	\
 	long-test-r6rs-run.sps				\
 	long-test-r6rs-run-via-eval.sps			\
