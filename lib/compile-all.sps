@@ -28,6 +28,7 @@
 (import
   (only (vicare installation-configuration))
   (only (vicare platform-constants))
+  (only (vicare platform features))
   (only (vicare errno))
   (only (vicare include))
   (only (vicare syntactic-extensions))

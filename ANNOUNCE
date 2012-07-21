@@ -42,7 +42,9 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d14
 -------------------------
 
-*
+* Added  library (vicare  platform  features)  exporting one  identifier
+  syntax for each HAVE_ constant  defined by "configure".  At present it
+  is maintained by hand.
 
 
 Notes for revision 0.2d13

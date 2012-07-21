@@ -7224,6 +7224,10 @@ library; if a constant value is not exported file a feature request for
 the project.  If a constant is not defined on a platform: its value is
 set to @false{}.
 
+The library @library{vicare platform features} exports one identifier
+syntax for each @code{HAVE_} symbol defined by @value{PRJNAME}
+@command{configure} script, expanding to @true{} or @false{}.
+
 @menu
 * posix conventions::           Conventions about the @posix{} @api{}.
 * posix conditions::            Condition object types.
@@ -13084,6 +13088,10 @@ identifier syntaxes exported by the @library{vicare platform-constants}
 library; if a constant value is not exported, file a feature request for
 the project.  If a constant is not defined on a platform: its value is
 set to @false{}.
+
+The library @library{vicare platform features} exports one identifier
+syntax for each @code{HAVE_} symbol defined by @value{PRJNAME}
+@command{configure} script, expanding to @true{} or @false{}.
 
 For a list of Linux--specific system calls, see the @code{syscalls(2)}
 manual page.
