@@ -13,22 +13,24 @@ dist_pkglibexec_SCRIPTS	= compile-all.sps
 libvicaredir		= $(libdir)/scheme
 
 nobase_dist_libvicare_DATA	= \
-	vicare/errno.sls			\
 	vicare/flonum-formatter.sls		\
 	vicare/flonum-parser.sls		\
 	vicare/include.sls			\
-	vicare/installation-configuration.sls	\
 	vicare/keywords.sls			\
 	vicare/parser-logic.sls			\
-	vicare/platform-constants.sls		\
-	vicare/platform/features.sls		\
 	vicare/syntactic-extensions.sls		\
 	vicare/unsafe-capi.sls			\
 	vicare/unsafe-operations.sls		\
 	vicare/unsafe-unicode.sls		\
 	vicare/weak-hashtables.sls		\
-	vicare/words.sls			\
 	vicare/checks.sls
+
+nobase_nodist_libvicare_DATA	= \
+	vicare/errno.sls			\
+	vicare/installation-configuration.sls	\
+	vicare/platform-constants.sls		\
+	vicare/platform/features.sls		\
+	vicare/words.sls
 
 if WANT_LIBFFI
 nobase_dist_libvicare_DATA	+= vicare/ffi.sls
@@ -148,6 +150,6 @@ noinst_PROGRAMS		= features
 features_SOURCES	= features.c
 
 vicare/platform/features.sls : features
-	./features >$@
+	$(MKDIR_P) vicare/platform && ./features >$@
 
 ### end of file
