@@ -6,6 +6,8 @@ EXTRA_DIST		= \
 			  vicare/words.sls.in			\
 			  vicare/installation-configuration.sls.in
 
+#vicare/platform/features.sls.in
+
 dist_pkglibexec_SCRIPTS	= compile-all.sps
 
 libvicaredir		= $(libdir)/scheme
@@ -19,6 +21,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/keywords.sls			\
 	vicare/parser-logic.sls			\
 	vicare/platform-constants.sls		\
+	vicare/platform/features.sls		\
 	vicare/syntactic-extensions.sls		\
 	vicare/unsafe-capi.sls			\
 	vicare/unsafe-operations.sls		\
@@ -138,5 +141,13 @@ endif
 if WANT_CRE2
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-cre2.sps
 endif
+
+## --------------------------------------------------------------------
+
+noinst_PROGRAMS		= features
+features_SOURCES	= features.c
+
+vicare/platform/features.sls : features
+	./features >$@
 
 ### end of file
