@@ -20367,6 +20367,11 @@ bytevector memory block.
 @subsubheading Convenience preprocessor macros
 
 
+@deftypefun {Preprocessor Macro} IK_IS_BYTEVECTOR (ikptr @var{obj})
+Evaluate to true if @var{obj} is a bytevector.
+@end deftypefun
+
+
 @deftypefn {Preprocessor Macro} long IK_BYTEVECTOR_LENGTH (ikptr @var{bv})
 Return the number of bytes in the data area of @var{bv}.
 @end deftypefn
