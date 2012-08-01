@@ -925,7 +925,8 @@ ik_decl ikptr ikrt_vector_copy		(ikptr s_dst, ikptr s_dst_start,
 ik_decl ikptr ika_bytevector_alloc		(ikpcb * pcb, long requested_number_of_bytes);
 ik_decl ikptr ika_bytevector_from_cstring	(ikpcb * pcb, const char * cstr);
 ik_decl ikptr ika_bytevector_from_cstring_len	(ikpcb * pcb, const char * cstr, size_t len);
-ik_decl ikptr ika_bytevector_from_memory_block	(ikpcb * pcb, void * memory, size_t length);
+ik_decl ikptr ika_bytevector_from_memory_block	(ikpcb * pcb, const void * memory,
+						 size_t length);
 ik_decl ikptr ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
 				    ikptr s_src, ikptr s_src_start,
 				    ikptr s_count);

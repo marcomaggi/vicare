@@ -20429,7 +20429,7 @@ the maximum positive fixnum.
 @end deftypefun
 
 
-@deftypefun ikptr ika_bytevector_from_memory_block (ikpcb * @var{pcb}, void * @var{memory}, size_t @var{length})
+@deftypefun ikptr ika_bytevector_from_memory_block (ikpcb * @var{pcb}, const void * @var{memory}, size_t @var{length})
 Allocate, initialise and return a new bytevector and copy in the data
 area @var{length} bytes from of the memory block referenced by
 @var{memory}.

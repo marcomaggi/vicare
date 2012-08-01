@@ -208,7 +208,7 @@ ika_bytevector_from_cstring_len (ikpcb * pcb, const char * cstr, size_t len)
   return s_bv;
 }
 ikptr
-ika_bytevector_from_memory_block (ikpcb * pcb, void * memory, size_t len)
+ika_bytevector_from_memory_block (ikpcb * pcb, const void * memory, size_t len)
 {
   if (len > most_positive_fixnum)
     len = most_positive_fixnum;
