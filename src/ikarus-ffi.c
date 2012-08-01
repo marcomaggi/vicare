@@ -363,7 +363,12 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
     uint8_t *   arg_next = &(args_buffer[0]);
     uint8_t *   arg_end  = arg_next + cif->args_bufsize;
     void *      arg_value_ptrs[1+cif->arity];
-    uint8_t     retval_buffer[cif->retval_type->size];
+    /* It seems  that Libffi expects  at least a return-value  buffer of
+       size  "sizeof(uint64_t)"  even for  smaller  types,  at least  on
+       64-bit platforms.  Let's play it safe and try to forget about it.
+       (Marco Maggi; Aug 1, 2012) */
+    uint8_t     retval_buffer[(cif->retval_type->size < sizeof(uint64_t))? \
+			      sizeof(uint64_t) : cif->retval_type->size];
     /* Fill ARG_VALUE_PTRS  with pointers  to memory blocks  holding the
        native argument values. */
     int  i;
