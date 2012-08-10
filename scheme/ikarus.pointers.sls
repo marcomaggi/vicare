@@ -487,9 +487,6 @@
 
 ;;; pointer manipulation procedures
 
-(define NULL-POINTER
-  (capi.ffi-fixnum->pointer 0))
-
 (define (pointer? obj)
   ;;FIXME Why  in hell do I have  to keep this function  rather than use
   ;;the  $FIXNUM?   primitive   operation  exported  by  (ikarus  system
@@ -498,7 +495,7 @@
   (capi.ffi-pointer? obj))
 
 (define (null-pointer)
-  NULL-POINTER)
+  (capi.ffi-fixnum->pointer 0))
 
 (define (pointer-null? obj)
   (and (pointer? obj) (capi.ffi-pointer-null? obj)))

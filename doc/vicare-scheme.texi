@@ -5502,7 +5502,7 @@ points to the same address as @var{p}.
 
 
 @defun null-pointer
-Return a pointer object representing @cnull{}.
+Return a newly allocated pointer object representing @cnull{}.
 @end defun
 
 
