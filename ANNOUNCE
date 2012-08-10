@@ -42,7 +42,8 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d15
 -------------------------
 
-*
+* NULL-POINTER now returns a newly allocated pointer object, rather than
+  returning always the same one.
 
 
 Notes for revision 0.2d14
