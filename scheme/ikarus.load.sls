@@ -114,7 +114,11 @@
 	 (make-fasl-pathname d filename))))
 
 (define (make-fasl-pathname prefix-pathname source-file-pathname)
-  (string-append (posix.real-pathname prefix-pathname)
+  ;;We  assume that  PREFIX-PATHNAME,  if it  exists,  has already  been
+  ;;normalised; if  PREFIX-PATHNAME does not  exist: it will  be created
+  ;;when the FASL file is created.
+  ;;
+  (string-append prefix-pathname
 		 (posix.real-pathname source-file-pathname)
 		 FASL-EXTENSION))
 
