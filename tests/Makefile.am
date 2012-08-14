@@ -6,7 +6,9 @@ VICARE_SELECTED_LONG_TESTS	= $(testdir)/long-test-*$(file)*.sps
 VICARE_SELECTED_FOREIGN_TESTS	= $(testdir)/foreign-test-*$(file)*.sps
 VICARE_SELECTED_PROOFS		= $(testdir)/proof-*$(file)*.sps
 
+VICARE_FASL_DIRECTORY	= $(builddir)/../lib/fasl
 VICARE_TEST_SEARCH_PATH	= $(srcdir):$(srcdir)/../lib:$(builddir)/../lib:$(srcdir)/../scheme
+VICARE_TEST_FASL_PATH	= $(VICARE_FASL_DIRECTORY):$(VICARE_FASL_PATH)
 
 # The variable "user_flags"  is for the user to be  set on the command
 # line of "make".

@@ -6,8 +6,6 @@ EXTRA_DIST = \
 	vicare/words.sls.in			\
 	vicare/installation-configuration.sls.in
 
-#vicare/platform/features.sls.in
-
 dist_pkglibexec_SCRIPTS	= compile-all.sps
 
 libvicaredir		= $(libdir)/scheme
@@ -74,12 +72,23 @@ endif
 
 ## --------------------------------------------------------------------
 
-VICARE_FLAGS	= -b $(VICARE_BOOT) $(user_flags)
+VICARE_FASL_DIRECTORY		= $(builddir)/fasl
+VICARE_COMPILE_LIBRARY_PATH	= $(builddir):$(srcdir):$(VICARE_LIBRARY_PATH)
+VICARE_COMPILE_FASL_PATH	= $(VICARE_FASL_DIRECTORY):$(VICARE_FASL_PATH)
+VICARE_COMPILE_LD_PATH		= $(builddir)/../src/.libs
+
+# The variable "user_flags"  is for the user to be  set on the command
+# line of "make", for example "user_flags=--print-loaded-libraries".
+VICARE_FLAGS	= -b $(VICARE_BOOT) --fasl-directory $(VICARE_FASL_DIRECTORY) $(user_flags)
+if WANT_DEBUG
+VICARE_FLAGS	+= --debug
+endif
 
 VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
-VICARE_ENV	= VICARE_LIBRARY_PATH=$(builddir):$(srcdir)	\
-		  LD_LIBRARY_PATH=$(builddir)/../src/.libs
+VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_COMPILE_LIBRARY_PATH)	\
+		  VICARE_FASL_PATH=$(VICARE_COMPILE_FASL_PATH)		\
+		  LD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH)
 VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
 
 VICARE_INST	= $(bindir)/vicare
@@ -89,6 +98,7 @@ VICARE_INST_RUN	= $(VICARE_INST_ENV) $(VICARE_INST)
 .PHONY: vfasl-installed
 
 vfasl:
+	test -d $(VICARE_FASL_DIRECTORY) || $(MKDIR_P) $(VICARE_FASL_DIRECTORY)
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-all.sps
 if WANT_LIBFFI
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-ffi.sps

@@ -49,6 +49,10 @@ Notes for revision 0.2d15
 
 * "make installcheck" should now work (I hope definitely).
 
+* When running "make vfasl" to precompile libraries from the build tree:
+  the FASL files are now created under $(builddir)/lib/fasl, rather than
+  polluting a system FASL cache directory.
+
 
 Notes for revision 0.2d14
 -------------------------

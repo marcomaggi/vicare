@@ -22,6 +22,20 @@ AC_DEFINE([_GNU_SOURCE],[1],[enable everything GNU])
 #page
 #### additional configuration command line options
 
+vicare_DEBUG=no
+AC_MSG_CHECKING([whether debugging features are included in compiled Scheme libraries])
+AC_ARG_ENABLE([debug],
+  [AS_HELP_STRING([--enable-debug],
+     [enable compilation of Scheme libraries with debugging features (default is disable)])],
+  [AC_MSG_RESULT([$enableval])
+  if test "z$enableval" = zno
+  then vicare_DEBUG=no
+  else vicare_DEBUG=yes
+  fi],
+  [vicare_DEBUG=no
+   AC_MSG_RESULT([no])])
+AM_CONDITIONAL([WANT_DEBUG],[test x$vicare_DEBUG = xyes])
+
 vicare_ARGUMENTS_VALIDATION=1
 AC_MSG_CHECKING([whether arguments validation is enabled])
 AC_ARG_ENABLE([arguments-validation],
