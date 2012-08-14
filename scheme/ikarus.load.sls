@@ -100,7 +100,7 @@
       (define who 'fasl-directory)
       (if (string? P)
 	  (if (file-exists? P)
-	      P
+	      (posix.real-pathname P)
 	    (error who "attempt to set non-existent directory pathname" P))
 	(error who "expected string as directory pathname" P)))))
 
@@ -114,7 +114,9 @@
 	 (make-fasl-pathname d filename))))
 
 (define (make-fasl-pathname prefix-pathname source-file-pathname)
-  (string-append prefix-pathname (posix.real-pathname source-file-pathname) FASL-EXTENSION))
+  (string-append (posix.real-pathname prefix-pathname)
+		 (posix.real-pathname source-file-pathname)
+		 FASL-EXTENSION))
 
 
 ;;;; loading and serialising libraries
@@ -145,7 +147,6 @@
 		#;(fasl-path filename)))
     (cond ((or (not ikfasl)
 	       (not (file-exists? ikfasl)))
-
 	   (%print-loaded-library filename)
 	   #f)
 	  ((< (posix.file-modification-time ikfasl)

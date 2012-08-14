@@ -839,12 +839,12 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (with-run-time-config (cfg)
     (when cfg.fasl-directory
       (if (file-exists? cfg.fasl-directory)
-	  (loading.fasl-directory cfg.fasl-directory)
+	  (loading.fasl-directory (posix.real-pathname cfg.fasl-directory))
 	(error 'init-fasl-search-path
 	  "invalid fasl directory pathname" cfg.fasl-directory)))
     (loading.fasl-search-path (append
 			       (if cfg.fasl-directory
-				   (list cfg.fasl-directory)
+				   (list (posix.real-pathname cfg.fasl-directory))
 				 '())
 			       (reverse cfg.fasl-search-path)
 			       (cond ((posix.getenv "VICARE_FASL_PATH")

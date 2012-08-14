@@ -45,6 +45,8 @@ Notes for revision 0.2d15
 * NULL-POINTER now returns a newly allocated pointer object, rather than
   returning always the same one.
 
+* Fixed missing normalisation of some FASL pathnames.
+
 
 Notes for revision 0.2d14
 -------------------------
