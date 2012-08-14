@@ -47,6 +47,8 @@ Notes for revision 0.2d15
 
 * Fixed missing normalisation of some FASL pathnames.
 
+* "make installcheck" should now work (I hope definitely).
+
 
 Notes for revision 0.2d14
 -------------------------

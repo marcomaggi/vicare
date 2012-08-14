@@ -1195,20 +1195,16 @@
 (parametrise ((check-test-name	'find-executable))
 
   (check	;first char is slash
-      (px.find-executable-as-string "/usr/local/bin/vicare")
-    => "/usr/local/bin/vicare")
-
-  (check
-      (px.find-executable-as-string "vicare")
-    => "/usr/local/bin/vicare")
-
-  (check
-      (px.find-executable-as-string "this-cannot-exist")
-    => #f)
+      (px.find-executable-as-string "/usr/bin/ls")
+    => "/usr/bin/ls")
 
   (check
       (px.find-executable-as-string "ls")
     => "/usr/bin/ls")
+
+  (check
+      (px.find-executable-as-string "this-cannot-exist")
+    => #f)
 
   (when #f
     (fprintf (current-error-port)
