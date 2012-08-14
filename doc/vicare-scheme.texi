@@ -562,6 +562,16 @@ $ make install
 @ref{overview install details} for how to enable the foreign functions
 interface.
 
+After installation, under the directory
+@code{$libexecdir/vicare-scheme}, scripts with names like
+@file{compile-all.sps} can be executed to precompile the installed
+libraries; for example:
+
+@example
+$ sudo vicare --compile-dependencies \
+   /usr/local/libexec/vicare-scheme/compile-all.sps
+@end example
+
 To uninstall @value{PACKAGE}, use the following steps:
 
 @example
@@ -771,6 +781,16 @@ Finally, do @command{make clean} to get rid of executables, object
 files, and other build products in the @file{vicare-@var{n.n.n}}
 directory.  Do not delete the directory itself: it will be needed if we
 ever want to uninstall @value{PRJNAME}.
+
+After installation, under the directory
+@code{$libexecdir/vicare-scheme}, scripts with names like
+@file{compile-all.sps} can be executed to precompile the installed
+libraries; for example:
+
+@example
+$ sudo vicare --compile-dependencies \
+   /usr/local/libexec/vicare-scheme/compile-all.sps
+@end example
 
 @c page
 @node overview install uninstall
