@@ -2,14 +2,12 @@
 #
 # Post-installation script for Slackware.
 
-exec_prefix=@prefix@
-libexecdir=@libexecdir@
+exec_prefix="@prefix@"
+libexecdir="@libexecdir@"
 pkglibexecdir="$libexecdir/@PACKAGE@"
 fasldir=/var/cache/vicare-scheme
 
-install -m 0775 -d $fasldir
-
-COMPILE="vicare --fasl-directory $fasldir --compile-dependencies"
+install -m 0775 -d "$fasldir"
 
 for item in \
     compile-all.sps             \
@@ -25,7 +23,7 @@ do
     if test -f "$item"
     then
         echo "*** compiling: $item"
-        $COMPILE "$item"
+        vicare --fasl-directory "$fasldir" --compile-dependencies "$item" || true
     else echo "*** skipping: $item"
     fi
 done
