@@ -162,6 +162,11 @@ features_SOURCES	= features.c
 vicare/platform/features.sls : features
 	$(MKDIR_P) vicare/platform && ./features >$@
 
+## --------------------------------------------------------------------
+
 CLEANFILES	= vicare/platform/features.sls
+
+clean-local:
+	-rm -rf $(VICARE_FASL_DIRECTORY)
 
 ### end of file
