@@ -17200,9 +17200,73 @@ specific C language type.  The library @library{vicare words} implements
 such predicates and minimum/maximum range constants.
 
 @menu
+* words sizeof::                Knowing the size of C language types.
 * words predicates::            Verifying the range of integers.
 * words limits::                Exact integer range limits.
 @end menu
+
+@c page
+@node words sizeof
+@subsection Knowing the size of C language types
+
+
+The following bindings are exported by the @library{vicare words}
+library.
+
+
+@deffn {Identifier Syntax} SIZEOF_CHAR
+Number of bytes in the C language type @code{char}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_SHORT
+Number of bytes in the C language type @code{short int}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_INT
+Number of bytes in the C language type @code{int}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_LONG
+Number of bytes in the C language type @code{long}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_LONG_LONG
+Number of bytes in the C language type @code{long long}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_SIZE_T
+Number of bytes in the C language type @code{size_t}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_SSIZE_T
+Number of bytes in the C language type @code{ssize_t}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_OFF_T
+Number of bytes in the C language type @code{off_t}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_FLOAT
+Number of bytes in the C language type @code{float}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_DOUBLE
+Number of bytes in the C language type @code{double}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_POINTER
+Number of bytes in the C language type @code{void *}.
+@end deffn
 
 @c page
 @node words predicates

@@ -31,6 +31,16 @@
 #!r6rs
 (library (vicare words)
   (export
+
+    ;; sizes
+    SIZEOF_CHAR
+    SIZEOF_SHORT	SIZEOF_INT
+    SIZEOF_LONG		SIZEOF_LONG_LONG
+    SIZEOF_SIZE_T	SIZEOF_SSIZE_T
+    SIZEOF_OFF_T
+    SIZEOF_FLOAT	SIZEOF_DOUBLE
+    SIZEOF_POINTER
+
     ;; predicates
     word?
     word-u8?		word-s8?
@@ -200,6 +210,11 @@
 (define-inline-constant SIZEOF_SIZE_T		@SIZEOF_SIZE_T@)
 (define-inline-constant SIZEOF_SSIZE_T		@SIZEOF_SSIZE_T@)
 (define-inline-constant SIZEOF_OFF_T		@SIZEOF_OFF_T@)
+(define-inline-constant SIZEOF_FLOAT		4)
+(define-inline-constant SIZEOF_DOUBLE		8)
+(define-inline-constant SIZEOF_POINTER		(case-word-size
+						 ((32)	4)
+						 ((64)	8)))
 
 (define-syntax SIZE_T_MAX
   (if (= 4 @SIZEOF_SIZE_T@)

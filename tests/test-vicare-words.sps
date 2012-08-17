@@ -105,6 +105,18 @@
 
 (parametrise ((check-test-name	'size_t))
 
+  (check (fixnum? words.SIZEOF_CHAR)		=> #t)
+  (check (fixnum? words.SIZEOF_SHORT)		=> #t)
+  (check (fixnum? words.SIZEOF_INT)		=> #t)
+  (check (fixnum? words.SIZEOF_LONG)		=> #t)
+  (check (fixnum? words.SIZEOF_LONG_LONG)	=> #t)
+  (check (fixnum? words.SIZEOF_SIZE_T)		=> #t)
+  (check (fixnum? words.SIZEOF_SSIZE_T)		=> #t)
+  (check (fixnum? words.SIZEOF_OFF_T)		=> #t)
+  (check (fixnum? words.SIZEOF_FLOAT)		=> #t)
+  (check (fixnum? words.SIZEOF_DOUBLE)		=> #t)
+  (check (fixnum? words.SIZEOF_POINTER)		=> #t)
+
   (check (words.size_t? (+ 1 SIZE_T_MAX))	=> #f)
   (check (words.size_t? SIZE_T_MAX)		=> #t)
   (check (words.size_t? 0)			=> #t)

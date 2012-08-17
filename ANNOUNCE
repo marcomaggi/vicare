@@ -53,6 +53,16 @@ Notes for revision 0.2d15
   the FASL files are now created under $(builddir)/lib/fasl, rather than
   polluting a system FASL cache directory.
 
+* More constants as identifiers syntaxes in (vicare words):
+
+    SIZEOF_CHAR
+    SIZEOF_SHORT        SIZEOF_INT
+    SIZEOF_LONG         SIZEOF_LONG_LONG
+    SIZEOF_SIZE_T       SIZEOF_SSIZE_T
+    SIZEOF_OFF_T
+    SIZEOF_FLOAT        SIZEOF_DOUBLE
+    SIZEOF_POINTER
+
 
 Notes for revision 0.2d14
 -------------------------
