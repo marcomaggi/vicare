@@ -19165,10 +19165,13 @@ was run.
 Built in Scheme objects are mostly implemented in the C language portion
 of the source code, but many core operations are also reimplemented at
 the Scheme level.  The overall definitions are in the C language file
-@file{vicare.h} and the definition of many values is duplicated in the
-Scheme language compiler @file{ikarus.compiler.sls}.
+@file{vicare.h} (for the public @api{}) the C language file
+@file{internal.h} (for the private @api{}) and the definition of many
+values is duplicated in the Scheme language compiler
+@file{ikarus.compiler.sls}.
 
 @menu
+* objects types::               Some basic type definitions.
 * objects refs::                Builtin objects and tags.
 * objects memory::              Memory allocation and collection.
 * objects fixnums::             Fixnum objects.
@@ -19190,6 +19193,40 @@ Scheme language compiler @file{ikarus.compiler.sls}.
 * objects misc::                Miscellaneous functions and
                                 preprocessor macros.
 @end menu
+
+@c page
+@node objects types
+@section Some basic type definitions
+
+
+@deftp Typedef ik_int
+An alias for @code{signed int}.
+@end deftp
+
+
+@deftp Typedef ik_long
+An alias for @code{signed long}.
+@end deftp
+
+
+@deftp Typedef ik_llong
+An alias for @code{signed long long}.
+@end deftp
+
+
+@deftp Typedef ik_uint
+An alias for @code{unsigned int}.
+@end deftp
+
+
+@deftp Typedef ik_ulong
+An alias for @code{unsigned long}.
+@end deftp
+
+
+@deftp Typedef ik_ullong
+An alias for @code{unsigned long long}.
+@end deftp
 
 @c page
 @node objects refs
