@@ -19192,6 +19192,7 @@ values is duplicated in the Scheme language compiler
 * objects pointers::            Pointer objects.
 * objects misc::                Miscellaneous functions and
                                 preprocessor macros.
+* objects callbacks::           Notes on calling Scheme code from C.
 @end menu
 
 @c page
@@ -22568,58 +22569,6 @@ See the source code in @file{ikarus.io.sls} for a more comprehensive
 documentation.
 
 @c page
-@node objects misc
-@section Miscellaneous functions and preprocessor macros
-
-
-@deftypefun ikptr ikrt_general_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
-Copy @var{count} items from @var{src} starting at offset
-@var{src_start}, to @var{dst} starting at offset @var{dst_start};
-@var{src_start}, @var{dst_start} and @var{count} must be non--negative
-fixnums.  Return unspecified values.
-
-Both @var{dst} and @var{src} can be one among: a bytevector, a pointer,
-a string.  For bytevectors and pointers: bytes are moved and
-@var{src_start}, @var{dst_start} and @var{count} are in byte units.  For
-strings: 32-bit values representing Unicode code points are moved and
-@var{src_start}, @var{dst_start} and @var{count} are in character units.
-@end deftypefun
-
-
-@deftypefn {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{OBJ})
-If @var{OBJ} is a bytevector object return a pointer to the first byte.
-If @var{OBJ} is a pointer object return a pointer to first byte of the
-referenced memory.
-@end deftypefn
-
-
-@deftypefn {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_NULL (ikptr @var{OBJ})
-If @var{OBJ} is the false object: return @cnull{}.  If @var{OBJ} is a
-bytevector object return a pointer to the first byte.  If @var{OBJ} is a
-pointer object return a pointer to first byte of the referenced memory.
-@end deftypefn
-
-
-@deftypefn {Preprocessor Macro} {void *} IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{OBJ})
-If @var{OBJ} is a bytevector object return a pointer to the first byte.
-If @var{OBJ} is a pointer object return a pointer to first byte of the
-referenced memory.
-@end deftypefn
-
-
-@deftypefn {Preprocessor Macro} {void *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_NULL (ikptr @var{OBJ})
-If @var{OBJ} is the false object: return @cnull{}.  If @var{OBJ} is a
-bytevector object return a pointer to the first byte.  If @var{OBJ} is a
-pointer object return a pointer to first byte of the referenced memory.
-@end deftypefn
-
-
-@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_POINTER_OR_FALSE (ikptr @var{OBJ})
-If @var{OBJ} is the false object: return @cnull{}; else @var{OBJ} must
-be a pointer object and its pointer is returned.
-@end deftypefn
-
-@c page
 @node objects pointers
 @section Pointer objects
 
@@ -22800,6 +22749,92 @@ the payload of this word is an 8-bit vector whose format is as follows:
 
 See the source code in the file @file{ikarus.codecs.sls} for more
 details.
+
+@c page
+@node objects misc
+@section Miscellaneous functions and preprocessor macros
+
+
+@deftypefun ikptr ikrt_general_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
+Copy @var{count} items from @var{src} starting at offset
+@var{src_start}, to @var{dst} starting at offset @var{dst_start};
+@var{src_start}, @var{dst_start} and @var{count} must be non--negative
+fixnums.  Return unspecified values.
+
+Both @var{dst} and @var{src} can be one among: a bytevector, a pointer,
+a string.  For bytevectors and pointers: bytes are moved and
+@var{src_start}, @var{dst_start} and @var{count} are in byte units.  For
+strings: 32-bit values representing Unicode code points are moved and
+@var{src_start}, @var{dst_start} and @var{count} are in character units.
+@end deftypefun
+
+
+@deftypefn {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{OBJ})
+If @var{OBJ} is a bytevector object return a pointer to the first byte.
+If @var{OBJ} is a pointer object return a pointer to first byte of the
+referenced memory.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_NULL (ikptr @var{OBJ})
+If @var{OBJ} is the false object: return @cnull{}.  If @var{OBJ} is a
+bytevector object return a pointer to the first byte.  If @var{OBJ} is a
+pointer object return a pointer to first byte of the referenced memory.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{OBJ})
+If @var{OBJ} is a bytevector object return a pointer to the first byte.
+If @var{OBJ} is a pointer object return a pointer to first byte of the
+referenced memory.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_NULL (ikptr @var{OBJ})
+If @var{OBJ} is the false object: return @cnull{}.  If @var{OBJ} is a
+bytevector object return a pointer to the first byte.  If @var{OBJ} is a
+pointer object return a pointer to first byte of the referenced memory.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_POINTER_OR_FALSE (ikptr @var{OBJ})
+If @var{OBJ} is the false object: return @cnull{}; else @var{OBJ} must
+be a pointer object and its pointer is returned.
+@end deftypefn
+
+@c page
+@node objects callbacks
+@section Notes on calling Scheme code from C
+
+
+While writing C language code interfacing with Scheme, if we call a C
+language function which calls back a Scheme function we have to save and
+restore the continuation:
+
+@example
+ikpcb * pcb = the_pcb;
+ikptr   sk;
+
+sk = ik_enter_c_function(pcb);
+@{
+  /* place here C code that calls Scheme code */
+@}
+ik_leave_c_function(pcb, sk);
+@end example
+
+@noindent
+else, upon returning from the Scheme code, the execution flow will go to
+the wrong continuation and undefined behaviour ensues.
+
+
+@deftypefun ikptr ik_enter_c_function (ikpcb * @var{pcb})
+Save the current Scheme continuation and return a reference to it.
+@end deftypefun
+
+
+@deftypefun ikptr ik_leave_c_function (ikpcb * @var{pcb}, ikptr @var{sk})
+Restore the previously saved Scheme continuation @var{sk}.
+@end deftypefun
 
 @c page
 @node debug int
