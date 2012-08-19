@@ -72,7 +72,7 @@ feature_failure_ (const char * funcname)
   ik_abort("called GNU C Library specific function, %s\n", funcname);
 }
 
-#define feature_failure(FN)     { feature_failure_(FN); return void_object; }
+#define feature_failure(FN)     { feature_failure_(FN); return IK_VOID_OBJECT; }
 
 
 /** --------------------------------------------------------------------
@@ -84,7 +84,7 @@ ikrt_glibc_clearenv (void)
 {
 #ifdef HAVE_CLEARENV
   clearenv();
-  return void_object;
+  return IK_VOID_OBJECT;
 #else
   feature_failure(__func__);
 #endif
@@ -198,7 +198,7 @@ ikrt_glibc_if_nametoindex (ikptr name_bv)
   unsigned int  rv;
   name  = IK_BYTEVECTOR_DATA_CHARP(name_bv);
   rv    = if_nametoindex(name);
-  return (0 == rv)? false_object : IK_FIX((long)rv);
+  return (0 == rv)? IK_FALSE_OBJECT : IK_FIX((long)rv);
 #else
   feature_failure(__func__);
 #endif
@@ -211,7 +211,7 @@ ikrt_glibc_if_indextoname (ikptr index, ikpcb * pcb)
   unsigned      i = (unsigned)IK_UNFIX(index);
   char *        rv;
   rv = if_indextoname(i, buffer);
-  return (rv)? ika_bytevector_from_cstring(pcb, buffer) : false_object;
+  return (rv)? ika_bytevector_from_cstring(pcb, buffer) : IK_FALSE_OBJECT;
 #else
   feature_failure(__func__);
 #endif
@@ -238,7 +238,7 @@ ikrt_glibc_if_nameindex (ikpcb * pcb)
 	  IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	  s_spine = IK_CDR(s_spine);
 	} else
-	  IK_CDR(s_spine) = null_object;
+	  IK_CDR(s_spine) = IK_NULL_OBJECT;
       }
     }
     pcb->root1 = NULL;
@@ -666,7 +666,7 @@ ikrt_glibc_srand (ikptr s_seed)
 {
 #ifdef HAVE_RAND
   srand(ik_integer_to_uint(s_seed));
-  return void_object;
+  return IK_VOID_OBJECT;
 #else
   feature_failure(__func__);
 #endif
@@ -684,7 +684,7 @@ ikrt_glibc_fnmatch (ikptr s_pattern, ikptr s_string, ikptr s_flags)
   int	rv = fnmatch(IK_BYTEVECTOR_DATA_CHARP(s_pattern),
 		     IK_BYTEVECTOR_DATA_CHARP(s_string),
 		     IK_UNFIX(s_flags));
-  return (rv)? false_object : true_object;
+  return (rv)? IK_FALSE_OBJECT : IK_TRUE_OBJECT;
 #else
   feature_failure(__func__);
 #endif
@@ -697,7 +697,7 @@ ikrt_glibc_glob (ikptr s_pattern, ikptr s_flags, ikptr s_error_handler, ikpcb * 
   glob_t        G;
   int           rv;
   handler_t     * handler;
-  handler = (false_object == s_error_handler)? NULL : IK_POINTER_DATA_VOIDP(s_error_handler);
+  handler = (IK_FALSE_OBJECT == s_error_handler)? NULL : IK_POINTER_DATA_VOIDP(s_error_handler);
   G.gl_pathc    = 0;
   G.gl_pathv    = NULL;
   G.gl_offs     = 0;
@@ -740,7 +740,7 @@ ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb *pcb)
    pointer itself is collected.  */
 {
 #ifdef HAVE_REGCOMP
-  ikptr		s_retval = void_object;
+  ikptr		s_retval = IK_VOID_OBJECT;
   regex_t *     rex;
   char *        pattern;
   char *	error_message;
@@ -766,7 +766,7 @@ ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb *pcb)
 	free(rex);
       }
     } else
-      s_retval = false_object; /* error allocating memory */
+      s_retval = IK_FALSE_OBJECT; /* error allocating memory */
   }
   pcb->root1 = NULL;
   pcb->root0 = NULL;
@@ -812,7 +812,7 @@ ikrt_glibc_regexec (ikptr s_rex, ikptr s_string, ikptr s_flags, ikpcb *pcb)
     {
       size_t      i;
       ikptr       s_match_vector = ika_vector_alloc_and_init(pcb, 1+nmatch);
-      ikptr       s_pair = void_object;
+      ikptr       s_pair = IK_VOID_OBJECT;
       pcb->root0 = &s_match_vector;
       pcb->root1 = &s_pair;
       {
@@ -828,7 +828,7 @@ ikrt_glibc_regexec (ikptr s_rex, ikptr s_string, ikptr s_flags, ikpcb *pcb)
       return s_match_vector;
     }
   case REG_NOMATCH:
-    return false_object;
+    return IK_FALSE_OBJECT;
   default:
     {
       ikptr	s_pair, s_error_code, s_error_msg;
@@ -866,7 +866,7 @@ ikrt_glibc_regfree (ikptr s_rex)
     free(rex);
     IK_POINTER_SET_NULL(s_rex);
   }
-  return void_object;
+  return IK_VOID_OBJECT;
 #else
   feature_failure(__func__);
 #endif
@@ -1002,10 +1002,10 @@ ikrt_glibc_iconv (ikptr s_handle,
 #if ((defined HAVE_LIBICONV) && (defined (HAVE_ICONV)))
   iconv_t	handle = (iconv_t)IK_POINTER_DATA_VOIDP(s_handle);
   size_t	istart = IK_UNFIX(s_in_start);
-  size_t	ipast  = (false_object == s_in_past)? \
+  size_t	ipast  = (IK_FALSE_OBJECT == s_in_past)? \
     IK_BYTEVECTOR_LENGTH(s_in_bv) : IK_UNFIX(s_in_past);
   size_t	ostart = IK_UNFIX(s_out_start);
-  size_t	opast  =  (false_object == s_out_past)? \
+  size_t	opast  =  (IK_FALSE_OBJECT == s_out_past)? \
     IK_BYTEVECTOR_LENGTH(s_out_bv) : IK_UNFIX(s_out_past);
   char *	input  = istart + IK_BYTEVECTOR_DATA_CHARP(s_in_bv);
   char *	output = ostart + IK_BYTEVECTOR_DATA_CHARP(s_out_bv);

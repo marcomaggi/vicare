@@ -41,16 +41,16 @@ ikptr
 ika_pair_alloc (ikpcb * pcb)
 {
   ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
-  IK_CAR(s_pair) = void_object;
-  IK_CDR(s_pair) = void_object;
+  IK_CAR(s_pair) = IK_VOID_OBJECT;
+  IK_CDR(s_pair) = IK_VOID_OBJECT;
   return s_pair;
 }
 ikptr
 iku_pair_alloc (ikpcb * pcb)
 {
   ikptr	s_pair = IKU_PAIR_ALLOC(pcb);
-  IK_CAR(s_pair) = void_object;
-  IK_CDR(s_pair) = void_object;
+  IK_CAR(s_pair) = IK_VOID_OBJECT;
+  IK_CDR(s_pair) = IK_VOID_OBJECT;
   return s_pair;
 }
 long
@@ -113,7 +113,7 @@ ika_list_from_argv (ikpcb * pcb, char ** argv)
    strings.  Make use of "pcb->root8,9".  */
 {
   if (! argv[0])
-    return null_object;
+    return IK_NULL_OBJECT;
   else {
     ikptr	s_list, s_pair;
     s_list = s_pair = ika_pair_alloc(pcb);
@@ -127,7 +127,7 @@ ika_list_from_argv (ikpcb * pcb, char ** argv)
 	  IK_ASS(IK_CDR(s_pair), ika_pair_alloc(pcb));
 	  s_pair = IK_CDR(s_pair);
 	} else {
-	  IK_CDR(s_pair) = null_object;
+	  IK_CDR(s_pair) = IK_NULL_OBJECT;
 	  break;
 	}
       }
@@ -144,7 +144,7 @@ ika_list_from_argv_and_argc (ikpcb * pcb, char ** argv, long argc)
    the ASCIIZ strings.	Make use of "pcb->root8,9".  */
 {
   if (! argc)
-    return null_object;
+    return IK_NULL_OBJECT;
   else {
     ikptr	s_list, s_pair;
     s_list = s_pair = ika_pair_alloc(pcb);
@@ -158,7 +158,7 @@ ika_list_from_argv_and_argc (ikpcb * pcb, char ** argv, long argc)
 	  IK_ASS(IK_CDR(s_pair), ika_pair_alloc(pcb));
 	  s_pair = IK_CDR(s_pair);
 	} else {
-	  IK_CDR(s_pair) = null_object;
+	  IK_CDR(s_pair) = IK_NULL_OBJECT;
 	  break;
 	}
       }
@@ -228,7 +228,24 @@ ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
   uint8_t *	dst = IK_BYTEVECTOR_DATA_UINT8P(s_dst) + dst_start;
   uint8_t *	src = IK_BYTEVECTOR_DATA_UINT8P(s_src) + src_start;
   memcpy(dst, src, count);
-  return void_object;
+  return IK_VOID_OBJECT;
+}
+ikptr
+ik_bytevector_from_utf16z (ikpcb * pcb, void * _data)
+/* Build and return  a new bytevector from a memory  block referencing a
+   UTF-16 string terminated with two  consecutive zeros starting at even
+   offset.  If the  the end of the  string is not found  before the byte
+   index reaches the maximum fixnum: return the false object. */
+{
+  const uint8_t *	data = _data;
+  int			i;
+  /* Search the end of  the UTF-16 string: it is a sequence  of two 0 at
+     even offset. */
+  for (i=0; data[i] || data[1+i]; i+=2)
+    if (most_positive_fixnum <= i)
+      return IK_FALSE_OBJECT;
+  return (most_positive_fixnum <= i)? IK_FALSE_OBJECT : \
+    ika_bytevector_from_memory_block(pcb, data, i);
 }
 
 
@@ -279,7 +296,7 @@ ikrt_vector_copy (ikptr s_dst, ikptr s_dst_start,
   uint8_t *	dst = IK_BYTEVECTOR_DATA_UINT8P(s_dst) + (long)s_dst_start;
   uint8_t *	src = IK_BYTEVECTOR_DATA_UINT8P(s_src) + (long)s_src_start;
   memcpy(dst, src, (size_t)s_count);
-  return void_object;
+  return IK_VOID_OBJECT;
 }
 
 
@@ -476,7 +493,7 @@ ika_integer_from_sint32	(ikpcb* pcb, int32_t N)
       return ika_integer_from_llong (pcb, (ik_llong)N);
     default:
       ik_abort("unexpected integers size");
-      return void_object;
+      return IK_VOID_OBJECT;
     }
   }
 }
@@ -498,7 +515,7 @@ ika_integer_from_sint64	(ikpcb* pcb, int64_t N)
       return ika_integer_from_llong (pcb, (ik_llong)N);
     default:
       ik_abort("unexpected integers size");
-      return void_object;
+      return IK_VOID_OBJECT;
     }
   }
 }
@@ -520,7 +537,7 @@ ika_integer_from_uint32	(ikpcb* pcb, uint32_t N)
       return ika_integer_from_ullong (pcb, (ik_ullong)N);
     default:
       ik_abort("unexpected integers size");
-      return void_object;
+      return IK_VOID_OBJECT;
     }
   }
 }
@@ -542,7 +559,7 @@ ika_integer_from_uint64	(ikpcb* pcb, uint64_t N)
       return ika_integer_from_ullong (pcb, (ik_ullong)N);
     default:
       ik_abort("unexpected integers size");
-      return void_object;
+      return IK_VOID_OBJECT;
     }
   }
 }
@@ -559,7 +576,7 @@ ika_integer_from_off_t (ikpcb * pcb, off_t N)
     return ika_integer_from_sint32(pcb, (int32_t)N);
   default:
     ik_abort("unexpected off_t size %d", sizeof(off_t));
-    return void_object;
+    return IK_VOID_OBJECT;
   }
 }
 ikptr
@@ -572,7 +589,7 @@ ika_integer_from_ssize_t (ikpcb * pcb, ssize_t N)
     return ika_integer_from_sint32(pcb, (int32_t)N);
   default:
     ik_abort("unexpected ssize_t size %d", sizeof(ssize_t));
-    return void_object;
+    return IK_VOID_OBJECT;
   }
 }
 ikptr
@@ -585,7 +602,7 @@ ika_integer_from_size_t (ikpcb * pcb, size_t N)
     return ika_integer_from_uint32(pcb, (uint32_t)N);
   default:
     ik_abort("unexpected size_t size %d", sizeof(size_t));
-    return void_object;
+    return IK_VOID_OBJECT;
   }
 }
 
@@ -618,7 +635,7 @@ ik_integer_to_int (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
     return (int)IK_UNFIX(x);
-  else if (x == void_object)
+  else if (x == IK_VOID_OBJECT)
     return 0;
   else {
     if (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))
@@ -632,7 +649,7 @@ ik_integer_to_long (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
     return IK_UNFIX(x);
-  else if (x == void_object)
+  else if (x == IK_VOID_OBJECT)
     return 0;
   else {
     if (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))
@@ -646,7 +663,7 @@ ik_integer_to_uint (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
     return IK_UNFIX(x);
-  else if (x == void_object)
+  else if (x == IK_VOID_OBJECT)
     return 0;
   else {
     assert(! IK_BNFST_NEGATIVE(ref(x, -vector_tag)));
@@ -658,7 +675,7 @@ ik_integer_to_ulong (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
     return IK_UNFIX(x);
-  else if (x == void_object)
+  else if (x == IK_VOID_OBJECT)
     return 0;
   else {
     assert(! IK_BNFST_NEGATIVE(ref(x, -vector_tag)));
@@ -670,7 +687,7 @@ ik_integer_to_llong (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
     return IK_UNFIX(x);
-  else if (x == void_object)
+  else if (x == IK_VOID_OBJECT)
     return 0;
   else {
     ikptr fst		   = ref(x, -vector_tag);
@@ -692,7 +709,7 @@ ik_integer_to_ullong (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
     return (ik_ullong)IK_UNFIX(x);
-  else if (x == void_object)
+  else if (x == IK_VOID_OBJECT)
     return 0;
   else {
     ik_ullong *	 memory = (ik_ullong *)(x + off_bignum_data);
@@ -708,7 +725,7 @@ ik_integer_to_uint32 (ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
     long	X = IK_UNFIX(x);
-    return ((0 <= X) && (X <= UINT32_MAX))? ((uint32_t)X) : false_object;
+    return ((0 <= X) && (X <= UINT32_MAX))? ((uint32_t)X) : IK_FALSE_OBJECT;
   } else {
     uint32_t *	memory = (void *)(((uint8_t *)x) + off_bignum_data);
     return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
@@ -719,7 +736,7 @@ ik_integer_to_sint32 (ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
     long	X = IK_UNFIX(x);
-    return ((INT32_MIN <= X) && (X <= INT32_MAX))? ((int32_t)X) : false_object;
+    return ((INT32_MIN <= X) && (X <= INT32_MAX))? ((int32_t)X) : IK_FALSE_OBJECT;
   } else {
     int32_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
     return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
@@ -730,7 +747,7 @@ ik_integer_to_uint64 (ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
     long	X = IK_UNFIX(x);
-    return ((0 <= X) && (X <= UINT64_MAX))? ((uint64_t)X) : false_object;
+    return ((0 <= X) && (X <= UINT64_MAX))? ((uint64_t)X) : IK_FALSE_OBJECT;
   } else {
     uint64_t *	memory = (void *)(((uint8_t *)x) + off_bignum_data);
     return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
@@ -741,7 +758,7 @@ ik_integer_to_sint64 (ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
     long	X = IK_UNFIX(x);
-    return ((INT64_MIN <= X) && (X <= INT64_MAX))? ((int64_t)X) : false_object;
+    return ((INT64_MIN <= X) && (X <= INT64_MAX))? ((int64_t)X) : IK_FALSE_OBJECT;
   } else {
     int64_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
     return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
@@ -875,7 +892,7 @@ ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
     ik_abort("%s: invalid dst value, %lu", __func__, (ik_ulong)s_dst);
 
   memcpy(dst, src, count);
-  return void_object;
+  return IK_VOID_OBJECT;
 }
 
 /* end of file */

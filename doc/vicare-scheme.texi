@@ -15184,12 +15184,12 @@ Access, setenv}.  Set a new value for an environment variable.
 @var{variable} must reference a bytevector object representing the name
 of the environment variable; @var{value} must reference a bytevector
 object representing the new value.  If @var{overwrite} is
-@code{false_object} and the environment variable already exists: the
+@code{IK_FALSE_OBJECT} and the environment variable already exists: the
 environment variable is left untouched; else the new value is set,
 either creating a new environment variable or replacing the old value.
 
-If successful return @code{true_object}; if an error occurs in
-@cfunc{setenv} return @code{false_object}.
+If successful return @code{IK_TRUE_OBJECT}; if an error occurs in
+@cfunc{setenv} return @code{IK_FALSE_OBJECT}.
 @end deftypefun
 
 
@@ -15233,7 +15233,7 @@ Closing Files, close}.  Close a file descriptor.
 
 @var{fd} must be a fixnum representing a file descriptor.
 
-If successful return @code{false_object}; if an error occurs in
+If successful return @code{IK_FALSE_OBJECT}; if an error occurs in
 @cfunc{close} return the return value of @cfunc{ik_errno_to_code}.
 @end deftypefun
 
@@ -15320,7 +15320,7 @@ Primitive, lseek}.  Set the cursor position.
 @var{fd} must be a fixnum representing a file descriptor; @var{pos} must
 be an exact integer in the range of the @code{off_t} platform type.
 
-If successful return @code{false_object}; if an error occurs in
+If successful return @code{IK_FALSE_OBJECT}; if an error occurs in
 @cfunc{lseek} return the return value of @cfunc{ik_errno_to_code}.
 @end deftypefun
 
@@ -15409,7 +15409,7 @@ hostname; @var{srvc} must reference a bytevector holding the service
 specification.
 
 If successful return a fixnum representing the socket; if an error
-occurs resolving the host name and address, return @code{false_object};
+occurs resolving the host name and address, return @code{IK_FALSE_OBJECT};
 if an error occurs in one of the C function calls, return the return
 value of @cfunc{ik_errno_to_code}.
 @end deftypefun
@@ -19187,7 +19187,8 @@ Scheme language compiler @file{ikarus.compiler.sls}.
 * objects ports::               Port objects.
 * objects transcoders::         Transcoder objects.
 * objects pointers::            Pointer objects.
-* objects misc::                Miscellaneous functions.
+* objects misc::                Miscellaneous functions and
+                                preprocessor macros.
 @end menu
 
 @c page
@@ -19317,25 +19318,25 @@ immediate_tag = 7 = #b111
 @end example
 
 
-@defmac false_object 0x2F
-@defmacx true_object 0x3F
-@defmacx null_object 0x4F
-@defmacx eof_object 0x5F
-@defmacx void_object 0x7F
+@defmac IK_FALSE_OBJECT 0x2F
+@defmacx IK_TRUE_OBJECT 0x3F
+@defmacx IK_NULL_OBJECT 0x4F
+@defmacx IK_EOF_OBJECT 0x5F
+@defmacx IK_VOID_OBJECT 0x7F
 Special machine words of type @ikptr{} representing, respectively:
 @false{}; @true{}; nil, the empty list; @eof{}, the end of file;
 @void{}, the return value of functions returning no value.
 @end defmac
 
 
-@defmac unbound_object 0x6F
+@defmac IK_UNBOUND_OBJECT 0x6F
 Special machine word value stored in the @code{value} and @code{proc}
 fields of Scheme symbol memory blocks to signal that these fields are
 unset.
 @end defmac
 
 
-@defmac bwp_object 0x8F
+@defmac IK_BWP_OBJECT 0x8F
 Special machine word value stored in locations that used to hold weak
 references to values which have been already garbage collected.
 @end defmac
@@ -20061,7 +20062,7 @@ are the pair tag.
 
 The empty list is not a pair: it is a special constant fitting in a
 single @ikptr{} machine word, and it is defined by the preprocessor
-symbol @code{null_object}.
+symbol @code{IK_NULL_OBJECT}.
 
 @c ------------------------------------------------------------
 
@@ -20190,7 +20191,7 @@ the cdr, the cdr of the cdr.
 Allocate and return a new pair object using, respectively,
 @cfunc{ik_safe_alloc} and @cfunc{ik_unsafe_alloc} and return a tagged
 reference to it.  Both the car and cdr are initialised to
-@code{void_object}.
+@code{IK_VOID_OBJECT}.
 @end deftypefun
 
 
@@ -20295,7 +20296,7 @@ if (argc) @{
         IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
         s_spine = IK_CDR(s_spine);
       @} else @{
-        IK_CDR(s_spine) = null_object;
+        IK_CDR(s_spine) = IK_NULL_OBJECT;
         break;
       @}
     @}
@@ -20303,7 +20304,7 @@ if (argc) @{
   pcb->root1 = NULL;
   pcb->root0 = NULL;
 @} else
-  s_list = null_object;
+  s_list = IK_NULL_OBJECT;
 
 /* make use of S_LIST */
 @end example
@@ -20521,6 +20522,22 @@ area @var{length} bytes from of the memory block referenced by
 @strong{NOTE} If the memory block length is greater than the maximum
 positive fixnum: the block is @strong{silently truncated} to a length
 equal to the maximum positive fixnum.
+@end deftypefun
+
+
+@deftypefun ikptr ik_bytevector_from_utf16z (ikpcb * @var{pcb}, void * @var{data});
+Build and return a new bytevector from a memory block referencing a
+@utf{}-16 string terminated with two consecutive zeros starting at even
+offset:
+
+@example
+   char      char      char      char     0    0
+|----+----|----+----|----+----|----+----|----+----|
+ byte byte byte byte byte byte byte byte byte byte
+@end example
+
+If the the end of the string is not found before the byte index reaches
+the maximum fixnum: return the false object.
 @end deftypefun
 
 
@@ -22515,7 +22532,7 @@ documentation.
 
 @c page
 @node objects misc
-@section Miscellaneous functions
+@section Miscellaneous functions and preprocessor macros
 
 
 @deftypefun ikptr ikrt_general_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
@@ -22530,6 +22547,40 @@ a string.  For bytevectors and pointers: bytes are moved and
 strings: 32-bit values representing Unicode code points are moved and
 @var{src_start}, @var{dst_start} and @var{count} are in character units.
 @end deftypefun
+
+
+@deftypefn {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{OBJ})
+If @var{OBJ} is a bytevector object return a pointer to the first byte.
+If @var{OBJ} is a pointer object return a pointer to first byte of the
+referenced memory.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_NULL (ikptr @var{OBJ})
+If @var{OBJ} is the false object: return @cnull{}.  If @var{OBJ} is a
+bytevector object return a pointer to the first byte.  If @var{OBJ} is a
+pointer object return a pointer to first byte of the referenced memory.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{OBJ})
+If @var{OBJ} is a bytevector object return a pointer to the first byte.
+If @var{OBJ} is a pointer object return a pointer to first byte of the
+referenced memory.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_NULL (ikptr @var{OBJ})
+If @var{OBJ} is the false object: return @cnull{}.  If @var{OBJ} is a
+bytevector object return a pointer to the first byte.  If @var{OBJ} is a
+pointer object return a pointer to first byte of the referenced memory.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_POINTER_OR_FALSE (ikptr @var{OBJ})
+If @var{OBJ} is the false object: return @cnull{}; else @var{OBJ} must
+be a pointer object and its pointer is returned.
+@end deftypefn
 
 @c page
 @node objects pointers
@@ -22681,8 +22732,8 @@ Return true if @var{X} is a pointer object.
 
 
 @deftypefun ikptr ikrt_is_pointer (ikptr @var{X})
-Return @code{true_object} if @var{X} is a pointer object, else return
-@code{false_object}.
+Return @code{IK_TRUE_OBJECT} if @var{X} is a pointer object, else return
+@code{IK_FALSE_OBJECT}.
 @end deftypefun
 
 @c page

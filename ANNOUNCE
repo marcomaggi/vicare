@@ -63,6 +63,16 @@ Notes for revision 0.2d15
     SIZEOF_FLOAT        SIZEOF_DOUBLE
     SIZEOF_POINTER
 
+* The following symbols substitutions have been imposed on the C code:
+
+    false_object	-> IK_FALSE_OBJECT
+    true_object		-> IK_TRUE_OBJECT
+    null_object		-> IK_NULL_OBJECT
+    eof_object		-> IK_EOF_OBJECT
+    void_object		-> IK_VOID_OBJECT
+    unbound_object	-> IK_UNBOUND_OBJECT
+    bwp_object		-> IK_BWP_OBJECT
+
 
 Notes for revision 0.2d14
 -------------------------

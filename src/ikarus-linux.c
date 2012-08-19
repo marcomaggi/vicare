@@ -111,7 +111,7 @@ feature_failure_ (const char * funcname)
   ik_abort("called GNU+Linux specific function, %s", funcname);
 }
 
-#define feature_failure(FN)     { feature_failure_(FN); return void_object; }
+#define feature_failure(FN)     { feature_failure_(FN); return IK_VOID_OBJECT; }
 
 
 /** --------------------------------------------------------------------
@@ -123,7 +123,7 @@ ikrt_linux_WIFCONTINUED (ikptr fx_status)
 {
 #ifdef HAVE_WIFCONTINUED
   int   status = IK_UNFIX(fx_status);
-  return (WIFCONTINUED(status))? true_object : false_object;
+  return (WIFCONTINUED(status))? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
 #else
   feature_failure(__func__);
 #endif
@@ -190,7 +190,7 @@ ikptr
 ikrt_linux_epoll_ctl (ikptr s_epfd, ikptr s_op, ikptr s_fd, ikptr s_event_struct)
 {
 #ifdef HAVE_EPOLL_CTL
-  struct epoll_event *	event = (false_object == s_event_struct)?
+  struct epoll_event *	event = (IK_FALSE_OBJECT == s_event_struct)?
     NULL : IK_POINTER_DATA_VOIDP(s_event_struct);
   int	rv;
   errno = 0;
@@ -226,7 +226,7 @@ ikrt_linux_epoll_event_alloc (ikptr s_number_of_entries, ikpcb * pcb)
 {
 #ifdef HAVE_STRUCT_EPOLL_EVENT
   void * event = malloc(IK_UNFIX(s_number_of_entries) * sizeof(struct epoll_event));
-  return (event)? ika_pointer_alloc(pcb, (ik_ulong)event) : false_object;
+  return (event)? ika_pointer_alloc(pcb, (ik_ulong)event) : IK_FALSE_OBJECT;
 #else
   feature_failure(__func__);
 #endif
@@ -249,7 +249,7 @@ ikrt_linux_epoll_event_set_events (ikptr s_events_array, ikptr s_index, ikptr s_
 #ifdef HAVE_STRUCT_EPOLL_EVENT
   struct epoll_event *	event = IK_POINTER_DATA_VOIDP(s_events_array);
   event[IK_UNFIX(s_index)].events = ik_integer_to_uint32(s_field_events);
-  return void_object;
+  return IK_VOID_OBJECT;
 #else
   feature_failure(__func__);
 #endif
@@ -273,7 +273,7 @@ ikrt_linux_epoll_event_set_data_ptr (ikptr s_events_array, ikptr s_index, ikptr 
 #ifdef HAVE_STRUCT_EPOLL_EVENT
   struct epoll_event *	event = IK_POINTER_DATA_VOIDP(s_events_array);
   event[IK_UNFIX(s_index)].data.ptr = IK_POINTER_DATA_VOIDP(s_field_ptr);
-  return void_object;
+  return IK_VOID_OBJECT;
 #else
   feature_failure(__func__);
 #endif
@@ -297,7 +297,7 @@ ikrt_linux_epoll_event_set_data_fd (ikptr s_events_array, ikptr s_index, ikptr s
 #ifdef HAVE_STRUCT_EPOLL_EVENT
   struct epoll_event *	event = IK_POINTER_DATA_VOIDP(s_events_array);
   event[IK_UNFIX(s_index)].data.fd = IK_NUM_TO_FD(s_field_fd);
-  return void_object;
+  return IK_VOID_OBJECT;
 #else
   feature_failure(__func__);
 #endif
@@ -321,7 +321,7 @@ ikrt_linux_epoll_event_set_data_u32 (ikptr s_events_array, ikptr s_index, ikptr 
 #ifdef HAVE_STRUCT_EPOLL_EVENT
   struct epoll_event *	event = IK_POINTER_DATA_VOIDP(s_events_array);
   event[IK_UNFIX(s_index)].data.u32 = ik_integer_to_uint32(s_field_u32);
-  return void_object;
+  return IK_VOID_OBJECT;
 #else
   feature_failure(__func__);
 #endif
@@ -345,7 +345,7 @@ ikrt_linux_epoll_event_set_data_u64 (ikptr s_events_array, ikptr s_index, ikptr 
 #ifdef HAVE_STRUCT_EPOLL_EVENT
   struct epoll_event *	event = IK_POINTER_DATA_VOIDP(s_events_array);
   event[IK_UNFIX(s_index)].data.u64 = ik_integer_to_uint64(s_field_u64);
-  return void_object;
+  return IK_VOID_OBJECT;
 #else
   feature_failure(__func__);
 #endif
@@ -476,7 +476,7 @@ ikrt_linux_timerfd_settime (ikptr s_fd, ikptr s_flags, ikptr s_new, ikptr s_old,
   errno = 0;
   rv    = timerfd_settime(IK_NUM_TO_FD(s_fd), IK_UNFIX(s_flags), &new, &old);
   if (0 == rv) {
-    if (false_object != s_old) {
+    if (IK_FALSE_OBJECT != s_old) {
       pcb->root0 = &s_old;
       {
 	IK_ASS(IK_FIELD(IK_FIELD(s_old, 0), 0),
@@ -570,7 +570,7 @@ ikrt_linux_prlimit (ikptr s_pid, ikptr s_resource,
   struct rlimit	*	new_rlim_p;
   struct rlimit		old_rlim;
   int			rv;
-  if (false_object != s_new_rlim) {
+  if (IK_FALSE_OBJECT != s_new_rlim) {
     switch (sizeof(rlim_t)) {
     case 4:
       new_rlim.rlim_cur	= ik_integer_to_uint32(IK_FIELD(s_new_rlim, 0));
@@ -725,7 +725,7 @@ ikrt_linux_inotify_read (ikptr s_fd, ikptr s_event, ikpcb * pcb)
 	IK_ASS(IK_FIELD(s_event,4),
 	       ika_bytevector_from_cstring_len(pcb, ev->name, (size_t)ev->len));
       } else {
-	IK_ASS(IK_FIELD(s_event,4), false_object);
+	IK_ASS(IK_FIELD(s_event,4), IK_FALSE_OBJECT);
       }
     }
     pcb->root0 = NULL;

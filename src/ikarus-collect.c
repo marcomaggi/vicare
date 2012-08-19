@@ -435,10 +435,10 @@ ik_collect_check (unsigned long req, ikpcb* pcb)
 {
   long bytes = ((long)pcb->allocation_redline) - ((long)pcb->allocation_pointer);
   if (bytes >= req) {
-    return true_object;
+    return IK_TRUE_OBJECT;
   } else {
     ik_collect(req, pcb);
-    return false_object;
+    return IK_FALSE_OBJECT;
   }
 }
 
@@ -472,7 +472,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
     gettimeofday(&rt0, 0);
     getrusage(RUSAGE_SELF, &t0);
   }
-  pcb->collect_key	= false_object;
+  pcb->collect_key	= IK_FALSE_OBJECT;
   bzero(&gc, sizeof(gc_t));
   gc.pcb		= pcb;
   gc.segment_vector	= pcb->segment_vector;
@@ -805,8 +805,8 @@ gc_finalize_guardians (gc_t* gc)
       ikptr last_pair = ref(tc, off_cdr);
       ref(last_pair, off_car) = obj;
       ref(last_pair, off_cdr) = p;
-      ref(p, off_car) = false_object;
-      ref(p, off_cdr) = false_object;
+      ref(p, off_car) = IK_FALSE_OBJECT;
+      ref(p, off_cdr) = IK_FALSE_OBJECT;
       ref(tc, off_cdr) = p;
       dirty_vec[IK_PAGE_INDEX(tc)] = -1;
       dirty_vec[IK_PAGE_INDEX(last_pair)] = -1;
@@ -1757,7 +1757,7 @@ fix_weak_pointers(gc_t* gc) {
               } else {
                 int x_gen = segment_vec[IK_PAGE_INDEX(x)] & gen_mask;
                 if (x_gen <= collect_gen) {
-                  ref(p, 0) = bwp_object;
+                  ref(p, 0) = IK_BWP_OBJECT;
                 }
               }
             }
@@ -1981,8 +1981,8 @@ add_one_tconc(ikpcb* pcb, ikptr p) {
   ikptr new_pair = p | pair_tag;
   ref(d, off_car) = tcbucket;
   ref(d, off_cdr) = new_pair;
-  ref(new_pair, off_car) = false_object;
-  ref(new_pair, off_cdr) = false_object;
+  ref(new_pair, off_car) = IK_FALSE_OBJECT;
+  ref(new_pair, off_cdr) = IK_FALSE_OBJECT;
   ref(tc, off_cdr) = new_pair;
   ref(tcbucket, -vector_tag) = (ikptr)(tcbucket_size - wordsize);
   ((int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(tc)] = -1;

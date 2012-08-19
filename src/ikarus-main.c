@@ -73,7 +73,7 @@ ikarus_main (int argc, char** argv, char* boot_file)
   { /* Set up arg_list from the  last "argv" to the first; the resulting
        list will end in COMMAND-LINE. */
 
-    ikptr	arg_list	= null_object;
+    ikptr	arg_list	= IK_NULL_OBJECT;
     int		i		= argc-1;
     for (; i > 0; --i) {
       if (0 == strcmp(argv[i], "--repl-on-sigint")) {

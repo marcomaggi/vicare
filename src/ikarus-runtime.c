@@ -230,7 +230,7 @@ ik_make_pcb (void)
 {
   ikpcb* pcb = ik_malloc(sizeof(ikpcb));
   bzero(pcb, sizeof(ikpcb));
-  pcb->collect_key = false_object;
+  pcb->collect_key = IK_FALSE_OBJECT;
 #define STAKSIZE (1024 * 4096)
   //#define STAKSIZE (256 * 4096)
   pcb->heap_base = ik_mmap(IK_HEAPSIZE);
@@ -578,7 +578,7 @@ ik_dump_metatable (ikpcb* pcb)
 	    ((long)p-(long)start)/IK_PAGESIZE,
 	    mtname(t));
   }
-  return void_object;
+  return IK_VOID_OBJECT;
 }
 ikptr
 ik_dump_dirty_vector (ikpcb* pcb)
@@ -600,7 +600,7 @@ ik_dump_dirty_vector (ikpcb* pcb)
         ((long)p-(long)start)/IK_PAGESIZE,
         t);
   }
-  return void_object;
+  return IK_VOID_OBJECT;
 }
 
 
@@ -616,7 +616,7 @@ ikrt_make_code (ikptr codesizeptr, ikptr freevars, ikptr rvec, ikpcb* pcb)
   IK_REF(mem, disp_code_code_size)    = codesizeptr;
   IK_REF(mem, disp_code_freevars)     = freevars;
   IK_REF(mem, disp_code_reloc_vector) = rvec;
-  IK_REF(mem, disp_code_annotation)   = false_object;
+  IK_REF(mem, disp_code_annotation)   = IK_FALSE_OBJECT;
   ik_relocate_code(mem);
   return mem | vector_tag;
 }
@@ -626,14 +626,14 @@ ikrt_set_code_reloc_vector (ikptr s_code, ikptr s_vec, ikpcb* pcb)
   IK_REF(s_code, off_code_reloc_vector) = s_vec;
   ik_relocate_code(s_code - vector_tag);
   ((unsigned*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(s_code)] = -1;
-  return void_object;
+  return IK_VOID_OBJECT;
 }
 ikptr
 ikrt_set_code_annotation (ikptr s_code, ikptr s_annot, ikpcb* pcb)
 {
   IK_REF(s_code, off_code_annotation) = s_annot;
   ((unsigned*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(s_code)] = -1;
-  return void_object;
+  return IK_VOID_OBJECT;
 }
 
 
@@ -693,7 +693,7 @@ ikrt_register_guardian_pair (ikptr p0, ikpcb* pcb)
     pcb->protected_list[IK_GUARDIANS_GENERATION_NUMBER] = new_node;
   }
   first->ptr[first->count++] = p0; /* store the guardian pair */
-  return void_object;
+  return IK_VOID_OBJECT;
 }
 ikptr
 ikrt_register_guardian (ikptr tc, ikptr obj, ikpcb* pcb)
@@ -735,7 +735,7 @@ ikrt_stats_now (ikptr t, ikpcb* pcb)
   }
   /* major bytes */
   IK_FIELD(t, 14) = IK_FIX(pcb->allocation_count_major);
-  return void_object;
+  return IK_VOID_OBJECT;
 }
 
 
@@ -763,7 +763,7 @@ ikrt_make_vector2 (ikptr len, ikptr obj, ikpcb* pcb)
     memset(s+disp_vector_data, 0, (int)len);
     return s+vector_tag;
   } else {
-    return false_object;
+    return IK_FALSE_OBJECT;
   }
 }
 #endif

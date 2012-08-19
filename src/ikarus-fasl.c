@@ -95,7 +95,7 @@ ik_fasl_load (ikpcb* pcb, char* fasl_file)
       close(fd);
     }
     ikptr val = ik_exec_code(pcb, v, 0, 0);
-    if (val != void_object)
+    if (val != IK_VOID_OBJECT)
       ik_print(val);
   }
   if (p.memp != p.memq)
@@ -346,13 +346,13 @@ do_read (ikpcb* pcb, fasl_port* p)
     return fixn;
   }
   else if (c == 'F') {
-    return false_object;
+    return IK_FALSE_OBJECT;
   }
   else if (c == 'T') {
-    return true_object;
+    return IK_TRUE_OBJECT;
   }
   else if (c == 'N') {
-    return null_object;
+    return IK_NULL_OBJECT;
   }
   else if (c == 'c') {
     /* FIXME: sounds broken */
@@ -376,7 +376,7 @@ do_read (ikpcb* pcb, fasl_port* p)
     fasl_read_buf(p, &n, sizeof(long));
     ikptr fields;
     if (n == 0) {
-      fields = null_object;
+      fields = IK_NULL_OBJECT;
     } else {
       fields = ik_unsafe_alloc(pcb, n * IK_ALIGN(pair_size)) | pair_tag;
       ikptr ptr = fields;
@@ -386,18 +386,18 @@ do_read (ikpcb* pcb, fasl_port* p)
         ptr += IK_ALIGN(pair_size);
       }
       ptr -= pair_size;
-      IK_REF(ptr, off_cdr) = null_object;
+      IK_REF(ptr, off_cdr) = IK_NULL_OBJECT;
     }
     ikptr gensym_val = IK_REF(symb, off_symbol_record_value);
     ikptr rtd;
-    if (gensym_val == unbound_object) {
+    if (gensym_val == IK_UNBOUND_OBJECT) {
       rtd = ik_unsafe_alloc(pcb, IK_ALIGN(rtd_size)) | vector_tag;
       ikptr base_rtd = pcb->base_rtd;
       IK_REF(rtd, off_rtd_rtd) = base_rtd;
       IK_REF(rtd, off_rtd_name) = name;
       IK_REF(rtd, off_rtd_length) = IK_FIX(n);
       IK_REF(rtd, off_rtd_fields) = fields;
-      IK_REF(rtd, off_rtd_printer) = false_object;
+      IK_REF(rtd, off_rtd_printer) = IK_FALSE_OBJECT;
       IK_REF(rtd, off_rtd_symbol) = symb;
       IK_REF(symb, off_symbol_record_value) = rtd;
       ((unsigned int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(symb+off_symbol_record_value)] = -1;
@@ -428,7 +428,7 @@ do_read (ikpcb* pcb, fasl_port* p)
       return obj;
     } else {
       ik_abort("reference to uninitialized mark %d", idx);
-      return void_object;
+      return IK_VOID_OBJECT;
     }
   }
   else if (c == 'v') {
@@ -537,7 +537,7 @@ do_read (ikpcb* pcb, fasl_port* p)
     return x;
   } else {
     ik_abort("invalid type '%c' (0x%02x) found in fasl file", c, c);
-    return void_object;
+    return IK_VOID_OBJECT;
   }
 }
 

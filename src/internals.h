@@ -475,19 +475,19 @@ ik_decl void	ik_fprint		(FILE*, ikptr x);
 #define IK_ALIGN(N) \
   ((((N) + IK_ALIGN_SIZE - 1) >>  IK_ALIGN_SHIFT) << IK_ALIGN_SHIFT)
 
-#define false_object		((ikptr)0x2F)
-#define true_object		((ikptr)0x3F)
-#define null_object		((ikptr)0x4F)
-#define eof_object		((ikptr)0x5F)
-#define void_object		((ikptr)0x7F)
+#define IK_FALSE_OBJECT		((ikptr)0x2F)
+#define IK_TRUE_OBJECT		((ikptr)0x3F)
+#define IK_NULL_OBJECT		((ikptr)0x4F)
+#define IK_EOF_OBJECT		((ikptr)0x5F)
+#define IK_VOID_OBJECT		((ikptr)0x7F)
 
 /* Special machine word value stored in locations that used to hold weak
    references to values which have been already garbage collected. */
-#define bwp_object		((ikptr)0x8F)
+#define IK_BWP_OBJECT		((ikptr)0x8F)
 
 /* Special machine word value stored  in the "value" and "proc" field of
    Scheme symbol memory blocks to signal that these fields are unset. */
-#define unbound_object		((ikptr)0x6F)
+#define IK_UNBOUND_OBJECT	((ikptr)0x6F)
 
 
 /** --------------------------------------------------------------------
@@ -927,6 +927,7 @@ ik_decl ikptr ika_bytevector_from_cstring	(ikpcb * pcb, const char * cstr);
 ik_decl ikptr ika_bytevector_from_cstring_len	(ikpcb * pcb, const char * cstr, size_t len);
 ik_decl ikptr ika_bytevector_from_memory_block	(ikpcb * pcb, const void * memory,
 						 size_t length);
+ik_decl ikptr ik_bytevector_from_utf16z		(ikpcb * pcb, void * data);
 ik_decl ikptr ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
 				    ikptr s_src, ikptr s_src_start,
 				    ikptr s_count);
@@ -1081,6 +1082,44 @@ ik_decl ikptr ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
 
 ik_decl ikptr ik_enter_c_function (ikpcb* pcb);
 ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
+
+
+/** --------------------------------------------------------------------
+ ** Miscellanous convenience macros.
+ ** ----------------------------------------------------------------- */
+
+/* If OBJ is  a bytevector object return a "char*"  pointer to the first
+   byte, if  OBJ is a pointer  object return a "char*"  pointer to first
+   byte of the referenced memory. */
+#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER(OBJ)	\
+  ((IK_IS_BYTEVECTOR(OBJ))? IK_BYTEVECTOR_DATA_CHARP(OBJ) : IK_POINTER_DATA_CHARP(OBJ))
+
+/* If OBJ  is the  false object:  return NULL.  If  OBJ is  a bytevector
+   object  return a  "char*" pointer  to the  first byte.   If OBJ  is a
+   pointer  object  return  a  "char*"  pointer to  first  byte  of  the
+   referenced memory. */
+#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_NULL(OBJ)	\
+  ((IK_FALSE_OBJECT == (OBJ))? NULL : \
+    ((IK_IS_BYTEVECTOR(OBJ))? IK_BYTEVECTOR_DATA_CHARP(OBJ) : IK_POINTER_DATA_CHARP(OBJ)))
+
+/* If OBJ is  a bytevector object return a "void*"  pointer to the first
+   byte, if  OBJ is a pointer  object return a "void*"  pointer to first
+   byte of the referenced memory. */
+#define IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER(OBJ)	\
+  ((IK_IS_BYTEVECTOR(OBJ))? IK_BYTEVECTOR_DATA_VOIDP(OBJ) : IK_POINTER_DATA_VOIDP(OBJ))
+
+/* If OBJ  is the  false object:  return NULL.  If  OBJ is  a bytevector
+   object  return a  "void*" pointer  to the  first byte.   If OBJ  is a
+   pointer  object  return  a  "void*"  pointer to  first  byte  of  the
+   referenced memory. */
+#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_NULL(OBJ)	\
+  ((IK_FALSE_OBJECT == (OBJ))? NULL : \
+    ((IK_IS_BYTEVECTOR(OBJ))? IK_BYTEVECTOR_DATA_CHARP(OBJ) : IK_POINTER_DATA_CHARP(OBJ)))
+
+/* If OBJ is the  false object: return NULL; else OBJ  must be a pointer
+   object and its "void*" pointer is returned. */
+#define IK_POINTER_FROM_POINTER_OR_FALSE(OBJ)		\
+  ((IK_FALSE_OBJECT == (OBJ))? NULL : IK_POINTER_DATA_VOIDP(OBJ))
 
 
 /** --------------------------------------------------------------------
