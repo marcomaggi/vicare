@@ -20562,7 +20562,7 @@ equal to the maximum positive fixnum.
 @end deftypefun
 
 
-@deftypefun ikptr ik_bytevector_from_utf16z (ikpcb * @var{pcb}, void * @var{data});
+@deftypefun ikptr ik_bytevector_from_utf16z (ikpcb * @var{pcb}, const void * @var{data});
 Build and return a new bytevector from a memory block referencing a
 @utf{}-16 string terminated with two consecutive zeros starting at even
 offset:

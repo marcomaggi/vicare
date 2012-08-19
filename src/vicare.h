@@ -620,7 +620,7 @@ ik_decl ikptr ika_bytevector_from_cstring	(ikpcb * pcb, const char * cstr);
 ik_decl ikptr ika_bytevector_from_cstring_len	(ikpcb * pcb, const char * cstr, size_t len);
 ik_decl ikptr ika_bytevector_from_memory_block	(ikpcb * pcb, const void * memory,
 						 size_t length);
-ik_decl ikptr ik_bytevector_from_utf16z		(ikpcb * pcb, void * data);
+ik_decl ikptr ik_bytevector_from_utf16z		(ikpcb * pcb, const void * data);
 ik_decl ikptr ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
 				    ikptr s_src, ikptr s_src_start,
 				    ikptr s_count);
@@ -791,7 +791,7 @@ ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
    object  return a  "char*" pointer  to the  first byte.   If OBJ  is a
    pointer  object  return  a  "char*"  pointer to  first  byte  of  the
    referenced memory. */
-#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_NULL(OBJ)	\
+#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE(OBJ)	\
   ((IK_FALSE_OBJECT == (OBJ))? NULL : \
     ((IK_IS_BYTEVECTOR(OBJ))? IK_BYTEVECTOR_DATA_CHARP(OBJ) : IK_POINTER_DATA_CHARP(OBJ)))
 
@@ -805,7 +805,7 @@ ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
    object  return a  "void*" pointer  to the  first byte.   If OBJ  is a
    pointer  object  return  a  "void*"  pointer to  first  byte  of  the
    referenced memory. */
-#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_NULL(OBJ)	\
+#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE(OBJ)	\
   ((IK_FALSE_OBJECT == (OBJ))? NULL : \
     ((IK_IS_BYTEVECTOR(OBJ))? IK_BYTEVECTOR_DATA_CHARP(OBJ) : IK_POINTER_DATA_CHARP(OBJ)))
 
