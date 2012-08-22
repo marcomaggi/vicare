@@ -182,6 +182,14 @@ ik_decl void	ik_fprint		(FILE*, ikptr x);
    Scheme symbol memory blocks to signal that these fields are unset. */
 #define IK_UNBOUND_OBJECT	((ikptr)0x6F)
 
+#define IK_FALSE		IK_FALSE_OBJECT
+#define IK_TRUE			IK_TRUE_OBJECT
+#define IK_NULL			IK_NULL_OBJECT
+#define IK_EOF			IK_EOF_OBJECT
+#define IK_VOID			IK_VOID_OBJECT
+#define IK_BWP			IK_BWP_OBJECT
+#define IK_UNBOUND		IK_UNBOUND_OBJECT
+
 
 /** --------------------------------------------------------------------
  ** Code objects.

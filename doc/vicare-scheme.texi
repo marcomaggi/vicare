@@ -19357,10 +19357,15 @@ immediate_tag = 7 = #b111
 
 
 @defmac IK_FALSE_OBJECT 0x2F
+@defmacx IK_FALSE
 @defmacx IK_TRUE_OBJECT 0x3F
+@defmacx IK_TRUE
 @defmacx IK_NULL_OBJECT 0x4F
+@defmacx IK_NULL
 @defmacx IK_EOF_OBJECT 0x5F
+@defmacx IK_EOF
 @defmacx IK_VOID_OBJECT 0x7F
+@defmacx IK_VOID
 Special machine words of type @ikptr{} representing, respectively:
 @false{}; @true{}; nil, the empty list; @eof{}, the end of file;
 @void{}, the return value of functions returning no value.
@@ -19368,6 +19373,7 @@ Special machine words of type @ikptr{} representing, respectively:
 
 
 @defmac IK_UNBOUND_OBJECT 0x6F
+@defmacx IK_UNBOUND
 Special machine word value stored in the @code{value} and @code{proc}
 fields of Scheme symbol memory blocks to signal that these fields are
 unset.
@@ -19375,6 +19381,7 @@ unset.
 
 
 @defmac IK_BWP_OBJECT 0x8F
+@defmacx IK_BWP
 Special machine word value stored in locations that used to hold weak
 references to values which have been already garbage collected.
 @end defmac

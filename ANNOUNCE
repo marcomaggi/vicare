@@ -73,6 +73,9 @@ Notes for revision 0.2d15
     unbound_object	-> IK_UNBOUND_OBJECT
     bwp_object		-> IK_BWP_OBJECT
 
+  and the following aliases defined: IK_FALSE, IK_TRUE, IK_NULL, IK_EOF,
+  IK_VOID, IK_UNBOUND, IK_BWP.
+
 
 Notes for revision 0.2d14
 -------------------------
