@@ -1,6 +1,6 @@
 #!../src/vicare -b vicare.boot --r6rs-script
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Copyright (C) 2006,2007,2008,2012  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Abstract
@@ -693,6 +693,7 @@
     (struct-type-descriptor			i v $language)
     (struct-rtd					i v $language)
     (struct=?					i v $language)
+    (struct-reset				i v $language)
     (code?					i v $language)
     (immediate?					i v $language)
     (pointer-value				i v $language)

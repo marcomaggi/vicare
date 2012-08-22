@@ -76,6 +76,9 @@ Notes for revision 0.2d15
   and the following aliases defined: IK_FALSE, IK_TRUE, IK_NULL, IK_EOF,
   IK_VOID, IK_UNBOUND, IK_BWP.
 
+* Added STRUCT-RESET  to (vicare), to  reset to #f  all the fields  of a
+  structure.
+
 
 Notes for revision 0.2d14
 -------------------------

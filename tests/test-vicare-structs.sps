@@ -296,6 +296,16 @@
 	(struct-ref S 4))
     => (list 4 S))
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((S ((struct-constructor color-rtd) 1 2 3)))
+	(struct-reset S)
+	(list (struct-ref S 0)
+	      (struct-ref S 1)
+	      (struct-ref S 2)))
+    => '(#f #f #f))
+
   #t)
 
 

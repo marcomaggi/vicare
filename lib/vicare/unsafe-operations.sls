@@ -52,6 +52,11 @@
 #!r6rs
 (library (vicare unsafe-operations)
   (export
+    (rename ($struct-rtd	struct-rtd)
+	    ($struct-length	struct-length)
+	    ($struct-ref	struct-ref)
+	    ($struct-set!	struct-set!))
+
     (rename ($fxzero?	fxzero?)
 	    ($fxadd1	fxadd1)		;increment
 	    ($fxsub1	fxsub1)		;decrement
@@ -237,6 +242,7 @@
 
     #| end of export |# )
   (import (ikarus)
+    (ikarus system $structs)
     (ikarus system $fx)
     (ikarus system $bignums)
     (ikarus system $ratnums)
@@ -255,6 +261,14 @@
     (for (prefix (vicare installation-configuration)
 		 config.)
 	 expand))
+
+
+;;;; structures
+
+(define-syntax $struct-length
+  (syntax-rules ()
+    ((_ ?stru)
+     ($struct-ref ($struct-rtd ?stru) 1))))
 
 
 ;;;; fixnums

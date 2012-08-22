@@ -34,6 +34,7 @@
     ;; struct accessors and mutators
     struct-ref			struct-set!
     struct-field-accessor	struct-field-mutator
+    struct-reset
 
     ;; structure inspection
     struct-rtd			(rename (struct-rtd struct-type-descriptor))
@@ -57,6 +58,7 @@
 		  ;; struct accessors and mutators
 		  struct-ref		struct-set!
 		  struct-field-accessor	struct-field-mutator
+		  struct-reset
 
 		  ;; structure inspection
 		  struct-rtd		struct-type-descriptor
@@ -317,6 +319,17 @@
 	(with-arguments-validation (who)
 	    ((struct-of-type x rtd))
 	  ($struct-set! x i v))))))
+
+(define (struct-reset x)
+  ;;Reset to #f all the fields of a structure.
+  ;;
+  (define who 'struct-reset)
+  (with-arguments-validation (who)
+      ((struct x))
+    (let ((len ($struct-ref ($struct-rtd x) 1)))
+      (do ((i 0 (+ 1 i)))
+	  ((= i len))
+	($struct-set! x i #f)))))
 
 
 ;;;; data structure inspection

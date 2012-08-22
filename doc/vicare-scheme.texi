@@ -2755,6 +2755,11 @@ Return true if @vari{obj} and @varii{obj} are two structures having the
 same @rtd{} and equal field values according to @func{eqv?}.
 @end defun
 
+
+@defun struct-reset @var{stru}
+Reset to @false{} all the fields of a structure.
+@end defun
+
 @c page
 @node iklib keywords
 @section Keyword objects
