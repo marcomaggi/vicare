@@ -79,6 +79,8 @@ Notes for revision 0.2d15
 * Added STRUCT-RESET  to (vicare), to  reset to #f  all the fields  of a
   structure.
 
+* Added REGCOMP/DISOWN to (vicare glibc).
+
 
 Notes for revision 0.2d14
 -------------------------
