@@ -326,8 +326,8 @@
 	rv)
     => '#((0 . 3)))
 
-
-  #f)
+;;;  (check-pretty-print 'gc)
+  (collect))
 
 
 (parametrise ((check-test-name	'word-expansion))
