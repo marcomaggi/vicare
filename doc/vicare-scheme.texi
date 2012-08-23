@@ -12833,7 +12833,7 @@ pointer itself is collected.
 
 
 @defun regcomp/disown @var{pattern} @var{flags}
-Like @func{regcomp}, when the returned pointer objectis garbage
+Like @func{regcomp}, but when the returned pointer object is garbage
 collected nothing happens; we have to explicitly apply @func{regfree} to
 the returned pointer object to release the allocated resources.
 @end defun
