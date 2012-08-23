@@ -62,7 +62,8 @@
 
     ;; pattern matching, globbing, regular expressions
     fnmatch		glob		glob/string
-    regcomp		regexec		regfree
+    regcomp		regcomp/disown
+    regexec		regfree
 
     ;; word expansion
     wordexp		wordexp/string
@@ -439,14 +440,19 @@
     (capi.glibc-regfree pointer)))
 
 (define (regcomp pattern flags)
-  (define who 'regcomp)
+  (%regex-guardian (%regcomp 'regcomp pattern flags)))
+
+(define (regcomp/disown pattern flags)
+  (%regcomp 'regcomp/disown pattern flags))
+
+(define (%regcomp who pattern flags)
   (with-arguments-validation (who)
       ((string/bytevector	pattern)
        (fixnum			flags))
     (with-bytevectors ((pattern.bv pattern))
       (let ((rv (capi.glibc-regcomp pattern.bv flags)))
 	(cond ((pointer? rv)
-	       (%regex-guardian rv))
+	       rv)
 	      ((not rv)
 	       (error who
 		 "error allocating memory for precompiled regular expression"

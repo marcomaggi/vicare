@@ -326,6 +326,20 @@
 	rv)
     => '#((0 . 3)))
 
+  (check
+      (let* ((rex (glibc.regcomp "[a-z]+" REG_EXTENDED))
+	     (rv  (glibc.regexec rex "abc" 0)))
+	(glibc.regfree rex)
+	rv)
+    => '#((0 . 3)))
+
+  (check
+      (let* ((rex (glibc.regcomp/disown "[a-z]+" REG_EXTENDED))
+	     (rv  (glibc.regexec rex "abc" 0)))
+	(glibc.regfree rex)
+	rv)
+    => '#((0 . 3)))
+
 ;;;  (check-pretty-print 'gc)
   (collect))
 
