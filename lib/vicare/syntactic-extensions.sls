@@ -51,7 +51,8 @@
     ;; miscellaneous dispatching
     case-word-size		case-endianness
     case-one-operand		case-two-operands
-    case-fixnums
+    case-fixnums		case-integers
+    define-exact-integer->symbol-function
 
     ;; auxiliary syntaxes
     big			little
@@ -505,6 +506,46 @@
 	     ...)))
     ))
 
+(define-syntax case-integers
+  (syntax-rules (else)
+    ((_ ?expr
+	((?integer)
+	 ?body0 ?body ...)
+	...
+	(else
+	 ?else-body0 ?else-body ...))
+     (let ((int ?expr))
+       (cond ((= ?integer int)
+	      ?body0 ?body ...)
+	     ...
+	     (else
+	      ?else-body0 ?else-body ...))))
+    ((_ ?expr
+	((?integer)
+	 ?body0 ?body ...)
+	...)
+     (let ((int ?expr))
+       (cond ((= ?integer int)
+	      ?body0 ?body ...)
+	     ...)))
+    ))
+
+(define-argument-validation (exact-integer who obj)
+  (and (integer? obj) (exact? obj))
+  (assertion-violation who "expected exact integer as argument" obj))
+
+(define-syntax define-exact-integer->symbol-function
+  (syntax-rules ()
+    ((_ ?who (?code ...))
+     (define (?who code)
+       (define who '?who)
+       (with-arguments-validation (who)
+	   ((exact-integer	code))
+	 (case-integers code
+	   ((?code)	'?code)
+	   ...
+	   (else #f)))))))
+
 
 ;;;; math functions dispatching
 
@@ -610,4 +651,5 @@
 ;;Local Variables:
 ;;eval: (put 'case-one-operand 'scheme-indent-function 1)
 ;;eval: (put 'case-two-operands 'scheme-indent-function 1)
+;;eval: (put 'case-integers 'scheme-indent-function 1)
 ;;End:

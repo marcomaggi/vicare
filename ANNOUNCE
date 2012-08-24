@@ -81,6 +81,11 @@ Notes for revision 0.2d15
 
 * Added REGCOMP/DISOWN to (vicare glibc).
 
+* Added syntaxes to (vicare syntactic-extensions):
+
+    case-integers
+    define-exact-integer->symbol-function
+
 
 Notes for revision 0.2d14
 -------------------------
