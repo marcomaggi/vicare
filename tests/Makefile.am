@@ -132,6 +132,7 @@ TESTS			=	\
 	test-vicare-bignums.sps				\
 	test-vicare-bytevectors.sps			\
 	test-vicare-chars.sps				\
+	test-vicare-collect.sps				\
 	test-vicare-enumerations.sps			\
 	test-vicare-equality.sps			\
 	test-vicare-debugging.sps			\
@@ -327,6 +328,7 @@ EXTRA_DIST = \
 	test-vicare-bignums.sps				\
 	test-vicare-bytevectors.sps			\
 	test-vicare-chars.sps				\
+	test-vicare-collect.sps				\
 	test-vicare-enumerations.sps			\
 	test-vicare-equality.sps			\
 	test-vicare-debugging.sps			\

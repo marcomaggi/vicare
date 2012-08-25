@@ -895,4 +895,118 @@ ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
   return IK_VOID_OBJECT;
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ik_register_to_avoid_collecting (ikptr s_obj, ikpcb * pcb)
+{
+  switch (s_obj) {
+  case IK_FALSE:     /* Avoid registering constants. */
+  case IK_TRUE:
+  case IK_NULL:
+  case IK_EOF:
+  case IK_VOID:
+  case IK_BWP:
+  case IK_UNBOUND:
+    return s_obj;
+  default:
+    if (IK_IS_FIXNUM(s_obj)) {    /* Avoid registering fixnums. */
+      return s_obj;
+    } else {
+      pcb->root0 = &s_obj;
+      {
+	ikptr	s_pair = ika_pair_alloc(pcb);
+	IK_CAR(s_pair) = s_obj;
+	IK_CDR(s_pair) = pcb->not_to_be_collected;
+	pcb->not_to_be_collected = s_pair;
+      }
+      pcb->root0 = NULL;
+      return s_obj;
+    }
+  }
+}
+ikptr
+ik_forget_to_avoid_collecting (ikptr s_obj, ikpcb * pcb)
+{
+  switch (s_obj) {
+  case IK_FALSE:     /* Avoid searching for constants. */
+  case IK_TRUE:
+  case IK_NULL:
+  case IK_EOF:
+  case IK_VOID:
+  case IK_BWP:
+  case IK_UNBOUND:
+    return IK_FALSE;
+  default:
+    if (IK_IS_FIXNUM(s_obj)) {    /* Avoid searching for fixnums. */
+      return IK_FALSE;
+    } else {
+      ikptr s_pair = pcb->not_to_be_collected;
+      /*
+       *  |------------| pcb
+       *       |
+       *        ---> NULL = s_pair
+       */
+      if (IK_NULL == s_pair) {
+	return IK_FALSE_OBJECT;
+      } else
+	/* Before:
+	 *
+	 *  |------------| pcb
+	 *       |
+	 *        --->|---|---| s_pair
+	 *              |   |
+	 *             OBJ   --->|---|---| CDR
+	 *
+	 * after:
+	 *
+	 *  |------------| pcb                |---|---| s_pair
+	 *       |                              |
+	 *        --->|---|---| CDR            OBJ
+	 */
+	if (IK_CAR(s_pair) == s_obj) {
+	  pcb->not_to_be_collected = IK_CDR(s_pair);
+	  return s_obj;
+	} else {
+	  ikptr	s_prev = s_pair;
+	  while (IK_NULL != s_pair) {
+	    /* Before:
+	     *
+	     *  |---|---| s_prev
+	     *        |
+	     *         --->|---|---| s_pair
+	     *               |   |
+	     *              OBJ   --->|---|---| CDR
+	     *
+	     * after:
+	     *
+	     *  |---|---| s_prev               |---|---| s_pair
+	     *        |                          |
+	     *         --->|---|---| CDR        OBJ
+	     */
+	    if (IK_CAR(s_pair) == s_obj) {
+	      IK_CDR(s_prev) = IK_CDR(s_pair);
+	      return s_obj;
+	    } else {
+	      s_prev = s_pair;
+	      s_pair = IK_CDR(s_prev);
+	    }
+	  }
+	  return IK_FALSE_OBJECT;
+	}
+    }
+  }
+}
+ikptr
+ik_collection_avoidance_list (ikpcb * pcb)
+{
+  return pcb->not_to_be_collected;
+}
+ikptr
+ik_purge_collection_avoidance_list (ikpcb * pcb)
+{
+  pcb->not_to_be_collected = IK_NULL;
+  return IK_VOID;
+}
+
 /* end of file */

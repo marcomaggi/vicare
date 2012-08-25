@@ -86,6 +86,13 @@ Notes for revision 0.2d15
     case-integers
     define-exact-integer->symbol-function
 
+* Added experimental API to avoid garbage collection of objects:
+
+	register-to-avoid-collecting
+	forget-to-avoid-collecting
+	collection-avoidance-list
+	purge-collection-avoidance-list
+
 
 Notes for revision 0.2d14
 -------------------------

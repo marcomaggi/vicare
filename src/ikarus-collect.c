@@ -491,6 +491,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
   scan_dirty_pages(&gc);
   collect_stack(&gc, pcb->frame_pointer, pcb->frame_base - wordsize);
   collect_locatives(&gc, pcb->callbacks);
+  pcb->not_to_be_collected = add_object(&gc, pcb->not_to_be_collected, "not_to_be_collected");
   pcb->next_k		= add_object(&gc, pcb->next_k,		"next_k");
   pcb->symbol_table	= add_object(&gc, pcb->symbol_table,	"symbol_table");
   pcb->gensym_table	= add_object(&gc, pcb->gensym_table,	"gensym_table");

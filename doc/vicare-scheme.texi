@@ -1707,6 +1707,7 @@ exports all the bindings exported by @library{vicare} that are
 * iklib printing::              Printing.
 * iklib tracing::               Tracing for debugging.
 * iklib timing::                Timing.
+* iklib collection::            Interfacing with garbage collection.
 * iklib guardians::             Guardians and garbage collection.
 * iklib io::                    Input/output library.
 * iklib pointers::              Handling pointer objects.
@@ -4681,6 +4682,63 @@ Return the garbage collection bytes major field of @var{stats}.
 @end defun
 
 @c page
+@node iklib collection
+@section Interfacing with garbage collection
+
+
+@defun collect
+Run the garbage collector.  If post--garbage collection hooks are
+registered, they are run.  This binding is exported by the
+@library{ikarus} library.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Avoiding garbage collection of objects
+
+
+The following @api{} allows us to register objects in the internal state
+of Vicare so that they are not garbage collected even though we may
+loose all the Scheme references to them.
+
+This mechanism is useful when we create a Scheme object and register it
+in a data structure controlled by a foreign library (for example when
+interfacing with C language libraries); we can loose the Scheme
+references to such object without having it garbage collected, and later
+we retrieve the object reference and use it.
+
+@center @strong{This @api{} is to be considered experimental.}
+
+
+@defun register-to-avoid-collecting @var{obj}
+Register @var{obj} in the internal state of Vicare so that it is not
+garbage collected even when we loose all the Scheme references to it;
+constant values (@false{}, @true{}, @dots{}) and fixnums cannot be
+registered in this way.  Return @var{obj} itself.
+@end defun
+
+
+@defun forget-to-avoid-collecting @var{obj}
+Remove @var{obj} from the internal state of Vicare so that it is garbage
+collected when we loose all the Scheme references to it.  If @var{obj}
+was previously registered: return @var{obj} itself, else return
+@false{}.
+@end defun
+
+
+@defun collection-avoidance-list
+Return the very list of object that where registered to avoid collection
+by @func{register-to-avoid-collecting}; it can be the empty list.  We
+must be very careful in handling and modifying this list.
+@end defun
+
+
+@defun purge-collection-avoidance-list
+Reset to empty the list of objects registered to avoid collection with
+@func{register-to-avoid-collecting}.  Use with care.
+@end defun
+
+@c page
 @node iklib guardians
 @section Guardians and garbage collection
 
@@ -4695,14 +4753,6 @@ registered for preservation and from which objects actually saved from
 destruction can be retrieved, one at a time, at the convenience of the
 program.
 @end quotation
-
-
-@defun collect
-Run the garbage collector.  If post--garbage collection hooks are
-registered, they are run.  This binding is exported by the
-@library{ikarus} library.
-@end defun
-
 
 @menu
 * iklib guardians examples::    Usage examples for guardians.

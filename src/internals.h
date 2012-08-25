@@ -368,7 +368,7 @@ typedef struct ikpcb {
   ikptr			memory_end;
 
   /* Number of garbage collections performed so far.  It is used: at the
-     beginning	of a  GC ru,  to determine  which objects  generation to
+     beginning of  a GC  run, to determine  which objects  generation to
      inspect; when reporting GC statistics to the user, to show how many
      GCs where performed between two timestamps. */
   int			collection_id;
@@ -380,6 +380,9 @@ typedef struct ikpcb {
   struct timeval	collect_utime;
   struct timeval	collect_stime;
   struct timeval	collect_rtime;
+
+  /* Scheme list of object not to be collected. */
+  ikptr			not_to_be_collected;
 
 } ikpcb;
 
