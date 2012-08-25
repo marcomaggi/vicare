@@ -19231,6 +19231,10 @@ was run.
 @section Language syntactic extensions
 
 
+@cindex Library @library{vicare syntactic-extensions}
+@cindex @library{vicare syntactic-extensions}, library
+
+
 The library @library{vicare syntactic-extensions} provides bindings to
 macros that extend the Scheme language implemented by @library{vicare}
 and @library{rnrs}.
