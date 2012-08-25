@@ -316,8 +316,9 @@
   ;;  (define-inline (vicare.argument-validation-error-for-bytevector who bv))
   ;;    (assertion-violation who "expected a bytevector as argument" bv))
   ;;
-  ;;If we need to export a  validator from a library: we can export just
-  ;;the VICARE.ARGUMENT-VALIDATION-FOR-?NAME, without prefixing it.
+  ;;If we need to export a validator  from a library: we can export just
+  ;;the    identifier   VICARE.ARGUMENT-VALIDATION-FOR-?NAME,    without
+  ;;prefixing it.
   ;;
   (lambda (stx)
     (define who 'define-argument-validation)
