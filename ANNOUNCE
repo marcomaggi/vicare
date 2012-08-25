@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.2d15
+Subject: [announce] Vicare Scheme revision 0.2d16
 
                              Vicare Scheme
                              =============
@@ -37,6 +37,12 @@ this project has a mailing list:
 collection of R6 Scheme libraries:
 
 	      <http://marcomaggi.github.com/nausicaa.html>
+
+
+Notes for revision 0.2d16
+-------------------------
+
+*
 
 
 Notes for revision 0.2d15
