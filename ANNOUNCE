@@ -93,6 +93,9 @@ Notes for revision 0.2d15
 	collection-avoidance-list
 	purge-collection-avoidance-list
 
+* Added documentation  for some, but  not all, the syntaxes  exported by
+  (vicare syntactic-extensions).
+
 
 Notes for revision 0.2d14
 -------------------------

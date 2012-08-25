@@ -229,11 +229,15 @@
 	     (cleanup)
 	     (raise E))
 	 (lambda ()
-	   (call-with-values
+	   (begin0
+	       ?body
+	     (cleanup))
+	   #;(call-with-values
 	       (lambda () ?body)
 	     (lambda return-values
 	       (cleanup)
-	       (apply values return-values)))))))))
+	       (apply values return-values)))
+	   ))))))
 
 (define-syntax debug-assert
   ;;This is meant to expand to nothing when debugging is turned off.
@@ -265,9 +269,10 @@
   ;;
   (syntax-rules ()
     ((_ ((?value.bv ?value) ...) . ?body)
-     (let ((?value.bv (if (bytevector? ?value)
-			  ?value
-			(string->latin1 ?value)))
+     (let ((?value.bv (let ((V ?value))
+			(if (bytevector? V)
+			    V
+			  (string->latin1 V))))
 	   ...)
        . ?body))))
 
@@ -280,11 +285,12 @@
   ;;
   (syntax-rules ()
     ((_ ((?value.bv ?value) ...) . ?body)
-     (let ((?value.bv (cond ((bytevector? ?value)
-			     ?value)
-			    ((string? ?value)
-			     (string->latin1 ?value))
-			    (else ?value)))
+     (let ((?value.bv (let ((V ?value))
+			(cond ((bytevector? V)
+			       V)
+			      ((string? V)
+			       (string->latin1 V))
+			      (else V))))
 	   ...)
        . ?body))))
 
