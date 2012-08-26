@@ -1123,9 +1123,9 @@ ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
    object  return a  "void*" pointer  to the  first byte.   If OBJ  is a
    pointer  object  return  a  "void*"  pointer to  first  byte  of  the
    referenced memory. */
-#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE(OBJ)	\
+#define IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE(OBJ)	\
   ((IK_FALSE_OBJECT == (OBJ))? NULL : \
-    ((IK_IS_BYTEVECTOR(OBJ))? IK_BYTEVECTOR_DATA_CHARP(OBJ) : IK_POINTER_DATA_CHARP(OBJ)))
+    ((IK_IS_BYTEVECTOR(OBJ))? IK_BYTEVECTOR_DATA_VOIDP(OBJ) : IK_POINTER_DATA_VOIDP(OBJ)))
 
 /* If OBJ is the  false object: return NULL; else OBJ  must be a pointer
    object and its "void*" pointer is returned. */

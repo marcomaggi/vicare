@@ -23310,7 +23310,7 @@ referenced memory.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_NULL (ikptr @var{OBJ})
+@deftypefn {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{OBJ})
 If @var{OBJ} is the false object: return @cnull{}.  If @var{OBJ} is a
 bytevector object return a pointer to the first byte.  If @var{OBJ} is a
 pointer object return a pointer to first byte of the referenced memory.
@@ -23324,7 +23324,7 @@ referenced memory.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {void *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_NULL (ikptr @var{OBJ})
+@deftypefn {Preprocessor Macro} {void *} IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{OBJ})
 If @var{OBJ} is the false object: return @cnull{}.  If @var{OBJ} is a
 bytevector object return a pointer to the first byte.  If @var{OBJ} is a
 pointer object return a pointer to first byte of the referenced memory.
