@@ -44,6 +44,7 @@ Notes for revision 0.2d16
 
 * Added C language preprocessor macros:
 
+    IK_IS_BOOLEAN
     IK_BOOLEAN_TO_INT
     IK_BOOLEAN_FROM_INT
 
