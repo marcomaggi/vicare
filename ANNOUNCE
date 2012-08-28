@@ -42,7 +42,10 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d16
 -------------------------
 
-*
+* Added C language preprocessor macros:
+
+    IK_BOOLEAN_TO_INT
+    IK_BOOLEAN_FROM_INT
 
 
 Notes for revision 0.2d15

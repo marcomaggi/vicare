@@ -822,6 +822,10 @@ ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
 #define IK_POINTER_FROM_POINTER_OR_FALSE(OBJ)		\
   ((IK_FALSE_OBJECT == (OBJ))? NULL : IK_POINTER_DATA_VOIDP(OBJ))
 
+#define IK_IS_BOOLEAN(OBJ)		((IK_FALSE == (OBJ)) || (IK_TRUE == (OBJ)))
+#define IK_BOOLEAN_TO_INT(OBJ)		(!(IK_FALSE == (OBJ)))
+#define IK_BOOLEAN_FROM_INT(INT)	((INT)? IK_TRUE : IK_FALSE)
+
 
 /** --------------------------------------------------------------------
  ** Done.

@@ -19701,6 +19701,7 @@ values is duplicated in the Scheme language compiler
 * objects types::               Some basic type definitions.
 * objects refs::                Builtin objects and tags.
 * objects memory::              Memory allocation and collection.
+* objects booleans::            Boolean objects.
 * objects fixnums::             Fixnum objects.
 * objects pairs::               Pair objects and lists.
 * objects bytevectors::         Bytevector objects.
@@ -20455,6 +20456,27 @@ pcb->root0 = NULL;
 
 @noindent
 because @cfunc{ika_pair_alloc} initialises the car and the cdr.
+
+@c page
+@node objects booleans
+@section Boolean objects
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_BOOLEAN (ikptr @var{obj})
+If @var{obj} is @code{IK_FALSE} or @code{IK_TRUE} return true, else
+return zero.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} int IK_BOOLEAN_TO_INT (ikptr @var{obj})
+If @var{obj} is @code{IK_FALSE} return @code{0}, else return @code{1}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_BOOLEAN_FROM_INT (int @var{val})
+If @var{val} is @code{0} return @code{IK_FALSE}, else return
+@code{IK_TRUE}.
+@end deftypefn
 
 @c page
 @node objects fixnums
