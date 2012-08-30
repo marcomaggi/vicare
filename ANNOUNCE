@@ -58,6 +58,9 @@ Notes for revision 0.2d16
   opaque object.   Such functions are  meant to  be used along  with the
   garbage collection avoidance API.
 
+* Changed STRUCT-RESET to set all the fields of a struct to void, rather
+  than to false.
+
 
 Notes for revision 0.2d15
 -------------------------

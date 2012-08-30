@@ -329,7 +329,7 @@
     (let ((len ($struct-ref ($struct-rtd x) 1)))
       (do ((i 0 (+ 1 i)))
 	  ((= i len))
-	($struct-set! x i #f)))))
+	($struct-set! x i (void))))))
 
 
 ;;;; data structure inspection

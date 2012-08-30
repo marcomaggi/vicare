@@ -304,7 +304,7 @@
 	(list (struct-ref S 0)
 	      (struct-ref S 1)
 	      (struct-ref S 2)))
-    => '(#f #f #f))
+    => `(,(void) ,(void) ,(void)))
 
   #t)
 

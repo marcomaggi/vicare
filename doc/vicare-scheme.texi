@@ -2758,7 +2758,7 @@ same @rtd{} and equal field values according to @func{eqv?}.
 
 
 @defun struct-reset @var{stru}
-Reset to @false{} all the fields of a structure.
+Reset to void all the fields of a structure.
 @end defun
 
 @c page
