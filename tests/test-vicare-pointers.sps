@@ -28,11 +28,12 @@
 #!r6rs
 (import (vicare)
   (vicare errno)
-  (vicare checks)
   (prefix (vicare words)
 	  words.)
   (prefix (vicare platform-constants)
-	  plat.))
+	  plat.)
+  (vicare syntactic-extensions)
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare pointer functions\n")
@@ -783,6 +784,23 @@
 	  (lambda (&int32)
 	    (assertion-violation #f "the error" 1 2 3))))
     => '(1 2 3))
+
+  #t)
+
+
+(parametrise ((check-test-name	'objects))
+
+  (check
+      (pointer? (scheme-object->pointer '(1 . 2)))
+    => #t)
+
+  (check
+      (let ((O '(1 . 2)))
+	(register-to-avoid-collecting O)
+	(eq? O (unwind-protect
+		   (pointer->scheme-object (scheme-object->pointer O))
+		 (forget-to-avoid-collecting O))))
+    => #t)
 
   #t)
 

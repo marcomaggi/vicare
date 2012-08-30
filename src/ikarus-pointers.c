@@ -159,6 +159,20 @@ ikrt_pointer_set_null (ikptr pointer)
 /* ------------------------------------------------------------------ */
 
 ikptr
+ikrt_pointer_from_scheme_object (ikptr s_obj, ikpcb * pcb)
+{
+  return ika_pointer_alloc(pcb, (ik_ulong)s_obj);
+}
+ikptr
+ikrt_pointer_to_scheme_object (ikptr s_pointer, ikpcb * pcb)
+{
+  void *	pointer = IK_POINTER_DATA_VOIDP(s_pointer);
+  return (ikptr)pointer;
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
 ikrt_pointer_to_int (ikptr pointer, ikpcb* pcb)
 {
   void *	memory;

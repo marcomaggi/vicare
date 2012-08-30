@@ -21,6 +21,7 @@
     pointer?
     null-pointer			pointer-null?
     pointer->integer			integer->pointer
+    pointer->scheme-object		scheme-object->pointer
     pointer-diff			pointer-add
     pointer=?				pointer<>?
     pointer<?				pointer>?
@@ -521,6 +522,17 @@
   (with-arguments-validation (who)
       ((pointer	x))
     (capi.ffi-pointer->integer x)))
+
+;;; --------------------------------------------------------------------
+
+(define (pointer->scheme-object ptr)
+  (define who 'pointer->object)
+  (with-arguments-validation (who)
+      ((pointer	ptr))
+    (capi.ffi-pointer->scheme-object ptr)))
+
+(define (scheme-object->pointer obj)
+  (capi.ffi-scheme-object->pointer obj))
 
 ;;; --------------------------------------------------------------------
 

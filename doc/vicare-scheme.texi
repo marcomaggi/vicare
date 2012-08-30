@@ -5616,6 +5616,23 @@ Comparison functions for pointers.  Return @true{} if the arguments
 satisfy the predicate, else return @false{}.
 @end defun
 
+
+@defun pointer->scheme-object @var{pointer}
+@defunx scheme-object->pointer @var{obj}
+One of the assumptions of @value{PRJNAME}, regarding the hosting
+platform, is that a machine word has the same dimension of a pointer;
+immediate Scheme objects and references to Scheme objects are
+represented as machine words.
+
+These functions convert between Scheme objects and pointer objects, so
+that a Scheme object can be handed, as opaque value, to a function
+written and compiled in a foreign language (typically the C language).
+
+To prevent garbage collection of objects converted to pointer objects,
+we must use the garbage collection avoiding @api{}.  @ref{iklib
+collection, Avoiding garbage collection of objects}
+@end defun
+
 @c page
 @node iklib pointers poke
 @subsection Poking values

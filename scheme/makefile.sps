@@ -1908,6 +1908,8 @@
     (null-pointer				$for i v $language)
     (pointer->integer				$for i v $language)
     (integer->pointer				$for i v $language)
+    (pointer->scheme-object			$for i v $language)
+    (scheme-object->pointer			$for i v $language)
     (pointer-null?				$for i v $language)
     (pointer-diff				$for i v $language)
     (pointer-add				$for i v $language)

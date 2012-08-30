@@ -48,6 +48,16 @@ Notes for revision 0.2d16
     IK_BOOLEAN_TO_INT
     IK_BOOLEAN_FROM_INT
 
+* Added functions to convert immediate  Scheme objects and references to
+  Scheme objects to pointer objects:
+
+    pointer->scheme-object
+    scheme-object->pointer
+
+  such functions allow to hand a  Scheme object to a foreign function as
+  opaque object.   Such functions are  meant to  be used along  with the
+  garbage collection avoidance API.
+
 
 Notes for revision 0.2d15
 -------------------------
