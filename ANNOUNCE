@@ -61,6 +61,17 @@ Notes for revision 0.2d16
 * Changed STRUCT-RESET to set all the fields of a struct to void, rather
   than to false.
 
+* Added functions to convert from  raw memory strings in UTF-16 encoding
+  to bytevectors and Scheme strings:
+
+    cstring16->bytevector
+    cstring16n->string
+    cstring16le->string
+    cstring16be->string
+
+* Fixed bug in BYTEVECTOR->CSTRING  erroneously using "strncpy()" rather
+  than a verbatim copy of the bytes.
+
 
 Notes for revision 0.2d15
 -------------------------

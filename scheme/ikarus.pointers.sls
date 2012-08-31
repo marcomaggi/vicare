@@ -64,6 +64,8 @@
     guarded-strdup			guarded-strdup*
     guarded-strndup			guarded-strndup*
     cstring->bytevector			cstring->string
+    cstring16->bytevector		cstring16n->string
+    cstring16le->string			cstring16be->string
     bytevector->cstring			bytevector->cstring*
     bytevector->guarded-cstring		bytevector->guarded-cstring*
     string->cstring			string->cstring*
@@ -155,6 +157,8 @@
 		  guarded-strdup			guarded-strdup*
 		  guarded-strndup			guarded-strndup*
 		  cstring->bytevector			cstring->string
+		  cstring16->bytevector			cstring16->string
+		  cstring16le->string			cstring16be->string
 		  bytevector->cstring			bytevector->cstring*
 		  bytevector->guarded-cstring		bytevector->guarded-cstring*
 		  string->cstring			string->cstring*
@@ -932,6 +936,12 @@
 	 (number-of-bytes	count))
       (capi.ffi-cstring->bytevector pointer count)))))
 
+(define (cstring16->bytevector pointer)
+  (define who 'cstring16->bytevector)
+  (with-arguments-validation (who)
+      ((pointer pointer))
+    (capi.ffi-cstring16->bytevector pointer)))
+
 ;;; --------------------------------------------------------------------
 
 (define cstring->string
@@ -947,6 +957,24 @@
 	((pointer		pointer)
 	 (number-of-bytes	count))
       (ascii->string (capi.ffi-cstring->bytevector pointer count))))))
+
+(define (cstring16n->string pointer)
+  (define who 'cstring16n->string)
+  (with-arguments-validation (who)
+      ((pointer pointer))
+    (utf16n->string (capi.ffi-cstring16->bytevector pointer))))
+
+(define (cstring16le->string pointer)
+  (define who 'cstring16le->string)
+  (with-arguments-validation (who)
+      ((pointer pointer))
+    (utf16le->string (capi.ffi-cstring16->bytevector pointer))))
+
+(define (cstring16be->string pointer)
+  (define who 'cstring16be->string)
+  (with-arguments-validation (who)
+      ((pointer pointer))
+    (utf16be->string (capi.ffi-cstring16->bytevector pointer))))
 
 (define (string->cstring str)
   (define who 'string->cstring)

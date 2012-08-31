@@ -47,6 +47,7 @@
     ffi-strcmp				ffi-strncmp
     ffi-strdup				ffi-strndup
     ffi-bytevector->cstring		ffi-cstring->bytevector
+    ffi-cstring16->bytevector
     ffi-bytevectors->argv		ffi-argv->bytevectors
     ffi-argv-length
 
@@ -447,6 +448,9 @@
 
 (define-inline (ffi-cstring->bytevector pointer count)
   (foreign-call "ikrt_bytevector_from_cstring" pointer count))
+
+(define-inline (ffi-cstring16->bytevector pointer)
+  (foreign-call "ikrt_bytevector_from_cstring16" pointer))
 
 (define-inline (ffi-strlen pointer)
   (foreign-call "ikrt_strlen" pointer))

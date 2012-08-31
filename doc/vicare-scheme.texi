@@ -6188,10 +6188,10 @@ Maker and predicate for condition objects of type
 
 
 The following functions perform operations on raw @ascii{} coded strings
-terminated by a zero byte, for short @asciiz{} strings.  The following
-bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+terminated by a zero byte, for short @asciiz{} strings; some functions
+act upon raw @utf{}-16 strings.  The following bindings are exported by
+the libraries @library{vicare}, @library{ikarus} and @library{ikarus
+system $foreign} and reexported by the library @library{vicare ffi}.
 
 
 @defun bytevector->cstring @var{bv}
@@ -6235,6 +6235,23 @@ Memory allocated by @func{string->cstring} must be explicitly
 released by @func{free}; memory allocated by
 @func{string->guarded-cstring} is automatically released by the
 garbage collector whenever the returned pointer is garbage collected.
+@end defun
+
+
+@defun cstring16->bytevector @var{pointer}
+Convert between an @utf{}-16 string and a Scheme bytevector; this
+function works with all the possible encodings of the string.  The end
+of the string is determined by searching for a sequence of two
+consecutive zero bytes, starting at even offset.
+@end defun
+
+
+@defun cstring16n->string @var{pointer}
+@defunx cstring16le->string @var{pointer}
+@defunx cstring16be->string @var{pointer}
+Like @func{cstring16->bytevector}, but convert the result to a Scheme
+string assuming the specified byte order (native, little endian, big
+endian).
 @end defun
 
 

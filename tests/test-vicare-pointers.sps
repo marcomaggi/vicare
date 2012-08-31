@@ -493,10 +493,40 @@
 
   (check
       (let ((argv (bytevectors->guarded-argv '(#vu8(65 66 67 68)
-						       #vu8(75 77 77 78)
-						       #vu8(85 86 87 88)))))
+						   #vu8(75 77 77 78)
+						   #vu8(85 86 87 88)))))
 	(argv-length argv))
     => 3)
+
+;;; --------------------------------------------------------------------
+
+  (check 'this	;cstring16->bytevector
+      (let* ((cstr (bytevector->guarded-cstring (bytevector-append (string->utf16n "ciao")
+								   '#vu8(0 0))))
+	     (bv   (cstring16->bytevector cstr)))
+	bv)
+    => (string->utf16n "ciao"))
+
+  (check	;cstring16n->string
+      (let* ((cstr (bytevector->guarded-cstring (bytevector-append (string->utf16n "ciao")
+								   '#vu8(0 0))))
+	     (S    (cstring16n->string cstr)))
+	S)
+    => "ciao")
+
+  (check	;cstring16le->string
+      (let* ((cstr (bytevector->guarded-cstring (bytevector-append (string->utf16le "ciao")
+								   '#vu8(0 0))))
+	     (S    (cstring16le->string cstr)))
+	S)
+    => "ciao")
+
+  (check	;cstring16be->string
+      (let* ((cstr (bytevector->guarded-cstring (bytevector-append (string->utf16be "ciao")
+								   '#vu8(0 0))))
+	     (S    (cstring16be->string cstr)))
+	S)
+    => "ciao")
 
   #t)
 

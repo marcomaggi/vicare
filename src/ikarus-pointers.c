@@ -398,9 +398,20 @@ ikrt_bytevector_to_cstring (ikptr bv, ikpcb * pcb)
   char *	pointer = IK_BYTEVECTOR_DATA_CHARP(bv);
   size_t	length	= (size_t)IK_BYTEVECTOR_LENGTH(bv);
   char *	cstr;
+  int		i;
   cstr = malloc(1+length);
   if (cstr) {
-    strncpy(cstr, pointer, length);
+    /* Notice that:
+
+          strncpy(cstr, pointer, length);
+
+       does the wrong thing here when there are zero bytes in the middle
+       of the  bytevector: it copies the  bytes up until the  first zero
+       byte, then  pads the  destination with  zeros.  We  want verbatim
+       copying  here,  in  case  the   input  bytevector  is  in  UTF-16
+       encoding. */
+    for (i=0; i<length; ++i)
+      cstr[i] = pointer[i];
     cstr[length] = '\0';
     return ika_pointer_alloc(pcb, (ik_ulong)cstr);
   } else
@@ -415,6 +426,11 @@ ikrt_bytevector_from_cstring (ikptr s_pointer, ikptr s_count, ikpcb * pcb)
   char *	data	= IK_BYTEVECTOR_DATA_CHARP(s_bv);
   memcpy(data, memory, count);
   return s_bv;
+}
+ikptr
+ikrt_bytevector_from_cstring16 (ikptr s_pointer, ikpcb * pcb)
+{
+  return ik_bytevector_from_utf16z(pcb, IK_POINTER_DATA_VOIDP(s_pointer));
 }
 
 /* ------------------------------------------------------------------ */
