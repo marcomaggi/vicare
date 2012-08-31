@@ -398,7 +398,6 @@ ikrt_bytevector_to_cstring (ikptr bv, ikpcb * pcb)
   char *	pointer = IK_BYTEVECTOR_DATA_CHARP(bv);
   size_t	length	= (size_t)IK_BYTEVECTOR_LENGTH(bv);
   char *	cstr;
-  int		i;
   cstr = malloc(1+length);
   if (cstr) {
     /* Notice that:
@@ -410,8 +409,10 @@ ikrt_bytevector_to_cstring (ikptr bv, ikpcb * pcb)
        byte, then  pads the  destination with  zeros.  We  want verbatim
        copying  here,  in  case  the   input  bytevector  is  in  UTF-16
        encoding. */
-    for (i=0; i<length; ++i)
-      cstr[i] = pointer[i];
+    /* int		i; */
+    /* for (i=0; i<length; ++i) */
+    /*   cstr[i] = pointer[i]; */
+    memcpy(cstr, pointer, length);
     cstr[length] = '\0';
     return ika_pointer_alloc(pcb, (ik_ulong)cstr);
   } else
