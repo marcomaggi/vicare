@@ -66,14 +66,16 @@
 ;;;SOFTWARE.
 
 
-#!r6rs
+#!vicare
 (library (vicare infix)
   (export infix incr! decr! xor ? :
 	  (rename (mod					%)
 		  (and					&&)
 		  (or					!!)
 		  (xor					^^)
-		  (not					~~))
+		  (not					~~)
+		  (incr!				++)
+		  (decr!				--))
 	  (rename (bitwise-and				&)
 		  (bitwise-ior				!)
 		  (bitwise-xor				^)

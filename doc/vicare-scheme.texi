@@ -1857,6 +1857,9 @@ Gensym syntax, @code{#@{gensym@}}.
 
 @item
 Shared structures graph notation: @code{#nn=}, @code{#nn#}.
+
+@item
+Special symbols are allowed: @code{++}, @code{--}.
 @end itemize
 
 The syntax extensions are made available by default on all input ports,
@@ -19858,7 +19861,10 @@ All the operators are left--associative with the exception of
 
 @item
 @func{incr!} and @func{decr!} are unary operators that can be applied to
-expressions both in prefix and suffix positions.
+expressions both in prefix and suffix positions.  @library{vicare infix}
+exports the identifiers @func{++} and @func{--} as aliases for
+@func{incr!} and @func{decr!}; such aliases are invalid in @code{#!r6rs}
+mode, but are allowed by the reader when in @code{#!vicare} mode.
 
 When applied in prefix position to an identifier, @func{incr!} expands
 to:

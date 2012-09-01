@@ -882,6 +882,18 @@
 	 (let ((ch1 (peek-char port)))
 	   (cond ((eof-object? ch1)	'(datum . +))
 		 ((delimiter?  ch1)	'(datum . +))
+
+		 ((unsafe.char= #\+ ch1)
+		  (if (port-in-r6rs-mode? port)
+		      (%error "++ syntax is invalid in #!r6rs mode")
+		    (begin
+		      (get-char-and-track-textual-position port)
+		      (let ((ch2 (peek-char port)))
+			(if (or (eof-object? ch2)
+				(delimiter?  ch2))
+			    '(datum . |++|)
+			  (%error "invalid syntax ++"))))))
+
 		 (else
 		  (cons 'datum (u:sign port '(#\+) 10 #f #f +1))))))
 
@@ -902,6 +914,17 @@
 		 ((unsafe.char= ch1 #\>)
 		  (get-char-and-track-textual-position port)
 		  (finish-tokenisation-of-identifier '(#\> #\-) port #t))
+
+		 ((unsafe.char= #\- ch1)
+		  (if (port-in-r6rs-mode? port)
+		      (%error "-- syntax is invalid in #!r6rs mode")
+		    (begin
+		      (get-char-and-track-textual-position port)
+		      (let ((ch2 (peek-char port)))
+			(if (or (eof-object? ch2)
+				(delimiter?  ch2))
+			    '(datum . |--|)
+			  (%error "invalid syntax --"))))))
 
 		 ;;number
 		 (else

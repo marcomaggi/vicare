@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (rnrs)
   (vicare infix)
   (vicare checks))
@@ -160,6 +160,49 @@
 (check
     (let ((x 10))
       (let ((r (infix x decr!)))
+	(list r x)))
+  => '(10 9))
+
+;;; --------------------------------------------------------------------
+
+(check (infix ++ 10)	=> 11)
+(check (infix 10 ++)	=> 11)
+(check (infix -- 10)	=> 9)
+(check (infix 10 --)	=> 9)
+
+(check
+    (let ((x 10))
+      (let ((r (infix ++ x)))
+	(list r x)))
+  => '(11 11))
+
+(check
+    (let ((x 10))
+      (let ((r (infix 2 + ++ x)))
+	(list r x)))
+  => '(13 11))
+
+(check
+    (let ((x 10))
+      (let ((r (infix 2 + (++ x))))
+	(list r x)))
+  => '(13 11))
+
+(check
+    (let ((x 10))
+      (let ((r (infix x ++)))
+	(list r x)))
+  => '(10 11))
+
+(check
+    (let ((x 10))
+      (let ((r (infix -- x)))
+	(list r x)))
+  => '(9 9))
+
+(check
+    (let ((x 10))
+      (let ((r (infix x --)))
 	(list r x)))
   => '(10 9))
 
