@@ -72,6 +72,8 @@ Notes for revision 0.2d16
 * Fixed bug in BYTEVECTOR->CSTRING  erroneously using "strncpy()" rather
   than a verbatim copy of the bytes.
 
+* Added (vicare infix) providing an infix to prefix transformer.
+
 
 Notes for revision 0.2d15
 -------------------------

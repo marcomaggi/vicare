@@ -14,6 +14,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/flonum-formatter.sls		\
 	vicare/flonum-parser.sls		\
 	vicare/include.sls			\
+	vicare/infix.sls			\
 	vicare/keywords.sls			\
 	vicare/parser-logic.sls			\
 	vicare/syntactic-extensions.sls		\

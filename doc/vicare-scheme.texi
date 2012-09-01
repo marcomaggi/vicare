@@ -17205,6 +17205,7 @@ be @code{AF_INET} or @code{AF_INET6}.
 * flonum parse::                Parsing flonums.
 * sel::                         Simple event loop.
 * syntaxes::                    Language syntactic extensions.
+* infix::                       Infix to prefix transformer.
 @end menu
 
 @c page
@@ -19717,6 +19718,269 @@ use continuations to escape from the body.  Expand to:
         (cleanup)))))
 @end example
 @end defmac
+
+@c page
+@node infix
+@section Infix to prefix transformer
+
+
+@cindex Library @library{vicare infix}
+@cindex @library{vicare infix}, library
+
+
+The library @library{vicare infix} provides the @func{infix} macro which
+converts the traditional infix notation for expressions to the
+equivalent Scheme's prefix notation.
+
+To use the library just import @library{vicare infix} and use the
+@func{infix} macro: it expands to a prefix expression to be evaluated at
+runtime, in the lexical context of the macro use; as a special case
+@code{(infix)} is equivalent to @code{(values)}.
+
+The macro allows us to evaluate forms like:
+
+@example
+(let ((a 1) (b 2) (c 3))
+
+  (infix cos (a) * tan (b) / c)
+  @expansion{} (/ (* (cos a) (tan b)) c)
+
+  (infix (cos (a) * tan (b) / c))
+  @expansion{} (/ (* (cos a) (tan b)) c)
+
+  (infix a ? b : c)
+  @expansion{} (if a b c)
+
+ #f)
+@end example
+
+Some interpretation rules:
+
+@itemize
+@item
+Any Scheme value can be element of the input form.
+
+@item
+The following infix operators are supported; in order of descending
+precedence from top to bottom, operators on the same line have equal
+precedence:
+
+@example
+bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
+bitwise-not
+bitwise-and bitwise-ior bitwise-xor
+incr! decr!
+(unary +) (unary -)
+expt
+mod mod0
+* / div div0
++ -
+< > <= >= = eq? eqv? equal?
+not
+and or xor
+@end example
+
+@noindent
+remember that the Scheme comparison operators are meant to return a
+boolean value, rather than a number object.
+
+@item
+All the operators are left--associative with the exception of
+@func{expt} which is right--associative and of the unary @func{+},
+@func{-}, @func{incr!}, @func{decr!}, @func{not} and @func{bitwise-not}
+which are non--associative:
+
+@example
+;; left-associative
+(infix 10 - 5 - 3) @expansion{} (- (- 10 5) 3)
+(infix 10 - 5 - 3) @expansion{} (- 10 5 3)
+(infix 10 / 5 / 3) @expansion{} (/ (/ 10 5) 3)
+(infix 10 / 5 / 3) @expansion{} (/ 10 5 3)
+
+;; right-associative
+(infix 10 expt 5 expt 3) @expansion{} (expt 10 (expt 5 3))
+@end example
+
+@item
+The following operators for fixnums are supported with the same
+precedence of the corresponding generic operators:
+
+@example
+fx+               fx-
+fx*
+fxdiv             fxdiv0
+fxmod             fxmod0
+fx<?              fx>?
+fx<=?             fx>=?
+fx=?
+
+fxand             fxior
+fxxor             fxnot
+fxarithmetic-shift-left
+fxarithmetic-shift-right
+@end example
+
+All the operators are left-associative with the exception of FXNOT which
+is non-associative:
+
+@example
+(infix 10 fx- 5 fx- 3)     @expansion{} (fx- (fx- 10 5) 3)
+(infix 10 fxdiv 5 fxdiv 3) @expansion{} (fxdiv (fxdiv 10 5) 3)
+@end example
+
+@item
+The following operators for flonums are supported with the same
+precedence of the corresponding generic operators:
+
+@example
+fl+               fl-
+fl*               fl/
+flexpt
+fl<?              fl>?
+fl<=?             fl>=?
+fl=?
+@end example
+
+All the operators are left--associative with the exception of
+@func{flexpt} which is right--associative:
+
+@example
+;; left-associative
+(infix 10. fl- 5. fl- 3.)         @expansion{} (fl- (fl- 10. 5.) 3.))
+(infix 10. fl- 5. fl- 3.)         @expansion{} (fl- 10. 5. 3.))
+(infix 10. fl/ 5. fl/ 3.)         @expansion{} (fl/ (fl/ 10. 5.) 3.))
+(infix 10. fl/ 5. fl/ 3.)         @expansion{} (fl/ 10. 5. 3.))
+
+;; right-associative
+(infix 10 expt 5 expt 3)          @expansion{} (expt 10 (expt 5 3))
+(infix 10. flexpt 5. flexpt 3.)   @expansion{} (flexpt 10. (flexpt 5. 3.))
+@end example
+
+@item
+@func{incr!} and @func{decr!} are unary operators that can be applied to
+expressions both in prefix and suffix positions.
+
+When applied in prefix position to an identifier, @func{incr!} expands
+to:
+
+@example
+(infix incr! ?id) @expansion{} (begin (set! ?id (+ ?id 1)) ?id)
+@end example
+
+@noindent
+and @func{decr!} expands to:
+
+@example
+(infix decr! ?id) @expansion{} (begin (set! ?id (- ?id 1)) ?id)
+@end example
+
+When applied in suffix position to an identifier, @func{incr!} expands
+to:
+
+@example
+(infix ?id incr!) @expansion{} (let ((v ?id)) (set! ?id (+ ?id 1)) v)
+@end example
+
+@noindent
+and @func{decr!} expands to:
+
+@example
+(infix ?id decr!) @expansion{} (let ((v ?id)) (set! ?id (- ?id 1)) v)
+@end example
+
+When applied to a non--identifier expression, both in prefix and suffix
+position, @func{incr!} expands to:
+
+@example
+(infix incr! ?expr) @expansion{} (+ ?expr 1)
+(infix ?expr incr!) @expansion{} (+ ?expr 1)
+@end example
+
+@noindent
+and @func{decr!} expands to:
+
+@example
+(infix decr! ?expr) @expansion{} (- ?expr 1)
+(infix ?expr decr!) @expansion{} (- ?expr 1)
+@end example
+
+@item
+The if-then-else statement involves the identifiers @func{?}  and
+@func{:}.  This statement has the least precedence of all.
+
+@item
+Identifiers which are not operators are interpreted as variable
+references; if an identifier is followed by a list, it is a function
+call.
+
+@item
+Function calls with one or more arguments require the arguments to be
+grouped in a list; there is no special separator in the list of
+arguments.
+
+@example
+(define (fun a b c)
+  (+ a b c))
+
+(infix fun (1 2 3)) @expansion{} (fun 1 2 3)
+@end example
+
+Notice that grouping the function arguments in a list is a requirement
+of the infix expression grammar.
+
+@item
+Numbers and all the other values are just put there as operands.
+
+@item
+As a special exception: the binding @func{begin} from @library{vicare}
+is recognised in the input form and allows us to nest prefix--notation
+expressions.
+
+@example
+(infix (begin (+ 1 2))) @result{} 3
+
+(infix (begin
+         (let ((a 3))
+           (/ a 4))))
+@result{} 3/4
+
+(let ((a 3))
+  (infix (begin (/ a 4))))
+@result{} 3/4
+
+(let ((a 1) (b 2) (c 3))
+  (infix (1 + a ? (begin
+                    (+ 2 b))
+                : 3 + c - 4))
+  @expansion{} (if (+ 1 a)
+          (begin (+ 2 b))
+        (- (+ 3 c) 4))
+  #f)
+@end example
+
+@item
+The following binding aliases are exported by the library:
+
+@example
+and                               -> &&
+or                                -> !!
+xor                               -> ^^
+not                               -> ~~
+mod                               -> %
+bitwise-and                       -> &
+bitwise-ior                       -> !
+bitwise-xor                       -> ^
+bitwise-not                       -> ~
+bitwise-arithmetic-shift-left     -> <<
+bitwise-arithmetic-shift-right    -> >>
+fxand                             -> fx&
+fxior                             -> fx!
+fxxor                             -> fx^
+fxnot                             -> fx~
+fxarithmetic-shift-left           -> fx<<
+fxarithmetic-shift-right          -> fx>>
+@end example
+@end itemize
 
 @c page
 @node objects

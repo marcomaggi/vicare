@@ -31,6 +31,7 @@
   (only (vicare platform features))
   (only (vicare errno))
   (only (vicare include))
+  (only (vicare infix))
   (only (vicare syntactic-extensions))
   (only (vicare unsafe-operations))
   (only (vicare unsafe-unicode))
