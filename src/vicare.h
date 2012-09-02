@@ -38,6 +38,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <unistd.h> /* for off_t */
 
 
@@ -397,6 +398,7 @@ ik_decl ikptr	ika_integer_from_uint64	(ikpcb* pcb, uint64_t N);
 ik_decl ikptr	ika_integer_from_off_t	(ikpcb * pcb, off_t N);
 ik_decl ikptr	ika_integer_from_ssize_t(ikpcb * pcb, ssize_t N);
 ik_decl ikptr	ika_integer_from_size_t	(ikpcb * pcb, size_t N);
+ik_decl ikptr	ika_integer_from_ptrdiff_t (ikpcb * pcb, ptrdiff_t N);
 
 ik_decl int32_t	 ik_integer_to_sint32	(ikptr x);
 ik_decl int64_t	 ik_integer_to_sint64	(ikptr x);
@@ -413,6 +415,7 @@ ik_decl ik_ullong ik_integer_to_ullong	(ikptr x);
 ik_decl off_t	ik_integer_to_off_t	(ikptr x);
 ik_decl size_t	ik_integer_to_size_t	(ikptr x);
 ik_decl ssize_t	ik_integer_to_ssize_t	(ikptr x);
+ik_decl ptrdiff_t ik_integer_to_ptrdiff_t (ikptr x);
 
 /* inspection */
 ik_decl ikptr	ikrt_positive_bn	(ikptr x);
